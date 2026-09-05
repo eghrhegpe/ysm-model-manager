@@ -6,8 +6,6 @@ import {
   isModelMissing,
   countMissing,
   filterModels,
-  groupSites,
-  renderCardsHTML,
   renderRepoHeaderHTML,
   type WorkshopModel,
 } from "./render.ts";
@@ -91,20 +89,6 @@ describe("filterModels", () => {
   });
 });
 
-describe("groupSites", () => {
-  it("按 group 分组，缺省 browse", () => {
-    const g = groupSites([
-      { label: "A", group: "search" },
-      { label: "B" },
-      { label: "C", group: "repo" },
-    ]);
-    expect(Object.keys(g).sort()).toEqual(["browse", "repo", "search"]);
-    expect(g.search).toHaveLength(1);
-    expect(g.browse).toHaveLength(1);
-    expect(g.repo).toHaveLength(1);
-  });
-});
-
 describe("renderRepoHeaderHTML", () => {
   const base = {
     esc: (s: string) => s,
@@ -136,54 +120,3 @@ describe("renderRepoHeaderHTML", () => {
   });
 });
 
-describe("renderCardsHTML", () => {
-  const esc = (s: string) => s;
-
-  it("按 SITE_GROUP_ORDER 顺序渲染分组标题", () => {
-    const html = renderCardsHTML(
-      [
-        { label: "S1", group: "search" },
-        { label: "B1" },
-        { label: "R1", group: "repo" },
-      ],
-      esc,
-    );
-    const si = html.indexOf("搜索平台");
-    const ri = html.indexOf("模型仓库");
-    const bi = html.indexOf("浏览平台");
-    expect(si).toBeGreaterThan(-1);
-    expect(ri).toBeGreaterThan(si);
-    expect(bi).toBeGreaterThan(ri);
-  });
-
-  it("空分组跳过（不渲染空标题）", () => {
-    const html = renderCardsHTML([{ label: "B1" }], esc);
-    expect(html).not.toContain("搜索平台");
-    expect(html).not.toContain("模型仓库");
-    expect(html).toContain("浏览平台");
-  });
-
-  it("卡片含 data-group 定位", () => {
-    const sites = [
-      { label: "S1", group: "search" },
-      { label: "B1" },
-    ];
-    const html = renderCardsHTML(sites, esc);
-    expect(html).toContain('data-group="search"');
-  });
-
-  it("label/desc 经 esc 转义", () => {
-    const html = renderCardsHTML(
-      [{ label: "a<b", desc: "d>e" }],
-      (s) => s.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-    );
-    expect(html).toContain("a&lt;b");
-    expect(html).toContain("d&gt;e");
-    expect(html).not.toContain("a<b");
-  });
-
-  it("图标缺省 🔗", () => {
-    const html = renderCardsHTML([{ label: "L" }], esc);
-    expect(html).toContain("🔗");
-  });
-});

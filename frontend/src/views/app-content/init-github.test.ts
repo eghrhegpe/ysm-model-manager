@@ -206,7 +206,7 @@ describe("githubShowRepo — 缓存命中", () => {
 });
 
 describe("githubShowRepo — 镜像竞速与本地扫描", () => {
-  it("缓存未命中 → 本地扫描建 localMap（stripBanSuffix）+ fetch 结果入库并渲染", async () => {
+  it("缓存未命中 → 本地扫描建 localMap（stripDisableSuffix）+ fetch 结果入库并渲染", async () => {
     const { host, raw, el } = makeHost();
     mockApp({
       LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]),
@@ -234,7 +234,7 @@ describe("githubShowRepo — 镜像竞速与本地扫描", () => {
       RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM],
     );
     const ctx = callArgs(bindRepoEvents, 0)[1] as any;
-    expect(ctx.localMap.get("alice")).toBe("h1"); // stripBanSuffix 剥掉 .ban
+    expect(ctx.localMap.get("alice")).toBe("h1"); // stripDisableSuffix 剥掉 .ban
     expect(ctx.localMap.get("bob")).toBe("h2"); // 剥掉 .disabled
     // 缺失徽章：ghost 不在本地 → missingCount 1
     expect(bodyOf(el).innerHTML).toContain("gh-model-badge-missing");

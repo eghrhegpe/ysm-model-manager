@@ -8,7 +8,7 @@ import { countMissing, renderRepoHeaderHTML } from "../../features/community/ren
 import { stagger } from "../../utils/animation/stagger.ts";
 import { swallowError } from "../../utils/core/async.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { stripBanSuffix } from "../../utils/dom/display.ts";
+import { stripDisableSuffix } from "../../utils/dom/display.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { AppContentHost } from "./init-workshop.ts";
@@ -144,7 +144,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
         (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) ||
         [];
       entries.forEach((e) => {
-        const n = stripBanSuffix(e.Name || "");
+        const n = stripDisableSuffix(e.Name || "");
         localMap.set(n, e.Hash || "");
       });
     }

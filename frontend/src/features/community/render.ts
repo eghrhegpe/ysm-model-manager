@@ -1,7 +1,6 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
 import { t } from "../../core/i18n/t.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
@@ -28,14 +27,6 @@ export interface WorkshopModel {
   path: string;
   size?: number;
   hash?: string;
-}
-
-/** 工坊站点 */
-export interface WorkshopSite {
-  group?: string;
-  label: string;
-  desc?: string;
-  icon?: string;
 }
 
 /**
@@ -110,7 +101,7 @@ function createIconBtn(iconHTML: string, action: string, title?: string): HTMLBu
   return btn;
 }
 
-/** 单行构建上下文（renderModelList / buildModelRow 共用） */
+/** 单行构建上下文（buildModelRow 用；renderModelList 已删除，esc/showAll 字段暂为兼容 events.ts 调用点保留） */
 export interface ModelRowCtx {
   dlPrefix: string;
   localMap: Map<string, string>;
@@ -183,108 +174,6 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   row.appendChild(actionsCell);
 
   return row;
-}
-
-/**
- * 渲染模型列表（DocumentFragment）
- * @param filtered 已筛选的模型数组
- * @param dlPrefix 下载 URL 前缀
- * @param localMap 本地文件映射
- * @param showAll 是否显示全部
- * @param selectedSet 选中集合
- * @param esc HTML 转义函数
- */
-export function renderModelList(
-  filtered: WorkshopModel[],
-  dlPrefix: string,
-  localMap: Map<string, string>,
-  showAll: boolean,
-  selectedSet: Set<string>,
-  esc: (s: string) => string,
-): DocumentFragment {
-  const frag = document.createDocumentFragment();
-
-  if (!filtered.length) {
-    const empty = document.createElement("div");
-    empty.className = "gh-empty";
-    frag.appendChild(empty);
-    return frag;
-  }
-
-  filtered.forEach((m) => {
-    frag.appendChild(buildModelRow(m, { dlPrefix, localMap, showAll, selectedSet, esc }));
-  });
-
-  return frag;
-}
-
-/**
- * 分组标签映射
- */
-const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
-  search: { icon: "🔍", label: t("workshop.platformSearch") },
-  repo: { icon: "📦", label: t("workshop.modelRepo") },
-  browse: { icon: "👁️", label: t("workshop.platformBrowse") },
-};
-
-/** 站点分组展示顺序（renderCardsHTML 使用；内部常量，不对外暴露） */
-const SITE_GROUP_ORDER = ["search", "repo", "browse"] as const;
-
-/**
- * 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。
- */
-export function groupSites(sites: WorkshopSite[]): Record<string, WorkshopSite[]> {
-  const groups: Record<string, WorkshopSite[]> = {};
-  sites.forEach((s) => {
-    const g = s.group || "browse";
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(s);
-  });
-  return groups;
-}
-
-/**
- * 生成左栏站点卡片 HTML
- * @param sites 站点数组
- * @param esc HTML 转义
- */
-export function renderCardsHTML(sites: WorkshopSite[], esc: (s: string) => string): string {
-  const groups = groupSites(sites);
-
-  let html = "";
-  let cardIdx = 0;
-  SITE_GROUP_ORDER.forEach((g) => {
-    if (!groups[g]?.length) return;
-    const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
-    // P3（审核发现）：未知分组回退 label/icon 未经 esc 直接拼入 HTML——已知分组是
-    // i18n 常量安全，未知分组若含 <script> 即注入；统一转义（已知分组 esc 无副作用）
-    html += '<div class="gh-section-title">' + esc(info.icon) + " " + esc(info.label) + "</div>";
-    groups[g].forEach((s) => {
-      html +=
-        '<div class="gh-card" style="animation-delay:' +
-        stagger(cardIdx, 30, 300) +
-        'ms" data-group="' +
-        esc(g) +
-        '">' +
-        '<div class="gh-card-icon">' +
-        esc(s.icon || "🔗") +
-        "</div>" +
-        '<div class="gh-card-body">' +
-        '<div class="gh-card-label">' +
-        esc(s.label) +
-        "</div>" +
-        '<div class="gh-card-desc">' +
-        esc(s.desc || "") +
-        "</div>" +
-        "</div>" +
-        '<div class="gh-card-external" title="' +
-        t("workshop.openExternal") +
-        '">↗</div>' +
-        "</div>";
-      cardIdx++;
-    });
-  });
-  return html;
 }
 
 /**

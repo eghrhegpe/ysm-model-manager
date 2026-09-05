@@ -59,7 +59,7 @@ function bracketRe(style: (typeof BRACKET_STYLES)[number]): RegExp {
  * 也兼容: [作者]《作品》角色变体2023-05.ysm
  */
 export function parseModelName(raw: string): ParsedModelName {
-  const name = stripBanSuffix(raw);
+  const name = stripDisableSuffix(raw);
   const extMatch = name.match(/\.(\w+)$/);
   const aMatch = name.match(/\[\[([^\]]+?)\]\]/) || name.match(bracketRe(BRACKET_STYLES[0]));
   const wMatch =

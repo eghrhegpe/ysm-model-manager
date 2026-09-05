@@ -430,3 +430,58 @@ describe("类型切换 / 事件委托 / 清理", () => {
     expect(list.innerHTML).not.toContain("stale.ysm");
   });
 });
+
+describe("清理竞态（guard.stale 保护幽灵回调）", () => {
+  it("确认框 await 期间 cleanup → binding 不执行、无 toast", async () => {
+    mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
+    root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
+    await flushPromises();
+    await flushPromises();
+
+    let resolveConfirm!: (v: boolean) => void;
+    mocks.modalConfirm.mockReturnValueOnce(
+      new Promise<boolean>((r) => {
+        resolveConfirm = r;
+      }),
+    );
+    const toasts = spyToasts();
+
+    root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
+    await flushPromises();
+    expect(mocks.modalConfirm).toHaveBeenCalled();
+
+    cleanup(); // 模拟用户在确认框弹出期间切走页面（组件卸载）
+
+    resolveConfirm(true); // 确认框迟到返回
+    await flushLong();
+    await flushPromises();
+
+    expect(mocks.DeleteFromRecycle).not.toHaveBeenCalled();
+    expect(toasts).toHaveLength(0);
+  });
+
+  it("binding await 期间 cleanup → 成功 toast 不再发出", async () => {
+    mocks.ListRecycleBin.mockResolvedValue([entry("a.ysm", "/mc/a.ysm")]);
+    root.getElementById("recy-refresh")!.dispatchEvent(new Event("click"));
+    await flushPromises();
+    await flushPromises();
+
+    let resolveBinding!: (v: unknown) => void;
+    mocks.DeleteFromRecycle.mockReturnValueOnce(
+      new Promise((r) => {
+        resolveBinding = r;
+      }),
+    );
+    const toasts = spyToasts();
+
+    root.querySelector<HTMLButtonElement>('[data-testid="recy-del"]')!.click();
+    await flushLong(); // 确认框默认 resolve(true) + 150ms leaving 动画，binding 已发起
+    expect(mocks.DeleteFromRecycle).toHaveBeenCalled();
+
+    cleanup();
+    resolveBinding(undefined);
+    await flushPromises();
+
+    expect(toasts).toHaveLength(0);
+  });
+});

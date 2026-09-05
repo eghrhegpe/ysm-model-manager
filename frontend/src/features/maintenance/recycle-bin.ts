@@ -69,6 +69,7 @@ function renderRecycleListHtml(
 
 function setupRecycleActions(
   listEl: HTMLElement,
+  guard: LoadGuard,
   opts: {
     RestoreFromRecycle: (p: string, s: string) => Promise<unknown>;
     DeleteFromRecycle: (p: string) => Promise<unknown>;
@@ -90,9 +91,12 @@ function setupRecycleActions(
       const btn = btnEl as HTMLButtonElement;
       btn.onclick = async (): Promise<void> => {
         if (btn.disabled) return;
+        // 本次操作自成一"代"：组件 cleanup（guard.invalidate）后，任何 await 返回即失效，
+        // 杜绝幽灵 toast / bus 副作用 / 对已脱离 DOM 的按钮恢复状态
+        const opGen = guard.next();
         if (opt.confirm) {
           const confirmed = await _modalConfirm({ ...opt.confirm, danger: true });
-          if (!confirmed) return;
+          if (!confirmed || guard.stale(opGen)) return;
         }
         btn.disabled = true;
         const item = btn.closest(".recy-item");
@@ -102,11 +106,13 @@ function setupRecycleActions(
         }
         try {
           await opt.binding(btn.dataset.path || "");
+          if (guard.stale(opGen)) return;
           opts.loadRecycleBin();
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
           opts.onShowToast(opts.t(opt.toastKey), TOAST_ACTION_OK_MS, "success");
         } catch (e) {
+          if (guard.stale(opGen)) return;
           if (item) item.classList.remove("leaving");
           btn.disabled = false;
           opts.onShowToast(`❌ ${friendlyError(e)}`, TOAST_ACTION_ERR_MS, "error");
@@ -236,7 +242,7 @@ function buildLoadRecycleBin(
         _t,
       );
       if (shell.cleanupActions.current) shell.cleanupActions.current();
-      shell.cleanupActions.current = setupRecycleActions(list, {
+      shell.cleanupActions.current = setupRecycleActions(list, guard, {
         RestoreFromRecycle,
         DeleteFromRecycle,
         getCurrentType,

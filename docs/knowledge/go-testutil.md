@@ -1,31 +1,37 @@
 ---
 kind: go-testutil
-name: 测试辅助函数 go/internal/testutil
+name: 测试辅助函数 internal/testutil
 tier: leaf
 category: go
 source_files:
-  - go/internal/testutil/testutil.go
+  - internal/testutil/testutil.go
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - CreateTestFile
+    - InjectRootRegistry
+    - MakeZipBytes
+    - WriteTestFile
+    - WriteTestFileBytes
+    - WriteZipFile
   tests:
-    - go/internal/testutil/testutil_test.go
+    - internal/testutil/testutil_test.go
 tests:
-  - go/internal/testutil/testutil_test.go
+  - internal/testutil/testutil_test.go
 use_when:
   - 跨包复用测试 helper
   - 创建测试文件
   - 构造内存 ZIP
 invariant_anchors:
-  - go/internal/testutil/testutil.go|CreateTestFile
-  - go/internal/testutil/testutil.go|MakeZipBytes
+  - internal/testutil/testutil.go|CreateTestFile
+  - internal/testutil/testutil.go|MakeZipBytes
 status: active
 ---
 
-# 测试辅助函数 go/internal/testutil
+# 测试辅助函数 internal/testutil
 
 ## 概览
 
-`go/internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。
+`internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。
 
 ## 核心职责
 

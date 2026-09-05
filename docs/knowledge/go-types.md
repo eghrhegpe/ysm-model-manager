@@ -211,6 +211,7 @@ status: active
 - `(pm *PackMeta) Desc() string` — description 可读文本（兼容 string / JSON text component 对象 / 数组）
 - **内容指纹契约（ADR-067）**：`ZipEntryMatch{Name, Match}`（Match ∈ `exact`/`prefix`/`suffix`）+ `(rt *ResourceType) MatchZipEntry(name)`（小写不敏感）——mmd/vrc/蓝图/投影 4 类经 `zipEntries` 指纹参与 zip 化识别；消费方：`packs.DetectResourceType` 的 `zipentry` detector（容器分支）、`importer.DetectZipType`（遍历全注册表首命中）；`Detector` 字段枚举：`"ysm"` / `"mcmeta"` / `"shader"` / **`"zipentry"`** / `"extension"`
 - 关键常量：`LinkCopy` / `LinkHard` / `LinkSym` / `LinkUnknown`（LinkType）；`SyncStatusSynced/Missing/Optional/Disabled/Legacy`；`ErrorCode` 系列（`ErrFileExists` / `ErrInvalidParam` / `ErrIO` / `ErrLinkFailed` 等 15 个，见下方）；`LogLevel` 系列（`LevelDebug/Info/Warn/Error/Fatal`）；`statusToLevel(status string) LogLevel`（将 ImportLog.Status 映射为日志级别，由 `addOp` 自动调用）
+- **`ErrMcRootNotSet` 哨兵错误**（`1b552872` 引入，`errors.New` 语义，**非 ErrorCode 常量**）：替代裸字符串"请先设置游戏根目录"——`requireMcRoot` 等 guard 检查点通过 `errors.Is(err, ErrMcRootNotSet)` 判定，前端 `friendlyError` 据此做 i18n 映射（复用 `ctx.pushNoMcRoot`），禁止再用字符串比较
 
 ### ErrorCode + LogLevel（ADR-051 落地）
 

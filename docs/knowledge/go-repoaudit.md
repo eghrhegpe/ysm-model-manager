@@ -31,11 +31,11 @@ perf:
 invariant_anchors:
   - go/repoaudit/repoaudit.go|func Audit
   - go/repoaudit/repoaudit.go|func Classify
-  - go/repoaudit/repoaudit.go|sync.Once
+  - go/repoaudit/repoaudit.go|extClassifierCache
 pitfalls:
   - "CLI 与 GUI 共用同一 Audit 实现——改一处必须同步考虑两端行为"
   - "isModelFileValid 拒绝空对象/数组——畸形 JSON 标记无效不报错"
-  - "Classify(ext) 首次 sync.Once 构建 ext→id map，构建失败永久缓存空 map"
+  - "Classify(ext) 经 extClassifierCache（atomic.Value + 注册表实例指针失效范式，与 go/types 的 extCache 对齐），cache hit 零锁；实例变即重建 map（963d4d36 从 sync.Once 替换，永久缓存空 map 的旧缺陷消失）"
   - "HealthReportFor 包含去重扫描——大仓库可能耗时数秒"
   - "缓存命中率计算基数是模型文件数而非总文件数"
   - "Audit 返回的 Result 不含去重结果——去重必须走 HealthReportFor"
@@ -58,7 +58,8 @@ status: active
 
 - `Audit(dirPath)` — 一次遍历完成：资源扫描 + 完整性检查（.json/.ysm 合法性验证）+ 缓存状态 + 健康分数 + 警告生成
 - `HealthReportFor(dirPath)` — 完整体检：Audit + 去重（`dedup.FindDuplicateFiles`），返回 `HealthReport` 统一载荷
-- `Classify(ext)` — 扩展名→注册表资源类型 id 映射，注册表驱动（新增类型只改 `resource_types.json`），首次调用 `sync.Once` 构建预计算 ext→id map，后续 O(1) 查表
+- `Classify(ext)` — 扩展名→注册表资源类型 id 映射，注册表驱动（新增类型只改 `resource_types.json`）；内部经 `extClassifierCache`（`atomic.Value` + 注册表实例指针失效范式，与 `go/types/extensions.go` 的 `extCache` 同款，`963d4d36` 由 `sync.Once` 替换），cache hit 零锁、O(1) 查表；大仓库 per-file 路径禁用本函数（线性放大）
+- `ClassifyWith(reg, ext)` — 使用调用方已 hoist 的注册表实例判型（`4277c151` 新增，签名同 `Classify` 但接受外层 reg）——`Audit` 大仓库调用点必须走此函数防 per-file `LoadRegistry` 线性放大（`Audit` 内部已改；CLI 命令/其他调用点若需批量分类，同样走此函数）
 - `isModelFileValid` — 模型文件完整性验证：.json/.ysm 必须合法 JSON 且含 `format_version`（或 `minecraft:geometry`/`bones`），拒绝空对象/数组
 
 ## 对外 API / 入口

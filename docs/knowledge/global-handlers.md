@@ -12,7 +12,6 @@ source_files:
   - frontend/src/core/error-diary.ts
 auto_fields:
   symbols_with_lines:
-    - __TEST__resetDiary
     - bindTreeDnD
     - handleTreeDrop
     - registerErrorDiary
@@ -20,6 +19,7 @@ auto_fields:
     - registerInstanceOps
     - registerSync
     - requireMcRoot
+    - unregisterErrorDiary
   tests:
     - frontend/src/core/error-diary.test.ts
     - frontend/src/features/import-dnd.test.ts

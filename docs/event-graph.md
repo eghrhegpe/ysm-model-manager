@@ -283,7 +283,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 486 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 
 ### `repo:search-creator`
@@ -332,7 +332,7 @@
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 356 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 351 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
@@ -345,7 +345,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 483 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 478 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 184 |
 
 ### `sync:download:done`
@@ -359,15 +359,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 199 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 220 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 194 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 215 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 213 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 208 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -501,14 +501,14 @@
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 115 |
-| beginSync | `frontend/src/views/app-sidebar/index.ts` | 143 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 268 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 274 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 280 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 339 |
+| beginSync | `frontend/src/views/app-sidebar/index.ts` | 138 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 263 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 269 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 275 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 334 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 340 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 345 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 350 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 354 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 37 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 66 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
@@ -576,7 +576,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerErrorDiary | `frontend/src/core/error-diary.ts` | 57 |
+| registerErrorDiary | `frontend/src/core/error-diary.ts` | 58 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 69 |
 
 ### `tree:reload`
@@ -596,7 +596,7 @@
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 357 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 352 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

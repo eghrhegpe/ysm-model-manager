@@ -94,6 +94,7 @@ status: active
 - **2026-09-05 锐评 P1 收敛**：① 删 `summary.go` 重复的 `extractTexSizeFromGeometry`（与 `texsize.go` 的 `extractTexSizeFromGeometryBytes` 逐字双胞胎），改调后者；② `looseAnims` map 遍历改先排序再收集（防 parity golden flaky 复发，同 commit dfa190b8 已修过同款）；③ `clampTexDim` 注释删「口径一致」假声明，显式化统计面板钳 65536 vs geometry UV 归 0 的语义差异
 - 注意：YSM 解析绑定（AnalyzeYSMModel/ExtractYsmSummary/ExtractYSMHeader）**不强制 go/paths 校验**——预览链路的临时文件（`SavePreviewTempFile` → os.TempDir）不在仓库根内，加 `IsInside(ysmRoot)` 守卫会破坏预览链路（与 `ReadFileBytes` 的守卫语义不同，撤修）
 - **包分层约束（2026-08-25 兄弟会话拆函数时确认）**：依赖方向 **geometry ← ysm**（`go/ysm` import `go/geometry`，`go/geometry` 不得反向 import `go/ysm`，否则 import cycle）。因此 `collectDeclaredTexByModel` / `computeTexSlotForComponent` / `applyCubeTextures` 等 helper 都归 ysm 包（`extracted.go`），**geometry 侧不能跨包调用**，只能镜像实现——geometry 的 `buildComponents`（archive.go）本就有一套平行 perComponent 逻辑，镜像模式是既定现状。`applyCubeTextures` 这类纯 `types.BedrockModel` 函数可在 geometry 包内用本地函数/闭包镜像（优先复用本包已有等价逻辑，勿再造第三份）。**抽公共 helper 前先查包依赖方向**：若目标位置会形成 geometry→ysm 反向边，改为包内镜像而非共享。
+- **句柄泄漏 defer Close 收敛（`98e2ad6a` code_review e3398497）**：`summary.go` 内所有 `zip.OpenReader` / `sevenzip.OpenReader` 打开的容器统一 `defer Close()`，防摘要抽取中途返回时句柄泄漏（长会话累积会耗尽 OS 文件描述符）。同批还有冲突路径穿越守卫补测试（`internal/app`）——都是"code_review 三修复"里的两条，第三条是 DoUpdate 错误通道修正（见 `go-geometry` / `version-updater`）
 
 ## 相关
 

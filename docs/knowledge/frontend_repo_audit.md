@@ -16,7 +16,6 @@ auto_fields:
     - __resetWebLogStateForTest
     - __setEncodeImplForTest
     - __setStatsRunnerForTest
-    - __TEST__resetDiary
     - _clearPmxStatsCache
     - _getGlueCode
     - _getGlueCodeMt

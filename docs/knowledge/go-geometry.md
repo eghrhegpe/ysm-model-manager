@@ -101,6 +101,7 @@ status: active
 - **测试文件名 GOARCH 后缀陷阱**：`archive_arm_test.go` 曾被 Go 工具链**静默排除**（`.IgnoredTestGoFiles`）——文件名 `_arm` 段是合法 GOARCH 平台后缀，amd64 上该文件从不参与编译。已改名 `archive_arm_models_test.go` 复活。**铁律：Go 文件名 `_test.go` 前的末段不得撞 GOOS/GOARCH 保留字（linux/windows/darwin/arm/amd64/386/arm64/wasm…）**；语义性后缀拼长（如 arm→arm_models）规避
 - **确定性/口径统一修复**：① `resolveComponentTexName` 前缀兜底多命中改候选收集后 `sort.Strings` 取字典序最小——map 迭代随机曾致同输入不同运行绑不同纹理；② `detectMaidNs` 复用 `collectMaidManifest`（"最长清单即主包"）——多命名空间包组件视图与合并预览选 ns 不再分叉；③ 组件路径排序键归一化：`buildOrderAndPngIndex`/`sortGeoFilesMainFirst` 双侧加 ToLower
 - **R29 安全修复**：① `classifyFileInventory` OOM 封顶：加 `maxClassifyEntries=10000` matched 条目数封顶，超限 `inv.Truncated=true` + log 标记 + break；② `selectBestMaidCandidate` 空切片 panic 修复：函数开头加 `if len(candidates) == 0 { return maidNsCandidate{} }`；③ 仅计 `appended`（matched）条目，dir 在计数前 `continue` 跳过
+- **确定性收敛（`421ae7b5` 四轮锐评三刀落地之一）**：`parseModelOrder` 从 `break`→`continue` 修复——原实现遇到首个不匹配元素即中断整个 order 派生，导致 main/arm/多组件排序错位（未匹配项被丢弃）；现逐元素判定，未命中项保留原位置继续遍历。同批还有 `internal/app` 的 DoUpdate 错误通道修正（`421ae7b5`）与 `go/recycle` 废弃字段清理（`421ae7b5`）
 
 ## 相关
 

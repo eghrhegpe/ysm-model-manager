@@ -47,14 +47,8 @@ func (a *App) findRecycleRoot(src string) string {
 	cfg := a.LoadAppConfig()
 	roots := []string{
 		a.ysmRoot(),
-		cfg.ResourcepackRoot,
-		cfg.ShaderpackRoot,
-		cfg.SchematicRoot,
-		cfg.LitematicRoot,
-		cfg.MmdRoot,
-		cfg.VrcRoot,
 	}
-	// CustomRoots 纳入根列表（迁移后废弃字段已清空，recycle 必须查新源）
+	// CustomRoots 是唯一事实源（废弃字段已清空，不再读取）
 	if cfg.CustomRoots != nil {
 		for _, r := range cfg.CustomRoots {
 			roots = append(roots, r)
@@ -179,14 +173,8 @@ func (a *App) EmptyRecycleBin(src string) (int, error) {
 func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 	roots := []string{
 		a.ysmRoot(),
-		cfg.ResourcepackRoot,
-		cfg.ShaderpackRoot,
-		cfg.SchematicRoot,
-		cfg.LitematicRoot,
-		cfg.MmdRoot,
-		cfg.VrcRoot,
 	}
-	// CustomRoots 纳入根列表（迁移后废弃字段已清空，回收站须查新源）
+	// CustomRoots 是唯一事实源（废弃字段已清空，不再读取）
 	if cfg.CustomRoots != nil {
 		for _, r := range cfg.CustomRoots {
 			roots = append(roots, r)

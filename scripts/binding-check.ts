@@ -47,7 +47,6 @@ const STRING_RETURN_ALLOWLIST = new Set([
   // ---- 真字符串：版本/文本 ----
   'GetAppVersion',
   'CurrentVersion',
-  'DoUpdate',                // "success"/"失败: ..." 文本结果
   'ImportByType',            // importer 文本结果
   'GetLinkMode',
   'DetectContainerType',

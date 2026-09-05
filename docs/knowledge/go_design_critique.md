@@ -288,6 +288,17 @@ invariant_anchors:
 - ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。`CompareGlobalInstanceHashes` 死代码已清理（见刀③）。
 - ➖ **P2 技术债（标记，不阻塞发版）**：`InstallLock` 注释契约 >10 处（ADR-056 设计决策，细粒度化引入死锁风险）；`ToggleModelEnable` bool 语义混用（改动面大，前端 banned 状态由扫描结果下发不依赖返回值）；`YSGP` 检测三胞胎合一（返回形态各不同，合并成本高）；`wasm_decoder.go` init 注入（ADR-047 设计决策，改风险高）。
 
+## 动刀进度（实施记录，2026-09-08 四轮锐评刀口）
+
+### 视角A：IO/扫描/路径/探测域
+- ✅ **刀① 回收站读废弃字段清理**：`internal/app/app_install_recycle.go` 的 `findRecycleRoot` 和 `allRecycleRoots` 删除对 `cfg.ResourcepackRoot`/`cfg.ShaderpackRoot`/`cfg.SchematicRoot`/`cfg.LitematicRoot`/`cfg.MmdRoot`/`cfg.VrcRoot` 等已清空废弃字段的读取，改为只读 `CustomRoots`（唯一事实源）。测试 `TestFindRecycleRoot_MultiType` 同步迁移到 `CustomRoots` 写法。消除迁移后资源包文件被错误移入 ysm `.recycle` 的错桶风险。
+
+### 视角B：二进制解析/渲染/缓存域
+- ✅ **刀② parseModelOrder break/continue 行为分叉修复**：`go/geometry/ysm_parser.go:216-229` 的 map 格式解析将 `break` 改为 `continue`，与 `go/ysm/extracted.go:153-171` 的 `parsePlayerModel` 同口径。修复 zip/7z 路径在首个畸形 value 后丢弃 main 等全部后续模型的行为分叉。
+
+### 视角C：Wails绑定/应用层域
+- ✅ **刀③ DoUpdate 返回 error 替代字符串错误通道**：`internal/app/app_config.go` 的 `DoUpdate` 签名由 `string` 改为 `(string, error)`，错误路径走 reject 而非字符串返回。`ErrExitRequested` 路径仍会 `os.Exit(0)`（helper 替换 exe 需要主进程退出，无法避免），但手动清理临时文件（os.Exit 会跳过 defer）。前端 `version-updater.ts` 适配：不再判断 `result !== "success"`，错误自然走 catch。同步 `binding-check.ts` 白名单将 `DoUpdate` 移出真字符串档、`binding_json_cleanup.md` 计数 16→15、`e2e/mock-data.ts` 保留（undefined mock 兼容）。`generate:bindings -ts` 重写绑定面。
+
 ## 相关
 
 - [frontend_design_critique](frontend_design_critique.md)：前端侧同方法论锐评（三子代理并发 + 主模型抽查）

@@ -96,10 +96,8 @@ async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise
     }
   });
   try {
-    const result = await DoUpdate(info.url || "", info.expectedHash || "");
-    if (result !== "success") {
-      throw new Error(result);
-    }
+    // DoUpdate 返回 "success" 表示下载+安装成功；失败时 reject（不再返回错误字符串）
+    await DoUpdate(info.url || "", info.expectedHash || "");
     // 说明：Go 侧 InstallUpdate 在替换完成后 os.Exit(0) 终止主进程，下面这段实际
     // 不可达（更新助手 ysm-updater-helper.exe 负责替换 exe 并重启新进程）；
     // 保留作防御——若未来 InstallUpdate 改为返回而非退出，可在此启动新进程

@@ -87,8 +87,10 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := installApp(t, types.AppConfig{
-		FilesRoot:        base,
-		ResourcepackRoot: rp,
+		FilesRoot: base,
+		CustomRoots: map[string]string{
+			"resourcepack": rp,
+		},
 	})
 
 	t.Run("resourcepack 根内命中", func(t *testing.T) {

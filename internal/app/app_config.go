@@ -310,28 +310,32 @@ func validUpdateURL(raw string) bool {
 		h == "gh-proxy.com"
 }
 
-func (a *App) DoUpdate(url string, expectedHash string) string {
+// DoUpdate 下载并应用更新。成功时返回 "success"（正常返回）或 os.Exit(0)
+// （helper 已在侧等待替换 exe，主进程必须退出）。
+// ErrExitRequested 路径仍会 os.Exit：helper 替换 exe 需要主进程先退出，
+// 此路径无法避免。手动清理临时文件（os.Exit 会跳过 defer）。
+func (a *App) DoUpdate(url string, expectedHash string) (string, error) {
 	if !validUpdateURL(url) {
-		return "下载失败: 非法的更新地址"
+		return "", fmt.Errorf("非法的更新地址")
 	}
 	exePath, err := updater.DownloadWithProgress(url, expectedHash, func(done, total int64) {
 		// 下载进度事件：与前端 download-queue 的 download:progress 同构，多参打包为数组
 		a.app.Event.Emit("update:progress", done, total)
 	})
 	if err != nil {
-		return "下载失败: " + err.Error()
+		return "", err
 	}
-	defer os.Remove(exePath)
 	if err := updater.InstallUpdate(exePath); err != nil {
-		// ErrExitRequested = 更新 exe 已就绪、helper 子进程已在侧等待：
-		// os.Exit 从 updater 库函数收口到应用层（库内退出会跳过 defer/锁），
-		// 此处退出即完成 exe 替换；前端应在此之前已展示提示
+		os.Remove(exePath) // 失败路径：手动清理（无 os.Exit）
 		if errors.Is(err, updater.ErrExitRequested) {
+			// helper 已在侧等待，主进程必须退出以完成 exe 替换。
+			// os.Exit 会跳过 defer，故上方已手动 Remove。
 			os.Exit(0)
 		}
-		return "安装失败: " + err.Error()
+		return "", fmt.Errorf("安装失败: %w", err)
 	}
-	return "success"
+	os.Remove(exePath) // 成功路径（理论上不可达，InstallUpdate 成功恒返 ErrExitRequested）
+	return "success", nil
 }
 
 func (a *App) RestartApplication() error {

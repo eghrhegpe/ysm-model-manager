@@ -154,9 +154,9 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 | `GetAllowedCLICommands` | 同上 | 同上 |
 | `ExportModelStructureJSON` | 导出物即 JSON 文件（前端 0 parse） | 无 |
 
-## 四、真字符串（16 条，不改签名，只规范错误通道）
+## 四、真字符串（15 条，不改签名，只规范错误通道）
 
-- `DoUpdate`（app_config.go:316）`"success"`/`"失败: ..."` 文本；`ImportByType`（resource_bindings.go:435）importer 文本结果
+- `ImportByType`（resource_bindings.go:435）importer 文本结果
 - 类型 ID 串：`DetectResourceType` / `DetectZipType`
 - 路径/配置/版本：`GetDefaultRepoRoot`、`GetGlobalCustomDir`、`GetYSMRepoRoot`、`GetConfigPath`、`GetLinkMode`、`FindPreviewImage`、`ExtractPreviewTexture`、`SelectImportZip`、`SelectImportFile`、`GetAppVersion`、`CurrentVersion`
 - `ReadPackEntry`（resourcepack_models.go:166）✅ 已统一为 `[]byte`（Wails 自动转 base64，与 `ReadFileBytes` 同口径，2026-09-01）

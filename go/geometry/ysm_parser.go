@@ -211,17 +211,19 @@ func parseModelOrder(raw string) []string {
 		}
 	case '{':
 		// map 格式：JSON 对象写入序即 Bedrock 声明序（Go map 丢失序，必须 Token 流保序）
+		// ⚠️ 非字符串 value（数字/对象/数组）Decode 报错且已消费完该值；
+		// 若 break 则后续好键（main 等）全部丢失 → 跳过继续（与 extracted.go parsePlayerModel 对齐）
 		dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
 		if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
 			for dec.More() {
 				keyTok, err := dec.Token()
 				if err != nil {
-					break
+					continue
 				}
 				_, _ = keyTok.(string) // 键名仅作引用，写入序即声明序
 				var val string
 				if err := dec.Decode(&val); err != nil {
-					break
+					continue
 				}
 				if val != "" {
 					result = append(result, val)

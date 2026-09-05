@@ -240,6 +240,12 @@ export function DetectResourceType(path: string): $CancellablePromise<string> {
     return $Call.ByID(2113518140, path);
 }
 
+/**
+ * DoUpdate 下载并应用更新。成功时返回 "success"（正常返回）或 os.Exit(0)
+ * （helper 已在侧等待替换 exe，主进程必须退出）。
+ * ErrExitRequested 路径仍会 os.Exit：helper 替换 exe 需要主进程先退出，
+ * 此路径无法避免。手动清理临时文件（os.Exit 会跳过 defer）。
+ */
 export function DoUpdate(url: string, expectedHash: string): $CancellablePromise<string> {
     return $Call.ByID(985752667, url, expectedHash);
 }
@@ -569,8 +575,9 @@ export function HasCachedTextures(hashes: string[] | null): $CancellablePromise<
 
 /**
  * ImportByType 统一导入入口——根据资源类型自动选择导入策略
+ * 返回 error：nil=成功；非 nil=失败原因（调用方应直接透传给前端 toast/modal）。
  */
-export function ImportByType(rtype: string, srcPath: string): $CancellablePromise<string> {
+export function ImportByType(rtype: string, srcPath: string): $CancellablePromise<void> {
     return $Call.ByID(1466768695, rtype, srcPath);
 }
 
@@ -1241,7 +1248,8 @@ export function ToggleEnable(path: string): $CancellablePromise<boolean> {
 /**
  * ========== 启用/禁用 ==========
  * ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
- * Deprecated: 仅桌面 UI 零消费，多根场景请用 ToggleEnable。保留为 CLI / browser-adapter 契约入口。
+ * Deprecated: 桌面 UI 零消费（多根场景请用 ToggleEnable），但网页版 browser-adapter 有真实调用。
+ * 保留为 CLI / browser-adapter 契约入口——删除需同步清 browser-adapter.ts 调用点。
  */
 export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3300558263, path);

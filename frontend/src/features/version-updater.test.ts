@@ -322,8 +322,8 @@ describe("initVersionUpdater（手动检查）", () => {
     expect(btn.textContent).toBe("🔄 检查更新");
   });
 
-  it("DoUpdate 返回非 success 字符串 → error toast 透传 Go 错误", async () => {
-    mocks.DoUpdate.mockResolvedValue("download failed");
+  it("DoUpdate reject → error toast 透传 Go 错误", async () => {
+    mocks.DoUpdate.mockRejectedValue(new Error("download failed"));
     const toasts = spyToasts();
     const { btn } = await setupRoot();
 

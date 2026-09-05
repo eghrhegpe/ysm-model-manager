@@ -32,7 +32,7 @@ const {
   parseModelNameMock: vi.fn(() => ({ author: "" })),
 }));
 
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../utils/dom/capabilities.ts", () => ({ can: canMock }));
 vi.mock("../../utils/dom/android-bridge.ts", () => ({
   isViewerMode: isViewerModeMock,

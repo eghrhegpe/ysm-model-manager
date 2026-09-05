@@ -1,6 +1,7 @@
 // ===== initRecycleBin 集成测试 =====
 // 覆盖：加载渲染、路径过滤、恢复/删除/清空、类型切换、事件委托、清理函数、异常路径
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { appFn } from "@/test-utils/mock-app.ts";
 import { bus } from "../bus.ts";
 import { flushPromises } from "../test-utils/index.ts";
 
@@ -20,6 +21,15 @@ const { mocks } = vi.hoisted(() => {
   };
   return { mocks };
 });
+Object.assign(mocks, {
+  GetRepoRoot: appFn("GetRepoRoot"),
+  ListRecycleBin: appFn("ListRecycleBin"),
+  RestoreFromRecycle: appFn("RestoreFromRecycle"),
+  DeleteFromRecycle: appFn("DeleteFromRecycle"),
+  EmptyRecycleBin: appFn("EmptyRecycleBin"),
+});
+
+
 
 vi.mock("../features/dialogs/modal.ts", () => ({
   modalConfirm: mocks.modalConfirm,
@@ -41,15 +51,10 @@ vi.mock("../utils/resource/types.ts", () => ({
   RESOURCE_TYPES: { YSM: "ysm", PACK: "resourcepack" },
 }));
 
-vi.mock("../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    GetRepoRoot: mocks.GetRepoRoot,
-    ListRecycleBin: mocks.ListRecycleBin,
-    RestoreFromRecycle: mocks.RestoreFromRecycle,
-    DeleteFromRecycle: mocks.DeleteFromRecycle,
-    EmptyRecycleBin: mocks.EmptyRecycleBin,
-  }),
-}));
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
+});
 
 import { initRecycleBin, type RecycleHost } from "./recycle-bin.ts";
 

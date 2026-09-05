@@ -1,6 +1,7 @@
 // ===== 版本更新检查测试 =====
 // 覆盖：频次限制、静默检查成功/失败、手动检查（modalConfirm 确认/取消、下载失败 toast）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { appFn } from "@/test-utils/mock-app.ts";
 import { bus } from "../bus.ts";
 
 const { mocks } = vi.hoisted(() => {
@@ -16,14 +17,18 @@ const { mocks } = vi.hoisted(() => {
   };
   return { mocks };
 });
+Object.assign(mocks, {
+  CheckUpdate: appFn("CheckUpdate"),
+  DoUpdate: appFn("DoUpdate"),
+  RestartApplication: appFn("RestartApplication"),
+});
 
-vi.mock("../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    CheckUpdate: mocks.CheckUpdate,
-    DoUpdate: mocks.DoUpdate,
-    RestartApplication: mocks.RestartApplication,
-  }),
-}));
+
+
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
+});
 
 vi.mock("../features/dialogs/modal.ts", () => ({
   esc: (s: unknown): string => String(s),

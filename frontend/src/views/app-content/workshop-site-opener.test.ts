@@ -5,7 +5,7 @@
 // （返回/打开/窗口打开/导出/导入：web 降级 + 桥 + toast 成功/失败分支）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 

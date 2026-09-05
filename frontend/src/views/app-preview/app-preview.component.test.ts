@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 阻断 Wails runtime 加载链：全链静态 import getApp（backend/app.ts）。
 // 注意 preview-wasm 从 getApp() 解构 ReadFileBytes（非 bindings import）——mock 需提供完整绑定
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ReadFileBytes: vi.fn().mockResolvedValue(null),
     DetectResourceType: vi.fn().mockResolvedValue("shaderpack"),

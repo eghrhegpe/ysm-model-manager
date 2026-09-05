@@ -13,7 +13,7 @@ import {
 import { getApp } from "../backend/app.ts";
 
 // mock getApp 以隔离 Wails 调用
-vi.mock("../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 

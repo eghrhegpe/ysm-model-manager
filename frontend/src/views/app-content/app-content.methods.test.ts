@@ -19,7 +19,7 @@ vi.mock("@wailsio/runtime", () => ({
   Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() },
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     LoadAppConfig: vi.fn().mockResolvedValue({}),
     GetRepoRoot: vi.fn().mockResolvedValue(""),

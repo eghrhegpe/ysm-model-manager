@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../../../bus.ts";
 
 // mock bindings（阻断 Wails runtime 加载链）
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     MergeWorkshopCreatorsFromJSON: vi.fn(async () => [2, 1]),
     LoadWorkshopCreators: vi.fn(async () => [{ name: "新A" }, { name: "新B" }]),

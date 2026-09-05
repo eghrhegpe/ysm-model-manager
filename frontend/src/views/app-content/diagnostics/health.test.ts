@@ -7,7 +7,7 @@ import { runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
 import { parseHealthReport } from "../../../utils/health-report.ts";
 
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
-vi.mock("../../../backend/app.ts", () => ({ getApp }));
+vi.mock("@/backend/app.ts", () => ({ getApp }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

@@ -61,7 +61,7 @@ vi.mock("../dialogs/modal.ts", () => ({
 vi.mock("../dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
 vi.mock("../dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
 // handler 统一走 getApp()（ADR-012）：mock getApp 返回 bindings mock 对象
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     OpenInstanceFolder: openFolderMock,
     GetRepoRoot: GetRepoRootMock,

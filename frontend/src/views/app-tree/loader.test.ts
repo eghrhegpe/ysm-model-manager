@@ -4,6 +4,7 @@
 // mock 基线来自 e2e/mock-data.ts（共享单源：改 Go 数据只改一处，防双源漂移），
 // 测试专用值用 override 覆盖（如反斜杠路径用例）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { appFn } from "@/test-utils/mock-app.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 // bus 不静态 import：beforeEach resetModules 后动态拿，保证与 loader 新实例同源
 // （裸 resetModules 会让 loader 的 bus 与 spy 的 bus 分叉，toast 收不到——见 141 行注）
@@ -18,14 +19,18 @@ const { mocks } = vi.hoisted(() => {
   };
   return { mocks };
 });
+Object.assign(mocks, {
+  GetRepoRoot: appFn("GetRepoRoot"),
+  ScanModelEntriesFiltered: appFn("ScanModelEntriesFiltered"),
+  IsFileBanned: appFn("IsFileBanned"),
+});
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    GetRepoRoot: mocks.GetRepoRoot,
-    ScanModelEntriesFiltered: mocks.ScanModelEntriesFiltered,
-    IsFileBanned: mocks.IsFileBanned,
-  }),
-}));
+
+
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
+});
 
 vi.mock("../../utils/resource/types.ts", () => ({
   RESOURCE_TYPE_LABELS: { ysm: "YSM模型", pack: "资源包", SceneModel: "场景模型" },

@@ -6,7 +6,7 @@ import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
 import { fireDrop } from "../test-utils/events.ts";
 import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 
-vi.mock("../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ImportModelFile: vi.fn().mockResolvedValue(undefined),
     ImportModelFolder: vi.fn().mockResolvedValue(undefined),

@@ -21,7 +21,7 @@ const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, cre
   wasmDecodeMock: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ExtractYsmSummary: summaryMock,
     ExtractYSMHeader: headerMock,

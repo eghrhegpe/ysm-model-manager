@@ -12,7 +12,7 @@ import resourceTypesJson from "#root/resource_types.json";
 
 // 阻断 Wails runtime 加载链（scanModelsByType 内部 getApp()）——mock 提供绑定
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 // 触发注册（import 即有 side effect：模块加载时调用 registerReRoute）
 import "./ysm-3d.ts";

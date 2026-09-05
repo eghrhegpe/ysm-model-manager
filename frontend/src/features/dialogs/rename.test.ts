@@ -2,14 +2,15 @@
 // 不 mock esc/registerDlg/closeDlg——原 mock 恰好覆盖陷阱 #15（转义）/#14（单例槽位）
 // /#3（finally/连点防重入）的载体；改用真实实现后这些防线可被测试锁定。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { appFn } from "@/test-utils/mock-app.ts";
 
-const { extractHeaderMock } = vi.hoisted(() => ({
-  extractHeaderMock: vi.fn().mockResolvedValue(null),
-}));
+const extractHeaderMock = appFn("ExtractYSMHeader");
+extractHeaderMock.mockResolvedValue(null);
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({ ExtractYSMHeader: extractHeaderMock }),
-}));
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
+});
 
 import { showRenameDialog } from "./rename.ts";
 

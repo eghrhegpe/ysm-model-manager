@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 import { dbg, safeStr } from "./debug.ts";
 

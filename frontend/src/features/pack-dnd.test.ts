@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   addOpLog: vi.fn<(...args: unknown[]) => Promise<void>>(),
 }));
 
-vi.mock("../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ImportFileAndPushToInstance: mocks.importFilePush,
     ImportFolderAndPushToInstance: mocks.importFolderPush,

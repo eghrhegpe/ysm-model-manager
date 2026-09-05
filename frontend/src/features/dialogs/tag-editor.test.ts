@@ -25,7 +25,7 @@ vi.mock("./modal.ts", () => ({
   trapFocus: vi.fn(),
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     GetModelTags: mocks.GetModelTags,
     AllTags: mocks.AllTags,

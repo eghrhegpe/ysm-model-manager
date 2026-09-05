@@ -10,7 +10,7 @@ const { getAppMock, pickDirMock } = vi.hoisted(() => ({
   getAppMock: vi.fn(),
   pickDirMock: vi.fn(),
 }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../utils/dom/directory-picker.ts", () => ({ pickDirectory: pickDirMock }));
 
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";

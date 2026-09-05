@@ -9,7 +9,7 @@ const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({
   getRepoRootMock: vi.fn(),
   scanFilteredMock: vi.fn(),
 }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../utils/resource/types.ts", () => ({
   RESOURCE_TYPES: { FBX: "fbx" },
   RESOURCE_TYPE_LABELS: { fbx: "FBX 模型" },

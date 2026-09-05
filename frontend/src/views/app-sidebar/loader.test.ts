@@ -19,7 +19,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // node 环境无 window，getApp() 在 app.ts 中访问 window.go 前就崩溃。
 // mock 整个 app.ts 使 loadInstances 直接拿到 mock bindings。
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 describe("groupMmdVariants", () => {
   it("按父文件夹聚合 missing/extra 变体", () => {

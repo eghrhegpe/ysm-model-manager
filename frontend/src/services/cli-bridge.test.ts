@@ -17,7 +17,7 @@ import {
 } from "./cli-bridge.ts";
 
 // Mock getApp 和 isWebPlatform
-vi.mock("../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 

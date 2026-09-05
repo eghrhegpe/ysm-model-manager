@@ -14,7 +14,7 @@ const queueMock = vi.hoisted(() => ({
 }));
 
 // mock bindings（阻断 Wails runtime 加载链）
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ OpenInBrowser: vi.fn() }),
 }));
 vi.mock("./download-queue.ts", () => ({

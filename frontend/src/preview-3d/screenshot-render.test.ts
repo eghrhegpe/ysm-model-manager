@@ -129,7 +129,7 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
     };
   });
 
-vi.mock("../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("./texture-loader.ts", () => ({
   loadTextures: loadTexturesMock,
   releaseTextureUrls: releaseTextureUrlsMock,

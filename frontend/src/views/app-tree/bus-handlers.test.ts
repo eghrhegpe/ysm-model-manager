@@ -44,7 +44,7 @@ const {
   loadEntriesMock: vi.fn(),
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     SelectDirectory: SelectDirectoryMock,
     SaveAppConfig: SaveAppConfigMock,

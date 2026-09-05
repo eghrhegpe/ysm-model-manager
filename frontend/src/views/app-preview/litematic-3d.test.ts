@@ -248,7 +248,7 @@ vi.mock("three/addons/controls/OrbitControls.js", () => ({
   },
 }));
 
-vi.mock("../../backend/app.ts", () => ({ getApp: vi.fn() }));
+vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 // 注：不再 mock 掉 CORE_MENU_ITEMS 的 roles 项。旧「dock-model 单 panel 直达」捷径已随
 // 2026-08-22 收口删除（恒进 roles 列表 → 点角色名 → roleDetailView）。切片控件断言不走
 // 菜单 DOM 导航——5329a347 schema 化后经 sliceNodes()（schema-registry 前缀查找）直驱，

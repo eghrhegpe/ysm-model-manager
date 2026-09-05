@@ -13,7 +13,7 @@ const { mocks } = vi.hoisted(() => {
   return { mocks };
 });
 
-vi.mock("../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ScanModelEntriesWithLabel: mocks.ScanModelEntries,
     GetRepoRoot: mocks.GetRepoRoot,

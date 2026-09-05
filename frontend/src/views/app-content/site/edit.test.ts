@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { bus } from "../../../bus.ts";
 
 // mock bindings + 社区数据源（fetch 更新配置路径不测，阻断网络与 getApp）
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     SaveWorkshopCreators: vi.fn(),
     SaveWorkshopSites: vi.fn(),

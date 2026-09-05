@@ -16,7 +16,7 @@ const { analyzeMock, specMock, mountMock, cleanupMock, makeAdapterMock, loadMode
   androidBackMock: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     AnalyzeBedrockModel: analyzeMock,
     GetModel3DSpec: specMock,

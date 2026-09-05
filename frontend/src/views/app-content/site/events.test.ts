@@ -51,7 +51,7 @@ vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
   getTagIconFromRole,
 }));
 vi.mock("./render.ts", () => ({ createCrCard }));
-vi.mock("../../../backend/app.ts", () => ({ getApp }));
+vi.mock("@/backend/app.ts", () => ({ getApp }));
 
 import { bindBrowseEvents } from "./events.ts";
 import type { SiteViewState } from "./types.ts";

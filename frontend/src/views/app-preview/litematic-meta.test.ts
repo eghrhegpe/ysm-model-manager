@@ -1,6 +1,7 @@
 // ===== showLitematic 测试 =====
 // 覆盖：litematic/nbt/schematic 三种路径、解析失败、材料列表、3D tab、Tab 切换、代际守卫
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { appFn } from "@/test-utils/mock-app.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -12,14 +13,18 @@ const { mocks } = vi.hoisted(() => {
   };
   return { mocks };
 });
+Object.assign(mocks, {
+  ReadLitematicMeta: appFn("ReadLitematicMeta"),
+  ReadNbtStructure: appFn("ReadNbtStructure"),
+  ReadSchematic: appFn("ReadSchematic"),
+});
 
-vi.mock("../../backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    ReadLitematicMeta: mocks.ReadLitematicMeta,
-    ReadNbtStructure: mocks.ReadNbtStructure,
-    ReadSchematic: mocks.ReadSchematic,
-  }),
-}));
+
+
+vi.mock("@/backend/app.ts", async () => {
+  const { setupAppMock } = await import("@/test-utils/mock-app.ts");
+  return setupAppMock();
+});
 
 // ADR-072 根治：litematic-3d 薄包装已归位 views/app-preview（视图壳注入层），mock 路径同目录
 vi.mock("./litematic-3d.ts", () => ({

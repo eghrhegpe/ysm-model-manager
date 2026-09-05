@@ -13,7 +13,7 @@ vi.mock("../../../utils/dom/storage.ts", () => ({
   safeSet: (...a: unknown[]) => safeSet(...(a as [string, string])),
 }));
 
-vi.mock("../../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: () => getApp(),
 }));
 

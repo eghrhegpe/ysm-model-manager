@@ -28,7 +28,7 @@ const {
 }));
 
 vi.mock("../../bus.ts", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../features/dialogs/adv-filter.ts", () => ({
   modalAdvFilter: modalAdvFilterMock,
 }));

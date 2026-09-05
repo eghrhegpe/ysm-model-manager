@@ -26,7 +26,7 @@ const { mocks, renderMock } = vi.hoisted(() => ({
   renderMock: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     LoadResourceTypes: mocks.LoadResourceTypes,
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,

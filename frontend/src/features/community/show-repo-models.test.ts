@@ -16,7 +16,7 @@ const { getAppMock, currentRepoTypeMock, bindRepoEventsMock, dbgMock } = vi.hois
   bindRepoEventsMock: vi.fn(),
   dbgMock: vi.fn(),
 }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
 vi.mock("./events.ts", () => ({ bindRepoEvents: bindRepoEventsMock }));
 vi.mock("../../utils/debug/debug.ts", () => ({ dbg: dbgMock }));

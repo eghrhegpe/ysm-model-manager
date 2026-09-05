@@ -16,7 +16,7 @@ vi.mock("../../utils/dom/capabilities.ts", () => ({
 }));
 
 // getApp 仅在 version 加载时调用，mock 阻断
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     GetAppVersion: vi.fn().mockResolvedValue("v1.0.0"),
   }),

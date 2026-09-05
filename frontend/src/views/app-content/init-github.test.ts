@@ -22,7 +22,7 @@ const { getApp, bindRepoEvents, renderList, repoCleanup, tryFetchModels } = vi.h
   };
 });
 
-vi.mock("../../backend/app.ts", () => ({ getApp }));
+vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents }));
 vi.mock("../../features/community/data.ts", () => ({ tryFetchModels }));
 

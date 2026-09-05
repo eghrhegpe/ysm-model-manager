@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // —— 模块 mock（工厂不引用外部变量，可安全提升）——
-vi.mock("../../backend/app.ts", () => ({ getApp: vi.fn() }));
+vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 // can() 默认 true（桌面/常规语义）；"查看器模式"用例内设 false 模拟无能力
 const { canMock } = vi.hoisted(() => ({ canMock: vi.fn(() => true) }));
 vi.mock("../../utils/dom/capabilities.ts", () => ({ can: canMock }));

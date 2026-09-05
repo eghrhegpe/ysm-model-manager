@@ -5,7 +5,7 @@
 // 以及 root 动态切换后闭包惰性解析不残留旧类型（审核 P2）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("../../backend/app.ts", () => ({ getApp: vi.fn() }));
+vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 vi.mock("./toolbar-events.ts", () => ({ bindToolbarEvents: vi.fn() }));
 // registry.ts 已删（架构锐评 P1-2 修正版）：loader mock 直供 loadEntries
 vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));

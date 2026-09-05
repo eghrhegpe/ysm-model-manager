@@ -21,7 +21,7 @@ vi.mock("../../preview-3d/decoder/cache.ts", () => ({
   cacheSet: cacheSetMock,
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     AnalyzeBedrockModel: AnalyzeMock,
     ExtractYsmSummary: ExtractSummaryMock,

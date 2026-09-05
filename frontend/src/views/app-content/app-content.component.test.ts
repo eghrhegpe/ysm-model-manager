@@ -12,7 +12,7 @@ vi.mock("@wailsio/runtime", () => ({
 }));
 
 // getApp 全绑定 mock（组件多处从 getApp() 解构绑定，缺导出会 "not a function"）
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ClearScanCache: vi.fn().mockResolvedValue(undefined),
     LoadAppConfig: vi.fn().mockResolvedValue({}),

@@ -31,7 +31,7 @@ const {
   resolveStageSiblingsMock: vi.fn(),
 }));
 
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../preview-3d/adapters/vrm-adapter.ts", () => ({
   readVrmMeta: vrmMetaMock,
 }));

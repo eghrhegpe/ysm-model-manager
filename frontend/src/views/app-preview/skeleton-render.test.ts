@@ -14,7 +14,7 @@ const { getApp, screenshotFn, renderMultiAngle, saveFile } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../core/i18n/t.ts", () => ({ t: (k: string) => k }));
-vi.mock("../../backend/app.ts", () => ({ getApp }));
+vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("../../preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
 vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
 

@@ -21,7 +21,7 @@ const { getAppMock, specMock, buildSpecMock, isViewerModeMock, isWebPlatformMock
   },
 }));
 
-vi.mock("../../backend/app.ts", () => ({
+vi.mock("@/backend/app.ts", () => ({
   getApp: getAppMock,
 }));
 vi.mock("../../utils/dom/android-bridge.ts", () => ({

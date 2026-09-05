@@ -22,7 +22,7 @@ vi.mock("../../preview-3d/adapters/mount-preview-core.ts", async (importOriginal
 // 须再上一级 `../../../backend/app.ts` 才能命中同一模块（原 `../../` 解析到
 // src/views/backend/ 不存在 → mock 静默失效，被旧版顶部无条件 cleanup 掩盖）。
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("../../backend/app.ts", () => ({ getApp: getAppMock }));
+vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
 import { cleanupPreview, hasActivePreview, switchPreview } from "../../preview-3d/adapters/mount-preview-core.ts";

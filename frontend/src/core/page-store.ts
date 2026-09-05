@@ -55,13 +55,23 @@ export function resolveInitialPage(): PageName {
 
 let _currentPage: PageName | undefined;
 
+/** _currentPage 唯一写入函数（ADR-189 D5 收敛：惰性 init 与 nav:changed 两分支
+ *  共用，写入路径由类型系统外的单一函数保证——code_review 1df34c8d 核实原注释
+ *  声称的「单一函数」实际不存在，裸写点在 ensureCurrentPage 与 listener 各一处） */
+function setCurrentPage(p: PageName): void {
+  _currentPage = p;
+}
+
 /** 首次触碰（读取或广播）才解析 localStorage——消除模块求值期副作用，
  *  防止未来 uiState（ADR-103）异步化后初始页快照抢跑（ADR-189 D5） */
 function ensureCurrentPage(): PageName {
-  if (_currentPage === undefined) {
-    _currentPage = resolveInitialPage();
-  }
-  return _currentPage;
+  const cur = _currentPage;
+  if (cur !== undefined) return cur;
+  // 惰性 init 走唯一写入函数（TS 不追踪函数副作用，故用 init 局部值返回
+  // 而非读回 _currentPage——code_review 1df34c8d 后 typecheck 收窄修正）
+  const init = resolveInitialPage();
+  setCurrentPage(init);
+  return init;
 }
 
 export const PageStore = {
@@ -79,9 +89,9 @@ export function registerPageStore(unsubs: Array<() => void>): void {
       // 会让 _currentPage 与真实视图脱节；宽容解析只属于启动恢复（resolveInitialPage）
       if (!isValidPage(page)) return;
       // 先确保初始页已解析（时序无关），再按「已发生事实」更新——两分支共用
-      // 唯一写入函数，写入路径收敛由类型系统外的单一函数保证（ADR-189 D5）
+      // setCurrentPage 唯一写入函数，写入路径收敛（ADR-189 D5）
       if (page !== ensureCurrentPage()) {
-        _currentPage = page;
+        setCurrentPage(page);
       }
     }),
   );

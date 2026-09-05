@@ -42,11 +42,16 @@ function isNonEmpty(b: Bundle | undefined): b is Bundle {
 
 /** 刷新活跃包缓存（bundles / _currentLang 任一变更后调用） */
 function refreshActiveBundle(): void {
-  _activeBundle = isNonEmpty(bundles[_currentLang])
-    ? bundles[_currentLang]
-    : isNonEmpty(bundles["zh-CN"])
-      ? bundles["zh-CN"]
-      : undefined;
+  // 平铺 if/early-return（禁嵌套三目）：每候选只取一次，避免 isNonEmpty 的
+  // Object.keys 全量扫描重复执行（code_review 1df34c8d：原三层嵌套三目让
+  // bundles[_currentLang]/bundles["zh-CN"] 各取两次，fallback 路径每 refresh 扫 3 遍）
+  const cur = bundles[_currentLang];
+  if (isNonEmpty(cur)) {
+    _activeBundle = cur;
+    return;
+  }
+  const base = bundles["zh-CN"];
+  _activeBundle = isNonEmpty(base) ? base : undefined;
 }
 
 /** 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） */

@@ -6,6 +6,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 import { MOCK_DATA } from "../../../e2e/mock-data.ts";
+
+/** vi.fn 返回类型（hoisted 占位标注用） */
+type MockFn = ReturnType<typeof vi.fn>;
 // bus 不静态 import：beforeEach resetModules 后动态拿，保证与 loader 新实例同源
 // （裸 resetModules 会让 loader 的 bus 与 spy 的 bus 分叉，toast 收不到——见 141 行注）
 import type { Bus } from "../../bus.ts";
@@ -13,6 +16,12 @@ import type { Bus } from "../../bus.ts";
 const { mocks } = vi.hoisted(() => {
   const mocks = {
     getAndroidBridge: vi.fn(),
+    // app 方法键类型占位（undefined as MockFn）：运行时经下方 Object.assign 注入
+    // appFn 实例。#10 清 hoisted 死 vi.fn() 后 Object.assign 扩展无 TS 类型——
+    // typecheck 报 TS2339（code_review 54ef29d3 修复的后续 typecheck 验证发现）
+    GetRepoRoot: undefined as unknown as MockFn,
+    ScanModelEntriesFiltered: undefined as unknown as MockFn,
+    IsFileBanned: undefined as unknown as MockFn,
   };
   return { mocks };
 });

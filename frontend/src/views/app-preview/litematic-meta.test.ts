@@ -3,10 +3,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 
+/** vi.fn 返回类型（hoisted 占位标注用） */
+type MockFn = ReturnType<typeof vi.fn>;
+
 const { mocks } = vi.hoisted(() => {
   const mocks = {
     createLitematic3D: vi.fn(),
     cleanupVoxel3D: vi.fn(),
+    // app 方法键类型占位（undefined as MockFn）：运行时经下方 Object.assign 注入
+    // appFn 实例。#10 清 hoisted 死 vi.fn() 后 Object.assign 扩展无 TS 类型——
+    // typecheck 报 TS2339（code_review 54ef29d3 修复的后续 typecheck 验证发现）
+    ReadLitematicMeta: undefined as unknown as MockFn,
+    ReadNbtStructure: undefined as unknown as MockFn,
+    ReadSchematic: undefined as unknown as MockFn,
   };
   return { mocks };
 });

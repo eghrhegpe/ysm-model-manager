@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-191：testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂",
+        "link": "/adr/ADR-191-testutil-go-internal"
+      },
+      {
         "text": "ADR-190：features 层职责收束与依赖注入真化",
         "link": "/adr/ADR-190-features-deps-convergence"
       },

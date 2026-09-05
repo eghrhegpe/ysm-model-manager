@@ -1,7 +1,7 @@
 // ===== 同步相关：导入缺失 / 同步启用状态（类型化版 — ADR-014 P3）=====
 // 迁移史：core/handlers/sync.ts → features/sync.ts（ADR-188——sync 是整合包业务，
 // 与 context-menu/pack-ops/platform 同层，不属内核；core 只留 i18n/page-store/
-// feedback/error-diary 纯内核）
+// error-diary 纯内核——feedback 原语已迁 utils/dom/toast.ts，ADR-189 D3）
 
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";

@@ -109,15 +109,15 @@ export const contentCreatorCSS: string = `
 .cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--sm-optional); }
 .cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--muted); }
 .cr-creator-card--grid[data-tier="gold"] .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),#D4A017,transparent 60%,#D4A017);
-  box-shadow:0 0 6px rgba(212,160,23,.4);
+  background:conic-gradient(from var(--grad-rot,0deg),var(--sm-optional),transparent 60%,var(--sm-optional));
+  box-shadow:0 0 6px color-mix(in srgb,var(--sm-optional) 40%,transparent);
 }
 .cr-creator-card--grid[data-tier="silver"] .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),#9E9E9E,transparent 60%,#9E9E9E);
-  box-shadow:0 0 6px rgba(158,158,158,.25);
+  background:conic-gradient(from var(--grad-rot,0deg),var(--muted),transparent 60%,var(--muted));
+  box-shadow:0 0 6px color-mix(in srgb,var(--muted) 25%,transparent);
 }
 .cr-creator-card--grid:not([data-tier]) .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),#6B9FFF,transparent 60%,#6B9FFF);
+  background:conic-gradient(from var(--grad-rot,0deg),var(--accent),transparent 60%,var(--accent));
   box-shadow:none;
 }
 

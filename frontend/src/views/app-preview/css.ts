@@ -64,7 +64,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-export-btn:hover { background:var(--hover); }
 .pv-export-btn:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent);outline:none; }
 .pv-toggle-row { display:flex;align-items:center;gap:4px;margin-bottom:6px;margin-top:4px;padding:4px 6px;background:var(--surf);border-radius:var(--radius-sm);justify-content:flex-end; }
-.pv-debug { font-size:var(--fs-xs);color:#ff6b6b;margin-top:2px;opacity:0.8; }
+.pv-debug { font-size:var(--fs-xs);color:var(--status-error);margin-top:2px;opacity:0.8; }
 .pv-loading-title { font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-bottom:4px; }
 .pv-loading-bar { height:60px;border-radius:var(--radius-md);background:rgba(0,0,0,.08); }
 .pv-error-title { font-size:var(--fs-sm);font-weight:600;margin-bottom:4px; }

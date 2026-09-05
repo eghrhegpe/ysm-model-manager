@@ -5,6 +5,7 @@
 import { getApp } from "../../../backend/app.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
+import { modalPicker } from "../../../features/dialogs/modal.ts";
 import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
 import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
@@ -13,26 +14,6 @@ import { safeGet } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
 import { groupStorageRootOf } from "../../../utils/resource/types.ts";
 import { cardRefreshers, cfg, isBusy, setBusy, toastError } from "./store.ts";
-
-/** HTML 转义（高级面板路径/路径选择器/扫描提示共用） */
-/** 路径选择模态/扫描气泡样式(P1 批次11:cssText 抽类;overlay 提升到 host 父级/body light DOM,head 注入适用) */
-const pcCss = `
-.pc-modal-overlay { position:fixed; z-index:var(--z-modal); inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; }
-.pc-modal-box { background:var(--surf,#2a2a3a); border:1px solid var(--bd,#444); border-radius:12px; padding:16px; max-width:500px; width:90%; max-height:70vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.4); }
-.pc-scan-tip { position:fixed; z-index:var(--z-toast); background:var(--surf,#2a2a3a); border:1px solid var(--bd,#444); border-radius:8px; padding:10px 14px; font-size:var(--fs-sm,11px); color:var(--txt,#cdd6f4); box-shadow:0 4px 16px rgba(0,0,0,.3); max-width:420px; max-height:350px; overflow-y:auto; pointer-events:none; line-height:1.6; }
-`;
-let _pcStylesInjected = false;
-function ensurePcStyles(): void {
-  if (_pcStylesInjected) return;
-  _pcStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = pcCss;
-  document.head.appendChild(el);
-}
-
-function escHtml(s: unknown): string {
-  return esc(String(s ?? ""));
-}
 
 // 保存 cfg 辅助（保留各字段原值）
 // P1 修复（审核，配置回退）：保存前重读 Go 端最新配置作为未 patch 字段默认——
@@ -108,62 +89,36 @@ export function bindPathClick(
 }
 
 /** 多路径选择器：弹出路径列表让用户挑选（返回 null 表示取消） */
-function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | null> {
-  return new Promise((resolve) => {
-    ensurePcStyles(); // P1 批次11:cssText 抽类注入(幂等;overlay 提升 light DOM)
-    const overlay = document.createElement("div");
-    overlay.className = "pc-modal-overlay";
-    const box = document.createElement("div");
-    box.className = "pc-modal-box";
-    let listHtml = "";
-    for (let i = 0; i < paths.length; i++) {
-      listHtml +=
-        "<div class='mc-pick-item' data-idx='" +
-        i +
-        "' style='padding:8px 10px;border-radius:6px;cursor:pointer;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);display:flex;align-items:center;gap:8px;transition:background var(--tr-fast)' onpointerenter='this.style.background=\"var(--hover,#3a3a4a)\"' onpointerleave='this.style.background=\"\"'>" +
-        "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
-        escHtml(paths[i]) +
-        "</div>";
-    }
-    box.innerHTML =
-      "<div style='font-weight:600;font-size:13px;margin-bottom:8px'>" +
-      t("content.pickMcDirTitle") +
-      "</div>" +
-      "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:12px'>" +
-      t("content.pickMcDirDesc") +
-      "</div>" +
-      listHtml +
-      "<div style='margin-top:12px;text-align:right'>" +
-      "<button class='mc-pick-cancel' style='padding:4px 12px;border-radius:4px;border:1px solid var(--bd,#444);background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-size:var(--fs-sm,11px);font-family:inherit'>" +
-      t("common.cancel") +
-      "</button>" +
-      "</div>";
-    overlay.appendChild(box);
-    (root.getRootNode() === document
-      ? document.body
-      : root.host?.parentElement || document.body
-    ).appendChild(overlay);
-
-    box.querySelectorAll(".mc-pick-item").forEach((el) => {
-      el.addEventListener("click", () => {
-        const idx = parseInt((el as HTMLElement).dataset.idx || "0", 10);
-        overlay.remove();
-        resolve(paths[idx] || null);
-      });
-    });
-    box.querySelector(".mc-pick-cancel")?.addEventListener("click", () => {
-      overlay.remove();
-      resolve(null);
-    });
+async function showPathPicker(paths: string[]): Promise<string | null> {
+  const result = await modalPicker({
+    title: t("content.pickMcDirTitle"),
+    subtitle: t("content.pickMcDirDesc"),
+    icon: "📁",
+    items: paths.map((p) => ({ label: p, meta: "" })),
+    cancelText: t("common.cancel"),
   });
+  return result ? paths[result.index] : null;
 }
 
 /** 扫描提示气泡：hover 时显示扫描到的所有路径 + 搜索范围 */
 function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[]): HTMLElement {
   const rect = anchor.getBoundingClientRect();
   const tip = document.createElement("div");
-  tip.id = "mc-scan-tooltip";
-  tip.className = "pc-scan-tip"; // 规则在文件头 pcCss(head 注入);left/top 定位属性级保留
+  tip.id = "mc-scan-tip";
+  tip.style.position = "fixed";
+  tip.style.zIndex = "var(--z-toast)";
+  tip.style.background = "var(--surf)";
+  tip.style.border = "1px solid var(--bd)";
+  tip.style.borderRadius = "8px";
+  tip.style.padding = "10px 14px";
+  tip.style.fontSize = "var(--fs-sm)";
+  tip.style.color = "var(--txt)";
+  tip.style.boxShadow = "0 4px 16px rgba(0,0,0,.3)";
+  tip.style.maxWidth = "420px";
+  tip.style.maxHeight = "350px";
+  tip.style.overflowY = "auto";
+  tip.style.pointerEvents = "none";
+  tip.style.lineHeight = "1.6";
   tip.style.left = Math.max(4, rect.left) + "px";
   tip.style.top = rect.bottom + 4 + "px";
 
@@ -195,8 +150,8 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
     for (let i = 0; i < paths.length; i++) {
       html +=
         "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:10px'>" +
-        "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
-        escHtml(paths[i]) +
+        "<span style='color:var(--accent);flex-shrink:0'>📁</span>" +
+        esc(String(paths[i])) +
         "</div>";
     }
   }
@@ -275,7 +230,7 @@ export function initAdvancedGrid(
         '" title="' +
         t("settings.path.clickToChange") +
         '">' +
-        escHtml(currentPath) +
+        esc(String(currentPath)) +
         "</div>" +
         "</div></div>";
     }
@@ -359,7 +314,7 @@ export function initMcDetect(root: ShadowRoot): void {
       // 只有一个直接使用，多个让用户选
       let selected: string | null = paths[0];
       if (paths.length > 1) {
-        selected = await showPathPicker(root, paths);
+        selected = await showPathPicker(paths);
         if (!selected) return; // 用户取消
       }
       const theme = safeGet("theme") || "dark";

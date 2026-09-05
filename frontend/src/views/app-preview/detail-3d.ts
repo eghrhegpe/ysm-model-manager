@@ -234,12 +234,12 @@ export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<v
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:rgba(100,100,100,0.2);color:#aaa;padding:1px 6px;border-radius:4px;font-weight:500">CustomMorph</span>
+      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px;font-weight:500">CustomMorph</span>
       <span>${t("preview.vpdPose")}</span>
-      <span style="background:rgba(100,100,100,0.2);color:#aaa;padding:1px 6px;border-radius:4px">${t("preview.singleFrameMorph")}</span>
+      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px">${t("preview.singleFrameMorph")}</span>
     </div>
     <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-morph-apply" title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,#50c878 0%,#2ea043 100%)"><span class="preview-ic">😊</span></button>
+    <button class="preview-fab" id="btn-morph-apply" title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,var(--status-success) 0%,color-mix(in srgb,var(--status-success) 65%,#000) 100%)"><span class="preview-ic">😊</span></button>
   </div>
 </div>`;
   // 加载兄弟列表
@@ -263,7 +263,7 @@ export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<v
       container.innerHTML = `<style>
   .morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
   .morph-item:hover{background:rgba(255,255,255,0.05)}
-  .morph-item.active{background:rgba(80,200,120,0.15);color:#50c878;font-weight:600}
+  .morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
 </style><div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
       // 点击兄弟列表项切换
       container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
@@ -302,11 +302,11 @@ export async function showStagePreview(ctx: PreviewCtx, path: string): Promise<v
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:rgba(255,160,80,0.2);color:#ffa050;padding:1px 6px;border-radius:4px;font-weight:500">StageAnim</span>
+      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:4px;font-weight:500">StageAnim</span>
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-stage-load" title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,#ffa050 0%,#e67e22 100%)"><span class="preview-ic">🎤</span></button>
+    <button class="preview-fab" id="btn-stage-load" title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,var(--warning,#ffa050) 0%,color-mix(in srgb,var(--warning,#ffa050) 65%,#000) 100%)"><span class="preview-ic">🎤</span></button>
   </div>
 </div>`;
   // 加载舞台内容
@@ -334,7 +334,11 @@ export async function showStagePreview(ctx: PreviewCtx, path: string): Promise<v
                       ? "⚙️"
                       : "📄";
               const color =
-                c.kind === "vmd" ? "#ffa050" : c.kind === "audio" ? "#80c0ff" : "#c0c0c0";
+                c.kind === "vmd"
+                  ? "var(--warning,#ffa050)"
+                  : c.kind === "audio"
+                    ? "var(--accent)"
+                    : "var(--muted)";
               return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
               <span>${icon}</span>
               <span>${esc(name)}</span>

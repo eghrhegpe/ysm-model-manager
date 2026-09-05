@@ -1,3 +1,5 @@
+import { dbg } from "./utils/debug/debug.ts";
+
 /** Wait until the DOM has been upgraded and painted before exposing the native window. */
 export async function revealMainWindow(
   show: () => void | Promise<void>,
@@ -30,6 +32,6 @@ export async function revealMainWindow(
     await show();
   } catch (error) {
     // Browser development mode has no native Wails window; the CSS reveal above is enough.
-    console.debug("[startup] native window show unavailable", error);
+    dbg("startup-reveal", "native window show unavailable", error);
   }
 }

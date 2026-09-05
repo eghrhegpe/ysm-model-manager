@@ -28,6 +28,11 @@ function mkKey(namespace: string, key: string): string {
   return namespace + ":" + key;
 }
 
+/** 过期时间戳：ttl=0 = 永不过期（文档契约，哨兵 MAX_SAFE_INTEGER）；>0 = nowMs + ttlMs */
+function expiryOf(ttlMs: number, nowMs: number): number {
+  return ttlMs === 0 ? Number.MAX_SAFE_INTEGER : nowMs + ttlMs;
+}
+
 /**
  * 带过期时间的异步缓存包装器
  *
@@ -91,9 +96,7 @@ export async function withCached<T>(
   const p = (async () => {
     try {
       const value = await fn();
-      if (ttlMs > 0) {
-        _cache.set(fullKey, { value, expiryMs: now + ttlMs });
-      }
+      _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, now) });
       return value;
     } catch (e) {
       // 失败不写入缓存——下次调用仍会重试 fn()
@@ -123,7 +126,7 @@ async function refreshInBackground<T>(
 ): Promise<T> {
   try {
     const value = await fn();
-    _cache.set(fullKey, { value, expiryMs: Date.now() + ttlMs });
+    _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
     dbg("cache", `[refresh] ${fullKey} 刷新成功`);
     return value;
   } catch (e) {

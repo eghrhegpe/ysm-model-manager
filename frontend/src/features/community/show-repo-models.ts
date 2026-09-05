@@ -11,6 +11,13 @@ import type { WorkshopModel } from "./render.ts";
 import { countMissing, renderRepoHeaderHTML } from "./render.ts";
 
 /**
+ * 模块级仓库渲染代际 token：每次 showRepoModels 调用递增，await 后若已被更新
+ * 调用超越（快速切换仓库乱序）则丢弃过期结果。原实现用函数局部 `_currentRepo`
+ * 在入口处赋值为 repo，`_currentRepo !== repo` 恒为 false——防竞态守卫是死代码。
+ */
+let _repoRenderGen = 0;
+
+/**
  * 显示 GitHub 仓库模型列表（比对本地已有文件）
  * 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRepoEvents
  *
@@ -38,9 +45,8 @@ export async function showRepoModels(
   rtype?: string,
 ): Promise<void> {
   const effectiveRtype = rtype || currentRepoType();
-  // _currentRepo 检测过时的异步响应（防快速切换乱序覆盖）
-  let _currentRepo = "";
-  _currentRepo = repo;
+  // 代际守卫：每次调用递增模块级 token，await 后若有更新调用则丢弃过期结果
+  const myGen = ++_repoRenderGen;
 
   // 加载本地仓库已有文件列表 + 镜像配置
   const localMap = new Map<string, string>();
@@ -66,7 +72,7 @@ export async function showRepoModels(
     // 加载失败不影响列表显示，但本地哈希对比会静默失效（「已安装」判断降级）——留痕
     console.warn("[community] 本地扫描失败，已安装对比降级:", e);
   }
-  if (_currentRepo !== repo) return; // 已切换仓库，丢弃过期结果
+  if (myGen !== _repoRenderGen) return; // 已有更新调用，丢弃过期结果
 
   // 下载 URL 统一用 raw 前缀：Go 端 downloadFileWithQueue 按 LoadAppConfig().Mirror
   // 重排 raw/jsd/api 顺序（jsdelivr 直通会令 ResolveSavePath 解析失败、回退失效、子目录被扁平化）
@@ -88,7 +94,7 @@ export async function showRepoModels(
 
   const missingCount = countMissing(models, localMap);
 
-  if (_currentRepo !== repo) return; // 已切换，丢弃
+  if (myGen !== _repoRenderGen) return; // 已有更新调用，丢弃
   searchResults.innerHTML = renderRepoHeaderHTML({
     esc,
     repo,
@@ -107,7 +113,7 @@ export async function showRepoModels(
       dbg("repo-events", "清理旧仓库事件失败:", (e as Error)?.message);
     }
   }
-  if (_currentRepo !== repo) return; // 清理期间已切换，丢弃
+  if (myGen !== _repoRenderGen) return; // 清理期间已有更新调用，丢弃
 
   // 委托 bindRepoEvents 管理所有事件 + 内部状态 (showAll/selectedSet/renderList)
   const { renderList, cleanup } = bindRepoEvents(searchResults, {

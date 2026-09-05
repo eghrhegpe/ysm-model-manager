@@ -282,6 +282,38 @@ describe("showBatchRenameDialog — 替换模式", () => {
     const preview = dlg.querySelector("#br-preview") as HTMLElement;
     expect(preview.innerHTML).toContain("[A]foo.ysm");
   });
+
+  it("预设 0（移除年份）→ find 保留 \\d，实际移除 YYYY-MM 段（反斜杠回归）", async () => {
+    const dlg = openReplace([{ Name: "foo2024-01.ysm" }]);
+    const preset = dlg.querySelectorAll(".br-preset")[0] as HTMLElement;
+    preset.click();
+    const find = dlg.querySelector("#br-find") as HTMLInputElement;
+    expect(find.value).toBe("(\\d{4}-\\d{2})"); // 反斜杠未被模板字符串吞掉
+    const preview = dlg.querySelector("#br-preview") as HTMLElement;
+    expect(preview.innerHTML).toContain("foo.ysm");
+    // 新名已移除年份（旧名 foo2024-01.ysm 仍作对比展示，故断言 .br-name-new 而非整体 innerHTML）
+    const newName = preview.querySelector(".br-name-new") as HTMLElement;
+    expect(newName.textContent).toBe("foo.ysm");
+    expect(newName.textContent).not.toContain("2024");
+  });
+
+  it("预设 1（移除版本号）→ find 保留 \\d", async () => {
+    const dlg = openReplace([{ Name: "x.ysm" }]);
+    const preset = dlg.querySelectorAll(".br-preset")[1] as HTMLElement;
+    preset.click();
+    const find = dlg.querySelector("#br-find") as HTMLInputElement;
+    expect(find.value).toBe("-v\\d+(?=.)");
+  });
+
+  it("预设 4（空格转下划线）→ find 保留 \\s，实际替换空白为 _", async () => {
+    const dlg = openReplace([{ Name: "my model.ysm" }]);
+    const preset = dlg.querySelectorAll(".br-preset")[4] as HTMLElement;
+    preset.click();
+    const find = dlg.querySelector("#br-find") as HTMLInputElement;
+    expect(find.value).toBe("\\s+");
+    const preview = dlg.querySelector("#br-preview") as HTMLElement;
+    expect(preview.innerHTML).toContain("my_model.ysm");
+  });
 });
 
 describe("showBatchRenameDialog — 应用失败与单例收尾", () => {

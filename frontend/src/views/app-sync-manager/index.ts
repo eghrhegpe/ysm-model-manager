@@ -53,9 +53,12 @@ export interface SyncManagerSelf {
   innerHTML: string;
   querySelector(sel: string): HTMLElement | null;
   querySelectorAll(sel: string): NodeList;
+  /** 容器级事件委托挂载点（绑定在组件根 light DOM，render 重建后无需重绑） */
+  addEventListener(type: "click", listener: (e: Event) => void): void;
+  removeEventListener(type: "click", listener: (e: Event) => void): void;
 }
 
-import { bindEvents } from "./events.ts";
+import { bindDelegatedEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
 import { render } from "./renderer.ts";
 import { _lastSelectedType, setLastSelectedType } from "./state.ts";
@@ -140,6 +143,19 @@ export class AppSyncManager extends WebComponentBase {
       this._unsubs.forEach((fn) => fn());
       this._unsubs = [];
     }
+
+    // 一次性容器级事件委托（render 重建 DOM 后无需重绑，消除并发 _doRender 双绑竞态）
+    this._unsubs.push(
+      bindDelegatedEvents(self, {
+        doRender: () => this._doRender(),
+        doPerformOp: (op, path) =>
+          performSingleOp(self, op, path, {
+            doLoadData: () => loadData(self),
+            doRender: () => this._doRender(),
+            doEmitStats: () => bus.emit("stats:refresh"),
+          }),
+      }),
+    );
 
     await loadTypeConfig(self);
     await loadData(self);
@@ -226,26 +242,12 @@ export class AppSyncManager extends WebComponentBase {
     this._unsubs.push(unsubSubdir);
   }
 
-  /** 渲染 + 事件绑定的统一入口（供 _init 和 stats:refresh 复用） */
+  /** 渲染统一入口（供 _init 和 stats:refresh 复用） */
   private _doRender(): void {
     const self = this as unknown as SyncManagerSelf;
-    const doLoadData = () => loadData(self);
-    const doEmitStats = () => bus.emit("stats:refresh");
-
-    // render 已改为 async（内部 await renderList，确保列表 HTML 就绪后再绑事件）
-    render(self)
-      .then(() => {
-        bindEvents(self, {
-          doRender: () => this._doRender(),
-          doPerformOp: (op, path) =>
-            performSingleOp(self, op, path, {
-              doLoadData,
-              doRender: () => this._doRender(),
-              doEmitStats,
-            }),
-        });
-      })
-      .catch((e) => console.error("[sync-manager] render 失败:", e));
+    // render 是 async（内部 await renderList）；事件已由 _init 一次性委托绑定，
+    // render 重建 DOM 后无需重绑（原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
+    render(self).catch((e) => console.error("[sync-manager] render 失败:", e));
   }
 }
 

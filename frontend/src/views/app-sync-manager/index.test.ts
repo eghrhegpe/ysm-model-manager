@@ -692,4 +692,47 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     expect(el.querySelector('[data-path="folder/a.ysm"]')).toBeNull();
     unmountElement(el);
   });
+
+  it("并发 _doRender → 事件委托只绑一次：点目录行一次只翻转一次（双绑竞态回归）", async () => {
+    const el = document.createElement("app-sync-manager");
+    el.setAttribute("instance", "test");
+    document.body.appendChild(el);
+    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+
+    const self = el as unknown as {
+      _selectedType: string;
+      _allItems: SyncItem[];
+      _filteredItems: SyncItem[];
+      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _dirOpen: Record<string, boolean>;
+      _filesRoots: Record<string, string>;
+      _doRender: () => void;
+    };
+    self._selectedType = "ysm";
+    self._typeConfig = [{ id: "ysm", dirLevelSync: true }];
+    self._allItems = [
+      { path: "模型A", name: "模型A", status: "synced", type: "ysm", icon: "📁", size: 0, isDir: true, children: [
+        { path: "模型A/a.ysm", name: "a.ysm", status: "synced", type: "ysm", icon: "💎", size: 10, isDir: false },
+      ] },
+    ];
+    self._filteredItems = self._allItems;
+    self._filesRoots = { ysm: "/repo" };
+    self._dirOpen = {};
+
+    // 模拟并发：连续两次 _doRender（原 bindEvents 每次 render 后全量重绑 → 双绑）
+    self._doRender();
+    self._doRender();
+    await sleep(200);
+
+    const dir = el.querySelector(".sm-dir") as HTMLElement;
+    expect(dir).toBeTruthy();
+    expect(el.querySelectorAll(".sm-file").length).toBe(0); // 初始折叠
+
+    // 点击一次：委托只触发一次翻转 → 展开（若双绑「点一次=翻转两次」会折回折叠）
+    dir.click();
+    await sleep(200);
+    expect(el.querySelectorAll(".sm-file").length).toBe(1);
+    expect(el.querySelector(".sm-dir .sm-dir-arrow")?.textContent).toBe("▾");
+    unmountElement(el);
+  });
 });

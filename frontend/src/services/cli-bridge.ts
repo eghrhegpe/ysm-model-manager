@@ -65,6 +65,13 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
       const app = await getApp();
       const raw = await app.GetAllowedCLICommands();
       const list: string[] = JSON.parse(raw);
+      if (!list.length) {
+        // 后端返回空列表 = 注册表异常（正常 39 命令，空集只可能来自故障/版本漂移）：
+        // 不缓存空集——否则 isCommandAllowed 对所有命令恒 false，整会话 CLI 锁死
+        //（not_supported）。与 catch 分支同语义：回退硬编码列表，下次调用重新拉取。
+        dynamicFetchPromise = null;
+        return new Set(ALLOWED_CLI_COMMANDS);
+      }
       cachedDynamicCommands = new Set(list);
       return cachedDynamicCommands;
     } catch {

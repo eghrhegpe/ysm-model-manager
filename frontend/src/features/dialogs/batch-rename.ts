@@ -149,11 +149,11 @@ function dgBrGenHTML(dir: string, items: BatchItem[]): string {
   </label>
   <button id="br-presets" class="dlg-btn-accent">📋 ${t("dialog.presets")}</button>
   <div id="br-presets-menu" class="dlg-presets-menu">
-    <div class="br-preset dlg-preset-chip" data-find="(d{4}-d{2})" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveYear")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="-vd+(?=.)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveVersion")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveYear")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveVersion")}</div>
     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">${t("dialog.presetBrackets")}</div>
     <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 ${t("dialog.presetFlatten")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="s+" data-replace="_" data-regex="1">🔗 ${t("dialog.presetSpaceUnderscore")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">🔗 ${t("dialog.presetSpaceUnderscore")}</div>
   </div>
 </div>
 <div id="br-preview" class="dlg-preview"></div>

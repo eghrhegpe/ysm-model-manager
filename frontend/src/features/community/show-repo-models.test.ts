@@ -4,6 +4,7 @@
 // 的 modal/下载队列/虚拟列表重 import 链）与 dbg；currentRepoType 状态外提 mock。
 // render.ts 的 countMissing / renderRepoHeaderHTML 走真实实现（断言 innerHTML 实际产物）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { waitFor } from "../../test-utils/index.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import type { WorkshopModel } from "./render.ts";
@@ -264,5 +265,33 @@ describe("showRepoModels", () => {
     const opts2 = bindRepoEventsMock.mock.calls[0][1] as { backToSite: () => void };
     opts2.backToSite();
     expect(setCurrentSite).not.toHaveBeenCalled();
+  });
+
+  it("快速切换仓库 → 旧异步响应完成后被代际守卫丢弃（不覆盖新仓库）", async () => {
+    const app = makeApp();
+    app.LoadAppConfig.mockResolvedValue({ mirror: "" });
+    app.GetRepoRoot.mockResolvedValue("/repo/root");
+    // 第一次扫描挂起，制造在途窗口；第二次走默认 resolved([])
+    let resolveFirst!: (v: Array<{ Name: string; Hash: string }> | null) => void;
+    app.ScanModelEntriesWithLabel
+      .mockImplementationOnce(() => new Promise((r) => (resolveFirst = r)))
+      .mockResolvedValue([]);
+    makeRenderList();
+    const { run } = setup();
+
+    // 第一次（repoA）：挂起在本地扫描
+    const first = run({ repo: "user/repoA", rtype: "ysm" });
+    await waitFor(() => expect(app.ScanModelEntriesWithLabel.mock.calls.length).toBe(1));
+
+    // 第二次（repoB）：完整走完，绑定 repoB
+    await run({ repo: "user/repoB", rtype: "ysm" });
+    expect(bindRepoEventsMock).toHaveBeenCalledTimes(1);
+    expect(bindRepoEventsMock.mock.calls[0][1].repo).toBe("user/repoB");
+
+    // 第一次扫描完成 → 代际守卫丢弃，不得再绑定 repoA（不覆盖 repoB）
+    resolveFirst([{ Name: "A.ysm", Hash: "ha" }]);
+    await first;
+    expect(bindRepoEventsMock).toHaveBeenCalledTimes(1);
+    expect(bindRepoEventsMock.mock.calls[0][1].repo).toBe("user/repoB");
   });
 });

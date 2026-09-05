@@ -254,6 +254,41 @@ describe("CLI Bridge - 动态白名单", () => {
     expect(retry.status).toBe("success");
     expect(mockApp.ExecuteCLI).toHaveBeenCalledWith("new-cmd", {});
   });
+
+  it("后端返回空列表 → 视为拉取失败（不缓存空集锁死），回退硬编码，后端恢复后重新拉取", async () => {
+    // 独立 mock 状态
+    vi.mocked(getApp).mockReset();
+
+    // 第一次：后端异常返回空列表 []（注册表正常为 39 命令，空列表只可能来自故障）
+    const emptyApp = {
+      GetAllowedCLICommands: vi.fn().mockResolvedValue(JSON.stringify([])),
+      ExecuteCLI: vi.fn().mockResolvedValue(
+        JSON.stringify({ status: "success", command: "search", data: {} }),
+      ),
+    } as unknown as AppBindings;
+    vi.mocked(getApp).mockResolvedValue(emptyApp);
+
+    // 空列表不得锁死：硬编码命令 search 应放行（回退硬编码列表，与拉取失败同语义）
+    const result = await executeCLI("search");
+    expect(result.status).toBe("success");
+    expect(emptyApp.ExecuteCLI).toHaveBeenCalledWith("search", {});
+
+    // 不持久化空集缓存：后端恢复后，下次调用重新拉取动态列表，新命令放行
+    vi.mocked(getApp).mockReset();
+    const healthyApp = {
+      GetAllowedCLICommands: vi.fn().mockResolvedValue(
+        JSON.stringify(["new-cmd", "search"]),
+      ),
+      ExecuteCLI: vi.fn().mockResolvedValue(
+        JSON.stringify({ status: "success", command: "new-cmd", data: {} }),
+      ),
+    } as unknown as AppBindings;
+    vi.mocked(getApp).mockResolvedValue(healthyApp);
+
+    const retry = await executeCLI("new-cmd");
+    expect(retry.status).toBe("success");
+    expect(healthyApp.ExecuteCLI).toHaveBeenCalledWith("new-cmd", {});
+  });
 });
 
 describe("CLI Bridge - 便捷方法", () => {

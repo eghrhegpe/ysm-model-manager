@@ -23,6 +23,19 @@ describe("withCached", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("ttl=0 → 永不过期（文档契约）：多次调用命中缓存，fn 只执行一次", async () => {
+    const fn = vi.fn(async () => "v1");
+    await withCached("zero-ttl-key", 0, fn);
+    // 契约「0 = 永不过期」→ 第二次调用应命中缓存（若实现为「0=不缓存」则 fn 二次执行）
+    const result = await withCached("zero-ttl-key", 0, fn);
+    expect(result).toBe("v1");
+    expect(fn).toHaveBeenCalledTimes(1);
+    // STALE 后台刷新路径也应遵守永不过期（refreshInBackground 不因 ttl=0 立即过期）
+    const stale = await withCached("zero-ttl-key", 0, fn, "STALE");
+    expect(stale).toBe("v1");
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it("ttl 过期后重新调用 fn", async () => {
     const fn = vi.fn(async (x: number) => x * 2);
     await withCached("ttl-key", 10, () => fn(1), "NORMAL");

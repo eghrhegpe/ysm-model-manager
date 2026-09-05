@@ -35,16 +35,30 @@ let _globalAnimId = 0;
 const _globalPerFrames: Array<(dt: number) => void> = [];
 /** 上次 perFrame 告警时间戳（节流用） */
 let _lastPerFrameWarnTs = 0;
+/** perFrame 快照缓存（dirty 重建）：注册表变更才分配，rAF 热路径零分配（R1-P1-1） */
+let _perFrameSnapshot: Array<(dt: number) => void> | null = null;
+let _perFramesDirty = true;
 
 /** 注册 perFrame 回调（setPerFrame 统一入口的落点） */
 export function registerPerFrame(f: (dt: number) => void): void {
   _globalPerFrames.push(f);
+  _perFramesDirty = true;
 }
 
 /** 注销 perFrame 回调（setPerFrame 换回调 / unloadModel / fullCleanup 用） */
 export function removePerFrame(f: (dt: number) => void): void {
   const idx = _globalPerFrames.indexOf(f);
   if (idx >= 0) _globalPerFrames.splice(idx, 1);
+  _perFramesDirty = true;
+}
+
+/** 取本次帧迭代快照：仅注册表变更时重建（每帧 spread 会无条件分配，见 animate 注释） */
+function perFrameIterable(): Array<(dt: number) => void> {
+  if (_perFramesDirty || _perFrameSnapshot === null) {
+    _perFrameSnapshot = [..._globalPerFrames];
+    _perFramesDirty = false;
+  }
+  return _perFrameSnapshot;
 }
 
 /** 所有 session 的 perFrame 清空后停 rAF（fullCleanup 尾部调用） */
@@ -59,6 +73,9 @@ export function stopIfIdle(): void {
 export function resetLoopState(): void {
   _globalAnimId = 0;
   _globalPerFrames.length = 0;
+  // 快照缓存随注册表清空失效（防 stale 快照残留到下次 loop）
+  _perFrameSnapshot = null;
+  _perFramesDirty = true;
 }
 
 /**
@@ -114,9 +131,11 @@ export function startGlobalRenderLoop(
       move: _move,
     });
     // 驱动所有 session 的 perFrame 回调
-    // 快照迭代（[..._globalPerFrames]）：回调内若触发 removePerFrame（卸载/切换时序，
-    // splice 活数组），迭代会跳元素或漏执行——快照隔离本次帧的注册表，增删下一帧生效
-    for (const fn of [..._globalPerFrames]) {
+    // 快照迭代（perFrameIterable）：回调内若触发 removePerFrame（卸载/切换时序，
+    // splice 活数组），迭代会跳元素或漏执行——快照隔离本次帧的注册表，增删下一帧
+    // 生效。快照仅注册表变更时重建（dirty 标志），避免每帧无条件 spread 分配——
+    // 对齐本文件「rAF 每帧复用实例，避免 GC 分配」纪律（code_review adc88661）
+    for (const fn of perFrameIterable()) {
       const pfStart = performance.now();
       try {
         fn(dt);

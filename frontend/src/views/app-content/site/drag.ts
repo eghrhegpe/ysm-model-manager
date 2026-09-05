@@ -8,6 +8,21 @@ import type { LocalCreatorLike } from "../site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 
 /**
+ * 合并结果归一化：Go/Wails 绑定按 (added, updated) 双值返回时解构元组，
+ * 旧单值形态（仅 added）兜底 updated=0——兼容两种返回形态，两分支复用
+ *（code_review 0d454160 #9：原创作者/站点分支逐字重复，提取公共 helper）。
+ */
+function normalizeMergeCounts(result: [number, number] | number): {
+  added: number;
+  updated: number;
+} {
+  if (Array.isArray(result)) {
+    return { added: result[0], updated: result[1] };
+  }
+  return { added: result, updated: 0 };
+}
+
+/**
  * 绑定拖拽 JSON 导入事件：创作者 JSON / 站点 JSON 识别 + 合并。
  * 仅在 wsEditModeRef.v 编辑模式下渲染 drop-zone，故内部判断编辑态。
  */
@@ -70,14 +85,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           dropZone.textContent = t("content.mergingCreators");
           const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } = await getApp();
           const result = await MergeWorkshopCreatorsFromJSON(text);
-          let added: number, updated: number;
-          if (Array.isArray(result)) {
-            added = result[0];
-            updated = result[1];
-          } else {
-            added = result;
-            updated = 0;
-          }
+          const { added, updated } = normalizeMergeCounts(result as [number, number] | number);
           // 刷新内存中的 allCreators
           const fresh = (await LoadWorkshopCreators()) || [];
           allCreators.length = 0;
@@ -93,16 +101,15 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           dropZone.textContent = t("content.mergingSites");
           const { MergeWorkshopSitesFromJSON, DefaultWorkshopSites } = await getApp();
           const result = await MergeWorkshopSitesFromJSON(text);
-          let added: number, updated: number;
-          if (Array.isArray(result)) {
-            added = result[0];
-            updated = result[1];
-          } else {
-            added = result;
-            updated = 0;
-          }
+          const { added, updated } = normalizeMergeCounts(result as [number, number] | number);
           // 刷新内存中的 allSites（DefaultWorkshopSites 读用户配置优先——Go 已落盘合并结果）
-          const fresh = (await DefaultWorkshopSites()) || [];
+          const fresh = await DefaultWorkshopSites();
+          // null/空守卫：合并已落盘但刷新源异常（binding 缺实现/返回 null）时不得把
+          // 视图清空成静默假成功——抛错进 catch 走「导入失败」反馈，保现有列表
+          //（code_review 0d454160 #8：`|| []` 会在 null 时把整个站点列表清空）
+          if (!Array.isArray(fresh) || fresh.length === 0) {
+            throw new Error(t("content.refreshSitesFailed"));
+          }
           allSites.length = 0;
           allSites.push(...(fresh as WorkshopSite[]));
           busRef.emit("toast:show", {
@@ -115,7 +122,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
         }
       } catch (e) {
         busRef.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, t("content.importFailed")),
+          msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
           duration: 4000,
           type: "error",
         });

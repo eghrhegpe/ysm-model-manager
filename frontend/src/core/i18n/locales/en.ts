@@ -537,6 +537,7 @@ export const en: Record<string, string> = {
   "content.creatorMergeResult": "✅ Creators: {added} added, {updated} updated",
   "content.mergingSites": "⏳ Merging sites…",
   "content.siteMergeResult": "✅ Sites: {added} added, {updated} updated",
+  "content.refreshSitesFailed": "Site merge saved, but refreshing the site list failed",
   "content.jsonUnrecognized": "Unrecognized JSON structure",
   "content.searchFor": "Search: {name}",
   "content.browseRepoFull": "📦 Browse Repository",

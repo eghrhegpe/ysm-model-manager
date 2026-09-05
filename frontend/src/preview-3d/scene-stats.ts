@@ -26,7 +26,9 @@ export interface SceneStats {
   triangleCount: number;
   /** 材质数（按实例去重） */
   materialCount: number;
-  /** 纹理数（按 map 实例去重） */
+  /** 纹理数（按贴图实例去重；口径 = 九贴图槽 ALL_TEXTURE_KEYS——map/emissiveMap/
+   *  normalMap/roughnessMap/metalnessMap/aoMap/lightMap/alphaMap/envMap，
+   *  与 mesh.disposeMaterial 一致，非旧「仅 map」口径） */
   textureCount: number;
   /** 表情数（morphTargetInfluences 最长网格的通道数） */
   morphCount: number;

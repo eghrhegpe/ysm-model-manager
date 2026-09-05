@@ -471,10 +471,10 @@
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 44 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 85 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 108 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 117 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 59 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 93 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 115 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 124 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 108 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 132 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 139 |

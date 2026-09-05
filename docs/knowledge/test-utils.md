@@ -7,6 +7,7 @@ source_files:
   - frontend/src/test-utils/
 auto_fields:
   symbols_with_lines:
+    - appFn
     - BlobUrlStubs
     - deriveTestIds
     - expectContainsAtLeast
@@ -26,6 +27,7 @@ auto_fields:
     - getByTestId
     - jpgBytes
     - MenuDefLike
+    - mockAppMethods
     - mountCustomElement
     - pngBytes
     - queryAllByTestId

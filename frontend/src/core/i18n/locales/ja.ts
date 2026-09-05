@@ -538,6 +538,7 @@ export const ja: Record<string, string> = {
   "content.creatorMergeResult": "✅ クリエイター: 追加 {added}、更新 {updated}",
   "content.mergingSites": "⏳ サイトをマージ中…",
   "content.siteMergeResult": "✅ サイト: 追加 {added}、更新 {updated}",
+  "content.refreshSitesFailed": "サイト統合は保存されましたが、サイト一覧の更新に失敗しました",
   "content.jsonUnrecognized": "認識できない JSON 構造です",
   "content.searchFor": "検索: {name}",
   "content.browseRepoFull": "📦 リポジトリを参照",

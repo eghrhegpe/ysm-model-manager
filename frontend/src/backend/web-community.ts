@@ -357,6 +357,7 @@ export const webCommunityBindings = {
       // 与 Go 31d30fb7 #1 修复后语义一致：全新用户导入不抹默认站
       const existing = loadWebSites();
       const existMap = new Map<string, number>();
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       existing.forEach((s, i) => existMap.set(s.id, i));
       let added = 0;
       let updated = 0;

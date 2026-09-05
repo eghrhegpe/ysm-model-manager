@@ -353,7 +353,8 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 // 一次 Load 磁盘最新全量（不依赖前端可能 stale 的会话副本）→ 逐条并入 → 单次
 // SaveWorkshopSites（fsutil.WriteFileAtomic）。写入前 sites 轻备份（同 creators 的
 // BackupWorkshopCreators 语义，全新用户无用户配置时跳过不中止）。
-// 返回 (added, updated, error)；added = 新增站点数，updated = 覆盖更新数。
+// 返回 (added, updated)；added = 新增站点数，updated = 覆盖更新数。出错以
+// error 返回（Wails 映射为 promise rejection），不混入元组。
 func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
 	var imported []types.WorkshopSite
 	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {

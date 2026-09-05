@@ -542,6 +542,7 @@ export const zhCN = {
   "content.creatorMergeResult": "✅ 创作者: 新增 {added}，更新 {updated}",
   "content.mergingSites": "⏳ 正在合并站点…",
   "content.siteMergeResult": "✅ 站点: 新增 {added}，更新 {updated}",
+  "content.refreshSitesFailed": "站点合并已保存，但刷新站点列表失败",
   "content.jsonUnrecognized": "JSON 结构无法识别",
   "content.searchFor": "搜索: {name}",
   "content.browseRepoFull": "📦 浏览仓库",

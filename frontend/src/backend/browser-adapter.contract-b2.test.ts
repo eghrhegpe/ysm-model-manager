@@ -300,3 +300,46 @@ describe("B2 契约：LoadGitHubRepos — 覆盖层（已对齐 Go 用户配置�
     expect(r[0].type).toBe("github");
   });
 });
+
+// ===== 站点 JSON 手动导入契约（drag.ts 站点分支消费，31d30fb7 桌面下沉双轨收口）=====
+// code_review 0d454160 P2 补测试：桌面下沉只补了 Wails binding，web 桥漏补
+// MergeWorkshopSitesFromJSON 使浏览器端拖入抛 "not a function"（旧 SaveWorkshopSites
+// 整存链被替换后无替代）。语义镜像 Go MergeWorkshopSitesFromJSON + 本地 creators
+// 合并骨架：id 命中 → 覆盖（updated），未命中 → 追加（added），空净化拒绝，
+// 合并结果须落 2-100 合法域，写入 WEB_SITES_KEY 覆盖层。
+describe("B2 契约：MergeWorkshopSitesFromJSON（站点手动导入 web 桥）", () => {
+  it("覆盖层为空时以 bundled 默认站为基准，id 命中覆盖 / 未命中追加", async () => {
+    localStorage.removeItem(WEB_SITES_KEY);
+    // bundled 默认站中应含 bilibili；构造 1 命中覆盖 + 1 追加
+    const siteA = { id: "bilibili", label: "B站改", url: "https://www.bilibili.com/" };
+    const siteB = { id: "custom-1", label: "自定义站", url: "https://custom.test" };
+    const [added, updated] = (await browserAdapter.MergeWorkshopSitesFromJSON(
+      JSON.stringify([siteA, siteB]),
+    )) as [number, number];
+    expect(added).toBe(1);
+    expect(updated).toBe(1);
+    const got = (await browserAdapter.DefaultWorkshopSites()) as Array<{
+      id: string;
+      label: string;
+    }>;
+    // bundled 默认站全保留 + custom-1 追加
+    expect(got.find((s) => s.id === "bilibili")?.label).toBe("B站改");
+    expect(got.find((s) => s.id === "custom-1")).toBeDefined();
+    expect(got.find((s) => s.id === "github")).toBeDefined(); // 默认站未被抹掉
+  });
+
+  it("无有效站点（净化后空）拒绝且不写覆盖层", async () => {
+    const before = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
+    const beforeLen = before.length;
+    await expect(
+      browserAdapter.MergeWorkshopSitesFromJSON(JSON.stringify([{ label: "无 id" }])),
+    ).rejects.toThrow();
+    const after = (await browserAdapter.DefaultWorkshopSites()) as Array<{ id: string }>;
+    expect(after.length).toBe(beforeLen); // 未写入
+  });
+
+  it("非 JSON / 非数组输入拒绝", async () => {
+    await expect(browserAdapter.MergeWorkshopSitesFromJSON("not-json")).rejects.toThrow();
+    await expect(browserAdapter.MergeWorkshopSitesFromJSON('{"a":1}')).rejects.toThrow();
+  });
+});

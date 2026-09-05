@@ -34,7 +34,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
     ? ""
     : `<div class="stg-card" style="animation-delay:60ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-        <span class="label" style="font-size:13px;font-weight:600">🔗 ${t("settings.links.title")}</span>
+        <label for="set-link-mode" class="label" style="font-size:13px;font-weight:600">🔗 ${t("settings.links.title")}</label>
         <button id="set-relink" class="btn-base sm">🔄 ${t("settings.links.reapply")}</button>
       </div>
       <div class="stg-card-body">
@@ -53,7 +53,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
     : `
     <div class="stg-card" style="animation-delay:120ms">
       <div class="stg-card-hdr">
-        <span class="label" style="font-size:13px;font-weight:600">🌐 ${t("settings.mirror.title")}</span>
+        <label for="set-mirror" class="label" style="font-size:13px;font-weight:600">🌐 ${t("settings.mirror.title")}</label>
       </div>
       <div class="stg-card-body">
         <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
@@ -181,7 +181,7 @@ function renderStgThemeAuto(): string {
   return `<!-- 自动切换：独立一栏 -->
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
   <div class="setting-row">
-    <span class="label">🕐 ${t("settings.theme.autoTitle")}</span>
+    <label for="theme-auto" class="label">🕐 ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
       <option value="off">${t("settings.theme.autoOff")}</option>
       <option value="system">${t("settings.theme.autoSystem")}</option>
@@ -197,7 +197,7 @@ function renderStgFontFamily(): string {
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">📏 ${t("settings.fontSize")}</span>
+      <label for="set-font-size" class="label" style="font-size:13px;font-weight:600">📏 ${t("settings.fontSize")}</label>
     </div>
     <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
       <option value="small">🔹 ${t("settings.fontSize.small")}</option>
@@ -214,7 +214,7 @@ function renderStgFontFamily(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">🃏 ${t("settings.font.creatorFont")}</span>
+      <label for="set-display-font" class="label" style="font-size:13px;font-weight:600">🃏 ${t("settings.font.creatorFont")}</label>
     </div>
     <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="kaiti" selected>🖌️ ${t("settings.font.kaiti")}</option>
@@ -225,7 +225,7 @@ function renderStgFontFamily(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">💳 ${t("settings.density")}</span>
+      <label for="set-card-density" class="label" style="font-size:13px;font-weight:600">💳 ${t("settings.density")}</label>
     </div>
     <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>📦 ${t("settings.density.compact")}</option>
@@ -241,7 +241,7 @@ function renderStgAnimDefault(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:180ms">
   <div class="setting-row">
-    <span class="label">✨ ${t("settings.animation.enable")}</span>
+    <label for="set-animations" class="label">✨ ${t("settings.animation.enable")}</label>
     <label class="stg-label" style="gap:8px">
       <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
     </label>
@@ -251,7 +251,7 @@ function renderStgAnimDefault(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:210ms">
   <div class="setting-row">
-    <span class="label">🏠 ${t("settings.defaultPage")}</span>
+    <label for="set-default-page" class="label">🏠 ${t("settings.defaultPage")}</label>
     <select id="set-default-page" class="stg-select">
       <option value="instances">🎮 ${t("settings.defaultPage.instances")}</option>
       <option value="workshop">🎨 ${t("settings.defaultPage.workshop")}</option>
@@ -267,7 +267,7 @@ function renderStgPreview3d(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:240ms">
   <div class="setting-row">
-    <span class="label">🎥 ${t("settings.preview3d.camSpeed")}</span>
+    <label for="td-camspeed" class="label">🎥 ${t("settings.preview3d.camSpeed")}</label>
     <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
     <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">20</span>
   </div>
@@ -276,7 +276,7 @@ function renderStgPreview3d(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:270ms">
   <div class="setting-row">
-    <span class="label">🔄 ${t("settings.preview3d.rotMode")}</span>
+    <label for="td-rotmode" class="label">🔄 ${t("settings.preview3d.rotMode")}</label>
     <select id="td-rotmode" class="stg-select" style="width:auto">
       <option value="orbit">${t("settings.preview3d.orbit")}</option>
       <option value="free">${t("settings.preview3d.free")}</option>

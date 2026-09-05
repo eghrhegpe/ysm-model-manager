@@ -21,7 +21,32 @@ class ContextMenu extends WebComponentBase {
     this._docClick = (): void => this.hide();
     this._docCtx = (): void => this.hide();
     this._docKeydown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") this.hide();
+      if (e.key === "Escape") {
+        this.hide();
+        return;
+      }
+      const menu = this.shadowRoot?.getElementById("menu");
+      if (!menu || this.style.display === "none") return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const items = Array.from(menu.querySelectorAll<HTMLElement>(".item")).filter(
+          (el) => el.style.display !== "none",
+        );
+        if (items.length === 0) return;
+        const active = document.activeElement as HTMLElement | null;
+        const current = items.indexOf(active as HTMLElement);
+        let next: number;
+        if (e.key === "ArrowDown") {
+          next = current < 0 ? 0 : (current + 1) % items.length;
+        } else {
+          next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;
+        }
+        items[next]?.focus();
+      }
+      if (e.key === "Enter") {
+        const active = document.activeElement as HTMLElement | null;
+        if (active?.classList.contains("item")) active.click();
+      }
     };
   }
 
@@ -83,7 +108,7 @@ class ContextMenu extends WebComponentBase {
         @keyframes menuPop { 0% { opacity: 0; transform: scale(.85) translateY(-6px); } 60% { opacity: 1; transform: scale(1.02) translateY(0); } 100% { transform: scale(1); } }
         @keyframes itemSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
       </style>
-      <div class="menu" id="menu"></div>
+      <div class="menu" id="menu" role="menu" aria-label="context menu"></div>
     `;
   }
 
@@ -108,7 +133,7 @@ class ContextMenu extends WebComponentBase {
         // filter（改文案/切 locale 即静默失效）；输出属性后定位与文案彻底解耦。
         const action = item.action ? ` data-action="${this._esc(item.action)}"` : "";
         return `
-        <div class="item ${danger}" data-testid="ctx-item" data-idx="${i}"${action} style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
+        <div class="item ${danger}" role="menuitem" tabindex="${i === 0 ? "0" : "-1"}" data-testid="ctx-item" data-idx="${i}"${action} style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
           ${icon ? `<span class="icon">${icon}</span>` : ""}
           <span>${label}</span>
         </div>
@@ -150,6 +175,9 @@ class ContextMenu extends WebComponentBase {
       if (y + mh > ih) t = Math.max(0, ih - mh);
       this.style.left = l + "px";
       this.style.top = t + "px";
+      // 焦点移到首个菜单项，启用键盘导航
+      const firstItem = menu.querySelector<HTMLElement>('[role="menuitem"]');
+      firstItem?.focus();
     });
   }
 

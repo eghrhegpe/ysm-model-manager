@@ -19,7 +19,6 @@ source_files:
   - go/fsutil/hardlink_other.go
 auto_fields:
   symbols_with_lines:
-    - CompareGlobalInstanceHashes
     - ConflictContentModified
     - ConflictReport
     - ConflictSizeMismatch
@@ -35,7 +34,6 @@ auto_fields:
     - GetInstanceStatusWith
     - GetLinkType
     - HasDotMinecraftSubdirs
-    - HasModInDirFn
     - InvalidateSyncScanCaches
     - IsHardLink
     - ListVersions

@@ -42,7 +42,7 @@
 | 渲染种类 | 归属 | 依据 |
 |---|---|---|
 | **DOM HTML 模板**（字符串拼接、内联 style、页面骨架/条目） | `views/`（沿用 §4.2 `tpl-*.ts` / `render.ts` 惯例） | `views/app-content/tpl-recycle.ts` 与 `features/maintenance/recycle-bin.ts:44` 服务同一页面却被劈成两半——模板归 views 是既有惯例，非新规 |
-| **3D/WebGL 渲染**（scene/camera/renderer/WebGL 管线） | `features/` 领域根 | ADR-129 已裁决 preview-3d 整体升格 features，**不得**以此 D1 反向回迁 |
+| **3D/WebGL 渲染**（scene/camera/renderer/WebGL 管线） | `src/preview-3d/` 顶层领域根（2026-09-05 考古订正：ADR-129 升格后又经 [ADR-138] 于 8/31 上提，已不在 `features/` 下；2D 画布三件套 model2d 已落 `views/app-preview/model2d/`） | ADR-129 总纲 + ADR-138 收尾已定，**不得**以此 D1 反向回迁 |
 
 依赖方向不变量：`features/` 永不 import `views/`（当前 0 命中，回迁时必须保持）。违反此二分的迁移（把 DOM 模板搬进 features 或把领域编排搬进 views）即为「来回迁移」的根源，禁止。
 

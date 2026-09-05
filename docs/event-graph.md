@@ -251,7 +251,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerPageStore | `frontend/src/core/page-store.ts` | 83 |
+| registerPageStore | `frontend/src/core/page-store.ts` | 86 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 148 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 

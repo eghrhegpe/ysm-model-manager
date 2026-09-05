@@ -527,3 +527,55 @@ func (a *App) MergeCommunityCreatorsFromJSON(communityJSON string) (int, int, er
 	}
 	return added, updated, a.SaveWorkshopCreators(existing)
 }
+
+// MergeCommunitySitesFromJSON 把社区站点索引（增量）并入本地 workshop_sites.json 并单次原子写回。
+// ADR-172 创作者对称：社区增量合并下沉 Go——替代前端 site edit 同步按钮的
+// TS mergeCommunitySites + SaveWorkshopSites(allSites) 整存链，解除「Go 派生结果
+// 只读」红线债务（sites 侧双轨收口）。
+//
+// 语义与 MergeWorkshopSitesFromJSON（手动全量导入，drag.ts 消费）刻意区分：
+//   - id 未命中 → 追加（社区索引只增不改，本地自定义站点不被覆盖）；
+//   - id 命中 → 跳过（用户可能改过 Label/URL，社区不覆盖）。
+//
+// 载入用 DefaultWorkshopSites（bundled 默认 + 用户配置叠加视角——社区合并的
+// "现有"应含默认站点，否则新用户会把社区里已有的默认站点重复添加）。
+// 幂等短路：无新增 → 不写盘（社区索引 6h 缓存命中后仍会转发，避免无谓原子写）。
+func (a *App) MergeCommunitySitesFromJSON(communityJSON string) (int, error) {
+	var imported []types.WorkshopSite
+	if err := json.Unmarshal([]byte(communityJSON), &imported); err != nil {
+		return 0, err
+	}
+	// 逐条净化：id 必须非空（站点唯一身份），非法元素过滤
+	cleaned := imported[:0]
+	for _, s := range imported {
+		if s.ID != "" {
+			cleaned = append(cleaned, s)
+		}
+	}
+	imported = cleaned
+	if len(imported) == 0 {
+		return 0, fmt.Errorf("社区数据为空（净化后 0 条有效站点）")
+	}
+	existing := a.DefaultWorkshopSites()
+	if existing == nil {
+		existing = []types.WorkshopSite{}
+	}
+	existMap := make(map[string]int, len(existing))
+	for i, s := range existing {
+		existMap[s.ID] = i
+	}
+	added := 0
+	for _, s := range imported {
+		if _, ok := existMap[s.ID]; ok {
+			continue // 命中跳过：不覆盖本地自定义站点
+		}
+		existing = append(existing, s)
+		existMap[s.ID] = len(existing) - 1
+		added++
+	}
+	// 幂等短路：无新增不写盘（对齐 MergeCommunityCreatorsFromJSON）
+	if added == 0 {
+		return 0, nil
+	}
+	return added, a.SaveWorkshopSites(existing)
+}

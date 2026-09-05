@@ -527,3 +527,77 @@ func TestMergeWorkshopSitesFromJSON_CorruptExistingAborts(t *testing.T) {
 		t.Errorf("损坏配置应原样保留, got %q", string(got))
 	}
 }
+
+// 社区站点合并：仅增不覆盖（id 未命中追加 / 命中跳过本地自定义）。
+func TestMergeCommunitySitesFromJSON_AddOnly(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	// 用户已有自定义站点 s1（Label 用户改过）
+	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "s1", Label: "用户自定义", URL: "https://custom"}}); err != nil {
+		t.Fatal(err)
+	}
+	// 社区索引含 s1（本地已有 → 跳过）+ s2/s3（新增）
+	community := []types.WorkshopSite{
+		{ID: "s1", Label: "社区覆盖名", URL: "https://community"}, // 不应覆盖
+		{ID: "s2", Label: "社区新站", URL: "https://s2"},
+		{ID: "s3", Label: "社区新站3", URL: "https://s3"},
+	}
+	data, _ := json.Marshal(community)
+	added, err := a.MergeCommunitySitesFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("社区合并不应失败, got %v", err)
+	}
+	if added != 2 {
+		t.Fatalf("期望 added=2（s2/s3），s1 命中跳过, got %d", added)
+	}
+	// 落盘验证：s1 保留用户自定义值（未被社区覆盖）
+	p := workshopSitesPath()
+	var got []types.WorkshopSite
+	if err := readJSONFile(p, &got); err != nil {
+		t.Fatalf("读回失败: %v", err)
+	}
+	for _, s := range got {
+		if s.ID == "s1" && s.Label != "用户自定义" {
+			t.Fatalf("s1 不应被社区覆盖, got %+v", s)
+		}
+	}
+}
+
+// 社区索引与本地全同（幂等）→ added=0，不写盘（无 .bak/无变化）。
+func TestMergeCommunitySitesFromJSON_Idempotent(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "s1", Label: "站", URL: "https://s1"}}); err != nil {
+		t.Fatal(err)
+	}
+	community := []types.WorkshopSite{{ID: "s1", Label: "站", URL: "https://s1"}}
+	data, _ := json.Marshal(community)
+	added, err := a.MergeCommunitySitesFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("幂等合并不应失败, got %v", err)
+	}
+	if added != 0 {
+		t.Fatalf("全同应 added=0（幂等短路）, got %d", added)
+	}
+}
+
+// 非法输入报错：非 JSON / 全空 id。
+func TestMergeCommunitySitesFromJSON_Invalid(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	if _, err := a.MergeCommunitySitesFromJSON("not-json"); err == nil {
+		t.Error("非 JSON 应报错")
+	}
+	if _, err := a.MergeCommunitySitesFromJSON(`[{"label":"无 id"}]`); err == nil {
+		t.Error("全空 id（净化后 0 条）应报错")
+	}
+}

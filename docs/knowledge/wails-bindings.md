@@ -84,6 +84,7 @@ auto_fields:
     - App.LoadResourceTypes
     - App.LoadWorkshopCreators
     - App.MergeCommunityCreatorsFromJSON
+    - App.MergeCommunitySitesFromJSON
     - App.MergeWorkshopCreatorsFromJSON
     - App.MergeWorkshopSitesFromJSON
     - App.MoveModelFile

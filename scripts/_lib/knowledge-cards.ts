@@ -62,5 +62,24 @@ export const PERF_TAGS = {
   'memory-heavy': '内存/显存大户（大缓冲/长驻缓存）',
 };
 
+/**
+ * CARD_STATUS — 知识卡生命周期状态受控词表（2026-09 收编：status 原是 151 卡自发
+ * 手写的野生字段，零校验零消费；现收编为正式字段，值域词表单一事实源本常量）。
+ * 语义（卡的生命周期，非决策采纳——ADR 采纳状态在 adr-status-categories.ts）：
+ *   active      当前有效，随源码演进维护
+ *   draft       起草中/未定稿（new-knowledge-card 模板默认值；定稿后改 active）
+ *   snapshot    一次性快照/报告（审计/迁移/扫描记录，不随源码演进；应配 affected: false）
+ *   archived    已归档（不再适用，留档备查）
+ *   superseded  被更新卡取代（应在正文标注取代关系）
+ * 扩展新状态只改本常量（checker/gen 自动跟上）。
+ */
+export const CARD_STATUS: Record<string, string> = {
+  active: '当前有效，随源码演进维护',
+  draft: '起草中/未定稿（模板默认；定稿后改 active）',
+  snapshot: '一次性快照/报告（应配 affected: false）',
+  archived: '已归档（不再适用，留档备查）',
+  superseded: '被更新卡取代（应在正文标注取代关系）',
+};
+
 /** 知识卡目录（供各 gen-* 脚本复用，避免各自 path.join 漂移）。 */
 export const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');

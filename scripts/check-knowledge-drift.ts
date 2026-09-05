@@ -34,7 +34,7 @@ import path from 'node:path';
 import { ROOT, walk } from './_lib/scan-files.ts';
 import { toPosix } from './_lib/to-posix.ts';
 import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
-import { PERF_TAGS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
+import { PERF_TAGS, CARD_STATUS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
 import { parseArgs } from './_lib/parse-args.ts';
 import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
 
@@ -180,6 +180,19 @@ function checkKnowledgeMeta(cards: any[]) {
       if (!PERF_ENUM.includes(t)) {
         errors.push(`知识卡 ${cf} 的 perf 标签非法: ${t}（词表见 _lib/knowledge-cards.ts PERF_TAGS: ${PERF_ENUM.join('|')}）`);
       }
+    }
+
+    // status 生命周期值域（受控词表，单一事实源 = _lib/knowledge-cards.ts CARD_STATUS；
+    // 2026-09 收编野生 status 字段——此前 151 卡自发手写、零校验零消费）
+    const statusVal = getScalar(fm, 'status');
+    if (statusVal && !(statusVal in CARD_STATUS)) {
+      errors.push(
+        `知识卡 ${cf} 的 status 非法: ${statusVal}（应为 ${Object.keys(CARD_STATUS).join('|')} 之一——词表见 _lib/knowledge-cards.ts CARD_STATUS；卡生命周期状态，非 ADR 采纳状态）`
+      );
+    }
+    // status: snapshot 必须配 affected: false（快照/报告型卡退出 --affected 匹配，AGENTS.md 口径）
+    if (statusVal === 'snapshot' && getScalar(fm, 'affected') !== 'false') {
+      warns.push(`知识卡 ${cf} 的 status: snapshot 未配 affected: false（快照/报告型卡应退出 --affected 匹配，见 AGENTS.md affected 字段语义）`);
     }
 
     // H1 vs name 一致性（WARN）

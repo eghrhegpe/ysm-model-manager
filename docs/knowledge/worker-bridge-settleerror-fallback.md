@@ -33,6 +33,7 @@ perf:
   - concurrent
 
 status: snapshot
+affected: false
 ---
 
 # worker-bridge-settleError-fallback

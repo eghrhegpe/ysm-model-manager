@@ -34,6 +34,7 @@ use_when:
   - 术语统一
   - 翻译名实不符
 status: snapshot
+affected: false
 ---
 
 # i18n 翻译准确度扫描记录

@@ -20,6 +20,7 @@ frontmatter 必填字段：`kind`（kebab-case，=文件名）/ `name`（=H1 标
 | `use_when`(≤8) / `quick_intents`(≤5) / `pitfalls` / `quick_groups` / `quick_risk_lines` / 正文 | 人工策展：用户自然语言关键词与陷阱 | 手写 | WARN |
 | `invariant_anchors`（`文件\|符号`） | 机制锚点，architecture 卡必须声明 | 手写声明 + 机器校验存在性 | ERROR 阻断 |
 | `affected: false` | 仅此值合法：快照/报告型卡退出 `--affected` 匹配 | 手写 | — |
+| `status` | 卡生命周期（受控词表 `scripts/_lib/knowledge-cards.ts` CARD_STATUS）：`active`（默认，随源码演进）/ `draft`（起草中，`new-knowledge-card.ts` 模板默认，定稿后改 active）/ `snapshot`（一次性快照/报告，**应配 `affected: false`**）/ `archived`（已归档）/ `superseded`（被取代，应在正文标注取代关系）。区别于 ADR 采纳状态（`adr-status-categories.ts`） | 手写 | 词表外 ERROR；snapshot 缺 `affected: false` WARN |
 | `perf` | 受控词表（`scripts/_lib/knowledge-cards.ts` PERF_TAGS）：cpu-bound\|io-bound\|gpu-bound\|concurrent\|single-thread\|memory-heavy | 手写 | 词表外 ERROR |
 
 ## 常用命令

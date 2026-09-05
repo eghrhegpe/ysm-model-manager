@@ -137,6 +137,7 @@ quick_intents:
   - "模型加载优化（PMX Worker 化）"
   - "缓存清理 / 限流"
 status: snapshot
+affected: false
 ---
 
 # 优化记录 optimization-log

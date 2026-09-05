@@ -31,6 +31,7 @@ kind: {kind}
 name: {name}
 tier: {tier}
 category: {category}
+status: draft
 source_files:
   - {source}
 use_when:

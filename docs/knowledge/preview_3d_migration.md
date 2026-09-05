@@ -26,6 +26,7 @@ use_when:
   - cmd 命令行限制
   - 目录归置
 status: snapshot
+affected: false
 ---
 
 # preview-3d 领域根迁移

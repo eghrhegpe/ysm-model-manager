@@ -1,7 +1,6 @@
 // ===== context-menu-handlers.ts — instance/batch handler 表（ADR-040 P1 第2轮拆分）=====
 // file/dir handler 已拆至 context-menu-file-handlers.ts / context-menu-dir-handlers.ts
 
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { tr } from "../../core/i18n/tr.ts";
@@ -12,6 +11,7 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
+import { contextMenuGetApp } from "./context-menu-deps.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
@@ -103,7 +103,7 @@ async function runBatchFileOp(
     );
     if (!resolved) return;
     const { folder, dstDir } = resolved;
-    const app = await getApp();
+    const app = await contextMenuGetApp();
     const fn = app[op.binding];
     toast(
       tr(tpl.progress, "📦 Moving {n} files to {folder}...", { n: ctx.paths.length, folder }),
@@ -165,7 +165,7 @@ export const HANDLERS = {
       return;
     }
     try {
-      const { OpenInstanceFolder } = await getApp();
+      const { OpenInstanceFolder } = await contextMenuGetApp();
       // 扁平化架构下，打开精确到 {instanceDir}（如 3d-skin）；
       // subdir 参数保留为 Wails 绑定兼容，已不参与路由
       await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
@@ -226,7 +226,7 @@ export const HANDLERS = {
         danger: true,
       });
       if (!ok2) return;
-      const { MoveToRecycle } = await getApp();
+      const { MoveToRecycle } = await contextMenuGetApp();
       let fail = 0;
       let lastErr: unknown = null;
       for (const p of ctx.paths) {

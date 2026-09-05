@@ -1,5 +1,5 @@
 // ===== context-menu-file-handlers.ts — file 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
-import { getApp } from "../../backend/app.ts";
+
 import { tr } from "../../core/i18n/tr.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { toast, toastError } from "../../utils/dom/toast.ts";
@@ -8,6 +8,7 @@ import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { modalSelect } from "../dialogs/modal-select.ts";
 import { showRenameDialog } from "../dialogs/rename.ts";
 import { modalTagEditor } from "../dialogs/tag-editor.ts";
+import { contextMenuGetApp } from "./context-menu-deps.ts";
 import type { FileCtx } from "./context-menu-handlers.ts";
 import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";
 
@@ -29,7 +30,7 @@ export const FILE_HANDLERS = {
       }
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
-      const { RenameFile } = await getApp();
+      const { RenameFile } = await contextMenuGetApp();
       await RenameFile(ctx.path || "", newName);
       refreshUI();
     } catch (e) {
@@ -49,7 +50,7 @@ export const FILE_HANDLERS = {
       );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
-      const { MoveModelFile } = await getApp();
+      const { MoveModelFile } = await contextMenuGetApp();
       await MoveModelFile(ctx.path || "", dstDir);
       toast(tr("ctx.fileMoveOk", "✅ Moved to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();
@@ -70,7 +71,7 @@ export const FILE_HANDLERS = {
       );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
-      const { CopyModelFile } = await getApp();
+      const { CopyModelFile } = await contextMenuGetApp();
       await CopyModelFile(ctx.path || "", dstDir);
       toast(tr("ctx.fileCopyOk", "✅ Copied to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();
@@ -80,7 +81,7 @@ export const FILE_HANDLERS = {
   },
   "file.push-to-pack": async (ctx) => {
     try {
-      const { LoadAppConfig, ListVersionInstances, InstallModelTo } = await getApp();
+      const { LoadAppConfig, ListVersionInstances, InstallModelTo } = await contextMenuGetApp();
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
@@ -133,7 +134,7 @@ export const FILE_HANDLERS = {
         danger: true,
       });
       if (!ok2) return;
-      const { MoveToRecycle } = await getApp();
+      const { MoveToRecycle } = await contextMenuGetApp();
       try {
         await MoveToRecycle(ctx.path || "");
         refreshUI();
@@ -146,7 +147,7 @@ export const FILE_HANDLERS = {
   },
   "file.reveal": async (ctx) => {
     try {
-      const { RevealInExplorer } = await getApp();
+      const { RevealInExplorer } = await contextMenuGetApp();
       await RevealInExplorer(ctx.path || "");
     } catch (e) {
       toastError(e, tr("ctx.revealFail", "Failed to open"));

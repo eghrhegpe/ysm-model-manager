@@ -1,10 +1,10 @@
 // ===== context-menu-dir-handlers.ts — dir 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { tr } from "../../core/i18n/tr.ts";
 import { toast, toastError } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { contextMenuGetApp } from "./context-menu-deps.ts";
 import type { DirCtx } from "./context-menu-handlers.ts";
 import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";
 
@@ -25,7 +25,7 @@ export const DIR_HANDLERS = {
       );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
-      const { MoveModelFile } = await getApp();
+      const { MoveModelFile } = await contextMenuGetApp();
       await MoveModelFile(ctx.dir || "", dstDir);
       toast(tr("ctx.dirMoveOk", "✅ Moved folder to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();
@@ -46,7 +46,7 @@ export const DIR_HANDLERS = {
       );
       if (!resolved) return;
       const { folder, dstDir } = resolved;
-      const { CopyModelFile } = await getApp();
+      const { CopyModelFile } = await contextMenuGetApp();
       await CopyModelFile(ctx.dir || "", dstDir);
       toast(tr("ctx.dirCopyOk", "✅ Copied folder to {folder}", { folder }), TOAST_MS.normal);
       refreshUI();

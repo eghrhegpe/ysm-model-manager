@@ -42,6 +42,7 @@ auto_fields:
     - ErrInvalidPath
     - ErrIO
     - ErrLinkFailed
+    - ErrMcRootNotSet
     - ErrMkdirFailed
     - ErrorCode
     - ErrUnknown

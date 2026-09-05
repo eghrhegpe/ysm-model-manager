@@ -11,11 +11,17 @@ import type { WorkshopModel } from "./render.ts";
 import { countMissing, renderRepoHeaderHTML } from "./render.ts";
 
 /**
- * 模块级仓库渲染代际 token：每次 showRepoModels 调用递增，await 后若已被更新
- * 调用超越（快速切换仓库乱序）则丢弃过期结果。原实现用函数局部 `_currentRepo`
+ * 模块级仓库渲染代际 token：每次用户请求递增，await 后若已被更新调用超越
+ *（快速切换仓库乱序）则丢弃过期结果。原实现用函数局部 `_currentRepo`
  * 在入口处赋值为 repo，`_currentRepo !== repo` 恒为 false——防竞态守卫是死代码。
+ *
+ * 代际只认「用户请求」（2026-09-05 code_review #3 收窄）：bindRepoEvents 内部
+ * doneTimer 下载完成重秀（internalRefresh=true）不 bump 代际——否则用户切到
+ * 新仓 A 的慢扫描在途期间，旧仓 B 迟到的 doneTimer 重秀会 bump 掉 A（A 永不
+ * 渲染）。内部重秀仅当目标 repo 仍是最近用户请求的 repo 才继续渲染。
  */
 let _repoRenderGen = 0;
+let _userRequestedRepo = ""; // 最近一次用户请求的 repo（workshop 单容器场景）
 
 /**
  * 显示 GitHub 仓库模型列表（比对本地已有文件）
@@ -43,10 +49,20 @@ export async function showRepoModels(
   source: string,
   searchResults: HTMLElement,
   rtype?: string,
+  internalRefresh = false,
 ): Promise<void> {
   const effectiveRtype = rtype || currentRepoType();
-  // 代际守卫：每次调用递增模块级 token，await 后若有更新调用则丢弃过期结果
-  const myGen = ++_repoRenderGen;
+  // 代际守卫：仅「用户请求」递增代际并更新目标 repo；内部 doneTimer 重秀
+  //（bindRepoEvents 下载完成回跳）不 bump——避免旧仓迟到重秀杀掉用户新切仓的
+  // 在途扫描（code_review #3）。内部重秀若目标已非最近用户请求的 repo → 直接
+  // 退出（用户已切走，旧仓刷新作废）。
+  if (internalRefresh) {
+    if (repo !== _userRequestedRepo) return; // 用户已切到别的仓，旧仓重秀作废
+  } else {
+    _userRequestedRepo = repo;
+    _repoRenderGen++;
+  }
+  const myGen = _repoRenderGen;
 
   // 加载本地仓库已有文件列表 + 镜像配置
   const localMap = new Map<string, string>();
@@ -134,6 +150,9 @@ export async function showRepoModels(
         source,
         searchResults,
         effectiveRtype,
+        // 内部 doneTimer 重秀：不 bump 代际、仅当仍是最新用户目标时才渲染
+        //（code_review #3：防止旧仓迟到重秀杀掉用户新切仓在途扫描）
+        true,
       ),
     backToSite: () => {
       if (currentSite) {

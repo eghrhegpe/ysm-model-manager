@@ -30,10 +30,26 @@ describe("withCached", () => {
     const result = await withCached("zero-ttl-key", 0, fn);
     expect(result).toBe("v1");
     expect(fn).toHaveBeenCalledTimes(1);
-    // STALE 后台刷新路径也应遵守永不过期（refreshInBackground 不因 ttl=0 立即过期）
-    const stale = await withCached("zero-ttl-key", 0, fn, "STALE");
-    expect(stale).toBe("v1");
-    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("STALE 后台刷新用 ttl=0 写回 → 刷新后仍永不过期（refreshInBackground 路径）", async () => {
+    const fn = vi.fn(async () => "v1");
+    // 先以短 ttl 种入缓存并等待过期——否则 ttl=0 条目 expiryMs=MAX_SAFE_INTEGER
+    // 永不「过期」，STALE 调用只会走缓存命中分支，refreshInBackground 永不触发
+    //（空断言陷阱：原测试在同一 ttl=0 key 上调 STALE，断言恒真但路径不可达）
+    await withCached("stale-refresh-zero-key", 10, fn);
+    await new Promise((r) => setTimeout(r, 20)); // 等待过期
+    // STALE：命中已过期条目 → 立即返回旧值并后台刷新（写回用 ttl=0 → 永不过期）
+    const stale = await withCached("stale-refresh-zero-key", 0, fn, "STALE");
+    expect(stale).toBe("v1"); // 返回旧值，不阻塞
+    // 后台刷新是异步 fire-and-forget：等一拍后 fn 应被二次调用且缓存已用 ttl=0 写回
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fn).toHaveBeenCalledTimes(2); // seed 1 次 + 后台刷新 1 次
+    // 刷新写回后仍永不过期：再过 ttl 时长仍命中（若 refresh 误用 ttl=0=不缓存则 fn 三调）
+    await new Promise((r) => setTimeout(r, 30));
+    const again = await withCached("stale-refresh-zero-key", 0, fn);
+    expect(again).toBe("v1");
+    expect(fn).toHaveBeenCalledTimes(2); // 命中，不再调 fn
   });
 
   it("ttl 过期后重新调用 fn", async () => {

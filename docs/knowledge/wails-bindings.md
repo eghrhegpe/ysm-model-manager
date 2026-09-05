@@ -85,6 +85,7 @@ auto_fields:
     - App.LoadWorkshopCreators
     - App.MergeCommunityCreatorsFromJSON
     - App.MergeWorkshopCreatorsFromJSON
+    - App.MergeWorkshopSitesFromJSON
     - App.MoveModelFile
     - App.OpenFolder
     - App.OpenInBrowser

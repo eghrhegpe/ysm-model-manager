@@ -29,6 +29,11 @@ export function bindDelegatedEvents(self: EventSelf, cb: EventCallbacks): () => 
     // ① 单行按钮（push / pull）
     const btn = target.closest(".sm-item-btn");
     if (btn) {
+      // 保持旧 per-button handler 的 stopPropagation 对等性：本组件根部 return 只
+      // 阻断③ dir 翻转，事件仍会冒泡到 document 级监听（app-sidebar closeAll /
+      // context-menu hide 等）——旧代码在按钮处截断，点击 push/pull 不会误关
+      // 侧栏弹出层/右键菜单；此处截断即恢复该契约
+      e.stopPropagation();
       const row = btn.closest("[data-path]");
       if (row) {
         const path = (row as HTMLElement).dataset.path || "";

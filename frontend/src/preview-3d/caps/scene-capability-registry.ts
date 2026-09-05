@@ -86,9 +86,10 @@ export class SceneCapabilityRegistry {
     return [...this.instances];
   }
 
-  /** 按 id 查找实例 */
-  getById(id: string): SceneCapability | undefined {
-    return this.instances.find((c) => c.id === id);
+  /** 按 id 查找实例。泛型版直接收窄为具体能力类型，替代调用点 `as XxxCapability` 断言
+   *  （id ↔ 类型映射由调用方保证——id 注册处即该工厂返回类型，2026-09 锐评 P2-4 收敛） */
+  getById<T extends SceneCapability = SceneCapability>(id: string): T | undefined {
+    return this.instances.find((c) => c.id === id) as T | undefined;
   }
 
   /** 保存所有能力状态到 localStorage */

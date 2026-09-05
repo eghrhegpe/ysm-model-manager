@@ -15,7 +15,6 @@ source_files:
   - frontend/src/backend/web-fs.ts
 auto_fields:
   symbols_with_lines:
-    - __setEncodeImplForTest
     - _clearPmxStatsCache
     - _resetSingletons
     - App.GetVoxelDataInContainer
@@ -24,8 +23,6 @@ auto_fields:
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - BaseScene
-    - BasisEncoderLike
-    - BasisModuleLike
     - bindInputHandlers
     - BoneDetail
     - BoneListItem
@@ -54,7 +51,6 @@ auto_fields:
     - buildYsmScene
     - CameraControlBridge
     - CameraControlScene
-    - cancelPendingEncodings
     - captureTextureName
     - cleanupPreview
     - clearSceneCaps
@@ -77,8 +73,6 @@ auto_fields:
     - DISPOSE_TEX_KEYS
     - disposeMmdMesh
     - disposeTextureDecoder
-    - encodeAndCacheTexture
-    - encodeToKTX2Basis
     - Error
     - estimateTexGpuBytes
     - FBX_TARGET_MAX_DIM
@@ -115,10 +109,6 @@ auto_fields:
     - InputOptions
     - invalidatePreview
     - isLikelyTga
-    - Ktx2EncodeRequest
-    - Ktx2EncodeResponse
-    - Ktx2TextureLoader
-    - Ktx2TextureLoaderDeps
     - listBonesWithDepth
     - listSchemas
     - LITEMATIC_SLICE_SCHEMA_ID
@@ -142,7 +132,6 @@ auto_fields:
     - materialNodes
     - matTexSlots
     - MatTexSlots
-    - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MdMmAllocEntry
     - MdMmBuildCtx
@@ -229,7 +218,6 @@ auto_fields:
     - renderLoadingState
     - RenderVrmBonePanel
     - RepresentativeSnapshot
-    - resetEncoderState
     - resetLoopState
     - resetSceneInfra
     - resetSchemas
@@ -241,7 +229,6 @@ auto_fields:
     - scanAllWebModels
     - scanWebModels
     - sceneRegistry
-    - scheduleBackgroundEncoding
     - SchemaBuilder
     - ScreenshotScene
     - SemanticScene
@@ -263,7 +250,6 @@ auto_fields:
     - TexDecodeResponse
     - TEXTURE_EXTS
     - TextureDecoder
-    - TextureTooLargeError
     - toggleBoneVisible
     - typeFromWebDir
     - UnloadCtx

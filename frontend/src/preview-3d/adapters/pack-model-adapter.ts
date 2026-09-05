@@ -9,6 +9,7 @@
 // （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
+import { logWarn } from "../../utils/base/log.ts";
 import { frameCameraSide } from "../camera-setup.ts";
 import { getTintColorSync, loadMcTints } from "../mc-tints.ts";
 import { multiModelSelectNode } from "../menu/multi-model.ts";
@@ -286,7 +287,7 @@ async function buildPackScene(
   try {
     await loadMcTints();
   } catch (e) {
-    console.warn("[pack-model] tint 表加载失败，使用 plains 默认色兜底:", e);
+    logWarn("preview-3d", "tint 表加载失败，使用 plains 默认色兜底", e);
   }
 
   // 释放旧内容层（ADR-084 L2：switchTo 先 dispose 旧 group 再重建）

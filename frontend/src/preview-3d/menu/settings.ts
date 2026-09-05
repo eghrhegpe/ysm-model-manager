@@ -13,8 +13,11 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { buildCameraControls } from "../adapters/camera-controls.ts";
+import type { LightCapability } from "../caps/light-capability.ts";
+import type { PostprocessingCapability } from "../caps/postprocessing-capability.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import type { ShadowCapability } from "../caps/shadow-capability.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
 import { getStateValue, setStateValue } from "../state/preview-state.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
@@ -41,9 +44,7 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 灯光面板 schema：从 light cap 自报控件渲染 */
 export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const lightFromReg = sceneCapabilityRegistry.getById("light") as
-    | import("../caps/light-capability.ts").LightCapability
-    | null;
+  const lightFromReg = sceneCapabilityRegistry.getById<LightCapability>("light");
   const lightCap =
     lightFromReg ??
     (() => {
@@ -67,9 +68,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 阴影面板 schema：从 shadow cap 自报控件渲染 */
 export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("shadow") as
-    | import("../caps/shadow-capability.ts").ShadowCapability
-    | null;
+  const fromReg = sceneCapabilityRegistry.getById<ShadowCapability>("shadow");
   if (!fromReg) {
     return [
       {
@@ -85,9 +84,7 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
 
 /** 后处理面板 schema：从 postprocessing cap 自报控件渲染 */
 export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("postprocessing") as
-    | import("../caps/postprocessing-capability.ts").PostprocessingCapability
-    | null;
+  const fromReg = sceneCapabilityRegistry.getById<PostprocessingCapability>("postprocessing");
   if (!fromReg) {
     return [
       {

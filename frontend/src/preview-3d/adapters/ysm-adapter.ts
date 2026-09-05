@@ -23,6 +23,7 @@ import {
   type AnimationController,
   parseAnimationControllerJSON,
 } from "../../utils/animation/animation-controller.ts";
+import { logWarn } from "../../utils/base/log.ts";
 import { isEditableTarget } from "../../utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { b64ToBytes } from "../base64.ts";
@@ -547,9 +548,7 @@ function mdYsMakeSceneHandle(
       // 已销毁纹理），且与 pack-model-adapter / screenshot-render 的 release 范式相悖。
       if (core.releaseTextures) core.releaseTextures();
       else
-        console.warn(
-          "[ysm-adapter] preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）",
-        );
+        logWarn("preview-3d", "preload 未提供 releaseTextures，纹理引用将泄漏（检查注入方契约）");
       document.removeEventListener("keydown", onFKeyDown); // 与挂载点配对（escH 同构）
       if (debugState.debugGroup) {
         disposeDebugGroup(debugState.debugGroup);

@@ -3,12 +3,12 @@
 import { applyVPD } from "@moeru/three-mmd";
 import { dbg } from "../../utils/debug/debug.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { cancelPendingEncodings } from "../decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { setPerceptionPaused } from "../perception/core.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { mdMmStage5Menu } from "./mmd-build-menu.ts";
-import { cancelPendingEncodings } from "./mmd-ktx2-encoder.ts";
 import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage6bCtx, MdMmStage6Ctx } from "./mmd-types.ts";
 import { applyVPDToMesh } from "./mmd-vpd-mesh.ts";

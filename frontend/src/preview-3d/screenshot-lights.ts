@@ -21,7 +21,7 @@ export interface ScreenshotLights {
 
 /** 从预览 LightCapability 提取截图灯光；cap 缺失 → undefined（渲染方回退标准灯） */
 export function toScreenshotLights(): ScreenshotLights | undefined {
-  const cap = sceneCapabilityRegistry.getById("light") as LightCapability | null;
+  const cap = sceneCapabilityRegistry.getById<LightCapability>("light");
   if (!cap) return undefined;
   const p = cap.getParams();
   return {

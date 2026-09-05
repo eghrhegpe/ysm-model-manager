@@ -171,16 +171,15 @@ export function buildSharedInfra(
   // [ADR-168] 状态层查询器注入（registry 单例长命，instances 由 createAll/dispose 管理——行为与状态层直持同一引用等价）
   setSceneCapabilityLookup(sceneCapabilityRegistry);
   _sceneCaps = caps;
-  const skyCap = (sceneCapabilityRegistry.getById("sky") as SkyCapability) ?? null;
-  const groundCap = (sceneCapabilityRegistry.getById("ground") as GroundCapability) ?? null;
-  const waterCap = (sceneCapabilityRegistry.getById("water") as WaterCapability) ?? null;
-  const lightCap = (sceneCapabilityRegistry.getById("light") as LightCapability) ?? null;
-  const fogCap = (sceneCapabilityRegistry.getById("fog") as FogCapability) ?? null;
-  const shadowCap = (sceneCapabilityRegistry.getById("shadow") as ShadowCapability) ?? null;
-  const reflectorCap =
-    (sceneCapabilityRegistry.getById("reflector") as ReflectorCapability) ?? null;
+  const skyCap = sceneCapabilityRegistry.getById<SkyCapability>("sky") ?? null;
+  const groundCap = sceneCapabilityRegistry.getById<GroundCapability>("ground") ?? null;
+  const waterCap = sceneCapabilityRegistry.getById<WaterCapability>("water") ?? null;
+  const lightCap = sceneCapabilityRegistry.getById<LightCapability>("light") ?? null;
+  const fogCap = sceneCapabilityRegistry.getById<FogCapability>("fog") ?? null;
+  const shadowCap = sceneCapabilityRegistry.getById<ShadowCapability>("shadow") ?? null;
+  const reflectorCap = sceneCapabilityRegistry.getById<ReflectorCapability>("reflector") ?? null;
   const environmentCap =
-    (sceneCapabilityRegistry.getById("environment") as EnvironmentCapability) ?? null;
+    sceneCapabilityRegistry.getById<EnvironmentCapability>("environment") ?? null;
   // 从 localStorage 恢复上次会话状态
   sceneCapabilityRegistry.loadAll();
   // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）
@@ -196,7 +195,7 @@ export function buildSharedInfra(
   if (shadowCap && lightCap) syncShadowLights(scene, shadowCap, lightCap);
   // 后处理体积光管线（ADR-081 L2）：PostprocessingCapability（registry 驱动）
   const postProcCap =
-    (sceneCapabilityRegistry.getById("postprocessing") as PostprocessingCapability) ?? null;
+    sceneCapabilityRegistry.getById<PostprocessingCapability>("postprocessing") ?? null;
   // 兼容老接口：postProc 变量也指向同一 capability（对外 render/setSize/dispose 方法签名一致）
   const postProc = postProcCap;
   // 按模型类别套用预设

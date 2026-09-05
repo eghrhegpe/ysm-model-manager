@@ -18,7 +18,7 @@ import { bytesToBase64 } from "../base64.ts";
 // 用 `slice(0, n)` 复制出真实长度的压缩数据。
 
 // 使用动态 import 加载 KTX2BasisWriter（含 BasisEncoder WASM）
-import type { MmdDataPort } from "./mmd-adapter.ts";
+import type { MmdDataPort } from "../adapters/mmd-types.ts";
 
 /** 最大并发编码数（WASM BasisEncoder 单实例，并发过高会争抢资源） */
 const MAX_CONCURRENT = 3;
@@ -108,10 +108,10 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
 // 核心实现已抽取到 mmd-ktx2-basis.ts（主线程与 Worker 共用，无 DOM 依赖）。
 // 本文件保留编码调度/并发/缓存逻辑，并在此处导出兼容符号。
 
+import { createWorkerBridge, type WorkerBridge } from "../adapters/worker-bridge.ts";
 import { encodeToKTX2Basis, MAX_KTX2_PIXELS, TextureTooLargeError } from "./mmd-ktx2-basis.ts";
 // type-only import：不产生运行时 import（worker 文件含 self.onmessage，主线程不能执行它）
 import type { Ktx2EncodeResponse } from "./mmd-ktx2-worker.ts";
-import { createWorkerBridge, type WorkerBridge } from "./worker-bridge.ts";
 
 /** Worker 池大小（P3-12：单一事实源 = MAX_CONCURRENT——原手写 3 靠注释「对齐」，易漂移） */
 const KTX2_WORKER_COUNT = MAX_CONCURRENT;

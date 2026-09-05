@@ -7,10 +7,10 @@ adr:
 category: config
 source_files:
   - frontend/src/preview-3d/adapters/mmd-adapter.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-encoder.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-basis.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-worker.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-basis.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-worker.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.ts
   - frontend/src/preview-3d/adapters/mmd-pmx-parser.ts
   - frontend/src/preview-3d/adapters/mmd-pmx-parser.worker.ts
   - frontend/src/preview-3d/adapters/mmd-texture-decoder.ts
@@ -101,13 +101,13 @@ auto_fields:
     - WriteCached
   tests:
     - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
-    - frontend/src/preview-3d/adapters/mmd-ktx2-encoder.test.ts
-    - frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.test.ts
+    - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.test.ts
+    - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.test.ts
     - frontend/src/utils/main-thread-watch.test.ts
 tests:
   - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-encoder.test.ts
-  - frontend/src/preview-3d/adapters/mmd-ktx2-texture-loader.test.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.test.ts
+  - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.test.ts
   - frontend/src/utils/main-thread-watch.test.ts
 use_when:
   - 性能优化

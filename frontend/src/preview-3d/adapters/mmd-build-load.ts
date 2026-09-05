@@ -6,7 +6,7 @@ import { safeGet } from "../../utils/dom/storage.ts";
 import { formatLongTask, startMainThreadWatch } from "../../utils/main-thread-watch.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer, bytesToBase64 } from "../base64.ts";
-import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
+import { Ktx2TextureLoader } from "../decoder/mmd-ktx2-texture-loader.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";
 import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import { getTextureDecoder } from "./mmd-texture-decoder.ts";

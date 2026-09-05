@@ -183,7 +183,7 @@ function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object
     try {
       ctx.getContent()?.dispose();
     } catch (e) {
-      console.error("[preview] 旧内容层 dispose 失败:", e);
+      logError("preview 3D", "旧内容层 dispose 失败", e);
     }
     // 审核 P3-1：dispose 后立即停驱动旧 perFrame——否则 await build 窗口内
     // rAF 仍每帧驱动已释放的旧 update（有 try/catch 兜底不崩，但每帧刷警告）。

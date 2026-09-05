@@ -100,12 +100,7 @@ function applyPreset(
   const link = ENV_PRESET_LINKAGE[presetId];
   if (!link) return;
   if (link.sky) {
-    const skyCap = sceneCapabilityRegistry.getById("sky") as
-      | (SkyCapability & {
-          setTime?(h: number): void;
-          setCloudCoverage?(v: number, regen?: boolean): void;
-        })
-      | null;
+    const skyCap = sceneCapabilityRegistry.getById<SkyCapability>("sky");
     if (skyCap) {
       skyCap.setTime?.(link.sky.time);
       skyCap.setCloudCoverage?.(link.sky.cloud, true);
@@ -121,7 +116,7 @@ function applyPreset(
     }
   }
   if (link.fog) {
-    const fogCap = sceneCapabilityRegistry.getById("fog") as FogCapability | null;
+    const fogCap = sceneCapabilityRegistry.getById<FogCapability>("fog");
     if (fogCap) {
       fogCap.setEnabled(link.fog.enabled);
       if (link.fog.mode) fogCap.setMode(link.fog.mode);
@@ -130,7 +125,7 @@ function applyPreset(
         fogCap.setLinearRange(link.fog.near, link.fog.far);
     }
   }
-  const envCap = sceneCapabilityRegistry.getById("environment") as EnvironmentCapability | null;
+  const envCap = sceneCapabilityRegistry.getById<EnvironmentCapability>("environment");
   if (envCap) {
     envCap.setPresetId(presetId);
     if (link.envIntensity !== undefined) envCap.setIntensity(link.envIntensity);

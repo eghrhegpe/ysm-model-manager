@@ -113,7 +113,7 @@ vi.mock("./mmd-pmx-parser.ts", async (importOriginal) => {
     },
   };
 });
-vi.mock("./mmd-ktx2-encoder.ts", () => ({
+vi.mock("../decoder/mmd-ktx2-encoder.ts", () => ({
   scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
 }));

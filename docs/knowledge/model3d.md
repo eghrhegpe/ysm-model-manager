@@ -726,6 +726,7 @@ perf:
 - **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见
 - **perComponent 纹理索引分类与绑定索引同一空间**：组件分支恒用局部槽 0，非组件回退全局 `texIdx`/`resolvedTexIdx`
 - **大文件解码 peak ~3-4× 文件大小**：base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（100MB 阈值是网页版唯一防线）
+- **纹理键集合单一事实源 = `mesh.ts` `ALL_TEXTURE_KEYS`**：`scene-stats.ts` 统计与 `mesh.ts` `disposeMaterial` 释放共用同一常量（`map` / `emissiveMap` / `normalMap` / `roughnessMap` / `metalnessMap` / `aoMap` / `lightMap` / `alphaMap` / `envMap`），禁止双源漂移——新增纹理槽位须同时更新 `ALL_TEXTURE_KEYS` 与所有消费者
 
 ## 相关
 

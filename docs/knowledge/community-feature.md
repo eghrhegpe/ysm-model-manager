@@ -108,7 +108,8 @@ status: active
 ## 核心职责
 
 - `data.ts` — `tryFetchModels(repo, mirror, onProgress)`：三镜像（raw.githubusercontent / jsDelivr / api.github）延时并发（首个立即、2s/4s 各补一个）+ `Promise.any` 取最快成功；单请求 8s `AbortController` 超时；任一 404 即置 `_earlyExitReason = "NoIndex"` 中止全部；全败时诊断根因抛 `NoIndex`/`RateLimited`/`NetworkOffline`/`AllFailed`。`showProgress` 渲染抓取进度条
-- `render.ts` — `isModelMissing`/`countMissing`（按 hash 或名称比对本地 `localMap`）、`buildModelRow`（单行构建器，供虚拟列表 `renderItem` 复用）、`renderModelList`（DOM API 构建行，非字符串拼接）、`renderCardsHTML`（站点卡片按 search/repo/browse 分组）、`renderRepoHeaderHTML`（仓库页头部）
+- `render.ts` — `isModelMissing`/`countMissing`（按 hash 或名称比对本地 `localMap`；`hashSetOf`/`_hashSetCache` WeakMap 把线性扫描收敛为 O(1) Set 查找，`1cd8e305`）、`buildModelRow`（单行构建器，供虚拟列表 `renderItem` 复用）、`renderModelList`（DOM API 构建行，非字符串拼接）、`renderCardsHTML`（站点卡片按 search/repo/browse 分组）、`renderRepoHeaderHTML`（仓库页头部）
+- `show-repo-models.ts` — 模块级 `_repoRenderGen` 代际计数器防快速切仓乱序覆盖；**代际只认用户请求**（`bindRepoEvents` 内部 `doneTimer` 重秀不 bump，须显式经 `internalRefresh` 参数或 `_userRequestedRepo` 标记），杜绝「内部刷新误刷 UI」竞态（code_review #3）
 - `events.ts` — `bindRepoEvents(sr, ctx)`：内部维护 `showAll`/`selectedSet`，返回 `{ renderList, updateSelectedUI, cleanup }`；**虚拟滚动接入**：`renderList` 内部经 `createVirtualList` 写入 `#gh-repo-list`（行高 42px 定高，jsdom 零高度自动全量回退）；全选逻辑改遍历 `currentFiltered` 筛选结果（虚拟化后 DOM 只含可见行，原"遍历 DOM 勾选"会漏选）；三个下载入口（单行下载按钮 `handleSingleDownload`、「下载选中」按钮、全选后「下载选中」）全部汇入 `queue.enqueue(tasks)`；单文件 >10MB 拒载、>4MB `modalConfirm` 确认；右键行 → `bus.emit("menu:show")` 展示索引信息；B 站搜索作者走 `parseModelName` 取作者 + `OpenInBrowser`（`parseModelName` 已由动态导入改为顶层静态导入，提交 7bb9f7c）
 - `virtual-list.ts` — `createVirtualList<T>(opts)`：定高虚拟列表组件（零高度自动全量回退、阈值 60 行以下直接全量、`destroy()` 移除滚动监听）；底层走 `utils/dom/virtual-scroll.ts` 共享原语（`calcVisibleRange` + `installScrollSync`）
 - `download-queue.ts` 族（原单文件超 100 行红线，ADR-040 拆为 tasks/store/progress/ui 四件；store 现含 web 分支后体积回升）：

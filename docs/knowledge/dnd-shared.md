@@ -39,6 +39,7 @@ pitfalls:
   - FileReader 无超时兜底 → 大文件读取卡死（已修复：10s 超时 abort）
   - base64 为空（0 字节文件）时跳过，不落库
   - isImportableFile：.json 仅放行 ysm.json 入口清单（与 go/scanner/scanner.go 白名单对齐）
+  - readEntries 分页：Web 标准 API 单次最多返回 100 条 FileSystemEntry，必须循环调用直到返回空数组才读完目录——单次调用会静默漏掉第 101+ 个文件（`dnd-collector.ts` 已收敛为 `readAllDirEntries` 循环读取，`1cd8e305`）
 use_when:
   - 拖拽导入
   - DnD 文件收集

@@ -161,12 +161,14 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 1. **局部 Vector3 复用**：渲染循环函数内声明 `const _camDir/_forward/_right/_move = new THREE.Vector3()`，每帧通过 `set()` 更新，避免 `new` 产生 GC 压力。
 2. **参数对象传递**：`applyWasdCameraMotion(keys, cam, ctr, ..., { camDir, forward, right, move })` 接收复用向量对象。
 3. **模块级常量**：不随帧变化的向量（如 `UpVec`）提为模块级常量，避免重复创建。
+4. **perFrame 快照迭代**（`_globalPerFrames`）：遍历渲染回调注册表时用 `[..._globalPerFrames]` 快照副本，回调内 `registerPerFrame` / `removePerFrame` 增删注册表不影响本次帧迭代（增删下一帧生效），防回调内删除导致 for-of 跳元素或漏执行。
 
 ### 示例
 - `adapters/render-loop.ts`：`const _camDir = new THREE.Vector3(); const _forward = new THREE.Vector3(); ...`
 - 渲染循环内：`camera.getWorldDirection(_camDir)` 替代 `new Vector3()`
 - `applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, ..., { camDir: _camDir, forward: _forward, ... })`
 - 模块级缓存：`const UpVec = new THREE.Vector3(0, 1, 0)`
+- 快照迭代：`for (const fn of [..._globalPerFrames])`（`render-loop.ts` `startGlobalRenderLoop`）
 
 ### 适用场景
 - 60fps 渲染循环

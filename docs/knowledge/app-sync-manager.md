@@ -104,6 +104,7 @@ status: active
 - 模块级 `_lastSelectedType` 跨实例记住上次选中类型（整合包间共享），并以 localStorage 键 `ysm_syncLastType` 持久化
 - 状态六态（synced/missing/disabled/optional/legacy/all）与 Go 端 `go/sync` 返回的状态字段一一对应，前端不自造状态
 - 组件 `define` 前先 `customElements.get` 守卫，防 HMR / 重复 import 重复注册
+- **事件绑定一次性委托于组件根（light DOM）**：`events.ts` 的 `bindDelegatedEvents` 在 `_init` 单次执行，render 重建 DOM 不影响委托——消除原 `bindEvents` 每次 render 后 `.then` 全量重绑导致的并发双绑竞态（目录行点一次=翻转两次）；`btn` 分支须 `e.stopPropagation()` 防冒泡到父，恢复对等性
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

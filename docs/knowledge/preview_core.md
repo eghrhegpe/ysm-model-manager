@@ -343,7 +343,7 @@ pitfalls:
 - **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 10 个能力（天空/地面/水面/环境/雾/阴影/反射/后处理/灯光/渲染模式）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
 - **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，上限 8）；跨类型 / 关旧开新走 `openModel3DFullscreen`
 - **生命周期清理**：
-  - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + `finishSession`。ESC / abort / 正常退出走这里
+  - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + **`setPerceptionPaused(false)` 复位感知暂停标志**（防 adapter 崩溃/切模型残留冻结下次 mount，属模块级单例无属主，须由会话完整关闭路径复位；见 `perception.md`） + `finishSession`。ESC / abort / 正常退出走这里
   - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 由调用方先移除）
   - `closeOverlay(ctx)`：**早期关闭**（build 尚未成功，cleanupFn 未赋值的 ESC 出口）——aborted/disposed 置位 + 拆 escH + 拆菜单 + 拆 overlay + `finishSession`
 - **多模型管理**：`sceneRegistry` 存每模型 `roots/visible/content/boneMaps/menuItems`；`fitCameraToRoots(visibleRoots())` 相机框可见模型；统一拾取器（`count >= 2` 激活）沿父链反查归属

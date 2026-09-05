@@ -53,7 +53,7 @@ status: active
 - 频次限制：`CHECK_KEY = "ysm_lastUpdateCheck"` + `CHECK_INTERVAL = 6h`，`canCheck()`/`markChecked()` 基于 localStorage 实现
 - `checkUpdateSilent()`：静默检查，先过 `canCheck()` 闸门；**`markChecked()` 在 `CheckUpdate()` 成功返回之后才写**（网络/API 失败不计入频次，下次启动仍会重试）；`info.available` 时发 `TOAST_MS.persist`（10000ms）可点击 toast（`click` 回调打开 `promptUpdate`）；下载中（静默路径 `statusEl` 为 null）发 `TOAST_MS.sticky`（60000ms）toast 覆盖整个下载窗口（P3 由 10s 拉到 60s），与 `modalProgress` 进度弹窗并存；任何异常静默吞掉不阻塞启动
 - `promptUpdate(info, statusEl)`：复用 `modalConfirm`（dialogs/modal.ts）而非手工构建遮罩，传 `title/icon/message/okText/width:"480px"` 与 `bodyHTML`；`bodyHTML` 内联样式用 CSS 变量适配主题，展示版本号与更新日志（`slice(0, 2000).trim()`，经 `textContent → innerHTML` 转义后 `white-space:pre-wrap` 保留换行；trim 后为空则不渲染日志块）
-- `doUpdate(info, statusEl)`：置 statusEl 文案「⬇️ 下载+安装中...」→ 打开只读进度弹窗 `modalProgress`（**`closable:false`**——下载中禁止 Esc/点遮罩关闭，防误关丢进度，P3 修复）+ 瞬态注册 `update:progress` 事件（Go 侧 `DoUpdate` 经 `Emit("update:progress", done, total)` 推送，payload 经 Array.isArray + 数值守卫降级 0）驱动弹窗进度；同时 **`Window.SetTitle` 同步窗口标题**（已知长度显示「⬇️ N%」，分块传输显示「⬇️ X MB」，标题栏永远可见作全局兜底），`finally` 注销监听 + 关闭弹窗 + 恢复原标题；`DoUpdate(url, expectedHash)` 返回非 `"success"` 即抛错；其后的 `RestartApplication()` 实际不可达（Go 侧 `InstallUpdate` 替换完成即 `os.Exit(0)`，由 `ysm-updater-helper.exe` 替换 exe 并拉起新进程），保留作防御
+- `doUpdate(info, statusEl)`：置 statusEl 文案「⬇️ 下载+安装中...」→ 打开只读进度弹窗 `modalProgress`（**`closable:false`**——下载中禁止 Esc/点遮罩关闭，防误关丢进度，P3 修复）+ 瞬态注册 `update:progress` 事件（Go 侧 `DoUpdate` 经 `Emit("update:progress", done, total)` 推送，payload 经 Array.isArray + 数值守卫降级 0）驱动弹窗进度；同时 **`Window.SetTitle` 同步窗口标题**（已知长度显示「⬇️ N%」，分块传输显示「⬇️ X MB」，标题栏永远可见作全局兜底），`finally` 注销监听 + 关闭弹窗 + 恢复原标题；`await DoUpdate(url, expectedHash)` 成功时 resolve、失败时 reject（不再返回错误字符串，`421ae7b5` 收敛）；其后的 `RestartApplication()` 实际不可达（Go 侧 `InstallUpdate` 替换完成即 `os.Exit(0)`，由 `ysm-updater-helper.exe` 替换 exe 并拉起新进程），保留作防御
 - `initVersionUpdater(root)`：绑定设置页 `#set-check-update` 按钮，检查中置文案与 `disabled`，`finally` 恢复「🔄 检查更新」与可用态（致命陷阱 #3 的解法）；`!info.available` 时提示「✅ 已是最新版本」并 return
 - 错误文案统一经 `friendlyError`（utils/dom/errors.ts）转换后再进 toast
 
@@ -79,7 +79,7 @@ status: active
 - 手动检查按钮的文案/disabled 必须在 `finally` 中恢复，防止异步失败后按钮卡死（致命陷阱 #3）
 - `promptUpdate` 内部捕获 `doUpdate` 异常转 toast，不再向外抛（由外层 finally 恢复按钮）
 - 更新日志展示前必须经 textContent 转义（先写 `textContent` 再取 `innerHTML`），长度截断 2000 字符
-- `DoUpdate` 返回值非 `"success"` 一律视为失败抛错，不做部分成功假设（**此分支与 releaseNotes 转义截断零测试覆盖**，P3 观察）
+- `DoUpdate` 失败时 reject（不再返回错误字符串，`421ae7b5` 收敛），不做部分成功假设（**reject 分支与 releaseNotes 转义截断零测试覆盖**，P3 观察）
 - `doUpdate` 末尾的 `RestartApplication()` 是防御性死代码（Go 侧已 `os.Exit(0)`），不得据此假设前端能拿到「更新完成」后续控制权（测试断言该路径属锁防御行为）
 - 下载中进度弹窗 `closable:false`（Esc/点遮罩不可关），配合窗口标题进度（`Window.SetTitle`）双保险——弹窗被挤兑/异常关闭时标题栏仍显示下载状态；`finally` 必须恢复原标题
 - `update:progress` payload 防御：Array.isArray + `Number.isFinite` 守卫，畸形事件降级 (0,0)，不抛 TypeError 不渲染 NaN（ADR-044 ② 数值守卫）

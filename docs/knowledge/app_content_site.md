@@ -109,6 +109,7 @@ status: active
 - 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃，否则站点视图预设 / 卡片作者搜索 / 详情浮层全部退化为只开网站首页（P1 修复锁定于 `workshop-site-opener.test.ts`）
 - 浏览模式「点谁用谁 + 即时生效」，收敛为单源 ref：`browseMode` 存 `BrowseModeRef{ v }`，禁止值拷贝 stale
 - 行内编辑排除预设卡片、拖拽用 `realIdx` 全量重排——两处 P2 修复为站点数据不污染的底线
+- **站点 JSON 导入下沉 Go**（ADR-172 对称，堵 site/edit + site/drag 双轨）：`site/edit.ts` 社区站点并入走 Go `MergeCommunitySitesFromJSON`（返回增量计数，前端 `mergeCommunitySites` 仅内存展示层合并、不驱动写回）；`site/drag.ts` 站点 JSON 拖入走 Go `MergeWorkshopSitesFromJSON`（合并/去重/写回下沉 Go，前端用 `DefaultWorkshopSites()` 拉取落盘后的最新结果刷新 `allSites`）——两端都不再 `SaveWorkshopSites(allSites)` 整存，计数以 Go 返回为准
 
 ## 相关
 

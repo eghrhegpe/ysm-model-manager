@@ -7,7 +7,7 @@ import { modalConfirm } from "../../features/dialogs/modal.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
-import { toastEmptyRtype, toastError } from "../context-menu-shared.ts";
+import { toast, toastEmptyRtype, toastError } from "../context-menu-shared.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
@@ -31,11 +31,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         const instances = (await ListVersionInstances(mcRoot)) ?? [];
         const ins = instances.find((i) => i.Name === insName);
         if (!ins?.VersionDir) {
-          bus.emit("toast:show", {
-            msg: t("inst.packNotFound"),
-            duration: TOAST_MS.normal,
-            type: "error",
-          });
+          toast(t("inst.packNotFound"), TOAST_MS.normal, "error");
           return;
         }
 
@@ -70,11 +66,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         //（仅 += files.length，非负整数）但违反 ADR-044 ②「数值用显式判断」，与同文件
         // L118 `totalCount === 0` 写法不一致
         if (totalFiles === 0) {
-          bus.emit("toast:show", {
-            msg: t("inst.noResources"),
-            duration: TOAST_MS.success,
-            type: "info",
-          });
+          toast(t("inst.noResources"), TOAST_MS.info, "info");
           return;
         }
 
@@ -83,18 +75,10 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         // 必须消费布尔结果，否则剪贴板失败仍会误弹「已复制」成功 toast（同 batch.copy-paths 分支范式）
         const copied = await copyText(text);
         if (!copied) {
-          bus.emit("toast:show", {
-            msg: t("ctx.copyPathsFail"),
-            duration: TOAST_MS.normal,
-            type: "error",
-          });
+          toast(t("ctx.copyPathsFail"), TOAST_MS.normal, "error");
           return;
         }
-        bus.emit("toast:show", {
-          msg: t("inst.exportListCopied", { n: totalFiles }),
-          duration: TOAST_MS.normal,
-          type: "success",
-        });
+        toast(t("inst.exportListCopied", { n: totalFiles }), TOAST_MS.normal, "success");
       } catch (e) {
         toastError(e);
       }
@@ -127,11 +111,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           return;
         }
         if (totalCount === 0) {
-          bus.emit("toast:show", {
-            msg: t("inst.nothingToClear"),
-            duration: TOAST_MS.success,
-            type: "info",
-          });
+          toast(t("inst.nothingToClear"), TOAST_MS.info, "info");
           return;
         }
         const typeLabel = RESOURCE_TYPE_LABELS[rtype] || rtype;
@@ -143,21 +123,13 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           danger: true,
         });
         if (!confirmed) {
-          bus.emit("toast:show", {
-            msg: t("inst.cancelled"),
-            duration: TOAST_MS.quick,
-            type: "info",
-          });
+          toast(t("inst.cancelled"), TOAST_MS.quick, "info");
           return;
         }
         try {
           const count = await ClearInstanceResources(insName, rtype);
           bus.emit("stats:refresh");
-          bus.emit("toast:show", {
-            msg: t("inst.cleared", { name: insName, n: count }),
-            duration: TOAST_MS.normal,
-            type: "success",
-          });
+          toast(t("inst.cleared", { name: insName, n: count }), TOAST_MS.normal, "success");
         } catch (err) {
           toastError(err, t("inst.clearFail"), t("inst.clearFail"));
         }

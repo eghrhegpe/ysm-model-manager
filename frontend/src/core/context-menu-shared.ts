@@ -77,21 +77,17 @@ export async function resolveDstDir(
   });
   if (!folder) return null;
   if (isUnsafeFolderName(folder)) {
-    bus.emit("toast:show", {
-      msg: tr("ctx.unsafeFolderName", "❌ Folder name contains illegal characters"),
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(
+      tr("ctx.unsafeFolderName", "❌ Folder name contains illegal characters"),
+      TOAST_MS.normal,
+      "error",
+    );
     return null;
   }
   const { GetRepoRoot } = await getApp();
   const filesRoot = await GetRepoRoot(rtype || RESOURCE_TYPES.YSM);
   if (!filesRoot) {
-    bus.emit("toast:show", {
-      msg: opts.emptyMsg,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(opts.emptyMsg, TOAST_MS.normal, "error");
     return null;
   }
   return { folder, dstDir: filesRoot + "/" + folder.replace(/\\/g, "/") };

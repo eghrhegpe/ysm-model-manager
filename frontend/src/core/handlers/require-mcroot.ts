@@ -1,10 +1,10 @@
 // ===== 配置守卫：读 mcRoot + 空守卫 + toast（去重 D-1，2026-08-05）=====
 // 抽自 5 处重复的「const cfg = await LoadAppConfig(); mcRoot = cfg.mcRoot || "";
-//   if (!mcRoot) { bus.emit("toast:show", {...}) }」模板。
+//   if (!mcRoot) { toast(...) }」模板。
 
 import { getApp } from "../../backend/app.ts";
-import { bus } from "../../bus.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { toast } from "../context-menu-shared.ts";
 import { t } from "../i18n/t.ts";
 
 /**
@@ -17,11 +17,7 @@ export async function requireMcRoot(): Promise<string | null> {
   const cfg = await LoadAppConfig();
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {
-    bus.emit("toast:show", {
-      msg: t("ctx.pushNoMcRoot"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("ctx.pushNoMcRoot"), TOAST_MS.normal, "warn");
     return null;
   }
   return mcRoot;

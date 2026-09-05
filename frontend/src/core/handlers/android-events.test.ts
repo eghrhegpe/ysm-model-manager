@@ -79,18 +79,22 @@ function fire(name: string, e?: Evt): void {
 }
 
 describe("registerAndroidEvents — 事件名注册", () => {
-  it("注册全部 6 个 Android 事件回调（与 Java 发射名逐字匹配）", async () => {
+  it("注册全部 3 个 Android 事件回调（与 Java 发射名逐字匹配）", async () => {
     await register();
     for (const name of [
       "android:back",
       "android:NetworkChanged",
-      "android:ScreenLocked",
       "storage:permissionGranted",
-      "android:BatteryChanged",
-      "android:ThemeChanged",
     ]) {
       expect(handlers[name], `事件 ${name} 未注册`).toBeTypeOf("function");
     }
+  });
+
+  it("不再注册空占位事件（2026-09 锐评整改：空监听即死代码）", async () => {
+    await register();
+    expect(handlers["android:ScreenLocked"]).toBeUndefined();
+    expect(handlers["android:BatteryChanged"]).toBeUndefined();
+    expect(handlers["android:ThemeChanged"]).toBeUndefined();
   });
 });
 
@@ -150,12 +154,10 @@ describe("android:NetworkChanged", () => {
 });
 
 describe("预留事件（ScreenLocked / BatteryChanged / ThemeChanged）", () => {
-  it("调用不抛错", async () => {
+  it("未注册，fire 抛「未注册」错误而非静默吞事件（占位已拆除）", async () => {
     await register();
-    expect(() => {
-      fire("android:ScreenLocked");
-      fire("android:BatteryChanged", { data: "{}" });
-      fire("android:ThemeChanged", { data: "{}" });
-    }).not.toThrow();
+    expect(() => fire("android:ScreenLocked")).toThrow(/未注册/);
+    expect(() => fire("android:BatteryChanged", { data: "{}" })).toThrow(/未注册/);
+    expect(() => fire("android:ThemeChanged", { data: "{}" })).toThrow(/未注册/);
   });
 });

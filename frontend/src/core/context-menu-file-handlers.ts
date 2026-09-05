@@ -20,7 +20,7 @@ export const FILE_HANDLERS = {
             "ctx.renameYsmJson",
             "ysm.json is the model directory manifest — right-click its folder and choose 'Rename'",
           ),
-          4000,
+          TOAST_MS.verbose,
           "warn",
         );
         return;
@@ -82,16 +82,12 @@ export const FILE_HANDLERS = {
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
-        toast(
-          tr("ctx.pushNoMcRoot", "Configure the game directory first"),
-          TOAST_MS.success,
-          "warn",
-        );
+        toast(tr("ctx.pushNoMcRoot", "Configure the game directory first"), TOAST_MS.info, "warn");
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) ?? [];
       if (!instances.length) {
-        toast(tr("ctx.pushNoInstances", "No packs found"), TOAST_MS.success, "warn");
+        toast(tr("ctx.pushNoInstances", "No packs found"), TOAST_MS.info, "warn");
         return;
       }
       const names = instances.map((i) => i.Name);

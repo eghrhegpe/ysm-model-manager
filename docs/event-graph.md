@@ -232,7 +232,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 159 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 161 |
 
 ### `nav:changed`
 
@@ -494,8 +494,8 @@
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 132 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 367 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 291 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 315 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 293 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 317 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 90 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 129 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |

@@ -3,7 +3,7 @@
 // 同时捕获 window.onerror / unhandledrejection
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
-import { registerErrorDiary, __TEST__resetDiary } from "./error-diary.ts";
+import { registerErrorDiary, unregisterErrorDiary } from "./error-diary.ts";
 import { flushPromises } from "../test-utils/index.ts";
 
 const { addOpLogMock } = vi.hoisted(() => ({
@@ -24,7 +24,7 @@ import { resolveWebMode } from "../backend/platform.ts";
 
 beforeEach(() => {
   addOpLogMock.mockClear();
-  __TEST__resetDiary();
+  unregisterErrorDiary();
 });
 
 afterEach(() => {
@@ -84,7 +84,7 @@ describe("registerErrorDiary", () => {
       expect(rejectionSpy).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener("unhandledrejection", onRejection);
-      __TEST__resetDiary();
+      unregisterErrorDiary();
     }
   });
 
@@ -108,7 +108,7 @@ describe("registerErrorDiary", () => {
     } finally {
       window.removeEventListener("unhandledrejection", onRejection);
       warnSpy.mockRestore();
-      __TEST__resetDiary();
+      unregisterErrorDiary();
     }
   });
 
@@ -271,10 +271,10 @@ describe("log sink 透写", () => {
     expect(addOpLogMock.mock.calls[0][5]).toBe("warn");
   });
 
-  it("__TEST__resetDiary 拆除 sink：reset 后 logWarn 不再落日记", async () => {
+  it("unregisterErrorDiary 拆除 sink：reset 后 logWarn 不再落日记", async () => {
     const { logWarn } = await import("../utils/core/log.ts");
     registerErrorDiary();
-    __TEST__resetDiary();
+    unregisterErrorDiary();
     logWarn("tag", "reset 后的消息");
     await flushPromises();
     expect(addOpLogMock).not.toHaveBeenCalled();

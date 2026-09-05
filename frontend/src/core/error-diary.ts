@@ -24,16 +24,17 @@ let _lastDedupKey = "";
 let _lastDedupAt = 0;
 
 /**
- * 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。
- * 不在生产代码中调用。
+ * 注销日记监听（与 registerErrorDiary 对称的正式生命周期 API，幂等）。
+ * 拆除 toast/error/unhandledrejection/logSink 四路监听并重置去重状态，
+ * 下次 registerErrorDiary 可重新注册。应用生命周期内通常只在测试中使用。
  */
-export function __TEST__resetDiary(): void {
+export function unregisterErrorDiary(): void {
   _registered = false;
-  // P3 修复（code_review）：重置去重状态——新增的 _lastDedupKey/_lastDedupAt 若不清理，
-  // 相邻用例若发相同 (msg,status)，第二次会被 5s 窗口误去重 → 断言 toHaveBeenCalledTimes 失败
+  // 重置去重状态——残留的 _lastDedupKey/_lastDedupAt 会让重新注册后
+  // 相邻相同 (msg,status) 被 5s 窗口误去重
   _lastDedupKey = "";
   _lastDedupAt = 0;
-  setLogSink(null); // 同步拆除 logWarn/logError 透写（防测试间 sink 残留串扰）
+  setLogSink(null); // 同步拆除 logWarn/logError 透写（防 sink 残留串扰）
   _unsubToast?.();
   _unsubToast = undefined;
   if (_unsubError) {

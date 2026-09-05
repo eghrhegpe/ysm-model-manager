@@ -7,6 +7,7 @@ import { dbg } from "../../utils/debug/debug.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { toast } from "../context-menu-shared.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 
 /** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */
@@ -39,11 +40,7 @@ async function runDownloadMissing(
   const instances = (await ListVersionInstances(mcRoot)) ?? [];
   const filesRoot = await GetRepoRoot(rtype);
   if (!filesRoot) {
-    bus.emit("toast:show", {
-      msg: t("sync.configureResourceTypeDir"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("sync.configureResourceTypeDir"), TOAST_MS.normal, "warn");
     return false;
   }
 
@@ -77,13 +74,13 @@ async function runDownloadMissing(
   }
   dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
-  bus.emit("toast:show", {
-    msg: instanceName
+  toast(
+    instanceName
       ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
       : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail }),
-    duration: TOAST_MS.verbose,
-    type: totalFail > 0 ? "warn" : "success",
-  });
+    TOAST_MS.verbose,
+    totalFail > 0 ? "warn" : "success",
+  );
   return true;
 }
 
@@ -108,11 +105,7 @@ async function handleSyncDownloadMissing(
   if (!rtype) {
     failed = true;
     skipReason = "config";
-    bus.emit("toast:show", {
-      msg: t("sync.missingRtype"),
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(t("sync.missingRtype"), TOAST_MS.long, "error");
   }
   try {
     if (rtype) {
@@ -125,11 +118,7 @@ async function handleSyncDownloadMissing(
   } catch (e) {
     failed = true;
     skipReason = "error";
-    bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
   } finally {
     flag.busy = false;
     bus.emit("sync:download:done", { token, instanceName, skipped: failed, skipReason });
@@ -150,20 +139,12 @@ async function runSyncToggleStatus(): Promise<void> {
   const filesRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
   const mcRoot = await requireMcRoot();
   if (!filesRoot || !mcRoot) {
-    bus.emit("toast:show", {
-      msg: t("sync.configureDir"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("sync.configureDir"), TOAST_MS.normal, "warn");
     return;
   }
   const instances = (await ListVersionInstances(mcRoot)) ?? [];
   if (!instances?.length) {
-    bus.emit("toast:show", {
-      msg: t("sync.noPacks"),
-      duration: TOAST_MS.success,
-      type: "info",
-    });
+    toast(t("sync.noPacks"), TOAST_MS.info, "info");
     return;
   }
   let totalDisable = 0;
@@ -193,13 +174,11 @@ async function runSyncToggleStatus(): Promise<void> {
   if (totalDisable > 0) parts.push(t("sync.disableN", { n: totalDisable }));
   if (totalEnable > 0) parts.push(t("sync.enableN", { n: totalEnable }));
   if (!parts.length) parts.push(t("sync.alreadySync"));
-  bus.emit("toast:show", {
-    msg: t("sync.doneToast", { parts: parts.join("，") }),
-    duration: TOAST_MS.verbose,
-    // P3（审核发现）：有错误但存在成功项时旧逻辑仍报 success，与 AddImportLog 的
-    // "failed" 自相矛盾（同一操作对用户 ✅、对日志 ✗）——统一按 errors 判定
-    type: errors.length === 0 ? "success" : "warn",
-  });
+  toast(
+    t("sync.doneToast", { parts: parts.join("，") }),
+    TOAST_MS.verbose,
+    errors.length === 0 ? "success" : "warn",
+  );
   bus.emit("stats:refresh");
 }
 
@@ -208,11 +187,7 @@ async function handleSyncToggleStatus(flag: SyncBusyFlag): Promise<void> {
   if (flag.busy) {
     // P2（审核发现）：与 download 分支对齐——busy 命中不再静默吞事件，
     // 发 toast 让调用方（app-tree 批量/单文件）感知被跳过，避免 UI 乐观更新后无反馈
-    bus.emit("toast:show", {
-      msg: t("sync.busySkip"),
-      duration: TOAST_MS.success,
-      type: "info",
-    });
+    toast(t("sync.busySkip"), TOAST_MS.info, "info");
     return;
   }
   flag.busy = true;
@@ -226,11 +201,7 @@ async function handleSyncToggleStatus(flag: SyncBusyFlag): Promise<void> {
       // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错
       dbg("sync", "AddImportLog(sync-status 失败) 写入失败:", logErr);
     }
-    bus.emit("toast:show", {
-      msg: t("sync.failedToast", { msg: friendlyError(err) }),
-      duration: 8000,
-      type: "error",
-    });
+    toast(t("sync.failedToast", { msg: friendlyError(err) }), TOAST_MS.long, "error");
   } finally {
     flag.busy = false;
     bus.emit("tree:reload");

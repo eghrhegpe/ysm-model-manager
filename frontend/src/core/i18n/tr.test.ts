@@ -5,9 +5,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { tr } from "./tr.ts";
 
-// 与 i18n 模块解耦测试：mock t() 模拟「缺失」「存在」两种状态
+// 与 i18n 模块解耦测试：mock t() 模拟「缺失」「存在」两种状态；
+// interpolate 保留真实实现（tr 的 fallback 插值依赖它，eba3f9aa 起生效）
 const { tMock } = vi.hoisted(() => ({ tMock: vi.fn() }));
-vi.mock("./t.ts", () => ({ t: tMock }));
+vi.mock("./t.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./t.ts")>();
+  return { ...actual, t: tMock };
+});
 
 beforeEach(() => {
   tMock.mockReset();

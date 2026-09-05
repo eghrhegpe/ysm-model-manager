@@ -130,7 +130,7 @@ async function runBatchFileOp(
         fail > 0
           ? tr(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
           : tr(tpl.okAll, "✅ Moved {n} files to {folder}", { n: ctx.paths.length, folder }),
-        4000,
+        TOAST_MS.verbose,
       );
     } else {
       toast(tr(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
@@ -269,7 +269,7 @@ export const HANDLERS = {
     const ok = await copyText(ctx.paths.join("\n"));
     toast(
       ok ? t("ctx.copyPathsOk", { n: ctx.paths.length }) : t("ctx.copyPathsFail"),
-      ok ? 2000 : 3000,
+      ok ? TOAST_MS.success : TOAST_MS.normal,
       ok ? undefined : "error",
     );
   },

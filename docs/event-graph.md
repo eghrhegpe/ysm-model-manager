@@ -463,8 +463,8 @@
 | dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 88 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 103 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 84 |
-| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 366 |
+| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 89 |
+| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 371 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 253 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 287 |

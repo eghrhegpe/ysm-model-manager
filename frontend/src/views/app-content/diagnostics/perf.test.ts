@@ -244,6 +244,55 @@ describe("perf-log 面板", () => {
   });
 });
 
+describe("性能面板复制按钮 — 面板重建后仍工作（perfCopyBound 归属修复）", () => {
+  it("容器重建（lang:changed clearPanels 语义）后 initPerfPanel 重新绑定复制委托", async () => {
+    // mock 剪贴板（happy-dom 无 navigator.clipboard 实现）
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: { output: SINGLE_OUTPUT },
+    });
+
+    // 第一次 init + 运行出结果（含复制按钮）→ 复制生效
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./player.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const copyBtn1 = root.querySelector<HTMLElement>("[data-perf-copy]");
+    expect(copyBtn1).toBeTruthy();
+    copyBtn1!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(writeText).toHaveBeenCalledTimes(1);
+
+    // 模拟面板重建：移除 diag-perf-single 容器并重建（clearPanels → panel.remove() 语义）
+    const outBox = root.getElementById("diag-perf-single")!;
+    const parent = outBox.parentElement!;
+    outBox.remove();
+    const newBox = document.createElement("div");
+    newBox.id = "diag-perf-single";
+    parent.appendChild(newBox);
+    // lang:changed → _render → initDiagnostics → initPerfPanel 再次调用（同一 root）
+    initPerfPanel(root, esc);
+
+    // 再跑一次 → 新容器内出现复制按钮，点击仍应复制
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const copyBtn2 = root.querySelector<HTMLElement>("[data-perf-copy]");
+    expect(copyBtn2).toBeTruthy();
+    writeText.mockClear();
+    copyBtn2!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    // 修复前：模块级 perfCopyBound=true 阻止重绑 → 新容器复制委托缺失（writeText 0 次）
+    expect(writeText).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("加载剖析面板", () => {
   it("无 trace → 显示暂无加载记录", async () => {
     const root = makeRoot();

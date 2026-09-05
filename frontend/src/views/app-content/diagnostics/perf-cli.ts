@@ -65,14 +65,19 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** 为三个结果容器注册复制按钮事件委托（只绑一次） */
-let perfCopyBound = false;
+/**
+ * 为三个结果容器注册复制按钮事件委托。
+ * 归属按「容器元素」跟踪（WeakSet<Element>）而非模块级 boolean：
+ * 面板重建（lang:changed → clearPanels 移除面板 DOM → 新容器元素）后 initPerfPanel
+ * 再次调用，新容器不在集合内 → 重新绑定；同一容器重复调用 → 幂等跳过（不双绑）。
+ * 原模块级 perfCopyBound 首次置 true 后永不重绑——面板重建后复制按钮永久失效直到重启。
+ */
+const perfCopyBoundEls = new WeakSet<Element>();
 export function bindPerfCopyHandlers(root: ShadowRoot): void {
-  if (perfCopyBound) return;
-  perfCopyBound = true;
   for (const id of ["diag-perf-single", "diag-perf-gui-out", "diag-perf-hist"]) {
     const el = root.getElementById(id);
-    if (!el) continue;
+    if (!el || perfCopyBoundEls.has(el)) continue;
+    perfCopyBoundEls.add(el);
     el.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement | null;
       if (!target?.matches?.("[data-perf-copy]")) return;

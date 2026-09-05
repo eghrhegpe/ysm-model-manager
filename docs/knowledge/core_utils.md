@@ -72,6 +72,7 @@ status: active
 | debounce | `debounce.ts` | 防抖/节流 |
 | disposable | `disposable.ts` | 资源生命周期管理（dispose 模式） |
 | log | `log.ts` | 运行时日志工具（带级别过滤） |
+| nbt-guards | `nbt-guards.ts` | NBT 数据结构类型守卫（isObj / asString / asNumber / asArray / getCompound） |
 
 ## 对外 API / 入口
 

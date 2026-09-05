@@ -25,6 +25,9 @@ import * as threejs$0 from "../../go/threejs/models.js";
 import * as types$0 from "../../go/types/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as registry$0 from "../../go/types/registry/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as updater$0 from "../../go/updater/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -448,7 +451,7 @@ export function GetLinkMode(): $CancellablePromise<string> {
 /**
  * GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
  */
-export function GetLitematicVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
+export function GetLitematicVoxelData(path: string): $CancellablePromise<registry$0.LitematicVoxelData | null> {
     return $Call.ByID(2172897631, path);
 }
 
@@ -470,7 +473,7 @@ export function GetModelTags(modelPath: string): $CancellablePromise<string[] | 
 /**
  * GetNbtVoxelData 读取 .nbt 结构文件体素数据
  */
-export function GetNbtVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
+export function GetNbtVoxelData(path: string): $CancellablePromise<registry$0.LitematicVoxelData | null> {
     return $Call.ByID(2164005593, path);
 }
 
@@ -506,7 +509,7 @@ export function GetRuntimeLogs(): $CancellablePromise<types$0.RuntimeLog[] | nul
 /**
  * GetSchematicVoxelData 读取 .schematic 文件体素数据
  */
-export function GetSchematicVoxelData(path: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
+export function GetSchematicVoxelData(path: string): $CancellablePromise<registry$0.LitematicVoxelData | null> {
     return $Call.ByID(199377974, path);
 }
 
@@ -521,7 +524,7 @@ export function GetSubDirMap(): $CancellablePromise<{ [_ in string]?: string } |
 /**
  * GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
  *   - global：仓库侧基准目录（GetRepoRoot 结果）
- *   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
+ *   - instance：实例侧实际扫描目录（registry.FindInstDir 结果，可能因兜底命中非标准目录）
  *   - warningCode：仓库侧目录疑似过宽时的结构化告警码（"scan_dir_wide"，空串=正常）
  *   - warningParams：告警参数（label=类型名、dir=过宽目录、subDir=建议专属子目录）；
  *     显示文案由前端按 i18n 组装，后端不吐拼好的中文（避免 en/ja 用户看到中文警告）
@@ -535,12 +538,12 @@ export function GetSyncScanDirs(rtype: string, instanceName: string): $Cancellab
 
 /**
  * GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（与 Get*VoxelData
- * 同形状：成功 → *types.LitematicVoxelData；失败 → error）。
+ * 同形状：成功 → *registry.LitematicVoxelData；失败 → error）。
  * entry 为容器内条目路径（如 "subdir/a.nbt"）；ext 决定体素构建器分派
  * （.nbt → BuildNbtVoxelDataFromRoot / .schematic → BuildSchematicVoxelDataFromRoot /
  * 其余 → BuildVoxelDataFromRoot，对齐 VOXEL_RPC_BY_EXT 前端映射）。
  */
-export function GetVoxelDataInContainer(path: string, entry: string, ext: string): $CancellablePromise<types$0.LitematicVoxelData | null> {
+export function GetVoxelDataInContainer(path: string, entry: string, ext: string): $CancellablePromise<registry$0.LitematicVoxelData | null> {
     return $Call.ByID(3637455095, path, entry, ext);
 }
 
@@ -733,9 +736,9 @@ export function LoadGitHubRepos(): $CancellablePromise<types$0.WorkshopCreator[]
 }
 
 /**
- * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types.LoadRegistry）
+ * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/typereg.LoadRegistry）
  */
-export function LoadResourceTypes(): $CancellablePromise<types$0.ResourceTypeRegistry | null> {
+export function LoadResourceTypes(): $CancellablePromise<registry$0.ResourceTypeRegistry | null> {
     return $Call.ByID(3636552016);
 }
 
@@ -942,7 +945,7 @@ export function ReadFileBytesBatchWithMeta(paths: string[] | null): $Cancellable
 /**
  * ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
  */
-export function ReadLitematicMeta(path: string): $CancellablePromise<types$0.LitematicMeta | null> {
+export function ReadLitematicMeta(path: string): $CancellablePromise<registry$0.LitematicMeta | null> {
     return $Call.ByID(3216421386, path);
 }
 
@@ -1136,7 +1139,7 @@ export function ScanModelEntries(dir: string): $CancellablePromise<types$0.Model
  * 
  * subtype 参数：按子类型隔离扩展名（如 EntityPlayer → 只有 .pmx/.pmd/.zip，不含 .vmd/.vpd）。
  * subtype 为空时回退到父类型扩展名（壳类型场景）。
- * 过滤逻辑：取 types.SupportedExtsForSubtype(rtype, subtype) 白名单，扩展名不匹配的条目直接丢弃。
+ * 过滤逻辑：取 typereg.SupportedExtsForSubtype(rtype, subtype) 白名单，扩展名不匹配的条目直接丢弃。
  * rtype 为空或注册表无匹配时退化为 ScanModelEntriesWithLabel 行为（不过滤）。
  * 路径守卫与 ScanModelEntries/ScanModelEntriesWithLabel 完全一致。
  */

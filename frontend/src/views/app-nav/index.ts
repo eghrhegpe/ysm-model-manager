@@ -153,6 +153,8 @@ class AppNav extends WebComponentBase {
   _unsub: (() => void) | undefined;
   _unsubLang: (() => void) | undefined;
   _unsubRtype: (() => void) | undefined;
+  /** _focusRepoSearch 的 setTimeout 句柄，disconnectedCallback 必须 clear */
+  _focusTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -202,6 +204,8 @@ class AppNav extends WebComponentBase {
     this._unsub?.();
     this._unsubLang?.();
     this._unsubRtype?.();
+    clearTimeout(this._focusTimer ?? undefined);
+    this._focusTimer = null;
   }
 
   /** logo 初始文案：当前资源类型短标签 + 「管理器」后缀（如「YSM 管理器」「MMD 管理器」） */
@@ -336,7 +340,9 @@ class AppNav extends WebComponentBase {
         srch.select();
         return;
       }
-      if (++tries < 20) setTimeout(tryFocus, 25);
+      if (++tries < 20) {
+        this._focusTimer = setTimeout(tryFocus, 25);
+      }
     };
     tryFocus();
   }

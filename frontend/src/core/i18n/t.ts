@@ -14,6 +14,19 @@ export type LocaleKey = keyof typeof zhCN;
 export type LocaleParams = Record<string, string | number>;
 
 /**
+ * 将 params 中的 {key} 占位符替换为对应值。
+ * 使用函数型替换防止 $&/$1 等特殊序列被正则解析，并对 key 先做正则转义。
+ */
+export function interpolate(text: string, params?: LocaleParams): string {
+  if (!params) return text;
+  for (const [k, v] of Object.entries(params)) {
+    const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(new RegExp(`\\{${escaped}\\}`, "g"), () => String(v));
+  }
+  return text;
+}
+
+/**
  * 翻译函数。
  * @param key - 扁平化 key，如 "nav.repository"（keyof 校验：字面量拼错编译期报错）
  * @param params - 插值参数，如 { n: 3 } 替换 "{n}"
@@ -36,14 +49,7 @@ export function t(key: LocaleKey, params?: LocaleParams): string {
   }
 
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      // P1/P2 修复（子代理审计）：① 替换值用函数型替换——字符串替换会把 `$&`/`$1`/
-      // `$<name>` 当特殊序列解析（参数值含 "$1" 会被替换成空串或捕获组内容，产生错译文）；
-      // ② 参数名先正则转义——`{a.b}`/`{[` 等含正则元字符的 key 会构造非法正则（RangeError）
-      // 或误匹配。函数型替换 + 转义双保险
-      const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      text = text.replace(new RegExp(`\\{${escaped}\\}`, "g"), () => String(v));
-    }
+    text = interpolate(text, params);
   }
   return text;
 }

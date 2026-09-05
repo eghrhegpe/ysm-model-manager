@@ -144,7 +144,7 @@ function texRow(
   const declT = opt.decl ?? "?";
   if (opt.ex) {
     // 专属纹理无单独加载位图句柄 → 只给声明尺寸，避免「专属」看不出大小
-    right.textContent = "专属 · 声明 " + declT;
+    right.textContent = t("skeleton.exclusiveDecl", { decl: declT });
   } else {
     const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
       ?.userData;
@@ -152,7 +152,7 @@ function texRow(
     const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
     const size = w !== null && h !== null ? w + "×" + h : "?";
     const catPart = opt.cat ? opt.cat + " · " : "";
-    right.textContent = `${catPart}声明 ${declT} · 加载 ${size}`;
+    right.textContent = t("skeleton.declAndLoad", { cat: catPart, decl: declT, size });
   }
   d.appendChild(right);
   return d;

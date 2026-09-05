@@ -1,5 +1,6 @@
 // ===== Canvas 全屏放大预览 =====
 // 从 events.ts 拆分：openFullPreview
+import { t } from "../../core/i18n/t.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { renderModel2D } from "./model2d/model2d.ts";
 
@@ -35,7 +36,7 @@ export async function openFullPreview(
   overlay.appendChild(bigCanvas);
   const hint = document.createElement("div");
   hint.className = "zoom-hint";
-  hint.textContent = "🖱️ 拖拽旋转 · 滚轮缩放 · ESC 关闭";
+  hint.textContent = t("preview.hint.zoom");
   overlay.appendChild(hint);
   let zoom = 1,
     rotation = 0;

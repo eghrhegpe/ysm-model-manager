@@ -200,7 +200,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 163 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 188 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
 
 ### `menu:show`
 
@@ -243,7 +243,7 @@
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 262 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 198 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 243 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
 
@@ -252,7 +252,7 @@
 |------|------|----|
 | registerPageStore | `frontend/src/core/page-store.ts` | 68 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 144 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 173 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
 
 ### `package:selected`
 
@@ -282,7 +282,7 @@
 | useCurrentResourceType | `frontend/src/features/repo-rtype.ts` | 33 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 190 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 488 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 

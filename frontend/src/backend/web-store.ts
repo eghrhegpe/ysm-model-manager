@@ -61,7 +61,8 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
     const saved = await idbGet<unknown>("config", logKeyOf(ring));
     if (Array.isArray(saved)) ring.push(...(saved as Array<Record<string, unknown>>));
   } catch {
-    // IDB 不可用：保持空环
+    // IDB 不可用：保持空环；仅首次失败时 warn，与 idb.ts:123 对齐
+    if (!webLogHydrated[flag]) console.warn("[web-store] IDB 不可用，日志无法恢复");
   }
   webLogHydrated[flag] = true;
 }

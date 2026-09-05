@@ -1094,6 +1094,7 @@ export const zhCN = {
   "preview.on": "开启",
   "preview.off": "关闭",
   "preview.zoom": "放大",
+  "preview.hint.zoom": "🖱️ 拖拽旋转 · 滚轮缩放 · ESC 关闭",
   "preview.action.exportBoneNames": "导出骨骼名",
   "preview.section.bones": "骨骼",
   "preview.close3d": "关闭 3D",
@@ -1384,6 +1385,8 @@ export const zhCN = {
   "skeleton.currentBinding": "当前组件绑定：{name}",
   "skeleton.componentExclusive": "组件专属",
   "skeleton.slots": "槽 {slots}",
+  "skeleton.exclusiveDecl": "专属 · 声明 {decl}",
+  "skeleton.declAndLoad": "{cat}声明 {decl} · 加载 {size}",
 
   "android.backExit": "再按一次返回退出应用",
   "android.networkOffline": "⚠️ 网络已断开",

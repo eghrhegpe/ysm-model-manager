@@ -1091,6 +1091,7 @@ export const en: Record<string, string> = {
   "preview.on": "On",
   "preview.off": "Off",
   "preview.zoom": "Zoom In",
+  "preview.hint.zoom": "🖱️ Drag to rotate · Scroll to zoom · ESC to close",
   "preview.action.exportBoneNames": "Export Bone Names",
   "preview.section.bones": "Bones",
   "preview.close3d": "Close 3D",
@@ -1380,6 +1381,8 @@ export const en: Record<string, string> = {
   "skeleton.currentBinding": "Current component binding: {name}",
   "skeleton.componentExclusive": "Component exclusive",
   "skeleton.slots": "Slots {slots}",
+  "skeleton.exclusiveDecl": "Exclusive · Declared {decl}",
+  "skeleton.declAndLoad": "{cat}Declared {decl} · Loaded {size}",
 
   "android.backExit": "Press back again to exit",
   "android.networkOffline": "⚠️ Network disconnected",

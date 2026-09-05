@@ -1092,6 +1092,7 @@ export const ja: Record<string, string> = {
   "preview.on": "オン",
   "preview.off": "オフ",
   "preview.zoom": "拡大",
+  "preview.hint.zoom": "🖱️ ドラッグで回転・スクロールでズーム・ESCで閉じる",
   "preview.action.exportBoneNames": "ボーン名をエクスポート",
   "preview.section.bones": "ボーン",
   "preview.close3d": "3Dを閉じる",
@@ -1381,6 +1382,8 @@ export const ja: Record<string, string> = {
   "skeleton.currentBinding": "現在のコンポーネントバインド: {name}",
   "skeleton.componentExclusive": "コンポーネント専用",
   "skeleton.slots": "スロット {slots}",
+  "skeleton.exclusiveDecl": "専用 · 宣言 {decl}",
+  "skeleton.declAndLoad": "{cat}宣言 {decl} · 読み込み {size}",
 
   "android.backExit": "もう一度戻るキーで終了します",
   "android.networkOffline": "⚠️ ネットワークが切断されました",

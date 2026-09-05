@@ -7,7 +7,6 @@ source_files:
   - frontend/src/utils/core/
 auto_fields:
   symbols_with_lines:
-    - Abortable
     - addDisposableListener
     - asArray
     - asNumber
@@ -17,7 +16,6 @@ auto_fields:
     - clampInt
     - clampPct
     - debounce
-    - DebouncedTimer
     - delay
     - Disposable
     - fireAndForget
@@ -25,11 +23,9 @@ auto_fields:
     - isObj
     - lerp
     - lerpArray
-    - LoadingGuard
     - logError
     - LogSink
     - logWarn
-    - makeLazyLoader
     - setLogSink
     - swallowError
     - waitForFrame

@@ -23,7 +23,6 @@ auto_fields:
     - _getWasmBinaryMt
     - _lastSelectedType
     - _resetSingletons
-    - Abortable
     - aboutHTML
     - actionBtnHTML
     - AdaptiveRenderBudget
@@ -346,7 +345,6 @@ auto_fields:
     - currentRepoType
     - dbg
     - debounce
-    - DebouncedTimer
     - DecodedStats
     - DecodedTexture
     - DecodedYsm
@@ -751,7 +749,6 @@ auto_fields:
     - loadEntries
     - loadFavs
     - LoadGuard
-    - LoadingGuard
     - loadingHTML
     - LoadingProgressMode
     - loadInstances
@@ -791,7 +788,6 @@ auto_fields:
     - makeBonePanelRenderer
     - makeBonesPanelItem
     - makeFbxAdapter
-    - makeLazyLoader
     - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter

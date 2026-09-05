@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-189：frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名",
+        "link": "/adr/ADR-189-frontend-core-backend-utils-core-feedback"
+      },
+      {
         "text": "ADR-188：core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语",
         "link": "/adr/ADR-188-core-handlers-sync-features-require-mcroot-features"
       },

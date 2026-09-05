@@ -116,13 +116,13 @@ status: active
 - `ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult` — **单点对比归并**（sync_diff.go，ADR-064 阶段一）：同名同大小 Synced / 同名不同大小 Missing / 仅单侧 Extra，结果排序确定性；`SyncResources` 消费，key 由调用方决定（统一为 `relKey` 相对路径）。注：`CompareGlobalInstanceHashes`（旧非 YSM 实例状态对比）已随死代码清理删除——实例状态对比统一走 `GetInstanceStatus` / `GetInstanceStatusWith`
 - `GetLinkType(path string) types.LinkType` — 判定 `symlink` / `hardlink` / `copy` / `unknown`
 - `SortEntries(entries []types.ModelEntry)` — 按名称排序
-- `PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) (int, error)` — 推送缺失资源；**`types.IsDirLevelSync(rtype)` 注册表驱动**（YSM/MMD 等 `dirLevelSync` 类型）走文件夹级（`SyncResourcesDirLevel` + `installer.InstallDir`），其余走文件级（`SyncResources` + `installer.Install`）
-- `PullResources(rtype, globalDir, targetDir string, logger Logger) (int, error)` — 把实例侧 Extra 拉回仓库（纯复制，不建链接）
+- `PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) (int, error)` — 推送缺失资源；**`types.IsDirLevelSync(rtype)` 注册表驱动**（YSM/MMD 等 `dirLevelSync` 类型）走文件夹级（`SyncResourcesDirLevel` + `installer.InstallDir`），其余走文件级（`SyncResources` + `installer.Install`）；部分失败返回 `ErrPartialSync`（2026-09-05 锐评 P1 刀加 sentinel，调用方可 `errors.Is(err, ErrPartialSync)` 区分「前置不满足」vs「可重试部分失败」）
+- `PullResources(rtype, globalDir, targetDir string, logger Logger) (int, error)` — 把实例侧 Extra 拉回仓库（纯复制，不建链接）；部分失败同样返回 `ErrPartialSync`
 - `PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error` / `PullSingleResource(globalDir, targetDir, srcPath string) error` — 单条推送/拉取；`.json`/`.pmx`/`.pmd` 与目录按整文件夹处理
 - `SyncCustomToRepo(customDir, repoDir string, scanFn, logger) (int, error)` — 把实例 custom 目录的模型收编回仓库，同哈希/同名跳过
 - `RelinkDir(customDir, repoRoot, rtype, linkMode string, scanFn, logger) (int, error)` — 按哈希重链接实例目录到仓库版本
 - `DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)` — 冲突检测（conflict.go）：收集两端文件 SHA256，哈希不同→`ConflictContentModified`，大小不同→`ConflictSizeMismatch`（防御分支）
-- `ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error` — 单文件冲突解决：`force_remote` 先备份本地再用远端覆盖（失败回滚备份），`force_local` 不操作，`manual` 返回错误
+- `ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error` — 单文件冲突解决：`force_remote` 先备份本地再用远端覆盖（失败回滚备份），`force_local` 不操作，`manual` 返回错误；**路径守卫**：入口用 `paths.RelInside` 校验 conflict.Path 不穿越 localDir/remoteDir（2026-09-05 锐评 P0 刀，原裸 `filepath.Join` 无越界守卫，与 sync_push.go 同款防线不对齐）
 - `ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int)` — 批量解决，`SuggestedStrategy==manual` 时回退到 `defaultStrategy`
 - `suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy` — 按修改时间推荐：远端新→`force_remote`，本地新→`force_local`，相同→`manual`
 - 函数类型：`ScanFunc`（扫描注入，由 internal/app 提供）、`ListVersionsFunc`、`Logger`（导入日志回调，薄壳注入 `App.logger.Add`）

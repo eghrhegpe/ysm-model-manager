@@ -248,6 +248,37 @@ invariant_anchors:
 
 三轮加权约 **3.3/5**——安全防御层行业级（OOM/栈溢出/路径逃逸/TOCTOU/代际防竞态 四重防线全部到位），技术债集中在「隐式协议靠注释续命 + 上帝包 + 核心路径无测试」三块。
 
+### 2026-09-07 四路子代理「全能 vs 确定」摸排 + 刀口执行
+
+**三评加权评分演进：**
+
+| 轮次 | 维度 | 初始 | 修复后 |
+|------|------|------|--------|
+| 第一轮（三路锐评） | IO/扫描/解析 | 3.4/5 | — |
+| | 二进制解析/渲染 | 3.2/5 | — |
+| | Wails绑定/应用层 | 2.8/5 | — |
+| 加权 | 三轮综合 | **3.3/5** | — |
+| 第二轮（全能vs确定摸排） | 全能函数堆积 | 2/5 | 2/5（已修复项扎实） |
+| | 隐式状态散落 | 2/5 | **1.5/5** ✅ |
+| | 错误语义模糊 | 3.5/5 | **1.5/5** ✅ |
+| 加权 | 二轮综合 | — | **1.8/5** ✅ |
+
+**本轮刀口（5 个 commit）：**
+
+- ✅ **P0#1 fbx 导入策略断链**：`go/importer/importer.go` init() 补 `Register(NewSimpleCopy("fbx"))`；`importer_test.go` 加 fbx 断言；契约测试 `importer_registry_test.go` 新创建（遍历注册表全量 id 断言 importer.Get(id)!=nil + Handler种类↔isDir 一致性）
+- ✅ **P0#2 panic 后假 done**：`queue.go:163` 条件补 `!panicked`；`queue_test.go` 补「panic 后不发 done」断言
+- ✅ **P0#3 ResolveConflict 路径穿越**：`conflict.go` 加 `paths.RelInside` 双侧守卫
+- ✅ **P0#4 clampTexDim 注释撒谎**：`texsize.go` 删「口径一致」假声明，显式化统计面板钳 65536 vs geometry UV 归 0 的语义差异
+- ✅ **P0 Handler.Import error 化**：`Handler.Import` 签名 `string→error`；`ImportByType` 同步改 `(string,error)`；`adr143_importbytype_test.go` 反转结论（error 透传保留结构化链路）；前端 `toolbar-events.ts` 适配
+- ✅ **P1#5 同包双胞胎**：`summary.go` 删 `extractTexSizeFromGeometry`，改调 `extractTexSizeFromGeometryBytes`
+- ✅ **P1#6 looseAnims 排序**：`summary.go` map 遍历改先排序再收集
+- ✅ **P1#7 TOCTOU 修复**：`summary.go` 裸 JSON 分支 Stat+ReadFile 改 ReadLimitedEntry 一步
+- ✅ **P1#10 ToggleModelEnable 注释修正**：`app_files.go` 修正「前端 0 消费」为「桌面 UI 零消费，网页版 browser-adapter 在用」
+- ✅ **P1 repoaudit 缓存**：`extToTypeID sync.Once → atomic.Value+实例指针失效`
+- ✅ **P1 ErrPartialSync**：`sync_push.go` 部分失败加 sentinel
+- ✅ **P1 queueEpoch**：`epoch uint64 → queueEpoch` 具名类型
+- ✅ **P2 saveConfig watcher 拆分**：`rebuildWatcherAndDirs` 独立函数，职责分离
+
 ## 动刀进度（实施记录，2026-09-06 三轮仲裁后落地）
 
 - ✅ **刀① `processForEpoch` 加 recover 兜底**：`internal/app/install/queue.go` 的 defer 首行加 `recover`，捕获 `downloadFn`/`emitFn`/`logFn` 回调 panic 后置 `panicked=true`（log 记账）+ 参与 `restart` 判定（`!panicked`）——防「panic → 重启 → 又 panic」无限重启循环，fail-stop 停在本任务。与 `conc.Pool`/`watcher.loop`/`dedup.worker` 三兄弟兜底口径对齐。新增 `queue_test.go` `TestDownloadQueue_DownloadPanicRecovered` 锁住：running 复位、剩余任务不消费、panic 不当普通失败记导入日志。`go build ./...` + `go test -race ./internal/app/install/` 全绿。
@@ -255,6 +286,7 @@ invariant_anchors:
 - ✅ **刀③ `CompareGlobalInstanceHashes` 死代码清理**：核实无 `internal/app` 生产调用（仅 3 个测试 + 文档），已被 `GetInstanceStatusWith` 取代（ADR-064 的 `GetResourceInstanceStatus` handler 实际走 `GetInstanceStatus` 而非它）。删 `CompareGlobalInstanceHashes` + `HasModInDirFn` 类型 + 3 个死测试（`sync_hash.go` 净删至只留 `computeHash`，被 `sync.go` 活跃使用）；`sync_diff.go` 注释同步修正为「唯一实现」。净删 186 行。`go build ./...` + `go test ./go/sync` + drift errors=0 全绿。
 - ➖ **刀③ `InstallLock` 锁粒度**（标记技术债，不动）：ADR-056 共享单锁是明确设计决策，细粒度化引入死锁风险；是性能天花板非正确性 bug，属推倒重来心态。
 - ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。`CompareGlobalInstanceHashes` 死代码已清理（见刀③）。
+- ➖ **P2 技术债（标记，不阻塞发版）**：`InstallLock` 注释契约 >10 处（ADR-056 设计决策，细粒度化引入死锁风险）；`ToggleModelEnable` bool 语义混用（改动面大，前端 banned 状态由扫描结果下发不依赖返回值）；`YSGP` 检测三胞胎合一（返回形态各不同，合并成本高）；`wasm_decoder.go` init 注入（ADR-047 设计决策，改风险高）。
 
 ## 相关
 

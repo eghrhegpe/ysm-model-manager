@@ -1,5 +1,5 @@
 // [doc:architecture] Card container helper — UI layout leaf.
-// Extracted from @/core/utils as part of ADR-191 de-barreling.
+// Extracted from @/core/utils as part of de-barreling (mis-numbered as ADR-191; corrected in ADR-189 D5).
 // Zero dependencies: only touches DOM, no app-state imports.
 // 自 MikuMikuAR 迁移：无应用层依赖，原样保留。
 

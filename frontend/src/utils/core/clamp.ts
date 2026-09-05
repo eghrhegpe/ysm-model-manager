@@ -1,5 +1,5 @@
 // utils/core/clamp.ts — 零依赖数学钳制叶子。
-// 独立自 MikuMikuAR @/core/utils 去桶化（ADR-191）：纯几何/物理模块直接从此处导入，
+// 独立自 MikuMikuAR @/core/utils 去桶化（原误记 ADR-191，ADR-189 D5 更正）：纯几何/物理模块直接从此处导入，
 // 避免从神桶拖起整套应用工具层。
 
 export function clamp(v: number, lo: number, hi: number): number {

@@ -53,11 +53,20 @@ export function resolveInitialPage(): PageName {
   return "repository";
 }
 
-let _currentPage: PageName = resolveInitialPage();
+let _currentPage: PageName | undefined;
+
+/** 首次触碰（读取或广播）才解析 localStorage——消除模块求值期副作用，
+ *  防止未来 uiState（ADR-103）异步化后初始页快照抢跑（ADR-189 D5） */
+function ensureCurrentPage(): PageName {
+  if (_currentPage === undefined) {
+    _currentPage = resolveInitialPage();
+  }
+  return _currentPage;
+}
 
 export const PageStore = {
   get currentPage(): PageName {
-    return _currentPage;
+    return ensureCurrentPage();
   },
 };
 
@@ -69,7 +78,9 @@ export function registerPageStore(unsubs: Array<() => void>): void {
       // nav:changed 是「已发生事实」的广播（视图已切），兜底重定向成 repository
       // 会让 _currentPage 与真实视图脱节；宽容解析只属于启动恢复（resolveInitialPage）
       if (!isValidPage(page)) return;
-      if (page !== _currentPage) {
+      // 先确保初始页已解析（时序无关），再按「已发生事实」更新——两分支共用
+      // 唯一写入函数，写入路径收敛由类型系统外的单一函数保证（ADR-189 D5）
+      if (page !== ensureCurrentPage()) {
         _currentPage = page;
       }
     }),

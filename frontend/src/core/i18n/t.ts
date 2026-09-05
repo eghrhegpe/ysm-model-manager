@@ -13,28 +13,16 @@ export type LocaleKey = keyof typeof zhCN;
 /** 插值参数：{key} 占位符的值（字符串/数字） */
 export type LocaleParams = Record<string, string | number>;
 
-/** 占位符正则编译缓存（带 params 的 t() 在列表渲染中高频，避免每次 new RegExp）。
- *  前提：key 须来自代码常量（LocaleParams 由调用点字面量构造）——interpolate 是
- *  导出函数，若被喂用户可控 key（如文件名）此 Map 会无界增长，勿用于外部输入 */
-const placeholderCache = new Map<string, RegExp>();
-
-function getPlaceholderRegex(key: string): RegExp {
-  let re = placeholderCache.get(key);
-  if (!re) {
-    re = new RegExp(`\\{${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\}`, "g");
-    placeholderCache.set(key, re);
-  }
-  return re;
-}
-
 /**
  * 将 params 中的 {key} 占位符替换为对应值。
- * 使用函数型替换防止 $&/$1 等特殊序列被正则解析。
+ * split/join 字面量替换：无正则编译、无缓存表（ADR-189 D5——原 placeholderCache
+ * 无界 Map 的「key 须为代码常量」前提只写在注释里，interpolate 是导出 API，
+ * 喂外部输入即无界增长；split/join 性能同级且对 $&/$1 等特殊序列天然免疫）。
  */
 export function interpolate(text: string, params?: LocaleParams): string {
   if (!params) return text;
   for (const [k, v] of Object.entries(params)) {
-    text = text.replace(getPlaceholderRegex(k), () => String(v));
+    text = text.split(`{${k}}`).join(String(v));
   }
   return text;
 }

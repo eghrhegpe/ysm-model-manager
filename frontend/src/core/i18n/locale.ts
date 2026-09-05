@@ -29,20 +29,24 @@ const bundles: Record<string, Bundle> = {};
 
 /**
  * 无参 getBundle() 的活跃包引用缓存。t() 是渲染热路径（每次调用原实现要
- * Object.keys 扫 1437 key 包两次），退化为一次属性读取；仅在 bundles /
- * _currentLang 变更点（loadLocale 成败、setLang、initI18n）刷新。
+ * Object.keys 扫 1437 key 包两次），退化为一次属性读取。
+ * ADR-189 D5：缓存失效记账收敛——bundles 唯一写点（doLoadLocale）与
+ * _currentLang 唯一写点（setCurrentLang）各自触发刷新，不再散落多处。
  */
 let _activeBundle: Bundle | undefined;
 
-/** 刷新活跃包缓存（ bundles / _currentLang 任一变更后调用） */
+/** 非空包判定（{} 是 truthy，直接判布尔会让空包短路 zh-CN 兜底） */
+function isNonEmpty(b: Bundle | undefined): b is Bundle {
+  return !!b && Object.keys(b).length > 0;
+}
+
+/** 刷新活跃包缓存（bundles / _currentLang 任一变更后调用） */
 function refreshActiveBundle(): void {
-  const cur = bundles[_currentLang];
-  if (cur && Object.keys(cur).length > 0) {
-    _activeBundle = cur;
-    return;
-  }
-  const base = bundles["zh-CN"];
-  _activeBundle = base && Object.keys(base).length > 0 ? base : undefined;
+  _activeBundle = isNonEmpty(bundles[_currentLang])
+    ? bundles[_currentLang]
+    : isNonEmpty(bundles["zh-CN"])
+      ? bundles["zh-CN"]
+      : undefined;
 }
 
 /** 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） */
@@ -91,12 +95,8 @@ async function doLoadLocale(lang: string): Promise<void> {
 export function getBundle(lang?: string): Bundle {
   if (lang === undefined && _activeBundle) return _activeBundle;
   const code = lang ?? _currentLang;
-  const cur = bundles[code];
-  // P2（code_review）：空对象 {} 是 truthy——`bundles[code] ?? zh-CN` 会被空包短路，
-  // 文档承诺的"否则回落到基准"永不执行；只返回非空包，否则回落非空 zh-CN
-  if (cur && Object.keys(cur).length > 0) return cur;
-  const base = bundles["zh-CN"];
-  if (base && Object.keys(base).length > 0) return base;
+  if (isNonEmpty(bundles[code])) return bundles[code];
+  if (isNonEmpty(bundles["zh-CN"])) return bundles["zh-CN"];
   return {};
 }
 
@@ -107,6 +107,12 @@ export function getLang(): LangCode {
   return _currentLang;
 }
 
+/** _currentLang 唯一写点（ADR-189 D5）：赋值与活跃包缓存刷新强制配对 */
+function setCurrentLang(code: LangCode): void {
+  _currentLang = code;
+  refreshActiveBundle();
+}
+
 /** 切换语言（异步加载语言包后触发事件） */
 export async function setLang(code: LangCode): Promise<void> {
   if (code === _currentLang) return;
@@ -115,13 +121,12 @@ export async function setLang(code: LangCode): Promise<void> {
   await loadLocale(code);
   if (gen !== _langReqGen) return; // 已有更新的切换请求 → 放弃过期写入
   if (code === _currentLang) return;
-  _currentLang = code;
+  setCurrentLang(code);
   safeSet(STORAGE_KEY, code);
   applyHtmlLang(code);
   // 切语言后清空缺失 key 告警节流——warnedKeys 原为全局 Set 跨语言复用，
   // zh-CN 期记录的 key 会吃掉 en/ja 期同 key 的告警（静默缺译）
   warnedKeys.clear();
-  refreshActiveBundle();
   bus.emit("lang:changed", { lang: code });
 }
 
@@ -163,12 +168,13 @@ function applyHtmlLang(code: string): void {
 export async function initI18n(): Promise<void> {
   const saved = safeGet(STORAGE_KEY) as LangCode | null;
   const detected = detectSystemLang();
-  _currentLang =
-    saved && SUPPORTED_LANGS.some((l) => l.code === saved) ? saved : (detected ?? "zh-CN");
+  setCurrentLang(
+    saved && SUPPORTED_LANGS.some((l) => l.code === saved) ? saved : (detected ?? "zh-CN"),
+  );
 
   applyHtmlLang(_currentLang);
   await loadLocale(_currentLang);
-  refreshActiveBundle();
+  // 活跃包缓存由 doLoadLocale 的 finally 与 setCurrentLang 刷新，此处无需重复
   // 仅当语言包确实加载成功（非空）才通知重渲染；失败留待重试，不污染订阅通道
   const loaded = bundles[_currentLang];
   if (loaded && Object.keys(loaded).length > 0) {

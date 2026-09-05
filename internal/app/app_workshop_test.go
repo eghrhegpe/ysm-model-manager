@@ -409,3 +409,121 @@ func TestMergeCommunityCreatorsFromJSON_FreshUser(t *testing.T) {
 		t.Fatalf("全新用户并入后应 2 条, got %d", got)
 	}
 }
+
+// 全新用户拖拽导入站点 JSON：全部新增（added=N），落盘可读回。
+func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	imported := []types.WorkshopSite{
+		{ID: "bilibili", Label: "B站", URL: "https://www.bilibili.com/"},
+		{ID: "afdian", Label: "爱发电", URL: "https://afdian.com/"},
+	}
+	data, _ := json.Marshal(imported)
+	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("全新用户首次 Merge 不应失败, got %v", err)
+	}
+	if added != 2 || updated != 0 {
+		t.Fatalf("期望 added=2 updated=0, got added=%d updated=%d", added, updated)
+	}
+	// 落盘验证：读回 workshop_sites.json（无独立 LoadWorkshopSites，直接读文件）
+	p := workshopSitesPath()
+	var got []types.WorkshopSite
+	if err := readJSONFile(p, &got); err != nil {
+		t.Fatalf("合并后读回失败: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("落盘应 2 条, got %d", len(got))
+	}
+}
+
+// 已存在站点时导入：同 id 整条覆盖（updated），新 id 追加（added）。
+func TestMergeWorkshopSitesFromJSON_OverwriteAndAdd(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopSite{{ID: "s1", Label: "旧名", URL: "https://old.test"}}
+	if err := a.SaveWorkshopSites(seed); err != nil {
+		t.Fatal(err)
+	}
+	incoming := []types.WorkshopSite{
+		{ID: "s1", Label: "新名", URL: "https://new.test"}, // 命中 → 覆盖
+		{ID: "s2", Label: "新站", URL: "https://s2.test"},  // 未命中 → 追加
+	}
+	data, _ := json.Marshal(incoming)
+	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
+	if err != nil {
+		t.Fatalf("Merge 不应失败, got %v", err)
+	}
+	if added != 1 || updated != 1 {
+		t.Fatalf("期望 added=1 updated=1, got added=%d updated=%d", added, updated)
+	}
+	p := workshopSitesPath()
+	var got []types.WorkshopSite
+	if err := readJSONFile(p, &got); err != nil {
+		t.Fatalf("读回失败: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("落盘应 2 条, got %d", len(got))
+	}
+	// 覆盖生效：s1 是导入的新值（非旧 seed）
+	found := false
+	for _, s := range got {
+		if s.ID == "s1" {
+			found = true
+			if s.Label != "新名" || s.URL != "https://new.test" {
+				t.Fatalf("s1 应被导入值覆盖, got %+v", s)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("落盘缺 s1")
+	}
+}
+
+// 非法输入报错：非 JSON / 全空 id（净化后 0 条）。
+func TestMergeWorkshopSitesFromJSON_Invalid(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	if _, _, err := a.MergeWorkshopSitesFromJSON("not-json"); err == nil {
+		t.Error("非 JSON 应报错")
+	}
+	if _, _, err := a.MergeWorkshopSitesFromJSON(`[{"label":"无 id"}]`); err == nil {
+		t.Error("全空 id（净化后 0 条）应报错")
+	}
+}
+
+// 现有用户配置损坏 → 中止（不静默置空覆盖用户数据）。
+func TestMergeWorkshopSitesFromJSON_CorruptExistingAborts(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	// 写一个损坏的 workshop_sites.json
+	p := workshopSitesPath()
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("{oops"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	imported := []types.WorkshopSite{{ID: "s1", Label: "新站", URL: "https://s1.test"}}
+	data, _ := json.Marshal(imported)
+	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err == nil {
+		t.Error("现有配置损坏应中止合并（不得覆盖）")
+	}
+	// 损坏文件原样保留
+	got, _ := os.ReadFile(p)
+	if string(got) != "{oops" {
+		t.Errorf("损坏配置应原样保留, got %q", string(got))
+	}
+}

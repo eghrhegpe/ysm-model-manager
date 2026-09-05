@@ -344,6 +344,75 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 	return added, updated, a.SaveWorkshopCreators(existing)
 }
 
+// MergeWorkshopSitesFromJSON 把拖入的站点 JSON（手动全量导入）并入本地 workshop_sites.json。
+// 镜像 MergeWorkshopCreatorsFromJSON（手动导入，drag.ts 消费）的覆盖语义，key = id：
+//   - id 命中 → 整条覆盖为导入值（用户主动导入期望覆盖同名站点配置）；
+//   - id 未命中 → 追加到末尾。
+//
+// 一次 Load 磁盘最新全量（不依赖前端可能 stale 的会话副本）→ 逐条并入 → 单次
+// SaveWorkshopSites（fsutil.WriteFileAtomic）。写入前 sites 轻备份（同 creators 的
+// BackupWorkshopCreators 语义，全新用户无用户配置时跳过不中止）。
+// 返回 (added, updated, error)；added = 新增站点数，updated = 覆盖更新数。
+func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
+	var imported []types.WorkshopSite
+	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
+		return 0, 0, err
+	}
+	// 逐条净化：id 必须非空字符串（站点唯一身份），非法元素过滤
+	cleaned := imported[:0]
+	for _, s := range imported {
+		if s.ID != "" {
+			cleaned = append(cleaned, s)
+		}
+	}
+	imported = cleaned
+	if len(imported) == 0 {
+		return 0, 0, fmt.Errorf("导入数据异常: 无有效站点（期望非空 id 数组）")
+	}
+	// 前置轻备份（无用户配置时 os.IsNotExist → 跳过不中止）
+	sitesPath := workshopSitesPath()
+	if sitesPath != "" {
+		if data, err := os.ReadFile(sitesPath); err == nil {
+			if err := fsutil.WriteFileAtomic(sitesPath+"."+time.Now().Format("20060102-150405")+".bak", data); err != nil {
+				return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
+			}
+		} else if !os.IsNotExist(err) {
+			return 0, 0, fmt.Errorf("备份站点数据失败，中止合并: %w", err)
+		}
+	}
+	// 载入「用户实际配置」（非 bundled 默认）：手动导入的合并基座 = 用户编辑过的
+	// workshop_sites.json。文件不存在（全新用户）→ 空列表，导入全部计 added；
+	// 文件损坏 → 中止（不静默置空覆盖用户配置）。bundled 默认仅 3 个站点，
+	// 混入会令同 id 导入误判为 updated，故此处不用 DefaultWorkshopSites。
+	var existing []types.WorkshopSite
+	if data, err := os.ReadFile(workshopSitesPath()); err == nil {
+		if err := json.Unmarshal(data, &existing); err != nil {
+			return 0, 0, fmt.Errorf("现有站点配置损坏，中止合并: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return 0, 0, fmt.Errorf("读取现有站点配置失败，中止合并: %w", err)
+	}
+	if existing == nil {
+		existing = []types.WorkshopSite{}
+	}
+	existMap := make(map[string]int, len(existing))
+	for i, s := range existing {
+		existMap[s.ID] = i
+	}
+	added, updated := 0, 0
+	for _, s := range imported {
+		if idx, ok := existMap[s.ID]; ok {
+			existing[idx] = s
+			updated++
+		} else {
+			existing = append(existing, s)
+			existMap[s.ID] = len(existing) - 1
+			added++
+		}
+	}
+	return added, updated, a.SaveWorkshopSites(existing)
+}
+
 // mergeTypeSegments 把 incoming 的 type 分号段并入 target（trim / 去空 / 去重）。
 // 领域语义：name 是创作者唯一身份，type 是多站点集合（分号段）——社区索引可能为
 // 既有创作者新增站点，段并入防覆盖丢站；与 MergeWorkshopCreatorsFromJSON 的覆盖

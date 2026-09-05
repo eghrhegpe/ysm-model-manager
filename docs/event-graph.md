@@ -494,8 +494,8 @@
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 85 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 109 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 108 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 117 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 108 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 132 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 139 |

@@ -24,6 +24,7 @@ import { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS } from "./sky-state.ts";
 export type { SkyModelType, SkyParams };
 export { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS };
 
+import { disposeObject3D } from "../safe-dispose.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
 import {
   type MenuControlDef,
@@ -173,10 +174,6 @@ function skcBuildTime(cap: SkyCapability): MenuControlDef[] {
   ];
 }
 
-function skcBuildSun(_cap: SkyCapability): MenuControlDef[] {
-  return [];
-}
-
 function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
   return [
     {
@@ -285,10 +282,11 @@ export class SkyCapability implements SceneCapability {
   /** 构造前 scene.environment 的快照——dispose 时还原，detach 不触碰（用户可能再启用） */
   private prevEnvironment: THREE.Texture | THREE.CubeTexture | null;
   /** 引用计数：多个 SkyCapability 共享同一 renderer 时，
-   *  tone mapping 只在第一个 attach 时设置，只在最后一个 dispose 时恢复 */
-  private static toneRefCount = new Map<THREE.WebGLRenderer, number>();
-  private static prevToneMap = new Map<THREE.WebGLRenderer, THREE.ToneMapping>();
-  private static prevExposureMap = new Map<THREE.WebGLRenderer, number>();
+   *  tone mapping 只在第一个 attach 时设置，只在最后一个 dispose 时恢复。
+   *  WeakMap：cap 未 dispose 时不得阻碍 renderer 被 GC（锐评 P2）。 */
+  private static toneRefCount = new WeakMap<THREE.WebGLRenderer, number>();
+  private static prevToneMap = new WeakMap<THREE.WebGLRenderer, THREE.ToneMapping>();
+  private static prevExposureMap = new WeakMap<THREE.WebGLRenderer, number>();
   /** God Rays（体积光束）*/
   private godRays: THREE.Group | null = null;
   private godRaysEnabled: boolean;
@@ -543,6 +541,9 @@ export class SkyCapability implements SceneCapability {
    *  forceEnv=false：昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建
    *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
+    // 禁用态不推进任何时间轴（锐评 P3：否则 timeOfDay 静默漂移——状态在走、视觉不变，
+    // 再启用时太阳跳变）。god rays shimmer 时间轴一并冻结（材质未挂场景，推进无意义）。
+    if (!this.enabled) return;
     // God Rays shimmer 动画时间轴独立于昼夜循环推进（锐评 P1：此前初始化后全仓无写入，
     // shader sin(uTime*2.0+...) 永远静止——写了动画，动画不存在）。
     this.godRaysTime.value += dt;
@@ -760,20 +761,8 @@ export class SkyCapability implements SceneCapability {
     return group;
   }
 
-  /** 释放一组 mesh 的 geometry/material（god rays / sunset tint 复用） */
-  private disposeMeshGroup(group: THREE.Object3D | null): void {
-    if (!group) return;
-    group.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      child.geometry.dispose();
-      const mat = child.material;
-      if (mat instanceof THREE.ShaderMaterial) mat.dispose();
-    });
-  }
-
-  /** 创建体积光束 geometry + material */
+  /** 创建体积光束 geometry + material（仅构造期调用一次；重建入口从未启用，不承担 dispose 旧实例职责） */
   private createGodRays(): void {
-    this.disposeMeshGroup(this.godRays);
     this.godRays = this.createConePlanes();
   }
 
@@ -860,7 +849,6 @@ export class SkyCapability implements SceneCapability {
   getMenuControls(): MenuControlDef[] {
     return [
       ...skcBuildTime(this),
-      ...skcBuildSun(this),
       ...skcBuildScattering(this),
       ...skcBuildAutoRotate(this),
       ...skcBuildAtmosphereFX(this),
@@ -973,11 +961,11 @@ export class SkyCapability implements SceneCapability {
     this.envSky.geometry.dispose();
     (this.envSky.material as THREE.Material).dispose();
     this.pmrem?.dispose();
-    // 释放 god rays
-    this.disposeMeshGroup(this.godRays);
+    // 释放 god rays / sunset tint（disposeObject3D uuid 去重——god rays 两 mesh 共享 material 只释放一次）
+    disposeObject3D(this.godRays);
     this.godRays = null;
     // 释放 sunset tint mesh
-    this.disposeMeshGroup(this.sunsetTintMesh);
+    disposeObject3D(this.sunsetTintMesh);
     this.sunsetTintMesh = null;
   }
 }

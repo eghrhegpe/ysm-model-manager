@@ -164,6 +164,7 @@ auto_fields:
     - disposeEnvSubscriptions
     - disposeMaterial
     - disposeMmdMesh
+    - disposeObject3D
     - disposeSceneMeshes
     - disposeTextureDecoder
     - drawEnvEquirect
@@ -393,6 +394,7 @@ auto_fields:
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
+    - nodeControlToCapControl
     - normalizeFbxScale
     - onOverlayStyleTargetReset
     - OrderedTexInput

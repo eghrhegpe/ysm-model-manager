@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { dbg } from "../../utils/debug/debug.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { safeDispose } from "../safe-dispose.ts";
+import { disposeObject3D, safeDispose } from "../safe-dispose.ts";
 import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad */
@@ -250,34 +250,9 @@ export class VolumetricCone {
 
   private disposeGroup(): void {
     if (!this.group) return;
-    if (this.group.parent) this.group.parent.remove(this.group);
-    // 两 plane 共享同一 geometry+material（buildGroup），traverse 会重复 dispose
-    // 同一实例——P1 double-dispose。用 Set 按 uuid 去重，每个唯一实例只 dispose 一次。
-    const seenGeo = new Set<string>();
-    const seenMat = new Set<string>();
-    this.group.traverse((obj) => {
-      const m = obj as THREE.Mesh;
-      const geo = m.geometry;
-      if (geo) {
-        const id = geo.uuid;
-        if (!seenGeo.has(id)) {
-          seenGeo.add(id);
-          safeDispose(geo);
-        }
-      }
-      const mat = (m as unknown as { material?: THREE.Material | THREE.Material[] }).material;
-      if (mat) {
-        const mats = Array.isArray(mat) ? mat : [mat];
-        for (const mt of mats) {
-          if (!mt) continue;
-          const id = mt.uuid;
-          if (!seenMat.has(id)) {
-            seenMat.add(id);
-            tryDisposeMat(mt);
-          }
-        }
-      }
-    });
+    // 释放逻辑已上收 safe-dispose.disposeObject3D（uuid 去重防共享实例 double-dispose，
+    // disposeMaterial=tryDisposeMat 连带清扫材质贴图槽位——opt-in 防误伤子树外共享贴图）
+    disposeObject3D(this.group, { detach: true, disposeMaterial: tryDisposeMat });
     this.group = null;
   }
 }

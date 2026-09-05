@@ -22,6 +22,7 @@ auto_fields:
     - closeActive3DOverlay
     - Disposable
     - disposeDebugGroup
+    - disposeObject3D
     - disposeSceneMeshes
     - getRegisteredRoutes
     - GroupedScene

@@ -829,6 +829,15 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     expect(cap.isAutoRotating()).toBe(false);
   });
 
+  it("[锐评 P3] enabled=false 时 update 冻结全部时间轴（timeOfDay/godRaysTime 不漂移）", () => {
+    const cap = newCap({ enabled: false });
+    cap.startAutoRotate();
+    const t = (cap as unknown as { godRaysTime: { value: number } }).godRaysTime;
+    cap.update(2);
+    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
+    expect(t.value).toBe(0);
+  });
+
   it("dispose 自动停止昼夜循环", () => {
     const cap = newCap();
     cap.startAutoRotate();

@@ -47,6 +47,7 @@ auto_fields:
     - mountPreviewRootMenu
     - multiModelSelectNode
     - MultiModelSelectOpts
+    - nodeControlToCapControl
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
     - PreviewControlSpec

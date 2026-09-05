@@ -201,6 +201,17 @@ export class FogCapability implements SceneCapability {
     }
   }
 
+  /* 菜单 getter（对齐 getMode/getColor 口径——私有 params 只许公开方法读，禁 cast 掏心） */
+  getDensity(): number {
+    return this.params.density;
+  }
+  getNear(): number {
+    return this.params.near;
+  }
+  getFar(): number {
+    return this.params.far;
+  }
+
   getParams(): FogParams {
     return { ...this.params, enabled: this.enabled };
   }
@@ -253,9 +264,6 @@ export class FogCapability implements SceneCapability {
 }
 
 function fcBuildMain(cap: FogCapability): MenuControlDef[] {
-  const self = cap as unknown as {
-    params: { density: number };
-  };
   return [
     {
       id: "fog-enabled",
@@ -294,16 +302,13 @@ function fcBuildMain(cap: FogCapability): MenuControlDef[] {
       fallback: "密度",
       group: "preview.fogGroupParams",
       slider: { min: 0.001, max: 0.1, step: 0.001 },
-      getValue: () => self.params.density,
+      getValue: () => cap.getDensity(),
       setValue: (v) => cap.setDensity(v as number),
     },
   ];
 }
 
 function fcBuildLinearGroup(cap: FogCapability): MenuControlDef[] {
-  const self = cap as unknown as {
-    params: { near: number; far: number };
-  };
   return [
     {
       id: "fog-near",
@@ -312,7 +317,7 @@ function fcBuildLinearGroup(cap: FogCapability): MenuControlDef[] {
       fallback: "近距",
       group: "preview.fogGroupParams",
       slider: { min: 0, max: 500, step: 1, unit: "" },
-      getValue: () => self.params.near,
+      getValue: () => cap.getNear(),
       setValue: (v) => cap.setLinearRange(v as number, undefined),
     },
     {
@@ -322,7 +327,7 @@ function fcBuildLinearGroup(cap: FogCapability): MenuControlDef[] {
       fallback: "远距",
       group: "preview.fogGroupParams",
       slider: { min: 10, max: 2000, step: 10, unit: "" },
-      getValue: () => self.params.far,
+      getValue: () => cap.getFar(),
       setValue: (v) => cap.setLinearRange(undefined, v as number),
     },
   ];

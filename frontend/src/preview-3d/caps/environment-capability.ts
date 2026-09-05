@@ -103,6 +103,24 @@ export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
   }
 }
 
+/** 环形日志面板注入点取用 helper（mount-preview-core 在 globalThis 挂载 __ysmRingLog）。
+ *  此前三处构建/加载路径逐字复制同构的 globalThis cast 样板（锐评 P2），收敛于此；
+ *  无注入点时可选 console 兜底（文案可与面板版不同，保持既有控制台口径）。 */
+function ringLog(
+  mod: string,
+  msg: string,
+  lvl: "info" | "warn" | "error",
+  consoleFallback?: () => void,
+): void {
+  const logger = (
+    globalThis as unknown as {
+      __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
+    }
+  ).__ysmRingLog;
+  if (logger) logger(mod, msg, lvl);
+  else consoleFallback?.();
+}
+
 function hexToCss(hex: number): string {
   const r = (hex >> 16) & 0xff;
   const g = (hex >> 8) & 0xff;
@@ -551,18 +569,12 @@ export class EnvironmentCapability implements SceneCapability {
     if (this.customHdrTex) return this.customHdrTex;
     if (!this.customHdrWarnedMissing) {
       this.customHdrWarnedMissing = true;
-      const logger = (
-        globalThis as unknown as {
-          __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
-        }
-      ).__ysmRingLog;
-      if (logger)
-        logger(
-          "env",
-          "未加载 HDR 文件，已自动回退到「工作室」预设。请点击「选择 HDR 文件」加载 .hdr。",
-          "warn",
-        );
-      else console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设");
+      ringLog(
+        "env",
+        "未加载 HDR 文件，已自动回退到「工作室」预设。请点击「选择 HDR 文件」加载 .hdr。",
+        "warn",
+        () => console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设"),
+      );
     }
     this.params.preset = "studio";
     return null;
@@ -721,13 +733,7 @@ export class EnvironmentCapability implements SceneCapability {
   setPresetId(id: EnvPresetId): void {
     if (id === "custom" && !this.customHdrTex) {
       // preset=custom 但没缓存 → 不 build（没内容），提示用户点"选择 HDR"按钮，保持现有预设
-      const logger = (
-        globalThis as unknown as {
-          __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
-        }
-      ).__ysmRingLog;
-      if (logger)
-        logger("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
+      ringLog("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
       return;
     }
     this.params.preset = id;
@@ -804,21 +810,15 @@ export class EnvironmentCapability implements SceneCapability {
           // 持久化读回 custom 但没缓存 → 静默回退 studio + 告警一次
           if (!this.customHdrWarnedMissing) {
             this.customHdrWarnedMissing = true;
-            const logger = (
-              globalThis as unknown as {
-                __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
-              }
-            ).__ysmRingLog;
-            if (logger)
-              logger(
-                "env",
-                "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
-                "warn",
-              );
-            else
-              console.warn(
-                "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
-              );
+            ringLog(
+              "env",
+              "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
+              "warn",
+              () =>
+                console.warn(
+                  "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
+                ),
+            );
           }
           this.params.preset = "studio";
         } else {

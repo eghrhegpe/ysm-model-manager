@@ -339,6 +339,19 @@ export class GroundCapability implements SceneCapability {
     this.params.matColor2 = hex;
     this.refreshSurface();
   }
+  /* 菜单 getter（对齐 getMatColor2 口径——私有 params/customTexName 只许公开方法读，禁 cast 掏心） */
+  getMatColor(): number {
+    return this.params.matColor;
+  }
+  getMatLineColor(): number {
+    return this.params.matLineColor;
+  }
+  getMatGridSize(): number {
+    return this.params.matGridSize;
+  }
+  getCustomTexName(): string {
+    return this.customTexName;
+  }
   getMatDensity(): number {
     return this.params.matDensity;
   }
@@ -541,11 +554,6 @@ function groundButtonDef(
 }
 
 function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
-  const self = cap as unknown as {
-    params: { matColor: number; matLineColor: number; matGridSize: number };
-    customTexName: string;
-    openTexturePicker(): void;
-  };
   return [
     {
       id: "ground-mat-source",
@@ -571,7 +579,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "ground-mat-color",
       "preview.groundMatColor",
       "底色",
-      () => self.params.matColor,
+      () => cap.getMatColor(),
       (v) => cap.setMatColor(v),
       (s) => s["env.groundMatSource"] !== "none",
     ),
@@ -587,7 +595,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "ground-mat-line-color",
       "preview.groundMatLineColor",
       "线色",
-      () => self.params.matLineColor,
+      () => cap.getMatLineColor(),
       (v) => cap.setMatLineColor(v),
       (s) => s["env.groundMatSource"] !== "none",
     ),
@@ -596,7 +604,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "preview.groundMatGridSize",
       "格数",
       { min: 2, max: 32, step: 1 },
-      () => self.params.matGridSize,
+      () => cap.getMatGridSize(),
       (v) => cap.setMatGridSize(Math.round(v)),
       (s) => s["env.groundMatSource"] !== "none",
     ),
@@ -624,9 +632,9 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "选择贴图",
       {
         textKey: "preview.groundMatPick",
-        getHint: () => self.customTexName || "",
+        getHint: () => cap.getCustomTexName() || "",
         variant: "primary",
-        action: () => self.openTexturePicker(),
+        action: () => cap.openTexturePicker(),
       },
       (s) => s["env.groundMatSource"] === "texture",
     ),

@@ -27,6 +27,7 @@ auto_fields:
     - BoneDetail
     - BoneListItem
     - BoneNode
+    - BonePanelCleanupRef
     - boneRowActiveBg
     - BonesPanelItemOpts
     - BoneTree

@@ -54,6 +54,7 @@ auto_fields:
     - BoneListItem
     - BoneMaps
     - BoneNode
+    - BonePanelCleanupRef
     - boneRowActiveBg
     - BoneSelectInfo
     - BonesPanelItemOpts
@@ -396,6 +397,7 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToCapControl
     - normalizeFbxScale
+    - oneOf
     - onOverlayStyleTargetReset
     - OrderedTexInput
     - overlayStyleRoot
@@ -464,6 +466,7 @@ auto_fields:
     - readVrmMeta
     - rebuildDebug
     - recordLoadTrace
+    - REFLECTION_MODES
     - ReflectionMode
     - REFLECTOR_PRESETS
     - ReflectorCapability
@@ -545,6 +548,7 @@ auto_fields:
     - setVrmMaterialVisible
     - SHADOW_PRESET_BY_MODEL
     - SHADOW_PRESETS
+    - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams
     - SharedInfra

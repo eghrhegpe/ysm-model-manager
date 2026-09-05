@@ -71,6 +71,10 @@ function makeFailFast(name: string): (...args: never[]) => Promise<never> {
   }
   return f;
 }
+/** 测试钩子：清空 fail-fast 缓存（防测试间缓存污染；模块级单例默认不清理） */
+export function resetFailFastCache(): void {
+  failFastCache.clear();
+}
 
 /** 浏览器后端（Proxy 动态形状，未实现 binding 一律 fail-fast） */
 export const browserAdapter = new Proxy({} as Record<string, unknown>, {

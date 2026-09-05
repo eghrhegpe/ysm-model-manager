@@ -20,5 +20,5 @@ const fbxPort: FbxDataPort = {
 
 /** 打开 FBX 3D 预览（独立资产：模型 + 内嵌动画）；siblings 透传同类型候选（ADR-066 §5.6） */
 export async function createFbx3D(path: string, opts?: Mount3DOptions): Promise<void> {
-  await mount3D(makeFbxAdapter({ port: fbxPort }), path, withPreviewExtras(opts ?? {}));
+  await mount3D(makeFbxAdapter({ port: () => fbxPort }), path, withPreviewExtras(opts ?? {}));
 }

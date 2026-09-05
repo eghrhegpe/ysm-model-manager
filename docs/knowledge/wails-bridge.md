@@ -22,6 +22,7 @@ auto_fields:
     - isWebEntryMode
     - parseZipCentralDir
     - readDeclaredBackend
+    - resetFailFastCache
     - resolveWebMode
     - WailsAndroidBridge
     - ZipEntryMeta

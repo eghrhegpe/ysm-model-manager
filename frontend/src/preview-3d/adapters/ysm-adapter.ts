@@ -43,6 +43,7 @@ import { screenshotFromRenderer } from "../screenshot.ts";
 import { ysmSemanticBoneMap } from "../semantic-bones.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
+import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
 import type {
@@ -186,7 +187,7 @@ interface MdYsCameraBones {
 
 /** 阶段③产物：骨骼面板 + 动画/感知系统 */
 interface MdYsPanelAnim {
-  bonePanelRef: YsmBonePanelRef;
+  bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree;
   animPlayer: YsmAnimPlayer | null;
   animBridge: MmdPlayBridge | null;
@@ -355,7 +356,7 @@ async function mdYsBuildBonePanelAndAnim(
   const { ctx, opts } = sc;
   const { obj, spec, model } = core;
 
-  const bonePanelRef: YsmBonePanelRef = { current: null };
+  const bonePanelRef: BonePanelCleanupRef = { current: null };
   const specBones = spec.models?.flatMap((m) => m.bones ?? []) ?? [];
   const boneNodes: BoneNode[] = specBones.map((b) => ({
     id: b.id,
@@ -646,11 +647,6 @@ export function makeYsmAdapter(opts: YsmAdapterOptions): PreviewAdapter {
   };
 }
 
-/** 骨骼面板清理引用（菜单项 render 与 adapter dispose 共享，防重入泄漏） */
-interface YsmBonePanelRef {
-  current: (() => void) | null;
-}
-
 /** ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */
 export interface YsmMenuItemsOpts {
   controlsCtx: YsmControlsContext;
@@ -665,7 +661,7 @@ export interface YsmMenuItemsOpts {
     /** 兼容真实 ctx 可选字段（undefined）与测试假依赖（null） */
     camera: THREE.PerspectiveCamera | null | undefined;
     scene: THREE.Object3D | null | undefined;
-    cleanupRef: YsmBonePanelRef;
+    cleanupRef: BonePanelCleanupRef;
   };
   /** 面板声明式节点工厂（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
   panels?:

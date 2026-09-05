@@ -26,6 +26,7 @@ import { createGazeController } from "../perception/gaze.ts"; // 语义骨骼消
 import { collectSceneStats, type SceneStats } from "../scene-stats.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { vrmSemanticBoneMap } from "../semantic-bones.ts";
+import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "./material-controls.ts";
 import type {
@@ -246,7 +247,7 @@ interface MdVrPerceptionState {
   exprMgr: VRM["expressionManager"];
 }
 interface MdVrBoneAssembly {
-  bonePanelRef: { current: (() => void) | null };
+  bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree;
   semanticBones: ReturnType<typeof vrmSemanticBoneMap>;
 }

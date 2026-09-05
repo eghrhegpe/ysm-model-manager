@@ -5,6 +5,7 @@ import type * as THREE from "three";
 import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
@@ -132,7 +133,7 @@ interface MdMmAnimState {
 
 /** 骨骼/感知域：骨骼面板依赖与感知层状态 */
 interface MdMmPerceptionState {
-  bonePanelRef: { current: (() => void) | null };
+  bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree | null;
   perceptionState: PerceptionState;
 }
@@ -392,7 +393,7 @@ export interface MmdMenuItemsOpts {
     /** 兼容真实 ctx 可选字段（undefined）与测试假依赖（null） */
     camera: THREE.PerspectiveCamera | null | undefined;
     scene: THREE.Object3D | null | undefined;
-    cleanupRef: { current: (() => void) | null };
+    cleanupRef: BonePanelCleanupRef;
   } | null;
   /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
   panels?: MmdPanelHooks | undefined;

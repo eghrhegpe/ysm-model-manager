@@ -27,6 +27,7 @@ auto_fields:
     - KNOWN_PATHS
     - MenuControlDef
     - MenuControlKind
+    - oneOf
     - persistState
     - previewSnapshot
     - PreviewSnapshot

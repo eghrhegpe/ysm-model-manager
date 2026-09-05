@@ -11,15 +11,19 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { safeGet } from "../../utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import { frameCameraSide } from "../camera-setup.ts";
 import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
+import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { disposeMaterial } from "../mesh.ts";
+import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { screenshotFromRenderer } from "../screenshot.ts";
+import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
@@ -258,7 +262,10 @@ export async function buildFbxScene(
     await fbxDiag(port, "fbx-scale", `尺度归一 ×${scaleInfo.factor.toFixed(3)}`, "warn");
   }
 
-  if (ctx.scene) ctx.scene.add(group);
+  if (ctx.scene) {
+    ctx.scene.add(group);
+    registerModelRoot(group);
+  }
 
   // 3) 动画：播全部内嵌 clip（FBX 通常为单段角色动画）
   let mixer: THREE.AnimationMixer | null = null;
@@ -274,7 +281,7 @@ export async function buildFbxScene(
   // 5) 骨骼面板（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）：收拢 SkinnedMesh 骨骼
   //    构建通用骨骼树；有骨骼才注入 🦴 菜单项，复用 makeBonePanelRenderer（列表/详情/拾取联动）
   const boneTree = buildBoneTree(fbxBonesToBoneNodes(group));
-  const bonePanelRef: { current: (() => void) | null } = { current: null };
+  const bonePanelRef: BonePanelCleanupRef = { current: null };
   const menuItems: PreviewMenuNode[] = [];
   if (boneTree.roots.length > 0) {
     // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复；fbx 持 bonePanelRef）
@@ -293,12 +300,17 @@ export async function buildFbxScene(
     menuItems,
     update: (dt: number) => {
       mixer?.update(dt);
+      // #9 全局暂停标志：FBX 动画激活时感知 controller 静默（对齐 ysm/vrm/mmd 范式）
+      setPerceptionPaused(!!mixer && mixer.time !== 0);
     },
     dispose: () => {
       try {
         bonePanelRef.current?.();
         mixer?.stopAllAction();
-        if (ctx.scene) ctx.scene.remove(group);
+        if (ctx.scene) {
+          unregisterModelRoot(group);
+          ctx.scene.remove(group);
+        }
         group.traverse((o) => {
           const mesh = o as THREE.Mesh;
           if (mesh.geometry) mesh.geometry.dispose();
@@ -329,18 +341,21 @@ export async function buildFbxScene(
 
 /** FBX 适配器工厂 deps（视图壳注入数据端口——ADR-072：适配器 0 backend import） */
 export interface FbxAdapterDeps {
-  /** FBX 数据端口（readFileBytes / addOpLog，视图层 view-shell 组装） */
-  port: FbxDataPort;
+  /**
+   * FBX 数据端口（readFileBytes / addOpLog，视图层 view-shell 组装）。
+   * 惰性工厂：每次 build 现取，防切换模型时旧会话日志泄漏（对齐 MMD dataPort 范式）。
+   */
+  port: () => FbxDataPort;
 }
 
 /**
  * ADR-161 §2.5 工厂：FBX 挂载主入口（make<Format>Adapter 命名章程，对齐 mmd/vrm/ysm）。
- * port 以 deps 注入（views 层 view-shell 组装），adapters 层不反向依赖 views。
- * 用法：`const adapter = makeFbxAdapter({ port: fbxPort }); mount3D(adapter, path)`
+ * port 以 deps 惰性工厂注入（views 层 view-shell 组装），adapters 层不反向依赖 views。
+ * 用法：`const adapter = makeFbxAdapter({ port: () => fbxPort }); mount3D(adapter, path)`
  */
 export function makeFbxAdapter(deps: FbxAdapterDeps): PreviewAdapter {
   return {
-    id: "fbx",
-    build: (ctx, path) => buildFbxScene(ctx, path, deps.port),
+    id: RESOURCE_TYPES.FBX,
+    build: (ctx, path) => buildFbxScene(ctx, path, deps.port()),
   };
 }

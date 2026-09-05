@@ -64,10 +64,12 @@ auto_fields:
     - MenuControlKind
     - MODEL_SKY_PRESETS
     - ModelEntry
+    - oneOf
     - persistState
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
+    - REFLECTION_MODES
     - ReflectionMode
     - REFLECTOR_PRESETS
     - ReflectorCapability
@@ -83,6 +85,7 @@ auto_fields:
     - sceneRegistry
     - SHADOW_PRESET_BY_MODEL
     - SHADOW_PRESETS
+    - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams
     - SkyCapability

@@ -27,12 +27,20 @@ import type { BoneTree } from "../bone-tools.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
 
+/**
+ * 骨骼面板清理引用（4 adapter 共用统一接口，ADR-074 S2）。
+ * caller 持此 ref，dispose 时同步调；重入时先清再写（防 listener 累积）。
+ */
+export interface BonePanelCleanupRef {
+  current: (() => void) | null;
+}
+
 /** 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） */
 export interface BonesPanelItemOpts {
   /** 骨骼树（YSM spec / VRM humanoid / FBX SkinnedMesh 统一抽象；null 走 makeBonePanelRenderer 空态） */
   tree: BoneTree | null;
   /** 重入时调用的清理函数 ref（adapter 持此 ref，dispose 时也调） */
-  cleanupRef: { current: (() => void) | null };
+  cleanupRef: BonePanelCleanupRef;
   /** 面板上下文：允许 null/undefined（核心未填充时面板不应渲染——mmd L1358-1361 守卫模式，
    *  caller 类型多为 `T | null | undefined`；工厂内部 falsy 检查统一覆盖两者） */
   viewContainer: HTMLElement | null | undefined;

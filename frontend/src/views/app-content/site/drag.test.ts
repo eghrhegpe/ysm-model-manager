@@ -9,7 +9,11 @@ vi.mock("../../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     MergeWorkshopCreatorsFromJSON: vi.fn(async () => [2, 1]),
     LoadWorkshopCreators: vi.fn(async () => [{ name: "新A" }, { name: "新B" }]),
-    SaveWorkshopSites: vi.fn(async () => undefined),
+    MergeWorkshopSitesFromJSON: vi.fn(async () => [1, 1]),
+    DefaultWorkshopSites: vi.fn(async () => [
+      { id: "s1", label: "站点1新" },
+      { id: "s2", label: "新站" },
+    ]),
   }),
 }));
 
@@ -23,7 +27,8 @@ import { fireDrop } from "../../../test-utils/events.ts";
 interface AppLike {
   MergeWorkshopCreatorsFromJSON: ReturnType<typeof vi.fn>;
   LoadWorkshopCreators: ReturnType<typeof vi.fn>;
-  SaveWorkshopSites: ReturnType<typeof vi.fn>;
+  MergeWorkshopSitesFromJSON: ReturnType<typeof vi.fn>;
+  DefaultWorkshopSites: ReturnType<typeof vi.fn>;
 }
 
 function makeState(): {
@@ -122,7 +127,7 @@ describe("bindDragEvents 拖拽 JSON 导入", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("4. 站点 JSON → 前端合并（新增+更新）→ SaveWorkshopSites", async () => {
+  it("4. 站点 JSON → Go MergeWorkshopSitesFromJSON + LoadWorkshopSites 刷新（双轨收口）", async () => {
     const { state, dropZone, refresh, allSites } = makeState();
     bindDragEvents(state, refresh);
     const file = new File(
@@ -132,13 +137,18 @@ describe("bindDragEvents 拖拽 JSON 导入", () => {
     );
     const toastP = toastOnce(() => dropFile(dropZone, file));
     const app = (await getApp()) as unknown as AppLike;
-    await vi.waitFor(() => expect(app.SaveWorkshopSites).toHaveBeenCalled());
+    await vi.waitFor(() => expect(app.MergeWorkshopSitesFromJSON).toHaveBeenCalled());
+    // 合并/去重/写回下沉 Go：前端只传原始 JSON（不本地合并、不 SaveWorkshopSites 整存）
+    expect(app.MergeWorkshopSitesFromJSON).toHaveBeenCalledWith(
+      '[{"id":"s1","label":"站点1新"},{"id":"s2","label":"新站"}]',
+    );
+    // 内存 allSites 由 DefaultWorkshopSites 刷新（前端加载站点规范函数）
+    expect(app.DefaultWorkshopSites).toHaveBeenCalled();
     expect(allSites).toHaveLength(2);
-    expect(allSites[0].label).toBe("站点1新"); // 更新命中
-    expect(allSites[1].id).toBe("s2"); // 新增追加
-    expect(app.SaveWorkshopSites).toHaveBeenCalledWith(allSites);
+    expect(allSites[0].label).toBe("站点1新");
+    expect(allSites[1].id).toBe("s2");
     const toast = await toastP;
-    expect(toast.msg).toBe("✅ 站点: 新增 1，更新 1");
+    expect(toast.msg).toBe("✅ 站点: 新增 1，更新 1"); // 计数以 Go 返回为准
     expect(refresh).toHaveBeenCalled();
   });
 

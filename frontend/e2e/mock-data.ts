@@ -312,6 +312,7 @@ export const MOCK_DATA = {
   ListRecycleBin: undefined,
   MergeCommunityCreatorsFromJSON: undefined,
   MergeWorkshopCreatorsFromJSON: undefined,
+  MergeWorkshopSitesFromJSON: undefined,
   MoveModelFile: undefined,
   MoveToRecycle: undefined,
   NavigatePlazaWindow: undefined,

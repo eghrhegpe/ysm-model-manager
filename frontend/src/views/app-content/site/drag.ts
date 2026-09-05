@@ -88,24 +88,23 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
             type: "success",
           });
         } else if (first && typeof first.id === "string" && typeof first.label === "string") {
-          // 站点 JSON → 前端合并后调用 SaveWorkshopSites
+          // 站点 JSON → Go 端 MergeWorkshopSitesFromJSON（镜像创作者分支，收口双轨）：
+          // 合并/去重/写回下沉 Go，前端只传原始 JSON + 用 DefaultWorkshopSites 刷新内存。
           dropZone.textContent = t("content.mergingSites");
-          const { SaveWorkshopSites } = await getApp();
-          const existMap = new Map(allSites.map((s) => [s.id, s]));
-          let added = 0,
+          const { MergeWorkshopSitesFromJSON, DefaultWorkshopSites } = await getApp();
+          const result = await MergeWorkshopSitesFromJSON(text);
+          let added: number, updated: number;
+          if (Array.isArray(result)) {
+            added = result[0];
+            updated = result[1];
+          } else {
+            added = result;
             updated = 0;
-          data.forEach((s) => {
-            const sid = String(s.id);
-            if (existMap.has(sid)) {
-              Object.assign(existMap.get(sid) as object, s);
-              updated++;
-            } else {
-              existMap.set(sid, s as unknown as WorkshopSite);
-              allSites.push(s as unknown as WorkshopSite);
-              added++;
-            }
-          });
-          await SaveWorkshopSites(allSites);
+          }
+          // 刷新内存中的 allSites（DefaultWorkshopSites 读用户配置优先——Go 已落盘合并结果）
+          const fresh = (await DefaultWorkshopSites()) || [];
+          allSites.length = 0;
+          allSites.push(...(fresh as WorkshopSite[]));
           busRef.emit("toast:show", {
             msg: t("content.siteMergeResult", { added, updated }),
             duration: 3000,

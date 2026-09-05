@@ -767,6 +767,21 @@ export function MergeWorkshopCreatorsFromJSON(jsonContent: string): $Cancellable
 }
 
 /**
+ * MergeWorkshopSitesFromJSON 把拖入的站点 JSON（手动全量导入）并入本地 workshop_sites.json。
+ * 镜像 MergeWorkshopCreatorsFromJSON（手动导入，drag.ts 消费）的覆盖语义，key = id：
+ *   - id 命中 → 整条覆盖为导入值（用户主动导入期望覆盖同名站点配置）；
+ *   - id 未命中 → 追加到末尾。
+ * 
+ * 一次 Load 磁盘最新全量（不依赖前端可能 stale 的会话副本）→ 逐条并入 → 单次
+ * SaveWorkshopSites（fsutil.WriteFileAtomic）。写入前 sites 轻备份（同 creators 的
+ * BackupWorkshopCreators 语义，全新用户无用户配置时跳过不中止）。
+ * 返回 (added, updated, error)；added = 新增站点数，updated = 覆盖更新数。
+ */
+export function MergeWorkshopSitesFromJSON(jsonContent: string): $CancellablePromise<[number, number]> {
+    return $Call.ByID(1613226894, jsonContent);
+}
+
+/**
  * MoveModelFile 移动（findMoveRoot 遍历所有已配置根做路径安全校验，
  * 修复原硬编码 cfg.FilesRoot 导致自定义根下文件无法移动的 bug。
  * fail-closed：无匹配根时拒绝，不向 fileops 传空 root 跳过校验）

@@ -22,14 +22,14 @@ import (
 	"ysm-model-manager/go/dedup"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // extClassifier 缓存 ext→rtype 映射，以注册表实例指针为失效 key。
 // 与 go/types/extensions.go 的 extCache 同款 atomic.Value+实例指针范式：
 // SetRegistryPath 重置注册表 → LoadRegistry 返回新实例 → 自动重建，永不 stale。
 type extClassifier struct {
-	reg    *types.ResourceTypeRegistry
+	reg    *registry.ResourceTypeRegistry
 	extMap map[string]string // 单一声明者: ext → rtype id
 }
 
@@ -38,7 +38,7 @@ var extClassifierCache atomic.Value // *extClassifier
 // buildExtClassifierFrom 以给定注册表实例构建 ext→rtype 映射。
 // reg 必须由调用方传入（而非内部 LoadRegistry）——与 ClassifyWith 的「外层已
 // hoist reg」契约一致，保证缓存失效比对与构建用同一实例。
-func buildExtClassifierFrom(reg *types.ResourceTypeRegistry) *extClassifier {
+func buildExtClassifierFrom(reg *registry.ResourceTypeRegistry) *extClassifier {
 	count := make(map[string]int)
 	owner := make(map[string]string)
 	for _, rt := range reg.ResourceTypes {
@@ -160,7 +160,7 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	resources := map[string]int{}
 	// 注册表加载提升到 walk 外——per-file TypeByLocation 不再
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 
 	err := filepath.WalkDir(dirPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -195,8 +195,8 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		result.Resources.TotalFiles++
 		totalSize += size
 
-		// 禁用文件统计：单一口径 types.IsDisableSuffix（.disabled/.ban，大小写不敏感）
-		if types.IsDisableSuffix(d.Name()) {
+		// 禁用文件统计：单一口径 registry.IsDisableSuffix（.disabled/.ban，大小写不敏感）
+		if registry.IsDisableSuffix(d.Name()) {
 			result.Resources.Banned++
 		}
 
@@ -219,9 +219,9 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		// （.zip 被 14 类型声明）last-wins 归最后一个声明者，mmd/PMX 下模型包 zip
 		// 会误归 DefaultMorph——目录归属优先（TypeByLocation），容器未命中标
 		// "container"（与 gui-flow 统计口径一致，2026-08-23 修复）。
-		typeName := types.TypeByLocation(path, reg)
+		typeName := registry.TypeByLocation(path, reg)
 		if typeName == "" {
-			if types.IsContainerExt(ext) {
+			if registry.IsContainerExt(ext) {
 				typeName = "container"
 			} else {
 				// 用 walk 外已 hoist 的 reg（L161）判型——Classify 入口每调一次
@@ -401,7 +401,7 @@ func isModelFileValid(path, ext string) bool {
 // （Audit walk / cli resource scan）请用 ClassifyWith 传外层已 hoist 的 reg，
 // 避免大仓库线性放大（见 ClassifyWith 注释）。
 func Classify(ext string) string {
-	return ClassifyWith(types.LoadRegistry(), ext)
+	return ClassifyWith(registry.LoadRegistry(), ext)
 }
 
 // ClassifyWith 使用调用方已 hoist 的注册表实例做扩展名判型（cache hit 时零锁）。
@@ -410,7 +410,7 @@ func Classify(ext string) string {
 // 中「注册表加载提升到 walk 外」（本文件 L159-161）的既有收敛。调用方须在
 // walk/scan 外 LoadRegistry 一次并传入；缓存仍以实例指针为失效 key，
 // SetRegistryPath 重置后新实例自然触发重建。
-func ClassifyWith(reg *types.ResourceTypeRegistry, ext string) string {
+func ClassifyWith(reg *registry.ResourceTypeRegistry, ext string) string {
 	key := strings.ToLower(strings.TrimSpace(ext))
 	if raw := extClassifierCache.Load(); raw != nil {
 		cl := raw.(*extClassifier)

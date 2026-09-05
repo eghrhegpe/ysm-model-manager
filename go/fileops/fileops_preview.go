@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -53,8 +54,8 @@ func ExtractPreviewTexture(modelPath string) string {
 	// 否则 readLimitedFile(剥离后路径) 命中不存在文件（陷阱：先改路径后读原文件）。
 	readPath := modelPath
 	extPath := modelPath
-	if types.IsDisableSuffix(extPath) {
-		extPath = types.StripDisableSuffix(extPath)
+	if registry.IsDisableSuffix(extPath) {
+		extPath = registry.StripDisableSuffix(extPath)
 	}
 	ext := strings.ToLower(filepath.Ext(extPath))
 	var png []byte

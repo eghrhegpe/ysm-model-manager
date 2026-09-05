@@ -20,6 +20,7 @@ import (
 	"ysm-model-manager/go/config"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ========== 扫描缓存（30s TTL）==========
@@ -516,7 +517,7 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 		}
 		// 目录级禁用（ADR-038 D3.7）不得被扫描为活跃条目——原实现只过滤文件级禁用，
 		// 导致目录级禁用模型以活跃身份进入 sync，被 GetInstanceStatus 列为 Missing
-		if types.IsDisableSuffix(d.Name()) {
+		if registry.IsDisableSuffix(d.Name()) {
 			return nil, filepath.SkipDir, false
 		}
 		return nil, nil, false
@@ -529,18 +530,18 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 	if restored != p {
 		originalExt = strings.ToLower(filepath.Ext(restored))
 	}
-	if !types.IsSupportedExt(originalExt) {
+	if !registry.IsSupportedExt(originalExt) {
 		return nil, nil, false
 	}
 	// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
 	if originalExt == ".json" {
-		baseName := types.NormalizeResourceName(filepath.Base(p))
-		if !types.IsYsmEntryJSON(baseName) {
+		baseName := registry.NormalizeResourceName(filepath.Base(p))
+		if !registry.IsYsmEntryJSON(baseName) {
 			return nil, nil, false
 		}
 	}
 	name := filepath.Base(p)
-	if types.IsYsmEntryJSON(name) {
+	if registry.IsYsmEntryJSON(name) {
 		name = filepath.Base(filepath.Dir(p))
 	}
 	e := types.ModelEntry{Name: name, Path: p, Ext: originalExt}
@@ -557,11 +558,11 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
 		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
 		// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
-		if types.ShouldHashExt(originalExt) && !deferHash {
+		if registry.ShouldHashExt(originalExt) && !deferHash {
 			e.Hash = ComputeFileHash(p)
 			// 哈希失败留痕——静默置空会让同步把该文件当「无哈希」跳过（用户不知为何不同步）
 			if e.Hash == "" {
-				emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", p, types.MaxImportSize)
+				emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", p, registry.MaxImportSize)
 			}
 		}
 	}
@@ -587,7 +588,7 @@ func ComputeFileHash(path string) string {
 	// 大文件哈希上限——.zip 资源包可达数百 MB，全量 io.Copy
 	// 会整线程卡死扫描/同步（bug-chronicle #36「全量哈希拖慢非 YSM」）；超 MaxImportSize
 	// 跳过哈希返回空（同步匹配对空哈希跳过该文件，与「读失败返回空」语义一致）
-	if fi, err := os.Stat(path); err == nil && fi.Size() > types.MaxImportSize {
+	if fi, err := os.Stat(path); err == nil && fi.Size() > registry.MaxImportSize {
 		return ""
 	}
 	hash, err := fsutil.SHA256File(path)
@@ -604,7 +605,7 @@ func ComputeFileHash(path string) string {
 func hashEntriesParallel(entries []types.ModelEntry) {
 	var jobs []int
 	for i := range entries {
-		if types.ShouldHashExt(entries[i].Ext) {
+		if registry.ShouldHashExt(entries[i].Ext) {
 			jobs = append(jobs, i)
 		}
 	}
@@ -627,7 +628,7 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 			for i := range ch {
 				entries[i].Hash = ComputeFileHash(entries[i].Path)
 				if entries[i].Hash == "" {
-					emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", entries[i].Path, types.MaxImportSize)
+					emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", entries[i].Path, registry.MaxImportSize)
 				}
 			}
 		}()
@@ -668,9 +669,9 @@ func ScanEntriesLite(dir string) []types.ModelEntry {
 }
 
 // stripDisableSuffix 剥离 .disabled/.ban 禁用后缀（口径与 ScanEntries 一致，三处共用防漂移）
-// 委托 types.StripDisableSuffix（单一事实来源）。
+// 委托 registry.StripDisableSuffix（单一事实来源）。
 func stripDisableSuffix(name string) string {
-	return types.StripDisableSuffix(name)
+	return registry.StripDisableSuffix(name)
 }
 
 // extractAuthor 从文件名提取 [作者] 前缀（无前缀或格式非法返回空串）

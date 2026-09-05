@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // InjectRootRegistry 读取仓库根 resource_types.json 注入为 types 包测试基线。
@@ -19,7 +19,7 @@ import (
 // 失败仅告警不阻断（LoadRegistry 相关测试将失去基线，由该包测试自身兜底暴露）。
 func InjectRootRegistry(m *testing.M) {
 	if data, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
-		types.SetBundledRegistryJSON(data)
+		registry.SetBundledRegistryJSON(data)
 	} else {
 		log.Printf("[testutil] 注入测试基线失败: %v（LoadRegistry 相关测试将失去基线）", err)
 	}

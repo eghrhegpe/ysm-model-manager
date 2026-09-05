@@ -5,7 +5,7 @@
 // 写一次内容物解析，解包免费。
 //
 // 边界：本包只做"容器打开 + 条目枚举 + 条目读取"，不做大小限制（读取时由
-// 调用方用 fsutil.ReadLimitedEntry / types.MaxReadLimit 施加，与现状一致）；
+// 调用方用 fsutil.ReadLimitedEntry / registry.MaxReadLimit 施加，与现状一致）；
 // YSM 加密二进制的前置 wasm 解密不属于容器层（解密产物 zip 再进本包）。
 package container
 
@@ -21,7 +21,7 @@ import (
 
 	"github.com/bodgit/sevenzip"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // Entry 统一容器条目（zip.File / sevenzip.File / 目录文件）。
@@ -149,7 +149,7 @@ func (e dirEntry) Open() (io.ReadCloser, error) {
 // 分派前剥离禁用后缀（.disabled/.ban）：ToggleEnable 改名后的 xxx.zip.disabled
 // 仍能按真实容器类型打开（c08c62bc P3 回归——否则指纹核验对禁用容器失效）；
 // 打开路径用原值（磁盘上文件就叫 xxx.zip.disabled）。
-// 禁用后缀剥离复用 types.StripDisableSuffix（ADR-144：types 已不依赖本包，
+// 禁用后缀剥离复用 registry.StripDisableSuffix（ADR-144：types 已不依赖本包，
 // 解除循环禁令，删掉本包内联实现）。
 func Open(path string) (Reader, error) {
 	info, err := os.Stat(path)
@@ -159,7 +159,7 @@ func Open(path string) (Reader, error) {
 	if info.IsDir() {
 		return openDir(path)
 	}
-	switch strings.ToLower(filepath.Ext(types.StripDisableSuffix(path))) {
+	switch strings.ToLower(filepath.Ext(registry.StripDisableSuffix(path))) {
 	case ".zip":
 		return OpenZipPath(path)
 	case ".7z":
@@ -269,12 +269,12 @@ func OpenDir(root string) (Reader, error) {
 // 打开失败（含损坏 zip / 非 zip 路径）一律返回 false——调用方据此把坏包/
 // 不含目标指纹的 zip 安全排除，绝不误判为某类型资源（同步推送/拉取链路
 // 据此避免把纯打包物或坏包当模型搬运）。match 接收小写条目名（与
-// types.ResourceType.MatchZipEntry 内部 ToLower 幂等一致）。
+// registry.ResourceType.MatchZipEntry 内部 ToLower 幂等一致）。
 // 禁用后缀文件（xxx.zip.disabled）：扩展名判定剥离 .disabled/.ban（与
 // Open/DetectResourceType 同口径——否则同步指纹链路把
 // 禁用容器当非 zip 排除，与指纹核验路径分类分叉）。
 func ZipMatchesEntries(path string, match func(string) bool) bool {
-	if !strings.EqualFold(filepath.Ext(types.StripDisableSuffix(path)), ".zip") {
+	if !strings.EqualFold(filepath.Ext(registry.StripDisableSuffix(path)), ".zip") {
 		return false
 	}
 	rc, err := OpenZipPath(path)

@@ -11,7 +11,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/repoaudit"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -52,10 +52,10 @@ type resourceStats struct {
 // （.zip 被 14 类型声明）last-wins 归最后一个声明者，mmd/PMX 下模型包 zip
 // 会误归 DefaultMorph（2026-08-23 与 gui-flow/仓库体检同源修复）；容器未命中
 // 标 "container"。
-func addClassified(path, ext string, stats *resourceStats, reg *types.ResourceTypeRegistry) {
-	t := types.TypeByLocation(path, reg)
+func addClassified(path, ext string, stats *resourceStats, reg *registry.ResourceTypeRegistry) {
+	t := registry.TypeByLocation(path, reg)
 	if t == "" {
-		if types.IsContainerExt(ext) {
+		if registry.IsContainerExt(ext) {
 			t = "container"
 		} else {
 			// 用已 hoist 的 reg 判型（runResourceScan 在 walk 外 LoadRegistry 一次）——
@@ -94,7 +94,7 @@ func runResourceScan(ctx *CmdContext) error {
 
 	threshold := cliScanLargeFileThreshold
 	// 注册表加载提升到 walk 外（per-file TypeByLocation 不再每文件 LoadRegistry）
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 
 	err = filepath.Walk(*dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -299,10 +299,10 @@ func runResourceTypes(ctx *CmdContext) error {
 		return err
 	}
 
-	all := types.LoadRegistry().ResourceTypes
+	all := registry.LoadRegistry().ResourceTypes
 	entries := all
 	if *typeFilter != "" {
-		var filtered []types.ResourceType
+		var filtered []registry.ResourceType
 		for _, rt := range all {
 			if rt.ID == *typeFilter {
 				filtered = append(filtered, rt)

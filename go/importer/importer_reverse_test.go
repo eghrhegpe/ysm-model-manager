@@ -18,6 +18,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
+	typereg "ysm-model-manager/go/types/registry"
 )
 
 // ===== 工具 =====
@@ -620,7 +621,7 @@ func TestImportFromBase64_FileTooLarge(t *testing.T) {
 		t.Skip("short 模式跳过 500MB 边界用例")
 	}
 	root := t.TempDir()
-	big := make([]byte, types.MaxImportSize+1)
+	big := make([]byte, typereg.MaxImportSize+1)
 	b64 := base64.StdEncoding.EncodeToString(big)
 	big = nil // 释放源缓冲，降低峰值内存
 	_, _, err := ImportFromBase64("big.ysm", b64, ImportOptions{}, func(rtype string) string { return root },

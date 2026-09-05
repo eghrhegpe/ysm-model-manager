@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ====== invalidateKeyVersion ======
@@ -118,7 +119,7 @@ func TestScanEntries_HashSkippedOversize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := f.Truncate(types.MaxImportSize + 1); err != nil {
+	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
 		t.Fatal(err)
 	}
 	f.Close()
@@ -142,7 +143,7 @@ func TestComputeFileHash_Oversize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := f.Truncate(types.MaxImportSize + 1); err != nil {
+	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
 		t.Fatal(err)
 	}
 	f.Close()

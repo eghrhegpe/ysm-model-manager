@@ -16,13 +16,14 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // maxReadSize 解压目录读取上限——对齐 zip 路径每条目 50MB（ADR-033 截断防线），
 // 防超大 ysm.json/geometry/纹理整体拖入内存（P2 审计：原 os.ReadFile 无界，
 // 与 zip 路径 50MB 口径不一致；geometry.ParseBedrockGeometry 的 100MB 上限是
 // 整文件读入后才检查，防不了分配）
-const maxReadSize = types.MaxReadLimit
+const maxReadSize = registry.MaxReadLimit
 
 // readFileLimited 受限读取：超限/失败返回 nil（+1 探测，不静默截断）
 func readFileLimited(path string) []byte {
@@ -76,9 +77,9 @@ func modelBaseNoExt(p string) string {
 // textureDataURI 按文件扩展名派生 data URI MIME（.png→image/png、.jpg/.jpeg→image/jpeg）。
 // .tga 非 Web 图像格式，浏览器解码器不认 → 返回空串，调用方跳过 perComponent data-URI
 // 分支、落回全局 texArr 路径（避免产出 data:image/png;base64,<TGA 字节> 的坏 URI）。
-// MIME 派生委托 types.TextureMIME（单一事实源），避免各处硬编码 switch 漂移。
+// MIME 派生委托 registry.TextureMIME（单一事实源），避免各处硬编码 switch 漂移。
 func textureDataURI(path string, data []byte) string {
-	mime := types.TextureMIME(filepath.Ext(path))
+	mime := registry.TextureMIME(filepath.Ext(path))
 	if mime == "" {
 		return ""
 	}
@@ -218,7 +219,7 @@ type texFile struct {
 // 排除 gui/ 子目录（YSM 的 gui_background/封面等非模型贴图，曾污染全局 texArr
 // 导致 plane 等共享皮肤组件错绑——wine_fox 17_mini 根因，geometry/组件两消费方
 // 共用同一遍历避免两次 WalkDir 口径漂移）。返回按遍历序（深度优先稳定序）。
-// 扩展名口径委托 types.IsTextureExt（单一事实源），含 .jpeg——此前漏收导致
+// 扩展名口径委托 registry.IsTextureExt（单一事实源），含 .jpeg——此前漏收导致
 // summary 计数与 avatar 提取认 .jpeg、但几何侧收集漏收的漂移。
 func collectTextureFiles(texDir string) []texFile {
 	var files []texFile
@@ -233,7 +234,7 @@ func collectTextureFiles(texDir string) []texFile {
 				}
 				return nil
 			}
-			if types.IsTextureExt(filepath.Ext(d.Name())) {
+			if registry.IsTextureExt(filepath.Ext(d.Name())) {
 				files = append(files, texFile{path: path, name: strings.ToLower(d.Name())})
 			}
 			return nil

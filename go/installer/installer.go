@@ -13,6 +13,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // InstallLock 防止安装操作与后台同步并发（sync 包复用同一把锁，见 sync.go——
@@ -37,13 +38,13 @@ func cleanAbs(path string) string {
 }
 
 // isSupportedModelExt 判断模型文件扩展名是否受支持（含禁用后缀变体）
-// 禁用后缀剥离委托 types.StripDisableSuffix（单一事实来源）。
+// 禁用后缀剥离委托 registry.StripDisableSuffix（单一事实来源）。
 func isSupportedModelExt(src string) bool {
 	ext := strings.ToLower(filepath.Ext(src))
-	if types.IsDisableSuffix(src) {
-		ext = strings.ToLower(filepath.Ext(types.StripDisableSuffix(src)))
+	if registry.IsDisableSuffix(src) {
+		ext = strings.ToLower(filepath.Ext(registry.StripDisableSuffix(src)))
 	}
-	return types.IsSupportedExt(ext)
+	return registry.IsSupportedExt(ext)
 }
 
 // Install 安装模型到目标目录（支持链接模式）
@@ -143,7 +144,7 @@ func InstallLocked(src, customDir, filesRoot, linkMode string) error {
 		return err
 	}
 	if !isSupportedModelExt(src) {
-		return types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装模型", SourcePath: src, Reason: "不支持的文件类型", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
+		return types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装模型", SourcePath: src, Reason: "不支持的文件类型", Suggestion: "支持格式: " + strings.Join(registry.AllExts(), " / ")}
 	}
 	// 计算相对路径，保持目录结构
 	// 上方 IsInside 已 fail-fast 保证 srcClean 在仓库内，此处直接用 Clean 后路径算 rel，
@@ -382,7 +383,7 @@ func checkDstSymlinkSegments(finalDst string) error {
 // 两级过滤：
 //  1. 硬黑名单：可执行文件类（.exe/.bat/.dll/.cmd/.scr/.pif/.com/.msi/.ps1/.vbs）即使 rtype 为空也拒绝，
 //     防模型目录内嵌的 .exe 被拷进 .minecraft（BUG-3 修复）；
-//  2. 注册表驱动白名单：types.InstallExtsFor(rtype) 从 resource_types.json 读取（EntityPlayer/ysm
+//  2. 注册表驱动白名单：registry.InstallExtsFor(rtype) 从 resource_types.json 读取（EntityPlayer/ysm
 //     等声明模型+纹理配套扩展名），空=全放行（仅受硬黑名单限制），新增类型改 JSON 无需改本函数。
 func isAllowedEntryName(name, rtype string) bool {
 	low := strings.ToLower(name)
@@ -391,7 +392,7 @@ func isAllowedEntryName(name, rtype string) bool {
 	case ".exe", ".bat", ".dll", ".cmd", ".scr", ".pif", ".com", ".msi", ".ps1", ".vbs":
 		return false
 	}
-	installExts := types.InstallExtsFor(rtype)
+	installExts := registry.InstallExtsFor(rtype)
 	if len(installExts) == 0 {
 		return true
 	}
@@ -532,12 +533,12 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 	}
 	src = cleanAbs(src)
 	if !isSupportedModelExt(src) {
-		return "", types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装到全局", SourcePath: src, Reason: "不支持的文件类型", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
+		return "", types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装到全局", SourcePath: src, Reason: "不支持的文件类型", Suggestion: "支持格式: " + strings.Join(registry.AllExts(), " / ")}
 	}
 	// 固定布局约定：YSM mod 的全局模型目录固定在 config/yes_steve_model/custom（mod 加载约定），
 	// 非用户可配置项；多实例根场景由上层传入具体 mcRoot，此处仅拼接布局。
 	// ADR-064 锚定：路径走注册表 SubDirMap（原硬编码，YSM scanDir 变更时失联）
-	customDir := filepath.Join(mcRoot, types.SubDirMap("ysm"))
+	customDir := filepath.Join(mcRoot, registry.SubDirMap("ysm"))
 	if err := os.MkdirAll(customDir, fsutil.DirPerms); err != nil {
 		return "", types.AppError{Code: types.ErrIO, Operation: "安装到全局", TargetPath: customDir, Reason: "无法创建安装目录", Suggestion: "请检查磁盘权限或空间"}
 	}
@@ -560,7 +561,7 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 		return "", types.AppError{Code: types.ErrInvalidPath, Operation: "安装模型（覆盖检查）", SourcePath: customDir, Reason: "目标目录不在 .minecraft 路径内", Suggestion: "请确保整合包的 custom 目录位于 .minecraft 内"}
 	}
 	if !isSupportedModelExt(src) {
-		return "", types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装模型（覆盖检查）", SourcePath: src, Reason: "不支持的文件格式", Suggestion: "仅支持 " + strings.Join(types.AllExts(), " / ") + " 格式"}
+		return "", types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装模型（覆盖检查）", SourcePath: src, Reason: "不支持的文件格式", Suggestion: "仅支持 " + strings.Join(registry.AllExts(), " / ") + " 格式"}
 	}
 	if err := os.MkdirAll(customDir, fsutil.DirPerms); err != nil {
 		return "", types.AppError{Code: types.ErrIO, Operation: "安装模型（覆盖检查）", TargetPath: customDir, Reason: "无法创建目录", Suggestion: "请检查磁盘权限或空间"}

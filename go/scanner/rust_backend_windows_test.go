@@ -11,6 +11,7 @@ import (
 
 	"ysm-model-manager/go/rustbridge"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestScanManifest_ABI_MatchesJwalk 锁定 ADR-120 的**函数能力契约**（非生产触发）：
@@ -23,7 +24,7 @@ import (
 func TestScanManifest_ABI_MatchesJwalk(t *testing.T) {
 	base := t.TempDir()
 	// registry 仅放行 .ysm + ysm.json（对齐 Rust is_model_json_name 白名单）
-	registryJSON, err := json.Marshal(types.LoadRegistry())
+	registryJSON, err := json.Marshal(registry.LoadRegistry())
 	if err != nil {
 		t.Fatalf("marshal registry: %v", err)
 	}

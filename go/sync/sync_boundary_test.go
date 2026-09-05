@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // =====================================================================
@@ -462,22 +463,22 @@ func TestPullSingleResource_DirOutside_Rejected(t *testing.T) {
 // =====================================================================
 
 func TestIsSyncAllowed_EmptyAndWeird(t *testing.T) {
-	if types.IsResourceAllowed("") {
+	if registry.IsResourceAllowed("") {
 		t.Error("空字符串应被拒绝")
 	}
-	if types.IsResourceAllowed(".") {
+	if registry.IsResourceAllowed(".") {
 		t.Error(". 应被拒绝")
 	}
-	if types.IsResourceAllowed("...") {
+	if registry.IsResourceAllowed("...") {
 		t.Error("... 应被拒绝")
 	}
-	if types.IsResourceAllowed("model.ysm.bak") {
+	if registry.IsResourceAllowed("model.ysm.bak") {
 		t.Error("model.ysm.bak 应被拒绝")
 	}
-	if !types.IsResourceAllowed("ysm.json.ban") {
+	if !registry.IsResourceAllowed("ysm.json.ban") {
 		t.Error("ysm.json.ban 应被允许")
 	}
-	if types.IsResourceAllowed("animation.json.ban") {
+	if registry.IsResourceAllowed("animation.json.ban") {
 		t.Error("animation.json.ban 应被拒绝")
 	}
 }

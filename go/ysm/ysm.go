@@ -7,7 +7,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml）
@@ -83,12 +83,12 @@ func IsModJar(jarPath, modID, displayName string) bool {
 }
 
 // HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar
-// ADR-110：mod 依赖从注册表查询（types.ModKeywordsFor / types.ModMetaFor），
+// ADR-110：mod 依赖从注册表查询（registry.ModKeywordsFor / registry.ModMetaFor），
 // 消除 Go 硬编码（旧 ModKeywords/ModGroupKeywords/ModMeta 已删除）。
 func HasModInDir(modsDir, rtype string) bool {
 	// ADR-095：内容检测型资源（注册表 mod.modId 有值）优先读 mods.toml，
 	// 不靠文件名关键词匹配（避免 jar 改名/翻译导致误判）
-	if modID, displayName := types.ModMetaFor(rtype); modID != "" {
+	if modID, displayName := registry.ModMetaFor(rtype); modID != "" {
 		files, err := os.ReadDir(modsDir)
 		if err != nil {
 			return false
@@ -104,7 +104,7 @@ func HasModInDir(modsDir, rtype string) bool {
 		return false
 	}
 	// ADR-110：从注册表查询 jarKeywords（含组级回退）
-	keywords := types.ModKeywordsFor(rtype)
+	keywords := registry.ModKeywordsFor(rtype)
 	if keywords == nil {
 		// 非模型类（资源包/光影包等）默认假设 mod 已安装，由调用方按需处理
 		return true
@@ -115,7 +115,7 @@ func HasModInDir(modsDir, rtype string) bool {
 	}
 	lower := strings.ToLower
 	// 循环不变量提升：rtype 在遍历中不变，注册表查询只执行一次
-	rt := types.RegistryType(rtype)
+	rt := registry.RegistryType(rtype)
 	for _, f := range files {
 		if f.IsDir() || !strings.HasSuffix(lower(f.Name()), ".jar") {
 			continue

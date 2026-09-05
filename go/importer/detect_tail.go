@@ -10,7 +10,7 @@ import (
 	"encoding/base64"
 
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/types"
+	regreg "ysm-model-manager/go/types/registry"
 )
 
 const (
@@ -104,7 +104,7 @@ func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
 	if len(entries) != totalEntries {
 		return "", false // 条目数对不上：解析不完整，宁可兜底不误判
 	}
-	id := packs.DetectByEntries(entries, types.LoadRegistry())
+	id := packs.DetectByEntries(entries, regreg.LoadRegistry())
 	if id == packs.ClassContainer || id == packs.ClassOther {
 		return "", true
 	}

@@ -13,7 +13,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 type Author struct {
@@ -198,7 +198,7 @@ type zipEntriesReader = interface{ Entries() []container.Entry }
 func findYsmEntryInZip(r zipEntriesReader) container.Entry {
 	for _, f := range r.Entries() {
 		name := strings.ToLower(filepath.Base(f.Name()))
-		if types.IsYsmEntryJSON(name) || name == "model.json" {
+		if registry.IsYsmEntryJSON(name) || name == "model.json" {
 			return f
 		}
 	}
@@ -215,7 +215,7 @@ func extractYsmRootFromZip(f container.Entry) (*ysmRoot, error) {
 	}
 	defer rc.Close()
 
-	const maxYsmJSON = types.MaxReadLimit
+	const maxYsmJSON = registry.MaxReadLimit
 	data, err := io.ReadAll(io.LimitReader(rc, maxYsmJSON+1))
 	if err != nil {
 		return nil, fmt.Errorf("读取 ysm.json 失败: %w", err)
@@ -274,7 +274,7 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 				animCount++
 			}
 		}
-		if types.IsTextureExt(filepath.Ext(low)) {
+		if registry.IsTextureExt(filepath.Ext(low)) {
 			texCount++
 		}
 	}
@@ -284,7 +284,7 @@ func scanZipBasicStats(r zipEntriesReader) Stats {
 // extractTexSizeFromZipGeo 在 ZIP 内按 geoPaths（来自 extractFileStats 的声明
 // 模型相对路径）匹配条目、读取 JSON 并提取 TexWidth/TexHeight（首条命中即停）。
 func extractTexSizeFromZipGeo(r zipEntriesReader, geoPaths []string) (int, int) {
-	const maxTexGeo = types.MaxReadLimit
+	const maxTexGeo = registry.MaxReadLimit
 	for _, geoPath := range geoPaths {
 		for _, f := range r.Entries() {
 			if !strings.HasSuffix(strings.ToLower(f.Name()), strings.ToLower(geoPath)) {
@@ -346,9 +346,9 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		// 立即登记关闭：ReadLimitedEntry 只读不负责关句柄，本分支全部返回路径
 		//（超限错误 / 解析错误 / 成功）都必须释放——os.File 双关无害（runtime 兜底）
 		defer f.Close()
-		data := fsutil.ReadLimitedEntry(f, types.MaxReadLimit)
+		data := fsutil.ReadLimitedEntry(f, registry.MaxReadLimit)
 		if data == nil {
-			return summary, fmt.Errorf("ysm.json 超过 %dMB 上限或读取失败", types.MaxReadLimit/(1<<20))
+			return summary, fmt.Errorf("ysm.json 超过 %dMB 上限或读取失败", registry.MaxReadLimit/(1<<20))
 		}
 		summary.Format = "ysm"
 		var root ysmRoot

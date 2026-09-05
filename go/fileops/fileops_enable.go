@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // disableSuffix 禁用方向写入的新标准后缀（MC 生态统一用 .disabled）
@@ -58,7 +58,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 	// 目录级禁用识别（与 IsFileBanned 对称）：父目录名以 .disabled/.ban 结尾 = 整组禁用态。
 	// 启用方向：还原父目录名（去禁用后缀）；禁用方向：目录已在禁用态内，幂等返回。
 	parentBase := filepath.Base(filepath.Dir(path))
-	if types.IsDisableSuffix(parentBase) {
+	if registry.IsDisableSuffix(parentBase) {
 		bannedParent := filepath.Dir(path)
 		// 根目录自身以禁用后缀结尾时禁止整组操作（防静默改名仓库根）
 		if root != "" {
@@ -70,12 +70,12 @@ func ToggleModelEnable(root, path string) (bool, error) {
 				return false, fmt.Errorf("不能对资源根目录执行启用/禁用操作")
 			}
 		}
-		if types.IsDisableSuffix(path) {
+		if registry.IsDisableSuffix(path) {
 			// 文件自身也带禁用后缀（旧状态残留）。
 			// P3-1：先 Rename 父目录（决定性步骤），再 Rename 文件名。
 			// 旧顺序先 Rename 文件名再 Rename 父目录，若第二步失败，
 			// 文件名已去后缀但父目录仍禁用，产生「半启用」不一致态。
-			fileNew := types.StripDisableSuffix(path)
+			fileNew := registry.StripDisableSuffix(path)
 			// 存在性检查对照旧父目录下 fileNew——两段式 Rename（先父目录后文件）
 			// 会把旧父目录内的同名文件随父目录一起带到落点，检查旧路径恰好预判该冲突
 			//（TestToggleModelEnable_DirBanFileNewExists 锁定：误改检查路径致冲突漏检）
@@ -83,7 +83,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 				return false, fmt.Errorf("目标已存在: %s", fileNew)
 			}
 			// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
-			dirNew := types.StripDisableSuffix(bannedParent)
+			dirNew := registry.StripDisableSuffix(bannedParent)
 			if _, err := os.Lstat(dirNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", dirNew)
 			}
@@ -100,7 +100,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 			}
 		} else {
 			// 大小写不敏感去禁用后缀（Windows 上 .DISABLED 目录也能还原）
-			dirNew := types.StripDisableSuffix(bannedParent)
+			dirNew := registry.StripDisableSuffix(bannedParent)
 			if _, err := os.Lstat(dirNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", dirNew)
 			}
@@ -111,7 +111,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		return true, nil // 整组启用
 	}
 	// ysm.json 是模型目录清单：禁用后缀作用于整个模型目录（整组语义）
-	if types.IsYsmEntryJSON(filepath.Base(path)) {
+	if registry.IsYsmEntryJSON(filepath.Base(path)) {
 		parent := filepath.Dir(path)
 		// 目录提升守卫：父目录必须严格深于仓库根（防根级 ysm.json 重命名仓库根）
 		if root != "" {
@@ -134,9 +134,9 @@ func ToggleModelEnable(root, path string) (bool, error) {
 			path = filepath.Dir(path)
 		}
 	}
-	if types.IsDisableSuffix(path) {
-		// 委托 types.StripDisableSuffix（单一事实来源），不内联切片防口径漂移。
-		newPath := types.StripDisableSuffix(path)
+	if registry.IsDisableSuffix(path) {
+		// 委托 registry.StripDisableSuffix（单一事实来源），不内联切片防口径漂移。
+		newPath := registry.StripDisableSuffix(path)
 		if _, err := os.Lstat(newPath); err == nil {
 			return false, fmt.Errorf("目标已存在: %s", newPath)
 		}
@@ -163,10 +163,10 @@ func IsFileBanned(path string) bool {
 	if path == "" {
 		return false
 	}
-	if types.IsDisableSuffix(path) {
+	if registry.IsDisableSuffix(path) {
 		return true
 	}
 	// 目录级禁用：父目录名以 .disabled/.ban 结尾（文件夹模型整组禁用）
 	parent := filepath.Base(filepath.Dir(path))
-	return types.IsDisableSuffix(parent)
+	return registry.IsDisableSuffix(parent)
 }

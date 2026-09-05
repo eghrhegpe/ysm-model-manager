@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // 锁统一（ADR-056 共享单锁）：同步与安装并发操作同一 custom 目录文件（Rename 竞态），
@@ -49,7 +50,7 @@ func buildRepoIndex(scanFn ScanFunc, repoDir string) *repoIndex {
 
 	for _, e := range scanFn(repoDir) {
 		// 禁用的模型（.disabled/.ban）不应出现在缺失列表，同时归入 bannedHashes
-		if types.IsDisableSuffix(e.Name) {
+		if registry.IsDisableSuffix(e.Name) {
 			if e.Hash != "" {
 				idx.BannedHash[e.Hash] = true
 			}
@@ -90,9 +91,9 @@ func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing,
 			continue
 		}
 		if idx.BannedHash[c.Hash] {
-			disabled = append(disabled, types.StripDisableSuffix(c.Name))
+			disabled = append(disabled, registry.StripDisableSuffix(c.Name))
 		} else if _, found := idx.ByHash[c.Hash]; !found {
-			extra = append(extra, types.StripDisableSuffix(c.Name))
+			extra = append(extra, registry.StripDisableSuffix(c.Name))
 		}
 	}
 
@@ -149,7 +150,7 @@ func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir
 // rtype 不为空时使用 FindInstDir 限定子目录；否则用 ins.CustomDir。
 func resolveInstanceScanDir(ins types.VersionInstance, rtype, subDir string) string {
 	if rtype != "" && subDir != "" {
-		return types.FindInstDir(ins.VersionDir, subDir, rtype)
+		return registry.FindInstDir(ins.VersionDir, subDir, rtype)
 	}
 	return ins.CustomDir
 }
@@ -165,7 +166,7 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 	// 预解析子目录（rtype 不为空时使用 FindInstDir 限定路径）
 	var subDir string
 	if rtype != "" {
-		subDir = types.SubDirMap(rtype)
+		subDir = registry.SubDirMap(rtype)
 	}
 
 	idx := buildRepoIndex(scanFn, repoDir)
@@ -206,7 +207,7 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 			linkType := GetLinkType(c.Path)
 			// 去掉禁用后缀，方便前端匹配
 			status.Files = append(status.Files, types.CustomFileInfo{
-				Name:     types.StripDisableSuffix(c.Name),
+				Name:     registry.StripDisableSuffix(c.Name),
 				LinkType: linkType,
 			})
 		}
@@ -236,17 +237,17 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件
 	filesRootClean := strings.ToLower(filepath.Clean(filesRoot)) + string(filepath.Separator)
 	for _, e := range repoEntries {
-		banned := types.IsDisableSuffix(e.Name)
+		banned := registry.IsDisableSuffix(e.Name)
 		// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
 		ePath := strings.ToLower(e.Path)
 		if strings.HasPrefix(ePath, filesRootClean) {
 			rel := strings.TrimPrefix(ePath, filesRootClean)
-			rel = types.StripDisableSuffix(rel)
+			rel = registry.StripDisableSuffix(rel)
 			repoName[rel] = banned
 		} else {
 			// fallback：纯文件名（顶层文件）
 			baseName := strings.ToLower(e.Name)
-			baseName = types.StripDisableSuffix(baseName)
+			baseName = registry.StripDisableSuffix(baseName)
 			repoName[baseName] = banned
 		}
 		if e.Hash != "" {
@@ -279,12 +280,12 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			return nil
 		}
 		actualPath := p
-		isCurrentlyBanned := types.IsDisableSuffix(p)
+		isCurrentlyBanned := registry.IsDisableSuffix(p)
 		if isCurrentlyBanned {
-			actualPath = types.StripDisableSuffix(p)
+			actualPath = registry.StripDisableSuffix(p)
 		}
 		ext := strings.ToLower(filepath.Ext(actualPath))
-		if !types.IsSupportedExt(ext) {
+		if !registry.IsSupportedExt(ext) {
 			return nil
 		}
 
@@ -303,7 +304,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		if strings.HasPrefix(pLower, customDirClean) {
 			// relKey 匹配（带文件夹限定）
 			rel := strings.TrimPrefix(pLower, customDirClean)
-			rel = types.StripDisableSuffix(rel)
+			rel = registry.StripDisableSuffix(rel)
 			shouldBeBanned, matched = repoName[rel]
 		}
 		if !matched {
@@ -325,13 +326,13 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			// 禁用统一收敛到 DisableSuffixes[0]（.disabled，新标准）。
 			// 历史 .ban 文件 toggle 启用→再禁用时也会变成 .disabled——
 			// 这是有意收敛，非 bug。
-			newPath := p + types.DisableSuffixes[0]
+			newPath := p + registry.DisableSuffixes[0]
 			if _, err := os.Stat(newPath); err == nil {
 				return nil // 目标已存在，跳过
 			}
 			ops = append(ops, renameOp{src: p, dst: newPath})
 		} else if !shouldBeBanned && isCurrentlyBanned {
-			newPath := types.StripDisableSuffix(p)
+			newPath := registry.StripDisableSuffix(p)
 			// 启用分支补目标存在性检查——与禁用分支「存在即跳过」
 			// 对称；原 os.Rename 会静默覆盖既有同名文件（内容不同则数据丢失，仅 Windows
 			// 目标被占用时失败）；目标已存在且非禁用后缀时跳过本次改名
@@ -363,7 +364,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			}
 			continue
 		}
-		if types.IsDisableSuffix(op.dst) {
+		if registry.IsDisableSuffix(op.dst) {
 			disableCount++
 		} else {
 			enableCount++
@@ -389,7 +390,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 // SyncResources 的 pack.mcmeta 文件夹收集仅对此类（及空 rtype 兼容）生效，
 // 避免蓝图/YSM 等类型的仓库中误放的资源包文件夹被当成本类型同步单元。
 func isMcmetaDetectorType(rtype string) bool {
-	rt := types.RegistryType(rtype)
+	rt := registry.RegistryType(rtype)
 	return rt != nil && rt.Detector == "mcmeta"
 }
 
@@ -403,7 +404,7 @@ func relKey(root, path string) string {
 	}
 	rel = filepath.ToSlash(rel)
 	rel = strings.ToLower(rel)
-	rel = types.StripDisableSuffix(rel)
+	rel = registry.StripDisableSuffix(rel)
 	return rel
 }
 
@@ -458,7 +459,7 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 				}
 				return nil
 			}
-			if !types.IsResourceAllowed(info.Name()) {
+			if !registry.IsResourceAllowed(info.Name()) {
 				return nil
 			}
 			if key := relKey(rootDir, path); key != "" {

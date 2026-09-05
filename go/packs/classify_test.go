@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // goldenCase 语料条目：纯路径用例（location 路由）留 entries 空；
@@ -93,7 +93,7 @@ func buildAll(t *testing.T) map[string]string {
 
 // TestClassifyGolden 主回归闸门：每个语料路径必须稳定判为 expect。
 func TestClassifyGolden(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	built := buildAll(t)
 	for _, c := range loadGolden(t) {
 		if got := packs.ClassifyResource(built[c.Path], reg); got != c.Expect {
@@ -105,7 +105,7 @@ func TestClassifyGolden(t *testing.T) {
 // TestClassifyIsolation 隔离不变量：移除任一类型后，其余语料分类不得改变
 // （归 victim 的用例跳过）。直接证明路由彼此隔离，杜绝 last-wins 跨类型污染。
 func TestClassifyIsolation(t *testing.T) {
-	base := types.LoadRegistry()
+	base := registry.LoadRegistry()
 	built := buildAll(t)
 	baseline := map[string]string{}
 	for _, c := range loadGolden(t) {
@@ -128,7 +128,7 @@ func TestClassifyIsolation(t *testing.T) {
 // （确定性伪 shuffle，可复现）。配合 (priority desc, id asc) 双键裁决，
 // 证明收敛后不再依赖注册表顺序。
 func TestClassifyOrderIndependent(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	built := buildAll(t)
 	ref := map[string]string{}
 	for _, c := range loadGolden(t) {
@@ -142,8 +142,8 @@ func TestClassifyOrderIndependent(t *testing.T) {
 	}
 }
 
-func removeType(reg *types.ResourceTypeRegistry, id string) *types.ResourceTypeRegistry {
-	out := &types.ResourceTypeRegistry{}
+func removeType(reg *registry.ResourceTypeRegistry, id string) *registry.ResourceTypeRegistry {
+	out := &registry.ResourceTypeRegistry{}
 	for _, rt := range reg.ResourceTypes {
 		if rt.ID != id {
 			out.ResourceTypes = append(out.ResourceTypes, rt)
@@ -153,9 +153,9 @@ func removeType(reg *types.ResourceTypeRegistry, id string) *types.ResourceTypeR
 }
 
 // shuffle 确定性伪 shuffle（黄金比乘法，可复现），用于顺序无关性验证。
-func shuffle(reg *types.ResourceTypeRegistry) *types.ResourceTypeRegistry {
-	out := &types.ResourceTypeRegistry{
-		ResourceTypes: append([]types.ResourceType(nil), reg.ResourceTypes...),
+func shuffle(reg *registry.ResourceTypeRegistry) *registry.ResourceTypeRegistry {
+	out := &registry.ResourceTypeRegistry{
+		ResourceTypes: append([]registry.ResourceType(nil), reg.ResourceTypes...),
 	}
 	for i := len(out.ResourceTypes) - 1; i > 0; i-- {
 		j := (i * 2654435761) % (i + 1)

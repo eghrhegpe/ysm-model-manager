@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestHasExt(t *testing.T) {
@@ -32,8 +32,8 @@ func TestHasExt(t *testing.T) {
 }
 
 func TestDetectResourceType_ExtensionOnly(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "test-type", Extensions: []string{".foo"}, Detector: "extension"},
 			{ID: "other-type", Extensions: []string{".bar"}, Detector: "extension"},
 		},
@@ -200,7 +200,7 @@ func TestReadShaderpackLang_NotFound(t *testing.T) {
 
 func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 	// [int] 格式
-	fr := types.FormatRange{}
+	fr := registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`5`)); err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 		t.Errorf("[int] → Min=%d Max=%d, want 5,5", fr.Min, fr.Max)
 	}
 	// [int, int] 格式
-	fr = types.FormatRange{}
+	fr = registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`[3,7]`)); err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 		t.Errorf("[int,int] → Min=%d Max=%d, want 3,7", fr.Min, fr.Max)
 	}
 	// 对象格式
-	fr = types.FormatRange{}
+	fr = registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`{"min_inclusive":1,"max_inclusive":2}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -409,7 +409,7 @@ func TestDetectResourceType_NilRegistry(t *testing.T) {
 }
 
 func TestDetectResourceType_EmptyRegistry(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{}
+	reg := &registry.ResourceTypeRegistry{}
 	if got := DetectResourceType("/path/file.zip", reg); got != "" {
 		t.Fatalf("空 registry 应返回 '', 得到 %q", got)
 	}
@@ -417,8 +417,8 @@ func TestDetectResourceType_EmptyRegistry(t *testing.T) {
 
 // 外部 registry 扩展名大写（.ZIP）不应导致检测静默失效（hasExt 大小写归一）
 func TestDetectResourceType_UppercaseRegistryExt(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "resourcepack", Extensions: []string{".ZIP"}, Detector: "extension"},
 		},
 	}
@@ -429,8 +429,8 @@ func TestDetectResourceType_UppercaseRegistryExt(t *testing.T) {
 
 // detector 大写（YSM）不应导致内容型检测被跳过
 func TestDetectResourceType_UppercaseDetector(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "ysm-model", Extensions: []string{".ysm"}, Detector: "YSM"},
 		},
 	}
@@ -474,8 +474,8 @@ func TestIsYsmFile_OtherJsonNotYsm(t *testing.T) {
 
 // .json 扩展经 DetectResourceType（ysm detector）应正确分类 ysm.json
 func TestDetectResourceType_YsmJsonFile(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "ysm-model", Extensions: []string{".ysm", ".zip", ".json"}, Detector: "ysm"},
 		},
 	}

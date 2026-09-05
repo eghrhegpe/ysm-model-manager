@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // 套目录材质包 zip（ADR-082 S1）：pack.mcmeta exact 指纹升级为任意层级段后缀匹配
 func TestDetectResourceType_NestedDirResourcepack(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	// 真实世界常见：材质包 zip 外层套一层目录 MyPack/pack.mcmeta
 	zipPath := testutil.WriteZipFile(t, "mypack.zip", map[string]string{
 		"MyPack/pack.mcmeta": `{"pack":{"pack_format":15}}`,
@@ -33,7 +33,7 @@ func TestDetectResourceType_NestedDirResourcepack(t *testing.T) {
 
 // 套目录光影包 zip（ADR-082 S1）：shaders/ prefix 指纹升级为任意层级
 func TestDetectResourceType_NestedDirShaderpack(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	zipPath := testutil.WriteZipFile(t, "shader.zip", map[string]string{
 		"MyShader/shaders/foo.fsh": "x",
 	})
@@ -44,7 +44,7 @@ func TestDetectResourceType_NestedDirShaderpack(t *testing.T) {
 
 // 套目录 ysm zip（ADR-082 S1）：models/ prefix 升级为任意层级
 func TestDetectResourceType_NestedDirYsm(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	zipPath := testutil.WriteZipFile(t, "model.zip", map[string]string{
 		"MyModel/models/thing/body.json": `{"format_version":"1.12.0"}`,
 	})
@@ -56,7 +56,7 @@ func TestDetectResourceType_NestedDirYsm(t *testing.T) {
 // .7z 材质包（ADR-082 S2/S3）：extensions 补 .7z 后走 container 指纹，不再被 ysm 兜底抢走。
 // fixture 由 7-Zip CLI 预生成（testdata/pack.7z，内含 pack.mcmeta，见 ADR-067 §4.3 同款做法）。
 func TestDetectResourceType_SevenZipResourcepack(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	sevenPath := filepath.Join("testdata", "pack.7z")
 	if got := DetectResourceType(sevenPath, reg); got != "resourcepack" {
 		t.Fatalf(".7z 材质包应识别 resourcepack，实际 %q", got)
@@ -66,7 +66,7 @@ func TestDetectResourceType_SevenZipResourcepack(t *testing.T) {
 // 坏 .7z 兜底已移除（ADR-082 续）：识别不出就是识别不出——
 // 原「ys m 扩展名直判接住坏 .7z」收敛为容器指纹失败即返回空，不再假装 YSM。
 func TestDetectResourceType_SevenZipNoFallback(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	dir := t.TempDir()
 	sevenPath := filepath.Join(dir, "pkg.7z")
 	if err := os.WriteFile(sevenPath, []byte("not really 7z"), 0644); err != nil {

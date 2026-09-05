@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -136,7 +137,7 @@ func runPhaseConfigLoad(a AppService) guiFlowResult {
 func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string) {
 	byType := make(map[string]int)
 	var firstModel string
-	registry := types.LoadRegistry()
+	registry := registry.LoadRegistry()
 	for _, e := range entries {
 		ext := strings.ToLower(filepath.Ext(e.Path))
 		id := classifyForScan(e.Path, ext, registry)
@@ -155,12 +156,12 @@ func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string) {
 //  2. 非容器 → packs.DetectResourceType（路径消歧 + 扩展名，零文件打开）；
 //  3. 容器兜底（目录消歧未命中）→ 诚实标 "container"（不归任意类型——共享扩展名
 //     .zip 被 14 类型声明，last-wins 归任意类型会误导分布）。
-func classifyForScan(path, ext string, registry *types.ResourceTypeRegistry) string {
-	if id := types.TypeByLocation(path, registry); id != "" {
+func classifyForScan(path, ext string, reg *registry.ResourceTypeRegistry) string {
+	if id := registry.TypeByLocation(path, reg); id != "" {
 		return id
 	}
-	if !types.IsContainerExt(ext) {
-		if id := packs.DetectResourceType(path, registry); id != "" {
+	if !registry.IsContainerExt(ext) {
+		if id := packs.DetectResourceType(path, reg); id != "" {
 			return id
 		}
 		return "other"

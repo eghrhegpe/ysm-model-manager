@@ -3,7 +3,7 @@
 // matchZipEntryTS（frontend/src/utils/resource/types.ts:376）逐条一致的
 // input→output 对。任一端改口径，另一端 vitest / go test 当场红。
 // 语料来源：classify-golden.json entries 字段 + 全类型 zipEntries 指纹 + 边界。
-// 单一权威 = Go types.MatchZipEntry（ADR-154 §2.2：双端互锁硬性要求）。
+// 单一权威 = Go MatchZipEntry（ADR-154 §2.2：双端互锁硬性要求）。
 // 仓库根定位复用 parity_test.go 的 repoRootFromPkgDir（同包共享，避免 jscpd 重复）。
 package registry
 
@@ -35,7 +35,7 @@ func loadZipentryParityFixture(t *testing.T) *zipentryParityFixture {
 	return &f
 }
 
-// TestParity_MatchZipEntry 对拍 Go types.MatchZipEntry ↔ TS matchZipEntryTS。
+// TestParity_MatchZipEntry 对拍 Go MatchZipEntry ↔ TS matchZipEntryTS。
 // 任何一条 input→output 与 fixture 不符即红；TS 侧由
 // frontend/src/backend/zipentry.parity.test.ts 消费同一 fixture。
 func TestParity_MatchZipEntry(t *testing.T) {

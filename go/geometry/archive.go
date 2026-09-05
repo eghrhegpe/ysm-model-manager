@@ -13,11 +13,12 @@ import (
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // maxExtractSize 单个文件最大读取大小（ZIP/7z 内文件），防止 ZIP 炸弹
-// 共享 types.MaxReadLimit（索引 6.7+5.2，与 fileops/ysm 的 50MB 上限单点）
-const maxExtractSize = types.MaxReadLimit
+// 共享 registry.MaxReadLimit（索引 6.7+5.2，与 fileops/ysm 的 50MB 上限单点）
+const maxExtractSize = registry.MaxReadLimit
 
 // IsArmModelName 判断模型文件是否为第一人称手持视角的独立手臂几何
 // （arm.json / arm.geo.json）。
@@ -209,7 +210,7 @@ func (b *l0BasenameIndex) build() (geo, png map[string][]l0NamedEntry) {
 		}
 		rel := low[len(b.maidNs):]
 		if strings.HasSuffix(low, ".json") {
-			if types.IsYsmEntryJSON(filepath.Base(rel)) ||
+			if registry.IsYsmEntryJSON(filepath.Base(rel)) ||
 				strings.HasSuffix(rel, "maid_model.json") ||
 				strings.HasSuffix(rel, "maid_chair.json") ||
 				strings.HasSuffix(rel, "maid_sound.json") ||
@@ -274,7 +275,7 @@ func classifyFileInventory(entries []container.Entry) *types.FileInventory {
 		case (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && strings.Contains(low, "avatar/"):
 			inv.Avatars = append(inv.Avatars, e.Name())
 			appended = true
-		case strings.HasSuffix(low, ".json") && !types.IsYsmEntryJSON(filepath.Base(e.Name())) && isLegacyGeometryName(low):
+		case strings.HasSuffix(low, ".json") && !registry.IsYsmEntryJSON(filepath.Base(e.Name())) && isLegacyGeometryName(low):
 			inv.LegacyModels = append(inv.LegacyModels, e.Name())
 			appended = true
 		}
@@ -472,7 +473,7 @@ func jsonEntryPass(e container.Entry, maidNs string) bool {
 	if !strings.HasSuffix(low, ".json") || e.IsDir() {
 		return false
 	}
-	if types.IsYsmEntryJSON(filepath.Base(e.Name())) {
+	if registry.IsYsmEntryJSON(filepath.Base(e.Name())) {
 		return false
 	}
 	// maid-model 命名空间过滤：只处理首个 namespace 的 entity JSON
@@ -989,7 +990,7 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 	for _, e := range entries {
 		low := strings.ToLower(e.Name())
 		if strings.HasSuffix(low, ".json") && !e.IsDir() {
-			if types.IsYsmEntryJSON(filepath.Base(e.Name())) {
+			if registry.IsYsmEntryJSON(filepath.Base(e.Name())) {
 				continue
 			}
 			if maidNs != "" {

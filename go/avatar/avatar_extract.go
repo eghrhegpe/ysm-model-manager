@@ -19,7 +19,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。
@@ -77,16 +77,16 @@ func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 func extractFallbackAvatarFromDir(files []ysmDecodedFile, safeName string) string {
 	// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
 	// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
-	// 不含 .tga——浏览器不解码，头像 <img> 无法渲染。委托 types.IsRenderableTextureExt。
+	// 不含 .tga——浏览器不解码，头像 <img> 无法渲染。委托 registry.IsRenderableTextureExt。
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
-		if !types.IsRenderableTextureExt(filepath.Ext(low)) {
+		if !registry.IsRenderableTextureExt(filepath.Ext(low)) {
 			continue
 		}
 		if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
 			continue
 		}
-		return SaveAvatarData(safeName, f.Data, types.TextureMIME(filepath.Ext(low)))
+		return SaveAvatarData(safeName, f.Data, registry.TextureMIME(filepath.Ext(low)))
 	}
 	return ""
 }
@@ -109,7 +109,7 @@ func matchAvatarByAuthor(files []ysmDecodedFile, authors []authorEntry, safeName
 					}
 				}
 				if matched {
-					return SaveAvatarData(safeName, f.Data, types.TextureMIME(filepath.Ext(fp)))
+					return SaveAvatarData(safeName, f.Data, registry.TextureMIME(filepath.Ext(fp)))
 				}
 			}
 		}
@@ -183,7 +183,7 @@ func extractAvatarFromJSON(modelPath, safeName string) string {
 				continue
 			}
 			if avatarData, _ := readLimitedAvatar(avatarPath); avatarData != nil {
-				mime := types.TextureMIME(filepath.Ext(c))
+				mime := registry.TextureMIME(filepath.Ext(c))
 				if mime == "" {
 					mime = "image/png" // 裸文件名等无扩展名场景兜底
 				}
@@ -427,7 +427,7 @@ func readLimitedModel(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data := fsutil.ReadLimitedEntry(f, types.MaxReadLimit)
+	data := fsutil.ReadLimitedEntry(f, registry.MaxReadLimit)
 	if data == nil {
 		return nil, fmt.Errorf("模型文件读取失败或超过上限: %s", path)
 	}
@@ -460,7 +460,7 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 			}
 			for _, c := range avatarCandidates(ap) {
 				if avatarData := ReadFileFromContainer(r, c); avatarData != nil {
-					mime := types.TextureMIME(filepath.Ext(c))
+					mime := registry.TextureMIME(filepath.Ext(c))
 					if mime == "" {
 						mime = "image/png" // 裸文件名等无扩展名场景兜底
 					}
@@ -476,7 +476,7 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 			continue
 		}
 		low := strings.ToLower(e.Name())
-		if !types.IsRenderableTextureExt(filepath.Ext(low)) {
+		if !registry.IsRenderableTextureExt(filepath.Ext(low)) {
 			continue
 		}
 		if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
@@ -486,12 +486,12 @@ func extractAvatarFromContainer(r container.Reader, safeName string) string {
 		if oerr != nil {
 			continue
 		}
-		avatarData, rerr := io.ReadAll(io.LimitReader(rc, types.MaxReadLimit+1))
+		avatarData, rerr := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
 		rc.Close()
-		if rerr != nil || int64(len(avatarData)) > types.MaxReadLimit {
+		if rerr != nil || int64(len(avatarData)) > registry.MaxReadLimit {
 			continue
 		}
-		mime := types.TextureMIME(filepath.Ext(low))
+		mime := registry.TextureMIME(filepath.Ext(low))
 		if mime == "" {
 			mime = "image/png" // 兜底
 		}

@@ -14,6 +14,7 @@ import (
 
 	"ysm-model-manager/go/rustbridge"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestScanEntries_GoRust_CrossEngineParity 锁定生产真实路径的**跨引擎一致性**：
@@ -34,7 +35,7 @@ import (
 // 不在本测试覆盖内。
 func TestScanEntries_GoRust_CrossEngineParity(t *testing.T) {
 	base := t.TempDir()
-	registryJSON, err := json.Marshal(types.LoadRegistry())
+	registryJSON, err := json.Marshal(registry.LoadRegistry())
 	if err != nil {
 		t.Fatalf("marshal registry: %v", err)
 	}

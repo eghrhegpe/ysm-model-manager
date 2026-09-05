@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ErrPartialSync 部分成功：有 N 个文件同步成功但 M 个失败。
@@ -44,7 +45,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// YSM(.json) 和 MMD(.pmx/.pmd) 位于子目录中，需文件夹推送
 	// 用文件夹级同步检测 missing，然后完整复制整个文件夹（含纹理等配套文件）
 	// 多层物理路径：行内计算 rel(globalDir, missing) 保留中间目录层级
-	if types.IsDirLevelSync(rtype) {
+	if registry.IsDirLevelSync(rtype) {
 		dirResult := SyncResourcesDirLevel(globalDir, targetDir, rtype)
 		for _, missing := range dirResult.Missing {
 			fi, stErr := os.Stat(missing)
@@ -110,7 +111,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	// 找出 extra 的文件并复制到全局
 	// 对 YSM/MMD 使用文件夹级同步
 	var result types.ResourceSyncResult
-	if types.IsDirLevelSync(rtype) {
+	if registry.IsDirLevelSync(rtype) {
 		result = SyncResourcesDirLevel(globalDir, targetDir, rtype)
 	} else {
 		result = SyncResources(globalDir, targetDir, rtype)
@@ -120,7 +121,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	for _, src := range result.Extra {
 		fi, stErr := os.Stat(src)
 		isDir := stErr == nil && fi.IsDir()
-		if types.IsDirLevelSync(rtype) {
+		if registry.IsDirLevelSync(rtype) {
 			// 相对 targetDir 映射到 globalDir，保留子目录层级（EntityPlayer/角色A →
 			// mmd/EntityPlayer/角色A）；越界无法映射时回退文件名（旧行为）
 			rel, relErr := paths.RelInside(targetDir, src)
@@ -256,7 +257,7 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 		return installer.InstallDir(dir, customDir, globalDir, linkMode, rtype)
 	}
 	// .json 仅 ysm.json 视为 YSM 文件夹级入口（防 readme.json 等误判）
-	if ext == ".json" && types.IsYsmEntryJSON(filePath) {
+	if ext == ".json" && registry.IsYsmEntryJSON(filePath) {
 		dir := filepath.Dir(filePath)
 		return installer.InstallDir(dir, customDir, globalDir, linkMode, rtype)
 	}

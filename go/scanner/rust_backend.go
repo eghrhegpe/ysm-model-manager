@@ -7,6 +7,7 @@ import (
 
 	"ysm-model-manager/go/rustbridge"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // scanEntriesWithRust 调用 Rust 扫描后端；不可用时返回 ok=false，由 Go 端兜底。
@@ -25,7 +26,7 @@ import (
 // Rust 深加工入口 rustbridge.ScanManifest 保留为显式独立 API（见 ADR-120）：仅当业务代码主动持有
 // 一份 Go entries 并想让 Rust 在其上深加工时，由调用方显式调用，绝不走本函数的隐式分支。
 func scanEntriesWithRust(dir string) ([]types.ModelEntry, bool, bool) {
-	registryJSON, err := json.Marshal(types.LoadRegistry())
+	registryJSON, err := json.Marshal(registry.LoadRegistry())
 	if err != nil {
 		emitScanError("[scanner] serialize registry for Rust backend: %v", err)
 		return nil, false, false

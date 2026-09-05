@@ -19,6 +19,7 @@ import (
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ===== 同步结果缓存（TTL 跟随 scanner.EffectiveCacheTTL，默认 30s）=====
@@ -56,7 +57,7 @@ func InvalidateSyncItemsCache() {
 // buildSyncItemsKey 仅供当前 BuildSyncItems 函数体实际依赖的输入做缓存键：
 // 目前只读 ins.Name / ins.VersionDir / subtype / filesRoots / rtypes。
 // 使用 xxhash 结构化摘要：新增字段不需要手动加进 key，哈希自动覆盖所有输入。
-func buildSyncItemsKey(ins *types.VersionInstance, rtypes []types.ResourceType, filesRoots map[string]string, subtype string) string {
+func buildSyncItemsKey(ins *types.VersionInstance, rtypes []registry.ResourceType, filesRoots map[string]string, subtype string) string {
 	h := xxhash.New()
 	h.WriteString(ins.Name)
 	h.Write([]byte{0})
@@ -120,7 +121,7 @@ func buildDirLevelChildren(globalPath, instPath, rtype, rIcon, groupGlobalDir st
 		childStatus := d.Status
 		childIcon := rIcon
 		lowName := strings.ToLower(filepath.Base(d.AbsPath))
-		if types.IsDisableSuffix(lowName) {
+		if registry.IsDisableSuffix(lowName) {
 			childStatus = types.SyncStatusDisabled
 			childIcon = "⛔"
 		}
@@ -174,7 +175,7 @@ func resolveItemMeta(
 	if isDirEntry {
 		meta.icon = "📁"
 	}
-	if types.IsDisableSuffix(lowName) {
+	if registry.IsDisableSuffix(lowName) {
 		meta.status = types.SyncStatusDisabled
 		meta.icon = "⛔"
 	} else if isLegacy != nil && isLegacy(p) {
@@ -188,7 +189,7 @@ func resolveItemMeta(
 // 把 appendOneItem 原先逐条拆包转发的 rtype/rIcon/globalDir/instDir/isDirLevelType
 // 五个类型内不变量收拢，签名从 11 参收敛到「接收者 + 条目路径 + meta」。
 type rtypeCtx struct {
-	rt         types.ResourceType
+	rt         registry.ResourceType
 	globalDir  string
 	instDir    string
 	isDirLevel bool
@@ -251,11 +252,11 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 //
 // 原 BuildSyncItems L132-296 主循环内体（164 行）完整升格，rtypes 外循环只负责迭代类型。
 func processOneResourceType(
-	rt types.ResourceType,
+	rt registry.ResourceType,
 	insVersionDir string,
 	filesRoots map[string]string,
 ) []types.ResourceSyncItem {
-	subDir := types.SubDirMap(rt.ID)
+	subDir := registry.SubDirMap(rt.ID)
 	if subDir == "" {
 		return nil
 	}
@@ -263,8 +264,8 @@ func processOneResourceType(
 	if globalDir == "" {
 		return nil
 	}
-	instDir := types.FindInstDir(insVersionDir, subDir, rt.ID)
-	isDirLevel := types.IsDirLevelSync(rt.ID)
+	instDir := registry.FindInstDir(insVersionDir, subDir, rt.ID)
+	isDirLevel := registry.IsDirLevelSync(rt.ID)
 
 	// ADR-064 分流：dirLevel 走 SyncResourcesDirLevelScan（注入 scanner 缓存复用），
 	// fileLevel 走 SyncResources（相对路径成对对比，不会丢同名不同目录文件）
@@ -308,7 +309,7 @@ func processOneResourceType(
 // BuildSyncItems 组装整合包内各资源类型的同步状态项（纯逻辑，root 由调用方注入）
 // subtype 指定子类型目录名（如 EntityPlayer/SceneModel），仅 MMD 分组类型有效；
 // 非空时路径限定到 subtype 子目录，避免扫全目录（清单式扫路径限定目录，与仓库侧同构）。
-func BuildSyncItems(ins *types.VersionInstance, rtypes []types.ResourceType, filesRoots map[string]string, subtype string) []types.ResourceSyncItem {
+func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, filesRoots map[string]string, subtype string) []types.ResourceSyncItem {
 	// 导出入口自守卫（ADR-044② 防御范式）：唯一调用方保证非 nil，但导出函数必须防 panic
 	if ins == nil {
 		return nil

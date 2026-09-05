@@ -23,7 +23,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ysmArchiveData 从 ysm.json 解析得到的**原文**结构数据。
@@ -247,7 +247,7 @@ func parseYsmArchive(entries []container.Entry, logPrefix string) *ysmArchiveDat
 	for _, e := range entries {
 		// 与兄弟调用点一致：IsYsmEntryJSON 是整串精确匹配，必须先取 basename，
 		// 否则嵌套目录（sub/ysm.json）的 ysm.json 会被静默跳过、元数据丢失。
-		if !types.IsYsmEntryJSON(filepath.Base(e.Name())) || e.IsDir() {
+		if !registry.IsYsmEntryJSON(filepath.Base(e.Name())) || e.IsDir() {
 			continue
 		}
 		rc, err := e.Open()

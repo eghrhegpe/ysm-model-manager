@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ===== relKeyDirLevel 单元测试 =====
@@ -723,7 +724,7 @@ func TestPushResources_FolderLevelMMD_Compatibility(t *testing.T) {
 // 摊平的子文件行（01_taisho_maid/ysm.json 等），违背「仓库怎么来，整合包就怎么来」。
 // 正解：目录同时含子模型文件夹时是「容器」而非「叶子模型夹」，应下钻保留各子夹层级。
 func TestSyncResourcesDirLevel_FlatFileNotAbove_SubfolderKept(t *testing.T) {
-	if !types.IsDirLevelSync("ysm") {
+	if !registry.IsDirLevelSync("ysm") {
 		t.Skip("ysm 非 dirLevel 类型，跳过")
 	}
 	globalDir := t.TempDir()

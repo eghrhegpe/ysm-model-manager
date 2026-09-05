@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/container"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ReadFileFromZip 从 ZIP 读取指定路径的文件。
@@ -34,13 +34,13 @@ func ReadFileFromZip(zr *zip.Reader, target string) []byte {
 		}
 		// 循环内显式 Close，不依赖 defer（defer 要等函数返回才释放，
 		// 多条目命中时累积未关闭句柄）。
-		data, err := io.ReadAll(io.LimitReader(rc, types.MaxReadLimit+1))
+		data, err := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
 		rc.Close()
 		if err != nil {
 			log.Printf("[avatar] zip 条目读取失败 %s: %v", f.Name, err)
 			return nil
 		}
-		if int64(len(data)) > types.MaxReadLimit {
+		if int64(len(data)) > registry.MaxReadLimit {
 			log.Printf("[avatar] zip 条目超限跳过 %s（解压超限）", f.Name)
 			return nil
 		}
@@ -67,13 +67,13 @@ func ReadFileFromContainer(r container.Reader, target string) []byte {
 			log.Printf("[avatar] 容器条目打开失败 %s: %v", e.Name(), err)
 			return nil
 		}
-		data, rerr := io.ReadAll(io.LimitReader(rc, types.MaxReadLimit+1))
+		data, rerr := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
 		rc.Close()
 		if rerr != nil {
 			log.Printf("[avatar] 容器条目读取失败 %s: %v", e.Name(), rerr)
 			return nil
 		}
-		if int64(len(data)) > types.MaxReadLimit {
+		if int64(len(data)) > registry.MaxReadLimit {
 			log.Printf("[avatar] 容器条目超限跳过 %s（解压超限）", e.Name())
 			return nil
 		}
@@ -82,7 +82,7 @@ func ReadFileFromContainer(r container.Reader, target string) []byte {
 	return nil
 }
 
-// matchAvatarZipEntry avatar zip 条目路径匹配（与 types.MatchZipEntry 注册表驱动不同：
+// matchAvatarZipEntry avatar zip 条目路径匹配（与 registry.MatchZipEntry 注册表驱动不同：
 //   - 精确相等（含目标含路径如 "avatar/alice.png" 时，仅同名同路径命中，杜绝
 //     sub/avatar/alice.png 误命中——P3-3 收紧点）
 //   - 目标以 "/" 结尾（目录级）→ 根下该目录前缀
@@ -106,8 +106,8 @@ func matchAvatarZipEntry(p, targetLower string) bool {
 // 原 HasSuffix(low, "ysm.json") 会把 "notysm.json"/"myysm.json" 等误判为清单——若该文件
 // 先于真实 ysm.json 出现在文件列表，元数据解析会取到错误内容；zip 分支 matchAvatarZipEntry
 // 裸名匹配仅认 "/ysm.json" 后缀，两分支口径不一致（本次对齐）。
-// 委托 types.IsYsmEntryJSON 作为单一事实来源（ADR-038 D2）。
+// 委托 registry.IsYsmEntryJSON 作为单一事实来源（ADR-038 D2）。
 func isYSMJSONPath(p string) bool {
 	low := strings.ToLower(filepath.ToSlash(p))
-	return types.IsYsmEntryJSON(low) || types.IsYsmEntryJSON(filepath.Base(low))
+	return registry.IsYsmEntryJSON(low) || registry.IsYsmEntryJSON(filepath.Base(low))
 }

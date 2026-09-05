@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // 资源包文件大小上限
@@ -31,7 +31,7 @@ var (
 )
 
 // ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图
-func ReadPackMeta(path string) (*types.PackMeta, string, error) {
+func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 	var data []byte
 	var packPng []byte
 	var metaTooLarge bool // zip 分支超限 pack.mcmeta 标记（与 dir 分支一致报 ErrPackMetaTooLarge）
@@ -120,7 +120,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 		return nil, "", ErrPackMetaNotFound
 	}
 
-	var meta types.PackMeta
+	var meta registry.PackMeta
 	// 去除 UTF-8 BOM（PowerShell 写入的 JSON 可能带 EF BB BF 前缀）
 	data = fsutil.StripBOM(data)
 	if err := json.Unmarshal(data, &meta); err != nil {
@@ -138,7 +138,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 
 // DetectResourceType 识别入口（ADR-144：识别大脑下沉本包后为同包直调，薄壳撤销）。
 // 签名保持不变——cli/flow.go classifyForScan / internal/app 直接调用。
-func DetectResourceType(path string, registry *types.ResourceTypeRegistry) string {
+func DetectResourceType(path string, registry *registry.ResourceTypeRegistry) string {
 	return ClassifyResource(path, registry)
 }
 

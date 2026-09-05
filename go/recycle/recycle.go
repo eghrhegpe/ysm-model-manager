@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // MoveResult 回收操作结果
@@ -230,7 +231,7 @@ func (tm *TrashManager) List() []types.ModelEntry {
 		}
 		ext := strings.ToLower(filepath.Ext(p))
 		// 检查是否为禁用后缀（.disabled/.ban）或其他受支持的扩展名
-		if !types.IsDisableSuffix(ext) && !types.IsSupportedExt(ext) {
+		if !registry.IsDisableSuffix(ext) && !registry.IsSupportedExt(ext) {
 			return nil
 		}
 		info, _ := d.Info()

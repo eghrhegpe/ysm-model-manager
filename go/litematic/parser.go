@@ -8,16 +8,16 @@ import (
 	"image/png"
 	"sort"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // sortedStats counts → []LitematicBlockStat，按 Count 降序。
 // 四格式统计出口的公共收尾（原 litematic/schematic/structure/bedrock 各写一遍）；
 // 计数方负责先把名字解析成最终形态（ResolveBlockZH 幂等，可安全重复调用）。
-func sortedStats(counts map[string]int) []types.LitematicBlockStat {
-	stats := make([]types.LitematicBlockStat, 0, len(counts))
+func sortedStats(counts map[string]int) []registry.LitematicBlockStat {
+	stats := make([]registry.LitematicBlockStat, 0, len(counts))
 	for name, count := range counts {
-		stats = append(stats, types.LitematicBlockStat{Name: name, Count: count})
+		stats = append(stats, registry.LitematicBlockStat{Name: name, Count: count})
 	}
 	sort.Slice(stats, func(i, j int) bool {
 		return stats[i].Count > stats[j].Count
@@ -27,13 +27,13 @@ func sortedStats(counts map[string]int) []types.LitematicBlockStat {
 
 // ParseMeta 解析 litematic 格式（Litematic/Minihud 保存的投影）元数据。
 // schematic / structure NBT 的摘要解析见 schematic.go / structure.go。
-func ParseMeta(path string) (*types.LitematicMeta, error) {
+func ParseMeta(path string) (*registry.LitematicMeta, error) {
 	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
 	}
 
-	meta := &types.LitematicMeta{}
+	meta := &registry.LitematicMeta{}
 
 	if v, ok := getInt(root, "Version"); ok {
 		meta.Version = v
@@ -90,7 +90,7 @@ func ParseMeta(path string) (*types.LitematicMeta, error) {
 // 防止超大投影（如 100³=1M+ 方块）逐块提取拖慢元数据解析；上限内抽样统计足够反映方块占比
 const maxStatBlocks = 2_000_000
 
-func aggregateBlockStatsFromPalette(regions map[string]any) []types.LitematicBlockStat {
+func aggregateBlockStatsFromPalette(regions map[string]any) []registry.LitematicBlockStat {
 	counts := make(map[string]int)
 	scanned := 0
 

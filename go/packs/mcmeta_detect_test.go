@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestDetectResourceType_McmetaDetector(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "resourcepack", Extensions: []string{".zip"}, Detector: "mcmeta",
-				ZipEntries: []types.ZipEntryMatch{{Name: "pack.mcmeta", Match: "exact"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: "pack.mcmeta", Match: "exact"}}},
 		},
 	}
 	// 含 pack.mcmeta → 识别
@@ -34,10 +34,10 @@ func TestDetectResourceType_McmetaDetector(t *testing.T) {
 }
 
 func TestDetectResourceType_ShaderDetector(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "shaderpack", Extensions: []string{".zip"}, Detector: "shader",
-				ZipEntries: []types.ZipEntryMatch{{Name: "shaders/", Match: "prefix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: "shaders/", Match: "prefix"}}},
 		},
 	}
 	// 含 shaders/ 条目 → 识别
@@ -57,19 +57,19 @@ func TestDetectResourceType_ShaderDetector(t *testing.T) {
 // zipentryReg 构造 zipentry 场景注册表。顺序即优先级（ADR-067 S3）：
 // ysm 的根标记（ysm.json/models/）最具体，须排最前——同时含 ysm.json 与 model.pmx
 // 的 .zip 应判 ysm（更具体者优先），而非 mmd。
-func zipentryReg() *types.ResourceTypeRegistry {
-	return &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+func zipentryReg() *registry.ResourceTypeRegistry {
+	return &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "ysm", Extensions: []string{".ysm", ".zip", ".7z", ".json"}, Detector: "ysm",
-				ZipEntries: []types.ZipEntryMatch{{Name: "ysm.json", Match: "suffix"}, {Name: "models/", Match: "prefix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: "ysm.json", Match: "suffix"}, {Name: "models/", Match: "prefix"}}},
 			{ID: "EntityPlayer", Extensions: []string{".pmx", ".pmd", ".zip"}, Detector: "zipentry",
-				ZipEntries: []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
 			{ID: "vrm", Extensions: []string{".vrm", ".zip"}, Detector: "zipentry",
-				ZipEntries: []types.ZipEntryMatch{{Name: ".vrm", Match: "suffix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: ".vrm", Match: "suffix"}}},
 			{ID: "blueprint", Extensions: []string{".nbt", ".schematic", ".zip"}, Detector: "zipentry",
-				ZipEntries: []types.ZipEntryMatch{{Name: ".nbt", Match: "suffix"}, {Name: ".schematic", Match: "suffix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: ".nbt", Match: "suffix"}, {Name: ".schematic", Match: "suffix"}}},
 			{ID: "litematic", Extensions: []string{".litematic", ".zip"}, Detector: "zipentry",
-				ZipEntries: []types.ZipEntryMatch{{Name: ".litematic", Match: "suffix"}}},
+				ZipEntries: []registry.ZipEntryMatch{{Name: ".litematic", Match: "suffix"}}},
 		},
 	}
 }
@@ -166,23 +166,23 @@ func TestDetectResourceType_ZipEntry_SevenZipNoFallback(t *testing.T) {
 // CustomAnim/StageAnim/DefaultAnim 都 .vmd；CustomMorph/DefaultMorph 都 .vpd）。
 // 路径消歧：当父目录名匹配类型 InstanceDir 时，优先命中该类型。
 func TestDetectResourceType_PathDisambiguation_MMD(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "EntityPlayer", Extensions: []string{".pmx", ".pmd", ".zip"}, Detector: "zipentry",
 				InstanceDir: "EntityPlayer",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
 			{ID: "SceneModel", Extensions: []string{".pmx", ".pmd", ".zip"}, Detector: "zipentry",
 				InstanceDir: "SceneModel",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}, {Name: ".pmd", Match: "suffix"}}},
 			{ID: "CustomAnim", Extensions: []string{".vmd", ".zip"}, Detector: "zipentry",
 				InstanceDir: "CustomAnim",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".vmd", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".vmd", Match: "suffix"}}},
 			{ID: "CustomMorph", Extensions: []string{".vpd", ".zip"}, Detector: "zipentry",
 				InstanceDir: "CustomMorph",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".vpd", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".vpd", Match: "suffix"}}},
 			{ID: "StageAnim", Extensions: []string{".vmd", ".zip"}, Detector: "zipentry",
 				InstanceDir: "StageAnim",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".vmd", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".vmd", Match: "suffix"}}},
 		},
 	}
 
@@ -213,14 +213,14 @@ func TestDetectResourceType_PathDisambiguation_MMD(t *testing.T) {
 
 // 无路径消歧时的兜底：InstanceDir 不匹配时回退扩展名遍历
 func TestDetectResourceType_PathDisambiguation_NoMatch(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "EntityPlayer", Extensions: []string{".pmx"}, Detector: "zipentry",
 				InstanceDir: "EntityPlayer",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
 			{ID: "SceneModel", Extensions: []string{".pmx"}, Detector: "zipentry",
 				InstanceDir: "SceneModel",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
 		},
 	}
 
@@ -230,8 +230,8 @@ func TestDetectResourceType_PathDisambiguation_NoMatch(t *testing.T) {
 	}
 
 	// InstanceDir 为空的类型（不参与路径消歧）→ 回退扩展名兜底
-	reg2 := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg2 := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "no-path", Extensions: []string{".dat"}, Detector: "extension"},
 		},
 	}
@@ -242,11 +242,11 @@ func TestDetectResourceType_PathDisambiguation_NoMatch(t *testing.T) {
 
 // 跨组隔离：路径消歧只在扩展名匹配时生效，防止跨组误判
 func TestDetectResourceType_PathDisambiguation_CrossGroup(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "EntityPlayer", Extensions: []string{".pmx"}, Detector: "zipentry",
 				InstanceDir: "EntityPlayer",
-				ZipEntries:  []types.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
+				ZipEntries:  []registry.ZipEntryMatch{{Name: ".pmx", Match: "suffix"}}},
 			// resourcepack 的 InstanceDir 可能也叫 "EntityPlayer"，但扩展名不匹配 → 不应被路径消歧误命中
 			{ID: "resourcepack", Extensions: []string{".zip"}, Detector: "mcmeta",
 				InstanceDir: "EntityPlayer"},
@@ -264,8 +264,8 @@ func TestDetectResourceType_PathDisambiguation_CrossGroup(t *testing.T) {
 // 共享扩展名（.zip/.vpd）last-wins 会把 mmd/PMX/DefaultMorph 下文件误归 EntityPlayer。
 // 深度优先修复后，DefaultMorph/DefaultAnim 等子类型目录能正确打赢外层 PMX/EntityPlayer。
 func TestDetectResourceType_PathDisambiguation_DeepPriority(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			// 外层类型 EntityPlayer，仓库目录 PMX，共享扩展名 .zip / .dat
 			{ID: "EntityPlayer", Extensions: []string{".zip", ".dat"}, Detector: "extension",
 				StorageSubDir: "PMX"},

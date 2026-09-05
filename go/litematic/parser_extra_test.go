@@ -103,7 +103,7 @@ func TestParseSchematicSummary_NoPaletteStatsFromBlocks(t *testing.T) {
 	}
 }
 
-// summarizeStats 通过反射读取 []types.LitematicBlockStat 的名称/计数
+// summarizeStats 通过反射读取 []registry.LitematicBlockStat 的名称/计数
 func summarizeStats(t *testing.T, v interface{}) (int, map[string]int) {
 	t.Helper()
 	total := 0

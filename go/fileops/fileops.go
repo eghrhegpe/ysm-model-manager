@@ -15,12 +15,12 @@ import (
 	"ysm-model-manager/go/config"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // maxPreviewRead 预览/元数据整读上限（P2 审计：原 os.ReadFile 无界，超大/畸形
-// 文件可致内存膨胀——共享 types.MaxReadLimit 与 geometry/ysm 的 50MB 口径，索引 6.7+5.2）
-const maxPreviewRead = types.MaxReadLimit
+// 文件可致内存膨胀——共享 registry.MaxReadLimit 与 geometry/ysm 的 50MB 口径，索引 6.7+5.2）
+const maxPreviewRead = registry.MaxReadLimit
 
 // previewReadLimit 预览整读上限：AppConfig.PreviewReadLimitMB > 0 用之，否则默认 50MB。
 // 配置源收敛到 go/config 单持有点（ADR-091 D12），字段 0 = 回退包级默认。
@@ -146,7 +146,7 @@ func RenameFile(oldPath, newName string) error {
 		return fmt.Errorf("文件名包含非法字符")
 	}
 	// ADR-038 D3：ysm.json 是模型目录清单（游戏按目录名识别模型），禁止单文件改名
-	if types.IsYsmEntryJSON(filepath.Base(oldPath)) {
+	if registry.IsYsmEntryJSON(filepath.Base(oldPath)) {
 		return fmt.Errorf("ysm.json 是模型目录清单，请重命名所在文件夹（整组操作）")
 	}
 	return renameToNewName(oldPath, newName)
@@ -225,7 +225,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	// 再 rename 失败（对齐 CopyModelFile 的「先提升、后自嵌套检查」顺序）。
 	// 根级 ysm.json（父目录 == 仓库根）：不整组提升，回退单文件移动（防移走整个仓库）。
 	liftToParent := false
-	if types.IsYsmEntryJSON(filepath.Base(src)) {
+	if registry.IsYsmEntryJSON(filepath.Base(src)) {
 		if root != "" {
 			absRoot, err := filepath.Abs(root)
 			if err != nil {
@@ -364,7 +364,7 @@ func CopyModelFile(root, src, dstDir string) error {
 		}
 	}
 	// ysm.json 提升：复制整个模型目录（ADR-038 D3）
-	if types.IsYsmEntryJSON(filepath.Base(src)) {
+	if registry.IsYsmEntryJSON(filepath.Base(src)) {
 		src = filepath.Dir(src)
 	}
 	// 自嵌套检查须在 MkdirAll 之前执行——被拒复制不得在 src 内
@@ -419,7 +419,7 @@ func DeleteModelFile(root, path string) error {
 	if path == "" {
 		return fmt.Errorf("参数空")
 	}
-	if types.IsYsmEntryJSON(filepath.Base(path)) {
+	if registry.IsYsmEntryJSON(filepath.Base(path)) {
 		parent := filepath.Dir(path)
 		// 目录提升守卫：父目录必须严格深于仓库根（防根级 ysm.json 清空整个仓库）
 		if root != "" {

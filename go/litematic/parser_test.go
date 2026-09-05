@@ -10,7 +10,7 @@ import (
 
 	"github.com/Tnze/go-mc/nbt"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ====== buildRegionInfo ======
@@ -527,7 +527,7 @@ func TestParseNbtStructure_BedrockSubLevels(t *testing.T) {
 	if result["blockCount"] != 6 {
 		t.Errorf("blockCount = %v, 期望 6", result["blockCount"])
 	}
-	stats, ok := result["paletteStats"].([]types.LitematicBlockStat)
+	stats, ok := result["paletteStats"].([]registry.LitematicBlockStat)
 	if !ok {
 		t.Fatalf("paletteStats 缺失或类型错误: %v", result["paletteStats"])
 	}
@@ -575,7 +575,7 @@ func TestParseNbtStructure_BedrockPaletteIdOutOfRange(t *testing.T) {
 	if result == nil {
 		t.Fatal("越界 palette_id 不应使解析失败")
 	}
-	stats, ok := result["paletteStats"].([]types.LitematicBlockStat)
+	stats, ok := result["paletteStats"].([]registry.LitematicBlockStat)
 	if !ok {
 		t.Fatalf("paletteStats 缺失: %v", result)
 	}

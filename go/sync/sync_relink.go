@@ -14,6 +14,7 @@ import (
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚）
@@ -42,7 +43,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			continue
 		}
 		// 仓库侧禁用条目只是禁用标记，不能作为重链接源（与 sync.go 对齐）
-		if types.IsDisableSuffix(e.Name) {
+		if registry.IsDisableSuffix(e.Name) {
 			continue
 		}
 		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
@@ -55,7 +56,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		}
 		// 重链接不得静默恢复禁用状态——禁用文件跳过（保持禁用），
 		// 否则 Install 会把仓库活跃版装回实例、用户禁用被悄悄撤销
-		if types.IsDisableSuffix(ce.Name) {
+		if registry.IsDisableSuffix(ce.Name) {
 			continue
 		}
 		entries, found := repoByHash[ce.Hash]
@@ -65,7 +66,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		var srcPath string
 		for _, e := range entries {
 			// 防御：即使构建时已跳过，查询仍只取第一个非禁用条目
-			if types.IsDisableSuffix(e.Name) {
+			if registry.IsDisableSuffix(e.Name) {
 				continue
 			}
 			srcPath = e.Path
@@ -76,8 +77,8 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		}
 		// 目录型模型文件判定（ADR-064 锚定）：原硬编码 ysm.json/.pmx/.pmd；
 		// 现为该类型注册表 dirLevelSync + 文件属于该类型——新增目录型类型自动生效
-		baseName := types.StripDisableSuffix(strings.ToLower(filepath.Base(ce.Path)))
-		isDirType := types.IsDirLevelSync(rtype) && packs.IsTypeModelFile(baseName, rtype)
+		baseName := registry.StripDisableSuffix(strings.ToLower(filepath.Base(ce.Path)))
+		isDirType := registry.IsDirLevelSync(rtype) && packs.IsTypeModelFile(baseName, rtype)
 		// 注：此处传剥 .disabled/.ban 后的 baseName（relink 需识别禁用文件的目录型——
 		// 原 ce.Path 未剥后缀时 filepath.Ext 得 ".ban" 不匹配任何扩展集，测试红）。
 		// 代价：MMD 目录型 .zip 在 relink 不识别（裸名 zip 分支开不了文件）——

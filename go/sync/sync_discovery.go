@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ListVersionsFunc 列出版本实例（函数类型，测试时可注入 mock）
@@ -69,7 +70,7 @@ func listVanillaInstances(mcRoot string) []types.VersionInstance {
 		name := e.Name()
 		verDir := filepath.Join(versionsDir, name)
 		// CustomDir 指向 YSM custom 子目录（InstallModelTo/SyncToggleStatus 消费者依赖此路径）
-		ysmCustom := filepath.Join(verDir, types.SubDirMap("ysm"))
+		ysmCustom := filepath.Join(verDir, registry.SubDirMap("ysm"))
 		exists := true
 		if _, st := os.Stat(ysmCustom); os.IsNotExist(st) {
 			exists = false
@@ -102,7 +103,7 @@ func listPrismInstances(instancesDir string) []types.VersionInstance {
 			continue
 		}
 		// CustomDir 指向 YSM custom 子目录（InstallModelTo/SyncToggleStatus 消费者依赖此路径）
-		ysmCustom := filepath.Join(mcDir, types.SubDirMap("ysm"))
+		ysmCustom := filepath.Join(mcDir, registry.SubDirMap("ysm"))
 		exists := true
 		if _, st := os.Stat(ysmCustom); os.IsNotExist(st) {
 			exists = false

@@ -10,7 +10,6 @@ source_files:
   - go/types/types.go
   - go/types/config.go
   - go/types/bedrock.go
-  - go/types/registry_facade.go
   - go/types/registry/resource.go
   - go/types/registry/extensions.go
   - go/types/registry/
@@ -196,7 +195,7 @@ status: active
 
 `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_registry](./resource-registry.md) 互补：那张卡讲 `resource_types.json` 单一事实源，本卡讲 Go 端的类型定义与配置结构。
 
-**ADR-192（2026-09-05 第一刀）**：注册表域已拆入新子包 `go/types/registry/`（`resource.go`/`extensions.go`/`findinst.go`/`location.go`/`texture.go` + 迁移测试）。`go/types` 现为**纯 DTO 包**（types.go/config.go/bedrock.go + 门面），`registry_facade.go` 对迁出符号出 type alias + wrapper（标 `// Deprecated: 直接 import go/types/registry`）承接旧路径——**77 个消费 .go 文件零改动**。依赖单向：`go/types/registry` 禁止 import `go/types`。前端绑定 `go/types/models.ts` 仅剩留守 5 类型（ModelEntry/WorkshopCreator/WorkshopPresetSearch/WorkshopSite/YsmMetadata），迁出类型生成到 `go/types/registry/models.ts`（前端无消费者）。loadRegistry/extensions 等上述职责的**源码在 registry 子包**，旧路径经门面等价可达。第二刀（DTO 拆分 / 门面退役）待第一刀稳定后另立项。本卡对 registry 域的查询：分支到 `source_files` 对应 registry 路径。
+**ADR-192（2026-09-05 两刀收官）**：注册表域拆入新子包 `go/types/registry/`（`resource.go`/`extensions.go`/`findinst.go`/`location.go`/`texture.go` + 测试）。第一刀用门面（`registry_facade.go`，type alias + wrapper 承接旧路径）使 77 个 Go 消费方零改动过渡；**第二刀（本刀）门面已退役**——46 个消费方改直接 `import go/types/registry`、测试同步迁移，`registry_facade.go` 已删除。`go/types` 为**纯 DTO 包**（types.go/config.go/bedrock.go）。依赖单向：`go/types/registry` 禁止 import `go/types`。前端绑定 `go/types/models.ts` 仅剩留守 5 类型（ModelEntry/WorkshopCreator/WorkshopPresetSearch/WorkshopSite/YsmMetadata），迁出类型生成到 `go/types/registry/models.ts`（前端无消费者）。本卡对 registry 域的查询：分支到 `source_files` 对应 registry 路径。
 
 ## 核心职责
 

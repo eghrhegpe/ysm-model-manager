@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // nbtLongArray 构造 TAG_Long_Array
@@ -126,7 +126,7 @@ func makeNbtStructureGz(t *testing.T, state int32) []byte {
 
 // makeVoxelGz 构造最小 litematic（含 1 个 region：palette 2 项，BlockStates 1 long）
 // blockStates 值：低 2 位（bpe=2）为 palette 索引；默认 1 → 取 palette[1]（stone）
-func makeVoxelGz(t *testing.T, blockStates int64, maxBlocks int) (*types.LitematicVoxelData, []byte) {
+func makeVoxelGz(t *testing.T, blockStates int64, maxBlocks int) (*registry.LitematicVoxelData, []byte) {
 	t.Helper()
 	// BlockStatePalette：list of compound（list 内元素无 type/name 前缀）
 	palette := nbtList("BlockStatePalette", 0x0A,

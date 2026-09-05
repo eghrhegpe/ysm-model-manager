@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ====== isYsmFile ======
@@ -144,8 +144,8 @@ func TestReadShaderpackLang_ZipNoLang(t *testing.T) {
 // ====== DetectResourceType with detectors ======
 
 func TestDetectResourceType_YsmDetector(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "ysm-model", Extensions: []string{".ysm", ".zip"}, Detector: "ysm"},
 		},
 	}
@@ -166,8 +166,8 @@ func TestDetectResourceType_YsmDetector(t *testing.T) {
 }
 
 func TestDetectResourceType_NoMatch(t *testing.T) {
-	reg := &types.ResourceTypeRegistry{
-		ResourceTypes: []types.ResourceType{
+	reg := &registry.ResourceTypeRegistry{
+		ResourceTypes: []registry.ResourceType{
 			{ID: "test", Extensions: []string{".foo"}, Detector: "extension"},
 		},
 	}

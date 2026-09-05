@@ -10,10 +10,11 @@ import (
 
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestBuildSyncItems_Basic(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过目录构造测试")
 	}
@@ -35,7 +36,7 @@ func TestBuildSyncItems_Basic(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instDir, "extra.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	if len(items) == 0 {
 		t.Fatal("应产出同步状态项")
 	}
@@ -62,7 +63,7 @@ func TestBuildSyncItems_EmptyInputs(t *testing.T) {
 		t.Fatalf("无资源类型应返回空，实际 %d", len(items))
 	}
 	// 资源类型 root 为空 → 跳过该类型
-	if items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, ""); len(items) != 0 {
+	if items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, ""); len(items) != 0 {
 		t.Fatalf("root 为空应跳过，实际 %d", len(items))
 	}
 }
@@ -95,7 +96,7 @@ func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	count := 0
 	for _, it := range items {
 		if it.Name == "PackA" {
@@ -130,7 +131,7 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	// 应恰好 1 条：pack-user.zip（optional），notes.txt 被过滤
 	if len(items) != 1 {
 		t.Fatalf("实例标准目录应产出 1 条（pack-user.zip），实际 %d 条: %+v", len(items), items)
@@ -145,7 +146,7 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 
 // TestBuildSyncItems_NilInstance 导出入口 nil 守卫（L27-29）——nil 不应 panic
 func TestBuildSyncItems_NilInstance(t *testing.T) {
-	if items := BuildSyncItems(nil, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, ""); items != nil {
+	if items := BuildSyncItems(nil, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, ""); items != nil {
 		t.Fatalf("nil instance 应返回 nil，实际 %v", items)
 	}
 }
@@ -153,7 +154,7 @@ func TestBuildSyncItems_NilInstance(t *testing.T) {
 // TestBuildSyncItems_UnknownTypeSkip SubDirMap 返回空 → 该类型直接跳过（L63-65）
 func TestBuildSyncItems_UnknownTypeSkip(t *testing.T) {
 	ins := &types.VersionInstance{Name: "t", VersionDir: t.TempDir()}
-	if items := BuildSyncItems(ins, []types.ResourceType{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, ""); len(items) != 0 {
+	if items := BuildSyncItems(ins, []registry.ResourceType{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, ""); len(items) != 0 {
 		t.Fatalf("未知类型无 InstanceDir 应跳过，实际 %d 条", len(items))
 	}
 }
@@ -191,7 +192,7 @@ func TestBuildSyncItems_IndependentTypes(t *testing.T) {
 
 	// 独立类型 EntityPlayer：应只包含 EntityPlayer 相关条目
 	items := BuildSyncItems(ins,
-		[]types.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
+		[]registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
 		map[string]string{"EntityPlayer": epGlobal}, "")
 
 	byName := map[string]types.ResourceSyncItem{}
@@ -218,7 +219,7 @@ func TestBuildSyncItems_IndependentTypes(t *testing.T) {
 	scanner.InvalidateCache()
 
 	items2 := BuildSyncItems(ins,
-		[]types.ResourceType{{ID: "CustomAnim", Icon: "🎬"}},
+		[]registry.ResourceType{{ID: "CustomAnim", Icon: "🎬"}},
 		map[string]string{"CustomAnim": epGlobal}, "")
 
 	for _, it := range items2 {
@@ -240,7 +241,7 @@ func TestBuildSyncItems_IndependentTypes(t *testing.T) {
 // TestBuildSyncItems_DisabledThreeBranches 三分支口径一致：
 // Synced .disabled / Missing .ban / Extra .ban（L85-88/L105-108/新增 Extra 分支）均应标 Disabled ⛔
 func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
@@ -265,7 +266,7 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instDir, "active.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	byName := map[string]types.ResourceSyncItem{}
 	for _, it := range items {
 		byName[it.Name] = it
@@ -289,7 +290,7 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 
 // TestBuildSyncItems_ExtraHardLinkLegacy Extra 硬链接（nlink>1）→ SyncStatusLegacy（L121-124 分支）
 func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
@@ -311,7 +312,7 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 		t.Skipf("无法创建硬链接（文件系统不支持）: %v", err)
 	}
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	found := 0
 	for _, it := range items {
 		if it.Name == "legacy.ysm" && it.Status == types.SyncStatusLegacy {
@@ -326,7 +327,7 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 // TestBuildSyncItems_YsmJSONEntryOnly ysm 的 .json 仅放行 ysm.json：
 // anim.json 不展示，ysm.json（含缺失态）正常展示（L41-43 分支）
 func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
@@ -345,7 +346,7 @@ func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalDir, "anim.json"), []byte("{}"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 	byName := map[string]types.ResourceSyncItem{}
 	for _, it := range items {
 		byName[it.Name] = it
@@ -374,7 +375,7 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("zip"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "pack.zip"), []byte("zip"), 0644)
 	ins := &types.VersionInstance{VersionDir: base}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	count := 0
 	for _, it := range items {
 		if it.Name == "pack.zip" {
@@ -392,7 +393,7 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 // TestBuildSyncItems_DirLevelChildren 验证 dirLevelSync 类型的 Synced 文件夹
 // 会自动填充 children 字段，包含文件夹内部文件的真实同步状态
 func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
@@ -415,7 +416,7 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(instPack, "model_d.ysm"), []byte("d"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到 packA 条目
 	var packItem *types.ResourceSyncItem
@@ -475,7 +476,7 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 // TestBuildSyncItems_DirLevelMissingHoldsStatus：Missing 文件夹保持 missing 状态（整体缺失，
 // 非部分差异，不降级 diverged），且从仓库侧填充 children 展示待推清单（仓库是权威源）
 func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
@@ -488,7 +489,7 @@ func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalPack, "model_x.ysm"), []byte("x"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到 packB 条目
 	var packItem *types.ResourceSyncItem
@@ -523,11 +524,11 @@ func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {
 // 场景：[Almeta_owx]【galgame】类：仓库根下真模型夹直接含多个 .ysm + 贴图，实例侧缺失 →
 // 夹子保持 missing（整体缺失、非部分差异），展开的 children 从仓库侧列全部子项（标 missing）供预览
 func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
-	if !types.IsDirLevelSync("ysm") {
+	if !registry.IsDirLevelSync("ysm") {
 		t.Skip("ysm 非 dirLevel 类型，跳过")
 	}
 	base := t.TempDir()
@@ -543,7 +544,7 @@ func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(pack, "Eanes_45.png"), []byte("png"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 找到真模型夹条目（顶层，因它自身是模型夹含 .ysm → 收集为单元，非容器）
 	var packItem *types.ResourceSyncItem
@@ -587,11 +588,11 @@ func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
 // 场景：[YSM模型]官方开源wine_fox_json/ {01_taisho_maid, 02_new_year} 各含 .ysm
 // wine_fox_json 自身不直接含模型文件 → 不应被作为独立同步单元，而应作为容器
 func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
-	if !types.IsDirLevelSync("ysm") {
+	if !registry.IsDirLevelSync("ysm") {
 		t.Skip("ysm 非 dirLevel 类型，跳过")
 	}
 	base := t.TempDir()
@@ -608,7 +609,7 @@ func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
 	}
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层应只出现父夹容器（2 个子夹被收入其中，不再平铺在根）
 	if len(items) != 1 {
@@ -644,11 +645,11 @@ func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
 // TestBuildSyncItems_NestedContainer_PathDirection 验证容器 Path 还原到正确的操作源侧：
 // 纯实例独有（optional，可拉取）容器 → Path 落实例根（pull 源）；推送/同步容器 → 落全局根
 func TestBuildSyncItems_NestedContainer_PathDirection(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
-	if !types.IsDirLevelSync("ysm") {
+	if !registry.IsDirLevelSync("ysm") {
 		t.Skip("ysm 非 dirLevel 类型，跳过")
 	}
 	base := t.TempDir()
@@ -666,7 +667,7 @@ func TestBuildSyncItems_NestedContainer_PathDirection(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalContainer, "charB", "charB.ysm"), []byte("b"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "💎"}}, map[string]string{"ysm": globalDir}, "")
 
 	// (a) optional 容器：status optional、Path 落实例根
 	var instC *types.ResourceSyncItem
@@ -740,11 +741,11 @@ func TestAggregateStatus_DisabledNeutral(t *testing.T) {
 // TestBuildSyncItems_NestedContainer_DeepHierarchy 验证多层嵌套镜像磁盘层级
 // 仓库怎么来，整合包就怎么来：每一层中间目录都建为可展开容器
 func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
-	sub := types.SubDirMap("ysm")
+	sub := registry.SubDirMap("ysm")
 	if sub == "" {
 		t.Skip("ysm 无 InstanceDir 配置，跳过")
 	}
-	if !types.IsDirLevelSync("ysm") {
+	if !registry.IsDirLevelSync("ysm") {
 		t.Skip("ysm 非 dirLevel 类型，跳过")
 	}
 	base := t.TempDir()
@@ -758,7 +759,7 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(deep, "model.ysm"), []byte("m"), 0644)
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
-	items := BuildSyncItems(ins, []types.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层：vendor（容器），其下 authors → character（模型文件夹叶子），逐步下钻
 	if len(items) != 1 {
@@ -798,7 +799,7 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 // 命中缓存返回克隆（调用方修改不污染缓存）；InvalidateSyncItemsCache 清空后不再命中。
 func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing.T) {
 	ins := &types.VersionInstance{Name: "cache", VersionDir: t.TempDir()}
-	rtypes := []types.ResourceType{{ID: "ysm", Icon: "📦"}}
+	rtypes := []registry.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
 	syncItemsCache.Store(key, &syncItemsCacheEntry{
@@ -834,7 +835,7 @@ func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
 	// 钩子注册已从隐式 init 改为显式调用（app 层启动时注册），测试自备同款前置
 	RegisterInvalidationHook()
 	ins := &types.VersionInstance{Name: "cache", VersionDir: t.TempDir()}
-	rtypes := []types.ResourceType{{ID: "ysm", Icon: "📦"}}
+	rtypes := []registry.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
 	syncItemsCache.Store(key, &syncItemsCacheEntry{

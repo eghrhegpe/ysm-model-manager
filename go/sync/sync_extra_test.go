@@ -9,6 +9,7 @@ import (
 
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ====== computeHash ======
@@ -50,49 +51,49 @@ func TestComputeHash_EmptyFile(t *testing.T) {
 // ====== isSyncAllowed ======
 
 func TestIsSyncAllowed_Ysm(t *testing.T) {
-	if !types.IsResourceAllowed("model.ysm") {
+	if !registry.IsResourceAllowed("model.ysm") {
 		t.Error("model.ysm should be allowed")
 	}
-	if !types.IsResourceAllowed("model.ysm.ban") {
+	if !registry.IsResourceAllowed("model.ysm.ban") {
 		t.Error("model.ysm.ban should be allowed")
 	}
-	if !types.IsResourceAllowed("model.ysm.disabled") {
+	if !registry.IsResourceAllowed("model.ysm.disabled") {
 		t.Error("model.ysm.disabled should be allowed")
 	}
 }
 
 func TestIsSyncAllowed_Zip7z(t *testing.T) {
-	if !types.IsResourceAllowed("model.zip") {
+	if !registry.IsResourceAllowed("model.zip") {
 		t.Error("model.zip should be allowed")
 	}
-	if !types.IsResourceAllowed("model.7z") {
+	if !registry.IsResourceAllowed("model.7z") {
 		t.Error("model.7z should be allowed")
 	}
 }
 
 func TestIsSyncAllowed_YsmJson(t *testing.T) {
-	if !types.IsResourceAllowed("ysm.json") {
+	if !registry.IsResourceAllowed("ysm.json") {
 		t.Error("ysm.json should be allowed")
 	}
 }
 
 func TestIsSyncAllowed_OtherJson(t *testing.T) {
-	if types.IsResourceAllowed("animation.json") {
+	if registry.IsResourceAllowed("animation.json") {
 		t.Error("animation.json should NOT be allowed")
 	}
-	if types.IsResourceAllowed("model.geo.json") {
+	if registry.IsResourceAllowed("model.geo.json") {
 		t.Error("model.geo.json should NOT be allowed")
 	}
-	if types.IsResourceAllowed("controller.json") {
+	if registry.IsResourceAllowed("controller.json") {
 		t.Error("controller.json should NOT be allowed")
 	}
 }
 
 func TestIsSyncAllowed_UnsupportedExt(t *testing.T) {
-	if types.IsResourceAllowed("readme.txt") {
+	if registry.IsResourceAllowed("readme.txt") {
 		t.Error(".txt should NOT be allowed")
 	}
-	if types.IsResourceAllowed("") {
+	if registry.IsResourceAllowed("") {
 		t.Error("empty string should NOT be allowed")
 	}
 }

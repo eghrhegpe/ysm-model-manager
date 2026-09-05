@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestMain 在测试进程启动前，将仓库根 resource_types.json 注入为编译期嵌入基线
@@ -16,7 +18,7 @@ import (
 // 与运行时 bundledRegistryJSON 同源，漂移归零。若注入失败，边缘回退测试将失去基线并打印告警。
 func TestMain(m *testing.M) {
 	if data, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
-		SetBundledRegistryJSON(data)
+		registry.SetBundledRegistryJSON(data)
 	} else {
 		log.Printf("[types_test] 注入测试基线失败: %v（边缘回退测试将失去有效基线）", err)
 	}

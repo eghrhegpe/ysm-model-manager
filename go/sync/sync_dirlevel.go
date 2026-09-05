@@ -40,6 +40,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // isDirTypeModelFolder 检查一个子目录是否包含 YSM/MMD 模型文件（即文件夹级资源）
@@ -61,7 +62,7 @@ func isDirTypeModelFolder(path string, rtype string) bool {
 	// 基于 NestedPatterns 配置的多层嵌套检测
 	// 支持任意深度的嵌套结构，不再硬编码 maid-model 特定逻辑
 	// 只在当前目录是真正的模型目录（包含入口文件的目录）时返回 true
-	if patterns := types.NestedPatternsFor(rtype); len(patterns) > 0 {
+	if patterns := registry.NestedPatternsFor(rtype); len(patterns) > 0 {
 		if foundDir := findNestedModelDir(path, patterns); foundDir != "" {
 			// 只有当找到的模型目录就是当前路径时才返回 true
 			// 如果找到的是更深层的目录，说明当前目录只是中间目录
@@ -77,7 +78,7 @@ func isDirTypeModelFolder(path string, rtype string) bool {
 // 返回第一个符合模式的模型目录路径，找不到返回空字符串
 // 关键设计：返回实际的模型目录路径（包含入口文件的目录），
 // 而不是中间目录的路径。这样 Walk 能正确识别嵌套结构。
-func findNestedModelDir(path string, patterns []types.NestedPattern) string {
+func findNestedModelDir(path string, patterns []registry.NestedPattern) string {
 	for _, pattern := range patterns {
 		if found := patternFind(path, pattern, 0); found != "" {
 			return found
@@ -98,7 +99,7 @@ func findNestedModelDir(path string, patterns []types.NestedPattern) string {
 //
 // 实现：薄包装 patternFindMemo，传入独立空 memo。单次调用内目录路径唯一，
 // memo 不会提前命中，故语义与"无 memo"的原实现逐分支一致（零行为变更，ADR-140 L3）。
-func patternFind(path string, pattern types.NestedPattern, depth int) string {
+func patternFind(path string, pattern registry.NestedPattern, depth int) string {
 	return patternFindMemo(path, pattern, depth, make(map[string]string))
 }
 
@@ -121,7 +122,7 @@ func checkEntryFiles(path string, entryFiles []string) bool {
 // 内层 key = 目录路径，值 = findNestedModelDir 对该路径+pattern 的返回结果（"" 表示未找到）。
 type nestedDirMemo map[string]map[string]string
 
-func patternKey(pattern types.NestedPattern) string {
+func patternKey(pattern registry.NestedPattern) string {
 	var b strings.Builder
 	b.WriteString(pattern.EntryDir)
 	b.WriteByte(0)
@@ -135,7 +136,7 @@ func patternKey(pattern types.NestedPattern) string {
 
 // patternFindMemo 语义同 patternFind，但结果写入 memo 避免重复子树扫描。
 // 同一棵 Walk 树内，同一路径+pattern 只递归一次。
-func patternFindMemo(path string, pattern types.NestedPattern, depth int, memo map[string]string) string {
+func patternFindMemo(path string, pattern registry.NestedPattern, depth int, memo map[string]string) string {
 	if v, ok := memo[path]; ok {
 		return v
 	}
@@ -200,7 +201,7 @@ func patternFindMemo(path string, pattern types.NestedPattern, depth int, memo m
 	return ""
 }
 
-func findNestedModelDirMemo(path string, patterns []types.NestedPattern, memo nestedDirMemo) string {
+func findNestedModelDirMemo(path string, patterns []registry.NestedPattern, memo nestedDirMemo) string {
 	for _, pattern := range patterns {
 		pKey := patternKey(pattern)
 		pMemo := memo[pKey]
@@ -229,7 +230,7 @@ func isDirTypeModelFolderMemo(path string, rtype string, memo nestedDirMemo) boo
 			return true
 		}
 	}
-	if patterns := types.NestedPatternsFor(rtype); len(patterns) > 0 {
+	if patterns := registry.NestedPatternsFor(rtype); len(patterns) > 0 {
 		if foundDir := findNestedModelDirMemo(path, patterns, memo); foundDir != "" {
 			if filepath.Clean(foundDir) == filepath.Clean(path) {
 				return true
@@ -269,7 +270,7 @@ func relKeyDirLevel(root, path string, isDir bool) string {
 	}
 	rel = filepath.ToSlash(rel)
 	rel = strings.ToLower(rel)
-	rel = types.StripDisableSuffix(rel)
+	rel = registry.StripDisableSuffix(rel)
 	// 剥离扩展名——模型身份不以扩展名区分
 	if ext := filepath.Ext(rel); ext != "" {
 		rel = strings.TrimSuffix(rel, ext)
@@ -438,7 +439,7 @@ func collectEntriesWalkCached(rootDir, rtype string) map[string]string {
 //   - 模型文件夹：所有直接含模型文件的目录（含容器）均登记为目录键。
 func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) map[string]string {
 	// 含嵌套模式无法精确重建，回退 nil → 调用方走 Walk
-	if len(types.NestedPatternsFor(rtype)) > 0 {
+	if len(registry.NestedPatternsFor(rtype)) > 0 {
 		return nil
 	}
 	sep := string(filepath.Separator)
@@ -596,7 +597,7 @@ func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEn
 // cacheHit=false（缓存未命中/含嵌套模式类型）时整体回退 DiffFolderContents，零行为漂移。
 // scanFn 签名与 SyncResourcesDirLevelScan 一致：func(dir string) ([]types.ModelEntry, bool)。
 func DiffFolderContentsScan(globalFolder, instanceFolder, rtype string, scanFn ScanEntriesFn, globalRoot string) []FileDiffEntry {
-	if scanFn == nil || len(types.NestedPatternsFor(rtype)) > 0 {
+	if scanFn == nil || len(registry.NestedPatternsFor(rtype)) > 0 {
 		// 含嵌套模式类型不参与反推（语义由 Walk 保证）；未注入则回退
 		return DiffFolderContents(globalFolder, instanceFolder, rtype)
 	}

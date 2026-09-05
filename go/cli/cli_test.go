@@ -20,6 +20,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/internal/app"
 )
 
@@ -782,7 +783,7 @@ func TestScanSummaryByType(t *testing.T) {
 // repoaudit.Classify 归到最后一个声明 .zip 的 DefaultMorph——217 个 PMX 包误统计）；
 // 更深目录优先（mmd/PMX/DefaultMorph 下归 DefaultMorph）。
 func TestClassifyForScan_LocationRouting(t *testing.T) {
-	registry := types.LoadRegistry()
+	registry := registry.LoadRegistry()
 
 	// mmd/PMX 目录（EntityPlayer.storageSubDir=PMX）下各类文件归 EntityPlayer
 	cases := []struct {
@@ -2085,8 +2086,8 @@ func TestConfigLinkMode_InvalidMode_Errors(t *testing.T) {
 // 结束后恢复默认（"resource_types.json"），避免污染后续测试。
 func pointRegistryToRepoRoot(t *testing.T) {
 	t.Helper()
-	types.SetRegistryPath(filepath.Join("..", "..", "resource_types.json"))
-	t.Cleanup(func() { types.SetRegistryPath("resource_types.json") })
+	registry.SetRegistryPath(filepath.Join("..", "..", "resource_types.json"))
+	t.Cleanup(func() { registry.SetRegistryPath("resource_types.json") })
 }
 
 func TestResourceTypes_Table(t *testing.T) {
@@ -2111,7 +2112,7 @@ func TestResourceTypes_JSON(t *testing.T) {
 			t.Errorf("runResourceTypes json 不应报错: %v", err)
 		}
 	})
-	var entries []types.ResourceType
+	var entries []registry.ResourceType
 	if err := json.Unmarshal([]byte(out), &entries); err != nil {
 		t.Fatalf("json 输出应可反序列化: %v\n输出: %s", err, out)
 	}

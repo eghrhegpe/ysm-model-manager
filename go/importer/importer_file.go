@@ -17,6 +17,7 @@ import (
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
+	regreg "ysm-model-manager/go/types/registry"
 )
 
 // ZIP/7z 容器魔数（文件头签名）：importFromBuffer 魔数校验与 DetectContainerType 扫描共用
@@ -41,12 +42,12 @@ type ImportLogger func(name, src, dst string, size int64, status, msg string)
 // 类型判定单一事实源仍在本函数，调用方不得自行复刻。
 func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn func(rtype string) string, logger ImportLogger) (string, string, error) {
 	ext := strings.ToLower(filepath.Ext(fileName))
-	if !types.IsSupportedExt(ext) {
+	if !regreg.IsSupportedExt(ext) {
 		return "", "", types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
 	}
 	// ysm 包内 json 白名单：.json 仅允许 ysm.json 入口清单，包内 geometry/animation/语言 json 不得单独导入
 	// 与 go/scanner/scanner.go:80-87 的 ysm.json 白名单对齐（ADR-038 D2）
-	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
+	if ext == ".json" && !regreg.IsYsmEntryJSON(filepath.Base(fileName)) {
 		return "", "", types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
 	// 路径穿越检测：统一入口 paths.HasTraversal（ADR-038 D2）
@@ -58,9 +59,9 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	}
 	// base64 受限解码：预检+解码+复检统一走 fsutil.DecodeBase64Limited
 	//（预检避免超大 base64 字符串解码后才命中上限、白白分配内存的峰值尖刺）
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
+	data, err := fsutil.DecodeBase64Limited(base64Data, regreg.MaxImportSize)
 	if errors.Is(err, fsutil.ErrB64TooLarge) {
-		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", types.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", types.MaxImportSizeMB)}
+		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", regreg.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", regreg.MaxImportSizeMB)}
 	}
 	if err != nil {
 		return "", "", types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
@@ -71,16 +72,16 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 
 	// 类型检测：优先内容检测（ZIP/7z 可能为 YSM/资源包/光影包），回退扩展名匹配
 	rtype := ""
-	// 容器集合单源：types.IsContainerExt
-	if types.IsContainerExt(ext) {
+	// 容器集合单源：regreg.IsContainerExt
+	if regreg.IsContainerExt(ext) {
 		rtype = DetectContainerType(data)
 	}
 	// DetectContainerType 无特征返回空（ADR-082 续）：扩展名不属于当前 rtype 注册表扩展名集合时，
 	// 用扩展名反查真实类型（ADR-065：扩展名列表注册表驱动，消除手写 .zip/.ysm/.7z/.json
 	// 字面量漂移）。反查仍无结果 → 识别不出就是识别不出：明确报错，不假装 YSM 导入。
 	if rtype == "" {
-		if !types.IsContainerExt(ext) {
-			rtypes := types.ExtBelongsTo(ext)
+		if !regreg.IsContainerExt(ext) {
+			rtypes := regreg.ExtBelongsTo(ext)
 			if len(rtypes) >= 1 {
 				rtype = rtypes[0]
 			}
@@ -172,7 +173,7 @@ func DetectContainerType(data []byte) string {
 	if len(entries) == 0 {
 		return ""
 	}
-	id := packs.DetectByEntries(entries, types.LoadRegistry())
+	id := packs.DetectByEntries(entries, regreg.LoadRegistry())
 	if id == "" || id == packs.ClassContainer || id == packs.ClassOther {
 		return ""
 	}

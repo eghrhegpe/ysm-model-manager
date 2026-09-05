@@ -10,7 +10,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TexInfo 轻量级纹理尺寸（不解析完整模型）
@@ -59,7 +59,7 @@ func readTexSizeFromFile(path string) (int, int) {
 // readTexFromZip 从 zip 中提取 geometry JSON 读取纹理尺寸
 func readTexFromZip(path string) (int, int) {
 	// limit+1 探测截断（ADR-033 陷阱），两个循环共用
-	const maxTexJSON = types.MaxReadLimit
+	const maxTexJSON = registry.MaxReadLimit
 	r, err := container.OpenZipPath(path)
 	if err != nil {
 		return 0, 0
@@ -97,7 +97,7 @@ func readTexFromZip(path string) (int, int) {
 // 真实 .7z 的纹理尺寸一直缺失）。
 func readTexFrom7z(path string) (int, int) {
 	// 与 readTexFromZip 同上限（50MB/条目，ADR-033 截断防线）
-	const maxTexJSON = types.MaxReadLimit
+	const maxTexJSON = registry.MaxReadLimit
 	zr, err := container.Open7zPath(path)
 	if err != nil {
 		return 0, 0
@@ -106,7 +106,7 @@ func readTexFrom7z(path string) (int, int) {
 	// 条目遍历模式对齐 readTexFromZip：非 .json 跳过，ysm.json 自身无 geometry 也跳过
 	for _, f := range zr.Entries() {
 		name := strings.ToLower(f.Name())
-		if !strings.HasSuffix(name, ".json") || types.IsYsmEntryJSON(filepath.Base(name)) {
+		if !strings.HasSuffix(name, ".json") || registry.IsYsmEntryJSON(filepath.Base(name)) {
 			continue
 		}
 		rc, err := f.Open()

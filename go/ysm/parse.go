@@ -8,7 +8,7 @@ import (
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // YSMModelMeta 模型元数据（从 model.json 提取）
@@ -50,8 +50,8 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 	// .ysm 也可能没有扩展名或 .zip 扩展
 	if ext != ".ysm" && ext != ".zip" {
 		// 去掉禁用后缀再检查
-		if types.IsDisableSuffix(path) {
-			base := types.StripDisableSuffix(path)
+		if registry.IsDisableSuffix(path) {
+			base := registry.StripDisableSuffix(path)
 			ext2 := strings.ToLower(filepath.Ext(base))
 			if ext2 != ".ysm" && ext2 != ".zip" {
 				meta.HasError = true
@@ -81,15 +81,15 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 		// 使 totalSize 累加后绕过 500MB 上限（zip 中央目录可声明伪造巨型未压缩大小）。
 		// 先按 uint64 逐条比较（无符号比较不会回绕），再累加 int64 总量。
 		uncomp := f.UncompressedSize64()
-		if uncomp > uint64(types.MaxImportSize) {
+		if uncomp > uint64(registry.MaxImportSize) {
 			meta.HasError = true
-			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", uncomp/(1024*1024), types.MaxImportSizeMB)
+			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", uncomp/(1024*1024), registry.MaxImportSizeMB)
 			return meta
 		}
 		totalSize += int64(uncomp)
-		if totalSize > int64(types.MaxImportSize) {
+		if totalSize > int64(registry.MaxImportSize) {
 			meta.HasError = true
-			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", totalSize/(1024*1024), types.MaxImportSizeMB)
+			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", totalSize/(1024*1024), registry.MaxImportSizeMB)
 			return meta
 		}
 	}

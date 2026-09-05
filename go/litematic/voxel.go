@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // regionInfo 标准化后的 region 遍历信息
@@ -87,16 +87,16 @@ func groupVoxelStream(next func() (voxelBlock, bool), maxBlocks int) (map[string
 }
 
 // finalizeVoxelData 表面过滤 + 组装返回（三兄弟尾部公共段）
-func finalizeVoxelData(size [3]int, colorGroups map[string][][3]int16, truncated bool, maxBlocks int) *types.LitematicVoxelData {
+func finalizeVoxelData(size [3]int, colorGroups map[string][][3]int16, truncated bool, maxBlocks int) *registry.LitematicVoxelData {
 	colorGroups = filterSurfaceOnly(colorGroups)
-	groups := make([]types.VoxelGroup, 0, len(colorGroups))
+	groups := make([]registry.VoxelGroup, 0, len(colorGroups))
 	for color, positions := range colorGroups {
-		groups = append(groups, types.VoxelGroup{
+		groups = append(groups, registry.VoxelGroup{
 			Color:     color,
 			Positions: positions,
 		})
 	}
-	return &types.LitematicVoxelData{
+	return &registry.LitematicVoxelData{
 		Size:      size,
 		Groups:    groups,
 		Truncated: truncated,
@@ -105,7 +105,7 @@ func finalizeVoxelData(size [3]int, colorGroups map[string][][3]int16, truncated
 }
 
 // BuildVoxelData 构建体素渲染数据（按颜色分组）——裸文件路径入口（零回归）。
-func BuildVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildVoxelData(path string, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func BuildVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, erro
 
 // BuildVoxelDataFromRoot 从已解码 root compound 构建 litematic 体素（ADR-132 遗留 1：
 // 容器内条目读取复用——root 由 OpenGzRootFromBytes 产出，跳过路径层）。
-func BuildVoxelDataFromRoot(root map[string]any, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	encSize := [3]int{}
 	if metadata := getCompound(root, "Metadata"); metadata != nil {
 		if es := getCompound(metadata, "EnclosingSize"); es != nil {
@@ -133,7 +133,7 @@ func BuildVoxelDataFromRoot(root map[string]any, maxBlocks int) (*types.Litemati
 
 	regions := getCompound(root, "Regions")
 	if regions == nil {
-		return &types.LitematicVoxelData{Size: encSize}, nil
+		return &registry.LitematicVoxelData{Size: encSize}, nil
 	}
 
 	var firstErr error
@@ -262,7 +262,7 @@ func buildRegionInfo(region map[string]any) (*regionInfo, error) {
 		return nil, fmt.Errorf("region Size 超出合理范围: %d×%d×%d", sx, sy, sz)
 	}
 	// origin+size 超出 int16 表示范围的 region 丢弃——坐标源是 int32（origin/px/py/pz），
-	// 体素输出 `[3]int16`（voxel.go:30 / types.VoxelGroup.Positions）会静默回绕
+	// 体素输出 `[3]int16`（voxel.go:30 / registry.VoxelGroup.Positions）会静默回绕
 	// （±32768 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
 	// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录。
 	// 双侧校验 + 上界 off-by-one——原仅查正上界 `ox > maxCoord`，
@@ -293,7 +293,7 @@ func buildRegionInfo(region map[string]any) (*regionInfo, error) {
 }
 
 // BuildNbtVoxelData 读取 .nbt structure 文件体素数据（裸文件路径入口）。
-func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildNbtVoxelData(path string, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
@@ -302,7 +302,7 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, e
 }
 
 // BuildNbtVoxelDataFromRoot 从已解码 root compound 构建 structure NBT 体素（容器内条目复用）。
-func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	// 基岩版 1.21+ structure 新格式：根含 sub_levels 时走聚合分支
 	// （对齐 ParseNbtStructure:274 的判定；Java 版 structure 无此字段，直接走下方原逻辑）
 	if subLevels := getList(root, "sub_levels"); subLevels != nil {
@@ -405,7 +405,7 @@ func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*types.Litem
 //	实测样本 local_bounds.min 恒为 0，公式退化即 local_pos 本身）。
 //
 // 空气判定按 palette 颜色为空（MapColor 对 air 系返回 ""），与 Java 分支口径一致。
-func buildBedrockVoxelData(subLevels []any, maxBlocks int) (*types.LitematicVoxelData, error) {
+func buildBedrockVoxelData(subLevels []any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	// 第一遍：聚合全局包围盒 + 各 sub_level 遍历信息（origin=local_bounds.min）
 	var gMinX, gMinY, gMinZ, gMaxX, gMaxY, gMaxZ int
 	hasBounds := false
@@ -517,7 +517,7 @@ func buildBedrockVoxelData(subLevels []any, maxBlocks int) (*types.LitematicVoxe
 }
 
 // BuildSchematicVoxelData 读取 .schematic 文件体素数据（裸文件路径入口）。
-func BuildSchematicVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildSchematicVoxelData(path string, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
@@ -526,7 +526,7 @@ func BuildSchematicVoxelData(path string, maxBlocks int) (*types.LitematicVoxelD
 }
 
 // BuildSchematicVoxelDataFromRoot 从已解码 root compound 构建 schematic 体素（容器内条目复用）。
-func BuildSchematicVoxelDataFromRoot(root map[string]any, maxBlocks int) (*types.LitematicVoxelData, error) {
+func BuildSchematicVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	w, wok := getInt(root, "Width")
 	h, hok := getInt(root, "Height")
 	l, lok := getInt(root, "Length")

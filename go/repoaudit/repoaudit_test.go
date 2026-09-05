@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestAudit_EmptyDir(t *testing.T) {
@@ -150,7 +150,7 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 	}
 }
 
-// TestAudit_BannedCount 禁用文件统计走 types.IsDisableSuffix 单一口径
+// TestAudit_BannedCount 禁用文件统计走 registry.IsDisableSuffix 单一口径
 // （.disabled/.ban，大小写不敏感）——此前前端 oldest 页自建正则数禁用，
 // 口径双轨，现统一由 Go 审计产出（resources.banned）。
 func TestAudit_BannedCount(t *testing.T) {
@@ -220,9 +220,9 @@ func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	types.SetRegistryPath(reg1)
-	defer types.SetRegistryPath("")
-	regA := types.LoadRegistry()
+	registry.SetRegistryPath(reg1)
+	defer registry.SetRegistryPath("")
+	regA := registry.LoadRegistry()
 	if got := ClassifyWith(regA, ".aaa"); got != "alpha" {
 		t.Fatalf("reg1 下 ClassifyWith('.aaa') 应为 alpha, got %q", got)
 	}
@@ -231,8 +231,8 @@ func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
 	}
 
 	// 切换注册表 → 缓存必须随新实例重建（新指针 → 缓存失效）
-	types.SetRegistryPath(reg2)
-	regB := types.LoadRegistry()
+	registry.SetRegistryPath(reg2)
+	regB := registry.LoadRegistry()
 	if got := ClassifyWith(regB, ".bbb"); got != "beta" {
 		t.Fatalf("切到 reg2 后 ClassifyWith('.bbb') 应为 beta（缓存需随实例重建）, got %q", got)
 	}

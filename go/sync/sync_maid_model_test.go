@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestZZMaidModelSync(t *testing.T) {
@@ -161,7 +161,7 @@ func TestSyncResourcesDirLevelNested(t *testing.T) {
 // 验证 NestedPatternsFor 函数返回正确的配置
 func TestNestedPatternsConfig(t *testing.T) {
 	t.Run("maid_model_patterns", func(t *testing.T) {
-		patterns := types.NestedPatternsFor("maid-model")
+		patterns := registry.NestedPatternsFor("maid-model")
 		if len(patterns) == 0 {
 			t.Fatal("maid-model 应有嵌套模式配置")
 		}
@@ -177,17 +177,17 @@ func TestNestedPatternsConfig(t *testing.T) {
 	})
 
 	t.Run("unknown_type_patterns", func(t *testing.T) {
-		patterns := types.NestedPatternsFor("unknown-type")
+		patterns := registry.NestedPatternsFor("unknown-type")
 		if len(patterns) != 0 {
 			t.Error("未知类型不应有嵌套模式配置")
 		}
 	})
 
 	t.Run("is_nested_model_dir", func(t *testing.T) {
-		if !types.IsNestedModelDir("maid-model") {
+		if !registry.IsNestedModelDir("maid-model") {
 			t.Error("maid-model 应被识别为嵌套模型目录类型")
 		}
-		if types.IsNestedModelDir("resourcepack") {
+		if registry.IsNestedModelDir("resourcepack") {
 			t.Error("resourcepack 不应被识别为嵌套模型目录类型")
 		}
 	})

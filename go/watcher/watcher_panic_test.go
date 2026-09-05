@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestSyncAllPanicResetsPending(t *testing.T) {
@@ -19,7 +20,7 @@ func TestSyncAllPanicResetsPending(t *testing.T) {
 	// ListVersions 需要至少一个 Prism 实例（instances/{name}/.minecraft + ysm 子目录，
 	// 否则 Exists=false 被 syncAll 跳过、走不到 scanFn）才会触达 panic 注入点
 	mcDir := filepath.Join(mcRoot, "instances", "t1", ".minecraft")
-	if err := os.MkdirAll(filepath.Join(mcDir, types.SubDirMap("ysm")), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(mcDir, registry.SubDirMap("ysm")), 0o755); err != nil {
 		t.Fatal(err)
 	}
 

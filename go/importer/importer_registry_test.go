@@ -3,7 +3,7 @@ package importer
 import (
 	"testing"
 
-	"ysm-model-manager/go/types"
+	typereg "ysm-model-manager/go/types/registry"
 )
 
 // TestAllRegistryTypesHaveHandler 契约测试：resource_types.json 是导入策略的事实源，
@@ -17,7 +17,7 @@ import (
 //     类型不匹配不会导致 ImportByType 返回 nil（两种 Handler 接口相同），
 //     但会破坏「策略与类型特征一致」的隐性契约，故也一并检查。
 func TestAllRegistryTypesHaveHandler(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := typereg.LoadRegistry()
 
 	// 豁免表：id → 豁免理由。新增豁免需附上可审计的理由。
 	// 若某类类型确实不需要导入策略（如仅用于扫描/同步的纯容器类型），在此声明。
@@ -40,7 +40,7 @@ func TestAllRegistryTypesHaveHandler(t *testing.T) {
 // 类型不匹配不会让 ImportByType 返回 nil（接口相同），但会导致语义错位：
 // 对文件型类型用 DirectoryCopy，用户传单个 .fbx 文件时会被误当成目录处理。
 func TestHandlerKindMatchesIsDir(t *testing.T) {
-	reg := types.LoadRegistry()
+	reg := typereg.LoadRegistry()
 
 	for _, rt := range reg.ResourceTypes {
 		h := Get(rt.ID)

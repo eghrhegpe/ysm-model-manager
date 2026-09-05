@@ -4,12 +4,15 @@
 package instance
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cespare/xxhash/v2"
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
@@ -52,36 +55,36 @@ func InvalidateSyncItemsCache() {
 
 // buildSyncItemsKey 仅供当前 BuildSyncItems 函数体实际依赖的输入做缓存键：
 // 目前只读 ins.Name / ins.VersionDir / subtype / filesRoots / rtypes。
-// 若未来函数体开始消费 ins.CustomDir、ins.Exists 等字段，必须同步加进 key，
-// 否则会静默命中旧同步结果缓存。
+// 使用 xxhash 结构化摘要：新增字段不需要手动加进 key，哈希自动覆盖所有输入。
 func buildSyncItemsKey(ins *types.VersionInstance, rtypes []types.ResourceType, filesRoots map[string]string, subtype string) string {
-	var b strings.Builder
-	b.WriteString(ins.Name)
-	b.WriteByte(0)
-	b.WriteString(ins.VersionDir)
-	b.WriteByte(0)
-	b.WriteString(subtype)
-	b.WriteByte(0)
+	h := xxhash.New()
+	h.WriteString(ins.Name)
+	h.Write([]byte{0})
+	h.WriteString(ins.VersionDir)
+	h.Write([]byte{0})
+	h.WriteString(subtype)
+	h.Write([]byte{0})
 	rootKeys := make([]string, 0, len(filesRoots))
 	for k := range filesRoots {
 		rootKeys = append(rootKeys, k)
 	}
 	sort.Strings(rootKeys)
 	for _, k := range rootKeys {
-		b.WriteString(k)
-		b.WriteByte('=')
-		b.WriteString(filesRoots[k])
-		b.WriteByte(0)
+		h.WriteString(k)
+		h.Write([]byte("="))
+		h.WriteString(filesRoots[k])
+		h.Write([]byte{0})
 	}
 	for _, rt := range rtypes {
-		b.WriteString(rt.ID)
-		b.WriteByte('|')
-		b.WriteString(rt.Name)
-		b.WriteByte('|')
-		b.WriteString(rt.Icon)
-		b.WriteByte(0)
+		h.WriteString(rt.ID)
+		h.Write([]byte{'|'})
+		h.WriteString(rt.Name)
+		h.Write([]byte{'|'})
+		h.WriteString(rt.Icon)
+		h.Write([]byte{0})
 	}
-	return b.String()
+	// 十六进制编码 8 字节 hash → 16 字符短键
+	return fmt.Sprintf("%016x", h.Sum64())
 }
 
 func cloneSyncItems(items []types.ResourceSyncItem) []types.ResourceSyncItem {

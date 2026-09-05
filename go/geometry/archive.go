@@ -164,6 +164,19 @@ type geoEntry struct {
 	data []byte
 }
 
+// subModelCtx 封装 buildSubModels 的上下文参数，避免 7 参数堆叠。
+// L0 来源：maidManifest + resolvedPathByItem + texNameByItem（来自 l0Resolved）
+// L1 来源：geoFiles + pngs（来自 l0Resolved 或 collectMergedFiles）
+// orderMap 由 sortByTexOrder 在调用前填充，buildSubModels 内部读取。
+type subModelCtx struct {
+	maidManifest       []maidManifestItem
+	resolvedPathByItem map[int]string
+	texNameByItem      map[int]string
+	orderMap           map[string]int
+	geoFiles           []geoEntry
+	pngs               [][]byte
+}
+
 // l0NamedEntry 是 resolveL0 的 basename 模糊匹配索引条目。
 // 升格自 resolveL0 内匿名 struct，避免闭包外无法声明类型签名。
 type l0NamedEntry struct {
@@ -493,7 +506,7 @@ func collectAnimJSONs(entries []container.Entry, maidNs string) []string {
 		}
 		// ReadLimitedEntry 内部已 Close；+1 探测，超限返回 nil（ADR-033）
 		buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
-		if len(buf) > 10 {
+		if len(buf) > 2 {
 			animJSONs = append(animJSONs, string(buf))
 			totalBytes += int64(len(buf))
 			// 条目/累计字节双封顶：恶意归档塞 5000 个 ~50MB 动画 JSON → ~250GB 物化到内存，
@@ -990,7 +1003,7 @@ func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []ge
 					continue
 				}
 				buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
-				if len(buf) > 10 {
+				if len(buf) > 2 {
 					animJSONs = append(animJSONs, string(buf))
 					animBytes += int64(len(buf))
 					// 条目/累计字节双封顶：与 collectPngEntries 同构
@@ -1103,11 +1116,11 @@ func sortByTexOrder(texOrder []string, pngs [][]byte, pngNames []string) map[str
 // L0「覆盖判定不对称」红线：SubModels 分支只看 len(maidManifest)>0（不看 resolveL0.hit），
 // 与 geoFiles 等覆盖判定（看 hit）不一致，此为现状事实，勿"顺手统一"。
 // geo 必须非 nil（调用方已判）；geoFiles 按声明序已排好（sortByModelOrder 先于本函数）。
-func buildSubModels(geo *types.BedrockModel, maidManifest []maidManifestItem, resolvedPathByItem, texNameByItem map[int]string, orderMap map[string]int, geoFiles []geoEntry, pngs [][]byte) {
+func buildSubModels(geo *types.BedrockModel, ctx subModelCtx) {
 	// L0：Name 取自 manifest，SourcePath 是 zip 内绝对路径，TexSlot 对应 manifest 下标
-	if len(maidManifest) > 0 {
-		l0Subs := make([]types.SubModel, 0, len(maidManifest))
-		for i, item := range maidManifest {
+	if len(ctx.maidManifest) > 0 {
+		l0Subs := make([]types.SubModel, 0, len(ctx.maidManifest))
+		for i, item := range ctx.maidManifest {
 			if item.Name == "" {
 				continue
 			}
@@ -1117,14 +1130,14 @@ func buildSubModels(geo *types.BedrockModel, maidManifest []maidManifestItem, re
 			// TexSlot 用条目纹理在排序后纹理数组的下标（texNameByItem → orderMap），
 			// 而非 manifest 下标（纹理解析失败的条目会使 l0Pngs 收缩、下标漂移）。
 			slot := 0
-			if tn, ok := texNameByItem[i]; ok {
-				if s, ok2 := orderMap[tn]; ok2 {
+			if tn, ok := ctx.texNameByItem[i]; ok {
+				if s, ok2 := ctx.orderMap[tn]; ok2 {
 					slot = s
 				}
 			}
 			l0Subs = append(l0Subs, types.SubModel{
 				Name:       item.Name,
-				SourcePath: resolvedPathByItem[i],
+				SourcePath: ctx.resolvedPathByItem[i],
 				TexSlot:    slot,
 			})
 		}
@@ -1132,10 +1145,10 @@ func buildSubModels(geo *types.BedrockModel, maidManifest []maidManifestItem, re
 			geo.SubModels = l0Subs
 		}
 	}
-	if len(geo.SubModels) == 0 && len(geoFiles) > 0 {
+	if len(geo.SubModels) == 0 && len(ctx.geoFiles) > 0 {
 		// L1 兜底：从 geoFiles 派生（Name=basename 去 .geo.json/.json 后缀）
-		l1Subs := make([]types.SubModel, 0, len(geoFiles))
-		for i, gf := range geoFiles {
+		l1Subs := make([]types.SubModel, 0, len(ctx.geoFiles))
+		for i, gf := range ctx.geoFiles {
 			subName := filepath.ToSlash(gf.name)
 			if idx := strings.LastIndex(subName, "/"); idx >= 0 {
 				subName = subName[idx+1:]
@@ -1143,8 +1156,8 @@ func buildSubModels(geo *types.BedrockModel, maidManifest []maidManifestItem, re
 			subName = strings.TrimSuffix(subName, ".geo.json")
 			subName = strings.TrimSuffix(subName, ".json")
 			slot := i
-			if slot >= len(pngs) && len(pngs) > 0 {
-				slot = len(pngs) - 1
+			if slot >= len(ctx.pngs) && len(ctx.pngs) > 0 {
+				slot = len(ctx.pngs) - 1
 			}
 			l1Subs = append(l1Subs, types.SubModel{
 				Name:       subName,
@@ -1425,7 +1438,14 @@ func parseModelFromEntries(entries []container.Entry, logTag string) (*types.Bed
 		}
 
 		// SubModels 清单（L0 manifest 优先 → L1 兜底）已收编 buildSubModels
-		buildSubModels(geo, maidManifest, resolvedPathByItem, texNameByItem, orderMap, geoFiles, pngs)
+		buildSubModels(geo, subModelCtx{
+			maidManifest:       maidManifest,
+			resolvedPathByItem: resolvedPathByItem,
+			texNameByItem:      texNameByItem,
+			orderMap:           orderMap,
+			geoFiles:           geoFiles,
+			pngs:               pngs,
+		})
 	}
 	// 顺带返回过滤后的 geoFiles（L0/L1 口径、排 arm）：ParseFromZipEntry 复用同一趟解析
 	// 的 geoFiles 做 subPath 匹配，避免二次全量遍历

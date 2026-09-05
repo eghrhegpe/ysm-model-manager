@@ -371,6 +371,7 @@ func logHalfCleanup(dst, prefix string, isDir bool) {
 
 // copyDirRecursive 递归复制目录树（跨设备 Restore 整组合并条目的 fallback）
 // 已收敛至 fsutil.CopyDirRecursive（ADR-044 策略 A）：保留 symlink 链接本身、覆盖允许。
+// 此处为测试注入点（copyDirForMove），生产路径由 New 初始化。
 func copyDirRecursive(src, dst string) error {
 	return fsutil.CopyDirRecursive(src, dst, fsutil.CopyDirOptions{
 		RejectSymlink: false, // 保留符号链接语义（复制链接本身，不跟随）

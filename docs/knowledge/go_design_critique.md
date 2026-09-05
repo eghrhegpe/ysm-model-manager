@@ -252,8 +252,9 @@ invariant_anchors:
 
 - ✅ **刀① `processForEpoch` 加 recover 兜底**：`internal/app/install/queue.go` 的 defer 首行加 `recover`，捕获 `downloadFn`/`emitFn`/`logFn` 回调 panic 后置 `panicked=true`（log 记账）+ 参与 `restart` 判定（`!panicked`）——防「panic → 重启 → 又 panic」无限重启循环，fail-stop 停在本任务。与 `conc.Pool`/`watcher.loop`/`dedup.worker` 三兄弟兜底口径对齐。新增 `queue_test.go` `TestDownloadQueue_DownloadPanicRecovered` 锁住：running 复位、剩余任务不消费、panic 不当普通失败记导入日志。`go build ./...` + `go test -race ./internal/app/install/` 全绿。
 - ✅ **刀② mod 检测轨道收敛（删三份冗余实现 + 死字段）**：实地挖出「mod 检测」散落三轨——① `sync.go` 填死字段 `InstanceStatus.HasYSM`（前端 `src/` 零消费，纯浪费）；② `App.HasYSMMod` 死绑定（纯子串 `Contains("ysm")` 语义最宽松，前端零调用）；③ `go/ysm.HasYSMMod` 硬编码特例（内容检测，语义等价 `HasModInDir(dir, "ysm")` 注册表驱动）。**收敛动作**：删 `InstanceStatus.HasYSM` 字段（types.go）、删 `sync.go` 的 `HasYSM` 赋值 + `import go/ysm`、删 `App.HasYSMMod` 死绑定（app_install_instance.go）、删 `go/ysm.HasYSMMod` 硬编码（ysm.go + 测试）、`frontend/e2e/mock-data.ts` 删 `HasYSM`/`HasYSMMod` stale key。**唯一事实源 = `HasModInDir(dir, rtype)`（ADR-110 注册表驱动）**。重新 `generate:bindings -ts`（171 方法，`HasYSMMod` 消失）。`go build ./...` + `go test ./go/types ./go/sync ./go/ysm ./internal/app` + 前端 `typecheck`/`vite build` + `binding-check`（171:171 零 issues）全绿。
+- ✅ **刀③ `CompareGlobalInstanceHashes` 死代码清理**：核实无 `internal/app` 生产调用（仅 3 个测试 + 文档），已被 `GetInstanceStatusWith` 取代（ADR-064 的 `GetResourceInstanceStatus` handler 实际走 `GetInstanceStatus` 而非它）。删 `CompareGlobalInstanceHashes` + `HasModInDirFn` 类型 + 3 个死测试（`sync_hash.go` 净删至只留 `computeHash`，被 `sync.go` 活跃使用）；`sync_diff.go` 注释同步修正为「唯一实现」。净删 186 行。`go build ./...` + `go test ./go/sync` + drift errors=0 全绿。
 - ➖ **刀③ `InstallLock` 锁粒度**（标记技术债，不动）：ADR-056 共享单锁是明确设计决策，细粒度化引入死锁风险；是性能天花板非正确性 bug，属推倒重来心态。
-- ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）；`CompareGlobalInstanceHashes` 疑似死代码（无 internal/app 生产调用，删它牵连 `sync_hash.go` + 3 测试 + 知识卡，单独排期核实 `ResourceDiff` 复用关系后再动）。
+- ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。`CompareGlobalInstanceHashes` 死代码已清理（见刀③）。
 
 ## 相关
 

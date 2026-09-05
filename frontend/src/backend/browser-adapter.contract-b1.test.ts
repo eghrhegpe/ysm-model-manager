@@ -12,7 +12,7 @@
 //   internal/app/app_install.go  ClearImportLogs/ClearRuntimeLogs
 //   internal/app/app_config.go   GetSubDirMap (→ go/types/extensions.go SubDirAll)
 // 共享 idb mock：setup 层 globalThis.__YSM_TEST_IDB__ 注入（isolate:false 穿透修复，2026-08-17）
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 const idbMock = (globalThis as unknown as {
   __YSM_TEST_IDB__: {
     idbGet: Mock;
@@ -27,6 +27,11 @@ import {
   browserAdapter,
   importWebFiles,
 } from "./browser-adapter.ts";
+// SearchModels 数值条件契约：统计来源 Web Worker 批量统计，测试经注入 runner 替换
+//（web-fs.searchWebModels → batchStatsWebModels → injectedRunner；null = 降级路径）
+import { __setStatsRunnerForTest } from "./web-stats.ts";
+// 直灌真实模型组结构用（多段组名场景：dir key 与组内 rel 无组名前缀）
+import { dirKey, fileKey } from "./web-fs-shared.ts";
 // 派生化数据源：从 resource_types.json 派生测试期望，禁止手写快照
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 // 模块级日志环重置钩子：webImportLogs/webRuntimeLogs 是共享模块图里的模块级数组，
@@ -42,6 +47,10 @@ beforeEach(() => {
   idbMock._store.clear();
   __resetWebLogStateForTest(); // 重置模块级日志环（防跨文件残留）
   localStorage.clear();
+  __setStatsRunnerForTest(null); // 默认恢复 Worker 真实路径（本文件不触碰 Worker）
+});
+afterEach(() => {
+  __setStatsRunnerForTest(null); // 防注入 runner 泄漏到后续测试文件（isolate:true 下亦防模块级残留）
 });
 
 // 导入单个 ysm 模型，返回主文件路径
@@ -99,6 +108,107 @@ describe("契约 B1c — SearchModels kw 快路径降级 = web 契约（vs Go �
       texHeight: 0,
       hasError: false, // 不标错：web 契约 = 降级提示（consumeWebSearchDegraded），不是红错
     });
+  });
+});
+
+// ===== 契约 B1d — SearchModels 六数值参数过滤对齐 Go app_scan.go:132-160 (modelMatchesFilters) =====
+// Go 语义（modelMatchesFilters，app_scan.go:133-153，逐条对照）：
+//   [L134] model.BoneCount == 0 → 排除（恒，无条件）；web 侧 = stats.hasError（stats-core 对齐 BoneCount==0）
+//   [L137] minBones > 0 && BoneCount < minBones → 排除
+//   [L140] maxBones > 0 && BoneCount > maxBones → 排除
+//   [L143] minCubes > 0 && CubeCount < minCubes → 排除
+//   [L146] maxCubes > 0 && CubeCount > maxCubes → 排除
+//   [L149] minTex > 0 && (TexWidth < minTex || TexHeight < minTex) → 排除（宽或高任一低于下限即排除）
+//   [L152] maxTex > 0 && (TexWidth > maxTex || TexHeight > maxTex) → 排除（宽或高任一超上限即排除）
+// 统计来源：web 走 Web Worker 批量统计（statsFromJsonBytes/statsFromDecodedFiles）；
+// 测试经 __setStatsRunnerForTest 注入确定性 stats（隔离 Worker/WASM，聚焦过滤语义本身）。
+// 六参数 >0 才参与过滤：0 = 不设限（Go 同款 `> 0` 守卫，见下方「无数值条件」断言）。
+describe("契约 B1d — SearchModels 六数值参数过滤对齐 Go modelMatchesFilters", () => {
+  // 两个模型：狐狸 10骨5方64x64；狼 2骨3方16x16（stats 注入，与文件名绑定）
+  const seedTwo = async (): Promise<void> => {
+    await importOne("狐狸.ysm");
+    await importOne("狼.ysm");
+    __setStatsRunnerForTest(async (paths: string[]) =>
+      paths.map((p) => ({
+        boneCount: p.includes("狐狸") ? 10 : 2,
+        cubeCount: p.includes("狐狸") ? 5 : 3,
+        texWidth: p.includes("狐狸") ? 64 : 16,
+        texHeight: p.includes("狐狸") ? 64 : 16,
+        hasError: false,
+      })),
+    );
+  };
+
+  it("minBones/maxBones 边界（Go L137/L140：>=minBones 保留、<=maxBones 保留）", async () => {
+    await seedTwo();
+    const minHit = (await browserAdapter.SearchModels("/web/ysm", "", 5, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(minHit.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 10>=5 保留；2<5 排除
+    const maxHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 5, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(maxHit.map((r) => r.name)).toEqual(["狼.ysm"]); // 2<=5 保留；10>5 排除
+    // 等值边界（Go 用 < / > 严格比较，等值不过滤）：boneCount 恰为边界值应保留
+    const eqMin = (await browserAdapter.SearchModels("/web/ysm", "", 10, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(eqMin.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 10==minBones 保留（10<10 false）
+    const eqMax = (await browserAdapter.SearchModels("/web/ysm", "", 0, 2, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(eqMax.map((r) => r.name)).toEqual(["狼.ysm"]); // 2==maxBones 保留（2>2 false）
+  });
+
+  it("minCubes/maxCubes 边界（Go L143/L146）", async () => {
+    await seedTwo();
+    const minHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 4, 0, 0, 0)) as Array<{ name: string }>;
+    expect(minHit.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 5>=4 保留；3<4 排除
+    const maxHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 4, 0, 0)) as Array<{ name: string }>;
+    expect(maxHit.map((r) => r.name)).toEqual(["狼.ysm"]); // 3<=4 保留；5>4 排除
+  });
+
+  it("minTex 任一维度低于下限即排除（Go L149：TexWidth<minTex || TexHeight<minTex）", async () => {
+    await seedTwo();
+    // minTex=32：狐狸宽高均 64>=32 保留；狼宽高均 16<32 排除
+    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 32, 0)) as Array<{ name: string }>;
+    expect(hit.map((r) => r.name)).toEqual(["狐狸.ysm"]);
+    // minTex=16：等值边界（16==16 不触发 < 排除）→ 两只都保留
+    const eq = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 16, 0)) as Array<{ name: string }>;
+    expect(eq).toHaveLength(2);
+  });
+
+  it("maxTex 任一维度超上限即排除（Go L152：TexWidth>maxTex || TexHeight>maxTex）", async () => {
+    await seedTwo();
+    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 32)) as Array<{ name: string }>;
+    expect(hit.map((r) => r.name)).toEqual(["狼.ysm"]); // 16<=32 保留；64>32 排除
+  });
+
+  it("stats.hasError=true（Go BoneCount==0 等价）在数值条件下恒排除（Go L134）", async () => {
+    await importOne("坏.ysm");
+    __setStatsRunnerForTest(async (paths: string[]) =>
+      paths.map((p) => ({
+        boneCount: 0,
+        cubeCount: 0,
+        texWidth: 0,
+        texHeight: 0,
+        hasError: p.includes("坏"),
+      })),
+    );
+    // 无数值条件 → kw 快路径（B1c 契约：hasError:false 降级行命中，不受影响）
+    const kw = (await browserAdapter.SearchModels("/web/ysm", "坏", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(kw.map((r) => r.name)).toEqual(["坏.ysm"]);
+    // 有数值条件（minBones=1）→ hasError=true 条目被排除（对齐 Go BoneCount==0 排除）
+    const num = (await browserAdapter.SearchModels("/web/ysm", "坏", 1, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(num).toEqual([]);
+  });
+
+  it("六参数全 0（无数值条件）→ 不按 stats 过滤：快路径返回全量关键词命中（Go `>0` 守卫）", async () => {
+    await seedTwo();
+    const all = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(all.map((r) => r.name).sort()).toEqual(["狐狸.ysm", "狼.ysm"]);
+  });
+
+  it("关键词 + 数值过滤组合（Go 先关键词预过滤再数值过滤）", async () => {
+    await seedTwo();
+    // kw="狐" 预过滤 → 仅狐狸候选；minBones=5 → 狐狸 10>=5 保留
+    const combo = (await browserAdapter.SearchModels("/web/ysm", "狐", 5, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(combo.map((r) => r.name)).toEqual(["狐狸.ysm"]);
+    // 关键词命中但数值不满足 → 空（不是返回关键词结果）
+    const miss = (await browserAdapter.SearchModels("/web/ysm", "狐", 0, 3, 0, 0, 0, 0)) as Array<{ name: string }>;
+    expect(miss).toEqual([]); // 狐狸 10>maxBones=3 排除
   });
 });
 
@@ -201,6 +311,129 @@ describe("契约 B1 — DeleteResourcePack 标记清理对齐 Go resource_bindin
     // web 主动清理 tags（browser-adapter.ts:396）；Go 契约下 tags.json 仍残留该 path 的孤立标签
     // 此处断言 web 实际行为（已清理），用于揭示与 Go 的差异：web 比 Go 更积极清理
     expect((await browserAdapter.GetModelTags(p)) as string[]).toEqual([]);
+  });
+});
+
+// ===== 契约 B1e — MoveModelFile/CopyModelFile/RenameDir/RenameFile 对齐 Go fileops.go =====
+// Go 契约（go/fileops/fileops.go）：
+//   [L184] MoveModelFile(root, src, dstDir)：移动 src 到 dstDir，保留原名 → dst=Join(dstDir, Base(src))
+//   [L222-249] ysm.json 提升为整组移动（web 无「游离文件」，组内任意文件路径均整组 rekey——ADR-071 #7 适配）
+//   [L259] 目标已存在 → error「目标已存在」（防 os.Rename 静默覆盖）
+//   [L310-320] prepareModelDest：自嵌套检查先于 MkdirAll（dstDir 位于 src 子树内拒绝）
+//   [L324] CopyModelFile：同语义但保留源
+// web 适配差异（web-fs.ts moveOrCopyWebModel 注释声明）：
+//   - 模型库以「模型组」为最小单位（无桌面「游离文件」），src 为组内文件/组目录均整组移动/复制
+//   - 多段组名只保留末段作为目标模型名（dst=Join(dstDir, Base(src))，如 分类1/狐狸 → 作者A/狐狸）
+//   - 校验顺序对齐 Go：自嵌套先于目标已存在；源缺失/非法 dstDir 拒绝
+// RenameDir/RenameFile（fileops.go RenameDir/RenameFile + web 适配）：
+//   - 重命名只替换末段，保留父路径；目标已存在拒绝（防静默覆盖合并）
+//   - ysm.json 是模型目录清单，禁止单文件改名（否则主文件 rank 掉 0 → 模型从列表消失）
+describe("契约 B1e — Move/Copy/Rename 组级 rekey 对齐 Go fileops.go", () => {
+  // 直灌真实模型组结构（对照 importWebFiles 落库形状：dir key 元数据 + file key 组内文件，
+  // 组内 rel 不含组名前缀）。多段组名（分类1/狐狸）经 idbMock 直写 dirKey/fileKey 构造，
+  // 避免 File 名含 "/" 时 importWebFiles 的 rel 保留整名导致的形状偏差。
+  const seedRealGroup = async (
+    type: string,
+    name: string,
+    rels: string[],
+    addedAt = 1700000000000,
+  ): Promise<void> => {
+    idbMock._store.set(dirKey(type, name), { name, addedAt });
+    for (const rel of rels) {
+      const bytes = new TextEncoder().encode(rel);
+      idbMock._store.set(fileKey(type, name, rel), {
+        data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        size: bytes.length,
+      });
+    }
+  };
+
+  it("MoveModelFile：整组迁移 + 标记随迁，源组消失，目标名取 src 组名末段（Go dst=Join(dstDir,Base(src))）", async () => {
+    await seedRealGroup("ysm", "分类1/狐狸", ["狐狸.ysm"]);
+    const srcPath = "/web/ysm/分类1/狐狸/狐狸.ysm";
+    await browserAdapter.SetModelTags(srcPath, ["联动"]);
+    // src 传组内文件路径 → web 整组移动（无游离文件，ADR-071 #7 适配）
+    await browserAdapter.MoveModelFile(srcPath, "/web/ysm/作者A");
+    // 目标组：作者A/狐狸（分类1 父路径丢弃，对齐 Go Base(src)）
+    const moved = (await browserAdapter.ScanModelEntries("/web/ysm/作者A/狐狸")) as Array<{ Path: string }>;
+    expect(moved.map((m) => m.Path)).toEqual(["/web/ysm/作者A/狐狸/狐狸.ysm"]);
+    // 源组消失
+    expect((await browserAdapter.ScanModelEntries("/web/ysm/分类1")) as unknown[]).toHaveLength(0);
+    // 标记随迁：tags 应绑定到新路径（web 侧 rekey 移动标记，对齐 Go .ban 文件随目录走）
+    const tagsAtNew = (await browserAdapter.GetModelTags("/web/ysm/作者A/狐狸/狐狸.ysm")) as string[];
+    expect(tagsAtNew).toEqual(["联动"]);
+  });
+
+  it("MoveModelFile：组内多个文件 + 子目录 rel 整组迁移", async () => {
+    await seedRealGroup("ysm", "狐狸", ["狐狸.ysm", "tex/face.png"]);
+    await browserAdapter.MoveModelFile("/web/ysm/狐狸/狐狸.ysm", "/web/ysm/作者B");
+    // ListAllFilePaths 递归列组内全部文件（ScanModelEntries 只收敛主文件，tex/face.png 是辅助文件看不到）
+    const moved = (await browserAdapter.ListAllFilePaths("/web/ysm/作者B/狐狸")) as string[];
+    // .sort() 默认按 UTF-16 码位：ASCII('tex') < 中文('狐') → tex/face.png 排前
+    expect(moved.sort()).toEqual([
+      "/web/ysm/作者B/狐狸/tex/face.png",
+      "/web/ysm/作者B/狐狸/狐狸.ysm",
+    ]);
+    // 源组全部文件消失（无残留：dir key + 全部 file key 均随迁）
+    expect((await browserAdapter.ListAllFilePaths("/web/ysm/狐狸")) as string[]).toEqual([]);
+  });
+
+  it("CopyModelFile：目标组出现且源组保留（Go CopyModelFile 保留源语义）", async () => {
+    await seedRealGroup("ysm", "狐狸", ["狐狸.ysm"]);
+    await browserAdapter.CopyModelFile("/web/ysm/狐狸/狐狸.ysm", "/web/ysm/备份");
+    const copy = (await browserAdapter.ScanModelEntries("/web/ysm/备份/狐狸")) as Array<{ Path: string }>;
+    expect(copy.map((c) => c.Path)).toEqual(["/web/ysm/备份/狐狸/狐狸.ysm"]);
+    // 源组保留（Go CopyModelFile 只写不删源）
+    const src = (await browserAdapter.ScanModelEntries("/web/ysm/狐狸")) as Array<{ Path: string }>;
+    expect(src.map((s) => s.Path)).toEqual(["/web/ysm/狐狸/狐狸.ysm"]);
+  });
+
+  it("目标已存在 → reject（Go L259 防静默覆盖）", async () => {
+    await seedRealGroup("ysm", "狐狸", ["狐狸.ysm"]);
+    await seedRealGroup("ysm", "备份/狐狸", ["狐狸.ysm"]); // 目标组 备份/狐狸 已存在
+    await expect(
+      browserAdapter.MoveModelFile("/web/ysm/狐狸/狐狸.ysm", "/web/ysm/备份"),
+    ).rejects.toThrow();
+  });
+
+  it("自嵌套（dstDir 位于 src 子树内）→ reject（Go prepareModelDest 先于 MkdirAll）", async () => {
+    await seedRealGroup("ysm", "狐狸", ["狐狸.ysm"]);
+    await expect(
+      browserAdapter.MoveModelFile("/web/ysm/狐狸/狐狸.ysm", "/web/ysm/狐狸/sub"),
+    ).rejects.toThrow();
+  });
+
+  it("源缺失 / 非法 src / 非法 dstDir → reject（Go os.Stat 源报错 + 仓库边界校验）", async () => {
+    await expect(browserAdapter.MoveModelFile("/web/ysm/不存在/main.ysm", "/web/ysm/作者A")).rejects.toThrow();
+    await expect(browserAdapter.MoveModelFile("/notweb/x", "/web/ysm/作者A")).rejects.toThrow();
+    await expect(browserAdapter.MoveModelFile("/web/ysm/狐狸/狐狸.ysm", "/notweb/dst")).rejects.toThrow();
+  });
+
+  it("RenameDir：整组 rekey，多段名只替换末段（分类1/狐狸 → 分类1/大猫），源消失", async () => {
+    await seedRealGroup("ysm", "分类1/狐狸", ["狐狸.ysm"]);
+    await browserAdapter.RenameDir("/web/ysm/分类1/狐狸", "大猫");
+    const renamed = (await browserAdapter.ScanModelEntries("/web/ysm/分类1/大猫")) as Array<{ Path: string }>;
+    expect(renamed.map((r) => r.Path)).toEqual(["/web/ysm/分类1/大猫/狐狸.ysm"]);
+    expect((await browserAdapter.ScanModelEntries("/web/ysm/分类1/狐狸")) as unknown[]).toHaveLength(0);
+  });
+
+  it("RenameDir：目标已存在拒绝（防静默覆盖合并两模型）", async () => {
+    await seedRealGroup("ysm", "分类1/狐狸", ["狐狸.ysm"]);
+    await seedRealGroup("ysm", "分类1/大猫", ["大猫.ysm"]);
+    await expect(browserAdapter.RenameDir("/web/ysm/分类1/狐狸", "大猫")).rejects.toThrow();
+  });
+
+  it("RenameFile：单文件 rekey；ysm.json 禁改（模型目录清单，改了主文件 rank 掉 0）", async () => {
+    await seedRealGroup("ysm", "组A", ["模型.ysm"]);
+    await browserAdapter.RenameFile("/web/ysm/组A/模型.ysm", "模型2.ysm");
+    const renamed = (await browserAdapter.ScanModelEntries("/web/ysm/组A")) as Array<{ Path: string }>;
+    expect(renamed.map((r) => r.Path)).toEqual(["/web/ysm/组A/模型2.ysm"]);
+    // ysm.json 禁改：补 ysm.json 文件，RenameFile 应拒绝（对齐 Go RenameFile ADR-038 D3）
+    idbMock._store.set(fileKey("ysm", "组A", "ysm.json"), {
+      data: new ArrayBuffer(4),
+      size: 4,
+    });
+    await expect(browserAdapter.RenameFile("/web/ysm/组A/ysm.json", "list.json")).rejects.toThrow();
   });
 });
 

@@ -213,6 +213,9 @@ export async function statsFromJsonBytes(
     cubeCount: parsed.cubeCount,
     texWidth: parsed.texWidth,
     texHeight: parsed.texHeight,
-    hasError: false,
+    // hasError 口径与 spec 分支（statsFromJsonBytes 上行）及 Go BoneCount==0 语义统一：
+    // 当前 parseAnyGeometry 对空 bones 返回 null（geometry.ts 挡空）→ 本行恒 false 不可达；
+    // 但显式写 boneCount === 0 保持自文档化——防未来 parseAnyGeometry 放宽空 bones 时静默漂移。
+    hasError: parsed.boneCount === 0,
   };
 }

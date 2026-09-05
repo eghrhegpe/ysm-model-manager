@@ -122,7 +122,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 14 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 11 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -134,7 +134,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 57 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 22 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -146,7 +146,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 58 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 23 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -158,7 +158,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 13 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-dir-handlers.ts` | 10 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

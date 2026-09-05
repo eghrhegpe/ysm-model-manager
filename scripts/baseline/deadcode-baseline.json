@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-05T16:08:28.501Z",
+  "generated": "2026-09-05T16:25:08.909Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -36,10 +36,6 @@
     "src/preview-3d/decoder/geometry.ts|types|BedrockBone",
     "src/preview-3d/decoder/geometry.ts|types|BedrockCube",
     "src/preview-3d/decoder/geometry.ts|types|BedrockSubModel",
-    "src/preview-3d/decoder/mmd-ktx2-encoder.ts|unresolved|../../../utils/safe-error-msg.ts",
-    "src/preview-3d/decoder/mmd-ktx2-encoder.ts|unresolved|../../base64.ts",
-    "src/preview-3d/decoder/mmd-ktx2-texture-loader.ts|unresolved|../../base64.ts",
-    "src/preview-3d/decoder/mmd-ktx2-worker.ts|unresolved|../../../utils/safe-error-msg.ts",
     "src/preview-3d/load-trace.ts|types|LoadTraceAssets",
     "src/preview-3d/load-trace.ts|types|LoadTraceStage",
     "src/preview-3d/load-trace.ts|types|LoadTraceTexture",
@@ -90,11 +86,11 @@
   ],
   "jscpd": [
     "src/backend/browser-adapter.contract-b1.test.ts#src/backend/browser-adapter.contract-b2.test.ts",
-    "src/backend/browser-adapter.contract-b1.test.ts#src/backend/browser-adapter.contract-b3.test.ts",
     "src/backend/browser-adapter.contract-b1.test.ts#src/backend/browser-adapter.test.ts",
-    "src/backend/browser-adapter.contract-b1.test.ts#src/backend/web-store.logs.test.ts",
     "src/backend/browser-adapter.contract-b1.test.ts#src/parsers/ysm-header.test.ts",
+    "src/backend/browser-adapter.contract-b2.test.ts#src/backend/browser-adapter.contract-b3.test.ts",
     "src/backend/browser-adapter.contract-b2.test.ts#src/backend/browser-adapter.test.ts",
+    "src/backend/browser-adapter.contract-b2.test.ts#src/backend/web-store.logs.test.ts",
     "src/backend/browser-adapter.test.ts#src/backend/browser-adapter.test.ts",
     "src/backend/idb.ts#src/backend/idb.ts",
     "src/backend/web-stats.test.ts#src/backend/web-stats.test.ts",

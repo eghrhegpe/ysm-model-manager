@@ -122,4 +122,23 @@ describe("stats-core.statsFromJsonBytes（.json 主文件：解压目录入口 A
     );
     expect(noBones.hasError).toBe(true);
   });
+
+  it("标准 bedrock geometry 空 bones / 无骨骼 → hasError true（对齐 Go BoneCount==0 语义）", async () => {
+    // 空 bones 数组的标准 geometry：parseAnyGeometry 返回 null（geometry.ts 挡空 bones）
+    // → EMPTY_ERROR hasError:true——与 spec 分支 hasError:boneCount===0 同口径。
+    const emptyGeo = await statsFromJsonBytes(
+      enc.encode(
+        JSON.stringify({ "minecraft:geometry": [{ description: { texture_width: 16, texture_height: 16 }, bones: [] }] }),
+      ),
+      async () => null,
+    );
+    expect(emptyGeo.hasError).toBe(true);
+    expect(emptyGeo.boneCount).toBe(0);
+    // 畸形结构（无 bones 字段）→ 同样 hasError true
+    const noGeoField = await statsFromJsonBytes(
+      enc.encode(JSON.stringify({ some: "other" })),
+      async () => null,
+    );
+    expect(noGeoField.hasError).toBe(true);
+  });
 });

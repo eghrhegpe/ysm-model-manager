@@ -983,6 +983,87 @@ describe("防御分支补刀", () => {
   });
 });
 
+// ===== GetFsaAuthState 四态判定（对齐 web-fs-auth.ts：unsupported/none/granted/revoked）=====
+// Go 侧无此 binding（网页版专属扩展，Phase 3 能力探测不会误报）；契约来源 =
+// web-fs-auth.ts getFsaAuthState + File System Access API 权限语义：
+//   showDirectoryPicker 缺失        → unsupported（能力不存在）
+//   config store 无 fsaRootHandle  → none（未授权过）
+//   handle.queryPermission granted  → granted（授权有效）
+//   queryPermission 非 granted      → revoked（权限已撤销/待重授权）
+//   queryPermission 抛错 / 老实现无该方法 → revoked（保守降级，防启动期误报 granted）
+// 仅 queryPermission（绝不 requestPermission——启动期无手势会被浏览器拦截）由实现注释锁定。
+// 本 describe 用临时 window.showDirectoryPicker + config 直灌句柄覆盖三态。
+const FSA_ROOT_KEY = "fsaRootHandle";
+describe("GetFsaAuthState 四态判定（unsupported/none/granted/revoked）", () => {
+  const mockShowDirPicker = (): void => {
+    (window as { showDirectoryPicker?: unknown }).showDirectoryPicker = () => Promise.resolve({});
+  };
+  const clearShowDirPicker = (): void => {
+    delete (window as { showDirectoryPicker?: unknown }).showDirectoryPicker;
+  };
+  const seedHandle = async (h: unknown): Promise<void> => {
+    await idb.idbSet("config", FSA_ROOT_KEY, h);
+  };
+
+  afterEach(() => {
+    clearShowDirPicker();
+  });
+
+  it("有 showDirectoryPicker + 无持久化句柄 → none（从未授权过本地仓库）", async () => {
+    mockShowDirPicker();
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("none");
+  });
+
+  it("句柄 queryPermission=granted → granted", async () => {
+    mockShowDirPicker();
+    await seedHandle({ queryPermission: async () => "granted" });
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("granted");
+  });
+
+  it("句柄 queryPermission=prompt / denied → revoked（权限已撤销，需手势重授权）", async () => {
+    mockShowDirPicker();
+    await seedHandle({ queryPermission: async () => "prompt" });
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("revoked");
+    await seedHandle({ queryPermission: async () => "denied" });
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("revoked");
+  });
+
+  it("句柄 queryPermission 抛错（句柄失效/隐私模式）→ revoked（保守降级）", async () => {
+    mockShowDirPicker();
+    await seedHandle({
+      queryPermission: async () => {
+        throw new Error("handle stale");
+      },
+    });
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("revoked");
+  });
+
+  it("老实现句柄无 queryPermission 方法 → revoked（不支持恢复，保守视为需重选）", async () => {
+    mockShowDirPicker();
+    await seedHandle({ name: "old-handle" });
+    await expect(webFsBindings.GetFsaAuthState()).resolves.toBe("revoked");
+  });
+
+  it("状态判定绝不调用 requestPermission（启动期无手势会被拦截；仅 queryPermission 恢复）", async () => {
+    mockShowDirPicker();
+    let permRequests = 0;
+    await seedHandle({
+      queryPermission: async () => {
+        permRequests++;
+        return "granted";
+      },
+      requestPermission: async () => {
+        permRequests++;
+        return "granted";
+      },
+    });
+    const state = await webFsBindings.GetFsaAuthState();
+    expect(state).toBe("granted");
+    // requestPermission 是用户手势专属操作：状态查询路径只允许 queryPermission（恰 1 次）
+    expect(permRequests).toBe(1);
+  });
+});
+
 // ===== parseWebModelPath 精确探测 + 回退语义（P0-2 优化回归锁）=====
 // 优化前：每个路径解析都全库扫 dir: 前缀（O(全库)）；优化后：先按路径段前缀
 // 精确探测 dir key（O(1)），全 miss 才回退全库反查（兼容"name 边界不确定"的模糊输入）。

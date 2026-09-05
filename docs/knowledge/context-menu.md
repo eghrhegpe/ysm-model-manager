@@ -29,6 +29,7 @@ auto_fields:
     - registerContextMenus
     - registerInstanceOps
     - resolveDstDir
+    - runSingleOp
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/context-menu/context-menus.test.ts

@@ -34,6 +34,8 @@ import { renderVersionCards } from "./render.ts";
 import { footerHTML, headerHTML, listContainerHTML } from "./tpl.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
+// ⚠️ 使用模块级 Map 而非组件实例：系统只存在一个 <app-sidebar> 实例，
+// 需要跨 disconnectedCallback/connectedCallback 周期保持勾选状态（见 sync.test.ts）
 const _checkedSets = new Map<string, Set<string>>();
 function checkedSetFor(rtype: string): Set<string> {
   let s = _checkedSets.get(rtype);
@@ -69,6 +71,7 @@ function bindSelectAll(root: ShadowRoot, rtype: string, instances: SidebarInstan
 // ---------- restoreCheckboxes ----------
 function restoreCheckboxes(root: ShadowRoot, rtype: string, instances: SidebarInstance[]): void {
   const set = checkedSetFor(rtype);
+  // 恢复勾选状态（从模块级 checkedSets 读取，支持跨重新挂载恢复）
   root.querySelectorAll(".chk").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);
@@ -610,6 +613,7 @@ class AppSidebar extends WebComponentBase {
       document.removeEventListener("click", this._docClickHandler);
       this._docClickHandler = null;
     }
+    // 注意：_checkedSets 保持模块级，跨重新挂载持久化勾选状态
   }
 
   private _renderLayout(): void {

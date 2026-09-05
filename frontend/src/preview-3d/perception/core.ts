@@ -3,6 +3,7 @@
 // update() 里 `!action || action.paused` / isAnimActive 分散判定，见 sharp-review #9）。
 // 用法：消费方每帧调用一次 setPerceptionPaused(动画是否激活)，
 // 各 controller 的 apply() 内部自查，动画优先级决策收归感知系统自身。
+// ⚠️ 此变量仅限主线程访问。若未来感知层扩展出 Worker 驱动路径，需重新设计同步机制。
 let _globalPause = false;
 
 /** 置全局暂停标志（true=动画激活，感知 controller 全部静默） */

@@ -46,6 +46,7 @@ function makeCtx(): PreviewRoot & YsmDecoder & PreviewDebugger {
     appendDebug: vi.fn(),
     decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
     unsubs: [] as Array<() => void>,
+    dragAbortCtrl: null,
   };
 }
 

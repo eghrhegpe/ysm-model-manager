@@ -136,6 +136,8 @@ cacheSetEvictHandler((_key, val) => {
 class AppPreview extends WebComponentBase implements PreviewCtx {
   root: ShadowRoot;
   unsubs: Array<() => void> = [];
+  /** P3 修复：2D 拖拽的 AbortController，避免模块级单例在多实例场景下的竞态风险 */
+  dragAbortCtrl: AbortController | null = null;
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
   /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
@@ -199,6 +201,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     // 切页：作废在飞预览渲染（代际守卫），并重置 _typeReg 重建窗口
     // —— 若上一实例 _typeReg 曾因 LoadResourceTypes 迟到而冻结为 {}，重挂载后自愈
     this._previewGuard.invalidate();
+    // P3 修复：清理拖拽 AbortController，防止跨实例竞态
+    this.dragAbortCtrl?.abort();
+    this.dragAbortCtrl = null;
     // 快照遍历：unsub 内部可能 splice 自身（如 close3D 的 P3 修复），
     // 先换新数组再遍历快照——遍历中 fn 抛错也不会留下跨生命周期累积的尸体引用
     //（旧数组随本次调用结束即被 GC，connectedCallback 的重置为第二道保险）

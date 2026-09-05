@@ -9,6 +9,8 @@ export interface PreviewRoot {
   root: ShadowRoot;
   /** 组件销毁清理收集（可选：子模块可挂 window/document 监听清理函数） */
   unsubs?: Array<() => void>;
+  /** P3 修复：2D 拖拽的 AbortController，避免模块级单例在多实例场景下的竞态风险 */
+  dragAbortCtrl: AbortController | null;
 }
 
 /** WASM 解码能力（loader/skeleton 消费） */

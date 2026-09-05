@@ -6,7 +6,7 @@ import { t } from "../../../core/i18n/t.ts";
 import { dbg } from "../../../utils/debug/debug.ts";
 import { getSiteIcon, getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
 import type { LocalCreatorLike } from "../site-view.ts";
-import type { BrowseMode, BrowseModeRef } from "../workshop-browse-mode.ts";
+import type { BrowseMode } from "../workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,
   getCreatorIdentity,
@@ -382,88 +382,14 @@ function cmSeSyncFavButtons(searchResults: HTMLElement): void {
   });
 }
 
-function cmSeSyncLocalBadges(searchResults: HTMLElement): void {
-  searchResults.querySelectorAll(".cr-card-local-jump").forEach(() => {
-    // 占位：本地徽章跨标签同步（当前无额外状态，保留分派槽）
-  });
-}
-
-function cmSeSyncAvatarCache(
-  searchResults: HTMLElement,
-  avatarCache: Record<string, string> | undefined,
-): void {
-  if (!avatarCache) return;
-  searchResults.querySelectorAll("[data-debug-avatar]").forEach(() => {
-    // 占位：头像缓存跨标签同步（当前无额外状态，保留分派槽）
-  });
-}
-
-function cmSeSyncBrowseMode(ctx: { browseMode: BrowseModeRef }, refreshView: () => void): void {
-  // 占位：跨标签同步浏览模式（ref 单源，重渲染读 ctx.browseMode.v 自动最新）
-  void ctx;
-  void refreshView;
-}
-
-function cmSeSyncKeyboardFocus(searchResults: HTMLElement): void {
-  const crGrid = searchResults.querySelector(".cr-creator-grid");
-  if (!crGrid) return;
-  const cards = crGrid.querySelectorAll(".gh-card[tabindex]");
-  if (!cards.length) return;
-  // 占位：creator 增删后调整焦点（当前仅在本地绑定，保留分派槽）
-}
-
-function cmSeSyncOverlayState(
-  searchResults: HTMLElement,
-  esc: (s: unknown) => string,
-  avatarCache: Record<string, string> | undefined,
-  authorCountMap: Record<string, number>,
-): void {
-  const root = searchResults.getRootNode() as Document | ShadowRoot;
-  const openOverlay = root.querySelector(".cr-detail-overlay") as HTMLDivElement | null;
-  if (!openOverlay) return;
-  // 占位：已打开浮层的跨标签刷新（当前由本地子事件直接处理，保留分派槽）
-  void esc;
-  void avatarCache;
-  void authorCountMap;
-}
-
-function cmSeSyncCreatorDelta(
-  searchResults: HTMLElement,
-  creators: LocalCreatorLike[],
-  wsEditModeRef: { v: boolean },
-  cardCtx: CrCardCtx,
-): void {
-  const grid = searchResults.querySelector("#cr-creator-grid");
-  if (!grid || wsEditModeRef.v) return;
-  // 占位：creator 增删后的网格局部刷新（当前仅由本地填充，保留分派槽）
-  void creators;
-  void cardCtx;
-}
-
 // ============================================================
 // 主函数 A：_storageSyncFn（跨标签 storage 同步分派）
 // ============================================================
 
-function cmSeMakeSyncFn(
-  searchResults: HTMLElement,
-  esc: (s: unknown) => string,
-  avatarCache: Record<string, string> | undefined,
-  authorCountMap: Record<string, number>,
-  creators: LocalCreatorLike[],
-  wsEditModeRef: { v: boolean },
-  cardCtx: CrCardCtx,
-  ctx: { browseMode: BrowseModeRef },
-  refreshView: () => void,
-): (e: StorageEvent) => void {
+function cmSeMakeSyncFn(searchResults: HTMLElement): (e: StorageEvent) => void {
   return (e: StorageEvent) => {
     if (e.key === "ysm-fav-creators") {
       cmSeSyncFavButtons(searchResults);
-      cmSeSyncLocalBadges(searchResults);
-      cmSeSyncAvatarCache(searchResults, avatarCache);
-      cmSeSyncBrowseMode(ctx, refreshView);
-      cmSeSyncKeyboardFocus(searchResults);
-      cmSeSyncOverlayState(searchResults, esc, avatarCache, authorCountMap);
-      cmSeSyncCreatorDelta(searchResults, creators, wsEditModeRef, cardCtx);
     }
   };
 }
@@ -490,7 +416,6 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
     fillSearch,
     openUrl,
     bus: busRef,
-    ctx,
   } = state;
 
   let disposed = false;
@@ -530,17 +455,7 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   if (_storageSyncFn) {
     window.removeEventListener("storage", _storageSyncFn);
   }
-  _storageSyncFn = cmSeMakeSyncFn(
-    searchResults,
-    esc,
-    avatarCache,
-    authorCountMap,
-    creators,
-    wsEditModeRef,
-    cardCtx,
-    ctx,
-    refreshView,
-  );
+  _storageSyncFn = cmSeMakeSyncFn(searchResults);
   window.addEventListener("storage", _storageSyncFn);
 
   return () => {

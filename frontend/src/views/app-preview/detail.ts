@@ -6,7 +6,7 @@
 
 import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
-import { cacheGet } from "../../preview-3d/decoder/cache.ts";
+import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -86,6 +86,9 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
         dec?.authors?.length
       );
       if (decHasInfo) {
+        // 写入缓存，供详情卡 decodedBy 徽标展示（与 loadModelData → skeleton.ts 的缓存写入路径对齐）
+        const existing = cacheGet(path) || {};
+        cacheSet(path, { ...existing, _decodedBy: "🧠 WASM 内置解码" });
         enriched = {
           name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
           authors: (dec.authors || []).map((a) => ({

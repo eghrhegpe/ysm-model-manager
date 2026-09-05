@@ -43,6 +43,7 @@ beforeEach(() => {
     loadPreviewImage: vi.fn().mockResolvedValue(null),
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
+    dragAbortCtrl: null,
   };
   mocks.ReadLitematicMeta.mockResolvedValue({
     name: "建筑",

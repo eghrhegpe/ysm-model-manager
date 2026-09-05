@@ -28,7 +28,7 @@ import { cleanupYsm3D, createYsm3D } from "./ysm-3d.ts";
 import { openFullPreview } from "./zoom.ts";
 
 // 2D 拖拽的 window 监听器使用 AbortController 管理，避免模块级单例竞态（审核 P3）
-let _prevAbort: AbortController | null = null;
+// ⚠️ 原模块级 _prevAbort 已迁移至组件实例 ctx.dragAbortCtrl（P3 修复）
 
 /**
  * P2 修复（审核）：3D overlay 挂 document.body，不随预览面板 shadow DOM 重建消失。
@@ -124,9 +124,10 @@ export async function loadModel2D(
       canvas.setPointerCapture(e.pointerId);
     });
     // 取消上一轮的 window 监听器（AbortController 一次性清除所有，无竞态风险）
-    _prevAbort?.abort();
+    // P3 修复：使用组件实例的 dragAbortCtrl 而非模块级单例
+    ctx.dragAbortCtrl?.abort();
     const ac = new AbortController();
-    _prevAbort = ac;
+    ctx.dragAbortCtrl = ac;
     const opts = { signal: ac.signal };
     const onWindowMove = (e: PointerEvent): void => {
       if (!_dragging) return;
@@ -144,7 +145,7 @@ export async function loadModel2D(
     window.addEventListener("pointerup", onWindowUp, opts);
     ctx.unsubs?.push(() => {
       ac.abort();
-      if (_prevAbort === ac) _prevAbort = null;
+      if (ctx.dragAbortCtrl === ac) ctx.dragAbortCtrl = null;
     });
     canvas.addEventListener("click", (e) => {
       if (_dragged) {

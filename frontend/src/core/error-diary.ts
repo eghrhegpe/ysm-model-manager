@@ -102,7 +102,9 @@ function registerErrorDiaryInner(): void {
 }
 
 async function logUiMsg(msg: string, status: string): Promise<void> {
-  // P2 修复（审核）：同 (msg+status) 5s 去重——错误风暴只记首条
+  // P2 修复（审核）：同 (msg+status) 5s 去重——措辞订正（2026-09-05 增量深评）：
+  // 实为「连续相同消息」去重（只记 _lastDedupKey 单条），A-B-A 交错风暴不受拦、
+  // 按设计逐条记录（保留诊断信息；真正风暴可依赖截断与 AddOpLog 限流兜底）
   const key = `${status}:${msg}`;
   const now = Date.now();
   if (key === _lastDedupKey && now - _lastDedupAt < DIARY_DEDUP_WINDOW) return;

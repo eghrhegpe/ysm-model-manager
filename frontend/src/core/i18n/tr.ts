@@ -6,7 +6,7 @@
 //
 // 判定语义：t() 缺失键返回 key 本身（t.ts:21）——「v === key」即命中兜底。
 // 该判定是单一事实来源，与 t() 缺失键行为强耦合，t() 行为变化需同步 tr()。
-import { interpolate, type LocaleKey, t } from "./t.ts";
+import { interpolate, type LocaleKey, type LocaleParams, t } from "./t.ts";
 
 /**
  * i18n 安全取值：键缺失时回退到 fallback，杜绝显示裸 key 字面量。
@@ -20,7 +20,7 @@ import { interpolate, type LocaleKey, t } from "./t.ts";
 export function tr(
   key: LocaleKey | (string & {}),
   fallback: string,
-  params?: Record<string, string | number>,
+  params?: LocaleParams,
 ): string {
   const v = t(key as LocaleKey, params);
   if (v === key) {

@@ -396,7 +396,7 @@
 |------|------|----|
 | runStartupSteps | `frontend/src/app-modules.ts` | 67 |
 | (顶层) | `frontend/src/app-modules.ts` | 125 |
-| toast | `frontend/src/core/feedback.ts` | 21 |
+| toast | `frontend/src/core/feedback.ts` | 24 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 259 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 306 |

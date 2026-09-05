@@ -13,7 +13,9 @@ export type LocaleKey = keyof typeof zhCN;
 /** 插值参数：{key} 占位符的值（字符串/数字） */
 export type LocaleParams = Record<string, string | number>;
 
-/** 占位符正则编译缓存（带 params 的 t() 在列表渲染中高频，避免每次 new RegExp） */
+/** 占位符正则编译缓存（带 params 的 t() 在列表渲染中高频，避免每次 new RegExp）。
+ *  前提：key 须来自代码常量（LocaleParams 由调用点字面量构造）——interpolate 是
+ *  导出函数，若被喂用户可控 key（如文件名）此 Map 会无界增长，勿用于外部输入 */
 const placeholderCache = new Map<string, RegExp>();
 
 function getPlaceholderRegex(key: string): RegExp {

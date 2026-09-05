@@ -191,10 +191,15 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           }
         }
         if (sitesData?.length) {
-          const r2 = m.mergeCommunitySites(allSites, sitesData);
-          if (r2.added > 0) {
-            await App.SaveWorkshopSites(allSites);
-            logs.push(t("workshop.logSites", { added: r2.added }));
+          // ADR-172 对称（站点侧双轨收口）：社区站点增量并入下沉 Go——原
+          // 「TS mergeCommunitySites + SaveWorkshopSites(allSites) 整存」用 UI 会话态
+          // 覆盖磁盘（与磁盘并行修改互踩）；现整存移除，计数以 Go 返回为准（权威）。
+          const sa = await App.MergeCommunitySitesFromJSON(JSON.stringify(sitesData));
+          const siteAdded = sa ?? 0;
+          if (siteAdded > 0) {
+            // UI 即时并入（仅内存展示，不驱动写回；输入与 Go 同源，结果等价）
+            m.mergeCommunitySites(allSites, sitesData);
+            logs.push(t("workshop.logSites", { added: siteAdded }));
             changed = true;
           }
         }

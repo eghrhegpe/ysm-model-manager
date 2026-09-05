@@ -311,6 +311,7 @@ export const MOCK_DATA = {
   ListPackModelsDetail: undefined,
   ListRecycleBin: undefined,
   MergeCommunityCreatorsFromJSON: undefined,
+  MergeCommunitySitesFromJSON: undefined,
   MergeWorkshopCreatorsFromJSON: undefined,
   MergeWorkshopSitesFromJSON: undefined,
   MoveModelFile: undefined,

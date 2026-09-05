@@ -329,6 +329,8 @@ describe("bindEditEvents 拉取配置", () => {
       SaveWorkshopSites: vi.fn().mockResolvedValue(undefined),
       // ADR-172：创作者落盘并入下沉 Go binding（默认幂等返回 [0,0]）
       MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([0, 0]),
+      // ADR-172 对称：站点社区增量并入下沉 Go（默认幂等返回 0）
+      MergeCommunitySitesFromJSON: vi.fn().mockResolvedValue(0),
       LoadGitHubRepos: vi.fn().mockResolvedValue([]),
       LoadResourceTypes: vi.fn().mockResolvedValue(null),
       ...overrides,
@@ -341,6 +343,8 @@ describe("bindEditEvents 拉取配置", () => {
       LoadResourceTypes: vi.fn().mockResolvedValue({ resourceTypes: [{ id: "ysm" }, { id: "mmd" }] }),
       // ADR-172：Go 返回权威计数（段并入/去重派生在 Go 侧）
       MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([1, 2]),
+      // ADR-172 对称：站点增量并入下沉 Go，返回权威 added 计数
+      MergeCommunitySitesFromJSON: vi.fn().mockResolvedValue(1),
     });
     fetchCreatorsMock.mockResolvedValue([{ name: "甲" }]);
     fetchSitesMock.mockResolvedValue([{ id: "s1" }]);
@@ -364,6 +368,7 @@ describe("bindEditEvents 拉取配置", () => {
       expect(msg).toContain("类型: 2 种");
       const app = (await getAppMock()) as {
         MergeCommunityCreatorsFromJSON: Mock;
+        MergeCommunitySitesFromJSON: Mock;
         SaveWorkshopCreators: Mock;
         SaveWorkshopSites: Mock;
       };
@@ -371,11 +376,16 @@ describe("bindEditEvents 拉取配置", () => {
       expect(app.MergeCommunityCreatorsFromJSON).toHaveBeenCalledWith(
         JSON.stringify([{ name: "甲" }]),
       );
-      // 红线验证：写回下沉后前端零整存（原 SaveWorkshopCreators(allCreators) 已移除）
+      // ADR-172 对称：站点增量并入直传 Go，前端零整存
+      expect(app.MergeCommunitySitesFromJSON).toHaveBeenCalledWith(
+        JSON.stringify([{ id: "s1" }]),
+      );
+      // 红线验证：写回下沉后前端零整存（原 SaveWorkshopSites(allSites) 已移除）
       expect(app.SaveWorkshopCreators).not.toHaveBeenCalled();
+      expect(app.SaveWorkshopSites).not.toHaveBeenCalled();
       // UI 即时展示并入（仅内存，不驱动写回）
       expect(mergeCreatorsMock).toHaveBeenCalled();
-      expect(app.SaveWorkshopSites).toHaveBeenCalledWith(state.allSites);
+      expect(mergeSitesMock).toHaveBeenCalled();
       expect(refresh).toHaveBeenCalled();
       const btn = searchResults.querySelector(".cr-fetch-btn") as HTMLButtonElement;
       expect(btn.textContent).toBe("🌐 更新配置");

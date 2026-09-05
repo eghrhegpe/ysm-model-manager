@@ -762,6 +762,24 @@ export function MergeCommunityCreatorsFromJSON(communityJSON: string): $Cancella
     return $Call.ByID(2780591293, communityJSON);
 }
 
+/**
+ * MergeCommunitySitesFromJSON 把社区站点索引（增量）并入本地 workshop_sites.json 并单次原子写回。
+ * ADR-172 创作者对称：社区增量合并下沉 Go——替代前端 site edit 同步按钮的
+ * TS mergeCommunitySites + SaveWorkshopSites(allSites) 整存链，解除「Go 派生结果
+ * 只读」红线债务（sites 侧双轨收口）。
+ * 
+ * 语义与 MergeWorkshopSitesFromJSON（手动全量导入，drag.ts 消费）刻意区分：
+ *   - id 未命中 → 追加（社区索引只增不改，本地自定义站点不被覆盖）；
+ *   - id 命中 → 跳过（用户可能改过 Label/URL，社区不覆盖）。
+ * 
+ * 载入用 DefaultWorkshopSites（bundled 默认 + 用户配置叠加视角——社区合并的
+ * "现有"应含默认站点，否则新用户会把社区里已有的默认站点重复添加）。
+ * 幂等短路：无新增 → 不写盘（社区索引 6h 缓存命中后仍会转发，避免无谓原子写）。
+ */
+export function MergeCommunitySitesFromJSON(communityJSON: string): $CancellablePromise<number> {
+    return $Call.ByID(3743705184, communityJSON);
+}
+
 export function MergeWorkshopCreatorsFromJSON(jsonContent: string): $CancellablePromise<[number, number]> {
     return $Call.ByID(2866539347, jsonContent);
 }

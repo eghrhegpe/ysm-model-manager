@@ -49,6 +49,7 @@ quick_risk_lines:
 pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
   - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
+  - **label-for 合规**（WCAG 4.1.2）：tpl-settings.ts 14+ 处 `<span class="label">` 全部改为 `<label for="...">` 关联对应 select/input，屏幕阅读器可正确读出「标签→控件」关联
 
 use_when:
   - 设置页

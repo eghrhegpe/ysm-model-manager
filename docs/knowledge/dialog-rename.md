@@ -82,7 +82,7 @@ status: active
 - 「读取头部」按钮的文案/disabled 必须在 `finally` 恢复，防读取失败后卡死
 - 弹窗必须经 `registerDlg` 登记，关闭统一走 `closeDlg`（退场动画 + 单次结算）
 - **Enter 键已接线**（P3 修复）：overlay keydown 的 Enter 触发 `#rn-ok` click，与按钮共享校验/关闭路径（原按钮文案「重命名 (Enter)」虚标，键盘 Enter 无法提交）；Esc 走取消
-- 弹窗未做 `trapFocus`（modal 家族其余成员有，此处一致性缺口 P3 观察）；`esc` 从 modal.ts 再导出引入（与 html.ts 等价，P4 约定性）
+- **`trapFocus` 已补全**（P3 修复）：`showRenameDialog` 内 `overlay.focus()` 后调用 `trapFocus(overlay)`，Tab 焦点不再逃逸到背后页面，与 modal 家族其余 4 弹窗行为一致
 
 ## 相关
 

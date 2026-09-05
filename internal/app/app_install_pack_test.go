@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 var b64 = func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
@@ -32,7 +33,7 @@ func packApp(t *testing.T) (*App, string, string) {
 	if err := os.MkdirAll(instVer, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	customDir := filepath.Join(instVer, types.SubDirMap("ysm"))
+	customDir := filepath.Join(instVer, registry.SubDirMap("ysm"))
 	a := repoApp(t, types.AppConfig{
 		FilesRoot:        base,
 		ResourcepackRoot: filepath.Join(base, "resourcepacks"),
@@ -43,7 +44,7 @@ func packApp(t *testing.T) (*App, string, string) {
 		McRoot:           mcRoot,
 	})
 	a.logger = logs.NewLogger(t.TempDir()) // repoApp 不带 logger，推送记账路径需要
-	ysmRoot := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +131,7 @@ func TestImportAndPush_NoMcRoot_Rejected(t *testing.T) {
 	if err == nil || !errors.Is(err, types.ErrMcRootNotSet) {
 		t.Fatalf("应报 ErrMcRootNotSet, got %v", err)
 	}
-	assertFileAbsent(t, filepath.Join(base, types.GroupStorageRoot("ysm"), "m.ysm"))
+	assertFileAbsent(t, filepath.Join(base, registry.GroupStorageRoot("ysm"), "m.ysm"))
 }
 
 func TestImportAndPush_FileExists_NoOverwrite(t *testing.T) {

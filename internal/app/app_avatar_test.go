@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestBatchExtractCreatorAvatars_CachedMime JPEG 头像缓存命中时，
@@ -24,7 +25,7 @@ func TestBatchExtractCreatorAvatars_CachedMime(t *testing.T) {
 
 	// 临时仓库根：ysm/[testuser]model.ysm 走真实扫描
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}

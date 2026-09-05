@@ -15,7 +15,7 @@ import (
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/litematic"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // maxContainerEntrySize 单条目读取上限（64MB，对齐 resourcepack_models.maxPackEntrySize
@@ -101,11 +101,11 @@ func (a *App) ListContainerEntries(path string, exts string) ([]string, error) {
 }
 
 // GetVoxelDataInContainer 读取容器内 gzip NBT 条目并构建体素数据（与 Get*VoxelData
-// 同形状：成功 → *types.LitematicVoxelData；失败 → error）。
+// 同形状：成功 → *registry.LitematicVoxelData；失败 → error）。
 // entry 为容器内条目路径（如 "subdir/a.nbt"）；ext 决定体素构建器分派
 // （.nbt → BuildNbtVoxelDataFromRoot / .schematic → BuildSchematicVoxelDataFromRoot /
 // 其余 → BuildVoxelDataFromRoot，对齐 VOXEL_RPC_BY_EXT 前端映射）。
-func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*types.LitematicVoxelData, error) {
+func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*registry.LitematicVoxelData, error) {
 	if !containerEntrySafe(entry) {
 		log.Printf("[container] GetVoxelDataInContainer 非法条目 %q", entry)
 		return nil, errString("非法条目路径")
@@ -141,7 +141,7 @@ func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*t
 			log.Printf("[container] GetVoxelDataInContainer NBT 解码失败 %s/%s: %v", path, entry, derr)
 			return nil, derr
 		}
-		var vd *types.LitematicVoxelData
+		var vd *registry.LitematicVoxelData
 		switch strings.ToLower(ext) {
 		case ".nbt":
 			vd, derr = litematic.BuildNbtVoxelDataFromRoot(root, a.voxelMaxBlocks())

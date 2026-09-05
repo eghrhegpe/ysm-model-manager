@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // containerFingerprint 单文件指纹：modtime+size 命中即复用旧 detected，避免重开归档
@@ -29,11 +29,11 @@ type containerFingerprint struct {
 type containerTypeCache struct {
 	mu       sync.Mutex
 	items    map[string]containerFingerprint
-	detectFn func(path string, registry *types.ResourceTypeRegistry) string
+	detectFn func(path string, registry *registry.ResourceTypeRegistry) string
 }
 
 // newContainerTypeCache 构造组件；detectFn 负责「缓存未命中时」的真实容器类型探测
-func newContainerTypeCache(detectFn func(path string, registry *types.ResourceTypeRegistry) string) *containerTypeCache {
+func newContainerTypeCache(detectFn func(path string, registry *registry.ResourceTypeRegistry) string) *containerTypeCache {
 	return &containerTypeCache{
 		items:    make(map[string]containerFingerprint),
 		detectFn: detectFn,
@@ -41,12 +41,12 @@ func newContainerTypeCache(detectFn func(path string, registry *types.ResourceTy
 }
 
 // defaultDetectFn 生产默认探测实现（指向 packs，组装点注入 App）
-func defaultDetectFn(path string, registry *types.ResourceTypeRegistry) string {
+func defaultDetectFn(path string, registry *registry.ResourceTypeRegistry) string {
 	return packs.DetectResourceType(path, registry)
 }
 
 // Get 返回容器真实类型（带文件指纹缓存）；文件变化（modtime/size）时重核验
-func (c *containerTypeCache) Get(path string, registry *types.ResourceTypeRegistry) string {
+func (c *containerTypeCache) Get(path string, registry *registry.ResourceTypeRegistry) string {
 	info, err := os.Stat(path)
 	if err != nil {
 		return ""

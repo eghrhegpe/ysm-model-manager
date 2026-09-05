@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/paths"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ========== 安装 ==========
@@ -64,7 +65,7 @@ func (a *App) DetectContainerType(base64Data string) string {
 	}
 	// 兜底：7z 等头部指纹格式、zip64/中央目录超出尾部窗口的 zip → 整包解码，
 	// 上限对齐导入上限（与 ImportModelFile 同口径，不再有探测/导入真空带）
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
+	data, err := fsutil.DecodeBase64Limited(base64Data, registry.MaxImportSize)
 	if err != nil {
 		return "unknown"
 	}
@@ -112,7 +113,7 @@ func (a *App) importModelFileMMD(fileName, subpath, mmdSubdir, base64Data string
 		return fmt.Errorf("请先设置文件存储路径")
 	}
 	// 扩展名校验：按资源类型自声明的 extensions 白名单
-	if allowedExts := types.SupportedExtsForType(rtype); len(allowedExts) > 0 {
+	if allowedExts := registry.SupportedExtsForType(rtype); len(allowedExts) > 0 {
 		ext := strings.ToLower(filepath.Ext(fileName))
 		extSet := make(map[string]bool, len(allowedExts))
 		for _, e := range allowedExts {
@@ -136,20 +137,20 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 		return fmt.Errorf("请先设置文件存储路径")
 	}
 	ext := strings.ToLower(filepath.Ext(fileName))
-	if !types.IsSupportedExt(ext) {
-		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
+	if !registry.IsSupportedExt(ext) {
+		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(registry.AllExts(), " / ")}
 	}
 	// ysm 包内 json 白名单：.json 仅允许 ysm.json 入口清单（与 go/importer + go/scanner 对齐，ADR-038 D2）
-	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
+	if ext == ".json" && !registry.IsYsmEntryJSON(filepath.Base(fileName)) {
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
 	// base64 受限解码：预检+解码+复检统一走 fsutil.DecodeBase64Limited
 	//（原「解码后才查 len(data)」会在 500MB 输入上先白白物化再拒绝，与 importer_file.go 口径不一）
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxImportSize)
+	data, err := fsutil.DecodeBase64Limited(base64Data, registry.MaxImportSize)
 	if errors.Is(err, fsutil.ErrB64TooLarge) {
 		// 文案绑定 MaxImportSizeMB 常量——原硬编码 "500MB"
 		// 与 MaxImportSize 无绑定，改常量后漂移即编译期暴露
-		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", types.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", types.MaxImportSizeMB)}
+		return types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", registry.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", registry.MaxImportSizeMB)}
 	}
 	if err != nil {
 		return types.AppError{Code: types.ErrDecodeFailed, Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
@@ -283,7 +284,7 @@ func (a *App) pushRepoPathToInstance(rtype, instanceName, repoPath string) error
 		ext := strings.ToLower(filepath.Ext(repoPath))
 		// IsYsmEntryJSON 做 baseName 全等比较（原传全路径恒 false 防线失效）——
 		// 与 importModelFileWithSubpath:183 同口径传 filepath.Base
-		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && types.IsYsmEntryJSON(filepath.Base(repoPath))) {
+		if ext == ".pmx" || ext == ".pmd" || (ext == ".json" && registry.IsYsmEntryJSON(filepath.Base(repoPath))) {
 			return types.AppError{Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: repoPath, Reason: "根级目录级安装入口被拒绝", Suggestion: "请将模型放入仓库子文件夹后再推送"}
 		}
 	}

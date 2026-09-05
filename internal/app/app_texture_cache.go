@@ -12,7 +12,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // CachedTextureResult 是 GetCachedTexture 的返回值。
@@ -72,7 +72,7 @@ func readWithHash(path string, hash string) (CachedTextureResult, error) {
 // SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。
 // hash 是 GetCachedTexture 返回的 Hash 值，data 是 KTX2 字节的 base64。
 func (a *App) SaveCachedTexture(hash string, b64Data string) error {
-	data, err := fsutil.DecodeBase64Limited(b64Data, types.MaxReadLimit)
+	data, err := fsutil.DecodeBase64Limited(b64Data, registry.MaxReadLimit)
 	if err != nil {
 		return err
 	}

@@ -20,10 +20,11 @@ import (
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/threejs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 )
 
-// 受限整读上限共用 types.MaxReadLimit（50MB 口径，防 YSMParser 被篡改输出 GB 级 JSON 撑爆内存）
+// 受限整读上限共用 registry.MaxReadLimit（50MB 口径，防 YSMParser 被篡改输出 GB 级 JSON 撑爆内存）
 
 // readLimitedFileBedrock 受限整读 JSON 文件（仅用于 parseBedrockGeometry 输入）
 // 返回 nil 表示读失败或超限（对齐 fileops readLimitedFile 风格）
@@ -32,7 +33,7 @@ func readLimitedFileBedrock(path string) []byte {
 	if err != nil {
 		return nil
 	}
-	return fsutil.ReadLimitedEntry(f, types.MaxReadLimit)
+	return fsutil.ReadLimitedEntry(f, registry.MaxReadLimit)
 }
 
 func (a *App) AnalyzeYSMModel(path string) ysm.YSMModelMeta {
@@ -59,7 +60,7 @@ func (a *App) ExtractYSMHeader(path string) ysm.YSMHeader {
 
 func (a *App) ExtractYSMHeaderFromBase64(base64Data string) ysm.YSMHeader {
 	// base64 预大小守卫：与 DecodeBase64Limited 统一口径，防前端超大字符串解码内存尖刺
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)
+	data, err := fsutil.DecodeBase64Limited(base64Data, registry.MaxReadLimit)
 	if err != nil {
 		return ysm.YSMHeader{}
 	}
@@ -200,7 +201,7 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 
 func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	// 剥禁用后缀（.ban/.disabled），与 scanner 口径一致
-	modelPath = types.StripDisableSuffix(modelPath)
+	modelPath = registry.StripDisableSuffix(modelPath)
 	// 路径守卫：AnalyzeBedrockModel 是 Wails binding（public method），
 	// 前端可传任意路径——原实现无校验，可读取系统任意文件（如 /etc/passwd）。
 	// 与 ReadFileBytes 对齐 isPathInRootOrSelf（扫描能列出的文件就能分析）。
@@ -264,7 +265,7 @@ func (a *App) AnalyzeBedrockModelEntry(modelPath, subPath string) types.BedrockM
 	if subPath == "" {
 		return types.BedrockModel{}
 	}
-	modelPath = types.StripDisableSuffix(modelPath)
+	modelPath = registry.StripDisableSuffix(modelPath)
 	if !a.isPathInRootOrSelf(modelPath) {
 		return types.BedrockModel{}
 	}
@@ -310,7 +311,7 @@ func (a *App) AnalyzeBedrockModelEntry(modelPath, subPath string) types.BedrockM
 
 func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 	// 剥禁用后缀（.ban/.disabled），与 scanner 口径一致
-	modelPath = types.StripDisableSuffix(modelPath)
+	modelPath = registry.StripDisableSuffix(modelPath)
 	// 路径守卫：GetModel3DSpec 是 Wails binding，原实现无校验可读取系统任意文件。
 	// 与 ReadFileBytes/AnalyzeBedrockModel 对齐 isPathInRootOrSelf。
 	if !a.isPathInRootOrSelf(modelPath) {
@@ -435,7 +436,7 @@ func (a *App) collect3DComponents(modelPath, ext string) ([]types.BedrockModel, 
 		}
 	case ".json":
 		// 解压目录的 ysm.json 路径
-		if types.IsYsmEntryJSON(filepath.Base(modelPath)) {
+		if registry.IsYsmEntryJSON(filepath.Base(modelPath)) {
 			return ysm.FindComponentsInExtractedYSM(modelPath)
 		}
 	}
@@ -457,7 +458,7 @@ func (a *App) SaveScreenshotFile(filename string, base64Data string) error {
 	}
 	dest := filepath.Join(tmpDir, clean)
 	// base64 预大小守卫：PNG 截图正常量级为 MB 级，50MB 上限拦截异常输入的解码内存尖刺
-	data, err := fsutil.DecodeBase64Limited(base64Data, types.MaxReadLimit)
+	data, err := fsutil.DecodeBase64Limited(base64Data, registry.MaxReadLimit)
 	if err != nil {
 		return err
 	}

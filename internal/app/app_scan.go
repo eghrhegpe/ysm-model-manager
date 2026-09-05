@@ -18,6 +18,7 @@ import (
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	typereg "ysm-model-manager/go/types/registry"
 )
 
 // ========== 导出单模型骨骼结构 ==========
@@ -257,7 +258,7 @@ func (a *App) ScanModelEntriesWithLabel(dir string, label string) []types.ModelE
 //
 // subtype 参数：按子类型隔离扩展名（如 EntityPlayer → 只有 .pmx/.pmd/.zip，不含 .vmd/.vpd）。
 // subtype 为空时回退到父类型扩展名（壳类型场景）。
-// 过滤逻辑：取 types.SupportedExtsForSubtype(rtype, subtype) 白名单，扩展名不匹配的条目直接丢弃。
+// 过滤逻辑：取 typereg.SupportedExtsForSubtype(rtype, subtype) 白名单，扩展名不匹配的条目直接丢弃。
 // rtype 为空或注册表无匹配时退化为 ScanModelEntriesWithLabel 行为（不过滤）。
 // 路径守卫与 ScanModelEntries/ScanModelEntriesWithLabel 完全一致。
 func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string, label string) []types.ModelEntry {
@@ -267,12 +268,12 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 	}
 	entries, hit := a.scanModelEntriesWithHit(dir)
 	// 按 rtype（+subtype）扩展名白名单过滤，并填充 Type 字段
-	if allowedExts := types.SupportedExtsForSubtype(rtype, subtype); len(allowedExts) > 0 {
+	if allowedExts := typereg.SupportedExtsForSubtype(rtype, subtype); len(allowedExts) > 0 {
 		extSet := make(map[string]bool, len(allowedExts))
 		for _, e := range allowedExts {
 			extSet[strings.ToLower(e)] = true
 		}
-		registry := types.LoadRegistry()
+		registry := typereg.LoadRegistry()
 		filtered := make([]types.ModelEntry, 0, len(entries))
 		for _, e := range entries {
 			// 与 scanner 同口径：文件级 .disabled/.ban 已由 scanner 恢复为原扩展名
@@ -290,7 +291,7 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 			// 已支持剥离禁用后缀判定真实类型（c08c62bc P3 回归——原跳过指纹导致
 			// 禁用容器泄漏进所有含 .zip 的 tab 标 Type=rtype）。
 			// 非容器扩展名维持扩展名白名单直接收的旧行为。
-			if types.IsContainerExt(ext) {
+			if typereg.IsContainerExt(ext) {
 				if detected := a.containerCache.Get(e.Path, registry); detected != rtype {
 					continue
 				}
@@ -348,7 +349,7 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 func (a *App) ScanLocalAuthors(rtype string) []types.WorkshopCreator {
 	roots := map[string]string{}
 	// ADR-064 锚定：遍历注册表而非硬编码 6 类型数组（新增类型自动纳入作者扫描）
-	for _, rt := range types.LoadRegistry().ResourceTypes {
+	for _, rt := range typereg.LoadRegistry().ResourceTypes {
 		if rtype != "" && rt.ID != rtype {
 			continue
 		}

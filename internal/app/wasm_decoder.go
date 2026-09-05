@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -83,7 +84,7 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 	var merged *types.BedrockModel
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
-		if !strings.HasSuffix(low, ".json") || types.IsYsmEntryJSON(filepath.Base(low)) {
+		if !strings.HasSuffix(low, ".json") || registry.IsYsmEntryJSON(filepath.Base(low)) {
 			continue
 		}
 		data := f.Data
@@ -120,7 +121,7 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 	var ysmJSON []byte
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
-		if types.IsYsmEntryJSON(filepath.Base(low)) {
+		if registry.IsYsmEntryJSON(filepath.Base(low)) {
 			ysmJSON = f.Data // 保留 ysm.json 用于纹理声明序对齐
 			continue
 		}
@@ -175,7 +176,7 @@ func decodeYSMComponentsViaNodeJS(ysmData []byte) ([]types.BedrockModel, []strin
 	var modelFiles []mf
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
-		if !strings.HasSuffix(low, ".json") || types.IsYsmEntryJSON(filepath.Base(low)) {
+		if !strings.HasSuffix(low, ".json") || registry.IsYsmEntryJSON(filepath.Base(low)) {
 			continue
 		}
 		if g := geometry.ParseBedrockGeometry(f.Data); g != nil {

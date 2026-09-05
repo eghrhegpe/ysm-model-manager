@@ -17,6 +17,7 @@ import (
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // ========== 目录操作 ==========
@@ -174,7 +175,7 @@ const neutralPageType = "ysm"
 // 旧路（含 ysm.json 入口优先级与兜底），最常用入口不静默改数据落点。
 func (a *App) ImportModelFolderTo(folderName, subpath, rtype string, files []types.ImportFileItem) error {
 	rtype = strings.TrimSpace(rtype)
-	if rtype == "" || types.RegistryType(rtype) == nil {
+	if rtype == "" || registry.RegistryType(rtype) == nil {
 		return a.ImportModelFolder(folderName, subpath, files)
 	}
 	if mismatch := inferExplicitFolderType(files); mismatch != "" && mismatch != rtype {
@@ -209,7 +210,7 @@ func inferExplicitFolderType(files []types.ImportFileItem) string {
 		if ext == ".json" {
 			continue // json 不参与明确判定（ysm.json 入口语义属 inferFolderType 职责）
 		}
-		rtypes := types.ExtBelongsTo(ext)
+		rtypes := registry.ExtBelongsTo(ext)
 		if len(rtypes) == 1 {
 			return rtypes[0]
 		}
@@ -227,7 +228,7 @@ func inferFolderType(files []types.ImportFileItem) string {
 	// 第一遍：ysm.json 是 YSM 解压目录入口，任意位置出现即优先
 	for _, f := range files {
 		rel := filepath.Clean(filepath.FromSlash(strings.TrimSpace(f.RelPath)))
-		if types.IsYsmEntryJSON(filepath.Base(rel)) {
+		if registry.IsYsmEntryJSON(filepath.Base(rel)) {
 			return neutralPageType
 		}
 	}
@@ -238,7 +239,7 @@ func inferFolderType(files []types.ImportFileItem) string {
 		if ext == ".json" {
 			continue // 其他 json 不参与类型判定
 		}
-		rtypes := types.ExtBelongsTo(ext)
+		rtypes := registry.ExtBelongsTo(ext)
 		if len(rtypes) == 1 {
 			return rtypes[0]
 		}
@@ -322,7 +323,7 @@ func (a *App) OpenInstanceFolder(instDir, rtype, subdir string) error {
 // vanilla: instDir/instanceDir；Prism: instDir/instanceDir
 // 未知类型返回 instDir。
 func resolveInstDirTarget(instDir, rtype string) string {
-	rt := types.RegistryType(rtype)
+	rt := registry.RegistryType(rtype)
 	if rt == nil {
 		return instDir
 	}

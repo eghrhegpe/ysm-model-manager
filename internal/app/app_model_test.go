@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // Build3DSpecFromGeometryJSON：Android 等无 Node 环境的 .ysm 3D 兜底通道
@@ -68,7 +69,7 @@ func TestReadFileBytes_MultiRootGuard(t *testing.T) {
 		t.Fatalf("VrcRoot 内文件应可读，got %q", got)
 	}
 	// 2. ysm 根内文件仍可读（回归：既有行为不破坏）
-	ysmRoot := filepath.Join(cfg.FilesRoot, types.GroupStorageRoot("ysm"))
+	ysmRoot := filepath.Join(cfg.FilesRoot, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func folderItem(rel string) types.ImportFileItem {
@@ -25,11 +26,11 @@ func TestImportModelFolderTo_ContextTypeWins(t *testing.T) {
 	if err := a.ImportModelFolderTo("多合一女仆包", "", "maid-model", files); err != nil {
 		t.Fatalf("导入失败: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("maid-model"), "多合一女仆包")
+	want := filepath.Join(base, registry.GroupStorageRoot("maid-model"), "多合一女仆包")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("zip 歧义文件夹应落在上下文类型根 %s: %v", want, err)
 	}
-	legacy := filepath.Join(base, types.GroupStorageRoot("ysm"), "多合一女仆包")
+	legacy := filepath.Join(base, registry.GroupStorageRoot("ysm"), "多合一女仆包")
 	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
 		t.Errorf("不应再回退落 ysm 根 %s", legacy)
 	}
@@ -42,7 +43,7 @@ func TestImportModelFolderTo_EmptyContextFallsBackInference(t *testing.T) {
 	if err := a.ImportModelFolderTo("MMD模型", "", "", files); err != nil {
 		t.Fatalf("导入失败: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("litematic"), "MMD模型")
+	want := filepath.Join(base, registry.GroupStorageRoot("litematic"), "MMD模型")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("空上下文应走内容推断落 litematic 根 %s: %v", want, err)
 	}
@@ -55,7 +56,7 @@ func TestImportModelFolderTo_UnknownContextFallsBackInference(t *testing.T) {
 	if err := a.ImportModelFolderTo("某资源包", "", "no-such-type", files); err != nil {
 		t.Fatalf("未注册上下文类型应回退而非报错: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("ysm"), "某资源包")
+	want := filepath.Join(base, registry.GroupStorageRoot("ysm"), "某资源包")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("未注册类型应回退推断落 ysm 根 %s: %v", want, err)
 	}
@@ -69,7 +70,7 @@ func TestImportModelFolderTo_MismatchWarnsButImports(t *testing.T) {
 	if err := a.ImportModelFolderTo("错位模型", "", "maid-model", files); err != nil {
 		t.Fatalf("内容错位不应阻断导入: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("maid-model"), "错位模型")
+	want := filepath.Join(base, registry.GroupStorageRoot("maid-model"), "错位模型")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("错位时仍应落在上下文类型根 %s: %v", want, err)
 	}
@@ -84,11 +85,11 @@ func TestImportModelFolderTo_NeutralContextYieldsToInference(t *testing.T) {
 	if err := a.ImportModelFolderTo("MMD模型", "", "ysm", files); err != nil {
 		t.Fatalf("中性上下文让位推断导入失败: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("litematic"), "MMD模型")
+	want := filepath.Join(base, registry.GroupStorageRoot("litematic"), "MMD模型")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("默认页应让位内容推断落 litematic 根 %s: %v", want, err)
 	}
-	neutral := filepath.Join(base, types.GroupStorageRoot("ysm"), "MMD模型")
+	neutral := filepath.Join(base, registry.GroupStorageRoot("ysm"), "MMD模型")
 	if _, err := os.Stat(neutral); !os.IsNotExist(err) {
 		t.Errorf("不应按中性上下文落 ysm 根 %s", neutral)
 	}
@@ -102,7 +103,7 @@ func TestImportModelFolderTo_NeutralContextAmbiguousStaysFallback(t *testing.T) 
 	if err := a.ImportModelFolderTo("某资源包", "", "ysm", files); err != nil {
 		t.Fatalf("中性上下文歧义导入失败: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("ysm"), "某资源包")
+	want := filepath.Join(base, registry.GroupStorageRoot("ysm"), "某资源包")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("歧义内容在默认页应落 ysm 兜底根 %s: %v", want, err)
 	}
@@ -120,11 +121,11 @@ func TestImportModelFolderTo_NeutralContextYsmJsonPriority(t *testing.T) {
 	if err := a.ImportModelFolderTo("YSM包", "", "ysm", files); err != nil {
 		t.Fatalf("中性上下文 ysm.json 优先导入失败: %v", err)
 	}
-	want := filepath.Join(base, types.GroupStorageRoot("ysm"), "YSM包")
+	want := filepath.Join(base, registry.GroupStorageRoot("ysm"), "YSM包")
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("ysm.json 非首位仍应落 ysm 根 %s: %v", want, err)
 	}
-	litematic := filepath.Join(base, types.GroupStorageRoot("litematic"), "YSM包")
+	litematic := filepath.Join(base, registry.GroupStorageRoot("litematic"), "YSM包")
 	if _, err := os.Stat(litematic); !os.IsNotExist(err) {
 		t.Errorf("不应按 litematic 单归属落位 %s", litematic)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // installApp 构造注入 configCache + logger 的 App（AddOpLog 依赖 logger）
@@ -103,7 +104,7 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 
 	t.Run("未配置根不参与（空跳过）", func(t *testing.T) {
 		// ShaderpackRoot 未配置 → 不参与候选；路径落到 FilesRoot 内 → 命中 ysm 子目录
-		ysm := filepath.Join(base, types.GroupStorageRoot("ysm"))
+		ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if err := os.MkdirAll(ysm, 0o755); err != nil {
 			t.Fatal(err)
 		}

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestToggleEnable(t *testing.T) {
@@ -25,7 +26,7 @@ func TestToggleEnable(t *testing.T) {
 	a := repoApp(t, cfg)
 
 	// GetRepoRoot("ysm") = FilesRoot/{GroupStorageRoot("ysm")}（ADR-092 两层路由）
-	ysmRoot := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}

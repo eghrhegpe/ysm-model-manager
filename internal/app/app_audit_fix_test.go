@@ -14,6 +14,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -21,7 +22,7 @@ import (
 // 返回零值 header 而非解码后才发现（内存尖刺回归线）。
 func TestExtractYSMHeaderFromBase64_Oversized(t *testing.T) {
 	a := &App{}
-	big := strings.Repeat("a", types.MaxReadLimit*2) // 解码后 > MaxReadLimit，预检必拒
+	big := strings.Repeat("a", registry.MaxReadLimit*2) // 解码后 > MaxReadLimit，预检必拒
 	if got := a.ExtractYSMHeaderFromBase64(big); got != (ysm.YSMHeader{}) {
 		t.Fatal("超大输入应返回零值 header")
 	}
@@ -30,7 +31,7 @@ func TestExtractYSMHeaderFromBase64_Oversized(t *testing.T) {
 // TestSaveScreenshotFile_Oversized：截图绑定同样受预大小守卫。
 func TestSaveScreenshotFile_Oversized(t *testing.T) {
 	a := &App{}
-	big := strings.Repeat("a", types.MaxReadLimit*2)
+	big := strings.Repeat("a", registry.MaxReadLimit*2)
 	if err := a.SaveScreenshotFile("shot.png", big); !errors.Is(err, fsutil.ErrB64TooLarge) {
 		t.Fatalf("超大输入应返回 ErrB64TooLarge, got %v", err)
 	}

@@ -17,6 +17,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
@@ -278,7 +279,7 @@ func (a *App) LoadAppConfig() types.AppConfig {
 // ========== 自动更新 ==========
 // GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用）
 func (a *App) GetSubDirMap() map[string]string {
-	return types.SubDirAll()
+	return registry.SubDirAll()
 }
 
 func (a *App) CurrentVersion() string { return version.Version }
@@ -561,7 +562,7 @@ func migrateLegacyConfigFields(cfg *types.AppConfig) {
 		cfg.CustomRoots = make(map[string]string)
 	}
 
-	registry := types.LoadRegistry()
+	registry := registry.LoadRegistry()
 	for _, rt := range registry.ResourceTypes {
 		if rt.ConfigField == "" {
 			continue

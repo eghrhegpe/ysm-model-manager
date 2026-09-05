@@ -12,7 +12,7 @@ import (
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI
@@ -40,8 +40,8 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	seenMod := map[string]int64{}
 	for _, e := range entries {
 		name := e.Name
-		if types.IsDisableSuffix(name) {
-			name = types.StripDisableSuffix(name)
+		if registry.IsDisableSuffix(name) {
+			name = registry.StripDisableSuffix(name)
 		}
 		if strings.HasPrefix(name, "[") {
 			if idx := strings.Index(name, "]"); idx > 0 {
@@ -97,8 +97,8 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	var foundPath string
 	for _, e := range entries {
 		name := e.Name
-		if types.IsDisableSuffix(name) {
-			name = types.StripDisableSuffix(name)
+		if registry.IsDisableSuffix(name) {
+			name = registry.StripDisableSuffix(name)
 		}
 		if strings.HasPrefix(name, "[") {
 			if idx := strings.Index(name, "]"); idx > 0 {

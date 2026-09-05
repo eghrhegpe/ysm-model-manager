@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // fakePathMgr 可注入的 pathManager（测 GetRepoRoot 平台默认回退，不依赖真实平台）
@@ -88,7 +89,7 @@ func TestGetRepoRoot_FallbackChain(t *testing.T) {
 			t.Fatal(err)
 		}
 		// ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
-		want := filepath.Join(base, types.GroupStorageRoot("ysm"))
+		want := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if got != want {
 			t.Errorf("FilesRoot+子目录, got %q want %q", got, want)
 		}
@@ -132,7 +133,7 @@ func TestGetRepoRoot_PlatformDefault(t *testing.T) {
 			t.Fatal(err)
 		}
 		// ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
-		want := filepath.Join(root, types.GroupStorageRoot("ysm"))
+		want := filepath.Join(root, registry.GroupStorageRoot("ysm"))
 		if got != want {
 			t.Errorf("平台默认回退+子目录, got %q want %q", got, want)
 		}
@@ -165,7 +166,7 @@ func TestFilesRootForSync(t *testing.T) {
 			t.Fatal(err)
 		}
 		// 用生产函数派生期望值（而非手写快照），注册表改了测试自动跟
-		want := filepath.Join(base, types.GroupStorageRoot("EntityPlayer"))
+		want := filepath.Join(base, registry.GroupStorageRoot("EntityPlayer"))
 		if got != want {
 			t.Errorf("filesRootForSync(EntityPlayer) 应为 group/storageSubDir, got %q want %q", got, want)
 		}
@@ -194,7 +195,7 @@ func TestFilesRootForSync(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := filepath.Join(base, types.GroupStorageRoot("ysm"))
+		want := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if got != want {
 			t.Errorf("ysm 应走 GetRepoRoot, got %q want %q", got, want)
 		}

@@ -14,6 +14,7 @@ import (
 
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // scanApp 构造注入 configCache + logger 的 App（AddOpLog 依赖 logger）
@@ -28,7 +29,7 @@ func TestIsPathInRoot_Boundaries(t *testing.T) {
 	base := t.TempDir()
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	// ysm 子目录：FilesRoot/ysm
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,7 @@ func TestIsPathInRoot_NoRootConfigured(t *testing.T) {
 
 func TestListFileNames_Guard(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +121,7 @@ func TestListFileNames_Guard(t *testing.T) {
 
 func TestCheckFileExists_Guard(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +150,7 @@ func TestCheckFileExists_Guard(t *testing.T) {
 
 func TestScanModelEntries_CacheHit(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +176,7 @@ func TestScanModelEntries_SiblingTypeRootAllowed(t *testing.T) {
 	// （FilesRoot 公共祖先），而非仅 ysmRoot——resourcepack 等兄弟类型根相对
 	// ysmRoot 是 ../，旧守卫会误拒（got 0 回归）
 	base := t.TempDir()
-	rpRoot := filepath.Join(base, types.GroupStorageRoot("resourcepack"))
+	rpRoot := filepath.Join(base, registry.GroupStorageRoot("resourcepack"))
 	if err := os.MkdirAll(rpRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +198,7 @@ func TestScanModelEntries_SiblingTypeRootAllowed(t *testing.T) {
 func TestScanModelEntriesWithLabel_Guard(t *testing.T) {
 	// code_review 修复：WithLabel 是前端主扫描入口，须与 ScanModelEntries 共用守卫
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +217,7 @@ func TestScanModelEntriesWithLabel_Guard(t *testing.T) {
 
 func TestScanModelEntriesWithHit_CacheSemantics(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +246,7 @@ func TestScanModelEntriesWithHit_CacheSemantics(t *testing.T) {
 
 func TestListModelAuthors_PrefixExtraction(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -282,8 +283,8 @@ func TestListModelAuthors_PrefixExtraction(t *testing.T) {
 // 语义与 isPathInRoot 的关键差异：放行根本身（rel==.）、支持兄弟类型根（resourcepack 等）。
 func TestIsPathInRootOrSelf_Boundaries(t *testing.T) {
 	base := t.TempDir()
-	ysmRoot := filepath.Join(base, types.GroupStorageRoot("ysm"))
-	rpRoot := filepath.Join(base, types.GroupStorageRoot("resourcepack"))
+	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
+	rpRoot := filepath.Join(base, registry.GroupStorageRoot("resourcepack"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -331,7 +332,7 @@ func TestIsPathInRootOrSelf_NoRootConfigured(t *testing.T) {
 // isPathInRootOrSelf 放行根本身（这是两函数语义差异的核心，直接影响整仓扫描合法与否）
 func TestIsPathInRootOrSelf_RootItselfAllowed(t *testing.T) {
 	base := t.TempDir()
-	root := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +362,7 @@ func TestInferFolderType_MMD(t *testing.T) {
 		t.Errorf("inferFolderType(MMD) 仍返回壳类型 'mmd-skin'，应该返回具体子类型")
 	}
 	// 验证返回值是有效的资源类型
-	if types.RegistryType(got) == nil {
+	if registry.RegistryType(got) == nil {
 		t.Errorf("inferFolderType(MMD) 返回无效类型: %q", got)
 	}
 }
@@ -491,7 +492,7 @@ func TestResolveInstDirTarget_YsmConfigTreeCustom(t *testing.T) {
 func TestResolveInstDirTarget_MaidModelStandard(t *testing.T) {
 	// maid-model 的 instanceDir 是 tlm_custom_pack
 	// 简化后的逻辑直接返回 instanceDir 拼接路径
-	if types.RegistryType("maid-model") == nil {
+	if registry.RegistryType("maid-model") == nil {
 		t.Skip("注册表暂无 maid-model 条目，跳过")
 	}
 	instDir := t.TempDir()
@@ -524,7 +525,7 @@ func TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix(t *testing.T) {
 		"DefaultAnim":  "3d-skin/DefaultAnim",
 	}
 	for id, wantDir := range mustHaveSubdir {
-		rt := types.RegistryType(id)
+		rt := registry.RegistryType(id)
 		if rt == nil {
 			t.Fatalf("注册表缺失 %s 条目（测试前提被破坏）", id)
 		}
@@ -539,7 +540,7 @@ func TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix(t *testing.T) {
 	}
 	// 游戏未生成独立子目录的类型：instanceDir 允许为 "3d-skin" 父目录（兜底不报错）
 	for _, id := range []string{"StageAnim", "mmd-shader"} {
-		rt := types.RegistryType(id)
+		rt := registry.RegistryType(id)
 		if rt == nil {
 			t.Skipf("注册表暂无 %s 条目，跳过", id)
 		}

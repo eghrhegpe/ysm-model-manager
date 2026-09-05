@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -44,11 +45,11 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 		return 0, fmt.Errorf("未找到整合包: %s", insName)
 	}
 	total := 0
-	for _, d := range types.AllSubDirs() {
+	for _, d := range registry.AllSubDirs() {
 		if rtype != "" && d.RType != rtype {
 			continue
 		}
-		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		dir := registry.FindInstDir(target.VersionDir, d.SubDir, d.RType)
 		filesRoot, _ := a.GetRepoRoot(d.RType)
 		if filesRoot == "" {
 			continue
@@ -90,11 +91,11 @@ func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 
 	// 先统计数量
 	scanned := 0
-	for _, d := range types.AllSubDirs() {
+	for _, d := range registry.AllSubDirs() {
 		if rtype != "" && d.RType != rtype {
 			continue
 		}
-		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		dir := registry.FindInstDir(target.VersionDir, d.SubDir, d.RType)
 		scanned += a.countInstanceDir(dir)
 	}
 	if scanned == 0 {
@@ -102,11 +103,11 @@ func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	}
 	// 实际删除——每种类型传入对应的仓库根目录用于比对
 	removed := 0
-	for _, d := range types.AllSubDirs() {
+	for _, d := range registry.AllSubDirs() {
 		if rtype != "" && d.RType != rtype {
 			continue
 		}
-		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		dir := registry.FindInstDir(target.VersionDir, d.SubDir, d.RType)
 		filesRoot, _ := a.GetRepoRoot(d.RType)
 		removed += a.clearInstanceDir(dir, d.RType, filesRoot)
 	}
@@ -147,7 +148,7 @@ func (a *App) clearInstanceDir(dir string, rtype string, filesRoot string) int {
 func (a *App) GetInstanceStatus(mcRoot, repoDir, rtype string) []types.InstanceStatus {
 	// 扫描日志带类型标签，与前端术语一致
 	label := "模型"
-	if rt := types.RegistryType(rtype); rt != nil {
+	if rt := registry.RegistryType(rtype); rt != nil {
 		label = rt.Name
 	}
 	scanFn := func(dir string) []types.ModelEntry { return a.ScanModelEntriesWithLabel(dir, label) }
@@ -163,12 +164,12 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 
 	// 扫描日志带类型标签，与前端术语一致
 	label := ""
-	if rt := types.RegistryType(rtype); rt != nil {
+	if rt := registry.RegistryType(rtype); rt != nil {
 		label = rt.Name
 	}
 
 	// 按资源类型扩展名过滤的 scanFn：仓库侧只收集本类型文件
-	typeExts := types.SupportedExtsForType(rtype)
+	typeExts := registry.SupportedExtsForType(rtype)
 	extSet := make(map[string]bool, len(typeExts))
 	for _, e := range typeExts {
 		extSet[strings.ToLower(e)] = true
@@ -257,10 +258,10 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
 	}
 	total := 0
-	for _, d := range types.AllSubDirs() {
+	for _, d := range registry.AllSubDirs() {
 		// ADR-064 锚定：统一走 FindInstDir（标准目录无该类型文件时兜底扫描），
 		// 否则 Sable-Schematics 等非标准目录里的蓝图不会参与重链接
-		instanceDir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		instanceDir := registry.FindInstDir(target.VersionDir, d.SubDir, d.RType)
 		if _, err := os.Stat(instanceDir); os.IsNotExist(err) {
 			continue
 		}
@@ -300,14 +301,14 @@ func (a *App) SyncResources(rtype, instanceName string) (types.ResourceSyncResul
 	var targetDir string
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			subDir := types.SubDirMap(rtype)
+			subDir := registry.SubDirMap(rtype)
 			if subDir == "" {
 				return empty, fmt.Errorf("未知资源类型: %s", rtype)
 			}
 			// 与展示层同口径：FindInstDir 标准目录无该类型文件时兜底扫描
 			// （Sable-Schematics 等非标准目录；原直拼 schematics 与此 binding
 			// 的展示结果不一致）
-			targetDir = types.FindInstDir(ins.VersionDir, subDir, rtype)
+			targetDir = registry.FindInstDir(ins.VersionDir, subDir, rtype)
 			break
 		}
 	}
@@ -368,18 +369,18 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 
 // findInstanceDir 解析整合包实例的资源类型子目录（Push/Pull 共用）
 // ADR-064 审核修复：原 filepath.Join 直拼标准子目录，与展示层 BuildSyncItems
-// 的 types.FindInstDir（标准目录无该类型文件时兜底扫描）口径不一致——
+// 的 registry.FindInstDir（标准目录无该类型文件时兜底扫描）口径不一致——
 // Sable-Schematics 场景下展示显示 Sable-Schematics 条目、操作却指向空 schematics，
 // mapSrcToGlobal 报"路径不在目标目录内"。统一走 FindInstDir。
 func (a *App) findInstanceDir(rtype, instanceName, mcRoot string) (string, error) {
 	instances := a.ListVersionInstances(mcRoot)
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			subDir := types.SubDirMap(rtype)
+			subDir := registry.SubDirMap(rtype)
 			if subDir == "" {
 				return "", fmt.Errorf("未知资源类型: %s", rtype)
 			}
-			return types.FindInstDir(ins.VersionDir, subDir, rtype), nil
+			return registry.FindInstDir(ins.VersionDir, subDir, rtype), nil
 		}
 	}
 	return "", fmt.Errorf("未找到整合包: %s", instanceName)
@@ -453,7 +454,7 @@ func globalRootSuspicious(dir string) bool {
 
 // GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
 //   - global：仓库侧基准目录（GetRepoRoot 结果）
-//   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
+//   - instance：实例侧实际扫描目录（registry.FindInstDir 结果，可能因兜底命中非标准目录）
 //   - warningCode：仓库侧目录疑似过宽时的结构化告警码（"scan_dir_wide"，空串=正常）
 //   - warningParams：告警参数（label=类型名、dir=过宽目录、subDir=建议专属子目录）；
 //     显示文案由前端按 i18n 组装，后端不吐拼好的中文（避免 en/ja 用户看到中文警告）
@@ -470,7 +471,7 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, e
 	warningCode := ""
 	warningParams := map[string]string{}
 	if globalRootSuspicious(globalDir) {
-		rt := types.RegistryType(rtype)
+		rt := registry.RegistryType(rtype)
 		label := rtype
 		if rt != nil {
 			label = rt.Name
@@ -479,14 +480,14 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, e
 		warningParams = map[string]string{
 			"label":  label,
 			"dir":    globalDir,
-			"subDir": types.StorageSubDir(rtype),
+			"subDir": registry.StorageSubDir(rtype),
 		}
 	}
 	instanceDir := ""
 	for _, ins := range a.ListVersionInstances(cfg.McRoot) {
 		if ins.Name == instanceName {
-			if subDir := types.SubDirMap(rtype); subDir != "" {
-				instanceDir = types.FindInstDir(ins.VersionDir, subDir, rtype)
+			if subDir := registry.SubDirMap(rtype); subDir != "" {
+				instanceDir = registry.FindInstDir(ins.VersionDir, subDir, rtype)
 			}
 			break
 		}
@@ -508,8 +509,8 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 		return nil, fmt.Errorf("未配置游戏根目录")
 	}
 
-	// 加载资源类型注册表（单一事实源：types.LoadRegistry，BuildSyncItems 直接消费 []types.ResourceType）
-	registry := types.LoadRegistry()
+	// 加载资源类型注册表（单一事实源：registry.LoadRegistry，BuildSyncItems 直接消费 []registry.ResourceType）
+	registry := registry.LoadRegistry()
 	if registry == nil || len(registry.ResourceTypes) == 0 {
 		return nil, fmt.Errorf("资源类型注册表为空")
 	}

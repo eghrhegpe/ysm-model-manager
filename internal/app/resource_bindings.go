@@ -20,11 +20,12 @@ import (
 	"ysm-model-manager/go/repoaudit"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
+	typereg "ysm-model-manager/go/types/registry"
 )
 
-// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types.LoadRegistry）
-func (a *App) LoadResourceTypes() (*types.ResourceTypeRegistry, error) {
-	reg := types.LoadRegistry()
+// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/typereg.LoadRegistry）
+func (a *App) LoadResourceTypes() (*typereg.ResourceTypeRegistry, error) {
+	reg := typereg.LoadRegistry()
 	if reg == nil || len(reg.ResourceTypes) == 0 {
 		return nil, fmt.Errorf("资源类型注册表为空")
 	}
@@ -64,7 +65,7 @@ func (a *App) ReadShaderpackLang(path string) (types.ShaderpackLang, error) {
 // ===== Litematica 蓝图/投影绑定 =====
 
 // buildVoxelData 调用体素构建函数并返回 typed 结果（ADR-143 P1：去 string-JSON）。
-func buildVoxelData(tag, fnName, path string, buildFn func(string, int) (*types.LitematicVoxelData, error), maxBlocks int) (*types.LitematicVoxelData, error) {
+func buildVoxelData(tag, fnName, path string, buildFn func(string, int) (*typereg.LitematicVoxelData, error), maxBlocks int) (*typereg.LitematicVoxelData, error) {
 	data, err := buildFn(path, maxBlocks)
 	if err != nil {
 		log.Printf("[%s] %s 失败 %s: %v", tag, fnName, path, err)
@@ -83,12 +84,12 @@ func (a *App) voxelMaxBlocks() int {
 }
 
 // GetNbtVoxelData 读取 .nbt 结构文件体素数据
-func (a *App) GetNbtVoxelData(path string) (*types.LitematicVoxelData, error) {
+func (a *App) GetNbtVoxelData(path string) (*typereg.LitematicVoxelData, error) {
 	return buildVoxelData("nbt", "BuildNbtVoxelData", path, litematic.BuildNbtVoxelData, a.voxelMaxBlocks())
 }
 
 // GetSchematicVoxelData 读取 .schematic 文件体素数据
-func (a *App) GetSchematicVoxelData(path string) (*types.LitematicVoxelData, error) {
+func (a *App) GetSchematicVoxelData(path string) (*typereg.LitematicVoxelData, error) {
 	return buildVoxelData("schematic", "BuildSchematicVoxelData", path, litematic.BuildSchematicVoxelData, a.voxelMaxBlocks())
 }
 
@@ -111,7 +112,7 @@ func (a *App) ReadNbtStructure(path string) (map[string]interface{}, error) {
 }
 
 // ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
-func (a *App) ReadLitematicMeta(path string) (*types.LitematicMeta, error) {
+func (a *App) ReadLitematicMeta(path string) (*typereg.LitematicMeta, error) {
 	meta, err := litematic.ParseMeta(path)
 	if err != nil {
 		log.Printf("[litematic] ParseMeta 失败 %s: %v", path, err)
@@ -121,15 +122,15 @@ func (a *App) ReadLitematicMeta(path string) (*types.LitematicMeta, error) {
 }
 
 // GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
-func (a *App) GetLitematicVoxelData(path string) (*types.LitematicVoxelData, error) {
+func (a *App) GetLitematicVoxelData(path string) (*typereg.LitematicVoxelData, error) {
 	return buildVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
 }
 
 // DetectResourceType 检测指定文件的资源类型
 func (a *App) DetectResourceType(path string) string {
 	// 单源化：registry 直接来自 go/types 内嵌的 resource_types.json
-	// （internal/app 复用 types.BundledRegistryJSON 同一 embed），解析失败兜底 LoadRegistry
-	registry := types.LoadRegistry()
+	// （internal/app 复用 typereg.BundledRegistryJSON 同一 embed），解析失败兜底 LoadRegistry
+	registry := typereg.LoadRegistry()
 	return packs.DetectResourceType(path, registry)
 }
 
@@ -160,7 +161,7 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 	if root := specificRoot(cfg, rtype); root != "" {
 		return root, nil
 	}
-	subDir := types.GroupStorageRoot(rtype) // ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
+	subDir := typereg.GroupStorageRoot(rtype) // ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
 	// 2. FilesRoot + 分组存储子目录
 	if cfg.FilesRoot != "" {
 		if subDir != "" {
@@ -187,7 +188,7 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 // GetAllRepoRoots 遍历所有注册资源类型，返回 rtype → root 映射（供跨类型搜索）。
 // 仅返回目录真实存在且可访问的类型；空 root/不存在的目录跳过。
 func (a *App) GetAllRepoRoots() map[string]string {
-	registry := types.LoadRegistry()
+	registry := typereg.LoadRegistry()
 	result := make(map[string]string, len(registry.ResourceTypes))
 	for _, rt := range registry.ResourceTypes {
 		root, _ := a.GetRepoRoot(rt.ID)
@@ -211,7 +212,7 @@ func (a *App) filesRootForSync(rtype string) (string, error) {
 // 仅当 GetRepoRoot 返回非空路径才建——空串（未配置/平台默认不可达）跳过，
 // 避免在工作目录裸建；已存在目录为 MkdirAll no-op，幂等安全。
 func (a *App) EnsureStorageDirs() error {
-	registry := types.LoadRegistry()
+	registry := typereg.LoadRegistry()
 	if len(registry.ResourceTypes) == 0 {
 		return nil
 	}
@@ -220,7 +221,7 @@ func (a *App) EnsureStorageDirs() error {
 		root, err := a.GetRepoRoot(rt.ID)
 		// 诊断打点：打印每个类型的路由推导，定位"目录扁平散开"问题
 		log.Printf("[storage] EnsureStorageDirs: id=%s group=%q sub=%q groupRoot=%q -> filesRoot=%q err=%v",
-			rt.ID, rt.Group, rt.StorageSubDir, types.GroupStorageRoot(rt.ID), root, err)
+			rt.ID, rt.Group, rt.StorageSubDir, typereg.GroupStorageRoot(rt.ID), root, err)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -265,7 +266,7 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 		if root := cfg.CustomRoots[rtype]; root != "" {
 			return root
 		}
-		rt := types.RegistryType(rtype)
+		rt := typereg.RegistryType(rtype)
 		if rt != nil && rt.ConfigFallback != "" {
 			if root := cfg.CustomRoots[rt.ConfigFallback]; root != "" {
 				return root
@@ -302,7 +303,7 @@ func (a *App) SelectImportFile(filter, title string) string {
 // 不再反射结构体字段，新增资源类型只改 resource_types.json 即可生效。
 func (a *App) SetResourceRoot(rtype, path string) error {
 	cfg := a.LoadAppConfig()
-	if types.RegistryType(rtype) == nil {
+	if typereg.RegistryType(rtype) == nil {
 		return fmt.Errorf("未知的资源类型: %s", rtype)
 	}
 	if path != "" {
@@ -380,7 +381,7 @@ func (a *App) ImportByType(rtype, srcPath string) error {
 // 守卫根传类型特定仓库根：防根级 ysm.json 清空整个仓库；
 // 路径守卫拒绝 rel=="." 或 rel 含 ".." 前缀的越权路径。
 func (a *App) DeleteResourcePack(path, rtype string) error {
-	rt := types.RegistryType(rtype)
+	rt := typereg.RegistryType(rtype)
 	if rt != nil && rt.IsDir {
 		// 目录型资源：删除父文件夹（合并原 DeleteModelDir 语义）
 		root := a.ysmRoot()
@@ -565,7 +566,7 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	}
 
 	// 根据 rtype 确定安装子目录（集中定义在 go/types/extensions.go）
-	subDir := types.SubDirMap(rtype)
+	subDir := typereg.SubDirMap(rtype)
 	if subDir == "" {
 		return fmt.Errorf("未知的资源类型: %s", rtype)
 	}
@@ -573,7 +574,7 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	// 目标路径 = 整合包版本目录 + 子目录（ADR-064 锚定：统一走 FindInstDir，
 	// 标准目录无该类型文件时兜底扫描——Sable-Schematics 等非标准目录，原直拼
 	// schematics 与展示层/拉取层口径不一致）
-	dstDir := types.FindInstDir(target.VersionDir, subDir, rtype)
+	dstDir := typereg.FindInstDir(target.VersionDir, subDir, rtype)
 
 	// 统一走 installer.Install，复用链接模式支持
 	globalRoot, _ := a.GetRepoRoot(rtype)
@@ -595,7 +596,7 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	// 目录型行为由注册表 isDir 驱动（EntityPlayer/vrchat-avatar isDir:true）；
 	// ysm 注册表 isDir:false，但现状 ysm 需要文件夹级推送（含配套文件），
 	// 故显式保留 rtype == "ysm" 维持既有行为不变。
-	rt := types.RegistryType(rtype)
+	rt := typereg.RegistryType(rtype)
 	needsFolder := rt != nil && (rt.IsDir || rtype == "ysm")
 
 	if cleanParent != cleanRoot && hasPrefix && needsFolder {

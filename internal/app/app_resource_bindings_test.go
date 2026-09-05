@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestSpecificRoot_Priority(t *testing.T) {
@@ -73,7 +74,7 @@ func TestMigrateLegacyConfigFields(t *testing.T) {
 		migrateLegacyConfigFields(&cfg)
 
 		// MmdRoot 被多个类型（EntityPlayer, SceneModel 等）引用
-		registry := types.LoadRegistry()
+		registry := registry.LoadRegistry()
 		for _, rt := range registry.ResourceTypes {
 			if rt.ConfigField == "MmdRoot" {
 				if cfg.CustomRoots[rt.ID] == "" {

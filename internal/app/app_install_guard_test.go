@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 // guardedApp 构造注入 configCache 的 App（各资源根指向 temp 子目录），复用 repoApp 注入样板
@@ -16,7 +17,7 @@ func guardedApp(t *testing.T) (*App, string) {
 	t.Helper()
 	base := t.TempDir()
 	// ADR-092 两层路由：ysm 根在 FilesRoot/{group}/{storageSubDir}
-	ysm := filepath.Join(base, types.GroupStorageRoot("ysm"))
+	ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysm, 0755); err != nil {
 		t.Fatal(err)
 	}

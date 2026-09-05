@@ -19,6 +19,7 @@ import (
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/tags"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
@@ -200,11 +201,11 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// 创建所有存储子目录（注册表驱动，防手写漂移；ADR-092 两层路由：有 group 则建 FilesRoot/{group}/{storageSubDir}）
 	if cfg.FilesRoot != "" {
 		migrateFlatStorageToGrouped(cfg.FilesRoot)
-		reg := types.LoadRegistry()
+		reg := registry.LoadRegistry()
 		seen := make(map[string]bool, len(reg.ResourceTypes))
 		for _, rt := range reg.ResourceTypes {
 			if rt.StorageSubDir != "" {
-				rel := types.GroupStorageRoot(rt.ID)
+				rel := registry.GroupStorageRoot(rt.ID)
 				if !seen[rel] {
 					seen[rel] = true
 					// 目录权限 0644 无执行位，目录不可进入——应为 0755
@@ -291,12 +292,12 @@ func (a *App) GetAppVersion() string {
 // 自动重命名为分组结构（如 minecraft-mod/ysm/、mmd/EntityPlayer/、vrm/vrchat/）。
 // 仅当目标路径不存在时才迁移，避免覆盖已有数据。
 func migrateFlatStorageToGrouped(filesRoot string) {
-	reg := types.LoadRegistry()
+	reg := registry.LoadRegistry()
 	moved := 0
 	for _, rt := range reg.ResourceTypes {
-		subDir := types.StorageSubDir(rt.ID)
+		subDir := registry.StorageSubDir(rt.ID)
 		// 目标路径：FilesRoot/{group}/{storageSubDir}
-		targetRel := types.GroupStorageRoot(rt.ID)
+		targetRel := registry.GroupStorageRoot(rt.ID)
 		targetPath := filepath.Join(filesRoot, targetRel)
 		// 目标已存在则无需迁移
 		if info, err := os.Stat(targetPath); err == nil && info.IsDir() {

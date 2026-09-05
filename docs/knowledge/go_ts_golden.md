@@ -7,33 +7,58 @@ source_files:
   - tests/parity/go-ts-zipentry.json
   - frontend/src/utils/resource/types.ts
   - frontend/src/parsers/voxel-colors.ts
-  - go/types/extensions.go
+  - go/types/registry/extensions.go
   - go/litematic/block_colors.go
   - go/litematic/block_ids.go
 tests:
-  - go/types/parity_zipentry_test.go
+  - go/types/registry/parity_zipentry_test.go
   - go/litematic/parity_voxel_test.go
   - frontend/src/backend/zipentry.parity.test.ts
   - frontend/src/parsers/voxel-colors.parity.test.ts
 auto_fields:
   symbols_with_lines:
     - ALL_RESOURCE_TYPES
+    - AllExts
+    - AllSubDirs
     - AMBIGUOUS_EXTS
+    - ContainerExts
+    - DisableSuffixes
+    - ExtBelongsTo
+    - ExtBelongsToBy
     - extOf
     - getPreviewableTypeTabs
     - GROUP_META
     - GROUP_OF
     - GROUP_TYPE_OPTIONS
+    - GroupIcon
+    - GroupLabel
     - groupLabelOf
+    - GroupOf
+    - GroupStorageRoot
     - groupStorageRootOf
     - GroupTypeOption
+    - InstallExtsFor
     - isContainerExt
+    - IsContainerExt
+    - IsDirLevelSync
+    - IsDisableSuffix
+    - IsNestedModelDir
+    - IsResourceAllowed
+    - IsScanInstance
+    - IsSupportedExt
+    - IsYsmEntryJSON
     - isYsmWasmPreview
     - mapColor
     - MapColor
     - matchTypeByExt
+    - MatchZipEntry
     - matchZipEntryTS
+    - MaxImportSize
+    - MaxImportSizeMB
+    - MaxReadLimit
+    - NestedPatternsFor
     - NO_3D_TYPES
+    - NormalizeResourceName
     - previewCandidateExtsOf
     - PreviewTab
     - resolveBlockName
@@ -46,6 +71,15 @@ auto_fields:
     - resolveTypeSafe
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
+    - ShouldHashExt
+    - StorageSubDir
+    - StripBanSuffix
+    - StripDisableSuffix
+    - SubDirAll
+    - SubDirEntry
+    - SubDirMap
+    - SupportedExtsForSubtype
+    - SupportedExtsForType
     - typeIconOf
     - VOXEL_RPC_BY_EXT
 use_when:
@@ -67,7 +101,7 @@ quick_risk_lines:
   - MatchZipEntry|matchZipEntryTS 首命中序依赖 resource_types.json 顺序
   - voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底
 invariant_anchors:
-  - go/types/parity_zipentry_test.go|TestParity_MatchZipEntry
+  - go/types/registry/parity_zipentry_test.go|TestParity_MatchZipEntry
   - go/litematic/parity_voxel_test.go|TestParity_VoxelColorMap
   - go/litematic/parity_voxel_test.go|TestParity_VoxelBlockVariant
 ---
@@ -86,14 +120,14 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- Go：`go/types/parity_zipentry_test.go::TestParity_MatchZipEntry`、`go/litematic/parity_voxel_test.go::TestParity_VoxelColorMap/VoxelBlockVariant/VoxelColorKeyCoverage`
+- Go：`go/types/registry/parity_zipentry_test.go::TestParity_MatchZipEntry`、`go/litematic/parity_voxel_test.go::TestParity_VoxelColorMap/VoxelBlockVariant/VoxelColorKeyCoverage`
 - TS：`frontend/src/backend/zipentry.parity.test.ts`、`frontend/src/parsers/voxel-colors.parity.test.ts`
 - Fixture：`tests/parity/go-ts-zipentry.json`；共享数据源 `frontend/src/parsers/voxel-colors-data.json`
 
 ## 与其他子系统关系
 
 - 上游事实源：`resource_types.json`（zipEntries 指纹）、`go/litematic/blocks_1_12.json`（方块表）。
-- 对拍对象：`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/parsers/voxel-colors.ts`、`go/types/extensions.go:257 MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
+- 对拍对象：`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/parsers/voxel-colors.ts`、`go/types/registry/extensions.go:257 MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
 - 更新口径（ADR-154 §2.5）：Go 行为变更（有意）→ 两端重跑、同一批 fixture 期望值同步更新并带 diff 审查；生成物变更 → golden 测试即过期检测器。
 
 ## 实施进度

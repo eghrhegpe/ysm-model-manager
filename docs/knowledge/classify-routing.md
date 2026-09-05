@@ -7,20 +7,44 @@ adr:
 category: go
 source_files:
   - go/packs/classify.go
-  - go/types/resource.go
+  - go/types/registry/resource.go
   - resource_types.json
 auto_fields:
   symbols_with_lines:
+    - BundledRegistryJSON
     - ClassContainer
     - ClassifyExt
     - ClassifyResource
     - ClassOther
     - CountZipEntryMatches
     - DetectByEntries
+    - FormatRange
+    - FormatRange.UnmarshalJSON
     - IsTypeModelFile
     - IsYsmFile
+    - LitematicBlockStat
+    - LitematicMeta
+    - LitematicVoxelData
+    - LoadRegistry
     - MatchYsmEntries
     - MatchZipArchive
+    - ModKeywordsFor
+    - ModMetaFor
+    - ModRequirement
+    - NestedPattern
+    - PackMeta
+    - PackMeta.Desc
+    - RegistryType
+    - ResourceType
+    - ResourceType.EffectiveExtensions
+    - ResourceType.MatchZipEntry
+    - ResourceTypeRegistry
+    - ResourceTypeRegistry.FindByID
+    - SetBundledRegistryJSON
+    - SetRegistryPath
+    - Variant
+    - VoxelGroup
+    - ZipEntryMatch
   tests:
     - go/packs/classify_test.go
     - go/packs/model_file_test.go
@@ -49,7 +73,7 @@ use_when:
 invariant_anchors:
   - go/packs/classify.go|ClassifyResource
   - go/packs/classify.go|DetectByEntries
-  - go/types/resource.go|validateRegistrySchema
+  - go/types/registry/resource.go|validateRegistrySchema
 status: active
 ---
 

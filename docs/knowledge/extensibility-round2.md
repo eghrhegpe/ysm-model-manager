@@ -32,8 +32,8 @@ status: active
 supersedes: extensibility-index
 last_verified: 2026-08-27
 invariant_anchors:
-  - go/types/extensions.go|ShouldHashExt
-  - go/types/resource.go|ResourceType
+  - go/types/registry/extensions.go|ShouldHashExt
+  - go/types/registry/resource.go|ResourceType
 ---
 
 # 拓展点 / 扩展入口 探索报告（Round 2）
@@ -52,13 +52,13 @@ invariant_anchors:
 | 维度 | 入口（文件:行） | 自动生效？ | 机制 |
 |---|---|---|---|
 | JSON 声明 | `resource_types.json` | ✅ | 在 `resourceTypes` 数组末尾追加条目 |
-| Go 注册表 | `go/types/resource.go`（`ResourceType` struct） | ✅ | 所有字段（含 `hashable/dirLevelSync/zipEntries/installExts/scanDir/preview/detector`）均已定义 |
+| Go 注册表 | `go/types/registry/resource.go`（`ResourceType` struct） | ✅ | 所有字段（含 `hashable/dirLevelSync/zipEntries/installExts/scanDir/preview/detector`）均已定义 |
 | Go 检测 | `go/packs/mcmeta.go`（`DetectResourceType`） | ✅（zipentry / extension / ""） | switch 覆盖 `ysm/mcmeta/shader/zipentry/extension/空`——zipentry 与 extension 全走注册表 |
 | 内容指纹 | `go/packs/mcmeta.go`（`matchZipArchive`）+ `container.Open` | ✅ | `.zip/.7z` 均走 `container.Open` 统一打开（ADR-068）→ 按 `rt.ZipEntries` 匹配 |
 | 导入器 | `go/importer/importer_file.go`（`DetectZipType`） | ✅ | 注册表驱动；zipEntries 命中即定类型 |
-| 安装白名单 | `go/types/extensions.go`（`InstallExtsFor`） | ✅ | 空 = 全部放行（仅可执行文件黑名单除外）；`installer.InstallDir` 已走此 |
-| 哈希 | `go/types/extensions.go`（`ShouldHashExt`） | ✅ | `hashable:true` 即参与；`types_extra_test.go` 钉住清单 |
-| 目录型同步 | `go/types/extensions.go`（`IsDirLevelSync`） | ✅ | `dirLevelSync:true` → `SyncResourcesDirLevel` |
+| 安装白名单 | `go/types/registry/extensions.go`（`InstallExtsFor`） | ✅ | 空 = 全部放行（仅可执行文件黑名单除外）；`installer.InstallDir` 已走此 |
+| 哈希 | `go/types/registry/extensions.go`（`ShouldHashExt`） | ✅ | `hashable:true` 即参与；`types_extra_test.go` 钉住清单 |
+| 目录型同步 | `go/types/registry/extensions.go`（`IsDirLevelSync`） | ✅ | `dirLevelSync:true` → `SyncResourcesDirLevel` |
 | 前端 RESOURCE_TYPES 键 | `frontend/src/utils/resource/types.ts`（`RESOURCE_TYPES`） | ❌ 手改 | 需加键值（如 `POTION: "potion-3d"`） |
 | 前端短标签 | `types.ts`（`RESOURCE_TYPE_LABELS`） | ❌ 手改 | 参与 Go `ScanModelEntriesWithLabel` 匹配 |
 | 前端派生能力 | `types.ts`（`RESOURCE_CAPS`） | ✅ | 从 JSON 派生 extensions/preview/icon |
@@ -204,7 +204,7 @@ invariant_anchors:
 
 ### 5.2 `types` 过滤扩展
 
-- **入口**：`go/types/extensions.go`（`NormalizeResourceName` / `IsResourceAllowed`）+ `go/packs/classify.go`（`IsTypeModelFile`，ADR-144 下沉）。
+- **入口**：`go/types/registry/extensions.go`（`NormalizeResourceName` / `IsResourceAllowed`）+ `go/packs/classify.go`（`IsTypeModelFile`，ADR-144 下沉）。
 - **扩展点**：新类型的扩展集自动进 `AllExts()` / `SupportedExtsForType()`，过滤器自动生效。
 - **坑**：`.json` 特判**只放行 ysm.json**——新类型如用 `.json` 清单（如 `manifest.json`）会被全量拒绝。需要把 `IsYsmEntryJSON` 泛化为 `IsEntryManifest(base, rtype)` 或引入 `registryEntries` 字段。
 

@@ -23,7 +23,7 @@ quick_intents:
 status: snapshot
 last_verified: 2026-08-17
 invariant_anchors:
-  - go/types/resource.go|ResourceType
+  - go/types/registry/resource.go|ResourceType
 ---
 
 <!-- 拓展点索引对账（2026-08-17）——逐条核对 extensibility-index.md 中「可拓展点」与当前 HEAD（含 ADR-064/065/067/068 + web M1/M2 + 硬编码清理）的落地状态。仅调研不改代码。 -->
@@ -44,11 +44,11 @@ invariant_anchors:
 | 2 | 两套检测器 `importer_file.go` + `mcmeta.go` 均应注册表驱动 | **部分** | 现状（2026-09-01 更新）：`go/packs/mcmeta.go` `DetectResourceType` 同包直调 `ClassifyResource`；`go/importer/importer_file.go` `DetectZipType` 收集全条目名后委托 `packs.DetectByEntries`（commit `bc95fbb4` 收敛至 types，**ADR-144 下沉至 packs**）。**分类核心统一于 `packs` 包**（识别大脑 + 识别入口同包，薄壳撤销），`resource_types.json` 字段驱动不变（ADR-067 闭环）。但 `go/repoaudit/repoaudit.go` `Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同），故「完全合并为单一入口」未达成。回归护栏见 [classify_routing](./classify-routing.md)（golden/isolation/order + schema 守卫 4/5，commit `634fb63f`）。|
 | 3 | 文件夹级判定 6+ 处硬编码 | **已闭环 ADR-064/065** | `go/sync/sync_push.go` 均改调 `types.IsDirLevelSync(rtype)`；`go/sync/sync_relink.go` 用 `types.IsDirLevelSync(rtype) && packs.IsTypeModelFile(base, rtype)`；`go/sync/sync_dirlevel.go` 用 `packs.IsTypeModelFile`；`go/instance/instance.go` 用 `types.FindInstDir`（注册表驱动）。`isSyncAllowed/isModelFile/extMatch/syncNameKey` 全部收敛进 `types/`（`NormalizeResourceName`/`IsResourceAllowed`/`IsDirLevelSync`）+ `packs/`（`IsTypeModelFile`，ADR-144 下沉）。 |
 | 4 | `fsutil/` `copyFile×6` / `copyDirRecursive×4` 重复 | **部分** | `go/fsutil/copy.go` 已定义统一 `CopyFile` + `CopyDirRecursive`（注释明确「收敛自 fileops/recycle/importer/sync 四份」）。`installer.copyFileLocked` 已收敛为 `fsutil.CopyFile` 委托 + `StepError` 步骤类型化错误（ADR-044 策略 A：机制归 fsutil、文案归 installer）。仍保留 6 处本地 wrapper：`sync.copyFile`、`recycle.copyFile`、`importer.copyFile`、`fileops.copyFile`、`updater.copyFile`、`cmd/updater.copyFile`——多数为薄包装/不同语义，未完全消除。 |
-| 5 | `ShouldHashExt` + scanner CI 清单硬编码 | **已闭环** | `go/types/extensions.go` `ShouldHashExt` 现按 `ResourceType.Hashable` 字段判定（注释：「注册表驱动：任何声明 hashable 的资源类型扩展名均计入哈希」）。`Hashable` 字段在 `go/types/resource.go` 已定义。`go/types/types_extra_test.go` `TestShouldHashExt_PinnedList` 钉住 `.ysm/.zip/.7z/.json/.nbt/.schematic/.litematic`，并测大小写不敏感。scanner 不再维护独立清单。 |
+| 5 | `ShouldHashExt` + scanner CI 清单硬编码 | **已闭环** | `go/types/registry/extensions.go` `ShouldHashExt` 现按 `ResourceType.Hashable` 字段判定（注释：「注册表驱动：任何声明 hashable 的资源类型扩展名均计入哈希」）。`Hashable` 字段在 `go/types/registry/resource.go` 已定义。`go/types/types_extra_test.go` `TestShouldHashExt_PinnedList` 钉住 `.ysm/.zip/.7z/.json/.nbt/.schematic/.litematic`，并测大小写不敏感。scanner 不再维护独立清单。 |
 | 6 | `browser-adapter.ts` 40+ binding 手写大对象字面量 | **已闭环 ADR-049/web M2 (93cb0e8b)** | `frontend/src/backend/browser-adapter.ts` 现 `webImpls = { ...webCommonBindings, ...webFsBindings, ...webStoreBindings, ...webCommunityBindings }`；各职责模块自注册片段（`web-common.ts`、`web-fs.ts`、`web-store.ts`、`web-community.ts`）。`browser-adapter.ts` 108 行，退化为「编排/入口」薄壳。 |
 | 7 | `import-dnd.ts` 4 处重复 | **已闭环 web M1 (93cb0e8b)** | `frontend/src/features/import/executor.ts` 定义 `importWebFilesWithToast` 单点；`import-dnd.ts` 与 `import-queue-events.ts` 全部改为调用 `importWebFilesWithToast`。`stats:refresh` 已统一在 `import-executor.ts` 发出（原 folderInput 分支缺失已修复）。 |
 | 8 | `app-modules.ts` 5 处 catch 模板逐字重复 | **已闭环** | `frontend/src/app-modules.ts` `loadView(name, importer)` 单点封装，5 处调用：`app-tree/sidebar/content/resource-manager/sync-manager`。 |
-| 9 | `ResourceType` 无 hook 字段 | **部分** | `go/types/resource.go` `ResourceType` 现含 `Detector`/`ConfigField`/`ConfigFallback`/`IsDir`/`Hashable`/`DirLevelSync`/`ScanInstance`/`InstallExts`/`ZipEntries` 等 9 个可驱动行为的字段；`Detector` 字段实际充当「handlerRef」字符串。但**无显式 `plugin`/`handlerRef` 指针类型**（无代码级 hook 接口），仍靠字符串分发。索引原文「增加 plugin/handlerRef 字段」的部分诉求（可注册表驱动）已满足；显式接口化未完成。 |
+| 9 | `ResourceType` 无 hook 字段 | **部分** | `go/types/registry/resource.go` `ResourceType` 现含 `Detector`/`ConfigField`/`ConfigFallback`/`IsDir`/`Hashable`/`DirLevelSync`/`ScanInstance`/`InstallExts`/`ZipEntries` 等 9 个可驱动行为的字段；`Detector` 字段实际充当「handlerRef」字符串。但**无显式 `plugin`/`handlerRef` 指针类型**（无代码级 hook 接口），仍靠字符串分发。索引原文「增加 plugin/handlerRef 字段」的部分诉求（可注册表驱动）已满足；显式接口化未完成。 |
 | 10 | `/web` 路径正则 5 处 | **已闭环** | `frontend/src/backend/web-common.ts` 集中导出 `WEB_DIR_RE`/`WEB_NAME_RE`/`isWebPath`/`parseWebPath`/`parseWebDirPath`/`webDirType`；注释明确「Top 10 收敛：原 /web 正则散落 5 处」。`web-fs.ts`/`web-community.ts`/`browser-adapter.ts` 全部改调 `web-common.ts`。 |
 
 **Top 10 小计**：已闭环 4 条（#3/#5/#6/#7/#8/#10 = **6 条**）；部分 3 条（#2/#4/#9）；N/A 1 条（#1）。
@@ -130,7 +130,7 @@ invariant_anchors:
 | 6.3 | 见 Top 4（部分） | |
 | 6.4 | 见 Top 5（已闭环） | |
 | 6.5 | 见 Top 9（部分） | |
-| 6.6 `MaxImportSize=500MB` 三方引用 | **存活** | `go/types/extensions.go` 仍硬编码常量（虽含 `MaxImportSizeMB` 派生，仍为编译期常量，未进 `AppConfig`）。 |
+| 6.6 `MaxImportSize=500MB` 三方引用 | **存活** | `go/types/registry/extensions.go` 仍硬编码常量（虽含 `MaxImportSizeMB` 派生，仍为编译期常量，未进 `AppConfig`）。 |
 | 6.7 `AppConfig` 缺扫描 TTL/日志上限/下载超时 | **存活** | `go/types/config.go` 仅含 `Mirror/VoxelMaxBlocks/LinkMode`。 |
 | 6.8 `dedup.go`/`recycle.go`/`instance.go` 成对重复 | **存活** | 未 grep 到本轮清理。 |
 | 6.9 `updater.go` 硬编码 | **存活** | 未 grep 到本轮改动。 |

@@ -26,7 +26,7 @@ quick_intents:
 status: superseded
 last_verified: 2026-09-01
 invariant_anchors:
-  - go/types/extensions.go|ShouldHashExt
+  - go/types/registry/extensions.go|ShouldHashExt
 ---
 
 <!-- 本文件为一次性发掘成果，由 AtomCode 于 2026-08-15 派发 6 个 explore 子代理汇总而成。非自动生成；如需更新请新增批次。 -->
@@ -62,11 +62,11 @@ invariant_anchors:
 | 2 | ⑥ | `go/importer/importer_file.go` + `go/packs/mcmeta.go` | 两套资源类型检测器并存，均应注册表驱动；新增类型须改两处 | 高 |
 | 3 | ③ | `go/sync/sync_dirlevel.go` / `sync_push.go` / `instance.go` / `installer.go` | 文件夹级/目录型 rtype 判定 6+ 处硬编码，应改用 registry `isDir` | 高 |
 | 4 | ② | `go/fsutil/` `copyFile×6` / `copyDirRecursive×4` | 原子复制原语成对重复，应收敛进 fsutil | 高 |
-| 5 | ③ | `go/types/extensions.go` `ShouldHashExt` + scanner 内嵌 CI 清单 | 哈希白名单硬编码 switch，文件头声称注册表驱动唯独此处例外；新增类型须改 2 处 Go + 1 处 CI | 高 |
+| 5 | ③ | `go/types/registry/extensions.go` `ShouldHashExt` + scanner 内嵌 CI 清单 | 哈希白名单硬编码 switch，文件头声称注册表驱动唯独此处例外；新增类型须改 2 处 Go + 1 处 CI | 高 |
 | 6 | ⑥ | `frontend/src/backend/browser-adapter.ts` `webImpls` | 40+ binding 手写大对象字面量，应改 binding 注册表（各职责模块自注册 + 元数据门控） | 高 |
 | 7 | ② | `frontend/src/features/dnd/import-dnd.ts` 与 `import-queue-events.ts` | 网页版导入块在 4 处近逐字重复，已有细微漂移（folderInput 分支缺 stats:refresh） | 高 |
 | 8 | ② | `frontend/src/app-modules.ts` 动态加载块 | 5 个 Web Component 动态加载 catch 模板逐字重复，应抽 `loadView(name, importFn)` | 高 |
-| 9 | ④ | `go/types/resource.go` `ResourceType` | 纯数据无 Go 层 hook 字段，importer/packs 的扩展点无法从 JSON 表达；增加 `plugin`/`handlerRef` 字段可打通三处硬编码根 | 高 |
+| 9 | ④ | `go/types/registry/resource.go` `ResourceType` | 纯数据无 Go 层 hook 字段，importer/packs 的扩展点无法从 JSON 表达；增加 `plugin`/`handlerRef` 字段可打通三处硬编码根 | 高 |
 | 10 | ② | `/web` 虚拟根路径解析正则散落 5 处（`web-fs.ts` + `browser-adapter.ts`） | 基于 WEB_ROOT 的统一路径模块 | 高 |
 
 ---
@@ -284,13 +284,13 @@ invariant_anchors:
 ### 6.3 `go/fsutil/` `copyFile×6` / `copyDirRecursive×4` — ②未抽离重复（Top 4）
 - 原子复制原语成对重复 → 收敛进 fsutil。
 
-### 6.4 `go/types/extensions.go` `ShouldHashExt` + scanner 内嵌 CI — ③缺扩展点（Top 5）
+### 6.4 `go/types/registry/extensions.go` `ShouldHashExt` + scanner 内嵌 CI — ③缺扩展点（Top 5）
 - 哈希白名单硬编码 switch，文件头声称注册表驱动唯独此处例外 → `ResourceType` 增加 `hashable`/`hashOnScan` 字段。
 
-### 6.5 `go/types/resource.go` `ResourceType` — ④未充分利用抽象（Top 9）
+### 6.5 `go/types/registry/resource.go` `ResourceType` — ④未充分利用抽象（Top 9）
 - 纯数据无 Go 层 hook 字段 → 增加 `plugin`/`handlerRef` 字段打通 importer/packs/sync 三处硬编码根。
 
-### 6.6 `go/types/extensions.go` `MaxImportSize` — ①硬编码
+### 6.6 `go/types/registry/extensions.go` `MaxImportSize` — ①硬编码
 - `MaxImportSize=500MB` 被 scanner/download/importer 三方引用 → AppConfig 可配置（中）。
 
 ### 6.7 `go/types/config.go` `AppConfig` — ⑤缺配置项

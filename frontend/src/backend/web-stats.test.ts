@@ -323,6 +323,88 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(true);
   });
 
+  it("多 worker 瞬态 error → 重试新建专属 worker，不占用他队 worker 在途请求（hc≥2 回归）", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
+    // 201 条 → 2 片（200+1）：w0 取 chunk0、w1 取 chunk1，两 worker 并发在途
+    const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
+    const p = batchStatsWebModels(paths);
+    const [w0, w1] = FakeWorker.instances;
+    expect(w0.posted[0].paths).toHaveLength(STATS_BATCH_LIMIT);
+    expect(w1.posted[0].paths).toHaveLength(1);
+    // w0 的 chunk0 瞬态 error → 终止 w0；重试必须新建专属 w2，不得复用池内 w1——
+    // w1 正并发持有 chunk1 在途（单 onmessage 槽位契约，复用会覆盖致其回复被丢弃）
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    await flushMicrotasks();
+    const w2 = FakeWorker.instances[2];
+    expect(w0.terminated).toBe(true); // 出错 worker 被终止
+    expect(w1.terminated).toBe(false); // w1 未被波及（关键：不杀健康 worker）
+    expect(w2).toBeTruthy();
+    expect(w2.terminated).toBe(false);
+    expect(w2.posted[0].paths).toHaveLength(STATS_BATCH_LIMIT); // chunk0 在专属新 worker 上重试
+    // w1 回自己的 chunk1 → 必须正常 settle（若被重试覆盖，此回包会被 requestId 过滤 → 批挂起）
+    w1.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w1.posted[0].requestId,
+        results: w1.posted[0].paths.map((path, i) => mkResult(path, STATS_BATCH_LIMIT + i)), // offset=200
+      },
+    });
+    w2.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w2.posted[0].requestId,
+        results: w2.posted[0].paths.map((path, i) => mkResult(path, i)), // chunk0 offset=0
+      },
+    });
+    const res = await p;
+    expect(res).toHaveLength(STATS_BATCH_LIMIT + 1);
+    expect(res?.[0]?.boneCount).toBe(0);
+    expect(res?.[STATS_BATCH_LIMIT]?.boneCount).toBe(STATS_BATCH_LIMIT); // w1 的 chunk1 对齐成功
+    expect(consumeWebSearchDegraded()).toBe(false); // 重试成功 + 他队 chunk 未丢 → 不降级
+  });
+
+  it("重试预算按次复位：前片重试成功后，后片再遇瞬态 error 仍享 1 次重试（hc=1 顺序队列）", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
+    const p = batchStatsWebModels(paths);
+    const w0 = FakeWorker.instances[0];
+    // chunk0（200 条）瞬态 error → 重试到新 worker w1
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    w1.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w1.posted[0].requestId,
+        results: w1.posted[0].paths.map((path, i) => mkResult(path, i)), // chunk0 重试成功（offset=0）
+      },
+    });
+    await flushMicrotasks(); // w1 队列推进 → 取 chunk1（1 条）
+    expect(w1.posted).toHaveLength(2);
+    expect(w1.posted[1].paths).toHaveLength(1);
+    // chunk1 再遇瞬态 error → retried 已复位 → 应再享 1 次重试（新建 w2），而非直接降级
+    w1.onmessage?.({ data: { type: "error", requestId: w1.posted[1].requestId, message: "wasm init again" } });
+    await flushMicrotasks();
+    const w2 = FakeWorker.instances[2];
+    expect(w1.terminated).toBe(true);
+    expect(w2).toBeTruthy();
+    expect(w2.posted[0].paths).toHaveLength(1);
+    w2.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w2.posted[0].requestId,
+        results: w2.posted[0].paths.map((path, i) => mkResult(path, STATS_BATCH_LIMIT + i)), // chunk1 offset=200
+      },
+    });
+    const res = await p;
+    expect(res).toHaveLength(STATS_BATCH_LIMIT + 1);
+    expect(res?.[0]?.boneCount).toBe(0);
+    expect(res?.[STATS_BATCH_LIMIT]?.boneCount).toBe(STATS_BATCH_LIMIT);
+    expect(consumeWebSearchDegraded()).toBe(false); // 两片都经重试成功 → 不降级
+  });
+
   it("单批超时（60s 无回包）→ 杀池防僵尸 + 降级", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("Worker", FakeWorker);

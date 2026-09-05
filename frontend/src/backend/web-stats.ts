@@ -111,16 +111,33 @@ export function getStatsPoolSize(): number {
   return poolSize();
 }
 
+/** 创建单个 stats worker（池懒建 / 瞬态 error 重试 replacement 共用）。 */
+function createStatsWorker(): Worker {
+  return new Worker(new URL("../workers/stats.worker.ts", import.meta.url), { type: "module" });
+}
+
+/**
+ * 新建专属 worker 并补入池（瞬态 error 重试用）。
+ * 绝不复用池内既有 worker：多 worker 池里其他 worker 正被并发 runWorkerQueue 持有在途
+ * 请求（单 onmessage 槽位契约），复用会把对方在途回复覆盖丢弃 → 挂 60s 超时杀整池。
+ * 失败返回 null（调用方按不可重试降级处理）。
+ */
+function spawnReplacementWorker(): Worker | null {
+  try {
+    const w = createStatsWorker();
+    workers.push(w);
+    return w;
+  } catch {
+    return null;
+  }
+}
+
 /** 懒创建 Worker 池；不支持（非浏览器/被屏蔽）返回 null */
 function getWorkerPool(): Worker[] | null {
   if (workers.length) return workers;
   try {
     const n = poolSize();
-    for (let i = 0; i < n; i++) {
-      workers.push(
-        new Worker(new URL("../workers/stats.worker.ts", import.meta.url), { type: "module" }),
-      );
-    }
+    for (let i = 0; i < n; i++) workers.push(createStatsWorker());
     return workers;
   } catch {
     workers = [];
@@ -228,22 +245,26 @@ export async function batchStatsWebModels(paths: string[]): Promise<WebModelStat
       const ci = nextChunk++;
       if (ci >= chunks.length) return;
       let res = await statsOneChunk(currentW, ++requestSeq, chunks[ci].slice);
-      // 瞬态 error（可重试）→ 换 worker 重试 1 次（该 worker 已被 terminateWorker 移除，
-      // getWorkerPool 会懒建新 worker 补池）；超时（不可重试）直接整体降级
+      // 瞬态 error（可重试）→ 换 worker 重试 1 次。出错 worker 已被 statsOneChunk 内
+      // terminateWorker 移除出池；重试必须新建专属 worker（spawnReplacementWorker），
+      // 不可复用池内既有 worker——多 worker 池里其余 worker 正被并发 runWorkerQueue
+      // 持有在途请求（单 onmessage 槽位契约），复用会覆盖对方槽位致其回复被
+      // requestId 过滤丢弃 → 挂 60s 超时杀整池（重试特性反而降级）。
       if (!res.ok && res.retryable && !retried) {
         retried = true;
-        const retryW = getWorkerPool()?.[0];
+        const retryW = spawnReplacementWorker();
         if (retryW) {
           currentW = retryW;
           res = await statsOneChunk(currentW, ++requestSeq, chunks[ci].slice);
         }
       }
       if (!res.ok) {
-        failed = true; // 重试仍失败（或不可重试）→ 该片降级 → 整体降级（在途其他片 settle 后统一判）
+        failed = true; // 重试仍失败（或不可重试/无 replacement 可用）→ 该片降级 → 整体降级
         results[ci] = null;
         return;
       }
       results[ci] = res.results;
+      retried = false; // 重试预算按「每次瞬态 error 一次」计：本片成功后复位，后续片独立享 1 次
       progressDone += chunks[ci].slice.length;
       statsProgressCb?.(Math.min(progressDone, paths.length), paths.length);
     }

@@ -253,16 +253,16 @@ describe("initSettings — 游戏目录检测", () => {
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-mc-detect") as HTMLElement).click();
-    await waitFor(() => document.querySelector(".mc-pick-item"));
-    (document.querySelector(".mc-pick-item") as HTMLElement).click();
+    await waitFor(() => document.querySelector("[data-testid='pick-item']"));
+    (document.querySelector("[data-testid='pick-item']") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
     expect(saveFn.mock.calls[0]![2]).toBe("/mc1");
 
     // 取消
     saveFn.mockClear();
     (root.getElementById("set-mc-detect") as HTMLElement).click();
-    await waitFor(() => document.querySelector(".mc-pick-cancel"));
-    (document.querySelector(".mc-pick-cancel") as HTMLElement).click();
+    await waitFor(() => document.querySelector("[data-testid='dlg-cancel']"));
+    (document.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
     await new Promise((r) => setTimeout(r, 0));
     expect(saveFn).not.toHaveBeenCalled();
   });

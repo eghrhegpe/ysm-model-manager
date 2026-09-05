@@ -2,10 +2,10 @@
 // 原 initSettings 巨型闭包中的路径相关逻辑整体迁出：共享状态（cfg/cardRefreshers/
 // busy/toastError）统一走 store.ts 模块级，root/refreshAdvanced 显式参数传递。
 
-import { modalPicker } from "../../../features/dialogs/modal.ts";
 import { getApp } from "../../../backend/app.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
+import { modalPicker } from "../../../features/dialogs/modal.ts";
 import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
 import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
@@ -104,7 +104,8 @@ async function showPathPicker(paths: string[]): Promise<string | null> {
 function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[]): HTMLElement {
   const rect = anchor.getBoundingClientRect();
   const tip = document.createElement("div");
-  tip.id = "mc-scan-tip";
+  // id 保持 mc-scan-tooltip：init.test.ts 经 getElementById 驱动 hover/泄漏回归断言
+  tip.id = "mc-scan-tooltip";
   tip.style.position = "fixed";
   tip.style.zIndex = "var(--z-toast)";
   tip.style.background = "var(--surf)";

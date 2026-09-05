@@ -79,7 +79,17 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
 
         const text = allLines.join("\n");
-        await copyText(text);
+        // copyText 永不 reject（Clipboard API / execCommand 兜底全败时返回 false，utils/dom 契约）：
+        // 必须消费布尔结果，否则剪贴板失败仍会误弹「已复制」成功 toast（同 batch.copy-paths 分支范式）
+        const copied = await copyText(text);
+        if (!copied) {
+          bus.emit("toast:show", {
+            msg: t("ctx.copyPathsFail"),
+            duration: TOAST_MS.normal,
+            type: "error",
+          });
+          return;
+        }
         bus.emit("toast:show", {
           msg: t("inst.exportListCopied", { n: totalFiles }),
           duration: TOAST_MS.normal,

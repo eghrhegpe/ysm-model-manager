@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 199 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -174,7 +174,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 96 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 106 |
 
 ### `instance:export-list`
 
@@ -318,7 +318,7 @@
 |------|------|----|
 | refreshUI | `frontend/src/core/context-menu-shared.ts` | 21 |
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 67 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 145 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 155 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 79 |
 | runSyncToggleStatus | `frontend/src/core/handlers/sync.ts` | 203 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 263 |
@@ -331,7 +331,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 332 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 355 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
@@ -402,10 +402,11 @@
 | registerAndroidEvents | `frontend/src/core/handlers/android-events.ts` | 43 |
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 34 |
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 73 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 83 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 120 |
-| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 136 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 86 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 93 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 130 |
 | registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 146 |
+| registerInstanceOps | `frontend/src/core/handlers/instance-ops.ts` | 156 |
 | requireMcRoot | `frontend/src/core/handlers/require-mcroot.ts` | 19 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 42 |
 | runDownloadMissing | `frontend/src/core/handlers/sync.ts` | 80 |
@@ -479,12 +480,12 @@
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 135 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 252 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 258 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 285 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 307 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 253 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 259 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 280 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 286 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 308 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 123 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 134 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |

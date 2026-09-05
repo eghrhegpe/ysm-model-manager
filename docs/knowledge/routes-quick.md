@@ -184,7 +184,7 @@
 | 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
-| 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:change / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
+| 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
 | 主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) | - | - |
 | 资源树、tree、目录树 | [资源树 app-tree](./app-tree.md) | app-tree 的 bus 订阅必须经 _unsubs 收集，disconnectedCallback 必须清理全部订阅 | - |
 | 子进程隐藏控制台窗口、HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | 子进程隐藏控制台窗口必须走 go/executil 的 HideWindow，禁止直调 os/exec 不带隐藏标志 | - |
@@ -193,7 +193,7 @@
 | emit 事件 / 跨组件通信 | [事件总线 bus.ts](./event-bus.md) | 所有跨组件异步通信必经 bus.ts，禁止组件间直耦 | - |
 | input-and-animation | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
 | isFileExistsError | [错误处理 errors](./utils-errors.md) | - | - |
-| nav:change 事件分发、全局 handler 注册 | [主内容页 app-content](./app-content.md) | - | - |
+| nav:changed 事件分发、全局 handler 注册 | [主内容页 app-content](./app-content.md) | - | - |
 | node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | - | - |
 | pointerdown / pointermove / pointerup、触屏 + 桌面统一 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart | - |
 | PushSingleResource / PullSingleResource | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
@@ -578,7 +578,7 @@
 | 性能 trace 未释放 | - | 长时占用内存；file-bench / perf-trace 完成后必须 stop 回收 |
 | 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |
 | 回调未正确包装 | - | 空指针 panic；必须在新 App 时注入完整包装 |
-| 页面 A 直接调用页面 B 的 init | - | 重复初始化 / 订阅泄漏；必须经 nav:change 单点分发 |
+| 页面 A 直接调用页面 B 的 init | - | 重复初始化 / 订阅泄漏；必须经 nav:changed 单点分发 |
 | subscription-bucket 未退订 | - | 跨页残留监听、状态串扰；每次切换必须 clear 旧桶 |
 | 新 JS 未登记进 app-modules.ts | - | 组件不加载、Shadow DOM 未升级；必须在 app-modules.ts 加入口 |
 | 主题值未归一化 | - | 脏值污染 localStorage 持久层；必须经 normalizeTheme 白名单过滤 |

@@ -92,7 +92,7 @@ export function registerErrorDiary(): void {
 
 async function logUiMsg(msg: string, status: string): Promise<void> {
   // P2 修复（审核）：同 (msg+status) 5s 去重——错误风暴只记首条
-  const key = status + ":" + msg;
+  const key = `${status}:${msg}`;
   const now = Date.now();
   if (key === _lastDedupKey && now - _lastDedupAt < DIARY_DEDUP_WINDOW) return;
   _lastDedupKey = key;

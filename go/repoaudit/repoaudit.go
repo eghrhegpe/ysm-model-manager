@@ -16,7 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"ysm-model-manager/go/dedup"
@@ -25,14 +25,17 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// extToTypeID 预计算的 ext→注册表类型 id 映射，避免 Classify 热路径每文件遍历注册表。
-// sync.Once 延迟构建——首次 Classify 调用时初始化。
-var (
-	extToTypeID   map[string]string
-	extToTypeIDMu sync.Once
-)
+// extClassifier 缓存 ext→rtype 映射，以注册表实例指针为失效 key。
+// 与 go/types/extensions.go 的 extCache 同款 atomic.Value+实例指针范式：
+// SetRegistryPath 重置注册表 → LoadRegistry 返回新实例 → 自动重建，永不 stale。
+type extClassifier struct {
+	reg    *types.ResourceTypeRegistry
+	extMap map[string]string // 单一声明者: ext → rtype id
+}
 
-func initExtMap() {
+var extClassifierCache atomic.Value // *extClassifier
+
+func buildExtClassifier() *extClassifier {
 	count := make(map[string]int)
 	owner := make(map[string]string)
 	reg := types.LoadRegistry()
@@ -43,12 +46,13 @@ func initExtMap() {
 			owner[low] = rt.ID
 		}
 	}
-	extToTypeID = make(map[string]string)
+	m := make(map[string]string)
 	for e, n := range count {
 		if n == 1 {
-			extToTypeID[e] = owner[e]
+			m[e] = owner[e]
 		}
 	}
+	return &extClassifier{reg: reg, extMap: m}
 }
 
 // 审计相关阈值常量
@@ -390,10 +394,21 @@ func isModelFileValid(path, ext string) bool {
 // 单一声明者直判——零或多声明者返回 "other"（禁 last-wins，共享扩展名靠
 // 扩展名判型本身就是回归根源）。导出供 resource-scan/审计兜底共用。
 func Classify(ext string) string {
-	extToTypeIDMu.Do(initExtMap)
-	id, ok := extToTypeID[strings.ToLower(strings.TrimSpace(ext))]
-	if !ok {
-		return "other"
+	key := strings.ToLower(strings.TrimSpace(ext))
+	if raw := extClassifierCache.Load(); raw != nil {
+		cl := raw.(*extClassifier)
+		if cl.reg == types.LoadRegistry() {
+			if id, ok := cl.extMap[key]; ok {
+				return id
+			}
+			return "other"
+		}
 	}
-	return id
+	// 缓存未命中或注册表已重置 → 重建（幂等：并发时最后 Store 者胜）
+	cl := buildExtClassifier()
+	extClassifierCache.Store(cl)
+	if id, ok := cl.extMap[key]; ok {
+		return id
+	}
+	return "other"
 }

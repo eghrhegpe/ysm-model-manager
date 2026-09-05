@@ -14,6 +14,11 @@ import (
 	"ysm-model-manager/go/types"
 )
 
+// queueEpoch 下载队列代际标记。
+// 用具名类型而非裸 uint64：防传入无关整数值（如任务数、文件大小）替代代际，
+// 编译器会拦截类型错位，消除「传 0 代替当前 epoch」的静默 bug。
+type queueEpoch uint64
+
 // DownloadQueue 串行下载队列
 // 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试）
 type DownloadQueue struct {
@@ -24,7 +29,7 @@ type DownloadQueue struct {
 	// epoch 代际计数：Cancel / Enqueue 递增。
 	// process 记录启动时 epoch，退出时仅当代际一致才复位 running / 发 done，
 	// 防止「取消后立即重新入队」时旧 goroutine 与新 goroutine 并发处理同一队列（P1 竞态修复）。
-	epoch    uint64
+	epoch    queueEpoch
 	ctx      context.Context
 	cancelFn context.CancelFunc
 
@@ -114,7 +119,7 @@ func (q *DownloadQueue) process() {
 // target > 0 时（重启路径），worker 启动即校验代际：若已被 Cancel/重入队取代
 // （q.epoch 已越过 target）则拒绝运行——防 restart-spawned goroutine 在 spawn 与首次
 // 取锁之间被新 Enqueue 启动的 worker 重复。
-func (q *DownloadQueue) processForEpoch(target uint64) {
+func (q *DownloadQueue) processForEpoch(target queueEpoch) {
 	q.mu.Lock()
 	if target > 0 && q.epoch != target {
 		q.mu.Unlock()

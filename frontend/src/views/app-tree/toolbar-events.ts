@@ -33,14 +33,15 @@ interface AtTlCtx {
 async function atTlShowConfirm(
   vm: AppTree,
   api: () => Promise<string | null>,
-  importByType: (rtype: string, path: string) => Promise<string>,
+  importByType: (rtype: string, path: string) => Promise<unknown>,
   rtype: string,
   successMsg: string,
 ): Promise<void> {
   const path = await api();
   if (!path) return;
-  const errMsg = await importByType(rtype, path);
-  if (errMsg) {
+  const err = await importByType(rtype, path);
+  if (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     bus.emit("toast:show", {
       msg: t("tree.importFail", { msg: errMsg }),
       duration: TOAST_MS.verbose,

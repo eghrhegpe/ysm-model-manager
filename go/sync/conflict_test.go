@@ -454,7 +454,7 @@ func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
 }
 
 // TestResolveConflict_PathTraversal_SafeSubpath 反向钉住：正常相对子路径不被守卫误杀
-// （RelInside 判定合法 → 照常执行 ForceRemote 覆盖）。
+//（RelInside 判定合法 → 照常执行 ForceRemote 覆盖）。
 func TestResolveConflict_PathTraversal_SafeSubpath(t *testing.T) {
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()

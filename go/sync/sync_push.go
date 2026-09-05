@@ -5,6 +5,7 @@
 package sync
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,10 @@ import (
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
+
+// ErrPartialSync 部分成功：有 N 个文件同步成功但 M 个失败。
+// 调用方可通过 errors.Is(err, ErrPartialSync) 区分「前置不满足」（nil）和「可重试的部分失败」。
+var ErrPartialSync = errors.New("partial sync: some files succeeded, some failed")
 
 // Logger 导入日志回调（薄壳注入 App.logger.Add）
 type Logger func(name, src, dst string, size int64, status, msg string)
@@ -190,7 +195,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		count++
 	}
 	if failed > 0 {
-		return count, fmt.Errorf("拉取完成: 成功 %d，失败 %d", count, failed)
+		return count, fmt.Errorf("%w: 成功 %d，失败 %d", ErrPartialSync, count, failed)
 	}
 	return count, nil
 }

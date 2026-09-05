@@ -6,27 +6,7 @@ category: ui
 source_files:
   - frontend/src/features/dialogs/modal.ts
 auto_fields:
-  symbols_with_lines:
-    - __resetModalStateForTest
-    - closeActiveDialog
-    - closeDlg
-    - fmtMB
-    - modalConfirm
-    - ModalConfirmOptions
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
-    - registerDlg
-    - trapFocus
-    - VIEW_TESTIDS
+  symbols_with_lines: []
   tests:
     - frontend/src/features/dialogs/modal.test.ts
 tests:

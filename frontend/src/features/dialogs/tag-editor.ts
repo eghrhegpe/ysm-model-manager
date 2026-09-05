@@ -5,7 +5,7 @@ import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
 
 interface DgTeShell {

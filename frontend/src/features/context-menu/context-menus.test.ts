@@ -53,9 +53,13 @@ const {
   isViewerModeMock: vi.fn(() => false),
 }));
 
-vi.mock("../dialogs/modal.ts", () => ({
+vi.mock("../dialogs/modal-prompt.ts", () => ({
   modalPrompt: modalPromptMock,
+}));
+vi.mock("../dialogs/modal-confirm.ts", () => ({
   modalConfirm: modalConfirmMock,
+}));
+vi.mock("../dialogs/modal-select.ts", () => ({
   modalSelect: modalSelectMock,
 }));
 vi.mock("../dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));

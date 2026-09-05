@@ -10,7 +10,9 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { fmtMB, modalConfirm, modalProgress } from "../dialogs/modal.ts";
+import { fmtMB } from "../../utils/format/fmt-mb.ts";
+import { modalConfirm } from "../dialogs/modal-confirm.ts";
+import { modalProgress } from "../dialogs/modal-progress.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {

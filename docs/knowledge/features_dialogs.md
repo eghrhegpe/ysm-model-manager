@@ -20,33 +20,13 @@ tests:
   - frontend/src/features/dialogs/tag-editor.test.ts
 auto_fields:
   symbols_with_lines:
-    - __resetModalStateForTest
     - AdvFilterResult
     - AdvFilterValue
     - BatchRenameChange
-    - closeActiveDialog
-    - closeDlg
-    - fmtMB
     - modalAdvFilter
-    - modalConfirm
-    - ModalConfirmOptions
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
     - modalTagEditor
-    - registerDlg
     - showBatchRenameDialog
     - showRenameDialog
-    - trapFocus
-    - VIEW_TESTIDS
 use_when:
   - 批量重命名 / 标签编辑 / 高级筛选对话框
   - 找对话框入口符号

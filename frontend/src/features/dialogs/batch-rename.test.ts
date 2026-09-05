@@ -18,11 +18,10 @@ const { closeDlgMock, registerDlgMock, trapFocusMock, activeCancelRef } = vi.hoi
   };
 });
 
-vi.mock("./modal.ts", () => ({
+vi.mock("./modal-core.ts", () => ({
   registerDlg: registerDlgMock,
   closeDlg: closeDlgMock,
   trapFocus: trapFocusMock,
-  esc: (s: unknown): string => String(s),
 }));
 
 import { showBatchRenameDialog } from "./batch-rename.ts";

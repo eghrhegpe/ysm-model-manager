@@ -30,10 +30,13 @@ vi.mock("@/backend/app.ts", async () => {
   return setupAppMock();
 });
 
-vi.mock("../dialogs/modal.ts", () => ({
-  esc: (s: unknown): string => String(s),
+vi.mock("../dialogs/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
+}));
+vi.mock("../dialogs/modal-progress.ts", () => ({
   modalProgress: mocks.modalProgress,
+}));
+vi.mock("../../utils/format/fmt-mb.ts", () => ({
   fmtMB: (n: number): string => (n / 1024 / 1024).toFixed(1) + " MB",
 }));
 

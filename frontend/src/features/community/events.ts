@@ -8,7 +8,7 @@ import { parseModelName } from "../../utils/dom/display.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
-import { modalConfirm } from "../dialogs/modal.ts";
+import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
 import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
 import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";

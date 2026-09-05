@@ -18,10 +18,9 @@ const { mocks, closeDlgMock, registerDlgMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock("./modal.ts", () => ({
+vi.mock("./modal-core.ts", () => ({
   closeDlg: closeDlgMock,
   registerDlg: registerDlgMock,
-  esc: (s: unknown): string => String(s),
   trapFocus: vi.fn(),
 }));
 

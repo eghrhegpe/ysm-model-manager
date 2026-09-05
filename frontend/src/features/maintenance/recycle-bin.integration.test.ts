@@ -31,7 +31,7 @@ Object.assign(mocks, {
 
 
 
-vi.mock("../dialogs/modal.ts", () => ({
+vi.mock("../dialogs/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
 

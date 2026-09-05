@@ -20,7 +20,7 @@ vi.mock("@/backend/app.ts", () => ({
 vi.mock("./download-queue.ts", () => ({
   createDownloadQueue: () => queueMock,
 }));
-vi.mock("../../features/dialogs/modal.ts", () => ({
+vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: vi.fn().mockResolvedValue(true),
 }));
 

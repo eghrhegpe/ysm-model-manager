@@ -6,7 +6,7 @@ import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
 
 type DgRnCloseFn = (v: string | null) => void;

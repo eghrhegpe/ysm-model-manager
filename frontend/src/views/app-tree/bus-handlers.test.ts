@@ -68,8 +68,10 @@ vi.mock("./loader.ts", () => ({
   loadEntries: loadEntriesMock,
 }));
 
-vi.mock("../../features/dialogs/modal.ts", () => ({
+vi.mock("../../features/dialogs/modal-prompt.ts", () => ({
   modalPrompt: modalPromptMock,
+}));
+vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: modalConfirmMock,
 }));
 

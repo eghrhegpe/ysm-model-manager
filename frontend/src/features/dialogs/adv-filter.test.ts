@@ -12,11 +12,10 @@ const { closeDlgMock, registerDlgMock, trapFocusMock, AllTagsMock } = vi.hoisted
   AllTagsMock: vi.fn(),
 }));
 
-vi.mock("./modal.ts", () => ({
+vi.mock("./modal-core.ts", () => ({
   closeDlg: closeDlgMock,
   registerDlg: registerDlgMock,
   trapFocus: trapFocusMock,
-  esc: (s: unknown): string => String(s),
 }));
 
 vi.mock("@/backend/app.ts", () => ({

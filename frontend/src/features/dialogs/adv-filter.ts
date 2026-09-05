@@ -9,7 +9,7 @@ import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 
 export type { AdvFilterValue } from "./adv-filter-util.ts";
 

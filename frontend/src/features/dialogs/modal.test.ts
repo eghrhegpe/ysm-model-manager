@@ -1,21 +1,22 @@
-// ===== 统一模态弹窗测试（modal.ts）=====
+// ===== 统一模态弹窗家族测试（modal.ts 拆分 — ADR-187 D2）=====
 // 覆盖：closeDlg / registerDlg / modalConfirm / modalPrompt / modalSelect
 //       + trapFocus / modalProgress / 键盘与遮罩交互（fmtMB 用例已迁 format/fmt-mb.test.ts）
-// 注意：_activeOverlay/_closeActive 是模块级单例，每个用例必须把弹窗关干净，
+// 家族集成测试：跨 modal-core 单例 + 5 builder 的行为串联；实现见 6 个 modal-*.ts。
+// 注意：_slot 是 modal-core 模块级单例，每个用例必须把弹窗关干净，
 // 否则残留的 _closeActive 会在下一个用例 registerDlg 时触发（脏状态）。
 import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   closeDlg,
   registerDlg,
   closeActiveDialog,
-  modalConfirm,
-  modalPrompt,
-  modalSelect,
-  modalProgress,
-  modalPicker,
   trapFocus,
   __resetModalStateForTest,
-} from "./modal.ts";
+} from "./modal-core.ts";
+import { modalConfirm } from "./modal-confirm.ts";
+import { modalPrompt } from "./modal-prompt.ts";
+import { modalSelect } from "./modal-select.ts";
+import { modalProgress } from "./modal-progress.ts";
+import { modalPicker } from "./modal-picker.ts";
 
 // 统一清理：恢复真实定时器（防 fake timers 泄漏到下一用例）+ 移除残留 overlay
 afterEach(() => {

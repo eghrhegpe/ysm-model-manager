@@ -10,13 +10,9 @@ source_files:
   - frontend/src/utils/cache/with-cached.ts
 auto_fields:
   symbols_with_lines:
-    - __resetModalStateForTest
     - __resetWebLogStateForTest
     - CachePolicy
     - clearAllCache
-    - closeActiveDialog
-    - closeDlg
-    - fmtMB
     - getBundle
     - getCacheTtlMs
     - getLang
@@ -24,24 +20,8 @@ auto_fields:
     - invalidateCache
     - LangCode
     - loadLocale
-    - modalConfirm
-    - ModalConfirmOptions
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
-    - registerDlg
     - setLang
     - SUPPORTED_LANGS
-    - trapFocus
-    - VIEW_TESTIDS
     - warnedKeys
     - webStoreBindings
     - withCached

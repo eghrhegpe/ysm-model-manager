@@ -12,7 +12,7 @@ import { formatBytes } from "../../utils/dom/format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { modalConfirm as _modalConfirm } from "../dialogs/modal.ts";
+import { modalConfirm as _modalConfirm } from "../dialogs/modal-confirm.ts";
 import { useCurrentResourceType } from "../repo/repo-rtype.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。

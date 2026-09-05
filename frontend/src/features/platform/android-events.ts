@@ -16,7 +16,7 @@ import { toast } from "../../core/feedback.ts";
 import { t } from "../../core/i18n/t.ts";
 import { emitAndroidBack } from "../../utils/dom/android-bridge.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { closeActiveDialog } from "../dialogs/modal.ts";
+import { closeActiveDialog } from "../dialogs/modal-core.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */
 export function registerAndroidEvents(unsubs: Array<() => void>): void {

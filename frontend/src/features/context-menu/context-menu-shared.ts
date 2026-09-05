@@ -10,7 +10,7 @@ import { toast } from "../../core/feedback.ts";
 import { tr } from "../../core/i18n/tr.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { modalPrompt } from "../dialogs/modal.ts";
+import { modalPrompt } from "../dialogs/modal-prompt.ts";
 
 /** 通知树组件和统计面板刷新 */
 export function refreshUI(): void {

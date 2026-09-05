@@ -9,7 +9,7 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { applyReplaceToName, rebuildParsedName } from "./batch-rename-util.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {

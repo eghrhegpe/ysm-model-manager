@@ -11,7 +11,7 @@ import { copyText } from "../../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../../utils/dom/download-text.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { modalConfirm } from "../dialogs/modal.ts";
+import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
 import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";

@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/container"
-	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // openZipEntries 构造内存 zip 并返回其条目集合（喂给 parseModelFromEntries）。

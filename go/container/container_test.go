@@ -82,7 +82,7 @@ func TestOpen_UnsupportedExt(t *testing.T) {
 	// 临时 .txt 文件：Open 应拒绝（仅 zip/7z/目录）
 	dir := t.TempDir()
 	p := dir + "/x.txt"
-	if err := writeFile(p, "x"); err != nil {
+	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Open(p); err == nil {
@@ -122,7 +122,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 
 	// 剥离只影响分派：非容器格式 + 禁用后缀仍拒绝；目录 + 禁用后缀仍走目录直读
 	txt := dir + "/x.txt.disabled"
-	if err := writeFile(txt, "x"); err != nil {
+	if err := os.WriteFile(txt, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Open(txt); err == nil {
@@ -132,7 +132,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 	if err := os.MkdirAll(sub, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeFile(sub+"/e.json", "{}"); err != nil {
+	if err := os.WriteFile(sub+"/e.json", []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	rd, err := Open(sub)
@@ -144,13 +144,13 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 
 func TestOpenDir_Entries(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeFile(dir+"/a.json", "{}"); err != nil {
+	if err := os.WriteFile(dir+"/a.json", []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(dir+"/sub", 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeFile(dir+"/sub/b.json", "{}"); err != nil {
+	if err := os.WriteFile(dir+"/sub/b.json", []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	r, err := OpenDir(dir)
@@ -165,10 +165,6 @@ func TestOpenDir_Entries(t *testing.T) {
 	if !names["a.json"] || !names["sub/b.json"] {
 		t.Errorf("目录条目缺失: %v", names)
 	}
-}
-
-func writeFile(p, content string) error {
-	return os.WriteFile(p, []byte(content), 0644)
 }
 
 // ===== ADR-068 补测：路径打开 / 7z 坏数据 / UncompressedSize64 / 目录条目读取 =====
@@ -228,13 +224,13 @@ func TestOpen7zBytes_BadData(t *testing.T) {
 
 func TestOpenDir_NestedDirAndRead(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeFile(dir+"/root.txt", "ROOT"); err != nil {
+	if err := os.WriteFile(dir+"/root.txt", []byte("ROOT"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(dir+"/sub", 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeFile(dir+"/sub/nested.txt", "NESTED"); err != nil {
+	if err := os.WriteFile(dir+"/sub/nested.txt", []byte("NESTED"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	r, err := OpenDir(dir)
@@ -294,7 +290,7 @@ func TestZipMatchesEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	pBad := dir + "/bad.zip"
-	if err := writeFile(pBad, "not a zip"); err != nil {
+	if err := os.WriteFile(pBad, []byte("not a zip"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	pFake7z := dir + "/fake.7z"

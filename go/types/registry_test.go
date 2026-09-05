@@ -3,6 +3,7 @@ package types
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -104,7 +105,7 @@ func TestSupportedExtsForType(t *testing.T) {
 	if len(exts) == 0 {
 		t.Fatal("SupportedExtsForType('ysm') = 空")
 	}
-	if !contains(exts, ".ysm") {
+	if !slices.Contains(exts, ".ysm") {
 		t.Error("SupportedExtsForType('ysm') 缺少 .ysm")
 	}
 	// 大小写不敏感（向后兼容）
@@ -352,15 +353,6 @@ func TestSupportedExtsForTypeUnknown(t *testing.T) {
 	if got := SupportedExtsForType("non-existent-type"); got != nil {
 		t.Errorf("SupportedExtsForType('non-existent-type') = %v, 期望 nil", got)
 	}
-}
-
-func contains(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // P3 补测：损坏外部 JSON 必须回退嵌入基线（不缓存空注册表、不 panic）——

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 套目录材质包 zip（ADR-082 S1）：pack.mcmeta exact 指纹升级为任意层级段后缀匹配

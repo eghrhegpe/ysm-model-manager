@@ -3,7 +3,7 @@ package repoaudit
 import (
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestMain 注入仓库根 resource_types.json 为 types 包测试基线

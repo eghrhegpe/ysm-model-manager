@@ -4,6 +4,8 @@
 package repoaudit
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"os"
 	"path/filepath"
 	"runtime"
@@ -32,7 +34,7 @@ func TestAudit_EmptyDir(t *testing.T) {
 
 func TestAudit_BadModelLowersScore(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "broken.ysm"), []byte("not json"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "broken.ysm"), []byte("not json"))
 
 	result, err := Audit(dir)
 	if err != nil {
@@ -53,7 +55,7 @@ func TestAudit_BadModelLowersScore(t *testing.T) {
 func TestAudit_StructuralInvalid(t *testing.T) {
 	dir := t.TempDir()
 	// 合法 JSON 但无 format_version/minecraft:geometry/bones 字段
-	writeFile(t, filepath.Join(dir, "bad.ysm"), []byte(`{"foo": "bar"}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "bad.ysm"), []byte(`{"foo": "bar"}`))
 
 	result, err := Audit(dir)
 	if err != nil {
@@ -66,7 +68,7 @@ func TestAudit_StructuralInvalid(t *testing.T) {
 
 	// 对照组：含 format_version 的合法模型
 	dir2 := t.TempDir()
-	writeFile(t, filepath.Join(dir2, "ok.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir2, "ok.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 	result2, err := Audit(dir2)
 	if err != nil {
 		t.Fatalf("Audit(ok) 应成功, got %v", err)
@@ -85,8 +87,8 @@ func TestAudit_NestedDir(t *testing.T) {
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(dir, "模型A", "model.json"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
-	writeFile(t, filepath.Join(sub, "tex.png"), []byte("png"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "模型A", "model.json"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(sub, "tex.png"), []byte("png"))
 
 	result, err := Audit(dir)
 	if err != nil {
@@ -110,9 +112,9 @@ func TestAudit_ByTypeLocationRouting(t *testing.T) {
 		t.Fatal(err)
 	}
 	// 模型包 zip + 表情 vpd + 裸 pmx（写最小合法 zip 内容即可，审计不校验内容）
-	writeFile(t, filepath.Join(pmxDir, "角色包.zip"), []byte("PK\x03\x04"))
-	writeFile(t, filepath.Join(pmxDir, "表情.vpd"), []byte("vpd"))
-	writeFile(t, filepath.Join(pmxDir, "角色.pmx"), []byte("pmx"))
+	testutil.WriteTestFileBytes(t, filepath.Join(pmxDir, "角色包.zip"), []byte("PK\x03\x04"))
+	testutil.WriteTestFileBytes(t, filepath.Join(pmxDir, "表情.vpd"), []byte("vpd"))
+	testutil.WriteTestFileBytes(t, filepath.Join(pmxDir, "角色.pmx"), []byte("pmx"))
 
 	result, err := Audit(dir)
 	if err != nil {
@@ -133,7 +135,7 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 	}
 	dir := t.TempDir()
 	outside := t.TempDir()
-	writeFile(t, filepath.Join(outside, "secret.json"), []byte(`{"format_version":"1.16.0"}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(outside, "secret.json"), []byte(`{"format_version":"1.16.0"}`))
 	link := filepath.Join(dir, "link")
 	if err := os.Symlink(outside, link); err != nil {
 		t.Skipf("无法创建符号链接: %v", err)
@@ -153,10 +155,10 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 // 口径双轨，现统一由 Go 审计产出（resources.banned）。
 func TestAudit_BannedCount(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
-	writeFile(t, filepath.Join(dir, "b.ysm.disabled"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
-	writeFile(t, filepath.Join(dir, "c.ysm.ban"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
-	writeFile(t, filepath.Join(dir, "d.ysm.BAN"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm.disabled"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "c.ysm.ban"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "d.ysm.BAN"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 
 	result, err := Audit(dir)
 	if err != nil {
@@ -172,10 +174,10 @@ func TestAudit_BannedCount(t *testing.T) {
 
 func TestHealthReportFor_IncludesDedup(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.ysm"), []byte("same content"))
-	writeFile(t, filepath.Join(dir, "b.ysm"), []byte("same content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("same content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("same content"))
 	// 第三个文件相同 → 2 组多余
-	writeFile(t, filepath.Join(dir, "c.ysm"), []byte("same content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "c.ysm"), []byte("same content"))
 
 	report, err := HealthReportFor(dir)
 	if err != nil {
@@ -199,14 +201,6 @@ func TestHealthReportFor_ErrOnMissingDir(t *testing.T) {
 	_, err := HealthReportFor(filepath.Join(t.TempDir(), "nope"))
 	if err == nil {
 		t.Error("不存在的目录应报错")
-	}
-}
-
-// writeFile 写文件（超小内容,一次写盘）
-func writeFile(t *testing.T, path string, data []byte) {
-	t.Helper()
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("写文件 %s 失败: %v", path, err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package avatar
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -45,7 +46,7 @@ func TestExtractAvatarCandidates(t *testing.T) {
 			continue
 		}
 		for _, w := range c.want {
-			if !contains(got, w) {
+			if !slices.Contains(got, w) {
 				t.Errorf("avatarCandidates(%q) 缺少 %q, 实际 %v", c.ref, w, got)
 			}
 		}
@@ -142,13 +143,4 @@ func TestExtractAvatarURIRouting(t *testing.T) {
 			t.Errorf("ExtractAvatarURI(%q)=%q, 期望空（缺失文件/未知扩展名）", c.path, got)
 		}
 	}
-}
-
-func contains(s []string, v string) bool {
-	for _, x := range s {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // ====== 包级函数 ======

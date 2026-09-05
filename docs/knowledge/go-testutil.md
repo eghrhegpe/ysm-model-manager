@@ -6,11 +6,7 @@ category: go
 source_files:
   - go/internal/testutil/testutil.go
 auto_fields:
-  symbols_with_lines:
-    - CreateTestFile
-    - InjectRootRegistry
-    - MakeZipBytes
-    - WriteZipFile
+  symbols_with_lines: []
   tests:
     - go/internal/testutil/testutil_test.go
 tests:

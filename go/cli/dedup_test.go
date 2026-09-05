@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,9 +57,9 @@ func TestDedupScan_EmptyDir(t *testing.T) {
 
 func TestDedupScan_Duplicates(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.ysm"), []byte("same content"))
-	mustWrite(t, filepath.Join(dir, "b.ysm"), []byte("same content"))
-	mustWrite(t, filepath.Join(dir, "c.ysm"), []byte("different"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("same content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("same content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "c.ysm"), []byte("different"))
 
 	out := captureOutput(t, func() {
 		if err := runDedupScan(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
@@ -91,9 +93,9 @@ func TestDedupCount_EmptyDir(t *testing.T) {
 
 func TestDedupCount_Duplicates(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.ysm"), []byte("dup"))
-	mustWrite(t, filepath.Join(dir, "b.ysm"), []byte("dup"))
-	mustWrite(t, filepath.Join(dir, "c.ysm"), []byte("solo")) // 非重复不应计数
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("dup"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("dup"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "c.ysm"), []byte("solo")) // 非重复不应计数
 
 	out := captureOutput(t, func() {
 		if err := runDedupCount(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
@@ -119,8 +121,8 @@ func TestDedupClean_DryRun_KeepsFiles(t *testing.T) {
 	dir := t.TempDir()
 	a := filepath.Join(dir, "a.ysm")
 	b := filepath.Join(dir, "b.ysm")
-	mustWrite(t, a, []byte("dup content"))
-	mustWrite(t, b, []byte("dup content"))
+	testutil.WriteTestFileBytes(t, a, []byte("dup content"))
+	testutil.WriteTestFileBytes(t, b, []byte("dup content"))
 
 	out := captureOutput(t, func() {
 		if err := runDedupClean(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: nil}); err != nil {
@@ -144,8 +146,8 @@ func TestDedupClean_Yes_MovesToRecycle(t *testing.T) {
 	dir := t.TempDir()
 	a := filepath.Join(dir, "a.ysm")
 	b := filepath.Join(dir, "b.ysm")
-	mustWrite(t, a, []byte("dup content"))
-	mustWrite(t, b, []byte("dup content"))
+	testutil.WriteTestFileBytes(t, a, []byte("dup content"))
+	testutil.WriteTestFileBytes(t, b, []byte("dup content"))
 
 	out := captureOutput(t, func() {
 		if err := runDedupClean(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--yes"}}); err != nil {
@@ -171,8 +173,8 @@ func TestDedupClean_Yes_MovesToRecycle(t *testing.T) {
 func TestDedupClean_RejectsDirOutsideRepo(t *testing.T) {
 	repoDir := t.TempDir()
 	outside := t.TempDir() // 仓库根外的独立目录
-	mustWrite(t, filepath.Join(outside, "a.ysm"), []byte("out content"))
-	mustWrite(t, filepath.Join(outside, "b.ysm"), []byte("out content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(outside, "a.ysm"), []byte("out content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(outside, "b.ysm"), []byte("out content"))
 
 	err := runDedupClean(&CmdContext{App: &app.App{}, FilesRoot: repoDir, Args: []string{"--dir", outside}})
 	if err == nil || !strings.Contains(err.Error(), "仓库根内") {
@@ -183,8 +185,8 @@ func TestDedupClean_RejectsDirOutsideRepo(t *testing.T) {
 // --output 写盘后不展开打印重复组（结果存文件，stdout 只留摘要）
 func TestDedupScan_OutputWritesFileWithoutExpansion(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.ysm"), []byte("same x"))
-	mustWrite(t, filepath.Join(dir, "b.ysm"), []byte("same x"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("same x"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("same x"))
 	outFile := filepath.Join(dir, "dup.json")
 
 	out := captureOutput(t, func() {

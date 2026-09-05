@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 type summaryParityCase struct {

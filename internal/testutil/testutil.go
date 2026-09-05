@@ -40,6 +40,27 @@ func CreateTestFile(t *testing.T, dir, name, content string) string {
 	return path
 }
 
+// WriteTestFile 向完整路径 path 写入 content（自动建父目录），返回 path。
+// 供夹具路径已含完整路径（不经 dir/name 拆分）的场景，收敛 launcher/scanner/
+// repoaudit/cli/sync 各自漂移的 writeFile/mustWrite 本地实现（有的建父目录、
+// 有的不建；签名 string/[]byte 混用）。
+func WriteTestFile(t *testing.T, path, content string) string {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("写文件 %s 失败: %v", path, err)
+	}
+	return path
+}
+
+// WriteTestFileBytes 向完整路径 path 写入 data（自动建父目录），返回 path。
+// WriteTestFile 的 []byte 变体，供实参本就是字节切片（bytes.Repeat 等）的调用点。
+func WriteTestFileBytes(t *testing.T, path string, data []byte) string {
+	return WriteTestFile(t, path, string(data))
+}
+
 // MakeZipBytes 构造内存 ZIP（entries: 条目名→内容），返回字节。
 // 统一 geometry/packs/ysm 五个包各自的 makeZipBytes/makeJar/writeZip 变体。
 func MakeZipBytes(t *testing.T, entries map[string]string) []byte {

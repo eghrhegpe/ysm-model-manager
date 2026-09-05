@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -38,11 +40,11 @@ func TestHealthReport_EmptyDir(t *testing.T) {
 func TestHealthReport_BadModelLowersScore(t *testing.T) {
 	dir := t.TempDir()
 	// 一个残缺 .ysm（非 JSON）→ 完整性扣分
-	mustWrite(t, filepath.Join(dir, "broken.ysm"), []byte("this is not json"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "broken.ysm"), []byte("this is not json"))
 
 	good := t.TempDir()
 	// 好模型须通过 isModelFileValid 加严校验（合法 JSON + format_version）
-	mustWrite(t, filepath.Join(good, "ok.ysm"), []byte(`{"format_version": "1.8.0", "name": "ok"}`))
+	testutil.WriteTestFileBytes(t, filepath.Join(good, "ok.ysm"), []byte(`{"format_version": "1.8.0", "name": "ok"}`))
 
 	badOut := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
@@ -64,8 +66,8 @@ func TestHealthReport_BadModelLowersScore(t *testing.T) {
 
 func TestHealthReport_ReportsDuplicates(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.ysm"), []byte("dup content"))
-	mustWrite(t, filepath.Join(dir, "b.ysm"), []byte("dup content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("dup content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("dup content"))
 
 	out := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
@@ -80,8 +82,8 @@ func TestHealthReport_ReportsDuplicates(t *testing.T) {
 // --output 写 JSON 且字段完整（去重/完整性/分数都在），写盘后不刷屏全量报告
 func TestHealthReport_OutputJSON(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.ysm"), []byte("dup content"))
-	mustWrite(t, filepath.Join(dir, "b.ysm"), []byte("dup content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.ysm"), []byte("dup content"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.ysm"), []byte("dup content"))
 	outFile := filepath.Join(dir, "health.json")
 
 	out := captureOutput(t, func() {

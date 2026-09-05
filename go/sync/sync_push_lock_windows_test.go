@@ -12,41 +12,21 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
-)
 
-// lockDirExclusive 以独占方式打开目录（FILE_FLAG_BACKUP_SEMANTICS + share=0），
-// 令后续对该目录的枚举（ReadDir）/重命名失败（ERROR_SHARING_VIOLATION）。
-// 若环境不执行共享锁语义（ReadDir 仍成功）则 Skip，避免误判。
-func lockDirExclusive(t *testing.T, dir string) {
-	t.Helper()
-	p, err := syscall.UTF16PtrFromString(dir)
-	if err != nil {
-		t.Skipf("UTF16 转换失败: %v", err)
-	}
-	h, err := syscall.CreateFile(p, syscall.GENERIC_READ, 0, nil,
-		syscall.OPEN_EXISTING, syscall.FILE_FLAG_BACKUP_SEMANTICS, 0)
-	if err != nil {
-		t.Skipf("独占打开目录失败: %v", err)
-	}
-	// 探针：锁应令 ReadDir 失败，否则该环境不执行共享锁语义，跳过测试
-	if _, err := os.ReadDir(dir); err == nil {
-		syscall.CloseHandle(h)
-		t.Skip("环境未执行共享锁（ReadDir 仍成功），跳过")
-	}
-	t.Cleanup(func() { syscall.CloseHandle(h) })
-}
+	"ysm-model-manager/internal/testutil"
+)
 
 // TestCopyDirRecursive_RollbackOnPartialCopy 复制中途失败且 dst 为本次新建
 // → 整树回滚清理（a.txt 已复制部分一并删除）
+// （目录锁经 testutil.LockDirExclusive 构造，环境不支持时自动 Skip）
 func TestCopyDirRecursive_RollbackOnPartialCopy(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "src")
 	_ = os.MkdirAll(filepath.Join(src, "d"), 0755)
 	_ = os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0644)
 	_ = os.WriteFile(filepath.Join(src, "d", "inner.txt"), []byte("i"), 0644)
-	lockDirExclusive(t, filepath.Join(src, "d"))
+	testutil.LockDirExclusive(t, filepath.Join(src, "d"))
 
 	dst := filepath.Join(base, "dst")
 	if err := copyDirRecursive(src, dst); err == nil {
@@ -65,7 +45,7 @@ func TestCopyDirRecursive_NoRollbackWhenDstExisted(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(src, "d"), 0755)
 	_ = os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0644)
 	_ = os.WriteFile(filepath.Join(src, "d", "inner.txt"), []byte("i"), 0644)
-	lockDirExclusive(t, filepath.Join(src, "d"))
+	testutil.LockDirExclusive(t, filepath.Join(src, "d"))
 
 	dst := filepath.Join(base, "dst")
 	_ = os.MkdirAll(dst, 0755)

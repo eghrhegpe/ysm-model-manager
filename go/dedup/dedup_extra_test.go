@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // ====== CountDuplicates ======

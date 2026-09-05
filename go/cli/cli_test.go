@@ -5,6 +5,8 @@
 package cli
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -184,9 +186,9 @@ func TestCacheStatus_EmptyCache(t *testing.T) {
 
 func TestCacheStatus_CountsKtx2Only(t *testing.T) {
 	dir := withTempCache(t)
-	mustWrite(t, filepath.Join(dir, "aaaa.ktx2"), bytes.Repeat([]byte("x"), 100))
-	mustWrite(t, filepath.Join(dir, "bbbb.ktx2"), bytes.Repeat([]byte("y"), 200))
-	mustWrite(t, filepath.Join(dir, "notes.txt"), []byte("ignore-me")) // 非 ktx2 应忽略
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "aaaa.ktx2"), bytes.Repeat([]byte("x"), 100))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "bbbb.ktx2"), bytes.Repeat([]byte("y"), 200))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "notes.txt"), []byte("ignore-me")) // 非 ktx2 应忽略
 
 	out := captureOutput(t, func() {
 		if err := runCacheStatus(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
@@ -218,7 +220,7 @@ func TestCacheClear_EmptyCache(t *testing.T) {
 func TestCacheClear_YesDeletesFiles(t *testing.T) {
 	dir := withTempCache(t)
 	for _, h := range []string{"a", "b", "c"} {
-		mustWrite(t, filepath.Join(dir, h+".ktx2"), []byte("x"))
+		testutil.WriteTestFileBytes(t, filepath.Join(dir, h+".ktx2"), []byte("x"))
 	}
 	out := captureOutput(t, func() {
 		if err := runCacheClear(&CmdContext{App: &app.App{}, Args: []string{"--yes"}}); err != nil {
@@ -235,7 +237,7 @@ func TestCacheClear_YesDeletesFiles(t *testing.T) {
 
 func TestCacheClear_CancelKeepsFiles(t *testing.T) {
 	dir := withTempCache(t)
-	mustWrite(t, filepath.Join(dir, "keep.ktx2"), []byte("x"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "keep.ktx2"), []byte("x"))
 	withStdin(t, "n\n") // 确认时输入非 y → 取消
 	out := captureOutput(t, func() {
 		if err := runCacheClear(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
@@ -275,7 +277,7 @@ func TestCacheVerify_NoTextures(t *testing.T) {
 func TestCacheVerify_ReportsMiss(t *testing.T) {
 	withTempCache(t)
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "tex.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
 	out := captureOutput(t, func() {
 		if err := runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
 			t.Fatalf("runCacheVerify 应成功, got %v", err)
@@ -462,13 +464,6 @@ func TestPrintCLIHelp_CommandsSorted(t *testing.T) {
 
 // ---- helpers ----
 
-func mustWrite(t *testing.T, path string, data []byte) {
-	t.Helper()
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("写入 %s: %v", path, err)
-	}
-}
-
 func listDirNames(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -494,7 +489,7 @@ func TestFileBench_RequiresDirOrFile(t *testing.T) {
 func TestFileBench_SingleFile(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "test.ysm")
-	mustWrite(t, filePath, bytes.Repeat([]byte("x"), 2*1024*1024)) // 2MB
+	testutil.WriteTestFileBytes(t, filePath, bytes.Repeat([]byte("x"), 2*1024*1024)) // 2MB
 
 	out := captureOutput(t, func() {
 		if err := runFileBench(&CmdContext{App: &app.App{}, Args: []string{"--file", filePath}}); err != nil {
@@ -509,7 +504,7 @@ func TestFileBench_SingleFile(t *testing.T) {
 func TestFileBench_DirWithLargeFiles(t *testing.T) {
 	dir := t.TempDir()
 	for i := 0; i < 3; i++ {
-		mustWrite(t, filepath.Join(dir, fmt.Sprintf("file_%d.ysm", i)), bytes.Repeat([]byte("x"), 2*1024*1024))
+		testutil.WriteTestFileBytes(t, filepath.Join(dir, fmt.Sprintf("file_%d.ysm", i)), bytes.Repeat([]byte("x"), 2*1024*1024))
 	}
 
 	out := captureOutput(t, func() {
@@ -546,9 +541,9 @@ func TestScanDir_EmptyDir(t *testing.T) {
 
 func TestScanDir_WithFiles(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "test.png"), []byte("fake png"))
-	mustWrite(t, filepath.Join(dir, "test.jpg"), []byte("fake jpg"))
-	mustWrite(t, filepath.Join(dir, "model.pmx"), bytes.Repeat([]byte("x"), 15*1024*1024)) // 15MB
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "test.png"), []byte("fake png"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "test.jpg"), []byte("fake jpg"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.pmx"), bytes.Repeat([]byte("x"), 15*1024*1024)) // 15MB
 
 	out := captureOutput(t, func() {
 		if err := runScanDir(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
@@ -588,10 +583,10 @@ func TestAnalyzeMMD_EmptyDir(t *testing.T) {
 func TestAnalyzeMMD_WithModels(t *testing.T) {
 	dir := t.TempDir()
 	// 创建模拟的 MMD 文件
-	mustWrite(t, filepath.Join(dir, "model.pmx"), []byte("fake pmx"))
-	mustWrite(t, filepath.Join(dir, "motion.vmd"), []byte("fake vmd"))
-	mustWrite(t, filepath.Join(dir, "physics.vpd"), []byte("fake vpd"))
-	mustWrite(t, filepath.Join(dir, "tex1.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.pmx"), []byte("fake pmx"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "motion.vmd"), []byte("fake vmd"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "physics.vpd"), []byte("fake vpd"))
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex1.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
 
 	out := captureOutput(t, func() {
 		if err := runAnalyzeMMD(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
@@ -627,7 +622,7 @@ func TestSingleBench_RequiresModel(t *testing.T) {
 func TestSingleBench_WithFakeModel(t *testing.T) {
 	dir := t.TempDir()
 	modelPath := filepath.Join(dir, "test.ysm")
-	mustWrite(t, modelPath, []byte(`{"test": "model"}`))
+	testutil.WriteTestFileBytes(t, modelPath, []byte(`{"test": "model"}`))
 
 	out := captureOutput(t, func() {
 		if err := runSingleBench(&CmdContext{App: &app.App{}, Args: []string{"--model", modelPath, "--iterations", "1"}}); err != nil {

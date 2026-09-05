@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,13 +18,13 @@ func TestScanCacheVerify(t *testing.T) {
 	root := t.TempDir()
 	withTempCache(t) // 重定向 texture_cache.CacheDir，t.Cleanup 自动恢复
 
-	mustWrite(t, filepath.Join(root, "a.png"), []byte("png-bytes"))
-	mustWrite(t, filepath.Join(root, "b.jpg"), []byte("jpg-bytes"))
-	mustWrite(t, filepath.Join(root, "notes.txt"), []byte("ignored-not-texture"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "a.png"), []byte("png-bytes"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "b.jpg"), []byte("jpg-bytes"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "notes.txt"), []byte("ignored-not-texture"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	mustWrite(t, filepath.Join(root, "sub", "c.tga"), []byte("tga-bytes"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "sub", "c.tga"), []byte("tga-bytes"))
 
 	infos, walkErrs, err := scanCacheVerify(root)
 	if err != nil {
@@ -85,17 +87,17 @@ func TestScanCacheVerify(t *testing.T) {
 func TestScanMMDAssets(t *testing.T) {
 	root := t.TempDir()
 
-	mustWrite(t, filepath.Join(root, "m1.pmx"), []byte("x"))
-	mustWrite(t, filepath.Join(root, "m2.pmd"), []byte("yy"))
-	mustWrite(t, filepath.Join(root, "v.vrm"), []byte("zzz"))
-	mustWrite(t, filepath.Join(root, "a.vmd"), []byte("w"))
-	mustWrite(t, filepath.Join(root, "p.vpd"), []byte("v"))
-	mustWrite(t, filepath.Join(root, "t.png"), []byte("tt"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "m1.pmx"), []byte("x"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "m2.pmd"), []byte("yy"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "v.vrm"), []byte("zzz"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "a.vmd"), []byte("w"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "p.vpd"), []byte("v"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "t.png"), []byte("tt"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	mustWrite(t, filepath.Join(root, "sub", "deep.pmx"), []byte("dd"))
-	mustWrite(t, filepath.Join(root, "ignore.txt"), []byte("no"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "sub", "deep.pmx"), []byte("dd"))
+	testutil.WriteTestFileBytes(t, filepath.Join(root, "ignore.txt"), []byte("no"))
 
 	s, err := scanMMDAssets(root)
 	if err != nil {

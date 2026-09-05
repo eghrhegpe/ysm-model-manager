@@ -3,6 +3,8 @@
 package scanner
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -42,13 +44,13 @@ func TestScanEntries_GoRust_CrossEngineParity(t *testing.T) {
 	//  - official/ysm.json   模型目录
 	//  - hidden.ysm.ban/     禁用目录（生产路径两端都必须跳过）
 	//  - nested/sub.ysm      嵌套模型
-	writeFile(t, filepath.Join(base, "hero.ysm"), "hero")
+	testutil.WriteTestFile(t, filepath.Join(base, "hero.ysm"), "hero")
 	mkDir(t, filepath.Join(base, "official"))
-	writeFile(t, filepath.Join(base, "official", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(base, "official", "ysm.json"), "{}")
 	mkDir(t, filepath.Join(base, "hidden.ysm.ban"))
-	writeFile(t, filepath.Join(base, "hidden.ysm.ban", "ghost.ysm"), "ghost")
+	testutil.WriteTestFile(t, filepath.Join(base, "hidden.ysm.ban", "ghost.ysm"), "ghost")
 	mkDir(t, filepath.Join(base, "nested"))
-	writeFile(t, filepath.Join(base, "nested", "sub.ysm"), "sub")
+	testutil.WriteTestFile(t, filepath.Join(base, "nested", "sub.ysm"), "sub")
 
 	// Go 主扫描（兜底路径）
 	goEntries := ScanEntries(base)
@@ -153,13 +155,6 @@ func keys[V any](m map[string]V) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func writeFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("写文件 %s: %v", path, err)
-	}
 }
 
 func mkDir(t *testing.T, path string) {

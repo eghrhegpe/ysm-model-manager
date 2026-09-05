@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // minimalYsmJSON 构造最小可解析的 ysm.json 内容

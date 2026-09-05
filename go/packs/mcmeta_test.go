@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestHasExt(t *testing.T) {

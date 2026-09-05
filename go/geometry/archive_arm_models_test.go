@@ -4,7 +4,7 @@ package geometry
 import (
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestParseFromZip_ExcludesArm 验证 ZIP 解析时排除 arm.json：

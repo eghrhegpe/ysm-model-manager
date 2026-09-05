@@ -3,7 +3,8 @@
 package packs_test
 
 import (
-	"archive/zip"
+	"ysm-model-manager/internal/testutil"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -52,34 +53,11 @@ func TestIsTypeModelFile_YsmJsonScopedByType(t *testing.T) {
 // 不得把纯打包物/坏包当模型搬运）=====
 
 // writeZip 造一个含指定条目的 zip 文件，返回路径。
-func writeZip(t *testing.T, entries map[string]string) string {
-	t.Helper()
-	p := filepath.Join(t.TempDir(), "model.zip")
-	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	zw := zip.NewWriter(f)
-	for name, content := range entries {
-		w, err := zw.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := w.Write([]byte(content)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
 
 // TestIsTypeModelFile_ZipEntry_VmdInsideIsModel 内含 .vmd 的 zip 应识别为
 // DefaultAnim 模型（保住合法用例：内装 vmd 动画的压缩包）。
 func TestIsTypeModelFile_ZipEntry_VmdInsideIsModel(t *testing.T) {
-	zipPath := writeZip(t, map[string]string{"motion.vmd": "vmd", "readme.txt": "x"})
+	zipPath := testutil.WriteZipFile(t, "model.zip", map[string]string{"motion.vmd": "vmd", "readme.txt": "x"})
 	if !packs.IsTypeModelFile(zipPath, "DefaultAnim") {
 		t.Fatalf("内含 .vmd 的 zip 应识别为 DefaultAnim 模型: %s", zipPath)
 	}
@@ -88,7 +66,7 @@ func TestIsTypeModelFile_ZipEntry_VmdInsideIsModel(t *testing.T) {
 // TestIsTypeModelFile_ZipEntry_NoMatchNotModel 内不含 .vmd 的 zip（纯打包物）
 // 不得识别为 DefaultAnim 模型——否则同步推送/拉取会把它当顶层模型搬运。
 func TestIsTypeModelFile_ZipEntry_NoMatchNotModel(t *testing.T) {
-	zipPath := writeZip(t, map[string]string{"data.bin": "x", "readme.txt": "y"})
+	zipPath := testutil.WriteZipFile(t, "model.zip", map[string]string{"data.bin": "x", "readme.txt": "y"})
 	if packs.IsTypeModelFile(zipPath, "DefaultAnim") {
 		t.Fatalf("内不含 .vmd 的 zip 不得识别为 DefaultAnim 模型: %s", zipPath)
 	}

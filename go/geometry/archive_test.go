@@ -5,7 +5,7 @@ package geometry
 import (
 	"testing"
 
-	"ysm-model-manager/go/internal/testutil"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 构造一个 > 4KB 的虚拟 PNG 数据

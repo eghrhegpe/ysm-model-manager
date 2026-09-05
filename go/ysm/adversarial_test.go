@@ -4,6 +4,8 @@
 package ysm
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"archive/zip"
 	"bytes"
 	"fmt"
@@ -235,7 +237,7 @@ func TestExtractYsmSummary_ZipSuffixShadow(t *testing.T) {
 	// 干扰项：后缀 `.json` 匹配到 `main.json` 后缀
 	shadowJSON := `{"minecraft:geometry":[{"description":{"texture_width":128,"texture_height":128},"bones":[{}]}]}`
 
-	path := writeZip(t, "shadow.ysm", map[string]string{
+	path := testutil.WriteZipFile(t, "shadow.ysm", map[string]string{
 		"ysm.json":          ysmJSON,
 		"geo/main.json":     mainJSON,
 		"geo/evil.txt.json": shadowJSON,
@@ -385,7 +387,7 @@ func TestAnalyzeYSMModel_MalformedFields(t *testing.T) {
 		"animations": 123,
 		"model": {"faces": []}
 	}`
-	path := writeZip(t, "mf.ysm", map[string]string{"model.json": modelJSON})
+	path := testutil.WriteZipFile(t, "mf.ysm", map[string]string{"model.json": modelJSON})
 	meta := AnalyzeYSMModel(path)
 	if meta.HasError {
 		t.Fatalf("畸形字段不应报错，实际 = %s", meta.ErrorMsg)
@@ -401,7 +403,7 @@ func TestAnalyzeYSMModel_MalformedFields(t *testing.T) {
 
 // 空 zip（无 model.json）—— AnalyzeYSMModel 应返回 HasError
 func TestAnalyzeYSMModel_EmptyZip(t *testing.T) {
-	path := writeZip(t, "empty.ysm", map[string]string{"readme.txt": "hi"})
+	path := testutil.WriteZipFile(t, "empty.ysm", map[string]string{"readme.txt": "hi"})
 	meta := AnalyzeYSMModel(path)
 	if !meta.HasError {
 		t.Fatalf("无 model.json 应返回错误")
@@ -468,7 +470,7 @@ func TestExtractYsmSummary_ZipLongTips(t *testing.T) {
 		"metadata": {"name": "longtips", "tips": %q},
 		"files": {"player": {"model": [], "texture": []}}
 	}`, tips)
-	path := writeZip(t, "long.ysm", map[string]string{"ysm.json": payload})
+	path := testutil.WriteZipFile(t, "long.ysm", map[string]string{"ysm.json": payload})
 	sum, err := ExtractYsmSummary(path)
 	if err != nil {
 		t.Fatalf("超长 tips 应容错: %v", err)
@@ -552,20 +554,3 @@ func TestExtractYsmSummary_YSGP_NoStats(t *testing.T) {
 // ---------------------------------------------------------------------------
 // 构造辅助：writeZip
 // ---------------------------------------------------------------------------
-
-func writeZip(t *testing.T, name string, entries map[string]string) string {
-	t.Helper()
-	var buf bytes.Buffer
-	zw := zip.NewWriter(&buf)
-	for n, c := range entries {
-		w, err := zw.Create(n)
-		if err != nil {
-			t.Fatal(err)
-		}
-		w.Write([]byte(c))
-	}
-	zw.Close()
-	p := filepath.Join(t.TempDir(), name)
-	os.WriteFile(p, buf.Bytes(), 0o644)
-	return p
-}

@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"ysm-model-manager/internal/testutil"
+
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,17 +18,17 @@ import (
 func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 	root := t.TempDir()
 	// 根级平铺模型文件（恒登记）
-	mustWrite(t, filepath.Join(root, "solo.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "solo.pmx"), "x")
 	// 非模型文件（应被忽略）
-	mustWrite(t, filepath.Join(root, "readme.txt"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "readme.txt"), "x")
 	// 叶子模型文件夹：内含 model.pmx，自身作为整体单元（内部文件不登记）
 	mkdir(t, filepath.Join(root, "leaf_pack"))
-	mustWrite(t, filepath.Join(root, "leaf_pack", "model.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "leaf_pack", "model.pmx"), "x")
 	// 容器模型文件夹：直接含 model.pmx + 子模型文件夹 sub（自身与子夹均登记、内部文件登记）
 	mkdir(t, filepath.Join(root, "container"))
-	mustWrite(t, filepath.Join(root, "container", "model.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "container", "model.pmx"), "x")
 	mkdir(t, filepath.Join(root, "container", "sub"))
-	mustWrite(t, filepath.Join(root, "container", "sub", "model2.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "container", "sub", "model2.pmx"), "x")
 
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
@@ -49,12 +51,12 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 func TestSyncResourcesDirLevelScanMatchesWalk(t *testing.T) {
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "leaf_pack"))
-	mustWrite(t, filepath.Join(root, "leaf_pack", "model.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "leaf_pack", "model.pmx"), "x")
 	mkdir(t, filepath.Join(root, "container"))
-	mustWrite(t, filepath.Join(root, "container", "model.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "container", "model.pmx"), "x")
 	mkdir(t, filepath.Join(root, "container", "sub"))
-	mustWrite(t, filepath.Join(root, "container", "sub", "model2.pmx"), "x")
-	mustWrite(t, filepath.Join(root, "solo.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "container", "sub", "model2.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "solo.pmx"), "x")
 
 	rtype := "EntityPlayer"
 	walkRes := SyncResourcesDirLevel(root, root, rtype)
@@ -74,14 +76,14 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 	// 目标 folder：container（直接含 model.pmx + 子夹 sub/model2.pmx）
 	container := filepath.Join(root, "container")
 	mkdir(t, container)
-	mustWrite(t, filepath.Join(container, "model.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(container, "model.pmx"), "x")
 	mkdir(t, filepath.Join(container, "sub"))
-	mustWrite(t, filepath.Join(container, "sub", "model2.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(container, "sub", "model2.pmx"), "x")
 	// 同层干扰：另一个叶子夹 leaf（不应出现在 container 的结果里）
 	mkdir(t, filepath.Join(root, "leaf"))
-	mustWrite(t, filepath.Join(root, "leaf", "solo.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "leaf", "solo.pmx"), "x")
 	// 根级平铺干扰
-	mustWrite(t, filepath.Join(root, "root_solo.pmx"), "x")
+	testutil.WriteTestFile(t, filepath.Join(root, "root_solo.pmx"), "x")
 
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
@@ -107,16 +109,6 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 		if k == "solo.pmx" || k == "root_solo.pmx" {
 			t.Errorf("反推结果泄漏了 container 外的文件：%s", k)
 		}
-	}
-}
-
-func mustWrite(t *testing.T, p, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
 	}
 }
 

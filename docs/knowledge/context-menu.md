@@ -99,7 +99,7 @@ status: active
 
 ## 与其他子系统关系
 
-- 弹窗交互委托 `utils/dom/dialogs/`：`modalPrompt` / `modalConfirm` / `modalSelect`（modal.ts）、`showRenameDialog`（rename.ts）、`modalTagEditor`（tag-editor.ts）
+- 弹窗交互委托 `features/dialogs/`：`modalPrompt` / `modalConfirm` / `modalSelect`（modal.ts）、`showRenameDialog`（rename.ts）、`modalTagEditor`（tag-editor.ts）（ADR-170 自 `utils/dom/dialogs/` 升格）
 - `dir:*` / `batch:rename` 等事件由 `app-tree/bus-handlers.ts` 消费（批量重命名弹窗见知识卡 `dialog_batch_rename`）
 - 错误文案统一走 `context-menu-shared.ts` 的 `toastError(err, fallback?, prefix?)`（内部转 `utils/dom/errors.ts` 的 `friendlyError`，long 时长），避免把 Go 原始错误串直接抛给用户——handler 层 catch 一律 `toastError`，不手写 `toast("❌ " + ...)` 模板
 - 回收站行为最终走 Go `go/recycle` 包（`MoveToRecycle`）

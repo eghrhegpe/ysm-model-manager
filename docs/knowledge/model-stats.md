@@ -82,9 +82,9 @@ status: active
 - **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
 
 - **`web-stats.ts`** — 主线程编排：
-  - `batchStatsWebModels(paths)` — 串行发送请求（同一时刻至多一个），批间 `STATS_CHUNK_TIMEOUT_MS`（60s）超时终止防僵尸
+  - `batchStatsWebModels(paths)` — chunk 分发到池内 worker **并行**统计（`Promise.all(ws.map(runWorkerQueue))`，每 worker 单在途——见不变量），批超时 `STATS_CHUNK_TIMEOUT_MS`（60s）终止防僵尸
   - **降级契约**：Worker 不支持（`new Worker` 抛错）/ 启动失败 / 运行时错误 / 单批超时 → 返回 `null` 并置降级标记（`consumeWebSearchDegraded` 消费，供 toolbar-search 提示）；`web-fs.searchWebModels` 收到 `null` 走「数值 0 + `hasError: false`」降级路径
-  - **测试注入**：`setStatsRunnerForTest` 替换 Worker 路径（`browser-adapter.test.ts` 用）
+  - **测试注入**：`__setStatsRunnerForTest` 替换 Worker 路径（`browser-adapter.test.ts` / `web-stats.test.ts` 用）
 
 ## 已知边界
 
@@ -96,7 +96,7 @@ status: active
 
 - 单批超时 60s 终止 Worker 防僵尸
 - 降级时 `hasError: false`（统计失败不影响搜索结果可用性，仅数值为 0）
-- 批量统计串行（`requestSeq` 保证顺序），批间不可并行
+- **池内 chunk 并行 + 批间调用方串行**：单批内 chunk 经 `Promise.all(ws.map(runWorkerQueue))` 分发到池内 worker 并行处理（每 worker 单在途，见下条）；`requestSeq`/`requestId` **只做消息隔离**（过滤旧批/进度消息），不提供跨批串行——并发发起两个 `batchStatsWebModels` 会共享池 worker 的 `onmessage` 单槽位互踩（与 8cfbf2e7 重试占用他队 worker 同族根因），调用方必须保证同一时刻至多一个 batch 在跑
 - **单 worker 单在途 + 重试专属 replacement**（2026-09-05 code_review 修复 8cfbf2e7）：
   - `statsOneChunk` 以 `w.onmessage` 单槽位按 `requestId` 过滤回包——每 worker 同时只允许一个在途请求（`runWorkerQueue` 池内并发各持一 worker）
   - 瞬态 error（WASM init 失败 / trap 逃逸）只 `terminateWorker` 出错者；重试**必须新建专属 worker**（`spawnReplacementWorker` 补入池），**禁止复用池内既有 worker**——多 worker 池里其余 worker 正被并发队列持在途，复用会覆盖其 onmessage 槽位 → 对方回包被 requestId 丢弃 → 挂 60s 超时杀整池（重试特性反而整体降级）

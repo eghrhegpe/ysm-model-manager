@@ -426,9 +426,9 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 626 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 625 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 159 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 158 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 46 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 58 |

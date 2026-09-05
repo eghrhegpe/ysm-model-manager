@@ -469,6 +469,8 @@ auto_fields:
     - ReflectorCapability
     - ReflectorParams
     - registerBoneRaycast
+    - registerBuiltScene
+    - RegisterBuiltSceneInput
     - registerModelRoot
     - registerPerFrame
     - registerSchema

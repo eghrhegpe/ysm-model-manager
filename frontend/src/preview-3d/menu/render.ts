@@ -9,6 +9,7 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { getSchema } from "../adapters/schema-registry.ts";
+import type { MenuControlDef, MenuControlKind } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import {
   isPathAvailable,
@@ -33,122 +34,55 @@ function ensureMenuStyles(): void {
   if (_menuStylesInjected) return;
   const style = document.createElement("style");
   style.textContent = `
-.cap-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  min-height: 32px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.cap-section-arrow {
-  font-size: 10px;
-  display: inline-block;
-}
-.menu-divider {
-  height: 1px;
-  background: rgba(255,255,255,0.1);
-  margin: 6px 10px;
-}
 /* ===== P1 抽类迁移（render.ts 控件行，2026-09）：原内联 style.cssText 逐字搬迁 =====
  * 双类锚定（.slide-item / .slide-label 在前）压过 ui 模块单类规则，避免注入顺序依赖；
- * 控件无基类的用 rm- 单类（前缀唯一，无撞名）。toggle 的 apply() 运行时色/位移仍走内联（动态豁免）。 */
+ * 控件无基类的用 rm- 单类（前缀唯一，无撞名）。
+ * [控件原语归一] rm-toggle-track/knob/range/slider-label-fixed/control-row-lg/control-label/control-label-strong 已删除——
+ *  cap 栈（cc-* 类）统一渲染，rm 栈三控件退役。*/
 .slide-item.rm-control-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
-}
-.slide-item.rm-control-row-lg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   padding: 4px 10px;
 }
 .slide-label.rm-label-sm {
-  font-size: 12px;
-}
-.slide-label.rm-control-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  color: rgba(255,255,255,0.7);
-}
-.slide-label.rm-control-label-strong {
-  flex: 1;
-  font-size: 12px;
-  color: rgba(255,255,255,0.85);
-}
-.slide-label.rm-slider-label-fixed {
-  flex: 0 0 auto;
-  font-size: 12px;
-  color: rgba(255,255,255,0.7);
+   font-size: 12px;
 }
 .slide-label.rm-label-ellipsis {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  font-size: 12px;
-  color: rgba(255,255,255,0.85);
-}
-.rm-toggle-track {
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.2s;
-}
-.rm-toggle-knob {
-  position: absolute;
-  top: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  transition: left 0.2s;
-}
-.rm-range {
-  flex: 1;
-  min-width: 0;
-  cursor: pointer;
-  accent-color: var(--accent, #7c83ff);
+   flex: 1 1 auto;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+   min-width: 0;
+   font-size: 12px;
+   color: rgba(255,255,255,0.85);
 }
 .rm-range-num {
-  flex: 0 0 auto;
-  width: 52px;
-  font-size: 11px;
-  padding: 1px 3px;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(0,0,0,0.3);
-  color: rgba(255,255,255,0.8);
-  text-align: center;
+   flex: 0 0 auto;
+   width: 52px;
+   font-size: 11px;
+   padding: 1px 3px;
+   border-radius: 4px;
+   border: 1px solid rgba(255,255,255,0.2);
+   background: rgba(0,0,0,0.3);
+   color: rgba(255,255,255,0.8);
+   text-align: center;
 }
 .rm-eye {
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0;
-  line-height: 1;
+   flex: 0 0 auto;
+   background: none;
+   border: none;
+   cursor: pointer;
+   font-size: 14px;
+   padding: 0;
+   line-height: 1;
 }
 .rm-op {
-  flex: 0 0 auto;
-  width: 72px;
-  cursor: pointer;
-  accent-color: var(--accent, #7c83ff);
-}
-`;
+   flex: 0 0 auto;
+   width: 72px;
+   cursor: pointer;
+   accent-color: var(--accent, #7c83ff);
+}`;
   overlayStyleRoot().appendChild(style);
   _menuStylesInjected = true;
 }
@@ -303,155 +237,80 @@ function rmAppendDynamicRow(
   container.appendChild(row);
 }
 
-/** select 当前值解析：bind 模式取 snapshot[bind]（状态层路径），闭包模式取 get(undefined)——
- *  9a65f796 review P12：嵌套三元改单层（bind 优先分支），行为等价 */
-function rmSelectCurrent(
-  spec: { bind?: string; get?: (v?: unknown) => unknown },
-  snapshot: Record<string, unknown>,
-): string {
-  if (spec.bind)
-    return spec.get ? String(spec.get(snapshot[spec.bind])) : String(snapshot[spec.bind]);
-  return spec.get ? String(spec.get(undefined)) : "";
-}
-
-/** [子函数 5/6] select：下拉选择控件（bind 到 PreviewStatePath，走状态层读写）——
- *  [doc:adr-126-p5-c] 受控化：组件选择等交互控件不再手写 DOM 闭包，声明为节点 + control.bind */
-function rmAppendSelect(
-  container: HTMLElement,
+/**
+ * [控件原语归一] 将 PreviewMenuNode 的 PreviewControlSpec 投影为 MenuControlDef，
+ *  供 renderCapControls 复用 cap 栈渲染。数据契约不动——只转换渲染层，
+ *  6 个适配器工厂产出结构零改动。
+ *
+ * 语义保留（对齐 rmAppendSelect/Slider/Toggle 全行为）：
+ *   - get(v?) → getValue()（bind 优先：取 snapshot[bind] 经 get 衍生）
+ *   - set(v) → setValue(v)（spec.set → bind 写状态层 → spec.onChange）
+ *   - onChange(v) → onChange(v)（refreshOnChange 时 menu.refresh）
+ *   - numeric → slider.numeric（cap 渲染端已支持双向联动 + clamp）
+ *   - bind（全仓零消费者，死代码；保留映射能力但不新增消费者）
+ */
+export function nodeControlToCapControl(
   node: PreviewMenuNode,
   snapshot: Record<string, unknown>,
   menu?: SlideMenuHandle,
-): void {
+): MenuControlDef {
   const spec = node.control;
-  if (!spec?.options?.length) return;
-  const wrap = document.createElement("div");
-  wrap.className = "slide-item rm-control-row";
-  const lb = document.createElement("span");
-  lb.className = "slide-label rm-control-label";
-  lb.textContent = rmLabel(node);
-  wrap.appendChild(lb);
-  const sel = document.createElement("select");
-  sel.className = "setting-select";
-  sel.dataset.testid = "preview-" + node.id;
-  // [doc:adr-126-p5-收尾] select 支持两种模式：bind（状态层路径，play/morph 之外用）或
-  // 闭包 get/set（非状态层来源，如 MmdPlayBridge 动作 select）——与 toggle 分支同构。
-  const cur = rmSelectCurrent(spec, snapshot);
-  for (const opt of spec.options) {
-    const o = document.createElement("option");
-    o.value = opt.value;
-    o.textContent = opt.label;
-    o.selected = String(cur) === opt.value;
-    sel.appendChild(o);
-  }
-  sel.onchange = (): void => {
-    const raw = sel.value;
-    const v = spec.set ? spec.set(raw) : raw;
+  const kind = node.kind as MenuControlKind;
+  const labelKey = node.labelKey ?? "";
+  const fallback = node.fallback ?? node.id;
+
+  const getValue = (): number | string | boolean | null | number[] => {
+    if (!spec) return null;
     if (spec.bind) {
-      // bind 模式：写状态层（未落地路径守卫，P5-A review P3）
-      // 收窄断言（非 as never）：spec.bind 是 PreviewStatePath 全集，isPathAvailable/
-      // setStateValue 只接受已落地的 KNOWN_PATHS 子集——守卫在前保证安全，同时保留
-      // 窄类型检查（KNOWN_PATHS 与 PreviewStatePath 漂移时编译期报错）
+      const raw = snapshot[spec.bind];
+      return spec.get
+        ? (spec.get(raw) as number | string | boolean | null | number[])
+        : (raw as number | string | boolean | null | number[]);
+    }
+    return spec.get ? (spec.get(undefined) as number | string | boolean | null | number[]) : null;
+  };
+
+  const setValue = (v: number | string | boolean): void => {
+    if (!spec) return;
+    spec.set?.(v);
+    if (spec.bind) {
       const path = spec.bind as (typeof KNOWN_PATHS)[number];
-      if (!isPathAvailable(path)) return;
-      setStateValue(path, v);
+      if (isPathAvailable(path)) {
+        setStateValue(path, v);
+      }
     }
     spec.onChange?.(v);
-    // [doc:adr-126-p5] refreshOnChange：面板内容随绑定状态变化（组件 select 切档后
-    // stats/纹理行按新快照重建）——menu.refresh() 重渲染当前面板，schema builder 重新执行
-    if (spec.refreshOnChange) menu?.refresh();
   };
-  wrap.appendChild(sel);
-  container.appendChild(wrap);
-}
 
-/** [子函数 5.5/6] toggle：label + 开关行（[doc:adr-126-p5] A 层控件分支——
- *  ADR-125 §3.3 预留的「确有面板需要时再补」场景，perception 面板首用）。
- *  control.get/set 闭包读写（perception state 非状态层路径，不走 bind） */
-function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
-  const spec = node.control;
-  const wrap = document.createElement("div");
-  wrap.className = "slide-item rm-control-row-lg";
-  wrap.dataset.testid = "preview-" + node.id;
-  const lb = document.createElement("span");
-  lb.className = "slide-label rm-control-label-strong";
-  lb.textContent = rmLabel(node);
-  wrap.appendChild(lb);
-  const btn = document.createElement("button");
-  btn.className = "rm-toggle-track";
-  const knob = document.createElement("span");
-  knob.className = "rm-toggle-knob";
-  const apply = (v: boolean): void => {
-    btn.style.background = v ? "var(--accent,#7c83ff)" : "rgba(255,255,255,0.2)";
-    knob.style.left = v ? "18px" : "2px";
+  const onChange = (): void => {
+    if (spec?.refreshOnChange) menu?.refresh();
   };
-  apply(Boolean(spec?.get?.(undefined)));
-  btn.appendChild(knob);
-  btn.onclick = (): void => {
-    const next = !spec?.get?.(undefined);
-    spec?.set?.(next);
-    apply(next);
-  };
-  wrap.appendChild(btn);
-  container.appendChild(wrap);
-}
 
-/** [子函数 5.6/6] slider：label(可选) + range（+numeric 时旁挂 number 联动）行——
- *  通用渲染器的 slider 分支补齐（caps 专属 slider 走 preview-menu-cap-controls 另一通道，
- *  此处分派的是 PreviewMenuNode 数据）。control.get/set 闭包读写（同 toggle 范式） */
-function rmAppendSlider(container: HTMLElement, node: PreviewMenuNode): void {
-  const spec = node.control;
-  const wrap = document.createElement("div");
-  wrap.className = "slide-item rm-control-row";
-  wrap.dataset.testid = "preview-" + node.id;
-  const min = spec?.min ?? 0;
-  const max = spec?.max ?? 100;
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = String(min);
-  range.max = String(max);
-  range.step = String(spec?.step ?? 1);
-  const initial = Number(spec?.get?.(undefined) ?? min);
-  range.value = String(initial);
-  range.className = "rm-range";
-  let num: HTMLInputElement | null = null;
-  if (spec?.numeric) {
-    num = document.createElement("input");
-    num.type = "number";
-    num.min = range.min;
-    num.max = range.max;
-    num.step = range.step;
-    num.value = String(initial);
-    num.className = "rm-range-num";
-  }
-  const commit = (v: number): void => {
-    spec?.set?.(v);
-    spec?.onChange?.(v);
+  const base: MenuControlDef = {
+    id: node.id,
+    kind,
+    labelKey,
+    fallback,
+    getValue,
+    setValue,
+    onChange,
   };
-  range.oninput = (): void => {
-    const v = Number(range.value);
-    if (num) num.value = String(v);
-    commit(v);
-  };
-  if (num) {
-    num.onchange = (): void => {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const n = Number(num!.value);
-      const v = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : Number(range.value);
-      range.value = String(v);
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      num!.value = String(v);
-      commit(v);
+
+  if (kind === "slider" && spec) {
+    const sliderDef: NonNullable<MenuControlDef["slider"]> = {
+      min: spec.min ?? 0,
+      max: spec.max ?? 100,
+      step: spec.step ?? 1,
     };
+    if (spec.numeric !== undefined) sliderDef.numeric = spec.numeric;
+    base.slider = sliderDef;
   }
-  if (node.labelKey) {
-    const lb = document.createElement("span");
-    lb.className = "slide-label rm-slider-label-fixed";
-    lb.textContent = rmLabel(node);
-    wrap.appendChild(lb);
+
+  if (kind === "select" && spec?.options) {
+    base.select = spec.options;
   }
-  wrap.append(range);
-  if (num) wrap.append(num);
-  container.appendChild(wrap);
+
+  return base;
 }
 
 /** [子函数 5.75/6] material-row：组合控件行（label + eye 显隐 + opacity 滑条）——
@@ -548,12 +407,11 @@ export function renderMenu(
       rmAppendButton(container, node, deps.actionCtx);
     } else if (node.kind === "row") {
       rmAppendDynamicRow(container, node, deps.actionCtx);
-    } else if (node.kind === "select") {
-      rmAppendSelect(container, node, snapshot, deps.menu);
-    } else if (node.kind === "slider") {
-      rmAppendSlider(container, node);
-    } else if (node.kind === "toggle") {
-      rmAppendToggle(container, node);
+    } else if (node.kind === "select" || node.kind === "slider" || node.kind === "toggle") {
+      // [控件原语归一] 三类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
+      //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役。
+      const def = nodeControlToCapControl(node, snapshot, deps.menu);
+      renderCapControls(container, [def], snapshot);
     } else if (node.kind === "material-row") {
       rmAppendMaterialRow(container, node);
     } else if (node.kind === "controls") {

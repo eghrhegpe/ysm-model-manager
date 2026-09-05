@@ -251,7 +251,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     };
     const container = document.createElement("div");
     renderMenu(container, nodes, deps);
-    const mode = container.querySelector('[data-testid="preview-slice-mode"]') as HTMLSelectElement;
+    const mode = container.querySelector('[data-testid="cap-slice-mode"] select') as HTMLSelectElement;
     expect(mode).not.toBeNull();
     // 真实 change：all → single
     mode.value = "single";
@@ -265,7 +265,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(c2.querySelectorAll('input[type="range"]').length).toBe(1);
     expect(c2.querySelectorAll('input[type="number"]').length).toBe(1);
     // 轴 select 真实 change（闭包更新轴）→ 重建后 slider max 随轴（X 轴 sizeX=7）
-    const axis = container.querySelector('[data-testid="preview-slice-axis"]') as HTMLSelectElement;
+    const axis = container.querySelector('[data-testid="cap-slice-axis"] select') as HTMLSelectElement;
     axis.value = "X";
     axis.dispatchEvent(new Event("change"));
     const rebuilt2 = getSchema(sliceKey)!(previewSnapshot());
@@ -293,8 +293,8 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
         makePanelView: (() => ({ title: "", render: () => {} })) as unknown as (node: PreviewMenuNode) => SlideMenuView,
       },
     );
-    expect(list.querySelector('[data-testid="preview-slice-mode"]')).not.toBeNull();
-    expect(list.querySelector('[data-testid="preview-slice-axis"]')).not.toBeNull();
+    expect(list.querySelector('[data-testid="cap-slice-mode"]')).not.toBeNull();
+    expect(list.querySelector('[data-testid="cap-slice-axis"]')).not.toBeNull();
   });
 
   it("i18n 键三语存在（slice 面板 + 新增 slider 标签）", () => {

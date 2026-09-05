@@ -1,6 +1,7 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderMenu } from "./core.ts";
+import { nodeControlToCapControl } from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
@@ -53,7 +54,7 @@ describe("renderMenu 新 kind", () => {
     expect(clicked).toEqual(["current"]);
   });
 
-  it("toggle: 渲染 label + 开关行，点击翻转 control.set", () => {
+  it("toggle: 渲染 label + 开关行，点击翻转 control.set（归一后 cap 栈渲染，testid cap-xxx + label-toggle 结构）", () => {
     let on = false;
     const nodes: PreviewMenuNode[] = [
       {
@@ -66,15 +67,19 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    const row = container.querySelector('[data-testid="preview-perception-breath"]') as HTMLElement;
+    const row = container.querySelector('[data-testid="cap-perception-breath"]') as HTMLElement;
     expect(row).not.toBeNull();
     expect(row.textContent).toContain("呼吸");
-    const btn = row.querySelector("button") as HTMLButtonElement;
-    expect(btn).not.toBeNull();
-    // 点击翻转（control.get 当前值取反 → control.set）
-    btn.click();
+    const input = row.querySelector("input[type=checkbox]") as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.checked).toBe(false);
+    // cap toggle 走 createHeaderToggle：click handler 在 label.toggle 上，
+    // e.target===input 时跳过（防双触发）；点击 label 非 input 区域触发 onChange
+    const toggle = row.querySelector("label.toggle") as HTMLLabelElement;
+    expect(toggle).not.toBeNull();
+    toggle.click();
     expect(on).toBe(true);
-    btn.click();
+    toggle.click();
     expect(on).toBe(false);
   });
 
@@ -317,7 +322,7 @@ describe("renderMenu 新 kind", () => {
     expect(row).not.toBeNull();
   });
 
-  it("slider: 渲染 range 行，value 来自 control.get，oninput 触发 set+onChange", () => {
+  it("slider: 渲染 range 行，value 来自 control.get，oninput 触发 set+onChange（归一后 cap- testid + head 结构）", () => {
     let val = 40;
     const changed: number[] = [];
     const nodes: PreviewMenuNode[] = [
@@ -337,7 +342,7 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    const row = container.querySelector('[data-testid="preview-layer-slider"]') as HTMLElement;
+    const row = container.querySelector('[data-testid="cap-layer-slider"]') as HTMLElement;
     expect(row).not.toBeNull();
     const range = row.querySelector('input[type="range"]') as HTMLInputElement;
     expect(range).not.toBeNull();
@@ -361,7 +366,7 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    const row = container.querySelector('[data-testid="preview-num-slider"]') as HTMLElement;
+    const row = container.querySelector('[data-testid="cap-num-slider"]') as HTMLElement;
     const range = row.querySelector('input[type="range"]') as HTMLInputElement;
     const num = row.querySelector('input[type="number"]') as HTMLInputElement;
     expect(num).not.toBeNull();
@@ -378,14 +383,15 @@ describe("renderMenu 新 kind", () => {
     expect(range.value).toBe("10");
   });
 
-  it("slider: 无 labelKey 时不渲染 label（保持旧裸滑条视觉）", () => {
+  it("slider: 无 labelKey 时 cap 栈仍渲染 head + fallback/id 文案（视觉行为变化，结构已变）", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "bare-slider", kind: "slider", control: { get: () => 1, set: () => {} } },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    const row = container.querySelector('[data-testid="preview-bare-slider"]') as HTMLElement;
-    expect(row.querySelector(".slide-label")).toBeNull();
+    const row = container.querySelector('[data-testid="cap-bare-slider"]') as HTMLElement;
+    // cap 栈 slider 恒有 head（label+当前值），slide-label 不再为 null
+    expect(row.querySelector(".slide-label")).not.toBeNull();
     expect(row.querySelector('input[type="range"]')).not.toBeNull();
   });
 
@@ -483,5 +489,151 @@ describe("renderMenu 新 kind", () => {
     renderMenu(container2, nodes, makeDeps() as any);
     expect(called).toBe(1); // 未再调用
     expect(container2.querySelector('[data-testid="preview-camera"]')).not.toBeNull();
+  });
+});
+
+describe("nodeControlToCapControl（控件原语归一：PreviewControlSpec → MenuControlDef 投影）", () => {
+  it("slider：min/max/step/numeric 直接映射，getValue 走闭包 get(undefined)", () => {
+    let val = 40;
+    const node: PreviewMenuNode = {
+      id: "layer-slider",
+      kind: "slider",
+      labelKey: "preview.sliceLayer",
+      fallback: "层",
+      control: {
+        min: 1,
+        max: 100,
+        step: 2,
+        get: () => val,
+        set: (v: unknown) => { val = Number(v); },
+        numeric: true,
+      },
+    };
+    const def = nodeControlToCapControl(node, {});
+    expect(def.id).toBe("layer-slider");
+    expect(def.kind).toBe("slider");
+    expect(def.labelKey).toBe("preview.sliceLayer");
+    expect(def.fallback).toBe("层");
+    expect(def.getValue()).toBe(40);
+    expect(def.slider).toEqual({ min: 1, max: 100, step: 2, numeric: true });
+    def.setValue(77);
+    expect(val).toBe(77);
+    expect(def.getValue()).toBe(77);
+  });
+
+  it("slider：onChange 透传（setValue 末尾调 spec.onChange）", () => {
+    let changed: number[] = [];
+    const node: PreviewMenuNode = {
+      id: "slider-1",
+      kind: "slider",
+      control: {
+        get: () => 1,
+        set: () => {},
+        onChange: (v: unknown) => { changed.push(Number(v)); },
+      },
+    };
+    const def = nodeControlToCapControl(node, {});
+    def.setValue(5);
+    expect(changed).toEqual([5]);
+  });
+
+  it("slider：refreshOnChange=true 时 onChange 钩子注入 menu.refresh", () => {
+    const refresh = vi.fn();
+    const menu = { refresh } as unknown as SlideMenuHandle;
+    const node: PreviewMenuNode = {
+      id: "slice-mode",
+      kind: "select",
+      control: {
+        options: [{ value: "a", label: "A" }],
+        get: () => "a",
+        set: () => {},
+        refreshOnChange: true,
+      },
+    };
+    const def = nodeControlToCapControl(node, {}, menu);
+    def.onChange?.(undefined);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("slider：refreshOnChange=false 时不注入 menu.refresh", () => {
+    const refresh = vi.fn();
+    const menu = { refresh } as unknown as SlideMenuHandle;
+    const node: PreviewMenuNode = {
+      id: "plain",
+      kind: "slider",
+      control: { get: () => 1, set: () => {} },
+    };
+    const def = nodeControlToCapControl(node, {}, menu);
+    def.onChange?.(undefined);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("toggle：getValue 走 get(undefined)，setValue 走 set + onChange", () => {
+    let on = false;
+    const node: PreviewMenuNode = {
+      id: "breath",
+      kind: "toggle",
+      labelKey: "preview.breath",
+      fallback: "呼吸",
+      control: {
+        get: () => on,
+        set: (v: unknown) => { on = Boolean(v); },
+      },
+    };
+    const def = nodeControlToCapControl(node, {});
+    expect(def.kind).toBe("toggle");
+    expect(def.getValue()).toBe(false);
+    def.setValue(true);
+    expect(on).toBe(true);
+    expect(def.getValue()).toBe(true);
+  });
+
+  it("select：options 直接映射，getValue 走 get(undefined)", () => {
+    let sel = "all";
+    const node: PreviewMenuNode = {
+      id: "slice-mode",
+      kind: "select",
+      labelKey: "preview.sliceMode",
+      fallback: "模式",
+      control: {
+        options: [
+          { value: "all", label: "All" },
+          { value: "single", label: "Single" },
+        ],
+        get: () => sel,
+        set: (v: unknown) => { sel = String(v); },
+      },
+    };
+    const def = nodeControlToCapControl(node, {});
+    expect(def.kind).toBe("select");
+    expect(def.getValue()).toBe("all");
+    expect(def.select).toEqual([
+      { value: "all", label: "All" },
+      { value: "single", label: "Single" },
+    ]);
+    def.setValue("single");
+    expect(sel).toBe("single");
+    expect(def.getValue()).toBe("single");
+  });
+
+  it("无 labelKey 时 labelKey 取空串、fallback 兜底为 node.id", () => {
+    const node: PreviewMenuNode = {
+      id: "bare-slider",
+      kind: "slider",
+      control: { get: () => 1, set: () => {} },
+    };
+    const def = nodeControlToCapControl(node, {});
+    expect(def.labelKey).toBe("");
+    expect(def.fallback).toBe("bare-slider");
+  });
+
+  it("numeric=false 时 slider.numeric 为 undefined（兼容纯 range 控件）", () => {
+    const node: PreviewMenuNode = {
+      id: "plain-slider",
+      kind: "slider",
+      control: { min: 0, max: 1, get: () => 0.5, set: () => {} },
+    };
+    const def = nodeControlToCapControl(node, {});
+    expect(def.slider?.numeric).toBeUndefined();
   });
 });

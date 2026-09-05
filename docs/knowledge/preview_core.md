@@ -221,6 +221,8 @@ auto_fields:
     - readPmxStats
     - readVrmMeta
     - readWebFile
+    - registerBuiltScene
+    - RegisterBuiltSceneInput
     - registerPerFrame
     - registerSchema
     - removePerFrame

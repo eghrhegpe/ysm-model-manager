@@ -42,9 +42,17 @@ const {
 }));
 
 vi.mock("./utils.ts", () => ({ getPrefer3D, setPrefer3D }));
-// t 返回 key（skeleton 用 t("preview.*")，语言包无该命名空间时真实 t 也返回 key）
+// t 与 locale 解耦：返回 key，并把收到的插值参数拼回（decl/size 等数值可见，
+// 便于断言验证真实传入 t 的声明/加载尺寸，无需加载真实语言包——真实 t 在无该
+// 命名空间时同样返回 key）。无参数时退化为纯 key（与旧行为一致）。
 vi.mock("../../core/i18n/t.ts", () => ({
-  t: (key: string) => key,
+  t: (key: string, params?: Record<string, unknown>) => {
+    if (!params || Object.keys(params).length === 0) return key;
+    const ps = Object.entries(params)
+      .map(([k, v]) => `${k}=${String(v)}`)
+      .join(" ");
+    return `${key}{${ps}}`;
+  },
 }));
 vi.mock("./loader.ts", () => ({ loadModelData, fillAuthorsAsync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("./model2d/model2d.ts", () => ({ renderModel2D }));
@@ -107,6 +115,7 @@ function makeCtx() {
     decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
     loadPreviewImage: vi.fn(() => Promise.resolve(null)),
     unsubs: [] as Array<() => void>,
+    dragAbortCtrl: null,
   };
   return ctx;
 }
@@ -499,10 +508,11 @@ describe("fill3DPanel", () => {
     expect(panel.textContent).toContain("纹理 (2)");
     expect(panel.textContent).toContain("skin");
     expect(panel.textContent).toContain("tail");
-    // 声明尺寸已在纹理行内标注（texRow），不再在模型统计区重复显示
-    expect(panel.textContent).toContain("声明 64×32");
-    expect(panel.textContent).toContain("加载 64×32");
-    expect(panel.textContent).toContain("加载 ?");
+    // 声明尺寸 / 加载尺寸经 t 参数传入（mock 拼回为 decl=… / size=…），
+    // 验证「声明 64×32 / 加载 64×32 / 加载 ?」三态均正确（locale 无关）
+    expect(panel.textContent).toContain("decl=64×32");
+    expect(panel.textContent).toContain("size=64×32");
+    expect(panel.textContent).toContain("size=?");
     // 多组件：选择器显示 + all 选项 + 2 个组件
     expect(modelSel.style.display).not.toBe("none");
     expect(modelSel.options.length).toBe(3);

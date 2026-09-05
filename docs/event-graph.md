@@ -283,7 +283,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 486 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
 
 ### `repo:search-creator`
@@ -332,7 +332,7 @@
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 351 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
@@ -345,7 +345,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 478 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 483 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 184 |
 
 ### `sync:download:done`
@@ -359,15 +359,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 194 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 215 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 201 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/index.ts` | 222 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/index.ts` | 208 |
+| pushOne | `frontend/src/views/app-sidebar/index.ts` | 215 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -494,21 +494,21 @@
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 132 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 367 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 293 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 317 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 296 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 320 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 90 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 129 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 115 |
-| beginSync | `frontend/src/views/app-sidebar/index.ts` | 138 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 263 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 269 |
-| runPush | `frontend/src/views/app-sidebar/index.ts` | 275 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 334 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 340 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 345 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 354 |
+| beginSync | `frontend/src/views/app-sidebar/index.ts` | 145 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 270 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 276 |
+| runPush | `frontend/src/views/app-sidebar/index.ts` | 282 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 341 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 347 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 352 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 361 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 37 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 66 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
@@ -596,7 +596,7 @@
 | setupRecycleActions | `frontend/src/features/recycle-bin.ts` | 107 |
 | onRecycleEmptyClick | `frontend/src/features/recycle-bin.ts` | 172 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
-| runPull | `frontend/src/views/app-sidebar/index.ts` | 352 |
+| runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

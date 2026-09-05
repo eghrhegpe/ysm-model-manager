@@ -14,6 +14,7 @@ class ContextMenu extends WebComponentBase {
   _docClick: () => void;
   _docCtx: () => void;
   _docKeydown: (e: KeyboardEvent) => void;
+  _prevFocus: Element | null = null; // show() 时记录打开前焦点，hide() 归还
 
   constructor() {
     super();
@@ -27,14 +28,24 @@ class ContextMenu extends WebComponentBase {
       }
       const menu = this.shadowRoot?.getElementById("menu");
       if (!menu || this.style.display === "none") return;
+      // 深焦解析：document.activeElement 对 shadow 内聚焦元素 retarget 成 host——
+      // 沿 shadowRoot.activeElement 下钻到真实聚焦元素（范式见 utils/dom/focus-restore.ts
+      // trapFocusAcrossShadow），否则 indexOf/classList 对 host 恒 false，键盘导航整体失效
+      let active: Element | null = document.activeElement as Element | null;
+      while (active?.shadowRoot?.activeElement) {
+        active = active.shadowRoot.activeElement;
+      }
+      const activeEl = active as HTMLElement | null;
+      // 焦点不在本菜单（Tab 逃逸 / 外部点击后菜单未关 / 空 items 未聚焦）→ 不接管
+      // 方向键/Enter：防劫持页面滚动/光标、防误触发页面上恰好同 class 的元素
+      if (!activeEl || !menu.contains(activeEl)) return;
+      const items = Array.from(menu.querySelectorAll<HTMLElement>(".item")).filter(
+        (el) => el.style.display !== "none",
+      );
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        const items = Array.from(menu.querySelectorAll<HTMLElement>(".item")).filter(
-          (el) => el.style.display !== "none",
-        );
         if (items.length === 0) return;
-        const active = document.activeElement as HTMLElement | null;
-        const current = items.indexOf(active as HTMLElement);
+        const current = items.indexOf(activeEl);
         let next: number;
         if (e.key === "ArrowDown") {
           next = current < 0 ? 0 : (current + 1) % items.length;
@@ -44,8 +55,7 @@ class ContextMenu extends WebComponentBase {
         items[next]?.focus();
       }
       if (e.key === "Enter") {
-        const active = document.activeElement as HTMLElement | null;
-        if (active?.classList.contains("item")) active.click();
+        if (activeEl.classList.contains("item")) activeEl.click();
       }
     };
   }
@@ -119,6 +129,11 @@ class ContextMenu extends WebComponentBase {
   show(x: number, y: number, items: MenuItem[]): void {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const menu = this.shadowRoot!.getElementById("menu") as HTMLElement;
+    // 记录打开前焦点（hide 归还；host 自身/body 不入账——防归还闭环与整页焦点丢失）
+    const docActive = document.activeElement;
+    if (docActive && docActive !== this && docActive !== document.body) {
+      this._prevFocus = docActive;
+    }
     // 防御：遗留 .js/内联调用方可能缺 items emit——直接 .map 会崩在 bus handler
     // 里（被 bus try/catch 吞成「menu:show 处理出错」，菜单无内容也不给位置）；
     // 回退空数组保持「空菜单 + 定位 + 可关闭」行为一致，不静默
@@ -184,6 +199,16 @@ class ContextMenu extends WebComponentBase {
   hide(): void {
     this.style.display = "none";
     document.removeEventListener("keydown", this._docKeydown);
+    // 归还焦点（打开时被移入菜单项；hide 不归还会掉到 body，键盘上下文丢失）
+    const prev = this._prevFocus;
+    this._prevFocus = null;
+    if (prev && (prev as HTMLElement).focus) {
+      try {
+        (prev as HTMLElement).focus({ preventScroll: true });
+      } catch {
+        /* 元素已从 DOM 移除等 → 忽略 */
+      }
+    }
   }
 }
 // 注册组件（防 HMR/重复 import 时重复 define）

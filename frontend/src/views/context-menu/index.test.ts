@@ -100,3 +100,71 @@ describe("<context-menu> 交互", () => {
     ).not.toThrow();
   });
 });
+
+describe("<context-menu> 键盘导航", () => {
+  /** 深焦解析：document.activeElement 对 shadow 内元素 retarget 成 host（浏览器行为），
+   *  测试断言需沿 shadowRoot.activeElement 下钻到真实聚焦项（与组件实现同范式） */
+  function focusedItem(el: Element): Element | null {
+    let active = document.activeElement as Element | null;
+    if (active?.shadowRoot) active = el.shadowRoot?.activeElement ?? null;
+    return active;
+  }
+
+  it("ArrowDown/ArrowUp 逐项移动焦点（含循环），Enter 激活当前项并 hide", () => {
+    const onClickA = vi.fn();
+    const onClickB = vi.fn();
+    const el = showMenu([
+      { label: "A", onClick: onClickA },
+      { label: "B", onClick: onClickB },
+    ]);
+    const items = [...el.shadowRoot!.querySelectorAll<HTMLElement>(".item")];
+    expect(items).toHaveLength(2);
+    (items[0] as HTMLElement).focus(); // show() 的 rAF 内 firstItem.focus() 同效
+
+    // ArrowDown：0 → 1
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(focusedItem(el)).toBe(items[1]);
+    // ArrowDown：1 → 0（循环）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(focusedItem(el)).toBe(items[0]);
+    // ArrowUp：0 → 1（循环）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    expect(focusedItem(el)).toBe(items[1]);
+    // Enter 激活当前聚焦项（items[1] = B）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(onClickA).not.toHaveBeenCalled();
+    expect(onClickB).toHaveBeenCalledTimes(1);
+    expect(el.style.display).toBe("none"); // hide()
+  });
+
+  it("Escape 关闭菜单且焦点不在菜单内时不劫持方向键（外部元素不受影响）", () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    const el = showMenu([{ label: "A", onClick: vi.fn() }]);
+    // 焦点在菜单外（Tab 逃逸场景）→ ArrowDown 不应被菜单拦截
+    outside.focus();
+    const items = [...el.shadowRoot!.querySelectorAll<HTMLElement>(".item")];
+    const spyFocus = vi.spyOn(items[0] as HTMLElement, "focus");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(spyFocus).not.toHaveBeenCalled(); // 焦点不属于本菜单 → 不接管
+
+    // Escape 仍关闭菜单
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(el.style.display).toBe("none");
+    spyFocus.mockRestore();
+    outside.remove();
+  });
+
+  it("hide() 归还打开前焦点（键盘上下文不丢到 body）", () => {
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
+    const el = showMenu([{ label: "A", onClick: vi.fn() }]);
+    (el.shadowRoot!.querySelector(".item") as HTMLElement).focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(el.style.display).toBe("none");
+    expect(document.activeElement).toBe(btn); // 归还给打开前聚焦的按钮
+    btn.remove();
+  });
+});

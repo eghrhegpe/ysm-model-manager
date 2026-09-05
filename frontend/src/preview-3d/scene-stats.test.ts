@@ -89,6 +89,34 @@ describe("collectSceneStats", () => {
     expect(s.materialCount).toBe(2);
   });
 
+  it("多贴图材质：emissiveMap/normalMap/roughnessMap 等计入 textureCount（口径与 disposeMaterial 一致）", () => {
+    // 修复前只计 mm.map → emissive/normal/roughness 三贴图漏计，textureCount 仅 1
+    const mapTex = new THREE.Texture();
+    const emissiveTex = new THREE.Texture();
+    const normalTex = new THREE.Texture();
+    const roughTex = new THREE.Texture();
+    const mat = new THREE.MeshStandardMaterial();
+    mat.map = mapTex;
+    mat.emissiveMap = emissiveTex;
+    mat.normalMap = normalTex;
+    mat.roughnessMap = roughTex;
+    const root = new THREE.Group();
+    root.add(new THREE.Mesh(makeIndexedGeo(2), mat));
+    const s = collectSceneStats(root);
+    expect(s.materialCount).toBe(1);
+    expect(s.textureCount).toBe(4);
+  });
+
+  it("同一纹理挂多个贴图槽（如 map 与 emissiveMap 同实例）→ 按实例去重", () => {
+    const shared = new THREE.Texture();
+    const mat = new THREE.MeshStandardMaterial();
+    mat.map = shared;
+    mat.emissiveMap = shared;
+    const root = new THREE.Group();
+    root.add(new THREE.Mesh(makeIndexedGeo(2), mat));
+    expect(collectSceneStats(root).textureCount).toBe(1);
+  });
+
   it("SkinnedMesh：计入网格；skeleton.bones 计入骨骼数", () => {
     const geo = makeIndexedGeo(2);
     const bones = [new THREE.Bone(), new THREE.Bone(), new THREE.Bone()];

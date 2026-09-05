@@ -1764,7 +1764,7 @@ export const autoSidebar = [
             "link": "/knowledge/scripts_jscpd_go"
           },
           {
-            "text": "README 登记处对账 check-readme-index.mjs",
+            "text": "README 登记处对账 check-readme-index.ts",
             "link": "/knowledge/scripts_readme_index"
           },
           {

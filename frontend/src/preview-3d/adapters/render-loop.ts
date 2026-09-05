@@ -114,7 +114,9 @@ export function startGlobalRenderLoop(
       move: _move,
     });
     // 驱动所有 session 的 perFrame 回调
-    for (const fn of _globalPerFrames) {
+    // 快照迭代（[..._globalPerFrames]）：回调内若触发 removePerFrame（卸载/切换时序，
+    // splice 活数组），迭代会跳元素或漏执行——快照隔离本次帧的注册表，增删下一帧生效
+    for (const fn of [..._globalPerFrames]) {
       const pfStart = performance.now();
       try {
         fn(dt);

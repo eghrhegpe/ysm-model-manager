@@ -14,6 +14,7 @@
 // 数量，尺寸由调用方在纹理 onLoad 后补采。
 
 import type * as THREE from "three";
+import { ALL_TEXTURE_KEYS } from "./mesh.ts";
 
 /** 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） */
 export interface SceneStats {
@@ -80,8 +81,16 @@ export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): Sce
       for (const m of matList) {
         if (!m) continue;
         materials.add(m);
-        const mm = m as THREE.MeshBasicMaterial;
-        if (mm.map) textures.add(mm.map);
+        // 纹理口径与 mesh.disposeMaterial 的 ALL_TEXTURE_KEYS 一致（map/emissiveMap/
+        // normalMap/roughnessMap/metalnessMap/aoMap/lightMap/alphaMap/envMap）——
+        // 旧实现只计 mm.map，emissive/normal/roughness 等多贴图材质统计偏低（审核 P2）。
+        const anyMat = m as unknown as Record<string, unknown | THREE.Texture | null>;
+        for (const key of ALL_TEXTURE_KEYS) {
+          const tex = anyMat[key];
+          if (tex && typeof (tex as THREE.Texture).isTexture === "boolean") {
+            textures.add(tex as THREE.Texture);
+          }
+        }
       }
 
       // 表情数：morphTargetInfluences 通道数取最长（VRM 表情通常挂单 mesh）

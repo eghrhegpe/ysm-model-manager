@@ -19,8 +19,9 @@ export function compKey(mi: number, id: string) {
   return mi + ":" + id;
 }
 
-/** 材质上所有可能持有贴图的属性 key（对应 THREE.Material 纹理字段 + ShaderMaterial uniforms） */
-const ALL_TEXTURE_KEYS = [
+/** 材质上所有可能持有贴图的属性 key（对应 THREE.Material 纹理字段 + ShaderMaterial uniforms）
+ *  导出供 scene-stats 复用：释放与统计共用同一纹理口径（单一事实源，防双源漂移）。 */
+export const ALL_TEXTURE_KEYS = [
   "map",
   "emissiveMap",
   "normalMap",

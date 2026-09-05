@@ -7,6 +7,7 @@ import { returnFocus } from "../../utils/dom/focus-restore.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
+import { setPerceptionPaused } from "../perception/core.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { textureCache } from "../texture-cache.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
@@ -245,6 +246,10 @@ export function runFullCleanup(ctx: MountCtx): void {
   // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
   textureCache.disposeAll();
   clearModelRoots();
+  // 感知暂停标志复位：该标志由各 adapter 的 update() 每帧覆盖写入（模块级单例，
+  // 无属主）——adapter 崩溃/提前退出/切到无感知模型时残留旧值会静默冻结感知。
+  // 会话完整关闭即归零，下次 mount 从干净状态开始（code review P2）。
+  setPerceptionPaused(false);
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
   // 从全局 perFrame 回调列表移除本 session；全部清空后停 rAF

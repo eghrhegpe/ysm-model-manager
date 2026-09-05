@@ -512,10 +512,10 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
-| 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
-| 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
-| CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.mjs](./scripts_readme_index.md) | - | - |
+| 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
+| 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | - | - |
+| 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
+| CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | - | - |
 
 ## 🎯 testid 查询与元素选择
 

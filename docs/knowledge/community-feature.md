@@ -28,7 +28,6 @@ auto_fields:
     - enqueueDownloads
     - FetchModelsResult
     - filterModels
-    - GetAppFn
     - getState
     - getStateSnapshot
     - GH_DOCS
@@ -46,9 +45,7 @@ auto_fields:
     - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle
-    - resetCommunityDeps
     - resume
-    - setCommunityDeps
     - showProgress
     - showRepoModels
     - STATE

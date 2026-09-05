@@ -39,7 +39,6 @@ auto_fields:
     - App.GetSchematicVoxelData
     - App.GetSyncScanDirs
     - App.GetVoxelDataInContainer
-    - App.HasYSMMod
     - App.ImportByType
     - App.InstallResourceToInstance
     - App.InvalidateScanCache

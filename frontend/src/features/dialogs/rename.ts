@@ -6,7 +6,7 @@ import { t } from "../../core/i18n/t.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { closeDlg, registerDlg } from "./modal.ts";
+import { closeDlg, registerDlg, trapFocus } from "./modal.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
 
 type DgRnCloseFn = (v: string | null) => void;
@@ -209,6 +209,7 @@ export async function showRenameDialog(
     document.body.appendChild(overlay);
     registerDlg(overlay, () => closeDlg(overlay, resolve, null));
     overlay.focus();
+    trapFocus(overlay);
 
     const { disableTail, getExt } = dgRnMakeExtCtx(currentName);
     const readFn: DgRnReadFn = () => dgRnReadFields(box);

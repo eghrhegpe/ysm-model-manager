@@ -45,7 +45,7 @@ export function initInstancesPage(host: AppContentHost): void {
       const defaultType = pkg.rtype;
       content.innerHTML =
         '<app-sync-manager instance="' +
-        String(insName).replace(/"/g, "&quot;") +
+        esc(insName) +
         '" default-type="' +
         defaultType +
         '" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';

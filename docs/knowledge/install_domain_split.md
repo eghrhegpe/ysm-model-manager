@@ -18,7 +18,6 @@ auto_fields:
     - App.GetInstanceSyncStatus
     - App.GetResourceInstanceStatus
     - App.GetSyncScanDirs
-    - App.HasYSMMod
     - App.ImportFileAndPushToInstance
     - App.ImportFolderAndPushToInstance
     - App.ImportModelFile

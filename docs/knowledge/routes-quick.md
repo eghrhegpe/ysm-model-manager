@@ -129,7 +129,7 @@
 | 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |
 | 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
 | advFilterIntersectPaths | [搜索筛选编排 search](./search.md) | - | - |
-| AnalyzeYSMModel、HasYSMMod | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
+| AnalyzeYSMModel、HasModInDir | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
 | CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
@@ -739,7 +739,7 @@
 | 更新未完成前继续操作 | - | 半更新状态、启动失败；必须等更新完成再操作 |
 | 轮询文件系统 | - | 延迟高、CPU 浪费；必须经 go/watcher 事件流 |
 | watcher 未读 errs/done 通道 | - | goroutine 泄漏；必须 drain 通道 |
-| 前端手写 YSM 解析 | - | 与 Go 解析结果不一致、漏掉 HasYSMMod 判定；必须交 Go 解析 |
+| 前端手写 YSM 解析 | - | 与 Go 解析结果不一致；必须交 Go 解析 |
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | navigator.languages 在老旧 WebView 可能 undefined | - | 兜底 navigator.language 防启动链打挂 |

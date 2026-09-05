@@ -11,7 +11,7 @@ export interface Disposable {
 export function safeDispose(obj: Disposable | null | undefined): void {
   try {
     obj?.dispose?.();
-  } catch {
-    /* 防御性：个别适配器 dispose 抛错不阻塞 */
+  } catch (e) {
+    console.warn("[safeDispose]", obj?.constructor?.name, e);
   }
 }

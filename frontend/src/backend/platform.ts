@@ -7,7 +7,7 @@
 // 单向化：android-bridge → platform-web → platform）。
 //
 // Tier 0：入口 HTML 显式声明 globalThis.__YSM_BACKEND__（'go' | 'browser'）——权威信号。
-//          web.html 置 'browser' 后即便误嵌进 WebView 也强制走 browserAdapter，
+//          浏览器构建置 'browser' 后即便误嵌进 WebView 也强制走 browserAdapter，
 //          消除「网页构建参杂 Go 逻辑」误判；桌面/Android 构建不声明（走 Tier 2）。
 // Tier 1：旧 web 短路标记 __YSM_WEB__ === true 或 import.meta.env.MODE === 'web'。
 // Tier 2：运行时探测 window.go（Wails 桌面）或 window.wails（Android 桥）——纯浏览器

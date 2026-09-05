@@ -1,7 +1,6 @@
 // ===== YSM 模型摘要工具函数（类型化版 — ADR-014 P2）=====
 
 import { t } from "../../core/i18n/t.ts";
-import type { YsmDecodedFile } from "../../wasm/ysm-parser.ts";
 import { parseModelName } from "../dom/display.ts";
 import { esc } from "../dom/html.ts";
 import { renderFormattedText } from "./mc-format.ts";
@@ -252,61 +251,4 @@ ${configHtml ? `<div class="md-divider"></div>${configHtml}` : ""}
 
 ${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 ${t("format.links")}</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.homepage")}</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.donate")}</a>` : ""}</span></div>` : ""}
 </div>`;
-}
-
-// ── 解码统计（收敛自 web-spike/spike-logic.ts，ADR-049 Phase 0）──
-// 从 WASM 解码产物统计骨骼/立方体/纹理数，供网页预览页展示。
-
-/** 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） */
-export interface DecodedStats {
-  bones: number;
-  cubes: number;
-  texCount: number;
-}
-
-const utf8 = new TextDecoder();
-
-/**
- * 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。
- * 命中 bone 相关 key 即返回该数组长度；否则下探第一个对象元素。
- */
-export function findBones(node: unknown, depth = 0): number {
-  if (depth > 6 || typeof node !== "object" || node === null) return 0;
-  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-    if (Array.isArray(v)) {
-      if (/bone|bone_name|boneNames/i.test(k)) return v.length;
-      if (v.length && typeof v[0] === "object") {
-        const n = findBones(v[0], depth + 1);
-        if (n > 0) return n;
-      }
-    } else if (typeof v === "object") {
-      const n = findBones(v, depth + 1);
-      if (n > 0) return n;
-    }
-  }
-  return 0;
-}
-
-/** 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） */
-export function summarizeDecoded(files: YsmDecodedFile[]): DecodedStats {
-  let bones = 0;
-  let cubes = 0;
-  let texCount = 0;
-
-  for (const f of files) {
-    const path = f.path.toLowerCase();
-    if (path.endsWith(".json") && /main|model/.test(path)) {
-      try {
-        const obj = JSON.parse(utf8.decode(f.data));
-        bones = findBones(obj, 0);
-        const cubesArr = JSON.stringify(obj).match(/"cubes"\s*:\s*\[/g);
-        cubes = cubesArr?.length ?? 0;
-      } catch {
-        // 非模型清单 json（animation 等），跳过
-      }
-    } else if (/textures?\//.test(path) || /\.png$/.test(path)) {
-      texCount++;
-    }
-  }
-  return { bones, cubes, texCount };
 }

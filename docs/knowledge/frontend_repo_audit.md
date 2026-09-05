@@ -345,7 +345,6 @@ auto_fields:
     - currentRepoType
     - dbg
     - debounce
-    - DecodedStats
     - DecodedTexture
     - DecodedYsm
     - decodeVoxelNbt
@@ -480,7 +479,6 @@ auto_fields:
     - filterAnimFiles
     - filterModels
     - findAncestorBoneId
-    - findBones
     - findControllerForAnimation
     - findTabbableAcrossShadow
     - findZipEntry
@@ -1336,7 +1334,6 @@ auto_fields:
     - subscribe
     - subscribeSettings
     - SubscriptionBucket
-    - summarizeDecoded
     - SummaryAnimGroup
     - SummaryAuthor
     - summaryCardHTML

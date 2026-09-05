@@ -7,10 +7,7 @@ source_files:
   - frontend/src/utils/format/summarize.ts
 auto_fields:
   symbols_with_lines:
-    - DecodedStats
-    - findBones
     - safeUrl
-    - summarizeDecoded
     - SummaryAnimGroup
     - SummaryAuthor
     - summaryCardHTML

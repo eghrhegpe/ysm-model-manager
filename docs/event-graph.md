@@ -222,7 +222,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 58 |
-| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 193 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 207 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 272 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
@@ -323,8 +323,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 38 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 197 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 125 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync.ts` | 79 |
@@ -418,7 +418,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 33 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 188 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 201 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 273 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 291 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 179 |
@@ -591,8 +591,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 39 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 196 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 112 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 178 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 126 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
 | handleSyncToggleStatus | `frontend/src/features/sync.ts` | 210 |

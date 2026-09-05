@@ -1545,23 +1545,6 @@ export const ja: Record<string, string> = {
   "toast.undone": "元に戻しました",
   "toast.undoFailed": "元に戻せませんでした",
 
-  // ── ウェブプレビュー（web-spike）──
-  "web.metric": "指標",
-  "web.value": "値",
-  "web.wasmInit": "⏳ WASM 初期化中…",
-  "web.wasmInitFailed":
-    "❌ WASM の初期化に失敗しました（このブラウザは WebAssembly に対応していませんか？）",
-  "web.wasmReady": "✅ WASM 準備完了",
-  "web.decoding": "⏳ decodeYsmFileFromMemory でメモリ解析中…",
-  "web.decodeNoOutput": "❌ デコードに失敗しました：出力ファイルなし（.ysm 形式が非対応？）",
-  "web.decodeSuccess": "✅ デコード成功：{n} 個の出力ファイル",
-  "web.outputFileCount": "出力ファイル数",
-  "web.metric.boneCount": "ボーン数（main.json）",
-  "web.cubeCount": "キューブ数（main.json）",
-  "web.textureCount": "テクスチャ/画像ファイル数",
-  "web.fileListTitle": "出力ファイル一覧：",
-  "web.omitted": "… 他 {n} 個省略",
-
   // ── アプリ ──
   "app.name": "YSM マネージャー",
   "app.managerSuffix": "マネージャー",

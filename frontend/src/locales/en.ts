@@ -1532,22 +1532,6 @@ export const en: Record<string, string> = {
   "toast.undone": "Undone",
   "toast.undoFailed": "Undo failed",
 
-  // ── Web preview (web-spike) ──
-  "web.metric": "Metric",
-  "web.value": "Value",
-  "web.wasmInit": "⏳ Initializing WASM…",
-  "web.wasmInitFailed": "❌ WASM initialization failed (does this browser support WebAssembly?)",
-  "web.wasmReady": "✅ WASM ready",
-  "web.decoding": "⏳ Parsing in memory via decodeYsmFileFromMemory…",
-  "web.decodeNoOutput": "❌ Decode failed: no output files (.ysm format incompatible?)",
-  "web.decodeSuccess": "✅ Decoded: {n} output files",
-  "web.outputFileCount": "Output file count",
-  "web.metric.boneCount": "Bone count (main.json)",
-  "web.cubeCount": "Cube count (main.json)",
-  "web.textureCount": "Texture/image file count",
-  "web.fileListTitle": "Output file list:",
-  "web.omitted": "… {n} more omitted",
-
   // ── App ──
   "app.name": "YSM Manager",
   "app.managerSuffix": "Manager",

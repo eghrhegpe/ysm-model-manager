@@ -19,7 +19,7 @@
 //     if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
 //   });
 
-import { clamp01 } from "../../utils/core/clamp.ts";
+import { clamp01 } from "../../utils/base/clamp.ts";
 import {
   getSemanticMorph,
   type SemanticMorphId,

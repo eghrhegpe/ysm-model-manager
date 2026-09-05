@@ -5,7 +5,7 @@
 // rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
 
 import { tr } from "../../core/i18n/tr.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import {

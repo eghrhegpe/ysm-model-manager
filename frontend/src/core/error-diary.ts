@@ -4,7 +4,7 @@
 //（AddOpLog 适配见 backend/diary-sink.ts）；本模块只持净化/去重/截断策略。
 
 import { bus, type ToastPayload } from "../bus.ts";
-import { setLogSink } from "../utils/core/log.ts";
+import { setLogSink } from "../utils/base/log.ts";
 import { stripPathSegments } from "../utils/dom/errors.ts";
 
 /** 日记状态（与 go/logs status 枚举对齐） */

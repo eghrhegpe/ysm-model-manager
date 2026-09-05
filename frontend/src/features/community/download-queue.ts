@@ -8,7 +8,7 @@
 import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";

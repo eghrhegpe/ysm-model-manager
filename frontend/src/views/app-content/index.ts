@@ -26,7 +26,7 @@ import { registerContextMenus } from "../../features/context-menu/context-menus.
 import { registerInstanceOps } from "../../features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "../../features/platform/android-events.ts";
 import { registerSync } from "../../features/sync.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "../app-preview/index.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";

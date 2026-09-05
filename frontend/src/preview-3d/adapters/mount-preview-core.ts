@@ -28,7 +28,7 @@ import {
 } from "../../ui/ui-components-styles.ts";
 import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
 import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
-import { logError, logWarn } from "../../utils/core/log.ts";
+import { logError, logWarn } from "../../utils/base/log.ts";
 import { rememberTrigger, trapFocusAcrossShadow } from "../../utils/dom/focus-restore.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";

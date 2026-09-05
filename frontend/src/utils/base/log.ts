@@ -1,4 +1,4 @@
-// utils/core/log.ts — 极简日志出口，供 async 等叶模块复用。
+// utils/base/log.ts — 极简日志出口，供 async 等叶模块复用。
 // 保持零应用层依赖：仅封装 console.warn / console.error，作为 ysm 统一告警通道的薄封装。
 // 透写环形日志（code review #6）：经可注入 sink 收敛——error-diary 注册时调
 // setLogSink 把告警接进 AddOpLog 日记（对齐 setSceneCapabilityLookup 注入范式，

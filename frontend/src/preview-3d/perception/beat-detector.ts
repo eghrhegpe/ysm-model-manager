@@ -21,7 +21,7 @@
 //   // 每帧按固定 BPM 产生虚拟节拍
 //   detector.update(0.5, dt); // 固定振幅 0.5
 
-import { clamp01 } from "../../utils/core/clamp.ts";
+import { clamp01 } from "../../utils/base/clamp.ts";
 
 /** 节拍检测配置 */
 export interface BeatDetectorOptions {

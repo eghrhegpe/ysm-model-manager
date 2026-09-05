@@ -6,7 +6,7 @@ import { bindRepoEvents } from "../../features/community/events.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import { countMissing, renderRepoHeaderHTML } from "../../features/community/render.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { stripDisableSuffix } from "../../utils/dom/display.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";

@@ -9,7 +9,7 @@ import { getApp } from "../../backend/app.ts";
 import { importWebFiles, MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { friendlyError, isFileExistsError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { CollectedEntry } from "../dnd/shared.ts";

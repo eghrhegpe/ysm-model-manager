@@ -3,7 +3,7 @@
 
 import { getApp } from "../../backend/app.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { extractAnimGroupsAndConfigs } from "../../utils/format/ysm-anim-config.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { sniffTexSize } from "../../utils/tex-size.ts";

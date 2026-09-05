@@ -9,7 +9,7 @@
 // 每个 long 的 LSB 开始连续排列，可跨 64 位容器边界。
 
 import { base64ToBytes } from "../backend/web-common.ts";
-import { asArray, asNumber, getCompound, isObj } from "../utils/core/nbt-guards.ts";
+import { asArray, asNumber, getCompound, isObj } from "../utils/base/nbt-guards.ts";
 import { parseNbtRootExact } from "./nbt-parse.ts";
 import { mapColor, resolveBlockName } from "./voxel-colors.ts";
 
@@ -206,7 +206,7 @@ function finalizeVoxelData(
   return { size, groups, truncated, maxBlocks };
 }
 
-// ===== 类型守卫（isObj/asArray/asNumber/getCompound 已收敛至 utils/core/nbt-guards.ts；
+// ===== 类型守卫（isObj/asArray/asNumber/getCompound 已收敛至 utils/base/nbt-guards.ts；
 //       保留本文件独有：asLongArray/asByteArray——LongArray 精确 64 位 bigint 与 ByteArray 非缺失语义）=====
 
 /** palette 列表 → 颜色数组（Name → mapColor；缺失 Name / 非 compound 元素兜底 fallback）。

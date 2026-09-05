@@ -1,8 +1,8 @@
 // [doc:architecture] ui-rows — 菜单行控件（toggle/slider/mode）
 // addToggleRow / addSliderRow / addModeRow / sliderRow / toggleRow
-// 自 MikuMikuAR 迁移：解耦 render-context(i18n/iconify)，依赖改为本库与 utils/core。
+// 自 MikuMikuAR 迁移：解耦 render-context(i18n/iconify)，依赖改为本库与 utils/base。
 
-import { clamp01, clampPct } from "../utils/core/clamp.ts";
+import { clamp01, clampPct } from "../utils/base/clamp.ts";
 import { registerControl } from "./control-registry.ts";
 // DOM 契约单源：role/class 由 dom-contract 提供，禁止手写字符串
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";

@@ -4,9 +4,31 @@ name: 核心工具函数 core-utils
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/core/
+  - frontend/src/utils/base/
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - addDisposableListener
+    - asArray
+    - asNumber
+    - asString
+    - clamp
+    - clamp01
+    - clampInt
+    - clampPct
+    - debounce
+    - delay
+    - Disposable
+    - fireAndForget
+    - getCompound
+    - isObj
+    - lerp
+    - lerpArray
+    - logError
+    - LogSink
+    - logWarn
+    - setLogSink
+    - swallowError
+    - waitForFrame
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -26,8 +48,8 @@ use_when:
   - 防抖
   - 异步
 invariant_anchors:
-  - frontend/src/utils/core/async.ts|swallowError
-  - frontend/src/utils/core/async.ts|fireAndForget
+  - frontend/src/utils/base/async.ts|swallowError
+  - frontend/src/utils/base/async.ts|fireAndForget
 status: active
 ---
 
@@ -35,7 +57,7 @@ status: active
 
 ## 概览
 
-`utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
+`utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
 
 ## 核心职责
 
@@ -53,8 +75,8 @@ status: active
 每个工具独立导出，按需 import：
 
 ```ts
-import { clamp } from './utils/core/clamp';
-import { swallowError, delay } from './utils/core/async';
+import { clamp } from './utils/base/clamp';
+import { swallowError, delay } from './utils/base/async';
 ```
 
 ## 不变量

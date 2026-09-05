@@ -35,7 +35,7 @@
 | commit-with-check、自动提交、并发提交、临时索引、白名单提交、门禁后自动 commit | [提交脚本 commit-with-check](./commit-with-check.md) | `commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD… |
 | 创意工坊、社区、下载队列、镜像源、批量下载、github 仓库、下载进度、workshop | [社区下载 community](./community-feature.md) ⚠️歧义（另见 go-download.md） | `features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e… |
 | 右键菜单、右键、上下文菜单、ctx:show、menu:show、批量操作、移入回收站 | [右键菜单系统](./context-menu.md) | 右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `me… |
-| 工具函数、工具方法、纯函数、防抖、异步 | [核心工具函数 core-utils](./core_utils.md) | `utils/core/` 是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。 |
+| 工具函数、工具方法、纯函数、防抖、异步 | [核心工具函数 core-utils](./core_utils.md) | `utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。 |
 | 高级筛选、筛选、骨骼数、立方体、纹理尺寸、按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) ⚠️歧义（另见 search.md、model-stats.md等） | `adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 … |
 | 批量重命名、批量改名、查找替换、正则替换、统一作者、预设、batch-rename | [批量重命名 batch-rename](./dialog-batch-rename.md) ⚠️歧义（另见 ui_components.md） | `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 … |
 | 弹窗、对话框、确认框、输入框弹窗、下拉选择弹窗、modal、prompt、confirm | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) ⚠️歧义（另见 android-events.md） | `modal.ts`（659 行）已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`： |

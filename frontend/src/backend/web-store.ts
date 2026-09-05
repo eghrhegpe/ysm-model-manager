@@ -3,7 +3,7 @@
 // 文件系统类操作见 web-fs.ts；社区数据持久化见 web-community.ts。
 // browser-adapter.ts 从本文件 import 组装 webImpls。
 
-import { swallowError } from "../utils/core/async.ts";
+import { swallowError } from "../utils/base/async.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { idbDel, idbGet, idbSet } from "./idb.ts";
 import { scanAllWebModels } from "./web-fs.ts";

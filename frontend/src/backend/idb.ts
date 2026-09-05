@@ -10,7 +10,7 @@
 // forcedMemory，后续调用改走内存分支，避免「一次失败永久毒化」。
 // 零依赖：不使用 fake-indexeddb，测试经 vi.mock 注入内存实现。
 
-import { swallowError } from "../utils/core/async.ts";
+import { swallowError } from "../utils/base/async.ts";
 
 const DB_NAME = "ysm-model-manager-web";
 const DB_VERSION = 1;

@@ -1,4 +1,4 @@
-// utils/core/disposable.ts — Disposable 模式（事件监听清理）。
+// utils/base/disposable.ts — Disposable 模式（事件监听清理）。
 // 从 MikuMikuAR 的 dom.ts 抽出通用部分；不携带任何项目专属 DOM 引用。
 
 /** 可释放资源的统一契约。 */

@@ -14,7 +14,7 @@
 // 输入同时支持 gzip（魔数 1f 8b → gunzipSync）与已解压原始 NBT（按魔数判断）。
 
 import { gunzipSync } from "fflate";
-import { asArray, asNumber, asString, getCompound, isObj } from "../utils/core/nbt-guards.ts";
+import { asArray, asNumber, asString, getCompound, isObj } from "../utils/base/nbt-guards.ts";
 
 // --- NBT 标签类型常量 ---
 const TAG_END = 0;
@@ -303,7 +303,7 @@ export function parseNbtRootExact(bytes: Uint8Array): Record<string, unknown> {
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
 }
 
-// ===== 类型守卫（isObj/asString/asNumber/asArray/getCompound 已收敛至 utils/core/nbt-guards.ts）=====
+// ===== 类型守卫（isObj/asString/asNumber/asArray/getCompound 已收敛至 utils/base/nbt-guards.ts）=====
 
 // ===== 三个 binding 的视图提取（对齐 go/litematic/parser.go 输出字段）=====
 // 返回 null 表示「无法解析/无有效内容」→ 调用方输出 "{}"（对齐 Go binding 契约）。

@@ -1,10 +1,10 @@
 // [doc:architecture] ui-slider-controller — 统一滑块输入控制器
 // 封装 mousedown→mousemove→mouseup 拖拽、键盘方向键步进、游标点击跳转逻辑。
 // 供 addSliderRow / addColorSliderRow / addVector3SliderRow / addModeSlider 共用。
-// 自 MikuMikuAR 迁移：依赖改为 utils/core 下的 disposable 与 clamp。
+// 自 MikuMikuAR 迁移：依赖改为 utils/base 下的 disposable 与 clamp。
 
-import { clamp01 } from "../utils/core/clamp.ts";
-import { addDisposableListener, type Disposable } from "../utils/core/disposable.ts";
+import { clamp01 } from "../utils/base/clamp.ts";
+import { addDisposableListener, type Disposable } from "../utils/base/disposable.ts";
 
 export interface DragSliderOptions {
   /** 当前值（内部可变） */

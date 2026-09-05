@@ -1,8 +1,8 @@
 // [doc:architecture] ui-advanced-rows — 高级菜单行控件（color-slider / mode-slider）
 // addColorSliderRow / addModeSlider
-// 自 MikuMikuAR 迁移：依赖改本库与 utils/core；颜色助手内联（解耦 Babylon Color3）。
+// 自 MikuMikuAR 迁移：依赖改本库与 utils/base；颜色助手内联（解耦 Babylon Color3）。
 
-import { clamp01, clampPct } from "../utils/core/clamp.ts";
+import { clamp01, clampPct } from "../utils/base/clamp.ts";
 import { uid } from "../utils/uid.ts";
 // DOM 契约单源：role/class 由 dom-contract 提供，禁止手写字符串
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";

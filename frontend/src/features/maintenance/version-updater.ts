@@ -4,7 +4,7 @@ import { getApp } from "../../backend/app.ts";
 import { Events, Window } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/core/async.ts";
+import { swallowError } from "../../utils/base/async.ts";
 import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { esc } from "../../utils/dom/html.ts";

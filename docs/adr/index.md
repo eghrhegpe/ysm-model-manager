@@ -17,26 +17,26 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 177 |
+| [🔄 部分采纳](#部分采纳) | 3 |
+| [✅ 已采纳](#已采纳) | 176 |
 | [❌ 已取代](#已取代) | 6 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（2）
+### 🔄 部分采纳（3）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | 🔄 部分采纳 |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（177）
+### ✅ 已采纳（176）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | ✅ 已采纳 |
 | [ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md) | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 |
 | [ADR-188](./ADR-188-core-handlers-sync-features-require-mcroot-features.md) | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 |
 | [ADR-187](./ADR-187-features-modal-ts.md) | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 |
@@ -237,7 +237,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-190 | features 层职责收束与依赖注入真化 | ✅ 已采纳 | 2026-09-05 |
+| ADR-190 | features 层职责收束与依赖注入真化 | 🔄 部分采纳 | 2026-09-05 |
 | ADR-189 | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 | 2026-09-05 |
 | ADR-188 | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 | 2026-09-05 |
 | ADR-187 | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 | 2026-09-05 |

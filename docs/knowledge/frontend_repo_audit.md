@@ -600,7 +600,6 @@ auto_fields:
     - groupCollected
     - groupLabelOf
     - groupMmdVariants
-    - groupSites
     - groupStorageRootOf
     - GroupTypeOption
     - handleInstanceDrop
@@ -1096,7 +1095,6 @@ auto_fields:
     - render
     - renderAdapterPanelContent
     - renderCapControls
-    - renderCardsHTML
     - renderComponent
     - renderDisplayName
     - renderEnvLevel
@@ -1108,7 +1106,6 @@ auto_fields:
     - RenderMode
     - RenderModeCapability
     - renderModel2D
-    - renderModelList
     - renderModelName
     - renderModelNameWithHighlight
     - renderMultiAngle
@@ -1479,7 +1476,6 @@ auto_fields:
     - workshopHTML
     - WorkshopModel
     - WorkshopRefs
-    - WorkshopSite
     - writeHeapBytes
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions

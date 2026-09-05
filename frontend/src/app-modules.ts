@@ -1,6 +1,7 @@
 // ===== 所有 ES module 组件的统一入口 =====
 
 import { prefetchStatsWorker } from "./backend/browser-adapter.ts";
+import { makeDiarySink } from "./backend/diary-sink.ts";
 import { Window } from "./backend/runtime.ts";
 import { bus } from "./bus.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
@@ -78,7 +79,11 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
 (async () => {
   try {
     await runStartupSteps([
-      { tag: "error-diary", failMsg: "错误日志注册失败:", run: registerErrorDiary },
+      {
+        tag: "error-diary",
+        failMsg: "错误日志注册失败:",
+        run: () => registerErrorDiary(makeDiarySink()),
+      },
     ]);
     // ADR-079 M1：网页版注册 COI Service Worker（补 COOP/COEP → crossOriginIsolated，
     // 为 pthread WASM 铺路；渐进增强，失败静默降级单线程）——内部自捕获，保持裸调用。

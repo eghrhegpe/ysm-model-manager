@@ -14,6 +14,9 @@ auto_fields:
   symbols_with_lines:
     - appContentStyle
     - bindTreeDnD
+    - DiaryEntry
+    - DiarySink
+    - DiaryStatus
     - handleTreeDrop
     - registerErrorDiary
     - registerInstanceOps

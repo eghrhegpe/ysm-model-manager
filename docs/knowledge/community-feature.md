@@ -32,7 +32,6 @@ auto_fields:
     - GH_DOCS
     - GH_RELEASES
     - GH_REPO
-    - groupSites
     - isActiveStatus
     - isModelMissing
     - ModelRowCtx
@@ -42,8 +41,6 @@ auto_fields:
     - QueueController
     - QueueControllerOptions
     - QueueError
-    - renderCardsHTML
-    - renderModelList
     - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle
@@ -57,7 +54,6 @@ auto_fields:
     - VirtualList
     - VirtualListOpts
     - WorkshopModel
-    - WorkshopSite
   tests:
     - frontend/src/features/community/data.test.ts
     - frontend/src/features/community/download-queue.test.ts

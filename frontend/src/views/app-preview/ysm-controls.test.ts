@@ -63,14 +63,13 @@ function makeCtx(overrides: Partial<YsmControlsContext> = {}): YsmControlsContex
 }
 
 describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
-  it("产出 6 个 button 节点（ys m- 前缀 id），legacyTestId 兼容旧 e2e", () => {
+  it("产出 6 个 button 节点（ysm- 前缀 id）", () => {
     const nodes = ysmShotNodes(makeCtx());
     expect(nodes.length).toBe(6);
     expect(nodes.map((n) => n.id)).toEqual([
       "ysm-shot-current", "ysm-shot-front", "ysm-shot-45", "ysm-shot-side", "ysm-shot-back45", "ysm-shot-all",
     ]);
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    expect(nodes[0].legacyTestId).toBe("shot-current");
     expect(nodes[0].icon).toBe("📷");
   });
 

@@ -131,7 +131,7 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
 });
 
 describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
-  it("6 个 button 节点，id 稳定 + legacyTestId 兼容，action 触发截图", () => {
+  it("6 个 button 节点，id 稳定，action 触发截图", () => {
     const { ctx } = makeCtx();
     const screenshotFn = vi.fn(() => Promise.resolve("b64"));
     const nodes = mmdShotNodes(ctx, screenshotFn);
@@ -140,8 +140,6 @@ describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
       "mmd-shot-current", "mmd-shot-front", "mmd-shot-45", "mmd-shot-side", "mmd-shot-back45", "mmd-shot-all",
     ]);
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    // legacyTestId 兼容旧 e2e 选择器（shot-<key>）
-    expect(nodes[0].legacyTestId).toBe("shot-current");
     expect(nodes[0].icon).toBe("📷");
   });
 

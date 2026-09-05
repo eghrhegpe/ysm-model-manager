@@ -132,7 +132,6 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   ensureCoreStyles();
   row.className = "ysm-preview-menu-row cm-row";
   row.dataset.testid = "preview-" + node.id;
-  if (node.legacyTestId) row.id = node.legacyTestId;
   if (node.danger) row.style.color = "#ff7b7b";
   const ic = document.createElement("span");
   ic.textContent = node.icon ?? "";
@@ -245,11 +244,10 @@ export function renderPreviewPanel(
 ): void {
   list.innerHTML = "";
   // 面板可定位（2026-08-28 反馈通道）：data-panel-id 机器可读（测试/诊断/外部工具），
-  // title hover 提示人读——用户悬停面板内容即可读到内部 id / testid，
+  // title hover 提示人读——用户悬停面板内容即可读到内部 id，
   // 反馈「我看到的这个面板」时直接报 id，免去视觉路径转译歧义
   list.dataset.panelId = node.id;
-  list.dataset.panelTestId = node.legacyTestId ?? "";
-  list.title = `panel: ${node.id}${node.legacyTestId ? ` · testid: ${node.legacyTestId}` : ""}`;
+  list.title = `panel: ${node.id}`;
   try {
     if (routers.schemaBuilders[node.id]) {
       // schema 面板内容统一走 renderMenu（renderCustomDirect：custom 直接填充面板，

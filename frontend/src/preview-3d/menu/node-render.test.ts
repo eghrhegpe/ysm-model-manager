@@ -15,7 +15,6 @@ function makeDeps(): {
     makeRow: (def: any) => {
       const row = document.createElement("div");
       if (def.id) row.dataset.testid = "preview-" + def.id;
-      if (def.legacyTestId) row.id = def.legacyTestId;
       return row;
     },
     makePanelView: () => ({ title: "", render: () => {} }) as any,

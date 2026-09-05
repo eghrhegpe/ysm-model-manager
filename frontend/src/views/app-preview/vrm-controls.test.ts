@@ -33,7 +33,6 @@ describe("vrmShotNodes（current-only 截图按钮）", () => {
     expect(nodes.map((n) => n.id)).toEqual(["vrm-shot-current"]);
     expect(nodes[0].kind).toBe("button");
     expect(nodes[0].icon).toBe("📷");
-    expect(nodes[0].legacyTestId).toBe("shot-current");
   });
 
   it("action 触发 saveScreenshot：_modelPath 透传 + screenshotFn 第四参", () => {

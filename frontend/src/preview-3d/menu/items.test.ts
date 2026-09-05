@@ -1,6 +1,6 @@
 // ===== 3D 菜单声明式测试：拿真实菜单数组去测（对齐 MikuMikuAR 范式）=====
 // CORE_MENU_ITEMS + ysm/mmd 适配器真实注入项 = 完整菜单数组（唯一事实来源）。
-// 测试遍历本表断言：结构完整性（id/legacyTestId 唯一、必填字段、i18n 键、组归属）、
+// 测试遍历本表断言：结构完整性（id 唯一、必填字段、i18n 键、组归属）、
 // dock 行全量渲染、安全面板逐个打开——加菜单项只改 menu 表，测试自动覆盖。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
@@ -173,11 +173,6 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     });
   });
 
-  it("legacyTestId 全局唯一（e2e 兼容锚点不撞车）", () => {
-    const legacies = allItems.map((d) => d.legacyTestId).filter(Boolean);
-    expect(new Set(legacies).size).toBe(legacies.length);
-  });
-
   it("非 divider 项必有 icon/fallback/labelKey，kind/dockGroup 合法", () => {
     const groupIds = PREVIEW_MENU_GROUPS.map((g) => g.id);
     allItems.forEach((d) => {
@@ -251,31 +246,6 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     // 无 screenshot 能力 → 无 shot 项（[doc:adr-126-p4-b-1] 条件注入契约）
     const noShot = mmdMenuItems(fakeMmdOpts({ screenshot: null }));
     expectNotContains(extractIds(noShot), ["shot"], "mmd 无 screenshot 时不注入 shot");
-  });
-
-  it("legacyTestId 锚点齐全（既有 e2e 选择器兼容契约）", () => {
-    const legacies = allItems.map((d) => d.legacyTestId).filter(Boolean);
-    [
-      "ysm-model-entry",
-      "ysm-shot-entry",
-      "ysm-bones-entry",
-      "mmd-model-entry",
-      "mmd-material-entry",
-      "mmd-play-entry",
-      "mmd-bones-entry",
-      "vrm-material-entry",
-      "vrm-bones-entry",
-      "ysm-roles-entry",
-      "env-menu-btn",
-    ].forEach((anchor) => expect(legacies, `缺锚点 ${anchor}`).toContain(anchor));
-  });
-});
-
-// ── dock 行全量渲染（真实数组驱动）──
-
-describe("dock 行全量渲染（遍历真实菜单数组驱动）", () => {
-  beforeEach(() => {
-    document.body.innerHTML = "";
   });
 
   it("ysm 数组：🧍 模型组按钮出现，点击直达 roles 面板（adapter model 项不在 dock 根）", () => {

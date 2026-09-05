@@ -729,7 +729,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "模型",
       kind: "panel",
       dockGroup: "model",
-      legacyTestId: "vrm-model-entry",
       // [doc:adr-126-p4-b-1] 面板内容声明式化（P5 收尾：VRM 迁 children 样板，对齐 MMD）：
       // children = vrmModelInfoNodes 纯数据节点（经 panels 注入，R1 禁 utils→views）。
       // 此前 renderCustom 委托 makeModelPanelRenderer——视图层从未注入（no-op 空面板），
@@ -743,7 +742,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "截图",
       kind: "panel",
       dockGroup: "model",
-      legacyTestId: "vrm-shot-entry",
       // [doc:adr-126-p4-b-1] 截图面板声明式化（P5 收尾：对齐 MMD/YSM shotNodes 样板，
       // 复用 shot-panel-shared 六角度按钮）；此前委托 makeShotPanelRenderer——
       // 视图层从未注入（no-op 空面板），迁 children 顺带补上截图功能。
@@ -755,7 +753,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.materialList",
       fallback: "材质",
       kind: "panel",
-      legacyTestId: "vrm-material-entry",
       dockGroup: "model",
       children: materialNodes(o.material),
     },
@@ -765,7 +762,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       viewContainer: o.bonePanel.viewContainer,
       camera: o.bonePanel.camera,
       scene: o.bonePanel.scene,
-      legacyTestId: "vrm-bones-entry",
     }),
   ];
   if (o.play) {
@@ -775,7 +771,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.mmdPlay",
       fallback: "播放",
       kind: "panel",
-      legacyTestId: "vrm-play-entry",
       dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
       // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
       children: o.panels?.playNodes?.(o.play) ?? [],

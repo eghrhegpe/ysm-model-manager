@@ -13,11 +13,9 @@ import { deriveTestIds } from "../../test-utils/self-healing.ts";
 import { makeMenuCtx as makeCtx } from "../adapters/menu-test-fixtures.ts";
 
 describe("CORE_MENU_ITEMS 表结构", () => {
-  it("id 唯一 + legacyTestId 唯一", () => {
+  it("id 唯一", () => {
     const ids = CORE_MENU_ITEMS.map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);
-    const legacies = CORE_MENU_ITEMS.map((d) => d.legacyTestId).filter(Boolean);
-    expect(new Set(legacies).size).toBe(legacies.length);
   });
 
   it("非 divider 项必有 icon/fallback/labelKey", () => {

@@ -705,7 +705,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "模型",
       kind: "panel",
       dockGroup: "model",
-      legacyTestId: "ysm-model-entry",
       // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 优先查 schema-registry 的
       // YSM_MODEL_SCHEMA_ID（缺省）或 per-scene key（传 sessionId），builder（buildYsmModelSchema）
       // 吃状态层快照产出声明式节点。
@@ -723,7 +722,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "截图",
       kind: "panel",
       dockGroup: "model",
-      legacyTestId: "ysm-shot-entry",
       // [doc:adr-126-p4-b-2] 面板内容声明式化：children = shotNodes 纯数据节点（经 panels 注入，
       // R1 禁 utils→views 运行时依赖）。YSM 的 screenshot 是 ctx 可选字段（undefined 走 fallback），
       // 面板常驻——不按能力条件注入。
@@ -735,7 +733,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       viewContainer: o.bonePanel.viewContainer,
       camera: o.bonePanel.camera,
       scene: o.bonePanel.scene,
-      legacyTestId: "ysm-bones-entry",
     }),
   ];
   if (o.play) {
@@ -745,7 +742,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.mmdPlay",
       fallback: "播放",
       kind: "panel",
-      legacyTestId: "ysm-play-entry",
       dockGroup: "motion",
       // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
       children: o.panels?.playNodes?.(o.play) ?? [],

@@ -4,10 +4,9 @@
 //     if (cleanupRef.current) { cleanupRef.current(); cleanupRef.current = null; }
 //     cleanupRef.current = makeBonePanelRenderer(tree)(list, { viewContainer, camera, scene });
 //   }
-// 此前 4 段 ~15 行代码高度同构（仅 legacyTestId / 是否 null 守卫不同）——抽本工厂：
+// 此前 4 段 ~15 行代码高度同构（仅是否 null 守卫不同）——抽本工厂：
 //   - 统一空守卫：viewContainer/camera/scene 任一缺失时早 return（采纳 mmd 写法 L1358-1361）
 //   - 统一 cleanup 重入清理（同一 panel 重渲染前先清理旧 renderer，防 listener 累积）
-//   - legacyTestId 由 caller 注入（"ysm-bones-entry" / "vrm-bones-entry" / "mmd-bones-entry" / "fbx-bones-entry"）
 // 4 个 adapter 的 menuItems 中 bones 项从 ~15 行 → 1 行 factory 调用。
 //
 // 为什么不走 schema 声明式（与 litematic 对齐）：
@@ -39,8 +38,6 @@ export interface BonesPanelItemOpts {
   viewContainer: HTMLElement | null | undefined;
   camera: THREE.Camera | null | undefined;
   scene: THREE.Object3D | null | undefined;
-  /** adapter-specific e2e 锚（"ysm-bones-entry" / "vrm-bones-entry" / "mmd-bones-entry" / "fbx-bones-entry"） */
-  legacyTestId: string;
 }
 
 /**
@@ -56,7 +53,6 @@ export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
     fallback: "骨骼",
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
-    legacyTestId: opts.legacyTestId,
     renderCustom: (list): void => {
       // 空守卫：核心未填充时不渲染（mmd 写法统一——4 个 adapter 共用同一守卫语义）
       if (!opts.viewContainer || !opts.camera || !opts.scene) return;

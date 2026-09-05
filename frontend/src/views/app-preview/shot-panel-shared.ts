@@ -73,7 +73,6 @@ export function shotButtonNodes(
     labelKey: SHOT_LABELS[i],
     fallback: key,
     icon: "📷",
-    legacyTestId: `shot-${key}`,
     action: (): void => {
       void saveShot(key);
     },

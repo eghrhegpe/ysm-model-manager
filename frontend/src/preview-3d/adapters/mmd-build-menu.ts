@@ -170,7 +170,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.modelInfo",
       fallback: "模型",
       kind: "panel",
-      legacyTestId: "mmd-model-entry",
       dockGroup: "model", // 底栏 🧍 模型组
       // [doc:adr-126-p4-b-1] 面板内容声明式化：children = modelInfoNodes 纯数据节点（经 panels 注入，
       // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu/render.ts）。
@@ -183,7 +182,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.mmdMorph",
       fallback: "表情",
       kind: "panel",
-      legacyTestId: "mmd-morph-entry",
       dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
       // [doc:adr-126-p5-收尾] morph 面板声明式化：children = morphNodes 纯数据节点
       // （toggle kind，照 perceptionNodes 样板）。fillMorphPanel 逃生舱删除。
@@ -203,7 +201,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.materialList",
       fallback: "材质",
       kind: "panel",
-      legacyTestId: "mmd-material-entry",
       dockGroup: "model", // 底栏 🧍 模型组
       children: materialNodes(o.material),
     },
@@ -219,7 +216,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       fallback: "截图",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
-      legacyTestId: "mmd-shot-entry",
       children: o.panels?.shotNodes?.(o.navCtx, o.screenshot) ?? [],
     });
   }
@@ -230,7 +226,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
     labelKey: "preview.mmdPlay",
     fallback: "播放",
     kind: "panel",
-    legacyTestId: "mmd-play-entry",
     dockGroup: "motion", // 底栏 💃 动作组
     // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（toggle 播放/暂停 +
     // select 动作 + 空态引导），经 panels 注入（R1 禁 utils→views）。fillPlayPanel 逃生舱删除。
@@ -245,7 +240,6 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
         viewContainer: o.bonePanel.viewContainer,
         camera: o.bonePanel.camera,
         scene: o.bonePanel.scene,
-        legacyTestId: "mmd-bones-entry",
       }),
     );
   }

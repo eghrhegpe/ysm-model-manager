@@ -135,7 +135,6 @@ export function modelDetailView(
         if (primary) {
           const infoHost = document.createElement("div");
           infoHost.dataset.panelId = primary.id;
-          infoHost.dataset.panelTestId = primary.legacyTestId ?? "";
           try {
             const handled = renderAdapterPanelContent(infoHost, primary, {
               ...panelDeps,

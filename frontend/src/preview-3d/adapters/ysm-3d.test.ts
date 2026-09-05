@@ -31,14 +31,13 @@ vi.mock("../bone-tools.ts", () => ({
 vi.mock("./bones-panel-node.ts", () => ({
   // stub 工厂：记录调用参数，便于断言「ysm 正确把 o.bonePanel 字段传给工厂」
   // bones 面板的真实渲染行为（含 cleanupRef 重入、空守卫）在 bones-panel-node.test.ts 覆盖
-  makeBonesPanelItem: vi.fn((opts: { legacyTestId: string }) => ({
+  makeBonesPanelItem: vi.fn(() => ({
     id: "bones",
     icon: "🦴",
     labelKey: "preview.section.bones",
     fallback: "骨骼",
     kind: "panel" as const,
     dockGroup: "motion" as const,
-    legacyTestId: opts.legacyTestId,
     renderCustom: (): void => {},
   })),
 }));
@@ -58,7 +57,6 @@ const fakePanels = {
       kind: "button" as const,
       labelKey: `preview.screenshot${k[0].toUpperCase()}${k.slice(1)}`,
       fallback: k,
-      legacyTestId: `shot-${k}`,
     })),
 };
 
@@ -499,7 +497,7 @@ describe("ysmMenuItems 独立菜单表测试", () => {
   // 「cleanupRef 重入清理：第二次 renderCustom 前先调上一次 cleanup 并置 null」覆盖。
   // ysm-adapter 这一层只剩「正确把 o.bonePanel 字段传给工厂」的接线契约：
 
-  it("ysm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene/legacyTestId）传给 bones 工厂", async () => {
+  it("ysm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene）传给 bones 工厂", async () => {
     const { makeBonesPanelItem } = await import("./bones-panel-node.ts");
     const cleanupRef = { current: null };
     const viewContainer = document.createElement("div");
@@ -527,7 +525,6 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       viewContainer,
       camera: null,
       scene: null,
-      legacyTestId: "ysm-bones-entry",
     });
   });
 });

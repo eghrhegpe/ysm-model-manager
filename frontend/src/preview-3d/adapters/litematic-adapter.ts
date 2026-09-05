@@ -409,7 +409,6 @@ function mdLiRegisterSliceSchema(
     fallback: "分层切片",
     kind: "panel",
     dockGroup: "model",
-    legacyTestId: "litematic-slice-entry",
     schemaId: sliceKey,
   };
 }

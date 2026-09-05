@@ -34,8 +34,6 @@ export interface MenuGraphNode {
   kind: PreviewMenuNodeKind;
   dockGroup?: string | undefined;
   schemaId?: string | undefined;
-  /** 兼容既有 e2e 选择器的 legacy data-testid */
-  legacyTestId?: string | undefined;
   /** 含 renderCustom 逃生舱（骨骼面板 / litematic 切片等真·复杂内容，图不强行走通） */
   escapeHatch: boolean;
   /** action 节点（runners / node.action），不进导航路径 */
@@ -109,7 +107,6 @@ function projectNode(n: PreviewMenuNode, snaps: RepresentativeSnapshot[]): MenuG
     kind: n.kind,
     dockGroup: n.dockGroup,
     schemaId: n.schemaId,
-    legacyTestId: n.legacyTestId,
     escapeHatch: !!n.renderCustom,
     nonNav: n.kind === "action" || !!n.action,
     reachable: reachableBy.length > 0,

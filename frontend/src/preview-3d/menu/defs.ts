@@ -70,7 +70,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     kind: "panel",
     /** 已加载角色列表（MikuMikuAR buildModelRootItems 移植）：焦点切换 + 详情 + 工具 + 加载入口 */
     dockGroup: "model",
-    legacyTestId: "ysm-roles-entry",
   },
   {
     id: "environment",
@@ -82,7 +81,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     // 环境能力门禁（requiresEnvironment 谓词化）：sky/ground cap 任一挂载才显示；
     // 经状态层 env.skyGroundCap 惰性解析，caps 后创建由 shared-infra refreshDock 补回
     visibleWhen: (s) => !!s["env.skyGroundCap"],
-    legacyTestId: "env-menu-btn",
   },
   {
     id: "camera",

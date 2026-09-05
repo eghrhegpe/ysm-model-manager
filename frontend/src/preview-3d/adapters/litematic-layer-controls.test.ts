@@ -99,7 +99,6 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(panel.id).toBe("slice");
     expect(panel.dockGroup).toBe("model");
     expect(panel.kind).toBe("panel");
-    expect(panel.legacyTestId).toBe("litematic-slice-entry");
     expect(panel.schemaId).toMatch(new RegExp(`^${LITEMATIC_SLICE_SCHEMA_ID}-`));
     expect(panel.renderCustom).toBeUndefined();
     expect(getSchema(panel.schemaId!)).toBeTypeOf("function");
@@ -275,7 +274,6 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
 
   it("集成：schemaId → 生产 panel-view 接线（renderPreviewPanel 经 schemaId 解析产出控件）", async () => {
     // 5329a347 review P3（finding 3）：此前测试经 getSchema 直接调 builder——若生产
-    // panel-view 的 schemaId 解析断开（或 legacyTestId 未挂 DOM），测试仍绿而真实面板空。
     // 本用例走 renderPreviewPanel（生产调度路径）锁接线。
     const { panel } = await buildScene();
     const list = document.createElement("div");
@@ -295,7 +293,6 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
         makePanelView: (() => ({ title: "", render: () => {} })) as unknown as (node: PreviewMenuNode) => SlideMenuView,
       },
     );
-    expect(list.dataset.panelTestId).toBe("litematic-slice-entry"); // legacyTestId 挂 DOM
     expect(list.querySelector('[data-testid="preview-slice-mode"]')).not.toBeNull();
     expect(list.querySelector('[data-testid="preview-slice-axis"]')).not.toBeNull();
   });

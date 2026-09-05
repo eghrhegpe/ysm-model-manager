@@ -285,7 +285,6 @@ export async function buildFbxScene(
         viewContainer: ctx.viewContainer,
         camera: ctx.camera,
         scene: ctx.scene,
-        legacyTestId: "fbx-bones-entry",
       }),
     );
   }

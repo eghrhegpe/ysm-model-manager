@@ -1,5 +1,5 @@
 // ===== bones-panel-node.ts 测试（通用骨骼面板菜单项工厂）=====
-// 覆盖：节点形状（id/icon/labelKey/fallback/kind/dockGroup/legacyTestId/renderCustom）
+// 覆盖：节点形状（id/icon/labelKey/fallback/kind/dockGroup/renderCustom）
 // / null 守卫（viewContainer/camera/scene 任一缺失早 return）/ cleanup 重入清理 /
 // tree=null 走 makeBonePanelRenderer 空态（让被委托函数自己处理，工厂不二次包装）。
 // 4 个 adapter 的 menuItems 测试覆盖「是否有 bones 项」，本测覆盖「骨头项形状契约」。
@@ -35,14 +35,13 @@ function makeCtx() {
 }
 
 describe("makeBonesPanelItem", () => {
-  it("节点形状：id/icon/labelKey/fallback/kind/dockGroup/legacyTestId 固定，renderCustom 是函数", () => {
+  it("节点形状：id/icon/labelKey/fallback/kind/dockGroup 固定，renderCustom 是函数", () => {
     const item = makeBonesPanelItem({
       tree: null,
       cleanupRef: { current: null },
       viewContainer: null,
       camera: null,
       scene: null,
-      legacyTestId: "ysm-bones-entry",
     });
     expect(item.id).toBe("bones");
     expect(item.icon).toBe("🦴");
@@ -50,25 +49,7 @@ describe("makeBonesPanelItem", () => {
     expect(item.fallback).toBe("骨骼");
     expect(item.kind).toBe("panel");
     expect(item.dockGroup).toBe("motion");
-    expect(item.legacyTestId).toBe("ysm-bones-entry");
     expect(typeof item.renderCustom).toBe("function");
-  });
-
-  it("legacyTestId 由 caller 注入（4 个 adapter 各自不同）", () => {
-    const cases: Array<{ id: string; legacyTestId: string }> = [
-      { id: "ysm", legacyTestId: "ysm-bones-entry" },
-      { id: "vrm", legacyTestId: "vrm-bones-entry" },
-      { id: "mmd", legacyTestId: "mmd-bones-entry" },
-      { id: "fbx", legacyTestId: "fbx-bones-entry" },
-    ];
-    for (const c of cases) {
-      const item = makeBonesPanelItem({
-        tree: null, cleanupRef: { current: null },
-        viewContainer: null, camera: null, scene: null,
-        legacyTestId: c.legacyTestId,
-      });
-      expect(item.legacyTestId, `${c.id} 应保留各自 legacyTestId`).toBe(c.legacyTestId);
-    }
   });
 
   it("null 守卫：viewContainer 缺失 → renderCustom 早 return，不调 makeBonePanelRenderer", () => {
@@ -78,7 +59,6 @@ describe("makeBonesPanelItem", () => {
       cleanupRef: { current: null },
       viewContainer: null,
       camera, scene,
-      legacyTestId: "test-bones-entry",
     });
     item.renderCustom!(document.createElement("div"));
     expect(makeBonePanelRenderer).not.toHaveBeenCalled();
@@ -91,7 +71,6 @@ describe("makeBonesPanelItem", () => {
       cleanupRef: { current: null },
       viewContainer: undefined,
       camera, scene,
-      legacyTestId: "test-bones-entry",
     });
     item.renderCustom!(document.createElement("div"));
     expect(makeBonePanelRenderer).not.toHaveBeenCalled();
@@ -104,7 +83,6 @@ describe("makeBonesPanelItem", () => {
       cleanupRef: { current: null },
       viewContainer,
       camera: null, scene,
-      legacyTestId: "test-bones-entry",
     });
     item.renderCustom!(document.createElement("div"));
     expect(makeBonePanelRenderer).not.toHaveBeenCalled();
@@ -117,7 +95,6 @@ describe("makeBonesPanelItem", () => {
       cleanupRef: { current: null },
       viewContainer, camera,
       scene: null,
-      legacyTestId: "test-bones-entry",
     });
     item.renderCustom!(document.createElement("div"));
     expect(makeBonePanelRenderer).not.toHaveBeenCalled();
@@ -129,7 +106,6 @@ describe("makeBonesPanelItem", () => {
     const item = makeBonesPanelItem({
       tree, cleanupRef: { current: null },
       viewContainer, camera, scene,
-      legacyTestId: "test-bones-entry",
     });
     const list = document.createElement("div");
     item.renderCustom!(list);
@@ -149,7 +125,6 @@ describe("makeBonesPanelItem", () => {
     const item = makeBonesPanelItem({
       tree: null, cleanupRef,
       viewContainer, camera, scene,
-      legacyTestId: "test-bones-entry",
     });
     const list = document.createElement("div");
     // 第一次挂载：mock renderer 返回的 cleanup 我们替换成 spy
@@ -173,7 +148,6 @@ describe("makeBonesPanelItem", () => {
     const item = makeBonesPanelItem({
       tree: null, cleanupRef: { current: null },
       viewContainer, camera, scene,
-      legacyTestId: "test-bones-entry",
     });
     item.renderCustom!(document.createElement("div"));
     // makeBonePanelRenderer 仍被调（参数 tree=null）

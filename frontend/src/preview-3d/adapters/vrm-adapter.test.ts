@@ -757,7 +757,7 @@ describe("vrmMenuItems 结构", () => {
     items.forEach((i) => expect(i.kind).toBe("panel"));
   });
 
-  it("vrm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene/legacyTestId）传给真实 bones 工厂", () => {
+  it("vrm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene）传给真实 bones 工厂", () => {
     // 真实 bones-panel-node 工厂（未被 mock）会调 mock 的 makeBonePanelRenderer，
     // 记录到 makeBonePanelRenderer 的第二次参数（cleanup 函数）便于断言 cleanupRef 接线正确
     const cleanupRef = { current: null as (() => void) | null };
@@ -777,7 +777,6 @@ describe("vrmMenuItems 结构", () => {
       play: null,
     });
     const bonesItem = items.find((i) => i.id === "bones")!;
-    expect(bonesItem.legacyTestId).toBe("vrm-bones-entry");
     // 工厂产物的 renderCustom 应绑 cleanupRef；调一次后 cleanupRef.current 应被设为 no-op 函数
     bonesItem.renderCustom!(document.createElement("div"));
     // camera/scene 为 null → 工厂早 return，cleanupRef.current 仍为 null

@@ -1107,6 +1107,7 @@ export const en: Record<string, string> = {
   "preview.description": "Description",
   "preview.loadingVoxels": "Loading voxel data...",
   "preview.loadingModel": "Loading model...",
+  "preview.loadingModels": "⏳ Loading model list...",
   "preview.authors": "Authors",
   "preview.modelOverview": "Model Overview",
   "preview.extraTextures": "{extra} extra textures (of {total} total)",

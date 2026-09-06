@@ -990,6 +990,7 @@
   "preview.description": "説明",
   "preview.loadingVoxels": "ボクセルデータを読み込み中...",
   "preview.loadingModel": "モデルを読み込み中...",
+  "preview.loadingModels": "⏳ モデルリストを読み込み中...",
   "preview.authors": "作者",
   "preview.modelOverview": "モデル概要",
   "preview.extraTextures": "追加テクスチャ {extra} 枚（計 {total} 枚）",

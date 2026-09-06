@@ -10,13 +10,13 @@
  *   1. id 全局唯一（渲染为 data-testid="preview-<id>"，撞车则 e2e 寻址失效）
  *   2. labelKey 非空
  *   3. labelKey 在 zh-CN 语言包存在（三语一致性由 locales-consistency.test 保证）
- *   4. dockGroup ∈ PreviewMenuGroupId 联合类型（单一事实来源，自动从 preview-menu/defs.ts 推导）或 无（非法值导致 dock 按钮进错组）
+ *   4. dockGroup ∈ PreviewMenuGroupId 联合类型（单一事实来源，自动从 menu/node-types.ts 推导）或 无（非法值导致 dock 按钮进错组）
  *   5. kind ∈ {panel, action, divider}
  *   6. panel 项必有渲染通道；action 项必有 run（缺失则面板/动作不可执行）
  *      渲染通道四选一：render | renderCustom（ADR-085 逃生舱）| children（ADR-126 P4-B 声明式子节点）
  *      | schemaId（ADR-126 P5 受控 schema 驱动，renderPreviewPanel 优先查 schema-registry）
  *
- * 解析策略：正则解析 4 个菜单表文件（preview-menu/defs.ts + ysm/mmd/vrm-adapter.ts），
+ * 解析策略：正则解析 4 个菜单表文件（menu/node-types.ts + defs.ts + ysm/mmd/vrm-adapter.ts），
  * 对每个 `id: "xxx"` 匹配回溯对象块（配对 { }，跳过字符串内 { }），提取字段。
  *
  * 用法：
@@ -56,16 +56,18 @@ function readRel(rel: string) {
   return fs.readFileSync(path.resolve(ROOT, rel), 'utf-8');
 }
 
-// 合法 dockGroup 从单一事实来源 preview-menu/defs.ts 的 `PreviewMenuGroupId` 联合类型推导，
+// 合法 dockGroup 从单一事实来源 menu/node-types.ts 的 `PreviewMenuGroupId` 联合类型推导，
 // 不在此处硬编码第二份清单——否则新增组（如 2026-08-19 的 "env"）时漏改闸门即双源漂移、误阻断推送。
 const LEGAL_GROUPS = deriveLegalGroups();
 
 function deriveLegalGroups() {
-  const defs = readRel(MENU_FILES[0]!);
+  // PreviewMenuGroupId 联合本体已归位 node-types.ts（类型叶，单一事实源），
+  // defs.ts 只 re-export——推导须跟类型本体走（[2026-09 锐评收口] 同步）
+  const defs = readRel('frontend/src/preview-3d/menu/node-types.ts');
   const m = defs.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
   const ids = m ? [...m[1]!.matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]) : [];
   if (!ids.length) {
-    throw new Error('check-menu-health: 无法从 preview-menu/defs.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
+    throw new Error('check-menu-health: 无法从 menu/node-types.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
   }
   return new Set(ids);
 }

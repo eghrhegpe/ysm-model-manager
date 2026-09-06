@@ -155,7 +155,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         span.style.color = "rgba(255,255,255,0.4)";
         span.textContent = k;
         r.appendChild(span);
-        r.appendChild(document.createTextNode(": " + v));
+        r.appendChild(document.createTextNode(`: ${v}`));
         d.appendChild(r);
       };
       field("名称", det.name);

@@ -88,8 +88,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
       cfg,
       mcRoot,
       instances: [],
-      errorHtml:
-        '<div class="stat-row diag-msg diag-msg-muted">' + t("diagnostics.noModpacks") + "</div>",
+      errorHtml: `<div class="stat-row diag-msg diag-msg-muted">${t("diagnostics.noModpacks")}</div>`,
     };
   }
   return { cfg, mcRoot, instances, errorHtml: null };

@@ -71,7 +71,7 @@ export function initRepositoryPage(host: AppContentHost): void {
       '<app-tree root="' +
       rtype +
       '"' +
-      (subdir ? ' subdir="' + subdir + '"' : "") +
+      (subdir ? ` subdir="${subdir}"` : "") +
       ' style="flex:1;min-width:0"></app-tree>';
   };
 
@@ -102,9 +102,9 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
   }
   tabs.forEach((btn, i) => {
     const tabId = btn.dataset.tab || ids[i] || "";
-    const panelId = prefix + "-tab-" + tabId;
+    const panelId = `${prefix}-tab-${tabId}`;
     btn.setAttribute("role", "tab");
-    btn.setAttribute("id", prefix + "-tab-btn-" + tabId);
+    btn.setAttribute("id", `${prefix}-tab-btn-${tabId}`);
     btn.setAttribute("aria-controls", panelId);
     btn.setAttribute("tabindex", i === 0 ? "0" : "-1"); // roving tabindex
     const panel = host._root.getElementById(panelId);
@@ -129,7 +129,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     });
     // 切换内容卡
     ids.forEach((id) => {
-      const el = host._root.getElementById(prefix + "-tab-" + id);
+      const el = host._root.getElementById(`${prefix}-tab-${id}`);
       if (!el) return;
       if (id === tab) {
         el.style.display = "";
@@ -141,7 +141,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     });
     // 首次切换到非默认 tab 时初始化内容
     if (!inited[tab] && tab !== ids[0]) {
-      const container = host._root.getElementById(prefix + "-tab-" + tab);
+      const container = host._root.getElementById(`${prefix}-tab-${tab}`);
       if (!container) return;
       // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
       // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
@@ -162,7 +162,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
       } catch (e) {
         inited[tab] = false;
         bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, t("common.loadFailed")),
+          msg: `❌ ${friendlyError(e, t("common.loadFailed"))}`,
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -290,7 +290,7 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
   } catch (e) {
     console.error("[settings] 初始化失败:", e);
     bus.emit("toast:show", {
-      msg: "❌ " + friendlyError(e, t("content.settingsInitFailed")),
+      msg: `❌ ${friendlyError(e, t("content.settingsInitFailed"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });

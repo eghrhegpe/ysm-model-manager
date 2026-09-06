@@ -264,7 +264,7 @@ function frRenderRoles(
  *  纯函数便于测试直断——happy-dom 计算样式读 color-mix() 丢声明（与 WebView2 不一致），
  *  测试断「类 token + 注入样式表原文」两级（roles.test.ts）。 */
 export function frRoleRowClass(isActive: boolean): string {
-  return "fr-role-row" + (isActive ? " fr-row-active" : "");
+  return `fr-role-row${isActive ? " fr-row-active" : ""}`;
 }
 
 function frBuildRoleRow(
@@ -347,7 +347,7 @@ function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuView {
       l.innerHTML = "";
       const unload = document.createElement("div");
       unload.dataset.testid = "preview-role-unload";
-      unload.textContent = "🗑 " + tr("preview.unloadModel", "卸载模型");
+      unload.textContent = `🗑 ${tr("preview.unloadModel", "卸载模型")}`;
       unload.className = "fr-unload-row";
       unload.onclick = (): void => {
         deps.unloadModel(e.id);
@@ -435,7 +435,7 @@ function renderComponentsSection(
     const row = document.createElement("div");
     row.dataset.testid = "preview-component-row";
     row.dataset.componentPath = p;
-    row.className = "fr-comp-row" + (isCur ? " fr-row-active" : "");
+    row.className = `fr-comp-row${isCur ? " fr-row-active" : ""}`;
     const mark = document.createElement("span");
     mark.className = "fr-comp-mark";
     mark.textContent = isCur ? "✓" : "🧩";

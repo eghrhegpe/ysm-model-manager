@@ -91,7 +91,7 @@ export function injectSkySunScalePatch(
       "\nuniform float sunIntensityScale;\nuniform float sunDiscScale;\n";
     mat.fragmentShader = mat.fragmentShader.replace(
       /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
-      "$1" + uniformDeclInjection,
+      `$1${uniformDeclInjection}`,
     );
     if (mat.fragmentShader !== before) patched = true;
     else {
@@ -344,7 +344,7 @@ export class SkyCapability implements SceneCapability {
   private createSky(): Sky {
     const sky = new Sky();
     sky.scale.setScalar(this.params.scale);
-    sky.material.uniforms["cloudCoverage"].value = this.params.cloudCoverage;
+    sky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
     return sky;
   }
 
@@ -383,28 +383,28 @@ export class SkyCapability implements SceneCapability {
 
   private writeUniforms(sky: Sky): void {
     const u = sky.material.uniforms;
-    u["turbidity"].value = this.params.turbidity;
-    u["rayleigh"].value = this.params.rayleigh;
-    u["mieCoefficient"].value = this.params.mieCoefficient;
-    u["mieDirectionalG"].value = this.params.mieDirectionalG;
-    u["cloudCoverage"].value = this.params.cloudCoverage;
+    u.turbidity.value = this.params.turbidity;
+    u.rayleigh.value = this.params.rayleigh;
+    u.mieCoefficient.value = this.params.mieCoefficient;
+    u.mieDirectionalG.value = this.params.mieDirectionalG;
+    u.cloudCoverage.value = this.params.cloudCoverage;
     const phi = THREE.MathUtils.degToRad(90 - this.params.elevation);
     const theta = THREE.MathUtils.degToRad(this.params.azimuth);
     const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
-    u["sunPosition"].value.copy(sun);
+    u.sunPosition.value.copy(sun);
     // §4 解耦：只有已注入过 sun scale patch 的天空（即主天空 this.sky）才同步这两个新 uniform；
     // envSky 未注入 patch，uniforms 上没有这两个字段，跳过即可（保持原生 Preetham 物理模型）。
-    if (u["sunIntensityScale"] !== undefined) {
-      u["sunIntensityScale"].value = this.params.sunIntensityScale;
+    if (u.sunIntensityScale !== undefined) {
+      u.sunIntensityScale.value = this.params.sunIntensityScale;
     }
-    if (u["sunDiscScale"] !== undefined) {
-      u["sunDiscScale"].value = this.params.sunDiscScale;
+    if (u.sunDiscScale !== undefined) {
+      u.sunDiscScale.value = this.params.sunDiscScale;
     }
   }
 
   private regenerateEnvironment(): void {
     // 生成环境贴图时隐藏太阳盘，避免光斑伪影（Sky 文档建议）
-    this.envSky.material.uniforms["showSunDisc"].value = 0;
+    this.envSky.material.uniforms.showSunDisc.value = 0;
     try {
       if (this.renderTarget) this.renderTarget.dispose();
       this.renderTarget = this.ensurePMREM().fromScene(this.envScene);
@@ -418,7 +418,7 @@ export class SkyCapability implements SceneCapability {
       this.renderTarget = null;
       this.scene.environment = null;
     } finally {
-      this.envSky.material.uniforms["showSunDisc"].value = 1;
+      this.envSky.material.uniforms.showSunDisc.value = 1;
     }
   }
 
@@ -472,8 +472,8 @@ export class SkyCapability implements SceneCapability {
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
   setCloudCoverage(v: number, regenerate = false): void {
     this.params.cloudCoverage = Math.max(0, Math.min(1, v));
-    this.sky.material.uniforms["cloudCoverage"].value = this.params.cloudCoverage;
-    this.envSky.material.uniforms["cloudCoverage"].value = this.params.cloudCoverage;
+    this.sky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
+    this.envSky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
     if (regenerate && this.enabled && this.params.environment) this.regenerateEnvironment();
   }
 
@@ -483,7 +483,7 @@ export class SkyCapability implements SceneCapability {
     const clamped = Math.max(0, Math.min(1.5, v));
     this.params.sunIntensityScale = clamped;
     const u = this.sky.material.uniforms;
-    if (u["sunIntensityScale"] !== undefined) u["sunIntensityScale"].value = clamped;
+    if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = clamped;
     // 环境贴图 envSky 不受这个参数影响（保持原生 Preetham，PBR 反射更真实）。
   }
 
@@ -493,7 +493,7 @@ export class SkyCapability implements SceneCapability {
     const clamped = Math.max(0, Math.min(1.5, v));
     this.params.sunDiscScale = clamped;
     const u = this.sky.material.uniforms;
-    if (u["sunDiscScale"] !== undefined) u["sunDiscScale"].value = clamped;
+    if (u.sunDiscScale !== undefined) u.sunDiscScale.value = clamped;
   }
 
   /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */
@@ -696,7 +696,7 @@ export class SkyCapability implements SceneCapability {
     const mat = this.sunsetTintMesh.material as THREE.ShaderMaterial;
     if (mat.uniforms) {
       mat.uniforms.uIntensity.value = intensity;
-      mat.uniforms.uSunPosition.value.copy(this.sky.material.uniforms["sunPosition"].value);
+      mat.uniforms.uSunPosition.value.copy(this.sky.material.uniforms.sunPosition.value);
     }
   }
 

@@ -129,7 +129,7 @@ export function parsePackMetaJson(bytes: Uint8Array): Record<string, unknown> | 
 /** pack.png 字节 → data URL base64 缩略图（10MB 限额；空/超限 → ""，对齐 go 截断探测置空） */
 export function packPngToThumbnail(png: Uint8Array | null): string {
   if (!png || png.length === 0 || png.length > MAX_PACK_PNG) return "";
-  return "data:image/png;base64," + u8ToBase64(png);
+  return `data:image/png;base64,${u8ToBase64(png)}`;
 }
 
 /**

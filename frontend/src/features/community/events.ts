@@ -92,7 +92,7 @@ function cmReUpdateSelectedUI(ctx: CmReCtx): void {
   const checked = selectedSet.size;
   const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement | null;
   if (btn) {
-    btn.textContent = "⬇️ " + t("workshop.downloadSelected", { n: checked });
+    btn.textContent = `⬇️ ${t("workshop.downloadSelected", { n: checked })}`;
     btn.disabled = checked === 0;
   }
 }
@@ -196,15 +196,15 @@ function cmReBindContextMenu(ctx: CmReCtx, listeners: ListenerRef[]): void {
       const m = models.find((x) => x.name === name);
       if (!m) return;
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const sizeStr = (m.size ?? 0) > 0 ? (m.size! / 1024).toFixed(0) + "KB" : "?KB";
+      const sizeStr = (m.size ?? 0) > 0 ? `${(m.size! / 1024).toFixed(0)}KB` : "?KB";
       bus.emit("menu:show", {
         x: e.clientX,
         y: e.clientY,
         items: [
-          { label: "📄 " + m.name, onClick: () => {} },
-          { label: "📂 " + m.path, onClick: () => {} },
-          { label: "🔐 " + (m.hash ? m.hash : "—"), onClick: () => {} },
-          { label: "📏 " + sizeStr, onClick: () => {} },
+          { label: `📄 ${m.name}`, onClick: () => {} },
+          { label: `📂 ${m.path}`, onClick: () => {} },
+          { label: `🔐 ${m.hash ? m.hash : "—"}`, onClick: () => {} },
+          { label: `📏 ${sizeStr}`, onClick: () => {} },
         ],
       });
     });
@@ -236,7 +236,7 @@ async function cmReHandleSingleDownload(
       ok = await modalConfirm({
         title: t("workshop.largeFile"),
         icon: "📏",
-        message: (size / 1024 / 1024).toFixed(1) + "MB，" + t("workshop.confirmDownload"),
+        message: `${(size / 1024 / 1024).toFixed(1)}MB，${t("workshop.confirmDownload")}`,
         okText: t("workshop.download"),
       });
     } catch {
@@ -297,7 +297,7 @@ function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
               try {
                 const { OpenInBrowser } = await communityGetApp();
                 OpenInBrowser(
-                  "https://search.bilibili.com/all?keyword=" + encodeURIComponent(author),
+                  `https://search.bilibili.com/all?keyword=${encodeURIComponent(author)}`,
                 );
               } catch (openErr) {
                 console.warn("[workshop] OpenInBrowser 失败:", openErr);

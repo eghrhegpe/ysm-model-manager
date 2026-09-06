@@ -92,7 +92,7 @@ export async function showRepoModels(
 
   // 下载 URL 统一用 raw 前缀：Go 端 downloadFileWithQueue 按 LoadAppConfig().Mirror
   // 重排 raw/jsd/api 顺序（jsdelivr 直通会令 ResolveSavePath 解析失败、回退失效、子目录被扁平化）
-  const dlPrefix = "https://raw.githubusercontent.com/" + repo + "/main/";
+  const dlPrefix = `https://raw.githubusercontent.com/${repo}/main/`;
 
   const sourceLabel =
     (source === "raw"

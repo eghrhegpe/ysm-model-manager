@@ -41,7 +41,7 @@ function stgBindMirrorSelect(
     mirrorSelect.value = savedMirror;
     const initMirrorKey = savedMirror || "direct";
     ["direct", "jsdelivr", "githubapi"].forEach((m) => {
-      const el = root.getElementById("mirror-hint-" + m);
+      const el = root.getElementById(`mirror-hint-${m}`);
       if (el) el.style.display = m === initMirrorKey ? "block" : "none";
     });
     mirrorSelect.addEventListener("change", async () => {
@@ -65,7 +65,7 @@ function stgBindMirrorSelect(
         toastErrorLocal(e);
       }
       ["direct", "jsdelivr", "githubapi"].forEach((m) => {
-        const el = root.getElementById("mirror-hint-" + m);
+        const el = root.getElementById(`mirror-hint-${m}`);
         if (el) el.style.display = m === (val || "direct") ? "block" : "none";
       });
     });
@@ -88,7 +88,7 @@ function stgBindUpdateInterval(
         await SaveThresholds(Number(updateCheckSelect.value), cfgLocal.logMaxEntries || 500);
         cfgLocal.updateCheckIntervalMs = Number(updateCheckSelect.value);
         bus.emit("toast:show", {
-          msg: "✅ " + t("settings.updateCheck.saved"),
+          msg: `✅ ${t("settings.updateCheck.saved")}`,
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -112,7 +112,7 @@ function stgBindLinkMode(
 
   const updateLinkHint = (mode: string): void => {
     ["copy", "hardlink", "symlink"].forEach((m) => {
-      const el = root.getElementById("lm-hint-" + m);
+      const el = root.getElementById(`lm-hint-${m}`);
       if (el) el.style.display = m === mode ? "block" : "none";
     });
   };
@@ -239,7 +239,7 @@ function stgBindReleasesClick(
       .catch((e) => {
         console.warn("[settings] 打开发布页失败:", e);
         bus.emit("toast:show", {
-          msg: "❌ " + t("tree.browserFailed"),
+          msg: `❌ ${t("tree.browserFailed")}`,
           duration: TOAST_MS.normal,
           type: "error",
         });

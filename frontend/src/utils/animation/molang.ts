@@ -45,7 +45,7 @@ export function setMolangScope(scope: Record<string, number> | null): void {
   // 有作用域时 v.* 读从作用域取（控制器条件读 timeline 写入的变量）。
   parser.variableHandler = scope
     ? (key: string): number => {
-        const norm = key.startsWith("v.") ? "variable" + key.slice(1) : key;
+        const norm = key.startsWith("v.") ? `variable${key.slice(1)}` : key;
         if (norm.startsWith("variable.") && typeof scope[norm] === "number") {
           return scope[norm];
         }

@@ -405,15 +405,15 @@ function isZipBytes(bytes: Uint8Array): boolean {
 function bareJsonSummary(bytes: Uint8Array, out: YsmSummaryShape): YsmSummaryShape {
   const root = parseYsmJsonRoot(bytes);
   out.format = RESOURCE_TYPES.YSM;
-  out.spec = toInt(root["spec"]);
+  out.spec = toInt(root.spec);
   fillSummaryFromRoot(root, out, false);
   if (out.name === "") out.name = stripExt(out.source);
-  const properties = asRecord(root["properties"]);
+  const properties = asRecord(root.properties);
   if (properties) {
     fillPreviewFromProperties(properties, out);
     appendAnimGroupsAndConfigs(properties, out);
   }
-  const { stats } = extractFileStats(root["files"]);
+  const { stats } = extractFileStats(root.files);
   out.stats = stats;
   return out;
 }
@@ -449,17 +449,17 @@ function zipSummary(bytes: Uint8Array, out: YsmSummaryShape): YsmSummaryShape {
   }
 
   const root = parseYsmJsonRoot(entries[ysmKey]);
-  out.spec = toInt(root["spec"]);
+  out.spec = toInt(root.spec);
   fillSummaryFromRoot(root, out, true);
   // zip 分支 Name 空值兜底（对齐 summary.go:325-327）
   if (out.name === "") out.name = stripExt(out.source);
-  const properties = asRecord(root["properties"]);
+  const properties = asRecord(root.properties);
   if (properties) {
     fillPreviewFromProperties(properties, out);
     appendAnimGroupsAndConfigs(properties, out);
   }
   // Stats 统计不依赖 properties；纹理尺寸需 properties 存在（对齐 summary.go:338-367）
-  const { stats, geoFiles } = extractFileStats(root["files"]);
+  const { stats, geoFiles } = extractFileStats(root.files);
   if (properties && geoFiles.length > 0) {
     for (const geoPath of geoFiles) {
       const entry = findEntryBySuffix(entries, geoPath);
@@ -496,37 +496,37 @@ function fillSummaryFromRoot(
   out: YsmSummaryShape,
   truncateTips: boolean,
 ): void {
-  const metadata = asRecord(root["metadata"]);
+  const metadata = asRecord(root.metadata);
   if (!metadata) return;
-  if (typeof metadata["name"] === "string") out.name = metadata["name"];
-  if (typeof metadata["tips"] === "string") {
-    out.tips = truncateTips ? truncate(metadata["tips"], 200) : metadata["tips"];
+  if (typeof metadata.name === "string") out.name = metadata.name;
+  if (typeof metadata.tips === "string") {
+    out.tips = truncateTips ? truncate(metadata.tips, 200) : metadata.tips;
   }
-  const license = asRecord(metadata["license"]);
-  if (license && typeof license["type"] === "string") out.license = license["type"];
-  const authors = metadata["authors"];
+  const license = asRecord(metadata.license);
+  if (license && typeof license.type === "string") out.license = license.type;
+  const authors = metadata.authors;
   if (Array.isArray(authors)) {
     const list: Array<{ name: string; roles?: string; bilibili?: string }> = [];
     for (const a of authors) {
       if (typeof a !== "object" || a === null) continue;
       const aa = a as Record<string, unknown>;
       const author: { name: string; roles?: string; bilibili?: string } = {
-        name: typeof aa["name"] === "string" ? aa["name"] : "",
+        name: typeof aa.name === "string" ? aa.name : "",
       };
-      if (typeof aa["role"] === "string" && aa["role"] !== "") author.roles = aa["role"];
-      const contact = asRecord(aa["contact"]);
-      if (contact && typeof contact["bilibili"] === "string" && contact["bilibili"] !== "") {
-        author.bilibili = contact["bilibili"];
+      if (typeof aa.role === "string" && aa.role !== "") author.roles = aa.role;
+      const contact = asRecord(aa.contact);
+      if (contact && typeof contact.bilibili === "string" && contact.bilibili !== "") {
+        author.bilibili = contact.bilibili;
       }
       list.push(author);
     }
     if (list.length > 0) out.authors = list;
   }
-  const link = asRecord(metadata["link"]);
+  const link = asRecord(metadata.link);
   if (link) {
     const links: { home?: string; donate?: string } = {};
-    if (typeof link["home"] === "string" && link["home"] !== "") links.home = link["home"];
-    if (typeof link["donate"] === "string" && link["donate"] !== "") links.donate = link["donate"];
+    if (typeof link.home === "string" && link.home !== "") links.home = link.home;
+    if (typeof link.donate === "string" && link.donate !== "") links.donate = link.donate;
     out.links = links;
   }
 }
@@ -537,11 +537,10 @@ function fillPreviewFromProperties(
   out: YsmSummaryShape,
 ): void {
   const preview: YsmSummaryShape["preview"] = { hasGui: false };
-  if (typeof properties["default_texture"] === "string")
-    preview.defaultTexture = properties["default_texture"];
-  if (typeof properties["height_scale"] === "number")
-    preview.heightScale = properties["height_scale"];
-  if (typeof properties["width_scale"] === "number") preview.widthScale = properties["width_scale"];
+  if (typeof properties.default_texture === "string")
+    preview.defaultTexture = properties.default_texture;
+  if (typeof properties.height_scale === "number") preview.heightScale = properties.height_scale;
+  if (typeof properties.width_scale === "number") preview.widthScale = properties.width_scale;
   out.preview = preview;
 }
 
@@ -560,21 +559,21 @@ function extractFileStats(filesRaw: unknown): {
   const geoFiles: string[] = [];
   const files = asRecord(filesRaw);
   if (!files) return { stats, geoFiles };
-  const player = asRecord(files["player"]);
+  const player = asRecord(files.player);
   if (!player) return { stats, geoFiles };
 
   // textures
-  const tex = player["texture"];
+  const tex = player.texture;
   if (Array.isArray(tex)) stats.textures = tex.length;
 
   // animation（对象或数组）
-  const anim = player["animation"];
+  const anim = player.animation;
   if (Array.isArray(anim)) stats.animations = anim.length;
   else if (typeof anim === "object" && anim !== null)
     stats.animations = Object.keys(anim as object).length;
 
   // model — 同时收集路径（{path} 数组 / 对象 / 字符串数组 / 单字符串，对齐 Go 四种形态）
-  const model = player["model"];
+  const model = player.model;
   if (Array.isArray(model)) {
     stats.models = model.length;
     if (model.length > 0 && typeof model[0] === "object" && model[0] !== null) {
@@ -636,12 +635,10 @@ function extractTexSizeFromGeometryJson(data: Uint8Array): { w: number; h: numbe
     const root = JSON.parse(utf8Decode(data)) as Record<string, unknown>;
     const geom = root["minecraft:geometry"];
     if (!Array.isArray(geom) || geom.length === 0) return { w: 0, h: 0 };
-    const desc = asRecord(asRecord(geom[0])?.["description"]);
+    const desc = asRecord(asRecord(geom[0])?.description);
     if (!desc) return { w: 0, h: 0 };
-    const w = clampTexDim(typeof desc["texture_width"] === "number" ? desc["texture_width"] : NaN);
-    const h = clampTexDim(
-      typeof desc["texture_height"] === "number" ? desc["texture_height"] : NaN,
-    );
+    const w = clampTexDim(typeof desc.texture_width === "number" ? desc.texture_width : NaN);
+    const h = clampTexDim(typeof desc.texture_height === "number" ? desc.texture_height : NaN);
     return { w, h };
   } catch {
     return { w: 0, h: 0 };
@@ -661,17 +658,17 @@ function appendAnimGroupsAndConfigs(
   properties: Record<string, unknown>,
   out: YsmSummaryShape,
 ): void {
-  const classify = properties["extra_animation_classify"];
+  const classify = properties.extra_animation_classify;
   if (Array.isArray(classify)) {
     for (const g of classify) {
       if (typeof g !== "object" || g === null) continue;
       const gg = g as Record<string, unknown>;
-      let name = typeof gg["name"] === "string" ? gg["name"] : "";
-      const extraAnim = gg["extra_animation"];
+      let name = typeof gg.name === "string" ? gg.name : "";
+      const extraAnim = gg.extra_animation;
       // name 为空时从 properties.extra_animation 按 #id 查找（对齐 summary.go:385-394）
       if (!name && extraAnim !== undefined) {
         const eaMap = asRecord(extraAnim);
-        const v = eaMap?.["#" + (typeof gg["id"] === "string" ? gg["id"] : "")];
+        const v = eaMap?.[`#${typeof gg.id === "string" ? gg.id : ""}`];
         if (typeof v === "string") name = v;
       }
       // 用 extra_animation 的 value（中文名）替换 raw id（对齐 summary.go:396-399）
@@ -679,7 +676,7 @@ function appendAnimGroupsAndConfigs(
       if (displayItems.length === 0) continue; // 全是内部引用（#开头）时跳过整组
       out.animGroups = out.animGroups || [];
       out.animGroups.push({
-        id: typeof gg["id"] === "string" ? gg["id"] : "",
+        id: typeof gg.id === "string" ? gg.id : "",
         name,
         items: displayItems,
       });
@@ -687,14 +684,14 @@ function appendAnimGroupsAndConfigs(
   }
 
   // 兜底：extra_animation 中未被分类的直接动画（对齐 summary.go:411-441）
-  const extraAnim = properties["extra_animation"];
+  const extraAnim = properties.extra_animation;
   if (extraAnim !== undefined) {
     const eaMap = asRecord(extraAnim);
     if (eaMap) {
       const classifiedItems = new Set<string>();
       if (Array.isArray(classify)) {
         for (const g of classify) {
-          const ge = asRecord(asRecord(g)?.["extra_animation"]);
+          const ge = asRecord(asRecord(g)?.extra_animation);
           if (ge) for (const k of Object.keys(ge)) classifiedItems.add(k);
         }
       }
@@ -713,16 +710,16 @@ function appendAnimGroupsAndConfigs(
   }
 
   // 配置菜单（extra_animation_buttons → 模型配置/自定义表情，对齐 summary.go:443-451）
-  const buttons = properties["extra_animation_buttons"];
+  const buttons = properties.extra_animation_buttons;
   if (Array.isArray(buttons)) {
     for (const b of buttons) {
       if (typeof b !== "object" || b === null) continue;
       const bb = b as Record<string, unknown>;
       out.configMenus = out.configMenus || [];
       out.configMenus.push({
-        id: typeof bb["id"] === "string" ? bb["id"] : "",
-        name: typeof bb["name"] === "string" ? bb["name"] : "",
-        controls: extractControlTypes(bb["config_forms"]),
+        id: typeof bb.id === "string" ? bb.id : "",
+        name: typeof bb.name === "string" ? bb.name : "",
+        controls: extractControlTypes(bb.config_forms),
       });
     }
   }
@@ -750,7 +747,7 @@ function extractControlTypes(raw: unknown): string[] {
   for (const f of raw) {
     const m = asRecord(f);
     if (!m) continue;
-    const t = typeof m["type"] === "string" ? m["type"] : "";
+    const t = typeof m.type === "string" ? m.type : "";
     types.push(t === "" ? "unknown" : t);
   }
   return types;
@@ -789,5 +786,5 @@ function stripExt(name: string): string {
 function truncate(s: string, max: number): string {
   const runes = [...s];
   if (runes.length <= max) return s;
-  return runes.slice(0, max).join("") + "...";
+  return `${runes.slice(0, max).join("")}...`;
 }

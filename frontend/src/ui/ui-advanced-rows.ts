@@ -139,11 +139,11 @@ function csrBuildChannelRow(
   const fill = document.createElement("div");
   fill.className = "cs-fill";
   fill.style.background = channelColor;
-  fill.style.width = initValue * 100 + "%";
+  fill.style.width = `${initValue * 100}%`;
 
   const thumb = document.createElement("div");
   thumb.className = "cs-thumb";
-  thumb.style.left = initValue * 100 + "%";
+  thumb.style.left = `${initValue * 100}%`;
 
   bar.appendChild(fill);
   bar.appendChild(thumb);
@@ -151,8 +151,8 @@ function csrBuildChannelRow(
   const updateDisplay = (v: number): void => {
     current[ci] = v;
     val.textContent = v.toFixed(2);
-    fill.style.width = v * 100 + "%";
-    thumb.style.left = v * 100 + "%";
+    fill.style.width = `${v * 100}%`;
+    thumb.style.left = `${v * 100}%`;
     bar.setAttribute(ARIA_ATTR.valuenow, String(v));
     swatch.style.background = rgbString(col3FromTriple(current));
     onChange([current[0], current[1], current[2]]);
@@ -192,8 +192,8 @@ function csrBindAutoUpdate(
         changed = true;
         current[i] = safe;
         refs[i].val.textContent = safe.toFixed(2);
-        refs[i].fill.style.width = safe * 100 + "%";
-        refs[i].thumb.style.left = safe * 100 + "%";
+        refs[i].fill.style.width = `${safe * 100}%`;
+        refs[i].thumb.style.left = `${safe * 100}%`;
         refs[i].bar.setAttribute(ARIA_ATTR.valuenow, String(safe));
         controllers[i].setValue(safe);
       }
@@ -347,11 +347,11 @@ function vsrBuildAxisRow(
   const fill = document.createElement("div");
   fill.className = "cs-fill";
   fill.style.background = axisColor;
-  fill.style.width = clampPct(pct) + "%";
+  fill.style.width = `${clampPct(pct)}%`;
 
   const thumb = document.createElement("div");
   thumb.className = "cs-thumb";
-  thumb.style.left = clampPct(pct) + "%";
+  thumb.style.left = `${clampPct(pct)}%`;
 
   bar.appendChild(fill);
   bar.appendChild(thumb);
@@ -362,8 +362,8 @@ function vsrBuildAxisRow(
     val.textContent = step < 1 ? safe.toFixed(2) : String(Math.round(safe));
     const newPct = hasRange ? ((safe - min) / range) * 100 : 0;
     const clamped = clampPct(newPct);
-    fill.style.width = clamped + "%";
-    thumb.style.left = clamped + "%";
+    fill.style.width = `${clamped}%`;
+    thumb.style.left = `${clamped}%`;
     bar.setAttribute(ARIA_ATTR.valuenow, String(safe));
     onChange([current[0], current[1], current[2]]);
   };
@@ -409,8 +409,8 @@ function vsrBindAutoUpdate(
         refs[i].val.textContent = step < 1 ? safe.toFixed(2) : String(Math.round(safe));
         const newPct = hasRange ? ((safe - min) / range) * 100 : 0;
         const clamped = clampPct(newPct);
-        refs[i].fill.style.width = clamped + "%";
-        refs[i].thumb.style.left = clamped + "%";
+        refs[i].fill.style.width = `${clamped}%`;
+        refs[i].thumb.style.left = `${clamped}%`;
         refs[i].bar.setAttribute(ARIA_ATTR.valuenow, String(safe));
         controllers[i].setValue(safe);
       }
@@ -481,11 +481,11 @@ export function addModeSlider<T extends string | number>(
   const fill = document.createElement("div");
   fill.className = "cs-fill";
   const pct = total > 1 ? (currentIndex / (total - 1)) * 100 : 100;
-  fill.style.width = clampPct(pct) + "%";
+  fill.style.width = `${clampPct(pct)}%`;
 
   const thumb = document.createElement("div");
   thumb.className = "cs-thumb";
-  thumb.style.left = clampPct(pct) + "%";
+  thumb.style.left = `${clampPct(pct)}%`;
 
   bar.appendChild(fill);
   bar.appendChild(thumb);
@@ -495,8 +495,8 @@ export function addModeSlider<T extends string | number>(
     val.textContent = options[idx].label;
     const newPct = total > 1 ? (idx / (total - 1)) * 100 : 100;
     const clamped = clampPct(newPct);
-    fill.style.width = clamped + "%";
-    thumb.style.left = clamped + "%";
+    fill.style.width = `${clamped}%`;
+    thumb.style.left = `${clamped}%`;
     top.setAttribute(ARIA_ATTR.valuenow, String(idx));
   }
 

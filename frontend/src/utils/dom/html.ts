@@ -30,5 +30,5 @@ export function hl(text: string, query?: string): string {
   const before = esc(text.substring(0, idx));
   const match = esc(text.substring(idx, idx + query.length));
   const after = esc(text.substring(idx + query.length));
-  return before + "<mark>" + match + "</mark>" + after;
+  return `${before}<mark>${match}</mark>${after}`;
 }

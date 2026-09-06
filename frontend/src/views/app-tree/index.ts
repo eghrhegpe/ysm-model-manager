@@ -223,7 +223,7 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       console.error("[Tree root change Error]", e);
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e),
+        msg: `❌ ${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -494,7 +494,7 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e),
+        msg: `❌ ${friendlyError(e)}`,
         duration: TOAST_MS.long,
         type: "error",
       });

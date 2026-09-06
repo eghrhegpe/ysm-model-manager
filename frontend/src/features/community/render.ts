@@ -117,7 +117,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   const row = document.createElement("div");
   row.dataset.name = m.name;
   row.dataset.testid = "gh-row";
-  row.className = "gh-row" + (exists ? " gh-row-exists" : " gh-row-missing");
+  row.className = `gh-row${exists ? " gh-row-exists" : " gh-row-missing"}`;
 
   // 列1: 复选框(缺失时) + 名称
   const nameWrap = document.createElement("div");
@@ -157,7 +157,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   if (exists) {
     const badge = document.createElement("span");
     badge.className = "gh-badge";
-    badge.innerHTML = ICONS.CHECKMARK + " " + t("workshop.exists");
+    badge.innerHTML = `${ICONS.CHECKMARK} ${t("workshop.exists")}`;
     actionsCell.appendChild(badge);
   } else {
     const dlBtn = createIconBtn(ICONS.DOWNLOAD, "download");
@@ -199,7 +199,7 @@ export function renderRepoHeaderHTML(params: {
     t("gh.modelCount", { n: modelsLength }) +
     "</span>" +
     (missingCount > 0
-      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' + missingCount + "</span>"
+      ? `<span class="gh-model-badge gh-model-badge-missing">⬇️ ${missingCount}</span>`
       : "") +
     "</div>" +
     // 行2: 仓库名（独占）+ 来源

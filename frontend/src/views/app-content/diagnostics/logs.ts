@@ -122,7 +122,7 @@ function dgLsMakeStatusLabel(l: ImportLogLike): string {
 }
 
 function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
-  const dir = l.TargetDir || l.SourcePath ? "<br>📂 " + esc(l.TargetDir || l.SourcePath) : "";
+  const dir = l.TargetDir || l.SourcePath ? `<br>📂 ${esc(l.TargetDir || l.SourcePath)}` : "";
   const raw = l.ErrorMsg || "";
   const cleanErr = esc(raw)
     // biome-ignore lint/suspicious/noMisleadingCharacterClass: 匹配日志状态 emoji 前缀，变音选择符为边角
@@ -133,7 +133,7 @@ function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
   if (!modelPart && !cleanErr) return dir || "";
   if (!modelPart) return dir || cleanErr ? dir + cleanErr : "";
   if (!cleanErr) return modelPart + dir;
-  return modelPart + dir + "<br>" + cleanErr;
+  return `${modelPart + dir}<br>${cleanErr}`;
 }
 
 function dgLsRenderDiagGroups(

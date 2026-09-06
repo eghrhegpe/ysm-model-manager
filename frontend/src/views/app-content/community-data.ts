@@ -171,7 +171,7 @@ export function mergeLocalAuthorsInto(
       if (found && la.type) {
         const hasType = (found.type || "").split(";").some((t) => t.trim() === la.type);
         if (!hasType) {
-          found.type = found.type ? found.type + ";" + la.type : la.type;
+          found.type = found.type ? `${found.type};${la.type}` : la.type;
         }
       }
       if (found) found._fromLocal = true;
@@ -244,7 +244,7 @@ async function fetchWithFallback<T>(
     const tmr = setTimeout(() => ctrl.abort(), 8000);
     try {
       const resp = await fetch(a.url, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       let data: unknown;
       if (a.name === "api") {
         const json = (await resp.json()) as { content?: string };
@@ -256,7 +256,7 @@ async function fetchWithFallback<T>(
       if (Array.isArray(data)) return data as T[];
     } catch (err) {
       if (err && (err as Error)?.name !== "AbortError") {
-        dbg(dbgTag, a.name + " failed:", (err as Error)?.message);
+        dbg(dbgTag, `${a.name} failed:`, (err as Error)?.message);
       }
     } finally {
       clearTimeout(tmr);

@@ -88,13 +88,13 @@ function typeMenuItemsHTML(): string {
     '" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">' +
     esc(text) +
     "</div>";
-  let html = render("all", "📦 " + t("sidebar.allTypes"));
+  let html = render("all", `📦 ${t("sidebar.allTypes")}`);
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));
   for (const m of SYNC_TYPE_MENU) {
     if (ALL_RESOURCE_TYPES.includes(m.id)) {
-      html += render(m.id, m.icon + " " + (m.labelKey ? t(m.labelKey) : (m.label ?? m.id)));
+      html += render(m.id, `${m.icon} ${m.labelKey ? t(m.labelKey) : (m.label ?? m.id)}`);
     }
   }
   for (const id of ALL_RESOURCE_TYPES) {

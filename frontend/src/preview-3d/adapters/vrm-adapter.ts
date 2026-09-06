@@ -159,7 +159,7 @@ export async function readVrmMeta(
         authors: meta.author ? [meta.author] : [],
         version: meta.version,
         license: meta.licenseName
-          ? meta.licenseName + (meta.otherLicenseUrl ? " · " + meta.otherLicenseUrl : "")
+          ? meta.licenseName + (meta.otherLicenseUrl ? ` · ${meta.otherLicenseUrl}` : "")
           : undefined,
         contact: meta.contactInformation,
         thumbnail: meta.texture ? imageToDataURL(meta.texture) : "",

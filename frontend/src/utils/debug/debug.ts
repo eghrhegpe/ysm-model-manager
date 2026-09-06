@@ -36,7 +36,7 @@ if (typeof window !== "undefined") window._DBG_RING = window._DBG_RING || [];
 /** 输出调试日志（保留 tag 用于过滤） */
 export function dbg(tag: string, ...args: unknown[]): void {
   if (!ENABLED) return;
-  const line = "[DBG:" + tag + "]";
+  const line = `[DBG:${tag}]`;
   // eslint-disable-next-line no-console
   console.log(line, ...args);
   try {
@@ -58,11 +58,11 @@ export function dbg(tag: string, ...args: unknown[]): void {
 export function safeStr(v: unknown): string {
   try {
     if (v == null) return String(v);
-    if (typeof v === "string") return v.length > 200 ? v.slice(0, 200) + "…" : v;
+    if (typeof v === "string") return v.length > 200 ? `${v.slice(0, 200)}…` : v;
     // P3 修复：Error 分支也走 200 字符截断——原实现直接返回 v.message，
     // 超长 message 会让环形缓冲条目突破上限约束
     if (v instanceof Error)
-      return v.message.length > 200 ? v.message.slice(0, 200) + "…" : v.message;
+      return v.message.length > 200 ? `${v.message.slice(0, 200)}…` : v.message;
     if (v instanceof Set)
       return (
         "Set(" +
@@ -72,12 +72,12 @@ export function safeStr(v: unknown): string {
         (v.size > 3 ? "…" : "") +
         "]"
       );
-    if (Array.isArray(v)) return "Array(" + v.length + ")";
+    if (Array.isArray(v)) return `Array(${v.length})`;
     // P3 修复：JSON.stringify 对函数/symbol 返回 undefined——原直接 `s.length` 在
     // strict 下为 TS2532（运行时靠 catch 兜底不崩，类型层不过关）；先判空走 String 兜底
     const s = JSON.stringify(v);
     if (s === undefined) return String(v);
-    return s.length > 200 ? s.slice(0, 200) + "…" : s;
+    return s.length > 200 ? `${s.slice(0, 200)}…` : s;
   } catch (_) {
     return String(v);
   }

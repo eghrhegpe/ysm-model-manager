@@ -224,8 +224,7 @@ vi.mock("three", async (importOriginal) => {
     }
   }
   class FakePMREMGenerator {
-    constructor() {}
-    fromScene(): { texture: {} } {
+    fromScene(): { texture: object } {
       return { texture: {} };
     }
     dispose(): void {}

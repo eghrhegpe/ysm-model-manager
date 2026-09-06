@@ -108,7 +108,7 @@ class AppToast extends WebComponentBase {
       }
     }
     const t = document.createElement("div") as ToastEl;
-    t.className = "toast" + (type ? " " + type : "");
+    t.className = `toast${type ? ` ${type}` : ""}`;
     t.dataset.testid = "toast"; // G-1 稳定钩子（Design.md §19.1）
     // 阶段 C+：type 的语义镜像。class 由 CSS 消费（重构可改名），测试需与样式解耦；
     // e2e 断言 [data-toast-type="success"] 替代原「按 i18n 文案 filter」。
@@ -132,7 +132,7 @@ class AppToast extends WebComponentBase {
           // 对齐 undo：记录并反馈，不静默
           console.error("[toast] 点击回调失败:", e);
           bus.emit("toast:show", {
-            msg: "❌ " + tr("error.fallback"),
+            msg: `❌ ${tr("error.fallback")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });
@@ -151,7 +151,7 @@ class AppToast extends WebComponentBase {
           // P3 修复（审核发现）：内部反馈统一走 bus——原 this.show 绕过 bus，
           // error-diary 的 toast:show 监听收不到（用户可见错误漏出日记链）
           bus.emit("toast:show", {
-            msg: "✅ " + tr("toast.undone"),
+            msg: `✅ ${tr("toast.undone")}`,
             duration: OK_TOAST_MS,
             type: "success",
           });
@@ -160,7 +160,7 @@ class AppToast extends WebComponentBase {
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
           console.error("[toast] 撤销回调失败:", e);
           bus.emit("toast:show", {
-            msg: "❌ " + tr("toast.undoFailed"),
+            msg: `❌ ${tr("toast.undoFailed")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });

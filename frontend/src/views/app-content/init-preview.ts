@@ -31,7 +31,7 @@ export function initPreviewResize(host: {
   const savedWidth = safeGet("preview-width");
   if (savedWidth) {
     const w = Math.max(160, Math.min(500, parseInt(savedWidth, 10)));
-    preview.style.width = w + "px";
+    preview.style.width = `${w}px`;
   }
 
   let resizing = false;
@@ -48,7 +48,7 @@ export function initPreviewResize(host: {
     if (!resizing) return;
     const rect = preview.getBoundingClientRect();
     const newW = Math.max(160, Math.min(500, rect.right - e.clientX));
-    preview.style.width = newW + "px";
+    preview.style.width = `${newW}px`;
   };
   const onUp = (e: PointerEvent): void => {
     if (!resizing) return;

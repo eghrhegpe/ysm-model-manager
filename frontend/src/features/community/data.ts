@@ -66,17 +66,17 @@ function buildFetchModelsAttempts(repo: string, mirror: MirrorStrategy): FetchAt
   const attempts: FetchAttempt[] = [
     {
       name: "raw",
-      url: "https://raw.githubusercontent.com/" + repo + "/main/index.json",
+      url: `https://raw.githubusercontent.com/${repo}/main/index.json`,
       label: "⏳ 正在连接 raw.githubusercontent.com…",
     },
     {
       name: "jsd",
-      url: "https://cdn.jsdelivr.net/gh/" + repo + "@main/index.json",
+      url: `https://cdn.jsdelivr.net/gh/${repo}@main/index.json`,
       label: "⏳ 正在连接 cdn.jsdelivr.net…",
     },
     {
       name: "api",
-      url: "https://api.github.com/repos/" + repo + "/contents/index.json",
+      url: `https://api.github.com/repos/${repo}/contents/index.json`,
       label: "⏳ 正在连接 api.github.com…",
     },
   ];
@@ -120,7 +120,7 @@ async function fetchModelsOne(
           }
         });
       }
-      throw new Error("HTTP " + resp.status);
+      throw new Error(`HTTP ${resp.status}`);
     }
     let models: unknown;
     if (attempt.name === "api") {

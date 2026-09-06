@@ -164,10 +164,10 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   title.textContent = rmLabel(node);
   header.append(arrow, title);
   const body = document.createElement("div");
-  body.dataset.testid = node.id + "-body";
+  body.dataset.testid = `${node.id}-body`;
   // 动态豁免（P1）：折叠状态读写均依赖内联 display（node-render 测试断言
   // body.style.display 初值 + 点击切换），抽类无法承载运行时状态，保留内联。
-  body.style.cssText = "display:" + (collapsed ? "none" : "block");
+  body.style.cssText = `display:${collapsed ? "none" : "block"}`;
   header.addEventListener("click", (ev: MouseEvent): void => {
     ev.stopPropagation();
     const nowCollapsed = body.style.display === "none";
@@ -184,7 +184,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
 function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
   const row = document.createElement("div");
   row.className = "slide-item field-row";
-  row.dataset.testid = "preview-" + node.id;
+  row.dataset.testid = `preview-${node.id}`;
   const k = document.createElement("span");
   k.className = "field-label";
   k.textContent = node.labelKey ? tr(node.labelKey, node.id) : node.id;
@@ -200,7 +200,7 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
 function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSpanElement } {
   const row = document.createElement("div");
   row.className = "slide-item";
-  row.dataset.testid = "preview-" + node.id;
+  row.dataset.testid = `preview-${node.id}`;
   if (node.icon) {
     const ic = document.createElement("span");
     ic.className = "slide-icon";
@@ -326,7 +326,7 @@ export function nodeControlToCapControl(
 function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): void {
   const wrap = document.createElement("div");
   wrap.className = "slide-item rm-control-row";
-  wrap.dataset.testid = "preview-" + node.id;
+  wrap.dataset.testid = `preview-${node.id}`;
   // 整行可点翻转显隐（对齐旧 buildMaterialControls 的 role/tabIndex/row.onclick——249bc6d0 review P3）
   wrap.setAttribute("role", "button");
   wrap.tabIndex = 0;

@@ -214,7 +214,7 @@ export function buildBoneExportRow(
   boneRow.className = "pv-toggle-row";
   const boneBtn = document.createElement("button");
   boneBtn.className = "pv-btn";
-  boneBtn.textContent = "📋 " + t("preview.action.exportBoneNames");
+  boneBtn.textContent = `📋 ${t("preview.action.exportBoneNames")}`;
   boneBtn.title = "导出骨骼名称为文本文件";
   const boneHint = document.createElement("span");
   boneHint.className = "pv-hint";
@@ -223,7 +223,7 @@ export function buildBoneExportRow(
     const lines = buildBoneNamesText(modelPath, model.boneCount ?? 0, model.bones || []);
     const blob = new Blob([lines.join("\n")], { type: "text/plain" });
     const a = document.createElement("a");
-    a.download = (modelPath.split(/[/\\]/).pop() || "model") + "_bones.txt";
+    a.download = `${modelPath.split(/[/\\]/).pop() || "model"}_bones.txt`;
     a.href = URL.createObjectURL(blob);
     document.body.appendChild(a);
     a.click();
@@ -270,7 +270,7 @@ export async function saveScreenshot(
       throw new Error("截图返回空（3D 渲染尚未就绪）");
     }
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
-    await SaveScreenshotFile(base + "_" + ts + ".png", b64);
+    await SaveScreenshotFile(`${base}_${ts}.png`, b64);
   } else if (key === "all") {
     for (const k of ["front", "45", "side", "back45"])
       await saveScreenshot(model, k, setShotState, screenshotFn);
@@ -280,7 +280,7 @@ export async function saveScreenshot(
     // 保存 front 帧，文件名与内容错位）
     const b64 = await renderFrame(model, key);
     if (!b64) return;
-    await SaveScreenshotFile(base + "_" + key + ".png", b64);
+    await SaveScreenshotFile(`${base}_${key}.png`, b64);
   }
   setShotState("\u2705");
   setTimeout(() => setShotState("\u{1F4F7}"), 2000);

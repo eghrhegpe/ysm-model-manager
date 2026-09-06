@@ -76,7 +76,7 @@ function eeApplyFilters(
     if (matchName && matchTag) visible++;
   });
   const countEl = searchResults.querySelector("#ws-cr-count");
-  if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
+  if (countEl) countEl.textContent = `(${visible}/${cards.length})`;
 }
 
 function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
@@ -137,7 +137,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         refreshView();
       } catch (e) {
         busRef.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, t("workshop.saveFailed")),
+          msg: `❌ ${friendlyError(e, t("workshop.saveFailed"))}`,
           duration: 4000,
           type: "error",
         });
@@ -223,7 +223,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
 
         if (changed) {
           busRef.emit("toast:show", {
-            msg: "🌐 " + logs.join(" · "),
+            msg: `🌐 ${logs.join(" · ")}`,
             duration: 4000,
             type: "success",
           });
@@ -244,7 +244,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
               ? t("workshop.indexMissing")
               : err.message === "RateLimited"
                 ? t("workshop.rateLimited")
-                : "🌐 " + friendlyError(e, t("workshop.fetchFailed"));
+                : `🌐 ${friendlyError(e, t("workshop.fetchFailed"))}`;
         busRef.emit("toast:show", {
           msg: errMsg,
           duration: 5000,

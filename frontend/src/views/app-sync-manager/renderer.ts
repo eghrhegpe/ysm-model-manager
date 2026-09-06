@@ -76,14 +76,14 @@ export async function render(self: SyncRenderSelf): Promise<void> {
   const statusDefs: Array<[string, string, number]> = [
     [
       "all",
-      "📊 " + t("syncManager.status.all"),
+      `📊 ${t("syncManager.status.all")}`,
       self._selectedType ? curCounts.total || 0 : self._allItems.length,
     ],
-    ["synced", "✅ " + t("syncManager.status.synced"), curCounts.synced || 0],
-    ["missing", "⬇️ " + t("syncManager.status.missing"), curCounts.missing || 0],
-    ["disabled", "⛔ " + t("syncManager.status.disabled"), curCounts.disabled || 0],
-    ["optional", "📤 " + t("syncManager.status.optional"), curCounts.optional || 0],
-    ["legacy", "🔗 " + t("syncManager.status.legacy"), curCounts.legacy || 0],
+    ["synced", `✅ ${t("syncManager.status.synced")}`, curCounts.synced || 0],
+    ["missing", `⬇️ ${t("syncManager.status.missing")}`, curCounts.missing || 0],
+    ["disabled", `⛔ ${t("syncManager.status.disabled")}`, curCounts.disabled || 0],
+    ["optional", `📤 ${t("syncManager.status.optional")}`, curCounts.optional || 0],
+    ["legacy", `🔗 ${t("syncManager.status.legacy")}`, curCounts.legacy || 0],
   ];
   // 当前类型只读指示（类型选择已全局化到 nav 下拉，此处仅展示上下文）
   const curCfg = self._typeConfig.find((c) => c.id === self._selectedType);
@@ -209,7 +209,7 @@ function renderNode(
   const isOpen = isDir && hasChildren && (dirOpen[item.path] ?? forceOpen);
 
   const wrapped = (contentHTML: string): string =>
-    indentPadding ? '<div style="padding-left:26px">' + contentHTML + "</div>" : contentHTML;
+    indentPadding ? `<div style="padding-left:26px">${contentHTML}</div>` : contentHTML;
 
   if (!isDir) {
     // 扁平文件行

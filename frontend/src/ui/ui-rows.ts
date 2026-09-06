@@ -275,8 +275,8 @@ function updateSliderDisplay(
   els.val.textContent = step < 1 ? v.toFixed(2) : String(Math.round(v));
   const newPct = ((v - min) / range) * 100;
   const clamped = clampPct(newPct);
-  els.fill.style.width = clamped + "%";
-  els.thumb.style.left = clamped + "%";
+  els.fill.style.width = `${clamped}%`;
+  els.thumb.style.left = `${clamped}%`;
   els.bar.setAttribute(ARIA_ATTR.valuenow, String(v));
 }
 
@@ -452,7 +452,7 @@ export function addModeRow<T extends string | number>(
   for (const opt of options) {
     const btn = document.createElement("button");
     btn.textContent = opt.label;
-    btn.className = "mode-btn" + (currentValue === opt.value ? " active" : "");
+    btn.className = `mode-btn${currentValue === opt.value ? " active" : ""}`;
     btn.addEventListener("click", () => onChange(opt.value));
     row.appendChild(btn);
   }
@@ -584,7 +584,7 @@ export function addInfoCard(
   opts?: { wide?: boolean; sub?: string; testId?: string },
 ): HTMLElement {
   const card = document.createElement("div");
-  card.className = "info-card" + (opts?.wide ? " info-card--wide" : "");
+  card.className = `info-card${opts?.wide ? " info-card--wide" : ""}`;
   if (opts?.testId) {
     card.setAttribute("data-testid", opts.testId);
   }
@@ -739,7 +739,7 @@ export function addInlineToggleRow(
   lbl.className = "toggle-label";
   lbl.textContent = label;
   const sw = document.createElement("span");
-  sw.className = "toggle-switch" + (value ? " active" : "");
+  sw.className = `toggle-switch${value ? " active" : ""}`;
   sw.addEventListener("click", () => {
     const v = !sw.classList.contains("active");
     sw.classList.toggle("active", v);

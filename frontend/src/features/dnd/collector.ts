@@ -52,7 +52,7 @@ export async function collectFiles(
       (item as DataTransferItem).webkitGetAsEntry?.() ||
       (isEntryArray ? (item as FileSystemEntry) : null);
     if (entry?.isDirectory) {
-      const subPath = basePath ? basePath + "/" + entry.name : entry.name;
+      const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
       const reader = (entry as FileSystemDirectoryEntry).createReader();
       const batch = await readAllDirEntries(reader, entry.name);
       if (batch.length && depth < MAX_DEPTH) {
@@ -60,7 +60,7 @@ export async function collectFiles(
         result.push(...deeper);
       }
     } else if (entry?.isFile) {
-      const relPath = basePath ? basePath + "/" + entry.name : entry.name;
+      const relPath = basePath ? `${basePath}/${entry.name}` : entry.name;
       try {
         result.push({
           file: await getFileFromEntry(entry as FileSystemFileEntry),

@@ -128,10 +128,10 @@ async function mdWsLoadAvatarsForJson(ctx: MdWsInflightCtx, result: DecodedYsm):
       const avatarRel =
         au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\")
           ? au.avatarPath
-          : "avatar/" + au.avatarPath;
+          : `avatar/${au.avatarPath}`;
       const avatarBytes = await mdWsReadBytesFromPath(
         ctx.ReadFileBytes,
-        ctx.baseDir + "/" + avatarRel,
+        `${ctx.baseDir}/${avatarRel}`,
       );
       if (avatarBytes?.length) {
         const blob = new Blob([avatarBytes.buffer as ArrayBuffer]);
@@ -187,11 +187,11 @@ async function mdWsHandleYsmJsonSpec(
 
       let modelRel = mfStr;
       if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
-        modelRel = "models/" + mfStr;
+        modelRel = `models/${mfStr}`;
       }
-      let modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, ctx.baseDir + "/" + modelRel);
+      let modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${modelRel}`);
       if (!modelBytes) {
-        modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, ctx.baseDir + "/" + mfStr);
+        modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${mfStr}`);
         if (!modelBytes) continue;
       }
       const jsonStr = new TextDecoder().decode(modelBytes);
@@ -216,8 +216,8 @@ async function mdWsHandleYsmJsonSpec(
       const texRel =
         tfStr.startsWith("textures/") || tfStr.startsWith("textures\\")
           ? tfStr
-          : "textures/" + tfStr;
-      const texBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, ctx.baseDir + "/" + texRel);
+          : `textures/${tfStr}`;
+      const texBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${texRel}`);
       if (!texBytes) continue;
 
       const blob = new Blob([texBytes.buffer as ArrayBuffer], {
@@ -654,7 +654,7 @@ function mdWsMatchModelFilesByOrder(
     }
     const texIdx = matchedKey != null ? (texKeyToIdx[matchedKey] ?? 0) : 0;
     const f = files.find(
-      (ff) => ff.path.endsWith("/" + mn) || ff.path.endsWith("\\" + mn) || ff.path === mn,
+      (ff) => ff.path.endsWith(`/${mn}`) || ff.path.endsWith(`\\${mn}`) || ff.path === mn,
     );
     if (f) mdWsProcessModelFile(f, ctx, texIdx);
   }

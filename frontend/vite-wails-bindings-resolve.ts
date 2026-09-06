@@ -8,8 +8,8 @@
 //
 // 维护点唯一：改动本文件即可同步桌面/网页两套构建配置。
 
-import { existsSync } from "fs";
-import { resolve } from "path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Plugin } from "vite";
 
 export const wailsBindingsResolve: Plugin = {

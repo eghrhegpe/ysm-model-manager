@@ -17,7 +17,7 @@ export async function extractAvatars(host: AppContentHost): Promise<void> {
     const avatars = (result || {}) as Record<string, string>;
     const keys = Object.keys(avatars);
     if (keys.length > 0) {
-      dbg("avatar", "提取了 " + keys.length + " 个头像: " + keys.join(", "));
+      dbg("avatar", `提取了 ${keys.length} 个头像: ${keys.join(", ")}`);
       host._setAvatarCache(avatars);
       // 头像更新后触发站点视图刷新（由调用方处理）
     } else {

@@ -180,7 +180,7 @@ function srBuildSlideItemVariant(
   extra: SlideRowExtra | undefined,
 ): void {
   const variant = extra?.variant ?? "default";
-  row.className = "slide-item" + (focused ? " slide-focused" : "");
+  row.className = `slide-item${focused ? " slide-focused" : ""}`;
   row.tabIndex = 0;
   row.role = ROLE.button;
 
@@ -234,7 +234,7 @@ function srAppendLabels(
     // return 会丢 sublabel——恢复为分支内也 append（行为保持）。
     if (sublabel) {
       const sub = document.createElement("span");
-      sub.className = "slide-sublabel" + (extra?.inlineSub ? " slide-sublabel-inline" : "");
+      sub.className = `slide-sublabel${extra?.inlineSub ? " slide-sublabel-inline" : ""}`;
       sub.textContent = sublabel;
       row.appendChild(sub);
     }
@@ -251,7 +251,7 @@ function srAppendLabels(
   row.appendChild(labelSpan);
   if (sublabel) {
     const sub = document.createElement("span");
-    sub.className = "slide-sublabel" + (extra?.inlineSub ? " slide-sublabel-inline" : "");
+    sub.className = `slide-sublabel${extra?.inlineSub ? " slide-sublabel-inline" : ""}`;
     sub.textContent = sublabel;
     row.appendChild(sub);
   }

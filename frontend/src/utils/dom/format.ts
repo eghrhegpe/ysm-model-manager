@@ -13,10 +13,10 @@ export function formatBytes(b: number): string {
   // 用 Number.isFinite 一并拦截 NaN/±Infinity，落实「非法输入一律返回空串」不变量。
   // P3 修复：负值/零值同样无效（文件大小不可能为 0——0 通常表示未知）
   if (!Number.isFinite(b) || b <= 0) return "";
-  if (b < KB) return b + " B";
-  if (b < MB) return (b / KB).toFixed(1) + " KB";
-  if (b < GB) return (b / MB).toFixed(1) + " MB";
-  return (b / GB).toFixed(1) + " GB";
+  if (b < KB) return `${b} B`;
+  if (b < MB) return `${(b / KB).toFixed(1)} KB`;
+  if (b < GB) return `${(b / MB).toFixed(1)} MB`;
+  return `${(b / GB).toFixed(1)} GB`;
 }
 
 /** 文件大小颜色 class：<1MB 绿色，1-3MB 正常，≥3MB 红色 */
@@ -43,10 +43,10 @@ export function fmtDate(ts: number): string {
   // 固定 24 小时制 HH:mm：不依赖运行环境 locale（en-US 会输出 "10:30 AM"，
   // 与其余中文固定格式不一致，且导致 CI 与本地行为漂移）
   if (isToday)
-    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   // 今年显示 M月D日，往年显示 YYYY/M/D
   if (d.getFullYear() === now.getFullYear()) {
-    return d.getMonth() + 1 + "月" + d.getDate() + "日";
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
   }
-  return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }

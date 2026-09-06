@@ -177,7 +177,7 @@ export async function statsFromJsonBytes(
       processed.add(name);
       // 路径归一化：补 models/ 前缀，失败回退原始路径（对齐 wasm.ts JSON 分支）
       const prefixed =
-        name.startsWith("models/") || name.startsWith("models\\") ? name : "models/" + name;
+        name.startsWith("models/") || name.startsWith("models\\") ? name : `models/${name}`;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(raw));
@@ -193,7 +193,7 @@ export async function statsFromJsonBytes(
       if (!name || texProcessed.has(name)) continue;
       texProcessed.add(name);
       const prefixed =
-        name.startsWith("textures/") || name.startsWith("textures\\") ? name : "textures/" + name;
+        name.startsWith("textures/") || name.startsWith("textures\\") ? name : `textures/${name}`;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const s = sniffTexSize(raw);

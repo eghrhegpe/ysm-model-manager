@@ -285,7 +285,7 @@ async function runPush(
       type: "error",
     });
   } finally {
-    pushBtn.textContent = "⬆️ " + t("sidebar.pushSelected") + " ▾";
+    pushBtn.textContent = `⬆️ ${t("sidebar.pushSelected")} ▾`;
     pushBtn.disabled = false;
     syncInProgress.val = false;
   }
@@ -364,7 +364,7 @@ async function runPull(
       type: "error",
     });
   } finally {
-    pullBtn.textContent = "⬇️ " + t("sidebar.pullSelected") + " ▾";
+    pullBtn.textContent = `⬇️ ${t("sidebar.pullSelected")} ▾`;
     pullBtn.disabled = false;
     syncInProgress.val = false;
   }

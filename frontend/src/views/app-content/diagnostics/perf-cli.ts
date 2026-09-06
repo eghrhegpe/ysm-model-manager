@@ -87,7 +87,7 @@ export function bindPerfCopyHandlers(root: ShadowRoot): void {
       const text = decodeURIComponent(raw);
       const ok = await copyText(text);
       bus.emit("toast:show", {
-        msg: ok ? "✅ " + t("diagnostics.perfCopied") : "❌ " + t("diagnostics.perfCopyFail"),
+        msg: ok ? `✅ ${t("diagnostics.perfCopied")}` : `❌ ${t("diagnostics.perfCopyFail")}`,
         duration: ok ? 2000 : 3000,
         ...(ok ? {} : { type: "error" as const }),
       });

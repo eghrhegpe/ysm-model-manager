@@ -19,7 +19,7 @@ function webParseContainerExts(exts: string): Set<string> {
   for (const e of exts.split(",")) {
     const e2 = e.trim().toLowerCase();
     if (!e2) continue;
-    out.add(e2.startsWith(".") ? e2 : "." + e2);
+    out.add(e2.startsWith(".") ? e2 : `.${e2}`);
   }
   return out;
 }

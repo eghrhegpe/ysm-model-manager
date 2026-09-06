@@ -37,7 +37,7 @@ export function flashBtn(el: HTMLElement | null, opts?: FlashOptions): void {
   const duration =
     typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : FLASH_DURATION_MS;
   const tone = opts?.tone ?? "success";
-  const toneCls = tone === "warn" || tone === "error" ? "flash--" + tone : "";
+  const toneCls = tone === "warn" || tone === "error" ? `flash--${tone}` : "";
 
   const prev = flashTimers.get(el);
   if (prev !== undefined) window.clearTimeout(prev);

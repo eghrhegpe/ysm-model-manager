@@ -83,7 +83,7 @@ export async function loadModel2D(
     const { eyeBtn, getLabelsOn, setLabelsOn } = buildToggleRow(container);
     const zoomBtn = document.createElement("button");
     zoomBtn.className = "pv-btn";
-    zoomBtn.innerHTML = "🔍 " + t("preview.zoom");
+    zoomBtn.innerHTML = `🔍 ${t("preview.zoom")}`;
     zoomBtn.title = "全窗口查看模型";
     zoomBtn.onclick = (): void => {
       openFullPreview(canvas, model, textureImg, getLabelsOn());

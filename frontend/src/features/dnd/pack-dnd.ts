@@ -59,7 +59,7 @@ export async function handleInstanceDrop(
   if (isEditableTarget(e.target)) return;
 
   if (busy.isBusy()) {
-    toast("⏳ " + t("import.busyImporting"), "info", TOAST_MS.success);
+    toast(`⏳ ${t("import.busyImporting")}`, "info", TOAST_MS.success);
     return;
   }
   busy.setBusy(true);
@@ -82,7 +82,7 @@ export async function handleInstanceDrop(
     // 仅提示超限（与仓库页拖拽同口径，避免误导性「未检测到支持文件」）
     if (collected0.length === 0) {
       logDrop("pack-drop: 收集 0 文件");
-      toast("📂 " + t("import.noSupportedFiles"), "info");
+      toast(`📂 ${t("import.noSupportedFiles")}`, "info");
       return;
     }
     // oversize 逐文件过滤（与仓库页拖拽同口径）
@@ -175,7 +175,7 @@ export async function handleInstanceDrop(
     }
   } catch (err) {
     logError("pack-dnd", "拖放处理失败", err);
-    toast(`❌ ${t("import.processError")}: ` + friendlyError(err), "error", TOAST_MS.verbose);
+    toast(`❌ ${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
   } finally {
     busy.setBusy(false);
   }
@@ -258,7 +258,7 @@ export function bindPackCardDnD(
     dbg("pack-dnd", "drop on instance card", { idx, name: ins.name });
     void handleInstanceDrop(e, ins.name, busy).catch((err) => {
       logError("pack-dnd", "拖放处理失败", err);
-      toast(`❌ ${t("import.processError")}: ` + friendlyError(err), "error", TOAST_MS.verbose);
+      toast(`❌ ${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
     });
   };
 

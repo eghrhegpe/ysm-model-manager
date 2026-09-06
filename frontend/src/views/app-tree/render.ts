@@ -309,7 +309,7 @@ export function flattenVisible(
     }
     const k = frame.keys[frame.idx++];
     const v = frame.node[k] as TreeNode;
-    const full = frame.dirPath ? frame.dirPath + "/" + k : k;
+    const full = frame.dirPath ? `${frame.dirPath}/${k}` : k;
     if (v._e) {
       const fileRow = atFvMakeFileRow(v._e, full, frame.state);
       if (fileRow) rows.push(fileRow);
@@ -351,7 +351,7 @@ function rowElOf(row: TreeRow): HTMLElement {
     rowTplCache.set(row, tpl);
   }
   const el = tpl.content.firstElementChild as HTMLElement | null;
-  if (!el) throw new Error("rowElOf: row.html produced no element for key " + row.key);
+  if (!el) throw new Error(`rowElOf: row.html produced no element for key ${row.key}`);
   // cloneNode 防缓存模板节点被 appendChild 移动——每帧插入全新克隆
   return el.cloneNode(true) as HTMLElement;
 }
@@ -377,8 +377,8 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
     frag.appendChild(rowElOf(rows[i]));
   }
   wrap.replaceChildren(frag);
-  (wrap as HTMLElement).style.paddingTop = range.startIdx * rowH + "px";
-  (wrap as HTMLElement).style.paddingBottom = (total - range.endIdx) * rowH + "px";
+  (wrap as HTMLElement).style.paddingTop = `${range.startIdx * rowH}px`;
+  (wrap as HTMLElement).style.paddingBottom = `${(total - range.endIdx) * rowH}px`;
 }
 
 // ——— 虚拟滚动实例状态（原 4 个 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/

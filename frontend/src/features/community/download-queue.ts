@@ -168,7 +168,7 @@ function cmDqHandleFileDone(
 }
 
 function cmDqUncheckByName(ctx: CmDqCtx, name: string): void {
-  const cb = ctx.sr.querySelector('.gh-sel[data-name="' + escapeAttrValue(name) + '"]');
+  const cb = ctx.sr.querySelector(`.gh-sel[data-name="${escapeAttrValue(name)}"]`);
   if (cb) (cb as HTMLInputElement).checked = false;
   if (ctx.onFileSuccess) ctx.onFileSuccess(name);
 }
@@ -202,7 +202,7 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   if (cancelled) {
     cmDqCleanupProgressUI(
       ctx,
-      summary || '<span class="gh-queue-cancel">⏹ ' + t("downloadQueue.cancelled") + "</span>",
+      summary || `<span class="gh-queue-cancel">⏹ ${t("downloadQueue.cancelled")}</span>`,
     );
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);
@@ -303,7 +303,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
   } catch (e) {
     rollbackToIdle();
     bus.emit("toast:show", {
-      msg: `❌ ${t("workshop.enqueueFailed")}: ` + safeErrorMessage(e),
+      msg: `❌ ${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`,
       duration: TOAST_MS.verbose,
       type: "error",
     });

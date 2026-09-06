@@ -4,7 +4,7 @@ import { type CollectedEntry, collectFiles } from "./collector.ts";
 
 export type { CollectedEntry };
 
-const getExt = (name: string): string => "." + (name.split(".").pop() || "").toLowerCase();
+const getExt = (name: string): string => `.${(name.split(".").pop() || "").toLowerCase()}`;
 
 /** 扩展名是否在支持列表 */
 export const isSupportedFile = (name: string): boolean => ALL_EXTS.includes(getExt(name));
@@ -82,7 +82,7 @@ export const fileToBase64 = (file: File): Promise<string> =>
     // Promise 永久 pending → 调用方卡死、在途标记永不释放。取 10s 覆盖大文件读取
     const timer = setTimeout(() => {
       reader.abort();
-      reject(new Error("读取文件超时: " + file.name));
+      reject(new Error(`读取文件超时: ${file.name}`));
     }, 10000);
     reader.onload = () => {
       clearTimeout(timer);
@@ -90,7 +90,7 @@ export const fileToBase64 = (file: File): Promise<string> =>
     };
     reader.onerror = () => {
       clearTimeout(timer);
-      reject(new Error("读取文件失败: " + file.name));
+      reject(new Error(`读取文件失败: ${file.name}`));
     };
     reader.readAsDataURL(file);
   });
@@ -104,7 +104,7 @@ export const buildFolderItems = async (
   const items: Array<{ RelPath: string; Base64: string }> = [];
   let skipped = 0;
   for (const c of files) {
-    const rel = c.relPath.startsWith(dir + "/") ? c.relPath.slice(dir.length + 1) : c.relPath;
+    const rel = c.relPath.startsWith(`${dir}/`) ? c.relPath.slice(dir.length + 1) : c.relPath;
     try {
       const b64 = await fileToBase64(c.file);
       if (!b64) continue; // 0 字节文件：base64 为空，跳过（与 importFolder 旧行为一致）
@@ -119,7 +119,7 @@ export const buildFolderItems = async (
 
 // ===== drop 事件文件收集（仓库页 / 整合包卡片共用收集口径）=====
 
-const fileKey = (f: File): string => f.name + ":" + f.size + ":" + f.lastModified;
+const fileKey = (f: File): string => `${f.name}:${f.size}:${f.lastModified}`;
 
 /**
  * 从 drop 事件的 DataTransfer 收集文件（桌面端）：

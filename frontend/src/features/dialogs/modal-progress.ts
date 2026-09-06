@@ -65,7 +65,7 @@ function updateProgressFinite(
   pctEl: HTMLDivElement,
 ): void {
   const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
-  fill.style.width = pct + "%";
+  fill.style.width = `${pct}%`;
   pctEl.textContent = `${pct}%（${fmtMB(done)} / ${fmtMB(total)}）`;
 }
 

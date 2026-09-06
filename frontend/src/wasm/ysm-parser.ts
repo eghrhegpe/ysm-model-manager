@@ -188,7 +188,7 @@ export async function decodeYsmFile(bytes: Uint8Array): Promise<YsmDecodedFile[]
     const cls = classifyWasmError(err);
     if (cls.kind === "exit") {
       if (cls.exitCode !== undefined && cls.exitCode !== 0) {
-        throw new Error("YSMParser exit code " + cls.exitCode);
+        throw new Error(`YSMParser exit code ${cls.exitCode}`);
       }
     } else {
       // P2 硬崩溃恢复：abort/trap/out of memory 等不可捕获信号 → 重置单例

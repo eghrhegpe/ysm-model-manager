@@ -748,7 +748,7 @@ export const webFsBindings = {
     const rest = pm.rest;
     return dirKeys.some((k) => {
       const name = k.slice(prefix.length, -1);
-      return !!name && (rest === name || rest.startsWith(name + "/"));
+      return !!name && (rest === name || rest.startsWith(`${name}/`));
     });
   },
   // DetectContainerType：base64 → 字节 → 内容指纹（extract.ts detectContainerType，对齐 Go 语义）

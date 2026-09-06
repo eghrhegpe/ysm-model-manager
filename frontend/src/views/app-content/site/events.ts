@@ -37,8 +37,7 @@ function cmCrBuildDetailHtml(
   const isFav = isFaved(cr.name);
   const localCount = authorCountMap[cr.name] || 0;
   const detailFallbackChar = esc(cr.name.charAt(0)).toUpperCase();
-  const detailFallbackDiv =
-    '<div class="cr-avatar cr-detail-avatar-text">' + detailFallbackChar + "</div>";
+  const detailFallbackDiv = `<div class="cr-avatar cr-detail-avatar-text">${detailFallbackChar}</div>`;
   const html =
     '<div class="cr-detail-box">' +
     '<div class="cr-detail-header">' +
@@ -99,7 +98,7 @@ function cmCrBuildDetailHtml(
     "</span>" +
     "</div>" +
     '<div class="cr-detail-desc">' +
-    descTags.map((tag) => '<span class="cr-desc-tag">#' + esc(tag) + "</span>").join("") +
+    descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("") +
     (!descTags.length ? esc(cr.desc) : "") +
     "</div>" +
     '<div class="cr-detail-row cr-local-card">' +
@@ -139,7 +138,7 @@ function cmCrBindOverlayEvents(
     const now = toggleFav(cr.name);
     (ev.target as HTMLElement).textContent = now ? "⭐" : "☆";
     const cardStar = searchResults.querySelector(
-      '.cr-star-btn[data-star="' + CSS.escape(cr.name) + '"]',
+      `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
     if (cardStar) cardStar.textContent = now ? "⭐" : "☆";
     busRef.emit("toast:show", {

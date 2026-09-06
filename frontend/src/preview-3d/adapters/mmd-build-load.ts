@@ -169,7 +169,7 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
     for (const p of texFiles) {
       const lower = p.toLowerCase().replace(/\\/g, "/");
       const dirNorm = c.dirPath.toLowerCase().replace(/\\/g, "/");
-      const rel = lower.startsWith(dirNorm + "/") ? lower.slice(dirNorm.length + 1) : lower;
+      const rel = lower.startsWith(`${dirNorm}/`) ? lower.slice(dirNorm.length + 1) : lower;
       const baseName = lower.split("/").pop() || "";
       const texB64 = texBatch[p] ?? null;
       if (!texB64) continue;

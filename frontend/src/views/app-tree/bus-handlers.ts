@@ -110,7 +110,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
     const { RenameDir, GetRepoRoot } = await getApp();
     const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
-    const absDir = filesRoot ? filesRoot + "/" + dir : dir;
+    const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     await RenameDir(absDir, name.trim());
     selectState.keys.clear();
     selectState.lastKey = null;
@@ -137,7 +137,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
     const { CreateDir, GetRepoRoot } = await getApp();
     const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
-    const absDir = filesRoot ? filesRoot + "/" + dir + "/" + name.trim() : dir + "/" + name.trim();
+    const absDir = filesRoot ? `${filesRoot}/${dir}/${name.trim()}` : `${dir}/${name.trim()}`;
     await CreateDir(absDir);
     await reload(vm);
   } catch (e) {
@@ -162,7 +162,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } = await getApp();
     const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
-    const absDir = filesRoot ? filesRoot + "/" + dir : dir;
+    const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const allFiles = await ListAllFilePaths(absDir);
     let count = 0;
     const errors: string[] = [];
@@ -171,7 +171,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
         await MoveToRecycle(p);
         count++;
       } catch (ex) {
-        errors.push(p.split(/[/\\]/).pop() + ": " + String(ex));
+        errors.push(`${p.split(/[/\\]/).pop()}: ${String(ex)}`);
       }
     }
     try {
@@ -187,7 +187,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
       ? t("tree.recycledFailSuffix", { fail: errors.length, detail: errors.slice(0, 3).join("; ") })
       : "";
     bus.emit("toast:show", {
-      msg: `♻️ ${t("tree.recycled", { count })}` + suffix,
+      msg: `♻️ ${t("tree.recycled", { count })}${suffix}`,
       duration: TOAST_MS.normal,
       type: "success",
     });
@@ -205,12 +205,12 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     const { ScanModelEntriesFiltered, GetRepoRoot } = await getApp();
     const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
-    const absDir = filesRoot ? filesRoot + "/" + dir : dir;
+    const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
     const entries = (await ScanModelEntriesFiltered(absDir, rtype, "", label)) || [];
     if (!entries?.length) {
       bus.emit("toast:show", {
-        msg: "📂 " + t("tree.dirEmpty"),
+        msg: `📂 ${t("tree.dirEmpty")}`,
         duration: TOAST_MS.success,
         type: "warn",
       });
@@ -279,7 +279,7 @@ async function reload(vm: AppTree): Promise<void> {
     console.warn("[bus] reload 失败:", err);
     vm._entries = [];
     bus.emit("toast:show", {
-      msg: "❌ " + friendlyError(err, t("tree.reloadFailed")),
+      msg: `❌ ${friendlyError(err, t("tree.reloadFailed"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -318,7 +318,7 @@ async function runBatchToggle(
         (e) =>
           e.path &&
           e.banned === enable &&
-          (!prefix || e.path === prefix || e.path.startsWith(prefix + "/")),
+          (!prefix || e.path === prefix || e.path.startsWith(`${prefix}/`)),
       )
       .map((e) => e.fullPath);
     let ok = 0,

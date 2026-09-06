@@ -261,7 +261,7 @@ function mdMgEnsureAllBonesPresent(model: BedrockModel, ctx: MdMgBonesCtx): void
     }
     if (!found) {
       if (!bp) {
-        console.warn("[spec-builder] 骨骼 " + name + " 无 pivot（纯 parent 引用）");
+        console.warn(`[spec-builder] 骨骼 ${name} 无 pivot（纯 parent 引用）`);
       }
       localPos = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
       parentName = "";
@@ -321,7 +321,7 @@ function mdMgPostProcessAndTextures(
   let texID: string | null = null;
   const hasTextures = false;
   if (hasTextures) {
-    texID = "tex_" + texIdxBase;
+    texID = `tex_${texIdxBase}`;
   }
   return texID;
 }

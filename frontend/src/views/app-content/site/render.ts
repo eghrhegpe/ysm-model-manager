@@ -54,14 +54,14 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
   const card = document.createElement("div");
   card.className = "gh-card cr-creator-card cr-creator-card--grid";
   card.tabIndex = 0;
-  card.style.animationDelay = idx * 0.03 + "s";
+  card.style.animationDelay = `${idx * 0.03}s`;
   card.dataset.name = cr.name;
   card.dataset.tag = getTagFromRole(cr.role);
   card.title = t("content.searchFor", { name: cr.name });
   if (tierRank) card.dataset.tier = tierRank;
 
   const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
-  const fallbackDiv = '<div class="cr-avatar cr-avatar-fallback">' + fallbackChar + "</div>";
+  const fallbackDiv = `<div class="cr-avatar cr-avatar-fallback">${fallbackChar}</div>`;
   const avatarHtml = hasAvatar
     ? '<img class="cr-avatar" src="' +
       esc(avatarCache[cr.name]) +
@@ -92,7 +92,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
   const platformBadges = (cr.type || "")
     .split(";")
     .filter(Boolean)
-    .map((platform: string) => '<span class="cr-platform-badge">' + esc(platform) + "</span>")
+    .map((platform: string) => `<span class="cr-platform-badge">${esc(platform)}</span>`)
     .join("");
 
   // 🔍 搜索快捷按钮（与星标对称）：有站点搜索能力才渲染，点击联网搜索创作者，免进详情
@@ -109,7 +109,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
     '<div class="cr-card-header">' +
     '<div class="cr-avatar-container">' +
     '<div class="cr-avatar-ring"' +
-    (tierRank ? ' data-spin="' + tierRank + '"' : "") +
+    (tierRank ? ` data-spin="${tierRank}"` : "") +
     "></div>" +
     avatarHtml +
     "</div>" +
@@ -284,7 +284,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
       '">' +
       t("content.fetchConfig") +
       "</button>" +
-      (ctx.viewerMode ? "" : '<button class="cr-edit-btn">' + t("content.edit") + "</button>") +
+      (ctx.viewerMode ? "" : `<button class="cr-edit-btn">${t("content.edit")}</button>`) +
       "</div>",
   );
   if (creators.length) {

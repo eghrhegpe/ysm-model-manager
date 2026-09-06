@@ -6,9 +6,9 @@
 
 import type { ToastPayload } from "../../bus.ts";
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "./errors.ts";
 import { TOAST_MS } from "./toast-ms.ts";
-import { t } from "../../core/i18n/t.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 

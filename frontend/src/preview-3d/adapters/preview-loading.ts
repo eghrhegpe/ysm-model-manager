@@ -41,7 +41,7 @@ export function renderLoadingState(
 export function showLoadFailure(loadingEl: HTMLElement, e: unknown): void {
   loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
   bus.emit("toast:show", {
-    msg: "❌ " + friendlyError(e, t("preview.loadFailed")),
+    msg: `❌ ${friendlyError(e, t("preview.loadFailed"))}`,
     duration: TOAST_MS.long,
     type: "error",
   });

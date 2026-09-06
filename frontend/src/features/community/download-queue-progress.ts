@@ -90,11 +90,11 @@ function cmPgCalcPct(s: DownloadState): CmPgCalcPctResult {
   let label: string;
   if (!total || total <= 0) {
     const mb = (dl / 1024 / 1024).toFixed(1);
-    label = mb + "MB";
+    label = `${mb}MB`;
     pct = 0;
   } else {
     pct = Math.min(Math.round((dl / total) * 100), 100);
-    label = pct + "%";
+    label = `${pct}%`;
   }
   const isTiny = total > 0 && total <= 100 * 1024;
   return { pct, label, isTiny, total };
@@ -156,7 +156,7 @@ function cmPgApplyLock(
             return;
           }
           pctEl._dots = ((pctEl._dots || 0) + 1) % 4;
-          pctEl.textContent = "⏳" + ".".repeat(pctEl._dots);
+          pctEl.textContent = `⏳${".".repeat(pctEl._dots)}`;
         }, 400);
       }
       if (fillEl) fillEl.style.width = "99%";
@@ -184,7 +184,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   if (pctEl && !ctx._stuckLocked) pctEl.textContent = label;
   if (fillEl) {
     fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
-    fillEl.style.width = pct + "%";
+    fillEl.style.width = `${pct}%`;
   }
 
   if (pct >= 100 && !ctx._stuckLocked) {

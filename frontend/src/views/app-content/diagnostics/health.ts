@@ -45,7 +45,7 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
   } catch (e) {
     // Go error 通道（路径校验等业务错误）或调用失败：统一展示
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
-    list.innerHTML = '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(msg) + "</div>";
+    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">❌ ${esc(msg)}</div>`;
   } finally {
     _healthBusy = false;
   }
@@ -63,7 +63,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
         : t("diagnostics.healthBad");
 
   const warnings = (r.warnings ?? [])
-    .map((w) => '<div class="stat-row diag-warn">⚠️ ' + esc(w) + "</div>")
+    .map((w) => `<div class="stat-row diag-warn">⚠️ ${esc(w)}</div>`)
     .join("");
 
   return (
@@ -122,7 +122,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     ": " +
     esc(formatSize(r.cache.cache_size)) +
     (r.cache.hit_rate > 0
-      ? " · " + t("diagnostics.healthHitRate") + ": " + Math.round(r.cache.hit_rate) + "%"
+      ? ` · ${t("diagnostics.healthHitRate")}: ${Math.round(r.cache.hit_rate)}%`
       : "") +
     "</div>" +
     "<div>🗑️ " +
@@ -132,7 +132,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     "</div>" +
     "</div>" +
     (warnings
-      ? '<div style="padding:6px 12px;border-top:1px solid var(--bd)">' + warnings + "</div>"
+      ? `<div style="padding:6px 12px;border-top:1px solid var(--bd)">${warnings}</div>`
       : "") +
     '<div class="stat-row diag-stat diag-stat-muted" style="padding:6px 12px">⚙️ ' +
     t("diagnostics.healthSource") +
@@ -142,7 +142,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
 
 /** 百分比展示（带小数收敛） */
 function formatPct(pct: number, esc: EscFn): string {
-  return esc(Number.isFinite(pct) ? pct.toFixed(1) + "%" : "100.0%");
+  return esc(Number.isFinite(pct) ? `${pct.toFixed(1)}%` : "100.0%");
 }
 
 /** 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） */

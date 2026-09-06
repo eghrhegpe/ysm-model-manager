@@ -49,13 +49,13 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
       await ClearImportLogs();
       loadDiagnosticsLogs(root, esc);
       bus.emit("toast:show", {
-        msg: "🗑️ " + t("diagnostics.logsCleared"),
+        msg: `🗑️ ${t("diagnostics.logsCleared")}`,
         duration: TOAST_MS.success,
         type: "info",
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, t("diagnostics.clearFailed")),
+        msg: `❌ ${friendlyError(e, t("diagnostics.clearFailed"))}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -74,7 +74,7 @@ function dgInBindCopyPanel(root: ShadowRoot): void {
     const text = (clone?.textContent ?? "").trim();
     if (!text) {
       bus.emit("toast:show", {
-        msg: "📋 " + t("diagnostics.noLogsToCopy"),
+        msg: `📋 ${t("diagnostics.noLogsToCopy")}`,
         duration: TOAST_MS.success,
         type: "info",
       });
@@ -86,7 +86,7 @@ function dgInBindCopyPanel(root: ShadowRoot): void {
       dgInCopyTextFallback(text);
     }
     bus.emit("toast:show", {
-      msg: "📋 " + t("diagnostics.copiedLogPrivacy"),
+      msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
       duration: TOAST_MS.normal,
       type: "info",
     });
@@ -101,7 +101,7 @@ function dgInCopyRowLog(row: HTMLElement): void {
     .writeText(text)
     .then(() => {
       bus.emit("toast:show", {
-        msg: "📋 " + t("diagnostics.copiedLogPrivacy"),
+        msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
         duration: TOAST_MS.normal,
         type: "info",
       });
@@ -109,7 +109,7 @@ function dgInCopyRowLog(row: HTMLElement): void {
     .catch(() => {
       dgInCopyTextFallback(text);
       bus.emit("toast:show", {
-        msg: "📋 " + t("diagnostics.copiedLog"),
+        msg: `📋 ${t("diagnostics.copiedLog")}`,
         duration: TOAST_MS.success,
         type: "success",
       });

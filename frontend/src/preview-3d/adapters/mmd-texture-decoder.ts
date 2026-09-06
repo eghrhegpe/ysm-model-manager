@@ -308,7 +308,7 @@ export function applyWorkerDecodedTextures(
           if (decodedTex.refCount <= 0) decodedTex.bitmap.close();
         });
         newTex.needsUpdate = true;
-        (mat as unknown as Record<string, unknown>)["map"] = newTex;
+        (mat as unknown as Record<string, unknown>).map = newTex;
         mat.needsUpdate = true;
         replaced++;
       }

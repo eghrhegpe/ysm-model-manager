@@ -46,7 +46,7 @@ export function extractAnimGroupsAndConfigs(p?: YsmProperties | null): {
   for (const g of p.extra_animation_classify ?? []) {
     let name = g.name ?? "";
     if (!name && g.id) {
-      const v = asStr(extraAnim["#" + g.id]);
+      const v = asStr(extraAnim[`#${g.id}`]);
       if (v) name = v;
     }
     const items: string[] = [];

@@ -25,7 +25,7 @@ const DEFAULT_NS = "ysm";
 
 /** 拼接命名空间 + key，生成唯一 fullKey */
 function mkKey(namespace: string, key: string): string {
-  return namespace + ":" + key;
+  return `${namespace}:${key}`;
 }
 
 /** 过期时间戳：ttl=0 = 永不过期（文档契约，哨兵 MAX_SAFE_INTEGER）；>0 = nowMs + ttlMs */
@@ -147,7 +147,7 @@ export function invalidateCache(key: string, namespace?: string): void {
 /** 清除所有缓存 */
 export function clearAllCache(namespace?: string): void {
   if (namespace) {
-    const prefix = namespace + ":";
+    const prefix = `${namespace}:`;
     for (const k of [..._cache.keys()]) {
       if (k.startsWith(prefix)) _cache.delete(k);
     }

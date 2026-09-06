@@ -59,7 +59,7 @@ export function initUiPrefs(root: ShadowRoot): void {
   const resolvePx = (varName: string): string => {
     const d = document.body;
     const orig = d.style.paddingTop;
-    d.style.paddingTop = "var(" + varName + ")";
+    d.style.paddingTop = `var(${varName})`;
     const val = getComputedStyle(d).paddingTop;
     d.style.paddingTop = orig;
     return val;
@@ -79,13 +79,13 @@ export function initUiPrefs(root: ShadowRoot): void {
     const mdPx = parseFloat(spaceMd);
     const smPx = parseFloat(spaceSm);
     const smFontPx = parseFloat(fsSm);
-    const btnH = Math.round(smPx * 2 + smFontPx * 1.4) + "px";
+    const btnH = `${Math.round(smPx * 2 + smFontPx * 1.4)}px`;
 
     const szBase = root.querySelector("#sz-base");
     const szSpace = root.querySelector("#sz-space");
     const szBtn = root.querySelector("#sz-btn-h");
-    if (szBase) szBase.textContent = basePx ? Math.round(basePx) + "px" : base;
-    if (szSpace) szSpace.textContent = mdPx ? Math.round(mdPx) + "px" : spaceMd;
+    if (szBase) szBase.textContent = basePx ? `${Math.round(basePx)}px` : base;
+    if (szSpace) szSpace.textContent = mdPx ? `${Math.round(mdPx)}px` : spaceMd;
     if (szBtn) szBtn.textContent = btnH;
   };
 

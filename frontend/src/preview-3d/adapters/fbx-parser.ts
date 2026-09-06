@@ -91,7 +91,6 @@ function buildMaterial(mat: FbxMaterialData): THREE.Material {
     case "MeshBasicMaterial":
       material = new THREE.MeshBasicMaterial(base);
       break;
-    case "MeshPhongMaterial":
     default: {
       const phong = new THREE.MeshPhongMaterial(base);
       if (mat.specular !== undefined) {

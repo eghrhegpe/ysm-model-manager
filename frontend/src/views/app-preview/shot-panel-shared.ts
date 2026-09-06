@@ -46,7 +46,7 @@ function makeShotAction(
     } catch (e) {
       console.error("[3D 截图]", e);
       bus.emit("toast:show", {
-        msg: "截图保存失败：" + friendlyError(e),
+        msg: `截图保存失败：${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

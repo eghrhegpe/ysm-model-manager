@@ -206,7 +206,7 @@ async function advFilterSearchModelPaths(
   } catch (e: unknown) {
     dbg("adv-filter", "search:error", { err: String(e) });
     bus.emit("toast:show", {
-      msg: "❌ " + t("tree.advFilterFail") + ": " + friendlyError(e),
+      msg: `❌ ${t("tree.advFilterFail")}: ${friendlyError(e)}`,
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -329,7 +329,7 @@ export async function pickWebFilesAndImport(
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e),
+          msg: `❌ ${friendlyError(e)}`,
           duration: TOAST_MS.verbose,
           type: "error",
         });

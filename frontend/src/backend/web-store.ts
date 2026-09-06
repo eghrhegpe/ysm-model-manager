@@ -125,7 +125,7 @@ async function addWebOpLog(
   // 操作日志归入运行时环（webRuntimeLogs），与导入日志环（webImportLogs）分离，
   // 否则 GetRuntimeLogs 恒空、ClearRuntimeLogs 形同虚设（原实现误写入导入环）
   await pushWebLog(webRuntimeLogs, WEB_RUNTIME_LOG_CAP, {
-    Message: `${op} ${modelName}${errMsg ? " " + errMsg : ""}`.trim(),
+    Message: `${op} ${modelName}${errMsg ? ` ${errMsg}` : ""}`.trim(),
     Timestamp: Date.now(),
   });
 }

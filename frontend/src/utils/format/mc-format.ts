@@ -102,7 +102,7 @@ export function renderFormattedText(text: string): string {
           html += esc(body);
         } else {
           // 无效码或连续 §，原样保留
-          html += esc("§" + part);
+          html += esc(`§${part}`);
         }
       }
 

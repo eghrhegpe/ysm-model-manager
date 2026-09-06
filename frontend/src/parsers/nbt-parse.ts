@@ -324,18 +324,18 @@ export function litematicMetaView(root: Record<string, unknown>): Record<string,
   // 对齐 ParseMeta:64-68：Regions compound 键数 = 区域数
   const regions = getCompound(root, "Regions");
   return {
-    name: asString(metadata["Name"]) ?? "",
-    author: asString(metadata["Author"]) ?? "",
-    description: asString(metadata["Description"]) ?? "",
-    timeCreated: asNumber(metadata["TimeCreated"]) ?? 0,
-    timeModified: asNumber(metadata["TimeModified"]) ?? 0,
-    minecraftDataVersion: asNumber(root["MinecraftDataVersion"]) ?? 0,
-    version: asNumber(root["Version"]) ?? 0,
-    totalBlocks: asNumber(metadata["TotalBlocks"]) ?? 0,
-    totalVolume: asNumber(metadata["TotalVolume"]) ?? 0,
+    name: asString(metadata.Name) ?? "",
+    author: asString(metadata.Author) ?? "",
+    description: asString(metadata.Description) ?? "",
+    timeCreated: asNumber(metadata.TimeCreated) ?? 0,
+    timeModified: asNumber(metadata.TimeModified) ?? 0,
+    minecraftDataVersion: asNumber(root.MinecraftDataVersion) ?? 0,
+    version: asNumber(root.Version) ?? 0,
+    totalBlocks: asNumber(metadata.TotalBlocks) ?? 0,
+    totalVolume: asNumber(metadata.TotalVolume) ?? 0,
     // 对齐 ParseMeta:46-58：缺 compound / 缺分量 → 0
     enclosingSize: encSize
-      ? [asNumber(encSize["x"]) ?? 0, asNumber(encSize["y"]) ?? 0, asNumber(encSize["z"]) ?? 0]
+      ? [asNumber(encSize.x) ?? 0, asNumber(encSize.y) ?? 0, asNumber(encSize.z) ?? 0]
       : [0, 0, 0],
     regionCount: regions ? Object.keys(regions).length : 0,
     blockStats: [],
@@ -351,29 +351,29 @@ export function litematicMetaView(root: Record<string, unknown>): Record<string,
  */
 export function nbtStructureView(root: Record<string, unknown>): Record<string, unknown> | null {
   // 基岩版 1.21+ structure 新格式：根含 sub_levels 时走聚合分支（对齐 ParseNbtStructure:274）
-  const subLevels = asArray(root["sub_levels"]);
+  const subLevels = asArray(root.sub_levels);
   if (subLevels) return bedrockStructureView(root, subLevels);
 
-  const sizeList = asArray(root["size"]);
-  const blocksList = asArray(root["blocks"]);
-  const paletteList = asArray(root["palette"]);
-  const entitiesList = asArray(root["entities"]);
+  const sizeList = asArray(root.size);
+  const blocksList = asArray(root.blocks);
+  const paletteList = asArray(root.palette);
+  const entitiesList = asArray(root.entities);
   // 对齐 ParseNbtStructure:282-284：缺 size/blocks/palette 判定无效
   if (!sizeList && !blocksList && !paletteList) return null;
 
   const out: Record<string, unknown> = {};
-  const dv = asNumber(root["DataVersion"]);
-  if (dv !== undefined) out["dataVersion"] = dv;
+  const dv = asNumber(root.DataVersion);
+  if (dv !== undefined) out.dataVersion = dv;
   if (sizeList && sizeList.length === 3) {
     // 对齐 ParseNbtStructure:290-295：取前三个元素转 int
-    out["size"] = [toInt(sizeList[0]), toInt(sizeList[1]), toInt(sizeList[2])];
+    out.size = [toInt(sizeList[0]), toInt(sizeList[1]), toInt(sizeList[2])];
   }
-  if (blocksList) out["blockCount"] = blocksList.length;
-  if (entitiesList) out["entityCount"] = entitiesList.length;
+  if (blocksList) out.blockCount = blocksList.length;
+  if (entitiesList) out.entityCount = entitiesList.length;
   // 对齐 ParseNbtStructure:302-321：palette 条目按 Name 计数（每条计 1）+ 数量降序
   if (paletteList) {
     const paletteStats = paletteEntryStats(paletteList);
-    if (paletteStats.length > 0) out["paletteStats"] = paletteStats;
+    if (paletteStats.length > 0) out.paletteStats = paletteStats;
   }
   return out;
 }
@@ -383,7 +383,7 @@ function paletteEntryStats(paletteList: unknown[]): Array<{ name: string; count:
   const counts: Record<string, number> = {};
   for (const elem of paletteList) {
     if (!isObj(elem)) continue;
-    const name = asString(elem["Name"]);
+    const name = asString(elem.Name);
     if (name) counts[name] = (counts[name] ?? 0) + 1;
   }
   return Object.entries(counts)
@@ -401,8 +401,8 @@ function bedrockStructureView(
   subLevels: unknown[],
 ): Record<string, unknown> | null {
   const out: Record<string, unknown> = {};
-  const dv = asNumber(root["DataVersion"]);
-  if (dv !== undefined) out["dataVersion"] = dv;
+  const dv = asNumber(root.DataVersion);
+  if (dv !== undefined) out.dataVersion = dv;
 
   const bounds: Record<string, number> = {
     min_x: 0,
@@ -441,43 +441,43 @@ function bedrockStructureView(
       }
       hasBounds = true;
     }
-    const blocks = asArray(sub["blocks"]);
+    const blocks = asArray(sub.blocks);
     if (blocks) blockCount += blocks.length;
     // block_palette：下标 → Name（对齐 parseBedrockStructure:371-379）
     const paletteNames: string[] = [];
-    for (const elem of asArray(sub["block_palette"]) ?? []) {
-      paletteNames.push(isObj(elem) ? (asString(elem["Name"]) ?? "") : "");
+    for (const elem of asArray(sub.block_palette) ?? []) {
+      paletteNames.push(isObj(elem) ? (asString(elem.Name) ?? "") : "");
     }
     // blocks.palette_id 引用计数（对齐 parseBedrockStructure:380-390）
     for (const b of blocks ?? []) {
       if (!isObj(b)) continue;
-      const pid = asNumber(b["palette_id"]);
+      const pid = asNumber(b.palette_id);
       if (pid !== undefined && pid >= 0 && pid < paletteNames.length) {
         const name = paletteNames[pid];
         if (name) counts[name] = (counts[name] ?? 0) + 1;
       }
     }
-    const ents = asArray(sub["entities"]);
+    const ents = asArray(sub.entities);
     if (ents) entityCount += ents.length;
-    const bes = asArray(sub["block_entities"]);
+    const bes = asArray(sub.block_entities);
     if (bes) tileEntityCount += bes.length;
   }
 
   // 对齐 parseBedrockStructure:399-418：仅在非零/存在时写入
   if (hasBounds) {
-    out["size"] = [
+    out.size = [
       bounds.max_x - bounds.min_x + 1,
       bounds.max_y - bounds.min_y + 1,
       bounds.max_z - bounds.min_z + 1,
     ];
   }
-  if (blockCount > 0) out["blockCount"] = blockCount;
-  if (entityCount > 0) out["entityCount"] = entityCount;
-  if (tileEntityCount > 0) out["tileEntityCount"] = tileEntityCount;
+  if (blockCount > 0) out.blockCount = blockCount;
+  if (entityCount > 0) out.entityCount = entityCount;
+  if (tileEntityCount > 0) out.tileEntityCount = tileEntityCount;
   const stats = Object.entries(counts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
-  if (stats.length > 0) out["paletteStats"] = stats;
+  if (stats.length > 0) out.paletteStats = stats;
 
   // 有效判定（对齐 parseBedrockStructure:422-424）：size 单独即有效，否则仅 DataVersion → 无效
   if (!("size" in out) && Object.keys(out).length <= 1) return null;
@@ -495,42 +495,42 @@ export function schematicSummaryView(
   root: Record<string, unknown>,
 ): Record<string, unknown> | null {
   const out: Record<string, unknown> = {};
-  const version = asNumber(root["Version"]);
-  if (version !== undefined) out["version"] = version;
-  const dataVersion = asNumber(root["DataVersion"]);
-  if (dataVersion !== undefined) out["dataVersion"] = dataVersion;
+  const version = asNumber(root.Version);
+  if (version !== undefined) out.version = version;
+  const dataVersion = asNumber(root.DataVersion);
+  if (dataVersion !== undefined) out.dataVersion = dataVersion;
 
   // 对齐 ParseSchematicSummary:188-193：三轴齐全才输出 size
-  const width = asNumber(root["Width"]);
-  const height = asNumber(root["Height"]);
-  const length = asNumber(root["Length"]);
+  const width = asNumber(root.Width);
+  const height = asNumber(root.Height);
+  const length = asNumber(root.Length);
   if (width !== undefined && height !== undefined && length !== undefined)
-    out["size"] = [width, height, length];
+    out.size = [width, height, length];
 
   // 对齐 ParseSchematicSummary:195-203：Metadata compound 的 Author/Name
   const metadata = getCompound(root, "Metadata");
   if (metadata) {
-    const author = asString(metadata["Author"]);
-    if (author !== undefined) out["author"] = author;
-    const name = asString(metadata["Name"]);
-    if (name !== undefined) out["name"] = name;
+    const author = asString(metadata.Author);
+    if (author !== undefined) out.author = author;
+    const name = asString(metadata.Name);
+    if (name !== undefined) out.name = name;
   }
 
   // 对齐 ParseSchematicSummary:205-208：Blocks（ByteArray）长度 = blockCount
-  const blocks = asArray(root["Blocks"]);
-  if (blocks) out["blockCount"] = blocks.length;
+  const blocks = asArray(root.Blocks);
+  if (blocks) out.blockCount = blocks.length;
 
   // 对齐 ParseSchematicSummary:210-216：Palette compound 键数 + PaletteMax
-  const paletteMax = asNumber(root["PaletteMax"]);
-  if (paletteMax !== undefined) out["paletteMax"] = paletteMax;
+  const paletteMax = asNumber(root.PaletteMax);
+  if (paletteMax !== undefined) out.paletteMax = paletteMax;
   const paletteCompound = getCompound(root, "Palette");
-  if (paletteCompound) out["paletteSize"] = Object.keys(paletteCompound).length;
+  if (paletteCompound) out.paletteSize = Object.keys(paletteCompound).length;
 
   // 对齐 ParseSchematicSummary:252-259：TileEntities/Entities 列表长度
-  const tileEntities = asArray(root["TileEntities"]);
-  if (tileEntities) out["tileEntityCount"] = tileEntities.length;
-  const entities = asArray(root["Entities"]);
-  if (entities) out["entityCount"] = entities.length;
+  const tileEntities = asArray(root.TileEntities);
+  if (tileEntities) out.tileEntityCount = tileEntities.length;
+  const entities = asArray(root.Entities);
+  if (entities) out.entityCount = entities.length;
 
   // 对齐 ParseSchematicSummary:261-263：仅剩 ≤1 个字段视为无效 → "{}"
   if (Object.keys(out).length <= 1) return null;

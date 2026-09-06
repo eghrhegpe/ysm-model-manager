@@ -99,7 +99,7 @@ function dgBrApplyReplace(
       if (cnt2 && !cnt2.dataset.regexErr) {
         cnt2.dataset.regexErr = "1";
         bus.emit("toast:show", {
-          msg: "⚠️ " + t("dialog.regexInvalid"),
+          msg: `⚠️ ${t("dialog.regexInvalid")}`,
           duration: TOAST_MS.normal,
           type: "warn",
         });
@@ -344,7 +344,7 @@ function dgBrBindReplaceTab(shell: DgBrShell): void {
   presetsBtn?.addEventListener("click", (): void => {
     const show = presetsMenu?.style.display !== "flex";
     if (presetsMenu) presetsMenu.style.display = show ? "flex" : "none";
-    presetsBtn.textContent = "📋 " + (show ? t("dialog.collapse") : t("dialog.presets"));
+    presetsBtn.textContent = `📋 ${show ? t("dialog.collapse") : t("dialog.presets")}`;
   });
   presetsMenu?.querySelectorAll(".br-preset").forEach((el) => {
     el.addEventListener("click", (): void => {
@@ -442,14 +442,14 @@ function dgBrBindApplyClick(
     });
     if (dup) {
       bus.emit("toast:show", {
-        msg: "❌ " + t("dialog.renameConflict", { name: dup.newName }),
+        msg: `❌ ${t("dialog.renameConflict", { name: dup.newName })}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
       return;
     }
     const btn = thisEl.querySelector("#br-apply") as HTMLButtonElement;
-    btn.textContent = "⏳ " + t("dialog.executing");
+    btn.textContent = `⏳ ${t("dialog.executing")}`;
     btn.disabled = true;
     try {
       await onApply(
@@ -461,12 +461,12 @@ function dgBrBindApplyClick(
       );
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ " + t("dialog.batchRenameFailed") + ": " + friendlyError(e),
+        msg: `❌ ${t("dialog.batchRenameFailed")}: ${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
     } finally {
-      btn.textContent = "📝 " + t("dialog.doRename");
+      btn.textContent = `📝 ${t("dialog.doRename")}`;
       btn.disabled = false;
       closeFn();
     }

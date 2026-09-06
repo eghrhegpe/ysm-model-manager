@@ -50,12 +50,9 @@ function dgTeRenderSuggestions(shell: DgTeShell, allTags: string[]): void {
   const unused = allTags.filter((tag) => !shell.tags.includes(tag));
   shell.suggestEl.innerHTML = unused.length
     ? unused
-        .map(
-          (tag) =>
-            '<button class="te-sug-btn" data-tag="' + esc(tag) + '">+' + esc(tag) + "</button>",
-        )
+        .map((tag) => `<button class="te-sug-btn" data-tag="${esc(tag)}">+${esc(tag)}</button>`)
         .join("")
-    : '<span style="color:var(--muted)">' + t("dialog.noOtherTags") + "</span>";
+    : `<span style="color:var(--muted)">${t("dialog.noOtherTags")}</span>`;
   shell.suggestEl.querySelectorAll(".te-sug-btn").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => {
       const tag = (btn as HTMLElement).dataset.tag;
@@ -178,7 +175,7 @@ function dgTeLoadData(shell: DgTeShell, modelPath: string, getApp: GetAppFn): vo
       dgTeRenderSuggestions(shell, allTags);
     } catch (e) {
       shell.loadFailed = true;
-      shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadFailed") + ": " + friendlyError(e);
+      shell.errEl.textContent = `⚠️ ${t("dialog.tagsLoadFailed")}: ${friendlyError(e)}`;
     } finally {
       shell.loading = false;
       // biome-ignore lint/correctness/noUnsafeFinally: shell 已销毁时提前返回，跳过按钮恢复（有意守卫）
@@ -204,7 +201,7 @@ function dgTeBindEvents(shell: DgTeShell, modelPath: string, getApp: GetAppFn): 
 
   (shell.box.querySelector("#te-save") as HTMLElement).onclick = async (): Promise<void> => {
     if (shell.loadFailed) {
-      shell.errEl.textContent = "⚠️ " + t("dialog.tagsLoadRetry");
+      shell.errEl.textContent = `⚠️ ${t("dialog.tagsLoadRetry")}`;
       return;
     }
     try {
@@ -214,7 +211,7 @@ function dgTeBindEvents(shell: DgTeShell, modelPath: string, getApp: GetAppFn): 
       if (shell.disposed) return;
       shell.close(shell.tags);
     } catch (e) {
-      shell.errEl.textContent = "⚠️ " + t("dialog.tagsSaveFailed") + ": " + friendlyError(e);
+      shell.errEl.textContent = `⚠️ ${t("dialog.tagsSaveFailed")}: ${friendlyError(e)}`;
     }
   };
 }

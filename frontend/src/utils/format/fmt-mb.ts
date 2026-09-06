@@ -5,5 +5,5 @@
 /** 格式化字节为 MB（进度弹窗/窗口标题共用）；非有限值/负值回退 "0.0 MB" */
 export function fmtMB(n: number): string {
   if (!Number.isFinite(n) || n < 0) return "0.0 MB";
-  return (n / 1024 / 1024).toFixed(1) + " MB";
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }

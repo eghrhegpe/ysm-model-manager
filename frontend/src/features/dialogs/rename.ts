@@ -60,13 +60,13 @@ function dgRnBindReadHeaderBtn(
   (box.querySelector("#rn-from-header") as HTMLElement).onclick = async (): Promise<void> => {
     if (!filePath) {
       const tipsEl = box.querySelector("#rn-tips") as HTMLElement;
-      tipsEl.textContent = "⚠️ " + t("dialog.notImported");
+      tipsEl.textContent = `⚠️ ${t("dialog.notImported")}`;
       tipsEl.style.display = "block";
       return;
     }
     try {
       const btn = box.querySelector("#rn-from-header") as HTMLButtonElement;
-      btn.textContent = "⏳ " + t("dialog.reading");
+      btn.textContent = `⏳ ${t("dialog.reading")}`;
       btn.disabled = true;
       const App = await getApp();
       const header = await App.ExtractYSMHeader(filePath);
@@ -78,7 +78,7 @@ function dgRnBindReadHeaderBtn(
           authorEl.value = header.authorName;
         }
         if (header.tips) {
-          tipsEl.textContent = "📝 " + header.tips;
+          tipsEl.textContent = `📝 ${header.tips}`;
           tipsEl.style.display = "block";
         } else {
           tipsEl.style.display = "none";
@@ -88,13 +88,13 @@ function dgRnBindReadHeaderBtn(
     } catch (_) {
       const tipsEl = box.querySelector("#rn-tips") as HTMLElement | null;
       if (tipsEl) {
-        tipsEl.textContent = "⚠️ " + t("dialog.readFailed");
+        tipsEl.textContent = `⚠️ ${t("dialog.readFailed")}`;
         tipsEl.style.display = "block";
       }
     } finally {
       const btn = box.querySelector("#rn-from-header") as HTMLButtonElement | null;
       if (btn) {
-        btn.textContent = "📖 " + t("dialog.readHeader");
+        btn.textContent = `📖 ${t("dialog.readHeader")}`;
         btn.disabled = false;
       }
     }
@@ -136,7 +136,7 @@ function dgRnUpdatePreview(
 
 function dgRnBindFieldInputs(box: HTMLDivElement, update: DgRnUpdateFn): void {
   ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach((id) => {
-    const el = box.querySelector("#" + id) as HTMLInputElement | null;
+    const el = box.querySelector(`#${id}`) as HTMLInputElement | null;
     el?.addEventListener("input", update);
     el?.addEventListener("input", (): void => {
       const errEl = box.querySelector("#rn-err") as HTMLElement | null;

@@ -49,7 +49,7 @@ const BRACKET_STYLES = [
 /** 从注册表构建括号段匹配正则（内容捕获，非全局） */
 function bracketRe(style: (typeof BRACKET_STYLES)[number]): RegExp {
   return new RegExp(
-    escRegex(style.open) + "([^" + escRegex(style.close) + "]+?)" + escRegex(style.close),
+    `${escRegex(style.open)}([^${escRegex(style.close)}]+?)${escRegex(style.close)}`,
   );
 }
 
@@ -71,7 +71,7 @@ export function parseModelName(raw: string): ParsedModelName {
   const bracketStripRe = new RegExp(
     "\\[\\[[^\\]]+?\\]\\]" +
       BRACKET_STYLES.map(
-        (s) => escRegex(s.open) + "[^" + escRegex(s.close) + "]+?" + escRegex(s.close),
+        (s) => `${escRegex(s.open)}[^${escRegex(s.close)}]+?${escRegex(s.close)}`,
       ).join("|"),
     "g",
   );
@@ -89,7 +89,7 @@ export function parseModelName(raw: string): ParsedModelName {
   const monthNum = rawMonth ? parseInt(rawMonth, 10) : 0;
   const date = dMatch
     ? rawMonth && monthNum >= 1 && monthNum <= 12
-      ? dMatch[1] + "-" + rawMonth.padStart(2, "0")
+      ? `${dMatch[1]}-${rawMonth.padStart(2, "0")}`
       : dMatch[1]
     : "";
 
@@ -141,7 +141,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
   // 匹配括号段（注册表驱动，索引 4.7）：[作者]/【作品】/《作品》共用 BRACKET_STYLES
   for (const style of BRACKET_STYLES) {
     const re = new RegExp(
-      escRegex(style.open) + "([^" + escRegex(style.close) + "]+?)" + escRegex(style.close),
+      `${escRegex(style.open)}([^${escRegex(style.close)}]+?)${escRegex(style.close)}`,
       "g",
     );
     let m: RegExpExecArray | null;
@@ -152,7 +152,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
         // P3 修复（子代理审计，问题 14）：`[ ]` 是作者段——原标 tag-work 与头注释
         // 「--meta-author/--meta-work/--meta-date」及 summarize.ts:113 的 tag-author
         // 不一致（Design.md §3 语义色：作者青 / 作品灰）；【】/《》保持 tag-work
-        html: '<span class="' + style.tag + '">' + esc(m[0]) + "</span>",
+        html: `<span class="${style.tag}">${esc(m[0])}</span>`,
         len: m[0].length,
       });
     }
@@ -177,7 +177,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
       if (overlaps) continue;
       matches.push({
         idx: m4.index,
-        html: '<span class="tag-date">' + esc(m4[0]) + "</span>",
+        html: `<span class="tag-date">${esc(m4[0])}</span>`,
         len: m4[0].length,
       });
     }
@@ -239,7 +239,7 @@ export function renderModelNameWithHighlight(
   let last = 0;
   // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
   while ((m = markRe.exec(rest)) !== null) {
-    safe += esc(rest.slice(last, m.index)) + "<mark>" + esc(m[1]) + "</mark>";
+    safe += `${esc(rest.slice(last, m.index))}<mark>${esc(m[1])}</mark>`;
     last = m.index + m[0].length;
   }
   safe += esc(rest.slice(last));

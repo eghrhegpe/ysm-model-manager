@@ -43,14 +43,14 @@ export function buildModelName(
   opts: BuildModelNameOptions = {},
 ): string {
   const parts: string[] = [];
-  if (f.author) parts.push("[" + f.author + "]");
-  if (f.work) parts.push("【" + f.work + "】");
+  if (f.author) parts.push(`[${f.author}]`);
+  if (f.work) parts.push(`【${f.work}】`);
   else if (opts.fillDefaults) parts.push("【未知】");
   if (f.chara) parts.push(f.chara);
   else if (opts.fillDefaults) parts.push("?");
-  if (f.variant) parts.push("-" + f.variant);
-  if (f.date) parts.push(" (" + f.date + ")");
-  return parts.join("") + "." + ext + (opts.keepBan ? ".disabled" : "");
+  if (f.variant) parts.push(`-${f.variant}`);
+  if (f.date) parts.push(` (${f.date})`);
+  return `${parts.join("")}.${ext}${opts.keepBan ? ".disabled" : ""}`;
 }
 
 /**
@@ -72,8 +72,8 @@ const ILLEGAL_CHARS = /[<>:"\\|?*/\u0000-\u001f]/;
 export function validateRenameFields(f: RenameFields, ext: string): string | null {
   if (!f.author || !f.chara) return "⚠️ 作者、角色名不能为空";
   const allFields = [f.author, f.work, f.chara, f.variant, f.date].filter(Boolean);
-  if (allFields.some((x) => ILLEGAL_CHARS.test(x))) return "⚠️ " + t("dialog.fileNameIllegal");
+  if (allFields.some((x) => ILLEGAL_CHARS.test(x))) return `⚠️ ${t("dialog.fileNameIllegal")}`;
   const newName = buildRenameName(f, ext);
-  if (newName.length > 255) return "⚠️ " + t("dialog.fileNameTooLong");
+  if (newName.length > 255) return `⚠️ ${t("dialog.fileNameTooLong")}`;
   return null;
 }

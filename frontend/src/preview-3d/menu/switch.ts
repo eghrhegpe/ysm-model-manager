@@ -82,7 +82,7 @@ export function switchTabHighlightBg(active: boolean): string {
 
 /** 类型 tab 类 token：激活叠加 .sw-tab-active（高亮规则见 ensureSwitchStyles 注入样式表） */
 function switchTabClass(active: boolean): string {
-  return "sw-tab" + (active ? " sw-tab-active" : "");
+  return `sw-tab${active ? " sw-tab-active" : ""}`;
 }
 
 /** [子函数 1/6] 解析默认高亮 tab：手动记忆 → 当前模型类型 → 首项；兜底 ""（siblings） */
@@ -180,7 +180,7 @@ function renderSwitchCandidateRow(
   const curType = ctx.getCurrentRtype?.() ?? "";
   const sameType = switchSameTypeOf(viaType, activeTab, candType, curType);
   const row = document.createElement("div");
-  row.className = "ysm-preview-menu-row sw-row" + (isCur ? " sw-row-cur" : "");
+  row.className = `ysm-preview-menu-row sw-row${isCur ? " sw-row-cur" : ""}`;
   row.dataset.testid = "preview-switch-item";
   const ic = document.createElement("span");
   ic.textContent = isCur ? "✓" : "📦";

@@ -36,7 +36,7 @@ let _busy = false;
 
 const toastError = (error: unknown): void => {
   bus.emit("toast:show", {
-    msg: "❌ " + friendlyError(error),
+    msg: `❌ ${friendlyError(error)}`,
     duration: TOAST_MS.verbose,
     type: "error",
   });
@@ -107,12 +107,12 @@ function showLauncherInstancePicker(
     items: instances.map((it) => ({
       label: `${it.launcher} · ${it.name}`,
       meta: it.gameVersion,
-      sub: t("launcher.picker.game") + ": " + it.gameDir,
+      sub: `${t("launcher.picker.game")}: ${it.gameDir}`,
       hint:
         t("launcher.picker.ysm") +
         ": " +
         it.customDir +
-        (it.exists ? "" : " · " + t("launcher.picker.pending")),
+        (it.exists ? "" : ` · ${t("launcher.picker.pending")}`),
       hintColor: it.exists ? "var(--status-success,#a6e3a1)" : "",
     })),
     footerHTML: `<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11px"><input data-launcher-default name="useAsYsmRoot" type="checkbox" checked> ${esc(t("launcher.picker.useAsYsmRoot"))}</label>`,
@@ -120,7 +120,7 @@ function showLauncherInstancePicker(
     if (!res) return null;
     const inst = instances[res.index];
     if (!inst) return null;
-    return { instance: inst, useAsYsmRoot: res.footerChecked["useAsYsmRoot"] === true };
+    return { instance: inst, useAsYsmRoot: res.footerChecked.useAsYsmRoot === true };
   });
 }
 

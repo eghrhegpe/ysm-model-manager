@@ -26,7 +26,7 @@ export function fileRowCommon(
   const ban = e.banned ? " ban" : "";
   const typeIcon =
     e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const pad = indent != null ? ` style="padding-left:${indent}px"` : "";
   return { p, fp, checked, ban, typeIcon, pad };
 }
 
@@ -62,6 +62,6 @@ export function folderRowCommon(
     ckCls = " on";
   }
   const dispName = renderDisplayName(k);
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const pad = indent != null ? ` style="padding-left:${indent}px"` : "";
   return { fi, nc, lk, ar, ac, ckCls, dispName, pad };
 }

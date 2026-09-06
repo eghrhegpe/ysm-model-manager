@@ -16,7 +16,7 @@ const MODEL_SCALE = 1 / 16;
 
 /** 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 */
 export function compKey(mi: number, id: string) {
-  return mi + ":" + id;
+  return `${mi}:${id}`;
 }
 
 /** 材质上所有可能持有贴图的属性 key（对应 THREE.Material 纹理字段 + ShaderMaterial uniforms）

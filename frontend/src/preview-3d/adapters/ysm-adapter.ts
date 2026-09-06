@@ -210,7 +210,7 @@ interface MdYsMenuDebug {
 async function mdYsLoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
   const model = await sc.opts.loader(sc.path);
   sc.tLoadEnd = performance.now();
-  if (!model) throw new Error("模型数据加载失败: " + sc.path);
+  if (!model) throw new Error(`模型数据加载失败: ${sc.path}`);
 
   const texIdx = sc.opts.texIdx ?? 0;
   sc.tPreloadStart = performance.now();

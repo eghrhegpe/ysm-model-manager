@@ -72,7 +72,7 @@ function anBindDualSelects(shadowRoot: ShadowRoot): void {
   if (groupSel && subtypeSel) {
     const groups = Object.entries(GROUP_META)
       .sort((a, b) => a[1].order - b[1].order)
-      .map(([gid, meta]) => ({ gid, label: meta.icon + " " + meta.name }));
+      .map(([gid, meta]) => ({ gid, label: `${meta.icon} ${meta.name}` }));
     groupSel.innerHTML = groups
       .map((g) => `<option value="${esc(g.gid)}">${esc(g.label)}</option>`)
       .join("");
@@ -212,14 +212,14 @@ class AppNav extends WebComponentBase {
   /** logo 初始文案：当前资源类型短标签 + 「管理器」后缀（如「YSM 管理器」「MMD 管理器」） */
   private _logoText(): string {
     const rtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
-    return shortLabelOf(rtype) + " " + t("app.managerSuffix");
+    return `${shortLabelOf(rtype)} ${t("app.managerSuffix")}`;
   }
 
   /** logo 文案随资源类型动态化：rtype → 「xxx 管理器」（仅类型短标签，如 YSM/MMD/VRC） */
   private _updateLogoText(rtype: string): void {
     const el = this.shadowRoot?.querySelector(".logo-text");
     if (!el) return;
-    el.textContent = shortLabelOf(rtype) + " " + t("app.managerSuffix");
+    el.textContent = `${shortLabelOf(rtype)} ${t("app.managerSuffix")}`;
   }
 
   render(): void {
@@ -294,7 +294,7 @@ class AppNav extends WebComponentBase {
           if (!this.isConnected) return;
           // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
           const el = this.shadowRoot!.getElementById("nav-version");
-          if (el) el.textContent = (v || "dev") + " \u2022 " + t("nav.preview");
+          if (el) el.textContent = `${v || "dev"} \u2022 ${t("nav.preview")}`;
         }),
       )
       .catch(() => {

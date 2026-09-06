@@ -4,7 +4,7 @@
 // 本插件在 build 阶段比对 key 集合，不一致即构建失败并提示重生成。
 // vite.config.js（桌面）与 vite.web.config.ts（web）共用，避免双维护。
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
 
 const LOCALE_CHECK = fileURLToPath(new URL("../scripts/generate-locale-json.ts", import.meta.url));
 

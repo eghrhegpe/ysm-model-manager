@@ -78,7 +78,7 @@ export function classifyWasmError(err: unknown): {
 export function wipeDir(FS: FSLike, dir: string): void {
   try {
     for (const e of FS.readdir(dir).filter((n) => n !== "." && n !== "..")) {
-      const f = dir + "/" + e;
+      const f = `${dir}/${e}`;
       if (FS.isDir(FS.stat(f).mode)) {
         wipeDir(FS, f);
         FS.rmdir(f);
@@ -94,7 +94,7 @@ export function wipeDir(FS: FSLike, dir: string): void {
 export function ensureDir(FS: FSLike, dir: string): void {
   let cur = "";
   for (const p of dir.split("/").filter(Boolean)) {
-    cur += "/" + p;
+    cur += `/${p}`;
     try {
       FS.mkdir(cur);
     } catch (_) {
@@ -107,8 +107,8 @@ export function collectOutputFiles(FS: FSLike, root: string): YsmDecodedFile[] {
   const r: YsmDecodedFile[] = [];
   (function w(d: string, rel: string): void {
     for (const e of FS.readdir(d).filter((n) => n !== "." && n !== "..")) {
-      const f = d + "/" + e;
-      const rp = rel ? rel + "/" + e : e;
+      const f = `${d}/${e}`;
+      const rp = rel ? `${rel}/${e}` : e;
       if (FS.isDir(FS.stat(f).mode)) w(f, rp);
       else r.push({ path: rp, data: FS.readFile(f) });
     }
@@ -132,7 +132,7 @@ export function writeHeapBytes(
   const src = data instanceof Uint8Array ? data : new Uint8Array(data);
   const len = src.length;
   const ptr = malloc(len);
-  if (!ptr) throw new Error("malloc 失败 (" + len + " bytes)");
+  if (!ptr) throw new Error(`malloc 失败 (${len} bytes)`);
   getHeap().set(src, ptr);
   return ptr;
 }

@@ -370,7 +370,7 @@ function resolveTypeByPath(path: string): string | null {
     if (!t.extensions?.includes(ext)) continue;
     const instDirNorm = t.instanceDir.toLowerCase();
     for (const anc of ancestors) {
-      if (anc === instDirNorm || anc.endsWith("/" + instDirNorm)) {
+      if (anc === instDirNorm || anc.endsWith(`/${instDirNorm}`)) {
         return t.id;
       }
     }

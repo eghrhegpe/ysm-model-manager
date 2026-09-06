@@ -216,7 +216,7 @@ function paletteToColors(paletteList: unknown[], fallback: string): string[] {
   for (let i = 0; i < paletteList.length; i++) {
     const elem = paletteList[i];
     if (isObj(elem)) {
-      const name = elem["Name"];
+      const name = elem.Name;
       out[i] = typeof name === "string" ? mapColor(name) : fallback;
     } else {
       out[i] = fallback;
@@ -273,25 +273,25 @@ function buildRegionInfo(region: Record<string, unknown>): {
   info: RegionInfo | null;
   err: string | null;
 } {
-  const paletteList = asArray(region["BlockStatePalette"]);
+  const paletteList = asArray(region.BlockStatePalette);
   if (!paletteList || paletteList.length <= 1) return { info: null, err: null };
 
   const palette = paletteToColors(paletteList, "#000000");
 
   const sizeCompound = getCompound(region, "Size");
   if (!sizeCompound) return { info: null, err: "region 缺少 Size compound" };
-  let sx = asNumber(sizeCompound["x"]) ?? 0;
-  let sy = asNumber(sizeCompound["y"]) ?? 0;
-  let sz = asNumber(sizeCompound["z"]) ?? 0;
+  let sx = asNumber(sizeCompound.x) ?? 0;
+  let sy = asNumber(sizeCompound.y) ?? 0;
+  let sz = asNumber(sizeCompound.z) ?? 0;
 
   const posCompound = getCompound(region, "Position");
   let ox = 0;
   let oy = 0;
   let oz = 0;
   if (posCompound) {
-    ox = asNumber(posCompound["x"]) ?? 0;
-    oy = asNumber(posCompound["y"]) ?? 0;
-    oz = asNumber(posCompound["z"]) ?? 0;
+    ox = asNumber(posCompound.x) ?? 0;
+    oy = asNumber(posCompound.y) ?? 0;
+    oz = asNumber(posCompound.z) ?? 0;
   }
 
   // 负 size 标准化（对齐 voxel.go:216-227）
@@ -310,7 +310,7 @@ function buildRegionInfo(region: Record<string, unknown>): {
   // 零尺寸 = 合法空 region，静默跳过
   if (sx === 0 || sy === 0 || sz === 0) return { info: null, err: null };
 
-  const longs = asLongArray(region["BlockStates"]);
+  const longs = asLongArray(region.BlockStates);
   if (!longs || longs.length === 0) {
     return { info: null, err: `region 缺少 BlockStates（尺寸 ${sx}×${sy}×${sz} 非空）` };
   }
@@ -374,11 +374,11 @@ export function litematicVoxelView(
   if (metadata) {
     const es = getCompound(metadata, "EnclosingSize");
     if (es) {
-      const x = asNumber(es["x"]);
+      const x = asNumber(es.x);
       if (x !== undefined) encSize[0] = x;
-      const y = asNumber(es["y"]);
+      const y = asNumber(es.y);
       if (y !== undefined) encSize[1] = y;
-      const z = asNumber(es["z"]);
+      const z = asNumber(es.z);
       if (z !== undefined) encSize[2] = z;
     }
   }
@@ -448,12 +448,12 @@ export function litematicVoxelView(
 export function nbtVoxelView(root: Record<string, unknown>, maxBlocks: number): VoxelData | null {
   // 基岩版 1.21+ structure 新格式：根含 sub_levels 时走聚合分支
   // （对齐 nbt-parse.ts:325 的判定 + Go voxel.go buildBedrockVoxelData 口径）
-  const subLevels = asArray(root["sub_levels"]);
+  const subLevels = asArray(root.sub_levels);
   if (subLevels) return bedrockVoxelView(subLevels, maxBlocks);
 
-  const sizeList = asArray(root["size"]);
-  const blocksList = asArray(root["blocks"]);
-  const paletteList = asArray(root["palette"]);
+  const sizeList = asArray(root.size);
+  const blocksList = asArray(root.blocks);
+  const paletteList = asArray(root.palette);
   if (!sizeList || !blocksList || !paletteList) return null;
   if (sizeList.length !== 3) return null;
   const sx = toIntStrict(sizeList[0], "size[0]");
@@ -469,8 +469,8 @@ export function nbtVoxelView(root: Record<string, unknown>, maxBlocks: number): 
       const elem: unknown = blocksList[bi];
       bi++;
       if (!isObj(elem)) continue;
-      const posList = asArray(elem["pos"]);
-      const stateTag = elem["state"];
+      const posList = asArray(elem.pos);
+      const stateTag = elem.state;
       if (!posList || stateTag === undefined || posList.length !== 3) continue;
       // 对齐 voxel.go:346-354：state 须为整型且落在 palette 内、颜色非空（air → 跳过）
       if (typeof stateTag !== "number" || !Number.isInteger(stateTag)) continue;
@@ -531,14 +531,14 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
   for (const sl of subLevels) {
     if (!isObj(sl)) continue;
     const lb = getCompound(sl, "local_bounds");
-    const blocks = asArray(sl["blocks"]);
+    const blocks = asArray(sl.blocks);
     if (!lb || !blocks) continue;
-    const minX = asNumber(lb["min_x"]) ?? 0;
-    const minY = asNumber(lb["min_y"]) ?? 0;
-    const minZ = asNumber(lb["min_z"]) ?? 0;
-    const maxX = asNumber(lb["max_x"]) ?? 0;
-    const maxY = asNumber(lb["max_y"]) ?? 0;
-    const maxZ = asNumber(lb["max_z"]) ?? 0;
+    const minX = asNumber(lb.min_x) ?? 0;
+    const minY = asNumber(lb.min_y) ?? 0;
+    const minZ = asNumber(lb.min_z) ?? 0;
+    const maxX = asNumber(lb.max_x) ?? 0;
+    const maxY = asNumber(lb.max_y) ?? 0;
+    const maxZ = asNumber(lb.max_z) ?? 0;
     if (!hasBounds) {
       gMinX = minX;
       gMinY = minY;
@@ -556,7 +556,7 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
       if (maxZ > gMaxZ) gMaxZ = maxZ;
     }
     // block_palette：Name → mapColor（缺失 Name / 非 compound 元素兜底灰）
-    const paletteList = asArray(sl["block_palette"]) ?? [];
+    const paletteList = asArray(sl.block_palette) ?? [];
     const palette = paletteToColors(paletteList, "#7F7F7F");
     infos.push({ originX: minX, originY: minY, originZ: minZ, palette, blocks });
   }
@@ -577,15 +577,15 @@ function bedrockVoxelView(subLevels: unknown[], maxBlocks: number): VoxelData | 
         const elem: unknown = info.blocks[bi];
         bi++;
         if (!isObj(elem)) continue;
-        const pid = asNumber(elem["palette_id"]);
+        const pid = asNumber(elem.palette_id);
         // 空气判定按 palette 条目实际颜色（mapColor 对 air 系返回 ""），非 `pid == 0`
         if (pid === undefined || pid < 0 || pid >= info.palette.length || info.palette[pid] === "")
           continue;
         const lp = getCompound(elem, "local_pos");
         if (!lp) continue;
-        const lx = asNumber(lp["x"]);
-        const ly = asNumber(lp["y"]);
-        const lz = asNumber(lp["z"]);
+        const lx = asNumber(lp.x);
+        const ly = asNumber(lp.y);
+        const lz = asNumber(lp.z);
         if (lx === undefined || ly === undefined || lz === undefined) continue;
         // 全局坐标 = local_bounds.min + local_pos − 聚合 min（平移归零）；int16 守卫与 Java 分支一致
         const gx = info.originX + lx - gMinX;
@@ -625,9 +625,9 @@ export function schematicVoxelView(
   root: Record<string, unknown>,
   maxBlocks: number,
 ): VoxelData | null {
-  const width = asNumber(root["Width"]);
-  const height = asNumber(root["Height"]);
-  const length = asNumber(root["Length"]);
+  const width = asNumber(root.Width);
+  const height = asNumber(root.Height);
+  const length = asNumber(root.Length);
   if (width === undefined || height === undefined || length === undefined) return null;
   // 对齐 Go voxel.go:556-564：维度上限（int32 可达 2^31-1，乘积可溢出——Go 用 int64 钳制）
   // 网页版用 JavaScript Number（双精度浮点，安全整数 2^53-1），512M 远小于安全范围，
@@ -638,9 +638,9 @@ export function schematicVoxelView(
   const total = width * height * length;
   if (total > MAX_SCHEMATIC_BLOCKS) return null;
 
-  const blocksBA = asByteArray(root["Blocks"]);
-  const blockDataBA = asByteArray(root["BlockData"]);
-  const dataBA = asByteArray(root["Data"]);
+  const blocksBA = asByteArray(root.Blocks);
+  const blockDataBA = asByteArray(root.BlockData);
+  const dataBA = asByteArray(root.Data);
 
   const paletteCompound = getCompound(root, "Palette");
   let paletteMap: Record<number, string> | null = null;

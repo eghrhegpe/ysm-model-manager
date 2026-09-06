@@ -5,9 +5,9 @@
  * 目的：确保所有 Go 函数调用都通过 bindings/ 强类型接口，避免参数错位等编译期不报错的问题
  */
 
-import { readdirSync, readFileSync } from "fs";
-import { basename, dirname, extname, join } from "path";
-import { fileURLToPath } from "url";
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, extname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

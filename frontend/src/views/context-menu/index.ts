@@ -191,8 +191,8 @@ class ContextMenu extends WebComponentBase {
       let t = y;
       if (x + mw > iw) l = Math.max(0, iw - mw);
       if (y + mh > ih) t = Math.max(0, ih - mh);
-      this.style.left = l + "px";
-      this.style.top = t + "px";
+      this.style.left = `${l}px`;
+      this.style.top = `${t}px`;
       // 焦点移到首个菜单项，启用键盘导航
       const firstItem = menu.querySelector<HTMLElement>('[role="menuitem"]');
       firstItem?.focus();

@@ -11,7 +11,7 @@ const THEME_DARK = "cyber";
 // 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）
 const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
 // class 清理列表由 THEME_VALID 推导，新增主题无需再手抄第二份（原 applyTheme 手抄双份是漂移源）
-const THEME_CLASSES = THEME_VALID.filter((t) => t !== "system").map((t) => "theme-" + t);
+const THEME_CLASSES = THEME_VALID.filter((t) => t !== "system").map((t) => `theme-${t}`);
 
 /** 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） */
 export function normalizeTheme(mode: string): string {
@@ -25,7 +25,7 @@ export function applyTheme(mode: string): void {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.body.classList.add(prefersDark ? "theme-cyber" : "theme-warm");
   } else {
-    document.body.classList.add("theme-" + mode);
+    document.body.classList.add(`theme-${mode}`);
   }
 }
 

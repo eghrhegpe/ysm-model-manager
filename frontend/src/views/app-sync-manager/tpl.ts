@@ -165,7 +165,7 @@ export function containerHTML(): string {
  */
 export function statusTabHTML(id: string, label: string, count: number, active: boolean): string {
   const cls = active ? " active" : "";
-  const showCount = count > 0 ? " (" + count + ")" : "";
+  const showCount = count > 0 ? ` (${count})` : "";
   return (
     '<button class="sm-status-tab' +
     cls +

@@ -282,7 +282,7 @@ export function buildCubeMeshData(
     mdCmBuildFace(faceKeys[fi], pts, uvData, out);
   }
 
-  const meshID = boneID + "_" + cubeIdx;
+  const meshID = `${boneID}_${cubeIdx}`;
   const localPos: [number, number, number] = [
     bonePivot.x + cp[0],
     cp[1] - bonePivot.y,

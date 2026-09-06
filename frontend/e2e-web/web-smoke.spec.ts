@@ -112,9 +112,9 @@ test.describe("网页版主链路（ADR-049）", () => {
   test.beforeEach(async ({ page }) => {
     const errors: string[] = [];
     (page as Page & { __webSmokeErrors?: string[] }).__webSmokeErrors = errors;
-    page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
     page.on("console", (m) => {
-      if (m.type() === "error") errors.push("console.error: " + m.text());
+      if (m.type() === "error") errors.push(`console.error: ${m.text()}`);
     });
     // P1 修复（code review 复查）：/wails/runtime 请求监听必须在 goto 之前注册——
     // 若放测试体内，启动期请求（正是本用例要抓的回归）已先行触发，断言恒过（假绿）。

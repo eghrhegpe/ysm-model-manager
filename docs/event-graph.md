@@ -242,7 +242,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 159 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 275 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 197 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 201 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 243 |
@@ -285,15 +285,15 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 259 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 204 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 203 |
 
 ### `repo:search-creator`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 168 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 297 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 296 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -310,7 +310,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 227 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 226 |
 
 ### `stats:refresh`
 
@@ -322,21 +322,21 @@
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 173 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 38 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 197 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 194 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 109 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 175 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync.ts` | 79 |
 | runSyncToggleStatus | `frontend/src/features/sync.ts` | 186 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 158 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 154 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 83 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 118 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 185 |
@@ -347,7 +347,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 483 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 184 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 183 |
 
 ### `sync:download:done`
 
@@ -416,8 +416,8 @@
 | bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 213 |
 | (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 42 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 33 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 188 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 201 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 185 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 198 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 266 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
@@ -435,7 +435,7 @@
 | toast | `frontend/src/utils/dom/toast.ts` | 21 |
 | (顶层) | `frontend/src/utils/module-loader.ts` | 19 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
-| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 190 |
+| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |
@@ -482,8 +482,8 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 225 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 232 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 248 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 264 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 263 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 116 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 126 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 132 |
@@ -516,7 +516,7 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 159 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 143 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 177 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 176 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 34 |
@@ -590,13 +590,13 @@
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 174 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 39 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 196 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 193 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
 | handleSyncToggleStatus | `frontend/src/features/sync.ts` | 211 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 368 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |
 
 **订阅方（on）：**

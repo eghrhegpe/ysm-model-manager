@@ -349,9 +349,9 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   test.beforeEach(async ({ page }) => {
     const errors: string[] = [];
     (page as Page & { __webPreviewErrors?: string[] }).__webPreviewErrors = errors;
-    page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
     page.on("console", (m) => {
-      if (m.type() === "error") errors.push("console.error: " + m.text());
+      if (m.type() === "error") errors.push(`console.error: ${m.text()}`);
     });
     // /wails/runtime 请求监听必须在 goto 之前注册——启动期请求正是要抓的回归。
     const wailsReqs: string[] = [];
@@ -573,7 +573,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     //    故接受两种合法状态：① 解析占位（Parsing）② 错误占位（Load failed 等）。
     //    真正的回归信号是「白屏」（previewText 为 null/空）——上方第 3 步已硬断言非空。
     const previewHTML = await previewContentHTML(page);
-    const fullText = (previewText || "") + " " + (previewHTML || "");
+    const fullText = `${previewText || ""} ${previewHTML || ""}`;
     expect(fullText, "损坏模型预览应渲染解析占位或错误占位（不白屏）").toMatch(
       /⚠️|Load failed|Parse failed|Unknown error|Cannot parse|No geometry|err|Parsing|⏳|Model Info|Details/i,
     );

@@ -131,7 +131,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
 
   // 标题行：优先用文件名解析的标签，其次 header.name
   const titleHtml = p
-    ? `<h3>${authorHtml ? authorHtml + " " : ""}<span style="color:var(--txt)">${esc(p.chara || p.raw.replace(/\.[^.]*$/, ""))}</span>${freeBadge}</h3>`
+    ? `<h3>${authorHtml ? `${authorHtml} ` : ""}<span style="color:var(--txt)">${esc(p.chara || p.raw.replace(/\.[^.]*$/, ""))}</span>${freeBadge}</h3>`
     : `<h3>${esc(name)}${freeBadge}</h3>`;
 
   return `<div class="content" id="preview-content">

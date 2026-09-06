@@ -86,12 +86,12 @@ export class WaterCapability implements SceneCapability {
 
     mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
       mat.userData.shader = shader;
-      shader.uniforms["uTime"] = this.waterTime;
+      shader.uniforms.uTime = this.waterTime;
       // 边缘羽化（pool 专用）：距离边 d < roundness*size/2 时 opacity 平滑衰减
       const round = Math.max(0, Math.min(0.5, w.poolRoundness));
-      shader.uniforms["uRoundness"] = { value: opts.forPool ? round : 0 };
-      shader.uniforms["uHalfSize"] = { value: this.params.size / 2 };
-      shader.uniforms["uBaseOpacity"] = { value: mat.opacity };
+      shader.uniforms.uRoundness = { value: opts.forPool ? round : 0 };
+      shader.uniforms.uHalfSize = { value: this.params.size / 2 };
+      shader.uniforms.uBaseOpacity = { value: mat.opacity };
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
         `#include <common>
@@ -282,11 +282,11 @@ export class WaterCapability implements SceneCapability {
         4,
       ); // 外壁略高，覆盖顶底接缝
       const inner = new THREE.Mesh(innerGeo, innerMat);
-      inner.name = pair.name + "-inner";
+      inner.name = `${pair.name}-inner`;
       inner.position.copy(pair.pos);
       if (pair.rotY) inner.rotation.y = pair.rotY;
       const outer = new THREE.Mesh(outerGeo, outerMat);
-      outer.name = pair.name + "-outer";
+      outer.name = `${pair.name}-outer`;
       outer.position.copy(pair.outerPos);
       if (pair.rotY) outer.rotation.y = pair.rotY;
       group.add(inner, outer);

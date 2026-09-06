@@ -103,7 +103,7 @@ function ensureSfpStyles(): void {
 // ===== 内部辅助（从 skeleton-render.ts 复用）=====
 function sec(label: string, border = true): HTMLDivElement {
   const d = document.createElement("div");
-  d.className = "stat-section sfp-sec" + (border ? " sfp-sec-bordered" : "");
+  d.className = `stat-section sfp-sec${border ? " sfp-sec-bordered" : ""}`;
   d.dataset.testid = "stat-section";
   d.textContent = label;
   return d;
@@ -111,7 +111,7 @@ function sec(label: string, border = true): HTMLDivElement {
 function iRow(k: string, v: string): HTMLDivElement {
   const d = document.createElement("div");
   d.className = "stat-row";
-  d.dataset.testid = "stat-" + k.toLowerCase();
+  d.dataset.testid = `stat-${k.toLowerCase()}`;
   // k/v 经 textContent 注入（innerHTML 拼接会把骨骼名/统计值中的
   // <>& 当 HTML 解析——注入/破版风险），span 样式保留（对齐 vrm-bone-ui field()）
   const kSpan = document.createElement("span");
@@ -150,8 +150,8 @@ function texRow(
       ?.userData;
     const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
     const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
-    const size = w !== null && h !== null ? w + "×" + h : "?";
-    const catPart = opt.cat ? opt.cat + " · " : "";
+    const size = w !== null && h !== null ? `${w}×${h}` : "?";
+    const catPart = opt.cat ? `${opt.cat} · ` : "";
     right.textContent = t("skeleton.declAndLoad", { cat: catPart, decl: declT, size });
   }
   d.appendChild(right);
@@ -198,8 +198,8 @@ function fillPanelComponent(
     bones = mm?.bones?.length || 0;
     for (const b of mm?.bones || []) cubes += b._cubeCount || 0;
   }
-  statsBox.appendChild(iRow("骨骼", bones + " 根"));
-  statsBox.appendChild(iRow("立方体", cubes + " 个"));
+  statsBox.appendChild(iRow("骨骼", `${bones} 根`));
+  statsBox.appendChild(iRow("立方体", `${cubes} 个`));
 
   // ── 纹理（只显示当前组件的绑定） ──
   const eff = rawIdx < 0 ? 0 : rawIdx;
@@ -216,7 +216,7 @@ function fillPanelComponent(
   // 当前组件声明尺寸（组件专属/全局共享都可引用；专属组件是独立 model，此字段即其声明）
   const decl =
     typeof mg?.textureWidth === "number" && typeof mg?.textureHeight === "number"
-      ? mg.textureWidth + "×" + mg.textureHeight
+      ? `${mg.textureWidth}×${mg.textureHeight}`
       : "?";
   texBox.innerHTML = "";
 
@@ -235,7 +235,7 @@ function fillPanelComponent(
     texBox.appendChild(secEl);
     ex.forEach((_uri, k) => {
       texBox.appendChild(
-        texRow(compName + (ex.length > 1 ? " #" + (k + 1) : ""), k, null, { ex: true, decl }),
+        texRow(compName + (ex.length > 1 ? ` #${k + 1}` : ""), k, null, { ex: true, decl }),
       );
     });
     return;
@@ -251,7 +251,7 @@ function fillPanelComponent(
   if (mg && slots.length === 0 && texArr.length > 0) {
     for (let i = 0; i < texArr.length; i++) slots.push(i);
   }
-  cap.innerHTML = `<span>${t("skeleton.currentBinding", { name: esc(compName) })}</span><span style="color:rgba(255,255,255,0.9)">${t("skeleton.slots", { slots: slots.map((s) => "[" + s + "]").join(" ") || "—" })}</span>`;
+  cap.innerHTML = `<span>${t("skeleton.currentBinding", { name: esc(compName) })}</span><span style="color:rgba(255,255,255,0.9)">${t("skeleton.slots", { slots: slots.map((s) => `[${s}]`).join(" ") || "—" })}</span>`;
   const secEl = sec(`🎨 纹理 (${slots.length})`);
   secEl.dataset.testid = "tex-section";
   texBox.appendChild(secEl);
@@ -263,7 +263,7 @@ function fillPanelComponent(
         ?.split(/[/\\]/)
         .pop()
         ?.replace(/\.[^.]+$/, "") ||
-      "纹理 " + (s + 1);
+      `纹理 ${s + 1}`;
     const cat = model.textureCategories?.[s] || "";
     texBox.appendChild(texRow(name, s, tex ?? null, { cat, decl }));
   }
@@ -289,8 +289,7 @@ function buildModelSelector(
     const mgItem = (spec.models?.[i] ?? {}) as { name?: string; id?: string; bones?: unknown[] };
     const opt = document.createElement("option");
     opt.value = String(i);
-    opt.textContent =
-      (mgItem.name || mgItem.id || "model") + " (" + (mgItem.bones?.length || 0) + ")";
+    opt.textContent = `${mgItem.name || mgItem.id || "model"} (${mgItem.bones?.length || 0})`;
     modelSel.appendChild(opt);
   }
 }
@@ -476,7 +475,7 @@ export function buildYsmModelSchema(
         kind: "row",
         labelKey: name,
         fallback: name,
-        value: `${cat ? cat + " · " : ""}声明 ${decl} · 加载 ${size}`,
+        value: `${cat ? `${cat} · ` : ""}声明 ${decl} · 加载 ${size}`,
       });
     }
   }

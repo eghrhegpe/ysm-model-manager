@@ -154,8 +154,8 @@ function renderGroupFilesHtml(
 <span class="diag-dedup-file-dir">📁 ${esc(dir)}</span>
 </span>
 <span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>
-${dateStr ? '<span class="diag-dedup-file-date">' + dateStr + "</span>" : ""}
-${isDefault ? '<span class="diag-dedup-recommend">' + t("diagnostics.recommended") + "</span>" : ""}
+${dateStr ? `<span class="diag-dedup-file-date">${dateStr}</span>` : ""}
+${isDefault ? `<span class="diag-dedup-recommend">${t("diagnostics.recommended")}</span>` : ""}
 </label>`;
   });
   return html;
@@ -228,8 +228,7 @@ function bindPreviewClicks(list: HTMLElement): void {
 // ④ cancel 按钮绑定
 function bindCancelButton(list: HTMLElement): void {
   list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-muted">' + t("diagnostics.dedupCancelled") + "</div>";
+    list.innerHTML = `<div class="stat-row diag-msg diag-msg-muted">${t("diagnostics.dedupCancelled")}</div>`;
   });
 }
 

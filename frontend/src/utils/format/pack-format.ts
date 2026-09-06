@@ -37,9 +37,9 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
     const minVer = fmtVer(min);
     const maxVer = fmtVer(max);
     if (max >= 9999) {
-      return { format: "≥ " + min, version: "≥ " + minVer };
+      return { format: `≥ ${min}`, version: `≥ ${minVer}` };
     }
-    return { format: min + " ~ " + max, version: minVer + " / " + maxVer };
+    return { format: `${min} ~ ${max}`, version: `${minVer} / ${maxVer}` };
   }
   // 2. min_format / max_format（可能是 int 或 [min,max] 数组）
   // binding 层（internal/app/resource_bindings.go）恒输出 []int{Min, Max}：
@@ -52,12 +52,12 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
     const minVer = fmtVer(minRaw);
     const maxVer = fmtVer(maxRaw);
     if (maxRaw >= 9999) {
-      return { format: "≥ " + minRaw, version: "≥ " + minVer };
+      return { format: `≥ ${minRaw}`, version: `≥ ${minVer}` };
     }
     if (minRaw !== maxRaw) {
       return {
-        format: minRaw + " ~ " + maxRaw,
-        version: minVer + " / " + maxVer,
+        format: `${minRaw} ~ ${maxRaw}`,
+        version: `${minVer} / ${maxVer}`,
       };
     }
   }

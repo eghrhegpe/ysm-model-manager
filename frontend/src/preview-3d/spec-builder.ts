@@ -148,7 +148,7 @@ export function buildSpecFromGeometryJSON(geometryJSON: string): string {
  */
 function parseBedrockGeometry(data: string): BedrockModel | null {
   if (data.length > MAX_PARSE_SIZE) {
-    console.warn("[spec-builder] ParseBedrockGeometry 输入过大: " + data.length + " bytes");
+    console.warn(`[spec-builder] ParseBedrockGeometry 输入过大: ${data.length} bytes`);
     return null;
   }
   let raw: RawGeometryJSON;
@@ -282,7 +282,7 @@ function buildMulti(models: BedrockModel[], texIdxBase: number[] | null): string
     if (texIdxBase && i < texIdxBase.length) {
       base = texIdxBase[i];
     }
-    const mg = buildModelGroup(m, "comp_" + i, base);
+    const mg = buildModelGroup(m, `comp_${i}`, base);
     groups.push(mg);
   }
   if (groups.length === 0) {

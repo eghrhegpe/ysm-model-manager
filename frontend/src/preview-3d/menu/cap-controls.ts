@@ -126,7 +126,7 @@ function ensureCapSection(
 /** divider：无 group 挂顶层作组间视觉分隔；有 group 挂 body 内作组内分隔 */
 function renderCapDivider(parent: HTMLElement, c: MenuControlDef): void {
   const hr = document.createElement("div");
-  hr.dataset.testid = "cap-" + c.id;
+  hr.dataset.testid = `cap-${c.id}`;
   hr.className = "cc-divider";
   parent.appendChild(hr);
 }
@@ -135,7 +135,7 @@ function renderCapDivider(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const labelBox = document.createElement("div");
   labelBox.className = "cc-labelbox";
   const label = document.createElement("span");
@@ -176,7 +176,7 @@ export function formatCapSliderValue(c: MenuControlDef, v: number): string {
 function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const head = document.createElement("div");
   head.className = "cc-head";
   const name = document.createElement("span");
@@ -240,7 +240,7 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
@@ -267,7 +267,7 @@ function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapButton(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
@@ -309,7 +309,7 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
   if (!url) return; // 无内容时跳过（不占位）
   const row = document.createElement("div");
   row.className = "slide-item cc-row-plain";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const img = document.createElement("img");
   img.src = url;
   img.alt = tr(c.labelKey, c.fallback);
@@ -322,7 +322,7 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
   label.textContent = tr(c.labelKey, c.fallback);
@@ -347,7 +347,7 @@ function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
 function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
 
   // 顶部：当前时间数字 + 标签
   const head = document.createElement("div");
@@ -366,7 +366,7 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
   const bandH = 28;
   const band = document.createElement("div");
   band.className = "cc-band";
-  band.style.height = bandH + "px"; // 动态插值拆出(P1):静态走 cc-band 类,height 运行时赋值
+  band.style.height = `${bandH}px`; // 动态插值拆出(P1):静态走 cc-band 类,height 运行时赋值
   const canvas = document.createElement("canvas");
   canvas.width = 240;
   canvas.height = bandH;
@@ -445,7 +445,7 @@ function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
   const data = Array.isArray(raw) ? (raw as number[]) : [];
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
 
   const label = document.createElement("span");
   label.className = "slide-label cc-label-body";
@@ -490,7 +490,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
   if (!thumb) return;
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
-  row.dataset.testid = "cap-" + c.id;
+  row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-dim";
   label.textContent = tr(c.labelKey, c.fallback);
@@ -508,8 +508,8 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
     img.src = dataUrl ?? "";
     img.alt = opt.label;
     img.className = "cc-thumb-img"; // 尺寸动态(P1 豁免)拆内联:width/height 运行时赋值
-    img.style.width = thumb.size + "px";
-    img.style.height = Math.max(1, Math.floor(thumb.size / 2)) + "px";
+    img.style.width = `${thumb.size}px`;
+    img.style.height = `${Math.max(1, Math.floor(thumb.size / 2))}px`;
     if (!dataUrl) {
       // placeholder
       img.style.background = "rgba(255,255,255,0.08)";

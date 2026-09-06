@@ -57,7 +57,7 @@ export const directImport = async (file: File): Promise<void> => {
     return;
   }
   // 键含 size+lastModified，防同名不同源文件误判在途
-  const key = file.name + ":" + file.size + ":" + file.lastModified;
+  const key = `${file.name}:${file.size}:${file.lastModified}`;
   if (_inFlight.has(key)) {
     // P2 修复（子代理审计）：busy 命中静默 return 违反 ADR-044①「busy 命中必回
     // 反馈」——用户重复提交同一文件时零反馈（无 toast/无 skipped）；与 sync.ts
@@ -71,11 +71,11 @@ export const directImport = async (file: File): Promise<void> => {
     const { ImportModelFile } = await backendGetApp();
     await ImportModelFile(file.name, base64);
     refreshRepo();
-    toast(t("import.success") + ": " + file.name, "success", TOAST_MS.success);
+    toast(`${t("import.success")}: ${file.name}`, "success", TOAST_MS.success);
   } catch (e) {
     // 显式化：friendlyError 消费 AppError.Code → i18n 文案（FILE_EXISTS 等），
     // 未归类 Code 透传 Go Reason/Suggestion 并剥离内部路径（ADR-082 续）
-    toast("❌ " + t("import.failed") + ": " + friendlyError(e), "error", TOAST_MS.verbose);
+    toast(`❌ ${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
   } finally {
     _inFlight.delete(key);
   }
@@ -95,10 +95,7 @@ export const importFolder = async (
   // 第二个导入被 "busy" 拦截而实际并非同一文件夹。修复：key 追加首文件指纹
   // （name+size+lastModified），与 directImport 的 key 构造范式对齐，保证跨源唯一
   const firstFile = files.length > 0 ? files[0].file : null;
-  const dirKey =
-    dir +
-    ":" +
-    (firstFile ? firstFile.name + ":" + firstFile.size + ":" + firstFile.lastModified : "");
+  const dirKey = `${dir}:${firstFile ? `${firstFile.name}:${firstFile.size}:${firstFile.lastModified}` : ""}`;
   if (_inFlight.has(dirKey)) {
     // P2 修复（子代理审计）：同上——busy 命中静默 return 零反馈，改 toast
     toast(t("import.busyImporting"), "warn", TOAST_MS.success);
@@ -113,7 +110,7 @@ export const importFolder = async (
     // 读取失败计入 skipped 跳过整组不拖垮；空 base64 自动 continue
     const { items, skipped } = await buildFolderItems(dir, files);
     if (!items.length) {
-      toast("❌ " + t("import.emptyFolder"), "error", TOAST_MS.verbose);
+      toast(`❌ ${t("import.emptyFolder")}`, "error", TOAST_MS.verbose);
       return;
     }
     const App = await backendGetApp();
@@ -135,14 +132,14 @@ export const importFolder = async (
     refreshRepo();
     // 部分文件跳过时成功 toast 带计数，避免用户以为全部导入（ADR-082 续）
     const skipHint = skipped > 0 ? `（${skipped} 个文件读取失败已跳过）` : "";
-    toast(t("import.success") + ": " + folderName + skipHint, "success", TOAST_MS.info);
+    toast(`${t("import.success")}: ${folderName}${skipHint}`, "success", TOAST_MS.info);
   } catch (e) {
     // 统一文件已存在判定（索引 4.2）：结构化 Code 优先，字符串兜底覆盖漂移文案
     if (isFileExistsError(e)) {
       toast(`❌ ${folderName} ${t("import.alreadyExists")}`, "error", TOAST_MS.verbose);
     } else {
       // 显式化：friendlyError 展示 Go 结构化错误（Reason/Suggestion），剥内部路径
-      toast("❌ " + t("import.failed") + ": " + friendlyError(e), "error", TOAST_MS.verbose);
+      toast(`❌ ${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
     }
   } finally {
     _inFlight.delete(dirKey);
@@ -200,7 +197,7 @@ export const importWebFilesWithToast = async (
     console.error("[import-web] importWebFiles 失败:", e);
     bus.emit("toast:show", {
       // 显式化：friendlyError 消费 AppError 结构化错误（ADR-082 续）
-      msg: "❌ " + t("import.processError") + ": " + friendlyError(e),
+      msg: `❌ ${t("import.processError")}: ${friendlyError(e)}`,
       duration: TOAST_MS.verbose,
       type: "error",
     });

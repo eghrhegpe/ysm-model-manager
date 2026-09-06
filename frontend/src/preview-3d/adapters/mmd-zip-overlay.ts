@@ -119,7 +119,7 @@ export function makeZipOverlayPort(
   inner: MmdDataPort,
   config: MmdZipConfig,
 ): { port: MmdDataPort; rootPath: string } {
-  const ROOT = config.zipPath + "!/";
+  const ROOT = `${config.zipPath}!/`;
 
   const overlay: MmdDataPort = {
     // ---- readFileBytes：虚拟路径 → zip entry ----
@@ -153,7 +153,7 @@ export function makeZipOverlayPort(
 
     // ---- listAllFilePaths：虚拟目录 → 返回 zip 全部 entry 路径（带前缀）----
     listAllFilePaths: async (dir) => {
-      const d = dir.endsWith("/") ? dir : dir + "/";
+      const d = dir.endsWith("/") ? dir : `${dir}/`;
       if (d === ROOT || d.startsWith(ROOT)) {
         const relDir = d.slice(ROOT.length);
         const all = config.entryPaths.map((p) => ROOT + p);

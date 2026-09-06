@@ -58,7 +58,7 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
       const v = input.value.trim();
       if (!v) {
         if (refocus) input.focus();
-        if (errEl) errEl.textContent = "⚠️ " + t("dialog.fieldRequired");
+        if (errEl) errEl.textContent = `⚠️ ${t("dialog.fieldRequired")}`;
         return null;
       }
       return v;

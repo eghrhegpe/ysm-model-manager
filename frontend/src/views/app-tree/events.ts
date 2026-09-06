@@ -119,7 +119,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
 
 // ===== 事件段 3：行点击分派（目录展开/文件选中/悬停操作） =====
 function atTeOpenAuthor(author: string): void {
-  const url = "https://search.bilibili.com/all?keyword=" + encodeURIComponent(author);
+  const url = `https://search.bilibili.com/all?keyword=${encodeURIComponent(author)}`;
   if (isViewerMode()) {
     window.open(url, "_blank", "noopener");
     return;
@@ -129,7 +129,7 @@ function atTeOpenAuthor(author: string): void {
     .catch((err) => {
       console.warn("[tree] OpenInBrowser 失败:", err);
       bus.emit("toast:show", {
-        msg: "❌ " + t("tree.browserFailed"),
+        msg: `❌ ${t("tree.browserFailed")}`,
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -144,7 +144,7 @@ function atTeClickRowFolder(ctx: AtTeCtx, e: MouseEvent, fh: HTMLElement): boole
   const isOpen = vm._dirOpen[dir];
   vm._dirOpen[dir] = !isOpen;
   if (isOpen) {
-    const prefix = (dir + "/").replace(/\\/g, "/");
+    const prefix = `${dir}/`.replace(/\\/g, "/");
     for (const key of Object.keys(vm._dirOpen)) {
       const nk = key.replace(/\\/g, "/");
       if (nk !== dir && nk.startsWith(prefix)) delete vm._dirOpen[key];
@@ -179,7 +179,7 @@ function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElemen
     .catch((err) => {
       console.warn("[tree] 加载 display 模块失败:", err);
       bus.emit("toast:show", {
-        msg: "❌ " + t("tree.parserLoadFailed"),
+        msg: `❌ ${t("tree.parserLoadFailed")}`,
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -195,14 +195,14 @@ function atTeClickRowCopy(_ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): bo
     ?.writeText(name)
     .then(() => {
       bus.emit("toast:show", {
-        msg: "📋 " + t("tree.copied", { name }),
+        msg: `📋 ${t("tree.copied", { name })}`,
         duration: TOAST_MS.quick,
         type: "info",
       });
     })
     .catch(() => {
       bus.emit("toast:show", {
-        msg: "❌ " + t("tree.copyFailed"),
+        msg: `❌ ${t("tree.copyFailed")}`,
         duration: TOAST_MS.success,
         type: "error",
       });
@@ -399,7 +399,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
       })
       .catch((err) => {
         bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(err, t("ctx.renameFail")),
+          msg: `❌ ${friendlyError(err, t("ctx.renameFail"))}`,
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -428,7 +428,7 @@ function collectDirEntries(entries: TreeEntry[], prefix: string): TreeEntry[] {
   for (const e of entries) {
     if (!e.path) continue;
     const normalized = e.path.replace(/\\/g, "/");
-    if (normalized === prefix || normalized.startsWith(prefix + "/")) {
+    if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
       result.push(e);
     }
   }
@@ -464,7 +464,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     const targets = collectDirEntries(vm._entries, prefix);
     if (!targets.length) return;
     const allEnabled = targets.every((e) => !e.banned);
-    const enable = allEnabled ? false : true;
+    const enable = !allEnabled;
     let ok = 0,
       fail = 0;
     const flipped: TreeEntry[] = [];
@@ -500,7 +500,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     });
   } catch (err) {
     bus.emit("toast:show", {
-      msg: "❌ " + friendlyError(err, t("tree.batchToggleFail")),
+      msg: `❌ ${friendlyError(err, t("tree.batchToggleFail"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });

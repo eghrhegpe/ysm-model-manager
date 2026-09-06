@@ -143,14 +143,12 @@ function renderDailyPicksHtml(entries: ModelEntry[]): string {
         '<div class="meta"><span> ' +
         sizeStr +
         "</span>" +
-        (dateStr ? "<span> " + dateStr + "</span>" : "") +
+        (dateStr ? `<span> ${dateStr}</span>` : "") +
         "</div></div>",
     );
   }
   if (!picks.length)
-    return (
-      '<div style="color:var(--muted);font-size:var(--fs-base)">' + t("oldest.noPicks") + "</div>"
-    );
+    return `<div style="color:var(--muted);font-size:var(--fs-base)">${t("oldest.noPicks")}</div>`;
   return (
     '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
     picks.join("") +

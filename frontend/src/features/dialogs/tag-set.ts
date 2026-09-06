@@ -19,7 +19,7 @@ export const MAX_TAG_LENGTH = 20;
 export function addTagToSet(tags: string[], raw: string): TagSetResult {
   const tag = raw.trim();
   if (!tag) return { tags, error: null };
-  if (tags.includes(tag)) return { tags, error: "⚠️ " + t("dialog.tagExists") };
-  if (tag.length > MAX_TAG_LENGTH) return { tags, error: "⚠️ " + t("dialog.tagTooLong") };
+  if (tags.includes(tag)) return { tags, error: `⚠️ ${t("dialog.tagExists")}` };
+  if (tag.length > MAX_TAG_LENGTH) return { tags, error: `⚠️ ${t("dialog.tagTooLong")}` };
   return { tags: [...tags, tag].sort(), error: null };
 }

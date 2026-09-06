@@ -31,7 +31,7 @@ const tdKeyLabel = (code: string): string => {
   if (!code) return "—";
   if (code.startsWith("Key")) return code.slice(3);
   if (code.startsWith("Digit")) return code.slice(5);
-  if (code.startsWith("Numpad")) return "Num " + code.slice(6);
+  if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
   const map: Record<string, string> = {
     Space: t("settings.keymap.keySpace"),
     ShiftLeft: "Shift",

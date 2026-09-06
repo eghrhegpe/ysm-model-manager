@@ -58,7 +58,7 @@ async function atTlShowConfirm(
   if (gen !== vm._gen) return;
   vm._renderTree();
   bus.emit("toast:show", {
-    msg: "✅ " + successMsg,
+    msg: `✅ ${successMsg}`,
     duration: TOAST_MS.success,
     type: "success",
   });
@@ -160,7 +160,7 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm).catch((e) => {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, t("tree.advFilterFail")),
+        msg: `❌ ${friendlyError(e, t("tree.advFilterFail"))}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -220,12 +220,12 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
   }
   const { SelectImportFile, ImportByType } = await getApp();
   const exts = getExts(rtype);
-  const extFilter = exts.length ? exts.map((e) => "*" + e).join(";") : "*.*";
+  const extFilter = exts.length ? exts.map((e) => `*${e}`).join(";") : "*.*";
   await atTlShowConfirm(
     vm,
     () =>
       SelectImportFile(
-        t("tree.importFileFilter", { rtype }) + "|" + extFilter,
+        `${t("tree.importFileFilter", { rtype })}|${extFilter}`,
         t("tree.selectFileTitle", { rtype }),
       ),
     ImportByType,
@@ -324,7 +324,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError(e),
+            msg: `❌ ${friendlyError(e)}`,
             duration: TOAST_MS.verbose,
             type: "error",
           });
@@ -335,7 +335,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
       }
     })().catch((err) => {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(err),
+        msg: `❌ ${friendlyError(err)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

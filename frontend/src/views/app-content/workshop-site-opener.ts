@@ -130,7 +130,7 @@ export function bindSiteEvents(host: AppContentHost): void {
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, t("workshop.exportFailed")),
+        msg: `❌ ${friendlyError(e, t("workshop.exportFailed"))}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -157,7 +157,7 @@ export function bindSiteEvents(host: AppContentHost): void {
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, t("content.importFailed")),
+        msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

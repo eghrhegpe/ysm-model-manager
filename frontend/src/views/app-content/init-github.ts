@@ -209,7 +209,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   if (openBtn)
     openBtn.addEventListener("click", () => {
       swallowError(
-        getApp().then(({ OpenInBrowser }) => OpenInBrowser("https://github.com/" + repo)),
+        getApp().then(({ OpenInBrowser }) => OpenInBrowser(`https://github.com/${repo}`)),
       );
     });
 }
@@ -228,7 +228,7 @@ async function githubRenderModels(
   try {
     const resultsBody = ctx.resultsBody;
     // 同上：下载 URL 统一 raw，镜像优先级由 Go 端 mirror 配置统一重排
-    const dlPrefix = "https://raw.githubusercontent.com/" + repo + "/main/";
+    const dlPrefix = `https://raw.githubusercontent.com/${repo}/main/`;
     const sourceLabel =
       source === "raw"
         ? '<span class="link-badge link-badge-raw">raw</span>'

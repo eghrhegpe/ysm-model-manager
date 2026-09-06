@@ -29,13 +29,13 @@ export function getAndroidBridge(): WailsAndroidBridge | null {
 
 /** 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined */
 export function readDeclaredBackend(): "go" | "browser" | undefined {
-  const v = (globalThis as Record<string, unknown>)["__YSM_BACKEND__"];
+  const v = (globalThis as Record<string, unknown>).__YSM_BACKEND__;
   return v === "go" || v === "browser" ? v : undefined;
 }
 
 /** Tier 1：旧 web 短路标记 / vite MODE=web 构建 */
 export function isWebEntryMode(): boolean {
-  if ((globalThis as Record<string, unknown>)["__YSM_WEB__"] === true) return true;
+  if ((globalThis as Record<string, unknown>).__YSM_WEB__ === true) return true;
   // ⚠️ 必须直接写 `import.meta.env.MODE`（无中间变量/可选链）：vite 的 define 是
   // 文本替换，`meta.env?.MODE` 编译后变成 `(t=import.meta.env)==null?void 0:t.MODE`，
   // 匹配不到 `import.meta.env.MODE` 原文 → mode:"web" 构建不生效（实测 2026-08）

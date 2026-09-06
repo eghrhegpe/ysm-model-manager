@@ -227,7 +227,7 @@ export async function idbKeys(store: Store, prefix: string): Promise<string[]> {
     // 空 prefix（=全库）不走区间，避免空上下界退化；无 IDBKeyRange（node 测试）降级全量
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
-      ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
+      ? os.openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`, false, false))
       : os.openCursor();
     const keys: string[] = [];
     req.onsuccess = () => {
@@ -266,7 +266,7 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
     const os = tx.objectStore(store);
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
-      ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
+      ? os.openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`, false, false))
       : os.openCursor();
     const out: Array<[string, unknown]> = [];
     req.onsuccess = () => {
@@ -315,7 +315,7 @@ export async function idbGetAllMetadata(
     const os = tx.objectStore(store);
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
-      ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
+      ? os.openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`, false, false))
       : os.openCursor();
     const out: Array<[string, { size?: number; mime?: string }]> = [];
     req.onsuccess = () => {

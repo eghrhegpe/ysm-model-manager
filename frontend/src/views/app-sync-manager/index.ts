@@ -105,8 +105,7 @@ export class AppSyncManager extends WebComponentBase {
     this._defaultType = this.getAttribute("default-type") || RESOURCE_TYPES.YSM;
     this._selectedType = _lastSelectedType || this._defaultType;
     if (!this._instance) {
-      this.innerHTML =
-        '<div style="padding:12px;color:var(--err)">⚠️ ' + t("sync.noInstance") + "</div>";
+      this.innerHTML = `<div style="padding:12px;color:var(--err)">⚠️ ${t("sync.noInstance")}</div>`;
       return;
     }
     this._init();
@@ -175,7 +174,7 @@ export class AppSyncManager extends WebComponentBase {
         esc(safeErrorMessage(e)) +
         "</div>";
       bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, t("sync.renderFailed")),
+        msg: `❌ ${friendlyError(e, t("sync.renderFailed"))}`,
         duration: TOAST_MS.long,
         type: "error",
       });

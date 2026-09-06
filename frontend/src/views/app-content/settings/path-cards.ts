@@ -120,8 +120,8 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
   tip.style.overflowY = "auto";
   tip.style.pointerEvents = "none";
   tip.style.lineHeight = "1.6";
-  tip.style.left = Math.max(4, rect.left) + "px";
-  tip.style.top = rect.bottom + 4 + "px";
+  tip.style.left = `${Math.max(4, rect.left)}px`;
+  tip.style.top = `${rect.bottom + 4}px`;
 
   // 搜索范围
   let html =
@@ -200,7 +200,7 @@ export function initAdvancedGrid(
       const canOverride = !!at.cfgKey;
       const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
       const defaultPath = cfg.filesRoot
-        ? cfg.filesRoot + "/" + (groupStorageRootOf(at.rtype) || at.rtype || "")
+        ? `${cfg.filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
         : t("settings.path.notSetStorage");
       const currentPath = overridePath || defaultPath;
       const isOverridden = !!overridePath;
@@ -215,7 +215,7 @@ export function initAdvancedGrid(
         at.name +
         "</span>" +
         (isOverridden
-          ? '<span class="stg-custom-badge">' + t("settings.path.customized") + "</span>"
+          ? `<span class="stg-custom-badge">${t("settings.path.customized")}</span>`
           : "") +
         (isOverridden
           ? '<button class="btn-base sm stg-adv-reset" data-rtype="' +
@@ -257,7 +257,7 @@ export function initAdvancedGrid(
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError((e as Error)?.message || e, t("settings.saveFailed")),
+            msg: `❌ ${friendlyError((e as Error)?.message || e, t("settings.saveFailed"))}`,
             duration: TOAST_MS.verbose,
             type: "error",
           });
@@ -284,7 +284,7 @@ export function initAdvancedGrid(
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError((e as Error)?.message || e, t("settings.resetFailed")),
+            msg: `❌ ${friendlyError((e as Error)?.message || e, t("settings.resetFailed"))}`,
             duration: TOAST_MS.verbose,
             type: "error",
           });

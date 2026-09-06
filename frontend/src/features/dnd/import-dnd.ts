@@ -41,7 +41,7 @@ export async function handleTreeDrop(
 
   if (isBusy()) {
     bus.emit("toast:show", {
-      msg: "⏳ " + t("import.busyImporting"),
+      msg: `⏳ ${t("import.busyImporting")}`,
       duration: TOAST_MS.success,
       type: "info",
     });
@@ -78,7 +78,7 @@ export async function handleTreeDrop(
     if (collected0.length === 0) {
       logDrop("drop: 收集 0 文件（webkitGetAsEntry fallback 也空）");
       bus.emit("toast:show", {
-        msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
+        msg: `📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`,
         duration: TOAST_MS.normal,
         type: "info",
       });
@@ -106,7 +106,7 @@ export async function handleTreeDrop(
     if (r.folders === 0 && r.singles === 0 && total > 0) {
       logDrop("drop: execute 返回 0 成功但 total>0（全部被 filter 过滤）");
       bus.emit("toast:show", {
-        msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
+        msg: `📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`,
         duration: TOAST_MS.normal,
         type: "info",
       });
@@ -213,7 +213,7 @@ export function bindTreeDnD(
       bus.emit("toast:show", {
         // 显式化：friendlyError 展示 Go 结构化错误（ADR-082 续），
         // 未归类 Code 透传 Reason/Suggestion 并剥离内部路径
-        msg: `❌ ${t("import.processError")}: ` + friendlyError(err),
+        msg: `❌ ${t("import.processError")}: ${friendlyError(err)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

@@ -5,10 +5,12 @@ tier: leaf
 category: go
 source_files:
   - go/internal/testutil/testutil.go
+  - go/internal/testutil/testutil_windows.go
 auto_fields:
   symbols_with_lines:
     - CreateTestFile
     - InjectRootRegistry
+    - LockDirExclusive
     - MakeZipBytes
     - WriteTestFile
     - WriteTestFileBytes

@@ -121,7 +121,7 @@ perf:
   - concurrent
   - memory-heavy
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/mmd-adapter.ts|mmdMenuItems
+  - frontend/src/preview-3d/adapters/mmd-build-menu.ts|mmdMenuItems
   - frontend/src/utils/main-thread-watch.ts|startMainThreadWatch
 pitfalls:
   - "KTX2 编码前未检查缓存 hash → 重复 WASM 编码"

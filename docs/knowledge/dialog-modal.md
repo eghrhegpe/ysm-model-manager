@@ -72,12 +72,12 @@ pitfalls:
 status: active
 ---
 
-# 弹窗基座 modal（ADR-187 D2 拆分为 6 文件）
+# 弹窗基座 modal（6 文件家族）
 
 ## 概览
 
-`modal.ts`（659 行）已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`：
-**modal-core.ts**（公共脚手架：overlay 构建 / 活动弹窗单例槽位 `_slot` / 焦点陷阱 / 退场动画结算 / `createDialog` 工厂，`createDialog` 由私有转 core 导出供 builder 协作，非对外契约）+ 5 个 builder（**modal-prompt / modal-select / modal-confirm / modal-progress / modal-picker**，各含 Options 接口 + 私有 BoxBuilder + modalXxx 入口）。消费方按需精确导入对应文件（如 `modal-confirm.ts` 的 modalConfirm），不再有统一入口；`fmtMB` re-export 已移除，消费方直连 `utils/format/fmt-mb.ts`。原 659 行上帝文件消灭，「改一个 picker 读 659 行」成为历史。
+`modal.ts` 原上帝文件已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`：
+**modal-core.ts**（公共脚手架：overlay 构建 / 活动弹窗单例槽位 `_slot` / 焦点陷阱 / 退场动画结算 / `createDialog` 工厂，`createDialog` 由私有转 core 导出供 builder 协作，非对外契约）+ 5 个 builder（**modal-prompt / modal-select / modal-confirm / modal-progress / modal-picker**，各含 Options 接口 + 私有 BoxBuilder + modalXxx 入口）。消费方按需精确导入对应文件（如 `modal-confirm.ts` 的 modalConfirm），不再有统一入口；`fmtMB` re-export 已移除，消费方直连 `utils/format/fmt-mb.ts`。原上帝文件消灭，「改一个 picker 读数百行」成为历史。
 
 ## 核心职责
 

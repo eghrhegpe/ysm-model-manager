@@ -140,7 +140,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|createAll
   - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
-  - frontend/src/preview-3d/menu/env.ts|renderEnvLevel
+  - frontend/src/preview-3d/menu/env.ts|envCapFolder
 status: active
 ---
 

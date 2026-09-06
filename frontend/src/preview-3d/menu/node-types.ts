@@ -1,32 +1,33 @@
-// preview-menu-node-types.ts — [doc:adr-093-ysm] Preview 3D 菜单声明式节点类型（纯类型叶，零运行时依赖）。
+// preview-menu-node-types.ts — [doc:adr-093-ysm] Preview 3D 菜单声明式节点类型（menu 层出口）。
 //
-// 从 MikuMikuAR frontend/src/scene/shared/menu-node-types.ts 移植概念（ADR-093 生态）：
-//   - MenuNode / MenuKind / ControlSpec / StatePath —— 声明式菜单数据层的类型契约
-//   - 补充 ysm 特有字段：dockGroup（预览器 dock 分组）+ visibleWhen 谓词（self/shared 模式
-//     守卫、环境能力门禁——[doc:adr-126-p4-d] 双轨归一，sharedOnly/hideInSelfMode/
-//     requiresEnvironment 布尔已删，dock 与内容级同一求值器）
+// [ADR-195 刀2] 节点/控件纯类型已下沉 preview-3d/menu-node-types.ts（共享类型叶）——
+// caps/ 与 menu/ 双域引用同一契约，本文件 re-export 保 30+ 消费者 import 语句零改动。
 //
-// 方向：适配器定义「菜单即数据」→ 单一渲染器递归渲染（renderMenu）。
-// controls kind 是 cap 生态（MenuControlDef）进 node 树的原生通道——声明式节点
-// 可直接持有 MenuControlDef[]（或惰性函数），渲染委托 renderCapControls（唯一控件渲染器）。
+// 保留项（未下沉）：
+//   - PreviewMenuCtx：运行时根菜单上下文（依赖 SceneCapability / CameraControlBridge 真依赖，
+//     下沉会形成叶 → caps/scene-capability 的 type-only 环）
+//   - isPreviewFolderNode / collectPreviewLeafNodes / collectPreviewNodeIds：纯运行时值函数，
+//     下沉破坏「零依赖纯类型叶」声明，且仅 node-types.test.ts 引用
+//
+// 方向：适配器定义「菜单即数据」→ 单一渲染器递归渲染（renderMenu）。类型契约本体
+// 见 ../menu-node-types.ts（叶）。
 
+// [ADR-195 刀2] 自共享叶 re-export 类型（caps 与 menu 消费同一契约）
+export type {
+  PreviewActionMenuCtx,
+  PreviewControlSpec,
+  PreviewDockGroup,
+  PreviewMenuGroupId,
+  PreviewMenuNode,
+  PreviewMenuNodeKind,
+} from "../menu-node-types.ts";
+
+// 保留项依赖（PreviewMenuCtx 用）：SceneCapability（caps）+ CameraControlBridge（adapters）
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
-import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
-// [doc:adr-129-第一刀] PreviewStatePath / PreviewSnapshot 迁至 state/preview-state.ts（本位）；
-// 本文件前向 import state 的类型——方向正（菜单节点吃状态层快照），非反向依赖。
-// [ADR-169] PreviewMenuCtx 自 core.ts 下沉本文件（断 core ⇄ env/roles/switch/settings 纯 type 环——
-// 子模块原 type import core.ts 的 ctx，而 core 值 import 它们；ctx 归位类型叶后方向单一）。
-import type { PreviewSnapshot, PreviewStatePath } from "../state/preview-state.ts";
-
-/** 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） */
-export interface PreviewActionMenuCtx {
-  toast: (message: string) => void;
-  closeAllOverlays: () => void;
-  /** [ADR-193 第四刀] 视图导航原语（可选）：声明式 action 内下钻子视图
-   *  （如 roles 角色行 → modelDetailView 详情）。mount3D 注入 menu.navigate，
-   *  旧消费者（仅 toast/closeAllOverlays）零感知 */
-  navigate?: (view: { title: string; render: (list: HTMLElement) => void }) => void;
-}
+import type { SceneCapability } from "../caps/scene-capability.ts";
+// 值函数（isPreviewFolderNode 等）需本地绑定 PreviewMenuNode——re-export 不提供模块内
+// 可用名，故另 type-import（与 scene-capability.ts 工厂引用 MenuControlDef 同款）。
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 
 /** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */
 export interface PreviewMenuCtx {
@@ -62,161 +63,6 @@ export interface PreviewMenuCtx {
   /** 动作节点真 ctx：mount3D 注入真实现，适配器动作可 toast/closeAllOverlays */
   toast: (message: string) => void;
   closeAllOverlays: () => void;
-}
-
-/** 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） */
-export type PreviewMenuNodeKind =
-  | "folder"
-  | "panel" // ysm 特有：子面板（渲染进详情/面板视图）
-  | "action"
-  | "slider"
-  | "toggle"
-  | "select" // [doc:adr-126-p5-c] 下拉选择控件（bind 到 PreviewStatePath，走状态层读写）
-  | "button"
-  | "color" // [ADR-195] 颜色控件（cap color 原生化；值 0xRRGGBB ↔ #rrggbb，投影 renderCapColor）
-  | "field" // 键值对行（统计/信息展示）
-  | "row" // 列表行（纹理/材质/bone 等动态列表）
-  | "divider"
-  | "sectionTitle"
-  | "material-row" // [doc:adr-126-p5] 组合控件行（label + eye 显隐 + opacity 滑条）——审计 #3 material 声明式化
-  | "controls" // 声明式节点直持 MenuControlDef[]（cap 生态原生通道），渲染委托 renderCapControls
-  | "custom";
-
-/**
- * 底栏 dock 分组 id（单一事实源——2026-09 锐评收口：原 defs.ts 手写字面量与本文件
- * dockGroup 双源漂移，归位类型叶后 defs.ts 值文件反向引用，方向单一）。
- * 仅列 dock 按钮组（5 组）；dockGroup 的 "stats" 是统计附加行通道（非 dock 组），单列。
- */
-export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "settings";
-
-/** dockGroup 合法值：dock 组 ∪ 统计附加行通道（node-types 类型叶自足，消费方经此引用） */
-export type PreviewDockGroup = PreviewMenuGroupId | "stats";
-
-/** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效）。
- *  [ADR-195] 本接口与 MenuControlDef（caps/scene-capability）同构——cap 控件迁入节点
- *  体系后字段零信息损失，nodeControlToCapControl 反向纯搬运。终态 MenuControlDef
- *  类型名作废、字段整体并入本接口（见 ADR-195）。 */
-export interface PreviewControlSpec {
-  /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
-   *  用 get/set 直接读写，bind 可省略） */
-  bind?: PreviewStatePath;
-  min?: number;
-  max?: number;
-  step?: number;
-  icon?: string;
-  options?: Array<{ value: string; label: string }>;
-  /** 衍生控件：状态值 → 控件显示值 */
-  get?: (v: unknown) => unknown;
-  /** 衍生控件：控件值 → 状态值 */
-  set?: (v: unknown) => unknown;
-  /** 控件值变更后的副作用 */
-  onChange?: (v: unknown) => void;
-  /** slider 类型：旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）——
-   *  大数值层号精确输入场景（litematic 分层切片首用） */
-  numeric?: boolean;
-  /** slider 值单位（[ADR-195] 自 MenuControlDef.slider.unit 同构）：
-   *  "h"→HH:MM 时间、"%"→百分比、其它非空字符串后缀（°、m、x）、""=无后缀。
-   *  渲染端 formatCapSliderValue 消费。 */
-  unit?: string;
-  /** slider 提交回调（拖拽松手/change 离散触发；[ADR-195] 自 MenuControlDef.slider.onCommit
-   *  同构——如 pixel-ratio 拖动抑制重算、松手广播一次） */
-  onCommit?: (v: number) => void;
-  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
-   *  渲染在 label 右侧小字） */
-  hintKey?: string;
-  /** button 类型：按钮变种（[ADR-195] 自 MenuControlDef.button 同构；primary 强调 / ghost 次） */
-  variant?: "primary" | "ghost";
-  /** button 类型：按钮点击回调（无值语义控件；node.action 的控件态表达） */
-  action?: () => void | Promise<void>;
-  /** button 类型：是否禁用（异步加载中禁用） */
-  disabled?: () => boolean;
-  /** button 类型：动态右侧 hint 文案（覆盖 hintKey，如已加载 HDR 文件名） */
-  getHint?: () => string;
-  /** onchange 后重渲染当前面板（menu.refresh()）：面板内容随绑定状态变化的场景
-   *  （如组件 select 切档后 stats/纹理行按新快照重建，[doc:adr-126-p5] 订阅链闭合的渲染侧） */
-  refreshOnChange?: boolean;
-  /** field 类型：显示值（静态或衍生） */
-  value?: string | number | boolean;
-  /** button 类型：按钮文案（i18n key 或字面量） */
-  text?: string;
-}
-
-/** 声明式菜单节点：菜单即数据 */
-export interface PreviewMenuNode {
-  /** 稳定 id；渲染为 data-testid="preview-<id>" */
-  id: string;
-  kind: PreviewMenuNodeKind;
-  /** i18n 键（folder/divider 不需要） */
-  labelKey?: string;
-  /** i18n 缺失时的回退文案 */
-  fallback?: string;
-  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
-   *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
-  hintKey?: string;
-  icon?: string;
-  /** 仅 folder：默认展开 */
-  defaultOpen?: boolean;
-  /** 仅 folder：header 上的功能总开关（对齐 MikuMikuAR PopupRow.headerToggle——
-   *  「功能 = 本 folder」时开关放 header 一眼可见，免展开；createHeaderToggle 内置
-   *  stopPropagation，开关点击不触发折叠。folder body 内不得再重复同一开关。 */
-  headerToggle?: {
-    value: boolean;
-    onChange: (v: boolean) => void;
-    /** 自更新：菜单 refresh 重渲染时经 control-registry 同步 checked */
-    bind?: () => boolean;
-  };
-  /** folder：子节点（可折叠 section）；panel：面板内容声明式子节点（[doc:adr-126-p4-b-1] renderPreviewPanel children 分支递归 renderMenu） */
-  children?: PreviewMenuNode[];
-  /** slider/toggle 等控件绑定 */
-  control?: PreviewControlSpec;
-  /** 静态显示值（field 类型用，无需控制绑定） */
-  value?: string | number;
-  /** 逃生舱：无法数据化的内容直接渲染；closePopup 可选（兼容 MikuMikuAR 单参用法） */
-  // biome-ignore lint/suspicious/noConfusingVoidType: renderCustom 返回 void 表「cleanup 或空」,改 undefined 连锁破坏 6+ 实现点(menu/env/settings/bones-panel-node),2026-09 裁决保留
-  renderCustom?: (container: HTMLElement, closePopup?: () => void) => (() => void) | void;
-  /** 条件守卫：吃状态层快照的纯函数，返回 false 时不渲染（如 self 模式隐藏 camera）——[doc:adr-126-p4-d] 升级为 (s: PreviewSnapshot) => boolean。
-   *  2026-09 放宽为 Partial：谓词只读自己关心的键（键存在性仍编译期守卫——未落地键报错），调用方可传部分快照 */
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
-  /** [doc:adr-126-p5-a] 受控 schema builder 注册 key：有则 renderPreviewPanel 查 schema-registry 的该 key。
-   *  多模型同框时各适配器用专属 key（如 "ysm-model" / "litematic-slice-{n}"）避免互相覆盖。
-   *  必显式——panel id 不再隐式兜底作 schema key（P5 复盘：id 撞注册键渲染错内容且无告警，
-   *  与 per-scene 显式 key 约定冲突） */
-  schemaId?: string;
-  /** action 节点回调 */
-  action?: (ctx: PreviewActionMenuCtx) => void | Promise<void>;
-  /** ———— ysm 特有（预览器 dock 归属与模式守卫）———— */ /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 环境 / 🎛️ 场景 / ⚙️ 设置 / 📊 统计附加行）；
-   *  无 dockGroup 只出现在设置聚合视图。
-   *  [ADR-159] "stats" = 统计附加行通道：适配器贡献 kind:"field" 节点（如资源包立方体数），
-   *  mergeStatsMenuItems 将其并入统计面板 children，随「能渲染就能出统计」通道展示 */
-  dockGroup?: PreviewDockGroup;
-  // 可见性统一走 visibleWhen（[doc:adr-126-p4-d] 谓词化收口）：sharedOnly/hideInSelfMode/
-  // requiresEnvironment 三个专有布尔已删除——dock 组过滤（menu/core.ts dockGroupItemsFor）
-  // 与内容级渲染（render.ts）共用同一求值器，谓词吃状态层快照
-  //   - self 模式隐藏 → (s) => s["ui.mode"] !== "self"
-  //   - 环境能力门禁 → (s) => !!s["env.skyGroundCap"]
-
-  /** row 类型：行首焦点钮（radio 语义，ADR-193 第四刀 roles 角色行首用）——
-   *  active 显 ● / ○，onClick 供焦点切换（如 sceneRegistry.setActive） */
-  radio?: { active: boolean; title: string; onClick: () => void };
-  /** row 类型：行尾徽标按钮（如 roles ⚙ 工具 / switch ➕ 追加）——
-   *  独立于整行 action 的行内次级动作 */
-  badge?: { label: string; title: string; onClick: () => void };
-  /** 危险操作（如删除/卸载），渲染红色文字 */
-  danger?: boolean;
-  /** [P3 已清退 2026-09-05] 原 legacyTestId e2e 兼容映射字段已删除——查证 e2e（frontend/e2e/）对 legacyTestId/panelTestId/各具体 id 值零消费，淘汰前提失效提前清退；e2e 选择器统一走 data-testid="preview-"+node.id 派生（makePreviewMenuRow）*/
-  /** material-row 类型：行内组合控件——eye 显隐 toggle（[doc:adr-126-p5] 审计 #3 组合行增强） */
-  eye?: { get: () => boolean; set: (v: boolean) => void };
-  /** material-row 类型：行内组合控件——opacity 透明度滑条（显示值 0-100，set 收 0-100） */
-  opacity?: { get: () => number; set: (v: number) => void };
-  /** row 类型：行密度（可选）。compact = 紧凑导航行（icon+label+箭头等稀疏内容，降
-   *  min-height/padding，对齐 scene 组根视图 .cm-row 密度，如 env 面板一级 cap 行）；
-   *  缺省 = 标准内容行（roles 角色行等，38px 触控基座）。纯视觉密度，不影响行为。 */
-  rowDensity?: "compact";
-  /** controls 类型：cap 生态控件组（MenuControlDef[]），渲染委托 renderCapControls。
-   *  传函数引用则每次渲染重取（惰性）——cap 后创建/参数变更后重渲染都能取到最新全量，
-   *  与 ADR-125 P3「禁止构建期求值 → cap 后创建则永不可见」同口径。
-   *  新增 cap 控件零接线：cap 自报 getMenuControls() 即可进任意声明式面板。 */
-  controls?: MenuControlDef[] | (() => MenuControlDef[]);
 }
 
 /** 类型守卫：节点是否为 folder（可下钻） */

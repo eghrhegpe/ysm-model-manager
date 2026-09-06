@@ -61,13 +61,13 @@ function readRel(rel: string) {
 const LEGAL_GROUPS = deriveLegalGroups();
 
 function deriveLegalGroups() {
-  // PreviewMenuGroupId 联合本体已归位 node-types.ts（类型叶，单一事实源），
-  // defs.ts 只 re-export——推导须跟类型本体走（[2026-09 锐评收口] 同步）
-  const defs = readRel('frontend/src/preview-3d/menu/node-types.ts');
-  const m = defs.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
+  // PreviewMenuGroupId 联合本体已归位共享叶 menu-node-types.ts（[ADR-195 刀2] 下沉：
+  // menu/node-types.ts 只 re-export），推导须跟类型本体走——同 [2026-09 锐评收口] 精神。
+  const leaf = readRel('frontend/src/preview-3d/menu-node-types.ts');
+  const m = leaf.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
   const ids = m ? [...m[1]!.matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]) : [];
   if (!ids.length) {
-    throw new Error('check-menu-health: 无法从 menu/node-types.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
+    throw new Error('check-menu-health: 无法从 menu-node-types.ts 推导 PreviewMenuGroupId（单一事实来源缺失），拒绝用兜底硬编码清单');
   }
   return new Set(ids);
 }

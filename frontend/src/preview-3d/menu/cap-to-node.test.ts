@@ -134,6 +134,28 @@ describe("capControlsToNodes（整组 → folder 嵌套 + controls 通道）", (
     expect(nodes[1]!.kind).toBe("folder");
   });
 
+  it("复杂控件带 group → folder 内 controls 包装剥 group（防嵌套 .cap-section 节头）", () => {
+    // code_review ADR-195 #1（P2）回归锁：同 group 复杂控件被外部 folder 承载折叠
+    // 语义后，controls 通道内嵌 def 不得再携带 group——否则 renderCapControls 的
+    // ensureCapSection 会在 folder body 内再建同名节头（folder 头 + 内嵌 N 个重复
+    // 节头 + 双折叠壳；env 的 envGroupCustomHdr/preset/background 均触发）
+    const nodes = capControlsToNodes([
+      def({ id: "hist1", kind: "histogram", group: "preview.g" }),
+      def({ id: "btn1", kind: "button", group: "preview.g" }),
+    ]);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]!.kind).toBe("folder");
+    expect(nodes[0]!.labelKey).toBe("preview.g");
+    const children = nodes[0]!.children!;
+    expect(children).toHaveLength(2);
+    for (const child of children) {
+      expect(child.kind).toBe("controls");
+      const inner = (child as { controls?: Array<{ group?: string }> }).controls ?? [];
+      expect(inner).toHaveLength(1);
+      expect(inner[0]!.group).toBeUndefined(); // 剥 group——渲染不再再生嵌套节头
+    }
+  });
+
   it("空输入 → 空节点数组", () => {
     expect(capControlsToNodes([])).toEqual([]);
   });

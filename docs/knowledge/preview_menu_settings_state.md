@@ -40,7 +40,6 @@ auto_fields:
     - PreviewStatePath
     - renderCapColor
     - renderCapControls
-    - renderCapControlSingle
     - renderCapDivider
     - renderCapSelect
     - renderCapSlider

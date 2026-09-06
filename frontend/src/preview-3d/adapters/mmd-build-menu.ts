@@ -62,12 +62,20 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
   const semanticBones = c.boneTree ? mmdSemanticBoneMap(c.boneTree) : undefined;
   const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
   // 能力声明：caps 从真实构造派生（非硬编码清单）——骨骼驱动模块（呼吸/注视/律动）
-  // 需语义骨骼、morph 驱动模块（眨眼/口型）需语义 morph，缺失时不显示死开关（菜单不谎报）
+  // 需语义骨骼、morph 驱动模块（眨眼/口型）需语义 morph，缺失时不显示死开关（菜单不谎报）。
+  // code_review ADR-195 #8：按语义族分别门控——语义 morph 表按族分键，聚合布尔
+  // `Object.keys().length > 0` 会在「仅 lip 系」模型上显示无驱动的死 blink 开关
+  // （反之仅 blink 显示死 lipSync）；与 mmd-build-result.ts 应用分支口径一致
+  // （blink 应用要求 semanticMorphs.blink、lipSync 应用要求 lipIndices 非空）
   const hasSemanticBones = !!semanticBones && Object.keys(semanticBones).length > 0;
-  const hasSemanticMorphs = Object.keys(semanticMorphs).length > 0;
+  const morphs = semanticMorphs as Partial<Record<string, { index?: number } | undefined>>;
+  const hasBlinkMorph = !!morphs.blink;
+  const hasLipMorph =
+    !!morphs.lipOpen || !!morphs.lipClose || !!morphs.lipPucker || !!morphs.lipSmile;
   const perceptionCaps = pickPerceptionCaps([
     ...(hasSemanticBones ? (["breath", "gaze", "autoDance"] as const) : []),
-    ...(hasSemanticMorphs ? (["blink", "lipSync"] as const) : []),
+    ...(hasBlinkMorph ? (["blink"] as const) : []),
+    ...(hasLipMorph ? (["lipSync"] as const) : []),
   ]);
   const items = mmdMenuItems({
     navCtx,

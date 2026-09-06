@@ -9,6 +9,22 @@ import type { PreviewMenuNode } from "../menu-node-types.ts";
 import type { LightCapability } from "./light-capability.ts";
 import type { MenuControlDef } from "./scene-capability.ts";
 
+// code_review ADR-195 #5：共享 options 常量——旧 getMenuControls 路径（lcBuild* 的
+// `select:`）与新节点树路径（buildLightNodes 的 `control.options:`）曾各持一份副本，
+// 单侧增改（加引擎/预设）会静默分叉双轨菜单数据，此处单源后两路径同引用。
+const LIGHT_ENGINE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "cone", label: "锥形" },
+  { value: "postprocess", label: "后处理" },
+];
+const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "default", label: "默认" },
+  { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
+  { value: "vrm", label: "VRM角色" },
+  { value: "mmd", label: "MMD角色" },
+  { value: "litematic", label: "体素" },
+  { value: "resourcepack", label: "MC块包" },
+];
+
 function lcBuildMain(cap: LightCapability): MenuControlDef[] {
   return [
     {
@@ -81,10 +97,7 @@ function lcBuildVolumetric(cap: LightCapability): MenuControlDef[] {
       labelKey: "preview.volumetricEngine",
       fallback: "锥引擎",
       group: "preview.lightGroupParams",
-      select: [
-        { value: "cone", label: "锥形" },
-        { value: "postprocess", label: "后处理" },
-      ],
+      select: LIGHT_ENGINE_OPTIONS,
       getValue: () => cap.getVolumetricEngine(),
       setValue: (v) => cap.setVolumetricEngine(v as "cone" | "postprocess"),
     },
@@ -109,14 +122,7 @@ function lcBuildThreePoint(cap: LightCapability): MenuControlDef[] {
       labelKey: "preview.lightPreset",
       fallback: "灯光预设",
       group: "preview.lightGroupParams",
-      select: [
-        { value: "default", label: "默认" },
-        { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
-        { value: "vrm", label: "VRM角色" },
-        { value: "mmd", label: "MMD角色" },
-        { value: "litematic", label: "体素" },
-        { value: "resourcepack", label: "MC块包" },
-      ],
+      select: LIGHT_PRESET_OPTIONS,
       getValue: () => cap.getCurrentPreset(),
       setValue: (v) => cap.setPreset(v as string, { manual: true }),
     },
@@ -200,10 +206,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       labelKey: "preview.volumetricEngine",
       fallback: "锥引擎",
       control: {
-        options: [
-          { value: "cone", label: "锥形" },
-          { value: "postprocess", label: "后处理" },
-        ],
+        options: LIGHT_ENGINE_OPTIONS,
         get: () => cap.getVolumetricEngine(),
         set: (v) => cap.setVolumetricEngine(v as "cone" | "postprocess"),
       },
@@ -228,14 +231,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       labelKey: "preview.lightPreset",
       fallback: "灯光预设",
       control: {
-        options: [
-          { value: "default", label: "默认" },
-          { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
-          { value: "vrm", label: "VRM角色" },
-          { value: "mmd", label: "MMD角色" },
-          { value: "litematic", label: "体素" },
-          { value: "resourcepack", label: "MC块包" },
-        ],
+        options: LIGHT_PRESET_OPTIONS,
         get: () => cap.getCurrentPreset(),
         set: (v) => cap.setPreset(v as string, { manual: true }),
       },

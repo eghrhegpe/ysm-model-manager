@@ -11,10 +11,12 @@
 //
 // 映射分级：
 //   - 可被原生节点 kind 无损承载（spec 与 MenuControlDef 同构后）：
-//     toggle/slider/select/button/divider/color → 节点 kind，control 字段承载全部
-//     能力（unit/onCommit/hintKey/variant/disabled/getValue/setValue 闭包）。
-//   - 无法纯数据化（canvas 时间轴/直方图/缩略图/HDR 图）：
-//     timeline/histogram/image/preset-thumb → controls 通道（节点树内嵌
+//     toggle/slider/select/divider/color → 节点 kind，control 字段承载全部
+//     能力（unit/onCommit/hintKey/getValue/setValue 闭包）。
+//     注：button 刻意留在 controls 通道——cap button 带 variant/disabled/getHint/
+//     hintKey，节点 button 是简单动作行壳（rmAppendButton）不承载（见下方注释）。
+//   - 无法纯数据化（canvas 时间轴/直方图/缩略图/HDR 图 + button）：
+//     timeline/histogram/image/preset-thumb/button → controls 通道（节点树内嵌
 //     MenuControlDef 数组，仍经 renderMenu 统一调度 + renderCapControls 统一渲染）。
 //     controls 通道是受控委托，不触发 renderCustom 审计门（那是「手写 DOM 逃生舱」）。
 //   - group 折叠语义 → folder 节点（节点体系原生折叠，替代 .cap-section）。
@@ -125,7 +127,13 @@ export function capControlsToNodes(controls: MenuControlDef[]): PreviewMenuNode[
           // 复杂控件：controls 通道（节点树内嵌 MenuControlDef 数组）
           id: `cap-${c.id}`,
           kind: "controls" as const,
-          controls: [c],
+          // code_review ADR-195 #1（P2）：剥掉 group——同 group 复杂控件已被外部
+          // folder 承载折叠语义，若原样保留 c.group，renderCapControls 的
+          // ensureCapSection 会在 folder body 内再建同名 .cap-section 节头
+          // （folder 头 + 内嵌 N 个重复节头 + 双折叠壳的可见回归，env 的
+          // envGroupCustomHdr/preset/background、ground MAT_GROUP 均触发）。
+          // 顶层无 group 的复杂控件不受影响，仍平铺直渲。
+          controls: [c.group ? { ...c, group: undefined } : c] as MenuControlDef[],
           ...(c.visibleWhen ? { visibleWhen: c.visibleWhen } : {}),
         };
     if (folder) {

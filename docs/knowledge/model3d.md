@@ -522,7 +522,6 @@ auto_fields:
     - renderAdapterPanelContent
     - renderCapColor
     - renderCapControls
-    - renderCapControlSingle
     - renderCapDivider
     - renderCapSelect
     - renderCapSlider

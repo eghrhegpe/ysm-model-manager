@@ -178,6 +178,15 @@ export function clearFolderCollapsedState(): void {
 function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
   if (children.length === 0) return;
+  // code_review ADR-195 #4/#5：渲染 header 前预筛 visibleWhen（与 renderMenu 顶层
+  // 循环同口径）——全隐组不再渲染空 folder 头。回归场景：water 水池组四控件全门控
+  // `env.waterMode === "pool"`，film 模式下旧 renderCapControls 全隐组不建节头，
+  // 桥接后 folder 无条件建 → 空「水池」folder 行误导用户。
+  const snapshot = previewSnapshot();
+  const visible = snapshot
+    ? children.filter((ch) => !ch.visibleWhen || ch.visibleWhen(snapshot))
+    : children;
+  if (visible.length === 0) return;
   const section = document.createElement("div");
   section.dataset.testid = node.id;
   const header = document.createElement("div");

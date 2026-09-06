@@ -566,13 +566,15 @@ export function collectVisiblePredicates(controls: MenuControlDef[]): MenuContro
   return controls.filter((c) => typeof c.visibleWhen === "function");
 }
 
-/** 单控件渲染分派（ADR-195 刀1 起导出：cap-to-node 桥接层 custom 委托用）。
+/** 单控件渲染分派（code_review ADR-195 #6：仅 renderCapControls 循环体自用——
+ *  cap-to-node 桥接层走 controls 通道整组渲染而非单控件委托，无外部消费者，
+ *  故不导出；如需单控件委托再恢复 export）。
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
  *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。
  *  [ADR-195 刀 2.5] 简单 kind（divider/toggle/slider/select/color）经 capControlToView
  *  适配为统一视图渲染（不再直接吃 MenuControlDef）；复杂 kind 保持 MenuControlDef
  *  （button 变体、thumb 配置等全字段承载）。 */
-export function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
   switch (c.kind) {
     case "divider":
       renderCapDivider(parent, capControlToView(c));

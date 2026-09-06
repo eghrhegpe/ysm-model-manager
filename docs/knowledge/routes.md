@@ -106,6 +106,7 @@
 | 预览状态路径、KNOWN_PATHS 扩展、PreviewStatePath 类型、状态层快照契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | 预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—… |
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) ⚠️歧义（另见 go-recycle.md等） | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |
+| 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）、判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） | [win-filename-rules](./reference.md) | Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol… |
 | 联邦渲染、shared renderer、rAF 复用、多 3D 场景 | [联邦渲染能力 (Render Federation)](./render-federation.md) | — |
 | 资源包、光影包、resourcepack、shaderpack | [资源包功能 resource-packs（已归档）](./resource-packs.md) ⚠️歧义（另见 go-packs.md等） | **已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager… |
 | 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 utils-resource-types.md、go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |

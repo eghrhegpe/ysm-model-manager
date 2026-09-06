@@ -1346,6 +1346,10 @@ export const autoSidebar = [
             "link": "/knowledge/install_domain_split"
           },
           {
+            "text": "win-filename-rules",
+            "link": "/knowledge/reference"
+          },
+          {
             "text": "Rust 桥 rustbridge",
             "link": "/knowledge/rustbridge"
           },

@@ -30,6 +30,7 @@ import {
   persistState,
   restoreFields,
   restoreState,
+  ringLog,
   type SceneCapability,
 } from "./scene-capability.ts";
 
@@ -102,24 +103,6 @@ export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
     ctx.fillStyle = hGrad;
     ctx.fillRect(0, yBase - yBand, W, yBand * 2);
   }
-}
-
-/** 环形日志面板注入点取用 helper（mount-preview-core 在 globalThis 挂载 __ysmRingLog）。
- *  此前三处构建/加载路径逐字复制同构的 globalThis cast 样板（锐评 P2），收敛于此；
- *  无注入点时可选 console 兜底（文案可与面板版不同，保持既有控制台口径）。 */
-function ringLog(
-  mod: string,
-  msg: string,
-  lvl: "info" | "warn" | "error",
-  consoleFallback?: () => void,
-): void {
-  const logger = (
-    globalThis as unknown as {
-      __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
-    }
-  ).__ysmRingLog;
-  if (logger) logger(mod, msg, lvl);
-  else consoleFallback?.();
 }
 
 function hexToCss(hex: number): string {
@@ -403,7 +386,11 @@ export class EnvironmentCapability implements SceneCapability {
       this.customHdrWarnedMissing = false;
       return true;
     } catch (err) {
-      console.warn("[EnvironmentCapability] 自定义 HDR 解码失败，回退到 studio 预设:", err);
+      ringLog(
+        "env",
+        `自定义 HDR 解码失败，回退到 studio 预设: ${err instanceof Error ? err.message : String(err)}`,
+        "warn",
+      );
       // 失败不保留中间缓存
       this.disposeCustomCache();
       return false;
@@ -595,7 +582,7 @@ export class EnvironmentCapability implements SceneCapability {
         srcTex.dispose();
       }
     } catch (e) {
-      console.error("[environment] PMREM 生成失败:", e);
+      ringLog("env", `PMREM 生成失败: ${e}`, "error");
       this.disposeEnvironment();
       this.scene.environment = this.prevEnvironment;
       // 失败回滚必须与禁用分支/dispose 同构：buildEnvironment 先 disposeEnvironment()，

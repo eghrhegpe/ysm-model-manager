@@ -13,6 +13,7 @@ import {
   persistState,
   restoreFields,
   restoreState,
+  ringLog,
   type SceneCapability,
 } from "./scene-capability.ts";
 
@@ -173,8 +174,10 @@ export class ReflectorCapability implements SceneCapability {
       .replace(alphaAnchor, "gl_FragColor = vec4( blendOverlay( base.rgb, color ), uOpacity );");
     const injectedOk = injectedFrag !== officialFrag && injectedFrag.includes("uOpacity");
     if (!injectedOk) {
-      console.warn(
-        "[reflector-cap] three ReflectorShader 锚点未匹配（three 升级？），opacity 注入失败，回退官方 shader",
+      ringLog(
+        "reflector",
+        "three ReflectorShader 锚点未匹配（three 升级？），opacity 注入失败，回退官方 shader",
+        "warn",
       );
       return false;
     }
@@ -221,8 +224,10 @@ export class ReflectorCapability implements SceneCapability {
     if (this.reflector.dispose) {
       this.reflector.dispose();
     } else {
-      console.warn(
-        "[reflector-cap] Reflector.dispose 缺失，手动释放 render target（检查 three 升级）",
+      ringLog(
+        "reflector",
+        "Reflector.dispose 缺失，手动释放 render target（检查 three 升级）",
+        "warn",
       );
       const r = this.reflector as Reflector & {
         getRenderTarget?: () => THREE.WebGLRenderTarget | null;

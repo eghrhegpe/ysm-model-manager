@@ -42,6 +42,25 @@ vi.mock("three", async (importOriginal) => {
   };
 });
 
+/** 环形日志注入点监听（ringLog 走 __ysmRingLog，console 仅兜底） */
+function spyRingLog() {
+  const calls: Array<{ mod: string; msg: string; lvl: string | undefined }> = [];
+  (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog = (
+    mod: string,
+    msg: string,
+    lvl?: string,
+  ) => calls.push({ mod, msg, lvl });
+  return {
+    calls,
+    expectLogged(mod: string, msgPart: string) {
+      expect(calls.some((c) => c.mod === mod && c.msg.includes(msgPart))).toBe(true);
+    },
+    restore() {
+      delete (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog;
+    },
+  };
+}
+
 function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMappingExposure?: number } = {}) {
   return {
     capabilities: { isWebGL2: true, maxTextures: 16 },
@@ -587,7 +606,7 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
   });
 
   it("乘法锚点彻底失配（文字被改）→ console.error 留痕不再静默，且不产生半残声明", () => {
-    const warnSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = spyRingLog();
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     injectSkySunScalePatch(mat);
@@ -596,9 +615,9 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
       .replace("pow( (vSunE * sunIntensityScale) * (", "pow( vSunE_Lin * (")
       .replace("19000.0 * sunDiscScale * Fex", "SUN_DISC_LUM * Fex");
     injectSkySunScalePatch(mat);
-    // 锚点已彻底不在 → 无法补全 → console.error 留痕（审计①：消除静默失效缝隙）
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
-    warnSpy.mockRestore();
+    // 锚点已彻底不在 → 无法补全 → 环形日志留痕（审计①：消除静默失效缝隙）
+    log.expectLogged("sky", "锚点失配");
+    log.restore();
   });
 
   it("setter 更新值只改 uniforms.value，不重编译 shader（needsUpdate=false）", () => {
@@ -636,16 +655,16 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
   });
 
   it("两个锚点全部失配时 console.error 留痕并跳过 patch（不产生半残 shader）", () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = spyRingLog();
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     mat.fragmentShader = "// totally different shader, no anchors at all";
     injectSkySunScalePatch(mat);
-    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("sky-capability"), expect.any(String));
+    log.expectLogged("sky", "无法注入声明");
     // uniforms 已注册（对象层先注册防 crash），但 shader 未被改
     expect(mat.uniforms.sunIntensityScale).toBeDefined();
     expect(mat.fragmentShader).toBe("// totally different shader, no anchors at all");
-    errSpy.mockRestore();
+    log.restore();
   });
 });
 
@@ -777,7 +796,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
   });
 
   it("regenerateEnvironment 失败（fromScene 抛错）走 catch 告警且 showSunDisc 恢复", () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = spyRingLog();
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     vi.spyOn(THREE.PMREMGenerator.prototype as unknown as { fromScene: () => unknown }, "fromScene")
@@ -785,10 +804,10 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
         throw new Error("gl oom");
       });
     expect(() => cap.setEnvironmentEnabled(true)).not.toThrow();
-    expect(errSpy).toHaveBeenCalledWith("[sky] 环境贴图生成失败:", expect.any(Error));
+    log.expectLogged("sky", "环境贴图生成失败");
     // finally 恢复太阳盘
     expect((cap as unknown as { envSky: Sky }).envSky.material.uniforms["showSunDisc"].value).toBe(1);
-    errSpy.mockRestore();
+    log.restore();
   });
 
   it("getSunPosition 输出 clamp 到 [0,1]（夜间 elevation<0 时 y<0.5）", () => {

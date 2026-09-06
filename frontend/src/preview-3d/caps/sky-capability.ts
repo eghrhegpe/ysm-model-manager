@@ -31,6 +31,7 @@ import {
   persistState,
   restoreFields,
   restoreState,
+  ringLog,
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
@@ -62,7 +63,7 @@ export function injectSkySunScalePatch(
   // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
   // 缺失时误判已注入 → 永不补全，静默半残）。现按字段各自校验：字段视为已注入
   // 仅当「uniform 存在 且 shader 已含对应乘法」。半残状态（uniform 在、乘法缺）下次
-  // 调用自动补全乘法层；锚点彻底失配时 console.error 留痕（消除静默失效缝隙）。
+  // 调用自动补全乘法层；锚点彻底失配时 ringLog 留痕（消除静默失效缝隙）。
   const hasSunScaleUniform = mat.uniforms.sunIntensityScale !== undefined;
   const hasDiscScaleUniform = mat.uniforms.sunDiscScale !== undefined;
   const hasSunScaleUse = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
@@ -104,9 +105,10 @@ export function injectSkySunScalePatch(
           mat.fragmentShader.slice(fallbackIdx);
         patched = true;
       } else {
-        console.error(
-          "[sky-capability] injectSkySunScalePatch 无法注入声明，跳过 shader patch。",
-          "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+        ringLog(
+          "sky",
+          "injectSkySunScalePatch 无法注入声明，跳过 shader patch。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+          "error",
         );
         // 声明失败 → 不再继续使用层的替换，防 GLSL 编译错
         return;
@@ -124,10 +126,11 @@ export function injectSkySunScalePatch(
     if (mat.fragmentShader !== before) patched = true;
     else {
       // 本层需补但锚点失配（无论 uniform 已注册与否——半残修复同样可能被外部破坏
-      // 挡住）→ console.error 留痕，消除「静默半残」失效缝隙
-      console.error(
-        "[sky-capability] injectSkySunScalePatch 解耦点①（vSunE 缩放）替换失败：锚点失配。",
-        "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+      // 挡住）→ ringLog 留痕，消除「静默半残」失效缝隙
+      ringLog(
+        "sky",
+        "injectSkySunScalePatch 解耦点①（vSunE 缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+        "error",
       );
     }
   }
@@ -141,9 +144,10 @@ export function injectSkySunScalePatch(
     );
     if (mat.fragmentShader !== before) patched = true;
     else {
-      console.error(
-        "[sky-capability] injectSkySunScalePatch 解耦点②（太阳盘缩放）替换失败：锚点失配。",
-        "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+      ringLog(
+        "sky",
+        "injectSkySunScalePatch 解耦点②（太阳盘缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+        "error",
       );
     }
   }
@@ -409,7 +413,7 @@ export class SkyCapability implements SceneCapability {
       // 都以此时太阳高度角为新的门控基准，避免循环在手动调参后首帧冗余重建。
       this.lastPmremElevation = this.params.elevation;
     } catch (e) {
-      console.error("[sky] 环境贴图生成失败:", e);
+      ringLog("sky", `环境贴图生成失败: ${e}`, "error");
       // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
       this.renderTarget = null;
       this.scene.environment = null;

@@ -77,6 +77,7 @@ auto_fields:
     - RenderModeCapability
     - restoreFields
     - restoreState
+    - ringLog
     - SceneCapability
     - SceneCapabilityFactory
     - SceneCapabilityLookup

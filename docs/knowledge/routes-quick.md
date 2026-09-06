@@ -484,6 +484,12 @@
 | PreviewSnapshot 快照类型 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
 | PreviewStatePath 类型契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
 
+## 🎯 校验入口：ContainsIllegalNameChar（单一事实源）
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 「为什么这个名字被拒」→ 三层校验：非法字符 `\/:*?"<>\|` ／ 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9，大小写不敏感）／ 尾随点或空格 | [win-filename-rules](./reference.md) | 扩展校验层时须同步前端 context-menu-shared.ts 的 WIN_RESERVED_NAMES 与本卡 | - |
+
 ## 🎯 门禁集成与 pre-push 流程
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -849,6 +855,9 @@
 | 截图灯光与预览灯光混用 | - | 导出 PNG 与实时预览不一致；截图灯光必须走 shot-panel 独立通道 |
 | 前端直调 os.Remove | - | 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle |
 | initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
+| 前端 isUnsafeFolderName（context-menu-shared.ts）是 UX 预检，**终审在 Go**——两端口径必须同步演化，单边收紧会导致体验断层 | `前端放行、Go 报错` | - |
+| 保留名判定是：con.tents 与 CON.txt 同拒（Windows 判定口径）；但 con.tents（子串中缀）类如 Console_Hud 放行 | `首个点之前整段匹配` | - |
+| 尾随空格校验必须吃**未 trim 原串**：前端 dstDir 拼接用未 trim 的 folder，校验若先 trim 就漏检（Windows 落盘静默剥离 | - | 落点漂移） |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
 | loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |

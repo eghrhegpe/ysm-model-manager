@@ -37,6 +37,7 @@ auto_fields:
     - resetSettingsListeners
     - restoreFields
     - restoreState
+    - ringLog
     - SceneCapability
     - SceneCapabilityLookup
     - setPreviewUiMode

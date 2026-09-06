@@ -504,6 +504,7 @@ auto_fields:
     - restoreFields
     - restoreModelGroupsVisible
     - restoreState
+    - ringLog
     - roleBaseName
     - runFailedMountCleanup
     - runFullCleanup

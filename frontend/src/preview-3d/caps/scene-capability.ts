@@ -158,6 +158,26 @@ export interface SceneCapability {
 
 /* ============ 持久化工具 ============ */
 
+/**
+ * 环形日志面板注入点取用 helper（mount-preview-core 在 globalThis 挂载 __ysmRingLog）。
+ * 此前三处构建/加载路径逐字复制同构的 globalThis cast 样板（锐评 P2），收敛于此；
+ * 无注入点时可选 console 兜底（文案可与面板版不同，保持既有控制台口径）。
+ */
+export function ringLog(
+  mod: string,
+  msg: string,
+  lvl: "info" | "warn" | "error",
+  consoleFallback?: () => void,
+): void {
+  const logger = (
+    globalThis as unknown as {
+      __ysmRingLog?: (mod: string, msg: string, lvl?: "info" | "warn" | "error") => void;
+    }
+  ).__ysmRingLog;
+  if (logger) logger(mod, msg, lvl);
+  else consoleFallback?.();
+}
+
 const STORAGE_PREFIX = "ysm-scene-cap-";
 
 /** 保存 JSON 到 localStorage */

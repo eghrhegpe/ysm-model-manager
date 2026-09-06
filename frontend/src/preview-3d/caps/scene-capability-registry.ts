@@ -13,7 +13,7 @@ import { LightCapability } from "./light-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
+import { ringLog, type SceneCapability, type SceneCapabilityLookup } from "./scene-capability.ts";
 import { ShadowCapability } from "./shadow-capability.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { WaterCapability } from "./water-capability.ts";
@@ -75,7 +75,7 @@ export class SceneCapabilityRegistry {
         const cap = factory({ ...ctx, caps: { getById: (id) => this.getById(id) } });
         this.instances.push(cap);
       } catch (e) {
-        console.warn("[scene-cap] 能力创建失败:", e);
+        ringLog("scene-cap", `能力创建失败: ${e}`, "warn");
       }
     }
     return [...this.instances];
@@ -98,7 +98,7 @@ export class SceneCapabilityRegistry {
       try {
         cap.saveState();
       } catch (e) {
-        console.warn(`[scene-cap] ${cap.id} 保存失败:`, e);
+        ringLog("scene-cap", `${cap.id} 保存失败: ${e}`, "warn");
       }
     }
   }
@@ -109,7 +109,7 @@ export class SceneCapabilityRegistry {
       try {
         cap.loadState();
       } catch (e) {
-        console.warn(`[scene-cap] ${cap.id} 恢复失败:`, e);
+        ringLog("scene-cap", `${cap.id} 恢复失败: ${e}`, "warn");
       }
     }
   }
@@ -120,7 +120,7 @@ export class SceneCapabilityRegistry {
       try {
         cap.dispose();
       } catch (e) {
-        console.warn(`[scene-cap] ${cap.id} 释放失败:`, e);
+        ringLog("scene-cap", `${cap.id} 释放失败: ${e}`, "warn");
       }
     }
     this.instances = [];

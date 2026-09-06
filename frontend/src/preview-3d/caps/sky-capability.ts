@@ -35,6 +35,9 @@ import {
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
+// 菜单控件工厂已下沉 sky-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
+// 保持既有调用方（sky-capability.test.ts 等）的 import 路径不破坏。
+import { buildSkyGroup } from "./sky-menu.ts";
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -154,109 +157,6 @@ export function injectSkySunScalePatch(
 
   // ③ 有改动才触发重编译
   if (patched) mat.needsUpdate = true;
-}
-
-function skcBuildTime(cap: SkyCapability): MenuControlDef[] {
-  return [
-    {
-      id: "sky-timeline",
-      kind: "timeline",
-      labelKey: "preview.skyTimeline",
-      fallback: "光影时间轴",
-      getValue: () => cap.getTimeOfDay(),
-      setValue: (v) => cap.setTime(v as number),
-    },
-    {
-      id: "sky-time",
-      kind: "slider",
-      labelKey: "preview.timeOfDay",
-      fallback: "时间",
-      slider: { min: 0, max: 24, step: 0.5, unit: "h" },
-      getValue: () => cap.getTimeOfDay(),
-      setValue: (v) => cap.setTime(v as number),
-    },
-  ];
-}
-
-function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
-  return [
-    {
-      id: "sky-env",
-      kind: "toggle",
-      labelKey: "preview.environmentMapping",
-      fallback: "环境贴图",
-      // 环境菜单基座级开关（无 group、无 settingsOrder）：同 ground/shadow 形态——
-      // 总开关一眼可见，云量等参数留在「高级」折叠分组内；不再复制进设置面板画质分组
-      getValue: () => cap.isEnvironmentEnabled(),
-      setValue: (v) => cap.setEnvironmentEnabled(v as boolean),
-    },
-    {
-      id: "sky-cloud",
-      kind: "slider",
-      labelKey: "preview.cloudCoverage",
-      fallback: "云量",
-      group: "preview.skyGroupAdvanced",
-      slider: { min: 0, max: 1, step: 0.05, unit: "%" },
-      getValue: () => cap.getCloudCoverage(),
-      setValue: (v) => cap.setCloudCoverage(v as number, true),
-    },
-    // §4 解耦：两个太阳耦合尺度作为高级滑块（默认在 0.75/0.5 已做过优化，高级用户可再调）
-    {
-      id: "sky-sun-intensity",
-      kind: "slider",
-      labelKey: "preview.skySunIntensityScale",
-      fallback: "天空×太阳耦合",
-      hintKey: "preview.skySunIntensityScaleHint",
-      group: "preview.skyGroupAdvanced",
-      slider: { min: 0.3, max: 1.2, step: 0.05 },
-      getValue: () => cap.getSunIntensityScale(),
-      setValue: (v) => cap.setSunIntensityScale(v as number),
-    },
-    {
-      id: "sky-sun-disc",
-      kind: "slider",
-      labelKey: "preview.skySunDiscScale",
-      fallback: "太阳盘强度",
-      hintKey: "preview.skySunDiscScaleHint",
-      group: "preview.skyGroupAdvanced",
-      slider: { min: 0.0, max: 1.2, step: 0.05 },
-      getValue: () => cap.getSunDiscScale(),
-      setValue: (v) => cap.setSunDiscScale(v as number),
-    },
-  ];
-}
-
-function skcBuildAutoRotate(cap: SkyCapability): MenuControlDef[] {
-  return [
-    {
-      id: "sky-auto-rotate",
-      kind: "toggle",
-      labelKey: "preview.skyAutoRotate",
-      fallback: "昼夜循环",
-      hintKey: "preview.skyAutoRotateHint",
-      group: "preview.skyGroupAdvanced",
-      getValue: () => cap.isAutoRotating(),
-      setValue: (v) => {
-        if (v) cap.startAutoRotate();
-        else cap.stopAutoRotate();
-      },
-    },
-  ];
-}
-
-function skcBuildAtmosphereFX(cap: SkyCapability): MenuControlDef[] {
-  return [
-    {
-      id: "sky-godrays",
-      kind: "toggle",
-      labelKey: "preview.skyGodRays",
-      fallback: "体积光束",
-      hintKey: "preview.skyGodRaysHint",
-      group: "preview.skyGroupAdvanced",
-      getValue: () => cap.isGodRaysEnabled(),
-      setValue: (v) => cap.setGodRaysEnabled(v as boolean),
-    },
-  ];
 }
 
 export class SkyCapability implements SceneCapability {
@@ -849,12 +749,7 @@ export class SkyCapability implements SceneCapability {
 
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
-    return [
-      ...skcBuildTime(this),
-      ...skcBuildScattering(this),
-      ...skcBuildAutoRotate(this),
-      ...skcBuildAtmosphereFX(this),
-    ];
+    return buildSkyGroup(this);
   }
 
   /** 保存状态到 localStorage */

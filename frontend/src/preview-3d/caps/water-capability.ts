@@ -6,20 +6,19 @@
 
 import * as THREE from "three";
 import { safeDispose } from "../safe-dispose.ts";
-// 状态层探针类型（visibleWhen 谓词吃 env.waterMode 快照——B 轨唯一条件显隐，不摸 cap 实例）
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import {
   createListenerSet,
   GROUND_LAYER_OFFSETS,
   type MenuControlDef,
-  makeColorDef,
-  makeSliderDef,
   oneOf,
   persistState,
   restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
+// 菜单控件工厂已下沉 water-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
+// 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
+import { buildWaterGroup } from "./water-menu.ts";
 import type { WaterMode, WaterParams } from "./water-state.ts";
 // 状态/序列化轴（WaterParams / 默认值 / 呈现模式）已下沉 water-state.ts；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
@@ -696,156 +695,4 @@ export class WaterCapability implements SceneCapability {
       this.normalMapCacheSize = -1;
     }
   }
-}
-
-// ── 菜单控件工厂（水面专属）──
-// 按功能分区，使环境面板「水面 ›」下钻为 形态 / 外观 / 水池 / 波纹 四个子区，
-// 而非单折叠平铺全部控件；启用水面（enabled）无 group → 作为 cap 根行主控件，不进子区。
-const WATER_GROUP_FORM = "preview.waterGroupForm"; // 形态
-const WATER_GROUP_LOOK = "preview.waterGroupLook"; // 外观
-const WATER_GROUP_POOL = "preview.waterGroupPool"; // 水池
-const WATER_GROUP_WAVE = "preview.waterGroupWave"; // 波纹
-
-function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
-  const wSlider = (
-    id: string,
-    labelKey: string,
-    fallback: string,
-    group: string,
-    slider: { min: number; max: number; step: number; unit?: string },
-    getValue: () => number,
-    setValue: (v: number) => void,
-    visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-  ): MenuControlDef =>
-    makeSliderDef(group, id, labelKey, fallback, slider, getValue, setValue, visibleWhen);
-  const wColor = (
-    id: string,
-    labelKey: string,
-    fallback: string,
-    group: string,
-    getValue: () => number,
-    setValue: (v: number) => void,
-    visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-  ): MenuControlDef => makeColorDef(group, id, labelKey, fallback, getValue, setValue, visibleWhen);
-  return [
-    {
-      // 无 group → 成为 cap 根行主控件（与 sky/ground 对齐），下钻子视图不再重复出现
-      id: "ground-water-enabled",
-      kind: "toggle",
-      labelKey: "preview.groundWaterEnabled",
-      fallback: "启用水面",
-      getValue: () => cap.getWaterEnabled(),
-      setValue: (v) => cap.setWaterEnabled(v as boolean),
-    },
-    // ── 形态 ──
-    {
-      id: "ground-water-mode",
-      kind: "select",
-      labelKey: "preview.groundWaterMode",
-      fallback: "水面形态",
-      group: WATER_GROUP_FORM,
-      select: [
-        { value: "film", label: "薄膜" },
-        { value: "pool", label: "水池" },
-      ],
-      getValue: () => cap.getWaterMode(),
-      setValue: (v) => cap.setWaterMode(v as WaterMode),
-    },
-    wSlider(
-      "ground-wetness",
-      "preview.waterFilmDensity",
-      "水膜浓度",
-      WATER_GROUP_LOOK,
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getWetness(),
-      (v) => cap.setWetness(v),
-      (s) => s["env.waterMode"] === "film", // 仅薄膜模式：pool 下 wetness 不参与 opacity（见 buildWaveWaterMaterial）
-    ),
-    // ── 外观 ──
-    wColor(
-      "ground-water-color",
-      "preview.groundWaterColor",
-      "水色",
-      WATER_GROUP_LOOK,
-      () => cap.getWaterColor(),
-      (v) => cap.setWaterColor(v),
-    ),
-    wSlider(
-      "ground-water-opacity",
-      "preview.groundWaterOpacity",
-      "不透明度",
-      WATER_GROUP_LOOK,
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getWaterOpacity(),
-      (v) => cap.setWaterOpacity(v),
-    ),
-    wSlider(
-      "ground-normal-strength",
-      "preview.groundNormalStrength",
-      "法线强度",
-      WATER_GROUP_LOOK,
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getNormalStrength(),
-      (v) => cap.setNormalStrength(v),
-    ),
-    wSlider(
-      "ground-water-clarity",
-      "preview.groundWaterClarity",
-      "水体通透度",
-      WATER_GROUP_LOOK,
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getClarity(),
-      (v) => cap.setClarity(v),
-    ),
-    // ── 水池（仅 pool 模式可见；film 下为死控件，故条件隐藏）──
-    wSlider(
-      "ground-pool-height",
-      "preview.groundPoolHeight",
-      "水池高度",
-      WATER_GROUP_POOL,
-      { min: 0.01, max: 5, step: 0.05, unit: "m" },
-      () => cap.getPoolHeight(),
-      (v) => cap.setPoolHeight(v),
-      (s) => s["env.waterMode"] === "pool",
-    ),
-    wSlider(
-      "ground-pool-wall-thickness",
-      "preview.groundPoolWallThickness",
-      "池壁厚度",
-      WATER_GROUP_POOL,
-      { min: 0.01, max: 2, step: 0.01, unit: "m" },
-      () => cap.getPoolWallThickness(),
-      (v) => cap.setPoolWallThickness(v),
-      (s) => s["env.waterMode"] === "pool",
-    ),
-    wColor(
-      "ground-pool-wall-color",
-      "preview.groundPoolWallColor",
-      "池壁颜色",
-      WATER_GROUP_POOL,
-      () => cap.getPoolWallColor(),
-      (v) => cap.setPoolWallColor(v),
-      (s) => s["env.waterMode"] === "pool",
-    ),
-    wSlider(
-      "ground-pool-roundness",
-      "preview.groundPoolRoundness",
-      "边缘圆角",
-      WATER_GROUP_POOL,
-      { min: 0, max: 0.5, step: 0.01 },
-      () => cap.getPoolRoundness(),
-      (v) => cap.setPoolRoundness(v),
-      (s) => s["env.waterMode"] === "pool",
-    ),
-    // ── 波纹 ──
-    wSlider(
-      "ground-wave-speed",
-      "preview.groundWaveSpeed",
-      "波速",
-      WATER_GROUP_WAVE,
-      { min: 0, max: 3, step: 0.05, unit: "x" },
-      () => cap.getWaveSpeed(),
-      (v) => cap.setWaveSpeed(v),
-    ),
-  ];
 }

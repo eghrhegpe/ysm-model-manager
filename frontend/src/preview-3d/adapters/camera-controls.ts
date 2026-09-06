@@ -1,15 +1,10 @@
-// ===== 通用相机控件（ADR-066 P3 拆出：破 mount-preview-core ↔ preview-menu 循环）=====
-// buildCameraControls / CameraControlBridge 原定义在 mount-preview-core.ts，
-// 但 preview-menu/core.ts 也 import 它们 → 两文件互相 import 构成循环依赖
-// （check-circular 检出）。拆到独立文件后：
-//   mount-preview-core → preview-menu（mountPreviewRootMenu）
-//   preview-menu → camera-controls（buildCameraControls）
-//   不再有环。
-import { t } from "../../core/i18n/t.ts";
-import { createIconButton } from "../../utils/dom/fab.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
+// ===== camera-controls.ts — CameraControlBridge 类型（ADR-066 P3 拆出破环 + ADR-193 第一刀瘦身）=====
+// 历史包袱清理：buildCameraControls DOM 拼装器已被 settings.ts buildCameraSchema 的
+// 声明式三节点（select/slider/button）取代——renderCustom 逃生舱退役，本文件只剩桥类型。
+// （原注释：buildCameraControls / CameraControlBridge 原定义在 mount-preview-core.ts，
+//   为破 mount-preview-core ↔ preview-menu 循环依赖拆至本文件；环早已不存在。）
 
-/** 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） */
+/** 相机控制桥：shared/self 双模式统一旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） */
 export interface CameraControlBridge {
   /** 当前旋转模式（true=环绕） */
   getOrbit(): boolean;
@@ -21,84 +16,4 @@ export interface CameraControlBridge {
   setSpeed(n: number): void;
   /** 重置视角（shared 模式经 content.resetCamera，build 前调用安全——闭包延迟求值） */
   reset(): void;
-}
-
-// ---- 通用相机控制常量（对齐 vrm/litematic 既有口径）----
-const MIN_CAM_SPEED = 2;
-const MAX_CAM_SPEED = 200;
-
-/** 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 */
-const camCss = `
-.cam-label { font-size:11px; color:rgba(255,255,255,0.5); }
-.cam-slider { width:80px; margin:0 4px; cursor:pointer; accent-color:var(--accent,#7c83ff); }
-.cam-val { font-size:11px; color:rgba(255,255,255,0.6); min-width:20px; }
-`;
-let _camStylesInjected = false;
-function ensureCamStyles(): void {
-  if (_camStylesInjected) return;
-  _camStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = camCss;
-  document.head.appendChild(el);
-}
-
-export function buildCameraControls(list: HTMLElement, bridge: CameraControlBridge): void {
-  ensureCamStyles(); // P1 批次9:cssText 抽类注入(幂等;list 挂根菜单 camera 面板,head 注入适用)
-  const rotLabel = document.createElement("span");
-  rotLabel.className = "cam-label";
-  rotLabel.textContent = t("preview.cameraRotation") + ":";
-  list.appendChild(rotLabel);
-
-  const rotSel = document.createElement("select");
-  rotSel.className = "setting-select"; // 🥉 ui/ 库下拉样式（§19）
-  rotSel.style.marginRight = "8px";
-  rotSel.dataset.testid = "mmd-rot-mode"; // §19.1
-  [
-    { v: true, t: "环绕" },
-    { v: false, t: "自身" },
-  ].forEach((m) => {
-    const opt = document.createElement("option");
-    opt.value = String(m.v);
-    opt.textContent = m.t;
-    rotSel.appendChild(opt);
-  });
-  rotSel.value = String(bridge.getOrbit());
-  rotSel.onchange = (): void => {
-    const v = rotSel.value === "true";
-    bridge.setOrbit(v);
-    safeSet("td-rot-mode", v ? "orbit" : "free");
-  };
-  list.appendChild(rotSel);
-
-  const spdLabel = document.createElement("span");
-  spdLabel.className = "cam-label";
-  spdLabel.textContent = t("preview.cameraSpeed") + ":";
-  list.appendChild(spdLabel);
-
-  const spdSlider = document.createElement("input");
-  spdSlider.type = "range";
-  spdSlider.min = String(MIN_CAM_SPEED);
-  spdSlider.max = String(MAX_CAM_SPEED);
-  spdSlider.value = String(bridge.getSpeed());
-  spdSlider.className = "cam-slider";
-  list.appendChild(spdSlider);
-
-  const spdVal = document.createElement("span");
-  spdVal.className = "cam-val";
-  spdVal.textContent = String(bridge.getSpeed());
-  list.appendChild(spdVal);
-
-  spdSlider.oninput = (): void => {
-    spdVal.textContent = spdSlider.value;
-    bridge.setSpeed(Number(spdSlider.value));
-    safeSet("td-cam-speed", spdSlider.value);
-  };
-
-  const resetBtn = createIconButton({
-    icon: "⟲",
-    label: t("preview.resetView"),
-    title: "重置相机视角到初始位置",
-  });
-  resetBtn.onclick = (): void => bridge.reset();
-  list.appendChild(resetBtn);
 }

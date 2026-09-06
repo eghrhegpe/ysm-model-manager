@@ -130,7 +130,7 @@ status: active
 - **`mountPreviewRootMenu(overlay, ctx): PreviewMenuHandle`**（core.ts）— 主入口：装配 dock + popup + SlideMenu 外壳 → 构建面板路由表 → 渲染 dock → 绑定 tap 识别。返回句柄（`dispose` / `setAdapterItems` / `openPanel` / `refreshDock`）。
 - **`renderMenu(container, nodes, deps)`**（render.ts）— 单一渲染器：按 `node.kind` 分派（folder/field/button/row/select/slider/toggle/material-row/controls/divider/sectionTitle/custom/panel/action），`visibleWhen` 谓词过滤。
 - **`renderPreviewPanel(list, node, routers, ...)`**（core.ts）— 面板渲染四路互斥分派：① schemaBuilders（core 注册面板）② `renderAdapterPanelContent`（adapter 面板三通道衰退）③ `node.action`（动作节点）④ fillers（仅 roles）。
-- **`buildPreviewMenuRouters(ctx, ...)`**（core.ts）— 构建面板路由表：`schemaBuilders`（lighting/shadow/postproc/settings/camera/environment 声明式 schema）、`fillers`（仅 roles）、`runners`（close）。
+- **`buildPreviewMenuRouters(ctx, ...)`**（core.ts）— 构建面板路由表：`schemaBuilders`（lighting/shadow/postproc/settings/camera/environment 声明式 schema）、`fillers`（仅 roles）。**ADR-193 第一刀（2026-09-06）**：camera 面板 renderCustom 退役——buildCameraSchema 改产出 select/slider/button 三声明式节点（control 闭包经 ctx.getCamBridge() 惰性取桥，持久化键 td-rot-mode/td-cam-speed 逐字对齐旧 buildCameraControls；buildCameraControls DOM 拼装器连同其测试已删，camera-controls.ts 只剩 CameraControlBridge 类型），renderCustom 构造点白名单 3→2（render-custom-audit 审计门收窄，剩 bones/env）、`runners`（close）。
 - **`PreviewMenuNode`**（node-types.ts）— 声明式菜单节点类型契约（纯类型叶，零运行时依赖）；`PreviewMenuNodeKind` 16 种节点类型；`PreviewControlSpec` 控件绑定规格。
 - **`CORE_MENU_ITEMS` / `PREVIEW_MENU_GROUPS`**（defs.ts）— 核心菜单项（roles/environment/camera/lighting/shadow/postproc/settings）+ 底栏分组定义（model/motion/env/scene/settings）。
 - **`renderAdapterPanelContent(list, node, deps)`**（render.ts）— adapter 面板内容三通道衰退：`schema-registry(schemaId)` → `children` → `renderCustom`。

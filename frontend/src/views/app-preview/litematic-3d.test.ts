@@ -495,32 +495,32 @@ describe("体素数据处理", () => {
 });
 
 describe("控件交互", () => {
-  it("旋转模式切换 + 速度滑块更新显示（camera 面板 buildCameraControls）", async () => {
+  it("旋转模式切换 + 速度滑块更新显示（camera 面板声明式三节点，ADR-193 第一刀）", async () => {
     await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
-    // camera 控件（buildCameraControls）挂在 scene 组的 camera 面板（SlideMenu 弹层内，
-    // 懒渲染）。scene 组含 camera/lighting/shadow/postproc/settings 多项，
-    // dock-scene 走「组根视图」列出条目，点 preview-camera 下钻渲染相机面板。
+    // camera 面板（声明式 select/slider/button 节点）挂在 scene 组（SlideMenu 弹层内，
+    // 懒渲染）。dock-scene 走「组根视图」列出条目，点 preview-camera 下钻渲染相机面板。
     const dock = overlay.querySelector('[data-testid="dock-scene"]') as HTMLElement;
     expect(dock).toBeTruthy();
     dock.click();
     const camRow = overlay.querySelector('[data-testid="preview-camera"]') as HTMLElement;
     expect(camRow).toBeTruthy();
     camRow.click();
-    const sel = overlay.querySelector('[data-testid="mmd-rot-mode"]') as HTMLSelectElement;
+    // cap 行 testid = cap-<node.id>（renderCapControls 派生），限定面板作用域防误命中
+    const orbitRow = overlay.querySelector('[data-testid="cap-camera-orbit"]') as HTMLElement;
+    expect(orbitRow).toBeTruthy();
+    const sel = orbitRow.querySelector("select") as HTMLSelectElement;
     expect(sel).toBeTruthy();
-    // 相机面板 list 是 buildCameraControls 的挂载点，速度滑块/值标签均在其内，
-    // 限定作用域避免误命中 litematic 常驻分层滑块。
-    const panelList = sel.parentElement as HTMLElement;
-    const spd = panelList.querySelector('input[type="range"]') as HTMLInputElement;
-    sel.value = "false";
+    const spdRow = overlay.querySelector('[data-testid="cap-camera-speed"]') as HTMLElement;
+    const spd = spdRow.querySelector('input[type="range"]') as HTMLInputElement;
+    expect(spd).toBeTruthy();
+    sel.value = "free";
     sel.dispatchEvent(new Event("change"));
     spd.value = "55";
     spd.dispatchEvent(new Event("input"));
-    const spdVal = [...panelList.querySelectorAll("span")].find(
-      (s) => /^\d+$/.test(s.textContent || ""),
-    );
-    expect(spdVal?.textContent).toBe("55");
+    // 持久化走旧键（td-rot-mode / td-cam-speed 逐字对齐旧 buildCameraControls）
+    expect(localStorage.getItem("td-rot-mode")).toBe("free");
+    expect(localStorage.getItem("td-cam-speed")).toBe("55");
     unmountOverlay(overlay);
   });
 
@@ -669,9 +669,13 @@ describe("审核补充：边界与异步路径", () => {
     const camRow = overlay.querySelector('[data-testid="preview-camera"]') as HTMLElement;
     expect(camRow).toBeTruthy();
     camRow.click();
-    const sel = overlay.querySelector('[data-testid="mmd-rot-mode"]') as HTMLSelectElement;
+    // ADR-193 第一刀：cap 行 testid = cap-<node.id>（renderCapControls 派生），
+    // select 的 option value 语义化为 orbit/free（旧 mmd-rot-mode 用 "true"/"false"）
+    const sel = overlay.querySelector(
+      '[data-testid="cap-camera-orbit"] select',
+    ) as HTMLSelectElement;
     expect(sel).toBeTruthy();
-    sel.value = "false";
+    sel.value = "free";
     sel.dispatchEvent(new Event("change"));
     // renderer.domElement（canvas）touchAction=none，pointerdown 绑其上、move/up 绑 window
     const rendererEl = Array.from(overlay.querySelectorAll("div")).find(

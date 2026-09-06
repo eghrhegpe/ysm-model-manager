@@ -62,7 +62,6 @@ auto_fields:
     - BoneTree
     - buildBoneHierarchy
     - buildBoneTree
-    - buildCameraControls
     - buildCameraSchema
     - buildCrossCuttingControls
     - buildCubeMeshData

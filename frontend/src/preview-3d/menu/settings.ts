@@ -12,7 +12,7 @@
 
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import { buildCameraControls } from "../adapters/camera-controls.ts";
+import { safeSet } from "../../utils/dom/storage.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
@@ -23,18 +23,52 @@ import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
 // ── 声明式 Schema 构建器（供 schemaBuilders 映射调用）──
 
-/** 相机面板 schema：wrap buildCameraControls 为声明式节点 */
+/** 相机面板 schema（ADR-193 第一刀：renderCustom 逃生舱退役）：
+ *  旋转模式 select / 速度 slider / 重置 button 三声明式节点，control 闭包经
+ *  ctx.getCamBridge() 惰性取桥（禁构建期捕获，对齐 ADR-125 P3「禁止构建期求值」口径），
+ *  持久化键 td-rot-mode / td-cam-speed 与旧 buildCameraControls 逐字对齐。 */
 export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
   return [
     {
-      id: "camera",
-      kind: "custom",
-      labelKey: "preview.cameraView",
-      fallback: "视图",
-      icon: "🎥",
-      renderCustom: (list: HTMLElement): void => {
-        buildCameraControls(list, ctx.getCamBridge());
+      id: "camera-orbit",
+      kind: "select",
+      labelKey: "preview.cameraRotation",
+      fallback: "摄像机旋转",
+      control: {
+        options: [
+          { value: "orbit", label: "环绕" },
+          { value: "free", label: "自身" },
+        ],
+        get: () => (ctx.getCamBridge().getOrbit() ? "orbit" : "free"),
+        set: (v) => {
+          const orbit = v === "orbit";
+          ctx.getCamBridge().setOrbit(orbit);
+          safeSet("td-rot-mode", orbit ? "orbit" : "free");
+        },
       },
+    },
+    {
+      id: "camera-speed",
+      kind: "slider",
+      labelKey: "preview.cameraSpeed",
+      fallback: "摄像机速度",
+      control: {
+        min: 2,
+        max: 200,
+        step: 1,
+        get: () => ctx.getCamBridge().getSpeed(),
+        set: (n) => {
+          ctx.getCamBridge().setSpeed(Number(n));
+          safeSet("td-cam-speed", String(n));
+        },
+      },
+    },
+    {
+      id: "camera-reset",
+      kind: "button",
+      labelKey: "preview.resetView",
+      fallback: "重置视角",
+      action: () => ctx.getCamBridge().reset(),
     },
   ];
 }

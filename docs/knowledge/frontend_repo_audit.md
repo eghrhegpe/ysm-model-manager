@@ -151,7 +151,6 @@ auto_fields:
     - buildBoneHierarchy
     - buildBoneNamesText
     - buildBoneTree
-    - buildCameraControls
     - buildCameraSchema
     - buildCrossCuttingControls
     - buildCubeMeshData

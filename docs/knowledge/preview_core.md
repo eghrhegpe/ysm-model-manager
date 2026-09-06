@@ -32,7 +32,6 @@ auto_fields:
     - BonesPanelItemOpts
     - BoneTree
     - buildBoneTree
-    - buildCameraControls
     - buildFbxScene
     - buildFbxSceneFromData
     - buildLitematicScene

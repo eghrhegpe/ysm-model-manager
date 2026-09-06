@@ -256,7 +256,9 @@ function rmAppendButton(
 }
 
 /** [子函数 4/6] row：动态列表行（纹理/材质/bone 等动态列表；ADR-193 第四刀起支持
- *  行首 radio（焦点钮）与行尾 badge（次级动作钮）槽位——roles 角色行/switch 候选行） */
+ *  行首 radio（焦点钮）与行尾 badge（次级动作钮）槽位——roles 角色行/switch 候选行；
+ *  环境面板 cap 行复用：headerToggle（能力开关）+ 行尾 chevron（无 badge 且有 action 时显示，
+ *  表「整行点击下钻」） */
 function rmAppendDynamicRow(
   container: HTMLElement,
   node: PreviewMenuNode,
@@ -293,6 +295,19 @@ function rmAppendDynamicRow(
     row.prepend(radio);
   }
   if (node.radio?.active) row.classList.add("rm-row-active");
+  if (node.headerToggle) {
+    // 行内能力开关（对齐 MikuMikuAR PopupRow.headerToggle / folder headerToggle）：
+    // createHeaderToggle 内置 stopPropagation，开关点击不触发整行 action（下钻）。
+    // 紧跟 label 后；行尾对齐交给 badge/chevron（env cap 行 = toggle + ›）。
+    const ht = node.headerToggle;
+    const tg = createHeaderToggle({
+      value: ht.value,
+      onChange: (v: boolean) => ht.onChange(v),
+      ...(ht.bind ? { bind: ht.bind } : {}),
+    });
+    if (!node.badge && !node.action) tg.style.marginLeft = "auto";
+    row.appendChild(tg);
+  }
   if (node.badge) {
     const badge = document.createElement("button");
     badge.type = "button";
@@ -306,6 +321,17 @@ function rmAppendDynamicRow(
       node.badge?.onClick();
     };
     row.appendChild(badge);
+  }
+  if (node.action && !node.badge) {
+    // 行尾 chevron：有 action（下钻/执行）且无 badge → 显示 › 提示可点（env cap 行 /
+    // roles 无 badge 行）。headerToggle 与 chevron 可同存（MikuMikuAR folder 行同款：
+    // 开关在 label 右、箭头行尾）。badge 是行尾次级钮，有它则不叠加箭头。
+    const chev = document.createElement("span");
+    chev.textContent = ">";
+    chev.dataset.testid = "row-chevron";
+    chev.className = "cm-row-chev";
+    chev.style.marginLeft = "auto";
+    row.appendChild(chev);
   }
   rmBindActionClick(row, node.action, actionCtx);
   container.appendChild(row);

@@ -238,6 +238,46 @@ describe("renderMenu 新 kind", () => {
     expect(body.style.display).toBe("block");
   });
 
+  it("row: headerToggle 行尾开关 + chevron 同存；开关点击不触发整行 action（env cap 行形态）", () => {
+    let on = false;
+    let nav = 0;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "env-cap-fog",
+        kind: "row",
+        labelKey: "preview.fog",
+        fallback: "雾效",
+        icon: "🌫️",
+        headerToggle: {
+          value: false,
+          onChange: (v: boolean) => {
+            on = v;
+          },
+          bind: () => on,
+        },
+        action: () => {
+          nav++;
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-env-cap-fog"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    // 行尾开关存在
+    const tg = row.querySelector(".header-toggle") as HTMLElement;
+    expect(tg).not.toBeNull();
+    // chevron 也存在（action 无 badge → 显示 ›）
+    expect(row.querySelector('[data-testid="row-chevron"]')).not.toBeNull();
+    // 点开关：onChange 触发且不触发整行 action（stopPropagation）
+    tg.click();
+    expect(on).toBe(true);
+    expect(nav).toBe(0);
+    // 点行其他区域：action 触发（下钻）
+    row.click();
+    expect(nav).toBe(1);
+  });
+
   it("folder: 折叠态记忆跨 refresh 保持，sibling 隔离，clearFolderCollapsedState 后回默认（code_review bc639ae0 #4）", () => {
     const makeNodes = (): PreviewMenuNode[] => [
       {

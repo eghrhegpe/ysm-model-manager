@@ -338,9 +338,10 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     const envGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "env")!.id;
     const envBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-${envGroupId}"]`);
     expect(envBtn).not.toBeNull();
-    // 单 panel 组 → 快捷直达环境面板（渲染 range 控件，不渲染组根行）
+    // 单 panel 组 → 快捷直达环境面板：渲染 cap 行（sky/ground 两行，不直接渲染 range）
     envBtn!.click();
-    expect(overlay.querySelectorAll('input[type="range"]').length).toBeGreaterThanOrEqual(2);
+    expect(overlay.querySelector('[data-testid="preview-env-cap-sky"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-env-cap-ground"]')).not.toBeNull();
     handle.dispose();
   });
 
@@ -447,9 +448,14 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
     handle.dispose();
   });
 
-  it("core environment 面板：时间/云量滑块渲染", () => {
+  it("core environment 面板：cap 行列表 + 点行下钻渲染时间/云量滑块", () => {
     const { overlay, handle } = mountWith([], { getSiblings: () => ["/m/b.ysm"] });
     handle.openPanel("environment");
+    // 一级：cap 行（sky/ground）
+    const skyRow = overlay.querySelector('[data-testid="preview-env-cap-sky"]') as HTMLElement;
+    expect(skyRow).not.toBeNull();
+    // 二级：点行下钻 → 该 cap 参数页渲染 range 滑块（时间/云量）
+    skyRow.click();
     expect(overlay.querySelectorAll('input[type="range"]').length).toBeGreaterThanOrEqual(2);
     handle.dispose();
   });

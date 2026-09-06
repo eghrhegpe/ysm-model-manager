@@ -1,6 +1,6 @@
 // ===== <app-content> 入口（ADR-040：≤400 行红线）=====
 
-import { bus } from "../../bus.ts";
+import { bus, type PageName } from "../../bus.ts";
 import { resolveInitialPage } from "../../core/page-store.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
@@ -57,10 +57,10 @@ class AppContent extends WebComponentBase {
   get _root(): ShadowRoot {
     return this.state.root;
   }
-  get _current(): string {
+  get _current(): PageName {
     return this.state.current;
   }
-  set _current(v: string) {
+  set _current(v: PageName) {
     this.state.current = v;
   }
   get _globalUnsubs(): Array<() => void> {

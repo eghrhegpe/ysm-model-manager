@@ -19,11 +19,11 @@ import {
   type DownloadState,
   type DownloadTask,
   enqueueDownloads,
+  getStateSnapshot,
   isActiveStatus,
-  notify,
   type QueueError,
   resume,
-  STATE,
+  rollbackToIdle,
   subscribe,
 } from "./download-queue-store.ts";
 
@@ -269,7 +269,7 @@ function cmDqHandleStateChange(ctx: CmDqCtx, s: DownloadState): void {
 }
 
 async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
-  if (isActiveStatus(STATE)) return;
+  if (isActiveStatus(getStateSnapshot())) return;
   if (!tasks.length) return;
 
   try {
@@ -301,8 +301,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     ctx.progressGuard.resetCompletionMutex();
     await enqueueDownloads(tasks);
   } catch (e) {
-    STATE.status = "idle";
-    notify();
+    rollbackToIdle();
     bus.emit("toast:show", {
       msg: `❌ ${t("workshop.enqueueFailed")}: ` + safeErrorMessage(e),
       duration: TOAST_MS.verbose,
@@ -351,7 +350,7 @@ export function createDownloadQueue({
       qsEl: () => cmDqQsEl(ctx),
       onTimedCompletion: (summary) => {
         cmDqCleanupProgressUI(ctx, summary);
-        if (onAllDone) onAllDone({ cancelled: false, errorList: STATE.errorList });
+        if (onAllDone) onAllDone({ cancelled: false, errorList: getStateSnapshot().errorList });
       },
     }),
     prev: {
@@ -368,7 +367,7 @@ export function createDownloadQueue({
   return {
     enqueue: (tasks) => cmDqEnqueue(ctx, tasks),
     cancel: cmDqCancel,
-    isDownloading: () => isActiveStatus(STATE),
+    isDownloading: () => isActiveStatus(getStateSnapshot()),
     destroy: () => {
       ctx.progressGuard.stuckGuardReset();
       unsub();

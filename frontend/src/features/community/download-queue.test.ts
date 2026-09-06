@@ -79,7 +79,7 @@ let resume!: () => Promise<void>;
 beforeEach(async () => {
   vi.resetModules();
   onMock.mockClear(); // 清掉上一用例注册记录，防「累积调用下恒真」弱断言
-  enqueueMock.mockReset(); // mockReset 清实现：防「入队失败」用例的 mockRejectedValue 跨用例残留
+  enqueueMock.mockReset(); // mockReset 清实现；桌面 Go 失败回滚用例见下方「enqueueDownloads 失败路径」describe
   statusMock.mockClear();
   cancelMock.mockClear();
   cachedAvatarMock.mockReset();
@@ -490,5 +490,19 @@ describe("queue:file-done 头像增量提取", () => {
     cachedAvatarMock.mockRejectedValue(new Error("boom"));
     emit("queue:file-done", ["[作者D] 角色.ysm", "ok", ""]);
     await vi.waitFor(() => expect(cachedAvatarMock).toHaveBeenCalled());
+  });
+});
+
+describe("enqueueDownloads 失败路径（桌面）", () => {
+  it("Go EnqueueDownloads 抛错 → STATE 回滚 idle + notify 触发 + reject 传播", async () => {
+    const notifySpy = vi.fn();
+    enqueueMock.mockRejectedValue(new Error("Go 调用失败"));
+    // subscribe 回调内断言 notify 被触发
+    subscribe(notifySpy);
+    await expect(enqueueDownloads([{ url: "u", saveDir: "", name: "a", size: 1 }]))
+      .rejects.toThrow("Go 调用失败");
+    expect(notifySpy).toHaveBeenCalled(); // rollbackToIdle 内 notify() 触发订阅者
+    const s = getState();
+    expect(s.status).toBe("idle"); // 回滚生效，不永久卡 downloading
   });
 });

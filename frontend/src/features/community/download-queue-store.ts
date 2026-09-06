@@ -57,9 +57,13 @@ export interface DownloadState {
  * ⚠️ ADR-187 D3 决策固化：本单例是**有意设计**（下载队列 app 级全局唯一，
  * 生命周期与 Events.On 常驻注册绑定，见文件头 ADR-039 豁免声明），
  * 订阅经自建 subscribe/notify（listeners Set），不引入 PageStore 适配层——
- * 双状态哲学并存（两套订阅机制）比单例更伤；__reset*ForTest 测试后门为单例固有代价，保留。
+ * 双状态哲学并存（两套订阅机制）比单例更伤。
+ *
+ * ⚠️ 单一写入纪律：所有 STATE 字段修改必须经本模块导出的写入函数，
+ * 禁止模块外直接写 STATE.xxx（会绕过 notify 导致订阅者看到陈旧状态）。
+ * 测试后门 __resetStateForTest 由测试文件动态 import 后调用。
  */
-export const STATE: DownloadState = {
+const STATE: DownloadState = {
   status: "idle",
   total: 0,
   remaining: 0,
@@ -69,6 +73,36 @@ export const STATE: DownloadState = {
   _lastDone: null,
   _lastDoneSeq: 0,
 };
+
+/** 测试重置：清空 STATE 到初始值，供 vi.resetModules() + 重 import 后调用 */
+export function __resetStateForTest(): void {
+  STATE.status = "idle";
+  STATE.total = 0;
+  STATE.remaining = 0;
+  STATE.currentFile = "";
+  STATE.progress = { dl: 0, total: 0 };
+  STATE.errorList = [];
+  STATE._lastDone = null;
+  STATE._lastDoneSeq = 0;
+}
+
+/** 外部写入入口：入队失败时回滚 idle（download-queue.ts catch 分支调用） */
+export function rollbackToIdle(): void {
+  STATE.status = "idle";
+  STATE.currentFile = "";
+  notify();
+}
+
+/** 外部写入入口：进度守卫重置进度为 0（不调 notify，避免在 notify 回调链内触发递归） */
+export function resetProgress(): void {
+  STATE.progress = { dl: 0, total: 0 };
+}
+
+/** 外部写入入口：更新剩余数 */
+export function setRemaining(n: number): void {
+  STATE.remaining = n;
+  notify();
+}
 
 const listeners = new Set<(s: DownloadState) => void>();
 let _registered = false;

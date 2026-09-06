@@ -1303,7 +1303,6 @@ auto_fields:
     - SpotlightParams
     - stagger
     - startMainThreadWatch
-    - STATE
     - STATS_BATCH_LIMIT
     - STATS_PANEL_ID
     - statsCardHTML

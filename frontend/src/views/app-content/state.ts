@@ -8,6 +8,7 @@
 // - 异步清理：repoEventsCleanup
 
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import type { PageName } from "../../bus.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 
 export interface RepoCacheEntry {
@@ -20,7 +21,7 @@ export class AppContentState {
   /** Shadow DOM 根 */
   root: ShadowRoot;
   /** 当前页面 key */
-  current: string;
+  current: PageName;
 
   /** 实例页监听注册标志（防重复注册 package:selected） */
   insListenerReg = false;
@@ -50,7 +51,7 @@ export class AppContentState {
    *  切页复用节点不重建；key=页面名，value=面板节点） */
   private pagePanels = new Map<string, HTMLElement>();
 
-  constructor(root: ShadowRoot, current: string) {
+  constructor(root: ShadowRoot, current: PageName) {
     this.root = root;
     this.current = current;
   }

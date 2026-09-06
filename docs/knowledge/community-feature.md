@@ -8,6 +8,7 @@ source_files:
   - frontend/src/utils/gh-links.ts
 auto_fields:
   symbols_with_lines:
+    - __resetStateForTest
     - bindRepoEvents
     - buildDownloadTasks
     - buildModelRow
@@ -45,10 +46,12 @@ auto_fields:
     - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle
+    - resetProgress
     - resume
+    - rollbackToIdle
+    - setRemaining
     - showProgress
     - showRepoModels
-    - STATE
     - subscribe
     - tryFetchModels
     - VIEW_TESTIDS

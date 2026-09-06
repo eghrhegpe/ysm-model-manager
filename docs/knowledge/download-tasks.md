@@ -9,6 +9,7 @@ source_files:
   - frontend/src/features/community/download-queue.ts
 auto_fields:
   symbols_with_lines:
+    - __resetStateForTest
     - buildDownloadTasks
     - cancelDownloads
     - classifyDownloadSize
@@ -28,8 +29,10 @@ auto_fields:
     - QueueController
     - QueueControllerOptions
     - QueueError
+    - resetProgress
     - resume
-    - STATE
+    - rollbackToIdle
+    - setRemaining
     - subscribe
 quick_groups:
   - 创意工坊下载

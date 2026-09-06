@@ -4,7 +4,7 @@
 // 职责：进度条渲染 + 小文件 300ms 强制 100% / 大文件 2s 转菊花 / file-done 强制复位 /
 // 3s completeTimer 收口互斥（与队列结束双路收口防重复）。
 import { t } from "../../core/i18n/t.ts";
-import { type DownloadState, isActiveStatus, STATE } from "./download-queue-store.ts";
+import { type DownloadState, isActiveStatus, resetProgress } from "./download-queue-store.ts";
 
 /** 进度条元素的自定义属性（点动画） */
 type PctEl = HTMLElement & {
@@ -71,7 +71,7 @@ function cmPgStuckGuardReset(ctx: CmPgCtx): void {
 }
 
 function cmPgResetProgressUI(ctx: CmPgCtx): { pctEl: PctEl | null; fillEl: HTMLElement | null } {
-  STATE.progress = { dl: 0, total: 0 };
+  resetProgress();
   const pctEl = ctx.qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
   const fillEl = ctx.qsEl()?.querySelector(".gh-progress-fill") as HTMLElement | null;
   return { pctEl, fillEl };
@@ -190,16 +190,16 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   if (pct >= 100 && !ctx._stuckLocked) {
     cmPgClearCompleteTimer(ctx);
     ctx.completeTimer = setTimeout(() => {
-      if (!isActiveStatus(STATE)) return;
-      if (STATE.remaining > 0) return;
-      if (STATE._lastDoneSeq > 0 && STATE.status !== "downloading") return;
+      if (!isActiveStatus(s)) return;
+      if (s.remaining > 0) return;
+      if (s._lastDoneSeq > 0 && s.status !== "downloading") return;
       if (ctx._doneNotified) return;
       ctx._doneNotified = true;
       let summary: string | undefined;
-      if (STATE.errorList.length > 0) {
+      if (s.errorList.length > 0) {
         summary =
           '<div class="gh-queue-error">⚠️ ' +
-          t("downloadQueue.failedCount", { n: STATE.errorList.length }) +
+          t("downloadQueue.failedCount", { n: s.errorList.length }) +
           "</div>";
       }
       ctx.onTimedCompletion(summary);

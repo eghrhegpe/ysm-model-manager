@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 391 |
+| eventArr | `frontend/src/features/community/download-queue-store.ts` | 425 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -317,7 +317,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 270 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 304 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 173 |
@@ -396,9 +396,9 @@
 |------|------|----|
 | runStartupSteps | `frontend/src/app-modules.ts` | 68 |
 | (顶层) | `frontend/src/app-modules.ts` | 130 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 259 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 293 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 306 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 226 |
@@ -426,9 +426,9 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 639 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 640 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 158 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 46 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 58 |
@@ -585,7 +585,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 269 |
+| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 303 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 174 |

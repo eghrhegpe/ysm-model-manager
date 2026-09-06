@@ -11,6 +11,7 @@ source_files:
   - frontend/src/backend/runtime.ts
 auto_fields:
   symbols_with_lines:
+    - __resetStateForTest
     - buildDownloadTasks
     - cancelDownloads
     - classifyDownloadSize
@@ -34,8 +35,10 @@ auto_fields:
     - QueueController
     - QueueControllerOptions
     - QueueError
+    - resetProgress
     - resume
-    - STATE
+    - rollbackToIdle
+    - setRemaining
     - subscribe
     - Window
 tests:

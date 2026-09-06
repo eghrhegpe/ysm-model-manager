@@ -16,6 +16,13 @@ rules:
 
   - match:
       tools: [bash, pwsh]
+      argv: { command: "git", args: ["reset"] }
+    action: ask
+    reason: "git reset 是一个意义不大的操作，存在为了提交的整洁性而干扰兄弟 session 的暂存过程，先确认"
+    tags: [federal, parallel-session]
+
+  - match:
+      tools: [bash, pwsh]
       argv: { command: "git", args: ["checkout"] }
     action: ask
     reason: "git checkout 切分支/还原文件会丢失未提交工作；并行 session 场景先确认"

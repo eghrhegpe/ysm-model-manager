@@ -200,8 +200,13 @@ export async function buildFbxScene(
     if (useFbxWorker) {
       await fbxDiag(port, "fbx-parse-dispatch", "FBX 派发 worker 解析", "ok");
       const parser = createFbxParser();
-      const resp = await parser.parse(bytes);
-      parser.dispose();
+      // parser.dispose（Worker terminate）放 finally：parse reject 时此前永不触达 → Worker 泄漏
+      let resp: Awaited<ReturnType<typeof parser.parse>>;
+      try {
+        resp = await parser.parse(bytes);
+      } finally {
+        parser.dispose();
+      }
       if (resp.ok && resp.data) {
         // texUrlMap：worker 只登记纹理文件名，主线程读真实字节建 blob URL 挂贴图
         // （发现1 P2：此前从不构建 → worker 路径纹理恒缺失，静默回归）
@@ -231,6 +236,9 @@ export async function buildFbxScene(
     }
     await fbxDiag(port, "fbx-load", `已加载 ${path}`, "ok");
   } catch (e) {
+    // buildFbxSceneFromData 抛错时 texBlobUrls 已产出（texUrlMap 赋值在前）→ revoke 防 blob 泄漏
+    for (const u of texBlobUrls) URL.revokeObjectURL(u);
+    texBlobUrls = [];
     await fbxDiag(port, "fbx-load", "FBX 解析失败", "fail", safeErrorMessage(e));
     throw e;
   } finally {
@@ -304,13 +312,31 @@ export async function buildFbxScene(
       // 「动画激活 → 感知静默」由各感知属主 adapter（mmd/vrm/ysm）用自己的动画判据自写。
     },
     dispose: () => {
+      // 逐段容错（对齐 mmd-adapter alloc 释放语义：单条 free 抛错不跳过其余）——
+      // 此前单 try 包全部，bonePanelRef 抛错会跳过 geometry/material dispose 与 blob revoke
       try {
         bonePanelRef.current?.();
+      } catch (e) {
+        console.warn("[fbx dispose] bonePanel", e);
+      }
+      try {
         mixer?.stopAllAction();
-        if (ctx.scene) {
+      } catch (e) {
+        console.warn("[fbx dispose] mixer", e);
+      }
+      if (ctx.scene) {
+        try {
           unregisterModelRoot(group);
-          ctx.scene.remove(group);
+        } catch (e) {
+          console.warn("[fbx dispose] unregisterModelRoot", e);
         }
+        try {
+          ctx.scene.remove(group);
+        } catch (e) {
+          console.warn("[fbx dispose] scene.remove", e);
+        }
+      }
+      try {
         group.traverse((o) => {
           const mesh = o as THREE.Mesh;
           if (mesh.geometry) mesh.geometry.dispose();
@@ -324,10 +350,14 @@ export async function buildFbxScene(
           if (Array.isArray(mat)) mat.forEach((m) => disposeMaterial(m));
           else if (mat) disposeMaterial(mat as THREE.Material);
         });
-        // 纹理 blob URL 释放（预览关闭后不再需要；未完成的 TextureLoader.load 会静默失败）
+      } catch (e) {
+        console.warn("[fbx dispose] geometry/material", e);
+      }
+      // 纹理 blob URL 释放（预览关闭后不再需要；未完成的 TextureLoader.load 会静默失败）
+      try {
         for (const u of texBlobUrls) URL.revokeObjectURL(u);
-      } catch {
-        /* 释放容错 */
+      } catch (e) {
+        console.warn("[fbx dispose] revokeObjectURL", e);
       }
     },
     screenshot: () =>

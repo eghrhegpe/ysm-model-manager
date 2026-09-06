@@ -19,6 +19,8 @@ const hoisted = vi.hoisted(() => {
     readBytesMock: vi.fn(),
     fbxParserImpl: null as null | (() => unknown),
     buildFromDataOverride: null as null | ((data: unknown, config?: unknown) => THREE.Group),
+    // makeBonesPanelItem 捕获 cleanupRef（dispose 逐段容错测试注入抛错 cleanup 用）
+    capturedCleanupRef: null as null | { current: (() => void) | null },
     setWithAnim: (v: boolean) => {
       withAnim = v;
     },
@@ -72,6 +74,20 @@ vi.mock("three/addons/loaders/FBXLoader.js", () => ({
   },
 }));
 
+vi.mock("./bones-panel-node.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./bones-panel-node.ts")>();
+  return {
+    ...actual,
+    makeBonesPanelItem: (
+      opts: Parameters<typeof actual.makeBonesPanelItem>[0],
+    ): ReturnType<typeof actual.makeBonesPanelItem> => {
+      // 捕获 cleanupRef：测试可在 dispose 前把 current 换成抛错实现（逐段容错）
+      hoisted.capturedCleanupRef = opts.cleanupRef;
+      return actual.makeBonesPanelItem(opts);
+    },
+  };
+});
+
 vi.mock("./fbx-parser.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./fbx-parser.ts")>();
   return {
@@ -112,6 +128,7 @@ describe("fbx-adapter", () => {
     hoisted.setLoadError(null);
     hoisted.fbxParserImpl = null;
     hoisted.buildFromDataOverride = null;
+    hoisted.capturedCleanupRef = null;
     localStorage.removeItem("fbx-worker");
   });
 
@@ -289,6 +306,7 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
     hoisted.setLoadError(null);
     hoisted.fbxParserImpl = null;
     hoisted.buildFromDataOverride = null;
+    hoisted.capturedCleanupRef = null;
     localStorage.removeItem("fbx-worker");
   });
 
@@ -361,18 +379,103 @@ describe("fbx-adapter worker 路径（fbx-worker=1）", () => {
     expect(revokeURL).toHaveBeenCalled();
   });
 
-  it("worker parse 抛错 → diag fail + 异常穿透", async () => {
+  it("worker parse 抛错 → diag fail + 异常穿透 + parser.dispose 仍执行（worker terminate 泄漏修复）", async () => {
     localStorage.setItem("fbx-worker", "1");
     stubBlobUrls(() => "blob:fbx-url");
     hoisted.readBytesMock.mockResolvedValue(btoa("FBX"));
+    const parserDispose = vi.fn();
     hoisted.fbxParserImpl = () => ({
       parse: () => Promise.reject(new Error("worker crash")),
-      dispose: vi.fn(),
+      dispose: parserDispose,
     });
     const ctx = makeCtx();
     await expect(
       buildFbxScene(ctx, "/repo/fbx/c.fbx", { readFileBytes: hoisted.readBytesMock, addOpLog: vi.fn() }),
     ).rejects.toThrow("worker crash");
+    // parser.parse reject 时 dispose（Worker terminate）必须仍执行（此前放 await 后永不触达）
+    expect(parserDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("buildFbxSceneFromData 抛错 → 已产出的 texBlobUrls 被 revoke（blob 泄漏修复）", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    const { revokeURL } = stubBlobUrls(() => "blob:mock-url");
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p === "/repo/fbx/g.fbx") return Promise.resolve(btoa("FBX"));
+      if (p === "/repo/fbx/Tex.PNG") return Promise.resolve(btoa("PNG"));
+      return Promise.resolve(null);
+    });
+    hoisted.fbxParserImpl = () => ({
+      parse: () => Promise.resolve({ ok: true, data: workerData() }),
+      dispose: vi.fn(),
+    });
+    hoisted.buildFromDataOverride = () => {
+      throw new Error("rebuild boom");
+    };
+    const ctx = makeCtx();
+    await expect(
+      buildFbxScene(ctx, "/repo/fbx/g.fbx", { readFileBytes: hoisted.readBytesMock, addOpLog: vi.fn() }),
+    ).rejects.toThrow("rebuild boom");
+    // texUrlMap 已产出 blob URL → catch 路径 revoke（此前直接 throw 泄漏）
+    expect(revokeURL).toHaveBeenCalledWith("blob:mock-url");
+  });
+
+  it("dispose 逐段容错：bonePanel cleanup 抛错，后续 unregister/remove/geometry dispose/revoke 仍执行", async () => {
+    localStorage.setItem("fbx-worker", "1");
+    const { revokeURL } = stubBlobUrls(() => "blob:mock-url");
+    hoisted.readBytesMock.mockImplementation((p: string) => {
+      if (p === "/repo/fbx/h.fbx") return Promise.resolve(btoa("FBX"));
+      if (p === "/repo/fbx/Tex.PNG") return Promise.resolve(btoa("PNG"));
+      return Promise.resolve(null);
+    });
+    hoisted.fbxParserImpl = () => ({
+      parse: () => Promise.resolve({ ok: true, data: workerData() }),
+      dispose: vi.fn(),
+    });
+    // build 产物带 SkinnedMesh（骨骼树非空 → makeBonesPanelItem 被调 → cleanupRef 被捕获）
+    const geo = new THREE.BoxGeometry(10, 10, 10);
+    // Box3.setFromObject 对 SkinnedMesh 走 applyBoneTransform，需覆盖全部 24 顶点的
+    // skinIndex/skinWeight（BoxGeometry；缺省/长度不足 → bones[undefined] 崩）
+    geo.setAttribute("skinIndex", new THREE.BufferAttribute(new Float32Array(24 * 4), 4));
+    const skinWeights = new Float32Array(24 * 4);
+    for (let i = 0; i < 24; i++) skinWeights[i * 4] = 1;
+    geo.setAttribute("skinWeight", new THREE.BufferAttribute(skinWeights, 4));
+    const geoDispose = vi.spyOn(geo, "dispose");
+    const group = new THREE.Group();
+    const mesh = new THREE.SkinnedMesh(geo, new THREE.MeshStandardMaterial());
+    const bone = new THREE.Bone();
+    bone.name = "Hips";
+    mesh.bind(new THREE.Skeleton([bone]));
+    group.add(mesh);
+    group.add(bone); // bone 入组才有 matrixWorld（Box3.setFromObject 走 applyBoneTransform）
+    (group as unknown as { animations: THREE.AnimationClip[] }).animations = [];
+    hoisted.buildFromDataOverride = () => group;
+
+    const ctx = makeCtx();
+    const scene = ctx.scene as THREE.Scene;
+    const rootsBefore = getModelRootCount(); // 模块级注册表，文件内先行用例有泄漏残留，取相对值
+    const content = await buildFbxScene(ctx, "/repo/fbx/h.fbx", {
+      readFileBytes: hoisted.readBytesMock,
+      addOpLog: vi.fn(),
+    });
+    expect(hoisted.capturedCleanupRef).not.toBeNull();
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // 第一步（骨骼面板卸载）抛错
+    let cleanupCalled = false;
+    hoisted.capturedCleanupRef!.current = () => {
+      cleanupCalled = true;
+      throw new Error("panel cleanup boom");
+    };
+    const removeSpy = vi.spyOn(scene, "remove");
+
+    expect(() => content.dispose()).not.toThrow();
+    expect(cleanupCalled).toBe(true);
+    // 后续各段仍执行：scene.remove / frustum 注销 / geometry dispose / blob revoke
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(getModelRootCount()).toBe(rootsBefore);
+    expect(geoDispose).toHaveBeenCalled();
+    expect(revokeURL).toHaveBeenCalledWith("blob:mock-url");
+    expect(warnSpy).toHaveBeenCalled();
   });
 });
 
@@ -385,6 +488,7 @@ describe("fbx-adapter 主线程降级与边界", () => {
     hoisted.setLoadError(null);
     hoisted.fbxParserImpl = null;
     hoisted.buildFromDataOverride = null;
+    hoisted.capturedCleanupRef = null;
     localStorage.removeItem("fbx-worker");
   });
 

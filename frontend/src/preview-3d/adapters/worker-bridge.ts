@@ -47,6 +47,8 @@ export type CreateWorkerBridgeOpts<Resp, Ok> = {
   timeoutMs: number;
   timeoutMsg: string;
   pickWorker?: (id: number, workers: Worker[]) => Worker;
+  /** Worker 死亡重建替补的工厂（resolve-mode 自愈；缺省不重建——reject-mode 走 terminatePool 无需） */
+  createWorker?: () => Worker;
 } & (
   | {
       // resolve-mode：settle 拿不到 reject，编译期杜绝误用；makeErrorResponse 必传
@@ -142,6 +144,27 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
       return;
     }
     for (const [id] of pending) settleError(id, "Worker 错误");
+    rebuildDeadWorkers();
+  }
+
+  /** resolve-mode 自愈（参照 mmd-texture-decoder.ts 崩溃重建模式）：worker 死亡后仅结算
+   *  在途不够——池里仍是死实例，后续 request 全部 postMessage 给死 worker 吃满 30s 超时。
+   *  此处 terminate 死实例 + 就地重建替补并接线（onmessage/onerror 委托回本桥），
+   *  下一次 request 经 pickWorker 读 workers 数组自动用上新实例（惰性自愈）。 */
+  function rebuildDeadWorkers(): void {
+    if (!opts.createWorker) return;
+    for (let i = 0; i < workers.length; i++) {
+      const dead = workers[i];
+      try {
+        dead.terminate();
+      } catch {
+        /* 已崩溃 */
+      }
+      const replacement = opts.createWorker();
+      replacement.onmessage = (e: MessageEvent<Resp>) => handleMessage(e.data);
+      replacement.onerror = () => handleWorkerError();
+      workers[i] = replacement;
+    }
   }
 
   function request(reqWithoutId: Omit<Req, "id">, transfer?: Transferable[]): Promise<Ok> {
@@ -183,6 +206,9 @@ export function createResolveModeBridge<Resp extends ResolveModeResponse>(
     settle: (r, { resolve }) => resolve(r),
     onWorkerError: "resolveAllError",
     makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg }) as Resp,
+    // resolve-mode 自愈：单 worker 崩溃 → 桥内 terminate + 重建替补并接线
+    // （P0：否则后续 request 全部 postMessage 给死 worker，吃满 30s 超时）
+    createWorker: () => new Worker(new URL(workerUrl, import.meta.url), { type: "module" }),
   });
   // 消息接线必须由工厂完成：薄封装不暴露 handleMessage/handleWorkerError，
   // 若漏接，worker 响应永不结算、恒超时 ok:false 静默回退主线程

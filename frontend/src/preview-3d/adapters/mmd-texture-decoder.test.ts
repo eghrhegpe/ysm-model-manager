@@ -2,11 +2,13 @@
 // P2-4：Worker 崩溃 → fail-fast 清算在途任务 + 重建替补（不再空等 8s 超时）
 // P2-5：closeUnusedDecodedBitmaps 只关 refCount<=0 的位图（未应用的不泄漏）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as THREE from "three";
 import {
   getTextureDecoder,
   disposeTextureDecoder,
   closeUnusedDecodedBitmaps,
   createTextureDecoder,
+  applyWorkerDecodedTextures,
   type DecodedTexture,
 } from "./mmd-texture-decoder.ts";
 
@@ -128,6 +130,82 @@ describe("Worker 崩溃恢复（P2-4）", () => {
       { relPath: "b.png", bytes: new ArrayBuffer(4), mimeType: "image/png" },
     ]);
     expect(results.size).toBe(1);
+  });
+});
+
+describe("applyWorkerDecodedTextures decode miss 兜底（防永久白模）", () => {
+  /** 构造带 pendingTexture 标记的 worker 路径 mesh */
+  function makePendingMesh(relPath: string, blobUrl: string): { mesh: THREE.Mesh; mat: THREE.MeshStandardMaterial } {
+    const mat = new THREE.MeshStandardMaterial();
+    mat.userData.pendingTexture = { relPath, blobUrl };
+    const mesh = { material: mat } as unknown as THREE.Mesh;
+    return { mesh, mat };
+  }
+
+  /** mock TextureLoader.load：同步回调 onLoad（对齐 fbx-parser.test 的 happy-dom 规避手法） */
+  function mockTextureLoader(): { textures: THREE.Texture[] } {
+    const textures: THREE.Texture[] = [];
+    vi.spyOn(THREE.TextureLoader.prototype, "load").mockImplementation(
+      ((_url: string, onLoad?: (tex: THREE.Texture) => void) => {
+        const tex = new THREE.Texture();
+        textures.push(tex);
+        onLoad?.(tex);
+        return tex;
+      }) as never,
+    );
+    return { textures };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("decode miss → pendingTexture blobUrl 走 TextureLoader 兜底赋 map（sRGB，防永久白模）", () => {
+    const { mesh, mat } = makePendingMesh("face.png", "blob:face");
+    mockTextureLoader();
+
+    // 解码结果为空（全部 miss）
+    const { replaced, total, fallback } = applyWorkerDecodedTextures(mesh, new Map(), new Map());
+
+    expect(fallback).toBe(1);
+    expect(replaced).toBe(0);
+    expect(total).toBe(0); // pendingTexture 材质不计入 Fallback 路径 total
+    const map = (mat as unknown as { map?: THREE.Texture }).map;
+    expect(map).toBeDefined();
+    expect(map!.colorSpace).toBe(THREE.SRGBColorSpace);
+    // three 的 Material.needsUpdate 只有 setter（getter undefined），以 version 递增断言
+    expect(mat.version).toBeGreaterThan(0);
+  });
+
+  it("decode 命中 → 位图纹理直接赋 map，不触发 TextureLoader 兜底", () => {
+    const { mesh, mat } = makePendingMesh("face.png", "blob:face");
+    const spy = mockTextureLoader();
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    const decoded = new Map<string, DecodedTexture>([
+      ["face.png", { relPath: "face.png", bitmap, width: 1, height: 1, refCount: 0 }],
+    ]);
+
+    const { replaced, fallback } = applyWorkerDecodedTextures(mesh, decoded, new Map());
+
+    expect(replaced).toBe(1);
+    expect(fallback).toBe(0);
+    expect(spy.textures).toHaveLength(0);
+    const map = (mat as unknown as { map?: THREE.Texture }).map;
+    expect(map).toBeDefined();
+    expect(map!.colorSpace).toBe(THREE.SRGBColorSpace);
+    // 位图引用计数 +1（释放链路不变）
+    expect(decoded.get("face.png")!.refCount).toBe(1);
+  });
+
+  it("兜底纹理来自 TextureLoader，随材质进既有 dispose 链路（map 可被 disposeMmdMesh 释放）", () => {
+    const { mat } = makePendingMesh("face.png", "blob:face");
+    const { textures } = mockTextureLoader();
+
+    applyWorkerDecodedTextures({ material: mat } as unknown as THREE.Mesh, new Map(), new Map());
+
+    // 兜底纹理是标准 THREE.Texture（HTMLImageElement 载体，flipY 默认 true 与 image 方向一致）
+    expect(textures).toHaveLength(1);
+    expect(textures[0].flipY).toBe(true);
   });
 });
 

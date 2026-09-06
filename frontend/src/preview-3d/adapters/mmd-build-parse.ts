@@ -10,6 +10,19 @@ import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { applyWorkerDecodedTextures, closeUnusedDecodedBitmaps } from "./mmd-texture-decoder.ts";
 import type { MdMmParsePmdCtx, MdMmParsePmxCtx } from "./mmd-types.ts";
 
+/**
+ * worker 路径伪造 mmd 的 updateWithMixer（P0 review 修复）：
+ * 真实 MMD.updateWithMixer(delta, mixer, options) 语义中 mixer.update(delta) 是动画推进主体
+ * （options 仅作用 physics/IK，worker 路径本就没有）。曾是 no-op → c.mixer.update(dt) 无人调用，
+ * worker 路径 VMD 动画永不播放（mmd-build-result.ts 每帧只走 c.mmd?.updateWithMixer(...)）。
+ */
+export function workerMmdUpdateWithMixer(
+  delta: number,
+  mixer: { update: (dt: number) => void },
+): void {
+  mixer.update(delta);
+}
+
 export async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
   c.workerResult = null;
   c.pmxParsedData = null;
@@ -70,7 +83,7 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
             morphs: c.pmxParsedData.morphs ?? [],
           }
         : undefined,
-      updateWithMixer: () => {},
+      updateWithMixer: workerMmdUpdateWithMixer,
       dispose: () => {},
     } as unknown as Awaited<ReturnType<MMDLoader["loadAsync"]>>;
     // worker 假 mmd（dispose no-op）：分配即登记，与主线程 loader 路径对称
@@ -151,15 +164,29 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
           "warn",
           `decoded=${decoded.size} bitmaps but 0 materials have pendingTexture! mats=${allMats2.length} userDatas=[${allMats2.map((m) => Object.keys(m.userData || {}).join(",")).join("|")}]`,
         );
-      } else if (decoded.size > 0) {
-        const { replaced, total } = applyWorkerDecodedTextures(c.mesh, decoded, c.blobUrlToRel);
+      } else if (pendingMats.length > 0) {
+        // decode miss 的材质由 applyWorkerDecodedTextures 内部用 pendingTexture.blobUrl 走
+        // 主线程 TextureLoader 兜底（fallback 计数），防解码失败永久白模
+        const { replaced, total, fallback } = applyWorkerDecodedTextures(
+          c.mesh,
+          decoded,
+          c.blobUrlToRel,
+        );
         if (replaced > 0) {
           await mmdDiag(
             c.effectivePort,
             "tex-decode-apply",
             c.effectivePath,
             "ok",
-            `worker-decoded=${replaced}/${total} textures (${decoded.size} bitmaps from workers)`,
+            `worker-decoded=${replaced}/${total} textures (${decoded.size} bitmaps from workers, fallback=${fallback} via TextureLoader)`,
+          );
+        } else if (fallback > 0) {
+          await mmdDiag(
+            c.effectivePort,
+            "tex-decode-apply",
+            c.effectivePath,
+            "ok",
+            `decode miss 兜底：${fallback}/${total} 材质改走主线程 TextureLoader（pendingTexture blobUrl）`,
           );
         } else {
           await mmdDiag(

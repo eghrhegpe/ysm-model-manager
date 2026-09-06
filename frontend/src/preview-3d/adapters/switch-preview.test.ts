@@ -379,17 +379,36 @@ describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
     expect(ctx.inFlight).toBe(false);
   });
 
-  it("keep=true build 失败 → 补释放旧 content（清除段跳过 dispose 的兜底）", async () => {
-    const { ctx, state, mockAdapter } = makeMockCtx();
+  it("keep=true build 失败 → 只丢弃半成品，既有同框模型保留（不 dispose / 注册表不动）", async () => {
+    const { ctx, state, mockScene, mockAdapter } = makeMockCtx();
     vi.spyOn(console, "error").mockImplementation(() => {});
     const oldDispose = vi.fn();
-    state.content = { dispose: oldDispose } as unknown as PreviewScene;
-    mockAdapter.build.mockRejectedValue(new Error("boom"));
+    const oldContent = { dispose: oldDispose } as unknown as PreviewScene;
+    state.content = oldContent;
+    state.perFrame = () => {};
+    ctx.allContent.push(oldContent);
+    sceneRegistry.reset();
+    sceneRegistry.register({ path: "old.glb", rtype: "vrm", roots: [], content: oldContent });
+    // 半成品：build 抛错前已把 mesh add 进 scene（适配器 add(group) 先于后续步骤抛错）
+    const halfGeo = new THREE.BoxGeometry(1, 1, 1);
+    const halfGeoDispose = vi.spyOn(halfGeo, "dispose");
+    const half = new THREE.Mesh(halfGeo);
+    mockAdapter.build.mockImplementation(async () => {
+      mockScene.add(half);
+      throw new Error("boom");
+    });
 
     await switchToSession(ctx, "bad.glb", { keepInScene: true });
 
-    // keep 模式清除段不 dispose，恢复段补释放
-    expect(oldDispose).toHaveBeenCalledTimes(1);
+    // 既有模型原样保留：不 dispose、allContent / 注册表 / 活跃态不动、perFrame 不中断
+    expect(oldDispose).not.toHaveBeenCalled();
+    expect(state.content).toBe(oldContent);
+    expect(ctx.allContent).toHaveLength(1);
+    expect(sceneRegistry.count()).toBe(1);
+    expect(sceneRegistry.getActiveId()).not.toBeNull();
+    // 半成品被移出 scene 并释放 GPU 资源（beforeBuild 差量捕获）
+    expect(mockScene.children).not.toContain(half);
+    expect(halfGeoDispose).toHaveBeenCalled();
     expect(ctx.inFlight).toBe(false);
   });
 
@@ -522,19 +541,33 @@ describe("switchToSession 内容层历史与基线维护", () => {
 });
 
 describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps 接线）", () => {
-  it("scene 缺失（self 模式）→ beforeBuild 为 null：注册空 roots 项 + dock 清空适配器项", async () => {
+  it("scene 缺失（self 模式）→ beforeBuild 为 null：注册空 roots 项（rtype 透传）+ dock 清空适配器项", async () => {
     const { ctx, mockAdapter } = makeMockCtx();
     ctx.scene = undefined; // self 模式：核心不提供共享 scene
     mockAdapter.build.mockResolvedValue({ dispose: vi.fn() } as unknown as PreviewScene);
 
     await switchToSession(ctx, "new.glb");
 
-    // registerSwitchScene 无 beforeBuild 分支：注册 rtype=""、roots=[]
+    // registerSwitchScene 无 beforeBuild 分支：rtype 透传 getCurrentRtype（mock 返回 currentPath），
+    // 不再硬编码空串污染注册表
     const entry = sceneRegistry.getAll().find((e) => e.path === "new.glb");
     expect(entry).toBeDefined();
     expect(entry!.roots).toHaveLength(0);
-    expect(entry!.rtype).toBe("");
+    expect(entry!.rtype).toBe("initial.glb");
     // 菜单刷新走「空数组」分支
+    expect(ctx.menuHandle.setAdapterItems).toHaveBeenCalledWith([]);
+    expect(ctx.inFlight).toBe(false);
+  });
+
+  it("beforeBuild null 且 rtype 拿不到（空串）→ 不注册空 rtype entry（防污染单一事实源）", async () => {
+    const { ctx, mockAdapter } = makeMockCtx();
+    ctx.scene = undefined;
+    ctx.getCurrentRtype = () => "";
+    mockAdapter.build.mockResolvedValue({ dispose: vi.fn() } as unknown as PreviewScene);
+
+    await switchToSession(ctx, "new.glb");
+
+    expect(sceneRegistry.getAll().find((e) => e.path === "new.glb")).toBeUndefined();
     expect(ctx.menuHandle.setAdapterItems).toHaveBeenCalledWith([]);
     expect(ctx.inFlight).toBe(false);
   });

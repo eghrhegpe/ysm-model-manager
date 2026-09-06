@@ -17,7 +17,7 @@ import type { LightCapability } from "../caps/light-capability.ts";
 import type { ShadowCapability } from "../caps/shadow-capability.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { safeDispose } from "../safe-dispose.ts";
+import { disposeObject3D, safeDispose } from "../safe-dispose.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import { showLoadFailure } from "./preview-loading.ts";
@@ -106,7 +106,7 @@ export async function switchToSession(
 
   // 清理旧内容层 + 重建新内容层（build 失败进 recoverSwitchFailure 恢复并 return null）
   const beforeBuild = clearSwitchContent(ctx, keep);
-  const next = await buildSwitchContent(ctx, newPath, keep);
+  const next = await buildSwitchContent(ctx, newPath, keep, beforeBuild);
   if (!next) return;
   // build 成功但代际已失效（用户已关闭/切换）→ 丢弃新内容层
   if (guardSwitchAborted(ctx, next)) return;
@@ -203,6 +203,7 @@ async function buildSwitchContent(
   ctx: SwitchContext,
   newPath: string,
   keep: boolean,
+  beforeBuild: Set<THREE.Object3D> | null,
 ): Promise<PreviewScene | null> {
   try {
     // P0 修复：捕获当前 session 的稳定 gen——switchTo 闭包按 gen 查找自身 handle，
@@ -232,15 +233,22 @@ async function buildSwitchContent(
     if (ctx.sessionId !== undefined) buildCtx.sessionId = ctx.sessionId;
     return await ctx.adapter.build(buildCtx, newPath);
   } catch (e) {
-    recoverSwitchFailure(ctx, keep, e);
+    recoverSwitchFailure(ctx, keep, e, beforeBuild);
     return null;
   }
 }
 
 /**
  * 切换失败恢复（原 switchToSession §4 catch 块，P1/P2 守卫 + GPU/sceneRegistry/allContent 清理）。
+ * @param beforeBuild build 前 scene.children 快照——keep 模式按差量识别并清理本次半成品
+ *                    （适配器 build 抛错前可能已把部分根节点 add 进 scene）
  */
-function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): void {
+function recoverSwitchFailure(
+  ctx: SwitchContext,
+  keep: boolean,
+  e: unknown,
+  beforeBuild: Set<THREE.Object3D> | null,
+): void {
   // P2 守卫（对齐 mount3D 主流程 gen 守卫）：build 失败迟到且用户已关闭/切换
   // 预览时不弹错误 toast，避免关闭后 1~2s 突然冒出「加载失败」掩盖用户意图
   if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) {
@@ -252,18 +260,32 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
   // 但 perFrame 回调仍指向已 dispose 的 update → rAF 每帧驱动已释放对象；
   // sceneRegistry 残留旧 entry → count 虚高（误触 MAX_MODELS）+ visibleRoots 含
   // detached root（取景幽灵）；allContent 残留已释放引用（GPU 资源孤儿泄漏）
-  ctx.setPerFrame(null);
   if (keep) {
-    // 同台模式：旧 content 未 dispose（清除段跳过），此处补释放
-    safeDispose(ctx.getContent());
+    // keep 模式：只丢弃本次构建的半成品，既有同框模型原样保留——
+    // 旧语义在此 safeDispose(ctx.getContent()) 会把仍在场景中的旧模型杀成幽灵网格
+    // （GPU 已释放但 mesh 仍挂 scene），且 dispose 全部 allContent + 清空注册表
+    // 等于一次失败处决全场。半成品按 beforeBuild 差量移出 scene 并释放 GPU 资源
+    // （keep 清除段不做 stale 移除，半成品无自愈路径，必须在此收走）。
+    if (ctx.scene && beforeBuild) {
+      const stale = ctx.scene.children.filter((c) => !beforeBuild.has(c));
+      for (const c of stale) {
+        ctx.scene.remove(c);
+        disposeObject3D(c);
+      }
+    }
+  } else {
+    // 非 keep 模式（原行为）：旧内容层已 dispose（清除段），此处停驱动旧 update +
+    // 注销注册表 + 清 allContent 残留引用，防止 rAF 驱动已释放对象 / count 虚高
+    // （误触 MAX_MODELS）+ GPU 孤儿泄漏
+    ctx.setPerFrame(null);
+    const prevId = sceneRegistry.getActiveId();
+    if (prevId) sceneRegistry.unregister(prevId);
+    for (const b of ctx.allContent) {
+      safeDispose(b);
+    }
+    ctx.allContent.length = 0;
+    ctx.setContent(null);
   }
-  const prevId = sceneRegistry.getActiveId();
-  if (prevId) sceneRegistry.unregister(prevId);
-  for (const b of ctx.allContent) {
-    safeDispose(b);
-  }
-  ctx.allContent.length = 0;
-  ctx.setContent(null);
   if (!ctx.loadingEl.parentNode) ctx.viewContainer.appendChild(ctx.loadingEl);
   showLoadFailure(ctx.loadingEl, e);
   ctx.inFlight = false;
@@ -338,7 +360,12 @@ function registerSwitchScene(
       components: containerMeta?.components,
     });
   }
-  sceneRegistry.register({ path: newPath, rtype: "", roots: [], content: next });
+  // self 模式（scene 缺失 → beforeBuild null）：rtype 透传当前值——此前硬编码 "" 会
+  // 污染注册表唯一事实源（dedup 复合键 `${rtype}::${path}` / 角色面板 fillRoles 消费）；
+  // rtype 拿不到（空串）时沿用注册表现状 = 不新增 entry（self 模式无 scene，roots 本就为空）
+  const rtype = ctx.getCurrentRtype?.() ?? "";
+  if (!rtype) return [];
+  sceneRegistry.register({ path: newPath, rtype, roots: [], content: next });
   return [];
 }
 

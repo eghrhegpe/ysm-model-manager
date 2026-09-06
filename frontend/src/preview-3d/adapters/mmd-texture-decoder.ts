@@ -258,12 +258,13 @@ export function closeUnusedDecodedBitmaps(decoded: Map<string, DecodedTexture>):
  * 将 Worker 解码的 ImageBitmap 应用到 MMD 模型的材质纹理：
  * 1. 优先处理 Worker 路径材质（userData.pendingTexture），直接创建纹理赋值
  * 2. 再处理 Fallback 路径材质，将命中的 blob:HTMLImageElement 替换为 ImageBitmap
+ * 3. Worker 路径 decode miss 时用 pendingTexture.blobUrl 走主线程 TextureLoader 兜底（防永久白模）
  */
 export function applyWorkerDecodedTextures(
   mesh: THREE.Mesh | THREE.SkinnedMesh,
   decoded: Map<string, DecodedTexture>,
   blobUrlToRel: Map<string, string>,
-): { replaced: number; total: number } {
+): { replaced: number; total: number; fallback: number } {
   const allMats: THREE.Material[] = Array.isArray(mesh.material)
     ? mesh.material
     : mesh.material
@@ -288,6 +289,7 @@ export function applyWorkerDecodedTextures(
 
   let replaced = 0;
   let total = 0;
+  let fallback = 0;
 
   for (const mat of allMats) {
     // Worker 路径：pendingTexture 标记，直接同步赋值
@@ -320,6 +322,18 @@ export function applyWorkerDecodedTextures(
         (mat as unknown as Record<string, unknown>).map = newTex;
         mat.needsUpdate = true;
         replaced++;
+      } else {
+        // decode miss 兜底（防永久白模）：pendingTexture 自带 blobUrl，走主线程
+        // TextureLoader 异步补挂 map。flipY 保持默认 true（HTMLImageElement 方向，
+        // 与 decode 路径 flipY=false 的 ImageBitmap 预解码方向各归其位）；sRGB 色彩空间
+        // 对齐 decode 路径。兜底纹理是标准 THREE.Texture，随材质进 disposeMmdMesh
+        // 既有释放链路，不引入新泄漏。
+        const loader = new THREE.TextureLoader();
+        const fallbackTex = loader.load(pending.blobUrl);
+        fallbackTex.colorSpace = THREE.SRGBColorSpace;
+        (mat as unknown as Record<string, unknown>).map = fallbackTex;
+        mat.needsUpdate = true;
+        fallback++;
       }
       continue;
     }
@@ -378,5 +392,5 @@ export function applyWorkerDecodedTextures(
     mesh.material = allMats.length > 1 ? allMats : allMats[0];
   }
 
-  return { replaced, total };
+  return { replaced, total, fallback };
 }

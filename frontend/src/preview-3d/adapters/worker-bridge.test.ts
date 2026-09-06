@@ -467,6 +467,78 @@ describe("createResolveModeBridge", () => {
   });
 });
 
+// ===== resolve-mode 崩溃自愈（惰性重建替补） =====
+// P0 review：resolve-mode worker 死亡后曾只结算在途、不重建——后续 request 全部
+// postMessage 给死 worker，吃满 30s 超时。修复后：terminate + 清池 + 惰性重建新实例。
+
+describe("resolve-mode 崩溃自愈（惰性重建）", () => {
+  it("worker onerror → terminate + 重建替补，下一次 request 用新 worker 实例", async () => {
+    const created: FakeWorker[] = [];
+    vi.stubGlobal(
+      "Worker",
+      class {
+        postMessage = vi.fn();
+        terminate = vi.fn();
+        onmessage: ((e: { data: FakeResp }) => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          created.push(this as unknown as FakeWorker);
+        }
+      },
+    );
+
+    const bridge = createResolveModeBridge<{ id: number; ok: boolean; error?: string }>(
+      "./some-worker.ts",
+      100,
+      "超时",
+    );
+    expect(created.length).toBe(1);
+    const first = created[0];
+
+    first.onerror?.(); // 崩溃
+    expect(first.terminate).toHaveBeenCalled();
+    expect(created.length).toBe(2); // 替补已重建
+
+    // 新 worker 已接线：下一次 request 派发给替补并可正常结算
+    const p = bridge.request(new ArrayBuffer(8));
+    expect(created[1].postMessage).toHaveBeenCalledTimes(1);
+    expect(first.postMessage).toHaveBeenCalledTimes(0); // 死 worker 不再接单
+    created[1].onmessage?.({ data: { id: 0, ok: true } });
+    await expect(p).resolves.toMatchObject({ ok: true });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("崩溃时在途请求仍以 ok:false 结算（resolveAllError 语义不变）", async () => {
+    const created: FakeWorker[] = [];
+    vi.stubGlobal(
+      "Worker",
+      class {
+        postMessage = vi.fn();
+        terminate = vi.fn();
+        onmessage: ((e: { data: FakeResp }) => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          created.push(this as unknown as FakeWorker);
+        }
+      },
+    );
+
+    const bridge = createResolveModeBridge<{ id: number; ok: boolean; error?: string }>(
+      "./some-worker.ts",
+      100,
+      "超时",
+    );
+    const p = bridge.request(new ArrayBuffer(8));
+    created[0].onerror?.();
+    const resp = await p;
+    expect(resp.ok).toBe(false);
+    expect(resp.error).toBe("Worker 错误");
+
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("resolve-mode 入参契约（belt-and-suspenders 运行时守卫）", () => {
   it("onWorkerError=resolveAllError 但缺 makeErrorResponse → 立即抛错（防 as any 绕过类型检查）", () => {
     const w = makeWorker();

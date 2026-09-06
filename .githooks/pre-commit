@@ -114,11 +114,11 @@ else
 fi
 
 if [ -n "$ADD_FAIL" ]; then
-  echo "⚠️  git add 失败（$ADD_FAIL），文档产物未 stage（不阻断 commit，请检查索引状态）"
+  echo "⚠️  git add 失败（$ADD_FAIL），文档产物未 stage（请检查索引状态）"
 elif [ -n "${GEN_SKIPPED:-}" ]; then
-  echo "⚠️  文档快照缺失，自动 stage 已跳过（不吞未提交 docs 漂移）；如需 sync 请手动 git add 本次 gen 产物"
+  echo "⚠️  文档快照缺失，自动 stage 已跳过；如需 sync 请手动 git add 本次 gen 产物"
 else
-  echo "[pre-commit] ✅ 文档已同步并 stage（仅本次 gen 产物）"
+  echo "[pre-commit] ✅ 文档已同步并 stage"
 fi
 
 # ── Take巧 #2：drift --affected 秒级接入（ADR-087）──
@@ -133,7 +133,7 @@ if [ -n "$CHANGED_FILES" ]; then
   FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -vE '^docs/(knowledge/index|project-map)\.md$' | grep -v '^frontend/public/locales/' || true)
   if [ -n "$FILTERED" ]; then
     # 批量 + --quiet：stem 列表供 prepare-commit-msg 消费；终端展示由 prepare-commit-msg 负责（避免双重输出）
-    node scripts/check-knowledge-drift.ts --affected --quiet $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
+    node scripts/check-knowledge-drift.ts --affected --quiet $FILTERED 2>&1 || echo "⚠️  drift 检查失败"
   fi
 fi
 
@@ -185,7 +185,7 @@ fi
 if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then
   echo ""
   echo "[pre-commit] i18n 新增键三段式检查（ADR-124）..."
-  node scripts/i18n-key-naming.ts 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败（不阻断，pre-push 测试兜底）"
+  node scripts/i18n-key-naming.ts 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败"
 fi
 
 # ── 语言包跨语言一致性检查（非阻断提示；ADR-045）──
@@ -196,7 +196,7 @@ fi
 if [ "${YSM_SKIP_I18N_CHECK:-0}" != "1" ]; then
   echo ""
   echo "[pre-commit] 语言包跨语言一致性检查（i18n-check, ADR-045）..."
-  node scripts/i18n-check.ts 2>&1 || echo "⚠️  i18n-check 发现漂移或执行失败（不阻断，pre-push --strict 兜底）"
+  node scripts/i18n-check.ts 2>&1 || echo "⚠️  i18n-check 发现漂移或执行失败"
 fi
 
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──
@@ -256,7 +256,7 @@ EOF
         git add -- $CLEAN_TS 2>/dev/null || true
         echo "[pre-commit] ✅ frontend TS 格式已自动修复并 stage"
       else
-        echo "  ⚠️ biome 自动修复失败或仍有残留违规（不阻断；请手动 node scripts/check-biome.ts --write 复查，pre-push 兜底）"
+        echo "  ⚠️ biome 自动修复失败或仍有残留违规（不阻断；请手动 node scripts/check-biome.ts --write 复查）"
       fi
     fi
   fi
@@ -311,7 +311,7 @@ git diff --cached --stat 2>/dev/null | tail -10 || true
 if command -v node >/dev/null 2>&1; then
   echo ""
   echo "[pre-commit] Android 平台黑名单检查..."
-  node scripts/check-android-unavailable.ts 2>&1 || echo "⚠️  android-unavailable 检查失败（不阻断）"
+  node scripts/check-android-unavailable.ts 2>&1 || echo "⚠️  android-unavailable 检查失败"
 fi
 
 # ── biome 行级增量闸（2026-09-04，A4）：拦「本次提交新增的违规行」，存量债不误伤 ──

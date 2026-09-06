@@ -376,8 +376,8 @@ async function mdYsBuildBonePanelAndAnim(
 
   if (!isGenericMode) {
     try {
-      const sb = spec.models?.flatMap((m) => m.bones ?? []) ?? [];
-      semanticBones = ysmSemanticBoneMap(sb);
+      // boneNodes（上方已携带 object）直接喂语义映射——object 必填不变量见 semantic-bones.ts
+      semanticBones = ysmSemanticBoneMap(boneNodes);
       breath = createBreathController();
 
       const allClips: Array<{ label: string; clip: AnimationClip }> = [];
@@ -394,7 +394,7 @@ async function mdYsBuildBonePanelAndAnim(
       }
       if (allClips.length > 0) {
         const boneByName = new Map<string, THREE.Object3D>();
-        for (const sbi of sb) {
+        for (const sbi of specBones) {
           const group = obj.boneGroupMap.get(sbi.id);
           if (group) boneByName.set(sbi.name, group);
         }
@@ -428,7 +428,13 @@ function mdYsBuildMenuAndDebug(
   const { ctx, opts } = sc;
   const { model, texArr, spec, obj } = core;
   const { content } = cam;
-  const { bonePanelRef, boneTree, animBridge } = anim;
+  const {
+    bonePanelRef,
+    boneTree,
+    animBridge,
+    semanticBones: animSemanticBones,
+    breath: animBreath,
+  } = anim;
 
   const controlsCtx: YsmControlsContext = {
     model,
@@ -451,8 +457,11 @@ function mdYsBuildMenuAndDebug(
     lipSync: false,
     autoDance: false,
   };
-  // 能力声明：YSM 非 generic 仅提供 呼吸（感知层语义骨收益有限，见 semantic-bones.ts）
-  const perceptionCaps = pickPerceptionCaps(["breath"]);
+  // 能力声明：YSM 非 generic 仅提供 呼吸（感知层语义骨收益有限，见 semantic-bones.ts）。
+  // caps 从真实构造派生（非硬编码清单）：语义映射为空（作者命名全未命中）时不显示死开关。
+  const perceptionCaps = pickPerceptionCaps(
+    animSemanticBones && Object.keys(animSemanticBones).length > 0 && animBreath ? ["breath"] : [],
+  );
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
   // （R1 禁 utils→views，注册钩子由视图层注入实现）。所有调用者（ysm-3d / maid-3d）都
   // 经 registerModelSchema 注册；缺失时不注册 → schemaId 无 fallback（契约禁双通道），面板空渲染。

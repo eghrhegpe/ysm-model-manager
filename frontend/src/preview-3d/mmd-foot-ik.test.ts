@@ -94,8 +94,8 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   it("语义 id 不在树中 → extract 失败（chain=null）→ dummy", () => {
     const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
-      leftUpperLeg: { id: "legL_root" },
-      leftFoot: { id: "notInTree" },
+      leftUpperLeg: { id: "legL_root", object: {} as never },
+      leftFoot: { id: "notInTree", object: {} as never },
     });
     controller.apply(0.016, true);
     expect(solveIKMock).not.toHaveBeenCalled();
@@ -104,8 +104,8 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   it("rootId === footId（链长 1）→ dummy", () => {
     const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
-      leftUpperLeg: { id: "legL_foot" },
-      leftFoot: { id: "legL_foot" },
+      leftUpperLeg: { id: "legL_foot", object: {} as never },
+      leftFoot: { id: "legL_foot", object: {} as never },
     });
     controller.apply(0.016, true);
     expect(solveIKMock).not.toHaveBeenCalled();
@@ -114,8 +114,8 @@ describe("createFootIKController 降级路径（dummy controller）", () => {
   it("语义条目缺 id（entry.id = undefined）→ getSemanticBoneId 返回 null → dummy", () => {
     const { tree } = makeMmdLegRig();
     const controller = createFootIKController(tree, {
-      leftUpperLeg: {} as NonNullable<SemanticBoneMap["leftUpperLeg"]>,
-      leftFoot: { id: "legL_foot" },
+      leftUpperLeg: { id: undefined } as unknown as NonNullable<SemanticBoneMap["leftUpperLeg"]>,
+      leftFoot: { id: "legL_foot", object: {} as never },
     });
     controller.apply(0.016, true);
     expect(solveIKMock).not.toHaveBeenCalled();

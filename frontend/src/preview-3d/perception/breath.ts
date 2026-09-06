@@ -79,9 +79,8 @@ export function createBreathController() {
     if (isPerceptionPaused()) return; // 动画激活时感知静默（#9 全局暂停标志）
     warmup(map);
     if (!state) return;
-    // 推进 cycle 时间
-    state.t += dt / BREATH_CYCLE_S;
-    if (state.t >= 1) state.t -= 1; // 防止浮点累积
+    // 推进 cycle 时间；% 1（非单步减）防大 dt（后台标签页恢复）一次跳过整周期后回绕失效
+    state.t = (state.t + dt / BREATH_CYCLE_S) % 1;
 
     const phase = state.t * 2 * Math.PI;
     // 呼吸曲线：正弦包络的绝对值让呼气也有力道（避免全负半周死寂）

@@ -57,9 +57,18 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
       ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
       : null;
   c.perceptionState = { breath: true, gaze: true, blink: true, lipSync: true, autoDance: true };
-  // perceptionCaps 仅本函数使用（菜单注入）——局部 const，不占用 ctx。
-  // 能力声明：MMD 提供全部五模块（按 ALL_PERCEPTION_CAPS 单一事实源裁剪）
-  const perceptionCaps = pickPerceptionCaps(["breath", "gaze", "blink", "lipSync", "autoDance"]);
+  // 语义层提前解析（caps 派生 + 下方控制器构造共用同一份）；perceptionCaps 仅本函数
+  // 使用（菜单注入）——局部 const，不占用 ctx。
+  const semanticBones = c.boneTree ? mmdSemanticBoneMap(c.boneTree) : undefined;
+  const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
+  // 能力声明：caps 从真实构造派生（非硬编码清单）——骨骼驱动模块（呼吸/注视/律动）
+  // 需语义骨骼、morph 驱动模块（眨眼/口型）需语义 morph，缺失时不显示死开关（菜单不谎报）
+  const hasSemanticBones = !!semanticBones && Object.keys(semanticBones).length > 0;
+  const hasSemanticMorphs = Object.keys(semanticMorphs).length > 0;
+  const perceptionCaps = pickPerceptionCaps([
+    ...(hasSemanticBones ? (["breath", "gaze", "autoDance"] as const) : []),
+    ...(hasSemanticMorphs ? (["blink", "lipSync"] as const) : []),
+  ]);
   const items = mmdMenuItems({
     navCtx,
     panels: c.panels,
@@ -123,8 +132,6 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
       : null,
     perception: { state: c.perceptionState, caps: perceptionCaps },
   });
-  const semanticBones = c.boneTree ? mmdSemanticBoneMap(c.boneTree) : undefined;
-  const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
   const breath = createBreathController();
   const gaze = createGazeController();
   const blink = createBlinkController();

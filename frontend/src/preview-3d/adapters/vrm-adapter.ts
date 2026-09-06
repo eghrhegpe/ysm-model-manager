@@ -407,8 +407,8 @@ function mdVrBuildPerception(
     lipSync: false,
     autoDance: false,
   };
-  // 能力声明：VRM 提供 呼吸/注视/眨眼（按 ALL_PERCEPTION_CAPS 单一事实源裁剪，无 lipSync/autoDance）
-  const perceptionCaps = pickPerceptionCaps(["breath", "gaze", "blink"]);
+  // 能力声明：caps 从真实构造派生（非硬编码清单）——原生 lookAt 接管注视、
+  // 眨眼表情缺失、语义骨骼为空时不显示对应开关（否则菜单谎报：开关在、驱动不在）
   const breath = createBreathController();
   const useNativeLookAt = !!vrm.lookAt;
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt
@@ -423,6 +423,11 @@ function mdVrBuildPerception(
       )
     : ([] as Array<"blink" | "blinkLeft" | "blinkRight">);
   const blink = createBlinkController();
+  const perceptionCaps = pickPerceptionCaps([
+    ...(semanticBones && Object.keys(semanticBones).length > 0 ? (["breath"] as const) : []),
+    ...(!useNativeLookAt ? (["gaze"] as const) : []),
+    ...(blinkExpressionNames.length > 0 ? (["blink"] as const) : []),
+  ]);
   const footIK = createFootIKController(boneTree, semanticBones);
   return {
     perceptionState,
@@ -551,12 +556,14 @@ function mdVrStage5BuildResult(
   return {
     menuItems,
     update: (dt: number): void => {
+      // 全局暂停标志先于 visible 早退写：不可见帧也要刷新标志，否则早退期间
+      // 标志停在上一帧的值，恢复可见后感知层被陈旧状态冻结
+      const animActive = !!motion.motionAction && !motion.motionAction.paused;
+      setPerceptionPaused(animActive);
       if (!vrm.scene.visible) return;
       if (motionMixer) motionMixer.update(dt);
       vrm.update(dt);
       // #9 全局暂停标志：动画激活时 breath/blink 自查静默，取代散布的 `!animActive` 守卫。
-      const animActive = !!motion.motionAction && !motion.motionAction.paused;
-      setPerceptionPaused(animActive);
       if (semanticBones) {
         if (perceptionState.breath) breath.apply(dt, semanticBones);
         // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫

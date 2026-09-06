@@ -11,14 +11,32 @@ import {
   mmdSemanticBoneMap,
   resolveSemanticBones,
   vrmSemanticBoneMap,
+  ysmSemanticBoneMap,
   type SemanticBoneMap,
 } from "./semantic-bones.ts";
 
 /** 构造骨架测试树：MMD 风格（id = 索引字符串，name = 骨骼名） */
 function mmdTree(names: string[]): BoneTree {
   return buildBoneTree(
-    names.map((n, i) => ({ id: String(i), name: n, parentId: i > 0 ? String(i - 1) : null })),
+    names.map((n, i) => ({
+      id: String(i),
+      name: n,
+      parentId: i > 0 ? String(i - 1) : null,
+      // 不变量配套：语义映射只收带 object 的骨骼（resolveSemanticBones 同口径）
+      object: { name: n, add: () => {}, updateMatrixWorld: () => {} } as unknown as import("three").Object3D,
+    })),
   );
+}
+
+/** 构造 YSM 风格 spec.bones（object 可选，验证「缺 object 不进 map」不变量） */
+function ysmBones(defs: Array<{ name: string; withObject?: boolean }>) {
+  return defs.map((d, i) => ({
+    id: `b${i}`,
+    name: d.name,
+    ...(d.withObject === false
+      ? {}
+      : { object: { name: d.name } as unknown as import("three").Object3D }),
+  })) as Parameters<typeof ysmSemanticBoneMap>[0];
 }
 
 /** 构造 VRM 风格 humanBones（键 = 语义名） */
@@ -115,7 +133,13 @@ describe("resolveSemanticBones / mmdSemanticBoneMap", () => {
   });
 
   it("resolveSemanticBones 接受自定义候选表（测试扩展性）", () => {
-    const tree = buildBoneTree([{ id: "a", name: "Body" }]);
+    const tree = buildBoneTree([
+      {
+        id: "a",
+        name: "Body",
+        object: { name: "Body" } as unknown as import("three").Object3D,
+      },
+    ]);
     const map = resolveSemanticBones(tree, {
       chest: ["Body"],
     } as unknown as Record<string, readonly string[]>);
@@ -131,6 +155,9 @@ describe("vrmSemanticBoneMap", () => {
     >;
     const map = vrmSemanticBoneMap(humanBones as unknown as Parameters<typeof vrmSemanticBoneMap>[0]);
     expect(map.hips?.id).toBe("hips");
+    // 不变量断言：entry 必须携带可写 object（感知层写变换依赖它——回归防线）
+    expect(map.hips?.object).toBe(humanBones.hips.node);
+    expect(map.chest?.object).toBe(humanBones.chest.node);
     expect(map.chest?.id).toBe("chest");
     expect(map.head?.id).toBe("head");
     expect(map.leftUpperArm?.id).toBe("leftUpperArm");
@@ -149,9 +176,31 @@ describe("vrmSemanticBoneMap", () => {
   });
 });
 
+describe("ysmSemanticBoneMap（spec.bones → 语义映射）", () => {
+  it("命中候选名 → entry 携带 object（不变量：感知层写变换依赖 object）", () => {
+    const map = ysmSemanticBoneMap(ysmBones([{ name: "Head" }, { name: "hips" }]));
+    expect(map.head?.id).toBe("b0");
+    expect(map.head?.object).toBeDefined();
+    expect(map.hips?.id).toBe("b1");
+    expect(map.hips?.object).toBeDefined();
+  });
+
+  it("命中但缺 object → 整条不进 map（防静默空转：无 object 无法驱动变换）", () => {
+    const map = ysmSemanticBoneMap(ysmBones([{ name: "Head", withObject: false }]));
+    expect(map.head).toBeUndefined();
+  });
+
+  it("未命中候选 → 语义缺省（宽容降级）", () => {
+    const map = ysmSemanticBoneMap(ysmBones([{ name: "totally_custom_bone" }]));
+    expect(map).toEqual({});
+  });
+});
+
 describe("getSemanticBone（消费方入口）", () => {
   it("存在返回 entry，缺失返回 null（不崩）", () => {
-    const map: SemanticBoneMap = { chest: { id: "2" } };
+    const map: SemanticBoneMap = {
+      chest: { id: "2", object: { name: "chest" } as unknown as import("three").Object3D },
+    };
     expect(getSemanticBone(map, "chest")?.id).toBe("2");
     expect(getSemanticBone(map, "head")).toBeNull();
     expect(getSemanticBone({}, "chest")).toBeNull();

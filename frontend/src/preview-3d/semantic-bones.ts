@@ -75,8 +75,12 @@ export const SEMANTIC_BONE_IDS: readonly SemanticBoneId[] = [
 export interface SemanticBoneEntry {
   /** 格式内骨骼 id（VRM: humanoid bone name；MMD: pmx 索引字符串） */
   id: string;
-  /** 3D 节点（改变换用；理论可缺省，实际两格式均有） */
-  object?: THREE.Object3D | undefined;
+  /**
+   * 3D 节点（改变换用）。**不变量：必填**——感知层靠它写变换，缺 object 的条目
+   * 无法驱动任何动作（静默空转），故构造方必须保证：缺 object 的骨骼整条不进 map。
+   * 该字段曾为可选，YSM mapper 漏填导致感知层整体空转仍全绿（见 ddb61cbdf 回归）。
+   */
+  object: THREE.Object3D;
 }
 
 /** 语义骨骼映射表（Partial：匹配不到的语义缺省，消费方宽容降级） */
@@ -264,7 +268,8 @@ export function resolveSemanticBones(
     const cands = candidates[id];
     if (!cands) continue; // 自定义/子集候选表缺键 = 该语义无候选，宽容跳过
     const node = matchSemanticBone(tree, cands);
-    if (node) map[id] = { id: node.id, object: node.object };
+    // 不变量：缺 object 的骨骼不进 map（消费方 getSemanticBone 返回 null 宽容降级）
+    if (node?.object) map[id] = { id: node.id, object: node.object };
   }
   return map;
 }
@@ -491,20 +496,21 @@ const YSM_SEMANTIC_CANDIDATES: Record<SemanticBoneId, readonly string[]> = {
  * @returns 语义映射（匹配不到的语义缺省）
  */
 export function ysmSemanticBoneMap(
-  bones: Array<{ id: string; name: string; parentId?: string }>,
+  bones: Array<{ id: string; name: string; object?: THREE.Object3D | undefined }>,
 ): SemanticBoneMap {
-  const nameToId = new Map<string, string>();
+  const nameToBone = new Map<string, { id: string; object?: THREE.Object3D | undefined }>();
   for (const b of bones) {
-    if (b.name) nameToId.set(b.name, b.id);
+    if (b.name) nameToBone.set(b.name, b);
   }
   const map: SemanticBoneMap = {};
   for (const id of SEMANTIC_BONE_IDS) {
     const cands = YSM_SEMANTIC_CANDIDATES[id];
     if (!cands) continue;
     for (const c of cands) {
-      const boneId = nameToId.get(c);
-      if (boneId) {
-        map[id] = { id: boneId };
+      const bone = nameToBone.get(c);
+      // 不变量：缺 object 的骨骼不进 map（无 object 无法驱动变换，进了就是静默空转）
+      if (bone?.object) {
+        map[id] = { id: bone.id, object: bone.object };
         break;
       }
     }

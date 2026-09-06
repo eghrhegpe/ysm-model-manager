@@ -21,7 +21,6 @@ import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import { disposeMaterial } from "../mesh.ts";
-import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
@@ -300,11 +299,9 @@ export async function buildFbxScene(
     menuItems,
     update: (dt: number) => {
       mixer?.update(dt);
-      // #9 全局暂停标志：FBX 动画激活时感知 controller 静默（对齐 ysm/vrm/mmd 范式）。
-      // code_review d6de20d2 #7/#8：判据用 !!mixer 而非 mixer.time !== 0——mixer.time
-      // 是单调累积钟，首次 update 后永不回 0（谓词恒 true 等价 !!mixer），且无暂停/
-      // 停止 UI（auto-play LoopRepeat），用时间判据会误导后续维护以为可翻转
-      setPerceptionPaused(!!mixer);
+      // 不写全局暂停标志（#9）：全局标志是模块级单例（perception/core.ts），而 FBX
+      // 自身无感知 controller——写它只会跨模型冻结同框 MMD/VRM/YSM 的感知层。
+      // 「动画激活 → 感知静默」由各感知属主 adapter（mmd/vrm/ysm）用自己的动画判据自写。
     },
     dispose: () => {
       try {

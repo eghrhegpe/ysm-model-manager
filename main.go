@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 	"net/http"
@@ -55,6 +56,12 @@ func main() {
 	// ADR-173：注入命令参数规格——DTO 薄转换（internal/app 不依赖 go/cli，
 	// 两侧规格字段漂移在此编译期拦截）
 	appStruct.SetAllowedCommandSpecs(cliSpecsToDTO(cli.GetAllowedCommandSpecs()))
+	// ADR-199：注入进程内 CLI 执行器（go/cli.RunCLIInProcess 薄封装）。
+	// 经 *App→cli.AppService 适配注入，internal/app 仍不依赖 go/cli，
+	// 彻底移除 GUI 自 fork 子进程的 os/exec 路径。
+	appStruct.SetCLIInProcessRunner(func(a *app.App, parent context.Context, args []string) (string, error) {
+		return cli.RunCLIInProcess(a, parent, args)
+	})
 	wailsApp := application.New(application.Options{
 		Name: "YSM 模型管理器",
 		Services: []application.Service{

@@ -14,6 +14,7 @@ auto_fields:
     - App.GetAllowedCLICommands
     - App.SetAllowedCommands
     - App.SetAllowedCommandSpecs
+    - App.SetCLIInProcessRunner
     - CatCache
     - CatConfig
     - CatModel
@@ -21,6 +22,7 @@ auto_fields:
     - CatPerf
     - CatResource
     - CliCommand
+    - CLIInProcessRunner
     - CmdContext
     - CommandSpec
     - CommandSpecDTO

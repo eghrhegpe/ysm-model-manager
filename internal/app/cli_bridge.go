@@ -3,21 +3,20 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
 	"sort"
-	"strings"
 	"time"
 )
 
 // ===== ADR-173 ParamSpec 注入（A1：规格单一事实源在 go/cli 注册表，经 main.go 薄转换注入）=====
 
 // ParamSpecDTO / CommandSpecDTO 是 go/cli ParamSpec/CommandSpec 的 app 侧镜像：
-// internal/app 不依赖 go/cli（ADR-145 架构：两侧互不 import，main 装配），
 // 字段名与 go/cli 对齐，漂移由 main.go 转换函数编译期拦截。
+// （ADR-199 经依赖注入复用 go/cli.RunCLIInProcess：执行器由 main.go 注入，
+// internal/app 仍不 import go/cli，保持 ADR-145「两侧互不 import，main 装配」；
+// 原 executeCLICommand 的 os/exec 自 fork 已彻底移除。）
 type ParamSpecDTO struct {
 	Key        string // flag 键名（不含 -- 前缀）
 	Type       string // "string" / "number" / "bool"
@@ -58,13 +57,25 @@ func (a *App) isCommandExposedToFrontend(command string) bool {
 	return a.allowedCommandSet[command]
 }
 
+// CLIInProcessRunner 进程内直调 CLI 的执行器（ADR-199）。
+// 签名以 internal/app 自有类型 *App 入参，避免本包直接 import go/cli；
+// main.go 注入时把 *App 当作 cli.AppService 透传给 cli.RunCLIInProcess。
+type CLIInProcessRunner func(a *App, parent context.Context, args []string) (string, error)
+
+// SetCLIInProcessRunner 注入进程内 CLI 执行器（main.go 在装配期调用，
+// 把 cli.RunCLIInProcess 包一层 *App→cli.AppService 的适配后传入）。
+// 未注入时 ExecuteCLI 不再退化到 os/exec 自 fork，而是返回显式错误响应。
+func (a *App) SetCLIInProcessRunner(runner CLIInProcessRunner) {
+	a.cliInProcessRunner = runner
+}
+
 // ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
 //
-// # GUI→CLI 参数链路（ADR-173 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
+// # GUI→CLI 参数链路（ADR-173 + ADR-199 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
 //
 //	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
 //	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
-//	→ 本函数转 []string → os/exec 子进程 <exe> --cli <args> --json
+//	→ 本函数转 []string → cli.RunCLIInProcess(a, appCtx, args) 进程内直调（ADR-199，零自 fork）
 //	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
 //	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
 //
@@ -114,37 +125,40 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 		fmt.Fprintf(os.Stderr, "[WARN] ExecuteCLI: %s\n", w)
 	}
 
-	// 3. 执行命令并捕获输出
-	// 子进程加 --json：RunCLI 的 jsonMode 分支输出统一 JsonResponse 协议（成功/失败均为 JSON）
+	// 3. 进程内直调执行命令（ADR-199：替代 os/exec 自 fork，零冷启动税、零孤儿进程）
+	// 命令恒带 --json：注入的 runner 复用 go/cli 的 JsonResponse 协议（成功/失败均为 JSON）
 	cmdArgs = append(cmdArgs, "--json")
 	parent := context.Background()
 	if a.appCtx != nil {
 		parent = a.appCtx
 	}
-	output, execErr := executeCLICommand(parent, cmdArgs)
 
-	// 4. 透传子进程 JSON 响应（协议由 go/cli/json.go 定义，前端统一消费）
-	// execErr 非空时仅透传合法 JSON 响应，防止异常部分输出掩盖真实错误
-	if output != "" && (execErr == nil || isValidJsonResponse(output)) {
+	if a.cliInProcessRunner == nil {
+		// 装配期未注入执行器：显式报错，绝不退化到 os/exec 自 fork（ADR-199 红线）
+		elapsed := float64(time.Since(start).Milliseconds())
+		resp, err := makeJsonResponse("error", command, nil, map[string]string{
+			"code":    "cli_runner_unset",
+			"message": "CLI 进程内执行器未注入（main.go 装配缺失）",
+		}, elapsed)
+		if err != nil {
+			return fmt.Sprintf(`{"status":"error","command":%q,"error":{"code":"json_failed","message":%q}}`, command, err.Error())
+		}
+		return resp
+	}
+	output, execErr := a.cliInProcessRunner(a, parent, cmdArgs)
+
+	// 4. 透传 JSON 响应（runner 恒返回合规 JsonResponse，成功/失败均为合法 JSON）
+	//    仅在极端空输出路径下兜底，避免前端收到空串无法解析。
+	if output != "" {
 		return output
 	}
-
-	// 兜底：子进程无 stdout 输出（异常路径），构造错误响应
 	elapsed := float64(time.Since(start).Milliseconds())
-	errCode := "unknown_error"
-	errMsg := "命令执行失败"
+	errMsg := "命令无输出"
 	if execErr != nil {
 		errMsg = execErr.Error()
-		// 根据退出码判断错误类型
-		exitCode := getExitCode(execErr)
-		if exitCode == 2 {
-			errCode = "param_error"
-		} else if exitCode == 1 {
-			errCode = "runtime_error"
-		}
 	}
 	resp, err := makeJsonResponse("error", command, nil, map[string]string{
-		"code":    errCode,
+		"code":    "empty_output",
 		"message": errMsg,
 	}, elapsed)
 	if err != nil {
@@ -310,57 +324,6 @@ func (a *App) GetAllowedCLICommands() string {
 		return "[]" // 空数组兜底，前端至少拿到合法 JSON
 	}
 	return string(result)
-}
-
-// cliCommandTimeout CLI 子进程挂死兜底：正常命令远低于此，仅防 GUI 永久等待
-// （原 exec.Command 无超时，子进程挂死则 GUI 桥永久阻塞）
-const cliCommandTimeout = 5 * time.Minute
-
-// executeCLICommand 执行 CLI 命令
-// 通过 os/exec 调用自身二进制的 CLI 模式，避免循环依赖
-// 返回 stdout 内容和错误（含退出码）
-// parent 传 a.appCtx：应用退出时在途 CLI 子进程一并被终止
-// （原 context.Background 脱离应用生命周期，退出后子进程独立跑满 5 分钟超时）。
-func executeCLICommand(parent context.Context, args []string) (string, error) {
-	// 获取当前可执行文件路径
-	exePath, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("获取可执行文件路径失败: %w", err)
-	}
-
-	// 构建命令：<exe> --cli <args...>（CommandContext 带超时，子进程挂死即终止）
-	cliArgs := append([]string{"--cli"}, args...)
-	ctx, cancel := context.WithTimeout(parent, cliCommandTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, exePath, cliArgs...)
-
-	// 捕获 stdout 和 stderr
-	var stdoutBuf, stderrBuf strings.Builder
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-
-	err = cmd.Run()
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return stdoutBuf.String(), fmt.Errorf("命令执行超时（超过 %s 被终止）", cliCommandTimeout)
-		}
-		// 如果有 stderr，将其附加到错误信息
-		if stderr := stderrBuf.String(); stderr != "" {
-			return stdoutBuf.String(), fmt.Errorf("%s: %s", err.Error(), strings.TrimSpace(stderr))
-		}
-		return stdoutBuf.String(), err
-	}
-
-	return stdoutBuf.String(), nil
-}
-
-// getExitCode 从错误中提取退出码（errors.As 可穿透 %w 包装层）
-func getExitCode(err error) int {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		return exitErr.ExitCode()
-	}
-	return -1
 }
 
 // makeJsonResponse 创建 JSON 响应（返回 error 而非静默吞错）

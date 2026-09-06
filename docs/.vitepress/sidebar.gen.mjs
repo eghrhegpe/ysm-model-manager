@@ -271,10 +271,6 @@ export const autoSidebar = [
         "link": "/knowledge-audit-20260705"
       },
       {
-        "text": "给兄弟会话：cap 统一 + ADR-196 方向同步",
-        "link": "/notes-to-sibling-session-cap-unification"
-      },
-      {
         "text": "YSM 前后端统一 & 架构问题研究与修复方案",
         "link": "/sharp-review-fix-plan"
       },

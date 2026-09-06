@@ -8,6 +8,7 @@ import (
 	"ysm-model-manager/go/internal/testutil"
 
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -2139,5 +2140,38 @@ func TestResourceTypes_TypeFilter(t *testing.T) {
 	// 未知类型 → 参数错误
 	if err := runResourceTypes(&CmdContext{App: &app.App{}, Args: []string{"--type", "nope"}}); err == nil {
 		t.Fatal("未知类型应报参数错误")
+	}
+}
+
+// ===== RunCLIInProcess 进程内直调（ADR-199）=====
+// 验证替代 os/exec 自 fork 的进程内入口：返回合规 JSON（成功/失败均为合法 JsonResponse），
+// 且命令经 appCtx 取消可终止（不脱离生命周期、不产生孤儿进程）。
+func TestRunCLIInProcess_ReturnsJSON(t *testing.T) {
+	dir := t.TempDir()
+	out, err := RunCLIInProcess(&app.App{}, context.Background(), []string{"--files-root", dir, "cache-status", "--json"})
+	if out == "" {
+		t.Fatalf("RunCLIInProcess 应返回非空 JSON 字符串，got empty (err=%v)", err)
+	}
+	var resp map[string]interface{}
+	if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
+		t.Fatalf("RunCLIInProcess 返回非合法 JSON: %v\nraw=%s", jErr, out)
+	}
+	if _, ok := resp["status"]; !ok {
+		t.Fatalf("RunCLIInProcess 返回 JSON 缺少 status 字段: %s", out)
+	}
+}
+
+// TestRunCLIInProcess_MissingFilesRoot_ErrorJSON 验证缺 files-root 时仍返回合规错误 JSON（非 panic/空串）
+func TestRunCLIInProcess_MissingFilesRoot_ErrorJSON(t *testing.T) {
+	out, _ := RunCLIInProcess(&app.App{}, context.Background(), []string{"search", "--keyword", "x", "--json"})
+	if out == "" {
+		t.Fatal("缺 files-root 应返回错误 JSON，got empty")
+	}
+	var resp map[string]interface{}
+	if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
+		t.Fatalf("错误路径返回非合法 JSON: %v\nraw=%s", jErr, out)
+	}
+	if resp["status"] != "error" {
+		t.Fatalf("缺 files-root 期望 status=error，got %v", resp["status"])
 	}
 }

@@ -77,6 +77,12 @@ type App struct {
 	// 独立 once——旧装配/测试只注入名单时为空，ExecuteCLI 走 legacy 降级）
 	allowedSpecs     map[string][]ParamSpecDTO
 	allowedSpecsOnce sync.Once
+
+	// cliInProcessRunner 进程内直调 CLI 的执行器（ADR-199）。
+	// 由 main.go 注入 go/cli.RunCLIInProcess 的薄封装，避免 internal/app 直接 import go/cli
+	// （保持 ADR-145「两侧互不 import，main 装配」约定，且不破坏 go/cli 白盒测试编译）。
+	// 缺失时 ExecuteCLI 走兜底错误响应，不会退化为 os/exec 自 fork。
+	cliInProcessRunner CLIInProcessRunner
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）

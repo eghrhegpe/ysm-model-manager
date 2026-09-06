@@ -293,7 +293,11 @@ const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = 
 type PreviewStateListener = (changed: (typeof KNOWN_PATHS)[number]) => void;
 const listeners = new Set<PreviewStateListener>();
 
-/** 订阅横切设置变更；返回取消订阅函数 */
+/**
+ * 订阅横切设置变更；返回取消订阅函数。
+ * 当前生产侧零调用方（面板走 getStateValue/setStateValue 手动读写），
+ * 此 hook 保留供未来「状态变更自动重算」愿景落地。
+ */
 export function subscribeSettings(listener: PreviewStateListener): () => void {
   listeners.add(listener);
   return () => {
@@ -330,13 +334,15 @@ export function setStateValue(
   opts?: { notify?: boolean },
 ): void {
   // cap set 可能抛错（cap 缺失、内部状态异常）；
-  // 不包 try/catch 时异常直接传播，notify 不执行，订阅者收不到变更通知
+  // 仅成功时才 notify，避免订阅者读旧值却以为新值已变更（状态层与 cap 实际状态分叉）。
+  let success = false;
   try {
     bindings[path].set(value);
+    success = true;
   } catch (e) {
     console.warn(`[preview-state] setStateValue("${path}") failed:`, e);
   }
-  if (opts?.notify !== false) notify(path);
+  if (success && opts?.notify !== false) notify(path);
 }
 
 /** 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） */

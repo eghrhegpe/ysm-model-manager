@@ -9,7 +9,6 @@ import { currentRepoType } from "../features/repo/repo-rtype.ts";
 import { idbGet, idbSet } from "./idb.ts";
 import { WebUnsupportedError } from "./web-common.ts";
 import { importWebFiles } from "./web-fs-import.ts";
-import { MAIN_FILE_RANK_NONE, mainFileRank } from "./web-fs-shared.ts";
 
 interface _FsaDirHandle {
   name: string;
@@ -120,17 +119,18 @@ async function scanFsaHandle(
   return { ok: true, imported, failed, dir: (handle as _FsaDirHandle).name };
 }
 
-/** 递归遍历目录句柄，收集所有主文件的 File 句柄 */
-async function _collectModelFiles(dir: _FsaDirHandle, out: File[]): Promise<void> {
+/** 递归遍历目录句柄，收集全部文件的 File 句柄（携带相对路径，供 importWebFiles 按 stem 分组） */
+async function _collectModelFiles(dir: _FsaDirHandle, out: File[], parentPath = ""): Promise<void> {
   for await (const entry of dir.values()) {
+    const rel = parentPath ? `${parentPath}/${entry.name}` : entry.name;
     if (entry.kind === "directory") {
-      await _collectModelFiles(entry as unknown as _FsaDirHandle, out);
+      await _collectModelFiles(entry as unknown as _FsaDirHandle, out, rel);
     } else if (entry.kind === "file") {
-      const f = entry as FileSystemFileHandle;
-      if (mainFileRank(f.name) > MAIN_FILE_RANK_NONE) {
-        const file = await f.getFile();
-        out.push(file);
-      }
+      const f = await (entry as FileSystemFileHandle).getFile();
+      // FSA getFile() 返回的 File 无 webkitRelativePath；自行拼相对路径，
+      // 供 importWebFiles 按 stem 分组时保留目录结构，避免多模型坍缩为同一组
+      Object.defineProperty(f, "webkitRelativePath", { value: rel, configurable: true });
+      out.push(f);
     }
   }
 }

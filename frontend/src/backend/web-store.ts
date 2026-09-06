@@ -5,8 +5,7 @@
 
 import { swallowError } from "../utils/base/async.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
-import { idbDel, idbGet, idbSet } from "./idb.ts";
-import { scanAllWebModels } from "./web-fs.ts";
+import { idbDel, idbGet, idbGetAll, idbSet } from "./idb.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---
 const CFG_KEY = "ysm:config";
@@ -107,6 +106,13 @@ async function addWebImportLog(
     Operation: "import",
   });
 }
+/**
+ * ADR-071 有意差异：桌面 AddOpLog(op,modelName,...) 进 ImportLog 全字段环
+ * （ModelName/SourcePath/TargetDir/FileSize/Status/ErrorMsg/Level）；
+ * web 进 runtime 环、仅记 Message+Timestamp（op 与 modelName 拼成 Message）。
+ * 消费方（runtime-logs 面板）只读 Message 字段，故功能等价。
+ * 禁静默改动——先改 ADR/契约再改实现。
+ */
 async function addWebOpLog(
   op: string,
   modelName: string,
@@ -151,18 +157,34 @@ async function getWebTags(path: string): Promise<string[]> {
   const v = await idbGet<string[]>("config", tagKeyOf(path));
   return Array.isArray(v) ? v : [];
 }
+/** 对齐 go/tags/tags.go trimTag：TrimSpace → 剔除 ASCII 控制符（\t 除外）→ 50 rune 截断 */
+function trimTagWeb(t: string): string {
+  const s = (t ?? "").trim();
+  if (s === "") return "";
+  let out = "";
+  let runes = 0;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (cp < 0x20 && cp !== 0x09) continue; // 控制符（\t 除外）剔除
+    out += ch;
+    runes++;
+    if (runes >= 50) break;
+  }
+  return out.trimEnd();
+}
+
 async function setWebTags(path: string, tags: string[] | null): Promise<void> {
   // null → 清除标签（对齐桌面 SetModelTags(path, null) 删除语义），而非残留空数组 key
   if (tags === null) {
     await idbDel("config", tagKeyOf(path));
     return;
   }
-  // 对齐 go/tags/tags.go SetTags：trimTag（去空白/控制符）+ 去重 + sort.Strings；
+  // 对齐 go/tags/tags.go SetTags：trimTagWeb（去空白/控制符/50 rune）+ 去重 + sort.Strings；
   // 空数组等同删除（len(tags)==0 → delete），避免残留空 key
   const seen = new Set<string>();
   const norm: string[] = [];
   for (const t of tags) {
-    const trimmed = (t ?? "").trim();
+    const trimmed = trimTagWeb(t);
     if (trimmed === "" || seen.has(trimmed)) continue;
     seen.add(trimmed);
     norm.push(trimmed);
@@ -174,22 +196,38 @@ async function setWebTags(path: string, tags: string[] | null): Promise<void> {
   }
   await idbSet("config", tagKeyOf(path), norm);
 }
+/** 批量取全部标签（一次 IDB 事务），返回 path → tags[] 索引。
+ * 替代 listByTagWeb / allTagsWeb 内 N 次单 key get（P1-7 性能修复）。 */
+async function getAllTagsIndex(): Promise<Map<string, string[]>> {
+  const index = new Map<string, string[]>();
+  try {
+    const rows = await idbGetAll("config", "tags:");
+    for (const [key, value] of rows) {
+      const path = key.slice("tags:".length);
+      if (Array.isArray(value)) index.set(path, value as string[]);
+    }
+  } catch {
+    // IDB 不可用 → 返回空索引
+  }
+  return index;
+}
+
 async function listByTagWeb(tag: string): Promise<string[]> {
-  const models = await scanAllWebModels();
+  // P1-7 修复：一次 IDB 前缀批量取全部标签建内存索引，替代 N 次单 key get
+  const allTags = await getAllTagsIndex();
+  const trimmed = trimTagWeb(tag);
   const out: string[] = [];
-  // 对齐 go/tags/tags.go ListByTag：tag = trimTag(tag) 后再匹配
-  const trimmed = (tag ?? "").trim();
-  for (const m of models) {
-    const tags = await getWebTags(m.path);
-    if (tags.includes(trimmed)) out.push(m.path);
+  for (const [path, tags] of allTags) {
+    if (tags.includes(trimmed)) out.push(path);
   }
   return out.sort(); // 对齐桌面 tags.Store.ListByTag 的 sort.Strings（稳定输出）
 }
 async function allTagsWeb(): Promise<string[]> {
-  const models = await scanAllWebModels();
+  // P1-7 修复：同上，批量取全部标签
+  const allTags = await getAllTagsIndex();
   const counts = new Map<string, number>();
-  for (const m of models) {
-    for (const t of await getWebTags(m.path)) counts.set(t, (counts.get(t) ?? 0) + 1);
+  for (const tags of allTags.values()) {
+    for (const t of tags) counts.set(t, (counts.get(t) ?? 0) + 1);
   }
   // 对齐桌面 tags.Store.AllTags 契约：按使用次数降序，同次数按名称升序（标签面板热门在前）
   return [...counts.entries()]

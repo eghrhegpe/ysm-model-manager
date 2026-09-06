@@ -4,16 +4,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeDiarySink } from "./diary-sink.ts";
 import { flushPromises } from "../test-utils/index.ts";
 
-const { addOpLogMock } = vi.hoisted(() => ({
+const { addOpLogMock, dbgMock } = vi.hoisted(() => ({
   addOpLogMock: vi.fn().mockResolvedValue(undefined),
+  dbgMock: vi.fn(),
 }));
 
 vi.mock("./app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ AddOpLog: addOpLogMock }),
 }));
 
+// P1-6 修复：diary-sink 改用 dbg 环形缓冲替代 console.warn——
+// 测试同步 spy dbg 模块，验证落盘失败有留痕
+vi.mock("../utils/debug/debug.ts", () => ({
+  dbg: dbgMock,
+}));
+
 beforeEach(() => {
   addOpLogMock.mockClear();
+  dbgMock.mockClear();
 });
 
 describe("makeDiarySink", () => {
@@ -26,11 +34,10 @@ describe("makeDiarySink", () => {
     );
   });
 
-  it("AddOpLog reject → console.warn 留痕，无未处理拒绝逸出（防 error-diary 死循环）", async () => {
+  it("AddOpLog reject → dbg 留痕，无未处理拒绝逸出（防 error-diary 死循环）", async () => {
     // 浮空 Promise 若逸出 → error-diary 的 unhandledrejection 监听 → logUiMsg
     // → 再落盘 → 拒绝 → 死循环；.catch 必须在适配层就地截断
     addOpLogMock.mockRejectedValueOnce(new Error("bridge down"));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const rejectionSpy = vi.fn();
     const onRejection = (e: PromiseRejectionEvent): void => rejectionSpy(e.reason);
     window.addEventListener("unhandledrejection", onRejection);
@@ -40,17 +47,15 @@ describe("makeDiarySink", () => {
       await flushPromises();
       expect(addOpLogMock).toHaveBeenCalledTimes(1);
       expect(rejectionSpy).not.toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalled();
+      expect(dbgMock).toHaveBeenCalled();
     } finally {
       window.removeEventListener("unhandledrejection", onRejection);
-      warnSpy.mockRestore();
     }
   });
 
   it("getApp 拒绝 → 同样就地截断，不产生 AddOpLog 调用", async () => {
     const { getApp } = await import("./app.ts");
     vi.mocked(getApp).mockRejectedValueOnce(new Error("bridge down"));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const rejectionSpy = vi.fn();
     const onRejection = (e: PromiseRejectionEvent): void => rejectionSpy(e.reason);
     window.addEventListener("unhandledrejection", onRejection);
@@ -60,10 +65,9 @@ describe("makeDiarySink", () => {
       await flushPromises();
       expect(addOpLogMock).not.toHaveBeenCalled();
       expect(rejectionSpy).not.toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalled();
+      expect(dbgMock).toHaveBeenCalled();
     } finally {
       window.removeEventListener("unhandledrejection", onRejection);
-      warnSpy.mockRestore();
     }
   });
 });

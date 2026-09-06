@@ -32,12 +32,14 @@ const TYPE_MAIN_EXTS: Set<string> = (() => {
 })();
 
 /** 主文件优先级打分（注册表驱动：YSM .ysm/.zip > ysm.json > 其他类型主文件 > 辅助文件）。
- * 不剥 .ban/.disabled——禁用模型在导入层即被拒（与 Go 导入层拒绝 .ban 一致）。 */
+ * 不剥 .ban/.disabled——禁用模型在导入层即被拒（与 Go 导入层拒绝 .ban 一致）。
+ * 对齐 go/ysm/header.go IsYsmEntryJSON：basename + EqualFold + TrimSpace 口径。 */
 export function mainFileRank(rel: string): number {
-  const low = rel.toLowerCase();
-  const dot = low.lastIndexOf(".");
-  const ext = dot > 0 ? low.slice(dot) : "";
-  if (ext === ".json") return low === "ysm.json" ? MAIN_FILE_RANK_JSON : MAIN_FILE_RANK_NONE;
+  const low = (rel ?? "").toLowerCase().trim();
+  const base = low.split("/").pop() ?? low;
+  const dot = base.lastIndexOf(".");
+  const ext = dot > 0 ? base.slice(dot) : "";
+  if (ext === ".json") return base === "ysm.json" ? MAIN_FILE_RANK_JSON : MAIN_FILE_RANK_NONE;
   if (ext === ".ysm" || ext === ".zip") return MAIN_FILE_RANK_YSM;
   if (TYPE_MAIN_EXTS.has(ext)) return MAIN_FILE_RANK_TYPE;
   return MAIN_FILE_RANK_NONE;

@@ -286,7 +286,56 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
   });
 }
 
-/** 单事务内的一个操作（put 写入 / del 删除） */
+/** 前缀批量取 metadata（仅投影 size + mimetype，不搬运 data:ArrayBuffer）
+ * 供 scanWebModelGroups 等只需要 size 的场景使用，避免全量结构化克隆。 */
+export async function idbGetAllMetadata(
+  store: Store,
+  prefix: string,
+): Promise<Array<[string, { size?: number; mimetype?: string }]>> {
+  const db = await getIdb();
+  if (!db) {
+    const m = memoryStore.get(store);
+    if (!m) return [];
+    return [...m.entries()]
+      .filter(([k]) => k.startsWith(prefix))
+      .map(([k, v]) => {
+        const meta = (v as { size?: number; mimetype?: string }) ?? {};
+        return [k, { size: meta.size, mimetype: meta.mimetype }] as [
+          string,
+          { size?: number; mimetype?: string },
+        ];
+      })
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  }
+  return new Promise<Array<[string, { size?: number; mimetype?: string }]>>((resolve, reject) => {
+    const tx = db.transaction(store, "readonly");
+    const os = tx.objectStore(store);
+    const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
+    const req = useRange
+      ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
+      : os.openCursor();
+    const out: Array<[string, { size?: number; mimetype?: string }]> = [];
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        const key = String(cursor.key);
+        if (key.startsWith(prefix)) {
+          const v = cursor.value as { size?: number; mimetype?: string } | undefined;
+          const meta: { size?: number; mimetype?: string } = {};
+          if (v?.size !== undefined) meta.size = v.size;
+          if (v?.mimetype !== undefined) meta.mimetype = v.mimetype;
+          out.push([key, meta]);
+        }
+        cursor.continue();
+      } else {
+        resolve(out);
+      }
+    };
+    req.onerror = () => reject(req.error);
+    tx.onerror = () => reject(tx.error ?? new Error("IDB read tx error"));
+    tx.onabort = () => reject(tx.error ?? new Error("IDB read tx abort"));
+  });
+}
 export type IdbOp = { kind: "put"; key: string; value: unknown } | { kind: "del"; key: string };
 
 /**

@@ -36,11 +36,31 @@ export const getApp = async (): Promise<AppBindings> => {
     if (typeof winApp === "object" && Object.keys(winApp).length === 0) {
       // 空对象视为未注入，回退动态 import
     } else {
-      // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
-      // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
-      // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
-      _App = winApp as AppBindings;
-      return _App;
+      // P4 修复（P1-5）：partial mock 检测——非空对象但缺失核心 binding 方法时，
+      // 仍回退动态 import，避免 partial mock 粘滞整个会话。
+      // 例：test harness 只注入 AddOpLog → 非空，但缺失 ScanModelEntries 等 → 穿透 undefined
+      const winAppRec = winApp as Record<string, unknown>;
+      // 核心启动集（browser-adapter 已实现的最小集 + 桌面高频绑定）——
+      // 至少命中其一才视为完整 mock，否则回退动态 import
+      const CORE_METHODS = [
+        "ScanModelEntries",
+        "GetRepoRoot",
+        "AddOpLog",
+        "AddImportLog",
+        "ImportModelFile",
+        "GetImportLogs",
+        "GetRuntimeLogs",
+      ];
+      const hasCore = CORE_METHODS.some((m) => typeof winAppRec[m] === "function");
+      if (!hasCore) {
+        // partial mock → 回退动态 import，不缓存
+      } else {
+        // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
+        // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
+        // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
+        _App = winApp as AppBindings;
+        return _App;
+      }
     }
   }
 

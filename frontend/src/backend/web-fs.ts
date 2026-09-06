@@ -56,7 +56,7 @@ import {
 import { getExts } from "../utils/resource/extensions.ts";
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
-import { type IdbOp, idbDel, idbGet, idbGetAll, idbKeys, idbTx } from "./idb.ts";
+import { type IdbOp, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbTx } from "./idb.ts";
 import {
   base64ToBytes,
   isWebPath,
@@ -142,11 +142,11 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
   // P0-1 优化：原本每模型组 1 次 meta get + 1 次 file 前缀扫 + N 次 file get
   // （N+1 串行事务，千级模型 ~2000+ 往返）。改为两次前缀批量操作收敛：
   //   ① idbGetAll("dir:type/")   一次事务拿全部 dir key+value（含 addedAt meta）
-  //   ② idbGetAll("file:type/")  一次事务拿全部文件 key+value（含 size）
+  //   ② idbGetAllMetadata("file:type/")  一次事务仅投影 size，不搬 data
   // 内存按组名收敛，主文件竞争 / 大小汇总在内存完成——总 IDB 事务数 O(1)。
-  const [dirRows, fileRows] = await Promise.all([
+  const [dirRows, fileMetaRows] = await Promise.all([
     idbGetAll("files", `dir:${type}/`),
-    idbGetAll("files", `file:${type}/`),
+    idbGetAllMetadata("files", `file:${type}/`),
   ]);
   const dirPrefix = `dir:${type}/`;
   const filePrefix = `file:${type}/`;
@@ -162,7 +162,7 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
   // 避免逐组全量扫描（O(文件×组) → O(文件×log组)，P1 性能修复）
   const filesByGroup = new Map<string, Array<[string, { size?: number }]>>();
   const sortedGroups = [...dirMeta.keys()].sort((a, b) => b.length - a.length);
-  for (const [fk, fv] of fileRows) {
+  for (const [fk, fv] of fileMetaRows) {
     const rel = fk.slice(filePrefix.length);
     let bestGroup = "";
     for (const name of sortedGroups) {
@@ -539,11 +539,21 @@ async function rekeyWebModelGroup(
   newName: string,
   move: boolean,
 ): Promise<void> {
-  const writtenNew: string[] = [];
+  // P1-2 修复：writtenNew 按 store 分桶——回滚时必须对号入座，
+  // 否则 config store 的 ban/tags key 会被错删到 files store（no-op）→ 孤儿标记
+  const writtenFiles: string[] = [];
+  const writtenCfg: string[] = [];
   const rollbackNew = async (): Promise<void> => {
-    for (const k of writtenNew.reverse()) {
+    for (const k of writtenFiles.reverse()) {
       try {
         await idbDel("files", k);
+      } catch {
+        /* best-effort */
+      }
+    }
+    for (const k of writtenCfg.reverse()) {
+      try {
+        await idbDel("config", k);
       } catch {
         /* best-effort */
       }
@@ -563,7 +573,7 @@ async function rekeyWebModelGroup(
         key: dirKey(type, newName),
         value: { ...(dv as Record<string, unknown>), name: newName },
       });
-      writtenNew.push(dirKey(type, newName));
+      writtenFiles.push(dirKey(type, newName));
     }
     const oldPrefix = `file:${type}/${oldName}/`;
     const fks = await idbKeys("files", oldPrefix);
@@ -573,7 +583,7 @@ async function rekeyWebModelGroup(
       if (val !== undefined) {
         const nk = fileKey(type, newName, rel);
         fileOps.push({ kind: "put", key: nk, value: val });
-        writtenNew.push(nk);
+        writtenFiles.push(nk);
       }
     }
     for (const prefix of ["ban:", "tags:"]) {
@@ -585,7 +595,7 @@ async function rekeyWebModelGroup(
         if (val !== undefined) {
           const nk = `${prefix}/web/${type}/${newName}/${suffix}`;
           cfgOps.push({ kind: "put", key: nk, value: val });
-          writtenNew.push(nk);
+          writtenCfg.push(nk);
         }
       }
     }

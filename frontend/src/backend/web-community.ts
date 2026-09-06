@@ -172,6 +172,13 @@ async function batchExtractCreatorAvatars(): Promise<Record<string, string>> {
       const author = base.slice(1, idx).trim();
       if (!author || result[author]) continue;
 
+      // P1-4 修复：先读 localStorage 缓存，命中则跳过全量 IDB 读 + WASM 解包
+      const cached = await cachedCreatorAvatar(author);
+      if (cached) {
+        result[author] = cached;
+        continue;
+      }
+
       const b64 = await readWebFile(e.Path);
       if (!b64) continue;
       // base64 → 字节统一走 web-common.base64ToBytes（非法输入返回 null → 跳过该模型）

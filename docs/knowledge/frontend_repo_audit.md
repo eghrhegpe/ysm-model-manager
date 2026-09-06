@@ -1120,7 +1120,6 @@ auto_fields:
     - RepresentativeSnapshot
     - requireMcRoot
     - rescanFsaRoot
-    - resetActiveComponent
     - resetAvatarConfigLoaded
     - resetDynamicCommandsCache
     - resetEncoderState

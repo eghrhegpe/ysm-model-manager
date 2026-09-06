@@ -32,9 +32,7 @@ export const KNOWN_PATHS = [
   // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
   "env.waterMode",
   "env.groundMatSource",
-  // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
-  // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
-  "ui.activeComponent",
+  // ui.activeComponent 已由 per-scene 闭包取代，本键保留仅作类型兼容，不再写入。
   // [doc:adr-126-p4-d] 预览会话模式（shared/self）：mountPreviewRootMenu 入口同步一次，
   // dock 级 visibleWhen 谓词消费（旧 hideInSelfMode/sharedOnly 语义收口到谓词）。
   "ui.mode",

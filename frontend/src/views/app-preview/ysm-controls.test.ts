@@ -29,7 +29,6 @@ import {
 } from "../../preview-3d/adapters/schema-registry.ts";
 import {
   resetSettingsListeners,
-  resetActiveComponent,
   type PreviewSnapshot,
 } from "../../preview-3d/state/preview-state.ts";
 import type { Spec3D } from "../../preview-3d/model3d.ts";
@@ -95,14 +94,12 @@ describe("registerYsmModelSchema（P5 受控注册 + B2 per-scene 会话态）",
   beforeEach(() => {
     resetSchemas();
     resetSettingsListeners();
-    resetActiveComponent();
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     resetSchemas();
     resetSettingsListeners();
-    resetActiveComponent();
   });
 
   it("注册 builder；调用 builder 时以 ctx + 状态快照委托 buildYsmModelSchema（缺省 sessionId → 旧全局 key 兼容）", () => {

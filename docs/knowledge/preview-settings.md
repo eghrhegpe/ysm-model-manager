@@ -56,7 +56,6 @@ auto_fields:
     - PreviewSnapshot
     - PreviewStatePath
     - renderModel2D
-    - resetActiveComponent
     - resetSettingsListeners
     - sampleAdaptivePixelRatio
     - saveScreenshot

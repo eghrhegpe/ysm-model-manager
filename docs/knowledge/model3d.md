@@ -504,7 +504,6 @@ auto_fields:
     - renderPreviewPanel
     - RenderVrmBonePanel
     - RepresentativeSnapshot
-    - resetActiveComponent
     - resetEncoderState
     - resetLoopState
     - resetSceneInfra

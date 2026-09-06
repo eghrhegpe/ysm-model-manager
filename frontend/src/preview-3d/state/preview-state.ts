@@ -87,9 +87,6 @@ function capById(id: string): SceneCapability | undefined {
   return _capLookup?.getById(id) ?? undefined;
 }
 
-/** [doc:adr-126-p5-b] 当前选中组件（会话态内存值）：-1 = All，其余 = 组件下标 */
-let _activeComponent = -1;
-
 /** [doc:adr-126-p4-d] 当前预览会话模式（shared/self）：menu/core.ts mount 入口同步一次，
  *  dock 级 visibleWhen 谓词经快照 `s["ui.mode"]` 读取——默认 shared（谓词缺省可见） */
 let _uiMode: "shared" | "self" = "shared";
@@ -273,17 +270,6 @@ const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = 
     set: (v) => groundMatCap()?.setMatSource(String(v)),
     available: () => groundMatCap() !== undefined,
   },
-  // ── 会话态：不落盘（非持久化偏好）──
-  //   [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
-  //   副作用（showModelGroup）由面板侧 subscribe 装配——本层只存值 + 广播。
-  "ui.activeComponent": {
-    get: () => _activeComponent,
-    set: (v) => {
-      const n = Number(v);
-      _activeComponent = Number.isFinite(n) ? n : -1;
-    },
-    available: () => true,
-  },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen
   // 谓词写 `(s) => s["ui.mode"] !== "self"` 与旧 hideInSelfMode 语义等价
   "ui.mode": {
@@ -301,13 +287,6 @@ const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = 
     available: () => !!(capById("sky") || capById("ground")),
   },
 };
-
-/** 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。
- *  [doc:adr-126-p5] _activeComponent 是模块级会话值，跨预览泄漏——不重置则下一个模型
- *  读陈旧下标，越界组件 → stats 聚合错 + select 无匹配项（P5-A review P2） */
-export function resetActiveComponent(): void {
-  _activeComponent = -1;
-}
 
 // ── 订阅（供后续取代 05fe24b7 的手工 refresh 链路）──
 

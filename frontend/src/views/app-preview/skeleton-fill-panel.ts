@@ -299,8 +299,7 @@ function buildModelSelector(
 
 // ===== [doc:adr-126-p5-c] YSM 模型面板声明式 schema（受控 builder 注册的落地）=====
 // fill3DPanel 的命令式 DOM 构建 → 声明式节点：统计 field + 纹理 row + 组件选择 select。
-// 组件切换走 previewState 的 ui.activeComponent（renderMenu select 分支读写），
-// 消除「裸函数直接拼 DOM + 手写事件监听」的渲染逃生舱。
+// 组件切换由 per-scene 闭包处理，本层仅消费外部传入的会话态。
 
 /** 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 */
 export interface YsmModelStats {
@@ -350,9 +349,6 @@ export function ysmModelTextureSlots(spec: Spec3D, rawIdx: number, texCount: num
  * @param ctx YSM 控件上下文（model/spec/texArr）
  * @param snapshot 状态层快照（兼容保留：P4-D visibleWhen 谓词同构；组件下标不再读它）
  * @param sessionActiveComponent per-scene 组件选择会话态闭包（get/set 读写，-1 = All）——
- *   [doc:adr-126-p5-b→B2] activeComponent 从全局状态层收敛为适配器内会话态（对齐 litematic
- *   shell 闭包范式）：跨预览泄漏的模块级单值被多场景共享，maid generic 模式 clamp 会误伤
- *   同台 YSM 的残留下标。B2 收敛在 ysm 适配器内，对外 API 形态不变（状态层零改动）。
  *   组件切换副作用（showModelGroup）由 views 层 registerModelSchema 闭包驱动（本函数只产出节点）。
  */
 export function buildYsmModelSchema(
@@ -361,15 +357,11 @@ export function buildYsmModelSchema(
     spec: Spec3D;
     texArr: import("three").Texture[];
   },
-  snapshot: Partial<PreviewSnapshot>,
+  _snapshot: Partial<PreviewSnapshot>,
   sessionActiveComponent?: { get: () => number; set: (n: number) => void },
 ): PreviewMenuNode[] {
-  // 会话态真源 = 闭包（per-scene）；缺省（旧调用/测试）回退快照读 ui.activeComponent（兼容）
-  const rawIdxRaw =
-    sessionActiveComponent?.get() ??
-    (typeof snapshot["ui.activeComponent"] === "number"
-      ? (snapshot["ui.activeComponent"] as number)
-      : -1);
+  // 会话态真源 = 闭包（per-scene）
+  const rawIdxRaw = sessionActiveComponent ? sessionActiveComponent.get() : -1;
   const mgCount = ctx.spec.models?.length ?? 0;
   // clamp：组件数变化后的陈旧下标（≥ mgCount）视为 -1（All）——防 stats 聚合越界 + select 无匹配项
   const rawIdx = rawIdxRaw >= mgCount ? -1 : rawIdxRaw;
@@ -400,13 +392,7 @@ export function buildYsmModelSchema(
           label: `${(mg as { name?: string; id?: string })?.name || (mg as { id?: string })?.id || "model"} (${(mg as { bones?: unknown[] })?.bones?.length ?? 0})`,
         })),
       ],
-      activeId: (): string =>
-        String(
-          sessionActiveComponent?.get() ??
-            (typeof snapshot["ui.activeComponent"] === "number"
-              ? (snapshot["ui.activeComponent"] as number)
-              : -1),
-        ),
+      activeId: (): string => String(sessionActiveComponent ? sessionActiveComponent.get() : -1),
       onSelect: (id: string): void => {
         sessionActiveComponent?.set(Number.isFinite(Number(id)) ? Number(id) : -1);
       },

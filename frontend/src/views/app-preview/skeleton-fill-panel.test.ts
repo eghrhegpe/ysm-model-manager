@@ -39,8 +39,8 @@ const ctx = {
   ],
 } as unknown as Parameters<typeof buildYsmModelSchema>[0];
 
-const snap = (activeComponent: number): PreviewSnapshot =>
-  ({ "ui.activeComponent": activeComponent }) as PreviewSnapshot;
+const snap = (_activeComponent: number): PreviewSnapshot =>
+  ({ "ui.mode": "shared" } as unknown) as PreviewSnapshot;
 
 /** 会话级 activeComponent 闭包（对齐 B2 范式：per-scene 会话态，不走全局状态层） */
 const sessionActive = (initial = -1): { get: () => number; set: (n: number) => void; snapshot: PreviewSnapshot } => {

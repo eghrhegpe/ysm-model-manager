@@ -31,7 +31,6 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
-    - resetActiveComponent
     - resetSettingsListeners
     - setPreviewUiMode
     - setSceneCapabilityLookup

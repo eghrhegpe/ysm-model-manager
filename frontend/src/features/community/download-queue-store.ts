@@ -61,7 +61,6 @@ export interface DownloadState {
  *
  * ⚠️ 单一写入纪律：所有 STATE 字段修改必须经本模块导出的写入函数，
  * 禁止模块外直接写 STATE.xxx（会绕过 notify 导致订阅者看到陈旧状态）。
- * 测试后门 __resetStateForTest 由测试文件动态 import 后调用。
  */
 const STATE: DownloadState = {
   status: "idle",
@@ -74,18 +73,6 @@ const STATE: DownloadState = {
   _lastDoneSeq: 0,
 };
 
-/** 测试重置：清空 STATE 到初始值，供 vi.resetModules() + 重 import 后调用 */
-export function __resetStateForTest(): void {
-  STATE.status = "idle";
-  STATE.total = 0;
-  STATE.remaining = 0;
-  STATE.currentFile = "";
-  STATE.progress = { dl: 0, total: 0 };
-  STATE.errorList = [];
-  STATE._lastDone = null;
-  STATE._lastDoneSeq = 0;
-}
-
 /** 外部写入入口：入队失败时回滚 idle（download-queue.ts catch 分支调用） */
 export function rollbackToIdle(): void {
   STATE.status = "idle";
@@ -96,12 +83,6 @@ export function rollbackToIdle(): void {
 /** 外部写入入口：进度守卫重置进度为 0（不调 notify，避免在 notify 回调链内触发递归） */
 export function resetProgress(): void {
   STATE.progress = { dl: 0, total: 0 };
-}
-
-/** 外部写入入口：更新剩余数 */
-export function setRemaining(n: number): void {
-  STATE.remaining = n;
-  notify();
 }
 
 const listeners = new Set<(s: DownloadState) => void>();
@@ -123,7 +104,7 @@ export function subscribe(fn: (s: DownloadState) => void): () => void {
 }
 
 /** 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） */
-export function notify(): void {
+function notify(): void {
   // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   listeners.forEach((fn) => fn(STATE));
 }

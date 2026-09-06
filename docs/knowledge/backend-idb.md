@@ -54,7 +54,6 @@ auto_fields:
     - prefetchStatsWorker
     - readDeclaredBackend
     - readWebFile
-    - resetFailFastCache
     - resolveWebMode
     - scanAllWebModels
     - scanWebModels

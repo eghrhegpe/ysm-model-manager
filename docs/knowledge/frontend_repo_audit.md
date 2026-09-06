@@ -920,7 +920,6 @@ auto_fields:
     - NO_3D_TYPES
     - normalizeFbxScale
     - normalizeTheme
-    - notify
     - onStatsProgress
     - openAdvFilterDialog
     - openDB

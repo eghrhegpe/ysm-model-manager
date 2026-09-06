@@ -68,10 +68,8 @@ auto_fields:
     - roleBaseName
     - RolesSchemaDeps
     - STATS_PANEL_ID
-    - switchNormPath
     - SwitchState
     - switchTabHighlightBg
-    - switchTabLabelOf
     - unregisterCorePanelSchemas
 tests:
   - frontend/src/features/community/render.test.ts

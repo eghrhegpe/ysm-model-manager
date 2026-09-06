@@ -21,13 +21,13 @@ import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";
 
 /** ADR-111：tab 标签统一从 getPreviewableTypeTabs 派生，preview key 兜底 RESOURCE_TYPE_LABELS */
-export function switchTabLabelOf(key: string): string {
+function switchTabLabelOf(key: string): string {
   const hit = getPreviewableTypeTabs().find((t) => t.key === key);
   return hit?.label ?? RESOURCE_TYPE_LABELS[key] ?? key;
 }
 
 /** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5） */
-export function switchNormPath(s: string): string {
+function switchNormPath(s: string): string {
   return s.replace(/\\/g, "/").toLowerCase();
 }
 

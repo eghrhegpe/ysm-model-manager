@@ -8,7 +8,6 @@ source_files:
   - frontend/src/utils/gh-links.ts
 auto_fields:
   symbols_with_lines:
-    - __resetStateForTest
     - bindRepoEvents
     - buildDownloadTasks
     - buildModelRow
@@ -37,7 +36,6 @@ auto_fields:
     - isActiveStatus
     - isModelMissing
     - ModelRowCtx
-    - notify
     - ProgressGuard
     - ProgressGuardHooks
     - QueueController
@@ -49,7 +47,6 @@ auto_fields:
     - resetProgress
     - resume
     - rollbackToIdle
-    - setRemaining
     - showProgress
     - showRepoModels
     - subscribe

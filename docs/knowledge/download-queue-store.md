@@ -11,7 +11,6 @@ source_files:
   - frontend/src/backend/runtime.ts
 auto_fields:
   symbols_with_lines:
-    - __resetStateForTest
     - buildDownloadTasks
     - cancelDownloads
     - classifyDownloadSize
@@ -29,7 +28,6 @@ auto_fields:
     - getState
     - getStateSnapshot
     - isActiveStatus
-    - notify
     - ProgressGuard
     - ProgressGuardHooks
     - QueueController
@@ -38,7 +36,6 @@ auto_fields:
     - resetProgress
     - resume
     - rollbackToIdle
-    - setRemaining
     - subscribe
     - Window
 tests:

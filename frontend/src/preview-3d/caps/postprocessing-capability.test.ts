@@ -959,3 +959,82 @@ describe("PostprocessingCapability — 菜单控件联动补充", () => {
     expect(p.toneMapping).toBe("cineon");
   });
 });
+
+// ============ ADR-195 刀2：cap 直产节点（getMenuNodes 契约）============
+describe("PostprocessingCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("顶层结构：3 基座 toggle + 5 文件夹，顺序与 getMenuControls 渲染等价", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(8);
+
+    // 基座级 toggle（无 children）
+    expect(nodes[0].id).toBe("pp-enabled");
+    expect(nodes[0].kind).toBe("toggle");
+
+    // Color 文件夹
+    expect(nodes[1].kind).toBe("folder");
+    expect(nodes[1].id).toBe("cap-group-postprocessing-color");
+    expect((nodes[1] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupColor");
+
+    expect(nodes[2].id).toBe("pp-bloom-enabled");
+    expect(nodes[2].kind).toBe("toggle");
+
+    // Bloom 文件夹
+    expect(nodes[3].kind).toBe("folder");
+    expect(nodes[3].id).toBe("cap-group-postprocessing-bloom");
+    expect((nodes[3] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupBloom");
+
+    expect(nodes[4].id).toBe("pp-ssao-enabled");
+    expect(nodes[4].kind).toBe("toggle");
+
+    // SSAO 文件夹
+    expect(nodes[5].kind).toBe("folder");
+    expect(nodes[5].id).toBe("cap-group-postprocessing-ssao");
+    expect((nodes[5] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupSsao");
+
+    // Reflection 文件夹
+    expect(nodes[6].kind).toBe("folder");
+    expect(nodes[6].id).toBe("cap-group-postprocessing-reflection");
+    expect((nodes[6] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupReflection");
+
+    // SSR 文件夹
+    expect(nodes[7].kind).toBe("folder");
+    expect(nodes[7].id).toBe("cap-group-postprocessing-ssr");
+    expect((nodes[7] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupSsr");
+  });
+
+  it("Bloom 文件夹子节点 pp-bloom-strength 读写闭包直连 cap", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const bloomFolder = nodes.find((n) => n.id === "cap-group-postprocessing-bloom") as unknown as {
+      children?: Array<{ id?: string; control?: { get: () => unknown; set: (v: unknown) => void } }>;
+    };
+    const children = bloomFolder.children!;
+    const strengthNode = children.find((n) => n.id === "pp-bloom-strength");
+
+    expect(strengthNode).toBeDefined();
+    // 初始值
+    expect(strengthNode!.control!.get()).toBe(cap.getParams().bloomStrength);
+    // set 闭包直连 cap
+    strengthNode!.control!.set(2.5);
+    expect(cap.getParams().bloomStrength).toBe(2.5);
+    // get 读取最新
+    expect(strengthNode!.control!.get()).toBe(2.5);
+  });
+
+  it("pp-enabled 基座 toggle 读写闭包直连 cap", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "pp-enabled") as unknown as {
+      control?: { get: () => unknown; set: (v: unknown) => void };
+    };
+
+    expect(enabledNode).toBeDefined();
+    expect(cap.isEnabled()).toBe(false);
+    expect(enabledNode.control!.get()).toBe(false);
+    enabledNode.control!.set(true);
+    expect(cap.isEnabled()).toBe(true);
+    enabledNode.control!.set(false);
+    expect(cap.isEnabled()).toBe(false);
+  });
+});

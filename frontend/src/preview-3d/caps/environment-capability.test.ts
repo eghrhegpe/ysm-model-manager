@@ -892,3 +892,102 @@ describe("EnvironmentCapability — 预设数据完整性", () => {
     expect(DEFAULT_ENV_PARAMS.useAsBackground).toBe(false);
   });
 });
+
+describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = env-enabled 平铺 toggle + preset/background/customHdr 三 folder（组分裂修复：background 含 histogram）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    // 4 顶层项
+    expect(nodes).toHaveLength(4);
+    // 0: env-enabled toggle 原生（能力总开关，无 group）
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("env-enabled");
+    nodes[0]!.control!.set!(false);
+    expect(cap.isEnabled()).toBe(false);
+    nodes[0]!.control!.set!(true);
+    expect(cap.isEnabled()).toBe(true);
+    // 1: preset folder
+    expect(nodes[1]!.kind).toBe("folder");
+    expect(nodes[1]!.labelKey).toBe("preview.envGroupPreset");
+    // 2: background folder（组分裂修复：含 use-as-background + intensity + histogram）
+    const bgFolder = nodes[2]!;
+    expect(bgFolder.kind).toBe("folder");
+    expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
+    expect(bgFolder.children!.map((c) => c.id)).toEqual([
+      "env-use-as-background",
+      "env-intensity",
+      "cap-group-env-histogram",
+    ]);
+    // background 组内 toggle/slider 原生节点读写闭包直连 cap
+    const useAsBg = bgFolder.children![0]!;
+    expect(useAsBg.kind).toBe("toggle");
+    expect(useAsBg.hintKey).toBe("preview.envUseAsBackgroundHint");
+    useAsBg.control!.set!(true);
+    expect(cap.isUseAsBackground()).toBe(true);
+    const intensity = bgFolder.children![1]!;
+    expect(intensity.kind).toBe("slider");
+    intensity.control!.set!(2.5);
+    expect(cap.getIntensity()).toBe(2.5);
+    // background 组内 histogram controls 节点
+    const histNode = bgFolder.children![2]!;
+    expect(histNode.kind).toBe("controls");
+    const histControls = typeof histNode.controls === "function" ? histNode.controls() : histNode.controls;
+    expect(histControls![0]!.kind).toBe("histogram");
+    expect(histControls![0]!.id).toBe("env-histogram");
+    // 3: customHdr folder
+    expect(nodes[3]!.kind).toBe("folder");
+    expect(nodes[3]!.labelKey).toBe("preview.envGroupCustomHdr");
+  });
+
+  it("preset folder 内 preset-thumb 走 controls 通道节点（MenuControlDef 内嵌）", () => {
+    const cap = newCap();
+    const presetFolder = cap.getMenuNodes()[1]!;
+    const thumbNode = presetFolder.children![0]!;
+    expect(thumbNode.kind).toBe("controls");
+    expect(thumbNode.id).toBe("cap-group-env-preset-thumb");
+    const controls = typeof thumbNode.controls === "function" ? thumbNode.controls() : thumbNode.controls;
+    expect(controls![0]!.kind).toBe("preset-thumb");
+    expect(controls![0]!.id).toBe("env-preset");
+    // thumb 配置完整
+    expect(controls![0]!.thumb).toBeDefined();
+    expect(controls![0]!.thumb!.size).toBe(64);
+    expect(controls![0]!.thumb!.options.length).toBe(5);
+    expect(controls![0]!.thumb!.activeValue()).toBe("sky");
+    // onSelect 切换预设
+    controls![0]!.thumb!.onSelect("studio");
+    expect(cap.getPresetId()).toBe("studio");
+  });
+
+  it("customHdr folder 内 image + button 走 controls 通道节点", () => {
+    const cap = newCap();
+    const hdrFolder = cap.getMenuNodes()[3]!;
+    expect(hdrFolder.children!.map((c) => c.id)).toEqual([
+      "cap-group-env-hdr-preview",
+      "cap-group-env-hdr-buttons",
+    ]);
+    // image controls 节点
+    const previewNode = hdrFolder.children![0]!;
+    expect(previewNode.kind).toBe("controls");
+    const previewControls = typeof previewNode.controls === "function" ? previewNode.controls() : previewNode.controls;
+    expect(previewControls![0]!.kind).toBe("image");
+    expect(previewControls![0]!.id).toBe("env-hdr-preview");
+    // button controls 节点（pick + clear）
+    const btnNode = hdrFolder.children![1]!;
+    expect(btnNode.kind).toBe("controls");
+    const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
+    expect(btnControls!.map((c) => c.id)).toEqual(["env-pick-hdr", "env-clear-hdr"]);
+    // pick button 语义
+    const pickBtn = btnControls![0]!;
+    expect(pickBtn.kind).toBe("button");
+    expect(pickBtn.button!.variant).toBe("primary");
+    expect(pickBtn.button!.disabled!()).toBe(false);
+    // clear button 语义
+    const clearBtn = btnControls![1]!;
+    expect(clearBtn.kind).toBe("button");
+    expect(clearBtn.button!.variant).toBe("ghost");
+    expect(clearBtn.button!.disabled!()).toBe(true); // 无 custom HDR → 禁用
+    // 注入缓存后 clear 不再禁用
+    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
+    expect(clearBtn.button!.disabled!()).toBe(false);
+  });
+});

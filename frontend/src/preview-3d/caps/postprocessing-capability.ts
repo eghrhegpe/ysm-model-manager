@@ -19,8 +19,10 @@ import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import type { PostprocessingLike } from "../adapters/postprocessing.ts";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { previewPixelRatio } from "../render-budget.ts";
 import type { LightCapability } from "./light-capability.ts";
+import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
 // cap-configs.test.ts 等）的 import 路径不破坏。THREE.ToneMapping 枚举求值仍在本文件
@@ -745,6 +747,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       ...ppcBuildSSAO(this),
       ...ppcBuildSSR(this),
     ];
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整后处理节点树：基座 toggle + 5 文件夹（Color/Bloom/SSAO/Reflection/SSR）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildPostprocessingNodes(this);
   }
 
   /* -------- 持久化 -------- */

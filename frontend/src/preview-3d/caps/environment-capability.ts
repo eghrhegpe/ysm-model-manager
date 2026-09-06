@@ -10,6 +10,8 @@
 
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type {
   EnvironmentParams,
   EnvPreset,
@@ -774,6 +776,14 @@ export class EnvironmentCapability implements SceneCapability {
   /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
   getMasterToggle(): MenuControlDef | null {
     return ecMasterToggle(this);
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树：env-enabled 平铺 toggle（能力总开关）+ preset/background/customHdr 三 folder。
+   *  background 组合并修复：use-as-background/intensity/histogram 同归一个 folder（getMenuControls 里被拆两段）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildEnvironmentNodes(this);
   }
 
   /* -------- 持久化 -------- */

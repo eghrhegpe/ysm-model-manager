@@ -15,10 +15,12 @@ auto_fields:
     - applyGroundSurfaceStructural
     - attenuateAmbientForSky
     - bindFieldRestorers
+    - buildEnvironmentNodes
     - buildFogNodes
     - buildGroundNodes
     - buildGroundSurfaceSpec
     - buildLightNodes
+    - buildPostprocessingNodes
     - buildReflectorNodes
     - buildRenderModeNodes
     - buildShadowNodes

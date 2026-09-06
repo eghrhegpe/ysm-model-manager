@@ -286,7 +286,7 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-196：预设三轴统一——收口模型类别/氛围联动/手动守卫为单一预设 Schema",
+        "text": "ADR-196：预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线）",
         "link": "/adr/ADR-196-presets-three-axis-unification"
       },
       {

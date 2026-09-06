@@ -66,6 +66,7 @@ auto_fields:
     - buildCameraSchema
     - buildCrossCuttingControls
     - buildCubeMeshData
+    - buildEnvironmentNodes
     - buildEnvSchema
     - buildFbxScene
     - buildFbxSceneFromData
@@ -81,6 +82,7 @@ auto_fields:
     - buildOrderedTexKeys
     - buildPackScene
     - buildPmxScene
+    - buildPostprocessingNodes
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
     - buildReflectorNodes

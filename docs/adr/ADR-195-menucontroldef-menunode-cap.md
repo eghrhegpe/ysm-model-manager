@@ -42,12 +42,15 @@ YSM cap 是**实例方法自报控件**（`cap.setCloudCoverage(v)` 等闭包）
 
 ### 刀序（实施见知识卡，ADR 不记进度）
 
-**2026-09-06 架构审计补正（子代理全仓实证）**：渲染层**早已单源化于 cap 渲染器**——render.ts:598-601 注释明写「rmAppendSelect/Slider/Toggle 已退役」，节点 slider/toggle/select 是**反向投影**（nodeControlToCapControl）成 MenuControlDef 再借 renderCapControls 渲染；rmAppendButton 只是简单行壳（variant/disabled/getHint 全不认）。故「节点体系 = 正统渲染、cap = 旁支」的原刀序前提不成立——**真正分裂的是类型声明层 + 行壳视觉层**。据此插入刀 0（先行收编渲染归属），再走桥接/迁移。
+**2026-09-06 架构审计补正（子代理全仓实证）**：渲染层**早已单源化于 cap 渲染器**——render.ts:606-613 注释明写「rmAppendSelect/Slider/Toggle 已退役」（color 分支后并入同组；行号随新增 kind 漂移，勿信旧值），节点 slider/toggle/select 是**反向投影**（nodeControlToCapControl）成 MenuControlDef 再借 renderCapControls 渲染；rmAppendButton 只是简单行壳（variant/disabled/getHint 全不认）。故「节点体系 = 正统渲染、cap = 旁支」的原刀序前提不成立——**真正分裂的是类型声明层 + 行壳视觉层**。据此插入刀 0（先行收编渲染归属），再走桥接/迁移。
 
 1. **刀 0：渲染归属复位**：节点 slider/toggle/select/button 直走 cap 渲染器官方实现（删 nodeControlToCapControl 反向投影，节点控件即声明为 cap 渲染器输入）；节点行视觉（.slide-item/.cm-row）与参数行视觉（.cc-row）统一进同一组密度/视觉 token（menu-styles），消灭「导航行 30px ↔ 参数行 50px」断裂。此刀后 renderMenu = 唯一渲染入口，节点与 cap 控件共用同一渲染/视觉。
 2. **刀 1：建桥接工厂 `cap-to-node`（薄转换层）**：MenuControlDef → PreviewMenuNode 转换器集中一处（spec 一次补齐为 MenuControlDef 超集，nodeControlToCapControl 变纯字段搬运零信息损失）。10 个 cap 的 `getMenuControls()` 暂不改，进 renderMenu 处先经工厂转 `PreviewMenuNode[]`。现有测试不动（中间多一层，行为零变）。
 3. **刀 2：逐 cap 迁移**：每 cap 的 `getMenuControls(): MenuControlDef[]` → `getMenuNodes(): PreviewMenuNode[]`（或改 schema 自产节点）。每迁一个删一个 MenuControlDef 消费者 + 改写对应测试。
-4. **刀 3：收口删除**：最后一个 cap 迁完时，删 `MenuControlDef`/`MenuControlKind`/cap-controls.ts 整组渲染与 cc-* 视觉层、`controls` 节点 kind、settings 的 `collectSettingsCapControls` 特判。
+4. **刀 2.5：投影反转（刀 3 的收口前置，不得跳过）**：刀 2 全部 cap 迁完后，`renderMenu` 的 select/slider/toggle/color 四分支仍经 `nodeControlToCapControl`（render.ts:354 定义、:613 消费）构造 `MenuControlDef` 中间对象再交 `renderCapControls`——**这四条分支是 MenuControlDef 类型最后的硬依赖**；若直接进刀 3 删类型，四分支编译期断链。故刀 3 之前必须先把投影**反转**：将 `renderCapToggle/Slider/Select/Divider/Color` 五个实现从 `cap-controls.ts` 上提为 `renderMenu` 的 `rmAppend*` 行实现（直吃 `PreviewMenuNode.control` spec，不再构造 MenuControlDef），删除 `nodeControlToCapControl`。此刀后 `renderCapControls` 仅剩 button/timeline/histogram/preset-thumb/image 五类复杂控件（与 `cap-to-node.ts` 的 `canNodeRepresent` 原生/复杂二分完全一致），随刀 3 一并迁入 `custom` 逃生舱。
+   - **完成判据（可验证）**：`grep -rn "nodeControlToCapControl" frontend/src` 零命中；`renderCapControls` 的 switch 仅剩 5 个复杂 kind。
+   - **与刀 0 的关系**：刀 0 是「渲染归属复位」的方向决策（谁该拥有渲染实现），刀 2.5 是其**延后执行的落地动作**——因刀 1/刀 2 期间桥接层需要稳定中间态，反向投影暂留作过渡；刀 2 收尾后必须在刀 3 前清偿，不得遗留。
+5. **刀 3：收口删除**：最后一个 cap 迁完时，删 `MenuControlDef`/`MenuControlKind`/cap-controls.ts 整组渲染与 cc-* 视觉层、`controls` 节点 kind、settings 的 `collectSettingsCapControls` 特判。
 
 ### 关键映射（刀 0/1 固化，刀 2 按此迁移；2026-09-06 全仓实证）
 
@@ -82,6 +85,8 @@ onCommit：仅 settings-pixel-ratio 1 处（节点体系原产，cap 未用）�
 
 **已知遗留**：env 面板已先行改为「行 + navigate 下钻」（9204166e），cap 控件在 env 二级经 navigate 直达 renderCapControls——迁移后该路径改经 renderMenu 渲染节点/custom。ADR-194（MenuControlDef 判别联合）射程被本 ADR 取代（不再需要独立联合化，类型整体退役）。
 
+**有界技术债（刀 2.5 清偿）**：刀 1/刀 2 期间 `nodeControlToCapControl` 反向投影**有意保留**——桥接层需要一个稳定的中间形制承载新旧两态，提前反转会与逐 cap 迁移互相干扰。该债由刀 2.5 在刀 3 前清偿；若跳过刀 2.5 直接删 `MenuControlDef`，`renderMenu` 的 select/slider/toggle/color 四分支将在编译期断链（此即「最后一公里」风险的具体形态）。
+
 ## 4. 数据溯源
 
 - AGENTS.md（2026-09 更新红线）：「3d 菜单只允许 MenuNode schema，新增 UI 功能必须可被所有 MenuNode schema 菜单调用」→ 本 ADR 立项总纲
@@ -89,5 +94,6 @@ onCommit：仅 settings-pixel-ratio 1 处（节点体系原产，cap 未用）�
 - YSM 架构审计（env 面板两级跳转暴露 cc-row vs 节点行视觉断裂 + lcard 不可用于 cap 控件）→ §1.2
 - ADR-193（declarative endgame）/ADR-194（MenuControlDef 判别联合，§2.5 明言 PreviewMenuNode 另套不动、交汇在 render.ts cast）/ADR-125（settingsOrder 聚合）/ADR-126（面板声明式化）→ §2 兼容与红线
 - `node-types.ts` PreviewMenuNodeKind / `scene-capability.ts` MenuControlDef / `cap-controls.ts` renderCapControls / `render.ts` nodeControlToCapControl + controls 节点 → §1.1 双体系实证
+- `render.ts:354`（nodeControlToCapControl 定义）/`:606-613`（select/slider/toggle/color 四分支消费）+ `menu/cap-to-node.ts` `canNodeRepresent` 原生 5 kind ↔ 复杂 5 kind 二分 → §2 刀 2.5 收口前置与完成判据（2026-09-06 全仓实测：刀 0 尚未执行，反向投影仍在位）
 
 <!-- 文件名: menucontroldef-menunode-cap.md → 实际文件 ADR-195-menucontroldef-menunode-cap.md -->

@@ -37,7 +37,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-196](./ADR-196-presets-three-axis-unification.md) | 预设三轴统一——收口模型类别/氛围联动/手动守卫为单一预设 Schema | ✅ 已采纳 |
+| [ADR-196](./ADR-196-presets-three-axis-unification.md) | 预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线） | ✅ 已采纳 |
 | [ADR-195](./ADR-195-menucontroldef-menunode-cap.md) | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 |
 | [ADR-193](./ADR-193-preview-menu-declarative-endgame.md) | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 |
 | [ADR-192](./ADR-192-go-types-registry-split.md) | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 |
@@ -243,7 +243,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-196 | 预设三轴统一——收口模型类别/氛围联动/手动守卫为单一预设 Schema | ✅ 已采纳 | 2026-09-06 |
+| ADR-196 | 预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线） | ✅ 已采纳 | 2026-09-06 |
 | ADR-195 | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 | 2026-09-06 |
 | ADR-194 | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ❌ 已取代 | 2026-09-06 |
 | ADR-193 | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 | 2026-09-06 |

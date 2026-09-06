@@ -166,8 +166,14 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// 恢复窗口位置
 	pos := a.GetWindowPosition()
 	if a.mainWindow != nil && pos.Width > 0 && pos.Height > 0 {
-		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中
-		if pos.X < -200 || pos.X > 4000 || pos.Y < -200 || pos.Y > 4000 {
+		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中。
+		// 阈值经验值：-200 覆盖左侧副屏未连接残留；4000 需大于主流单屏宽度
+		// （5K/6K 横屏 5120/6016 px 下单屏合法窗口会被误判居中——已知局限，
+		// 修法是接入屏幕工作区实际边界，暂以常量收口魔数）。
+		const offscreenNegLimit = -200
+		const offscreenPosLimit = 4000
+		if pos.X < offscreenNegLimit || pos.X > offscreenPosLimit ||
+			pos.Y < offscreenNegLimit || pos.Y > offscreenPosLimit {
 			a.mainWindow.SetSize(pos.Width, pos.Height)
 			a.mainWindow.Center()
 		} else {
@@ -208,8 +214,8 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 				rel := registry.GroupStorageRoot(rt.ID)
 				if !seen[rel] {
 					seen[rel] = true
-					// 目录权限 0644 无执行位，目录不可进入——应为 0755
-					os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), 0755)
+					// 权限统一走 fsutil.DirPerms（原裸 0755 漏收口，防漂移）
+					os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), fsutil.DirPerms)
 				}
 			}
 		}

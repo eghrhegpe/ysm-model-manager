@@ -117,7 +117,11 @@ func (a *App) ExecuteCLI(command string, args map[string]interface{}) string {
 	// 3. 执行命令并捕获输出
 	// 子进程加 --json：RunCLI 的 jsonMode 分支输出统一 JsonResponse 协议（成功/失败均为 JSON）
 	cmdArgs = append(cmdArgs, "--json")
-	output, execErr := executeCLICommand(cmdArgs)
+	parent := context.Background()
+	if a.appCtx != nil {
+		parent = a.appCtx
+	}
+	output, execErr := executeCLICommand(parent, cmdArgs)
 
 	// 4. 透传子进程 JSON 响应（协议由 go/cli/json.go 定义，前端统一消费）
 	// execErr 非空时仅透传合法 JSON 响应，防止异常部分输出掩盖真实错误
@@ -315,7 +319,9 @@ const cliCommandTimeout = 5 * time.Minute
 // executeCLICommand 执行 CLI 命令
 // 通过 os/exec 调用自身二进制的 CLI 模式，避免循环依赖
 // 返回 stdout 内容和错误（含退出码）
-func executeCLICommand(args []string) (string, error) {
+// parent 传 a.appCtx：应用退出时在途 CLI 子进程一并被终止
+// （原 context.Background 脱离应用生命周期，退出后子进程独立跑满 5 分钟超时）。
+func executeCLICommand(parent context.Context, args []string) (string, error) {
 	// 获取当前可执行文件路径
 	exePath, err := os.Executable()
 	if err != nil {
@@ -324,7 +330,7 @@ func executeCLICommand(args []string) (string, error) {
 
 	// 构建命令：<exe> --cli <args...>（CommandContext 带超时，子进程挂死即终止）
 	cliArgs := append([]string{"--cli"}, args...)
-	ctx, cancel := context.WithTimeout(context.Background(), cliCommandTimeout)
+	ctx, cancel := context.WithTimeout(parent, cliCommandTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, exePath, cliArgs...)
 

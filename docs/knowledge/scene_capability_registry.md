@@ -24,7 +24,6 @@ auto_fields:
     - buildReflectorNodes
     - buildRenderModeNodes
     - buildShadowNodes
-    - buildSkyGroup
     - buildSkyNodes
     - buildWaterNodes
     - CapabilityId
@@ -60,7 +59,6 @@ auto_fields:
     - FogMode
     - FogParams
     - generateSurfacePixels
-    - getLightMenuControls
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
@@ -107,10 +105,6 @@ auto_fields:
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams
-    - skcBuildAtmosphereFX
-    - skcBuildAutoRotate
-    - skcBuildScattering
-    - skcBuildTime
     - SkyCapability
     - SkyModelType
     - SkyParams

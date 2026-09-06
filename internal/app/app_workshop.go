@@ -361,7 +361,8 @@ func (a *App) MergeWorkshopSitesFromJSON(jsonContent string) (int, int, error) {
 		return 0, 0, err
 	}
 	// 逐条净化：id 必须非空字符串（站点唯一身份），非法元素过滤
-	cleaned := imported[:0]
+	// （新分配，不复用参数底层数组——imported[:0] 原地写会让别名持有者被静默改写）
+	cleaned := make([]types.WorkshopSite, 0, len(imported))
 	for _, s := range imported {
 		if s.ID != "" {
 			cleaned = append(cleaned, s)
@@ -495,8 +496,8 @@ func (a *App) MergeCommunityCreatorsFromJSON(communityJSON string) (int, int, er
 		return 0, 0, err
 	}
 	// 逐字段净化：name 必须非空字符串，非法元素过滤（防 __proto__ 注入 / 畸形数据
-	// 污染；与 web 桥 web-community.ts 逐字段校验同源）
-	cleaned := imported[:0]
+	// 污染；与 web 桥 web-community.ts 逐字段校验同源；新分配同上）
+	cleaned := make([]types.WorkshopCreator, 0, len(imported))
 	for _, cr := range imported {
 		if cr.Name != "" {
 			cleaned = append(cleaned, cr)

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -479,32 +480,29 @@ func (a *App) RepoHealthAudit(dir string) (*repoaudit.HealthReport, error) {
 	return &report, nil
 }
 
-// RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
-// 无有效目录时返回错误。
-func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
-	roots := a.GetAllRepoRoots()
-	if len(roots) == 0 {
-		return nil, fmt.Errorf("请先配置仓库目录")
-	}
-	type auditResult struct {
-		rtype  string
-		report repoaudit.HealthReport
-		err    error
-	}
-	results := make([]auditResult, 0, len(roots))
-	for rtype, root := range roots {
-		rpt, err := repoaudit.HealthReportFor(root)
-		results = append(results, auditResult{rtype: rtype, report: rpt, err: err})
-	}
-	// 合并：资源汇总 + 分数加权 + 警告汇集
+// auditResult 单类型审计结果（RepoHealthAuditAll → mergeAuditResults 的中间载体）
+type auditResult struct {
+	rtype  string
+	report repoaudit.HealthReport
+	err    error
+}
+
+// mergeAuditResults 合并各类型审计结果：资源汇总 + 分数加权 + 警告汇集。
+// 先按 rtype 排序再合并——同输入恒同输出（ADR-119 确定性契约；原 map 随机
+// 遍历导致 Warnings 顺序与 Cache 取值随运行漂移，与 scanner.go:760 专门修的
+// "同输入不同输出"同一性质）。
+func mergeAuditResults(results []auditResult, timestamp string) *repoaudit.HealthReport {
+	sorted := append([]auditResult(nil), results...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].rtype < sorted[j].rtype })
+
 	merged := repoaudit.HealthReport{
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Timestamp: timestamp,
 		Directory: "（全仓库）",
 		Resources: repoaudit.ResourceSummary{ByType: make(map[string]int)},
 	}
 	scoreSum := 0
 	scoreCount := 0
-	for _, r := range results {
+	for _, r := range sorted {
 		if r.err != nil {
 			merged.Warnings = append(merged.Warnings, fmt.Sprintf("[%s] %v", r.rtype, r.err))
 			continue
@@ -528,8 +526,8 @@ func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
 		scoreSum += r.report.Score * r.report.Resources.TotalFiles
 		scoreCount += r.report.Resources.TotalFiles
 	}
-	// 缓存全局唯一（texture_cache），只取一次——取第一个有效结果
-	for _, r := range results {
+	// 缓存全局唯一（texture_cache），只取一次——排序后"第一个有效结果"亦确定
+	for _, r := range sorted {
 		if r.err == nil {
 			merged.Cache = r.report.Cache
 			break
@@ -541,7 +539,22 @@ func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
 	if merged.Completeness.Checked > 0 {
 		merged.Completeness.Percentage = float64(merged.Completeness.Valid) / float64(merged.Completeness.Checked) * 100
 	}
-	return &merged, nil
+	return &merged
+}
+
+// RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
+// 无有效目录时返回错误。
+func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
+	roots := a.GetAllRepoRoots()
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("请先配置仓库目录")
+	}
+	results := make([]auditResult, 0, len(roots))
+	for rtype, root := range roots {
+		rpt, err := repoaudit.HealthReportFor(root)
+		results = append(results, auditResult{rtype: rtype, report: rpt, err: err})
+	}
+	return mergeAuditResults(results, time.Now().UTC().Format(time.RFC3339)), nil
 }
 
 // InstallResourceToInstance 将资源文件安装到指定整合包
@@ -589,7 +602,13 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	cleanParent := filepath.Clean(srcParent)
 	cleanRoot := filepath.Clean(globalRoot)
 
-	hasPrefix := strings.HasPrefix(strings.ToLower(srcParent), strings.ToLower(globalRoot))
+	// 前缀判定带路径分隔符边界：原裸 HasPrefix 会让 C:\repo-evil 误判在
+	// C:\repo 内（与 isPathInRootOrSelf 口径对齐，code_review 2026-09-06 #9）；
+	// Windows 盘符大小写不敏感故两侧 ToLower。
+	lowerParent := strings.ToLower(cleanParent)
+	lowerRoot := strings.ToLower(cleanRoot)
+	hasPrefix := lowerParent == lowerRoot ||
+		strings.HasPrefix(lowerParent, lowerRoot+string(filepath.Separator))
 
 	// YSM(.json) 和 MMD(.pmx/.pmd) 模型可能有子文件夹（含动作/纹理等配套文件）
 	// VRM(.vrm) 是自包含格式，单文件即可

@@ -20,22 +20,14 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-var _blocklistIPs = []string{
-	"0.0.0.0", "::", "127.", "10.", "192.168.", "172.16.", "172.17.",
-	"172.18.", "172.19.", "172.20.", "172.21.", "172.22.", "172.23.",
-	"172.24.", "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
-	"172.30.", "172.31.", "169.254.", "100.64.", "100.65.", "100.66.",
-	"100.67.", "100.68.", "100.69.", "100.70.", "100.71.", "100.72.",
-	"100.73.", "100.74.", "100.75.", "100.76.", "100.77.", "100.78.",
-	"100.79.", "100.80.", "100.81.", "100.82.", "100.83.", "100.84.",
-	"100.85.", "100.86.", "100.87.", "100.88.", "100.89.", "100.90.",
-	"100.91.", "100.92.", "100.93.", "100.94.", "100.95.", "100.96.",
-	"100.97.", "100.98.", "100.99.", "100.100.", "100.101.", "100.102.",
-	"100.103.", "100.104.", "100.105.", "100.106.", "100.107.", "100.108.",
-	"100.109.", "100.110.", "100.111.", "100.112.", "100.113.", "100.114.",
-	"100.115.", "100.116.", "100.117.", "100.118.", "100.119.", "100.120.",
-	"100.121.", "100.122.", "100.123.", "100.124.", "100.125.", "100.126.",
-	"100.127.",
+// isCGNAT 判断 IPv4 是否落在 CGNAT 共享地址段 100.64.0.0/10（RFC 6598）：
+// net.IP.IsPrivate 不覆盖该段，原 80 行逐段前缀黑名单（100.64.~100.127.）
+// 收敛为单条字节判断（首字节 100 且次字节 64..127）。
+// 其余私网/保留段（loopback/private/link-local/unspecified/multicast）
+// 由调用方 Is* 系列方法原生覆盖，无需字符串前缀表。
+func isCGNAT(ip net.IP) bool {
+	ip4 := ip.To4()
+	return ip4 != nil && ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127
 }
 
 type proxySession struct {
@@ -62,10 +54,8 @@ func isBlockedIP(host string) bool {
 		ip.IsUnspecified() || ip.IsPrivate() || ip.IsMulticast() {
 		return true
 	}
-	for _, prefix := range _blocklistIPs {
-		if strings.HasPrefix(host, prefix) {
-			return true
-		}
+	if isCGNAT(ip) {
+		return true
 	}
 	return false
 }
@@ -202,6 +192,9 @@ func isWebSocketUpgrade(r *http.Request) bool {
 	return false
 }
 
+// ssrfDial dial 注入点：测试替换为直连假上游（ssrfGuardDial 拦回环，测试无法走真实现）
+var ssrfDial = ssrfGuardDial
+
 func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter, r *http.Request) error {
 	wsPort := target.Port()
 	if wsPort == "" {
@@ -211,7 +204,7 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 			wsPort = "80"
 		}
 	}
-	targetConn, err := ssrfGuardDial(ctx, "tcp", net.JoinHostPort(target.Hostname(), wsPort))
+	targetConn, err := ssrfDial(ctx, "tcp", net.JoinHostPort(target.Hostname(), wsPort))
 	if err != nil {
 		return err
 	}
@@ -255,6 +248,12 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 		io.Copy(clientConn, targetConn)
 		done <- struct{}{}
 	}()
+	// 两个方向都要等待：原 <-done 只收一次，另一拷贝 goroutine 靠 defer Close
+	// 间接唤醒——若上游不主动断，该 goroutine 与连接资源泄漏至会话结束
+	<-done
+	// 任一向已断开：显式关闭两侧连接，唤醒仍在阻塞的另一方向 io.Copy
+	_ = clientConn.Close()
+	_ = targetConn.Close()
 	<-done
 	return nil
 }

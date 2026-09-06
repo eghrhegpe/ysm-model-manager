@@ -94,7 +94,6 @@ auto_fields:
     - buildShadowNodes
     - buildShadowSchema
     - buildSharedInfra
-    - buildSkyGroup
     - buildSkyNodes
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
@@ -249,7 +248,6 @@ auto_fields:
     - getBonePosition
     - getCustomAnimPath
     - getFrameIntervalMs
-    - getLightMenuControls
     - getLoadTraces
     - getMaterialDetailBase
     - getMaxFps
@@ -601,10 +599,6 @@ auto_fields:
     - shouldRenderPreviewFrame
     - showLoadFailure
     - showModelGroup
-    - skcBuildAtmosphereFX
-    - skcBuildAutoRotate
-    - skcBuildScattering
-    - skcBuildTime
     - SkyCapability
     - SkyModelType
     - SkyParams

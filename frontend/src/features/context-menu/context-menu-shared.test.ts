@@ -40,6 +40,9 @@ describe("isUnsafeFolderName（安全过滤：逃逸段 + 平台非法字符 + �
       expect(isUnsafeFolderName(reserved.toLowerCase())).toBe(true);
       expect(isUnsafeFolderName(`${reserved}.txt`)).toBe(true);
     }
+    // 首点前整段 = CON → 保留（code_review 04449b48 #1：原断言误放「合法名放行」
+    // 块内与标题矛盾，移回本块——防保留名扩展的前端回归防护被按标题误删）
+    expect(isUnsafeFolderName("con.tents")).toBe(true);
   });
 
   it("尾随点/空格（Windows 静默剥离 → 落点漂移）→ 不安全", () => {
@@ -53,6 +56,5 @@ describe("isUnsafeFolderName（安全过滤：逃逸段 + 平台非法字符 + �
     expect(isUnsafeFolderName("测试作者")).toBe(false);
     expect(isUnsafeFolderName("a/b")).toBe(false); // 嵌套语义：dstDir 拼接按 / 逐段落盘
     expect(isUnsafeFolderName("v1.2备份")).toBe(false);
-    expect(isUnsafeFolderName("con.tents")).toBe(true); // 首点前整段 = CON → 保留（Windows 判定口径）
   });
 });

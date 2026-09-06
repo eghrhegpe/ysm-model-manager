@@ -21,13 +21,15 @@ import (
 func WriteModelFolder(filesRoot, subpath, folderName string, files []types.ImportFileItem) error {
 	opMu.Lock()
 	defer opMu.Unlock()
+	// 校验吃未 trim 原串（code_review 04449b48 #2）：下方 TrimSpace 剥除尾随空格
+	// 会漏检——与前端 isUnsafeFolderName 口径一致（reference.md 契约）
+	if fsutil.ContainsIllegalNameChar(folderName) {
+		return fmt.Errorf("文件夹名不符合规范（非法字符 / Windows 保留名 / 尾随点空格）")
+	}
 	filesRoot = strings.TrimSpace(filesRoot)
 	folderName = strings.TrimSpace(folderName)
 	if filesRoot == "" || folderName == "" {
 		return fmt.Errorf("参数空")
-	}
-	if fsutil.ContainsIllegalNameChar(folderName) {
-		return fmt.Errorf("文件夹名包含非法字符")
 	}
 	// 拒绝 . / ..（原实现 folderName=="." 会直接写进 repoRoot/subpath，绕过模型文件夹抽象）
 	if folderName == "." || folderName == ".." {

@@ -300,8 +300,11 @@ export async function buildFbxScene(
     menuItems,
     update: (dt: number) => {
       mixer?.update(dt);
-      // #9 全局暂停标志：FBX 动画激活时感知 controller 静默（对齐 ysm/vrm/mmd 范式）
-      setPerceptionPaused(!!mixer && mixer.time !== 0);
+      // #9 全局暂停标志：FBX 动画激活时感知 controller 静默（对齐 ysm/vrm/mmd 范式）。
+      // code_review d6de20d2 #7/#8：判据用 !!mixer 而非 mixer.time !== 0——mixer.time
+      // 是单调累积钟，首次 update 后永不回 0（谓词恒 true 等价 !!mixer），且无暂停/
+      // 停止 UI（auto-play LoopRepeat），用时间判据会误导后续维护以为可翻转
+      setPerceptionPaused(!!mixer);
     },
     dispose: () => {
       try {
@@ -343,7 +346,11 @@ export async function buildFbxScene(
 export interface FbxAdapterDeps {
   /**
    * FBX 数据端口（readFileBytes / addOpLog，视图层 view-shell 组装）。
-   * 惰性工厂：每次 build 现取，防切换模型时旧会话日志泄漏（对齐 MMD dataPort 范式）。
+   * 函数形态为统一工厂入口（对齐 MMD dataPort 签名）；code_review d6de20d2 #9：
+   * 原注释声称「每次 build 现取防旧会话日志泄漏」——但当前 fbx port 无跨会话可变
+   * 状态（readFileBytes 无状态、addOpLog scope 固定 "fbx-preview"），getter 返回
+   * 同一对象与直接传值等价，勿按注释误读为 per-build 隔离；未来若引入按会话
+   * scope（如 MMD 的 makeMmdDataPort），在 getter 内构造新 port 即可。
    */
   port: () => FbxDataPort;
 }

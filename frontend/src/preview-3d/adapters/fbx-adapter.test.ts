@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adapter.ts";
+import { getModelRootCount } from "../frustum-cull.ts";
 import { stubBlobUrls } from "../../test-utils/blob-urls.ts";
 
 const hoisted = vi.hoisted(() => {
@@ -129,6 +130,9 @@ describe("fbx-adapter", () => {
     expect(hoisted.readBytesMock).toHaveBeenCalledWith("/repo/mmd/CustomAnim/a.fbx");
     // 模型挂入场景
     expect(addSpy).toHaveBeenCalledTimes(1);
+    // frustum-cull 注册平衡（code_review d6de20d2 #6）：build 注册、dispose 注销，
+    // 失衡会静默残留已 dispose 的 group 被每帧 cullModelGroups 迭代
+    expect(getModelRootCount()).toBe(1);
     // 返回标准 PreviewScene 契约
     expect(typeof content.update).toBe("function");
     expect(typeof content.dispose).toBe("function");
@@ -142,9 +146,10 @@ describe("fbx-adapter", () => {
     expect((ctx.camera as THREE.PerspectiveCamera).position.z).toBeCloseTo(FBX_TARGET_MAX_DIM * 1.6, 0);
     // perFrame 驱动不抛（mixer.update）
     expect(() => content.update?.(0.016)).not.toThrow();
-    // dispose 释放并移出场景
+    // dispose 释放并移出场景 + frustum 注销回基线
     content.dispose();
     expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(getModelRootCount()).toBe(0);
   });
 
   it("空字节抛错（ReadFileBytes 返回 null）", async () => {

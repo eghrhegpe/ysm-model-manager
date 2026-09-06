@@ -43,6 +43,13 @@ Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `C
 2. **Windows 保留设备名**：CON / PRN / AUX / NUL / COM1-9 / LPT1-9（`winReservedNames`，大小写不敏感，剥首个点后的扩展名再整体匹配——CON.txt 亦拒）；
 3. **尾随点/空格**（Windows 落盘静默剥离 → 用户看到的名字与实际落点漂移）。
 
+> **跨平台收紧是有意为之（勿单侧放宽）**：第 2/3 层是 Windows 规则，但 Go 侧
+> `ContainsIllegalNameChar` 无 `runtime.GOOS` 门控、对所有平台无条件生效——理由：
+> 模型目录/文件可能分享给 Windows 用户打开（YSM 生态以 Windows 为主），Linux/macOS
+> 上合法的 `con`/`COM1`/`backup.` 若入仓再同步到 Windows 会静默剥名/失败。
+> 若未来确认纯本机场景需要放开，须 Go 与前端 `isUnsafeFolderName` **双侧同步**加
+> GOOS 门控并补跨平台测试，禁止只改一侧（code_review 04449b48 #4/#5 口径）。
+
 前端镜像实现：`frontend/src/features/context-menu/context-menu-shared.ts` 的 `isUnsafeFolderName`（UX 预检，弹窗提交前即时 toast；额外允许 `/` `\` 作嵌套分隔符按段校验）。
 
 ## 对外 API / 入口

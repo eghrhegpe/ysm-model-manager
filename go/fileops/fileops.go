@@ -53,12 +53,15 @@ var opMu sync.Mutex
 func CreateDir(root, dir string) error {
 	opMu.Lock()
 	defer opMu.Unlock()
+	// 校验吃未 trim 原串（code_review 04449b48 #2）：尾随空格会被下方 TrimSpace
+	// 剥除而漏检——Windows 落盘静默剥离导致落点漂移，与前端 isUnsafeFolderName
+	// 「段级校验吃未 trim 原串」口径保持一致（reference.md 契约）
+	if fsutil.ContainsIllegalNameChar(dir) {
+		return fmt.Errorf("目录名不符合规范（非法字符 / Windows 保留名 / 尾随点空格）")
+	}
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return fmt.Errorf("目录名为空")
-	}
-	if fsutil.ContainsIllegalNameChar(dir) {
-		return fmt.Errorf("目录名包含非法字符")
 	}
 	if dir == "." || paths.HasTraversal(dir) {
 		return fmt.Errorf("目录名包含非法路径段")
@@ -95,16 +98,19 @@ func opPrologue(a, b, emptyMsg string) (ca, cb string, unlock func(), err error)
 
 // RenameDir 重命名目录（仅改末段，保持父目录）
 func RenameDir(oldPath, newName string) error {
+	// 校验吃未 trim 原串（code_review 04449b48 #2）：opPrologue 内部会 TrimSpace
+	// 剥除尾随空格——先对原始 newName 校验，防 Windows 落盘静默剥离落点漂移；
+	// 与前端 isUnsafeFolderName「段级校验吃未 trim 原串」口径一致（reference.md 契约）
+	if fsutil.ContainsIllegalNameChar(newName) {
+		return fmt.Errorf("目录名不符合规范（非法字符 / Windows 保留名 / 尾随点空格）")
+	}
 	oldPath, newName, unlock, err := opPrologue(oldPath, newName, "参数为空")
 	if err != nil {
 		return err
 	}
 	defer unlock()
-	// 与 RenameFile 对齐，newName 必须通过非法字符 + 穿越校验。
+	// 与 RenameFile 对齐，newName 必须通过穿越校验。
 	// 原实现 `filepath.Join(parent, "../x")` 可逃出父目录/仓库。
-	if fsutil.ContainsIllegalNameChar(newName) {
-		return fmt.Errorf("目录名包含非法字符")
-	}
 	if newName == "." || paths.HasTraversal(newName) {
 		return fmt.Errorf("目录名包含非法路径段")
 	}
@@ -137,14 +143,16 @@ func RemoveDir(dir string) error {
 
 // RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名）
 func RenameFile(oldPath, newName string) error {
+	// 校验吃未 trim 原串（code_review 04449b48 #2）：opPrologue 内部会 TrimSpace
+	// 剥除尾随空格——先对原始 newName 校验，与前端 isUnsafeFolderName 口径一致
+	if fsutil.ContainsIllegalNameChar(newName) {
+		return fmt.Errorf("文件名不符合规范（非法字符 / Windows 保留名 / 尾随点空格）")
+	}
 	oldPath, newName, unlock, err := opPrologue(oldPath, newName, "参数为空")
 	if err != nil {
 		return err
 	}
 	defer unlock()
-	if fsutil.ContainsIllegalNameChar(newName) {
-		return fmt.Errorf("文件名包含非法字符")
-	}
 	// ADR-038 D3：ysm.json 是模型目录清单（游戏按目录名识别模型），禁止单文件改名
 	if registry.IsYsmEntryJSON(filepath.Base(oldPath)) {
 		return fmt.Errorf("ysm.json 是模型目录清单，请重命名所在文件夹（整组操作）")

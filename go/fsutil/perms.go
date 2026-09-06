@@ -23,10 +23,12 @@ var winReservedNames = map[string]bool{
 	"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
 }
 
-// ContainsIllegalNameChar 检测文件名是否非法。
+// ContainsIllegalNameChar 检测文件名是否非法（名字保留历史——原仅查字符，
+// 现语义已扩至三层，勿按名字推断只查字符；调用方错误文案用「不符合规范」
+// 而非「包含非法字符」，避免对保留名/尾随点误报（code_review 04449b48 #3））。
 // 单一事实源——fileops.CreateDir/RenameDir/RenameFile/folder_import.WriteModelFolder
 // 均委托本函数。三层校验：
-//  1. 非法字符 <>:*?"|/\
+//  1. 非法字符 <>:*?"|\
 //  2. Windows 保留设备名（剥扩展名后整体匹配，CON.txt 亦拒）
 //  3. 尾随点/空格（Windows 落盘时静默剥离 → 用户看到的名字与实际落点漂移）
 func ContainsIllegalNameChar(name string) bool {

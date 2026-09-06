@@ -70,6 +70,7 @@ auto_fields:
     - buildFbxScene
     - buildFbxSceneFromData
     - buildFogNodes
+    - buildGroundNodes
     - buildGroundSurfaceSpec
     - buildLightingSchema
     - buildLightNodes

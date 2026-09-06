@@ -7,9 +7,11 @@
 
 import * as THREE from "three";
 import { dbg } from "../../utils/debug/debug.ts";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
 // 状态层探针类型（visibleWhen 谓词吃 env.groundMatSource 快照——B 轨唯一条件显隐，不摸 cap 实例）
 import type { PreviewSnapshot } from "../state/preview-paths.ts";
+import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
@@ -405,6 +407,15 @@ export class GroundCapability implements SceneCapability {
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
     return [...buildGroundMain(this), ...buildGroundMaterialGroup(this)];
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树：ground-visible 平铺 toggle + 材质组 folder
+   *  （mat-source/color/slider 原生 + texture/clear button 走 controls 通道）。
+   *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildGroundNodes(this);
   }
 
   /** 保存状态到 localStorage（mat 字段纯数据可持久化；texture 二进制不存） */

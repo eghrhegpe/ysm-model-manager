@@ -472,4 +472,61 @@ describe("GroundCapability — 菜单控件联动", () => {
   });
 });
 
+describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = ground-visible 平铺 toggle + 材质组 folder", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(2);
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("ground-visible");
+    nodes[0]!.control!.set!(false);
+    expect(cap.getVisible()).toBe(false);
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.groundGroupMaterial");
+  });
+
+  it("材质 folder 混排原生节点 + controls 通道（texture/clear button）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const folder = cap.getMenuNodes()[1]!;
+    // mat-source select 原生
+    const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
+    expect(source.kind).toBe("select");
+    source.control!.set!("checker");
+    expect(cap.getMatSource()).toBe("checker");
+    // texture/clear button 走 controls 通道节点（MenuControlDef 内嵌）
+    const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    expect(btnNode.kind).toBe("controls");
+    const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
+    expect(btnControls!.map((c) => c.id)).toEqual(["ground-mat-texture", "ground-mat-clear"]);
+    // button visibleWhen 随模式
+    expect(btnControls![0]!.visibleWhen?.({ "env.groundMatSource": "texture" })).toBe(true);
+    expect(btnControls![0]!.visibleWhen?.({ "env.groundMatSource": "none" })).toBe(false);
+  });
+
+  it("原生 color/slider 节点读写闭包直连 cap", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const folder = cap.getMenuNodes()[1]!;
+    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
+    expect(color.kind).toBe("color");
+    color.control!.set!(0xff8800);
+    expect(cap.getMatColor()).toBe(0xff8800);
+    const density = folder.children!.find((c) => c.id === "ground-mat-density")!;
+    density.control!.set!(4);
+    expect(cap.getMatDensity()).toBe(4);
+  });
+
+  it("visibleWhen 谓词挂原生节点（matSource ≠ none 时材质控件可见）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const folder = cap.getMenuNodes()[1]!;
+    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
+    expect(color.visibleWhen?.({ "env.groundMatSource": "grid" })).toBe(true);
+    expect(color.visibleWhen?.({ "env.groundMatSource": "none" })).toBe(false);
+  });
+});
+
 type MenuControlDefOf = ReturnType<GroundCapability["getMenuControls"]>[number];

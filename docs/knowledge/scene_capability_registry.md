@@ -16,6 +16,7 @@ auto_fields:
     - attenuateAmbientForSky
     - bindFieldRestorers
     - buildFogNodes
+    - buildGroundNodes
     - buildGroundSurfaceSpec
     - buildLightNodes
     - buildReflectorNodes

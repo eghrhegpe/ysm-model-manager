@@ -19,7 +19,7 @@ import {
   setStateValue,
 } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
-import { MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
+import { MENU_DIVIDER_CSS, MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
@@ -46,6 +46,7 @@ function ensureMenuStyles(): void {
  *  现消费方自足，单源共享（cap-controls 拼同一常量）。*/
 ${MENU_SECTION_CSS}
 ${MENU_ROW_DENSITY_CSS}
+${MENU_DIVIDER_CSS}
 .slide-item.rm-control-row {
    display: flex;
    align-items: center;
@@ -396,6 +397,8 @@ export function nodeControlToCapControl(
     setValue,
     onChange,
   };
+  // [ADR-195] spec 与 MenuControlDef 同构：节点 hintKey 透传（cap hintKey 展示右侧小字）
+  if (node.hintKey) base.hintKey = node.hintKey;
 
   if (kind === "slider" && spec) {
     const sliderDef: NonNullable<MenuControlDef["slider"]> = {
@@ -404,11 +407,19 @@ export function nodeControlToCapControl(
       step: spec.step ?? 1,
     };
     if (spec.numeric !== undefined) sliderDef.numeric = spec.numeric;
+    // [ADR-195] unit/onCommit 同构透传（cap slider 值格式化/离散提交零损失）
+    if (spec.unit !== undefined) sliderDef.unit = spec.unit;
+    if (spec.onCommit) sliderDef.onCommit = spec.onCommit;
     base.slider = sliderDef;
   }
 
   if (kind === "select" && spec?.options) {
     base.select = spec.options;
+  }
+
+  if (kind === "color") {
+    // [ADR-195] color：值 = 0xRRGGBB 数字，renderCapColor 经 getValue/setValue 读写
+    // （get 闭包已在上方 getValue 统一处理，此处无需额外配置块）
   }
 
   return base;
@@ -594,9 +605,11 @@ export function renderMenu(
         break;
       case "select":
       case "slider":
-      case "toggle": {
-        // [控件原语归一] 三类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
-        //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役。
+      case "toggle":
+      case "color": {
+        // [控件原语归一] 四类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
+        //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役；
+        //  color 为 [ADR-195] 新增原生 kind（cap color 同构，投影 renderCapColor）。
         const def = nodeControlToCapControl(node, snapshot, deps.menu);
         renderCapControls(container, [def], snapshot);
         break;

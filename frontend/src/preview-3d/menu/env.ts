@@ -2,8 +2,8 @@
 // 2026 收口：环境面板对齐 scene 组根视图 / roles / MikuMikuAR env 一级菜单——
 // 「行 + navigate 下钻」形态（推翻 ADR-193 第三刀 folder 手风琴拍板）：
 //   - 一级：氛围预设 select + 每 cap 一行（icon + label + 可选 headerToggle 能力开关）
-//   - 二级：点行 → actionCtx.navigate 下钻到该 cap 参数页（renderCapControls 渲染，
-//     group 字段天然折叠成 .cap-section，无需手写分区）
+//   - 二级：点行 → actionCtx.navigate 下钻到该 cap 参数页（ADR-195 刀1 起经
+//     cap-to-node 桥接转 PreviewMenuNode[] 走 renderMenu，group 折叠由节点 folder 承载）
 // 行渲染复用 render.ts 唯一 row 生成器（slide-item + radio/badge/headerToggle 槽位），
 // 与 roles 同构，消除「env 手风琴 vs 其余面板行列表」的形态割裂。
 
@@ -13,9 +13,9 @@ import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capabi
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
-import { previewSnapshot } from "../state/preview-state.ts";
-import { renderCapControls } from "./cap-controls.ts";
-import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import { capControlsToNodes } from "./cap-to-node.ts";
+import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import { renderMenu } from "./render.ts";
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
@@ -118,15 +118,37 @@ function envCapRestControls(cap: SceneCapability): ReturnType<SceneCapability["g
 }
 
 /**
- * cap 参数子视图（navigate 落点）：renderCapControls 平铺渲染该 cap 全部控件。
- * group 字段天然折叠成 .cap-section（唯一控件渲染器内建），无需手写分区。
+ * cap 参数子视图（navigate 落点）：经 cap-to-node 桥接（ADR-195 刀1）把该 cap 控件
+ * 转为 PreviewMenuNode[] 后走 renderMenu 渲染——内容进入节点 schema 通道：
+ *   - 简单控件（toggle/slider/select/divider/color）→ 原生节点（spec 同构承载，
+ *     renderMenu 经 nodeControlToCapControl 投影到 cap 渲染器——单渲染链闭环）
+ *   - 复杂控件（timeline/histogram/image/preset-thumb/button）→ controls 节点通道
+ *     （树内嵌 MenuControlDef，受控委托）
+ * group 字段由桥接层转 folder（rmAppendFolder 渲染折叠 section）。
+ * visibleWhen 过滤由 renderMenu 内部经 previewSnapshot() 求值（铁律收口）。
  */
 function envCapSubview(cap: SceneCapability): SlideMenuView {
+  // 子视图内容全为控件节点/folder/controls：不触达 makeRow/makePanelView/action 分支；
+  // menu.refresh 供 refreshOnChange 语义（当前 cap 控件经 onChange 闭包自刷新，少用）。
+  const subviewDeps = {
+    makeRow: (): HTMLDivElement => document.createElement("div"),
+    makePanelView: (): never => {
+      throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap-to-node 桥接层）");
+    },
+    menu: {
+      refresh: (): void => {},
+    } as unknown as SlideMenuHandle,
+    actionCtx: {
+      toast: (): void => {},
+      closeAllOverlays: (): void => {},
+    } as unknown as PreviewActionMenuCtx,
+  };
   return {
     title: tr(cap.labelKey, cap.id),
     render: (list) => {
       list.replaceChildren();
-      renderCapControls(list, envCapRestControls(cap), previewSnapshot());
+      const nodes = capControlsToNodes(envCapRestControls(cap));
+      renderMenu(list, nodes, subviewDeps);
     },
   };
 }

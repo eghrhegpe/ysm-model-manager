@@ -62,3 +62,14 @@ export const MENU_ROW_DENSITY_CSS = `
   height: 18px;
   font-size: 14px;
 }`;
+
+/**
+ * 节点 divider 分隔线样式（[ADR-195] 补：原 .menu-divider 无任何样式规则——cap divider
+ * 经 cc-divider 有完整视觉，节点体系收编 divider 后补同款分隔线；视觉对齐 .cc-divider）。
+ * rmAppendDecor（render.ts）消费；与 cap-controls 的 .cc-divider 同值避免双源。
+ */
+export const MENU_DIVIDER_CSS = `.menu-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 4px 10px;
+}`;

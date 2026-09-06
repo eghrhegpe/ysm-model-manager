@@ -265,14 +265,14 @@ describe("renderMenu 新 kind", () => {
     const row = container.querySelector('[data-testid="preview-env-cap-fog"]') as HTMLElement;
     expect(row).not.toBeNull();
     // rowDensity compact → 紧凑导航行类（稀疏行不吃 .slide-item 38px 内容行基座）
-    const nodesC = [
+    const nodesC: PreviewMenuNode[] = [
       {
         id: "env-cap-sky",
         kind: "row",
         labelKey: "preview.sky",
         fallback: "天空",
         icon: "☁️",
-        rowDensity: "compact" as const,
+        rowDensity: "compact",
         action: () => {},
       },
     ];

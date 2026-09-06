@@ -529,6 +529,48 @@ export function collectVisiblePredicates(controls: MenuControlDef[]): MenuContro
   return controls.filter((c) => typeof c.visibleWhen === "function");
 }
 
+/** 单控件渲染分派（ADR-195 刀1 起导出：cap-to-node 桥接层 custom 委托用）。
+ *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
+ *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。 */
+export function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
+  switch (c.kind) {
+    case "divider":
+      renderCapDivider(parent, c);
+      break;
+    case "toggle":
+      renderCapToggle(parent, c);
+      break;
+    case "slider":
+      renderCapSlider(parent, c);
+      break;
+    case "select":
+      renderCapSelect(parent, c);
+      break;
+    case "button":
+      renderCapButton(parent, c);
+      break;
+    case "image":
+      renderCapImage(parent, c);
+      break;
+    case "color":
+      renderCapColor(parent, c);
+      break;
+    case "timeline":
+      renderCapTimeline(parent, c);
+      break;
+    case "histogram":
+      renderCapHistogram(parent, c);
+      break;
+    case "preset-thumb":
+      renderCapPresetThumb(parent, c);
+      break;
+    default: {
+      const _unhandled: never = c.kind;
+      console.warn(`[preview-menu] 未处理的控件 kind: ${_unhandled as string}`);
+    }
+  }
+}
+
 export function renderCapControls(
   list: HTMLElement,
   controls: MenuControlDef[],
@@ -543,43 +585,6 @@ export function renderCapControls(
     // 条件显隐只允许 visibleWhen。无 snapshot 传入（纯 DOM 冒烟/早期调用）时跳过求值保留渲染。
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
-    switch (c.kind) {
-      case "divider":
-        renderCapDivider(parent, c);
-        break;
-      case "toggle":
-        renderCapToggle(parent, c);
-        break;
-      case "slider":
-        renderCapSlider(parent, c);
-        break;
-      case "select":
-        renderCapSelect(parent, c);
-        break;
-      case "button":
-        renderCapButton(parent, c);
-        break;
-      case "image":
-        renderCapImage(parent, c);
-        break;
-      case "color":
-        renderCapColor(parent, c);
-        break;
-      case "timeline":
-        renderCapTimeline(parent, c);
-        break;
-      case "histogram":
-        renderCapHistogram(parent, c);
-        break;
-      case "preset-thumb":
-        renderCapPresetThumb(parent, c);
-        break;
-      default: {
-        // 穷尽检查：MenuControlKind 新增未在此处理 → 编译期报错（never 收窄），
-        // 杜绝「漏 kind 静默丢弃」（此前无 default，新增 kind 静默不渲染）
-        const _unhandled: never = c.kind;
-        console.warn(`[preview-menu] 未处理的控件 kind: ${_unhandled as string}`);
-      }
-    }
+    renderCapControlSingle(parent, c);
   }
 }

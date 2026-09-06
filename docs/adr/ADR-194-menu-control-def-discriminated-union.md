@@ -1,6 +1,6 @@
 # ADR-194：MenuControlDef 判别联合重构：kind 与配置块编译期配对
 
-- **状态**：已采纳（Accepted）
+- **状态**：❌ 已取代（被 [ADR-195](ADR-195-menucontroldef-menunode-cap.md) 取代——MenuControlDef 不再独立判别联合化，改整体并入 PreviewControlSpec 单类型化，本 ADR 射程终止）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理

@@ -73,6 +73,7 @@ export type PreviewMenuNodeKind =
   | "toggle"
   | "select" // [doc:adr-126-p5-c] 下拉选择控件（bind 到 PreviewStatePath，走状态层读写）
   | "button"
+  | "color" // [ADR-195] 颜色控件（cap color 原生化；值 0xRRGGBB ↔ #rrggbb，投影 renderCapColor）
   | "field" // 键值对行（统计/信息展示）
   | "row" // 列表行（纹理/材质/bone 等动态列表）
   | "divider"
@@ -91,7 +92,10 @@ export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "setting
 /** dockGroup 合法值：dock 组 ∪ 统计附加行通道（node-types 类型叶自足，消费方经此引用） */
 export type PreviewDockGroup = PreviewMenuGroupId | "stats";
 
-/** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） */
+/** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效）。
+ *  [ADR-195] 本接口与 MenuControlDef（caps/scene-capability）同构——cap 控件迁入节点
+ *  体系后字段零信息损失，nodeControlToCapControl 反向纯搬运。终态 MenuControlDef
+ *  类型名作废、字段整体并入本接口（见 ADR-195）。 */
 export interface PreviewControlSpec {
   /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
    *  用 get/set 直接读写，bind 可省略） */
@@ -110,6 +114,24 @@ export interface PreviewControlSpec {
   /** slider 类型：旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）——
    *  大数值层号精确输入场景（litematic 分层切片首用） */
   numeric?: boolean;
+  /** slider 值单位（[ADR-195] 自 MenuControlDef.slider.unit 同构）：
+   *  "h"→HH:MM 时间、"%"→百分比、其它非空字符串后缀（°、m、x）、""=无后缀。
+   *  渲染端 formatCapSliderValue 消费。 */
+  unit?: string;
+  /** slider 提交回调（拖拽松手/change 离散触发；[ADR-195] 自 MenuControlDef.slider.onCommit
+   *  同构——如 pixel-ratio 拖动抑制重算、松手广播一次） */
+  onCommit?: (v: number) => void;
+  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
+   *  渲染在 label 右侧小字） */
+  hintKey?: string;
+  /** button 类型：按钮变种（[ADR-195] 自 MenuControlDef.button 同构；primary 强调 / ghost 次） */
+  variant?: "primary" | "ghost";
+  /** button 类型：按钮点击回调（无值语义控件；node.action 的控件态表达） */
+  action?: () => void | Promise<void>;
+  /** button 类型：是否禁用（异步加载中禁用） */
+  disabled?: () => boolean;
+  /** button 类型：动态右侧 hint 文案（覆盖 hintKey，如已加载 HDR 文件名） */
+  getHint?: () => string;
   /** onchange 后重渲染当前面板（menu.refresh()）：面板内容随绑定状态变化的场景
    *  （如组件 select 切档后 stats/纹理行按新快照重建，[doc:adr-126-p5] 订阅链闭合的渲染侧） */
   refreshOnChange?: boolean;
@@ -128,6 +150,9 @@ export interface PreviewMenuNode {
   labelKey?: string;
   /** i18n 缺失时的回退文案 */
   fallback?: string;
+  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
+   *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
+  hintKey?: string;
   icon?: string;
   /** 仅 folder：默认展开 */
   defaultOpen?: boolean;

@@ -209,16 +209,19 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const schema = buildEnvSchema(makeCtx(), makeMenu());
     const row = capRow(schema, 1);
     const { container } = navigateAndRender(row);
-    // 无 group 的 ground-visible 平铺；两个 group 折叠成独立 .cap-section
+    // ADR-195 刀1：group 经 cap-to-node 转 folder（rmAppendFolder 渲染折叠 section）
+    // 无 group 的 ground-visible 平铺；两个 group → 两个 folder section
     expect(container.querySelector('[data-testid="cap-ground-visible"]')).not.toBeNull();
-    const sections = container.querySelectorAll(".cap-section");
-    expect(sections.length).toBe(2);
-    // group 内的控件按组归属（water 组不混 material 组）
-    const sectionTexts = [...container.querySelectorAll(".cap-section-header")].map(
+    const folders = container.querySelectorAll(
+      '[data-testid^="cap-group-"]:not([data-testid$="-body"])',
+    );
+    expect(folders.length).toBe(2);
+    // group 头文案（rmLabel 转译 labelKey）按组归属（water 组不混 material 组）
+    const headerTexts = [...container.querySelectorAll(".cap-section-header")].map(
       (h) => h.textContent,
     );
-    expect(sectionTexts.join("")).toContain("水面");
-    expect(sectionTexts.join("")).toContain("材质");
+    expect(headerTexts.join("")).toContain("水面");
+    expect(headerTexts.join("")).toContain("材质");
   });
 
   it("订阅链：menu 存在时重建 cap 订阅，disposeEnvSubscriptions 退订全部", () => {

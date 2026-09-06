@@ -30,8 +30,6 @@ auto_fields:
     - KNOWN_PATHS
     - makeColorDef
     - makeSliderDef
-    - MenuControlDef
-    - MenuControlKind
     - oneOf
     - persistState
     - pickPersistFields

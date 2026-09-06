@@ -86,6 +86,7 @@ auto_fields:
     - buildSettingsSchema
     - buildShadowSchema
     - buildSharedInfra
+    - buildSkyGroup
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
     - buildStatsPanel
@@ -93,6 +94,7 @@ auto_fields:
     - buildVrmBoneNodes
     - buildVrmBoneTree
     - buildVrmScene
+    - buildWaterGroup
     - buildYsmObject
     - buildYsmScene
     - bytesToArrayBuffer
@@ -585,6 +587,10 @@ auto_fields:
     - shouldRenderPreviewFrame
     - showLoadFailure
     - showModelGroup
+    - skcBuildAtmosphereFX
+    - skcBuildAutoRotate
+    - skcBuildScattering
+    - skcBuildTime
     - SkyCapability
     - SkyModelType
     - SkyParams

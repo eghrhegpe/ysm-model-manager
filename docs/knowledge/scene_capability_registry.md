@@ -16,6 +16,8 @@ auto_fields:
     - attenuateAmbientForSky
     - bindFieldRestorers
     - buildGroundSurfaceSpec
+    - buildSkyGroup
+    - buildWaterGroup
     - CapabilityId
     - CapabilityMap
     - createListenerSet
@@ -67,8 +69,6 @@ auto_fields:
     - makeColorDef
     - makeSliderDef
     - MAX_MODELS
-    - MenuControlDef
-    - MenuControlKind
     - MODEL_SKY_PRESETS
     - ModelEntry
     - oneOf
@@ -98,6 +98,10 @@ auto_fields:
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams
+    - skcBuildAtmosphereFX
+    - skcBuildAutoRotate
+    - skcBuildScattering
+    - skcBuildTime
     - SkyCapability
     - SkyModelType
     - SkyParams

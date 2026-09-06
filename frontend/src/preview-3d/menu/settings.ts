@@ -97,7 +97,10 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return lightCap.getMenuNodes();
+  // code_review efb8b20c2 P1：getMenuNodes 是可选成员，未迁移 cap（仅 getMenuControls）
+  // 无条件调用会 TypeError——对齐 env.ts envCapSubNodes 双轨：有节点直产，无则
+  // capControlsToNodes 桥接回退（preview-state.test 挂的 fake cap 即走此回退）
+  return lightCap.getMenuNodes?.() ?? capControlsToNodes(lightCap.getMenuControls());
 }
 
 /** 阴影面板 schema：从 shadow cap 直产节点渲染 */
@@ -113,7 +116,7 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return fromReg.getMenuNodes();
+  return fromReg.getMenuNodes?.() ?? capControlsToNodes(fromReg.getMenuControls());
 }
 
 /** 后处理面板 schema：从 postprocessing cap 直产节点渲染 */
@@ -129,7 +132,7 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
       },
     ];
   }
-  return fromReg.getMenuNodes();
+  return fromReg.getMenuNodes?.() ?? capControlsToNodes(fromReg.getMenuControls());
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。

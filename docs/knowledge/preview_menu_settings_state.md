@@ -30,8 +30,6 @@ auto_fields:
     - GROUND_LAYER_OFFSETS
     - isPathAvailable
     - KNOWN_PATHS
-    - makeColorDef
-    - makeSliderDef
     - oneOf
     - persistState
     - pickPersistFields
@@ -53,7 +51,6 @@ auto_fields:
     - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue
-    - stripMenuControlGroup
     - subscribeSettings
     - toStatePath
   tests:

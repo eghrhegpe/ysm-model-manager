@@ -485,24 +485,33 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("cap schema 面板为 controls 声明式节点（惰性函数引用，非 custom 套壳）", () => {
+  it("cap schema 面板为声明式节点（原生/controls，非 custom 套壳）", () => {
     // 灯光/阴影/后处理面板不再用 renderCustom 套壳手调 renderCapControls——
-    // 直接是 controls 节点，渲染委托唯一控件渲染器（AGENTS.md「禁止手写 3d 菜单」）。
+    // 直接是声明式节点（AGENTS.md「禁止手写 3d 菜单」）。code_review efb8b20c2 P1：
+    // getMenuNodes 是可选成员，未迁移 fake（仅 getMenuControls）走 capControlsToNodes
+    // 回退——断言不 TypeError 且产出原生节点（此前无条件 getMenuNodes() 必炸）
+    const ctrl: MenuControlDef = {
+      id: "fake-slider",
+      kind: "slider",
+      labelKey: "preview.fake",
+      fallback: "fake",
+      slider: { min: 0, max: 1, step: 0.1 },
+      getValue: () => 0,
+      setValue: () => {},
+    };
     mountCaps(
-      makeFakeCap("light"),
-      makeFakeCap("shadow"),
-      makeFakeCap("postprocessing"),
+      makeFakeCap("light", { controls: [ctrl] }),
+      makeFakeCap("shadow", { controls: [ctrl] }),
+      makeFakeCap("postprocessing", { controls: [ctrl] }),
     );
     const ctx = { getCap: () => null } as unknown as PreviewMenuCtx;
     const lighting = buildLightingSchema(ctx);
-    expect(lighting[0]!.kind).toBe("controls");
-    expect(typeof (lighting[0] as { controls?: unknown }).controls).toBe("function");
+    expect(lighting[0]!.kind).toBe("slider"); // 回退桥接：简单控件转原生节点
+    expect(lighting[0]!.kind).not.toBe("custom");
     const shadow = buildShadowSchema(ctx);
-    expect(shadow[0]!.kind).toBe("controls");
-    expect(typeof (shadow[0] as { controls?: unknown }).controls).toBe("function");
+    expect(shadow[0]!.kind).toBe("slider");
     const postproc = buildPostprocessingSchema(ctx);
-    expect(postproc[0]!.kind).toBe("controls");
-    expect(typeof (postproc[0] as { controls?: unknown }).controls).toBe("function");
+    expect(postproc[0]!.kind).toBe("slider");
   });
 });
 

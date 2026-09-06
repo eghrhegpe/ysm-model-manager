@@ -103,7 +103,6 @@ auto_fields:
     - buildVrmBoneNodes
     - buildVrmBoneTree
     - buildVrmScene
-    - buildWaterGroup
     - buildWaterNodes
     - buildYsmObject
     - buildYsmScene
@@ -332,13 +331,11 @@ auto_fields:
     - LoadTraceTexture
     - makeBonePanelRenderer
     - makeBonesPanelItem
-    - makeColorDef
     - makeFbxAdapter
     - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter
-    - makeSliderDef
     - makeSwitchState
     - makeUnifiedPickHandler
     - makeVrmAdapter
@@ -625,7 +622,6 @@ auto_fields:
     - startGlobalRenderLoop
     - STATS_PANEL_ID
     - stopIfIdle
-    - stripMenuControlGroup
     - stripYsgpTextHeader
     - SubModel
     - subscribeSettings

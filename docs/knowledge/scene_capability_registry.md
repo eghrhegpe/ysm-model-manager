@@ -26,7 +26,6 @@ auto_fields:
     - buildShadowNodes
     - buildSkyGroup
     - buildSkyNodes
-    - buildWaterGroup
     - buildWaterNodes
     - CapabilityId
     - CapabilityMap
@@ -77,8 +76,6 @@ auto_fields:
     - LightCapability
     - lightDirToPosition
     - LightParams
-    - makeColorDef
-    - makeSliderDef
     - MAX_MODELS
     - MODEL_SKY_PRESETS
     - ModelEntry
@@ -118,7 +115,6 @@ auto_fields:
     - SkyModelType
     - SkyParams
     - SpotlightParams
-    - stripMenuControlGroup
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE

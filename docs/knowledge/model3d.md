@@ -86,6 +86,7 @@ auto_fields:
     - buildSceneMesh
     - buildSettingsControls
     - buildSettingsSchema
+    - buildShadowNodes
     - buildShadowSchema
     - buildSharedInfra
     - buildSkyGroup

@@ -720,6 +720,61 @@ describe("ShadowCapability — getMenuControls 结构", () => {
   });
 });
 
+describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  function newCap() {
+    return new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+  }
+
+  it("完整树 = shadow-enabled 平铺 toggle + 参数组 folder（soft/select/3 slider）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(2);
+    // shadow-enabled 平铺（shadow 无 getMasterToggle，非 header 总开关）
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("shadow-enabled");
+    expect(nodes[0]!.hintKey).toBe("preview.shadowEnabledHint");
+    nodes[0]!.control!.set!(true);
+    expect(cap.isEnabled()).toBe(true);
+    // 参数组 folder
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.shadowGroupParams");
+    expect(folder.children!.map((c) => c.id)).toEqual([
+      "shadow-soft",
+      "shadow-map-size",
+      "shadow-bias",
+      "shadow-normal-bias",
+      "shadow-camera-size",
+    ]);
+    expect(folder.children!.map((c) => c.kind)).toEqual([
+      "toggle",
+      "select",
+      "slider",
+      "slider",
+      "slider",
+    ]);
+  });
+
+  it("hintKey 节点字段透传（shadow-map-size 等）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[1]!;
+    const mapSize = folder.children!.find((c) => c.id === "shadow-map-size")!;
+    expect(mapSize.hintKey).toBe("preview.shadowMapSizeDesc");
+    expect(mapSize.control!.options!.length).toBe(4);
+    mapSize.control!.set!("2048");
+    expect(cap.getMapSize()).toBe(2048);
+  });
+
+  it("slider 节点读写闭包直连 cap", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[1]!;
+    const bias = folder.children!.find((c) => c.id === "shadow-bias")!;
+    expect(bias.control!.get!(undefined)).toBe(cap.getBias());
+    bias.control!.set!(0.002);
+    expect(cap.getBias()).toBe(0.002);
+  });
+});
+
 describe("ShadowCapability — DEFAULT_SHADOW_PARAMS 默认值完整", () => {
   it("默认值字段齐全", () => {
     expect(DEFAULT_SHADOW_PARAMS.enabled).toBe(false);

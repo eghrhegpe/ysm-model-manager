@@ -11,6 +11,7 @@
 //   - 默认 enabled=false：阴影有显著 GPU 开销，用户明确开启
 
 import * as THREE from "three";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
   type MenuControlDef,
@@ -20,6 +21,7 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
+import { buildShadowNodes } from "./shadow-menu.ts";
 import type { ShadowParams } from "./shadow-state.ts";
 // 状态/序列化轴（ShadowParams / 默认值 / 预设表 / 模型映射）已下沉 shadow-state.ts；
 // 此处透传导出，保持既有调用方（shadow-capability.test.ts 等）的 import 路径不破坏。
@@ -516,6 +518,15 @@ export class ShadowCapability implements SceneCapability {
 
   getMenuControls(): MenuControlDef[] {
     return [...shcBuildMain(this), ...shcBuildQuality(this)];
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树——直产 PreviewMenuNode[]（全原生 toggle/select/slider）。
+   *  shadow 无能力总开关（无 getMasterToggle）：shadow-enabled 为平铺 toggle，
+   *  其余参数归 folder。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildShadowNodes(this);
   }
 
   /* -------- 持久化 -------- */

@@ -18,6 +18,7 @@ auto_fields:
     - buildFogNodes
     - buildGroundSurfaceSpec
     - buildReflectorNodes
+    - buildShadowNodes
     - buildSkyGroup
     - buildWaterGroup
     - CapabilityId

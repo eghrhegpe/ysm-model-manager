@@ -28,6 +28,8 @@ auto_fields:
     - GROUND_LAYER_OFFSETS
     - isPathAvailable
     - KNOWN_PATHS
+    - makeColorDef
+    - makeSliderDef
     - MenuControlDef
     - MenuControlKind
     - oneOf

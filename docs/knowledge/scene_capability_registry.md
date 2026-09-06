@@ -64,6 +64,8 @@ auto_fields:
     - LightCapability
     - lightDirToPosition
     - LightParams
+    - makeColorDef
+    - makeSliderDef
     - MAX_MODELS
     - MenuControlDef
     - MenuControlKind

@@ -8,9 +8,7 @@
 //   - 模块名 / 类型名 / 快照函数名升格：SettingsPath→(并入 PreviewStatePath) /
 //     SETTINGS_PATHS→KNOWN_PATHS / settingsSnapshot→previewSnapshot
 //   - `PreviewStatePath`（ADR-129 第一刀归位自 adapters，ADR-168 二期下沉至
-//     preview-paths.ts 契约叶子；本文件 re-export 保公共面）作为路径类型契约：
-//     七域（env/render/light/ui/perception/motion/model）类型层全声明；
-//     本文件 binding 层只填**已落地的 6 项**（render.*/env.* 横切设置）。
+//     preview-paths.ts 契约叶子；本文件 re-export 保公共面）作为路径类型契约。
 //   - 业务状态（角色/动作/面板导航）由 sceneRegistry / SlideMenuHandle / 节点字段
 //     各有归宿——不重复造轮，避免双源。后续 P4-C 拆 dockGroup 时按需加
 //     `ui.activePanel`、P4-D 谓词化时按需加 model/motion 域 binding。
@@ -64,7 +62,7 @@ export function toStatePath(path: PreviewStatePath): PreviewStatePath {
   return path;
 }
 
-/** 单个路径的读写绑定（模块内使用；不外导，避免 knip 判为无引用导出） */
+/** 单个路径的读写绑定（模块内使用，不外导） */
 interface PreviewStatePathBinding {
   /** 读取当前值（cap 派生项在 cap 缺席时返回安全缺省） */
   get: () => unknown;

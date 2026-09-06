@@ -311,11 +311,13 @@ auto_fields:
     - LoadTraceTexture
     - makeBonePanelRenderer
     - makeBonesPanelItem
+    - makeColorDef
     - makeFbxAdapter
     - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter
+    - makeSliderDef
     - makeSwitchState
     - makeUnifiedPickHandler
     - makeVrmAdapter

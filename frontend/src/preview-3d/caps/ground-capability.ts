@@ -27,6 +27,8 @@ import {
   type FieldKind,
   GROUND_LAYER_OFFSETS,
   type MenuControlDef,
+  makeColorDef,
+  makeSliderDef,
   oneOf,
   persistState,
   pickPersistFields,
@@ -508,6 +510,9 @@ function buildGroundMain(cap: GroundCapability): MenuControlDef[] {
 
 const MAT_GROUP = "preview.groundGroupMaterial";
 
+/** B 轨唯一条件显隐谓词：地面承接面开启（matSource ≠ none）时材质子控件可见 */
+const groundSurfaceOn = (s: Partial<PreviewSnapshot>) => s["env.groundMatSource"] !== "none";
+
 function groundSliderDef(
   id: string,
   labelKey: string,
@@ -517,17 +522,7 @@ function groundSliderDef(
   setValue: (v: number) => void,
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
 ): MenuControlDef {
-  return {
-    id,
-    kind: "slider",
-    labelKey,
-    fallback,
-    group: MAT_GROUP,
-    slider,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  };
+  return makeSliderDef(MAT_GROUP, id, labelKey, fallback, slider, getValue, setValue, visibleWhen);
 }
 
 function groundColorDef(
@@ -538,16 +533,7 @@ function groundColorDef(
   setValue: (v: number) => void,
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
 ): MenuControlDef {
-  return {
-    id,
-    kind: "color",
-    labelKey,
-    fallback,
-    group: MAT_GROUP,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  };
+  return makeColorDef(MAT_GROUP, id, labelKey, fallback, getValue, setValue, visibleWhen);
 }
 
 function groundButtonDef(
@@ -598,7 +584,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "底色",
       () => cap.getMatColor(),
       (v) => cap.setMatColor(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundColorDef(
       "ground-mat-color2",
@@ -606,7 +592,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "副色",
       () => cap.getMatColor2(),
       (v) => cap.setMatColor2(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundColorDef(
       "ground-mat-line-color",
@@ -614,7 +600,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       "线色",
       () => cap.getMatLineColor(),
       (v) => cap.setMatLineColor(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-grid-size",
@@ -623,7 +609,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 2, max: 32, step: 1 },
       () => cap.getMatGridSize(),
       (v) => cap.setMatGridSize(Math.round(v)),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-density",
@@ -632,7 +618,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatDensity(),
       (v) => cap.setMatDensity(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-angle",
@@ -641,7 +627,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatAngle(),
       (v) => cap.setMatAngle(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundButtonDef(
       "ground-mat-texture",
@@ -673,7 +659,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatOpacity(),
       (v) => cap.setMatOpacity(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-scale",
@@ -682,7 +668,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatScale(),
       (v) => cap.setMatScale(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-rotation",
@@ -691,7 +677,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatRotation(),
       (v) => cap.setMatRotation(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-roughness",
@@ -700,7 +686,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatRoughness(),
       (v) => cap.setMatRoughness(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
     groundSliderDef(
       "ground-mat-metalness",
@@ -709,7 +695,7 @@ function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatMetalness(),
       (v) => cap.setMatMetalness(v),
-      (s) => s["env.groundMatSource"] !== "none",
+      groundSurfaceOn,
     ),
   ];
 }

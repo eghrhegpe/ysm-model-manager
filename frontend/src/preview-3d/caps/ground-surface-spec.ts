@@ -125,25 +125,10 @@ export function buildGroundSurfaceSpec(
 
 /* ============ 自动 key（杀死手拼字符串哨兵）============ */
 
-/** structural 子集确定性序列化：新增结构字段后在此补一行即自动纳入重建判别 */
+/** structural 子集确定性序列化：整体 JSON 序列化——新增结构字段即自动纳入重建判别，
+ * 无手拼遗漏风险（Suite 1 逐字段完备性测试锁死该性质；键序由 build 字面量固定，确定性有保障） */
 export function surfaceSpecKey(s: GroundSurfaceSpec): string {
-  const st = s.structural;
-  return JSON.stringify([
-    st.mode,
-    st.color[0],
-    st.color[1],
-    st.color[2],
-    st.lineColor[0],
-    st.lineColor[1],
-    st.lineColor[2],
-    st.gridSize,
-    st.textureToken,
-    st.color2[0],
-    st.color2[1],
-    st.color2[2],
-    st.density,
-    st.angleRad,
-  ]);
+  return JSON.stringify(s.structural);
 }
 
 /** 结构性变化 → 需要重建材质与纹理；否则原地更新即可 */

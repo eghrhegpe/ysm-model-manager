@@ -63,6 +63,22 @@ describe("Suite 1 — spec 构建与 key 确定性", () => {
     const p2 = { ...baseParams(), matLineColor: 0x112233, matGridSize: 8, matSource: "grid" as const };
     expect(surfaceSpecKey(buildGroundSurfaceSpec(p1, ""))).toBe(surfaceSpecKey(buildGroundSurfaceSpec(p2, "")));
   });
+
+  it("structural 逐字段完备：任一字段变化 key 必变（锁死「新增字段自动纳入」）", () => {
+    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "grid" as const }, "");
+    const base = surfaceSpecKey(spec);
+    for (const [field, value] of Object.entries(spec.structural)) {
+      const mutated: typeof spec.structural = {
+        ...spec.structural,
+        [field]: Array.isArray(value)
+          ? (value.map((n) => n + 1) as typeof value)
+          : typeof value === "number"
+            ? value + 1
+            : `${value}#`,
+      };
+      expect(surfaceSpecKey({ ...spec, structural: mutated })).not.toBe(base);
+    }
+  });
 });
 
 describe("Suite 2 — 重建判别 groundSurfaceNeedsRebuild", () => {

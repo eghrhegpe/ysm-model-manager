@@ -12,6 +12,8 @@ import {
   createListenerSet,
   GROUND_LAYER_OFFSETS,
   type MenuControlDef,
+  makeColorDef,
+  makeSliderDef,
   oneOf,
   persistState,
   restoreFields,
@@ -714,17 +716,8 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     getValue: () => number,
     setValue: (v: number) => void,
     visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-  ): MenuControlDef => ({
-    id,
-    kind: "slider",
-    labelKey,
-    fallback,
-    group,
-    slider,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  });
+  ): MenuControlDef =>
+    makeSliderDef(group, id, labelKey, fallback, slider, getValue, setValue, visibleWhen);
   const wColor = (
     id: string,
     labelKey: string,
@@ -733,16 +726,7 @@ function buildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     getValue: () => number,
     setValue: (v: number) => void,
     visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-  ): MenuControlDef => ({
-    id,
-    kind: "color",
-    labelKey,
-    fallback,
-    group,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  });
+  ): MenuControlDef => makeColorDef(group, id, labelKey, fallback, getValue, setValue, visibleWhen);
   return [
     {
       // 无 group → 成为 cap 根行主控件（与 sky/ground 对齐），下钻子视图不再重复出现

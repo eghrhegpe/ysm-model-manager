@@ -105,6 +105,54 @@ export interface MenuControlDef {
   setValue: (v: number | string | boolean) => void;
 }
 
+/* ============ 通用控件构造工厂 ============ */
+
+/** slider 控件构造（visibleWhen 透传样板收敛：ground/water 曾各写一份同构工厂，2026-09 上提共享） */
+export function makeSliderDef(
+  group: string,
+  id: string,
+  labelKey: string,
+  fallback: string,
+  slider: NonNullable<MenuControlDef["slider"]>,
+  getValue: () => number,
+  setValue: (v: number) => void,
+  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
+): MenuControlDef {
+  return {
+    id,
+    kind: "slider",
+    labelKey,
+    fallback,
+    group,
+    slider,
+    getValue,
+    setValue: (v) => setValue(v as number),
+    ...(visibleWhen ? { visibleWhen } : {}),
+  };
+}
+
+/** color 控件构造（同上收敛） */
+export function makeColorDef(
+  group: string,
+  id: string,
+  labelKey: string,
+  fallback: string,
+  getValue: () => number,
+  setValue: (v: number) => void,
+  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
+): MenuControlDef {
+  return {
+    id,
+    kind: "color",
+    labelKey,
+    fallback,
+    group,
+    getValue,
+    setValue: (v) => setValue(v as number),
+    ...(visibleWhen ? { visibleWhen } : {}),
+  };
+}
+
 /* ============ 场景能力统一接口 ============ */
 
 /** cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import

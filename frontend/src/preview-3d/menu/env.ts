@@ -26,6 +26,10 @@ function rebuildEnvSubs(caps: SceneCapability[], menu: SlideMenuHandle): void {
 export function disposeEnvSubscriptions(): void {
   for (const u of _envCapUnsubs) u();
   _envCapUnsubs = [];
+  // code_review bc639ae0 #6/#7/#8：重置预设 select 模块缓存——cap 真值源在
+  // environment cap 的 params.preset，本变量仅作无 cap 时的回退，跨会话残留
+  // 会让新会话 select 显示上一会话的选中态
+  _lastEnvPreset = "studio";
 }
 const PRESET_ORDER = [
   { id: "studio", icon: "\u2600\uFE0F", labelKey: "preview.presetQuickStudio" },
@@ -211,7 +215,16 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
           value: p.id,
           label: `${p.icon} ${tr(p.labelKey, p.id)}`,
         })),
-        get: () => _lastEnvPreset,
+        // code_review bc639ae0 #6/#7/#8：显示值读 environment cap 实际 preset
+        // （applyPreset/预设 thumb/loadState 都经 envCap.setPresetId 写 params.preset，
+        // 是单一真值源）——旧实现只读 _lastEnvPreset 模块级 last-write 缓存，
+        // 其它路径改 preset 后 select 显示 stale 值误导；custom（自定义 HDR）
+        // 不在快预设 options 内时回退最近快预设
+        get: () => {
+          const envCap = sceneCapabilityRegistry.getById("environment");
+          const cur = envCap?.getPresetId?.();
+          return cur && cur !== "custom" ? cur : _lastEnvPreset;
+        },
         set: (v) => {
           _lastEnvPreset = v as Exclude<EnvPresetId, "custom">;
           applyPreset(ctx, _lastEnvPreset, menu);

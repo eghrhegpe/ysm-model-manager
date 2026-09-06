@@ -486,7 +486,6 @@ function assembleShell(ctx: MountCtx): {
   const adapter = ctx.adapter;
   const opts = ctx.opts;
   const focusTrap = ctx.focusTrap;
-  const _handles = ctx.handles;
 
   // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
   // keys 直接使用 session.keys（render-loop 动态读取驱动相机运动）
@@ -577,9 +576,11 @@ function assembleShell(ctx: MountCtx): {
     setSpeed: (n: number) => {
       session.camSpeed = n;
     },
-    // content 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用
+    // content 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用。
+    // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄——原 `_handles[length-1]` 在 coop
+    // 多 session 下指向「最后 commit 的 session」而非本菜单/camera 桥属主，相机复位会误切他人
     reset: () => {
-      _handles[_handles.length - 1]?.handle.resetCamera?.();
+      ctx.handles.find((h) => h.gen === ctx.myGen)?.handle.resetCamera?.();
     },
   };
   ctx.camBridge = camBridge;
@@ -624,7 +625,10 @@ function assembleShell(ctx: MountCtx): {
       else closeOverlay(ctx);
     },
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> | void => {
-      const active = _handles[_handles.length - 1];
+      // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄（对齐 runBuild.switchTo 同款
+      // 查找）——原 `_handles[length-1]` 在 coop 多 session 下指向最后 commit 的 session，
+      // 菜单模型切换会误触发其它 session 的 switchTo
+      const active = ctx.handles.find((h) => h.gen === ctx.myGen);
       const r = active?.handle.switchTo?.(p, options);
       // 透传 Promise：调用方（fillSwitch 替换/追加）在完成后局部刷新面板（renderRows 重读新当前路径）
       if (r) {
@@ -1012,8 +1016,10 @@ function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: Preview
   document.removeEventListener("keydown", oldEscH);
   document.addEventListener("keydown", session.escH);
   session.cleanupFn = () => runFullCleanup(ctx);
-  // P0 修复：build 成功 → 本会话成为活跃输入会话（render-loop 动态读取 keys/camSpeed/orbitMode）
-  setActiveInputSession(session);
+  // P0 修复：build 成功 → 本会话成为活跃输入会话（render-loop 动态读取 keys/camSpeed/orbitMode）。
+  // code_review ece0d4a4 #2/#3/#9：self-mode session 不绑 WASD（buildInfra `if (!selfMode)` 守卫
+  // 跳过输入绑定，keys 恒空）——不得抢占活跃输入 slot，否则共享/动画 session 的 WASD 立即失效
+  if (!ctx.selfMode) setActiveInputSession(session);
   const sessionHandle: PreviewHandle = {
     cleanup: () => runFullCleanup(ctx),
     resetCamera: content.resetCamera,

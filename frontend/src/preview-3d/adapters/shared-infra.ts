@@ -33,23 +33,33 @@ let _singletonControls: OrbitControls | null = null;
  *  shared 模式下 caps 由 buildSharedInfra 单次填充，render loop 直接遍历，避免逐能力硬编码。 */
 let _sceneCaps: SceneCapability[] = [];
 
+/**
+ * 遍历 scene 树释放 geometry/material GPU 资源 + 清空场景。
+ * resetSceneInfra / teardownSharedInfra 共用（code_review ece0d4a4 #6：原两处逐字
+ * 重复 ~13 行，防单侧演化漂移——未来若补 texture/light 处理只改此处）。
+ * 纹理归 textureCache 引用计数管，不在此释放（防双重释放打穿计数）。
+ */
+function disposeSceneObjectResources(scene: THREE.Scene): void {
+  scene.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.isMesh) {
+      mesh.geometry?.dispose();
+      const mat = mesh.material;
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else mat?.dispose();
+    }
+  });
+  scene.clear();
+}
+
 /** 置空场景级单例（cleanupPreview / _resetSingletons 调用；renderer/canvas 保留语义由调用方承担）。
  *  P0 修复：单例归零前主动遍历 scene 树释放 geometry/material GPU 资源——否则后续 session
  *  的闭包可能引用已离但 GPU 未释放的旧 scene 子树（跨 session 资源泄漏）。纹理归 textureCache
  *  引用计数管，不在此释放（防双重释放打穿计数）。 */
 export function resetSceneInfra(): void {
   if (_singletonScene) {
-    _singletonScene.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      if (mesh.isMesh) {
-        mesh.geometry?.dispose();
-        const mat = mesh.material;
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-        else mat?.dispose();
-      }
-    });
-    _singletonScene.clear();
+    disposeSceneObjectResources(_singletonScene);
   }
   _singletonScene = null;
   _singletonCamera = null;
@@ -78,17 +88,7 @@ export function teardownSharedInfra(): void {
     _singletonControls = null;
   }
   if (_singletonScene) {
-    _singletonScene.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      if (mesh.isMesh) {
-        mesh.geometry?.dispose();
-        const mat = mesh.material;
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-        else mat?.dispose();
-      }
-    });
-    _singletonScene.clear();
+    disposeSceneObjectResources(_singletonScene);
     _singletonScene = null;
   }
   _singletonCamera = null;

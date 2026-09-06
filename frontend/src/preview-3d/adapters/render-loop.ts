@@ -49,22 +49,39 @@ let _activeInputSession: {
   orbitMode: boolean;
 } | null = null;
 
+/** 存活输入会话列表（升序 = commit 顺序；末尾 = 最新）——
+ *  code_review ece0d4a4 #2/#3/#9：注销活跃会话时晋升最新存活的，而非无条件置 null，
+ *  否则 coop 多会话下关掉 active 的那个 → 存活会话的 WASD/相机移动永久死 */
+const _liveInputSessions: Array<{
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  camSpeed: number;
+  orbitMode: boolean;
+}> = [];
+
 /** 注册活跃输入会话（build 成功后调用；重复注册同一引用为 no-op） */
 export function setActiveInputSession(s: {
   keys: Partial<Record<TdKeyAction, boolean>>;
   camSpeed: number;
   orbitMode: boolean;
 }): void {
+  if (!_liveInputSessions.includes(s)) _liveInputSessions.push(s);
   _activeInputSession = s;
 }
 
-/** 注销活跃输入会话（cleanup 时调用；仅当传入引用为当前活跃时才置 null） */
+/** 注销活跃输入会话（cleanup 时调用）：从存活列表移除并置 active 为最新存活者，
+ *  仅当列表空时才置 null（code_review ece0d4a4 #2/#3/#9——原实现关掉 active 后
+ *  无条件置 null，coop 下存活 session 的 WASD 永久失活） */
 export function unregisterActiveInputSession(s: {
   keys: Partial<Record<TdKeyAction, boolean>>;
   camSpeed: number;
   orbitMode: boolean;
 }): void {
-  if (_activeInputSession === s) _activeInputSession = null;
+  const idx = _liveInputSessions.indexOf(s);
+  if (idx >= 0) _liveInputSessions.splice(idx, 1);
+  if (_activeInputSession === s) {
+    _activeInputSession =
+      _liveInputSessions.length > 0 ? _liveInputSessions[_liveInputSessions.length - 1] : null;
+  }
 }
 
 /** 取当前活跃输入会话（rAF 热路径调用；null 表示无活跃 session，跳过相机运动） */
@@ -114,6 +131,7 @@ export function resetLoopState(): void {
   _perFrameSnapshot = null;
   _perFramesDirty = true;
   _activeInputSession = null;
+  _liveInputSessions.length = 0;
 }
 
 /**

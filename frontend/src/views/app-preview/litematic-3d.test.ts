@@ -11,6 +11,7 @@ vi.mock("three", () => {
     add = vi.fn();
     remove = vi.fn();
     traverse = vi.fn();
+    clear = vi.fn();
   }
   class Color {
     constructor(..._a: unknown[]) {}

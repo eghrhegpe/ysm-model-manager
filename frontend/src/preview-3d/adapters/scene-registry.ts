@@ -53,18 +53,11 @@ type RegisterInput = {
   components?: string[] | undefined;
 };
 
-function mdSrDedupByExplicitKey(
-  byAuthor: Map<string, string>,
-  byName: Map<string, string>,
-  input: RegisterInput,
-): string | null {
-  const authorKey = `${input.rtype}::${input.path}`;
-  const existingByPath = byAuthor.get(authorKey);
-  if (existingByPath) return existingByPath;
-  const nameKey = `${input.rtype}::${input.path}`;
-  const existingByName = byName.get(nameKey);
-  if (existingByName) return existingByName;
-  return null;
+/** dedup 查重：按 `${rtype}::${path}` 复合键找既有 entry。
+ *  code_review ece0d4a4 #7：原 byAuthor/byName 双 map 键完全一致（byte-for-byte 重复，
+ *  双维护易漂移）——收敛单 map byPath。 */
+function mdSrDedupByExplicitKey(byPath: Map<string, string>, input: RegisterInput): string | null {
+  return byPath.get(`${input.rtype}::${input.path}`) ?? null;
 }
 
 function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
@@ -85,19 +78,17 @@ function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
 
 function mdSrIndexIntoMaps(
   entries: Map<string, ModelEntry>,
-  byAuthor: Map<string, string>,
-  byName: Map<string, string>,
+  byPath: Map<string, string>,
   entry: ModelEntry,
 ): void {
   entries.set(entry.id, entry);
-  byAuthor.set(`${entry.rtype}::${entry.path}`, entry.id);
-  byName.set(`${entry.rtype}::${entry.path}`, entry.id);
+  byPath.set(`${entry.rtype}::${entry.path}`, entry.id);
 }
 
 class SceneRegistry {
   private entries = new Map<string, ModelEntry>();
-  private byAuthor = new Map<string, string>();
-  private byName = new Map<string, string>();
+  /** `${rtype}::${path}` → entry id（dedup 查重索引；code_review ece0d4a4 #7 单 map 收敛） */
+  private byPath = new Map<string, string>();
   private seq = 0;
   private activeId: string | null = null;
   private menuSink: MenuItemsSink | null = null;
@@ -107,8 +98,7 @@ class SceneRegistry {
   /** 重置（会话开始/关闭时调用，清空全部模型记录） */
   reset(): void {
     this.entries.clear();
-    this.byAuthor.clear();
-    this.byName.clear();
+    this.byPath.clear();
     this.seq = 0;
     this.activeId = null;
     this.menuSink = null;
@@ -120,7 +110,7 @@ class SceneRegistry {
    * roots 由调用方经 scene.children 差量捕获传入；boneMaps/menuItems 可选。
    */
   register(input: RegisterInput): string {
-    const existing = mdSrDedupByExplicitKey(this.byAuthor, this.byName, input);
+    const existing = mdSrDedupByExplicitKey(this.byPath, input);
     if (existing) {
       // 去重命中：同 path 重载时旧 entry 持有已 dispose 的 content/roots，
       // 须用新 input 刷新可变字段，否则取景幽灵 + 计数虚高（P2 审核修复）
@@ -142,7 +132,7 @@ class SceneRegistry {
     }
     const id = `m${++this.seq}`;
     const entry = mdSrBuildEntryFromInput(id, input);
-    mdSrIndexIntoMaps(this.entries, this.byAuthor, this.byName, entry);
+    mdSrIndexIntoMaps(this.entries, this.byPath, entry);
     for (const r of input.roots) this.objToEntry.set(r, entry);
     this.activeId = id;
     return id;
@@ -151,8 +141,7 @@ class SceneRegistry {
   unregister(id: string): void {
     const e = this.entries.get(id);
     if (e) {
-      this.byAuthor.delete(`${e.rtype}::${e.path}`);
-      this.byName.delete(`${e.rtype}::${e.path}`);
+      this.byPath.delete(`${e.rtype}::${e.path}`);
       for (const r of e.roots) this.objToEntry.delete(r);
     }
     this.entries.delete(id);

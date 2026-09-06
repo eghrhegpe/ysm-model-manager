@@ -246,6 +246,16 @@ export function runFullCleanup(ctx: MountCtx): void {
   session.allContent.length = 0;
   // P0 修复：本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
   for (const id of myIds) sceneRegistry.unregister(id);
+  // code_review ece0d4a4 #1/#11 ghost 清扫：选择性注销只覆盖「仍在 allContent 的 entry」——
+  // mid-session 被 dispose（keep→非 keep 切换 pushSwitchHistory dispose 旧内容并移出
+  // allContent、但从不 unregister，switch-preview 注释自认「残留由下次 mount 的 reset
+  // 兜底」）的 ghost entry 不在 myIds，会在会话关闭后滞留——count() 虚高误触 MAX_MODELS
+  // 上限 / 陈旧 roots 参与取景 / objToEntry 映射已释放对象。本会话是最后一个存活会话时
+  // 整体 reset 兜底（还原旧 close-time sweep 语义）；coop 尚有其它会话则保留选择性注销
+  //（不误伤他人——原 reset 正是在此多会话场景被本 P0 修复替换掉的原因）
+  if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
+    sceneRegistry.reset();
+  }
   // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFailedMountCleanup 同段共用）
   unbindInputsAndStopLoop(ctx);
   // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用

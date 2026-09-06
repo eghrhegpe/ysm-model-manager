@@ -1,7 +1,7 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderMenu } from "./core.ts";
-import { nodeControlToCapControl } from "./render.ts";
+import { clearFolderCollapsedState, nodeControlToCapControl } from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
@@ -196,6 +196,52 @@ describe("renderMenu 新 kind", () => {
     header.click();
     expect(body.style.display).toBe("block");
     expect(container.querySelector('[data-testid="preview-child-2"]')).not.toBeNull();
+  });
+
+  it("folder: 折叠态记忆跨 refresh 保持，sibling 隔离，clearFolderCollapsedState 后回默认（code_review bc639ae0 #4）", () => {
+    const makeNodes = (): PreviewMenuNode[] => [
+      {
+        id: "folder-mem-a",
+        kind: "folder",
+        labelKey: "preview.folder",
+        fallback: "组 A",
+        defaultOpen: false,
+        children: [{ id: "child-a", kind: "field", labelKey: "preview.child", value: "a" }],
+      },
+      {
+        id: "folder-mem-b",
+        kind: "folder",
+        labelKey: "preview.folder",
+        fallback: "组 B",
+        defaultOpen: false,
+        children: [{ id: "child-b", kind: "field", labelKey: "preview.child", value: "b" }],
+      },
+    ];
+    // ① 初次渲染：两 folder 默认折叠
+    const c1 = document.createElement("div");
+    renderMenu(c1, makeNodes(), makeDeps() as any);
+    const bodyA1 = c1.querySelector('[data-testid="folder-mem-a-body"]') as HTMLElement;
+    const bodyB1 = c1.querySelector('[data-testid="folder-mem-b-body"]') as HTMLElement;
+    expect(bodyA1.style.display).toBe("none");
+    expect(bodyB1.style.display).toBe("none");
+    // 点击展开 A（B 不动）
+    const headers1 = c1.querySelectorAll(".cap-section-header");
+    (headers1[0] as HTMLElement).click();
+    expect(bodyA1.style.display).toBe("block");
+    expect(bodyB1.style.display).toBe("none");
+    // ② refresh 重建 DOM（同 id）：A 记忆保持展开、B 仍折叠——且 B 不受 A 的 key 串扰
+    const c2 = document.createElement("div");
+    renderMenu(c2, makeNodes(), makeDeps() as any);
+    const bodyA2 = c2.querySelector('[data-testid="folder-mem-a-body"]') as HTMLElement;
+    const bodyB2 = c2.querySelector('[data-testid="folder-mem-b-body"]') as HTMLElement;
+    expect(bodyA2.style.display).toBe("block");
+    expect(bodyB2.style.display).toBe("none");
+    // ③ dispose 清理后重挂载：回默认折叠（无跨会话泄漏）
+    clearFolderCollapsedState();
+    const c3 = document.createElement("div");
+    renderMenu(c3, makeNodes(), makeDeps() as any);
+    const bodyA3 = c3.querySelector('[data-testid="folder-mem-a-body"]') as HTMLElement;
+    expect(bodyA3.style.display).toBe("none");
   });
 
   it("folder: 空 children 不渲染 section", () => {

@@ -78,8 +78,11 @@ export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecod
    * 但 worker 仍可能回传迟到 response——其携带的 ImageBitmap 已 transfer 到主线程，
    * 若无人 close 则 GPU 显存永久泄漏（GC 不感知 GPU 压力）。
    * onmessage 命中此集合时须 bitmap.close() 并移除。
+   * code_review ece0d4a4 #4/#5：Map<id, worker> 记录任务归属——worker 崩溃（onerror）
+   * 后其消息队列被丢弃、迟到 response 永不抵达，名下超时 id 若不清除会随共享单例
+   * 无限累积（每批解码都向已坏 worker 继续派发，Set 单调膨胀）
    */
-  const timedOutIds = new Set<number>();
+  const timedOutIds = new Map<number, Worker>();
 
   // Worker 消息处理
   for (const w of workers) {
@@ -107,6 +110,11 @@ export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecod
         clearTimeout(entry.timer);
         pending.delete(id);
         entry.resolve({ id, ok: false, error: "Worker 崩溃", relPath: "", width: 0, height: 0 });
+      }
+      // code_review ece0d4a4 #4/#5：崩溃 worker 名下已超时的任务（terminate 后消息
+      // 队列丢弃，迟到 response 永不抵达）——立即清除，防共享单例 Set 无限膨胀
+      for (const [id, owner] of [...timedOutIds]) {
+        if (owner === w) timedOutIds.delete(id);
       }
       // 终止崩溃实例并重建替补
       try {
@@ -154,10 +162,11 @@ export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecod
         };
 
         const timer = setTimeout(() => {
-          // 超时：静默跳过（主线程 fallback 会覆盖）；登记待清理 id，
-          // 防 worker 迟到 response 携带的 ImageBitmap 无人 close 泄漏 GPU 显存
+          // 超时：静默跳过（主线程 fallback 会覆盖）；登记待清理 id + 归属 worker，
+          // 防 worker 迟到 response 携带的 ImageBitmap 无人 close 泄漏 GPU 显存；
+          // 崩溃 worker 名下条目由 onerror 一并清除（code_review ece0d4a4 #4/#5）
           pending.delete(id);
-          timedOutIds.add(id);
+          timedOutIds.set(id, w);
           completed++;
           if (completed >= total) resolve(results);
         }, timeoutMs);

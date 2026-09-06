@@ -93,6 +93,7 @@ auto_fields:
     - buildShadowSchema
     - buildSharedInfra
     - buildSkyGroup
+    - buildSkyNodes
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
     - buildStatsPanel

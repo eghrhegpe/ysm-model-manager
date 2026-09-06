@@ -23,6 +23,7 @@ auto_fields:
     - buildRenderModeNodes
     - buildShadowNodes
     - buildSkyGroup
+    - buildSkyNodes
     - buildWaterGroup
     - buildWaterNodes
     - CapabilityId

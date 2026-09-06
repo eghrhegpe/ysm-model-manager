@@ -987,3 +987,45 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     expect(cap.getSunIntensityScale()).toBe(DEFAULT_SKY_PARAMS.sunIntensityScale);
   });
 });
+
+describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = timeline controls 节点 + sky-time/sky-env 平铺 + 高级 folder", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    // 0: timeline controls 通道（复杂控件）
+    expect(nodes[0]!.kind).toBe("controls");
+    const tl = typeof nodes[0]!.controls === "function" ? nodes[0]!.controls() : nodes[0]!.controls;
+    expect(tl![0]!.kind).toBe("timeline");
+    expect(tl![0]!.id).toBe("sky-timeline");
+    // 1: sky-time slider 平铺
+    expect(nodes[1]!.kind).toBe("slider");
+    expect(nodes[1]!.id).toBe("sky-time");
+    nodes[1]!.control!.set!(9);
+    expect(cap.getTimeOfDay()).toBe(9);
+    // 2: sky-env toggle 平铺（基座级开关）
+    expect(nodes[2]!.kind).toBe("toggle");
+    expect(nodes[2]!.id).toBe("sky-env");
+    // 3: 高级 folder
+    const folder = nodes[3]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
+    expect(folder.children!.map((c) => c.id)).toEqual([
+      "sky-cloud",
+      "sky-sun-intensity",
+      "sky-sun-disc",
+      "sky-auto-rotate",
+      "sky-godrays",
+    ]);
+  });
+
+  it("高级组节点读写闭包直连 cap（cloud/godrays）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[3]!;
+    const cloud = folder.children!.find((c) => c.id === "sky-cloud")!;
+    cloud.control!.set!(0.6);
+    expect(cap.getCloudCoverage()).toBeCloseTo(0.6, 5);
+    const godrays = folder.children!.find((c) => c.id === "sky-godrays")!;
+    godrays.control!.set!(true);
+    expect(cap.isGodRaysEnabled()).toBe(true);
+  });
+});

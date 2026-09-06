@@ -140,6 +140,9 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
     labelKey: cap.labelKey,
     fallback: cap.id,
     icon: cap.icon,
+    // 导航行紧凑密度（稀疏内容：icon+label+可选开关+箭头）——与 scene 组根视图行同密度，
+    // 不吃 .slide-item 38px 内容行基座。token 见 menu-styles MENU_ROW_DENSITY_CSS。
+    rowDensity: "compact",
     // 能力总开关放行尾（对齐 MikuMikuAR env 一级菜单 headerToggle）：开关点击
     // stopPropagation 不触发整行下钻；bind 随 refresh 同步 checked
     ...(master

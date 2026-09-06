@@ -264,6 +264,22 @@ describe("renderMenu 新 kind", () => {
     renderMenu(container, nodes, makeDeps() as any);
     const row = container.querySelector('[data-testid="preview-env-cap-fog"]') as HTMLElement;
     expect(row).not.toBeNull();
+    // rowDensity compact → 紧凑导航行类（稀疏行不吃 .slide-item 38px 内容行基座）
+    const nodesC = [
+      {
+        id: "env-cap-sky",
+        kind: "row",
+        labelKey: "preview.sky",
+        fallback: "天空",
+        icon: "☁️",
+        rowDensity: "compact" as const,
+        action: () => {},
+      },
+    ];
+    const c2 = document.createElement("div");
+    renderMenu(c2, nodesC, makeDeps() as any);
+    const skyRow = c2.querySelector('[data-testid="preview-env-cap-sky"]') as HTMLElement;
+    expect(skyRow.classList.contains("rm-row-compact")).toBe(true);
     // 行尾开关存在
     const tg = row.querySelector(".header-toggle") as HTMLElement;
     expect(tg).not.toBeNull();

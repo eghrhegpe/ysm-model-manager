@@ -183,6 +183,10 @@ export interface PreviewMenuNode {
   eye?: { get: () => boolean; set: (v: boolean) => void };
   /** material-row 类型：行内组合控件——opacity 透明度滑条（显示值 0-100，set 收 0-100） */
   opacity?: { get: () => number; set: (v: number) => void };
+  /** row 类型：行密度（可选）。compact = 紧凑导航行（icon+label+箭头等稀疏内容，降
+   *  min-height/padding，对齐 scene 组根视图 .cm-row 密度，如 env 面板一级 cap 行）；
+   *  缺省 = 标准内容行（roles 角色行等，38px 触控基座）。纯视觉密度，不影响行为。 */
+  rowDensity?: "compact";
   /** controls 类型：cap 生态控件组（MenuControlDef[]），渲染委托 renderCapControls。
    *  传函数引用则每次渲染重取（惰性）——cap 后创建/参数变更后重渲染都能取到最新全量，
    *  与 ADR-125 P3「禁止构建期求值 → cap 后创建则永不可见」同口径。

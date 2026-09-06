@@ -30,3 +30,35 @@ export const MENU_SECTION_CSS = `.cap-section-header {
   font-size: 10px;
   display: inline-block;
 }`;
+
+/**
+ * 行密度 token + 紧凑导航行规则（3d 菜单单一样式源）。
+ *
+ * 背景：3d 菜单行分两类——「导航行」（icon+label+箭头，稀疏内容，如 env 一级 cap 行 /
+ * scene 组根视图行）与「内容行」（radio/badge/参数控件填充，如 roles 行 / cap 参数行）。
+ * 二者共享底层变量（--3d-row-*，字号/基准可随主题同步缩放），仅密度不同。
+ * 紧凑行 = 内容自然高（无 min-height 硬撑），标准行 = 38px 触控基座。
+ *
+ * [行高治理] 原 .slide-item 基座（ui-components --uih-slide-item-min-height:38px）对所有行
+ * 统一撑高，稀疏导航行显得空旷（env 行 6+38+6 ≈ 50px vs .cm-row 8+13+8 ≈ 34px）。
+ * 本规则让声明 rowDensity:"compact" 的行走紧凑密度，两类行各自 token 化。
+ */
+export const MENU_ROW_DENSITY_CSS = `
+.menu-wrapper.slide-menu {
+  --3d-row-nav-pad-y: 4px;
+  --3d-row-nav-min-h: 30px;
+}
+.menu-wrapper.slide-menu .slide-item.rm-row-compact {
+  min-height: var(--3d-row-nav-min-h);
+  padding-top: var(--3d-row-nav-pad-y);
+  padding-bottom: var(--3d-row-nav-pad-y);
+  margin-bottom: 1px;
+}
+.menu-wrapper.slide-menu .slide-item.rm-row-compact .slide-label {
+  font-size: 13px;
+}
+.menu-wrapper.slide-menu .slide-item.rm-row-compact .slide-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+}`;

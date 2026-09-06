@@ -19,7 +19,7 @@ import {
   setStateValue,
 } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
-import { MENU_SECTION_CSS } from "./menu-styles.ts";
+import { MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
@@ -45,6 +45,7 @@ function ensureMenuStyles(): void {
  *  rmAppendFolder 消费的 section 头原无本地定义（搭 cap-controls 注入便车），
  *  现消费方自足，单源共享（cap-controls 拼同一常量）。*/
 ${MENU_SECTION_CSS}
+${MENU_ROW_DENSITY_CSS}
 .slide-item.rm-control-row {
    display: flex;
    align-items: center;
@@ -229,7 +230,7 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
 /** [模式⑥·提纯] button/row 共用行骨架：slide-item 行 + testid + 可选图标 + 空标签（jscpd 去重） */
 function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSpanElement } {
   const row = document.createElement("div");
-  row.className = "slide-item";
+  row.className = node.rowDensity === "compact" ? "slide-item rm-row-compact" : "slide-item";
   row.dataset.testid = `preview-${node.id}`;
   if (node.icon) {
     const ic = document.createElement("span");

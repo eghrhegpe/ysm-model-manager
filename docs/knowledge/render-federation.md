@@ -21,6 +21,8 @@ auto_fields:
     - attenuateAmbientForSky
     - BaseScene
     - CameraControlScene
+    - CapabilityId
+    - CapabilityMap
     - cleanupPreview
     - DEFAULT_ENV_PARAMS
     - DEFAULT_FOG_PARAMS

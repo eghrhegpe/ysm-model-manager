@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-193：3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道",
+        "link": "/adr/ADR-193-preview-menu-declarative-endgame"
+      },
+      {
         "text": "ADR-192：go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移",
         "link": "/adr/ADR-192-go-types-registry-split"
       },

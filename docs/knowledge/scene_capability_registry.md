@@ -15,6 +15,8 @@ auto_fields:
     - applyGroundSurfaceStructural
     - attenuateAmbientForSky
     - buildGroundSurfaceSpec
+    - CapabilityId
+    - CapabilityMap
     - createListenerSet
     - deepMergeLightParams
     - DeepPartial

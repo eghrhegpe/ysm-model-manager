@@ -101,6 +101,8 @@ auto_fields:
     - CameraControlBridge
     - CameraControlScene
     - cancelPendingEncodings
+    - CapabilityId
+    - CapabilityMap
     - captureTextureName
     - cleanupPreview
     - clearLoadTraces

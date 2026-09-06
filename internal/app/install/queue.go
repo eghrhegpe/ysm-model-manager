@@ -32,16 +32,25 @@ type DownloadQueue struct {
 	epoch    queueEpoch
 	ctx      context.Context
 	cancelFn context.CancelFunc
+	// parentCtx 队列生命周期的父 context（应用级 appCtx）：Cancel 重置 ctx 时
+	// 仍从 parent 派生，保证应用退出（parent cancel）能贯通终止在途下载
+	// （原 context.Background 自建生命周期，ServiceShutdown 的 appCancel 管不到队列）
+	parentCtx context.Context
 
 	downloadFn func(ctx context.Context, url, saveDir string) (string, error)
 	emitFn     func(name string, args ...interface{})
 	logFn      func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)
 }
 
-// NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入）
-func NewDownloadQueue(downloadFn func(ctx context.Context, url, saveDir string) (string, error), emitFn func(name string, args ...interface{}), logFn func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)) *DownloadQueue {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &DownloadQueue{downloadFn: downloadFn, emitFn: emitFn, logFn: logFn, ctx: ctx, cancelFn: cancel}
+// NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入）。
+// parent 传应用生命周期 context（a.appCtx）：队列 ctx 派生自 parent，
+// 应用退出时在途下载与消费循环一并终止；parent 为 nil 时回退 Background（测试兜底）。
+func NewDownloadQueue(parent context.Context, downloadFn func(ctx context.Context, url, saveDir string) (string, error), emitFn func(name string, args ...interface{}), logFn func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)) *DownloadQueue {
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithCancel(parent)
+	return &DownloadQueue{downloadFn: downloadFn, emitFn: emitFn, logFn: logFn, ctx: ctx, cancelFn: cancel, parentCtx: parent}
 }
 
 // Enqueue 入队一批下载任务（URL 仅允许 https，防 SSRF / 本地文件读取）。
@@ -89,7 +98,7 @@ func (q *DownloadQueue) Cancel() {
 	q.epoch++
 	if q.running {
 		q.cancelFn()
-		q.ctx, q.cancelFn = context.WithCancel(context.Background())
+		q.ctx, q.cancelFn = context.WithCancel(q.parentCtx)
 	}
 	q.tasks = nil
 	q.running = false
@@ -154,8 +163,10 @@ func (q *DownloadQueue) processForEpoch(target queueEpoch) {
 		// 丢失唤醒竞态——process 判空解锁 return 与 defer 取锁复位 running 之间，
 		// Enqueue 可能已追加任务（running 仍 true → start=false 不启新 goroutine）；
 		// 复位后重检任务列表：代际一致且有任务则重启处理，防队列静默停滞。
-		// panic 时不重启（fail-stop），防无限重启循环。
-		restart := !panicked && !cancelled && len(q.tasks) > 0
+		// panic 时不重启（fail-stop），防无限重启循环；
+		// parent 已取消（应用退出）同样不重启——应用退出不是新一批任务的起点。
+		shuttingDown := q.parentCtx.Err() != nil
+		restart := !panicked && !cancelled && !shuttingDown && len(q.tasks) > 0
 		if restart {
 			q.running = true
 			q.epoch++
@@ -166,8 +177,8 @@ func (q *DownloadQueue) processForEpoch(target queueEpoch) {
 		newEpoch := q.epoch
 		q.mu.Unlock()
 		// panicked 时不发 done：UI 收到 done 会认为「下载完成」，但实际队列 fail-stop
-		// 停在 panic 任务上——假 done 会让前端误判整体状态。
-		if !cancelled && !restart && !panicked {
+		// 停在 panic 任务上——假 done 会让前端误判整体状态。应用退出同理不发。
+		if !cancelled && !restart && !panicked && !shuttingDown {
 			log.Printf("[queue] emit queue:status done")
 			q.emitFn("queue:status", "done", 0, "")
 		}
@@ -180,6 +191,12 @@ func (q *DownloadQueue) processForEpoch(target queueEpoch) {
 		q.mu.Lock()
 		if q.epoch != myEpoch {
 			// 代际已变：本队列已被取代（取消后重新入队），立即退出不再消费新任务
+			q.mu.Unlock()
+			return
+		}
+		if q.parentCtx.Err() != nil {
+			// 应用退出：parent 已取消，终止消费且不走 defer 的 restart 分支
+			// （重启出的 worker 也只会在已取消 ctx 上快速失败，空转清空队列）
 			q.mu.Unlock()
 			return
 		}

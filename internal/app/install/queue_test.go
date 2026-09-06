@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"ysm-model-manager/go/types"
 )
@@ -14,7 +15,7 @@ import (
 func TestDownloadQueue_Sequential(t *testing.T) {
 	var downloaded []string
 	var emitted []string
-	q := NewDownloadQueue(
+	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
 			downloaded = append(downloaded, url)
 			return filepath.Join(saveDir, "out.ysm"), nil
@@ -46,7 +47,7 @@ func TestDownloadQueue_Sequential(t *testing.T) {
 
 func TestDownloadQueue_ErrorDoesNotStopQueue(t *testing.T) {
 	var downloaded []string
-	q := NewDownloadQueue(
+	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
 			downloaded = append(downloaded, url)
 			if url == "https://bad.example/x.ysm" {
@@ -74,7 +75,7 @@ func TestDownloadQueue_ErrorDoesNotStopQueue(t *testing.T) {
 
 func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 	var emitted []string
-	q := NewDownloadQueue(
+	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
 			// 等待 ctx 取消（模拟下载中）
 			<-ctx.Done()
@@ -101,7 +102,7 @@ func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 // TestQueueStatus_ReflectsQueue 钉住 Status 的结构化返回（ADR-145：返回类型
 // 已下沉 types.QueueStatusInfo——JSON 契约 remaining/running 不变，本测试锁行为）。
 func TestQueueStatus_ReflectsQueue(t *testing.T) {
-	q := NewDownloadQueue(
+	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
 			return filepath.Join(saveDir, "out.ysm"), nil
 		},
@@ -126,13 +127,49 @@ func TestQueueStatus_ReflectsQueue(t *testing.T) {
 	}
 }
 
+// TestDownloadQueue_ParentCancelStopsQueue 锁定生命周期归属：队列 ctx 必须派生自
+// 应用级 parent ctx——parent 取消时在途下载与后续消费一并终止
+// （原 context.Background 自建生命周期，应用退出后队列独立跑满下载超时）。
+func TestDownloadQueue_ParentCancelStopsQueue(t *testing.T) {
+	parent, parentCancel := context.WithCancel(context.Background())
+	defer parentCancel()
+	downloadStarted := make(chan struct{})
+	q := NewDownloadQueue(parent,
+		func(ctx context.Context, url, saveDir string) (string, error) {
+			close(downloadStarted)
+			<-ctx.Done() // 阻塞直到队列 ctx 被取消
+			return "", ctx.Err()
+		},
+		func(name string, args ...interface{}) {},
+		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
+	)
+	q.tasks = []types.DownloadTask{
+		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "a.ysm"},
+		{URL: "https://b.example/y.ysm", SaveDir: t.TempDir(), Name: "b.ysm"},
+	}
+	done := make(chan struct{})
+	go func() { q.process(); close(done) }()
+
+	<-downloadStarted
+	parentCancel() // 应用退出：parent 取消
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("parent ctx 取消后 process 未退出（队列 ctx 未派生自 parent）")
+	}
+	if q.running {
+		t.Error("parent 取消后 running 应复位（代际一致路径）")
+	}
+}
+
 // TestDownloadQueue_DownloadPanicRecovered 锁住 processForEpoch 的 recover 防线：
 // downloadFn 回调 panic 不得崩溃进程（与 conc.Pool/watcher/dedup 的 worker 兜底对齐），
 // 队列以 fail-stop 语义停止——running 复位、不重启、不把 panic 当普通下载失败记账。
 func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
 	var emitted []string
 	var logged []string
-	q := NewDownloadQueue(
+	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
 			panic("boom")
 		},

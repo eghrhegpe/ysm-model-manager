@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-198：scanner 扫描缓存五件套收口为 scanCacheHub 组件",
+        "link": "/adr/ADR-198-scanner-scancachehub"
+      },
+      {
         "text": "ADR-197：conc/scanner context 贯通——并发任务可取消",
         "link": "/adr/ADR-197-conc-scanner-context"
       },

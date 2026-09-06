@@ -888,13 +888,30 @@ func ensureRepoWorkflow(repoPath string) {
 	}
 	// 裸 os.WriteFile 中途崩溃可能留残缺文件，被上方 os.Stat 误判为「已存在」而永久静默失效；
 	// WriteFileAtomic（临时文件+rename，ADR-109 §4）保证目标「要么不存在、要么完整」。
-	if err := fsutil.WriteFileAtomic(workflowPath, []byte(generateIndexWorkflow)); err != nil {
+	if err := fsutil.WriteFileAtomic(workflowPath, []byte(buildGenerateIndexWorkflow())); err != nil {
 		// 写入失败留痕——静默失败会让 CI 自动重生成 index 静默失效，用户无感知
 		emitScanError("[scanner] 写入 workflow %s 失败: %v", workflowPath, err)
 	}
 }
 
-const generateIndexWorkflow = `name: Generate index.json
+// extConditionPlaceholder 扩展名过滤条件注入位：buildGenerateIndexWorkflow 以
+// registry.AllExts() 动态填充（原手抄清单是注册表之外的第三份平行实现，
+// 注册表新增扩展后 CI 索引静默漏收——口径单一事实源回归 resource_types.json）。
+const extConditionPlaceholder = "__EXT_CONDITION__"
+
+// buildGenerateIndexWorkflow 生成 CI workflow 内容：扩展名过滤条件从注册表动态注入。
+func buildGenerateIndexWorkflow() string {
+	conds := make([]string, 0, 8)
+	for _, ext := range registry.AllExts() {
+		if ext == ".json" {
+			continue // .json 仅放行 ysm.json，模板内走单独判定路径
+		}
+		conds = append(conds, `ext != "`+ext+`"`)
+	}
+	return strings.Replace(generateIndexWorkflowTemplate, extConditionPlaceholder, strings.Join(conds, " && "), 1)
+}
+
+const generateIndexWorkflowTemplate = `name: Generate index.json
 on:
   push:
     branches: [main]
@@ -940,7 +957,7 @@ jobs:
                 base = strings.TrimSuffix(base, ".disabled")
                 if base != "ysm.json" { return nil }
               }
-              if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".nbt" && ext != ".schematic" && ext != ".litematic" { return nil }
+              if __EXT_CONDITION__ { return nil }
               if strings.Contains(p, "/.github") { return nil }
               rel, _ := filepath.Rel(".", p)
               rel = filepath.ToSlash(rel)

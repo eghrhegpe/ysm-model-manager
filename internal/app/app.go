@@ -104,6 +104,7 @@ func NewApp() *App {
 	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
 	a.install = install.NewManager(
 		install.NewDownloadQueue(
+			a.appCtx,
 			a.downloadFileWithQueue,
 			func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
 			a.AddOpLog,

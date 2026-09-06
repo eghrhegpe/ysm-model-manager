@@ -170,6 +170,8 @@ status: active
 - **schemaId 必显式**：panel id 不再隐式兜底作 schema key（P5 复盘：id 撞注册键渲染错内容且无告警）。
 - **fillers 仅 roles**：G3 删 fill* 后唯一残留；health.test 白名单守卫——禁止新增 filler。
 - **renderCustom 末段逃生舱**：schemaId 未注册时走 renderCustom 会 console.warn 提示。
+- **renderCustom cleanup 双持有者**（2026-09 生命周期收编）：`renderCustom` 返回 cleanup 后同时交给两方——① 渲染器（render.ts `runCustomMount` 按容器持有，重渲染前先清旧 / `disposeCustomCleanups` 菜单 dispose 全清）；② bones 的 `cleanupRef`（adapter.dispose 模型级兜底，摘挂 viewContainer 的 raycaster listener——模型卸载而菜单存活时唯一防线）。两者持同一函数，renderer 实现幂等，双清无害。**新增 renderCustom 逃生舱自动获得面板级生命周期，勿自搓 cleanupRef**；仅当 cleanup 跨面板存活（引用模型资源）时才需模型级兜底通道。
+- **disposeCustomCleanups 只挂 dispose**：不可挂 `onOverlayStyleTargetReset`——该钩子每次 mount 都触发，而 cleanup 表是模块级共享，全清会误伤并行挂载会话仍存活的骨骼面板（listener 被摘而 DOM 仍在 → 拾取静默失效）。
 - **setAdapterItems id 冲突守卫**（ADR-085 S1）：重复 id 或与 CORE_MENU_ITEMS 冲突时抛错阻断。
 - **motion 组动态直达唯一特例**：活跃角色 + 技能 → 直达动作详情；静态直达走 `directToPanel` 声明。
 

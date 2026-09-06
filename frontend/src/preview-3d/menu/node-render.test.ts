@@ -1,7 +1,11 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderMenu } from "./core.ts";
-import { clearFolderCollapsedState, nodeControlToCapControl } from "./render.ts";
+import {
+  clearFolderCollapsedState,
+  disposeCustomCleanups,
+  nodeControlToCapControl,
+} from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
@@ -535,6 +539,64 @@ describe("renderMenu 新 kind", () => {
     renderMenu(container2, nodes, makeDeps() as any);
     expect(called).toBe(1); // 未再调用
     expect(container2.querySelector('[data-testid="preview-camera"]')).not.toBeNull();
+  });
+
+  // ---- renderCustom 逃生舱 cleanup 生命周期（面板级；模型级兜底见 bones-panel-node.test.ts）----
+  it("renderCustomDirect: 同容器重渲染前先调旧 cleanup（面板级生命周期归渲染器）", () => {
+    disposeCustomCleanups(); // 模块级表跨测试隔离
+    const calls: string[] = [];
+    let mountCount = 0;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "camera",
+        kind: "custom",
+        renderCustom: (list) => {
+          const n = ++mountCount;
+          const d = document.createElement("div");
+          d.dataset.testid = `mount-${n}`;
+          list.appendChild(d);
+          return (): void => {
+            calls.push(`cleanup-${n}`);
+          };
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, { ...(makeDeps() as any), renderCustomDirect: true });
+    expect(mountCount).toBe(1);
+    expect(calls).toEqual([]); // 首次挂载不触发清理
+
+    // 同容器二次渲染：渲染器先清旧（cleanup-1）再挂载新的——取代逃生舱自搓 cleanupRef
+    renderMenu(container, nodes, { ...(makeDeps() as any), renderCustomDirect: true });
+    expect(mountCount).toBe(2);
+    expect(calls).toEqual(["cleanup-1"]);
+    disposeCustomCleanups();
+  });
+
+  it("disposeCustomCleanups: 全清挂载中 cleanup（菜单 dispose 路径，幂等）", () => {
+    disposeCustomCleanups(); // 模块级表跨测试隔离
+    const calls: string[] = [];
+    const mkNode = (id: string): PreviewMenuNode => ({
+      id,
+      kind: "custom",
+      renderCustom: (list) => {
+        list.appendChild(document.createElement("div"));
+        return (): void => {
+          calls.push(id);
+        };
+      },
+    });
+    const a = document.createElement("div");
+    const b = document.createElement("div");
+    renderMenu(a, [mkNode("a")], { ...(makeDeps() as any), renderCustomDirect: true });
+    renderMenu(b, [mkNode("b")], { ...(makeDeps() as any), renderCustomDirect: true });
+    expect(calls).toEqual([]);
+
+    disposeCustomCleanups();
+    expect([...calls].sort()).toEqual(["a", "b"]);
+    // 幂等：表已清空，二次全清不再触发（dispose 与 overlay 兜底双调无害）
+    disposeCustomCleanups();
+    expect([...calls].sort()).toEqual(["a", "b"]);
   });
 });
 

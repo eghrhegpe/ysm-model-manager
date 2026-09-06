@@ -29,7 +29,12 @@ import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
-import { clearFolderCollapsedState, renderAdapterPanelContent, renderMenu } from "./render.ts";
+import {
+  clearFolderCollapsedState,
+  disposeCustomCleanups,
+  renderAdapterPanelContent,
+  renderMenu,
+} from "./render.ts";
 import { buildRolesSchema, motionDetailView, roleBaseName } from "./roles.ts";
 import {
   buildCameraSchema,
@@ -617,6 +622,7 @@ export function mountPreviewRootMenu(
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）
       menu.dispose();
+      disposeCustomCleanups(); // renderCustom 逃生舱 cleanup（如骨骼面板的 viewContainer raycaster listener）——菜单销毁即摘，防跨会话泄漏
       dock.remove();
       popup.remove();
     },

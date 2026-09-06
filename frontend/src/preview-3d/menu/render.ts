@@ -450,6 +450,45 @@ function rmAppendLeaf(container: HTMLElement, node: PreviewMenuNode, deps: Rende
 // renderMenu — 主函数（分派器，≤25 行）
 // ===================================================================
 
+// ===================================================================
+// renderCustom 逃生舱 cleanup 注册表（生命周期收编，2026-09）
+// ===================================================================
+// 背景：node-types.ts 声明 renderCustom 可返回 cleanup（(() => void) | void），但渲染器此前
+// 两处调用都丢弃返回值——逃生舱语义残缺。收编：渲染器按容器持有 cleanup，重渲染前先清旧、
+// 菜单 dispose 时全清。任何 renderCustom 逃生舱自动获得正确生命周期，无需各自手搓。
+// 注：这是「面板级」生命周期，与「模型级」兜底（bones 的 cleanupRef，见 bones-panel-node.ts）
+// 并列——两者持同一 cleanup，renderer 实现幂等，双清无害。
+const customCleanups = new Map<HTMLElement, () => void>();
+
+/** 逃生舱挂载：容器已有旧 cleanup → 先调（重入清理）；renderCustom 返回新 cleanup → 持有。 */
+function runCustomMount(
+  container: HTMLElement,
+  // biome-ignore lint/suspicious/noConfusingVoidType: 与 node-types.ts renderCustom 同契约（void 表「cleanup 或空」），改 undefined 会连锁破坏全部实现点
+  render: (el: HTMLElement, close?: () => void) => (() => void) | void,
+  closePopup?: () => void,
+): void {
+  const prev = customCleanups.get(container);
+  if (prev) {
+    prev();
+    customCleanups.delete(container);
+  }
+  const cleanup = render(container, closePopup);
+  if (typeof cleanup === "function") customCleanups.set(container, cleanup);
+}
+
+/**
+ * 全清挂载中 cleanup（菜单 dispose 由 core.ts 调用）。cleanup 幂等，重复调用无害。
+ *
+ * 刻意**不**挂 onOverlayStyleTargetReset：该钩子每次 mount 都会触发（见 mount-preview-core.ts
+ * 的 setOverlayStyleTarget），而本表是模块级共享——全清会误伤并行挂载会话中仍存活的骨骼面板
+ * （listener 被摘而面板 DOM 仍在 → 点击拾取静默失效，需重开面板才恢复）。
+ * dispose 才是唯一明确的「这个菜单没了」信号，只在该时机全清。
+ */
+export function disposeCustomCleanups(): void {
+  for (const c of customCleanups.values()) c();
+  customCleanups.clear();
+}
+
 export function renderMenu(
   container: HTMLElement,
   nodes: PreviewMenuNode[],
@@ -484,8 +523,9 @@ export function renderMenu(
       rmAppendDecor(container, node);
     } else if (node.kind === "custom" && deps.renderCustomDirect && node.renderCustom) {
       // 面板内容语义：直接调 renderCustom(container) 填充（schema 面板路径；
-      // closePopup 可选，MikuMikuAR 单参用法兼容）。
-      node.renderCustom(container);
+      // closePopup 可选，MikuMikuAR 单参用法兼容）。cleanup 由注册表持有——
+      // 重渲染前先清旧（runCustomMount），取代逃生舱自搓 cleanupRef。
+      runCustomMount(container, node.renderCustom);
     } else {
       rmAppendLeaf(container, node, deps);
     }
@@ -538,7 +578,8 @@ export function renderAdapterPanelContent(
         `[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`,
       );
     }
-    node.renderCustom(list, deps.hideMenu);
+    // cleanup 由注册表持有（生命周期收编：重渲染前先清旧、dispose 全清——取代 adapter 手动 cleanupRef）
+    runCustomMount(list, node.renderCustom, deps.hideMenu);
     return true;
   }
   return false;

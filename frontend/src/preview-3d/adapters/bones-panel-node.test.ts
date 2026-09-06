@@ -1,6 +1,6 @@
 // ===== bones-panel-node.ts 测试（通用骨骼面板菜单项工厂）=====
 // 覆盖：节点形状（id/icon/labelKey/fallback/kind/dockGroup/renderCustom）
-// / null 守卫（viewContainer/camera/scene 任一缺失早 return）/ cleanup 重入清理 /
+// / null 守卫（viewContainer/camera/scene 任一缺失早 return）/ cleanup 双持有者 /
 // tree=null 走 makeBonePanelRenderer 空态（让被委托函数自己处理，工厂不二次包装）。
 // 4 个 adapter 的 menuItems 测试覆盖「是否有 bones 项」，本测覆盖「骨头项形状契约」。
 
@@ -119,7 +119,7 @@ describe("makeBonesPanelItem", () => {
     expect(ctx!.scene).toBe(scene);
   });
 
-  it("cleanupRef 重入清理：第二次 renderCustom 前先调上一次 cleanup 并置 null", () => {
+  it("cleanup 双持有者：renderCustom 返回 cleanup 且同一函数写回 cleanupRef", () => {
     const { viewContainer, camera, scene } = makeCtx();
     const cleanupRef: { current: (() => void) | null } = { current: null };
     const item = makeBonesPanelItem({
@@ -127,20 +127,46 @@ describe("makeBonesPanelItem", () => {
       viewContainer, camera, scene,
     });
     const list = document.createElement("div");
-    // 第一次挂载：mock renderer 返回的 cleanup 我们替换成 spy
-    let firstCleanupCalled = 0;
+    // mock renderer 返回的 cleanup 换成 spy，观察谁在什么时候调它
+    let cleanupCalls = 0;
     vi.mocked(makeBonePanelRenderer).mockReturnValueOnce(() => {
-      return (): void => { firstCleanupCalled++; };
+      return (): void => { cleanupCalls++; };
     });
-    item.renderCustom!(list);
-    expect(cleanupRef.current).toBeTypeOf("function");
-    expect(firstCleanupCalled).toBe(0);
 
-    // 第二次挂载：工厂应先调第一次的 cleanup，再调 makeBonePanelRenderer
+    const returned = item.renderCustom!(list);
+    // ① 面板级：return 给渲染器（render.ts runCustomMount 按容器持有，重渲染前先清旧）
+    expect(returned).toBeTypeOf("function");
+    // ② 模型级：同一 cleanup 写回 caller 的 cleanupRef（adapter.dispose 时摘 listener）
+    expect(cleanupRef.current).toBe(returned);
+    // 工厂只创建、不执行——挂载期不调 cleanup
+    expect(cleanupCalls).toBe(0);
+
+    // 重入清理由渲染器负责（render.ts runCustomMount），工厂不自行调旧 cleanup
     item.renderCustom!(list);
-    expect(firstCleanupCalled).toBe(1);
-    expect(cleanupRef.current).not.toBeNull(); // 新 cleanup 写回
+    expect(cleanupCalls).toBe(0);
+    expect(cleanupRef.current).not.toBeNull(); // 新 cleanup 覆盖写回
     expect(makeBonePanelRenderer).toHaveBeenCalledTimes(2);
+
+    // 模型级兜底通道可用：adapter.dispose 调 cleanupRef.current 即摘 listener
+    cleanupRef.current!();
+    expect(cleanupCalls).toBe(0); // 已换成第二次的 cleanup（默认 mock），首次 spy 不再被调
+  });
+
+  it("模型级兜底：adapter.dispose 调 cleanupRef.current 即执行 renderer cleanup", () => {
+    const { viewContainer, camera, scene } = makeCtx();
+    const cleanupRef: { current: (() => void) | null } = { current: null };
+    const item = makeBonesPanelItem({
+      tree: null, cleanupRef,
+      viewContainer, camera, scene,
+    });
+    let cleanupCalls = 0;
+    vi.mocked(makeBonePanelRenderer).mockReturnValueOnce(() => {
+      return (): void => { cleanupCalls++; };
+    });
+    item.renderCustom!(document.createElement("div"));
+    // 模拟 adapter.dispose（模型卸载而菜单仍存活）
+    cleanupRef.current?.();
+    expect(cleanupCalls).toBe(1);
   });
 
   it("tree=null 透传：工厂不二次包装空态（让 makeBonePanelRenderer 自己处理，vrm-bone-ui.ts L48-58）", () => {

@@ -1,13 +1,12 @@
 // ===== bones-panel-node.ts — 通用骨骼面板菜单项工厂（ADR-077 + ADR-074 S2 复用）=====
 // 4 个 3D adapter（ysm / vrm / mmd / fbx）共享同一个调用模式：
-//   renderCustom = (list) => {
-//     if (cleanupRef.current) { cleanupRef.current(); cleanupRef.current = null; }
-//     cleanupRef.current = makeBonePanelRenderer(tree)(list, { viewContainer, camera, scene });
-//   }
+//   renderCustom = (list) => makeBonePanelRenderer(tree)(list, { viewContainer, camera, scene })
 // 此前 4 段 ~15 行代码高度同构（仅是否 null 守卫不同）——抽本工厂：
 //   - 统一空守卫：viewContainer/camera/scene 任一缺失时早 return（采纳 mmd 写法 L1358-1361）
-//   - 统一 cleanup 重入清理（同一 panel 重渲染前先清理旧 renderer，防 listener 累积）
-// 4 个 adapter 的 menuItems 中 bones 项从 ~15 行 → 1 行 factory 调用。
+//   - cleanup 双持有者（2026-09 生命周期收编，单一创建点）：
+//       ① 渲染器（render.ts runCustomMount 按容器持有）——面板级：重渲染前先清旧、菜单 dispose 全清
+//       ② caller 的 cleanupRef——模型级：adapter.dispose 时摘（模型卸载而菜单仍存活的兜底）
+//     两者持同一 cleanup（renderer 实现幂等：disposed 置位 + removeEventListener），双清无害。
 //
 // 为什么不走 schema 声明式（与 litematic 对齐）：
 //   litematic 是「6 个固定控件」（select / slider / divider），schema 自然；
@@ -29,17 +28,19 @@ import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
 
 /**
  * 骨骼面板清理引用（4 adapter 共用统一接口，ADR-074 S2）。
- * caller 持此 ref，dispose 时同步调；重入时先清再写（防 listener 累积）。
+ * caller 持此 ref，**模型 dispose 时调用**——摘 viewContainer 上的 raycaster listener
+ * （listener 闭包引用模型 scene/tree，模型卸载后必须摘，即使菜单面板仍开着）。
+ * 面板级重入清理由渲染器 render.ts 负责，本 ref 仅作模型级兜底（双清幂等，无害）。
  */
 export interface BonePanelCleanupRef {
   current: (() => void) | null;
 }
 
-/** 工厂入参：caller 持 cleanupRef（与 panel 生命周期对齐，dispose 时同步调） */
+/** 工厂入参：caller 提供骨骼树 + 面板上下文（核心未填充时工厂空守卫早 return） */
 export interface BonesPanelItemOpts {
   /** 骨骼树（YSM spec / VRM humanoid / FBX SkinnedMesh 统一抽象；null 走 makeBonePanelRenderer 空态） */
   tree: BoneTree | null;
-  /** 重入时调用的清理函数 ref（adapter 持此 ref，dispose 时也调） */
+  /** 清理函数 ref（adapter 持此 ref，模型 dispose 时调；渲染器另持同一 cleanup 管面板生命周期） */
   cleanupRef: BonePanelCleanupRef;
   /** 面板上下文：允许 null/undefined（核心未填充时面板不应渲染——mmd L1358-1361 守卫模式，
    *  caller 类型多为 `T | null | undefined`；工厂内部 falsy 检查统一覆盖两者） */
@@ -52,6 +53,8 @@ export interface BonesPanelItemOpts {
  * 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定：
  *   id="bones" / icon="🦴" / dockGroup="motion" / kind="panel"
  * caller 决定「是否 push」（有无骨骼 / 有无 bonePanel）。
+ * renderCustom 把 renderer 的 cleanup 同时交给两方：return 给渲染器（面板级生命周期），
+ * 写回 caller 的 cleanupRef（模型级 dispose 兜底）。两者持同一函数，幂等。
  */
 export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
   return {
@@ -61,19 +64,20 @@ export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
     fallback: "骨骼",
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
-    renderCustom: (list): void => {
+    // biome-ignore lint/suspicious/noConfusingVoidType: 同 node-types.ts renderCustom 契约（void 表「cleanup 或空」），改 undefined 连锁破坏 6+ 实现点
+    renderCustom: (list): (() => void) | void => {
       // 空守卫：核心未填充时不渲染（mmd 写法统一——4 个 adapter 共用同一守卫语义）
       if (!opts.viewContainer || !opts.camera || !opts.scene) return;
-      // 重入清理：同一 panel 重复挂载前先清理旧 renderer（含 viewContainer raycaster listener 摘除）
-      if (opts.cleanupRef.current) {
-        opts.cleanupRef.current();
-        opts.cleanupRef.current = null;
-      }
-      opts.cleanupRef.current = makeBonePanelRenderer(opts.tree)(list, {
+      const cleanup = makeBonePanelRenderer(opts.tree)(list, {
         viewContainer: opts.viewContainer,
         camera: opts.camera as THREE.PerspectiveCamera, // makeBonePanelRenderer 类型要求 PerspectiveCamera，caller 契约保证
         scene: opts.scene,
       });
+      // 模型级兜底句柄：adapter.dispose 摘 listener（模型卸载而菜单存活的场景唯一防线）。
+      // 渲染器可能已先清过（重入/dispose）——cleanup 幂等，重复调用无害。
+      opts.cleanupRef.current = cleanup;
+      // 面板级生命周期：交渲染器持有（重渲染前先清旧、菜单 dispose 全清）
+      return cleanup;
     },
   };
 }

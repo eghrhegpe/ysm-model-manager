@@ -267,6 +267,10 @@ function singleBenchValidateAndRender(
   return params;
 }
 
+/** single-bench 汇总行标签（契约 = go/cli/concurrent.go printSingleModelStages 输出，
+ *  perf.test.ts 夹具锁定；本仓 CLI 文案不做 i18n，Go 侧改名需同步此处） */
+const BENCH_TOTAL_LABEL = "总计";
+
 function singleBenchParseStages(
   output: string,
 ): { stages: SingleBenchStage[]; total: number } | null {
@@ -281,7 +285,7 @@ function singleBenchParseStages(
     const m = line.match(stageRe);
     if (!m) continue;
     const name = m[1].trim();
-    if (name === "总计") continue;
+    if (name === BENCH_TOTAL_LABEL) continue;
     const ms = parseFloat(m[2]);
     const status = m[3] ?? "";
     stages.push({ name, ms, status });

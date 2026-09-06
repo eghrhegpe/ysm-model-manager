@@ -151,8 +151,13 @@ function cmPgApplyLock(
         pctEl.style.fontSize = "9px";
         pctEl._dots = 0;
         pctEl._dotTimer = setInterval(() => {
-          if (!pctEl || pctEl.textContent === "100%") {
-            if (pctEl?._dotTimer) clearInterval(pctEl._dotTimer);
+          // isConnected 守卫：pctEl 被重渲染/移除后文本永远停在 ⏳，原判据（textContent
+          // 变 100%）不再触发 → interval 悬挂持有 detached 节点。脱文档即自清。
+          if (!pctEl.isConnected || pctEl.textContent === "100%") {
+            if (pctEl._dotTimer) {
+              clearInterval(pctEl._dotTimer);
+              pctEl._dotTimer = null;
+            }
             return;
           }
           pctEl._dots = ((pctEl._dots || 0) + 1) % 4;

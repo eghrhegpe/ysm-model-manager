@@ -308,6 +308,55 @@ describe("mountPreviewRootMenu", () => {
     expect(unsub).toHaveBeenCalled();
   });
 
+  it("dispose 清 folder 折叠态（render.ts 模块级 Map 不残留到下次 mount）", () => {
+    // 面板带 folder（defaultOpen: false = 默认折叠）；先展开记折叠态 → dispose → 重挂载应回默认折叠
+    const folderPanel = {
+      id: "folder-panel",
+      kind: "panel" as const,
+      dockGroup: "model" as const,
+      children: [
+        {
+          id: "fld",
+          kind: "folder" as const,
+          fallback: "组",
+          defaultOpen: false,
+          children: [{ id: "leaf", kind: "field" as const, value: "x" }],
+        },
+      ],
+    };
+    const handle = mountPreviewRootMenu(overlay, makeCtx());
+    handle.setAdapterItems([folderPanel]);
+    handle.openPanel("folder-panel");
+    const header = overlay.querySelector('[data-testid="fld"] .cap-section-header') as HTMLElement;
+    header.click();
+    expect(
+      (overlay.querySelector('[data-testid="fld-body"]') as HTMLElement).style.display,
+    ).toBe("block");
+    handle.dispose();
+    // 重挂载同一面板 → 折叠态记忆已清空，回 defaultOpen（折叠）
+    const handle2 = mountPreviewRootMenu(overlay, makeCtx());
+    handle2.setAdapterItems([folderPanel]);
+    handle2.openPanel("folder-panel");
+    expect(
+      (overlay.querySelector('[data-testid="fld-body"]') as HTMLElement).style.display,
+    ).toBe("none");
+    handle2.dispose();
+  });
+
+  it("setAdapterItems 重复 id / 与 CORE_MENU_ITEMS 冲突 → 抛错阻断（ADR-085 S1）", () => {
+    const handle = mountPreviewRootMenu(overlay, makeCtx());
+    expect(() =>
+      handle.setAdapterItems([
+        { id: "dup", kind: "panel" as const, dockGroup: "model" as const },
+        { id: "dup", kind: "panel" as const, dockGroup: "model" as const },
+      ]),
+    ).toThrow(/重复 id/);
+    expect(() =>
+      handle.setAdapterItems([{ id: "roles", kind: "panel" as const, dockGroup: "model" as const }]),
+    ).toThrow(/与 CORE_MENU_ITEMS 冲突/);
+    handle.dispose();
+  });
+
   it("角色面板加载入口：无 siblings → 显示空态（路径输入仍在，类型 tab 由 adapter 注入）", () => {
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => [] }));
     const modelGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "model")!.id;

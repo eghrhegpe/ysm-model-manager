@@ -28,7 +28,7 @@ import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
-import { renderAdapterPanelContent, renderMenu } from "./render.ts";
+import { clearFolderCollapsedState, renderAdapterPanelContent, renderMenu } from "./render.ts";
 import { buildRolesSchema, motionDetailView, roleBaseName } from "./roles.ts";
 import {
   buildCameraSchema,
@@ -260,15 +260,18 @@ export function buildPreviewMenuRouters(
   return routers;
 }
 
+/** 类型守卫：string → CorePanelId 收窄（替代 `as readonly string[]` 强转，联合收窄收益保留） */
+function isCorePanelId(id: string): id is CorePanelId {
+  return (CORE_PANEL_IDS as readonly string[]).includes(id);
+}
+
 /** 收 key 后的运行时安全取值：panel id 字符串 → core builder（非 core 面板返回 undefined）。
  *  renderPreviewPanel 的分派入口吃任意 node.id（含 adapter 面板），类型窄化后需此守卫桥接。 */
 export function corePanelBuilder(
   routers: PreviewMenuRouters,
   id: string,
 ): ((menu?: SlideMenuHandle) => PreviewMenuNode[]) | undefined {
-  return (CORE_PANEL_IDS as readonly string[]).includes(id)
-    ? routers.schemaBuilders[id as CorePanelId]
-    : undefined;
+  return isCorePanelId(id) ? routers.schemaBuilders[id] : undefined;
 }
 
 /** dispose 时注销 core 六面板的 registry 注册（与注册循环同 key 集）——
@@ -608,6 +611,7 @@ export function mountPreviewRootMenu(
       abortTap();
       disposeEnvSubscriptions(); // 清环境面板 cap 订阅，防 cap 单例持有过期 menu 引用
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
+      clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）
       menu.dispose();
       dock.remove();
       popup.remove();

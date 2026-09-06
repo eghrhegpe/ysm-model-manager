@@ -62,6 +62,7 @@ export function capControlToNode(c: MenuControlDef): PreviewMenuNode {
   if (c.fallback) node.fallback = c.fallback;
   if (c.hintKey) node.hintKey = c.hintKey;
   if (c.visibleWhen) node.visibleWhen = c.visibleWhen;
+  if (c.settingsOrder !== undefined) node.settingsOrder = c.settingsOrder;
 
   if (c.kind === "divider") return node; // divider 无 control
 

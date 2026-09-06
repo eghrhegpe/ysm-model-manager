@@ -238,12 +238,17 @@ export function collectSettingsCapControls(): PreviewMenuNode[] {
       }
       continue;
     }
-    // 未迁移 cap：MenuControlDef → 节点桥接后按 settingsOrder 收集（保序）
-    const nodes = capControlsToNodes(cap.getMenuControls());
-    for (const n of nodes) {
-      if (n.settingsOrder === undefined) continue;
-      if (n.kind === "folder") continue;
-      out.push(n);
+    // 未迁移 cap：MenuControlDef → 节点桥接后按 settingsOrder 收集（保序）。
+    // capControlsToNodes 把同 group 控件包进 folder，settings 扁平视图需递归展平
+    // 子节点（folder 本身无 settingsOrder，但子节点可能有）。
+    for (const n of capControlsToNodes(cap.getMenuControls())) {
+      if (n.kind === "folder" && n.children) {
+        for (const c of n.children) {
+          if (c.settingsOrder !== undefined) out.push(c);
+        }
+      } else if (n.settingsOrder !== undefined) {
+        out.push(n);
+      }
     }
   }
   out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));

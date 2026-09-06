@@ -147,6 +147,19 @@ describe("WaterCapability", () => {
 });
 
 describe("WaterCapability — 水池几何 / 嵌套参数", () => {
+  it("[不变式] setWaterMode 后 variant.mode 与 params.mode 恒等（判别联合判别键一致性）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const body = () => (cap as unknown as { water: { mode: string } }).water;
+    expect(body().mode).toBe("film");
+    cap.setWaterMode("pool");
+    expect(body().mode).toBe("pool");
+    expect(cap.getWaterMode()).toBe("pool");
+    cap.setWaterMode("film");
+    expect(body().mode).toBe("film");
+    expect(cap.getWaterMode()).toBe("film");
+  });
+
   it("初始 film 模式 water 是单 Mesh；setWaterMode('pool') 后 ysm-ground-water 下 mesh≥5", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });

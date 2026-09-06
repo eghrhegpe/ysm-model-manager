@@ -26,6 +26,12 @@ import { DEFAULT_WATER_PARAMS, WATER_MODES } from "./water-state.ts";
 export type { WaterMode, WaterParams };
 export { DEFAULT_WATER_PARAMS, WATER_MODES };
 
+/** 水面渲染体判别联合：film 单 mesh（root 即顶水面）；pool 为 Group + 预捕获顶水面引用 */
+type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
+type WaterRenderBody =
+  | { mode: "film"; root: WaterTopMesh; mat: THREE.MeshPhysicalMaterial }
+  | { mode: "pool"; root: THREE.Group; top: WaterTopMesh; topMat: THREE.MeshPhysicalMaterial };
+
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
   readonly labelKey = "preview.water";
@@ -33,8 +39,10 @@ export class WaterCapability implements SceneCapability {
   readonly descKey = "preview.waterDesc";
 
   private scene: THREE.Scene;
-  /** 水面容器：film 模式是 Mesh，pool 模式是 Group（含顶/底/四壁）；name 恒为 "ysm-ground-water" */
-  private water: THREE.Object3D;
+  /** 水面渲染体判别联合：mode 即判别键，variant 内引用创建时已定型，消费点零断言
+   *  （重建路径仅 createFilmBody/createPoolBody 两个写入点，类型与运行时天然同步）；
+   *  root 恒为 name="ysm-ground-water" 的场景挂载对象（film=root 即 mesh，pool=root 即 Group） */
+  private water: WaterRenderBody;
   private waterTime: { value: number }; // 水面波纹动画 time uniform（波速倍率 = waveSpeed）
   private params: WaterParams;
   private enabled: boolean;
@@ -145,7 +153,7 @@ export class WaterCapability implements SceneCapability {
   }
 
   /** 遍历收集某个容器（Mesh/Group）下的所有 mesh，用于同步 material 参数 */
-  private collectWaterMeshes(root: THREE.Object3D = this.water): THREE.Mesh[] {
+  private collectWaterMeshes(root: THREE.Object3D = this.water.root): THREE.Mesh[] {
     const out: THREE.Mesh[] = [];
     root.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -154,28 +162,24 @@ export class WaterCapability implements SceneCapability {
     return out;
   }
 
-  /** 从 water 根容器中筛选出「顶水面」（波浪材质）：film 直接 this.water 作为 mesh；pool 下通过 name === "ysm-water-top" 匹配 */
-  private findTopWater(): THREE.Mesh | null {
-    if (this.params.mode === "film" && (this.water as THREE.Mesh).isMesh) {
-      return this.water as THREE.Mesh;
-    }
-    const meshes = this.collectWaterMeshes(this.water);
-    return meshes.find((m) => m.name === "ysm-water-top") ?? null;
+  /** 顶水面（波浪材质）：film 即 root 本体；pool 为创建时预捕获的 top 引用（零运行时查找） */
+  private findTopWater(): WaterTopMesh {
+    return this.water.mode === "film" ? this.water.root : this.water.top;
   }
 
   /** 构造 film 模式水面（贴地薄水膜，旧实现语义兼容 + 升级到 PhysicalMaterial 但关闭 transmission） */
-  private createFilmMesh(): THREE.Mesh {
+  private createFilmBody(): Extract<WaterRenderBody, { mode: "film" }> {
     const waterGeo = new THREE.PlaneGeometry(this.params.size, this.params.size, 32, 32);
     const waterMat = this.buildWaveWaterMaterial({ forPool: false });
-    const water = new THREE.Mesh(waterGeo, waterMat);
+    const water: WaterTopMesh = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
     water.position.y = GROUND_LAYER_OFFSETS.waterFilm;
     water.name = "ysm-ground-water";
-    return water;
+    return { mode: "film", root: water, mat: waterMat };
   }
 
   /** 构造 pool 模式盒式凹形水池：顶水面（带波浪）+ 底（贴地）+ 四壁（内外层双材质） */
-  private createPoolGroup(): THREE.Group {
+  private createPoolBody(): Extract<WaterRenderBody, { mode: "pool" }> {
     const size = this.params.size;
     const half = size / 2;
     const h = Math.max(0.01, this.params.poolHeight);
@@ -186,11 +190,12 @@ export class WaterCapability implements SceneCapability {
     // 顶水面（带波浪 shader，位于 y = h）
     const topGeo = new THREE.PlaneGeometry(size, size, 32, 32);
     const topMat = this.buildWaveWaterMaterial({ forPool: true });
-    const top = new THREE.Mesh(topGeo, topMat);
+    const top: WaterTopMesh = new THREE.Mesh(topGeo, topMat);
     top.rotation.x = -Math.PI / 2;
     top.position.y = h;
     top.name = "ysm-water-top";
     group.add(top);
+    // 捕获顶水面引用进判别联合（消费点免 traverse 查找 + 零断言）
 
     // 底平面（贴 y=0，用 poolWallColor 实色，放在水里防止外部透过去看到地下空洞）
     const bottomMat = new THREE.MeshStandardMaterial({
@@ -287,13 +292,13 @@ export class WaterCapability implements SceneCapability {
       group.add(inner, outer);
     }
 
-    return group;
+    return { mode: "pool", root: group, top, topMat };
   }
 
   /** 释放旧 water 容器（递归所有子 mesh 的 geometry + material + normalMap），并从 scene 暂移除 */
   private disposeWater(): void {
-    if (this.water.parent) this.water.parent.remove(this.water);
-    const meshes = this.collectWaterMeshes(this.water);
+    if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
+    const meshes = this.collectWaterMeshes();
     for (const m of meshes) {
       m.geometry.dispose();
       const mats = Array.isArray(m.material) ? m.material : [m.material];
@@ -318,17 +323,16 @@ export class WaterCapability implements SceneCapability {
    * 重建 this.water 根容器（film↔pool 切换入口，new 时初次构建传 initial=true 不 dispose 旧实例）。
    * 重建后保持 name="ysm-ground-water"，scene.add 幂等由 apply() 兜底。
    */
-  private rebuildWaterContainer(initial = false): THREE.Object3D {
+  private rebuildWaterContainer(initial = false): WaterRenderBody {
     // 重建前记录旧容器是否已在场景内（apply 过），重建后需原样挂回
-    const wasInScene = !initial && this.water.parent != null;
+    const wasInScene = !initial && this.water.root.parent != null;
     if (!initial) this.disposeWater();
-    const container = this.params.mode === "pool" ? this.createPoolGroup() : this.createFilmMesh();
+    this.water = this.params.mode === "pool" ? this.createPoolBody() : this.createFilmBody();
     // 初始化或模式切换后的可见性：由 syncWaterVisibility 统一裁决
-    this.water = container;
     this.syncWaterVisibility();
     // 旧 water 本来就在场景里（apply 过）→ 重建完重新挂进去；新容器 parent 此刻为 null，不能靠 parent 判
     if (wasInScene && this.enabled) {
-      this.scene.add(this.water);
+      this.scene.add(this.water.root);
     }
     return this.water;
   }
@@ -339,26 +343,26 @@ export class WaterCapability implements SceneCapability {
     const filmOn = w.mode === "film" && w.wetness > 0;
     const poolOn = w.mode === "pool";
     const shouldShow = w.enabled && (filmOn || poolOn);
-    this.water.visible = shouldShow;
+    this.water.root.visible = shouldShow;
   }
 
   /** 推进水面波纹动画（render loop 调用） */
   update(dt: number): void {
-    if (!this.enabled || !this.params.enabled || !this.water.visible) return;
+    if (!this.enabled || !this.params.enabled || !this.water.root.visible) return;
     this.waterTime.value += dt * this.params.waveSpeed;
   }
 
   /** 挂入场景（对齐 SceneCapability.apply 口径） */
   apply(): void {
     if (!this.enabled) return;
-    if (!this.water.parent) this.scene.add(this.water);
+    if (!this.water.root.parent) this.scene.add(this.water.root);
   }
 
   setEnabled(v: boolean): void {
     this.enabled = v;
     if (v) this.apply();
     else {
-      if (this.water.parent) this.water.parent.remove(this.water);
+      if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     }
   }
 
@@ -398,9 +402,8 @@ export class WaterCapability implements SceneCapability {
   // ── 水面参数（film + pool 通用）──
   setWetness(v: number): void {
     this.params.wetness = Math.max(0, Math.min(1, v));
-    if (this.params.mode === "film") {
-      const top = this.water as THREE.Mesh; // film 模式 this.water 恒为 Mesh
-      const mat = top.material as THREE.MeshPhysicalMaterial;
+    if (this.water.mode === "film") {
+      const mat = this.water.mat;
       mat.opacity = this.params.waterOpacity * this.params.wetness;
       // 反射回 uniform：onBeforeCompile 注入的 uBaseOpacity 是 snapshot，material.opacity 变化同步
       if (
@@ -424,8 +427,8 @@ export class WaterCapability implements SceneCapability {
     this.params.waterColor = hex;
     // film：顶层 mesh；pool：顶 mesh + 四壁 inner mesh
     const targets =
-      this.params.mode === "film"
-        ? [this.water as THREE.Mesh]
+      this.water.mode === "film"
+        ? [this.water.root]
         : this.collectWaterMeshes().filter(
             (m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"),
           );
@@ -442,7 +445,7 @@ export class WaterCapability implements SceneCapability {
     this.params.waterOpacity = Math.max(0, Math.min(1, v));
     const top = this.findTopWater();
     if (top) {
-      const mat = top.material as THREE.MeshPhysicalMaterial;
+      const mat = top.material;
       const newOp =
         this.params.mode === "film"
           ? this.params.waterOpacity * this.params.wetness
@@ -459,7 +462,7 @@ export class WaterCapability implements SceneCapability {
     this.params.normalStrength = Math.max(0, Math.min(1, v));
     const top = this.findTopWater();
     if (top) {
-      const mat = top.material as THREE.MeshStandardMaterial;
+      const mat = top.material;
       mat.normalScale?.set(this.params.normalStrength, this.params.normalStrength);
     }
   }
@@ -504,7 +507,7 @@ export class WaterCapability implements SceneCapability {
     // 直接修改 uniform：material 的 userData.shader（若已编译）中的 uRoundness
     const top = this.findTopWater();
     if (top) {
-      const mat = top.material as THREE.MeshPhysicalMaterial;
+      const mat = top.material;
       const shader = (
         mat as unknown as {
           userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
@@ -682,7 +685,7 @@ export class WaterCapability implements SceneCapability {
 
   /** 移除并释放 */
   dispose(): void {
-    if (this.water.parent) this.water.parent.remove(this.water);
+    if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     this.disposeWater();
     // 法线贴图缓存在此统一释放（重建路径 disposeWater 共用缓存，不在此拆）
     if (this.normalMapCache) {

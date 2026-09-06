@@ -79,6 +79,7 @@ auto_fields:
     - buildPmxScene
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
+    - buildRolesSchema
     - buildSceneMesh
     - buildSettingsControls
     - buildSettingsSchema
@@ -87,6 +88,7 @@ auto_fields:
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
     - buildStatsPanel
+    - buildSwitchNodes
     - buildVrmBoneNodes
     - buildVrmBoneTree
     - buildVrmScene
@@ -105,6 +107,7 @@ auto_fields:
     - CapabilityMap
     - captureTextureName
     - cleanupPreview
+    - clearFolderCollapsedState
     - clearLoadTraces
     - clearModelRoots
     - clearSceneCaps
@@ -205,8 +208,6 @@ auto_fields:
     - FbxSkeletonData
     - FieldKind
     - FieldRestorer
-    - fillRoles
-    - fillSwitch
     - filterAnimFiles
     - findAncestorBoneId
     - fitCameraToRoots
@@ -220,7 +221,6 @@ auto_fields:
     - formatCapSliderValue
     - frameCameraSide
     - FrameSideOptions
-    - frRoleRowClass
     - generateSurfacePixels
     - getActiveInputSession
     - getBoneDetail
@@ -316,6 +316,7 @@ auto_fields:
     - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter
+    - makeSwitchState
     - makeUnifiedPickHandler
     - makeVrmAdapter
     - makeYsmAdapter
@@ -515,6 +516,7 @@ auto_fields:
     - restoreState
     - ringLog
     - roleBaseName
+    - RolesSchemaDeps
     - runFailedMountCleanup
     - runFullCleanup
     - safeDispose
@@ -591,8 +593,11 @@ auto_fields:
     - subscribeSettings
     - surfaceSpecKey
     - SwitchContext
+    - switchNormPath
     - switchPreview
+    - SwitchState
     - switchTabHighlightBg
+    - switchTabLabelOf
     - switchToSession
     - syncLightTargetFromContent
     - TdKeyAction

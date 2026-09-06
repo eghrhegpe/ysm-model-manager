@@ -52,18 +52,32 @@ function logHydrateFlagOf(ring: Array<Record<string, unknown>>): "import" | "run
   return ring === webImportLogs ? "import" : "runtime";
 }
 
-/** 内存环首次使用时从 IDB 恢复上会话日志（幂等：hydrated 标记防重复读） */
+// P0 修复（hydrate 竞态）：按 ring 持有一个 hydrate Promise，并发 pushWebLog 共享同一次 hydrate
+const webLogHydrating: Record<"import" | "runtime", Promise<void> | null> = {
+  import: null,
+  runtime: null,
+};
+
+/** 内存环首次使用时从 IDB 恢复上会话日志（幂等：hydrate Promise 锁防并发重复读） */
 async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void> {
   const flag = logHydrateFlagOf(ring);
+  // 已有进行中的 hydrate → 复用同一 Promise，避免两次 hydrate 读到同一旧数据后互相覆盖
+  const pending = webLogHydrating[flag];
+  if (pending) return pending;
   if (webLogHydrated[flag]) return;
-  try {
-    const saved = await idbGet<unknown>("config", logKeyOf(ring));
-    if (Array.isArray(saved)) ring.push(...(saved as Array<Record<string, unknown>>));
-  } catch {
-    // IDB 不可用：保持空环；仅首次失败时 warn，与 idb.ts:123 对齐
-    if (!webLogHydrated[flag]) console.warn("[web-store] IDB 不可用，日志无法恢复");
-  }
-  webLogHydrated[flag] = true;
+  const p = (async () => {
+    try {
+      const saved = await idbGet<unknown>("config", logKeyOf(ring));
+      if (Array.isArray(saved)) ring.push(...(saved as Array<Record<string, unknown>>));
+    } catch {
+      if (!webLogHydrated[flag]) console.warn("[web-store] IDB 不可用，日志无法恢复");
+    } finally {
+      webLogHydrated[flag] = true;
+      webLogHydrating[flag] = null;
+    }
+  })();
+  webLogHydrating[flag] = p;
+  return p;
 }
 
 /** 追加日志：先 hydrate（合并上会话旧日志，防 fresh 会话先写后读覆盖丢失），

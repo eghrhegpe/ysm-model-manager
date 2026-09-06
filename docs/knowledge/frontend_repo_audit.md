@@ -471,9 +471,7 @@ auto_fields:
     - fileToBase64
     - fill3DPanel
     - fillAuthorsAsync
-    - fillRoles
     - fillSearch
-    - fillSwitch
     - filterAnimFiles
     - filterModels
     - findAncestorBoneId

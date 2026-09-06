@@ -120,10 +120,11 @@ function createStatsWorker(): Worker {
  * 新建专属 worker 并补入池（瞬态 error 重试用）。
  * 绝不复用池内既有 worker：多 worker 池里其他 worker 正被并发 runWorkerQueue 持有在途
  * 请求（单 onmessage 槽位契约），复用会把对方在途回复覆盖丢弃 → 挂 60s 超时杀整池。
- * 失败返回 null（调用方按不可重试降级处理）。
+ * P0 修复：池大小受 poolSize() 硬上限保护，超限不再 push，返回 null 让调用方降级。
  */
 function spawnReplacementWorker(): Worker | null {
   try {
+    if (workers.length >= poolSize()) return null; // 池满拒扩，防瞬态错误下无限增长
     const w = createStatsWorker();
     workers.push(w);
     return w;

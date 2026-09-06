@@ -18,6 +18,7 @@ auto_fields:
     - buildMmdScene
     - buildPreviewMenuRouters
     - buildYsmScene
+    - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
     - corePanelBuilder

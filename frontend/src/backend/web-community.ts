@@ -40,9 +40,11 @@ let mergeSeq: Promise<unknown> = Promise.resolve();
 /**
  * 串行队列尾（jscpd 自克隆收敛）：runMerge 入队 → 链回序列释放 token
  * （无论成功/失败，都让下一次 merge 进队）。
+ * P0 修复：merge 失败必须传递错误，调用方才能感知失败（原实现吞错导致下次 merge 误判成功）。
  */
 function enqueueMerge(runMerge: () => Promise<[number, number]>): Promise<[number, number]> {
   const result = mergeSeq.then(runMerge);
+  // 无论成功失败都释放 token，但保留错误链路让调用方 catch
   mergeSeq = result.then(
     () => undefined,
     () => undefined,

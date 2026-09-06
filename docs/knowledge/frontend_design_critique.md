@@ -49,7 +49,6 @@ auto_fields:
     - DedupConfigShape
     - DedupSession
     - Disposable
-    - fillRoles
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps

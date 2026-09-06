@@ -51,9 +51,10 @@ export function webDirType(dir: string): string | null {
 /** 导入大小上限 100MB（对齐 import-dnd.ts MAX_FILE_SIZE，桌面 oversize 过滤同口径） */
 export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 
-/** ArrayBuffer → base64（分块，大文件避免栈溢出） */
+/** ArrayBuffer → base64（分块，大文件避免栈溢出；P0 修复：强制拷贝隔离底层 buffer，防并发读写竞态） */
 export function arrayBufferToBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
+  const copy = buf.slice(0);
+  const bytes = new Uint8Array(copy);
   let binary = "";
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {

@@ -25,10 +25,13 @@ auto_fields:
     - buildLightingSchema
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
+    - buildRolesSchema
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
     - buildStatsPanel
+    - buildSwitchNodes
+    - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
     - collectSettingsCapControls
@@ -37,12 +40,10 @@ auto_fields:
     - corePanelBuilder
     - CorePanelId
     - disposeEnvSubscriptions
-    - fillRoles
-    - fillSwitch
     - formatCapSliderValue
-    - frRoleRowClass
     - hasSceneStats
     - isPreviewFolderNode
+    - makeSwitchState
     - mergeStatsMenuItems
     - modelDetailView
     - motionDetailView
@@ -65,8 +66,12 @@ auto_fields:
     - renderMenu
     - renderPreviewPanel
     - roleBaseName
+    - RolesSchemaDeps
     - STATS_PANEL_ID
+    - switchNormPath
+    - SwitchState
     - switchTabHighlightBg
+    - switchTabLabelOf
     - unregisterCorePanelSchemas
 tests:
   - frontend/src/features/community/render.test.ts

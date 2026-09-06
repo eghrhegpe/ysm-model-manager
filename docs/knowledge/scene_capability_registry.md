@@ -24,6 +24,7 @@ auto_fields:
     - buildShadowNodes
     - buildSkyGroup
     - buildWaterGroup
+    - buildWaterNodes
     - CapabilityId
     - CapabilityMap
     - createListenerSet

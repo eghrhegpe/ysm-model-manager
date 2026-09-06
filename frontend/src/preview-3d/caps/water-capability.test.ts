@@ -585,3 +585,59 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("ground-wave-speed").getValue()).toBeCloseTo(1.8, 5);
   });
 });
+
+describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  function newCap() {
+    return new WaterCapability({ scene: new THREE.Scene() });
+  }
+
+  it("完整树 = enabled 平铺 toggle + 4 组 folder（form/look/pool/wave）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(5);
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("ground-water-enabled");
+    nodes[0]!.control!.set!(false);
+    expect(cap.getWaterEnabled()).toBe(false);
+    expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
+      "preview.waterGroupForm",
+      "preview.waterGroupLook",
+      "preview.waterGroupPool",
+      "preview.waterGroupWave",
+    ]);
+    const look = nodes[2]!;
+    expect(look.children!.map((c) => c.id)).toEqual([
+      "ground-wetness",
+      "ground-water-color",
+      "ground-water-opacity",
+      "ground-normal-strength",
+      "ground-water-clarity",
+    ]);
+  });
+
+  it("film/pool visibleWhen 谓词挂节点", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const look = nodes[2]!;
+    const wetness = look.children!.find((c) => c.id === "ground-wetness")!;
+    expect(wetness.visibleWhen?.({ "env.waterMode": "film" })).toBe(true);
+    expect(wetness.visibleWhen?.({ "env.waterMode": "pool" })).toBe(false);
+    const pool = nodes[3]!;
+    const height = pool.children!.find((c) => c.id === "ground-pool-height")!;
+    expect(height.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
+    expect(height.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
+  });
+
+  it("color/slider 节点读写闭包直连 cap", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const look = nodes[2]!;
+    const color = look.children!.find((c) => c.id === "ground-water-color")!;
+    expect(color.kind).toBe("color");
+    color.control!.set!(0x3355aa);
+    expect(cap.getWaterColor()).toBe(0x3355aa);
+    const opacity = look.children!.find((c) => c.id === "ground-water-opacity")!;
+    opacity.control!.set!(0.6);
+    expect(cap.getWaterOpacity()).toBeCloseTo(0.6, 5);
+  });
+});

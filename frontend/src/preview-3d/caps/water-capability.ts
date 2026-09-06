@@ -5,6 +5,7 @@
 // 由 scene-capability-registry 自动发现 + 菜单控件 + 持久化。
 
 import * as THREE from "three";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import {
   createListenerSet,
@@ -18,7 +19,7 @@ import {
 } from "./scene-capability.ts";
 // 菜单控件工厂已下沉 water-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
-import { buildWaterGroup } from "./water-menu.ts";
+import { buildWaterGroup, buildWaterNodes } from "./water-menu.ts";
 import type { WaterMode, WaterParams } from "./water-state.ts";
 // 状态/序列化轴（WaterParams / 默认值 / 呈现模式）已下沉 water-state.ts；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
@@ -618,6 +619,15 @@ export class WaterCapability implements SceneCapability {
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
     return buildWaterGroup(this);
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树：ground-water-enabled 平铺 toggle + 4 组 folder
+   *  （form/look/pool/wave 全原生，含 film/pool visibleWhen 谓词）。
+   *  water 无能力总开关（无 getMasterToggle）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildWaterNodes(this);
   }
 
   /** 保存状态到 localStorage（water 键；legacy "ground" 键的水字段不再由本能力写） */

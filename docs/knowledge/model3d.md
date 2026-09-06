@@ -101,6 +101,7 @@ auto_fields:
     - buildVrmBoneTree
     - buildVrmScene
     - buildWaterGroup
+    - buildWaterNodes
     - buildYsmObject
     - buildYsmScene
     - bytesToArrayBuffer

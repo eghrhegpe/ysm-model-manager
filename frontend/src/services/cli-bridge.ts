@@ -1,6 +1,14 @@
 // ===== CLI Bridge 前端封装层（ADR-049 打通期）=====
 // 封装 Wails ExecuteCLI 调用，处理 JSON 响应，提供类型安全的命令接口。
 // 网页版（browserAdapter）走 web 降级实现，桌面/Android 走 Wails 原逻辑。
+//
+// 三层兜链（命令白名单判定）：
+//   ① 动态拉取：getApp().GetAllowedCLICommands()（桌面端 Go 注册表 39 命令）
+//   ② 硬编码兜底：CLI_ALLOWLIST（web 模式 + 桌面端拉取失败时的 curated 子集 20 项）
+//   ③ web-only 短路：isWebPlatform() 直接走硬编码列表
+//
+// CLI_ALLOWLIST 是 curated 子集（有意排除需 Go 进程/落盘依赖的命令），数量差异是设计意图。
+// 详情见 frontend/src/backend/cli-allowlist.ts 文件头注释。
 
 import { getApp } from "../backend/app.ts";
 import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "../backend/cli-allowlist.ts";

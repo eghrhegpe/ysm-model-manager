@@ -14,68 +14,7 @@ import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 export type { MenuControlDef, MenuControlKind } from "../menu-node-types.ts";
 
 // PreviewMenuNode 同自共享叶（刀2 接口 getMenuNodes? 返回类型；caps 直产节点入口）
-import type { MenuControlDef, PreviewMenuNode } from "../menu-node-types.ts";
-// PreviewSnapshot 仍被下方工厂（makeSliderDef/makeColorDef visibleWhen 形参）引用；
-// 自 preview-paths.ts 零依赖叶引入（[ADR-168 二期] 下沉产物）。
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
-
-/* ============ 通用控件构造工厂 ============ */
-
-/** slider 控件构造（visibleWhen 透传样板收敛：ground/water 曾各写一份同构工厂，2026-09 上提共享） */
-export function makeSliderDef(
-  group: string,
-  id: string,
-  labelKey: string,
-  fallback: string,
-  slider: NonNullable<MenuControlDef["slider"]>,
-  getValue: () => number,
-  setValue: (v: number) => void,
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): MenuControlDef {
-  return {
-    id,
-    kind: "slider",
-    labelKey,
-    fallback,
-    group,
-    slider,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  };
-}
-
-/** color 控件构造（同上收敛） */
-export function makeColorDef(
-  group: string,
-  id: string,
-  labelKey: string,
-  fallback: string,
-  getValue: () => number,
-  setValue: (v: number) => void,
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): MenuControlDef {
-  return {
-    id,
-    kind: "color",
-    labelKey,
-    fallback,
-    group,
-    getValue,
-    setValue: (v) => setValue(v as number),
-    ...(visibleWhen ? { visibleWhen } : {}),
-  };
-}
-
-/**
- * 抹平控件的 group 字段（扁平视图共用——env 分区子视图 / settings 聚合面板都需剥掉
- * group，防 renderCapControls 再包同名折叠 section）。
- * 收敛样板：env.ts stripGroup 与 settings.ts out.map(({group,_grp,...rest})) 此前各写一份，
- * 上提后两处同源。exactOptional 下用解构省略而非赋 undefined。
- */
-export function stripMenuControlGroup(items: MenuControlDef[]): MenuControlDef[] {
-  return items.map(({ group: _group, ...rest }) => rest);
-}
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 
 /* ============ 场景能力统一接口 ============ */
 
@@ -119,21 +58,19 @@ export interface SceneCapability {
   setPreset?(modelType: string): void;
 
   /** 返回菜单控件定义列表（框架自动渲染为 slide panel） */
-  getMenuControls(): MenuControlDef[];
-
-  /** [ADR-195 刀2] cap 直产声明式节点树（可选，渐进迁移：已迁 cap 实现本方法产
-   *  PreviewMenuNode[]，未迁 cap 仅 getMenuControls——消费者优先 getMenuNodes、
-   *  fallback 经 capControlsToNodes(getMenuControls()) 桥接）。语义 = 「该 cap 参数面板
-   *  完整节点树」（简单控件 → 原生节点 + group → folder；复杂控件 timeline/histogram/
-   *  image/preset-thumb 保留为 controls 节点通道，树内嵌 MenuControlDef）。 */
   getMenuNodes?(): PreviewMenuNode[];
 
-  /** 能力总开关控件（可选）：folder 聚合器（如 env 面板）据此把开关升到 folder header
-   *  （对齐 MikuMikuAR PopupRow.headerToggle——「功能=本 folder」时开关免展开可见），
-   *  并自动从 body 剔除同源控件。仅当存在「启停整个能力」的 toggle 时实现
-   *  （fog/env/reflector 的 enabled toggle 属此）；ground 的 visible 是 params 级、
-   *  sky 无能力级启停 → 不实现。返回的应是 getMenuControls() 中同一控件引用。 */
-  getMasterToggle?(): MenuControlDef | null;
+  /**
+   * 能力总开关节点 id（可选）：folder 聚合器（如 env 面板）据此把开关升到 folder header
+   * （对齐 MikuMikuAR PopupRow.headerToggle——「功能=本 folder」时开关免展开可见），
+   * 并自动从 body 剔除同源节点。仅当存在「启停整个能力」的 toggle 时实现
+   * （fog/env/reflector 的 enabled toggle 属此）；ground 的 visible 是 params 级、
+   * sky 无能力级启停 → 不实现。
+   *
+   * 返回值是 getMenuNodes() 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"），
+   * 非 MenuControlDef。
+   */
+  getMasterNodeId?(): string;
 
   /** 持久化：保存当前状态到 localStorage */
   saveState(): void;

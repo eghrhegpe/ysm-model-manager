@@ -10,16 +10,15 @@ import { safeDispose } from "../safe-dispose.ts";
 import {
   createListenerSet,
   GROUND_LAYER_OFFSETS,
-  type MenuControlDef,
   oneOf,
   persistState,
   restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
-// 菜单控件工厂已下沉 water-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
+// 菜单节点工厂已下沉 water-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
-import { buildWaterGroup, buildWaterNodes } from "./water-menu.ts";
+import { buildWaterNodes } from "./water-menu.ts";
 import type { WaterMode, WaterParams } from "./water-state.ts";
 // 状态/序列化轴（WaterParams / 默认值 / 呈现模式）已下沉 water-state.ts；此处透传导出，
 // 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
@@ -614,11 +613,6 @@ export class WaterCapability implements SceneCapability {
     }
 
     return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.UnsignedByteType);
-  }
-
-  /** 返回菜单控件定义（框架自动渲染） */
-  getMenuControls(): MenuControlDef[] {
-    return buildWaterGroup(this);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

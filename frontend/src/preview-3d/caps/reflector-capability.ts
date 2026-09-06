@@ -11,7 +11,6 @@ import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   GROUND_LAYER_OFFSETS,
-  type MenuControlDef,
   persistState,
   restoreFields,
   restoreState,
@@ -90,57 +89,6 @@ type ReflectorShaderDef = {
 };
 const REFLECTOR_SHADER = (Reflector as typeof Reflector & { ReflectorShader: ReflectorShaderDef })
   .ReflectorShader;
-
-/** 反光地面总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
-function rcMasterToggle(cap: ReflectorCapability): MenuControlDef {
-  return {
-    id: "reflector-enabled",
-    kind: "toggle",
-    labelKey: "preview.reflector",
-    fallback: "反光地面",
-    getValue: () => cap.isEnabled(),
-    setValue: (v) => cap.setEnabled(v as boolean),
-  };
-}
-
-function rcBuildMain(cap: ReflectorCapability): MenuControlDef[] {
-  return [rcMasterToggle(cap)];
-}
-
-function rcBuildAppearance(cap: ReflectorCapability): MenuControlDef[] {
-  return [
-    {
-      id: "reflector-opacity",
-      kind: "slider",
-      labelKey: "preview.reflectorOpacity",
-      fallback: "反射强度",
-      group: "preview.reflectorGroupParams",
-      slider: { min: 0, max: 1, step: 0.01 },
-      getValue: () => cap.getParams().opacity,
-      setValue: (v) => cap.setOpacity(v as number),
-    },
-    {
-      id: "reflector-resolution",
-      kind: "slider",
-      labelKey: "preview.reflectorResolution",
-      fallback: "反射精度",
-      group: "preview.reflectorGroupParams",
-      slider: { min: 256, max: 2048, step: 256 },
-      getValue: () => cap.getParams().resolution,
-      setValue: (v) => cap.setResolution(v as number),
-    },
-    {
-      id: "reflector-size",
-      kind: "slider",
-      labelKey: "preview.reflectorSize",
-      fallback: "地面大小",
-      group: "preview.reflectorGroupParams",
-      slider: { min: 20, max: 500, step: 10 },
-      getValue: () => cap.getParams().size,
-      setValue: (v) => cap.setSize(v as number),
-    },
-  ];
-}
 
 export class ReflectorCapability implements SceneCapability {
   readonly id = "reflector";
@@ -299,20 +247,18 @@ export class ReflectorCapability implements SceneCapability {
 
   /* -------- 菜单控件（声明式驱动）-------- */
 
-  getMenuControls(): MenuControlDef[] {
-    return [...rcBuildMain(this), ...rcBuildAppearance(this)];
-  }
+  /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
 
-  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
-  getMasterToggle(): MenuControlDef | null {
-    return rcMasterToggle(this);
+  /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
+  getMasterNodeId(): string {
+    return "reflector-enabled";
   }
 
   /* -------- ADR-195 刀2 试点：cap 直产节点（getMenuNodes）-------- */
 
   /** 完整参数面板节点树（能力总开关 + 参数组 folder）——直产 PreviewMenuNode[]，
    *  不经过 MenuControlDef/桥接层；简单控件原生节点 + group→folder。
-   *  消费者需「除总开关外」子树时按 getMasterToggle() id 剔除顶层节点
+   *  消费者需「除总开关外」子树时按 getMasterNodeId() 剔除顶层节点
    *  （env.ts envCapSubNodes 通用处理）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildReflectorNodes(this);

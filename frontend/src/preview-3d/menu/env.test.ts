@@ -45,7 +45,7 @@ function makeMenu(): SlideMenuHandle {
 function makeCap(
   id: string,
   labelKey: string,
-  controls: ReturnType<NonNullable<SceneCapability["getMenuControls"]>>,
+  nodes: PreviewMenuNode[],
   extra: Record<string, unknown> = {},
 ) {
   return {
@@ -53,7 +53,7 @@ function makeCap(
     labelKey,
     icon: "🌤️",
     descKey: "",
-    getMenuControls: () => controls,
+    getMenuNodes: () => nodes,
     apply: vi.fn(),
     dispose: vi.fn(),
     setEnabled: vi.fn(),
@@ -64,7 +64,7 @@ function makeCap(
   };
 }
 
-type CtrlsFn = ReturnType<NonNullable<SceneCapability["getMenuControls"]>>;
+type CtrlsFn = ReturnType<NonNullable<SceneCapability["getMenuNodes"]>>;
 
 /** 取 env schema 第 idx 个 cap 行（schema[0] 是预设 select） */
 function capRow(schema: PreviewMenuNode[], idx: number): PreviewMenuNode {
@@ -118,9 +118,13 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         kind: "slider",
         labelKey: "preview.timeOfDay",
         fallback: "时间",
-        getValue: () => 12,
-        setValue: () => {},
-        slider: { min: 0, max: 24, step: 0.25 },
+        control: {
+          min: 0,
+          max: 24,
+          step: 0.25,
+          get: () => 12,
+          set: () => {},
+        },
       },
     ]);
     const fog = makeCap("fog", "preview.fog", [
@@ -129,8 +133,10 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         kind: "toggle",
         labelKey: "preview.fogEnabled",
         fallback: "雾",
-        getValue: () => false,
-        setValue: () => {},
+        control: {
+          get: () => false,
+          set: () => {},
+        },
       },
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog, sky]); // 乱序注入，验证排序
@@ -149,7 +155,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
   it("cap 行 action → navigate 到参数子视图；子视图惰性渲染该 cap 全部控件（每次进入重取）", () => {
     let calls = 0;
     const sky = makeCap("sky", "preview.sky", []);
-    sky.getMenuControls = () => {
+    sky.getMenuNodes = () => {
       calls++;
       return [
         {
@@ -157,20 +163,23 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
           kind: "slider",
           labelKey: "preview.timeOfDay",
           fallback: "时间",
-          group: "preview.skyGroupAdvanced",
-          slider: { min: 0, max: 24, step: 0.25 },
-          getValue: () => 12,
-          setValue: () => {},
+          control: {
+            min: 0,
+            max: 24,
+            step: 0.25,
+            get: () => 12,
+            set: () => {},
+          },
         },
       ];
     };
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
     const row = capRow(schema, 1);
-    // navigate 触发 + 子视图渲染：group 折叠成 .cap-section（唯一控件渲染器内建），无手写分区
+    // navigate 触发 + 子视图渲染
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();
-    // 惰性：每次 render 重取 getMenuControls（ADR-125 P3 口径——cap 后创建也可见）
+    // 惰性：每次 render 重取 getMenuNodes（ADR-125 P3 口径——cap 后创建也可见）
     navigateAndRender(row, container);
     expect(calls).toBeGreaterThanOrEqual(2);
   });
@@ -182,34 +191,53 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         kind: "toggle",
         labelKey: "preview.ground",
         fallback: "地面",
-        getValue: () => true,
-        setValue: () => {},
+        control: {
+          get: () => true,
+          set: () => {},
+        },
       },
       {
-        id: "ground-water-enabled",
-        kind: "toggle",
-        labelKey: "preview.groundWaterEnabled",
+        id: "cap-group-ground-water",
+        kind: "folder",
+        labelKey: "preview.groundGroupWater",
         fallback: "水面",
-        group: "preview.groundGroupWater",
-        getValue: () => true,
-        setValue: () => {},
+        children: [
+          {
+            id: "ground-water-enabled",
+            kind: "toggle",
+            labelKey: "preview.groundWaterEnabled",
+            fallback: "水面",
+            control: {
+              get: () => true,
+              set: () => {},
+            },
+          },
+        ],
       },
       {
-        id: "ground-mat-source",
-        kind: "select",
-        labelKey: "preview.groundMatSource",
+        id: "cap-group-ground-material",
+        kind: "folder",
+        labelKey: "preview.groundGroupMaterial",
         fallback: "材质",
-        group: "preview.groundGroupMaterial",
-        select: [{ value: "none", label: "无" }],
-        getValue: () => "none",
-        setValue: () => {},
+        children: [
+          {
+            id: "ground-mat-source",
+            kind: "select",
+            labelKey: "preview.groundMatSource",
+            fallback: "材质",
+            control: {
+              options: [{ value: "none", label: "无" }],
+              get: () => "none",
+              set: () => {},
+            },
+          },
+        ],
       },
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([ground]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
     const row = capRow(schema, 1);
     const { container } = navigateAndRender(row);
-    // ADR-195 刀1：group 经 cap-to-node 转 folder（rmAppendFolder 渲染折叠 section）
     // 无 group 的 ground-visible 平铺；两个 group → 两个 folder section
     expect(container.querySelector('[data-testid="cap-ground-visible"]')).not.toBeNull();
     const folders = container.querySelectorAll(
@@ -276,31 +304,33 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(menu.refresh).toHaveBeenCalled(); // 联动后重渲染兄弟控件
   });
 
-  it("cap 自报 getMasterToggle → 一级行带 headerToggle（行尾开关）；子视图剔除同源开关", () => {
+  it("cap 自报 getMasterNodeId → 一级行带 headerToggle（行尾开关）；子视图剔除同源开关", () => {
     let enabled = false;
-    const masterCtrl = {
-      id: "fog-enabled",
-      kind: "toggle" as const,
-      labelKey: "preview.fog",
-      fallback: "雾效",
-      getValue: () => enabled,
-      setValue: (v: boolean) => {
-        enabled = v;
-      },
-    };
     const fog = makeCap("fog", "preview.fog", [
-      masterCtrl,
+      {
+        id: "fog-enabled",
+        kind: "toggle" as const,
+        labelKey: "preview.fog",
+        fallback: "雾效",
+        control: {
+          get: () => enabled,
+          set: (v: boolean) => {
+            enabled = v;
+          },
+        },
+      },
       {
         id: "fog-color",
         kind: "color" as const,
         labelKey: "preview.fogColor",
         fallback: "雾色",
-        group: "preview.fogGroupParams",
-        getValue: () => 0,
-        setValue: () => {},
+        control: {
+          get: () => 0,
+          set: () => {},
+        },
       },
     ] as unknown as CtrlsFn, {
-      getMasterToggle: () => masterCtrl,
+      getMasterNodeId: () => "fog-enabled",
       isEnabled: () => enabled,
     });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog]);
@@ -317,16 +347,20 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(container.querySelector('[data-testid="cap-fog-color"]')).not.toBeNull();
   });
 
-  it("cap 不报 getMasterToggle（sky/ground）→ 一级行无 headerToggle；子视图全量保留控件", () => {
+  it("cap 不报 getMasterNodeId（sky/ground）→ 一级行无 headerToggle；子视图全量保留控件", () => {
     const sky = makeCap("sky", "preview.sky", [
       {
         id: "sky-time",
         kind: "slider" as const,
         labelKey: "preview.timeOfDay",
         fallback: "时间",
-        slider: { min: 0, max: 24, step: 0.5 },
-        getValue: () => 12,
-        setValue: () => {},
+        control: {
+          min: 0,
+          max: 24,
+          step: 0.5,
+          get: () => 12,
+          set: () => {},
+        },
       },
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);

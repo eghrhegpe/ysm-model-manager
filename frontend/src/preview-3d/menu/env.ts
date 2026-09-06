@@ -13,7 +13,6 @@ import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capabi
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
-import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderMenu } from "./render.ts";
 
@@ -51,13 +50,10 @@ function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
     const fb: SceneCapability[] = [];
     const skyCap = ctx.getCap("sky");
     const groundCap = ctx.getCap("ground");
-    if (skyCap && "getMenuControls" in skyCap)
-      fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
-    if (groundCap && "getMenuControls" in groundCap)
-      fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
+    if (skyCap) fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
+    if (groundCap) fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
     const waterCapFb = ctx.getCap("water");
-    if (waterCapFb && "getMenuControls" in waterCapFb)
-      fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
+    if (waterCapFb) fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
     allCaps = fb;
   }
   return allCaps;
@@ -111,28 +107,26 @@ function applyPreset(
 /** 预设 select 当前值（模块级：预设无状态层路径，applyPreset 写入；旧 UI 按钮本就无选中态显示） */
 let _lastEnvPreset: Exclude<EnvPresetId, "custom"> = "studio";
 
-/** 剔除 cap 能力总开关后的子视图控件（getMasterToggle 已升一级行 headerToggle 时） */
-function envCapRestControls(cap: SceneCapability): ReturnType<SceneCapability["getMenuControls"]> {
-  const masterId = cap.getMasterToggle?.()?.id ?? null;
-  return masterId ? cap.getMenuControls().filter((c) => c.id !== masterId) : cap.getMenuControls();
+/** 从 cap 节点树提取 master 节点（getMasterNodeId 已升一级行 headerToggle 时） */
+function capMasterNode(cap: SceneCapability): PreviewMenuNode | null {
+  const masterId = cap.getMasterNodeId?.();
+  if (!masterId) return null;
+  const nodes = cap.getMenuNodes?.() ?? null;
+  return nodes?.find((n) => n.id === masterId) ?? null;
 }
 
 /**
- * cap 参数子视图节点（ADR-195 刀2 双轨：已迁移 cap 直产 getMenuNodes()，未迁移经
- * capControlsToNodes 桥接 getMenuControls()）。
- *  - 已迁移：取完整节点树，剔除能力总开关节点（getMasterToggle 已升一级行 headerToggle，
- *    防子视图双份开关）——按 master id 匹配顶层节点剔。
- *  - 未迁移：旧路径 envCapRestControls（MenuControlDef 剔 master）→ capControlsToNodes。
- * group→folder 折叠、复杂控件 controls 通道均由产方/桥接统一表达，renderMenu 单一调度。
+ * cap 参数子视图节点（ADR-195 刀2：所有 cap 直产 getMenuNodes()）。
+ * 取完整节点树，剔除能力总开关节点（getMasterNodeId 已升一级行 headerToggle，
+ * 防子视图双份开关）——按 master id 匹配顶层节点剔。
+ * group→folder 折叠、复杂控件 controls 通道均由产方统一表达，renderMenu 单一调度。
  */
 function envCapSubNodes(cap: SceneCapability): PreviewMenuNode[] {
-  if (cap.getMenuNodes) {
-    const masterId = cap.getMasterToggle?.()?.id ?? null;
-    const all = cap.getMenuNodes();
-    if (!masterId) return all;
-    return all.filter((n) => n.id !== masterId);
-  }
-  return capControlsToNodes(envCapRestControls(cap));
+  const masterId = cap.getMasterNodeId?.();
+  const all = cap.getMenuNodes?.();
+  if (!all) return [];
+  if (!masterId) return all;
+  return all.filter((n) => n.id !== masterId);
 }
 
 /**
@@ -167,28 +161,29 @@ function envCapSubview(cap: SceneCapability): SlideMenuView {
 
 /** 一级 cap 行：icon + label + 可选 headerToggle + 整行 action 下钻参数页 */
 function envCapRow(cap: SceneCapability): PreviewMenuNode {
-  const master = cap.getMasterToggle?.() ?? null;
+  const master = capMasterNode(cap);
   return {
     id: `env-cap-${cap.id}`,
     kind: "row",
     labelKey: cap.labelKey,
     fallback: cap.id,
     icon: cap.icon,
-    // 导航行紧凑密度（稀疏内容：icon+label+可选开关+箭头）——与 scene 组根视图行同密度，
-    // 不吃 .slide-item 38px 内容行基座。token 见 menu-styles MENU_ROW_DENSITY_CSS。
     rowDensity: "compact",
-    // 能力总开关放行尾（对齐 MikuMikuAR env 一级菜单 headerToggle）：开关点击
-    // stopPropagation 不触发整行下钻；bind 随 refresh 同步 checked
-    ...(master
+    ...(master && master.control
       ? {
           headerToggle: {
-            value: master.getValue() as boolean,
-            onChange: (v: boolean) => master.setValue(v),
-            bind: () => master.getValue() as boolean,
+            value: (master.control.get
+              ? master.control.get(undefined)
+              : (master.control as any).value) as boolean,
+            onChange: (v: boolean) => {
+              if (master.control?.set) master.control.set(v);
+            },
+            ...(master.control.get
+              ? { bind: () => master.control!.get!(undefined) as boolean }
+              : {}),
           },
         }
       : {}),
-    // 整行 action：下钻到该 cap 参数页（actionCtx.navigate；render.ts row 分支注入）
     action: (ctx) => ctx.navigate?.(envCapSubview(cap)),
   };
 }

@@ -9,8 +9,6 @@ import * as THREE from "three";
 import { dbg } from "../../utils/debug/debug.ts";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
-// 状态层探针类型（visibleWhen 谓词吃 env.groundMatSource 快照——B 轨唯一条件显隐，不摸 cap 实例）
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,
@@ -28,9 +26,6 @@ import {
   createListenerSet,
   type FieldKind,
   GROUND_LAYER_OFFSETS,
-  type MenuControlDef,
-  makeColorDef,
-  makeSliderDef,
   oneOf,
   persistState,
   pickPersistFields,
@@ -404,11 +399,6 @@ export class GroundCapability implements SceneCapability {
     return this.enabled;
   }
 
-  /** 返回菜单控件定义（框架自动渲染） */
-  getMenuControls(): MenuControlDef[] {
-    return [...buildGroundMain(this), ...buildGroundMaterialGroup(this)];
-  }
-
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
   /** 完整参数面板节点树：ground-visible 平铺 toggle + 材质组 folder
@@ -504,209 +494,4 @@ export class GroundCapability implements SceneCapability {
       this.customTex = null;
     }
   }
-}
-
-function buildGroundMain(cap: GroundCapability): MenuControlDef[] {
-  return [
-    {
-      id: "ground-visible",
-      kind: "toggle",
-      labelKey: "preview.ground",
-      fallback: "地面",
-      getValue: () => cap.getVisible(),
-      setValue: (v) => cap.setVisible(v as boolean),
-    },
-  ];
-}
-
-const MAT_GROUP = "preview.groundGroupMaterial";
-
-/** B 轨唯一条件显隐谓词：地面承接面开启（matSource ≠ none）时材质子控件可见 */
-const groundSurfaceOn = (s: Partial<PreviewSnapshot>) => s["env.groundMatSource"] !== "none";
-
-function groundSliderDef(
-  id: string,
-  labelKey: string,
-  fallback: string,
-  slider: { min: number; max: number; step: number; unit?: string },
-  getValue: () => number,
-  setValue: (v: number) => void,
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): MenuControlDef {
-  return makeSliderDef(MAT_GROUP, id, labelKey, fallback, slider, getValue, setValue, visibleWhen);
-}
-
-function groundColorDef(
-  id: string,
-  labelKey: string,
-  fallback: string,
-  getValue: () => number,
-  setValue: (v: number) => void,
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): MenuControlDef {
-  return makeColorDef(MAT_GROUP, id, labelKey, fallback, getValue, setValue, visibleWhen);
-}
-
-function groundButtonDef(
-  id: string,
-  labelKey: string,
-  fallback: string,
-  button: MenuControlDef["button"],
-  visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): MenuControlDef {
-  return {
-    id,
-    kind: "button",
-    labelKey,
-    fallback,
-    group: MAT_GROUP,
-    ...(button !== undefined ? { button } : {}),
-    getValue: () => null,
-    setValue: () => {},
-    ...(visibleWhen ? { visibleWhen } : {}),
-  };
-}
-
-function buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[] {
-  return [
-    {
-      id: "ground-mat-source",
-      kind: "select",
-      labelKey: "preview.groundMatSource",
-      fallback: "表面材质",
-      group: MAT_GROUP,
-      select: [
-        { value: "none", label: "无" },
-        { value: "solid", label: "纯色" },
-        { value: "plain", label: "素面" },
-        { value: "grid", label: "网格" },
-        { value: "checker", label: "棋盘" },
-        { value: "stripes", label: "条纹" },
-        { value: "diamond", label: "菱格" },
-        { value: "marble", label: "大理石" },
-        { value: "texture", label: "自定义贴图" },
-      ],
-      getValue: () => cap.getMatSource(),
-      setValue: (v) => cap.setMatSource(v as GroundSurfaceMode),
-    },
-    groundColorDef(
-      "ground-mat-color",
-      "preview.groundMatColor",
-      "底色",
-      () => cap.getMatColor(),
-      (v) => cap.setMatColor(v),
-      groundSurfaceOn,
-    ),
-    groundColorDef(
-      "ground-mat-color2",
-      "preview.groundMatColor2",
-      "副色",
-      () => cap.getMatColor2(),
-      (v) => cap.setMatColor2(v),
-      groundSurfaceOn,
-    ),
-    groundColorDef(
-      "ground-mat-line-color",
-      "preview.groundMatLineColor",
-      "线色",
-      () => cap.getMatLineColor(),
-      (v) => cap.setMatLineColor(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-grid-size",
-      "preview.groundMatGridSize",
-      "格数",
-      { min: 2, max: 32, step: 1 },
-      () => cap.getMatGridSize(),
-      (v) => cap.setMatGridSize(Math.round(v)),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-density",
-      "preview.groundMatDensity",
-      "纹理密度",
-      { min: 0.25, max: 8, step: 0.25 },
-      () => cap.getMatDensity(),
-      (v) => cap.setMatDensity(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-angle",
-      "preview.groundMatAngle",
-      "纹理角度",
-      { min: 0, max: 360, step: 5, unit: "°" },
-      () => cap.getMatAngle(),
-      (v) => cap.setMatAngle(v),
-      groundSurfaceOn,
-    ),
-    groundButtonDef(
-      "ground-mat-texture",
-      "preview.groundMatPick",
-      "选择贴图",
-      {
-        textKey: "preview.groundMatPick",
-        getHint: () => cap.getCustomTexName() || "",
-        variant: "primary",
-        action: () => cap.openTexturePicker(),
-      },
-      (s) => s["env.groundMatSource"] === "texture",
-    ),
-    groundButtonDef(
-      "ground-mat-clear",
-      "preview.groundMatClear",
-      "清除贴图",
-      {
-        textKey: "preview.groundMatClear",
-        variant: "ghost",
-        action: () => cap.clearCustomTexture(),
-      },
-      (s) => s["env.groundMatSource"] === "texture",
-    ),
-    groundSliderDef(
-      "ground-mat-opacity",
-      "preview.groundMatOpacity",
-      "表面不透明度",
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getMatOpacity(),
-      (v) => cap.setMatOpacity(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-scale",
-      "preview.groundMatScale",
-      "纹理缩放",
-      { min: 0.25, max: 8, step: 0.25 },
-      () => cap.getMatScale(),
-      (v) => cap.setMatScale(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-rotation",
-      "preview.groundMatRotation",
-      "纹理旋转",
-      { min: 0, max: 360, step: 5, unit: "°" },
-      () => cap.getMatRotation(),
-      (v) => cap.setMatRotation(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-roughness",
-      "preview.groundMatRoughness",
-      "粗糙度",
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getMatRoughness(),
-      (v) => cap.setMatRoughness(v),
-      groundSurfaceOn,
-    ),
-    groundSliderDef(
-      "ground-mat-metalness",
-      "preview.groundMatMetalness",
-      "金属度",
-      { min: 0, max: 1, step: 0.05 },
-      () => cap.getMatMetalness(),
-      (v) => cap.setMatMetalness(v),
-      groundSurfaceOn,
-    ),
-  ];
 }

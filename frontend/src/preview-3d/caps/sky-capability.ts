@@ -28,7 +28,6 @@ import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { disposeObject3D } from "../safe-dispose.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
 import {
-  type MenuControlDef,
   persistState,
   restoreFields,
   restoreState,
@@ -36,9 +35,9 @@ import {
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
-// 菜单控件工厂已下沉 sky-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
+// 菜单节点工厂已下沉 sky-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
 // 保持既有调用方（sky-capability.test.ts 等）的 import 路径不破坏。
-import { buildSkyGroup, buildSkyNodes } from "./sky-menu.ts";
+import { buildSkyNodes } from "./sky-menu.ts";
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -746,11 +745,6 @@ export class SkyCapability implements SceneCapability {
     this.godRaysEnabled = v;
     if (!this.enabled) return;
     this.updateGodRays();
-  }
-
-  /** 返回菜单控件定义（框架自动渲染） */
-  getMenuControls(): MenuControlDef[] {
-    return buildSkyGroup(this);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

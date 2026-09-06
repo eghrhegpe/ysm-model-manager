@@ -7,12 +7,7 @@
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { buildRenderModeNodes } from "./render-mode-menu.ts";
-import {
-  type MenuControlDef,
-  persistState,
-  restoreState,
-  type SceneCapability,
-} from "./scene-capability.ts";
+import { persistState, restoreState, type SceneCapability } from "./scene-capability.ts";
 
 /* -------- 属性定义 -------- */
 
@@ -223,79 +218,6 @@ export class RenderModeCapability implements SceneCapability {
   }
   isEnabled(): boolean {
     return this.hasAnyOverride();
-  }
-
-  /* -------- 菜单控件 -------- */
-
-  getMenuControls(): MenuControlDef[] {
-    const BLENDING_OPTIONS = [
-      { value: String(THREE.NormalBlending), label: "正常" },
-      { value: String(THREE.AdditiveBlending), label: "叠加" },
-      { value: String(THREE.MultiplyBlending), label: "正片叠底" },
-      { value: String(THREE.SubtractiveBlending), label: "减去" },
-    ];
-    const SIDE_OPTIONS = [
-      { value: String(THREE.FrontSide), label: "正面" },
-      { value: String(THREE.BackSide), label: "背面" },
-      { value: String(THREE.DoubleSide), label: "双面" },
-    ];
-    return [
-      // 📐 线框
-      {
-        id: "rm-wireframe",
-        kind: "toggle",
-        labelKey: "preview.wireframe",
-        fallback: "线框",
-        hintKey: "preview.wireframeDesc",
-        settingsOrder: 30,
-        getValue: () => this.getWireframe() === true,
-        setValue: (v) => this.setWireframe(v ? true : null),
-      },
-      // 🌈 混合模式
-      {
-        id: "rm-blending",
-        kind: "select",
-        labelKey: "preview.renderModeBlending",
-        fallback: "混合模式",
-        settingsOrder: 31,
-        select: BLENDING_OPTIONS,
-        getValue: () => String(this.getBlending() ?? THREE.NormalBlending),
-        setValue: (v) => this.setBlending(v as unknown as THREE.Blending),
-      },
-      // 💀 X光透视（深度测试关闭 = 可看穿模型）
-      {
-        id: "rm-depth-test",
-        kind: "toggle",
-        labelKey: "preview.renderModeXray",
-        fallback: "X光透视",
-        hintKey: "preview.renderModeXrayDesc",
-        settingsOrder: 32,
-        getValue: () => this.getDepthTest() === false,
-        setValue: (v) => this.setDepthTest(v ? false : null),
-      },
-      // 🔄 面剔除
-      {
-        id: "rm-side",
-        kind: "select",
-        labelKey: "preview.renderModeSide",
-        fallback: "面剔除",
-        settingsOrder: 33,
-        select: SIDE_OPTIONS,
-        getValue: () => String(this.getSide() ?? THREE.FrontSide),
-        setValue: (v) => this.setSide(v as unknown as THREE.Side),
-      },
-      // ⚡ 深度写入
-      {
-        id: "rm-depth-write",
-        kind: "toggle",
-        labelKey: "preview.renderModeDepthWrite",
-        fallback: "深度写入",
-        hintKey: "preview.renderModeDepthWriteDesc",
-        settingsOrder: 34,
-        getValue: () => this.getDepthWrite() !== false,
-        setValue: (v) => this.setDepthWrite(v ? null : false),
-      },
-    ];
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

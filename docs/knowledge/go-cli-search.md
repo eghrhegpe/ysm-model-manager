@@ -9,7 +9,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ExecuteCLIWithApp
+    - JsonDataPayload
+    - PrintCLIHelp
     - RunCLI
+    - RunCLIInProcess
   tests:
     - go/cli/cli_test.go
 tests:

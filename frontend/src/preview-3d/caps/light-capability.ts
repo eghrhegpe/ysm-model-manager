@@ -20,7 +20,7 @@
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { VolumetricCone } from "./light-cone.ts";
-import { buildLightNodes, getLightMenuControls } from "./light-controls.ts";
+import { buildLightNodes } from "./light-controls.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
@@ -32,7 +32,6 @@ import {
   type VolumetricParams,
 } from "./light-presets.ts";
 import {
-  type MenuControlDef,
   persistState,
   restoreState,
   type SceneCapability,
@@ -357,11 +356,6 @@ export class LightCapability implements SceneCapability {
   /** 当前预设名（ADR-085 S2：fillLighting 只读初始化，消灭启发式派生） */
   getCurrentPreset(): string {
     return this.currentPreset;
-  }
-
-  /** 返回菜单控件定义（框架自动渲染） */
-  getMenuControls(): MenuControlDef[] {
-    return getLightMenuControls(this);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

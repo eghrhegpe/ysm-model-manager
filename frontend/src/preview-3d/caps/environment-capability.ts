@@ -28,7 +28,6 @@ import {
   ENV_PRESETS,
 } from "./environment-state.ts";
 import {
-  type MenuControlDef,
   persistState,
   restoreFields,
   restoreState,
@@ -165,142 +164,6 @@ function pickHdrFile(): Promise<File | null> {
     window.addEventListener("focus", onBlurWindow, { once: true });
     input.click();
   });
-}
-
-/** 环境总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
-function ecMasterToggle(cap: EnvironmentCapability): MenuControlDef {
-  return {
-    id: "env-enabled",
-    kind: "toggle",
-    labelKey: "preview.environment",
-    fallback: "环境贴图",
-    getValue: () => cap.isEnabled(),
-    setValue: (v) => cap.setEnabled(v as boolean),
-  };
-}
-
-function ecBuildBasic(cap: EnvironmentCapability): MenuControlDef[] {
-  return [
-    ecMasterToggle(cap),
-    {
-      id: "env-preset",
-      kind: "preset-thumb",
-      labelKey: "preview.envPresetThumbnail",
-      fallback: "预设预览",
-      group: "preview.envGroupPreset",
-      thumb: {
-        size: 64,
-        options: ((): Array<{ value: string; label: string; getThumb: () => string | null }> => {
-          const keys = Object.keys(ENV_PRESETS) as Array<Exclude<EnvPresetId, "custom">>;
-          return keys.map((id) => ({
-            value: id,
-            label: ENV_PRESETS[id].label,
-            getThumb: () => cap.getPresetThumbnail(id, 64),
-          }));
-        })(),
-        activeValue: () => cap.getPresetId(),
-        onSelect: (v) => cap.setPresetId(v as EnvPresetId),
-      },
-      getValue: () => "",
-      setValue: () => {
-        /* 由 thumb.onSelect 处理 */
-      },
-    },
-    {
-      id: "env-use-as-background",
-      kind: "toggle",
-      labelKey: "preview.envUseAsBackground",
-      fallback: "用作背景",
-      group: "preview.envGroupBackground",
-      hintKey: "preview.envUseAsBackgroundHint",
-      getValue: () => cap.isUseAsBackground(),
-      setValue: (v) => cap.setUseAsBackground(v as boolean),
-    },
-    {
-      id: "env-intensity",
-      kind: "slider",
-      labelKey: "preview.envIntensity",
-      fallback: "反射强度",
-      group: "preview.envGroupBackground",
-      slider: { min: 0, max: 3, step: 0.05 },
-      getValue: () => cap.getIntensity(),
-      setValue: (v) => cap.setIntensity(v as number),
-    },
-  ];
-}
-
-function ecBuildCustomHdr(cap: EnvironmentCapability): MenuControlDef[] {
-  return [
-    {
-      id: "env-hdr-preview",
-      kind: "image",
-      labelKey: "preview.envHdrPreview",
-      fallback: "HDR 预览",
-      group: "preview.envGroupCustomHdr",
-      getValue: () => cap.getCustomHdrThumbnail(),
-      setValue: () => {
-        /* 只读 */
-      },
-    },
-    {
-      id: "env-pick-hdr",
-      kind: "button",
-      labelKey: "preview.envPickHdr",
-      fallback: "自定义 HDR",
-      group: "preview.envGroupCustomHdr",
-      button: {
-        textKey: "preview.envPickHdrBtn",
-        variant: "primary",
-        action: async () => cap.onPickCustomHdr(),
-        disabled: () => cap.isCustomHdrLoading(),
-        getHint: () => {
-          if (cap.isCustomHdrLoading()) return "加载中…";
-          const n = cap.getCustomHdrName();
-          return n ? `已加载：${n}` : "";
-        },
-        hintKey: "preview.envPickHdrHint",
-      },
-      getValue: () => "",
-      setValue: () => {
-        /* ignore */
-      },
-    },
-    {
-      id: "env-clear-hdr",
-      kind: "button",
-      labelKey: "preview.envClearHdr",
-      fallback: "清除自定义 HDR",
-      group: "preview.envGroupCustomHdr",
-      button: {
-        textKey: "preview.envClearHdrBtn",
-        variant: "ghost",
-        action: () => cap.onClearCustomHdr(),
-        disabled: () => !cap.hasCustomHdr(),
-        hintKey: "preview.envClearHdrHint",
-        getHint: () => (cap.hasCustomHdr() ? "已清空将回到工作室预设" : ""),
-      },
-      getValue: () => "",
-      setValue: () => {
-        /* ignore */
-      },
-    },
-  ];
-}
-
-function ecBuildHistogram(cap: EnvironmentCapability): MenuControlDef[] {
-  return [
-    {
-      id: "env-histogram",
-      kind: "histogram",
-      labelKey: "preview.envHistogram",
-      fallback: "亮度直方图",
-      group: "preview.envGroupBackground",
-      getValue: () => cap.getLuminanceHistogram(),
-      setValue: () => {
-        /* 只读 */
-      },
-    },
-  ];
 }
 
 export class EnvironmentCapability implements SceneCapability {
@@ -769,13 +632,11 @@ export class EnvironmentCapability implements SceneCapability {
 
   /* -------- 菜单控件（声明式驱动）-------- */
 
-  getMenuControls(): MenuControlDef[] {
-    return [...ecBuildBasic(this), ...ecBuildCustomHdr(this), ...ecBuildHistogram(this)];
-  }
+  /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
 
-  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
-  getMasterToggle(): MenuControlDef | null {
-    return ecMasterToggle(this);
+  /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
+  getMasterNodeId(): string {
+    return "env-enabled";
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

@@ -97,10 +97,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  // code_review efb8b20c2 P1：getMenuNodes 是可选成员，未迁移 cap（仅 getMenuControls）
-  // 无条件调用会 TypeError——对齐 env.ts envCapSubNodes 双轨：有节点直产，无则
-  // capControlsToNodes 桥接回退（preview-state.test 挂的 fake cap 即走此回退）
-  return lightCap.getMenuNodes?.() ?? capControlsToNodes(lightCap.getMenuControls());
+  return lightCap.getMenuNodes?.() ?? [];
 }
 
 /** 阴影面板 schema：从 shadow cap 直产节点渲染 */
@@ -116,7 +113,7 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return fromReg.getMenuNodes?.() ?? capControlsToNodes(fromReg.getMenuControls());
+  return fromReg.getMenuNodes?.() ?? [];
 }
 
 /** 后处理面板 schema：从 postprocessing cap 直产节点渲染 */
@@ -132,7 +129,7 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
       },
     ];
   }
-  return fromReg.getMenuNodes?.() ?? capControlsToNodes(fromReg.getMenuControls());
+  return fromReg.getMenuNodes?.() ?? [];
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。
@@ -237,19 +234,6 @@ export function collectSettingsCapControls(): PreviewMenuNode[] {
       for (const n of cap.getMenuNodes()) {
         if (n.settingsOrder === undefined) continue;
         if (n.kind === "folder") continue; // settings 扁平视图不收 folder 组
-        out.push(n);
-      }
-      continue;
-    }
-    // 未迁移 cap：MenuControlDef → 节点桥接后按 settingsOrder 收集（保序）。
-    // capControlsToNodes 把同 group 控件包进 folder，settings 扁平视图需递归展平
-    // 子节点（folder 本身无 settingsOrder，但子节点可能有）。
-    for (const n of capControlsToNodes(cap.getMenuControls())) {
-      if (n.kind === "folder" && n.children) {
-        for (const c of n.children) {
-          if (c.settingsOrder !== undefined) out.push(c);
-        }
-      } else if (n.settingsOrder !== undefined) {
         out.push(n);
       }
     }

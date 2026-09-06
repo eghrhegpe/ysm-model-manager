@@ -14,7 +14,6 @@ import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
-  type MenuControlDef,
   oneOf,
   persistState,
   restoreFields,
@@ -34,89 +33,6 @@ import {
 
 export type { ShadowParams };
 export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
-
-/* ============ 菜单控件 ============ */
-
-const MAP_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "512", label: "512（性能优先）" },
-  { value: "1024", label: "1024（均衡）" },
-  { value: "2048", label: "2048（清晰）" },
-  { value: "4096", label: "4096（精细）" },
-];
-
-/* ============ getMenuControls 拆分：2 个包级函数（前缀 shc 防冲突） ============ */
-
-function shcBuildMain(cap: ShadowCapability): MenuControlDef[] {
-  return [
-    {
-      id: "shadow-enabled",
-      kind: "toggle",
-      labelKey: "preview.shadow",
-      fallback: "阴影",
-      hintKey: "preview.shadowEnabledHint",
-      getValue: () => cap.isEnabled(),
-      setValue: (v) => cap.setEnabled(v as boolean),
-    },
-    {
-      id: "shadow-soft",
-      kind: "toggle",
-      labelKey: "preview.shadowSoft",
-      fallback: "软阴影",
-      group: "preview.shadowGroupParams",
-      getValue: () => cap.isSoft(),
-      setValue: (v) => cap.setSoft(v as boolean),
-    },
-    {
-      id: "shadow-map-size",
-      kind: "select",
-      labelKey: "preview.shadowMapSize",
-      fallback: "分辨率",
-      hintKey: "preview.shadowMapSizeDesc",
-      group: "preview.shadowGroupParams",
-      select: MAP_SIZE_OPTIONS,
-      getValue: () => String(cap.getMapSize()),
-      setValue: (v) => cap.setMapSize(Number(v)),
-    },
-  ];
-}
-
-function shcBuildQuality(cap: ShadowCapability): MenuControlDef[] {
-  return [
-    {
-      id: "shadow-bias",
-      kind: "slider",
-      labelKey: "preview.shadowBias",
-      fallback: "阴影偏移",
-      hintKey: "preview.shadowBiasDesc",
-      group: "preview.shadowGroupParams",
-      slider: { min: -0.01, max: 0.001, step: 0.0001 },
-      getValue: () => cap.getBias(),
-      setValue: (v) => cap.setBias(v as number),
-    },
-    {
-      id: "shadow-normal-bias",
-      kind: "slider",
-      labelKey: "preview.shadowNormalBias",
-      fallback: "法线偏移",
-      hintKey: "preview.shadowNormalBiasDesc",
-      group: "preview.shadowGroupParams",
-      slider: { min: 0, max: 0.1, step: 0.005 },
-      getValue: () => cap.getNormalBias(),
-      setValue: (v) => cap.setNormalBias(v as number),
-    },
-    {
-      id: "shadow-camera-size",
-      kind: "slider",
-      labelKey: "preview.shadowCameraSize",
-      fallback: "视锥大小",
-      hintKey: "preview.shadowCameraSizeDesc",
-      group: "preview.shadowGroupParams",
-      slider: { min: 5, max: 80, step: 1 },
-      getValue: () => cap.getCameraSize(),
-      setValue: (v) => cap.setCameraSize(v as number),
-    },
-  ];
-}
 
 /* ============ 快照类型：dispose 还原灯与 mesh 的原 shadow 状态 ============ */
 
@@ -515,10 +431,6 @@ export class ShadowCapability implements SceneCapability {
   }
 
   /* -------- 菜单控件（声明式驱动）-------- */
-
-  getMenuControls(): MenuControlDef[] {
-    return [...shcBuildMain(this), ...shcBuildQuality(this)];
-  }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 

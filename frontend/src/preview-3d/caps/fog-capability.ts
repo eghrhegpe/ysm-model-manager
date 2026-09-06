@@ -8,7 +8,6 @@ import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
-  type MenuControlDef,
   oneOf,
   persistState,
   restoreFields,
@@ -229,20 +228,18 @@ export class FogCapability implements SceneCapability {
 
   /* -------- 菜单控件（声明式驱动）-------- */
 
-  getMenuControls(): MenuControlDef[] {
-    return [...fcBuildMain(this), ...fcBuildLinearGroup(this)];
-  }
+  /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
 
-  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
-  getMasterToggle(): MenuControlDef | null {
-    return fcMasterToggle(this);
+  /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
+  getMasterNodeId(): string {
+    return "fog-enabled";
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
   /** 完整参数面板节点树（能力总开关 + 参数组 folder）——直产 PreviewMenuNode[]，
    *  不经过 MenuControlDef/桥接层；全原生节点（toggle/color/select/slider）。
-   *  消费者需「除总开关外」子树时按 getMasterToggle() id 剔除顶层节点
+   *  消费者需「除总开关外」子树时按 getMasterNodeId() 剔除顶层节点
    *  （env.ts envCapSubNodes 通用处理）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildFogNodes(this);
@@ -287,79 +284,4 @@ export class FogCapability implements SceneCapability {
     this.scene.fog = this.prevFog;
     this.currentFog = null;
   }
-}
-
-/** 雾效总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
-function fcMasterToggle(cap: FogCapability): MenuControlDef {
-  return {
-    id: "fog-enabled",
-    kind: "toggle",
-    labelKey: "preview.fog",
-    fallback: "雾效",
-    getValue: () => cap.isEnabled(),
-    setValue: (v) => cap.setEnabled(v as boolean),
-  };
-}
-
-function fcBuildMain(cap: FogCapability): MenuControlDef[] {
-  return [
-    fcMasterToggle(cap),
-    {
-      id: "fog-color",
-      kind: "color",
-      labelKey: "preview.fogColor",
-      fallback: "雾色",
-      group: "preview.fogGroupParams",
-      getValue: () => cap.getColor(),
-      setValue: (v) => cap.setColor(v as number),
-    },
-    {
-      id: "fog-mode",
-      kind: "select",
-      labelKey: "preview.fogMode",
-      fallback: "雾型",
-      group: "preview.fogGroupParams",
-      select: [
-        { value: "linear", label: "线性" },
-        { value: "exp2", label: "指数" },
-      ],
-      getValue: () => cap.getMode(),
-      setValue: (v) => cap.setMode(v as FogMode),
-    },
-    {
-      id: "fog-density",
-      kind: "slider",
-      labelKey: "preview.fogDensity",
-      fallback: "密度",
-      group: "preview.fogGroupParams",
-      slider: { min: 0.001, max: 0.1, step: 0.001 },
-      getValue: () => cap.getDensity(),
-      setValue: (v) => cap.setDensity(v as number),
-    },
-  ];
-}
-
-function fcBuildLinearGroup(cap: FogCapability): MenuControlDef[] {
-  return [
-    {
-      id: "fog-near",
-      kind: "slider",
-      labelKey: "preview.fogNear",
-      fallback: "近距",
-      group: "preview.fogGroupParams",
-      slider: { min: 0, max: 500, step: 1, unit: "" },
-      getValue: () => cap.getNear(),
-      setValue: (v) => cap.setLinearRange(v as number, undefined),
-    },
-    {
-      id: "fog-far",
-      kind: "slider",
-      labelKey: "preview.fogFar",
-      fallback: "远距",
-      group: "preview.fogGroupParams",
-      slider: { min: 10, max: 2000, step: 10, unit: "" },
-      getValue: () => cap.getFar(),
-      setValue: (v) => cap.setLinearRange(undefined, v as number),
-    },
-  ];
 }

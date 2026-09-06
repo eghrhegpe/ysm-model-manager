@@ -34,6 +34,7 @@ auto_fields:
     - GetAllowedCommandSpecs
     - GetCommand
     - IsCommandAllowed
+    - JsonDataPayload
     - JsonError
     - JsonResponse
     - JsonResponse.ToJson
@@ -47,10 +48,12 @@ auto_fields:
     - ParamString
     - ParamType
     - ParseCommandArgs
+    - PrintCLIHelp
     - PrintError
     - RegisterCommand
     - RegisterCommandC
     - RunCLI
+    - RunCLIInProcess
     - String
     - TimingInfo
 use_when:

@@ -290,6 +290,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-199：cli-bridge 进程内直调：移除 GUI 自 fork",
+        "link": "/adr/ADR-199-cli-bridge-gui-fork"
+      },
+      {
         "text": "ADR-198：scanner 扫描缓存五件套收口为 scanCacheHub 组件",
         "link": "/adr/ADR-198-scanner-scancachehub"
       },

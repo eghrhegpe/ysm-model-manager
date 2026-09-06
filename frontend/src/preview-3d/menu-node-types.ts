@@ -213,6 +213,10 @@ export interface PreviewMenuNode {
   /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
    *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
   hintKey?: string;
+  /** [ADR-195 刀2] 设置面板聚合序号（自 MenuControlDef.settingsOrder 同构）：定义后该
+   *  节点自动并入 ⚙️ 设置面板，按本值升序排列。settings 聚合 collectSettingsCapControls
+   *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧 MenuControlDef.settingsOrder）。 */
+  settingsOrder?: number;
   icon?: string;
   /** 仅 folder：默认展开 */
   defaultOpen?: boolean;

@@ -18,8 +18,9 @@ import { type MenuControlDef, stripMenuControlGroup } from "../caps/scene-capabi
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
-import { getStateValue, setStateValue } from "../state/preview-state.ts";
+import { getStateValue, previewSnapshot, setStateValue } from "../state/preview-state.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import { nodeControlToCapControl } from "./render.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -223,6 +224,18 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
 export function collectSettingsCapControls(): MenuControlDef[] {
   const out: MenuControlDef[] = [];
   for (const cap of sceneCapabilityRegistry.getAll()) {
+    // [ADR-195 刀2 双轨] 已迁移 cap（getMenuNodes）从节点树收集 settingsOrder 节点，
+    // 经 nodeControlToCapControl 投影回 MenuControlDef 保 settings 渲染通道不变；
+    // 未迁移 cap 走旧 getMenuControls 路径。刀3 收口后统一走节点。
+    if (cap.getMenuNodes) {
+      const snapshot = previewSnapshot();
+      for (const n of cap.getMenuNodes()) {
+        if (n.settingsOrder === undefined) continue;
+        if (n.kind === "folder") continue; // settings 扁平视图不收 folder 组
+        out.push(nodeControlToCapControl(n, snapshot, undefined));
+      }
+      continue;
+    }
     for (const c of cap.getMenuControls()) {
       if (c.settingsOrder === undefined) continue;
       out.push(c);

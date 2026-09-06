@@ -5,6 +5,8 @@
 // 纯属性切换零额外 GPU 开销——全是光栅化/管线级开关。
 
 import * as THREE from "three";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { buildRenderModeNodes } from "./render-mode-menu.ts";
 import {
   type MenuControlDef,
   persistState,
@@ -294,6 +296,14 @@ export class RenderModeCapability implements SceneCapability {
         setValue: (v) => this.setDepthWrite(v ? null : false),
       },
     ];
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树（5 控件平铺，各带 settingsOrder）——直产 PreviewMenuNode[]，
+   *  全原生 toggle/select。render-mode 无 group 无 master。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildRenderModeNodes(this);
   }
 
   /* -------- 持久化 -------- */

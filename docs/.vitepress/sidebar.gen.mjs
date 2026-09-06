@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-196：预设三轴统一——收口模型类别/氛围联动/手动守卫为单一预设 Schema",
+        "link": "/adr/ADR-196-presets-three-axis-unification"
+      },
+      {
         "text": "ADR-195：cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除）",
         "link": "/adr/ADR-195-menucontroldef-menunode-cap"
       },

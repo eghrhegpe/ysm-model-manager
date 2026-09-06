@@ -82,6 +82,7 @@ auto_fields:
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
     - buildReflectorNodes
+    - buildRenderModeNodes
     - buildRolesSchema
     - buildSceneMesh
     - buildSettingsControls

@@ -285,6 +285,43 @@ describe("RenderModeCapability — getMenuControls", () => {
   });
 });
 
+describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("返回 5 平铺节点，id/kind 齐全，settingsOrder 透传", () => {
+    const cap = newCap(makeMesh());
+    const nodes = cap.getMenuNodes();
+    expect(nodes.map((n) => n.id)).toEqual([
+      "rm-wireframe",
+      "rm-blending",
+      "rm-depth-test",
+      "rm-side",
+      "rm-depth-write",
+    ]);
+    expect(nodes.map((n) => n.kind)).toEqual(["toggle", "select", "toggle", "select", "toggle"]);
+    // settingsOrder 透传（settings 聚合据此收编进 ⚙️ 设置面板）
+    expect(nodes.map((n) => n.settingsOrder)).toEqual([30, 31, 32, 33, 34]);
+  });
+
+  it("toggle 节点读写闭包直连 cap（线框）", () => {
+    const mesh = makeMesh();
+    const cap = newCap(mesh);
+    const wire = cap.getMenuNodes()[0]!;
+    expect(wire.control!.get!(undefined)).toBe(false);
+    wire.control!.set!(true);
+    expect(cap.getWireframe()).toBe(true);
+    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+    wire.control!.set!(false);
+    expect(cap.getWireframe()).toBeNull();
+  });
+
+  it("select 节点 options/读写直连 cap（混合模式）", () => {
+    const cap = newCap(makeMesh());
+    const blending = cap.getMenuNodes()[1]!;
+    expect(blending.control!.options!.length).toBe(4);
+    blending.control!.set!(String(THREE.AdditiveBlending));
+    expect(cap.getBlending()).toBe(String(THREE.AdditiveBlending));
+  });
+});
+
 describe("RenderModeCapability — 持久化", () => {
   beforeEach(() => { localStorage.clear(); });
   afterEach(() => { localStorage.clear(); });

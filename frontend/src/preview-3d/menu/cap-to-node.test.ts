@@ -4,11 +4,9 @@
 //   - 复杂控件（button/timeline/histogram/image/preset-thumb）→ controls 通道节点
 //   - group → folder 嵌套（连续同组合并、组间断开另起）
 //   - visibleWhen 随迁节点层
-//   - 往返保真：capControlToNode → nodeControlToCapControl 字段零损失
 import { describe, it, expect } from "vitest";
 import { capControlToNode, capControlsToNodes, canNodeRepresent } from "./cap-to-node.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
-import { nodeControlToCapControl } from "./render.ts";
 
 function def(partial: Partial<MenuControlDef> & { id: string; kind: MenuControlDef["kind"] }): MenuControlDef {
   return {
@@ -59,23 +57,6 @@ describe("capControlToNode（原生节点映射）", () => {
     expect(spec.unit).toBe("h");
     expect(spec.numeric).toBe(true);
     expect(typeof spec.onCommit).toBe("function");
-  });
-
-  it("往返保真：capControlToNode → nodeControlToCapControl 字段零损失", () => {
-    const c = def({
-      id: "fog-density",
-      kind: "slider",
-      slider: { min: 0.01, max: 1, step: 0.01, unit: "" },
-      getValue: () => 0.5,
-      setValue: () => {},
-    });
-    const n = capControlToNode(c);
-    const back = nodeControlToCapControl(n as never, {}, undefined as never);
-    expect(back.kind).toBe("slider");
-    expect(back.slider!.min).toBe(0.01);
-    expect(back.slider!.max).toBe(1);
-    expect(back.slider!.unit).toBe("");
-    expect(back.getValue()).toBe(0.5);
   });
 
   it("toggle hintKey 透传节点", () => {

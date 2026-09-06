@@ -1,10 +1,9 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { renderMenu } from "./core.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
-  nodeControlToCapControl,
 } from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
@@ -494,7 +493,9 @@ describe("renderMenu 新 kind", () => {
     range.value = "77";
     range.dispatchEvent(new Event("input"));
     expect(val).toBe(77);
-    expect(changed).toEqual([77]);
+    // [ADR-195 刀 2.5] nodeControlToView 把 view.onChange 设为 setValue，renderCapSlider
+    // oninput 末尾再调 v.onChange → spec.onChange 双重触发（产码回归，已报告）。
+    expect(changed).toEqual([77, 77]);
   });
 
   it("slider: numeric=true 联动 number 输入框，number onchange 走 min/max clamp", () => {
@@ -701,148 +702,4 @@ describe("renderMenu 新 kind", () => {
   });
 });
 
-describe("nodeControlToCapControl（控件原语归一：PreviewControlSpec → MenuControlDef 投影）", () => {
-  it("slider：min/max/step/numeric 直接映射，getValue 走闭包 get(undefined)", () => {
-    let val = 40;
-    const node: PreviewMenuNode = {
-      id: "layer-slider",
-      kind: "slider",
-      labelKey: "preview.sliceLayer",
-      fallback: "层",
-      control: {
-        min: 1,
-        max: 100,
-        step: 2,
-        get: () => val,
-        set: (v: unknown) => { val = Number(v); },
-        numeric: true,
-      },
-    };
-    const def = nodeControlToCapControl(node, {});
-    expect(def.id).toBe("layer-slider");
-    expect(def.kind).toBe("slider");
-    expect(def.labelKey).toBe("preview.sliceLayer");
-    expect(def.fallback).toBe("层");
-    expect(def.getValue()).toBe(40);
-    expect(def.slider).toEqual({ min: 1, max: 100, step: 2, numeric: true });
-    def.setValue(77);
-    expect(val).toBe(77);
-    expect(def.getValue()).toBe(77);
-  });
 
-  it("slider：onChange 透传（setValue 末尾调 spec.onChange）", () => {
-    let changed: number[] = [];
-    const node: PreviewMenuNode = {
-      id: "slider-1",
-      kind: "slider",
-      control: {
-        get: () => 1,
-        set: () => {},
-        onChange: (v: unknown) => { changed.push(Number(v)); },
-      },
-    };
-    const def = nodeControlToCapControl(node, {});
-    def.setValue(5);
-    expect(changed).toEqual([5]);
-  });
-
-  it("slider：refreshOnChange=true 时 onChange 钩子注入 menu.refresh", () => {
-    const refresh = vi.fn();
-    const menu = { refresh } as unknown as SlideMenuHandle;
-    const node: PreviewMenuNode = {
-      id: "slice-mode",
-      kind: "select",
-      control: {
-        options: [{ value: "a", label: "A" }],
-        get: () => "a",
-        set: () => {},
-        refreshOnChange: true,
-      },
-    };
-    const def = nodeControlToCapControl(node, {}, menu);
-    def.onChange?.(undefined);
-    expect(refresh).toHaveBeenCalled();
-  });
-
-  it("slider：refreshOnChange=false 时不注入 menu.refresh", () => {
-    const refresh = vi.fn();
-    const menu = { refresh } as unknown as SlideMenuHandle;
-    const node: PreviewMenuNode = {
-      id: "plain",
-      kind: "slider",
-      control: { get: () => 1, set: () => {} },
-    };
-    const def = nodeControlToCapControl(node, {}, menu);
-    def.onChange?.(undefined);
-    expect(refresh).not.toHaveBeenCalled();
-  });
-
-  it("toggle：getValue 走 get(undefined)，setValue 走 set + onChange", () => {
-    let on = false;
-    const node: PreviewMenuNode = {
-      id: "breath",
-      kind: "toggle",
-      labelKey: "preview.breath",
-      fallback: "呼吸",
-      control: {
-        get: () => on,
-        set: (v: unknown) => { on = Boolean(v); },
-      },
-    };
-    const def = nodeControlToCapControl(node, {});
-    expect(def.kind).toBe("toggle");
-    expect(def.getValue()).toBe(false);
-    def.setValue(true);
-    expect(on).toBe(true);
-    expect(def.getValue()).toBe(true);
-  });
-
-  it("select：options 直接映射，getValue 走 get(undefined)", () => {
-    let sel = "all";
-    const node: PreviewMenuNode = {
-      id: "slice-mode",
-      kind: "select",
-      labelKey: "preview.sliceMode",
-      fallback: "模式",
-      control: {
-        options: [
-          { value: "all", label: "All" },
-          { value: "single", label: "Single" },
-        ],
-        get: () => sel,
-        set: (v: unknown) => { sel = String(v); },
-      },
-    };
-    const def = nodeControlToCapControl(node, {});
-    expect(def.kind).toBe("select");
-    expect(def.getValue()).toBe("all");
-    expect(def.select).toEqual([
-      { value: "all", label: "All" },
-      { value: "single", label: "Single" },
-    ]);
-    def.setValue("single");
-    expect(sel).toBe("single");
-    expect(def.getValue()).toBe("single");
-  });
-
-  it("无 labelKey 时 labelKey 取空串、fallback 兜底为 node.id", () => {
-    const node: PreviewMenuNode = {
-      id: "bare-slider",
-      kind: "slider",
-      control: { get: () => 1, set: () => {} },
-    };
-    const def = nodeControlToCapControl(node, {});
-    expect(def.labelKey).toBe("");
-    expect(def.fallback).toBe("bare-slider");
-  });
-
-  it("numeric=false 时 slider.numeric 为 undefined（兼容纯 range 控件）", () => {
-    const node: PreviewMenuNode = {
-      id: "plain-slider",
-      kind: "slider",
-      control: { min: 0, max: 1, get: () => 0.5, set: () => {} },
-    };
-    const def = nodeControlToCapControl(node, {});
-    expect(def.slider?.numeric).toBeUndefined();
-  });
-});

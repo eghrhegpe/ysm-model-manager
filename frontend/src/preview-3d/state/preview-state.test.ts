@@ -439,24 +439,17 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
 
     const got = collectSettingsCapControls();
     expect(got.map((c) => c.id)).toEqual(["c-10", "c-30"]);
-    expect(got.every((c) => c.group === undefined)).toBe(true);
+    // settings 扁平不收 folder 组（节点形态无 group 字段——folder 已剥）
+    expect(got.every((c) => c.kind !== "folder")).toBe(true);
   });
 
-  it("cap 缺席时不产生聚合控件；后挂载 cap 再渲染节点能看见（惰性求值，非构建期冻结）", () => {
-    // 走真实 UI 路径：schema 节点在构建时只持有 supplier，每次渲染重取注册表。
-    // 若实现是构建期求值（快照烤进 renderCustom 闭包），同一节点第二次渲染
-    // 永远看不到后挂载的 cap——正是 05fe24b7 所修「声明期求值」病的复现条件。
-    const qualityNode = buildSettingsSchema({} as unknown as PreviewMenuCtx).find(
-      (n) => n.id === "settings-quality",
-    )!;
-    const renderRowIds = (): string[] => {
-      const list = document.createElement("div");
-      renderMenu(list, [qualityNode], renderMenuStubDeps);
-      return [...list.querySelectorAll("[data-testid^='cap-']")].map((el) =>
-        (el as HTMLElement).dataset.testid!.replace(/^cap-/, ""),
-      );
-    };
-    expect(renderRowIds()).toEqual([]);
+  it("cap 缺席时不产生聚合控件；后挂载 cap schema 重建可见（惰性求值，非构建期冻结）", () => {
+    // [ADR-195 刀 2.5] buildSettingsSchema 每次重建：collectSettingsCapControls 实时遍历
+    // registry，聚合节点直接 spread 进 schema（原 settings-quality controls 节点已删）。
+    // 若实现是构建期求值（快照烤进 schema 数组），第二次 build 永远看不到后挂载的
+    // cap——正是 05fe24b7 所修「声明期求值」病的复现条件。
+    const ids = () => buildSettingsSchema({} as unknown as PreviewMenuCtx).map((n) => n.id);
+    expect(ids()).not.toContain("pp-enabled");
 
     const cap = makeFakeCap("postprocessing", {
       controls: [{
@@ -470,8 +463,13 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
       }],
     });
     mountCaps(cap);
-    // 同一节点、第二次渲染：cap 已就位 → 控件出现
-    expect(renderRowIds()).toEqual(["pp-enabled"]);
+    // 第二次 build：cap 已就位 → 聚合节点出现
+    expect(ids()).toContain("pp-enabled");
+    // 走真实渲染路径：节点经 nodeControlToView → renderCapToggle，testid cap-pp-enabled
+    const schema = buildSettingsSchema({} as unknown as PreviewMenuCtx);
+    const list = document.createElement("div");
+    renderMenu(list, schema, renderMenuStubDeps);
+    expect(list.querySelector('[data-testid="cap-pp-enabled"]')).not.toBeNull();
   });
 
   it("回归红线：设置面板不再手写 cap 已自报的开关（f0fa3e23 型重复真值来源）", () => {
@@ -527,9 +525,10 @@ describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 
       getValue: () => false, setValue: vi.fn(),
     };
     mountCaps(makeFakeCap("fakecap", { controls: [gated] }));
-    expect(collectVisiblePredicates(collectSettingsCapControls()).map((c) => c.id)).toEqual([
-      "c-gated",
-    ]);
+    // [ADR-195 刀 2.5] collectSettingsCapControls 返回 PreviewMenuNode[]；
+    // 节点也带 visibleWhen，直接枚举（capControlToNode 桥接携带 visibleWhen + settingsOrder）。
+    const visibleNodes = collectSettingsCapControls().filter((n) => n.visibleWhen !== undefined);
+    expect(visibleNodes.map((n) => n.id)).toEqual(["c-gated"]);
   });
 });
 

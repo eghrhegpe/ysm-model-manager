@@ -91,6 +91,82 @@ describe("buildPmxScene — 多根骨骼挂载", () => {
   });
 });
 
+// ===== worker 路径 morph/表情补全（review P1：parsed.morphs 此前在 buildPmxScene 原地烂掉）=====
+describe("buildPmxScene — morph targets 构建", () => {
+  it("顶点 morph → morphAttributes.position + 字典/影响数组（相对增量语义）", async () => {
+    const pmx = syntheticPmx();
+    pmx.morphs = [
+      {
+        name: "まばたき",
+        type: 1,
+        elements: [
+          { index: 1, offset: [0, 0.5, 0] },
+          { index: 2, offset: [0, 0.25, 0] },
+        ],
+      },
+      { name: "あ", type: 1, elements: [{ index: 0, offset: [0, -0.1, 0] }] },
+    ];
+    const result = await buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result).not.toBeNull();
+    const { mesh, geometry } = result!;
+    // 字典 + 影响数组：消费方（blink/lipsync/morph 面板/VPD）统一按名查 index
+    expect(mesh.morphTargetDictionary).toEqual({ まばたき: 0, あ: 1 });
+    expect(mesh.morphTargetInfluences).toEqual([0, 0]);
+    // 几何属性：每 morph 一组顶点位移；PMX 位移是相对基准位置的增量 → relative 必须为 true
+    const attrs = geometry.morphAttributes.position!;
+    expect(attrs).toHaveLength(2);
+    expect(geometry.morphTargetsRelative).toBe(true);
+    const arr = attrs[0].array as Float32Array;
+    expect(arr[1 * 3 + 1]).toBe(0.5); // vertex1 y 位移
+    expect(arr[2 * 3 + 1]).toBe(0.25);
+    expect(arr[0]).toBe(0); // 未涉及顶点位移恒 0
+    expect(result!.morphBuilt).toBe(2);
+    expect(result!.morphSkipped).toBe(0);
+  });
+
+  it("非顶点 morph（group/bone/uv）显式降级计数，不进字典（不留死影响槽）", async () => {
+    const pmx = syntheticPmx();
+    pmx.morphs = [
+      { name: "ウィンク", type: 1, elements: [{ index: 1, offset: [0, 0.3, 0] }] },
+      { name: "グループ", type: 0, elements: [{ index: 0, offset: [0.5, 0, 0] }] },
+      { name: "骨モーフ", type: 2, elements: [{ index: 0, offset: [0, 0, 0] }] },
+      { name: "uv", type: 3, elements: [{ index: 0, offset: [0.1, 0, 0] }] },
+    ];
+    const result = await buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result!.mesh.morphTargetDictionary).toEqual({ ウィンク: 0 });
+    expect(result!.geometry.morphAttributes.position).toHaveLength(1);
+    expect(result!.morphBuilt).toBe(1);
+    expect(result!.morphSkipped).toBe(3);
+  });
+
+  it("无 morph：不创建 morphAttributes，字典/影响数组保持 undefined", async () => {
+    const pmx = syntheticPmx();
+    const result = await buildPmxScene(pmx, { texUrlMap: new Map() });
+    expect(result!.geometry.morphAttributes.position).toBeUndefined();
+    expect(result!.mesh.morphTargetDictionary).toBeUndefined();
+    expect(result!.morphBuilt).toBe(0);
+  });
+
+  it("越界顶点索引跳过不崩（损坏/手工改坏的 PMX）", async () => {
+    const pmx = syntheticPmx();
+    pmx.morphs = [
+      {
+        name: "破損",
+        type: 1,
+        elements: [
+          { index: 9999, offset: [1, 1, 1] },
+          { index: 0, offset: [0, 1, 0] },
+        ],
+      },
+    ];
+    const result = await buildPmxScene(pmx, { texUrlMap: new Map() });
+    const arr = (result!.geometry.morphAttributes.position as THREE.BufferAttribute[])[0]
+      .array as Float32Array;
+    expect(arr[0 * 3 + 1]).toBe(1); // 合法索引正常生效
+    expect(arr[3]).toBe(0); // 越界索引不写越界内存
+  });
+});
+
 // ===== 覆盖率攻坚：createPmxParser（Worker 可用路径）+ 材质/纹理构建 =====
 
 /** 可手动投递响应的 FakeWorker（对齐 createResolveModeBridge 协议） */

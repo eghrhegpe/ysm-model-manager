@@ -35,6 +35,10 @@ export interface PmxBuildResult {
   materials: THREE.MeshStandardMaterial[];
   bones: THREE.Bone[];
   skeleton: THREE.Skeleton;
+  /** 已构建 morphTargets 的顶点 morph 数（morphAttributes.position 长度） */
+  morphBuilt: number;
+  /** 显式降级跳过的非顶点 morph 数（group/bone/uv——消费方语义只覆盖顶点型） */
+  morphSkipped: number;
 }
 
 /** PMX 解析器管理器 */
@@ -53,7 +57,8 @@ export function createPmxParser(): PmxParser {
 
 /**
  * 从 Worker 解析结果构建 Three.js 场景对象。
- * 只构建核心几何 + 材质 + 骨骼，MMD 特有功能（toon/sdf/physics）仍由 MMDLoader 处理。
+ * 构建核心几何 + 材质 + 骨骼 + 顶点 morph targets；group/bone/uv morph 与
+ * toon/sdf/physics 仍为 worker 路径显式降级项（morphSkipped 计数，调用方打 worker-limit 诊断）。
  * config.sliced 时异步分帧构建（rAF yield 让出主线程），避免大模型单帧长卡顿。
  */
 export async function buildPmxScene(
@@ -170,7 +175,46 @@ export async function buildPmxScene(
   attachRootBones(mesh, bones, pmxBones);
   mesh.bind(skeleton);
 
-  return { mesh, geometry, materials, bones, skeleton };
+  // --- 5. Morph targets（review P1：parsed.morphs 此前在此原地烂掉 → 表情/口型/眨眼
+  //     /VPD/autoDance 全静默失效）。顶点 morph 烘成 morphAttributes.position，
+  //     字典/影响数组挂 mesh——消费方（mmd-build-result blink、build-menu lipIndices、
+  //     morph-controls 面板、mmd-vpd-mesh）统一按名查 influence index。
+  //     group/bone/uv morph 显式降级计数（标准表情全是顶点型；group 需要权重级联，
+  //     three 无原生支持，留死影响槽比缺名更有害）。
+  let morphBuilt = 0;
+  let morphSkipped = 0;
+  const morphs = parsed.morphs;
+  if (morphs && morphs.length > 0) {
+    const vertexCount = vertices.positions.length / 3;
+    const deltas: Float32Array[] = [];
+    const dict: Record<string, number> = {};
+    for (const m of morphs) {
+      if (m.type !== 1 || dict[m.name] !== undefined) {
+        morphSkipped++;
+        continue;
+      }
+      const arr = new Float32Array(vertexCount * 3);
+      for (const el of m.elements) {
+        const vi = el.index;
+        if (vi < 0 || vi >= vertexCount) continue; // 损坏 PMX：越界索引跳过不崩
+        arr[vi * 3] += el.offset[0];
+        arr[vi * 3 + 1] += el.offset[1];
+        arr[vi * 3 + 2] += el.offset[2];
+      }
+      dict[m.name] = deltas.length;
+      deltas.push(arr);
+      morphBuilt++;
+    }
+    if (deltas.length > 0) {
+      // PMX morph 位移是相对基准位置的增量 → relative 语义，勿用默认的绝对目标
+      geometry.morphTargetsRelative = true;
+      geometry.morphAttributes.position = deltas.map((a) => new THREE.BufferAttribute(a, 3));
+      mesh.morphTargetDictionary = dict;
+      mesh.morphTargetInfluences = deltas.map(() => 0);
+    }
+  }
+
+  return { mesh, geometry, materials, bones, skeleton, morphBuilt, morphSkipped };
 }
 
 /**

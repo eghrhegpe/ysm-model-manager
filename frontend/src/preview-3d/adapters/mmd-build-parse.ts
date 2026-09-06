@@ -38,8 +38,19 @@ export async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
             "pmx-worker-build",
             c.effectivePath,
             "ok",
-            `vertices=${pmxResult.vertices.count} faces=${pmxResult.faces.count} bones=${pmxResult.bones?.length ?? 0} mats=${pmxResult.materials?.length ?? 0} (Worker path)`,
+            `vertices=${pmxResult.vertices.count} faces=${pmxResult.faces.count} bones=${pmxResult.bones?.length ?? 0} mats=${pmxResult.materials?.length ?? 0} morphs=${c.workerResult.morphBuilt} (Worker path)`,
           );
+          // 非顶点 morph（group/bone/uv）降级可见化：与 IK/物理的 worker-limit 诊断对称，
+          // 用户表情/口型异常时可归因到"worker 路径未支持"而非"模型坏了"
+          if (c.workerResult.morphSkipped > 0) {
+            await mmdDiag(
+              c.effectivePort,
+              "worker-limit",
+              c.effectivePath,
+              "warn",
+              `non-vertex morphs skipped: ${c.workerResult.morphSkipped}/${pmxResult.morphs?.length ?? 0} (group/bone/uv not supported on worker path)`,
+            );
+          }
         }
       } else if (!pmxResult.ok) {
         await mmdDiag(

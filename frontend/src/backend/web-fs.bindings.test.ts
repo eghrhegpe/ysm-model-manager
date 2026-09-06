@@ -1128,15 +1128,17 @@ describe("scanWebModels 根扫描批量收敛（P0-1）", () => {
     idb.idbKeys.mockClear();
     idb.idbGet.mockClear();
     idb.idbGetAll.mockClear();
+    idb.idbGetAllMetadata.mockClear();
 
     const entries = await scanWebModels("/web/ysm");
     expect(entries).toHaveLength(3);
     expect(entries.map((e) => e.Name).sort()).toEqual(["a.ysm", "b.ysm", "c.ysm"]);
 
-    // 前缀批量：dir + file 各一次 getAll（或 keys）；不出现逐组/逐文件的 get
+    // 前缀批量：dir 走 idbGetAll，file 走 idbGetAllMetadata（P0-1 性能优化，不搬 data）
     const getAllCalls = idb.idbGetAll.mock.calls;
+    const getMetaCalls = idb.idbGetAllMetadata.mock.calls;
     expect(getAllCalls.some((c) => c[1] === "dir:ysm/")).toBe(true);
-    expect(getAllCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
+    expect(getMetaCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
     // 不逐文件 get（file: 前缀的 idbGet 调用应为 0——dir meta 也走 getAll 了）
     const fileGets = idb.idbGet.mock.calls.filter((c) => String(c[1]).startsWith("file:"));
     expect(fileGets).toHaveLength(0);
@@ -1185,12 +1187,15 @@ describe("scanWebModels 根扫描批量收敛（P0-1）", () => {
       await seedGroup("ysm", `分类/子组${i}`, { [`sub${i}.ysm`]: enc.encode(`subdata${i}`) });
     }
     idb.idbGetAll.mockClear();
+    idb.idbGetAllMetadata.mockClear();
     const entries = await scanWebModels("/web/ysm");
     expect(entries).toHaveLength(150);
-    // 验证 getAll 调用次数：dir + file 各 1 次（共 2 次）
+    // 验证调用：dir + file 各 1 次（共 2 次，不同函数）
     const getAllCalls = idb.idbGetAll.mock.calls;
-    expect(getAllCalls).toHaveLength(2);
+    const getMetaCalls = idb.idbGetAllMetadata.mock.calls;
+    expect(getAllCalls).toHaveLength(1);
+    expect(getMetaCalls).toHaveLength(1);
     expect(getAllCalls.some((c) => c[1] === "dir:ysm/")).toBe(true);
-    expect(getAllCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
+    expect(getMetaCalls.some((c) => c[1] === "file:ysm/")).toBe(true);
   });
 });

@@ -11,6 +11,7 @@ import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { type ModelEntry, sceneRegistry } from "../adapters/scene-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
 import { buildSwitchNodes, type SwitchState } from "./switch.ts";
@@ -53,7 +54,7 @@ function ensureRolesStyles(): void {
 .fr-comp-row { padding: 6px 10px; font-size: 12px; }
 .fr-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size: 12px; }
-.fr-error-note { padding: 8px 10px; color: #ff7b7b; font-size: 12px; }
+${MENU_ERROR_NOTE_CSS}
 .fr-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 6px 10px; }
 .fr-scroll-box { max-height: 220px; overflow-y: auto; }
 .fr-name-ellipsis { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

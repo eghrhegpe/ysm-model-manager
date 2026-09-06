@@ -27,6 +27,7 @@ import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
+import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { clearFolderCollapsedState, renderAdapterPanelContent, renderMenu } from "./render.ts";
 import { buildRolesSchema, motionDetailView, roleBaseName } from "./roles.ts";
@@ -64,6 +65,9 @@ export interface PreviewMenuHandle {
 
 // P1 批次6：core 装配层内联 cssText → 集中类（cm- 前缀本文件私有，ensureCoreStyles
 // 幂等注入——buildPreviewMenuShell + makePreviewMenuRow 双入口调用覆盖 popup/行/错误行）
+// [菜单共享样式] .cm-error-note 与 roles .fr-error-note 同值，已收敛至 menu-styles.ts
+// MENU_ERROR_NOTE_CSS 单一事实源（旧注释称镜像 switch .sw-row，ADR-193 第四刀
+// switch DOM 层退役后该镜像已不存在——同步修正）。
 let _coreStylesInjected = false;
 onOverlayStyleTargetReset(() => {
   _coreStylesInjected = false;
@@ -72,13 +76,13 @@ function ensureCoreStyles(): void {
   if (_coreStylesInjected) return;
   const style = document.createElement("style");
   style.textContent = `
-/* core 装配层集中样式（P1 批次6：cssText→类）。镜像待合并：cm-row == switch .sw-row、
-   cm-row-icon == switch .sw-row-icon、cm-error-note == roles .fr-error-note（同值多源）。 */
+/* core 装配层集中样式（P1 批次6：cssText→类）。cm-row 为 core 行专属（switch .sw-row
+   镜像已随 ADR-193 第四刀退役）。 */
 .ysm-preview-menu.cm-popup { position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;z-index:25; }
 .ysm-preview-menu-row.cm-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
 .cm-row-icon { font-size:15px;width:18px;text-align:center; }
 .cm-row-chev { margin-left:auto;font-size:13px;font-weight:700;opacity:0.4;user-select:none; }
-.cm-error-note { padding:8px 10px;color:#ff7b7b;font-size:12px; }
+${MENU_ERROR_NOTE_CSS}
 `;
   overlayStyleRoot().appendChild(style);
   _coreStylesInjected = true;

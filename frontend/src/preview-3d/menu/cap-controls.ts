@@ -7,6 +7,7 @@ import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
+import { MENU_SECTION_CSS } from "./menu-styles.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（MenuControlDef.labelKey/group 为数据字段 + group 原文兜底），
@@ -17,8 +18,9 @@ onOverlayStyleTargetReset(() => {
 }); // ADR-175 M1:目标切换重注入
 /** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
  *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
- *  .cap-section-header/.cap-section-arrow 与 render.ts ensureMenuStyles 同值镜像(双源,
- *  共享样式模块化时合并);cc-* 为本模块控件独有类(双类锚定压过 .slide-label/.setting-select)。 */
+ *  .cap-section-header/.cap-section-arrow 自 menu-styles.ts 共享常量引入（单一事实源，
+ *  render.ts rmAppendFolder 消费同一常量——不再双源漂移）；cc-* 为本模块控件独有类
+ *  (双类锚定压过 .slide-label/.setting-select)。 */
 function ensureCapStyles(): void {
   if (_capStylesInjected) return;
   const style = document.createElement("style");
@@ -26,23 +28,7 @@ function ensureCapStyles(): void {
 .cap-section {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
-.cap-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  min-height: 32px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.cap-section-arrow {
-  font-size: 10px;
-  display: inline-block;
-}
+${MENU_SECTION_CSS}
 .cc-row { display:flex;align-items:center;gap:8px;padding:6px 10px; }
 .cc-row-col { display:flex;flex-direction:column;gap:4px;padding:6px 10px; }
 .cc-row-plain { padding:6px 10px; }

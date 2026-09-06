@@ -18,6 +18,7 @@ import {
   setStateValue,
 } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
+import { MENU_SECTION_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 // i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
@@ -39,6 +40,10 @@ function ensureMenuStyles(): void {
  * 控件无基类的用 rm- 单类（前缀唯一，无撞名）。
  * [控件原语归一] rm-toggle-track/knob/range/slider-label-fixed/control-row-lg/control-label/control-label-strong 已删除——
  *  cap 栈（cc-* 类）统一渲染，rm 栈三控件退役。*/
+/* [菜单共享样式] .cap-section-header/.cap-section-arrow 自 menu-styles.ts 引入——
+ *  rmAppendFolder 消费的 section 头原无本地定义（搭 cap-controls 注入便车），
+ *  现消费方自足，单源共享（cap-controls 拼同一常量）。*/
+${MENU_SECTION_CSS}
 .slide-item.rm-control-row {
    display: flex;
    align-items: center;

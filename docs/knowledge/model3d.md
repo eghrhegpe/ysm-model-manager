@@ -362,6 +362,8 @@ auto_fields:
     - MdMmStage6Ctx
     - mdMmStage6Result
     - mdMmTrackAlloc
+    - MENU_ERROR_NOTE_CSS
+    - MENU_SECTION_CSS
     - MenuControlDef
     - MenuControlKind
     - MenuGraph

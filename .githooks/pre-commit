@@ -304,6 +304,16 @@ fi
 echo ""
 git diff --cached --stat 2>/dev/null | tail -10 || true
 
+# ── Android 平台黑名单完整性检查（非阻断，stderr 提示）──
+# 从 platform-web.ts 读 ANDROID_UNAVAILABLE 黑名单，对比 bindings/app.ts 中的 desktop-only binding，
+# 发现未覆盖的桌面专属 binding 时输出警告。新增 Go binding 时提醒前端同步黑名单。
+# 零依赖脚本（node:fs/path/url），bindings 未生成时自动跳过。
+if command -v node >/dev/null 2>&1; then
+  echo ""
+  echo "[pre-commit] Android 平台黑名单检查..."
+  node scripts/check-android-unavailable.ts 2>&1 || echo "⚠️  android-unavailable 检查失败（不阻断）"
+fi
+
 # ── biome 行级增量闸（2026-09-04，A4）：拦「本次提交新增的违规行」，存量债不误伤 ──
 # 为什么这是本仓唯一 exit-1 阻断段（其余段含 --write 修复失败均仅提示）：
 #   - check-biome.ts 默认 --changed 基准 = vcs.defaultBranch(main)；main 直提工作流下

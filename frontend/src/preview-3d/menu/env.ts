@@ -1,15 +1,12 @@
 // ===== 环境菜单声明式 Schema（ADR-076 + ADR-106）=====
 
 import { tr } from "../../core/i18n/tr.ts";
-import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capability.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { type PreviewSnapshot, previewSnapshot } from "../state/preview-state.ts";
-import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
@@ -37,13 +34,6 @@ const PRESET_ORDER = [
   { id: "forest", icon: "\uD83C\uDF33", labelKey: "preview.presetQuickForest" },
   { id: "sky", icon: "\uD83C\uDF24\uFE0F", labelKey: "preview.presetQuickSky" },
 ];
-/** 环境面板空态提示行（两分支共用） */
-function appendEnvEmpty(list: HTMLElement): void {
-  const r = document.createElement("div");
-  r.className = "ev-empty-note";
-  r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
-  list.appendChild(r);
-}
 function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
   let allCaps = sceneCapabilityRegistry.getAll().filter((cap) => ENV_IDS.has(cap.id));
   if (allCaps.length === 0) {
@@ -131,250 +121,103 @@ function applyPreset(
   menu?.refresh();
 }
 
-// P1 批次4：环境面板内联 cssText → 集中类（ev- 前缀本文件私有，ensureEnvStyles
-// 幂等注入——renderEnvLevel 唯一入口调用，覆盖预设栏/摘要行/分区入口全部渲染路径）
-let _envStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _envStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
-function ensureEnvStyles(): void {
-  if (_envStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
-/* 环境面板集中样式（P1 批次4：cssText→类）。双源镜像待共享模块化：
-   ev-empty-note == roles .fr-empty-note、ev-range == cap-controls .cc-range、
-   ev-label-grow == cap-controls .cc-label-grow（同值多源）。 */
-.slide-item.ev-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
-.slide-item.ev-group-entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; }
-.slide-label.ev-label-grow { flex: 1; font-size: 13px; }
-.ev-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size: 12px; }
-.ev-preset-bar {
-  display: flex; gap: 4px; padding: 6px 10px; flex-wrap: wrap;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.ev-preset-btn {
-  flex: 1; min-width: 48px; padding: 4px 6px; border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 6px; background: transparent; color: rgba(255,255,255,0.85); cursor: pointer;
-  font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
-}
-.ev-preset-icon { font-size: 14px; }
-.ev-slider-host { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.ev-slider-meta { display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,0.85); }
-.ev-range { width: 100%; cursor: pointer; accent-color: var(--accent,#7c83ff); }
-.ev-chevron {
-  margin-left: auto; font-size: 18px; font-weight: 700; opacity: 0.5;
-  user-select: none; padding: 0 4px; pointer-events: none;
-}
-`;
-  overlayStyleRoot().appendChild(style);
-  _envStylesInjected = true;
-}
+// ── ADR-193 第三刀：环境面板声明式化（folder 内联展开，renderEnvLevel 过程式渲染退役）──
+// 交互形态拍板（2026-09-06）：cap 分组下钻由 menu.navigate 子页改为 folder 手风琴内联展开，
+// 复用现有 folder 节点原语零新机制；开合态经 render.ts rmAppendFolder 的按 id 记忆跨 refresh 保持。
+// 预设栏保留（ENV_PRESET_LINKAGE 是跨 cap 联动：sky+fog+envIntensity，与 environment cap
+// 自报的 env-preset preset-thumb（仅切 envMap）职责不同，非重复真值）——声明式化为 select 单行。
 
-/** 环境面板（ADR-075 + 统一注册表）：只渲染环境类能力（sky/ground/environment/fog/reflector）
- *  独立面板排除项：light → lighting；shadow → shadow；postprocessing → postproc；避免同一能力控件双面板重复。
- *
- *  两级菜单（2026-08-20 改造）：
- *  - 第一层（环境根视图）：每个 cap 渲染一行摘要 = 主控件 + 名称 + ›
- *    · environment/fog/reflector：第一个控件是 *-enabled toggle → 第一层放该 toggle
- *    · sky：无 enabled toggle，第一个控件是 sky-time slider → 第一层直接放该 slider
- *    · ground：仅一个 visible toggle、无数值 → 纯 toggle 行，无 ›
- *  - › 点击 → menu.navigate(subView)，subView 渲染该 cap 的完整 getMenuControls()
- *  - 无 menu 句柄（旧调用路径）→ 回退到平铺渲染，保持向后兼容 */
-export function renderEnvLevel(
-  list: HTMLElement,
-  ctx: PreviewMenuCtx,
-  menu?: SlideMenuHandle,
-): void {
-  ensureEnvStyles();
-  if (!menu) {
-    const caps = orderedCaps(resolveCaps(ctx));
-    if (caps.length === 0) {
-      appendEnvEmpty(list);
-      return;
-    }
-    const ctrls: MenuControlDef[] = [];
-    caps.forEach((cap, idx) => {
-      if (idx > 0)
-        ctrls.push({
-          id: "__divider_" + cap.id,
-          kind: "divider" as const,
-          labelKey: "",
-          fallback: "",
-          getValue: () => false,
-          setValue: () => {},
-        });
-      ctrls.push(...cap.getMenuControls());
+/** 预设 select 当前值（模块级：预设无状态层路径，applyPreset 写入；旧 UI 按钮本就无选中态显示） */
+let _lastEnvPreset: Exclude<EnvPresetId, "custom"> = "studio";
+
+/** 节点 label 的 labelKey 需要 i18n 键：group key 本身就是键（partitionCapControlsByGroup 的
+ *  label = tr(k, k)），base 组（无 group）回退 cap.labelKey */
+function envCapFolder(cap: SceneCapability): PreviewMenuNode {
+  // 惰性分区：controls 传函数引用，每次渲染重取 getMenuControls + 重分区
+  //（visibleWhen B 轨实时——水模式切换后 Pool/Look 组成员随订阅 refresh 重建）
+  const parts = () => partitionCapControlsByGroup(cap, cap.getMenuControls(), previewSnapshot());
+  const stripGroup = (cs: MenuControlDef[]): MenuControlDef[] =>
+    cs.map(({ group: _grp, ...rest }) => rest);
+  const partsNow = parts();
+  let children: PreviewMenuNode[];
+  if (partsNow.length > 1) {
+    // 多组 cap（ground 的 水面/表面材质、water 的 形态/水池/观感）：组内嵌一层 folder
+    children = partsNow.map((g) => {
+      const gid = `env-cap-${cap.id}-grp-${g.key ?? "base"}`;
+      return {
+        id: gid,
+        kind: "folder",
+        labelKey: g.key ?? cap.labelKey,
+        fallback: g.key ?? cap.id,
+        children: [
+          {
+            id: `${gid}-ctrls`,
+            kind: "controls",
+            controls: () => {
+              const cur = parts().find((x) => x.key === g.key);
+              return cur ? stripGroup(cur.ctrls) : [];
+            },
+          },
+        ],
+      };
     });
-    renderCapControls(list, ctrls, previewSnapshot());
-    return;
+  } else {
+    children = [
+      {
+        id: `env-cap-${cap.id}-ctrls`,
+        kind: "controls",
+        controls: () => stripGroup(cap.getMenuControls()),
+      },
+    ];
   }
-  const caps = orderedCaps(resolveCaps(ctx));
-  rebuildEnvSubs(caps, menu); // 重建订阅：进入环境面板即刷新最新参数（含上一次会话遗留的 menu 引用清理）
-  if (caps.length === 0) {
-    appendEnvEmpty(list);
-    return;
-  }
-  const pb = document.createElement("div");
-  pb.className = "ev-preset-bar";
-  PRESET_ORDER.forEach((p) => {
-    const btn = document.createElement("button");
-    btn.dataset.testid = "env-preset-" + p.id;
-    btn.className = "ev-preset-btn";
-    const ic = document.createElement("span");
-    ic.textContent = p.icon;
-    ic.className = "ev-preset-icon";
-    const lb = document.createElement("span");
-    lb.textContent = tr(p.labelKey, p.id);
-    btn.append(ic, lb);
-    btn.onclick = (e: MouseEvent) => {
-      e.stopPropagation();
-      applyPreset(ctx, p.id as Exclude<EnvPresetId, "custom">, menu);
-    };
-    pb.appendChild(btn);
-  });
-  list.appendChild(pb);
-  for (const cap of caps) {
-    const ctrls = cap.getMenuControls();
-    if (ctrls.length === 0) continue;
-    const pi = ctrls.findIndex((cc) => cc.kind !== "divider");
-    if (pi === -1) continue;
-    const primary = ctrls[pi];
-    const hasSub = ctrls.length > 1;
-    const row = document.createElement("div");
-    row.className = "slide-item ev-row";
-    row.dataset.testid = "cap-row-" + cap.id;
-    // 动态豁免（P1）：hasSub 可点态 cursor 留内联属性——env.test.ts:122 断言 style.cursor，
-    // 抽类无法被该 DOM 级断言读回（同 render.ts body.display 豁免范式）。
-    row.style.cursor = hasSub ? "pointer" : "";
-    if (primary.kind === "toggle") {
-      const lb = document.createElement("span");
-      lb.className = "slide-label ev-label-grow";
-      lb.textContent = tr(primary.labelKey, primary.fallback);
-      const tg = createHeaderToggle({
-        value: primary.getValue() as boolean,
-        onChange: (v: boolean) => primary.setValue(v),
-        bind: (): boolean => primary.getValue() as boolean,
-      });
-      tg.addEventListener("click", (e: MouseEvent) => e.stopPropagation());
-      row.append(lb, tg);
-    } else if (primary.kind === "slider") {
-      const hd = document.createElement("div");
-      hd.className = "ev-slider-host";
-      const nr = document.createElement("div");
-      nr.className = "ev-slider-meta";
-      const nm = document.createElement("span");
-      nm.className = "slide-label";
-      nm.textContent = tr(primary.labelKey, primary.fallback);
-      const vl = document.createElement("span");
-      const nv = primary.getValue() as number;
-      vl.textContent = formatCapSliderValue(primary, nv);
-      nr.append(nm, vl);
-      const sl = document.createElement("input");
-      sl.type = "range";
-      sl.min = String(primary.slider?.min ?? 0);
-      sl.max = String(primary.slider?.max ?? 1);
-      sl.step = String(primary.slider?.step ?? 0.01);
-      sl.value = String(nv);
-      sl.className = "ev-range";
-      sl.oninput = (): void => {
-        const v = Number(sl.value);
-        primary.setValue(v);
-        vl.textContent = formatCapSliderValue(primary, v);
-      };
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-      ["click", "mousedown", "touchstart"].forEach((ev) =>
-        sl.addEventListener(ev, (e: Event) => e.stopPropagation()),
-      );
-      hd.append(nr, sl);
-      row.appendChild(hd);
-    } else {
-      const lb = document.createElement("span");
-      lb.className = "slide-label ev-label-grow";
-      lb.textContent = tr(cap.labelKey, cap.id);
-      row.appendChild(lb);
-    }
-    if (hasSub) {
-      row.onclick = (): void => {
-        // 根行已展示主控件（通常是启用开关），下钻子视图不再重复罗列，避免「开关套开关」
-        // render 闭包每次执行都从 cap 重新取控件并分区——模式切换后局部刷新能反映最新 visible?（不死快照）
-        const renderSub = (subList: HTMLElement): void => {
-          const all = cap.getMenuControls();
-          const idx = all.findIndex((cc) => cc.kind !== "divider");
-          const subCtrls = all.filter((_, i) => i !== idx);
-          const snap = previewSnapshot();
-          const groups = partitionCapControlsByGroup(cap, subCtrls, snap).filter(
-            (g) => g.ctrls.length > 0,
-          );
-          if (groups.length <= 1) {
-            // 无分组（或仅剩单组）：保持原平铺下钻
-            subList.replaceChildren();
-            renderCapControls(subList, subCtrls, previewSnapshot());
-            return;
-          }
-          // 带分组：先列分区入口（形态 / 外观 / 水池 / 波纹 …），各自下钻到该组控件
-          subList.replaceChildren();
-          for (const g of groups) {
-            const key = g.key; // 记录分组键，控件层 render 时按 key 重新取该组（每次重算）
-            const entry = document.createElement("div");
-            entry.className = "slide-item ev-group-entry";
-            entry.dataset.testid = "cap-group-entry-" + (g.key ?? "base");
-            const lb = document.createElement("span");
-            lb.className = "slide-label ev-label-grow";
-            lb.textContent = g.label;
-            const ch = document.createElement("span");
-            ch.textContent = "›";
-            ch.className = "ev-chevron";
-            entry.append(lb, ch);
-            entry.onclick = (): void => {
-              menu.navigate({
-                title: g.label,
-                render: (gsub) => {
-                  gsub.replaceChildren();
-                  // 重新分区取该组控件（每次重算，模式切换后可见性实时生效）
-                  const cur = cap.getMenuControls();
-                  const cidx = cur.findIndex((cc) => cc.kind !== "divider");
-                  const csub = cur.filter((_, i) => i !== cidx);
-                  const grp = partitionCapControlsByGroup(cap, csub, previewSnapshot()).find(
-                    (x) => x.key === key,
-                  );
-                  if (!grp) return;
-                  // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
-                  const flat = grp.ctrls.map(({ group: _grp, ...rest }) => rest);
-                  renderCapControls(gsub, flat, previewSnapshot());
-                },
-              });
-            };
-            subList.appendChild(entry);
-          }
-        };
-        menu.navigate({ title: tr(cap.labelKey, cap.id), render: renderSub });
-      };
-      const ch = document.createElement("span");
-      ch.textContent = "›";
-      ch.dataset.testid = "row-chevron";
-      ch.className = "ev-chevron";
-      row.appendChild(ch);
-    }
-    list.appendChild(row);
-  }
+  return {
+    id: `env-cap-${cap.id}`,
+    kind: "folder",
+    labelKey: cap.labelKey,
+    fallback: cap.id,
+    icon: cap.icon,
+    defaultOpen: false,
+    children,
+  };
 }
 
-/** [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）：
- *  包 renderEnvLevel 进 PreviewMenuNode.custom 壳，接入 schemaBuilders 统一路由。
- *  内部逻辑（预设栏/摘要行/分区下钻/订阅刷新）全复用 renderEnvLevel——零行为变化。
- *  schemaBuilders 路径 menu 必传（走两级菜单分支）；renderEnvLevel 平铺回退保留
- *  给 legacy 调用方（测试/旧路径）保留，暂不删。 */
+/**
+ * 环境面板声明式 schema（ADR-193 第三刀）。
+ * 结构：氛围预设 select（跨 cap 联动）+ 每 cap 一个 folder（单组平铺 / 多组嵌套）。
+ * 空 caps → 空态提示单节点。menu 存在时重建 cap 订阅（cap 参数变更 → menu.refresh →
+ * 面板重渲染 → 本函数重跑 → 分区/可见性实时）。
+ */
 export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
+  const caps = orderedCaps(resolveCaps(ctx));
+  if (menu) rebuildEnvSubs(caps, menu);
+  if (caps.length === 0) {
+    return [
+      {
+        id: "env-empty",
+        kind: "sectionTitle",
+        labelKey: "preview.noEnvironment",
+        fallback: "进入 3D 后再打开环境面板",
+      },
+    ];
+  }
   return [
     {
-      id: "environment",
-      kind: "custom",
-      labelKey: "preview.environment",
-      fallback: "环境",
-      icon: "🌍",
-      renderCustom: (list: HTMLElement): void => {
-        renderEnvLevel(list, ctx, menu);
+      id: "env-preset-bar",
+      kind: "select",
+      labelKey: "preview.envPresetThumbnail",
+      fallback: "氛围预设",
+      control: {
+        options: PRESET_ORDER.map((p) => ({
+          value: p.id,
+          label: `${p.icon} ${tr(p.labelKey, p.id)}`,
+        })),
+        get: () => _lastEnvPreset,
+        set: (v) => {
+          _lastEnvPreset = v as Exclude<EnvPresetId, "custom">;
+          applyPreset(ctx, _lastEnvPreset, menu);
+        },
       },
     },
+    ...caps.map(envCapFolder),
   ];
 }

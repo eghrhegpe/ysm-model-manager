@@ -1093,7 +1093,6 @@ auto_fields:
     - renderCapControls
     - renderComponent
     - renderDisplayName
-    - renderEnvLevel
     - renderFormattedText
     - renderHealthReport
     - renderLoadingState

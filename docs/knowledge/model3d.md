@@ -221,6 +221,7 @@ auto_fields:
     - FrameSideOptions
     - frRoleRowClass
     - generateSurfacePixels
+    - getActiveInputSession
     - getBoneDetail
     - getBoneList
     - getBonePath
@@ -489,7 +490,6 @@ auto_fields:
     - removePerFrame
     - renderAdapterPanelContent
     - renderCapControls
-    - renderEnvLevel
     - renderLoadingState
     - renderMenu
     - RenderModeCapability
@@ -540,6 +540,7 @@ auto_fields:
     - SemanticMorphId
     - SemanticMorphMap
     - SemanticScene
+    - setActiveInputSession
     - setBoneNodeVisible
     - setBoneVisible
     - setFrustumCullEnabled
@@ -617,6 +618,7 @@ auto_fields:
     - UnloadCtx
     - unloadModel
     - unloadSessionModel
+    - unregisterActiveInputSession
     - unregisterCorePanelSchemas
     - unregisterModelRoot
     - unregisterSchema

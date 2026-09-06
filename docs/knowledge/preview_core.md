@@ -91,6 +91,7 @@ auto_fields:
     - FbxSkeletonData
     - filterAnimFiles
     - findAncestorBoneId
+    - getActiveInputSession
     - getBoneDetail
     - getBonePath
     - getBonePosition
@@ -232,6 +233,7 @@ auto_fields:
     - SchemaBuilder
     - ScreenshotScene
     - SemanticScene
+    - setActiveInputSession
     - setBoneNodeVisible
     - SharedInfra
     - showLoadFailure
@@ -255,6 +257,7 @@ auto_fields:
     - UnloadCtx
     - unloadModel
     - unloadSessionModel
+    - unregisterActiveInputSession
     - unregisterSchema
     - UpdateableScene
     - VrmAdapterDeps

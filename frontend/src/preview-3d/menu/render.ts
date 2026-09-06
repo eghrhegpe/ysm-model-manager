@@ -142,6 +142,12 @@ function rmBindLeafClick(row: HTMLElement, node: PreviewMenuNode, deps: RenderMe
   };
 }
 
+/** folder 开合态记忆（按 node.id）：用户交互过的开合状态跨 menu.refresh() 重渲染保持——
+ *  ADR-193 第三刀（env folder 手风琴）引入：cap 订阅驱动的 refresh 会重建 DOM，
+ *  无此记忆则用户展开的分组被重置回 defaultOpen。id 集合有限（菜单节点固定），不泄漏；
+ *  未交互过的 folder 仍以 defaultOpen 为初值。 */
+const folderOpenState = new Map<string, boolean>();
+
 /** [子函数 1/6] folder：可折叠 section，递归 renderMenu 渲染 children */
 function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
@@ -150,7 +156,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   section.dataset.testid = node.id;
   const header = document.createElement("div");
   header.className = "cap-section-header";
-  const collapsed = node.defaultOpen === false;
+  const collapsed = folderOpenState.get(node.id) ?? node.defaultOpen === false;
   const arrow = document.createElement("span");
   arrow.textContent = collapsed ? "▸" : "▾";
   arrow.className = "cap-section-arrow";
@@ -167,6 +173,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     const nowCollapsed = body.style.display === "none";
     body.style.display = nowCollapsed ? "block" : "none";
     arrow.textContent = nowCollapsed ? "▾" : "▸";
+    folderOpenState.set(node.id, !nowCollapsed); // 仅记用户交互态（ADR-193 第三刀）
   });
   renderMenu(body, children, deps);
   section.append(header, body);

@@ -28,6 +28,7 @@ import {
 import {
   type MenuControlDef,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
@@ -798,10 +799,14 @@ export class EnvironmentCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
-      this.params.enabled = state.enabled;
-    }
+    restoreFields(state, {
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+          this.params.enabled = v;
+        },
+      },
+    });
     if (typeof state.preset === "string") {
       const p = state.preset as EnvPresetId;
       // 只有 custom=custom 且已有缓存（不可能，因为存的时候不存 HDR，这里只做二次保险）时保留
@@ -828,10 +833,11 @@ export class EnvironmentCapability implements SceneCapability {
         this.params.preset = p;
       }
     }
-    if (typeof state.intensity === "number") this.params.intensity = state.intensity;
-    if (typeof state.resolution === "number") this.params.resolution = state.resolution;
-    if (typeof state.useAsBackground === "boolean")
-      this.params.useAsBackground = state.useAsBackground;
+    restoreFields(state, {
+      intensity: { number: (v) => (this.params.intensity = v) },
+      resolution: { number: (v) => (this.params.resolution = v) },
+      useAsBackground: { boolean: (v) => (this.params.useAsBackground = v) },
+    });
     this.buildEnvironment();
   }
 

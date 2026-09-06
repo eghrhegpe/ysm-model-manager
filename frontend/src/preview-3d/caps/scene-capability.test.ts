@@ -30,6 +30,45 @@ describe("restoreFields — 类型分发", () => {
     expect(ok).toBe(true);
   });
 
+  it("oneOf：值命中白名单 → 触发 apply，返回 true", () => {
+    const apply = vi.fn();
+    const ok = restoreFields(
+      { mode: "exp2" },
+      { mode: { oneOf: { values: ["linear", "exp2"], apply } } },
+    );
+    expect(apply).toHaveBeenCalledWith("exp2");
+    expect(ok).toBe(true);
+  });
+
+  it("oneOf：值不在白名单 → 跳过且不置 applied", () => {
+    const apply = vi.fn();
+    const ok = restoreFields(
+      { mode: "fancy" },
+      { mode: { oneOf: { values: ["linear", "exp2"], apply } } },
+    );
+    expect(apply).not.toHaveBeenCalled();
+    expect(ok).toBe(false);
+  });
+
+  it("oneOf：非 string 值 → 跳过（先类型分发再白名单）", () => {
+    const apply = vi.fn();
+    const ok = restoreFields({ mode: 2 }, { mode: { oneOf: { values: ["linear"], apply } } });
+    expect(apply).not.toHaveBeenCalled();
+    expect(ok).toBe(false);
+  });
+
+  it("oneOf 与 string 恢复器同配：string 优先，oneOf 不触发", () => {
+    const s = vi.fn();
+    const apply = vi.fn();
+    const ok = restoreFields(
+      { mode: "linear" },
+      { mode: { string: s, oneOf: { values: ["linear"], apply } } },
+    );
+    expect(s).toHaveBeenCalledWith("linear");
+    expect(apply).not.toHaveBeenCalled();
+    expect(ok).toBe(true);
+  });
+
   it("混合存档：匹配的字段回填，不匹配的跳过，返回 true", () => {
     const n = vi.fn();
     const s = vi.fn();

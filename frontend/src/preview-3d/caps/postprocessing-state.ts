@@ -9,6 +9,13 @@
 /** 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） */
 export type ReflectionMode = "envmap-only" | "envmap+ssr" | "ssr-only";
 
+/** ReflectionMode 合法值白名单（loadState 枚举校验用） */
+export const REFLECTION_MODES = [
+  "envmap-only",
+  "envmap+ssr",
+  "ssr-only",
+] as const satisfies readonly ReflectionMode[];
+
 export interface PostprocessingParams {
   enabled: boolean;
   /** Bloom 强度（0~3）*/

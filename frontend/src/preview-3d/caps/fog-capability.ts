@@ -7,12 +7,17 @@
 import * as THREE from "three";
 import {
   type MenuControlDef,
+  oneOf,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
 
 export type FogMode = "linear" | "exp2";
+
+/** FogMode 合法值白名单（loadState 枚举校验用） */
+const FOG_MODES = ["linear", "exp2"] as const satisfies readonly FogMode[];
 
 export interface FogParams {
   enabled: boolean;
@@ -242,15 +247,19 @@ export class FogCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
-      this.params.enabled = state.enabled;
-    }
-    if (state.mode === "linear" || state.mode === "exp2") this.params.mode = state.mode;
-    if (typeof state.color === "number") this.params.color = state.color;
-    if (typeof state.near === "number") this.params.near = state.near;
-    if (typeof state.far === "number") this.params.far = state.far;
-    if (typeof state.density === "number") this.params.density = state.density;
+    restoreFields(state, {
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+          this.params.enabled = v;
+        },
+      },
+      mode: oneOf(FOG_MODES, (v) => (this.params.mode = v)),
+      color: { number: (v) => (this.params.color = v) },
+      near: { number: (v) => (this.params.near = v) },
+      far: { number: (v) => (this.params.far = v) },
+      density: { number: (v) => (this.params.density = v) },
+    });
     this.applyFog();
   }
 

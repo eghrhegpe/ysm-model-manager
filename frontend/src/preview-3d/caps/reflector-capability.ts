@@ -11,6 +11,7 @@ import { Reflector } from "three/addons/objects/Reflector.js";
 import {
   type MenuControlDef,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
@@ -312,15 +313,19 @@ export class ReflectorCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
-      this.params.enabled = state.enabled;
-    }
-    if (typeof state.size === "number") this.params.size = state.size;
-    if (typeof state.resolution === "number") this.params.resolution = state.resolution;
-    if (typeof state.color === "number") this.params.color = state.color;
-    if (typeof state.opacity === "number") this.params.opacity = state.opacity;
-    if (typeof state.clipBias === "number") this.params.clipBias = state.clipBias;
+    restoreFields(state, {
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+          this.params.enabled = v;
+        },
+      },
+      size: { number: (v) => (this.params.size = v) },
+      resolution: { number: (v) => (this.params.resolution = v) },
+      color: { number: (v) => (this.params.color = v) },
+      opacity: { number: (v) => (this.params.opacity = v) },
+      clipBias: { number: (v) => (this.params.clipBias = v) },
+    });
     this.buildReflector();
   }
 

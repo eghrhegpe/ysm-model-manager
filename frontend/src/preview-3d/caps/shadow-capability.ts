@@ -14,14 +14,21 @@ import * as THREE from "three";
 import type { LightCapability } from "./light-capability.ts";
 import {
   type MenuControlDef,
+  oneOf,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
 import type { ShadowParams } from "./shadow-state.ts";
 // 状态/序列化轴（ShadowParams / 默认值 / 预设表 / 模型映射）已下沉 shadow-state.ts；
 // 此处透传导出，保持既有调用方（shadow-capability.test.ts 等）的 import 路径不破坏。
-import { DEFAULT_SHADOW_PARAMS, SHADOW_PRESET_BY_MODEL, SHADOW_PRESETS } from "./shadow-state.ts";
+import {
+  DEFAULT_SHADOW_PARAMS,
+  SHADOW_PRESET_BY_MODEL,
+  SHADOW_PRESETS,
+  SHADOW_TYPES,
+} from "./shadow-state.ts";
 
 export type { ShadowParams };
 export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
@@ -531,16 +538,21 @@ export class ShadowCapability implements SceneCapability {
       this.enabled = state.enabled;
       this.params.enabled = state.enabled;
     }
-    if (typeof state.type === "string" && (state.type === "hard" || state.type === "soft")) {
-      this.params.type = state.type;
-    } else if (typeof state.soft === "boolean") {
-      // 兼容旧 soft 字段（老会话持久化落盘）
+    let typeRestored = false;
+    restoreFields(state, {
+      type: oneOf(SHADOW_TYPES, (v) => {
+        this.params.type = v;
+        typeRestored = true;
+      }),
+      mapSize: { number: (v) => (this.params.mapSize = v) },
+      bias: { number: (v) => (this.params.bias = v) },
+      normalBias: { number: (v) => (this.params.normalBias = v) },
+      cameraSize: { number: (v) => (this.params.cameraSize = v) },
+    });
+    if (!typeRestored && typeof state.soft === "boolean") {
+      // 兼容旧 soft 字段（老会话持久化落盘，type 尚未进存档）
       this.params.type = state.soft ? "soft" : "hard";
     }
-    if (typeof state.mapSize === "number") this.params.mapSize = state.mapSize;
-    if (typeof state.bias === "number") this.params.bias = state.bias;
-    if (typeof state.normalBias === "number") this.params.normalBias = state.normalBias;
-    if (typeof state.cameraSize === "number") this.params.cameraSize = state.cameraSize;
     this.isStateLoaded = true;
     this.apply();
   }

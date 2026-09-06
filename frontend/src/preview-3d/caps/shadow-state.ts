@@ -18,6 +18,9 @@ export interface ShadowParams {
   cameraSize: number;
 }
 
+/** type 合法值白名单（loadState 枚举校验用） */
+export const SHADOW_TYPES = ["hard", "soft"] as const satisfies readonly ShadowParams["type"][];
+
 export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
   enabled: false,
   type: "hard",

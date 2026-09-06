@@ -11,7 +11,9 @@ import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import {
   createListenerSet,
   type MenuControlDef,
+  oneOf,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
@@ -654,25 +656,27 @@ export class WaterCapability implements SceneCapability {
       }
     }
     if (!state) return;
-    if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.size === "number") this.params.size = state.size;
+    restoreFields(state, {
+      enabled: { boolean: (v) => (this.enabled = v) },
+      size: { number: (v) => (this.params.size = v) },
+    });
     // V2 新格式：state.water 嵌套对象（优先走）
     const w = (state.water ?? state) as Partial<WaterParams>;
-    if (typeof w.enabled === "boolean") this.setWaterEnabled(w.enabled);
-    if (typeof w.mode === "string" && WATER_MODES.includes(w.mode as WaterMode)) {
-      this.setWaterMode(w.mode as WaterMode);
-    }
-    if (typeof w.wetness === "number") this.setWetness(w.wetness);
-    if (typeof w.waterColor === "number") this.setWaterColor(w.waterColor);
-    if (typeof w.waterOpacity === "number") this.setWaterOpacity(w.waterOpacity);
-    if (typeof w.normalStrength === "number") this.setNormalStrength(w.normalStrength);
-    if (typeof w.waveSpeed === "number") this.setWaveSpeed(w.waveSpeed);
-    if (typeof w.clarity === "number") this.setClarity(w.clarity);
-    // pool 专属参数：值先 set；若当前模式非 pool，setter 只存参数不 rebuild
-    if (typeof w.poolHeight === "number") this.setPoolHeight(w.poolHeight);
-    if (typeof w.poolWallThickness === "number") this.setPoolWallThickness(w.poolWallThickness);
-    if (typeof w.poolWallColor === "number") this.setPoolWallColor(w.poolWallColor);
-    if (typeof w.poolRoundness === "number") this.setPoolRoundness(w.poolRoundness);
+    restoreFields(w as Record<string, unknown>, {
+      enabled: { boolean: (v) => this.setWaterEnabled(v) },
+      mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+      wetness: { number: (v) => this.setWetness(v) },
+      waterColor: { number: (v) => this.setWaterColor(v) },
+      waterOpacity: { number: (v) => this.setWaterOpacity(v) },
+      normalStrength: { number: (v) => this.setNormalStrength(v) },
+      waveSpeed: { number: (v) => this.setWaveSpeed(v) },
+      clarity: { number: (v) => this.setClarity(v) },
+      // pool 专属参数：值先 set；若当前模式非 pool，setter 只存参数不 rebuild
+      poolHeight: { number: (v) => this.setPoolHeight(v) },
+      poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
+      poolWallColor: { number: (v) => this.setPoolWallColor(v) },
+      poolRoundness: { number: (v) => this.setPoolRoundness(v) },
+    });
   }
 
   /** 移除并释放 */

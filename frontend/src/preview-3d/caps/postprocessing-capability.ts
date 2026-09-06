@@ -21,7 +21,6 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import type { PostprocessingLike } from "../adapters/postprocessing.ts";
 import { previewPixelRatio } from "../render-budget.ts";
 import type { LightCapability } from "./light-capability.ts";
-import type { PostprocessingParams, ReflectionMode } from "./postprocessing-state.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
 // cap-configs.test.ts 等）的 import 路径不破坏。THREE.ToneMapping 枚举求值仍在本文件
@@ -29,12 +28,17 @@ import type { PostprocessingParams, ReflectionMode } from "./postprocessing-stat
 import {
   DEFAULT_POSTPROC_PARAMS,
   POSTPROC_PRESETS,
+  type PostprocessingParams,
+  REFLECTION_MODES,
+  type ReflectionMode,
   TONE_MAPPING_KEYS,
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
   type MenuControlDef,
+  oneOf,
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
@@ -774,45 +778,34 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
-      this.params.enabled = state.enabled;
-    }
-    if (typeof state.bloomStrength === "number") this.params.bloomStrength = state.bloomStrength;
-    if (typeof state.bloomThreshold === "number") this.params.bloomThreshold = state.bloomThreshold;
-    if (typeof state.bloomRadius === "number") this.params.bloomRadius = state.bloomRadius;
-    if (typeof state.bloomFollowVolumetric === "boolean")
-      this.params.bloomFollowVolumetric = state.bloomFollowVolumetric;
-    if (typeof state.bloomEnabled === "boolean") this.params.bloomEnabled = state.bloomEnabled;
-    if (typeof state.ssaoEnabled === "boolean") this.params.ssaoEnabled = state.ssaoEnabled;
-    if (typeof state.ssaoRadius === "number") this.params.ssaoRadius = state.ssaoRadius;
-    if (typeof state.ssaoMinDist === "number") this.params.ssaoMinDist = state.ssaoMinDist;
-    if (typeof state.ssaoMaxDist === "number") this.params.ssaoMaxDist = state.ssaoMaxDist;
-    if (
-      typeof state.toneMapping === "string" &&
-      (TONE_MAPPING_KEYS as readonly string[]).includes(state.toneMapping)
-    ) {
-      this.params.toneMapping = state.toneMapping as PostprocessingParams["toneMapping"];
-    }
-    if (typeof state.exposure === "number") this.params.exposure = state.exposure;
-    if (
-      typeof state.reflectionMode === "string" &&
-      (state.reflectionMode === "envmap-only" ||
-        state.reflectionMode === "envmap+ssr" ||
-        state.reflectionMode === "ssr-only")
-    ) {
-      this.params.reflectionMode = state.reflectionMode;
-    }
-    if (typeof state.ssrOpacity === "number") this.params.ssrOpacity = state.ssrOpacity;
-    if (typeof state.ssrMaxDistance === "number") this.params.ssrMaxDistance = state.ssrMaxDistance;
-    if (typeof state.ssrThickness === "number") this.params.ssrThickness = state.ssrThickness;
-    if (typeof state.ssrBlur === "boolean") this.params.ssrBlur = state.ssrBlur;
-    if (typeof state.ssrDistanceAttenuation === "boolean")
-      this.params.ssrDistanceAttenuation = state.ssrDistanceAttenuation;
-    if (typeof state.ssrFresnel === "boolean") this.params.ssrFresnel = state.ssrFresnel;
-    if (typeof state.ssrBouncing === "boolean") this.params.ssrBouncing = state.ssrBouncing;
-    if (typeof state.reflectorDisableWhenSSR === "boolean")
-      this.params.reflectorDisableWhenSSR = state.reflectorDisableWhenSSR;
+    restoreFields(state, {
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+          this.params.enabled = v;
+        },
+      },
+      bloomStrength: { number: (v) => (this.params.bloomStrength = v) },
+      bloomThreshold: { number: (v) => (this.params.bloomThreshold = v) },
+      bloomRadius: { number: (v) => (this.params.bloomRadius = v) },
+      bloomFollowVolumetric: { boolean: (v) => (this.params.bloomFollowVolumetric = v) },
+      bloomEnabled: { boolean: (v) => (this.params.bloomEnabled = v) },
+      ssaoEnabled: { boolean: (v) => (this.params.ssaoEnabled = v) },
+      ssaoRadius: { number: (v) => (this.params.ssaoRadius = v) },
+      ssaoMinDist: { number: (v) => (this.params.ssaoMinDist = v) },
+      ssaoMaxDist: { number: (v) => (this.params.ssaoMaxDist = v) },
+      toneMapping: oneOf(TONE_MAPPING_KEYS, (v) => (this.params.toneMapping = v)),
+      exposure: { number: (v) => (this.params.exposure = v) },
+      reflectionMode: oneOf(REFLECTION_MODES, (v) => (this.params.reflectionMode = v)),
+      ssrOpacity: { number: (v) => (this.params.ssrOpacity = v) },
+      ssrMaxDistance: { number: (v) => (this.params.ssrMaxDistance = v) },
+      ssrThickness: { number: (v) => (this.params.ssrThickness = v) },
+      ssrBlur: { boolean: (v) => (this.params.ssrBlur = v) },
+      ssrDistanceAttenuation: { boolean: (v) => (this.params.ssrDistanceAttenuation = v) },
+      ssrFresnel: { boolean: (v) => (this.params.ssrFresnel = v) },
+      ssrBouncing: { boolean: (v) => (this.params.ssrBouncing = v) },
+      reflectorDisableWhenSSR: { boolean: (v) => (this.params.reflectorDisableWhenSSR = v) },
+    });
     // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
     if (this.enabled) this.applyToneMapping();
     this.applyReflectorSync();

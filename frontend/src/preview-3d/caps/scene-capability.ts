@@ -181,6 +181,24 @@ export interface FieldRestorer {
   number?: (v: number) => void;
   boolean?: (v: boolean) => void;
   string?: (v: string) => void;
+  /**
+   * 枚举白名单：值为 string 且命中 values 才 apply（取代手写
+   * `typeof v === "string" && (v === "a" || v === "b")` 的枚举守卫）。
+   * 与 string 同配时 string 优先（oneOf 仅作缺省的受约束分发）。
+   */
+  oneOf?: { values: readonly string[]; apply: (v: string) => void };
+}
+
+/**
+ * 枚举白名单恢复器工厂：保持调用方零断言（apply 收到窄化后的枚举类型）。
+ * apply 的宽化断言收敛在这一处——运行时分发前已过 `values.includes` 校验，
+ * 传入 v 必然 ∈ values，断言不引入不安全。
+ */
+export function oneOf<T extends string>(
+  values: readonly T[],
+  apply: (v: T) => void,
+): FieldRestorer {
+  return { oneOf: { values, apply: apply as (v: string) => void } };
 }
 
 /**
@@ -214,6 +232,9 @@ export function restoreFields(
     } else if (typeof v === "string") {
       if (restorer.string) {
         restorer.string(v);
+        applied = true;
+      } else if (restorer.oneOf?.values.includes(v)) {
+        restorer.oneOf.apply(v);
         applied = true;
       }
     }

@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-194：MenuControlDef 判别联合重构：kind 与配置块编译期配对",
+        "link": "/adr/ADR-194-menu-control-def-discriminated-union"
+      },
+      {
         "text": "ADR-193：3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道",
         "link": "/adr/ADR-193-preview-menu-declarative-endgame"
       },

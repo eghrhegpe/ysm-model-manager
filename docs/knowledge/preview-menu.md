@@ -39,6 +39,7 @@ auto_fields:
     - CORE_MENU_ITEMS
     - corePanelBuilder
     - CorePanelId
+    - disposeCustomCleanups
     - disposeEnvSubscriptions
     - formatCapSliderValue
     - hasSceneStats

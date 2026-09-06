@@ -169,6 +169,7 @@ auto_fields:
     - DirectionalLightParams
     - Disposable
     - DISPOSE_TEX_KEYS
+    - disposeCustomCleanups
     - disposeDebugGroup
     - disposeEnvSubscriptions
     - disposeMaterial

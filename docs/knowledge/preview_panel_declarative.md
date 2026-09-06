@@ -23,6 +23,7 @@ auto_fields:
     - collectPreviewNodeIds
     - corePanelBuilder
     - CorePanelId
+    - disposeCustomCleanups
     - isPreviewFolderNode
     - makeMmdAdapter
     - makeYsmAdapter

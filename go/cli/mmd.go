@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	iofs "io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -345,7 +346,8 @@ func calculateIPCOverhead(a AppService, files []fileBenchItem, iterations int) i
 		serdeErr := error(nil)
 		payload, serdeErr = json.Marshal(map[string]string{"data": base64.StdEncoding.EncodeToString(original)})
 		if serdeErr != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  基准序列化失败: %v\n", serdeErr)
+			// 排障性失败原因走统一日志设施（stdlib log → stderr + 环形日志面板）
+			log.Printf("⚠️  基准序列化失败: %v", serdeErr)
 			break
 		}
 		serdeTotal += time.Since(start)

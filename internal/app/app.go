@@ -236,6 +236,16 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	return nil
 }
 
+// ctxOrBackground 返回应用生命周期 context（ADR-197）：ServiceShutdown 触发 appCancel
+// 后，消费方可取消在途并发任务。nil 兜底与 app_download.go:96 对称——测试/工具代码
+// 常用 &App{} 零值构造（不经 NewApp），nil ctx 传入并发/HTTP 路径会 panic。
+func (a *App) ctxOrBackground() context.Context {
+	if a.appCtx == nil {
+		return context.Background()
+	}
+	return a.appCtx
+}
+
 // ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用
 func (a *App) ServiceShutdown() error {
 	defer func() {

@@ -4,6 +4,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -115,7 +116,7 @@ func (a *App) searchModelsSequential(entries []types.ModelEntry, minBones, maxBo
 
 // searchModelsConcurrent 并发分析（goroutine 池 + 有序收集结果）
 func (a *App) searchModelsConcurrent(entries []types.ModelEntry, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
-	return runConcurrentAnalyze(len(entries), func(i int) *types.SearchResult {
+	return runConcurrentAnalyze(a.ctxOrBackground(), len(entries), func(i int) *types.SearchResult {
 		entry := entries[i]
 		model := a.AnalyzeBedrockModel(entry.Path)
 		if !modelMatchesFilters(model, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) {
@@ -159,9 +160,10 @@ func modelMatchesFilters(model types.BedrockModel, minBones, maxBones, minCubes,
 // SearchAllModels 收敛复用，消除两处 Phase 2 复制）。analyze(i) 完成单项的过滤 + 构建：
 // 不满足条件返回 nil 即跳过该项。排序口径：名称主键 + 原始索引兜底，消除 goroutine
 // 完成序随机导致的「同输入不同输出」（ADR-119 确定性契约）。
-// 实现收敛到 go/conc.Parallel（P0：统一手写 worker 池）——conc 保输入序，
-// 等价 index 兜底；后续仅剩 Name 主键排序。
-func runConcurrentAnalyze(count int, analyze func(i int) *types.SearchResult) []types.SearchResult {
+// 实现收敛到 go/conc.ParallelCtx（P0：统一手写 worker 池 + ADR-197 取消语义）——
+// conc 保输入序，等价 index 兜底；后续仅剩 Name 主键排序。ctx 取消时停止派发
+// （应用退出中断在途批量分析），fn 内复查 ctx 尽早返回。
+func runConcurrentAnalyze(ctx context.Context, count int, analyze func(i int) *types.SearchResult) []types.SearchResult {
 	type indexedResult struct {
 		index  int
 		result *types.SearchResult
@@ -170,7 +172,10 @@ func runConcurrentAnalyze(count int, analyze func(i int) *types.SearchResult) []
 	for i := range count {
 		indices[i] = i
 	}
-	collected := conc.Parallel(indices, func(_ int, idx int) (indexedResult, bool) {
+	collected := conc.ParallelCtx(ctx, indices, func(ctx context.Context, _ int, idx int) (indexedResult, bool) {
+		if ctx.Err() != nil {
+			return indexedResult{}, false
+		}
 		r := analyze(idx)
 		if r == nil {
 			return indexedResult{}, false

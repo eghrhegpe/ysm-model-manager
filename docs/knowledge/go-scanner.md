@@ -15,8 +15,11 @@ auto_fields:
     - ListModelAuthors
     - OnCacheInvalidated
     - ScanEntries
+    - ScanEntriesCtx
     - ScanEntriesLite
+    - ScanEntriesLiteCtx
     - ScanEntriesWithHit
+    - ScanEntriesWithHitCtx
     - ScanLocalAuthors
     - SetErrorSink
 use_when:
@@ -27,6 +30,7 @@ use_when:
   - 缓存
   - 作者提取
   - ScanEntries
+  - ScanEntriesCtx 取消扫描
   - 索引生成
 perf:
   - io-bound
@@ -84,6 +88,7 @@ status: active
 
 - `ScanEntries(dir)` — 单返回值薄壳：内部 `ScanEntriesWithHit(dir)` 丢弃 `bool` 后返回条目
 - `ScanEntriesWithHit(dir)` — 扫描核心（缓存 30s，`.recycle` 跳过），返回 `(entries []ModelEntry, hit bool)`，调用方据此决定是否记录扫描日志，避免 30s 内重复访问同一目录时刷屏操作日志面板
+- **ctx 变体（ADR-197，2026-09-06）**：`ScanEntriesCtx` / `ScanEntriesWithHitCtx` / `ScanEntriesLiteCtx` 带 context 取消——walk 回调内 ctx.Done 即 `fs.SkipAll`；取消产生的部分结果**只返回不写入缓存**（防 30s TTL 污染）。旧签名委托 `context.Background()`。CLI/watcher 后续按需接入
 - **在途合并（single-flight，2026-08-21）**：缓存「扫完才 Store」，同目录并发请求在途重叠时会双双真扫（点击整合包时前端多组件并发要状态 → 操作日志同秒重复条目）。`inFlight`（`sync.Map: dir → *scanFlight`）让首个调用方注册航班走盘，后续调用方 `wg.Wait()` 并入航班取**克隆**结果且返回 `hit=true`（薄壳不重复记日志）；唯一 owner 返回 `hit=false`。`walkCount`/`flightJoins` 为诊断计数。测试 `scanner_singleflight_test.go`（walkStartHook 制造确定性重叠）
 - `InvalidateCache()` / `InvalidatePath(dir)` — 缓存失效（导入/启用禁用后调用）
   - **`InvalidatePath` 祖先链覆盖（长治久安核心）**：`scanner.go:209-259` 的 `InvalidatePath` 不只删 `dir` 自身，还遍历 `keyVersions` / `scanCache` 删所有**互前缀** key——含 `strings.HasPrefix(key, kstr+sep)`（失效 dir 是 kstr 的后代时，递增 kstr 版本并删 kstr 条目）。即「禁用 `globalDir/ModelA` → `InvalidatePath(filepath.Dir(ModelA))` = `InvalidatePath(globalDir)`（文件级）或 `InvalidatePath(base)`（目录级 ModelA 文件夹）→ 仍经祖先链命中并失效 `globalDir` 仓库根缓存」。所以 sync 层消费的 `scanCache[globalDir]` 在 Toggle 后立即失效，**无 30s 陈旧窗口**。`BuildSyncItems` 入口无需额外失效（冗余）。

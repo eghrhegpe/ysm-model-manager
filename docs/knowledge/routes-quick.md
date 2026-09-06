@@ -721,6 +721,7 @@
 | 陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts | `前端/后端黑名单不同步` | 三谓词测试 platform-parity.test.ts 会爆 |
 | 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
+| zip/7z 容器打开统一走 openModelContainer（avatar_extract.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错） | - | - |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；必须经缓存失效策略 |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |
 | runSearch 未传范围参数 | - | 数值筛选失效；必须完整传 6 个范围参数 |

@@ -4,6 +4,7 @@
 package app
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -113,14 +114,17 @@ func (a *App) readFileBytesBatchSequential(paths []string) map[string][]byte {
 }
 
 // readFileBytesBatchConcurrent 并发批量读取（goroutine 池 + 分片调度）
-// 收敛到 go/conc.Parallel（P0：统一手写 worker 池）——conc 内部 worker=NumCPU，
-// 结果按输入序收集；ok=false 跳过（路径守卫失败 / 读失败）。
+// 收敛到 go/conc.ParallelCtx（P0：统一手写 worker 池；ADR-197 取消语义）——
+// 结果按输入序收集；ok=false 跳过（路径守卫失败 / 读失败 / ctx 取消）。
 func (a *App) readFileBytesBatchConcurrent(paths []string) map[string][]byte {
 	type fileRead struct {
 		path string
 		data []byte
 	}
-	reads := conc.Parallel(paths, func(_ int, p string) (fileRead, bool) {
+	reads := conc.ParallelCtx(a.ctxOrBackground(), paths, func(ctx context.Context, _ int, p string) (fileRead, bool) {
+		if ctx.Err() != nil {
+			return fileRead{}, false
+		}
 		if !a.isPathInRootOrSelf(p) {
 			return fileRead{}, false
 		}
@@ -177,12 +181,15 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 		}
 		return result
 	}
-	// 并发读取：收敛到 go/conc.Parallel（P0：统一手写 worker 池）
+	// 并发读取：收敛到 go/conc.ParallelCtx（P0；ADR-197 取消语义）
 	type fileMeta struct {
 		path string
 		meta ReadFileMeta
 	}
-	metas := conc.Parallel(paths, func(_ int, p string) (fileMeta, bool) {
+	metas := conc.ParallelCtx(a.ctxOrBackground(), paths, func(ctx context.Context, _ int, p string) (fileMeta, bool) {
+		if ctx.Err() != nil {
+			return fileMeta{}, false
+		}
 		if !a.isPathInRootOrSelf(p) {
 			return fileMeta{}, false
 		}

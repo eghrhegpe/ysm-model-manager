@@ -6,23 +6,37 @@
 package conc
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"sync"
 )
 
 // Parallel 对 items 并行执行 fn，结果按输入序收集返回。
-// fn 返回 (R, ok)：ok=false 表示该项被跳过（结果中不出现该位置）。
-// worker 数 = max(NumCPU, 2)，不超过 items 长度；空输入返回 nil。
+// 等价于 ParallelCtx(context.Background(), ...)（ADR-197 兼容壳）：无取消语义的
+// 旧调用方零迁移成本；新代码一律走 ParallelCtx。
+func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
+	return ParallelCtx(context.Background(), items, func(_ context.Context, i int, item T) (R, bool) {
+		return fn(i, item)
+	})
+}
+
+// ParallelCtx 对 items 并行执行 fn，结果按输入序收集返回；带取消语义（ADR-197）。
+// fn 收到 ctx 用于任务内部尽早退出（返回 ok=false 跳过该位）；ctx 取消后
+// 停止派发新任务，在途任务不受强制打断（文件级粒度，IO 由 fn 自行让出）。
+// worker 数 = max(NumCPU, 2)，不超过 items 长度；空输入或预取消返回空切片（非 nil）。
 //
 // 设计要点：
 //   - 结果顺序 = 输入顺序，与 goroutine 完成序无关（ADR-119 确定性契约）——
 //     内部按 index 写入预留切片，不依赖 resultCh 到达序。
-//   - 不提供 context 取消：现有三处调用均无取消语义；将来需要时在此加 ctx 变体。
-func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
+//   - 取消只保证「尽快停止派发」：派发循环 select ctx.Done，worker 每取一个任务前复查。
+func ParallelCtx[T, R any](ctx context.Context, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R {
 	n := len(items)
 	if n == 0 {
 		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return []R{}
 	}
 	workers := runtime.NumCPU()
 	if workers < 2 {
@@ -42,6 +56,9 @@ func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
 		go func() {
 			defer wg.Done()
 			for idx := range taskCh {
+				if ctx.Err() != nil {
+					continue // 取消后不再处理新任务，仅排空管道
+				}
 				func() {
 					defer func() {
 						if r := recover(); r != nil {
@@ -50,14 +67,20 @@ func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
 							fmt.Printf("[conc] Parallel worker panic at idx=%d: %v\n", idx, r)
 						}
 					}()
-					r, keep := fn(idx, items[idx])
+					r, keep := fn(ctx, idx, items[idx])
 					results[idx] = r
 					ok[idx] = keep
 				}()
 			}
 		}()
 	}
+dispatch:
 	for i := range n {
+		select {
+		case <-ctx.Done():
+			break dispatch
+		default:
+		}
 		taskCh <- i
 	}
 	close(taskCh)

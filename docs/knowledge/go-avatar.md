@@ -31,6 +31,7 @@ quick_risk_lines:
   - 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接
 pitfalls:
   - 手写头像路径拼接 → 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验
+  - zip/7z 容器打开统一走 openModelContainer（avatar_extract.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错）
   - 头像缓存不失效 → 换头像后仍显示旧图；必须经缓存失效策略
 
 use_when:

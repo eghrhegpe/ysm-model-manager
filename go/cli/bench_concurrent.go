@@ -1,3 +1,7 @@
+// bench_concurrent.go：并发/单模型基准测试 harness（原 concurrent.go，2026-09-06 锐评正名）。
+// 文件内容全部是 benchmark 工具命令（concurrent-bench / single-bench），非生产并发代码；
+// 生产并发收敛在 go/conc（ADR-197）。与生产 AppService（appservice.go）同包仅因共用
+// CLI 基建（RegisterCommandC / newCmdFlagSet / newParamErrf 等），依赖纠缠暂不拆包。
 package cli
 
 import (

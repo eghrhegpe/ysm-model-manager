@@ -6,6 +6,7 @@ package app
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1119,7 +1120,7 @@ func TestScanModelEntriesFiltered_DisabledContainerNoCrossTabLeak(t *testing.T) 
 // 排序口径：名称主键 + 原始索引兜底（消除并发完成序导致的「同输入不同输出」，ADR-119）。
 
 func TestRunConcurrentAnalyze_Basic(t *testing.T) {
-	got := runConcurrentAnalyze(4, func(i int) *types.SearchResult {
+	got := runConcurrentAnalyze(context.Background(), 4, func(i int) *types.SearchResult {
 		return &types.SearchResult{Name: fmt.Sprintf("m%d", i), Path: fmt.Sprintf("/p/%d", i)}
 	})
 	if len(got) != 4 {
@@ -1134,7 +1135,7 @@ func TestRunConcurrentAnalyze_Basic(t *testing.T) {
 
 func TestRunConcurrentAnalyze_FilterSkip(t *testing.T) {
 	// analyze 返回 nil 表示该项不满足过滤 → 从结果剔除
-	got := runConcurrentAnalyze(5, func(i int) *types.SearchResult {
+	got := runConcurrentAnalyze(context.Background(), 5, func(i int) *types.SearchResult {
 		if i == 0 || i == 2 {
 			return nil
 		}
@@ -1146,13 +1147,13 @@ func TestRunConcurrentAnalyze_FilterSkip(t *testing.T) {
 }
 
 func TestRunConcurrentAnalyze_AllFilteredEmpty(t *testing.T) {
-	if got := runConcurrentAnalyze(3, func(i int) *types.SearchResult { return nil }); len(got) != 0 {
+	if got := runConcurrentAnalyze(context.Background(), 3, func(i int) *types.SearchResult { return nil }); len(got) != 0 {
 		t.Fatalf("全过滤应返回空, got %d", len(got))
 	}
 }
 
 func TestRunConcurrentAnalyze_ZeroCount(t *testing.T) {
-	if got := runConcurrentAnalyze(0, func(i int) *types.SearchResult { return &types.SearchResult{} }); len(got) != 0 {
+	if got := runConcurrentAnalyze(context.Background(), 0, func(i int) *types.SearchResult { return &types.SearchResult{} }); len(got) != 0 {
 		t.Fatalf("count=0 应返回空, got %d", len(got))
 	}
 }
@@ -1160,7 +1161,7 @@ func TestRunConcurrentAnalyze_ZeroCount(t *testing.T) {
 func TestRunConcurrentAnalyze_SameNameIndexTieBreak(t *testing.T) {
 	// 同名不同原始 index → 按 index 升序兜底（确定性契约）
 	names := []string{"z", "a", "b", "a"} // 声明序 index 0..3
-	got := runConcurrentAnalyze(len(names), func(i int) *types.SearchResult {
+	got := runConcurrentAnalyze(context.Background(), len(names), func(i int) *types.SearchResult {
 		return &types.SearchResult{Name: names[i], Path: fmt.Sprintf("/p/%d", i)}
 	})
 	// 期望 Name 主键升序，同名按 index 兜底：a/p1, a/p3, b/p2, z/p0

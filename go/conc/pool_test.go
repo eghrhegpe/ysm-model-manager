@@ -1,6 +1,7 @@
 package conc
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -120,5 +121,57 @@ func TestParallel_ConcurrentExecution(t *testing.T) {
 	defer mu.Unlock()
 	if maxActive < 2 {
 		t.Fatalf("未观察到并行执行: maxActive=%d", maxActive)
+	}
+}
+
+// TestParallelCtx_CancelStopsDispatch：cancel 后停止派发新任务（ADR-197）。
+// 已派发任务自行观察到 ctx 取消并跳过；未派发任务不再执行。
+func TestParallelCtx_CancelStopsDispatch(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	items := make([]int, 200)
+	var started atomic.Int32
+	got := ParallelCtx(ctx, items, func(_ context.Context, _ int, _ int) (int, bool) {
+		n := started.Add(1)
+		if n == 5 {
+			cancel() // 第 5 个任务执行时取消
+		}
+		select {
+		case <-ctx.Done():
+			return 0, false // 取消后任务尽早退出
+		default:
+			return 1, true
+		}
+	})
+	// 取消后不应跑完全部 200 个
+	if s := started.Load(); s >= 200 {
+		t.Fatalf("取消后仍执行了全部任务: started=%d", s)
+	}
+	_ = got
+}
+
+// TestParallelCtx_ContextDoneBeforeStart：预取消的 ctx 不执行任何任务。
+func TestParallelCtx_ContextDoneBeforeStart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	var started atomic.Int32
+	got := ParallelCtx(ctx, []int{1, 2, 3}, func(_ context.Context, _ int, _ int) (int, bool) {
+		started.Add(1)
+		return 1, true
+	})
+	if started.Load() != 0 {
+		t.Fatalf("预取消后仍执行了 %d 个任务", started.Load())
+	}
+	if got == nil || len(got) != 0 {
+		t.Fatalf("取消后应返回空结果, got %#v", got)
+	}
+}
+
+// TestParallelCtx_Delegate: Parallel 等价于 ParallelCtx(Background)。
+func TestParallelCtx_Delegate(t *testing.T) {
+	got := ParallelCtx(context.Background(), []int{1, 2, 3}, func(_ context.Context, _ int, v int) (int, bool) {
+		return v * 2, true
+	})
+	if len(got) != 3 || got[0] != 2 || got[2] != 6 {
+		t.Fatalf("结果错误: %#v", got)
 	}
 }

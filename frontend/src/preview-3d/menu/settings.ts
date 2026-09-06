@@ -83,7 +83,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
     lightFromReg ??
     (() => {
       const fromCtx = ctx.getCap("light");
-      if (fromCtx && "getMenuControls" in fromCtx)
+      if (fromCtx && "getMenuNodes" in fromCtx)
         return fromCtx as unknown as import("../caps/light-capability.ts").LightCapability;
       return null;
     })();
@@ -97,10 +97,10 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return [{ id: "lighting", kind: "controls", controls: () => lightCap.getMenuControls() }];
+  return lightCap.getMenuNodes();
 }
 
-/** 阴影面板 schema：从 shadow cap 自报控件渲染 */
+/** 阴影面板 schema：从 shadow cap 直产节点渲染 */
 export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
   const fromReg = sceneCapabilityRegistry.getById("shadow");
   if (!fromReg) {
@@ -113,10 +113,10 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return [{ id: "shadow", kind: "controls", controls: () => fromReg.getMenuControls() }];
+  return fromReg.getMenuNodes();
 }
 
-/** 后处理面板 schema：从 postprocessing cap 自报控件渲染 */
+/** 后处理面板 schema：从 postprocessing cap 直产节点渲染 */
 export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
   const fromReg = sceneCapabilityRegistry.getById("postprocessing");
   if (!fromReg) {
@@ -129,7 +129,7 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
       },
     ];
   }
-  return [{ id: "postproc", kind: "controls", controls: () => fromReg.getMenuControls() }];
+  return fromReg.getMenuNodes();
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。

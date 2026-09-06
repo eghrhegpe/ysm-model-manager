@@ -117,25 +117,30 @@ func matchAvatarByAuthor(files []ysmDecodedFile, authors []authorEntry, safeName
 	return ""
 }
 
-// extractAvatarFromArchive 从 .zip/.7z 压缩包提取指定作者的头像。
-func extractAvatarFromArchive(modelPath, safeName, ext string) string {
+// openModelContainer 受限整读模型文件并按扩展名打开 zip/7z 容器。
+// 单作者提取（extractAvatarFromArchive）与批量缓存（cacheContainerAvatars）共用，
+// 消除原先逐行重复的「整读 + switch 开容器」段。未知扩展名返回错误。
+func openModelContainer(modelPath, ext string) (container.Reader, error) {
 	data, err := readLimitedModel(modelPath)
 	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
-		}
-		return ""
+		return nil, err
 	}
-
-	var r container.Reader
 	switch ext {
 	case ".zip":
-		r, err = container.OpenZipBytes(data, int64(len(data)))
+		return container.OpenZipBytes(data, int64(len(data)))
 	case ".7z":
-		r, err = container.Open7zBytes(data, int64(len(data)))
+		return container.Open7zBytes(data, int64(len(data)))
 	}
+	return nil, fmt.Errorf("不支持的容器扩展名: %s", ext)
+}
+
+// extractAvatarFromArchive 从 .zip/.7z 压缩包提取指定作者的头像。
+func extractAvatarFromArchive(modelPath, safeName, ext string) string {
+	r, err := openModelContainer(modelPath, ext)
 	if err != nil {
-		log.Printf("[avatar] %s 解析失败 %s: %v", ext, modelPath, err)
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("[avatar] %s 打开失败 %s: %v", ext, modelPath, err)
+		}
 		return ""
 	}
 	defer r.Close()
@@ -348,8 +353,10 @@ func cacheYSMavatars(modelPath string) {
 			continue // 已缓存，跳过
 		}
 		// 命中即写缓存，未命中返回 ""（不影响其他作者）——匹配逻辑与
-		// extractAvatarFromYSM 单作者路径共用，不重复解码
-		_ = matchAvatarByAuthor(files, authors, safe)
+		// extractAvatarFromYSM 单作者路径共用，不重复解码；未命中补日志便于排查
+		if matchAvatarByAuthor(files, authors, safe) == "" {
+			log.Printf("[avatar] .ysm 作者 %s 未提取到头像（无 avatar 声明或文件缺失）", safe)
+		}
 	}
 }
 
@@ -363,22 +370,11 @@ func cacheContainerAvatars(modelPath, ext string) {
 	if !ok {
 		return
 	}
-	data, err := readLimitedModel(modelPath)
+	r, err := openModelContainer(modelPath, ext)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
+			log.Printf("[avatar] %s 打开失败 %s: %v", ext, modelPath, err)
 		}
-		return
-	}
-	var r container.Reader
-	switch ext {
-	case ".zip":
-		r, err = container.OpenZipBytes(data, int64(len(data)))
-	case ".7z":
-		r, err = container.Open7zBytes(data, int64(len(data)))
-	}
-	if err != nil {
-		log.Printf("[avatar] %s 解析失败 %s: %v", ext, modelPath, err)
 		return
 	}
 	defer r.Close()
@@ -388,8 +384,11 @@ func cacheContainerAvatars(modelPath, ext string) {
 		if avatarCached(cacheDir, safe) {
 			continue // 已缓存，跳过
 		}
-		// 单作者容器提取（作者匹配 → 降级首图，内部 SaveAvatarData 落盘）
-		_ = extractAvatarFromContainer(r, safe)
+		// 单作者容器提取（作者匹配 → 降级首图，内部 SaveAvatarData 落盘）；
+		// 返回 "" 表示该作者无可提取头像（未声明 avatar 且容器无降级图），补日志便于排查
+		if uri := extractAvatarFromContainer(r, safe); uri == "" {
+			log.Printf("[avatar] %s 作者 %s 未提取到头像（无 avatar 声明或容器内无候选图）", modelPath, safe)
+		}
 	}
 }
 

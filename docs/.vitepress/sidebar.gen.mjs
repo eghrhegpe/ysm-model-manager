@@ -286,8 +286,16 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-197：conc/scanner context 贯通——并发任务可取消",
+        "link": "/adr/ADR-197-conc-scanner-context"
+      },
+      {
         "text": "ADR-196：预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线）",
         "link": "/adr/ADR-196-presets-three-axis-unification"
+      },
+      {
+        "text": "给兄弟会话：cap 统一 + ADR-196 方向同步",
+        "link": "/adr/ADR-196-to-sibling-session"
       },
       {
         "text": "ADR-195：cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除）",

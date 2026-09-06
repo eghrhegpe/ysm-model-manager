@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI_ALLOWLIST = path.join(ROOT, 'frontend/src/backend/cli-allowlist.ts');
 const FLOW_GO = path.join(ROOT, 'go/cli/flow.go');
-const CONCURRENT_GO = path.join(ROOT, 'go/cli/concurrent.go');
+const CONCURRENT_GO = path.join(ROOT, 'go/cli/bench_concurrent.go');
 
 const errors = [];
 function must(cond, msg) {
@@ -37,7 +37,7 @@ function readOrDie(rel) {
 
 const allowlist = readOrDie('frontend/src/backend/cli-allowlist.ts');
 const flowGo = readOrDie('go/cli/flow.go');
-const concurrentGo = readOrDie('go/cli/concurrent.go');
+const concurrentGo = readOrDie('go/cli/bench_concurrent.go');
 
 // ── 1) 命令白名单契约（前端 cli-allowlist 单一事实源）────────────
 // 白名单字符串字面量从 cli-allowlist.ts 找（cli-bridge.ts 仅 re-export，无字面量）。
@@ -92,11 +92,11 @@ const sbTotalRe = /⏱️\s*总耗时.*?([\d.]+)ms/;
 if (concurrentGo) {
   must(
     concurrentGo.includes('%10.2fms'),
-    'single-bench 阶段行模板失效：go/cli/concurrent.go 不再包含 "%10.2fms"',
+    'single-bench 阶段行模板失效：go/cli/bench_concurrent.go 不再包含 "%10.2fms"',
   );
   must(
     concurrentGo.includes('总耗时（'),
-    'single-bench 总耗时模板失效：go/cli/concurrent.go 不再包含 "总耗时（"',
+    'single-bench 总耗时模板失效：go/cli/bench_concurrent.go 不再包含 "总耗时（"',
   );
 }
 

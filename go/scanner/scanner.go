@@ -5,8 +5,10 @@
 package scanner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -321,9 +323,22 @@ func ScanEntries(dir string) []types.ModelEntry {
 	return entries
 }
 
+// ScanEntriesCtx 同 ScanEntries，ctx 取消时中止 walk（ADR-197）。
+func ScanEntriesCtx(ctx context.Context, dir string) []types.ModelEntry {
+	entries, _ := ScanEntriesWithHitCtx(ctx, dir)
+	return entries
+}
+
 // ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。
 // 调用方据此决定是否记录扫描日志，避免 30s 内重复访问同一目录时刷屏操作日志面板。
 func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
+	return ScanEntriesWithHitCtx(context.Background(), dir)
+}
+
+// ScanEntriesWithHitCtx 同 ScanEntriesWithHit，带取消语义（ADR-197）：ctx 取消即
+// fs.SkipAll 中止 walk，返回已收集的部分结果且不写入缓存（部分结果当成功缓存
+// 会污染 30s TTL 窗口）。
+func ScanEntriesWithHitCtx(ctx context.Context, dir string) ([]types.ModelEntry, bool) {
 	dir = normalizeScanKey(dir)
 	if dir == "" {
 		return []types.ModelEntry{}, false
@@ -389,6 +404,9 @@ retry:
 	// 接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
 	// 直接返回 error，旧实现忽略该返回值导致 walkFailed 恒 false，空结果照常缓存。
 	if werr := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return fs.SkipAll // ADR-197：取消即中止整个 walk
+		}
 		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
 		if rootFailed {
 			walkFailed = true
@@ -413,6 +431,10 @@ retry:
 	stored := append([]types.ModelEntry(nil), entries...)
 	// 航班结果供等待方克隆取用（须在 wg.Done 前写入——defer 于函数返回时放行等待方）
 	fl.entries = stored
+	// 取消路径：部分结果只返回不缓存（walkFailed 语义保留给真失败）
+	if ctx.Err() != nil {
+		return entries, false
+	}
 	tryStoreScanCache(dir, stored, startTime, gen, keyVersion, walkFailed)
 	return entries, false
 }
@@ -650,12 +672,21 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 // 跳过逐文件 open+hash 后冷扫成本降为纯目录枚举（大库首屏关键路径优化）。
 // 不设独立缓存：调用方（前端 withCached / CLI 单次调用）自行决定复用策略。
 func ScanEntriesLite(dir string) []types.ModelEntry {
+	return ScanEntriesLiteCtx(context.Background(), dir)
+}
+
+// ScanEntriesLiteCtx 同 ScanEntriesLite，ctx 取消时中止 walk（ADR-197），
+// 返回已收集的部分结果。
+func ScanEntriesLiteCtx(ctx context.Context, dir string) []types.ModelEntry {
 	dir = normalizeScanKey(dir)
 	if dir == "" {
 		return []types.ModelEntry{}
 	}
 	entries := []types.ModelEntry{}
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return fs.SkipAll
+		}
 		entry, walkRet, _ := processScanDirEntry(p, d, err, dir, false, false)
 		if walkRet != nil {
 			return walkRet

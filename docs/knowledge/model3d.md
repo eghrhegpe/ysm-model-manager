@@ -104,8 +104,11 @@ auto_fields:
     - CameraControlBridge
     - CameraControlScene
     - cancelPendingEncodings
+    - canNodeRepresent
     - CapabilityId
     - CapabilityMap
+    - capControlsToNodes
+    - capControlToNode
     - captureTextureName
     - cleanupPreview
     - clearFolderCollapsedState
@@ -502,6 +505,7 @@ auto_fields:
     - removePerFrame
     - renderAdapterPanelContent
     - renderCapControls
+    - renderCapControlSingle
     - renderLoadingState
     - renderMenu
     - RenderModeCapability

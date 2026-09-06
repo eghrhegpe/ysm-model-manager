@@ -38,7 +38,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: rgba(20, 20, 30, 0.7);
+  background: rgba(20, 20, 30, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -71,6 +71,8 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   flex-direction: column;
   gap: 2px;
   padding: var(--uih-slide-list-pad);
+  background: rgba(15, 15, 22, 0.92);
+  border-radius: 10px;
 }
 
 .slide-header {

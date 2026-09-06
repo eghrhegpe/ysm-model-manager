@@ -39,6 +39,7 @@ auto_fields:
     - PreviewSnapshot
     - PreviewStatePath
     - renderCapControls
+    - renderCapControlSingle
     - resetSettingsListeners
     - restoreFields
     - restoreState

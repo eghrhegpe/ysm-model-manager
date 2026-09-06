@@ -63,6 +63,7 @@ auto_fields:
     - PreviewMenuRouters
     - renderAdapterPanelContent
     - renderCapControls
+    - renderCapControlSingle
     - renderMenu
     - renderPreviewPanel
     - roleBaseName

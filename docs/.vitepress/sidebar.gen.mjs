@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-195：cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除）",
+        "link": "/adr/ADR-195-menucontroldef-menunode-cap"
+      },
+      {
         "text": "ADR-194：MenuControlDef 判别联合重构：kind 与配置块编译期配对",
         "link": "/adr/ADR-194-menu-control-def-discriminated-union"
       },

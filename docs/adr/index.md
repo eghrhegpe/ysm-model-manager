@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **192** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **193** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 3 |
-| [✅ 已采纳](#已采纳) | 180 |
+| [✅ 已采纳](#已采纳) | 181 |
 | [❌ 已取代](#已取代) | 6 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -33,10 +33,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（180）
+### ✅ 已采纳（181）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-195](./ADR-195-menucontroldef-menunode-cap.md) | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 |
 | [ADR-194](./ADR-194-menu-control-def-discriminated-union.md) | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ✅ 已采纳 |
 | [ADR-193](./ADR-193-preview-menu-declarative-endgame.md) | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 |
 | [ADR-192](./ADR-192-go-types-registry-split.md) | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 |
@@ -241,6 +242,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-195 | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 | 2026-09-06 |
 | ADR-194 | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ✅ 已采纳 | 2026-09-06 |
 | ADR-193 | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 | 2026-09-06 |
 | ADR-192 | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 | 2026-09-05 |

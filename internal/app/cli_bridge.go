@@ -301,18 +301,6 @@ func formatCLINumber(f float64) string {
 	return fmt.Sprintf("%g", f)
 }
 
-// isValidJsonResponse 判断字符串是否为含 status 字段的合法 JSON 响应
-// 用于子进程异常退出时区分「完整 JSON 错误文档」与「部分/非 JSON 输出」
-func isValidJsonResponse(s string) bool {
-
-	var m map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &m); err != nil {
-		return false
-	}
-	_, ok := m["status"]
-	return ok
-}
-
 // GetAllowedCLICommands 返回可用 CLI 命令列表
 // 列表由 main.go 从 cli 注册表注入（SetAllowedCommands），新增命令自动可见
 func (a *App) GetAllowedCLICommands() string {

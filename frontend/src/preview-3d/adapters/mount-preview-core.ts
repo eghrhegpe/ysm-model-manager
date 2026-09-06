@@ -394,6 +394,7 @@ export async function mount3D(
     allContent: [],
     perFrame: null,
     onUnifiedPick: null,
+    onUnifiedPickDispose: null,
     escH: () => {},
     tipTimeoutId: undefined,
     keys: {},
@@ -775,7 +776,9 @@ function buildInfra(
     handlers.cancelPendingResize = bound.cancelPendingResize;
 
     // ADR-093 T5：统一多模型拾取器（仅 count>=2 激活，单模型完全沿用逐模型 registerBoneRaycast，零回归）
-    session.onUnifiedPick = makeUnifiedPickHandler(infra.renderer, infra.camera, infra.scene);
+    const unifiedPick = makeUnifiedPickHandler(infra.renderer, infra.camera, infra.scene);
+    session.onUnifiedPick = unifiedPick.handle;
+    session.onUnifiedPickDispose = unifiedPick.dispose;
     infra.renderer.domElement.addEventListener("click", session.onUnifiedPick);
 
     // ===== §4b rAF 渲染管线（render-loop.ts：全局唯一 loop，所有 session 共享同一 renderer）=====

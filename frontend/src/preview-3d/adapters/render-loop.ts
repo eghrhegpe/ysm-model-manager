@@ -219,9 +219,17 @@ export function startGlobalRenderLoop(viewContainer: HTMLElement, infra: SharedI
     const nextPixelRatio = sampleAdaptivePixelRatio(adaptiveBudget, now, interval);
     if (nextPixelRatio !== null) {
       infra.renderer.setPixelRatio(nextPixelRatio);
-      infra.renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
+      // 容器已脱离文档（cleanup 拆单例 → stopIfIdle 停环前的窗口帧）或尺寸为 0 时跳过
+      // resize：setSize(0, h) 会把画布打没、cam.aspect=0/N 直接坏画面（一帧也不行）
+      if (
+        viewContainer.isConnected &&
+        viewContainer.clientWidth > 0 &&
+        viewContainer.clientHeight > 0
+      ) {
+        infra.renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
+        postProcCap?.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
+      }
       postProcCap?.setPixelRatio?.(nextPixelRatio);
-      postProcCap?.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
     }
   }
   animate();

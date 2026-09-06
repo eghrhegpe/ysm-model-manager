@@ -103,15 +103,16 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         row.style.paddingLeft = `${item.depth * 12 + 6}px`;
         if (activeId === item.id) row.style.background = boneRowActiveBg();
 
-        // 显隐勾选框
+        // 显隐勾选框（状态回读：重渲染时按节点实际可见性恢复，否则取消勾选后
+        // 任何 renderList 重画都把 UI 谎报回“可见”）
+        const node = tree.byId.get(item.id);
         const cb = document.createElement("input");
         cb.type = "checkbox";
-        cb.checked = true;
+        cb.checked = node?.object ? node.object.visible : true;
         cb.className = "vbu-cb";
         cb.onchange = (): void => {
           if (!tree) return;
-          const node = tree.byId.get(item.id);
-          toggleBoneVisible(node);
+          toggleBoneVisible(tree.byId.get(item.id));
         };
         // 点击勾选框不触发行选中（避免与拾取联动抢焦点）
         cb.onclick = (e): void => e.stopPropagation();
@@ -158,16 +159,22 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         r.appendChild(document.createTextNode(`: ${v}`));
         d.appendChild(r);
       };
-      field("名称", det.name);
-      field("路径", det.path);
+      field(t("preview.bone.detail.name"), det.name);
+      field(t("preview.bone.detail.path"), det.path);
       field(
-        "坐标",
+        t("preview.bone.detail.position"),
         det.position
           ? `(${det.position.x.toFixed(2)}, ${det.position.y.toFixed(2)}, ${det.position.z.toFixed(2)})`
           : "—",
       );
-      field("父骨骼", det.parent ? `${det.parent.name} (${det.parent.id})` : "—（根）");
-      field("子骨骼", det.children.length ? det.children.map((c) => c.name).join("、") : "—");
+      field(
+        t("preview.bone.detail.parent"),
+        det.parent ? `${det.parent.name} (${det.parent.id})` : `—${t("preview.bone.detail.root")}`,
+      );
+      field(
+        t("preview.bone.detail.children"),
+        det.children.length ? det.children.map((c) => c.name).join("、") : "—",
+      );
       return d;
     };
 

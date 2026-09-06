@@ -58,6 +58,8 @@ export interface MpSessionState {
   perFrame: ((dt: number) => void) | null;
   /** 统一多模型拾取器（仅 count>=2 激活） */
   onUnifiedPick: ((e: MouseEvent) => void) | null;
+  /** 拾取器内部监听器的解绑函数（pointerdown 记拖拽起点；canvas 共享单例，须成对解绑） */
+  onUnifiedPickDispose: (() => void) | null;
   /** 可变 ESC handler（switchTo 后替换，cleanup 经当前引用卸载） */
   escH: (e: KeyboardEvent) => void;
   /** 提示条自动消失定时器（cleanup 时 clearTimeout） */
@@ -167,6 +169,7 @@ function unbindInputsAndStopLoop(ctx: MountCtx): void {
   document.removeEventListener("keydown", h.onKeyDown);
   document.removeEventListener("keyup", h.onKeyUp);
   window.removeEventListener("pointerup", h.onDragPointerUp);
+  window.removeEventListener("pointercancel", h.onDragPointerUp);
   window.removeEventListener("pointermove", h.onDragPointerMove);
   window.removeEventListener("resize", h.onResize);
   h.cancelPendingResize?.(); // 取消已在途 resize rAF 帧（容器已拆，防幽灵 setSize）
@@ -175,6 +178,8 @@ function unbindInputsAndStopLoop(ctx: MountCtx): void {
     infra.renderer.domElement.removeEventListener("pointerdown", h.onDragPointerDown);
     if (session.onUnifiedPick)
       infra.renderer.domElement.removeEventListener("click", session.onUnifiedPick);
+    session.onUnifiedPickDispose?.();
+    session.onUnifiedPickDispose = null;
   }
   // 从全局 perFrame 回调列表移除本 session；全部清空后停 rAF
   if (session.perFrame) removePerFrame(session.perFrame);

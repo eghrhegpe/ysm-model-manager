@@ -680,8 +680,14 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
     const idB = sceneRegistry.register({ path: "/m/b.vrm", rtype: "vrm", roots: [meshB], content: makeContent() });
 
     const dom = buildCtx.renderer!.domElement as unknown as { dispatchEvent: (e: unknown) => void };
+    // 拾取器以 pointerdown 记拖拽起点（>5px 位移的 click 视为拖拽误触不拾取）——
+    // 真实点击序列 = 同点位 pointerdown → click，测试同样成对派发
+    const clickAt = (x: number, y: number): void => {
+      dom.dispatchEvent(new PointerEvent("pointerdown", { clientX: x, clientY: y, bubbles: true }));
+      dom.dispatchEvent(new MouseEvent("click", { clientX: x, clientY: y, bubbles: true }));
+    };
     // 点击 canvas 中央 → 射线沿 -Z → 先命中近处 groupA
-    dom.dispatchEvent(new MouseEvent("click", { clientX: 400, clientY: 300, bubbles: true }));
+    clickAt(400, 300);
     expect(sceneRegistry.getActiveId()).toBe(idA);
     // boneMaps 分支：boneId 解析 + 骨骼信息组装 + 回调透传
     expect(onPickA).toHaveBeenCalledWith("b1");
@@ -689,6 +695,12 @@ describe("统一多模型拾取器（count>=2 激活）", () => {
 
     // 隐藏链跳过：藏 A → 同一点位命中被跳过 → 切到 B
     sceneRegistry.setVisible(idA, false);
+    clickAt(400, 300);
+    expect(sceneRegistry.getActiveId()).toBe(idB);
+
+    // 拖拽误触过滤：pointerdown 与 click 位移 >5px（orbit 松手）→ 不拾取，活跃保持 idB
+    sceneRegistry.setVisible(idA, true);
+    dom.dispatchEvent(new PointerEvent("pointerdown", { clientX: 100, clientY: 100, bubbles: true }));
     dom.dispatchEvent(new MouseEvent("click", { clientX: 400, clientY: 300, bubbles: true }));
     expect(sceneRegistry.getActiveId()).toBe(idB);
   });

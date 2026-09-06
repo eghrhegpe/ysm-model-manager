@@ -190,6 +190,9 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   };
   rd.domElement.addEventListener("pointerdown", onDragPointerDown);
   window.addEventListener("pointerup", onDragPointerUp);
+  // pointercancel 同 pointerup 复位：触控/系统手势/弹窗截获只发 cancel 不发 up，
+  // 缺此分支 mouseDown 粘 true，之后 pointermove 持续自转直到下一次 pointerup
+  window.addEventListener("pointercancel", onDragPointerUp);
   window.addEventListener("pointermove", onDragPointerMove);
 
   // —— Resize（rAF 合并：范式同 utils/dom/virtual-scroll.ts installScrollSync）——

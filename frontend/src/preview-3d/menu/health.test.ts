@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CORE_MENU_ITEMS } from "./defs.ts";
 import {
   buildPreviewMenuRouters,
+  corePanelBuilder,
   renderPreviewPanel,
   type PreviewMenuRouters,
 } from "./core.ts";
@@ -47,7 +48,7 @@ describe("常驻 dock 面板解析契约", () => {
     for (const node of CORE_MENU_ITEMS) {
       if (node.kind !== "panel") continue;
       const hasChannel =
-        !!routers.schemaBuilders[node.id] ||
+        !!corePanelBuilder(routers, node.id) ||
         !!getSchema(node.schemaId ?? node.id) ||
         (node.children?.length ?? 0) > 0 ||
         !!node.renderCustom ||

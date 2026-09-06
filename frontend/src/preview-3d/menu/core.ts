@@ -16,6 +16,7 @@ import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
+import { registerSchema, unregisterSchema } from "../adapters/schema-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
@@ -156,11 +157,30 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
 }
 
 /** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更）
- *  - schemaBuilders：core 注册面板（lighting/shadow/postproc/settings/camera/environment），内容 = 状态层 schema
+ *  - schemaBuilders：core 注册面板（key 收窄为 CorePanelId 联合——ADR-193 §2.4 宽表收 key，
+ *    拼错面板 id 编译期报错，模式同右键菜单 MenuAction 三层钉死）
  *  - fillers：**roles-only**（G3 删 fill* 后唯一残留——加载角色内容组件；新面板禁添，health.test 白名单守卫）
  *  - runners：动作入口（close 等） */
+export type CorePanelId =
+  | "lighting"
+  | "shadow"
+  | "postproc"
+  | "settings"
+  | "camera"
+  | "environment";
+
+/** core 六面板 id 运行时清单（注册/注销共用，防两处漂移） */
+const CORE_PANEL_IDS: readonly CorePanelId[] = [
+  "lighting",
+  "shadow",
+  "postproc",
+  "settings",
+  "camera",
+  "environment",
+];
+
 export interface PreviewMenuRouters {
-  schemaBuilders: Record<string, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
+  schemaBuilders: Record<CorePanelId, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
   fillers: Record<string, (list: HTMLElement, menu?: SlideMenuHandle) => void>;
   runners: Record<string, () => void>;
 }
@@ -222,7 +242,32 @@ export function buildPreviewMenuRouters(
       close: () => ctx.close(),
     },
   };
+  // ADR-193 §2.5 双注册合并：core 六面板统一注册进 schema-registry——
+  // dualChannelDebt（schemaBuilders key ∉ fullRegistry）清零，coverage:full 的隐藏前置步。
+  // 快照参数 core builder 不消费（内容走 ctx 闭包），透传 menu 兼容 settings/environment 两级菜单分支。
+  for (const id of CORE_PANEL_IDS) {
+    const builder = routers.schemaBuilders[id];
+    registerSchema(id, () => builder(menu));
+  }
   return routers;
+}
+
+/** 收 key 后的运行时安全取值：panel id 字符串 → core builder（非 core 面板返回 undefined）。
+ *  renderPreviewPanel 的分派入口吃任意 node.id（含 adapter 面板），类型窄化后需此守卫桥接。 */
+export function corePanelBuilder(
+  routers: PreviewMenuRouters,
+  id: string,
+): ((menu?: SlideMenuHandle) => PreviewMenuNode[]) | undefined {
+  return (CORE_PANEL_IDS as readonly string[]).includes(id)
+    ? routers.schemaBuilders[id as CorePanelId]
+    : undefined;
+}
+
+/** dispose 时注销 core 六面板的 registry 注册（与注册循环同 key 集）——
+ *  防陈旧 builder 闭包持有已 dispose 场景的 ctx/handle 引用（对齐 schema-registry
+ *  头注释的跨会话污染防线） */
+export function unregisterCorePanelSchemas(): void {
+  for (const id of CORE_PANEL_IDS) unregisterSchema(id);
 }
 
 /** [子函数 5/9] 单面板渲染：四路互斥分派 + try-catch 错误边界。
@@ -249,11 +294,11 @@ export function renderPreviewPanel(
   list.dataset.panelId = node.id;
   list.title = `panel: ${node.id}`;
   try {
-    if (routers.schemaBuilders[node.id]) {
+    const builder = corePanelBuilder(routers, node.id);
+    if (builder) {
       // schema 面板内容统一走 renderMenu（renderCustomDirect：custom 直接填充面板，
       // 与 renderPreviewPanel 五级衰退的其余通道同源——2026-09 双轨归一，删 renderPreviewSchemaContent）
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      renderMenu(list, routers.schemaBuilders[node.id]!(menu), {
+      renderMenu(list, builder(menu), {
         makeRow: panelDeps.makeRow,
         makePanelView: panelDeps.makePanelView,
         menu,
@@ -541,6 +586,7 @@ export function mountPreviewRootMenu(
     dispose: (): void => {
       abortTap();
       disposeEnvSubscriptions(); // 清环境面板 cap 订阅，防 cap 单例持有过期 menu 引用
+      unregisterCorePanelSchemas(); // ADR-193 §2.5：注销 core 六面板 registry 注册，防陈旧 ctx 闭包跨会话污染
       menu.dispose();
       dock.remove();
       popup.remove();

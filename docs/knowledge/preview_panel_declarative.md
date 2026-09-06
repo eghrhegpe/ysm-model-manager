@@ -20,6 +20,8 @@ auto_fields:
     - buildYsmScene
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
+    - corePanelBuilder
+    - CorePanelId
     - isPreviewFolderNode
     - makeMmdAdapter
     - makeYsmAdapter
@@ -51,6 +53,7 @@ auto_fields:
     - renderPreviewPanel
     - roleBaseName
     - shotButtonNodes
+    - unregisterCorePanelSchemas
     - YsmAdapterOptions
     - YsmControlsContext
     - ysmMenuItems

@@ -124,6 +124,8 @@ auto_fields:
     - concurrentMap
     - ConsoleLogger
     - CORE_MENU_ITEMS
+    - corePanelBuilder
+    - CorePanelId
     - createAdaptiveRenderBudget
     - createAutoDanceController
     - createBeatDetector
@@ -615,6 +617,7 @@ auto_fields:
     - UnloadCtx
     - unloadModel
     - unloadSessionModel
+    - unregisterCorePanelSchemas
     - unregisterModelRoot
     - unregisterSchema
     - UpdateableScene

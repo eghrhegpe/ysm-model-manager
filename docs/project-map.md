@@ -23,7 +23,7 @@
 | `executil/` | 外部进程工具（HideWindow 平台双实现，收敛自三处副本） 〔源码 2: hidewindow_other.go hidewindow_windows.go · 测试 3〕 |
 | `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） 〔源码 4: fileops.go fileops_enable.go fileops_preview.go folder_import.go · 测试 11〕 |
 | `fsutil/` | 目录遍历工具（WalkDir 集中管理） 〔源码 11: b64.go bom.go copy.go crossdevice_other.go crossdevice_windows.go format.go hardlink_other.go har… · 测试 12〕 |
-| `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 3: archive.go parse.go ysm_parser.go · 测试 17 · 子目录 1: testdata/〕 |
+| `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 4: archive.go maid_l0.go parse.go ysm_parser.go · 测试 17 · 子目录 1: testdata/〕 |
 | `importer/` | 资源导入策略接口与内置实现 〔源码 3: detect_tail.go importer.go importer_file.go · 测试 11〕 |
 | `installer/` | 模型安装 〔源码 1: installer.go · 测试 5〕 |
 | `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 1: instance.go · 测试 3〕 |
@@ -36,7 +36,7 @@
 | `recycle/` | 回收站管理 〔源码 2: recycle.go recycle_clean.go · 测试 12〕 |
 | `repoaudit/` | 仓库健康审计核心（GUI 绑定层与 CLI 共用，防双轨口径漂移） 〔源码 1: repoaudit.go · 测试 2〕 |
 | `rustbridge/` | Windows Rust 扫描 DLL 的嵌入、校验、加载与窄 ABI 适配层 〔源码 7: bridge_cgo.go bridge_windows.go common.go doc.go embedded_windows.go types.go types_windows.go · 测试 1 · 子目录 2: bin/ static-lib/〕 |
-| `scanner/` | 模型扫描 + 作者提取 + 仓库索引（ADR-003 P2 Logic Sinking） 〔源码 3: rust_backend.go rust_backend_stub.go scanner.go · 测试 11〕 |
+| `scanner/` | 模型扫描 + 作者提取 + 仓库索引（ADR-003 P2 Logic Sinking） 〔源码 3: rust_backend.go rust_backend_stub.go scanner.go · 测试 12〕 |
 | `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 19〕 |
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 3〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |

@@ -119,16 +119,34 @@ async function scanFsaHandle(
   return { ok: true, imported, failed, dir: (handle as _FsaDirHandle).name };
 }
 
+/** FSA 递归安全上限：防恶意/异常目录结构导致栈溢出或内存 OOM */
+const MAX_FSA_DEPTH = 32;
+const MAX_FSA_FILES = 50_000;
+
 /** 递归遍历目录句柄，收集全部文件的 File 句柄（携带相对路径，供 importWebFiles 按 stem 分组） */
-async function _collectModelFiles(dir: _FsaDirHandle, out: File[], parentPath = ""): Promise<void> {
+async function _collectModelFiles(
+  dir: _FsaDirHandle,
+  out: File[],
+  parentPath = "",
+  depth = 0,
+): Promise<void> {
+  if (depth > MAX_FSA_DEPTH) {
+    // 超深目录跳过（防御性截断，正常模型目录 ≤ 5 层）
+    console.warn(`[web-fs-auth] 目录递归深度超过 ${MAX_FSA_DEPTH} 层，跳过: ${parentPath}`);
+    return;
+  }
+  if (out.length > MAX_FSA_FILES) {
+    // 总文件数超限，抛错中断（防内存 OOM）
+    throw new Error(
+      `[web-fs-auth] 文件总数超过 ${MAX_FSA_FILES} 限制（当前 ${out.length}），请检查授权目录是否包含异常深层嵌套`,
+    );
+  }
   for await (const entry of dir.values()) {
     const rel = parentPath ? `${parentPath}/${entry.name}` : entry.name;
     if (entry.kind === "directory") {
-      await _collectModelFiles(entry as unknown as _FsaDirHandle, out, rel);
+      await _collectModelFiles(entry as unknown as _FsaDirHandle, out, rel, depth + 1);
     } else if (entry.kind === "file") {
       const f = await (entry as FileSystemFileHandle).getFile();
-      // FSA getFile() 返回的 File 无 webkitRelativePath；自行拼相对路径，
-      // 供 importWebFiles 按 stem 分组时保留目录结构，避免多模型坍缩为同一组
       Object.defineProperty(f, "webkitRelativePath", { value: rel, configurable: true });
       out.push(f);
     }

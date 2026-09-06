@@ -165,52 +165,65 @@ async function batchExtractCreatorAvatars(): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   try {
     const entries = await scanWebModels(`${WEB_ROOT}/ysm`);
+    // 预过滤：唯一作者 + 跳过已在 result 中的（防并行竞态）
+    const seenAuthors = new Set<string>();
+    const tasks: Array<Promise<{ author: string; uri: string } | null>> = [];
     for (const e of entries) {
-      // 作者名取自 [作者]模型 命名（对齐 Go app_avatar.go:38 解析口径）
       const base = e.Name.replace(/\.(ysm|zip|7z|json|ban)$/i, "");
       if (!base.startsWith("[")) continue;
       const idx = base.indexOf("]");
       if (idx <= 0) continue;
       const author = base.slice(1, idx).trim();
-      if (!author || result[author]) continue;
-
-      // P1-4 修复：先读 localStorage 缓存，命中则跳过全量 IDB 读 + WASM 解包
-      const cached = await cachedCreatorAvatar(author);
-      if (cached) {
-        result[author] = cached;
-        continue;
-      }
-
-      const b64 = await readWebFile(e.Path);
-      if (!b64) continue;
-      // base64 → 字节统一走 web-common.base64ToBytes（非法输入返回 null → 跳过该模型）
-      const bytes = base64ToBytes(b64);
-      if (!bytes) continue;
-      try {
-        const files = await decodeYsmFile(bytes);
-        // 优先找 avatar/ 目录下首张图（对齐 Go ExtractAvatarURI 降级分支）
-        for (const f of files) {
-          const low = f.path.toLowerCase();
-          if (!(low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg"))) continue;
-          if (!low.startsWith("avatar/") && !low.includes("/avatar/")) continue;
-          const mime = low.endsWith(".png") ? "image/png" : "image/jpeg";
-          result[author] = `data:${mime};base64,${arrayBufferToBase64(
-            f.data.buffer.slice(
-              f.data.byteOffset,
-              f.data.byteOffset + f.data.byteLength,
-            ) as ArrayBuffer,
-          )}`;
-          saveAvatarCache(author, result[author]);
-          break;
-        }
-      } catch {
-        // 单模型解码失败：跳过，不中断批量（降级为无头像）
+      if (!author || seenAuthors.has(author) || result[author]) continue;
+      seenAuthors.add(author);
+      // P2a 修复：并行化每个作者的头像提取（原 for 串行 N×RTT → 并发 N×RTT/并发度）
+      tasks.push(extractOneAvatar(author, e.Path));
+    }
+    const settled = await Promise.allSettled(tasks);
+    for (const r of settled) {
+      if (r.status === "fulfilled" && r.value) {
+        result[r.value.author] = r.value.uri;
       }
     }
   } catch {
     // 模型库不可用：返回空 map（前端 index.ts 已处理空结果，无红错）
   }
   return result;
+}
+
+/** 单作者头像提取（供 Promise.allSettled 调用，失败返回 null 不中断批量） */
+async function extractOneAvatar(
+  author: string,
+  path: string,
+): Promise<{ author: string; uri: string } | null> {
+  try {
+    // P1-4 修复：先读 localStorage 缓存，命中则跳过全量 IDB 读 + WASM 解包
+    const cached = await cachedCreatorAvatar(author);
+    if (cached) return { author, uri: cached };
+
+    const b64 = await readWebFile(path);
+    if (!b64) return null;
+    const bytes = base64ToBytes(b64);
+    if (!bytes) return null;
+    const files = await decodeYsmFile(bytes);
+    for (const f of files) {
+      const low = f.path.toLowerCase();
+      if (!(low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg"))) continue;
+      if (!low.startsWith("avatar/") && !low.includes("/avatar/")) continue;
+      const mime = low.endsWith(".png") ? "image/png" : "image/jpeg";
+      const uri = `data:${mime};base64,${arrayBufferToBase64(
+        f.data.buffer.slice(
+          f.data.byteOffset,
+          f.data.byteOffset + f.data.byteLength,
+        ) as ArrayBuffer,
+      )}`;
+      saveAvatarCache(author, uri);
+      return { author, uri };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // --- 作者扫描 / 仓库索引（ADR-049 桥接增强 Batch 3）---

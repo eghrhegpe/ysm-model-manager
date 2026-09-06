@@ -41,7 +41,9 @@ export const getApp = async (): Promise<AppBindings> => {
       // 例：test harness 只注入 AddOpLog → 非空，但缺失 ScanModelEntries 等 → 穿透 undefined
       const winAppRec = winApp as Record<string, unknown>;
       // 核心启动集（browser-adapter 已实现的最小集 + 桌面高频绑定）——
-      // 至少命中其一才视为完整 mock，否则回退动态 import
+      // code_review 53e59e02 #2/#5：须全核心集命中（.every）才视为完整 mock；
+      // 原 .some 下「只注入 AddOpLog」（AddOpLog 恰在清单内）算出 hasCore=true，
+      // partial mock 仍被缓存粘滞——正是注释声称要防的反例
       const CORE_METHODS = [
         "ScanModelEntries",
         "GetRepoRoot",
@@ -51,7 +53,7 @@ export const getApp = async (): Promise<AppBindings> => {
         "GetImportLogs",
         "GetRuntimeLogs",
       ];
-      const hasCore = CORE_METHODS.some((m) => typeof winAppRec[m] === "function");
+      const hasCore = CORE_METHODS.every((m) => typeof winAppRec[m] === "function");
       if (!hasCore) {
         // partial mock → 回退动态 import，不缓存
       } else {

@@ -167,8 +167,13 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
     allPanels.push(buildPanelNode(id, nodes, snapshots, lookupDock(id) ?? nodes[0]?.dockGroup));
   }
 
-  // 通道 2：schema-registry Map（ysm-model + 动态 litematic 切片键）
+  // 通道 2：schema-registry Map（ysm-model + 动态 litematic 切片键）。
+  // code_review 8988145d #1/#2/#3：ADR-193 §2.5 后 core 六面板已由 buildPreviewMenuRouters
+  // 双注册进 registry（与通道 1 的 schemaBuilders 闭包同 id）——此处须跳过闭包已枚举的 id，
+  // 否则每个 dock 面板 ×2、predicateCount 双计、audit/doctor 图全量重复
+  const closureIds = new Set(Object.keys(routers.schemaBuilders));
   for (const id of registryIds) {
+    if (closureIds.has(id)) continue;
     const builder = getSchema(id);
     if (!builder) continue;
     let nodes: PreviewMenuNode[];

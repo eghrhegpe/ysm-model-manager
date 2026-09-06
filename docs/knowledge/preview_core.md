@@ -64,6 +64,7 @@ auto_fields:
     - createFbxParser
     - createPmxParser
     - createResolveModeBridge
+    - createTextureDecoder
     - createWorkerBridge
     - CreateWorkerBridgeOpts
     - createWorkerParser

@@ -286,12 +286,15 @@ export async function idbGetAll(store: Store, prefix: string): Promise<Array<[st
   });
 }
 
-/** 前缀批量取 metadata（仅投影 size + mimetype，不搬运 data:ArrayBuffer）
- * 供 scanWebModelGroups 等只需要 size 的场景使用，避免全量结构化克隆。 */
+/** 前缀批量取 metadata（投影 size + mime）
+ * 供 scanWebModelGroups 等只需要 size 的场景使用。
+ * ⚠️ 注意（code_review 53e59e02 #7）：IDB 无部分值读取——cursor.value 仍是整条
+ * 记录（含 data:ArrayBuffer）的结构化克隆，本函数并不省克隆成本；投影只是
+ * 省去把 data 带回调用方的传输/驻留。勿按旧注释误读为「不搬 data」。 */
 export async function idbGetAllMetadata(
   store: Store,
   prefix: string,
-): Promise<Array<[string, { size?: number; mimetype?: string }]>> {
+): Promise<Array<[string, { size?: number; mime?: string }]>> {
   const db = await getIdb();
   if (!db) {
     const m = memoryStore.get(store);
@@ -299,31 +302,31 @@ export async function idbGetAllMetadata(
     return [...m.entries()]
       .filter(([k]) => k.startsWith(prefix))
       .map(([k, v]) => {
-        const meta = (v as { size?: number; mimetype?: string }) ?? {};
-        return [k, { size: meta.size, mimetype: meta.mimetype }] as [
+        const meta = (v as { size?: number; mime?: string }) ?? {};
+        return [k, { size: meta.size, mime: meta.mime }] as [
           string,
-          { size?: number; mimetype?: string },
+          { size?: number; mime?: string },
         ];
       })
       .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   }
-  return new Promise<Array<[string, { size?: number; mimetype?: string }]>>((resolve, reject) => {
+  return new Promise<Array<[string, { size?: number; mime?: string }]>>((resolve, reject) => {
     const tx = db.transaction(store, "readonly");
     const os = tx.objectStore(store);
     const useRange = prefix !== "" && typeof IDBKeyRange !== "undefined";
     const req = useRange
       ? os.openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff", false, false))
       : os.openCursor();
-    const out: Array<[string, { size?: number; mimetype?: string }]> = [];
+    const out: Array<[string, { size?: number; mime?: string }]> = [];
     req.onsuccess = () => {
       const cursor = req.result;
       if (cursor) {
         const key = String(cursor.key);
         if (key.startsWith(prefix)) {
-          const v = cursor.value as { size?: number; mimetype?: string } | undefined;
-          const meta: { size?: number; mimetype?: string } = {};
+          const v = cursor.value as { size?: number; mime?: string } | undefined;
+          const meta: { size?: number; mime?: string } = {};
           if (v?.size !== undefined) meta.size = v.size;
-          if (v?.mimetype !== undefined) meta.mimetype = v.mimetype;
+          if (v?.mime !== undefined) meta.mime = v.mime;
           out.push([key, meta]);
         }
         cursor.continue();

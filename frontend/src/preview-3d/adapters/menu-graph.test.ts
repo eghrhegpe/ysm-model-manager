@@ -7,7 +7,8 @@ import type { MenuGraph, MenuGraphNode, RepresentativeSnapshot } from "./menu-gr
 import type { PreviewMenuRouters } from "../menu/core.ts";
 import { buildPreviewMenuRouters } from "../menu/core.ts";
 import { makeMenuCtx, mockMenuHandle } from "./menu-test-fixtures.ts";
-import { registerSchema, resetSchemas } from "./schema-registry.ts";
+import { registerSchema, resetSchemas, listSchemas, getSchema } from "./schema-registry.ts";
+import { unregisterCorePanelSchemas } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
@@ -191,5 +192,25 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     // buildPreviewMenuRouters 已把六面板注册进 registry（dualChannelDebt 判定依据）
     expect(graph.uncoveredLayers).not.toContain("lighting");
     expect(graph.uncoveredLayers).not.toContain("camera");
+  });
+
+  it("core 六面板注册生命周期：build 注册 → dispose 所有权注销 → 重挂载重注册（code_review 8988145d #6-#9）", async () => {
+    const CORE_IDS = ["lighting", "shadow", "postproc", "settings", "camera", "environment"];
+    // build（=一次挂载的注册侧）→ registry 含六 id
+    const { routers: r1 } = buildGraphRouters();
+    for (const id of CORE_IDS) expect(getSchema(id)).toBeDefined();
+
+    // dispose（所有权注销）→ 六 id 从 registry 消失
+    unregisterCorePanelSchemas(r1);
+    for (const id of CORE_IDS) expect(getSchema(id)).toBeUndefined();
+
+    // 重挂载 → 六 id 重新注册（新 build 覆盖旧条目）
+    buildGraphRouters();
+    for (const id of CORE_IDS) expect(getSchema(id)).toBeDefined();
+    expect(listSchemas().filter((id) => CORE_IDS.includes(id))).toHaveLength(6);
+
+    // 所有权：旧挂载 dispose 不得误删新挂载已覆盖的条目（Bug-A 纪律）
+    unregisterCorePanelSchemas(r1);
+    for (const id of CORE_IDS) expect(getSchema(id)).toBeDefined();
   });
 });

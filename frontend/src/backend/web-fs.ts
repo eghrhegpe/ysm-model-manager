@@ -142,7 +142,9 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
   // P0-1 优化：原本每模型组 1 次 meta get + 1 次 file 前缀扫 + N 次 file get
   // （N+1 串行事务，千级模型 ~2000+ 往返）。改为两次前缀批量操作收敛：
   //   ① idbGetAll("dir:type/")   一次事务拿全部 dir key+value（含 addedAt meta）
-  //   ② idbGetAllMetadata("file:type/")  一次事务仅投影 size，不搬 data
+  //   ② idbGetAllMetadata("file:type/")  一次事务投影 size/mime（code_review
+  //      53e59e02 #7：IDB 无部分值读取，cursor.value 仍克隆整条含 data——
+  //      此处省的是把 data 传回调用方，不是省克隆成本）
   // 内存按组名收敛，主文件竞争 / 大小汇总在内存完成——总 IDB 事务数 O(1)。
   const [dirRows, fileMetaRows] = await Promise.all([
     idbGetAll("files", `dir:${type}/`),

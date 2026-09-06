@@ -16,7 +16,12 @@ import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
-import { registerSchema, unregisterSchema } from "../adapters/schema-registry.ts";
+import {
+  getSchema,
+  registerSchema,
+  type SchemaBuilder,
+  unregisterSchema,
+} from "../adapters/schema-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
@@ -183,6 +188,9 @@ export interface PreviewMenuRouters {
   schemaBuilders: Record<CorePanelId, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
   fillers: Record<string, (list: HTMLElement, menu?: SlideMenuHandle) => void>;
   runners: Record<string, () => void>;
+  /** 本挂载注册进 schema-registry 的 core 面板 wrapper（dispose 所有权校验凭据）——
+   *  code_review 8988145d #4/#5：注销只删仍属本挂载的条目，防旧会话 dispose 误删新会话注册 */
+  coreSchemaOwners?: Map<CorePanelId, SchemaBuilder>;
 }
 
 /**
@@ -245,10 +253,16 @@ export function buildPreviewMenuRouters(
   // ADR-193 §2.5 双注册合并：core 六面板统一注册进 schema-registry——
   // dualChannelDebt（schemaBuilders key ∉ fullRegistry）清零，coverage:full 的隐藏前置步。
   // 快照参数 core builder 不消费（内容走 ctx 闭包），透传 menu 兼容 settings/environment 两级菜单分支。
+  // code_review 8988145d #4/#5：注册记 owner wrapper（按挂载实例），注销前身份校验——
+  // 无条件删固定 key 会在重叠挂载时误删新会话条目（Bug-A 纪律，对齐 ysm-model-{sessionId} 范式）
+  const coreSchemaOwners = new Map<CorePanelId, SchemaBuilder>();
   for (const id of CORE_PANEL_IDS) {
     const builder = routers.schemaBuilders[id];
-    registerSchema(id, () => builder(menu));
+    const wrapper: SchemaBuilder = () => builder(menu);
+    registerSchema(id, wrapper);
+    coreSchemaOwners.set(id, wrapper);
   }
+  routers.coreSchemaOwners = coreSchemaOwners;
   return routers;
 }
 
@@ -265,9 +279,21 @@ export function corePanelBuilder(
 
 /** dispose 时注销 core 六面板的 registry 注册（与注册循环同 key 集）——
  *  防陈旧 builder 闭包持有已 dispose 场景的 ctx/handle 引用（对齐 schema-registry
- *  头注释的跨会话污染防线） */
-export function unregisterCorePanelSchemas(): void {
-  for (const id of CORE_PANEL_IDS) unregisterSchema(id);
+ *  头注释的跨会话污染防线）。
+ *  code_review 8988145d #4/#5/#7/#9：所有权校验——只删「当前 registry 条目仍是本挂载
+ *  注册的 wrapper」的 key（身份相等才删）。重叠挂载时旧会话 dispose 不得误删新会话
+ *  已覆盖的条目（Bug-A 纪律，对齐 ysm-adapter/litematic per-scene key 只注销自己的）；
+ *  未传 owners（测试直建 routers 场景）退化为无条件注销，保持旧语义。 */
+export function unregisterCorePanelSchemas(routers: PreviewMenuRouters): void {
+  const owners = routers.coreSchemaOwners;
+  for (const id of CORE_PANEL_IDS) {
+    if (!owners) {
+      unregisterSchema(id);
+      continue;
+    }
+    // 身份相等才删：新挂载已覆盖（getSchema(id) !== 本挂载 wrapper）则跳过，勿误删
+    if (getSchema(id) === owners.get(id)) unregisterSchema(id);
+  }
 }
 
 /** [子函数 5/9] 单面板渲染：四路互斥分派 + try-catch 错误边界。
@@ -586,7 +612,7 @@ export function mountPreviewRootMenu(
     dispose: (): void => {
       abortTap();
       disposeEnvSubscriptions(); // 清环境面板 cap 订阅，防 cap 单例持有过期 menu 引用
-      unregisterCorePanelSchemas(); // ADR-193 §2.5：注销 core 六面板 registry 注册，防陈旧 ctx 闭包跨会话污染
+      unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       menu.dispose();
       dock.remove();
       popup.remove();

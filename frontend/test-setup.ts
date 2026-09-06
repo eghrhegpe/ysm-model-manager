@@ -41,6 +41,20 @@ vi.hoisted(() => {
           .filter(([k]) => k.startsWith(prefix))
           .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
       ),
+      idbGetAllMetadata: vi.fn(async (_s: string, prefix: string) =>
+        [...store.entries()]
+          .filter(([k]) => k.startsWith(prefix))
+          .map(([k, v]) => {
+            // code_review 53e59e02 #1：镜像真实 schema {data, size, mime}——
+            // 原投影 mimetype 与 idb.ts 同错（存储写 mime，读 mimetype 恒 undefined）
+            const meta = (v as { size?: number; mime?: string }) ?? {};
+            return [k, { size: meta.size, mime: meta.mime }] as [
+              string,
+              { size?: number; mime?: string },
+            ];
+          })
+          .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
+      ),
       idbDel: vi.fn(async (_s: string, k: string) => {
         store.delete(k);
       }),
@@ -63,6 +77,7 @@ vi.mock("./src/backend/idb.ts", () => {
     idbSet: unknown;
     idbKeys: unknown;
     idbGetAll: unknown;
+    idbGetAllMetadata: unknown;
     idbDel: unknown;
     idbTx: unknown;
   };
@@ -71,6 +86,7 @@ vi.mock("./src/backend/idb.ts", () => {
     idbSet: m.idbSet,
     idbKeys: m.idbKeys,
     idbGetAll: m.idbGetAll,
+    idbGetAllMetadata: m.idbGetAllMetadata,
     idbDel: m.idbDel,
     idbTx: m.idbTx,
   };

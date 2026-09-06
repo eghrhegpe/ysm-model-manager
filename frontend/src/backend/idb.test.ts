@@ -7,7 +7,7 @@
 // 穿透修复，供 browser-adapter 系共享），此处显式 unmock 恢复真实实现（否则 22 用例全被 mock 吞）。
 vi.unmock("./idb.ts");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbKeys, idbSet, idbTx, openDB } from "./idb.ts";
+import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbSet, idbTx, openDB } from "./idb.ts";
 
 // MEMORY_MAX_KEYS=200 / MEMORY_MAX_BYTES=64MB（与 idb.ts 常量保持一致——此处验证驱逐行为）
 const MEMORY_MAX_KEYS = 200;
@@ -357,6 +357,54 @@ describe("idb IDB 事务路径", () => {
     const rows = await idbGetAll("files", "file:ysm/");
     expect(rows.map(([k]) => k)).toEqual(["file:ysm/a/main.ysm", "file:ysm/b/x.ysm"]);
     expect(rows.map(([, v]) => (v as { size: number }).size)).toEqual([5, 6]);
+  });
+
+  it("idbGetAllMetadata：投影 size+mime（code_review 53e59e02 #1/#6：字段对齐存储 schema {data,size,mime}，非 mimetype）", async () => {
+    makeFakeIDBWithTx();
+    // 真实写入门径形状：web-fs-import 写 { data, size, mime: f.type || octet-stream }
+    await idbSet("files", "file:ysm/a/main.ysm", { data: new ArrayBuffer(1), size: 123, mime: "model/ysm" });
+    await idbSet("files", "file:ysm/a/tex/p.png", { data: new ArrayBuffer(2), size: 456, mime: "image/png" });
+    await idbSet("files", "file:ysm/b/other.ysm", { data: new ArrayBuffer(3), size: 789, mime: "" });
+    await idbSet("files", "cfg:x", { n: 9 });
+    const rows = await idbGetAllMetadata("files", "file:ysm/");
+    expect(rows.map(([k]) => k)).toEqual([
+      "file:ysm/a/main.ysm",
+      "file:ysm/a/tex/p.png",
+      "file:ysm/b/other.ysm",
+    ]);
+    // 只投影 size+mime（不带 data），mime 字段真实读出
+    const metas = rows.map(([, v]) => v);
+    expect(metas[0]).toEqual({ size: 123, mime: "model/ysm" });
+    expect(metas[1]).toEqual({ size: 456, mime: "image/png" });
+    expect(metas[2]).toEqual({ size: 789, mime: "" });
+    // 任何投影结果都不含 data 字段
+    for (const [, v] of rows) {
+      expect(v).not.toHaveProperty("data");
+    }
+  });
+
+  it("idbGetAllMetadata：前缀不命中 → 空数组；缺 size/mime 的行投影为 undefined（不抛错）", async () => {
+    makeFakeIDBWithTx();
+    await idbSet("files", "file:ysm/a/main.ysm", { data: new ArrayBuffer(1), size: 5, mime: "x" });
+    await idbSet("files", "file:ysm/a/nosize.ysm", { data: new ArrayBuffer(1) });
+    expect(await idbGetAllMetadata("files", "file:vrm/")).toEqual([]);
+    const rows = await idbGetAllMetadata("files", "file:ysm/");
+    expect(rows).toHaveLength(2);
+    const noSize = rows.find(([k]) => k.endsWith("nosize.ysm"))?.[1];
+    expect(noSize).toEqual({});
+  });
+
+  it("idbGetAllMetadata：内存降级路径（无 indexedDB）同语义且与 IDB 分支形状一致", async () => {
+    // 未 stub indexedDB → 纯内存模式
+    await idbSet("files", "file:ysm/a/main.ysm", { data: new ArrayBuffer(1), size: 10, mime: "model/ysm" });
+    await idbSet("files", "file:ysm/b/x.ysm", { data: new ArrayBuffer(2), size: 20, mime: "" });
+    await idbSet("files", "cfg:z", { n: 1 });
+    const rows = await idbGetAllMetadata("files", "file:ysm/");
+    expect(rows.map(([k]) => k)).toEqual(["file:ysm/a/main.ysm", "file:ysm/b/x.ysm"]);
+    expect(rows.map(([, v]) => v)).toEqual([
+      { size: 10, mime: "model/ysm" },
+      { size: 20, mime: "" },
+    ]);
   });
 
   it("idbTx：批量 put+del 单事务提交，全部落库（全有）", async () => {

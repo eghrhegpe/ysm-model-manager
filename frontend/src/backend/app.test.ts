@@ -36,9 +36,24 @@ afterEach(() => {
   }
 });
 
+// code_review 53e59e02 #2 连带：partial mock 检测改 .every 后，单方法 mock
+// （{ AddImportLog }）不再算完整 bridge——测缓存语义的用例需全核心集 mock
+function makeFullMockApp(): Record<string, () => string> {
+  const all = [
+    "ScanModelEntries",
+    "GetRepoRoot",
+    "AddOpLog",
+    "AddImportLog",
+    "ImportModelFile",
+    "GetImportLogs",
+    "GetRuntimeLogs",
+  ];
+  return Object.fromEntries(all.map((m) => [m, () => `mock:${m}`]));
+}
+
 describe("getApp — window.go mock bridge 注入路径", () => {
   it("window.go.main.App 存在 → 返回该句柄（不 import）", async () => {
-    const mockApp = { AddImportLog: () => "mock" };
+    const mockApp = makeFullMockApp();
     (window as unknown as { go: { main: { App: unknown } } }).go = {
       main: { App: mockApp },
     };
@@ -55,11 +70,22 @@ describe("getApp — window.go mock bridge 注入路径", () => {
     // 空对象不得被缓存为 _App——若被缓存会返回 {}，现应走 import（成功返回模块或失败返回 null）
     expect(app).not.toEqual({});
   });
+
+  it("只注入单个方法 → partial mock 回退动态 import（P4/P1-5 修复）", async () => {
+    const partialApp = { AddImportLog: () => "mock" };
+    (window as unknown as { go: { main: { App: unknown } } }).go = {
+      main: { App: partialApp },
+    };
+    const getApp = await freshGetApp();
+    const app = await getApp().catch(() => null);
+    // .every 全核心集判定：单方法不达标 → 不得缓存 partialApp
+    expect(app).not.toBe(partialApp);
+  });
 });
 
 describe("getApp — 缓存与并发语义（经 window.go 注入隔离）", () => {
   it("缓存命中：首调后二次调用返回同一对象（不再重新解析）", async () => {
-    const mockApp = { AddImportLog: () => "mock" };
+    const mockApp = makeFullMockApp();
     (window as unknown as { go: { main: { App: unknown } } }).go = {
       main: { App: mockApp },
     };
@@ -71,7 +97,7 @@ describe("getApp — 缓存与并发语义（经 window.go 注入隔离）", () 
   });
 
   it("并发首调复用同一 in-flight promise（import 只触发一次）", async () => {
-    const mockApp = { AddImportLog: () => "mock" };
+    const mockApp = makeFullMockApp();
     (window as unknown as { go: { main: { App: unknown } } }).go = {
       main: { App: mockApp },
     };
@@ -137,7 +163,9 @@ describe("getApp — 动态 import 路径语义（无 window.go 注入）", () =
   });
 
   it("无 __YSM_BACKEND__ 标记 + window.go 注入 → 仍走 Wails 原逻辑（桌面不受影响）", async () => {
-    const mockApp = { AddImportLog: () => "mock" };
+    // code_review 53e59e02 #2 连带：.every 后单方法 mock 不算完整桥（回退 import）——
+    // 本用例测「桌面 window.go 注入优先」，需全核心集才命中 Wails 原逻辑分支
+    const mockApp = makeFullMockApp();
     (window as unknown as { go: { main: { App: unknown } } }).go = {
       main: { App: mockApp },
     };

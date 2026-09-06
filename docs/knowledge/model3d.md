@@ -138,6 +138,7 @@ auto_fields:
     - createListenerSet
     - createPmxParser
     - createResolveModeBridge
+    - createTextureDecoder
     - createWorkerBridge
     - CreateWorkerBridgeOpts
     - createWorkerParser

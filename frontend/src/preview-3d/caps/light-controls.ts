@@ -1,8 +1,11 @@
 // ===== LightCapability 菜单定义（ADR-177 拆分：职责④从 LightCapability 抽离）=====
 // 原 4 个 lcBuild* 顶层函数与 getMenuControls 的聚合逻辑迁入本模块。
 // 经 `import type` 取 LightCapability（仅类型，不引入运行时环），全部调用其公开 API。
+// [ADR-195 刀2] 同文件新增 buildLightNodes 直产 PreviewMenuNode[]（cap.getMenuNodes 用）；
+// 旧 getLightMenuControls 保留兼容（未迁移消费者/测试仍走 MenuControlDef）。
 
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import type { LightCapability } from "./light-capability.ts";
 import type { MenuControlDef } from "./scene-capability.ts";
 
@@ -127,5 +130,134 @@ export function getLightMenuControls(cap: LightCapability): MenuControlDef[] {
     ...lcBuildSpotlight(cap),
     ...lcBuildVolumetric(cap),
     ...lcBuildThreePoint(cap),
+  ];
+}
+
+/* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
+
+const LIGHT_PARAMS_GROUP = "preview.lightGroupParams";
+
+/** 完整参数面板节点树：light-key 平铺 toggle + 参数组 folder（8 控件）——
+ *  light 无能力总开关（light-key 是主灯 params 开关，非启停），无 getMasterToggle。 */
+export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
+  const children: PreviewMenuNode[] = [
+    {
+      id: "light-fill",
+      kind: "toggle",
+      labelKey: "preview.fillLight",
+      fallback: "补灯",
+      control: {
+        get: () => cap.getParams().fill.enabled,
+        set: (v) => cap.setParams({ fill: { enabled: v as boolean } }),
+      },
+    },
+    {
+      id: "light-rim",
+      kind: "toggle",
+      labelKey: "preview.rimLight",
+      fallback: "轮廓灯",
+      control: {
+        get: () => cap.getParams().rim.enabled,
+        set: (v) => cap.setParams({ rim: { enabled: v as boolean } }),
+      },
+    },
+    {
+      id: "light-ambient",
+      kind: "slider",
+      labelKey: "preview.ambientIntensity",
+      fallback: "环境光",
+      control: {
+        min: 0,
+        max: 2,
+        step: 0.1,
+        get: () => cap.getParams().ambient.intensity,
+        set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
+      },
+    },
+    {
+      id: "light-spotlight",
+      kind: "toggle",
+      labelKey: "preview.spotlight",
+      fallback: "聚光灯",
+      control: {
+        get: () => cap.getParams().spotlight.enabled,
+        set: (v) => cap.setSpotlight({ enabled: v as boolean }),
+      },
+    },
+    {
+      id: "light-volumetric",
+      kind: "toggle",
+      labelKey: "preview.volumetric",
+      fallback: "体积光",
+      control: {
+        get: () => cap.getParams().volumetric.enabled,
+        set: (v) => cap.setVolumetric({ enabled: v as boolean }),
+      },
+    },
+    {
+      id: "light-engine",
+      kind: "select",
+      labelKey: "preview.volumetricEngine",
+      fallback: "锥引擎",
+      control: {
+        options: [
+          { value: "cone", label: "锥形" },
+          { value: "postprocess", label: "后处理" },
+        ],
+        get: () => cap.getVolumetricEngine(),
+        set: (v) => cap.setVolumetricEngine(v as "cone" | "postprocess"),
+      },
+    },
+    {
+      id: "light-cone-angle",
+      kind: "slider",
+      labelKey: "preview.coneAngle",
+      fallback: "锥角",
+      control: {
+        min: 10,
+        max: 60,
+        step: 1,
+        unit: "°",
+        get: () => cap.getParams().spotlight.angle,
+        set: (v) => cap.setSpotlight({ angle: v as number }),
+      },
+    },
+    {
+      id: "light-preset",
+      kind: "select",
+      labelKey: "preview.lightPreset",
+      fallback: "灯光预设",
+      control: {
+        options: [
+          { value: "default", label: "默认" },
+          { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
+          { value: "vrm", label: "VRM角色" },
+          { value: "mmd", label: "MMD角色" },
+          { value: "litematic", label: "体素" },
+          { value: "resourcepack", label: "MC块包" },
+        ],
+        get: () => cap.getCurrentPreset(),
+        set: (v) => cap.setPreset(v as string, { manual: true }),
+      },
+    },
+  ];
+  return [
+    {
+      id: "light-key",
+      kind: "toggle",
+      labelKey: "preview.keyLight",
+      fallback: "主灯",
+      control: {
+        get: () => cap.getParams().key.enabled,
+        set: (v) => cap.setParams({ key: { enabled: v as boolean } }),
+      },
+    },
+    {
+      id: "cap-group-light-params",
+      kind: "folder",
+      labelKey: LIGHT_PARAMS_GROUP,
+      fallback: "灯光参数",
+      children,
+    },
   ];
 }

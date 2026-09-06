@@ -72,6 +72,7 @@ auto_fields:
     - buildFogNodes
     - buildGroundSurfaceSpec
     - buildLightingSchema
+    - buildLightNodes
     - buildLipMorphIndices
     - buildLitematicScene
     - buildMmdScene

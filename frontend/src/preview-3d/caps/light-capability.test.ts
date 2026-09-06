@@ -269,6 +269,53 @@ describe("LightCapability — getMenuControls 分组", () => {
   });
 });
 
+describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(2);
+    // light-key 平铺（light 无 getMasterToggle）
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("light-key");
+    nodes[0]!.control!.set!(false);
+    expect(cap.getParams().key.enabled).toBe(false);
+    // 参数组 folder
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.lightGroupParams");
+    expect(folder.children!.map((c) => c.id)).toEqual([
+      "light-fill",
+      "light-rim",
+      "light-ambient",
+      "light-spotlight",
+      "light-volumetric",
+      "light-engine",
+      "light-cone-angle",
+      "light-preset",
+    ]);
+  });
+
+  it("slider/toggle 节点读写闭包直连 cap（fill/ambient）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[1]!;
+    const fill = folder.children!.find((c) => c.id === "light-fill")!;
+    fill.control!.set!(true);
+    expect(cap.getParams().fill.enabled).toBe(true);
+    const ambient = folder.children!.find((c) => c.id === "light-ambient")!;
+    ambient.control!.set!(1.5);
+    expect(cap.getParams().ambient.intensity).toBe(1.5);
+  });
+
+  it("light-preset select 直连 cap 预设", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[1]!;
+    const preset = folder.children!.find((c) => c.id === "light-preset")!;
+    expect(preset.control!.options!.length).toBe(6);
+    preset.control!.set!("mmd");
+    expect(cap.getCurrentPreset()).toBe("mmd");
+  });
+});
+
 describe("LightCapability — setVolumetricEngine", () => {
   it("cone 模式默认", () => {
     const cap = newCap();

@@ -17,6 +17,7 @@ auto_fields:
     - bindFieldRestorers
     - buildFogNodes
     - buildGroundSurfaceSpec
+    - buildLightNodes
     - buildReflectorNodes
     - buildRenderModeNodes
     - buildShadowNodes

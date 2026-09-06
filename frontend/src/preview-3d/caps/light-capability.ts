@@ -18,8 +18,9 @@
 //   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
 
 import * as THREE from "three";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { VolumetricCone } from "./light-cone.ts";
-import { getLightMenuControls } from "./light-controls.ts";
+import { buildLightNodes, getLightMenuControls } from "./light-controls.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
@@ -361,6 +362,14 @@ export class LightCapability implements SceneCapability {
   /** 返回菜单控件定义（框架自动渲染） */
   getMenuControls(): MenuControlDef[] {
     return getLightMenuControls(this);
+  }
+
+  /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树：light-key 平铺 toggle + 参数组 folder（8 控件）。
+   *  light 无能力总开关（无 getMasterToggle）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildLightNodes(this);
   }
 
   /** 保存状态到 localStorage */

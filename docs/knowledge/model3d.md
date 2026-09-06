@@ -181,8 +181,10 @@ auto_fields:
     - DEFAULT_SKY_PARAMS
     - DEFAULT_TD_KEYMAP
     - DEFAULT_WATER_PARAMS
+    - deriveDefaultEnvState
     - devLog
     - DirectionalLightParams
+    - dispatchEnvChange
     - Disposable
     - DISPOSE_TEX_KEYS
     - disposeCustomCleanups
@@ -200,11 +202,16 @@ auto_fields:
     - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
     - ENV_PRESETS
+    - ENV_STATE_SCHEMA
+    - EnvCallback
     - EnvironmentCapability
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
     - EnvPresetLinkage
+    - envState
+    - EnvState
+    - EnvStateSchema
     - estimateTexGpuBytes
     - eulerToQuaternion
     - extractIKChainFromTree
@@ -247,6 +254,7 @@ auto_fields:
     - getBonePath
     - getBonePosition
     - getCustomAnimPath
+    - getEnvCallbackCount
     - getFrameIntervalMs
     - getLoadTraces
     - getMaterialDetailBase
@@ -256,6 +264,7 @@ auto_fields:
     - getMmdMaterialDetail
     - getModelRootCount
     - getPerfPreset
+    - getPresetKeys
     - getSceneCaps
     - getSchema
     - getSemanticBone
@@ -509,6 +518,7 @@ auto_fields:
     - registerBoneRaycast
     - registerBuiltScene
     - RegisterBuiltSceneInput
+    - registerEnvCallback
     - registerModelRoot
     - registerPerFrame
     - registerSchema
@@ -530,6 +540,7 @@ auto_fields:
     - RenderVrmBonePanel
     - RepresentativeSnapshot
     - resetEncoderState
+    - resetEnvState
     - resetLoopState
     - resetSceneInfra
     - resetSchemas
@@ -574,6 +585,7 @@ auto_fields:
     - setActiveInputSession
     - setBoneNodeVisible
     - setBoneVisible
+    - setEnvState
     - setFrustumCullEnabled
     - setMaterialOpacity
     - setMaterialVisible

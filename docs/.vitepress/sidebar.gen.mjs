@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-200：CLI 输出契约结构化：命令返回结果对象，--json 载荷去文本化",
+        "link": "/adr/ADR-200-cli-structured-output"
+      },
+      {
         "text": "ADR-199：cli-bridge 进程内直调：移除 GUI 自 fork",
         "link": "/adr/ADR-199-cli-bridge-gui-fork"
       },

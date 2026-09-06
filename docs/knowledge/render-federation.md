@@ -29,7 +29,6 @@ auto_fields:
     - DEFAULT_GROUND_PARAMS
     - DEFAULT_POSTPROC_PARAMS
     - DEFAULT_SHADOW_PARAMS
-    - DEFAULT_SKY_PARAMS
     - drawEnvEquirect
     - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
@@ -52,7 +51,6 @@ auto_fields:
     - isSkyEnvironmentOn
     - LightCapability
     - lightDirToPosition
-    - MODEL_SKY_PRESETS
     - mount3D
     - Mount3DOptions
     - PoseScene
@@ -74,7 +72,6 @@ auto_fields:
     - ShadowParams
     - SkyCapability
     - SkyModelType
-    - SkyParams
     - switchPreview
     - UpdateableScene
   tests:

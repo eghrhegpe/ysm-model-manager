@@ -71,7 +71,6 @@ auto_fields:
     - createWorkerParser
     - DecodedTexture
     - DEFAULT_GROUND_PARAMS
-    - DEFAULT_SKY_PARAMS
     - DISPOSE_TEX_KEYS
     - disposeMmdMesh
     - disposeTextureDecoder
@@ -171,7 +170,6 @@ auto_fields:
     - MmdPlayBridge
     - MmdZipConfig
     - mockMenuHandle
-    - MODEL_SKY_PRESETS
     - ModelEntry
     - MorphMeshLike
     - morphNodes
@@ -242,7 +240,6 @@ auto_fields:
     - showLoadFailure
     - SkyCapability
     - SkyModelType
-    - SkyParams
     - startGlobalRenderLoop
     - stopIfIdle
     - SwitchContext

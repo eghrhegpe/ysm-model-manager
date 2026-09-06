@@ -64,6 +64,18 @@ const GUI_OUTPUT = `🎮 GUI 流程模拟器
 ⏱️  总耗时: 231.73ms
 📈 成功: 2, 失败: 1`;
 
+// 对齐 Go guiFlowStructured（ADR-200 D2）：前端直接消费结构化 stages，不再反解析文案
+const GUI_STRUCTURED = {
+  stages: [
+    { status: "✅", name: "① 配置加载", ms: 1.23, desc: ["仓库根: /models", "模型根: /models/ysm"] },
+    { status: "✅", name: "② 模型扫描", ms: 30, desc: ["发现 10 个模型 (333 models/sec)"] },
+    { status: "❌", name: "③ 模型分析", ms: 200.5, desc: ["分析失败: /models/ysm/player.ysm"] },
+  ],
+  total_ms: 231.73,
+  failed: true,
+  output: GUI_OUTPUT, // deprecated（D5）：迁移期保留
+};
+
 const PERF_LOG_OUTPUT = `╔══════════════════════════════════════╗
 ║             优化记录 perf-log        ║
 ╚══════════════════════════════════════╝
@@ -189,11 +201,11 @@ describe("single-bench 面板", () => {
 });
 
 describe("gui-flow 面板", () => {
-  it("渲染 6 阶段状态，失败阶段标红提示", async () => {
+  it("渲染 6 阶段状态，失败阶段标红提示（结构化 stages 消费）", async () => {
     executeCLI.mockResolvedValue({
       status: "success",
       command: "gui-flow",
-      data: { output: GUI_OUTPUT },
+      data: GUI_STRUCTURED,
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -207,11 +219,27 @@ describe("gui-flow 面板", () => {
     expect(out.querySelector("[class*='perf-gui-fail']")).toBeTruthy();
   });
 
+  it("status=error（阶段失败）时仍渲染结构化阶段明细（规律六）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "gui-flow",
+      error: { code: "runtime_error", message: "有 1 个阶段失败" },
+      data: GUI_STRUCTURED,
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-gui") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
+    expect(out.textContent).toContain("③ 模型分析");
+    expect(out.querySelector("[class*='perf-gui-fail']")).toBeTruthy();
+  });
+
   it("结果容器与按钮 id 隔离：点击结果区不会触发重跑", async () => {
     executeCLI.mockResolvedValue({
       status: "success",
       command: "gui-flow",
-      data: { output: GUI_OUTPUT },
+      data: GUI_STRUCTURED,
     });
     const root = makeRoot();
     initPerfPanel(root, esc);

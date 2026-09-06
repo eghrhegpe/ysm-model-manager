@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AppService
+    - AttachSidecar
     - CatCache
     - CatConfig
     - CatModel
@@ -16,6 +17,7 @@ auto_fields:
     - CatResource
     - CliCommand
     - CmdContext
+    - CmdContext.SetResult
     - CommandSpec
     - DispatchCommand
     - ErrParam
@@ -52,6 +54,7 @@ auto_fields:
     - RegisterCommandC
     - RunCLI
     - RunCLIInProcess
+    - SidecarOutput
     - String
     - TimingInfo
 use_when:

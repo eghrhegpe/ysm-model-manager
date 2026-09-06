@@ -11,6 +11,7 @@ auto_fields:
     - ExecuteCLIWithApp
     - RunCLI
     - RunCLIInProcess
+    - SidecarOutput
   tests:
     - go/cli/cli_test.go
 tests:

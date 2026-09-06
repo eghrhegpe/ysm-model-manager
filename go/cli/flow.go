@@ -32,6 +32,68 @@ type guiFlowResult struct {
 	FirstModel string
 }
 
+// guiFlowStageItem 单阶段结构化结果（ADR-200 D2：gui-flow 为首批结构化命令）。
+// 字段与前端 GuiFlowStage（perf-cli.ts）逐字对齐，前端据此直接渲染、
+// 不再对人类文案做正则反解析。
+type guiFlowStageItem struct {
+	Status string   `json:"status"` // "✅" / "❌"
+	Name   string   `json:"name"`
+	Ms     float64  `json:"ms"`
+	Desc   []string `json:"desc"`
+}
+
+// guiFlowStructured gui-flow --json 结构化载荷（ADR-200 D1/D5）：
+// Data 优先承载本对象；output/filesRoot 迁移期保留（Sidecar 注入，标 deprecated），
+// 兼容前端 respHasOutput 守卫与复制原文功能。
+type guiFlowStructured struct {
+	Stages    []guiFlowStageItem `json:"stages"`
+	TotalMs   float64            `json:"total_ms"`
+	Failed    bool               `json:"failed"`
+	Output    string             `json:"output,omitempty"`
+	FilesRoot string             `json:"filesRoot,omitempty"`
+}
+
+// AttachSidecar 实现 SidecarOutput（ADR-200 D5）：由 buildJsonData 在 --json 响应时注入。
+func (g *guiFlowStructured) AttachSidecar(output, filesRoot string) {
+	g.Output = output
+	g.FilesRoot = filesRoot
+}
+
+// buildGuiFlowStructured 由阶段结果构造结构化载荷。
+// 在 printFlowReport 之前调用：即使汇总报错（有阶段失败），结构化明细也已就位，
+// --json 错误分支同样带回（规律六）。
+func buildGuiFlowStructured(results []guiFlowResult, totalDuration time.Duration) *guiFlowStructured {
+	items := make([]guiFlowStageItem, 0, len(results))
+	failed := false
+	for _, r := range results {
+		if !r.Success {
+			failed = true
+		}
+		items = append(items, guiFlowStageItem{
+			Status: map[bool]string{true: "✅", false: "❌"}[r.Success],
+			Name:   r.Stage,
+			Ms:     float64(r.Duration.Microseconds()) / 1000,
+			Desc:   splitDescLines(r.Description),
+		})
+	}
+	return &guiFlowStructured{
+		Stages:  items,
+		TotalMs: float64(totalDuration.Microseconds()) / 1000,
+		Failed:  failed,
+	}
+}
+
+// splitDescLines 将阶段描述按行拆分（去空行、去行首缩进），供前端逐行渲染。
+func splitDescLines(desc string) []string {
+	var lines []string
+	for _, line := range strings.Split(desc, "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			lines = append(lines, trimmed)
+		}
+	}
+	return lines
+}
+
 // runGUIFlow 模拟 GUI 完整加载流程
 func runGUIFlow(ctx *CmdContext) error {
 	fs := newCmdFlagSet("gui-flow")
@@ -98,6 +160,9 @@ func runGUIFlow(ctx *CmdContext) error {
 
 	// ============ 汇总报告 ============
 	totalDuration := time.Since(totalStart)
+	// 结构化结果先于人类文本报告就位（ADR-200 D1）：printFlowReport 有阶段失败会返回
+	// error，但 --json 错误分支仍需带回阶段明细（规律六），SetResult 必须前置。
+	ctx.SetResult(buildGuiFlowStructured(results, totalDuration))
 	if err := printFlowReport(results, totalDuration, *verbose); err != nil {
 		return err
 	}

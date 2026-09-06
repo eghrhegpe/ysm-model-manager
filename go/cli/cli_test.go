@@ -1125,7 +1125,7 @@ func TestAllCommandsRegistered(t *testing.T) {
 
 func TestDispatchCommand_RequiresFilesRoot(t *testing.T) {
 	a := app.NewApp()
-	err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search"}, true)
+	_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search"}, true)
 	if err == nil {
 		t.Error("requireFilesRoot=true 且 filesRoot 为空时应返回错误")
 	}
@@ -1136,7 +1136,7 @@ func TestDispatchCommand_RequiresFilesRoot(t *testing.T) {
 
 func TestDispatchCommand_AllowsEmptyFilesRoot(t *testing.T) {
 	a := app.NewApp()
-	err := DispatchCommand(a, a.SaveAppConfig, "", []string{"cache-status"}, false)
+	_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"cache-status"}, false)
 	if err != nil {
 		t.Logf("无 files-root 时 dispatch 返回: %v（可能正常）", err)
 	}
@@ -1145,7 +1145,7 @@ func TestDispatchCommand_AllowsEmptyFilesRoot(t *testing.T) {
 func TestDispatchCommand_UnknownCommand(t *testing.T) {
 	a := app.NewApp()
 	dir := t.TempDir()
-	err := DispatchCommand(a, a.SaveAppConfig, dir, []string{"no-such-cmd"}, false)
+	_, err := DispatchCommand(a, a.SaveAppConfig, dir, []string{"no-such-cmd"}, false)
 	if err == nil {
 		t.Error("未知命令应返回错误")
 	}
@@ -1157,7 +1157,7 @@ func TestDispatchCommand_UnknownCommand(t *testing.T) {
 func TestDispatchCommand_SubCommandHelp(t *testing.T) {
 	a := app.NewApp()
 	out := captureOutput(t, func() {
-		err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search", "--help"}, false)
+		_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search", "--help"}, false)
 		if err != nil {
 			t.Errorf("--help 应返回 nil, got: %v", err)
 		}
@@ -1179,7 +1179,7 @@ func TestDispatchCommand_SessionRootNoWriteThrough(t *testing.T) {
 	}
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
-		if err := DispatchCommand(a, saveFn, dir, []string{"search", "--keyword", "zz-nohit"}, false); err != nil {
+		if _, err := DispatchCommand(a, saveFn, dir, []string{"search", "--keyword", "zz-nohit"}, false); err != nil {
 			t.Errorf("search 执行失败: %v", err)
 		}
 	})
@@ -1194,7 +1194,7 @@ func TestDispatchCommand_SessionRootNoWriteThrough(t *testing.T) {
 
 func TestDispatchCommand_EmptyCommandList(t *testing.T) {
 	a := app.NewApp()
-	err := DispatchCommand(a, a.SaveAppConfig, "", nil, false)
+	_, err := DispatchCommand(a, a.SaveAppConfig, "", nil, false)
 	if err != nil {
 		t.Errorf("空命令列表应返回 nil, got: %v", err)
 	}
@@ -2173,5 +2173,54 @@ func TestRunCLIInProcess_MissingFilesRoot_ErrorJSON(t *testing.T) {
 	}
 	if resp["status"] != "error" {
 		t.Fatalf("缺 files-root 期望 status=error，got %v", resp["status"])
+	}
+}
+
+// TestCmdNameFromArgs code_review 58232c2d5 #6/#7/#8 回归锚：超时/取消/panic 错误 JSON
+// 的 command 字段须取真实命令名——GUI 桥 ExecuteCLI 恒以 --files-root <值> 开头，
+// 取 args[0] 会把 command 写成 "--files-root"；cmdNameFromArgs 跳过全局参数取首个 token。
+func TestCmdNameFromArgs(t *testing.T) {
+	cases := []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--files-root", "/repo", "search", "--keyword", "x", "--json"}, "search"},
+		{[]string{"--files-root", "/repo", "cache-status", "--json"}, "cache-status"},
+		{[]string{"--files-root", "/repo", "--json", "scan"}, "scan"}, // 无 --files-root 值的畸形输入兜底
+		{[]string{"--json"}, "unknown"},
+		{nil, "unknown"},
+	}
+	for _, c := range cases {
+		if got := cmdNameFromArgs(c.args); got != c.want {
+			t.Errorf("cmdNameFromArgs(%v) = %q, want %q", c.args, got, c.want)
+		}
+	}
+}
+
+// TestRunCLIInProcess_StdoutSerialize 验证进程内 CLI 串行化（code_review 58232c2d5 #5/#12）：
+// captureStdout 读写进程级全局 os.Stdout，并发调用必须排队——并发启动两条命令后，
+// 后启动者等前一条完成，进程 stdout 不被交错的 capture/restore 损坏（输出均完整可达）。
+func TestRunCLIInProcess_StdoutSerialize(t *testing.T) {
+	dir := t.TempDir()
+	results := make(chan string, 2)
+	for range 2 {
+		go func() {
+			out, _ := RunCLIInProcess(&app.App{}, context.Background(),
+				[]string{"--files-root", dir, "cache-status", "--json"})
+			results <- out
+		}()
+	}
+	for range 2 {
+		out := <-results
+		if out == "" {
+			t.Fatal("并发 RunCLIInProcess 应返回非空 JSON，got empty")
+		}
+		var resp map[string]interface{}
+		if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
+			t.Fatalf("并发返回非合法 JSON: %v\nraw=%s", jErr, out)
+		}
+		if _, ok := resp["status"]; !ok {
+			t.Fatalf("并发返回 JSON 缺 status 字段: %s", out)
+		}
 	}
 }

@@ -2,9 +2,11 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sort"
+	"sync"
 	"time"
 
 	"ysm-model-manager/go/version"
@@ -57,7 +59,7 @@ func RunCLI(a AppService, args []string) error {
 		start := time.Now()
 		outputBuf, restoreStdout := captureStdout()
 		defer restoreStdout() // panic 兜底：确保 stdout 一定恢复
-		err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+		ctx, err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
 		restoreStdout() // 显式关闭 pipe，确保 outputBuf.String() 不死锁
 
 		cmdName := commandArgs[0]
@@ -67,18 +69,26 @@ func RunCLI(a AppService, args []string) error {
 			resp := NewJsonError(cmdName, err, elapsed)
 			// 规律六「错误信息不能丢」在 CLI --json 层的落地：失败分支同样带上捕获的输出，
 			// 否则 gui-flow 等命令失败时前端/gate 拿不到阶段明细，无法定位具体失败阶段。
-			resp.Data = jsonDataPayload(outputBuf.String(), filesRoot)
+			resp.Data = buildJsonData(ctx, outputBuf.String(), filesRoot)
 			fmt.Println(resp.ToJson())
 		} else {
-			resp := NewJsonSuccess(cmdName, jsonDataPayload(outputBuf.String(), filesRoot), elapsed)
+			resp := NewJsonSuccess(cmdName, buildJsonData(ctx, outputBuf.String(), filesRoot), elapsed)
 			resp.Meta.Platform = runtime.GOOS
 			fmt.Println(resp.ToJson())
 		}
 		return err
 	}
 
-	return DispatchCommand(a, nil, filesRoot, commandArgs, true)
+	_, err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+	return err
 }
+
+// inProcessCliMu 串行化进程内 CLI 执行（code_review 58232c2d5 #5/#12）：captureStdout
+// 读写进程级全局 os.Stdout，并发/超时幽灵 goroutine 与后续调用的捕获/恢复交错会
+// 静默串扰输出甚至把 os.Stdout 指向已关闭 pipe（进程 stdout 永久失效）。锁由执行
+// goroutine 在命令真正结束时释放——超时「放弃等待」返回后幽灵 goroutine 仍持有锁，
+// 后续 ExecuteCLI 阻塞等待其完成，保证任一时刻至多一个 capture/dispatch/restore 周期。
+var inProcessCliMu sync.Mutex
 
 // cliInProcessTimeout 进程内直调兜底超时（ADR-199）：与 cliCommandTimeout 对齐，
 // 防 GUI 桥因命令挂死永久阻塞；正常命令远低于此。
@@ -87,8 +97,9 @@ const cliInProcessTimeout = 5 * time.Minute
 // RunCLIInProcess 进程内直调入口（ADR-199）：替代 os/exec 自 fork。
 // 供 internal/app.ExecuteCLI 直接调用，复用 cliPrologue/DispatchCommand/captureStdout
 // 与 json.go 的 JsonResponse 协议，返回 --json 模式 JSON 字符串（成功/失败均为合法 JSON）。
-// 生命周期：内置超时 + 透传 parent.Done（parent 通常为 App.appCtx），应用退出时
-// 命令随 parent 取消，不再产生 Context 脱离的孤儿进程。
+// 生命周期（code_review 58232c2d5 #1-#4 如实化）：进程内命令无法被强杀——超时/取消仅
+// 「放弃等待」并返回超时 JSON，命令继续在后台 goroutine 运行直至自行结束；串行化锁
+// 保证其 stdout 捕获不与后续命令交错。错误文案如实区分超时与取消，不再宣称「被终止」。
 func RunCLIInProcess(a AppService, parent context.Context, args []string) (string, error) {
 	ctx, cancel := context.WithTimeout(parent, cliInProcessTimeout)
 	defer cancel()
@@ -98,23 +109,58 @@ func RunCLIInProcess(a AppService, parent context.Context, args []string) (strin
 		err  error
 	}
 	done := make(chan result, 1)
+	// 先取锁再启动：并发调用在此排队，后启动者等前一条命令（含超时幽灵）真正结束。
+	inProcessCliMu.Lock()
 	go func() {
-		j, e := runCLIInProcessCore(a, args)
+		// 命令 panic 不得杀死整个 GUI 进程（旧 os/exec 子进程隔离丢失）——
+		// recover 转合规错误 JSON（code_review 58232c2d5 #11）
+		var j string
+		var e error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					e = fmt.Errorf("命令内部 panic: %v", r)
+					j = NewJsonError(cmdNameFromArgs(args), e, 0).ToJson()
+				}
+			}()
+			j, e = runCLIInProcessCore(a, args)
+		}()
+		inProcessCliMu.Unlock() // 命令真正结束才释放（超时放弃等待后由幽灵持有至完成）
 		done <- result{json: j, err: e}
 	}()
 
 	select {
 	case <-ctx.Done():
-		// 超时：返回合规 JSON 错误，不向 GUI stdout 泄漏。
-		cmdName := "unknown"
-		if len(args) > 0 {
-			cmdName = args[0]
+		// 超时/取消：返回合规 JSON 错误，不向 GUI stdout 泄漏。命令仍在后台运行
+		// （无法强杀），串行化锁保证不与其他命令的 stdout 捕获交错。
+		cmdName := cmdNameFromArgs(args)
+		err := ctx.Err()
+		msg := fmt.Sprintf("命令执行超时（超过 %s 放弃等待，仍在后台运行）", cliInProcessTimeout)
+		if errors.Is(err, context.Canceled) {
+			msg = "应用退出，命令随会话取消（放弃等待，仍在后台运行）"
 		}
-		return NewJsonError(cmdName, ctx.Err(), 0).ToJson(),
-			fmt.Errorf("命令执行超时（超过 %s 被终止）", cliInProcessTimeout)
+		return NewJsonError(cmdName, err, 0).ToJson(), fmt.Errorf("%s", msg)
 	case r := <-done:
 		return r.json, r.err
 	}
+}
+
+// cmdNameFromArgs 从原始 args 提取真实命令名（跳过 --files-root <值>/--json 等全局
+// 参数）——GUI 桥 ExecuteCLI 恒以 --files-root 开头，直接取 args[0] 会把超时/panic
+// 错误 JSON 的 command 字段写成 "--files-root"（code_review 58232c2d5 #6/#7/#8）。
+func cmdNameFromArgs(args []string) string {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--files-root" {
+			i++ // 跳过其值
+			continue
+		}
+		if a == "--json" || len(a) > 2 && a[:2] == "--" {
+			continue
+		}
+		return a
+	}
+	return "unknown"
 }
 
 // runCLIInProcessCore 实际执行命令并捕获 JSON 输出（在独立 goroutine 内运行以支持超时取消）。
@@ -136,7 +182,7 @@ func runCLIInProcessCore(a AppService, args []string) (json string, err error) {
 	start := time.Now()
 	outputBuf, restoreStdout := captureStdout()
 	defer restoreStdout()
-	runErr := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+	ctx, runErr := DispatchCommand(a, nil, filesRoot, commandArgs, true)
 	restoreStdout()
 
 	cmdName := commandArgs[0]
@@ -144,10 +190,10 @@ func runCLIInProcessCore(a AppService, args []string) (json string, err error) {
 
 	if runErr != nil {
 		resp := NewJsonError(cmdName, runErr, elapsed)
-		resp.Data = jsonDataPayload(outputBuf.String(), filesRoot)
+		resp.Data = buildJsonData(ctx, outputBuf.String(), filesRoot)
 		return resp.ToJson(), runErr
 	}
-	resp := NewJsonSuccess(cmdName, jsonDataPayload(outputBuf.String(), filesRoot), elapsed)
+	resp := NewJsonSuccess(cmdName, buildJsonData(ctx, outputBuf.String(), filesRoot), elapsed)
 	return resp.ToJson(), nil
 }
 
@@ -166,7 +212,29 @@ func ExecuteCLIWithApp(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot
 		return nil
 	}
 
-	return DispatchCommand(a, saveConfigFn, filesRoot, commandArgs, false)
+	_, err := DispatchCommand(a, saveConfigFn, filesRoot, commandArgs, false)
+	return err
+}
+
+// SidecarOutput 结构化结果可选实现的接口（ADR-200 D5）：--json 响应时由 buildJsonData
+// 注入人类可读文本与 filesRoot，迁移期保留 output 字段兼容前端 respHasOutput 守卫与
+// 复制原文功能。未实现则 Data 为纯结果对象。
+type SidecarOutput interface {
+	AttachSidecar(output, filesRoot string)
+}
+
+// buildJsonData 构造 --json 响应的 Data（ADR-200 D1 渲染与数据分离）：
+//   - 命令经 CmdContext.SetResult 设置了结构化结果 → 优先承载于 Data；
+//     实现 SidecarOutput 时注入 output/filesRoot 兼容字段；
+//   - 未设置（多数未迁移命令）→ 回退文本载荷 jsonDataPayload，行为零变化。
+func buildJsonData(ctx *CmdContext, output, filesRoot string) interface{} {
+	if ctx != nil && ctx.result != nil {
+		if sc, ok := ctx.result.(SidecarOutput); ok {
+			sc.AttachSidecar(output, filesRoot)
+		}
+		return ctx.result
+	}
+	return jsonDataPayload(output, filesRoot)
 }
 
 // printVersion 打印版本信息
@@ -175,7 +243,7 @@ func printVersion() {
 	fmt.Println("  CLI 模式")
 }
 
-// printCLIHelp 打印 CLI 帮助信息（导出供 cli_test 外部测试包复用）
+// printCLIHelp 打印 CLI 帮助信息（同包 cli_test 白盒测试直接调用，无需导出——code_review 58232c2d5 #10）
 func printCLIHelp() {
 	fmt.Println("🎮 YSM 模型管理器 - CLI 模式")
 	fmt.Println()
@@ -248,7 +316,7 @@ func printCommandHelp(cmdName string) {
 // jsonDataPayload 构造 CLI --json 响应（json.go JsonResponse.Data）的业务数据载荷。
 // 成功/失败分支共用（DRY），保证两者 output 口径一致。output 为空时返回 nil——
 // Data 带 `json:"data,omitempty"`，nil 会被省略，前端以 status/error 为准。
-// 导出供 cli_test 外部测试包复用。
+// 同包 cli_test 白盒测试直接调用，无需导出（code_review 58232c2d5 #10）。
 func jsonDataPayload(output, filesRoot string) map[string]interface{} {
 	if output == "" {
 		return nil

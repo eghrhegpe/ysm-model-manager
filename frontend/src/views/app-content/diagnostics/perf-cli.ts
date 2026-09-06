@@ -382,37 +382,14 @@ function guiFlowWebModeCheck(): boolean {
   return false;
 }
 
-function guiFlowParseEntries(output: string): {
-  entries: GuiFlowStage[];
-  flowTotal: number | null;
+// 结构化载荷（ADR-200 D2：gui-flow 首批结构化命令，字段与 Go guiFlowStructured 逐字对齐）
+interface GuiFlowStructured {
+  stages: GuiFlowStage[];
+  total_ms: number;
   failed: boolean;
-} | null {
-  const lines = output.split("\n");
-  const stageRe = /^([✅❌])\s*\[\d+\]\s*(.+?)\s*\(([\d.]+)ms\)$/;
-  const totalRe = /⏱️\s*总耗时:\s*([\d.]+)ms/;
-
-  const entries: GuiFlowStage[] = [];
-  let cur: GuiFlowStage | null = null;
-  let flowTotal: number | null = null;
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    const sm = line.match(stageRe);
-    if (sm) {
-      cur = { status: sm[1], name: sm[2].trim(), ms: parseFloat(sm[3]), desc: [] };
-      entries.push(cur);
-      continue;
-    }
-    const tm = line.match(totalRe);
-    if (tm) {
-      flowTotal = parseFloat(tm[1]);
-      continue;
-    }
-    if (cur && /^\s{3}/.test(line) && line.trim()) cur.desc.push(line.trim());
-  }
-
-  if (!entries.length) return null;
-  const failed = entries.some((e) => e.status === "❌");
-  return { entries, flowTotal, failed };
+  /** deprecated（ADR-200 D5）：迁移期保留，供复制原文与守卫兼容 */
+  output?: string;
+  filesRoot?: string;
 }
 
 function guiFlowRenderStages(
@@ -466,20 +443,27 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
   try {
     const resp = await executeCLI("gui-flow", { verbose: true });
     if (stale()) return;
-    if (!respHasOutput(resp)) {
+    // 结构化消费（ADR-200 D2/D3）：直接读 data.stages，禁止对人类文案做正则反解析。
+    // 失败阶段（status=error，如「③ 模型分析」失败）也照常渲染阶段明细——
+    // Go 侧 SetResult 先于汇总报错，错误分支同样带回结构化载荷（规律六）。
+    const data = resp.data as Partial<GuiFlowStructured> | undefined;
+    if (resp.status !== "success" && resp.status !== "error") {
       setErrorResp(out, resp, esc);
       return;
     }
-    const parsed = guiFlowParseEntries(resp.data.output);
-    if (!parsed) {
-      setErrorMsg(out, t("diagnostics.perfFail"), esc);
+    if (!data?.stages || !Array.isArray(data.stages) || data.stages.length === 0) {
+      if (resp.status === "success") {
+        setErrorMsg(out, t("diagnostics.perfFail"), esc);
+      } else {
+        setErrorResp(out, resp, esc);
+      }
       return;
     }
     out.innerHTML = guiFlowRenderStages(
-      parsed.entries,
-      parsed.flowTotal,
-      parsed.failed,
-      resp.data.output,
+      data.stages,
+      typeof data.total_ms === "number" ? data.total_ms : null,
+      !!data.failed,
+      data.output ?? "",
       esc,
     );
   } catch (e) {

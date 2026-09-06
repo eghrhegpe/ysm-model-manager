@@ -24,6 +24,7 @@ auto_fields:
     - CliCommand
     - CLIInProcessRunner
     - CmdContext
+    - CmdContext.SetResult
     - CommandSpec
     - CommandSpecDTO
     - DispatchCommand

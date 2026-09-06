@@ -10,6 +10,16 @@ type CmdContext struct {
 	App       AppService
 	FilesRoot string
 	Args      []string
+	// result 命令的结构化结果对象（ADR-200 D1），由 SetResult 设置，
+	// DispatchCommand 返回后由 buildJsonData 在 --json 路径读取优先承载于 Data。
+	// 未设置的命令（多数未迁移）走文本载荷回退，行为零变化。
+	result interface{}
+}
+
+// SetResult 设置命令的结构化结果对象（ADR-200 D1）。
+// --json 模式下优先于文本载荷承载于 JsonResponse.Data；无 --json 时该值被忽略。
+func (c *CmdContext) SetResult(v interface{}) {
+	c.result = v
 }
 
 // ParamType 参数值类型（ADR-173：桥接序列化按类型决定形态）
@@ -92,27 +102,29 @@ func GetAllCommands() []CliCommand {
 	return cmds
 }
 
-// DispatchCommand 分发命令执行
-func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, filesRoot string, commandArgs []string, requireFilesRoot bool) error {
+// DispatchCommand 分发命令执行。
+// 返回命令的 CmdContext（含结构化结果，ADR-200 D1），供 --json 路径 buildJsonData 读取；
+// 前置短路（help/未知命令/参数缺失）时 ctx 为 nil。调用方无需结果时用 `_` 接收。
+func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, filesRoot string, commandArgs []string, requireFilesRoot bool) (*CmdContext, error) {
 	if len(commandArgs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	cmdName := commandArgs[0]
 
 	if len(commandArgs) > 1 && (commandArgs[1] == "--help" || commandArgs[1] == "-h") {
 		printCommandHelp(cmdName)
-		return nil
+		return nil, nil
 	}
 
 	cmd, exists := cliCommands[cmdName]
 	if !exists {
-		return &ErrParam{CmdName: cmdName,
+		return nil, &ErrParam{CmdName: cmdName,
 			Err: fmt.Errorf("未知命令: %s", cmdName)}
 	}
 
 	if requireFilesRoot && filesRoot == "" {
-		return &ErrParam{CmdName: cmdName,
+		return nil, &ErrParam{CmdName: cmdName,
 			Err: fmt.Errorf("--files-root 参数不能为空")}
 	}
 
@@ -127,8 +139,9 @@ func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, 
 
 	ctx := &CmdContext{App: a, FilesRoot: filesRoot, Args: commandArgs[1:]}
 	if err := cmd.Run(ctx); err != nil {
-		return err
+		// 失败也返回 ctx：gui-flow 等命令可能已 SetResult（部分阶段明细），错误分支同样带回。
+		return ctx, err
 	}
 
-	return nil
+	return ctx, nil
 }

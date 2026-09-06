@@ -7,6 +7,7 @@
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
 import { tr } from "../../core/i18n/tr.ts";
+import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { getSchema } from "../adapters/schema-registry.ts";
 import type { MenuControlDef, MenuControlKind } from "../caps/scene-capability.ts";
@@ -180,6 +181,18 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   const title = document.createElement("span");
   title.textContent = rmLabel(node);
   header.append(arrow, title);
+  // [对齐 MikuMikuAR PopupRow.headerToggle] folder 功能总开关：嵌在 header（label 与箭头间）。
+  // createHeaderToggle 内置 stopPropagation → 开关点击不触发 header 折叠；bind 自更新
+  // 经 control-registry 在 menu.refresh() 重渲染时同步 checked。
+  if (node.headerToggle) {
+    const ht = node.headerToggle;
+    const tg = createHeaderToggle({
+      value: ht.value,
+      onChange: (v: boolean) => ht.onChange(v),
+      ...(ht.bind ? { bind: ht.bind } : {}),
+    });
+    header.appendChild(tg);
+  }
   const body = document.createElement("div");
   body.dataset.testid = `${node.id}-body`;
   // 动态豁免（P1）：折叠状态读写均依赖内联 display（node-render 测试断言

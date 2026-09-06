@@ -207,6 +207,13 @@ export interface SceneCapability {
   /** 返回菜单控件定义列表（框架自动渲染为 slide panel） */
   getMenuControls(): MenuControlDef[];
 
+  /** 能力总开关控件（可选）：folder 聚合器（如 env 面板）据此把开关升到 folder header
+   *  （对齐 MikuMikuAR PopupRow.headerToggle——「功能=本 folder」时开关免展开可见），
+   *  并自动从 body 剔除同源控件。仅当存在「启停整个能力」的 toggle 时实现
+   *  （fog/env/reflector 的 enabled toggle 属此）；ground 的 visible 是 params 级、
+   *  sky 无能力级启停 → 不实现。返回的应是 getMenuControls() 中同一控件引用。 */
+  getMasterToggle?(): MenuControlDef | null;
+
   /** 持久化：保存当前状态到 localStorage */
   saveState(): void;
 

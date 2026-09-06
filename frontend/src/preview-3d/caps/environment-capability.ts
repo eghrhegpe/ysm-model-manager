@@ -165,16 +165,21 @@ function pickHdrFile(): Promise<File | null> {
   });
 }
 
+/** 环境总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
+function ecMasterToggle(cap: EnvironmentCapability): MenuControlDef {
+  return {
+    id: "env-enabled",
+    kind: "toggle",
+    labelKey: "preview.environment",
+    fallback: "环境贴图",
+    getValue: () => cap.isEnabled(),
+    setValue: (v) => cap.setEnabled(v as boolean),
+  };
+}
+
 function ecBuildBasic(cap: EnvironmentCapability): MenuControlDef[] {
   return [
-    {
-      id: "env-enabled",
-      kind: "toggle",
-      labelKey: "preview.environment",
-      fallback: "环境贴图",
-      getValue: () => cap.isEnabled(),
-      setValue: (v) => cap.setEnabled(v as boolean),
-    },
+    ecMasterToggle(cap),
     {
       id: "env-preset",
       kind: "preset-thumb",
@@ -764,6 +769,11 @@ export class EnvironmentCapability implements SceneCapability {
 
   getMenuControls(): MenuControlDef[] {
     return [...ecBuildBasic(this), ...ecBuildCustomHdr(this), ...ecBuildHistogram(this)];
+  }
+
+  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
+  getMasterToggle(): MenuControlDef | null {
+    return ecMasterToggle(this);
   }
 
   /* -------- 持久化 -------- */

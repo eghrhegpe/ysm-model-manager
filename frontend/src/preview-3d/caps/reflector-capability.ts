@@ -89,17 +89,20 @@ type ReflectorShaderDef = {
 const REFLECTOR_SHADER = (Reflector as typeof Reflector & { ReflectorShader: ReflectorShaderDef })
   .ReflectorShader;
 
+/** 反光地面总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
+function rcMasterToggle(cap: ReflectorCapability): MenuControlDef {
+  return {
+    id: "reflector-enabled",
+    kind: "toggle",
+    labelKey: "preview.reflector",
+    fallback: "反光地面",
+    getValue: () => cap.isEnabled(),
+    setValue: (v) => cap.setEnabled(v as boolean),
+  };
+}
+
 function rcBuildMain(cap: ReflectorCapability): MenuControlDef[] {
-  return [
-    {
-      id: "reflector-enabled",
-      kind: "toggle",
-      labelKey: "preview.reflector",
-      fallback: "反光地面",
-      getValue: () => cap.isEnabled(),
-      setValue: (v) => cap.setEnabled(v as boolean),
-    },
-  ];
+  return [rcMasterToggle(cap)];
 }
 
 function rcBuildAppearance(cap: ReflectorCapability): MenuControlDef[] {
@@ -296,6 +299,11 @@ export class ReflectorCapability implements SceneCapability {
 
   getMenuControls(): MenuControlDef[] {
     return [...rcBuildMain(this), ...rcBuildAppearance(this)];
+  }
+
+  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
+  getMasterToggle(): MenuControlDef | null {
+    return rcMasterToggle(this);
   }
 
   /* -------- 持久化 -------- */

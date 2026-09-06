@@ -231,6 +231,11 @@ export class FogCapability implements SceneCapability {
     return [...fcBuildMain(this), ...fcBuildLinearGroup(this)];
   }
 
+  /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
+  getMasterToggle(): MenuControlDef | null {
+    return fcMasterToggle(this);
+  }
+
   /* -------- 持久化 -------- */
 
   saveState(): void {
@@ -272,16 +277,21 @@ export class FogCapability implements SceneCapability {
   }
 }
 
+/** 雾效总开关控件（folder 聚合器升 header 用；getMenuControls 与 getMasterToggle 同源） */
+function fcMasterToggle(cap: FogCapability): MenuControlDef {
+  return {
+    id: "fog-enabled",
+    kind: "toggle",
+    labelKey: "preview.fog",
+    fallback: "雾效",
+    getValue: () => cap.isEnabled(),
+    setValue: (v) => cap.setEnabled(v as boolean),
+  };
+}
+
 function fcBuildMain(cap: FogCapability): MenuControlDef[] {
   return [
-    {
-      id: "fog-enabled",
-      kind: "toggle",
-      labelKey: "preview.fog",
-      fallback: "雾效",
-      getValue: () => cap.isEnabled(),
-      setValue: (v) => cap.setEnabled(v as boolean),
-    },
+    fcMasterToggle(cap),
     {
       id: "fog-color",
       kind: "color",

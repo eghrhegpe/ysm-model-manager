@@ -382,4 +382,65 @@ describe("buildEnvSchema（ADR-193 第三刀：声明式 folder 手风琴）", (
     expect(ctrls().map((c) => c.id)).toEqual(["g-w"]);
     expect(before).toBeDefined();
   });
+
+  it("cap 自报 getMasterToggle → folder 带 headerToggle，body 剔除同源开关（fog/env/reflector 形态）", () => {
+    let enabled = false;
+    const masterCtrl = {
+      id: "fog-enabled",
+      kind: "toggle" as const,
+      labelKey: "preview.fog",
+      fallback: "雾效",
+      getValue: () => enabled,
+      setValue: (v: boolean) => {
+        enabled = v;
+      },
+    };
+    const fog = makeCap("fog", "preview.fog", [
+      masterCtrl,
+      {
+        id: "fog-color",
+        kind: "color" as const,
+        labelKey: "preview.fogColor",
+        fallback: "雾色",
+        group: "preview.fogGroupParams",
+        getValue: () => 0,
+        setValue: () => {},
+      },
+    ] as unknown as ReturnType<NonNullable<SceneCapability["getMenuControls"]>>, {
+      getMasterToggle: () => masterCtrl,
+      isEnabled: () => enabled,
+    });
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog]);
+    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const folder = schema[1]!;
+    expect(folder.kind).toBe("folder");
+    // headerToggle 声明：读写即 masterCtrl 读写（bind 同步 enabled）
+    expect(folder.headerToggle).toBeDefined();
+    folder.headerToggle!.onChange(true);
+    expect(enabled).toBe(true);
+    expect(folder.headerToggle!.bind!()).toBe(true);
+    // 单组 cap：body controls 已剔除 fog-enabled（防双份），只剩 fog-color
+    const bodyCtrls = folder.children![0]!.controls as () => CtrlsFn;
+    expect(bodyCtrls().map((c) => c.id)).toEqual(["fog-color"]);
+  });
+
+  it("cap 不报 getMasterToggle（sky/ground）→ 无 headerToggle，body 全量保留", () => {
+    const sky = makeCap("sky", "preview.sky", [
+      {
+        id: "sky-time",
+        kind: "slider" as const,
+        labelKey: "preview.timeOfDay",
+        fallback: "时间",
+        slider: { min: 0, max: 24, step: 0.5 },
+        getValue: () => 12,
+        setValue: () => {},
+      },
+    ]);
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
+    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const folder = schema[1]!;
+    expect(folder.headerToggle).toBeUndefined();
+    const bodyCtrls = folder.children![0]!.controls as () => CtrlsFn;
+    expect(bodyCtrls().map((c) => c.id)).toEqual(["sky-time"]);
+  });
 });

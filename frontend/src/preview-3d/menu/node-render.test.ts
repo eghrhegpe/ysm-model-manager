@@ -202,6 +202,42 @@ describe("renderMenu 新 kind", () => {
     expect(container.querySelector('[data-testid="preview-child-2"]')).not.toBeNull();
   });
 
+  it("folder: headerToggle 渲染在 header（label 与箭头间），点击开关不触发折叠、bind 同步 checked", () => {
+    let on = false;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "folder-tg",
+        kind: "folder",
+        labelKey: "preview.folder",
+        fallback: "组",
+        defaultOpen: false,
+        headerToggle: {
+          value: false,
+          onChange: (v: boolean) => {
+            on = v;
+          },
+          bind: () => on,
+        },
+        children: [{ id: "child-tg", kind: "field", labelKey: "preview.child", value: "x" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const body = container.querySelector('[data-testid="folder-tg-body"]') as HTMLElement;
+    expect(body.style.display).toBe("none"); // folder 默认折叠
+    // header 内有 header-toggle
+    const tg = container.querySelector(".cap-section-header .header-toggle") as HTMLElement;
+    expect(tg).not.toBeNull();
+    // 点击开关：onChange 触发（on=true）且 body 仍折叠（stopPropagation 不冒泡到 header 折叠）
+    tg.click();
+    expect(on).toBe(true);
+    expect(body.style.display).toBe("none");
+    // 点 header 其他区域（非开关）：折叠展开
+    const header = container.querySelector(".cap-section-header") as HTMLElement;
+    (header.querySelector("span:nth-child(2)") as HTMLElement).click();
+    expect(body.style.display).toBe("block");
+  });
+
   it("folder: 折叠态记忆跨 refresh 保持，sibling 隔离，clearFolderCollapsedState 后回默认（code_review bc639ae0 #4）", () => {
     const makeNodes = (): PreviewMenuNode[] => [
       {

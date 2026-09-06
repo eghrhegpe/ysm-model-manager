@@ -141,9 +141,18 @@ let _lastEnvPreset: Exclude<EnvPresetId, "custom"> = "studio";
 /** 节点 label 的 labelKey 需要 i18n 键：group key 本身就是键（partitionCapControlsByGroup 的
  *  label = tr(k, k)），base 组（无 group）回退 cap.labelKey */
 function envCapFolder(cap: SceneCapability): PreviewMenuNode {
-  // 惰性分区：controls 传函数引用，每次渲染重取 getMenuControls + 重分区
-  //（visibleWhen B 轨实时——水模式切换后 Pool/Look 组成员随订阅 refresh 重建）
-  const parts = () => partitionCapControlsByGroup(cap, cap.getMenuControls(), previewSnapshot());
+  // 惰性分区：每次渲染重取 getMenuControls → 剔除总开关（升 header）→ 按剩余 group 分区
+  //（visibleWhen B 轨实时——水模式切换后 Pool/Look 组成员随订阅 refresh 重建）。
+  const masterId = () => cap.getMasterToggle?.()?.id ?? null;
+  const restControls = (): MenuControlDef[] => {
+    const id = masterId();
+    return id ? cap.getMenuControls().filter((c) => c.id !== id) : cap.getMenuControls();
+  };
+  // 分区：base 组若被剔空（如 fog 只剩 enabled）则不产生组文件夹——headerToggle 已承载其开关
+  const parts = () =>
+    partitionCapControlsByGroup(cap, restControls(), previewSnapshot()).filter(
+      (g) => g.ctrls.length > 0,
+    );
   const partsNow = parts();
   let children: PreviewMenuNode[];
   if (partsNow.length > 1) {
@@ -172,10 +181,11 @@ function envCapFolder(cap: SceneCapability): PreviewMenuNode {
       {
         id: `env-cap-${cap.id}-ctrls`,
         kind: "controls",
-        controls: () => stripMenuControlGroup(cap.getMenuControls()),
+        controls: () => stripMenuControlGroup(parts()[0]?.ctrls ?? []),
       },
     ];
   }
+  const m = cap.getMasterToggle?.() ?? null;
   return {
     id: `env-cap-${cap.id}`,
     kind: "folder",
@@ -183,6 +193,18 @@ function envCapFolder(cap: SceneCapability): PreviewMenuNode {
     fallback: cap.id,
     icon: cap.icon,
     defaultOpen: false,
+    // [对齐 MikuMikuAR env 根菜单] cap 自报总开关 → folder header 一眼可见、免展开即可
+    // 切换；点 header 其他区域才展开参数。开关点击经 createHeaderToggle stopPropagation
+    // 不触发折叠。body 内同源开关已剔除（restControls），无双份。
+    ...(m
+      ? {
+          headerToggle: {
+            value: m.getValue() as boolean,
+            onChange: (v: boolean) => m.setValue(v),
+            bind: () => m.getValue() as boolean,
+          },
+        }
+      : {}),
     children,
   };
 }

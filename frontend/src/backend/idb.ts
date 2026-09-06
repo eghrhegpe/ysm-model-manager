@@ -99,8 +99,14 @@ function memorySet(store: Store, key: string, value: unknown): void {
   }
   // 增量维护 totalBytes：已存在 key 先减旧值，写入后加新值
   let totalBytes = memoryTotalBytes.get(store) ?? 0;
-  if (m.has(key)) totalBytes -= estimateBytes(m.get(key));
-  m.set(key, value); // Map.set 在 key 存在时更新值但不改变位置；LRU 需在 idbGet 中重排
+  if (m.has(key)) {
+    totalBytes -= estimateBytes(m.get(key));
+    // code_review 64749809 #10/#13：覆盖写视为一次访问——先删再设把 key 移到 Map 尾，
+    // 与 memoryGet 命中重排一致（否则反复写入的热 key 停在头部，下一次 set 超限时
+    // 刚写的最新条目反而最先被驱逐，LRU 语义只实现一半）
+    m.delete(key);
+  }
+  m.set(key, value);
   totalBytes += estimateBytes(value);
 
   // 双上限：条目数超限 或 字节估算超限 → 驱逐最旧（map 迭代首个）

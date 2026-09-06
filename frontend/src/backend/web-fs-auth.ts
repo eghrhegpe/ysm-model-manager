@@ -149,7 +149,7 @@ async function _collectModelFiles(
   if (out.length > MAX_FSA_FILES) {
     // 总文件数超限，抛错中断（防内存 OOM）
     throw new Error(
-      `[web-fs-auth] 文件总数超过 ${MAX_FSA_FILES} 限制（当前 ${out.length}），请检查授权目录是否包含异常深层嵌套`,
+      `[web-fs-auth] ${t("webFs.filesLimit", { limit: MAX_FSA_FILES, count: out.length })}`,
     );
   }
   for await (const entry of dir.values()) {
@@ -160,6 +160,14 @@ async function _collectModelFiles(
       const f = await (entry as FileSystemFileHandle).getFile();
       Object.defineProperty(f, "webkitRelativePath", { value: rel, configurable: true });
       out.push(f);
+      // code_review f9fdb7b9 #1/#11：超限检查只放递归入口会被「单平目录 60k 文件」
+      // 绕过（入口检查时 out 尚小，全部 push 后无再查）——push 后立即复查，
+      // 守卫对任意树形（平铺/兄弟目录累计）都生效
+      if (out.length >= MAX_FSA_FILES) {
+        throw new Error(
+          `[web-fs-auth] ${t("webFs.filesLimit", { limit: MAX_FSA_FILES, count: out.length })}`,
+        );
+      }
     }
   }
 }

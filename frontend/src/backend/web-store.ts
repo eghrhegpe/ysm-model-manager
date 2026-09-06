@@ -57,6 +57,11 @@ const webLogHydrating: Record<"import" | "runtime", Promise<void> | null> = {
   import: null,
   runtime: null,
 };
+/** hydrate 代际计数器（code_review 494843c9 #1/#4）：clear/reset 时递增并置空锁——
+ *  在途 hydrate 完成时若代际已变（期间发生过 clear）则放弃 ring.push 与 hydrated 标记，
+ *  防「清后快照复活已删日志」（无代际守卫时在途 idbGet 读的是清前数据，push 后又被
+ *  pushWebLog 的 idbSet 持久化，撤销 clear） */
+const _webLogEpoch: Record<"import" | "runtime", number> = { import: 0, runtime: 0 };
 
 /** 内存环首次使用时从 IDB 恢复上会话日志（幂等：hydrate Promise 锁防并发重复读） */
 async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void> {
@@ -65,6 +70,7 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
   const pending = webLogHydrating[flag];
   if (pending) return pending;
   if (webLogHydrated[flag]) return;
+  const epoch = _webLogEpoch[flag];
   const p = (async () => {
     try {
       const saved = await idbGet<unknown>("config", logKeyOf(ring));
@@ -72,8 +78,12 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
     } catch {
       if (!webLogHydrated[flag]) console.warn("[web-store] IDB 不可用，日志无法恢复");
     } finally {
-      webLogHydrated[flag] = true;
-      webLogHydrating[flag] = null;
+      // 代际守卫：await 期间发生 clear/reset（epoch 已变）→ 读的是清前快照，
+      // 不得 push 复活、不得置 hydrated（下次 push 重新 hydrate 读清后状态）
+      if (epoch === _webLogEpoch[flag]) {
+        webLogHydrated[flag] = true;
+        webLogHydrating[flag] = null;
+      }
     }
   })();
   webLogHydrating[flag] = p;
@@ -148,12 +158,16 @@ async function addWebOpLog(
 function clearWebImportLogs(): void {
   webImportLogs.length = 0;
   webLogHydrated.import = false; // 重置：下次 hydrate 读到已删 IDB → 空环
+  _webLogEpoch.import++; // 代际递增：在途 hydrate 的旧快照作废（code_review 494843c9 #1/#4）
+  webLogHydrating.import = null; // 置空锁：防后续 push 绑定到清前在途 hydrate
   swallowError(idbDel("config", LOG_IMPORT_KEY));
 }
 /** 清空运行时日志环（webImpls.ClearRuntimeLogs 调用；状态封装在 web-store 内部） */
 function clearWebRuntimeLogs(): void {
   webRuntimeLogs.length = 0;
   webLogHydrated.runtime = false;
+  _webLogEpoch.runtime++; // 代际递增：在途 hydrate 的旧快照作废
+  webLogHydrating.runtime = null; // 置空锁：防后续 push 绑定到清前在途 hydrate
   swallowError(idbDel("config", LOG_RUNTIME_KEY));
 }
 
@@ -163,6 +177,10 @@ export function __resetWebLogStateForTest(): void {
   webRuntimeLogs.length = 0;
   webLogHydrated.import = false;
   webLogHydrated.runtime = false;
+  _webLogEpoch.import++;
+  _webLogEpoch.runtime++;
+  webLogHydrating.import = null;
+  webLogHydrating.runtime = null;
 }
 
 // --- 标签（config store: tags:<path> = string[]）---

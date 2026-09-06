@@ -165,30 +165,63 @@ async function batchExtractCreatorAvatars(): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   try {
     const entries = await scanWebModels(`${WEB_ROOT}/ysm`);
-    // 预过滤：唯一作者 + 跳过已在 result 中的（防并行竞态）
-    const seenAuthors = new Set<string>();
-    const tasks: Array<Promise<{ author: string; uri: string } | null>> = [];
+    // 按作者收集候选 entry 路径（code_review f9fdb7b9 #2/#3/#12：原 seenAuthors 前置
+    // 去重会在该作者首个模型无 avatar/目录或解码失败时永久跳过其余模型——作者多
+    // 模型（[A] 模型1/模型2…）只需其中一个含头像即可；改为成功才记 done，失败
+    // 自动试该作者下一候选，对齐旧串行「result[author] 未设则继续尝试」语义）
+    const byAuthor = new Map<string, string[]>();
     for (const e of entries) {
       const base = e.Name.replace(/\.(ysm|zip|7z|json|ban)$/i, "");
       if (!base.startsWith("[")) continue;
       const idx = base.indexOf("]");
       if (idx <= 0) continue;
       const author = base.slice(1, idx).trim();
-      if (!author || seenAuthors.has(author) || result[author]) continue;
-      seenAuthors.add(author);
-      // P2a 修复：并行化每个作者的头像提取（原 for 串行 N×RTT → 并发 N×RTT/并发度）
-      tasks.push(extractOneAvatar(author, e.Path));
+      if (!author) continue;
+      const list = byAuthor.get(author);
+      if (list) list.push(e.Path);
+      else byAuthor.set(author, [e.Path]);
     }
-    const settled = await Promise.allSettled(tasks);
-    for (const r of settled) {
-      if (r.status === "fulfilled" && r.value) {
-        result[r.value.author] = r.value.uri;
+    const doneAuthors = new Set<string>();
+    const authors = [...byAuthor.keys()];
+    // P2a 修复：并行化每个作者的头像提取（原 for 串行 N×RTT → 并发）。
+    // code_review f9fdb7b9 #3/#4/#13：须限流——原 Promise.allSettled 全部任务同时起跑，
+    // N 作者 × 整文件 IDB 读（≤100MB）+ WASM 解包并发，冷库（localStorage 缓存空）首访
+    // 内存飙高/主线程卡顿；桌面 download-queue 对同构 WASM 解包明确串行 concurrency 1
+    // 防 CPU/内存峰值。按 K=4 一批滚动（保留并行收益，峰内存随批次而非作者总数）
+    const K = 4;
+    for (let i = 0; i < authors.length; i += K) {
+      const chunk = authors.slice(i, i + K);
+      const settled = await Promise.allSettled(
+        chunk.map((author) => extractAuthorAvatar(author, byAuthor.get(author) ?? [], doneAuthors)),
+      );
+      for (const r of settled) {
+        if (r.status === "fulfilled" && r.value) {
+          result[r.value.author] = r.value.uri;
+        }
       }
     }
   } catch {
     // 模型库不可用：返回空 map（前端 index.ts 已处理空结果，无红错）
   }
   return result;
+}
+
+/** 逐候选尝试提取某作者头像：该作者首个模型失败（无 avatar/ 目录/解码失败）时
+ *  继续试下一模型，任一成功即记 done（code_review f9fdb7b9 #2/#3/#12） */
+async function extractAuthorAvatar(
+  author: string,
+  candidates: string[],
+  doneAuthors: Set<string>,
+): Promise<{ author: string; uri: string } | null> {
+  if (doneAuthors.has(author)) return null;
+  for (const path of candidates) {
+    const r = await extractOneAvatar(author, path);
+    if (r) {
+      doneAuthors.add(author);
+      return r;
+    }
+  }
+  return null;
 }
 
 /** 单作者头像提取（供 Promise.allSettled 调用，失败返回 null 不中断批量） */

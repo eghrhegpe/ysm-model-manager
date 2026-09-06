@@ -51,16 +51,23 @@ export function webDirType(dir: string): string | null {
 /** 导入大小上限 100MB（对齐 import-dnd.ts MAX_FILE_SIZE，桌面 oversize 过滤同口径） */
 export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 
-/** ArrayBuffer → base64（分块，大文件避免栈溢出；P0 修复：强制拷贝隔离底层 buffer，防并发读写竞态） */
-export function arrayBufferToBase64(buf: ArrayBuffer): string {
-  const copy = buf.slice(0);
-  const bytes = new Uint8Array(copy);
+/** 分块 base64 核心（操作调用方私有的 bytes 视图，不再拷贝）。
+ *  code_review 494843c9 #2/#3：原 u8ToBase64 先建私有副本再调 arrayBufferToBase64，
+ *  后者又 slice 一次 = 双份全量拷贝；100MB 文件瞬时峰值 ≈ 原 + 副本 + base64 字符串。
+ *  本函数假设入参独占（调用方负责隔离），公开入口的防御拷贝各自保留。 */
+function chunkedBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return btoa(binary);
+}
+
+/** ArrayBuffer → base64（分块，大文件避免栈溢出；强制拷贝隔离底层 buffer，防并发读写竞态） */
+export function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const copy = buf.slice(0);
+  return chunkedBase64(new Uint8Array(copy));
 }
 
 /** base64 → Uint8Array（arrayBufferToBase64 逆操作；非法输入返回 null） */
@@ -75,11 +82,13 @@ export function base64ToBytes(b64: string): Uint8Array | null {
   }
 }
 
-/** Uint8Array → base64（先拷贝隔离 view 偏移共享 buffer，再对齐 arrayBufferToBase64 分块防栈溢出） */
+/** Uint8Array → base64（先拷贝隔离 view 偏移共享 buffer；code_review 494843c9 #2/#3：
+ *  直接走 chunkedBase64 核心——copy 是刚创建的私有副本，不再叠一次 arrayBufferToBase64
+ *  的无谓 slice（原实现双份全量拷贝）） */
 export function u8ToBase64(bytes: Uint8Array): string {
   const copy = new Uint8Array(bytes.length);
   copy.set(bytes);
-  return arrayBufferToBase64(copy.buffer);
+  return chunkedBase64(copy);
 }
 
 // ===== 基础 binding 片段（Top 6 注册表驱动：browser-adapter.ts 只做 {...} 装配）=====

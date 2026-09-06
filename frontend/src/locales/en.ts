@@ -1555,6 +1555,8 @@ export const en: Record<string, string> = {
   "webFs.kindFile": "file",
   "webFs.fsaUnsupported":
     "SelectLocalRepo: File System Access API is not supported in this environment",
+  "webFs.filesLimit":
+    "File count exceeds the {limit} limit (currently {count}); please check the authorized folder scope",
   "webFs.renameEmptyName": "Rename failed: {kind} name is empty",
   "webFs.renameInvalidChars": "Rename failed: {kind} name contains invalid characters",
   "webFs.renameInvalidPathSegment": "Rename failed: {kind} name contains an invalid path segment",

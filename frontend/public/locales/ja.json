@@ -1405,6 +1405,7 @@
   "webFs.kindDir": "ディレクトリ",
   "webFs.kindFile": "ファイル",
   "webFs.fsaUnsupported": "SelectLocalRepo: この環境では File System Access API はサポートされていません",
+  "webFs.filesLimit": "ファイル総数が上限 {limit} を超えました（現在 {count}）。承認ディレクトリの範囲を確認してください",
   "webFs.renameEmptyName": "名前の変更に失敗しました：{kind}名が空です",
   "webFs.renameInvalidChars": "名前の変更に失敗しました：{kind}名に無効な文字が含まれています",
   "webFs.renameInvalidPathSegment": "名前の変更に失敗しました：{kind}名に無効なパスセグメントが含まれています",

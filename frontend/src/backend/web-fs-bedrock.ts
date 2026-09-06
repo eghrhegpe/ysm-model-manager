@@ -225,8 +225,19 @@ function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | nul
   for (const key of candidates) {
     const data = entries[key].subarray(0, maxProbe);
     try {
-      // 快速首字节过滤：Bedropck geometry JSON 以 "{" 开头，先排除明显非 JSON 的二进制
-      if (data[0] !== 0x7b) continue;
+      // 快速首字节过滤：Bedrock geometry JSON 以 "{" 开头，先排除明显非 JSON 的二进制。
+      // code_review 64749809 #12：须跳过 UTF-8 BOM（EF BB BF，Windows 工具/导出器常见）
+      // 与前导空白（20/09/0A/0D）再判首字节——否则合法 BOM/空行前缀 JSON 被静默跳过，
+      // geometry 解析失败 fallthrough geo=null（此前按 "minecraft:geometry" 标记全量匹配不受影响）
+      let i = 0;
+      if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) i = 3;
+      while (
+        i < data.length &&
+        (data[i] === 0x20 || data[i] === 0x09 || data[i] === 0x0a || data[i] === 0x0d)
+      ) {
+        i++;
+      }
+      if (data[i] !== 0x7b) continue;
       if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
     } catch {}
   }

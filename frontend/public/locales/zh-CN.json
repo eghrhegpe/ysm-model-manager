@@ -1405,6 +1405,7 @@
   "webFs.kindDir": "目录",
   "webFs.kindFile": "文件",
   "webFs.fsaUnsupported": "SelectLocalRepo: 当前环境不支持 File System Access API",
+  "webFs.filesLimit": "文件总数超过 {limit} 上限（当前 {count}），请检查授权目录范围",
   "webFs.renameEmptyName": "重命名失败：{kind}名称为空",
   "webFs.renameInvalidChars": "重命名失败：{kind}名称包含非法字符",
   "webFs.renameInvalidPathSegment": "重命名失败：{kind}名称包含非法路径段",

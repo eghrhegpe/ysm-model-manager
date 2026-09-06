@@ -15,6 +15,7 @@ auto_fields:
     - applyGroundSurfaceStructural
     - attenuateAmbientForSky
     - bindFieldRestorers
+    - buildFogNodes
     - buildGroundSurfaceSpec
     - buildReflectorNodes
     - buildSkyGroup
@@ -44,6 +45,7 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvPresetLinkage
+    - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
     - FOG_PRESETS

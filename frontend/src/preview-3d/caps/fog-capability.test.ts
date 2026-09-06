@@ -190,6 +190,65 @@ describe("FogCapability — getMenuControls 结构", () => {
   });
 });
 
+describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = master toggle 原生节点 + 参数组 folder（color/select/3 slider）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(2);
+    // master toggle
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("fog-enabled");
+    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    nodes[0]!.control!.set!(true);
+    expect(cap.isEnabled()).toBe(true);
+    // 参数组 folder
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.fogGroupParams");
+    expect(folder.children!.map((c) => c.id)).toEqual([
+      "fog-color",
+      "fog-mode",
+      "fog-density",
+      "fog-near",
+      "fog-far",
+    ]);
+    // 全原生节点（color/select/slider；fog 无复杂控件不走 controls 通道）
+    expect(folder.children!.map((c) => c.kind)).toEqual([
+      "color",
+      "select",
+      "slider",
+      "slider",
+      "slider",
+    ]);
+  });
+
+  it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
+    const cap = newCap();
+    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterToggle()?.id);
+    expect(rest).toHaveLength(1);
+    expect(rest[0]!.children!.some((c) => c.id === "fog-enabled")).toBe(false);
+  });
+
+  it("color/select/slider 节点读写闭包直连 cap", () => {
+    const cap = newCap({ params: { mode: "exp2" } });
+    const folder = cap.getMenuNodes()[1]!;
+    const color = folder.children!.find((c) => c.id === "fog-color")!;
+    expect(color.kind).toBe("color");
+    expect(color.control!.get!(undefined)).toBe(0xaac4e8);
+    color.control!.set!(0xff0000);
+    expect(cap.getColor()).toBe(0xff0000);
+    // select 模式
+    const mode = folder.children!.find((c) => c.id === "fog-mode")!;
+    expect(mode.control!.options).toHaveLength(2);
+    mode.control!.set!("linear");
+    expect(cap.getMode()).toBe("linear");
+    // slider 密度
+    const density = folder.children!.find((c) => c.id === "fog-density")!;
+    density.control!.set!(0.03);
+    expect(cap.getDensity()).toBe(0.03);
+  });
+});
+
 describe("FogCapability — 预设数据完整性", () => {
   it("DEFAULT_FOG_PARAMS 默认值完整", () => {
     expect(DEFAULT_FOG_PARAMS.enabled).toBe(false);

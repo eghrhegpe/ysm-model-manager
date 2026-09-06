@@ -69,6 +69,7 @@ auto_fields:
     - buildEnvSchema
     - buildFbxScene
     - buildFbxSceneFromData
+    - buildFogNodes
     - buildGroundSurfaceSpec
     - buildLightingSchema
     - buildLipMorphIndices
@@ -214,6 +215,7 @@ auto_fields:
     - FbxSceneData
     - fbxSceneToData
     - FbxSkeletonData
+    - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
     - filterAnimFiles

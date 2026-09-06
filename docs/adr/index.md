@@ -18,8 +18,8 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 3 |
-| [✅ 已采纳](#已采纳) | 181 |
-| [❌ 已取代](#已取代) | 6 |
+| [✅ 已采纳](#已采纳) | 180 |
+| [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -33,12 +33,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（181）
+### ✅ 已采纳（180）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-195](./ADR-195-menucontroldef-menunode-cap.md) | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 |
-| [ADR-194](./ADR-194-menu-control-def-discriminated-union.md) | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ✅ 已采纳 |
 | [ADR-193](./ADR-193-preview-menu-declarative-endgame.md) | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 |
 | [ADR-192](./ADR-192-go-types-registry-split.md) | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 |
 | [ADR-191](./ADR-191-testutil-go-internal.md) | testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂 | ✅ 已采纳 |
@@ -219,10 +218,11 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（6）
+### ❌ 已取代（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-194](./ADR-194-menu-control-def-discriminated-union.md) | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ❌ 已取代 |
 | [ADR-138](./ADR-138-preview-3d-to-src.md) | preview-3d 上提 src/preview-3d（去 features 中间层） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
@@ -243,7 +243,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-195 | cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除） | ✅ 已采纳 | 2026-09-06 |
-| ADR-194 | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ✅ 已采纳 | 2026-09-06 |
+| ADR-194 | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ❌ 已取代 | 2026-09-06 |
 | ADR-193 | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 | 2026-09-06 |
 | ADR-192 | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 | 2026-09-05 |
 | ADR-191 | testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂 | ✅ 已采纳 | 2026-09-05 |

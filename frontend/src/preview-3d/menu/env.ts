@@ -169,18 +169,18 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
     fallback: cap.id,
     icon: cap.icon,
     rowDensity: "compact",
-    ...(master && master.control
+    ...(master?.control?.get
       ? {
           headerToggle: {
-            value: (master.control.get
-              ? master.control.get(undefined)
-              : (master.control as any).value) as boolean,
+            // code_review 3d17dd0e3 #2/#4：PreviewControlSpec 无 control.value 字段
+            // （静态值在节点级 PreviewMenuNode.value）——原 (control as any).value
+            // 分支不可达 + 违反禁 any 规则；master 节点恒带 control.get（toggle 契约），
+            // 门控 get 即取真值源
+            value: master.control.get(undefined) as boolean,
             onChange: (v: boolean) => {
-              if (master.control?.set) master.control.set(v);
+              master.control?.set?.(v);
             },
-            ...(master.control.get
-              ? { bind: () => master.control!.get!(undefined) as boolean }
-              : {}),
+            bind: () => master.control?.get?.(undefined) ?? false,
           },
         }
       : {}),

@@ -271,6 +271,10 @@ export const autoSidebar = [
         "link": "/knowledge-audit-20260705"
       },
       {
+        "text": "给兄弟会话：cap 统一 + ADR-196 方向同步",
+        "link": "/notes-to-sibling-session-cap-unification"
+      },
+      {
         "text": "YSM 前后端统一 & 架构问题研究与修复方案",
         "link": "/sharp-review-fix-plan"
       },
@@ -296,10 +300,6 @@ export const autoSidebar = [
       {
         "text": "ADR-196：预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线）",
         "link": "/adr/ADR-196-presets-three-axis-unification"
-      },
-      {
-        "text": "给兄弟会话：cap 统一 + ADR-196 方向同步",
-        "link": "/adr/ADR-196-to-sibling-session"
       },
       {
         "text": "ADR-195：cap 控件单类型化——MenuControlDef/renderCapControls 并入 MenuNode schema（渐进根除）",

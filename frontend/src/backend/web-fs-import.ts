@@ -15,7 +15,7 @@
 // R2 导入增强：ZIP 解压（extractZip 解出文件；文件名以 fflateKey 入库——
 // 前端无 GBK 码表，非 UTF-8 中文名降级透传 fflateKey，数据访问不受影响）
 import { extractZip } from "../parsers/extract.ts";
-import { idbDel, idbGet, idbSet } from "./idb.ts";
+import { type IdbOp, idbDel, idbGet, idbTx } from "./idb.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
 import { dirKey, fileKey, MAIN_FILE_RANK_TYPE, mainFileRank } from "./web-fs-shared.ts";
 
@@ -228,11 +228,10 @@ function validateGroupHasUsableMain(group: File[]): boolean {
 }
 
 /**
- * [子函数 5/6] 组写入主流程：遍历文件落 IDB → 写 dirKey 目录条目。
- * 返回 { success, fileFails }。success=false 表示无任何文件写入。
- * writtenKeys 为调用方传入的**累积器**（out-param）：每次写入成功即 push，
- * 中途抛错时调用方 catch 仍能拿到已落盘的 key 做回滚（若用局部数组只在成功路径
- * 返回，idbSet 中途抛错会丢——P2 回归：回滚 no-op 留下孤儿条目）。
+ * [子函数 5/6] 组写入主流程：遍历文件收集 ops → 单事务批量落 IDB → 写 dirKey 目录条目。
+ * P1 修复：原实现逐文件单事务（N 文件 = N 次事务），中途崩溃留孤儿 key；
+ * 现改为单事务批量写入（IDB 全有或无一致保证），消除孤儿 key 风险。
+ * writtenKeys 在事务成功后填充（供上层 importWebFiles 的回滚链使用）。
  */
 async function writeGroupFiles(
   group: File[],
@@ -240,8 +239,12 @@ async function writeGroupFiles(
   stem: string,
   writtenKeys: WrittenKey[],
 ): Promise<{ success: boolean; fileFails: number }> {
-  let wrote = false;
   let fileFails = 0;
+  const pendingPuts: Array<{
+    key: string;
+    value: { data: ArrayBuffer; size: number; mime: string };
+    preExisted: boolean;
+  }> = [];
 
   for (const f of group) {
     if (f.size > MAX_IMPORT_BYTES) {
@@ -251,20 +254,36 @@ async function writeGroupFiles(
     const data = await f.arrayBuffer();
     const k = fileKey(type, stem, relOf(f, stem));
     const preExisted = (await idbGet("files", k)) !== undefined;
-    await idbSet("files", k, {
-      data,
-      size: data.byteLength,
-      mime: f.type || "application/octet-stream",
+    pendingPuts.push({
+      key: k,
+      value: { data, size: data.byteLength, mime: f.type || "application/octet-stream" },
+      preExisted,
     });
-    writtenKeys.push({ key: k, preExisted });
-    wrote = true;
   }
 
-  if (!wrote) return { success: false, fileFails };
+  if (pendingPuts.length === 0) return { success: false, fileFails };
 
+  // 准备 dirKey
   const dk = dirKey(type, stem);
   const dkPreExisted = (await idbGet("files", dk)) !== undefined;
-  await idbSet("files", dk, { name: stem, addedAt: Date.now() });
+
+  // 单事务批量写入（文件 + dirKey），全有或无一贯性
+  const ops: IdbOp[] = [
+    ...pendingPuts.map((p) => ({ kind: "put" as const, key: p.key, value: p.value })),
+    { kind: "put" as const, key: dk, value: { name: stem, addedAt: Date.now() } },
+  ];
+
+  try {
+    await idbTx("files", ops);
+  } catch {
+    // 事务失败 = 无任何 key 落盘（IDB 原子性保证），writtenKeys 保持空
+    return { success: false, fileFails };
+  }
+
+  // 成功 → 填充 writtenKeys（供上层 importWebFiles 的回滚链使用）
+  for (const p of pendingPuts) {
+    writtenKeys.push({ key: p.key, preExisted: p.preExisted });
+  }
   writtenKeys.push({ key: dk, preExisted: dkPreExisted });
 
   return { success: true, fileFails };

@@ -14,6 +14,26 @@ export type { AppBindings };
 let _App: AppBindings | null = null;
 let _appPromise: Promise<AppBindings> | null = null;
 
+/**
+ * P1 修复：Proxy 包装 winApp 做运行时 fail-fast。
+ * 直接 `winApp as AppBindings` 是类型造假——缺失方法编译期不报错、运行时 undefined 穿透。
+ * 用 Proxy 包装后，访问不存在的方法会立即抛错（fail-fast），而非静默返回 undefined。
+ */
+function makeSafeAppBindings(raw: Record<string, unknown>): AppBindings {
+  return new Proxy(raw as AppBindings, {
+    get(target, prop) {
+      if (typeof prop === "symbol") return undefined;
+      const val = target[prop as keyof AppBindings];
+      if (val === undefined) {
+        throw new Error(
+          `[app] binding ${String(prop)} 在 window.go.main.App mock 中未实现（类型造假防护）`,
+        );
+      }
+      return val;
+    },
+  });
+}
+
 /** 获取 Go App 绑定的缓存引用，避免重复动态 import */
 export const getApp = async (): Promise<AppBindings> => {
   // 网页版（ADR-049 Phase 1）：无 Wails 壳，路由到 browser adapter——
@@ -57,10 +77,10 @@ export const getApp = async (): Promise<AppBindings> => {
       if (!hasCore) {
         // partial mock → 回退动态 import，不缓存
       } else {
-        // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
-        // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
-        // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
-        _App = winApp as AppBindings;
+        // P3 修复（P1-9）：用 Proxy 包装 winApp 做运行时 fail-fast——
+        // 直接 `winApp as AppBindings` 是类型造假，缺失方法编译期不报错、运行时 undefined 穿透。
+        // Proxy 包装后访问不存在的方法立即抛错（fail-fast），防陷阱 #5 静默穿透。
+        _App = makeSafeAppBindings(winAppRec);
         return _App;
       }
     }

@@ -588,9 +588,12 @@ async function rekeyWebModelGroup(
         writtenFiles.push(nk);
       }
     }
+    // P1 修复：收集 config keys 供阶段二复用（避免重复扫描 config store）
+    const cfgKeysCache = new Map<string, string[]>();
     for (const prefix of ["ban:", "tags:"]) {
       const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
       const keys = await idbKeys("config", scanPrefix);
+      cfgKeysCache.set(scanPrefix, keys);
       for (const k of keys) {
         const suffix = k.slice(scanPrefix.length);
         const val = await idbGet("config", k);
@@ -608,12 +611,9 @@ async function rekeyWebModelGroup(
       const delFileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, oldName) }];
       for (const k of fks) delFileOps.push({ kind: "del", key: k });
       await idbTx("files", delFileOps);
-      // 阶段二 config 删：两个 prefix 的删合并为单事务（与阶段一 cfgOps 对齐），
-      // 避免 ban: 删成功后 tags: 删失败导致旧 tags: 残留（新旧并存）。
+      // 阶段二 config 删：复用阶段一已缓存的 keys（避免重复扫描 config store）
       const delCfgOps: IdbOp[] = [];
-      for (const prefix of ["ban:", "tags:"]) {
-        const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
-        const keys = await idbKeys("config", scanPrefix);
+      for (const [, keys] of cfgKeysCache) {
         delCfgOps.push(...keys.map((k) => ({ kind: "del" as const, key: k })));
       }
       if (delCfgOps.length) await idbTx("config", delCfgOps);

@@ -90,7 +90,7 @@ function estimateBytes(value: unknown): number {
   }
 }
 
-/** 内存降级写入：超限时按插入顺序驱逐最旧条目（Map 迭代序 = 插入序） */
+/** 内存降级写入：超限时按 LRU 驱逐（Map 迭代序 = 最近访问序，命中时重排尾部） */
 function memorySet(store: Store, key: string, value: unknown): void {
   let m = memoryStore.get(store);
   if (!m) {
@@ -98,10 +98,9 @@ function memorySet(store: Store, key: string, value: unknown): void {
     memoryStore.set(store, m);
   }
   // 增量维护 totalBytes：已存在 key 先减旧值，写入后加新值
-  // 旧实现每次 set 全量重算（N×200 次 JSON.stringify，批量导入阻塞主线程）
   let totalBytes = memoryTotalBytes.get(store) ?? 0;
   if (m.has(key)) totalBytes -= estimateBytes(m.get(key));
-  m.set(key, value);
+  m.set(key, value); // Map.set 在 key 存在时更新值但不改变位置；LRU 需在 idbGet 中重排
   totalBytes += estimateBytes(value);
 
   // 双上限：条目数超限 或 字节估算超限 → 驱逐最旧（map 迭代首个）
@@ -113,6 +112,18 @@ function memorySet(store: Store, key: string, value: unknown): void {
     m.delete(oldest);
   }
   memoryTotalBytes.set(store, totalBytes);
+}
+
+/** 内存读取：命中时重排到 Map 尾部（LRU 语义） */
+function memoryGet<T>(store: Store, key: string): T | undefined {
+  const m = memoryStore.get(store);
+  if (!m) return undefined;
+  const v = m.get(key);
+  if (v === undefined) return undefined;
+  // LRU：删除后重新 set → 移到迭代尾部（最近访问）
+  m.delete(key);
+  m.set(key, v);
+  return v as T;
 }
 
 /** 取 IDB 连接；不可用或 open 失败时返回 null 并标记强制内存模式 */
@@ -156,12 +167,13 @@ export function __resetDBForTest(): void {
   forcedMemory = false;
   _warnedNoIdb = false;
   memoryStore.clear();
+  memoryTotalBytes.clear();
 }
 
 /** 读取单 key */
 export async function idbGet<T>(store: Store, key: string): Promise<T | undefined> {
   const db = await getIdb();
-  if (!db) return memoryStore.get(store)?.get(key) as T | undefined;
+  if (!db) return memoryGet<T>(store, key);
   return new Promise<T | undefined>((resolve, reject) => {
     const tx = db.transaction(store, "readonly");
     const req = tx.objectStore(store).get(key);

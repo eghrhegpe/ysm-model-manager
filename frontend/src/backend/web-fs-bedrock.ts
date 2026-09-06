@@ -208,11 +208,25 @@ export async function webExtractPreviewTexture(modelPath: string): Promise<strin
 
 /** 从 zip entries 挑第一个含 minecraft:geometry 的 JSON key */
 function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | null {
+  const keys = Object.keys(entries);
+  // 优先文件名含 geometry 的条目（Bedrock 命名惯例：geometry.xxx.json）
+  const preferredKeys = keys.filter((k) => /geometry/i.test(k));
+  // 其次 .geo.json 后缀（Bedrock 压缩 geometry 命名）
+  const geoJsonKeys = keys.filter((k) => /\.geo\.json$/i.test(k));
+  // 合并优先级队列（preferred → geoJson → 全部 .json）
+  const candidates = [
+    ...preferredKeys,
+    ...geoJsonKeys.filter((k) => !preferredKeys.includes(k)),
+    ...keys.filter(
+      (k) => /\.json$/i.test(k) && !preferredKeys.includes(k) && !geoJsonKeys.includes(k),
+    ),
+  ];
   const maxProbe = 1 << 20; // 1MB 探测上限，避免超大 JSON 全量解码
-  for (const key of Object.keys(entries)) {
-    if (!/\.json$/i.test(key)) continue;
+  for (const key of candidates) {
     const data = entries[key].subarray(0, maxProbe);
     try {
+      // 快速首字节过滤：Bedropck geometry JSON 以 "{" 开头，先排除明显非 JSON 的二进制
+      if (data[0] !== 0x7b) continue;
       if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
     } catch {}
   }

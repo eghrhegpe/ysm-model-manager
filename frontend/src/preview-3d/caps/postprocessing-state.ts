@@ -1,3 +1,5 @@
+import type { FieldKind } from "./scene-capability.ts";
+
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====
 // 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
 // （ReflectionMode / PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表），
@@ -67,6 +69,35 @@ export interface PostprocessingParams {
  * 因 mock 缺枚举导出而炸。枚举取值统一走 postprocessing-capability.ts 的 toneMappingValue()。
  */
 export const TONE_MAPPING_KEYS = ["none", "linear", "reinhard", "aces", "cineon"] as const;
+
+/**
+ * 持久化字段种别表（2026-09 锐评 P2-1）：键集与 PostprocessingParams 全键（除 enabled）
+ * 编译期互锁——params 加字段没进表、或表里写了 params 没有的字段，satisfies 双向报错；
+ * saveState 走 pickPersistFields、loadState 走 bindFieldRestorers，键集自动跟随本表。
+ * enabled 除外：params.enabled + this.enabled 双写语义，cap 内保留显式行。
+ */
+export const POSTPROC_PERSIST_FIELDS = {
+  bloomStrength: "number",
+  bloomThreshold: "number",
+  bloomRadius: "number",
+  bloomFollowVolumetric: "boolean",
+  bloomEnabled: "boolean",
+  ssaoEnabled: "boolean",
+  ssaoRadius: "number",
+  ssaoMinDist: "number",
+  ssaoMaxDist: "number",
+  toneMapping: { oneOf: TONE_MAPPING_KEYS },
+  exposure: "number",
+  reflectionMode: { oneOf: REFLECTION_MODES },
+  ssrOpacity: "number",
+  ssrMaxDistance: "number",
+  ssrThickness: "number",
+  ssrBlur: "boolean",
+  ssrDistanceAttenuation: "boolean",
+  ssrFresnel: "boolean",
+  ssrBouncing: "boolean",
+  reflectorDisableWhenSSR: "boolean",
+} as const satisfies Record<Exclude<keyof PostprocessingParams, "enabled">, FieldKind>;
 
 export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
   enabled: false,

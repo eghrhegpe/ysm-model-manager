@@ -194,6 +194,57 @@ export const GROUND_LAYER_OFFSETS = {
   reflector: -0.01,
 } as const;
 
+/** 持久化字段种别：普通字段按 typeof 分发；枚举字段走 oneOf 白名单 */
+export type FieldKind = "number" | "boolean" | { oneOf: readonly string[] };
+
+/**
+ * 持久化种别表绑定到目标对象，生成 restoreFields 的 restorer 表（表驱动持久化基建，
+ * 2026-09 锐评 P2-1：params 接口 + 种别表两处互锁后，save/load 自动跟随，四处手工同步收敛为两处）。
+ * 对 target 的写入用一次受控宽化 cast——运行时安全由 restoreFields 的 typeof 分发保证：
+ * restorer 只在存档值类型与种别匹配时被调用，写入类型必然正确。
+ */
+export function bindFieldRestorers<P extends object>(
+  target: P,
+  spec: { [K in keyof P]?: FieldKind },
+): Record<string, FieldRestorer> {
+  const out: Record<string, FieldRestorer> = {};
+  const writable = target as unknown as Record<string, number | boolean | string>;
+  for (const key of Object.keys(spec) as Array<keyof P & string>) {
+    const kind = spec[key];
+    if (kind === undefined) continue;
+    if (kind === "number") {
+      out[key] = {
+        number: (v) => {
+          writable[key] = v;
+        },
+      };
+    } else if (kind === "boolean") {
+      out[key] = {
+        boolean: (v) => {
+          writable[key] = v;
+        },
+      };
+    } else {
+      out[key] = oneOf(kind.oneOf, (v) => {
+        writable[key] = v;
+      });
+    }
+  }
+  return out;
+}
+
+/** 按种别表键集从 source 导出白名单对象（saveState 的表驱动形态，键集与表恒等） */
+export function pickPersistFields<P extends object>(
+  source: P,
+  spec: { [K in keyof P]?: FieldKind },
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(spec) as Array<keyof P & string>) {
+    out[key] = source[key];
+  }
+  return out;
+}
+
 const STORAGE_PREFIX = "ysm-scene-cap-";
 
 /** 保存 JSON 到 localStorage */

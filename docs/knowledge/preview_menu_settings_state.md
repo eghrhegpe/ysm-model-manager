@@ -10,6 +10,7 @@ source_files:
   - frontend/src/preview-3d/caps/scene-capability.ts
 auto_fields:
   symbols_with_lines:
+    - bindFieldRestorers
     - buildCameraSchema
     - buildCrossCuttingControls
     - buildLightingSchema
@@ -20,6 +21,7 @@ auto_fields:
     - collectSettingsCapControls
     - collectVisiblePredicates
     - createListenerSet
+    - FieldKind
     - FieldRestorer
     - formatCapSliderValue
     - getStateValue
@@ -30,6 +32,7 @@ auto_fields:
     - MenuControlKind
     - oneOf
     - persistState
+    - pickPersistFields
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath

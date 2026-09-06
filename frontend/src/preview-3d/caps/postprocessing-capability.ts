@@ -27,17 +27,17 @@ import type { LightCapability } from "./light-capability.ts";
 // toneMappingValue()（惰性，测试 mock 约束见 state 文件头注释）。
 import {
   DEFAULT_POSTPROC_PARAMS,
+  POSTPROC_PERSIST_FIELDS,
   POSTPROC_PRESETS,
   type PostprocessingParams,
-  REFLECTION_MODES,
   type ReflectionMode,
-  TONE_MAPPING_KEYS,
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
+  bindFieldRestorers,
   type MenuControlDef,
-  oneOf,
   persistState,
+  pickPersistFields,
   restoreFields,
   restoreState,
   type SceneCapability,
@@ -752,32 +752,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      bloomStrength: this.params.bloomStrength,
-      bloomThreshold: this.params.bloomThreshold,
-      bloomRadius: this.params.bloomRadius,
-      bloomFollowVolumetric: this.params.bloomFollowVolumetric,
-      bloomEnabled: this.params.bloomEnabled,
-      ssaoEnabled: this.params.ssaoEnabled,
-      ssaoRadius: this.params.ssaoRadius,
-      ssaoMinDist: this.params.ssaoMinDist,
-      ssaoMaxDist: this.params.ssaoMaxDist,
-      toneMapping: this.params.toneMapping,
-      exposure: this.params.exposure,
-      reflectionMode: this.params.reflectionMode,
-      ssrOpacity: this.params.ssrOpacity,
-      ssrMaxDistance: this.params.ssrMaxDistance,
-      ssrThickness: this.params.ssrThickness,
-      ssrBlur: this.params.ssrBlur,
-      ssrDistanceAttenuation: this.params.ssrDistanceAttenuation,
-      ssrFresnel: this.params.ssrFresnel,
-      ssrBouncing: this.params.ssrBouncing,
-      reflectorDisableWhenSSR: this.params.reflectorDisableWhenSSR,
+      ...pickPersistFields(this.params, POSTPROC_PERSIST_FIELDS),
     });
   }
 
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
+    // 表驱动恢复：种别表键集与 params 编译期互锁（POSTPROC_PERSIST_FIELDS）
+    restoreFields(state, bindFieldRestorers(this.params, POSTPROC_PERSIST_FIELDS));
     restoreFields(state, {
       enabled: {
         boolean: (v) => {
@@ -785,26 +768,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
           this.params.enabled = v;
         },
       },
-      bloomStrength: { number: (v) => (this.params.bloomStrength = v) },
-      bloomThreshold: { number: (v) => (this.params.bloomThreshold = v) },
-      bloomRadius: { number: (v) => (this.params.bloomRadius = v) },
-      bloomFollowVolumetric: { boolean: (v) => (this.params.bloomFollowVolumetric = v) },
-      bloomEnabled: { boolean: (v) => (this.params.bloomEnabled = v) },
-      ssaoEnabled: { boolean: (v) => (this.params.ssaoEnabled = v) },
-      ssaoRadius: { number: (v) => (this.params.ssaoRadius = v) },
-      ssaoMinDist: { number: (v) => (this.params.ssaoMinDist = v) },
-      ssaoMaxDist: { number: (v) => (this.params.ssaoMaxDist = v) },
-      toneMapping: oneOf(TONE_MAPPING_KEYS, (v) => (this.params.toneMapping = v)),
-      exposure: { number: (v) => (this.params.exposure = v) },
-      reflectionMode: oneOf(REFLECTION_MODES, (v) => (this.params.reflectionMode = v)),
-      ssrOpacity: { number: (v) => (this.params.ssrOpacity = v) },
-      ssrMaxDistance: { number: (v) => (this.params.ssrMaxDistance = v) },
-      ssrThickness: { number: (v) => (this.params.ssrThickness = v) },
-      ssrBlur: { boolean: (v) => (this.params.ssrBlur = v) },
-      ssrDistanceAttenuation: { boolean: (v) => (this.params.ssrDistanceAttenuation = v) },
-      ssrFresnel: { boolean: (v) => (this.params.ssrFresnel = v) },
-      ssrBouncing: { boolean: (v) => (this.params.ssrBouncing = v) },
-      reflectorDisableWhenSSR: { boolean: (v) => (this.params.reflectorDisableWhenSSR = v) },
     });
     // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
     if (this.enabled) this.applyToneMapping();

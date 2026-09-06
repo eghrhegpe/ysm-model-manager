@@ -14,6 +14,7 @@ auto_fields:
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
     - attenuateAmbientForSky
+    - bindFieldRestorers
     - buildGroundSurfaceSpec
     - CapabilityId
     - CapabilityMap
@@ -40,6 +41,7 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvPresetLinkage
+    - FieldKind
     - FieldRestorer
     - FOG_PRESETS
     - FogCapability
@@ -69,6 +71,8 @@ auto_fields:
     - ModelEntry
     - oneOf
     - persistState
+    - pickPersistFields
+    - POSTPROC_PERSIST_FIELDS
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams

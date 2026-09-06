@@ -246,6 +246,20 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(cap4.getMatSource()).toBe("plain"); // 二进制未持久化 → 回退
   });
 
+  it("网格轴字段 round-trip（曾漏存：size/divisions/colorCenter/colorGrid 跨会话丢失）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    (cap as unknown as { params: { size: number; divisions: number; colorCenter: number; colorGrid: number } }).params.size = 120;
+    (cap as unknown as { params: { divisions: number; colorCenter: number; colorGrid: number } }).params.divisions = 40;
+    (cap as unknown as { params: { colorCenter: number; colorGrid: number } }).params.colorCenter = 0x112233;
+    (cap as unknown as { params: { colorGrid: number } }).params.colorGrid = 0x445566;
+    cap.saveState();
+    const cap2 = new GroundCapability({ scene });
+    cap2.loadState();
+    const p2 = (cap2 as unknown as { params: { size: number; divisions: number; colorCenter: number; colorGrid: number } }).params;
+    expect([p2.size, p2.divisions, p2.colorCenter, p2.colorGrid]).toEqual([120, 40, 0x112233, 0x445566]);
+  });
+
   it("loadState 非法 matSource 回退 none（缺字段不崩）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

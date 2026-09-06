@@ -6,7 +6,12 @@
 //   - null 存档 / 损坏数据（真值非对象）→ false，不应用任何字段
 //   - 至少一个字段回填 → true（@returns 契约：真实应用与否，而非「有存档」）
 import { describe, it, expect, vi } from "vitest";
-import { restoreFields, createListenerSet } from "./scene-capability.ts";
+import {
+  bindFieldRestorers,
+  createListenerSet,
+  pickPersistFields,
+  restoreFields,
+} from "./scene-capability.ts";
 
 describe("restoreFields — 类型分发", () => {
   it("number 值触发 number 恢复器", () => {
@@ -117,6 +122,38 @@ describe("restoreFields — 不匹配与损坏数据", () => {
       { timeOfDay: { number: vi.fn() }, enabled: { boolean: vi.fn() } },
     );
     expect(ok).toBe(false);
+  });
+});
+
+describe("bindFieldRestorers / pickPersistFields — 表驱动持久化基建", () => {
+  it("number/boolean 种别绑定后按 typeof 分发写入目标", () => {
+    const target = { a: 0, b: false };
+    const ok = restoreFields({ a: 3, b: true }, bindFieldRestorers(target, { a: "number", b: "boolean" }));
+    expect(ok).toBe(true);
+    expect(target).toEqual({ a: 3, b: true });
+  });
+
+  it("oneOf 种别绑定：白名单命中才写入", () => {
+    const target = { mode: "linear" as "linear" | "exp2" | "unset" };
+    restoreFields({ mode: "exp2" }, bindFieldRestorers(target, { mode: { oneOf: ["linear", "exp2"] } }));
+    expect(target.mode).toBe("exp2");
+    restoreFields({ mode: "fancy" }, bindFieldRestorers(target, { mode: { oneOf: ["linear", "exp2"] } }));
+    expect(target.mode).toBe("exp2");
+  });
+
+  it("spec 缺键（部分绑定）只恢复表内字段", () => {
+    const target = { a: 0, b: 0 };
+    restoreFields({ a: 1, b: 2 }, bindFieldRestorers(target, { a: "number" }));
+    expect(target).toEqual({ a: 1, b: 0 });
+  });
+
+  it("pickPersistFields 按表键集导出白名单快照", () => {
+    const source = { a: 1, b: true, mode: "linear", hidden: "x" };
+    expect(pickPersistFields(source, { a: "number", b: "boolean", mode: { oneOf: ["linear"] } })).toEqual({
+      a: 1,
+      b: true,
+      mode: "linear",
+    });
   });
 });
 

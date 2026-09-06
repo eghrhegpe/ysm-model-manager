@@ -24,9 +24,12 @@ import {
 } from "./ground-surface-spec.ts";
 import {
   createListenerSet,
+  type FieldKind,
   GROUND_LAYER_OFFSETS,
   type MenuControlDef,
+  oneOf,
   persistState,
+  pickPersistFields,
   restoreFields,
   restoreState,
   type SceneCapability,
@@ -69,6 +72,31 @@ export const DEFAULT_GROUND_PARAMS: GroundParams = {
   colorGrid: 0x2a2a3a,
   visible: true,
 };
+
+/**
+ * 持久化种别表（2026-09 锐评 P2-1）：saveState 键集唯一事实源，satisfies 与 GroundParams
+ * 编译期互锁（漏键/多键即报错）——修复 size/divisions/colorCenter/colorGrid 漏存（改网格
+ * 尺寸/线色跨会话丢失的 bug）。matSource 除外：custom 无缓存回退语义，cap 内显式处理。
+ * loadState 的 mat* 七字段走 setter（clamp + refreshSurface 副作用），不进纯赋值绑定。
+ */
+const GROUND_PERSIST_FIELDS = {
+  visible: "boolean",
+  size: "number",
+  divisions: "number",
+  colorCenter: "number",
+  colorGrid: "number",
+  matColor: "number",
+  matLineColor: "number",
+  matColor2: "number",
+  matGridSize: "number",
+  matOpacity: "number",
+  matScale: "number",
+  matRotationDeg: "number",
+  matDensity: "number",
+  matAngleDeg: "number",
+  matRoughness: "number",
+  matMetalness: "number",
+} as const satisfies Record<Exclude<keyof GroundParams, "matSource">, FieldKind>;
 
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
@@ -380,21 +408,9 @@ export class GroundCapability implements SceneCapability {
   /** 保存状态到 localStorage（mat 字段纯数据可持久化；texture 二进制不存） */
   saveState(): void {
     persistState(this.id, {
-      visible: this.params.visible,
       enabled: this.enabled,
       matSource: this.params.matSource === "texture" ? "texture" : this.params.matSource,
-      matColor: this.params.matColor,
-      matLineColor: this.params.matLineColor,
-      matColor2: this.params.matColor2,
-      matGridSize: this.params.matGridSize,
-      matOpacity: this.params.matOpacity,
-      matScale: this.params.matScale,
-      matRotationDeg: this.params.matRotationDeg,
-      matDensity: this.params.matDensity,
-      matAngleDeg: this.params.matAngleDeg,
-      matRoughness: this.params.matRoughness,
-      matMetalness: this.params.matMetalness,
-      // V1→V2 迁移兼容：保留旧字段（V2 仍能被 V1 loadState 读到水相关字段做兜底）
+      ...pickPersistFields(this.params, GROUND_PERSIST_FIELDS),
     });
   }
 
@@ -414,14 +430,14 @@ export class GroundCapability implements SceneCapability {
           this.grid.visible = v;
         },
       },
-      matSource: {
-        string: (v) => {
-          if (GROUND_SURFACE_MODES.includes(v as GroundSurfaceMode)) {
-            this.params.matSource =
-              v === "texture" && !this.customTex ? "plain" : (v as GroundSurfaceMode);
-          }
-        },
-      },
+      matSource: oneOf(GROUND_SURFACE_MODES, (v) => {
+        this.params.matSource = v === "texture" && !this.customTex ? "plain" : v;
+      }),
+      // 网格轴字段（曾漏存：改网格尺寸/线色跨会话丢失，2026-09 锐评 P2-1 顺手修复）
+      size: { number: (v) => (this.params.size = v) },
+      divisions: { number: (v) => (this.params.divisions = v) },
+      colorCenter: { number: (v) => (this.params.colorCenter = v) },
+      colorGrid: { number: (v) => (this.params.colorGrid = v) },
       matColor: {
         number: (v) => {
           this.params.matColor = v;

@@ -11,6 +11,7 @@ import {
   POSTPROC_PRESETS,
 } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
+import { POSTPROC_PERSIST_FIELDS } from "./postprocessing-state.ts";
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
@@ -215,12 +216,50 @@ describe("PostprocessingCapability — SSR 反射", () => {
   });
 });
 
+describe("POSTPROC_PERSIST_FIELDS — 表驱动持久化契约（2026-09 锐评 P2-1）", () => {
+  beforeEach(() => { localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it("键集契约：表键集 + enabled 与 params 全键双向全等（运行时镜像 satisfies 编译锁）", () => {
+    const tableKeys = new Set(Object.keys(POSTPROC_PERSIST_FIELDS));
+    tableKeys.add("enabled");
+    const paramKeys = new Set(Object.keys(DEFAULT_POSTPROC_PARAMS));
+    expect([...tableKeys].sort()).toEqual([...paramKeys].sort());
+  });
+
+  it("round-trip：全字段 setParams → saveState → 新会话 loadState → deep-equal", () => {
+    const cap = newCap({ enabled: true, params: {
+      enabled: true, // 构造器 enabled 不回写 params.enabled（历史双写口径），round-trip 快照需两者一致
+      bloomStrength: 1.2, bloomThreshold: 0.7, bloomRadius: 0.8, bloomFollowVolumetric: false,
+      bloomEnabled: false, ssaoEnabled: true, ssaoRadius: 12, ssaoMinDist: 0.01, ssaoMaxDist: 0.5,
+      toneMapping: "reinhard", exposure: 1.5,
+      reflectionMode: "envmap+ssr", ssrOpacity: 0.7, ssrMaxDistance: 300, ssrThickness: 0.03,
+      ssrBlur: false, ssrDistanceAttenuation: false, ssrFresnel: false, ssrBouncing: true,
+      reflectorDisableWhenSSR: false,
+    } });
+    cap.apply();
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.getParams()).toEqual(cap.getParams());
+    expect((cap2 as unknown as { enabled: boolean }).enabled).toBe(true);
+  });
+
+  it("round-trip 防漂移：save 的存档键集与表键集 + enabled 全等", () => {
+    const cap = newCap({ enabled: false });
+    cap.saveState();
+    const saved = Object.keys(JSON.parse(localStorage.getItem("ysm-scene-cap-postprocessing") ?? "{}"));
+    expect([...saved].sort()).toEqual([...Object.keys(POSTPROC_PERSIST_FIELDS), "enabled"].sort());
+  });
+});
+
 describe("PostprocessingCapability — 持久化", () => {
   beforeEach(() => { localStorage.clear(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
     const cap = newCap({ enabled: true, params: {
+      enabled: true, // 构造器 enabled 不回写 params.enabled（历史双写口径），round-trip 快照需两者一致
       bloomStrength: 1.2, bloomThreshold: 0.7, bloomRadius: 0.8, bloomFollowVolumetric: false,
       ssaoEnabled: true, ssaoRadius: 12, ssaoMinDist: 0.01, ssaoMaxDist: 0.5,
       toneMapping: "reinhard", exposure: 1.5,

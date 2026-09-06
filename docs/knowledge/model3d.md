@@ -44,6 +44,7 @@ auto_fields:
     - BedrockGeometry
     - BedrockModel
     - BedrockSubModel
+    - bindFieldRestorers
     - bindInputHandlers
     - BlinkCallback
     - BlinkOptions
@@ -200,6 +201,7 @@ auto_fields:
     - FbxSceneData
     - fbxSceneToData
     - FbxSkeletonData
+    - FieldKind
     - FieldRestorer
     - fillRoles
     - fillSwitch
@@ -422,6 +424,7 @@ auto_fields:
     - persistState
     - pickBone
     - pickMmdBone
+    - pickPersistFields
     - PmxBoneData
     - PmxBuilderConfig
     - PmxBuildResult
@@ -440,6 +443,7 @@ auto_fields:
     - PmxRigidBodyData
     - PmxVertexData
     - PoseScene
+    - POSTPROC_PERSIST_FIELDS
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingLike

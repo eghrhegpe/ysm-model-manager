@@ -199,6 +199,48 @@ describe("ReflectorCapability — getMenuControls 结构", () => {
   });
 });
 
+describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("完整树 = master toggle 原生节点 + 参数组 folder（3 slider）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(2);
+    // master toggle
+    expect(nodes[0]!.kind).toBe("toggle");
+    expect(nodes[0]!.id).toBe("reflector-enabled");
+    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    nodes[0]!.control!.set!(true);
+    expect(cap.isEnabled()).toBe(true);
+    // 参数组 folder
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.reflectorGroupParams");
+    expect(folder.children!.map((c) => c.id)).toEqual([
+      "reflector-opacity",
+      "reflector-resolution",
+      "reflector-size",
+    ]);
+    // 全部原生节点（reflector 无复杂控件，不走 controls 通道）
+    expect(folder.children!.every((c) => c.kind === "slider")).toBe(true);
+  });
+
+  it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
+    const cap = newCap();
+    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterToggle()?.id);
+    expect(rest).toHaveLength(1);
+    expect(rest[0]!.kind).toBe("folder");
+    expect(rest[0]!.children!.some((c) => c.id === "reflector-enabled")).toBe(false);
+  });
+
+  it("slider 节点读写闭包直连 cap 参数", () => {
+    const cap = newCap({ params: { opacity: 0.75 } });
+    const folder = cap.getMenuNodes()[1]!;
+    const opacity = folder.children!.find((c) => c.id === "reflector-opacity")!;
+    expect(opacity.control!.get!(undefined)).toBe(0.75);
+    opacity.control!.set!(0.42);
+    expect(cap.getParams().opacity).toBe(0.42);
+  });
+});
+
 describe("ReflectorCapability — 预设数据完整性", () => {
   it("DEFAULT_REFLECTOR_PARAMS 默认值完整", () => {
     expect(DEFAULT_REFLECTOR_PARAMS.enabled).toBe(false);

@@ -13,7 +13,8 @@ import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 // 注：re-export 不提供本模块内可用绑定，故下方另 type-import 供工厂内部引用。
 export type { MenuControlDef, MenuControlKind } from "../menu-node-types.ts";
 
-import type { MenuControlDef } from "../menu-node-types.ts";
+// PreviewMenuNode 同自共享叶（刀2 接口 getMenuNodes? 返回类型；caps 直产节点入口）
+import type { MenuControlDef, PreviewMenuNode } from "../menu-node-types.ts";
 // PreviewSnapshot 仍被下方工厂（makeSliderDef/makeColorDef visibleWhen 形参）引用；
 // 自 preview-paths.ts 零依赖叶引入（[ADR-168 二期] 下沉产物）。
 import type { PreviewSnapshot } from "../state/preview-paths.ts";
@@ -119,6 +120,13 @@ export interface SceneCapability {
 
   /** 返回菜单控件定义列表（框架自动渲染为 slide panel） */
   getMenuControls(): MenuControlDef[];
+
+  /** [ADR-195 刀2] cap 直产声明式节点树（可选，渐进迁移：已迁 cap 实现本方法产
+   *  PreviewMenuNode[]，未迁 cap 仅 getMenuControls——消费者优先 getMenuNodes、
+   *  fallback 经 capControlsToNodes(getMenuControls()) 桥接）。语义 = 「该 cap 参数面板
+   *  完整节点树」（简单控件 → 原生节点 + group → folder；复杂控件 timeline/histogram/
+   *  image/preset-thumb 保留为 controls 节点通道，树内嵌 MenuControlDef）。 */
+  getMenuNodes?(): PreviewMenuNode[];
 
   /** 能力总开关控件（可选）：folder 聚合器（如 env 面板）据此把开关升到 folder header
    *  （对齐 MikuMikuAR PopupRow.headerToggle——「功能=本 folder」时开关免展开可见），

@@ -118,13 +118,26 @@ function envCapRestControls(cap: SceneCapability): ReturnType<SceneCapability["g
 }
 
 /**
- * cap 参数子视图（navigate 落点）：经 cap-to-node 桥接（ADR-195 刀1）把该 cap 控件
- * 转为 PreviewMenuNode[] 后走 renderMenu 渲染——内容进入节点 schema 通道：
- *   - 简单控件（toggle/slider/select/divider/color）→ 原生节点（spec 同构承载，
- *     renderMenu 经 nodeControlToCapControl 投影到 cap 渲染器——单渲染链闭环）
- *   - 复杂控件（timeline/histogram/image/preset-thumb/button）→ controls 节点通道
- *     （树内嵌 MenuControlDef，受控委托）
- * group 字段由桥接层转 folder（rmAppendFolder 渲染折叠 section）。
+ * cap 参数子视图节点（ADR-195 刀2 双轨：已迁移 cap 直产 getMenuNodes()，未迁移经
+ * capControlsToNodes 桥接 getMenuControls()）。
+ *  - 已迁移：取完整节点树，剔除能力总开关节点（getMasterToggle 已升一级行 headerToggle，
+ *    防子视图双份开关）——按 master id 匹配顶层节点剔。
+ *  - 未迁移：旧路径 envCapRestControls（MenuControlDef 剔 master）→ capControlsToNodes。
+ * group→folder 折叠、复杂控件 controls 通道均由产方/桥接统一表达，renderMenu 单一调度。
+ */
+function envCapSubNodes(cap: SceneCapability): PreviewMenuNode[] {
+  if (cap.getMenuNodes) {
+    const masterId = cap.getMasterToggle?.()?.id ?? null;
+    const all = cap.getMenuNodes();
+    if (!masterId) return all;
+    return all.filter((n) => n.id !== masterId);
+  }
+  return capControlsToNodes(envCapRestControls(cap));
+}
+
+/**
+ * cap 参数子视图（navigate 落点）：把该 cap 参数节点树经 renderMenu 渲染——
+ * 内容进入节点 schema 通道（刀1 桥接或刀2 直产统一出口）。
  * visibleWhen 过滤由 renderMenu 内部经 previewSnapshot() 求值（铁律收口）。
  */
 function envCapSubview(cap: SceneCapability): SlideMenuView {
@@ -147,8 +160,7 @@ function envCapSubview(cap: SceneCapability): SlideMenuView {
     title: tr(cap.labelKey, cap.id),
     render: (list) => {
       list.replaceChildren();
-      const nodes = capControlsToNodes(envCapRestControls(cap));
-      renderMenu(list, nodes, subviewDeps);
+      renderMenu(list, envCapSubNodes(cap), subviewDeps);
     },
   };
 }

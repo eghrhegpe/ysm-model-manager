@@ -16,6 +16,7 @@ auto_fields:
     - attenuateAmbientForSky
     - bindFieldRestorers
     - buildGroundSurfaceSpec
+    - buildReflectorNodes
     - buildSkyGroup
     - buildWaterGroup
     - CapabilityId
@@ -78,6 +79,7 @@ auto_fields:
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
+    - rcMasterToggleNode
     - REFLECTION_MODES
     - ReflectionMode
     - REFLECTOR_PRESETS

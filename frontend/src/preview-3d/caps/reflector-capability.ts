@@ -7,6 +7,8 @@
 
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   GROUND_LAYER_OFFSETS,
   type MenuControlDef,
@@ -304,6 +306,16 @@ export class ReflectorCapability implements SceneCapability {
   /** 能力总开关（SceneCapability 可选接口）：folder 聚合器升 header + body 剔除同源 */
   getMasterToggle(): MenuControlDef | null {
     return rcMasterToggle(this);
+  }
+
+  /* -------- ADR-195 刀2 试点：cap 直产节点（getMenuNodes）-------- */
+
+  /** 完整参数面板节点树（能力总开关 + 参数组 folder）——直产 PreviewMenuNode[]，
+   *  不经过 MenuControlDef/桥接层；简单控件原生节点 + group→folder。
+   *  消费者需「除总开关外」子树时按 getMasterToggle() id 剔除顶层节点
+   *  （env.ts envCapSubNodes 通用处理）。 */
+  getMenuNodes(): PreviewMenuNode[] {
+    return buildReflectorNodes(this);
   }
 
   /* -------- 持久化 -------- */

@@ -275,6 +275,7 @@ auto_fields:
     - webFsBindings
     - WorkerBridge
     - WorkerErrorStrategy
+    - workerMmdUpdateWithMixer
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmContentHandle

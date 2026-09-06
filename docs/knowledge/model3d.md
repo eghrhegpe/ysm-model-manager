@@ -80,6 +80,7 @@ auto_fields:
     - buildPmxScene
     - buildPostprocessingSchema
     - buildPreviewMenuRouters
+    - buildReflectorNodes
     - buildRolesSchema
     - buildSceneMesh
     - buildSettingsControls
@@ -489,6 +490,7 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - rcMasterToggleNode
     - readPmxStats
     - readVrmMeta
     - rebuildDebug
@@ -672,6 +674,7 @@ auto_fields:
     - WaterParams
     - WorkerBridge
     - WorkerErrorStrategy
+    - workerMmdUpdateWithMixer
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer

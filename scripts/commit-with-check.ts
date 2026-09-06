@@ -139,7 +139,7 @@ if (files.length === 0 && !docsMode && !checkOnly) {
   const unstaged = git(['diff', '--name-only']).split('\n').map((s) => s.trim()).filter(Boolean);
   const divergent = paths.filter((p) => unstaged.includes(p));
   if (divergent.length > 0) {
-    console.warn(`⚠️  以下文件存在未暂存改动（提交将包含工作区内容而非暂存内容）:\n  ${divergent.join('\n  ')}\n  如需提交暂存版本，请先 git add 这些文件或取消未暂存改动。`);
+    console.warn(`⚠️  以下文件存在未暂存改动:\n  ${divergent.join('\n  ')}\n  提交将包含工作区内容，如需提交暂存版本，请先 git add 这些文件或取消未暂存改动。`);
   }
 }
 
@@ -228,14 +228,14 @@ console.log(`✅ 已提交: ${sha} ${subject}`);
 console.log('');
 
 console.log('════════════════════════════════════════');
-console.log('  ✅ 轻量门禁全绿 + 已提交，可直接执行：git push');
-console.log('  （重型门禁 go build/vite build 等由 pre-push 钩子兜底）');
+console.log('  ✅ 轻量门禁全绿 + 已提交，建议派子代理复核改动');
+console.log('  重型门禁 go build/vite build 等由 pre-push 钩子兜底');
 console.log('════════════════════════════════════════');
 console.log('');
 
 const status = git(['status', '--short']);
 if (status) {
-  console.log('剩余未暂存改动:');
+  console.log('剩余未暂存改动，注意配合并发会话:');
   console.log(status);
 } else {
   console.log('工作区干净，无剩余改动。');

@@ -18,6 +18,8 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
+    - capControlToView
+    - CapControlView
     - collectSettingsCapControls
     - collectVisiblePredicates
     - createListenerSet
@@ -36,8 +38,13 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - renderCapColor
     - renderCapControls
     - renderCapControlSingle
+    - renderCapDivider
+    - renderCapSelect
+    - renderCapSlider
+    - renderCapToggle
     - resetSettingsListeners
     - restoreFields
     - restoreState

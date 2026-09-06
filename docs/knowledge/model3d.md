@@ -121,6 +121,8 @@ auto_fields:
     - CapabilityMap
     - capControlsToNodes
     - capControlToNode
+    - capControlToView
+    - CapControlView
     - captureTextureName
     - cleanupPreview
     - clearFolderCollapsedState
@@ -429,7 +431,6 @@ auto_fields:
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
-    - nodeControlToCapControl
     - normalizeFbxScale
     - oneOf
     - onOverlayStyleTargetReset
@@ -519,8 +520,13 @@ auto_fields:
     - releaseTextureUrls
     - removePerFrame
     - renderAdapterPanelContent
+    - renderCapColor
     - renderCapControls
     - renderCapControlSingle
+    - renderCapDivider
+    - renderCapSelect
+    - renderCapSlider
+    - renderCapToggle
     - renderLoadingState
     - renderMenu
     - RenderModeCapability

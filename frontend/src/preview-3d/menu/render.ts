@@ -10,7 +10,6 @@ import { tr } from "../../core/i18n/tr.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
 import { getSchema } from "../adapters/schema-registry.ts";
-import type { MenuControlDef, MenuControlKind } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import {
   isPathAvailable,
@@ -18,7 +17,14 @@ import {
   previewSnapshot,
   setStateValue,
 } from "../state/preview-state.ts";
-import { renderCapControls } from "./cap-controls.ts";
+import {
+  type CapControlView,
+  renderCapColor,
+  renderCapControls,
+  renderCapSelect,
+  renderCapSlider,
+  renderCapToggle,
+} from "./cap-controls.ts";
 import { MENU_DIVIDER_CSS, MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
@@ -340,36 +346,32 @@ function rmAppendDynamicRow(
 }
 
 /**
- * [控件原语归一] 将 PreviewMenuNode 的 PreviewControlSpec 投影为 MenuControlDef，
- *  供 renderCapControls 复用 cap 栈渲染。数据契约不动——只转换渲染层，
- *  6 个适配器工厂产出结构零改动。
+ * [控件原语归一 · ADR-195 刀 2.5 投影反转] 将 PreviewMenuNode.control（PreviewControlSpec）
+ * 适配为 CapControlView 供 cap 栈简单控件渲染器（renderCapToggle/Slider/Select/Color/
+ * Divider）直吃——不再构造 MenuControlDef 中间对象（该类型刀 3 退役）。
  *
- * 语义保留（对齐 rmAppendSelect/Slider/Toggle 全行为）：
+ * 语义保留（对齐旧 nodeControlToCapControl 全行为）：
  *   - get(v?) → getValue()（bind 优先：取 snapshot[bind] 经 get 衍生）
  *   - set(v) → setValue(v)（spec.set → bind 写状态层 → spec.onChange）
- *   - onChange(v) → onChange(v)（refreshOnChange 时 menu.refresh）
- *   - numeric → slider.numeric（cap 渲染端已支持双向联动 + clamp）
- *   - bind（全仓零消费者，死代码；保留映射能力但不新增消费者）
+ *   - refreshOnChange → onChange 内触发 menu.refresh()
+ *   - numeric/slider.unit/onCommit → view.slider 透传
  */
-export function nodeControlToCapControl(
+function nodeControlToView(
   node: PreviewMenuNode,
   snapshot: Record<string, unknown>,
   menu?: SlideMenuHandle,
-): MenuControlDef {
+): CapControlView {
   const spec = node.control;
-  const kind = node.kind as MenuControlKind;
   const labelKey = node.labelKey ?? "";
   const fallback = node.fallback ?? node.id;
 
-  const getValue = (): number | string | boolean | null | number[] => {
+  const getValue = (): unknown => {
     if (!spec) return null;
     if (spec.bind) {
       const raw = snapshot[spec.bind];
-      return spec.get
-        ? (spec.get(raw) as number | string | boolean | null | number[])
-        : (raw as number | string | boolean | null | number[]);
+      return spec.get ? spec.get(raw) : raw;
     }
-    return spec.get ? (spec.get(undefined) as number | string | boolean | null | number[]) : null;
+    return spec.get ? spec.get(undefined) : null;
   };
 
   const setValue = (v: number | string | boolean): void => {
@@ -382,47 +384,32 @@ export function nodeControlToCapControl(
       }
     }
     spec.onChange?.(v);
+    if (spec.refreshOnChange) menu?.refresh();
   };
 
-  const onChange = (): void => {
-    if (spec?.refreshOnChange) menu?.refresh();
-  };
-
-  const base: MenuControlDef = {
+  const view: CapControlView = {
     id: node.id,
-    kind,
     labelKey,
     fallback,
     getValue,
     setValue,
-    onChange,
+    ...(spec?.onChange || spec?.refreshOnChange ? { onChange: setValue } : {}),
   };
-  // [ADR-195] spec 与 MenuControlDef 同构：节点 hintKey 透传（cap hintKey 展示右侧小字）
-  if (node.hintKey) base.hintKey = node.hintKey;
+  if (node.hintKey) view.hintKey = node.hintKey;
 
-  if (kind === "slider" && spec) {
-    const sliderDef: NonNullable<MenuControlDef["slider"]> = {
+  if (node.kind === "slider" && spec) {
+    const slider: NonNullable<CapControlView["slider"]> = {
       min: spec.min ?? 0,
       max: spec.max ?? 100,
       step: spec.step ?? 1,
     };
-    if (spec.numeric !== undefined) sliderDef.numeric = spec.numeric;
-    // [ADR-195] unit/onCommit 同构透传（cap slider 值格式化/离散提交零损失）
-    if (spec.unit !== undefined) sliderDef.unit = spec.unit;
-    if (spec.onCommit) sliderDef.onCommit = spec.onCommit;
-    base.slider = sliderDef;
+    if (spec.numeric !== undefined) slider.numeric = spec.numeric;
+    if (spec.unit !== undefined) slider.unit = spec.unit;
+    if (spec.onCommit) slider.onCommit = spec.onCommit;
+    view.slider = slider;
   }
-
-  if (kind === "select" && spec?.options) {
-    base.select = spec.options;
-  }
-
-  if (kind === "color") {
-    // [ADR-195] color：值 = 0xRRGGBB 数字，renderCapColor 经 getValue/setValue 读写
-    // （get 闭包已在上方 getValue 统一处理，此处无需额外配置块）
-  }
-
-  return base;
+  if (node.kind === "select" && spec?.options) view.select = spec.options;
+  return view;
 }
 
 /** [子函数 5.75/6] material-row：组合控件行（label + eye 显隐 + opacity 滑条）——
@@ -607,11 +594,19 @@ export function renderMenu(
       case "slider":
       case "toggle":
       case "color": {
-        // [控件原语归一] 四类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
-        //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役；
-        //  color 为 [ADR-195] 新增原生 kind（cap color 同构，投影 renderCapColor）。
-        const def = nodeControlToCapControl(node, snapshot, deps.menu);
-        renderCapControls(container, [def], snapshot);
+        // [控件原语归一 · ADR-195 刀 2.5 投影反转] 节点控件经 nodeControlToView 适配为
+        // CapControlView 直供 cap 栈渲染器（renderCapToggle/Slider/Select/Color）——
+        // 不再构造 MenuControlDef 中间对象（rmAppendSelect/Slider/Toggle 已退役）。
+        const view = nodeControlToView(node, snapshot, deps.menu);
+        const renderer =
+          node.kind === "toggle"
+            ? renderCapToggle
+            : node.kind === "slider"
+              ? renderCapSlider
+              : node.kind === "select"
+                ? renderCapSelect
+                : renderCapColor;
+        renderer(container, view);
         break;
       }
       case "material-row":

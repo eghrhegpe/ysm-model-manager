@@ -1,6 +1,11 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
 // 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
+//
+// [ADR-195 刀 2.5] 投影反转：renderMenu 分派的节点控件（select/slider/toggle/color/divider）
+// 不再经 nodeControlToCapControl 构造 MenuControlDef 中间对象——五个简单控件渲染实现改吃
+// 统一 CapControlView（MenuControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
+// renderCapControls 的 MenuControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
 
 import { tr } from "../../core/i18n/tr.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
@@ -8,6 +13,38 @@ import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
+
+/**
+ * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
+ * 渲染实现的读取面（MenuControlDef 子集）。MenuControlDef 结构化满足；node spec 经
+ * specToCapControlView 适配。杜绝渲染实现直接依赖 MenuControlDef 类型（刀 3 删类型的
+ * 最后硬依赖清除）。
+ */
+export interface CapControlView {
+  id: string;
+  labelKey: string;
+  fallback: string;
+  hintKey?: string;
+  getValue(): unknown;
+  setValue(v: number | string | boolean): void;
+  onChange?(v: number | string | boolean): void;
+  /** slider 专属 */
+  slider?: {
+    min: number;
+    max: number;
+    step: number;
+    unit?: string;
+    numeric?: boolean;
+    onCommit?: (v: number) => void;
+  };
+  /** select 专属 */
+  select?: Array<{ value: string; label: string }>;
+}
+
+/** MenuControlDef → CapControlView（结构化满足，零拷贝适配） */
+export function capControlToView(c: MenuControlDef): CapControlView {
+  return c as unknown as CapControlView;
+}
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（MenuControlDef.labelKey/group 为数据字段 + group 原文兜底），
@@ -110,35 +147,35 @@ function ensureCapSection(
 }
 
 /** divider：无 group 挂顶层作组间视觉分隔；有 group 挂 body 内作组内分隔 */
-function renderCapDivider(parent: HTMLElement, c: MenuControlDef): void {
+export function renderCapDivider(parent: HTMLElement, v: CapControlView): void {
   const hr = document.createElement("div");
-  hr.dataset.testid = `cap-${c.id}`;
+  hr.dataset.testid = `cap-${v.id}`;
   hr.className = "cc-divider";
   parent.appendChild(hr);
 }
 
 /** toggle：label + hint + 滑动开关 */
-function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
+export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = `cap-${c.id}`;
+  row.dataset.testid = `cap-${v.id}`;
   const labelBox = document.createElement("div");
   labelBox.className = "cc-labelbox";
   const label = document.createElement("span");
   label.className = "slide-label cc-label-xs";
-  label.textContent = tr(c.labelKey, c.fallback);
+  label.textContent = tr(v.labelKey, v.fallback);
   const hint = document.createElement("span");
   hint.className = "cc-hint";
-  hint.textContent = c.hintKey ? tr(c.hintKey, "") : "";
+  hint.textContent = v.hintKey ? tr(v.hintKey, "") : "";
   labelBox.append(label, hint);
   const toggle = createHeaderToggle({
-    value: c.getValue() as boolean,
-    onChange: (v: boolean): void => {
-      c.setValue(v);
+    value: v.getValue() as boolean,
+    onChange: (val: boolean): void => {
+      v.setValue(val);
       // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
-      c.onChange?.(v);
+      v.onChange?.(val);
     },
-    bind: (): boolean => c.getValue() as boolean,
+    bind: (): boolean => v.getValue() as boolean,
   });
   row.append(labelBox, toggle);
   parent.appendChild(row);
@@ -149,39 +186,39 @@ function renderCapToggle(parent: HTMLElement, c: MenuControlDef): void {
  *   unit="h" → HH:MM（小数进位分钟）／ unit="%" → 百分比（×100 取整）／
  *   其它 unit → 值+单位拼接 ／ 无 unit → toFixed(2)
  */
-export function formatCapSliderValue(c: MenuControlDef, v: number): string {
-  const u = c.slider?.unit;
+export function formatCapSliderValue(v: CapControlView, num: number): string {
+  const u = v.slider?.unit;
   if (u === "h")
-    return `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}`;
-  if (u === "%") return `${Math.round(v * 100)}%`;
-  if (u) return `${v}${u}`;
-  return v.toFixed(2);
+    return `${String(Math.floor(num)).padStart(2, "0")}:${String(Math.round((num % 1) * 60)).padStart(2, "0")}`;
+  if (u === "%") return `${Math.round(num * 100)}%`;
+  if (u) return `${num}${u}`;
+  return num.toFixed(2);
 }
 
 /** slider：label + 当前值 + range 拖动（[控件原语归一] 收编 rmAppendSlider：numeric 数字输入 + onChange 钩子） */
-function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
+export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
-  row.dataset.testid = `cap-${c.id}`;
+  row.dataset.testid = `cap-${v.id}`;
   const head = document.createElement("div");
   head.className = "cc-head";
   const name = document.createElement("span");
   name.className = "slide-label";
-  name.textContent = tr(c.labelKey, c.fallback);
+  name.textContent = tr(v.labelKey, v.fallback);
   const val = document.createElement("span");
-  const numVal = c.getValue() as number;
-  val.textContent = formatCapSliderValue(c, numVal);
+  const numVal = v.getValue() as number;
+  val.textContent = formatCapSliderValue(v, numVal);
   head.append(name, val);
   const slider = document.createElement("input");
   slider.type = "range";
-  slider.min = String(c.slider?.min ?? 0);
-  slider.max = String(c.slider?.max ?? 1);
-  slider.step = String(c.slider?.step ?? 0.01);
+  slider.min = String(v.slider?.min ?? 0);
+  slider.max = String(v.slider?.max ?? 1);
+  slider.step = String(v.slider?.step ?? 0.01);
   slider.value = String(numVal);
   slider.className = "cc-range";
   // [控件原语归一] numeric：旁挂数字输入框（双向联动，onchange 走 min/max clamp——litematic 分层语义）
   let num: HTMLInputElement | null = null;
-  if (c.slider?.numeric) {
+  if (v.slider?.numeric) {
     num = document.createElement("input");
     num.type = "number";
     num.min = slider.min;
@@ -191,31 +228,31 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
     num.className = "rm-range-num";
   }
   slider.oninput = (): void => {
-    const v = Number(slider.value);
-    c.setValue(v);
-    val.textContent = formatCapSliderValue(c, v);
-    if (num) num.value = String(v);
-    c.onChange?.(v);
+    const cur = Number(slider.value);
+    v.setValue(cur);
+    val.textContent = formatCapSliderValue(v, cur);
+    if (num) num.value = String(cur);
+    v.onChange?.(cur);
   };
   if (num) {
     // const 收窄替代非空断言：num 在 if 块内确定存在，捕获为 numEl 供闭包引用（TS 对 const 收窄生效）
     const numEl = num;
     numEl.onchange = (): void => {
       const n = Number(numEl.value);
-      const v = Number.isFinite(n)
+      const cur = Number.isFinite(n)
         ? Math.max(Number(slider.min), Math.min(Number(slider.max), n))
         : Number(slider.value);
-      slider.value = String(v);
-      numEl.value = String(v);
-      c.setValue(v);
-      val.textContent = formatCapSliderValue(c, v);
-      c.onChange?.(v);
+      slider.value = String(cur);
+      numEl.value = String(cur);
+      v.setValue(cur);
+      val.textContent = formatCapSliderValue(v, cur);
+      v.onChange?.(cur);
     };
   }
   // slider 提交（松手/change）：高频拖拽在 oninput 已写值，此处只做离散提交回调
   // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。
   slider.onchange = (): void => {
-    c.slider?.onCommit?.(Number(slider.value));
+    v.slider?.onCommit?.(Number(slider.value));
   };
   row.append(head, slider);
   if (num) row.append(num);
@@ -223,27 +260,27 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /** select：label + 下拉选择（[控件原语归一] 收编 rmAppendSelect：onChange 钩子） */
-function renderCapSelect(parent: HTMLElement, c: MenuControlDef): void {
+export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = `cap-${c.id}`;
+  row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tr(c.labelKey, c.fallback);
+  label.textContent = tr(v.labelKey, v.fallback);
   const sel = document.createElement("select");
   sel.className = "setting-select cc-select";
-  for (const opt of c.select ?? []) {
+  for (const opt of v.select ?? []) {
     const o = document.createElement("option");
     o.value = opt.value;
     o.textContent = opt.label;
     sel.appendChild(o);
   }
-  sel.value = String(c.getValue());
+  sel.value = String(v.getValue());
   sel.onchange = (): void => {
-    const v = sel.value;
-    c.setValue(v);
+    const sv = sel.value;
+    v.setValue(sv);
     // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
-    c.onChange?.(v);
+    v.onChange?.(sv);
   };
   row.append(label, sel);
   parent.appendChild(row);
@@ -305,16 +342,16 @@ function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /** color：label + 颜色选择器（number 0xRRGGBB ↔ "#rrggbb"） */
-function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
+export function renderCapColor(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
-  row.dataset.testid = `cap-${c.id}`;
+  row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tr(c.labelKey, c.fallback);
-  const hex = c.getValue() as number;
-  const toHexStr = (v: number): string => {
-    const s = (v >>> 0).toString(16).padStart(6, "0").slice(-6);
+  label.textContent = tr(v.labelKey, v.fallback);
+  const hex = v.getValue() as number;
+  const toHexStr = (val: number): string => {
+    const s = (val >>> 0).toString(16).padStart(6, "0").slice(-6);
     return `#${s}`;
   };
   const picker = document.createElement("input");
@@ -323,7 +360,7 @@ function renderCapColor(parent: HTMLElement, c: MenuControlDef): void {
   picker.className = "cc-picker";
   picker.oninput = (): void => {
     const h = picker.value; // "#rrggbb"
-    c.setValue(parseInt(h.slice(1), 16));
+    v.setValue(parseInt(h.slice(1), 16));
   };
   row.append(label, picker);
   parent.appendChild(row);
@@ -531,20 +568,23 @@ export function collectVisiblePredicates(controls: MenuControlDef[]): MenuContro
 
 /** 单控件渲染分派（ADR-195 刀1 起导出：cap-to-node 桥接层 custom 委托用）。
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
- *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。 */
+ *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。
+ *  [ADR-195 刀 2.5] 简单 kind（divider/toggle/slider/select/color）经 capControlToView
+ *  适配为统一视图渲染（不再直接吃 MenuControlDef）；复杂 kind 保持 MenuControlDef
+ *  （button 变体、thumb 配置等全字段承载）。 */
 export function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
   switch (c.kind) {
     case "divider":
-      renderCapDivider(parent, c);
+      renderCapDivider(parent, capControlToView(c));
       break;
     case "toggle":
-      renderCapToggle(parent, c);
+      renderCapToggle(parent, capControlToView(c));
       break;
     case "slider":
-      renderCapSlider(parent, c);
+      renderCapSlider(parent, capControlToView(c));
       break;
     case "select":
-      renderCapSelect(parent, c);
+      renderCapSelect(parent, capControlToView(c));
       break;
     case "button":
       renderCapButton(parent, c);
@@ -553,7 +593,7 @@ export function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): 
       renderCapImage(parent, c);
       break;
     case "color":
-      renderCapColor(parent, c);
+      renderCapColor(parent, capControlToView(c));
       break;
     case "timeline":
       renderCapTimeline(parent, c);

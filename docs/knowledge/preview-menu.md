@@ -37,6 +37,8 @@ auto_fields:
     - canNodeRepresent
     - capControlsToNodes
     - capControlToNode
+    - capControlToView
+    - CapControlView
     - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
@@ -57,7 +59,6 @@ auto_fields:
     - mountPreviewRootMenu
     - multiModelSelectNode
     - MultiModelSelectOpts
-    - nodeControlToCapControl
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
     - PreviewControlSpec
@@ -70,8 +71,13 @@ auto_fields:
     - PreviewMenuNodeKind
     - PreviewMenuRouters
     - renderAdapterPanelContent
+    - renderCapColor
     - renderCapControls
     - renderCapControlSingle
+    - renderCapDivider
+    - renderCapSelect
+    - renderCapSlider
+    - renderCapToggle
     - renderMenu
     - renderPreviewPanel
     - roleBaseName

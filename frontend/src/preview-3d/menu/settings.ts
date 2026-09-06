@@ -14,13 +14,13 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
-import { type MenuControlDef, stripMenuControlGroup } from "../caps/scene-capability.ts";
+import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
-import { getStateValue, previewSnapshot, setStateValue } from "../state/preview-state.ts";
+import { getStateValue, setStateValue } from "../state/preview-state.ts";
+import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
-import { nodeControlToCapControl } from "./render.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -132,7 +132,9 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
   return [{ id: "postproc", kind: "controls", controls: () => fromReg.getMenuControls() }];
 }
 
-/** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
+/** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。
+ *  每次面板渲染重构建（core.ts schemaBuilder），collectSettingsCapControls 内部实时遍历
+ *  registry——「cap 后创建可见」由 schema 重建语义保证（对齐 ADR-125 P3）。 */
 export function buildSettingsSchema(
   _ctx: PreviewMenuCtx,
   menu?: SlideMenuHandle,
@@ -141,10 +143,11 @@ export function buildSettingsSchema(
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
     // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示
     bsBuildPerfPresetRow(menu),
-    // 传函数引用而非求值结果：每次 DOM 渲染时重取，cap 后创建/再渲染也能看见
-    bsBuildControlsRow("settings-perf", buildCrossCuttingControls),
+    // [ADR-195 刀 2.5] 横切控件转节点展开（原 controls 通道退役）
+    ...capControlsToNodes(buildCrossCuttingControls()),
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality", "画质"),
-    bsBuildControlsRow("settings-quality", collectSettingsCapControls),
+    // [ADR-195 刀 2.5] cap 聚合节点直接展开（collectSettingsCapControls 返回节点数组）
+    ...collectSettingsCapControls(),
     bsBuildNote(),
   ];
 }
@@ -209,46 +212,50 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
 // ── 设置面板：自动 cap 聚合（ADR-125 P2）──
 
 /**
- * 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。
+ * 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件节点，升序并入设置面板。
  *
- * 设计要点：
+ * [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]（不再投影回 MenuControlDef）：
+ *   - 已迁移 cap（getMenuNodes）：从节点树收集带 settingsOrder 的原生节点
+ *     （settings 扁平视图不收 folder 组；复杂控件若带 settingsOrder 保持原节点
+ *     ——刀 2 迁移保证 settingsOrder 只挂在原生节点上）
+ *   - 未迁移 cap：getMenuControls → capControlsToNodes 桥接成节点再收
+ * 渲染侧由 renderMenu 直渲染节点（settings-quality 展开），不再包 controls 节点。
+ *
+ * 其余设计要点（沿用）：
  *  - **settings 侧零接线**：新 cap 想进设置面板，只在自己文件里给控件加
- *    `settingsOrder`，本函数自动发现（`f0fa3e23` 那类「cap 已自报、面板却手写」
- *    的重复真值来源从此不可能发生）
- *  - **每次调用重取**：不在模块加载期缓存 cap 实例，规避 ADR-125 P3 明令禁止的
- *    「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修同类病）
- *  - **抹平 group**：设置面板是扁平视图，剥掉 cap 自身的折叠分组壳，
- *    避免「高级」等 section 混进设置页
+ *    `settingsOrder`，本函数自动发现
+ *  - **每次调用重取**：不在模块加载期缓存 cap 实例，规避 ADR-125 P3「声明期求值」
  *  - 未声明 settingsOrder 的控件不进设置面板（否则 pp 的 20 个高级控件会淹没它）
  */
-export function collectSettingsCapControls(): MenuControlDef[] {
-  const out: MenuControlDef[] = [];
+export function collectSettingsCapControls(): PreviewMenuNode[] {
+  const out: PreviewMenuNode[] = [];
   for (const cap of sceneCapabilityRegistry.getAll()) {
-    // [ADR-195 刀2 双轨] 已迁移 cap（getMenuNodes）从节点树收集 settingsOrder 节点，
-    // 经 nodeControlToCapControl 投影回 MenuControlDef 保 settings 渲染通道不变；
-    // 未迁移 cap 走旧 getMenuControls 路径。刀3 收口后统一走节点。
     if (cap.getMenuNodes) {
-      const snapshot = previewSnapshot();
       for (const n of cap.getMenuNodes()) {
         if (n.settingsOrder === undefined) continue;
         if (n.kind === "folder") continue; // settings 扁平视图不收 folder 组
-        out.push(nodeControlToCapControl(n, snapshot, undefined));
+        out.push(n);
       }
       continue;
     }
-    for (const c of cap.getMenuControls()) {
-      if (c.settingsOrder === undefined) continue;
-      out.push(c);
+    // 未迁移 cap：MenuControlDef → 节点桥接后按 settingsOrder 收集（保序）
+    const nodes = capControlsToNodes(cap.getMenuControls());
+    for (const n of nodes) {
+      if (n.settingsOrder === undefined) continue;
+      if (n.kind === "folder") continue;
+      out.push(n);
     }
   }
   out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));
-  // 抹平 group：剥掉 group 字段（共享纯函数，env 分区子视图同源——防 renderCapControls 再包折叠 section）
-  return stripMenuControlGroup(out);
+  // 节点形态无 group 字段（folder 已剥）——无需抹平 group
+  return out;
 }
 
-/** 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM */
-export function buildSettingsControls(): MenuControlDef[] {
-  return [...buildCrossCuttingControls(), ...collectSettingsCapControls()];
+/** 设置面板全部控件节点（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM。
+ *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切 MenuControlDef[] 经 capControlsToNodes
+ *  桥接成节点，与聚合节点同流。 */
+export function buildSettingsControls(): PreviewMenuNode[] {
+  return [...capControlsToNodes(buildCrossCuttingControls()), ...collectSettingsCapControls()];
 }
 
 // ── 通用节点工厂 ──
@@ -280,20 +287,6 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
 
 function bsBuildSectionTitle(id: string, labelKey: string, fallback: string): PreviewMenuNode {
   return { id, kind: "sectionTitle", labelKey, fallback };
-}
-
-/**
- * 把一组 MenuControlDef 包成声明式 controls 节点，交给唯一控件渲染器 renderCapControls。
- *
- * `controls` 传**函数引用**时每次渲染求值（惰性）——规避 ADR-125 P3 明令禁止的
- * 「构建期求值 → cap 后创建则永不可见」（即 05fe24b7 所修同类病）：
- * 节点只持有 supplier，cap 何时创建、面板何时重渲染，都取最新全量。
- */
-function bsBuildControlsRow(
-  id: string,
-  controls: MenuControlDef[] | (() => MenuControlDef[]),
-): PreviewMenuNode {
-  return { id, kind: "controls", controls };
 }
 
 function bsBuildNote(): PreviewMenuNode {

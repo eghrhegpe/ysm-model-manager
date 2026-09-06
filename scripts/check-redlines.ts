@@ -375,6 +375,8 @@ function runChecks() {
         if (hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)/, 10, cache)) return false;
         // 预览临时目录清扫（os.TempDir()/ysm-preview，非 scanner 跟踪范围），豁免
         if (hasContext(f, line, /sweepPreviewTemp|ysm-preview|os\.TempDir\(\)/, 15, cache)) return false;
+        // updater 临时安装包清理（DoUpdate/InstallUpdate 下载的 exe，非模型库写操作），豁免
+        if (hasContext(f, line, /DoUpdate|InstallUpdate/, 10, cache)) return false;
         return true;
       }),
     '确认所在函数已配 scanner.InvalidateCache/InvalidatePath（防 30s 陈旧缓存"复活"）');

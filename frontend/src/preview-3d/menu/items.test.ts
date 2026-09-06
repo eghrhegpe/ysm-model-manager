@@ -374,7 +374,7 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     modelBtn!.click();
     const popup = overlay.querySelector(".ysm-preview-menu") as HTMLElement;
     expect(popup.style.display).toBe("flex");
-    const rows = overlay.querySelectorAll('[data-testid="preview-switch-item"]');
+    const rows = overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]');
     expect(rows.length).toBe(2);
     (rows[1] as HTMLElement).click();
     expect(switchTo).toHaveBeenCalledWith("/m/b.vrm");

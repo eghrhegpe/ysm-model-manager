@@ -33,7 +33,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
   beforeEach(() => resetSchemas());
   afterEach(() => resetSchemas());
 
-  it("枚举闭包 schemaBuilders + registry 双通道，roles 标 procedural（coverage=partial）", () => {
+  it("枚举闭包 schemaBuilders + registry 双通道（ADR-193 第四刀后 roles 已入 schemaBuilders，coverage=full）", () => {
     // registry 通道：注册 ysm-model（模拟 ysm-adapter 运行时注册）
     registerSchema("ysm-model", () => [
       {
@@ -58,10 +58,10 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     // registry 通道（ysm-model 解析进 model dock）+ 闭包缺的 roles filler
     expect(byGroup["model"]).toEqual(expect.arrayContaining(["roles", "ysm-model"]));
 
-    // 🔴 ADR-193 推进中：roles filler 仍过程式 → partial（core 六面板已随
-    // buildPreviewMenuRouters 双注册合并 §2.5 迁入 registry，builder 债已清零）
-    expect(graph.coverage).toBe("partial");
-    expect(graph.proceduralPanels).toContain("roles");
+    // ✅ ADR-193 第四刀达成：roles 迁入 schemaBuilders（fillers 通道退役）→
+    // proceduralPanels 与 dualChannelDebt 双清零 → 判定式自然翻转为 full
+    expect(graph.coverage).toBe("full");
+    expect(graph.proceduralPanels).toEqual([]);
     // 关键：registry 通道真被枚举（死穴一的反证）
     expect(graph.proceduralPanels).not.toContain("ysm-model");
   });
@@ -172,7 +172,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     expect(ysm.reachableBy).toEqual(["default", "envOn", "modeOn"]);
   });
 
-  it("registryIds 白名单只收窄枚举、不收窄 coverage 判定（防白名单洗掉 procedural 债，P2③）；§2.5 合并后 builder 债不再出现在 uncoveredLayers", () => {
+  it("registryIds 白名单只收窄枚举（P2③）；第四刀后 uncoveredLayers 全清空", () => {
     registerSchema("ysm-model", () => [{ id: "model", kind: "panel", dockGroup: "model" }]);
     const { routers, menu } = buildGraphRouters();
     // 白名单只给 ysm-model：枚举收窄，但 closure builder 债仍按全量 listSchemas() 算
@@ -185,13 +185,9 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     // 枚举收窄：registry 通道只产出 ysm-model（无其它 registry 面板混入）
     const modelDock = graph.docks.find((d) => d.group === "model")!;
     expect(modelDock.panels.map((p) => p.id)).toContain("ysm-model");
-    // coverage 仍 partial：roles filler 仍过程式（core 六面板债已随 §2.5 双注册合并清零）
-    expect(graph.coverage).toBe("partial");
-    expect(graph.uncoveredLayers).toContain("roles"); // procedural 面板 id
-    // ADR-193 §2.5 合并后：closure builder id 不再出现在 uncoveredLayers——
-    // buildPreviewMenuRouters 已把六面板注册进 registry（dualChannelDebt 判定依据）
-    expect(graph.uncoveredLayers).not.toContain("lighting");
-    expect(graph.uncoveredLayers).not.toContain("camera");
+    // ADR-193 第四刀达成：procedural 债（roles）+ builder 债（§2.5 双注册合并）双清零
+    expect(graph.coverage).toBe("full");
+    expect(graph.uncoveredLayers).toEqual([]);
   });
 
   it("core 六面板注册生命周期：build 注册 → dispose 所有权注销 → 重挂载重注册（code_review 8988145d #6-#9）", async () => {

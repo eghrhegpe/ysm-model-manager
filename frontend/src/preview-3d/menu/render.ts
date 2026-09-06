@@ -82,7 +82,11 @@ function ensureMenuStyles(): void {
    width: 72px;
    cursor: pointer;
    accent-color: var(--accent, #7c83ff);
-}`;
+}
+/* row 槽位样式（ADR-193 第四刀）：radio 活跃行高亮 + 行内按钮尺寸微调 */
+.rm-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.row-radio-active { color: var(--accent, #7c83ff); }
+.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size: 12px; line-height: 1.2; }`;
   overlayStyleRoot().appendChild(style);
   _menuStylesInjected = true;
 }
@@ -142,11 +146,19 @@ function rmBindLeafClick(row: HTMLElement, node: PreviewMenuNode, deps: RenderMe
   };
 }
 
-/** folder 开合态记忆（按 node.id）：用户交互过的开合状态跨 menu.refresh() 重渲染保持——
+/** folder 折叠态记忆（按 node.id，true=折叠）：用户交互过的折叠状态跨 menu.refresh() 重渲染保持——
  *  ADR-193 第三刀（env folder 手风琴）引入：cap 订阅驱动的 refresh 会重建 DOM，
- *  无此记忆则用户展开的分组被重置回 defaultOpen。id 集合有限（菜单节点固定），不泄漏；
- *  未交互过的 folder 仍以 defaultOpen 为初值。 */
-const folderOpenState = new Map<string, boolean>();
+ *  无此记忆则用户展开的分组被重置回 defaultOpen。id 集合有限（菜单节点固定）；
+ *  ⚠️ code_review bc639ae0 #3：命名取「折叠态」非「开合态」——存储值 true=折叠
+ *  （点击折叠存 true / 展开存 false），旧名 folderOpenState 与语义相反，易被
+ *  未来维护者按名误写；#1/#2/#5：本 Map 模块级存活，菜单 dispose 时必须清空，
+ *  否则跨会话泄漏（core.ts dispose 调 clearFolderCollapsedState） */
+const folderCollapsedState = new Map<string, boolean>();
+
+/** 清空 folder 折叠态记忆（core.ts 菜单 dispose 时调用——防跨会话/跨挂载状态泄漏） */
+export function clearFolderCollapsedState(): void {
+  folderCollapsedState.clear();
+}
 
 /** [子函数 1/6] folder：可折叠 section，递归 renderMenu 渲染 children */
 function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
@@ -156,7 +168,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   section.dataset.testid = node.id;
   const header = document.createElement("div");
   header.className = "cap-section-header";
-  const collapsed = folderOpenState.get(node.id) ?? node.defaultOpen === false;
+  const collapsed = folderCollapsedState.get(node.id) ?? node.defaultOpen === false;
   const arrow = document.createElement("span");
   arrow.textContent = collapsed ? "▸" : "▾";
   arrow.className = "cap-section-arrow";
@@ -173,7 +185,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     const nowCollapsed = body.style.display === "none";
     body.style.display = nowCollapsed ? "block" : "none";
     arrow.textContent = nowCollapsed ? "▾" : "▸";
-    folderOpenState.set(node.id, !nowCollapsed); // 仅记用户交互态（ADR-193 第三刀）
+    folderCollapsedState.set(node.id, !nowCollapsed); // 仅记用户交互态（ADR-193 第三刀；true=折叠）
   });
   renderMenu(body, children, deps);
   section.append(header, body);
@@ -225,7 +237,8 @@ function rmAppendButton(
   container.appendChild(row);
 }
 
-/** [子函数 4/6] row：动态列表行（纹理/材质/bone 等） */
+/** [子函数 4/6] row：动态列表行（纹理/材质/bone 等动态列表；ADR-193 第四刀起支持
+ *  行首 radio（焦点钮）与行尾 badge（次级动作钮）槽位——roles 角色行/switch 候选行） */
 function rmAppendDynamicRow(
   container: HTMLElement,
   node: PreviewMenuNode,
@@ -233,12 +246,48 @@ function rmAppendDynamicRow(
 ): void {
   const { row, lb } = rmMakeRowBase(node);
   lb.classList.add("rm-label-sm");
-  lb.textContent = rmLabel(node, node.value || node.id);
-  if (node.value && typeof node.value === "string") {
-    const meta = document.createElement("span");
-    meta.className = "slide-sublabel";
-    meta.textContent = node.value;
-    row.appendChild(meta);
+  // 无 labelKey（动态内容如角色名/候选文件名）→ fallback 直出行文案，meta 不重复显示；
+  // 有 labelKey → 旧行为（tr 求值 + value 作 sublabel meta）
+  if (node.labelKey) {
+    lb.textContent = rmLabel(node, node.value || node.id);
+    if (node.value && typeof node.value === "string") {
+      const meta = document.createElement("span");
+      meta.className = "slide-sublabel";
+      meta.textContent = node.value;
+      row.appendChild(meta);
+    }
+  } else {
+    lb.textContent = node.fallback ?? node.id;
+  }
+  if (node.radio) {
+    const radio = document.createElement("button");
+    radio.type = "button";
+    radio.dataset.testid = "row-radio";
+    radio.textContent = node.radio.active ? "●" : "○";
+    radio.title = node.radio.title;
+    radio.className =
+      "cc-btn cc-btn-ghost rm-inline-btn" + (node.radio.active ? " row-radio-active" : "");
+    radio.style.marginRight = "6px";
+    radio.onclick = (ev): void => {
+      ev.stopPropagation();
+      node.radio?.onClick();
+    };
+    row.prepend(radio);
+  }
+  if (node.radio?.active) row.classList.add("rm-row-active");
+  if (node.badge) {
+    const badge = document.createElement("button");
+    badge.type = "button";
+    badge.dataset.testid = "row-badge";
+    badge.textContent = node.badge.label;
+    badge.title = node.badge.title;
+    badge.className = "cc-btn cc-btn-ghost rm-inline-btn";
+    badge.style.marginLeft = "auto";
+    badge.onclick = (ev): void => {
+      ev.stopPropagation();
+      node.badge?.onClick();
+    };
+    row.appendChild(badge);
   }
   rmBindActionClick(row, node.action, actionCtx);
   container.appendChild(row);
@@ -377,10 +426,10 @@ function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
     container.appendChild(hr);
     return;
   }
-  // sectionTitle
+  // sectionTitle（无 labelKey → fallback 直出，同 rmAppendDynamicRow 口径）
   const st = document.createElement("div");
   st.dataset.testid = node.id;
-  st.textContent = rmLabel(node);
+  st.textContent = node.labelKey ? rmLabel(node) : (node.fallback ?? node.id);
   st.className = "section-title";
   container.appendChild(st);
 }

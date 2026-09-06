@@ -22,6 +22,10 @@ import type { PreviewSnapshot, PreviewStatePath } from "../state/preview-state.t
 export interface PreviewActionMenuCtx {
   toast: (message: string) => void;
   closeAllOverlays: () => void;
+  /** [ADR-193 第四刀] 视图导航原语（可选）：声明式 action 内下钻子视图
+   *  （如 roles 角色行 → modelDetailView 详情）。mount3D 注入 menu.navigate，
+   *  旧消费者（仅 toast/closeAllOverlays）零感知 */
+  navigate?: (view: { title: string; render: (list: HTMLElement) => void }) => void;
 }
 
 /** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */
@@ -136,8 +140,7 @@ export interface PreviewMenuNode {
   schemaId?: string;
   /** action 节点回调 */
   action?: (ctx: PreviewActionMenuCtx) => void | Promise<void>;
-  /** ———— ysm 特有（预览器 dock 归属与模式守卫）———— */
-  /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 环境 / 🎛️ 场景 / ⚙️ 设置 / 📊 统计附加行）；
+  /** ———— ysm 特有（预览器 dock 归属与模式守卫）———— */ /** 归属底栏分组（🧍 模型 / 💃 动作 / 🌍 环境 / 🎛️ 场景 / ⚙️ 设置 / 📊 统计附加行）；
    *  无 dockGroup 只出现在设置聚合视图。
    *  [ADR-159] "stats" = 统计附加行通道：适配器贡献 kind:"field" 节点（如资源包立方体数），
    *  mergeStatsMenuItems 将其并入统计面板 children，随「能渲染就能出统计」通道展示 */
@@ -148,6 +151,12 @@ export interface PreviewMenuNode {
   //   - self 模式隐藏 → (s) => s["ui.mode"] !== "self"
   //   - 环境能力门禁 → (s) => !!s["env.skyGroundCap"]
 
+  /** row 类型：行首焦点钮（radio 语义，ADR-193 第四刀 roles 角色行首用）——
+   *  active 显 ● / ○，onClick 供焦点切换（如 sceneRegistry.setActive） */
+  radio?: { active: boolean; title: string; onClick: () => void };
+  /** row 类型：行尾徽标按钮（如 roles ⚙ 工具 / switch ➕ 追加）——
+   *  独立于整行 action 的行内次级动作 */
+  badge?: { label: string; title: string; onClick: () => void };
   /** 危险操作（如删除/卸载），渲染红色文字 */
   danger?: boolean;
   /** [P3 已清退 2026-09-05] 原 legacyTestId e2e 兼容映射字段已删除——查证 e2e（frontend/e2e/）对 legacyTestId/panelTestId/各具体 id 值零消费，淘汰前提失效提前清退；e2e 选择器统一走 data-testid="preview-"+node.id 派生（makePreviewMenuRow）*/

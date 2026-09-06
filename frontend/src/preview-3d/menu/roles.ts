@@ -13,7 +13,7 @@ import { type ModelEntry, sceneRegistry } from "../adapters/scene-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
-import { fillSwitch } from "./switch.ts";
+import { buildSwitchNodes, type SwitchState } from "./switch.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -207,134 +207,9 @@ export function motionDetailView(
   };
 }
 
-interface FrRenderDeps {
-  setAdapterItems: (items: PreviewMenuNode[]) => void;
-  makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
-  makePanelView: (node: PreviewMenuNode) => SlideMenuView;
-  menu: SlideMenuHandle;
-  actionCtx: PreviewActionMenuCtx;
-  reRender?: () => void;
-}
-
 interface FrToolsDeps {
   unloadModel: (id: string) => void;
   closePopup: () => void;
-}
-
-function frBuildRolesBox(): HTMLDivElement {
-  const rolesBox = document.createElement("div");
-  rolesBox.dataset.testid = "preview-roles-list";
-  rolesBox.className = "fr-scroll-box";
-  return rolesBox;
-}
-
-function frAppendSeparator(list: HTMLElement): void {
-  const sep = document.createElement("div");
-  sep.className = "fr-divider";
-  list.appendChild(sep);
-}
-
-function frRenderRoles(
-  rolesBox: HTMLDivElement,
-  deps: FrRenderDeps,
-  toolsDeps: FrToolsDeps,
-  onSelectRole: (e: ModelEntry) => SlideMenuView,
-  reRender: () => void,
-): void {
-  rolesBox.innerHTML = "";
-  const entries = sceneRegistry.getAll();
-  if (entries.length === 0) {
-    const empty = document.createElement("div");
-    empty.dataset.testid = "preview-roles-empty";
-    empty.className = "fr-empty-note";
-    empty.textContent = tr("preview.noRoles", "（无已加载角色）");
-    rolesBox.appendChild(empty);
-    return;
-  }
-  const activeId = sceneRegistry.getActiveId();
-  for (const e of entries) {
-    rolesBox.appendChild(
-      frBuildRoleRow(e, e.id === activeId, deps, toolsDeps, onSelectRole, reRender),
-    );
-  }
-}
-
-/** 角色行类 token（P1 批次3：cssText → 类后原样式串缝转为类 token 缝；样式本体在
- *  ensureRolesStyles 注入的 .fr-role-row/.fr-row-active，见 roles.ts 顶部样式块）。
- *  纯函数便于测试直断——happy-dom 计算样式读 color-mix() 丢声明（与 WebView2 不一致），
- *  测试断「类 token + 注入样式表原文」两级（roles.test.ts）。 */
-export function frRoleRowClass(isActive: boolean): string {
-  return `fr-role-row${isActive ? " fr-row-active" : ""}`;
-}
-
-function frBuildRoleRow(
-  e: ModelEntry,
-  isActive: boolean,
-  deps: FrRenderDeps,
-  toolsDeps: FrToolsDeps,
-  onSelectRole: (e: ModelEntry) => SlideMenuView,
-  reRender: () => void,
-): HTMLElement {
-  const row = document.createElement("div");
-  row.dataset.testid = "preview-role-row";
-  row.dataset.roleId = e.id;
-  row.className = frRoleRowClass(isActive);
-  const radio = frBuildFocusRadio(e, isActive, deps.setAdapterItems, reRender);
-  const name = frBuildRoleName(e);
-  row.onclick = (): void => {
-    deps.menu.navigate(onSelectRole(e));
-  };
-  const tools = frBuildRoleToolsBtn(e, toolsDeps, deps.menu);
-  row.append(radio, name, tools);
-  return row;
-}
-
-function frBuildFocusRadio(
-  e: ModelEntry,
-  isActive: boolean,
-  setAdapterItems: (items: PreviewMenuNode[]) => void,
-  reRender: () => void,
-): HTMLButtonElement {
-  const radio = document.createElement("button");
-  radio.dataset.testid = "preview-role-focus";
-  radio.textContent = isActive ? "●" : "○";
-  attachTooltip(radio, () => tr("preview.roleFocus", "设为焦点"));
-  radio.className = "fr-focus-btn";
-  radio.onclick = (ev): void => {
-    ev.stopPropagation();
-    sceneRegistry.setActive(e.id);
-    // setActive 仅在 menuItems truthy 时经 menuSink 换菜单；无专属项的角色
-    // 需显式清空 dock 适配器项，避免残留上一角色的菜单（code_review P2）
-    if (!e.menuItems) setAdapterItems([]);
-    reRender();
-  };
-  return radio;
-}
-
-function frBuildRoleName(e: ModelEntry): HTMLSpanElement {
-  const name = document.createElement("span");
-  name.dataset.testid = "preview-role-name";
-  name.textContent = roleBaseName(e);
-  attachTooltip(name, e.path);
-  name.className = "fr-name-ellipsis";
-  return name;
-}
-
-function frBuildRoleToolsBtn(
-  e: ModelEntry,
-  toolsDeps: FrToolsDeps,
-  menu: SlideMenuHandle,
-): HTMLButtonElement {
-  const tools = document.createElement("button");
-  tools.dataset.testid = "preview-role-tools";
-  tools.textContent = "⚙";
-  attachTooltip(tools, () => tr("preview.roleTools", "模型工具"));
-  tools.className = "fr-tools-btn";
-  tools.onclick = (ev): void => {
-    ev.stopPropagation();
-    menu.navigate(frBuildToolsView(e, toolsDeps));
-  };
-  return tools;
 }
 
 function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuView {
@@ -356,40 +231,6 @@ function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuView {
       l.appendChild(unload);
     },
   };
-}
-
-export function fillRoles(
-  list: HTMLElement,
-  ctx: PreviewMenuCtx,
-  closePopup: () => void,
-  makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
-  makePanelView: (node: PreviewMenuNode) => SlideMenuView,
-  menu: SlideMenuHandle,
-  setAdapterItems: (items: PreviewMenuNode[]) => void,
-  onSelectRole: (e: ModelEntry) => SlideMenuView,
-): void {
-  ensureRolesStyles();
-  const actionCtx: PreviewActionMenuCtx = {
-    toast: ctx.toast,
-    closeAllOverlays: ctx.closeAllOverlays,
-  };
-  list.innerHTML = "";
-
-  const rolesBox = frBuildRolesBox();
-  list.appendChild(rolesBox);
-
-  const renderDeps: FrRenderDeps = { setAdapterItems, makeRow, makePanelView, menu, actionCtx };
-  const toolsDeps: FrToolsDeps = { unloadModel: (id) => ctx.unloadModel?.(id), closePopup };
-  const reRender: () => void = () =>
-    frRenderRoles(rolesBox, renderDeps, toolsDeps, onSelectRole, reRender);
-  renderDeps.reRender = reRender;
-
-  reRender();
-
-  // [ADR-159 呈现收敛] 组件导航收进 modelDetailView 详情（镜像 mmd 面板范式），
-  // 顶层不再平铺组件区——「加载角色」保持纯角色列表 + 底部加载入口。
-  frAppendSeparator(list);
-  fillSwitch(list, ctx);
 }
 
 /** [ADR-159 呈现收敛] 容器组件导航段：entry 带 components（资源包 = zip 内模型）时平铺。
@@ -463,4 +304,85 @@ function renderComponentsSection(
   }
   container.appendChild(box);
   return true;
+}
+
+// ── ADR-193 第四刀：roles 面板声明式化（fillRoles DOM 层退役）──
+// 结构：角色 row 列表（radio 焦点 / 整行进详情 / ⚙ badge 工具）+ divider + switch 加载入口。
+// modelDetailView / motionDetailView（SlideMenuView 工厂）保留——它们是 navigate 目标，
+// 内部本就声明式（renderAdapterPanelContent 三通道 → renderMenu）。
+// 旧 fillRoles DOM 层（rolesBox/frBuildRoleRow/focus radio/➕）删除；row 节点新增的
+// radio/badge 槽位（node-types.ts）承接「行首焦点钮 + 行尾 ⚙」复合行语义。
+
+/** roles 面板 deps（buildPreviewMenuRouters 组装；闭包延迟求值防 handle 未就绪） */
+export interface RolesSchemaDeps {
+  makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+  makePanelView: (node: PreviewMenuNode) => SlideMenuView;
+  menu: SlideMenuHandle;
+  actionCtx: PreviewActionMenuCtx;
+  setAdapterItems: (items: PreviewMenuNode[]) => void;
+  hideMenu: () => void;
+}
+
+/** roles 面板声明式 schema：角色列表 + divider + switch 加载入口（switch 状态 mount 级） */
+export function buildRolesSchema(
+  ctx: PreviewMenuCtx,
+  deps: RolesSchemaDeps,
+  switchState: SwitchState,
+): PreviewMenuNode[] {
+  ensureRolesStyles();
+  const nodes: PreviewMenuNode[] = [];
+  const entries = sceneRegistry.getAll();
+  const activeId = sceneRegistry.getActiveId();
+  if (entries.length === 0) {
+    nodes.push({
+      id: "roles-empty",
+      kind: "sectionTitle",
+      labelKey: "",
+      fallback: tr("preview.noRoles", "（无已加载角色）"),
+    });
+  }
+  for (const e of entries) {
+    const isActive = e.id === activeId;
+    nodes.push({
+      id: `role-${e.id}`,
+      kind: "row",
+      fallback: roleBaseName(e),
+      // 整行进详情（navigate 目标 = modelDetailView：组件导航/统计/工具齐备）
+      action: () =>
+        deps.actionCtx.navigate?.(
+          modelDetailView(e, {
+            makeRow: deps.makeRow,
+            makePanelView: deps.makePanelView,
+            menu: deps.menu,
+            actionCtx: deps.actionCtx,
+            switchTo: (p, o) => (o === undefined ? ctx.switchTo(p) : ctx.switchTo(p, o)),
+          }),
+        ),
+      radio: {
+        active: isActive,
+        title: tr("preview.roleFocus", "设为焦点"),
+        onClick: () => {
+          sceneRegistry.setActive(e.id);
+          // setActive 仅在 menuItems truthy 时经 menuSink 换菜单；无专属项的角色
+          // 需显式清空 dock 适配器项，避免残留上一角色的菜单（code_review P2）
+          if (!e.menuItems) deps.setAdapterItems([]);
+          deps.menu.refresh(); // 重跑 builder：active 态/列表即时跟随
+        },
+      },
+      badge: {
+        label: "⚙",
+        title: tr("preview.roleTools", "模型工具"),
+        onClick: () =>
+          deps.actionCtx.navigate?.(
+            frBuildToolsView(e, {
+              unloadModel: (id) => ctx.unloadModel?.(id),
+              closePopup: () => deps.hideMenu(),
+            }),
+          ),
+      },
+    });
+  }
+  nodes.push({ id: "roles-divider", kind: "divider" });
+  nodes.push(...buildSwitchNodes(ctx, deps.menu, switchState));
+  return nodes;
 }

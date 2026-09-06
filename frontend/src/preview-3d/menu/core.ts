@@ -29,7 +29,7 @@ import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
-import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./roles.ts";
+import { buildRolesSchema, motionDetailView, roleBaseName } from "./roles.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,
@@ -37,6 +37,7 @@ import {
   buildSettingsSchema,
   buildShadowSchema,
 } from "./settings.ts";
+import { makeSwitchState } from "./switch.ts";
 
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
 // 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，
@@ -163,8 +164,8 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
 
 /** buildPreviewMenuRouters 返回类型：面板路由 + 声明式 schema 映射（导出供菜单健康测试复用，零行为变更）
  *  - schemaBuilders：core 注册面板（key 收窄为 CorePanelId 联合——ADR-193 §2.4 宽表收 key，
- *    拼错面板 id 编译期报错，模式同右键菜单 MenuAction 三层钉死）
- *  - fillers：**roles-only**（G3 删 fill* 后唯一残留——加载角色内容组件；新面板禁添，health.test 白名单守卫）
+ *    拼错面板 id 编译期报错，模式同右键菜单 MenuAction 三层钉死）；第四刀起 fillers 字段退役
+ *    （roles 迁入 schemaBuilders，过程式 filler 通道不复存在）
  *  - runners：动作入口（close 等） */
 export type CorePanelId =
   | "lighting"
@@ -172,9 +173,10 @@ export type CorePanelId =
   | "postproc"
   | "settings"
   | "camera"
-  | "environment";
+  | "environment"
+  | "roles";
 
-/** core 六面板 id 运行时清单（注册/注销共用，防两处漂移） */
+/** core 面板 id 运行时清单（注册/注销共用，防两处漂移） */
 const CORE_PANEL_IDS: readonly CorePanelId[] = [
   "lighting",
   "shadow",
@@ -182,11 +184,11 @@ const CORE_PANEL_IDS: readonly CorePanelId[] = [
   "settings",
   "camera",
   "environment",
+  "roles",
 ];
 
 export interface PreviewMenuRouters {
   schemaBuilders: Record<CorePanelId, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
-  fillers: Record<string, (list: HTMLElement, menu?: SlideMenuHandle) => void>;
   runners: Record<string, () => void>;
   /** 本挂载注册进 schema-registry 的 core 面板 wrapper（dispose 所有权校验凭据）——
    *  code_review 8988145d #4/#5：注销只删仍属本挂载的条目，防旧会话 dispose 误删新会话注册 */
@@ -194,11 +196,10 @@ export interface PreviewMenuRouters {
 }
 
 /**
- * [子函数 4/9] 构建 core 面板路由表（schemaBuilders 声明式 + fillers roles-only + runners 动作）。
+ * [子函数 4/9] 构建 core 面板路由表（schemaBuilders 声明式 + runners 动作；第四刀起无 fillers）。
  *   roles 面板需要 setAdapterItems 回写 dock——handle 尚未构造时经 shell 延迟读取。
  *   导出供 preview-menu-health.test.ts 复用（ADR-128 落地前哨：真正执行每个常驻面板渲染器，
  *   捕捉「菜单没迁移就断渲染」），与 check-menu-health.mjs（正则静态扫表）互补。
- *   [G4 收口] G3 删 fill* 后 fillers 仅剩 roles 一项（内容组件，声明式化属 ADR-126 P4 后续）；
  */
 export function buildPreviewMenuRouters(
   ctx: PreviewMenuCtx,
@@ -212,6 +213,8 @@ export function buildPreviewMenuRouters(
     previewMakePanelView(node, (l, n) =>
       renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, { makeRow, makePanelView }),
     );
+  // ADR-193 第四刀：switch 段状态（mount 级一次；activeTab 解析含持久化记忆）
+  const rolesSwitchState = makeSwitchState(ctx);
   // 先占位：makePanelView 上面的闭包会立即引用 routers，routers 下面立即赋值
   const routers: PreviewMenuRouters = {
     schemaBuilders: {
@@ -221,29 +224,20 @@ export function buildPreviewMenuRouters(
       settings: (menu) => buildSettingsSchema(ctx, menu),
       camera: () => buildCameraSchema(ctx),
       environment: (menu) => buildEnvSchema(ctx, menu),
-    },
-    fillers: {
-      roles: (list, m) =>
-        fillRoles(
-          list,
+      // ADR-193 第四刀：roles 自 fillers 过程式臂迁入声明式（角色 row + switch 段）
+      roles: (menu) =>
+        buildRolesSchema(
           ctx,
-          hideMenu,
-          makeRow,
-          makePanelView,
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          m!,
-          (items) => shell.handle?.setAdapterItems(items),
-          // 🧍 模型 dock → 角色列表 → 点角色名 → 模型详情（组件导航置顶 + 统计/纹理 + 工具行）
-          (e) =>
-            modelDetailView(e, {
-              makeRow,
-              makePanelView,
-              // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-              menu: m!,
-              actionCtx,
-              // 缺省参数契约：无 options 不透传 undefined（下游 mock/实现零噪音）
-              switchTo: (p, o) => (o === undefined ? ctx.switchTo(p) : ctx.switchTo(p, o)),
-            }),
+          {
+            makeRow,
+            makePanelView,
+            // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+            menu: menu!,
+            actionCtx,
+            setAdapterItems: (items) => shell.handle?.setAdapterItems(items),
+            hideMenu,
+          },
+          rolesSwitchState,
         ),
     },
     runners: {
@@ -345,10 +339,9 @@ export function renderPreviewPanel(
       // （P5 事故：旧直渲门只认 renderCustom，四类适配器面板迁新通道后本体在 roles 消失）
     } else if (node.action) {
       node.action(actionCtx);
-    } else {
-      // roles-only：core 注册面板中唯一内容组件（fillRoles），G3 后不再接受新 filler（health.test 白名单守卫）
-      routers.fillers[node.id]?.(list, menu);
     }
+    // ADR-193 第四刀：fillers 过程式臂退役——roles 已迁 schemaBuilders（路径①），
+    // 全部面板内容只走「schema 节点 + 动作节点」两路，逃生舱仅余 adapter renderCustom（bones）
   } catch (err) {
     console.error("[preview-menu] renderPanel FAILED", node.id, err);
     const errRow = document.createElement("div");
@@ -562,6 +555,8 @@ export function mountPreviewRootMenu(
   const actionCtx: PreviewActionMenuCtx = {
     toast: ctx.toast,
     closeAllOverlays: ctx.closeAllOverlays,
+    // ADR-193 第四刀：声明式 action 内下钻子视图（roles 角色行 → modelDetailView 等）
+    navigate: (view) => menu.navigate(view),
   };
   const shell: PreviewHandleShell = { handle: null };
   const adapterItemsRef = { v: [] as PreviewMenuNode[] };

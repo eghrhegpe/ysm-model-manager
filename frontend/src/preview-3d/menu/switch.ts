@@ -1,88 +1,42 @@
-// ===== 3D 内模型切换面板（自 preview-menu.ts 抽出，ADR-076 v3 拆分收尾）=====
-// 各资源类型 tab 懒加载候选，当前项高亮。默认高亮优先级：
-// ① 用户手动记忆的类型（localStorage）② 当前模型自身类型（getCurrentRtype）③ 第一个类型 tab。
-// 「当前目录」tab 已移除（记忆/当前类型生效后可少一个 tab）；
-// rtypes 为空（无注册路由）时仍走 siblings 列表兜底，不空白。
+// ===== 3D 内模型切换段（ADR-193 第四刀：声明式构建器，fillSwitch DOM 层退役）=====
+// 原 fillSwitch（tabBar DOM + renderRows 异步绘制）改写为 buildSwitchNodes：
+// 类型 tab = 声明式 select 节点；候选 = row 节点（action 替换 / badge ➕ 追加）。
+// 异步候选（getModelsByType）走「数据就绪后 cache + menu.refresh」范式
+//（对齐 litematic per-scene registerSchema 精神：builder 同步、数据异步到位后重渲染）。
+// 状态（activeTab + 候选缓存）由 makeSwitchState 创建、buildPreviewMenuRouters 持有
+//（mount 级一次），builder 每次渲染重跑时读写同一 state——旧闭包 let activeTab 语义平移。
 
 import { tr } from "../../core/i18n/tr.ts";
+import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { swallowError } from "../../utils/base/async.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { attachTooltip } from "../../utils/dom/tooltip.ts";
 import {
   getPreviewableTypeTabs,
   RESOURCE_TYPE_LABELS,
   resolveTypeSafe,
 } from "../../utils/resource/types.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
-import type { PreviewMenuCtx } from "./node-types.ts";
-
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
- *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
-// P1 批次5：模型切换面板内联 cssText → 集中类（sw- 前缀本文件私有，ensureSwitchStyles
-// 幂等注入——fillSwitch 唯一入口调用覆盖 tabBar/候选行/空态全部渲染路径）
-let _swStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _swStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
-function ensureSwitchStyles(): void {
-  if (_swStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
-/* 模型切换面板集中样式（P1 批次5：cssText→类）。.sw-tab-active 背景派生自
-   switchTabHighlightBg(true)（刀② 收编单一源，模板插值防二次漂移）；
-   sw-row-cur 与 roles .fr-row-active 同款 25% --accent 高亮（镜像待合并）；
-   sw-empty-note 与 roles .fr-empty-note / env .ev-empty-note 同值（镜像待合并）。 */
-.sw-tab-bar { display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.12);flex-wrap:wrap;flex-shrink:0; }
-.sw-tab {
-  font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
-  cursor:pointer;color:rgba(255,255,255,0.7);background:transparent;
-}
-.sw-tab-active { background:${switchTabHighlightBg(true)}; color:#fff; }
-.ysm-preview-menu-row.sw-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px; }
-.sw-row-cur { background:color-mix(in srgb,var(--accent) 25%,transparent); }
-.sw-row-icon { font-size:15px;width:18px;text-align:center; }
-.sw-append-btn {
-  width:22px;height:22px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;
-  border-radius:4px;cursor:pointer;font-size:12px;line-height:1;margin-left:auto;
-}
-.sw-empty-note { padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px; }
-.sw-scroll-body { max-height:240px;overflow-y:auto; }
-`;
-  overlayStyleRoot().appendChild(style);
-  _swStylesInjected = true;
-}
+import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";
 
-// ===================================================================
-// fillSwitch — 子函数（原 3 闭包升格：mkTab / draw / renderRows）
-// ===================================================================
-
 /** ADR-111：tab 标签统一从 getPreviewableTypeTabs 派生，preview key 兜底 RESOURCE_TYPE_LABELS */
-function switchTabLabelOf(key: string): string {
+export function switchTabLabelOf(key: string): string {
   const hit = getPreviewableTypeTabs().find((t) => t.key === key);
   return hit?.label ?? RESOURCE_TYPE_LABELS[key] ?? key;
 }
 
 /** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5） */
-function switchNormPath(s: string): string {
+export function switchNormPath(s: string): string {
   return s.replace(/\\/g, "/").toLowerCase();
 }
 
 /**
- * 类型 tab 激活高亮背景（刀②收编：硬编码 rgba(124,131,255) → --accent 派生）。
- * 单一源：ensureSwitchStyles 注入的 .sw-tab-active 规则背景由本函数模板插值派生，
- * 测试直断本函数保证派生不回退硬编码（happy-dom 不认 color-mix()，DOM 计算丢声明，
- * 激活态断言走类归属 + 样式表原文，见 core.test.ts）。
+ * tab 激活高亮背景（刀②收编：--accent 派生，禁回硬编码 rgba）。
+ * DOM 层已随 ADR-193 第四刀退役，本函数保留为高亮口径单一源（测试直断派生不回退）。
  */
 export function switchTabHighlightBg(active: boolean): string {
   return active ? "color-mix(in srgb,var(--accent) 35%,transparent)" : "transparent";
-}
-
-/** 类型 tab 类 token：激活叠加 .sw-tab-active（高亮规则见 ensureSwitchStyles 注入样式表） */
-function switchTabClass(active: boolean): string {
-  return `sw-tab${active ? " sw-tab-active" : ""}`;
 }
 
 /** [子函数 1/6] 解析默认高亮 tab：手动记忆 → 当前模型类型 → 首项；兜底 ""（siblings） */
@@ -93,49 +47,9 @@ function resolveSwitchActiveTab(rtypes: string[], curRtype: string): string {
   return rtypes[0] ?? "";
 }
 
-/**
- * [子函数 2/6] 构建 tabBar 容器并返回更新句柄。
- *   mkTab 闭包升格为包级函数；点击时透传 onSwitchTab 回调刷新 activeTab + 高亮 + 重渲染。
- */
-function buildSwitchTabBar(
-  rtypes: string[],
-  initialActive: string,
-  onSwitchTab: (key: string) => void,
-): HTMLElement {
-  const tabBar = document.createElement("div");
-  tabBar.className = "sw-tab-bar";
-  tabBar.dataset.testid = "preview-switch-tabs";
-  const highlightTab = (key: string): void => {
-    for (const tb of Array.from(tabBar.children)) {
-      (tb as HTMLElement).classList.toggle(
-        "sw-tab-active",
-        (tb as HTMLElement).dataset.rtype === key,
-      );
-    }
-  };
-  for (const r of rtypes) {
-    const b = document.createElement("button");
-    b.dataset.testid = "preview-switch-tab";
-    b.dataset.rtype = r;
-    b.textContent = switchTabLabelOf(r);
-    b.className = switchTabClass(r === initialActive);
-    b.onclick = (): void => {
-      // 持久化选中类型（「当前目录」空串不持久化——临时视图）
-      if (r !== "") safeSet(PREVIEW_LAST_RTYPE_KEY, r);
-      highlightTab(r);
-      onSwitchTab(r);
-    };
-    tabBar.appendChild(b);
-  }
-  return tabBar;
-}
-
-/**
- * [子函数 3/6] sameType 同源判定。
- *   sameType 仅用于行点击路由：同源 → switchTo 复用外壳替换，跨源 → switchExternal。
- *   类型判定：类型 tab 按 activeTab；当前目录 tab 按候选实际类型（resolveTypeSafe 解析）。
- *   候选类型无法可靠识别（歧义扩展名，resolveTypeSafe 返回 null）时保守判「不同源」。
- */
+/** [子函数 3/6] sameType 同源判定（行点击路由：同源 → switchTo，跨源 → switchExternal）。
+ *  类型判定：类型 tab 按 activeTab；当前目录 tab 按候选实际类型（resolveTypeSafe）。
+ *  候选类型无法可靠识别（歧义扩展名）时保守判「不同源」。 */
 function switchSameTypeOf(
   viaType: boolean,
   activeTab: string,
@@ -147,17 +61,13 @@ function switchSameTypeOf(
     : !!candType && (candType === curType || curType === "");
 }
 
-/**
- * [子函数 4/6] 执行点击行的替换/追加语义（原两段 10+ 行重复 inline onclick）。
- *   keepInScene=true→追加；false→替换。失败已由 mount 层 catch(logWarn) 记录，此处吞 unhandled rejection。
- */
+/** [子函数 4/6] 行点击替换/追加语义。失败已由 mount 层 catch(logWarn) 记录，此处吞 unhandled rejection。 */
 function applySwitchRowClick(
   p: string,
   sameType: boolean,
   ctx: PreviewMenuCtx,
   keepInScene: boolean,
 ): void {
-  // 追加语义才带 opts；替换语义保持旧签名形态（不传第二/三参），调用方契约按参数个数区分
   const extra: [{ keepInScene?: boolean }?] = keepInScene ? [{ keepInScene: true }] : [];
   const r =
     !sameType && ctx.switchExternal
@@ -166,117 +76,126 @@ function applySwitchRowClick(
   if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
 }
 
-/** [子函数 5/6] 绘制单条候选行：图标 / 标签 / ➕追加按钮 / 替换行点击。 */
-function renderSwitchCandidateRow(
-  listBody: HTMLElement,
-  p: string,
+/** switch 段可变状态（mount 级一次，builder 每次渲染读写） */
+export interface SwitchState {
+  activeTab: string;
+  /** tab → 候选路径缓存（加载完成后填；切 tab 时 delete 强制重拉，对齐旧 renderRows 每次重扫） */
+  cache: Map<string, string[]>;
+  inflight: Set<string>;
+}
+
+/** 创建 switch 段状态（buildPreviewMenuRouters 调一次；activeTab 解析含持久化记忆） */
+export function makeSwitchState(ctx: PreviewMenuCtx): SwitchState {
+  return {
+    activeTab: resolveSwitchActiveTab(ctx.getTypeTabs?.() ?? [], ctx.getCurrentRtype?.() ?? ""),
+    cache: new Map(),
+    inflight: new Set(),
+  };
+}
+
+/** 候选行构造：✓ 当前项 / ➕ 追加 badge / 整行点击替换 */
+function switchCandidateRows(
   ctx: PreviewMenuCtx,
-  curNorm: string,
-  activeTab: string,
+  paths: string[],
   viaType: boolean,
-): void {
-  const isCur = switchNormPath(p) === curNorm;
-  const candType = resolveTypeSafe(p);
-  const curType = ctx.getCurrentRtype?.() ?? "";
-  const sameType = switchSameTypeOf(viaType, activeTab, candType, curType);
-  const row = document.createElement("div");
-  row.className = `ysm-preview-menu-row sw-row${isCur ? " sw-row-cur" : ""}`;
-  row.dataset.testid = "preview-switch-item";
-  const ic = document.createElement("span");
-  ic.textContent = isCur ? "✓" : "📦";
-  ic.className = "sw-row-icon";
-  const lb = document.createElement("span");
-  lb.textContent = p.split(/[/\\]/).pop() || p;
-  row.append(ic, lb);
-  if (!isCur) {
-    const append = document.createElement("button");
-    append.dataset.testid = "preview-switch-append";
-    append.textContent = "➕";
-    attachTooltip(append, () => tr("preview.appendModel", "追加到场景"));
-    append.className = "sw-append-btn";
-    append.onclick = (ev): void => {
-      ev.stopPropagation();
-      applySwitchRowClick(p, sameType, ctx, true);
-    };
-    row.appendChild(append);
-  }
-  row.onclick = (): void => {
-    applySwitchRowClick(p, sameType, ctx, false);
-  };
-  listBody.appendChild(row);
-}
-
-/** [子函数 6/6] renderRows：代际守卫 + 异步扫描 + 空态 + 候选列表绘制。 */
-function runSwitchRenderRows(
-  listBody: HTMLElement,
-  ctx: PreviewMenuCtx,
-  getActiveTab: () => string,
-  reqGen: { v: number },
-): void {
-  const gen = ++reqGen.v;
-  listBody.innerHTML = "";
+  activeTab: string,
+): PreviewMenuNode[] {
   const curNorm = switchNormPath(ctx.getCurrentPath());
-
-  const draw = (paths: string[], viaType: boolean): void => {
-    // 类型 tab 过滤当前项（siblings 分支已由 getSiblings 去当前项）
-    const shown = viaType ? paths.filter((p) => switchNormPath(p) !== curNorm) : paths;
-    if (shown.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "sw-empty-note";
-      empty.textContent = viaType
-        ? tr("preview.noTypeModel", "（该类型暂无模型）")
-        : tr("preview.noOtherModel", "（无其他模型）");
-      listBody.appendChild(empty);
-      return;
-    }
-    const activeTab = getActiveTab();
-    for (const p of shown) {
-      renderSwitchCandidateRow(listBody, p, ctx, curNorm, activeTab, viaType);
-    }
-  };
-
-  const activeTab = getActiveTab();
-  if (activeTab === "") {
-    draw(ctx.getSiblings(), false);
-    return;
+  const curType = ctx.getCurrentRtype?.() ?? "";
+  const shown = viaType ? paths.filter((p) => switchNormPath(p) !== curNorm) : paths;
+  if (shown.length === 0) {
+    return [
+      {
+        id: "switch-empty",
+        kind: "sectionTitle",
+        labelKey: "",
+        fallback: viaType
+          ? tr("preview.noTypeModel", "（该类型暂无模型）")
+          : tr("preview.noOtherModel", "（无其他模型）"),
+      },
+    ];
   }
-  void Promise.resolve(
-    ctx.getModelsByType?.(activeTab, ctx.getCurrentSubtype?.()) ?? Promise.resolve([]),
-  )
-    .then((paths) => {
-      if (gen !== reqGen.v) return; // 过期请求丢弃（P1-3）
-      if (!listBody.parentNode) return; // 面板已关闭
-      draw(paths ?? [], true);
-    })
-    .catch(() => {
-      // P3-3：扫描失败优雅降级为空列表
-      if (gen !== reqGen.v) return;
-      if (!listBody.parentNode) return;
-      draw([], true);
-    });
+  return shown.map((p, i) => {
+    const isCur = switchNormPath(p) === curNorm;
+    const candType = resolveTypeSafe(p);
+    const sameType = switchSameTypeOf(viaType, activeTab, candType, curType);
+    return {
+      id: `switch-cand-${i}`,
+      kind: "row",
+      fallback: `${isCur ? "✓" : "📦"} ${p.split(/[/\\]/).pop() || p}`,
+      action: () => applySwitchRowClick(p, sameType, ctx, false),
+      ...(isCur
+        ? {}
+        : {
+            badge: {
+              label: "➕",
+              title: tr("preview.appendModel", "追加到场景"),
+              onClick: () => applySwitchRowClick(p, sameType, ctx, true),
+            },
+          }),
+    };
+  });
 }
 
-// ===================================================================
-// fillSwitch — 主函数
-// ===================================================================
-
-export function fillSwitch(list: HTMLElement, ctx: PreviewMenuCtx): void {
-  ensureSwitchStyles();
+/**
+ * [主函数] switch 段声明式节点（roles 面板底部加载入口）。
+ * 类型分支：cache 未命中 → 发起异步扫描（inflight 去重）+ loading 占位，
+ * 数据就绪 menu.refresh() 重跑 builder 读缓存；每次切 tab 强制重拉（对齐旧 renderRows）。
+ */
+export function buildSwitchNodes(
+  ctx: PreviewMenuCtx,
+  menu: SlideMenuHandle,
+  st: SwitchState,
+): PreviewMenuNode[] {
   const rtypes = ctx.getTypeTabs?.() ?? [];
-  const curRtype = ctx.getCurrentRtype?.() ?? "";
-  // 阶段 1：默认高亮 tab 解析（记忆 → 当前类型 → 首项）
-  let activeTab = resolveSwitchActiveTab(rtypes, curRtype);
-  // 阶段 2：tabBar + 高亮更新回写
-  const tabBar = buildSwitchTabBar(rtypes, activeTab, (key) => {
-    activeTab = key;
-    // runSwitchRenderRows 内部读 reqGen，直接触发重新拉取+绘制
-    runSwitchRenderRows(listBody, ctx, () => activeTab, reqGen);
-  });
-  // 阶段 3：列表容器 + 代际守卫 state
-  const listBody = document.createElement("div");
-  listBody.className = "sw-scroll-body";
-  const reqGen = { v: 0 };
-  // 阶段 4：挂 DOM + 首调 renderRows
-  list.append(tabBar, listBody);
-  runSwitchRenderRows(listBody, ctx, () => activeTab, reqGen);
+  const nodes: PreviewMenuNode[] = [];
+  if (rtypes.length > 0) {
+    nodes.push({
+      id: "switch-tab",
+      kind: "select",
+      labelKey: "preview.switchTypeTab",
+      fallback: "类型",
+      control: {
+        options: rtypes.map((r) => ({ value: r, label: switchTabLabelOf(r) })),
+        get: () => st.activeTab,
+        set: (v) => {
+          st.activeTab = String(v);
+          if (st.activeTab) safeSet(PREVIEW_LAST_RTYPE_KEY, st.activeTab);
+          st.cache.delete(st.activeTab); // 强制重拉（对齐旧「每次切 tab 重新扫描」）
+          menu.refresh();
+        },
+      },
+    });
+  }
+  if (st.activeTab === "") {
+    nodes.push(...switchCandidateRows(ctx, ctx.getSiblings(), false, st.activeTab));
+    return nodes;
+  }
+  if (!st.cache.has(st.activeTab)) {
+    if (!st.inflight.has(st.activeTab)) {
+      st.inflight.add(st.activeTab);
+      void Promise.resolve(
+        ctx.getModelsByType?.(st.activeTab, ctx.getCurrentSubtype?.()) ?? Promise.resolve([]),
+      )
+        .then((paths) => {
+          st.cache.set(st.activeTab, paths ?? []);
+        })
+        .catch(() => {
+          st.cache.set(st.activeTab, []); // P3-3：扫描失败优雅降级为空列表
+        })
+        .finally(() => {
+          st.inflight.delete(st.activeTab);
+          menu.refresh(); // 数据就绪重跑 builder 读缓存
+        });
+    }
+    nodes.push({
+      id: "switch-loading",
+      kind: "sectionTitle",
+      labelKey: "",
+      fallback: tr("preview.loadingModels", "加载中…"),
+    });
+    return nodes;
+  }
+  nodes.push(...switchCandidateRows(ctx, st.cache.get(st.activeTab) ?? [], true, st.activeTab));
+  return nodes;
 }

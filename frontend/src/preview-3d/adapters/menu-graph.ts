@@ -7,7 +7,7 @@
 //   1. routers.schemaBuilders 闭包（6 常驻 L2 面板）    —— 渲染器第一真值源
 //   2. schema-registry Map（ysm-model + 动态 litematic）— 渲染器第二通道
 //   3. PreviewMenuNode.children[] 递归                   —— L3/L4 声明式下钻（无独立块，内嵌 projectNode 递归，见 P5①）
-//   4. fillers（roles 过程式下钻）                       —— P4-B 前必需，标 procedural
+//   4. fillers（ADR-193 第四刀已退役——roles 迁通道 1 声明式）
 //   5. runners（close 动作式）                            —— 标 nonNav，不进导航路径
 //
 // 可达性 = 对代表性快照集求 node.visibleWhen(snap)；节点级谓词（吃 PreviewSnapshot）
@@ -188,22 +188,8 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
     allPanels.push(buildPanelNode(id, nodes, snapshots, nodes[0]?.dockGroup ?? lookupDock(id), id));
   }
 
-  // 通道 4：fillers（roles 过程式下钻，P4-B 前必需）——仅占位，内部不可静态走通
-  for (const id of Object.keys(routers.fillers)) {
-    proceduralPanels.push(id);
-    allPanels.push({
-      id,
-      kind: "panel",
-      dockGroup: lookupDock(id),
-      procedural: true,
-      escapeHatch: false,
-      nonNav: false,
-      reachable: true,
-      reachableBy: snapshots.map((s) => s.name),
-      children: [],
-    });
-  }
-
+  // 通道 4（ADR-193 第四刀）：fillers 通道退役——roles 迁 schemaBuilders 声明式，
+  // proceduralPanels 语义保留给未来受控逃生舱（当前恒空）
   // 通道 5：runners 动作式节点（close 等，非导航路径）
   const actions: MenuGraphNode[] = Object.keys(routers.runners).map((id) => ({
     id,

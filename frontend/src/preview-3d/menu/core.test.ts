@@ -12,6 +12,21 @@ import type { SceneCapability } from "../caps/scene-capability.ts";
 import { deriveTestIds } from "../../test-utils/self-healing.ts";
 import { makeMenuCtx as makeCtx } from "../adapters/menu-test-fixtures.ts";
 
+/** ADR-193 第四刀：类型 tab 已声明式化为 select——切 tab = 改 select 值 + change 事件 */
+function switchSelectTo(overlay: HTMLElement, rtype: string): void {
+  const sel = overlay.querySelector('[data-testid="cap-switch-tab"] select') as HTMLSelectElement;
+  expect(sel).toBeTruthy();
+  sel.value = rtype;
+  sel.dispatchEvent(new Event("change"));
+}
+
+/** 读当前 tab select 的值（默认高亮断言用） */
+function switchSelectedTab(overlay: HTMLElement): string {
+  const sel = overlay.querySelector('[data-testid="cap-switch-tab"] select') as HTMLSelectElement;
+  expect(sel).toBeTruthy();
+  return sel.value;
+}
+
 describe("CORE_MENU_ITEMS 表结构", () => {
   it("id 唯一", () => {
     const ids = CORE_MENU_ITEMS.map((d) => d.id);
@@ -319,9 +334,9 @@ describe("mountPreviewRootMenu", () => {
     const popup = overlay.querySelector(".ysm-preview-menu") as HTMLElement;
     expect(popup.style.display).toBe("flex");
     // 兄弟项渲染
-    expect(popup.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(2);
-    // 点击兄弟项 → switchTo
-    const rows = popup.querySelectorAll<HTMLElement>('.ysm-preview-menu-row');
+    expect(popup.querySelectorAll('[data-testid^="preview-switch-cand-"]').length).toBe(2);
+    // 点击兄弟项 → switchTo（整行 action；选 b = 第二个候选行）
+    const rows = popup.querySelectorAll<HTMLElement>('[data-testid^="preview-switch-cand-"]');
     rows[1].click();
     expect(switchTo).toHaveBeenCalledWith("/m/b.ysm");
     handle.dispose();
@@ -338,7 +353,7 @@ describe("mountPreviewRootMenu", () => {
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
     // 当前项（/m/a.ysm）无 ➕，兄弟项（/m/b.ysm）有 ➕
-    const appendBtns = overlay.querySelectorAll('[data-testid="preview-switch-append"]');
+    const appendBtns = overlay.querySelectorAll('[data-testid^="preview-switch-cand-"] [data-testid="row-badge"]');
     expect(appendBtns.length).toBe(1);
     (appendBtns[0] as HTMLElement).click();
     expect(switchTo).toHaveBeenCalledWith("/m/b.ysm", { keepInScene: true });
@@ -359,13 +374,13 @@ describe("mountPreviewRootMenu", () => {
     modelBtn!.click();
     // /m/b.vrm 是跨类型兄弟：有 ➕，但点击走 switchExternal keepInScene（openModel3DFullscreen
     // cooperate → switchPreview 主门按类型路由同台追加，ADR-093 T4）——不喂给当前 ysm adapter
-    const appendBtns = overlay.querySelectorAll('[data-testid="preview-switch-append"]');
+    const appendBtns = overlay.querySelectorAll('[data-testid^="preview-switch-cand-"] [data-testid="row-badge"]');
     expect(appendBtns.length).toBe(1);
     (appendBtns[0] as HTMLElement).click();
     expect(switchExternal).toHaveBeenCalledWith("/m/b.vrm", ["/m/a.ysm", "/m/b.vrm"], { keepInScene: true });
     expect(switchTo).not.toHaveBeenCalled();
     // 行本体点击仍是跨类型替换（switchExternal，无 keepInScene）——重建语义不变
-    const rows = overlay.querySelectorAll('[data-testid="preview-switch-item"]');
+    const rows = overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]');
     (rows[1] as HTMLElement).click();
     expect(switchExternal).toHaveBeenCalledWith("/m/b.vrm", ["/m/a.ysm", "/m/b.vrm"]);
     handle.dispose();
@@ -384,14 +399,12 @@ describe("mountPreviewRootMenu", () => {
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
     // 切到 ysm 类型 tab（与当前会话同类型）
-    const tabs = overlay.querySelectorAll('[data-testid="preview-switch-tab"]');
-    const ysmTab = Array.from(tabs).find((t) => (t as HTMLElement).dataset.rtype === "ysm") as HTMLElement;
-    ysmTab.click();
+    switchSelectTo(overlay, "ysm");
     await vi.waitFor(() => {
-      expect(overlay.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(1);
+      expect(overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]').length).toBe(1);
     });
     // 同类型候选：有 ➕；点击追加 → keepInScene
-    const appendBtn = overlay.querySelector('[data-testid="preview-switch-append"]') as HTMLElement;
+    const appendBtn = overlay.querySelector('[data-testid^="preview-switch-cand-"] [data-testid="row-badge"]') as HTMLElement;
     expect(appendBtn).not.toBeNull();
     appendBtn.click();
     expect(switchTo).toHaveBeenCalledWith("/m/b.ysm", { keepInScene: true });
@@ -413,21 +426,19 @@ describe("mountPreviewRootMenu", () => {
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
     // 切到 vrm 类型 tab（懒加载候选）
-    const tabs = overlay.querySelectorAll('[data-testid="preview-switch-tab"]');
-    const vrmTab = Array.from(tabs).find((t) => (t as HTMLElement).dataset.rtype === "vrm") as HTMLElement;
-    vrmTab.click();
+    switchSelectTo(overlay, "vrm");
     await vi.waitFor(() => {
-      expect(overlay.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(1);
+      expect(overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]').length).toBe(1);
     });
     // 跨类型候选：有 ➕，点击走 switchExternal keepInScene（switchPreview 主门
     // 按类型路由同台追加，ADR-093 T4）——不喂给当前 ysm adapter
-    const appendBtn = overlay.querySelector('[data-testid="preview-switch-append"]') as HTMLElement;
+    const appendBtn = overlay.querySelector('[data-testid^="preview-switch-cand-"] [data-testid="row-badge"]') as HTMLElement;
     expect(appendBtn).not.toBeNull();
     appendBtn.click();
     expect(switchExternal).toHaveBeenCalledWith("/m/x.vrm", ["/m/a.ysm"], { keepInScene: true });
     expect(switchTo).not.toHaveBeenCalled();
     // 行本体点击仍是跨类型替换（switchExternal）
-    (overlay.querySelector('[data-testid="preview-switch-item"]') as HTMLElement).click();
+    (overlay.querySelector('[data-testid^="preview-switch-cand-"]') as HTMLElement).click();
     expect(switchExternal).toHaveBeenCalledWith("/m/x.vrm", ["/m/a.ysm"]);
     handle.dispose();
   });
@@ -446,7 +457,7 @@ describe("mountPreviewRootMenu", () => {
     modelBtn!.click();
     // /m/b.json 是歧义扩展名（resolveTypeSafe 返回 null），但 siblings 即同目录兄弟契约，
     // 应回退为同源 → 行本体走 switchTo 复用外壳替换（不触发 switchExternal 重建）
-    const rows = overlay.querySelectorAll('[data-testid="preview-switch-item"]');
+    const rows = overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]');
     (rows[1] as HTMLElement).click();
     expect(switchTo).toHaveBeenCalledWith("/m/b.json");
     expect(switchExternal).not.toHaveBeenCalled();
@@ -466,20 +477,12 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    // vrm tab 应为默认高亮（背景非 transparent；高亮色走 --accent 派生——刀②收编）。
-    // 断言走纯函数 switchTabHighlightBg：happy-dom 的 CSS 解析器不认 color-mix()，
-    // DOM 级 background 会丢声明读回 transparent，与真实浏览器（WebView2）不一致。
-    const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
-    const vrmTab = Array.from(tabs).find((t) => t.dataset.rtype === "vrm") as HTMLElement;
+    // ADR-193 第四刀：tab = select，记忆持久化 → 默认选中 vrm
+    expect(switchSelectedTab(overlay)).toBe("vrm");
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     expect(switchTabHighlightBg(false)).toBe("transparent");
-    // P1 批次5 cssText→类：激活态走 .sw-tab-active 类（规则背景由 switchTabHighlightBg(true)
-    // 模板插值派生——happy-dom 丢 color-mix 的旧 DOM 读回不可用，断类归属替代）
-    expect(vrmTab.classList.contains("sw-tab-active")).toBe(true);
-    const ysmTab = Array.from(tabs).find((t) => t.dataset.rtype === "ysm") as HTMLElement;
-    expect(ysmTab.classList.contains("sw-tab-active")).toBe(false);
     await vi.waitFor(() => {
-      expect(overlay.querySelectorAll('[data-testid="preview-switch-item"]').length).toBe(1);
+      expect(overlay.querySelectorAll('[data-testid^="preview-switch-cand-"]').length).toBe(1);
     });
     handle.dispose();
   });
@@ -498,11 +501,9 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
-    const dirTab = Array.from(tabs).find((t) => t.dataset.rtype === "");
     // 当前类型 ysm 高亮（记忆越界不污染）；当前目录 tab 已根除——加载角色路径限定，不容其他
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
-    expect(dirTab).toBeUndefined();
+    expect(switchSelectedTab(overlay)).toBe("ysm");
     handle.dispose();
   });
 
@@ -519,11 +520,8 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    const tabs = overlay.querySelectorAll<HTMLElement>('[data-testid="preview-switch-tab"]');
-    // 当前目录 tab 已根除：不存在 rtype="" 的按钮（加载角色路径限定，不容其他）
-    const dirTab = Array.from(tabs).find((t) => t.dataset.rtype === "");
-    expect(dirTab).toBeUndefined();
-    // 记忆与当前类型都不在 tabs → 高亮第一个类型 tab（ysm）
+    // 记忆与当前类型都不在 tabs → 选中第一个类型 tab（ysm）
+    expect(switchSelectedTab(overlay)).toBe("ysm");
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     handle.dispose();
   });
@@ -540,7 +538,8 @@ describe("mountPreviewRootMenu", () => {
     }));
     const modelBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-model"]`);
     modelBtn!.click();
-    // 开 YSM 模型默认就高亮 YSM（你反馈的核心痛点）
+    // 开 YSM 模型默认就选中 YSM（你反馈的核心痛点）
+    expect(switchSelectedTab(overlay)).toBe("ysm");
     expect(switchTabHighlightBg(true)).toContain("var(--accent)");
     handle.dispose();
   });

@@ -52,8 +52,7 @@ describe("常驻 dock 面板解析契约", () => {
         !!getSchema(node.schemaId ?? node.id) ||
         (node.children?.length ?? 0) > 0 ||
         !!node.renderCustom ||
-        !!node.action ||
-        !!routers.fillers[node.id];
+        !!node.action;
       expect(hasChannel, `面板 "${node.id}" 无任何渲染通道（未迁移/漏接线）`).toBe(true);
     }
   });
@@ -88,7 +87,7 @@ describe("常驻 dock 面板渲染冒烟", () => {
     const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4]);
     const deps = mockPanelDeps();
 
-    const panelIds = [...Object.keys(routers.schemaBuilders), ...Object.keys(routers.fillers)];
+    const panelIds = [...Object.keys(routers.schemaBuilders)];
     expect(panelIds.length, "至少应覆盖 lighting/shadow/postproc/settings/camera/environment/roles 七面板").toBeGreaterThanOrEqual(7);
 
     for (const id of panelIds) {
@@ -103,12 +102,11 @@ describe("常驻 dock 面板渲染冒烟", () => {
   });
 });
 
-describe("fillers 通道收敛守卫（G4：roles-only 白名单）", () => {
-  // G3 删 fill* 旧轨后 buildPreviewMenuRouters.fillers 仅剩 roles 一项（加载角色内容组件，
-  // 需 makeRow/makePanelView/actionCtx 等渲染依赖注入，声明式化属 ADR-126 P4 后续）。
-  // 若后人再往 fillers 添条目 → 命令式渲染双轨回潮，本断言即红；
+describe("fillers 通道退役守卫（ADR-193 第四刀：过程式 filler 不复存在）", () => {
+  // 第四刀 roles 迁 schemaBuilders 后 PreviewMenuRouters 已无 fillers 字段——
+  // 若后人复活该字段/通道 → 命令式渲染双轨回潮，本断言即红；
   // 新增面板一律走 schemaBuilders（core）/ schema-registry / children（adapter）声明式通道。
-  it("fillers 键集合恒等于 ['roles']", () => {
+  it("routers 不再持有 fillers 通道", () => {
     const routers: PreviewMenuRouters = buildPreviewMenuRouters(
       makeCtx(),
       () => {},
@@ -116,20 +114,8 @@ describe("fillers 通道收敛守卫（G4：roles-only 白名单）", () => {
       { toast: vi.fn(), closeAllOverlays: vi.fn() },
       { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
     );
-    expect(Object.keys(routers.fillers).sort()).toEqual(["roles"]);
-  });
-
-  it("自检：fillers 新增条目会被守卫抓到（证明门禁非摆设）", () => {
-    // 模拟回潮：直接构造含第二 filler 的 routers 形状，守卫断言逻辑应能区分
-    const routers: PreviewMenuRouters = buildPreviewMenuRouters(
-      makeCtx(),
-      () => {},
-      mockMenu(),
-      { toast: vi.fn(), closeAllOverlays: vi.fn() },
-      { handle: null } as unknown as Parameters<typeof buildPreviewMenuRouters>[4],
-    ) as PreviewMenuRouters & { fillers: Record<string, never> };
-    const regressed = { ...routers.fillers, "new-filler": (): void => {} };
-    expect(Object.keys(regressed).sort()).not.toEqual(["roles"]);
+    expect("fillers" in routers).toBe(false);
+    expect(Object.keys(routers.schemaBuilders)).toContain("roles");
   });
 });
 

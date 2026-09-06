@@ -6,6 +6,7 @@
 
 import * as THREE from "three";
 import { logWarn } from "../../utils/base/log.ts";
+import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import {
   cullModelGroups,
   isFrustumCullEnabled,
@@ -145,8 +146,9 @@ export function startGlobalRenderLoop(viewContainer: HTMLElement, infra: SharedI
   const cam = infra.camera;
   const ctr = infra.controls;
   const ot = infra.orbitTarget;
-  const lightCap = infra.lightCap;
-  const postProc = infra.postProc;
+  // postProc/lightCap 不闭包捕获首个 session 的实例：coop 多会话下旧会话 dispose 后
+  // rAF 若未停，仍会调用已 dispose 的旧 cap（enabled 残留 true 会重建 composer），
+  // 新会话 cap 反而拿不到每帧 render。改为每帧经 registry 动态读取（同 getSceneCaps() 模式）。
   // rAF 每帧复用 Vector3 实例，避免 5 次 GC 分配（R1-P1-1）
   const _camDir = new THREE.Vector3();
   const _forward = new THREE.Vector3();
@@ -209,14 +211,17 @@ export function startGlobalRenderLoop(viewContainer: HTMLElement, infra: SharedI
       if (_globalPerFrames.length > 0 || hasCapUpdate) markCullMatricesDirty();
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
-    const rendered = postProc ? postProc.render(dt, lightCap) : false;
+    // 每帧动态解析（coop 会话切换后指向当前存活 cap；全清后为 null 走直渲兜底）
+    const postProcCap = sceneCapabilityRegistry.getById("postprocessing");
+    const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
+    const rendered = postProcCap ? postProcCap.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);
     const nextPixelRatio = sampleAdaptivePixelRatio(adaptiveBudget, now, interval);
     if (nextPixelRatio !== null) {
       infra.renderer.setPixelRatio(nextPixelRatio);
       infra.renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
-      postProc?.setPixelRatio?.(nextPixelRatio);
-      postProc?.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
+      postProcCap?.setPixelRatio?.(nextPixelRatio);
+      postProcCap?.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
     }
   }
   animate();

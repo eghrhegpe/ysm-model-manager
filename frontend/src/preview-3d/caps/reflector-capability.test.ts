@@ -141,6 +141,24 @@ describe("ReflectorCapability — 持久化", () => {
     cap.loadState();
     expect(cap.getParams().opacity).toBe(0.3);
   });
+
+  it("setPreset 在 loadState 已恢复后不覆盖用户会话（对齐 shadow 的 isStateLoaded 守卫）", () => {
+    const cap1 = newCap({ params: { opacity: 0.9, size: 300 } });
+    cap1.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    cap2.setPreset("litematic");
+    const p = cap2.getParams();
+    expect(p.opacity).toBe(0.9);
+    expect(p.size).toBe(300);
+  });
+
+  it("setPreset 在空存储（未恢复过状态）时照常套用模型预设", () => {
+    const cap = newCap();
+    cap.loadState();
+    cap.setPreset("vrm");
+    expect(cap.getParams().opacity).toBe(0.5);
+  });
 });
 
 describe("ReflectorCapability — getMenuControls 结构", () => {

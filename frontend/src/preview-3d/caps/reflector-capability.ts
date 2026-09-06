@@ -148,6 +148,8 @@ export class ReflectorCapability implements SceneCapability {
   private enabled: boolean;
 
   private reflector: Reflector | null = null;
+  /** loadState 是否成功载入过；setPreset 有它时不覆盖用户会话（对齐 shadow-capability 同名守卫） */
+  private isStateLoaded = false;
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -250,7 +252,9 @@ export class ReflectorCapability implements SceneCapability {
     return this.enabled;
   }
 
+  /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(modelType: string): void {
+    if (this.isStateLoaded) return;
     const preset = REFLECTOR_PRESETS[modelType] ?? REFLECTOR_PRESETS.default;
     this.params = { ...this.params, ...preset };
     if (this.enabled) this.buildReflector();
@@ -323,6 +327,7 @@ export class ReflectorCapability implements SceneCapability {
       opacity: { number: (v) => (this.params.opacity = v) },
       clipBias: { number: (v) => (this.params.clipBias = v) },
     });
+    this.isStateLoaded = true;
     this.buildReflector();
   }
 

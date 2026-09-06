@@ -280,7 +280,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 33 |
+| useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 259 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
@@ -444,7 +444,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 103 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 89 |
-| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 371 |
+| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 375 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 266 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 292 |

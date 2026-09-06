@@ -18,6 +18,7 @@ auto_fields:
     - currentRepoType
     - extBelongsTo
     - extOf
+    - getExt
     - getExts
     - getPreviewableTypeTabs
     - GROUP_META
@@ -27,7 +28,9 @@ auto_fields:
     - groupStorageRootOf
     - GroupTypeOption
     - isContainerExt
+    - isImportableFile
     - isSupportedExt
+    - isSupportedFile
     - isYsmWasmPreview
     - matchTypeByExt
     - matchZipEntryTS

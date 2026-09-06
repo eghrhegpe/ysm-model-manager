@@ -231,96 +231,78 @@ describe("SkyCapability — 持久化", () => {
   });
 });
 
-describe("SkyCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表", () => {
+describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("基座级节点平铺 + 高级 folder（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(3);
-    // 时间滑块
-    const timeCtrl = controls.find((c) => c.id === "sky-time");
-    expect(timeCtrl).toBeDefined();
-    expect(timeCtrl!.kind).toBe("slider");
-    expect(timeCtrl!.slider?.unit).toBe("h");
-    expect(timeCtrl!.getValue()).toBe(9);
-    // 云量滑块
-    const cloudCtrl = controls.find((c) => c.id === "sky-cloud");
-    expect(cloudCtrl).toBeDefined();
-    expect(cloudCtrl!.kind).toBe("slider");
-    expect(cloudCtrl!.slider?.unit).toBe("%");
-    // 环境贴图开关
-    const envCtrl = controls.find((c) => c.id === "sky-env");
-    expect(envCtrl).toBeDefined();
-    expect(envCtrl!.kind).toBe("toggle");
-    expect(envCtrl!.getValue()).toBe(true);
+    const nodes = cap.getMenuNodes();
+    // 0: timeline controls 通道
+    expect(nodes[0]!.kind).toBe("controls");
+    // 1: sky-time slider 平铺
+    expect(nodes[1]!.id).toBe("sky-time");
+    expect(nodes[1]!.kind).toBe("slider");
+    // 2: sky-env toggle 平铺
+    expect(nodes[2]!.id).toBe("sky-env");
+    expect(nodes[2]!.kind).toBe("toggle");
+    // 3: 高级 folder
+    const folder = nodes[3]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("sky-cloud");
+    expect(childIds).toContain("sky-sun-intensity");
+    expect(childIds).toContain("sky-sun-disc");
+    expect(childIds).toContain("sky-auto-rotate");
+    expect(childIds).toContain("sky-godrays");
   });
 
-  it("控件操作同步状态", () => {
+  it("控件操作同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    // 时间滑块
-    const timeCtrl = controls.find((c) => c.id === "sky-time")!;
-    timeCtrl.setValue(18);
+    const nodes = cap.getMenuNodes();
+    const timeNode = nodes[1]!;
+    timeNode.control!.set!(18);
     expect(cap.getTimeOfDay()).toBe(18);
-    expect(timeCtrl.getValue()).toBe(18);
-    // 环境贴图开关
-    const envCtrl = controls.find((c) => c.id === "sky-env")!;
-    envCtrl.setValue(false);
+    expect(timeNode.control!.get!(undefined)).toBe(18);
+    const envNode = nodes[2]!;
+    envNode.control!.set!(false);
     expect(cap.isEnvironmentEnabled()).toBe(false);
-    envCtrl.setValue(true);
+    envNode.control!.set!(true);
     expect(cap.isEnvironmentEnabled()).toBe(true);
   });
 
-  it("基座级主控件（时间/环境贴图开关）无 group，其余控件含 group 字段", () => {
+  it("时间轴控件与云量滑块联动状态（controls 通道 + 高级 folder，节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    // sky-timeline/sky-time 是顶层主控件、sky-env 是环境贴图基座级开关——三者无 group；
-    // 其余控件（云量/太阳耦合/昼夜循环等）必须含 group 且以 preview.sky 开头
-    const baseIds = ["sky-timeline", "sky-time", "sky-env"];
-    baseIds.forEach((id) => {
-      const c = controls.find((x) => x.id === id)!;
-      expect(c).toBeDefined();
-      expect(c.group).toBeUndefined();
-    });
-    controls.filter((c) => !baseIds.includes(c.id)).forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!.startsWith("preview.sky")).toBe(true);
-    });
-  });
-
-  it("时间轴控件与云量滑块联动状态（regenerate=true 分支）", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    const timelineCtrl = controls.find((c) => c.id === "sky-timeline")!;
-    timelineCtrl.setValue(20);
+    const nodes = cap.getMenuNodes();
+    const tlNode = nodes[0]!;
+    const tl = (typeof tlNode.controls === "function" ? tlNode.controls() : tlNode.controls)![0]!;
+    tl.setValue(20);
     expect(cap.getTimeOfDay()).toBe(20);
-    expect(timelineCtrl.getValue()).toBe(20);
-    const cloudCtrl = controls.find((c) => c.id === "sky-cloud")!;
-    cloudCtrl.setValue(0.8); // 走 setCloudCoverage(v, true) → regenerate
+    expect(tl.getValue()).toBe(20);
+    const folder = nodes[3]!;
+    const cloudNode = folder.children!.find((c) => c.id === "sky-cloud")!;
+    cloudNode.control!.set!(0.8);
     expect(cap.getCloudCoverage()).toBe(0.8);
   });
 
-  it("太阳耦合滑块与昼夜循环控件联动", () => {
+  it("太阳耦合滑块与昼夜循环控件联动（高级 folder，节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const intensityCtrl = controls.find((c) => c.id === "sky-sun-intensity")!;
-    intensityCtrl.setValue(1.1);
+    const folder = cap.getMenuNodes()[3]!;
+    const intensityNode = folder.children!.find((c) => c.id === "sky-sun-intensity")!;
+    intensityNode.control!.set!(1.1);
     expect(cap.getSunIntensityScale()).toBe(1.1);
-    expect(intensityCtrl.getValue()).toBe(1.1);
-    const discCtrl = controls.find((c) => c.id === "sky-sun-disc")!;
-    discCtrl.setValue(0.3);
+    expect(intensityNode.control!.get!(undefined)).toBe(1.1);
+    const discNode = folder.children!.find((c) => c.id === "sky-sun-disc")!;
+    discNode.control!.set!(0.3);
     expect(cap.getSunDiscScale()).toBe(0.3);
-    // 昼夜循环 toggle
-    const rotateCtrl = controls.find((c) => c.id === "sky-auto-rotate")!;
-    rotateCtrl.setValue(true);
+    const rotateNode = folder.children!.find((c) => c.id === "sky-auto-rotate")!;
+    rotateNode.control!.set!(true);
     expect(cap.isAutoRotating()).toBe(true);
-    expect(rotateCtrl.getValue()).toBe(true);
-    rotateCtrl.setValue(false);
+    expect(rotateNode.control!.get!(undefined)).toBe(true);
+    rotateNode.control!.set!(false);
     expect(cap.isAutoRotating()).toBe(false);
-    // 体积光束 toggle
-    const godraysCtrl = controls.find((c) => c.id === "sky-godrays")!;
-    godraysCtrl.setValue(true);
+    const godraysNode = folder.children!.find((c) => c.id === "sky-godrays")!;
+    godraysNode.control!.set!(true);
     expect(cap.isGodRaysEnabled()).toBe(true);
-    expect(godraysCtrl.getValue()).toBe(true);
+    expect(godraysNode.control!.get!(undefined)).toBe(true);
   });
 });
 
@@ -389,13 +371,13 @@ describe("SkyCapability — God Rays（体积光束）", () => {
     expect(cap.getGodRaysIntensity()).toBe(0);
   });
 
-  it("getMenuControls 包含 sky-godrays toggle", () => {
+  it("getMenuNodes 包含 sky-godrays toggle（高级 folder）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const godraysCtrl = controls.find((c) => c.id === "sky-godrays");
-    expect(godraysCtrl).toBeDefined();
-    expect(godraysCtrl!.kind).toBe("toggle");
-    expect(godraysCtrl!.getValue()).toBe(false);
+    const folder = cap.getMenuNodes()[3]!;
+    const godraysNode = folder.children!.find((c) => c.id === "sky-godrays")!;
+    expect(godraysNode).toBeDefined();
+    expect(godraysNode.kind).toBe("toggle");
+    expect(godraysNode.control!.get!(undefined)).toBe(false);
   });
 
   it("saveState/loadState 持久化 godRaysEnabled", () => {

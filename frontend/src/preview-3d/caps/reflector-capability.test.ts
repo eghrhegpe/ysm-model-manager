@@ -161,41 +161,31 @@ describe("ReflectorCapability — 持久化", () => {
   });
 });
 
-describe("ReflectorCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表", () => {
+describe("ReflectorCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(4);
-    // 总开关
-    const enabledCtrl = controls.find((c) => c.id === "reflector-enabled");
-    expect(enabledCtrl).toBeDefined();
-    expect(enabledCtrl!.kind).toBe("toggle");
-    expect(enabledCtrl!.getValue()).toBe(false);
-    // 透明度滑块
-    expect(controls.find((c) => c.id === "reflector-opacity")).toBeDefined();
-    // 精度滑块
-    expect(controls.find((c) => c.id === "reflector-resolution")).toBeDefined();
-    // 地面大小滑块
-    expect(controls.find((c) => c.id === "reflector-size")).toBeDefined();
+    const nodes = cap.getMenuNodes();
+    // master toggle 在顶层
+    expect(nodes[0]!.id).toBe("reflector-enabled");
+    // 其余节点在 folder children 内
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("reflector-opacity");
+    expect(childIds).toContain("reflector-resolution");
+    expect(childIds).toContain("reflector-size");
+    // folder 的 labelKey 对应原 group
+    expect(folder.labelKey).toBe("preview.reflectorGroupParams");
   });
 
-  it("toggle 开关同步状态", () => {
+  it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const enabledCtrl = controls.find((c) => c.id === "reflector-enabled")!;
-    enabledCtrl.setValue(true);
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "reflector-enabled")!;
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    enabledCtrl.setValue(false);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
-  });
-
-  it("非总开关控件均含 group 字段", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "reflector-enabled").forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!.startsWith("preview.")).toBe(true);
-    });
   });
 });
 
@@ -225,7 +215,7 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
 
   it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
     const cap = newCap();
-    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterToggle()?.id);
+    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterNodeId());
     expect(rest).toHaveLength(1);
     expect(rest[0]!.kind).toBe("folder");
     expect(rest[0]!.children!.some((c) => c.id === "reflector-enabled")).toBe(false);
@@ -359,16 +349,16 @@ describe("ReflectorCapability — 真实管线", () => {
 });
 
 // ============ 菜单控件联动 ============
-describe("ReflectorCapability — 菜单控件联动", () => {
+describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）", () => {
   it("opacity/resolution/size 滑块读写联动", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const by = (id: string) => controls.find((c) => c.id === id)!;
-    by("reflector-opacity").setValue(0.9);
-    expect(by("reflector-opacity").getValue()).toBe(0.9);
-    by("reflector-resolution").setValue(2048);
-    expect(by("reflector-resolution").getValue()).toBe(2048);
-    by("reflector-size").setValue(400);
-    expect(by("reflector-size").getValue()).toBe(400);
+    const folder = cap.getMenuNodes()[1]!;
+    const by = (id: string) => folder.children!.find((c) => c.id === id)!;
+    by("reflector-opacity").control!.set!(0.9);
+    expect(by("reflector-opacity").control!.get!(undefined)).toBe(0.9);
+    by("reflector-resolution").control!.set!(2048);
+    expect(by("reflector-resolution").control!.get!(undefined)).toBe(2048);
+    by("reflector-size").control!.set!(400);
+    expect(by("reflector-size").control!.get!(undefined)).toBe(400);
   });
 });

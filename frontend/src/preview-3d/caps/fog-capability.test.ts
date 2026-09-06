@@ -139,54 +139,42 @@ describe("FogCapability — 持久化", () => {
   });
 });
 
-describe("FogCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表", () => {
+describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(5);
-    // 总开关
-    const enabledCtrl = controls.find((c) => c.id === "fog-enabled");
-    expect(enabledCtrl).toBeDefined();
-    expect(enabledCtrl!.kind).toBe("toggle");
-    expect(enabledCtrl!.getValue()).toBe(false);
-    // 模式选择
-    const modeCtrl = controls.find((c) => c.id === "fog-mode");
-    expect(modeCtrl).toBeDefined();
-    expect(modeCtrl!.kind).toBe("select");
-    expect(modeCtrl!.select?.length).toBe(2);
-    // 近距/远距/密度滑块
-    expect(controls.find((c) => c.id === "fog-near")).toBeDefined();
-    expect(controls.find((c) => c.id === "fog-far")).toBeDefined();
-    expect(controls.find((c) => c.id === "fog-density")).toBeDefined();
+    const nodes = cap.getMenuNodes();
+    // master toggle 在顶层
+    expect(nodes[0]!.id).toBe("fog-enabled");
+    // 其余节点在 folder children 内
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("fog-color");
+    expect(childIds).toContain("fog-mode");
+    expect(childIds).toContain("fog-density");
+    expect(childIds).toContain("fog-near");
+    expect(childIds).toContain("fog-far");
+    // folder 的 labelKey 对应原 group
+    expect(folder.labelKey).toBe("preview.fogGroupParams");
   });
 
-  it("toggle 开关同步状态", () => {
+  it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const enabledCtrl = controls.find((c) => c.id === "fog-enabled")!;
-    enabledCtrl.setValue(true);
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "fog-enabled")!;
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    expect(enabledCtrl.getValue()).toBe(true);
-    enabledCtrl.setValue(false);
+    expect(enabledNode.control!.get!(undefined)).toBe(true);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("模式选择同步", () => {
+  it("模式选择同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const modeCtrl = controls.find((c) => c.id === "fog-mode")!;
-    modeCtrl.setValue("exp2");
+    const folder = cap.getMenuNodes()[1]!;
+    const modeNode = folder.children!.find((c) => c.id === "fog-mode")!;
+    modeNode.control!.set!("exp2");
     expect(cap.getMode()).toBe("exp2");
-  });
-
-  it("非总开关控件均含 group 字段", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "fog-enabled").forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(typeof c.group).toBe("string");
-      expect(c.group!.startsWith("preview.")).toBe(true);
-    });
   });
 });
 
@@ -224,7 +212,7 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
 
   it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
     const cap = newCap();
-    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterToggle()?.id);
+    const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterNodeId());
     expect(rest).toHaveLength(1);
     expect(rest[0]!.children!.some((c) => c.id === "fog-enabled")).toBe(false);
   });

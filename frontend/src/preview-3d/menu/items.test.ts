@@ -122,8 +122,10 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
   };
 }
 
-/** 环境能力假 cap（environment 面板 env.skyGroundCap 谓词放行 + 渲染用） */
-const fakeCap = {
+/** 环境能力假 cap（environment 面板 env.skyGroundCap 谓词放行 + 渲染用）
+ *  [ADR-195 刀3] 接口已删 getMenuControls——fake 走 getMenuNodes 节点形态。
+ *  内部 core 对象先定义（闭包引用 core 保有方法类型），末尾 cast 为 SceneCapability。 */
+const fakeCapCore = {
   getTimeOfDay: () => 9,
   setTime: vi.fn(),
   getCloudCoverage: () => 0,
@@ -132,11 +134,38 @@ const fakeCap = {
   setEnvironmentEnabled: vi.fn(),
   getVisible: () => true,
   setVisible: vi.fn(),
-  getMenuControls: () => [
-    { id: "sky-time", kind: "slider" as const, labelKey: "preview.timeOfDay", fallback: "时间", slider: { min: 0, max: 24, step: 0.5 }, getValue: () => 9, setValue: vi.fn() },
-    { id: "sky-cloud", kind: "slider" as const, labelKey: "preview.cloudCoverage", fallback: "云量", slider: { min: 0, max: 1, step: 0.05 }, getValue: () => 0, setValue: vi.fn() },
-    { id: "sky-env", kind: "toggle" as const, labelKey: "preview.environmentMapping", fallback: "环境贴图", getValue: () => true, setValue: vi.fn() },
-    { id: "ground-visible", kind: "toggle" as const, labelKey: "preview.ground", fallback: "地面", getValue: () => true, setValue: vi.fn() },
+};
+const fakeCap = {
+  ...fakeCapCore,
+  getMenuNodes: () => [
+    {
+      id: "sky-time",
+      kind: "slider" as const,
+      labelKey: "preview.timeOfDay",
+      fallback: "时间",
+      control: { min: 0, max: 24, step: 0.5, get: () => fakeCapCore.getTimeOfDay(), set: (v: unknown) => fakeCapCore.setTime(v) },
+    },
+    {
+      id: "sky-cloud",
+      kind: "slider" as const,
+      labelKey: "preview.cloudCoverage",
+      fallback: "云量",
+      control: { min: 0, max: 1, step: 0.05, get: () => fakeCapCore.getCloudCoverage(), set: (v: unknown) => fakeCapCore.setCloudCoverage(v) },
+    },
+    {
+      id: "sky-env",
+      kind: "toggle" as const,
+      labelKey: "preview.environmentMapping",
+      fallback: "环境贴图",
+      control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
+    },
+    {
+      id: "ground-visible",
+      kind: "toggle" as const,
+      labelKey: "preview.ground",
+      fallback: "地面",
+      control: { get: () => fakeCapCore.getVisible(), set: (v: unknown) => fakeCapCore.setVisible(v) },
+    },
   ],
 } as unknown as SceneCapability;
 

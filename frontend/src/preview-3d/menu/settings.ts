@@ -215,10 +215,8 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
  * 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件节点，升序并入设置面板。
  *
  * [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]（不再投影回 MenuControlDef）：
- *   - 已迁移 cap（getMenuNodes）：从节点树收集带 settingsOrder 的原生节点
- *     （settings 扁平视图不收 folder 组；复杂控件若带 settingsOrder 保持原节点
- *     ——刀 2 迁移保证 settingsOrder 只挂在原生节点上）
- *   - 未迁移 cap：getMenuControls → capControlsToNodes 桥接成节点再收
+ *   - 全部 cap（10 个均已迁移）：从 getMenuNodes 节点树递归收集带 settingsOrder 的
+ *     节点（folder 壳不收、其 children 递归展平）
  * 渲染侧由 renderMenu 直渲染节点（settings-quality 展开），不再包 controls 节点。
  *
  * 其余设计要点（沿用）：
@@ -231,11 +229,20 @@ export function collectSettingsCapControls(): PreviewMenuNode[] {
   const out: PreviewMenuNode[] = [];
   for (const cap of sceneCapabilityRegistry.getAll()) {
     if (cap.getMenuNodes) {
-      for (const n of cap.getMenuNodes()) {
-        if (n.settingsOrder === undefined) continue;
-        if (n.kind === "folder") continue; // settings 扁平视图不收 folder 组
-        out.push(n);
-      }
+      // 递归展平 folder：settings 扁平视图不收 folder 壳，但其 children 可能带
+      // settingsOrder（fake/桥接节点同 group 控件被包 folder 时）。真实 cap 的
+      // settingsOrder 节点多为平铺顶层，递归兜底 folder 内声明。
+      const walk = (nodes: PreviewMenuNode[]): void => {
+        for (const n of nodes) {
+          if (n.kind === "folder" && n.children) {
+            walk(n.children);
+            continue;
+          }
+          if (n.settingsOrder === undefined) continue;
+          out.push(n);
+        }
+      };
+      walk(cap.getMenuNodes());
     }
   }
   out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));

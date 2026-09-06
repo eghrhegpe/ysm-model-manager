@@ -29,6 +29,7 @@ import {
 } from "../menu/settings.ts";
 import type { PreviewMenuCtx } from "../menu/core.ts";
 import { renderMenu } from "../menu/render.ts";
+import { capControlsToNodes } from "../menu/cap-to-node.ts";
 import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
@@ -84,7 +85,10 @@ function makeFakeCap(
       cap.envOn = v;
     },
     isEnvironmentEnabled: () => cap.envOn,
-    getMenuControls: () => cap.controls,
+    // [ADR-195 刀3] fake cap 走 getMenuNodes（接口已删 getMenuControls）——
+    // controls 选项（MenuControlDef[]）经 capControlsToNodes 桥接成节点树，
+    // 对齐 collectSettingsCapControls 只收 getMenuNodes 分支的现状。
+    getMenuNodes: () => capControlsToNodes(cap.controls),
     saveState: vi.fn(),
     loadState: vi.fn(),
   };

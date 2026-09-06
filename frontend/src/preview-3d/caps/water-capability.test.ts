@@ -38,37 +38,36 @@ describe("WaterCapability", () => {
     expect(scene.getObjectByName("ysm-ground-water")?.visible).toBe(true);
   });
 
-  it("getMenuControls：12 项按功能区（形态/外观/水池/波纹）分组，启用开关无 group 作根行主控件", () => {
+  it("getMenuNodes：enabled 平铺 toggle + 4 组 folder（节点化后 group 由 folder 表达）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBe(12);
-    // 首个控件 = 启用水面，无 group（作为 cap 根行主控件，下钻子视图不再重复）
-    expect(controls[0].id).toBe("ground-water-enabled");
-    expect(controls[0].group).toBeUndefined();
-    // 其余 11 项归属 4 个功能组，且全部带 group
-    const rest = controls.slice(1);
-    expect(rest.every((c) => c.group !== undefined)).toBe(true);
-    const groups = new Set(rest.map((c) => c.group));
-    expect([...groups].sort()).toEqual([
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(5);
+    // enabled 平铺
+    expect(nodes[0].id).toBe("ground-water-enabled");
+    // 4 个 folder
+    expect(nodes.slice(1).map((n) => n.kind)).toEqual(["folder", "folder", "folder", "folder"]);
+    expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
       "preview.waterGroupForm",
       "preview.waterGroupLook",
       "preview.waterGroupPool",
       "preview.waterGroupWave",
-    ].sort());
-    const byGroup = (g: string) => rest.filter((c) => c.group === g).map((c) => c.id).sort();
-    expect(byGroup("preview.waterGroupForm")).toEqual(["ground-water-mode"]);
-    expect(byGroup("preview.waterGroupLook")).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity", "ground-wetness"].sort());
-    expect(byGroup("preview.waterGroupPool")).toEqual(["ground-pool-height", "ground-pool-wall-color", "ground-pool-wall-thickness", "ground-pool-roundness"].sort());
-    expect(byGroup("preview.waterGroupWave")).toEqual(["ground-wave-speed"]);
+    ]);
+    const byLabel = (label: string) => nodes.slice(1).find((n) => n.labelKey === label)!;
+    expect(byLabel("preview.waterGroupForm").children!.map((c) => c.id).sort()).toEqual(["ground-water-mode"]);
+    expect(byLabel("preview.waterGroupLook").children!.map((c) => c.id).sort()).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity", "ground-wetness"].sort());
+    expect(byLabel("preview.waterGroupPool").children!.map((c) => c.id).sort()).toEqual(["ground-pool-height", "ground-pool-wall-color", "ground-pool-wall-thickness", "ground-pool-roundness"].sort());
+    expect(byLabel("preview.waterGroupWave").children!.map((c) => c.id).sort()).toEqual(["ground-wave-speed"]);
   });
 
-  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool（visibleWhen B 轨）", () => {
+  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool（visibleWhen B 轨，节点化）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const controls = cap.getMenuControls();
-    const wetness = controls.find((c) => c.id === "ground-wetness")!;
-    const poolHeight = controls.find((c) => c.id === "ground-pool-height")!;
+    const nodes = cap.getMenuNodes();
+    const look = nodes[2]!;
+    const pool = nodes[3]!;
+    const wetness = look.children!.find((c) => c.id === "ground-wetness")!;
+    const poolHeight = pool.children!.find((c) => c.id === "ground-pool-height")!;
     // [铁律收口] 谓词吃状态层快照 env.waterMode（纯函数，不摸 cap 实例）
     const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
     // 默认 film：wetness 可见，pool 系列隐藏
@@ -79,15 +78,16 @@ describe("WaterCapability", () => {
     expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
   });
 
-  it("getMenuControls 含 ground-normal-strength slider（group=preview.waterGroup）", () => {
+  it("getMenuNodes 含 ground-normal-strength slider（节点 control 字段）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const controls = cap.getMenuControls();
-    const normalCtrl = controls.find((c) => c.id === "ground-normal-strength");
-    expect(normalCtrl).toBeDefined();
-    expect(normalCtrl!.kind).toBe("slider");
-    expect(normalCtrl!.group).toBe("preview.waterGroupLook");
-    expect(normalCtrl!.slider).toEqual({ min: 0, max: 1, step: 0.05 });
+    const look = cap.getMenuNodes()[2]!;
+    const normalNode = look.children!.find((c) => c.id === "ground-normal-strength")!;
+    expect(normalNode).toBeDefined();
+    expect(normalNode.kind).toBe("slider");
+    expect(normalNode.control!.min).toBe(0);
+    expect(normalNode.control!.max).toBe(1);
+    expect(normalNode.control!.step).toBe(0.05);
   });
 
   it("setNormalStrength 影响顶水面 normalScale", () => {
@@ -553,36 +553,47 @@ describe("WaterCapability — 法线贴图缓存", () => {
   });
 });
 
-// ============ 菜单控件全联动（覆盖 buildWaterGroup 全部 getValue/setValue 闭包）============
+// ============ 菜单控件全联动（节点 control 闭包）============
 describe("WaterCapability — 菜单控件全联动", () => {
-  it("12 项控件 setValue/getValue 双向读写联动", () => {
+  it("12 项控件 setValue/getValue 双向读写联动（节点 control 闭包）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const by = (id: string) => cap.getMenuControls().find((c) => c.id === id)!;
-    by("ground-water-enabled").setValue(false);
-    expect(by("ground-water-enabled").getValue()).toBe(false);
-    by("ground-water-mode").setValue("pool");
-    expect(by("ground-water-mode").getValue()).toBe("pool");
-    by("ground-wetness").setValue(0.45);
-    expect(by("ground-wetness").getValue()).toBeCloseTo(0.45, 5);
-    by("ground-water-color").setValue(0x0a0b0c);
-    expect(by("ground-water-color").getValue()).toBe(0x0a0b0c);
-    by("ground-water-opacity").setValue(0.55);
-    expect(by("ground-water-opacity").getValue()).toBeCloseTo(0.55, 5);
-    by("ground-normal-strength").setValue(0.6);
-    expect(by("ground-normal-strength").getValue()).toBeCloseTo(0.6, 5);
-    by("ground-water-clarity").setValue(0.35);
-    expect(by("ground-water-clarity").getValue()).toBeCloseTo(0.35, 5);
-    by("ground-pool-height").setValue(1.5);
-    expect(by("ground-pool-height").getValue()).toBeCloseTo(1.5, 5);
-    by("ground-pool-wall-thickness").setValue(0.4);
-    expect(by("ground-pool-wall-thickness").getValue()).toBeCloseTo(0.4, 5);
-    by("ground-pool-wall-color").setValue(0x334455);
-    expect(by("ground-pool-wall-color").getValue()).toBe(0x334455);
-    by("ground-pool-roundness").setValue(0.2);
-    expect(by("ground-pool-roundness").getValue()).toBeCloseTo(0.2, 5);
-    by("ground-wave-speed").setValue(1.8);
-    expect(by("ground-wave-speed").getValue()).toBeCloseTo(1.8, 5);
+    const nodes = cap.getMenuNodes();
+    const form = nodes[1]!;
+    const look = nodes[2]!;
+    const pool = nodes[3]!;
+    const wave = nodes[4]!;
+    const by = (id: string) => {
+      for (const arr of [nodes, form.children!, look.children!, pool.children!, wave.children!]) {
+        const found = arr.find((c) => c.id === id);
+        if (found) return found;
+      }
+      throw new Error(`node ${id} not found`);
+    };
+    nodes[0]!.control!.set!(false);
+    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    by("ground-water-mode").control!.set!("pool");
+    expect(by("ground-water-mode").control!.get!(undefined)).toBe("pool");
+    by("ground-wetness").control!.set!(0.45);
+    expect(by("ground-wetness").control!.get!(undefined)).toBeCloseTo(0.45, 5);
+    by("ground-water-color").control!.set!(0x0a0b0c);
+    expect(by("ground-water-color").control!.get!(undefined)).toBe(0x0a0b0c);
+    by("ground-water-opacity").control!.set!(0.55);
+    expect(by("ground-water-opacity").control!.get!(undefined)).toBeCloseTo(0.55, 5);
+    by("ground-normal-strength").control!.set!(0.6);
+    expect(by("ground-normal-strength").control!.get!(undefined)).toBeCloseTo(0.6, 5);
+    by("ground-water-clarity").control!.set!(0.35);
+    expect(by("ground-water-clarity").control!.get!(undefined)).toBeCloseTo(0.35, 5);
+    by("ground-pool-height").control!.set!(1.5);
+    expect(by("ground-pool-height").control!.get!(undefined)).toBeCloseTo(1.5, 5);
+    by("ground-pool-wall-thickness").control!.set!(0.4);
+    expect(by("ground-pool-wall-thickness").control!.get!(undefined)).toBeCloseTo(0.4, 5);
+    by("ground-pool-wall-color").control!.set!(0x334455);
+    expect(by("ground-pool-wall-color").control!.get!(undefined)).toBe(0x334455);
+    by("ground-pool-roundness").control!.set!(0.2);
+    expect(by("ground-pool-roundness").control!.get!(undefined)).toBeCloseTo(0.2, 5);
+    by("ground-wave-speed").control!.set!(1.8);
+    expect(by("ground-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
   });
 });
 

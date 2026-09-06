@@ -648,75 +648,60 @@ describe("ShadowCapability — 持久化", () => {
   });
 });
 
-describe("ShadowCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表", () => {
+describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(6);
-    // 总开关
-    const enabledCtrl = controls.find((c) => c.id === "shadow-enabled");
-    expect(enabledCtrl).toBeDefined();
-    expect(enabledCtrl!.kind).toBe("toggle");
-    expect(enabledCtrl!.getValue()).toBe(false);
-    // 分辨率选择器
-    const mapSizeCtrl = controls.find((c) => c.id === "shadow-map-size");
-    expect(mapSizeCtrl).toBeDefined();
-    expect(mapSizeCtrl!.kind).toBe("select");
-    expect(mapSizeCtrl!.select?.length).toBe(4);
-    // 软阴影开关
-    const softCtrl = controls.find((c) => c.id === "shadow-soft");
-    expect(softCtrl).toBeDefined();
-    expect(softCtrl!.kind).toBe("toggle");
-    expect(softCtrl!.getValue()).toBe(false);
-    // bias / normalBias / cameraSize 滑块
-    expect(controls.find((c) => c.id === "shadow-bias")).toBeDefined();
-    expect(controls.find((c) => c.id === "shadow-normal-bias")).toBeDefined();
-    expect(controls.find((c) => c.id === "shadow-camera-size")).toBeDefined();
+    const nodes = cap.getMenuNodes();
+    // shadow-enabled 平铺
+    expect(nodes[0]!.id).toBe("shadow-enabled");
+    // 其余节点在 folder children 内
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("shadow-soft");
+    expect(childIds).toContain("shadow-map-size");
+    expect(childIds).toContain("shadow-bias");
+    expect(childIds).toContain("shadow-normal-bias");
+    expect(childIds).toContain("shadow-camera-size");
+    // folder labelKey 对应原 group
+    expect(folder.labelKey).toBe("preview.shadowGroupParams");
   });
 
-  it("toggle 开关同步状态", () => {
+  it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const controls = cap.getMenuControls();
-    const enabledCtrl = controls.find((c) => c.id === "shadow-enabled")!;
-    enabledCtrl.setValue(true);
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "shadow-enabled")!;
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    enabledCtrl.setValue(false);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("分辨率选择同步", () => {
+  it("分辨率选择同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const controls = cap.getMenuControls();
-    const mapSizeCtrl = controls.find((c) => c.id === "shadow-map-size")!;
-    mapSizeCtrl.setValue("2048");
+    const folder = cap.getMenuNodes()[1]!;
+    const mapSizeNode = folder.children!.find((c) => c.id === "shadow-map-size")!;
+    mapSizeNode.control!.set!("2048");
     expect(cap.getMapSize()).toBe(2048);
   });
 
-  it("软阴影开关同步", () => {
+  it("软阴影开关同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const softCtrl = cap.getMenuControls().find((c) => c.id === "shadow-soft")!;
-    softCtrl.setValue(true);
+    const folder = cap.getMenuNodes()[1]!;
+    const softNode = folder.children!.find((c) => c.id === "shadow-soft")!;
+    softNode.control!.set!(true);
     expect(cap.isSoft()).toBe(true);
   });
 
-  it("bias / normalBias / cameraSize 滑块同步", () => {
+  it("bias / normalBias / cameraSize 滑块同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const controls = cap.getMenuControls();
-    controls.find((c) => c.id === "shadow-bias")!.setValue(-0.002);
-    controls.find((c) => c.id === "shadow-normal-bias")!.setValue(0.06);
-    controls.find((c) => c.id === "shadow-camera-size")!.setValue(25);
+    const folder = cap.getMenuNodes()[1]!;
+    folder.children!.find((c) => c.id === "shadow-bias")!.control!.set!(-0.002);
+    folder.children!.find((c) => c.id === "shadow-normal-bias")!.control!.set!(0.06);
+    folder.children!.find((c) => c.id === "shadow-camera-size")!.control!.set!(25);
     expect(cap.getBias()).toBe(-0.002);
     expect(cap.getNormalBias()).toBe(0.06);
     expect(cap.getCameraSize()).toBe(25);
-  });
-
-  it("非总开关控件均含 group 字段", () => {
-    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "shadow-enabled").forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!.startsWith("preview.")).toBe(true);
-    });
   });
 });
 

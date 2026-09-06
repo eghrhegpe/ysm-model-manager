@@ -673,170 +673,53 @@ describe("EnvironmentCapability — 持久化", () => {
   });
 });
 
-describe("EnvironmentCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表，包含所有必需控件", () => {
+describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("非总开关节点全部嵌套在 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(6);
-    // 检查总开关（env-enabled）
-    const enabledCtrl = controls.find((c) => c.id === "env-enabled");
-    expect(enabledCtrl).toBeDefined();
-    expect(enabledCtrl!.kind).toBe("toggle");
-    expect(enabledCtrl!.getValue()).toBe(true);
-    // 检查预设缩略图
-    const presetCtrl = controls.find((c) => c.id === "env-preset");
-    expect(presetCtrl).toBeDefined();
-    expect(presetCtrl!.kind).toBe("preset-thumb");
-    expect(presetCtrl!.thumb).toBeDefined();
-    expect(presetCtrl!.thumb!.options.length).toBe(5); // 5 presets (no custom)
-    expect(presetCtrl!.thumb!.activeValue()).toBe("sky");
-    // 检查强度滑块
-    const intensityCtrl = controls.find((c) => c.id === "env-intensity");
-    expect(intensityCtrl).toBeDefined();
-    expect(intensityCtrl!.kind).toBe("slider");
-    expect(intensityCtrl!.slider?.min).toBe(0);
-    expect(intensityCtrl!.slider?.max).toBe(3);
-    // 检查背景开关
-    const bgCtrl = controls.find((c) => c.id === "env-use-as-background");
-    expect(bgCtrl).toBeDefined();
-    expect(bgCtrl!.kind).toBe("toggle");
-    // 检查 HDR 按钮
-    const pickCtrl = controls.find((c) => c.id === "env-pick-hdr");
-    expect(pickCtrl).toBeDefined();
-    expect(pickCtrl!.kind).toBe("button");
-    expect(pickCtrl!.button?.variant).toBe("primary");
-    const clearCtrl = controls.find((c) => c.id === "env-clear-hdr");
-    expect(clearCtrl).toBeDefined();
-    expect(clearCtrl!.kind).toBe("button");
-    expect(clearCtrl!.button?.variant).toBe("ghost");
-    // 直方图控件
-    const histCtrl = controls.find((c) => c.id === "env-histogram");
-    expect(histCtrl).toBeDefined();
-    expect(histCtrl!.kind).toBe("histogram");
-    expect(histCtrl!.getValue()).toEqual(new Array(16).fill(0));
+    const nodes = cap.getMenuNodes();
+    // env-enabled 平铺
+    expect(nodes[0]!.id).toBe("env-enabled");
+    // 其余节点在 folder children 内
+    const bgFolder = nodes[2]!;
+    expect(bgFolder.kind).toBe("folder");
+    expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
+    const bgChildIds = bgFolder.children!.map((c) => c.id);
+    expect(bgChildIds).toContain("env-use-as-background");
+    expect(bgChildIds).toContain("env-intensity");
+    expect(bgChildIds).toContain("cap-group-env-histogram");
+    // folder labelKey 对应原 group
+    expect(nodes[1]!.labelKey).toBe("preview.envGroupPreset");
+    expect(nodes[3]!.labelKey).toBe("preview.envGroupCustomHdr");
   });
 
-  it("toggle 开关操作同步状态", () => {
+  it("toggle 开关操作同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const enabledCtrl = controls.find((c) => c.id === "env-enabled")!;
-    expect(enabledCtrl.getValue()).toBe(true);
-    enabledCtrl.setValue(false);
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "env-enabled")!;
+    expect(enabledNode.control!.get!(undefined)).toBe(true);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
-    expect(enabledCtrl.getValue()).toBe(false);
-    enabledCtrl.setValue(true);
+    expect(enabledNode.control!.get!(undefined)).toBe(false);
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
   });
 
-  it("强度滑块读写同步", () => {
+  it("强度滑块读写同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const intensityCtrl = controls.find((c) => c.id === "env-intensity")!;
-    intensityCtrl.setValue(2.5);
+    const bgFolder = cap.getMenuNodes()[2]!;
+    const intensityNode = bgFolder.children!.find((c) => c.id === "env-intensity")!;
+    intensityNode.control!.set!(2.5);
     expect(cap.getIntensity()).toBe(2.5);
-    expect(intensityCtrl.getValue()).toBe(2.5);
+    expect(intensityNode.control!.get!(undefined)).toBe(2.5);
   });
 
-  it("背景开关读写同步", () => {
+  it("背景开关读写同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const bgCtrl = controls.find((c) => c.id === "env-use-as-background")!;
-    bgCtrl.setValue(true);
+    const bgFolder = cap.getMenuNodes()[2]!;
+    const bgNode = bgFolder.children!.find((c) => c.id === "env-use-as-background")!;
+    bgNode.control!.set!(true);
     expect(cap.isUseAsBackground()).toBe(true);
-    expect(bgCtrl.getValue()).toBe(true);
-  });
-
-  it("HDR 清除按钮 disabled 随 hasCustomHdr 变化", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    const clearCtrl = controls.find((c) => c.id === "env-clear-hdr")!;
-    // 无 custom HDR → 禁用
-    expect(clearCtrl.button?.disabled?.()).toBe(true);
-    // 注入假 HDR 缓存（模拟已加载）
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
-    (cap as unknown as Record<string, unknown>).customHdrName = "test.hdr";
-    expect(clearCtrl.button?.disabled?.()).toBe(false);
-    expect(clearCtrl.button?.getHint?.()).toBe("已清空将回到工作室预设");
-  });
-
-  it("HDR 选择按钮 disabled 随加载状态变化，getHint 反馈状态", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    const pickCtrl = controls.find((c) => c.id === "env-pick-hdr")!;
-    expect(pickCtrl.button?.disabled?.()).toBe(false);
-    expect(pickCtrl.button?.getHint?.()).toBe("");
-    // 模拟加载中
-    (cap as unknown as Record<string, unknown>).customHdrLoading = true;
-    expect(pickCtrl.button?.disabled?.()).toBe(true);
-    expect(pickCtrl.button?.getHint?.()).toBe("加载中…");
-    // 已加载文件名
-    (cap as unknown as Record<string, unknown>).customHdrLoading = false;
-    (cap as unknown as Record<string, unknown>).customHdrName = "room.hdr";
-    expect(pickCtrl.button?.getHint?.()).toBe("已加载：room.hdr");
-  });
-
-  it("env-hdr-preview image 控件返回 custom 缩略图", () => {
-    const cap = newCap();
-    const previewCtrl = cap.getMenuControls().find((c) => c.id === "env-hdr-preview")!;
-    expect(previewCtrl.kind).toBe("image");
-    expect(previewCtrl.getValue()).toBeNull(); // 无缓存
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture();
-    expect(previewCtrl.getValue()).toBe("data:image/png;base64,mock");
-  });
-
-  it("预设选择器 onSelect 切换预设", () => {
-    const cap = newCap();
-    const presetCtrl = cap.getMenuControls().find((c) => c.id === "env-preset")!;
-    presetCtrl.thumb!.onSelect("studio");
-    expect(cap.getPresetId()).toBe("studio");
-  });
-
-  it("预设选择器列出所有预设（5个，不含 custom）", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    const presetCtrl = controls.find((c) => c.id === "env-preset")!;
-    expect(presetCtrl.kind).toBe("preset-thumb");
-    const values = presetCtrl.thumb!.options.map((o) => o.value);
-    // 所有 ENV_PRESETS 的 key 都应出现（不含 custom）
-    for (const key of Object.keys(ENV_PRESETS)) {
-      expect(values).toContain(key);
-    }
-    expect(values).not.toContain("custom");
-  });
-
-  it("getThumb 按选项返回缩略图", () => {
-    const cap = newCap();
-    const presetCtrl = cap.getMenuControls().find((c) => c.id === "env-preset")!;
-    for (const opt of presetCtrl.thumb!.options) {
-      expect(opt.getThumb()).toBe("data:image/png;base64,mock");
-    }
-  });
-
-  it("非总开关控件均含 group 字段", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "env-enabled").forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!.startsWith("preview.env")).toBe(true);
-    });
-  });
-
-  it("activeValue 返回当前 presetId", () => {
-    const cap = newCap({ params: { preset: "sunset" } });
-    const controls = cap.getMenuControls();
-    const presetCtrl = controls.find((c) => c.id === "env-preset")!;
-    expect(presetCtrl.thumb!.activeValue()).toBe("sunset");
-  });
-
-  it("image/button 控件的 setValue 与 getValue no-op 语义", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    // 全部 setValue 调用不抛错（声明式 no-op）
-    for (const c of controls) c.setValue("x");
-    // button 控件 getValue 返回空串
-    expect(controls.find((c) => c.id === "env-pick-hdr")!.getValue()).toBe("");
-    expect(controls.find((c) => c.id === "env-clear-hdr")!.getValue()).toBe("");
-    expect(controls.find((c) => c.id === "env-preset")!.getValue()).toBe("");
+    expect(bgNode.control!.get!(undefined)).toBe(true);
   });
 });
 

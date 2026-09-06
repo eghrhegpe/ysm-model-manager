@@ -42,6 +42,18 @@ function stubLightCap(opts: { engine?: "cone" | "postprocess"; volEnabled?: bool
   } as unknown as LightCapability;
 }
 
+/** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children） */
+function findNode(nodes: import("../menu-node-types.ts").PreviewMenuNode[], id: string): import("../menu-node-types.ts").PreviewMenuNode | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children) {
+      const found = findNode(n.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 function newCap(opts: { enabled?: boolean; params?: Partial<import("./postprocessing-capability.ts").PostprocessingParams> } = {}) {
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
@@ -60,16 +72,12 @@ describe("PostprocessingCapability — 构造与默认值", () => {
   it("构造默认值完整", () => {
     const cap = newCap();
     expect(cap.isEnabled()).toBe(false);
-    // 通过 getMenuControls 暴露的 getter 验证参数
-    const controls = cap.getMenuControls();
-    const toneMapping = controls.find((c) => c.id === "pp-toneMapping")!;
-    expect(toneMapping.getValue()).toBe("aces");
-    const exposure = controls.find((c) => c.id === "pp-exposure")!;
-    expect(exposure.getValue()).toBe(1.0);
-    const bloomStr = controls.find((c) => c.id === "pp-bloom-strength")!;
-    expect(bloomStr.getValue()).toBe(0.6);
-    const ssaoEn = controls.find((c) => c.id === "pp-ssao-enabled")!;
-    expect(ssaoEn.getValue()).toBe(false);
+    // 通过 getMenuNodes 暴露的 getter 验证参数
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-toneMapping")!.control!.get!(undefined)).toBe("aces");
+    expect(findNode(nodes, "pp-exposure")!.control!.get!(undefined)).toBe(1.0);
+    expect(findNode(nodes, "pp-bloom-strength")!.control!.get!(undefined)).toBe(0.6);
+    expect(findNode(nodes, "pp-ssao-enabled")!.control!.get!(undefined)).toBe(false);
   });
 
   it("enabled:true 初始启用", () => {
@@ -79,13 +87,10 @@ describe("PostprocessingCapability — 构造与默认值", () => {
 
   it("params 覆盖生效", () => {
     const cap = newCap({ params: { bloomStrength: 1.2, exposure: 1.5, toneMapping: "reinhard" } });
-    const controls = cap.getMenuControls();
-    const bloomStr = controls.find((c) => c.id === "pp-bloom-strength")!;
-    expect(bloomStr.getValue()).toBe(1.2);
-    const exposure = controls.find((c) => c.id === "pp-exposure")!;
-    expect(exposure.getValue()).toBe(1.5);
-    const toneMapping = controls.find((c) => c.id === "pp-toneMapping")!;
-    expect(toneMapping.getValue()).toBe("reinhard");
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-bloom-strength")!.control!.get!(undefined)).toBe(1.2);
+    expect(findNode(nodes, "pp-exposure")!.control!.get!(undefined)).toBe(1.5);
+    expect(findNode(nodes, "pp-toneMapping")!.control!.get!(undefined)).toBe("reinhard");
   });
 });
 
@@ -105,19 +110,19 @@ describe("PostprocessingCapability — Bloom 参数", () => {
     cap.setBloomStrength(1.5);
     cap.setBloomThreshold(0.7);
     cap.setBloomRadius(0.8);
-    const controls = cap.getMenuControls();
-    expect(controls.find((c) => c.id === "pp-bloom-strength")!.getValue()).toBe(1.5);
-    expect(controls.find((c) => c.id === "pp-bloom-threshold")!.getValue()).toBe(0.7);
-    expect(controls.find((c) => c.id === "pp-bloom-radius")!.getValue()).toBe(0.8);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-bloom-strength")!.control!.get!(undefined)).toBe(1.5);
+    expect(findNode(nodes, "pp-bloom-threshold")!.control!.get!(undefined)).toBe(0.7);
+    expect(findNode(nodes, "pp-bloom-radius")!.control!.get!(undefined)).toBe(0.8);
   });
 
   it("Bloom 跟随体积光联动开关", () => {
     const cap = newCap();
     cap.setBloomFollowVolumetric(false);
-    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-bloom-follow")!;
-    expect(ctrl.getValue()).toBe(false);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-bloom-follow")!.control!.get!(undefined)).toBe(false);
     cap.setBloomFollowVolumetric(true);
-    expect(ctrl.getValue()).toBe(true);
+    expect(findNode(nodes, "pp-bloom-follow")!.control!.get!(undefined)).toBe(true);
   });
 
   it("独立辉光开关默认开启且继承 DEFAULT", () => {
@@ -126,16 +131,15 @@ describe("PostprocessingCapability — Bloom 参数", () => {
     expect(cap.getParams().bloomEnabled).toBe(true);
   });
 
-  it("pp-bloom-enabled 控件存在且读写经 setBloomEnabled（与管线开关 this.enabled 正交）", () => {
+  it("pp-bloom-enabled 节点存在且读写经 setBloomEnabled（与管线开关 this.enabled 正交）", () => {
     const cap = newCap();
-    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-bloom-enabled")!;
-    expect(ctrl).toBeDefined();
-    expect(ctrl.kind).toBe("toggle");
-    // 效果总开关升面板基座级：不再归入 Bloom 折叠分组
-    expect(ctrl.group).toBeUndefined();
-    expect(ctrl.getValue()).toBe(true);
+    const nodes = cap.getMenuNodes();
+    const node = findNode(nodes, "pp-bloom-enabled")!;
+    expect(node).toBeDefined();
+    expect(node.kind).toBe("toggle");
+    expect(node.control!.get!(undefined)).toBe(true);
     cap.setBloomEnabled(false);
-    expect(ctrl.getValue()).toBe(false);
+    expect(node.control!.get!(undefined)).toBe(false);
     expect(cap.getParams().bloomEnabled).toBe(false);
     cap.setBloomEnabled(true);
     expect(cap.getParams().bloomEnabled).toBe(true);
@@ -159,11 +163,11 @@ describe("PostprocessingCapability — SSAO", () => {
     cap.setSSAORadius(12);
     cap.setSSAOMinDist(0.01);
     cap.setSSAOMaxDist(0.5);
-    const controls = cap.getMenuControls();
-    expect(controls.find((c) => c.id === "pp-ssao-enabled")!.getValue()).toBe(true);
-    expect(controls.find((c) => c.id === "pp-ssao-radius")!.getValue()).toBe(12);
-    expect(controls.find((c) => c.id === "pp-ssao-mindist")!.getValue()).toBe(0.01);
-    expect(controls.find((c) => c.id === "pp-ssao-maxdist")!.getValue()).toBe(0.5);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-ssao-enabled")!.control!.get!(undefined)).toBe(true);
+    expect(findNode(nodes, "pp-ssao-radius")!.control!.get!(undefined)).toBe(12);
+    expect(findNode(nodes, "pp-ssao-mindist")!.control!.get!(undefined)).toBe(0.01);
+    expect(findNode(nodes, "pp-ssao-maxdist")!.control!.get!(undefined)).toBe(0.5);
   });
 });
 
@@ -171,17 +175,17 @@ describe("PostprocessingCapability — 色彩映射与曝光", () => {
   it("setToneMapping 切换", () => {
     const cap = newCap();
     cap.setToneMapping("linear");
-    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-toneMapping")!;
-    expect(ctrl.getValue()).toBe("linear");
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-toneMapping")!.control!.get!(undefined)).toBe("linear");
     cap.setToneMapping("none");
-    expect(ctrl.getValue()).toBe("none");
+    expect(findNode(nodes, "pp-toneMapping")!.control!.get!(undefined)).toBe("none");
   });
 
   it("setExposure 读写", () => {
     const cap = newCap();
     cap.setExposure(2.0);
-    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-exposure")!;
-    expect(ctrl.getValue()).toBe(2.0);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-exposure")!.control!.get!(undefined)).toBe(2.0);
   });
 });
 
@@ -189,12 +193,12 @@ describe("PostprocessingCapability — SSR 反射", () => {
   it("setReflectionMode 切换三档", () => {
     const cap = newCap();
     cap.setReflectionMode("envmap+ssr");
-    const ctrl = cap.getMenuControls().find((c) => c.id === "pp-reflection-mode")!;
-    expect(ctrl.getValue()).toBe("envmap+ssr");
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-reflection-mode")!.control!.get!(undefined)).toBe("envmap+ssr");
     cap.setReflectionMode("ssr-only");
-    expect(ctrl.getValue()).toBe("ssr-only");
+    expect(findNode(nodes, "pp-reflection-mode")!.control!.get!(undefined)).toBe("ssr-only");
     cap.setReflectionMode("envmap-only");
-    expect(ctrl.getValue()).toBe("envmap-only");
+    expect(findNode(nodes, "pp-reflection-mode")!.control!.get!(undefined)).toBe("envmap-only");
   });
 
   it("SSR 参数读写", () => {
@@ -206,14 +210,14 @@ describe("PostprocessingCapability — SSR 反射", () => {
     cap.setSSRDistanceAttenuation(false);
     cap.setSSRFresnel(false);
     cap.setSSRBouncing(true);
-    const controls = cap.getMenuControls();
-    expect(controls.find((c) => c.id === "pp-ssr-opacity")!.getValue()).toBe(0.7);
-    expect(controls.find((c) => c.id === "pp-ssr-maxdistance")!.getValue()).toBe(300);
-    expect(controls.find((c) => c.id === "pp-ssr-thickness")!.getValue()).toBe(0.03);
-    expect(controls.find((c) => c.id === "pp-ssr-blur")!.getValue()).toBe(false);
-    expect(controls.find((c) => c.id === "pp-ssr-distanceAttenuation")!.getValue()).toBe(false);
-    expect(controls.find((c) => c.id === "pp-ssr-fresnel")!.getValue()).toBe(false);
-    expect(controls.find((c) => c.id === "pp-ssr-bouncing")!.getValue()).toBe(true);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-ssr-opacity")!.control!.get!(undefined)).toBe(0.7);
+    expect(findNode(nodes, "pp-ssr-maxdistance")!.control!.get!(undefined)).toBe(300);
+    expect(findNode(nodes, "pp-ssr-thickness")!.control!.get!(undefined)).toBe(0.03);
+    expect(findNode(nodes, "pp-ssr-blur")!.control!.get!(undefined)).toBe(false);
+    expect(findNode(nodes, "pp-ssr-distanceAttenuation")!.control!.get!(undefined)).toBe(false);
+    expect(findNode(nodes, "pp-ssr-fresnel")!.control!.get!(undefined)).toBe(false);
+    expect(findNode(nodes, "pp-ssr-bouncing")!.control!.get!(undefined)).toBe(true);
   });
 });
 
@@ -272,84 +276,57 @@ describe("PostprocessingCapability — 持久化", () => {
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.isEnabled()).toBe(true);
-    const c = cap2.getMenuControls();
-    expect(c.find((x) => x.id === "pp-bloom-strength")!.getValue()).toBe(1.2);
-    expect(c.find((x) => x.id === "pp-ssao-enabled")!.getValue()).toBe(true);
-    expect(c.find((x) => x.id === "pp-toneMapping")!.getValue()).toBe("reinhard");
-    expect(c.find((x) => x.id === "pp-exposure")!.getValue()).toBe(1.5);
-    expect(c.find((x) => x.id === "pp-reflection-mode")!.getValue()).toBe("envmap+ssr");
-    expect(c.find((x) => x.id === "pp-ssr-bouncing")!.getValue()).toBe(true);
+    const nodes = cap2.getMenuNodes();
+    expect(findNode(nodes, "pp-bloom-strength")!.control!.get!(undefined)).toBe(1.2);
+    expect(findNode(nodes, "pp-ssao-enabled")!.control!.get!(undefined)).toBe(true);
+    expect(findNode(nodes, "pp-toneMapping")!.control!.get!(undefined)).toBe("reinhard");
+    expect(findNode(nodes, "pp-exposure")!.control!.get!(undefined)).toBe(1.5);
+    expect(findNode(nodes, "pp-reflection-mode")!.control!.get!(undefined)).toBe("envmap+ssr");
+    expect(findNode(nodes, "pp-ssr-bouncing")!.control!.get!(undefined)).toBe(true);
   });
 
   it("loadState 空存储时保持默认值", () => {
     const cap = newCap({ params: { bloomStrength: 2.0 } });
     cap.loadState();
-    const ctrl = cap.getMenuControls().find((x) => x.id === "pp-bloom-strength")!;
-    expect(ctrl.getValue()).toBe(2.0);
+    const nodes = cap.getMenuNodes();
+    expect(findNode(nodes, "pp-bloom-strength")!.control!.get!(undefined)).toBe(2.0);
   });
 });
 
-describe("PostprocessingCapability — getMenuControls 结构", () => {
-  it("返回完整控件列表", () => {
+describe("PostprocessingCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  it("顶层结构：3 基座 toggle + 5 文件夹（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    expect(controls.length).toBeGreaterThanOrEqual(18);
-    // 总开关
-    expect(controls.find((c) => c.id === "pp-enabled")).toBeDefined();
-    // 色彩与曝光组
-    expect(controls.find((c) => c.id === "pp-toneMapping")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-exposure")).toBeDefined();
-    // Bloom 组
-    expect(controls.find((c) => c.id === "pp-bloom-strength")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-bloom-threshold")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-bloom-radius")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-bloom-follow")).toBeDefined();
-    // SSAO 组
-    expect(controls.find((c) => c.id === "pp-ssao-enabled")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssao-radius")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssao-mindist")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssao-maxdist")).toBeDefined();
-    // 反射模式组
-    expect(controls.find((c) => c.id === "pp-reflection-mode")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-reflector-disable-when-ssr")).toBeDefined();
-    // SSR 参数组
-    expect(controls.find((c) => c.id === "pp-ssr-opacity")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-maxdistance")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-thickness")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-blur")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-distanceAttenuation")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-fresnel")).toBeDefined();
-    expect(controls.find((c) => c.id === "pp-ssr-bouncing")).toBeDefined();
+    const nodes = cap.getMenuNodes();
+    expect(nodes).toHaveLength(8);
+    // 基座级 toggle
+    expect(nodes[0].id).toBe("pp-enabled");
+    expect(nodes[0].kind).toBe("toggle");
+    expect(nodes[2].id).toBe("pp-bloom-enabled");
+    expect(nodes[2].kind).toBe("toggle");
+    expect(nodes[4].id).toBe("pp-ssao-enabled");
+    expect(nodes[4].kind).toBe("toggle");
+    // 5 个 folder
+    expect(nodes[1].kind).toBe("folder");
+    expect(nodes[3].kind).toBe("folder");
+    expect(nodes[5].kind).toBe("folder");
+    expect(nodes[6].kind).toBe("folder");
+    expect(nodes[7].kind).toBe("folder");
+    // folder labelKey 对应原 group
+    expect(nodes[1].labelKey).toBe("preview.postprocessingGroupColor");
+    expect(nodes[3].labelKey).toBe("preview.postprocessingGroupBloom");
+    expect(nodes[5].labelKey).toBe("preview.postprocessingGroupSsao");
+    expect(nodes[6].labelKey).toBe("preview.postprocessingGroupReflection");
+    expect(nodes[7].labelKey).toBe("preview.postprocessingGroupSsr");
   });
 
-  it("toggle 开关同步状态", () => {
+  it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const enabledCtrl = controls.find((c) => c.id === "pp-enabled")!;
-    enabledCtrl.setValue(true);
+    const nodes = cap.getMenuNodes();
+    const enabledNode = nodes.find((n) => n.id === "pp-enabled")!;
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    enabledCtrl.setValue(false);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
-  });
-
-  it("三个效果总开关升面板基座级，其余控件均含 group 字段（5 组：Color/Bloom/SSAO/Reflection/SSR）", () => {
-    const cap = newCap();
-    const controls = cap.getMenuControls();
-    // 基座级开关：管线总开关 + Bloom/SSAO 效果总开关——无 group、免展开即可开关
-    const baseToggles = ["pp-enabled", "pp-bloom-enabled", "pp-ssao-enabled"];
-    baseToggles.forEach((id) => {
-      const c = controls.find((x) => x.id === id)!;
-      expect(c.kind).toBe("toggle");
-      expect(c.group).toBeUndefined();
-    });
-    // 其余（参数 + 次级开关）均归入 postprocessingGroup* 折叠分组
-    controls.filter((c) => !baseToggles.includes(c.id)).forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!.startsWith("preview.postprocessingGroup")).toBe(true);
-    });
-    // 确认 5 个 group 分组都存在
-    const groups = new Set(controls.map((c) => c.group).filter(Boolean));
-    expect(groups.size).toBe(5);
   });
 });
 
@@ -913,30 +890,31 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
   });
 });
 
-// ============ 菜单控件联动（真实闭包）============
+// ============ 菜单控件联动（节点 control 闭包）============
 describe("PostprocessingCapability — 菜单控件联动补充", () => {
-  it("bloom/SSAO/SSR/色彩控件 setValue 落地参数", () => {
+  it("bloom/SSAO/SSR/色彩控件 setValue 落地参数（节点 control 闭包）", () => {
     const cap = newCap();
-    const by = (id: string) => cap.getMenuControls().find((c) => c.id === id)!;
-    by("pp-bloom-strength").setValue(2.0);
-    by("pp-bloom-threshold").setValue(0.4);
-    by("pp-bloom-radius").setValue(0.7);
-    by("pp-bloom-follow").setValue(false);
-    by("pp-ssao-enabled").setValue(true);
-    by("pp-ssao-radius").setValue(3);
-    by("pp-ssao-mindist").setValue(0.03);
-    by("pp-ssao-maxdist").setValue(0.4);
-    by("pp-reflection-mode").setValue("envmap+ssr");
-    by("pp-ssr-opacity").setValue(0.9);
-    by("pp-ssr-maxdistance").setValue(10);
-    by("pp-ssr-thickness").setValue(0.15);
-    by("pp-ssr-blur").setValue(true);
-    by("pp-ssr-distanceAttenuation").setValue(true);
-    by("pp-ssr-fresnel").setValue(true);
-    by("pp-ssr-bouncing").setValue(true);
-    by("pp-reflector-disable-when-ssr").setValue(false);
-    by("pp-exposure").setValue(1.4);
-    by("pp-toneMapping").setValue("cineon");
+    const nodes = cap.getMenuNodes();
+    const by = (id: string) => findNode(nodes, id)!;
+    by("pp-bloom-strength").control!.set!(2.0);
+    by("pp-bloom-threshold").control!.set!(0.4);
+    by("pp-bloom-radius").control!.set!(0.7);
+    by("pp-bloom-follow").control!.set!(false);
+    by("pp-ssao-enabled").control!.set!(true);
+    by("pp-ssao-radius").control!.set!(3);
+    by("pp-ssao-mindist").control!.set!(0.03);
+    by("pp-ssao-maxdist").control!.set!(0.4);
+    by("pp-reflection-mode").control!.set!("envmap+ssr");
+    by("pp-ssr-opacity").control!.set!(0.9);
+    by("pp-ssr-maxdistance").control!.set!(10);
+    by("pp-ssr-thickness").control!.set!(0.15);
+    by("pp-ssr-blur").control!.set!(true);
+    by("pp-ssr-distanceAttenuation").control!.set!(true);
+    by("pp-ssr-fresnel").control!.set!(true);
+    by("pp-ssr-bouncing").control!.set!(true);
+    by("pp-reflector-disable-when-ssr").control!.set!(false);
+    by("pp-exposure").control!.set!(1.4);
+    by("pp-toneMapping").control!.set!("cineon");
     const p = cap.getParams();
     expect(p.bloomStrength).toBe(2.0);
     expect(p.bloomThreshold).toBe(0.4);

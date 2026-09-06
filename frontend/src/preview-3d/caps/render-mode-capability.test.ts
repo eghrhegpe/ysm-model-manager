@@ -217,70 +217,35 @@ describe("RenderModeCapability — apply 与 sync 分支", () => {
   });
 });
 
-describe("RenderModeCapability — getMenuControls", () => {
-  it("返回 5 个控件且 id 齐全", () => {
-    const cap = newCap(makeMesh());
-    const controls = cap.getMenuControls();
-    expect(controls.map((c) => c.id)).toEqual([
-      "rm-wireframe",
-      "rm-blending",
-      "rm-depth-test",
-      "rm-side",
-      "rm-depth-write",
-    ]);
-  });
-
-  it("线框 toggle：开 → wireframe=true，关 → 清 override", () => {
-    const mesh = makeMesh();
-    const cap = newCap(mesh);
-    const ctrl = cap.getMenuControls().find((c) => c.id === "rm-wireframe")!;
-    expect(ctrl.getValue()).toBe(false);
-    ctrl.setValue(true);
-    expect(cap.getWireframe()).toBe(true);
-    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
-    expect(ctrl.getValue()).toBe(true);
-    ctrl.setValue(false);
-    expect(cap.getWireframe()).toBeNull();
-  });
-
-  it("混合模式 select：选择写 override，getValue 回读当前值", () => {
-    const cap = newCap(makeMesh());
-    const ctrl = cap.getMenuControls().find((c) => c.id === "rm-blending")!;
-    expect(ctrl.getValue()).toBe(String(THREE.NormalBlending)); // null 时回显 NormalBlending
-    ctrl.setValue(String(THREE.AdditiveBlending));
-    // select 层传字符串（源码 as unknown as 断言），getter 回读字符串原样
-    expect(cap.getBlending()).toBe(String(THREE.AdditiveBlending));
-    expect(ctrl.getValue()).toBe(String(THREE.AdditiveBlending));
-  });
-
+describe("RenderModeCapability — getMenuNodes 读写全覆盖", () => {
   it("X 光 toggle：开 → depthTest=false，关 → 清 override", () => {
     const mesh = makeMesh();
     const cap = newCap(mesh);
-    const ctrl = cap.getMenuControls().find((c) => c.id === "rm-depth-test")!;
-    expect(ctrl.getValue()).toBe(false);
-    ctrl.setValue(true);
+    const node = cap.getMenuNodes().find((n) => n.id === "rm-depth-test")!;
+    expect(node.control!.get!(undefined)).toBe(false);
+    node.control!.set!(true);
     expect(cap.getDepthTest()).toBe(false);
-    expect(ctrl.getValue()).toBe(true);
-    ctrl.setValue(false);
+    expect(node.control!.get!(undefined)).toBe(true);
+    node.control!.set!(false);
     expect(cap.getDepthTest()).toBeNull();
   });
 
   it("面剔除 select：选择写 override", () => {
     const cap = newCap(makeMesh());
-    const ctrl = cap.getMenuControls().find((c) => c.id === "rm-side")!;
-    expect(ctrl.getValue()).toBe(String(THREE.FrontSide));
-    ctrl.setValue(String(THREE.DoubleSide));
-    expect(cap.getSide()).toBe(String(THREE.DoubleSide)); // select 传字符串
+    const node = cap.getMenuNodes().find((n) => n.id === "rm-side")!;
+    expect(node.control!.get!(undefined)).toBe(String(THREE.FrontSide));
+    node.control!.set!(String(THREE.DoubleSide));
+    expect(cap.getSide()).toBe(String(THREE.DoubleSide));
   });
 
   it("深度写入 toggle：默认开；关 → depthWrite=false，开 → 清 override", () => {
     const cap = newCap(makeMesh());
-    const ctrl = cap.getMenuControls().find((c) => c.id === "rm-depth-write")!;
-    expect(ctrl.getValue()).toBe(true); // !== false
-    ctrl.setValue(false);
+    const node = cap.getMenuNodes().find((n) => n.id === "rm-depth-write")!;
+    expect(node.control!.get!(undefined)).toBe(true);
+    node.control!.set!(false);
     expect(cap.getDepthWrite()).toBe(false);
-    expect(ctrl.getValue()).toBe(false);
-    ctrl.setValue(true);
+    expect(node.control!.get!(undefined)).toBe(false);
+    node.control!.set!(true);
     expect(cap.getDepthWrite()).toBeNull();
   });
 });

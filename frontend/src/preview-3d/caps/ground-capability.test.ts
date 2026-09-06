@@ -57,31 +57,33 @@ describe("GroundCapability", () => {
   });
 });
 
-describe("GroundCapability — getMenuControls 分组", () => {
-  it("总开关无 group；表面材质参数组归 preview.groundGroupMaterial", () => {
+describe("GroundCapability — getMenuNodes 分组（节点化后 group 由 folder 表达）", () => {
+  it("总开关平铺 + 材质参数组 folder（节点化后 group 由 folder 承载）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const controls = cap.getMenuControls();
-    // 总开关(1，无 group) + 材质参数组(14)
-    expect(controls.length).toBe(15); // 水面已拆出，此处不再含 water 组
-    expect(controls[0]!.id).toBe("ground-visible");
-    expect(controls[0]!.group).toBeUndefined();
-    const matControls = controls.filter((c) => c.group === "preview.groundGroupMaterial");
-    expect(matControls.length).toBe(14);
-    expect(matControls.map((c) => c.id)).toContain("ground-mat-source");
-    expect(matControls.map((c) => c.id)).toContain("ground-mat-color2");
-    expect(matControls.map((c) => c.id)).toContain("ground-mat-density");
+    const nodes = cap.getMenuNodes();
+    // ground-visible 平铺
+    expect(nodes[0]!.id).toBe("ground-visible");
+    // 材质参数组 folder
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    expect(folder.labelKey).toBe("preview.groundGroupMaterial");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("ground-mat-source");
+    expect(childIds).toContain("ground-mat-color2");
+    expect(childIds).toContain("ground-mat-density");
   });
 });
 
-describe("GroundCapability — 材质控件按 matSource 条件显隐（visibleWhen B 轨）", () => {
+describe("GroundCapability — 材质控件按 matSource 条件显隐（visibleWhen B 轨，节点化）", () => {
   it("默认 matSource=none：仅 source 门控可见，其余材质控件隐藏；快照切源后 viz 跟随", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const controls = cap.getMenuControls();
-    const source = controls.find((c) => c.id === "ground-mat-source")!;
-    const color = controls.find((c) => c.id === "ground-mat-color")!;
-    const texBtn = controls.find((c) => c.id === "ground-mat-texture")!;
+    const folder = cap.getMenuNodes()[1]!;
+    const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
+    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
+    const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const texBtn = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
     // [铁律收口] 谓词吃状态层快照 env.groundMatSource（纯函数，不摸 cap 实例）
     expect(source.visibleWhen).toBeUndefined(); // 门控 select 常显
     const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
@@ -189,7 +191,8 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const mat = surf.material as THREE.MeshStandardMaterial;
     expect(surf.visible).toBe(true);
     expect(mat.map).toBe(tex); // 直接用缓存贴图
-    const btn = cap.getMenuControls().find((c) => c.id === "ground-mat-texture");
+    const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const btn = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
     expect(btn!.button!.getHint!()).toContain("wood.png");
   });
 
@@ -367,7 +370,8 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
     expect(disposeSpy).toHaveBeenCalled(); // 旧缓存释放
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBe(tex2);
-    const hint = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!.button!.getHint!();
+    const hintNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const hint = (typeof hintNode.controls === "function" ? hintNode.controls() : hintNode.controls)![0]!.button!.getHint!();
     expect(hint).toContain("b.png");
   });
 
@@ -385,54 +389,56 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 
 // ============ 菜单控件联动 ============
 describe("GroundCapability — 菜单控件联动", () => {
-  it("visible toggle 与 mat-source select 联动", () => {
+  it("visible toggle 与 mat-source select 联动（节点 control 闭包）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const controls = cap.getMenuControls();
-    const visibleCtrl = controls.find((c) => c.id === "ground-visible")!;
-    visibleCtrl.setValue(false);
+    const nodes = cap.getMenuNodes();
+    const visibleNode = nodes[0]!;
+    visibleNode.control!.set!(false);
     expect(cap.getVisible()).toBe(false);
-    expect(visibleCtrl.getValue()).toBe(false);
-    const sourceCtrl = controls.find((c) => c.id === "ground-mat-source")!;
-    sourceCtrl.setValue("stripes");
+    expect(visibleNode.control!.get!(undefined)).toBe(false);
+    const sourceNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-source")!;
+    sourceNode.control!.set!("stripes");
     expect(cap.getMatSource()).toBe("stripes");
-    expect(sourceCtrl.getValue()).toBe("stripes");
+    expect(sourceNode.control!.get!(undefined)).toBe("stripes");
   });
 
-  it("材质参数控件 setValue/getValue 全联动（texture 模式下可见）", () => {
+  it("材质参数控件 setValue/getValue 全联动（texture 模式下可见，节点 control 闭包）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene, params: { matSource: "checker" } });
-    const controls = cap.getMenuControls();
-    const by = (id: string): MenuControlDefOf => controls.find((c) => c.id === id)!;
-    by("ground-mat-color").setValue(0xff8800);
-    by("ground-mat-color2").setValue(0x00ff88);
-    by("ground-mat-line-color").setValue(0x445566);
-    by("ground-mat-grid-size").setValue(12);
-    by("ground-mat-density").setValue(4);
-    by("ground-mat-angle").setValue(45);
-    by("ground-mat-opacity").setValue(0.5);
-    by("ground-mat-scale").setValue(2);
-    by("ground-mat-rotation").setValue(30);
-    by("ground-mat-roughness").setValue(0.8);
-    by("ground-mat-metalness").setValue(0.2);
-    expect(by("ground-mat-color").getValue()).toBe(0xff8800);
-    expect(by("ground-mat-color2").getValue()).toBe(0x00ff88);
-    expect(by("ground-mat-line-color").getValue()).toBe(0x445566);
-    expect(by("ground-mat-grid-size").getValue()).toBe(12);
-    expect(by("ground-mat-density").getValue()).toBe(4);
-    expect(by("ground-mat-angle").getValue()).toBe(45);
-    expect(by("ground-mat-opacity").getValue()).toBe(0.5);
-    expect(by("ground-mat-scale").getValue()).toBe(2);
-    expect(by("ground-mat-rotation").getValue()).toBe(30);
-    expect(by("ground-mat-roughness").getValue()).toBe(0.8);
-    expect(by("ground-mat-metalness").getValue()).toBe(0.2);
+    const folder = cap.getMenuNodes()[1]!;
+    const by = (id: string) => folder.children!.find((c) => c.id === id)!;
+    by("ground-mat-color").control!.set!(0xff8800);
+    by("ground-mat-color2").control!.set!(0x00ff88);
+    by("ground-mat-line-color").control!.set!(0x445566);
+    by("ground-mat-grid-size").control!.set!(12);
+    by("ground-mat-density").control!.set!(4);
+    by("ground-mat-angle").control!.set!(45);
+    by("ground-mat-opacity").control!.set!(0.5);
+    by("ground-mat-scale").control!.set!(2);
+    by("ground-mat-rotation").control!.set!(30);
+    by("ground-mat-roughness").control!.set!(0.8);
+    by("ground-mat-metalness").control!.set!(0.2);
+    expect(by("ground-mat-color").control!.get!(undefined)).toBe(0xff8800);
+    expect(by("ground-mat-color2").control!.get!(undefined)).toBe(0x00ff88);
+    expect(by("ground-mat-line-color").control!.get!(undefined)).toBe(0x445566);
+    expect(by("ground-mat-grid-size").control!.get!(undefined)).toBe(12);
+    expect(by("ground-mat-density").control!.get!(undefined)).toBe(4);
+    expect(by("ground-mat-angle").control!.get!(undefined)).toBe(45);
+    expect(by("ground-mat-opacity").control!.get!(undefined)).toBe(0.5);
+    expect(by("ground-mat-scale").control!.get!(undefined)).toBe(2);
+    expect(by("ground-mat-rotation").control!.get!(undefined)).toBe(30);
+    expect(by("ground-mat-roughness").control!.get!(undefined)).toBe(0.8);
+    expect(by("ground-mat-metalness").control!.get!(undefined)).toBe(0.2);
   });
 
-  it("button 控件：getValue null、setValue no-op、visibleWhen 随模式切换", () => {
+  it("button 控件：getValue null、setValue no-op、visibleWhen 随模式切换（controls 通道节点）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const pick = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!;
-    const clear = cap.getMenuControls().find((c) => c.id === "ground-mat-clear")!;
+    const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const btnControls = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)!;
+    const pick = btnControls[0]!;
+    const clear = btnControls[1]!;
     const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
     // none 模式隐藏
     expect(pick.visibleWhen?.(snap("none"))).toBe(false);
@@ -449,7 +455,7 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(cap.getMatSource()).toBe("plain");
   });
 
-  it("选择贴图按钮 action 触发文件选择器（mock input，node 环境）", () => {
+  it("选择贴图按钮 action 触发文件选择器（mock input，node 环境，controls 通道节点）", () => {
     const fakeInput = {
       type: "",
       accept: "",
@@ -462,7 +468,8 @@ describe("GroundCapability — 菜单控件联动", () => {
     try {
       const scene = new THREE.Scene();
       const cap = new GroundCapability({ scene, params: { matSource: "texture" } });
-      const pick = cap.getMenuControls().find((c) => c.id === "ground-mat-texture")!;
+      const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+      const pick = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
       expect(() => pick.button!.action!()).not.toThrow();
       expect(fakeInput.type).toBe("file");
       expect(fakeInput.accept).toBe("image/*");
@@ -529,4 +536,4 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   });
 });
 
-type MenuControlDefOf = ReturnType<GroundCapability["getMenuControls"]>[number];
+

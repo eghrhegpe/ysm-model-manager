@@ -258,14 +258,26 @@ describe("LightCapability — setPreset", () => {
   });
 });
 
-describe("LightCapability — getMenuControls 分组", () => {
-  it("主灯之外的控件均含 group 字段（全部归 lightGroupParams）", () => {
+describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folder 表达）", () => {
+  it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "light-key").forEach((c) => {
-      expect(c.group).toBeDefined();
-      expect(c.group!).toBe("preview.lightGroupParams");
-    });
+    const nodes = cap.getMenuNodes();
+    // light-key 平铺
+    expect(nodes[0]!.id).toBe("light-key");
+    // 其余节点在 folder children 内
+    const folder = nodes[1]!;
+    expect(folder.kind).toBe("folder");
+    const childIds = folder.children!.map((c) => c.id);
+    expect(childIds).toContain("light-fill");
+    expect(childIds).toContain("light-rim");
+    expect(childIds).toContain("light-ambient");
+    expect(childIds).toContain("light-spotlight");
+    expect(childIds).toContain("light-volumetric");
+    expect(childIds).toContain("light-engine");
+    expect(childIds).toContain("light-cone-angle");
+    expect(childIds).toContain("light-preset");
+    // folder labelKey 对应原 group
+    expect(folder.labelKey).toBe("preview.lightGroupParams");
   });
 });
 
@@ -573,34 +585,36 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
   });
 });
 
-// ============ 菜单控件联动 ============
+// ============ 菜单控件联动（节点 control 闭包）============
 describe("LightCapability — 菜单控件联动", () => {
-  it("toggle/slider/select 全部读写联动", () => {
+  it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
-    const controls = cap.getMenuControls();
-    const by = (id: string) => controls.find((c) => c.id === id)!;
-    by("light-key").setValue(false);
-    expect(by("light-key").getValue()).toBe(false);
-    by("light-fill").setValue(false);
-    expect(by("light-fill").getValue()).toBe(false);
-    by("light-rim").setValue(false);
-    expect(by("light-rim").getValue()).toBe(false);
-    by("light-ambient").setValue(1.2);
-    expect(by("light-ambient").getValue()).toBe(1.2);
-    by("light-spotlight").setValue(true);
-    expect(by("light-spotlight").getValue()).toBe(true);
-    by("light-volumetric").setValue(true);
-    expect(by("light-volumetric").getValue()).toBe(true);
-    by("light-cone-angle").setValue(45);
-    expect(by("light-cone-angle").getValue()).toBe(45);
-    by("light-preset").setValue("vrm");
-    expect(by("light-preset").getValue()).toBe("vrm");
+    const nodes = cap.getMenuNodes();
+    const folder = nodes[1]!;
+    const by = (id: string) => folder.children!.find((c) => c.id === id)!;
+    nodes[0]!.control!.set!(false);
+    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    by("light-fill").control!.set!(false);
+    expect(by("light-fill").control!.get!(undefined)).toBe(false);
+    by("light-rim").control!.set!(false);
+    expect(by("light-rim").control!.get!(undefined)).toBe(false);
+    by("light-ambient").control!.set!(1.2);
+    expect(by("light-ambient").control!.get!(undefined)).toBe(1.2);
+    by("light-spotlight").control!.set!(true);
+    expect(by("light-spotlight").control!.get!(undefined)).toBe(true);
+    by("light-volumetric").control!.set!(true);
+    expect(by("light-volumetric").control!.get!(undefined)).toBe(true);
+    by("light-cone-angle").control!.set!(45);
+    expect(by("light-cone-angle").control!.get!(undefined)).toBe(45);
+    by("light-preset").control!.set!("vrm");
+    expect(by("light-preset").control!.get!(undefined)).toBe("vrm");
   });
 
-  it("light-preset select 经 manual 入口记录手动预设", () => {
+  it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
     const cap = newCap();
-    const presetCtrl = cap.getMenuControls().find((c) => c.id === "light-preset")!;
-    presetCtrl.setValue("ysm");
+    const folder = cap.getMenuNodes()[1]!;
+    const presetNode = folder.children!.find((c) => c.id === "light-preset")!;
+    presetNode.control!.set!("ysm");
     expect(cap.getCurrentPreset()).toBe("ysm");
     cap.setPreset("mmd"); // 自动入口被手动压制
     expect(cap.getCurrentPreset()).toBe("ysm");

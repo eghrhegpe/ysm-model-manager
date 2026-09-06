@@ -243,6 +243,7 @@ auto_fields:
     - getTextureDecoder
     - getTintColorSync
     - getVrmMaterialDetail
+    - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
     - GroundParams

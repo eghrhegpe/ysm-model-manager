@@ -23,6 +23,7 @@ auto_fields:
     - FieldRestorer
     - formatCapSliderValue
     - getStateValue
+    - GROUND_LAYER_OFFSETS
     - isPathAvailable
     - KNOWN_PATHS
     - MenuControlDef

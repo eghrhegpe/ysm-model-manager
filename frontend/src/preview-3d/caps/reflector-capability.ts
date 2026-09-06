@@ -1,14 +1,14 @@
 // ===== ReflectorCapability：反光地面能力（ADR-073 caps/ 能力模式）=====
 // 复用 Three 官方 Reflector（three/addons/objects/Reflector.js），不允许自写镜像相机/RTV shader。
-// 与 ShadowCapability 的 ShadowMaterial 地面分层共存：
-//   - Shadow 平面 y = groundY（贴 GridHelper）
-//   - Reflector 平面 y = groundY - 0.01（毫米级后移，避免 z-fighting）
+// 与 ShadowCapability / GroundCapability 的分层共存：Shadow 走 cameraSize 正交视锥无承接平面；
+// Reflector 平面按 GROUND_LAYER_OFFSETS.reflector 下沉（位于 ground 承接面之下，z-fighting 防御）
 // Reflector 是一个透明 mesh + 背面镜像 WebGLRenderTarget，draw call 代价不低（约等于再渲染一次场景），
 // 默认关闭，用户显式开启；模型类别预设给出建议参数。
 
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import {
+  GROUND_LAYER_OFFSETS,
   type MenuControlDef,
   persistState,
   restoreFields,
@@ -21,8 +21,6 @@ export interface ReflectorParams {
   enabled: boolean;
   /** 地面平面尺寸（世界单位）*/
   size: number;
-  /** 位置 Y（默认与 GridHelper 对齐） */
-  groundY: number;
   /** 镜面渲染目标分辨率（越大越精细，开销越大） */
   resolution: number;
   /** 镜面色调（白色=纯反射；浅灰=柔和；蓝色=冷调） */
@@ -36,7 +34,6 @@ export interface ReflectorParams {
 export const DEFAULT_REFLECTOR_PARAMS: ReflectorParams = {
   enabled: false,
   size: 100,
-  groundY: 0,
   resolution: 1024,
   color: 0xffffff,
   opacity: 0.6,
@@ -197,7 +194,7 @@ export class ReflectorCapability implements SceneCapability {
       color: this.params.color,
       shader,
     });
-    reflector.position.y = this.params.groundY - 0.01;
+    reflector.position.y = GROUND_LAYER_OFFSETS.reflector;
     reflector.rotation.x = -Math.PI / 2;
     reflector.name = "ysm-reflector";
 
@@ -275,11 +272,6 @@ export class ReflectorCapability implements SceneCapability {
   setSize(v: number): void {
     this.params.size = v;
     if (this.enabled) this.buildReflector();
-  }
-
-  setGroundY(v: number): void {
-    this.params.groundY = v;
-    if (this.reflector) this.reflector.position.y = v - 0.01;
   }
 
   setResolution(v: number): void {

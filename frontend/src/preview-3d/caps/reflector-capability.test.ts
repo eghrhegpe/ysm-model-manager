@@ -8,6 +8,7 @@ import {
   DEFAULT_REFLECTOR_PARAMS,
   REFLECTOR_PRESETS,
 } from "./reflector-capability.ts";
+import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 
 // buildReflector 的 Reflector 构造（geometry + ShaderMaterial + WebGLRenderTarget）是纯数据
 // 对象创建，不触碰真实 WebGL context，node 环境可直接跑真实管线（onBeforeRender 渲染除外）。
@@ -198,12 +199,12 @@ describe("ReflectorCapability — 预设数据完整性", () => {
 });
 describe("ReflectorCapability — 真实管线", () => {
   it("setEnabled(true) 后 scene 出现 ysm-reflector mesh，位置/旋转/uOpacity 就位", () => {
-    const cap = newCap({ enabled: true, params: { groundY: 2, opacity: 0.75 } });
+    const cap = newCap({ enabled: true, params: { opacity: 0.75 } });
     cap.apply(); // 构造不自动 build，需 apply 显式挂载
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
     expect(reflector).toBeDefined();
-    expect(reflector.position.y).toBeCloseTo(2 - 0.01, 5);
+    expect(reflector.position.y).toBeCloseTo(GROUND_LAYER_OFFSETS.reflector, 5);
     expect(reflector.rotation.x).toBeCloseTo(-Math.PI / 2, 5);
     const mat = reflector.material as THREE.ShaderMaterial;
     expect(mat.transparent).toBe(true);
@@ -245,15 +246,11 @@ describe("ReflectorCapability — 真实管线", () => {
     expect((cap.getParams().clipBias)).toBe(0.008);
   });
 
-  it("setGroundY 挂载态下更新高度；disabled 只存参数", () => {
+  it("reflector 平面贴地偏移：position.y = GROUND_LAYER_OFFSETS.reflector（-0.01，z-fighting 防御）", () => {
     const cap = newCap({ enabled: true });
     cap.apply();
     const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
-    cap.setGroundY(5);
-    expect(reflector.position.y).toBeCloseTo(5 - 0.01, 5);
-    const cap2 = newCap();
-    cap2.setGroundY(7);
-    expect(cap2.getParams().groundY).toBe(7);
+    expect(reflector.position.y).toBeCloseTo(GROUND_LAYER_OFFSETS.reflector, 5);
   });
 
   it("setPreset 挂载态下重建（新尺寸参数生效）", () => {

@@ -24,6 +24,7 @@ import {
 } from "./ground-surface-spec.ts";
 import {
   createListenerSet,
+  GROUND_LAYER_OFFSETS,
   type MenuControlDef,
   persistState,
   restoreFields,
@@ -116,7 +117,7 @@ export class GroundCapability implements SceneCapability {
     const surfaceGeo = new THREE.PlaneGeometry(this.params.size, this.params.size);
     const surface = new THREE.Mesh(surfaceGeo);
     surface.rotation.x = -Math.PI / 2;
-    surface.position.y = 0.005;
+    surface.position.y = GROUND_LAYER_OFFSETS.groundSurface;
     surface.name = "ysm-ground-surface";
     this.surface = surface; // 先挂成员再刷新（refreshSurface→rebuildSurface 会解引用 this.surface）
     this.refreshSurface();

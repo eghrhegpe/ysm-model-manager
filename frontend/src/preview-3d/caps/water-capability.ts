@@ -10,6 +10,7 @@ import { safeDispose } from "../safe-dispose.ts";
 import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import {
   createListenerSet,
+  GROUND_LAYER_OFFSETS,
   type MenuControlDef,
   oneOf,
   persistState,
@@ -168,7 +169,7 @@ export class WaterCapability implements SceneCapability {
     const waterMat = this.buildWaveWaterMaterial({ forPool: false });
     const water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = 0.01;
+    water.position.y = GROUND_LAYER_OFFSETS.waterFilm;
     water.name = "ysm-ground-water";
     return water;
   }
@@ -199,7 +200,7 @@ export class WaterCapability implements SceneCapability {
     });
     const bottom = new THREE.Mesh(new THREE.PlaneGeometry(size, size), bottomMat);
     bottom.rotation.x = -Math.PI / 2;
-    bottom.position.y = 0.0001; // 微抬，防与地面 z-fighting
+    bottom.position.y = GROUND_LAYER_OFFSETS.waterPoolBottom; // 微抬，防与地面 z-fighting
     bottom.name = "ysm-water-bottom";
     group.add(bottom);
 

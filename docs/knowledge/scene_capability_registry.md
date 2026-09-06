@@ -47,6 +47,7 @@ auto_fields:
     - FogParams
     - generateSurfacePixels
     - getLightMenuControls
+    - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
     - GroundParams

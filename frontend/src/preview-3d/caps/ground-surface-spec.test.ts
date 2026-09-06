@@ -67,17 +67,31 @@ describe("Suite 1 — spec 构建与 key 确定性", () => {
   it("structural 逐字段完备：任一字段变化 key 必变（锁死「新增字段自动纳入」）", () => {
     const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "grid" as const }, "");
     const base = surfaceSpecKey(spec);
+    // code_review 74cc9ad95 #1/#3：嵌套三元扁平化为具名 helper（批次规则禁嵌套三元）
+    const mutate = (v: unknown): unknown => {
+      if (Array.isArray(v)) return (v as number[]).map((n) => n + 1);
+      if (typeof v === "number") return v + 1;
+      return `${String(v)}#`;
+    };
     for (const [field, value] of Object.entries(spec.structural)) {
-      const mutated: typeof spec.structural = {
+      const mutated = {
         ...spec.structural,
-        [field]: Array.isArray(value)
-          ? (value.map((n) => n + 1) as typeof value)
-          : typeof value === "number"
-            ? value + 1
-            : `${value}#`,
-      };
+        [field]: mutate(value),
+      } as typeof spec.structural;
       expect(surfaceSpecKey({ ...spec, structural: mutated })).not.toBe(base);
     }
+  });
+
+  it("key 对 structural 键插入序不敏感（规范序列化契约）", () => {
+    // code_review 74cc9ad95 #2/#4 回归锚：整体 JSON.stringify 依赖键插入序，仅
+    // buildGroundSurfaceSpec 字面量固定序的约定兜底；排序键投影后同内容异键序 key 相等
+    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "grid" as const }, "");
+    const stA = spec.structural as unknown as Record<string, unknown>;
+    const keys = Object.keys(stA);
+    const stB = Object.fromEntries([...keys].reverse().map((k) => [k, stA[k]])) as unknown as typeof spec.structural;
+    expect(surfaceSpecKey({ ...spec, structural: stB })).toBe(
+      surfaceSpecKey(spec),
+    );
   });
 });
 

@@ -125,10 +125,20 @@ export function buildGroundSurfaceSpec(
 
 /* ============ 自动 key（杀死手拼字符串哨兵）============ */
 
-/** structural 子集确定性序列化：整体 JSON 序列化——新增结构字段即自动纳入重建判别，
- * 无手拼遗漏风险（Suite 1 逐字段完备性测试锁死该性质；键序由 build 字面量固定，确定性有保障） */
+/** structural 子集确定性序列化：排序键投影重建后 JSON——键序与构造/插入顺序无关
+ * （code_review 74cc9ad95 #2/#4：整体 JSON.stringify 依赖键插入序，仅 buildGroundSurfaceSpec
+ * 字面量固定序的约定兜底；从持久化 JSON 恢复/程序化构造产生不同键序时，语义相同内容会
+ * 误报 groundSurfaceNeedsRebuild → 512×512 表面纹理无谓再生。顶层键排序即够——值均为
+ * 原子或定长数组，数组元素序是语义、不受影响）。Suite 1「key 对字段顺序不敏感」锁死契约 */
 export function surfaceSpecKey(s: GroundSurfaceSpec): string {
-  return JSON.stringify(s.structural);
+  const st = s.structural as unknown as Record<string, unknown>;
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.keys(st)
+        .sort()
+        .map((k) => [k, st[k]]),
+    ),
+  );
 }
 
 /** 结构性变化 → 需要重建材质与纹理；否则原地更新即可 */

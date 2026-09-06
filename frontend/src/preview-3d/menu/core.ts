@@ -622,9 +622,14 @@ export function mountPreviewRootMenu(
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）
       menu.dispose();
-      disposeCustomCleanups(); // renderCustom 逃生舱 cleanup（如骨骼面板的 viewContainer raycaster listener）——菜单销毁即摘，防跨会话泄漏
       dock.remove();
       popup.remove();
+      // renderCustom 逃生舱 cleanup（如骨骼面板的 viewContainer raycaster listener）——
+      // 菜单销毁即摘，防跨会话泄漏。code_review 4ac2b4f72 #2/#4/#5：须在 dock/popup
+      // remove 之后调用——disposeCustomCleanups 现只清「容器已脱离文档」的条目，
+      // remove 后本会话面板容器均已离文档命中全清；并行挂载会话仍存活的面板
+      // （isConnected=true）不被本会话误清（render.ts 注释的防御场景）
+      disposeCustomCleanups();
     },
     setAdapterItems,
     openPanel,

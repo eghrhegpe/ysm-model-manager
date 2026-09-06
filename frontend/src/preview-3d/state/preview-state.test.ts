@@ -353,6 +353,33 @@ describe("P1 状态层 — 订阅通知", () => {
     expect(() => setStateValue("render.frustumCull", true)).not.toThrow();
     expect(ok).toHaveBeenCalledTimes(1);
   });
+
+  it("set 抛错（cap 内部异常）→ 不广播 + console.warn；恢复后成功 set 重新广播", () => {
+    // code_review 0b439f802 #4/#5/#6：success 门控回归锚——setStateValue 仅成功时
+    // notify（防订阅者读旧值却以为已变更）；门控写反/回退（无条件广播）时此用例必红
+    const rm = makeFakeCap("renderMode", { wireframeMode: true });
+    mountCaps(rm);
+    const cap = rm as unknown as { setWireframe(v: boolean | null): void };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const seen: string[] = [];
+    const off = subscribeSettings((p) => seen.push(p));
+
+    // cap.setWireframe 抛错 → setStateValue 捕获、不广播
+    cap.setWireframe = () => {
+      throw new Error("cap 内部状态异常");
+    };
+    setStateValue("render.wireframe", true);
+    expect(seen).toEqual([]); // 订阅者未收到（值未写入，广播会误导「已变更」）
+    expect(warn).toHaveBeenCalled();
+
+    // 恢复 cap 后成功 set → 重新广播（恢复路径）
+    cap.setWireframe = (v: boolean | null) => {
+      (rm as unknown as { wfOn: boolean | null }).wfOn = v;
+    };
+    setStateValue("render.wireframe", true);
+    expect(seen).toEqual(["render.wireframe"]);
+    off();
+  });
 });
 
 describe("P2 单渲染器 — 设置面板为纯数据节点", () => {

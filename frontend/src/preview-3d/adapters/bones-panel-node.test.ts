@@ -141,15 +141,39 @@ describe("makeBonesPanelItem", () => {
     // 工厂只创建、不执行——挂载期不调 cleanup
     expect(cleanupCalls).toBe(0);
 
-    // 重入清理由渲染器负责（render.ts runCustomMount），工厂不自行调旧 cleanup
+    // code_review 4ac2b4f72 #1/#3：重入清理由工厂先行——每次挂载新渲染器前先摘旧
+    // cleanupRef（元素无关单槽：面板 close→reopen 换新容器时 registry 按容器键控
+    // miss，工厂前置调用是唯一防线，防 N 次开合累计 N 个 viewContainer listener）
     item.renderCustom!(list);
-    expect(cleanupCalls).toBe(0);
+    expect(cleanupCalls).toBe(1); // 旧 cleanup（首次 spy）在挂载新渲染器前被摘除
     expect(cleanupRef.current).not.toBeNull(); // 新 cleanup 覆盖写回
     expect(makeBonePanelRenderer).toHaveBeenCalledTimes(2);
 
     // 模型级兜底通道可用：adapter.dispose 调 cleanupRef.current 即摘 listener
     cleanupRef.current!();
-    expect(cleanupCalls).toBe(0); // 已换成第二次的 cleanup（默认 mock），首次 spy 不再被调
+    expect(cleanupCalls).toBe(1); // 第二次挂载的 cleanup 是默认 no-op mock，spy 不再被调
+  });
+
+  it("reopen 换新容器：旧 cleanupRef 被先行摘除（registry 键控 miss 的防线）", () => {
+    const { viewContainer, camera, scene } = makeCtx();
+    const cleanupRef: { current: (() => void) | null } = { current: null };
+    const item = makeBonesPanelItem({
+      tree: null, cleanupRef,
+      viewContainer, camera, scene,
+    });
+    let cleanupCalls = 0;
+    // 每次 renderer 返回的 cleanup 都计数——验证「同模型最多 1 个存活 cleanup」单槽语义
+    vi.mocked(makeBonePanelRenderer).mockImplementation(() => {
+      return (): () => void => () => { cleanupCalls++; };
+    });
+    // 第一次挂载（面板打开）——不调任何旧 cleanup
+    item.renderCustom!(document.createElement("div"));
+    expect(cleanupCalls).toBe(0);
+    // close→reopen：导航建**新** list 容器（旧容器已脱离文档），runCustomMount 的
+    // customCleanups.get(新容器) 永远 miss——旧 cleanup 只能由工厂前置调用摘除
+    item.renderCustom!(document.createElement("div"));
+    expect(cleanupCalls).toBe(1); // 旧 cleanup 恰好被调一次（单槽：同模型最多 1 listener）
+    expect(makeBonePanelRenderer).toHaveBeenCalledTimes(2);
   });
 
   it("模型级兜底：adapter.dispose 调 cleanupRef.current 即执行 renderer cleanup", () => {

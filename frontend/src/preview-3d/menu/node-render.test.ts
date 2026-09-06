@@ -588,10 +588,19 @@ describe("renderMenu 新 kind", () => {
     });
     const a = document.createElement("div");
     const b = document.createElement("div");
+    // 真实面板容器挂 dock/popup DOM（isConnected=true）——renderMenu 渲染 b 时
+    // runCustomMount 的陈旧条目扫清（code_review 4ac2b4f72 #1/#3）不得误清仍在
+    // 文档的 a（并行会话隔离判据即 isConnected）
+    document.body.appendChild(a);
+    document.body.appendChild(b);
     renderMenu(a, [mkNode("a")], { ...(makeDeps() as any), renderCustomDirect: true });
     renderMenu(b, [mkNode("b")], { ...(makeDeps() as any), renderCustomDirect: true });
     expect(calls).toEqual([]);
 
+    // 模拟菜单销毁时序（core.ts dispose：先 dock.remove/popup.remove 再
+    // disposeCustomCleanups——dispose 只清「容器已离文档」的条目）
+    document.body.removeChild(a);
+    document.body.removeChild(b);
     disposeCustomCleanups();
     expect([...calls].sort()).toEqual(["a", "b"]);
     // 幂等：表已清空，二次全清不再触发（dispose 与 overlay 兜底双调无害）

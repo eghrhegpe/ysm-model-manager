@@ -467,9 +467,30 @@ function runCustomMount(
   render: (el: HTMLElement, close?: () => void) => (() => void) | void,
   closePopup?: () => void,
 ): void {
+  // code_review 4ac2b4f72 #1/#3：先清「容器已脱离文档」的陈旧条目——面板 close→reopen
+  // 每次导航建新 list 容器，旧容器已 disconnect，原 get(container) 键控永远 miss，
+  // 旧 cleanup（骨骼面板 viewContainer raycaster listener）永不摘除、模块表残项
+  // （废弃元素 + 闭包）驻留到会话 dispose。此扫清同时天然会话隔离：并行挂载会话
+  // 仍存活的面板容器 isConnected=true，不会被本会话误清（render.ts 注释 L482-485 的
+  // 防御场景）。cleanup 幂等，对已摘过的 cleanup 双调无害。
+  for (const [c, cfn] of customCleanups) {
+    if (c === container || c.isConnected) continue;
+    try {
+      cfn();
+    } catch (e) {
+      // 单条 cleanup 抛错不阻断其余清理/挂载（对齐 vrm/fbx adapter dispose 的 try/catch 惯例）
+      console.warn("[preview-menu] stale custom cleanup failed:", e);
+    }
+    customCleanups.delete(c);
+  }
   const prev = customCleanups.get(container);
   if (prev) {
-    prev();
+    try {
+      prev();
+    } catch (e) {
+      // 同容器重入清理抛错不阻断新挂载
+      console.warn("[preview-menu] custom cleanup failed on remount:", e);
+    }
     customCleanups.delete(container);
   }
   const cleanup = render(container, closePopup);
@@ -483,10 +504,25 @@ function runCustomMount(
  * 的 setOverlayStyleTarget），而本表是模块级共享——全清会误伤并行挂载会话中仍存活的骨骼面板
  * （listener 被摘而面板 DOM 仍在 → 点击拾取静默失效，需重开面板才恢复）。
  * dispose 才是唯一明确的「这个菜单没了」信号，只在该时机全清。
+ *
+ * code_review 4ac2b4f72 #2/#4/#5：仅清「容器已脱离文档」的条目（isConnected=false）——
+ * core.ts 在 dock.remove()/popup.remove() 之后调用，届时本会话面板容器均已离文档，
+ * 命中全清；并行挂载会话仍存活的面板容器 isConnected=true 不受影响（互杀根治，
+ * 与上方 onOverlayStyleTargetReset 同理——per-session dispose 不得误伤并行会话）。
  */
 export function disposeCustomCleanups(): void {
-  for (const c of customCleanups.values()) c();
-  customCleanups.clear();
+  for (const [c, cfn] of customCleanups) {
+    if (c.isConnected) continue; // 仍在文档：并行会话的活面板，不归本会话 dispose 管
+    try {
+      cfn();
+    } catch (e) {
+      console.warn("[preview-menu] custom cleanup failed on dispose:", e);
+    }
+  }
+  // 只清离文档条目；活面板条目留给其所属会话 dispose
+  for (const c of [...customCleanups.keys()]) {
+    if (!c.isConnected) customCleanups.delete(c);
+  }
 }
 
 export function renderMenu(

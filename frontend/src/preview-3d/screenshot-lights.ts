@@ -4,11 +4,7 @@
 //
 // 从预览 LightCapability 提取截图灯光（仅 light cap 缺失才回退标准灯——三点全关是用户
 // 刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得）。
-import {
-  attenuateAmbientForSky,
-  type DirectionalLightParams,
-  type LightCapability,
-} from "./caps/light-capability.ts";
+import { attenuateAmbientForSky, type DirectionalLightParams } from "./caps/light-capability.ts";
 import { isSkyEnvironmentOn, sceneCapabilityRegistry } from "./caps/scene-capability-registry.ts";
 
 /** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） */
@@ -21,7 +17,7 @@ export interface ScreenshotLights {
 
 /** 从预览 LightCapability 提取截图灯光；cap 缺失 → undefined（渲染方回退标准灯） */
 export function toScreenshotLights(): ScreenshotLights | undefined {
-  const cap = sceneCapabilityRegistry.getById<LightCapability>("light");
+  const cap = sceneCapabilityRegistry.getById("light");
   if (!cap) return undefined;
   const p = cap.getParams();
   return {

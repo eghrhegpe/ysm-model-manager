@@ -37,6 +37,7 @@ auto_fields:
     - idbDel
     - idbGet
     - idbGetAll
+    - idbGetAllMetadata
     - idbKeys
     - IdbOp
     - idbSet

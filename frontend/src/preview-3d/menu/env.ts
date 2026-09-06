@@ -3,9 +3,7 @@
 import { tr } from "../../core/i18n/tr.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import type { EnvironmentCapability } from "../caps/environment-capability.ts";
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capability.ts";
-import type { FogCapability } from "../caps/fog-capability.ts";
 import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
@@ -100,7 +98,7 @@ function applyPreset(
   const link = ENV_PRESET_LINKAGE[presetId];
   if (!link) return;
   if (link.sky) {
-    const skyCap = sceneCapabilityRegistry.getById<SkyCapability>("sky");
+    const skyCap = sceneCapabilityRegistry.getById("sky");
     if (skyCap) {
       skyCap.setTime?.(link.sky.time);
       skyCap.setCloudCoverage?.(link.sky.cloud, true);
@@ -116,7 +114,7 @@ function applyPreset(
     }
   }
   if (link.fog) {
-    const fogCap = sceneCapabilityRegistry.getById<FogCapability>("fog");
+    const fogCap = sceneCapabilityRegistry.getById("fog");
     if (fogCap) {
       fogCap.setEnabled(link.fog.enabled);
       if (link.fog.mode) fogCap.setMode(link.fog.mode);
@@ -125,7 +123,7 @@ function applyPreset(
         fogCap.setLinearRange(link.fog.near, link.fog.far);
     }
   }
-  const envCap = sceneCapabilityRegistry.getById<EnvironmentCapability>("environment");
+  const envCap = sceneCapabilityRegistry.getById("environment");
   if (envCap) {
     envCap.setPresetId(presetId);
     if (link.envIntensity !== undefined) envCap.setIntensity(link.envIntensity);

@@ -18,6 +18,28 @@ import { ShadowCapability } from "./shadow-capability.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { WaterCapability } from "./water-capability.ts";
 
+/**
+ * id ↔ 能力类型绑定表（2026-09 锐评 P2-2）：id 字符串与具体能力类型在此声明一次，
+ * getById 调用点 `getById("sky")` 自动收窄为 SkyCapability，16 处手写泛型配对全部退役；
+ * add(id, factory) 在注册处绑定 K ↔ CapabilityMap[K]，拼错 id / 漏挂 / 返回错类型编译期报错，
+ * 运行时再由 add 的 id 校验兜底（反射/动态构造等静态盲区的最后防线）。
+ */
+export interface CapabilityMap {
+  sky: import("./sky-capability.ts").SkyCapability;
+  ground: import("./ground-capability.ts").GroundCapability;
+  water: import("./water-capability.ts").WaterCapability;
+  environment: import("./environment-capability.ts").EnvironmentCapability;
+  fog: import("./fog-capability.ts").FogCapability;
+  shadow: import("./shadow-capability.ts").ShadowCapability;
+  reflector: import("./reflector-capability.ts").ReflectorCapability;
+  postprocessing: import("./postprocessing-capability.ts").PostprocessingCapability;
+  light: import("./light-capability.ts").LightCapability;
+  renderMode: import("./render-mode-capability.ts").RenderModeCapability;
+}
+
+/** 能力 id 字面量联合（CapabilityMap 的键） */
+export type CapabilityId = keyof CapabilityMap;
+
 /** 能力工厂：接收 scene/renderer/camera，返回能力实例。
  *  ctx.caps 是 cap 间协调查询器（getById 本批实例）——cap 间联动经注入，不 import
  *  本模块（组合根 import 全部 cap，反向 import 即成模块环，check-circular 卡点） */
@@ -43,9 +65,29 @@ export class SceneCapabilityRegistry {
     camera: THREE.PerspectiveCamera;
   } | null = null;
 
-  /** 注册能力工厂 */
-  add(factory: SceneCapabilityFactory): void {
-    this.factories.push(factory);
+  /** 逃生阀重载（测试 fake cap / 动态注册）：不经 CapabilityMap 绑定，生产代码请用键控版 */
+  add(factory: SceneCapabilityFactory): void;
+  /** 注册能力工厂：id 在注册处与返回类型绑定（CapabilityMap），运行时校验防拼错/漏挂漂移 */
+  add<K extends CapabilityId>(
+    id: K,
+    factory: (ctx: Parameters<SceneCapabilityFactory>[0]) => CapabilityMap[K],
+  ): void;
+  add<K extends CapabilityId>(
+    idOrFactory: K | SceneCapabilityFactory,
+    factory?: (ctx: Parameters<SceneCapabilityFactory>[0]) => CapabilityMap[K],
+  ): void {
+    if (typeof idOrFactory === "string" && typeof factory === "function") {
+      const id = idOrFactory;
+      this.factories.push((ctx) => {
+        const cap = factory(ctx);
+        if (cap.id !== id) {
+          throw new Error(`[scene-cap] 能力 id 不匹配：注册为 "${id}"，实例为 "${cap.id}"`);
+        }
+        return cap;
+      });
+    } else {
+      this.factories.push(idOrFactory as SceneCapabilityFactory);
+    }
   }
 
   /** 创建所有已注册能力（mount-preview-core 调用） */
@@ -86,10 +128,12 @@ export class SceneCapabilityRegistry {
     return [...this.instances];
   }
 
-  /** 按 id 查找实例。泛型版直接收窄为具体能力类型，替代调用点 `as XxxCapability` 断言
-   *  （id ↔ 类型映射由调用方保证——id 注册处即该工厂返回类型，2026-09 锐评 P2-4 收敛） */
-  getById<T extends SceneCapability = SceneCapability>(id: string): T | undefined {
-    return this.instances.find((c) => c.id === id) as T | undefined;
+  /** 按 id 查找实例：字面量 id 走 CapabilityMap 收窄（类型由 CapabilityMap 绑定表保证），
+   *  动态字符串 id 退化为 SceneCapability（mount 层透传/lookup 场景） */
+  getById<K extends CapabilityId>(id: K): CapabilityMap[K] | undefined;
+  getById(id: string): SceneCapability | undefined;
+  getById(id: string): SceneCapability | undefined {
+    return this.instances.find((c) => c.id === id);
   }
 
   /** 保存所有能力状态到 localStorage */
@@ -139,14 +183,15 @@ export const sceneCapabilityRegistry = new SceneCapabilityRegistry();
 // ============ 内置能力注册 ============
 // 注意顺序：菜单渲染按注册顺序列出控件（天→地→水面→环境→雾→阴影→反光→后处理→灯光→渲染模式），
 // 与用户"先环境后灯光"的心智一致。
-sceneCapabilityRegistry.add((ctx) => new SkyCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new GroundCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new WaterCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new EnvironmentCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new FogCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new ShadowCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new ReflectorCapability(ctx));
+sceneCapabilityRegistry.add("sky", (ctx) => new SkyCapability(ctx));
+sceneCapabilityRegistry.add("ground", (ctx) => new GroundCapability(ctx));
+sceneCapabilityRegistry.add("water", (ctx) => new WaterCapability(ctx));
+sceneCapabilityRegistry.add("environment", (ctx) => new EnvironmentCapability(ctx));
+sceneCapabilityRegistry.add("fog", (ctx) => new FogCapability(ctx));
+sceneCapabilityRegistry.add("shadow", (ctx) => new ShadowCapability(ctx));
+sceneCapabilityRegistry.add("reflector", (ctx) => new ReflectorCapability(ctx));
 sceneCapabilityRegistry.add(
+  "postprocessing",
   (ctx) =>
     new PostprocessingCapability({
       scene: ctx.scene,
@@ -154,8 +199,8 @@ sceneCapabilityRegistry.add(
       camera: ctx.camera,
     }),
 );
-sceneCapabilityRegistry.add((ctx) => new LightCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new RenderModeCapability({ scene: ctx.scene }));
+sceneCapabilityRegistry.add("light", (ctx) => new LightCapability(ctx));
+sceneCapabilityRegistry.add("renderMode", (ctx) => new RenderModeCapability({ scene: ctx.scene }));
 
 /** sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像
  *  （skeleton-render）共用——原 light-capability 模块函数，上移断 registry↔light 环） */

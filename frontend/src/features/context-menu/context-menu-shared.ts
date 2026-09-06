@@ -18,12 +18,38 @@ export function refreshUI(): void {
   bus.emit("stats:refresh");
 }
 
-/** 路径安全过滤：禁止逃逸段（. / ..）与绝对路径 */
+/** Windows 保留设备名（大小写不敏感，带任意扩展名同样保留：CON.txt 亦非法） */
+const WIN_RESERVED_NAMES = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  ...Array.from({ length: 9 }, (_, i) => `COM${i + 1}`),
+  ...Array.from({ length: 9 }, (_, i) => `LPT${i + 1}`),
+]);
+
+/**
+ * 路径安全过滤（UX 预检，终审在 Go fsutil.ContainsIllegalNameChar——2026-09-06 同步扩展）：
+ * 禁逃逸段（. / ..）与绝对路径；禁 Windows 非法字符 <>:*?"|；
+ * 禁保留设备名与尾随点/空格（Windows 静默剥离 → 落点漂移）。
+ * `/`、`\` 允许作为嵌套分隔符（dstDir 拼接逐段落盘），校验按段独立进行。
+ */
 export function isUnsafeFolderName(folder: string): boolean {
   const trimmed = folder.trim();
   if (!trimmed) return true;
   if (/^[/\\]/.test(trimmed) || /^[A-Za-z]:/.test(trimmed)) return true;
-  return trimmed.split(/[/\\]/).some((seg) => seg === "." || seg === "..");
+  // 段校验吃原串不吃 trim()：dstDir 拼接用的是未 trim 的 folder，
+  // 尾随空格若在此被 trim 掉就漏检（Windows 落盘静默剥离 → 落点漂移）
+  return folder.split(/[/\\]/).some((seg) => {
+    if (seg === "." || seg === "..") return true;
+    // Windows 非法字符（/ \ 已作分隔符消费，不在此列）
+    if (/[<>:*?"|]/.test(seg)) return true;
+    // 尾随点/空格：Windows 落盘时静默剥离，用户看到的名字与实际落点不符
+    if (/[. ]$/.test(seg)) return true;
+    // 保留设备名：剥掉首个点后的扩展名再整体匹配（CON.txt 同样保留）
+    const dot = seg.indexOf(".");
+    return WIN_RESERVED_NAMES.has((dot === -1 ? seg : seg.slice(0, dot)).toUpperCase());
+  });
 }
 
 /**

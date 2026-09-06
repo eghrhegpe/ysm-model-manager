@@ -35,7 +35,8 @@ import {
   renderAdapterPanelContent,
   renderMenu,
 } from "./render.ts";
-import { buildRolesSchema, motionDetailView, roleBaseName } from "./roles.ts";
+import { buildRolesSchema, roleBaseName } from "./roles.ts";
+import { motionDetailView } from "./roles-views.ts";
 import {
   buildCameraSchema,
   buildLightingSchema,

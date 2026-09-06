@@ -535,35 +535,67 @@ export function renderMenu(
   const snapshot = previewSnapshot();
   for (const node of nodes) {
     if (node.visibleWhen && !node.visibleWhen(snapshot)) continue;
+    // 形状前置（2026-09 分派穷举化保留）：folder 或「带 children 的节点」都按可折叠 section
+    // 渲染——panel 带 children（如 shot 工具面板在 modelDetailView 里的 folder 形态，
+    // roles.test.ts 三通道回归锁）走此路。kind 判不了「声明了 children」，故先于 switch。
     if (node.kind === "folder" || Array.isArray(node.children)) {
       rmAppendFolder(container, node, deps);
-    } else if (node.kind === "field") {
-      rmAppendField(container, node);
-    } else if (node.kind === "button") {
-      rmAppendButton(container, node, deps.actionCtx);
-    } else if (node.kind === "row") {
-      rmAppendDynamicRow(container, node, deps.actionCtx);
-    } else if (node.kind === "select" || node.kind === "slider" || node.kind === "toggle") {
-      // [控件原语归一] 三类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
-      //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役。
-      const def = nodeControlToCapControl(node, snapshot, deps.menu);
-      renderCapControls(container, [def], snapshot);
-    } else if (node.kind === "material-row") {
-      rmAppendMaterialRow(container, node);
-    } else if (node.kind === "controls") {
-      // 声明式节点直持 cap 控件组：委托 renderCapControls（唯一控件渲染器）。
-      // 惰性：controls 为函数时每次渲染重取（cap 后创建/参数变更后重渲染可见最新全量）。
-      const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
-      if (ctrls?.length) renderCapControls(container, ctrls, snapshot);
-    } else if (node.kind === "divider" || node.kind === "sectionTitle") {
-      rmAppendDecor(container, node);
-    } else if (node.kind === "custom" && deps.renderCustomDirect && node.renderCustom) {
-      // 面板内容语义：直接调 renderCustom(container) 填充（schema 面板路径；
-      // closePopup 可选，MikuMikuAR 单参用法兼容）。cleanup 由注册表持有——
-      // 重渲染前先清旧（runCustomMount），取代逃生舱自搓 cleanupRef。
-      runCustomMount(container, node.renderCustom);
-    } else {
-      rmAppendLeaf(container, node, deps);
+      continue;
+    }
+    switch (node.kind) {
+      case "field":
+        rmAppendField(container, node);
+        break;
+      case "button":
+        rmAppendButton(container, node, deps.actionCtx);
+        break;
+      case "row":
+        rmAppendDynamicRow(container, node, deps.actionCtx);
+        break;
+      case "select":
+      case "slider":
+      case "toggle": {
+        // [控件原语归一] 三类节点控件统一经 nodeControlToCapControl 投影到 MenuControlDef，
+        //  委托 renderCapControls（cap 栈）渲染——rmAppendSelect/Slider/Toggle 已退役。
+        const def = nodeControlToCapControl(node, snapshot, deps.menu);
+        renderCapControls(container, [def], snapshot);
+        break;
+      }
+      case "material-row":
+        rmAppendMaterialRow(container, node);
+        break;
+      case "controls": {
+        // 声明式节点直持 cap 控件组：委托 renderCapControls（唯一控件渲染器）。
+        // 惰性：controls 为函数时每次渲染重取（cap 后创建/参数变更后重渲染可见最新全量）。
+        const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
+        if (ctrls?.length) renderCapControls(container, ctrls, snapshot);
+        break;
+      }
+      case "divider":
+      case "sectionTitle":
+        rmAppendDecor(container, node);
+        break;
+      case "custom":
+        if (deps.renderCustomDirect && node.renderCustom) {
+          // 面板内容语义：直接调 renderCustom(container) 填充（schema 面板路径；
+          // closePopup 可选，MikuMikuAR 单参用法兼容）。cleanup 由注册表持有——
+          // 重渲染前先清旧（runCustomMount），取代逃生舱自搓 cleanupRef。
+          runCustomMount(container, node.renderCustom);
+        } else {
+          rmAppendLeaf(container, node, deps);
+        }
+        break;
+      case "panel":
+      case "action":
+        rmAppendLeaf(container, node, deps);
+        break;
+      default: {
+        // 穷举兜底：kind 联合新增未在此处理 → 编译期 never 报错（对照 cap-controls.ts
+        // renderCapControls 同款纪律）；运行期 warn 防「拼错 kind 静默渲染成死行」。
+        const _unhandled: never = node.kind;
+        console.warn(`[preview-menu] 未处理的菜单节点 kind: ${_unhandled as string}`);
+        rmAppendLeaf(container, node, deps);
+      }
     }
   }
 }

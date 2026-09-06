@@ -67,9 +67,7 @@ auto_fields:
     - MAX_FPS_KEY
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
-    - modelDetailView
     - ModelEntry
-    - motionDetailView
     - PREVIEW_FRAME_INTERVAL_MS
     - previewPixelRatio
     - registerDlg

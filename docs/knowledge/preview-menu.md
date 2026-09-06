@@ -46,8 +46,6 @@ auto_fields:
     - isPreviewFolderNode
     - makeSwitchState
     - mergeStatsMenuItems
-    - modelDetailView
-    - motionDetailView
     - mountPreviewRootMenu
     - multiModelSelectNode
     - MultiModelSelectOpts

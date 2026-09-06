@@ -223,6 +223,7 @@ auto_fields:
     - formatCapSliderValue
     - frameCameraSide
     - FrameSideOptions
+    - frBuildToolsView
     - generateSurfacePixels
     - getActiveInputSession
     - getBoneDetail

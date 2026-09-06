@@ -489,15 +489,21 @@ function renderPreviewDock(
   }
 }
 
+/** 点按 vs 拖拽判定阈值：点按 = 位移 ≤ 5px 且 时长 ≤ 400ms（3D 渲染器拖拽手势的折中，
+ *  对齐浏览器 click 的位移语义但放宽时长——OrbitControls 拖拽常慢移，阈值需同量级）。
+ *  命名为模块常量：避免魔法值散落，pointercancel 复位依赖同一语义。 */
+const TAP_MAX_MOVE_PX = 5;
+const TAP_MAX_DURATION_MS = 400;
+
 /**
  * [子函数 9/9] 渲染器点按 vs 拖拽识别。
- *   点按 = 位移≤5 且 时长≤400ms，此时切换 popup 显隐（仅切 display，DOM/栈保留）。
+ *   点按 = 位移≤TAP_MAX_MOVE_PX 且 时长≤TAP_MAX_DURATION_MS，此时切换 popup 显隐（仅切 display，DOM/栈保留）。
+ *   pointercancel（系统手势抢占）时复位 downT，防后续 pointerup 误判为点按。
  *   返回 abort 句柄供 dispose 解绑。
  */
 function bindPreviewTapToggle(
   viewEl: HTMLElement,
   popup: HTMLElement,
-  _showMenu: (view: SlideMenuView) => void,
   hideMenu: (opts?: { restoreFocus?: boolean }) => void,
 ): () => void {
   const tapAbort = new AbortController();
@@ -514,10 +520,18 @@ function bindPreviewTapToggle(
     { signal: tapAbort.signal },
   );
   viewEl.addEventListener(
+    "pointercancel",
+    (): void => {
+      downT = 0; // 系统手势抢占（如滚动/拖拽接管）→ 复位，防 pointerup 误判为点按
+    },
+    { signal: tapAbort.signal },
+  );
+  viewEl.addEventListener(
     "pointerup",
     (e: PointerEvent): void => {
+      if (downT === 0) return; // 已被 pointercancel 复位 → 非点按
       const moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
-      if (moved > 5 || performance.now() - downT > 400) return;
+      if (moved > TAP_MAX_MOVE_PX || performance.now() - downT > TAP_MAX_DURATION_MS) return;
       if (popup.style.display !== "none") {
         hideMenu(); // 点击渲染器 → 隐藏菜单（焦点恢复给触发元素）
       } else {
@@ -600,7 +614,7 @@ export function mountPreviewRootMenu(
       adapterItemsRef,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）
-  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, showMenu, hideMenu);
+  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, hideMenu);
 
   // ---- 句柄方法 ----
   const setAdapterItems = (items: PreviewMenuNode[]): void => {

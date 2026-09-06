@@ -26,8 +26,9 @@ function switchTabLabelOf(key: string): string {
   return hit?.label ?? RESOURCE_TYPE_LABELS[key] ?? key;
 }
 
-/** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5） */
-function switchNormPath(s: string): string {
+/** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5）。
+ *  导出供 menu 内同口径复用（roles.ts renderComponentsSection 的 isCur 比较）——防归一操作多处内联漂移 */
+export function switchNormPath(s: string): string {
   return s.replace(/\\/g, "/").toLowerCase();
 }
 

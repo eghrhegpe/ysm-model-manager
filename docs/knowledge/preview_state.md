@@ -25,7 +25,9 @@ auto_fields:
     - KNOWN_PATHS
     - PreviewActionMenuCtx
     - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewMenuCtx
+    - PreviewMenuGroupId
     - PreviewMenuNode
     - PreviewMenuNodeKind
     - previewSnapshot

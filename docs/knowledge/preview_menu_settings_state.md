@@ -48,6 +48,7 @@ auto_fields:
     - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue
+    - stripMenuControlGroup
     - subscribeSettings
     - toStatePath
   tests:

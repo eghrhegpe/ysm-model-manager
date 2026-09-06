@@ -18,8 +18,10 @@ export const DEFAULT_TD_KEYMAP: Record<TdKeyAction, string> = {
 };
 
 const TD_KEYMAP_KEY = "td-keymap";
-const TD_CAMSPEED_KEY = "td-cam-speed";
-const TD_ROTMODE_KEY = "td-rot-mode";
+/** 相机移动速度持久化键（单一源：menu/settings.ts buildCameraSchema 同引用，防双源漂移） */
+export const TD_CAMSPEED_KEY = "td-cam-speed";
+/** 相机旋转模式持久化键（单一源：menu/settings.ts buildCameraSchema 同引用，防双源漂移） */
+export const TD_ROTMODE_KEY = "td-rot-mode";
 
 // ── 读取函数（非法/缺失回退默认）──────────────────
 

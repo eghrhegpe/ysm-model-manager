@@ -3,6 +3,12 @@
 // update() 里 `!action || action.paused` / isAnimActive 分散判定，见 sharp-review #9）。
 // 用法：消费方每帧调用一次 setPerceptionPaused(动画是否激活)，
 // 各 controller 的 apply() 内部自查，动画优先级决策收归感知系统自身。
+//
+// 受控清单（apply 内自查 isPerceptionPaused，暂停即静默）：
+//   breath / blink / lipSync / autoDance（mmd-build-result.ts、vrm-adapter.ts、ysm-adapter.ts）
+// 例外（不随全局暂停，设计意图）：
+//   gaze——注视属「摄像机追踪」而非动画优先级，动画播放中仍应跟随相机
+//   （见 mmd-build-result.ts update 内注释；VRM 走原生 lookAt 同理不受暂停管辖）。
 // ⚠️ 此变量仅限主线程访问。若未来感知层扩展出 Worker 驱动路径，需重新设计同步机制。
 let _globalPause = false;
 

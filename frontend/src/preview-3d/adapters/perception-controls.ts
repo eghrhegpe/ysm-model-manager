@@ -22,8 +22,10 @@ export interface PerceptionCapability {
   fallback: string;
 }
 
-/** 所有可能的感知模块（fallback 文案，i18n 缺失时使用） */
-const ALL_MODULES: Array<{ id: keyof PerceptionState; labelKey: string; fallback: string }> = [
+/** 所有可能的感知模块（id + i18n key + fallback 文案，单一事实源）。
+ *  adapter 声明能力时经 pickPerceptionCaps 按 id 裁剪本表——不复制 labelKey/fallback 字面量，
+ *  文案只在改一处（防三 adapter + 本表四处漂移）。 */
+export const ALL_PERCEPTION_CAPS: PerceptionCapability[] = [
   { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
   { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
   { id: "blink", labelKey: "preview.perceptionBlink", fallback: "眨眼" },
@@ -31,14 +33,22 @@ const ALL_MODULES: Array<{ id: keyof PerceptionState; labelKey: string; fallback
   { id: "autoDance", labelKey: "preview.perceptionAutoDance", fallback: "律动" },
 ];
 
+/** 按 id 从全量表挑选能力（顺序稳定 = ALL_PERCEPTION_CAPS 声明序，保证跨适配器面板顺序一致） */
+export function pickPerceptionCaps(
+  ids: ReadonlyArray<keyof PerceptionState>,
+): PerceptionCapability[] {
+  const want = new Set(ids);
+  return ALL_PERCEPTION_CAPS.filter((c) => want.has(c.id));
+}
+
 /** 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点，
  *  control.get/set 闭包读写 adapter 内 perception state（非状态层路径，不走 bind） */
 export function perceptionNodes(
   state: PerceptionState,
   caps: PerceptionCapability[],
 ): PreviewMenuNode[] {
-  // 按 ALL_MODULES 顺序排列（保证跨适配器顺序一致）
-  const ordered = ALL_MODULES.filter((m) => caps.some((c) => c.id === m.id));
+  // 按 ALL_PERCEPTION_CAPS 顺序排列（保证跨适配器顺序一致）
+  const ordered = ALL_PERCEPTION_CAPS.filter((m) => caps.some((c) => c.id === m.id));
   if (ordered.length === 0) {
     // 空态提示（对齐旧 buildPerceptionControls 的 noPerception 行）
     return [

@@ -38,34 +38,38 @@ function entryExtOf(entry: string): string {
   return VOXEL_RPC_BY_EXT[ext] ? ext : "";
 }
 
+/** voxel RPC 查表（单一分派点，替代 if/else 链——注册表新增 RPC 名只需在此加一行）。
+ *  三 Go 绑定签名一致（GetNbtVoxelData / GetSchematicVoxelData / GetLitematicVoxelData，
+ *  均返回 LitematicVoxelData | null，与前端 VoxelData 结构同源——null 差异由各绑定
+ *  实现承担，此处仅收窄类型）。空串 = 历史默认语义（voxelFnFor 兜底）。
+ *  未知名不在表内 → 调用方显式抛错（fail-loud，同原 if/else 语义）。 */
+type VoxelApp = {
+  GetNbtVoxelData(p: string): Promise<unknown>;
+  GetSchematicVoxelData(p: string): Promise<unknown>;
+  GetLitematicVoxelData(p: string): Promise<unknown>;
+};
+
 /** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据）。
  *  voxelFn 是 VOXEL_RPC_BY_EXT 的 Go RPC 名（GetNbtVoxelData / GetSchematicVoxelData /
- *  GetLitematicVoxelData，三签名一致）——动态 key 保留（工厂注入），但取方法走类型化
- *  索引（AppBindings 具名方法），替换原 `as unknown as Record<string,...>` 手写断言。
+ *  GetLitematicVoxelData，三签名一致）——动态 key 保留（工厂注入），查表分派；
+ *  未知名显式抛错（fail-loud，注册表增长失败响亮，同原审查 P3 意图）。
  *  ADR-143 P1：绑定返回 typed VoxelData | null（原 string JSON）。 */
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | null> {
   return async (path: string): Promise<VoxelData | null> => {
-    const App = await getApp();
-    // 动态 key：按 VOXEL_RPC_BY_EXT 值域收窄到 AppBindings 具名方法（if/else 链，
-    // 审查 P3：嵌套三元 + 未知值静默回退 GetLitematicVoxelData 会让注册表新增 RPC
-    // 名时错调 builder——未知名显式抛错，注册表增长失败响亮；空串仍走默认语义）
-    let fn: (p: string) => Promise<VoxelData | null>;
-    if (voxelFn === "GetNbtVoxelData") {
-      // Go 绑定返回 LitematicVoxelData（生成类型），与前端 VoxelData 结构同源（null 差异）
-      fn = ((p: string) => App.GetNbtVoxelData(p)) as unknown as (
-        p: string,
-      ) => Promise<VoxelData | null>;
-    } else if (voxelFn === "GetSchematicVoxelData") {
-      fn = ((p: string) => App.GetSchematicVoxelData(p)) as unknown as (
-        p: string,
-      ) => Promise<VoxelData | null>;
-    } else if (voxelFn === "" || voxelFn === "GetLitematicVoxelData") {
-      fn = ((p: string) => App.GetLitematicVoxelData(p)) as unknown as (
-        p: string,
-      ) => Promise<VoxelData | null>;
-    } else {
-      throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
-    }
+    const App = (await getApp()) as unknown as VoxelApp;
+    // 按 VOXEL_RPC_BY_EXT 值域收窄到三个具名方法（arrow 包装保留调用形态；未知名不在
+    // 表内 → 显式抛错而非静默回退 GetLitematicVoxelData——注册表新增 RPC 名失败响亮）
+    const table: Record<string, (p: string) => Promise<VoxelData | null>> = {
+      GetNbtVoxelData: (p) => App.GetNbtVoxelData(p) as unknown as Promise<VoxelData | null>,
+      GetSchematicVoxelData: (p) =>
+        App.GetSchematicVoxelData(p) as unknown as Promise<VoxelData | null>,
+      GetLitematicVoxelData: (p) =>
+        App.GetLitematicVoxelData(p) as unknown as Promise<VoxelData | null>,
+      // 空串 = 默认走 Litematic（历史语义，voxelFnFor 的兜底）
+      "": (p) => App.GetLitematicVoxelData(p) as unknown as Promise<VoxelData | null>,
+    };
+    const fn = table[voxelFn];
+    if (!fn) throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
     return await fn(path);
   };
 }

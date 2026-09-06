@@ -14,7 +14,7 @@ import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-br
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
-import { buildSwitchNodes, type SwitchState } from "./switch.ts";
+import { buildSwitchNodes, type SwitchState, switchNormPath } from "./switch.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */
@@ -271,9 +271,9 @@ function renderComponentsSection(
   const box = document.createElement("div");
   box.dataset.testid = "preview-components-list";
   box.className = "fr-scroll-box";
-  const curNorm = (entry.path ?? "").replace(/\\/g, "/").toLowerCase();
+  const curNorm = switchNormPath(entry.path ?? "");
   for (const p of components) {
-    const isCur = p.replace(/\\/g, "/").toLowerCase() === curNorm;
+    const isCur = switchNormPath(p) === curNorm;
     const row = document.createElement("div");
     row.dataset.testid = "preview-component-row";
     row.dataset.componentPath = p;

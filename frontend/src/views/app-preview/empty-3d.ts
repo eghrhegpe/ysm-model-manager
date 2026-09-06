@@ -14,7 +14,17 @@ import {
 import { withPreviewExtras } from "./preview-library.ts";
 
 /**
- * 空适配器：build 直接 resolve 空 scene，core 渲染空白场景 + 环境光/天空/地面。
+ * 空场景默认取景（与真格式适配器「fitCameraToRoots 空几何体 else 分支」同语义：
+ * 相机略高于地面、朝原点俯视天空/地面环境；shared 相机单例跨 session 复用——
+ * 若 build 时不显式设位，首次进入会停在 PerspectiveCamera 原点 (0,0,0)，贴地视角不可用）。
+ */
+const EMPTY_CAM_POS = Object.freeze({ x: 0, y: 5, z: 10 } satisfies {
+  x: number;
+  y: number;
+  z: number;
+});
+
+/** 空适配器：build 直接 resolve 空 scene，core 渲染空白场景 + 环境光/天空/地面。
  * 例外说明（P1#1 审计）：本 adapter 无 path、无数据端口、无格式解析——是「空环境
  * 展示」特例而非格式适配器，不套用 make<Format>Adapter 工厂（无 deps 可注入）。
  * 真格式（mmd/vrm/ysm/fbx/litematic/pack）的工厂均收在 preview-3d/adapters/ 层。
@@ -24,11 +34,19 @@ const emptyAdapter: PreviewAdapter = {
   build: async (ctx) => {
     // 不向 scene 添加任何对象——core 已有 skyCap/groundCap/lightCap，直接呈现环境
     ctx.loadingEl.remove();
+    // 空场景无几何体可框选：build 即应用默认取景（真格式 build 内 fitCameraToRoots
+    // 设机位；此处显式设位，避免 shared 相机单例残留位/原点贴地）
+    if (ctx.camera && ctx.controls) {
+      ctx.camera.position.set(EMPTY_CAM_POS.x, EMPTY_CAM_POS.y, EMPTY_CAM_POS.z);
+      ctx.camera.lookAt(0, 0, 0);
+      ctx.controls.target.set(0, 0, 0);
+      ctx.controls.update();
+    }
     return {
       dispose: () => {},
       resetCamera: () => {
         if (ctx.camera && ctx.controls) {
-          ctx.camera.position.set(0, 5, 10);
+          ctx.camera.position.set(EMPTY_CAM_POS.x, EMPTY_CAM_POS.y, EMPTY_CAM_POS.z);
           ctx.camera.lookAt(0, 0, 0);
           ctx.controls.target.set(0, 0, 0);
           ctx.controls.update();

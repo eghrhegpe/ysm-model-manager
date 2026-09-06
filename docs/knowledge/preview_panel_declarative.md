@@ -43,7 +43,9 @@ auto_fields:
     - playNodes
     - PreviewActionMenuCtx
     - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewMenuCtx
+    - PreviewMenuGroupId
     - PreviewMenuHandle
     - PreviewMenuNode
     - PreviewMenuNodeKind

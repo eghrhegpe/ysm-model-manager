@@ -574,6 +574,12 @@ export function renderCapControls(
       case "preset-thumb":
         renderCapPresetThumb(parent, c);
         break;
+      default: {
+        // 穷尽检查：MenuControlKind 新增未在此处理 → 编译期报错（never 收窄），
+        // 杜绝「漏 kind 静默丢弃」（此前无 default，新增 kind 静默不渲染）
+        const _unhandled: never = c.kind;
+        console.warn(`[preview-menu] 未处理的控件 kind: ${_unhandled as string}`);
+      }
     }
   }
 }

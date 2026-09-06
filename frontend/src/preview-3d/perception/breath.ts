@@ -36,7 +36,7 @@ const BREATH_WEIGHTS: Partial<Record<SemanticBoneId, number>> = {
 };
 
 /** 呼吸周期参数（秒） */
-const BREATH_CYCLE_S = 2.5; // 正常呼吸 ~4-6 次/分钟 → 周期 10-15s？不，成人静息 12-20 次/分，即周期 3-5s。用 2.5s 作为轻快待机感。
+const BREATH_CYCLE_S = 2.5; // 成人静息呼吸 12-20 次/分（周期 3-5s）；取 2.5s 轻快待机感
 const BREATH_AMP_Y = 0.004; // Y 轴微移幅度（单位：模型空间，MMD 约 cm；4mm 轻微）
 const BREATH_AMP_Z = 0.002; // Z 轴微移（胸腔前后胀缩）
 const BREATH_AMP_ROTX = 0.001; // 胸椎微前倾（弧度）

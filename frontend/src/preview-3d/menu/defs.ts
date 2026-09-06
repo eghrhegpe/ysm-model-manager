@@ -7,7 +7,11 @@
 // 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
 // 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。
 
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuGroupId, PreviewMenuNode } from "./node-types.ts";
+
+// [2026-09 锐评收口] PreviewMenuGroupId 已归位 node-types.ts（类型叶，单一事实源）；
+// 原位 re-export 保公共面——既有 import defs.ts 的消费方零改动。
+export type { PreviewMenuGroupId } from "./node-types.ts";
 //
 // 能力驱动显示（用户 2026-08-16 决策 + 2026-08-19 环境拆组）：
 // - 有骨骼/模型工具（适配器注入 model 组项）→ 显示「🧍 模型」
@@ -16,8 +20,6 @@ import type { PreviewMenuNode } from "./node-types.ts";
 //   （环境体量 > 全部场景设置：sky/ground/env/fog/reflector 聚合一面板，
 //    后续地面/水面系统继续膨胀也不挤占场景组）
 // - 有场景/相机能力（shared 模式）→ 显示「🎛️ 场景」
-
-export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "settings";
 
 /** 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） */
 export interface PreviewMenuGroupDef {

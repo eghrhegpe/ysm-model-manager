@@ -81,6 +81,16 @@ export type PreviewMenuNodeKind =
   | "controls" // 声明式节点直持 MenuControlDef[]（cap 生态原生通道），渲染委托 renderCapControls
   | "custom";
 
+/**
+ * 底栏 dock 分组 id（单一事实源——2026-09 锐评收口：原 defs.ts 手写字面量与本文件
+ * dockGroup 双源漂移，归位类型叶后 defs.ts 值文件反向引用，方向单一）。
+ * 仅列 dock 按钮组（5 组）；dockGroup 的 "stats" 是统计附加行通道（非 dock 组），单列。
+ */
+export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "settings";
+
+/** dockGroup 合法值：dock 组 ∪ 统计附加行通道（node-types 类型叶自足，消费方经此引用） */
+export type PreviewDockGroup = PreviewMenuGroupId | "stats";
+
 /** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） */
 export interface PreviewControlSpec {
   /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
@@ -144,7 +154,7 @@ export interface PreviewMenuNode {
    *  无 dockGroup 只出现在设置聚合视图。
    *  [ADR-159] "stats" = 统计附加行通道：适配器贡献 kind:"field" 节点（如资源包立方体数），
    *  mergeStatsMenuItems 将其并入统计面板 children，随「能渲染就能出统计」通道展示 */
-  dockGroup?: "model" | "motion" | "env" | "scene" | "settings" | "stats";
+  dockGroup?: PreviewDockGroup;
   // 可见性统一走 visibleWhen（[doc:adr-126-p4-d] 谓词化收口）：sharedOnly/hideInSelfMode/
   // requiresEnvironment 三个专有布尔已删除——dock 组过滤（menu/core.ts dockGroupItemsFor）
   // 与内容级渲染（render.ts）共用同一求值器，谓词吃状态层快照

@@ -102,6 +102,7 @@ auto_fields:
     - SkyModelType
     - SkyParams
     - SpotlightParams
+    - stripMenuControlGroup
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE

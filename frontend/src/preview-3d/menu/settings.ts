@@ -13,8 +13,9 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import { type MenuControlDef, stripMenuControlGroup } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
 import { getStateValue, setStateValue } from "../state/preview-state.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
@@ -43,7 +44,7 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
         set: (v) => {
           const orbit = v === "orbit";
           ctx.getCamBridge().setOrbit(orbit);
-          safeSet("td-rot-mode", orbit ? "orbit" : "free");
+          safeSet(TD_ROTMODE_KEY, orbit ? "orbit" : "free");
         },
       },
     },
@@ -59,7 +60,7 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
         get: () => ctx.getCamBridge().getSpeed(),
         set: (n) => {
           ctx.getCamBridge().setSpeed(Number(n));
-          safeSet("td-cam-speed", String(n));
+          safeSet(TD_CAMSPEED_KEY, String(n));
         },
       },
     },
@@ -227,8 +228,8 @@ export function collectSettingsCapControls(): MenuControlDef[] {
     }
   }
   out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));
-  // 抹平 group：剥掉 group 字段（exactOptional 收紧后不能赋 undefined，直接省略更贴合意图）
-  return out.map(({ group: _grp, ...rest }) => rest);
+  // 抹平 group：剥掉 group 字段（共享纯函数，env 分区子视图同源——防 renderCapControls 再包折叠 section）
+  return stripMenuControlGroup(out);
 }
 
 /** 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM */

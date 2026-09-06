@@ -153,6 +153,16 @@ export function makeColorDef(
   };
 }
 
+/**
+ * 抹平控件的 group 字段（扁平视图共用——env 分区子视图 / settings 聚合面板都需剥掉
+ * group，防 renderCapControls 再包同名折叠 section）。
+ * 收敛样板：env.ts stripGroup 与 settings.ts out.map(({group,_grp,...rest})) 此前各写一份，
+ * 上提后两处同源。exactOptional 下用解构省略而非赋 undefined。
+ */
+export function stripMenuControlGroup(items: MenuControlDef[]): MenuControlDef[] {
+  return items.map(({ group: _group, ...rest }) => rest);
+}
+
 /* ============ 场景能力统一接口 ============ */
 
 /** cap 间协调查询器：组合根 createAll 时注入，cap 间联动经此查询（不 import

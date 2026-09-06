@@ -59,6 +59,7 @@ import {
   type PerceptionCapability,
   type PerceptionState,
   perceptionNodes,
+  pickPerceptionCaps,
 } from "./perception-controls.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
@@ -450,9 +451,8 @@ function mdYsBuildMenuAndDebug(
     lipSync: false,
     autoDance: false,
   };
-  const perceptionCaps: PerceptionCapability[] = [
-    { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
-  ];
+  // 能力声明：YSM 非 generic 仅提供 呼吸（感知层语义骨收益有限，见 semantic-bones.ts）
+  const perceptionCaps = pickPerceptionCaps(["breath"]);
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
   // （R1 禁 utils→views，注册钩子由视图层注入实现）。所有调用者（ysm-3d / maid-3d）都
   // 经 registerModelSchema 注册；缺失时不注册 → schemaId 无 fallback（契约禁双通道），面板空渲染。

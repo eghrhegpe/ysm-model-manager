@@ -7,8 +7,9 @@
 //   - VRM：humanoid 52 骨骼 id 天然就是语义名（vrmSemanticBoneMap 零匹配直接产映射）。
 //   - MMD：pmx 骨骼名随意（上半身/頭/左腕…），走候选名匹配表
 //     （候选表自 MikuMikuAR motion-algos/proc-motion-shared 移植，已含日/英变体）。
-//   - YSM：不接入——spec.bones 作者自由命名无标准，低模方块人上感知层收益有限，
-//     候选表维护成本高、命中率低（语义骨骼面板等 YSM 现有功能不受影响）。
+//   - YSM：已接入（非 generic 模式）——spec.bones 作者自由命名，走 YSM_SEMANTIC_CANDIDATES
+//     候选表（YSM_SEMANTIC_CANDIDATES + ysmSemanticBoneMap，下方 §YSM 特化）。命中靠作者
+//     命名靠近约定名（hips/head/chest 及中英/日英变体），未命中语义缺省优雅降级。
 //
 // 宽容缺省：匹配不到的语义直接缺省（map 无该键），消费方 getSemanticBone 返回
 // null 优雅降级（如呼吸 chest 缺失 → fallback spine → hips → 静默）。

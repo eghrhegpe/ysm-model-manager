@@ -3,7 +3,12 @@
 // 旧 buildPerceptionControls（89 行手写 DOM，三 adapter 复制）已删除——节点契约由本文件锁定。
 
 import { describe, it, expect } from "vitest";
-import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import {
+  perceptionNodes,
+  pickPerceptionCaps,
+  type PerceptionState,
+  type PerceptionCapability,
+} from "./perception-controls.ts";
 
 const allCaps: PerceptionCapability[] = [
   { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
@@ -16,7 +21,7 @@ const allCaps: PerceptionCapability[] = [
 const offState = (): PerceptionState => ({ breath: false, gaze: false, blink: false, lipSync: false, autoDance: false });
 
 describe("perceptionNodes（声明式 toggle 节点）", () => {
-  it("按 ALL_MODULES 顺序产出 toggle 节点（id/labelKey/fallback 对齐 caps）", () => {
+  it("按 ALL_PERCEPTION_CAPS 顺序产出 toggle 节点（id/labelKey/fallback 对齐 caps）", () => {
     const state = { ...offState(), breath: true, blink: true };
     const nodes = perceptionNodes(state, allCaps);
     expect(nodes.map((n) => n.id)).toEqual([
@@ -53,5 +58,28 @@ describe("perceptionNodes（声明式 toggle 节点）", () => {
     // 非布尔输入归一（Boolean 强转）
     breath.control?.set?.("yes" as unknown as boolean);
     expect(state.breath).toBe(true);
+  });
+});
+
+describe("pickPerceptionCaps（按 id 裁剪单一事实源 ALL_PERCEPTION_CAPS）", () => {
+  it("子集挑选：保持声明序（breath/gaze/blink），不复制文案", () => {
+    const caps = pickPerceptionCaps(["breath", "gaze", "blink"]);
+    expect(caps.map((c) => c.id)).toEqual(["breath", "gaze", "blink"]);
+    // 文案来自单一事实源（与 ALL 常量逐字一致）
+    expect(caps[0]).toMatchObject({ labelKey: "preview.perceptionBreath", fallback: "呼吸" });
+  });
+
+  it("空集 → 空数组（无感知模块）", () => {
+    expect(pickPerceptionCaps([])).toEqual([]);
+  });
+
+  it("全量挑选 = 五模块（MMD 能力）", () => {
+    expect(pickPerceptionCaps(["breath", "gaze", "blink", "lipSync", "autoDance"]).map((c) => c.id)).toEqual([
+      "breath",
+      "gaze",
+      "blink",
+      "lipSync",
+      "autoDance",
+    ]);
   });
 });

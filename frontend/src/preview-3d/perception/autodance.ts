@@ -1,7 +1,8 @@
 // ===== 感知层：AutoDance 简化版（程序化生命力 L3）=====
 // 按 BPM 节拍驱动骨骼律动，不生成 VMD，直接改 Three.js 骨骼变换。
 // 简化设计（相比 MikuMikuAR 完整版）：
-//   - 单正弦源驱动（无 beatBounce 脉冲、无 downbeatWeight 层次）
+//   - 单正弦源驱动（beatBounce 为内建正弦包络近似——见 apply 内 bounce，非完整版
+//     独立 beatBounce 脉冲输入/无 downbeatWeight 层次）
 //   - 躯干左右摇摆 + 肩膀上下 + 手臂挥舞
 //   - 4 拍呼吸幅度调制（避免机械重复感）
 //

@@ -24,8 +24,7 @@ import type { MmdBottomNavCtx } from "./content-bridges.ts";
 import { materialNodes } from "./material-controls.ts";
 import type { MdMmStage5Ctx, MmdMenuItemsOpts } from "./mmd-types.ts";
 import { morphNodes } from "./morph-controls.ts";
-import type { PerceptionCapability } from "./perception-controls.ts";
-import { perceptionNodes } from "./perception-controls.ts";
+import { perceptionNodes, pickPerceptionCaps } from "./perception-controls.ts";
 
 export function mdMmStage5Menu(c: MdMmStage5Ctx): {
   semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;
@@ -58,14 +57,9 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
       ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
       : null;
   c.perceptionState = { breath: true, gaze: true, blink: true, lipSync: true, autoDance: true };
-  // perceptionCaps 仅本函数使用（菜单注入）——局部 const，不占用 ctx
-  const perceptionCaps: PerceptionCapability[] = [
-    { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
-    { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
-    { id: "blink", labelKey: "preview.perceptionBlink", fallback: "眨眼" },
-    { id: "lipSync", labelKey: "preview.perceptionLipSync", fallback: "口型" },
-    { id: "autoDance", labelKey: "preview.perceptionAutoDance", fallback: "律动" },
-  ];
+  // perceptionCaps 仅本函数使用（菜单注入）——局部 const，不占用 ctx。
+  // 能力声明：MMD 提供全部五模块（按 ALL_PERCEPTION_CAPS 单一事实源裁剪）
+  const perceptionCaps = pickPerceptionCaps(["breath", "gaze", "blink", "lipSync", "autoDance"]);
   const items = mmdMenuItems({
     navCtx,
     panels: c.panels,

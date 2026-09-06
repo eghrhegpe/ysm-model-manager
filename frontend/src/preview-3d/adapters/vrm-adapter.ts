@@ -40,6 +40,7 @@ import {
   type PerceptionCapability,
   type PerceptionState,
   perceptionNodes,
+  pickPerceptionCaps,
 } from "./perception-controls.ts";
 import { renderLoadingState } from "./preview-loading.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
@@ -406,11 +407,8 @@ function mdVrBuildPerception(
     lipSync: false,
     autoDance: false,
   };
-  const perceptionCaps: PerceptionCapability[] = [
-    { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
-    { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
-    { id: "blink", labelKey: "preview.perceptionBlink", fallback: "眨眼" },
-  ];
+  // 能力声明：VRM 提供 呼吸/注视/眨眼（按 ALL_PERCEPTION_CAPS 单一事实源裁剪，无 lipSync/autoDance）
+  const perceptionCaps = pickPerceptionCaps(["breath", "gaze", "blink"]);
   const breath = createBreathController();
   const useNativeLookAt = !!vrm.lookAt;
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt

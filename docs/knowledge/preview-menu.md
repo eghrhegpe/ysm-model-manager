@@ -55,6 +55,7 @@ auto_fields:
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
     - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewMenuCtx
     - PreviewMenuGroupDef
     - PreviewMenuGroupId
@@ -69,6 +70,7 @@ auto_fields:
     - roleBaseName
     - RolesSchemaDeps
     - STATS_PANEL_ID
+    - switchNormPath
     - SwitchState
     - switchTabHighlightBg
     - unregisterCorePanelSchemas

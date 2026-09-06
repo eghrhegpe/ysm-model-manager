@@ -467,6 +467,7 @@ auto_fields:
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewHandle
     - PreviewMenuCtx
     - PreviewMenuGroupDef
@@ -594,16 +595,20 @@ auto_fields:
     - startGlobalRenderLoop
     - STATS_PANEL_ID
     - stopIfIdle
+    - stripMenuControlGroup
     - stripYsgpTextHeader
     - SubModel
     - subscribeSettings
     - surfaceSpecKey
     - SwitchContext
+    - switchNormPath
     - switchPreview
     - SwitchState
     - switchTabHighlightBg
     - switchToSession
     - syncLightTargetFromContent
+    - TD_CAMSPEED_KEY
+    - TD_ROTMODE_KEY
     - TdKeyAction
     - teardownSharedInfra
     - TexDecodeConfig

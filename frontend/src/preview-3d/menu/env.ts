@@ -3,7 +3,11 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capability.ts";
-import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
+import {
+  type MenuControlDef,
+  type SceneCapability,
+  stripMenuControlGroup,
+} from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SkyCapability } from "../caps/sky-capability.ts";
 import { type PreviewSnapshot, previewSnapshot } from "../state/preview-state.ts";
@@ -140,8 +144,6 @@ function envCapFolder(cap: SceneCapability): PreviewMenuNode {
   // 惰性分区：controls 传函数引用，每次渲染重取 getMenuControls + 重分区
   //（visibleWhen B 轨实时——水模式切换后 Pool/Look 组成员随订阅 refresh 重建）
   const parts = () => partitionCapControlsByGroup(cap, cap.getMenuControls(), previewSnapshot());
-  const stripGroup = (cs: MenuControlDef[]): MenuControlDef[] =>
-    cs.map(({ group: _grp, ...rest }) => rest);
   const partsNow = parts();
   let children: PreviewMenuNode[];
   if (partsNow.length > 1) {
@@ -159,7 +161,7 @@ function envCapFolder(cap: SceneCapability): PreviewMenuNode {
             kind: "controls",
             controls: () => {
               const cur = parts().find((x) => x.key === g.key);
-              return cur ? stripGroup(cur.ctrls) : [];
+              return cur ? stripMenuControlGroup(cur.ctrls) : [];
             },
           },
         ],
@@ -170,7 +172,7 @@ function envCapFolder(cap: SceneCapability): PreviewMenuNode {
       {
         id: `env-cap-${cap.id}-ctrls`,
         kind: "controls",
-        controls: () => stripGroup(cap.getMenuControls()),
+        controls: () => stripMenuControlGroup(cap.getMenuControls()),
       },
     ];
   }

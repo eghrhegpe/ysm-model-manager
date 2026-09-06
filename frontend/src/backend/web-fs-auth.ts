@@ -5,6 +5,7 @@
 // 复用 web-fs-import 的 importWebFiles（File → IDB 落库），不重复造 IDB 写入逻辑。
 
 import { t } from "../core/i18n/t.ts";
+import { isImportableFile } from "../features/dnd/shared.ts";
 import { currentRepoType } from "../features/repo/repo-rtype.ts";
 import { idbGet, idbSet } from "./idb.ts";
 import { WebUnsupportedError } from "./web-common.ts";
@@ -115,7 +116,17 @@ async function scanFsaHandle(
 ): Promise<{ ok: boolean; imported: number; failed: number; dir: string }> {
   const files: File[] = [];
   await _collectModelFiles(handle as _FsaDirHandle, files);
-  const { imported, failed } = await importWebFiles(files, currentRepoType());
+  // P2b 修复：过滤「顶层散落不可导入文件」（readme.txt / 任意 png / 非 ysm.json 的 json 等）。
+  // FSA 授权目录语义 = 扫描模型库（对齐桌面 scanner walk 跳过非支持文件）——散落杂物静默忽略
+  // 不计 failed；组内辅助文件（rel 含目录前缀，如 狐狸/main.json）保留，供 preview 读纹理/清单。
+  // 与 dnd/shared.ts groupCollected 的散落单文件 isImportableFile 过滤口径一致。
+  const filesRoot = files.filter((f) => {
+    const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
+    // 有目录前缀（组内文件）→ 保留（整组校验由 importWebFiles 分组完成）
+    if (rel.includes("/")) return true;
+    return isImportableFile(rel);
+  });
+  const { imported, failed } = await importWebFiles(filesRoot, currentRepoType());
   return { ok: true, imported, failed, dir: (handle as _FsaDirHandle).name };
 }
 

@@ -14,25 +14,9 @@ export type { AppBindings };
 let _App: AppBindings | null = null;
 let _appPromise: Promise<AppBindings> | null = null;
 
-/**
- * P1 修复：Proxy 包装 winApp 做运行时 fail-fast。
- * 直接 `winApp as AppBindings` 是类型造假——缺失方法编译期不报错、运行时 undefined 穿透。
- * 用 Proxy 包装后，访问不存在的方法会立即抛错（fail-fast），而非静默返回 undefined。
- */
-function makeSafeAppBindings(raw: Record<string, unknown>): AppBindings {
-  return new Proxy(raw as AppBindings, {
-    get(target, prop) {
-      if (typeof prop === "symbol") return undefined;
-      const val = target[prop as keyof AppBindings];
-      if (val === undefined) {
-        throw new Error(
-          `[app] binding ${String(prop)} 在 window.go.main.App mock 中未实现（类型造假防护）`,
-        );
-      }
-      return val;
-    },
-  });
-}
+// 注：window.go.main.App mock 注入路径按契约「原样返回注入句柄」（app.test.ts 锁定
+// toBe 引用相等）；不做 Proxy 包装——partial mock 已由下方 CORE_METHODS.every 拦截，
+// 包装会破坏「拿到自己注入的对象」的 E2E 语义且让记忆化失效。
 
 /** 获取 Go App 绑定的缓存引用，避免重复动态 import */
 export const getApp = async (): Promise<AppBindings> => {
@@ -77,10 +61,7 @@ export const getApp = async (): Promise<AppBindings> => {
       if (!hasCore) {
         // partial mock → 回退动态 import，不缓存
       } else {
-        // P3 修复（P1-9）：用 Proxy 包装 winApp 做运行时 fail-fast——
-        // 直接 `winApp as AppBindings` 是类型造假，缺失方法编译期不报错、运行时 undefined 穿透。
-        // Proxy 包装后访问不存在的方法立即抛错（fail-fast），防陷阱 #5 静默穿透。
-        _App = makeSafeAppBindings(winAppRec);
+        _App = winApp as AppBindings;
         return _App;
       }
     }

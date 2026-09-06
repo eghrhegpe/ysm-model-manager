@@ -8,7 +8,9 @@ const idbMock = (globalThis as unknown as {
     idbSet: Mock;
     idbKeys: Mock;
     idbGetAll: Mock;
+    idbGetAllMetadata: Mock;
     idbDel: Mock;
+    idbTx: Mock;
     _store: Map<string, unknown>;
   };
 }).__YSM_TEST_IDB__;
@@ -237,8 +239,16 @@ describe("importWebFiles — Phase 2 数据层", () => {
       "ysm",
     );
     expect(r).toEqual({ imported: 2, failed: 0 });
-    expect(idbMock.idbSet).toHaveBeenCalledWith("files", "dir:ysm/模型A:", expect.anything());
-    expect(idbMock.idbSet).toHaveBeenCalledWith("files", "file:ysm/模型A/模型A.ysm", expect.anything());
+    // P1 单事务化：dir/file key 均经 idbTx 批量写入（不再逐 key idbSet）
+    expect(idbMock.idbTx).toHaveBeenCalledWith(
+      "files",
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "put", key: "dir:ysm/模型A:" }),
+        expect.objectContaining({ kind: "put", key: "file:ysm/模型A/模型A.ysm" }),
+      ]),
+    );
+    expect(idbMock._store.has("dir:ysm/模型A:")).toBe(true);
+    expect(idbMock._store.has("file:ysm/模型A/模型A.ysm")).toBe(true);
   });
 
   it("空文件名（如 .ysm 隐藏文件）→ failed 计数", async () => {
@@ -280,8 +290,14 @@ describe("importWebFiles — Phase 2 数据层", () => {
     const r = await importWebFiles([f1, f2], "ysm");
     expect(r).toEqual({ imported: 1, failed: 0 });
     // 组内非主文件（main.json）也落库（供 preview 读纹理/清单），但只建一个 dir 条目
-    expect(idbMock.idbSet).toHaveBeenCalledWith("files", "dir:ysm/狐狸:", expect.anything());
-    expect(idbMock.idbSet).toHaveBeenCalledWith("files", "file:ysm/狐狸/main.json", expect.anything());
+    // P1 单事务化：dir/file key 均经 idbTx 批量写入
+    expect(idbMock.idbTx).toHaveBeenCalledWith(
+      "files",
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "put", key: "dir:ysm/狐狸:" }),
+        expect.objectContaining({ kind: "put", key: "file:ysm/狐狸/main.json" }),
+      ]),
+    );
     const entries = (await browserAdapter.ScanModelEntries("/web/ysm")) as Array<{ Name: string; Ext: string }>;
     expect(entries).toHaveLength(1);
     // 主文件优先选 .ysm，而非 main.json
@@ -374,39 +390,35 @@ describe("importWebFiles — Phase 2 数据层", () => {
     expect(entries2.find((e) => e.Name === "FOO.YSM")?.Ext).toBe(".ysm");
   });
 
-  it("中途 idbSet 失败 → 回滚只删本次新建 key，保留 preExisted（P3 code review）", async () => {
+  it("组写入单事务失败 → 无部分写入（原子性，preExisted 数据保留）（P1 单事务化）", async () => {
     // 预置：dir + 主文件已存在（模拟先前成功导入的同一模型）
     await importWebFiles([new File([enc.encode("OLD")], "狐狸.ysm")], "ysm");
     expect(idbMock._store.has("file:ysm/狐狸/狐狸.ysm")).toBe(true);
     expect(idbMock._store.has("dir:ysm/狐狸:")).toBe(true);
-    // 本次重导入：主文件 + 辅助文件；第一次 idbSet（覆盖主文件）成功，
-    // 第二次 idbSet（辅助文件写入）reject → 触发回滚
+    // 本次重导入：主文件 + 辅助文件；idbTx（组内全部写入）reject → 原子回滚
     const fMain = new File([enc.encode("NEW")], "狐狸.ysm");
     const fAux = new File([enc.encode("{}")], "main.json");
     Object.defineProperty(fMain, "webkitRelativePath", { value: "狐狸/狐狸.ysm" });
     Object.defineProperty(fAux, "webkitRelativePath", { value: "狐狸/main.json" });
-    idbMock.idbSet
-      .mockResolvedValueOnce(undefined) // 第一次（覆盖主文件）成功
-      .mockRejectedValueOnce(new Error("QuotaExceededError")); // 第二次（辅助文件）失败
+    idbMock.idbTx.mockRejectedValueOnce(new Error("QuotaExceededError"));
     const r = await importWebFiles([fMain, fAux], "ysm");
     expect(r.failed).toBeGreaterThan(0);
-    // 主文件 key 是 preExisted（先前成功导入）→ 回滚不得删除，旧数据保留
+    // 原子性：dir key 与主文件均未被覆盖（preExisted 旧数据保留）
     expect(idbMock._store.has("file:ysm/狐狸/狐狸.ysm")).toBe(true);
-    // dir key 是 preExisted → 保留
     expect(idbMock._store.has("dir:ysm/狐狸:")).toBe(true);
+    // 新辅助文件也未落库（整组事务失败 = 全有或全无）
+    expect(idbMock._store.has("file:ysm/狐狸/main.json")).toBe(false);
   });
 
-  it("中途失败回滚调用 idbDel 且只传本次新建 key（P3 code review：mock 补齐前不可测）", async () => {
+  it("单文件组写入失败 → idbTx 原子失败，无孤儿 file key（P1 单事务化）", async () => {
     const f = new File([enc.encode("Y")], "新人.ysm");
-    // 单文件组：第一次 idbSet（写 file key）成功，第二次 idbSet（写 dir key）失败
-    // → 回滚删本次新建的 file key（preExisted=false）
-    idbMock.idbSet
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("abort"));
-    await importWebFiles([f], "ysm");
-    expect(idbMock.idbDel).toHaveBeenCalledWith("files", "file:ysm/新人/新人.ysm");
-    // 回滚后孤儿清理完成：库中无残留
+    // 单文件组：idbTx（file key + dir key 同一事务）reject → 无任何 key 落盘
+    idbMock.idbTx.mockRejectedValueOnce(new Error("abort"));
+    const r = await importWebFiles([f], "ysm");
+    expect(r.imported).toBe(0);
+    // 原子性：dir key 与 file key 均无残留（无需逐 key 回滚）
     expect(idbMock._store.has("file:ysm/新人/新人.ysm")).toBe(false);
+    expect(idbMock._store.has("dir:ysm/新人:")).toBe(false);
   });
 });
 

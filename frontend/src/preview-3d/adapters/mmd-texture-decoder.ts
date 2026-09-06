@@ -47,7 +47,7 @@ export interface TextureDecoder {
 }
 
 /** 创建纹理解码器（Worker 池） */
-function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
+export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
   const maxWorkers = config.maxWorkers ?? TEX_DECODE_WORKER_COUNT;
   const timeoutMs = config.timeoutMs ?? 8000;
 
@@ -73,6 +73,14 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
     }
   >();
 
+  /**
+   * 已超时待清理集合：setTimeout 回调触发后，主线程已结算该任务（completed++），
+   * 但 worker 仍可能回传迟到 response——其携带的 ImageBitmap 已 transfer 到主线程，
+   * 若无人 close 则 GPU 显存永久泄漏（GC 不感知 GPU 压力）。
+   * onmessage 命中此集合时须 bitmap.close() 并移除。
+   */
+  const timedOutIds = new Set<number>();
+
   // Worker 消息处理
   for (const w of workers) {
     w.onmessage = (e: MessageEvent<TexDecodeResponse>) => {
@@ -82,6 +90,11 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
         clearTimeout(entry.timer);
         pending.delete(id);
         entry.resolve(e.data);
+      } else if (timedOutIds.has(id)) {
+        // 超时后迟到 response：位图已 transfer 到主线程，主线程已结算该任务，
+        // 无消费者接手——直接 close 防 GPU 显存泄漏
+        timedOutIds.delete(id);
+        if (e.data.bitmap) e.data.bitmap.close();
       }
     };
     // P2-4（审核）：Worker 崩溃不再静默等 8s 超时——立即清算该 worker 名下全部在途
@@ -141,8 +154,10 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
         };
 
         const timer = setTimeout(() => {
-          // 超时：静默跳过（主线程 fallback 会覆盖）
+          // 超时：静默跳过（主线程 fallback 会覆盖）；登记待清理 id，
+          // 防 worker 迟到 response 携带的 ImageBitmap 无人 close 泄漏 GPU 显存
           pending.delete(id);
+          timedOutIds.add(id);
           completed++;
           if (completed >= total) resolve(results);
         }, timeoutMs);
@@ -182,6 +197,7 @@ function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecoder {
       entry.resolve({ id, ok: false, error: "Worker 已终止", relPath: "", width: 0, height: 0 });
     }
     pending.clear();
+    timedOutIds.clear();
     for (const w of workers) w.terminate();
   }
 

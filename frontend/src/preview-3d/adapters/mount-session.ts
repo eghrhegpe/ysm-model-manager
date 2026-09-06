@@ -6,6 +6,7 @@
 import { returnFocus } from "../../utils/dom/focus-restore.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
+import type { TdKeyAction } from "../keymap.ts";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import { setPerceptionPaused } from "../perception/core.ts";
 import { safeDispose } from "../safe-dispose.ts";
@@ -17,7 +18,7 @@ import type {
   PreviewHandle,
   PreviewScene,
 } from "./mount-preview-core.ts";
-import { removePerFrame, stopIfIdle } from "./render-loop.ts";
+import { removePerFrame, stopIfIdle, unregisterActiveInputSession } from "./render-loop.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { SharedInfra } from "./shared-infra.ts";
 import { clearSceneCaps } from "./shared-infra.ts";
@@ -61,6 +62,8 @@ export interface MpSessionState {
   escH: (e: KeyboardEvent) => void;
   /** 提示条自动消失定时器（cleanup 时 clearTimeout） */
   tipTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  /** 当前会话的键盘输入状态（render-loop 动态读取驱动相机运动） */
+  keys: Partial<Record<TdKeyAction, boolean>>;
 }
 
 /** 输入事件 handler 集合（bindInputHandlers 返回；cleanup 按当前引用解绑） */
@@ -231,11 +234,18 @@ export function runFullCleanup(ctx: MountCtx): void {
     const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
     for (const c of stale) infra.scene.remove(c);
   }
+  // P0 修复：dispose 前先按 content 匹配定位本会话注册的 entry——
+  // 不能在 allContent 清空后再找（数组已空，filter 全 miss）。
+  const myIds = sceneRegistry
+    .getAll()
+    .filter((e) => session.allContent.includes(e.content) || e.content === session.content)
+    .map((e) => e.id);
   for (const b of session.allContent) {
     safeDispose(b);
   }
   session.allContent.length = 0;
-  sceneRegistry.reset();
+  // P0 修复：本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
+  for (const id of myIds) sceneRegistry.unregister(id);
   // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFailedMountCleanup 同段共用）
   unbindInputsAndStopLoop(ctx);
   // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
@@ -251,6 +261,8 @@ export function runFullCleanup(ctx: MountCtx): void {
   setPerceptionPaused(false);
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
+  // P0 修复：本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）
+  unregisterActiveInputSession(session);
   // 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
   finishSession(ctx);
 }

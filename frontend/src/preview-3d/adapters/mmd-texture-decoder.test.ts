@@ -6,12 +6,17 @@ import {
   getTextureDecoder,
   disposeTextureDecoder,
   closeUnusedDecodedBitmaps,
+  createTextureDecoder,
   type DecodedTexture,
 } from "./mmd-texture-decoder.ts";
 
 /** 可编程假 Worker：postMessage 后回包或触发崩溃 */
 let respondWith: ((id: number) => "ok" | "fail" | "crash") | null = null;
 let createdWorkers: FakeDecodeWorker[] = [];
+/** 回包延迟 ms（> timeoutMs 时模拟超时场景） */
+let responseDelayMs = 0;
+/** 最近创建的假位图（用于断言 late response 是否 close） */
+let createdBitmaps: ImageBitmap[] = [];
 
 class FakeDecodeWorker {
   onmessage: ((e: { data: unknown }) => void) | null = null;
@@ -35,19 +40,22 @@ class FakeDecodeWorker {
       }
       // ok：回传假位图（带 close 间谍）
       const bitmap = { width: 1, height: 1, close: vi.fn() } as unknown as ImageBitmap;
+      createdBitmaps.push(bitmap);
       this.onmessage?.({
         data: { id: msg.id, relPath: msg.relPath, ok: true, bitmap, width: 1, height: 1 },
       });
-    }, 0);
+    }, responseDelayMs);
   }
   terminate(): void {
     this.terminated = true;
   }
 }
 
-function installFakeWorker(): void {
+function installFakeWorker(delayMs = 0): void {
   createdWorkers = [];
   respondWith = null;
+  responseDelayMs = delayMs;
+  createdBitmaps = [];
   vi.stubGlobal("Worker", FakeDecodeWorker);
 }
 
@@ -56,6 +64,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   createdWorkers = [];
   respondWith = null;
+  responseDelayMs = 0;
+  createdBitmaps = [];
 });
 
 describe("Worker 崩溃恢复（P2-4）", () => {
@@ -144,5 +154,27 @@ describe("closeUnusedDecodedBitmaps（P2-5）", () => {
     closeUnusedDecodedBitmaps(decoded);
     closeUnusedDecodedBitmaps(decoded);
     expect(bmp.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("超时 late response 位图清理（GPU 泄漏修复）", () => {
+  it("超时后 worker 迟到 response 携带的 ImageBitmap 须 close 防 GPU 泄漏", async () => {
+    // 超时时间 20ms，worker 延迟 50ms 回包 → 任务先超时结算，后收到迟到 response
+    installFakeWorker(50);
+    const decoder = createTextureDecoder({ maxWorkers: 1, timeoutMs: 20 });
+
+    const results = await decoder.decodeAll([
+      { relPath: "slow.png", bytes: new ArrayBuffer(4), mimeType: "image/png" },
+    ]);
+
+    // 超时任务不入结果
+    expect(results.size).toBe(0);
+    // 等待 worker 迟到回包触发（50ms 延迟 + 余量）
+    await vi.waitFor(() => expect(createdBitmaps).toHaveLength(1), { timeout: 200 });
+    // worker 迟到回包 → close 位图
+    const closeSpy = createdBitmaps[0].close;
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+
+    decoder.dispose();
   });
 });

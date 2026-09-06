@@ -70,6 +70,8 @@ export interface SwitchContext {
   setPerFrame: (f: ((dt: number) => void) | null) => void;
   /** 可变：_handle 构造后赋值 */
   getHandle: () => PreviewHandle | null;
+  /** [P0 修复] 模块级句柄列表引用（switchTo 闭包按 gen 查找自身 handle 用） */
+  handles: Array<{ handle: PreviewHandle; gen: number }>;
   /** [Bug A] 当前 mount 会话稳定 id（mount3D 生成，会话内切换复用同一 id）——
    *  buildSwitchContent 转发给 adapter.build，per-scene schema key 前后一致 */
   sessionId?: string;
@@ -203,17 +205,22 @@ async function buildSwitchContent(
   keep: boolean,
 ): Promise<PreviewScene | null> {
   try {
+    // P0 修复：捕获当前 session 的稳定 gen——switchTo 闭包按 gen 查找自身 handle，
+    // 不取 handles 数组末尾，避免多 session 下同框 session 互踩。
+    const myGen = ctx.myGen;
     const buildCtx: PreviewBuildCtx = {
       viewContainer: ctx.viewContainer,
       loadingEl: ctx.loadingEl,
       overlay: ctx.overlay,
       menu: ctx.menuHandle,
-      // [审核修复] 延迟闭包（与 mount3D 初次 build 注入同款）：switch 重建后的 menuItems
+      // 延迟闭包（与 mount3D 初次 build 注入同款）：switch 重建后的 menuItems
       // select 节点（pack 多模型选择 ADR-132）onSelect 仍能触发后续切换——此前传 undefined
       // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
       // 无活跃会话时 no-op（与 switchPreview 同口径）。
       switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
-        ctx.getHandle()?.switchTo?.(p, options) ?? Promise.resolve(),
+        ctx.handles.find((h) => h.gen === myGen)?.handle.switchTo?.(p, options) ??
+        ctx.getHandle()?.switchTo?.(p, options) ??
+        Promise.resolve(),
     };
     // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
     // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）

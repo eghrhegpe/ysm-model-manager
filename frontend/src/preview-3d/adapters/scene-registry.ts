@@ -58,7 +58,8 @@ function mdSrDedupByExplicitKey(
   byName: Map<string, string>,
   input: RegisterInput,
 ): string | null {
-  const existingByPath = byAuthor.get(input.path);
+  const authorKey = `${input.rtype}::${input.path}`;
+  const existingByPath = byAuthor.get(authorKey);
   if (existingByPath) return existingByPath;
   const nameKey = `${input.rtype}::${input.path}`;
   const existingByName = byName.get(nameKey);
@@ -89,7 +90,7 @@ function mdSrIndexIntoMaps(
   entry: ModelEntry,
 ): void {
   entries.set(entry.id, entry);
-  byAuthor.set(entry.path, entry.id);
+  byAuthor.set(`${entry.rtype}::${entry.path}`, entry.id);
   byName.set(`${entry.rtype}::${entry.path}`, entry.id);
 }
 
@@ -150,7 +151,7 @@ class SceneRegistry {
   unregister(id: string): void {
     const e = this.entries.get(id);
     if (e) {
-      this.byAuthor.delete(e.path);
+      this.byAuthor.delete(`${e.rtype}::${e.path}`);
       this.byName.delete(`${e.rtype}::${e.path}`);
       for (const r of e.roots) this.objToEntry.delete(r);
     }

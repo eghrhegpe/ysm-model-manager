@@ -157,14 +157,25 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
   };
 }
 
+/** MMD 菜单表条目：声明式表达条件注入 + 节点构建（对齐 visibleWhen 语义，但吃构建期能力） */
+interface MmdMenuEntry {
+  id: string;
+  /** 构建期能力守卫：false 时不注入该节点（对齐 visibleWhen 语义，但吃构建期能力而非状态层快照） */
+  when?: (o: MmdMenuItemsOpts) => boolean;
+  /** 构建节点（惰性求值，仅当 when 通过时调用） */
+  build: (o: MmdMenuItemsOpts) => PreviewMenuNode;
+}
+
 /**
- * MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。
+ * MMD 声明式根菜单专属项表（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。
  * 提取为可导出表：适配器与测试共用同一份真实数组——测试遍历本表断言结构与
  * dock 渲染（对齐 MikuMikuAR 声明式菜单测试范式），加菜单项只改这里。
+ * 条件注入用 when 字段声明式表达（对齐 visibleWhen 语义），消除命令式 if + push。
  */
-export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
-  const items: PreviewMenuNode[] = [
-    {
+const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
+  {
+    id: "model",
+    build: (o) => ({
       id: "model",
       icon: "🧍",
       labelKey: "preview.modelInfo",
@@ -175,8 +186,11 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu/render.ts）。
       // fill* 命令式逃生舱字段已于 2026-09-03 随 G3 收口删除——nodes 为唯一通道。
       children: o.panels?.modelInfoNodes?.(o.navCtx) ?? [],
-    },
-    {
+    }),
+  },
+  {
+    id: "morph",
+    build: (o) => ({
       id: "morph",
       icon: "😀",
       labelKey: "preview.mmdMorph",
@@ -194,8 +208,11 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
           ? { morphTargetInfluences: o.navCtx.mesh.morphTargetInfluences }
           : {}),
       }),
-    },
-    {
+    }),
+  },
+  {
+    id: "material",
+    build: (o) => ({
       id: "material",
       icon: "🎨",
       labelKey: "preview.materialList",
@@ -203,58 +220,81 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
       children: materialNodes(o.material),
-    },
-  ];
-  // [doc:adr-126-p4-b-1] 截图面板条件注入：screenshot 能力缺失（null）→ 不注入项
-  // （对齐 bonePanel 范式；比"注入空 children 面板"干净——截图能力是可选能力）。
-  // 面板内容声明式化：children = shotNodes 纯数据节点（6 截图按钮，经 panels 注入），渲染走 renderMenu。
-  if (o.screenshot) {
-    items.push({
+    }),
+  },
+  {
+    id: "shot",
+    // [doc:adr-126-p4-b-1] 截图面板条件注入：screenshot 能力缺失（null）→ 不注入项
+    // （对齐 bonePanel 范式；比"注入空 children 面板"干净——截图能力是可选能力）。
+    when: (o) => !!o.screenshot,
+    build: (o) => ({
       id: "shot",
       icon: "📷",
       labelKey: "preview.screenshot",
       fallback: "截图",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
+      // 面板内容声明式化：children = shotNodes 纯数据节点（6 截图按钮，经 panels 注入），渲染走 renderMenu。
       children: o.panels?.shotNodes?.(o.navCtx, o.screenshot) ?? [],
-    });
-  }
-  // MMD 始终注入 play 项（支持用户配置的自定义动作库，空态引导选择）
-  items.push({
+    }),
+  },
+  {
     id: "play",
-    icon: "▶️",
-    labelKey: "preview.mmdPlay",
-    fallback: "播放",
-    kind: "panel",
-    dockGroup: "motion", // 底栏 💃 动作组
-    // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（toggle 播放/暂停 +
-    // select 动作 + 空态引导），经 panels 注入（R1 禁 utils→views）。fillPlayPanel 逃生舱删除。
-    children: o.panels?.playNodes?.(o.play) ?? [],
-  });
-  if (o.bonePanel) {
-    // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复）
-    items.push(
-      makeBonesPanelItem({
-        tree: o.bonePanel.tree,
-        cleanupRef: o.bonePanel.cleanupRef,
-        viewContainer: o.bonePanel.viewContainer,
-        camera: o.bonePanel.camera,
-        scene: o.bonePanel.scene,
-      }),
-    );
-  }
-  if (o.perception) {
-    // 局部 const 收窄替代 !：renderCustom 闭包内 TS 不保持 o.perception 的收窄
-    const pc = o.perception;
-    items.push({
-      id: "perception",
-      icon: "👁️",
-      labelKey: "preview.perception",
-      fallback: "感知",
+    build: (o) => ({
+      id: "play",
+      icon: "▶️",
+      labelKey: "preview.mmdPlay",
+      fallback: "播放",
       kind: "panel",
-      dockGroup: "motion",
-      children: perceptionNodes(pc.state, pc.caps),
-    });
-  }
-  return items;
+      dockGroup: "motion", // 底栏 💃 动作组
+      // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（toggle 播放/暂停 +
+      // select 动作 + 空态引导），经 panels 注入（R1 禁 utils→views）。fillPlayPanel 逃生舱删除。
+      children: o.panels?.playNodes?.(o.play) ?? [],
+    }),
+  },
+  {
+    id: "bones",
+    when: (o) => !!o.bonePanel,
+    build: (o) => {
+      // 局部 const 收窄替代逐字段 !：when 守卫已筛 o.bonePanel 非空，
+      // 但 build 与 when 是独立函数，TS 窄化不跨函数传播（对齐 perception 条目范式）
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(when 守卫已筛 o.bonePanel 非空)
+      const bp = o.bonePanel!;
+      // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复）
+      return makeBonesPanelItem({
+        tree: bp.tree,
+        cleanupRef: bp.cleanupRef,
+        viewContainer: bp.viewContainer,
+        camera: bp.camera,
+        scene: bp.scene,
+      });
+    },
+  },
+  {
+    id: "perception",
+    when: (o) => !!o.perception,
+    build: (o) => {
+      // 局部 const 收窄替代 !：renderCustom 闭包内 TS 不保持 o.perception 的收窄
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(when 守卫已筛 o.perception 非空)
+      const pc = o.perception!;
+      return {
+        id: "perception",
+        icon: "👁️",
+        labelKey: "preview.perception",
+        fallback: "感知",
+        kind: "panel",
+        dockGroup: "motion",
+        children: perceptionNodes(pc.state, pc.caps),
+      };
+    },
+  },
+];
+
+/**
+ * MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：遍历声明式表，按 when 守卫过滤 + build 构建。
+ * 适配器与测试共用同一份真实数组——测试遍历本表断言结构与 dock 渲染（对齐 MikuMikuAR
+ * 声明式菜单测试范式），加菜单项只改 MMD_MENU_TABLE。
+ */
+export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
+  return MMD_MENU_TABLE.filter((e) => !e.when || e.when(o)).map((e) => e.build(o));
 }

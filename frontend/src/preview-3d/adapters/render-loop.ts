@@ -39,6 +39,43 @@ let _lastPerFrameWarnTs = 0;
 let _perFrameSnapshot: Array<(dt: number) => void> | null = null;
 let _perFramesDirty = true;
 
+/** 当前活跃输入会话（render-loop 每帧动态读取 keys/camSpeed/orbitMode 驱动相机运动）。
+ *  P0 修复：替代原 startGlobalRenderLoop 闭包捕获首个 session 参数的方式——后续 session
+ *  的输入状态不再被忽略，WASD 不再失灵。mount-preview-core 在 build 成功后置活跃、
+ *  cleanup 时注销活跃。 */
+let _activeInputSession: {
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  camSpeed: number;
+  orbitMode: boolean;
+} | null = null;
+
+/** 注册活跃输入会话（build 成功后调用；重复注册同一引用为 no-op） */
+export function setActiveInputSession(s: {
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  camSpeed: number;
+  orbitMode: boolean;
+}): void {
+  _activeInputSession = s;
+}
+
+/** 注销活跃输入会话（cleanup 时调用；仅当传入引用为当前活跃时才置 null） */
+export function unregisterActiveInputSession(s: {
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  camSpeed: number;
+  orbitMode: boolean;
+}): void {
+  if (_activeInputSession === s) _activeInputSession = null;
+}
+
+/** 取当前活跃输入会话（rAF 热路径调用；null 表示无活跃 session，跳过相机运动） */
+export function getActiveInputSession(): {
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  camSpeed: number;
+  orbitMode: boolean;
+} | null {
+  return _activeInputSession;
+}
+
 /** 注册 perFrame 回调（setPerFrame 统一入口的落点） */
 export function registerPerFrame(f: (dt: number) => void): void {
   _globalPerFrames.push(f);
@@ -76,19 +113,16 @@ export function resetLoopState(): void {
   // 快照缓存随注册表清空失效（防 stale 快照残留到下次 loop）
   _perFrameSnapshot = null;
   _perFramesDirty = true;
+  _activeInputSession = null;
 }
 
 /**
  * 首个 session 启动全局 loop（幂等：仅未运行时创建；后续 session 只追加 perFrame）。
- * keys/session/viewContainer/infra 按调用时刻捕获——与拆分前闭包语义一致（首个
- * session 的 WASD 键位与相机偏好持续驱动 loop，后续 session 仅贡献 perFrame 回调）。
+ * viewContainer 仍作为参数传入（不影响 session 切换），但 keys/camSpeed/orbitMode
+ * 不再闭包捕获——改为从「当前活跃输入会话」动态读取（每帧读一次），后续 session
+ * 的 WASD 键位与相机偏好均可在激活时生效。
  */
-export function startGlobalRenderLoop(
-  keys: Partial<Record<TdKeyAction, boolean>>,
-  session: { readonly camSpeed: number; readonly orbitMode: boolean },
-  viewContainer: HTMLElement,
-  infra: SharedInfra,
-): void {
+export function startGlobalRenderLoop(viewContainer: HTMLElement, infra: SharedInfra): void {
   if (_globalAnimId !== 0) return;
   const cam = infra.camera;
   const ctr = infra.controls;
@@ -111,8 +145,6 @@ export function startGlobalRenderLoop(
     const now = performance.now();
     const interval = getFrameIntervalMs();
     if (!shouldRenderAtFps(now, nextFrameTime, interval, document.hidden === true)) {
-      // 跳过帧（隐藏/节流）：推进采样起点——隐藏期间墙钟继续走但 sampleFrames
-      // 不涨，恢复后平均帧时虚高会把像素比误降级，重复最小化渐进降到地板（code review P3）
       adaptiveBudget.sampleStart = now;
       return;
     }
@@ -124,17 +156,21 @@ export function startGlobalRenderLoop(
     lastTime = now;
     // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
     for (const c of getSceneCaps()) c.update?.(dt);
-    applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
-      camDir: _camDir,
-      forward: _forward,
-      right: _right,
-      move: _move,
-    });
-    // 驱动所有 session 的 perFrame 回调
-    // 快照迭代（perFrameIterable）：回调内若触发 removePerFrame（卸载/切换时序，
-    // splice 活数组），迭代会跳元素或漏执行——快照隔离本次帧的注册表，增删下一帧
-    // 生效。快照仅注册表变更时重建（dirty 标志），避免每帧无条件 spread 分配——
-    // 对齐本文件「rAF 每帧复用实例，避免 GC 分配」纪律（code_review adc88661）
+    // P0 修复：每帧从动态活跃输入会话读取 keys/camSpeed/orbitMode，不再闭包捕获首个 session
+    const activeInput = _activeInputSession;
+    if (activeInput) {
+      applyWasdCameraMotion(
+        activeInput.keys,
+        cam,
+        ctr,
+        activeInput.camSpeed,
+        dt,
+        activeInput.orbitMode,
+        ot,
+        { camDir: _camDir, forward: _forward, right: _right, move: _move },
+      );
+    }
+    // 驱动所有 session 的 perFrame 回调（快照迭代）
     for (const fn of perFrameIterable()) {
       const pfStart = performance.now();
       try {
@@ -142,7 +178,6 @@ export function startGlobalRenderLoop(
       } catch (err) {
         logWarn("perFrame", `session 回调异常: ${String(err)}`);
       }
-      // 单次计时（code review #10：原 pfMs/pfNow 两次 now() 冗余）
       const pfNow = performance.now();
       const pfMs = pfNow - pfStart;
       if (pfMs > PER_FRAME_WARN_MS && pfNow - _lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS) {
@@ -150,17 +185,12 @@ export function startGlobalRenderLoop(
         logWarn("perFrame", `阻塞 ${pfMs.toFixed(1)}ms (>${PER_FRAME_WARN_MS}ms 阈值)`);
       }
     }
-    // 视锥裁剪（设置开关：关 → 跳过并恢复可见性——剔除失误会误藏模型，可关闭）
     if (isFrustumCullEnabled()) {
-      // 有模型动画（perFrame 改写局部变换）或 scene-cap update（水面/弹簧骨骼等
-      // 改写注册根子树变换）→ 矩阵置脏，expandBox 强制刷新；纯静态场景（无 perFrame
-      // 且无 cap update）复用 render() 留下的新鲜矩阵，省一遍全子树递归
       const caps = getSceneCaps();
       const hasCapUpdate = caps.length > 0 && caps.some((c) => typeof c.update === "function");
       if (_globalPerFrames.length > 0 || hasCapUpdate) markCullMatricesDirty();
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
-    // ADR-081 L2：后处理体积光管线
     const rendered = postProc ? postProc.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);
     const nextPixelRatio = sampleAdaptivePixelRatio(adaptiveBudget, now, interval);

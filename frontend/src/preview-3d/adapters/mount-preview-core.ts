@@ -61,6 +61,7 @@ import {
   registerPerFrame,
   removePerFrame,
   resetLoopState,
+  setActiveInputSession,
   startGlobalRenderLoop,
 } from "./render-loop.ts";
 import { sceneRegistry } from "./scene-registry.ts";
@@ -280,6 +281,8 @@ export function cleanupPreview(): void {
     }
   }
   _handles.length = 0;
+  // P0 修复：cleanupPreview 是「全部关闭」语义，可安全 reset 注册表
+  sceneRegistry.reset();
   // renderer/canvas/overlay 保留（下次 mount3D 直接复用，不重建 DOM）
   // 但 _singletonOverlay/_singletonBody/_singletonViewContainer 必须清零：handle.cleanup→
   // fullCleanup 已从 DOM 移除它们，保留旧引用会导致下次 mount3D 复用已脱离文档的
@@ -393,6 +396,7 @@ export async function mount3D(
     onUnifiedPick: null,
     escH: () => {},
     tipTimeoutId: undefined,
+    keys: {},
   };
 
   // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 buildSharedInfra
@@ -485,7 +489,8 @@ function assembleShell(ctx: MountCtx): {
   const _handles = ctx.handles;
 
   // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
-  const keys: Partial<Record<TdKeyAction, boolean>> = {};
+  // keys 直接使用 session.keys（render-loop 动态读取驱动相机运动）
+  const keys = session.keys;
   // mouseDown 用 { v } 引用容器（与 input-and-animation InputOptions.mouseDown 同形）：
   // camBridge.setOrbit 与 bindInputHandlers 共享同一引用——修历史脱节（原 let 布尔 +
   // { v: mouseDown } 快照，camBridge 写裸布尔不影响 input 读容器），并为 assembleShell/
@@ -771,7 +776,7 @@ function buildInfra(
 
     // ===== §4b rAF 渲染管线（render-loop.ts：全局唯一 loop，所有 session 共享同一 renderer）=====
     // 首个 session 启动 loop，后续 session 追加 perFrame 回调；stopIfIdle 在 runFullCleanup 收尾
-    startGlobalRenderLoop(keys, session, viewContainer, infra);
+    startGlobalRenderLoop(viewContainer, infra);
     // perFrame 注册统一走 setPerFrame（初次 mount 在 build 成功后、切换在
     // switchToSession 内）——此处不再一次性 push：执行时 perFrame 尚未赋值（P3）
   }
@@ -837,6 +842,7 @@ function buildInfra(
       if (f) registerPerFrame(f);
     },
     getHandle: () => _handles[_handles.length - 1]?.handle ?? null,
+    handles: _handles,
     aborted: session.aborted,
     inFlight: false,
     isDisposed: session.isDisposed,
@@ -879,10 +885,12 @@ async function runBuild(
     overlay: shell.root, // ADR-175 M1：适配器内容插入目标 = root（shadow 内），非 host
     menu: shell.menuHandle,
     // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
-    // 无活跃会话时 no-op（与 switchPreview 同口径）
+    // 无活跃会话时 no-op（与 switchPreview 同口径）。
+    // P0 修复：捕获当前 session 的稳定 gen，闭包按 gen 查找自身 handle——
+    // 不取 handles 数组末尾，避免多 session 下同框 session 误触发彼此的切换。
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
-      const active = ctx.handles[ctx.handles.length - 1];
-      return active?.handle.switchTo?.(p, options) ?? Promise.resolve();
+      const mine = ctx.handles.find((h) => h.gen === ctx.myGen);
+      return mine?.handle.switchTo?.(p, options) ?? Promise.resolve();
     },
   };
   // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
@@ -1004,6 +1012,8 @@ function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: Preview
   document.removeEventListener("keydown", oldEscH);
   document.addEventListener("keydown", session.escH);
   session.cleanupFn = () => runFullCleanup(ctx);
+  // P0 修复：build 成功 → 本会话成为活跃输入会话（render-loop 动态读取 keys/camSpeed/orbitMode）
+  setActiveInputSession(session);
   const sessionHandle: PreviewHandle = {
     cleanup: () => runFullCleanup(ctx),
     resetCamera: content.resetCamera,

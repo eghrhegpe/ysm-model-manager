@@ -81,6 +81,7 @@ function makeMockCtx(): {
     getPerFrame: () => state.perFrame,
     setPerFrame: (f) => { state.perFrame = f; },
     getHandle: () => state._handle,
+    handles: [],
     aborted: { v: false },
     inFlight: false,
     isDisposed: { v: false },

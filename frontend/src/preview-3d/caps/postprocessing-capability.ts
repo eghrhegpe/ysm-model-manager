@@ -76,9 +76,8 @@ function ppcBuildBasic(cap: PostprocessingCapability): MenuControlDef[] {
       kind: "toggle",
       labelKey: "preview.postprocessing",
       fallback: "后处理管线",
-      // [doc:adr-125] 自动并入设置面板（画质分组）。原 settings 面板手写的
-      // 「Bloom 辉光」toggle 与本控件同源（均读写 cap.setEnabled），已由聚合取代
-      settingsOrder: 10,
+      // 面板顶层总开关（无 group、无 settingsOrder）：后处理开关只在本面板出现，
+      // 不再复制进设置面板画质分组（ADR-125 聚合退场——总开关属本面板职责，设置页不重复）
       getValue: () => cap.isEnabled(),
       setValue: (v) => cap.setEnabled(v as boolean),
     },
@@ -118,7 +117,8 @@ function ppcBuildBloom(cap: PostprocessingCapability): MenuControlDef[] {
       kind: "toggle",
       labelKey: "preview.bloomEnabled",
       fallback: "辉光开关",
-      group: "preview.postprocessingGroupBloom",
+      // 效果总开关升面板基座级（无 group）：一眼可见、免展开即可开关；
+      // 参数（强度/阈值/半径/联动）留在 Bloom 折叠分组内
       getValue: () => cap.getParams().bloomEnabled,
       setValue: (v) => cap.setBloomEnabled(v as boolean),
     },
@@ -171,7 +171,7 @@ function ppcBuildSSAO(cap: PostprocessingCapability): MenuControlDef[] {
       kind: "toggle",
       labelKey: "preview.ssao",
       fallback: "环境光遮蔽 (SSAO)",
-      group: "preview.postprocessingGroupSsao",
+      // 效果总开关升面板基座级（无 group）：同 Bloom 开关，参数留在 SSAO 折叠分组内
       getValue: () => cap.getParams().ssaoEnabled,
       setValue: (v) => cap.setSSAOEnabled(v as boolean),
     },

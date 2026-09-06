@@ -5,9 +5,10 @@
 // [doc:adr-125 + adr-126-p4-a] settings 面板重构（P1 状态层 + P2 单渲染器 + 自动 cap 聚合）：
 //   - 横切设置项（视锥裁剪 / 帧率 / 分辨率）改为纯数据 MenuControlDef，读写走
 //     state/preview-state.ts 的统一路径（[adr-126-p4-a] 升格自 settings-state.ts）
-//   - Bloom / PMREM / 线框三个开关不再手写——它们本就是 postprocessing / sky /
-//     wireframe 三个 cap 自报控件（pp-enabled / sky-env / wireframe-toggle）的
-//     重复真值来源，改由 collectSettingsCapControls() 自动聚合
+//   - 线框开关不再手写——它本就是 RenderModeCapability 自报控件（rm-wireframe /
+//     wireframe-toggle）的重复真值来源，改由 collectSettingsCapControls() 自动聚合。
+//     Bloom/PMREM 总开关（pp-enabled/sky-env）已退场：总开关归各自面板
+//     （后处理/环境）基座级，不再复制进设置页画质分组——设置页只留渲染模式类开关。
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
 import { tr } from "../../core/i18n/tr.ts";

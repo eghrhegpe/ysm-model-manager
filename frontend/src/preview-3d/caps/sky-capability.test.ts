@@ -270,11 +270,18 @@ describe("SkyCapability — getMenuControls 结构", () => {
     expect(cap.isEnvironmentEnabled()).toBe(true);
   });
 
-  it("非主控件均含 group 字段（云量/环境贴图/昼夜循环）", () => {
+  it("基座级主控件（时间/环境贴图开关）无 group，其余控件含 group 字段", () => {
     const cap = newCap();
     const controls = cap.getMenuControls();
-    // sky-time/sky-timeline 是顶层主控件，无 group；其余控件必须含 group 且以 preview.sky 开头
-    controls.filter((c) => c.id !== "sky-time" && c.id !== "sky-timeline").forEach((c) => {
+    // sky-timeline/sky-time 是顶层主控件、sky-env 是环境贴图基座级开关——三者无 group；
+    // 其余控件（云量/太阳耦合/昼夜循环等）必须含 group 且以 preview.sky 开头
+    const baseIds = ["sky-timeline", "sky-time", "sky-env"];
+    baseIds.forEach((id) => {
+      const c = controls.find((x) => x.id === id)!;
+      expect(c).toBeDefined();
+      expect(c.group).toBeUndefined();
+    });
+    controls.filter((c) => !baseIds.includes(c.id)).forEach((c) => {
       expect(c.group).toBeDefined();
       expect(c.group!.startsWith("preview.sky")).toBe(true);
     });

@@ -99,7 +99,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.maxFps` | `MAX_FPS_KEY` | 本层管，写入后**必须** `invalidateMaxFpsCache()`（rAF 热路径有模块级缓存） |
 | `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY` | 本层管 |
 | `render.bloom` | postprocessing cap `pp-enabled` | **不落盘**（cap 存自己的域） |
-| `render.wireframe` | wireframe cap `wireframe-toggle` | 不落盘 |
+| `render.wireframe` | RenderModeCapability `rm-wireframe`（幽灵船 `wireframe-toggle` 已收口） | 不落盘 |
 | `env.pmrem` | sky cap `sky-env` | 不落盘 |
 
 - 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu/node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
@@ -112,7 +112,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - `MenuControlDef.settingsOrder?: number` —— **定义了才进设置面板**，升序排列。未定义则不进（否则 pp 的 20 个高级控件会淹没设置页）。
 - 新 cap 想进设置面板：只改自己文件加一个 `settingsOrder`，`preview-menu/settings.ts` 不动。
 - `collectSettingsCapControls()` 每次调用重取，**抹平 `group`**（设置面板是扁平视图，否则「高级」等折叠 section 会混进来）。
-- 已声明：`pp-enabled`(10) / `sky-env`(20) / `wireframe-toggle`(30)。
+- 已声明：RenderModeCapability 五件套 `rm-wireframe`(30) / `rm-blending`(31) / `rm-depth-test`(32) / `rm-side`(33) / `rm-depth-write`(34)。（pp-enabled / sky-env 曾声明 10/20，已退场：总开关归各自面板基座级，设置页画质分组不再复制——见 postprocessing-capability / sky-capability。）
 
 ### P3 visible 规则
 

@@ -181,6 +181,16 @@ function skcBuildTime(cap: SkyCapability): MenuControlDef[] {
 function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
   return [
     {
+      id: "sky-env",
+      kind: "toggle",
+      labelKey: "preview.environmentMapping",
+      fallback: "环境贴图",
+      // 环境菜单基座级开关（无 group、无 settingsOrder）：同 ground/shadow 形态——
+      // 总开关一眼可见，云量等参数留在「高级」折叠分组内；不再复制进设置面板画质分组
+      getValue: () => cap.isEnvironmentEnabled(),
+      setValue: (v) => cap.setEnvironmentEnabled(v as boolean),
+    },
+    {
       id: "sky-cloud",
       kind: "slider",
       labelKey: "preview.cloudCoverage",
@@ -189,18 +199,6 @@ function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
       slider: { min: 0, max: 1, step: 0.05, unit: "%" },
       getValue: () => cap.getCloudCoverage(),
       setValue: (v) => cap.setCloudCoverage(v as number, true),
-    },
-    {
-      id: "sky-env",
-      kind: "toggle",
-      labelKey: "preview.environmentMapping",
-      fallback: "环境贴图",
-      group: "preview.skyGroupAdvanced",
-      // [doc:adr-125] 自动并入设置面板（画质分组）。原 settings 面板手写的
-      // 「PMREM 环境光」toggle 与本控件同源，已由聚合取代
-      settingsOrder: 20,
-      getValue: () => cap.isEnvironmentEnabled(),
-      setValue: (v) => cap.setEnvironmentEnabled(v as boolean),
     },
     // §4 解耦：两个太阳耦合尺度作为高级滑块（默认在 0.75/0.5 已做过优化，高级用户可再调）
     {

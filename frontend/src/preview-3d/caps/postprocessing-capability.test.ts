@@ -131,7 +131,8 @@ describe("PostprocessingCapability — Bloom 参数", () => {
     const ctrl = cap.getMenuControls().find((c) => c.id === "pp-bloom-enabled")!;
     expect(ctrl).toBeDefined();
     expect(ctrl.kind).toBe("toggle");
-    expect(ctrl.group).toBe("preview.postprocessingGroupBloom");
+    // 效果总开关升面板基座级：不再归入 Bloom 折叠分组
+    expect(ctrl.group).toBeUndefined();
     expect(ctrl.getValue()).toBe(true);
     cap.setBloomEnabled(false);
     expect(ctrl.getValue()).toBe(false);
@@ -331,10 +332,18 @@ describe("PostprocessingCapability — getMenuControls 结构", () => {
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("非总开关控件均含 group 字段（5 组：Color/Bloom/SSAO/Reflection/SSR）", () => {
+  it("三个效果总开关升面板基座级，其余控件均含 group 字段（5 组：Color/Bloom/SSAO/Reflection/SSR）", () => {
     const cap = newCap();
     const controls = cap.getMenuControls();
-    controls.filter((c) => c.id !== "pp-enabled").forEach((c) => {
+    // 基座级开关：管线总开关 + Bloom/SSAO 效果总开关——无 group、免展开即可开关
+    const baseToggles = ["pp-enabled", "pp-bloom-enabled", "pp-ssao-enabled"];
+    baseToggles.forEach((id) => {
+      const c = controls.find((x) => x.id === id)!;
+      expect(c.kind).toBe("toggle");
+      expect(c.group).toBeUndefined();
+    });
+    // 其余（参数 + 次级开关）均归入 postprocessingGroup* 折叠分组
+    controls.filter((c) => !baseToggles.includes(c.id)).forEach((c) => {
       expect(c.group).toBeDefined();
       expect(c.group!.startsWith("preview.postprocessingGroup")).toBe(true);
     });

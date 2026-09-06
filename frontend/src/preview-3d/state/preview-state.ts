@@ -295,8 +295,9 @@ const listeners = new Set<PreviewStateListener>();
 
 /**
  * 订阅横切设置变更；返回取消订阅函数。
- * 当前生产侧零调用方（面板走 getStateValue/setStateValue 手动读写），
- * 此 hook 保留供未来「状态变更自动重算」愿景落地。
+ * 生产侧暂无消费方（横切设置控件走 getValue/setValue 自身读写 + cap.subscribe 局部刷新）。
+ * 预留：setStateValue 已按「仅成功广播」实现，接入方（如跨 cap 联动、面板自动重算）
+ * 可直接订阅而不必轮询快照。dispose 语义由接入方自持 off 处理。
  */
 export function subscribeSettings(listener: PreviewStateListener): () => void {
   listeners.add(listener);

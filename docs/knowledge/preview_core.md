@@ -17,6 +17,7 @@ auto_fields:
   symbols_with_lines:
     - _clearPmxStatsCache
     - _resetSingletons
+    - ALL_PERCEPTION_CAPS
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
     - applyVPDToMesh
@@ -187,6 +188,7 @@ auto_fields:
     - perceptionNodes
     - PerceptionState
     - pickBone
+    - pickPerceptionCaps
     - PmxBoneData
     - PmxBuilderConfig
     - PmxBuildResult

@@ -15,6 +15,7 @@ auto_fields:
     - _resetSingletons
     - AdaptiveRenderBudget
     - addMeshToBoneGroup
+    - ALL_PERCEPTION_CAPS
     - ALL_TEXTURE_KEYS
     - ALPHA_F_HOLE
     - ALPHA_F_TRANSLUCENT
@@ -433,6 +434,7 @@ auto_fields:
     - persistState
     - pickBone
     - pickMmdBone
+    - pickPerceptionCaps
     - pickPersistFields
     - PmxBoneData
     - PmxBuilderConfig

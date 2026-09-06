@@ -12,14 +12,14 @@
 //   const dataArray = new Uint8Array(analyser.frequencyBinCount);
 //   analyser.getByteFrequencyData(dataArray);
 //   const bassEnergy = dataArray.slice(0, 10).reduce((s, v) => s + v, 0) / 10 / 255;
-//   detector.update(bassEnergy, dt);
+//   detector.update(bassEnergy);
 //   if (detector.isBeat()) { /* 踩点 */ }
 //   const phase = detector.getPhase(); // 0..1  Within beat
 //
 // 消费方接入示例（无音频，手动驱动）：
-//   const detector = createBeatDetector({ bpm: 120 });
-//   // 每帧按固定 BPM 产生虚拟节拍
-//   detector.update(0.5, dt); // 固定振幅 0.5
+//   const detector = createBeatDetector({ initialBpm: 120 });
+//   // 每帧按固定振幅产生虚拟能量，由 minInterval 节流出固定节奏
+//   detector.update(0.5); // 固定振幅 0.5
 
 import { clamp01 } from "../../utils/base/clamp.ts";
 
@@ -104,10 +104,10 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
 
   /**
    * 每帧调用，注入归一化能量值（0..1）。
+   * 能量峰值检测与帧率无关（时间基于 performance.now 绝对戳），无需 dt。
    * @param energy 当前帧低频能量（已归一化 0..1）
-   * @param dt     帧间隔（秒）
    */
-  function update(energy: number, _dt: number): void {
+  function update(energy: number): void {
     const normalized = clamp01(energy);
     state.currentEnergy = normalized;
 
@@ -144,7 +144,7 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
         const rawBpm = avgIntervalMs > 0 ? 60000 / avgIntervalMs : initialBpm;
         // BPM 量化
         if (quantizeEnabled) {
-          state.bpm = quantizeBpm(rawBpm, quantizeTolerance);
+          state.bpm = quantizeBpm(rawBpm, quantizeTolerance, initialBpm);
         } else {
           state.bpm = rawBpm;
         }
@@ -194,13 +194,14 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
     reset,
     dispose,
     getPhase: () => state.phase,
+    getBpm: () => state.bpm,
     isBeat: () => state.isBeat,
   };
 }
 
-/** BPM 量化：偏差 ±tolerance 内吸附到常见值 */
-function quantizeBpm(raw: number, tolerance: number): number {
-  if (raw <= 0) return 120;
+/** BPM 量化：偏差 ±tolerance 内吸附到常见值；raw 非法（<=0）时回退 initialBpm */
+function quantizeBpm(raw: number, tolerance: number, fallback: number): number {
+  if (raw <= 0) return fallback;
   for (const bpm of COMMON_BPMS) {
     if (Math.abs(raw - bpm) <= tolerance) return bpm;
   }

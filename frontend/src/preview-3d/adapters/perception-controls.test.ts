@@ -4,19 +4,13 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  ALL_PERCEPTION_CAPS,
   perceptionNodes,
   pickPerceptionCaps,
   type PerceptionState,
-  type PerceptionCapability,
 } from "./perception-controls.ts";
 
-const allCaps: PerceptionCapability[] = [
-  { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
-  { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
-  { id: "blink", labelKey: "preview.perceptionBlink", fallback: "眨眼" },
-  { id: "lipSync", labelKey: "preview.perceptionLipSync", fallback: "口型" },
-  { id: "autoDance", labelKey: "preview.perceptionAutoDance", fallback: "律动" },
-];
+const allCaps = ALL_PERCEPTION_CAPS;
 
 const offState = (): PerceptionState => ({ breath: false, gaze: false, blink: false, lipSync: false, autoDance: false });
 

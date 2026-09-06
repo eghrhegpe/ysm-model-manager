@@ -32,8 +32,6 @@ interface BlinkState {
   blinkRemaining: number;
   /** 眨眼速度（帧/秒），决定闭眼→睁眼的时间长度 */
   blinkSpeed: number;
-  /** 上次计时起点（performance.now 毫秒） */
-  lastTick: number;
 }
 
 /** 默认参数 */
@@ -69,7 +67,6 @@ export function createBlinkController(opts: BlinkOptions = {}) {
       nextBlinkIn: interval,
       blinkRemaining: 0,
       blinkSpeed: 1 / blinkDuration,
-      lastTick: performance.now(),
     };
   }
 
@@ -84,9 +81,6 @@ export function createBlinkController(opts: BlinkOptions = {}) {
       scheduleNext();
       return;
     }
-
-    const now = performance.now();
-    state.lastTick = now;
 
     if (state.blinkRemaining > 0) {
       // 眨眼周期中：三角波 0→1→0

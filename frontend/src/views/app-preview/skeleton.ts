@@ -18,13 +18,7 @@ import {
   buildToggleRow,
   setup2DCanvas,
 } from "./skeleton-render.ts";
-import {
-  getPrefer3D,
-  type PreviewDebugger,
-  type PreviewRoot,
-  setPrefer3D,
-  type YsmDecoder,
-} from "./utils.ts";
+import type { Prefer3DState, PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
 import { cleanupYsm3D, createYsm3D } from "./ysm-3d.ts";
 import { openFullPreview } from "./zoom.ts";
 
@@ -49,7 +43,7 @@ export function setActive3DClose(ctx: PreviewRoot, fn: (() => void) | null): voi
 
 /** 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） */
 export async function loadModel2D(
-  ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
+  ctx: PreviewRoot & YsmDecoder & PreviewDebugger & Prefer3DState,
   modelPath: string,
   skelContainer: HTMLElement | null,
   statsContainer?: HTMLElement | null,
@@ -182,14 +176,14 @@ export async function loadModel2D(
       modelPath,
     );
     let _is3D = false,
-      _prefer3D = getPrefer3D(),
+      _prefer3D = ctx.getPrefer3D(),
       _loading3D = false;
     const model3dGuard = new GenGuard();
     const _toggle3D = async (): Promise<void> => {
       if (_loading3D) return;
       _is3D = !_is3D;
       _prefer3D = _is3D;
-      setPrefer3D(_prefer3D);
+      ctx.setPrefer3D(_prefer3D);
       if (!_is3D) return;
       _loading3D = true;
       const gen = model3dGuard.next();
@@ -204,7 +198,7 @@ export async function loadModel2D(
         _is3D = false;
         if (!keepPrefer) {
           _prefer3D = false;
-          setPrefer3D(false);
+          ctx.setPrefer3D(false);
         }
       };
       // core 关闭（ESC / 关闭按钮 / 切模型 cleanup）时复位骨架层状态 + 注销 android-back。
@@ -218,7 +212,7 @@ export async function loadModel2D(
         ctx.active3DClose = null;
         if (userClosed) {
           _prefer3D = false;
-          setPrefer3D(false);
+          ctx.setPrefer3D(false);
         }
         if (unsubAndroidBack) {
           unsubAndroidBack();

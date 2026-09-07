@@ -14,7 +14,6 @@ import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { detailGen } from "./detail.ts";
 import { createFbx3D } from "./fbx-3d.ts";
 import { createMmd3D } from "./mmd-3d.ts";
 import { createScene3D } from "./scene-3d.ts";
@@ -25,16 +24,16 @@ import {
   resolveSceneSiblings,
   resolveStageSiblings,
 } from "./siblings.ts";
-import type { PreviewCtx } from "./utils.ts";
+import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 import { createVrm3D } from "./vrm-3d.ts";
 
 /** 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） */
 export async function showVrmMeta(
-  ctx: PreviewCtx,
+  ctx: PreviewCtx & DetailGenGuard,
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  const gen = detailGen.next();
+  const gen = ctx.detailGen.next();
   const icon = opts?.icon || "🥽";
   const label = opts?.label || t("preview.vrcAvatar");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -45,7 +44,7 @@ export async function showVrmMeta(
   try {
     const App = await getApp();
     const meta = await readVrmMeta(path, App.ReadFileBytes);
-    if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
+    if (ctx.detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     if (!meta || (!meta.name && !meta.authors?.length)) {
       // 无 meta（非标准 VRM 或解析失败）→ 仅名称 + FAB
       ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -108,7 +107,7 @@ export async function showVrmMeta(
       };
     }
   } catch (e) {
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
@@ -118,12 +117,12 @@ export async function showVrmMeta(
 
 /** 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） */
 export async function showMmdPreview(
-  ctx: PreviewCtx,
+  ctx: PreviewCtx & DetailGenGuard,
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
-  const gen = detailGen.next();
+  ctx.detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
+  const gen = ctx.detailGen.next();
   const icon = opts?.icon || "🎭";
   const label = opts?.label || t("preview.mmdSkin");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -152,7 +151,7 @@ export async function showMmdPreview(
       try {
         const App = await getApp();
         const stats = await readPmxStats(path, App.ReadFileBytes);
-        if (detailGen.stale(gen) || !stats) return;
+        if (ctx.detailGen.stale(gen) || !stats) return;
         const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
         if (!host) return;
         // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
@@ -173,11 +172,11 @@ export async function showMmdPreview(
 
 /** 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） */
 export async function showFbxPreview(
-  ctx: PreviewCtx,
+  ctx: PreviewCtx & DetailGenGuard,
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
+  ctx.detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = opts?.icon || "🦴";
   const label = opts?.label || t("preview.fbxModel");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -202,8 +201,11 @@ export async function showFbxPreview(
 }
 
 /** 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） */
-export async function showScenePreview(ctx: PreviewCtx, path: string): Promise<void> {
-  detailGen.invalidate();
+export async function showScenePreview(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
+  ctx.detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🏗️ ${t("preview.sceneModel")}</h3>
@@ -229,8 +231,11 @@ export async function showScenePreview(ctx: PreviewCtx, path: string): Promise<v
 }
 
 /** 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） */
-export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<void> {
-  detailGen.invalidate();
+export async function showMorphPreview(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
+  ctx.detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>😊 ${t("preview.customMorph")}</h3>
@@ -297,8 +302,11 @@ export async function showMorphPreview(ctx: PreviewCtx, path: string): Promise<v
 }
 
 /** 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） */
-export async function showStagePreview(ctx: PreviewCtx, path: string): Promise<void> {
-  detailGen.invalidate();
+export async function showStagePreview(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
+  ctx.detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎤 ${t("preview.stageAnim")}</h3>

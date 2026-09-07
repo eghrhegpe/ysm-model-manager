@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
 import type { PreviewCtx } from "./utils.ts";
+import { GenGuard } from "./gen-guard.ts";
 
 const {
   getAppMock,
@@ -67,6 +68,9 @@ function makeCtx(): PreviewCtx {
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,
+    getPrefer3D: vi.fn().mockReturnValue(false),
+    setPrefer3D: vi.fn(),
+    detailGen: new GenGuard(),
   };
 }
 

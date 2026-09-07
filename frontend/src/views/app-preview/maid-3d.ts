@@ -19,7 +19,6 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { detailGen } from "./detail.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
@@ -27,7 +26,7 @@ import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { setActive3DClose } from "./skeleton.ts";
 import { componentCountsFromSpec } from "./skeleton-render.ts";
 import { type StatsCardModel, statsCardHTML } from "./tpl.ts";
-import type { PreviewCtx } from "./utils.ts";
+import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 import { readFileBytes } from "./view-shell.ts";
 import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
 
@@ -285,11 +284,14 @@ async function dpToggle3D(state: MaidPreviewState, ctx: PreviewCtx, path: string
  * 调用 Go 端 AnalyzeBedrockModel 获取骨骼数、方块数、纹理等详细信息。
  * FAB 接线复用 skeleton 的 3D overlay 管理（_active3DClose / android-back）。
  */
-export async function showMaidPreview(ctx: PreviewCtx, path: string): Promise<void> {
+export async function showMaidPreview(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
   // 跨文件快速切换守卫：与 detail 域共享 detailGen——切到其他文件（detail/simple/maid）
   // 会推进代数，本函数 await 续体（loadPreviewImage/AnalyzeBedrockModel）回来后
   // stale 即丢弃在途渲染，避免旧面板画回新文件上。
-  const gen = detailGen.next();
+  const gen = ctx.detailGen.next();
   const basename = path.split(/[/\\]/).pop() || path;
   // 先显示加载状态
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -370,7 +372,7 @@ export async function showMaidPreview(ctx: PreviewCtx, path: string): Promise<vo
   render();
 
   const cover = await ctx.loadPreviewImage(path);
-  if (detailGen.stale(gen)) return; // 用户已切走，丢弃在途封面
+  if (ctx.detailGen.stale(gen)) return; // 用户已切走，丢弃在途封面
   if (cover && cover !== state.previewUri) {
     state.previewUri = cover;
     render();

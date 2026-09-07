@@ -145,6 +145,18 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
   /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
   private _previewGuard = new GenGuard();
+  /** 详情代际守卫（实例级，多实例隔离防串扰） */
+  detailGen = new GenGuard();
+  /** 3D 偏好状态（实例级，跨模型切换保留） */
+  private _prefer3D = false;
+
+  getPrefer3D(): boolean {
+    return this._prefer3D;
+  }
+
+  setPrefer3D(v: boolean): void {
+    this._prefer3D = v;
+  }
 
   constructor() {
     super();

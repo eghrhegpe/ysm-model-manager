@@ -8,7 +8,18 @@
 //  - 组内项目：取 extra_animation 中非 # 开头的中文名；整组皆内部引用则跳过
 //  - 松散动画兜底：未被任何分类组引用、且非 # 内部引用的顶层动画 → 归并到「其他动画」组
 //  - 配置菜单 extra_animation_buttons：每个按钮即一个配置项（仅取 name/id）
-import type { SummaryAnimGroup, SummaryConfigMenu } from "@/views/app-preview/tpl-summary.ts";
+/** 动画分组（纯数据结构，Go summary.go:SummaryAnimGroup 前端镜像） */
+export interface SummaryAnimGroup {
+  name?: string;
+  id?: string;
+  items?: string[] | null;
+}
+
+/** 配置菜单（纯数据结构，Go summary.go:SummaryConfigMenu 前端镜像） */
+export interface SummaryConfigMenu {
+  name?: string;
+  id?: string;
+}
 
 /** WASM 解码产物 ysm.json 的 properties 相关字段（仅取本模块需要的部分） */
 export interface YsmProperties {

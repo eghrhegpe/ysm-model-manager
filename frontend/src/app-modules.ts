@@ -3,16 +3,34 @@
 import { prefetchStatsWorker } from "@/backend/browser-adapter.ts";
 import { makeDiarySink } from "@/backend/diary-sink.ts";
 import { Window } from "@/backend/runtime.ts";
-import { bus } from "./bus.ts";
 import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
-import { revealMainWindow } from "./startup-reveal.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { loadView } from "@/utils/module-loader.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
 import { registerCoiServiceWorker } from "@/workers/coi-sw.ts";
+import { bus } from "./bus.ts";
+import { revealMainWindow } from "./startup-reveal.ts";
+
+// ===== 懒加载 Web Component（原 utils/module-loader.ts，单消费者 → 并入装配层）=====
+/**
+ * 懒加载 Web Component：统一动态 import + 加载失败 toast 反馈。
+ * 收敛 5 处 `import(...).catch` 模板（app-tree/sidebar/content/resource-manager/sync-manager）。
+ * 用字面量路径确保 Vite 构建时解析。
+ */
+export const loadView = (name: string, importer: () => Promise<unknown>): Promise<void> => {
+  return importer()
+    .then(() => undefined)
+    .catch((e) => {
+      console.warn(`[module] 组件加载失败: ${name}`, e);
+      bus.emit("toast:show", {
+        msg: `❌ ${friendlyError(e, "组件加载失败")}`,
+        duration: TOAST_MS.long,
+        type: "error",
+      });
+    });
+};
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
@@ -33,10 +51,10 @@ loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 
 // ===== 全局主题控制 =====
 
+import { safeGet } from "@/utils/dom/storage.ts";
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
 import { applyTheme, initTheme, normalizeTheme } from "./theme-core.ts";
-import { safeGet } from "@/utils/dom/storage.ts";
 
 export { applyTheme, initTheme, normalizeTheme };
 

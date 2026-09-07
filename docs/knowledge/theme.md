@@ -13,6 +13,7 @@ auto_fields:
   symbols_with_lines:
     - applyTheme
     - initTheme
+    - loadView
     - normalizeTheme
     - unregisterDevtools
 quick_groups:

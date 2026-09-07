@@ -38,6 +38,7 @@ auto_fields:
     - IsRecycleDir
     - IsResourcePackFolder
     - ReadLimitedEntry
+    - RecoverAtomicRename
     - SHA256File
     - StepChmod
     - StepClose

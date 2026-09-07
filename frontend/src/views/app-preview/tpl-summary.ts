@@ -7,21 +7,15 @@ import { parseModelName } from "@/utils/model-name/display.ts";
 
 // ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
 
+import type { SummaryAnimGroup, SummaryConfigMenu } from "@/utils/format/ysm-anim-config.ts";
+
+// 保持转口导出，零下游改动
+export type { SummaryAnimGroup, SummaryConfigMenu };
+
 export interface SummaryAuthor {
   name?: string;
   bilibili?: string;
   roles?: string;
-}
-
-export interface SummaryAnimGroup {
-  name?: string;
-  id?: string;
-  items?: string[] | null;
-}
-
-export interface SummaryConfigMenu {
-  name?: string;
-  id?: string;
 }
 
 export interface YsmSummary {

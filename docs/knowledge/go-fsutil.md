@@ -98,7 +98,7 @@ status: active
 
 - `walk.go` — 文件/目录遍历、目录后序遍历、计数、空目录清理，内置 `.recycle` 回收站跳过开关
 - `write.go` — `WriteFileAtomic`（tmp+rename 原子落地 + Sync 落盘检查 + `Chmod FilePerms`）；`ReadLimitedEntry`（limit+1 探测截断，ADR-033 修复）
-- `copy.go` — `CopyFile`（同目录 tmp+rename 原子复制 + Sync + `Chmod FilePerms` + MkdirAll + **目录源前置拒绝 + 读毕早关 src**）；`CopyDirRecursive`（参数化 symlink 策略 / 防覆盖 / 失败回滚）；`StepError` 步骤类型化错误（中性步骤名 `StepStat/Open/CreateTmp/Copy/Sync/Close/Chmod/Rename/...`，经 `errors.As` 取步骤，`Error()` 透传内层、`errors.Is` 穿透——ADR-044 策略 A：机制归 fsutil、UX 文案归调用方如 installer.mapStepToAppError）
+- `copy.go` — `CopyFile`（同目录 tmp+rename 原子复制 + Sync + `Chmod FilePerms` + MkdirAll + **目录源前置拒绝 + 读毕早关 src**）；`CopyDirRecursive`（参数化 symlink 策略 / 防覆盖 / 失败回滚，`AtomicRename` 分支通过 tmpDir → rename 原子替换）；`RecoverAtomicRename(dir)` 启动自愈扫描 `.bak-*` 备份目录（上次 AtomicRename 崩溃残留）；`StepError` 步骤类型化错误（中性步骤名 `StepStat/Open/CreateTmp/Copy/Sync/Close/Chmod/Rename/...`，经 `errors.As` 取步骤，`Error()` 透传内层、`errors.Is` 穿透——ADR-044 策略 A：机制归 fsutil、UX 文案归调用方如 installer.mapStepToAppError）
 - `perms.go` — `DirPerms`(0755) / `FilePerms`(0644) 全仓权限单点（os.MkdirAll/os.WriteFile 全仓 27 处手写字面量已收敛至此）
 - `bom.go` — `UTF8BOM` / `StripBOM`（PowerShell 等工具写出的 JSON/文本 BOM 剥离单点，ysm/fileops/packs/internal-app 共 7 处已收敛）
 - `hardlink_other.go` / `hardlink_windows.go` — `IsHardLink`（nlink>1 判定，目录排除防 ADR-038 D3.4 误删）
@@ -111,6 +111,7 @@ status: active
 - `WriteFileAtomic(destPath, data) error` — tmp+rename 原子写
 - `ReadLimitedEntry(rc, limit) []byte` — zip/7z 单条目 limit+1 探测截断读取
 - `CopyFile(src, dst) error` / `CopyDirRecursive(src, dst, opts) error` — 原子单文件/目录复制
+- `RecoverAtomicRename(dir) (int, error)` — 启动自愈：扫描 `.bak-*` 备份目录，恢复未完成的 AtomicRename（返回恢复数量）
 - `DirPerms` / `FilePerms` / `UTF8BOM` / `StripBOM(data)` — 权限/BOM 单点
 - `IsHardLink(path) bool` / `IsCrossDeviceErr(err) bool` — 硬链接/跨设备判定
 

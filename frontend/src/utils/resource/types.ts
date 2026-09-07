@@ -1,7 +1,9 @@
 // ===== 资源类型常量（类型化版 — ADR-014 P2）=====
 // RESOURCE_TYPES（短标签→ID）保留手写：短标签（如 "MMD"）≠ JSON 的 name 全名
-// （如 "MMD 角色模型"），且短标签参与 Go 端 ScanModelEntriesWithLabel 扫描匹配，
-// 语义由前端契约决定，不能从 JSON 派生。
+// （如 "MMD 角色模型"），且短标签作为操作日志标签传入 Go 扫描入口
+// （ScanModelEntriesWithLabel / ScanModelEntriesFiltered 的 label 参数，仅记日志
+// 不参与匹配/过滤——过滤按 rtype 的 extensions 注册表进行），语义由前端契约决定，
+// 不能从 JSON 派生。
 //
 // RESOURCE_TYPE_LABELS（ID→中文名）现已从 resource_types.json 的 name 字段派生。
 // 新增资源类型只需改 JSON，中文全名自动同步，无需手动维护双表。

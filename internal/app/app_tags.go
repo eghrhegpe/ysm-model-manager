@@ -7,11 +7,14 @@ import (
 	"ysm-model-manager/go/tags"
 )
 
-// getTagsStore 初始化或获取标签存储实例（懒加载，sync.Once 保护）
+// getTagsStore 初始化或获取标签存储实例（懒加载，sync.Mutex + nil 检查）
 func (a *App) getTagsStore() *tags.Store {
-	a.tagsStoreOnce.Do(func() {
-		a.tagsStore = tags.NewStore(configDir())
-	})
+	a.tagsStoreMu.Lock()
+	defer a.tagsStoreMu.Unlock()
+	if a.tagsStore != nil {
+		return a.tagsStore
+	}
+	a.tagsStore = tags.NewStore(configDir())
 	return a.tagsStore
 }
 

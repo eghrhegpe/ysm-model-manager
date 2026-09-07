@@ -53,7 +53,7 @@ type App struct {
 	resolvedRootCache     *resolvedRootCache // ADR-134 同构：root 解析缓存组件（原包级全局抽离）
 	resolvedRootCacheOnce sync.Once
 	tagsStore             *tags.Store
-	tagsStoreOnce         sync.Once
+	tagsStoreMu           sync.Mutex
 	configCache           types.AppConfig
 	configLoaded          bool
 	configMu              sync.RWMutex

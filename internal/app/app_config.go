@@ -269,7 +269,9 @@ func (a *App) LoadAppConfig() types.AppConfig {
 	if a.configLoaded {
 		return a.configCache
 	}
-	readJSONFile(configPath(), &a.configCache)
+	if err := readJSONFile(configPath(), &a.configCache); err != nil {
+		return a.configCache
+	}
 	// ADR-095: 将废弃的独立配置字段（YsmRoot/MmdRoot 等）迁移到 CustomRoots map
 	migrateLegacyConfigFields(&a.configCache)
 	a.configLoaded = true

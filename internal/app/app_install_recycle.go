@@ -27,6 +27,10 @@ func (a *App) MoveToRecycle(src string) error {
 	if root == "" {
 		root = a.ysmRoot()
 	}
+	// fail-fast：root 仍为空 → 无法定位回收站，拒绝执行
+	if root == "" {
+		return fmt.Errorf("找不到包含该文件的资源根目录，无法移入回收站")
+	}
 	// src 等于资源根本身时拒绝——findRecycleRoot 对 rel=="."
 	// 判命中 + recycle.IsInside 对 path==root 放行 → 整仓库移入 .recycle（可恢复但误操作面大）；
 	// fallback 到 ysmRoot 后 Clean 相等同样拒绝。

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/publicsuffix"
@@ -192,8 +193,24 @@ func isWebSocketUpgrade(r *http.Request) bool {
 	return false
 }
 
-// ssrfDial dial 注入点：测试替换为直连假上游（ssrfGuardDial 拦回环，测试无法走真实现）
-var ssrfDial = ssrfGuardDial
+// ssrfDial atomic.Value 保护：测试替换为直连假上游（ssrfGuardDial 拦回环，测试无法走真实现）
+var ssrfDial = atomic.Value{}
+
+func init() {
+	ssrfDial.Store(func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return ssrfGuardDial(ctx, network, addr)
+	})
+}
+
+// getSSRFDial 获取当前 ssrfDial 函数（atomic.Value 保护）
+func getSSRFDial() func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return ssrfDial.Load().(func(ctx context.Context, network, addr string) (net.Conn, error))
+}
+
+// setSSRFDial 替换 ssrfDial 函数（测试注入用，atomic.Value 保护）
+func setSSRFDial(fn func(ctx context.Context, network, addr string) (net.Conn, error)) {
+	ssrfDial.Store(fn)
+}
 
 func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter, r *http.Request) error {
 	wsPort := target.Port()
@@ -204,7 +221,7 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 			wsPort = "80"
 		}
 	}
-	targetConn, err := ssrfDial(ctx, "tcp", net.JoinHostPort(target.Hostname(), wsPort))
+	targetConn, err := getSSRFDial()(ctx, "tcp", net.JoinHostPort(target.Hostname(), wsPort))
 	if err != nil {
 		return err
 	}

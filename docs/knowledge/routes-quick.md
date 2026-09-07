@@ -272,7 +272,7 @@
 | 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
 | 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
 | createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
-| FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 dom/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
+| FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 preview-3d/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
 | modalAdvFilter | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | modalTagEditor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | overlay、ADR-057、ensureFabStyles | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | - | - |

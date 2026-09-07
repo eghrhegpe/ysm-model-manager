@@ -4,12 +4,21 @@ name: Android 桥接层：存储授权 + 目录选择器
 tier: architecture
 category: core
 source_files:
-  - frontend/src/utils/dom/android-bridge.ts
+  - frontend/src/backend/platform.ts
   - frontend/src/utils/dom/directory-picker.ts
 auto_fields:
   symbols_with_lines:
+    - emitAndroidBack
+    - getAndroidBridge
+    - isViewerMode
+    - isViewerPlatform
+    - isWebEntryMode
     - pickDirectory
+    - readDeclaredBackend
+    - registerAndroidBackHandler
     - resolveAndroidRepoDir
+    - resolveWebMode
+    - WailsAndroidBridge
   tests:
     - frontend/src/features/version-updater.test.ts
     - tests/test_android_bridge_contract.ts
@@ -46,11 +55,11 @@ Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 
 
 ## 核心职责
 
-- **`getAndroidBridge()`**（原语已下沉 backend/platform.ts，ADR-123 P3；android-bridge.ts 仅 re-export，消费路径不变）：类型安全返回 Java 桥（`hasStoragePermission` / `requestStoragePermission`），桌面端返回 `null`。类型断言用 `unknown` 收窄，无 `as any`（ADR-014）。
+- **`getAndroidBridge()`**（定义于 backend/platform.ts，ADR-203 D2 已把原 utils/dom/android-bridge.ts 整体并入，无独立 shim 文件）：类型安全返回 Java 桥（`hasStoragePermission` / `requestStoragePermission`），桌面端返回 `null`。类型断言用 `unknown` 收窄，无 `as any`（ADR-014）。
 - **`resolveAndroidRepoDir()`**（directory-picker.ts）：Android 目录路径解析专用入口——未授权时 warn toast + `requestStoragePermission` 引导授权并返回 `null`；已授权时 `GetDefaultRepoRoot` 定位公共仓库目录 + info toast 返回路径。设置页路径卡片与树「导入文件夹」统一复用。
 - **`pickDirectory()`**（directory-picker.ts）：跨平台统一入口——桌面走 Wails Dialog（`SelectDirectory`）；Android 有桥时委托 `resolveAndroidRepoDir()`。
 - **共享复用**：`loader.ts` 库加载失败引导授权、`version-updater.ts` 平台门控、`toolbar-events.ts` 导入文件夹均引用此桥，避免重复实现。
-- **`registerAndroidBackHandler`**（android-bridge.ts，ADR-057 新增）：返回键注册表，对齐 MikuMikuAR `handleAndroidBack`。实际链路：`MainActivity.handleBackPressed()` → `bridge.emitEvent("android:back")` → `android-events.ts` 的 `Events.On("android:back")` → `emitAndroidBack()`；注册的 handler 按栈顶优先询问，返回 `true`（已消费）即短路。3D 预览 overlay 打开时注册消费返回键关层，否则透传。
+- **`registerAndroidBackHandler`**（backend/platform.ts，ADR-057 新增，ADR-203 D2 并入）：返回键注册表，对齐 MikuMikuAR `handleAndroidBack`。实际链路：`MainActivity.handleBackPressed()` → `bridge.emitEvent("android:back")` → `android-events.ts` 的 `Events.On("android:back")` → `emitAndroidBack()`；注册的 handler 按栈顶优先询问，返回 `true`（已消费）即短路。3D 预览 overlay 打开时注册消费返回键关层，否则透传。
 
 ## 对外 API / 入口
 

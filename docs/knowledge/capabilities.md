@@ -4,16 +4,20 @@ name: 能力门控 capabilities
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/dom/capabilities.ts
+  - frontend/src/backend/capabilities.ts
   - frontend/src/backend/platform-web.ts
 auto_fields:
   symbols_with_lines:
     - ANDROID_UNAVAILABLE
+    - can
     - canBinding
+    - canWebAction
     - isViewerPlatform
     - isWebPlatform
     - PlatformMode
     - resolvePlatformMode
+    - VIEWER_PURE_ACTIONS
+    - VIEWER_WEB_ACTION_BINDINGS
 quick_groups:
   - 能力门控与平台判定
 quick_intents:
@@ -39,7 +43,7 @@ status: active
 
 前端能力门控唯一对外入口。`can(binding)` 将「当前平台是否可用指定 binding」的三态判定（desktop 全量 / web adapter has / Android 黑名单）委托给 `backend/platform-web.ts` 的 `canBinding()` 三态矩阵；`canWebAction()` 在此基础上叠加 viewer/web 模式右键菜单的 action 可达性判定（`VIEWER_PURE_ACTIONS` 纯前端恒可达 + `VIEWER_WEB_ACTION_BINDINGS` 走 `can()` 探测）。
 
-ADR-071 后判定逻辑收拢至 `canBinding()`，`utils/dom/capabilities.ts` 保留对外 API 与消费方清单注释——消费方（app-nav/app-tree/context-menus 等）零改动。
+ADR-071 后判定逻辑收拢至 `canBinding()`，`backend/capabilities.ts`（ADR-203 自 utils/dom/capabilities.ts 迁入 backend）保留对外 API 与消费方清单注释——消费方（app-nav/app-tree/context-menus 等）零改动。
 
 ## 核心职责
 

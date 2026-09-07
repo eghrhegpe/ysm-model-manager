@@ -1714,6 +1714,10 @@ export const autoSidebar = [
             "link": "/knowledge/core_utils"
           },
           {
+            "text": "跨平台目录选择器",
+            "link": "/knowledge/directory_picker"
+          },
+          {
             "text": "悬浮提示 tooltip",
             "link": "/knowledge/dom_tooltip"
           },

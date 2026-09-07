@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 173 张知识卡
+> 总计: 174 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -338,7 +338,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（28 张）
+## utils（29 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -348,6 +348,7 @@
 | 🍃 capabilities | 能力门控 capabilities | leaf | — | can binding 门控, viewer 模式右键菜单过滤, web 可达性判定, 平台能力矩阵 |
 | 🏗 commit-with-check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
 | 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
+| 🍃 directory_picker | 跨平台目录选择器 | leaf | — | 目录选择, 选择文件夹, Android 公共仓库目录, 网页版虚拟根, 授权引导, viewer 模式 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
@@ -379,6 +380,7 @@
 - **capabilities**（能力门控 capabilities）：前端能力门控唯一对外入口。`can(binding)` 将「当前平台是否可用指定 binding」的三态判定（desktop 全量 / web adapter has / Android 黑名单）委托给 `backend/platform-…
 - **commit-with-check**（提交脚本 commit-with-check）：`commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD…
 - **core_utils**（核心工具函数 core-utils）：`utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
+- **directory_picker**（跨平台目录选择器）：`frontend/src/utils/dom/directory-picker.ts`：跨平台「要一个目录路径」的统一入口（ADR-046 P2、ADR-049 Phase 3）。三端三分支——桌面走 Wails 系统目录对话框（`Sel…
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…

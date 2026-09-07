@@ -21,6 +21,8 @@ auto_fields:
     - InstallLocker
     - InstallToGlobal
     - IsValidRepoRoot
+    - LinkOrCopyLocked
+    - SymlinkOrCopyLocked
 quick_groups:
   - 文件操作与标签
 quick_intents:

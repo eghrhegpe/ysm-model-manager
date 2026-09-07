@@ -421,9 +421,9 @@ func isAllowedEntryName(name, rtype string) bool {
 func applyInstallFileByMode(srcFile, dstDir, linkMode string) error {
 	switch linkMode {
 	case "hardlink":
-		return linkOrCopyLocked(srcFile, dstDir)
+		return LinkOrCopyLocked(srcFile, dstDir)
 	case "symlink":
-		return symlinkOrCopyLocked(srcFile, dstDir)
+		return SymlinkOrCopyLocked(srcFile, dstDir)
 	default:
 		_, err := CopyFileLocked(srcFile, dstDir)
 		return err
@@ -619,11 +619,11 @@ func CopyFile(src, dstDir string) (string, error) {
 	return CopyFileLocked(src, dstDir)
 }
 
-// linkOrCopyLocked 以硬链接落地 src 到 dstDir（调用方须持有 InstallLock，禁止直接调用）；
+// LinkOrCopyLocked 以硬链接落地 src 到 dstDir（调用方须持有 InstallLock，禁止直接调用）；
 // 目标已存在时：
 //   - 同源（已是到 src 的硬链接）→ 幂等返回
 //   - 不同源（旧副本/旧版本）→ 先建临时链接再原子替换，失败不破坏原文件
-func linkOrCopyLocked(src, dstDir string) error {
+func LinkOrCopyLocked(src, dstDir string) error {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
@@ -650,12 +650,12 @@ func linkOrCopyLocked(src, dstDir string) error {
 func linkOrCopy(src, dstDir string) error {
 	InstallLocker.Lock()
 	defer InstallLocker.Unlock()
-	return linkOrCopyLocked(src, dstDir)
+	return LinkOrCopyLocked(src, dstDir)
 }
 
-// symlinkOrCopyLocked 以符号链接落地 src 到 dstDir（调用方须持有 InstallLock，禁止直接调用）；
-// 目标已存在时与 linkOrCopyLocked 同语义
-func symlinkOrCopyLocked(src, dstDir string) error {
+// SymlinkOrCopyLocked 以符号链接落地 src 到 dstDir（调用方须持有 InstallLock，禁止直接调用）；
+// 目标已存在时与 LinkOrCopyLocked 同语义
+func SymlinkOrCopyLocked(src, dstDir string) error {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
@@ -688,7 +688,7 @@ func symlinkOrCopyLocked(src, dstDir string) error {
 func symlinkOrCopy(src, dstDir string) error {
 	InstallLocker.Lock()
 	defer InstallLocker.Unlock()
-	return symlinkOrCopyLocked(src, dstDir)
+	return SymlinkOrCopyLocked(src, dstDir)
 }
 
 // sameSource 判断 dst 是否已是 src 的有效落地点（同一文件 / 指向 src 的链接）。

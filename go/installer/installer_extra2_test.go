@@ -366,19 +366,19 @@ func TestCopyFileLocked_RenameFail(t *testing.T) {
 	}
 }
 
-// ====== linkOrCopyLocked 失败分支 ======
+// ====== LinkOrCopyLocked 失败分支 ======
 
 // TestLinkOrCopyLocked_LinkErr 源是目录时 os.Link 必败 → 分类为 LINK_FAILED
 func TestLinkOrCopyLocked_LinkErr(t *testing.T) {
 	srcDir := t.TempDir() // 目录作源，硬链接必败
-	err := linkOrCopyLocked(srcDir, filepath.Join(t.TempDir(), "dst"))
+	err := LinkOrCopyLocked(srcDir, filepath.Join(t.TempDir(), "dst"))
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "LINK_FAILED" {
 		t.Fatalf("目录源硬链接应返回 LINK_FAILED, got %v", err)
 	}
 }
 
-// ====== symlinkOrCopyLocked 失败分支 ======
+// ====== SymlinkOrCopyLocked 失败分支 ======
 
 func TestSymlinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
@@ -390,13 +390,13 @@ func TestSymlinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := symlinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
+	if err := SymlinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
 	}
 }
 
 func TestSymlinkOrCopyLocked_SrcMissing(t *testing.T) {
-	err := symlinkOrCopyLocked(filepath.Join(t.TempDir(), "missing.ysm"), t.TempDir())
+	err := SymlinkOrCopyLocked(filepath.Join(t.TempDir(), "missing.ysm"), t.TempDir())
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("源不存在应返回 IO_ERROR, got %v", err)
@@ -431,7 +431,7 @@ func TestSymlinkOrCopyLocked_RenameFail(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := symlinkOrCopyLocked(src, dstDir) // rename tmp → 非空目录必败
+	err := SymlinkOrCopyLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
@@ -728,7 +728,7 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 	})
 }
 
-// ====== linkOrCopyLocked 失败分支 ======
+// ====== LinkOrCopyLocked 失败分支 ======
 
 func TestLinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
@@ -740,7 +740,7 @@ func TestLinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := linkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
+	if err := LinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
 	}
 }
@@ -763,14 +763,14 @@ func TestLinkOrCopyLocked_RenameFail(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := linkOrCopyLocked(src, dstDir) // os.Link 成功 → Rename(tmp, 非空目录) 必败
+	err := LinkOrCopyLocked(src, dstDir) // os.Link 成功 → Rename(tmp, 非空目录) 必败
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
 	}
 }
 
-// ====== symlinkOrCopyLocked 剩余分支 ======
+// ====== SymlinkOrCopyLocked 剩余分支 ======
 
 // TestSymlinkOrCopyLocked_Idempotent 目标已是指向 src 的 symlink → 幂等返回
 func TestSymlinkOrCopyLocked_Idempotent(t *testing.T) {
@@ -786,7 +786,7 @@ func TestSymlinkOrCopyLocked_Idempotent(t *testing.T) {
 	if err := os.Symlink(src, filepath.Join(dstDir, "model.ysm")); err != nil {
 		t.Skipf("平台不支持符号链接: %v", err)
 	}
-	if err := symlinkOrCopyLocked(src, dstDir); err != nil {
+	if err := SymlinkOrCopyLocked(src, dstDir); err != nil {
 		t.Fatalf("幂等重装应成功: %v", err)
 	}
 }
@@ -809,7 +809,7 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := symlinkOrCopyLocked(src, dstDir) // os.Remove 忽略失败 → os.Symlink 撞上目录必败
+	err := SymlinkOrCopyLocked(src, dstDir) // os.Remove 忽略失败 → os.Symlink 撞上目录必败
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "LINK_FAILED" {
 		t.Fatalf("symlink 创建失败应返回 LINK_FAILED, got %v", err)

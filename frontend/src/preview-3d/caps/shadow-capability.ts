@@ -74,16 +74,37 @@ export class ShadowCapability implements SceneCapability {
     this.prevShadowMapEnabled = this.renderer.shadowMap.enabled;
     this.prevShadowMapType = this.renderer.shadowMap.type;
 
-    // ADR-196：订阅 envState 变更
+    // ADR-196：订阅 envState 变更——按字段细粒度分派（code_review P3 #19 单主化）：
+    // 结构性字段（type/mapSize）→ apply() 全量重建；参数字段（bias/normalBias/
+    // cameraSize）→ 只遍历灯就地改对应属性（避免全量快照重建的重活）。
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (
-        changed.has("shadowType") ||
-        changed.has("shadowMapSize") ||
-        changed.has("shadowBias") ||
-        changed.has("shadowNormalBias") ||
-        changed.has("shadowCameraSize")
-      ) {
-        if (this.enabled) this.apply();
+      if (!this.enabled) return;
+      if (changed.has("shadowType") || changed.has("shadowMapSize")) {
+        this.apply();
+        return;
+      }
+      const { dirs, spots } = this.collectLights();
+      if (changed.has("shadowBias")) {
+        const v = envState.shadowBias;
+        for (const l of dirs) l.shadow.bias = v;
+        for (const sp of spots) sp.shadow.bias = v;
+      }
+      if (changed.has("shadowNormalBias")) {
+        const v = envState.shadowNormalBias;
+        for (const l of dirs) l.shadow.normalBias = v;
+        for (const sp of spots) sp.shadow.normalBias = v;
+      }
+      if (changed.has("shadowCameraSize")) {
+        const s = envState.shadowCameraSize;
+        for (const l of dirs) {
+          const cam = l.shadow.camera as THREE.OrthographicCamera;
+          cam.left = -s;
+          cam.right = s;
+          cam.top = s;
+          cam.bottom = -s;
+          cam.updateProjectionMatrix();
+          l.shadow.needsUpdate = true;
+        }
       }
     });
   }
@@ -353,8 +374,8 @@ export class ShadowCapability implements SceneCapability {
 
   setMapSize(v: number): void {
     const clamped = [512, 1024, 2048, 4096].includes(v) ? v : envState.shadowMapSize;
+    // ADR-196 收口：纯写 envState；apply 由 callback 落地。
     setEnvState({ shadowMapSize: clamped }, { source: "manual" });
-    if (this.enabled) this.apply();
   }
   getMapSize(): number {
     return envState.shadowMapSize;
@@ -362,52 +383,32 @@ export class ShadowCapability implements SceneCapability {
 
   /** 菜单用：toggle true → 软阴影；false → 硬阴影 */
   setSoft(v: boolean): void {
+    // ADR-196 收口：纯写 envState；renderer.shadowMap.type 由 callback 落地。
     setEnvState({ shadowType: v ? "soft" : "hard" }, { source: "manual" });
-    if (this.enabled) {
-      this.renderer.shadowMap.type = v ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
-      this.renderer.shadowMap.needsUpdate = true;
-    }
   }
   isSoft(): boolean {
     return envState.shadowType === "soft";
   }
 
   setBias(v: number): void {
+    // ADR-196 收口：纯写 envState；遍历灯改 bias 由 callback 落地。
     setEnvState({ shadowBias: v }, { source: "manual" });
-    if (!this.enabled) return;
-    const { dirs, spots } = this.collectLights();
-    for (const l of dirs) l.shadow.bias = v;
-    for (const sp of spots) sp.shadow.bias = v;
   }
   getBias(): number {
     return envState.shadowBias;
   }
 
   setNormalBias(v: number): void {
+    // ADR-196 收口：纯写 envState；遍历灯改 normalBias 由 callback 落地。
     setEnvState({ shadowNormalBias: v }, { source: "manual" });
-    if (!this.enabled) return;
-    const { dirs, spots } = this.collectLights();
-    for (const l of dirs) l.shadow.normalBias = v;
-    for (const sp of spots) sp.shadow.normalBias = v;
   }
   getNormalBias(): number {
     return envState.shadowNormalBias;
   }
 
   setCameraSize(v: number): void {
+    // ADR-196 收口：纯写 envState；遍历灯改 camera 由 callback 落地。
     setEnvState({ shadowCameraSize: Math.max(5, Math.min(80, v)) }, { source: "manual" });
-    if (!this.enabled) return;
-    const { dirs } = this.collectLights();
-    const s = envState.shadowCameraSize;
-    for (const l of dirs) {
-      const cam = l.shadow.camera as THREE.OrthographicCamera;
-      cam.left = -s;
-      cam.right = s;
-      cam.top = s;
-      cam.bottom = -s;
-      cam.updateProjectionMatrix();
-      l.shadow.needsUpdate = true;
-    }
   }
   getCameraSize(): number {
     return envState.shadowCameraSize;

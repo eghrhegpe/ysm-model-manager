@@ -86,8 +86,6 @@ export class FogCapability implements SceneCapability {
   private enabled: boolean;
   /** 构造前 scene.fog，dispose 时还原 */
   private prevFog: THREE.Fog | THREE.FogExp2 | null;
-  /** 当前挂在 scene 上的雾对象（由 createFog() 创建或 null 禁用） */
-  private currentFog: THREE.Fog | THREE.FogExp2 | null = null;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
 
@@ -127,7 +125,6 @@ export class FogCapability implements SceneCapability {
 
   private applyFog(): void {
     const f = this.createFog();
-    this.currentFog = f;
     // 禁用时还原构造前 scene.fog（与 dispose() 行为一致），而非置 null
     this.scene.fog = f ?? this.prevFog;
   }
@@ -291,6 +288,5 @@ export class FogCapability implements SceneCapability {
     this.unsubscribeEnv();
     // 还原构造前 scene.fog（可能为 null）
     this.scene.fog = this.prevFog;
-    this.currentFog = null;
   }
 }

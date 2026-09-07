@@ -50,7 +50,6 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
-    - FOG_PRESETS
     - FogCapability
     - FogMode
     - generateSurfacePixels

@@ -64,7 +64,7 @@ status: active
 
 - `Install(src, customDir, repoRoot, linkMode string) error` — 安装单个模型；按 `src` 相对 `repoRoot` 的位置在 `customDir` 下还原目录结构
 - `InstallDir(srcDir, dstDir, repoRoot, linkMode, rtype string) error` — 安装整个文件夹（MMD/YSM 的模型+纹理成组），目标为 `dstDir/{srcDir 基名}`，内部 `installDirRecursive` 递归
-- `InstallToGlobal(src, mcRoot string) (string, error)` — 复制到 `{mcRoot}/config/yes_steve_model/custom`（固定复制，不走链接）
+- `InstallToGlobal(src, mcRoot string) (string, error)` — 复制到 `{mcRoot}/config/yes_steve_model/custom`（固定复制，不走链接）；src 归属校验在调用层 `internal/app/app_install_import.go|ensureSrcInRepo`——installer 无 `filesRoot` 参数属设计契约（src 归属是仓库根知识，由持有仓库配置的 App 层负责）
 - `InstallWithOverlay(src, customDir string) (string, error)` — 带冲突检查的复制；目标已存在时返回 `"CONFLICT:"+dst` 与 `ALREADY_EXISTS` 错误，不覆盖
 - `CopyFile(src, dstDir string) (string, error)` — 加锁的单文件复制
 - `IsValidRepoRoot(path string) bool` — 仓库根目录合法性校验

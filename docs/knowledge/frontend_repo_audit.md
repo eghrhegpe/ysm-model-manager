@@ -494,7 +494,6 @@ auto_fields:
     - fmtDate
     - fmtMB
     - focusVisibleCSS
-    - FOG_PRESETS
     - FogCapability
     - FogMode
     - FolderGroup

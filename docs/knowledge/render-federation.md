@@ -33,7 +33,6 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvPresetLinkage
-    - FOG_PRESETS
     - FogCapability
     - FogMode
     - GroundCapability

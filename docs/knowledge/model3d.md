@@ -237,7 +237,6 @@ auto_fields:
     - fitCameraToRoots
     - fitCameraToScene
     - flagsForAlpha
-    - FOG_PRESETS
     - FogCapability
     - FogMode
     - FootIKController

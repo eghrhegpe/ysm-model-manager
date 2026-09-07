@@ -3,9 +3,9 @@ package cli
 import (
 	"ysm-model-manager/go/internal/testutil"
 
+	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -158,7 +158,7 @@ func TestExtractBulletSection(t *testing.T) {
 		"## Details",
 		"- detail a",
 	}
-	if got := extractBulletSection(lines, "Overview"); !reflect.DeepEqual(got, []string{"item one", "item two"}) {
+	if got := extractBulletSection(lines, "Overview"); !cmp.Equal(got, []string{"item one", "item two"}) {
 		t.Errorf("Overview: got %v", got)
 	}
 	if got := extractBulletSection(lines, "Missing"); len(got) != 0 {
@@ -178,7 +178,7 @@ func TestExtractTableSection(t *testing.T) {
 		"| skip | this | should | not | appear |",
 	}
 	want := []string{"a | b | c | d", "f | g | h | i"}
-	if got := extractTableSection(lines, "Metrics"); !reflect.DeepEqual(got, want) {
+	if got := extractTableSection(lines, "Metrics"); !cmp.Equal(got, want) {
 		t.Errorf("Metrics table: got %v, want %v", got, want)
 	}
 }

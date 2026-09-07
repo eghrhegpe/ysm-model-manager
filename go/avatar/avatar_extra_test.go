@@ -7,10 +7,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"ysm-model-manager/go/container"
 )
@@ -62,7 +63,7 @@ func TestAvatarCandidates(t *testing.T) {
 		{"Avatar/Face.png", []string{"Avatar/Face.png", "avatar/Face.png", "avatar/Face.jpg", "avatar/Face.jpeg"}},
 	}
 	for _, tt := range tests {
-		if got := avatarCandidates(tt.in); !reflect.DeepEqual(got, tt.want) {
+		if got := avatarCandidates(tt.in); !cmp.Equal(got, tt.want) {
 			t.Errorf("avatarCandidates(%q) = %v, 期望 %v", tt.in, got, tt.want)
 		}
 	}
@@ -652,7 +653,7 @@ func TestContainerAuthorNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if got := containerAuthorNames(r); !reflect.DeepEqual(got, []string{"用户A", "用户B"}) {
+	if got := containerAuthorNames(r); !cmp.Equal(got, []string{"用户A", "用户B"}) {
 		t.Errorf("容器作者名应过滤空名, 得到 %v", got)
 	}
 

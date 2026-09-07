@@ -7,6 +7,7 @@ require (
 	github.com/bodgit/sevenzip v1.6.4
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/google/go-cmp v0.7.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.105
 	golang.org/x/mod v0.37.0
 	golang.org/x/net v0.57.0

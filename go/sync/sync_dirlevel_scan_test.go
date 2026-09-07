@@ -3,9 +3,9 @@ package sync
 import (
 	"ysm-model-manager/go/internal/testutil"
 
+	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"testing"
 
@@ -41,7 +41,7 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 	if scanMap == nil {
 		t.Fatalf("collectEntriesFromScan 返回 nil（rtype=%s 不应回退 Walk）", rtype)
 	}
-	if !reflect.DeepEqual(walkMap, scanMap) {
+	if !cmp.Equal(walkMap, scanMap) {
 		t.Errorf("collectEntriesFromScan 与 Walk 结果不一致\nWalk: %v\nScan: %v", walkMap, scanMap)
 	}
 }
@@ -100,7 +100,7 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 		t.Fatalf("scanner 未返回组根条目（hit=%v, len=%d），反推路径无法验证", hit, len(allEntries))
 	}
 	scanMap := collectFolderFilesFromScan(container, rtype, allEntries)
-	if !reflect.DeepEqual(walkMap, scanMap) {
+	if !cmp.Equal(walkMap, scanMap) {
 		t.Errorf("collectFolderFilesFromScan 与 Walk 结果不一致\nWalk: %v\nScan: %v", walkMap, scanMap)
 	}
 

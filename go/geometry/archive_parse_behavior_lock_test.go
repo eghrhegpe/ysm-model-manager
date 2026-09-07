@@ -6,9 +6,10 @@
 package geometry
 
 import (
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/internal/testutil"
@@ -71,10 +72,10 @@ func TestParseFromEntries_L0GeoFilesExcludesJunk(t *testing.T) {
 	if geo == nil {
 		t.Fatal("模型不应为 nil")
 	}
-	if got, want := geoFileBases(geoFiles), []string{"reimu.geo.json", "marisa.geo.json"}; !reflect.DeepEqual(got, want) {
+	if got, want := geoFileBases(geoFiles), []string{"reimu.geo.json", "marisa.geo.json"}; !cmp.Equal(got, want) {
 		t.Fatalf("geoFiles = %v, 期望 %v（L0 生效应排除清单外 junk 且按声明序）", got, want)
 	}
-	if got, want := subModelNames(geo.SubModels), []string{"reimu", "marisa"}; !reflect.DeepEqual(got, want) {
+	if got, want := subModelNames(geo.SubModels), []string{"reimu", "marisa"}; !cmp.Equal(got, want) {
 		t.Fatalf("SubModels = %v, 期望 %v", got, want)
 	}
 }
@@ -104,7 +105,7 @@ func TestParseFromEntries_L0EmptyHit_KeepL1GeoFiles(t *testing.T) {
 		t.Fatal("模型不应为 nil")
 	}
 	// geoFiles 回退：保留 L1 全量收集
-	if got := geoFileBases(geoFiles); !reflect.DeepEqual(got, []string{"x.geo.json"}) {
+	if got := geoFileBases(geoFiles); !cmp.Equal(got, []string{"x.geo.json"}) {
 		t.Fatalf("geoFiles = %v, 期望 [x.geo.json]（L0 空命中回退保留 L1 收集）", got)
 	}
 	// SubModels 仍走 manifest 派生（不看命中），此为现状不对称行为

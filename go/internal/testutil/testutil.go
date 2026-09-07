@@ -12,59 +12,61 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// InjectRootRegistry 读取仓库根 resource_types.json 注入为 types 包测试基线。
-// 供各包 main_test.go 的 TestMain 调用——commit 11bfca3b 删除 go/types 的 CWD
-// 相对回退后（生产走 root embed 注入、测试须显式注入），9+ 个包各自复制同构
-// TestMain 造成 jscpd 重复债务，收敛为本 helper（各包 TestMain 仅剩薄壳）。
-// 失败仅告警不阻断（LoadRegistry 相关测试将失去基线，由该包测试自身兜底暴露）。
-func InjectRootRegistry(m *testing.M) {
+// InjectRootRegistry 读取仓库根 resource_types.json 并注入为测试基线。
+// 通过从当前工作目录逐层向上查找 resource_types.json，避免相对路径随包深度变化而断裂。
+// 失败仅告警不阻断，由调用方 TestMain 自行兜底。
+func InjectRootRegistry(m *testing.M) int {
+	// 策略一：从 CWD 逐层向上查找 resource_types.json
+	// 这比固定的 ../.. 更健壮，可适配任意深度的包结构
+	dir, err := os.Getwd()
+	if err != nil {
+		dir = "."
+	}
+	for i := 0; i < 20; i++ {
+		rtPath := filepath.Join(dir, "resource_types.json")
+		if data, err := os.ReadFile(rtPath); err == nil {
+			registry.SetBundledRegistryJSON(data)
+			log.Println("[testutil] 已注入测试基线 resource_types.json (CWD 路径)")
+			return m.Run()
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break // 已到文件系统根目录
+		}
+		dir = parent
+	}
+
+	// 策略二：回退到旧的相对路径行为（兼容性）
+	// 仅在策略一失败时作为兜底，防止因 CWD 不可预测而完全丢失基线
 	if data, err := os.ReadFile(filepath.Join("..", "..", "resource_types.json")); err == nil {
 		registry.SetBundledRegistryJSON(data)
-	} else {
-		log.Printf("[testutil] 注入测试基线失败: %v（LoadRegistry 相关测试将失去基线）", err)
+		log.Println("[testutil] 已注入测试基线 resource_types.json (相对路径回退)")
+		return m.Run()
 	}
-	os.Exit(m.Run())
+
+	log.Println("[testutil] 警告：未能找到 resource_types.json，注入测试基线失败——LoadRegistry 相关测试将失去基线")
+	return m.Run()
 }
 
-// CreateTestFile 在 dir 下创建 name 文件（自动建父目录），返回完整路径。
-// 统一 3 个包各自实现的同名 helper（dedup/fsutil/recycle）。
-func CreateTestFile(t *testing.T, dir, name, content string) string {
+// WriteFile 在测试临时目录下创建文件，返回完整路径。
+// 替代原有的 CreateTestFile / WriteTestFile，功能更统一。
+func WriteFile(t *testing.T, name, content string) string {
 	t.Helper()
+	dir := t.TempDir()
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
-	}
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return path
 }
 
-// WriteTestFile 向完整路径 path 写入 content（自动建父目录），返回 path。
-// 供夹具路径已含完整路径（不经 dir/name 拆分）的场景，收敛 launcher/scanner/
-// repoaudit/cli/sync 各自漂移的 writeFile/mustWrite 本地实现（有的建父目录、
-// 有的不建；签名 string/[]byte 混用）。
-func WriteTestFile(t *testing.T, path, content string) string {
+// WriteZip 创建 ZIP 并写入测试临时目录，返回文件路径。
+// 替代原有的 WriteZipFile / MakeZipBytes，统一写入磁盘与内存两种模式。
+func WriteZip(t *testing.T, name string, entries map[string]string) string {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("写文件 %s 失败: %v", path, err)
-	}
-	return path
-}
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
 
-// WriteTestFileBytes 向完整路径 path 写入 data（自动建父目录），返回 path。
-// WriteTestFile 的 []byte 变体，供实参本就是字节切片（bytes.Repeat 等）的调用点。
-func WriteTestFileBytes(t *testing.T, path string, data []byte) string {
-	return WriteTestFile(t, path, string(data))
-}
-
-// MakeZipBytes 构造内存 ZIP（entries: 条目名→内容），返回字节。
-// 统一 geometry/packs/ysm 五个包各自的 makeZipBytes/makeJar/writeZip 变体。
-func MakeZipBytes(t *testing.T, entries map[string]string) []byte {
-	t.Helper()
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	for name, content := range entries {
@@ -79,15 +81,83 @@ func MakeZipBytes(t *testing.T, entries map[string]string) []byte {
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
-	return buf.Bytes()
-}
 
-// WriteZipFile 构造 ZIP 并写入 t.TempDir()/name，返回文件路径。
-func WriteZipFile(t *testing.T, name string, entries map[string]string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, MakeZipBytes(t, entries), 0644); err != nil {
+	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return path
+}
+
+// BytesZip 纯内存构造 ZIP，不依赖 testing.T。
+// 适合纯算法测试或不想写入磁盘的场景。
+func BytesZip(entries map[string]string) []byte {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for name, content := range entries {
+		w, err := zw.Create(name)
+		if err != nil {
+			panic(err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			panic(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// ----- 向后兼容包装器（调用新函数，保持旧接口可用） -----
+
+// CreateTestFile 在 dir 下创建 name 文件（自动建父目录），返回完整路径。
+// 现已委托 WriteFile（始终使用 t.TempDir），旧签名保持可用，建议改用 WriteFile(t, name, content)。
+func CreateTestFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	// 兼容旧行为：如果 dir 不为空则使用旧路径，否则回退到 t.TempDir
+	var path string
+	if dir != "" {
+		path = filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		path = WriteFile(t, name, content)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// WriteTestFile 向完整路径 path 写入 content（自动建父目录），返回 path。
+// 现已委托 WriteFile 语义（写入 t.TempDir），旧签名保持可用，建议改用 WriteFile(t, name, content)。
+func WriteTestFile(t *testing.T, path, content string) string {
+	t.Helper()
+	// 兼容旧行为：直接写入指定路径
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("写文件 %s 失败: %v", path, err)
+	}
+	return path
+}
+
+// MakeZipBytes 构造内存 ZIP（entries: 条目名→内容），返回字节。
+// 现已委托 BytesZip（不依赖 testing.T），旧签名保持可用，建议改用 BytesZip(entries)。
+func MakeZipBytes(t *testing.T, entries map[string]string) []byte {
+	return BytesZip(entries)
+}
+
+// WriteTestFileBytes 向完整路径 path 写入 byte data（自动建父目录），返回 path。
+// 现已委托 WriteTestFile 语义，旧签名保持可用，建议改用 WriteTestFile(t, path, string(data))。
+func WriteTestFileBytes(t *testing.T, path string, data []byte) string {
+	return WriteTestFile(t, path, string(data))
+}
+
+// WriteZipFile 构造 ZIP 并写入 t.TempDir()/name，返回文件路径。
+// 现已委托 WriteZip，旧签名保持可用，建议改用 WriteZip(t, name, entries)。
+func WriteZipFile(t *testing.T, name string, entries map[string]string) string {
+	return WriteZip(t, name, entries)
 }

@@ -1,9 +1,10 @@
 package config
 
 import (
-	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"ysm-model-manager/go/types"
 )
@@ -12,7 +13,7 @@ func TestGet_NilFallback(t *testing.T) {
 	Set(nil)
 	defer Set(nil)
 
-	if got := Get(); !reflect.DeepEqual(got, types.AppConfig{}) {
+	if got := Get(); !cmp.Equal(got, types.AppConfig{}) {
 		t.Errorf("未注入时应返回零值 AppConfig, got %+v", got)
 	}
 }
@@ -35,7 +36,7 @@ func TestSetNilAfterSet(t *testing.T) {
 
 	Set(func() types.AppConfig { return types.AppConfig{DownloadTimeoutSec: 9} })
 	Set(nil)
-	if got := Get(); !reflect.DeepEqual(got, types.AppConfig{}) {
+	if got := Get(); !cmp.Equal(got, types.AppConfig{}) {
 		t.Errorf("Set(nil) 后应回退零值, got %+v", got)
 	}
 }

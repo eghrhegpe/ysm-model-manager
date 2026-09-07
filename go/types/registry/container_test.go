@@ -1,8 +1,9 @@
 package registry
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // 容器扩展名判定（IsContainerExt / ContainerExts）：
@@ -34,7 +35,7 @@ func TestIsContainerExt(t *testing.T) {
 func TestContainerExts_SetStable(t *testing.T) {
 	got := ContainerExts()
 	want := []string{".zip", ".7z"}
-	if !reflect.DeepEqual(got, want) {
+	if !cmp.Equal(got, want) {
 		t.Errorf("ContainerExts() = %v, want %v", got, want)
 	}
 	// 集合语义：每个返回的扩展名都应被 IsContainerExt 判定为容器

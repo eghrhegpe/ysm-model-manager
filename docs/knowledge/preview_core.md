@@ -25,6 +25,7 @@ auto_fields:
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
+    - AssembledShell
     - BaseScene
     - bindInputHandlers
     - BoneDetail

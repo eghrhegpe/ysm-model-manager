@@ -33,6 +33,7 @@ auto_fields:
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - assembleBoneSelectInfo
+    - AssembledShell
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
     - attenuateAmbientForSky
@@ -430,6 +431,7 @@ auto_fields:
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts
+    - nodeControlToView
     - normalizeFbxScale
     - oneOf
     - onOverlayStyleTargetReset

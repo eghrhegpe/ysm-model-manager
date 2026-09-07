@@ -39,6 +39,7 @@ auto_fields:
     - MorphMeshLike
     - morphNodes
     - mountPreviewRootMenu
+    - nodeControlToView
     - playNodes
     - PreviewMenuCtx
     - PreviewMenuHandle

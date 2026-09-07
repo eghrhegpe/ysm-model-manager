@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-202：Go 测试执行结构收敛：registry 并发安全 + 锁协议注入 + 包内并行解锁（测试税减负 Go 版）",
+        "link": "/adr/ADR-202-go-registry-go"
+      },
+      {
         "text": "ADR-201：测试文件命名规范",
         "link": "/adr/ADR-201-test-naming-convention"
       },

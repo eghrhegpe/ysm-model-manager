@@ -324,7 +324,7 @@ func TestInstall_CustomDirNotMinecraft(t *testing.T) {
 	}
 }
 
-// ====== copyFileLocked 失败分支 ======
+// ====== CopyFileLocked 失败分支 ======
 
 func TestCopyFileLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
@@ -336,7 +336,7 @@ func TestCopyFileLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := copyFileLocked(src, filepath.Join(blocker, "sub")); err == nil {
+	if _, err := CopyFileLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
 	}
 }
@@ -359,7 +359,7 @@ func TestCopyFileLocked_RenameFail(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := copyFileLocked(src, dstDir) // rename tmp → 非空目录必败
+	_, err := CopyFileLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
@@ -816,7 +816,7 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 	}
 }
 
-// ====== copyFileLocked 剩余分支 ======
+// ====== CopyFileLocked 剩余分支 ======
 
 // TestCopyFileLocked_Success 已覆盖主路径；固定名占位用例（.copy-tmp 被占目录）
 // 随收敛到 fsutil.CopyFile 的 CreateTemp 随机名而天然规避，不再有该失败路径，
@@ -824,7 +824,7 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 
 // TestCopyFileLocked_SrcMissing 源缺失经 fsutil StepStat 前置拒绝 → IO_ERROR
 func TestCopyFileLocked_SrcMissingStepErr(t *testing.T) {
-	_, err := copyFileLocked(filepath.Join(t.TempDir(), "nope.ysm"), t.TempDir())
+	_, err := CopyFileLocked(filepath.Join(t.TempDir(), "nope.ysm"), t.TempDir())
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("源缺失应返回 IO_ERROR, got %v", err)
@@ -906,7 +906,7 @@ func TestCopyFileLocked_ReadDirAsSourceFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	dstDir := filepath.Join(dir, "dst")
-	_, err := copyFileLocked(srcDir, dstDir)
+	_, err := CopyFileLocked(srcDir, dstDir)
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("目录作源复制应返回 IO_ERROR, got %v", err)
@@ -923,7 +923,7 @@ func TestCopyFileLocked_ReadDirAsSourceFails(t *testing.T) {
 // ====== mapStepToAppError 差异化文案映射表（ADR-044 策略 A：机制归 fsutil、文案归 installer）======
 
 // TestMapStepToAppError 断言每个中性步骤名映射回六档既有差异化文案，
-// 保证收敛 fsutil.CopyFile 后 UI 提示与旧 copyFileLocked 逐字一致（回归护栏）。
+// 保证收敛 fsutil.CopyFile 后 UI 提示与旧 CopyFileLocked 逐字一致（回归护栏）。
 func TestMapStepToAppError(t *testing.T) {
 	src := "/repo/a.ysm"
 	dst := "/mc/custom/a.ysm"

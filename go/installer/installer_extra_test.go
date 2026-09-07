@@ -57,7 +57,7 @@ func TestSymlinkOrCopy_SrcMissing(t *testing.T) {
 	_ = err
 }
 
-// ====== copyFileLocked ======
+// ====== CopyFileLocked ======
 
 func TestCopyFileLocked_Success(t *testing.T) {
 	dir := t.TempDir()
@@ -67,9 +67,9 @@ func TestCopyFileLocked_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	dstDir := filepath.Join(dir, "sub")
-	dst, err := copyFileLocked(src, dstDir)
+	dst, err := CopyFileLocked(src, dstDir)
 	if err != nil {
-		t.Fatalf("copyFileLocked failed: %v", err)
+		t.Fatalf("CopyFileLocked failed: %v", err)
 	}
 	if dst == "" {
 		t.Fatal("returned path should not be empty")
@@ -89,9 +89,9 @@ func TestCopyFileLocked_SameFile(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	dst, err := copyFileLocked(src, dir)
+	dst, err := CopyFileLocked(src, dir)
 	if err != nil {
-		t.Fatalf("copyFileLocked same file failed: %v", err)
+		t.Fatalf("CopyFileLocked same file failed: %v", err)
 	}
 	if dst != filepath.Join(dir, "file.ysm") {
 		t.Errorf("expected source path, got %q", dst)
@@ -99,7 +99,7 @@ func TestCopyFileLocked_SameFile(t *testing.T) {
 }
 
 func TestCopyFileLocked_SrcMissing(t *testing.T) {
-	_, err := copyFileLocked("/nonexistent/path.ysm", t.TempDir())
+	_, err := CopyFileLocked("/nonexistent/path.ysm", t.TempDir())
 	if err == nil {
 		t.Fatal("missing source should error")
 	}

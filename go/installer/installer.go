@@ -417,7 +417,7 @@ func isAllowedEntryName(name, rtype string) bool {
 
 // applyInstallFileByMode 按 linkMode 分发单个文件到落地层（纯分发，无日志）。
 // 与 InstallLocked 阶段 5 三分支同口径，为 installDirRecursive 循环提供单一入口。
-// copyFileLocked 返回 (string, error)，其它返回 error，统一收口为 error。
+// CopyFileLocked 返回 (string, error)，其它返回 error，统一收口为 error。
 func applyInstallFileByMode(srcFile, dstDir, linkMode string) error {
 	switch linkMode {
 	case "hardlink":
@@ -425,7 +425,7 @@ func applyInstallFileByMode(srcFile, dstDir, linkMode string) error {
 	case "symlink":
 		return symlinkOrCopyLocked(srcFile, dstDir)
 	default:
-		_, err := copyFileLocked(srcFile, dstDir)
+		_, err := CopyFileLocked(srcFile, dstDir)
 		return err
 	}
 }
@@ -553,14 +553,14 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 	if err := os.MkdirAll(customDir, fsutil.DirPerms); err != nil {
 		return "", types.AppError{Code: types.ErrIO, Operation: "安装到全局", TargetPath: customDir, Reason: "无法创建安装目录", Suggestion: "请检查磁盘权限或空间"}
 	}
-	return copyFileLocked(src, customDir)
+	return CopyFileLocked(src, customDir)
 }
 
-// copyFileLocked 复制文件到目标目录（调用方须持有 InstallLock，禁止直接调用）。
+// CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。
 // 委托 fsutil.CopyFile（ADR-044 收敛：原子 tmp+rename + Sync + Chmod 0644 +
 // 目录源前置拒绝 + 读毕早关 src），复用其步骤类型化错误 StepError，把差异化
 // UI 文案留在本层 mapStepToAppError——机制归 fsutil、文案归 installer，职责分层不破。
-func copyFileLocked(src, dstDir string) (string, error) {
+func CopyFileLocked(src, dstDir string) (string, error) {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
@@ -582,7 +582,7 @@ func copyFileLocked(src, dstDir string) (string, error) {
 }
 
 // mapStepToAppError 将 fsutil.StepError 的中性步骤名映射为 installer 的差异化
-// AppError 文案（与收敛前 copyFileLocked 六档逐字一致，回归护栏见 TestMapStepToAppError）。
+// AppError 文案（与收敛前 CopyFileLocked 六档逐字一致，回归护栏见 TestMapStepToAppError）。
 // 纯函数表：只读输入 → 只出输出，不含任何 IO。
 func mapStepToAppError(step, src, dst string, err error) types.AppError {
 	base := types.AppError{Code: types.ErrIO, Operation: "复制文件", SourcePath: src, TargetPath: dst}
@@ -617,12 +617,6 @@ func CopyFile(src, dstDir string) (string, error) {
 	InstallLocker.Lock()
 	defer InstallLocker.Unlock()
 	return CopyFileLocked(src, dstDir)
-}
-
-// CopyFileLocked 复制文件到目标目录（调用方须已持有 InstallLock，禁止直接调用）。
-// 语义与 CopyFile 一致，但不重复加锁——供 sync.RelinkDir 等已持锁调用方使用（防重入死锁）。
-func CopyFileLocked(src, dstDir string) (string, error) {
-	return copyFileLocked(src, dstDir)
 }
 
 // linkOrCopyLocked 以硬链接落地 src 到 dstDir（调用方须持有 InstallLock，禁止直接调用）；

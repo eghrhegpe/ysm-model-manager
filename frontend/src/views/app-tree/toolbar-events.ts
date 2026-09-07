@@ -14,7 +14,6 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AuthorInfo } from "./authors.ts";
-import { selectState } from "./data.ts";
 import { updateSelectCount } from "./events.ts";
 import type { AppTree } from "./index.ts";
 import { getVsRows, type RenderMode, setRenderMode } from "./render.ts";
@@ -97,16 +96,16 @@ function atTlBindSelectAll(ctx: AtTlCtx): void {
   if (!selAllBtn) return;
   selAllBtn.addEventListener("click", () => {
     const treeEl = vm._root.getElementById("tree");
-    const rows = treeEl ? getVsRows(treeEl) : [];
+    const rows = treeEl ? getVsRows(vm.treeRenderCtx, treeEl) : [];
     const visible = rows.filter((r) => r.type === "file");
     const keys = visible.map((r) => r.key).filter(Boolean);
-    const allSelected = keys.every((k) => selectState.keys.has(k));
+    const allSelected = keys.every((k) => vm.selectState.keys.has(k));
     keys.forEach((k) => {
-      if (allSelected) selectState.keys.delete(k);
-      else selectState.keys.add(k);
+      if (allSelected) vm.selectState.keys.delete(k);
+      else vm.selectState.keys.add(k);
     });
     vm._renderTree();
-    updateSelectCount(ctx.root);
+    updateSelectCount(ctx.root, vm.selectState);
     flashBtn(selAllBtn);
   });
 }

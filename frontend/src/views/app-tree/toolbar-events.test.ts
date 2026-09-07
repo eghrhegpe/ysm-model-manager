@@ -3,7 +3,6 @@
 //       作者菜单填充、批量按钮、更多菜单（打开文件夹/导入/刷新/生成索引）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
-import { selectState } from "./data.ts";
 import type { AppTree } from "./index.ts";
 
 const {
@@ -33,7 +32,7 @@ const {
   modalAdvFilterMock: vi.fn(),
   setRenderModeMock: vi.fn(),
   // 默认空行（全选/反选注入行数据经 mockReturnValue）；签名对齐 render.ts getVsRows
-  getVsRowsMock: vi.fn((_el: HTMLElement) => [] as Array<{ id: number; type: "file" | "folder"; key: string; depth: number; html: string }>),
+  getVsRowsMock: vi.fn((_ctx: unknown, _el: HTMLElement) => [] as Array<{ id: number; type: "file" | "folder"; key: string; depth: number; html: string }>),
   getAndroidBridgeMock: vi.fn(),
   isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
   resolveAndroidRepoDirMock: vi.fn(),
@@ -129,6 +128,7 @@ interface VM {
   _rootAttr: string;
   _authors: Array<{ Name?: string; Count?: number } | string>;
   _filterPaths: Set<string> | null;
+  selectState: { keys: Set<string>; lastKey: string | null };
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
 }
@@ -143,6 +143,7 @@ function makeVM(root: ShadowRoot): VM {
     _rootAttr: "ysm",
     _authors: [],
     _filterPaths: null,
+    selectState: { keys: new Set(), lastKey: null },
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),
   };
@@ -179,8 +180,6 @@ beforeEach(() => {
   getAndroidBridgeMock.mockReturnValue(null); // 默认桌面（无 Android 桥）
   isViewerModeMock.mockReturnValue(false); // 默认桌面（非查看器模式）
   resolveAndroidRepoDirMock.mockResolvedValue("/storage/emulated/0/YSM-Model-Manager");
-  selectState.keys.clear();
-  selectState.lastKey = null;
 });
 
 afterEach(() => {
@@ -425,7 +424,6 @@ describe("bindToolbarEvents — 全选/反选", () => {
   it("首次点击 → 全选可见文件行", () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    // getVsRows mock 注入（模拟渲染结果；WeakMap 版访问器经模块 mock 提供）
     getVsRowsMock.mockReturnValue([
       { id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" },
       { id: 1, type: "file", key: "/r/b.ysm", depth: 0, html: "" },
@@ -435,11 +433,9 @@ describe("bindToolbarEvents — 全选/反选", () => {
 
     getByTestId("tree-sel-all")!.click();
 
-    expect(selectState.keys.has("/r/a.ysm")).toBe(true);
-    expect(selectState.keys.has("/r/b.ysm")).toBe(true);
-    // 文件夹行不参与全选
-    expect(selectState.keys.has("/r/dir")).toBe(false);
-    // 使用点接线：flashBtn 同步加 flash class（审核回归锁）
+    expect(vm.selectState.keys.has("/r/a.ysm")).toBe(true);
+    expect(vm.selectState.keys.has("/r/b.ysm")).toBe(true);
+    expect(vm.selectState.keys.has("/r/dir")).toBe(false);
     expect(getByTestId("tree-sel-all")!.classList.contains("flash")).toBe(true);
   });
 
@@ -447,12 +443,12 @@ describe("bindToolbarEvents — 全选/反选", () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     getVsRowsMock.mockReturnValue([{ id: 0, type: "file", key: "/r/a.ysm", depth: 0, html: "" }]);
-    selectState.keys.add("/r/a.ysm");
+    vm.selectState.keys.add("/r/a.ysm");
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-sel-all")!.click();
 
-    expect(selectState.keys.size).toBe(0);
+    expect(vm.selectState.keys.size).toBe(0);
   });
 });
 

@@ -4,7 +4,6 @@
 //       文件夹重命名/新建/回收 / 批量重命名（空目录/成功/部分失败）/ tree:reload
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
-import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 
 const {
@@ -106,6 +105,7 @@ interface VM {
   _filesRoot: string | null;
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
+  selectState: { keys: Set<string>; lastKey: string | null };
 }
 
 function makeVM(entries: TreeEntry[] = []): VM {
@@ -118,6 +118,7 @@ function makeVM(entries: TreeEntry[] = []): VM {
     _filesRoot: null,
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),
+    selectState: { keys: new Set(), lastKey: null },
   };
 }
 
@@ -155,8 +156,6 @@ beforeEach(() => {
   modalConfirmMock.mockResolvedValue(false);
   showBatchRenameDialogMock.mockResolvedValue(undefined);
   loadEntriesMock.mockImplementation(async () => ({ filesRoot: "/repo", entries: [] as TreeEntry[] }));
-  selectState.keys.clear();
-  selectState.lastKey = null;
 });
 
 afterEach(() => {
@@ -263,14 +262,14 @@ describe("bindBusEvents — 文件夹操作", () => {
     const vm = makeVM();
     await bind(vm);
     modalPromptMock.mockResolvedValue("新名字");
-    selectState.keys.add("/repo/旧");
+    vm.selectState.keys.add("/repo/旧");
 
     bus.emit("dir:rename", { dir: "旧" });
     await new Promise((r) => setTimeout(r, 0));
 
     expect(RenameDirMock).toHaveBeenCalledWith("/repo/旧", "新名字");
-    expect(selectState.keys.size).toBe(0);
-    expect(selectState.lastKey).toBeNull();
+    expect(vm.selectState.keys.size).toBe(0);
+    expect(vm.selectState.lastKey).toBeNull();
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
@@ -312,7 +311,7 @@ describe("bindBusEvents — 文件夹操作", () => {
     const vm = makeVM();
     await bind(vm);
     modalConfirmMock.mockResolvedValue(true);
-    selectState.keys.add("/repo/a.ysm");
+    vm.selectState.keys.add("/repo/a.ysm");
 
     bus.emit("dir:recycle", { dir: "旧目录" });
     await new Promise((r) => setTimeout(r, 0));
@@ -320,7 +319,7 @@ describe("bindBusEvents — 文件夹操作", () => {
     expect(ListAllFilePathsMock).toHaveBeenCalledWith("/repo/旧目录");
     expect(MoveToRecycleMock).toHaveBeenCalledTimes(2);
     expect(RemoveDirMock).toHaveBeenCalledWith("/repo/旧目录");
-    expect(selectState.keys.size).toBe(0);
+    expect(vm.selectState.keys.size).toBe(0);
     expect(toasts.some((t) => t.msg.includes("已回收 2 个文件"))).toBe(true);
     expect(statsRefreshed).toHaveLength(1);
   });
@@ -421,9 +420,9 @@ describe("bindBusEvents — 批量重命名", () => {
       expect.any(Function),
     );
 
-    selectState.keys.add("/repo/x/a.ysm");
+    vm.selectState.keys.add("/repo/x/a.ysm");
     await onRenames!([{ oldPath: "/repo/x/a.ysm", newName: "a2.ysm" }]);
-    expect(selectState.keys.size).toBe(0);
+    expect(vm.selectState.keys.size).toBe(0);
     expect(toasts.some((t) => t.msg.includes("批量重命名完成：1 成功"))).toBe(true);
   });
 

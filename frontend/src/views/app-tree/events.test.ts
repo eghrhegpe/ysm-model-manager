@@ -6,11 +6,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
-import { selectState, selectSingle } from "./data.ts";
+import { selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
-import { setVsRows } from "./render.ts";
+import { createTreeRenderCtx, setVsRows } from "./render.ts";
 
 const {
   getAppMock,
@@ -90,7 +90,8 @@ interface Harness {
 
 function makeHarness(): Harness {
   const container = document.createElement("div");
-  setVsRows(container, []);
+  const treeRenderCtx = createTreeRenderCtx();
+  setVsRows(treeRenderCtx, container, []);
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<div id="ftr-stat"></div>`;
@@ -105,6 +106,8 @@ function makeHarness(): Harness {
     _toggleBusy: false,
     _batchBusy: false,
     _entries: [] as TreeEntry[],
+    selectState: { keys: new Set<string>(), lastKey: null as string | null },
+    treeRenderCtx,
   } as unknown as AppTree;
   return { container, vm, root, stat };
 }
@@ -132,8 +135,6 @@ beforeEach(() => {
   });
   ToggleEnableMock.mockResolvedValue(undefined);
   RenameFileMock.mockResolvedValue(undefined);
-  selectState.keys.clear();
-  selectState.lastKey = null;
   localStorage.clear();
   emitSpy = vi.spyOn(bus, "emit");
   clipboardWrite = vi.fn().mockResolvedValue(undefined);
@@ -151,10 +152,10 @@ afterEach(() => {
 
 describe("updateSelectCount 选中统计", () => {
   it("有选中 → 文本「已选 N 个文件」+ accent 色 + data-count", () => {
-    const { root, stat } = makeHarness();
-    selectState.keys.add("/a.ysm");
-    selectState.keys.add("/b.ysm");
-    updateSelectCount(root);
+    const { root, stat, vm } = makeHarness();
+    vm.selectState.keys.add("/a.ysm");
+    vm.selectState.keys.add("/b.ysm");
+    updateSelectCount(root, vm.selectState);
     expect(stat.textContent).toBe("已选 2 个文件");
     expect(stat.style.color).toBe("var(--accent)");
     // e2e 数据通道：与文案/locale 解耦（en-US 下文案为 "N files selected"，正则断言必挂）
@@ -162,10 +163,10 @@ describe("updateSelectCount 选中统计", () => {
   });
 
   it("空选中 → 重置颜色（文本不动）+ data-count=0", () => {
-    const { root, stat } = makeHarness();
+    const { root, stat, vm } = makeHarness();
     stat.textContent = "已选 2 个文件";
     stat.style.color = "var(--accent)";
-    updateSelectCount(root);
+    updateSelectCount(root, vm.selectState);
     expect(stat.style.color).toBe("");
     expect(stat.getAttribute("data-count")).toBe("0");
   });
@@ -173,7 +174,7 @@ describe("updateSelectCount 选中统计", () => {
   it("无 #ftr-stat 节点 → 安全返回不抛", () => {
     const host = document.createElement("div");
     const emptyRoot = host.attachShadow({ mode: "open" });
-    expect(() => updateSelectCount(emptyRoot)).not.toThrow();
+    expect(() => updateSelectCount(emptyRoot, { keys: new Set() })).not.toThrow();
   });
 });
 
@@ -216,7 +217,7 @@ describe("click 行分派（文件选中）", () => {
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl") as Element);
-    expect(selectState.keys.has("/repo/a.ysm")).toBe(true);
+    expect(h.vm.selectState.keys.has("/repo/a.ysm")).toBe(true);
     expect(emitted("model:select")).toEqual([
       { path: "/repo/a.ysm", rtype: "ysm" },
     ]);
@@ -230,11 +231,11 @@ describe("click 行分派（文件选中）", () => {
     bindTreeEvents(h.container, h.vm);
     const row = h.container.querySelector(".fl") as Element;
     click(row, { ctrlKey: true });
-    expect(selectState.keys.has("/repo/a.ysm")).toBe(true);
-    expect(selectState.lastKey).toBe("/repo/a.ysm");
+    expect(h.vm.selectState.keys.has("/repo/a.ysm")).toBe(true);
+    expect(h.vm.selectState.lastKey).toBe("/repo/a.ysm");
     click(row, { ctrlKey: true });
-    expect(selectState.keys.size).toBe(0);
-    expect(selectState.lastKey).toBeNull();
+    expect(h.vm.selectState.keys.size).toBe(0);
+    expect(h.vm.selectState.lastKey).toBeNull();
     expect(emitted("model:select")).toEqual([]);
   });
 
@@ -244,19 +245,20 @@ describe("click 行分派（文件选中）", () => {
       h.container.appendChild(fileRow(p, p.split("/").pop() || p));
     }
     setVsRows(
+      h.vm.treeRenderCtx,
       h.container,
       [
         { key: "/repo/a.ysm", type: "file" },
         { key: "/repo/b.ysm", type: "file" },
         { key: "/repo/c.ysm", type: "file" },
-      ] as unknown as Parameters<typeof setVsRows>[1],
+      ] as unknown as Parameters<typeof setVsRows>[2],
     );
     bindTreeEvents(h.container, h.vm);
-    selectSingle("/repo/a.ysm"); // 锚点
+    selectSingle(h.vm.selectState, "/repo/a.ysm"); // 锚点
     const rows = h.container.querySelectorAll(".fl");
     click(rows[2], { shiftKey: true });
-    expect(selectState.keys.size).toBe(3);
-    expect(selectState.lastKey).toBe("/repo/c.ysm");
+    expect(h.vm.selectState.keys.size).toBe(3);
+    expect(h.vm.selectState.lastKey).toBe("/repo/c.ysm");
     expect(h.stat.textContent).toBe("已选 3 个文件");
     expect(emitted("model:select")).toEqual([]);
   });
@@ -266,7 +268,7 @@ describe("click 行分派（文件选中）", () => {
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl") as Element, { shiftKey: true });
-    expect(selectState.keys.size).toBe(0);
+    expect(h.vm.selectState.keys.size).toBe(0);
     expect(h.vm._renderTree).not.toHaveBeenCalled();
     expect(emitted("model:select")).toEqual([]);
   });
@@ -540,7 +542,7 @@ describe("dblclick 重命名", () => {
   it("双击行 → .nm 被 input.rename-inp 替换，value 为文件名并聚焦", () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
-    setVsRows(h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[1]);
+    setVsRows(h.vm.treeRenderCtx, h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[2]);
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelector(".nm")!
@@ -554,7 +556,7 @@ describe("dblclick 重命名", () => {
   it("Enter → preventDefault + blur；focusout 后续走保存链（RenameFile → _load/_renderTree/stats:refresh）", async () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
-    setVsRows(h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[1]);
+    setVsRows(h.vm.treeRenderCtx, h.container, [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[2]);
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelector(".nm")!
@@ -675,13 +677,13 @@ describe("dblclick 重命名", () => {
     inp.className = "rename-inp";
     inp.value = "新名字.ysm";
     h.container.querySelector(".fl")!.appendChild(inp);
-    selectState.keys.add("/repo/a.ysm");
-    selectState.lastKey = "/repo/a.ysm";
+    h.vm.selectState.keys.add("/repo/a.ysm");
+    h.vm.selectState.lastKey = "/repo/a.ysm";
     inp.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     await flush();
     expect(RenameFileMock).toHaveBeenCalledWith("/repo/a.ysm", "新名字.ysm");
-    expect(selectState.keys.size).toBe(0);
-    expect(selectState.lastKey).toBeNull();
+    expect(h.vm.selectState.keys.size).toBe(0);
+    expect(h.vm.selectState.lastKey).toBeNull();
   });
 });
 
@@ -745,12 +747,12 @@ describe("contextmenu 右键菜单", () => {
     for (const p of ["/repo/a.ysm", "/repo/b.ysm"]) {
       h.container.appendChild(fileRow(p, p.split("/").pop() || p));
     }
-    setVsRows(h.container, [
+    setVsRows(h.vm.treeRenderCtx, h.container, [
       { key: "/repo/a.ysm", type: "file" },
       { key: "/repo/b.ysm", type: "file" },
-    ] as unknown as Parameters<typeof setVsRows>[1]);
-    selectState.keys.add("/repo/a.ysm");
-    selectState.keys.add("/repo/b.ysm");
+    ] as unknown as Parameters<typeof setVsRows>[2]);
+    h.vm.selectState.keys.add("/repo/a.ysm");
+    h.vm.selectState.keys.add("/repo/b.ysm");
     bindTreeEvents(h.container, h.vm);
     h.container
       .querySelectorAll(".fl")[0]

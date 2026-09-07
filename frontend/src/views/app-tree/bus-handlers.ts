@@ -12,7 +12,6 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { selectState } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import { loadEntries } from "./loader.ts";
 
@@ -78,8 +77,8 @@ async function runBatchRename(
       fail++;
     }
   }
-  selectState.keys.clear();
-  selectState.lastKey = null;
+  vm.selectState.keys.clear();
+  vm.selectState.lastKey = null;
   await reload(vm);
   bus.emit("stats:refresh");
   bus.emit("toast:show", {
@@ -113,8 +112,8 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     await RenameDir(absDir, name.trim());
-    selectState.keys.clear();
-    selectState.lastKey = null;
+    vm.selectState.keys.clear();
+    vm.selectState.lastKey = null;
     await reload(vm);
     bus.emit("stats:refresh");
   } catch (e) {
@@ -180,8 +179,8 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     } catch (ex) {
       dbg("tree-remove-dir-failed", { dir: absDir, error: String(ex) });
     }
-    selectState.keys.clear();
-    selectState.lastKey = null;
+    vm.selectState.keys.clear();
+    vm.selectState.lastKey = null;
     await reload(vm);
     bus.emit("stats:refresh");
     const suffix = errors.length

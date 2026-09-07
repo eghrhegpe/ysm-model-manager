@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { buildTree, flattenVisible, getRenderMode, setRenderMode } from "./render.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 
 function entry(
@@ -103,11 +102,6 @@ describe("buildTree 过滤", () => {
 });
 
 describe("flattenVisible", () => {
-  beforeEach(() => {
-    selectState.keys.clear();
-    selectState.lastKey = null;
-  });
-
   it("折叠的目录只输出文件夹行（不递归）", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm")],
@@ -180,11 +174,6 @@ describe("flattenVisible", () => {
 });
 
 describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", () => {
-  beforeEach(() => {
-    selectState.keys.clear();
-    selectState.lastKey = null;
-  });
-
   it("文件夹内全部启用 → 行 ck 为 on", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm"), entry("b.ysm", "folder/b.ysm")],
@@ -301,11 +290,6 @@ describe("annotateDirNodes — O(n²) 回归绊线（深链全启用无早退）
 // loader 剪掉 /web/<type> 得到多段 relPath（分类1/狐狸/狐狸.ysm），buildTree 按段
 // 建嵌套节点、flattenVisible 递归展开——本组用例锁定「树视图子目录可展开」闭环。
 describe("R3 子目录展开（web 多段组形态）", () => {
-  beforeEach(() => {
-    selectState.keys.clear();
-    selectState.lastKey = null;
-  });
-
   // 模拟 loader 对 web entry 的 relPath 计算结果（多段组名 + 组内主文件）
   function webEntry(mainRel: string, grpPath: string): TreeEntry {
     const rel = grpPath.replace(/^\//, "");

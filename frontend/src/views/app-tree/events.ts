@@ -13,10 +13,10 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { rememberModelPath } from "@/views/app-content/init-pages.ts";
-import { selectSingle, selectState, toggleSelect } from "./data.ts";
+import { selectSingle, toggleSelect } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
-import { getVsRows } from "./render.ts";
+import { getVsRows, type TreeRenderCtx } from "./render.ts";
 
 const ENABLE_MULTI_SELECT = true;
 
@@ -26,19 +26,21 @@ const ENABLE_MULTI_SELECT = true;
 interface AtTeCtx {
   container: HTMLElement;
   vm: AppTree;
+  /** 渲染上下文（实例级，含 WeakMap 缓存） */
+  treeRenderCtx: TreeRenderCtx;
 }
 
 // ===== 闭包升格：辅助函数（atTe* 前缀） =====
-function atTeFindRow(container: HTMLElement, path: string): HTMLElement | null {
-  const rows = getVsRows(container);
+function atTeFindRow(ctx: AtTeCtx, path: string): HTMLElement | null {
+  const rows = getVsRows(ctx.treeRenderCtx, ctx.container);
   const idx = rows.findIndex((r) => r.key === path);
   if (idx === -1) return null;
   const selector = `[data-fullpath="${CSS.escape(path)}"], [data-path="${CSS.escape(path)}"]`;
-  return container.querySelector(selector);
+  return ctx.container.querySelector(selector);
 }
 
 function atTeStartRename(ctx: AtTeCtx, path: string): void {
-  const row = atTeFindRow(ctx.container, path);
+  const row = atTeFindRow(ctx, path);
   if (!row) return;
   const nmEl = row.querySelector(".nm") as HTMLElement | null;
   if (!nmEl) return;
@@ -205,6 +207,7 @@ function atTeClickRowCopy(_ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): bo
 
 function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean {
   const { container, vm } = ctx;
+  const state = vm.selectState;
   e.stopPropagation();
   const fullPath = fl.dataset.fullpath || fl.dataset.path;
   if (!fullPath) return true;
@@ -213,32 +216,32 @@ function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean
   if (isShift) {
     e.preventDefault();
     document.getSelection()?.removeAllRanges();
-    if (!selectState.lastKey) return true;
-    const allPaths = getVsRows(container)
+    if (!state.lastKey) return true;
+    const allPaths = getVsRows(ctx.treeRenderCtx, container)
       .filter((r) => r.type === "file")
       .map((r) => r.key);
-    const startIdx = allPaths.indexOf(selectState.lastKey);
+    const startIdx = allPaths.indexOf(state.lastKey);
     const endIdx = allPaths.indexOf(fullPath);
     if (startIdx !== -1 && endIdx !== -1) {
       const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
       for (let i = min; i <= max; i++) {
-        selectState.keys.add(allPaths[i]);
+        state.keys.add(allPaths[i]);
       }
     }
-    selectState.lastKey = fullPath;
+    state.lastKey = fullPath;
     vm._renderTree();
-    updateSelectCount(vm._root);
+    updateSelectCount(vm._root, vm.selectState);
     return true;
   }
   if (isCtrl) {
-    toggleSelect(fullPath);
+    toggleSelect(state, fullPath);
     vm._renderTree();
-    updateSelectCount(vm._root);
+    updateSelectCount(vm._root, vm.selectState);
     return true;
   }
-  selectSingle(fullPath);
+  selectSingle(state, fullPath);
   vm._renderTree();
-  updateSelectCount(vm._root);
+  updateSelectCount(vm._root, vm.selectState);
   // 带上已分类 rtype（当前浏览类型）：消费端优先用，避免歧义扩展名重复探测
   bus.emit("model:select", { path: fullPath, rtype: atTeGetRtype(vm) });
   rememberModelPath(fullPath);
@@ -298,8 +301,8 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
       const fullPath = fl.dataset.fullpath || fl.dataset.path;
       const nameEl = fl.querySelector(".nm");
       const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
-      const selectedPaths = getVsRows(container)
-        .filter((r) => r.type === "file" && selectState.keys.has(r.key))
+      const selectedPaths = getVsRows(ctx.treeRenderCtx, container)
+        .filter((r) => r.type === "file" && vm.selectState.keys.has(r.key))
         .map((r) => r.key);
       if (
         ENABLE_MULTI_SELECT &&
@@ -380,8 +383,8 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
         // dir:recycle / dir:batch-rename / batch:rename 三条链路。被重命名的文件若在
         // 选中集内，旧路径残留会让底部「已选 N 个文件」滞留、右键 batch 菜单携带
         // 已不存在的路径（误删风险）。
-        selectState.keys.clear();
-        selectState.lastKey = null;
+        vm.selectState.keys.clear();
+        vm.selectState.lastKey = null;
         await vm._load();
         vm._renderTree();
         bus.emit("stats:refresh");
@@ -397,10 +400,10 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
 }
 
 // ===== 导出：更新底部选中统计 =====
-export function updateSelectCount(root: ShadowRoot): void {
+export function updateSelectCount(root: ShadowRoot, state: { keys: Set<string> }): void {
   const stat = root?.getElementById("ftr-stat");
   if (!stat) return;
-  const n = selectState.keys.size;
+  const n = state.keys.size;
   // data-count 数据通道：e2e 读数字而非文案，与 locale 解耦（ADR-133 导向）
   stat.setAttribute("data-count", String(n));
   if (n > 0) {
@@ -517,7 +520,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
 
 // ===== 主函数：纯分派，原签名不变 =====
 export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
-  const ctx: AtTeCtx = { container, vm };
+  const ctx: AtTeCtx = { container, vm, treeRenderCtx: vm.treeRenderCtx };
 
   atTeBindRowDoubleClick(ctx);
   atTeBindContextMenu(ctx);

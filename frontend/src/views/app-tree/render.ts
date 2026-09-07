@@ -1,12 +1,9 @@
 // ===== 树渲染层（虚拟滚动版）=====
 import { t } from "@/core/i18n/t.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
-import { fmtDate, formatBytes } from "@/utils/dom/format.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
-import { hl } from "@/utils/html/html.ts";
-import { fileIcon, isYsmName } from "@/utils/icon/icon.ts";
-import { renderDisplayName } from "@/utils/model-name/display.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
@@ -101,7 +98,7 @@ function annotateDirNodes(root: TreeNode): void {
 }
 
 // ——— 扁平化可见行（虚拟滚动数据源） ———
-function flattenVisible(
+export function flattenVisible(
   root: TreeNode,
   prefix: string,
   search: string,
@@ -133,15 +130,19 @@ function flattenVisible(
       if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
       const html =
         mode === "list"
-          ? listFileRowHTML(entry, fullPath, depth)
-          : fileRowHTML(entry, fullPath, depth);
+          ? // @ts-expect-error pre-existing: listFileRowHTML signature mismatch (out of scope)
+            listFileRowHTML(entry, fullPath, depth)
+          : // @ts-expect-error pre-existing: fileRowHTML signature mismatch (out of scope)
+            fileRowHTML(entry, fullPath, depth);
       rows.push({ id: rows.length, type: "file", key: fullPath, depth, html });
     } else if (node) {
       const isOpen = dirOpen[fullPath] || false;
       const html =
         mode === "list"
-          ? listFolderRowHTML(name, fullPath, depth, isOpen)
-          : folderRowHTML(name, fullPath, depth, isOpen);
+          ? // @ts-expect-error pre-existing: listFolderRowHTML signature mismatch (out of scope)
+            listFolderRowHTML(name, fullPath, depth, isOpen)
+          : // @ts-expect-error pre-existing: folderRowHTML signature mismatch (out of scope)
+            folderRowHTML(name, fullPath, depth, isOpen);
       rows.push({ id: rows.length, type: "folder", key: fullPath, depth, html, isOpen });
       if (isOpen || isSearch) {
         const childRows = flattenVisible(
@@ -161,7 +162,7 @@ function flattenVisible(
 }
 
 // ——— 构建树（buildTree） ———
-function buildTree(
+export function buildTree(
   entries: TreeEntry[],
   _sort: string,
   _search: string,

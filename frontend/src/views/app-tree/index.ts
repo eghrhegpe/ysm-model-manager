@@ -446,7 +446,7 @@ export class AppTree extends WebComponentBase {
       newEl.setAttribute("aria-selected", "true");
     }
 
-    updateSelectCount(this._root);
+    updateSelectCount(this._root, this.selectState);
     bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 

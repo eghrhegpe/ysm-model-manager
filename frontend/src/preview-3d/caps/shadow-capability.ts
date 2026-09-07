@@ -1,14 +1,6 @@
-// ===== ShadowCapability — 3D 预览阴影系统 =====
+// ===== ShadowCapability — 3D 预览阴影系统（ADR-196 迁移至 envState）=====
 // 跨能力协作：不重新创建光源，只改造 LightCapability 已挂场景的 3 盏 DirectionalLight + SpotLight。
 // 跨能力连接：preview-core 构造能力后 `shadowCap.setLightCap(lightCap)` 注入引用。
-//
-// 设计要点：
-//   - renderer.shadowMap 开关 + 软/硬阴影（PCFSoft / Basic）
-//   - 统一 DirectionalLight.shadow cameraSize（正交相机 ±size 视锥体，默认 15 覆盖大部分场景）
-//   - SpotLight.shadow 用 PerspectiveCamera（自动根据 spot.angle 配 fov，不用手动）
-//   - mapSize / bias / normalBias 可调（修复阴影 acne / 缝合面漏光）
-//   - mesh castShadow / receiveShadow 全量设置 + dispose 还原（快照原状态，不破坏外部预设）
-//   - 默认 enabled=false：阴影有显著 GPU 开销，用户明确开启
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
@@ -21,33 +13,24 @@ import {
   type SceneCapability,
 } from "./scene-capability.ts";
 import { buildShadowNodes } from "./shadow-menu.ts";
-import type { ShadowParams } from "./shadow-state.ts";
-// 状态/序列化轴（ShadowParams / 默认值 / 预设表 / 模型映射）已下沉 shadow-state.ts；
-// 此处透传导出，保持既有调用方（shadow-capability.test.ts 等）的 import 路径不破坏。
-import {
-  DEFAULT_SHADOW_PARAMS,
-  SHADOW_PRESET_BY_MODEL,
-  SHADOW_PRESETS,
-  SHADOW_TYPES,
-} from "./shadow-state.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
-export type { ShadowParams };
-export { DEFAULT_SHADOW_PARAMS, SHADOW_PRESETS };
+/** 阴影类型合法值 */
+const SHADOW_TYPES = ["soft", "hard"] as const;
+export type ShadowType = (typeof SHADOW_TYPES)[number];
 
-/* ============ 快照类型：dispose 还原灯与 mesh 的原 shadow 状态 ============ */
-
-interface LightShadowSnapshot {
-  castShadow: boolean;
-  mapSize: { x: number; y: number };
-  bias: number;
-  normalBias: number;
-}
-interface MeshShadowSnapshot {
-  castShadow: boolean;
-  receiveShadow: boolean;
-}
-
-/* ============ ShadowCapability ============ */
+/** 模型类别到阴影预设 key 的映射 */
+const SHADOW_PRESET_BY_MODEL: Record<string, string> = {
+  default: "default",
+  ysm: "default",
+  vrm: "soft",
+  mmd: "soft",
+  "mmd-scene": "soft",
+  litematic: "default",
+  resourcepack: "default",
+};
 
 export class ShadowCapability implements SceneCapability {
   readonly id = "shadow";
@@ -57,7 +40,6 @@ export class ShadowCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
-  private params: ShadowParams;
   private enabled: boolean;
   /** loadState 是否成功载入过；setPreset 有它时不覆盖用户会话（避免每次新会话回到预设） */
   private isStateLoaded = false;
@@ -78,19 +60,27 @@ export class ShadowCapability implements SceneCapability {
   private _spotRef: THREE.SpotLight | null = null;
   private _spotSnapsList: Array<[THREE.SpotLight, LightShadowSnapshot]> = [];
   private meshSnaps: Map<THREE.Object3D, MeshShadowSnapshot> = new Map();
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    params?: Partial<ShadowParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
-    this.params = { ...DEFAULT_SHADOW_PARAMS, ...(opts.params ?? {}) };
-    this.enabled = opts.enabled ?? this.params.enabled;
+    this.enabled = opts.enabled ?? true;
     this.prevShadowMapEnabled = this.renderer.shadowMap.enabled;
     this.prevShadowMapType = this.renderer.shadowMap.type;
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (changed.has('shadowType') || changed.has('shadowMapSize') || changed.has('shadowBias') ||
+          changed.has('shadowNormalBias') || changed.has('shadowCameraSize')) {
+        if (this.enabled) this.apply();
+      }
+    });
   }
 
   /* -------- 跨能力注入 / mount-preview-core 兼容接口 -------- */
@@ -115,9 +105,11 @@ export class ShadowCapability implements SceneCapability {
   setPreset(adapterId: string): void {
     if (this.isStateLoaded) return;
     const presetKey = SHADOW_PRESET_BY_MODEL[adapterId] ?? "default";
-    const preset = SHADOW_PRESETS[presetKey] ?? SHADOW_PRESETS.default;
-    if (!preset) return;
-    Object.assign(this.params, preset);
+    if (presetKey === "soft") {
+      setEnvState({ shadowType: "soft" }, { source: 'auto-model' });
+    } else {
+      setEnvState({ shadowType: "hard" }, { source: 'auto-model' });
+    }
   }
 
   /* -------- 内部：apply 管线 -------- */
@@ -145,10 +137,10 @@ export class ShadowCapability implements SceneCapability {
   /** 应用方向灯 shadow 参数；DirectionalLight.shadow.camera 是 OrthographicCamera */
   private applyDirLightShadow(l: THREE.DirectionalLight): void {
     l.castShadow = true;
-    l.shadow.mapSize.set(this.params.mapSize, this.params.mapSize);
-    l.shadow.bias = this.params.bias;
-    l.shadow.normalBias = this.params.normalBias;
-    const s = this.params.cameraSize;
+    l.shadow.mapSize.set(envState.shadowMapSize, envState.shadowMapSize);
+    l.shadow.bias = envState.shadowBias;
+    l.shadow.normalBias = envState.shadowNormalBias;
+    const s = envState.shadowCameraSize;
     const cam = l.shadow.camera as THREE.OrthographicCamera;
     cam.left = -s;
     cam.right = s;
@@ -163,9 +155,9 @@ export class ShadowCapability implements SceneCapability {
   /** 应用聚光灯 shadow 参数；SpotLight.shadow.camera 是 PerspectiveCamera */
   private applySpotShadow(s: THREE.SpotLight): void {
     s.castShadow = true;
-    s.shadow.mapSize.set(this.params.mapSize, this.params.mapSize);
-    s.shadow.bias = this.params.bias;
-    s.shadow.normalBias = this.params.normalBias;
+    s.shadow.mapSize.set(envState.shadowMapSize, envState.shadowMapSize);
+    s.shadow.bias = envState.shadowBias;
+    s.shadow.normalBias = envState.shadowNormalBias;
     const cam = s.shadow.camera as THREE.PerspectiveCamera;
     cam.near = 0.5;
     cam.far = Math.max(s.distance, 50);
@@ -179,35 +171,20 @@ export class ShadowCapability implements SceneCapability {
       if (!m.isMesh) return;
       m.castShadow = true;
       m.receiveShadow = true;
-      // material.needsUpdate 一般不需要：castShadow/receiveShadow 触发 renderer 内部 uniform 更新
     });
   }
 
-  /**
-   * 收集需要配置阴影的灯。**有意不遍历场景**——只认两个显式来源：
-   * ① `LightCapability` getter（`setLightCap` 注入）② legacy 缓存（`syncLights()` 传入，
-   * 由 mount-preview-core 遍历场景后接线）。
-   *
-   * 设计理由：3D 场景里可能存在适配器自带、语义各异的灯（补光/特效灯等），
-   * 若在此遍历场景统一开 castShadow，会「误伤」这些不该参与阴影计算的灯
-   * （性能与观感双损）。故采用**调用方显式接线**的白名单语义。
-   *
-   * 契约（调用方须知）：适配器若自行往场景加灯，必须经 `setLightCap` 或 `syncLights()`
-   * 接线，否则该灯不会被纳入阴影配置（保持其原有 castShadow 值，不被本能力改写）。
-   */
   private collectLights(): {
     dirs: THREE.DirectionalLight[];
     spots: THREE.SpotLight[];
   } {
     const dirs: THREE.DirectionalLight[] = [];
     const spots: THREE.SpotLight[] = [];
-    // 优先 LightCapability getter（实例明确，不会误伤其他自定义灯）
     if (this.lightCap) {
       dirs.push(...this.lightCap.getDirectionalLights());
       const sp = this.lightCap.getSpotLight();
       if (sp) spots.push(sp);
     }
-    // 其次 legacy 缓存（mount-preview-core 遍历场景拿到的，可能与上面重复——去重）
     const seenDirs = new Set<THREE.DirectionalLight>(dirs);
     const seenSpots = new Set<THREE.SpotLight>(spots);
     for (const l of this.legacyLights) {
@@ -231,12 +208,11 @@ export class ShadowCapability implements SceneCapability {
   private applyShadows(): void {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type =
-      this.params.type === "soft" ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+      envState.shadowType === "soft" ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
     this.renderer.shadowMap.needsUpdate = true;
 
     const { dirs, spots } = this.collectLights();
     this.snapshotDirLights(dirs);
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     dirs.forEach((l) => this.applyDirLightShadow(l));
     const spotSnaps: Array<[THREE.SpotLight, LightShadowSnapshot]> = [];
     for (const sp of spots) {
@@ -249,8 +225,7 @@ export class ShadowCapability implements SceneCapability {
       spotSnaps.push([sp, snap]);
       if (sp.visible) this.applySpotShadow(sp);
     }
-    // 替换掉原单 Spot 快照：旧逻辑只会记录 1 盏，这里新逻辑与 directionals 相同记录多盏（lightCap 只有一盏 spot，但 legacy 可能有多盏）
-    this.restoreSpot(); // 清空旧 spotSnap
+    this.restoreSpot();
     if (spotSnaps.length === 1) {
       this.spotSnap = spotSnaps[0][1];
       this._spotRef = spotSnaps[0][0];
@@ -274,7 +249,6 @@ export class ShadowCapability implements SceneCapability {
     this.dirLightSnaps.clear();
   }
   private restoreSpot(): void {
-    // 多 spot：优先走 _spotSnapsList（legacy 可能有多盏）
     if (this._spotSnapsList && this._spotSnapsList.length > 0) {
       for (const [sp, snap] of this._spotSnapsList) {
         if (!sp) continue;
@@ -288,7 +262,6 @@ export class ShadowCapability implements SceneCapability {
       this.spotSnap = null;
       return;
     }
-    // 单 spot：优先 _spotRef（legacy 单盏），其次 lightCap getter
     const sp: THREE.SpotLight | null =
       this._spotRef ?? (this.lightCap ? this.lightCap.getSpotLight() : null);
     if (sp && this.spotSnap) {
@@ -323,10 +296,8 @@ export class ShadowCapability implements SceneCapability {
   /* -------- 公共 API：mesh 同步（外部加载完模型后调用，重新扫描 cast/receive + 快照）-------- */
 
   syncMeshes(roots: THREE.Object3D[]): void {
-    // 先还原之前 mesh 的快照（避免后续 accumulate snapshots 越堆越大）
     this.restoreMeshes();
     if (!this.enabled) return;
-    // 对 roots 所有子孙设 cast/receive 并写入快照
     const touched = new Set<THREE.Object3D>();
     for (const root of roots) {
       root.traverse((obj) => {
@@ -344,78 +315,85 @@ export class ShadowCapability implements SceneCapability {
   /* -------- SceneCapability 接口 -------- */
 
   apply(): void {
-    this.disableShadows(); // 先清理之前 apply 留下的状态（灯/mesh 快照可能已变）
+    this.disableShadows();
     if (!this.enabled) return;
     this.applyShadows();
   }
 
   dispose(): void {
+    this.unsubscribeEnv();
     this.disableShadows();
   }
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.params.enabled = v;
     this.apply();
   }
   isEnabled(): boolean {
     return this.enabled;
   }
 
-  getParams(): ShadowParams {
-    return this.params;
+  getParams() {
+    return {
+      enabled: this.enabled,
+      type: envState.shadowType,
+      mapSize: envState.shadowMapSize,
+      bias: envState.shadowBias,
+      normalBias: envState.shadowNormalBias,
+      cameraSize: envState.shadowCameraSize,
+    };
   }
 
   /* -------- 公共 setters（菜单调用）-------- */
 
   setMapSize(v: number): void {
-    const clamped = [512, 1024, 2048, 4096].includes(v) ? v : DEFAULT_SHADOW_PARAMS.mapSize;
-    this.params.mapSize = clamped;
+    const clamped = [512, 1024, 2048, 4096].includes(v) ? v : envState.shadowMapSize;
+    setEnvState({ shadowMapSize: clamped }, { source: 'manual' });
     if (this.enabled) this.apply();
   }
   getMapSize(): number {
-    return this.params.mapSize;
+    return envState.shadowMapSize;
   }
 
-  /** 菜单用：toggle true → 软阴影；false → 硬阴影（与 params.type 映射） */
+  /** 菜单用：toggle true → 软阴影；false → 硬阴影 */
   setSoft(v: boolean): void {
-    this.params.type = v ? "soft" : "hard";
+    setEnvState({ shadowType: v ? "soft" : "hard" }, { source: 'manual' });
     if (this.enabled) {
       this.renderer.shadowMap.type = v ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
       this.renderer.shadowMap.needsUpdate = true;
     }
   }
   isSoft(): boolean {
-    return this.params.type === "soft";
+    return envState.shadowType === "soft";
   }
 
   setBias(v: number): void {
-    this.params.bias = v;
+    setEnvState({ shadowBias: v }, { source: 'manual' });
     if (!this.enabled) return;
     const { dirs, spots } = this.collectLights();
     for (const l of dirs) l.shadow.bias = v;
     for (const sp of spots) sp.shadow.bias = v;
   }
   getBias(): number {
-    return this.params.bias;
+    return envState.shadowBias;
   }
 
   setNormalBias(v: number): void {
-    this.params.normalBias = v;
+    setEnvState({ shadowNormalBias: v }, { source: 'manual' });
     if (!this.enabled) return;
     const { dirs, spots } = this.collectLights();
     for (const l of dirs) l.shadow.normalBias = v;
     for (const sp of spots) sp.shadow.normalBias = v;
   }
   getNormalBias(): number {
-    return this.params.normalBias;
+    return envState.shadowNormalBias;
   }
 
   setCameraSize(v: number): void {
-    this.params.cameraSize = Math.max(5, Math.min(80, v));
+    setEnvState({ shadowCameraSize: Math.max(5, Math.min(80, v)) }, { source: 'manual' });
     if (!this.enabled) return;
     const { dirs } = this.collectLights();
-    const s = this.params.cameraSize;
+    const s = envState.shadowCameraSize;
     for (const l of dirs) {
       const cam = l.shadow.camera as THREE.OrthographicCamera;
       cam.left = -s;
@@ -427,16 +405,12 @@ export class ShadowCapability implements SceneCapability {
     }
   }
   getCameraSize(): number {
-    return this.params.cameraSize;
+    return envState.shadowCameraSize;
   }
-
-  /* -------- 菜单控件（声明式驱动）-------- */
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树——直产 PreviewMenuNode[]（全原生 toggle/select/slider）。
-   *  shadow 无能力总开关（无 getMasterToggle）：shadow-enabled 为平铺 toggle，
-   *  其余参数归 folder。 */
+  /** 完整参数面板节点树——直产 PreviewMenuNode[]（全原生 toggle/select/slider）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildShadowNodes(this);
   }
@@ -446,11 +420,11 @@ export class ShadowCapability implements SceneCapability {
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      type: this.params.type,
-      mapSize: this.params.mapSize,
-      bias: this.params.bias,
-      normalBias: this.params.normalBias,
-      cameraSize: this.params.cameraSize,
+      type: envState.shadowType,
+      mapSize: envState.shadowMapSize,
+      bias: envState.shadowBias,
+      normalBias: envState.shadowNormalBias,
+      cameraSize: envState.shadowCameraSize,
     });
   }
 
@@ -459,24 +433,35 @@ export class ShadowCapability implements SceneCapability {
     if (!state) return;
     if (typeof state.enabled === "boolean") {
       this.enabled = state.enabled;
-      this.params.enabled = state.enabled;
     }
     let typeRestored = false;
     restoreFields(state, {
       type: oneOf(SHADOW_TYPES, (v) => {
-        this.params.type = v;
+        setEnvState({ shadowType: v }, { source: 'manual' });
         typeRestored = true;
       }),
-      mapSize: { number: (v) => (this.params.mapSize = v) },
-      bias: { number: (v) => (this.params.bias = v) },
-      normalBias: { number: (v) => (this.params.normalBias = v) },
-      cameraSize: { number: (v) => (this.params.cameraSize = v) },
+      mapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: 'manual' }) },
+      bias: { number: (v) => setEnvState({ shadowBias: v }, { source: 'manual' }) },
+      normalBias: { number: (v) => setEnvState({ shadowNormalBias: v }, { source: 'manual' }) },
+      cameraSize: { number: (v) => setEnvState({ shadowCameraSize: v }, { source: 'manual' }) },
     });
     if (!typeRestored && typeof state.soft === "boolean") {
-      // 兼容旧 soft 字段（老会话持久化落盘，type 尚未进存档）
-      this.params.type = state.soft ? "soft" : "hard";
+      setEnvState({ shadowType: state.soft ? "soft" : "hard" }, { source: 'manual' });
     }
     this.isStateLoaded = true;
     this.apply();
   }
+}
+
+/* ============ 快照类型：dispose 还原灯与 mesh 的原 shadow 状态 ============ */
+
+interface LightShadowSnapshot {
+  castShadow: boolean;
+  mapSize: { x: number; y: number };
+  bias: number;
+  normalBias: number;
+}
+interface MeshShadowSnapshot {
+  castShadow: boolean;
+  receiveShadow: boolean;
 }

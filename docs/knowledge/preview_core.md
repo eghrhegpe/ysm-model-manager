@@ -70,7 +70,6 @@ auto_fields:
     - CreateWorkerBridgeOpts
     - createWorkerParser
     - DecodedTexture
-    - DEFAULT_GROUND_PARAMS
     - DISPOSE_TEX_KEYS
     - disposeMmdMesh
     - disposeTextureDecoder
@@ -101,7 +100,6 @@ auto_fields:
     - getSchema
     - getTextureDecoder
     - GroundCapability
-    - GroundParams
     - GroupedScene
     - hasActivePreview
     - hasSchema
@@ -170,6 +168,7 @@ auto_fields:
     - MmdPlayBridge
     - MmdZipConfig
     - mockMenuHandle
+    - MODEL_SKY_PRESETS
     - ModelEntry
     - MorphMeshLike
     - morphNodes

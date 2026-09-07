@@ -356,12 +356,9 @@ auto_fields:
     - DedupSession
     - DEFAULT_COMMUNITY_URL
     - DEFAULT_ENV_PARAMS
-    - DEFAULT_FOG_PARAMS
-    - DEFAULT_GROUND_PARAMS
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
-    - DEFAULT_REFLECTOR_PARAMS
     - DEFAULT_SHADOW_PARAMS
     - DEFAULT_SKY_PARAMS
     - DEFAULT_TD_KEYMAP
@@ -501,7 +498,6 @@ auto_fields:
     - FOG_PRESETS
     - FogCapability
     - FogMode
-    - FogParams
     - FolderGroup
     - folderRowCommon
     - folderRowHTML
@@ -582,7 +578,6 @@ auto_fields:
     - GithubPageCtx
     - GroundCapability
     - GroundMaterialParams
-    - GroundParams
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -1063,7 +1058,6 @@ auto_fields:
     - ReflectionMode
     - REFLECTOR_PRESETS
     - ReflectorCapability
-    - ReflectorParams
     - refreshAdoptedStyleSheets
     - refreshUI
     - registerAndroidBackHandler

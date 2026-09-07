@@ -1,8 +1,7 @@
-// ===== FogCapability：雾效能力（ADR-073 caps/ 能力模式）=====
+// ===== FogCapability：雾效能力（ADR-196 迁移至 envState）=====
 // 复用 THREE.Fog / THREE.FogExp2（线性 / 指数），零 addon 依赖。
 // 雾是 scene.fog 纯属性，不占 draw call；切换模式时重建新雾对象赋值到 scene.fog。
 // dispose() 时还原构造前的 scene.fog，不泄漏到其它预览会话。
-// 按模型类别套用预设（YSM 方块雾稍淡营造空间感，MMD toon 雾更薄避免褪高光）。
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
@@ -14,90 +13,66 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 export type FogMode = "linear" | "exp2";
 
 /** FogMode 合法值白名单（loadState 枚举校验用） */
 const FOG_MODES = ["linear", "exp2"] as const satisfies readonly FogMode[];
 
-export interface FogParams {
-  enabled: boolean;
-  mode: FogMode;
-  /** 雾颜色（默认取天空近地色 0xaac4e8） */
-  color: number;
-  /** 线性雾：近距开始雾化 */
-  near: number;
-  /** 线性雾：远距完全雾化 */
-  far: number;
-  /** 指数雾：密度（0.005~0.03 常见范围；越大越浓 */
-  density: number;
-}
-
-export const DEFAULT_FOG_PARAMS: FogParams = {
-  enabled: false,
-  mode: "linear",
-  color: 0xaac4e8,
-  near: 10,
-  far: 200,
-  density: 0.015,
-};
-
-/** 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 */
-export const FOG_PRESETS: Record<string, Partial<FogParams>> = {
-  default: { ...DEFAULT_FOG_PARAMS },
+/** 模型类别雾预设：材质类别不同，雾浓度/远近做合理初始值 */
+export const FOG_PRESETS: Record<string, Partial<EnvState>> = {
+  default: {},
   ysm: {
-    // 方块场景：近处清晰，远处轻雾（100 ~ 600 尺幅）
-    enabled: false,
-    mode: "linear",
-    color: 0xb8d0ec,
-    near: 20,
-    far: 600,
-    density: 0.006,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xb8d0ec,
+    fogNear: 20,
+    fogFar: 600,
+    fogDensity: 0.006,
   },
   vrm: {
-    // PBR 角色：半身近景，雾薄突出主体
-    enabled: false,
-    mode: "linear",
-    color: 0xc5d4e8,
-    near: 50,
-    far: 400,
-    density: 0.008,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xc5d4e8,
+    fogNear: 50,
+    fogFar: 400,
+    fogDensity: 0.008,
   },
   mmd: {
-    // toon 材质高光易被雾褪：整体更薄
-    enabled: false,
-    mode: "linear",
-    color: 0xd6e0f0,
-    near: 80,
-    far: 500,
-    density: 0.005,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xd6e0f0,
+    fogNear: 80,
+    fogFar: 500,
+    fogDensity: 0.005,
   },
   "mmd-scene": {
-    // 场景模型：大范围雾（80 ~ 1500），营造纵深感
-    enabled: false,
-    mode: "linear",
-    color: 0xd0daed,
-    near: 100,
-    far: 1500,
-    density: 0.003,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xd0daed,
+    fogNear: 100,
+    fogFar: 1500,
+    fogDensity: 0.003,
   },
   litematic: {
-    // 体素大场景：线性雾营造距离感
-    enabled: false,
-    mode: "linear",
-    color: 0xc0d4f0,
-    near: 30,
-    far: 800,
-    density: 0.004,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xc0d4f0,
+    fogNear: 30,
+    fogFar: 800,
+    fogDensity: 0.004,
   },
   resourcepack: {
-    // MC 方块/物品：同 YSM 口径
-    enabled: false,
-    mode: "linear",
-    color: 0xb8d0ec,
-    near: 20,
-    far: 600,
-    density: 0.006,
+    fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xb8d0ec,
+    fogNear: 20,
+    fogFar: 600,
+    fogDensity: 0.006,
   },
 };
 
@@ -108,33 +83,40 @@ export class FogCapability implements SceneCapability {
   readonly descKey = "preview.fogDesc";
 
   private scene: THREE.Scene;
-  private params: FogParams;
   private enabled: boolean;
   /** 构造前 scene.fog，dispose 时还原 */
   private prevFog: THREE.Fog | THREE.FogExp2 | null;
   /** 当前挂在 scene 上的雾对象（由 createFog() 创建或 null 禁用） */
   private currentFog: THREE.Fog | THREE.FogExp2 | null = null;
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: {
     scene: THREE.Scene;
-    params?: Partial<FogParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.params = { ...DEFAULT_FOG_PARAMS, ...(opts.params ?? {}) };
-    this.enabled = opts.enabled ?? this.params.enabled;
+    this.enabled = opts.enabled ?? true;
     this.prevFog = (this.scene.fog as THREE.Fog | THREE.FogExp2 | null) ?? null;
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (changed.has('fogEnabled') || changed.has('fogMode') || changed.has('fogColor') ||
+          changed.has('fogNear') || changed.has('fogFar') || changed.has('fogDensity')) {
+        this.applyFog();
+      }
+    });
   }
 
-  /* -------- 内部：按当前 params 创建雾对象（或 null）并写回 scene.fog -------- */
+  /* -------- 内部：按当前 envState 创建雾对象（或 null）并写回 scene.fog -------- */
 
   private createFog(): THREE.Fog | THREE.FogExp2 | null {
-    if (!this.enabled) return null;
-    if (this.params.mode === "exp2") {
-      const f = new THREE.FogExp2(this.params.color, this.params.density);
+    if (!this.enabled || !envState.fogEnabled) return null;
+    if (envState.fogMode === "exp2") {
+      const f = new THREE.FogExp2(envState.fogColor, envState.fogDensity);
       return f;
     }
-    return new THREE.Fog(this.params.color, this.params.near, this.params.far);
+    return new THREE.Fog(envState.fogColor, envState.fogNear, envState.fogFar);
   }
 
   private applyFog(): void {
@@ -152,7 +134,6 @@ export class FogCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.params.enabled = v;
     this.applyFog();
   }
 
@@ -163,70 +144,76 @@ export class FogCapability implements SceneCapability {
   /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
   setPreset(modelType: string): void {
     const preset = FOG_PRESETS[modelType] ?? FOG_PRESETS.default;
-    this.params = { ...this.params, ...preset };
+    setEnvState(preset, { source: 'auto-model' });
     // 预设只调合理默认，不强制开启（避免覆盖用户明确的开关选择）
     this.applyFog();
   }
 
   /* -------- 参数变更 API -------- */
 
+  setEnabledFog(v: boolean): void {
+    setEnvState({ fogEnabled: v }, { source: 'manual' });
+  }
+
   setMode(mode: FogMode): void {
-    this.params.mode = mode;
-    this.applyFog();
+    setEnvState({ fogMode: mode }, { source: 'manual' });
   }
 
   setColor(hex: number): void {
-    this.params.color = hex;
+    setEnvState({ fogColor: hex }, { source: 'manual' });
     if (this.currentFog) this.currentFog.color.setHex(hex);
-    else this.applyFog();
   }
 
   getColor(): number {
-    return this.params.color;
+    return envState.fogColor;
   }
 
   /** 线性雾：near / far；传任一即可 */
   setLinearRange(near?: number, far?: number): void {
-    if (near !== undefined) this.params.near = near;
-    if (far !== undefined) this.params.far = far;
+    const partial: Partial<EnvState> = {};
+    if (near !== undefined) partial.fogNear = near;
+    if (far !== undefined) partial.fogFar = far;
+    setEnvState(partial, { source: 'manual' });
     if (this.currentFog && this.currentFog instanceof THREE.Fog) {
-      this.currentFog.near = this.params.near;
-      this.currentFog.far = this.params.far;
-    } else {
-      this.applyFog();
+      this.currentFog.near = envState.fogNear;
+      this.currentFog.far = envState.fogFar;
     }
   }
 
   /** 指数雾：density */
   setDensity(d: number): void {
-    this.params.density = d;
+    setEnvState({ fogDensity: d }, { source: 'manual' });
     if (this.currentFog && this.currentFog instanceof THREE.FogExp2) {
       this.currentFog.density = d;
-    } else {
-      this.applyFog();
     }
   }
 
-  /* 菜单 getter（对齐 getMode/getColor 口径——私有 params 只许公开方法读，禁 cast 掏心） */
+  /* 菜单 getter（对齐 getMode/getColor 口径） */
   getDensity(): number {
-    return this.params.density;
+    return envState.fogDensity;
   }
   getNear(): number {
-    return this.params.near;
+    return envState.fogNear;
   }
   getFar(): number {
-    return this.params.far;
-  }
-
-  getParams(): FogParams {
-    return { ...this.params, enabled: this.enabled };
+    return envState.fogFar;
   }
 
   getMode(): FogMode {
-    return this.params.mode;
+    return envState.fogMode as FogMode;
   }
 
-  /* -------- 菜单控件（声明式驱动）-------- */
+  /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用） */
+  getParams() {
+    return {
+      enabled: this.enabled && envState.fogEnabled,
+      mode: envState.fogMode,
+      color: envState.fogColor,
+      near: envState.fogNear,
+      far: envState.fogFar,
+      density: envState.fogDensity,
+    };
+  }
 
   /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
 
@@ -237,10 +224,7 @@ export class FogCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树（能力总开关 + 参数组 folder）——直产 PreviewMenuNode[]，
-   *  不经过 MenuControlDef/桥接层；全原生节点（toggle/color/select/slider）。
-   *  消费者需「除总开关外」子树时按 getMasterNodeId() 剔除顶层节点
-   *  （env.ts envCapSubNodes 通用处理）。 */
+  /** 完整参数面板节点树（能力总开关 + 参数组 folder） */
   getMenuNodes(): PreviewMenuNode[] {
     return buildFogNodes(this);
   }
@@ -250,11 +234,12 @@ export class FogCapability implements SceneCapability {
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      mode: this.params.mode,
-      color: this.params.color,
-      near: this.params.near,
-      far: this.params.far,
-      density: this.params.density,
+      fogEnabled: envState.fogEnabled,
+      fogMode: envState.fogMode,
+      fogColor: envState.fogColor,
+      fogNear: envState.fogNear,
+      fogFar: envState.fogFar,
+      fogDensity: envState.fogDensity,
     });
   }
 
@@ -265,14 +250,14 @@ export class FogCapability implements SceneCapability {
       enabled: {
         boolean: (v) => {
           this.enabled = v;
-          this.params.enabled = v;
         },
       },
-      mode: oneOf(FOG_MODES, (v) => (this.params.mode = v)),
-      color: { number: (v) => (this.params.color = v) },
-      near: { number: (v) => (this.params.near = v) },
-      far: { number: (v) => (this.params.far = v) },
-      density: { number: (v) => (this.params.density = v) },
+      fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: 'manual' }) },
+      fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: 'manual' })),
+      fogColor: { number: (v) => setEnvState({ fogColor: v }, { source: 'manual' }) },
+      fogNear: { number: (v) => setEnvState({ fogNear: v }, { source: 'manual' }) },
+      fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: 'manual' }) },
+      fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: 'manual' }) },
     });
     this.applyFog();
   }
@@ -280,6 +265,7 @@ export class FogCapability implements SceneCapability {
   /* -------- 生命周期：还原 prevFog -------- */
 
   dispose(): void {
+    this.unsubscribeEnv();
     // 还原构造前 scene.fog（可能为 null）
     this.scene.fog = this.prevFog;
     this.currentFog = null;

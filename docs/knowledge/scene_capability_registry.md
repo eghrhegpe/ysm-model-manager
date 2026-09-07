@@ -32,12 +32,9 @@ auto_fields:
     - deepMergeLightParams
     - DeepPartial
     - DEFAULT_ENV_PARAMS
-    - DEFAULT_FOG_PARAMS
-    - DEFAULT_GROUND_PARAMS
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
-    - DEFAULT_REFLECTOR_PARAMS
     - DEFAULT_SHADOW_PARAMS
     - DEFAULT_SKY_PARAMS
     - DEFAULT_WATER_PARAMS
@@ -57,12 +54,10 @@ auto_fields:
     - FOG_PRESETS
     - FogCapability
     - FogMode
-    - FogParams
     - generateSurfacePixels
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
-    - GroundParams
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -89,7 +84,6 @@ auto_fields:
     - ReflectionMode
     - REFLECTOR_PRESETS
     - ReflectorCapability
-    - ReflectorParams
     - RenderModeCapability
     - restoreFields
     - restoreState
@@ -105,6 +99,7 @@ auto_fields:
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams
+    - ShadowType
     - SkyCapability
     - SkyModelType
     - SkyParams

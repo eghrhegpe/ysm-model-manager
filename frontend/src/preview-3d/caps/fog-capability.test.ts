@@ -1,29 +1,22 @@
 // @vitest-environment node
-// ===== FogCapability 测试（preview-3d/caps/fog-capability.ts）=====
-// 覆盖：构造默认值、模式切换、线性近远距、指数密度、启用禁用、预设、持久化、getMenuControls。
+// ===== FogCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import {
-  FogCapability,
-  DEFAULT_FOG_PARAMS,
-  FOG_PRESETS,
-} from "./fog-capability.ts";
+import { FogCapability } from "./fog-capability.ts";
+import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
 
-function newCap(opts: { enabled?: boolean; params?: Partial<import("./fog-capability.ts").FogParams> } = {}) {
-  const scene = new THREE.Scene();
-  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
-  return new FogCapability({
-    scene,
-    ...(opts.params !== undefined ? { params: opts.params } : {}),
-    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
-  });
+function newCap(opts: { enabled?: boolean } = {}) {
+  return new FogCapability({ scene: new THREE.Scene(), ...opts });
 }
 
 describe("FogCapability — 构造与默认值", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("构造默认值完整", () => {
     const cap = newCap();
     const p = cap.getParams();
-    expect(cap.isEnabled()).toBe(false);
+    expect(cap.isEnabled()).toBe(true);
+    expect(envState.fogEnabled).toBe(false);
     expect(p.mode).toBe("linear");
     expect(p.near).toBe(10);
     expect(p.far).toBe(200);
@@ -31,13 +24,14 @@ describe("FogCapability — 构造与默认值", () => {
     expect(p.color).toBe(0xaac4e8);
   });
 
-  it("enabled:true 初始启用", () => {
-    const cap = newCap({ enabled: true });
-    expect(cap.isEnabled()).toBe(true);
+  it("enabled:false 初始禁用", () => {
+    const cap = newCap({ enabled: false });
+    expect(cap.isEnabled()).toBe(false);
   });
 
-  it("params 覆盖生效", () => {
-    const cap = newCap({ params: { mode: "exp2", density: 0.02, near: 50, far: 500 } });
+  it("setEnvState 覆盖生效", () => {
+    setEnvState({ fogMode: "exp2", fogDensity: 0.02, fogNear: 50, fogFar: 500 }, { source: 'manual' });
+    const cap = newCap();
     const p = cap.getParams();
     expect(p.mode).toBe("exp2");
     expect(p.density).toBe(0.02);
@@ -47,6 +41,8 @@ describe("FogCapability — 构造与默认值", () => {
 });
 
 describe("FogCapability — 模式切换", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setMode 切换线性/指数", () => {
     const cap = newCap();
     cap.setMode("exp2");
@@ -57,6 +53,8 @@ describe("FogCapability — 模式切换", () => {
 });
 
 describe("FogCapability — 线性范围", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setLinearRange 设置近远距", () => {
     const cap = newCap({ enabled: true });
     cap.setLinearRange(20, 400);
@@ -66,7 +64,8 @@ describe("FogCapability — 线性范围", () => {
   });
 
   it("setLinearRange 传单一参数不覆盖另一参数", () => {
-    const cap = newCap({ enabled: true, params: { near: 10, far: 200 } });
+    setEnvState({ fogNear: 10, fogFar: 200 }, { source: 'manual' });
+    const cap = newCap({ enabled: true });
     cap.setLinearRange(50, undefined);
     expect(cap.getParams().near).toBe(50);
     expect(cap.getParams().far).toBe(200);
@@ -77,6 +76,8 @@ describe("FogCapability — 线性范围", () => {
 });
 
 describe("FogCapability — 指数密度", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setDensity 设置密度", () => {
     const cap = newCap({ enabled: true });
     cap.setDensity(0.03);
@@ -85,6 +86,8 @@ describe("FogCapability — 指数密度", () => {
 });
 
 describe("FogCapability — 启用/禁用", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setEnabled 切换", () => {
     const cap = newCap();
     cap.setEnabled(true);
@@ -92,14 +95,23 @@ describe("FogCapability — 启用/禁用", () => {
     cap.setEnabled(false);
     expect(cap.isEnabled()).toBe(false);
   });
+
+  it("setEnabledFog 切换", () => {
+    const cap = newCap();
+    cap.setEnabledFog(true);
+    expect(envState.fogEnabled).toBe(true);
+    cap.setEnabledFog(false);
+    expect(envState.fogEnabled).toBe(false);
+  });
 });
 
 describe("FogCapability — 预设", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setPreset 按模型类别套用", () => {
     const cap = newCap();
     cap.setPreset("mmd");
     const p = cap.getParams();
-    // mmd 预设
     expect(p.mode).toBe("linear");
     cap.setPreset("vrm");
     const p2 = cap.getParams();
@@ -108,12 +120,14 @@ describe("FogCapability — 预设", () => {
 });
 
 describe("FogCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { localStorage.clear(); resetEnvState(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
-    const cap = newCap({ enabled: true, params: { mode: "exp2", density: 0.025, near: 30, far: 500 } });
+    setEnvState({ fogEnabled: true, fogMode: "exp2", fogDensity: 0.025, fogNear: 30, fogFar: 500 }, { source: 'manual' });
+    const cap = newCap();
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.isEnabled()).toBe(true);
@@ -124,13 +138,13 @@ describe("FogCapability — 持久化", () => {
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = newCap({ params: { mode: "exp2" } });
+    const cap = newCap();
     cap.loadState();
-    expect(cap.getMode()).toBe("exp2");
+    expect(cap.getMode()).toBe("linear");
   });
 
   it("loadState 读回合法数据", () => {
-    localStorage.setItem("ysm-scene-cap-fog", JSON.stringify({ enabled: true, mode: "exp2", density: 0.02, color: 0x123456, near: 20, far: 300 }));
+    localStorage.setItem("ysm-scene-cap-fog", JSON.stringify({ enabled: true, fogMode: "exp2", fogDensity: 0.02, fogColor: 0x123456, fogNear: 20, fogFar: 300 }));
     const cap = newCap();
     cap.loadState();
     expect(cap.isEnabled()).toBe(true);
@@ -140,6 +154,8 @@ describe("FogCapability — 持久化", () => {
 });
 
 describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -179,6 +195,8 @@ describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 
 });
 
 describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("完整树 = master toggle 原生节点 + 参数组 folder（color/select/3 slider）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -186,9 +204,9 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     // master toggle
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("fog-enabled");
-    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    nodes[0]!.control!.set!(true);
-    expect(cap.isEnabled()).toBe(true);
+    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
+    nodes[0]!.control!.set!(false);
+    expect(cap.isEnabled()).toBe(false);
     // 参数组 folder
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
@@ -218,7 +236,8 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
   });
 
   it("color/select/slider 节点读写闭包直连 cap", () => {
-    const cap = newCap({ params: { mode: "exp2" } });
+    setEnvState({ fogMode: "exp2" }, { source: 'manual' });
+    const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;
     const color = folder.children!.find((c) => c.id === "fog-color")!;
     expect(color.kind).toBe("color");
@@ -238,19 +257,70 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
 });
 
 describe("FogCapability — 预设数据完整性", () => {
-  it("DEFAULT_FOG_PARAMS 默认值完整", () => {
-    expect(DEFAULT_FOG_PARAMS.enabled).toBe(false);
-    expect(DEFAULT_FOG_PARAMS.mode).toBe("linear");
-    expect(typeof DEFAULT_FOG_PARAMS.color).toBe("number");
-    expect(typeof DEFAULT_FOG_PARAMS.near).toBe("number");
-    expect(typeof DEFAULT_FOG_PARAMS.far).toBe("number");
-    expect(typeof DEFAULT_FOG_PARAMS.density).toBe("number");
+  beforeEach(() => { resetEnvState(); });
+
+  it("envState 默认值完整", () => {
+    expect(envState.fogEnabled).toBe(false);
+    expect(envState.fogMode).toBe("linear");
+    expect(typeof envState.fogColor).toBe("number");
+    expect(typeof envState.fogNear).toBe("number");
+    expect(typeof envState.fogFar).toBe("number");
+    expect(typeof envState.fogDensity).toBe("number");
+  });
+});
+
+describe("FogCapability — apply 管线", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("applyFog 写入 scene.fog", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene, enabled: true });
+    cap.setEnabledFog(true);
+    expect(scene.fog).not.toBeNull();
+    cap.setEnabledFog(false);
+    // 禁用时还原构造前 scene.fog（null）
+    expect(scene.fog).toBeNull();
   });
 
-  it("FOG_PRESETS 覆盖所有模型类型", () => {
-    const expectedTypes = ["default", "ysm", "vrm", "mmd", "mmd-scene", "litematic", "resourcepack"];
-    for (const t of expectedTypes) {
-      expect(FOG_PRESETS[t]).toBeDefined();
-    }
+  it("setColor 更新 currentFog 颜色", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene, enabled: true });
+    cap.setEnabledFog(true);
+    cap.setColor(0x00ff00);
+    const fog = scene.fog as THREE.Fog;
+    expect(fog.color.getHex()).toBe(0x00ff00);
+  });
+
+  it("setLinearRange 更新 currentFog 近/远距", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene, enabled: true });
+    cap.setEnabledFog(true);
+    cap.setLinearRange(100, 2000);
+    const fog = scene.fog as THREE.Fog;
+    expect(fog.near).toBe(100);
+    expect(fog.far).toBe(2000);
+  });
+
+  it("setDensity 更新 currentFog 密度（exp2 模式）", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene, enabled: true });
+    cap.setEnabledFog(true);
+    cap.setMode("exp2");
+    cap.setDensity(0.05);
+    const fog = scene.fog as THREE.FogExp2;
+    expect(fog.density).toBe(0.05);
+  });
+});
+
+describe("FogCapability — 生命周期", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("dispose 还原 prevFog", () => {
+    const scene = new THREE.Scene();
+    const prevFog = new THREE.Fog(0xffffff, 10, 100);
+    scene.fog = prevFog;
+    const cap = new FogCapability({ scene });
+    cap.dispose();
+    expect(scene.fog).toBe(prevFog);
   });
 });

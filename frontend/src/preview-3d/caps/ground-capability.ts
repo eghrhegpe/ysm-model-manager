@@ -1,9 +1,7 @@
-// ===== GroundCapability：地面能力（ADR-073 同款 caps/ 能力模式）=====
+// ===== GroundCapability：地面能力（ADR-196 迁移至 envState）=====
 // 统一核心注入（mount-preview-core），YSM/VRM/MMD/Litematic 零改动继承。
 // GridHelper 地面 + 表面材质层（spec 单源，见 ground-surface-spec.ts）+ 水面叠加层；
-// apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览
-// （对齐 SkyCapability 生命周期口径）。实现 SceneCapability 统一接口，
-// 支持注册表自动发现 + 菜单控件 + 持久化。
+// apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
 import { dbg } from "../../utils/debug/debug.ts";
@@ -14,8 +12,6 @@ import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
   buildGroundSurfaceSpec,
-  DEFAULT_GROUND_SURFACE_PARAMS,
-  type GroundMaterialParams,
   type GroundSurfaceMode,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
@@ -24,15 +20,16 @@ import {
 } from "./ground-surface-spec.ts";
 import {
   createListenerSet,
-  type FieldKind,
   GROUND_LAYER_OFFSETS,
   oneOf,
   persistState,
-  pickPersistFields,
   restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 程序化表面纹理边长（plain/grid/checker 共用；512² 够细且重建成本低） */
 const SURFACE_TEX_SIZE = 512;
@@ -49,54 +46,6 @@ const GROUND_SURFACE_MODES: readonly GroundSurfaceMode[] = [
   "marble",
 ];
 
-/** 地面参数（表面材质 + 网格；水面已拆分为独立 WaterCapability） */
-export interface GroundParams extends GroundMaterialParams {
-  /** 地面网格尺寸（世界单位） */
-  size: number;
-  /** 网格分段 */
-  divisions: number;
-  /** 中心轴线颜色 */
-  colorCenter: number;
-  /** 网格线颜色 */
-  colorGrid: number;
-  /** 地面初始可见 */
-  visible: boolean;
-}
-
-export const DEFAULT_GROUND_PARAMS: GroundParams = {
-  ...DEFAULT_GROUND_SURFACE_PARAMS, // mat* 材质字段（matSource 默认 none）
-  size: 80,
-  divisions: 60,
-  colorCenter: 0x555577,
-  colorGrid: 0x2a2a3a,
-  visible: true,
-};
-
-/**
- * 持久化种别表（2026-09 锐评 P2-1）：saveState 键集唯一事实源，satisfies 与 GroundParams
- * 编译期互锁（漏键/多键即报错）——修复 size/divisions/colorCenter/colorGrid 漏存（改网格
- * 尺寸/线色跨会话丢失的 bug）。matSource 除外：custom 无缓存回退语义，cap 内显式处理。
- * loadState 的 mat* 七字段走 setter（clamp + refreshSurface 副作用），不进纯赋值绑定。
- */
-const GROUND_PERSIST_FIELDS = {
-  visible: "boolean",
-  size: "number",
-  divisions: "number",
-  colorCenter: "number",
-  colorGrid: "number",
-  matColor: "number",
-  matLineColor: "number",
-  matColor2: "number",
-  matGridSize: "number",
-  matOpacity: "number",
-  matScale: "number",
-  matRotationDeg: "number",
-  matDensity: "number",
-  matAngleDeg: "number",
-  matRoughness: "number",
-  matMetalness: "number",
-} as const satisfies Record<Exclude<keyof GroundParams, "matSource">, FieldKind>;
-
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
   readonly labelKey = "preview.ground";
@@ -105,48 +54,59 @@ export class GroundCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private grid: THREE.GridHelper;
-  private surface: THREE.Mesh; // 表面材质层（spec 单源驱动；matSource=none 时隐藏）
-  private surfaceMat: THREE.MeshStandardMaterial | null = null; // 当前表面材质（重建时换新）
-  private surfaceTex: THREE.Texture | null = null; // 当前挂载纹理（自建才 dispose）
-  private surfaceSpec: GroundSurfaceSpec | null = null; // 当前 spec（重建判别基准）
-  private customTex: THREE.Texture | null = null; // 自定义贴图缓存（独立于材质生命周期）
-  private customTexName = ""; // 自定义贴图文件名（菜单 hint + token）
-  private params: GroundParams;
+  private surface: THREE.Mesh;
+  private surfaceMat: THREE.MeshStandardMaterial | null = null;
+  private surfaceTex: THREE.Texture | null = null;
+  private surfaceSpec: GroundSurfaceSpec | null = null;
+  private customTex: THREE.Texture | null = null;
+  private customTexName = "";
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅材质来源切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: {
     scene: THREE.Scene;
-    params?: Partial<GroundParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.params = { ...DEFAULT_GROUND_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? true;
     this.grid = this.createGridHelper();
     this.surface = this.createSurfaceMesh();
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (changed.has('groundType') || changed.has('groundColor') || changed.has('groundLineColor') ||
+          changed.has('groundMatSource') || changed.has('groundSize') || changed.has('groundDivisions') ||
+          changed.has('groundMatColor') || changed.has('groundMatLineColor') || changed.has('groundMatColor2') ||
+          changed.has('groundMatGridSize') || changed.has('groundMatOpacity') || changed.has('groundMatScale') ||
+          changed.has('groundMatRotationDeg') || changed.has('groundMatDensity') || changed.has('groundMatAngleDeg') ||
+          changed.has('groundMatRoughness') || changed.has('groundMatMetalness')) {
+        this.refreshSurface();
+      }
+    });
   }
 
   private createGridHelper(): THREE.GridHelper {
     const grid = new THREE.GridHelper(
-      this.params.size,
-      this.params.divisions,
-      this.params.colorCenter,
-      this.params.colorGrid,
+      envState.groundSize,
+      envState.groundDivisions,
+      envState.groundColorCenter,
+      envState.groundColorGrid,
     );
-    grid.visible = this.params.visible;
+    grid.visible = envState.groundVisible;
     grid.name = "ysm-ground";
     return grid;
   }
 
   private createSurfaceMesh(): THREE.Mesh {
-    const surfaceGeo = new THREE.PlaneGeometry(this.params.size, this.params.size);
+    const surfaceGeo = new THREE.PlaneGeometry(envState.groundSize, envState.groundSize);
     const surface = new THREE.Mesh(surfaceGeo);
     surface.rotation.x = -Math.PI / 2;
     surface.position.y = GROUND_LAYER_OFFSETS.groundSurface;
     surface.name = "ysm-ground-surface";
-    this.surface = surface; // 先挂成员再刷新（refreshSurface→rebuildSurface 会解引用 this.surface）
+    this.surface = surface;
     this.refreshSurface();
     return surface;
   }
@@ -159,7 +119,7 @@ export class GroundCapability implements SceneCapability {
 
   /** 地面显隐开关（表面层跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
   setVisible(v: boolean): void {
-    this.params.visible = v;
+    setEnvState({ groundVisible: v }, { source: 'manual' });
     this.grid.visible = v;
     this.updateSurfaceVisible();
   }
@@ -175,16 +135,8 @@ export class GroundCapability implements SceneCapability {
       if (this.grid.parent) this.grid.parent.remove(this.grid);
       if (this.surface.parent) this.surface.parent.remove(this.surface);
     }
-    // 门控须随 enabled 重算：surface.visible = enabled × params.visible × 模式非 none。
-    // 只挂卸场景而不重算会留下陈旧值——「禁用期间改材质（refreshSurface 按 enabled=false
-    // 重算成 false）→ 再启用时 apply() 只挂回、不恢复门控」会让表面层挂在场景里却不可见，
-    // 表现为地面材质凭空消失。与 setVisible 路径保持对称（setVisible 亦走此重算）。
     this.updateSurfaceVisible();
   }
-
-  // 所有 mat* setter 只改 params 后调 refreshSurface()；
-  // structural 变化 → rebuildSurface（新材质+新纹理），appearance 变化 → applyGroundSurfaceAppearance 原地。
-  // 禁止绕过 refreshSurface 直接 mutate 材质（合约测试锁死两路径等价性）。
 
   /** 程序化像素 → DataTexture（SRGB：albedo 语义；RepeatWrapping 平铺） */
   private makeGeneratedTexture(st: GroundSurfaceStructuralSpec): THREE.DataTexture {
@@ -208,8 +160,6 @@ export class GroundCapability implements SceneCapability {
   private rebuildSurface(spec: GroundSurfaceSpec): void {
     const st = { ...spec.structural };
 
-    // 先释放旧材质与旧自建纹理——在创建新纹理之前 dispose，避免新旧纹理短暂并存
-    // 导致双倍 GPU 纹理内存峰值（程序化 CanvasTexture 虽小，但保持正确顺序更安全）
     if (this.surfaceMat) {
       this.surfaceMat.dispose();
       if (this.surfaceTex && this.surfaceTex !== this.customTex) {
@@ -220,25 +170,39 @@ export class GroundCapability implements SceneCapability {
 
     let tex: THREE.Texture | null = null;
     if (st.mode === "texture") {
-      tex = this.customTex ?? this.makeGeneratedTexture({ ...st, mode: "solid" }); // 无缓存先占位纯色
+      tex = this.customTex ?? this.makeGeneratedTexture({ ...st, mode: "solid" });
     } else if (st.mode !== "solid" && st.mode !== "none") {
       tex = this.makeGeneratedTexture(st);
-    } // solid/none：color 直出，无贴图
+    }
 
     this.surfaceTex = tex;
     this.surfaceMat = new THREE.MeshStandardMaterial();
     applyGroundSurfaceStructural(this.surfaceMat, st, tex);
-    applyGroundSurfaceAppearance(this.surfaceMat, spec, this.params.size);
+    applyGroundSurfaceAppearance(this.surfaceMat, spec, envState.groundSize);
     this.surface.material = this.surfaceMat;
   }
 
   /** 唯一变更入口：判别重建/原地并落地（所有 setter 的必经之路） */
   private refreshSurface(): void {
-    const next = buildGroundSurfaceSpec(this.params, this.currentTextureToken());
+    const matParams = {
+      matSource: envState.groundMatSource,
+      matColor: envState.groundMatColor,
+      matLineColor: envState.groundMatLineColor,
+      matColor2: envState.groundMatColor2,
+      matGridSize: envState.groundMatGridSize,
+      matOpacity: envState.groundMatOpacity,
+      matScale: envState.groundMatScale,
+      matRotationDeg: envState.groundMatRotationDeg,
+      matDensity: envState.groundMatDensity,
+      matAngleDeg: envState.groundMatAngleDeg,
+      matRoughness: envState.groundMatRoughness,
+      matMetalness: envState.groundMatMetalness,
+    };
+    const next = buildGroundSurfaceSpec(matParams, this.currentTextureToken());
     if (!this.surfaceSpec || groundSurfaceNeedsRebuild(this.surfaceSpec, next)) {
       this.rebuildSurface(next);
     } else if (this.surfaceMat) {
-      applyGroundSurfaceAppearance(this.surfaceMat, next, this.params.size);
+      applyGroundSurfaceAppearance(this.surfaceMat, next, envState.groundSize);
     }
     this.surfaceSpec = next;
     this.updateSurfaceVisible();
@@ -246,10 +210,10 @@ export class GroundCapability implements SceneCapability {
 
   /** 显隐门控：总开关 × 网格显隐 × 模式非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
-    this.surface.visible = this.enabled && this.params.visible && this.params.matSource !== "none";
+    this.surface.visible = this.enabled && envState.groundVisible && envState.groundMatSource !== "none";
   }
 
-  /** 自定义贴图加载完成入口（openTexturePicker 异步解码后调用；测试直接注入） */
+  /** 自定义贴图加载完成入口 */
   acceptLoadedTexture(tex: THREE.Texture, name: string): void {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
@@ -259,7 +223,7 @@ export class GroundCapability implements SceneCapability {
     }
     this.customTex = tex;
     this.customTexName = name;
-    this.params.matSource = "texture";
+    setEnvState({ groundMatSource: "texture" }, { source: 'manual' });
     this.refreshSurface();
   }
 
@@ -271,8 +235,8 @@ export class GroundCapability implements SceneCapability {
       this.customTex = null;
       this.customTexName = "";
     }
-    if (this.params.matSource === "texture") this.params.matSource = "plain";
-    if (wasAttached) this.surfaceTex = null; // 重建时不再误判归属
+    if (envState.groundMatSource === "texture") setEnvState({ groundMatSource: "plain" }, { source: 'manual' });
+    if (wasAttached) this.surfaceTex = null;
     this.refreshSurface();
   }
 
@@ -296,13 +260,13 @@ export class GroundCapability implements SceneCapability {
 
   // ── 材质参数 setter/getter（全部经 refreshSurface 单路径落地）──
   getMatSource(): GroundSurfaceMode {
-    return this.params.matSource;
+    return envState.groundMatSource as GroundSurfaceMode;
   }
   setMatSource(mode: GroundSurfaceMode): void {
-    if (this.params.matSource === mode) return; // 同值早退：避免无意义材质重建 + 菜单刷新
-    this.params.matSource = mode;
+    if (envState.groundMatSource === mode) return;
+    setEnvState({ groundMatSource: mode }, { source: 'manual' });
     this.refreshSurface();
-    this.notify(); // 材质来源切换改变表面材质分组可见性（none 隐藏全部材质控件），通知菜单局部刷新
+    this.notify();
   }
 
   /** 订阅参数变更（材质来源切换触发）；返回取消订阅函数 */
@@ -314,84 +278,84 @@ export class GroundCapability implements SceneCapability {
     this.listenerSet.notify();
   }
   setMatColor(hex: number): void {
-    this.params.matColor = hex;
+    setEnvState({ groundMatColor: hex }, { source: 'manual' });
     this.refreshSurface();
   }
   setMatLineColor(hex: number): void {
-    this.params.matLineColor = hex;
+    setEnvState({ groundMatLineColor: hex }, { source: 'manual' });
     this.refreshSurface();
   }
   setMatGridSize(n: number): void {
-    this.params.matGridSize = Math.max(2, Math.round(n));
+    setEnvState({ groundMatGridSize: Math.max(2, Math.round(n)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatOpacity(): number {
-    return this.params.matOpacity;
+    return envState.groundMatOpacity;
   }
   setMatOpacity(v: number): void {
-    this.params.matOpacity = Math.max(0, Math.min(1, v));
+    setEnvState({ groundMatOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatScale(): number {
-    return this.params.matScale;
+    return envState.groundMatScale;
   }
   setMatScale(v: number): void {
-    this.params.matScale = Math.max(0.25, Math.min(8, v));
+    setEnvState({ groundMatScale: Math.max(0.25, Math.min(8, v)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatRotation(): number {
-    return this.params.matRotationDeg;
+    return envState.groundMatRotationDeg;
   }
   setMatRotation(deg: number): void {
-    this.params.matRotationDeg = ((deg % 360) + 360) % 360;
+    setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatRoughness(): number {
-    return this.params.matRoughness;
+    return envState.groundMatRoughness;
   }
   setMatRoughness(v: number): void {
-    this.params.matRoughness = Math.max(0, Math.min(1, v));
+    setEnvState({ groundMatRoughness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatMetalness(): number {
-    return this.params.matMetalness;
+    return envState.groundMatMetalness;
   }
   setMatMetalness(v: number): void {
-    this.params.matMetalness = Math.max(0, Math.min(1, v));
+    setEnvState({ groundMatMetalness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatColor2(): number {
-    return this.params.matColor2;
+    return envState.groundMatColor2;
   }
   setMatColor2(hex: number): void {
-    this.params.matColor2 = hex;
+    setEnvState({ groundMatColor2: hex }, { source: 'manual' });
     this.refreshSurface();
   }
-  /* 菜单 getter（对齐 getMatColor2 口径——私有 params/customTexName 只许公开方法读，禁 cast 掏心） */
+  /* 菜单 getter */
   getMatColor(): number {
-    return this.params.matColor;
+    return envState.groundMatColor;
   }
   getMatLineColor(): number {
-    return this.params.matLineColor;
+    return envState.groundMatLineColor;
   }
   getMatGridSize(): number {
-    return this.params.matGridSize;
+    return envState.groundMatGridSize;
   }
   getCustomTexName(): string {
     return this.customTexName;
   }
   getMatDensity(): number {
-    return this.params.matDensity;
+    return envState.groundMatDensity;
   }
   setMatDensity(v: number): void {
-    this.params.matDensity = Math.max(0.25, Math.min(8, v));
+    setEnvState({ groundMatDensity: Math.max(0.25, Math.min(8, v)) }, { source: 'manual' });
     this.refreshSurface();
   }
   getMatAngle(): number {
-    return this.params.matAngleDeg;
+    return envState.groundMatAngleDeg;
   }
   setMatAngle(deg: number): void {
-    this.params.matAngleDeg = ((deg % 360) + 360) % 360;
+    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: 'manual' });
     this.refreshSurface();
   }
 
@@ -401,9 +365,6 @@ export class GroundCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树：ground-visible 平铺 toggle + 材质组 folder
-   *  （mat-source/color/slider 原生 + texture/clear button 走 controls 通道）。
-   *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildGroundNodes(this);
   }
@@ -412,75 +373,61 @@ export class GroundCapability implements SceneCapability {
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      matSource: this.params.matSource === "texture" ? "texture" : this.params.matSource,
-      ...pickPersistFields(this.params, GROUND_PERSIST_FIELDS),
+      groundVisible: envState.groundVisible,
+      groundMatSource: envState.groundMatSource === "texture" ? "texture" : envState.groundMatSource,
+      groundSize: envState.groundSize,
+      groundDivisions: envState.groundDivisions,
+      groundColorCenter: envState.groundColorCenter,
+      groundColorGrid: envState.groundColorGrid,
+      groundMatColor: envState.groundMatColor,
+      groundMatLineColor: envState.groundMatLineColor,
+      groundMatColor2: envState.groundMatColor2,
+      groundMatGridSize: envState.groundMatGridSize,
+      groundMatOpacity: envState.groundMatOpacity,
+      groundMatScale: envState.groundMatScale,
+      groundMatRotationDeg: envState.groundMatRotationDeg,
+      groundMatDensity: envState.groundMatDensity,
+      groundMatAngleDeg: envState.groundMatAngleDeg,
+      groundMatRoughness: envState.groundMatRoughness,
+      groundMatMetalness: envState.groundMatMetalness,
     });
   }
 
-  /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain；V1→V2 自动迁移） */
+  /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain） */
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
     restoreFields(state, {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
-        },
-      },
-      visible: {
-        boolean: (v) => {
-          this.params.visible = v;
-          this.grid.visible = v;
-        },
-      },
-      matSource: oneOf(GROUND_SURFACE_MODES, (v) => {
-        this.params.matSource = v === "texture" && !this.customTex ? "plain" : v;
-      }),
-      // 网格轴字段（曾漏存：改网格尺寸/线色跨会话丢失，2026-09 锐评 P2-1 顺手修复）
-      size: { number: (v) => (this.params.size = v) },
-      divisions: { number: (v) => (this.params.divisions = v) },
-      colorCenter: { number: (v) => (this.params.colorCenter = v) },
-      colorGrid: { number: (v) => (this.params.colorGrid = v) },
-      matColor: {
-        number: (v) => {
-          this.params.matColor = v;
-        },
-      },
-      matLineColor: {
-        number: (v) => {
-          this.params.matLineColor = v;
-        },
-      },
-      matColor2: {
-        number: (v) => {
-          this.params.matColor2 = v;
-        },
-      },
-      matGridSize: {
-        number: (v) => {
-          this.params.matGridSize = v;
-        },
-      },
-      matOpacity: { number: (v) => this.setMatOpacity(v) },
-      matScale: { number: (v) => this.setMatScale(v) },
-      matRotationDeg: { number: (v) => this.setMatRotation(v) },
-      matDensity: { number: (v) => this.setMatDensity(v) },
-      matAngleDeg: { number: (v) => this.setMatAngle(v) },
-      matRoughness: { number: (v) => this.setMatRoughness(v) },
-      matMetalness: { number: (v) => this.setMatMetalness(v) },
+      enabled: { boolean: (v) => { this.enabled = v; } },
+      groundVisible: { boolean: (v) => setEnvState({ groundVisible: v }, { source: 'manual' }) },
+      groundMatSource: oneOf(GROUND_SURFACE_MODES, (v) => setEnvState({ groundMatSource: v === "texture" && !this.customTex ? "plain" : v }, { source: 'manual' })),
+      groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: 'manual' }) },
+      groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: 'manual' }) },
+      groundColorCenter: { number: (v) => setEnvState({ groundColorCenter: v }, { source: 'manual' }) },
+      groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: 'manual' }) },
+      groundMatColor: { number: (v) => setEnvState({ groundMatColor: v }, { source: 'manual' }) },
+      groundMatLineColor: { number: (v) => setEnvState({ groundMatLineColor: v }, { source: 'manual' }) },
+      groundMatColor2: { number: (v) => setEnvState({ groundMatColor2: v }, { source: 'manual' }) },
+      groundMatGridSize: { number: (v) => setEnvState({ groundMatGridSize: v }, { source: 'manual' }) },
+      groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
+      groundMatScale: { number: (v) => this.setMatScale(v) },
+      groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },
+      groundMatDensity: { number: (v) => this.setMatDensity(v) },
+      groundMatAngleDeg: { number: (v) => this.setMatAngle(v) },
+      groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
+      groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
     });
   }
 
-  /** 移除并释放（GridHelper 材质可能是数组，遍历 dispose；surface 连同纹理一并释放） */
+  /** 移除并释放 */
   dispose(): void {
+    this.unsubscribeEnv();
     if (this.grid.parent) this.grid.parent.remove(this.grid);
     if (this.surface.parent) this.surface.parent.remove(this.surface);
     this.grid.geometry.dispose();
     const mat = this.grid.material;
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
     else mat.dispose();
-    // 表面层：材质 + 当前挂载纹理 + 自定义贴图缓存全部释放
     this.surface.geometry.dispose();
     if (this.surfaceMat) {
       if (this.surfaceTex && this.surfaceTex !== this.customTex) {

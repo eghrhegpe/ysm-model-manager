@@ -11,10 +11,10 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import {
   SkyCapability,
-  DEFAULT_SKY_PARAMS,
   MODEL_SKY_PRESETS,
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
+import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
 // PMREMGenerator 扩展 mock：fromScene 返回带 dispose 的对象（真实返回 WebGLRenderTarget），
@@ -76,19 +76,20 @@ function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMapp
   } as unknown as THREE.WebGLRenderer;
 }
 
-function newCap(opts: { enabled?: boolean; params?: Partial<import("./sky-capability.ts").SkyParams> } = {}) {
+function newCap(opts: { enabled?: boolean } = {}) {
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
-  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
-  return new SkyCapability({
+  const cap = new SkyCapability({
     scene,
     renderer,
-    ...(opts.params !== undefined ? { params: opts.params } : {}),
     ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
   });
+  return cap;
 }
 
 describe("SkyCapability — 构造与默认值", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("构造默认值完整", () => {
     const cap = newCap();
     expect(cap.isEnabled()).toBe(true);
@@ -102,8 +103,9 @@ describe("SkyCapability — 构造与默认值", () => {
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("params 覆盖生效", () => {
-    const cap = newCap({ params: { timeOfDay: 15, cloudCoverage: 0.5, environment: false } });
+  it("setEnvState 覆盖生效", () => {
+    setEnvState({ skyTimeOfDay: 15, skyCloudCoverage: 0.5, skyEnvironment: false }, { source: 'manual' });
+    const cap = newCap();
     expect(cap.getTimeOfDay()).toBe(15);
     expect(cap.getCloudCoverage()).toBe(0.5);
     expect(cap.isEnvironmentEnabled()).toBe(false);
@@ -111,6 +113,8 @@ describe("SkyCapability — 构造与默认值", () => {
 });
 
 describe("SkyCapability — 时间控制", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setTime 设置时间（0-24 循环）", () => {
     const cap = newCap();
     cap.setTime(12);
@@ -129,6 +133,8 @@ describe("SkyCapability — 时间控制", () => {
 });
 
 describe("SkyCapability — 云量控制", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setCloudCoverage 设置云量（0~1 clamp）", () => {
     const cap = newCap();
     cap.setCloudCoverage(0.5);
@@ -141,6 +147,8 @@ describe("SkyCapability — 云量控制", () => {
 });
 
 describe("SkyCapability — 环境 IBL 开关", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setEnvironmentEnabled 切换", () => {
     const cap = newCap();
     expect(cap.isEnvironmentEnabled()).toBe(true);
@@ -169,6 +177,8 @@ describe("SkyCapability — 环境 IBL 开关", () => {
 });
 
 describe("SkyCapability — 启用/禁用", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setEnabled 切换", () => {
     const cap = newCap();
     cap.setEnabled(false);
@@ -179,6 +189,8 @@ describe("SkyCapability — 启用/禁用", () => {
 });
 
 describe("SkyCapability — 预设", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setPreset 按模型类别套用", () => {
     const cap = newCap();
     cap.setPreset("vrm");
@@ -190,12 +202,14 @@ describe("SkyCapability — 预设", () => {
 });
 
 describe("SkyCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { localStorage.clear(); resetEnvState(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
-    const cap = newCap({ params: { timeOfDay: 15, cloudCoverage: 0.3, environment: false } });
+    setEnvState({ skyTimeOfDay: 15, skyCloudCoverage: 0.3, skyEnvironment: false }, { source: 'manual' });
+    const cap = newCap();
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.getTimeOfDay()).toBe(15);
@@ -205,19 +219,24 @@ describe("SkyCapability — 持久化", () => {
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = newCap({ params: { timeOfDay: 18 } });
+    const cap = newCap();
     cap.loadState();
-    expect(cap.getTimeOfDay()).toBe(18);
+    expect(cap.getTimeOfDay()).toBe(9);
   });
 
   it("saveState↔loadState 字段对齐：7 字段单次 round-trip 全还原（防 saveState/loadState 漂移）", () => {
-    // 锁「saveState 存了哪些字段，loadState 必须全恢复」——任一方向漏字段在此必现
-    const cap = newCap({
-      params: { timeOfDay: 16, cloudCoverage: 0.4, environment: false, sunIntensityScale: 0.7, sunDiscScale: 0.55 },
-      enabled: false,
-    });
+    setEnvState({
+      skyTimeOfDay: 16,
+      skyCloudCoverage: 0.4,
+      skyEnvironment: false,
+      skySunIntensityScale: 0.7,
+      skySunDiscScale: 0.55,
+    }, { source: 'manual' });
+    const cap = newCap();
+    cap.setEnabled(false);
     cap.setGodRaysEnabled(true);
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.getTimeOfDay()).toBe(16);
@@ -225,13 +244,14 @@ describe("SkyCapability — 持久化", () => {
     expect(cap2.isEnvironmentEnabled()).toBe(false);
     expect(cap2.isEnabled()).toBe(false);
     expect(cap2.isGodRaysEnabled()).toBe(true);
-    const p = cap2.getParams();
-    expect(p.sunIntensityScale).toBeCloseTo(0.7, 4);
-    expect(p.sunDiscScale).toBeCloseTo(0.55, 4);
+    expect(cap2.getParams().sunIntensityScale).toBeCloseTo(0.7, 4);
+    expect(cap2.getParams().sunDiscScale).toBeCloseTo(0.55, 4);
   });
 });
 
 describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("基座级节点平铺 + 高级 folder（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -307,12 +327,14 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
 });
 
 describe("SkyCapability — 预设数据完整性", () => {
-  it("DEFAULT_SKY_PARAMS 默认值完整", () => {
-    expect(DEFAULT_SKY_PARAMS.timeOfDay).toBe(9);
-    expect(typeof DEFAULT_SKY_PARAMS.elevation).toBe("number");
-    expect(typeof DEFAULT_SKY_PARAMS.turbidity).toBe("number");
-    expect(typeof DEFAULT_SKY_PARAMS.cloudCoverage).toBe("number");
-    expect(DEFAULT_SKY_PARAMS.scale).toBeGreaterThan(0);
+  beforeEach(() => { resetEnvState(); });
+
+  it("envState 默认值完整", () => {
+    expect(envState.skyTimeOfDay).toBe(9);
+    expect(typeof envState.skyElevation).toBe("number");
+    expect(typeof envState.skyTurbidity).toBe("number");
+    expect(typeof envState.skyCloudCoverage).toBe("number");
+    expect(envState.skyScale).toBeGreaterThan(0);
   });
 
   it("MODEL_SKY_PRESETS 覆盖所有模型类型", () => {
@@ -324,6 +346,8 @@ describe("SkyCapability — 预设数据完整性", () => {
 });
 
 describe("SkyCapability — God Rays（体积光束）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("初始 godRaysEnabled=false", () => {
     const cap = newCap();
     expect(cap.isGodRaysEnabled()).toBe(false);
@@ -338,22 +362,26 @@ describe("SkyCapability — God Rays（体积光束）", () => {
   });
 
   it("getGodRaysIntensity: elevation=-10 → 1", () => {
-    const cap = newCap({ params: { elevation: -10 } });
+    setEnvState({ skyElevation: -10 }, { source: 'manual' });
+    const cap = newCap();
     expect(cap.getGodRaysIntensity()).toBe(1);
   });
 
   it("getGodRaysIntensity: elevation=10 → ~0.33", () => {
-    const cap = newCap({ params: { elevation: 10 } });
+    setEnvState({ skyElevation: 10 }, { source: 'manual' });
+    const cap = newCap();
     expect(cap.getGodRaysIntensity()).toBeCloseTo(0.33, 1);
   });
 
   it("getGodRaysIntensity: elevation=20 → 0", () => {
-    const cap = newCap({ params: { elevation: 20 } });
+    setEnvState({ skyElevation: 20 }, { source: 'manual' });
+    const cap = newCap();
     expect(cap.getGodRaysIntensity()).toBe(0);
   });
 
   it("getGodRaysIntensity: elevation=-20 → 1", () => {
-    const cap = newCap({ params: { elevation: -20 } });
+    setEnvState({ skyElevation: -20 }, { source: 'manual' });
+    const cap = newCap();
     expect(cap.getGodRaysIntensity()).toBe(1);
   });
 
@@ -381,9 +409,11 @@ describe("SkyCapability — God Rays（体积光束）", () => {
   });
 
   it("saveState/loadState 持久化 godRaysEnabled", () => {
-    const cap = newCap({ params: { timeOfDay: 18 } });
+    setEnvState({ skyTimeOfDay: 18 }, { source: 'manual' });
+    const cap = newCap();
     cap.setGodRaysEnabled(true);
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.isGodRaysEnabled()).toBe(true);
@@ -391,6 +421,8 @@ describe("SkyCapability — God Rays（体积光束）", () => {
 });
 
 describe("SkyCapability — Sunset Tint Overlay", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("构造时自动创建 sunsetTintMesh，geometry 是 PlaneGeometry", () => {
     const cap = newCap();
     const mesh = (cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh;
@@ -402,7 +434,8 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
   });
 
   it("getSunsetTintIntensity 与 getGodRaysIntensity 返回相同值（复用同一段逻辑）", () => {
-    const cap = newCap({ params: { elevation: -10 } });
+    setEnvState({ skyElevation: -10 }, { source: 'manual' });
+    const cap = newCap();
     const tintIntensity = (cap as unknown as { getSunsetTintIntensity: () => number }).getSunsetTintIntensity();
     const godRaysIntensity = cap.getGodRaysIntensity();
     expect(tintIntensity).toBe(godRaysIntensity);
@@ -427,8 +460,10 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
   });
 
   it("saveState/loadState 不存 tint（tint 完全由时间驱动，无需持久化）", () => {
-    const cap = newCap({ params: { timeOfDay: 18 } });
+    setEnvState({ skyTimeOfDay: 18 }, { source: 'manual' });
+    const cap = newCap();
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     // tint 不持久化，由时间重新计算
@@ -449,15 +484,17 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
 
 // ============ §4 解耦：sunIntensityScale / sunDiscScale 从 Preetham 里把天空色与太阳亮度解耦 ============
 describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
-  it("DEFAULT_SKY_PARAMS 包含解耦参数且默认值合理", () => {
-    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeDefined();
-    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeDefined();
+  beforeEach(() => { resetEnvState(); });
+
+  it("envState 包含解耦参数且默认值合理", () => {
+    expect(envState.skySunIntensityScale).toBeDefined();
+    expect(envState.skySunDiscScale).toBeDefined();
     // 正午天空底色耦合从 1000^2 压到 750^2 ≈ 削 44%
-    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeGreaterThan(0.5);
-    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeLessThan(1.0);
+    expect(envState.skySunIntensityScale).toBeGreaterThan(0.5);
+    expect(envState.skySunIntensityScale).toBeLessThan(1.0);
     // 太阳盘 19M 亮度砍半，保留辨识度但不炸屏
-    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeGreaterThan(0.2);
-    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeLessThanOrEqual(1.0);
+    expect(envState.skySunDiscScale).toBeGreaterThan(0.2);
+    expect(envState.skySunDiscScale).toBeLessThanOrEqual(1.0);
   });
 
   it("MODEL_SKY_PRESETS 全部 6 类预设均携带解耦参数（统一默认，不丢失差异）", () => {
@@ -472,16 +509,19 @@ describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
     }
   });
 
-  it("构造函数 params 覆盖解耦参数且通过 getter 可读", () => {
-    const cap = newCap({ params: { sunIntensityScale: 0.6, sunDiscScale: 0.35 } });
+  it("setEnvState 覆盖解耦参数且通过 getter 可读", () => {
+    setEnvState({ skySunIntensityScale: 0.6, skySunDiscScale: 0.35 }, { source: 'manual' });
+    const cap = newCap();
     const params = cap.getParams();
     expect(params.sunIntensityScale).toBeCloseTo(0.6, 4);
     expect(params.sunDiscScale).toBeCloseTo(0.35, 4);
   });
 
   it("saveState/loadState 正确持久化解耦参数（不归因于「时间」或「预设」，用户可调）", () => {
-    const cap1 = newCap({ params: { sunIntensityScale: 0.62, sunDiscScale: 0.42 } });
+    setEnvState({ skySunIntensityScale: 0.62, skySunDiscScale: 0.42 }, { source: 'manual' });
+    const cap1 = newCap();
     cap1.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     const params = cap2.getParams();
@@ -492,15 +532,16 @@ describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
 
 // ============ injectSkySunScalePatch：给官方 Preetham Sky shader 追加解耦 uniforms ============
 describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patch，不越 ADR-073 红线）", () => {
+  beforeEach(() => { resetEnvState(); });
 
-  it("注入后 uniforms 新增 sunIntensityScale / sunDiscScale 两项且默认值匹配 DEFAULT", () => {
+  it("注入后 uniforms 新增 sunIntensityScale / sunDiscScale 两项且默认值匹配 envState", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     injectSkySunScalePatch(mat);
     expect(mat.uniforms.sunIntensityScale).toBeDefined();
     expect(mat.uniforms.sunDiscScale).toBeDefined();
-    expect(mat.uniforms.sunIntensityScale.value).toBeCloseTo(DEFAULT_SKY_PARAMS.sunIntensityScale, 3);
-    expect(mat.uniforms.sunDiscScale.value).toBeCloseTo(DEFAULT_SKY_PARAMS.sunDiscScale, 3);
+    expect(mat.uniforms.sunIntensityScale.value).toBeCloseTo(envState.skySunIntensityScale, 3);
+    expect(mat.uniforms.sunDiscScale.value).toBeCloseTo(envState.skySunDiscScale, 3);
   });
 
   it("注入后 fragment shader 声明了两个 uniform（防止 GLSL 编译未声明报错）", () => {
@@ -659,6 +700,7 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
 
 // ============ apply 完整管线（Fake PMREM + happy-dom rAF）============
 describe("SkyCapability — apply 管线（真实分支）", () => {
+  beforeEach(() => { resetEnvState(); });
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -671,13 +713,14 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(cap.isEnabled()).toBe(true);
     expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
-    expect(renderer.toneMappingExposure).toBe(DEFAULT_SKY_PARAMS.exposure);
+    expect(renderer.toneMappingExposure).toBe(envState.skyExposure);
     expect(scene.environment).not.toBeNull();
   });
 
   it("environment=false 时 apply 清空 environment 但仍挂载天空", () => {
     const scene = new THREE.Scene();
-    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), params: { environment: false } });
+    setEnvState({ skyEnvironment: false }, { source: 'manual' });
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
     expect(scene.environment).toBeNull();
     expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
@@ -687,7 +730,8 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     const scene = new THREE.Scene();
     const external = new THREE.Texture();
     scene.environment = external;
-    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), params: { environment: false } });
+    setEnvState({ skyEnvironment: false }, { source: 'manual' });
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
     cap.setEnvironmentEnabled(false);
     // renderTarget 未生成（environment=false 从未 build）→ 不等于 rt.texture → 外部值保留
@@ -800,7 +844,8 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
   });
 
   it("getSunPosition 输出 clamp 到 [0,1]（夜间 elevation<0 时 y<0.5）", () => {
-    const cap = newCap({ params: { timeOfDay: 0 } }); // 午夜
+    setEnvState({ skyTimeOfDay: 0 }, { source: 'manual' }); // 午夜
+    const cap = newCap();
     const pos = cap.getSunPosition();
     expect(pos.x).toBeGreaterThanOrEqual(0);
     expect(pos.x).toBeLessThanOrEqual(1);
@@ -812,8 +857,10 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
 
 // ============ 昼夜循环（SceneCapability.update(dt) 驱动；2026-09-03 起不再自建 rAF）============
 describe("SkyCapability — 昼夜循环 autoRotate", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("start/stop 切换与幂等；update(dt) 推进 timeOfDay", () => {
-    const cap = newCap(); // DEFAULT_SKY_PARAMS.timeOfDay = 9
+    const cap = newCap(); // envState.skyTimeOfDay = 9
     expect(cap.isAutoRotating()).toBe(false);
     cap.update(1); // 未启动 → no-op
     expect(cap.getTimeOfDay()).toBe(9);
@@ -842,7 +889,7 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     cap.startAutoRotate();
     const t = (cap as unknown as { godRaysTime: { value: number } }).godRaysTime;
     cap.update(2);
-    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
+    expect(cap.getTimeOfDay()).toBe(envState.skyTimeOfDay);
     expect(t.value).toBe(0);
   });
 
@@ -853,7 +900,7 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     cap.dispose();
     expect(cap.isAutoRotating()).toBe(false);
     cap.update(1); // dispose 后 update 空转，timeOfDay 不再推进
-    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
+    expect(cap.getTimeOfDay()).toBe(envState.skyTimeOfDay);
   });
 
   it("[锐评 P1 GPU 熔炉修复] 昼夜循环 update(dt) 走阈值门控：高度角变化 < 2° 不重建 PMREM", () => {
@@ -888,6 +935,7 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
 
 // ============ God Rays 挂载/卸载（真实分支）============
 describe("SkyCapability — God Rays 挂载分支", () => {
+  beforeEach(() => { resetEnvState(); });
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -952,7 +1000,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
     const turbidityBefore = u["turbidity"].value;
     cap.setPreset("vrm");
-    expect(cap.getParams().turbidity).toBe(MODEL_SKY_PRESETS.vrm!.turbidity!);
+    expect(envState.skyTurbidity).toBe(MODEL_SKY_PRESETS.vrm!.turbidity!);
     expect(u["turbidity"].value).toBe(turbidityBefore); // 未写入 uniforms
   });
 
@@ -963,14 +1011,16 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     }));
     const cap = newCap();
     cap.loadState();
-    expect(cap.getTimeOfDay()).toBe(DEFAULT_SKY_PARAMS.timeOfDay);
-    expect(cap.getCloudCoverage()).toBe(DEFAULT_SKY_PARAMS.cloudCoverage);
-    expect(cap.isEnvironmentEnabled()).toBe(DEFAULT_SKY_PARAMS.environment);
-    expect(cap.getSunIntensityScale()).toBe(DEFAULT_SKY_PARAMS.sunIntensityScale);
+    expect(cap.getTimeOfDay()).toBe(envState.skyTimeOfDay);
+    expect(cap.getCloudCoverage()).toBe(envState.skyCloudCoverage);
+    expect(cap.isEnvironmentEnabled()).toBe(envState.skyEnvironment);
+    expect(cap.getSunIntensityScale()).toBe(envState.skySunIntensityScale);
   });
 });
 
 describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("完整树 = timeline controls 节点 + sky-time/sky-env 平铺 + 高级 folder", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();

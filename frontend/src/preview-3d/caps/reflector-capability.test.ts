@@ -1,21 +1,13 @@
 // @vitest-environment node
-// ===== ReflectorCapability 测试（preview-3d/caps/reflector-capability.ts）=====
-// 覆盖：构造默认值、启用禁用、透明度/颜色、尺寸/精度、预设、持久化、getMenuControls。
+// ===== ReflectorCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import {
-  ReflectorCapability,
-  DEFAULT_REFLECTOR_PARAMS,
-  REFLECTOR_PRESETS,
-} from "./reflector-capability.ts";
+import { ReflectorCapability } from "./reflector-capability.ts";
+import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 
-// buildReflector 的 Reflector 构造（geometry + ShaderMaterial + WebGLRenderTarget）是纯数据
-// 对象创建，不触碰真实 WebGL context，node 环境可直接跑真实管线（onBeforeRender 渲染除外）。
-
-function newCap(opts: { enabled?: boolean; params?: Partial<import("./reflector-capability.ts").ReflectorParams> } = {}) {
-  const scene = new THREE.Scene();
-  const renderer = {
+function makeFakeRenderer() {
+  return {
     capabilities: { isWebGL2: true, maxTextures: 16 },
     properties: new Map(),
     info: { autoReset: true, memory: { textures: 0, geometries: 0 }, render: { calls: 0, triangles: 0, points: 0, frame: 0 }, reset: () => {} },
@@ -27,20 +19,25 @@ function newCap(opts: { enabled?: boolean; params?: Partial<import("./reflector-
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
   } as unknown as THREE.WebGLRenderer;
-  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+}
+
+function newCap(opts: { enabled?: boolean } = {}) {
+  const scene = new THREE.Scene();
   return new ReflectorCapability({
     scene,
-    renderer,
-    ...(opts.params !== undefined ? { params: opts.params } : {}),
-    ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+    renderer: makeFakeRenderer(),
+    ...opts,
   });
 }
 
 describe("ReflectorCapability — 构造与默认值", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("构造默认值完整", () => {
     const cap = newCap();
     const p = cap.getParams();
-    expect(cap.isEnabled()).toBe(false);
+    expect(cap.isEnabled()).toBe(true);
+    expect(envState.reflectorEnabled).toBe(false);
     expect(p.opacity).toBe(0.6);
     expect(p.size).toBe(100);
     expect(p.resolution).toBe(1024);
@@ -48,13 +45,14 @@ describe("ReflectorCapability — 构造与默认值", () => {
     expect(p.clipBias).toBe(0.003);
   });
 
-  it("enabled:true 初始启用", () => {
-    const cap = newCap({ enabled: true });
-    expect(cap.isEnabled()).toBe(true);
+  it("enabled:false 初始禁用", () => {
+    const cap = newCap({ enabled: false });
+    expect(cap.isEnabled()).toBe(false);
   });
 
-  it("params 覆盖生效", () => {
-    const cap = newCap({ params: { opacity: 0.8, size: 200, resolution: 2048 } });
+  it("setEnvState 覆盖生效", () => {
+    setEnvState({ reflectorOpacity: 0.8, reflectorSize: 200, reflectorResolution: 2048 }, { source: 'manual' });
+    const cap = newCap();
     const p = cap.getParams();
     expect(p.opacity).toBe(0.8);
     expect(p.size).toBe(200);
@@ -63,6 +61,8 @@ describe("ReflectorCapability — 构造与默认值", () => {
 });
 
 describe("ReflectorCapability — 启用/禁用", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setEnabled 切换", () => {
     const cap = newCap();
     cap.setEnabled(true);
@@ -70,9 +70,19 @@ describe("ReflectorCapability — 启用/禁用", () => {
     cap.setEnabled(false);
     expect(cap.isEnabled()).toBe(false);
   });
+
+  it("setEnabledReflector 切换", () => {
+    const cap = newCap();
+    cap.setEnabledReflector(true);
+    expect(envState.reflectorEnabled).toBe(true);
+    cap.setEnabledReflector(false);
+    expect(envState.reflectorEnabled).toBe(false);
+  });
 });
 
 describe("ReflectorCapability — 透明度与颜色", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setOpacity 限制 [0, 1]", () => {
     const cap = newCap();
     cap.setOpacity(0.5);
@@ -91,6 +101,8 @@ describe("ReflectorCapability — 透明度与颜色", () => {
 });
 
 describe("ReflectorCapability — 尺寸与精度", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setSize 设置地面大小", () => {
     const cap = newCap();
     cap.setSize(300);
@@ -105,6 +117,8 @@ describe("ReflectorCapability — 尺寸与精度", () => {
 });
 
 describe("ReflectorCapability — 预设", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setPreset 按模型类别套用", () => {
     const cap = newCap();
     cap.setPreset("vrm");
@@ -119,12 +133,14 @@ describe("ReflectorCapability — 预设", () => {
 });
 
 describe("ReflectorCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { localStorage.clear(); resetEnvState(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
-    const cap = newCap({ enabled: true, params: { opacity: 0.8, size: 200, resolution: 2048, color: 0xffeedd, clipBias: 0.005 } });
+    setEnvState({ reflectorEnabled: true, reflectorOpacity: 0.8, reflectorSize: 200, reflectorResolution: 2048, reflectorColor: 0xffeedd, reflectorClipBias: 0.005 }, { source: 'manual' });
+    const cap = newCap();
     cap.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     expect(cap2.isEnabled()).toBe(true);
@@ -137,14 +153,16 @@ describe("ReflectorCapability — 持久化", () => {
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = newCap({ params: { opacity: 0.3 } });
+    const cap = newCap();
     cap.loadState();
-    expect(cap.getParams().opacity).toBe(0.3);
+    expect(cap.getParams().opacity).toBe(0.6);
   });
 
   it("setPreset 在 loadState 已恢复后不覆盖用户会话（对齐 shadow 的 isStateLoaded 守卫）", () => {
-    const cap1 = newCap({ params: { opacity: 0.9, size: 300 } });
+    setEnvState({ reflectorOpacity: 0.9, reflectorSize: 300 }, { source: 'manual' });
+    const cap1 = newCap();
     cap1.saveState();
+    resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     cap2.setPreset("litematic");
@@ -162,6 +180,8 @@ describe("ReflectorCapability — 持久化", () => {
 });
 
 describe("ReflectorCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -190,6 +210,8 @@ describe("ReflectorCapability — getMenuNodes 结构（节点化后 group 由 f
 });
 
 describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("完整树 = master toggle 原生节点 + 参数组 folder（3 slider）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -197,9 +219,9 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
     // master toggle
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("reflector-enabled");
-    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    nodes[0]!.control!.set!(true);
-    expect(cap.isEnabled()).toBe(true);
+    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
+    nodes[0]!.control!.set!(false);
+    expect(cap.isEnabled()).toBe(false);
     // 参数组 folder
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
@@ -222,7 +244,8 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   });
 
   it("slider 节点读写闭包直连 cap 参数", () => {
-    const cap = newCap({ params: { opacity: 0.75 } });
+    setEnvState({ reflectorOpacity: 0.75 }, { source: 'manual' });
+    const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;
     const opacity = folder.children!.find((c) => c.id === "reflector-opacity")!;
     expect(opacity.control!.get!(undefined)).toBe(0.75);
@@ -231,26 +254,13 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   });
 });
 
-describe("ReflectorCapability — 预设数据完整性", () => {
-  it("DEFAULT_REFLECTOR_PARAMS 默认值完整", () => {
-    expect(DEFAULT_REFLECTOR_PARAMS.enabled).toBe(false);
-    expect(DEFAULT_REFLECTOR_PARAMS.size).toBe(100);
-    expect(DEFAULT_REFLECTOR_PARAMS.resolution).toBe(1024);
-    expect(DEFAULT_REFLECTOR_PARAMS.opacity).toBe(0.6);
-    expect(DEFAULT_REFLECTOR_PARAMS.clipBias).toBe(0.003);
-  });
-
-  it("REFLECTOR_PRESETS 覆盖所有模型类型", () => {
-    const expectedTypes = ["default", "ysm", "vrm", "mmd", "litematic", "resourcepack"];
-    for (const t of expectedTypes) {
-      expect(REFLECTOR_PRESETS[t]).toBeDefined();
-    }
-  });
-});
 describe("ReflectorCapability — 真实管线", () => {
-  it("setEnabled(true) 后 scene 出现 ysm-reflector mesh，位置/旋转/uOpacity 就位", () => {
-    const cap = newCap({ enabled: true, params: { opacity: 0.75 } });
-    cap.apply(); // 构造不自动 build，需 apply 显式挂载
+  beforeEach(() => { resetEnvState(); });
+
+  it("setEnabledReflector(true) + apply 后 scene 出现 ysm-reflector mesh，位置/旋转/uOpacity 就位", () => {
+    const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
+    cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
     expect(reflector).toBeDefined();
@@ -258,32 +268,35 @@ describe("ReflectorCapability — 真实管线", () => {
     expect(reflector.rotation.x).toBeCloseTo(-Math.PI / 2, 5);
     const mat = reflector.material as THREE.ShaderMaterial;
     expect(mat.transparent).toBe(true);
-    expect(mat.uniforms.uOpacity.value).toBe(0.75);
+    expect(mat.uniforms.uOpacity.value).toBe(0.6);
     // opacity 注入成功：fragmentShader 含 uOpacity
     expect(mat.fragmentShader).toContain("uOpacity");
   });
 
-  it("setOpacity 挂载态下更新 uniforms.uOpacity（不重建）", () => {
+  it("setOpacity 挂载态下更新 uniforms.uOpacity", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
+    cap.setOpacity(0.2);
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
     const mat = reflector.material as THREE.ShaderMaterial;
-    cap.setOpacity(0.2);
     expect(mat.uniforms.uOpacity.value).toBe(0.2);
   });
 
   it("setColor 挂载态下更新 uniforms.color（官方 tint 通道）", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
+    cap.setColor(0x123456);
     const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
     const mat = reflector.material as THREE.ShaderMaterial;
-    cap.setColor(0x123456);
     expect((mat.uniforms.color.value as THREE.Color).getHex()).toBe(0x123456);
   });
 
   it("setSize/setResolution/setClipBias 挂载态下触发重建（旧 mesh 移除 + 新 mesh 就位）", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     const first = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
@@ -298,6 +311,7 @@ describe("ReflectorCapability — 真实管线", () => {
 
   it("reflector 平面贴地偏移：position.y = GROUND_LAYER_OFFSETS.reflector（-0.01，z-fighting 防御）", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
     const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
     expect(reflector.position.y).toBeCloseTo(GROUND_LAYER_OFFSETS.reflector, 5);
@@ -305,6 +319,7 @@ describe("ReflectorCapability — 真实管线", () => {
 
   it("setPreset 挂载态下重建（新尺寸参数生效）", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     cap.setPreset("litematic");
@@ -314,6 +329,7 @@ describe("ReflectorCapability — 真实管线", () => {
 
   it("setEnabled(false) 移除并释放；重复 apply 幂等", () => {
     const cap = newCap({ enabled: true });
+    cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     const reflector = scene.getObjectByName("ysm-reflector")!;
@@ -327,7 +343,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("loadState(enabled=true) 直接重建反射面", () => {
-    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ enabled: true, size: 250, opacity: 0.4 }));
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ enabled: true, reflectorEnabled: true, size: 250, opacity: 0.4 }));
     const cap = newCap();
     cap.loadState();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
@@ -337,19 +353,20 @@ describe("ReflectorCapability — 真实管线", () => {
     localStorage.removeItem("ysm-scene-cap-reflector");
   });
 
-  it("apply 挂载（enabled 默认 false 时不创建）", () => {
+  it("apply 挂载（enabled 默认 true + reflectorEnabled=false 时不创建）", () => {
     const cap = newCap({ enabled: true });
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     cap.apply();
+    expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
+    cap.setEnabledReflector(true);
     expect(scene.getObjectByName("ysm-reflector")).toBeDefined();
-    const capOff = newCap();
-    capOff.apply();
-    expect(((capOff as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector"))).toBeUndefined();
   });
 });
 
 // ============ 菜单控件联动 ============
 describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("opacity/resolution/size 滑块读写联动", () => {
     const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;

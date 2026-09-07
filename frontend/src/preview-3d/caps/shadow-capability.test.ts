@@ -1,14 +1,9 @@
 // @vitest-environment node
-// ===== ShadowCapability 测试（preview-3d/caps/shadow-capability.ts）=====
-// 覆盖：构造默认值、apply 完整管线（真实 three 灯对象 + fake renderer）、还原管线、
-// collectLights 去重、setPreset、跨能力注入、syncMeshes、enabled 参数直改、持久化、getMenuControls。
+// ===== ShadowCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
-import {
-  ShadowCapability,
-  DEFAULT_SHADOW_PARAMS,
-  SHADOW_PRESETS,
-} from "./shadow-capability.ts";
+import { ShadowCapability } from "./shadow-capability.ts";
+import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
 
 function makeFakeRenderer() {
@@ -60,7 +55,6 @@ function setup(opts: { extraDir?: boolean; spot?: boolean } = {}): Ctx & { cap: 
     scene.add(lights.spot);
   }
   const cap = new ShadowCapability({ scene, renderer, enabled: true });
-  // collectLights 只认 lightCap/legacyLights 两个来源，模拟 mount-preview-core 的 syncLights 接线
   cap.syncLights([
     lights.dir,
     ...(lights.dir2 ? [lights.dir2] : []),
@@ -78,16 +72,17 @@ function makeMesh(parent: THREE.Object3D, cast = false, receive = false) {
 }
 
 describe("ShadowCapability — collectLights 取灯语义（白名单，不遍历场景）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("只认 lightCap/legacyLights 两个来源：场景里未接线的灯不被纳入阴影配置", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const wired = new THREE.DirectionalLight(0xffffff, 1);
-    const stray = new THREE.DirectionalLight(0xffffff, 0.3); // 适配器自行加入场景、未经接线
+    const stray = new THREE.DirectionalLight(0xffffff, 0.3);
     scene.add(wired, stray);
     const cap = new ShadowCapability({ scene, renderer, enabled: true });
-    cap.syncLights([wired]); // 仅接线 wired
+    cap.syncLights([wired]);
     expect(wired.castShadow).toBe(true);
-    // 设计语义：不遍历场景，避免误伤适配器自带灯——未接线的灯保持原状、不被改写
     expect(stray.castShadow).toBe(false);
   });
 
@@ -97,7 +92,6 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
     const lightCap = new LightCapability({ scene, renderer });
     const cap = new ShadowCapability({ scene, renderer, enabled: true });
     cap.setLightCap(lightCap);
-    // LightCapability 的三盏方向灯全部被纳入（未调 syncLights）
     for (const dl of lightCap.getDirectionalLights()) {
       expect(dl.castShadow).toBe(true);
     }
@@ -105,39 +99,38 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
 });
 
 describe("ShadowCapability — 构造与默认值", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("构造默认值完整", () => {
     const { scene, renderer } = { scene: new THREE.Scene(), renderer: makeFakeRenderer() };
     const cap = new ShadowCapability({ scene, renderer });
-    expect(cap.isEnabled()).toBe(false);
-    expect(cap.getMapSize()).toBe(1024);
-    expect(cap.isSoft()).toBe(false); // "hard" ≠ soft
+    expect(cap.isEnabled()).toBe(true);
+    expect(cap.getMapSize()).toBe(2048);
+    expect(cap.isSoft()).toBe(false);
     expect(cap.getBias()).toBe(-0.0005);
     expect(cap.getNormalBias()).toBe(0.02);
     expect(cap.getCameraSize()).toBe(15);
   });
 
-  it("enabled:true 初始启用", () => {
+  it("enabled:false 初始禁用", () => {
     const { scene, renderer } = { scene: new THREE.Scene(), renderer: makeFakeRenderer() };
-    const cap = new ShadowCapability({ scene, renderer, enabled: true });
-    expect(cap.isEnabled()).toBe(true);
+    const cap = new ShadowCapability({ scene, renderer, enabled: false });
+    expect(cap.isEnabled()).toBe(false);
   });
 
-  it("params 覆盖生效", () => {
+  it("setEnvState 覆盖生效", () => {
+    setEnvState({ shadowMapSize: 2048, shadowType: "soft", shadowCameraSize: 20 }, { source: 'manual' });
     const { scene, renderer } = { scene: new THREE.Scene(), renderer: makeFakeRenderer() };
-    const cap = new ShadowCapability({ scene, renderer, params: { mapSize: 2048, type: "soft", cameraSize: 20 } });
+    const cap = new ShadowCapability({ scene, renderer });
     expect(cap.getMapSize()).toBe(2048);
     expect(cap.isSoft()).toBe(true);
     expect(cap.getCameraSize()).toBe(20);
   });
-
-  it("未传 enabled 时回落 params.enabled", () => {
-    const { scene, renderer } = { scene: new THREE.Scene(), renderer: makeFakeRenderer() };
-    const cap = new ShadowCapability({ scene, renderer, params: { enabled: true } });
-    expect(cap.isEnabled()).toBe(true);
-  });
 });
 
 describe("ShadowCapability — apply 管线（真实灯对象）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setEnabled(true) 后 shadowMap 开启、hard → BasicShadowMap", () => {
     const { renderer, cap } = setup();
     cap.setEnabled(true);
@@ -162,8 +155,8 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
       expect(dir.castShadow).toBe(true);
       expect(dir.shadow.mapSize.x).toBe(2048);
       expect(dir.shadow.mapSize.y).toBe(2048);
-      expect(dir.shadow.bias).toBe(DEFAULT_SHADOW_PARAMS.bias);
-      expect(dir.shadow.normalBias).toBe(DEFAULT_SHADOW_PARAMS.normalBias);
+      expect(dir.shadow.bias).toBe(envState.shadowBias);
+      expect(dir.shadow.normalBias).toBe(envState.shadowNormalBias);
       const cam = dir.shadow.camera as THREE.OrthographicCamera;
       expect(cam.left).toBe(-30);
       expect(cam.right).toBe(30);
@@ -177,12 +170,12 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
 
   it("spot 灯 shadow 参数下发且 far=max(distance,50)", () => {
     const { lights, cap } = setup({ spot: true });
-    lights.spot!.distance = 20; // < 50 → far=50
+    lights.spot!.distance = 20;
     cap.setEnabled(true);
     const sp = lights.spot!;
     expect(sp.castShadow).toBe(true);
-    expect(sp.shadow.mapSize.x).toBe(1024);
-    expect(sp.shadow.bias).toBe(DEFAULT_SHADOW_PARAMS.bias);
+    expect(sp.shadow.mapSize.x).toBe(2048);
+    expect(sp.shadow.bias).toBe(envState.shadowBias);
     const cam = sp.shadow.camera as THREE.PerspectiveCamera;
     expect(cam.far).toBe(50);
     expect(sp.shadow.needsUpdate).toBe(true);
@@ -206,7 +199,7 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
   it("setEnabled(false) 还原灯与 mesh 原状态及 shadowMap", () => {
     const { scene, renderer, lights, cap } = setup({ spot: true });
     const mesh = makeMesh(scene, true, false);
-    lights.dir.castShadow = false; // 原始 false
+    lights.dir.castShadow = false;
     renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -215,11 +208,11 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     expect(lights.dir.castShadow).toBe(true);
 
     cap.setEnabled(false);
-    expect(mesh.castShadow).toBe(true); // mesh 原始 true → 还原为 true
+    expect(mesh.castShadow).toBe(true);
     expect(mesh.receiveShadow).toBe(false);
     expect(lights.dir.castShadow).toBe(false);
     expect(lights.spot!.castShadow).toBe(false);
-    expect(lights.dir.shadow.mapSize.x).toBe(512); // three 默认
+    expect(lights.dir.shadow.mapSize.x).toBe(512);
     expect(lights.dir.shadow.bias).toBe(0);
     expect(renderer.shadowMap.enabled).toBe(false);
     expect(renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
@@ -229,9 +222,8 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     const { lights, cap } = setup({ spot: true });
     lights.spot!.visible = false;
     cap.setEnabled(true);
-    expect(lights.spot!.castShadow).toBe(false); // 未被置 true
+    expect(lights.spot!.castShadow).toBe(false);
     cap.setEnabled(false);
-    // 还原也不炸（快照存在但灯未动）
     expect(lights.spot!.castShadow).toBe(false);
   });
 
@@ -240,17 +232,16 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     const renderer = makeFakeRenderer();
     const sp1 = new THREE.SpotLight(0xffffff, 1);
     const sp2 = new THREE.SpotLight(0xffffff, 1);
-    sp1.castShadow = true; // 原始开阴影
+    sp1.castShadow = true;
     scene.add(sp1, sp2);
     const cap = new ShadowCapability({ scene, renderer });
-    // legacy 传两盏（无方向灯，走 legacy spot 分支）
     cap.syncLights([sp1, sp2]);
     cap.setEnabled(true);
-    expect(sp1.castShadow).toBe(true); // apply 后仍 true
+    expect(sp1.castShadow).toBe(true);
     expect(sp2.castShadow).toBe(true);
 
     cap.setEnabled(false);
-    expect(sp1.castShadow).toBe(true); // 还原原始值
+    expect(sp1.castShadow).toBe(true);
     expect(sp2.castShadow).toBe(false);
     expect(sp1.shadow.mapSize.x).toBe(512);
     expect(sp2.shadow.mapSize.x).toBe(512);
@@ -264,18 +255,18 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     expect(mesh.castShadow).toBe(false);
     expect(lights.dir.castShadow).toBe(false);
     expect(renderer.shadowMap.enabled).toBe(false);
-    expect(cap.isEnabled()).toBe(true); // dispose 不改 enabled 标志
+    expect(cap.isEnabled()).toBe(true);
   });
 
   it("重复 apply 幂等（先清旧快照再应用）", () => {
     const { scene, lights, cap } = setup();
     const mesh = makeMesh(scene, true, true);
     cap.setEnabled(true);
-    cap.apply(); // 第二次 apply：disableShadows → 还原 → 再应用
+    cap.apply();
     expect(lights.dir.castShadow).toBe(true);
     expect(mesh.castShadow).toBe(true);
     cap.setEnabled(false);
-    expect(mesh.castShadow).toBe(true); // 还原原值 true
+    expect(mesh.castShadow).toBe(true);
     expect(mesh.receiveShadow).toBe(true);
   });
 
@@ -290,10 +281,12 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
 });
 
 describe("ShadowCapability — collectLights 来源与去重", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("lightCap 优先提供灯（不经场景遍历）", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
-    const external = new THREE.DirectionalLight(0xffffff, 1); // 不加进场景
+    const external = new THREE.DirectionalLight(0xffffff, 1);
     const spot = new THREE.SpotLight(0xffffff, 1);
     const cap = new ShadowCapability({ scene, renderer });
     cap.setLightCap(stubLightCap([external], spot));
@@ -310,7 +303,7 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     scene.add(dir, spot);
     const cap = new ShadowCapability({ scene, renderer });
     cap.setLightCap(stubLightCap([dir], spot));
-    cap.syncLights([dir, spot]); // 与 lightCap 完全重复
+    cap.syncLights([dir, spot]);
     cap.setEnabled(true);
     expect(dir.castShadow).toBe(true);
     expect(spot.castShadow).toBe(true);
@@ -325,7 +318,7 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     const legacySpot = new THREE.SpotLight(0xffffff, 1);
     scene.add(legacySpot);
     const cap = new ShadowCapability({ scene, renderer });
-    cap.setLightCap(stubLightCap([], null)); // lightCap 无 spot
+    cap.setLightCap(stubLightCap([], null));
     cap.syncLights([legacySpot]);
     cap.setEnabled(true);
     expect(legacySpot.castShadow).toBe(true);
@@ -336,12 +329,11 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
   it("非方向灯/聚光灯的 legacy 灯被忽略", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
-    const point = new THREE.PointLight(0xffffff, 1); // 两分支都不命中
+    const point = new THREE.PointLight(0xffffff, 1);
     scene.add(point);
     const cap = new ShadowCapability({ scene, renderer });
     cap.syncLights([point as unknown as THREE.DirectionalLight]);
     cap.setEnabled(true);
-    // PointLight 无 shadow.camera 正交/透视断言需求，仅不炸且不误改 castShadow 语义
     expect(cap.isEnabled()).toBe(true);
     cap.setEnabled(false);
   });
@@ -362,22 +354,23 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
 });
 
 describe("ShadowCapability — setPreset", () => {
-  it("按 adapterId 映射预设（mmd→character：soft/1024/15）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("按 adapterId 映射预设（mmd→soft）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.setPreset("mmd");
     expect(cap.isSoft()).toBe(true);
-    expect(cap.getMapSize()).toBe(1024);
+    expect(cap.getMapSize()).toBe(2048);
     expect(cap.getCameraSize()).toBe(15);
-    // setPreset 只写 params；isEnabled 走构造期私有标志，不随预设翻转
     expect(cap.getParams().enabled).toBe(true);
-    expect(cap.isEnabled()).toBe(false);
+    expect(cap.isEnabled()).toBe(true);
   });
 
   it("未知 adapterId 落回 default 预设", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.setPreset("unknown-type");
-    expect(cap.isSoft()).toBe(false); // default: hard
-    expect(cap.isEnabled()).toBe(false);
+    expect(cap.isSoft()).toBe(false);
+    expect(cap.isEnabled()).toBe(true);
   });
 
   it("loadState 后 setPreset 不覆盖用户会话配置", () => {
@@ -385,27 +378,22 @@ describe("ShadowCapability — setPreset", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
     cap.setPreset("mmd");
-    expect(cap.isSoft()).toBe(false); // 用户配置保留
+    expect(cap.isSoft()).toBe(false);
     expect(cap.getMapSize()).toBe(4096);
-  });
-
-  it("SHADOW_PRESETS 覆盖所有预设键", () => {
-    const expectedKeys = ["default", "prop", "small", "architecture", "scene", "character", "creature"];
-    for (const k of expectedKeys) {
-      expect(SHADOW_PRESETS[k]).toBeDefined();
-    }
   });
 });
 
 describe("ShadowCapability — 跨能力注入", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("enabled 时 setLightCap 立即 apply", () => {
     const scene = new THREE.Scene();
     const dir = new THREE.DirectionalLight(0xffffff, 1);
     scene.add(dir);
     const cap = new ShadowCapability({ scene, renderer: makeFakeRenderer(), enabled: true });
-    expect(dir.castShadow).toBe(false); // 尚无灯
+    expect(dir.castShadow).toBe(false);
     cap.setLightCap(stubLightCap([dir], null));
-    expect(dir.castShadow).toBe(true); // 注入即应用
+    expect(dir.castShadow).toBe(true);
   });
 
   it("enabled 时 syncLights 立即 apply", () => {
@@ -419,16 +407,17 @@ describe("ShadowCapability — 跨能力注入", () => {
 });
 
 describe("ShadowCapability — syncMeshes / applyMeshCasts", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("enabled 时对 roots mesh 快照并置 true；重复调用还原旧快照不累积", () => {
     const { scene, cap } = setup();
-    const m1 = makeMesh(scene, true, true); // 原始全 true
+    const m1 = makeMesh(scene, true, true);
     cap.setEnabled(true);
     cap.syncMeshes([m1]);
     expect(m1.castShadow).toBe(true);
-    // 换一个新 root：旧 mesh 还原（回到 true），新 mesh 快照
     const m2 = makeMesh(scene, false, false);
     cap.syncMeshes([m2]);
-    expect(m1.castShadow).toBe(true); // 还原原始值
+    expect(m1.castShadow).toBe(true);
     expect(m2.castShadow).toBe(true);
     cap.setEnabled(false);
     expect(m2.castShadow).toBe(false);
@@ -441,9 +430,9 @@ describe("ShadowCapability — syncMeshes / applyMeshCasts", () => {
     cap.setEnabled(true);
     cap.syncMeshes([m1]);
     expect(m1.castShadow).toBe(true);
-    cap.setEnabled(false); // 还原
+    cap.setEnabled(false);
     expect(m1.castShadow).toBe(false);
-    const m2 = makeMesh(scene); // disabled 下新 mesh 不动
+    const m2 = makeMesh(scene);
     cap.syncMeshes([m2]);
     expect(m2.castShadow).toBe(false);
   });
@@ -471,6 +460,8 @@ describe("ShadowCapability — syncMeshes / applyMeshCasts", () => {
 });
 
 describe("ShadowCapability — enabled 状态下参数直改", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setBias 直改灯 shadow.bias（含 spot）", () => {
     const { lights, cap } = setup({ spot: true });
     cap.setEnabled(true);
@@ -516,18 +507,20 @@ describe("ShadowCapability — enabled 状态下参数直改", () => {
     expect(lights.dir.shadow.mapSize.x).toBe(4096);
   });
 
-  it("disabled 时直改仅更新 params 不碰灯", () => {
+  it("disabled 时直改仅更新 envState 不碰灯", () => {
     const { lights, cap } = setup();
-    cap.setEnabled(false); // 关闭后灯 shadow 已还原为快照原值
+    cap.setEnabled(false);
     cap.setBias(-0.003);
     cap.setNormalBias(0.05);
     cap.setCameraSize(60);
     expect(cap.getBias()).toBe(-0.003);
-    expect(lights.dir.shadow.bias).toBe(0); // 未下发
+    expect(lights.dir.shadow.bias).toBe(0);
   });
 });
 
 describe("ShadowCapability — 分辨率", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setMapSize 合法值", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.setMapSize(2048);
@@ -538,12 +531,14 @@ describe("ShadowCapability — 分辨率", () => {
 
   it("setMapSize 非法值回退默认", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    cap.setMapSize(3000); // 不在 [512,1024,2048,4096] 中
-    expect(cap.getMapSize()).toBe(DEFAULT_SHADOW_PARAMS.mapSize);
+    cap.setMapSize(3000);
+    expect(cap.getMapSize()).toBe(envState.shadowMapSize);
   });
 });
 
 describe("ShadowCapability — 软硬切换 / bias / cameraSize（disabled 基础读写）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setSoft 切换", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.setSoft(true);
@@ -568,25 +563,22 @@ describe("ShadowCapability — 软硬切换 / bias / cameraSize（disabled 基�
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.setCameraSize(30);
     expect(cap.getCameraSize()).toBe(30);
-    cap.setCameraSize(3); // clamp 到 5
+    cap.setCameraSize(3);
     expect(cap.getCameraSize()).toBe(5);
-    cap.setCameraSize(100); // clamp 到 80
+    cap.setCameraSize(100);
     expect(cap.getCameraSize()).toBe(80);
   });
 });
 
 describe("ShadowCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { localStorage.clear(); resetEnvState(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
-    const cap = new ShadowCapability({
-      scene: new THREE.Scene(),
-      renderer: makeFakeRenderer(),
-      enabled: true,
-      params: { mapSize: 2048, type: "soft", bias: -0.001, normalBias: 0.05, cameraSize: 20 },
-    });
+    setEnvState({ shadowMapSize: 2048, shadowType: "soft", shadowBias: -0.001, shadowNormalBias: 0.05, shadowCameraSize: 20 }, { source: 'manual' });
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer(), enabled: true });
     cap.saveState();
+    resetEnvState();
     const cap2 = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap2.loadState();
     expect(cap2.isEnabled()).toBe(true);
@@ -598,13 +590,9 @@ describe("ShadowCapability — 持久化", () => {
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = new ShadowCapability({
-      scene: new THREE.Scene(),
-      renderer: makeFakeRenderer(),
-      params: { mapSize: 4096 },
-    });
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
-    expect(cap.getMapSize()).toBe(4096);
+    expect(cap.getMapSize()).toBe(2048);
   });
 
   it("loadState 兼容旧 soft 字段", () => {
@@ -620,9 +608,9 @@ describe("ShadowCapability — 持久化", () => {
     localStorage.setItem("ysm-scene-cap-shadow", JSON.stringify({ mapSize: "big", bias: null, cameraSize: "40" }));
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
-    expect(cap.getMapSize()).toBe(DEFAULT_SHADOW_PARAMS.mapSize);
-    expect(cap.getBias()).toBe(DEFAULT_SHADOW_PARAMS.bias);
-    expect(cap.getCameraSize()).toBe(DEFAULT_SHADOW_PARAMS.cameraSize);
+    expect(cap.getMapSize()).toBe(envState.shadowMapSize);
+    expect(cap.getBias()).toBe(envState.shadowBias);
+    expect(cap.getCameraSize()).toBe(envState.shadowCameraSize);
   });
 
   it("loadState 非法 type 且无 soft 字段保持默认 hard", () => {
@@ -649,12 +637,12 @@ describe("ShadowCapability — 持久化", () => {
 });
 
 describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     const nodes = cap.getMenuNodes();
-    // shadow-enabled 平铺
     expect(nodes[0]!.id).toBe("shadow-enabled");
-    // 其余节点在 folder children 内
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
     const childIds = folder.children!.map((c) => c.id);
@@ -663,7 +651,6 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
     expect(childIds).toContain("shadow-bias");
     expect(childIds).toContain("shadow-normal-bias");
     expect(childIds).toContain("shadow-camera-size");
-    // folder labelKey 对应原 group
     expect(folder.labelKey).toBe("preview.shadowGroupParams");
   });
 
@@ -706,6 +693,8 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
 });
 
 describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   function newCap() {
     return new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
   }
@@ -714,13 +703,11 @@ describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(2);
-    // shadow-enabled 平铺（shadow 无 getMasterToggle，非 header 总开关）
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("shadow-enabled");
     expect(nodes[0]!.hintKey).toBe("preview.shadowEnabledHint");
     nodes[0]!.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    // 参数组 folder
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.shadowGroupParams");
@@ -760,13 +747,15 @@ describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   });
 });
 
-describe("ShadowCapability — DEFAULT_SHADOW_PARAMS 默认值完整", () => {
+describe("ShadowCapability — envState 默认值完整", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("默认值字段齐全", () => {
-    expect(DEFAULT_SHADOW_PARAMS.enabled).toBe(false);
-    expect(DEFAULT_SHADOW_PARAMS.type).toBe("hard");
-    expect(DEFAULT_SHADOW_PARAMS.mapSize).toBe(1024);
-    expect(typeof DEFAULT_SHADOW_PARAMS.bias).toBe("number");
-    expect(typeof DEFAULT_SHADOW_PARAMS.normalBias).toBe("number");
-    expect(typeof DEFAULT_SHADOW_PARAMS.cameraSize).toBe("number");
+    expect(envState.shadowEnabled).toBe(true);
+    expect(envState.shadowType).toBe("hard");
+    expect(envState.shadowMapSize).toBe(2048);
+    expect(typeof envState.shadowBias).toBe("number");
+    expect(typeof envState.shadowNormalBias).toBe("number");
+    expect(typeof envState.shadowCameraSize).toBe("number");
   });
 });

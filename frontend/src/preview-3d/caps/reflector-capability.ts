@@ -1,9 +1,7 @@
-// ===== ReflectorCapability：反光地面能力（ADR-073 caps/ 能力模式）=====
+// ===== ReflectorCapability：反光地面能力（ADR-196 迁移至 envState）=====
 // 复用 Three 官方 Reflector（three/addons/objects/Reflector.js），不允许自写镜像相机/RTV shader。
 // 与 ShadowCapability / GroundCapability 的分层共存：Shadow 走 cameraSize 正交视锥无承接平面；
 // Reflector 平面按 GROUND_LAYER_OFFSETS.reflector 下沉（位于 ground 承接面之下，z-fighting 防御）
-// Reflector 是一个透明 mesh + 背面镜像 WebGLRenderTarget，draw call 代价不低（约等于再渲染一次场景），
-// 默认关闭，用户显式开启；模型类别预设给出建议参数。
 
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
@@ -17,67 +15,48 @@ import {
   ringLog,
   type SceneCapability,
 } from "./scene-capability.ts";
-
-export interface ReflectorParams {
-  enabled: boolean;
-  /** 地面平面尺寸（世界单位）*/
-  size: number;
-  /** 镜面渲染目标分辨率（越大越精细，开销越大） */
-  resolution: number;
-  /** 镜面色调（白色=纯反射；浅灰=柔和；蓝色=冷调） */
-  color: number;
-  /** 反射强度（0~1；1 = 完全镜像，0 = 不可见） */
-  opacity: number;
-  /** clipBias：反射平面 z-fighting 与对象近距裁剪的折中值（0.001~0.01 常见） */
-  clipBias: number;
-}
-
-export const DEFAULT_REFLECTOR_PARAMS: ReflectorParams = {
-  enabled: false,
-  size: 100,
-  resolution: 1024,
-  color: 0xffffff,
-  opacity: 0.6,
-  clipBias: 0.003,
-};
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） */
-export const REFLECTOR_PRESETS: Record<string, Partial<ReflectorParams>> = {
-  default: { ...DEFAULT_REFLECTOR_PARAMS },
+export const REFLECTOR_PRESETS: Record<string, Partial<EnvState>> = {
+  default: {},
   ysm: {
     // 方块：弱反射，避免镜面太强抢主体
-    opacity: 0.25,
-    size: 200,
-    resolution: 512,
-    color: 0xf0f4fa,
+    reflectorOpacity: 0.25,
+    reflectorSize: 200,
+    reflectorResolution: 512,
+    reflectorColor: 0xf0f4fa,
   },
   vrm: {
     // PBR 角色：中等反射 + 暖调
-    opacity: 0.5,
-    size: 60,
-    resolution: 1024,
-    color: 0xf8efe2,
+    reflectorOpacity: 0.5,
+    reflectorSize: 60,
+    reflectorResolution: 1024,
+    reflectorColor: 0xf8efe2,
   },
   mmd: {
     // toon：更弱，避免高光与反射冲突
-    opacity: 0.2,
-    size: 80,
-    resolution: 1024,
-    color: 0xfafcff,
+    reflectorOpacity: 0.2,
+    reflectorSize: 80,
+    reflectorResolution: 1024,
+    reflectorColor: 0xfafcff,
   },
   litematic: {
     // 体素：大平面 + 冷调
-    opacity: 0.25,
-    size: 500,
-    resolution: 512,
-    color: 0xeaf1fb,
+    reflectorOpacity: 0.25,
+    reflectorSize: 500,
+    reflectorResolution: 512,
+    reflectorColor: 0xeaf1fb,
   },
   resourcepack: {
     // MC 方块：同 YSM
-    opacity: 0.25,
-    size: 200,
-    resolution: 512,
-    color: 0xf0f4fa,
+    reflectorOpacity: 0.25,
+    reflectorSize: 200,
+    reflectorResolution: 512,
+    reflectorColor: 0xf0f4fa,
   },
 };
 
@@ -97,22 +76,29 @@ export class ReflectorCapability implements SceneCapability {
   readonly descKey = "preview.reflectorDesc";
 
   private scene: THREE.Scene;
-  private params: ReflectorParams;
   private enabled: boolean;
 
   private reflector: Reflector | null = null;
   /** loadState 是否成功载入过；setPreset 有它时不覆盖用户会话（对齐 shadow-capability 同名守卫） */
   private isStateLoaded = false;
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    params?: Partial<ReflectorParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.params = { ...DEFAULT_REFLECTOR_PARAMS, ...(opts.params ?? {}) };
-    this.enabled = opts.enabled ?? this.params.enabled;
+    this.enabled = opts.enabled ?? true;
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (changed.has('reflectorEnabled') || changed.has('reflectorSize') || changed.has('reflectorResolution') ||
+          changed.has('reflectorColor') || changed.has('reflectorOpacity') || changed.has('reflectorClipBias')) {
+        this.buildReflector();
+      }
+    });
   }
 
   /* -------- 内部：构造/销毁 Reflector -------- */
@@ -138,15 +124,15 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   private createReflectorMesh(): Reflector | null {
-    const geometry = new THREE.PlaneGeometry(this.params.size, this.params.size);
+    const geometry = new THREE.PlaneGeometry(envState.reflectorSize, envState.reflectorSize);
     const shader = { ...REFLECTOR_SHADER };
     this.injectOpacityIntoShader({ shader });
 
     const reflector = new Reflector(geometry, {
-      clipBias: this.params.clipBias,
-      textureWidth: this.params.resolution,
-      textureHeight: this.params.resolution,
-      color: this.params.color,
+      clipBias: envState.reflectorClipBias,
+      textureWidth: envState.reflectorResolution,
+      textureHeight: envState.reflectorResolution,
+      color: envState.reflectorColor,
       shader,
     });
     reflector.position.y = GROUND_LAYER_OFFSETS.reflector;
@@ -155,14 +141,14 @@ export class ReflectorCapability implements SceneCapability {
 
     const mat = reflector.material as THREE.ShaderMaterial;
     mat.transparent = true;
-    mat.uniforms.uOpacity = { value: this.params.opacity };
+    mat.uniforms.uOpacity = { value: envState.reflectorOpacity };
 
     return reflector;
   }
 
   private buildReflector(): void {
     this.disposeReflector();
-    if (!this.enabled) return;
+    if (!this.enabled || !envState.reflectorEnabled) return;
     this.reflector = this.createReflectorMesh();
     if (this.reflector) this.scene.add(this.reflector);
   }
@@ -171,8 +157,6 @@ export class ReflectorCapability implements SceneCapability {
     if (!this.reflector) return;
     if (this.reflector.parent) this.reflector.parent.remove(this.reflector);
     this.reflector.geometry.dispose();
-    // Reflector 内部通过 WebGLRenderTarget 缓存，需显式释放。
-    // 不用可选链静默跳过：若 dispose 缺失（three 升级/Reflector 实现变更），显式告警并手动释放 render target。
     if (this.reflector.dispose) {
       this.reflector.dispose();
     } else {
@@ -197,7 +181,6 @@ export class ReflectorCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.params.enabled = v;
     this.buildReflector();
   }
 
@@ -209,43 +192,51 @@ export class ReflectorCapability implements SceneCapability {
   setPreset(modelType: string): void {
     if (this.isStateLoaded) return;
     const preset = REFLECTOR_PRESETS[modelType] ?? REFLECTOR_PRESETS.default;
-    this.params = { ...this.params, ...preset };
+    setEnvState(preset, { source: 'auto-model' });
     if (this.enabled) this.buildReflector();
   }
 
+  setEnabledReflector(v: boolean): void {
+    setEnvState({ reflectorEnabled: v }, { source: 'manual' });
+  }
+
   setOpacity(v: number): void {
-    this.params.opacity = Math.max(0, Math.min(1, v));
+    setEnvState({ reflectorOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
     const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-    if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = this.params.opacity;
+    if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
   }
 
   setColor(hex: number): void {
-    this.params.color = hex;
+    setEnvState({ reflectorColor: hex }, { source: 'manual' });
     const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-    // tint 走官方 color uniform（fragmentShader 内 blendOverlay( base.rgb, color ) 原生混合）
     if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(hex);
   }
 
   setSize(v: number): void {
-    this.params.size = v;
+    setEnvState({ reflectorSize: v }, { source: 'manual' });
     if (this.enabled) this.buildReflector();
   }
 
   setResolution(v: number): void {
-    this.params.resolution = v;
+    setEnvState({ reflectorResolution: v }, { source: 'manual' });
     if (this.enabled) this.buildReflector();
   }
 
   setClipBias(v: number): void {
-    this.params.clipBias = v;
+    setEnvState({ reflectorClipBias: v }, { source: 'manual' });
     if (this.enabled) this.buildReflector();
   }
 
-  getParams(): ReflectorParams {
-    return { ...this.params, enabled: this.enabled };
+  getParams() {
+    return {
+      enabled: this.enabled && envState.reflectorEnabled,
+      size: envState.reflectorSize,
+      resolution: envState.reflectorResolution,
+      color: envState.reflectorColor,
+      opacity: envState.reflectorOpacity,
+      clipBias: envState.reflectorClipBias,
+    };
   }
-
-  /* -------- 菜单控件（声明式驱动）-------- */
 
   /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
 
@@ -256,10 +247,7 @@ export class ReflectorCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2 试点：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树（能力总开关 + 参数组 folder）——直产 PreviewMenuNode[]，
-   *  不经过 MenuControlDef/桥接层；简单控件原生节点 + group→folder。
-   *  消费者需「除总开关外」子树时按 getMasterNodeId() 剔除顶层节点
-   *  （env.ts envCapSubNodes 通用处理）。 */
+  /** 完整参数面板节点树（能力总开关 + 参数组 folder） */
   getMenuNodes(): PreviewMenuNode[] {
     return buildReflectorNodes(this);
   }
@@ -269,11 +257,12 @@ export class ReflectorCapability implements SceneCapability {
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      size: this.params.size,
-      resolution: this.params.resolution,
-      color: this.params.color,
-      opacity: this.params.opacity,
-      clipBias: this.params.clipBias,
+      reflectorEnabled: envState.reflectorEnabled,
+      size: envState.reflectorSize,
+      resolution: envState.reflectorResolution,
+      color: envState.reflectorColor,
+      opacity: envState.reflectorOpacity,
+      clipBias: envState.reflectorClipBias,
     });
   }
 
@@ -284,14 +273,14 @@ export class ReflectorCapability implements SceneCapability {
       enabled: {
         boolean: (v) => {
           this.enabled = v;
-          this.params.enabled = v;
         },
       },
-      size: { number: (v) => (this.params.size = v) },
-      resolution: { number: (v) => (this.params.resolution = v) },
-      color: { number: (v) => (this.params.color = v) },
-      opacity: { number: (v) => (this.params.opacity = v) },
-      clipBias: { number: (v) => (this.params.clipBias = v) },
+      reflectorEnabled: { boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: 'manual' }) },
+      size: { number: (v) => setEnvState({ reflectorSize: v }, { source: 'manual' }) },
+      resolution: { number: (v) => setEnvState({ reflectorResolution: v }, { source: 'manual' }) },
+      color: { number: (v) => setEnvState({ reflectorColor: v }, { source: 'manual' }) },
+      opacity: { number: (v) => setEnvState({ reflectorOpacity: v }, { source: 'manual' }) },
+      clipBias: { number: (v) => setEnvState({ reflectorClipBias: v }, { source: 'manual' }) },
     });
     this.isStateLoaded = true;
     this.buildReflector();
@@ -304,6 +293,7 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   dispose(): void {
+    this.unsubscribeEnv();
     this.disposeReflector();
   }
 }

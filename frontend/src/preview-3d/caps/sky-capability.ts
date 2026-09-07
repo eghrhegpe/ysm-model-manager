@@ -16,13 +16,11 @@
 
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-import type { SkyModelType, SkyParams } from "./sky-state.ts";
-// 状态/序列化轴（SkyParams / 默认值 / 模型预设）已下沉 sky-state.ts；此处透传导出，
-// 保持既有调用方（sky-capability.test.ts 等）的 import 路径不破坏。
-import { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS } from "./sky-state.ts";
+import { MODEL_SKY_PRESETS } from "./sky-state.ts";
+import type { SkyModelType } from "./sky-state.ts";
 
-export type { SkyModelType, SkyParams };
-export { DEFAULT_SKY_PARAMS, MODEL_SKY_PRESETS };
+export type { SkyModelType };
+export { MODEL_SKY_PRESETS };
 
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { disposeObject3D } from "../safe-dispose.ts";
@@ -35,9 +33,11 @@ import {
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
-// 菜单节点工厂已下沉 sky-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
-// 保持既有调用方（sky-capability.test.ts 等）的 import 路径不破坏。
 import { buildSkyNodes } from "./sky-menu.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -53,14 +53,14 @@ import { buildSkyNodes } from "./sky-menu.ts";
  *
  * ⚡ 幂等：重复调用不会重复注入。未注入过时才做 shader 替换并置 needsUpdate=true。
  *
- * @param defaults 默认值通常是 DEFAULT_SKY_PARAMS.sunIntensityScale / sunDiscScale，
+ * @param defaults 默认值通常是 envState.skySunIntensityScale / envState.skySunDiscScale，
  *                 之后通过 uniforms.value 再同步运行时参数。
  */
 export function injectSkySunScalePatch(
   mat: THREE.ShaderMaterial,
   defaults: { sunIntensityScale: number; sunDiscScale: number } = {
-    sunIntensityScale: DEFAULT_SKY_PARAMS.sunIntensityScale,
-    sunDiscScale: DEFAULT_SKY_PARAMS.sunDiscScale,
+    sunIntensityScale: envState.skySunIntensityScale,
+    sunDiscScale: envState.skySunDiscScale,
   },
 ): void {
   // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
@@ -174,8 +174,9 @@ export class SkyCapability implements SceneCapability {
   private envScene: THREE.Scene;
   private envSky: Sky;
   private renderTarget: THREE.WebGLRenderTarget | null = null;
-  private params: SkyParams;
   private enabled: boolean;
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
   /** 本实例是否已向 toneRefCount 贡献过引用（apply 幂等标记——防重复 apply 抬高计数；
    *  从未贡献的实例 dispose 不得拆共享 tone 状态，见 dispose/apply 注释） */
   private toneApplied = false;
@@ -191,15 +192,17 @@ export class SkyCapability implements SceneCapability {
   private static prevExposureMap = new WeakMap<THREE.WebGLRenderer, number>();
   /** God Rays（体积光束）*/
   private godRays: THREE.Group | null = null;
-  private godRaysEnabled: boolean;
+  private godRaysEnabled = false;
   private godRaysTime: { value: number };
   /** Sunset Tint Overlay（日落暖色渐变）*/
   private sunsetTintMesh: THREE.Mesh | null = null;
+  /** ADR-196：运行时太阳位置（从 envState.skyTimeOfDay 推导） */
+  private elevation = 0;
+  private azimuth = 180;
 
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    params?: Partial<SkyParams>;
     enabled?: boolean;
     /** cap 间协调查询器（组合根 createAll 注入）——环境开关变化通知 light 刷新 ambient */
     caps?: SceneCapabilityLookup;
@@ -207,7 +210,6 @@ export class SkyCapability implements SceneCapability {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.params = { ...DEFAULT_SKY_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? true;
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevExposure = this.renderer.toneMappingExposure;
@@ -218,17 +220,93 @@ export class SkyCapability implements SceneCapability {
     // §4 解耦：只给主天空 this.sky 注入 sun scale 补丁，envSky（用于 IBL）保持原生 Preetham —
     // 这样 IBL 环境贴图的色调基准与物体反射保持物理正确，而主天空不再被 1000² 的太阳强度炸白。
     injectSkySunScalePatch(this.sky.material as THREE.ShaderMaterial, {
-      sunIntensityScale: this.params.sunIntensityScale,
-      sunDiscScale: this.params.sunDiscScale,
+      sunIntensityScale: envState.skySunIntensityScale,
+      sunDiscScale: envState.skySunDiscScale,
     });
     this.envScene = new THREE.Scene();
     this.envScene.add(this.envSky);
     // God Rays 初始化（默认禁用）
-    this.godRaysEnabled = false;
     this.godRaysTime = { value: 0 };
     this.createGodRays();
     // Sunset Tint 初始化
     this.createSunsetTintMesh();
+
+    // ADR-196：初始化运行时太阳位置
+    this.elevation = envState.skyElevation;
+    this.azimuth = envState.skyAzimuth;
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, state) => {
+      if (changed.has('skyTimeOfDay')) {
+        this.syncSunFromTime();
+        if (this.enabled) {
+          this.writeUniforms(this.sky);
+          this.writeUniforms(this.envSky);
+        }
+        this.updateGodRays();
+        this.updateSunsetTint();
+      }
+      if (changed.has('skyElevation') || changed.has('skyAzimuth')) {
+        if (this.enabled) {
+          this.writeUniforms(this.sky);
+          this.writeUniforms(this.envSky);
+          if (state.skyEnvironment && state.skyForceEnv) {
+            this.regenerateEnvironment();
+          }
+        }
+      }
+      if (changed.has('skyElevation')) {
+        this.elevation = state.skyElevation;
+      }
+      if (changed.has('skyAzimuth')) {
+        this.azimuth = state.skyAzimuth;
+      }
+      if (changed.has('skyCloudCoverage')) {
+        if (this.enabled) {
+          this.sky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
+          this.envSky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
+        }
+      }
+      if (changed.has('skyTurbidity')) {
+        if (this.enabled) this.sky.material.uniforms.turbidity.value = state.skyTurbidity;
+      }
+      if (changed.has('skyRayleigh')) {
+        if (this.enabled) this.sky.material.uniforms.rayleigh.value = state.skyRayleigh;
+      }
+      if (changed.has('skyMieCoefficient')) {
+        if (this.enabled) this.sky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
+      }
+      if (changed.has('skyMieDirectionalG')) {
+        if (this.enabled) this.sky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
+      }
+      if (changed.has('skySunIntensityScale')) {
+        if (this.enabled) {
+          const u = this.sky.material.uniforms;
+          if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = state.skySunIntensityScale;
+        }
+      }
+      if (changed.has('skySunDiscScale')) {
+        if (this.enabled) {
+          const u = this.sky.material.uniforms;
+          if (u.sunDiscScale !== undefined) u.sunDiscScale.value = state.skySunDiscScale;
+        }
+      }
+      if (changed.has('skyExposure')) {
+        if (this.enabled) this.renderer.toneMappingExposure = state.skyExposure;
+      }
+      if (changed.has('skyEnvironment')) {
+        if (this.enabled) {
+          if (state.skyEnvironment) this.regenerateEnvironment();
+          else this.clearEnvironment();
+        }
+      }
+      if (changed.has('skyGodRaysEnabled')) {
+        if (this.enabled) this.updateGodRays();
+      }
+      if (changed.has('skyAutoRotate')) {
+        // autoRotate 仅影响 update(dt) 行为，无需立即响应
+      }
+    });
   }
 
   /** 确保 PMREMGenerator 已创建（延迟到首次需要时） */
@@ -241,8 +319,8 @@ export class SkyCapability implements SceneCapability {
 
   private createSky(): Sky {
     const sky = new Sky();
-    sky.scale.setScalar(this.params.scale);
-    sky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
+    sky.scale.setScalar(envState.skyScale);
+    sky.material.uniforms.cloudCoverage.value = envState.skyCloudCoverage;
     return sky;
   }
 
@@ -271,8 +349,8 @@ export class SkyCapability implements SceneCapability {
     }
     // exposure 每次都刷：apply→detach→apply 往返时 toneApplied 已为 true，
     // 但 exposure 可能已被外部改过，必须重新写入。
-    this.renderer.toneMappingExposure = this.params.exposure;
-    if (this.params.environment) this.regenerateEnvironment();
+    this.renderer.toneMappingExposure = envState.skyExposure;
+    if (envState.skyEnvironment) this.regenerateEnvironment();
     else this.clearEnvironment();
     // 更新 god rays 和 sunset tint
     this.updateGodRays();
@@ -281,22 +359,20 @@ export class SkyCapability implements SceneCapability {
 
   private writeUniforms(sky: Sky): void {
     const u = sky.material.uniforms;
-    u.turbidity.value = this.params.turbidity;
-    u.rayleigh.value = this.params.rayleigh;
-    u.mieCoefficient.value = this.params.mieCoefficient;
-    u.mieDirectionalG.value = this.params.mieDirectionalG;
-    u.cloudCoverage.value = this.params.cloudCoverage;
-    const phi = THREE.MathUtils.degToRad(90 - this.params.elevation);
-    const theta = THREE.MathUtils.degToRad(this.params.azimuth);
+    u.turbidity.value = envState.skyTurbidity;
+    u.rayleigh.value = envState.skyRayleigh;
+    u.mieCoefficient.value = envState.skyMieCoefficient;
+    u.mieDirectionalG.value = envState.skyMieDirectionalG;
+    u.cloudCoverage.value = envState.skyCloudCoverage;
+    const phi = THREE.MathUtils.degToRad(90 - this.elevation);
+    const theta = THREE.MathUtils.degToRad(this.azimuth);
     const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
     u.sunPosition.value.copy(sun);
-    // §4 解耦：只有已注入过 sun scale patch 的天空（即主天空 this.sky）才同步这两个新 uniform；
-    // envSky 未注入 patch，uniforms 上没有这两个字段，跳过即可（保持原生 Preetham 物理模型）。
     if (u.sunIntensityScale !== undefined) {
-      u.sunIntensityScale.value = this.params.sunIntensityScale;
+      u.sunIntensityScale.value = envState.skySunIntensityScale;
     }
     if (u.sunDiscScale !== undefined) {
-      u.sunDiscScale.value = this.params.sunDiscScale;
+      u.sunDiscScale.value = envState.skySunDiscScale;
     }
   }
 
@@ -309,7 +385,7 @@ export class SkyCapability implements SceneCapability {
       this.scene.environment = this.renderTarget.texture;
       // 同步阈值基准：任何重建路径（手动 forceEnv / 循环阈值命中 / setSun / preset）
       // 都以此时太阳高度角为新的门控基准，避免循环在手动调参后首帧冗余重建。
-      this.lastPmremElevation = this.params.elevation;
+      this.lastPmremElevation = this.elevation;
     } catch (e) {
       ringLog("sky", `环境贴图生成失败: ${e}`, "error");
       // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
@@ -328,11 +404,12 @@ export class SkyCapability implements SceneCapability {
 
   /** 调整太阳位置（度） */
   setSun(elevation: number, azimuth: number): void {
-    this.params.elevation = elevation;
-    this.params.azimuth = azimuth;
+    setEnvState({ skyElevation: elevation, skyAzimuth: azimuth, skyForceEnv: true }, { source: 'manual' });
+    this.elevation = elevation;
+    this.azimuth = azimuth;
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
-    if (this.enabled && this.params.environment) this.regenerateEnvironment();
+    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   setEnabled(v: boolean): void {
@@ -346,7 +423,7 @@ export class SkyCapability implements SceneCapability {
   }
 
   setEnvironmentEnabled(v: boolean): void {
-    this.params.environment = v;
+    setEnvState({ skyEnvironment: v }, { source: 'manual' });
     if (!this.enabled) return;
     if (v) this.regenerateEnvironment();
     else this.clearEnvironment();
@@ -360,26 +437,36 @@ export class SkyCapability implements SceneCapability {
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
   setPreset(modelType: string): void {
     const preset = MODEL_SKY_PRESETS[modelType] ?? MODEL_SKY_PRESETS.default;
-    this.params = { ...this.params, ...preset };
+    // MODEL_SKY_PRESETS 的 key 是旧名（turbidity），需映射到 Schema 新名（skyTurbidity）
+    const mapped: Partial<EnvState> = {};
+    if (preset.turbidity !== undefined) mapped.skyTurbidity = preset.turbidity;
+    if (preset.rayleigh !== undefined) mapped.skyRayleigh = preset.rayleigh;
+    if (preset.mieCoefficient !== undefined) mapped.skyMieCoefficient = preset.mieCoefficient;
+    if (preset.mieDirectionalG !== undefined) mapped.skyMieDirectionalG = preset.mieDirectionalG;
+    if (preset.exposure !== undefined) mapped.skyExposure = preset.exposure;
+    if (preset.sunIntensityScale !== undefined) mapped.skySunIntensityScale = preset.sunIntensityScale;
+    if (preset.sunDiscScale !== undefined) mapped.skySunDiscScale = preset.sunDiscScale;
+    setEnvState(mapped, { source: 'auto-model' });
     if (!this.enabled) return;
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
-    if (this.params.environment) this.regenerateEnvironment();
+    if (envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
   setCloudCoverage(v: number, regenerate = false): void {
-    this.params.cloudCoverage = Math.max(0, Math.min(1, v));
-    this.sky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
-    this.envSky.material.uniforms.cloudCoverage.value = this.params.cloudCoverage;
-    if (regenerate && this.enabled && this.params.environment) this.regenerateEnvironment();
+    const clamped = Math.max(0, Math.min(1, v));
+    setEnvState({ skyCloudCoverage: clamped }, { source: 'manual' });
+    this.sky.material.uniforms.cloudCoverage.value = clamped;
+    this.envSky.material.uniforms.cloudCoverage.value = clamped;
+    if (regenerate && this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   /** §4 解耦：设置太阳强度对天空底色的耦合尺度（0.5~1.0，默认 0.75）；
    *  1.0 = 原生 Preetham 强度（正午最白），越低天空越不被太阳光绑架。 */
   setSunIntensityScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
-    this.params.sunIntensityScale = clamped;
+    setEnvState({ skySunIntensityScale: clamped }, { source: 'manual' });
     const u = this.sky.material.uniforms;
     if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = clamped;
     // 环境贴图 envSky 不受这个参数影响（保持原生 Preetham，PBR 反射更真实）。
@@ -389,22 +476,36 @@ export class SkyCapability implements SceneCapability {
    *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
   setSunDiscScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
-    this.params.sunDiscScale = clamped;
+    setEnvState({ skySunDiscScale: clamped }, { source: 'manual' });
     const u = this.sky.material.uniforms;
     if (u.sunDiscScale !== undefined) u.sunDiscScale.value = clamped;
   }
 
   /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */
   getSunIntensityScale(): number {
-    return this.params.sunIntensityScale;
+    return envState.skySunIntensityScale;
   }
   getSunDiscScale(): number {
-    return this.params.sunDiscScale;
+    return envState.skySunDiscScale;
   }
 
   /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用，对齐其它 capability 口径） */
-  getParams(): SkyParams {
-    return { ...this.params };
+  getParams() {
+    return {
+      elevation: this.elevation,
+      azimuth: this.azimuth,
+      turbidity: envState.skyTurbidity,
+      rayleigh: envState.skyRayleigh,
+      mieCoefficient: envState.skyMieCoefficient,
+      mieDirectionalG: envState.skyMieDirectionalG,
+      cloudCoverage: envState.skyCloudCoverage,
+      scale: envState.skyScale,
+      environment: envState.skyEnvironment,
+      timeOfDay: envState.skyTimeOfDay,
+      exposure: envState.skyExposure,
+      sunIntensityScale: envState.skySunIntensityScale,
+      sunDiscScale: envState.skySunDiscScale,
+    };
   }
 
   // ── 昼夜循环动画（2026-08-20 引入；2026-09-03 迁入 SceneCapability.update(dt)）──
@@ -443,23 +544,29 @@ export class SkyCapability implements SceneCapability {
    *  forceEnv=false：昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建
    *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
-    // 禁用态不推进任何时间轴（锐评 P3：否则 timeOfDay 静默漂移——状态在走、视觉不变，
-    // 再启用时太阳跳变）。god rays shimmer 时间轴一并冻结（材质未挂场景，推进无意义）。
     if (!this.enabled) return;
-    // God Rays shimmer 动画时间轴独立于昼夜循环推进（锐评 P1：此前初始化后全仓无写入，
-    // shader sin(uTime*2.0+...) 永远静止——写了动画，动画不存在）。
     this.godRaysTime.value += dt;
     if (!this.autoRotateOn) return;
-    this.setTime(this.params.timeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC, {
-      forceEnv: false,
-    });
+    // 昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建（锐评 P1 GPU 熔炉修复）
+    setEnvState({ skyTimeOfDay: ((envState.skyTimeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC) % 24 + 24) % 24, skyForceEnv: false }, { source: 'auto-model' });
+    this.syncSunFromTime();
+    if (envState.skyEnvironment) {
+      const el = this.elevation;
+      const dirty = Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
+      if (dirty) {
+        this.regenerateEnvironment();
+        this.lastPmremElevation = el;
+      }
+    }
+    this.updateGodRays();
+    this.updateSunsetTint();
   }
 
   /** 由 timeOfDay 推导太阳 elevation/azimuth（单一事实来源，避免与 setSun 双写冲突） */
   private syncSunFromTime(): void {
-    const { elevation, azimuth } = this.hourToSun(this.params.timeOfDay);
-    this.params.elevation = elevation;
-    this.params.azimuth = azimuth;
+    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
+    this.elevation = elevation;
+    this.azimuth = azimuth;
   }
 
   /** 按一天中的小时（0-24）映射太阳位置：6=日出(东)、12=正午(南)、18=日落(西)，夜间在地平线下 → 天空转暗 */
@@ -476,7 +583,7 @@ export class SkyCapability implements SceneCapability {
    * 供时间轴标记太阳位置；与 ENV_PRESETS.sunPos 同一口径。
    */
   getSunPosition(): { x: number; y: number } {
-    const { elevation, azimuth } = this.hourToSun(this.params.timeOfDay);
+    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
     // azimuth 90~270 → x 0~1；elevation -70~70 → y 0~1（70=顶 1.0，-70=底 0.0）
     const x = (azimuth - 90) / 180;
     const y = (elevation + 70) / 140;
@@ -491,20 +598,14 @@ export class SkyCapability implements SceneCapability {
    *   （昼夜循环 update(dt) 每帧调用，锐评 P1 GPU 熔炉修复）。
    */
   setTime(hour: number, opts?: { forceEnv?: boolean }): void {
-    this.params.timeOfDay = ((hour % 24) + 24) % 24;
+    const forceEnv = opts?.forceEnv ?? true;
+    setEnvState({ skyTimeOfDay: ((hour % 24) + 24) % 24, skyForceEnv: forceEnv }, { source: 'manual' });
     this.syncSunFromTime();
     if (!this.enabled) return;
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
-    if (this.params.environment) {
-      const forceEnv = opts?.forceEnv ?? true;
-      const el = this.params.elevation;
-      const dirty =
-        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
-      if (forceEnv || dirty) {
-        this.regenerateEnvironment();
-        this.lastPmremElevation = el;
-      }
+    if (envState.skyEnvironment && forceEnv) {
+      this.regenerateEnvironment();
     }
     // 更新 god rays 和 sunset tint
     this.updateGodRays();
@@ -512,24 +613,24 @@ export class SkyCapability implements SceneCapability {
   }
 
   getTimeOfDay(): number {
-    return this.params.timeOfDay;
+    return envState.skyTimeOfDay;
   }
 
   /** 当前是否联动 IBL 环境贴图（下拉开关初始化用） */
   isEnvironmentEnabled(): boolean {
-    return this.params.environment;
+    return envState.skyEnvironment;
   }
 
   /** 当前云量（ADR-085 S2：菜单初始化惰性读，消灭硬编码 "0%"） */
   getCloudCoverage(): number {
-    return this.params.cloudCoverage;
+    return envState.skyCloudCoverage;
   }
 
   // ── God Rays ──
 
   /** 创建 sunset tint overlay mesh */
   private createSunsetTintMesh(): void {
-    const scale = this.params.scale * 0.999; // 略小于 sky，避免 z-fighting
+    const scale = envState.skyScale * 0.999; // 略小于 sky，避免 z-fighting
 
     const geometry = new THREE.PlaneGeometry(scale, scale);
 
@@ -641,7 +742,7 @@ export class SkyCapability implements SceneCapability {
   }
 
   private createConePlanes(): THREE.Group {
-    const scale = this.params.scale;
+    const scale = envState.skyScale;
     const width = scale * 0.3;
     const height = scale * 0.4;
 
@@ -677,8 +778,8 @@ export class SkyCapability implements SceneCapability {
 
   /** 获取 god rays intensity（0~1，elevation<20° 时激活） */
   getGodRaysIntensity(): number {
-    if (this.params.elevation > 20) return 0;
-    return Math.min(1, Math.max(0, (20 - this.params.elevation) / 30));
+    if (this.elevation > 20) return 0;
+    return Math.min(1, Math.max(0, (20 - this.elevation) / 30));
   }
 
   /** 按太阳位置更新 god rays 旋转和 intensity */
@@ -689,7 +790,7 @@ export class SkyCapability implements SceneCapability {
       this.godRays.visible = false;
       return;
     }
-    const { elevation, azimuth } = this.hourToSun(this.params.timeOfDay);
+    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
     const elRad = THREE.MathUtils.degToRad(elevation);
     // 旋转 group：先绕 X 轴调整仰角，再绕 Y 轴调整方位
     this.godRays.rotation.x = -elRad; // 负：仰角越高，beam 越往下压
@@ -758,14 +859,14 @@ export class SkyCapability implements SceneCapability {
   /** 保存状态到 localStorage */
   saveState(): void {
     persistState(this.id, {
-      timeOfDay: this.params.timeOfDay,
-      cloudCoverage: this.params.cloudCoverage,
-      environment: this.params.environment,
+      timeOfDay: envState.skyTimeOfDay,
+      cloudCoverage: envState.skyCloudCoverage,
+      environment: envState.skyEnvironment,
       enabled: this.enabled,
       godRaysEnabled: this.godRaysEnabled,
       // §4 解耦：持久化用户调整的太阳耦合尺度
-      sunIntensityScale: this.params.sunIntensityScale,
-      sunDiscScale: this.params.sunDiscScale,
+      sunIntensityScale: envState.skySunIntensityScale,
+      sunDiscScale: envState.skySunDiscScale,
     });
   }
 
@@ -779,17 +880,17 @@ export class SkyCapability implements SceneCapability {
       },
       timeOfDay: {
         number: (v) => {
-          this.params.timeOfDay = v;
+          setEnvState({ skyTimeOfDay: v }, { source: 'manual' });
         },
       },
       cloudCoverage: {
         number: (v) => {
-          this.params.cloudCoverage = v;
+          setEnvState({ skyCloudCoverage: v }, { source: 'manual' });
         },
       },
       environment: {
         boolean: (v) => {
-          this.params.environment = v;
+          setEnvState({ skyEnvironment: v }, { source: 'manual' });
         },
       },
       godRaysEnabled: {
@@ -800,12 +901,12 @@ export class SkyCapability implements SceneCapability {
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
       sunIntensityScale: {
         number: (v) => {
-          this.params.sunIntensityScale = v;
+          setEnvState({ skySunIntensityScale: v }, { source: 'manual' });
         },
       },
       sunDiscScale: {
         number: (v) => {
-          this.params.sunDiscScale = v;
+          setEnvState({ skySunDiscScale: v }, { source: 'manual' });
         },
       },
     });
@@ -841,6 +942,7 @@ export class SkyCapability implements SceneCapability {
 
   dispose(): void {
     this.stopAutoRotate();
+    this.unsubscribeEnv();
     this.detach();
     // 守卫依据：本能力生成过的 environment 贴图引用（须在 renderTarget dispose/置空前捕获）
     const ownedEnv = this.renderTarget?.texture ?? null;

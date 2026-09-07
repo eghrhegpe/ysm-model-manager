@@ -25,10 +25,7 @@ auto_fields:
     - CapabilityMap
     - cleanupPreview
     - DEFAULT_ENV_PARAMS
-    - DEFAULT_FOG_PARAMS
-    - DEFAULT_GROUND_PARAMS
     - DEFAULT_POSTPROC_PARAMS
-    - DEFAULT_SHADOW_PARAMS
     - drawEnvEquirect
     - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
@@ -41,9 +38,7 @@ auto_fields:
     - FOG_PRESETS
     - FogCapability
     - FogMode
-    - FogParams
     - GroundCapability
-    - GroundParams
     - GroupedScene
     - hasActivePreview
     - injectSkySunScalePatch
@@ -51,6 +46,7 @@ auto_fields:
     - isSkyEnvironmentOn
     - LightCapability
     - lightDirToPosition
+    - MODEL_SKY_PRESETS
     - mount3D
     - Mount3DOptions
     - PoseScene
@@ -67,9 +63,8 @@ auto_fields:
     - SceneCapabilityRegistry
     - ScreenshotScene
     - SemanticScene
-    - SHADOW_PRESETS
     - ShadowCapability
-    - ShadowParams
+    - ShadowType
     - SkyCapability
     - SkyModelType
     - switchPreview

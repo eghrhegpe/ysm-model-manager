@@ -9,9 +9,7 @@ source_files:
   - frontend/src/preview-3d/caps/ground-capability.ts
 auto_fields:
   symbols_with_lines:
-    - DEFAULT_GROUND_PARAMS
     - GroundCapability
-    - GroundParams
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

@@ -23,9 +23,7 @@ auto_fields:
     - buildMmdScene
     - CameraControlScene
     - cleanupPreview
-    - DEFAULT_GROUND_PARAMS
     - GroundCapability
-    - GroundParams
     - GroupedScene
     - hasActivePreview
     - invalidatePreview

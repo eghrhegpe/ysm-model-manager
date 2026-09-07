@@ -74,6 +74,10 @@ export async function loadModel2D(
       return;
     }
     container.style.opacity = "1";
+    // 清理 canvas 悬停监听器（防止泄漏：innerHTML="" 移除 DOM 但不触发监听器移除）
+    container.querySelectorAll("canvas").forEach((c) => {
+      c._hoverCleanup?.();
+    });
     container.innerHTML = "";
     const { canvas, textureImg } = await setup2DCanvas(container, model);
     if (!container.isConnected) return;

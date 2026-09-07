@@ -630,7 +630,7 @@
 | 手写 .(ysm\|zip\|json) 判定 | - | .7z 漏判、注册表变更不同步；必须经 matchTypeByExt(RESOURCE_TYPES.YSM) |
 | async 窗口期无 container.isConnected 守卫 | - | 组件卸载后异步回调写已卸载 DOM；每个 await 后必须检查 isConnected |
 | events.ts 里直接调 PushSingleResource | - | 绕过排队，并发冲突；必须经 runPush/runPull |
-| _lastEmittedPkg 未更新 | - | 拖拽导入重复触发；每次导入必须刷新该锚点 |
+| 去重状态机未复位 | - | 拖拽导入重复触发；宿主必须实现 SidebarHost 并复位 lastEmittedPkg |
 | 各列各自查询同步状态 | - | 状态不一致、并发冲突；必须经 _gen 单点生成 |
 | 同步操作未进队列 | - | 并发 push/pull 冲突；必须经 sync-manager 排队 |
 | bus 订阅未进 _unsubs | - | 组件卸载后监听泄漏；必须经 bindBusEvents 返回的 unsub 数组收集 |

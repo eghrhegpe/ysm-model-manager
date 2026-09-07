@@ -88,6 +88,10 @@ export async function openFullPreview(
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === "Escape") close();
   };
+  const onPopState = (): void => close();
+  const onVisibilityChange = (): void => {
+    if (document.visibilityState === "hidden") close();
+  };
   window.addEventListener("pointermove", onWindowMove);
   window.addEventListener("pointerup", onWindowUp);
   window.addEventListener("pointercancel", onWindowCancel);
@@ -99,11 +103,15 @@ export async function openFullPreview(
     window.removeEventListener("pointerup", onWindowUp);
     window.removeEventListener("pointercancel", onWindowCancel);
     document.removeEventListener("keydown", onKey);
+    window.removeEventListener("popstate", onPopState);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     if (overlay.parentNode) document.body.removeChild(overlay);
   };
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
   document.addEventListener("keydown", onKey);
+  window.addEventListener("popstate", onPopState);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   document.body.appendChild(overlay);
 }

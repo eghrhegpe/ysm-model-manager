@@ -41,13 +41,12 @@ auto_fields:
     - createVrm3D
     - createYsm3D
     - cubeVec
-    - detailGen
+    - DetailGenGuard
     - drawMiniView
     - drawView
     - fill3DPanel
     - fillAuthorsAsync
     - GenGuard
-    - getPrefer3D
     - getRegisteredRoutes
     - HitZone
     - invalidateEmptyPreview
@@ -76,6 +75,7 @@ auto_fields:
     - OpenModel3DOptions
     - PanelHandle
     - playNodes
+    - Prefer3DState
     - preloadModel
     - previewCSS
     - PreviewCtx
@@ -96,7 +96,6 @@ auto_fields:
     - saveScreenshot
     - scanModelsByType
     - setActive3DClose
-    - setPrefer3D
     - setup2DCanvas
     - shotButtonNodes
     - showFbxPreview

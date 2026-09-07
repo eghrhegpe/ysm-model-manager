@@ -363,7 +363,6 @@ auto_fields:
     - DEFAULT_WATER_PARAMS
     - deriveTestIds
     - describeVersionRange
-    - detailGen
     - detectContainerType
     - devLog
     - diagnosticsHTML
@@ -540,7 +539,6 @@ auto_fields:
     - getMmdMaterialDetail
     - getModelRootCount
     - getPerfPreset
-    - getPrefer3D
     - getPreviewableTypeTabs
     - getRegisteredRoutes
     - getRenderMode
@@ -1206,7 +1204,6 @@ auto_fields:
     - setMolangScope
     - setPerceptionPaused
     - setPerfPreset
-    - setPrefer3D
     - setRenderMode
     - setSceneCapabilityLookup
     - setShowSiteView

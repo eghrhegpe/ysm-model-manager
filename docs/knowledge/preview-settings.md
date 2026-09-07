@@ -30,11 +30,11 @@ auto_fields:
     - closeActive3DOverlay
     - componentCountsFromSpec
     - createAdaptiveRenderBudget
+    - DetailGenGuard
     - fill3DPanel
     - getFrameIntervalMs
     - getMaxFps
     - getMaxPixelRatio
-    - getPrefer3D
     - getStateValue
     - invalidateMaxFpsCache
     - isPathAvailable
@@ -46,6 +46,7 @@ auto_fields:
     - Model2DOptions
     - openFullPreview
     - PanelHandle
+    - Prefer3DState
     - PREVIEW_FRAME_INTERVAL_MS
     - PreviewCtx
     - PreviewDebugger
@@ -60,7 +61,6 @@ auto_fields:
     - sampleAdaptivePixelRatio
     - saveScreenshot
     - setActive3DClose
-    - setPrefer3D
     - setPreviewUiMode
     - setSceneCapabilityLookup
     - setStateValue

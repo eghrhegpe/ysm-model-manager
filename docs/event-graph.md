@@ -108,9 +108,9 @@
 |------|------|----|
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 144 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 127 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 287 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 311 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 323 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 288 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 312 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 324 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -227,7 +227,7 @@
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 275 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 356 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 160 |
-| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 245 |
+| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 246 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 450 |
 
 **订阅方（on）：**
@@ -341,7 +341,7 @@
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 119 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 186 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 104 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 390 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -382,7 +382,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 348 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 102 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 497 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 498 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -544,11 +544,11 @@
 | atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 176 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 192 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 199 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 392 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 432 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 440 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 393 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 433 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 441 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 501 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 511 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 74 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 233 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 375 |

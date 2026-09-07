@@ -30,6 +30,7 @@ export interface MmdVariantGroups {
  * （30s 缓存扫完才 Store，重叠请求双双真扫 → 操作日志同秒重复条目）。
  * 前端在途去重 + go/scanner 航班合并双层防御。 */
 const _inflight = new Map<string, Promise<SidebarInstance[]>>();
+const _inflightTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并）
  *  @param opts.force 变异后刷新（sync 拉取/导入/启停完成）传 true，跳过在途去重——
@@ -46,8 +47,21 @@ export function loadInstances(
   }
   const p = doLoadInstances(key).finally(() => {
     _inflight.delete(key);
+    const timer = _inflightTimers.get(key);
+    if (timer) {
+      clearTimeout(timer);
+      _inflightTimers.delete(key);
+    }
   });
   _inflight.set(key, p);
+  // 30s 超时淘汰：防止 Promise 永远不 settle 导致条目永久残留
+  _inflightTimers.set(
+    key,
+    setTimeout(() => {
+      if (_inflight.get(key) === p) _inflight.delete(key);
+      _inflightTimers.delete(key);
+    }, 30000),
+  );
   return p;
 }
 

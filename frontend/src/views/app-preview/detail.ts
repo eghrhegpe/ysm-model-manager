@@ -1,8 +1,8 @@
 // ===== 模型/资源包详情面板 =====
 // 从 index.ts 拆分：详情面板渲染逻辑。
 // ADR-072 D3：3D 入口（showVrmMeta/showMmdPreview）已拆至 detail-3d.ts，
-// 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）；
-// detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
+// 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）。
+// detailGen 已迁至 AppPreview 实例（多实例隔离防串扰，快速切换时各实例在途请求互不影响）。
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
@@ -16,18 +16,17 @@ import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
-import type { PreviewCtx } from "./utils.ts";
-
-/** 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
-export const detailGen = new GenGuard();
+import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 
 /** 显示模型详情（YSM 模型） */
-export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<void> {
-  const gen = detailGen.next();
+export async function showModelDetail(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
+  const gen = ctx.detailGen.next();
   const savedTab = safeGet("ysm_previewTab") || "detail";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="pv-tab-row">
@@ -57,12 +56,12 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
   await ctx.loadPreviewImage(path);
-  if (detailGen.stale(gen)) return; // 用户已切换到其他预览
+  if (ctx.detailGen.stale(gen)) return; // 用户已切换到其他预览
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } = await getApp();
     const results = await Promise.allSettled([ExtractYsmSummary(path), ExtractYSMHeader(path)]);
-    if (detailGen.stale(gen)) return; // 解析期间用户已切换
+    if (ctx.detailGen.stale(gen)) return; // 解析期间用户已切换
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
     const basename = path.split(/[/\\]/).pop() || "";
@@ -80,7 +79,7 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
     let enriched: YsmSummary | null = summary;
     if (!hasRealSummary) {
       const dec = await decodeYsmViaWasm(path);
-      if (detailGen.stale(gen)) return;
+      if (ctx.detailGen.stale(gen)) return;
       const decHasInfo = !!(
         dec?.animGroups?.length ||
         dec?.configMenus?.length ||
@@ -130,7 +129,7 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
       logWarn("preview", "loadModel2D 失败", e),
     );
   } catch (err) {
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(friendlyError(err))}`;
@@ -140,16 +139,16 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
 
 /** 显示资源包信息（pack.mcmeta + pack.png + 模型清单） */
 export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<void> {
-  const gen = detailGen.next();
+  const gen = ctx.detailGen.next();
   try {
     const App = await getApp();
     const { ReadPackMeta } = App;
     const meta = await ReadPackMeta(path);
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     if (!meta) throw new Error("资源包信息为空");
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     const rv = describeVersionRange(meta);
     // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
     // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
@@ -174,7 +173,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）
     void renderPackModelList(ctx, gen, App, path);
   } catch (e) {
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
   }
 }
@@ -188,7 +187,7 @@ async function renderPackModelList(
 ): Promise<void> {
   try {
     const detail = await App.ListPackModelsDetail(path);
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     const models = detail?.models ?? [];
     const host = ctx.root.querySelector<HTMLElement>("#pack-model-list");
     if (!host) return;
@@ -230,11 +229,11 @@ async function renderPackModelList(
 
 /** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */
 export async function showSimplePreview(
-  ctx: PreviewCtx,
+  ctx: PreviewCtx & DetailGenGuard,
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
+  ctx.detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = opts?.icon || "☀️";
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -248,11 +247,11 @@ export async function showSimplePreview(
 
 /** 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 */
 export async function showShaderpack(
-  ctx: PreviewCtx,
+  ctx: PreviewCtx & DetailGenGuard,
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  const gen = detailGen.next();
+  const gen = ctx.detailGen.next();
   const icon = opts?.icon || "☀️";
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -263,7 +262,7 @@ export async function showShaderpack(
   try {
     const { ReadShaderpackLang } = await getApp();
     const spMeta = await ReadShaderpackLang(path);
-    if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
+    if (ctx.detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     const displayName = spMeta?.name || basename;
     const entries = spMeta?.entries ?? {};
     // 取前几条 option 描述作为简介（与 app-resource-manager 同口径，去 § 格式码）
@@ -283,7 +282,7 @@ export async function showShaderpack(
   </div>
 </div>`;
   } catch (e) {
-    if (detailGen.stale(gen)) return;
+    if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>

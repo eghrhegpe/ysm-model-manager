@@ -3,6 +3,8 @@
 // ADR-137 第五刀拆分：纯领域部分（DecodedYsm / stripYsgpTextHeader / devLog）
 // 已归位 preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
 
+import type { GenGuard } from "./gen-guard.ts";
+
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 /** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） */
 export interface PreviewRoot {
@@ -37,16 +39,26 @@ export interface PreviewImageLoader {
   loadPreviewImage(path: string): Promise<string | null>;
 }
 
+/** 3D 偏好状态（实例级，跨模型切换保留） */
+export interface Prefer3DState {
+  /** 读取 3D 偏好状态 */
+  getPrefer3D(): boolean;
+  /** 设置 3D 偏好状态 */
+  setPrefer3D(v: boolean): void;
+}
+
+/** 详情代际守卫（实例级，多实例隔离防串扰） */
+export interface DetailGenGuard {
+  detailGen: GenGuard;
+}
+
 /** 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。
  * 消费方按需收窄参数到小接口（见 detail/litematic-meta/loader/skeleton），
  * 测试 mock 只需提供被测字段，消除「mock 全套」压力。 */
-export interface PreviewCtx extends PreviewRoot, YsmDecoder, PreviewDebugger, PreviewImageLoader {}
-
-/** 3D 偏好状态（跨模型切换保留） */
-let _prefer3D = false;
-export function getPrefer3D(): boolean {
-  return _prefer3D;
-}
-export function setPrefer3D(v: boolean): void {
-  _prefer3D = v;
-}
+export interface PreviewCtx
+  extends PreviewRoot,
+    YsmDecoder,
+    PreviewDebugger,
+    PreviewImageLoader,
+    Prefer3DState,
+    DetailGenGuard {}

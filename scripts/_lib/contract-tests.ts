@@ -81,6 +81,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_check_path_hygiene.ts': ['frontend', 'tests'],
   'test_api_break.ts': ['tests'],
   'test_auto_import.ts': ['tests'],
+  // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
+  'test_check_android_unavailable.ts': ['tests', 'go', 'frontend'],
   'test_check_diff_coverage.ts': ['tests'],
   'test_check_go_diff_coverage_skip.ts': ['tests'],
   'test_check_go_diff_coverage.ts': ['tests'],
@@ -132,6 +134,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   'test_check_path_hygiene.ts': ['scripts/check-path-hygiene.ts', 'scripts/_lib/alias-resolve.ts', 'scripts/_lib/scan-files.ts', 'frontend/tsconfig.json', 'frontend/vite.config.js'],
   'test_api_break.ts': ['scripts/api-break.ts'],
   'test_auto_import.ts': ['scripts/auto-import-lexer.ts', 'scripts/auto-import-symbols.ts', 'scripts/auto-import-detect.ts'],
+  // 守卫事实源：脚本自身 + 前端黑名单/测试副本/bindings + internal/app/ 目录哨兵（T1 文件差集 / T2 守卫扫描源）
+  'test_check_android_unavailable.ts': [
+    'scripts/check-android-unavailable.ts',
+    'frontend/src/backend/platform-web.ts',
+    'frontend/src/backend/platform-web.test.ts',
+    'frontend/bindings/ysm-model-manager/internal/app/app.ts',
+    'internal/app/',
+  ],
   'test_check_diff_coverage.ts': ['scripts/check-diff-coverage.ts'],
   'test_check_go_diff_coverage.ts': ['scripts/check-go-diff-coverage.ts'],
   'test_check_go_diff_coverage_skip.ts': ['scripts/check-go-diff-coverage.ts'],

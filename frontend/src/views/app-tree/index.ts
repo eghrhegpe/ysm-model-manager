@@ -1,11 +1,11 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 
-import { t } from "../../core/i18n/t.ts";
-import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
+import { t } from "@/core/i18n/t.ts";
+import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { treeCSS } from "./app-tree-styles.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
@@ -22,8 +22,8 @@ const appTreeStyle: CSSStyleSheet = (() => {
 
 export { appTreeStyle };
 
-import { isPreviewOverlayActive } from "../../ui/overlay-active.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { isPreviewOverlayActive } from "@/ui/overlay-active.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
@@ -48,10 +48,10 @@ export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
-import { bus } from "../../bus.ts";
-import { modalConfirm } from "../../features/dialogs/modal-confirm.ts";
-import { bindTreeDnD } from "../../features/dnd/import-dnd.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+import { bus } from "@/bus";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
+import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { rememberModelPath } from "../app-content/init-pages.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { selectSingle, selectState } from "./data.ts";

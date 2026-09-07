@@ -2,7 +2,7 @@
 // ===== 全局导入执行器测试（import-executor.ts）=====
 // 覆盖：单文件直导、文件夹整组、执行入口分组、去重、ysm.json 引导
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { getApp, type AppBindings } from "@/backend/app.ts";
 import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./executor.ts";
 

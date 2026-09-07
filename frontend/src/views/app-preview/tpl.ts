@@ -1,8 +1,8 @@
 // ===== preview HTML 模板 =====
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
-import { extOf } from "../../utils/resource/types.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
+import { extOf } from "@/utils/resource/types.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
 export interface ModelDetailMeta {

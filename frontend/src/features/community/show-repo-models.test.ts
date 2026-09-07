@@ -4,9 +4,9 @@
 // 的 modal/下载队列/虚拟列表重 import 链）与 dbg；currentRepoType 状态外提 mock。
 // render.ts 的 countMissing / renderRepoHeaderHTML 走真实实现（断言 innerHTML 实际产物）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../test-utils/index.ts";
-import { esc } from "../../utils/html/html.ts";
-import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { waitFor } from "@/test-utils/index.ts";
+import { esc } from "@/utils/html/html.ts";
+import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { WorkshopModel } from "./render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 

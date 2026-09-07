@@ -16,6 +16,7 @@ auto_fields:
     - cleanupPreview
     - GroupedScene
     - hasActivePreview
+    - InstalledPreviewInfra
     - invalidatePreview
     - mount3D
     - Mount3DOptions

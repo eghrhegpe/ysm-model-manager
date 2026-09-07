@@ -110,6 +110,7 @@ auto_fields:
     - injectSkySunScalePatch
     - InputHandlers
     - InputOptions
+    - InstalledPreviewInfra
     - invalidatePreview
     - isLikelyTga
     - listBonesWithDepth

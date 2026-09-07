@@ -1,12 +1,12 @@
 // ===== <app-sidebar> 入口 =====
 
-import { bus } from "../../bus.ts";
-import { currentRepoType } from "../../features/repo/repo-rtype.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { ALL_RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
+import { ALL_RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
@@ -24,9 +24,9 @@ const appSidebarStyle: CSSStyleSheet = (() => {
 export { appSidebarStyle };
 
 import { getApp } from "@/backend/app.ts";
-import { t } from "../../core/i18n/t.ts";
-import { bindPackCardDnD } from "../../features/dnd/pack-dnd.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { t } from "@/core/i18n/t.ts";
+import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
 import { loadInstances } from "./loader.ts";

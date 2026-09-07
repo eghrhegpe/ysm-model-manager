@@ -10,7 +10,7 @@ import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewMenuHandle } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
-import { stubBlobUrls } from "../../test-utils/blob-urls.ts";
+import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
 
 const hoisted = vi.hoisted(() => {
   const managerInstances: Array<{ resolveURL: (url: string) => string }> = [];
@@ -118,7 +118,7 @@ vi.mock("../decoder/mmd-ktx2-encoder.ts", () => ({
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
 }));
 vi.mock("../../utils/main-thread-watch.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../utils/main-thread-watch.ts")>();
+  const actual = await importOriginal<typeof import("@/utils/main-thread-watch.ts")>();
   return {
     ...actual,
     startMainThreadWatch: (cb: (info: unknown) => void): (() => void) => {

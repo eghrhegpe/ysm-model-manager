@@ -3,16 +3,16 @@
 // busy/toastError）统一走 store.ts 模块级，root/refreshAdvanced 显式参数传递。
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { modalPicker } from "../../../features/dialogs/modal-picker.ts";
-import type { ResourceTypeEntry } from "../../../services/resource-registry.ts";
-import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { safeGet } from "../../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { esc } from "../../../utils/html/html.ts";
-import { groupStorageRootOf } from "../../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { modalPicker } from "@/features/dialogs/modal-picker.ts";
+import type { ResourceTypeEntry } from "@/services/resource-registry.ts";
+import { pickDirectory } from "@/utils/dom/directory-picker.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
+import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { cardRefreshers, cfg, isBusy, setBusy, toastError } from "./store.ts";
 
 // 保存 cfg 辅助（保留各字段原值）

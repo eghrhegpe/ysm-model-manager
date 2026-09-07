@@ -6,7 +6,7 @@
 // 依赖全部 mock（真链会拖入 Web Component / Wails 桥），断言走 hoisted spy；
 // bus / registry / module-loader / storage 保持真实（它们是装配行为的观察点）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { TOAST_MS } from "./utils/dom/toast-ms.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // [治本] 文件级真实 timer 登记：boot 期间注册的所有 setTimeout 句柄（含 app-modules
 // 顶层 IIFE 的 setTimeout(2000) 预取与 flush 泵的 setTimeout(0)）统一登记，afterEach

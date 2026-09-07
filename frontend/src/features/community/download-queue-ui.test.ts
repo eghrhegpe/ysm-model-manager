@@ -5,7 +5,7 @@
 // ⚠️ ADR-187 D5 修订（2026-09-05）：vitest isolate:true 下拆分可行——本文件自持
 // mock 矩阵 + beforeEach 动态 import（与状态层复制式同构，见 download-queue.test.ts 头）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { type Bus, type ToastPayload } from "../../bus.ts";
+import { type Bus, type ToastPayload } from "@/bus";
 import { type QueueController, type QueueControllerOptions } from "./download-queue.ts";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
@@ -85,7 +85,7 @@ beforeEach(async () => {
   const mod = await import("./download-queue.ts");
   createDownloadQueue = mod.createDownloadQueue;
   // 与重新 import 的 download-queue 共用同一 bus 实例
-  bus = (await import("../../bus.ts")).bus;
+  bus = (await import("@/bus")).bus;
 });
 
 /** 触发后端事件（payload 为 { data: [...] } 格式） */

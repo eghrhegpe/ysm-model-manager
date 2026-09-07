@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== 创意工坊渲染层纯函数测试（ADR-023 L3）=====
-import { formatBytes } from "../../utils/dom/format.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
 import { describe, it, expect } from "vitest";
 import {
   isModelMissing,

@@ -173,10 +173,15 @@ export interface BarrelHygiene {
  * - 同目录别名：isAlias 且展开目标与本文件 dirname 相等 → 应写相对 `./`。
  */
 export function classifyBarrelHygiene(spec: string, fromFileAbs: string, isTestFile: boolean): BarrelHygiene {
-  const bareAlias = /^@\/[^/]+$/.test(spec);
   const indexGlobal = /\/index$/.test(spec);
-  const isBarrelEntry = bareAlias || indexGlobal;
+  const bareAlias = /^@\/[^/]+$/.test(spec);
   const c = classifyImport(spec, fromFileAbs);
+  // 裸 `@/x` 只有在展开后是【目录】（有 index 聚合）才叫桶入口；文件级别名（@/bus→bus.ts 等）是具体叶，不算。
+  let dirBarrel = false;
+  if (bareAlias && c.targetAbs) {
+    try { dirBarrel = fs.statSync(c.targetAbs).isDirectory(); } catch { dirBarrel = false; }
+  }
+  const isBarrelEntry = indexGlobal || dirBarrel;
   const sameDirAlias = !isBarrelEntry && c.resolved && c.isAlias && c.targetAbs !== null
     ? path.dirname(c.targetAbs) === path.dirname(fromFileAbs)
     : false;

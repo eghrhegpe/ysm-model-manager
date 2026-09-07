@@ -2,9 +2,9 @@
 // 自 settings/launcher-detection.test.ts 搬家适配：装配逻辑（按钮注入/MutationObserver）
 // 随设置页版删除不再覆盖，检测流程各分支语义保持等价（happy-dom + mock 桥）。
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { bus, type BusEvents } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus, type BusEvents } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 const { getAppMock, pickDirMock } = vi.hoisted(() => ({
   getAppMock: vi.fn(),

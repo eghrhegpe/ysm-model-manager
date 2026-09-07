@@ -4,7 +4,7 @@
 //  - 收藏点击（阻止冒泡 + 排序 + toast）/ 头像调试 / 详情浮层（关闭/搜索/查看本地）
 //  - 键盘导航 ←↑↓→ / storage 跨标签同步 + cleanup
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 
 const {
   busEmit,

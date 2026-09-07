@@ -3,7 +3,7 @@
 // 禁止内联魔法数字或在本文件外另起同名命名（命名冲突会造成语义漂移）。
 // 改动本表须同步更新 toast-ms.test.ts 契约测试。
 
-import type { ToastPayload } from "../../bus.ts";
+import type { ToastPayload } from "@/bus";
 
 export const TOAST_MS = {
   /** 瞬时提示（操作进行中、快速确认） */

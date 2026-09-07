@@ -5,7 +5,7 @@
 // 无同名测试先例（app-tree.component / render / toolbar-events 等均不 import events.ts）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { selectState, selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";

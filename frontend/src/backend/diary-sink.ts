@@ -2,8 +2,8 @@
 // core/error-diary 经此注入落盘能力，依赖方向保持 backend → core 单向；
 // 净化/去重/截断策略归 core，本文件只负责 Wails 调用与失败截断。
 
-import type { DiarySink } from "../core/error-diary.ts";
-import { dbg } from "../utils/debug/debug.ts";
+import type { DiarySink } from "@/core/error-diary.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { getApp } from "./app.ts";
 
 /** 构造日记落盘 sink：entry 转发至 AddOpLog（op="ui"，sourcePath/targetDir/fileSize 空位） */

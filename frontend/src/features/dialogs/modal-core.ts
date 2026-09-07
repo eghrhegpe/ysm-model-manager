@@ -6,7 +6,7 @@
 // 勿直接依赖本文件内部 API；createDialog 为内部脚手架（供同目录 builder 使用），
 // 导出仅为兄弟文件协作，非对外契约。
 
-import { esc } from "../../utils/html/html.ts";
+import { esc } from "@/utils/html/html.ts";
 
 /** ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
  * 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。 */

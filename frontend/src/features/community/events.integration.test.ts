@@ -3,7 +3,7 @@
 // 渲染/筛选/大小策略等纯函数已单独测（render.test / download-tasks.test），本文件只验证编排层。
 // 命名：编排/委托链路 → .integration.（§19.2；被测 events.ts 非 Web Component，不属 .component.）
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 // mock 下载队列（编排层委托点；enqueue 等由 download-queue.test 覆盖，这里只验证委托）
 const queueMock = vi.hoisted(() => ({
@@ -27,7 +27,7 @@ vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
 import { getApp } from "@/backend/app.ts";
 import { bindRepoEvents, type RepoEventsContext } from "./events.ts";
 import { type WorkshopModel } from "./render.ts";
-import { fireClick, fireInput } from "../../test-utils/events.ts";
+import { fireClick, fireInput } from "@/test-utils/events.ts";
 import {
   DOWNLOAD_CONFIRM_BYTES,
   DOWNLOAD_REJECT_BYTES,

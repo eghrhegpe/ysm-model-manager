@@ -1,9 +1,9 @@
 // ===== loadOldestModel 资历最深/评分/热力图/每日推荐测试 =====
 // 覆盖：空仓库、未配置目录、正常渲染（评分/热力图/资历最深/推荐）、rtype 切换、清理函数、点击选模型
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
-import { flushPromises } from "../../test-utils/index.ts";
-import { renderOldestPage } from "../../views/app-content/tpl-oldest.ts";
+import { bus } from "@/bus";
+import { flushPromises } from "@/test-utils/index.ts";
+import { renderOldestPage } from "@/views/app-content/tpl-oldest.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {

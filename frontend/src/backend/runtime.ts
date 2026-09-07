@@ -3,7 +3,7 @@
 // 网页版（无 Wails 壳）走 no-op 桩——MikuMikuAR ADR-176 教训：Events/Window
 // 在纯浏览器无原生后端，须 no-op 兜底，否则 OpenDevTools 等会抛 / 行为漂移。
 import { Events as WailsEvents, Window as WailsWindow } from "@wailsio/runtime";
-import { dbg } from "../utils/debug/debug.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { isWebPlatform } from "./platform-web.ts";
 
 const isWeb = isWebPlatform();

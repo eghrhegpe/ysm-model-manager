@@ -6,7 +6,7 @@
 //  - config-loaded 事件重提取 + 模块级注册守卫 + resetAvatarConfigLoaded 复位
 // mock 写法按知识卡 vitest-env-switch.md 模式 4（vi.hoisted + mock getApp）；bus 用真实实例 + spy。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 const {
   getApp,

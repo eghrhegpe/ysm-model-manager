@@ -10,7 +10,7 @@
 //   2. readFileBytesBatch([...])  → 逐条分流（zip 内 / zip 外）
 //   3. listAllFilePaths(dir)      → dir 为虚拟目录 → 返回 zip 所有 entry 路径
 
-import { extractZip } from "../../parsers/extract.ts";
+import { extractZip } from "@/parsers/extract.ts";
 import { b64ToBytes, bytesToBase64 } from "../base64.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 

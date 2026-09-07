@@ -5,9 +5,9 @@
 // network → store（push/pull 后调 loadData 刷新数据）
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 import type { SyncManagerSelf } from "./index.ts";
 

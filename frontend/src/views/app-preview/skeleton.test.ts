@@ -7,7 +7,7 @@
 //  - 3D 切换：overlay 创建 + preloadModel/renderModel3D 调用 + close3D 清理
 //  - 3D 加载失败 → error toast
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { waitFor } from "../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 
 const {
   getPrefer3D,
@@ -71,7 +71,7 @@ vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D }));
 
 import { loadModel2D } from "./skeleton.ts";
 import { fill3DPanel } from "./skeleton-render.ts";
-import type { Spec3D } from "../../preview-3d/model3d.ts";
+import type { Spec3D } from "@/preview-3d/model3d.ts";
 
 /** 可控 Image：src setter 同步 onload（happy-dom 无真实网络） */
 class FakeImage {

@@ -2,7 +2,7 @@
 // 覆盖：updateAll 对 banned 文件（foo.ysm.ban）扩展名/角色名/尾缀的处理、普通文件、应用载荷、
 // 键盘交互（Esc/Enter）、解析模式批量应用、替换模式防抖/无效正则、预设、应用失败兜底
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 const { closeDlgMock, registerDlgMock, trapFocusMock, activeCancelRef } = vi.hoisted(() => {
   // 模拟 modal.ts registerDlg 的真实单例语义：登记新弹窗前先结算旧弹窗的取消回调

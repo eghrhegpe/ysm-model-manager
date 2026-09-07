@@ -2,7 +2,7 @@
 // 覆盖：高级筛选全链路（回填/交集/清空/失败）、全选反选、导出、视图切换、
 //       作者菜单填充、批量按钮、更多菜单（打开文件夹/导入/刷新/生成索引）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { selectState } from "./data.ts";
 import type { AppTree } from "./index.ts";
 

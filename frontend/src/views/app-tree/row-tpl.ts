@@ -1,7 +1,7 @@
 // ===== 树节点行 HTML 模板（grid 模式）=====
-import { t } from "../../core/i18n/t.ts";
-import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { formatBytes, sizeColor } from "@/utils/dom/format.ts";
+import { esc } from "@/utils/html/html.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 

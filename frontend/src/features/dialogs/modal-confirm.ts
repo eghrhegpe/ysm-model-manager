@@ -2,8 +2,8 @@
 // 原 modal.ts（ADR-014 P3）confirm 段独立成文件；脚手架走 modal-core createDialog。
 // 用法: const ok = await modalConfirm({ title, icon, message, danger })
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalConfirm 选项 */

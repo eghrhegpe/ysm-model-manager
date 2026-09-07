@@ -10,7 +10,7 @@ import {
   isFaved,
   toggleFav,
 } from "./workshop-data.ts";
-import { ICONS } from "../../../utils/icon/workshop-icons.ts";
+import { ICONS } from "@/utils/icon/workshop-icons.ts";
 
 describe("getCreatorIdentity", () => {
   it("已知 role 映射到对应标签与图标", () => {

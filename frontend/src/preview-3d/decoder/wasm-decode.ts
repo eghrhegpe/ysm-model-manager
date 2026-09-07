@@ -2,12 +2,12 @@
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 
 import { getApp } from "@/backend/app.ts";
-import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { extractAnimGroupsAndConfigs } from "../../utils/format/ysm-anim-config.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
-import { sniffTexSize } from "../../utils/tex-size.ts";
-import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "../../wasm/ysm-parser.ts";
+import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { extractAnimGroupsAndConfigs } from "@/utils/format/ysm-anim-config.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
+import { sniffTexSize } from "@/utils/tex-size.ts";
+import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "@/wasm/ysm-parser.ts";
 import { cacheGet, cacheSet } from "./cache.ts";
 import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.ts";
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";

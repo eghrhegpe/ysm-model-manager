@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
 import type { BedrockModel, BedrockCube } from "./model2d.ts";
-import type { BoneTransform, Vec3 } from "../../../utils/animation/animation.ts";
+import type { BoneTransform, Vec3 } from "@/utils/animation/animation.ts";
 
 /** 便捷构造：单骨骼单 cube 模型 */
 function cubeModel(bone: string, cube: BedrockCube): BedrockModel {

@@ -4,7 +4,7 @@
 // apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
-import { dbg } from "../../utils/debug/debug.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { registerEnvCallback } from "../state/env-dispatcher.ts";

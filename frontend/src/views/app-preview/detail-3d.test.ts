@@ -4,7 +4,7 @@
 // 缩略图 / esc 转义 / 过期守卫），按 2D 详情卡同构范式（makeCtx + vi.hoisted mock）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import type { PreviewCtx } from "./utils.ts";
 
 const {

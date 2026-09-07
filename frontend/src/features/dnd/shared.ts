@@ -3,7 +3,7 @@
 // utils/resource/importable.ts（backend/web-fs-auth 直引同口径，消除 backend →
 // features 反向依赖）；本文件仅内部依赖 getExt / isImportableFile，不再 re-export。
 // CollectedEntry 事实源在 ./collector.ts——消费方请直引该文件，勿经本文件中转。
-import { getExt, isImportableFile } from "../../utils/resource/importable.ts";
+import { getExt, isImportableFile } from "@/utils/resource/importable.ts";
 import { type CollectedEntry, collectFiles } from "./collector.ts";
 
 /** 判断文件是否需要进入命名表单

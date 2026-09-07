@@ -3,7 +3,7 @@
 // 提为接收 MountCtx 上下文的模块级函数（switch-preview.ts 的 SwitchContext 同款模式）。
 // 本文件仅承载「会话终结/清理/卸载」生命周期；菜单/rAF/外壳装配仍归 mount-preview-core。
 
-import { returnFocus } from "../../utils/dom/focus-restore.ts";
+import { returnFocus } from "@/utils/dom/focus-restore.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
 import type { TdKeyAction } from "../keymap.ts";

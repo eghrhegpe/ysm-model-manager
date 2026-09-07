@@ -5,8 +5,8 @@
 // ADR-189 D4：core→utils/base 允许（纯函数层），core→backend/features/views 禁止。
 // stripPathSegments 从 utils/dom/errors.ts 内联至此，消除 core→utils/dom 依赖。
 
-import { bus, type ToastPayload } from "../bus.ts";
-import { setLogSink } from "../utils/base/log.ts"; // ADR-189 D4：core→utils/base 允许（纯函数层），核心红线是 core→backend/features/views
+import { bus, type ToastPayload } from "@/bus";
+import { setLogSink } from "@/utils/base/log.ts"; // ADR-189 D4：core→utils/base 允许（纯函数层），核心红线是 core→backend/features/views
 
 /** 日记状态（与 go/logs status 枚举对齐） */
 export type DiaryStatus = "failed" | "warn";

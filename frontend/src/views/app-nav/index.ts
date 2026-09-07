@@ -3,21 +3,21 @@
 
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
-import { bus, type PageName } from "../../bus.ts";
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
-import { isValidPage, resolveInitialPage } from "../../core/page-store.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { esc } from "../../utils/html/html.ts";
-import { shortLabelOf } from "../../utils/resource/short-label.ts";
+import { bus, type PageName } from "@/bus";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
+import { esc } from "@/utils/html/html.ts";
+import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   GROUP_META,
   GROUP_OF,
   GROUP_TYPE_OPTIONS,
   type GroupTypeOption,
   RESOURCE_TYPES,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 import { navCSS } from "./tpl.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。

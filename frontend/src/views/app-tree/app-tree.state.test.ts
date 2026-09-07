@@ -2,9 +2,9 @@
 // 断言基于 data-testid 稳定钩子 + 交互路径；状态经 selectState/实例字段查询，
 // 不绑定 CSS 类/文案。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, queryAllByTestId, waitFor } from "../../test-utils/index.ts";
+import { getByTestId, queryAllByTestId, waitFor } from "@/test-utils/index.ts";
 import { selectState } from "./data.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { ToggleEnable } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import "./index.ts"; // 注册 app-tree 自定义元素（constructor 里 attachShadow）
 import type { TreeEntry } from "./loader.ts";

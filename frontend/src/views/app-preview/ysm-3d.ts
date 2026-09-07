@@ -7,11 +7,11 @@
 // 3D 内模型切换无需重建整个会话。
 
 import { getApp } from "@/backend/app.ts";
-import { cleanupPreview, mount3D } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { cleanupPreview, mount3D } from "@/preview-3d/adapters/mount-preview-core.ts";
+import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { loadModelData } from "./loader.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";

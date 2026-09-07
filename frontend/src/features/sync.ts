@@ -3,14 +3,14 @@
 // 与 context-menu/pack-ops/platform 同层，不属内核；core 只留 i18n/page-store/
 // error-diary 纯内核——feedback 原语已迁 utils/dom/toast.ts，ADR-189 D3）
 
-import { bus } from "../bus.ts";
-import { t } from "../core/i18n/t.ts";
-import { type BusyLock, createBusyLock, withLock } from "../utils/base/lock.ts";
-import { dbg } from "../utils/debug/debug.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { toast } from "../utils/dom/toast.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { type BusyLock, createBusyLock, withLock } from "@/utils/base/lock.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "./backend-deps.ts";
 import { requireMcRoot } from "./require-mcroot.ts";
 

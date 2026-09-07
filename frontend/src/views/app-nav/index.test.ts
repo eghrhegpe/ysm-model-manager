@@ -4,8 +4,8 @@
 // 无「请求/响应」双事件；app-nav 点击直接 emit nav:changed，自身监听更新高亮。
 // 单独挂载 app-nav 时 nav:changed 的页面消费方（app-content）不在场，但 emit 可被自身监听捕获。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
-import { bus } from "../../bus.ts";
+import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
+import { bus } from "@/bus";
 
 const { canMock } = vi.hoisted(() => ({
   canMock: vi.fn().mockReturnValue(true), // 默认桌面：ListVersionInstances 可用
@@ -34,8 +34,8 @@ vi.mock("../../views/app-preview/preview-library.ts", () => ({
   openModel3DFullscreen: vi.fn(),
 }));
 import { getApp, type AppBindings } from "@/backend/app.ts";
-import { t } from "../../core/i18n/t.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { t } from "@/core/i18n/t.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { getLastModelPath } from "../../views/app-content/init-pages.ts";
 import { openEmpty3DFullscreen } from "../../views/app-preview/empty-3d.ts";
 import { openModel3DFullscreen } from "../../views/app-preview/preview-library.ts";

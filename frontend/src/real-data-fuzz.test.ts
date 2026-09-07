@@ -9,9 +9,9 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "node:url";
-import { parseBedrockGeometryFromJSON } from "./preview-3d/decoder/geometry.ts";
-import { parseYsmJsonDirect } from "./preview-3d/decoder/parse-ysm-json.ts";
-import { parseBedrockAnimationJSON } from "./utils/animation/animation.ts";
+import { parseBedrockGeometryFromJSON } from "@/preview-3d/decoder/geometry.ts";
+import { parseYsmJsonDirect } from "@/preview-3d/decoder/parse-ysm-json.ts";
+import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 
 // 基于本文件位置解析（src/ 上三级 = 仓库根），与 cwd 解耦。
 // 注：不用 `new URL(rel, import.meta.url)`——happy-dom 的 URL polyfill 对相对

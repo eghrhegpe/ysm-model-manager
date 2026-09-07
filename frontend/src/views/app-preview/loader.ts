@@ -2,10 +2,10 @@
 // 供给 skeleton.ts 使用（ADR-136 第四刀后截图走 preview-3d/screenshot-render.ts）
 
 import { getApp } from "@/backend/app.ts";
-import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { type AnimationClip, parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
-import { extOf } from "../../utils/resource/types.ts";
+import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { type AnimationClip, parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
+import { extOf } from "@/utils/resource/types.ts";
 import type { PreviewDebugger, YsmDecoder } from "./utils.ts";
 
 /** loadModelData 选项（Bedrock 通用模型加载控制） */

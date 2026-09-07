@@ -7,7 +7,7 @@
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
 //  - scanConflicts：无游戏目录 / 无实例 / 冲突渲染 / 无冲突 / 扫描失败
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
 
 const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.hoisted(() => ({

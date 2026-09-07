@@ -11,7 +11,7 @@
 
 import { PmxReader } from "../vendor/babylon-mmd/pmxReader.js";
 import { pmxObjectToResponse } from "./mmd-pmx-convert.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 
 /** 主线程 → Worker 请求 */
 export interface PmxParseRequest {

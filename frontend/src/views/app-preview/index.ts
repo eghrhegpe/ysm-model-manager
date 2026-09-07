@@ -1,9 +1,9 @@
 // ===== <app-preview> 入口 =====
 
-import { bus } from "../../bus.ts";
-import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
+import { bus } from "@/bus";
+import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { previewCSS } from "./css.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
@@ -20,23 +20,23 @@ const appPreviewStyle: CSSStyleSheet = (() => {
 
 import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
   collectBlobUrls,
-} from "../../preview-3d/decoder/cache.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { esc } from "../../utils/html/html.ts";
+} from "@/preview-3d/decoder/cache.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
+import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { esc } from "@/utils/html/html.ts";
 import {
   extOf,
   isYsmWasmPreview,
   RESOURCE_TYPES,
   resolvePreviewKey,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 import { showModelDetail, showResourcePack, showShaderpack, showSimplePreview } from "./detail.ts";
 import {
   showFbxPreview,

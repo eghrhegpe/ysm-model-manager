@@ -16,13 +16,13 @@ import type {
 } from "../../bindings/ysm-model-manager/go/types/models.ts";
 // i18n：错误消息统一走 t()（与 web-fs.ts 全量 t("webFs.*") 一致，避免硬编码中文
 // 漏掉 en/ja 三语言同步——friendlyError 对含中文消息直接透传，硬编码会在英文/日文用户侧裸显）
-import { t } from "../core/i18n/t.ts";
-import { safeGet, safeRemove, safeSet } from "../utils/dom/storage.ts";
-import { stripDisableSuffix } from "../utils/model-name/display.ts";
-import { hasRecycleSegment } from "../utils/recycle-path.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { t } from "@/core/i18n/t.ts";
+import { safeGet, safeRemove, safeSet } from "@/utils/dom/storage.ts";
+import { stripDisableSuffix } from "@/utils/model-name/display.ts";
+import { hasRecycleSegment } from "@/utils/recycle-path.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 // 网页版头像提取复用前端 YSM 解包能力（替代 Go ExtractAvatarURI，ADR-049 缺口补齐）
-import { decodeYsmFile } from "../wasm/ysm-parser.ts";
+import { decodeYsmFile } from "@/wasm/ysm-parser.ts";
 import { arrayBufferToBase64, base64ToBytes, WEB_ROOT } from "./web-common.ts";
 import { collectAllWebEntries, readWebFile, scanWebModels, typeFromWebDir } from "./web-fs.ts";
 

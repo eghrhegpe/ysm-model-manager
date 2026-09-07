@@ -19,7 +19,7 @@ vi.mock("../../preview-3d/adapters/mount-preview-core.ts", () => ({
 }));
 
 import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
-import { sceneRegistry } from "../../preview-3d/adapters/scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 
 const opener = vi.fn().mockResolvedValue(undefined);
 

@@ -3,7 +3,7 @@
 // 策略：占位式——列表容器 paddingTop/Bottom 撑出总高，DOM 常驻仅可见切片 ± 缓冲行。
 // 兼容零高度（jsdom/首帧 clientHeight=0）→ 自动降级全量渲染。
 // 前提：定高行；不等高布局（如创作者卡片网格）不适用。
-import { calcVisibleRange, installScrollSync } from "../../utils/dom/virtual-scroll.ts";
+import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
 
 export interface VirtualListOpts<T> {
   /** 滚动容器 */

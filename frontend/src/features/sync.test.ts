@@ -3,11 +3,11 @@
 // 覆盖：并发守卫、repoRoot 未配置、成功路径、finally 解锁、toggle 成功/失败聚合
 // mock 基线来自 e2e/mock-data.ts（共享单源：改 Go 数据只改一处，防双源漂移）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../bus.ts";
-import { t } from "../core/i18n/t.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { MOCK_DATA } from "../../e2e/mock-data.ts";
-import { flushPromises } from "../test-utils/index.ts";
-import { appFn, resetAppMock } from "../test-utils/mock-app.ts";
+import { flushPromises } from "@/test-utils/index.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {

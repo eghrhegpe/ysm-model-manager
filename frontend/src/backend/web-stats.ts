@@ -12,10 +12,10 @@ import {
   type StatsWorkerResponse,
   type WebModelStats,
   type WebModelStatsWithPath,
-} from "../workers/stats-protocol.ts";
+} from "@/workers/stats-protocol.ts";
 
 // 对外类型（web-fs 复用：SearchModels 数值字段形状对齐 go types.SearchResult）
-export type { WebModelStats } from "../workers/stats-protocol.ts";
+export type { WebModelStats } from "@/workers/stats-protocol.ts";
 
 /** 单批超时（毫秒）：WASM 解码 + 200 模型，60s 已含余量；超时终止整个池防僵尸 */
 const STATS_CHUNK_TIMEOUT_MS = 60_000;

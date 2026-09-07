@@ -10,13 +10,13 @@ import {
   onStatsProgress,
 } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { type AdvFilterValue, modalAdvFilter } from "../../features/dialogs/adv-filter.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { getExts } from "../../utils/resource/extensions.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { type AdvFilterValue, modalAdvFilter } from "@/features/dialogs/adv-filter.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { getExts } from "@/utils/resource/extensions.ts";
 import type { AppTree } from "./index.ts";
 
 // P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)

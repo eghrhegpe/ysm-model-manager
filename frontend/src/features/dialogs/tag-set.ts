@@ -1,7 +1,7 @@
 // ===== 标签集合操作（纯函数层）=====
 // 从 utils/dom/dialogs/tag-editor.ts 的 addTag 抽出：去重 / 长度限制 / 排序，
 // 供单测覆盖（ADR-023 L3）。
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 
 export interface TagSetResult {
   tags: string[];

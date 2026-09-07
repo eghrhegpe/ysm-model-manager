@@ -5,7 +5,7 @@
 // 跨用例污染 → 每用例 vi.resetModules + 动态 import 重载（bus 必须同实例重载，
 // 否则事件监听落在旧 bus 上）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { Bus } from "../../bus.ts";
+import type { Bus } from "@/bus";
 import type { LangCode } from "./locale.ts";
 
 type LocaleModule = typeof import("../../core/i18n/locale.ts");
@@ -18,7 +18,7 @@ interface Fresh {
 async function freshModule(): Promise<Fresh> {
   vi.resetModules();
   const locale = await import("../../core/i18n/locale.ts");
-  const busMod = await import("../../bus.ts");
+  const busMod = await import("@/bus");
   return { locale, bus: busMod.bus };
 }
 

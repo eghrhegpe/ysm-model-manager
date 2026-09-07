@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vites
 // ⚠️ setup 必须最先 import：其顶层 vi.mock 需在 context-menus.ts 树（静态加载
 // backend/app.ts）之前注册，否则 mock 晚于真实解析而失效（vitest 不 hoist 非测试文件）。
 import "./context-menus.setup.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import type { CtxShowPayload, ToastPayload } from "../../bus";
 import { registerContextMenus } from "./context-menus.ts";
 import {

@@ -4,8 +4,8 @@
 // 通用外壳（overlay/renderer/循环/释放/相机控制）由 mount-preview-core.ts 拥有。
 
 import * as THREE from "three";
-import { t } from "../../core/i18n/t.ts";
-import type { VoxelData } from "../../parsers/voxel-parse.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { VoxelData } from "@/parsers/voxel-parse.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { multiModelSelectNode } from "../menu/multi-model.ts";

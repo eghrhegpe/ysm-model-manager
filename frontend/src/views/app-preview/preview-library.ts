@@ -12,15 +12,15 @@
 // 全程轻量获取文件——不再全量扫描各仓库、不再按扩展名分类贴标签。
 
 import { getApp } from "@/backend/app.ts";
-import { t } from "../../core/i18n/t.ts";
-import type { Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { Mount3DOptions } from "@/preview-3d/adapters/mount-preview-core.ts";
 import {
   cleanupPreview,
   hasActivePreview,
   switchPreview,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
-import { sceneRegistry } from "../../preview-3d/adapters/scene-registry.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
+import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import {
   extOf,
   getPreviewableTypeTabs,
@@ -30,7 +30,7 @@ import {
   resolvePreviewKey,
   resolvePreviewKeyByExt,
   resolvePreviewKeyToRtype,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
@@ -86,7 +86,7 @@ export async function openModel3DFullscreen(
     ({ DetectResourceType } = await getApp());
   } catch (e) {
     console.warn("[preview-3d] 后端不可用，无法打开 3D:", e);
-    const { bus } = await import("../../bus.ts");
+    const { bus } = await import("@/bus");
     bus.emit("toast:show", {
       msg: t("preview.backendUnavailable"),
       duration: TOAST_MS.normal,
@@ -125,7 +125,7 @@ export async function openModel3DFullscreen(
     const newRtype = resolvePreviewKeyToRtype(routeKey);
     if (activeRtype && newRtype && activeRtype !== newRtype && activeRtype !== routeKey) {
       cooperate = false;
-      const { bus } = await import("../../bus.ts");
+      const { bus } = await import("@/bus");
       bus.emit("toast:show", {
         msg: t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
         duration: TOAST_MS.normal,
@@ -156,7 +156,7 @@ export async function openModel3DFullscreen(
     await opener(path, siblings);
     return;
   }
-  const { bus } = await import("../../bus.ts");
+  const { bus } = await import("@/bus");
   // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」
   const ext = extOf(path) || "(无扩展名)";
   const reason = `探测类型=${rtype || "(空)"} 路由key=${routeKey || "(空)"} 扩展名=${ext}`;

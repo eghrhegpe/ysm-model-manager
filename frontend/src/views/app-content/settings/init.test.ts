@@ -6,9 +6,9 @@
 //  - 链接模式切换 → SetLinkMode + 自动 relink；relink 无 mcRoot warn / 有实例成功
 //  - 高级面板展开、主题卡片点击、镜像源切换、发布页跳转
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import { initSettings } from "./init.ts";
-import { t } from "../../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 
 const {
   busEmit,

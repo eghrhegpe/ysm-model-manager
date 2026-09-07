@@ -11,7 +11,7 @@ import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-previ
 import { collectSceneStats } from "../scene-stats.ts";
 import { mergeStatsMenuItems } from "../menu/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 beforeEach(() => {
   sceneRegistry.reset();

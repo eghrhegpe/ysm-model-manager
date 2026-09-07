@@ -6,7 +6,7 @@ import type { AppBindings } from "@/backend/app.ts";
 
 // toastError 已收敛至 utils/dom/toast.ts（ADR-185 下沉，ADR-189 D3 归位）（instance-ops / settings 等多处 catch 共用，
 // 2026-09 去重专项；本文件原本地实现删除，re-export 保持 settings/ 内部导入路径不变）
-export { toastError } from "../../../utils/dom/toast.ts";
+export { toastError } from "@/utils/dom/toast.ts";
 
 /** 设置页当前配置类型（LoadAppConfig 返回值，经 Wails $CancellablePromise 解包） */
 export type SettingsCfg = Awaited<ReturnType<AppBindings["LoadAppConfig"]>>;

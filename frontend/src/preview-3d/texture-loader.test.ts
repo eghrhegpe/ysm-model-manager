@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 
-import { FakeImage } from "../test-utils/fake-image.ts";
+import { FakeImage } from "@/test-utils/fake-image.ts";
 
 const { fakeTextureCache } = vi.hoisted(() => ({
   fakeTextureCache: {

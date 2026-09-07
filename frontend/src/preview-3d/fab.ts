@@ -3,7 +3,7 @@
 // 挂载点：3D overlay 挂 document.body（light DOM），全局 CSS 经 ensureFabStyles 注入 head 一次。
 // 触发 FAB 在预览面板 Shadow DOM 内（.preview-fab 见 css.ts，因 Shadow DOM 隔离需本地样式）。
 
-import { attachTooltip } from "../utils/dom/tooltip.ts";
+import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "./overlay-style-bridge.ts";
 
 export const YSW_FAB_CSS = `

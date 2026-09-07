@@ -13,8 +13,8 @@ import {
   applyTheme,
   initTheme,
 } from "./theme-core.ts";
-import { applyUIPrefs } from "./views/app-content/settings/ui-prefs.ts";
-import { safeGet, safeSet } from "./utils/dom/storage.ts";
+import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 
 /** 隐私模式模拟：让 localStorage 读写抛错（node 环境 test-setup 注入的全局 localStorage，必须 vi.spyOn） */
 function breakLocalStorage() {

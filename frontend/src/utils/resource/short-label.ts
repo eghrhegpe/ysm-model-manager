@@ -4,7 +4,7 @@
 // 与 RESOURCE_TYPE_LABELS（全名，硬编码中文）互补——短标签优先，
 // 未命中回退全名（兜底覆盖 maid-model 等新类型，无需改本文件）。
 
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "./types.ts";
 
 /** 资源类型短标签映射（仅需 i18n 化的 4 类；YSM/MMD 为通用英文缩写） */

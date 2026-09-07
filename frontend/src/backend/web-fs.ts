@@ -32,17 +32,17 @@
 // 避免 browser-adapter 另起一套扩展名校验导致漂移
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
-import { t } from "../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 // R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
-import { detectContainerType } from "../parsers/extract.ts";
+import { detectContainerType } from "@/parsers/extract.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
 import {
   litematicMetaView,
   nbtStructureView,
   parseNbtRoot,
   schematicSummaryView,
-} from "../parsers/nbt-parse.ts";
-import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "../parsers/voxel-parse.ts";
+} from "@/parsers/nbt-parse.ts";
+import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "@/parsers/voxel-parse.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
@@ -51,11 +51,11 @@ import {
   emptyYsmSummary,
   extractYsmSummaryFromBytes,
   parseYsmHeaderFromBytes,
-} from "../parsers/ysm-header.ts";
+} from "@/parsers/ysm-header.ts";
 // rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
-import { getExts } from "../utils/resource/extensions.ts";
+import { getExts } from "@/utils/resource/extensions.ts";
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
-import { RESOURCE_TYPES, resolveTypeSafe } from "../utils/resource/types.ts";
+import { RESOURCE_TYPES, resolveTypeSafe } from "@/utils/resource/types.ts";
 import { type IdbOp, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbTx } from "./idb.ts";
 import {
   base64ToBytes,

@@ -2,9 +2,9 @@
 // ADR-040 按职责切文件：原 init.ts（797 行）拆分——日志加载（本文件）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）
 
 import { getApp } from "@/backend/app.ts";
-import { type LocaleKey, t } from "../../../core/i18n/t.ts";
-import { stagger } from "../../../utils/animation/stagger.ts";
-import { renderDisplayName } from "../../../utils/model-name/display.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 /** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
 export type EscFn = (s: unknown) => string;

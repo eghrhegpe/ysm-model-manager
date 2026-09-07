@@ -7,8 +7,8 @@
 // 统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
 // renderCapControls 的 PreviewControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
 
-import { tr } from "../../core/i18n/tr.ts";
-import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
 import type { PreviewControlDef } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";

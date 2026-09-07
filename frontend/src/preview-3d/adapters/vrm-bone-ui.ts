@@ -6,7 +6,7 @@
 // 不再依赖 extraControls(topBar) 或 extraPanel 机制。
 
 import * as THREE from "three";
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import {
   type BoneTree,
   getBoneDetail,

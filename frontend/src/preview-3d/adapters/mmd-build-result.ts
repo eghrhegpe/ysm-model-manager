@@ -1,8 +1,8 @@
 // ===== mmd-build-result.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import { applyVPD } from "@moeru/three-mmd";
-import { dbg } from "../../utils/debug/debug.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { cancelPendingEncodings } from "../decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "../frustum-cull.ts";
 import { recordLoadTrace } from "../load-trace.ts";

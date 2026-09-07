@@ -6,7 +6,7 @@
 //    检测（error / 无冲突 / 有冲突渲染）/ 异常兜底
 //  - 同步冲突解决：ResolveConflicts 策略透传 + 结果计数 + 1.5s 自动复扫 / error / 异常
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 
 const { busEmit, busOn, getApp, isWebPlatform } = vi.hoisted(() => ({

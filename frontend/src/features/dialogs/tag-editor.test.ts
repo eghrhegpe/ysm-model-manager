@@ -22,7 +22,7 @@ vi.mock("@/backend/app.ts", () => ({
 
 import { modalTagEditor } from "./tag-editor.ts";
 import { closeActiveDialog, __resetModalStateForTest } from "./modal-core.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 
 async function open(modelPath = "/m/a.ysm") {
   const pending = modalTagEditor(modelPath);

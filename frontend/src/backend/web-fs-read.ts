@@ -5,8 +5,8 @@
 // 只做「读 IDB → base64 → 字节 → 解码 → 视图」装配，不触碰文件系统/IDB key 规约之外
 // 的语义（key 规约见 web-fs-shared.ts）。
 
-import { extractZip } from "../parsers/extract.ts";
-import { decodeVoxelNbt, type VoxelData } from "../parsers/voxel-parse.ts";
+import { extractZip } from "@/parsers/extract.ts";
+import { decodeVoxelNbt, type VoxelData } from "@/parsers/voxel-parse.ts";
 import { idbGet, idbKeys } from "./idb.ts";
 import {
   arrayBufferToBase64,

@@ -10,7 +10,7 @@ import {
   invalidatePreview,
   mount3D,
   type PreviewAdapter,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { withPreviewExtras } from "./preview-library.ts";
 
 /**

@@ -2,9 +2,9 @@
 // 覆盖：parseHealthReport（合法/非法/后端错误）/ renderHealthReport（分数环/维度/警告/转义）
 //      / runHealthAudit（成功渲染 / 后端错误 / 解析失败 / 调用异常 + 重入守卫）
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import { runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
-import { parseHealthReport } from "../../../utils/health-report.ts";
+import { parseHealthReport } from "@/utils/health-report.ts";
 
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));

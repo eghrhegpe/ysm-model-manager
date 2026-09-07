@@ -9,7 +9,7 @@ import { switchTabHighlightBg } from "./switch.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import type { PreviewScene } from "../adapters/mount-preview-core.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
-import { deriveTestIds } from "../../test-utils/self-healing.ts";
+import { deriveTestIds } from "@/test-utils/self-healing.ts";
 import { makeMenuCtx as makeCtx } from "../adapters/menu-test-fixtures.ts";
 
 /** ADR-193 第四刀：类型 tab 已声明式化为 select——切 tab = 改 select 值 + change 事件 */

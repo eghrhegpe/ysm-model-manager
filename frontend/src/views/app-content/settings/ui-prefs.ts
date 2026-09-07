@@ -1,10 +1,10 @@
 // ===== 设置页：界面与体验设置（ADR-040 拆分自 init.ts）=====
 // 读取/应用 UI 偏好（localStorage），统一走 safeGet/safeSet——
 // 隐私模式（存储禁用）下抛错会中断 initSettings（applyUIPref 是 init 同步执行的一部分）。
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 魔法数值收敛：偏好变更成功 toast 展示时长（ms）
 const TOAST_DURATION_MS = TOAST_MS.quick;

@@ -4,7 +4,7 @@
 
 import { canWebAction } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
-import { bus, type CtxShowPayload, type MenuItem } from "../../bus.ts";
+import { bus, type CtxShowPayload, type MenuItem } from "@/bus";
 // P1 修复（ADR-040）：handler 表已拆至 context-menu-handlers.ts；此处仅消费 HANDLERS，
 // 不再 re-export 其余共享符号（无外部消费者，消除死代码）
 import { HANDLERS } from "./context-menu-handlers.ts";

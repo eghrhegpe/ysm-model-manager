@@ -2,9 +2,9 @@
 // ===== instance-ops 整合包操作 handler 测试 =====
 // 覆盖：导出清单（成功/未找到整合包/子目录读取失败/无文件）、清空目录（统计失败/取消/成功）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
-import { flushPromises } from "../../test-utils/index.ts";
-import { appFn, resetAppMock } from "../../test-utils/mock-app.ts";
+import { bus } from "@/bus";
+import { flushPromises } from "@/test-utils/index.ts";
+import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {

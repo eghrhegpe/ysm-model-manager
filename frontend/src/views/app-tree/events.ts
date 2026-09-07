@@ -3,13 +3,13 @@
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { flashBtn } from "../../utils/dom/feedback.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { flashBtn } from "@/utils/dom/feedback.ts";
+import { safeSet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { rememberModelPath } from "../app-content/init-pages.ts";
 import { selectSingle, selectState, toggleSelect } from "./data.ts";
 import type { AppTree } from "./index.ts";
@@ -163,7 +163,7 @@ function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElemen
   e.stopPropagation();
   const path = haPreview.dataset.path;
   const name = path?.split(/[/\\]/).pop() || "";
-  import("../../utils/model-name/display.ts")
+  import("@/utils/model-name/display.ts")
     .then(({ parseModelName }) => {
       const { author } = parseModelName(name);
       if (author) {

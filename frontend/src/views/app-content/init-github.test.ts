@@ -7,8 +7,8 @@
 //    bindRepoEvents 委托 + cleanup 登记 / 同步抛错留痕不逸出（P3 回归）
 // mock 写法按知识卡 vitest-env-switch.md 模式 4（vi.hoisted + mock getApp）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { flushPromises, waitFor } from "../../test-utils/index.ts";
-import { t } from "../../core/i18n/t.ts";
+import { flushPromises, waitFor } from "@/test-utils/index.ts";
+import { t } from "@/core/i18n/t.ts";
 
 const { getApp, bindRepoEvents, renderList, repoCleanup, tryFetchModels } = vi.hoisted(() => {
   const renderList = vi.fn();
@@ -28,7 +28,7 @@ vi.mock("../../features/community/data.ts", () => ({ tryFetchModels }));
 
 import { initGithubPage } from "./init-github.ts";
 import type { AppContentHost } from "./init-workshop.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { RepoCacheEntry } from "./state.ts";
 
 /** vi.fn() 未显式标注入参时 mock.calls 元组推断为空，统一经 unknown[] 取参 */

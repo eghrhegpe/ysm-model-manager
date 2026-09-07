@@ -22,7 +22,7 @@ vi.mock("@/backend/browser-adapter.ts", () => ({
   MAX_IMPORT_BYTES: 10,
 }));
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { getApp } from "@/backend/app.ts";
 import { handleInstanceDrop, bindPackCardDnD } from "./pack-dnd.ts";
 

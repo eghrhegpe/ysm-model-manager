@@ -8,10 +8,10 @@
 // roleBaseName 单源落位本文件（modelDetailView/motionDetailView/frBuildToolsView 标题
 // 共用；roles.ts 单向 import，方向不反向）。
 
-import { tr } from "../../core/i18n/tr.ts";
-import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
-import { attachTooltip } from "../../utils/dom/tooltip.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
+import { attachTooltip } from "@/utils/dom/tooltip.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { type ModelEntry, sceneRegistry } from "../adapters/scene-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";

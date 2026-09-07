@@ -2,8 +2,8 @@
 // 原 modal.ts（ADR-014 P3）select 段独立成文件；脚手架走 modal-core createDialog。
 // 用法: const choice = await modalSelect({ title, icon, items })
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalSelect 选项 */

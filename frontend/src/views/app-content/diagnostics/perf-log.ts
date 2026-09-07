@@ -1,9 +1,9 @@
 // ===== 诊断页：性能面板 — perf-log（优化历史卡片）=====
 // 数据来源：Go CLI perf-log 命令文本输出，正则解析日期/区域/提交，卡片渲染。
 
-import { t } from "../../../core/i18n/t.ts";
-import { executeCLI } from "../../../services/cli-bridge.ts";
-import { stagger } from "../../../utils/animation/stagger.ts";
+import { t } from "@/core/i18n/t.ts";
+import { executeCLI } from "@/services/cli-bridge.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,

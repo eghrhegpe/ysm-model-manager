@@ -3,7 +3,7 @@
 // 本工具在 Group 级做 BoundingSphere 测试，visible=false 后 Three.js 跳过整组遍历。
 // 用途：多模型同框时，镜头外的模型整组跳过（省 matrixWorld 递归 + mesh 遍历）。
 import * as THREE from "three";
-import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 
 const _frustum = new THREE.Frustum();
 const _projScreenMatrix = new THREE.Matrix4();

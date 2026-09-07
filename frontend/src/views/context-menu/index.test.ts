@@ -2,7 +2,7 @@
 // 触发 menu:show → 断言 Shadow DOM 渲染（items / divider / danger）；
 // 点击 item → 断言 onClick 执行 + hide()。
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import type { MenuItem } from "../../bus";
 import "./index.ts"; // 触发 customElements.define
 

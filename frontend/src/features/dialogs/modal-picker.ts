@@ -2,8 +2,8 @@
 // 原 modal.ts（ADR-014 P3）picker 段独立成文件；脚手架走 modal-core createDialog。
 // 用法: const result = await modalPicker({ title, items, footerHTML })
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） */

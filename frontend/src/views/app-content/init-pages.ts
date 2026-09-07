@@ -1,14 +1,14 @@
 // ===== 页面初始化函数集合（为 app-content/index.ts 减负，ADR-040）=====
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { loadOldestModel } from "../../features/maintenance/oldest-models.ts";
-import { initRecycleBin } from "../../features/maintenance/recycle-bin.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { esc } from "../../utils/html/html.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
+import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "./diagnostics/dedup.ts";
 import { initDiagnostics } from "./diagnostics/init.ts";
 import { initGithubPage as _initGithubPage } from "./init-github.ts";

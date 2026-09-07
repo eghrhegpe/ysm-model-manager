@@ -1,4 +1,4 @@
-import { dbg } from "./utils/debug/debug.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 
 /** Wait until the DOM has been upgraded and painted before exposing the native window. */
 export async function revealMainWindow(

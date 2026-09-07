@@ -12,9 +12,9 @@ import {
   invalidatePreview,
   type Mount3DOptions,
   mount3D,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makePackAdapter } from "../../preview-3d/adapters/pack-model-adapter.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
+import { makePackAdapter } from "@/preview-3d/adapters/pack-model-adapter.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中资源包时派发到此）

@@ -1,9 +1,9 @@
 // ===== 诊断页：性能面板 — single-bench（7 阶段耗时柱状图）=====
 // 数据来源：Go CLI single-bench 命令文本输出，正则解析后渲染柱状图 + 趋势图。
 
-import { t } from "../../../core/i18n/t.ts";
-import type { CLIArgs } from "../../../services/cli-bridge.ts";
-import { executeCLI } from "../../../services/cli-bridge.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { CLIArgs } from "@/services/cli-bridge.ts";
+import { executeCLI } from "@/services/cli-bridge.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,

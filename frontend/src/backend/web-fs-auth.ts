@@ -4,9 +4,9 @@
 // 作为模型库「文件来源」（ADR-049 能力门控缺口补齐）。
 // 复用 web-fs-import 的 importWebFiles（File → IDB 落库），不重复造 IDB 写入逻辑。
 
-import { t } from "../core/i18n/t.ts";
-import { isImportableFile } from "../utils/resource/importable.ts";
-import { currentRepoType } from "../utils/resource/repo-rtype.ts";
+import { t } from "@/core/i18n/t.ts";
+import { isImportableFile } from "@/utils/resource/importable.ts";
+import { currentRepoType } from "@/utils/resource/repo-rtype.ts";
 import { idbGet, idbSet } from "./idb.ts";
 import { WebUnsupportedError } from "./web-common.ts";
 import { importWebFiles } from "./web-fs-import.ts";

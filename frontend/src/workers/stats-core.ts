@@ -7,8 +7,8 @@
 //  - texWidth/texHeight：max(geometry description texture_width/height, 实际纹理嗅探)
 //    （Go 只取 geometry 描述；前端 wasm.ts 取 max(嗅探, 描述)——本文件取大者，语义超集）
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
-import { parseBedrockGeometryFromJSON } from "../preview-3d/decoder/geometry.ts";
-import { sniffTexSize } from "../utils/tex-size.ts";
+import { parseBedrockGeometryFromJSON } from "@/preview-3d/decoder/geometry.ts";
+import { sniffTexSize } from "@/utils/tex-size.ts";
 
 /** 解码/直读产物文件（Worker 与主线程共用形状） */
 export interface StatsFileInput {

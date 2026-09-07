@@ -7,14 +7,14 @@
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
 import { idbGet } from "@/backend/idb.ts";
 import { parseWebPath } from "@/backend/web-common.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import {
   initYsmParserInWorker,
   initYsmParserInWorkerMt,
   decodeYsmInWorker,
   decodeYsmInWorkerMemfs,
-} from "../wasm/ysm-worker-loader.ts";
-import { stripYsgpTextHeader } from "../preview-3d/decoder/utils.ts";
+} from "@/wasm/ysm-worker-loader.ts";
+import { stripYsgpTextHeader } from "@/preview-3d/decoder/utils.ts";
 import {
   statsFromDecodedFiles,
   statsFromJsonBytes,

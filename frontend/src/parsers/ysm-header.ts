@@ -14,7 +14,7 @@
 // 失败不 reject：头部返回全空 YSMHeader，摘要返回最小空 YsmSummary（对齐 Go internal/app
 // app_model.go:41-65 的单返回值签名：错误被吞、返回最小结构，消费方容错）。
 
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { extractZip } from "./extract.ts";
 
 // --- 魔数 / 常量（对齐 header.go:13 ysgpMagic 与 summary.go 各分支）---

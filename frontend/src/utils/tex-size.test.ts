@@ -2,7 +2,7 @@
 // 口径对齐 Go imagePixelArea / wasm.ts，勿单独改。
 import { describe, expect, it } from "vitest";
 import { sniffTexSize } from "./tex-size.ts";
-import { pngBytes, jpgBytes } from "../test-utils/tex-bytes.ts";
+import { pngBytes, jpgBytes } from "@/test-utils/tex-bytes.ts";
 
 describe("utils.tex-size.sniffTexSize（对齐 Go imagePixelArea / wasm.ts 嗅探口径）", () => {
   it("PNG 签名 + IHDR 宽高", () => {

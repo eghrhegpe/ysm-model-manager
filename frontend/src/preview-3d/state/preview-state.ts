@@ -26,7 +26,7 @@
 //   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
-import { safeSet } from "../../utils/dom/storage.ts";
+import { safeSet } from "@/utils/dom/storage.ts";
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
 // [ADR-168] 状态层不 import 组合根单例（scene-capability-registry）——cap 查询走注入点

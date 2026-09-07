@@ -4,8 +4,8 @@
 // import 纯函数即触发全部顶层副作用 → 切 node 环境需逐个 stubGlobal 补不完。
 // 拆出本文件：normalizeTheme/applyTheme/initTheme 无顶层副作用，测试可独立 import。
 // 主题变更通过 document.body.classList 直接生效，无需 bus 广播（P2：theme:change 零订阅，删发射）。
-import { getApp } from "./backend/app.ts";
-import { safeGet, safeSet } from "./utils/dom/storage.ts";
+import { getApp } from "@/backend/app.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 
 const THEME_DARK = "cyber";
 // 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）

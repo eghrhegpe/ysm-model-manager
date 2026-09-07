@@ -293,6 +293,7 @@ auto_fields:
     - injectSkySunScalePatch
     - InputHandlers
     - InputOptions
+    - InstalledPreviewInfra
     - invalidateMaxFpsCache
     - invalidatePreview
     - isFrustumCullEnabled

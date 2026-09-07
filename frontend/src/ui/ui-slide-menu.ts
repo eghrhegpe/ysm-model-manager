@@ -19,7 +19,7 @@
 //  - onShow() / onHide() 管理焦点记忆恢复 + 输入阻断栈（menu.openId →
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
-import { popInputBlock, pushInputBlock } from "../utils/dom/focus-restore.ts";
+import { popInputBlock, pushInputBlock } from "@/utils/dom/focus-restore.ts";
 import { installUiComponentsStyles } from "./ui-components-styles.ts";
 import { installSlideMenuStyles } from "./ui-slide-menu-styles.ts";
 

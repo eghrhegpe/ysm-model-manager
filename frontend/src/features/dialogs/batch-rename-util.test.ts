@@ -2,7 +2,7 @@
 // ===== batch-rename-util 纯函数测试（ADR-023 L3）=====
 import { describe, it, expect } from "vitest";
 import { rebuildParsedName, applyReplaceToName } from "./batch-rename-util.ts";
-import type { ParsedModelName } from "../../utils/model-name/display.ts";
+import type { ParsedModelName } from "@/utils/model-name/display.ts";
 
 const mkParsed = (over: Partial<ParsedModelName> = {}): ParsedModelName => ({
   raw: "",

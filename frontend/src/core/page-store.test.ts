@@ -3,7 +3,7 @@
 // 唯一写入点：registerPageStore 的 nav:changed listener；
 // 页面名收窄为 PageName 联合（编译期拦截拼错，运行时信任 emit 方类型）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus, type PageName } from "../bus.ts";
+import { bus, type PageName } from "@/bus";
 import {
   isValidPage,
   PageStore,

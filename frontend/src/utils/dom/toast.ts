@@ -4,8 +4,8 @@
 // 归位 utils/dom 理由：DOM 反馈原语与 toast-ms.ts 同域；同时消除与
 // utils/dom/feedback.ts（flashBtn 原地闪烁）的撞名。
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "./errors.ts";
 import { TOAST_MS, type ToastType } from "./toast-ms.ts";
 

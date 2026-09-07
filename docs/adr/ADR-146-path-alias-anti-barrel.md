@@ -57,7 +57,8 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 
 | 别名 | 目标 | 说明 |
 |------|------|------|
-| `@/preview-3d/*` `@/views/*` `@/utils/*` `@/backend/*` `@/core/*` `@/ui/*` `@/features/*` `@/workers/*` `@/services/*` `@/wasm/*` `@/test-utils/*` | `src/<同名目录>/*` | 手写源码顶层目录，逐一显式登记 |
+| `@/preview-3d/*` `@/views/*` `@/utils/*` `@/backend/*` `@/core/*` `@/ui/*` `@/features/*` `@/workers/*` `@/services/*` `@/wasm/*` `@/test-utils/*` `@/web-spike/*` `@/locales/*` `@/parsers/*` | `src/<同名目录>/*` | 手写源码顶层目录，逐一显式登记（2026-09-07 补 `locales`/`parsers`） |
+| `@/bus` / `@/theme-core` | `src/bus.ts` / `src/theme-core.ts` | **文件级别名**：src 根上的叶子文件，目录别名映射不了，单条显式登记（vite `FILE_ALIASES` + tsconfig 单条 `paths`，一致性校验覆盖） |
 | `#root/*` | 仓库根 `../*` | **过渡措施，只减不增**。消灭 `../../../../resource_types.json` 类跨仓根引用，仅存量可切换（见下方约束） |
 | ~~`@/*`~~ | — | **禁止**。不得配置通配到 `src` 任意深度的 catch-all |
 
@@ -92,6 +93,8 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 | **R2 目录深度** | 相对 `src/` 深度 ≤ 3 | WARN（观察期） | 无 |
 | **R3 import 上跳** | ≤ 3 级 | WARN（观察期） | 跨仓根资源允许 4 级（`resource_types.json` / `creators.json` / `workshop*.json` / `bindings/**` / `e2e/mock-data.ts`） |
 | **R4 跨仓根冻结** | 越过 `frontend/src` 边界且非 bindings 的引用条数 ≤ 冻结基线 | **FAIL** | 基线清单（脚本首跑冻结，当前非 bindings 部分 14 条） |
+| **R5 同目录别名** | import 用别名指向本文件同一目录（应写 `./`） | WARN（2026-09-07 加入，观察期） | 无 |
+| **R6 测试神桶** | 测试文件 import 一个 index 桶入口（裸 `@/dir` 指向目录、或以 `/index` 结尾），会拉起整模块 → 改引具体叶 | WARN（2026-09-07 加入，观察期） | 文件级别名（`@/bus`/`@/theme-core`）指向具体叶，不触发 |
 
 **R1 度量口径——按 re-export 来源模块数，不按行数或占比。** 本仓样本 `types-re-export.ts` 只有 13 行、re-export 占比 100%，任何带行数下限的阈值都会漏报它；而 ADR-191 神桶的本质特征是"从多个模块聚合一切"。按来源数判定可以同时做到：放过兼容垫层（来源数 1）与二元转发（来源数 2），抓住真正的聚合桶。
 
@@ -116,11 +119,16 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 - 2026-09-01 复核：`check-tpl-refs`（仅查 `getElementById`/`id=`，不解析 import specifier）与 `auto-import*`（符号级检测，不解析 specifier 路径，默认退出码 0 非阻断）经核验为 **import 无关**——别名 import 对其透明、不存在假阴性，故正确排除在改造面外；盲目改造反而引入无谓风险。`frontend/AGENTS.md` 与 `pre-push-gate.ts` 的 R0 残留注释/死键已在同期清理。
 - **与 D5 的关系**：D5「新文件一律用别名」自**闸二**起生效；闸一期间新文件仍写相对路径。两闸之间不存在"别名已可用但门禁看不见"的窗口期。
 
-### D5. 增量迁移，禁止一次性 codemod 全量重写
+### D5. 迁移：增量起步 → 2026-09-07 全量收敛
 
-- **新文件**一律用别名（自 D4 闸二起生效，闸一期间仍写相对路径）；
-- **存量文件**保持相对路径，仅当该文件因其他原因被修改时，顺手把该文件内全部 import 切成别名（保持单文件内一致，不产生混用）；
-- **禁止**跨文件批量 codemod。理由：全量重写等于再来一次 ADR-138 级 diff，收益（消除 153 条三级上跳）与风险不匹配。
+最初按增量推进（新文件用别名、存量顺手切），代价是"两套路径风格长期混用"——每次跨层搬家仍要改相对宽度，且 LLM 手写 `../` 深度易错。2026-09-07 采纳**一次性全量迁移**：以 TS 语法树 + 等长注释掩码脚本，将 `frontend/src` 全部跨顶层相对引用（约 337 文件 / 981 处）改写为 `@/`；脚本只改 git 干净文件、跳过并行脏文件，以 `vite build` + `typecheck` + 全量 vitest + `check-path-hygiene` 全绿后提交。迁移后状态：
+
+- **跨顶层目录** → 一律 `@/<顶层>/具体文件`（不再手算 `../` 宽度）；
+- **同顶层目录内**（`core/a.ts`→`core/b.ts`）→ 保持相对 `./` / `../`；
+- **src 根上的叶子文件**（`bus.ts` / `theme-core.ts`）→ 文件级别名 `@/bus` / `@/theme-core`；
+- **越 `src` 界**（`bindings/**`、仓库根 JSON）→ 维持相对 / `#root`，不并入 `@/`（R4 域，只减不增）；
+- **新增文件** → 一律 `@/`（跨顶层）或相对（同顶层）。
+- **例外**：迁移时 3 个并行会话 dirty 文件（未提交）暂留相对，待其入库后顺手切。
 
 ---
 

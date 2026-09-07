@@ -6,8 +6,8 @@
 // ADR-095 后续（2026-08-18）：全局焦点统一——类型选择已全局化到 app-nav 下拉，
 // 状态主键为 repo_rtype（app-nav 同源），ysm_syncLastType 仅为历史兼容键。
 // 移除 sm-tabs 后 sync 页不再承担类型切换，仅跟随全局 repo:rtype-changed。
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // 历史兼容键（sm-tabs 时代的旧数据）
 export const LAST_TYPE_KEY = "ysm_syncLastType";

@@ -1,9 +1,9 @@
 // ===== YSM 模型摘要工具函数（类型化版 — ADR-014 P2）=====
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
-import { renderFormattedText } from "../../utils/html/mc-format.ts";
-import { parseModelName } from "../../utils/model-name/display.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
+import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { parseModelName } from "@/utils/model-name/display.ts";
 
 // ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
 

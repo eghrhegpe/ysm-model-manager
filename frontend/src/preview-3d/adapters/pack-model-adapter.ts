@@ -9,7 +9,7 @@
 // （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
-import { logWarn } from "../../utils/base/log.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { frameCameraSide } from "../camera-setup.ts";
 import { getTintColorSync, loadMcTints } from "../mc-tints.ts";
 import { multiModelSelectNode } from "../menu/multi-model.ts";

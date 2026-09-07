@@ -5,12 +5,12 @@
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { fileIcon } from "../../../utils/icon/icon.ts";
-import { renderDisplayName } from "../../../utils/model-name/display.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { loadResourceRegistry } from "@/services/resource-registry.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { fileIcon } from "@/utils/icon/icon.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { EscFn } from "./logs.ts";
 

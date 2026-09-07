@@ -1,7 +1,7 @@
 // ===== 页面导航状态（类型化版 — ADR-014 P3 组件层）=====
 // 治理红线：页面状态唯一来源是 PageStore（AGENTS.md 4.1）
-import { bus, type PageName } from "../bus.ts";
-import { safeGet } from "../utils/dom/storage.ts";
+import { bus, type PageName } from "@/bus";
+import { safeGet } from "@/utils/dom/storage.ts";
 
 // 唯一写入点：_currentPage 只允许被 registerPageStore 的 nav:changed listener
 // 修改（app-content 完成导航后单向广播）；禁止新增其他写入路径，否则页面

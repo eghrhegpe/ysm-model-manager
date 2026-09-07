@@ -1,12 +1,12 @@
 // ===== sidebar 数据加载层 =====
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";
 
 /** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */

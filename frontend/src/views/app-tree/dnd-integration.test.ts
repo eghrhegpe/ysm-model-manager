@@ -13,7 +13,7 @@ vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 import { loadEntries } from "./loader.ts";
 import { getApp } from "@/backend/app.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-import { waitFor } from "../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import type { AppTree } from "./index.ts";
 
 const loadEntriesMock = vi.mocked(loadEntries);

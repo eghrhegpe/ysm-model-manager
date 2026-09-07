@@ -25,7 +25,7 @@ const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 import { openModel3DFullscreen, registerReRoute } from "./preview-library.ts";
-import { cleanupPreview, hasActivePreview, switchPreview } from "../../preview-3d/adapters/mount-preview-core.ts";
+import { cleanupPreview, hasActivePreview, switchPreview } from "@/preview-3d/adapters/mount-preview-core.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

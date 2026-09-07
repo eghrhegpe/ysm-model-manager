@@ -10,9 +10,9 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { safeGet } from "../../utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { safeGet } from "@/utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { buildBoneTree } from "../bone-tools.ts";
 import { frameCameraSide } from "../camera-setup.ts";

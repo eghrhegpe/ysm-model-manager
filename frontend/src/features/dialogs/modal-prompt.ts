@@ -2,8 +2,8 @@
 // 原 modal.ts（ADR-014 P3）prompt 段独立成文件；脚手架走 modal-core createDialog。
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
-import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalPrompt 选项 */

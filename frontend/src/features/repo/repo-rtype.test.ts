@@ -1,8 +1,8 @@
 // ===== repo-rtype 单元测试（P3 审计补盲：当前仓库资源类型订阅）=====
 // 覆盖 currentRepoType（localStorage 兜底）/ useCurrentResourceType（订阅 + 同值去重 + cleanup）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // safeGet 隔离 localStorage 真实状态（隐私模式 / 并发写入不影响断言）
 vi.mock("../../utils/dom/storage.ts", () => ({
@@ -10,7 +10,7 @@ vi.mock("../../utils/dom/storage.ts", () => ({
 }));
 
 import { currentRepoType, useCurrentResourceType } from "./repo-rtype.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
 
 const offs: Array<() => void> = [];
 

@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { buildTree, flattenVisible, getRenderMode, setRenderMode } from "./render.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 

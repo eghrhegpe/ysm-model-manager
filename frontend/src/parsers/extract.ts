@@ -14,7 +14,7 @@
 //   - MAX_ZIP_FILE_BYTES: 100MB（单文件上限，与 MAX_IMPORT_BYTES 对齐）
 
 import { unzipSync } from "fflate";
-import { matchZipEntryTS, type RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { matchZipEntryTS, type RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // --- ZIP 格式常量 ---
 const EOCD_SIG = 0x06054b50; // End of Central Directory

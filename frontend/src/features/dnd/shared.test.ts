@@ -2,7 +2,7 @@
 // ===== DnD 导入共享逻辑测试（dnd-shared.ts）=====
 // 覆盖：isSupportedFile、isImportableFile、shouldEnterForm、getExt
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isImportableFile, isSupportedFile, getExt } from "../../utils/resource/importable.ts";
+import { isImportableFile, isSupportedFile, getExt } from "@/utils/resource/importable.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { groupCollected, shouldEnterForm } from "./shared.ts";
 import { getApp } from "@/backend/app.ts";

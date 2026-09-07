@@ -3,11 +3,11 @@
 import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import type { BrowseMode } from "./site/workshop-browse-mode.ts";
 

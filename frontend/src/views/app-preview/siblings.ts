@@ -8,7 +8,7 @@ import {
   previewCandidateExtsOf,
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPES,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 
 /**
  * 解析某资源类型的同目录候选主文件路径列表。

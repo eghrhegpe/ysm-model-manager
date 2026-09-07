@@ -3,7 +3,7 @@
 // dirKey/fileKey/mainFileRank）、web-fs-auth.ts（FSA 递归收集用 mainFileRank）与
 // web-fs.ts 主文件（scan/rename/rekey 用同款）三方共用——立此叶子断
 // auth → import → web-fs 主文件 的值级循环依赖。
-import { RESOURCE_EXTS } from "../utils/resource/extensions.ts";
+import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
 
 // --- key 规约（对齐 MikuMikuAR ADR-177：dir:*: / file:*: 前缀）---
 export const dirKey = (type: string, name: string): string => `dir:${type}/${name}:`;

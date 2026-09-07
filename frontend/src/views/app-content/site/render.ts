@@ -1,9 +1,9 @@
 // ===== 站点视图 HTML 构建（纯函数，从 site-view.ts 拆出）=====
 
-import { t } from "../../../core/i18n/t.ts";
-import { stagger } from "../../../utils/animation/stagger.ts";
-import { getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
-import type { WorkshopSite } from "../../../utils/types-re-export.ts";
+import { t } from "@/core/i18n/t.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
+import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./site-view.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
 import { getTagFromRole, loadFavs } from "./workshop-data.ts";

@@ -2,11 +2,11 @@
 // 持久化于 localStorage，与 model3d.ts 同源。
 // _activeCapture 随本段迁移（原 init.ts 模块级）：单一捕获守卫——同一时刻仅允许
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { loadTdKeymap, type TdKeyAction } from "../../../preview-3d/model3d.ts";
-import { safeGet, safeRemove, safeSet } from "../../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/model3d.ts";
+import { safeGet, safeRemove, safeSet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
 let _activeCapture: ((e: KeyboardEvent) => void) | null = null;

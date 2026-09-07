@@ -4,8 +4,8 @@
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
 import { getApp } from "@/backend/app.ts";
-import { applyTheme } from "../../../theme-core.ts";
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { applyTheme } from "@/theme-core";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { cfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber

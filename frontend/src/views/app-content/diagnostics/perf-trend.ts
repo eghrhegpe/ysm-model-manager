@@ -3,8 +3,8 @@
 // 趋势图：原生 SVG polyline，每阶段一条线（时间 → 耗时），看清优化趋势 / 突然变慢。
 // 隐私模式（safeSet 静默降级）无持久化不影响功能，只是历史不跨会话。
 
-import { t } from "../../../core/i18n/t.ts";
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { t } from "@/core/i18n/t.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 

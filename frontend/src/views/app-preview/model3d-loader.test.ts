@@ -42,8 +42,8 @@ vi.mock("../../preview-3d/texture-cache.ts", () => ({
 }));
 
 import { preloadModel } from "./model3d-loader.ts";
-import { getLoadTraces, clearLoadTraces } from "../../preview-3d/load-trace.ts";
-import { FakeImage } from "../../test-utils/fake-image.ts";
+import { getLoadTraces, clearLoadTraces } from "@/preview-3d/load-trace.ts";
+import { FakeImage } from "@/test-utils/fake-image.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

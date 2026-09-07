@@ -12,10 +12,10 @@
 
 import { emitAndroidBack } from "@/backend/platform.ts";
 import { Events } from "@/backend/runtime.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { toast } from "../../utils/dom/toast.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { closeActiveDialog } from "../dialogs/modal-core.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */

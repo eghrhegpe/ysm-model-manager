@@ -11,9 +11,9 @@
 //     （后处理/环境）基座级，不再复制进设置页画质分组——设置页只留渲染模式类开关。
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
-import { tr } from "../../core/i18n/tr.ts";
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import { safeSet } from "../../utils/dom/storage.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
+import { safeSet } from "@/utils/dom/storage.ts";
 import type { PreviewControlDef } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";

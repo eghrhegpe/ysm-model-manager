@@ -5,9 +5,9 @@ import { getApp } from "@/backend/app.ts";
 
 type GetAppFn = typeof getApp;
 
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
 

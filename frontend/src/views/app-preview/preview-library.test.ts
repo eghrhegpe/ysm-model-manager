@@ -6,7 +6,7 @@
 // 而不是资源类型 ID。测试需要理解 variants 路由机制。
 
 import { describe, it, expect, vi } from "vitest";
-import { ALL_RESOURCE_TYPES, NO_3D_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { ALL_RESOURCE_TYPES, NO_3D_TYPES, RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { getRegisteredRoutes, scanModelsByType } from "./preview-library.ts";
 import resourceTypesJson from "#root/resource_types.json";
 

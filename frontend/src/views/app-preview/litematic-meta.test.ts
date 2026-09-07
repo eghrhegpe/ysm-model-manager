@@ -42,7 +42,7 @@ vi.mock("./litematic-3d.ts", () => ({
 
 import type { PreviewCtx } from "./utils.ts";
 import { showLitematic, invalidateLitematicPreview } from "./litematic-meta.ts";
-import { flushPromises } from "../../test-utils/index.ts";
+import { flushPromises } from "@/test-utils/index.ts";
 
 let root: ShadowRoot;
 let ctx: PreviewCtx;

@@ -37,6 +37,7 @@ auto_fields:
     - GroupedScene
     - hasActivePreview
     - injectSkySunScalePatch
+    - InstalledPreviewInfra
     - invalidatePreview
     - isSkyEnvironmentOn
     - LightCapability

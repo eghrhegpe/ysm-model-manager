@@ -8,9 +8,9 @@
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { bus } from "../../bus.ts";
-import { logError } from "../../utils/base/log.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { logError } from "@/utils/base/log.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 import type { EnvironmentCapability } from "../caps/environment-capability.ts";
 import type { LightCapability } from "../caps/light-capability.ts";

@@ -6,13 +6,13 @@
 //
 // 内容层复用 buildMmdScene（mmd-adapter.ts），确保 PMX 解析/纹理绑定逻辑一致。
 
-import { type MmdPanelHooks, makeMmdAdapter } from "../../preview-3d/adapters/mmd-adapter.ts";
+import { type MmdPanelHooks, makeMmdAdapter } from "@/preview-3d/adapters/mmd-adapter.ts";
 import {
   cleanupPreview,
   invalidatePreview,
   type Mount3DOptions,
   mount3D,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { mmdModelInfoNodes, mmdShotNodes, playNodes } from "./mmd-controls.ts";
 import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

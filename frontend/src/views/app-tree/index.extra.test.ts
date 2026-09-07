@@ -23,17 +23,17 @@ vi.mock("./toolbar-events.ts", () => ({ bindToolbarEvents: vi.fn() }));
 // registry.ts 已删（架构锐评 P1-2 修正版）：loader mock 直供 loadEntries
 vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { getApp } from "@/backend/app.ts";
 import type { AppBindings } from "@/backend/app.ts";
-import { modalConfirm } from "../../features/dialogs/modal-confirm.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { selectState } from "./data.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-import { waitFor, queryAllByTestId } from "../../test-utils/index.ts";
+import { waitFor, queryAllByTestId } from "@/test-utils/index.ts";
 import type { AppTree } from "./index.ts";
 
 const getAppMock = vi.mocked(getApp);

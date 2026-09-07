@@ -16,8 +16,8 @@
 //   不 preventDefault——3D 面板内文本框打字不再被吞（修复：w/a/s/d 无法输入）。
 
 import type * as THREE from "three";
-import { isEditableTarget } from "../../utils/dom/editable-target.ts";
-import { isInputBlocked } from "../../utils/dom/focus-restore.ts";
+import { isEditableTarget } from "@/utils/dom/editable-target.ts";
+import { isInputBlocked } from "@/utils/dom/focus-restore.ts";
 import { loadTdKeymap, type TdKeyAction } from "../keymap.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 

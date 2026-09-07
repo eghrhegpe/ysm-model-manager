@@ -1,13 +1,13 @@
 // ===== 批量重命名对话框（类型化版 — ADR-014 P3 dialogs 收官）=====
 // 复用 parseModelName 解析
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { esc } from "../../utils/html/html.ts";
-import { type ParsedModelName, parseModelName } from "../../utils/model-name/display.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
+import { type ParsedModelName, parseModelName } from "@/utils/model-name/display.ts";
 import { applyReplaceToName, rebuildParsedName } from "./batch-rename-util.ts";
 import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 

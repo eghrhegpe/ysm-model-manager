@@ -5,7 +5,7 @@
 // （advFilterEarlyEmpty）、网页版「导入文件」（pickWebFilesAndImport 的 change 链路）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
-import { getExts } from "../../utils/resource/extensions.ts";
+import { getExts } from "@/utils/resource/extensions.ts";
 
 const {
   emitMock,

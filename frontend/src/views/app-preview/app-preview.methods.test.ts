@@ -3,8 +3,8 @@
 // _showPackInfo 三态渲染、appendDebug、顶层 cacheSetEvictHandler blob 释放。
 // 依赖：detail/litematic-meta/wasm 全 mock（分流断言用 spy），cache 用真实实现。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // ── mock 链 ──────────────────────────────────────
 const appObj = vi.hoisted(() => ({
@@ -41,9 +41,9 @@ const litematicSpies = vi.hoisted(() => ({
 }));
 vi.mock("./litematic-meta.ts", () => litematicSpies);
 
-import { cacheSet, cacheGet } from "../../preview-3d/decoder/cache.ts";
+import { cacheSet, cacheGet } from "@/preview-3d/decoder/cache.ts";
 import "./index.ts"; // 触发 customElements.define + evict handler 注册
-import { sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
 /** 创建 app-preview 实例（connectedCallback 会调 _preloadTypeRegistry） */
 function mountPreview() {

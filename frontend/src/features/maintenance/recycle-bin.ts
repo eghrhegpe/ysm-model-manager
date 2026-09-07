@@ -3,14 +3,14 @@
 // 测试可直接注入替身，无需 vi.mock 整个模块；缺省走生产实现。
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
-import { loadResourceRegistry } from "../../services/resource-registry.ts";
-import { createLoadGuard, type LoadGuard } from "../../utils/async/load-guard.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { esc } from "../../utils/html/html.ts";
-import type { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { loadResourceRegistry } from "@/services/resource-registry.ts";
+import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
+import type { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { useCurrentResourceType } from "../repo/repo-rtype.ts";
 

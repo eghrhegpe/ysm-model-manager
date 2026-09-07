@@ -8,8 +8,8 @@
 // - 异步清理：repoEventsCleanup
 
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { PageName } from "../../bus.ts";
-import type { WorkshopModel } from "../../features/community/render.ts";
+import type { PageName } from "@/bus";
+import type { WorkshopModel } from "@/features/community/render.ts";
 
 export interface RepoCacheEntry {
   models: WorkshopModel[];

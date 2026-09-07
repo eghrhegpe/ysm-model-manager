@@ -1,12 +1,12 @@
 // ===== skeleton-fill-panel.ts — fill3DPanel（从 skeleton-render.ts 拆出，ADR-040 P1）=====
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择 + 骨骼列表 + 详情框
-import { t } from "../../core/i18n/t.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
-import type { BoneSelectInfo, Spec3D } from "../../preview-3d/model3d.ts";
-import type { PreviewSnapshot } from "../../preview-3d/state/preview-state.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import { esc } from "@/utils/html/html.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
 export interface PanelHandle {

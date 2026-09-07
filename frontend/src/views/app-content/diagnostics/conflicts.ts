@@ -3,13 +3,13 @@
 
 import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { stagger } from "../../../utils/animation/stagger.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { renderDisplayName } from "../../../utils/model-name/display.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../../utils/resource/types.ts";
-import type { AppConfig, VersionInstance } from "../../../utils/types-re-export.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import type { AppConfig, VersionInstance } from "@/utils/types-re-export.ts";
 import type { EscFn } from "./logs.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描

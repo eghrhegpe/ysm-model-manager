@@ -1,11 +1,11 @@
 // ===== oldest 页 DOM 模板（ADR-190 D1a 自 features/maintenance/oldest-models.ts 回迁）=====
 // DOM HTML 模板归 views：热力图/资历卡片/每日推荐/整页装配；
 // 数据获取与评分分档仍归 features（loadOldestModel 经 deps.renderPage 注入本模块）。
-import { t } from "../../core/i18n/t.ts";
-import type { ModelEntry, RepoStats } from "../../features/maintenance/oldest-models.ts";
-import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/html/html.ts";
-import { renderDisplayName } from "../../utils/model-name/display.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { ModelEntry, RepoStats } from "@/features/maintenance/oldest-models.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
+import { esc } from "@/utils/html/html.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 // ===== 展示常量（渲染侧；评分分档 80/60 留守 features）=====
 const MS_PER_DAY = 86400000;

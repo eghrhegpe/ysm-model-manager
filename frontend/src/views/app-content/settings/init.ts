@@ -7,15 +7,15 @@ import { getApp } from "@/backend/app.ts";
 import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { initVersionUpdater } from "../../../features/maintenance/version-updater.ts";
-import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { safeGet } from "../../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
-import { GH_RELEASES } from "../../../utils/gh-links.ts";
-import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
+import { loadResourceRegistry } from "@/services/resource-registry.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { GH_RELEASES } from "@/utils/gh-links.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
 import { cfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
@@ -249,7 +249,7 @@ async function stgBindLangSwitch(
 ): Promise<void> {
   const langSelect = root.getElementById("set-lang") as HTMLSelectElement | null;
   if (langSelect) {
-    const { getLang, setLang } = await import("../../../core/i18n/locale.ts");
+    const { getLang, setLang } = await import("@/core/i18n/locale.ts");
     langSelect.value = getLang();
     langSelect.addEventListener("change", async () => {
       try {

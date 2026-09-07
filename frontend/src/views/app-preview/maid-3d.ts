@@ -7,17 +7,17 @@
 import { getApp } from "@/backend/app.ts";
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import {
   cleanupPreview,
   invalidatePreview,
   mount3D,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
-import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
-import { esc } from "../../utils/html/html.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
+import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
+import { esc } from "@/utils/html/html.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { detailGen } from "./detail.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { loadModelData } from "./loader.ts";

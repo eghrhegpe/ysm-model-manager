@@ -3,11 +3,11 @@
 // 评分/去重/禁用统计：数据源统一为 Go RepoHealthAudit（与诊断页/CLI health-report
 // 同源），前端不再自算健康分——消灭「本地正则数 ban + Hash 分组算重复」的双轨口径。
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { createLoadGuard } from "../../utils/async/load-guard.ts";
-import { parseHealthReport } from "../../utils/health-report.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { parseHealthReport } from "@/utils/health-report.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "../backend-deps.ts";
 import { useCurrentResourceType } from "../repo/repo-rtype.ts";
 

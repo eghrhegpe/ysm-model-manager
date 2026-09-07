@@ -4,7 +4,7 @@
 // loadInstances：失败路径 toast（loading 孤儿已删除）。
 import { describe, it, expect, vi } from "vitest";
 import { groupMmdVariants, loadInstances } from "./loader.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 // 阻断 Wails runtime 加载链：loader.ts 顶部静态 import bindings → @wailsio/runtime
 // （其 drag.js 在模块加载时访问 window，jsdom teardown 后延迟回调触发

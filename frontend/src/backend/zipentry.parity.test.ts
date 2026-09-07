@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { matchZipEntryTS } from "../utils/resource/types.ts";
+import { matchZipEntryTS } from "@/utils/resource/types.ts";
 
 // 定位仓库根：vitest 运行时 cwd = frontend/，仓库根 = cwd 上一级。
 // 不走 import 语句（ADR-146 R4 冻结基线禁止新增跨 frontend/src 边界的 import）；

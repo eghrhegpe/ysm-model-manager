@@ -2,7 +2,7 @@
 // core/error-diary 经此注入落盘能力；reject 截断语义从 core 测试迁入本层
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeDiarySink } from "./diary-sink.ts";
-import { flushPromises } from "../test-utils/index.ts";
+import { flushPromises } from "@/test-utils/index.ts";
 
 const { addOpLogMock, dbgMock } = vi.hoisted(() => ({
   addOpLogMock: vi.fn().mockResolvedValue(undefined),

@@ -2,7 +2,7 @@
 // 覆盖：频次限制、静默检查成功/失败、手动检查（modalConfirm 确认/取消、下载失败 toast）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 
 /** vi.fn 返回类型（hoisted 占位标注用） */
 type MockFn = ReturnType<typeof vi.fn>;

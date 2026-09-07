@@ -5,7 +5,7 @@
 // mount-preview-core 经 registerPerFrame/removePerFrame/stopIfIdle/resetLoopState 访问。
 
 import * as THREE from "three";
-import { logWarn } from "../../utils/base/log.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import {
   cullModelGroups,

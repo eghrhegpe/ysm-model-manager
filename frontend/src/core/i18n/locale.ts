@@ -2,8 +2,8 @@
 // 语言偏好持久化到 localStorage，启动时检测系统语言，切换时触发 lang:changed 事件。
 // 语言包缓存也收归本模块，避免与 t.ts 循环依赖。
 
-import { bus } from "../../bus.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { bus } from "@/bus";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 
 const STORAGE_KEY = "uiLang";
 

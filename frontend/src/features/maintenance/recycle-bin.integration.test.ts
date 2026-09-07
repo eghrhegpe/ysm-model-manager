@@ -2,8 +2,8 @@
 // 覆盖：加载渲染、路径过滤、恢复/删除/清空、类型切换、事件委托、清理函数、异常路径
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
-import { bus } from "../../bus.ts";
-import { flushPromises } from "../../test-utils/index.ts";
+import { bus } from "@/bus";
+import { flushPromises } from "@/test-utils/index.ts";
 
 /** vi.fn 返回类型（hoisted 占位 + AppLike 标注用） */
 type MockFn = ReturnType<typeof vi.fn>;
@@ -65,7 +65,7 @@ vi.mock("@/backend/app.ts", async () => {
 });
 
 import { initRecycleBin, type RecycleDeps, type RecycleHost } from "./recycle-bin.ts";
-import { renderRecycleListHtml } from "../../views/app-content/tpl-recycle.ts";
+import { renderRecycleListHtml } from "@/views/app-content/tpl-recycle.ts";
 
 function entry(name: string, path: string, size = 100) {
   return { Name: name, Path: path, Size: size };

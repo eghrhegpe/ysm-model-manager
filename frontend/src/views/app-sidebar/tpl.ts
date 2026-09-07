@@ -1,14 +1,14 @@
 // ===== sidebar HTML 模板 =====
 
-import { type LocaleKey, t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/html/html.ts";
-import { shortLabelOf } from "../../utils/resource/short-label.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
+import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   ALL_RESOURCE_TYPES,
   GROUP_OF,
   RESOURCE_TYPES,
   typeIconOf,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。

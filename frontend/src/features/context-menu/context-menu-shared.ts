@@ -4,11 +4,11 @@
 // 已下沉 utils/dom/toast.ts（跨层复用，ADR-185 下沉，ADR-189 D3 归位）。
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
 
-import { bus } from "../../bus.ts";
-import { tr } from "../../core/i18n/tr.ts";
-import { toast, toastError } from "../../utils/dom/toast.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { tr } from "@/core/i18n/tr.ts";
+import { toast, toastError } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { modalPrompt } from "../dialogs/modal-prompt.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 

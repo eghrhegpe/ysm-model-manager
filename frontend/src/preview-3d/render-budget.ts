@@ -1,4 +1,4 @@
-import { safeGet } from "../utils/dom/storage.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
 
 const PREVIEW_MAX_PIXEL_RATIO_DEFAULT = 1.5;
 // 存储键单一事实来源（code review P3：preview-menu 设置面板写同一键——不再双份硬编码）

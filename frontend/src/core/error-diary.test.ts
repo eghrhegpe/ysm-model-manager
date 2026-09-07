@@ -2,9 +2,9 @@
 // ADR-189 D1：core 不感知 backend——落盘断言改走注入的 sink spy；
 // AddOpLog 适配（含 reject 截断防死循环）的用例见 backend/diary-sink.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { bus } from "../bus.ts";
+import { bus } from "@/bus";
 import { registerErrorDiary, unregisterErrorDiary, type DiaryEntry } from "./error-diary.ts";
-import { flushPromises } from "../test-utils/index.ts";
+import { flushPromises } from "@/test-utils/index.ts";
 
 const sinkSpy = vi.fn<(e: DiaryEntry) => void>();
 
@@ -189,7 +189,7 @@ describe("registerErrorDiary", () => {
 // ===== logWarn/logError 透写日记（热路径告警进环形日志，经注入 sink 落盘）=====
 describe("log sink 透写", () => {
   it("logError → status=failed，带 tag 前缀与 err detail", async () => {
-    const { logError } = await import("../utils/base/log.ts");
+    const { logError } = await import("@/utils/base/log.ts");
     registerErrorDiary(sinkSpy);
     logError("preview 3D", "加载失败", new Error("boom"));
     await flushPromises();
@@ -202,7 +202,7 @@ describe("log sink 透写", () => {
   });
 
   it("logWarn → status=warn；无 err 不追加 detail", async () => {
-    const { logWarn } = await import("../utils/base/log.ts");
+    const { logWarn } = await import("@/utils/base/log.ts");
     registerErrorDiary(sinkSpy);
     logWarn("preview 3D", "handle.cleanup 失败");
     await flushPromises();
@@ -211,7 +211,7 @@ describe("log sink 透写", () => {
   });
 
   it("unregisterErrorDiary 拆除 sink：reset 后 logWarn 不再落日记", async () => {
-    const { logWarn } = await import("../utils/base/log.ts");
+    const { logWarn } = await import("@/utils/base/log.ts");
     registerErrorDiary(sinkSpy);
     unregisterErrorDiary();
     logWarn("tag", "reset 后的消息");

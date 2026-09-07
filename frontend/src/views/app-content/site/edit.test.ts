@@ -2,7 +2,7 @@
 // 真实绑定 bindEditEvents：拖拽排序（创作者/搜索词）、编辑入口/取消、
 // 删除/新增搜索词、创作者搜索过滤。moveItem 纯函数已单独测，此处验证编排集成。
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { bus } from "../../../bus.ts";
+import { bus } from "@/bus";
 
 // mock bindings + 社区数据源（fetch 更新配置路径不测，阻断网络与 getApp）
 vi.mock("@/backend/app.ts", () => ({
@@ -25,7 +25,7 @@ import { bindEditEvents } from "./edit.ts";
 import type { SiteViewState } from "./types.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite, WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import { fireDrag } from "../../../test-utils/events.ts";
+import { fireDrag } from "@/test-utils/events.ts";
 import { getApp } from "@/backend/app.ts";
 import * as communityData from "../community-data.ts";
 

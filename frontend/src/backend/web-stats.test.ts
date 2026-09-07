@@ -18,7 +18,7 @@ import {
   type StatsWorkerRequest,
   type StatsWorkerResponse,
   type WebModelStatsWithPath,
-} from "../workers/stats-protocol.ts";
+} from "@/workers/stats-protocol.ts";
 
 beforeEach(() => {
   __setStatsRunnerForTest(null);

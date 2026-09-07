@@ -6,15 +6,15 @@
 // 状态（activeTab + 候选缓存）由 makeSwitchState 创建、buildPreviewMenuRouters 持有
 //（mount 级一次），builder 每次渲染重跑时读写同一 state——旧闭包 let activeTab 语义平移。
 
-import { tr } from "../../core/i18n/tr.ts";
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import {
   getPreviewableTypeTabs,
   RESOURCE_TYPE_LABELS,
   resolveTypeSafe,
-} from "../../utils/resource/types.ts";
+} from "@/utils/resource/types.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */

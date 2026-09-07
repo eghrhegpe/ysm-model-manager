@@ -5,8 +5,8 @@
 // _fmtSize / _esc 纯函数。
 // heavy feature 模块全 mock（副作用 import 断开），页面 HTML 用真实 tpl。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/html/html.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
+import { esc } from "@/utils/html/html.ts";
 
 // 去重会话工厂 mock 走hoisted：init-pages 在模块内部创建会话，测试需捕获其方法做断言
 const { dedupStartMock, dedupInitConfigMock } = vi.hoisted(() => ({
@@ -85,16 +85,16 @@ vi.mock("./site/site-view.ts", () => ({ renderSiteView: vi.fn(() => () => {}) })
 vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }));
 vi.mock("../../utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => "") }));
 
-import { bus } from "../../bus.ts";
-import { initRecycleBin } from "../../features/maintenance/recycle-bin.ts";
-import { loadOldestModel } from "../../features/maintenance/oldest-models.ts";
+import { bus } from "@/bus";
+import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
+import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 // 断言跟随实现的真实消费路径（init-pages 直接 import dedup.ts；init.ts 仅兼容壳）
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";
-import { tryFetchModels } from "../../features/community/data.ts";
+import { tryFetchModels } from "@/features/community/data.ts";
 import { renderSiteView } from "./site/site-view.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
-import { waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
 // ===== 反 flaky 基建（替换原固定 sleep；审计 P1：sleep 是墙钟等待，慢机不够即假红）=====
 // mock 链路全部微任务级 resolve，排空 2 轮「宏任务 + rAF」即覆盖 init 落定，

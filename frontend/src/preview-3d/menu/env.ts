@@ -7,8 +7,8 @@
 // 行渲染复用 render.ts 唯一 row 生成器（slide-item + radio/badge/headerToggle 槽位），
 // 与 roles 同构，消除「env 手风琴 vs 其余面板行列表」的形态割裂。
 
-import { tr } from "../../core/i18n/tr.ts";
-import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import type { EnvPresetId } from "../caps/environment-capability.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";

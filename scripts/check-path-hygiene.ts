@@ -172,6 +172,19 @@ function loadViteAliasFinds(): Set<string> {
     }
   }
   if (/find:\s*["']#root["']/.test(txt)) keys.add('#root');
+  // 字面量 find 条目：文件级别名（@/bus、@/theme-core 等，单独声明，不在 ALIAS_DIRS 模板内）
+  for (const fm of txt.matchAll(/find:\s*["']([^"']+)["']/g)) {
+    const find = fm[1];
+    if (find !== '#root') keys.add(find);
+  }
+  // FILE_ALIASES 对象键（模板字面量拼 find，等价于字面量；供双写一致性核对）
+  const fam = txt.match(/FILE_ALIASES\s*=\s*\{([\s\S]*?)\}/);
+  if (fam) {
+    for (const km of fam[1].matchAll(/["']([^"':]+)["']\s*:/g)) {
+      const name = km[1];
+      if (name) keys.add(`@/${name}`);
+    }
+  }
   return keys;
 }
 const tsKeys = loadTsconfigPathsKeys();

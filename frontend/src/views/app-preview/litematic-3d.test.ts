@@ -305,13 +305,13 @@ vi.mock("../../preview-3d/caps/light-capability.ts", () => ({
 }));
 
 import { getApp, type AppBindings } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
-import { getSchema, listSchemas } from "../../preview-3d/adapters/schema-registry.ts";
-import { switchPreview } from "../../preview-3d/adapters/mount-preview-core.ts";
-import { previewSnapshot } from "../../preview-3d/state/preview-state.ts";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
+import { getSchema, listSchemas } from "@/preview-3d/adapters/schema-registry.ts";
+import { switchPreview } from "@/preview-3d/adapters/mount-preview-core.ts";
+import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 
 /** 访问 mock 暴露的 InstancedMesh 实例列表，供 count / setMatrixAt 断言 */
 const meshInstances = (THREE as unknown as {

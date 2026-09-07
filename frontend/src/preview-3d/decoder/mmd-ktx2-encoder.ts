@@ -1,4 +1,4 @@
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { bytesToBase64 } from "../base64.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====

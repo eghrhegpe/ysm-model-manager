@@ -4,16 +4,16 @@
 
 import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { logError } from "../../utils/base/log.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { isEditableTarget } from "../../utils/dom/editable-target.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { isImportableFile } from "../../utils/resource/importable.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { logError } from "@/utils/base/log.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { isEditableTarget } from "@/utils/dom/editable-target.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { ALL_EXTS } from "@/utils/resource/extensions.ts";
+import { isImportableFile } from "@/utils/resource/importable.ts";
 import { backendGetApp } from "../backend-deps.ts";
 import { executeCollected, importWebFilesWithToast } from "../import/executor.ts";
 import type { CollectedEntry } from "./collector.ts";

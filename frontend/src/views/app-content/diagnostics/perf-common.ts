@@ -2,10 +2,10 @@
 // 三个命令模块（single-bench / gui-flow / perf-log）与 perf-trace 共用的渲染/守卫/错误辅助。
 // 纯前端逻辑，零 Go 改动。
 
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import type { executeCLI } from "../../../services/cli-bridge.ts";
-import { safeErrorMessage } from "../../../utils/safe-error-msg.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import type { executeCLI } from "@/services/cli-bridge.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { EscFn } from "./logs.ts";
 
 // ===== 区段头（带可选复制按钮）=====

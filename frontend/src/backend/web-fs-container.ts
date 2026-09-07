@@ -7,9 +7,9 @@
 // 共享读取装配（readWebFile / readWebZipEntries / voxelFromBase64 / VOXEL_MAX_BLOCKS）
 // 来自 web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
-import { extractZip } from "../parsers/extract.ts";
-import { findZipEntry } from "../parsers/pack-meta.ts";
-import type { VoxelData } from "../parsers/voxel-parse.ts";
+import { extractZip } from "@/parsers/extract.ts";
+import { findZipEntry } from "@/parsers/pack-meta.ts";
+import type { VoxelData } from "@/parsers/voxel-parse.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { readWebFile, readWebZipEntries, voxelFromBase64 } from "./web-fs-read.ts";
 

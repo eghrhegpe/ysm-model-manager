@@ -4,16 +4,16 @@
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { readPmxStats } from "../../preview-3d/adapters/mmd-detail-stats.ts";
-import { readVrmMeta } from "../../preview-3d/adapters/vrm-adapter.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
-import { esc } from "../../utils/html/html.ts";
-import { renderFormattedText } from "../../utils/html/mc-format.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { readPmxStats } from "@/preview-3d/adapters/mmd-detail-stats.ts";
+import { readVrmMeta } from "@/preview-3d/adapters/vrm-adapter.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
+import { esc } from "@/utils/html/html.ts";
+import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { detailGen } from "./detail.ts";
 import { createFbx3D } from "./fbx-3d.ts";
 import { resolveFbxSiblings } from "./fbx-siblings.ts";

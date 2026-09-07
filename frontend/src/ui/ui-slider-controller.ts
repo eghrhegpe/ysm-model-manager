@@ -3,8 +3,8 @@
 // 供 addSliderRow / addColorSliderRow / addVector3SliderRow / addModeSlider 共用。
 // 自 MikuMikuAR 迁移：依赖改为 utils/base 下的 disposable 与 clamp。
 
-import { clamp01 } from "../utils/base/clamp.ts";
-import { addDisposableListener, type Disposable } from "../utils/base/disposable.ts";
+import { clamp01 } from "@/utils/base/clamp.ts";
+import { addDisposableListener, type Disposable } from "@/utils/base/disposable.ts";
 
 export interface DragSliderOptions {
   /** 当前值（内部可变） */

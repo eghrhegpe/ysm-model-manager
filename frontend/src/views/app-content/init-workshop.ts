@@ -8,12 +8,12 @@
 
 import { Events } from "@/backend/runtime.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "../../bus.ts";
-import type { WorkshopModel } from "../../features/community/render.ts";
-import { showRepoModels } from "../../features/community/show-repo-models.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { safeGet } from "../../utils/dom/storage.ts";
-import { esc } from "../../utils/html/html.ts";
+import { bus } from "@/bus";
+import type { WorkshopModel } from "@/features/community/render.ts";
+import { showRepoModels } from "@/features/community/show-repo-models.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { esc } from "@/utils/html/html.ts";
 import { fillSearch } from "./community-data.ts";
 import { type RenderSiteViewCtx, renderSiteView } from "./site/site-view.ts";
 import {

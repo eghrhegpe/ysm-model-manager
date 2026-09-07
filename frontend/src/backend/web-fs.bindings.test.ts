@@ -16,7 +16,7 @@ import {
 import { dirKey, fileKey } from "./web-fs-shared.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
 import { __setStatsRunnerForTest } from "./web-stats.ts";
-import { emptyYsmHeader, emptyYsmSummary } from "../parsers/ysm-header.ts";
+import { emptyYsmHeader, emptyYsmSummary } from "@/parsers/ysm-header.ts";
 import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 
 // ── NBT 解析/视图 mock（web-fs 只做装配，解析层不在此验证）──

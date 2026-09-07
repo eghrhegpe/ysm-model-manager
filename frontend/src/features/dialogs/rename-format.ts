@@ -1,7 +1,7 @@
 // ===== 重命名文件名构建 + 字段校验（纯函数层）=====
 // 从 utils/dom/dialogs/rename.ts 抽出：文件名拼接与校验逻辑，供单测覆盖（ADR-023 L3）。
 // 原实现中拼接逻辑在 update() 预览与提交按钮里重复两份，此处收敛为单一事实来源。
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 
 /** 重命名字段（调用方已 trim） */
 export interface RenameFields {

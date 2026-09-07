@@ -5,12 +5,12 @@
 // · 本文件：createDownloadQueue UI 控制器 + 对外 re-export（测试 / events.ts / download-tasks.ts
 //   均从本文件取符号，契约零改动）
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { renderDisplayName } from "../../utils/model-name/display.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";

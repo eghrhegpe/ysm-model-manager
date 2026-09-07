@@ -2,7 +2,7 @@
 // 从 app-modules.ts 提取，消除 5 处 import(...).catch 重复模板
 // 并使其可独立测试（app-modules.ts import 即触发顶层副作用）。
 
-import { bus } from "../bus.ts";
+import { bus } from "@/bus";
 import { friendlyError } from "./dom/errors.ts";
 import { TOAST_MS } from "./dom/toast-ms.ts";
 

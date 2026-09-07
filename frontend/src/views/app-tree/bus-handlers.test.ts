@@ -3,7 +3,7 @@
 // 覆盖：选仓库 / 去重占位 / 回收站占位 / 批量启用禁用（前缀过滤+并发守卫）/
 //       文件夹重命名/新建/回收 / 批量重命名（空目录/成功/部分失败）/ tree:reload
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 

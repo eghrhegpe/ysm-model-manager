@@ -26,6 +26,7 @@ auto_fields:
     - GroupedScene
     - hasActivePreview
     - hasSchema
+    - InstalledPreviewInfra
     - invalidatePreview
     - listSchemas
     - makeYsmAdapter

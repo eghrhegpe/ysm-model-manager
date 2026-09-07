@@ -1,7 +1,7 @@
 // ===== 高级筛选条件：解析 + 校验（纯函数层）=====
 // 从 utils/dom/dialogs/adv-filter.ts 抽出，供单测覆盖（ADR-023 L3）。
 // 注意：Go SearchModels 只支持 6 个范围 + 1 关键字（见 adv-filter.ts 头部注释）。
-import type { LocaleKey } from "../../core/i18n/t.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 筛选条件 */
 export interface AdvFilterValue {

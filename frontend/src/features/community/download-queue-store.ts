@@ -15,10 +15,10 @@
 
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { Events } from "@/backend/runtime.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { communityGetApp } from "./community-deps.ts";
 
 // ============================================================

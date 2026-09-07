@@ -1,6 +1,6 @@
 // ===== 作者标签模块 =====
 import { getApp } from "@/backend/app.ts";
-import { withCached } from "../../utils/cache/with-cached.ts";
+import { withCached } from "@/utils/cache/with-cached.ts";
 
 /** 作者统计（Go ListModelAuthors 返回） */
 export interface AuthorInfo {

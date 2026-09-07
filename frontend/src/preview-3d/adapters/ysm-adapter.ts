@@ -18,14 +18,14 @@ import {
   type AnimationClip,
   parseBedrockAnimationJSON,
   ysmAnimClipLabels,
-} from "../../utils/animation/animation.ts";
+} from "@/utils/animation/animation.ts";
 import {
   type AnimationController,
   parseAnimationControllerJSON,
-} from "../../utils/animation/animation-controller.ts";
-import { logWarn } from "../../utils/base/log.ts";
-import { isEditableTarget } from "../../utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+} from "@/utils/animation/animation-controller.ts";
+import { logWarn } from "@/utils/base/log.ts";
+import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { b64ToBytes } from "../base64.ts";
 import { buildBoneHierarchy, registerBoneRaycast } from "../bone-raycast.ts";
 import { type BoneNode, type BoneTree, buildBoneTree } from "../bone-tools.ts";

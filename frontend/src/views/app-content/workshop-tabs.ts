@@ -1,12 +1,12 @@
 // ===== 创意工坊 Tab 管理 =====
 
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { esc as escUtil } from "../../utils/html/html.ts";
-import { getSiteIcon } from "../../utils/icon/workshop-icons.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc as escUtil } from "@/utils/html/html.ts";
+import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import {
   type CommunityData,
   type LocalCreator,
@@ -129,7 +129,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
           // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
           // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
           // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
-          const { t } = await import("../../core/i18n/t.ts");
+          const { t } = await import("@/core/i18n/t.ts");
           const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
           tabsEl.innerHTML =
             '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +

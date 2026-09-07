@@ -5,10 +5,10 @@ import type {
   WorkshopCreator,
   WorkshopSite,
 } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { invalidateCache, withCached } from "../../utils/cache/with-cached.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {

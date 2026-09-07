@@ -6,10 +6,10 @@
 //   - YSM：screenshot 是 ctx 可选字段（undefined = 走 renderMultiAngle fallback，面板常驻）
 // 本共享层兼容两者：screenshotFn 允许 null | undefined，saveScreenshot 第四参语义一致。
 
-import { bus } from "../../bus.ts";
-import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 
 /** 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移。

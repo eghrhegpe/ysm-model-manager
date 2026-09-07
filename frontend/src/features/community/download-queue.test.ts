@@ -9,7 +9,7 @@
 // 为状态层；UI 层见 download-queue-ui.test.ts）；beforeEach 动态 import 绑定文件级
 // let 与 mock 矩阵强耦合，抽共享 setup 需双 let 绑定复杂度不值，故每文件自持矩阵。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { type Bus } from "../../bus.ts";
+import { type Bus } from "@/bus";
 import { type DownloadState, type DownloadTask } from "./download-queue.ts";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
@@ -98,7 +98,7 @@ beforeEach(async () => {
   cancelDownloads = mod.cancelDownloads;
   resume = mod.resume;
   // 与重新 import 的 download-queue 共用同一 bus 实例
-  bus = (await import("../../bus.ts")).bus;
+  bus = (await import("@/bus")).bus;
 });
 
 /** 触发后端事件（payload 为 { data: [...] } 格式） */

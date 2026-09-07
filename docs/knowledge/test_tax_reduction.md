@@ -24,6 +24,7 @@ auto_fields:
     - FbxScaleInfo
     - GroupedScene
     - hasActivePreview
+    - InstalledPreviewInfra
     - invalidatePreview
     - makeFbxAdapter
     - makeMmdAdapter

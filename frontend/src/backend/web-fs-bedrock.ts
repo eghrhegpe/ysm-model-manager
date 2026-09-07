@@ -5,13 +5,13 @@
 // 共享读取装配与路径反解（readWebFile / readWebZipEntries / listWebModelDirFiles）来自
 // web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
-import { extractZip } from "../parsers/extract.ts";
+import { extractZip } from "@/parsers/extract.ts";
 import {
   type BedrockGeometry,
   parseBedrockGeometryFromJSON,
-} from "../preview-3d/decoder/geometry.ts";
-import { parseYsmJsonDirect } from "../preview-3d/decoder/parse-ysm-json.ts";
-import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+} from "@/preview-3d/decoder/geometry.ts";
+import { parseYsmJsonDirect } from "@/preview-3d/decoder/parse-ysm-json.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { listWebModelDirFiles, readWebFile } from "./web-fs-read.ts";
 

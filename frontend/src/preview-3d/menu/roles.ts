@@ -10,8 +10,8 @@
 // ensureRolesStyles 及 roleBaseName 的实现已迁 roles-views.ts（navigate 目标视图工厂，
 // DOM 半身）——分开存放防后来者把 DOM 装配误当 buildRolesSchema 的写法复制。
 
-import { tr } from "../../core/i18n/tr.ts";
-import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";

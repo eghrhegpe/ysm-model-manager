@@ -2,12 +2,12 @@
 // 动态导入目标：init-pages.ts 按需加载，使 Vite 真正按功能拆分 chunk。
 // P3（ADR-190 D1/D1a）：renderRecycleListHtml 从 features/maintenance/recycle-bin.ts 回迁至此——
 // DOM HTML 模板归 views（同页面模板归拢）；features 侧经 RecycleDeps.renderListHtml 注入本函数。
-import { t } from "../../core/i18n/t.ts";
-import type { RecycleBinEntry } from "../../features/maintenance/recycle-bin.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/html/html.ts";
-import { renderDisplayName } from "../../utils/model-name/display.ts";
+import { t } from "@/core/i18n/t.ts";
+import type { RecycleBinEntry } from "@/features/maintenance/recycle-bin.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
+import { esc } from "@/utils/html/html.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 export function recycleHTML(): string {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">

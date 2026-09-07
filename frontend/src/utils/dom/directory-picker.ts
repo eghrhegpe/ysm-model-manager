@@ -9,8 +9,8 @@
 import { getApp } from "@/backend/app.ts";
 import { getAndroidBridge, isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "./toast-ms.ts";
 
 /**

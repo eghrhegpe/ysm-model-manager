@@ -5,13 +5,13 @@
 // 失败契约对齐 Go binding：ReadPackMeta → "{}"；ReadShaderpackLang → {"name":"","entries":{}}
 // ListPackModels → "[]"；ReadPackEntry → ""。共享读取装配来自 web-fs-read.ts 叶子。
 
-import { extractZip } from "../parsers/extract.ts";
+import { extractZip } from "@/parsers/extract.ts";
 import {
   findZipEntry,
   packPngToThumbnail,
   parsePackMetaJson,
   parseShaderpackLang,
-} from "../parsers/pack-meta.ts";
+} from "@/parsers/pack-meta.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { readWebFile, readWebZipEntries } from "./web-fs-read.ts";
 

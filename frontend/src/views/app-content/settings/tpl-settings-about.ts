@@ -1,6 +1,6 @@
 // ===== tpl-settings-about.ts — 设置页 About/Credits 标签页模板（从 tpl-settings.ts 拆出，ADR-040 P1）=====
-import { type LocaleKey, t } from "../../../core/i18n/t.ts";
-import { GH_DOCS, GH_RELEASES, GH_REPO } from "../../../utils/gh-links.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/gh-links.ts";
 
 /** About 标签页（版本/特性/技术栈/链接/快速上手） */
 export function aboutHTML(): string {

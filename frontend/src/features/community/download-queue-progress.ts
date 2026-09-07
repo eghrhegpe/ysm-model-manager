@@ -3,7 +3,7 @@
 // 逻辑零改动纯搬移——回归护栏见 download-queue.test.ts「99% 锁定状态机」describe。
 // 职责：进度条渲染 + 小文件 300ms 强制 100% / 大文件 2s 转菊花 / file-done 强制复位 /
 // 3s completeTimer 收口互斥（与队列结束双路收口防重复）。
-import { t } from "../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import { type DownloadState, isActiveStatus, resetProgress } from "./download-queue-store.ts";
 
 /** 进度条元素的自定义属性（点动画） */

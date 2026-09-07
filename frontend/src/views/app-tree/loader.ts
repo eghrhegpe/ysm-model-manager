@@ -2,11 +2,11 @@
 
 import { getApp } from "@/backend/app.ts";
 import { getAndroidBridge } from "@/backend/platform.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 
 /** 树条目（loader 转换后的渲染格式） */
 export interface TreeEntry {

@@ -2,8 +2,8 @@
 // 从 utils/dom/dialogs/batch-rename.ts 抽出：解析名重建 + 查找替换，供单测覆盖（ADR-023 L3）。
 // 与单个重命名对话框（rename-format.ts）语义差异：
 // 批量重建空段跳过（无缺省「未知」/「?」），并保留禁用尾缀与「角色名回退到文件名」。
-import type { ParsedModelName } from "../../utils/model-name/display.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import type { ParsedModelName } from "@/utils/model-name/display.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { buildModelName } from "./rename-format.ts";
 
 /**

@@ -17,7 +17,7 @@ import {
   getMmdMaterialDetail,
   setMmdMaterialVisible,
   setMmdMaterialOpacity,
-} from "../../preview-3d/mmd-materials.ts";
+} from "@/preview-3d/mmd-materials.ts";
 
 function makeCtx() {
   // MMD 的 SkinnedMesh 是多材质数组（材料列表按数组访问 mats[i]）

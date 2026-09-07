@@ -1,6 +1,6 @@
 // ===== context-menu-dir-handlers.ts — dir 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import type { DirCtx } from "./context-menu-handlers.ts";
 import { runSingleOp } from "./context-menu-shared.ts";
 import type { MenuAction } from "./menu-defs.ts";

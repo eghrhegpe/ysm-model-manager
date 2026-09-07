@@ -10,8 +10,8 @@ import {
   type Mount3DOptions,
   mount3D,
   type PreviewAdapter,
-} from "../../preview-3d/adapters/mount-preview-core.ts";
-import { makeVrmAdapter, type VrmPanelHooks } from "../../preview-3d/adapters/vrm-adapter.ts";
+} from "@/preview-3d/adapters/mount-preview-core.ts";
+import { makeVrmAdapter, type VrmPanelHooks } from "@/preview-3d/adapters/vrm-adapter.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";

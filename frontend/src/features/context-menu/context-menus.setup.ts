@@ -7,8 +7,8 @@
 //   - bus 订阅 / registerContextMenus 生命周期留在各消费测试文件（钩子不能在此模块注册）。
 import { expect, vi } from "vitest";
 import type { CtxShowPayload, MenuItem } from "../../bus";
-import { bus } from "../../bus.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { getMenuDef } from "./menu-defs.ts";
 
 // getApp 是动态 import（backend/app.ts），测试用 mock 替代

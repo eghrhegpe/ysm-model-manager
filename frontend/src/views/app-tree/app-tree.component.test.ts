@@ -26,10 +26,10 @@ vi.mock("./loader.ts", async (importOriginal) => {
   return { ...mod, loadEntries: vi.fn(mod.loadEntries) };
 });
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { loadEntries } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-import { sleep, waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
 describe("app-tree 生命周期配对", () => {
   let loadSpy: ReturnType<typeof vi.fn>;

@@ -2,10 +2,10 @@
 // 数据来源：Go CLI gui-flow 结构化输出（ADR-200 D2），直接读 data.stages，禁止正则反解析。
 
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { executeCLI } from "../../../services/cli-bridge.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { executeCLI } from "@/services/cli-bridge.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,

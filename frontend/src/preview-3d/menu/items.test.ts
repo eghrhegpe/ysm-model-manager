@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
-import { zhCN } from "../../locales/zh-CN.ts";
+import { zhCN } from "@/locales/zh-CN.ts";
 import {
   CORE_MENU_ITEMS,
   PREVIEW_MENU_GROUPS,
@@ -25,7 +25,7 @@ import {
   expectNotContains,
   deriveTestIds,
   extractIds,
-} from "../../test-utils/index.ts";
+} from "@/test-utils/index.ts";
 
 // ── 假依赖工厂（结构/行渲染/轻面板用；重面板 fill3DPanel/截图/骨骼 不执行）──
 

@@ -4,11 +4,11 @@
 // 前端不再自算健康分，只做展示。
 
 import { getApp } from "@/backend/app.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { currentRepoType } from "../../../features/repo/repo-rtype.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { formatBytes } from "../../../utils/dom/format.ts";
-import { type HealthReport, parseHealthReport } from "../../../utils/health-report.ts";
+import { t } from "@/core/i18n/t.ts";
+import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { formatBytes } from "@/utils/dom/format.ts";
+import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 import type { EscFn } from "./logs.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML

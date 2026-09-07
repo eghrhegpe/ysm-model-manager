@@ -7,7 +7,7 @@ import * as THREE from "three";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adapter.ts";
 import { getModelRootCount } from "../frustum-cull.ts";
-import { stubBlobUrls } from "../../test-utils/blob-urls.ts";
+import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
 
 const hoisted = vi.hoisted(() => {
   const loadImpl = vi.fn();

@@ -11,7 +11,7 @@ import { registerSchema, resetSchemas, listSchemas, getSchema } from "./schema-r
 import { unregisterCorePanelSchemas } from "../menu/core.ts";
 import type { PreviewMenuNode } from "../menu/node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 
 /** 默认代表性快照：空记录（无状态守卫激活）→ 非守卫节点可达，守卫节点隐藏 */
 const DEFAULT_SNAP: Partial<PreviewSnapshot> = {};

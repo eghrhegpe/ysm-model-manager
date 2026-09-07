@@ -2,8 +2,8 @@
 // 时刻值读取已下沉 utils/resource/repo-rtype.ts（backend/web-fs-auth 同源消费，
 // 消除 backend → features 反向依赖），此处 re-export + 提供事件订阅。
 
-import { bus } from "../../bus.ts";
-import { currentRepoType } from "../../utils/resource/repo-rtype.ts";
+import { bus } from "@/bus";
+import { currentRepoType } from "@/utils/resource/repo-rtype.ts";
 
 export { currentRepoType };
 

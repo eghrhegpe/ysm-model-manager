@@ -1,9 +1,9 @@
 // ===== 仓库页 DnD（组件级 — ADR-060）测试 =====
 // 覆盖：bindTreeDnD 事件绑定 / handleTreeDrop 处理链路（网页版分支、桌面版收集、oversize、busy 互斥、错误兜底）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus, type ToastPayload } from "../../bus.ts";
+import { bus, type ToastPayload } from "@/bus";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
-import { fireDrop } from "../../test-utils/events.ts";
+import { fireDrop } from "@/test-utils/events.ts";
 import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 
 vi.mock("@/backend/app.ts", () => ({

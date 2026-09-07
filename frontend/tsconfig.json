@@ -38,6 +38,10 @@
       "@/wasm/*": ["./src/wasm/*"],
       "@/test-utils/*": ["./src/test-utils/*"],
       "@/web-spike/*": ["./src/web-spike/*"],
+      "@/locales/*": ["./src/locales/*"],
+      "@/parsers/*": ["./src/parsers/*"],
+      "@/bus": ["./src/bus.ts"],
+      "@/theme-core": ["./src/theme-core.ts"],
       "#root/*": ["../*"]
     }
   },

@@ -1,16 +1,16 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
 import { getApp } from "@/backend/app.ts";
-import { t } from "../../core/i18n/t.ts";
-import { tryFetchModels } from "../../features/community/data.ts";
-import { bindRepoEvents } from "../../features/community/events.ts";
-import type { WorkshopModel } from "../../features/community/render.ts";
-import { countMissing, renderRepoHeaderHTML } from "../../features/community/render.ts";
-import { stagger } from "../../utils/animation/stagger.ts";
-import { swallowError } from "../../utils/base/async.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { esc as escUtil } from "../../utils/html/html.ts";
-import { stripDisableSuffix } from "../../utils/model-name/display.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { t } from "@/core/i18n/t.ts";
+import { tryFetchModels } from "@/features/community/data.ts";
+import { bindRepoEvents } from "@/features/community/events.ts";
+import type { WorkshopModel } from "@/features/community/render.ts";
+import { countMissing, renderRepoHeaderHTML } from "@/features/community/render.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
+import { swallowError } from "@/utils/base/async.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { esc as escUtil } from "@/utils/html/html.ts";
+import { stripDisableSuffix } from "@/utils/model-name/display.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import type { RepoCacheEntry } from "./state.ts";
 

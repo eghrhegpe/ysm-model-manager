@@ -5,8 +5,8 @@
 // shouldInterceptRequest 注入（ADR-079 §1.3）。
 // 渐进增强：SW 注册失败/不支持 → 静默降级（无跨源隔离，单线程 WASM 兜底，功能不残）。
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { dbg } from "../utils/debug/debug.ts";
-import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 
 /** 防 reload 循环标记（值 = JSON {t: 上次 reload 时间戳, n: 已尝试次数}）。
  *  旧版值为 "1"（首次注册固定写）——读到 "1" 视为「曾 reload 但未成功」，t=0 立即落入可重试。 */

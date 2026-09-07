@@ -2,15 +2,15 @@
 
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { showBatchRenameDialog } from "../../features/dialogs/batch-rename.ts";
-import { modalConfirm } from "../../features/dialogs/modal-confirm.ts";
-import { modalPrompt } from "../../features/dialogs/modal-prompt.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { showBatchRenameDialog } from "@/features/dialogs/batch-rename.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
+import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { selectState } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import { loadEntries } from "./loader.ts";

@@ -16,10 +16,10 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // registry.ts 已删（架构锐评 P1-2 修正版）：loader 假实现注入改标准 vi.mock
 vi.mock("./loader.ts", () => ({ loadInstances: vi.fn() }));
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
-import { mountCustomElement, unmountElement, waitFor } from "../../test-utils/index.ts";
+import { mountCustomElement, unmountElement, waitFor } from "@/test-utils/index.ts";
 import type { SidebarInstance } from "./data.ts";
 
 /** loader mock 句柄（各用例 mockImplementation 设假数据，beforeEach mockReset 防泄漏） */

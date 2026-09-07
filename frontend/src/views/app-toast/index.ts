@@ -1,11 +1,11 @@
 // ===== <app-toast> — Toast 通知系统（类型化版 — ADR-014 P3 components）=====
 // 用法：bus.emit('toast:show', { msg, undo?, duration?, type? })
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 // 别名导入：show() 内局部变量 `t` 是 toast 元素，直接用 `t` 会被遮蔽
-import { t as tr } from "../../core/i18n/t.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { esc } from "../../utils/html/html.ts";
+import { t as tr } from "@/core/i18n/t.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
+import { esc } from "@/utils/html/html.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。

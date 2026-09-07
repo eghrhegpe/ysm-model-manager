@@ -1,18 +1,18 @@
 // ===== 所有 ES module 组件的统一入口 =====
 
-import { prefetchStatsWorker } from "./backend/browser-adapter.ts";
-import { makeDiarySink } from "./backend/diary-sink.ts";
-import { Window } from "./backend/runtime.ts";
+import { prefetchStatsWorker } from "@/backend/browser-adapter.ts";
+import { makeDiarySink } from "@/backend/diary-sink.ts";
+import { Window } from "@/backend/runtime.ts";
 import { bus } from "./bus.ts";
-import { registerErrorDiary } from "./core/error-diary.ts";
-import { initI18n } from "./core/i18n/locale.ts";
-import { checkUpdateSilent } from "./features/maintenance/version-updater.ts";
+import { registerErrorDiary } from "@/core/error-diary.ts";
+import { initI18n } from "@/core/i18n/locale.ts";
+import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
 import { revealMainWindow } from "./startup-reveal.ts";
-import { friendlyError } from "./utils/dom/errors.ts";
-import { TOAST_MS } from "./utils/dom/toast-ms.ts";
-import { loadView } from "./utils/module-loader.ts";
-import { applyUIPrefs } from "./views/app-content/settings/ui-prefs.ts";
-import { registerCoiServiceWorker } from "./workers/coi-sw.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { loadView } from "@/utils/module-loader.ts";
+import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
+import { registerCoiServiceWorker } from "@/workers/coi-sw.ts";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
@@ -20,14 +20,14 @@ import { registerCoiServiceWorker } from "./workers/coi-sw.ts";
 // 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）
 // 注意：app-nav 的注册已移至 async IIFE 中，放在 initI18n() 之后，
 // 避免首帧渲染时 i18n bundle 尚未加载导致 [i18n] 缺失 key 警告。
-import "./views/context-menu/index.ts";
-import "./views/app-toast/index.ts";
+import "@/views/context-menu/index.ts";
+import "@/views/app-toast/index.ts";
 
 // Web Components 动态导入（使用字面量确保 Vite 能在构建时解析路径）
-loadView("app-tree", () => import("./views/app-tree/index.ts"));
-loadView("app-sidebar", () => import("./views/app-sidebar/index.ts"));
-const appContentReady = loadView("app-content", () => import("./views/app-content/index.ts"));
-loadView("app-sync-manager", () => import("./views/app-sync-manager/index.ts"));
+loadView("app-tree", () => import("@/views/app-tree/index.ts"));
+loadView("app-sidebar", () => import("@/views/app-sidebar/index.ts"));
+const appContentReady = loadView("app-content", () => import("@/views/app-content/index.ts"));
+loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 
 //  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入
 
@@ -36,7 +36,7 @@ loadView("app-sync-manager", () => import("./views/app-sync-manager/index.ts"));
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
 import { applyTheme, initTheme, normalizeTheme } from "./theme-core.ts";
-import { safeGet } from "./utils/dom/storage.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
 
 export { applyTheme, initTheme, normalizeTheme };
 
@@ -99,7 +99,7 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
         tag: "module",
         failMsg: "app-nav 加载失败:",
         toast: { prefix: "❌ ", fallback: "导航组件加载失败" },
-        run: () => import("./views/app-nav/index.ts"),
+        run: () => import("@/views/app-nav/index.ts"),
       },
       {
         tag: "theme",

@@ -6,15 +6,15 @@
 // events 的 LAST_TYPE_KEY 等共享状态走 state.ts，不再反向依赖 index）
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { esc } from "../../utils/html/html.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
+import { esc } from "@/utils/html/html.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
 import { containerHTML, loadingHTML } from "./tpl.ts";

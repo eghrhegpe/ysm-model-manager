@@ -11,7 +11,7 @@ import { MOCK_DATA } from "../../../e2e/mock-data.ts";
 type MockFn = ReturnType<typeof vi.fn>;
 // bus 不静态 import：beforeEach resetModules 后动态拿，保证与 loader 新实例同源
 // （裸 resetModules 会让 loader 的 bus 与 spy 的 bus 分叉，toast 收不到——见 141 行注）
-import type { Bus } from "../../bus.ts";
+import type { Bus } from "@/bus";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -63,7 +63,7 @@ beforeEach(async () => {
   // 避免被兄弟文件先求值的真实绑定固化（同 errors.test.ts 修复模式）。
   // bus 必须动态 import 拿同一实例——否则 loader 新实例与 spy 的 bus 分叉，toast 收不到。
   vi.resetModules();
-  bus = (await import("../../bus.ts")).bus;
+  bus = (await import("@/bus")).bus;
   vi.clearAllMocks();
   // 共享基线：GetRepoRoot 取 MOCK_DATA 值（"/e2e/repo"），与 e2e 一致
   mocks.GetRepoRoot.mockResolvedValue(MOCK_DATA.GetRepoRoot);

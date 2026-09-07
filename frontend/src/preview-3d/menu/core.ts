@@ -6,14 +6,14 @@
 //   - 组内多个项 → home 到组根视图（项列表），点击项 navigate 下钻面板
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
-import { tr } from "../../core/i18n/tr.ts";
+import { tr } from "@/core/i18n/tr.ts";
 import {
   createSlideMenu,
   type SlideMenuHandle,
   type SlideMenuView,
-} from "../../ui/ui-slide-menu.ts";
-import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+} from "@/ui/ui-slide-menu.ts";
+import { pushInputBlock } from "@/utils/dom/focus-restore.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
 import {
   getSchema,

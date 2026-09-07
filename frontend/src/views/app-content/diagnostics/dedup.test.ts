@@ -3,7 +3,7 @@
 // priorityPath 变更实时落会话）③ getDefaultKeepIdx 策略分支（oldest/newest/path/largest）。
 // 会话工厂特性：每测试新开会话，状态互不串扰。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { waitFor } from "../../../test-utils/index.ts";
+import { waitFor } from "@/test-utils/index.ts";
 import { createDedupSession } from "./dedup.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 

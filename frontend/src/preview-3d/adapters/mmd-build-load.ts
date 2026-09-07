@@ -2,9 +2,9 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { safeGet } from "../../utils/dom/storage.ts";
-import { formatLongTask, startMainThreadWatch } from "../../utils/main-thread-watch.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { safeGet } from "@/utils/dom/storage.ts";
+import { formatLongTask, startMainThreadWatch } from "@/utils/main-thread-watch.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer, bytesToBase64 } from "../base64.ts";
 import { Ktx2TextureLoader } from "../decoder/mmd-ktx2-texture-loader.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";

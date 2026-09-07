@@ -3,8 +3,8 @@
 // 用法: const handle = modalProgress({ title, icon, closable }); handle.update(done, total)
 // 注意: fmtMB 不再经本文件 re-export——消费方直连 utils/format/fmt-mb.ts（原「逐步移除」兑现）。
 
-import { t } from "../../core/i18n/t.ts";
-import { fmtMB } from "../../utils/format/fmt-mb.ts";
+import { t } from "@/core/i18n/t.ts";
+import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { createDialog } from "./modal-core.ts";
 
 export interface ModalProgressOptions {

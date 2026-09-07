@@ -5,16 +5,16 @@
 // detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
 
 import { getApp } from "@/backend/app.ts";
-import { t } from "../../core/i18n/t.ts";
-import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
-import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
-import { describeVersionRange } from "../../utils/format/pack-format.ts";
-import { esc } from "../../utils/html/html.ts";
-import { renderFormattedText } from "../../utils/html/mc-format.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { t } from "@/core/i18n/t.ts";
+import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
+import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
+import { describeVersionRange } from "@/utils/format/pack-format.ts";
+import { esc } from "@/utils/html/html.ts";
+import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { summaryCardHTML, type YsmSummary } from "../../views/app-preview/tpl-summary.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { createPack3D } from "./pack-3d.ts";

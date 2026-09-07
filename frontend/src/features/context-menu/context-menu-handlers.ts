@@ -1,16 +1,16 @@
 // ===== context-menu-handlers.ts — instance/batch handler 表（ADR-040 P1 第2轮拆分）=====
 // file/dir handler 已拆至 context-menu-file-handlers.ts / context-menu-dir-handlers.ts
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { tr } from "../../core/i18n/tr.ts";
-import { type BusyLock, createBusyLock } from "../../utils/base/lock.ts";
-import { dbg } from "../../utils/debug/debug.ts";
-import { copyText } from "../../utils/dom/clipboard.ts";
-import { downloadTextFile } from "../../utils/dom/download-text.ts";
-import { friendlyError } from "../../utils/dom/errors.ts";
-import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/lock.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { copyText } from "@/utils/dom/clipboard.ts";
+import { downloadTextFile } from "@/utils/dom/download-text.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
@@ -124,7 +124,7 @@ const moveBusy = createBusyLock();
 const copyBusy = createBusyLock();
 const recycleBusy = createBusyLock();
 
-export type MenuCtx = import("../../bus.ts").CtxShowPayload & { paths: string[] };
+export type MenuCtx = import("@/bus").CtxShowPayload & { paths: string[] };
 
 // P2-1 表级窄化：file/dir 两张表各拿掉对立字段，编译期防跨表误取——
 //   file handler 读 ctx.dir / dir handler 读 ctx.path → 直接编译报错。

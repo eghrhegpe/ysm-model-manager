@@ -42,10 +42,10 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   ),
 }));
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import { DetectResourceType } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import "./index.ts"; // 触发 customElements.define("app-preview")
-import { sleep, waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
 describe("app-preview 生命周期配对", () => {
   beforeEach(() => {

@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 import { bindInputHandlers } from "./input-and-animation.ts";
 import type { InputOptions } from "./input-and-animation.ts";
-import { pushInputBlock, popInputBlock, isInputBlocked } from "../../utils/dom/focus-restore.ts";
+import { pushInputBlock, popInputBlock, isInputBlocked } from "@/utils/dom/focus-restore.ts";
 
 // mock WebGLRenderer / domElement / postProc 的最小壳，避免真实 WebGL 依赖
 function mkFakeRenderer(): THREE.WebGLRenderer {

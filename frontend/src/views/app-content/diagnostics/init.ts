@@ -5,10 +5,10 @@
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
-import { bus } from "../../../bus.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";

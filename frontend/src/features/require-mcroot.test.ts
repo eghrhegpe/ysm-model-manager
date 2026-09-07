@@ -3,8 +3,8 @@
 // 覆盖：已配置 mcRoot 返回路径；未配置发 warn toast 并返回 null
 // backend/app mock 走 test-setup §5 全局 fail-closed Proxy（mockAppMethods 配置）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../bus.ts";
-import { mockAppMethods, resetAppMock } from "../test-utils/mock-app.ts";
+import { bus } from "@/bus";
+import { mockAppMethods, resetAppMock } from "@/test-utils/mock-app.ts";
 
 // app mock：共享工厂 + 别名路径（归一写法，详见 test-utils/mock-app.ts 头注）
 vi.mock("@/backend/app.ts", async () => {

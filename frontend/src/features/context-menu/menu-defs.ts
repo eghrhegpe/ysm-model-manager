@@ -5,7 +5,7 @@
 // 节点级 `visibleWhen` 谓词吃 ctx 快照（与 AGENTS.md「3d菜单只允许 visibleWhen」
 // 的精神面一致），实现右键菜单与3D 菜单的声明式语义统一；未定义时行为不变。
 import type { CtxShowPayload } from "../../bus";
-import { tr } from "../../core/i18n/tr.ts";
+import { tr } from "@/core/i18n/tr.ts";
 
 /** 菜单项声明：结构（label/icon/danger/divider）+ 行为标识（action）+ 节点级显隐守卫 */
 interface MenuItemDef {

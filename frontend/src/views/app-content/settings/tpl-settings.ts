@@ -3,7 +3,7 @@
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { t } from "../../../core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。

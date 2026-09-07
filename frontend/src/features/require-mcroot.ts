@@ -5,9 +5,9 @@
 // ——features 内共享原语，pack-ops/sync 双消费；守卫自带 toast 属交互反馈，
 // 非纯内核语义）。
 
-import { t } from "../core/i18n/t.ts";
-import { toast } from "../utils/dom/toast.ts";
-import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "./backend-deps.ts";
 
 /**

@@ -28,6 +28,7 @@ auto_fields:
     - getRegisteredRoutes
     - GroupedScene
     - hasActivePreview
+    - InstalledPreviewInfra
     - invalidatePreview
     - loadModel2D
     - mount3D

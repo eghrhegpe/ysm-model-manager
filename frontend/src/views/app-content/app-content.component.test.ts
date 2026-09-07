@@ -47,9 +47,9 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   ScanLocalAuthors: vi.fn().mockResolvedValue([]),
 }));
 
-import { bus } from "../../bus.ts";
+import { bus } from "@/bus";
 import "./index.ts"; // 触发 customElements.define("app-content")
-import { sleep, waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
+import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
 describe("app-content 生命周期配对", () => {
   beforeEach(() => {

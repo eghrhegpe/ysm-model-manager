@@ -1,11 +1,11 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
 
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
-import { copyText } from "../../utils/dom/clipboard.ts";
-import { toast, toastEmptyRtype, toastError } from "../../utils/dom/toast.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { copyText } from "@/utils/dom/clipboard.ts";
+import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { backendGetApp } from "../backend-deps.ts";
 import { modalConfirm } from "../dialogs/modal-confirm.ts";
 import { requireMcRoot } from "../require-mcroot.ts";

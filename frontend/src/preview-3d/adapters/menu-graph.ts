@@ -13,7 +13,7 @@
 // 可达性 = 对代表性快照集求 node.visibleWhen(snap)；节点级谓词（吃 PreviewSnapshot）
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import type { PreviewMenuRouters } from "../menu/core.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "../menu/defs.ts";
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "../menu/node-types.ts";

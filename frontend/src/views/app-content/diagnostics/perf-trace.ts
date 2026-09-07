@@ -3,8 +3,8 @@
 // 本文件消费 store 渲染甘特图 + 资产清单 + 纹理详情。
 // 与 perf-cli.ts 职责隔离：CLI 文本流 ≠ 运行时 trace store，不混在同一文件。
 
-import { t } from "../../../core/i18n/t.ts";
-import { getLoadTraces } from "../../../preview-3d/load-trace.ts";
+import { t } from "@/core/i18n/t.ts";
+import { getLoadTraces } from "@/preview-3d/load-trace.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 

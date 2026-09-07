@@ -3,7 +3,7 @@
 // getApp 四个绑定 mock（MergeWorkshopCreatorsFromJSON / LoadWorkshopCreators /
 // MergeWorkshopSitesFromJSON / DefaultWorkshopSites）；bus/toast 用真实总线事件流断言。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { bus } from "../../../bus.ts";
+import { bus } from "@/bus";
 
 // mock bindings（阻断 Wails runtime 加载链）
 vi.mock("@/backend/app.ts", () => ({
@@ -23,7 +23,7 @@ import { bindDragEvents } from "./drag.ts";
 import type { SiteViewState } from "./types.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import { fireDrop } from "../../../test-utils/events.ts";
+import { fireDrop } from "@/test-utils/events.ts";
 
 interface AppLike {
   MergeWorkshopCreatorsFromJSON: ReturnType<typeof vi.fn>;

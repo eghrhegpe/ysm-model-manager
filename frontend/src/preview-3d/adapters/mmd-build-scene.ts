@@ -2,8 +2,8 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { dbg } from "../../utils/debug/debug.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { scheduleBackgroundEncoding } from "../decoder/mmd-ktx2-encoder.ts";
 import { registerModelRoot } from "../frustum-cull.ts";

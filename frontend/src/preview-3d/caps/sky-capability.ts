@@ -553,14 +553,17 @@ export class SkyCapability implements SceneCapability {
     if (!this.enabled) return;
     this.godRaysTime.value += dt;
     if (!this.autoRotateOn) return;
-    // 昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建（锐评 P1 GPU 熔炉修复）
+    // 昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建（锐评 P1 GPU 熔炉修复）。
+    // code_review df84baefb #1/#14（P1）：force 跳过 shouldOverwrite——autoRotate 推进
+    // timeOfDay 是动画自身行为，用户拖过一次时间滑杆（manual 写入）后 auto-model 写被
+    // 永久拒绝 → 昼夜循环冻结；force 恢复 ADR-196 前 update 直接推进 params 的语义。
     setEnvState(
       {
         skyTimeOfDay:
           (((envState.skyTimeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC) % 24) + 24) % 24,
         skyForceEnv: false,
       },
-      { source: "auto-model" },
+      { source: "auto-model", force: true },
     );
     this.syncSunFromTime();
     if (envState.skyEnvironment) {

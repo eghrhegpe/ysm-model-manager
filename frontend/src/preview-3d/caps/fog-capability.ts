@@ -140,6 +140,12 @@ export class FogCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
+    // code_review df84baefb #2/#10（P1）：master toggle（fog-menu.ts set: cap.setEnabled）
+    // 必须打通 envState.fogEnabled gate——createFog 的 `!envState.fogEnabled` 使旧实现
+    // toggle ON 后 scene.fog 仍 null（fogEnabled 唯一写者 setEnabledFog 无生产调用方）。
+    // setEnvState 同步 dispatch → env 回调（changed.has("fogEnabled")）applyFog 一次；
+    // 下方 applyFog 幂等兜底（fog 对象重建轻量），perf 单主化在 C 组收敛。
+    setEnvState({ fogEnabled: v }, { source: "manual" });
     this.applyFog();
   }
 
@@ -250,8 +256,25 @@ export class FogCapability implements SceneCapability {
   }
 
   loadState(): void {
-    const state = restoreState(this.id);
+    let state = restoreState(this.id);
     if (!state) return;
+    // code_review df84baefb #13（P2）：legacy 旧键迁移——ADR-196 前 fog 持久化为
+    // {enabled, mode, color, near, far, density}（无前缀），迁移后只读前缀键且
+    // migrateEnvState 为空透传 → 升级用户的自定义雾设置静默回默认。判据用
+    // fogMode（saveState 恒写的前缀代表键）缺失 + 任一旧键存在 → 纯旧形态；
+    // 只映射实际存在的旧键（防 undefined 覆盖混合形态的新前缀键）。
+    const legacyKeys = ["mode", "enabled", "color", "near", "far", "density"] as const;
+    const s = state as Record<string, unknown>; // 非空副本（下方重新赋值会丢失 if 收窄）
+    if (!("fogMode" in s) && legacyKeys.some((k) => k in s)) {
+      state = {
+        ...("enabled" in s ? ({ fogEnabled: s.enabled as boolean } as object) : {}),
+        ...("mode" in s ? ({ fogMode: s.mode } as object) : {}),
+        ...("color" in s ? ({ fogColor: s.color } as object) : {}),
+        ...("near" in s ? ({ fogNear: s.near } as object) : {}),
+        ...("far" in s ? ({ fogFar: s.far } as object) : {}),
+        ...("density" in s ? ({ fogDensity: s.density } as object) : {}),
+      };
+    }
     restoreFields(state, {
       enabled: {
         boolean: (v) => {

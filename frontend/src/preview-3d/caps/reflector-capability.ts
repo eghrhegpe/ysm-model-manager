@@ -187,6 +187,13 @@ export class ReflectorCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
+    // code_review df84baefb #3/#11（P1）：master toggle（reflector-menu.ts set:
+    // cap.setEnabled）须打通 envState.reflectorEnabled gate——buildReflector 的
+    // `!envState.reflectorEnabled` 使 toggle ON 后 mesh 永空（唯一写者
+    // setEnabledReflector 无生产调用方）；legacy {enabled:true} 存档无该键同样
+    // 恢复为永久关闭。setEnvState 同步 dispatch → env 回调 buildReflector；
+    // 下方 buildReflector 幂等兜底（perf 双跑 C 组收敛）。
+    setEnvState({ reflectorEnabled: v }, { source: "manual" });
     this.buildReflector();
   }
 

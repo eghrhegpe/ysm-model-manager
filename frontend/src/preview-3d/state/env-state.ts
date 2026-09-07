@@ -43,14 +43,22 @@ function schedulePersistEnvState(): void {
 /**
  * 中央写入入口（仿 MikuMikuAR setEnvState）。
  * 写入带来源标记，按 lastWriteSource 优先级决策是否覆盖。
+ * force=true：跳过 shouldOverwrite 守卫强制写入（code_review df84baefb #1/#14——仅供
+ * 昼夜循环这类动画驱动器使用：autoRotate 持续推进 skyTimeOfDay 是动画自身行为，用户
+ * 拖过一次时间滑杆（manual）不该把动画永久冻结；恢复 ADR-196 前 update(dt) 直接推进
+ * params 的无条件语义。普通调用方不得用 force 覆盖用户 manual 值）。
  */
-export function setEnvState(partial: Partial<EnvState>, opts?: { source?: WriteSource }): void {
+export function setEnvState(
+  partial: Partial<EnvState>,
+  opts?: { source?: WriteSource; force?: boolean },
+): void {
   const source = opts?.source ?? "auto-model";
+  const force = opts?.force ?? false;
   const migrated = migrateEnvState(partial);
 
   const changedKeys = new Set<string>();
   for (const key of Object.keys(migrated) as Array<keyof EnvState>) {
-    if (shouldOverwrite(key as string, source)) {
+    if (force || shouldOverwrite(key as string, source)) {
       (envState as any)[key] = migrated[key];
       _writeSource[key as string] = source;
       changedKeys.add(key as string);

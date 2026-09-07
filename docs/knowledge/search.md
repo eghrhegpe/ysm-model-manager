@@ -20,9 +20,11 @@ auto_fields:
     - appTreeStyle
     - batchStatsWebModels
     - bindToolbarEvents
+    - buildTree
     - cleanupVirtualScroll
     - consumeWebSearchDegraded
     - createTreeRenderCtx
+    - flattenVisible
     - getRenderMode
     - getStatsPoolSize
     - getVsMode

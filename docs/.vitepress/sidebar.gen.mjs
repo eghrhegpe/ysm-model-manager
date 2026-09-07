@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-205：Go 静态分析引入 golangci-lint（仅补真空面，不接管自研 gofmt/jscpd-go）",
+        "link": "/adr/ADR-205-golangci-lint-go-static-analysis"
+      },
+      {
         "text": "ADR-204：废弃 check-circular-go 与收敛 type-consistency 为派生守卫",
         "link": "/adr/ADR-204-check-circular-go-type-consistency"
       },

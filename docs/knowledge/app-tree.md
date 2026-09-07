@@ -14,11 +14,13 @@ auto_fields:
     - bindBusEvents
     - bindToolbarEvents
     - bindTreeEvents
+    - buildTree
     - cleanupVirtualScroll
     - createTreeRenderCtx
     - emptyStateHTML
     - fileRowCommon
     - fileRowHTML
+    - flattenVisible
     - folderRowCommon
     - folderRowHTML
     - footerHTML

@@ -55,8 +55,38 @@ Wails 绑定以包路径为命名空间。前端从 `bindings/ysm-model-manager/
 
 **已知遗留**：前端深路径 import 收口（21 文件直接 import，另 11 处注释引用）、存量 import 渐进迁移（可在各包自然迭代时顺手做）。
 
-## 4. 数据溯源
+## 4. 实施落地记录（2026-09-07 复审）
+
+**实际偏离**：ADR §2.1 规划的「门面 alias + 消费方零改动」未执行，实际走了**直接改 import 路径**的路线（没有 type alias 或 wrapper 留在 go/types 根包）。约 80 个文件被改为直接 import registry。
+
+**当前实态**：
+
+| 包 | 非测试文件 | 行数 | 职责 |
+|----|-----------|------|------|
+| `go/types`（根） | 3（types.go / config.go / bedrock.go） | **487** | 纯 DTO（39 个 struct + AppError 错误体系） |
+| `go/types/registry` | 5（resource / extensions / findinst / location / texture） | **1237** | 注册表加载 + 扩展名工具函数 + 安装路径查找 |
+
+**消费方分布（去重后 166 文件）**：
+
+| 消费模式 | 文件数 | 说明 |
+|----------|--------|------|
+| 仅 `import "go/types"` | 80 | 只用 DTO struct |
+| 仅 `import "go/types/registry"` | 39 | 只用注册表函数 |
+| **两者都 import** | **47** | 混合使用——既拿 DTO 又调注册表函数 |
+
+`go build ./...` ✅ 零错误，依赖方向单向（registry 不依赖 types），无环。
+
+**47 个混合 import 文件的扫描分类**（2026-09-07 实测）：
+
+- **类别 A（真混合）**：约 20 个文件在同一调用链里既构建 DTO（如 `types.ResourceSyncItem`）又调注册表函数（如 `registry.LoadRegistry()`），无法自然收敛为单一 import
+- **类别 B（可单边收敛）**：约 10 个文件可以审视是否把某一侧的 import 删掉——典型如 `go/importer/importer_file.go` 只调用 `types.` 8 次，但同时挂着 registry import（虽然实际也用了 `regreg.MaxImportSizeMB`，不算孤儿）；`internal/app/app.go` 只有 3 个 `types.` 调用，其中 2 个是 `AppConfig`，无法删
+- **类别 C（微小文件，2-3 次调用）**：约 17 个文件混用次数 ≤ 7，改动收益极低
+
+**结论**：第一刀的核心目标（上帝包拆分、注册表域独立）已完整达成；门面层未建是决策偏离，但没有引入额外技术债（反而省了 ~150 行样板代码）。47 个混合 import 是自然收敛结果，不需要"强制去混合"——DTO 消费者本来就需要既拿 DTO 又查注册表，拆成两个包不代表每个文件只能引一个。
+
+## 5. 数据溯源
 
 - 实测：`wc -l go/types/*.go`（1867 非测试 / 4860 含测试）；grep import 分布（77 文件 / 25 包）；moving↔staying 符号交叉 = 0；前端绑定 import 面（5 类型全属留守域）。
 - 来源：docs/knowledge/go_design_critique.md 刀⑥记录（1715 行）、go/types/ 源码、frontend/bindings/ysm-model-manager/go/types/models.ts、frontend/src/utils/types-re-export.ts。
+- 2026-09-07 复审：行数实测（根包 487 / registry 1237）、消费方 grep（47 混合 / 80 types-only / 39 registry-only）、`go build ./...` 编译验证通过。
 - 结果：本 ADR + go/types/registry 子包落地。

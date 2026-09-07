@@ -211,9 +211,15 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
     await assertion;
   });
 
-  it("fetch 抛出含 HTTP 404 的错误（非提前退出路径）→ NoIndex", async () => {
+  it("非 raw 源 404（非确定性早退路径）→ 汇总 NoIndex", async () => {
     vi.useFakeTimers();
-    mockFetch(() => Promise.reject(new Error("HTTP 404")));
+    // 真实 fetch 语义：HTTP 404 走 resp.ok=false（永不 reject）——raw 非 404（500）不触发
+    // 早退 abort，jsd/api 的 404 在汇总期按 has404 归类 NoIndex（替代旧字符串消息嗅探）
+    mockFetch((url) =>
+      url.includes("raw.githubusercontent.com")
+        ? Promise.resolve(errResp(500))
+        : Promise.resolve(errResp(404)),
+    );
     const promise = tryFetchModels("owner/repo", "");
     const assertion = expect(promise).rejects.toThrow("NoIndex");
     await vi.advanceTimersByTimeAsync(4500);

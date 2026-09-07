@@ -3,7 +3,6 @@
 
 import { esc } from "../../utils/dom/html.ts";
 import { hasRecycleSegment } from "../../utils/recycle-path.ts";
-import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
@@ -51,11 +50,20 @@ type MirrorStrategy = "" | "jsdelivr" | "githubapi";
 /** 单个镜像源抓取条目 */
 type FetchAttempt = { name: string; url: string; label: string };
 
-/** 竞速期间共享的可变状态（fetchOne 写，waitForReady / 汇总读） */
+/** 单源失败的类型化记录（替代字符串消息嗅探：HTTP status 直判 + 网络层 TypeError 识别） */
+type FetchFailKind = "http" | "network" | "timeout";
+interface FetchFail {
+  kind: FetchFailKind;
+  status: number | null;
+}
+
+/** 竞速期间共享状态（fetchModelsOne 写，延时启动 / 汇总读） */
 interface FetchRaceState {
-  earlyExitReason: string | null;
-  succeeded: boolean;
-  controllers: AbortController[];
+  /** raw 源确定性 404（jsd/api 404 可能是 CDN 缓存未命中/限流，不算证据）：置位后 abort 整体 */
+  rawNoIndex: boolean;
+  failures: FetchFail[];
+  /** 整体取消控制器：成功胜出 / raw404 早退时 abort（唤醒延时启动、终止在途 fetch） */
+  ctrl: AbortController;
 }
 
 /**
@@ -86,126 +94,103 @@ function buildFetchModelsAttempts(repo: string, mirror: MirrorStrategy): FetchAt
 }
 
 /**
- * 向单个镜像源发起 index.json 抓取（AbortController 超时 + 404 只认 raw 确定性
- * + GitHub API base64 去 [\r\n\s] 再 atob）
+ * 向单个镜像源发起 index.json 抓取：
+ * - 双通道取消：本源超时（8s timer）+ 整体取消（raw404 早退 / 他人胜出，经 state.ctrl）；
+ * - 失败按类型记录（http status / network TypeError / timeout），替代字符串嗅探；
+ * - 404 判定：仅 raw 源 404 视为确定性证据（jsd/api 404 可能是 CDN 缓存未命中/限流），
+ *   置 rawNoIndex 并 abort 整体终止在途与延时请求；其余源 404 仅记录、不误杀在途；
+ * - api 源 base64 去 [\r\n\s] 再 atob + TextDecoder。
  */
 async function fetchModelsOne(
   attempt: FetchAttempt,
   state: FetchRaceState,
   timeoutMs: number,
 ): Promise<FetchModelsResult> {
-  // 如果已经提前退出或已有成功结果，直接抛错（不再发请求）
-  if (state.earlyExitReason) throw new Error(state.earlyExitReason);
-  if (state.succeeded) throw new Error("already succeeded");
-  const ctrl = new AbortController();
-  state.controllers.push(ctrl);
-  const tmr = setTimeout((): void => {
-    ctrl.abort();
-  }, timeoutMs);
+  const timeoutCtrl = new AbortController();
+  // 整体取消转播到本源（fetch 只认 timeoutCtrl.signal，避免依赖 AbortSignal.any 运行环境）
+  const onOuterAbort = (): void => timeoutCtrl.abort();
+  state.ctrl.signal.addEventListener("abort", onOuterAbort);
+  const tmr = setTimeout((): void => timeoutCtrl.abort(), timeoutMs);
+  let resp: Response;
   try {
-    const resp = await fetch(attempt.url, { signal: ctrl.signal });
-    clearTimeout(tmr);
-    if (!resp.ok) {
-      // 404 处理：仅 raw 源 404 视为确定性证据（仓库确实无 index.json）——
-      // jsd/api 404 可能是 CDN 缓存未命中/限流，误杀本可成功的在途请求
-      // （P2 修复：原实现任一源 404 即 abort 全部）
-      if (resp.status === 404 && attempt.name === "raw") {
-        state.earlyExitReason = "NoIndex";
-        state.controllers.forEach((c): void => {
-          // P4：abort 在规范中不抛错，此处 try/catch 仅为防御（无需上报）
-          try {
-            c.abort();
-          } catch (_) {
-            /* abort 防御性保护 */
-          }
-        });
-      }
-      throw new Error(`HTTP ${resp.status}`);
-    }
-    let models: unknown;
-    if (attempt.name === "api") {
-      const data = (await resp.json()) as {
-        encoding?: string;
-        content?: string;
-      };
-      if (data.encoding !== "base64" || data.content == null) throw new Error("no content");
-      // P2 修复（审核发现）：GitHub API base64 可能含 \r\n 换行——原只去 \n，
-      // \r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
-      const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
-      const bytes = Uint8Array.from(binary, (c): number => c.charCodeAt(0));
-      models = JSON.parse(new TextDecoder().decode(bytes));
-    } else {
-      models = await resp.json();
-    }
-    if (Array.isArray(models)) {
-      state.succeeded = true;
-      return { models, source: attempt.name };
-    }
+    resp = await fetch(attempt.url, { signal: timeoutCtrl.signal });
   } catch (err) {
-    clearTimeout(tmr);
+    // 整体取消（他人已胜出 / raw404 早退）引发的连带失败不计入本源的失败记录
+    if (state.ctrl.signal.aborted) throw err;
+    state.failures.push(
+      timeoutCtrl.signal.aborted
+        ? { kind: "timeout", status: null }
+        : { kind: "network", status: null },
+    );
     throw err;
+  } finally {
+    clearTimeout(tmr);
+    state.ctrl.signal.removeEventListener("abort", onOuterAbort);
   }
+  if (!resp.ok) {
+    // 404 处理：仅 raw 源 404 视为确定性证据（仓库确实无 index.json）——
+    // jsd/api 404 可能是 CDN 缓存未命中/限流，误杀本可成功的在途请求
+    if (resp.status === 404 && attempt.name === "raw") {
+      state.rawNoIndex = true;
+      state.ctrl.abort();
+    } else {
+      state.failures.push({ kind: "http", status: resp.status });
+    }
+    throw new Error(`HTTP ${resp.status}`);
+  }
+  let models: unknown;
+  if (attempt.name === "api") {
+    const data = (await resp.json()) as {
+      encoding?: string;
+      content?: string;
+    };
+    if (data.encoding !== "base64" || data.content == null) throw new Error("no content");
+    // GitHub API base64 可能含 \r\n 换行——\r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
+    const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
+    const bytes = Uint8Array.from(binary, (c): number => c.charCodeAt(0));
+    models = JSON.parse(new TextDecoder().decode(bytes));
+  } else {
+    models = await resp.json();
+  }
+  if (Array.isArray(models)) {
+    return { models, source: attempt.name };
+  }
+  // 无效载荷：本源失败（不 push 分类记录——汇总按 404/403/网络缺失自然落 AllFailed，与旧实现一致）
   throw new Error("invalid payload");
 }
 
-/**
- * 轮询等待延时到位（每 200ms 检查一次）；若竞速期间已提前退出或有成功结果，
- * 立即以 _earlyExit 标记返回，避免 p2/p3 发出迟到/孤儿请求（P2 修复）
- */
-function fetchModelsWaitForReady(
-  getReady: () => boolean,
-  state: FetchRaceState,
-): Promise<{ _earlyExit: boolean }> {
-  return new Promise((resolve): void => {
-    const check = (): void => {
-      // 已有成功结果也算提前退出：p2/p3 不再发出（P2 修复）
-      if (state.earlyExitReason || state.succeeded) {
-        resolve({ _earlyExit: true });
-        return;
-      }
-      if (getReady()) {
-        resolve({ _earlyExit: false });
-        return;
-      }
-      setTimeout(check, 200);
+/** 延时（可被整体 ctrl abort 提前唤醒：成功胜出 / raw404 早退后不再启动下一源，杜绝孤儿请求） */
+function delayUntil(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(t);
+      resolve();
     };
-    check();
+    const t = setTimeout((): void => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
 /**
- * 全部源失败的根因诊断（404→NoIndex / 403→RateLimited / 网络→NetworkOffline，
- * 否则 AllFailed）；提前退出原因优先透传
+ * 全部源失败的汇总分类（类型化，替代字符串消息嗅探）：
+ * raw 404（确定性早退）→ NoIndex；任一 404 → NoIndex；任一 403 → RateLimited；
+ * 网络/超时 → NetworkOffline；其余（HTTP 500 / 无效载荷等）→ AllFailed。
+ * 语义与旧实现对齐（404 优先于 403 优先于网络）；超时自「消息无关键词落 AllFailed」
+ * 修正为网络类——嗅探缺陷：8s 无响应即网络不可达的强信号。
  */
-function classifyFetchModelsError(aggErr: unknown, earlyExitReason: string | null): never {
-  if (earlyExitReason) throw new Error(earlyExitReason);
-  // 全部失败 — 诊断根因
-  const reasons = (aggErr as { errors?: Array<{ message?: string }> }).errors
-    ? (aggErr as { errors: Array<{ message?: string }> }).errors.map((e): string =>
-        safeErrorMessage(e),
-      )
-    : [safeErrorMessage(aggErr)];
-
-  let has404 = false;
-  let hasNetwork = false;
-  let hasRateLimit = false;
-
-  for (let i = 0; i < reasons.length; i++) {
-    const msg = reasons[i];
-    if (msg.indexOf("HTTP 404") >= 0) has404 = true;
-    else if (msg.indexOf("HTTP 403") >= 0) hasRateLimit = true;
-    else if (
-      msg.indexOf("fetch") >= 0 ||
-      msg.indexOf("network") >= 0 ||
-      msg.indexOf("NetworkError") >= 0
-    )
-      hasNetwork = true;
-  }
-
-  // 只要有一个 404，就认为是仓库缺少索引文件（jsDelivr 的 404 是确定性证据）
-  if (has404) throw new Error("NoIndex");
-  if (hasRateLimit) throw new Error("RateLimited");
-  if (hasNetwork) throw new Error("NetworkOffline");
+function summarizeFetchFailures(state: FetchRaceState): never {
+  if (state.rawNoIndex) throw new Error("NoIndex");
+  if (state.failures.some((f) => f.status === 404)) throw new Error("NoIndex");
+  if (state.failures.some((f) => f.status === 403)) throw new Error("RateLimited");
+  if (state.failures.some((f) => f.kind === "network" || f.kind === "timeout"))
+    throw new Error("NetworkOffline");
   throw new Error("AllFailed");
 }
 
@@ -224,11 +209,12 @@ export async function tryFetchModels(
   const sorted = buildFetchModelsAttempts(repo, mirror);
   if (onProgress) onProgress(10, "⏳ 连接镜像源…");
 
-  // 竞速期间共享的可变状态（fetchOne 写 / 汇总读）
+  // 竞速期间共享状态（fetchModelsOne 写 / 延时启动与汇总读）；整体 ctrl 统一取消：
+  // 成功胜出与 raw404 确定性早退都走 ctrl.abort()，在途 fetch 与延时启动同步终止
   const state: FetchRaceState = {
-    earlyExitReason: null,
-    succeeded: false,
-    controllers: [],
+    rawNoIndex: false,
+    failures: [],
+    ctrl: new AbortController(),
   };
   const TIMEOUT = 8000;
 
@@ -237,25 +223,15 @@ export async function tryFetchModels(
   // 延时并发：第一个请求立即发出，后续每 2 秒启动一个（不等前一个完成）
   // 兼顾速度（jsDelivr 可能 1 秒内响应）和带宽（不一次性发 3 个请求）
   const p1 = fetchModelsOne(sorted[0], state, TIMEOUT);
-
-  // 延迟 2 秒启动第二个，延迟 4 秒启动第三个（但若已提前退出则跳过）
-  let p2Ready = false;
-  let p3Ready = false;
-  setTimeout((): void => {
-    p2Ready = true;
-  }, 2000);
-  setTimeout((): void => {
-    p3Ready = true;
-  }, 4000);
-
-  const p2 = fetchModelsWaitForReady(() => p2Ready, state).then((r) => {
-    if (r._earlyExit) throw new Error(state.earlyExitReason || "early exit");
+  // p2/p3 延 2/4 秒启动；期间若已成功或 raw404 早退（ctrl abort），delayUntil 立即
+  // 唤醒且下方 aborted 检查拦截，不再发出迟到/孤儿请求
+  const p2 = delayUntil(2000, state.ctrl.signal).then(() => {
+    if (state.ctrl.signal.aborted) throw new Error("race settled");
     if (onProgress) onProgress(30, "⏳ 发出第二个请求…");
     return fetchModelsOne(sorted[1], state, TIMEOUT);
   });
-
-  const p3 = fetchModelsWaitForReady(() => p3Ready, state).then((r) => {
-    if (r._earlyExit) throw new Error(state.earlyExitReason || "early exit");
+  const p3 = delayUntil(4000, state.ctrl.signal).then(() => {
+    if (state.ctrl.signal.aborted) throw new Error("race settled");
     if (onProgress) onProgress(50, "⏳ 发出第三个请求…");
     return fetchModelsOne(sorted[2], state, TIMEOUT);
   });
@@ -263,8 +239,7 @@ export async function tryFetchModels(
   // 用 Promise.any 取第一个成功的结果
   try {
     const result = await Promise.any([p1, p2, p3]);
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    state.controllers.forEach((c) => c.abort());
+    state.ctrl.abort(); // 胜出：终止仍在途/未启动的请求
     if (onProgress) onProgress(100, "✅ 加载完成");
     // 过滤回收站条目：.recycle 段下的"已删/待清理"文件不进下载列表（防下载剥段平铺根 + 语义上本就不该下载）
     return {
@@ -273,8 +248,8 @@ export async function tryFetchModels(
       ),
       source: result.source,
     };
-  } catch (aggErr) {
-    // 如果提前退出抛出的明确错误直接透传，否则诊断根因
-    classifyFetchModelsError(aggErr, state.earlyExitReason);
+  } catch {
+    // 全部源失败：类型化汇总分类（见 summarizeFetchFailures）
+    summarizeFetchFailures(state);
   }
 }

@@ -2,7 +2,7 @@
 // 被 import-dnd.ts（仓库页全局拖拽）与 import-queue-data.ts（导入页队列拖拽）共用，
 // 消除 ADR-060 立项前的两套收集器漂移问题。
 
-/** 收集结果条目（唯一事实源；shared.ts / import-executor.ts 经 re-export 消费 — ADR-187 D4） */
+/** 收集结果条目（唯一事实源；shared.ts / import-executor.ts 直引消费 — ADR-187 D4） */
 export interface CollectedEntry {
   file: File;
   relPath: string;

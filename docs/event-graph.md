@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 200 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 181 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -170,7 +170,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 193 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 174 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -182,7 +182,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 183 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 164 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -320,15 +320,15 @@
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 285 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 173 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 38 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 194 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 168 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 35 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 191 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 109 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 175 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync.ts` | 79 |
-| runSyncToggleStatus | `frontend/src/features/sync.ts` | 186 |
+| runDownloadMissing | `frontend/src/features/sync.ts` | 75 |
+| runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
@@ -354,8 +354,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 99 |
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 127 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 122 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -373,7 +373,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync.ts` | 223 |
+| registerSync | `frontend/src/features/sync.ts` | 222 |
 
 ### `sync:toggle:status`
 
@@ -387,7 +387,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync.ts` | 225 |
+| registerSync | `frontend/src/features/sync.ts` | 224 |
 
 ### `toast:show`
 
@@ -408,16 +408,16 @@
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 430 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 444 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 463 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 43 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 61 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 80 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 90 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 108 |
-| bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 213 |
-| (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 42 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 33 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 185 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 198 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 45 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 63 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 82 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 92 |
+| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 110 |
+| bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 215 |
+| (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 37 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 30 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 182 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 195 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 266 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
@@ -588,13 +588,13 @@
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 284 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 174 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 39 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 193 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 36 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 190 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
+| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 359 |

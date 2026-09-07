@@ -17,12 +17,9 @@ auto_fields:
     - extBelongsTo
     - fileToBase64
     - FolderGroup
-    - getExt
     - getExts
     - groupCollected
-    - isImportableFile
     - isSupportedExt
-    - isSupportedFile
     - RESOURCE_EXTS
     - shouldEnterForm
 quick_groups:

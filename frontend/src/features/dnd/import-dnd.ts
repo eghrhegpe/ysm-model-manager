@@ -13,9 +13,11 @@ import { isEditableTarget } from "../../utils/dom/editable-target.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
+import { isImportableFile } from "../../utils/resource/importable.ts";
 import { backendGetApp } from "../backend-deps.ts";
 import { executeCollected, importWebFilesWithToast } from "../import/executor.ts";
-import { type CollectedEntry, collectDropFiles, isImportableFile } from "./shared.ts";
+import type { CollectedEntry } from "./collector.ts";
+import { collectDropFiles } from "./shared.ts";
 
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 

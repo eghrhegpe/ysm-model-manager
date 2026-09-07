@@ -1,11 +1,10 @@
 // ===== DnD 导入共享逻辑（import-queue 与 handler-dnd 共用，消除重复）=====
-// 可导入判定原语已下沉 utils/resource/importable.ts（backend/web-fs-auth 同口径消费，
-// 消除 backend → features 反向依赖），此处 re-export 兼容下游。
-import { getExt, isImportableFile, isSupportedFile } from "../../utils/resource/importable.ts";
+// 可导入判定原语（getExt / isImportableFile / isSupportedFile）事实源在
+// utils/resource/importable.ts（backend/web-fs-auth 直引同口径，消除 backend →
+// features 反向依赖）；本文件仅内部依赖 getExt / isImportableFile，不再 re-export。
+// CollectedEntry 事实源在 ./collector.ts——消费方请直引该文件，勿经本文件中转。
+import { getExt, isImportableFile } from "../../utils/resource/importable.ts";
 import { type CollectedEntry, collectFiles } from "./collector.ts";
-
-export type { CollectedEntry };
-export { getExt, isImportableFile, isSupportedFile };
 
 /** 判断文件是否需要进入命名表单
  *  2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认），
@@ -16,7 +15,7 @@ export const shouldEnterForm = (name: string): boolean => {
 };
 
 // ===== 文件夹整组分组（dnd.ts 全局拖拽与 import-queue 导入页共用）=====
-// CollectedEntry 唯一事实源在 collector.ts（ADR-187 D4 合并双胞胎，此处 re-export 兼容下游）
+// CollectedEntry 直引 collector.ts（ADR-187 D4 合并双胞胎后的唯一事实源，无中转）
 
 /** 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） */
 export interface FolderGroup {

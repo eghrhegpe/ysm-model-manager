@@ -15,13 +15,8 @@ import { isEditableTarget } from "../../utils/dom/editable-target.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { backendGetApp } from "../backend-deps.ts";
-import {
-  buildFolderItems,
-  type CollectedEntry,
-  collectDropFiles,
-  fileToBase64,
-  groupCollected,
-} from "./shared.ts";
+import type { CollectedEntry } from "./collector.ts";
+import { buildFolderItems, collectDropFiles, fileToBase64, groupCollected } from "./shared.ts";
 
 /** drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） */
 export interface PackDndBusy {

@@ -11,10 +11,12 @@ auto_fields:
     - asArray
     - asNumber
     - asString
+    - BusyLock
     - clamp
     - clamp01
     - clampInt
     - clampPct
+    - createBusyLock
     - debounce
     - delay
     - Disposable
@@ -29,6 +31,7 @@ auto_fields:
     - setLogSink
     - swallowError
     - waitForFrame
+    - withLock
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -4,6 +4,7 @@
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { tr } from "../../core/i18n/tr.ts";
+import { type BusyLock, createBusyLock } from "../../utils/base/lock.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { copyText } from "../../utils/dom/clipboard.ts";
 import { downloadTextFile } from "../../utils/dom/download-text.ts";
@@ -20,26 +21,6 @@ import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { refreshUI, resolveDstDir } from "./context-menu-shared.ts";
 // P2 收窄：HANDLERS 断言覆盖 MENU_ACTIONS（type-only，无运行时循环依赖）
 import type { MenuAction } from "./menu-defs.ts";
-
-/**
- * Busy flag 工厂（2026-XX 重构）：消除模块级 `let _batchBusy`——
- * 每个 handler 闭包持自己的 flag，互不耦合。
- * 原实现：模块单 flag → batch.move / batch.copy / batch.recycle 三选一互斥（过保守）
- * 新实现：按 verb 独立 busy → 同一 verb 连点互斥（保留原保护），不同 verb 可并发
- */
-function makeBusy() {
-  let busy = false;
-  return {
-    tryStart(): boolean {
-      if (busy) return false;
-      busy = true;
-      return true;
-    },
-    finish() {
-      busy = false;
-    },
-  };
-}
 
 /** batch 批量操作模板（i18n key 集中定义——toast/弹窗文案不再散落 handler 字面量） */
 type BatchMode = "move" | "copy";
@@ -83,7 +64,7 @@ async function runBatchFileOp(
   op: {
     mode: BatchMode;
     binding: "MoveModelFile" | "CopyModelFile";
-    busy: ReturnType<typeof makeBusy>;
+    busy: BusyLock;
   },
 ): Promise<void> {
   if (!op.busy.tryStart()) {
@@ -139,9 +120,9 @@ async function runBatchFileOp(
 }
 
 // 模块初始化时为每个 verb 各创建独立 busy flag（move / copy / recycle 互不耦合）
-const moveBusy = makeBusy();
-const copyBusy = makeBusy();
-const recycleBusy = makeBusy();
+const moveBusy = createBusyLock();
+const copyBusy = createBusyLock();
+const recycleBusy = createBusyLock();
 
 export type MenuCtx = import("../../bus.ts").CtxShowPayload & { paths: string[] };
 

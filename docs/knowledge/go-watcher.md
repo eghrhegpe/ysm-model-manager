@@ -13,6 +13,7 @@ auto_fields:
     - Watcher.IsRunning
     - Watcher.Start
     - Watcher.Stop
+    - Watcher.WaitReady
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

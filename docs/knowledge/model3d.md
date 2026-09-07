@@ -31,6 +31,8 @@ auto_fields:
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - assembleBoneSelectInfo
+    - ATMOSPHERE_PRESETS
+    - AtmospherePresetId
     - attenuateAmbientForSky
     - AutoDanceOptions
     - b64ToBytes

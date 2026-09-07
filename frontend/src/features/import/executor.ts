@@ -12,15 +12,12 @@ import { swallowError } from "../../utils/base/async.ts";
 import { friendlyError, isFileExistsError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { backendGetApp } from "../backend-deps.ts";
-import type { CollectedEntry } from "../dnd/shared.ts";
+import type { CollectedEntry } from "../dnd/collector.ts";
 import { buildFolderItems, fileToBase64, groupCollected } from "../dnd/shared.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };
-
-/** 收集条目类型复用 dnd-shared（唯一事实源，消除两处同构定义） */
-export type { CollectedEntry };
 
 /** per-file 在途集合：仅阻止同一文件并发/重复提交，不同文件可并行 */
 const _inFlight = new Set<string>();

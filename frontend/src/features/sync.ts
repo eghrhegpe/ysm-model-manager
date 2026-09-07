@@ -5,6 +5,7 @@
 
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
+import { type BusyLock, createBusyLock, withLock } from "../utils/base/lock.ts";
 import { dbg } from "../utils/debug/debug.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { toast } from "../utils/dom/toast.ts";
@@ -18,11 +19,6 @@ interface SyncDownloadPayload {
   instanceName?: string;
   rtype: string;
   token?: string;
-}
-
-/** 并发守卫共享外壳：闭包升格后由 registerSync 创建并显式传入各包级 handler */
-interface SyncBusyFlag {
-  busy: boolean;
 }
 
 /** 逐个整合包安装缺失文件，返回是否整体成功（false = 配置缺失/异常） */
@@ -87,45 +83,48 @@ async function runDownloadMissing(
   return true;
 }
 
-/** 导入缺失 handler 包级化：并发守卫 + 缺参显式失败 + try/catch/finally（done 语义） */
+/** 导入缺失 handler：withLock 守卫 + 缺参显式失败；busy 命中回 done(skipped) 防调用方 30s 超时 */
 async function handleSyncDownloadMissing(
-  flag: SyncBusyFlag,
+  lock: BusyLock,
   { instanceName, rtype, token }: SyncDownloadPayload,
 ): Promise<void> {
-  if (flag.busy) {
-    // P1 修复：busy 命中时也要回 done（带 skipped 标记）——调用方（app-sidebar 推送）
-    // 因 token/instanceName 永远等不到 done 而 30s 超时，或经 instanceName fallback
-    // 误判成功；现让调用方立即解锁并识别「被跳过」
+  const result = await withLock(lock, async () => {
+    // rtype 契约已必填（bus.ts BusEvents），缺参显式失败而非静默降级 YSM——
+    // 错误类型装错仓库文件比直接报错危害大
+    let failed = false;
+    let skipReason: "config" | "error" | undefined;
+    if (!rtype) {
+      failed = true;
+      skipReason = "config";
+      toast(t("sync.missingRtype"), TOAST_MS.long, "error");
+    } else {
+      try {
+        const ok = await runDownloadMissing(instanceName, rtype);
+        if (!ok) failed = true;
+        // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
+        // tree:reload 会引发无意义全树重扫
+        else bus.emit("tree:reload");
+      } catch (e) {
+        failed = true;
+        skipReason = "error";
+        toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
+      }
+    }
+    return { failed, skipReason };
+  });
+  // 锁释放后统一结算 done（含 busy 命中）：调用方（app-sidebar 推送）因
+  // token/instanceName 永远等不到 done 而 30s 超时，或经 instanceName fallback
+  // 误判成功；skipped 标记让调用方立即解锁并识别「被跳过」
+  if (result === null) {
     bus.emit("sync:download:done", { token, instanceName, skipped: true, skipReason: "busy" });
     return;
   }
-  flag.busy = true;
-  // P2 收尾（历史审计）：rtype 契约已必填（bus.ts BusEvents），缺参显式失败
-  // 而非静默降级 YSM——错误类型装错仓库文件比直接报错危害大；finally 回
-  // done(skipped=true)，调用方（app-sidebar）立即解锁并感知被跳过
-  let failed = false;
-  let skipReason: "busy" | "config" | "error" | undefined;
-  if (!rtype) {
-    failed = true;
-    skipReason = "config";
-    toast(t("sync.missingRtype"), TOAST_MS.long, "error");
-  }
-  try {
-    if (rtype) {
-      const ok = await runDownloadMissing(instanceName, rtype);
-      if (!ok) failed = true;
-      // P2（审核修复）：仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
-      // tree:reload 会引发无意义全树重扫
-      else bus.emit("tree:reload");
-    }
-  } catch (e) {
-    failed = true;
-    skipReason = "error";
-    toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
-  } finally {
-    flag.busy = false;
-    bus.emit("sync:download:done", { token, instanceName, skipped: failed, skipReason });
-  }
+  bus.emit("sync:download:done", {
+    token,
+    instanceName,
+    skipped: result.failed,
+    skipReason: result.skipReason,
+  });
 }
 
 /** 同步启用/禁用状态到所有整合包（核心逻辑），失败明细经 friendlyError 显式化 */
@@ -186,41 +185,41 @@ async function runSyncToggleStatus(): Promise<void> {
   bus.emit("stats:refresh");
 }
 
-/** 同步启禁状态 handler 包级化：并发守卫 + 失败日志写盘 + try/catch/finally（tree:reload 兜底） */
-async function handleSyncToggleStatus(flag: SyncBusyFlag): Promise<void> {
-  if (flag.busy) {
-    // P2（审核发现）：与 download 分支对齐——busy 命中不再静默吞事件，
-    // 发 toast 让调用方（app-tree 批量/单文件）感知被跳过，避免 UI 乐观更新后无反馈
+/** 同步启禁状态 handler：withLock 守卫 + 失败日志写盘；busy 命中 toast 感知，tree:reload 兜底 */
+async function handleSyncToggleStatus(lock: BusyLock): Promise<void> {
+  const ran = await withLock(lock, async () => {
+    try {
+      await runSyncToggleStatus();
+    } catch (err) {
+      try {
+        const { AddImportLog } = await backendGetApp();
+        await AddImportLog("sync-status", "同步失败", "", 0, "failed", String(err));
+      } catch (logErr) {
+        // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错
+        dbg("sync", "AddImportLog(sync-status 失败) 写入失败:", logErr);
+      }
+      toast(t("sync.failedToast", { msg: friendlyError(err) }), TOAST_MS.long, "error");
+    }
+  });
+  if (ran === null) {
+    // busy 命中不再静默吞事件：toast 让调用方（app-tree 批量/单文件）感知被跳过，
+    // 避免 UI 乐观更新后无反馈
     toast(t("sync.busySkip"), TOAST_MS.info, "info");
     return;
   }
-  flag.busy = true;
-  try {
-    await runSyncToggleStatus();
-  } catch (err) {
-    try {
-      const { AddImportLog } = await backendGetApp();
-      await AddImportLog("sync-status", "同步失败", "", 0, "failed", String(err));
-    } catch (logErr) {
-      // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错
-      dbg("sync", "AddImportLog(sync-status 失败) 写入失败:", logErr);
-    }
-    toast(t("sync.failedToast", { msg: friendlyError(err) }), TOAST_MS.long, "error");
-  } finally {
-    flag.busy = false;
-    bus.emit("tree:reload");
-  }
+  // tree:reload 兜底：成败均广播全树重扫（仅 busy 命中不广播）
+  bus.emit("tree:reload");
 }
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
 export function registerSync(unsubs: Array<() => void>): void {
   // 并发守卫：sync:download:missing / sync:toggle:status 各有多生产者（app-sidebar、
-  // app-content、app-tree）连点会并发跑同一批文件写操作（竞态）——守卫外壳由本层
-  // 创建并显式传入各包级 handler
-  const downloadFlag: SyncBusyFlag = { busy: false };
-  const toggleFlag: SyncBusyFlag = { busy: false };
+  // app-content、app-tree）连点会并发跑同一批文件写操作（竞态）——共享忙锁
+  // createBusyLock + withLock（utils/base/lock.ts）：finally 自动释放，杜绝忘释放锁死
+  const downloadLock = createBusyLock();
+  const toggleLock = createBusyLock();
   // 导入仓库模型到整合包
-  unsubs.push(bus.on("sync:download:missing", (p) => handleSyncDownloadMissing(downloadFlag, p)));
+  unsubs.push(bus.on("sync:download:missing", (p) => handleSyncDownloadMissing(downloadLock, p)));
   // 同步启用/禁用状态到所有整合包
-  unsubs.push(bus.on("sync:toggle:status", () => handleSyncToggleStatus(toggleFlag)));
+  unsubs.push(bus.on("sync:toggle:status", () => handleSyncToggleStatus(toggleLock)));
 }

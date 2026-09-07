@@ -1,6 +1,6 @@
 // ===== LightCapability 菜单定义（ADR-177 拆分：职责④从 LightCapability 抽离）=====
 // 经 `import type` 取 LightCapability（仅类型，不引入运行时环），全部调用其公开 API。
-// [ADR-195 刀3] 删旧 getLightMenuControls + lcBuild*（旧 MenuControlDef 工厂）；
+// [ADR-195 刀3] 删旧 getLightMenuControls + lcBuild*（旧控件工厂）；
 // 仅保留 buildLightNodes 直产 PreviewMenuNode[]（cap.getMenuNodes 用）。
 
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";

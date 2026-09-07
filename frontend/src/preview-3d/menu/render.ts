@@ -357,7 +357,7 @@ function rmAppendDynamicRow(
 /**
  * [控件原语归一 · ADR-195 刀 2.5 投影反转] 将 PreviewMenuNode.control（PreviewControlSpec）
  * 适配为 CapControlView 供 cap 栈简单控件渲染器（renderCapToggle/Slider/Select/Color/
- * Divider）直吃——不再构造 MenuControlDef 中间对象（该类型刀 3 退役）。
+ * Divider）直吃——不再构造控件中间对象（该类型刀 3 已退役）。
  *
  * 语义保留（对齐旧 nodeControlToCapControl 全行为）：
  *   - get(v?) → getValue()（bind 优先：取 snapshot[bind] 经 get 衍生）
@@ -605,7 +605,7 @@ export function renderMenu(
       case "color": {
         // [控件原语归一 · ADR-195 刀 2.5 投影反转] 节点控件经 nodeControlToView 适配为
         // CapControlView 直供 cap 栈渲染器（renderCapToggle/Slider/Select/Color）——
-        // 不再构造 MenuControlDef 中间对象（rmAppendSelect/Slider/Toggle 已退役）。
+        // 不再构造控件中间对象（rmAppendSelect/Slider/Toggle 已退役）。
         const view = nodeControlToView(node, snapshot, deps.menu);
         const renderer =
           node.kind === "toggle"

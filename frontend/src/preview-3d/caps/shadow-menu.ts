@@ -2,7 +2,7 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()。
 // shadow 全为简单控件（toggle/select/slider）→ 全原生节点，无 controls 通道。
 //
-// 结构（对齐旧 MenuControlDef 分组；shadow 无 getMasterToggle——shadow-enabled 是
+// 结构（对齐旧控件分组；shadow 无 getMasterToggle——shadow-enabled 是
 // 平铺 toggle 非「能力总开关」，与 fog/reflector 不同）：
 //   - shadow-enabled：toggle（平铺，带 hintKey 提示）
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size

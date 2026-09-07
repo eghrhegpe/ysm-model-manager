@@ -52,7 +52,7 @@ import { makeSwitchState } from "./switch.ts";
 export type { PreviewMenuCtx } from "./node-types.ts";
 export { renderMenu } from "./render.ts";
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
-/** 通用控件渲染器：将 MenuControlDef[] 渲染为 DOM 行，替代手写 fill* 函数 */
+/** 通用控件渲染器：将控件定义渲染为 DOM 行，替代手写 fill* 函数 */
 export { renderCapControls, roleBaseName };
 
 /** 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（ADR-085 S3） */

@@ -1,21 +1,22 @@
 // ===== cap-to-node 桥接层测试（ADR-195 刀1：spec 同构映射）=====
-// 验证 MenuControlDef[] → PreviewMenuNode[] 转换：
+// 验证 控件定义 → PreviewMenuNode[] 转换：
+// 更名后 PreviewControlDef（原旧控件类型）走同一桥。
 //   - 简单控件（toggle/slider/select/divider/color）→ 原生节点 kind + control 同构 spec
 //   - 复杂控件（button/timeline/histogram/image/preset-thumb）→ controls 通道节点
 //   - group → folder 嵌套（连续同组合并、组间断开另起）
 //   - visibleWhen 随迁节点层
 import { describe, it, expect } from "vitest";
 import { capControlToNode, capControlsToNodes, canNodeRepresent } from "./cap-to-node.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "../caps/scene-capability.ts";
 
-function def(partial: Partial<MenuControlDef> & { id: string; kind: MenuControlDef["kind"] }): MenuControlDef {
+function def(partial: Partial<PreviewControlDef> & { id: string; kind: PreviewControlDef["kind"] }): PreviewControlDef {
   return {
     labelKey: `preview.${partial.id}`,
     fallback: partial.id,
     getValue: () => null,
     setValue: () => {},
     ...partial,
-  } as MenuControlDef;
+  } as PreviewControlDef;
 }
 
 describe("canNodeRepresent（原生 vs controls 通道）", () => {

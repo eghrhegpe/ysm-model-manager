@@ -1,7 +1,7 @@
 // ===== 反光地面能力菜单节点工厂（ADR-195 刀2 试点：cap 直产 PreviewMenuNode[]）=====
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes() / 消费。
-// 与兄弟 sky-menu.ts（拆 MenuControlDef）不同——本文件是刀2 试点，cap 侧直产节点，
-// 不经过 MenuControlDef/桥接层，验证「cap → 节点树 → renderMenu」全链路。
+// 与兄弟 sky-menu.ts（拆控件）不同——本文件是刀2 试点，cap 侧直产节点，
+// 不经过控件定义层/桥接，验证「cap → 节点树 → renderMenu」全链路。
 //
 // 节点形态（全部原生节点，reflector 无复杂控件）：
 //   - reflector-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）

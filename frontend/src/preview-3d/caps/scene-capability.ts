@@ -7,11 +7,16 @@
 
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 
-// [ADR-195 刀2] MenuControlDef/MenuControlKind 下沉 preview-3d/menu-node-types.ts
+// [ADR-195 刀2] 控件类型下沉 preview-3d/menu-node-types.ts
 // （共享类型叶，menu/ 与 caps/ 双域引用，破 caps→menu 纯类型环）——本文件 re-export
 // 保既有公共面（caps/*、menu/*、adapters/*、state/* 的 import 语句零改动）。
+// [ADR-195 刀3] 类型更名收敛：旧控件类型 → PreviewControlDef / PreviewControlKind
+// （旧名消除，控件声明单类型化）。
 // 注：re-export 不提供本模块内可用绑定，故下方另 type-import 供工厂内部引用。
-export type { MenuControlDef, MenuControlKind } from "../menu-node-types.ts";
+export type {
+  PreviewControlDef,
+  PreviewControlKind,
+} from "../menu-node-types.ts";
 
 // PreviewMenuNode 同自共享叶（刀2 接口 getMenuNodes? 返回类型；caps 直产节点入口）
 import type { PreviewMenuNode } from "../menu-node-types.ts";
@@ -65,7 +70,7 @@ export interface SceneCapability {
    * sky 无能力级启停 → 不实现。
    *
    * 返回值是 getMenuNodes() 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"），
-   * 非 MenuControlDef。
+   * 非控件定义（PreviewControlDef）。
    */
   getMasterNodeId?(): string;
 

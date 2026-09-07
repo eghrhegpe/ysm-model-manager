@@ -33,7 +33,7 @@ export function interpolate(text: string, params?: LocaleParams): string {
  * @param params - 插值参数，如 { n: 3 } 替换 "{n}"
  * @returns 翻译后的字符串，缺失时返回 key 本身
  *
- * 数据驱动 key（MenuControlDef.labelKey / tr() / opts.t 等运行时 string）
+ * 数据驱动 key（控件定义 labelKey / tr() / opts.t 等运行时 string）
  * 需显式收窄为 LocaleKey（调用处 as LocaleKey 或字段类型改 LocaleKey）——
  * 语言包 key 即契约，新 UI 文案先入语言包再引用。
  */

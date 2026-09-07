@@ -5,9 +5,9 @@
 import { describe, it, expect } from "vitest";
 import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "../caps/scene-capability.ts";
 
-function makeSlider(unit?: string): MenuControlDef {
+function makeSlider(unit?: string): PreviewControlDef {
   return {
     id: "t",
     kind: "slider",
@@ -48,7 +48,7 @@ describe("formatCapSliderValue", () => {
 });
 
 describe("renderCapControls — visibleWhen B 轨谓词", () => {
-  function toggle(id: string, extra: Partial<MenuControlDef> = {}): MenuControlDef {
+  function toggle(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
     return { id, kind: "toggle", labelKey: id, fallback: id, getValue: () => true, setValue: () => {}, ...extra };
   }
   const snap = (mode: "film" | "pool"): PreviewSnapshot =>

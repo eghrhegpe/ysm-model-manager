@@ -2,7 +2,7 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()。
 // fog 全为简单控件（toggle/color/select/slider）→ 全原生节点，无 controls 通道。
 //
-// 结构（对齐旧 MenuControlDef 分组）：
+// 结构（对齐旧控件分组）：
 //   - fog-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
 

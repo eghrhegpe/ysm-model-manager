@@ -15,13 +15,17 @@ auto_fields:
     - AppBindings
     - browserAdapter
     - detectContainerType
+    - emitAndroidBack
     - ExtractResult
     - extractZip
     - getAndroidBridge
     - getApp
+    - isViewerMode
+    - isViewerPlatform
     - isWebEntryMode
     - parseZipCentralDir
     - readDeclaredBackend
+    - registerAndroidBackHandler
     - resolveWebMode
     - WailsAndroidBridge
     - ZipEntryMeta

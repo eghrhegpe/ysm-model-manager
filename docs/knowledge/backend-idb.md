@@ -31,6 +31,7 @@ auto_fields:
     - browserAdapter
     - collectAllWebEntries
     - consumeWebSearchDegraded
+    - emitAndroidBack
     - getAndroidBridge
     - getApp
     - getStatsPoolSize
@@ -43,6 +44,8 @@ auto_fields:
     - idbSet
     - idbTx
     - importWebFiles
+    - isViewerMode
+    - isViewerPlatform
     - isWebEntryMode
     - isWebPath
     - MAX_IMPORT_BYTES
@@ -54,6 +57,7 @@ auto_fields:
     - prefetchStatsWorker
     - readDeclaredBackend
     - readWebFile
+    - registerAndroidBackHandler
     - resolveWebMode
     - scanAllWebModels
     - scanWebModels

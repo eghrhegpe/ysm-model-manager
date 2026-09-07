@@ -3,7 +3,7 @@
 // environment 是刀2 最复杂一例——含 preset-thumb/image/histogram 复杂控件 + 组分裂修复：
 //   - background 组（use-as-background/intensity/histogram）在 getMenuControls 里被拆两段
 //     （ecBuildBasic 与末尾 ecBuildHistogram），节点化后正确合并进同一个 folder。
-//   - preset-thumb/image/histogram/button 的 MenuControlDef 保持原样（含 group 字段），
+//   - preset-thumb/image/histogram/button 的控件定义保持原样（含 group 字段），
 //     进 controls 节点后由 renderCapControls 消费。
 // 顶层顺序：
 //   1. env-enabled toggle 原生（无 group——能力总开关）
@@ -13,7 +13,7 @@
 //   4. folder preview.envGroupCustomHdr：env-hdr-preview → controls 节点（image）
 //      + env-pick-hdr/env-clear-hdr → controls 节点（button 打包）
 
-import type { MenuControlDef, PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewControlDef, PreviewMenuNode } from "../menu-node-types.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
@@ -24,7 +24,7 @@ const ENV_GROUP_CUSTOM_HDR = "preview.envGroupCustomHdr";
 
 /** 预设缩略图复杂控件（preset-thumb——非纯数据，走 controls 通道节点承载） */
 function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
-  const preset: MenuControlDef = {
+  const preset: PreviewControlDef = {
     id: "env-preset",
     kind: "preset-thumb",
     labelKey: "preview.envPresetThumbnail",
@@ -53,7 +53,7 @@ function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
 
 /** 直方图复杂控件（histogram——非纯数据，走 controls 通道节点承载） */
 function envHistogramControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
-  const hist: MenuControlDef = {
+  const hist: PreviewControlDef = {
     id: "env-histogram",
     kind: "histogram",
     labelKey: "preview.envHistogram",
@@ -69,7 +69,7 @@ function envHistogramControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
 
 /** 自定义 HDR 控件组：image 预览 + pick/clear 按钮（全部走 controls 通道） */
 function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[] {
-  const image: MenuControlDef = {
+  const image: PreviewControlDef = {
     id: "env-hdr-preview",
     kind: "image",
     labelKey: "preview.envHdrPreview",
@@ -80,7 +80,7 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
       /* 只读 */
     },
   };
-  const buttons: MenuControlDef[] = [
+  const buttons: PreviewControlDef[] = [
     {
       id: "env-pick-hdr",
       kind: "button",

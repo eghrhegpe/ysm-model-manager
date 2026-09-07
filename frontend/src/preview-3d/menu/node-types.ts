@@ -26,7 +26,7 @@ export type {
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 // 值函数（isPreviewFolderNode 等）需本地绑定 PreviewMenuNode——re-export 不提供模块内
-// 可用名，故另 type-import（与 scene-capability.ts 工厂引用 MenuControlDef 同款）。
+// 可用名，故另 type-import（与 scene-capability.ts 工厂引用控件类型同款）。
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 
 /** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */

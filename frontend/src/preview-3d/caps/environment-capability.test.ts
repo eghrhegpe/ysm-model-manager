@@ -826,7 +826,7 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     expect(nodes[3]!.labelKey).toBe("preview.envGroupCustomHdr");
   });
 
-  it("preset folder 内 preset-thumb 走 controls 通道节点（MenuControlDef 内嵌）", () => {
+  it("preset folder 内 preset-thumb 走 controls 通道节点（控件定义内嵌）", () => {
     const cap = newCap();
     const presetFolder = cap.getMenuNodes()[1]!;
     const thumbNode = presetFolder.children![0]!;

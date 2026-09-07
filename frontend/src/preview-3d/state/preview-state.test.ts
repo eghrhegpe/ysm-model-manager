@@ -33,7 +33,7 @@ import { capControlsToNodes } from "../menu/cap-to-node.ts";
 import { collectVisiblePredicates } from "../menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
-import type { MenuControlDef, SceneCapability } from "../caps/scene-capability.ts";
+import type { PreviewControlDef, SceneCapability } from "../caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
 
 /** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
@@ -52,7 +52,7 @@ const renderMenuStubDeps = {
 function makeFakeCap(
   id: string,
   opts: {
-    controls?: MenuControlDef[];
+    controls?: PreviewControlDef[];
     env?: boolean;
     envMethods?: boolean;
     /** RenderModeCapability 的 wireframe 单项语义（getWireframe/setWireframe） */
@@ -86,7 +86,7 @@ function makeFakeCap(
     },
     isEnvironmentEnabled: () => cap.envOn,
     // [ADR-195 刀3] fake cap 走 getMenuNodes（接口已删 getMenuControls）——
-    // controls 选项（MenuControlDef[]）经 capControlsToNodes 桥接成节点树，
+    // controls 选项（PreviewControlDef[]）经 capControlsToNodes 桥接成节点树，
     // 对齐 collectSettingsCapControls 只收 getMenuNodes 分支的现状。
     getMenuNodes: () => capControlsToNodes(cap.controls),
     saveState: vi.fn(),
@@ -425,7 +425,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   });
 
   it("自动聚合：仅收 settingsOrder 声明项，升序且抹平 group", () => {
-    const mk = (id: string, order: number | undefined): MenuControlDef => ({
+    const mk = (id: string, order: number | undefined): PreviewControlDef => ({
       id,
       kind: "toggle",
       labelKey: id,
@@ -494,7 +494,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     // 直接是声明式节点（AGENTS.md「禁止手写 3d 菜单」）。code_review efb8b20c2 P1：
     // getMenuNodes 是可选成员，未迁移 fake（仅 getMenuControls）走 capControlsToNodes
     // 回退——断言不 TypeError 且产出原生节点（此前无条件 getMenuNodes() 必炸）
-    const ctrl: MenuControlDef = {
+    const ctrl: PreviewControlDef = {
       id: "fake-slider",
       kind: "slider",
       labelKey: "preview.fake",
@@ -521,18 +521,18 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
 
 describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 唯一）", () => {
   it("collectVisiblePredicates 只挑出带 visibleWhen 谓词的控件（纯函数）", () => {
-    const plain: MenuControlDef = {
+    const plain: PreviewControlDef = {
       id: "a", kind: "toggle", labelKey: "a", fallback: "a",
       getValue: () => false, setValue: vi.fn(),
     };
-    const gated: MenuControlDef = {
+    const gated: PreviewControlDef = {
       ...plain, id: "b", visibleWhen: () => false,
     };
     expect(collectVisiblePredicates([plain, gated]).map((c) => c.id)).toEqual(["b"]);
   });
 
   it("聚合到设置面板的控件如带 visibleWhen，谓词仍可枚举（不被抹平丢失）", () => {
-    const gated: MenuControlDef = {
+    const gated: PreviewControlDef = {
       id: "c-gated", kind: "toggle", labelKey: "c", fallback: "c",
       settingsOrder: 5, visibleWhen: () => true,
       getValue: () => false, setValue: vi.fn(),

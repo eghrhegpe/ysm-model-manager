@@ -3,7 +3,7 @@
 // cap 缺席时渲染单行提示行，不空白。
 //
 // [doc:adr-125 + adr-126-p4-a] settings 面板重构（P1 状态层 + P2 单渲染器 + 自动 cap 聚合）：
-//   - 横切设置项（视锥裁剪 / 帧率 / 分辨率）改为纯数据 MenuControlDef，读写走
+//   - 横切设置项（视锥裁剪 / 帧率 / 分辨率）改为纯数据控件定义，读写走
 //     state/preview-state.ts 的统一路径（[adr-126-p4-a] 升格自 settings-state.ts）
 //   - 线框开关不再手写——它本就是 RenderModeCapability 自报控件（rm-wireframe /
 //     wireframe-toggle）的重复真值来源，改由 collectSettingsCapControls() 自动聚合。
@@ -14,7 +14,7 @@
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
@@ -166,7 +166,7 @@ const FPS_OPTIONS: ReadonlyArray<{ value: string; labelKey: string; fallback: st
  * 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道，
  * 现统一为纯数据节点，读写经 `settingsState` 的 `render.*` 路径。
  */
-export function buildCrossCuttingControls(): MenuControlDef[] {
+export function buildCrossCuttingControls(): PreviewControlDef[] {
   return [
     {
       id: "settings-frustum-cull",
@@ -214,7 +214,7 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
 /**
  * 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件节点，升序并入设置面板。
  *
- * [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]（不再投影回 MenuControlDef）：
+ * [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]（不再投影回控件定义）：
  *   - 全部 cap（10 个均已迁移）：从 getMenuNodes 节点树递归收集带 settingsOrder 的
  *     节点（folder 壳不收、其 children 递归展平）
  * 渲染侧由 renderMenu 直渲染节点（settings-quality 展开），不再包 controls 节点。
@@ -251,7 +251,7 @@ export function collectSettingsCapControls(): PreviewMenuNode[] {
 }
 
 /** 设置面板全部控件节点（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM。
- *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切 MenuControlDef[] 经 capControlsToNodes
+ *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切控件定义（PreviewControlDef）经 capControlsToNodes
  *  桥接成节点，与聚合节点同流。 */
 export function buildSettingsControls(): PreviewMenuNode[] {
   return [...capControlsToNodes(buildCrossCuttingControls()), ...collectSettingsCapControls()];

@@ -3,7 +3,7 @@
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
 import type { PreviewMenuNode } from "../menu-node-types.ts";
-import type { MenuControlDef } from "./scene-capability.ts";
+import type { PreviewControlDef } from "./scene-capability.ts";
 import type { SkyCapability } from "./sky-capability.ts";
 
 const SKY_GROUP_ADVANCED = "preview.skyGroupAdvanced"; // 高级（云量/太阳/昼夜/光束）
@@ -12,7 +12,7 @@ const SKY_GROUP_ADVANCED = "preview.skyGroupAdvanced"; // 高级（云量/太阳
 
 /** 时间轴复杂控件（timeline——非纯数据，走 controls 通道节点承载） */
 function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
-  const timeline: MenuControlDef = {
+  const timeline: PreviewControlDef = {
     id: "sky-timeline",
     kind: "timeline",
     labelKey: "preview.skyTimeline",

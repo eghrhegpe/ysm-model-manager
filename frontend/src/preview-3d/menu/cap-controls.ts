@@ -1,23 +1,23 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
-// 独立模块只依赖 ui-header-toggle / i18n / MenuControlDef 类型，供 preview-menu.ts 与
+// 独立模块只依赖 ui-header-toggle / i18n / PreviewControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
 //
 // [ADR-195 刀 2.5] 投影反转：renderMenu 分派的节点控件（select/slider/toggle/color/divider）
-// 不再经 nodeControlToCapControl 构造 MenuControlDef 中间对象——五个简单控件渲染实现改吃
-// 统一 CapControlView（MenuControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
-// renderCapControls 的 MenuControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
+// 不再经 nodeControlToCapControl 构造 PreviewControlDef 中间对象——五个简单控件渲染实现改吃
+// 统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
+// renderCapControls 的 PreviewControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
 
 import { tr } from "../../core/i18n/tr.ts";
 import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "../caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
- * 渲染实现的读取面（MenuControlDef 子集）。MenuControlDef 结构化满足；node spec 经
- * specToCapControlView 适配。杜绝渲染实现直接依赖 MenuControlDef 类型（刀 3 删类型的
+ * 渲染实现的读取面（PreviewControlDef 子集）。PreviewControlDef 结构化满足；node spec 经
+ * specToCapControlView 适配。杜绝渲染实现直接依赖 PreviewControlDef 类型（刀 3 删类型的
  * 最后硬依赖清除）。
  */
 export interface CapControlView {
@@ -41,13 +41,13 @@ export interface CapControlView {
   select?: Array<{ value: string; label: string }>;
 }
 
-/** MenuControlDef → CapControlView（结构化满足，零拷贝适配） */
-export function capControlToView(c: MenuControlDef): CapControlView {
+/** PreviewControlDef → CapControlView（结构化满足，零拷贝适配） */
+export function capControlToView(c: PreviewControlDef): CapControlView {
   return c as unknown as CapControlView;
 }
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
- *  key 有意接受 string（MenuControlDef.labelKey/group 为数据字段 + group 原文兜底），
+ *  key 有意接受 string（PreviewControlDef.labelKey/group 为数据字段 + group 原文兜底），
  *  内部经 LocaleKey 收窄——字面量拼错在声明处（cap 定义）编译期暴露。 */
 let _capStylesInjected = false;
 onOverlayStyleTargetReset(() => {
@@ -287,7 +287,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
 }
 
 /** button：label + 按钮（primary/ghost）+ 动态 hint；点击动作异步禁用防重复触发，stopPropagation 护栏在虚拟层不适用 */
-function renderCapButton(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapButton(parent: HTMLElement, c: PreviewControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
   row.dataset.testid = `cap-${c.id}`;
@@ -327,7 +327,7 @@ function renderCapButton(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /** image：全宽图片；无内容时跳过（不占位） */
-function renderCapImage(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapImage(parent: HTMLElement, c: PreviewControlDef): void {
   const url = c.getValue() as string | null;
   if (!url) return; // 无内容时跳过（不占位）
   const row = document.createElement("div");
@@ -367,7 +367,7 @@ export function renderCapColor(parent: HTMLElement, v: CapControlView): void {
 }
 
 /** timeline：昼夜色带 + 太阳位置标记 + 可拖动调 timeOfDay（pointer events 支持触屏） */
-function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
   row.dataset.testid = `cap-${c.id}`;
@@ -463,7 +463,7 @@ function renderCapTimeline(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /** histogram：亮度直方图，16 个柱子，值 = number[] */
-function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapHistogram(parent: HTMLElement, c: PreviewControlDef): void {
   const raw = c.getValue();
   const data = Array.isArray(raw) ? (raw as number[]) : [];
   const row = document.createElement("div");
@@ -508,7 +508,7 @@ function renderCapHistogram(parent: HTMLElement, c: MenuControlDef): void {
 }
 
 /** preset-thumb：缩略图网格，每张图是程序化 equirect 截图；无 thumb 配置时跳过 */
-function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
   const thumb = c.thumb;
   if (!thumb) return;
   const row = document.createElement("div");
@@ -562,7 +562,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: MenuControlDef): void {
  * 的纯函数，不摸 cap 实例）。collectVisiblePredicates 现只收 visibleWhen——与
  * AGENTS.md「3d菜单只允许 visibleWhen」对齐。
  */
-export function collectVisiblePredicates(controls: MenuControlDef[]): MenuControlDef[] {
+export function collectVisiblePredicates(controls: PreviewControlDef[]): PreviewControlDef[] {
   return controls.filter((c) => typeof c.visibleWhen === "function");
 }
 
@@ -572,9 +572,9 @@ export function collectVisiblePredicates(controls: MenuControlDef[]): MenuContro
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
  *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。
  *  [ADR-195 刀 2.5] 简单 kind（divider/toggle/slider/select/color）经 capControlToView
- *  适配为统一视图渲染（不再直接吃 MenuControlDef）；复杂 kind 保持 MenuControlDef
+ *  适配为统一视图渲染（不再直接吃 PreviewControlDef）；复杂 kind 保持 PreviewControlDef
  *  （button 变体、thumb 配置等全字段承载）。 */
-function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
+function renderCapControlSingle(parent: HTMLElement, c: PreviewControlDef): void {
   switch (c.kind) {
     case "divider":
       renderCapDivider(parent, capControlToView(c));
@@ -615,7 +615,7 @@ function renderCapControlSingle(parent: HTMLElement, c: MenuControlDef): void {
 
 export function renderCapControls(
   list: HTMLElement,
-  controls: MenuControlDef[],
+  controls: PreviewControlDef[],
   snapshot?: PreviewSnapshot,
 ): void {
   ensureCapStyles();

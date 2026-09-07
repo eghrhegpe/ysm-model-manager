@@ -9,15 +9,11 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ANDROID_UNAVAILABLE
-    - can
     - canBinding
-    - canWebAction
     - isViewerPlatform
     - isWebPlatform
     - PlatformMode
     - resolvePlatformMode
-    - VIEWER_PURE_ACTIONS
-    - VIEWER_WEB_ACTION_BINDINGS
 quick_groups:
   - 能力门控与平台判定
 quick_intents:

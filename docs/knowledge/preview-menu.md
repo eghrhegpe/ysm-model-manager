@@ -53,14 +53,14 @@ auto_fields:
     - hasSceneStats
     - isPreviewFolderNode
     - makeSwitchState
-    - MenuControlDef
-    - MenuControlKind
     - mergeStatsMenuItems
     - mountPreviewRootMenu
     - multiModelSelectNode
     - MultiModelSelectOpts
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
+    - PreviewControlDef
+    - PreviewControlKind
     - PreviewControlSpec
     - PreviewDockGroup
     - PreviewMenuCtx

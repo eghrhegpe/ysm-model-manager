@@ -820,8 +820,6 @@ auto_fields:
     - mdMmTrackAlloc
     - MENU_DEFS
     - MenuAction
-    - MenuControlDef
-    - MenuControlKind
     - MenuCtx
     - MenuDef
     - MenuDefLike

@@ -4,13 +4,14 @@
 //
 // 下沉背景（ADR-195 刀2）：cap 生态要直产 PreviewMenuNode[]（getMenuNodes 替代
 // getMenuControls），caps/* 需反向引用节点类型；而 node-types（menu/）依赖
-// MenuControlDef（caps/scene-capability）——若不破环，「caps → menu/node-types →
-// caps/scene-capability → caps/*」会形成纯类型环。把控件/节点类型统一下沉本叶后：
+// 控件类型（caps/scene-capability 旧称，刀3 更名为 PreviewControlDef）
+// ——若不破环，「caps → menu/node-types → 控件类型」会成纯类型环。下沉本叶后：
 //   - menu/node-types.ts 与 caps/scene-capability.ts 都从本叶引用类型（re-export 保兼容）
 //   - caps/* 直产 PreviewMenuNode[] 只依赖本叶（不再反向 import menu/）
 //   - 方向单一：menu/caps → 本叶 → state/preview-paths（零依赖），无环
 //
-// 血统：MenuControlDef/MenuControlKind 自 caps/scene-capability.ts 下沉；PreviewMenuNode
+// 血统：控件类型（刀3 由旧控件类型更名，终成 PreviewControlDef /
+// PreviewControlKind）自 caps/scene-capability.ts 下沉；PreviewMenuNode
 // 系（PreviewMenuNode/Kind/PreviewControlSpec/PreviewActionMenuCtx/dockGroup）自
 // menu/node-types.ts 下沉（2026-09-06 ADR-195 刀2）——两域（menu/caps）共享同一类型契约，
 // 对齐 ADR-168 二期 preview-paths.ts 下沉范本（零依赖叶子 + 原位 re-export 兼容）。
@@ -19,8 +20,12 @@
 
 import type { PreviewSnapshot, PreviewStatePath } from "./state/preview-paths.ts";
 
-/** 单个菜单控件类型（导出：PreviewMenuNode.controls 字段引用同一形制） */
-export type MenuControlKind =
+/** 控件种类（含简单+复杂）——controls 通道承载元素的 kind。
+ *  [ADR-195 刀3] 更名收敛（终名 PreviewControlKind）：cap 控件与节点控件收敛到
+ *  同一声明式类型子孙，消除"第二套控件类型"观感。简单 kind（toggle/slider/select/divider/color）可走
+ *  PreviewMenuNode.control 节点原生承载，复杂 kind（button/image/timeline/histogram/
+ *  preset-thumb）经 controls 通道承载——二者由同一个 cap 栈渲染器渲染。 */
+export type PreviewControlKind =
   | "toggle"
   | "slider"
   | "select"
@@ -32,12 +37,16 @@ export type MenuControlKind =
   | "histogram"
   | "preset-thumb";
 
-/** 菜单控件定义（声明式，由框架渲染为 DOM） */
-export interface MenuControlDef {
+/**
+ * 控件定义（[ADR-195 刀3] 更名，终名 PreviewControlDef）：声明式，由 cap 栈渲染器渲染为 DOM。
+ * 经 `PreviewMenuNode.controls` 通道承载（复杂可视化控件），与 `PreviewControlSpec`
+ * （节点原生控件字段）同属控件声明体系——不再有并列于节点体系的第二种类型。
+ */
+export interface PreviewControlDef {
   /** 稳定 id（用于持久化 key） */
   id: string;
   /** 控件类型 */
-  kind: MenuControlKind;
+  kind: PreviewControlKind;
   /** i18n 标签键 */
   labelKey: string;
   /** i18n 回退文案 */
@@ -139,7 +148,7 @@ export type PreviewMenuNodeKind =
   | "divider"
   | "sectionTitle"
   | "material-row" // [doc:adr-126-p5] 组合控件行（label + eye 显隐 + opacity 滑条）——审计 #3 material 声明式化
-  | "controls" // 声明式节点直持 MenuControlDef[]（cap 生态原生通道），渲染委托 renderCapControls
+  | "controls" // [ADR-195 刀3] 承载 PreviewControlDef[]，渲染委托 renderCapControls
   | "custom";
 
 /**
@@ -153,9 +162,9 @@ export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "setting
 export type PreviewDockGroup = PreviewMenuGroupId | "stats";
 
 /** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效）。
- *  [ADR-195] 本接口与 MenuControlDef（caps/scene-capability）同构——cap 控件迁入节点
- *  体系后字段零信息损失，nodeControlToCapControl 反向纯搬运。终态 MenuControlDef
- *  类型名作废、字段整体并入本接口（见 ADR-195）。 */
+ *  [ADR-195 刀3] 本接口与 PreviewControlDef（复杂控件）同属一个控件声明体系——简单控件
+ *  由节点原生承载（本接口），复杂控件经 controls 通道承载（PreviewControlDef），
+ *  渲染统一走 cap 栈（见 ADR-195）。 */
 export interface PreviewControlSpec {
   /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
    *  用 get/set 直接读写，bind 可省略） */
@@ -174,17 +183,17 @@ export interface PreviewControlSpec {
   /** slider 类型：旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）——
    *  大数值层号精确输入场景（litematic 分层切片首用） */
   numeric?: boolean;
-  /** slider 值单位（[ADR-195] 自 MenuControlDef.slider.unit 同构）：
+  /** slider 值单位（[ADR-195] 自 PreviewControlDef.slider.unit 同构）：
    *  "h"→HH:MM 时间、"%"→百分比、其它非空字符串后缀（°、m、x）、""=无后缀。
    *  渲染端 formatCapSliderValue 消费。 */
   unit?: string;
-  /** slider 提交回调（拖拽松手/change 离散触发；[ADR-195] 自 MenuControlDef.slider.onCommit
+  /** slider 提交回调（拖拽松手/change 离散触发；[ADR-195] 自 PreviewControlDef.slider.onCommit
    *  同构——如 pixel-ratio 拖动抑制重算、松手广播一次） */
   onCommit?: (v: number) => void;
-  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
+  /** 控件辅助说明 i18n 键（[ADR-195] 自 PreviewControlDef.hintKey 同构——toggle/select/slider
    *  渲染在 label 右侧小字） */
   hintKey?: string;
-  /** button 类型：按钮变种（[ADR-195] 自 MenuControlDef.button 同构；primary 强调 / ghost 次） */
+  /** button 类型：按钮变种（[ADR-195] 自 PreviewControlDef.button 同构；primary 强调 / ghost 次） */
   variant?: "primary" | "ghost";
   /** button 类型：按钮点击回调（无值语义控件；node.action 的控件态表达） */
   action?: () => void | Promise<void>;
@@ -210,12 +219,12 @@ export interface PreviewMenuNode {
   labelKey?: string;
   /** i18n 缺失时的回退文案 */
   fallback?: string;
-  /** 控件辅助说明 i18n 键（[ADR-195] 自 MenuControlDef.hintKey 同构——toggle/select/slider
+  /** 控件辅助说明 i18n 键（[ADR-195] 自 PreviewControlDef.hintKey 同构——toggle/select/slider
    *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
   hintKey?: string;
-  /** [ADR-195 刀2] 设置面板聚合序号（自 MenuControlDef.settingsOrder 同构）：定义后该
+  /** [ADR-195 刀2] 设置面板聚合序号（自 PreviewControlDef.settingsOrder 同构）：定义后该
    *  节点自动并入 ⚙️ 设置面板，按本值升序排列。settings 聚合 collectSettingsCapControls
-   *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧 MenuControlDef.settingsOrder）。 */
+   *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧控件定义 settingsOrder）。 */
   settingsOrder?: number;
   icon?: string;
   /** 仅 folder：默认展开 */
@@ -276,9 +285,10 @@ export interface PreviewMenuNode {
    *  min-height/padding，对齐 scene 组根视图 .cm-row 密度，如 env 面板一级 cap 行）；
    *  缺省 = 标准内容行（roles 角色行等，38px 触控基座）。纯视觉密度，不影响行为。 */
   rowDensity?: "compact";
-  /** controls 类型：cap 生态控件组（MenuControlDef[]），渲染委托 renderCapControls。
+  /** controls 类型：cap 生态控件组（PreviewControlDef[]），渲染委托 renderCapControls。
    *  传函数引用则每次渲染重取（惰性）——cap 后创建/参数变更后重渲染都能取到最新全量，
    *  与 ADR-125 P3「禁止构建期求值 → cap 后创建则永不可见」同口径。
-   *  新增 cap 控件零接线：cap 自报 getMenuControls() 即可进任意声明式面板。 */
-  controls?: MenuControlDef[] | (() => MenuControlDef[]);
+   *  [ADR-195 刀3] 类型名收敛：控件声明统一 PreviewControlDef（cap 栈渲染），无第二套类型。
+   *  新增 cap 控件零接线：cap 自报控件即可进任意声明式面板。 */
+  controls?: PreviewControlDef[] | (() => PreviewControlDef[]);
 }

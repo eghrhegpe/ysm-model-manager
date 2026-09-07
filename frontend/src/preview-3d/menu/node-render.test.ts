@@ -538,7 +538,7 @@ describe("renderMenu 新 kind", () => {
     expect(row.querySelector('input[type="range"]')).not.toBeNull();
   });
 
-  it("controls: 声明式节点直持 MenuControlDef[]，委托 renderCapControls 渲染（cap-xxx testid）", () => {
+  it("controls: 声明式节点直持 PreviewControlDef[]，委托 renderCapControls 渲染（cap-xxx testid）", () => {
     const nodes: PreviewMenuNode[] = [
       {
         id: "lighting",

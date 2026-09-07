@@ -4,10 +4,10 @@
 //   - ground-visible：平铺 toggle（ground 无 getMasterToggle——visible 是 params 级）
 //   - 材质组 folder（preview.groundGroupMaterial）：mat-source select + 3 color +
 //     9 slider 原生节点；2 button（texture/clear，variant/getHint）→ controls 通道节点
-//     （MenuControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
+//     （PreviewControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
 // visibleWhen 谓词（B 轨快照驱动）原样挂节点。
 
-import type { MenuControlDef, PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewControlDef, PreviewMenuNode } from "../menu-node-types.ts";
 import type { PreviewSnapshot } from "../state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import type { GroundSurfaceMode } from "./ground-surface-spec.ts";
@@ -62,9 +62,9 @@ function sliderNode(
   };
 }
 
-/** 贴图按钮（MenuControlDef 保 variant/getHint——controls 通道节点承载） */
+/** 贴图按钮（PreviewControlDef 保 variant/getHint——controls 通道节点承载） */
 function textureButtonsNode(cap: GroundCapability): PreviewMenuNode {
-  const buttons: MenuControlDef[] = [
+  const buttons: PreviewControlDef[] = [
     {
       id: "ground-mat-texture",
       kind: "button",

@@ -102,7 +102,7 @@ invariant_anchors:
 ## 与其他子系统关系
 
 - caps/*-capability.ts：构造注册 callback 监听自己的 envState 键 → 分派 Three 应用（结构字段 rebuild 容器、参数字段就地改材质/uniform）。setter 不再直接改 Three（防双写双重建）。
-- menu 层（ADR-195 刀2 直产节点）：控件闭包绑 cap setter/getter，刀3 换 StatePath 直绑 envState 键。
+- menu 层（ADR-195 刀2 直产节点）：控件闭包绑 cap setter/getter。**ADR-196 刀3 字面 StatePath 化已决策不采纳**（2026-09-07）——cap setter 已直通 envState（见「对外 API」），菜单控件闭包即状态驱动；`getStateValue/setStateValue` 保留为可选实现细节，非菜单绑定要求。
 - 持久化：各 cap `saveState/loadState` 仍写 localStorage（旧键轨向后兼容），恢复时映射 setEnvState。envState 层自身持久化（env-state-persist.ts）为预留。
 - 测试：各 cap 测试 `beforeEach(() => resetEnvState())` 隔离单例；`clearEnvCallbacks()` 清泄漏。
 

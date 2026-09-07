@@ -1,28 +1,28 @@
 import { describe, expect, it } from "vitest";
-import type { MenuControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "../caps/scene-capability.ts";
 import { renderCapControls } from "../menu/core.ts";
 
-// 工厂：构造 MenuControlDef，简化用例书写
+// 工厂：构造 PreviewControlDef，简化用例书写
 const mk = (
-  kind: MenuControlDef["kind"],
+  kind: PreviewControlDef["kind"],
   opts: {
     id?: string;
     labelKey?: string;
     fallback?: string;
     group?: string | undefined;
-    slider?: NonNullable<MenuControlDef["slider"]>;
-    select?: NonNullable<MenuControlDef["select"]>;
-    button?: NonNullable<MenuControlDef["button"]>;
-    thumb?: NonNullable<MenuControlDef["thumb"]>;
+    slider?: NonNullable<PreviewControlDef["slider"]>;
+    select?: NonNullable<PreviewControlDef["select"]>;
+    button?: NonNullable<PreviewControlDef["button"]>;
+    thumb?: NonNullable<PreviewControlDef["thumb"]>;
     getValue?: () => number | string | boolean | null;
     setValue?: (v: number | string | boolean) => void;
   } = {},
-): MenuControlDef => ({
+): PreviewControlDef => ({
   id: opts.id ?? `c-${kind}`,
   kind,
   labelKey: opts.labelKey ?? "preview.test.label",
   fallback: opts.fallback ?? `test-${kind}`,
-  // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 MenuControlDef）
+  // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 PreviewControlDef）
   ...(opts.group !== undefined ? { group: opts.group } : {}),
   ...(opts.slider !== undefined ? { slider: opts.slider } : {}),
   ...(opts.select !== undefined ? { select: opts.select } : {}),

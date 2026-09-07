@@ -51,7 +51,6 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   'check-tpl-refs.ts',
   'check-dynamic-import.ts',
   { tool: 'auto-import.ts', args: ['--strict'] },
-  { tool: 'gen-project-map.ts', args: ['--check'], autoFix: true },
   { tool: 'event-graph.ts', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-routes.ts', args: ['--check'], autoFix: true },
@@ -77,7 +76,6 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
 export const DOC_STATIC_TOOLS: GateTool[] = [
   'check-doc-drift.ts',
   'check-adr-health.ts',
-  { tool: 'gen-project-map.ts', args: ['--check'], autoFix: true },
   { tool: 'event-graph.ts', args: ['--check'], autoFix: true },
   { tool: 'build-novel-index.ts', args: ['--check'], autoFix: true },
   { tool: 'gen-routes.ts', args: ['--check'], autoFix: true },

@@ -13,6 +13,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -31,7 +32,7 @@ func loadTestdataZip(t *testing.T) []byte {
 		if e.IsDir() {
 			continue
 		}
-		data, err := os.ReadFile(dir + "/" + e.Name())
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			t.Fatalf("读取 %s 失败: %v", e.Name(), err)
 		}

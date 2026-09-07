@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -107,7 +108,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 	data := makeTestZip(t, map[string]string{"ysm.json": `{}`})
 	dir := t.TempDir()
 	for _, name := range []string{"m.zip.disabled", "m.zip.ban", "M.ZIP.DISABLED"} {
-		p := dir + "/" + name
+		p := filepath.Join(dir, name)
 		if err := os.WriteFile(p, data, 0644); err != nil {
 			t.Fatal(err)
 		}

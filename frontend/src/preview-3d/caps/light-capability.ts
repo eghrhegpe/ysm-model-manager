@@ -537,8 +537,9 @@ export class LightCapability implements SceneCapability {
       "lightRimIntensity",
       "lightRimAzimuth",
       "lightRimElevation",
-      "lightAmbientColor",
-      "lightAmbientIntensity",
+      // code_review 80e6379dd #3（P2）：ambient 排除——旧 LIGHT_PRESETS 合并范围
+      // 刻意不含 ambient（测试契约「ambient 不在合并范围，保留」，用户可调滑杆），
+      // 新 30 键表曾含 lightAmbientColor/Intensity → 切模型静默重置用户 ambient 微调
       "lightSpotEnabled",
       "lightSpotColor",
       "lightSpotIntensity",

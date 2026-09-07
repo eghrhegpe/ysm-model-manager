@@ -490,6 +490,13 @@ export class SkyCapability implements SceneCapability {
     if (src.skySunDiscScale !== undefined) mapped.skySunDiscScale = src.skySunDiscScale as number;
     mapped.skyForceEnv = true;
     setEnvState(mapped, { source: "auto-model" });
+    // code_review da123e2a1 #1/#2/#3（P2）：恢复预设切换的 IBL 重建——散射-only 的
+    // changed 集（skyTurbidity/.../skyForceEnv）不命中任何 callback 重建分支（唯一判
+    // skyForceEnv 的 cloudCoverage 分支还要求 skyCloudCoverage 同变，预设不含），
+    // 注释「skyForceEnv=true 触发 PMREM 重建」与代码不符——不恢复则切模型后
+    // scene.environment 残留上一预设散射烘焙（code_review 57aeefdb4 #3 修复被回退
+    // 重引入）；envSky uniforms 已由 callback 散射分支同步，此处只需重建一次
+    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */

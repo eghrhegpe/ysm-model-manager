@@ -47,6 +47,25 @@ describe("cap 预设/默认值结构完整性", () => {
     }
   });
 
+  it("MODEL_DEFAULTS fog 逐模型调校值齐全（刀5 迁移值级回归锚）", () => {
+    // code_review f0b1449f7 #3/#4（P3）：MODEL_DEFAULTS 合并曾整段丢失 FOG_PRESETS
+    // 的逐模型雾参数（六模型只剩 fogEnabled:false）——旧测试仅 toBeDefined 存在性
+    // 检查零守卫；值级断言防再次漏搬/抄错
+    const fog = (t: keyof typeof MODEL_DEFAULTS) =>
+      MODEL_DEFAULTS[t] as Record<string, unknown>;
+    for (const t of ["ysm", "vrm", "mmd", "mmd-scene", "litematic", "resourcepack"] as const) {
+      expect(typeof fog(t).fogNear).toBe("number");
+      expect(typeof fog(t).fogFar).toBe("number");
+      expect(typeof fog(t).fogDensity).toBe("number");
+      expect(fog(t).fogMode).toBe("linear");
+    }
+    // per-model 差异保留（非全抄 default）
+    expect(fog("mmd-scene").fogFar).not.toBe(fog("vrm").fogFar); // 1500 vs 400
+    expect(fog("vrm").fogColor).not.toBe(fog("litematic").fogColor);
+    // default 回退不写 fog 键（原 FOG_PRESETS.default={} 语义：不强制关用户已开雾）
+    expect("fogEnabled" in fog("default")).toBe(false);
+  });
+
   it("POSTPROC_PRESETS has default key", () => {
     expect(POSTPROC_PRESETS.default).toBeDefined();
     expect(typeof POSTPROC_PRESETS.default).toBe("object");

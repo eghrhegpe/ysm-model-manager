@@ -32,8 +32,8 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.75,
     skySunDiscScale: 0.5,
     skyForceEnv: true,
-    // --- fog (来自 FOG_PRESETS.default = 空，仅关闭) ---
-    fogEnabled: false,
+    // --- fog (来自 FOG_PRESETS.default = 空 → 不写任何 fog 键，不打扰用户已开雾) ---
+    // code_review f0b1449f7 #2：default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
     // --- environment ---
     envPreset: "sky",
     envIntensity: 1.0,
@@ -55,8 +55,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.75,
     skySunDiscScale: 0.5,
     skyForceEnv: true,
-    // fog (FOG_PRESETS.ysm 未显式定义 → 关)
+    // fog (FOG_PRESETS.ysm：线性雾 ysm 蓝，20~600 远距)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xb8d0ec,
+    fogNear: 20,
+    fogFar: 600,
+    fogDensity: 0.006,
     // environment (ENV_PRESET_BY_MODEL.ysm)
     envPreset: "sky",
     envIntensity: 1.0,
@@ -91,8 +96,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.78,
     skySunDiscScale: 0.55,
     skyForceEnv: true,
-    // fog
+    // fog (FOG_PRESETS.vrm：线性雾冷色调，50~400)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xc5d4e8,
+    fogNear: 50,
+    fogFar: 400,
+    fogDensity: 0.008,
     // environment (ENV_PRESET_BY_MODEL.vrm)
     envPreset: "studio",
     envIntensity: 1.6,
@@ -123,8 +133,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.72,
     skySunDiscScale: 0.45,
     skyForceEnv: true,
-    // fog
+    // fog (FOG_PRESETS.mmd：线性雾暖白，80~500)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xd6e0f0,
+    fogNear: 80,
+    fogFar: 500,
+    fogDensity: 0.005,
     // environment (ENV_PRESET_BY_MODEL.mmd = studio)
     envPreset: "studio",
     envIntensity: 1.6,
@@ -154,8 +169,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.7,
     skySunDiscScale: 0.45,
     skyForceEnv: true,
-    // fog
+    // fog (FOG_PRESETS.mmd-scene：线性雾远距 100~1500，大场景专用)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xd0daed,
+    fogNear: 100,
+    fogFar: 1500,
+    fogDensity: 0.003,
     // environment (ENV_PRESET_BY_MODEL.mmd-scene = sky)
     envPreset: "sky",
     envIntensity: 1.1,
@@ -185,8 +205,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.75,
     skySunDiscScale: 0.5,
     skyForceEnv: true,
-    // fog
+    // fog (FOG_PRESETS.litematic：线性雾蓝白 30~800)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xc0d4f0,
+    fogNear: 30,
+    fogFar: 800,
+    fogDensity: 0.004,
     // environment (ENV_PRESET_BY_MODEL.litematic = forest)
     envPreset: "forest",
     envIntensity: 1.1,
@@ -221,8 +246,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     skySunIntensityScale: 0.75,
     skySunDiscScale: 0.5,
     skyForceEnv: true,
-    // fog
+    // fog (FOG_PRESETS.resourcepack：与 ysm 同调 20~600)
     fogEnabled: false,
+    fogMode: "linear",
+    fogColor: 0xb8d0ec,
+    fogNear: 20,
+    fogFar: 600,
+    fogDensity: 0.006,
     // environment (ENV_PRESET_BY_MODEL.resourcepack = sky)
     envPreset: "sky",
     envIntensity: 1.0,

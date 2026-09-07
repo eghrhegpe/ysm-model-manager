@@ -10,7 +10,7 @@ const { getTagFromRole, getTagIconFromRole, loadFavs } = vi.hoisted(() => ({
   loadFavs: vi.fn<() => string[]>(() => []),
 }));
 
-vi.mock("../workshop-data.ts", () => ({ getTagFromRole, loadFavs }));
+vi.mock("./workshop-data.ts", () => ({ getTagFromRole, loadFavs }));
 vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
   getSiteIcon: vi.fn(() => "🌐"),
   getTagIconFromRole,
@@ -19,7 +19,7 @@ vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
 import { buildSiteHtml, createCrCard } from "./render.ts";
 import type { BuildSiteHtmlCtx, CrCardCtx } from "./render.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 
 const esc = (s: unknown): string =>
   String(s)

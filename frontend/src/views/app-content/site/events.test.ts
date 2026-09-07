@@ -38,7 +38,7 @@ const {
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("../../../utils/debug/debug.ts", () => ({ dbg }));
-vi.mock("../workshop-data.ts", () => ({
+vi.mock("./workshop-data.ts", () => ({
   getCreatorIdentity,
   getTagFromRole,
   parseDescTags,

@@ -23,7 +23,7 @@ vi.mock("../community-data.ts", () => ({
 
 import { bindEditEvents } from "./edit.ts";
 import type { SiteViewState } from "./types.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite, WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { fireDrag } from "../../../test-utils/events.ts";
 import { getApp } from "../../../backend/app.ts";

@@ -238,7 +238,7 @@ const KF_PARAM_NAMES = ["fadeSlideUp", "fadeSlideDown", "fadeSlideLeft"];
 const compCssText = readSafe(DOCUMENT_LAYER_FILE) || "";
 // shadow 侧 keyframe 来源：app-content(content-layout) + sidebar(sidebar-css)
 const shadowKfSources = [
-  "frontend/src/views/app-content/content-layout.ts",
+  "frontend/src/views/app-content/css/content-layout.ts",
   "frontend/src/views/app-sidebar/sidebar-css.ts",
 ];
 let shadowKfAgg = "";

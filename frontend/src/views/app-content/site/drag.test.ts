@@ -21,7 +21,7 @@ vi.mock("@/backend/app.ts", () => ({
 import { getApp } from "../../../backend/app.ts";
 import { bindDragEvents } from "./drag.ts";
 import type { SiteViewState } from "./types.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { fireDrop } from "../../../test-utils/events.ts";
 

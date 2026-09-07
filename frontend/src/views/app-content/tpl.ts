@@ -19,8 +19,8 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-search-results",
 ];
 
-// P1 修复（ADR-040）：settingsHTML 已拆至 tpl-settings.ts，此处 re-export 兼容
-export { settingsHTML } from "./tpl-settings.ts";
+// P1 修复（ADR-040）：settingsHTML 已拆至 settings/tpl-settings.ts，此处 re-export 兼容
+export { settingsHTML } from "./settings/tpl-settings.ts";
 
 export function repositoryHTML(): string {
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统

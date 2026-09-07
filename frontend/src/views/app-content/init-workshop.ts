@@ -15,15 +15,15 @@ import { dbg } from "../../utils/debug/debug.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { esc } from "../../utils/html/html.ts";
 import { fillSearch } from "./community-data.ts";
-import { type RenderSiteViewCtx, renderSiteView } from "./site-view.ts";
-import type { RepoCacheEntry } from "./state.ts";
-import { extractAvatars } from "./workshop-avatar.ts";
+import { type RenderSiteViewCtx, renderSiteView } from "./site/site-view.ts";
 import {
   type BrowseMode,
   createBrowseModeRef,
   loadBrowseMode,
   saveBrowseMode,
-} from "./workshop-browse-mode.ts";
+} from "./site/workshop-browse-mode.ts";
+import type { RepoCacheEntry } from "./state.ts";
+import { extractAvatars } from "./workshop-avatar.ts";
 import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./workshop-tabs.ts";
 

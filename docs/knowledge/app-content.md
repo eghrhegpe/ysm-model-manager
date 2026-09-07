@@ -7,15 +7,15 @@ source_files:
   - frontend/src/views/app-content/index.ts
   - frontend/src/views/app-content/tpl.ts
   - frontend/src/views/app-content/tpl-recycle.ts
-  - frontend/src/views/app-content/tpl-settings.ts
-  - frontend/src/views/app-content/tpl-settings-about.ts
-  - frontend/src/views/app-content/content-css.ts
-  - frontend/src/views/app-content/content-layout.ts
-  - frontend/src/views/app-content/content-repo.ts
-  - frontend/src/views/app-content/content-creator.ts
-  - frontend/src/views/app-content/content-diag.ts
-  - frontend/src/views/app-content/content-stg.ts
-  - frontend/src/views/app-content/content-util.ts
+  - frontend/src/views/app-content/settings/tpl-settings.ts
+  - frontend/src/views/app-content/settings/tpl-settings-about.ts
+  - frontend/src/views/app-content/css/content-css.ts
+  - frontend/src/views/app-content/css/content-layout.ts
+  - frontend/src/views/app-content/css/content-repo.ts
+  - frontend/src/views/app-content/css/content-creator.ts
+  - frontend/src/views/app-content/css/content-diag.ts
+  - frontend/src/views/app-content/css/content-stg.ts
+  - frontend/src/views/app-content/css/content-util.ts
   - frontend/src/views/app-content/init-pages.ts
   - frontend/src/views/app-content/init-preview.ts
   - frontend/src/views/app-content/init-workshop.ts
@@ -37,6 +37,13 @@ auto_fields:
     - bindSiteEvents
     - clearAllCommunityCache
     - CommunityData
+    - contentCreatorCSS
+    - contentCSS
+    - contentDiagCSS
+    - contentLayoutCSS
+    - contentRepoCSS
+    - contentStgCSS
+    - contentUtilCSS
     - createWorkshopRefs
     - creditsHTML
     - DEFAULT_COMMUNITY_URL
@@ -143,12 +150,12 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册五组全局 handler（`registerPageStore` / `registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `core/page-store.ts` / `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
-- `content-css.ts` — 样式组合层：6 个域 CSS 文件 join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
-- `content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
-- `content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 热力图 + 通用标签。
-- `content-creator.ts` — 创作者 `.cr-*` 全族样式（标签/频道/卡片/详情浮层/编辑）。
-- `content-diag.ts` — 诊断页 + GitHub 工坊 `.gh-*` 全族样式。
-- `content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。
+- `css/content-css.ts` — 样式组合层：6 个域 CSS 文件（同在 `css/` 子目录）join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
+- `css/content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
+- `css/content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 热力图 + 通用标签。
+- `css/content-creator.ts` — 创作者 `.cr-*` 全族样式（标签/频道/卡片/详情浮层/编辑）。
+- `css/content-diag.ts` — 诊断页 + GitHub 工坊 `.gh-*` 全族样式。
+- `css/content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。
 - `community-data.ts` — 社区数据层：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
 - `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。

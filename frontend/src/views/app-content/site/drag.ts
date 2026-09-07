@@ -4,7 +4,7 @@ import { getApp } from "../../../backend/app.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { WorkshopSite } from "../../../utils/types-re-export.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 
 /**

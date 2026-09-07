@@ -81,7 +81,7 @@ vi.mock("./community-data.ts", () => ({
   loadCommunityData: vi.fn().mockResolvedValue({ sites: [], creators: [], authors: [] }),
   fillSearch: vi.fn(),
 }));
-vi.mock("./site-view.ts", () => ({ renderSiteView: vi.fn(() => () => {}) }));
+vi.mock("./site/site-view.ts", () => ({ renderSiteView: vi.fn(() => () => {}) }));
 vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }));
 vi.mock("../../utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => "") }));
 
@@ -92,7 +92,7 @@ import { loadOldestModel } from "../../features/maintenance/oldest-models.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";
 import { tryFetchModels } from "../../features/community/data.ts";
-import { renderSiteView } from "./site-view.ts";
+import { renderSiteView } from "./site/site-view.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
 import { waitFor, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 

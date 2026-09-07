@@ -4,11 +4,18 @@ name: 摘要生成 summarize
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/format/summarize.ts
+  - frontend/src/views/app-preview/tpl-summary.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - safeUrl
+    - SummaryAnimGroup
+    - SummaryAuthor
+    - summaryCardHTML
+    - SummaryConfigMenu
+    - YSMHeader
+    - YsmSummary
   tests:
-    - frontend/src/utils/format/summarize.test.ts
+    - frontend/src/views/app-preview/summarize.test.ts
 quick_groups:
   - 截图导出与缓存
 quick_intents:
@@ -30,7 +37,7 @@ use_when:
   - 动画分组
   - 免费付费
 invariant_anchors:
-  - frontend/src/utils/format/summarize.ts|summaryCardHTML
+  - frontend/src/views/app-preview/tpl-summary.ts|summaryCardHTML
 status: active
 ---
 
@@ -54,8 +61,8 @@ status: active
 
 ## 与其他子系统关系
 
-- 唯一消费方：`app-preview/preview-detail.ts`（预览面板详情区）
-- 依赖 `utils/display.ts`（parseModelName 回退）、`utils/mc-format.ts`（renderFormattedText 着色）、`utils/dom/html.ts`（esc）
+- 唯一消费方：`app-preview/detail.ts`（预览面板详情区）
+- 依赖 `utils/model-name/display.ts`（parseModelName 回退）、`utils/html/mc-format.ts`（renderFormattedText 着色）、`utils/dom/html.ts`（esc）
 - 上游数据来自 Go 端模型分析 binding（summary/header），解析链路见 [go_ysm_parser](./go-ysm-parser.md)
 
 ## 不变量
@@ -69,4 +76,4 @@ status: active
 
 - [app_preview](./app-preview.md) — 预览面板
 - [go_ysm_parser](./go-ysm-parser.md) — 摘要数据源
-- `frontend/src/utils/format/summarize.test.ts` — 单元测试（验证入口）
+- `frontend/src/views/app-preview/summarize.test.ts` — 单元测试（验证入口）

@@ -5,8 +5,10 @@ import type { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { dbg } from "../../../utils/debug/debug.ts";
 import { getSiteIcon, getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
-import type { BrowseMode } from "../workshop-browse-mode.ts";
+import { type CrCardCtx, createCrCard } from "./render.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
+import type { CleanupFn, SiteViewState } from "./types.ts";
+import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,
   getCreatorIdentity,
@@ -15,9 +17,7 @@ import {
   loadFavs,
   parseDescTags,
   toggleFav,
-} from "../workshop-data.ts";
-import { type CrCardCtx, createCrCard } from "./render.ts";
-import type { CleanupFn, SiteViewState } from "./types.ts";
+} from "./workshop-data.ts";
 
 // storage 监听器模块私有变量（防泄漏，bindBrowseEvents 返回的 cleanup 会清）
 let _storageSyncFn: ((e: StorageEvent) => void) | null = null;

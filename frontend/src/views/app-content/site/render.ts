@@ -4,9 +4,9 @@ import { t } from "../../../core/i18n/t.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
 import { getTagIconFromRole } from "../../../utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "../../../utils/types-re-export.ts";
-import type { LocalCreatorLike, RepoAuthorLike } from "../site-view.ts";
-import type { BrowseModeRef } from "../workshop-browse-mode.ts";
-import { getTagFromRole, loadFavs } from "../workshop-data.ts";
+import type { LocalCreatorLike, RepoAuthorLike } from "./site-view.ts";
+import type { BrowseModeRef } from "./workshop-browse-mode.ts";
+import { getTagFromRole, loadFavs } from "./workshop-data.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {

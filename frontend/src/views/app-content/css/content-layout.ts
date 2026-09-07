@@ -5,7 +5,7 @@
 // 故这些 keyframes 必须在本 shadow 层本地重定义（见下方 contentLayoutCSS 内的 @keyframes 块），
 // 引用它们的 .stg-card / .setting-row / .gh-card / .repo-tab / .recy-item 等规则才能产生动画。
 // components.css 的全局副本仅服务 document 层光 DOM（dialog 等）。
-import { btnBaseCSS, focusVisibleCSS } from "../../utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS } from "../../../utils/dom/css.ts";
 
 export const contentLayoutCSS: string = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }

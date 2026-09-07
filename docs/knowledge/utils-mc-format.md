@@ -4,13 +4,14 @@ name: MC 格式判定 mc-format
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/format/mc-format.ts
+  - frontend/src/utils/html/mc-format.ts
   - frontend/src/utils/format/pack-format.ts
 auto_fields:
   symbols_with_lines:
     - describeVersionRange
     - LATEST_VERSION_SENTINEL
     - PackMeta
+    - renderFormattedText
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -33,7 +34,7 @@ use_when:
   - renderFormattedText
   - 版本兼容
 invariant_anchors:
-  - frontend/src/utils/format/mc-format.ts|renderFormattedText
+  - frontend/src/utils/html/mc-format.ts|renderFormattedText
   - frontend/src/utils/format/pack-format.ts|describeVersionRange
 status: active
 ---
@@ -74,4 +75,4 @@ status: active
 
 - [utils_display](./utils-display.md) — 文件名 § 着色消费方
 - [go_packs](./go-packs.md) — 包元数据数据源
-- `frontend/src/utils/format/mc-format.test.ts` — 单元测试（验证入口）
+- `frontend/src/utils/html/mc-format.test.ts` — 单元测试（验证入口）

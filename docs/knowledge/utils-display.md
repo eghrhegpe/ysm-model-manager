@@ -4,9 +4,16 @@ name: 文件名显示 display
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/dom/display.ts
+  - frontend/src/utils/model-name/display.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - ParsedModelName
+    - parseModelName
+    - renderDisplayName
+    - renderModelName
+    - renderModelNameWithHighlight
+    - stripBanSuffix
+    - stripDisableSuffix
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -26,8 +33,8 @@ use_when:
   - 文件名着色
   - 搜索高亮
 invariant_anchors:
-  - frontend/src/utils/dom/display.ts|parseModelName
-  - frontend/src/utils/dom/display.ts|renderDisplayName
+  - frontend/src/utils/model-name/display.ts|parseModelName
+  - frontend/src/utils/model-name/display.ts|renderDisplayName
 status: active
 ---
 
@@ -68,5 +75,5 @@ status: active
 
 - [utils_dom](./utils-dom.md) — esc() HTML 转义红线
 - [utils_mc_format](./utils-mc-format.md) — § 分节符着色
-- `frontend/src/utils/dom/display.test.ts` — 单元测试（验证入口）
+- `frontend/src/utils/model-name/display.test.ts` — 单元测试（验证入口）
 - AGENTS.md §3.3 UI 安全红线

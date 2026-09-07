@@ -81,7 +81,7 @@ use_when:
   - mark
   - XSS
 invariant_anchors:
-  - frontend/src/utils/dom/html.ts|export function esc
+  - frontend/src/utils/html/html.ts|export function esc
 status: active
 ---
 
@@ -132,7 +132,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 ## 相关
 
 - [utils_display](./utils-display.md) — 文件名显示（同源红线）
-- `frontend/src/utils/dom/html.test.ts` — 单元测试（验证入口）
+- `frontend/src/utils/html/html.test.ts` — 单元测试（验证入口）
 - `frontend/src/utils/dom/virtual-scroll.test.ts` — 虚拟滚动原语测试
 - `frontend/src/features/community/virtual-list.test.ts` — 定高虚拟列表组件测试
 - AGENTS.md §3.3 UI 安全红线

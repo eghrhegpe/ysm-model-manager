@@ -7,7 +7,7 @@ import { friendlyError } from "../../../utils/dom/errors.ts";
 import { safeSet } from "../../../utils/dom/storage.ts";
 import type { WorkshopPresetSearch } from "../../../utils/types-re-export.ts";
 import * as m from "../community-data.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 
 interface DragStateShell {

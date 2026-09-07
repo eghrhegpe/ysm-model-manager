@@ -4,14 +4,14 @@ name: 创意工坊站点视图 site
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/views/app-content/site-view.ts
+  - frontend/src/views/app-content/site/site-view.ts
   - frontend/src/views/app-content/site/render.ts
   - frontend/src/views/app-content/site/events.ts
   - frontend/src/views/app-content/site/edit.ts
   - frontend/src/views/app-content/site/drag.ts
   - frontend/src/views/app-content/site/types.ts
-  - frontend/src/views/app-content/workshop-data.ts
-  - frontend/src/views/app-content/workshop-browse-mode.ts
+  - frontend/src/views/app-content/site/workshop-data.ts
+  - frontend/src/views/app-content/site/workshop-browse-mode.ts
 auto_fields:
   symbols_with_lines:
     - bindBrowseEvents
@@ -41,21 +41,21 @@ auto_fields:
     - SiteViewState
     - toggleFav
   tests:
-    - frontend/src/views/app-content/site-view.test.ts
+    - frontend/src/views/app-content/site/site-view.test.ts
     - frontend/src/views/app-content/site/render.test.ts
     - frontend/src/views/app-content/site/events.test.ts
     - frontend/src/views/app-content/site/edit.test.ts
     - frontend/src/views/app-content/site/drag.test.ts
-    - frontend/src/views/app-content/workshop-data.test.ts
-    - frontend/src/views/app-content/workshop-browse-mode.test.ts
+    - frontend/src/views/app-content/site/workshop-data.test.ts
+    - frontend/src/views/app-content/site/workshop-browse-mode.test.ts
 tests:
-  - frontend/src/views/app-content/site-view.test.ts
+  - frontend/src/views/app-content/site/site-view.test.ts
   - frontend/src/views/app-content/site/render.test.ts
   - frontend/src/views/app-content/site/events.test.ts
   - frontend/src/views/app-content/site/edit.test.ts
   - frontend/src/views/app-content/site/drag.test.ts
-  - frontend/src/views/app-content/workshop-data.test.ts
-  - frontend/src/views/app-content/workshop-browse-mode.test.ts
+  - frontend/src/views/app-content/site/workshop-data.test.ts
+  - frontend/src/views/app-content/site/workshop-browse-mode.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -75,7 +75,7 @@ use_when:
   - 卡片拖拽
   - workshop-data
 invariant_anchors:
-  - frontend/src/views/app-content/site-view.ts|renderSiteView
+  - frontend/src/views/app-content/site/site-view.ts|renderSiteView
 status: active
 ---
 
@@ -83,7 +83,7 @@ status: active
 
 ## 概览
 
-`site/` + `site-view.ts` 是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.ts` 委托 `site/` 5 个子模块渲染与绑定（render / events / edit / drag / types），并共享 `workshop-data.ts`（收藏/标签解析）与 `workshop-browse-mode.ts`（浏览模式 ref）。对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
+`site/` 子目录（含 `site-view.ts`、`workshop-data.ts`、`workshop-browse-mode.ts` 与 5 个子模块）是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.ts` 委托同目录 5 个子模块渲染与绑定（render / events / edit / drag / types），并共享 `workshop-data.ts`（收藏/标签解析）与 `workshop-browse-mode.ts`（浏览模式 ref）。对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据；2026-09 三件套已物理归位 site/ 子目录，消灭顶层散落）。
 
 ## 核心职责
 
@@ -115,5 +115,5 @@ status: active
 
 - 主卡：`docs/knowledge/app-content.md`
 - 知识卡：`app-content`、`community-feature`
-- `frontend/src/views/app-content/content-creator.ts` / `content-layout.ts` — 站点样式层（主卡持有）
+- `frontend/src/views/app-content/css/content-creator.ts` / `css/content-layout.ts` — 站点样式层（主卡持有）
 - `frontend/src/views/app-content/workshop-site-opener.ts` — 站点打开器（主卡装配，经 `init-workshop.ts` 接线）

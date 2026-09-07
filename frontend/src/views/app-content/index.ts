@@ -5,7 +5,7 @@ import { resolveInitialPage } from "../../core/page-store.ts";
 import { refreshAdoptedStyleSheets } from "../../utils/dom/css-hmr.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
-import { contentCSS } from "./content-css.ts";
+import { contentCSS } from "./css/content-css.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
@@ -319,7 +319,7 @@ class AppContent extends WebComponentBase {
 if (typeof customElements !== "undefined" && !customElements.get("app-content")) {
   customElements.define("app-content", AppContent);
 }
-// HMR 热更新：仅 contentCSS（./content-css.ts）变更时热刷 shadow 样式表；其余依赖变更落到整页重载。
-import.meta.hot?.accept("./content-css.ts", (newCssMod) => {
+// HMR 热更新：仅 contentCSS（./css/content-css.ts）变更时热刷 shadow 样式表；其余依赖变更落到整页重载。
+import.meta.hot?.accept("./css/content-css.ts", (newCssMod) => {
   refreshAdoptedStyleSheets(newCssMod?.contentCSS, "app-content");
 });

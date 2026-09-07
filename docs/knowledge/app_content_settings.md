@@ -103,4 +103,4 @@ status: active
 
 - 主卡：`docs/knowledge/app-content.md`
 - 知识卡：`theme`、`version-updater`、`app-modules`、`app-content`
-- `frontend/src/views/app-content/content-stg.ts` — 设置页样式层（主卡持有）
+- `frontend/src/views/app-content/css/content-stg.ts` — 设置页样式层（主卡持有）

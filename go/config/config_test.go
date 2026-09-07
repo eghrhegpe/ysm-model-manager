@@ -14,7 +14,7 @@ func TestGet_NilFallback(t *testing.T) {
 	defer Set(nil)
 
 	if got := Get(); !cmp.Equal(got, types.AppConfig{}) {
-		t.Errorf("未注入时应返回零值 AppConfig, got %+v", got)
+		t.Errorf("未注入时应返回零值 AppConfig\ndiff:\n%s", cmp.Diff(got, types.AppConfig{}))
 	}
 }
 
@@ -37,7 +37,7 @@ func TestSetNilAfterSet(t *testing.T) {
 	Set(func() types.AppConfig { return types.AppConfig{DownloadTimeoutSec: 9} })
 	Set(nil)
 	if got := Get(); !cmp.Equal(got, types.AppConfig{}) {
-		t.Errorf("Set(nil) 后应回退零值, got %+v", got)
+		t.Errorf("Set(nil) 后应回退零值\ndiff:\n%s", cmp.Diff(got, types.AppConfig{}))
 	}
 }
 

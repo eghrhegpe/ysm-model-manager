@@ -54,6 +54,7 @@ describe("RenderModeCapability — 构造与初始状态", () => {
 });
 
 describe("RenderModeCapability — 单属性覆盖/还原", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("setWireframe(true) 覆盖材质；setWireframe(null) 还原原始值", () => {
     const mesh = makeMesh();
     (mesh.material as THREE.MeshBasicMaterial).wireframe = true; // 原始 true
@@ -140,6 +141,7 @@ describe("RenderModeCapability — 单属性覆盖/还原", () => {
 });
 
 describe("RenderModeCapability — 快照细节", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("共享同一材质只快照一次（uuid 去重）", () => {
     const mat = new THREE.MeshBasicMaterial();
     const m1 = new THREE.Mesh(new THREE.BoxGeometry(), mat);
@@ -206,6 +208,7 @@ describe("RenderModeCapability — 快照细节", () => {
 });
 
 describe("RenderModeCapability — apply 与 sync 分支", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("apply() 空场景不炸", () => {
     const cap = newCap();
     cap.apply();
@@ -221,6 +224,7 @@ describe("RenderModeCapability — apply 与 sync 分支", () => {
 });
 
 describe("RenderModeCapability — getMenuNodes 读写全覆盖", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("X 光 toggle：开 → depthTest=false，关 → 清 override", () => {
     const mesh = makeMesh();
     const cap = newCap(mesh);
@@ -254,6 +258,7 @@ describe("RenderModeCapability — getMenuNodes 读写全覆盖", () => {
 });
 
 describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("返回 5 平铺节点，id/kind 齐全，settingsOrder 透传", () => {
     const cap = newCap(makeMesh());
     const nodes = cap.getMenuNodes();
@@ -359,6 +364,7 @@ describe("RenderModeCapability — 持久化", () => {
 });
 
 describe("RenderModeCapability — dispose", () => {
+  beforeEach(() => { resetEnvState(); }); // ADR-196 单例化：断言不依赖前序 describe 残留
   it("dispose 还原已覆盖材质并清空 override", () => {
     const mesh = makeMesh();
     const cap = newCap(mesh);

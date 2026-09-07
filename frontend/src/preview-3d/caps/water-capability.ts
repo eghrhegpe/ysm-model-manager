@@ -624,12 +624,17 @@ export class WaterCapability implements SceneCapability {
   /** 从 localStorage 恢复状态 */
   loadState(): void {
     let state = restoreState(this.id) as Record<string, unknown> | null;
+    // code_review 9fe958249 #2/#3：legacy.water 解包后 state.water 不存在 → 下方
+    // nested 判定误判 flat → 子域开关 enabled 不写 setWaterEnabled（envState.
+    // waterEnabled 保持默认 true）——「用户关水」偏好升级后丢失，重开能力水面重现
+    let fromNestedLegacy = false;
     if (!state) {
       const legacy = restoreState("ground") as Record<string, unknown> | null;
       if (legacy) {
         const lw = legacy.water;
         if (lw && typeof lw === "object") {
           state = lw as Record<string, unknown>;
+          fromNestedLegacy = true;
         } else if (
           typeof legacy.wetness === "number" ||
           typeof legacy.waterColor === "number" ||
@@ -652,8 +657,9 @@ export class WaterCapability implements SceneCapability {
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
     // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。
-    const nested =
-      state.water && typeof state.water === "object"
+    const nested = fromNestedLegacy
+      ? state // legacy.water 解包内容即嵌套方言（含 enabled 子域开关）
+      : state.water && typeof state.water === "object"
         ? (state.water as Record<string, unknown>)
         : null;
     const w = (nested ?? state) as Record<string, unknown>;

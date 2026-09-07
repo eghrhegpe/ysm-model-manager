@@ -6,59 +6,12 @@
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { registerEnvCallback } from "../state/env-dispatcher.ts";
-// ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
-import {
-  GROUND_LAYER_OFFSETS,
-  persistState,
-  restoreFields,
-  restoreState,
-  ringLog,
-  type SceneCapability,
-} from "./scene-capability.ts";
-
-/** 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） */
-export const REFLECTOR_PRESETS: Record<string, Partial<EnvState>> = {
-  default: {},
-  ysm: {
-    // 方块：弱反射，避免镜面太强抢主体
-    reflectorOpacity: 0.25,
-    reflectorSize: 200,
-    reflectorResolution: 512,
-    reflectorColor: 0xf0f4fa,
-  },
-  vrm: {
-    // PBR 角色：中等反射 + 暖调
-    reflectorOpacity: 0.5,
-    reflectorSize: 60,
-    reflectorResolution: 1024,
-    reflectorColor: 0xf8efe2,
-  },
-  mmd: {
-    // toon：更弱，避免高光与反射冲突
-    reflectorOpacity: 0.2,
-    reflectorSize: 80,
-    reflectorResolution: 1024,
-    reflectorColor: 0xfafcff,
-  },
-  litematic: {
-    // 体素：大平面 + 冷调
-    reflectorOpacity: 0.25,
-    reflectorSize: 500,
-    reflectorResolution: 512,
-    reflectorColor: 0xeaf1fb,
-  },
-  resourcepack: {
-    // MC 方块：同 YSM
-    reflectorOpacity: 0.25,
-    reflectorSize: 200,
-    reflectorResolution: 512,
-    reflectorColor: 0xf0f4fa,
-  },
-};
+import { GROUND_LAYER_OFFSETS, persistState, restoreFields, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
 
 /** three r185 官方 ReflectorShader 静态属性（运行时存在，@types/three 未声明该静态属性，断言桥接） */
 type ReflectorShaderDef = {
@@ -211,9 +164,12 @@ export class ReflectorCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(modelType: string): void {
     if (this.isStateLoaded) return;
-    const preset = REFLECTOR_PRESETS[modelType] ?? REFLECTOR_PRESETS.default;
-    // ADR-196 收口：纯写 envState；buildReflector 由 callback 落地。
-    setEnvState(preset, { source: "auto-model" });
+    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const partial: Partial<EnvState> = {};
+    for (const key of ["reflectorEnabled", "reflectorOpacity", "reflectorSize", "reflectorResolution", "reflectorColor", "reflectorClipBias"] as const) {
+      if ((preset as Record<string, unknown>)[key] !== undefined) (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
+    }
+    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }
 
   setEnabledReflector(v: boolean): void {

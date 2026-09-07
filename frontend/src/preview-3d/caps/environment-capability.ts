@@ -20,14 +20,15 @@ import { registerEnvCallback } from "../state/env-dispatcher.ts";
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
-import type { EnvPreset, EnvPresetId, EnvPresetLinkage } from "./environment-state.ts";
+import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
-import { ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS } from "./environment-state.ts";
+import { ENV_PRESETS } from "./environment-state.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { persistState, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
 
-export type { EnvPreset, EnvPresetId, EnvPresetLinkage };
-// ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
-export { ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS };
+export type { EnvPreset, EnvPresetId };
+// ENV_PRESETS（程序化天空数据表）仍被 cap/菜单/测试消费，保留透传导出。
+export { ENV_PRESETS };
 
 /** 给 canvas 2D ctx 填充 equirectangular 环境贴图（程序化） */
 export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
@@ -595,17 +596,15 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   setPreset(modelType: string): void {
-    const modelPreset = ENV_PRESET_BY_MODEL[modelType] ?? ENV_PRESET_BY_MODEL.default;
-    // setPreset 是"模型类别初始化"入口，不应该跳到 custom（custom 由用户主动选 HDR 才进）
+    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    // ADR-196：统一数据源 MODEL_DEFAULTS；callback → buildEnvironment。
     const partial: Partial<EnvState> = {};
-    const safePreset: EnvPresetId | undefined =
-      modelPreset.preset === "custom" ? "studio" : modelPreset.preset;
-    if (safePreset !== undefined) partial.envPreset = safePreset;
-    if (modelPreset.intensity !== undefined) partial.envIntensity = modelPreset.intensity;
-    if (Object.keys(partial).length > 0) {
-      setEnvState(partial, { source: "manual" });
-      // callback → buildEnvironment（无需显式调用）
-    }
+    const src = preset as Record<string, unknown>;
+    if (src.envPreset !== undefined) partial.envPreset = src.envPreset as EnvPresetId;
+    if (src.envIntensity !== undefined) partial.envIntensity = src.envIntensity as number;
+    if (src.envResolution !== undefined) partial.envResolution = src.envResolution as number;
+    if (src.envUseAsBackground !== undefined) partial.envUseAsBackground = src.envUseAsBackground as boolean;
+    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }
 
   setPresetId(id: EnvPresetId): void {

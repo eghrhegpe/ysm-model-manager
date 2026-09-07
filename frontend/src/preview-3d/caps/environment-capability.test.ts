@@ -16,11 +16,11 @@ import * as THREE from "three";
 import {
   EnvironmentCapability,
   ENV_PRESETS,
-  ENV_PRESET_BY_MODEL,
   drawEnvEquirect,
   type EnvPreset,
   type EnvPresetId,
 } from "./environment-capability.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 // ADR-196：统一状态层
 import { resetEnvState, setEnvState } from "../state/env-state.ts";
 import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
@@ -219,7 +219,8 @@ describe("EnvironmentCapability — 预设切换", () => {
   it("setPreset 未知模型类型回退 default（sky）", () => {
     const cap = newCap();
     cap.setPreset("unknown_type");
-    expect(cap.getPresetId()).toBe(ENV_PRESET_BY_MODEL.default.preset ?? "sky");
+    // unknown → MODEL_DEFAULTS.default → envPreset: "sky"
+    expect(cap.getPresetId()).toBe(MODEL_DEFAULTS.default.envPreset);
   });
 
   it("setPreset 不会跳到 custom（由用户主动选 HDR 才进）", () => {
@@ -771,10 +772,10 @@ describe("EnvironmentCapability — 预设数据完整性", () => {
     }
   });
 
-  it("ENV_PRESET_BY_MODEL 覆盖所有已知模型类型", () => {
+  it("MODEL_DEFAULTS 覆盖所有已知模型类型", () => {
     const expectedTypes = ["default", "ysm", "vrm", "mmd", "mmd-scene", "litematic", "resourcepack"];
     for (const t of expectedTypes) {
-      expect(ENV_PRESET_BY_MODEL[t]).toBeDefined();
+      expect(MODEL_DEFAULTS[t as keyof typeof MODEL_DEFAULTS]).toBeDefined();
     }
   });
 });

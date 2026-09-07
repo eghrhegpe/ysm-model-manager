@@ -9,6 +9,7 @@ import { registerEnvCallback } from "../state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
   oneOf,
@@ -22,59 +23,6 @@ export type FogMode = "linear" | "exp2";
 
 /** FogMode 合法值白名单（loadState 枚举校验用） */
 const FOG_MODES = ["linear", "exp2"] as const satisfies readonly FogMode[];
-
-/** 模型类别雾预设：材质类别不同，雾浓度/远近做合理初始值 */
-export const FOG_PRESETS: Record<string, Partial<EnvState>> = {
-  default: {},
-  ysm: {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xb8d0ec,
-    fogNear: 20,
-    fogFar: 600,
-    fogDensity: 0.006,
-  },
-  vrm: {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xc5d4e8,
-    fogNear: 50,
-    fogFar: 400,
-    fogDensity: 0.008,
-  },
-  mmd: {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xd6e0f0,
-    fogNear: 80,
-    fogFar: 500,
-    fogDensity: 0.005,
-  },
-  "mmd-scene": {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xd0daed,
-    fogNear: 100,
-    fogFar: 1500,
-    fogDensity: 0.003,
-  },
-  litematic: {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xc0d4f0,
-    fogNear: 30,
-    fogFar: 800,
-    fogDensity: 0.004,
-  },
-  resourcepack: {
-    fogEnabled: false,
-    fogMode: "linear",
-    fogColor: 0xb8d0ec,
-    fogNear: 20,
-    fogFar: 600,
-    fogDensity: 0.006,
-  },
-};
 
 export class FogCapability implements SceneCapability {
   readonly id = "fog";
@@ -151,10 +99,12 @@ export class FogCapability implements SceneCapability {
 
   /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
   setPreset(modelType: string): void {
-    const preset = FOG_PRESETS[modelType] ?? FOG_PRESETS.default;
-    // ADR-196 收口：纯写 envState；applyFog 由 callback 落地（预设只调合理默认，
-    // 不强制开启——避免覆盖用户明确的开关选择）。
-    setEnvState(preset, { source: "auto-model" });
+    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const partial: Partial<EnvState> = {};
+    for (const key of ["fogEnabled", "fogMode", "fogColor", "fogNear", "fogFar", "fogDensity"] as const) {
+      if ((preset as Record<string, unknown>)[key] !== undefined) (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
+    }
+    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }
 
   /* -------- 参数变更 API -------- */

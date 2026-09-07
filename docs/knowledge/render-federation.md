@@ -26,13 +26,10 @@ auto_fields:
     - cleanupPreview
     - DEFAULT_POSTPROC_PARAMS
     - drawEnvEquirect
-    - ENV_PRESET_BY_MODEL
-    - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - EnvironmentCapability
     - EnvPreset
     - EnvPresetId
-    - EnvPresetLinkage
     - FogCapability
     - FogMode
     - GroundCapability
@@ -43,7 +40,6 @@ auto_fields:
     - isSkyEnvironmentOn
     - LightCapability
     - lightDirToPosition
-    - MODEL_SKY_PRESETS
     - mount3D
     - Mount3DOptions
     - PoseScene
@@ -63,7 +59,6 @@ auto_fields:
     - ShadowCapability
     - ShadowType
     - SkyCapability
-    - SkyModelType
     - switchPreview
     - UpdateableScene
   tests:

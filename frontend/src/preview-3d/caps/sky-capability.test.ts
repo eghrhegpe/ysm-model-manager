@@ -11,9 +11,9 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import {
   SkyCapability,
-  MODEL_SKY_PRESETS,
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
 import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
 import type { SceneCapability } from "./scene-capability.ts";
@@ -362,10 +362,10 @@ describe("SkyCapability — 预设数据完整性", () => {
     expect(envState.skyScale).toBeGreaterThan(0);
   });
 
-  it("MODEL_SKY_PRESETS 覆盖所有模型类型", () => {
+  it("MODEL_DEFAULTS 覆盖所有模型类型", () => {
     const expectedTypes = ["default", "vrm", "mmd", "mmd-scene", "ysm", "litematic"];
     for (const t of expectedTypes) {
-      expect(MODEL_SKY_PRESETS[t]).toBeDefined();
+      expect(MODEL_DEFAULTS[t as keyof typeof MODEL_DEFAULTS]).toBeDefined();
     }
   });
 });
@@ -522,15 +522,13 @@ describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
     expect(envState.skySunDiscScale).toBeLessThanOrEqual(1.0);
   });
 
-  it("MODEL_SKY_PRESETS 全部 6 类预设均携带解耦参数（统一默认，不丢失差异）", () => {
+  it("MODEL_DEFAULTS sky 全部模型类型均携带解耦参数", () => {
     const all = ["default", "vrm", "mmd", "mmd-scene", "ysm", "litematic"];
     for (const k of all) {
-      const preset = MODEL_SKY_PRESETS[k];
-      // 必须存在（预设 k 已定义）
+      const preset = MODEL_DEFAULTS[k as keyof typeof MODEL_DEFAULTS];
       expect(preset).toBeDefined();
-      // 每个预设显式携带 sunIntensityScale / sunDiscScale（显式意图，不依赖 DEFAULT 兜底 undefined）
-      expect(typeof preset!.sunIntensityScale).toBe("number");
-      expect(typeof preset!.sunDiscScale).toBe("number");
+      expect(typeof preset.skySunIntensityScale).toBe("number");
+      expect(typeof preset.skySunDiscScale).toBe("number");
     }
   });
 
@@ -1031,7 +1029,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
     const turbidityBefore = u["turbidity"].value;
     cap.setPreset("vrm");
-    expect(envState.skyTurbidity).toBe(MODEL_SKY_PRESETS.vrm!.turbidity!);
+    expect(envState.skyTurbidity).toBe(MODEL_DEFAULTS.vrm!.skyTurbidity!);
     expect(u["turbidity"].value).toBe(turbidityBefore); // 未写入 uniforms
   });
 

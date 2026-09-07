@@ -168,7 +168,6 @@ auto_fields:
     - MmdPlayBridge
     - MmdZipConfig
     - mockMenuHandle
-    - MODEL_SKY_PRESETS
     - ModelEntry
     - MorphMeshLike
     - morphNodes
@@ -238,7 +237,6 @@ auto_fields:
     - SharedInfra
     - showLoadFailure
     - SkyCapability
-    - SkyModelType
     - startGlobalRenderLoop
     - stopIfIdle
     - SwitchContext

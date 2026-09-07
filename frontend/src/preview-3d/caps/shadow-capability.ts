@@ -15,22 +15,12 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { buildShadowNodes } from "./shadow-menu.ts";
 
 /** 阴影类型合法值 */
 const SHADOW_TYPES = ["soft", "hard"] as const;
 export type ShadowType = (typeof SHADOW_TYPES)[number];
-
-/** 模型类别到阴影预设 key 的映射 */
-const SHADOW_PRESET_BY_MODEL: Record<string, string> = {
-  default: "default",
-  ysm: "default",
-  vrm: "soft",
-  mmd: "soft",
-  "mmd-scene": "soft",
-  litematic: "default",
-  resourcepack: "default",
-};
 
 export class ShadowCapability implements SceneCapability {
   readonly id = "shadow";
@@ -155,12 +145,8 @@ export class ShadowCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(adapterId: string): void {
     if (this.isStateLoaded) return;
-    const presetKey = SHADOW_PRESET_BY_MODEL[adapterId] ?? "default";
-    if (presetKey === "soft") {
-      setEnvState({ shadowType: "soft" }, { source: "auto-model" });
-    } else {
-      setEnvState({ shadowType: "hard" }, { source: "auto-model" });
-    }
+    const preset = MODEL_DEFAULTS[adapterId as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    if (preset.shadowType !== undefined) setEnvState({ shadowType: preset.shadowType }, { source: "auto-model" });
   }
 
   /* -------- 内部：apply 管线 -------- */

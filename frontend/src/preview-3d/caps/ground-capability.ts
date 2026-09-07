@@ -411,8 +411,36 @@ export class GroundCapability implements SceneCapability {
 
   /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain） */
   loadState(): void {
-    const state = restoreState(this.id);
+    let state = restoreState(this.id);
     if (!state) return;
+    // code_review df84baefb #13（P2）：legacy 旧键迁移——ADR-196 前 ground 持久化为
+    // {visible, size, divisions, colorCenter, colorGrid, matSource, matColor...}
+    // （无 ground 前缀），迁移后只读前缀键且 migrateEnvState 空透传 → 升级用户的
+    // 网格尺寸/线色/材质源设置静默回默认。判据用 groundSize（saveState 恒写前缀
+    // 代表键）缺失 + 任一旧键存在；只映射实际存在的旧键。
+    const legacyGroundKeys = [
+      "visible", "size", "divisions", "colorCenter", "colorGrid",
+      "matSource", "matColor", "matLineColor", "matColor2", "matGridSize",
+      "matOpacity", "matScale", "matDensity", "matAngleDeg", "matRoughness", "matMetalness",
+    ] as const;
+    const gs = state as Record<string, unknown>; // 非空副本（重赋值丢失收窄）
+    if (!("groundSize" in gs) && legacyGroundKeys.some((k) => k in gs)) {
+      const map: Record<string, string> = {
+        visible: "groundVisible", size: "groundSize", divisions: "groundDivisions",
+        colorCenter: "groundColorCenter", colorGrid: "groundColorGrid",
+        matSource: "groundMatSource", matColor: "groundMatColor",
+        matLineColor: "groundMatLineColor", matColor2: "groundMatColor2",
+        matGridSize: "groundMatGridSize", matOpacity: "groundMatOpacity",
+        matScale: "groundMatScale", matDensity: "groundMatDensity",
+        matAngleDeg: "groundMatAngleDeg", matRoughness: "groundMatRoughness",
+        matMetalness: "groundMatMetalness",
+      };
+      const migrated: Record<string, unknown> = {};
+      for (const k of legacyGroundKeys) {
+        if (k in gs) migrated[map[k]] = gs[k];
+      }
+      state = migrated;
+    }
     restoreFields(state, {
       enabled: {
         boolean: (v) => {

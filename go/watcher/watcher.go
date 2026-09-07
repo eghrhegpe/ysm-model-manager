@@ -34,6 +34,7 @@ type Watcher struct {
 	mu           sync.Mutex
 	debounce     *time.Timer
 	done         chan struct{}
+	ready        chan struct{} // Start 完成 WalkDir + go loop 后关闭
 	running      bool
 	syncRunning  bool           // 同步执行中标志（防并发重入）
 	syncPending  bool           // 执行期间积累的新事件，完成后需再跑一轮
@@ -53,6 +54,7 @@ func New(filesRoot, mcRoot string, scanFn ScanFunc, clearCacheFn ...func()) *Wat
 		scanFn:       scanFn,
 		clearCacheFn: ccf,
 		done:         make(chan struct{}),
+		ready:        make(chan struct{}),
 		loopDone:     make(chan struct{}),
 	}
 }
@@ -70,8 +72,9 @@ func (w *Watcher) Start() error {
 		return err
 	}
 	w.w = fw
-	// 每次 Start 重建 done 与 loopDone：支持 Stop 后再 Start（已关闭的 channel 不可复用）
+	// 每次 Start 重建 done/ready/loopDone：支持 Stop 后再 Start（已关闭的 channel 不可复用）
 	w.done = make(chan struct{})
+	w.ready = make(chan struct{})
 	w.loopDone = make(chan struct{})
 	w.running = true
 
@@ -101,6 +104,7 @@ func (w *Watcher) Start() error {
 	// 事件可能不完整），仓库根变更可能漏报；Android 上以手动刷新/重扫为准，不做轮询兜底。
 
 	go w.loop()
+	close(w.ready) // WalkDir + loop 已就绪，WaitReady 可返回
 	log.Printf("[watcher] 已启动: %s", w.filesRoot)
 	return nil
 }
@@ -162,6 +166,11 @@ func (w *Watcher) IsRunning() bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.running
+}
+
+// WaitReady 阻塞直到 Start 完成 WalkDir + 启动 loop，测试可用于替代 time.Sleep
+func (w *Watcher) WaitReady() {
+	<-w.ready
 }
 
 func (w *Watcher) loop() {

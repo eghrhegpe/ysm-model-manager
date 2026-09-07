@@ -30,21 +30,26 @@ func setupMinecraftRoot(t *testing.T) string {
 }
 
 func TestNew(t *testing.T) {
-	w := New("/tmp/repo", "/tmp/mc", mockScanFunc)
+	repoDir := t.TempDir()
+	mcDir := filepath.Join(repoDir, "mc")
+	w := New(repoDir, mcDir, mockScanFunc)
 	if w == nil {
 		t.Fatal("New() = nil")
 	}
-	if w.filesRoot != "/tmp/repo" {
+	if w.filesRoot != repoDir {
 		t.Errorf("filesRoot = %q", w.filesRoot)
 	}
-	if w.mcRoot != "/tmp/mc" {
+	if w.mcRoot != mcDir {
 		t.Errorf("mcRoot = %q", w.mcRoot)
 	}
 }
 
 func TestStartStop(t *testing.T) {
 	repoDir := t.TempDir()
-	mcDir := setupMinecraftRoot(t)
+	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
+	if err := os.MkdirAll(mcDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
 	if err := w.Start(); err != nil {
@@ -61,7 +66,10 @@ func TestStartStop(t *testing.T) {
 
 func TestStartTwice(t *testing.T) {
 	repoDir := t.TempDir()
-	mcDir := setupMinecraftRoot(t)
+	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
+	if err := os.MkdirAll(filepath.Join(mcDir, "..", "..", ".."), 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
 	if err := w.Start(); err != nil {
@@ -74,12 +82,18 @@ func TestStartTwice(t *testing.T) {
 }
 
 func TestStopWithoutStart(t *testing.T) {
-	w := New("/tmp/repo", "/tmp/mc", mockScanFunc)
+	repoDir := t.TempDir()
+	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
+	if err := os.MkdirAll(mcDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	w := New(repoDir, mcDir, mockScanFunc)
 	w.Stop()
 }
 
 func TestIsRunning(t *testing.T) {
-	w := New("/tmp/repo", "/tmp/mc", mockScanFunc)
+	w := New(t.TempDir(), t.TempDir(), mockScanFunc)
 	if w.IsRunning() {
 		t.Fatal("IsRunning() = true before Start")
 	}
@@ -88,12 +102,12 @@ func TestIsRunning(t *testing.T) {
 func TestStartInvalidPath(t *testing.T) {
 	// 生产语义：Start 对不存在的 repoRoot 不报错（WalkDir 失败仅 log 后返回 nil），
 	// 验证「无效路径不崩溃、watcher 正常进入运行态」（原测试 if err==nil 恒过是空断言）
-	w := New("/nonexistent/path", "/tmp/mc", mockScanFunc)
+	w := New("/nonexistent/path", "", mockScanFunc)
 	if err := w.Start(); err != nil {
-		t.Fatalf("Start(/nonexistent/path) 应容忍无效路径: %v", err)
+		t.Fatalf("Start(/nonexistent/path) should tolerate invalid path: %v", err)
 	}
 	if !w.IsRunning() {
-		t.Fatal("Start 后 IsRunning() = false，watcher 未进入运行态")
+		t.Fatal("IsRunning() = false after Start, watcher not in running state")
 	}
 	w.Stop()
 }
@@ -113,9 +127,7 @@ func TestFileEventTriggersSync(t *testing.T) {
 		t.Fatalf("Start() = %v", err)
 	}
 	defer w.Stop()
-
-	// 等 watcher 完成目录注册
-	time.Sleep(500 * time.Millisecond)
+	w.WaitReady()
 
 	// 创建文件 → 触发 Create 事件 → 触发射频同步
 	testFile := filepath.Join(repoDir, "test.ysm")
@@ -147,8 +159,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 		t.Fatalf("Start() = %v", err)
 	}
 	defer w.Stop()
-
-	time.Sleep(500 * time.Millisecond)
+	w.WaitReady()
 
 	newFile := filepath.Join(repoDir, "renamed.ysm")
 	if err := os.Rename(existingFile, newFile); err != nil {
@@ -173,8 +184,7 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 		t.Fatalf("Start() = %v", err)
 	}
 	defer w.Stop()
-
-	time.Sleep(500 * time.Millisecond)
+	w.WaitReady()
 
 	// 快速连续创建文件
 	for i := 0; i < 5; i++ {
@@ -194,7 +204,7 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 	// 原 `if n > 3 { t.Logf(...) }`——n<=3 静默通过、n>3 只打日志，
 	// **永远不会失败**（防抖合并效果完全未验证）；改硬断言：5 次快速创建应合并到 <5 次
 	if n >= 5 {
-		t.Errorf("防抖合并失效：%d 次文件创建 → %d 次同步调用（期望合并 < 5）", 5, n)
+		t.Errorf("debounce merge failed: %d file creates -> %d sync calls (expected < 5)", 5, n)
 	}
 }
 
@@ -218,8 +228,7 @@ func TestStartStopRestart(t *testing.T) {
 		t.Fatalf("Start() #2 = %v", err)
 	}
 	defer w.Stop()
-
-	time.Sleep(500 * time.Millisecond)
+	w.WaitReady()
 	testFile := filepath.Join(repoDir, "restart.ysm")
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		t.Fatal(err)
@@ -281,7 +290,7 @@ func TestSyncAllSerialized(t *testing.T) {
 	wg.Wait()
 
 	if n := maxConcurrent.Load(); n > 1 {
-		t.Fatalf("syncAll 最大并发 = %d, 期望串行执行", n)
+		t.Fatalf("syncAll max concurrency = %d, expected serial execution", n)
 	}
 }
 
@@ -302,7 +311,7 @@ func TestCreateSubdirTriggersSync(t *testing.T) {
 		t.Fatalf("Start() = %v", err)
 	}
 	defer w.Stop()
-	time.Sleep(500 * time.Millisecond)
+	w.WaitReady()
 
 	// 级联创建两层新目录（mkdir -p 场景：事件到达时目录树已就位，须递归补监听）
 	sub := filepath.Join(repoDir, "nested")
@@ -349,6 +358,6 @@ func TestStopWaitsForSync(t *testing.T) {
 	start := time.Now()
 	w.Stop()
 	if elapsed := time.Since(start); elapsed < 200*time.Millisecond {
-		t.Fatalf("Stop 未等待 in-flight 同步完成（耗时 %v）", elapsed)
+		t.Fatalf("Stop did not wait for in-flight sync (elapsed %v)", elapsed)
 	}
 }

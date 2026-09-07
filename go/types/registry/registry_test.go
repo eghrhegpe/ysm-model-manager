@@ -40,22 +40,23 @@ func TestAllExts(t *testing.T) {
 }
 
 func TestIsSupportedExt(t *testing.T) {
-	// 支持的扩展名
-	if !IsSupportedExt(".ysm") {
-		t.Error("IsSupportedExt('.ysm') = false, 期望 true")
+	tests := []struct {
+		name string
+		ext  string
+		want bool
+	}{
+		{name: ".ysm", ext: ".ysm", want: true},
+		{name: ".YSM case-insensitive", ext: ".YSM", want: true},
+		{name: ".zip", ext: ".zip", want: true},
+		{name: ".xyz unsupported", ext: ".xyz", want: false},
+		{name: ".txt unsupported", ext: ".txt", want: false},
 	}
-	if !IsSupportedExt(".YSM") {
-		t.Error("IsSupportedExt('.YSM') = false, 期望 true（大小写不敏感）")
-	}
-	if !IsSupportedExt(".zip") {
-		t.Error("IsSupportedExt('.zip') = false, 期望 true")
-	}
-	// 不支持的扩展名
-	if IsSupportedExt(".xyz") {
-		t.Error("IsSupportedExt('.xyz') = true, 期望 false")
-	}
-	if IsSupportedExt(".txt") {
-		t.Error("IsSupportedExt('.txt') = true, 期望 false")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsSupportedExt(tt.ext); got != tt.want {
+				t.Errorf("IsSupportedExt(%q) = %v, want %v", tt.ext, got, tt.want)
+			}
+		})
 	}
 }
 

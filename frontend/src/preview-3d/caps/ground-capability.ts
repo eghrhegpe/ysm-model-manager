@@ -419,20 +419,41 @@ export class GroundCapability implements SceneCapability {
     // 网格尺寸/线色/材质源设置静默回默认。判据用 groundSize（saveState 恒写前缀
     // 代表键）缺失 + 任一旧键存在；只映射实际存在的旧键。
     const legacyGroundKeys = [
-      "visible", "size", "divisions", "colorCenter", "colorGrid",
-      "matSource", "matColor", "matLineColor", "matColor2", "matGridSize",
-      "matOpacity", "matScale", "matDensity", "matAngleDeg", "matRoughness", "matMetalness",
+      "visible",
+      "size",
+      "divisions",
+      "colorCenter",
+      "colorGrid",
+      "matSource",
+      "matColor",
+      "matLineColor",
+      "matColor2",
+      "matGridSize",
+      "matOpacity",
+      "matScale",
+      "matDensity",
+      "matAngleDeg",
+      "matRoughness",
+      "matMetalness",
     ] as const;
     const gs = state as Record<string, unknown>; // 非空副本（重赋值丢失收窄）
     if (!("groundSize" in gs) && legacyGroundKeys.some((k) => k in gs)) {
       const map: Record<string, string> = {
-        visible: "groundVisible", size: "groundSize", divisions: "groundDivisions",
-        colorCenter: "groundColorCenter", colorGrid: "groundColorGrid",
-        matSource: "groundMatSource", matColor: "groundMatColor",
-        matLineColor: "groundMatLineColor", matColor2: "groundMatColor2",
-        matGridSize: "groundMatGridSize", matOpacity: "groundMatOpacity",
-        matScale: "groundMatScale", matDensity: "groundMatDensity",
-        matAngleDeg: "groundMatAngleDeg", matRoughness: "groundMatRoughness",
+        visible: "groundVisible",
+        size: "groundSize",
+        divisions: "groundDivisions",
+        colorCenter: "groundColorCenter",
+        colorGrid: "groundColorGrid",
+        matSource: "groundMatSource",
+        matColor: "groundMatColor",
+        matLineColor: "groundMatLineColor",
+        matColor2: "groundMatColor2",
+        matGridSize: "groundMatGridSize",
+        matOpacity: "groundMatOpacity",
+        matScale: "groundMatScale",
+        matDensity: "groundMatDensity",
+        matAngleDeg: "groundMatAngleDeg",
+        matRoughness: "groundMatRoughness",
         matMetalness: "groundMatMetalness",
       };
       const migrated: Record<string, unknown> = {};
@@ -490,7 +511,10 @@ export class GroundCapability implements SceneCapability {
     if (this.surface.parent) this.surface.parent.remove(this.surface);
     this.grid.geometry.dispose();
     const mat = this.grid.material;
-    if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+    if (Array.isArray(mat))
+      mat.forEach((m) => {
+        m.dispose();
+      });
     else mat.dispose();
     this.surface.geometry.dispose();
     if (this.surfaceMat) {

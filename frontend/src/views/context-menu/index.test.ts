@@ -3,7 +3,7 @@
 // 点击 item → 断言 onClick 执行 + hide()。
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { bus } from "@/bus";
-import type { MenuItem } from "../../bus";
+import type { MenuItem } from "@/bus";
 import "./index.ts"; // 触发 customElements.define
 
 /** 挂载 <context-menu> 到 document（connectedCallback → render） */

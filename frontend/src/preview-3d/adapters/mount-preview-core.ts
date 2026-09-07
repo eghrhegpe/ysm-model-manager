@@ -20,29 +20,35 @@
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { bus } from "../../bus.ts";
-import { t } from "../../core/i18n/t.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
-  installUiComponentsStyles,
-  uiComponentsStyleSheet,
-} from "../../ui/ui-components-styles.ts";
-import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
-import { slideMenuStyleSheet } from "../../ui/ui-slide-menu-styles.ts";
-import { logError, logWarn } from "../../utils/base/log.ts";
-import { rememberTrigger, trapFocusAcrossShadow } from "../../utils/dom/focus-restore.ts";
-import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { TdKeyAction } from "../keymap.ts";
-import { mountPreviewRootMenu, type PreviewMenuCtx, type PreviewMenuHandle } from "../menu/core.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { type BoneMaps, type BoneSelectInfo, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
+  mountPreviewRootMenu,
+  type PreviewMenuCtx,
+  type PreviewMenuHandle,
+} from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import {
+  type BoneMaps,
+  type BoneSelectInfo,
+  loadTdCamSpeed,
+  loadTdRotMode,
+} from "@/preview-3d/model3d.ts";
 import {
   onOverlayStyleTargetReset,
   overlayStyleRoot,
   setOverlayStyleTarget,
-} from "../overlay-style-bridge.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import type { SemanticBoneMap } from "../semantic-bones.ts";
+} from "@/preview-3d/overlay-style-bridge.ts";
+import { safeDispose } from "@/preview-3d/safe-dispose.ts";
+import type { SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
+import { installUiComponentsStyles, uiComponentsStyleSheet } from "@/ui/ui-components-styles.ts";
+import { PREVIEW_OVERLAY_ID } from "@/ui/ui-constants.ts";
+import { slideMenuStyleSheet } from "@/ui/ui-slide-menu-styles.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
+import { rememberTrigger, trapFocusAcrossShadow } from "@/utils/dom/focus-restore.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { InputOptions } from "./input-and-animation.ts";
 import { bindInputHandlers } from "./input-and-animation.ts";

@@ -6,17 +6,17 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
-import { tr } from "../../core/i18n/tr.ts";
-import { createHeaderToggle } from "../../ui/ui-header-toggle.ts";
-import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
-import { getSchema } from "../adapters/schema-registry.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
+import { tr } from "@/core/i18n/tr.ts";
+import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import {
   isPathAvailable,
   type KNOWN_PATHS,
   previewSnapshot,
   setStateValue,
-} from "../state/preview-state.ts";
+} from "@/preview-3d/state/preview-state.ts";
+import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import {
   type CapControlView,
   renderCapColor,

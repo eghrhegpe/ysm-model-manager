@@ -7,10 +7,10 @@ import {
   nodeControlToView,
 } from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import { previewSnapshot, setStateValue } from "../state/preview-state.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
-import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
-import { mockMenuHandle } from "../adapters/menu-test-fixtures.ts";
+import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
+import { mockMenuHandle } from "@/preview-3d/adapters/menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;

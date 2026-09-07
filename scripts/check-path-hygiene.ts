@@ -11,7 +11,7 @@
  * 规则：
  *   R1 聚合桶嫌疑   单文件 re-export 来源模块数 ≥ 3 → WARN（观察期；白名单 types-re-export.ts）
  *   R2 目录深度     相对 src/ 的目录层级 > 3 → WARN（观察期）
- *   R3 import 上跳  相对路径 `../` 上跳 > 3 且目标仍在 src 内（真·内部深 wander）→ WARN（观察期）
+ *   R3 in-src 上跳  任何相对 `../` 上跳且目标仍在 src 内 → FAIL（2026-09-07 锁定，相对深度已归零；跳过 git dirty 并发 WIP）
  *   R4 跨仓根冻结   越过 frontend/src 边界且非 bindings 的引用条数 > 冻结基线 → FAIL
  *   R5 同目录别名   import 用别名指向本文件同一目录（应写 ./）→ WARN（观察期；ADR-146 反桶补强）
  *   R6 测试神桶     测试文件 import 一个 index 桶入口（裸 @/dir，或以 /index 结尾），会拉起整模块 → WARN（观察期）
@@ -39,6 +39,7 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { walk, toPosix } from './_lib/scan-files.ts';
 import { classifyImport, classifyBarrelHygiene } from './_lib/alias-resolve.ts';
@@ -57,7 +58,21 @@ const UPDATE_FLAG = process.argv.includes('--update');
 const R1_BARREL_WHITELIST = new Set(['utils/types-re-export.ts']); // 来源数=1 的 bindings 转发垫层（relPosix 相对 SRC_ROOT，无 src/ 前缀）
 const R1_BARREL_THRESHOLD = 3; // re-export 来源模块数 ≥ 3 → 嫌疑
 const R2_DEPTH_MAX = 3; // 目录层级 > 3 → WARN
-const R3_UPLEVEL_MAX = 3; // `../` 上跳 > 3 且仍在 src 内 → WARN
+const R3_UPLEVEL_MIN = 1; // 任何 in-src 相对上跳（../）即 FAIL——相对深度已全仓归零（2026-09-07 锁定回归）
+const R3_DIRTY_SKIP = loadGitDirtySrcAbs(); // 并行未提交 WIP 跳过 R3（不破坏并发；入库后自会被 R3 拦）
+
+/** git 未提交的 frontend/src 绝对路径集（并行会话 WIP；R3 新严则不误伤并发，导入定位回到已合入/clean 文件）。 */
+function loadGitDirtySrcAbs(): Set<string> {
+  const s = new Set<string>();
+  try {
+    const raw = execFileSync('git', ['-C', REPO_ROOT, 'status', '--porcelain', '--', 'frontend/src'], { encoding: 'utf8' });
+    for (const line of raw.split(/\r?\n/)) {
+      const p = line.slice(3).trim();
+      if (p) s.add(resolve(REPO_ROOT, p));
+    }
+  } catch { /* git 不可用：静默为空（不跳过，宁严勿漏） */ }
+  return s;
+}
 
 // 解析前剥离注释，避免注释/反引号字符串里的 `from '...'` 被误判为真实 import
 // （例：types-re-export.ts 文档注释含消费方示例，曾致 R4/R0 误报）。保留 `://` 协议头。
@@ -132,10 +147,11 @@ for (const { abs, rel } of files) {
       warns.push({ rule: 'R6', file: relPosix, detail: `测试 import 桶入口，会拉起整个模块，改引具体文件` });
     }
     if (c.isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
-    // R3：真·内部深 wander（字面相对上跳 > 3 且目标仍在 src 内）——别名不触
-    if (!c.isAlias && c.upLevels > R3_UPLEVEL_MAX && !c.escapesSrc) {
+    // R3：任何 in-src 相对上跳（../）即 FAIL ——相对深度已全仓归零，任何再引入即违规。
+    // 并行未提交 WIP（R3_DIRTY_SKIP）跳过：锁定的是「已合入/clean 代码」不回归，不误伤并发半成品。
+    if (!c.isAlias && c.upLevels >= R3_UPLEVEL_MIN && !c.escapesSrc && !R3_DIRTY_SKIP.has(abs)) {
       r3Hits.push(`${relPosix} ← ${spec}`);
-      warns.push({ rule: 'R3', file: relPosix, detail: `上跳 ${c.upLevels} 级且目标仍在 src 内` });
+      fails.push({ rule: 'R3', file: relPosix, detail: `in-src 相对上跳，应写 @/ 或 ./（仅精确同目录）` });
     }
     // R4：越界（展开后落 src 外，含 #root 别名逃逸）或 == frontend/e2e/mock-data.ts（真实位置，ADR 内定入基线）
     // ADR-174 D5 豁免：parity 对账测试消费黄金语料（tests/fixtures/parity/）——双端单一事实源
@@ -243,7 +259,7 @@ if (JSON_FLAG) {
 } else {
   process.stdout.write(`check-path-hygiene: ${ok ? 'PASS' : 'FAIL'} (fail=${failCount} warn=${warnCount})\n`);
   if (r1Hits.length) process.stdout.write(`  R1 聚合桶嫌疑: ${r1Hits.join('; ')}\n`);
-  if (r3Hits.length) process.stdout.write(`  R3 内部深 wander: ${r3Hits.slice(0, 5).join('; ')}\n`);
+  if (r3Hits.length) process.stdout.write(`  R3 in-src 相对上跳（FAIL）: ${r3Hits.slice(0, 5).join('; ')}\n`);
   if (r5Hits.length) process.stdout.write(`  R5 同目录别名: ${r5Hits.slice(0, 5).join('; ')}\n`);
   if (r6Hits.length) process.stdout.write(`  R6 测试神桶: ${r6Hits.slice(0, 5).join('; ')}\n`);
   process.stdout.write(`  R4 跨边界冻结: ${r4Count}/${baseline} ${r4Ok ? 'OK' : 'EXCEED'}\n`);

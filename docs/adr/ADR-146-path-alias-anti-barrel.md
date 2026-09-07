@@ -91,7 +91,7 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 | ~~R0 别名闸~~ | ~~（已随闸二删除，2026-09-01）~~ | — | — |
 | **R1 聚合桶嫌疑** | 单文件 re-export **来源模块数 ≥ 3** | WARN（观察期） | `src/utils/types-re-export.ts`（转发垫层，来源数=1，天然不触发） |
 | **R2 目录深度** | 相对 `src/` 深度 ≤ 3 | WARN（观察期） | 无 |
-| **R3 import 上跳** | ≤ 3 级 | WARN（观察期） | 跨仓根资源允许 4 级（`resource_types.json` / `creators.json` / `workshop*.json` / `bindings/**` / `e2e/mock-data.ts`） |
+| **R3 in-src 上跳** | 任何相对 `../` 且目标仍在 src 内 | **FAIL**（2026-09-07 锁定回归；相对深度已全仓归零，跳过 git dirty 并发 WIP） | 越 `src` 界由 R4 管 |
 | **R4 跨仓根冻结** | 越过 `frontend/src` 边界且非 bindings 的引用条数 ≤ 冻结基线 | **FAIL** | 基线清单（脚本首跑冻结，当前非 bindings 部分 14 条） |
 | **R5 同目录别名** | import 用别名指向本文件同一目录（应写 `./`） | WARN（2026-09-07 加入，观察期） | 无 |
 | **R6 测试神桶** | 测试文件 import 一个 index 桶入口（裸 `@/dir` 指向目录、或以 `/index` 结尾），会拉起整模块 → 改引具体叶 | WARN（2026-09-07 加入，观察期） | 文件级别名（`@/bus`/`@/theme-core`）指向具体叶，不触发 |

@@ -6,7 +6,7 @@
 //     消费方 import 本模块（副作用：vi.mock 注册）后解构访问器使用。
 //   - bus 订阅 / registerContextMenus 生命周期留在各消费测试文件（钩子不能在此模块注册）。
 import { expect, vi } from "vitest";
-import type { CtxShowPayload, MenuItem } from "../../bus";
+import type { CtxShowPayload, MenuItem } from "@/bus";
 import { bus } from "@/bus";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { getMenuDef } from "./menu-defs.ts";

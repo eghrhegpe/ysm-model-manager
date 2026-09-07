@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } 
 // backend/app.ts）之前注册，否则 mock 晚于真实解析而失效（vitest 不 hoist 非测试文件）。
 import "./context-menus.setup.ts";
 import { bus } from "@/bus";
-import type { MenuItem, CtxShowPayload, ToastPayload } from "../../bus";
+import type { MenuItem, CtxShowPayload, ToastPayload } from "@/bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, type MenuAction } from "./menu-defs.ts";
 import { HANDLERS } from "./context-menu-handlers.ts";

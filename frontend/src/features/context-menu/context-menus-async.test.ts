@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vites
 // backend/app.ts）之前注册，否则 mock 晚于真实解析而失效（vitest 不 hoist 非测试文件）。
 import "./context-menus.setup.ts";
 import { bus } from "@/bus";
-import type { CtxShowPayload, ToastPayload } from "../../bus";
+import type { CtxShowPayload, ToastPayload } from "@/bus";
 import { registerContextMenus } from "./context-menus.ts";
 import {
   getMocks,

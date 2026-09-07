@@ -131,7 +131,7 @@ use_when:
   - 场景能力 / cap / registry / SceneCapability
   - 3D 菜单控件声明式渲染（getMenuControls）
   - 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）
-  - 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）
+  - 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）
   - 「光」指代消歧（light 是光源，fog/shadow/reflector 不是）
 perf:
   - gpu-bound

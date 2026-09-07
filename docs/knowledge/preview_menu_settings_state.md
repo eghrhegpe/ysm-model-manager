@@ -128,7 +128,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - `applyPerfPreset(level)`：遍历表走 `setStateValue`（cap 缺席的派生路径静默跳过）；**custom 不套用**（保持用户手调，零副作用）。
 - `setPerfPreset(level)`：持久化（键 `ysm_3d_perfPreset`）+ 套用；`getPerfPreset()` 无存档回 `medium`。
 - 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点），切档套用后 `menu?.refresh()` 刷新兄弟控件显示。
-- 进入预览时 `mount-preview-core` 在 `loadAll → setPreset(模型类别)` **之后**调 `applyPerfPreset(getPerfPreset())`——用户显式档位最后覆盖模型预设。
+- 进入预览时 `mount-preview-core` 在 `loadAll → applyModelPreset(模型类别)` **之后**调 `applyPerfPreset(getPerfPreset())`——用户显式档位最后覆盖模型预设。
 
 ## 对外 API / 入口
 

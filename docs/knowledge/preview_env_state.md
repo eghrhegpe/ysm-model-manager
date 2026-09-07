@@ -112,7 +112,7 @@ invariant_anchors:
 - 能力级 enabled 不入 schema；运行时态（customHdrTex/currentPreset/manualPreset/volumetricEngine）留 cap 私有。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。
-- MODEL_DEFAULTS 缺口（已知）：cap 参数全部入 envState，但 postprocessing 的 `setPreset` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删（刀5 遗漏，随 PARK 决策按下，风险封存不复现）。
+- MODEL_DEFAULTS 缺口（已知）：cap 参数全部入 envState，但 postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删（刀5 遗漏，本次按专属数据源保留，风险封存不复现）。
 
 ## 相关
 

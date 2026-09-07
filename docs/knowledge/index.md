@@ -242,7 +242,7 @@
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
 | 🏗 preview_env_state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
-| 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
+| 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 
 ### 摘要
 

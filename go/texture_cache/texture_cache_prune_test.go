@@ -1,6 +1,7 @@
 package texture_cache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -269,5 +270,52 @@ func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
 	// Remaining 只计 .ktx2（100B），不含 tmp
 	if res.Remaining != 100 {
 		t.Fatalf("剩余应只计 ktx2=100B，got %d", res.Remaining)
+	}
+}
+
+// code_review 9e1a74a28 #4/#5（P3）：SetShutdownCtx/异步淘汰中止分支零测试——补取消
+// ctx 跳过淘汰 + live ctx 正常淘汰两用例；SetShutdownCtx(nil) cleanup 复位全局
+// （nil 真清除语义）防跨测试泄漏。interval>0 走后台 goroutine，轮询 pruneInFlight
+// 复位作为 goroutine 结束标志。
+func TestWriteCached_ShutdownCtx_Cancelled_SkipsPrune(t *testing.T) {
+	dir := setCacheDir(t)
+	setLimits(t, 100, 0, time.Hour)           // interval>0 → 异步分支；容量 100 制造应淘汰场景
+	lastPrune = time.Time{}                   // 清限频状态：interval=0 的前序测试会更新包级 lastPrune，
+	t.Cleanup(func() { SetShutdownCtx(nil) }) // 不清则「距上次 < 间隔」跳过 → 不 fork goroutine
+	// 预置超限旧文件（200B > 上限 100，正常容量淘汰会删它）
+	writeCacheFile(t, dir, "old.ktx2", make([]byte, 200), time.Now().Add(-time.Hour))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // 已取消：分叉的淘汰应立即放弃
+	SetShutdownCtx(ctx)
+	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for pruneInFlight.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); err != nil {
+		t.Fatalf("取消 ctx 后后台淘汰应放弃——旧文件不应被删: %v", err)
+	}
+}
+
+func TestWriteCached_ShutdownCtx_Live_Prunes(t *testing.T) {
+	dir := setCacheDir(t)
+	setLimits(t, 100, 0, time.Hour)
+	lastPrune = time.Time{} // 同上：清限频状态防前序测试污染跳过
+	t.Cleanup(func() { SetShutdownCtx(nil) })
+	writeCacheFile(t, dir, "old.ktx2", make([]byte, 200), time.Now().Add(-time.Hour))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	SetShutdownCtx(ctx) // live ctx：淘汰正常执行
+	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for pruneInFlight.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); err == nil {
+		t.Fatal("live ctx 下后台淘汰应执行——超限旧文件应被删")
 	}
 }

@@ -97,7 +97,8 @@ func NewApp() *App {
 		logger:      logs.NewLogger(configDir()),
 		runtimeLogs: logs.NewRuntimeBuffer(logs.DefaultRuntimeCap),
 	}
-	// 写后淘汰后台 goroutine 接应用生命周期：退出即放弃在途淘汰（风险表🟡#3）
+	// 写后淘汰后台 goroutine 接应用生命周期：退出即放弃尚未开始的轮次
+	// （best-effort——已进入 pruneDir 的扫描删除不可打断，见 texture_cache 注释）
 	texture_cache.SetShutdownCtx(appCtx)
 
 	// 头像缓存收敛到平台数据根（与 logs/tags 同根，ADR-046 P2）：

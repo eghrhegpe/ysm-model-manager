@@ -282,13 +282,22 @@ func SetCacheLimits(maxBytes int64, maxAge, interval time.Duration) {
 }
 
 // pruneShutdownCh 应用生命周期退出信号（由 App 在 NewApp 注入 appCtx.Done()）。
-// 写后淘汰的后台 goroutine 启动前select它：应用退出即放弃本轮淘汰，避免关停期
-// 仍对真实缓存目录做 pruneDir 扫描/删除（测试 restore 全局后的竞态与真实污染风险）。
+// 写后淘汰的后台 goroutine 启动前 select 它：应用退出即放弃**尚未开始**的本轮淘汰
+// （code_review 9e1a74a28 #7：select 只覆盖「pruneDir 开始前」窗口——已进入 pruneDir
+// 的 O(n) 扫描删除无法被打断；此为 best-effort 关停协作而非硬性取消）。消费关闭
+// 信号后复位 nil（只跳与关停竞速的这一轮，进程内后续写仍正常淘汰）。
 // nil 时（CLI/测试未注入）退化为原行为——始终执行淘汰。
 var pruneShutdownCh <-chan struct{}
 
-// SetShutdownCtx 注入应用生命周期 context；传 nil 视为不清（保持默认执行）。
+// SetShutdownCtx 注入应用生命周期 context；传 nil 真清除（恢复默认——始终执行淘汰）。
 func SetShutdownCtx(ctx context.Context) {
+	pruneMu.Lock()
+	defer pruneMu.Unlock()
+	// code_review 9e1a74a28 #1/#2/#3/#6（P2）：pruneMu 同步写——原直接写包级变量与
+	// maybePrune 后台 goroutine 的无锁读构成数据竞态（-race 抖动 + 可能读到别的 App
+	// 代际 channel，关停保证丢失）；#8（P2）：nil 真清除——原 `if ctx != nil` 使 nil
+	// 纯 no-op，App 关闭后全局永不复位 → 进程内后续写静默永久失去后台淘汰
+	pruneShutdownCh = nil
 	if ctx != nil {
 		pruneShutdownCh = ctx.Done()
 	}
@@ -432,12 +441,24 @@ func maybePrune() {
 	// 若运行时动态读 CacheDir()，测试 restore 全局后会把真实用户缓存目录当靶子
 	// 扫描/淘汰（TestSaveCachedTexture TempDir 清理竞态 + 真实缓存污染双重风险）。
 	dir := CacheDir()
+	// code_review 9e1a74a28 #1/#2/#3/#6（P2）：分叉前在 pruneMu 下快照 shutdown
+	// channel——goroutine 内直接读包级全局与 SetShutdownCtx 的无锁写构成竞态
+	// （-race 抖动 + 读到别的 App 代际 channel）；局部快照使 goroutine 读稳定副本
+	pruneMu.Lock()
+	shutdownCh := pruneShutdownCh
+	pruneMu.Unlock()
 	go func() {
 		defer pruneInFlight.Store(false)
 		// 应用退出：放弃本轮后台淘汰（详见 pruneShutdownCh）
-		if pruneShutdownCh != nil {
+		if shutdownCh != nil {
 			select {
-			case <-pruneShutdownCh:
+			case <-shutdownCh:
+				// code_review 9e1a74a28 #8（P2）：消费关闭信号后复位全局——关闭的
+				// channel 只应跳过与关停竞速的这一轮，否则进程内后续写（CLI/重开）
+				// 静默永久失去后台淘汰（1 GiB 上限形同虚设）
+				pruneMu.Lock()
+				pruneShutdownCh = nil
+				pruneMu.Unlock()
 				return
 			default:
 			}

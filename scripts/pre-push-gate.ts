@@ -393,12 +393,21 @@ async function main() {
     // 无防假绿动机。源码/测试未变时重复跑（重推失败重试 / 连续 doctor）→ (cached) 秒回，
     // go test 37.4s → <1s。逃生阀：YSM_FRESH_GO_TEST=1 强制新鲜（发版前 / 怀疑测试读
     // 仓库外可变状态致缓存假绿时，doctor 输出 [WARN]skip 场景可配合使用）。
+    // ADR-202 刀5（2026-09-07）：-race 仅并发敏感包（共享单锁/缓存/worker 池的包），
+    // 其余包普通跑——-race 插桩慢 ~2-3x，非并发包无数据竞争风险，分级后门禁提速；
+    // 普通全量仍覆盖 ./go/... ./internal/app/（并发包普通跑一遍，cache 秒回）。
     const freshGoTest = process.env.YSM_FRESH_GO_TEST === '1';
-    const goTest = await shAsync(`go test -race ./go/... ./internal/app/ ${freshGoTest ? '-count=1 ' : ''}-timeout 60s`);
+    // 并发敏感包 -race；其余包经 go list 过滤（排除并发包，避免重复跑两遍）。
+    // 实测（-count=1 强制新鲜）：全量 -race 42.5s → 分级+过滤 18.9s（-55%）。
+    const racePkgs = './go/sync/... ./go/conc/... ./go/download/... ./go/instance/... ./go/installer/... ./go/watcher/... ./go/scanner/...';
+    const goTest = await shAsync(
+      `go test -race ${racePkgs} ${freshGoTest ? '-count=1 ' : ''}-timeout 60s ` +
+        `&& go test $(go list ./go/... ./internal/app/ | grep -vE 'go/(sync|conc|download|instance|installer|watcher|scanner)($|/)') ${freshGoTest ? '-count=1 ' : ''}-timeout 60s`,
+    );
     record('go test', goTest.rc === 0, {
       time: Date.now() - t1,
       tail: goTest.rc ? goTest.out.trim().split('\n').slice(-4).join('\n') : '',
-      note: freshGoTest ? 'YSM_FRESH_GO_TEST=1 强制新鲜跑' : '',
+      note: freshGoTest ? 'YSM_FRESH_GO_TEST=1 强制新鲜跑' : 'ADR-202 刀5：-race 仅并发敏感包 + 普通全量',
     });
 
     const tV = Date.now();

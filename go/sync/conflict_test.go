@@ -40,6 +40,7 @@ func writeFile(t *testing.T, dir, name, content string, modTime time.Time) {
 }
 
 func TestDetectConflicts_NoConflicts(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -58,6 +59,7 @@ func TestDetectConflicts_NoConflicts(t *testing.T) {
 }
 
 func TestDetectConflicts_ContentConflict(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -85,6 +87,7 @@ func TestDetectConflicts_ContentConflict(t *testing.T) {
 }
 
 func TestDetectConflicts_SameContent_NoConflict(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -102,6 +105,7 @@ func TestDetectConflicts_SameContent_NoConflict(t *testing.T) {
 }
 
 func TestDetectConflicts_MultipleConflicts(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -121,6 +125,7 @@ func TestDetectConflicts_MultipleConflicts(t *testing.T) {
 }
 
 func TestDetectConflicts_EmptyDirs(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -134,6 +139,7 @@ func TestDetectConflicts_EmptyDirs(t *testing.T) {
 }
 
 func TestDetectConflicts_NonExistentDir(t *testing.T) {
+	t.Parallel()
 	_, _, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -145,6 +151,7 @@ func TestDetectConflicts_NonExistentDir(t *testing.T) {
 }
 
 func TestResolveConflict_ForceRemote(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -181,6 +188,7 @@ func TestResolveConflict_ForceRemote(t *testing.T) {
 // ADR-044 收敛后由 fsutil.CopyFile 的原子 tmp+rename 统一保证——即使中途
 // 失败也不会出现"半截目标"，回滚路径同样走原子拷贝。
 func TestResolveConflict_ForceRemote_CopyFail_LocalIntact(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -213,6 +221,7 @@ func TestResolveConflict_ForceRemote_CopyFail_LocalIntact(t *testing.T) {
 }
 
 func TestResolveConflict_ForceLocal(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -240,6 +249,7 @@ func TestResolveConflict_ForceLocal(t *testing.T) {
 }
 
 func TestResolveConflict_Manual(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -255,6 +265,7 @@ func TestResolveConflict_Manual(t *testing.T) {
 }
 
 func TestResolveConflict_UnknownStrategy(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -266,6 +277,7 @@ func TestResolveConflict_UnknownStrategy(t *testing.T) {
 }
 
 func TestResolveConflicts_Batch(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -289,6 +301,7 @@ func TestResolveConflicts_Batch(t *testing.T) {
 }
 
 func TestResolveConflicts_DefaultStrategyForManual(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -309,6 +322,7 @@ func TestResolveConflicts_DefaultStrategyForManual(t *testing.T) {
 }
 
 func TestSuggestStrategy(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	past := now.Add(-1 * time.Hour)
 	future := now.Add(1 * time.Hour)
@@ -332,6 +346,7 @@ func TestSuggestStrategy(t *testing.T) {
 }
 
 func TestCollectFileEntries(t *testing.T) {
+	t.Parallel()
 	dir, err := os.MkdirTemp("", "collect-test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -369,6 +384,7 @@ func TestCollectFileEntries(t *testing.T) {
 // TestSHA256File 验证 fsutil.SHA256File（conflict 曾私有 computeFileHash 薄封装，
 // 收编直连后本测试改测底层原语：确定性 + 内容区分）
 func TestSHA256File(t *testing.T) {
+	t.Parallel()
 	dir, err := os.MkdirTemp("", "hash-test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -411,6 +427,7 @@ func TestSHA256File(t *testing.T) {
 // conflict.Path 含 ".." 逃逸 localDir/remoteDir 时，必须在任何文件操作（备份/拷贝）
 // 前被 RelInside 拒绝——否则恶意 ../ 路径可让 ResolveForceRemote 写到目录外。
 func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 
@@ -451,6 +468,7 @@ func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
 // TestResolveConflict_PathTraversal_SafeSubpath 反向钉住：正常相对子路径不被守卫误杀
 // （RelInside 判定合法 → 照常执行 ForceRemote 覆盖）。
 func TestResolveConflict_PathTraversal_SafeSubpath(t *testing.T) {
+	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)
 	defer cleanup()
 

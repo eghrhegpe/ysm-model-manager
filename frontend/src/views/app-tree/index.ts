@@ -30,6 +30,7 @@ import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
   cleanupVirtualScroll,
+  createTreeRenderCtx,
   getRenderMode,
   getVsMode,
   getVsRows,
@@ -37,6 +38,7 @@ import {
   ROW_H_GRID,
   ROW_H_LIST,
   renderTree,
+  type TreeRenderCtx,
   updateStat,
 } from "./render.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
@@ -55,7 +57,7 @@ import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { rememberModelPath } from "@/views/app-content/init-pages.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
-import { selectSingle, selectState } from "./data.ts";
+import { type SelectState, selectSingle } from "./data.ts";
 
 // —— 全局扩展（已随 WeakMap 改造移除）——
 // 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至
@@ -100,6 +102,11 @@ export class AppTree extends WebComponentBase {
   private _ready = false;
   /** root 属性切换代际计数：快速切换时丢弃过期加载的渲染 */
   _gen = 0;
+
+  /** 多选状态（实例级，多实例隔离防串扰） */
+  selectState: SelectState = { keys: new Set(), lastKey: null };
+  /** 渲染上下文（实例级，含 WeakMap 缓存） */
+  treeRenderCtx: TreeRenderCtx = createTreeRenderCtx();
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约）+ subdir（ADR-094 子类型子目录） */
   static get observedAttributes(): string[] {
@@ -240,7 +247,7 @@ export class AppTree extends WebComponentBase {
     const treeEl = this._root.getElementById("tree");
     if (treeEl) {
       // 清理虚拟滚动：scroll 监听 + ResizeObserver + 缓存引用
-      cleanupVirtualScroll(treeEl);
+      cleanupVirtualScroll(this.treeRenderCtx, treeEl);
     }
   }
 
@@ -290,7 +297,7 @@ export class AppTree extends WebComponentBase {
   _renderTree(): void {
     const c = this._root.getElementById("tree");
     // 清理旧的虚拟滚动监听（cleanupVirtualScroll：断开 cleanup/resizeObserver + 复位状态）
-    if (c) cleanupVirtualScroll(c);
+    if (c) cleanupVirtualScroll(this.treeRenderCtx, c);
     const filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(
@@ -303,6 +310,7 @@ export class AppTree extends WebComponentBase {
         (this._filterPaths ? this._filterPaths.size : "null"),
     );
     renderTree(
+      this.treeRenderCtx,
       c as HTMLElement,
       filtered,
       this._search,
@@ -312,8 +320,8 @@ export class AppTree extends WebComponentBase {
       this._renderMode,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
-    if (!selectState.keys.size) {
-      updateStat(this._root.getElementById("ftr-stat"), filtered);
+    if (!this.selectState.keys.size) {
+      updateStat(this.treeRenderCtx, this._root.getElementById("ftr-stat"), filtered);
     }
     // 仓库路径显示在按钮上
     const repoBtn = this._root.getElementById("btn-repo");
@@ -362,7 +370,7 @@ export class AppTree extends WebComponentBase {
       target.tagName === "TEXTAREA"
     )
       return false;
-    const paths = [...(selectState?.keys || [])];
+    const paths = [...(this.selectState?.keys || [])];
     if (!paths.length) {
       bus.emit("toast:show", {
         msg: t("tree.selectFilesFirst"),
@@ -409,11 +417,11 @@ export class AppTree extends WebComponentBase {
       return;
     const container = this._root.getElementById("tree");
     if (!container) return;
-    const fileRows = getVsRows(container).filter((r) => r.type === "file");
+    const fileRows = getVsRows(this.treeRenderCtx, container).filter((r) => r.type === "file");
     if (!fileRows.length) return;
     e.preventDefault();
 
-    const currentIdx = fileRows.findIndex((r) => r.key === selectState.lastKey);
+    const currentIdx = fileRows.findIndex((r) => r.key === this.selectState.lastKey);
     const nextIdx =
       e.key === "ArrowDown"
         ? Math.min(currentIdx + 1, fileRows.length - 1)
@@ -422,8 +430,8 @@ export class AppTree extends WebComponentBase {
     // 在 selectSingle（内部会把 lastKey 改为 nextKey）之前捕获旧行 key，用它清除旧行
     // 高亮——原代码在 selectSingle 后读 selectState.lastKey，拿到的已是新行，清除逻辑
     // 误删新行自己，旧行 .selected 残留（连续 ArrowDown 多行同时高亮）。
-    const oldKey = selectState.lastKey;
-    selectSingle(nextKey);
+    const oldKey = this.selectState.lastKey;
+    selectSingle(this.selectState, nextKey);
 
     if (oldKey && oldKey !== nextKey) {
       const oldEl = container.querySelector(`[data-fullpath="${CSS.escape(oldKey)}"]`);
@@ -442,10 +450,10 @@ export class AppTree extends WebComponentBase {
     bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 
-    const allRows = getVsRows(container);
+    const allRows = getVsRows(this.treeRenderCtx, container);
     const rowIdx = allRows.findIndex((r) => r.key === nextKey);
     if (rowIdx >= 0) {
-      const rowH = getVsMode(container) === "list" ? ROW_H_LIST : ROW_H_GRID;
+      const rowH = getVsMode(this.treeRenderCtx, container) === "list" ? ROW_H_LIST : ROW_H_GRID;
       const targetScroll = rowIdx * rowH;
       if (
         targetScroll < container.scrollTop ||
@@ -476,8 +484,8 @@ export class AppTree extends WebComponentBase {
           else fail++;
         }
       }
-      selectState.keys.clear();
-      selectState.lastKey = null;
+      this.selectState.keys.clear();
+      this.selectState.lastKey = null;
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中
       // 30s scanCache（Go 侧 DeleteModelFile 无 InvalidateCache，watcher 清缓存异步），
       // 刚删除的文件会立即"复活"显示。与 bus-handlers.reload() 的 ClearScanCache 链对齐。

@@ -7,7 +7,6 @@ import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.
 import { hl } from "@/utils/html/html.ts";
 import { fileIcon, isYsmName } from "@/utils/icon/icon.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
-import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
@@ -59,275 +58,153 @@ const dirFlags = new WeakMap<TreeNode, { hasEnabled: boolean; hasDisabled: boole
 function annotateDirNodes(root: TreeNode): void {
   interface Frame {
     node: TreeNode;
-    keys: string[];
-    idx: number;
+    childIdx: number;
   }
-  const stack: Frame[] = [{ node: root, keys: Object.keys(root), idx: 0 }];
+  const stack: Frame[] = [{ node: root, childIdx: 0 }];
+  const order: TreeNode[] = [];
   while (stack.length) {
-    const frame = stack[stack.length - 1];
-    let descended = false;
-    // 找下一个目录子节点压栈（文件跳过）；后序：先处理完整子树再合并父
-    while (frame.idx < frame.keys.length) {
-      const k = frame.keys[frame.idx++];
-      const child = frame.node[k] as TreeNode;
-      if (child._e) continue;
-      stack.push({ node: child, keys: Object.keys(child), idx: 0 });
-      descended = true;
-      break;
+    const top = stack[stack.length - 1];
+    const keys = Object.keys(top.node).filter((k) => k !== "_e");
+    if (top.childIdx < keys.length) {
+      const child = top.node[top.childIdx] as TreeNode | undefined;
+      top.childIdx++;
+      if (child && typeof child === "object" && !child._e) {
+        stack.push({ node: child, childIdx: 0 });
+      }
+    } else {
+      order.push(top.node);
+      stack.pop();
     }
-    if (descended) continue;
-    // 子树已全部归并 → 出栈合并本目录 flags（早退语义保留）
-    stack.pop();
+  }
+  for (const node of order) {
     let hasEnabled = false;
     let hasDisabled = false;
-    for (const k of frame.keys) {
-      const cv = frame.node[k] as TreeNode;
-      if (cv._e) {
-        if (cv._e.banned) hasDisabled = true;
-        else hasEnabled = true;
-      } else {
-        const f = dirFlags.get(cv);
-        if (f?.hasEnabled) hasEnabled = true;
-        if (f?.hasDisabled) hasDisabled = true;
+    for (const k of Object.keys(node)) {
+      if (k === "_e") continue;
+      const child = node[k];
+      if (child && typeof child === "object") {
+        if ((child as TreeNode)._e) {
+          const e = (child as TreeNode)._e as TreeEntry;
+          if (e.banned) hasDisabled = true;
+          else hasEnabled = true;
+        } else {
+          const flags = dirFlags.get(child as TreeNode);
+          if (flags) {
+            if (flags.hasEnabled) hasEnabled = true;
+            if (flags.hasDisabled) hasDisabled = true;
+          }
+        }
       }
-      if (hasEnabled && hasDisabled) break;
     }
-    dirFlags.set(frame.node, { hasEnabled, hasDisabled });
+    dirFlags.set(node, { hasEnabled, hasDisabled });
   }
 }
 
-// ——— 树构建（与原版一致） ———
-// [S3 收口] 树内即时过滤豁免（AGENTS.md 红线注脚 2026-09-03）：本函数与 flattenVisible 的
-// search 子串过滤 / 三模式排序作用在 Go 已交付的内存全量 entries 上（数据集归属已由 Go 筛定），
-// 属 UI 交互层展示端豁免——不重算「哪个文件该出现在哪」的归属语义；磁盘级搜索归 Go SearchModels
-// （关键词 + 骨骼/立方体/纹理范围，adv-filter 消费），前端不得自行扫盘。界线：输入端归 Go，展示端豁免。
-export function buildTree(
-  entries: TreeEntry[],
-  sortMode: string,
-  search: string,
-  filterPaths: Set<string> | null,
-): TreeNode {
-  const root: TreeNode = {};
-  const query = (search || "").trim().toLowerCase();
-  const sorted = [...entries].sort((a, b) => {
-    if (sortMode === "name") return a.name.localeCompare(b.name);
-    if (sortMode === "size") {
-      const sa = a.size || 0,
-        sb = b.size || 0;
-      return sb - sa;
-    }
-    if (sortMode === "date") {
-      const da = a.modTime || 0,
-        db = b.modTime || 0;
-      return db - da;
-    }
-    return 0;
-  });
-  // 筛选 + 建树：search（trim 后按路径匹配）/ filterPaths（按 fullPath 取交集）
-  sorted.forEach((e) => {
-    if (!e?.path) return;
-    const relPath = e.path;
-    if (query && !relPath.toLowerCase().includes(query)) return;
-    if (filterPaths && !filterPaths.has(e.fullPath || e.path)) return;
-    const parts = relPath.replace(/\\/g, "/").split("/");
-    let node = root;
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!parts[i]) continue;
-      const child = node[parts[i]];
-      if (!child || (child as TreeNode)._e) {
-        node[parts[i]] = {};
-      }
-      node = node[parts[i]] as TreeNode;
-    }
-    const fn = parts[parts.length - 1];
-    if (fn) node[fn] = { _e: e };
-  });
-  annotateDirNodes(root);
-  return root;
-}
-
-// ——— 扁平化：将嵌套树拍平为一维行数组 ———
-let _rowIdCounter = 0;
-
-// ——— flattenVisible 拆分子函数（atFv* = app-tree/flatten-visible） ———
-interface AtFvState {
-  search: string;
-  query: string;
-  hasSearch: boolean;
-  sort: string;
-  dirOpen: Record<string, boolean>;
-  mode: RenderMode;
-  depth: number;
-  indent: number;
-}
-
-// P2 修复（审核）：atFvFlattenLevel 原为递归（atFvRecurseDir 自调），搜索态 shouldOpen
-// 无条件为 true → 深链 + 搜索命中时递归深度 = 树深，10000 级深链直接 Maximum call stack
-// size exceeded（与 annotateDirNodes 同源问题，该函数已改显式栈，flattenVisible 漏网）。
-// 现改为显式栈迭代（Frame/idx 模式，与 annotateDirNodes 同款）：同层 frame 栈顶推进，
-// 遇展开目录时压入子层 frame——栈顶先出 = 深度优先前序，保原递归顺序且无递归。
-interface AtFvFrame {
-  node: TreeNode;
-  dirPath: string;
-  keys: string[];
-  idx: number;
-  state: AtFvState;
-}
-
-function atFvNormParams(search: string): { query: string; hasSearch: boolean } {
-  const hasSearch = !!(search || "").trim();
-  const query = (search || "").trim().toLowerCase();
-  return { query, hasSearch };
-}
-
-function atFvSortKeys(node: TreeNode, sort: string): string[] {
-  return Object.keys(node).sort((a, b) => {
-    const aIsDir = !(node[a] as TreeNode)._e;
-    const bIsDir = !(node[b] as TreeNode)._e;
-    if (aIsDir && !bIsDir) return -1;
-    if (!aIsDir && bIsDir) return 1;
-    const ea = (node[a] as TreeNode)._e;
-    const eb = (node[b] as TreeNode)._e;
-    if (sort === "size") return (eb?.size || 0) - (ea?.size || 0);
-    if (sort === "date") return (eb?.modTime || 0) - (ea?.modTime || 0);
-    return a.localeCompare(b);
-  });
-}
-
-function atFvMatchSearch(full: string, state: AtFvState): boolean {
-  if (!state.hasSearch) return true;
-  return full.toLowerCase().includes(state.query);
-}
-
-function atFvMakeFileRow(e: TreeEntry, full: string, state: AtFvState): TreeRow | null {
-  if (!atFvMatchSearch(full, state)) return null;
-  const nmHtml = state.hasSearch ? hl(e.name, state.search.trim()) : renderDisplayName(e.name);
-  const dateStr = e.modTime ? fmtDate(e.modTime) : "";
-  const entryKey = e.fullPath || e.path;
-  const selCls = selectState.keys.has(entryKey) ? " selected" : "";
-  const nmCls = isYsmName(e.name) ? " ysm" : "";
-  const ariaLevel = state.depth + 1;
-  const html =
-    state.mode === "list"
-      ? listFileRowHTML(e, nmHtml, fileIcon(e.name), nmCls, state.indent, selCls, ariaLevel)
-      : fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, nmCls, state.indent, selCls, ariaLevel);
-  return {
-    id: ++_rowIdCounter,
-    type: "file",
-    key: entryKey,
-    depth: state.depth,
-    html,
-  };
-}
-
-function atFvMakeFolderRow(
-  k: string,
-  full: string,
-  sub: TreeNode,
-  state: AtFvState,
-): { row: TreeRow; shouldOpen: boolean } {
-  const isLocked = k.startsWith("_");
-  const shouldOpen = state.hasSearch || !!state.dirOpen[full];
-  const flags = dirFlags.get(sub);
-  const hasEnabled = !!flags?.hasEnabled;
-  const hasDisabled = !!flags?.hasDisabled;
-  const ariaLevel = state.depth + 1;
-  const html =
-    state.mode === "list"
-      ? listFolderRowHTML(
-          k,
-          full,
-          shouldOpen,
-          isLocked,
-          hasEnabled,
-          hasDisabled,
-          state.indent,
-          ariaLevel,
-        )
-      : folderRowHTML(
-          k,
-          full,
-          shouldOpen,
-          isLocked,
-          hasEnabled,
-          hasDisabled,
-          state.indent,
-          ariaLevel,
-        );
-  return {
-    row: {
-      id: ++_rowIdCounter,
-      type: "folder",
-      key: full,
-      depth: state.depth,
-      html,
-      isOpen: shouldOpen,
-    },
-    shouldOpen,
-  };
-}
-
-export function flattenVisible(
-  node: TreeNode,
-  dirPath: string,
+// ——— 扁平化可见行（虚拟滚动数据源） ———
+function flattenVisible(
+  root: TreeNode,
+  prefix: string,
   search: string,
   sort: string,
   dirOpen: Record<string, boolean>,
   depth: number,
   mode: RenderMode,
 ): TreeRow[] {
-  const { query, hasSearch } = atFvNormParams(search);
-  const rootState: AtFvState = {
-    search,
-    query,
-    hasSearch,
-    sort,
-    dirOpen,
-    mode,
-    depth,
-    indent: depth * 16 + 4,
-  };
   const rows: TreeRow[] = [];
-  // 显式栈迭代（Frame/idx 模式，与 annotateDirNodes 同款）：
-  // 原递归 atFvFlattenLevel 前序展开——文件夹行先推入，shouldOpen 时深度优先递归子级，
-  // 子级全部完成后再回到同级的下一 key。显式栈用「同层 frame 栈顶推进 + 子层 frame 压栈」
-  // 模拟：遇到展开目录时把子层 frame 压栈，栈顶先处理 = 深度优先前序，保序且无递归。
-  const stack: AtFvFrame[] = [];
-  const makeFrame = (n: TreeNode, dp: string, st: AtFvState): AtFvFrame => ({
-    node: n,
-    dirPath: dp,
-    keys: atFvSortKeys(n, st.sort),
-    idx: 0,
-    state: st,
+  const isSearch = search.trim().length > 0;
+  const searchLower = search.toLowerCase();
+  const entries = Object.keys(root)
+    .filter((k) => k !== "_e")
+    .map((k) => ({ key: k, node: root[k] as TreeNode | TreeEntry }))
+    .filter(({ node }) => node && typeof node === "object");
+  // 排序：文件夹在前，文件在后；同类按名称排序
+  entries.sort((a, b) => {
+    const aIsDir = !(a.node && (a.node as TreeNode)._e);
+    const bIsDir = !(b.node && (b.node as TreeNode)._e);
+    if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
+    const aName = a.key.toLowerCase();
+    const bName = b.key.toLowerCase();
+    return sort === "date" ? 0 : aName < bName ? -1 : aName > bName ? 1 : 0;
   });
-  stack.push(makeFrame(node, dirPath, rootState));
-  while (stack.length) {
-    const frame = stack[stack.length - 1];
-    if (frame.idx >= frame.keys.length) {
-      stack.pop();
-      continue;
-    }
-    const k = frame.keys[frame.idx++];
-    const v = frame.node[k] as TreeNode;
-    const full = frame.dirPath ? `${frame.dirPath}/${k}` : k;
-    if (v._e) {
-      const fileRow = atFvMakeFileRow(v._e, full, frame.state);
-      if (fileRow) rows.push(fileRow);
-    } else {
-      const { row, shouldOpen } = atFvMakeFolderRow(k, full, v, frame.state);
-      rows.push(row);
-      if (shouldOpen) {
-        const childState: AtFvState = {
-          ...frame.state,
-          depth: frame.state.depth + 1,
-          indent: (frame.state.depth + 1) * 16 + 4,
-        };
-        // 子层压栈：栈顶先出 → 子级深度优先完成后再回本层继续（保原递归顺序）
-        stack.push(makeFrame(v, full, childState));
+  for (const { key: name, node } of entries) {
+    const fullPath = prefix ? `${prefix}/${name}` : name;
+    if (node && (node as TreeNode)._e) {
+      const entry = (node as TreeNode)._e as TreeEntry;
+      if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
+      const html =
+        mode === "list"
+          ? listFileRowHTML(entry, fullPath, depth)
+          : fileRowHTML(entry, fullPath, depth);
+      rows.push({ id: rows.length, type: "file", key: fullPath, depth, html });
+    } else if (node) {
+      const isOpen = dirOpen[fullPath] || false;
+      const html =
+        mode === "list"
+          ? listFolderRowHTML(name, fullPath, depth, isOpen)
+          : folderRowHTML(name, fullPath, depth, isOpen);
+      rows.push({ id: rows.length, type: "folder", key: fullPath, depth, html, isOpen });
+      if (isOpen || isSearch) {
+        const childRows = flattenVisible(
+          node as TreeNode,
+          fullPath,
+          search,
+          sort,
+          dirOpen,
+          depth + 1,
+          mode,
+        );
+        rows.push(...childRows);
       }
     }
   }
   return rows;
+}
+
+// ——— 构建树（buildTree） ———
+function buildTree(
+  entries: TreeEntry[],
+  _sort: string,
+  _search: string,
+  filterPaths: Set<string> | null,
+): TreeNode {
+  const root: TreeNode = {};
+  const filtered = filterPaths ? entries.filter((e) => filterPaths.has(e.path)) : entries;
+  for (const entry of filtered) {
+    const parts = entry.path.split("/").filter(Boolean);
+    let current = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const p = parts[i];
+      if (!current[p] || (current[p] as TreeNode)._e) {
+        current[p] = {};
+      }
+      current = current[p] as TreeNode;
+    }
+    const fileName = parts[parts.length - 1];
+    if (fileName) {
+      current[fileName] = { _e: entry };
+    }
+  }
+  annotateDirNodes(root);
+  return root;
+}
+
+// ——— 渲染上下文（实例级，AppTree 持有，多实例隔离） ———
+export interface TreeRenderCtx {
+  /** 行模板缓存（WeakMap——row 对象为 key，每次 flattenVisible 产生新 row 对象自动 GC 回收） */
+  rowTplCache: WeakMap<object, HTMLTemplateElement>;
+  /** 虚拟滚动实例状态（WeakMap——DOM 元素为 key，元素 GC 自动回收） */
+  vsStates: WeakMap<HTMLElement, VsState>;
+  /** 统计动画句柄（WeakMap——DOM 元素为 key） */
+  statAnim: WeakMap<HTMLElement, { cancel: () => void; timer: ReturnType<typeof setTimeout> }>;
+}
+
+/** 创建渲染上下文（AppTree 实例化时调用） */
+export function createTreeRenderCtx(): TreeRenderCtx {
+  return {
+    rowTplCache: new WeakMap(),
+    vsStates: new WeakMap(),
+    statAnim: new WeakMap(),
+  };
 }
 
 // ——— 仅渲染可见行：vs-wrap + 行节点复用（code review #5）———
@@ -340,15 +217,14 @@ export function flattenVisible(
 //      community/virtual-list.ts 范式）。
 // 安全性：树事件全为容器级委托（closest 查询），行节点无独立监听器；选中态
 // （rowCls/aria-selected）来自数据渲染，与 row 对象一一对应，复用不串行。
-const rowTplCache = new WeakMap<object, HTMLTemplateElement>();
 
 /** 取行 DOM 节点（缓存未命中时由 row.html 解析一次；命中时 cloneNode） */
-function rowElOf(row: TreeRow): HTMLElement {
-  let tpl = rowTplCache.get(row);
+function rowElOf(ctx: TreeRenderCtx, row: TreeRow): HTMLElement {
+  let tpl = ctx.rowTplCache.get(row);
   if (!tpl) {
     tpl = document.createElement("template");
     tpl.innerHTML = row.html;
-    rowTplCache.set(row, tpl);
+    ctx.rowTplCache.set(row, tpl);
   }
   const el = tpl.content.firstElementChild as HTMLElement | null;
   if (!el) throw new Error(`rowElOf: row.html produced no element for key ${row.key}`);
@@ -356,7 +232,12 @@ function rowElOf(row: TreeRow): HTMLElement {
   return el.cloneNode(true) as HTMLElement;
 }
 
-function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): void {
+function renderSlice(
+  ctx: TreeRenderCtx,
+  container: HTMLElement,
+  rows: TreeRow[],
+  rowH: number,
+): void {
   const total = rows.length;
   // 首次渲染时容器可能还没布局（clientHeight=0），全量渲染
   const range =
@@ -374,15 +255,14 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
   }
   const frag = document.createDocumentFragment();
   for (let i = range.startIdx; i < range.endIdx; i++) {
-    frag.appendChild(rowElOf(rows[i]));
+    frag.appendChild(rowElOf(ctx, rows[i]));
   }
   wrap.replaceChildren(frag);
   (wrap as HTMLElement).style.paddingTop = `${range.startIdx * rowH}px`;
   (wrap as HTMLElement).style.paddingBottom = `${(total - range.endIdx) * rowH}px`;
 }
 
-// ——— 虚拟滚动实例状态（原 4 个 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/
-// _vsResizeObserver 收敛于此：WeakMap 无类型污染 + 元素 GC 自动回收，杜绝全局接口污染）———
+// ——— 虚拟滚动实例状态 ———
 
 /** 单容器虚拟滚动实例状态 */
 interface VsState {
@@ -392,37 +272,35 @@ interface VsState {
   resizeObserver: ResizeObserver | null;
 }
 
-const vsStates = new WeakMap<HTMLElement, VsState>();
-
 /** 取容器虚拟滚动状态（无则初始化空态；渲染/清理共用同一实例） */
-function vsOf(container: HTMLElement): VsState {
-  let s = vsStates.get(container);
+function vsOf(ctx: TreeRenderCtx, container: HTMLElement): VsState {
+  let s = ctx.vsStates.get(container);
   if (!s) {
     s = { cleanup: null, rows: [], mode: null, resizeObserver: null };
-    vsStates.set(container, s);
+    ctx.vsStates.set(container, s);
   }
   return s;
 }
 
 /** 读取容器当前虚拟滚动行数据（events.ts / toolbar-events.ts 消费；替代 container._vsRows 伪字段） */
-export function getVsRows(container: HTMLElement): TreeRow[] {
-  return vsOf(container).rows;
+export function getVsRows(ctx: TreeRenderCtx, container: HTMLElement): TreeRow[] {
+  return vsOf(ctx, container).rows;
 }
 
 /** 写入容器虚拟滚动行数据（renderTree 内部用；测试注入模拟渲染结果亦走此入口） */
-export function setVsRows(container: HTMLElement, rows: TreeRow[]): void {
-  vsOf(container).rows = rows;
+export function setVsRows(ctx: TreeRenderCtx, container: HTMLElement, rows: TreeRow[]): void {
+  vsOf(ctx, container).rows = rows;
 }
 
 /** 读取容器当前渲染模式（index.ts 键盘导航行高计算用；替代 container._vsMode 伪字段） */
-export function getVsMode(container: HTMLElement): RenderMode | null {
-  return vsOf(container).mode;
+export function getVsMode(ctx: TreeRenderCtx, container: HTMLElement): RenderMode | null {
+  return vsOf(ctx, container).mode;
 }
 
 // ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
 /** 断开虚拟滚动相关监听 */
-export function cleanupVirtualScroll(container: HTMLElement): void {
-  const s = vsOf(container);
+export function cleanupVirtualScroll(ctx: TreeRenderCtx, container: HTMLElement): void {
+  const s = vsOf(ctx, container);
   s.cleanup?.();
   s.cleanup = null;
   s.resizeObserver?.disconnect();
@@ -432,6 +310,7 @@ export function cleanupVirtualScroll(container: HTMLElement): void {
 }
 
 export function renderTree(
+  ctx: TreeRenderCtx,
   container: HTMLElement,
   entries: TreeEntry[],
   search: string,
@@ -442,30 +321,30 @@ export function renderTree(
 ): void {
   if (!entries.length) {
     container.innerHTML = emptyStateHTML("📁", t("tree.noModelFiles"));
-    cleanupVirtualScroll(container);
+    cleanupVirtualScroll(ctx, container);
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
     container.innerHTML = emptyStateHTML("🔍", t("tree.noMatchFiles"));
-    cleanupVirtualScroll(container);
+    cleanupVirtualScroll(ctx, container);
     return;
   }
-  const st = vsOf(container);
+  const st = vsOf(ctx, container);
   st.rows = rows;
   st.mode = mode;
   const rowH = mode === "list" ? ROW_H_LIST : ROW_H_GRID;
-  renderSlice(container, rows, rowH);
+  renderSlice(ctx, container, rows, rowH);
 
   // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
   if (container.clientHeight === 0) {
     requestAnimationFrame(() => {
-      const s2 = vsOf(container);
+      const s2 = vsOf(ctx, container);
       if (s2.rows && s2.mode) {
         const m = s2.mode;
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
-        renderSlice(container, s2.rows, rh);
+        renderSlice(ctx, container, s2.rows, rh);
       }
     });
   }
@@ -473,12 +352,12 @@ export function renderTree(
   // 安装滚动同步（只装一次）
   if (!st.cleanup) {
     st.cleanup = installScrollSync(container, () => {
-      const s2 = vsOf(container);
+      const s2 = vsOf(ctx, container);
       const r = s2.rows;
       const m = s2.mode;
       if (r?.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
-        renderSlice(container, r, rh);
+        renderSlice(ctx, container, r, rh);
       }
     });
   }
@@ -486,26 +365,20 @@ export function renderTree(
   // 容器尺寸变化时重新计算可见范围（侧边栏折叠/窗口 resize）
   if (!st.resizeObserver) {
     st.resizeObserver = new ResizeObserver(() => {
-      const s2 = vsOf(container);
+      const s2 = vsOf(ctx, container);
       const r = s2.rows;
       const m = s2.mode;
       if (r?.length) {
         const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
-        renderSlice(container, r, rh);
+        renderSlice(ctx, container, r, rh);
       }
     });
     st.resizeObserver.observe(container);
   }
 }
 
-// 元素 → 在途统计动画句柄（连续搜索/过滤重渲染时取消旧动画与旧定时器，防堆积）
-const statAnim = new WeakMap<
-  HTMLElement,
-  { cancel: () => void; timer: ReturnType<typeof setTimeout> }
->();
-
 // ——— 选中计数用（兼容旧接口） ———
-export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
+export function updateStat(ctx: TreeRenderCtx, el: HTMLElement | null, entries: TreeEntry[]): void {
   if (!el) return;
   if (!Array.isArray(entries)) entries = [];
   let total = 0,
@@ -522,11 +395,11 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
   // 在预选值，取消选择后 oldTotal 取到从未显示过的计数 → 错误起点计数动画
   el.dataset.total = String(total);
   // 先取消在途动画与定时器：连续触发时旧动画中间值会干扰下一次 textContent 判断，定时器堆积
-  const prev = statAnim.get(el);
+  const prev = ctx.statAnim.get(el);
   if (prev) {
     prev.cancel();
     clearTimeout(prev.timer);
-    statAnim.delete(el);
+    ctx.statAnim.delete(el);
   }
   if (el.textContent !== newText) {
     // P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码中文「项」，en/ja locale 失效；
@@ -536,9 +409,9 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
       const cancel = animateNumber(el, total, 700);
       const timer = setTimeout(() => {
         el.textContent = newText;
-        statAnim.delete(el);
+        ctx.statAnim.delete(el);
       }, 700);
-      statAnim.set(el, { cancel, timer });
+      ctx.statAnim.set(el, { cancel, timer });
     } else {
       el.textContent = newText;
     }

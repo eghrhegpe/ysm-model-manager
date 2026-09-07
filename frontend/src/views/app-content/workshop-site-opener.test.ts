@@ -26,7 +26,7 @@ vi.mock("../../core/i18n/t.ts", () => ({ t: (key: string) => key }));
 import { getApp } from "@/backend/app.ts";
 import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import type { AppContentHost } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
 /** 组装 openEmbedded 分支需要的假 host（shadow DOM 节点直供） */

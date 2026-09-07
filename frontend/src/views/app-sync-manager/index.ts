@@ -8,6 +8,7 @@
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -27,7 +28,8 @@ export interface SyncManagerSelf {
   _selectedType: string;
   _subtype: string;
   _statusFilter: string;
-  _singleBusy: boolean;
+  /** 单行操作在途 path 集合（按 path 粒度防重入；不同 path 可并发 push/pull，P2 修复） */
+  _singleBusy: Set<string>;
   _allItems: SyncItem[];
   _filteredItems: SyncItem[];
   /** 筛选后强制展开的目录 path 集合（status 筛选下「有命中后代的目录」，见 store.applyFilter） */
@@ -95,7 +97,7 @@ export class AppSyncManager extends WebComponentBase {
   _loading = false;
   private _gen = 0;
   private _unsubs: Array<() => void> = [];
-  _singleBusy = false;
+  _singleBusy = new Set<string>();
   _dirOpen: Record<string, boolean> = {};
   _filesRoots: Record<string, string> = {};
   _scanDirs: Record<string, { global: string; instance: string; warning?: string }> = {};
@@ -166,7 +168,7 @@ export class AppSyncManager extends WebComponentBase {
     try {
       this._doRender();
     } catch (e) {
-      console.error("[sync-manager] _render 出错:", e);
+      logError("sync-manager", "_render 出错:", e);
       this.innerHTML +=
         '<div style="padding:12px;color:var(--err)">' +
         t("sync.renderFailed") +
@@ -192,7 +194,7 @@ export class AppSyncManager extends WebComponentBase {
           this._doRender();
         })
         .catch((err) => {
-          console.warn("[sync-manager] stats:refresh 重载失败:", err);
+          logWarn("sync-manager", "stats:refresh 重载失败:", err);
         });
     });
     this._unsubs.push(unsub);
@@ -217,7 +219,7 @@ export class AppSyncManager extends WebComponentBase {
           this._doRender();
         })
         .catch((err) => {
-          console.warn("[sync-manager] rtype 跟随重载失败:", err);
+          logWarn("sync-manager", "rtype 跟随重载失败:", err);
         });
     });
     this._unsubs.push(unsubRtype);
@@ -235,7 +237,7 @@ export class AppSyncManager extends WebComponentBase {
           this._doRender();
         })
         .catch((err) => {
-          console.warn("[sync-manager] subdir 重载失败:", err);
+          logWarn("sync-manager", "subdir 重载失败:", err);
         });
     });
     this._unsubs.push(unsubSubdir);
@@ -246,7 +248,7 @@ export class AppSyncManager extends WebComponentBase {
     const self = this as unknown as SyncManagerSelf;
     // render 是 async（内部 await renderList）；事件已由 _init 一次性委托绑定，
     // render 重建 DOM 后无需重绑（原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
-    render(self).catch((e) => console.error("[sync-manager] render 失败:", e));
+    render(self).catch((e) => logError("sync-manager", "render 失败:", e));
   }
 }
 

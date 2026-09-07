@@ -41,6 +41,7 @@
       "@/locales/*": ["./src/locales/*"],
       "@/parsers/*": ["./src/parsers/*"],
       "@/bus": ["./src/bus.ts"],
+      "@/app-modules": ["./src/app-modules.ts"],
       "@/theme-core": ["./src/theme-core.ts"],
       "#root/*": ["../*"]
     }

@@ -5,6 +5,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
+import { logError } from "@/utils/base/log.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { EscFn } from "./logs.ts";
 
@@ -109,7 +110,7 @@ function setErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
 }
 
 function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
-  console.error("[diagnostics] perf-cli 失败:", e);
+  logError("diagnostics", "perf-cli 失败", e);
   out.innerHTML = errorHTML(`${t("diagnostics.perfFail")}: ${safeErrorMessage(e)}`, esc);
 }
 

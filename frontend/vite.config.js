@@ -17,7 +17,7 @@ const ALIAS_DIRS = [
   "locales", "parsers",
 ];
 /** 手写源码根文件级别名（src 根上的文件，目录别名映射不了；与 tsconfig paths 一致）。 */
-const FILE_ALIASES = { "bus": "bus.ts", "theme-core": "theme-core.ts" };
+const FILE_ALIASES = { "bus": "bus.ts", "theme-core": "theme-core.ts", "app-modules": "app-modules.ts" };
 
 export default defineConfig({
   root: ".",

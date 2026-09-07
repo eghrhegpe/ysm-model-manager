@@ -5,12 +5,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   repositoryHTML,
   instancesHTML,
-  settingsHTML,
   diagnosticsHTML,
-  recycleHTML,
   githubHTML,
   workshopHTML,
 } from "./tpl.ts";
+import { settingsHTML } from "./settings/tpl-settings.ts";
+import { recycleHTML } from "./tpl-recycle.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({

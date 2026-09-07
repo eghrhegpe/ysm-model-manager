@@ -10,7 +10,7 @@ vi.mock("../utils/dom/errors.ts", () => ({
     e instanceof Error ? e.message : fallback,
 }));
 
-import { loadView } from "../app-modules.ts";
+import { loadView } from "@/app-modules";
 
 beforeEach(() => {
   vi.clearAllMocks();

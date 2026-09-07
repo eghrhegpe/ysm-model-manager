@@ -3,6 +3,7 @@
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { moveItem } from "@/utils/array.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
@@ -214,7 +215,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
             resourceTypes = reg.resourceTypes;
           }
         } catch (e) {
-          console.warn("[site-edit] parse resourceTypes:", e);
+          logWarn("site-edit", "parse resourceTypes", e);
         }
         if (resourceTypes.length) {
           logs.push(t("workshop.logTypes", { n: resourceTypes.length }));

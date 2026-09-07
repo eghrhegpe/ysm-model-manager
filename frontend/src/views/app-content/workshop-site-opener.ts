@@ -9,7 +9,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { BrowseMode } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { AppContentHost } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 
 /** 内嵌浏览加载超时（15s 未完成加载 → 提示此站点不允许内嵌浏览） */
 const WS_EMBED_TIMEOUT_MS = 15000;

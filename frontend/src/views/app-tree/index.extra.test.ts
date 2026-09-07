@@ -425,7 +425,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
     el.setAttribute("root", RESOURCE_TYPES.MMD);
     await sleep0();
-    expect(consoleSpy).toHaveBeenCalledWith("[Tree root change Error]", expect.anything());
+    expect(consoleSpy).toHaveBeenCalledWith("[app-tree] root change Error", expect.anything());
     expect(loader).toHaveBeenCalledTimes(1); // 未走到 _load
     consoleSpy.mockRestore();
   });
@@ -478,7 +478,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换 → 补载
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] });
     await waitFor(() =>
-      consoleSpy.mock.calls.some((c) => c[0] === "[Tree pendingRoot Error]"),
+      consoleSpy.mock.calls.some((c) => c[0] === "[app-tree] pendingRoot Error"),
     );
     expect(loader).toHaveBeenCalledTimes(1); // 补载被 ClearScanCache 失败中断，未再 _load
     // 首代渲染已被 gen 作废（无错配帧），_entries 为首代数据 → 兜底渲染避免空白树

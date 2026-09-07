@@ -4,6 +4,7 @@
 // 依赖 DAG：index → renderer ← events（events 点击触发 render）
 
 import { t } from "@/core/i18n/t.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { esc } from "@/utils/html/html.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./index.ts";
@@ -28,14 +29,14 @@ export async function render(self: SyncRenderSelf): Promise<void> {
   try {
     self.innerHTML = containerHTML();
   } catch (e) {
-    console.error("[sync-manager] _render 设置 innerHTML 失败:", e);
+    logError("sync-manager", "_render 设置 innerHTML 失败:", e);
     return;
   }
 
   const statusTabsEl = self.querySelector(".sm-status-tabs");
   const listEl = self.querySelector(".sm-list");
   if (!statusTabsEl || !listEl) {
-    console.warn("[sync-manager] _render DOM 查询失败, 放弃渲染");
+    logWarn("sync-manager", "_render DOM 查询失败, 放弃渲染");
     return;
   }
 
@@ -110,7 +111,7 @@ export async function render(self: SyncRenderSelf): Promise<void> {
 
   // — 列表 —
   applyFilter(self);
-  await renderList(self, listEl).catch((e) => console.error("[sync-manager] renderList 失败:", e));
+  await renderList(self, listEl).catch((e) => logError("sync-manager", "renderList 失败:", e));
 }
 
 /** 渲染 `.sm-summary`：显示仓库基准目录与实例实际扫描目录，兜底路径一目了然。 */

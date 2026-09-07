@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 178 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -63,7 +63,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 27 |
 
 ### `batch:enable-all`
 
@@ -75,7 +75,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 25 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
 
 ### `batch:rename`
 
@@ -87,7 +87,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 48 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 49 |
 
 ### `community:clearCache`
 
@@ -99,7 +99,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/views/app-content/community-data.ts` | 85 |
+| (顶层) | `frontend/src/views/app-content/community-data.ts` | 86 |
 
 ### `ctx:show`
 
@@ -108,9 +108,9 @@
 |------|------|----|
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 144 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 294 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 318 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 330 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 285 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 309 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 321 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -127,7 +127,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 43 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 44 |
 
 ### `dir:mkdir`
 
@@ -139,7 +139,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 33 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 34 |
 
 ### `dir:recycle`
 
@@ -151,7 +151,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 38 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 39 |
 
 ### `dir:rename`
 
@@ -163,7 +163,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 28 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 29 |
 
 ### `instance:clear`
 
@@ -201,7 +201,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 167 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 191 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
 
 ### `menu:show`
 
@@ -226,14 +226,14 @@
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 272 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 353 |
-| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 156 |
-| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 250 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 441 |
+| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 158 |
+| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 243 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 442 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 161 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 162 |
 
 ### `nav:changed`
 
@@ -243,8 +243,8 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 159 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 275 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
-| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 40 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 201 |
+| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 41 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 202 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 243 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
 
@@ -253,7 +253,7 @@
 |------|------|----|
 | registerPageStore | `frontend/src/core/page-store.ts` | 86 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 148 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 175 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 176 |
 
 ### `package:selected`
 
@@ -266,26 +266,26 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 38 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 37 |
 
 ### `repo:rtype-changed`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 281 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 303 |
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 110 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 282 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 304 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 111 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 259 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 79 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 194 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 491 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 203 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 205 |
 
 ### `repo:search-creator`
 
@@ -305,12 +305,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 111 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 112 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 226 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 228 |
 
 ### `stats:refresh`
 
@@ -330,24 +330,24 @@
 | runDownloadMissing | `frontend/src/features/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 144 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 75 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 333 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 145 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
 | runPull | `frontend/src/views/app-sidebar/index.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 158 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 154 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 83 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 118 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 185 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 100 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 398 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 156 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 119 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 186 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 102 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 387 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 483 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 183 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 185 |
 
 ### `sync:download:done`
 
@@ -380,9 +380,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 338 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 98 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 489 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 339 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 100 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 495 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -443,29 +443,29 @@
 | dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 88 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 103 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 72 |
+| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 73 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 32 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 266 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 292 |
-| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 48 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 86 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 126 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 146 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 154 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 163 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 191 |
-| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 237 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 163 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 291 |
+| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 127 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 147 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 155 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 164 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 192 |
+| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 238 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 103 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 135 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 253 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 259 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 280 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 286 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 308 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 254 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 260 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 281 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 287 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 335 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 123 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 134 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |
@@ -476,12 +476,12 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 93 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 115 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 124 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 108 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 132 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 139 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 225 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 232 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 248 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 109 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 133 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 140 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 226 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 233 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 249 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 263 |
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 116 |
@@ -492,11 +492,11 @@
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 159 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
-| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 132 |
+| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 367 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 296 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 320 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 297 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 321 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 90 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 129 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 163 |
@@ -516,46 +516,45 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 159 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 143 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 176 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 47 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 55 |
-| loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 34 |
-| loadData | `frontend/src/views/app-sync-manager/store.ts` | 90 |
-| show | `frontend/src/views/app-toast/index.ts` | 134 |
-| show | `frontend/src/views/app-toast/index.ts` | 153 |
-| show | `frontend/src/views/app-toast/index.ts` | 162 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 120 |
-| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 144 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 189 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 195 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 212 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 225 |
-| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 244 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 281 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 297 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 305 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 341 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 347 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 71 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 79 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 104 |
-| atTeOpenAuthor | `frontend/src/views/app-tree/events.ts` | 131 |
-| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 172 |
-| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 181 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 178 |
+| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
+| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
+| loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
+| loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
+| show | `frontend/src/views/app-toast/index.ts` | 135 |
+| show | `frontend/src/views/app-toast/index.ts` | 154 |
+| show | `frontend/src/views/app-toast/index.ts` | 163 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 85 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
+| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 145 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 190 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 196 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 213 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 226 |
+| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 245 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 282 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 298 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 342 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 348 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 73 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 81 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 106 |
+| atTeOpenAuthor | `frontend/src/views/app-tree/events.ts` | 133 |
+| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 174 |
+| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 190 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 197 |
-| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 204 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 401 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 441 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 449 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 492 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 502 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 71 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 225 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 366 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 374 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 489 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 496 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 390 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 430 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 438 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 498 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 508 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 72 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 226 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 367 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 375 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 494 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 501 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 49 |
@@ -578,7 +577,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiaryInner | `frontend/src/core/error-diary.ts` | 96 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 69 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 70 |
 
 ### `tree:reload`
 
@@ -602,7 +601,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 53 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 54 |
 
 ### `tree:set-search`
 
@@ -614,4 +613,4 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 152 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 153 |

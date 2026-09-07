@@ -31,7 +31,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - aboutHTML
-    - AppContentHost
     - AppContentState
     - appContentStyle
     - bindSiteEvents

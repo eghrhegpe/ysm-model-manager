@@ -4,6 +4,7 @@
 import { getApp } from "@/backend/app.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { logError } from "@/utils/base/log.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 /** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
@@ -201,7 +202,7 @@ export async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise
     const groups = dgLsGroupByOp(filtered);
     list.innerHTML = dgLsRenderDiagGroups(groups, esc, copyLogTitle);
   } catch (e) {
-    console.error("[diagnostics] 加载操作日志失败:", e);
+    logError("diagnostics", "加载操作日志失败", e);
     dgLsSetEmpty(list, "diagnostics.loadLogsFailed", "error");
   }
 }
@@ -218,7 +219,7 @@ export async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<voi
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noRuntimeLogs");
     list.innerHTML = dgLsRenderRuntimeRows(logs, esc, copyLogTitle);
   } catch (e) {
-    console.error("[diagnostics] 加载运行时日志失败:", e);
+    logError("diagnostics", "加载运行时日志失败", e);
     dgLsSetEmpty(list, "diagnostics.loadRuntimeLogsFailed", "error");
   }
 }

@@ -6,7 +6,6 @@
 
 import { getApp } from "@/backend/app.ts";
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
-import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import {
   cleanupPreview,
@@ -15,9 +14,11 @@ import {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { detailGen } from "./detail.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { loadModelData } from "./loader.ts";
@@ -274,7 +275,7 @@ async function dpToggle3D(state: MaidPreviewState, ctx: PreviewCtx, path: string
     });
   } catch (e) {
     if (state.model3dGuard.stale(gen)) return;
-    console.error("[maid-3d] 加载失败:", e);
+    logError("maid-3d", "加载失败", e);
   }
   state.loading3D = false;
 }
@@ -336,7 +337,7 @@ export async function showMaidPreview(ctx: PreviewCtx, path: string): Promise<vo
       }
     }
   } catch (e) {
-    console.warn("[maid-preview] 模型数据分析:", e);
+    logWarn("maid-preview", "模型数据分析失败", e);
   }
   // 大字口径：spec 组件合计优先（YSM 详情同款）；spec 空/失败回落 AnalyzeBedrockModel 聚合值
   if (baseModelInfo && componentCounts.length > 0) {

@@ -4,6 +4,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
+import { logError } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -12,9 +13,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
 import { initSettings } from "@/views/app-content/settings/init.ts";
-import { initGithubPage as _initGithubPage } from "./init-github.ts";
-import type { AppContentHost } from "./init-workshop.ts";
-import { initWorkshopPage as _initWorkshopPage } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 
 /**
  * 初始化诊断页
@@ -288,7 +287,7 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
   try {
     await initSettings(host._root);
   } catch (e) {
-    console.error("[settings] 初始化失败:", e);
+    logError("settings", "初始化失败", e);
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(e, t("content.settingsInitFailed"))}`,
       duration: TOAST_MS.long,
@@ -297,23 +296,8 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
   }
 }
 
-/**
- * 初始化创意工坊页（转发壳：实现见 ./init-workshop.ts）。
- * init-pages 是页面 init 的统一集合点，page-registry / app-content 单文件取齐全部
- * 页面，此转发避免误判为与 init-workshop.ts 的同名重复。
- */
-export function initWorkshopPage(host: AppContentHost): void {
-  _initWorkshopPage(host);
-}
-
-/**
- * 初始化 GitHub 页（转发壳：实现见 ./init-github.ts）。
- * init-pages 是页面 init 的统一集合点，page-registry / app-content 单文件取齐全部
- * 页面，此转发避免误判为与 init-github.ts 的同名重复。
- */
-export function initGithubPage(host: AppContentHost): void {
-  _initGithubPage(host);
-}
+// initWorkshopPage / initGithubPage 转发壳已删除（P1-2）——
+// page-registry 直接引用 init-workshop.ts / init-github.ts 的实现函数。
 
 // ===== 最近选中模型（供导航栏 3D 一键跳转复用；app-tree 在 model:select 时写入）=====
 let _lastModelPath: string | null = null;

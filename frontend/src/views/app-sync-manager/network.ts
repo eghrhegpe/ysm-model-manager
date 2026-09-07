@@ -6,6 +6,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
@@ -30,8 +31,10 @@ export async function performSingleOp(
   path: string,
   cb: NetworkCallbacks,
 ): Promise<void> {
-  if (self._singleBusy) return;
-  self._singleBusy = true;
+  // P2 修复：原全局 _singleBusy 布尔 → 按 path 粒度 Set——
+  // 不同行可并发 push/pull，同一行防重入（保原契约）。
+  if (self._singleBusy.has(path)) return;
+  self._singleBusy.add(path);
   setButtonsBusy(self, true);
   const rtype = self._selectedType;
   const targetInstance = self._instance;
@@ -43,7 +46,7 @@ export async function performSingleOp(
       await app.PullSingleResourceFromInstance(rtype, path, targetInstance);
     }
     if (!self.isConnected) return;
-    const msg = op === "push" ? "✅ 已推送" : "✅ 已拉取";
+    const msg = op === "push" ? t("syncManager.pushed") : t("syncManager.pulled");
     bus.emit("toast:show", { msg, duration: TOAST_MS.success });
     const gen = self._gen;
     await cb.doLoadData();
@@ -58,7 +61,7 @@ export async function performSingleOp(
       type: "error",
     });
   } finally {
-    self._singleBusy = false;
+    self._singleBusy.delete(path);
     setButtonsBusy(self, false);
   }
 }

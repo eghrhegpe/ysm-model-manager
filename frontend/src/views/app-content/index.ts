@@ -2,6 +2,7 @@
 
 import { bus, type PageName } from "@/bus";
 import { resolveInitialPage } from "@/core/page-store.ts";
+import { logError } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -32,16 +33,15 @@ import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { initGithubPage } from "./init-github.ts";
 import {
   initDiagnosticsPage,
-  initGithubPage,
   initInstancesPage,
   initRepositoryPage,
   initSettingsPage,
-  initWorkshopPage,
 } from "./init-pages.ts";
 import { initPreviewResize } from "./init-preview.ts";
-import { resetAvatarConfigLoaded } from "./init-workshop.ts";
+import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { AppContentState, type RepoCacheEntry } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
@@ -262,7 +262,7 @@ class AppContent extends WebComponentBase {
 
   /** 页面初始化失败统一出口（同步 throw 与 async reject 共用） */
   private _pageInitFailed(e: unknown): void {
-    console.error("[app-content] 页面初始化失败:", e);
+    logError("app-content", "页面初始化失败", e);
     bus.emit("toast:show", {
       msg: `❌ ${t("content.pageLoadFailed")}: ${friendlyError(e)}`,
       duration: TOAST_MS.long,
@@ -278,16 +278,6 @@ class AppContent extends WebComponentBase {
 
   _initPreviewResize(): void {
     initPreviewResize(this);
-  }
-
-  /**
-   * 绑定 tab 按钮切换。按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
-   *   _bindTabs(".repo-tab", "ins", ["versions"]) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-versions
-   */
-  _bindTabs(_tabSelector: string, _prefix: string, _ids: string[]): void {
-    initRepositoryPage(this);
-    // 注意：这里需要调用真实的 bindTabs，但为了测试兼容，我们保留方法签名
-    // 实际逻辑在 init-pages.ts 中
   }
 
   _initDiagnostics(): void {

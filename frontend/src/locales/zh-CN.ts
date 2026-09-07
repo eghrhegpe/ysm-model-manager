@@ -726,6 +726,11 @@ export const zhCN = {
   "syncManager.scanInstance": "实例扫描：{dir}",
   "syncManager.scanDirWide":
     "⚠️ {label} 仓库基准目录 {dir} 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 {subDir} 子目录",
+  // P1.2 修复：sync-manager 内中文硬编码全量 i18n
+  "syncManager.loadTypeConfigFailed": "⚠️ 资源类型配置加载失败",
+  "syncManager.loadSyncStatusFailed": "⚠️ 同步状态加载失败",
+  "syncManager.pushed": "✅ 已推送",
+  "syncManager.pulled": "✅ 已拉取",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "❌ 整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "❌ 整合包目录未找到",

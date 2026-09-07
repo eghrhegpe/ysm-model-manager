@@ -8,6 +8,7 @@ import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
@@ -126,7 +127,7 @@ export async function showModelDetail(ctx: PreviewCtx, path: string): Promise<vo
     // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
     // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
     loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch((e) =>
-      console.warn("[preview] loadModel2D:", e),
+      logWarn("preview", "loadModel2D 失败", e),
     );
   } catch (err) {
     if (detailGen.stale(gen)) return;
@@ -218,7 +219,7 @@ async function renderPackModelList(
         const entry = el.dataset.entry || "";
         if (!entry) return;
         createPack3D(path, { startEntry: entry }).catch((e) =>
-          console.warn("[preview] pack3D:", e),
+          logWarn("preview", "pack3D 失败", e),
         );
       };
     });

@@ -1,6 +1,7 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 
 import { t } from "@/core/i18n/t.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
@@ -125,7 +126,7 @@ export class AppTree extends WebComponentBase {
     try {
       Object.assign(this._dirOpen, JSON.parse(safeGet("at_dirs") || "{}"));
     } catch (e) {
-      console.warn("[app-tree] parse at_dirs:", e);
+      logWarn("app-tree", "parse at_dirs:", e);
     }
 
     try {
@@ -173,7 +174,7 @@ export class AppTree extends WebComponentBase {
         await this._reloadAfterMountSwitch();
       }
     } catch (e) {
-      console.error("[Tree Init Error]", e);
+      logError("app-tree", "Init Error", e);
       const tree = this._root?.getElementById("tree");
       if (tree) tree.innerHTML = t("tree.treeLoadFailed");
       toastThrottled(e, t("tree.treeLoadFailed"));
@@ -191,7 +192,7 @@ export class AppTree extends WebComponentBase {
       await this._load();
       if (gen2 === this._gen) this._renderTree();
     } catch (e) {
-      console.error("[Tree pendingRoot Error]", e);
+      logError("app-tree", "pendingRoot Error", e);
       // 补载失败：_entries 保留首代数据 → 兜底渲染避免空白树（gen 未被再次作废时）
       if (gen2 === this._gen && this._entries.length) this._renderTree();
       toastThrottled(e, t("tree.treeLoadFailed"));
@@ -221,7 +222,7 @@ export class AppTree extends WebComponentBase {
       if (gen !== this._gen) return;
       this._renderTree();
     } catch (e) {
-      console.error("[Tree root change Error]", e);
+      logError("app-tree", "root change Error", e);
       bus.emit("toast:show", {
         msg: `❌ ${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
@@ -266,7 +267,7 @@ export class AppTree extends WebComponentBase {
       }
     } catch (e) {
       // 目录加载失败降级为空树——用户侧「空目录」与「加载失败」不可区分，留痕供排查
-      console.warn("[app-tree] entries 加载失败:", e);
+      logWarn("app-tree", "entries 加载失败:", e);
       this._entries = [];
     }
   }
@@ -463,12 +464,16 @@ export class AppTree extends WebComponentBase {
       let ok = 0,
         fail = 0;
       const { DeleteResourcePack } = await getApp();
-      for (const p of paths) {
-        try {
-          await DeleteResourcePack(p, rtype);
-          ok++;
-        } catch {
-          fail++;
+      // P2 修复：原串行 for...of await → 并发批处理（限并发 8）——
+      // 大批量删除时串行 IPC 阻塞主线程，并发 8 兼顾吞吐与后端压力。
+      // Promise.allSettled 保原语义：每项独立 try/catch，统计 ok/fail 不短路。
+      const BATCH = 8;
+      for (let i = 0; i < paths.length; i += BATCH) {
+        const batch = paths.slice(i, i + BATCH);
+        const results = await Promise.allSettled(batch.map((p) => DeleteResourcePack(p, rtype)));
+        for (const r of results) {
+          if (r.status === "fulfilled") ok++;
+          else fail++;
         }
       }
       selectState.keys.clear();
@@ -481,7 +486,7 @@ export class AppTree extends WebComponentBase {
         if (App.ClearScanCache) await App.ClearScanCache();
       } catch (e) {
         /* 清缓存失败不影响删除结果，_load 仍会执行；留痕防缓存幽灵无人知晓 */
-        console.warn("[app-tree] ClearScanCache 失败:", e);
+        logWarn("app-tree", "ClearScanCache 失败:", e);
       }
       await this._load();
       if (gen !== this._gen) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染

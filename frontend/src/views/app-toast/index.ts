@@ -3,6 +3,7 @@
 import { bus } from "@/bus";
 // 别名导入：show() 内局部变量 `t` 是 toast 元素，直接用 `t` 会被遮蔽
 import { t as tr } from "@/core/i18n/t.ts";
+import { logError } from "@/utils/base/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -130,7 +131,7 @@ class AppToast extends WebComponentBase {
           // P2 修复（审核发现）：click 回调无 catch 出口——抛错逃逸 onclick 成
           // uncaught 且无反馈，与 undo 路径（L92-103 有 catch）错误边界不对称；
           // 对齐 undo：记录并反馈，不静默
-          console.error("[toast] 点击回调失败:", e);
+          logError("toast", "点击回调失败:", e);
           bus.emit("toast:show", {
             msg: `❌ ${tr("error.fallback")}`,
             duration: ERR_TOAST_MS,
@@ -158,7 +159,7 @@ class AppToast extends WebComponentBase {
         } catch (e) {
           // P2 修复：undo 抛错不得跳过反馈——原 try/finally 无 catch，
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
-          console.error("[toast] 撤销回调失败:", e);
+          logError("toast", "撤销回调失败:", e);
           bus.emit("toast:show", {
             msg: `❌ ${tr("toast.undoFailed")}`,
             duration: ERR_TOAST_MS,

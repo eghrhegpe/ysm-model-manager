@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { showBatchRenameDialog } from "@/features/dialogs/batch-rename.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -259,9 +260,9 @@ async function reload(vm: AppTree): Promise<void> {
     if (App.ClearScanCache) await App.ClearScanCache();
     import("@/views/app-content/community-data.ts")
       .then((m) => m.clearAllCommunityCache())
-      .catch((e) => console.warn("[app-tree] clearAllCommunityCache:", e));
+      .catch((e) => logWarn("app-tree", "clearAllCommunityCache:", e));
   } catch (e) {
-    console.warn("[app-tree] ClearScanCache:", e);
+    logWarn("app-tree", "ClearScanCache:", e);
   }
   const gen = vm._gen;
   try {
@@ -276,7 +277,7 @@ async function reload(vm: AppTree): Promise<void> {
     }
   } catch (err) {
     if (atBeGenGuard(vm, gen)) return;
-    console.warn("[bus] reload 失败:", err);
+    logWarn("bus", "reload 失败:", err);
     vm._entries = [];
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(err, t("tree.reloadFailed"))}`,
@@ -329,7 +330,7 @@ async function runBatchToggle(
         ok++;
       } catch (err) {
         fail++;
-        console.warn(`[bus] ${opts.label} 失败:`, fullPath, err);
+        logWarn("bus", `${opts.label} 失败: ${fullPath}`, err);
       }
     }
     if (ok > 0) {

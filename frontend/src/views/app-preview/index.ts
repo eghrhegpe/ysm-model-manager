@@ -1,6 +1,7 @@
 // ===== <app-preview> 入口 =====
 
 import { bus } from "@/bus";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -187,7 +188,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
             await this._showModelDetail(path, rtype);
           }
         } catch (e) {
-          console.error("[preview] 加载失败:", e);
+          logError("preview", "加载失败", e);
           this.root.innerHTML =
             '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' +
             t("preview.loadFailed") +
@@ -282,7 +283,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       this._typeCache = reg?.resourceTypes || [];
       this._typeReg = null; // 强制下次 _typeMeta 按新 _typeCache 重建；防 LoadResourceTypes 迟到时 _typeReg 永久冻结为 {}
     } catch (e) {
-      console.warn("[preview] LoadResourceTypes:", e);
+      logWarn("preview", "LoadResourceTypes 失败", e);
     }
   }
 
@@ -308,7 +309,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         const { DetectResourceType } = await getApp();
         rtype = (await DetectResourceType(path)) || "";
       } catch (e) {
-        console.warn("[preview] DetectResourceType:", e);
+        logWarn("preview", "DetectResourceType 失败", e);
       }
     }
     // 过期守卫：await 期间用户已点其他文件，丢弃本次分流

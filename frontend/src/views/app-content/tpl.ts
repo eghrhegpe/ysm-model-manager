@@ -19,8 +19,7 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-search-results",
 ];
 
-// P1 修复（ADR-040）：settingsHTML 已拆至 settings/tpl-settings.ts，此处 re-export 兼容
-export { settingsHTML } from "@/views/app-content/settings/tpl-settings.ts";
+// settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
 
 export function repositoryHTML(): string {
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统
@@ -88,8 +87,7 @@ export function instancesHTML(): string {
     "</div>"
   );
 }
-// P2 修复（chunk 实效）：recycleHTML 已拆至 tpl-recycle.ts
-export { recycleHTML } from "./tpl-recycle.ts";
+// recycleHTML 已拆至 tpl-recycle.ts，消费者直接 import 叶文件（P1-6）
 
 export function diagnosticsHTML(): string {
   return `<div class="repo-wrap">

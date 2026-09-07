@@ -116,7 +116,6 @@ type ContentEl = {
   _initPreviewResize(): void;
   _initRepository(): void;
   _initInstances(): void;
-  _bindTabs(sel: string, prefix: string, ids: string[]): void;
   [key: string]: unknown;
 } & Element;
 
@@ -600,7 +599,7 @@ import {
   rememberModelPath,
   getLastModelPath,
 } from "./init-pages.ts";
-import type { AppContentHost } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 import type { Mock } from "vitest";
 
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
@@ -637,7 +636,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
     expect(host._unsubs).toHaveLength(1); // 仅 repo:rtype-changed 订阅
   });
 
-  it("initSettingsPage：initSettings 拒绝 → console.error + toast（280-281）", async () => {
+  it("initSettingsPage：initSettings 拒绝 → logError + toast（280-281）", async () => {
     const el = mountContent();
     el._current = "settings";
     el._render();

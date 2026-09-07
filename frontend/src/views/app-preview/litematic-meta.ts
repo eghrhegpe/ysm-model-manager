@@ -1,5 +1,6 @@
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
@@ -273,7 +274,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
       // catch 防 unhandled rejection（陷阱 #3：异步点击不得产生未处理拒绝）
       const voxelFn = VOXEL_RPC_BY_EXT[ext] || "GetLitematicVoxelData";
       btn3d.onclick = (): void => {
-        createLitematic3D(path, voxelFn).catch((e) => console.warn("[preview] litematic3D:", e));
+        createLitematic3D(path, voxelFn).catch((e) => logWarn("preview", "litematic3D 失败", e));
       };
     }
   } catch (e) {

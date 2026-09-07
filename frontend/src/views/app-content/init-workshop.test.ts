@@ -48,7 +48,8 @@ vi.mock("./workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
 vi.mock("./workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
 vi.mock("./community-data.ts", () => ({ fillSearch }));
 
-import { initWorkshopPage, resetAvatarConfigLoaded, type AppContentHost } from "./init-workshop.ts";
+import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** vi.fn() 未显式标注入参时 mock.calls 元组推断为空，统一经 unknown[] 取参 */

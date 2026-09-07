@@ -22,7 +22,7 @@ import {
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { fillSearch } from "./community-data.ts";
-import type { RepoCacheEntry } from "./state.ts";
+import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./workshop-avatar.ts";
 import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./workshop-tabs.ts";
@@ -180,25 +180,4 @@ export function resetAvatarConfigLoaded(): void {
   _avatarConfigLoadedRegistered = false;
 }
 
-// ==================== 类型定义 ====================
-
-/** app-content 组件接口（供 workshop/github 初始化函数访问） */
-export interface AppContentHost {
-  _root: ShadowRoot;
-  _unsubs: Array<() => void>;
-  _globalUnsubs: Array<() => void>;
-  _repoEventsCleanup: (() => Promise<void>) | null;
-  _setRepoEventsCleanup(fn: (() => Promise<void>) | null): void;
-  _currentSite: WorkshopSite | null;
-  _setCurrentSite(site: WorkshopSite | null): void;
-  _avatarCache: Record<string, string>;
-  _setAvatarCache(cache: Record<string, string>): void;
-  _workshopCache: Map<string, RepoCacheEntry> | null;
-  _setWorkshopCache(cache: Map<string, RepoCacheEntry> | null): void;
-  _githubCache: Map<string, RepoCacheEntry> | null;
-  _setGithubCache(cache: Map<string, RepoCacheEntry> | null): void;
-  _workshopTimer: ReturnType<typeof setTimeout> | null;
-  _setWorkshopTimer(timer: ReturnType<typeof setTimeout> | null): void;
-  _avatarRefreshRegistered: boolean;
-  _setAvatarRefreshRegistered(v: boolean): void;
-}
+// AppContentHost 接口已迁至 ./host.ts（P1-1 归属归位）

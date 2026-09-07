@@ -7,6 +7,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { modalPicker } from "@/features/dialogs/modal-picker.ts";
 import type { ResourceTypeEntry } from "@/services/resource-registry.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { pickDirectory } from "@/utils/dom/directory-picker.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
@@ -362,7 +363,7 @@ export function initMcDetect(root: ShadowRoot): void {
     } catch (e) {
       // P3 修复（审核）：hover 预加载失败有出口——原裸 await 逸出 unhandled rejection
       // （hover 非用户主动操作，静默降级不 toast，避免打扰）
-      console.warn("[scan-tooltip] 预加载路径失败:", e);
+      logWarn("scan-tooltip", "预加载路径失败", e);
       _scanPaths = [];
     }
   });

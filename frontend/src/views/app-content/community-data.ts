@@ -1,14 +1,15 @@
 // ===== 创意工坊纯数据层 =====
 
 import { getApp } from "@/backend/app.ts";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { logWarn } from "@/utils/base/log.ts";
+import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import type {
   WorkshopCreator,
   WorkshopSite,
 } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
-import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
-import { dbg } from "@/utils/debug/debug.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {
@@ -119,7 +120,7 @@ export async function loadCommunityData(): Promise<CommunityData> {
     // 显式化（ADR-082 续）：不再只 console.warn 静默——failed 标记让调用方
     // 区分「加载失败」（提示重试）与「真无数据」（显示空态），避免页面空白无感知
     failed = true;
-    console.warn("[community] 社区数据加载失败:", e);
+    logWarn("community", "社区数据加载失败", e);
   }
 
   const merged = (creators || []) as LocalCreator[];

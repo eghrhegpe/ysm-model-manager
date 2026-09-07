@@ -525,7 +525,10 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
     statAnim.delete(el);
   }
   if (el.textContent !== newText) {
-    const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1] || "", 10) || 0;
+    // P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码中文「项」，en/ja locale 失效；
+    // 改读 data-total 属性通道（与 events.ts 的 data-count 同源思路，ADR-133 导向）。
+    const oldTotal = parseInt(el.dataset.total || "0", 10) || 0;
+    el.dataset.total = String(total);
     if (oldTotal > 0 && oldTotal !== total && total > 0) {
       const cancel = animateNumber(el, total, 700);
       const timer = setTimeout(() => {

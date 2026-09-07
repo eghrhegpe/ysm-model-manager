@@ -5,10 +5,12 @@ import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { rememberModelPath } from "@/views/app-content/init-pages.ts";
 import { selectSingle, selectState, toggleSelect } from "./data.ts";
@@ -19,10 +21,11 @@ import { getVsRows } from "./render.ts";
 const ENABLE_MULTI_SELECT = true;
 
 // ===== 类型提级：AtTeCtx 收纳上下文 =====
+// 注：原 disposed 字段已删——ctx 为闭包局部变量，无处可置 true，5 处 `if (ctx.disposed)
+// return` 早退分支是死代码（P1.4 死字段清理）。
 interface AtTeCtx {
   container: HTMLElement;
   vm: AppTree;
-  disposed: boolean;
 }
 
 // ===== 闭包升格：辅助函数（atTe* 前缀） =====
@@ -35,7 +38,6 @@ function atTeFindRow(container: HTMLElement, path: string): HTMLElement | null {
 }
 
 function atTeStartRename(ctx: AtTeCtx, path: string): void {
-  if (ctx.disposed) return;
   const row = atTeFindRow(ctx.container, path);
   if (!row) return;
   const nmEl = row.querySelector(".nm") as HTMLElement | null;
@@ -100,7 +102,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
         bus.emit("stats:refresh");
       })
       .catch((err) => {
-        console.warn("[tree] ToggleEnable 失败:", fullPath, err);
+        logWarn("tree", `ToggleEnable 失败: ${fullPath}`, err);
         bus.emit("toast:show", {
           msg: t("tree.toggleFail", {
             name: fullPath ? fullPath.split(/[/\\]/).pop() || "" : "",
@@ -127,7 +129,7 @@ function atTeOpenAuthor(author: string): void {
   getApp()
     .then(({ OpenInBrowser }) => OpenInBrowser(url))
     .catch((err) => {
-      console.warn("[tree] OpenInBrowser 失败:", err);
+      logWarn("tree", "OpenInBrowser 失败:", err);
       bus.emit("toast:show", {
         msg: `❌ ${t("tree.browserFailed")}`,
         duration: TOAST_MS.normal,
@@ -163,27 +165,18 @@ function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElemen
   e.stopPropagation();
   const path = haPreview.dataset.path;
   const name = path?.split(/[/\\]/).pop() || "";
-  import("@/utils/model-name/display.ts")
-    .then(({ parseModelName }) => {
-      const { author } = parseModelName(name);
-      if (author) {
-        atTeOpenAuthor(author);
-      } else {
-        bus.emit("toast:show", {
-          msg: t("tree.noAuthor"),
-          duration: TOAST_MS.success,
-          type: "warn",
-        });
-      }
-    })
-    .catch((err) => {
-      console.warn("[tree] 加载 display 模块失败:", err);
-      bus.emit("toast:show", {
-        msg: `❌ ${t("tree.parserLoadFailed")}`,
-        duration: TOAST_MS.normal,
-        type: "error",
-      });
+  // P1.5 修复：原动态 import("@/utils/model-name/display.ts") 改静态——render.ts 已静态
+  // 引入同模块的 renderDisplayName，懒加载无意义（首屏已加载该 chunk）。
+  const { author } = parseModelName(name);
+  if (author) {
+    atTeOpenAuthor(author);
+  } else {
+    bus.emit("toast:show", {
+      msg: t("tree.noAuthor"),
+      duration: TOAST_MS.success,
+      type: "warn",
     });
+  }
   return true;
 }
 
@@ -268,7 +261,6 @@ function atTeBindRowClick(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement): boo
 function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
   const { container } = ctx;
   container.addEventListener("dblclick", (e: MouseEvent) => {
-    if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;
     if (!target) return;
     const fl = target.closest(".fl, .fl-list") as HTMLElement | null;
@@ -284,7 +276,6 @@ function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
 function atTeBindContextMenu(ctx: AtTeCtx): void {
   const { container, vm } = ctx;
   container.addEventListener("contextmenu", (e: MouseEvent) => {
-    if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;
     if (!target) return;
     const fh = target.closest(".fh, .fh-list") as HTMLElement | null;
@@ -343,7 +334,6 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
 function atTeBindRenameInput(ctx: AtTeCtx): void {
   const { container, vm } = ctx;
   container.addEventListener("keydown", (e: Event) => {
-    if (ctx.disposed) return;
     const ke = e as KeyboardEvent;
     const target = ke.target as HTMLElement | null;
     if (!target?.classList.contains("rename-inp")) return;
@@ -362,7 +352,6 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
     }
   });
   container.addEventListener("focusout", (e: FocusEvent) => {
-    if (ctx.disposed) return;
     const target = e.target as HTMLElement | null;
     if (!target?.classList.contains("rename-inp")) return;
     // P1 修复（审核）：Esc 取消标记——跳过保存链（见上方 Escape 分支注释）
@@ -468,15 +457,32 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     let ok = 0,
       fail = 0;
     const flipped: TreeEntry[] = [];
-    for (const e of targets) {
-      if (e.banned === !enable) continue;
-      try {
-        await ToggleEnable(e.fullPath);
-        ok++;
-        flipped.push(e); // 只登记实际成功的项，失败项不翻转（不靠重载纠正）
-      } catch (err) {
-        fail++;
-        console.warn("[tree] toggleFolderBatch 失败:", e.fullPath, err);
+    // P2 修复：原串行 for...of await → 并发批处理（限并发 8）——
+    // 文件夹批量启用/禁用时串行 IPC 阻塞主线程。Promise.allSettled 保原语义：
+    // 每项独立 try/catch，统计 ok/fail 不短路；flipped 仅登记成功项（失败项不翻转）。
+    // 注：原 `if (e.banned === !enable) continue` 处理「banned 与目标态不一致」的项，
+    // filter 取同集（banned !== !enable），勿写反。
+    const targetsToToggle = targets.filter((e) => e.banned !== !enable);
+    const BATCH = 8;
+    for (let i = 0; i < targetsToToggle.length; i += BATCH) {
+      const batch = targetsToToggle.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map((e) =>
+          ToggleEnable(e.fullPath)
+            .then(() => e)
+            .catch((err: unknown) => {
+              logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
+              throw err;
+            }),
+        ),
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          ok++;
+          flipped.push(r.value);
+        } else {
+          fail++;
+        }
       }
     }
     if (ok > 0) {
@@ -511,7 +517,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
 
 // ===== 主函数：纯分派，原签名不变 =====
 export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
-  const ctx: AtTeCtx = { container, vm, disposed: false };
+  const ctx: AtTeCtx = { container, vm };
 
   atTeBindRowDoubleClick(ctx);
   atTeBindContextMenu(ctx);

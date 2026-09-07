@@ -11,6 +11,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -138,7 +139,7 @@ function stgBindLinkMode(
           total += await RelinkAllInstanceResources(ins.Name);
         } catch (e) {
           failed++;
-          console.warn("[community] 重新链接失败:", ins.Name, e);
+          logWarn("community", "重新链接失败", { name: ins.Name, err: e });
         }
       }
       bus.emit("stats:refresh");
@@ -213,7 +214,7 @@ async function stgBindShowVersion(root: ShadowRoot): Promise<void> {
     const el = root.getElementById("set-version");
     if (el) el.textContent = ver;
   } catch (e) {
-    console.warn("[settings] CurrentVersion 获取失败:", e);
+    logWarn("settings", "CurrentVersion 获取失败", e);
     const el = root.getElementById("set-version");
     if (el) el.textContent = "—";
   }
@@ -233,7 +234,7 @@ function stgBindReleasesClick(
     getApp()
       .then(({ OpenInBrowser }) => OpenInBrowser(url))
       .catch((e) => {
-        console.warn("[settings] 打开发布页失败:", e);
+        logWarn("settings", "打开发布页失败", e);
         bus.emit("toast:show", {
           msg: `❌ ${t("tree.browserFailed")}`,
           duration: TOAST_MS.normal,

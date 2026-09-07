@@ -5,6 +5,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { SyncManagerSelf } from "./index.ts";
 import type { SyncItem } from "./tpl.ts";
@@ -32,7 +33,7 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
     if (gen !== self._gen || !self.isConnected) return;
     self._typeConfig = [];
     bus.emit("toast:show", {
-      msg: "⚠️ 资源类型配置加载失败",
+      msg: t("syncManager.loadTypeConfigFailed"),
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -88,7 +89,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
     if (gen !== self._gen) return;
     self._allItems = [];
     bus.emit("toast:show", {
-      msg: "⚠️ 同步状态加载失败",
+      msg: t("syncManager.loadSyncStatusFailed"),
       duration: TOAST_MS.normal,
       type: "warn",
     });

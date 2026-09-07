@@ -27,7 +27,7 @@ vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents }));
 vi.mock("../../features/community/data.ts", () => ({ tryFetchModels }));
 
 import { initGithubPage } from "./init-github.ts";
-import type { AppContentHost } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { RepoCacheEntry } from "./state.ts";
 

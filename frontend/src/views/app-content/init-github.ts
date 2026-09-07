@@ -11,7 +11,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { AppContentHost } from "./init-workshop.ts";
+import type { AppContentHost } from "./host.ts";
 import type { RepoCacheEntry } from "./state.ts";
 
 /**

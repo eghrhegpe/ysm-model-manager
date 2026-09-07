@@ -5,6 +5,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { applyTheme } from "@/theme-core";
+import { logWarn } from "@/utils/base/log.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { cfg } from "./store.ts";
 
@@ -51,8 +52,9 @@ export function initThemeSection(root: ShadowRoot): void {
               themeName,
             );
           } catch (e) {
-            console.warn(
-              "[settings] 主题保存到配置失败:",
+            logWarn(
+              "settings",
+              "主题保存到配置失败",
               e,
             ); /* 保存失败不影响 UI 主题，但留痕便于排障 */
           }

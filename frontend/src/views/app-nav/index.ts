@@ -6,6 +6,7 @@ import { can } from "@/backend/capabilities.ts";
 import { bus, type PageName } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
+import { logError } from "@/utils/base/log.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -128,7 +129,7 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
   if (fab) {
     const handler = (): void => {
       void viewerFabClick().catch((e) => {
-        console.error("[app-nav] 打开 3D 失败:", e);
+        logError("app-nav", "打开 3D 失败", e);
         bus.emit("toast:show", {
           msg: "❌ 打开 3D 失败",
           duration: TOAST_MS.normal,

@@ -737,6 +737,11 @@ export const en: Record<string, string> = {
   "syncManager.scanInstance": "Instance scan: {dir}",
   "syncManager.scanDirWide":
     "⚠️ {label} repo base dir {dir} looks too broad (contains mods/config/schematics subdirs); sync may mix in other resources — point the type root to a dedicated {subDir} subdir",
+  // P1.2 fix: sync-manager hardcoded Chinese → full i18n
+  "syncManager.loadTypeConfigFailed": "⚠️ Failed to load resource type config",
+  "syncManager.loadSyncStatusFailed": "⚠️ Failed to load sync status",
+  "syncManager.pushed": "✅ Pushed",
+  "syncManager.pulled": "✅ Pulled",
   // P0 fix: context menu rtype guard toast (i18n compliance)
   "ctx.emptyRtype": "❌ Pack missing type info, right-click ops disabled",
   "ctx.missingPath": "❌ Pack directory not found",

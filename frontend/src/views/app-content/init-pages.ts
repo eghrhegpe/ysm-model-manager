@@ -29,9 +29,8 @@ export function initInstancesPage(host: AppContentHost): void {
   bindTabs(host, ".repo-tab", "ins", ["versions"]);
 
   // 只注册一次，避免重复监听
-  const insKey = "_insListenerReg";
-  if ((host as unknown as Record<string, unknown>)[insKey]) return;
-  (host as unknown as Record<string, unknown>)[insKey] = true;
+  if (host._insListenerReg) return;
+  host._insListenerReg = true;
 
   host._unsubs.push(
     bus.on("package:selected", (pkg) => {

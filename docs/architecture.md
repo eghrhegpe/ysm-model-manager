@@ -28,7 +28,7 @@ YSM 模型管理器是一个跨平台桌面 + 移动 + 网页应用，用于管�
 |----|------|------|
 | 桌面壳 | **Wails v3**（Go + WebView2 / Android WebView / WebKitGTK） | `main.go` 注册单一 Service；Android 通过 Java 桥 + Gradle APK |
 | 后端语言 | **Go 1.25** | 模块名 `ysm-model-manager`（`go.mod:1`）；Android 用 `-buildmode=c-shared` 编译 `libwails.so` |
-| 前端 | **Vite + TypeScript**（Web Components + Shadow DOM） | `frontend/index.html` → `js/app-modules.ts`；源码全 `.ts`，仅 `*.test.js` 与生成态 `wasm/*-data.js` 为 `.js` |
+| 前端 | **Vite + TypeScript**（Web Components + Shadow DOM） | `frontend/index.html` → `src/app-modules.ts`；源码全 `.ts`，仅 `*.test.js` 与生成态 `wasm/*-data.js` 为 `.js` |
 | 3D 渲染 | **Three.js** + 内嵌 **YSMParser WASM** | WebView/浏览器/Android WebView 内内存直解 `.ysm`，无 exe sidecar |
 | 平台抽象 | **build tags** + PathManager | `pathmgr_{desktop,android}.go`、`screen_{windows,other}.go`、`app_config_{windows,other,android}.go` 等 |
 | Web 后端 | **backend adapter** | `backend/browser-adapter.ts` Proxy 同形状绑定；`backend/platform.ts` Tier 分层判定 |
@@ -42,7 +42,7 @@ YSM 模型管理器是一个跨平台桌面 + 移动 + 网页应用，用于管�
 桌面/Web WebView2:                            Android:
 ┌────────────────────────────────────┐    ┌────────────────────────────────────┐
 │  前端 (Vite/TS Web Components)       │    │  前端 (WebView + JS Bridge)          │
-│   components/ · core/ · features/    │    │   components/ · android-bridge.ts    │
+│   components/ · core/ · features/    │    │   components/ · backend/platform.ts   │
 │   utils/ · backend/{app,platform}      │    │   features/android-events.ts          │
 └────────┬──────────────────────────┘    └──────┬───────────────────────────────┘
          │ Wails Service 反射绑定                │  Java↔JS (WailsJSBridge)
@@ -107,7 +107,7 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 | 1 | `__YSM_WEB__ === true` / `MODE === 'web'` | vite web 构建判定 |
 | 2 | `window.go` / `window.wails` | 桌面 Wails 桥 / Android Java 桥 |
 
-`isViewerMode()`（`android-bridge.ts:24`）统一判定「查看器模式」：`__YSM_BACKEND__=browser`（网页版）或 Android 桥存在 → 隐藏自更新/资源管理器/游戏目录等桌面专属 UI，写操作降级为只读/浏览器下载。
+`isViewerMode()`（`backend/platform.ts`）统一判定「查看器模式」：`__YSM_BACKEND__=browser`（网页版）或 Android 桥存在 → 隐藏自更新/资源管理器/游戏目录等桌面专属 UI，写操作降级为只读/浏览器下载。
 
 ### 2.2 Android Java 宿主层
 
@@ -419,9 +419,9 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 6.1 入口与组件注册
 
-`frontend/index.html:15` → `js/app-modules.ts`（~6.4KB）：
+`frontend/index.html:15` → `src/app-modules.ts`（~6.4KB）：
 - 静态 `import` `app-nav` / `context-menu` / `app-toast`（:16-18）；
-- 动态 `import()` 字面量加载 `app-tree`/`app-sidebar`/`app-content`/`app-resource-manager`/`app-sync-manager`（:20-34，分包按需）；
+- 动态 `import()` 字面量加载 `app-tree`/`app-sidebar`/`app-content`/`app-sync-manager`（:20-34，分包按需）；
 - `register("loadInstances"|"loadEntries")` 注入服务（:11-12）；
 - 主题 + UI 偏好初始化（:46-132）。
 
@@ -435,7 +435,6 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 | `app-preview/` | ~160KB，16 文件 | `skeleton.ts` 36.8KB、`wasm.ts` 22.9KB、`litematic-3d.ts` 21.7KB、`css.ts`、`pack.ts`、`detail.ts` |
 | `app-tree/` | ~90KB，15 文件 | `toolbar-events.ts` 15.6KB、`bus-handlers.ts` 12.6KB、`render.ts`、`virtual-scroll.ts`、`loader.ts` |
 | `app-sidebar/` | ~39KB，8 文件 | 侧栏导航 |
-| `app-resource-manager/` | 21.6KB | 资源管理器 |
 | `app-sync-manager/` | 18.9KB | 同步管理器 |
 | 单文件 | — | `app-nav.ts` 5.4KB、`app-toast.ts` 4.4KB、`context-menu.ts` 4.7KB、`app-tree-styles.ts` 11.9KB |
 
@@ -460,7 +459,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 
 ### 6.5 其他前端目录
 
-`core/`（context-menus 13.7KB、handler-dnd 10.6KB、handler-sync 10.8KB、handler-upload、theme、page-store、menu-defs）、`features/`（import-queue 30.8KB、community/download-queue 21.4KB、oldest-models、recycle-bin、version-updater、dnd-state）、`utils/`（3d/ 含 adapters 适配器层 + caps 能力层 + perception 感知层共 138 文件、model2d 19.4KB、animation、summarize、display、extensions、resource-types 等 20+ 模块）、`utils/dom/`（android-bridge、directory-picker、esc、dom 等）、`dialogs/`（modal/rename/batch-rename/tag-editor/adv-filter）、`services/registry.ts`、`backend/`（app.ts / platform.ts / browser-adapter.ts / idb.ts / types.ts）、`wasm/`、`css/`、`web-spike/`（ADR-049 Phase 0 调试页）、`views/`（app-content/app-preview/app-tree/app-sidebar/app-resource-manager/app-sync-manager/app-nav/app-toast）。
+`core/`（context-menus 13.7KB、handler-dnd 10.6KB、handler-sync 10.8KB、handler-upload、theme、page-store、menu-defs）、`features/`（import-queue 30.8KB、community/download-queue 21.4KB、oldest-models、recycle-bin、version-updater、dnd-state）、`utils/`（3d/ 含 adapters 适配器层 + caps 能力层 + perception 感知层共 138 文件、model2d 19.4KB、animation、summarize、display、extensions、resource-types 等 20+ 模块）、`utils/dom/`（directory-picker、esc、dom 等）、`dialogs/`（modal/rename/batch-rename/tag-editor/adv-filter）、`services/registry.ts`、`backend/`（app.ts / platform.ts / browser-adapter.ts / idb.ts / types.ts）、`wasm/`、`css/`、`web-spike/`（ADR-049 Phase 0 调试页）、`views/`（app-content/app-preview/app-tree/app-sidebar/app-sync-manager/app-nav/app-toast）。
 
 ### 6.6 网页版架构（Web Edition / 查看器模式）
 
@@ -697,14 +696,14 @@ ysm-model-manager/
 │   ├── fileops/               # 文件操作（ADR-003 下沉）
 │   ├── instance/               # Minecraft 实例管理
 ├── frontend/
-│   ├── index.html               # 桌面/Android 入口 → js/app-modules.ts
+│   ├── index.html               # 桌面/Android 入口 → src/app-modules.ts
 │   ├── web.html                 # ★ Web 版 Spike 入口 (Tier 0 __YSM_BACKEND__=browser)
 │   ├── vite.config.js           # wailsBindingsResolve + vitest (桌面)
 │   ├── vite.web.config.ts       # ★ Web 版构建 (mode=web, dist-web)
 │   ├── bindings/                # wails3 generate bindings 产物
 │   ├── dist/                    # 桌面构建产物 (embed 源)
 │   ├── dist-web/                # Web 版构建产物 (静态托管)
-│   └── js/
+│   └── src/
 │       ├── app-modules.ts       # 组件注册 + 初始化
 │       ├── bus.ts               # 事件总线 (~50 事件)
 │       ├── backend/               # ★ 跨平台桥接层
@@ -713,11 +712,10 @@ ysm-model-manager/
 │       │   ├── browser-adapter.ts  # ★ Web 版 backend adapter (Proxy + IndexedDB)
 │       │   ├── idb.ts           # Web 版 IndexedDB 封装
 │       │   └── types.ts         # AppBindings 类型定义
-│       ├── utils/dom/           # android-bridge / directory-picker / esc / dom
+│       ├── utils/dom/           # directory-picker / esc / dom
 │       ├── components/          # app-content / app-preview / app-tree /
-│       │                        #   app-sidebar / app-resource-manager /
-│       │                        #   app-sync-manager / app-nav / app-toast /
-│       │                        #   context-menu
+│       │                        #   app-sidebar / app-sync-manager /
+│       │                        #   app-nav / app-toast / context-menu
 │       ├── core/ features/ utils/ dialogs/ services/ css/ wasm/ web-spike/
 ├── build/
 │   ├── Taskfile.yml / common/ windows/ darwin/ linux/ android/  # 平台构建

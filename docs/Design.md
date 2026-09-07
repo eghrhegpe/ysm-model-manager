@@ -507,7 +507,7 @@ description: 一句话摘要
 ### 14.1 技术基座：Web Components + Shadow DOM
 
 - 前端为 **TypeScript 编译的原生 Web Components**，无前端框架（React/Vue 等）。
-- 全部 9 个组件直接 `extends HTMLElement`（已逐一确认：`context-menu.ts:6`、`app-content/index.ts:46`、`app-toast.ts:10`、`app-sync-manager/index.ts:38`、`app-tree/index.ts:46`、`app-nav.ts:6`、`app-preview/index.ts:32`、`app-sidebar/index.ts:15`、`app-resource-manager/index.ts:66`）。
+- 全部 8 个组件直接 `extends HTMLElement`（已逐一确认：`context-menu.ts:6`、`app-content/index.ts:46`、`app-toast.ts:10`、`app-sync-manager/index.ts:38`、`app-tree/index.ts:46`、`app-nav.ts:6`、`app-preview/index.ts:32`、`app-sidebar/index.ts:15`）。
 - **无共享基类 / Mixin**。唯一的"接口契约"是 `PreviewCtx`（`app-preview/preview-utils.ts:26`，`interface` 而非基类），`AppPreview` 实现它，仅向子模块暴露最小面（`_root` / `_loadPreviewImage` / `decodeYsmViaWasm` 等）。这是依赖倒置手法，不是继承体系。
 - 样式注入统一用 `adoptedStyleSheets` + `CSSStyleSheet.replaceSync`（见 §9）。
 
@@ -537,7 +537,6 @@ unsub();
 | 页面导航 | `core/page-store.ts` | `_currentPage` 模块级；唯一写入点 = `registerPageStore` 的 `nav:changed` listener（过 `sanitizePage` 白名单）；**无公开 setter**（旧 `setCurrentPage(p)` 已删除——幽灵路径历史本体，禁止复活，见 §19.2 备注） |
 | 树多选 | `app-tree/data.ts` | `selectState = { keys:Set, lastKey }` + `toggleSelect()`，跨节点共享 |
 | 跨组件搜索手递 | `app-tree/index.ts:17,20` | `setPendingTreeSearch(name)` / `takePendingTreeSearch()`：app-content 写入、app-tree 挂载消费 |
-| 资源类型缓存 | `app-resource-manager` 模块级 `STORE._config` | 订阅 `config:resource-types-changed` 后重置 |
 | 同步选中类型 | `app-sync-manager` 模块级 `_lastSelectedType` | 记忆上次选中类型，供恢复 |
 | 主题 / UI 偏好 | `app-modules.ts` `applyTheme` / `applyUIPrefs` | 写入 `:root` CSS 变量 + `localStorage` |
 
@@ -548,8 +547,8 @@ unsub();
 1. **Shadow DOM 创建**：构造函数 `attachShadow({mode:"open"})` + `adoptedStyleSheets`（见 §9）。
 2. **bus 订阅注册**：`connectedCallback` 内调用 `bus.on(...)`。
 3. **退订存储**：单订阅存 `this._unsub`；多订阅存数组 `this._unsubs`（或 `_globalUnsubs`）。
-4. **统一清理**：`disconnectedCallback` 中遍历数组逐个退订，并移除 window 级监听（如 `app-preview._cleanupModelListeners`，`index.ts:61-67`）。实证：`context-menu.ts:27`、`app-toast.ts:50`、`app-preview:61`、`app-tree:140`、`app-sidebar:298`、`app-sync-manager:124`、`app-content:102`、`app-resource-manager:87`。
-5. **重复注册防护**：`app-resource-manager/index.ts:437` 用 `if (!customElements.get("app-resource-manager"))` 包裹 `customElements.define`。
+4. **统一清理**：`disconnectedCallback` 中遍历数组逐个退订，并移除 window 级监听（如 `app-preview._cleanupModelListeners`，`index.ts:61-67`）。实证：`context-menu.ts:27`、`app-toast.ts:50`、`app-preview:61`、`app-tree:140`、`app-sidebar:298`、`app-sync-manager:124`、`app-content:102`。
+5. **重复注册防护**：组件定义前 `if (!customElements.get("xxx"))` 包裹 `customElements.define`。
 
 **推荐范式（新增组件照抄）**：
 
@@ -575,7 +574,7 @@ disconnectedCallback() {
 | 范式 | 适用场景 | 模板代码 | 出处 |
 |------|----------|----------|------|
 | **`_busy` + `try/finally`** | 按钮点击类异步操作，防止连点重叠触发 | `if (this._busy) return; this._busy = true; try { ... } finally { this._busy = false; }` | app-tree / app-sidebar / import-queue / app-preview |
-| **generation counter** | 多个 await 后写共享 DOM 的初始化/刷新，丢弃过期响应 | `const gen = ++this._loadGen;` + await 后 `if (gen !== this._loadGen) return;` | recycle-bin / oldest-models / preview-detail（`_detailGen`）/ app-resource-manager（`_initGen`） |
+| **generation counter** | 多个 await 后写共享 DOM 的初始化/刷新，丢弃过期响应 | `const gen = ++this._loadGen;` + await 后 `if (gen !== this._loadGen) return;` | recycle-bin / oldest-models / preview-detail（`_detailGen`） |
 | **单例槽位** | 弹窗类，防止连点叠加/双执行 | `registerDlg(overlay, cancelClose)` — 先结算旧弹窗再登记新的 | modal.ts（`_activeOverlay` / `_closeActive`） |
 | **先移除再绑定** | window/document 级监听，防止切页累积 | `if (this._prevHandler) window.removeEventListener(...);` 再绑新 handler | preview-skeleton 拖拽 / app-content preview resize / handler-dnd document 监听 |
 
@@ -590,7 +589,7 @@ disconnectedCallback() {
 入口 `frontend/src/app-modules.ts`：
 
 - **静态 import**（首屏即用）：`app-nav` / `context-menu` / `app-toast`。
-- **动态 `import()` 懒加载**（与 `customElements.define` 配对）：`app-tree` / `app-sidebar` / `app-content` / `app-resource-manager` / `app-sync-manager`。
+- **动态 `import()` 懒加载**（与 `customElements.define` 配对）：`app-tree` / `app-sidebar` / `app-content` / `app-sync-manager`。
 - `?dev=1` 时启用 DevTools。
 
 ### 14.6 已知架构漂移（登记，勿效仿 / 待修）
@@ -619,7 +618,6 @@ disconnectedCallback() {
 | `<app-sidebar>` | `views/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `sync:download:missing`/`toast:show`/`tree:reload` |
 | `<app-tree>` | `views/app-tree/index.ts` | 资源/文件树 | 无（`root` 命令式读） | 订阅 `filter:results`/`tree:set-search`/`bus-handlers` 多事件；发射 `model:select`/`ctx:show`/`stats:refresh` |
 | `<app-preview>` | `views/app-preview/index.ts` | 模型/资源预览详情 | 无 | 仅订阅 `model:select` |
-| `<app-resource-manager>` | `views/app-resource-manager/index.ts` | 资源类型/包管理列表 | `rtype`,`instance` | 订阅 `config:resource-types-changed`；反馈走 `bus.emit("toast:show")` |
 | `<app-sync-manager>` | `views/app-sync-manager/index.ts` | 单实例同步管理 | `instance`,`default-type` | 订阅 `stats:refresh`；发射 `repo:rtype-changed`/`toast:show` |
 | `<app-toast>` | `views/app-toast/index.ts` | 全局通知条 | 无 | 仅订阅 `toast:show` |
 | `<context-menu>` | `views/context-menu/index.ts` | 右键/弹出菜单层 | 无 | 仅订阅 `menu:show` |
@@ -676,17 +674,7 @@ disconnectedCallback() {
 - **bus**：仅订阅 `model:select`（:51），payload `{path, isDir?}`。
 - **DOM 事件**：无。**插槽/部件**：无。详情渲染委托 `preview-detail.ts` 等模块函数操作 `this._root`。
 
-### 15.6 `<app-resource-manager>`
-
-- **角色**：资源类型/资源包管理列表；按 `rtype`/`instance` 过滤，提供搜索、详情。由 `features/resource-packs.ts` 渲染（非 app-content 直接挂载）。
-- **observedAttributes**：`["rtype","instance"]`（:67 getter；:91 `attributeChangedCallback`）。
-- **公共属性**：`rtype`、`instance`（反射属性）。
-- **公共方法**：无对外。
-- **bus**：仅订阅 `config:resource-types-changed`（:46，模块级）→ 重置并重新初始化。**不发射 bus 事件**。
-- **DOM 事件**：**无**。内部 `_toast()` 统一 `bus.emit("toast:show", {msg,type,duration})`（D3 已闭环，不再派发游离 DOM 事件）。
-- **插槽/部件**：无。
-
-### 15.7 `<app-sync-manager>`
+### 15.6 `<app-sync-manager>`
 
 - **角色**：单实例同步管理器（推送/拉取缺失文件）；按 `instance` 加载项，按 `default-type`/选中类型过滤。
 - **observedAttributes**：`["instance","default-type"]`（:39 getter；:65 `attributeChangedCallback`）。
@@ -697,7 +685,7 @@ disconnectedCallback() {
   - 发射 `repo:rtype-changed`（:316）、`toast:show`（:352/357/371/376）、`stats:refresh`（:355/374）。
 - **DOM 事件**：无。**插槽/部件**：无。
 
-### 15.8 `<app-toast>`
+### 15.7 `<app-toast>`
 
 - **角色**：全局轻量通知条容器；订阅 `toast:show` 堆叠显示（最多 5 条，超时自动移除）。
 - **observedAttributes**：无。
@@ -705,7 +693,7 @@ disconnectedCallback() {
 - **bus**：仅订阅 `toast:show`，payload `ToastPayload {msg, duration?, type?, click?, undo?}`（bus.ts:7）。
 - **DOM 事件**：无。**插槽/部件**：无。类型 class：`warn`/`success`/`error`/`info`。
 
-### 15.9 `<context-menu>`
+### 15.8 `<context-menu>`
 
 - **角色**：通用右键/弹出菜单层；订阅 `menu:show` 在 (x,y) 渲染 `MenuItem[]`，点击/ESC/外部点击关闭。
 - **observedAttributes**：无。
@@ -772,7 +760,7 @@ disconnectedCallback() {
 - **页面切换**：`<app-nav>` `bus.emit("nav:change")` → `<app-content>` 订阅 → `bus.emit("nav:changed")` → `page-store`/`app-nav` 同步 + 重渲染。
 - **模型选中预览**：`<app-tree>` `bus.emit("model:select",{path})` → `<app-preview>` 订阅渲染详情。
 - **同步缺失文件**：`<app-sidebar>` `bus.emit("sync:download:missing")` → `handler-sync` 处理 → `bus.emit("sync:download:done")` → `<app-sidebar>` 局部刷新。
-- **资源类型变更**：settings 改 `config` → `bus.emit("config:resource-types-changed")` → `<app-resource-manager>` 重置。
+- **资源类型变更**：settings 改 `config` → `bus.emit("config:resource-types-changed")`（`app-resource-manager` 已删除，当前无订阅方——该事件保留以备未来组件消费）。
 
 ---
 

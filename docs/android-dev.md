@@ -29,7 +29,7 @@ Android 端模型仓库 = **公共目录固定路径**（`internal/app/pathmgr_a
 |------|------|---------|---------|
 | 设置页「选择目录」 | Wails Dialog | `resolveAndroidRepoDir`（授权引导 → 定位公共仓库） | `directory-picker.ts` / `settings/init.ts` |
 | 树「📁 导入文件夹」 | `SelectDirectory` + `ImportByType` | `resolveAndroidRepoDir`（查看器模式公共目录即仓库） | `toolbar-events.ts` |
-| 树「📂 打开文件夹」 | `OpenFolder` | `resolveAndroidRepoDir`（提示路径，不调 Go 守卫报错） | `toolbar-events.ts` / `app-resource-manager/index.ts` |
+| 树「📂 打开文件夹」 | `OpenFolder` | `resolveAndroidRepoDir`（提示路径，不调 Go 守卫报错） | `toolbar-events.ts` |
 | 树「📁 导入文件」 | `SelectImportFile` | **官方桥可用**（`launchFilePicker` → `ACTION_OPEN_DOCUMENT` 多选 → 复制到缓存 → Go 读真实路径） | — |
 | 导入 tab 文件选择（`<input type="file">`） | 浏览器原生 | `WebChromeClient.onShowFileChooser`（`MainActivity`）→ `ACTION_GET_CONTENT` 多选 | 前端 `FileReader`→base64 流不变 |
 | 版本更新 | Windows 自更新 | `getAndroidBridge()` 守卫跳过 + 提示 Windows 专属 | `version-updater.ts` |

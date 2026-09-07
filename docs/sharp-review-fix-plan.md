@@ -56,8 +56,8 @@ const handler = PREVIEW_HANDLERS[`${rtype}:${previewKey}`] ?? PREVIEW_HANDLERS[r
 ### #2 RESOURCE_TYPES / RESOURCE_TYPE_LABELS 手写双表
 
 **问题：** `types.ts` 里有 14 条 `RESOURCE_TYPES`（标签→ID）和 14 条 `RESOURCE_TYPE_LABELS`（ID→中文名）。
-标签语义是前端契约（参与 Go ScanModelEntriesWithLabel 扫描匹配），无法从 JSON 派生。
-但**中文名**完全可以由 JSON 的 `name` 字段派生。
+标签仅作操作日志标签（`d0547b286` 纠偏：不参与 Go 扫描匹配），但仍需前端手写维护。
+**中文名**完全可以由 JSON 的 `name` 字段派生。
 
 **影响：** JSON 新增类型 → 必须手动同步这两张表 → 漏同步 → 前端显示错误类型名。
 

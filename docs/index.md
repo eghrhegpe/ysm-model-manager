@@ -45,8 +45,8 @@ features:
 
 ## 🚀 快速开始
 
-1. **下载**：前往 [GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) 下载最新 `YSM-Model-Manager_windows_amd64.zip`
-2. **解压**：解压到任意目录（如 `D:\YSM-Model-Manager\`）
+1. **下载**：前往 [GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) 下载最新 `YSM-Model-Manager_windows_amd64.exe`
+2. **运行**：直接双击启动（v1.13.0 起单 exe 交付，数据编译期内嵌）
 3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 

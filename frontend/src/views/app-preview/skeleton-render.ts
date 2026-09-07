@@ -10,7 +10,7 @@ import { toScreenshotLights } from "@/preview-3d/screenshot-lights.ts";
 import { renderMultiAngle } from "@/preview-3d/screenshot-render.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
 import { esc } from "@/utils/html/html.ts";
-import { safeUrl } from "../../views/app-preview/tpl-summary.ts";
+import { safeUrl } from "./tpl-summary.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
 import type { PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";

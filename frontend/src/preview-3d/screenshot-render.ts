@@ -6,7 +6,7 @@
 import * as THREE from "three";
 
 import { getApp } from "@/backend/app.ts";
-import { lightDirToPosition } from "./caps/light-capability.ts";
+import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
 import type { Spec3D } from "./model3d.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
 import type { ScreenshotLights } from "./screenshot-lights.ts";

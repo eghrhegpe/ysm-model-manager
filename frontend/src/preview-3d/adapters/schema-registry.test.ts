@@ -15,9 +15,9 @@ import {
   makeYsmModelSchemaId,
   YSM_MODEL_SCHEMA_ID,
 } from "./schema-registry.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 
 beforeEach(() => {
   resetSchemas();

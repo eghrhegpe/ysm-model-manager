@@ -1,4 +1,4 @@
-import type { EnvState } from "../state/env-state-schema.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { FieldKind } from "./scene-capability.ts";
 
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====

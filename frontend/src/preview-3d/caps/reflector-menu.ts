@@ -7,7 +7,7 @@
 //   - reflector-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组（reflectorGroupParams）folder：opacity/resolution/size 三 slider
 
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 
 const REFLECTOR_PARAMS_GROUP = "preview.reflectorGroupParams";

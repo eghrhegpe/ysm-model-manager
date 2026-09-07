@@ -11,15 +11,15 @@ import {
   PREVIEW_MENU_GROUPS,
 } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
-import { ysmMenuItems, type YsmMenuItemsOpts } from "../adapters/ysm-adapter.ts";
-import { mmdMenuItems, type MmdMenuItemsOpts } from "../adapters/mmd-adapter.ts";
-import { vrmMenuItems, type VrmMenuItemsOpts } from "../adapters/vrm-adapter.ts";
+import { ysmMenuItems, type YsmMenuItemsOpts } from "@/preview-3d/adapters/ysm-adapter.ts";
+import { mmdMenuItems, type MmdMenuItemsOpts } from "@/preview-3d/adapters/mmd-adapter.ts";
+import { vrmMenuItems, type VrmMenuItemsOpts } from "@/preview-3d/adapters/vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
-import type { YsmModel, YsmContentHandle } from "../adapters/content-bridges.ts";
-import type { Spec3D } from "../model3d.ts";
-import { makeMenuCtx } from "../adapters/menu-test-fixtures.ts";
-import type { BoneTree } from "../bone-tools.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type { YsmModel, YsmContentHandle } from "@/preview-3d/adapters/content-bridges.ts";
+import type { Spec3D } from "@/preview-3d/model3d.ts";
+import { makeMenuCtx } from "@/preview-3d/adapters/menu-test-fixtures.ts";
+import type { BoneTree } from "@/preview-3d/bone-tools.ts";
 import {
   expectContainsAtLeast,
   expectNotContains,

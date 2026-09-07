@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { FogCapability } from "./fog-capability.ts";
-import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 
 function newCap(opts: { enabled?: boolean } = {}) {
   return new FogCapability({ scene: new THREE.Scene(), ...opts });

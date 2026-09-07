@@ -5,9 +5,9 @@
 // 本文件不持有任何模块级单例状态。
 import type * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { fitCameraToRoots } from "../camera-setup.ts";
-import type { PreviewMenuHandle } from "../menu/core.ts";
-import { safeDispose } from "../safe-dispose.ts";
+import { fitCameraToRoots } from "@/preview-3d/camera-setup.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import type { PreviewScene } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 

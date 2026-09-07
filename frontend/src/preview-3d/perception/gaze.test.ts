@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { createGazeController } from "./gaze.ts";
-import { type SemanticBoneMap } from "../semantic-bones.ts";
+import { type SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 
 function fakeMap(entries: Record<string, THREE.Object3D>): SemanticBoneMap {
   const map: SemanticBoneMap = {};

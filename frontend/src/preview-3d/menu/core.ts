@@ -14,16 +14,16 @@ import {
 } from "@/ui/ui-slide-menu.ts";
 import { pushInputBlock } from "@/utils/dom/focus-restore.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { sceneRegistry } from "../adapters/scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import {
   getSchema,
   registerSchema,
   type SchemaBuilder,
   unregisterSchema,
-} from "../adapters/schema-registry.ts";
-import { ensureFabStyles } from "../fab.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
-import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
+} from "@/preview-3d/adapters/schema-registry.ts";
+import { ensureFabStyles } from "@/preview-3d/fab.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";

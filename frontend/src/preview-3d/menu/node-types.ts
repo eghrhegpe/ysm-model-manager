@@ -20,14 +20,14 @@ export type {
   PreviewMenuGroupId,
   PreviewMenuNode,
   PreviewMenuNodeKind,
-} from "../menu-node-types.ts";
+} from "@/preview-3d/menu-node-types.ts";
 
 // 保留项依赖（PreviewMenuCtx 用）：SceneCapability（caps）+ CameraControlBridge（adapters）
-import type { CameraControlBridge } from "../adapters/camera-controls.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
+import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 // 值函数（isPreviewFolderNode 等）需本地绑定 PreviewMenuNode——re-export 不提供模块内
 // 可用名，故另 type-import（与 scene-capability.ts 工厂引用控件类型同款）。
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 
 /** 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 */
 export interface PreviewMenuCtx {

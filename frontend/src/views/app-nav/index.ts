@@ -313,15 +313,15 @@ class AppNav extends WebComponentBase {
    * 无选中模型 → 直接开空场景 3D（不弹 toast，降低首次使用门槛）。
    */
   private async _viewerFabClick(): Promise<void> {
-    const { getLastModelPath } = await import("../../views/app-content/init-pages.ts");
+    const { getLastModelPath } = await import("@/views/app-content/init-pages.ts");
     const path = getLastModelPath();
     if (!path) {
       // 无选中模型 → 空场景 3D（renderer/scene/camera 已就位，用户可通过资源库选模型）
-      const { openEmpty3DFullscreen } = await import("../../views/app-preview/empty-3d.ts");
+      const { openEmpty3DFullscreen } = await import("@/views/app-preview/empty-3d.ts");
       void openEmpty3DFullscreen();
       return;
     }
-    const { openModel3DFullscreen } = await import("../../views/app-preview/preview-library.ts");
+    const { openModel3DFullscreen } = await import("@/views/app-preview/preview-library.ts");
     await openModel3DFullscreen(path);
   }
 

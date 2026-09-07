@@ -10,14 +10,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // resetModules + 动态 import 把真实 t.ts 的求值限定在本文件作用域内。
 vi.unmock("../../core/i18n/t.ts");
 vi.resetModules();
-const { t } = await import("../../core/i18n/t.ts");
+const { t } = await import("./t.ts");
 
 const { getBundle } = vi.hoisted(() => ({
   getBundle: vi.fn(),
 }));
 
 vi.mock("../../core/i18n/locale.ts", async () => {
-  const actual = await vi.importActual<typeof import("../../core/i18n/locale.ts")>("../../core/i18n/locale.ts");
+  const actual = await vi.importActual<typeof import("./locale.ts")>("../../core/i18n/locale.ts");
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
     getBundle, // 覆盖为 mock（控制翻译表）
@@ -25,7 +25,7 @@ vi.mock("../../core/i18n/locale.ts", async () => {
   };
 });
 
-import { SUPPORTED_LANGS } from "../../core/i18n/locale.ts";
+import { SUPPORTED_LANGS } from "./locale.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

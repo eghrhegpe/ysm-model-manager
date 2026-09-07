@@ -257,7 +257,7 @@ async function reload(vm: AppTree): Promise<void> {
   try {
     const App = await getApp();
     if (App.ClearScanCache) await App.ClearScanCache();
-    import("../../views/app-content/community-data.ts")
+    import("@/views/app-content/community-data.ts")
       .then((m) => m.clearAllCommunityCache())
       .catch((e) => console.warn("[app-tree] clearAllCommunityCache:", e));
   } catch (e) {

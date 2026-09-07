@@ -2,7 +2,7 @@
 // 从 events.ts 拆分：openFullPreview
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { renderModel2D } from "./model2d/model2d.ts";
+import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
 
 /** 全窗放大预览（独立函数，不依赖组件实例） */
 /** 全屏放大预览样式(P1 批次10:cssText 抽类;overlay 挂 document.body light DOM,head 注入适用) */

@@ -3,8 +3,8 @@
 // 并使其可独立测试（app-modules.ts import 即触发顶层副作用）。
 
 import { bus } from "@/bus";
-import { friendlyError } from "./dom/errors.ts";
-import { TOAST_MS } from "./dom/toast-ms.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 /**
  * 懒加载 Web Component：统一动态 import + 加载失败 toast 反馈。

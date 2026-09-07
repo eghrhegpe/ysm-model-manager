@@ -9,12 +9,12 @@ import { safeGet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { createDedupSession } from "./diagnostics/dedup.ts";
-import { initDiagnostics } from "./diagnostics/init.ts";
+import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
+import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
 import { initGithubPage as _initGithubPage } from "./init-github.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import { initWorkshopPage as _initWorkshopPage } from "./init-workshop.ts";
-import { initSettings } from "./settings/init.ts";
+import { initSettings } from "@/views/app-content/settings/init.ts";
 
 /**
  * 初始化诊断页

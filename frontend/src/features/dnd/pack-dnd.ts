@@ -14,7 +14,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { backendGetApp } from "../backend-deps.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { buildFolderItems, collectDropFiles, fileToBase64, groupCollected } from "./shared.ts";
 

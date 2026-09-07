@@ -12,7 +12,7 @@
 //
 // 守卫：lastWriteSource auto-atmosphere < manual——用户手动调过的字段不被氛围覆盖。
 
-import type { EnvPresetId } from "../caps/environment-state.ts";
+import type { EnvPresetId } from "@/preview-3d/caps/environment-state.ts";
 import type { EnvState } from "./env-state-schema.ts";
 
 export type AtmospherePresetId = Exclude<EnvPresetId, "custom">;

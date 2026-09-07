@@ -13,8 +13,8 @@
 //
 // 与 ADR-085 S1「注册表驱动」同语言：新增项只改注册表，不散改代码。
 
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 
 /** YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） */
 export const YSM_MODEL_SCHEMA_ID = "ysm-model";

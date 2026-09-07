@@ -3,8 +3,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
-import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 
 describe("GroundCapability", () => {
   beforeEach(() => { resetEnvState(); });

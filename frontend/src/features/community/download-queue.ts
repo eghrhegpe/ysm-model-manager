@@ -11,7 +11,7 @@ import { swallowError } from "@/utils/base/async.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { currentRepoType } from "../repo/repo-rtype.ts";
+import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 import {

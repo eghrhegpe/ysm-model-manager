@@ -92,7 +92,7 @@ import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";
 import { tryFetchModels } from "@/features/community/data.ts";
-import { renderSiteView } from "./site/site-view.ts";
+import { renderSiteView } from "@/views/app-content/site/site-view.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
 import { waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
@@ -606,7 +606,7 @@ import type { Mock } from "vitest";
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
     const el = mountContent();
-    const diag = await import("./diagnostics/init.ts");
+    const diag = await import("@/views/app-content/diagnostics/init.ts");
     initDiagnosticsPage(el as unknown as AppContentHost);
     expect(diag.initDiagnostics).toHaveBeenCalledWith(el._root, expect.any(Function));
   });
@@ -642,7 +642,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
     el._current = "settings";
     el._render();
     await flushAsyncTurns();
-    const settingsMod = await import("./settings/init.ts");
+    const settingsMod = await import("@/views/app-content/settings/init.ts");
     (settingsMod.initSettings as Mock).mockRejectedValueOnce(new Error("settings boom"));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const toasts: Array<{ type?: string }> = [];

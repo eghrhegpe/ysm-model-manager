@@ -163,7 +163,7 @@ describe("tint 渲染", () => {
   });
 
   it("类别按纹理路径启发式（tintindex 值非类别索引）：_leaves→foliage、water→water、无后缀→grass", async () => {
-    const { getTintColorSync } = await import("../mc-tints.ts");
+    const { getTintColorSync } = await import("@/preview-3d/mc-tints.ts");
     const spy = vi.mocked(getTintColorSync);
     hoisted.parseMock.mockResolvedValue(makeJavaModel({
       faces: [
@@ -243,7 +243,7 @@ describe("makePackAdapter", () => {
 
 describe("纹理缓存", () => {
   it("textureCache.acquire 在 texEntry 时调用", async () => {
-    const { textureCache } = await import("../texture-cache.ts");
+    const { textureCache } = await import("@/preview-3d/texture-cache.ts");
     const deps = makeDeps();
     const ctx = makeCtx();
     const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");
@@ -252,7 +252,7 @@ describe("纹理缓存", () => {
   });
 
   it("textureCache.release 在 dispose 时调用", async () => {
-    const { textureCache } = await import("../texture-cache.ts");
+    const { textureCache } = await import("@/preview-3d/texture-cache.ts");
     const deps = makeDeps();
     const ctx = makeCtx();
     const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");

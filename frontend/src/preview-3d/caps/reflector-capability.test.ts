@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { ReflectorCapability } from "./reflector-capability.ts";
-import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 
 function makeFakeRenderer() {

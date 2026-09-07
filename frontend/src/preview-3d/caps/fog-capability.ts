@@ -4,12 +4,12 @@
 // dispose() 时还原构造前的 scene.fog，不泄漏到其它预览会话。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
   oneOf,

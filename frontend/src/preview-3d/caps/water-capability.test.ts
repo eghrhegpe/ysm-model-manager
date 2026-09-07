@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
-import { resetEnvState, setEnvState } from "../state/env-state.ts";
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
+import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 
 afterEach(() => {
   try { localStorage.clear(); } catch { /* noop */ }

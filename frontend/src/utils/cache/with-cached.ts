@@ -2,7 +2,7 @@
 // 基于 key+namespace+ttl 的内存缓存，支持 STALE / NORMAL / FORCE 策略
 // 特性：并发去重（stampede guard）、失败不缓存、命名空间隔离
 
-import { dbg } from "../debug/debug.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 
 /** 缓存条目 */
 interface CacheEntry<T> {

@@ -20,7 +20,7 @@ export const VIEW_TESTIDS: readonly string[] = [
 ];
 
 // P1 修复（ADR-040）：settingsHTML 已拆至 settings/tpl-settings.ts，此处 re-export 兼容
-export { settingsHTML } from "./settings/tpl-settings.ts";
+export { settingsHTML } from "@/views/app-content/settings/tpl-settings.ts";
 
 export function repositoryHTML(): string {
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统

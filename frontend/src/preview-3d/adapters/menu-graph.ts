@@ -14,10 +14,10 @@
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
-import type { PreviewMenuRouters } from "../menu/core.ts";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "../menu/defs.ts";
-import type { PreviewMenuNode, PreviewMenuNodeKind } from "../menu/node-types.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "@/preview-3d/menu/defs.ts";
+import type { PreviewMenuNode, PreviewMenuNodeKind } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { getSchema, listSchemas } from "./schema-registry.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。

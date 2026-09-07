@@ -4,12 +4,12 @@
 // VRMA 动作加载（同目录 .vrma → createVRMAnimationClip）、
 // 错误路径（空字节/解析失败）、GPU 释放（deepDispose + uncacheRoot）。
 // @pixiv/three-vrm 全 mock；three 用真实实现（Box3/Vector3/LoadingManager）。
-import type { BoneTree } from "../bone-tools.ts"
+import type { BoneTree } from "@/preview-3d/bone-tools.ts"
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { PreviewMenuHandle } from "../menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 
 // ---- DOM mock（vitest 无默认 document）----
 const mockElements: Map<string, HTMLElement> = new Map();
@@ -1042,7 +1042,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     hoisted.listPathsMock.mockResolvedValue([]);
     // listVrmMaterials / getVrmMaterialDetail 已在文件头 mock → 重配置返回非空列表
     const { listVrmMaterials, getVrmMaterialDetail, setVrmMaterialVisible, setVrmMaterialOpacity } =
-      await import("../vrm-materials.ts");
+      await import("@/preview-3d/vrm-materials.ts");
     (listVrmMaterials as ReturnType<typeof vi.fn>).mockReturnValue([
       { index: 0, name: "服" },
       { index: 1, name: "肌" },
@@ -1077,7 +1077,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     const { ctx, camera } = makeCtx();
     const content = await buildVrmScene(ctx, "/vrm/gaze.vrm", makePort(), hoisted.readBytesMock);
     content.update!(0.016);
-    const { createGazeController } = await import("../perception/gaze.ts");
+    const { createGazeController } = await import("@/preview-3d/perception/gaze.ts");
     const gaze = (createGazeController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
     expect(gaze.apply).toHaveBeenCalledWith(0.016, expect.anything(), camera.position);
     content.dispose();
@@ -1093,7 +1093,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     const { ctx } = makeCtx();
     const content = await buildVrmScene(ctx, "/vrm/blink.vrm", makePort(), hoisted.readBytesMock);
     content.update!(0.016);
-    const { createBlinkController } = await import("../perception/blink.ts");
+    const { createBlinkController } = await import("@/preview-3d/perception/blink.ts");
     const blink = (createBlinkController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
     expect(blink.apply).toHaveBeenCalledTimes(1);
     // 回调写入 expressionManager.setValue

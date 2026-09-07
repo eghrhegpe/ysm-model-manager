@@ -6,7 +6,7 @@
 //   - fog-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
 
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
 
 const FOG_PARAMS_GROUP = "preview.fogGroupParams";

@@ -14,7 +14,7 @@
 //   };
 
 import type * as THREE from "three";
-import { getSemanticBone, type SemanticBoneId, type SemanticBoneMap } from "../semantic-bones.ts";
+import { getSemanticBone, type SemanticBoneId, type SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 呼吸驱动的语义骨骼列表（躯干段）：顺序即优先级，先 chest 再 fallback spine/shoulders */

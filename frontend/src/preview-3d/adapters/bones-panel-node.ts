@@ -22,8 +22,8 @@
 //   这些「是否注入」的策略由各 adapter 在外层控制，本工厂只负责「注入什么形状」。
 
 import type * as THREE from "three";
-import type { BoneTree } from "../bone-tools.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { BoneTree } from "@/preview-3d/bone-tools.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
 
 /**

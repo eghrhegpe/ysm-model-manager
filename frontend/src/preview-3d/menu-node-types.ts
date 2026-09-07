@@ -18,7 +18,7 @@
 // menu/node-types.ts 留 PreviewMenuCtx（依赖 caps/adapters 真依赖）+ 值函数并 re-export
 // 本叶类型保 30+ 消费者 import 零改动。
 
-import type { PreviewSnapshot, PreviewStatePath } from "./state/preview-paths.ts";
+import type { PreviewSnapshot, PreviewStatePath } from "@/preview-3d/state/preview-paths.ts";
 
 /** 控件种类（含简单+复杂）——controls 通道承载元素的 kind。
  *  [ADR-195 刀3] 更名收敛（终名 PreviewControlKind）：cap 控件与节点控件收敛到

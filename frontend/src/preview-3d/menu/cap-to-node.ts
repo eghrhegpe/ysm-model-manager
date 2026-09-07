@@ -25,7 +25,7 @@
 // cap 自身（旧 getMenuControls 退役），控件定义统一 PreviewControlDef。
 // 本文件纯转换，零注册表依赖，可单测。
 
-import type { PreviewControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 
 /**

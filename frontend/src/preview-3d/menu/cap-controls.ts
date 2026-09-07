@@ -9,9 +9,9 @@
 
 import { tr } from "@/core/i18n/tr.ts";
 import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
-import type { PreviewControlDef } from "../caps/scene-capability.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
-import type { PreviewSnapshot } from "../state/preview-state.ts";
+import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
+import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
 
 /**

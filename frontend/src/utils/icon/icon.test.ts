@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { fileIcon, isYsmName } from "./icon.ts";
-import { RESOURCE_EXTS } from "../resource/extensions.ts";
-import { typeIconOf } from "../resource/types.ts";
+import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
+import { typeIconOf } from "@/utils/resource/types.ts";
 
 describe("fileIcon", () => {
   // 数据驱动：从 REGISTRY_EXT_ICONS 计算期望值，杜绝硬编码 emoji 漂移

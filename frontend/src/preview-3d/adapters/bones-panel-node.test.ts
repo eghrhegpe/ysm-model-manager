@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
-import type { BoneTree } from "../bone-tools.ts";
+import type { BoneTree } from "@/preview-3d/bone-tools.ts";
 
 // mock vrm-bone-ui：观察工厂调 makeBonePanelRenderer 的参数与顺序，不真实挂载面板
 vi.mock("./vrm-bone-ui.ts", () => ({

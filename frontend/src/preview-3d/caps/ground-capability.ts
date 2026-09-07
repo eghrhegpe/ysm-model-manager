@@ -5,11 +5,11 @@
 
 import * as THREE from "three";
 import { dbg } from "@/utils/debug/debug.ts";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { safeDispose } from "../safe-dispose.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { safeDispose } from "@/preview-3d/safe-dispose.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,

@@ -2,7 +2,7 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()（ADR-195 刀2）。
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 import type { PreviewControlDef } from "./scene-capability.ts";
 import type { SkyCapability } from "./sky-capability.ts";
 

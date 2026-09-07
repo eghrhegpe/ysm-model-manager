@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Bus } from "@/bus";
 import type { LangCode } from "./locale.ts";
 
-type LocaleModule = typeof import("../../core/i18n/locale.ts");
+type LocaleModule = typeof import("./locale.ts");
 
 interface Fresh {
   locale: LocaleModule;
@@ -17,7 +17,7 @@ interface Fresh {
 
 async function freshModule(): Promise<Fresh> {
   vi.resetModules();
-  const locale = await import("../../core/i18n/locale.ts");
+  const locale = await import("./locale.ts");
   const busMod = await import("@/bus");
   return { locale, bus: busMod.bus };
 }

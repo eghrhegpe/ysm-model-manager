@@ -13,7 +13,7 @@
 //   4. folder preview.envGroupCustomHdr：env-hdr-preview → controls 节点（image）
 //      + env-pick-hdr/env-clear-hdr → controls 节点（button 打包）
 
-import type { PreviewControlDef, PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";

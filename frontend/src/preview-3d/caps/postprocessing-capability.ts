@@ -25,13 +25,13 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import type { PostprocessingLike } from "../adapters/postprocessing.ts";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { previewPixelRatio } from "../render-budget.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PostprocessingLike } from "@/preview-3d/adapters/postprocessing.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { previewPixelRatio } from "@/preview-3d/render-budget.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉

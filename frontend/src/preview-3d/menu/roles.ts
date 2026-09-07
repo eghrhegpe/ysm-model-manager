@@ -12,7 +12,7 @@
 
 import { tr } from "@/core/i18n/tr.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
-import { sceneRegistry } from "../adapters/scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";
 import { buildSwitchNodes, type SwitchState } from "./switch.ts";

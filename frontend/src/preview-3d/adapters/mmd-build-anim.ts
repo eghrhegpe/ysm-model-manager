@@ -4,7 +4,7 @@ import { buildAnimation, buildCameraAnimation, VmdObject, VPDLoader } from "@moe
 import * as THREE from "three";
 import { dbg } from "@/utils/debug/debug.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
+import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
 import { mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage4Ctx } from "./mmd-types.ts";

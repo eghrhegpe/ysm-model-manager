@@ -13,9 +13,9 @@ import {
   SkyCapability,
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
-import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
-import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
 // ADR-196 单例化：SkyCapability 构造即注册 envState 回调（dispatch 广播），

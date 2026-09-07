@@ -7,8 +7,8 @@ import {
   DEFAULT_LIGHT_PARAMS,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { resetEnvState } from "../state/env-state.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { resetEnvState } from "@/preview-3d/state/env-state.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {

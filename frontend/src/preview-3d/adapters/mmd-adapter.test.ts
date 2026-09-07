@@ -7,8 +7,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { PreviewMenuHandle } from "../menu/core.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
 
@@ -86,7 +86,7 @@ vi.mock("./mmd-texture-decoder.ts", async (importOriginal) => {
   };
 });
 vi.mock("../load-trace.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../load-trace.ts")>();
+  const actual = await importOriginal<typeof import("@/preview-3d/load-trace.ts")>();
   return {
     ...actual,
     recordLoadTrace: hoisted.recordTraceMock,

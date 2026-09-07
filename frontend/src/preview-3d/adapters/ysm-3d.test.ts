@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
-import type { BedrockGeometry } from "../decoder/geometry.ts";
-import type { PreviewMenuHandle } from "../menu/core.ts";
-import type { BoneTree } from "../bone-tools.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { BoneTree } from "@/preview-3d/bone-tools.ts";
 import type { YsmModel, YsmContentHandle } from "./content-bridges.ts";
-import type { Spec3D } from "../model3d.ts";
+import type { Spec3D } from "@/preview-3d/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 

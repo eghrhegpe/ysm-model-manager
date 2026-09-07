@@ -3,8 +3,8 @@
 import type { MMDLoader, VpdObject } from "@moeru/three-mmd";
 import type * as THREE from "three";
 import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import type { BoneTree } from "../bone-tools.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { BoneTree } from "@/preview-3d/bone-tools.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";

@@ -11,7 +11,7 @@ import { downloadTextFile } from "@/utils/dom/download-text.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { modalConfirm } from "../dialogs/modal-confirm.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并

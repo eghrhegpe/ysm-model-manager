@@ -15,9 +15,9 @@ import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-stat
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 // ADR-196：统一状态层（测试隔离）
-import { resetEnvState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
+import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
 // 顶层隔离：每个测试前重置 envState 单例 + 清空回调注册表（防止 cap 泄漏跨测试）
 beforeEach(() => {
@@ -56,7 +56,7 @@ function stubLightCap(opts: { engine?: "cone" | "postprocess"; volEnabled?: bool
 }
 
 /** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children） */
-function findNode(nodes: import("../menu-node-types.ts").PreviewMenuNode[], id: string): import("../menu-node-types.ts").PreviewMenuNode | undefined {
+function findNode(nodes: import("@/preview-3d/menu-node-types.ts").PreviewMenuNode[], id: string): import("@/preview-3d/menu-node-types.ts").PreviewMenuNode | undefined {
   for (const n of nodes) {
     if (n.id === id) return n;
     if (n.children) {

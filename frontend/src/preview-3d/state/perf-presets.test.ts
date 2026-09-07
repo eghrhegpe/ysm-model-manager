@@ -10,7 +10,7 @@ import {
   setPerfPreset,
   applyPerfPreset,
 } from "./perf-presets.ts";
-import { getMaxFps, invalidateMaxFpsCache, MAX_FPS_KEY } from "../render-budget.ts";
+import { getMaxFps, invalidateMaxFpsCache, MAX_FPS_KEY } from "@/preview-3d/render-budget.ts";
 
 beforeEach(() => {
   localStorage.clear();

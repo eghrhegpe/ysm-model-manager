@@ -52,7 +52,7 @@ import { bus } from "@/bus";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { rememberModelPath } from "../app-content/init-pages.ts";
+import { rememberModelPath } from "@/views/app-content/init-pages.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { selectSingle, selectState } from "./data.ts";
 

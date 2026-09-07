@@ -116,7 +116,7 @@ describe("registerInstanceOps — instance:export-list", () => {
   });
 
   it("requireMcRoot 返回空 → 直接返回", async () => {
-    const { requireMcRoot } = await import("../require-mcroot.ts");
+    const { requireMcRoot } = await import("@/features/require-mcroot.ts");
     (requireMcRoot as ReturnType<typeof vi.fn>).mockResolvedValueOnce("");
     await register();
 

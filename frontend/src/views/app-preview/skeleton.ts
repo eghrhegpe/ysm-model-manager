@@ -10,7 +10,7 @@ import { esc } from "@/utils/html/html.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { fillAuthorsAsync, loadModelData } from "./loader.ts";
-import { renderModel2D } from "./model2d/model2d.ts";
+import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
 import {
   buildBoneExportRow,
   buildStatsCard,

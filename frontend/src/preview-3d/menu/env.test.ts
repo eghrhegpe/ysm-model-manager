@@ -1,14 +1,14 @@
 // ===== 环境菜单声明式 Schema 测试（2026 收口：行 + navigate 下钻，folder 手风琴退役）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
-import { resetEnvState, envState } from "../state/env-state.ts";
-import { ATMOSPHERE_PRESETS } from "../state/atmosphere-presets.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import { resetEnvState, envState } from "@/preview-3d/state/env-state.ts";
+import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
-import type { CameraControlBridge } from "../adapters/camera-controls.ts";
+import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
-import { setSceneCapabilityLookup } from "../state/preview-state.ts";
+import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {

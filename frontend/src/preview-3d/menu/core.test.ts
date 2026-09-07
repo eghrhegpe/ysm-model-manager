@@ -6,11 +6,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
 import { switchTabHighlightBg } from "./switch.ts";
-import { sceneRegistry } from "../adapters/scene-registry.ts";
-import type { PreviewScene } from "../adapters/mount-preview-core.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
+import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { deriveTestIds } from "@/test-utils/self-healing.ts";
-import { makeMenuCtx as makeCtx } from "../adapters/menu-test-fixtures.ts";
+import { makeMenuCtx as makeCtx } from "@/preview-3d/adapters/menu-test-fixtures.ts";
 
 /** ADR-193 第四刀：类型 tab 已声明式化为 select——切 tab = 改 select 值 + change 事件 */
 function switchSelectTo(overlay: HTMLElement, rtype: string): void {

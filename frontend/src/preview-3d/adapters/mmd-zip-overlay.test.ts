@@ -6,7 +6,7 @@
 // 以及 resolveMmdZipConfig 的模型选择逻辑（多模型取首个 + GBK 解码 + 纹理发现）。
 import { describe, it, expect, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { b64ToBytes, bytesToBase64 } from "../base64.ts";
+import { b64ToBytes, bytesToBase64 } from "@/preview-3d/base64.ts";
 import { extractZip } from "@/parsers/extract.ts";
 import {
   resolveMmdZipConfig,

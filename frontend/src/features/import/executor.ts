@@ -11,10 +11,10 @@ import { t } from "@/core/i18n/t.ts";
 import { swallowError } from "@/utils/base/async.ts";
 import { friendlyError, isFileExistsError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { backendGetApp } from "../backend-deps.ts";
-import type { CollectedEntry } from "../dnd/collector.ts";
-import { buildFolderItems, fileToBase64, groupCollected } from "../dnd/shared.ts";
-import { currentRepoType } from "../repo/repo-rtype.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
+import type { CollectedEntry } from "@/features/dnd/collector.ts";
+import { buildFolderItems, fileToBase64, groupCollected } from "@/features/dnd/shared.ts";
+import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };

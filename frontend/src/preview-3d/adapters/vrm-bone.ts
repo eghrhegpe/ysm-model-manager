@@ -7,7 +7,7 @@
 
 import type { VRM } from "@pixiv/three-vrm";
 import type * as THREE from "three";
-import { type BoneNode, type BoneTree, buildBoneTree } from "../bone-tools.ts";
+import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone-tools.ts";
 
 /** 标准 Humanoid bones 数量上限（VRMSpec 定义 52 个；防御守卫用） */
 const MAX_HUMANOID_BONES = 52;

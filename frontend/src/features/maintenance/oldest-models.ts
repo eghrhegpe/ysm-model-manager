@@ -8,8 +8,8 @@ import { t } from "@/core/i18n/t.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { parseHealthReport } from "@/utils/health-report.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { backendGetApp } from "../backend-deps.ts";
-import { useCurrentResourceType } from "../repo/repo-rtype.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
+import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 
 // ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
 

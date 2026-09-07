@@ -1,7 +1,7 @@
 // ===== mmd-shared.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import * as THREE from "three";
-import { safeDispose } from "../safe-dispose.ts";
+import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import type { MdMmAllocEntry, MmdDataPort } from "./mmd-types.ts";
 import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, matTexSlots } from "./mmd-utils.ts";
 

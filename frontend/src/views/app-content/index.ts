@@ -5,7 +5,7 @@ import { resolveInitialPage } from "@/core/page-store.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
-import { contentCSS } from "./css/content-css.ts";
+import { contentCSS } from "@/views/app-content/css/content-css.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
@@ -28,7 +28,7 @@ import { registerAndroidEvents } from "@/features/platform/android-events.ts";
 import { registerSync } from "@/features/sync.ts";
 import { swallowError } from "@/utils/base/async.ts";
 // 副作用导入：注册 <app-preview> 组件
-import "../app-preview/index.ts";
+import "@/views/app-preview/index.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";

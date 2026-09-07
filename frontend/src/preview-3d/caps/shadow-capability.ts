@@ -3,11 +3,11 @@
 // 跨能力连接：preview-core 构造能力后 `shadowCap.setLightCap(lightCap)` 注入引用。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
   oneOf,

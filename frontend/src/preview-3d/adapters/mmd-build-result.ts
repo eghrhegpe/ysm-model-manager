@@ -3,11 +3,11 @@
 import { applyVPD } from "@moeru/three-mmd";
 import { dbg } from "@/utils/debug/debug.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { cancelPendingEncodings } from "../decoder/mmd-ktx2-encoder.ts";
-import { unregisterModelRoot } from "../frustum-cull.ts";
-import { recordLoadTrace } from "../load-trace.ts";
-import { setPerceptionPaused } from "../perception/core.ts";
-import { screenshotFromRenderer } from "../screenshot.ts";
+import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
+import { unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
+import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
+import { setPerceptionPaused } from "@/preview-3d/perception/core.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
 import type { mdMmStage5Menu } from "./mmd-build-menu.ts";
 import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage6bCtx, MdMmStage6Ctx } from "./mmd-types.ts";
@@ -196,7 +196,7 @@ function mdMmStage6Dispose(c: MdMmStage6Ctx, s5: ReturnType<typeof mdMmStage5Men
 function mdMmStage6bTrace(c: MdMmStage6bCtx, tStart: number): void {
   c.tBuildEnd = performance.now();
   c.buildSucceeded = true;
-  const _stages: import("../load-trace.ts").LoadTraceStage[] = [];
+  const _stages: import("@/preview-3d/load-trace.ts").LoadTraceStage[] = [];
   if (c.tParseStart > 0)
     _stages.push({ name: "读取", ms: Math.round(c.tParseStart - tStart), status: "ok" });
   if (c.tParseEnd > 0)
@@ -214,7 +214,7 @@ function mdMmStage6bTrace(c: MdMmStage6bCtx, tStart: number): void {
     : c.mmd?.mesh?.material
       ? [c.mmd.mesh.material]
       : [];
-  const _texDetails: import("../load-trace.ts").LoadTraceTexture[] = [];
+  const _texDetails: import("@/preview-3d/load-trace.ts").LoadTraceTexture[] = [];
   for (const m of _mats) {
     const img = (m as { map?: { image?: HTMLImageElement } })?.map?.image;
     if (img?.width && img?.height) {

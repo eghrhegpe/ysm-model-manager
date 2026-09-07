@@ -14,9 +14,9 @@
 
 import type { MMD } from "@moeru/three-mmd";
 import type { SkinnedMesh, Texture } from "three";
-import type { BedrockGeometry } from "../decoder/geometry.ts";
-import type { MmdMaterialDetail, MmdMaterialListItem } from "../mmd-materials.ts";
-import type { BoneSelectInfo, Spec3D } from "../model3d.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import type { MmdMaterialDetail, MmdMaterialListItem } from "@/preview-3d/mmd-materials.ts";
+import type { BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 
 // ── MMD 内容层桥（原 views/app-preview/mmd-controls.ts）──

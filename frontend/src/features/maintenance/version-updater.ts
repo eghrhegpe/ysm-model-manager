@@ -10,9 +10,9 @@ import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { esc } from "@/utils/html/html.ts";
-import { backendGetApp } from "../backend-deps.ts";
-import { modalConfirm } from "../dialogs/modal-confirm.ts";
-import { modalProgress } from "../dialogs/modal-progress.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
+import { modalProgress } from "@/features/dialogs/modal-progress.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {

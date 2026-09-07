@@ -151,7 +151,7 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { bus } from "@/bus";
 
 /** 最小 panel 菜单项 */

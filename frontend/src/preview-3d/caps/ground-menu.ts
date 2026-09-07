@@ -7,8 +7,8 @@
 //     （PreviewControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
 // visibleWhen 谓词（B 轨快照驱动）原样挂节点。
 
-import type { PreviewControlDef, PreviewMenuNode } from "../menu-node-types.ts";
-import type { PreviewSnapshot } from "../state/preview-paths.ts";
+import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import type { GroundSurfaceMode } from "./ground-surface-spec.ts";
 

@@ -6,14 +6,14 @@
 
 import * as THREE from "three";
 import { logWarn } from "@/utils/base/log.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import {
   cullModelGroups,
   isFrustumCullEnabled,
   markCullMatricesDirty,
   restoreModelGroupsVisible,
-} from "../frustum-cull.ts";
-import type { TdKeyAction } from "../keymap.ts";
+} from "@/preview-3d/frustum-cull.ts";
+import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
   createAdaptiveRenderBudget,
   getFrameIntervalMs,
@@ -21,7 +21,7 @@ import {
   previewPixelRatio,
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
-} from "../render-budget.ts";
+} from "@/preview-3d/render-budget.ts";
 import { getSceneCaps, type SharedInfra } from "./shared-infra.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
 

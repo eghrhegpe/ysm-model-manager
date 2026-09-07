@@ -5,10 +5,10 @@
 // 纯属性切换零额外 GPU 开销——全是光栅化/管线级开关。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { buildRenderModeNodes } from "./render-mode-menu.ts";
 import { persistState, restoreState, type SceneCapability } from "./scene-capability.ts";
 

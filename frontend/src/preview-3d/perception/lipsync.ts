@@ -24,7 +24,7 @@ import {
   getSemanticMorph,
   type SemanticMorphId,
   type SemanticMorphMap,
-} from "../semantic-morphs.ts";
+} from "@/preview-3d/semantic-morphs.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 单 morph 回调：消费方写入具体格式的 morph weight */

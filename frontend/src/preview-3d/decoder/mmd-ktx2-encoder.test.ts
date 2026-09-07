@@ -12,7 +12,7 @@ const hoisted = vi.hoisted(() => {
 });
 
 import { encodeAndCacheTexture, scheduleBackgroundEncoding, cancelPendingEncodings, resetEncoderState, __setEncodeImplForTest } from "./mmd-ktx2-encoder.ts";
-import type { MmdDataPort } from "../adapters/mmd-types.ts";
+import type { MmdDataPort } from "@/preview-3d/adapters/mmd-types.ts";
 
 // ===== 辅助函数 =====
 

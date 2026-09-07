@@ -43,7 +43,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
   };
 });
 
-import { closeActiveDialog } from "../dialogs/modal-core.ts";
+import { closeActiveDialog } from "@/features/dialogs/modal-core.ts";
 
 let cleanups: Array<() => void> = [];
 

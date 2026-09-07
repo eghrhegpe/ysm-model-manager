@@ -14,8 +14,8 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "@/utils/resource/extensions.ts";
 import { isImportableFile } from "@/utils/resource/importable.ts";
-import { backendGetApp } from "../backend-deps.ts";
-import { executeCollected, importWebFilesWithToast } from "../import/executor.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
+import { executeCollected, importWebFilesWithToast } from "@/features/import/executor.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { collectDropFiles } from "./shared.ts";
 

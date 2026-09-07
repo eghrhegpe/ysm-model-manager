@@ -7,7 +7,7 @@
 //   - visibleWhen 随迁节点层
 import { describe, it, expect } from "vitest";
 import { capControlToNode, capControlsToNodes, canNodeRepresent } from "./cap-to-node.ts";
-import type { PreviewControlDef } from "../caps/scene-capability.ts";
+import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 
 function def(partial: Partial<PreviewControlDef> & { id: string; kind: PreviewControlDef["kind"] }): PreviewControlDef {
   return {

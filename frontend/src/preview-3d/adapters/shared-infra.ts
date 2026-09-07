@@ -4,22 +4,22 @@
 // mount-preview-core 不再直接读写这些单例变量。
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { EnvironmentCapability } from "../caps/environment-capability.ts";
-import type { FogCapability } from "../caps/fog-capability.ts";
-import type { GroundCapability } from "../caps/ground-capability.ts";
-import type { LightCapability } from "../caps/light-capability.ts";
-import type { PostprocessingCapability } from "../caps/postprocessing-capability.ts";
-import type { ReflectorCapability } from "../caps/reflector-capability.ts";
-import type { SceneCapability } from "../caps/scene-capability.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { ShadowCapability } from "../caps/shadow-capability.ts";
-import type { SkyCapability } from "../caps/sky-capability.ts";
-import type { WaterCapability } from "../caps/water-capability.ts";
-import type { PreviewMenuHandle } from "../menu/core.ts";
-import { previewPixelRatio } from "../render-budget.ts";
-import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
+import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
+import type { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
+import type { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
+import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
+import type { PostprocessingCapability } from "@/preview-3d/caps/postprocessing-capability.ts";
+import type { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
+import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
+import type { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import { previewPixelRatio } from "@/preview-3d/render-budget.ts";
+import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 // [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环
-import { setSceneCapabilityLookup } from "../state/preview-state.ts";
+import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewAdapter } from "./mount-preview-core.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 

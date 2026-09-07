@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { envState } from "../state/env-state.ts";
-import { deriveDefaultEnvState } from "../state/env-state-schema.ts";
+import { envState } from "@/preview-3d/state/env-state.ts";
+import { deriveDefaultEnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
 import { POSTPROC_PRESETS } from "./postprocessing-capability.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 
 describe("envState 默认值结构完整性", () => {
   it("envState defaults have required fields", () => {

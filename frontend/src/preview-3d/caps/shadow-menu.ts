@@ -7,7 +7,7 @@
 //   - shadow-enabled：toggle（平铺，带 hintKey 提示）
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size
 
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 import type { ShadowCapability } from "./shadow-capability.ts";
 
 const SHADOW_PARAMS_GROUP = "preview.shadowGroupParams";

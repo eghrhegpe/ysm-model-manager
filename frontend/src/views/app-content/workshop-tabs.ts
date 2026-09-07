@@ -15,7 +15,7 @@ import {
   mergeLocalAuthorsInto,
 } from "./community-data.ts";
 import type { AppContentHost } from "./init-workshop.ts";
-import type { RepoAuthorLike } from "./site/site-view.ts";
+import type { RepoAuthorLike } from "@/views/app-content/site/site-view.ts";
 
 /** 创意工坊 Tab 延迟加载毫秒数（等首帧渲染后再异步拉数据） */
 const WS_TAB_LOAD_DELAY_MS = 100;

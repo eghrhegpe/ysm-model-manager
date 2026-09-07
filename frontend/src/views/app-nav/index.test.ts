@@ -36,9 +36,9 @@ vi.mock("../../views/app-preview/preview-library.ts", () => ({
 import { getApp, type AppBindings } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { getLastModelPath } from "../../views/app-content/init-pages.ts";
-import { openEmpty3DFullscreen } from "../../views/app-preview/empty-3d.ts";
-import { openModel3DFullscreen } from "../../views/app-preview/preview-library.ts";
+import { getLastModelPath } from "@/views/app-content/init-pages.ts";
+import { openEmpty3DFullscreen } from "@/views/app-preview/empty-3d.ts";
+import { openModel3DFullscreen } from "@/views/app-preview/preview-library.ts";
 
 import "./index.ts"; // 触发 customElements.define("app-nav")
 

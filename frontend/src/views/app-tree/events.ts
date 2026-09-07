@@ -10,7 +10,7 @@ import { flashBtn } from "@/utils/dom/feedback.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { rememberModelPath } from "../app-content/init-pages.ts";
+import { rememberModelPath } from "@/views/app-content/init-pages.ts";
 import { selectSingle, selectState, toggleSelect } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";

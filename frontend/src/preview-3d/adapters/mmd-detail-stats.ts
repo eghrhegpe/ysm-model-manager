@@ -9,7 +9,7 @@
 //
 // Worker 不可用（vitest node）→ 解析失败 → null → 详情卡不渲染统计行（优雅降级）。
 
-import { b64ToBytes } from "../base64.ts";
+import { b64ToBytes } from "@/preview-3d/base64.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";
 
 /** PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） */

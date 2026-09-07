@@ -4,7 +4,7 @@ import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/
 import { dbg } from "@/utils/debug/debug.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
-import { currentRepoType } from "../repo/repo-rtype.ts";
+import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { bindRepoEvents } from "./events.ts";
 import type { WorkshopModel } from "./render.ts";

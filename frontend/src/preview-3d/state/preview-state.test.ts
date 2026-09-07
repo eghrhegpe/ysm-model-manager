@@ -26,15 +26,15 @@ import {
   buildLightingSchema,
   buildShadowSchema,
   buildPostprocessingSchema,
-} from "../menu/settings.ts";
-import type { PreviewMenuCtx } from "../menu/core.ts";
-import { renderMenu } from "../menu/render.ts";
-import { capControlsToNodes } from "../menu/cap-to-node.ts";
-import { collectVisiblePredicates } from "../menu/cap-controls.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+} from "@/preview-3d/menu/settings.ts";
+import type { PreviewMenuCtx } from "@/preview-3d/menu/core.ts";
+import { renderMenu } from "@/preview-3d/menu/render.ts";
+import { capControlsToNodes } from "@/preview-3d/menu/cap-to-node.ts";
+import { collectVisiblePredicates } from "@/preview-3d/menu/cap-controls.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
-import type { PreviewControlDef, SceneCapability } from "../caps/scene-capability.ts";
-import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "../render-budget.ts";
+import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/render-budget.ts";
 
 /** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
 const renderMenuStubDeps = {

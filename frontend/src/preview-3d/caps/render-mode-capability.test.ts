@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import { resetEnvState } from "../state/env-state.ts";
+import { resetEnvState } from "@/preview-3d/state/env-state.ts";
 
 const STORAGE_KEY = "ysm-scene-cap-renderMode";
 

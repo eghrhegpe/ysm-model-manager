@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
 import type { SceneCapability } from "./scene-capability.ts";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
 
 /** createAll 的 ctx 参数类型（测试传空对象桩时精确断言，替代 as never） */
 type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];

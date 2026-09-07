@@ -8,8 +8,8 @@ import * as THREE from "three";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
-import { collectSceneStats } from "../scene-stats.ts";
-import { mergeStatsMenuItems } from "../menu/stats.ts";
+import { collectSceneStats } from "@/preview-3d/scene-stats.ts";
+import { mergeStatsMenuItems } from "@/preview-3d/menu/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
 import { bus } from "@/bus";
 

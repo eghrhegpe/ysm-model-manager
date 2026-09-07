@@ -26,23 +26,23 @@ import {
 import { logWarn } from "@/utils/base/log.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { b64ToBytes } from "../base64.ts";
-import { buildBoneHierarchy, registerBoneRaycast } from "../bone-raycast.ts";
-import { type BoneNode, type BoneTree, buildBoneTree } from "../bone-tools.ts";
-import { fitCameraToScene } from "../camera-setup.ts";
-import { disposeDebugGroup } from "../cleanup-helper.ts";
-import { rebuildDebug } from "../debug-render.ts";
-import type { BedrockGeometry } from "../decoder/geometry.ts";
-import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
-import { recordLoadTrace } from "../load-trace.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import type { BoneMaps, BoneSelectInfo, Spec3D } from "../model3d.ts";
-import { createBreathController } from "../perception/breath.ts";
-import { setPerceptionPaused } from "../perception/core.ts"; // #9 全局暂停标志
-import { screenshotFromRenderer } from "../screenshot.ts";
-import { ysmSemanticBoneMap } from "../semantic-bones.ts";
-import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
-import { buildYsmObject, type YsmObjectHandle } from "../ysm-object.ts";
+import { b64ToBytes } from "@/preview-3d/base64.ts";
+import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone-raycast.ts";
+import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone-tools.ts";
+import { fitCameraToScene } from "@/preview-3d/camera-setup.ts";
+import { disposeDebugGroup } from "@/preview-3d/cleanup-helper.ts";
+import { rebuildDebug } from "@/preview-3d/debug-render.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
+import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
+import { createBreathController } from "@/preview-3d/perception/breath.ts";
+import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
+import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { ysmSemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
+import { createYsmAnimPlayer, type YsmAnimPlayer } from "@/preview-3d/ysm-animation-player.ts";
+import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
@@ -192,7 +192,7 @@ interface MdYsPanelAnim {
   boneTree: BoneTree;
   animPlayer: YsmAnimPlayer | null;
   animBridge: MmdPlayBridge | null;
-  semanticBones: import("../semantic-bones.ts").SemanticBoneMap | null;
+  semanticBones: import("@/preview-3d/semantic-bones.ts").SemanticBoneMap | null;
   breath: ReturnType<typeof createBreathController> | null;
 }
 
@@ -371,7 +371,7 @@ async function mdYsBuildBonePanelAndAnim(
   const isGenericMode = opts.mode === "generic";
   let animPlayer: YsmAnimPlayer | null = null;
   let animBridge: MmdPlayBridge | null = null;
-  let semanticBones: import("../semantic-bones.ts").SemanticBoneMap | null = null;
+  let semanticBones: import("@/preview-3d/semantic-bones.ts").SemanticBoneMap | null = null;
   let breath: ReturnType<typeof createBreathController> | null = null;
 
   if (!isGenericMode) {

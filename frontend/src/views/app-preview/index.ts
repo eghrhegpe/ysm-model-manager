@@ -165,7 +165,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         // 导致 3D 预览打开错误模型或误报类型不支持。纯副作用：fire-and-forget + 失败静默，
         // 绝不 await 阻塞预览主流程（测试实证：动态 import 挂起会吞掉后续 _showModelDetail）
         if (!isDir && path) {
-          void import("../app-content/init-pages.ts")
+          void import("@/views/app-content/init-pages.ts")
             .then(({ rememberModelPath }) => rememberModelPath(path))
             .catch(() => {
               /* rememberModelPath 失败不影响预览 */

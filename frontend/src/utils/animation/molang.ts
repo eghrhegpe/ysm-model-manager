@@ -12,7 +12,7 @@
 // 无法直接静态 import；本项目采用**源码内嵌**策略，将 molangjs/src 与 syntax 目录
 // 按 MIT 许可保留原始版权头，本地路径 import，彻底避开 ESM/CJS 混用坑。
 
-import Molang from "./molang-lib/molang.js";
+import Molang from "@/utils/animation/molang-lib/molang.js";
 
 /** Molang 求值函数：入参为当前动画时间（秒，即 query.anim_time） */
 export type MolangFn = (animTime: number) => number;

@@ -15,7 +15,7 @@ import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { summaryCardHTML, type YsmSummary } from "../../views/app-preview/tpl-summary.ts";
+import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { loadModel2D } from "./skeleton.ts";

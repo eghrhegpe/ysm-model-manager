@@ -1,8 +1,8 @@
 // ===== 文件名 → 图标（类型化版 — ADR-014 P2）=====
 
-import { stripDisableSuffix } from "../model-name/display.ts";
-import { RESOURCE_EXTS } from "../resource/extensions.ts";
-import { RESOURCE_TYPES, typeIconOf } from "../resource/types.ts";
+import { stripDisableSuffix } from "@/utils/model-name/display.ts";
+import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
+import { RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 
 function getExt(name: string): string {
   // P3 修复（子代理审计）：null/undefined 入参守卫——app-tree/render.ts:182,186 的

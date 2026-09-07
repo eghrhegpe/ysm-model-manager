@@ -14,12 +14,12 @@
 
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。

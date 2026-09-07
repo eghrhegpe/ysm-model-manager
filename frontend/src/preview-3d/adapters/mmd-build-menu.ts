@@ -1,24 +1,24 @@
 // ===== mmd-build-menu.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import type * as THREE from "three";
-import { buildBoneTree } from "../bone-tools.ts";
-import type { PreviewMenuNode } from "../menu/node-types.ts";
-import { mmdBonesToBoneNodes } from "../mmd-bones.ts";
-import { createFootIKController } from "../mmd-foot-ik.ts";
+import { buildBoneTree } from "@/preview-3d/bone-tools.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { mmdBonesToBoneNodes } from "@/preview-3d/mmd-bones.ts";
+import { createFootIKController } from "@/preview-3d/mmd-foot-ik.ts";
 import {
   getMmdMaterialDetail,
   listMmdMaterials,
   setMmdMaterialOpacity,
   setMmdMaterialVisible,
-} from "../mmd-materials.ts";
-import { createAutoDanceController } from "../perception/autodance.ts";
-import { createBlinkController } from "../perception/blink.ts";
-import { createBreathController } from "../perception/breath.ts";
-import { createGazeController } from "../perception/gaze.ts";
-import { buildLipMorphIndices, createLipSyncController } from "../perception/lipsync.ts";
-import { screenshotFromRenderer } from "../screenshot.ts";
-import { mmdSemanticBoneMap } from "../semantic-bones.ts";
-import { mmdSemanticMorphMap } from "../semantic-morphs.ts";
+} from "@/preview-3d/mmd-materials.ts";
+import { createAutoDanceController } from "@/preview-3d/perception/autodance.ts";
+import { createBlinkController } from "@/preview-3d/perception/blink.ts";
+import { createBreathController } from "@/preview-3d/perception/breath.ts";
+import { createGazeController } from "@/preview-3d/perception/gaze.ts";
+import { buildLipMorphIndices, createLipSyncController } from "@/preview-3d/perception/lipsync.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { mmdSemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
+import { mmdSemanticMorphMap } from "@/preview-3d/semantic-morphs.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { MmdBottomNavCtx } from "./content-bridges.ts";
 import { materialNodes } from "./material-controls.ts";

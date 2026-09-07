@@ -20,10 +20,10 @@ import {
   type EnvPreset,
   type EnvPresetId,
 } from "./environment-capability.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
-import { resetEnvState, setEnvState } from "../state/env-state.ts";
-import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
+import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
 vi.mock("three", async (importOriginal) => {

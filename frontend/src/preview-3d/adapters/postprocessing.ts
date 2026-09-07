@@ -2,7 +2,7 @@
 // PostprocessingManager 已退役，由 PostprocessingCapability（caps/）统一接管。
 // 保留 PostprocessingLike 作为跨层最小契约（mount-preview-core 使用）。
 
-import type { LightCapability } from "../caps/light-capability.ts";
+import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
 
 /** 后处理对外最小契约（PostprocessingCapability 实现此接口） */
 export interface PostprocessingLike {

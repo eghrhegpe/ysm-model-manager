@@ -14,11 +14,11 @@
 import { tr } from "@/core/i18n/tr.ts";
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
-import type { PreviewControlDef } from "../caps/scene-capability.ts";
-import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "../keymap.ts";
-import { getPerfPreset, type PerfLevel, setPerfPreset } from "../state/perf-presets.ts";
-import { getStateValue, setStateValue } from "../state/preview-state.ts";
+import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
+import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
+import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
@@ -84,7 +84,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
     (() => {
       const fromCtx = ctx.getCap("light");
       if (fromCtx && "getMenuNodes" in fromCtx)
-        return fromCtx as unknown as import("../caps/light-capability.ts").LightCapability;
+        return fromCtx as unknown as import("@/preview-3d/caps/light-capability.ts").LightCapability;
       return null;
     })();
   if (!lightCap) {

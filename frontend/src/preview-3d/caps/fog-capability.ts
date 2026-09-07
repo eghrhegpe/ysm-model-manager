@@ -143,10 +143,9 @@ export class FogCapability implements SceneCapability {
     // code_review df84baefb #2/#10（P1）：master toggle（fog-menu.ts set: cap.setEnabled）
     // 必须打通 envState.fogEnabled gate——createFog 的 `!envState.fogEnabled` 使旧实现
     // toggle ON 后 scene.fog 仍 null（fogEnabled 唯一写者 setEnabledFog 无生产调用方）。
-    // setEnvState 同步 dispatch → env 回调（changed.has("fogEnabled")）applyFog 一次；
-    // 下方 applyFog 幂等兜底（fog 对象重建轻量），perf 单主化在 C 组收敛。
+    // setEnvState 同步 dispatch → env 回调（changed.has("fogEnabled")）applyFog 一次。
+    // ADR-196 收口：渲染应用（applyFog）统一走 callback，不再双写。
     setEnvState({ fogEnabled: v }, { source: "manual" });
-    this.applyFog();
   }
 
   isEnabled(): boolean {
@@ -156,9 +155,9 @@ export class FogCapability implements SceneCapability {
   /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
   setPreset(modelType: string): void {
     const preset = FOG_PRESETS[modelType] ?? FOG_PRESETS.default;
+    // ADR-196 收口：纯写 envState；applyFog 由 callback 落地（预设只调合理默认，
+    // 不强制开启——避免覆盖用户明确的开关选择）。
     setEnvState(preset, { source: "auto-model" });
-    // 预设只调合理默认，不强制开启（避免覆盖用户明确的开关选择）
-    this.applyFog();
   }
 
   /* -------- 参数变更 API -------- */
@@ -172,8 +171,8 @@ export class FogCapability implements SceneCapability {
   }
 
   setColor(hex: number): void {
+    // ADR-196 收口：纯写 envState；applyFog（重建雾对象）由 callback 落地。
     setEnvState({ fogColor: hex }, { source: "manual" });
-    if (this.currentFog) this.currentFog.color.setHex(hex);
   }
 
   getColor(): number {
@@ -185,19 +184,14 @@ export class FogCapability implements SceneCapability {
     const partial: Partial<EnvState> = {};
     if (near !== undefined) partial.fogNear = near;
     if (far !== undefined) partial.fogFar = far;
+    // ADR-196 收口：纯写 envState；applyFog 由 callback 落地。
     setEnvState(partial, { source: "manual" });
-    if (this.currentFog && this.currentFog instanceof THREE.Fog) {
-      this.currentFog.near = envState.fogNear;
-      this.currentFog.far = envState.fogFar;
-    }
   }
 
   /** 指数雾：density */
   setDensity(d: number): void {
+    // ADR-196 收口：纯写 envState；applyFog 由 callback 落地。
     setEnvState({ fogDensity: d }, { source: "manual" });
-    if (this.currentFog && this.currentFog instanceof THREE.FogExp2) {
-      this.currentFog.density = d;
-    }
   }
 
   /* 菜单 getter（对齐 getMode/getColor 口径） */

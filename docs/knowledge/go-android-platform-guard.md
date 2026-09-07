@@ -141,8 +141,31 @@ ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的�
 - **失败必须可见**：Android 上不支持的桌面能力返回明确错误（含原因提示），禁止静默成功/空操作
 - **build-tag 优先**：平台差异大的逻辑用 build-tag 双文件（编译期保证只含正确实现）；单点方法用 `runtime.GOOS` 分支即可
 - **SAF 不复活**：Android 文件访问走 MANAGE_EXTERNAL_STORAGE + `os.*` 直读，禁止引入 content:// URI
+- **守卫信号即事实源**：新增桌面专属拒绝项时，Go 侧写的 `runtime.GOOS == "android"` / `case "android":` 就是机器可读的登记信号——写守卫即被 `check-android-unavailable.ts` 的 T2 自动捕获，无需另找人同步前端名单
+
+## 黑名单同步守卫（scripts/check-android-unavailable.ts）
+
+本卡「前端/后端黑名单不同步」陷阱的机器化防线。初版（2026-09-04）只比对脚本内硬编码
+`KNOWN_DESKTOP_ONLY` 常量集合，与真实 binding 全集零交集校验 → **「新增未登记桌面 binding」
+恒不可达**（条件不可达缺陷）；且 bindings 缺失时 ENOENT → exit 0 静默放行。2026-09-08
+换轨为 Go 源码派生的四级事实源：
+
+| 层 | 事实源 | 强度 |
+|----|--------|------|
+| T0 | `frontend/bindings/.../app.ts` 为 git 入库文件，缺失 = 异常 | 硬失败（`--allow-missing` 逃生） |
+| T1 | `GOOS=android go list -f '{{.GoFiles}}' ./internal/app/` 与默认 GOOS 的文件差集 → 差集内 `*App` 方法 | 硬失败 |
+| T2 | desktop 构建集内 `*App` 方法体出现 `runtime.GOOS == "android"` / `case "android":`（ADR-047 守卫） | 硬失败 |
+| T3 | 真实 binding 全集 × 桌面语义正则（Plaza / Select* / Minecraft / Explorer / Restart / Window* …） | 提示 |
+| T4 | Stale（黑名单项已从 bindings 消失）+ `platform-web.test.ts` 硬编码副本漂移 + 基线回退 | 提示 |
+
+要点：
+- **go 不可用 → 降级**（`_summary.degraded=true`，仅跑 T3/T4），**不静默 exit 0**——旧版 ENOENT 分支的教训。
+- T2 只认「等于 android」的守卫，不认 `!= "android"` 的桌面正向分支（如 watcher 守卫），并跳过注释行，防误报。
+- 实测：173 bindings / 19 黑名单，T2 精确命中 `RevealInExplorer`/`OpenFolder`/`RestartApplication`（与本卡三处守卫一一对应）；T3 仅 3 条合理提示（`GetWindowPosition`/`SaveWindowPosition`/`SaveScreenshotFile`）。
+- 挂载：pre-commit 阻断段 + `scripts/_lib/gate-config.ts` 的 `ALL_STATIC_TOOLS`（doctor 全量）。契约测试 `tests/test_check_android_unavailable.ts`。
 
 ## 相关
 
 - ADR-047（平台守卫批量）、ADR-046（全平台化）、ADR-033（更新 Windows-only）
 - `docs/knowledge/android-bridge.md`（前端门控）、`docs/knowledge/go-watcher.md`、`docs/knowledge/go-updater.md`
+- `scripts/check-android-unavailable.ts`（黑名单守卫，见上节）、`tests/test_check_android_unavailable.ts`

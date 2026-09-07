@@ -65,6 +65,9 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   'i18n-ui-check.ts',
   { tool: 'css-layer-check.ts', args: ['--strict'] },
   'check-toast-duration.ts',
+  // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
+  // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
+  'check-android-unavailable.ts',
 ];
 
 /**

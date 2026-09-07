@@ -315,18 +315,25 @@ fi
 echo ""
 git diff --cached --stat 2>/dev/null | tail -10 || true
 
-# ── Android 平台黑名单完整性检查（非阻断，stderr 提示）──
-# 从 platform-web.ts 读 ANDROID_UNAVAILABLE 黑名单，对比 bindings/app.ts 中的 desktop-only binding，
-# 发现未覆盖的桌面专属 binding 时输出警告。新增 Go binding 时提醒前端同步黑名单。
-# 零依赖脚本（node:fs/path/url），bindings 未生成时自动跳过。
+# ── Android 平台黑名单完整性检查（T1/T2 硬阻断，2026-09-08 升级）──
+# 初版只比对硬编码名单 → 「新增未登记桌面 binding」恒不可达；现换轨为 Go 源码派生事实源：
+#   T1 GOOS=android go list 文件差集（编译期缺失）、T2 *App 方法体 ADR-047 平台守卫（运行期降级）
+#   → 命中且未登记 ANDROID_UNAVAILABLE 即 exit 1 阻断；T3 命名可疑 / T4 反向漏检仅提示。
+# go 工具链不可用时脚本自动降级为 T3/T4（degraded 标记），不会因此误伤提交。
 if command -v node >/dev/null 2>&1; then
   echo ""
   echo "[pre-commit] Android 平台黑名单检查..."
-  node scripts/check-android-unavailable.ts 2>&1 || echo "⚠️  android-unavailable 检查失败"
+  if ! node scripts/check-android-unavailable.ts 2>&1; then
+    echo "❌ Android 黑名单不完整：存在 Android 上不可用但未登记的 binding"
+    echo "   修复：在 frontend/src/backend/platform-web.ts 的 ANDROID_UNAVAILABLE 中补充（并同步 platform-web.test.ts 名单）"
+    echo "   紧急绕过：git commit --no-verify"
+    exit 1
+  fi
 fi
 
 # ── biome 行级增量闸（2026-09-04，A4）：拦「本次提交新增的违规行」，存量债不误伤 ──
-# 为什么这是本仓唯一 exit-1 阻断段（其余段含 --write 修复失败均仅提示）：
+# 为什么这是本仓唯二的 exit-1 阻断段之一（另一为上方 Android 黑名单守卫，2026-09-08 升级；
+# 其余段含 --write 修复失败均仅提示）：
 #   - check-biome.ts 默认 --changed 基准 = vcs.defaultBranch(main)；main 直提工作流下
 #     相对 main 无「已提交 diff」→ 该闸恒绿（2026-09 实测，形同虚设）；
 #   - pre-push 若把基准换 origin/main：本仓 59 commits 未 push、存量 lint 债 885 条，

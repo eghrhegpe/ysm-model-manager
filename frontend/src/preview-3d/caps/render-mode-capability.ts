@@ -6,11 +6,11 @@
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { buildRenderModeNodes } from "./render-mode-menu.ts";
-import { persistState, restoreState, type SceneCapability } from "./scene-capability.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
+import { buildRenderModeNodes } from "./render-mode-menu.ts";
+import { persistState, restoreState, type SceneCapability } from "./scene-capability.ts";
 
 /** 单个材质的原始值快照 */
 interface MaterialSnapshot {
@@ -55,9 +55,13 @@ export class RenderModeCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (changed.has('renderModeWireframe') || changed.has('renderModeBlending') ||
-          changed.has('renderModeDepthTest') || changed.has('renderModeSide') ||
-          changed.has('renderModeDepthWrite')) {
+      if (
+        changed.has("renderModeWireframe") ||
+        changed.has("renderModeBlending") ||
+        changed.has("renderModeDepthTest") ||
+        changed.has("renderModeSide") ||
+        changed.has("renderModeDepthWrite")
+      ) {
         this.sync();
       }
     });
@@ -84,11 +88,33 @@ export class RenderModeCapability implements SceneCapability {
     for (const m of collectMaterials(this.scene)) {
       const mat = m as THREE.MeshBasicMaterial;
       const orig = this.snapshot.get(m.uuid);
-      this.applyProp("wireframe", mat, envState.renderModeWireframe, orig, (v: boolean) => { mat.wireframe = v; });
-      this.applyProp("blending", mat, envState.renderModeBlending as THREE.Blending | null, orig, (v: THREE.Blending) => { mat.blending = v; });
-      this.applyProp("depthTest", mat, envState.renderModeDepthTest, orig, (v: boolean) => { mat.depthTest = v; });
-      this.applyProp("side", mat, envState.renderModeSide as THREE.Side | null, orig, (v: THREE.Side) => { mat.side = v; });
-      this.applyProp("depthWrite", mat, envState.renderModeDepthWrite, orig, (v: boolean) => { mat.depthWrite = v; });
+      this.applyProp("wireframe", mat, envState.renderModeWireframe, orig, (v: boolean) => {
+        mat.wireframe = v;
+      });
+      this.applyProp(
+        "blending",
+        mat,
+        envState.renderModeBlending as THREE.Blending | null,
+        orig,
+        (v: THREE.Blending) => {
+          mat.blending = v;
+        },
+      );
+      this.applyProp("depthTest", mat, envState.renderModeDepthTest, orig, (v: boolean) => {
+        mat.depthTest = v;
+      });
+      this.applyProp(
+        "side",
+        mat,
+        envState.renderModeSide as THREE.Side | null,
+        orig,
+        (v: THREE.Side) => {
+          mat.side = v;
+        },
+      );
+      this.applyProp("depthWrite", mat, envState.renderModeDepthWrite, orig, (v: boolean) => {
+        mat.depthWrite = v;
+      });
     }
   }
 
@@ -127,9 +153,13 @@ export class RenderModeCapability implements SceneCapability {
   }
 
   private hasAnyOverride(): boolean {
-    return envState.renderModeWireframe !== null || envState.renderModeBlending !== null ||
-           envState.renderModeDepthTest !== null || envState.renderModeSide !== null ||
-           envState.renderModeDepthWrite !== null;
+    return (
+      envState.renderModeWireframe !== null ||
+      envState.renderModeBlending !== null ||
+      envState.renderModeDepthTest !== null ||
+      envState.renderModeSide !== null ||
+      envState.renderModeDepthWrite !== null
+    );
   }
 
   private sync(): void {
@@ -144,35 +174,35 @@ export class RenderModeCapability implements SceneCapability {
   /* -------- 单属性 setter/getter -------- */
 
   setWireframe(v: boolean | null): void {
-    setEnvState({ renderModeWireframe: v }, { source: 'manual' });
+    setEnvState({ renderModeWireframe: v }, { source: "manual" });
   }
   getWireframe(): boolean | null {
     return envState.renderModeWireframe;
   }
 
   setBlending(v: THREE.Blending | null): void {
-    setEnvState({ renderModeBlending: v as number | null }, { source: 'manual' });
+    setEnvState({ renderModeBlending: v as number | null }, { source: "manual" });
   }
   getBlending(): THREE.Blending | null {
     return envState.renderModeBlending as THREE.Blending | null;
   }
 
   setDepthTest(v: boolean | null): void {
-    setEnvState({ renderModeDepthTest: v }, { source: 'manual' });
+    setEnvState({ renderModeDepthTest: v }, { source: "manual" });
   }
   getDepthTest(): boolean | null {
     return envState.renderModeDepthTest;
   }
 
   setSide(v: THREE.Side | null): void {
-    setEnvState({ renderModeSide: v as number | null }, { source: 'manual' });
+    setEnvState({ renderModeSide: v as number | null }, { source: "manual" });
   }
   getSide(): THREE.Side | null {
     return envState.renderModeSide as THREE.Side | null;
   }
 
   setDepthWrite(v: boolean | null): void {
-    setEnvState({ renderModeDepthWrite: v }, { source: 'manual' });
+    setEnvState({ renderModeDepthWrite: v }, { source: "manual" });
   }
   getDepthWrite(): boolean | null {
     return envState.renderModeDepthWrite;
@@ -213,15 +243,15 @@ export class RenderModeCapability implements SceneCapability {
     const s = restoreState(this.id);
     if (!s) return;
     if (typeof s.wireframe === "boolean" || s.wireframe === null)
-      setEnvState({ renderModeWireframe: s.wireframe }, { source: 'manual' });
+      setEnvState({ renderModeWireframe: s.wireframe }, { source: "manual" });
     if (typeof s.blending === "number" || s.blending === null)
-      setEnvState({ renderModeBlending: s.blending as number | null }, { source: 'manual' });
+      setEnvState({ renderModeBlending: s.blending as number | null }, { source: "manual" });
     if (typeof s.depthTest === "boolean" || s.depthTest === null)
-      setEnvState({ renderModeDepthTest: s.depthTest }, { source: 'manual' });
+      setEnvState({ renderModeDepthTest: s.depthTest }, { source: "manual" });
     if (typeof s.side === "number" || s.side === null)
-      setEnvState({ renderModeSide: s.side as number | null }, { source: 'manual' });
+      setEnvState({ renderModeSide: s.side as number | null }, { source: "manual" });
     if (typeof s.depthWrite === "boolean" || s.depthWrite === null)
-      setEnvState({ renderModeDepthWrite: s.depthWrite }, { source: 'manual' });
+      setEnvState({ renderModeDepthWrite: s.depthWrite }, { source: "manual" });
     this.sync();
   }
 
@@ -230,13 +260,16 @@ export class RenderModeCapability implements SceneCapability {
   dispose(): void {
     this.unsubscribeEnv();
     if (this.snapshot.size > 0) this.restoreSnapshot();
-    setEnvState({
-      renderModeWireframe: null,
-      renderModeBlending: null,
-      renderModeDepthTest: null,
-      renderModeSide: null,
-      renderModeDepthWrite: null,
-    }, { source: 'manual' });
+    setEnvState(
+      {
+        renderModeWireframe: null,
+        renderModeBlending: null,
+        renderModeDepthTest: null,
+        renderModeSide: null,
+        renderModeDepthWrite: null,
+      },
+      { source: "manual" },
+    );
     this.snapshot.clear();
     this.coveredProps.clear();
   }

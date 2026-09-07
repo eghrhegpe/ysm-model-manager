@@ -6,6 +6,9 @@
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
 import {
   createListenerSet,
   GROUND_LAYER_OFFSETS,
@@ -18,9 +21,6 @@ import {
 import { buildWaterNodes } from "./water-menu.ts";
 import type { WaterMode } from "./water-state.ts";
 import { WATER_MODES } from "./water-state.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 export type { WaterMode };
 
@@ -156,7 +156,8 @@ export class WaterCapability implements SceneCapability {
     mat.needsUpdate = true;
 
     const normalMap = this.getNormalMap();
-    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap = normalMap;
+    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap =
+      normalMap;
     (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale =
       new THREE.Vector2(envState.waterNormalStrength, envState.waterNormalStrength);
     mat.needsUpdate = true;
@@ -360,7 +361,7 @@ export class WaterCapability implements SceneCapability {
   // ── 水面：独立开关 / 形态切换 ──
   // ADR-196 收口：setter 只写 envState；渲染应用（可见性/重建/材质）统一走 registerEnvCallback。
   setWaterEnabled(v: boolean): void {
-    setEnvState({ waterEnabled: v }, { source: 'manual' });
+    setEnvState({ waterEnabled: v }, { source: "manual" });
   }
   getWaterEnabled(): boolean {
     return envState.waterEnabled;
@@ -368,7 +369,7 @@ export class WaterCapability implements SceneCapability {
 
   setWaterMode(m: WaterMode): void {
     if (envState.waterMode === m) return;
-    setEnvState({ waterMode: m }, { source: 'manual' });
+    setEnvState({ waterMode: m }, { source: "manual" });
   }
 
   /** 订阅参数变更（模式切换触发）；返回取消订阅函数 */
@@ -436,8 +437,7 @@ export class WaterCapability implements SceneCapability {
             userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
           }
         ).userData?.shader;
-        if (shader?.uniforms?.uRoundness)
-          shader.uniforms.uRoundness.value = s.waterPoolRoundness;
+        if (shader?.uniforms?.uRoundness) shader.uniforms.uRoundness.value = s.waterPoolRoundness;
       }
     }
     // clarity（pool）→ top/inner transmission
@@ -448,8 +448,7 @@ export class WaterCapability implements SceneCapability {
       for (const m of targets) {
         const mat = m.material as THREE.MeshPhysicalMaterial;
         if ("transmission" in mat) {
-          mat.transmission =
-            m.name === "ysm-water-top" ? s.waterClarity : s.waterClarity * 0.5;
+          mat.transmission = m.name === "ysm-water-top" ? s.waterClarity : s.waterClarity * 0.5;
           mat.needsUpdate = true;
         }
       }
@@ -457,10 +456,7 @@ export class WaterCapability implements SceneCapability {
     // waterWaveSpeed：无材质应用（仅 update 累加速度读值）
   }
 
-  private syncBaseOpacityUniform(
-    mat: THREE.MeshPhysicalMaterial,
-    value: number,
-  ): void {
+  private syncBaseOpacityUniform(mat: THREE.MeshPhysicalMaterial, value: number): void {
     const shader = (
       mat as unknown as {
         userData: { shader?: { uniforms?: { uBaseOpacity?: { value: number } } } };
@@ -470,21 +466,21 @@ export class WaterCapability implements SceneCapability {
   }
 
   setWetness(v: number): void {
-    setEnvState({ waterWetness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ waterWetness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
   }
   getWetness(): number {
     return envState.waterWetness;
   }
 
   setWaterColor(hex: number): void {
-    setEnvState({ waterColor: hex }, { source: 'manual' });
+    setEnvState({ waterColor: hex }, { source: "manual" });
   }
   getWaterColor(): number {
     return envState.waterColor;
   }
 
   setWaterOpacity(v: number): void {
-    setEnvState({ waterOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ waterOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
   }
   getWaterOpacity(): number {
     return envState.waterOpacity;
@@ -492,7 +488,7 @@ export class WaterCapability implements SceneCapability {
 
   // ── 法线贴图强度（顶层水面）──
   setNormalStrength(v: number): void {
-    setEnvState({ waterNormalStrength: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ waterNormalStrength: Math.max(0, Math.min(1, v)) }, { source: "manual" });
   }
   getNormalStrength(): number {
     return envState.waterNormalStrength;
@@ -500,41 +496,41 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水池专属参数（pool 模式）──
   setPoolHeight(v: number): void {
-    setEnvState({ waterPoolHeight: Math.max(0.01, v) }, { source: 'manual' });
+    setEnvState({ waterPoolHeight: Math.max(0.01, v) }, { source: "manual" });
   }
   getPoolHeight(): number {
     return envState.waterPoolHeight;
   }
 
   setPoolWallThickness(v: number): void {
-    setEnvState({ waterPoolWallThickness: Math.max(0.01, v) }, { source: 'manual' });
+    setEnvState({ waterPoolWallThickness: Math.max(0.01, v) }, { source: "manual" });
   }
   getPoolWallThickness(): number {
     return envState.waterPoolWallThickness;
   }
 
   setPoolWallColor(hex: number): void {
-    setEnvState({ waterPoolWallColor: hex }, { source: 'manual' });
+    setEnvState({ waterPoolWallColor: hex }, { source: "manual" });
   }
   getPoolWallColor(): number {
     return envState.waterPoolWallColor;
   }
 
   setPoolRoundness(v: number): void {
-    setEnvState({ waterPoolRoundness: Math.max(0, Math.min(0.5, v)) }, { source: 'manual' });
+    setEnvState({ waterPoolRoundness: Math.max(0, Math.min(0.5, v)) }, { source: "manual" });
   }
   getPoolRoundness(): number {
     return envState.waterPoolRoundness;
   }
 
   setWaveSpeed(v: number): void {
-    setEnvState({ waterWaveSpeed: Math.max(0, v) }, { source: 'manual' });
+    setEnvState({ waterWaveSpeed: Math.max(0, v) }, { source: "manual" });
   }
   getWaveSpeed(): number {
     return envState.waterWaveSpeed;
   }
   setClarity(v: number): void {
-    setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
   }
   getClarity(): number {
     return envState.waterClarity;
@@ -652,7 +648,7 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      size: { number: (v) => setEnvState({ waterSize: v }, { source: 'manual' }) },
+      size: { number: (v) => setEnvState({ waterSize: v }, { source: "manual" }) },
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
     // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。

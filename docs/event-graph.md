@@ -273,8 +273,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 282 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 304 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 307 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 111 |
 
 **订阅方（on）：**
@@ -330,7 +330,7 @@
 | runDownloadMissing | `frontend/src/features/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 145 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 85 |
@@ -380,7 +380,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 339 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 348 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 100 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 495 |
 
@@ -451,11 +451,11 @@
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 127 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 147 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 155 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 164 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 192 |
-| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 238 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 158 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 167 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 195 |
+| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 241 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 103 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 135 |
@@ -535,8 +535,8 @@
 | reload | `frontend/src/views/app-tree/bus-handlers.ts` | 282 |
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 298 |
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 342 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 348 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 351 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 357 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 73 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 81 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 106 |

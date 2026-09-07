@@ -139,7 +139,10 @@ function stgBindLinkMode(
           total += await RelinkAllInstanceResources(ins.Name);
         } catch (e) {
           failed++;
-          logWarn("community", "重新链接失败", { name: ins.Name, err: e });
+          // code_review 3413288be 段 B #2（P3）：第三参直传 error（同文件 L217/237
+          // 约定形状）——原 { name, err } 对象包装绕过 log 层错误格式化/栈保留，
+          // name 并入 message
+          logWarn("community", `重新链接失败: ${ins.Name}`, e);
         }
       }
       bus.emit("stats:refresh");

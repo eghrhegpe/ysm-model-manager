@@ -324,13 +324,22 @@ async function runBatchToggle(
       .map((e) => e.fullPath);
     let ok = 0,
       fail = 0;
-    for (const fullPath of snapshot) {
-      try {
-        await ToggleEnable(fullPath);
-        ok++;
-      } catch (err) {
-        fail++;
-        logWarn("bus", `${opts.label} 失败: ${fullPath}`, err);
+    // code_review 3413288be 段 C #2/#3（P3）：对齐 toggleFolderBatch/_deleteSelected 的
+    // BATCH=8 + Promise.allSettled 并发批处理——原串行 for...of await 阻塞主线程
+    // （同 diff 已改兄弟循环「文件夹/批量删除」，独漏本入口「全部启用/禁用」；
+    // 大仓库全树条目时串行 IPC 问题依旧存在）。Promise.allSettled 保原语义：逐项
+    // 独立 ok/fail 统计不短路；失败日志保留 fullPath（results 与 batch 按下标配对）。
+    const BATCH = 8;
+    for (let i = 0; i < snapshot.length; i += BATCH) {
+      const batch = snapshot.slice(i, i + BATCH);
+      const results = await Promise.allSettled(batch.map((fullPath) => ToggleEnable(fullPath)));
+      for (let j = 0; j < results.length; j++) {
+        const r = results[j];
+        if (r.status === "fulfilled") ok++;
+        else {
+          fail++;
+          logWarn("bus", `${opts.label} 失败: ${batch[j]}`, r.reason);
+        }
       }
     }
     if (ok > 0) {

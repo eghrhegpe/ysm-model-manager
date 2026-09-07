@@ -517,6 +517,10 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
     totalSize += e.size || 0;
   });
   const newText = t("tree.statSummary", { total, enabled, size: formatBytes(totalSize) });
+  // code_review 3413288be 段 C #1（P3）：data-total 无条件写（与可见文案是否变化
+  // 无关）——多选期间 updateStat 被跳过 + 选中文案不写 dataset → dataset.total 冻结
+  // 在预选值，取消选择后 oldTotal 取到从未显示过的计数 → 错误起点计数动画
+  el.dataset.total = String(total);
   // 先取消在途动画与定时器：连续触发时旧动画中间值会干扰下一次 textContent 判断，定时器堆积
   const prev = statAnim.get(el);
   if (prev) {
@@ -528,7 +532,6 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
     // P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码中文「项」，en/ja locale 失效；
     // 改读 data-total 属性通道（与 events.ts 的 data-count 同源思路，ADR-133 导向）。
     const oldTotal = parseInt(el.dataset.total || "0", 10) || 0;
-    el.dataset.total = String(total);
     if (oldTotal > 0 && oldTotal !== total && total > 0) {
       const cancel = animateNumber(el, total, 700);
       const timer = setTimeout(() => {

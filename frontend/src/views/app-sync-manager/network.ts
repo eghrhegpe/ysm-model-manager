@@ -62,7 +62,11 @@ export async function performSingleOp(
     });
   } finally {
     self._singleBusy.delete(path);
-    setButtonsBusy(self, false);
+    // code_review 3413288be 段 A #1/#2/#3/#4（P2）：busy 视觉须由在途 op 数派生——
+    // 无条件 setButtonsBusy(false) 会把另一在途行的按钮提前复位（per-path 并发化
+    // 只做了一半：守卫按 path、复位仍全局，两半自相矛盾——先结束的 op 让仍在途
+    // 行的 UI 假空闲、点击被 Set 守卫静默吞）
+    setButtonsBusy(self, self._singleBusy.size > 0);
   }
 }
 

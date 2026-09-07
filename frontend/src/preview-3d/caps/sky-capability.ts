@@ -293,29 +293,45 @@ export class SkyCapability implements SceneCapability {
         }
       }
       if (changed.has("skyTurbidity")) {
-        if (this.enabled) this.sky.material.uniforms.turbidity.value = state.skyTurbidity;
+        if (this.enabled) {
+          this.sky.material.uniforms.turbidity.value = state.skyTurbidity;
+          this.envSky.material.uniforms.turbidity.value = state.skyTurbidity;
+        }
       }
       if (changed.has("skyRayleigh")) {
-        if (this.enabled) this.sky.material.uniforms.rayleigh.value = state.skyRayleigh;
+        if (this.enabled) {
+          this.sky.material.uniforms.rayleigh.value = state.skyRayleigh;
+          this.envSky.material.uniforms.rayleigh.value = state.skyRayleigh;
+        }
       }
       if (changed.has("skyMieCoefficient")) {
-        if (this.enabled) this.sky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
+        if (this.enabled) {
+          this.sky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
+          this.envSky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
+        }
       }
       if (changed.has("skyMieDirectionalG")) {
-        if (this.enabled)
+        if (this.enabled) {
           this.sky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
+          this.envSky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
+        }
       }
       if (changed.has("skySunIntensityScale")) {
         if (this.enabled) {
           const u = this.sky.material.uniforms;
           if (u.sunIntensityScale !== undefined)
             u.sunIntensityScale.value = state.skySunIntensityScale;
+          const eu = this.envSky.material.uniforms;
+          if (eu.sunIntensityScale !== undefined)
+            eu.sunIntensityScale.value = state.skySunIntensityScale;
         }
       }
       if (changed.has("skySunDiscScale")) {
         if (this.enabled) {
           const u = this.sky.material.uniforms;
           if (u.sunDiscScale !== undefined) u.sunDiscScale.value = state.skySunDiscScale;
+          const eu = this.envSky.material.uniforms;
+          if (eu.sunDiscScale !== undefined) eu.sunDiscScale.value = state.skySunDiscScale;
         }
       }
       if (changed.has("skyExposure")) {
@@ -473,16 +489,9 @@ export class SkyCapability implements SceneCapability {
     if (preset.sunIntensityScale !== undefined)
       mapped.skySunIntensityScale = preset.sunIntensityScale;
     if (preset.sunDiscScale !== undefined) mapped.skySunDiscScale = preset.sunDiscScale;
-    // ADR-196 收口：纯写 envState；uniform 由 callback 各键分支落地 + 末尾强制重建一次
-    // （预设切换是离散动作，散射参数变化应刷新环境烘焙——callback 各分支不互知，
-    //  单一 changed 集内多键无法各自触发 rebuild，故此处保留一次显式 regenerate）。
+    // ADR-196 收口：纯写 envState；callback 各散射分支已同步写 envSky uniforms
+    // （含 skyForceEnv=true 触发 PMREM 重建），此处不再双写。
     setEnvState({ ...mapped, skyForceEnv: true }, { source: "auto-model" });
-    // code_review 57aeefdb4 #3（P2）：烘焙前刷新 envSky uniforms——regenerateEnvironment
-    // 从 this.envScene 烘焙 IBL，而 callback 散射 key 分支（skyTurbidity 等）只写
-    // this.sky 不写 this.envSky——不刷 envSky 则 IBL 用旧预设散射参数烘焙，
-    // 切模型类型后模型反射/环境光与主天空不一致（整场会话残留）
-    if (this.enabled) this.writeUniforms(this.envSky);
-    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */

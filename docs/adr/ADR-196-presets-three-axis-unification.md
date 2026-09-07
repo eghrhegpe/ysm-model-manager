@@ -53,6 +53,21 @@ YSM cap 是**能力自治**模式——每个 cap 封装 Three 节点创建、sh
 
 **选「激进路线」而非「保留 cap 参数封装 + 加 getState/setState 接口」**——后者是渐进补魂，但 cap 参数仍私有，菜单仍需闭包绑定，三轴问题只治标。激进路线把 cap 参数彻底外移到全局 `envState`，菜单-状态绑定从根上打通，三轴自然合一。
 
+### 与 ADR-195 的衔接裁决（2026-09-07 补）
+
+ADR-195（cap 控件单类型化）与 ADR-196 同属菜单/状态体系收口，二者**先后衔接而非打架**：
+
+- ADR-195 完成的是**声明类型统一**：10 cap 从 `getMenuControls(): MenuControlDef[]` 迁到 `getMenuNodes(): PreviewMenuNode[]`，渲染走 renderMenu 单链。此步已全量落地。
+- ADR-196 刀 3 原写的「经 cap-to-node 桥接层替换闭包」**机制前提被 ADR-195 取代**——cap 已不经过桥，直接产节点。但刀 3 的**实质目标（菜单控件从 cap.setXxx 闭包改为 StatePath 直绑 envState）未因 ADR-195 自动完成**：ADR-195 只统一了类型载体，控件仍绑 `cap.setXxx(v)` 闭包（2026-09-07 实证：`getStateValue`/`setStateValue` 零消费，菜单 setter 全为闭包直调）。
+- 结论：ADR-195 取代 ADR-196 刀 3 的**机制路径**，刀 3 **目标保留**、落点改为「直接改各 cap 的 menu 节点工厂」（见上方刀 3 修订）。
+
+### 当前实施进度（2026-09-07 快照，详细见知识卡 preview_env_state）
+
+- 刀 0：3/4（`env-state-schema.ts`/`env-state.ts`/`env-dispatcher.ts` 已建；`env-state-persist.ts` 未建，持久化仍由各 cap saveState 承担）
+- 刀 1：Sky 参数写入已走 setEnvState，但 `MODEL_SKY_PRESETS` 旧表未删、setter 仍双写 uniforms（残留）
+- 刀 2：10/10（全部 cap 参数迁入 envState，schema 全量拍平 ~90 字段）
+- 刀 3-5：未落（本修订后推进）
+
 ### 刀序（实施见知识卡，ADR 不记进度）
 
 1. **刀 0：建统一状态层**：
@@ -73,20 +88,21 @@ YSM cap 是**能力自治**模式——每个 cap 封装 Three 节点创建、sh
    - setter 改调 `setEnvState`，getter 改读 `envState`
    - 菜单控件改 StatePath 绑定
 
-4. **刀 3：菜单-状态桥接**：
-   - `cap-to-node.ts` 的 `getValue/setValue` 闭包替换为 `bind: StatePath`
-   - `render-menu.ts` 的 slider/toggle/select 渲染：读 `getStateValue(ctrl.bind)`，写 `setStateValue(ctrl.bind, v)`
-   - 复杂控件（timeline/histogram/preset-thumb/image）走 `custom` 逃生舱（对齐 MikuMikuAR）
+4. **刀 3：菜单-状态桥接（2026-09-07 修订：机制路径被 ADR-195 取代，目标保留）**：
+   - **原方案**（cap-to-node 桥接层替换闭包）已被 ADR-195 取代：ADR-195 刀 2 让 10 个 cap 全部直产 `PreviewMenuNode[]`（`getMenuNodes()`），cap 不再经 `getMenuControls` 桥接，原「在桥接层替换」无落点。
+   - **修订后落点**：直接改各 cap 的 `menu/*.ts` 节点工厂——控件 `control: { get: () => cap.getXxx(), set: (v) => cap.setXxx(v) }` 闭包替换为 `control: { get: () => getStateValue('skyTimeOfDay'), set: (v) => setStateValue('skyTimeOfDay', v) }`（StatePath 直绑 envState 键）。cap 的 setter/getter 方法在渲染层保留（menu/env.ts、shared-infra 装配链仍调 setPreset/setTime 等），但菜单控件不再经闭包触达。
+   - **判据**：`grep -rn "cap\.set\|cap\.get" frontend/src/preview-3d/menu/*.ts` 归零（复杂控件 timeline/histogram/preset-thumb/image/button 走 custom 逃生舱，豁免）。
 
 5. **刀 4：预设体系收口**：
-   - 删 `MODEL_*_PRESETS` / `FOG_PRESETS` / `ENV_PRESET_BY_MODEL`，收口到 `MODEL_DEFAULTS`（Schema 派生）
-   - 删 `ENV_PRESET_LINKAGE`，收口到 `ATMOSPHERE_PRESETS`（完整快照，每个氛围 = 所有 cap 参数的 partial）
-   - `applyPreset` 改 `setEnvState(ATMOSPHERE_PRESETS[snapshot])`
+   - 删 `MODEL_SKY_PRESETS` / `FOG_PRESETS` / `ENV_PRESET_BY_MODEL` / `ENV_PRESET_LINKAGE` / `LIGHT_PRESETS` / `POSTPROC_PRESETS` 的模型类别维度，收口到 `MODEL_DEFAULTS`（Schema 派生的模型默认值，`auto-model` source）
+   - 删 `ENV_PRESET_LINKAGE`，收口到 `ATMOSPHERE_PRESETS`（完整快照，每个氛围 = 所有 cap 参数的 partial，`auto-atmosphere` source）
+   - `menu/env.ts` 的 `applyPreset` 硬编码 `if (link.sky)` / `if (link.fog)` → `setEnvState(ATMOSPHERE_PRESETS[presetId], { source: 'auto-atmosphere' })`
+   - 各 cap `setPreset(modelType)` 改为 `setEnvState(MODEL_DEFAULTS[modelType], { source: 'auto-model' })`（或删 setPreset 由 shared-infra 直接写）
 
 6. **刀 5：删除旧体系**：
-   - 删 `cap-controls.ts` / `cap-to-node.ts` / `MenuControlDef` 类型
-   - 删各 cap 的 `MODEL_*_PRESETS` 常量
-   - 删 `SceneCapability.setPreset` 接口（不再需要，预设统一走 `setEnvState`）
+   - 删 `MenuControlDef` / `MenuControlKind` / `cap-controls.ts`（ADR-195 刀 3 范畴，与 ADR-196 刀 5 收口重叠时以 ADR-195 刀序为准）
+   - 删各 cap 的 `MODEL_*_PRESETS` 常量（刀 4 后无引用）
+   - 删 `SceneCapability.setPreset` 接口（不再需要，模型预设统一走 `MODEL_DEFAULTS` + `setEnvState`）
 
 ### 关键映射
 

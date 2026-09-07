@@ -139,18 +139,18 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
 }
 
 /**
- * 解析「比对基线 rev」——与上方 getChangedFiles 的 fallback 链同口径（远端 oid →
+ * 解析「比对基线 rev」——与上方 resolveChanges 的 fallback 链同口径（远端 oid →
  * merge-base origin/<branch> → origin/HEAD → origin/main → origin/master）。
  *
  * 抽出为模块级函数供 golangci-lint 的 `--new-from-rev` 复用（ADR-205）：lint 需要的是
- * **rev** 而非文件集，而 getChangedFiles 只吐文件名。
- * 口径同步约束：改动 fallback 链时本函数与 getChangedFiles 须同改，否则 lint 的
+ * **rev** 而非文件集，而 resolveChanges 只吐文件名。
+ * 口径同步约束：改动 fallback 链时本函数与 resolveChanges 须同改，否则 lint 的
  * 「新增代码」判定与门禁的「变更文件」判定会漂移（一个漏检一个拦下）。
  *
  * @returns 基线 rev；取不到（孤儿分支 / 无远端 / merge-base 全失败）返回 ""，由调用方降级。
  */
 function resolveBaseRev(localOid: string, remoteOid: string, localRef: string): string {
-  // 已存在远端分支且非同源：remoteOid 即权威基线（等价于 getChangedFiles 首个 diff 分支）
+  // 已存在远端分支且非同源：remoteOid 即权威基线（等价于 resolveChanges 首个 diff 分支）
   if (!/^0+$/.test(remoteOid || "") && remoteOid !== localOid) return remoteOid;
   const mergeBase = (ref: string) => {
     const r = git(["merge-base", localOid, ref]);
@@ -564,21 +564,60 @@ async function main() {
           blockPolicy: "debt",
         });
       } else {
-        const baseRev = resolveBaseRev(pushLocalOid, pushRemoteOid, pushLocalRef);
-        if (!baseRev) {
-          record("golangci-lint（跳过：无基线 rev）", true, {
+        // code_review 9403a4dff #4（P2）：版本地板校验——.golangci.yml 为 v2 schema
+        // （version: "2"），v1 线或 <v1.64 的二进制解析不了（go directive/config keys
+        // 静默丢）→ run 必失败且硬阻断，违背「宁可漏检不可误堵」；按地板降级 debt
+        const glVerLine = glVer.out.split("\n")[0] ?? "";
+        const vM = glVerLine.match(/v?(\d+)\.(\d+)\.(\d+)/);
+        const glMaj = vM ? parseInt(vM[1], 10) : 0;
+        const glMin = vM ? parseInt(vM[2], 10) : 0;
+        const belowFloor = glMaj !== 0 && (glMaj < 1 || (glMaj === 1 && glMin < 64) || glMaj > 2);
+        if (belowFloor) {
+          record("golangci-lint（跳过：版本低于地板 v1.64+/v2 线）", true, {
             time: Date.now() - tGL,
-            note: `golangci-lint ${glVer.out.split("\n")[0] ?? ""} 已安装，但无法解析 --new-from-rev 基线（孤儿分支/无远端）；全量跑会撞 736 条存量债，故跳过而非阻断`,
+            note: `${glVerLine} 低于 ADR-205 §2.4 版本地板（.golangci.yml 为 v2 schema）；安装 v2 线：go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`,
             blockPolicy: "debt",
           });
         } else {
-          const glCmd = `golangci-lint run --new-from-rev=${baseRev} ./...`;
-          const gl = await shAsync(glCmd);
-          record(glCmd, gl.rc === 0, {
-            time: Date.now() - tGL,
-            note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量 736 条另案清零）`,
-            tail: gl.rc ? gl.out.trim().split("\n").slice(-8).join("\n") : "",
-          });
+          // code_review 9403a4dff #1/#9（P2）：非 push 模式（--all/--files）localOid 为
+          // 空串 → merge-base 空 rev 必失败 → fallback 链恒返回 ""，doctor 每次记录误导性
+          // 「跳过：孤儿分支」（真实原因是空 oid）；以 HEAD 为本地侧走 fallback 链
+          const baseRev = resolveBaseRev(pushLocalOid || "HEAD", pushRemoteOid, pushLocalRef);
+          // code_review 9403a4dff #5（P2）：baseRev 可能来自 pre-push stdin 派生的
+          // remoteOid（未验证 hex）——插入 shell 字符串执行构成命令注入（violate
+          // git() helper 明示的「stdin 元字符禁入 shell」不变式）——先验 hex 再执行
+          const hexOk = /^[0-9a-f]{40,64}$/i.test(baseRev);
+          if (!baseRev || !hexOk) {
+            record("golangci-lint（跳过：无基线 rev）", true, {
+              time: Date.now() - tGL,
+              note: `${glVerLine} 已安装，但无法解析 --new-from-rev 基线（孤儿分支/无远端/基线非 hex）；全量跑会撞 736 条存量债，故跳过而非阻断`,
+              blockPolicy: "debt",
+            });
+          } else if (
+            // code_review 9403a4dff #2/#3/#6（P2）：快照守卫——golangci-lint 分析当前
+            // 检出工作树，基线却取被推 ref：推非当前分支/脏工作树时 lint 错快照
+            // （漏检被推代码 / 误堵无关 WIP）；HEAD==localOid 才跑，否则降级
+            pushLocalOid &&
+            !pushLocalOid.startsWith("0") &&
+            procRun("git", ["rev-parse", "HEAD"], { cwd: ROOT }).out.trim() !== pushLocalOid
+          ) {
+            record("golangci-lint（跳过：推非当前分支）", true, {
+              time: Date.now() - tGL,
+              note: `${glVerLine} 已安装，但推送 ref 与当前检出 HEAD 不一致——增量 lint 分析错快照（漏检被推代码/误堵 HEAD）；降级跳过（ADR-205 口径：宁可漏检不可误堵）`,
+              blockPolicy: "debt",
+            });
+          } else {
+            // 数组形式执行（防 shell 解析 baseRev）；字符串仅供 label 展示
+            const glLabel = `golangci-lint run --new-from-rev=${baseRev} ./...`;
+            const gl = procRun("golangci-lint", ["run", `--new-from-rev=${baseRev}`, "./..."], {
+              cwd: ROOT,
+            });
+            record(glLabel, gl.rc === 0, {
+              time: Date.now() - tGL,
+              note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量 736 条另案清零）`,
+              tail: gl.rc ? gl.out.trim().split("\n").slice(-8).join("\n") : "",
+            });
+          }
         }
       }
 

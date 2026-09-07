@@ -104,9 +104,11 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
     expect(el.selectState.keys.size).toBe(2);
   });
 
-  it("4. Shift 范围选择（行0 → Shift+行1）", async () => {
-    // shift-click 依赖 vsRows 注入（虚拟滚动数据源），组件集成测试难以完整模拟；
-    // 由 events.test.ts 覆盖。此处仅验证首行选中态正确。
+  it("4. 单击选中首行（Shift 范围选择由 events.test.ts harness 覆盖）", async () => {
+    // code_review b95c7dd42 #5/#6/#7/#8（P3）：原标题「Shift 范围选择」与断言不符——
+    // shift-click 依赖 vsRows 注入（虚拟滚动数据源），组件集成测试难以完整模拟，
+    // 已由 events.test.ts 覆盖；此处仅验证首行选中态正确（标题如实化防维护者误信
+    // 组件级 Shift 覆盖存在）
     const el = await mountTree();
     clickRow(el, 0);
     await waitFor(() => expect(el.selectState.lastKey).toBe("/repo/a.ysm"));

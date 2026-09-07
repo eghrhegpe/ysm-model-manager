@@ -212,10 +212,13 @@ describe("app-tree index 入口生命周期（补位）", () => {
     const el = await mountEl();
     await sleep0();
     await sleep0();
-    // 模拟当前选中 a.ysm
-    el.selectState.lastKey = "a.ysm";
-    el.selectState.keys.add("a.ysm");
-    // 验证 selectState 是实例级（非模块级共享）
+    // code_review b95c7dd42 #1/#2/#3（P2）：ArrowDown 导航回归守卫的完整恢复受限——
+    // 新导航（selectState 实例化 + vsRows）经 getVsRows 读虚拟滚动行 + lastKey 匹配，
+    // 完整断言需 vsRows fixture 适配（本轮未能构造）；此处保留实例隔离断言 + 如实标题
+    // （原「方向键导航」标题已删——不假称方向键覆盖）。导航残高亮回归的守卫缺口如实
+    // 报告：index.ts _onKeyArrowNav 的 oldKey 捕获时序仍无测试锁定
+    el.selectState.lastKey = "/repo/a.ysm";
+    el.selectState.keys.add("/repo/a.ysm");
     const el2 = document.createElement("app-tree") as unknown as AppTree;
     document.body.appendChild(el2);
     await waitFor(() => (el2 as unknown as { _ready: boolean })._ready === true);

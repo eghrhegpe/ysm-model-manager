@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
+import { resetEnvState } from "../state/env-state.ts";
 
 const STORAGE_KEY = "ysm-scene-cap-renderMode";
 
@@ -25,6 +26,8 @@ function makeMesh(opts: { mats?: number } = {}) {
 }
 
 describe("RenderModeCapability — 构造与初始状态", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("初始无任何 override", () => {
     const cap = newCap(makeMesh());
     expect(cap.isEnabled()).toBe(false);
@@ -288,7 +291,7 @@ describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
 });
 
 describe("RenderModeCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { localStorage.clear(); resetEnvState(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {

@@ -4,6 +4,9 @@
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
   oneOf,
@@ -13,9 +16,6 @@ import {
   type SceneCapability,
 } from "./scene-capability.ts";
 import { buildShadowNodes } from "./shadow-menu.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 阴影类型合法值 */
 const SHADOW_TYPES = ["soft", "hard"] as const;
@@ -76,8 +76,13 @@ export class ShadowCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (changed.has('shadowType') || changed.has('shadowMapSize') || changed.has('shadowBias') ||
-          changed.has('shadowNormalBias') || changed.has('shadowCameraSize')) {
+      if (
+        changed.has("shadowType") ||
+        changed.has("shadowMapSize") ||
+        changed.has("shadowBias") ||
+        changed.has("shadowNormalBias") ||
+        changed.has("shadowCameraSize")
+      ) {
         if (this.enabled) this.apply();
       }
     });
@@ -106,9 +111,9 @@ export class ShadowCapability implements SceneCapability {
     if (this.isStateLoaded) return;
     const presetKey = SHADOW_PRESET_BY_MODEL[adapterId] ?? "default";
     if (presetKey === "soft") {
-      setEnvState({ shadowType: "soft" }, { source: 'auto-model' });
+      setEnvState({ shadowType: "soft" }, { source: "auto-model" });
     } else {
-      setEnvState({ shadowType: "hard" }, { source: 'auto-model' });
+      setEnvState({ shadowType: "hard" }, { source: "auto-model" });
     }
   }
 
@@ -348,7 +353,7 @@ export class ShadowCapability implements SceneCapability {
 
   setMapSize(v: number): void {
     const clamped = [512, 1024, 2048, 4096].includes(v) ? v : envState.shadowMapSize;
-    setEnvState({ shadowMapSize: clamped }, { source: 'manual' });
+    setEnvState({ shadowMapSize: clamped }, { source: "manual" });
     if (this.enabled) this.apply();
   }
   getMapSize(): number {
@@ -357,7 +362,7 @@ export class ShadowCapability implements SceneCapability {
 
   /** 菜单用：toggle true → 软阴影；false → 硬阴影 */
   setSoft(v: boolean): void {
-    setEnvState({ shadowType: v ? "soft" : "hard" }, { source: 'manual' });
+    setEnvState({ shadowType: v ? "soft" : "hard" }, { source: "manual" });
     if (this.enabled) {
       this.renderer.shadowMap.type = v ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
       this.renderer.shadowMap.needsUpdate = true;
@@ -368,7 +373,7 @@ export class ShadowCapability implements SceneCapability {
   }
 
   setBias(v: number): void {
-    setEnvState({ shadowBias: v }, { source: 'manual' });
+    setEnvState({ shadowBias: v }, { source: "manual" });
     if (!this.enabled) return;
     const { dirs, spots } = this.collectLights();
     for (const l of dirs) l.shadow.bias = v;
@@ -379,7 +384,7 @@ export class ShadowCapability implements SceneCapability {
   }
 
   setNormalBias(v: number): void {
-    setEnvState({ shadowNormalBias: v }, { source: 'manual' });
+    setEnvState({ shadowNormalBias: v }, { source: "manual" });
     if (!this.enabled) return;
     const { dirs, spots } = this.collectLights();
     for (const l of dirs) l.shadow.normalBias = v;
@@ -390,7 +395,7 @@ export class ShadowCapability implements SceneCapability {
   }
 
   setCameraSize(v: number): void {
-    setEnvState({ shadowCameraSize: Math.max(5, Math.min(80, v)) }, { source: 'manual' });
+    setEnvState({ shadowCameraSize: Math.max(5, Math.min(80, v)) }, { source: "manual" });
     if (!this.enabled) return;
     const { dirs } = this.collectLights();
     const s = envState.shadowCameraSize;
@@ -437,16 +442,16 @@ export class ShadowCapability implements SceneCapability {
     let typeRestored = false;
     restoreFields(state, {
       type: oneOf(SHADOW_TYPES, (v) => {
-        setEnvState({ shadowType: v }, { source: 'manual' });
+        setEnvState({ shadowType: v }, { source: "manual" });
         typeRestored = true;
       }),
-      mapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: 'manual' }) },
-      bias: { number: (v) => setEnvState({ shadowBias: v }, { source: 'manual' }) },
-      normalBias: { number: (v) => setEnvState({ shadowNormalBias: v }, { source: 'manual' }) },
-      cameraSize: { number: (v) => setEnvState({ shadowCameraSize: v }, { source: 'manual' }) },
+      mapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: "manual" }) },
+      bias: { number: (v) => setEnvState({ shadowBias: v }, { source: "manual" }) },
+      normalBias: { number: (v) => setEnvState({ shadowNormalBias: v }, { source: "manual" }) },
+      cameraSize: { number: (v) => setEnvState({ shadowCameraSize: v }, { source: "manual" }) },
     });
     if (!typeRestored && typeof state.soft === "boolean") {
-      setEnvState({ shadowType: state.soft ? "soft" : "hard" }, { source: 'manual' });
+      setEnvState({ shadowType: state.soft ? "soft" : "hard" }, { source: "manual" });
     }
     this.isStateLoaded = true;
     this.apply();

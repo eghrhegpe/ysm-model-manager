@@ -2,14 +2,14 @@
 // 可变单例 envState + 中央写入入口 + lastWriteSource 守卫决策。
 // 仿 MikuMikuAR setEnvState 模式。
 
-import { deriveDefaultEnvState, type EnvState } from './env-state-schema.ts';
-import { dispatchEnvChange } from './env-dispatcher.ts';
+import { dispatchEnvChange } from "./env-dispatcher.ts";
+import { deriveDefaultEnvState, type EnvState } from "./env-state-schema.ts";
 
 // 可变单例（仿 MikuMikuAR envState）
 export const envState: EnvState = deriveDefaultEnvState() as EnvState;
 
 // 写入来源标记
-type WriteSource = 'auto-model' | 'auto-atmosphere' | 'manual';
+type WriteSource = "auto-model" | "auto-atmosphere" | "manual";
 
 // 各字段最后一次写入来源
 const _writeSource: Record<string, WriteSource> = {};
@@ -19,10 +19,10 @@ const _writeSource: Record<string, WriteSource> = {};
  * 优先级：manual > auto-atmosphere > auto-model
  */
 function shouldOverwrite(key: string, source: WriteSource): boolean {
-  const prev = _writeSource[key] ?? 'auto-model';
-  if (source === 'manual') return true;
-  if (source === 'auto-atmosphere' && prev !== 'manual') return true;
-  if (source === 'auto-model' && prev === 'auto-model') return true;
+  const prev = _writeSource[key] ?? "auto-model";
+  if (source === "manual") return true;
+  if (source === "auto-atmosphere" && prev !== "manual") return true;
+  if (source === "auto-model" && prev === "auto-model") return true;
   return false;
 }
 
@@ -44,11 +44,8 @@ function schedulePersistEnvState(): void {
  * 中央写入入口（仿 MikuMikuAR setEnvState）。
  * 写入带来源标记，按 lastWriteSource 优先级决策是否覆盖。
  */
-export function setEnvState(
-  partial: Partial<EnvState>,
-  opts?: { source?: WriteSource },
-): void {
-  const source = opts?.source ?? 'auto-model';
+export function setEnvState(partial: Partial<EnvState>, opts?: { source?: WriteSource }): void {
+  const source = opts?.source ?? "auto-model";
   const migrated = migrateEnvState(partial);
 
   const changedKeys = new Set<string>();
@@ -77,7 +74,7 @@ export function getStateValue(path: string): unknown {
  * StatePath 写（菜单控件用）。
  */
 export function setStateValue(path: string, value: unknown): void {
-  setEnvState({ [path]: value } as Partial<EnvState>, { source: 'manual' });
+  setEnvState({ [path]: value } as Partial<EnvState>, { source: "manual" });
 }
 
 /**

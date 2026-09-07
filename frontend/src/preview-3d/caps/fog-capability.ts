@@ -5,6 +5,10 @@
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
   oneOf,
@@ -13,10 +17,6 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 export type FogMode = "linear" | "exp2";
 
@@ -101,8 +101,14 @@ export class FogCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (changed.has('fogEnabled') || changed.has('fogMode') || changed.has('fogColor') ||
-          changed.has('fogNear') || changed.has('fogFar') || changed.has('fogDensity')) {
+      if (
+        changed.has("fogEnabled") ||
+        changed.has("fogMode") ||
+        changed.has("fogColor") ||
+        changed.has("fogNear") ||
+        changed.has("fogFar") ||
+        changed.has("fogDensity")
+      ) {
         this.applyFog();
       }
     });
@@ -144,7 +150,7 @@ export class FogCapability implements SceneCapability {
   /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
   setPreset(modelType: string): void {
     const preset = FOG_PRESETS[modelType] ?? FOG_PRESETS.default;
-    setEnvState(preset, { source: 'auto-model' });
+    setEnvState(preset, { source: "auto-model" });
     // 预设只调合理默认，不强制开启（避免覆盖用户明确的开关选择）
     this.applyFog();
   }
@@ -152,15 +158,15 @@ export class FogCapability implements SceneCapability {
   /* -------- 参数变更 API -------- */
 
   setEnabledFog(v: boolean): void {
-    setEnvState({ fogEnabled: v }, { source: 'manual' });
+    setEnvState({ fogEnabled: v }, { source: "manual" });
   }
 
   setMode(mode: FogMode): void {
-    setEnvState({ fogMode: mode }, { source: 'manual' });
+    setEnvState({ fogMode: mode }, { source: "manual" });
   }
 
   setColor(hex: number): void {
-    setEnvState({ fogColor: hex }, { source: 'manual' });
+    setEnvState({ fogColor: hex }, { source: "manual" });
     if (this.currentFog) this.currentFog.color.setHex(hex);
   }
 
@@ -173,7 +179,7 @@ export class FogCapability implements SceneCapability {
     const partial: Partial<EnvState> = {};
     if (near !== undefined) partial.fogNear = near;
     if (far !== undefined) partial.fogFar = far;
-    setEnvState(partial, { source: 'manual' });
+    setEnvState(partial, { source: "manual" });
     if (this.currentFog && this.currentFog instanceof THREE.Fog) {
       this.currentFog.near = envState.fogNear;
       this.currentFog.far = envState.fogFar;
@@ -182,7 +188,7 @@ export class FogCapability implements SceneCapability {
 
   /** 指数雾：density */
   setDensity(d: number): void {
-    setEnvState({ fogDensity: d }, { source: 'manual' });
+    setEnvState({ fogDensity: d }, { source: "manual" });
     if (this.currentFog && this.currentFog instanceof THREE.FogExp2) {
       this.currentFog.density = d;
     }
@@ -252,12 +258,12 @@ export class FogCapability implements SceneCapability {
           this.enabled = v;
         },
       },
-      fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: 'manual' }) },
-      fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: 'manual' })),
-      fogColor: { number: (v) => setEnvState({ fogColor: v }, { source: 'manual' }) },
-      fogNear: { number: (v) => setEnvState({ fogNear: v }, { source: 'manual' }) },
-      fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: 'manual' }) },
-      fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: 'manual' }) },
+      fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: "manual" }) },
+      fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: "manual" })),
+      fogColor: { number: (v) => setEnvState({ fogColor: v }, { source: "manual" }) },
+      fogNear: { number: (v) => setEnvState({ fogNear: v }, { source: "manual" }) },
+      fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: "manual" }) },
+      fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: "manual" }) },
     });
     this.applyFog();
   }

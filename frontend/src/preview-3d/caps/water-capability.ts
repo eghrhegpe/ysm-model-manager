@@ -1,8 +1,7 @@
-// ===== WaterCapability：水面能力（2026-08-28 从 GroundCapability 解耦为独立能力）=====
+// ===== WaterCapability：水面能力（ADR-196 迁移至 envState）=====
 // 独立前水面是 GroundCapability 的「双子域」；拆分后成为环境面板一等公民（与 sky/ground 平级）。
 // 波浪 shader 注入（onBeforeCompile）+ 程序化法线贴图（generateNormalMap）仍为水面专属技术基盘，
-// 不与他人共享，故不另抽共享模块（YAGNI）。实现 SceneCapability 统一接口，
-// 由 scene-capability-registry 自动发现 + 菜单控件 + 持久化。
+// 不与他人共享，故不另抽共享模块（YAGNI）。
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
@@ -16,16 +15,14 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
-// 菜单节点工厂已下沉 water-menu.ts（纯声明层，零 THREE 依赖）；此处透传导出，
-// 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
 import { buildWaterNodes } from "./water-menu.ts";
-import type { WaterMode, WaterParams } from "./water-state.ts";
-// 状态/序列化轴（WaterParams / 默认值 / 呈现模式）已下沉 water-state.ts；此处透传导出，
-// 保持既有调用方（water-capability.test.ts 等）的 import 路径不破坏。
-import { DEFAULT_WATER_PARAMS, WATER_MODES } from "./water-state.ts";
+import type { WaterMode } from "./water-state.ts";
+import { WATER_MODES } from "./water-state.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
-export type { WaterMode, WaterParams };
-export { DEFAULT_WATER_PARAMS, WATER_MODES };
+export type { WaterMode };
 
 /** 水面渲染体判别联合：film 单 mesh（root 即顶水面）；pool 为 Group + 预捕获顶水面引用 */
 type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
@@ -40,47 +37,65 @@ export class WaterCapability implements SceneCapability {
   readonly descKey = "preview.waterDesc";
 
   private scene: THREE.Scene;
-  /** 水面渲染体判别联合：mode 即判别键，variant 内引用创建时已定型，消费点零断言
-   *  （重建路径仅 createFilmBody/createPoolBody 两个写入点，类型与运行时天然同步）；
-   *  root 恒为 name="ysm-ground-water" 的场景挂载对象（film=root 即 mesh，pool=root 即 Group） */
   private water: WaterRenderBody;
-  private waterTime: { value: number }; // 水面波纹动画 time uniform（波速倍率 = waveSpeed）
-  private params: WaterParams;
+  private waterTime: { value: number };
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
-  /** 法线贴图实例级缓存（锐评 P1 重建风暴治理）：生成只依赖 size（运行期无 setter，仅
-   *  loadState 迁移可变），pool 高度/壁厚滑块逐帧 rebuild 不必重生成 256²×3 层逐像素噪声；
-   *  缓存跨 rebuild 共用 → 释放责任在 dispose()，disposeWater 不得中途释放。 */
+  /** 法线贴图实例级缓存 */
   private normalMapCache: THREE.DataTexture | null = null;
   private normalMapCacheSize = -1;
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: {
     scene: THREE.Scene;
-    params?: Partial<WaterParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.params = { ...DEFAULT_WATER_PARAMS, ...(opts.params ?? {}) };
     this.enabled = opts.enabled ?? true;
     this.waterTime = { value: 0 };
     this.water = this.rebuildWaterContainer(true);
+
+    // ADR-196：订阅 envState 变更——渲染应用统一收敛到此回调：
+    // 结构字段（mode/size/池体几何）→ 重建容器；参数字段 → 就地改材质/uniform；
+    // 子域开关 → 只切可见性。setter 只负责写 envState（不再各自就地改材质，避免双写）。
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      const mode = envState.waterMode;
+      // mode/size 恒重建；池体几何字段仅在 pool 生效时重建（film 下只存参，切 pool 时一并读取）
+      const needsRebuild =
+        changed.has("waterMode") ||
+        changed.has("waterSize") ||
+        ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
+          mode === "pool");
+      if (needsRebuild) {
+        this.rebuildWaterContainer(false);
+        this.syncWaterVisibility();
+        if (changed.has("waterMode")) this.notify();
+        return;
+      }
+      if (changed.has("waterEnabled")) {
+        this.syncWaterVisibility();
+        return;
+      }
+      // 参数字段：就地应用（不重建容器，材质句柄保持稳定）
+      this.applyChangedParams(changed);
+      if (changed.has("waterWetness")) this.syncWaterVisibility();
+    });
   }
 
   // ── 水材质（波浪 shader + 法线贴图）：film 顶 / pool 顶 共用，避免技术分叉 ──
   private buildWaveWaterMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial {
-    const w = this.params;
     // 升级到 MeshPhysicalMaterial：pool 模式用 transmission/thickness 体现「水体厚度感」，film 仍降级为原视觉
     const mat = new THREE.MeshPhysicalMaterial({
-      color: w.waterColor,
+      color: envState.waterColor,
       transparent: true,
-      opacity: w.waterOpacity * (opts.forPool ? 1 : w.wetness), // film 仍 × wetness 做薄水膜遮罩
+      opacity: envState.waterOpacity * (opts.forPool ? 1 : envState.waterWetness),
       roughness: 0.15,
       metalness: opts.forPool ? 0.0 : 0.3,
       depthWrite: false,
-      // 仅 pool 透射；film 保持原视觉不启 transmission（避免反射计算额外开销）
-      transmission: opts.forPool ? w.clarity : 0,
-      thickness: opts.forPool ? Math.max(0.01, w.poolHeight * 0.5) : 0,
+      transmission: opts.forPool ? envState.waterClarity : 0,
+      thickness: opts.forPool ? Math.max(0.01, envState.waterPoolHeight * 0.5) : 0,
       clearcoat: opts.forPool ? 0.8 : 0,
       clearcoatRoughness: 0.1,
     });
@@ -88,10 +103,9 @@ export class WaterCapability implements SceneCapability {
     mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
       mat.userData.shader = shader;
       shader.uniforms.uTime = this.waterTime;
-      // 边缘羽化（pool 专用）：距离边 d < roundness*size/2 时 opacity 平滑衰减
-      const round = Math.max(0, Math.min(0.5, w.poolRoundness));
+      const round = Math.max(0, Math.min(0.5, envState.waterPoolRoundness));
       shader.uniforms.uRoundness = { value: opts.forPool ? round : 0 };
-      shader.uniforms.uHalfSize = { value: this.params.size / 2 };
+      shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
       shader.uniforms.uBaseOpacity = { value: mat.opacity };
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -117,7 +131,6 @@ export class WaterCapability implements SceneCapability {
          vec4 worldPosWave = modelMatrix * vec4(transformed, 1.0);
          vWorldPos_wave = worldPosWave.xyz;`,
       );
-      // opacity 注入：fragment 在输出前应用 smoothstep 衰减边缘（只对 roundness > 0 生效；film 不影响）
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <common>",
         `#include <common>
@@ -127,28 +140,25 @@ export class WaterCapability implements SceneCapability {
          varying vec3 vWorldPos_wave;`,
       );
       shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n");
-      // 在结尾赋值 opacity 前（Three r185 先由 #include <opaque_fragment> / 透明度分支赋值 diffuseColor.a）做一次覆盖
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <dithering_fragment>",
         `#include <dithering_fragment>
          if (uRoundness > 0.0) {
            vec2 p = vWorldPos_wave.xz;
-           float md = max(abs(p.x), abs(p.y)); // 切比雪夫距离（长方形边长距边缘）
+           float md = max(abs(p.x), abs(p.y));
            float edge = uHalfSize - uRoundness * uHalfSize;
            float fade = 1.0 - smoothstep(edge, uHalfSize, md);
            gl_FragColor.a *= fade;
          }
-         // 保证 baseOpacity（由 opacity 属性）被尊重（PhysicalMaterial transmission 路径可能改写 a）
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
     };
     mat.needsUpdate = true;
 
     const normalMap = this.getNormalMap();
-    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap =
-      normalMap;
+    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap = normalMap;
     (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale =
-      new THREE.Vector2(w.normalStrength, w.normalStrength);
+      new THREE.Vector2(envState.waterNormalStrength, envState.waterNormalStrength);
     mat.needsUpdate = true;
     return mat;
   }
@@ -163,14 +173,14 @@ export class WaterCapability implements SceneCapability {
     return out;
   }
 
-  /** 顶水面（波浪材质）：film 即 root 本体；pool 为创建时预捕获的 top 引用（零运行时查找） */
+  /** 顶水面（波浪材质）：film 即 root 本体；pool 为创建时预捕获的 top 引用 */
   private findTopWater(): WaterTopMesh {
     return this.water.mode === "film" ? this.water.root : this.water.top;
   }
 
-  /** 构造 film 模式水面（贴地薄水膜，旧实现语义兼容 + 升级到 PhysicalMaterial 但关闭 transmission） */
+  /** 构造 film 模式水面 */
   private createFilmBody(): Extract<WaterRenderBody, { mode: "film" }> {
-    const waterGeo = new THREE.PlaneGeometry(this.params.size, this.params.size, 32, 32);
+    const waterGeo = new THREE.PlaneGeometry(envState.waterSize, envState.waterSize, 32, 32);
     const waterMat = this.buildWaveWaterMaterial({ forPool: false });
     const water: WaterTopMesh = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
@@ -179,16 +189,14 @@ export class WaterCapability implements SceneCapability {
     return { mode: "film", root: water, mat: waterMat };
   }
 
-  /** 构造 pool 模式盒式凹形水池：顶水面（带波浪）+ 底（贴地）+ 四壁（内外层双材质） */
+  /** 构造 pool 模式盒式凹形水池 */
   private createPoolBody(): Extract<WaterRenderBody, { mode: "pool" }> {
-    const size = this.params.size;
+    const size = envState.waterSize;
     const half = size / 2;
-    const h = Math.max(0.01, this.params.poolHeight);
-    const w = this.params;
+    const h = Math.max(0.01, envState.waterPoolHeight);
     const group = new THREE.Group();
     group.name = "ysm-ground-water";
 
-    // 顶水面（带波浪 shader，位于 y = h）
     const topGeo = new THREE.PlaneGeometry(size, size, 32, 32);
     const topMat = this.buildWaveWaterMaterial({ forPool: true });
     const top: WaterTopMesh = new THREE.Mesh(topGeo, topMat);
@@ -196,92 +204,81 @@ export class WaterCapability implements SceneCapability {
     top.position.y = h;
     top.name = "ysm-water-top";
     group.add(top);
-    // 捕获顶水面引用进判别联合（消费点免 traverse 查找 + 零断言）
 
-    // 底平面（贴 y=0，用 poolWallColor 实色，放在水里防止外部透过去看到地下空洞）
     const bottomMat = new THREE.MeshStandardMaterial({
-      color: w.poolWallColor,
+      color: envState.waterPoolWallColor,
       side: THREE.DoubleSide,
       roughness: 0.9,
     });
     const bottom = new THREE.Mesh(new THREE.PlaneGeometry(size, size), bottomMat);
     bottom.rotation.x = -Math.PI / 2;
-    bottom.position.y = GROUND_LAYER_OFFSETS.waterPoolBottom; // 微抬，防与地面 z-fighting
+    bottom.position.y = GROUND_LAYER_OFFSETS.waterPoolBottom;
     bottom.name = "ysm-water-bottom";
     group.add(bottom);
 
-    // 内侧水四壁（transmission + 水色，视觉为「水体侧边界」）
     const innerMat = new THREE.MeshPhysicalMaterial({
-      color: w.waterColor,
+      color: envState.waterColor,
       transparent: true,
-      opacity: w.waterOpacity * 0.85,
-      side: THREE.BackSide, // BackSide：从池子内部看内壁着色（朝里可见）
+      opacity: envState.waterOpacity * 0.85,
+      side: THREE.BackSide,
       roughness: 0.1,
       metalness: 0,
-      transmission: w.clarity * 0.5,
-      thickness: w.poolWallThickness,
+      transmission: envState.waterClarity * 0.5,
+      thickness: envState.waterPoolWallThickness,
       depthWrite: false,
     });
-    // 外侧池壁（朝外，wallColor，不透明）
     const outerMat = new THREE.MeshStandardMaterial({
-      color: w.poolWallColor,
+      color: envState.waterPoolWallColor,
       side: THREE.FrontSide,
       roughness: 0.8,
       metalness: 0,
     });
 
-    // 每壁：inner + outer 两块 mesh 叠加（厚度由位置偏移产生）
     const wallPairs: Array<{
       name: string;
-      // 四壁轴向："ns"（沿 x，北/南 z 固定）/ "ew"（沿 z，东/西 x 固定）
       axis: "ns" | "ew";
-      pos: THREE.Vector3; // inner 位置
-      outerPos: THREE.Vector3; // outer 位置
-      rotY?: number; // 0 默认（Plane 默认法向 +z）；90°（π/2）用于 ew 轴墙
+      pos: THREE.Vector3;
+      outerPos: THREE.Vector3;
+      rotY?: number;
     }> = [
-      // 北壁（z=-half，面朝 +z 即池内观察者南视方向）
       {
         name: "ysm-water-wall-n",
         axis: "ns",
         pos: new THREE.Vector3(0, h / 2, -half),
-        outerPos: new THREE.Vector3(0, h / 2, -half - w.poolWallThickness),
+        outerPos: new THREE.Vector3(0, h / 2, -half - envState.waterPoolWallThickness),
       },
-      // 南壁（z=+half，面朝 -z）
       {
         name: "ysm-water-wall-s",
         axis: "ns",
         pos: new THREE.Vector3(0, h / 2, half),
-        outerPos: new THREE.Vector3(0, h / 2, half + w.poolWallThickness),
+        outerPos: new THREE.Vector3(0, h / 2, half + envState.waterPoolWallThickness),
         rotY: Math.PI,
       },
-      // 东壁（x=+half，面朝 -x）—— Plane 需绕 y 转 -π/2
       {
         name: "ysm-water-wall-e",
         axis: "ew",
         pos: new THREE.Vector3(half, h / 2, 0),
-        outerPos: new THREE.Vector3(half + w.poolWallThickness, h / 2, 0),
+        outerPos: new THREE.Vector3(half + envState.waterPoolWallThickness, h / 2, 0),
         rotY: -Math.PI / 2,
       },
-      // 西壁（x=-half，面朝 +x）
       {
         name: "ysm-water-wall-w",
         axis: "ew",
         pos: new THREE.Vector3(-half, h / 2, 0),
-        outerPos: new THREE.Vector3(-half - w.poolWallThickness, h / 2, 0),
+        outerPos: new THREE.Vector3(-half - envState.waterPoolWallThickness, h / 2, 0),
         rotY: Math.PI / 2,
       },
     ];
 
     for (const pair of wallPairs) {
-      // 每块 plane：宽 = (ns → size; ew → size)，高 = h（水池高度）
-      const geoSizeW = pair.axis === "ns" ? size : size;
+      const geoSizeW = size;
       const innerGeo = new THREE.PlaneGeometry(geoSizeW, h, 4, 4);
       const outerGeo = new THREE.PlaneGeometry(
         geoSizeW,
-        h + Math.max(0.02, w.poolWallThickness * 0.6),
+        h + Math.max(0.02, envState.waterPoolWallThickness * 0.6),
         4,
         4,
-      ); // 外壁略高，覆盖顶底接缝
+      );
       const inner = new THREE.Mesh(innerGeo, innerMat);
       inner.name = `${pair.name}-inner`;
       inner.position.copy(pair.pos);
@@ -296,7 +293,7 @@ export class WaterCapability implements SceneCapability {
     return { mode: "pool", root: group, top, topMat };
   }
 
-  /** 释放旧 water 容器（递归所有子 mesh 的 geometry + material + normalMap），并从 scene 暂移除 */
+  /** 释放旧 water 容器 */
   private disposeWater(): void {
     if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     const meshes = this.collectWaterMeshes();
@@ -304,9 +301,6 @@ export class WaterCapability implements SceneCapability {
       m.geometry.dispose();
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       for (const mat of mats) {
-        // MeshPhysicalMaterial transmission 特性会在内部创建 transmissionRenderTarget，
-        // 必须在 material.dispose() 之前显式释放其 texture 和 render target。
-        // （normalMap 不在此释放：实例级缓存跨 rebuild 共用，释放责任在 dispose()）
         const asPhysical = mat as THREE.MeshPhysicalMaterial & {
           transmissionRenderTarget?: THREE.WebGLRenderTarget | null;
         };
@@ -320,40 +314,32 @@ export class WaterCapability implements SceneCapability {
     }
   }
 
-  /**
-   * 重建 this.water 根容器（film↔pool 切换入口，new 时初次构建传 initial=true 不 dispose 旧实例）。
-   * 重建后保持 name="ysm-ground-water"，scene.add 幂等由 apply() 兜底。
-   */
+  /** 重建 this.water 根容器 */
   private rebuildWaterContainer(initial = false): WaterRenderBody {
-    // 重建前记录旧容器是否已在场景内（apply 过），重建后需原样挂回
     const wasInScene = !initial && this.water.root.parent != null;
     if (!initial) this.disposeWater();
-    this.water = this.params.mode === "pool" ? this.createPoolBody() : this.createFilmBody();
-    // 初始化或模式切换后的可见性：由 syncWaterVisibility 统一裁决
+    this.water = envState.waterMode === "pool" ? this.createPoolBody() : this.createFilmBody();
     this.syncWaterVisibility();
-    // 旧 water 本来就在场景里（apply 过）→ 重建完重新挂进去；新容器 parent 此刻为 null，不能靠 parent 判
     if (wasInScene && this.enabled) {
       this.scene.add(this.water.root);
     }
     return this.water;
   }
 
-  /** 水面可见性：enabled（能力级） ∧ water.enabled（子域开关） ∧（film → wetness>0；pool → 恒开） */
+  /** 水面可见性：enabled ∧ water.enabled ∧（film → wetness>0；pool → 恒开） */
   private syncWaterVisibility(): void {
-    const w = this.params;
-    const filmOn = w.mode === "film" && w.wetness > 0;
-    const poolOn = w.mode === "pool";
-    const shouldShow = w.enabled && (filmOn || poolOn);
+    const filmOn = envState.waterMode === "film" && envState.waterWetness > 0;
+    const poolOn = envState.waterMode === "pool";
+    const shouldShow = this.enabled && envState.waterEnabled && (filmOn || poolOn);
     this.water.root.visible = shouldShow;
   }
 
   /** 推进水面波纹动画（render loop 调用） */
   update(dt: number): void {
-    if (!this.enabled || !this.params.enabled || !this.water.root.visible) return;
-    this.waterTime.value += dt * this.params.waveSpeed;
+    if (!this.enabled || !envState.waterEnabled || !this.water.root.visible) return;
+    this.waterTime.value += dt * envState.waterWaveSpeed;
   }
 
-  /** 挂入场景（对齐 SceneCapability.apply 口径） */
   apply(): void {
     if (!this.enabled) return;
     if (!this.water.root.parent) this.scene.add(this.water.root);
@@ -372,20 +358,17 @@ export class WaterCapability implements SceneCapability {
   }
 
   // ── 水面：独立开关 / 形态切换 ──
+  // ADR-196 收口：setter 只写 envState；渲染应用（可见性/重建/材质）统一走 registerEnvCallback。
   setWaterEnabled(v: boolean): void {
-    this.params.enabled = v;
-    this.syncWaterVisibility();
+    setEnvState({ waterEnabled: v }, { source: 'manual' });
   }
   getWaterEnabled(): boolean {
-    return this.params.enabled;
+    return envState.waterEnabled;
   }
 
   setWaterMode(m: WaterMode): void {
-    if (this.params.mode === m) return;
-    this.params.mode = m;
-    this.rebuildWaterContainer(false);
-    // 首次切 pool 时，film 语义的 wetness 不再直接控制 opacity，但仍保留值以允许切回 film
-    this.notify(); // 模式切换改变水面分组可见性（pool 控件仅 pool、wetness 仅 film），通知菜单局部刷新
+    if (envState.waterMode === m) return;
+    setEnvState({ waterMode: m }, { source: 'manual' });
   }
 
   /** 订阅参数变更（模式切换触发）；返回取消订阅函数 */
@@ -397,141 +380,68 @@ export class WaterCapability implements SceneCapability {
     this.listenerSet.notify();
   }
   getWaterMode(): WaterMode {
-    return this.params.mode;
+    return envState.waterMode as WaterMode;
   }
 
   // ── 水面参数（film + pool 通用）──
-  setWetness(v: number): void {
-    this.params.wetness = Math.max(0, Math.min(1, v));
-    if (this.water.mode === "film") {
+  // 就地渲染应用统一入口（registerEnvCallback 的参数字段分派）：不重建容器，保持材质句柄稳定。
+  private applyChangedParams(changed: Set<string>): void {
+    const s = envState;
+    // wetness（film）：top opacity = waterOpacity * wetness + 同步 uBaseOpacity uniform
+    if (changed.has("waterWetness") && this.water.mode === "film") {
       const mat = this.water.mat;
-      mat.opacity = this.params.waterOpacity * this.params.wetness;
-      // 反射回 uniform：onBeforeCompile 注入的 uBaseOpacity 是 snapshot，material.opacity 变化同步
-      if (
-        (mat as unknown as { userData: { shader?: THREE.WebGLProgramParametersWithUniforms } })
-          .userData?.shader?.uniforms?.uBaseOpacity
-      ) {
-        (
-          mat as unknown as {
-            userData: { shader: { uniforms: { uBaseOpacity: { value: number } } } };
-          }
-        ).userData.shader.uniforms.uBaseOpacity.value = mat.opacity;
+      mat.opacity = s.waterOpacity * s.waterWetness;
+      this.syncBaseOpacityUniform(mat, mat.opacity);
+    }
+    // opacity：film → top opacity × wetness；pool → 直取（不含 wetness）
+    if (changed.has("waterOpacity")) {
+      const top = this.findTopWater();
+      if (top) {
+        top.material.opacity =
+          this.water.mode === "film" ? s.waterOpacity * s.waterWetness : s.waterOpacity;
       }
     }
-    this.syncWaterVisibility();
-  }
-  getWetness(): number {
-    return this.params.wetness;
-  }
-
-  setWaterColor(hex: number): void {
-    this.params.waterColor = hex;
-    // film：顶层 mesh；pool：顶 mesh + 四壁 inner mesh
-    const targets =
-      this.water.mode === "film"
-        ? [this.water.root]
-        : this.collectWaterMeshes().filter(
-            (m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"),
-          );
-    for (const m of targets) {
-      const mat = m.material as THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
-      if ("color" in mat) mat.color.setHex(hex);
-    }
-  }
-  getWaterColor(): number {
-    return this.params.waterColor;
-  }
-
-  setWaterOpacity(v: number): void {
-    this.params.waterOpacity = Math.max(0, Math.min(1, v));
-    const top = this.findTopWater();
-    if (top) {
-      const mat = top.material;
-      const newOp =
-        this.params.mode === "film"
-          ? this.params.waterOpacity * this.params.wetness
-          : this.params.waterOpacity;
-      mat.opacity = newOp;
-    }
-  }
-  getWaterOpacity(): number {
-    return this.params.waterOpacity;
-  }
-
-  // ── 法线贴图强度（顶层水面）──
-  setNormalStrength(v: number): void {
-    this.params.normalStrength = Math.max(0, Math.min(1, v));
-    const top = this.findTopWater();
-    if (top) {
-      const mat = top.material;
-      mat.normalScale?.set(this.params.normalStrength, this.params.normalStrength);
-    }
-  }
-  getNormalStrength(): number {
-    return this.params.normalStrength;
-  }
-
-  // ── 水池专属参数（pool 模式）──
-  setPoolHeight(v: number): void {
-    this.params.poolHeight = Math.max(0.01, v);
-    if (this.params.mode === "pool") this.rebuildWaterContainer(false); // 几何高度需要重排
-  }
-  getPoolHeight(): number {
-    return this.params.poolHeight;
-  }
-
-  setPoolWallThickness(v: number): void {
-    this.params.poolWallThickness = Math.max(0.01, v);
-    if (this.params.mode === "pool") this.rebuildWaterContainer(false);
-  }
-  getPoolWallThickness(): number {
-    return this.params.poolWallThickness;
-  }
-
-  setPoolWallColor(hex: number): void {
-    this.params.poolWallColor = hex;
-    // pool 底 + 四壁 outer：同步改色；pool 非生效时先存参数，下次 rebuild 会用上
-    const meshes = this.collectWaterMeshes();
-    for (const m of meshes) {
-      if (m.name.endsWith("-outer") || m.name === "ysm-water-bottom") {
-        const mat = m.material as THREE.MeshStandardMaterial;
-        mat.color.setHex(hex);
+    // color：film → root；pool → top + 四壁 inner
+    if (changed.has("waterColor")) {
+      const targets =
+        this.water.mode === "film"
+          ? [this.water.root]
+          : this.collectWaterMeshes().filter(
+              (m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"),
+            );
+      for (const m of targets) {
+        const mat = m.material as THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
+        if ("color" in mat) mat.color.setHex(s.waterColor);
       }
     }
-  }
-  getPoolWallColor(): number {
-    return this.params.poolWallColor;
-  }
-
-  setPoolRoundness(v: number): void {
-    this.params.poolRoundness = Math.max(0, Math.min(0.5, v));
-    // 直接修改 uniform：material 的 userData.shader（若已编译）中的 uRoundness
-    const top = this.findTopWater();
-    if (top) {
-      const mat = top.material;
-      const shader = (
-        mat as unknown as {
-          userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
+    // normalStrength → top normalScale
+    if (changed.has("waterNormalStrength")) {
+      const top = this.findTopWater();
+      if (top) top.material.normalScale?.set(s.waterNormalStrength, s.waterNormalStrength);
+    }
+    // poolWallColor → 池底 + 四壁 outer
+    if (changed.has("waterPoolWallColor")) {
+      for (const m of this.collectWaterMeshes()) {
+        if (m.name.endsWith("-outer") || m.name === "ysm-water-bottom") {
+          (m.material as THREE.MeshStandardMaterial).color.setHex(s.waterPoolWallColor);
         }
-      ).userData?.shader;
-      if (shader?.uniforms?.uRoundness)
-        shader.uniforms.uRoundness.value = this.params.poolRoundness;
+      }
     }
-  }
-  getPoolRoundness(): number {
-    return this.params.poolRoundness;
-  }
-
-  setWaveSpeed(v: number): void {
-    this.params.waveSpeed = Math.max(0, v);
-  }
-  getWaveSpeed(): number {
-    return this.params.waveSpeed;
-  }
-  setClarity(v: number): void {
-    this.params.clarity = Math.max(0, Math.min(1, v));
-    // pool 顶 mesh + inner walls 已构建 → 需要改 material.transmission；否则下次 buildWaveWaterMaterial 时天然使用新值
-    if (this.params.mode === "pool") {
+    // poolRoundness → top uRoundness uniform
+    if (changed.has("waterPoolRoundness")) {
+      const top = this.findTopWater();
+      if (top) {
+        const shader = (
+          top.material as unknown as {
+            userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
+          }
+        ).userData?.shader;
+        if (shader?.uniforms?.uRoundness)
+          shader.uniforms.uRoundness.value = s.waterPoolRoundness;
+      }
+    }
+    // clarity（pool）→ top/inner transmission
+    if (changed.has("waterClarity") && this.water.mode === "pool") {
       const targets = this.collectWaterMeshes().filter(
         (m) => m.name === "ysm-water-top" || m.name.endsWith("-inner"),
       );
@@ -539,63 +449,138 @@ export class WaterCapability implements SceneCapability {
         const mat = m.material as THREE.MeshPhysicalMaterial;
         if ("transmission" in mat) {
           mat.transmission =
-            m.name === "ysm-water-top" ? this.params.clarity : this.params.clarity * 0.5;
+            m.name === "ysm-water-top" ? s.waterClarity : s.waterClarity * 0.5;
           mat.needsUpdate = true;
         }
       }
     }
+    // waterWaveSpeed：无材质应用（仅 update 累加速度读值）
+  }
+
+  private syncBaseOpacityUniform(
+    mat: THREE.MeshPhysicalMaterial,
+    value: number,
+  ): void {
+    const shader = (
+      mat as unknown as {
+        userData: { shader?: { uniforms?: { uBaseOpacity?: { value: number } } } };
+      }
+    ).userData?.shader;
+    if (shader?.uniforms?.uBaseOpacity) shader.uniforms.uBaseOpacity.value = value;
+  }
+
+  setWetness(v: number): void {
+    setEnvState({ waterWetness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+  }
+  getWetness(): number {
+    return envState.waterWetness;
+  }
+
+  setWaterColor(hex: number): void {
+    setEnvState({ waterColor: hex }, { source: 'manual' });
+  }
+  getWaterColor(): number {
+    return envState.waterColor;
+  }
+
+  setWaterOpacity(v: number): void {
+    setEnvState({ waterOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+  }
+  getWaterOpacity(): number {
+    return envState.waterOpacity;
+  }
+
+  // ── 法线贴图强度（顶层水面）──
+  setNormalStrength(v: number): void {
+    setEnvState({ waterNormalStrength: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+  }
+  getNormalStrength(): number {
+    return envState.waterNormalStrength;
+  }
+
+  // ── 水池专属参数（pool 模式）──
+  setPoolHeight(v: number): void {
+    setEnvState({ waterPoolHeight: Math.max(0.01, v) }, { source: 'manual' });
+  }
+  getPoolHeight(): number {
+    return envState.waterPoolHeight;
+  }
+
+  setPoolWallThickness(v: number): void {
+    setEnvState({ waterPoolWallThickness: Math.max(0.01, v) }, { source: 'manual' });
+  }
+  getPoolWallThickness(): number {
+    return envState.waterPoolWallThickness;
+  }
+
+  setPoolWallColor(hex: number): void {
+    setEnvState({ waterPoolWallColor: hex }, { source: 'manual' });
+  }
+  getPoolWallColor(): number {
+    return envState.waterPoolWallColor;
+  }
+
+  setPoolRoundness(v: number): void {
+    setEnvState({ waterPoolRoundness: Math.max(0, Math.min(0.5, v)) }, { source: 'manual' });
+  }
+  getPoolRoundness(): number {
+    return envState.waterPoolRoundness;
+  }
+
+  setWaveSpeed(v: number): void {
+    setEnvState({ waterWaveSpeed: Math.max(0, v) }, { source: 'manual' });
+  }
+  getWaveSpeed(): number {
+    return envState.waterWaveSpeed;
+  }
+  setClarity(v: number): void {
+    setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
   }
   getClarity(): number {
-    return this.params.clarity;
+    return envState.waterClarity;
   }
 
   // ── 程序化法线贴图生成 ──
-  /** 取法线贴图（按 size 缓存复用；size 变化时失效重生成并释放旧贴图） */
   private getNormalMap(): THREE.DataTexture {
-    if (this.normalMapCache && this.normalMapCacheSize === this.params.size) {
+    if (this.normalMapCache && this.normalMapCacheSize === envState.waterSize) {
       return this.normalMapCache;
     }
     if (this.normalMapCache) safeDispose(this.normalMapCache);
     this.normalMapCache = this.generateNormalMap(256);
-    this.normalMapCacheSize = this.params.size;
+    this.normalMapCacheSize = envState.waterSize;
     return this.normalMapCache;
   }
 
   private generateNormalMap(size: number): THREE.DataTexture {
     const data = new Uint8Array(size * size * 4);
-    const sz = this.params.size;
+    const sz = envState.waterSize;
 
     for (let v = 0; v < size; v++) {
       for (let u = 0; u < size; u++) {
-        // 归一化到波浪空间
         const x = (u / size - 0.5) * sz * 2;
         const y = (v / size - 0.5) * sz * 2;
 
         let dhdx = 0,
           dhdy = 0;
 
-        // Wave 1: dir=(1,0.3) normalized, freq=0.8, amp=0.08
         const d1 = new THREE.Vector2(1, 0.3).normalize();
         const p1 = new THREE.Vector2(x, y);
         const phase1 = p1.dot(d1) * 0.8;
         dhdx += 0.08 * Math.cos(phase1) * d1.x * 0.8;
         dhdy += 0.08 * Math.cos(phase1) * d1.y * 0.8;
 
-        // Wave 2: dir=(-0.4,1) normalized, freq=1.1, amp=0.05
         const d2 = new THREE.Vector2(-0.4, 1).normalize();
         const p2 = new THREE.Vector2(x, y);
         const phase2 = p2.dot(d2) * 1.1;
         dhdx += 0.05 * Math.cos(phase2) * d2.x * 1.1;
         dhdy += 0.05 * Math.cos(phase2) * d2.y * 1.1;
 
-        // Wave 3: dir=(0.2,-0.8) normalized, freq=1.6, amp=0.03
         const d3 = new THREE.Vector2(0.2, -0.8).normalize();
         const p3 = new THREE.Vector2(x, y);
         const phase3 = p3.dot(d3) * 1.6;
         dhdx += 0.03 * Math.cos(phase3) * d3.x * 1.6;
         dhdy += 0.03 * Math.cos(phase3) * d3.y * 1.6;
 
-        // 组合法线：N = (-dh/dx, -dh/dy, 1) 归一化
         const nx = -dhdx;
         const ny = -dhdy;
         const nz = 1;
@@ -603,12 +588,11 @@ export class WaterCapability implements SceneCapability {
         const nnx = nx / len;
         const nny = ny / len;
 
-        // 编码到 RGB
         const idx = (v * size + u) * 4;
-        data[idx] = Math.round((nnx * 0.5 + 0.5) * 255); // R
-        data[idx + 1] = Math.round((nny * 0.5 + 0.5) * 255); // G
-        data[idx + 2] = 255; // B (朝上)
-        data[idx + 3] = 255; // A
+        data[idx] = Math.round((nnx * 0.5 + 0.5) * 255);
+        data[idx + 1] = Math.round((nny * 0.5 + 0.5) * 255);
+        data[idx + 2] = 255;
+        data[idx + 3] = 255;
       }
     }
 
@@ -617,32 +601,33 @@ export class WaterCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树：ground-water-enabled 平铺 toggle + 4 组 folder
-   *  （form/look/pool/wave 全原生，含 film/pool visibleWhen 谓词）。
-   *  water 无能力总开关（无 getMasterToggle）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildWaterNodes(this);
   }
 
-  /** 保存状态到 localStorage（water 键；legacy "ground" 键的水字段不再由本能力写） */
+  /** 保存状态到 localStorage */
   saveState(): void {
     persistState(this.id, {
-      size: this.params.size,
+      size: envState.waterSize,
       enabled: this.enabled,
-      water: { ...this.params },
-      // V1→V2 迁移兼容：保留旧字段（V2 仍能被 V1 loadState 读到水相关字段做兜底）
-      wetness: this.params.wetness,
-      waterColor: this.params.waterColor,
-      waterOpacity: this.params.waterOpacity,
-      normalStrength: this.params.normalStrength,
+      waterEnabled: envState.waterEnabled,
+      waterMode: envState.waterMode,
+      waterWetness: envState.waterWetness,
+      waterColor: envState.waterColor,
+      waterOpacity: envState.waterOpacity,
+      waterNormalStrength: envState.waterNormalStrength,
+      waterClarity: envState.waterClarity,
+      waterWaveSpeed: envState.waterWaveSpeed,
+      waterPoolHeight: envState.waterPoolHeight,
+      waterPoolWallThickness: envState.waterPoolWallThickness,
+      waterPoolWallColor: envState.waterPoolWallColor,
+      waterPoolRoundness: envState.waterPoolRoundness,
     });
   }
 
-  /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain；V1→V2 自动迁移） */
+  /** 从 localStorage 恢复状态 */
   loadState(): void {
-    // 优先读本能力专属键 "water"
     let state = restoreState(this.id) as Record<string, unknown> | null;
-    // 回退：旧存档水面数据在 "ground" 键里（拆分前），做一次迁移
     if (!state) {
       const legacy = restoreState("ground") as Record<string, unknown> | null;
       if (legacy) {
@@ -667,32 +652,49 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      size: { number: (v) => (this.params.size = v) },
+      size: { number: (v) => setEnvState({ waterSize: v }, { source: 'manual' }) },
     });
-    // V2 新格式：state.water 嵌套对象（优先走）
-    const w = (state.water ?? state) as Partial<WaterParams>;
-    restoreFields(w as Record<string, unknown>, {
-      enabled: { boolean: (v) => this.setWaterEnabled(v) },
+    // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
+    // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。
+    const nested =
+      state.water && typeof state.water === "object"
+        ? (state.water as Record<string, unknown>)
+        : null;
+    const w = (nested ?? state) as Record<string, unknown>;
+    restoreFields(w, {
+      // 子域开关：仅当取到嵌套对象时 w.enabled 才是子域开关（顶层 enabled=能力级，已在上方处理）
+      ...(nested
+        ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } }
+        : { waterEnabled: { boolean: (v) => this.setWaterEnabled(v) } }),
+      // 新旧键双轨（restoreFields 对缺失键安全跳过；实际存档只含一种方言）
       mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+      waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
       wetness: { number: (v) => this.setWetness(v) },
+      waterWetness: { number: (v) => this.setWetness(v) },
       waterColor: { number: (v) => this.setWaterColor(v) },
       waterOpacity: { number: (v) => this.setWaterOpacity(v) },
       normalStrength: { number: (v) => this.setNormalStrength(v) },
+      waterNormalStrength: { number: (v) => this.setNormalStrength(v) },
       waveSpeed: { number: (v) => this.setWaveSpeed(v) },
+      waterWaveSpeed: { number: (v) => this.setWaveSpeed(v) },
       clarity: { number: (v) => this.setClarity(v) },
-      // pool 专属参数：值先 set；若当前模式非 pool，setter 只存参数不 rebuild
+      waterClarity: { number: (v) => this.setClarity(v) },
       poolHeight: { number: (v) => this.setPoolHeight(v) },
+      waterPoolHeight: { number: (v) => this.setPoolHeight(v) },
       poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
+      waterPoolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
       poolWallColor: { number: (v) => this.setPoolWallColor(v) },
+      waterPoolWallColor: { number: (v) => this.setPoolWallColor(v) },
       poolRoundness: { number: (v) => this.setPoolRoundness(v) },
+      waterPoolRoundness: { number: (v) => this.setPoolRoundness(v) },
     });
   }
 
   /** 移除并释放 */
   dispose(): void {
+    this.unsubscribeEnv();
     if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     this.disposeWater();
-    // 法线贴图缓存在此统一释放（重建路径 disposeWater 共用缓存，不在此拆）
     if (this.normalMapCache) {
       safeDispose(this.normalMapCache);
       this.normalMapCache = null;

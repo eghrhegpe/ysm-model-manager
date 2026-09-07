@@ -180,7 +180,7 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
             onChange: (v: boolean) => {
               master.control?.set?.(v);
             },
-            bind: () => master.control?.get?.(undefined) ?? false,
+            bind: (): boolean => (master.control?.get?.(undefined) as boolean) ?? false,
           },
         }
       : {}),

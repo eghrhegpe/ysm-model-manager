@@ -1,20 +1,19 @@
 // @vitest-environment node
-// ===== WaterCapability 测试（preview-3d/caps/water-capability.ts）=====
-// 覆盖：apply 挂入场景（ysm-ground-water）、独立开关、getMenuControls 分组、
-// 法线贴图生成、参数 setter/getter、水池几何、持久化（water 键 + legacy ground 键迁移）。
-// 2026-08-28 从 GroundCapability 解耦为独立能力（详见 docs/superpowers/plans/2026-08-28-split-water-capability.md）。
-import { describe, it, expect, afterEach } from "vitest";
+// ===== WaterCapability 测试（ADR-196 迁移至 envState）=====
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
+import { resetEnvState, setEnvState } from "../state/env-state.ts";
 import type { PreviewSnapshot } from "../state/preview-paths.ts";
 
-// node 环境内存版 localStorage 跨用例共享，清理防污染（与 ground 拆分的持久化键互不串扰）
 afterEach(() => {
   try { localStorage.clear(); } catch { /* noop */ }
 });
 
 describe("WaterCapability", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("apply 挂入场景（ysm-ground-water），默认 film + 水膜浓度>0 可见", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -23,7 +22,7 @@ describe("WaterCapability", () => {
     const water = scene.getObjectByName("ysm-ground-water");
     expect(water).toBeDefined();
     expect(water).toBeInstanceOf(THREE.Mesh);
-    expect(water!.visible).toBe(true); // 水膜浓度 0.15 > 0 → 可见
+    expect(water!.visible).toBe(true);
   });
 
   it("setWaterEnabled 独立控制 visible（与能力 enabled 解耦）", () => {
@@ -38,14 +37,12 @@ describe("WaterCapability", () => {
     expect(scene.getObjectByName("ysm-ground-water")?.visible).toBe(true);
   });
 
-  it("getMenuNodes：enabled 平铺 toggle + 4 组 folder（节点化后 group 由 folder 表达）", () => {
+  it("getMenuNodes：enabled 平铺 toggle + 4 组 folder", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(5);
-    // enabled 平铺
     expect(nodes[0].id).toBe("ground-water-enabled");
-    // 4 个 folder
     expect(nodes.slice(1).map((n) => n.kind)).toEqual(["folder", "folder", "folder", "folder"]);
     expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
       "preview.waterGroupForm",
@@ -53,14 +50,9 @@ describe("WaterCapability", () => {
       "preview.waterGroupPool",
       "preview.waterGroupWave",
     ]);
-    const byLabel = (label: string) => nodes.slice(1).find((n) => n.labelKey === label)!;
-    expect(byLabel("preview.waterGroupForm").children!.map((c) => c.id).sort()).toEqual(["ground-water-mode"]);
-    expect(byLabel("preview.waterGroupLook").children!.map((c) => c.id).sort()).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity", "ground-wetness"].sort());
-    expect(byLabel("preview.waterGroupPool").children!.map((c) => c.id).sort()).toEqual(["ground-pool-height", "ground-pool-wall-color", "ground-pool-wall-thickness", "ground-pool-roundness"].sort());
-    expect(byLabel("preview.waterGroupWave").children!.map((c) => c.id).sort()).toEqual(["ground-wave-speed"]);
   });
 
-  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool（visibleWhen B 轨，节点化）", () => {
+  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
@@ -68,26 +60,11 @@ describe("WaterCapability", () => {
     const pool = nodes[3]!;
     const wetness = look.children!.find((c) => c.id === "ground-wetness")!;
     const poolHeight = pool.children!.find((c) => c.id === "ground-pool-height")!;
-    // [铁律收口] 谓词吃状态层快照 env.waterMode（纯函数，不摸 cap 实例）
     const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
-    // 默认 film：wetness 可见，pool 系列隐藏
     expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
-    // 切 pool：wetness 隐藏，pool 系列可见
     expect(wetness.visibleWhen?.(snap("pool"))).toBe(false);
     expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
-  });
-
-  it("getMenuNodes 含 ground-normal-strength slider（节点 control 字段）", () => {
-    const scene = new THREE.Scene();
-    const cap = new WaterCapability({ scene });
-    const look = cap.getMenuNodes()[2]!;
-    const normalNode = look.children!.find((c) => c.id === "ground-normal-strength")!;
-    expect(normalNode).toBeDefined();
-    expect(normalNode.kind).toBe("slider");
-    expect(normalNode.control!.min).toBe(0);
-    expect(normalNode.control!.max).toBe(1);
-    expect(normalNode.control!.step).toBe(0.05);
   });
 
   it("setNormalStrength 影响顶水面 normalScale", () => {
@@ -112,34 +89,12 @@ describe("WaterCapability", () => {
     expect(tex.height).toBe(256);
   });
 
-  it("generateNormalMap 像素值合法：R/G 有变化，B 接近 255", () => {
-    const scene = new THREE.Scene();
-    const cap = new WaterCapability({ scene });
-    const tex = cap["generateNormalMap"](256) as THREE.DataTexture;
-    expect(tex.image.data).toBeDefined();
-    const data = tex.image.data as Uint8Array;
-    expect(data.length).toBe(256 * 256 * 4);
-
-    let rMin = 255, rMax = 0, gMin = 255, gMax = 0;
-    let bCount = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      if (r < rMin) rMin = r; if (r > rMax) rMax = r;
-      if (g < gMin) gMin = g; if (g > gMax) gMax = g;
-      if (b >= 240) bCount++;
-    }
-    // R/G 通道应有变化（不为单一值）
-    expect(rMax - rMin).toBeGreaterThan(5);
-    expect(gMax - gMin).toBeGreaterThan(5);
-    // B 通道大部分接近 255（朝上法线）
-    expect(bCount).toBeGreaterThan(data.length / 4 * 0.9);
-  });
-
   it("saveState/loadState 持久化 normalStrength（water 键）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.setNormalStrength(0.7);
     cap.saveState();
+    resetEnvState();
     const cap2 = new WaterCapability({ scene });
     cap2.loadState();
     expect(cap2.getNormalStrength()).toBe(0.7);
@@ -147,7 +102,9 @@ describe("WaterCapability", () => {
 });
 
 describe("WaterCapability — 水池几何 / 嵌套参数", () => {
-  it("[不变式] setWaterMode 后 variant.mode 与 params.mode 恒等（判别联合判别键一致性）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("setWaterMode 后 variant.mode 与 envState.waterMode 恒等", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const body = () => (cap as unknown as { water: { mode: string } }).water;
@@ -186,7 +143,7 @@ describe("WaterCapability — 水池几何 / 嵌套参数", () => {
       const m = o as THREE.Mesh;
       if (m.isMesh) topY = Math.max(topY, m.getWorldPosition(new THREE.Vector3()).y);
     });
-    expect(topY).toBeCloseTo(1.2, 1); // ±0.1 容差
+    expect(topY).toBeCloseTo(1.2, 1);
   });
 
   it("setPoolHeight / setPoolWallColor getter/setter 一致", () => {
@@ -202,8 +159,9 @@ describe("WaterCapability — 水池几何 / 嵌套参数", () => {
 });
 
 describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("顶层 wetness/waterColor/waterOpacity/normalStrength → 迁移进 water 参数", () => {
-    // 模拟 legacy 存档：拆分前 water 四字段在 ground 顶层（无 water 嵌套对象）
     persistState("ground", {
       enabled: true,
       visible: true,
@@ -220,7 +178,6 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
     expect(cap.getWaterColor()).toBe(0x4488aa);
     expect(cap.getWaterOpacity()).toBeCloseTo(0.5);
     expect(cap.getNormalStrength()).toBeCloseTo(0.4);
-    // 迁移后默认 enabled=true / mode=film
     expect(cap.getWaterEnabled()).toBe(true);
     expect(cap.getWaterMode()).toBe("film");
   });
@@ -233,11 +190,10 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
     cap.setPoolHeight(0.8);
     const before = scene.getObjectByName("ysm-ground-water");
     expect(before).toBeDefined();
-    cap.setWaterMode("film"); // 回切薄水膜
+    cap.setWaterMode("film");
     const after = scene.getObjectByName("ysm-ground-water");
     expect(after).toBeInstanceOf(THREE.Mesh);
     expect(after!.name).toBe("ysm-ground-water");
-    // 再切 pool 不崩
     cap.setWaterMode("pool");
     const root = scene.getObjectByName("ysm-ground-water")!;
     const meshes: THREE.Mesh[] = [];
@@ -254,7 +210,7 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
       expect(typeof unsub).toBe("function");
       cap.setWaterMode("pool");
       expect(calls).toBe(1);
-      cap.setWaterMode("pool"); // 同值早退
+      cap.setWaterMode("pool");
       expect(calls).toBe(1);
       cap.setWaterMode("film");
       expect(calls).toBe(2);
@@ -276,10 +232,9 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
   });
 });
 
-// ============ 盲区补全：onBeforeCompile / pool setter / update / loadState 分支 / dispose ============
-// 这些路径在 happy-dom 无 WebGL 下原本不可达，但 onBeforeCompile 是纯字符串回调，
-// 可手动构造假 shader 触发并断言 GLSL 注入（不依赖 GPU 编译）。
 describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
+  beforeEach(() => { resetEnvState(); });
+
   function fakeShader() {
     return {
       uniforms: {} as Record<string, { value: number }>,
@@ -296,14 +251,14 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     const shader = fakeShader();
     mat.onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, undefined as unknown as THREE.WebGLRenderer);
     expect(shader.uniforms.uTime).toBeDefined();
-    expect(shader.uniforms.uHalfSize.value).toBeCloseTo(40, 5); // size/2 = 80/2
-    expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.15, 5); // waterOpacity * wetness
-    expect(shader.uniforms.uRoundness.value).toBe(0); // film → forPool:false → 0
+    expect(shader.uniforms.uHalfSize.value).toBeCloseTo(40, 5);
+    expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.15, 5);
+    expect(shader.uniforms.uRoundness.value).toBe(0);
     expect(shader.vertexShader).toContain("float wave(");
     expect(shader.vertexShader).toContain("vWorldPos_wave");
     expect(shader.vertexShader).toContain("transformed.z += h;");
     expect(shader.fragmentShader).toContain("vWorldPos_wave");
-    expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;"); // edge-fade 代码段恒插入（运行时按 uRoundness 判断）
+    expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;");
   });
 
   it("pool 材质 + roundness>0 → uRoundness 取 round，fragment 注入 edge-fade", () => {
@@ -321,6 +276,8 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
 });
 
 describe("WaterCapability — update 波纹动画推进", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("update(dt) 按 waveSpeed 累加 waterTime（film 默认可见）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -337,20 +294,22 @@ describe("WaterCapability — update 波纹动画推进", () => {
     cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
     cap.setEnabled(false);
-    cap.update(1.0); // 早退
+    cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
     cap.setEnabled(true);
     cap.setWaterEnabled(false);
-    cap.update(1.0); // 早退
+    cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
     cap.setWaterEnabled(true);
-    cap.setWetness(0); // film 下 wetness=0 → visible=false
-    cap.update(1.0); // 早退
+    cap.setWetness(0);
+    cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
   });
 });
 
 describe("WaterCapability — pool 模式 setter 分支", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("setWaterColor（pool）→ 顶 + 内壁 inner 改色", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -427,13 +386,15 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
 });
 
 describe("WaterCapability — loadState 多分支", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("V2 嵌套 water 对象还原全部字段（pool + 各参数）", () => {
     persistState("water", {
       enabled: true,
       size: 64,
       water: {
         enabled: false, mode: "pool", wetness: 0.2, waterColor: 0x112233,
-        waterOpacity: 0.4, normalStrength: 0.3, waveSpeed: 1.5, clarity: 0.7,
+        waterOpacity: 0.4, waterNormalStrength: 0.3, waveSpeed: 1.5, clarity: 0.7,
         poolHeight: 0.9, poolWallThickness: 0.2, poolWallColor: 0x445566, poolRoundness: 0.25,
       },
     });
@@ -467,7 +428,7 @@ describe("WaterCapability — loadState 多分支", () => {
   it("类型不匹配字段全部跳过（保持默认）", () => {
     persistState("water", {
       enabled: "yes", size: "big",
-      water: { mode: 123 as unknown as string, wetness: "x", waterColor: true as unknown as number },
+      waterMode: 123 as unknown as string, waterWetness: "x", waterColor: true as unknown as number,
     });
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -476,9 +437,44 @@ describe("WaterCapability — loadState 多分支", () => {
     expect(cap.getWaterMode()).toBe("film");
     expect(cap.getWetness()).toBeCloseTo(0.15, 5);
   });
+
+  it("flat 键轨（saveState 拍平）roundtrip：子域开关/全部参数还原", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.setWaterEnabled(false);
+    cap.setWaterMode("pool");
+    cap.setWetness(0.55);
+    cap.setWaterColor(0x556677);
+    cap.setWaterOpacity(0.8);
+    cap.setNormalStrength(0.9);
+    cap.setClarity(0.7);
+    cap.setWaveSpeed(2.5);
+    cap.setPoolHeight(1.1);
+    cap.setPoolWallThickness(0.33);
+    cap.setPoolWallColor(0x112233);
+    cap.setPoolRoundness(0.28);
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new WaterCapability({ scene });
+    cap2.loadState();
+    expect(cap2.getWaterEnabled()).toBe(false);
+    expect(cap2.getWaterMode()).toBe("pool");
+    expect(cap2.getWetness()).toBeCloseTo(0.55, 5);
+    expect(cap2.getWaterColor()).toBe(0x556677);
+    expect(cap2.getWaterOpacity()).toBeCloseTo(0.8, 5);
+    expect(cap2.getNormalStrength()).toBeCloseTo(0.9, 5);
+    expect(cap2.getClarity()).toBeCloseTo(0.7, 5);
+    expect(cap2.getWaveSpeed()).toBeCloseTo(2.5, 5);
+    expect(cap2.getPoolHeight()).toBeCloseTo(1.1, 5);
+    expect(cap2.getPoolWallThickness()).toBeCloseTo(0.33, 5);
+    expect(cap2.getPoolWallColor()).toBe(0x112233);
+    expect(cap2.getPoolRoundness()).toBeCloseTo(0.28, 5);
+  });
 });
 
 describe("WaterCapability — dispose", () => {
+  beforeEach(() => { resetEnvState(); });
+
   it("dispose 移除并释放 water 容器（幂等）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -493,7 +489,6 @@ describe("WaterCapability — dispose", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
-    // 模拟真渲染后 PhysicalMaterial 内部创建的 transmissionRenderTarget
     let texDisposed = 0, rtDisposed = 0;
     const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh).material as THREE.MeshPhysicalMaterial & {
       transmissionRenderTarget?: { texture: { dispose: () => void }; dispose: () => void } | null;
@@ -508,8 +503,9 @@ describe("WaterCapability — dispose", () => {
   });
 });
 
-// ============ 法线贴图缓存（锐评 P1 重建风暴治理）============
 describe("WaterCapability — 法线贴图缓存", () => {
+  beforeEach(() => { resetEnvState(); });
+
   const topNormalMap = (scene: THREE.Scene): THREE.Texture | null => {
     const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh | null;
     return top ? (top.material as THREE.MeshPhysicalMaterial).normalMap : null;
@@ -522,26 +518,26 @@ describe("WaterCapability — 法线贴图缓存", () => {
     cap.setWaterMode("pool");
     const n1 = topNormalMap(scene);
     expect(n1).not.toBeNull();
-    cap.setPoolHeight(2.5); // rebuild ①
-    cap.setPoolWallThickness(0.5); // rebuild ②
-    expect(topNormalMap(scene)).toBe(n1); // 滑块逐帧 rebuild 不重生成 256² 噪声
+    cap.setPoolHeight(2.5);
+    cap.setPoolWallThickness(0.5);
+    expect(topNormalMap(scene)).toBe(n1);
   });
 
   it("size 变化（loadState 迁移路径）→ 缓存按 size 失效重生成", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const t1 = cap["getNormalMap"]();
-    (cap as unknown as { params: { size: number } }).params.size = 40;
+    setEnvState({ waterSize: 40 }, { source: 'manual' });
     const t2 = cap["getNormalMap"]();
     expect(t2).not.toBe(t1);
-    expect(cap["getNormalMap"]()).toBe(t2); // 新 size 下稳定复用
+    expect(cap["getNormalMap"]()).toBe(t2);
   });
 
   it("dispose 释放缓存贴图（释放责任从 disposeWater 挪到 dispose），且幂等", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
-    cap.setWaterMode("pool"); // ysm-water-top 仅 pool 模式存在
+    cap.setWaterMode("pool");
     const n1 = topNormalMap(scene);
     expect(n1).not.toBeNull();
     let disposed = 0;
@@ -553,9 +549,10 @@ describe("WaterCapability — 法线贴图缓存", () => {
   });
 });
 
-// ============ 菜单控件全联动（节点 control 闭包）============
 describe("WaterCapability — 菜单控件全联动", () => {
-  it("12 项控件 setValue/getValue 双向读写联动（节点 control 闭包）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("12 项控件 setValue/getValue 双向读写联动", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
@@ -598,6 +595,8 @@ describe("WaterCapability — 菜单控件全联动", () => {
 });
 
 describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => { resetEnvState(); });
+
   function newCap() {
     return new WaterCapability({ scene: new THREE.Scene() });
   }

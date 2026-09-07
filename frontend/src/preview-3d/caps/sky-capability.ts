@@ -16,14 +16,18 @@
 
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-import { MODEL_SKY_PRESETS } from "./sky-state.ts";
 import type { SkyModelType } from "./sky-state.ts";
+import { MODEL_SKY_PRESETS } from "./sky-state.ts";
 
 export type { SkyModelType };
 export { MODEL_SKY_PRESETS };
 
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { disposeObject3D } from "../safe-dispose.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
 import {
   persistState,
@@ -34,10 +38,6 @@ import {
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -237,7 +237,7 @@ export class SkyCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, state) => {
-      if (changed.has('skyTimeOfDay')) {
+      if (changed.has("skyTimeOfDay")) {
         this.syncSunFromTime();
         if (this.enabled) {
           this.writeUniforms(this.sky);
@@ -246,7 +246,7 @@ export class SkyCapability implements SceneCapability {
         this.updateGodRays();
         this.updateSunsetTint();
       }
-      if (changed.has('skyElevation') || changed.has('skyAzimuth')) {
+      if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
         if (this.enabled) {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
@@ -255,55 +255,57 @@ export class SkyCapability implements SceneCapability {
           }
         }
       }
-      if (changed.has('skyElevation')) {
+      if (changed.has("skyElevation")) {
         this.elevation = state.skyElevation;
       }
-      if (changed.has('skyAzimuth')) {
+      if (changed.has("skyAzimuth")) {
         this.azimuth = state.skyAzimuth;
       }
-      if (changed.has('skyCloudCoverage')) {
+      if (changed.has("skyCloudCoverage")) {
         if (this.enabled) {
           this.sky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
           this.envSky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
         }
       }
-      if (changed.has('skyTurbidity')) {
+      if (changed.has("skyTurbidity")) {
         if (this.enabled) this.sky.material.uniforms.turbidity.value = state.skyTurbidity;
       }
-      if (changed.has('skyRayleigh')) {
+      if (changed.has("skyRayleigh")) {
         if (this.enabled) this.sky.material.uniforms.rayleigh.value = state.skyRayleigh;
       }
-      if (changed.has('skyMieCoefficient')) {
+      if (changed.has("skyMieCoefficient")) {
         if (this.enabled) this.sky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
       }
-      if (changed.has('skyMieDirectionalG')) {
-        if (this.enabled) this.sky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
+      if (changed.has("skyMieDirectionalG")) {
+        if (this.enabled)
+          this.sky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
       }
-      if (changed.has('skySunIntensityScale')) {
+      if (changed.has("skySunIntensityScale")) {
         if (this.enabled) {
           const u = this.sky.material.uniforms;
-          if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = state.skySunIntensityScale;
+          if (u.sunIntensityScale !== undefined)
+            u.sunIntensityScale.value = state.skySunIntensityScale;
         }
       }
-      if (changed.has('skySunDiscScale')) {
+      if (changed.has("skySunDiscScale")) {
         if (this.enabled) {
           const u = this.sky.material.uniforms;
           if (u.sunDiscScale !== undefined) u.sunDiscScale.value = state.skySunDiscScale;
         }
       }
-      if (changed.has('skyExposure')) {
+      if (changed.has("skyExposure")) {
         if (this.enabled) this.renderer.toneMappingExposure = state.skyExposure;
       }
-      if (changed.has('skyEnvironment')) {
+      if (changed.has("skyEnvironment")) {
         if (this.enabled) {
           if (state.skyEnvironment) this.regenerateEnvironment();
           else this.clearEnvironment();
         }
       }
-      if (changed.has('skyGodRaysEnabled')) {
+      if (changed.has("skyGodRaysEnabled")) {
         if (this.enabled) this.updateGodRays();
       }
-      if (changed.has('skyAutoRotate')) {
+      if (changed.has("skyAutoRotate")) {
         // autoRotate 仅影响 update(dt) 行为，无需立即响应
       }
     });
@@ -404,7 +406,10 @@ export class SkyCapability implements SceneCapability {
 
   /** 调整太阳位置（度） */
   setSun(elevation: number, azimuth: number): void {
-    setEnvState({ skyElevation: elevation, skyAzimuth: azimuth, skyForceEnv: true }, { source: 'manual' });
+    setEnvState(
+      { skyElevation: elevation, skyAzimuth: azimuth, skyForceEnv: true },
+      { source: "manual" },
+    );
     this.elevation = elevation;
     this.azimuth = azimuth;
     this.writeUniforms(this.sky);
@@ -423,7 +428,7 @@ export class SkyCapability implements SceneCapability {
   }
 
   setEnvironmentEnabled(v: boolean): void {
-    setEnvState({ skyEnvironment: v }, { source: 'manual' });
+    setEnvState({ skyEnvironment: v }, { source: "manual" });
     if (!this.enabled) return;
     if (v) this.regenerateEnvironment();
     else this.clearEnvironment();
@@ -444,9 +449,10 @@ export class SkyCapability implements SceneCapability {
     if (preset.mieCoefficient !== undefined) mapped.skyMieCoefficient = preset.mieCoefficient;
     if (preset.mieDirectionalG !== undefined) mapped.skyMieDirectionalG = preset.mieDirectionalG;
     if (preset.exposure !== undefined) mapped.skyExposure = preset.exposure;
-    if (preset.sunIntensityScale !== undefined) mapped.skySunIntensityScale = preset.sunIntensityScale;
+    if (preset.sunIntensityScale !== undefined)
+      mapped.skySunIntensityScale = preset.sunIntensityScale;
     if (preset.sunDiscScale !== undefined) mapped.skySunDiscScale = preset.sunDiscScale;
-    setEnvState(mapped, { source: 'auto-model' });
+    setEnvState(mapped, { source: "auto-model" });
     if (!this.enabled) return;
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
@@ -456,7 +462,7 @@ export class SkyCapability implements SceneCapability {
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
   setCloudCoverage(v: number, regenerate = false): void {
     const clamped = Math.max(0, Math.min(1, v));
-    setEnvState({ skyCloudCoverage: clamped }, { source: 'manual' });
+    setEnvState({ skyCloudCoverage: clamped }, { source: "manual" });
     this.sky.material.uniforms.cloudCoverage.value = clamped;
     this.envSky.material.uniforms.cloudCoverage.value = clamped;
     if (regenerate && this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
@@ -466,7 +472,7 @@ export class SkyCapability implements SceneCapability {
    *  1.0 = 原生 Preetham 强度（正午最白），越低天空越不被太阳光绑架。 */
   setSunIntensityScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
-    setEnvState({ skySunIntensityScale: clamped }, { source: 'manual' });
+    setEnvState({ skySunIntensityScale: clamped }, { source: "manual" });
     const u = this.sky.material.uniforms;
     if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = clamped;
     // 环境贴图 envSky 不受这个参数影响（保持原生 Preetham，PBR 反射更真实）。
@@ -476,7 +482,7 @@ export class SkyCapability implements SceneCapability {
    *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
   setSunDiscScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
-    setEnvState({ skySunDiscScale: clamped }, { source: 'manual' });
+    setEnvState({ skySunDiscScale: clamped }, { source: "manual" });
     const u = this.sky.material.uniforms;
     if (u.sunDiscScale !== undefined) u.sunDiscScale.value = clamped;
   }
@@ -548,11 +554,19 @@ export class SkyCapability implements SceneCapability {
     this.godRaysTime.value += dt;
     if (!this.autoRotateOn) return;
     // 昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建（锐评 P1 GPU 熔炉修复）
-    setEnvState({ skyTimeOfDay: ((envState.skyTimeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC) % 24 + 24) % 24, skyForceEnv: false }, { source: 'auto-model' });
+    setEnvState(
+      {
+        skyTimeOfDay:
+          (((envState.skyTimeOfDay + dt * SkyCapability.AUTO_ROTATE_HOURS_PER_SEC) % 24) + 24) % 24,
+        skyForceEnv: false,
+      },
+      { source: "auto-model" },
+    );
     this.syncSunFromTime();
     if (envState.skyEnvironment) {
       const el = this.elevation;
-      const dirty = Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
+      const dirty =
+        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
       if (dirty) {
         this.regenerateEnvironment();
         this.lastPmremElevation = el;
@@ -599,7 +613,10 @@ export class SkyCapability implements SceneCapability {
    */
   setTime(hour: number, opts?: { forceEnv?: boolean }): void {
     const forceEnv = opts?.forceEnv ?? true;
-    setEnvState({ skyTimeOfDay: ((hour % 24) + 24) % 24, skyForceEnv: forceEnv }, { source: 'manual' });
+    setEnvState(
+      { skyTimeOfDay: ((hour % 24) + 24) % 24, skyForceEnv: forceEnv },
+      { source: "manual" },
+    );
     this.syncSunFromTime();
     if (!this.enabled) return;
     this.writeUniforms(this.sky);
@@ -880,17 +897,17 @@ export class SkyCapability implements SceneCapability {
       },
       timeOfDay: {
         number: (v) => {
-          setEnvState({ skyTimeOfDay: v }, { source: 'manual' });
+          setEnvState({ skyTimeOfDay: v }, { source: "manual" });
         },
       },
       cloudCoverage: {
         number: (v) => {
-          setEnvState({ skyCloudCoverage: v }, { source: 'manual' });
+          setEnvState({ skyCloudCoverage: v }, { source: "manual" });
         },
       },
       environment: {
         boolean: (v) => {
-          setEnvState({ skyEnvironment: v }, { source: 'manual' });
+          setEnvState({ skyEnvironment: v }, { source: "manual" });
         },
       },
       godRaysEnabled: {
@@ -901,12 +918,12 @@ export class SkyCapability implements SceneCapability {
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
       sunIntensityScale: {
         number: (v) => {
-          setEnvState({ skySunIntensityScale: v }, { source: 'manual' });
+          setEnvState({ skySunIntensityScale: v }, { source: "manual" });
         },
       },
       sunDiscScale: {
         number: (v) => {
-          setEnvState({ skySunDiscScale: v }, { source: 'manual' });
+          setEnvState({ skySunDiscScale: v }, { source: "manual" });
         },
       },
     });

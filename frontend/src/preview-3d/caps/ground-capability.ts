@@ -7,6 +7,9 @@ import * as THREE from "three";
 import { dbg } from "../../utils/debug/debug.ts";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,
@@ -27,9 +30,6 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 程序化表面纹理边长（plain/grid/checker 共用；512² 够细且重建成本低） */
 const SURFACE_TEX_SIZE = 512;
@@ -77,12 +77,25 @@ export class GroundCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (changed.has('groundType') || changed.has('groundColor') || changed.has('groundLineColor') ||
-          changed.has('groundMatSource') || changed.has('groundSize') || changed.has('groundDivisions') ||
-          changed.has('groundMatColor') || changed.has('groundMatLineColor') || changed.has('groundMatColor2') ||
-          changed.has('groundMatGridSize') || changed.has('groundMatOpacity') || changed.has('groundMatScale') ||
-          changed.has('groundMatRotationDeg') || changed.has('groundMatDensity') || changed.has('groundMatAngleDeg') ||
-          changed.has('groundMatRoughness') || changed.has('groundMatMetalness')) {
+      if (
+        changed.has("groundType") ||
+        changed.has("groundColor") ||
+        changed.has("groundLineColor") ||
+        changed.has("groundMatSource") ||
+        changed.has("groundSize") ||
+        changed.has("groundDivisions") ||
+        changed.has("groundMatColor") ||
+        changed.has("groundMatLineColor") ||
+        changed.has("groundMatColor2") ||
+        changed.has("groundMatGridSize") ||
+        changed.has("groundMatOpacity") ||
+        changed.has("groundMatScale") ||
+        changed.has("groundMatRotationDeg") ||
+        changed.has("groundMatDensity") ||
+        changed.has("groundMatAngleDeg") ||
+        changed.has("groundMatRoughness") ||
+        changed.has("groundMatMetalness")
+      ) {
         this.refreshSurface();
       }
     });
@@ -119,7 +132,7 @@ export class GroundCapability implements SceneCapability {
 
   /** 地面显隐开关（表面层跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
   setVisible(v: boolean): void {
-    setEnvState({ groundVisible: v }, { source: 'manual' });
+    setEnvState({ groundVisible: v }, { source: "manual" });
     this.grid.visible = v;
     this.updateSurfaceVisible();
   }
@@ -210,7 +223,8 @@ export class GroundCapability implements SceneCapability {
 
   /** 显隐门控：总开关 × 网格显隐 × 模式非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
-    this.surface.visible = this.enabled && envState.groundVisible && envState.groundMatSource !== "none";
+    this.surface.visible =
+      this.enabled && envState.groundVisible && envState.groundMatSource !== "none";
   }
 
   /** 自定义贴图加载完成入口 */
@@ -223,7 +237,7 @@ export class GroundCapability implements SceneCapability {
     }
     this.customTex = tex;
     this.customTexName = name;
-    setEnvState({ groundMatSource: "texture" }, { source: 'manual' });
+    setEnvState({ groundMatSource: "texture" }, { source: "manual" });
     this.refreshSurface();
   }
 
@@ -235,7 +249,8 @@ export class GroundCapability implements SceneCapability {
       this.customTex = null;
       this.customTexName = "";
     }
-    if (envState.groundMatSource === "texture") setEnvState({ groundMatSource: "plain" }, { source: 'manual' });
+    if (envState.groundMatSource === "texture")
+      setEnvState({ groundMatSource: "plain" }, { source: "manual" });
     if (wasAttached) this.surfaceTex = null;
     this.refreshSurface();
   }
@@ -264,7 +279,7 @@ export class GroundCapability implements SceneCapability {
   }
   setMatSource(mode: GroundSurfaceMode): void {
     if (envState.groundMatSource === mode) return;
-    setEnvState({ groundMatSource: mode }, { source: 'manual' });
+    setEnvState({ groundMatSource: mode }, { source: "manual" });
     this.refreshSurface();
     this.notify();
   }
@@ -278,57 +293,57 @@ export class GroundCapability implements SceneCapability {
     this.listenerSet.notify();
   }
   setMatColor(hex: number): void {
-    setEnvState({ groundMatColor: hex }, { source: 'manual' });
+    setEnvState({ groundMatColor: hex }, { source: "manual" });
     this.refreshSurface();
   }
   setMatLineColor(hex: number): void {
-    setEnvState({ groundMatLineColor: hex }, { source: 'manual' });
+    setEnvState({ groundMatLineColor: hex }, { source: "manual" });
     this.refreshSurface();
   }
   setMatGridSize(n: number): void {
-    setEnvState({ groundMatGridSize: Math.max(2, Math.round(n)) }, { source: 'manual' });
+    setEnvState({ groundMatGridSize: Math.max(2, Math.round(n)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatOpacity(): number {
     return envState.groundMatOpacity;
   }
   setMatOpacity(v: number): void {
-    setEnvState({ groundMatOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ groundMatOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatScale(): number {
     return envState.groundMatScale;
   }
   setMatScale(v: number): void {
-    setEnvState({ groundMatScale: Math.max(0.25, Math.min(8, v)) }, { source: 'manual' });
+    setEnvState({ groundMatScale: Math.max(0.25, Math.min(8, v)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatRotation(): number {
     return envState.groundMatRotationDeg;
   }
   setMatRotation(deg: number): void {
-    setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, { source: 'manual' });
+    setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
     this.refreshSurface();
   }
   getMatRoughness(): number {
     return envState.groundMatRoughness;
   }
   setMatRoughness(v: number): void {
-    setEnvState({ groundMatRoughness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ groundMatRoughness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatMetalness(): number {
     return envState.groundMatMetalness;
   }
   setMatMetalness(v: number): void {
-    setEnvState({ groundMatMetalness: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ groundMatMetalness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatColor2(): number {
     return envState.groundMatColor2;
   }
   setMatColor2(hex: number): void {
-    setEnvState({ groundMatColor2: hex }, { source: 'manual' });
+    setEnvState({ groundMatColor2: hex }, { source: "manual" });
     this.refreshSurface();
   }
   /* 菜单 getter */
@@ -348,14 +363,14 @@ export class GroundCapability implements SceneCapability {
     return envState.groundMatDensity;
   }
   setMatDensity(v: number): void {
-    setEnvState({ groundMatDensity: Math.max(0.25, Math.min(8, v)) }, { source: 'manual' });
+    setEnvState({ groundMatDensity: Math.max(0.25, Math.min(8, v)) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatAngle(): number {
     return envState.groundMatAngleDeg;
   }
   setMatAngle(deg: number): void {
-    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: 'manual' });
+    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
     this.refreshSurface();
   }
 
@@ -374,7 +389,8 @@ export class GroundCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       groundVisible: envState.groundVisible,
-      groundMatSource: envState.groundMatSource === "texture" ? "texture" : envState.groundMatSource,
+      groundMatSource:
+        envState.groundMatSource === "texture" ? "texture" : envState.groundMatSource,
       groundSize: envState.groundSize,
       groundDivisions: envState.groundDivisions,
       groundColorCenter: envState.groundColorCenter,
@@ -398,17 +414,32 @@ export class GroundCapability implements SceneCapability {
     const state = restoreState(this.id);
     if (!state) return;
     restoreFields(state, {
-      enabled: { boolean: (v) => { this.enabled = v; } },
-      groundVisible: { boolean: (v) => setEnvState({ groundVisible: v }, { source: 'manual' }) },
-      groundMatSource: oneOf(GROUND_SURFACE_MODES, (v) => setEnvState({ groundMatSource: v === "texture" && !this.customTex ? "plain" : v }, { source: 'manual' })),
-      groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: 'manual' }) },
-      groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: 'manual' }) },
-      groundColorCenter: { number: (v) => setEnvState({ groundColorCenter: v }, { source: 'manual' }) },
-      groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: 'manual' }) },
-      groundMatColor: { number: (v) => setEnvState({ groundMatColor: v }, { source: 'manual' }) },
-      groundMatLineColor: { number: (v) => setEnvState({ groundMatLineColor: v }, { source: 'manual' }) },
-      groundMatColor2: { number: (v) => setEnvState({ groundMatColor2: v }, { source: 'manual' }) },
-      groundMatGridSize: { number: (v) => setEnvState({ groundMatGridSize: v }, { source: 'manual' }) },
+      enabled: {
+        boolean: (v) => {
+          this.enabled = v;
+        },
+      },
+      groundVisible: { boolean: (v) => setEnvState({ groundVisible: v }, { source: "manual" }) },
+      groundMatSource: oneOf(GROUND_SURFACE_MODES, (v) =>
+        setEnvState(
+          { groundMatSource: v === "texture" && !this.customTex ? "plain" : v },
+          { source: "manual" },
+        ),
+      ),
+      groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
+      groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }) },
+      groundColorCenter: {
+        number: (v) => setEnvState({ groundColorCenter: v }, { source: "manual" }),
+      },
+      groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }) },
+      groundMatColor: { number: (v) => setEnvState({ groundMatColor: v }, { source: "manual" }) },
+      groundMatLineColor: {
+        number: (v) => setEnvState({ groundMatLineColor: v }, { source: "manual" }),
+      },
+      groundMatColor2: { number: (v) => setEnvState({ groundMatColor2: v }, { source: "manual" }) },
+      groundMatGridSize: {
+        number: (v) => setEnvState({ groundMatGridSize: v }, { source: "manual" }),
+      },
       groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
       groundMatScale: { number: (v) => this.setMatScale(v) },
       groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },

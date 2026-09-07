@@ -8,12 +8,15 @@ source_files:
   - go/internal/testutil/testutil_windows.go
 auto_fields:
   symbols_with_lines:
+    - BytesZip
     - CreateTestFile
     - InjectRootRegistry
     - LockDirExclusive
     - MakeZipBytes
+    - WriteFile
     - WriteTestFile
     - WriteTestFileBytes
+    - WriteZip
     - WriteZipFile
   tests:
     - go/internal/testutil/testutil_test.go

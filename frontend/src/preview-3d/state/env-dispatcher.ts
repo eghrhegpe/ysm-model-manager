@@ -2,7 +2,7 @@
 // 状态变更回调注册表 + dispatchEnvChange 派发。
 // 仿 MikuMikuAR dispatchEnvChange 模式。
 
-import type { EnvState } from './env-state-schema.ts';
+import type { EnvState } from "./env-state-schema.ts";
 
 export type EnvCallback = (changed: Set<string>, state: EnvState) => void;
 
@@ -30,7 +30,7 @@ export function dispatchEnvChange(changed: Set<string>, state: EnvState): void {
       cb(changed, state);
     } catch (e) {
       // ringLog 兜底
-      console.warn('[env-dispatcher] 回调异常:', e);
+      console.warn("[env-dispatcher] 回调异常:", e);
     }
   }
 }

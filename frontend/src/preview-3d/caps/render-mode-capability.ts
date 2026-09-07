@@ -1,4 +1,4 @@
-// ===== RenderModeCapability：统一渲染模式覆盖（ADR-073 caps/ 能力模式）=====
+// ===== RenderModeCapability：统一渲染模式覆盖（ADR-196 迁移至 envState）=====
 // 场景级渲染属性：线框 / 混合模式 / 深度测试 / 面剔除 / 深度写入。
 // 遍历 scene 所有 Mesh.material，快照原始值 → 覆盖 → 还原（不 clone 材质）。
 // 每个属性独立 override（null = 不覆盖原始值），组合生效。
@@ -8,26 +8,9 @@ import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { buildRenderModeNodes } from "./render-mode-menu.ts";
 import { persistState, restoreState, type SceneCapability } from "./scene-capability.ts";
-
-/* -------- 属性定义 -------- */
-
-/** 每个属性的 override：null = 不覆盖（保持原始值），value = 强制为该值 */
-interface RenderModeOverrides {
-  wireframe: boolean | null;
-  blending: THREE.Blending | null;
-  depthTest: boolean | null;
-  side: THREE.Side | null;
-  depthWrite: boolean | null;
-}
-
-/** 无 override 时的初始状态（全部 null = 保持原始值） */
-const EMPTY_OVERRIDES: RenderModeOverrides = {
-  wireframe: null,
-  blending: null,
-  depthTest: null,
-  side: null,
-  depthWrite: null,
-};
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 单个材质的原始值快照 */
 interface MaterialSnapshot {
@@ -60,16 +43,24 @@ export class RenderModeCapability implements SceneCapability {
   readonly descKey = "preview.renderModeDesc";
 
   private scene: THREE.Scene;
-  private overrides: RenderModeOverrides = { ...EMPTY_OVERRIDES };
   /** material uuid → 原始属性快照 */
   private snapshot = new Map<string, MaterialSnapshot>();
-  /** 本次覆盖会话中曾被 override 的属性（ov 从非 null 回 null 的清除瞬间回落快照一次）。
-   *  审核修复：避免任何一次 sync 都把全部 5 项按快照重写——从未覆盖过的属性保持
-   *  材质现值不写，外部写入（ground depthWrite、legacy wireframe 等）不被静默还原。 */
-  private coveredProps = new Set<keyof RenderModeOverrides>();
+  /** 本次覆盖会话中曾被 override 的属性 */
+  private coveredProps = new Set<string>();
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
 
   constructor(opts: { scene: THREE.Scene }) {
     this.scene = opts.scene;
+
+    // ADR-196：订阅 envState 变更
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (changed.has('renderModeWireframe') || changed.has('renderModeBlending') ||
+          changed.has('renderModeDepthTest') || changed.has('renderModeSide') ||
+          changed.has('renderModeDepthWrite')) {
+        this.sync();
+      }
+    });
   }
 
   /* -------- 快照 / 应用 / 还原 -------- */
@@ -93,48 +84,31 @@ export class RenderModeCapability implements SceneCapability {
     for (const m of collectMaterials(this.scene)) {
       const mat = m as THREE.MeshBasicMaterial;
       const orig = this.snapshot.get(m.uuid);
-      // 单属性取值（审核修复：if/else 展开，消嵌套三元）：
-      //   override 非 null → 用它（登记 coveredProps，清除时回落快照一次）；
-      //   override null 且曾被覆盖 → 回落该属性快照原始值（无快照保持现值）；
-      //   override null 且从未覆盖 → 保持材质现值不写（外部写入不被 sync 还原）。
-      // 回调参数显式注解：泛型 T 无法从回调体反向推断，不注解会落为 unknown。
-      this.applyProp("wireframe", mat, orig, (v: boolean) => {
-        mat.wireframe = v;
-      });
-      this.applyProp("blending", mat, orig, (v: THREE.Blending) => {
-        mat.blending = v;
-      });
-      this.applyProp("depthTest", mat, orig, (v: boolean) => {
-        mat.depthTest = v;
-      });
-      this.applyProp("side", mat, orig, (v: THREE.Side) => {
-        mat.side = v;
-      });
-      this.applyProp("depthWrite", mat, orig, (v: boolean) => {
-        mat.depthWrite = v;
-      });
+      this.applyProp("wireframe", mat, envState.renderModeWireframe, orig, (v: boolean) => { mat.wireframe = v; });
+      this.applyProp("blending", mat, envState.renderModeBlending as THREE.Blending | null, orig, (v: THREE.Blending) => { mat.blending = v; });
+      this.applyProp("depthTest", mat, envState.renderModeDepthTest, orig, (v: boolean) => { mat.depthTest = v; });
+      this.applyProp("side", mat, envState.renderModeSide as THREE.Side | null, orig, (v: THREE.Side) => { mat.side = v; });
+      this.applyProp("depthWrite", mat, envState.renderModeDepthWrite, orig, (v: boolean) => { mat.depthWrite = v; });
     }
   }
 
-  /** 单属性应用：见 applyOverrides 三态注释。 */
+  /** 单属性应用：override 非 null → 用它；override null 且曾被覆盖 → 回落快照；从未覆盖 → 保持现值 */
   private applyProp<T>(
-    key: keyof RenderModeOverrides,
+    key: string,
     _mat: THREE.MeshBasicMaterial,
+    ov: T | null,
     orig: MaterialSnapshot | undefined,
     set: (v: T) => void,
   ): void {
-    const ov = this.overrides[key];
     if (ov !== null) {
       this.coveredProps.add(key);
-      set(ov as unknown as T);
+      set(ov as T);
       return;
     }
     if (this.coveredProps.has(key)) {
       this.coveredProps.delete(key);
-      if (orig !== undefined) set(orig[key] as unknown as T);
-      // 无快照（首次 apply 前就被外部改写）→ 保持现值不写
+      if (orig !== undefined) set(orig[key as keyof MaterialSnapshot] as unknown as T);
     }
-    // 从未覆盖 → 保持现值不写
   }
 
   private restoreSnapshot(): void {
@@ -153,7 +127,9 @@ export class RenderModeCapability implements SceneCapability {
   }
 
   private hasAnyOverride(): boolean {
-    return Object.values(this.overrides).some((v) => v !== null);
+    return envState.renderModeWireframe !== null || envState.renderModeBlending !== null ||
+           envState.renderModeDepthTest !== null || envState.renderModeSide !== null ||
+           envState.renderModeDepthWrite !== null;
   }
 
   private sync(): void {
@@ -168,43 +144,38 @@ export class RenderModeCapability implements SceneCapability {
   /* -------- 单属性 setter/getter -------- */
 
   setWireframe(v: boolean | null): void {
-    this.overrides.wireframe = v;
-    this.sync();
+    setEnvState({ renderModeWireframe: v }, { source: 'manual' });
   }
   getWireframe(): boolean | null {
-    return this.overrides.wireframe;
+    return envState.renderModeWireframe;
   }
 
   setBlending(v: THREE.Blending | null): void {
-    this.overrides.blending = v;
-    this.sync();
+    setEnvState({ renderModeBlending: v as number | null }, { source: 'manual' });
   }
   getBlending(): THREE.Blending | null {
-    return this.overrides.blending;
+    return envState.renderModeBlending as THREE.Blending | null;
   }
 
   setDepthTest(v: boolean | null): void {
-    this.overrides.depthTest = v;
-    this.sync();
+    setEnvState({ renderModeDepthTest: v }, { source: 'manual' });
   }
   getDepthTest(): boolean | null {
-    return this.overrides.depthTest;
+    return envState.renderModeDepthTest;
   }
 
   setSide(v: THREE.Side | null): void {
-    this.overrides.side = v;
-    this.sync();
+    setEnvState({ renderModeSide: v as number | null }, { source: 'manual' });
   }
   getSide(): THREE.Side | null {
-    return this.overrides.side;
+    return envState.renderModeSide as THREE.Side | null;
   }
 
   setDepthWrite(v: boolean | null): void {
-    this.overrides.depthWrite = v;
-    this.sync();
+    setEnvState({ renderModeDepthWrite: v }, { source: 'manual' });
   }
   getDepthWrite(): boolean | null {
-    return this.overrides.depthWrite;
+    return envState.renderModeDepthWrite;
   }
 
   /* -------- SceneCapability 接口 -------- */
@@ -222,8 +193,6 @@ export class RenderModeCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树（5 控件平铺，各带 settingsOrder）——直产 PreviewMenuNode[]，
-   *  全原生 toggle/select。render-mode 无 group 无 master。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildRenderModeNodes(this);
   }
@@ -232,11 +201,11 @@ export class RenderModeCapability implements SceneCapability {
 
   saveState(): void {
     persistState(this.id, {
-      wireframe: this.overrides.wireframe,
-      blending: this.overrides.blending,
-      depthTest: this.overrides.depthTest,
-      side: this.overrides.side,
-      depthWrite: this.overrides.depthWrite,
+      wireframe: envState.renderModeWireframe,
+      blending: envState.renderModeBlending,
+      depthTest: envState.renderModeDepthTest,
+      side: envState.renderModeSide,
+      depthWrite: envState.renderModeDepthWrite,
     });
   }
 
@@ -244,23 +213,30 @@ export class RenderModeCapability implements SceneCapability {
     const s = restoreState(this.id);
     if (!s) return;
     if (typeof s.wireframe === "boolean" || s.wireframe === null)
-      this.overrides.wireframe = s.wireframe;
+      setEnvState({ renderModeWireframe: s.wireframe }, { source: 'manual' });
     if (typeof s.blending === "number" || s.blending === null)
-      this.overrides.blending = s.blending as THREE.Blending | null;
+      setEnvState({ renderModeBlending: s.blending as number | null }, { source: 'manual' });
     if (typeof s.depthTest === "boolean" || s.depthTest === null)
-      this.overrides.depthTest = s.depthTest;
+      setEnvState({ renderModeDepthTest: s.depthTest }, { source: 'manual' });
     if (typeof s.side === "number" || s.side === null)
-      this.overrides.side = s.side as THREE.Side | null;
+      setEnvState({ renderModeSide: s.side as number | null }, { source: 'manual' });
     if (typeof s.depthWrite === "boolean" || s.depthWrite === null)
-      this.overrides.depthWrite = s.depthWrite;
+      setEnvState({ renderModeDepthWrite: s.depthWrite }, { source: 'manual' });
     this.sync();
   }
 
   /* -------- 释放 -------- */
 
   dispose(): void {
+    this.unsubscribeEnv();
     if (this.snapshot.size > 0) this.restoreSnapshot();
-    this.overrides = { ...EMPTY_OVERRIDES };
+    setEnvState({
+      renderModeWireframe: null,
+      renderModeBlending: null,
+      renderModeDepthTest: null,
+      renderModeSide: null,
+      renderModeDepthWrite: null,
+    }, { source: 'manual' });
     this.snapshot.clear();
     this.coveredProps.clear();
   }

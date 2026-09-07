@@ -6,6 +6,10 @@
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   GROUND_LAYER_OFFSETS,
@@ -15,10 +19,6 @@ import {
   ringLog,
   type SceneCapability,
 } from "./scene-capability.ts";
-// ADR-196：统一状态层
-import { envState, setEnvState } from "../state/env-state.ts";
-import type { EnvState } from "../state/env-state-schema.ts";
-import { registerEnvCallback } from "../state/env-dispatcher.ts";
 
 /** 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） */
 export const REFLECTOR_PRESETS: Record<string, Partial<EnvState>> = {
@@ -94,8 +94,14 @@ export class ReflectorCapability implements SceneCapability {
 
     // ADR-196：订阅 envState 变更
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (changed.has('reflectorEnabled') || changed.has('reflectorSize') || changed.has('reflectorResolution') ||
-          changed.has('reflectorColor') || changed.has('reflectorOpacity') || changed.has('reflectorClipBias')) {
+      if (
+        changed.has("reflectorEnabled") ||
+        changed.has("reflectorSize") ||
+        changed.has("reflectorResolution") ||
+        changed.has("reflectorColor") ||
+        changed.has("reflectorOpacity") ||
+        changed.has("reflectorClipBias")
+      ) {
         this.buildReflector();
       }
     });
@@ -192,38 +198,38 @@ export class ReflectorCapability implements SceneCapability {
   setPreset(modelType: string): void {
     if (this.isStateLoaded) return;
     const preset = REFLECTOR_PRESETS[modelType] ?? REFLECTOR_PRESETS.default;
-    setEnvState(preset, { source: 'auto-model' });
+    setEnvState(preset, { source: "auto-model" });
     if (this.enabled) this.buildReflector();
   }
 
   setEnabledReflector(v: boolean): void {
-    setEnvState({ reflectorEnabled: v }, { source: 'manual' });
+    setEnvState({ reflectorEnabled: v }, { source: "manual" });
   }
 
   setOpacity(v: number): void {
-    setEnvState({ reflectorOpacity: Math.max(0, Math.min(1, v)) }, { source: 'manual' });
+    setEnvState({ reflectorOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
     const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
     if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
   }
 
   setColor(hex: number): void {
-    setEnvState({ reflectorColor: hex }, { source: 'manual' });
+    setEnvState({ reflectorColor: hex }, { source: "manual" });
     const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
     if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(hex);
   }
 
   setSize(v: number): void {
-    setEnvState({ reflectorSize: v }, { source: 'manual' });
+    setEnvState({ reflectorSize: v }, { source: "manual" });
     if (this.enabled) this.buildReflector();
   }
 
   setResolution(v: number): void {
-    setEnvState({ reflectorResolution: v }, { source: 'manual' });
+    setEnvState({ reflectorResolution: v }, { source: "manual" });
     if (this.enabled) this.buildReflector();
   }
 
   setClipBias(v: number): void {
-    setEnvState({ reflectorClipBias: v }, { source: 'manual' });
+    setEnvState({ reflectorClipBias: v }, { source: "manual" });
     if (this.enabled) this.buildReflector();
   }
 
@@ -275,12 +281,14 @@ export class ReflectorCapability implements SceneCapability {
           this.enabled = v;
         },
       },
-      reflectorEnabled: { boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: 'manual' }) },
-      size: { number: (v) => setEnvState({ reflectorSize: v }, { source: 'manual' }) },
-      resolution: { number: (v) => setEnvState({ reflectorResolution: v }, { source: 'manual' }) },
-      color: { number: (v) => setEnvState({ reflectorColor: v }, { source: 'manual' }) },
-      opacity: { number: (v) => setEnvState({ reflectorOpacity: v }, { source: 'manual' }) },
-      clipBias: { number: (v) => setEnvState({ reflectorClipBias: v }, { source: 'manual' }) },
+      reflectorEnabled: {
+        boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: "manual" }),
+      },
+      size: { number: (v) => setEnvState({ reflectorSize: v }, { source: "manual" }) },
+      resolution: { number: (v) => setEnvState({ reflectorResolution: v }, { source: "manual" }) },
+      color: { number: (v) => setEnvState({ reflectorColor: v }, { source: "manual" }) },
+      opacity: { number: (v) => setEnvState({ reflectorOpacity: v }, { source: "manual" }) },
+      clipBias: { number: (v) => setEnvState({ reflectorClipBias: v }, { source: "manual" }) },
     });
     this.isStateLoaded = true;
     this.buildReflector();

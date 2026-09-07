@@ -69,8 +69,10 @@ export class WaterCapability implements SceneCapability {
         ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
           mode === "pool");
       if (needsRebuild) {
+        // code_review 9fe958249 #4（P3 conf 0.90）：rebuildWaterContainer 内部已
+        // syncWaterVisibility（L323 由已更新的 envState 重算 visible）——此处重复
+        // 调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
         this.rebuildWaterContainer(false);
-        this.syncWaterVisibility();
         if (changed.has("waterMode")) this.notify();
         return;
       }

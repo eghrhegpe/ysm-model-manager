@@ -31,14 +31,8 @@ function migrateEnvState(partial: Partial<EnvState>): Partial<EnvState> {
   return partial;
 }
 
-// 防抖持久化（预留，当前直接写 localStorage）
-let _persistTimer: ReturnType<typeof setTimeout> | null = null;
-function schedulePersistEnvState(): void {
-  if (_persistTimer) clearTimeout(_persistTimer);
-  _persistTimer = setTimeout(() => {
-    // TODO: 批量持久化
-  }, 200);
-}
+// 防抖持久化：ADR-196 刀0 原规划 env-state-persist，现持久化仍由各 cap saveState/loadState
+// 承担（旧键轨向后兼容），envState 层不做第二层持久化（避免双写双恢复冲突），此处不设空壳。
 
 /**
  * 中央写入入口（仿 MikuMikuAR setEnvState）。
@@ -67,7 +61,6 @@ export function setEnvState(
 
   if (changedKeys.size > 0) {
     dispatchEnvChange(changedKeys, envState);
-    schedulePersistEnvState();
   }
 }
 

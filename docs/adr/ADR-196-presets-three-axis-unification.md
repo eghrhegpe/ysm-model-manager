@@ -63,11 +63,11 @@ ADR-195（cap 控件单类型化）与 ADR-196 同属菜单/状态体系收口�
 
 ### 当前实施进度（2026-09-07 v2 快照，详细见知识卡 preview_env_state）
 
-- 刀 0：3/4（`env-state-schema.ts`/`env-state.ts`/`env-dispatcher.ts` 已建；`env-state-persist.ts` 未建，持久化仍由各 cap saveState 承担）
+- 刀 0：**3/4，第 4 项明确不做**（`env-state-schema.ts`/`env-state.ts`/`env-dispatcher.ts` 已建；`env-state-persist.ts` 取消——持久化由各 cap saveState 承担，envState 层持久化会双写双恢复冲突，空壳 schedulePersistEnvState 已删，2026-09-07 决断）
 - 刀 1：Sky 参数写入已走 setEnvState，旧 `MODEL_SKY_PRESETS` 已删（3aeb60913）；setter 仍双写 uniforms（残留，不影响预设体系）
 - 刀 2：10/10（全部 cap 参数迁入 envState，schema 全量拍平 ~90 字段）
 - 刀 4：`MODEL_DEFAULTS`（7 源合并）+ `ATMOSPHERE_PRESETS`（完整氛围快照）已建；`applyPreset` 硬编码 `if(link.sky)` → `setEnvState(ATMOSPHERE_PRESETS[id], {source:'auto-atmosphere'})`
-- 刀 5：**旧预设表清理完成度 6/7**——`MODEL_SKY_PRESETS`/`ENV_PRESET_BY_MODEL`/`ENV_PRESET_LINKAGE`（3aeb60913）/`SHADOW_PRESETS`+`SHADOW_PRESET_BY_MODEL`/`LIGHT_PRESETS`（本次）/`SceneCapability.setPreset` 接口（13b8b4e5f）均已删除；**唯一遗留** `POSTPROC_PRESETS` 未并入 MODEL_DEFAULTS（cap 侧效 enabled 无法被单次 setEnvState 等效替代，封存为 known gap）
+- 刀 5：**旧预设表清理完成度 6/7**——`MODEL_SKY_PRESETS`/`ENV_PRESET_BY_MODEL`/`ENV_PRESET_LINKAGE`（3aeb60913）/`SHADOW_PRESETS`+`SHADOW_PRESET_BY_MODEL`/`LIGHT_PRESETS`（本次）/`SceneCapability.setPreset` 接口（13b8b4e5f）均已删除；`POSTPROC_PRESETS` **收口为正确保留**（2026-09-07 决断）——其只额外携带 `enabled` 键（per-type 门禁，属能力级 enabled 不入 schema 红线），非刀5 遗漏
 - 刀 3：**已由刀 0/2 实质达成，字面 StatePath 化不采纳**（2026-09-07 决策，见「衔接裁决」）——cap setter/getter 全直通 envState，菜单控件闭包即状态驱动；StatePath 留作可选实现细节。
 
 ### 刀序（实施见知识卡，ADR 不记进度）

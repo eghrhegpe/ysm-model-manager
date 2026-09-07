@@ -103,7 +103,7 @@ invariant_anchors:
 
 - caps/*-capability.ts：构造注册 callback 监听自己的 envState 键 → 分派 Three 应用（结构字段 rebuild 容器、参数字段就地改材质/uniform）。setter 不再直接改 Three（防双写双重建）。
 - menu 层（ADR-195 刀2 直产节点）：控件闭包绑 cap setter/getter。**ADR-196 刀3 字面 StatePath 化已决策不采纳**（2026-09-07）——cap setter 已直通 envState（见「对外 API」），菜单控件闭包即状态驱动；`getStateValue/setStateValue` 保留为可选实现细节，非菜单绑定要求。
-- 持久化：各 cap `saveState/loadState` 仍写 localStorage（旧键轨向后兼容），恢复时映射 setEnvState。envState 层自身持久化（env-state-persist.ts）为预留。
+- 持久化：各 cap `saveState/loadState` 仍写 localStorage（旧键轨向后兼容），恢复时映射 setEnvState。envState 层自身持久化（env-state-persist.ts）**明确不做**（2026-09-07 决断：避免与 cap saveState 双写双恢复冲突，schedulePersistEnvState 空壳已删）。
 - 测试：各 cap 测试 `beforeEach(() => resetEnvState())` 隔离单例；`clearEnvCallbacks()` 清泄漏。
 
 ## 不变量
@@ -112,7 +112,7 @@ invariant_anchors:
 - 能力级 enabled 不入 schema；运行时态（customHdrTex/currentPreset/manualPreset/volumetricEngine）留 cap 私有。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。
-- MODEL_DEFAULTS 缺口（已知）：cap 参数全部入 envState，但 postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删（刀5 遗漏，本次按专属数据源保留，风险封存不复现）。
+- MODEL_DEFAULTS 缺口（已决断收口）：postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删。**收口理由（2026-09-07）**：该表只额外携带 `enabled` 一个键（per-type 门禁），而 `enabled` 属**能力级 enabled**（ADR-196 红线：不入 schema，留 cap 私有 this.enabled），故按专属数据源保留为**正确决策**而非遗漏，风险封存不复现。MODEL_DEFAULTS 内的 postproc 参数键（ppBloomStrength 等）与它不重叠。
 
 ## 相关
 

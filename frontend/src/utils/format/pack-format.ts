@@ -6,6 +6,9 @@ import _FORMAT_VERSION_MAP from "./pack-format-map.json" with { type: "json" };
 /** FORMAT_VERSION_MAP 静态 import，MC 版本迭代只改 JSON 不改代码（显式类型标注供 number 索引） */
 const FORMAT_VERSION_MAP: Record<string, string> = _FORMAT_VERSION_MAP;
 
+/** 版本号哨兵：≥ 此值视为「最新版本」（resource_types.json 约定，Go 端同步对齐） */
+export const LATEST_VERSION_SENTINEL = 9999;
+
 /** 已知最大 pack_format（超出视为「最新版本」），动态计算消灭硬编码魔数 */
 const MAX_KNOWN_FORMAT = Math.max(...Object.keys(FORMAT_VERSION_MAP).map(Number));
 
@@ -36,7 +39,7 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
     const max = meta.supported_formats[1];
     const minVer = fmtVer(min);
     const maxVer = fmtVer(max);
-    if (max >= 9999) {
+    if (max >= LATEST_VERSION_SENTINEL) {
       return { format: `≥ ${min}`, version: `≥ ${minVer}` };
     }
     return { format: `${min} ~ ${max}`, version: `${minVer} / ${maxVer}` };
@@ -51,7 +54,7 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
       : meta.max_format;
     const minVer = fmtVer(minRaw);
     const maxVer = fmtVer(maxRaw);
-    if (maxRaw >= 9999) {
+    if (maxRaw >= LATEST_VERSION_SENTINEL) {
       return { format: `≥ ${minRaw}`, version: `≥ ${minVer}` };
     }
     if (minRaw !== maxRaw) {

@@ -19,9 +19,10 @@ export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** 逐元素线性插值数组。 */
+/** 逐元素线性插值数组。长度不等时取较短者，截断补齐（不抛错）。 */
 export function lerpArray(a: number[], b: number[], t: number): number[] {
-  return a.map((v, i) => lerp(v, b[i], t));
+  const len = Math.min(a.length, b.length);
+  return Array.from({ length: len }, (_, i) => lerp(a[i], b[i], t));
 }
 
 /** 百分比钳制到 [0, 100]。 */

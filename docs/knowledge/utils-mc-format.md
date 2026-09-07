@@ -9,6 +9,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - describeVersionRange
+    - LATEST_VERSION_SENTINEL
     - PackMeta
     - renderFormattedText
 quick_groups:

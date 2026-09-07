@@ -7,14 +7,12 @@
 // - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
 import { Events } from "@/backend/runtime.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import type { WorkshopModel } from "@/features/community/render.ts";
 import { showRepoModels } from "@/features/community/show-repo-models.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
 import { esc } from "@/utils/html/html.ts";
-import { fillSearch } from "./community-data.ts";
 import { type RenderSiteViewCtx, renderSiteView } from "@/views/app-content/site/site-view.ts";
 import {
   type BrowseMode,
@@ -22,6 +20,8 @@ import {
   loadBrowseMode,
   saveBrowseMode,
 } from "@/views/app-content/site/workshop-browse-mode.ts";
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { fillSearch } from "./community-data.ts";
 import type { RepoCacheEntry } from "./state.ts";
 import { extractAvatars } from "./workshop-avatar.ts";
 import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";

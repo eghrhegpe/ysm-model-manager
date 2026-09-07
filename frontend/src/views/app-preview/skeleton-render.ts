@@ -2,7 +2,6 @@
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
 
 import { getApp } from "@/backend/app.ts";
-import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -10,9 +9,10 @@ import { toScreenshotLights } from "@/preview-3d/screenshot-lights.ts";
 import { renderMultiAngle } from "@/preview-3d/screenshot-render.ts";
 import { safeGet } from "@/utils/dom/storage.ts";
 import { esc } from "@/utils/html/html.ts";
-import { safeUrl } from "./tpl-summary.ts";
+import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
+import { safeUrl } from "./tpl-summary.ts";
 import type { PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
 
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容

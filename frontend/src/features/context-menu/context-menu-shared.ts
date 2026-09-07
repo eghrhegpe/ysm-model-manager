@@ -6,10 +6,10 @@
 
 import { bus } from "@/bus";
 import { tr } from "@/core/i18n/tr.ts";
+import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
 import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 
 /** 通知树组件和统计面板刷新 */

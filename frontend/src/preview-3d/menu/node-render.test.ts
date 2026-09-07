@@ -4,8 +4,10 @@ import { renderMenu } from "./core.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
+  nodeControlToView,
 } from "./render.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
+import { previewSnapshot, setStateValue } from "../state/preview-state.ts";
 import type { PreviewSnapshot } from "../state/preview-state.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
 import { mockMenuHandle } from "../adapters/menu-test-fixtures.ts";
@@ -699,6 +701,181 @@ describe("renderMenu 新 kind", () => {
     // 幂等：表已清空，二次全清不再触发（dispose 与 overlay 兜底双调无害）
     disposeCustomCleanups();
     expect([...calls].sort()).toEqual(["a", "b"]);
+  });
+});
+
+// ===== nodeControlToView 单测（控件原语归一 · ADR-195 刀 2.5 投影反转）=====
+describe("nodeControlToView", () => {
+  it("bind 映射：spec.bind 时 getValue 读 snapshot[bind]，setValue 写状态层", () => {
+    // 用 render.frustumCull（KNOWN_PATHS 之一，无 cap 直管持久化）验证 bind 读写
+    setStateValue("render.frustumCull", false);
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "test-frustum",
+      kind: "toggle",
+      labelKey: "preview.frustumCull",
+      fallback: "视锥剔除",
+      control: {
+        bind: "render.frustumCull",
+        get: (v: unknown) => Boolean(v),
+        set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
+      },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.getValue()).toBe(false);
+    view.setValue(true);
+    expect(previewSnapshot()["render.frustumCull"]).toBe(true);
+    // 还原
+    setStateValue("render.frustumCull", false);
+  });
+
+  it("refreshOnChange → onChange 注入：spec 含 refreshOnChange 时 view.onChange = setValue", () => {
+    let refreshCalled = 0;
+    const menu = mockMenuHandle();
+    menu.refresh = () => { refreshCalled++; };
+    setStateValue("render.frustumCull", false);
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "test-refresh",
+      kind: "toggle",
+      labelKey: "preview.frustumCull",
+      fallback: "视锥剔除",
+      control: {
+        bind: "render.frustumCull",
+        get: (v: unknown) => Boolean(v),
+        set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
+        refreshOnChange: true,
+      },
+    };
+    const view = nodeControlToView(node, snapshot, menu);
+    expect(view.onChange).toBeDefined();
+    view.onChange!(true);
+    expect(previewSnapshot()["render.frustumCull"]).toBe(true);
+    expect(refreshCalled).toBe(1);
+    // 还原
+    setStateValue("render.frustumCull", false);
+  });
+
+  it("onChange 注入：spec 含 onChange 时 view.onChange = setValue", () => {
+    const changed: unknown[] = [];
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "test-onchange",
+      kind: "toggle",
+      labelKey: "preview.frustumCull",
+      fallback: "视锥剔除",
+      control: {
+        get: () => false,
+        set: () => {},
+        onChange: (v: unknown) => { changed.push(v); },
+      },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.onChange).toBeDefined();
+    view.onChange!(true);
+    expect(changed).toEqual([true]);
+  });
+
+  it("numeric 透传：slider 节点 numeric/unit/onCommit 透传到 view.slider", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "test-numeric",
+      kind: "slider",
+      labelKey: "preview.maxFps",
+      fallback: "最大帧率",
+      control: {
+        min: 30,
+        max: 120,
+        step: 5,
+        numeric: true,
+        unit: "fps",
+        get: () => 60,
+        set: () => {},
+        onCommit: () => {},
+      },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.slider).toBeDefined();
+    expect(view.slider!.min).toBe(30);
+    expect(view.slider!.max).toBe(120);
+    expect(view.slider!.step).toBe(5);
+    expect(view.slider!.numeric).toBe(true);
+    expect(view.slider!.unit).toBe("fps");
+    expect(view.slider!.onCommit).toBeTypeOf("function");
+  });
+
+  it("无 labelKey 时 fallback 兜底：view.fallback = node.fallback ?? node.id", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "bare-control",
+      kind: "toggle",
+      control: { get: () => false, set: () => {} },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.labelKey).toBe("");
+    expect(view.fallback).toBe("bare-control");
+    expect(view.id).toBe("bare-control");
+  });
+
+  it("有 labelKey 时 view.labelKey = node.labelKey", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "labeled-control",
+      kind: "toggle",
+      labelKey: "preview.frustumCull",
+      fallback: "视锥剔除",
+      control: { get: () => false, set: () => {} },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.labelKey).toBe("preview.frustumCull");
+    expect(view.fallback).toBe("视锥剔除");
+  });
+
+  it("select 节点透传 spec.options 到 view.select", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "test-select",
+      kind: "select",
+      labelKey: "preview.waterMode",
+      fallback: "水面模式",
+      control: {
+        options: [
+          { value: "film", label: "薄膜" },
+          { value: "pool", label: "水池" },
+        ],
+        get: () => "film",
+        set: () => {},
+      },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.select).toBeDefined();
+    expect(view.select!.length).toBe(2);
+    expect(view.select![0].value).toBe("film");
+  });
+
+  it("hintKey 透传：node.hintKey → view.hintKey", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "hint-control",
+      kind: "toggle",
+      labelKey: "preview.frustumCull",
+      fallback: "视锥剔除",
+      hintKey: "preview.frustumCullHint",
+      control: { get: () => false, set: () => {} },
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.hintKey).toBe("preview.frustumCullHint");
+  });
+
+  it("无 spec 时 getValue 返回 null，setValue 不抛错", () => {
+    const snapshot = previewSnapshot();
+    const node: PreviewMenuNode = {
+      id: "no-control",
+      kind: "toggle",
+    };
+    const view = nodeControlToView(node, snapshot);
+    expect(view.getValue()).toBe(null);
+    expect(() => view.setValue(true)).not.toThrow();
   });
 });
 

@@ -8,12 +8,12 @@
 // 与 roles 同构，消除「env 手风琴 vs 其余面板行列表」的形态割裂。
 
 import { tr } from "@/core/i18n/tr.ts";
-import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import type { EnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderMenu } from "./render.ts";
 

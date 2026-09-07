@@ -14,9 +14,9 @@ import { emitAndroidBack } from "@/backend/platform.ts";
 import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { closeActiveDialog } from "@/features/dialogs/modal-core.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { closeActiveDialog } from "@/features/dialogs/modal-core.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */
 export function registerAndroidEvents(unsubs: Array<() => void>): void {

@@ -3,11 +3,11 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
-import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
 import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";

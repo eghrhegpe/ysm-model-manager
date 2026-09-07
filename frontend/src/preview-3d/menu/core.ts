@@ -7,13 +7,6 @@
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
 import { tr } from "@/core/i18n/tr.ts";
-import {
-  createSlideMenu,
-  type SlideMenuHandle,
-  type SlideMenuView,
-} from "@/ui/ui-slide-menu.ts";
-import { pushInputBlock } from "@/utils/dom/focus-restore.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import {
   getSchema,
@@ -24,6 +17,9 @@ import {
 import { ensureFabStyles } from "@/preview-3d/fab.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
+import { createSlideMenu, type SlideMenuHandle, type SlideMenuView } from "@/ui/ui-slide-menu.ts";
+import { pushInputBlock } from "@/utils/dom/focus-restore.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";

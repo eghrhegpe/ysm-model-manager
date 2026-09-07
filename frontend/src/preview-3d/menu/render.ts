@@ -365,7 +365,7 @@ function rmAppendDynamicRow(
  *   - refreshOnChange → onChange 内触发 menu.refresh()
  *   - numeric/slider.unit/onCommit → view.slider 透传
  */
-function nodeControlToView(
+export function nodeControlToView(
   node: PreviewMenuNode,
   snapshot: Record<string, unknown>,
   menu?: SlideMenuHandle,

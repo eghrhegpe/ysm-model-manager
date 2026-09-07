@@ -11,10 +11,10 @@ import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
+import { initSettings } from "@/views/app-content/settings/init.ts";
 import { initGithubPage as _initGithubPage } from "./init-github.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import { initWorkshopPage as _initWorkshopPage } from "./init-workshop.ts";
-import { initSettings } from "@/views/app-content/settings/init.ts";
 
 /**
  * 初始化诊断页

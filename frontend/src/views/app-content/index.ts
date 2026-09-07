@@ -29,9 +29,9 @@ import { registerSync } from "@/features/sync.ts";
 import { swallowError } from "@/utils/base/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import {
   initDiagnosticsPage,
   initGithubPage,

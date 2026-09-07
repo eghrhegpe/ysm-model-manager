@@ -19,12 +19,12 @@
 //     if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
 //   });
 
-import { clamp01 } from "@/utils/base/clamp.ts";
 import {
   getSemanticMorph,
   type SemanticMorphId,
   type SemanticMorphMap,
 } from "@/preview-3d/semantic-morphs.ts";
+import { clamp01 } from "@/utils/base/clamp.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 单 morph 回调：消费方写入具体格式的 morph weight */

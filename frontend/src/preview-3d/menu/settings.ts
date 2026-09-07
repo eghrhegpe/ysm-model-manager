@@ -12,13 +12,13 @@
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
 import { tr } from "@/core/i18n/tr.ts";
-import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
-import { safeSet } from "@/utils/dom/storage.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
+import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
+import { safeSet } from "@/utils/dom/storage.ts";
 import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 

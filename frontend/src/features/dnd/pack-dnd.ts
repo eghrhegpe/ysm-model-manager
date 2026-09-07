@@ -8,13 +8,13 @@ import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
 import { swallowError } from "@/utils/base/async.ts";
 import { logError } from "@/utils/base/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { buildFolderItems, collectDropFiles, fileToBase64, groupCollected } from "./shared.ts";
 

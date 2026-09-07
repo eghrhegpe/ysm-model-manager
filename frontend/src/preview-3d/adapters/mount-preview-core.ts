@@ -351,10 +351,26 @@ export interface Mount3DOptions {
 }
 
 // ===== mount3D stage 拆分段间产物类型（ADR-167 800 行老将拆单兵）=====
-/** stage 3 runBuild 产物：构建成功的内容层（stage 4 commit 消费）。
- *  注：AssembledShell / InstalledPreviewInfra 两个预留类型（assembleShell/buildInfra
- *  stage 拆分用）已随步骤 4 暂缓删除——见 docs/superpowers/plans/2026-09-preview3d-mount3d-stage-split.md
- *  §8 R4（跨 stage 闭包共享 mouseDown 需改 {v} 容器，超纯搬家边界，待拍板）。 */
+/** stage 1 assembleShell 产物：外壳 DOM(overlay/body/root) + 相机桥 + 声明式根菜单 + 加载态 + 输入状态容器 */
+export interface AssembledShell {
+  overlay: HTMLElement;
+  body: HTMLElement;
+  root: HTMLElement | ShadowRoot;
+  camBridge: CameraControlBridge;
+  viewContainer: HTMLElement;
+  menuHandle: PreviewMenuHandle;
+  loadingEl: HTMLElement;
+  keys: Partial<Record<TdKeyAction, boolean>>;
+  mouseDown: { v: boolean };
+  lastMouse: { x: number; y: number };
+}
+/** stage 2 buildInfra 产物：已安装 shared 基础设施 + 会话内切换上下文 */
+export interface InstalledPreviewInfra {
+  /** shared 模式非 null；self 模式 null（适配器自驱） */
+  infra: SharedInfra | null;
+  switchCtx: SwitchContext;
+}
+/** stage 3 runBuild 产物：构建成功的内容层（stage 4 commit 消费）。 */
 interface MountBuildResult {
   /** 已 build 成功、已登记进 session.allContent 的内容层 */
   content: PreviewScene;
@@ -470,18 +486,7 @@ export async function mount3D(
  * 及 input 状态容器(keys/mouseDown/lastMouse)。camBridge.setOrbit 经 ctx.getInfra() 延迟读 infra
  * (原闭包捕获 let infra 的语义等价——buildInfra 赋值后调度层回填 ctx 槽位)。
  */
-function assembleShell(ctx: MountCtx): {
-  overlay: HTMLElement;
-  body: HTMLElement;
-  root: HTMLElement | ShadowRoot;
-  camBridge: CameraControlBridge;
-  viewContainer: HTMLElement;
-  menuHandle: PreviewMenuHandle;
-  loadingEl: HTMLElement;
-  keys: Partial<Record<TdKeyAction, boolean>>;
-  mouseDown: { v: boolean };
-  lastMouse: { x: number; y: number };
-} {
+function assembleShell(ctx: MountCtx): AssembledShell {
   const session = ctx.session;
   const selfMode = ctx.selfMode;
   const adapter = ctx.adapter;
@@ -698,21 +703,7 @@ function assembleShell(ctx: MountCtx): {
  * tip 提示条 + switchCtx 构造。self 模式 infra 保持 null（适配器自驱）。
  * @returns infra(shared 模式非 null) + switchCtx——调度层回填 ctx.getInfra()/getSwitchCtx() 槽位
  */
-function buildInfra(
-  ctx: MountCtx,
-  shell: {
-    viewContainer: HTMLElement;
-    loadingEl: HTMLElement;
-    root: HTMLElement | ShadowRoot;
-    body: HTMLElement;
-    overlay: HTMLElement;
-    menuHandle: PreviewMenuHandle;
-    camBridge: CameraControlBridge;
-    keys: Partial<Record<TdKeyAction, boolean>>;
-    mouseDown: { v: boolean };
-    lastMouse: { x: number; y: number };
-  },
-): { infra: SharedInfra | null; switchCtx: SwitchContext } {
+function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra {
   const session = ctx.session;
   const selfMode = ctx.selfMode;
   const adapter = ctx.adapter;
@@ -870,13 +861,7 @@ function buildInfra(
  */
 async function runBuild(
   ctx: MountCtx,
-  shell: {
-    viewContainer: HTMLElement;
-    loadingEl: HTMLElement;
-    root: HTMLElement | ShadowRoot;
-    menuHandle: PreviewMenuHandle;
-    camBridge: CameraControlBridge;
-  },
+  shell: AssembledShell,
   installed: { infra: SharedInfra | null; switchCtx: SwitchContext },
 ): Promise<MountBuildResult | null> {
   const session = ctx.session;

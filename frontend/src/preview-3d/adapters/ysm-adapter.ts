@@ -14,18 +14,6 @@
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
-import {
-  type AnimationClip,
-  parseBedrockAnimationJSON,
-  ysmAnimClipLabels,
-} from "@/utils/animation/animation.ts";
-import {
-  type AnimationController,
-  parseAnimationControllerJSON,
-} from "@/utils/animation/animation-controller.ts";
-import { logWarn } from "@/utils/base/log.ts";
-import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { b64ToBytes } from "@/preview-3d/base64.ts";
 import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone-raycast.ts";
 import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone-tools.ts";
@@ -43,6 +31,18 @@ import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
 import { ysmSemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "@/preview-3d/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
+import {
+  type AnimationClip,
+  parseBedrockAnimationJSON,
+  ysmAnimClipLabels,
+} from "@/utils/animation/animation.ts";
+import {
+  type AnimationController,
+  parseAnimationControllerJSON,
+} from "@/utils/animation/animation-controller.ts";
+import { logWarn } from "@/utils/base/log.ts";
+import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";

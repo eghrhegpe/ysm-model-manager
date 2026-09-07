@@ -5,7 +5,6 @@
 // mount-preview-core 经 registerPerFrame/removePerFrame/stopIfIdle/resetLoopState 访问。
 
 import * as THREE from "three";
-import { logWarn } from "@/utils/base/log.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import {
   cullModelGroups,
@@ -22,6 +21,7 @@ import {
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
 } from "@/preview-3d/render-budget.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { getSceneCaps, type SharedInfra } from "./shared-infra.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
 

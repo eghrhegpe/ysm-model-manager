@@ -12,7 +12,11 @@
 //   autoDance.apply(dt, semanticBones);
 
 import * as THREE from "three";
-import { getSemanticBone, type SemanticBoneId, type SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
+import {
+  getSemanticBone,
+  type SemanticBoneId,
+  type SemanticBoneMap,
+} from "@/preview-3d/semantic-bones.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */

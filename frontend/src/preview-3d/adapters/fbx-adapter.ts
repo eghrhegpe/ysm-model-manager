@@ -10,9 +10,6 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { safeGet } from "@/utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { buildBoneTree } from "@/preview-3d/bone-tools.ts";
 import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
@@ -22,6 +19,9 @@ import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { safeGet } from "@/utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";

@@ -9,8 +9,6 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "@/bus";
-import { logError } from "@/utils/base/log.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fitCameraToRoots } from "@/preview-3d/camera-setup.ts";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
@@ -18,6 +16,8 @@ import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeObject3D, safeDispose } from "@/preview-3d/safe-dispose.ts";
+import { logError } from "@/utils/base/log.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import { showLoadFailure } from "./preview-loading.ts";

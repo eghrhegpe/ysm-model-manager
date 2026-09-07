@@ -2,13 +2,13 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
+import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
+import { requireMcRoot } from "@/features/require-mcroot.ts";
 import { copyText } from "@/utils/dom/clipboard.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
-import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
-import { requireMcRoot } from "@/features/require-mcroot.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {

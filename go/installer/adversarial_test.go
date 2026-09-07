@@ -15,6 +15,9 @@ import (
 // InstallToGlobal 校验了 mcRoot 的 .minecraft 标记和 src 的扩展名，
 // 但从未检查 src 是否位于任何受信任的 repo/filesRoot 内。攻击者可指定
 // 系统上任意 .ysm 路径，将其内容复制进 .minecraft/custom。
+// 【修复归属】installer 层无 filesRoot 参数属设计契约（src 归属是仓库根知识，
+// 由持有仓库配置的调用层负责）——App.InstallModelFile 已加 ensureSrcInRepo
+// 双重守卫（internal/app/app_install_import.go）。本探针记录 installer 层行为。
 // ============================================================================
 func TestAdversarial_InstallToGlobal_ArbitraryRead(t *testing.T) {
 	// 在临时目录创建 .ysm 文件——不在任何 repo 内
@@ -53,6 +56,8 @@ func TestAdversarial_InstallToGlobal_ArbitraryRead(t *testing.T) {
 // BUG-2: InstallWithOverlay 允许读取任意路径文件
 // 与 BUG-1 同因——InstallWithOverlay 同样缺少 src 的 repo 归属校验。
 // 覆盖检查逻辑（os.Stat dst）在冲突前并不阻止越权读取。
+// 【现状】该函数前端已 0 消费（Deprecated 绑定，installer.go 注释「待发版清理」），
+// 守卫责任与 BUG-1 相同：由调用层保证 src 归属（App.InstallModelFile 已修）。
 // ============================================================================
 func TestAdversarial_InstallWithOverlay_ArbitraryRead(t *testing.T) {
 	evilDir := t.TempDir()
@@ -199,6 +204,9 @@ func TestAdversarial_InstallDir_CaseMismatchDeadRecursion(t *testing.T) {
 // 在 Linux 上，src 参数如果是符号链接，InstallToGlobal 不会调用 EvalSymlinks
 // 来解析真实路径，也不会校验真实路径是否在预期范围内。
 // os.Open 会静默跟随符号链接，将仓库外的文件内容复制进 .minecraft。
+// 【修复归属】与 BUG-1 同链路：App.InstallModelFile 的 ensureSrcInRepo 在词法
+// IsInside 命中后对 src/root 两侧做 EvalSymlinks 二次判定（防 symlink 段绕过）——
+// 调用层已补，installer 层契约不变。
 // ============================================================================
 func TestAdversarial_InstallToGlobal_SymlinkBypass(t *testing.T) {
 	if runtime.GOOS == "windows" {

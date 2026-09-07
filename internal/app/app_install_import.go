@@ -21,7 +21,56 @@ import (
 
 // ========== 安装 ==========
 func (a *App) InstallModelFile(src, mcRoot string) (string, error) {
+	// src 仓库归属守卫：InstallToGlobal 无 filesRoot 参数（installer.go 注释
+	// 「源侧仅靠调用方约束」），仓库根是 App 层持有的配置知识——在透传前补上
+	// validateInstallPaths 同口径的词法 + EvalSymlinks 双重校验（adversarial BUG-1/2 修复）。
+	if err := a.ensureSrcInRepo(src); err != nil {
+		return "", err
+	}
 	return installer.InstallToGlobal(src, mcRoot)
+}
+
+// ensureSrcInRepo 校验 src 位于任一仓库根内（FilesRoot 或 CustomRoots 覆盖根）。
+// 与 installer.validateInstallPaths 的 src 侧两道守卫同口径：
+//   - 词法 IsInside(rootClean, srcClean)
+//   - EvalSymlinks 解析两侧真实路径后再次 IsInside（防 src/root 任一侧 symlink 段绕过
+//     字符串守卫；任一侧解析失败【路径不存在等】时保持词法结论不放宽不放窄）
+//
+// 全部根都不命中时返回 ErrInvalidPath「源文件不在仓库目录内」（文案对齐 installer）。
+func (a *App) ensureSrcInRepo(src string) error {
+	srcClean, err := filepath.Abs(filepath.Clean(src))
+	if err != nil {
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "安装到全局", SourcePath: src, Reason: "源文件路径无效"}
+	}
+	cfg := a.LoadAppConfig()
+	roots := []string{cfg.FilesRoot}
+	for _, r := range cfg.CustomRoots {
+		roots = append(roots, r)
+	}
+	for _, root := range roots {
+		if root == "" {
+			continue
+		}
+		rootClean, err := filepath.Abs(filepath.Clean(root))
+		if err != nil {
+			continue
+		}
+		if err := paths.IsInside(rootClean, srcClean); err != nil {
+			continue
+		}
+		// 词法命中后二次解析——防 symlink 段绕过字符串守卫
+		resolvedSrc, srcErr := filepath.EvalSymlinks(srcClean)
+		resolvedRoot, rootErr := filepath.EvalSymlinks(rootClean)
+		if srcErr == nil && rootErr == nil {
+			if err := paths.IsInside(resolvedRoot, resolvedSrc); err == nil {
+				return nil
+			}
+			continue
+		}
+		// 任一侧解析失败 → 保持词法结论（与 validateInstallPaths 口径一致）
+		return nil
+	}
+	return types.AppError{Code: types.ErrInvalidPath, Operation: "安装到全局", SourcePath: src, Reason: "源文件不在仓库目录内", Suggestion: "请确保模型文件位于已选择的仓库目录中"}
 }
 
 func (a *App) InstallModelTo(src, customDir string) error {

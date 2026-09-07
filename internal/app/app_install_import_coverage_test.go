@@ -7,6 +7,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/base64"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/texture_cache"
@@ -77,5 +80,41 @@ func TestSaveCachedTexture(t *testing.T) {
 	}
 	if err := a.SaveCachedTexture("h2", "not-base64!!"); err == nil {
 		t.Error("非法 base64 应报错")
+	}
+}
+
+// TestInstallModelFile_SrcGuard 覆盖 InstallModelFile 透传 InstallToGlobal 前的
+// src 仓库归属守卫（adversarial BUG-1/2 修复，ensureSrcInRepo）：仓库外 src 拒绝、
+// 仓库内 src 放行并成功落地。
+func TestInstallModelFile_SrcGuard(t *testing.T) {
+	a, ysm := guardedApp(t)
+
+	// 仓库外 src → 拒绝（守卫先于 InstallToGlobal 的 .minecraft 校验触发）
+	outside := t.TempDir()
+	outsideFile := filepath.Join(outside, "evil.ysm")
+	if err := os.WriteFile(outsideFile, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.InstallModelFile(outsideFile, t.TempDir()); err == nil {
+		t.Error("仓库外 src 应被拒绝")
+	} else if !strings.Contains(err.Error(), "仓库目录") {
+		t.Errorf("应提示源文件不在仓库目录内, got %v", err)
+	}
+
+	// 仓库内 src → 放行（InstallToGlobal: mcRoot 需含 .minecraft 段）
+	inRepo := filepath.Join(ysm, "m.ysm")
+	if err := os.WriteFile(inRepo, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
+	dst, err := a.InstallModelFile(inRepo, mcRoot)
+	if err != nil {
+		t.Fatalf("仓库内 src 应安装成功: %v", err)
+	}
+	if dst == "" {
+		t.Error("应返回落地文件路径")
+	}
+	if _, err := os.Stat(dst); err != nil {
+		t.Fatalf("落地文件不存在: %v", err)
 	}
 }

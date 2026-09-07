@@ -6,144 +6,106 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
+const perm = 0o644
+
 // 文件级分支（非 ysm/EntityPlayer）：resourcepack 支持 .zip
 
-func TestPushResources_CopyMode(t *testing.T) {
+// setupSyncDirs 创建 (globalDir, targetDir) 测试目录。
+func setupSyncDirs(t *testing.T) (globalDir, targetDir string) {
+	t.Helper()
 	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	// installer.Install 要求目标目录在 .minecraft 内（安全校验）
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
+	globalDir = filepath.Join(base, "global")
+	targetDir = filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	for _, d := range []string{globalDir, targetDir} {
+		if err := os.MkdirAll(d, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return
+}
+
+func TestPushResources_CopyMode(t *testing.T) {
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
+	if err := os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("data"), perm); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("data"), 0644)
 
 	var logs []string
 	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
 		func(name, src, dst string, size int64, status, msg string) { logs = append(logs, name) })
-	if err != nil {
-		t.Fatalf("Push 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应推送 1 个，实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(targetDir, "pack.zip")); err != nil {
-		t.Fatalf("目标文件应存在: %v", err)
-	}
-	if len(logs) != 0 {
-		t.Fatalf("成功路径不应有失败日志: %v", logs)
-	}
+	testutil.NoError(t, err, "Push 失败")
+	testutil.Equal(t, count, 1, "应推送 1 个")
+	testutil.FileExists(t, filepath.Join(targetDir, "pack.zip"))
+	testutil.Equal(t, len(logs), 0, "成功路径不应有失败日志")
 }
 
 func TestPushResources_Empty(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 
 	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("空推送不应报错: %v", err)
-	}
-	if count != 0 {
-		t.Fatalf("空仓库应推送 0 个，实际 %d", count)
-	}
+	testutil.NoError(t, err, "空推送不应报错")
+	testutil.Equal(t, count, 0, "空仓库应推送 0 个")
 }
 
 func TestPullResources(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
+	if err := os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("data"), perm); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	_ = os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("data"), 0644)
 
 	count, err := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("Pull 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应拉取 1 个，实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(globalDir, "extra.zip")); err != nil {
-		t.Fatalf("全局文件应存在: %v", err)
-	}
+	testutil.NoError(t, err, "Pull 失败")
+	testutil.Equal(t, count, 1, "应拉取 1 个")
+	testutil.FileExists(t, filepath.Join(globalDir, "extra.zip"))
 }
 
 func TestPullSingleResource_File(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	src := filepath.Join(targetDir, "extra.zip")
-	_ = os.WriteFile(src, []byte("x"), 0644)
-	if err := PullSingleResource(globalDir, targetDir, src); err != nil {
-		t.Fatalf("PullSingle 失败: %v", err)
+	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(globalDir, "extra.zip")); err != nil {
-		t.Fatalf("全局文件应存在: %v", err)
-	}
+	testutil.NoError(t, PullSingleResource(globalDir, targetDir, src), "PullSingle 失败")
+	testutil.FileExists(t, filepath.Join(globalDir, "extra.zip"))
 }
 
 func TestPullSingleResource_Dir(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	srcDir := filepath.Join(targetDir, "pack")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	_ = os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("x"), 0644)
-	if err := PullSingleResource(globalDir, targetDir, srcDir); err != nil {
-		t.Fatalf("文件夹拉取失败: %v", err)
+	if err := os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(globalDir, "pack", "a.txt")); err != nil {
-		t.Fatalf("全局文件夹应存在: %v", err)
-	}
+	testutil.NoError(t, PullSingleResource(globalDir, targetDir, srcDir), "文件夹拉取失败")
+	testutil.FileExists(t, filepath.Join(globalDir, "pack", "a.txt"))
 }
 
 func TestPushSingleResource_File(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	src := filepath.Join(globalDir, "pack.zip")
-	_ = os.WriteFile(src, []byte("x"), 0644)
-	if err := PushSingleResource(src, customDir, globalDir, "copy", "resourcepack"); err != nil {
-		t.Fatalf("PushSingle 失败: %v", err)
+	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(customDir, "pack.zip")); err != nil {
-		t.Fatalf("目标文件应存在: %v", err)
-	}
+	testutil.NoError(t, PushSingleResource(src, targetDir, globalDir, "copy", "resourcepack"), "PushSingle 失败")
+	testutil.FileExists(t, filepath.Join(targetDir, "pack.zip"))
 }
 
 func TestSyncCustomToRepo(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	customDir := filepath.Join(base, "custom")
 	repoDir := filepath.Join(base, "repo")
@@ -153,11 +115,15 @@ func TestSyncCustomToRepo(t *testing.T) {
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	// 新文件：应复制
-	_ = os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), 0644)
-	// 同名文件（同哈希）：应跳过
-	_ = os.WriteFile(filepath.Join(customDir, "dup.ysm"), []byte("x"), 0644)
-	_ = os.WriteFile(filepath.Join(repoDir, "dup.ysm"), []byte("x"), 0644)
+	if err := os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(customDir, "dup.ysm"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoDir, "dup.ysm"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	scanFn := func(dir string) []types.ModelEntry {
 		files, _ := os.ReadDir(dir)
@@ -176,23 +142,15 @@ func TestSyncCustomToRepo(t *testing.T) {
 	}
 	count, err := SyncCustomToRepo(customDir, repoDir, scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("SyncCustomToRepo 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应复制 1 个（new.ysm），实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(repoDir, "new.ysm")); err != nil {
-		t.Fatalf("new.ysm 应复制到仓库: %v", err)
-	}
-	// dup.ysm 保留仓库原文件（跳过）
+	testutil.NoError(t, err, "SyncCustomToRepo 失败")
+	testutil.Equal(t, count, 1, "应复制 1 个（new.ysm）")
+	testutil.FileExists(t, filepath.Join(repoDir, "new.ysm"))
 	data, _ := os.ReadFile(filepath.Join(repoDir, "dup.ysm"))
-	if string(data) != "x" {
-		t.Fatalf("dup.ysm 不应被覆盖: %q", string(data))
-	}
+	testutil.Equal(t, string(data), "x", "dup.ysm 不应被覆盖")
 }
 
 func TestSyncCustomToRepo_Empty(t *testing.T) {
+	t.Parallel()
 	if _, err := SyncCustomToRepo("", "repo", nil, nil); err == nil {
 		t.Fatal("空参数应报错")
 	}
@@ -201,139 +159,98 @@ func TestSyncCustomToRepo_Empty(t *testing.T) {
 // ===== PushResources 文件夹级分支（YSM/MMD 类型走 SyncResourcesDirLevel）=====
 
 func TestPushResources_FolderLevelYSM(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
-	// 文件夹级：global 下有一个含 ysm.json 的文件夹，target 没有 → 应推送
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(globalDir, "modelpack"), 0755)
-	_ = os.WriteFile(filepath.Join(globalDir, "modelpack", "ysm.json"), []byte("{}"), 0644)
+	if err := os.WriteFile(filepath.Join(globalDir, "modelpack", "ysm.json"), []byte("{}"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	var logs []string
 	count, err := PushResources("ysm", globalDir, targetDir, "copy",
 		func(name, src, dst string, size int64, status, msg string) { logs = append(logs, name+":"+status) })
-	if err != nil {
-		t.Fatalf("Push 文件夹级失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(targetDir, "modelpack", "ysm.json")); err != nil {
-		t.Fatalf("目标文件夹应存在: %v", err)
-	}
+	testutil.NoError(t, err, "Push 文件夹级失败")
+	testutil.Equal(t, count, 1, "应推送 1 个文件夹")
+	testutil.FileExists(t, filepath.Join(targetDir, "modelpack", "ysm.json"))
 }
 
 func TestPushResources_FolderLevelMMD(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(globalDir, "mmdmodel"), 0755)
-	_ = os.WriteFile(filepath.Join(globalDir, "mmdmodel", "char.pmx"), []byte("pmx"), 0644)
+	if err := os.WriteFile(filepath.Join(globalDir, "mmdmodel", "char.pmx"), []byte("pmx"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy",
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("Push MMD 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应推送 1 个 MMD 文件夹，实际 %d", count)
-	}
+	testutil.NoError(t, err, "Push MMD 失败")
+	testutil.Equal(t, count, 1, "应推送 1 个 MMD 文件夹")
 }
 
 func TestPushResources_AllSyncedNoOp(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
-	// 两边都有同名同内容文件 → Synced → 无推送
-	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("x"), 0644)
-	_ = os.WriteFile(filepath.Join(targetDir, "pack.zip"), []byte("x"), 0644)
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
+	if err := os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "pack.zip"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("全同步不应报错: %v", err)
-	}
-	if count != 0 {
-		t.Fatalf("全同步应推送 0 个，实际 %d", count)
-	}
+	testutil.NoError(t, err, "全同步不应报错")
+	testutil.Equal(t, count, 0, "全同步应推送 0 个")
 }
 
 // ===== PullResources 文件夹级分支（YSM/MMD）=====
 
 func TestPullResources_FolderLevelDir(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
-	// 目标实例有文件夹级 extra（含 .ysm）→ 拉取整个文件夹
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(targetDir, "extra-pack"), 0755)
-	_ = os.WriteFile(filepath.Join(targetDir, "extra-pack", "m.ysm"), []byte("e"), 0644)
-	// 还有平铺文件 extra
-	_ = os.WriteFile(filepath.Join(targetDir, "flat.ysm"), []byte("f"), 0644)
+	if err := os.WriteFile(filepath.Join(targetDir, "extra-pack", "m.ysm"), []byte("e"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "flat.ysm"), []byte("f"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	count, err := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("Pull 文件夹级失败: %v", err)
-	}
-	if count != 2 {
-		t.Fatalf("应拉取 2 个（文件夹+平铺），实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(globalDir, "extra-pack", "m.ysm")); err != nil {
-		t.Fatalf("文件夹应已拉取到 global: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(globalDir, "flat.ysm")); err != nil {
-		t.Fatalf("平铺文件应已拉取到 global: %v", err)
-	}
+	testutil.NoError(t, err, "Pull 文件夹级失败")
+	testutil.Equal(t, count, 2, "应拉取 2 个（文件夹+平铺）")
+	testutil.FileExists(t, filepath.Join(globalDir, "extra-pack", "m.ysm"))
+	testutil.FileExists(t, filepath.Join(globalDir, "flat.ysm"))
 }
 
 func TestPullResources_NoExtra(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
-	// 两边相同 → 无 extra → 0
-	_ = os.WriteFile(filepath.Join(globalDir, "same.zip"), []byte("x"), 0644)
-	_ = os.WriteFile(filepath.Join(targetDir, "same.zip"), []byte("x"), 0644)
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
+	if err := os.WriteFile(filepath.Join(globalDir, "same.zip"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "same.zip"), []byte("x"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	count, err := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("无 extra 不应报错: %v", err)
-	}
-	if count != 0 {
-		t.Fatalf("应拉取 0 个，实际 %d", count)
-	}
+	testutil.NoError(t, err, "无 extra 不应报错")
+	testutil.Equal(t, count, 0, "应拉取 0 个")
 }
 
 func TestPullResources_MMDFolderLevel(t *testing.T) {
-	base := t.TempDir()
-	globalDir := filepath.Join(base, "global")
-	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
-	_ = os.MkdirAll(globalDir, 0755)
-	_ = os.MkdirAll(targetDir, 0755)
-
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(targetDir, "mmd-pack"), 0755)
-	_ = os.WriteFile(filepath.Join(targetDir, "mmd-pack", "m.pmx"), []byte("m"), 0644)
+	if err := os.WriteFile(filepath.Join(targetDir, "mmd-pack", "m.pmx"), []byte("m"), perm); err != nil {
+		t.Fatal(err)
+	}
 
 	count, err := PullResources("EntityPlayer", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("Pull MMD 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应拉取 1 个 MMD 文件夹，实际 %d", count)
-	}
+	testutil.NoError(t, err, "Pull MMD 失败")
+	testutil.Equal(t, count, 1, "应拉取 1 个 MMD 文件夹")
 }

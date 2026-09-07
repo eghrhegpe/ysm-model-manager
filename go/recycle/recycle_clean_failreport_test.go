@@ -4,29 +4,80 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
-// TestRemoveRepoDuplicates_NilLoggerBackwardCompat logger 允许 nil（向后兼容），
-// 正常清理路径不 panic 且计数正确。
-func TestRemoveRepoDuplicates_NilLoggerBackwardCompat(t *testing.T) {
+const perm = 0o644
+
+// setupRecycleDirs 创建 (recycleRoot, dir, filesRoot) 三件套，dir 放在 recycleRoot 解析树内。
+// 用于验证「移入回收站」分支的确定性触发。
+func setupRecycleDirs(t *testing.T) (recycleRoot, dir, filesRoot string) {
+	t.Helper()
 	base := t.TempDir()
-	dir := filepath.Join(base, "inst")
-	filesRoot := filepath.Join(base, "repo")
-	for _, root := range []string{dir, filesRoot} {
+	recycleRoot = filepath.Join(base, "recycle")
+	dir = filepath.Join(recycleRoot, "inst") // base/recycle/inst ⊂ base/recycle
+	filesRoot = filepath.Join(base, "repo")
+	for _, root := range []string{recycleRoot, dir, filesRoot} {
 		if err := os.MkdirAll(root, 0755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(dir, "a.bin"), []byte("c"), 0644); err != nil {
+	return
+}
+
+// putDup 在 dir/subdir/name.bin 和 filesRoot/name.bin 各放一个相同内容的副本。
+func putDup(t *testing.T, dir, filesRoot, subdir, name, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(dir, subdir), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(filesRoot, "a.bin"), []byte("c"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, subdir, name+".bin"), []byte(content), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filesRoot, name+".bin"), []byte(content), perm); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// blockRecycleLanding 在 recycleRoot/.recycle/<subdir> 处放一个同名普通文件，
+// 使 os.MkdirAll(落点目录) 因路径组件已被文件占用而必然返回 "not a directory"。
+func blockRecycleLanding(t *testing.T, recycleRoot, subdir string) {
+	t.Helper()
+	blockParent := filepath.Join(recycleRoot, ".recycle", subdir)
+	if err := os.MkdirAll(blockParent, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(blockParent, "a"), []byte("block"), perm); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// collectFailures 返回一个 logger 回调，收集 status=="failed" 的条目。
+func collectFailures(t *testing.T) (logger func(name, src, dst string, size int64, status, msg string), failures *[]string) {
+	t.Helper()
+	var f []string
+	logger = func(name, src, dst string, size int64, status, msg string) {
+		if status == "failed" {
+			f = append(f, src+": "+msg)
+		}
+	}
+	return logger, &f
+}
+
+// TestRemoveRepoDuplicates_NilLoggerBackwardCompat logger 允许 nil（向后兼容），
+// 正常清理路径不 panic 且计数正确。
+func TestRemoveRepoDuplicates_NilLoggerBackwardCompat(t *testing.T) {
+	t.Parallel()
+	_, dir, filesRoot := setupRecycleDirs(t)
+	if err := os.WriteFile(filepath.Join(dir, "a.bin"), []byte("c"), perm); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filesRoot, "a.bin"), []byte("c"), perm); err != nil {
 		t.Fatal(err)
 	}
 	removed := RemoveRepoDuplicates(dir, filesRoot, "", nil)
-	if removed != 1 {
-		t.Fatalf("expected 1 removed, got %d", removed)
-	}
+	testutil.Equal(t, removed, 1)
 }
 
 // TestRemoveRepoDuplicates_FailureReported 验证清理失败可见性契约：
@@ -42,58 +93,20 @@ func TestRemoveRepoDuplicates_NilLoggerBackwardCompat(t *testing.T) {
 // Windows 各环境不一致（本地绿 / CI 红）；本版零锁、跨平台、结果确定，且真正覆盖
 // 注释所述「移入回收站」路径，对齐 DeduplicateEntries 口径。
 func TestRemoveRepoDuplicates_FailureReported(t *testing.T) {
-	base := t.TempDir()
-	// recycleRoot 必须是真实目录；dir 放进其解析树内 → 走 Move 分支而非 os.Remove 分支
-	recycleRoot := filepath.Join(base, "recycle")
-	dir := filepath.Join(recycleRoot, "inst") // base/recycle/inst ⊂ base/recycle
-	filesRoot := filepath.Join(base, "repo")
-	for _, root := range []string{recycleRoot, dir, filesRoot} {
-		if err := os.MkdirAll(root, 0755); err != nil {
-			t.Fatal(err)
-		}
-	}
+	t.Parallel()
+	recycleRoot, dir, filesRoot := setupRecycleDirs(t)
 	content := []byte("same-content")
 	// 在 inst/ 下分两个子目录放 a.bin / b.bin，使二者回收站落点目录不同，
 	// 从而可选择性地只阻塞 a.bin 的落点（b.bin 仍正常清理），验证「失败上报 + 成功计数」双路径。
-	for _, name := range []string{"a", "b"} {
-		if err := os.MkdirAll(filepath.Join(dir, name), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, name, name+".bin"), content, 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(filesRoot, name+".bin"), content, 0644); err != nil {
-			t.Fatal(err)
-		}
-	}
-
+	putDup(t, dir, filesRoot, "a", "a", string(content))
+	putDup(t, dir, filesRoot, "b", "b", string(content))
 	// 阻塞 a.bin 的回收站落点目录：base/recycle/.recycle/inst/a
-	// 先建父目录，再在其中写一个同名普通文件，使后续 os.MkdirAll(.../inst/a) 必败。
-	// a.bin 的 dst = base/recycle/.recycle/inst/a/a.bin → Dir(dst) = .../inst/a（已被文件占用）。
-	// b.bin 的 dst = base/recycle/.recycle/inst/b/b.bin → Dir(dst) = .../inst/b（未被占用）。
-	blockParent := filepath.Join(recycleRoot, ".recycle", "inst")
-	if err := os.MkdirAll(blockParent, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(blockParent, "a"), []byte("block"), 0644); err != nil {
-		t.Fatal(err)
-	}
+	blockRecycleLanding(t, recycleRoot, "inst")
 
-	var failures []string
-	logger := func(name, src, dst string, size int64, status, msg string) {
-		if status == "failed" {
-			failures = append(failures, src+": "+msg)
-		}
-	}
-
+	logger, failures := collectFailures(t)
 	removed := RemoveRepoDuplicates(dir, filesRoot, recycleRoot, logger)
-	if removed != 1 {
-		t.Fatalf("仅未阻塞的 b.bin 应清理成功, got %d", removed)
-	}
-	if len(failures) != 1 {
-		t.Fatalf("a.bin 的 Move 失败应上报 1 条 failed 回调, got %d 条: %v", len(failures), failures)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "a", "a.bin")); err != nil {
-		t.Fatalf("失败的文件应保持原位: %v", err)
-	}
+
+	testutil.Equal(t, removed, 1, "仅未阻塞的 b.bin 应清理成功")
+	testutil.Equal(t, len(*failures), 1, "a.bin 的 Move 失败应上报 1 条 failed 回调")
+	testutil.FileExists(t, filepath.Join(dir, "a", "a.bin"), "失败的文件应保持原位")
 }

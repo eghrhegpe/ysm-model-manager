@@ -2,15 +2,19 @@ package download
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestFileDownload(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello world"))
 	}))
@@ -23,20 +27,14 @@ func TestFileDownload(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL, savePath, func(downloaded, total int64) {
 		progressDownloaded = downloaded
 	})
-	if err != nil {
-		t.Fatalf("File() error: %v", err)
-	}
-
+	testutil.NoError(t, err, "File()")
 	data, _ := os.ReadFile(savePath)
-	if string(data) != "hello world" {
-		t.Fatalf("got %q, want %q", string(data), "hello world")
-	}
-	if progressDownloaded != 11 {
-		t.Fatalf("progress %d, want 11", progressDownloaded)
-	}
+	testutil.Equal(t, string(data), "hello world")
+	testutil.Equal(t, progressDownloaded, int64(11))
 }
 
 func TestFileDownloadHTTPError(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -44,12 +42,14 @@ func TestFileDownloadHTTPError(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "x.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for 404")
+	var httpErr *HTTPStatusError
+	if !errors.As(err, &httpErr) || httpErr.Code != http.StatusNotFound {
+		t.Fatalf("404 应返回可分类的 HTTPStatusError{Code:404}, got %v", err)
 	}
 }
 
 func TestFileDownloadEmptyBody(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -57,17 +57,13 @@ func TestFileDownloadEmptyBody(t *testing.T) {
 
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "empty.txt")
-	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err != nil {
-		t.Fatalf("File() error: %v", err)
-	}
+	testutil.NoError(t, dl.File(context.Background(), ts.URL, savePath, nil))
 	data, _ := os.ReadFile(savePath)
-	if len(data) != 0 {
-		t.Fatalf("expected empty file, got %d bytes", len(data))
-	}
+	testutil.Equal(t, len(data), 0, "expected empty file")
 }
 
 func TestFileDownloadProgressOnlyAtEnd(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("short"))
 	}))
@@ -78,17 +74,14 @@ func TestFileDownloadProgressOnlyAtEnd(t *testing.T) {
 	dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "p.txt"), func(downloaded, total int64) {
 		calls = append(calls, downloaded)
 	})
-
-	// small files may only trigger one progress call at the end
 	if len(calls) == 0 {
 		t.Fatal("expected at least 1 progress call")
 	}
-	if calls[len(calls)-1] != 5 {
-		t.Fatalf("final progress %d, want 5", calls[len(calls)-1])
-	}
+	testutil.Equal(t, calls[len(calls)-1], int64(5))
 }
 
 func TestGitHubAPIDownload(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Accept") != "application/vnd.github.v3.raw" {
 			t.Errorf("expected GitHub Accept header")
@@ -99,13 +92,11 @@ func TestGitHubAPIDownload(t *testing.T) {
 
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "api.txt")
-	err := dl.FromGitHubAPI(context.Background(), ts.URL, savePath, nil)
-	if err != nil {
-		t.Fatalf("FromGitHubAPI() error: %v", err)
-	}
+	testutil.NoError(t, dl.FromGitHubAPI(context.Background(), ts.URL, savePath, nil))
 }
 
 func TestResolveSavePath(t *testing.T) {
+	t.Parallel()
 	savePath, jsd, api := ResolveSavePath(
 		"https://raw.githubusercontent.com/user/repo/main/models/a.ysm",
 		"/tmp/out",
@@ -113,31 +104,24 @@ func TestResolveSavePath(t *testing.T) {
 	if savePath == "" || jsd == "" || api == "" {
 		t.Fatal("expected non-empty paths")
 	}
-	if jsd != "https://cdn.jsdelivr.net/gh/user/repo@main/models/a.ysm" {
-		t.Fatalf("unexpected jsd: %s", jsd)
-	}
-	if api != "https://api.github.com/repos/user/repo/contents/models/a.ysm" {
-		t.Fatalf("unexpected api: %s", api)
-	}
+	testutil.Equal(t, jsd, "https://cdn.jsdelivr.net/gh/user/repo@main/models/a.ysm")
+	testutil.Equal(t, api, "https://api.github.com/repos/user/repo/contents/models/a.ysm")
 }
 
 func TestResolveSavePathTraversal(t *testing.T) {
-	// 路径遍历 payload 应被拒绝，返回空值
-	// 使用 raw.githubusercontent.com 格式以进入分支路径解析逻辑
-	cases := []string{
+	t.Parallel()
+	urls := []string{
 		"https://raw.githubusercontent.com/user/repo/main/../../etc/passwd",
 		"https://raw.githubusercontent.com/user/repo/master/a/b/../../c/../../../../../etc/passwd",
 	}
-	for _, url := range cases {
+	for _, url := range urls {
 		savePath, _, _ := ResolveSavePath(url, "/tmp/out")
-		if savePath != "" {
-			t.Fatalf("expected empty savePath for traversal URL %q, got %q", url, savePath)
-		}
+		testutil.Equal(t, savePath, "", "expected empty savePath for traversal URL")
 	}
 }
 
 func TestResolveSavePathValidNested(t *testing.T) {
-	// 正常嵌套路径应正常工作
+	t.Parallel()
 	savePath, _, _ := ResolveSavePath(
 		"https://raw.githubusercontent.com/user/repo/main/models/sub/a.ysm",
 		"/tmp/out",
@@ -148,8 +132,6 @@ func TestResolveSavePathValidNested(t *testing.T) {
 }
 
 func TestDownloadCtxCancel(t *testing.T) {
-	// ctx 取消应在下载循环中被主动检测，返回 Canceled
-	// 持续发送数据并在每次写入后延迟，确保 cancel 在两次 Read 间命中
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < 1000; i++ {
 			w.Write(make([]byte, 4096))

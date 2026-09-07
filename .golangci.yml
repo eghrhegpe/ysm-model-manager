@@ -39,6 +39,19 @@ linters:
       - upstream
       - build
       - node_modules
+    rules:
+      # 测试文件豁免 errcheck（2026-09-08 实测：增量 23 条中 20 条在 _test.go，
+      # errcheck 13 条里 12 条是 `defer resp.Body.Close()` / `w.Write(...)` 一类测试辅助调用——
+      # 测试进程一退资源全释放，未检查错误无实际风险，却让每写一行测试都挨一刀。
+      # 噪音/信号比 87% → lint 只剩「全员 --no-verify」一个结局，与 ADR-205 原意相悖。
+      - linters: [errcheck]
+        path: _test\.go
+      # 测试函数豁免 gocyclo：剩余 2 条均为集成测试（复杂度 22 / 32），分支来自
+      # 一长串 `if err != nil { t.Fatalf }` 断言序列，而非业务逻辑复杂度——
+      # gocyclo 的治理价值在生产代码，对测试按生产标准卡只会逼人拆散用例、丢可读性。
+      # 生产代码 gocyclo 照常生效（门槛 20）。
+      - linters: [gocyclo]
+        path: _test\.go
 
 issues:
   # 不设上限：门禁只跑 --new-from-rev 增量，输出规模天然可控；

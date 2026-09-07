@@ -71,8 +71,13 @@ for (let i = 0; i < lines.length; i++) {
 
 // 验证每个 IIFE 起始行之后都有一个 )() 调用行（main().then 不算 Promise.all IIFE）
 for (const startLine of iifeLines) {
-  // main().then(async ...) 不需要 )() 调用（它是 promise chain，不是 IIFE）
-  if (gateSrc.split('\n')[startLine - 1]?.includes('main().then')) {
+  // main().then(async ...) 不需要 )() 调用（它是 promise chain，不是 IIFE）。
+  // 注意：本仓写法是 `main()` 换行后 `.then(async (code) => {`，起始行只含 `.then(async`，
+  // 单行 includes('main().then') 永远为假 → 误判「漏调用括号」（2026-09-08 实证红灯）。
+  // 取「上一行 + 当前行」合并判断，容忍跨行书写。
+  const curLine = gateSrc.split('\n')[startLine - 1] ?? '';
+  const prevLine = gateSrc.split('\n')[startLine - 2] ?? '';
+  if (/main\(\)\s*\.then\(async/.test(prevLine + curLine)) {
     continue;
   }
   // 找最近的 )() 行，且行号 > startLine
@@ -87,7 +92,8 @@ for (const startLine of iifeLines) {
 }
 
 // ---- 4. 专项验证：main().then(async ...) 必须有调用 ----
-const mainThenMatch = gateSrc.match(/main\(\)\.then\(async/);
+// 同上：`main()` 与 `.then(async` 允许跨行（\s* 覆盖换行）
+const mainThenMatch = gateSrc.match(/main\(\)\s*\.then\(async/);
 check(!!mainThenMatch, 'main().then(async ...) 必须存在（门禁入口）');
 
 // ---- 5. 验证 Go 域和前端域 IIFE 都存在 ----

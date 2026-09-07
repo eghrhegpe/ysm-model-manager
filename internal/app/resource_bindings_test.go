@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ysm-model-manager/go/dedup"
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/repoaudit"
 	"ysm-model-manager/go/types"
@@ -41,9 +40,11 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("根内路径不应报错: %v", err)
 	}
-	if groups == nil {
-		groups = []dedup.Group{}
-	}
+	// 本用例只校验「根内路径不被守卫拒绝」（err 语义），不校验分组内容。
+	// 原写 `groups = []dedup.Group{}` 是无效赋值（ineffassign：赋完即弃），且上方注释误判
+	// 「无重复」——实测本 fixture 的 a.ysm/b.ysm 内容相同，实际返回 1 组，断言 len==0 会红。
+	// 显式丢弃（_ =）既消除 ineffassign，又不绑死实现返回 nil 还是空切片。
+	_ = groups
 
 	// 根外路径应被守卫拒绝
 	outside := filepath.Join(base, "..", "outside")

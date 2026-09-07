@@ -204,6 +204,8 @@ func TestNewDownloadQueue(t *testing.T) {
 
 // TestNewDownloadQueue_NilParent 测试 nil parent context
 func TestNewDownloadQueue_NilParent(t *testing.T) {
+	// 本用例正是验证「nil parent → 回退 context.Background()」，nil 是被测输入，不可替换。
+	//nolint:staticcheck // SA1012：刻意传 nil 以覆盖 queue.go 的 nil 兜底分支
 	q := NewDownloadQueue(nil, nil, nil, nil)
 	if q == nil {
 		t.Fatal("NewDownloadQueue(nil parent) 应返回非 nil（回退 Background）")

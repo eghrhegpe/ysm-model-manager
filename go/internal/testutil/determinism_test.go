@@ -39,7 +39,7 @@ func TestSortedKeys_Deterministic(t *testing.T) {
 
 func TestWithFixedClock_ReturnsFixed(t *testing.T) {
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	var clock = func() time.Time { return time.Now() }
+	var clock = time.Now // gocritic unlambda：直接引用，等价少一层闭包
 	WithFixedClock(t, &clock, now)
 	if got := clock(); !got.Equal(now) {
 		t.Fatalf("冻结后 clock() = %v, want %v", got, now)
@@ -49,7 +49,7 @@ func TestWithFixedClock_ReturnsFixed(t *testing.T) {
 func TestWithFixedClock_RestoresAfterCleanup(t *testing.T) {
 	// t.Cleanup 在子测试结束后执行：内层冻结 → 外层验证已恢复。
 	fixed := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
-	var clock = func() time.Time { return time.Now() }
+	var clock = time.Now // gocritic unlambda：直接引用，等价少一层闭包
 	t.Run("inner", func(t *testing.T) {
 		WithFixedClock(t, &clock, fixed)
 		if got := clock(); !got.Equal(fixed) {

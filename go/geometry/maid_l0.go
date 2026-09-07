@@ -185,7 +185,8 @@ func collectPngEntries(entries []container.Entry, maidNs string) ([][]byte, []st
 	var totalBytes int64
 	for _, e := range entries {
 		low := strings.ToLower(e.Name())
-		if !((strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !e.IsDir() && !strings.Contains(low, "avatar/") && !strings.Contains(low, "gui/")) {
+		// QF1001 德摩根：!(A && !B && !C && !D) → !A || B || C || D（语义等价，短路更早）
+		if (!strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg")) || e.IsDir() || strings.Contains(low, "avatar/") || strings.Contains(low, "gui/") {
 			continue
 		}
 		// maid-model 命名空间过滤：只收集首个 namespace 的纹理

@@ -53,6 +53,23 @@ golangci-lint 结构上接不住。
 - **真空面补齐**：`go vet` 结构上覆盖不到的未检查错误返回（errcheck）等高价值缺陷。
 - **增量门禁**：只检本次推送新增代码，存量债务不惩罚。
 
+## 测试文件豁免策略（2026-09-08 实测校准）
+
+首次接入时增量 23 条中 **20 条在 `_test.go`**（噪音/信号比 87%）。按「只补真空面、不制造噪音」
+原则，对测试文件定向豁免两类 linter：**生产代码一律照常生效**。
+
+| linter | 对 `*_test.go` | 理由 |
+|--------|----------------|------|
+| `errcheck` | **豁免** | 13 条中 12 条是 `defer resp.Body.Close()` / `w.Write(...)` 测试辅助调用；进程一退资源全释放，风险≈0 |
+| `gocyclo` | **豁免** | 集成测试函数复杂度 22 / 32，分支来自 `if err != nil { t.Fatalf }` 断言序列，非业务逻辑复杂度 |
+| `gocritic` / `staticcheck` / `ineffassign` / `unused` | 生效 | SA1012（传 nil Context）等仍拦，测试代码质量不放松 |
+
+豁免后增量 23 → 11 → 修完生产 3 条 + 测试机械项后 **0 条**。
+
+> 反面案例（勿重蹈）：`TestNewDownloadQueue_NilParent` 的 nil 是**被测输入**（验证 nil parent 回退
+> Background），差点被 SA1012 的「换个 TODO()」机械修复掉语义——此处必须 `//nolint:staticcheck`。
+> 同理 `TestFindDuplicateFiles_Guard` 的注释误判「无重复」，实测返回 1 组；改断言前先跑实测。
+
 ## 接线位置
 
 | 位置 | 说明 |

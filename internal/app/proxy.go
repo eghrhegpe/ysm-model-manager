@@ -197,9 +197,8 @@ func isWebSocketUpgrade(r *http.Request) bool {
 var ssrfDial = atomic.Value{}
 
 func init() {
-	ssrfDial.Store(func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return ssrfGuardDial(ctx, network, addr)
-	})
+	// gocritic unlambda：直接存函数引用，等价且少一层无谓闭包
+	ssrfDial.Store(ssrfGuardDial)
 }
 
 // getSSRFDial 获取当前 ssrfDial 函数（atomic.Value 保护）

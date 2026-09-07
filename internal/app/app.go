@@ -227,7 +227,10 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 				if !seen[rel] {
 					seen[rel] = true
 					// 权限统一走 fsutil.DirPerms（原裸 0755 漏收口，防漂移）
-					os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), fsutil.DirPerms)
+					// errcheck：建目录失败须留痕——静默忽略会让后续写入抛出误导性错误（查不到真因）
+					if err := os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), fsutil.DirPerms); err != nil {
+						log.Printf("[startup] 存储子目录创建失败 %s: %v", rel, err)
+					}
 				}
 			}
 		}

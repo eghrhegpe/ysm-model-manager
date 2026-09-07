@@ -35,18 +35,18 @@ status: active
 
 ## 核心职责
 
-构建「表面材质」菜单组的控件项（source select、底/副/线 3 color、grid-size、density、angle、2 buttons、opacity、scale、rotation、roughness、metalness），返回 `MenuControlDef[]` 供 `getMenuControls()` 聚合（控件清单以源码为准，总数不硬编码）。
+构建「表面材质」菜单组的控件项（source select、底/副/线 3 color、grid-size、density、angle、2 buttons、opacity、scale、rotation、roughness、metalness），返回 `PreviewControlDef[]` 供 `getMenuNodes()` 聚合（控件清单以源码为准，总数不硬编码）。
 
 ## 对外 API / 入口
 
-- `buildGroundMaterialGroup(cap: GroundCapability): MenuControlDef[]` — 包级函数，仅 `getMenuControls()` 调用。
+- `buildGroundMaterialGroup(cap: GroundCapability): PreviewControlDef[]` — 包级函数，仅 `getMenuNodes()` 桥接消费。
 - 辅助工厂（包级、material group 专用）：`groundSliderDef` / `groundColorDef` / `groundButtonDef`。
 - 水面菜单（原 `buildWaterGroup` 的 12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
 
 ## 与其他子系统关系
 
 - 上游：`GroundCapability.getMenuControls()` 聚合 `buildGroundMain`/`buildGroundMaterialGroup` 两组控件（水面已拆为独立 WaterCapability，其 `buildWaterGroup` 在 `water-capability.ts` 内）。
-- 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
+- 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费控件定义渲染声明式菜单。
 - 横向：`buildGroundMain`（`ground-capability.ts|buildGroundMain`，短函数）与 `buildGroundMaterialGroup`（超 100 行红线：material group 工厂化降行后，2026-08-28 拓展控件回升）——组长尾不再均达标。
 
 ## 不变量
@@ -64,7 +64,7 @@ status: active
 ## 建议动作（续）
 
 1. 水面控件（12 项）已迁至 `water-capability.ts` 的 `buildWaterGroup`，其工厂化演进在该卡维护。
-2. 增加 pool 模式下 4 个专属控件的条件隐藏：当前全部常显，菜单偏长——可考虑 MenuControlDef 加 `enabled?:()=>boolean` 再做（ADR-109 次优先级）。
+2. 增加 pool 模式下 4 个专属控件的条件隐藏：当前全部常显，菜单偏长——可考虑控件定义加 `enabled?:()=>boolean` 再做（ADR-109 次优先级）。
 
 ## 相关
 

@@ -52,15 +52,14 @@ YSM cap 是**实例方法自报控件**（`cap.setCloudCoverage(v)` 等闭包）
    - **与刀 0 的关系**：刀 0 是「渲染归属复位」的方向决策（谁该拥有渲染实现），刀 2.5 是其**延后执行的落地动作**——因刀 1/刀 2 期间桥接层需要稳定中间态，反向投影暂留作过渡；刀 2 收尾后必须在刀 3 前清偿，不得遗留。
 5. **刀 3：收口删除**：最后一个 cap 迁完时，删 `MenuControlDef`/`MenuControlKind`/cap-controls.ts 整组渲染与 cc-* 视觉层、`controls` 节点 kind、settings 的 `collectSettingsCapControls` 特判。
 
-   > **2026-09-07 开工蓝图（把 ADR 万能句落到文件级拆除清单）**：
-   > `MenuControlDef` 生产代码 85 处、散布 11+ 文件——分四类拆除：
-   >
-   > - **A. 渲染层（cap-controls.ts + render.ts）**：`renderCap*`（button/timeline/histogram/preset-thumb/image）消费 `MenuControlDef` 字段（getValue/thumb/dataURL/action/variant）。→ 迁移到直接吃 `PreviewControlSpec`/`CapControlView`（刀 2.5 的 `capControlToView` 已统一视图输入），删 `capControlToView` 转换后 cap-controls 整组退役。
-   > - **B. 桥接曾用（cap-to-node.ts）**：`capControlToNode`/`capControlsToNodes` 构造 `kind:"controls"` 节点内嵌 `MenuControlDef`。→ 复杂控件落点改为节点原生字段表达（或 custom 逃生舱），删该桥。
-   > - **C. cap 残留 `getMenuControls`**：仅剩 render-mode + postprocessing 2 cap 仍走旧路径（其余 8 已直产 `getMenuNodes`）。→ 迁这两 cap 的复杂控件到节点/custom，随后 `SceneCapability.getMenuControls` 接口退役。
-   > - **D. 类型与 kind**：`PreviewMenuNode.controls` 字段 + `MenuControlDef`/`MenuControlKind` 定义 + `PreviewMenuNodeKind."controls"` kind + settings 的 `collectSettingsCapControls` 特判。→ 全删。
-   >
-   > 移除后：`SceneCapability.getMenuNodes(): PreviewMenuNode[]` 独占，控件渲染进 renderMenu 单链，MenuControlDef 类型名消失。判据 = `grep MenuControlDef` 全仓零命中。
+   > **2026-09-07 实施结果（刀3 走法乙，已落地）**：
+   > 原蓝图按「custom 逃生舱迁复杂控件 + 删桥」规划四类拆除；实际落地**改走法乙（更名收敛）**——保留 controls 通道与 cap 栈渲染器，仅把类型名从 `MenuControlDef`/`MenuControlKind` 更名收敛为 `PreviewControlDef`/`PreviewControlKind`（字段原样），渲染形态零变、不碰 render-custom 审计门。落地后：
+   > - **类型**：旧类型名全仓归零（仅历史叙事保留旧名）；`PreviewMenuNode.controls` 改持 `PreviewControlDef[]`。
+   > - **构造点**（sky/ground/environment 复杂控件 + settings `buildCrossCuttingControls` + cap-to-node 桥）全改吃 `PreviewControlDef`。
+   > - **渲染层** cap-controls.ts 复杂渲染器（button/timeline/histogram/preset-thumb/image）+ `capControlToView`/`collectVisiblePredicates`/`renderCapControls` 全改 `PreviewControlDef`。
+   > - **`SceneCapability.getMenuControls` 接口**退役（10 cap 已全 `getMenuNodes`）。
+   > - 判据：`grep MenuControlDef` 全仓零命中（代码）；contrast 测试 1894 全绿 + typecheck + biome 全过。
+   > 未做：custom 逃生舱迁移（因走法乙保留 controls 通道，无需触动量仓）；cap-controls 整组退役（简单控件渲染器本就是 render 主链活依赖，保留）。
 
 ### 关键映射（刀 0/1 固化，刀 2 按此迁移；2026-09-06 全仓实证）
 

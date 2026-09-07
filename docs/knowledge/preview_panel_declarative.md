@@ -94,7 +94,7 @@ status: active
 
 ## 概览
 
-ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 `children: PreviewMenuNode[]`，渲染走 `renderMenu`（preview-menu/render.ts），消灭「面板内容手写 DOM 闭包」的第二渲染通道。
+ADR-125 把**设置面板**的控件统一到 `PreviewControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 `children: PreviewMenuNode[]`，渲染走 `renderMenu`（preview-menu/render.ts），消灭「面板内容手写 DOM 闭包」的第二渲染通道。
 
 **P4-B 分三小步**（ADR-126 §2.1 拆解）：P4-B-1 验证通道（MMD 信息卡 + 截图按钮组）→ P4-B-2 YSM 截图声明式化（`fill3DPanel` 统计/纹理/模型选择器**保留逃生舱**——含多组件切换动态视图状态，非静态内容）→ P4-B-3 morph/play 交互面板。`fillRoles` **不在范围**（实测已声明式：sceneRegistry + menuItems 过滤 + SlideMenuView 驱动）。
 
@@ -173,7 +173,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 
 ## 与其他子系统关系
 
-- **ADR-125**：设置面板走 `MenuControlDef[]`（B 层），本卡的面板内容走 `PreviewMenuNode[]`（A 层 children）——两条声明式通道各自独立，不混用。
+- **ADR-125**：设置面板走 `PreviewControlDef[]`（B 层），本卡的面板内容走 `PreviewMenuNode[]`（A 层 children）——两条声明式通道各自独立，不混用。
 - **renderMenu**（preview-menu/render.ts）：children 内容的渲染器，支持 field/button/row/folder/divider/sectionTitle + 逃生舱。
 - **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板 `children: o.panels?.modelInfoNodes?.(...)`，shot 面板条件注入 `children: o.panels?.shotNodes?.(...)`。（`fillMmdModelPanel` / `fillMmdShotPanel` 命令式旧轨已于 2026-09-03 随 G3 收口删除——生产装配零调用点，nodes 为唯一通道）
 - **注入通道回归（R1 分层）**：节点工厂（`mmdModelInfoNodes` / `mmdShotNodes` / `ysmShotNodes`）定义在 views，adapter 经 `MmdPanelHooks` / `YsmMenuItemsOpts.panels` 的可选字段（`modelInfoNodes` / `shotNodes`）由视图层注入（mmd-3d / scene-3d / ysm-3d / maid-3d）——**adapter 不得直接 import views 层工厂**（check-layering R1 零容忍，曾因直接 import 阻断推送，见 `44b4e1b2`）。注入缺失 → children 空、面板不渲染（测试桩同步补注入）。

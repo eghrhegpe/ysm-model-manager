@@ -102,7 +102,7 @@ resetSettingsListeners()                  // 测试隔离
 toStatePath(path)                         // 恒等函数（编译期守卫 PreviewStatePath 定义域）
 ```
 
-> 谓词签名已放宽为 `(s: Partial<PreviewSnapshot>) => boolean`（node 级 visibleWhen / cap 级 MenuControlDef.visibleWhen / SchemaBuilder）：**键存在性仍编译期守卫**（写 `s["ui.activePanel"]` 报 TS7053——[2026-09-03 S1] `ui.mode` 已落地为合法键，dock 级谓词可读），但调用方可传部分快照（代表性快照天然是部分状态）。菜单图 `RepresentativeSnapshot.snapshot` 同步为 `Partial<PreviewSnapshot>`。
+> 谓词签名已放宽为 `(s: Partial<PreviewSnapshot>) => boolean`（node 级 visibleWhen / cap 级 PreviewControlDef.visibleWhen / SchemaBuilder）：**键存在性仍编译期守卫**（写 `s["ui.activePanel"]` 报 TS7053——[2026-09-03 S1] `ui.mode` 已落地为合法键，dock 级谓词可读），但调用方可传部分快照（代表性快照天然是部分状态）。菜单图 `RepresentativeSnapshot.snapshot` 同步为 `Partial<PreviewSnapshot>`。
 
 ## 与其他子系统关系
 

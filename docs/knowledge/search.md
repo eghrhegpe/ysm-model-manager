@@ -96,7 +96,7 @@ status: active
   │
   └─ 高级筛选：openAdvFilterDialog($) 编排入口
        │
-       ├─ 8 段 advFilter* 私有子函数线性流水线
+       ├─ 12 段 advFilter* 私有子函数线性流水线（advFilterReadCurAndOpenDialog → BackfillInlinePanel → FetchTagPaths → SearchModelPaths → IntersectPaths → ToastAndRender 等）
        ├─ 组装三路参数
        │   ├─ 关键词 + 6 数值范围 → getApp().SearchModels()
        │   ├─ 标签列表 → getApp().ListByTag()
@@ -111,7 +111,7 @@ status: active
 
 - **三路交集语义**：`SearchModels`（关键词 + 6 数值范围一次性过滤）+ `ListByTag`（标签路径集）+ 客户端 `Set` 交集 → `_filterPaths` 白名单 → `buildTree` 精确匹配
 - **两路搜索**：inline `#srch` debounce 150ms 仅做前端 `_search` 文本匹配（轻量路径）；高级筛选走 Go 后端 + 白名单（全量路径），两者叠加生效
-- **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），8 段 `advFilter*` 私有子函数串成线性流水线
+- **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），12 段 `advFilter*` 私有子函数串成线性流水线
 
 ## 错误 / 降级分支（三路）
 

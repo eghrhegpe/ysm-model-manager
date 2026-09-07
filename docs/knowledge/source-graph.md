@@ -118,12 +118,12 @@ invariant_anchors:
 
 | 脚本 | 用途 | 调用的出口 | 状态 |
 |------|------|-----------|------|
-| `api-break.mjs` | 破坏性变更检测 | `getExportedSymbolsAny` / `topDeclsAny` / `searchName` / `countLines` | ✅ 一线，pre-push --check |
-| `audit-split.mjs` | refactor 提交主动审计 | `getExportedSymbolsAny` / `topDeclsAny` / `countLines` | ✅ 一线，manual + doctor |
-| `rollback-impact.mjs` | revert 影响面分析 | `getExportedSymbolsAny` / `topDeclsAny` / `searchName` | ✅ 一线，manual |
-| `bloat-history.mjs` | 单文件膨胀轨迹 | `getExportedSymbolsAny` / `topDeclsAny` / `countLines` | ✅ 一线，manual |
-| `gen-knowledge-symbols.mjs` | 知识卡 symbols 字段同步 | `getExportedSymbolsAny` + `EXCLUDE_DIRS` | ✅ 一线，pre-commit GEN_CMDS |
-| `check-lib-adoption.mjs` | _lib 采用率检查 | 只在 RULES 表里列 `advice` 字符串 | ⚠️ 并行会话未提交 |
+| `api-break.ts` | 破坏性变更检测 | `getExportedSymbolsAny` / `topDeclsAny` / `searchName` / `countLines` | ✅ 一线，pre-push --check |
+| `audit-split.ts` | refactor 提交主动审计 | `getExportedSymbolsAny` / `topDeclsAny` / `countLines` | ✅ 一线，manual + doctor |
+| `rollback-impact.ts` | revert 影响面分析 | `getExportedSymbolsAny` / `topDeclsAny` / `searchName` | ✅ 一线，manual |
+| `bloat-history.ts` | 单文件膨胀轨迹 | `getExportedSymbolsAny` / `topDeclsAny` / `countLines` | ✅ 一线，manual（已归档 `scripts/_attic/`） |
+| `gen-knowledge-symbols.ts` | 知识卡 symbols 字段同步 | `getExportedSymbolsAny` + `EXCLUDE_DIRS` | ✅ 一线，pre-commit GEN_CMDS |
+| `check-lib-adoption.ts` | _lib 采用率检查 | 只在 RULES 表里列 `advice` 字符串 | ⚠️ 并行会话未提交 |
 
 **杠杆率**：审 source-graph.ts 1 行 ≈ 审这 6 个调用方各 1 行的正确性。2026-09 孤儿审计②判定"同模板复制铁证"的类比在这里也成立——**审共享层比审调用方更高效**。
 
@@ -131,9 +131,9 @@ invariant_anchors:
 
 - `scripts/_lib/scan-files.ts` 的 `walk`：source-graph 借用它做源码文件收集（`.ts/.tsx/.js/.jsx` 扩展名），但符号提取本身不依赖 walk。
 - `scripts/_lib/to-posix.ts`：Windows 路径归一（`C:\foo` → `C:/foo`），symbol 提取结果里路径统一正斜杠。
-- `scripts/check-lib-adoption.ts`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.mjs 的 RULES 表）。
+- `scripts/check-lib-adoption.ts`：采用率闸门——检测「手搓了某模块能覆盖的能力却未 import」。source-graph 的 `getExportedSymbolsAny` / `topDeclsAny` 在其 RULES 表里已有 `advice` 条目（见 check-lib-adoption.ts 的 RULES 表）。
 - `docs/adr/ADR-141-large-script-split-baseline.md`：2026-08-31 审计实证 source-graph 与 auto-import.extractExports 在 re-export 处理上存在 15 文件差异，结论「不复用」——这是**差异化设计不是复制**（source-graph 把转发符号也算本文件导出，auto-import 故意排除转发名）。
-- `tests/test_scripts_lib.mjs`：契约测试，当前覆盖 scan-files / ripgrep / to-posix / parseRgLine，**尚未覆盖 source-graph**——这是待补缺口。
+- `tests/test_scripts_lib.ts`：契约测试，当前覆盖 scan-files / ripgrep / to-posix / parseRgLine，**尚未覆盖 source-graph**——这是待补缺口。
 
 ## 不变量
 
@@ -158,6 +158,6 @@ invariant_anchors:
 - `scripts/api-break.ts`（破坏性变更检测，主力调用方）
 - `scripts/audit-split.ts`（refactor 提交审计，主力调用方）
 - `scripts/rollback-impact.ts`（revert 影响面分析，主力调用方）
-- `scripts/bloat-history.ts`（单文件膨胀轨迹，主力调用方）
+- `scripts/_attic/bloat-history.ts`（单文件膨胀轨迹，主力调用方，已归档）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（2026-08-31 审计基线，含 source-graph 复用实证）
 - `docs/knowledge/script_shared_cores.md`（共享核登记卡）

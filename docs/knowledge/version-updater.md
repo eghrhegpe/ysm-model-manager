@@ -11,9 +11,9 @@ auto_fields:
     - initVersionUpdater
     - UpdateInfo
   tests:
-    - frontend/src/features/version-updater.test.ts
+    - frontend/src/features/maintenance/version-updater.test.ts
 tests:
-  - frontend/src/features/version-updater.test.ts
+  - frontend/src/features/maintenance/version-updater.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -52,7 +52,7 @@ status: active
 
 - 频次限制：`CHECK_KEY = "ysm_lastUpdateCheck"` + `CHECK_INTERVAL = 6h`，`canCheck()`/`markChecked()` 基于 localStorage 实现
 - `checkUpdateSilent()`：静默检查，先过 `canCheck()` 闸门；**`markChecked()` 在 `CheckUpdate()` 成功返回之后才写**（网络/API 失败不计入频次，下次启动仍会重试）；`info.available` 时发 `TOAST_MS.persist`（10000ms）可点击 toast（`click` 回调打开 `promptUpdate`）；下载中（静默路径 `statusEl` 为 null）发 `TOAST_MS.sticky`（60000ms）toast 覆盖整个下载窗口（P3 由 10s 拉到 60s），与 `modalProgress` 进度弹窗并存；任何异常静默吞掉不阻塞启动
-- `promptUpdate(info, statusEl)`：复用 `modalConfirm`（dialogs/modal.ts）而非手工构建遮罩，传 `title/icon/message/okText/width:"480px"` 与 `bodyHTML`；`bodyHTML` 内联样式用 CSS 变量适配主题，展示版本号与更新日志（`slice(0, 2000).trim()`，经 `textContent → innerHTML` 转义后 `white-space:pre-wrap` 保留换行；trim 后为空则不渲染日志块）
+- `promptUpdate(info, statusEl)`：复用 `modalConfirm`（features/dialogs/modal-confirm.ts）而非手工构建遮罩，传 `title/icon/message/okText/width:"480px"` 与 `bodyHTML`；`bodyHTML` 内联样式用 CSS 变量适配主题，展示版本号与更新日志（`slice(0, 2000).trim()`，经 `textContent → innerHTML` 转义后 `white-space:pre-wrap` 保留换行；trim 后为空则不渲染日志块）
 - `doUpdate(info, statusEl)`：置 statusEl 文案「⬇️ 下载+安装中...」→ 打开只读进度弹窗 `modalProgress`（**`closable:false`**——下载中禁止 Esc/点遮罩关闭，防误关丢进度，P3 修复）+ 瞬态注册 `update:progress` 事件（Go 侧 `DoUpdate` 经 `Emit("update:progress", done, total)` 推送，payload 经 Array.isArray + 数值守卫降级 0）驱动弹窗进度；同时 **`Window.SetTitle` 同步窗口标题**（已知长度显示「⬇️ N%」，分块传输显示「⬇️ X MB」，标题栏永远可见作全局兜底），`finally` 注销监听 + 关闭弹窗 + 恢复原标题；`await DoUpdate(url, expectedHash)` 成功时 resolve、失败时 reject（不再返回错误字符串，`421ae7b5` 收敛）；其后的 `RestartApplication()` 实际不可达（Go 侧 `InstallUpdate` 替换完成即 `os.Exit(0)`，由 `ysm-updater-helper.exe` 替换 exe 并拉起新进程），保留作防御
 - `initVersionUpdater(root)`：绑定设置页 `#set-check-update` 按钮，检查中置文案与 `disabled`，`finally` 恢复「🔄 检查更新」与可用态（致命陷阱 #3 的解法）；`!info.available` 时提示「✅ 已是最新版本」并 return
 - 错误文案统一经 `friendlyError`（utils/dom/errors.ts）转换后再进 toast
@@ -62,7 +62,7 @@ status: active
 - 导出：`checkUpdateSilent(): Promise<void>`、`initVersionUpdater(root: Document | ShadowRoot): void`、`interface UpdateInfo`（available/latest/current/url/expectedHash/releaseNotes）
 - 派发 bus：`toast:show`（静默通知带 `click` 回调；失败/已是最新用对应 type）
 - Wails binding（经 `getApp()`，frontend/src/backend/app.ts 统一入口）：`CheckUpdate`、`DoUpdate`、`RestartApplication`
-- 依赖：`modalConfirm`/`modalProgress`/`fmtMB`（features/dialogs/modal.ts；fmtMB 实现已下沉 utils/format/fmt-mb.ts，经 modal.ts re-export）、`esc`（utils/dom/html.ts）、`Events`/`Window`（@wailsio/runtime——update:progress 瞬态监听 + SetTitle 标题进度）、`friendlyError`（utils/dom/errors.ts）、`bus`
+- 依赖：`modalConfirm`/`modalProgress`（features/dialogs/modal-confirm.ts / modal-progress.ts；`fmtMB` 从 modal 家族 re-export 已移除，直连 `utils/format/fmt-mb.ts`）、`esc`（utils/dom/html.ts）、`Events`/`Window`（@wailsio/runtime——update:progress 瞬态监听 + SetTitle 标题进度）、`friendlyError`（utils/dom/errors.ts）、`bus`
 - 调用方：`frontend/src/app-modules.ts` 启动序列（`checkUpdateSilent().catch(console.warn)`，fire-and-forget 不阻塞界面）；`frontend/src/views/app-content/settings/init.ts`（`initVersionUpdater(root)`）
 
 ## 与其他子系统关系
@@ -70,7 +70,7 @@ status: active
 - 后端更新流水线见 [go_updater](./go-updater.md)（版本比对/下载/hash 校验/替换）
 - 启动挂载点见 [app_modules](./app-modules.md)（`registerErrorDiary` → `initTheme` → `applyUIPrefs` 之后 fire-and-forget 静默检查，不阻塞界面）
 - toast 通知（含 `click` 回调支持）由 [app_toast](./app-toast.md) 渲染；确认弹窗直接复用 [dialog_modal](./dialog-modal.md) 的 `modalConfirm`（含其 Esc / 点遮罩关闭行为），本文件不再自建 `dlg-overlay`
-- 转义复用 `dialogs/modal.ts` 导出的 `esc`；错误文案复用 `utils/dom/errors.ts` 的 `friendlyError`
+- 转义用 `utils/dom/html.ts` 的 `esc`；错误文案复用 `utils/dom/errors.ts` 的 `friendlyError`
 
 ## 不变量
 

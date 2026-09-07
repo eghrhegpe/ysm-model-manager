@@ -5,16 +5,18 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/maintenance/oldest-models.ts
+  - frontend/src/views/app-content/tpl-oldest.ts
 auto_fields:
   symbols_with_lines:
     - loadOldestModel
     - ModelEntry
     - OldestDeps
+    - renderOldestPage
     - RepoStats
   tests:
-    - frontend/src/features/oldest-models.test.ts
+    - frontend/src/features/maintenance/oldest-models.test.ts
 tests:
-  - frontend/src/features/oldest-models.test.ts
+  - frontend/src/features/maintenance/oldest-models.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
@@ -53,17 +55,17 @@ status: active
 - 数据获取：`GetRepoRoot(currentType)` 取当前类型仓库根（未配置显示提示），`ScanModelEntries(repoRoot)` 取条目列表（`{ Name, Size, Path, Ext, Hash, ModTime }`）
 - 仓库评分：初始 100 分，`.ban` 占比罚最多 40 分、重复（按 `Hash` 分组）每个多余副本罚 5 分封顶 55 分；≥80 健康（绿）/≥50 亚健康（黄）/其余需要整理（红），conic-gradient 圆环展示
 - 资历最深：过滤有 `ModTime` 的条目升序取前 4，展示大小/日期/入库天数
-- 月度活动：`buildMonthHeatmap` 统计近 12 个月文件数，归一化柱高与分段配色
-- 每日推荐：Fisher-Yates 洗牌取前 3 渲染卡片
-- 交互：卡片事件委托（命名函数 `handleContainerClick`，重绑前先 remove），点击 `bus.emit("model:select", { path })`；监听 `repo:rtype-changed` 切换类型后重渲染
+- 月度活动：`buildMonthHeatmap` 统计近 12 个月文件数（**DOM 模板与热力图已按 ADR-190 D1a 回迁 `views/app-content/tpl-oldest.ts`**，数据获取/评分分档留守本文件，经 `deps.renderPage` 注入模板），归一化柱高与分段配色
+- 每日推荐：Fisher-Yates 洗牌取前 3 渲染卡片（卡片模板亦在 tpl-oldest.ts）
+- 交互：卡片事件委托（命名函数 `handleContainerClick`，重绑前先 remove），点击 `bus.emit("model:select", { path })`；经 `useCurrentResourceType` 订阅类型切换（`repo:rtype-changed` 事件由 repo-rtype.ts 统一消费）后重渲染
 
 ## 对外 API / 入口
 
 - 导出：`loadOldestModel(container: HTMLElement, esc: (s: string) => string): Promise<() => void>`
-- 监听 bus：`repo:rtype-changed`
+- 监听 bus：`repo:rtype-changed`（经 `useCurrentResourceType` 订阅，见 features/repo/repo-rtype.ts）
 - 派发 bus：`model:select`
 - getApp() 调用：`ScanModelEntries`、`GetRepoRoot`
-- 依赖：`renderDisplayName`（utils/display.ts）、`loadResourceRegistry`（utils/resource-registry.ts，取类型图标）
+- 依赖：`renderDisplayName`（utils/dom/display.ts）、`parseHealthReport`（utils/health-report.ts）、`loadResourceRegistry`（services/resource-registry.ts，取类型图标）、`useCurrentResourceType`（features/repo/repo-rtype.ts，替代直接监听 rtype 事件）、DOM 模板 `tpl-oldest.ts`（views/app-content/）
 
 ## 与其他子系统关系
 
@@ -74,7 +76,7 @@ status: active
 
 ## 不变量
 
-- 清理函数必须同时 `removeEventListener("click", handleContainerClick)` 与退订 `repo:rtype-changed`，二者缺一即泄漏
+- 清理函数必须同时 `removeEventListener("click", handleContainerClick)` 与调 `useCurrentResourceType` 返回的 `cleanup()`，二者缺一即泄漏
 - 重绑点击监听前先移除旧监听（命名函数引用），防止 render 多次执行导致重复绑定
 - 所有动态文本过 `esc` 转义、显示名过 `renderDisplayName`；`container` 为空直接返回空清理函数
 - 扫描失败/仓库为空/未配置目录均有对应空态文案，不渲染半成品

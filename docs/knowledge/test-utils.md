@@ -124,7 +124,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- `tests/test_testid_contract.mjs`：关键 testid 契约守护（被删即契约红）
+- `tests/test_testid_contract.ts`：关键 testid 契约守护（被删即契约红）
 - 各组件 `*.test.ts`：统一走本层 helper（app-nav/resource-manager/sync-manager/toast/tree/context-menu）
 - Design.md §19.1：testid 命名规范（`<域>-<角色>` kebab-case 前缀命名空间）
 - E2E（ADR-037）：`frontend/e2e/` 14 spec / 51 用例共享本层 testid 钩子与 mock 契约（覆盖现状见 ADR-037 §2.5）

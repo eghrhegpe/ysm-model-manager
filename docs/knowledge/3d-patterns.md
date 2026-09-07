@@ -57,7 +57,6 @@ auto_fields:
     - UpdateableScene
     - withPreviewExtras
   tests:
-    - frontend/src/preview-3d/adapters/mount-preview-core.behavior.test.ts
     - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
     - frontend/src/preview-3d/cleanup-helper.test.ts
     - frontend/src/preview-3d/debug-render.test.ts

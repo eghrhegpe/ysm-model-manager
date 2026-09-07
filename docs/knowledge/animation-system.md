@@ -95,7 +95,7 @@ status: active
 - 关键帧插值求值（线性/step）与骨骼层级变换传播（父级变换累积到子级）
 - UI 数字滚动动画与列表 stagger 入场延迟计算
 - **Molang 表达式编译**（ADR-100 L4）：内嵌 molangjs 源码，把 `.animation.json` 里的 Molang 字符串编译为 `(animTime) => number` 求值闭包；安全口径：DSL 解析器非 eval；性能口径：LRU 缓存 400 条，加载期编译 AST / 运行期纯求值
-- **`foldMolangConstant` 常量折叠已有 bench 实证**（`frontend/src/utils/animation/bench-fold-molang.ts`，2026-09-01）：molangjs parse 本身仅 ~600ns，折叠正则 ~580ns，**收益 ≈ 0**——该优化目前"不亏不赚"，保留原因只剩「跳过闭包创建」，不值得为它扩展正则覆盖面；若未来重构解析链可整体移除，由 compileMolang 统一承接
+- **`foldMolangConstant` 常量折叠已有 bench 实证**（`frontend/scripts/bench-fold-molang.ts`，2026-09-01）：molangjs parse 本身仅 ~600ns，折叠正则 ~580ns，**收益 ≈ 0**——该优化目前"不亏不赚"，保留原因只剩「跳过闭包创建」，不值得为它扩展正则覆盖面；若未来重构解析链可整体移除，由 compileMolang 统一承接
 
 ## 对外 API / 入口
 
@@ -137,7 +137,7 @@ status: active
 
 ## 上游留档：YSMParser 动画模型 ID 映射（v0.3.6）
 
-`GetAnimationModelName(modelId, isNewVersion)`（`upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp:136`，调用点 :2222/:2329/:2655）把动画文件内部的 modelId 翻译成模型名：
+`GetAnimationModelName(modelId, isNewVersion)`（`upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp|GetAnimationModelName`）把动画文件内部的 modelId 翻译成模型名：
 
 | ID | 新版本（v3+） | 旧版本 |
 |----|--------------|--------|
@@ -204,7 +204,7 @@ status: active
 |------|------|------|
 | 关键帧插值 | ✅ 已落地 | `evaluateKeyframes` + `evaluateClip` 逐通道局部插值（父子复合由场景图层承担，51a7c5e1 起 evaluateClip 不做父子传播） |
 | molang builtin math | ✅ 已落地 | `molang-lib/math.js`（Sin/Cos/Atan2/Lerp/MinAngle… 整套直译） |
-| molang 求值器 | ✅ 已落地 | `molang.ts` `compileMolang` 返回 `(animTime) => number` 闭包，被 `animation.ts:115,140` 调用 |
+| molang 求值器 | ✅ 已落地 | `molang.ts` `compileMolang` 返回 `(animTime) => number` 闭包，被 `animation.ts|parseKeyValue` / `animation.ts|extractKeyframe` 等解析函数调用 |
 | transition（跨 clip） | ✅ 已落地 | `selectClip` 从当前姿态采集 rest + alpha 归零，commit 163a6f09 |
 | blend（多源混合） | ❌ 未接 | `grep blend` 整个 `frontend/src/utils/animation/` 零命中 |
 | 状态机 | ✅ 已落地 | `animation-controller.ts` 解析 `.animation_controllers.json` + `AnimationControllerRuntime` 状态机（transitions/on_exit/unconditional/编译失败守护），`animation-controller.test.ts` 14 用例 |

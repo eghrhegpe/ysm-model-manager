@@ -65,13 +65,13 @@ status: active
 - 导出：`showRenameDialog(filePath: string | null, currentName: string): Promise<string | null>`
 - 监听/派发 bus：无
 - getApp() 调用：`ExtractYSMHeader`
-- 依赖：`parseModelName`（utils/display.ts）、`closeDlg`/`registerDlg`/`esc`（dialogs/modal.ts）
+- 依赖：`parseModelName`（utils/dom/display.ts）、`closeDlg`/`registerDlg`（features/dialogs/modal-core.ts）、`esc`（utils/dom/html.ts）
 - 调用方：app-tree 右键重命名、[import_queue](./import-queue.md)（导入命名确认与已导入项改名后调 `RenameFile`）
 
 ## 与其他子系统关系
 
 - 弹窗生命周期原语与样式复用 [dialog_modal](./dialog-modal.md)
-- 命名解析/拼接与 `parseModelName`/`renderDisplayName` 同一套口径（utils/display.ts）
+- 命名解析/拼接与 `parseModelName`/`renderDisplayName` 同一套口径（utils/dom/display.ts）
 - 头部元数据解析后端见 [go_ysm_parser](./go-ysm-parser.md)
 - 实际重命名 binding `RenameFile` 见 [wails_bindings](./wails-bindings.md)
 

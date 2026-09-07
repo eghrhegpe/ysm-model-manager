@@ -50,8 +50,8 @@ invariant_anchors:
 
 | 共享核 | 消费方 | 消除的重复 |
 |--------|--------|-----------|
-| `diff-coverage-core.ts` | `check-diff-coverage.mjs` / `check-go-diff-coverage.mjs` | git 变更收集 + rename 处理 + 建议区块（~250 行） |
-| `cycles.ts` | `check-circular.mjs` / `check-circular-go.mjs` | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
+| `diff-coverage-core.ts` | `check-diff-coverage.ts` / `check-go-diff-coverage.ts` | git 变更收集 + rename 处理 + 建议区块（~250 行） |
+| `cycles.ts` | `check-circular.ts` / `check-circular-go.ts` | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
 
 演进方向与 `scan-files.ts` 注释「删除各脚本内联 walk/resolveImport 样板」一致：**语言无关的纯函数抽核，语言专属策略留在入口**。
 
@@ -63,15 +63,15 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - 入口脚本 re-export 共享函数，**契约测试 import 路径不变**：
-  - `tests/test_check_diff_coverage.mjs` / `tests/test_check_go_diff_coverage.mjs` 从入口脚本 import（`addLinesFromDiff` / `parseRenameStatus` / `statementPctForChangedLines` / `buildSuggestBlock` 等），签名与抽核前一致。
-  - `tests/test_scripts_json.mjs` 锁定 `check-circular.mjs --json` JSON 形状。
+  - `tests/test_check_diff_coverage.ts` / `tests/test_check_go_diff_coverage.ts` 从入口脚本 import（`addLinesFromDiff` / `parseRenameStatus` / `statementPctForChangedLines` / `buildSuggestBlock` 等），签名与抽核前一致。
+  - `tests/test_scripts_json.ts` 锁定 `check-circular.ts --json` JSON 形状。
 - CLI 契约不变：`--suggest --staged` / `--files --json` / 退出码 0/1/2 语义原样保留。
 
 ## 与其他子系统关系
 
 - 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.ts`（run）。
-- `check-circular-go.mjs` 的目录遍历（`collectGo` 自定义 walk go/+internal/+根级不递归）不抽核——目录结构特殊，非共享样板。
-- `port-align.mjs` / `line-counter.mjs` 仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
+- `check-circular-go.ts` 的目录遍历（`collectGo` 自定义 walk go/+internal/+根级不递归）不抽核——目录结构特殊，非共享样板。
+- `port-align.ts` / `line-counter.ts`（已归档 `scripts/_attic/`）仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
 
 ## 不变量
 

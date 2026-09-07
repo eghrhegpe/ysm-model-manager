@@ -9,6 +9,8 @@ source_files:
   - frontend/src/features/dnd/shared.ts
   - frontend/src/features/dnd/collector.ts
   - frontend/src/features/dnd/pack-dnd.ts
+  - frontend/src/utils/resource/importable.ts
+  - frontend/src/utils/dom/editable-target.ts
 auto_fields:
   symbols_with_lines:
     - bindPackCardDnD
@@ -21,21 +23,25 @@ auto_fields:
     - executeCollected
     - fileToBase64
     - FolderGroup
+    - getExt
     - groupCollected
     - handleInstanceDrop
     - handleTreeDrop
     - ImportFile
     - importFolder
     - importWebFilesWithToast
+    - isEditableTarget
+    - isImportableFile
+    - isSupportedFile
     - PackDndBusy
     - PackDndInstance
     - shouldEnterForm
   tests:
-    - frontend/src/features/import-executor.test.ts
-    - frontend/src/features/import-dnd.test.ts
-    - frontend/src/features/dnd-shared.test.ts
-    - frontend/src/features/dnd-collector.test.ts
-    - frontend/src/features/pack-dnd.test.ts
+    - frontend/src/features/import/executor.test.ts
+    - frontend/src/features/dnd/import-dnd.test.ts
+    - frontend/src/features/dnd/shared.test.ts
+    - frontend/src/features/dnd/collector.test.ts
+    - frontend/src/features/dnd/pack-dnd.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:
@@ -59,7 +65,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/features/dnd/shared.ts|isImportableFile
+  - frontend/src/utils/resource/importable.ts|isImportableFile
   - frontend/src/features/import/executor.ts|executeCollected
 status: active
 ---
@@ -92,14 +98,14 @@ status: active
 
 ### dnd-shared.ts（共享判定）
 
-- `isSupportedFile(name)`：扩展名是否在 `ALL_EXTS` 支持列表
-- `isImportableFile(name)`：`.json` 仅放行 `ysm.json` 入口清单（包内 `main.json`/`*.animation.json`/`zh_cn.json` 等不得单独导入），与 `go/scanner/scanner.go` 白名单对齐
+- `isSupportedFile(name)`（**utils/resource/importable.ts**）：扩展名是否在 `ALL_EXTS` 支持列表
+- `isImportableFile(name)`（**utils/resource/importable.ts**）：`.json` 仅放行 `ysm.json` 入口清单（包内 `main.json`/`*.animation.json`/`zh_cn.json` 等不得单独导入），与 `go/scanner/scanner.go` 白名单对齐
 - `shouldEnterForm(name)`：**仅 `ysm.json` 返回 true**（当前仅用于表单分流，整组导入不进表单）
 - `fileToBase64(file)`（10s 超时 base64 读取）：import-executor / pack-dnd 复用
 - `buildFolderItems(files, folderName, subpath)`：文件夹导入项构建（base64 批转）
 - `groupCollected(collected)`：按顶层目录分组，组内至少 1 个支持文件才整组导入，否则整组丢弃
 - `collectDropFiles(e)`（2026-08-29）：drop 事件收集口径单点——`dataTransfer.files` 优先（WebView2 可靠）+ `webkitGetAsEntry` 补充目录条目，按 `name:size:lastModified` 去重合并；`handleTreeDrop` / `handleInstanceDrop` 共用（原 import-dnd 内联块收敛）
-- `isEditableTarget(el)`：drop 目标是否可编辑元素（输入框内 drop 不触发导入），两 handler 共用
+- `isEditableTarget(el)`（**utils/dom/editable-target.ts**，非本文件导出）：drop 目标是否可编辑元素（输入框内 drop 不触发导入），import-dnd / pack-dnd / input-and-animation 三处共用
 - 类型：`CollectedEntry`、`FolderGroup`
 
 ### pack-dnd.ts（整合包卡片拖拽导入，2026-08-29）
@@ -112,14 +118,14 @@ status: active
 
 - `collectFiles(items, isEntryArray, basePath, depth)`：递归收集 `DataTransferItem[]` 或 `FileSystemEntry[]`
 - `getFileFromEntry(entry)`：`FileSystemFileEntry.file()` Promise 化 + 5s 超时兜底
-- `readEntries` 3s 超时防 WebView2 卡死，`MAX_DEPTH=10` 防递归过深
+- `readAllDirEntries`（`readEntries` 3s 超时防 WebView2 卡死，`MAX_DEPTH=10` 防递归过深）——Web 标准 API 单次最多返回 100 条，循环读取直到空数组
 - 错误静默跳过（warn 日志），不拖垮整批
 
 ## 对外 API / 入口
 
 - import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`
 - import-dnd 导出：`handleTreeDrop`、`bindTreeDnD`
-- dnd-shared 导出：`isSupportedFile`、`isImportableFile`、`shouldEnterForm`、`getExt`、`groupCollected`、`collectDropFiles`、`isEditableTarget`、`fileToBase64`、`buildFolderItems`、类型 `CollectedEntry`/`FolderGroup`
+- dnd-shared 导出：`shouldEnterForm`、`groupCollected`、`collectDropFiles`、`fileToBase64`、`buildFolderItems`、类型 `CollectedEntry`/`FolderGroup`；`isSupportedFile`/`isImportableFile`/`getExt` 在 `utils/resource/importable.ts`、`isEditableTarget` 在 `utils/dom/editable-target.ts`
 - dnd-collector 导出：`collectFiles`、类型 `CollectedFile`
 - pack-dnd 导出：`handleInstanceDrop`、`bindPackCardDnD`、类型 `PackDndBusy`/`PackDndInstance`
 - 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`

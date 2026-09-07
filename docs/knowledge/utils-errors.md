@@ -96,4 +96,4 @@ status: active
 
 - [app_toast](./app-toast.md) — toast 呈现
 - [event_bus](./event-bus.md) — toast:show 事件通道
-- `frontend/src/utils/dom/errors.test.js` — 单元测试（验证入口）
+- `frontend/src/utils/dom/errors.test.ts` — 单元测试（验证入口）

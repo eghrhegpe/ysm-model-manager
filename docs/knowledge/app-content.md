@@ -148,7 +148,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 > - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
 > - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
 
-- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）
+- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册五组全局 handler（`registerPageStore` / `registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `core/page-store.ts` / `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
 - `content-css.ts` — 样式组合层：6 个域 CSS 文件 join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
@@ -165,7 +165,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 自定义元素：`<app-content>`
 - 监听 bus：`nav:changed`（切页整块重渲染；`index.ts` 注释明示「不再每次 nav:changed 清扫描缓存」——30s 缓存由导入/同步/下载等实际数据变更处失效，见 `go-scanner.md`/`go-watcher.md`）、`repo:switch-tab`、`repo:search-creator`（写入 `setPendingTreeSearch` 后切仓库页）、`package:selected`（instances 页注入 `<app-sync-manager>`）、`repo:rtype-changed`、`avatar:refresh`
 - 派发 bus：`nav:changed`、`repo:rtype-changed`、`toast:show`
-- 全局 handler 注册：`connectedCallback` 末尾调用 `registerGlobalHandlers()`（`core/handlers/global.ts`，汇聚 PageStore / 右键菜单 / 同步 / 实例操作 / Android 事件 handler，返回 unsub 数组收进 `_globalUnsubs`）；另单独调用 `registerResourceManagerGlobal(this._globalUnsubs)`；仓库页 DnD 由 `app-tree` 组件内部 `bindTreeDnD` 绑定，不在此注册
+- 全局 handler 注册：`connectedCallback` 末尾经 `globalUnsubs` 数组逐个调用 `registerPageStore` / `registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`（ADR-188 后无 `core/handlers/global.ts` 汇编壳，五组 handler 由本组件直接编排，unsub 全部收进数组）；仓库页 DnD 由 `app-tree` 组件内部 `bindTreeDnD` 绑定，不在此注册
 - Wails 运行时事件：`Events.On("config-loaded")` 触发头像重提取，用模块级 `_avatarConfigLoadedRegistered` / `_avatarConfigLoadedUnsub` 保证只注册一次，`disconnectedCallback` 回收并复位 flag
 - getApp 调用：`LoadGitHubRepos`、`LoadAppConfig`、`GetRepoRoot`、`ScanModelEntries`、`BatchExtractCreatorAvatars`、`OpenInBrowser`、`NavigatePlazaWindow`、`ExportWorkshopSitesJSONFile` / `ImportWorkshopSitesJSONFile`（`ClearScanCache` 已不在本组件切页路径——见监听 bus 说明）
 
@@ -192,7 +192,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 ## 相关
 
-- `frontend/src/core/handlers/global.ts` — 全局 handler 汇聚入口（`registerPageStore` / `registerContextMenus` / `registerSync` / `registerInstanceOps` / `registerAndroidEvents`）；`registerResourceManagerGlobal` 由本文件单独调用
+- 全局 handler 五组直注册（ADR-188 去壳）：`registerPageStore`（`frontend/src/core/page-store.ts`）、`registerSync`（`frontend/src/features/sync.ts`）、`registerContextMenus`（`frontend/src/features/context-menu/context-menus.ts`）、`registerInstanceOps`（`frontend/src/features/pack-ops/instance-ops.ts`）、`registerAndroidEvents`（`frontend/src/features/platform/android-events.ts`）——unsub 收进 `globalUnsubs`
 - `frontend/src/views/app-tree/index.ts` — 仓库页 DnD 组件级绑定（`bindTreeDnD`）与显式 `tree-drop-hint`
 - `frontend/src/core/page-store.ts` — `resolveInitialPage` / `sanitizePage` / `PageStore`，初始页与页面状态的唯一来源
 - `frontend/src/features/community/` — 仓库页数据/渲染/事件/下载队列（`data.ts` / `render.ts` / `events.ts` / `download-queue.ts`，`bindRepoEvents`、`tryFetchModels` 等由 index.ts 调用）

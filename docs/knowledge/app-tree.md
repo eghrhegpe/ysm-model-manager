@@ -151,7 +151,7 @@ status: active
 
 - `app-content/`: 选中节点内容在 content 区域渲染
 - `app-sidebar/`: 侧栏面板状态联动
-- `core/context-menus.ts`: 右键菜单事件路由
+- `features/context-menu/context-menus.ts`: 右键菜单事件路由
 - 通过 bus 发出节点选择事件
 
 ## 不变量
@@ -164,7 +164,7 @@ status: active
 - **事件层 toast/弹窗文案全量 i18n（2026-08-31）**：`events.ts` / `bus-handlers.ts` / `toolbar-events.ts` / `toolbar-search.ts` / `index.ts` / `render.ts` 53 处裸中文收敛到 `tree.*` key（含复用 `ctx.busyWait`/`ctx.renameFail`/`ctx.fileRecycleTitle` 与既有 `tree.recycled`/`tree.dirEmpty`/`tree.noAuthor`/`tree.copied`/`tree.browserFailed`/`tree.inputNewFolder` 等）；新增 key 集中在 zh-CN.ts 的「文件树动作 toast/弹窗」注释段，改动 UI 文案只改三语言包即可
 - **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey；2026-09 补漏 `events.ts` 内联重命名成功链——原漏清导致旧路径滞留显示「已选 N 个文件」并对已不存在路径误删）。全部链路：bus-handlers 三条 + events.ts 内联重命名 + index.ts _deleteSelected
 - **重命名 Escape 取消不得误保存（P1 修复 2026-09）**：`events.ts` rename keydown Escape 分支原直接 `_renderTree()`——聚焦的 `.rename-inp` 被 DOM 移除时 Chromium 同步派发 focusout（冒泡到 container）→ 走保存链，用户按 Esc 想放弃却把改动写盘。修复：Escape 先置 `inp.dataset.cancelRename="1"` + `value=""`（双保险），focusout 分支查标记跳过保存。回归测试在 `events.test.ts`（模拟真实 DOM 重建 + 手动派发 focusout 断言 RenameFile 不被调用）——原测试 mock `_renderTree` 不重建 DOM 故假绿，勿回退到裸 `_renderTree()`
-- **instance-actions 契约口径（2026-08-09 收敛）**：① 同步键口径 = Go `sync_push.go` `SyncCustomToRepo` 的去重规则（Hash 优先 + 原始 Name 兜底、复制保留相对路径）——前端**不**自行按 `.ban` 剥离裸名 Set 计数，`uploaded` 直接信任 Go 返回值（单一事实来源，防「📤 N」撒谎/漏同步）；② `AddImportLog` 调用源已迁移至 `core/handlers/sync.ts`（原 `instance-actions.ts` 模块已删除，知识卡保留此标注供追溯）；sourcePath=源、targetDir=目标，调用方不得装反/漏传
+- **instance-actions 契约口径（2026-08-09 收敛）**：① 同步键口径 = Go `sync_push.go` `SyncCustomToRepo` 的去重规则（Hash 优先 + 原始 Name 兜底、复制保留相对路径）——前端**不**自行按 `.ban` 剥离裸名 Set 计数，`uploaded` 直接信任 Go 返回值（单一事实来源，防「📤 N」撒谎/漏同步）；② `AddImportLog` 调用源在 `features/sync.ts`（`registerSync` 内，原 `instance-actions.ts` 模块已删除，知识卡保留此标注供追溯）；sourcePath=源、targetDir=目标，调用方不得装反/漏传
 
 ## 相关
 

@@ -65,7 +65,7 @@ status: active
 - 导出：`modalAdvFilter(opts?: { value?: Partial<AdvFilterValue> }): Promise<AdvFilterResult>`、`interface AdvFilterValue`、`type AdvFilterResult = AdvFilterValue | { cleared: true } | null`
 - 监听/派发 bus：无
 - getApp() 调用：`AllTags`
-- 依赖：`esc`/`closeDlg`/`registerDlg`（dialogs/modal.ts）
+- 依赖：`esc`（utils/dom/html.ts）/`closeDlg`/`registerDlg`（features/dialogs/modal-core.ts）
 - 调用方：app-tree 高级筛选入口（结果交 `toolbar-search.ts` 的 `runFilter`：调 Go `SearchModels`，命中路径写入 `AppTree._filterPaths` 集合驱动树过滤；无独立 bus 事件——旧文所称 `filter:results` 事件从未存在，已移出契约，见 `Design.md` D6 记录）
 
 ## 与其他子系统关系

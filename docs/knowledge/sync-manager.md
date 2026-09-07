@@ -129,7 +129,7 @@ status: active
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
 
-### `core/handlers/sync.ts`（bus 调度）
+### `features/sync.ts`（bus 调度）
 - **`sync:download:missing`**：`downloadFlag.busy` 守卫 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 遍历 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）
 - **`sync:toggle:status`**：`.ban`/`.disabled` 启禁同步
 
@@ -183,15 +183,15 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | `LoadResourceTypes()` | sync-manager/store.ts | 拉注册表（含 `dirLevelSync` 标记） |
 | `GetInstanceSyncStatus(instance, subtype, rtype)` | sync-manager/store.ts | 拉层级 `SyncItem[]` |
 | `GetSyncScanDirs(rtype, instance)` | sync-manager/store.ts | 摘要栏扫描目录 |
-| `GetRepoRoot(rtype)` | sync-manager/index.ts、handlers/sync.ts | 仓库根路径 |
+| `GetRepoRoot(rtype)` | sync-manager/index.ts、features/sync.ts | 仓库根路径 |
 | `PushSingleResourceToInstance(rtype, instance, path)` | sync-manager/network.ts | 单文件推送 |
 | `PullSingleResourceFromInstance(rtype, path, instance)` | sync-manager/network.ts | 单文件拉取 |
 | `PullResourceFromInstance(rtype, instance)` | sidebar/index.ts | 整包拉取 |
-| `InstallModelTo / InstallResourceToInstance` | handlers/sync.ts | 缺失安装 |
-| `ListVersionInstances / GetResourceInstanceStatus` | handlers/sync.ts、sidebar/loader.ts | 实例列表 + 缺失/多余 |
-| `SyncModelToggleStatus(ins.CustomDir, filesRoot)` | handlers/sync.ts | 启禁同步 |
-| `InvalidateScanCache()` | handlers/sync.ts | 强制刷新 30s 缓存 |
-| `AddImportLog` | handlers/sync.ts | 同步日志 |
+| `InstallModelTo / InstallResourceToInstance` | features/sync.ts | 缺失安装 |
+| `ListVersionInstances / GetResourceInstanceStatus` | features/sync.ts、sidebar/loader.ts | 实例列表 + 缺失/多余 |
+| `SyncModelToggleStatus(ins.CustomDir, filesRoot)` | features/sync.ts | 启禁同步 |
+| `InvalidateScanCache()` | features/sync.ts | 强制刷新 30s 缓存 |
+| `AddImportLog` | features/sync.ts | 同步日志 |
 
 ## 与其他子系统关系
 
@@ -210,7 +210,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
   → runPull → PullResourceFromInstance 后台整包拉取
 ```
 
-**`core/handlers/sync.ts`** 是**整包级**调度，与 `app-sync-manager` 组件的**逐文件级**操作分工明确：
+**`features/sync.ts`** 是**整包级**调度，与 `app-sync-manager` 组件的**逐文件级**操作分工明确：
 - 组件内单行按钮 → `getApp().PushSingleResourceToInstance` / `PullSingleResourceFromInstance`
 - sidebar 底部 push 菜单 → bus `sync:download:missing` → handler `runDownloadMissing` → `InstallModelTo`/`InstallResourceToInstance`
 

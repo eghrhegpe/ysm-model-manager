@@ -8,7 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines: []
 tests:
-  - tests/test_bus_contract.mjs
+  - tests/test_bus_contract.ts
 use_when:
   - 未传参
   - 缺参
@@ -68,7 +68,7 @@ node scripts/event-graph.ts --json          # 机读报告
 
 - 契约事实源 = `frontend/src/bus.ts`（BusEvents + VOID_EVENTS；运行时缺参 console.warn 同源）
 - 门禁挂点：`scripts/pre-push-gate.ts` 的 `ALL_STATIC_TOOLS`（--check+autoFix）与
-  `FRONTEND_STATIC_TOOLS`（--strict）；契约测试 `tests/test_bus_contract.mjs`
+  `FRONTEND_STATIC_TOOLS`（--strict）；契约测试 `tests/test_bus_contract.ts`
 - TS 类型表只约束 .ts 调用方；html 内联 / 运行时边界靠本守卫兜底
 
 ## 不变量

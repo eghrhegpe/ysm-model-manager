@@ -51,7 +51,7 @@ status: active
 
 ## 核心职责
 
-### `openAdvFilterDialog` — 高级筛选全流程编排（行 42-232）
+### `openAdvFilterDialog` — 高级筛选全流程编排（`toolbar-search.ts|openAdvFilterDialog`）
 
 1. **收集当前值**：从 inline 面板读取 keyword、minBones/maxBones、minCubes/maxCubes、minTex/maxTex
 2. **打开弹窗**：调用 `modalAdvFilter`（`dialog-adv-filter.md`），用户确认后回填 inline 面板
@@ -62,13 +62,13 @@ status: active
 7. **取交集**：标签 ∩ 搜索条件（如果两者都有），存到 `vm._filterPaths`
 8. **触发渲染**：`vm._renderTree()` 刷新树，`render.ts` 的 `buildTree` 按 `_filterPaths` 过滤
 
-### `pickWebFilesAndImport` — 网页版导入（行 236-272）
+### `pickWebFilesAndImport` — 网页版导入（`toolbar-search.ts|pickWebFilesAndImport`）
 
 - 桌面版走 Wails 原生对话框
 - 网页版无此 binding → 创建 `<input type=file>` 触发选择
 - 调 `importWebFiles` 直写 IndexedDB，完成后回调刷新
 
-### 多线程统计角标（行 18-39）
+### 多线程统计角标（`toolbar-search.ts` 模块顶部，`advFilterWarnWebDegraded` / `onStatsProgress` 消费）
 
 - 右下角 fixed 小角标，仅 web 模式（`resolveWebMode()`）创建
 - 数值条件搜索时显示 `🧵×N ⚙️ x/y`（Worker 批进度），统计完成隐藏

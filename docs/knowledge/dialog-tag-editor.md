@@ -59,7 +59,7 @@ status: active
 - 导出：`modalTagEditor(modelPath: string): Promise<string[] | null>`
 - 监听/派发 bus：无（`bus` 仅被 import 引用）
 - getApp() 调用：`GetModelTags`、`AllTags`、`SetModelTags`
-- 依赖：`esc`（utils/dom/html.ts）、`closeDlg`/`registerDlg`（dialogs/modal.ts）
+- 依赖：`esc`（utils/dom/html.ts）、`closeDlg`/`registerDlg`（features/dialogs/modal-core.ts）
 - 调用方：app-tree 文件右键「编辑标签」等入口
 
 ## 与其他子系统关系

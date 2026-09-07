@@ -52,4 +52,4 @@ status: active
 ## 相关
 
 - `frontend/src/utils/format/summarize.ts` — `SummaryAnimGroup` / `SummaryConfigMenu` 类型定义
-- `go/internal/app/summary.go` — 对齐的 Go 端逻辑
+- `go/ysm/summary.go` — 对齐的 Go 端逻辑（`appendAnimGroupsAndConfigs`）

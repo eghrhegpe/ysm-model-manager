@@ -230,8 +230,9 @@ invariant_anchors:
 - 🟢 **errors.Is / errors.As 全面收敛**：download 包 sentinel error 分类（ErrTruncated / ErrChecksumMismatch / ErrUnsupportedScheme）+ `errors.As` 精确匹配，替代文本 contains 反模式。
 
 ### 视角C：包边界与耦合度（新维度）
-- 🆕 **包边界评分 3.475/5**：依赖方向整体健康（`internal/app` → `go/` 单向、`internal/app/install` 不反向 import `internal/app`、21 个 ADR 全部落地），但 `go/types` 是实锤的上帝包。
-- 🔴 **致命 — `go/types/` 上帝包**：全仓 import `go/types` 的文件 77 个（子代理报「21 包」系低估）。`types.go` + `resource.go` + `extensions.go` 等非测试共 1715 行，DTO + 注册表加载 + 扩展名工具函数三层抽象混杂。`LoadRegistry` 耦合 JSON 加载、`StripDisableSuffix` 耦合扩展名判定，与纯 DTO 应分家。
+- 🆕 **包边界评分 3.475/5**：依赖方向整体健康（`internal/app` → `go/` 单向、`internal/app/install` 不反向 import `internal/app`、21 个 ADR 全部落地），`go/types` 上帝包已由 ADR-192 第一刀拆分为纯 DTO 根包（487 行 / 3 文件）+ registry 子包（1237 行 / 5 文件），根包不再致命。
+- ~~🔴 **致命 — `go/types/` 上帝包**~~（**已修复，2026-09-07 ADR-192 落地**）：原全仓 import `go/types` 的文件 77 个，非测试 1715 行，DTO + 注册表加载 + 扩展名工具函数三层混杂。经 ADR-192 拆分为纯 DTO 根包 + registry 子包，消费方去重后 166 文件分布为：仅 types 80、仅 registry 39、混合 import 47（属自然收敛，见 ADR-192 §4）。根包不再是上帝包。
+- 🟢 `go/types` 当前状态：纯 DTO（39 个 struct + AppError 错误体系），仅依赖标准库，零环风险，487 行。`go/types/registry` 独立子包，负责注册表加载 + 扩展名工具函数 + 安装路径查找，1237 行。两者均为正常规模，依赖方向单向（registry 不反向依赖根包）。
 - ⚠️ **主模型仲裁修正：「go/cli 绕过 AppService 直调 go/ysm」系幻觉**（子代理 3 报 🔴）——实地 `appservice.go` 的 import `go/ysm` 是接口签名要引用返回类型 `ysm.YSMModelMeta`（`AnalyzeYSMMod` 方法），不是绕过接口直调格式解析器。依赖倒置（ADR-145）成立。
 - 🟡 **`go/sync`→`go/ysm` 逆向依赖（已随刀②收敛）**：原 `sync.go` 调用 `ysm.HasYSMMod()` 填充死字段 `HasYSM`，反向依赖 YSM 格式专属逻辑——现 `HasYSM` 字段 + `HasYSMMod` 已删，sync 不再依赖 go/ysm。残留 `go/fileops`→`go/ysm`（`DecodeYSM` 解码封面，合理，本就走注入解码器）。
 - 🟡 **`go/ysm/extracted.go` 906 行**：「解压后 YSM 目录中的 geometry/纹理查找」把 YSM 目录读取、geometry 解析、纹理查找、载具/投射物纹理声明解析全塞一起。
@@ -285,7 +286,7 @@ invariant_anchors:
 - ✅ **刀② mod 检测轨道收敛（删三份冗余实现 + 死字段）**：实地挖出「mod 检测」散落三轨——① `sync.go` 填死字段 `InstanceStatus.HasYSM`（前端 `src/` 零消费，纯浪费）；② `App.HasYSMMod` 死绑定（纯子串 `Contains("ysm")` 语义最宽松，前端零调用）；③ `go/ysm.HasYSMMod` 硬编码特例（内容检测，语义等价 `HasModInDir(dir, "ysm")` 注册表驱动）。**收敛动作**：删 `InstanceStatus.HasYSM` 字段（types.go）、删 `sync.go` 的 `HasYSM` 赋值 + `import go/ysm`、删 `App.HasYSMMod` 死绑定（app_install_instance.go）、删 `go/ysm.HasYSMMod` 硬编码（ysm.go + 测试）、`frontend/e2e/mock-data.ts` 删 `HasYSM`/`HasYSMMod` stale key。**唯一事实源 = `HasModInDir(dir, rtype)`（ADR-110 注册表驱动）**。重新 `generate:bindings -ts`（171 方法，`HasYSMMod` 消失）。`go build ./...` + `go test ./go/types ./go/sync ./go/ysm ./internal/app` + 前端 `typecheck`/`vite build` + `binding-check`（171:171 零 issues）全绿。
 - ✅ **刀③ `CompareGlobalInstanceHashes` 死代码清理**：核实无 `internal/app` 生产调用（仅 3 个测试 + 文档），已被 `GetInstanceStatusWith` 取代（ADR-064 的 `GetResourceInstanceStatus` handler 实际走 `GetInstanceStatus` 而非它）。删 `CompareGlobalInstanceHashes` + `HasModInDirFn` 类型 + 3 个死测试（`sync_hash.go` 净删至只留 `computeHash`，被 `sync.go` 活跃使用）；`sync_diff.go` 注释同步修正为「唯一实现」。净删 186 行。`go build ./...` + `go test ./go/sync` + drift errors=0 全绿。
 - ➖ **刀③ `InstallLock` 锁粒度**（标记技术债，不动）：ADR-056 共享单锁是明确设计决策，细粒度化引入死锁风险；是性能天花板非正确性 bug，属推倒重来心态。
-- ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；`go/types` 1715 行上帝包（77 文件 import，需独立立项拆包）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。`CompareGlobalInstanceHashes` 死代码已清理（见刀③）。
+- ➖ **纯技术债清单（不做）**：全仓零 `t.Parallel()`（渐进式）；~~`go/types` 1715 行上帝包~~（**已由 ADR-192 拆分完成**，纯 DTO 根包 487 行 + registry 子包 1237 行，2026-09-07 落地）；watcher 14 个 `time.Sleep`（虚拟时钟改造）。`CompareGlobalInstanceHashes` 死代码已清理（见刀③）。
 - ➖ **P2 技术债（标记，不阻塞发版）**：`InstallLock` 注释契约 >10 处（ADR-056 设计决策，细粒度化引入死锁风险）；`ToggleModelEnable` bool 语义混用（改动面大，前端 banned 状态由扫描结果下发不依赖返回值）；`YSGP` 检测三胞胎合一（返回形态各不同，合并成本高）；`wasm_decoder.go` init 注入（ADR-047 设计决策，改风险高）。
 
 ## 动刀进度（实施记录，2026-09-08 四轮锐评刀口）

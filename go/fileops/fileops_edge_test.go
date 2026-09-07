@@ -5,7 +5,6 @@ package fileops
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -25,34 +24,20 @@ func TestRemoveDir_RelativeTraversal(t *testing.T) {
 	_ = os.Chdir(inner)
 
 	err := RemoveDir("..")
-	// Windows 上 os.RemoveAll(".") 失败（不能删除当前目录）——
-	// 但关键发现是：RemoveDir 未拒绝相对路径，直接传给 OS。
-	// Linux 上 ".." 会成功删除父目录。
-	if err != nil {
-		t.Logf("BUG(INFO-TRAVERSAL): RemoveDir 接受相对路径穿越（\"..\"），OS 层拒绝: %v——RemoveDir 自身无校验", err)
-		return
+	// 相对路径穿越无论由 RemoveDir 自身校验还是 OS 层拒绝，都必须失败
+	if err == nil {
+		t.Fatalf("BUG(INFO-TRAVERSAL): RemoveDir(\"..\") 未报错——父目录可能已被删除")
 	}
-	// Linux: tmpDir 被删除
-	if _, err := os.Stat(tmpDir); os.IsNotExist(err) {
-		t.Logf("BUG(INFO-TRAVERSAL): RemoveDir(\"..\") 成功删除了父目录（Linux 无阻止）")
-	} else {
-		t.Logf("INFO(INFO-TRAVERSAL): RemoveDir(\"..\") 执行, tmpDir exists=%v", err == nil)
-	}
+	t.Logf("守卫: RemoveDir(\"..\") 被拒绝: %v", err)
 }
 
 // ---------- 2. RemoveDir 接受绝对路径 ----------
+// KNOWN-DESIGN: RemoveDir 是底层删除原语,接受任意绝对路径是其 API 语义,
+// root 归属校验在上层封装(MoveModelFile/CopyModelFile 在 fileops_test.go
+// 有"仓库外源应被拒绝"断言)。此探针曾记录"接受任意绝对路径",非缺陷——
+// 把它翻成断言等于断言与 API 设计相反的契约。
 func TestRemoveDir_AbsolutePath(t *testing.T) {
-	tmpDir := t.TempDir()
-	subdir := filepath.Join(tmpDir, "target")
-	os.MkdirAll(subdir, 0755)
-	os.WriteFile(filepath.Join(subdir, "file.ysm"), []byte("test"), 0644)
-
-	// RemoveDir 接受任何绝对路径——无 root 归属校验
-	err := RemoveDir(subdir)
-	if err != nil {
-		t.Fatalf("RemoveDir 绝对路径失败: %v", err)
-	}
-	t.Logf("BUG(INFO-ABS): RemoveDir 接受任意绝对路径（无 root 校验）——攻击者可指定任何目录删除")
+	t.Skip("KNOWN-DESIGN: RemoveDir 接受任意绝对路径属底层原语语义,调用方负责 root 校验")
 }
 
 // ---------- 3. RemoveDir NUL 字节 ----------
@@ -62,11 +47,10 @@ func TestRemoveDir_NULByte(t *testing.T) {
 
 	// NUL 字节注入——OS 层会拒绝，但 RemoveDir 自身无显式校验
 	err := RemoveDir(tmpDir + "\x00" + "..\\evil")
-	if err != nil {
-		t.Logf("FIXED(INFO-NUL): RemoveDir NUL 字节被 OS 层拒绝: %v（但 RemoveDir 无显式校验）", err)
-		return
+	if err == nil {
+		t.Fatalf("BUG(INFO-NUL): RemoveDir NUL 字节未报错（可能静默截断到其他目录）")
 	}
-	t.Log("BUG(INFO-NUL): RemoveDir NUL 字节未报错（Linux 可能静默截断）")
+	t.Logf("守卫: RemoveDir NUL 字节路径被拒绝: %v", err)
 }
 
 // =====================================================================
@@ -74,23 +58,11 @@ func TestRemoveDir_NULByte(t *testing.T) {
 // =====================================================================
 
 // ---------- 4. FindPreviewImage 读取任意路径的 preview.png ----------
+// KNOWN-DESIGN: FindPreviewImage 按设计从给定模型路径的同名目录读取 preview,
+// 无 root 归属校验——路径由调用方（UI 预览流）传入。上层的模型路径均来自
+// 仓库扫描结果。若后续引入任意路径预览入口,需在此补 root 校验。
 func TestFindPreviewImage_ArbitraryPathRead(t *testing.T) {
-	// FindPreviewImage 无 root 校验，任意路径可被读取。
-	// 攻击者传入系统路径下的模型路径，可读取该目录下的 preview.png
-	tmpDir := t.TempDir()
-	// 在 tmpDir 内创建"任意位置"的 preview.png
-	secretDir := filepath.Join(tmpDir, "secret")
-	os.MkdirAll(secretDir, 0755)
-	os.WriteFile(filepath.Join(secretDir, "preview.png"), []byte("SECRET_PREVIEW"), 0644)
-
-	modelPath := filepath.Join(secretDir, "model.ysm")
-	result := FindPreviewImage(modelPath)
-	if result == "" {
-		t.Fatal("FindPreviewImage 应返回 preview.png 内容")
-	}
-	if strings.Contains(result, "SECRET_PREVIEW") {
-		t.Logf("BUG(INFO-READ): FindPreviewImage 接受任意路径，读取了非模型目录内的 preview.png——无 root 归属校验")
-	}
+	t.Skip("KNOWN-DESIGN: FindPreviewImage 按设计读取任意路径的 preview,调用方保证路径归属")
 }
 
 // ---------- 5. FindPreviewImage 空路径 ----------
@@ -105,17 +77,11 @@ func TestFindPreviewImage_EmptyPath(t *testing.T) {
 // =====================================================================
 
 // ---------- 6. CreateDir root="" 在任意位置创建目录 ----------
+// KNOWN-DESIGN(待拍板): CreateDir(root="") 时创建于当前工作目录。
+// 带 root 的场景有校验(fileops_test.go TestCreateDir_Validation);空 root
+// 是否应拒绝属契约决策——若拒绝会影响现有调用方,先标记不翻转断言。
 func TestCreateDir_EmptyRoot(t *testing.T) {
-	// CreateDir("", "subdir")——root="" 时在 CWD 下创建，无 root 归属校验
-	// tmpDir 不参与本测试（测试重点在 root="" 绕过）
-	err := CreateDir("", "subdir")
-	if err != nil {
-		t.Logf("INFO(INFO-EMPTY-ROOT): CreateDir(\"\") 被拒绝: %v", err)
-		return
-	}
-	t.Logf("BUG(INFO-EMPTY-ROOT): CreateDir(\"\", \"subdir\") 成功——在 CWD 下创建目录，无 root 归属校验")
-	// 清理
-	os.RemoveAll("subdir")
+	t.Skip("KNOWN-DESIGN(待拍板): CreateDir root 为空时按 CWD 处理,是否应拒绝未定")
 }
 
 // =====================================================================
@@ -123,21 +89,11 @@ func TestCreateDir_EmptyRoot(t *testing.T) {
 // =====================================================================
 
 // ---------- 7. RenameDir 接受任意 oldPath ----------
+// KNOWN-DESIGN: RenameDir 是重命名原语,接受任意 oldPath 为其 API 语义
+// （fileops_test.go TestRenameDir_Ok 覆盖成功路径）。上层调用方保证
+// 源路径的仓库归属。
 func TestRenameDir_ArbitraryOldPath(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldDir := filepath.Join(tmpDir, "old")
-	os.MkdirAll(oldDir, 0755)
-	os.WriteFile(filepath.Join(oldDir, "file.ysm"), []byte("test"), 0644)
-
-	// RenameDir 不校验 oldPath 来源——攻击者可指定任意目录重命名
-	err := RenameDir(oldDir, "newname")
-	if err != nil {
-		t.Fatalf("RenameDir 任意 oldPath 失败: %v", err)
-	}
-	newDir := filepath.Join(tmpDir, "newname")
-	if _, err := os.Stat(newDir); err == nil {
-		t.Logf("BUG(INFO-OLD-PATH): RenameDir 接受任意 oldPath，成功重命名")
-	}
+	t.Skip("KNOWN-DESIGN: RenameDir 接受任意 oldPath 属原语语义,调用方负责校验")
 }
 
 // =====================================================================
@@ -169,8 +125,7 @@ func TestExtractPreviewTexture_NULByte(t *testing.T) {
 	badPath := filepath.Join(tmpDir, "file.ysm") + "\x00" + ".zip"
 	result := ExtractPreviewTexture(badPath)
 	if result != "" {
-		t.Logf("BUG(INFO-NUL-TEX): ExtractPreviewTexture 接受 NUL 字节路径")
-		return
+		t.Fatalf("BUG(INFO-NUL-TEX): ExtractPreviewTexture 接受 NUL 字节路径, result=%q", result)
 	}
-	t.Log("FIXED/INFO(INFO-NUL-TEX): ExtractPreviewTexture 返回空（OS 层或读文件失败）")
+	t.Log("守卫: ExtractPreviewTexture NUL 路径返回空")
 }

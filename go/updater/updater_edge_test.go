@@ -244,11 +244,11 @@ func TestDownloadOnce_TruncatedTransfer(t *testing.T) {
 
 	path, err := downloadOnce(server.URL, "", nil)
 	if err != nil {
-		t.Logf("FIXED(INFO-TRUNC): downloadOnce 截断传输被拒绝: %v", err)
+		t.Logf("守卫: downloadOnce 截断传输被拒绝: %v", err)
 		return
 	}
 	os.Remove(path)
-	t.Logf("INFO(INFO-TRUNC): downloadOnce 截断传输成功返回 path=%q（unexpected EOF 被吞？）", path)
+	t.Fatalf("BUG(INFO-TRUNC): downloadOnce 接受截断传输（Content-Length 100 实际 5 字节），损坏包被装盘")
 }
 
 // ---------- 12. 超大 Content-Length ----------
@@ -300,13 +300,12 @@ func TestDownloadOnce_InfiniteRedirect(t *testing.T) {
 
 	// Go http.Client 默认最多跟随 10 次重定向，第 10 次返回错误
 	_, err := downloadOnce(server.URL, "", nil)
-	if err != nil {
-		if errors.Is(err, http.ErrUseLastResponse) {
-			t.Logf("FIXED(INFO-REDIR-LOOP): 无限重定向被 Go http 拒绝: %v", err)
-		} else {
-			t.Logf("FIXED/INFO(INFO-REDIR-LOOP): 无限重定向被拒绝: %v", err)
-		}
-		return
+	if err == nil {
+		t.Fatalf("BUG(INFO-REDIR-LOOP): 无限重定向未被拒绝")
 	}
-	t.Log("BUG(INFO-REDIR-LOOP): 无限重定向未被拒绝")
+	if errors.Is(err, http.ErrUseLastResponse) {
+		t.Logf("守卫: 无限重定向被 Go http 拒绝: %v", err)
+	} else {
+		t.Logf("守卫: 无限重定向被拒绝: %v", err)
+	}
 }

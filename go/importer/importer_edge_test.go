@@ -5,6 +5,7 @@ package importer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,13 +18,14 @@ func TestSanitizePath_NULByte(t *testing.T) {
 	path := "safe/" + "\x00" + "..\\evil"
 	cleaned, err := sanitizePath(path, "test")
 	if err != nil {
-		// Windows: filepath.Clean 在 NUL 处截断后可能触发异常；
-		// Linux: filepath.Clean 静默截断 → ".." 穿越被检测到
-		t.Logf("FIXED/INFO(NUL-1): sanitizePath NUL 字节处理: cleaned=%q, err=%v", cleaned, err)
+		t.Logf("守卫: sanitizePath NUL 路径被拒绝: %v", err)
 		return
 	}
-	// 若未报错，检查 cleaned 是否包含逃逸片段
-	t.Logf("INFO(NUL-1): sanitizePath 未拒绝 NUL, cleaned=%q", cleaned)
+	// 未拒绝必须是干净路径——NUL 截断后的 ".." 逃逸片段不得残留
+	if strings.Contains(cleaned, "..") || strings.Contains(cleaned, "\\") {
+		t.Fatalf("BUG(NUL-1): sanitizePath 接受 NUL 截断后的逃逸片段, cleaned=%q", cleaned)
+	}
+	t.Logf("守卫: sanitizePath 返回已清理路径 %q", cleaned)
 }
 
 // ---------- 2. 空路径 ----------
@@ -62,9 +64,12 @@ func TestSimpleCopyImporter_RelativeSrc(t *testing.T) {
 	importer := NewSimpleCopy("ysm")
 	err := importer.Import(src, dstDir)
 	if err != nil {
-
+		t.Fatalf("SimpleCopyImporter 相对路径导入失败: %v", err)
 	}
-	t.Log("FIXED(INFO-REL): SimpleCopyImporter 相对路径导入成功")
+	if _, statErr := os.Stat(dstDir); statErr != nil {
+		t.Fatalf("目标目录未创建: %v", statErr)
+	}
+	t.Log("守卫: 相对路径导入成功")
 }
 
 // ---------- 5. SimpleCopy 源为根目录（会触发 src 包含 dst 检测）----------
@@ -93,9 +98,13 @@ func TestSimpleCopyImporter_SameDirSelfCopy(t *testing.T) {
 	// 目标目录与源文件同目录——复制后文件名应相同
 	err := importer.Import(src, tmpDir)
 	if err != nil {
-
+		t.Fatalf("SimpleCopyImporter 同目录自拷贝失败: %v", err)
 	}
-	t.Log("FIXED(INFO-SAME): SimpleCopyImporter 同目录自拷贝成功")
+	// 同目录复制不得破坏源文件
+	if data, rErr := os.ReadFile(src); rErr != nil || string(data) != "test" {
+		t.Fatalf("源文件被破坏: %v %q", rErr, string(data))
+	}
+	t.Log("守卫: 同目录自拷贝成功且源文件完好")
 }
 
 // =====================================================================
@@ -127,9 +136,12 @@ func TestDirectoryCopyImporter_FileInsideDir(t *testing.T) {
 	// srcPath 为 modelDir/data.json——应取父目录 modelDir 作为导入源
 	err := importer.Import(filepath.Join(modelDir, "data.json"), dstDir)
 	if err != nil {
-
+		t.Fatalf("DirectoryCopyImporter 从子文件取父目录导入失败: %v", err)
 	}
-	t.Log("FIXED(INFO-FILE-SUB): DirectoryCopyImporter 从子文件取父目录导入成功")
+	if _, statErr := os.Stat(dstDir); statErr != nil {
+		t.Fatalf("目标目录未创建: %v", statErr)
+	}
+	t.Log("守卫: 从子文件取父目录导入成功")
 }
 
 // ---------- 9. DirectoryCopy src 与目标相同（回归：src==dst 守卫）----------

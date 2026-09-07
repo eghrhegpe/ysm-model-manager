@@ -22,22 +22,14 @@ func TestWriteFileAtomic_NULByteInDest(t *testing.T) {
 	// 攻击意图：将写入目标截断到其他目录（如 dest.ysm\x00.exe → dest.ysm）
 	destPath := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.exe"
 	err := WriteFileAtomic(destPath, []byte("malicious"))
-	if err != nil {
-		if errors.Is(err, ErrTempCreateFailed) {
-			t.Logf("FIXED(BUG-NUL-1): NUL 字节路径被显式拒绝(ErrTempCreateFailed): %v", err)
-			return
-		}
-		t.Logf("FIXED/INFO(NUL-1): NUL 字节路径被 OS 层拒绝: %v", err)
-		return
+	if err == nil {
+		t.Fatalf("BUG(NUL-1): WriteFileAtomic 接受含 NUL 的路径, dest=%q", destPath)
 	}
-	t.Logf("BUG(NUL-1): WriteFileAtomic 接受含 NUL 的路径, dest=%q", destPath)
-	// 检查实际写入位置——NUL 截断可能导致写入到非预期文件
-	entries, _ := os.ReadDir(tmpDir)
-	for _, e := range entries {
-		name := e.Name()
-		if strings.HasPrefix(name, "safe") {
-			t.Logf("BUG(NUL-1): NUL 截断后写入文件名='%s'", name)
-		}
+	// 拒绝即守卫生效（显式 ErrTempCreateFailed 或 OS 层拒绝皆可）
+	if errors.Is(err, ErrTempCreateFailed) {
+		t.Logf("守卫: NUL 字节路径被显式拒绝(ErrTempCreateFailed): %v", err)
+	} else {
+		t.Logf("守卫: NUL 字节路径被 OS 层拒绝: %v", err)
 	}
 }
 

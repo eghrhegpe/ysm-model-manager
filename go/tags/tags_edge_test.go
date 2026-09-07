@@ -19,19 +19,17 @@ func TestStore_SetTags_NULInPath(t *testing.T) {
 	// 路径中嵌入 NUL——Linux 上可截断，Windows 上 os 拒绝
 	path := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.json"
 	err := store.SetTags(path, []string{"test"})
-	if err != nil {
-		t.Logf("FIXED(BUG-NUL-1): SetTags NUL 路径被拒绝: %v", err)
-		return
+	if err == nil {
+		// 未拒绝 → 标签数据内也决不允许出现 NUL key
+		store.mu.RLock()
+		_, exists := store.data[path]
+		store.mu.RUnlock()
+		if exists {
+			t.Fatalf("BUG(NUL-1): SetTags 接受含 NUL 的路径，tags 内存在该 key")
+		}
+		t.Fatalf("BUG(NUL-1): SetTags 未报错即接受含 NUL 的路径(path=%q)", path)
 	}
-	// 若未拒绝，检查 tags.json 是否写入 NUL 字节
-	store.mu.RLock()
-	_, exists := store.data[path]
-	store.mu.RUnlock()
-	if exists {
-		t.Logf("BUG(NUL-1): SetTags 接受含 NUL 的路径，tags 内存在该 key")
-		return
-	}
-	t.Log("INFO(NUL-1): SetTags 未崩溃但 tags 内不存在该 key")
+	t.Logf("守卫: SetTags NUL 路径被拒绝: %v", err)
 }
 
 // ---------- 1b. NUL 字节在 modelPath 中（AddTag/RemoveTag 同 SetTags 安全边界）----------
@@ -75,20 +73,20 @@ func TestStore_SetTags_NULInTag(t *testing.T) {
 	tmpDir := t.TempDir()
 	store := NewStore(tmpDir)
 	err := store.SetTags("model.ysm", []string{"safe\x00malicious"})
-	if err != nil {
-		t.Logf("FIXED(INFO-NUL-TAG): SetTags NUL 标签被拒绝: %v", err)
-		return
-	}
 	store.mu.RLock()
 	tags := store.data["model.ysm"]
 	store.mu.RUnlock()
-	for _, tag := range tags {
-		if strings.Contains(tag, "\x00") {
-			t.Logf("BUG(INFO-NUL-TAG): tags 内存在含 NUL 的标签")
-			return
+	if err == nil {
+		// 接受路径 → 标签必须已被 trimTag 剔除 NUL
+		for _, tag := range tags {
+			if strings.Contains(tag, "\x00") {
+				t.Fatalf("BUG(INFO-NUL-TAG): tags 内存在含 NUL 的标签")
+			}
 		}
+		t.Log("守卫: trimTag 已剔除 NUL 字节")
+	} else {
+		t.Logf("守卫: SetTags NUL 标签被拒绝: %v", err)
 	}
-	t.Log("FIXED(INFO-NUL-TAG): trimTag 已剔除 NUL 字节")
 }
 
 // ---------- 3. 换行符注入 tag（JSON 破坏）----------
@@ -97,20 +95,20 @@ func TestStore_SetTags_NewlineInTag(t *testing.T) {
 	store := NewStore(tmpDir)
 	// 换行符注入——破坏 JSON 结构，导致后续 load 失败
 	err := store.SetTags("model.ysm", []string{"safe\ntag2"})
-	if err != nil {
-		t.Logf("FIXED(INFO-NEWLINE): SetTags 换行标签被拒绝: %v", err)
-		return
-	}
 	store.mu.RLock()
 	tags := store.data["model.ysm"]
 	store.mu.RUnlock()
-	for _, tag := range tags {
-		if strings.Contains(tag, "\n") {
-			t.Logf("BUG(INFO-NEWLINE): tags 内存在含换行的标签")
-			return
+	if err == nil {
+		// 接受路径 → 标签必须已被 trimTag 剔除换行
+		for _, tag := range tags {
+			if strings.Contains(tag, "\n") {
+				t.Fatalf("BUG(INFO-NEWLINE): tags 内存在含换行的标签")
+			}
 		}
+		t.Log("守卫: trimTag 已剔除换行符")
+	} else {
+		t.Logf("守卫: SetTags 换行标签被拒绝: %v", err)
 	}
-	t.Log("FIXED(INFO-NEWLINE): trimTag 已剔除换行符")
 }
 
 // ---------- 4. 超长标签 ----------
@@ -119,18 +117,22 @@ func TestStore_SetTags_ExtremelyLongTag(t *testing.T) {
 	store := NewStore(tmpDir)
 	longTag := strings.Repeat("a", 100000)
 	err := store.SetTags("model.ysm", []string{longTag})
-	if err != nil {
-		t.Logf("INFO(INFO-LONG): SetTags 超长标签被拒绝: %v", err)
-		return
-	}
 	store.mu.RLock()
 	tags := store.data["model.ysm"]
 	store.mu.RUnlock()
-	if len(tags) > 0 && len(tags[0]) > maxTagLen {
-		t.Logf("BUG(INFO-LONG): 标签超长未截断, len=%d", len(tags[0]))
-		return
+	if err == nil {
+		// 接受路径 → 标签必须已被截断至 maxTagLen
+		for _, tag := range tags {
+			if len(tag) > maxTagLen {
+				t.Fatalf("BUG(INFO-LONG): 标签超长未截断, len=%d", len(tag))
+			}
+		}
+		if len(tags) > 0 {
+			t.Logf("守卫: 标签已截断至 %d 字符", len(tags[0]))
+		}
+	} else {
+		t.Logf("守卫: SetTags 超长标签被拒绝: %v", err)
 	}
-	t.Logf("FIXED(INFO-LONG): 标签已截断至 %d 字符", len(tags[0]))
 }
 
 // ---------- 5. 空 configDir ----------
@@ -150,20 +152,15 @@ func TestStore_NULInConfigDir(t *testing.T) {
 	badDir := tmpDir + "\x00" + "..\\evil"
 	store := NewStore(badDir)
 	err := store.SetTags("model.ysm", []string{"test"})
-	if err != nil {
-		t.Logf("FIXED(INFO-NUL-CFG): NUL configDir 被拒绝: %v", err)
-		return
-	}
-	// 保存后检查文件是否写入非预期位置
-	store.mu.Lock()
-	_ = store.save()
-	store.mu.Unlock()
-	// 检查 tags.json 是否在当前目录被创建
-	_, err = os.Stat("tags.json")
 	if err == nil {
-		os.Remove("tags.json")
-		t.Logf("BUG(INFO-NUL-CFG): NUL configDir 导致 tags.json 写入当前目录")
-		return
+		// 接受路径 → 保存后 tags.json 决不允许落入当前工作目录
+		store.mu.Lock()
+		_ = store.save()
+		store.mu.Unlock()
+		if _, statErr := os.Stat("tags.json"); statErr == nil {
+			os.Remove("tags.json")
+			t.Fatalf("BUG(INFO-NUL-CFG): NUL configDir 导致 tags.json 写入当前目录")
+		}
 	}
-	t.Log("FIXED(INFO-NUL-CFG): NUL configDir 未污染当前目录")
+	t.Log("守卫: NUL configDir 未污染当前目录")
 }

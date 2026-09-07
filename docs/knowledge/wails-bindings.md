@@ -268,7 +268,6 @@ status: active
 
 - `InstallModelFile(src, mcRoot) → string` — 安装模型文件到 MC 目录（**2026-09-07 补齐 src 归属守卫**：经 `App.ensureSrcInRepo` 多根守卫——FilesRoot + CustomRoots 覆盖根、词法 `IsInside` + `EvalSymlinks` 双重判定，比 `isPathInRoot` 的单 ysm 根更宽，因该入口不判资源类型）
 - `InstallModelTo(src, customDir) → void` — 安装模型到指定自定义目录
-- `InstallModelWithOverlay(src, customDir) → string` — 安装模型（带 overlay 覆盖处理）
 - `ImportModelFile(fileName, base64Data) → void` — 导入 base64 模型文件（查重）
 - `ImportModelFileSkipCheck(fileName, base64Data) → void` — 导入且跳过查重
 - `ImportModelFileOverwrite(fileName, base64Data) → void` — 导入且重名覆盖

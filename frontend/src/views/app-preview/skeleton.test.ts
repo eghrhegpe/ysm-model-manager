@@ -10,8 +10,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 
 const {
-  getPrefer3D,
-  setPrefer3D,
   loadModelData,
   renderModel2D,
   openFullPreview,
@@ -25,8 +23,6 @@ const {
   createYsm3D,
   cleanupYsm3D,
 } = vi.hoisted(() => ({
-  getPrefer3D: vi.fn(() => false),
-  setPrefer3D: vi.fn(),
   loadModelData: vi.fn(),
   renderModel2D: vi.fn(),
   openFullPreview: vi.fn(),
@@ -41,7 +37,7 @@ const {
   cleanupYsm3D: vi.fn(),
 }));
 
-vi.mock("./utils.ts", () => ({ getPrefer3D, setPrefer3D }));
+// t 与 locale 解耦：返回 key，并把收到的插值参数拼回（decl/size 等数值可见，
 // t 与 locale 解耦：返回 key，并把收到的插值参数拼回（decl/size 等数值可见，
 // 便于断言验证真实传入 t 的声明/加载尺寸，无需加载真实语言包——真实 t 在无该
 // 命名空间时同样返回 key）。无参数时退化为纯 key（与旧行为一致）。
@@ -69,7 +65,7 @@ vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 // ADR-072 根治：ysm-3d 薄包装已归位 views/app-preview（视图壳注入层），mock 路径同目录
 vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D }));
 
-import { loadModel2D } from "./skeleton.ts";
+import { loadModel2D, closeActive3DOverlay, setActive3DClose } from "./skeleton.ts";
 import { fill3DPanel } from "./skeleton-render.ts";
 import type { Spec3D } from "@/preview-3d/model3d.ts";
 
@@ -117,6 +113,8 @@ function makeCtx() {
     unsubs: [] as Array<() => void>,
     dragAbortCtrl: null,
     active3DClose: null,
+    getPrefer3D: vi.fn(() => false),
+    setPrefer3D: vi.fn(),
   };
   return ctx;
 }
@@ -147,7 +145,6 @@ beforeEach(() => {
   renderModel2D.mockReset(); // 清 mockImplementation 防跨测试泄漏
   localStorage.clear();
   document.body.innerHTML = "";
-  getPrefer3D.mockReturnValue(false);
   loadModelData.mockResolvedValue({ model: makeModel(), decodedBy: "go" });
   getApp.mockResolvedValue({
     SaveScreenshotFile: vi.fn(),
@@ -353,15 +350,16 @@ describe("loadModel2D — 交互", () => {
   });
 });
 
-describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，shared 集成见 ysm-3d.test.ts）", () => {
-  async function setupCtx() {
-    const ctx = makeCtx();
-    const container = document.createElement("div");
-    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
-    await loadModel2D(ctx, "/m/a.ysm", container);
-    return { ctx, container };
-  }
+// code_review a760aece0：setupCtx 提为文件级——文件尾 active3DClose describe 复用
+async function setupCtx() {
+  const ctx = makeCtx();
+  const container = document.createElement("div");
+  document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
+  await loadModel2D(ctx, "/m/a.ysm", container);
+  return { ctx, container };
+}
 
+describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，shared 集成见 ysm-3d.test.ts）", () => {
   it("btn-3d-preview 点击 → createYsm3D(path, 0, { loader, onClose }) + 偏好持久化", async () => {
     createYsm3D.mockResolvedValue(undefined);
     const { ctx } = await setupCtx();
@@ -378,13 +376,13 @@ describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，share
       }),
     );
     // 打开 3D → 持久化偏好（跨模型自动弹 3D 的开关）
-    expect(setPrefer3D).toHaveBeenCalledWith(true);
+    expect(ctx.setPrefer3D).toHaveBeenCalledWith(true);
 
     // close3D 已在 unsubs（组件销毁自动清理）
     for (const fn of [...ctx.unsubs]) fn();
     expect(cleanupYsm3D).toHaveBeenCalledTimes(1);
     // 关闭 3D → 清除偏好（用户退出 3D 后不再自动弹全屏，ADR-057 §2.5 口径）
-    expect(setPrefer3D).toHaveBeenCalledWith(false);
+    expect(ctx.setPrefer3D).toHaveBeenCalledWith(false);
   });
 
   it("unsubs 清理（切模型/组件销毁）→ cleanupYsm3D + 偏好复位", async () => {
@@ -397,7 +395,7 @@ describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，share
     const closeFn = ctx.unsubs.at(-1)!;
     closeFn();
     expect(cleanupYsm3D).toHaveBeenCalledTimes(1);
-    expect(setPrefer3D).toHaveBeenCalledWith(false);
+    expect(ctx.setPrefer3D).toHaveBeenCalledWith(false);
   });
 
   it("createYsm3D 失败 → 骨架层不崩、不额外弹错（core 统一处理错误）", async () => {
@@ -555,5 +553,43 @@ describe("fill3DPanel", () => {
     expect(panel.textContent).toContain("arrow");
     expect(panel.textContent).not.toContain("全量");
     document.body.removeChild(panel);
+  });
+});
+
+describe("active3DClose 实例隔离（a760aece0 模块级→实例级迁移回归锚）", () => {
+  // code_review a760aece0 #2/#3（P3）：active3DClose 从模块级单例迁实例 ctx——
+  // P1 修复（多实例串扰：一个实例的 model:select 关掉别的实例的 overlay）。原迁移
+  // 零测试——补两锚：①双实例隔离（close 一个不碰另一个）；②切模型 vs 用户关闭的
+  // 偏好判别（closeActive3DOverlay 置 null 保留偏好 / onClose 清偏好）
+  it("双实例隔离：closeActive3DOverlay(ctxA) 不碰 ctxB 的钩子", () => {
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    const closeA = vi.fn();
+    const closeB = vi.fn();
+    setActive3DClose(ctxA, closeA);
+    setActive3DClose(ctxB, closeB);
+    closeActive3DOverlay(ctxA);
+    expect(closeA).toHaveBeenCalledTimes(1);
+    expect(ctxA.active3DClose).toBeNull();
+    // 实例隔离：ctxB 的钩子未被触发、引用保留
+    expect(closeB).not.toHaveBeenCalled();
+    expect(ctxB.active3DClose).toBe(closeB);
+  });
+
+  it("closeActive3DOverlay 后 onClose 不再清偏好（切模型保留 _prefer3D）", async () => {
+    createYsm3D.mockResolvedValue(undefined);
+    const { ctx } = await setupCtx();
+    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
+    await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
+    // 捕获 createYsm3D 收到的 onClose（用户 ESC 时由 3D 层回调）
+    const onClose = createYsm3D.mock.calls[0]?.[2]?.onClose as () => void;
+    expect(onClose).toBeTypeOf("function");
+    expect(ctx.active3DClose).not.toBeNull();
+    // 切模型路径：closeActive3DOverlay 先置 null（userClosed=false）→ 偏好保留
+    closeActive3DOverlay(ctx);
+    expect(ctx.setPrefer3D).not.toHaveBeenCalledWith(false);
+    onClose();
+    expect(ctx.active3DClose).toBeNull();
+    expect(ctx.setPrefer3D).not.toHaveBeenCalledWith(false); // 保留偏好
   });
 });

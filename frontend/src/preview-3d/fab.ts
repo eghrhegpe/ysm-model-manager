@@ -1,6 +1,9 @@
 // ===== 3D 预览悬浮控制层组件（ADR-057）=====
 // 用途：替代 skeleton.ts 内联 style.cssText 控制栏，集中治理样式 + 双端响应式。
-// 挂载点：3D overlay 挂 document.body（light DOM），全局 CSS 经 ensureFabStyles 注入 head 一次。
+// 挂载点：3D overlay 挂 document.body（light DOM）；样式经 ensureFabStyles 注入
+// overlayStyleRoot() 目标——ADR-175 M1 后为 overlay 的 shadow root（无 overlay 挂载
+// 时降级到 overlay 元素本身，document.head 仅作无 overlay 时的兜底；按目标幂等去重，
+// 目标切换经 onOverlayStyleTargetReset 复位重注入）。
 // 触发 FAB 在预览面板 Shadow DOM 内（.preview-fab 见 css.ts，因 Shadow DOM 隔离需本地样式）。
 
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
@@ -121,11 +124,17 @@ export function createIconButton(opts: IconButtonOpts): HTMLButtonElement {
   if (opts.icon) {
     const ic = document.createElement("span");
     ic.className = "preview-ic";
-    if (/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(opts.icon)) {
+    // code_review 4014c3d57 #4（P3）：CSS 类形态须在白名单内——原只验标识符正则，
+    // typo（"camera"）或未来加了代码没加 CSS 的图标类会静默渲染空白按钮（防误渲染
+    // 保证被 class 路径绕过）；非白名单降级 textContent（与「非纯类名字符串 icon →
+    // 降级」防线一致）。白名单 = YSW_FAB_CSS 的 .preview-ic--* glyph 规则集
+    const KNOWN_ICON_CLASSES = new Set(["cam", "rot", "close", "panel-hide", "panel-show"]);
+    if (/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(opts.icon) && KNOWN_ICON_CLASSES.has(opts.icon)) {
       // CSS class name form: match preview-ic-{name} rule in YSW_FAB_CSS
-      ic.classList.add("preview-ic", `preview-ic--${opts.icon}`);
+      // code_review 4014c3d57 #1（P3）：preview-ic 已由上方 className 设置——重复 add 是 no-op
+      ic.classList.add(`preview-ic--${opts.icon}`);
     } else {
-      // Unicode emoji form
+      // Unicode emoji form（或未知类名——降级为可见字符防空白按钮）
       ic.textContent = opts.icon;
     }
     btn.appendChild(ic);

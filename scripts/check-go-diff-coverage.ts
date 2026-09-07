@@ -209,7 +209,14 @@ export function isBareFatalAssertLine(line: string): boolean {
   if (!t) return false;
   if (t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('#')) return false;
   // 先剥字符串字面量（双引号 + 反引号），避免字面量内容被误判为调用 token
-  const code = t.replace(/"(?:\\.|[^"\\])*"/g, '').replace(/`[^`]*`/g, '');
+  // code_review 5cdfa23d0 #2/#3（P2）：再剥尾随 // 注释与内联 /* */ 注释——原实现只放行
+  // 整行注释，`errCh <- err // 勿用 t.Fatalf(这里)`（collect-errors 惯用法注释）与多行
+  // 反引号 raw-string 内的 t.Fatalf( 文本会被误判为裸断言 → 硬阻断合规提交（强制逃生）
+  const code = t
+    .replace(/"(?:\\.|[^"\\])*"/g, '')
+    .replace(/`[^`]*`/g, '')
+    .replace(/\/\/.*$/, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
   return /\bt\.Fatal(f)?\(/.test(code);
 }
 
@@ -437,6 +444,40 @@ function main() {
   if (changed === null) failOrWarn('git diff 执行失败，拒绝空跑放行');
 
   const renameMap = detectRenames(base, head, staged);
+
+  // ── 测试断言增量红线（ADR-202 刀5）：新增/变更测试行裸 t.Fatal/t.Fatalf → 拦 ──
+  // 只查测试文件的「新增行」，存量行不罚；go/internal/testutil/ 自身豁免
+  // （它内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
+  // code_review 5cdfa23d0 #1/#4（P2）：红线块必须位于「无改动源码提前退出」之前——
+  // 原位置在 changed.length===0 exit(0) 之后，而 changed 排除 *_test.go → 纯测试文件
+  // 变更（红线最典型目标场景）直接提前退出，红线形同虚设
+  const bareAssertOff = (args['bare-assert'] as string | null) === 'off';
+  const testChanged = args.files
+    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean)
+        .filter((f) => isGoTestSource(f) && !f.startsWith('go/internal/testutil/'))
+    : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? [])
+        .filter((f) => !f.startsWith('go/internal/testutil/'));
+  const bareAssertHits: { file: string; items: { line: number; text: string }[] }[] = [];
+  for (const f of testChanged) {
+    const renameOld = renameMap.get(f)?.from;
+    // 与 rewriteDiff 同源的 diff 文本获取：staged → --cached；rename → 两点 blob diff
+    // code_review 5cdfa23d0 #5/#6/#7（P3）：uncommitted（非 staged）→ 工作区 diff
+    // （base...HEAD 只含已提交行，本地预检模式漏检工作区新增裸断言，与覆盖率侧
+    // getChangedLines 的 uncommitted 感知口径分裂）
+    const d = staged
+      ? (renameOld ? git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${f}`]) : git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', f]))
+      : uncommitted
+        ? (renameOld
+            ? git(['diff', '--unified=0', `${base}:${renameOld}`, `:${f}`])
+            : git(['diff', '--unified=0', '--', f]))
+        : (renameOld
+            ? git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${f}`])
+            : git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', f]));
+    const items = findBareFatalAddedLines(d);
+    if (items.length > 0) bareAssertHits.push({ file: f, items });
+  }
+  const bareFail = bareAssertHits.length > 0 && !bareAssertOff;
+
   if (changed.length === 0) {
     const msg = `[check-go-diff-coverage] 本次无改动 Go 源码需要检查（阈值 ${threshold}%）。通过。`;
     if (suggest) console.error(msg);
@@ -519,28 +560,7 @@ function main() {
     try { fs.unlinkSync(tmp); } catch { /* 忽略 */ }
   }
 
-  // ── 测试断言增量红线（ADR-202 刀5）：新增/变更测试行裸 t.Fatal/t.Fatalf → 拦 ──
-  // 只查测试文件的「新增行」，存量行不罚；go/internal/testutil/ 自身豁免
-  // （它内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
-  const bareAssertOff = (args['bare-assert'] as string | null) === 'off';
-  const testChanged = args.files
-    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean)
-        .filter((f) => isGoTestSource(f) && !f.startsWith('go/internal/testutil/'))
-    : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? [])
-        .filter((f) => !f.startsWith('go/internal/testutil/'));
-  const bareAssertHits: { file: string; items: { line: number; text: string }[] }[] = [];
-  for (const f of testChanged) {
-    const renameOld = renameMap.get(f)?.from;
-    // 与 rewriteDiff 同源的 diff 文本获取：staged → --cached；rename → 两点 blob diff
-    const d = staged
-      ? (renameOld ? git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${f}`]) : git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', f]))
-      : (renameOld
-          ? git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${f}`])
-          : git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', f]));
-    const items = findBareFatalAddedLines(d);
-    if (items.length > 0) bareAssertHits.push({ file: f, items });
-  }
-  const bareFail = bareAssertHits.length > 0 && !bareAssertOff;
+  // ── 测试断言增量红线（ADR-202 刀5）已上移至「无改动提前退出」之前（见上方）──
 
   if (suggest) {
     if (failures.length > 0) console.log(buildSuggestBlock(failures, threshold));

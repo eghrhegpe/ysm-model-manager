@@ -116,7 +116,11 @@ func FileExists(t *testing.T, path string, msgAndArgs ...any) {
 // FileNotExists 断言 path 不存在。
 func FileNotExists(t *testing.T, path string, msgAndArgs ...any) {
 	t.Helper()
-	if _, err := os.Stat(path); err == nil {
+	// code_review e8d9afdcf（P3）：用 os.Lstat 而非 os.Stat——dangling symlink
+	// （条目存在、目标缺失）使 os.Stat 报错 → 断言误过；本 helper 是安全测试断言
+	// 「被拒操作不留残留」的标准方式（symlink 逃逸类残留正是要抓的），
+	// Lstat 对任何现存条目（含断链）都视为「路径不应存在」而失败
+	if _, err := os.Lstat(path); err == nil {
 		t.Fatalf("%spath should not exist: %s", prefixFromArgs(msgAndArgs...), path)
 	}
 }

@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, readFileBytesMock, readPmxStatsMock, packModelsMock, createPack3DMock, loadModel2DMock, shaderLangMock, wasmDecodeMock } = vi.hoisted(() => ({
+const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, createMmd3DMock, resolveMmdSiblingsMock, resolveFbxSiblingsMock, resolveSceneSiblingsMock, resolveMorphSiblingsMock, resolveStageSiblingsMock, readFileBytesMock, readPmxStatsMock, packModelsMock, createPack3DMock, loadModel2DMock, shaderLangMock, wasmDecodeMock } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
   headerMock: vi.fn(),
   readPackMock: vi.fn(),
@@ -12,6 +12,14 @@ const { summaryMock, headerMock, readPackMock, vrmMetaMock, createVrm3DMock, cre
   createVrm3DMock: vi.fn(),
   createMmd3DMock: vi.fn(),
   resolveMmdSiblingsMock: vi.fn(),
+  // code_review a760aece0（P3）：siblings 五壳合并后本文件 mock 需全量导出——原
+  // factory 只导 resolveMmdSiblings，其余 4 resolver 对 import 者 resolve 为
+  // undefined（detail-3d 全量 import）——未来 showFbxPreview 等用例即抛
+  // "resolveFbxSiblings is not a function"（对齐 detail-3d.test.ts 已合并的 factory）
+  resolveFbxSiblingsMock: vi.fn(),
+  resolveSceneSiblingsMock: vi.fn(),
+  resolveMorphSiblingsMock: vi.fn(),
+  resolveStageSiblingsMock: vi.fn(),
   readFileBytesMock: vi.fn(),
   readPmxStatsMock: vi.fn(),
   packModelsMock: vi.fn(),
@@ -54,11 +62,17 @@ vi.mock("./mmd-3d.ts", () => ({
 }));
 vi.mock("./siblings.ts", () => ({
   resolveMmdSiblings: resolveMmdSiblingsMock,
+  // code_review a760aece0（P3）：与上方 vi.hoisted 配套——五壳合并后全量导出
+  resolveFbxSiblings: resolveFbxSiblingsMock,
+  resolveSceneSiblings: resolveSceneSiblingsMock,
+  resolveMorphSiblings: resolveMorphSiblingsMock,
+  resolveStageSiblings: resolveStageSiblingsMock,
 }));
 
-import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack, detailGen } from "./detail.ts";
+import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack } from "./detail.ts";
 import { sleep } from "@/test-utils/index.ts";
 import { showVrmMeta, showMmdPreview } from "./detail-3d.ts";
+import { GenGuard } from "./gen-guard.ts";
 
 function makeCtx(): PreviewCtx {
   const host = document.createElement("div");
@@ -71,6 +85,9 @@ function makeCtx(): PreviewCtx {
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,
+    detailGen: new GenGuard(),
+    getPrefer3D: vi.fn(() => false),
+    setPrefer3D: vi.fn(),
   };
 }
 
@@ -365,7 +382,7 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
       () => new Promise<null>((r) => (resolvePreview = r)),
     );
     const pending = showModelDetail(ctx, "/m/stale.ysm");
-    detailGen.invalidate(); // 用户切走
+    ctx.detailGen.invalidate(); // 用户切走
     resolvePreview(null);
     await pending;
     expect(summaryMock).not.toHaveBeenCalled();
@@ -377,7 +394,7 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
     summaryMock.mockImplementationOnce(() => new Promise<null>((r) => (resolveSummary = r)));
     const pending = showModelDetail(ctx, "/m/stale2.ysm");
     await vi.waitFor(() => expect(summaryMock).toHaveBeenCalled());
-    detailGen.invalidate();
+    ctx.detailGen.invalidate();
     resolveSummary(null);
     await pending;
     const detail = ctx.root.getElementById("preview-detail") as HTMLElement;
@@ -416,7 +433,7 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
     readPackMock.mockImplementationOnce(() => new Promise<Record<string, unknown> | null>((r) => (resolveRead = r)));
     const pending = showResourcePack(ctx, "/p/a.zip");
     await vi.waitFor(() => expect(readPackMock).toHaveBeenCalled());
-    detailGen.invalidate();
+    ctx.detailGen.invalidate();
     resolveRead({});
     await pending;
     expect(ctx.root.getElementById("preview-content")).toBeNull();
@@ -430,7 +447,7 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
       { description: "x", pack_format: 15 },
     );
     await showResourcePack(ctx, "/p/stale.zip");
-    detailGen.invalidate();
+    ctx.detailGen.invalidate();
     resolveList({ models: [{ path: "assets/a.json", cubes: 2 }], total: 1 });
     await sleep(50);
     expect(ctx.root.querySelector(".pack-model-item")).toBeNull();
@@ -496,7 +513,7 @@ describe("showShaderpack 光影包详情", () => {
     const ctx = makeCtx();
     const pending = showShaderpack(ctx, "/s/stale.zip");
     await vi.waitFor(() => expect(shaderLangMock).toHaveBeenCalled());
-    detailGen.invalidate();
+    ctx.detailGen.invalidate();
     resolveLang({ name: "迟到的光影", entries: {} });
     await pending;
     const content = ctx.root.getElementById("preview-content") as HTMLElement;

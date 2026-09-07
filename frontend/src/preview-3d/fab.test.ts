@@ -9,6 +9,10 @@ import type * as FabModule from "./fab.ts";
 
 afterEach(() => {
   document.getElementById("ysw-fab-styles")?.remove();
+  // code_review 4014c3d57 #3/#6（P3）：tooltip 用例把按钮挂到 document.body 且不
+  // mouseleave——单例 .ysw-tooltip 带 --show 残留会让后续「挂载点在 body」用例对
+  // 陈旧节点假通过；对齐 tooltip.test.ts 清残留（跨测试 DOM 隔离）
+  document.querySelectorAll(".ysw-tooltip, button.ysm-ovl-btn").forEach((n) => n.remove());
   vi.unstubAllGlobals();
 });
 

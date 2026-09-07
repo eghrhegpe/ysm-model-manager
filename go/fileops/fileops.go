@@ -53,6 +53,11 @@ var opMu sync.Mutex
 func CreateDir(root, dir string) error {
 	opMu.Lock()
 	defer opMu.Unlock()
+	// root 空拒绝——生产唯一调用方（app_files.go CreateDir）恒传仓库根，
+	// 空 root 会退化为相对 CWD 创建（KNOWN-DESIGN 审查项 2026-09-07 关闭：防御纵深）
+	if strings.TrimSpace(root) == "" {
+		return fmt.Errorf("根目录为空")
+	}
 	// 校验吃未 trim 原串（code_review 04449b48 #2）：尾随空格会被下方 TrimSpace
 	// 剥除而漏检——Windows 落盘静默剥离导致落点漂移，与前端 isUnsafeFolderName
 	// 「段级校验吃未 trim 原串」口径保持一致（reference.md 契约）

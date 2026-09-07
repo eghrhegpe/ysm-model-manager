@@ -552,36 +552,6 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 	return copyFileLocked(src, customDir)
 }
 
-// InstallWithOverlay 带冲突检查的安装
-// 注意：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minecraft 守卫，源侧仅靠调用方约束）；
-// 前端已 0 消费（Deprecated 绑定，上层 InstallModelWithOverlay 仅兼容旧绑定面），待发版清理。
-func InstallWithOverlay(src, customDir string) (string, error) {
-	InstallLocker.Lock()
-	defer InstallLocker.Unlock()
-
-	if src == "" || customDir == "" {
-		return "", types.AppError{Code: types.ErrInvalidParam, Operation: "安装模型（覆盖检查）", Reason: "参数为空", Suggestion: "请检查输入"}
-	}
-	src = cleanAbs(src)
-	customDir = cleanAbs(customDir)
-	if !paths.ContainsMinecraftMarker(customDir) {
-		return "", types.AppError{Code: types.ErrInvalidPath, Operation: "安装模型（覆盖检查）", SourcePath: customDir, Reason: "目标目录不在 .minecraft 路径内", Suggestion: "请确保整合包的 custom 目录位于 .minecraft 内"}
-	}
-	if !isSupportedModelExt(src) {
-		return "", types.AppError{Code: types.ErrUnsupportedFmt, Operation: "安装模型（覆盖检查）", SourcePath: src, Reason: "不支持的文件格式", Suggestion: "仅支持 " + strings.Join(registry.AllExts(), " / ") + " 格式"}
-	}
-	if err := os.MkdirAll(customDir, fsutil.DirPerms); err != nil {
-		return "", types.AppError{Code: types.ErrIO, Operation: "安装模型（覆盖检查）", TargetPath: customDir, Reason: "无法创建目录", Suggestion: "请检查磁盘权限或空间"}
-	}
-	// 防覆盖检查：在 InstallLock 临界区内先检查后写入（同一锁内天然原子，无 TOCTOU 窗口）。
-	// 不能把检查下沉到 copyFileLocked —— 那会破坏 Install/RelinkDir 的覆盖替换语义
-	dst := filepath.Join(customDir, filepath.Base(src))
-	if _, err := os.Stat(dst); err == nil {
-		return "CONFLICT:" + dst, types.AppError{Code: types.ErrAlreadyExists, Operation: "安装模型（覆盖检查）", TargetPath: dst, Reason: "文件已存在", Suggestion: "如需覆盖请先删除原文件"}
-	}
-	return copyFileLocked(src, customDir)
-}
-
 // copyFileLocked 复制文件到目标目录（调用方须持有 InstallLock，禁止直接调用）。
 // 委托 fsutil.CopyFile（ADR-044 收敛：原子 tmp+rename + Sync + Chmod 0644 +
 // 目录源前置拒绝 + 读毕早关 src），复用其步骤类型化错误 StepError，把差异化

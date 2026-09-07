@@ -522,42 +522,6 @@ func TestInstallToGlobal_UnsupportedExt_ValidMcRoot(t *testing.T) {
 	}
 }
 
-// ====== InstallWithOverlay 补充分支 ======
-
-func TestInstallWithOverlay_UnsupportedExt_ValidCustomDir(t *testing.T) {
-	customDir := mcCustomDir(t)
-	src := filepath.Join(t.TempDir(), "model.txt")
-	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := InstallWithOverlay(src, customDir)
-	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "UNSUPPORTED_FORMAT" {
-		t.Fatalf("不支持扩展名应返回 UNSUPPORTED_FORMAT, got %v", err)
-	}
-}
-
-func TestInstallWithOverlay_MkdirFail(t *testing.T) {
-	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
-	if err := os.MkdirAll(mcRoot, 0755); err != nil {
-		t.Fatal(err)
-	}
-	blocker := filepath.Join(mcRoot, "config")
-	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	src := filepath.Join(t.TempDir(), "model.ysm")
-	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	customDir := filepath.Join(mcRoot, "config", "yes_steve_model", "custom")
-	_, err := InstallWithOverlay(src, customDir) // config 是文件 → MkdirAll 失败
-	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("MkdirAll 失败应返回 IO_ERROR, got %v", err)
-	}
-}
-
 // ====== InstallLocked symlink 守卫分支（本环境 os.Symlink 可用；不可用时跳过）======
 
 func TestInstall_CustomDirSymlinkOutside(t *testing.T) {

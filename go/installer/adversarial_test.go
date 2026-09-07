@@ -53,47 +53,6 @@ func TestAdversarial_InstallToGlobal_ArbitraryRead(t *testing.T) {
 }
 
 // ============================================================================
-// BUG-2: InstallWithOverlay 允许读取任意路径文件
-// 与 BUG-1 同因——InstallWithOverlay 同样缺少 src 的 repo 归属校验。
-// 覆盖检查逻辑（os.Stat dst）在冲突前并不阻止越权读取。
-// 【现状】该函数前端已 0 消费（Deprecated 绑定，installer.go 注释「待发版清理」），
-// 守卫责任与 BUG-1 相同：由调用层保证 src 归属（App.InstallModelFile 已修）。
-// ============================================================================
-func TestAdversarial_InstallWithOverlay_ArbitraryRead(t *testing.T) {
-	evilDir := t.TempDir()
-	evilFile := filepath.Join(evilDir, "overlay.ysm")
-	if err := os.WriteFile(evilFile, []byte("overlay-malicious"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	mcRoot := t.TempDir()
-	mcDir := filepath.Join(mcRoot, ".minecraft")
-	customDir := filepath.Join(mcDir, "versions", "1.20.1", "config", "yes_steve_model", "custom")
-	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := InstallWithOverlay(evilFile, customDir)
-	if err != nil {
-		var ae types.AppError
-		if errors.As(err, &ae) && ae.Code == "ALREADY_EXISTS" {
-			t.Logf("OK: InstallWithOverlay 因冲突拒绝（但越权检查已发生）: %v", err)
-			return
-		}
-		t.Logf("OK: InstallWithOverlay rejected arbitrary src: %v", err)
-		return
-	}
-
-	t.Logf("INFO(BUG-2): InstallWithOverlay 允许读取任意路径文件（by design——同 BUG-1）: result=%s", result)
-	if _, err := os.Stat(result); err == nil {
-		data, _ := os.ReadFile(result)
-		if string(data) == "overlay-malicious" {
-			t.Logf("确认: 恶意内容已被复制到 .minecraft/custom")
-		}
-	}
-}
-
-// ============================================================================
 // BUG-3: InstallDir(rtype="") 复制 .exe / .bat / .dll 等危险文件
 // isAllowed 在 rtype=="" 时进入 default 分支，对所有文件名返回 true，
 // 包括可执行文件。攻击者可将 .exe 嵌入模型目录，安装后进入 .minecraft。
@@ -255,53 +214,6 @@ func TestAdversarial_InstallToGlobal_SymlinkBypass(t *testing.T) {
 	if _, statErr := os.Stat(result); statErr == nil {
 		data, _ := os.ReadFile(result)
 		if string(data) == "SECRET-DATA" {
-			t.Logf("确认: 通过符号链接泄露了仓库外文件内容")
-		}
-	}
-}
-
-// ============================================================================
-// BUG-5b: InstallWithOverlay 同样未 EvalSymlinks 解析 src
-// ============================================================================
-func TestAdversarial_InstallWithOverlay_SymlinkBypass(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Linux only")
-	}
-
-	repo := t.TempDir()
-	outside := t.TempDir()
-	realFile := filepath.Join(outside, "hidden.ysm")
-	if err := os.WriteFile(realFile, []byte("HIDDEN-DATA"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	linkPath := filepath.Join(repo, "hidden_link.ysm")
-	if err := os.Symlink(realFile, linkPath); err != nil {
-		t.Fatal(err)
-	}
-
-	mcRoot := t.TempDir()
-	mcDir := filepath.Join(mcRoot, ".minecraft")
-	customDir := filepath.Join(mcDir, "config", "yes_steve_model", "custom")
-	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := InstallWithOverlay(linkPath, customDir)
-	if err != nil {
-		var ae types.AppError
-		if errors.As(err, &ae) && ae.Code == "ALREADY_EXISTS" {
-			t.Logf("OK: InstallWithOverlay 因冲突拒绝: %v", err)
-			return
-		}
-		t.Logf("OK: InstallWithOverlay rejected symlink src: %v", err)
-		return
-	}
-
-	t.Logf("BUG-5: InstallWithOverlay 跟随了符号链接（未 EvalSymlinks）: result=%s", result)
-	if _, statErr := os.Stat(result); statErr == nil {
-		data, _ := os.ReadFile(result)
-		if string(data) == "HIDDEN-DATA" {
 			t.Logf("确认: 通过符号链接泄露了仓库外文件内容")
 		}
 	}

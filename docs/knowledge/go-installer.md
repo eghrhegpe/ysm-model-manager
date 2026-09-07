@@ -20,7 +20,6 @@ auto_fields:
     - InstallLocked
     - InstallLocker
     - InstallToGlobal
-    - InstallWithOverlay
     - IsValidRepoRoot
 quick_groups:
   - 文件操作与标签

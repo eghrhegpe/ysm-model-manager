@@ -76,12 +76,17 @@ func TestFindPreviewImage_EmptyPath(t *testing.T) {
 // CreateDir root="" 绕过——HIGH
 // =====================================================================
 
-// ---------- 6. CreateDir root="" 在任意位置创建目录 ----------
-// KNOWN-DESIGN(待拍板): CreateDir(root="") 时创建于当前工作目录。
-// 带 root 的场景有校验(fileops_test.go TestCreateDir_Validation);空 root
-// 是否应拒绝属契约决策——若拒绝会影响现有调用方,先标记不翻转断言。
+// ---------- 6. CreateDir root="" 拒绝 ----------
+// 2026-09-07 关闭 KNOWN-DESIGN（待拍板→已定）：生产唯一调用方（app_files.go CreateDir）
+// 恒传仓库根（a.ysmRoot() 非空），空 root 是畸形输入——按防御纵深显式拒绝，
+// 杜绝退化到相对当前工作目录创建（原行为会污染 CWD）。
 func TestCreateDir_EmptyRoot(t *testing.T) {
-	t.Skip("KNOWN-DESIGN(待拍板): CreateDir root 为空时按 CWD 处理,是否应拒绝未定")
+	if err := CreateDir("", "subdir"); err == nil {
+		t.Fatal("CreateDir 空 root 应被拒绝（禁止退化到 CWD 创建）")
+	}
+	if err := CreateDir("   ", "subdir"); err == nil {
+		t.Fatal("空白 root 应被拒绝")
+	}
 }
 
 // =====================================================================

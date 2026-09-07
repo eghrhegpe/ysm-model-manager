@@ -182,6 +182,7 @@ class ContextMenu extends WebComponentBase {
     this.style.left = "-9999px";
     this.style.top = "-9999px";
     requestAnimationFrame(() => {
+      if (!this.isConnected) return; // 组件已卸载则早退，防操作已 disconnected 的 DOM
       const rect = menu.getBoundingClientRect();
       const iw = window.innerWidth;
       const ih = window.innerHeight;

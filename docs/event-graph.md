@@ -58,7 +58,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 204 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 208 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -70,7 +70,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 203 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 207 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -382,7 +382,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 347 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 102 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 498 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 495 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -547,8 +547,8 @@
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 393 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 433 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 441 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 501 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 511 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 498 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 508 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 74 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 233 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 375 |
@@ -559,11 +559,11 @@
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 48 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 59 |
-| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 301 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 319 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 325 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
+| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 165 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 305 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 323 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 329 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 340 |
 | advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 159 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 178 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 208 |

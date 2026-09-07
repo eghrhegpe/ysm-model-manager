@@ -150,6 +150,10 @@ function atTlBindSearch(ctx: AtTlCtx): void {
       vm._renderTree();
     }, 150);
   });
+  // 组件卸载时清 timer，防 disconnectedCallback 后 _renderTree 在已卸载实例执行
+  vm._unsubs.push(() => {
+    if (srchTimer) clearTimeout(srchTimer);
+  });
 }
 
 function atTlBindAdvFilter(ctx: AtTlCtx): void {

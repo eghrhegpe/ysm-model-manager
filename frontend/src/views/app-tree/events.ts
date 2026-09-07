@@ -489,11 +489,8 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
       }
     }
     if (ok > 0) {
-      for (const e of flipped) {
-        if (!e.banned && !enable) e.banned = true;
-        else if (e.banned && enable) e.banned = false;
-      }
-      vm._renderTree();
+      // ⚠️ 不直接 mutate Go 端原始 entry 对象，reload 取真值防幽灵状态
+      await vm._load();
       if ((vm._rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }

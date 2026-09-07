@@ -407,7 +407,6 @@ auto_fields:
     - ensureDir
     - ensureFabStyles
     - ensureTooltipStyles
-    - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - EnvironmentCapability
@@ -878,7 +877,6 @@ auto_fields:
     - modalSelect
     - ModalSelectOptions
     - modalTagEditor
-    - MODEL_SKY_PRESETS
     - Model2DOptions
     - modelDetailHTML
     - ModelDetailMeta

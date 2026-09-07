@@ -39,7 +39,6 @@ auto_fields:
     - DEFAULT_WATER_PARAMS
     - DirectionalLightParams
     - drawEnvEquirect
-    - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - EnvironmentCapability
@@ -68,7 +67,6 @@ auto_fields:
     - lightDirToPosition
     - LightParams
     - MAX_MODELS
-    - MODEL_SKY_PRESETS
     - ModelEntry
     - oneOf
     - persistState

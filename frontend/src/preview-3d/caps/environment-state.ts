@@ -150,14 +150,3 @@ export interface EnvironmentParams {
   /** 是否把当前环境贴图（HDR 原图/程序化 canvas）作为 scene.background */
   useAsBackground: boolean;
 }
-
-/** 模型类别环境默认 preset（YSM 方块=sky，VRM/MMD=studio 柔光更友好，体素=forest） */
-export const ENV_PRESET_BY_MODEL: Record<string, Partial<EnvironmentParams>> = {
-  default: { preset: "sky", intensity: ENV_PRESETS.sky.defaultIntensity },
-  ysm: { preset: "sky", intensity: 1.0 },
-  vrm: { preset: "studio", intensity: ENV_PRESETS.studio.defaultIntensity },
-  mmd: { preset: "studio", intensity: ENV_PRESETS.studio.defaultIntensity },
-  "mmd-scene": { preset: "sky", intensity: 1.1 },
-  litematic: { preset: "forest", intensity: ENV_PRESETS.forest.defaultIntensity },
-  resourcepack: { preset: "sky", intensity: 1.0 },
-};

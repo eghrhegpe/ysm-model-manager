@@ -198,7 +198,6 @@ auto_fields:
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Endianness
-    - ENV_PRESET_BY_MODEL
     - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
@@ -415,7 +414,6 @@ auto_fields:
     - MmdZipConfig
     - mockMenuHandle
     - MODEL_DEFAULTS
-    - MODEL_SKY_PRESETS
     - modelDetailView
     - ModelEntry
     - modelEntryFor

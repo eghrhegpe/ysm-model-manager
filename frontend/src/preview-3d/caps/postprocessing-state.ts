@@ -165,7 +165,7 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
  * per-type 预设只携带 `enabled`（能力级门禁，不入 schema）+ envState 亮度覆盖（当前为空，
  * 全部继承默认）。最终生效开关 = 性能档位 `render.bloom`（总闸）&& 此处 `enabled`（per-type 门禁）。
  *
- * setPreset 读取 preset.enabled 落库 this.enabled，其余 envState 键走 setEnvState({source:'auto-model'})。
+ * applyPostProcDefaults 读取 preset.enabled 落库 this.enabled，其余 envState 键走 setEnvState({source:'auto-model'})。
  */
 export const POSTPROC_PRESETS: Record<string, Partial<EnvState> & { enabled?: boolean }> = {
   default: {},

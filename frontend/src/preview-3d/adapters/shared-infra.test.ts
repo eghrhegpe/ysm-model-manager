@@ -67,3 +67,59 @@ describe("teardownSharedInfra", () => {
     container.remove();
   });
 });
+
+// ===== ADR-196 装配链收敛契约（applyModelDefaults / applyPostProcDefaults） =====
+// 断言「7 个散落 setPreset 调用收敛为 2 个命名入口」后，编排仍逐字复刻原顺序，
+// 且按 modelType 透传（未知类型由各 cap 内部回落 default，装配层不越权）。
+describe("applyModelDefaults / applyPostProcDefaults（ADR-196 装配链收敛契约）", () => {
+  function makeDeps() {
+    const cap = (name: string) => ({ applyModelPreset: vi.fn(), id: name });
+    const sky = cap("sky");
+    const light = cap("light");
+    const fog = cap("fog");
+    const shadow = cap("shadow");
+    const reflector = cap("reflector");
+    const environment = cap("environment");
+    return {
+      deps: { sky, light, fog, shadow, reflector, environment },
+      spies: [sky.applyModelPreset, light.applyModelPreset, fog.applyModelPreset, shadow.applyModelPreset, reflector.applyModelPreset, environment.applyModelPreset],
+    };
+  }
+
+  it("applyModelDefaults 对 6 个预 apply cap 各调一次 applyModelPreset，顺序 sky→light→fog→shadow→reflector→environment", async () => {
+    const { applyModelDefaults } = await import("./shared-infra.ts");
+    const { deps, spies } = makeDeps();
+    applyModelDefaults("vrm", deps as never);
+    for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+    for (const spy of spies) expect(spy).toHaveBeenCalledWith("vrm");
+    // 调用顺序：sky 最早、environment 最晚
+    expect(spies[0].mock.invocationCallOrder[0]).toBeLessThan(spies[5].mock.invocationCallOrder[0]);
+  });
+
+  it("未知 modelType 透传到各 cap（内部回落 default 的文案保留在 cap 侧，装配层不吞）", async () => {
+    const { applyModelDefaults } = await import("./shared-infra.ts");
+    const { deps, spies } = makeDeps();
+    applyModelDefaults("unknown_type", deps as never);
+    for (const spy of spies) expect(spy).toHaveBeenCalledWith("unknown_type");
+  });
+
+  it("缺省 cap（undefined/null）静默跳过，不抛错", async () => {
+    const { applyModelDefaults } = await import("./shared-infra.ts");
+    expect(() =>
+      applyModelDefaults("vrm", { sky: null, fog: null, shadow: null, reflector: null } as never),
+    ).not.toThrow();
+  });
+
+  it("applyPostProcDefaults 调用 postProc.applyPostProcDefaults(modelType)", async () => {
+    const { applyPostProcDefaults } = await import("./shared-infra.ts");
+    const postProc = { applyPostProcDefaults: vi.fn() };
+    applyPostProcDefaults(postProc as never, "mmd");
+    expect(postProc.applyPostProcDefaults).toHaveBeenCalledTimes(1);
+    expect(postProc.applyPostProcDefaults).toHaveBeenCalledWith("mmd");
+  });
+
+  it("applyPostProcDefaults 遇 null 静默跳过", async () => {
+    const { applyPostProcDefaults } = await import("./shared-infra.ts");
+    expect(() => applyPostProcDefaults(null, "vrm")).not.toThrow();
+  });
+});

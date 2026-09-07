@@ -12,11 +12,18 @@ source_files:
   - frontend/src/preview-3d/state/env-dispatcher.ts
   - frontend/src/preview-3d/state/model-defaults.ts
   - frontend/src/preview-3d/state/atmosphere-presets.ts
+  - frontend/src/preview-3d/adapters/shared-infra.ts
+tests:
+  - frontend/src/preview-3d/adapters/shared-infra.test.ts
 auto_fields:
   symbols_with_lines:
+    - applyModelDefaults
+    - applyPostProcDefaults
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
+    - buildSharedInfra
     - clearEnvCallbacks
+    - clearSceneCaps
     - deriveDefaultEnvState
     - dispatchEnvChange
     - ENV_STATE_SCHEMA
@@ -26,13 +33,17 @@ auto_fields:
     - EnvStateSchema
     - getEnvCallbackCount
     - getPresetKeys
+    - getSceneCaps
     - getStateValue
     - MODEL_DEFAULTS
     - ModelType
     - registerEnvCallback
     - resetEnvState
+    - resetSceneInfra
     - setEnvState
     - setStateValue
+    - SharedInfra
+    - teardownSharedInfra
 perf: gpu-bound
 use_when:
   - 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写
@@ -79,14 +90,14 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - `setEnvState(partial, { source })`：唯一写入口。cap setter 收口为它（`source:'manual'`）；模型类别预设用 `source:'auto-model'`；氛围预设（刀4 ATMOSPHERE_PRESETS）用 `auto-atmosphere`。
-- cap 公开 setter/getter **保留**（`setWaterMode`/`getPresetId` 等签名不变），内部实现改读/写 envState + registerEnvCallback 落地渲染——菜单闭包与 mount-preview-core 装配链零改动。
+- cap 公开 setter/getter **保留**（`setWaterMode`/`getPresetId` 等签名不变），内部实现改读/写 envState + registerEnvCallback 落地渲染——菜单闭包不感知，装配链见下「已收敛」。
 
 ## 统一数据源（ADR-196 刀4–5）
 
 - `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），来源合并此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）。`skyForceEnv: true` 标记「模型切换是离散动作，应触发 PMREM 重建」。
 - `state/atmosphere-presets.ts`：`ATMOSPHERE_PRESETS` 完整氛围快照（含 light 强度/色温 + postproc exposure/bloom 氛围语义），取代 ENV_PRESET_LINKAGE 硬编码联动。
-- **setPreset 收口态（刀3.5/刀5）**：sky/fog/shadow/reflector/light/environment 六个 cap 的 `setPreset(modelType)` 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、light 锥组挂载、reflector 重建等）留在 cap 内。
-- **已决策 PARK（2026-09-07）**：装配链（adapters/shared-infra.ts）维持 `cap.setPreset(adapter.id)` facade，**不**收敛成单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`、**不**删 `SceneCapability.setPreset` 接口——因 isStateLoaded 守卫、postproc enabled 侧效等无法被全局 setEnvState 等效替代，删接口收益≈0 而风险实存。SceneCapability.setPreset 保留（可选方法）。
+- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/light/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。六个 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`（light 为 `{source:'manual'}` 双入口），侧效（isStateLoaded 守卫、shadow needsUpdate、light 锥组挂载/手动压制、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。
+- **装配链已收敛（2026-09-07）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 改为两个命名入口——`applyModelDefaults(modelType, deps)`（预 apply 6 cap：sky→light→fog→shadow→reflector→environment）+ `applyPostProcDefaults(postProcCap, modelType)`（post-apply 1 cap，在 apply/syncShadowLights 之后、setReflectorCap 之前）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、light 手动/自动双入口、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。装配序逐字复刻原行为。
 
 ## 与其他子系统关系
 

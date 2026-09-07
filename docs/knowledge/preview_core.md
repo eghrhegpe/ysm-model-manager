@@ -20,6 +20,8 @@ auto_fields:
     - ALL_PERCEPTION_CAPS
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
+    - applyModelDefaults
+    - applyPostProcDefaults
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures

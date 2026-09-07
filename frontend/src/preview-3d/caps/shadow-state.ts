@@ -30,7 +30,7 @@ export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
   cameraSize: 15,
 };
 
-/** 预设（setPreset 套用到不同模型类别） */
+/** 预设（applyModelPreset 套用到不同模型类别） */
 export const SHADOW_PRESETS: Record<string, Partial<ShadowParams> | undefined> = {
   default: { type: "hard" },
   // v1.14: 启用 enabled:true；建筑类仍保持关闭以省 GPU

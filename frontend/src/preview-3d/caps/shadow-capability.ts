@@ -31,7 +31,7 @@ export class ShadowCapability implements SceneCapability {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
   private enabled: boolean;
-  /** loadState 是否成功载入过；setPreset 有它时不覆盖用户会话（避免每次新会话回到预设） */
+  /** loadState 是否成功载入过；applyModelPreset 有它时不覆盖用户会话（避免每次新会话回到预设） */
   private isStateLoaded = false;
 
   /** 跨能力：外部注入 LightCapability 实例，取灯 */
@@ -143,7 +143,7 @@ export class ShadowCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
-  setPreset(adapterId: string): void {
+  applyModelPreset(adapterId: string): void {
     if (this.isStateLoaded) return;
     const preset =
       MODEL_DEFAULTS[adapterId as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;

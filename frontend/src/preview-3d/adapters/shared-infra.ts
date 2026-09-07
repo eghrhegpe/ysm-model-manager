@@ -23,6 +23,46 @@ import { setSceneCapabilityLookup } from "../state/preview-state.ts";
 import type { PreviewAdapter } from "./mount-preview-core.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 
+/**
+ * 装配链——按模型类别套用预设（ADR-196）。
+ * MODEL_DEFAULTS 驱动的单个入口：把 6 个预 apply cap 的模型预设套用统一编排，
+ * 逐字复刻原 7 个散落 `cap.setPreset(adapter.id)` 的调用顺序（sky→light→fog→shadow→
+ * reflector→environment）与各 cap 内部守卫（shadow/reflector 的 isStateLoaded、
+ * light 的 manual 双入口原样保留在 cap 内，此处不越权）。未知 modelType 由各 cap
+ * 内部 `?? MODEL_DEFAULTS.default` 回落，语义与现状一致。
+ */
+export function applyModelDefaults(
+  modelType: string,
+  deps: {
+    sky?: SkyCapability | null;
+    light?: LightCapability | null;
+    fog?: FogCapability | null;
+    shadow?: ShadowCapability | null;
+    reflector?: ReflectorCapability | null;
+    environment?: EnvironmentCapability | null;
+  },
+): void {
+  deps.sky?.applyModelPreset(modelType);
+  deps.light?.applyModelPreset(modelType);
+  deps.fog?.applyModelPreset(modelType);
+  deps.shadow?.applyModelPreset(modelType);
+  deps.reflector?.applyModelPreset(modelType);
+  deps.environment?.applyModelPreset(modelType);
+}
+
+/**
+ * 装配链——post-apply 后处理模型预设（ADR-196）。
+ * 须跑在 `for(cap)cap.apply()` + `syncShadowLights` 之后、`setReflectorCap` 之前
+ * （composer / SSR↔reflector 联动时序）。postproc per-type enabled 不入 schema，
+ * 读自家 POSTPROC_PRESETS，由 cap 内 applyPostProcDefaults 完成翻转 + composer 侧效。
+ */
+export function applyPostProcDefaults(
+  postProcCap: PostprocessingCapability | null,
+  modelType: string,
+): void {
+  postProcCap?.applyPostProcDefaults(modelType);
+}
+
 /** 共享 scene（所有模型共用一个 scene，不同格式模型叠加在同一 WebGL context） */
 let _singletonScene: THREE.Scene | null = null;
 /** 共享 camera / renderer / controls（第一次 mount3D 创建，后续复用） */
@@ -197,13 +237,16 @@ export function buildSharedInfra(
   const environmentCap = sceneCapabilityRegistry.getById("environment") ?? null;
   // 从 localStorage 恢复上次会话状态
   sceneCapabilityRegistry.loadAll();
-  // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）
-  skyCap?.setPreset(adapter.id);
-  lightCap?.setPreset(adapter.id);
-  fogCap?.setPreset(adapter.id);
-  shadowCap?.setPreset(adapter.id);
-  reflectorCap?.setPreset(adapter.id);
-  environmentCap?.setPreset(adapter.id);
+  // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）——ADR-196 装配链收敛：
+  // 单个 applyModelDefaults 入口编排 6 个预 apply cap，逐字复刻原 setPreset 顺序与守卫
+  applyModelDefaults(adapter.id, {
+    sky: skyCap,
+    light: lightCap,
+    fog: fogCap,
+    shadow: shadowCap,
+    reflector: reflectorCap,
+    environment: environmentCap,
+  });
   // 全部挂入场景
   for (const cap of caps) cap.apply();
   // ShadowCapability 同步：光 castShadow（光已由 LightCapability 创建）
@@ -212,8 +255,8 @@ export function buildSharedInfra(
   const postProcCap = sceneCapabilityRegistry.getById("postprocessing") ?? null;
   // 兼容老接口：postProc 变量也指向同一 capability（对外 render/setSize/dispose 方法签名一致）
   const postProc = postProcCap;
-  // 按模型类别套用预设
-  postProcCap?.setPreset(adapter.id);
+  // 按模型类别套用预设（post-apply，须在 apply/syncShadowLights 之后、setReflectorCap 之前）
+  applyPostProcDefaults(postProcCap, adapter.id);
   // SSR↔Reflector 联动（postprocessing-capability.setReflectorCap）：SSR 开启时自动禁用单平面镜面，防 z-fighting
   postProcCap?.setReflectorCap(reflectorCap);
   // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项

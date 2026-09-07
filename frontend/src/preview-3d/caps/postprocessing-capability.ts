@@ -8,7 +8,7 @@
 //   - Pass 顺序：RenderPass → (SSAOPass 可选) → UnrealBloomPass → (SSRPass 可选，reflectionMode 控制) → OutputPass
 //   - dispose 还原构造前 renderer.toneMapping 等输出设置，不泄漏
 //   - SceneCapability 接口 + 注册表驱动：菜单自动渲染所有控件
-//   - setPreset 按模型类别分：方块/体素 = Bloom 薄 + 关 SSAO（无明显细节）；VRM/MMD = SSAO 中档 + Bloom 柔光
+//   - applyPostProcDefaults 按模型类别分：方块/体素 = Bloom 薄 + 关 SSAO（无明显细节）；VRM/MMD = SSAO 中档 + Bloom 柔光
 //   - reflectionMode 三档：envmap-only (SSR off) / envmap+ssr (默认，SSR 叠上 envmap 反射当屏外 fallback) / ssr-only (SSR 无屏外补全)
 //
 // ADR-196 刀2：参数真值源从 this.params 迁移到全局 envState 单例。
@@ -445,7 +445,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   }
 
   /** 性能档位总闸（render.bloom 绑定入口）：只写当前生效开关 this.enabled，
-   *  不触碰 per-type 门禁 params.enabled——门禁由 setPreset 维护，总闸 off 不得抹掉
+   *  不触碰 per-type 门禁 params.enabled——门禁由 applyPostProcDefaults 维护，总闸 off 不得抹掉
    *  （否则 off→on 循环后门禁已毁，bloom 再也开不回来）。手动开关（pp-enabled）仍走 setEnabled。 */
   setMasterEnabled(v: boolean): void {
     if (this.enabled === v) return;
@@ -490,7 +490,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     };
   }
 
-  setPreset(modelType: string): void {
+  applyPostProcDefaults(modelType: string): void {
     const preset = POSTPROC_PRESETS[modelType] ?? POSTPROC_PRESETS.default;
     // per-type 门禁 enabled（不入 schema，单独携带）
     const { enabled: presetEnabled, ...presetEnv } = preset;

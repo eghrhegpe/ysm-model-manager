@@ -369,12 +369,12 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
   });
 });
 
-describe("ShadowCapability — setPreset", () => {
+describe("ShadowCapability — applyModelPreset", () => {
   beforeEach(() => { resetEnvState(); });
 
   it("按 adapterId 映射预设（mmd→soft）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    cap.setPreset("mmd");
+    cap.applyModelPreset("mmd");
     expect(cap.isSoft()).toBe(true);
     expect(cap.getMapSize()).toBe(2048);
     expect(cap.getCameraSize()).toBe(15);
@@ -384,16 +384,16 @@ describe("ShadowCapability — setPreset", () => {
 
   it("未知 adapterId 落回 default 预设", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    cap.setPreset("unknown-type");
+    cap.applyModelPreset("unknown-type");
     expect(cap.isSoft()).toBe(false);
     expect(cap.isEnabled()).toBe(true);
   });
 
-  it("loadState 后 setPreset 不覆盖用户会话配置", () => {
+  it("loadState 后 applyModelPreset 不覆盖用户会话配置", () => {
     localStorage.setItem("ysm-scene-cap-shadow", JSON.stringify({ enabled: true, type: "hard", mapSize: 4096 }));
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
-    cap.setPreset("mmd");
+    cap.applyModelPreset("mmd");
     expect(cap.isSoft()).toBe(false);
     expect(cap.getMapSize()).toBe(4096);
   });

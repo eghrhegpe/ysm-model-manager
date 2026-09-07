@@ -216,12 +216,12 @@ describe("SkyCapability — 启用/禁用", () => {
 describe("SkyCapability — 预设", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setPreset 按模型类别套用", () => {
+  it("applyModelPreset 按模型类别套用", () => {
     const cap = newCap();
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     // vrm 预设覆盖 turbidity/exposure 等
     expect(cap.isEnabled()).toBe(true);
-    cap.setPreset("mmd");
+    cap.applyModelPreset("mmd");
     expect(cap.isEnabled()).toBe(true);
   });
 });
@@ -1024,11 +1024,11 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
   });
 
-  it("setPreset 在 disabled 时只合并参数不写 uniforms", () => {
+  it("applyModelPreset 在 disabled 时只合并参数不写 uniforms", () => {
     const cap = newCap({ enabled: false });
     const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
     const turbidityBefore = u["turbidity"].value;
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     expect(envState.skyTurbidity).toBe(MODEL_DEFAULTS.vrm!.skyTurbidity!);
     expect(u["turbidity"].value).toBe(turbidityBefore); // 未写入 uniforms
   });

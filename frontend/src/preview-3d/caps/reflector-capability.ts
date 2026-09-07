@@ -39,7 +39,7 @@ export class ReflectorCapability implements SceneCapability {
   private enabled: boolean;
 
   private reflector: Reflector | null = null;
-  /** loadState 是否成功载入过；setPreset 有它时不覆盖用户会话（对齐 shadow-capability 同名守卫） */
+  /** loadState 是否成功载入过；applyModelPreset 有它时不覆盖用户会话（对齐 shadow-capability 同名守卫） */
   private isStateLoaded = false;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
@@ -169,7 +169,7 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
-  setPreset(modelType: string): void {
+  applyModelPreset(modelType: string): void {
     if (this.isStateLoaded) return;
     const preset =
       MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;

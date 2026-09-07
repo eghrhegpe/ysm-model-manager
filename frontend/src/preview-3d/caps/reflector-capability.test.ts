@@ -119,13 +119,13 @@ describe("ReflectorCapability — 尺寸与精度", () => {
 describe("ReflectorCapability — 预设", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setPreset 按模型类别套用", () => {
+  it("applyModelPreset 按模型类别套用", () => {
     const cap = newCap();
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     const p = cap.getParams();
     expect(p.opacity).toBe(0.5);
     expect(p.size).toBe(60);
-    cap.setPreset("litematic");
+    cap.applyModelPreset("litematic");
     const p2 = cap.getParams();
     expect(p2.opacity).toBe(0.25);
     expect(p2.size).toBe(500);
@@ -158,23 +158,23 @@ describe("ReflectorCapability — 持久化", () => {
     expect(cap.getParams().opacity).toBe(0.6);
   });
 
-  it("setPreset 在 loadState 已恢复后不覆盖用户会话（对齐 shadow 的 isStateLoaded 守卫）", () => {
+  it("applyModelPreset 在 loadState 已恢复后不覆盖用户会话（对齐 shadow 的 isStateLoaded 守卫）", () => {
     setEnvState({ reflectorOpacity: 0.9, reflectorSize: 300 }, { source: 'manual' });
     const cap1 = newCap();
     cap1.saveState();
     resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
-    cap2.setPreset("litematic");
+    cap2.applyModelPreset("litematic");
     const p = cap2.getParams();
     expect(p.opacity).toBe(0.9);
     expect(p.size).toBe(300);
   });
 
-  it("setPreset 在空存储（未恢复过状态）时照常套用模型预设", () => {
+  it("applyModelPreset 在空存储（未恢复过状态）时照常套用模型预设", () => {
     const cap = newCap();
     cap.loadState();
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     expect(cap.getParams().opacity).toBe(0.5);
   });
 });
@@ -317,12 +317,12 @@ describe("ReflectorCapability — 真实管线", () => {
     expect(reflector.position.y).toBeCloseTo(GROUND_LAYER_OFFSETS.reflector, 5);
   });
 
-  it("setPreset 挂载态下重建（新尺寸参数生效）", () => {
+  it("applyModelPreset 挂载态下重建（新尺寸参数生效）", () => {
     const cap = newCap({ enabled: true });
     cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
-    cap.setPreset("litematic");
+    cap.applyModelPreset("litematic");
     expect((scene.getObjectByName("ysm-reflector") as THREE.Mesh).material).toBeDefined();
     expect(cap.getParams().size).toBe(500);
   });

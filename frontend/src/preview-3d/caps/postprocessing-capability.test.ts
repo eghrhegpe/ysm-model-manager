@@ -471,7 +471,7 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     expect(renderer.toneMappingExposure).toBeCloseTo(2.0, 4);
   });
 
-  it("setPreset 在 enabled=false 时不碰 renderer（只更新 params）", () => {
+  it("applyPostProcDefaults 在 enabled=false 时不碰 renderer（只更新 params）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.58);
@@ -479,7 +479,7 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     const origExp = renderer.toneMappingExposure;
     const origTM = renderer.toneMapping;
     // ysm 预设 enabled=false：统一亮度口径下预设只带 enabled，不携 exposure
-    cap.setPreset("ysm");
+    cap.applyPostProcDefaults("ysm");
     expect(renderer.toneMapping).toBe(origTM);
     expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
     // params 保持全局默认曝光（光影包统一值），不出现 per-type 1.05
@@ -487,18 +487,18 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("setPreset 在 enabled=true 时正常写 tone mapping / exposure（全局统一值）", () => {
+  it("applyPostProcDefaults 在 enabled=true 时正常写 tone mapping / exposure（全局统一值）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState();
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
     // vrm 预设 enabled=true：写全局默认曝光 1.0（不再 per-type 1.05）
-    cap.setPreset("vrm");
+    cap.applyPostProcDefaults("vrm");
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
     expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
   });
 
-  it("setPreset 落库 this.enabled（per-type 开关生效，根治死代码）", () => {
+  it("applyPostProcDefaults 落库 this.enabled（per-type 开关生效，根治死代码）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState();
@@ -508,7 +508,7 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     (capOn as unknown as { buildComposer: () => void }).buildComposer = () => { composerBuilt = true; };
     (capOn as unknown as { disposeComposer: () => void }).disposeComposer = () => {};
     (capOn as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
-    capOn.setPreset("vrm");
+    capOn.applyPostProcDefaults("vrm");
     expect(capOn.isEnabled()).toBe(true);
     expect(composerBuilt).toBe(true);
     // 构造 on，套用 ysm（enabled:false）→ 应翻转为 off 并销毁 composer
@@ -517,7 +517,7 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     (capOff as unknown as { buildComposer: () => void }).buildComposer = () => {};
     (capOff as unknown as { disposeComposer: () => void }).disposeComposer = () => { disposed = true; };
     (capOff as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
-    capOff.setPreset("ysm");
+    capOff.applyPostProcDefaults("ysm");
     expect(capOff.isEnabled()).toBe(false);
     expect(disposed).toBe(true);
   });
@@ -572,8 +572,8 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   });
 });
 
-// ============ 性能档位总闸 setMasterEnabled + setPreset 构建次数（审核修复回归） ============
-describe("PostprocessingCapability — 总闸与 setPreset 构建次数", () => {
+// ============ 性能档位总闸 setMasterEnabled + applyPostProcDefaults 构建次数（审核修复回归） ============
+describe("PostprocessingCapability — 总闸与 applyPostProcDefaults 构建次数", () => {
   function buildSpy() {
     return vi.spyOn(
       PostprocessingCapability.prototype as unknown as { buildComposer: () => void },
@@ -600,21 +600,21 @@ describe("PostprocessingCapability — 总闸与 setPreset 构建次数", () => 
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("setPreset enabled 翻转（false→true）时 composer 只构建一次", () => {
+  it("applyPostProcDefaults enabled 翻转（false→true）时 composer 只构建一次", () => {
     const cap = newCap(); // 默认 enabled=false（params.enabled=false）
     const spy = buildSpy();
     spy.mockClear();
-    cap.setPreset("vrm"); // 门禁 false→true 翻转
+    cap.applyPostProcDefaults("vrm"); // 门禁 false→true 翻转
     expect(cap.isEnabled()).toBe(true);
     expect(spy).toHaveBeenCalledTimes(1); // 修复前末尾无条件重建会二次 build
   });
 
-  it("setPreset enabled 未变（保持 on）时重建 composer 一次以同步参数", () => {
+  it("applyPostProcDefaults enabled 未变（保持 on）时重建 composer 一次以同步参数", () => {
     const cap = newCap({ enabled: true, params: { enabled: true } });
     cap.setEnabled(true); // 建真 composer（后续 buildComposer 内部 disposeComposer 依赖真实实例）
     const spy = buildSpy();
     spy.mockClear();
-    cap.setPreset("vrm");
+    cap.applyPostProcDefaults("vrm");
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });

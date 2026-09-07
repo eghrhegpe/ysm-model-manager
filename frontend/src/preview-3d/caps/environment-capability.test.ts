@@ -207,25 +207,25 @@ describe("EnvironmentCapability — 预设切换", () => {
 
   it("setPreset 按模型类别套用（ENV_PRESET_BY_MODEL）", () => {
     const cap = newCap();
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     // vrm → studio
     expect(cap.getPresetId()).toBe("studio");
     expect(cap.getIntensity()).toBe(ENV_PRESETS.studio.defaultIntensity);
-    cap.setPreset("litematic");
+    cap.applyModelPreset("litematic");
     // litematic → forest
     expect(cap.getPresetId()).toBe("forest");
   });
 
   it("setPreset 未知模型类型回退 default（sky）", () => {
     const cap = newCap();
-    cap.setPreset("unknown_type");
+    cap.applyModelPreset("unknown_type");
     // unknown → MODEL_DEFAULTS.default → envPreset: "sky"
     expect(cap.getPresetId()).toBe(MODEL_DEFAULTS.default.envPreset);
   });
 
-  it("setPreset 不会跳到 custom（由用户主动选 HDR 才进）", () => {
+  it("applyModelPreset 不会跳到 custom（由用户主动选 HDR 才进）", () => {
     const cap = newCap();
-    cap.setPreset("default");
+    cap.applyModelPreset("default");
     expect(cap.getPresetId()).not.toBe("custom");
   });
 });

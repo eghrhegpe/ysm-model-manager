@@ -280,7 +280,7 @@ export class SkyCapability implements SceneCapability {
           // regenerate=true（setCloudCoverage 第二参）→ 云量影响环境烘焙，重刷 IBL。
           // code_review 57aeefdb4 #5/#6/#8/#10（P2）：用本次派发的 changed 集判定
           // 而非读粘滞的 state.skyForceEnv——skyForceEnv 默认 true 且手动
-          // setTime/setSun/setPreset 均置 true 从不复位（autoRotate 关时），读粘滞值
+          // setTime/setSun/applyModelPreset 均置 true 从不复位（autoRotate 关时），读粘滞值
           // 会让默认 regenerate=false 的云量滑块每 tick 全量 PMREM 烘焙（GPU 熔炉）
           if (changed.has("skyForceEnv") && state.skyEnvironment) {
             this.regenerateEnvironment();
@@ -472,7 +472,7 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
-  setPreset(modelType: string): void {
+  applyModelPreset(modelType: string): void {
     const preset =
       MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     // ADR-196 收口：统一数据源 MODEL_DEFAULTS；callback 各散射分支落地。

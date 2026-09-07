@@ -509,7 +509,7 @@ export class LightCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
-  setPreset(modelType: string, opts?: { manual?: boolean }): void {
+  applyModelPreset(modelType: string, opts?: { manual?: boolean }): void {
     if (opts?.manual) {
       this.manualPreset = modelType;
     } else if (this.manualPreset) {
@@ -560,7 +560,7 @@ export class LightCapability implements SceneCapability {
   }
 
   /**
-   * 锥组挂载态与当前 envState 同步（setPreset / loadState 复用）。
+   * 锥组挂载态与当前 envState 同步（applyModelPreset / loadState 复用）。
    * 只在锥组已挂载时处理卸载与定位。
    */
   private syncConeMount(): void {
@@ -709,9 +709,9 @@ export class LightCapability implements SceneCapability {
     //    预设以 envState 为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
       this.manualPreset = state.manualPreset; // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）
-      this.setPreset(state.manualPreset, { manual: true });
+      this.applyModelPreset(state.manualPreset, { manual: true });
     } else if (typeof state.currentPreset === "string") {
-      this.setPreset(state.currentPreset);
+      this.applyModelPreset(state.currentPreset);
     }
     // ② 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）。
     if (typeof state.keyEnabled === "boolean") {

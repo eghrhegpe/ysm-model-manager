@@ -595,7 +595,7 @@ export class EnvironmentCapability implements SceneCapability {
     return this.enabled;
   }
 
-  setPreset(modelType: string): void {
+  applyModelPreset(modelType: string): void {
     const preset =
       MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     // ADR-196：统一数据源 MODEL_DEFAULTS；callback → buildEnvironment。

@@ -25,7 +25,9 @@ auto_fields:
     - AngleShot
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
+    - applyModelDefaults
     - applyPerfPreset
+    - applyPostProcDefaults
     - applyRotationIfNonIdentity
     - applyVPDToMesh
     - applyWasdCameraMotion

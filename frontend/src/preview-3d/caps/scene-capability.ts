@@ -54,9 +54,6 @@ export interface SceneCapability {
   setEnabled(v: boolean): void;
   isEnabled(): boolean;
 
-  /** 按模型类别套用预设（可选，无预设的能力忽略） */
-  setPreset?(modelType: string): void;
-
   /** 返回菜单控件定义列表（框架自动渲染为 slide panel） */
   getMenuNodes?(): PreviewMenuNode[];
 

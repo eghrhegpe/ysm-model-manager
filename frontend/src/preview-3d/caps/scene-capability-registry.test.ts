@@ -19,7 +19,6 @@ function makeFakeCap(id: string, overrides: Partial<SceneCapability> = {}): Scen
     dispose: vi.fn(),
     setEnabled: vi.fn(),
     isEnabled: () => true,
-    setPreset: vi.fn(),
     getMenuNodes: (): PreviewMenuNode[] => [],
     saveState: vi.fn(),
     loadState: vi.fn(),

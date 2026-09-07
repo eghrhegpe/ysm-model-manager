@@ -115,7 +115,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       control: {
         options: LIGHT_PRESET_OPTIONS,
         get: () => cap.getCurrentPreset(),
-        set: (v) => cap.setPreset(v as string, { manual: true }),
+        set: (v) => cap.applyModelPreset(v as string, { manual: true }),
       },
     },
   ];

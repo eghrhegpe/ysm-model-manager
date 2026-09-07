@@ -108,12 +108,12 @@ describe("FogCapability — 启用/禁用", () => {
 describe("FogCapability — 预设", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setPreset 按模型类别套用", () => {
+  it("applyModelPreset 按模型类别套用", () => {
     const cap = newCap();
-    cap.setPreset("mmd");
+    cap.applyModelPreset("mmd");
     const p = cap.getParams();
     expect(p.mode).toBe("linear");
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     const p2 = cap.getParams();
     expect(p2.enabled).toBe(false); // 预设不强制开启
   });

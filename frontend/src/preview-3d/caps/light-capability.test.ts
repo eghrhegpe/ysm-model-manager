@@ -35,7 +35,7 @@ function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
   p: ReturnType<LightCapability["getParams"]>;
 } {
   const cap = newCap();
-  cap.setPreset("mmd", { manual: true });
+  cap.applyModelPreset("mmd", { manual: true });
   cap.setSpotlight({ enabled: true });
   cap.setVolumetric({ enabled: opts.volumetricEnabled });
   expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
@@ -221,12 +221,12 @@ describe("LightCapability — 聚光灯定位 setTarget / setTargetHeight", () =
   });
 });
 
-describe("LightCapability — setPreset", () => {
+describe("LightCapability — applyModelPreset", () => {
   beforeEach(() => resetEnvState());
 
   it("ysm 预设：方块顶光稍柔", () => {
     const cap = newCap();
-    cap.setPreset("ysm");
+    cap.applyModelPreset("ysm");
     const p = cap.getParams();
     expect(p.key.intensity).toBe(1.3);
     expect(p.spotlight.intensity).toBe(1.8);
@@ -235,28 +235,28 @@ describe("LightCapability — setPreset", () => {
 
   it("vrm 预设：rim 稍强", () => {
     const cap = newCap();
-    cap.setPreset("vrm");
+    cap.applyModelPreset("vrm");
     expect(cap.getParams().rim.intensity).toBe(0.6);
     expect(cap.getParams().key.intensity).toBe(1.0);
   });
 
   it("mmd 预设：整体降 30%", () => {
     const cap = newCap();
-    cap.setPreset("mmd");
+    cap.applyModelPreset("mmd");
     expect(cap.getParams().key.intensity).toBe(0.85);
   });
 
   it("未知类型回退 default 预设", () => {
     const cap = newCap();
-    cap.setPreset("unknown-type");
+    cap.applyModelPreset("unknown-type");
     expect(cap.getParams().spotlight.enabled).toBe(false);
   });
 
-  it("手动 preset 后自动 setPreset 不再覆盖（手动优先——双入口时序修复）", () => {
+  it("手动 preset 后自动 applyModelPreset 不再覆盖（手动优先——双入口时序修复）", () => {
     const cap = newCap();
-    cap.setPreset("vrm", { manual: true });
+    cap.applyModelPreset("vrm", { manual: true });
     expect(cap.getCurrentPreset()).toBe("vrm");
-    cap.setPreset("ysm"); // 模拟切模型自动套 adapter.id（mount-preview-core）
+    cap.applyModelPreset("ysm"); // 模拟切模型自动套 adapter.id（mount-preview-core）
     expect(cap.getCurrentPreset()).toBe("vrm"); // 手动选择压制自动覆盖
     expect(cap.getParams().key.intensity).toBe(1.0); // 仍是 vrm 预设参数
   });
@@ -272,7 +272,7 @@ describe("LightCapability — setPreset", () => {
           id === "sky" ? ({ isEnvironmentEnabled: () => true } as unknown as SceneCapability) : undefined,
       },
     });
-    cap.setPreset("ysm"); // 触发 syncLightsFromParams
+    cap.applyModelPreset("ysm"); // 触发 syncLightsFromParams
     const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
     expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
   });
@@ -437,9 +437,9 @@ describe("LightCapability — 持久化", () => {
 
   it("saveState/loadState 往返：布尔/数值/引擎/预设全还原", () => {
     const cap = newCap();
-    // 真实用户路径：先选手动预设，再逐个调灯开关（故开关值须在 setPreset 之后设置，
+    // 真实用户路径：先选手动预设，再逐个调灯开关（故开关值须在 applyModelPreset 之后设置，
     // 否则被预设就地覆盖，saveState 存下的就已经是预设值，测不出跨会话丢失）
-    cap.setPreset("mmd", { manual: true });
+    cap.applyModelPreset("mmd", { manual: true });
     cap.setParams({ key: { enabled: false }, ambient: { intensity: 0.9 } });
     cap.setSpotlight({ enabled: true });
     cap.setVolumetric({ enabled: true });
@@ -506,7 +506,7 @@ describe("LightCapability — 持久化", () => {
     const cap = newCap();
     cap.loadState();
     expect(cap.getCurrentPreset()).toBe("litematic"); // 手动优先
-    cap.setPreset("mmd"); // 自动套模型类别
+    cap.applyModelPreset("mmd"); // 自动套模型类别
     expect(cap.getCurrentPreset()).toBe("litematic"); // 仍被压制
   });
 
@@ -583,13 +583,13 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
-  it("setPreset 切到 volumetric 关闭的预设时卸载锥组；重新开启时回挂", () => {
+  it("applyModelPreset 切到 volumetric 关闭的预设时卸载锥组；重新开启时回挂", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    cap.setPreset("ysm"); // ysm 预设 volumetric.enabled=false → 锥组卸载
+    cap.applyModelPreset("ysm"); // ysm 预设 volumetric.enabled=false → 锥组卸载
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
-    cap.setPreset("mmd-scene"); // volumetric 仍 false → 保持卸载
+    cap.applyModelPreset("mmd-scene"); // volumetric 仍 false → 保持卸载
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
@@ -653,7 +653,7 @@ describe("LightCapability — 菜单控件联动", () => {
     const presetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
     presetNode.control!.set!("ysm");
     expect(cap.getCurrentPreset()).toBe("ysm");
-    cap.setPreset("mmd"); // 自动入口被手动压制
+    cap.applyModelPreset("mmd"); // 自动入口被手动压制
     expect(cap.getCurrentPreset()).toBe("ysm");
   });
 });

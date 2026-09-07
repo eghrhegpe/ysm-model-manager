@@ -1,6 +1,6 @@
 // ===== 模型类别默认值 MODEL_DEFAULTS（ADR-196 刀5）=====
 // 统一数据源替代各 cap 散落的 *_PRESETS 表。每个模型 = Partial<EnvState>，
-// 各 cap 的 setPreset 读自己关注的键 + 保留守卫/副作用。
+// 各 cap 的 applyModelPreset 读自己关注的键 + 保留守卫/副作用。
 //
 // 来源合并：MODEL_SKY_PRESETS + FOG_PRESETS + ENV_PRESET_BY_MODEL +
 // LIGHT_PRESETS + REFLECTOR_PRESETS + POSTPROC_PRESETS + SHADOW_PRESET_BY_MODEL。

@@ -97,8 +97,8 @@ export class FogCapability implements SceneCapability {
     return this.enabled;
   }
 
-  /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
-  setPreset(modelType: string): void {
+  /** 按模型类别套用预设；持久化状态优先（applyModelPreset 仅做合理默认） */
+  applyModelPreset(modelType: string): void {
     const preset =
       MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     const partial: Partial<EnvState> = {};

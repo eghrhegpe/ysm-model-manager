@@ -138,6 +138,36 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
   return t.rc === 0 && t.out.trim() ? t.out.trim().split("\n").filter(Boolean) : null;
 }
 
+/**
+ * 解析「比对基线 rev」——与上方 getChangedFiles 的 fallback 链同口径（远端 oid →
+ * merge-base origin/<branch> → origin/HEAD → origin/main → origin/master）。
+ *
+ * 抽出为模块级函数供 golangci-lint 的 `--new-from-rev` 复用（ADR-205）：lint 需要的是
+ * **rev** 而非文件集，而 getChangedFiles 只吐文件名。
+ * 口径同步约束：改动 fallback 链时本函数与 getChangedFiles 须同改，否则 lint 的
+ * 「新增代码」判定与门禁的「变更文件」判定会漂移（一个漏检一个拦下）。
+ *
+ * @returns 基线 rev；取不到（孤儿分支 / 无远端 / merge-base 全失败）返回 ""，由调用方降级。
+ */
+function resolveBaseRev(localOid: string, remoteOid: string, localRef: string): string {
+  // 已存在远端分支且非同源：remoteOid 即权威基线（等价于 getChangedFiles 首个 diff 分支）
+  if (!/^0+$/.test(remoteOid || "") && remoteOid !== localOid) return remoteOid;
+  const mergeBase = (ref: string) => {
+    const r = git(["merge-base", localOid, ref]);
+    return r.rc === 0 ? r.out.trim() : "";
+  };
+  const branchName = localRef.startsWith("refs/heads/")
+    ? localRef.slice("refs/heads/".length)
+    : null;
+  return (
+    (branchName && mergeBase(`origin/${branchName}`)) ||
+    mergeBase("origin/HEAD") ||
+    mergeBase("origin/main") ||
+    mergeBase("origin/master") ||
+    ""
+  );
+}
+
 /* ---------------- 检查执行 ---------------- */
 
 /* ---------------- gofmt 只读校验 ---------------- */
@@ -212,6 +242,12 @@ async function main() {
   let domainSummary = "";
   let byDomain: Record<string, string[]> = {};
   let files: string[] = []; // 本次变更文件集（--files / push 模式填充；--all / --docs 保持为空）
+  // 推送上下文：Go 域 golangci-lint 需 local/remote oid 解析 --new-from-rev 基线（ADR-205）；
+  // 定义在 main 顶层是因为 pushed/ref 只存在于「推送门禁模式」分支块内，Go 域在其外。
+  // --all / --docs / --files 模式保持空串 → resolveBaseRev 走 merge-base fallback 链。
+  let pushLocalRef = "";
+  let pushLocalOid = "";
+  let pushRemoteOid = "";
 
   if (allMode) {
     // —— 全量模式：所有域 + 静态工具（等价 doctor 默认全量）——
@@ -306,6 +342,10 @@ async function main() {
     byDomain = groupByDomain(files);
 
     const { localRef, localOid } = pushed[0]!;
+    // 提升到外层供 Go 域 golangci-lint 复用（ADR-205 基线解析）
+    pushLocalRef = localRef;
+    pushLocalOid = localOid;
+    pushRemoteOid = pushed[0]!.remoteOid;
     const multiRef = pushed.length > 1;
     console.log(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,
@@ -508,6 +548,39 @@ async function main() {
         time: Date.now() - tV,
         tail: goVet.rc ? goVet.out.trim().split("\n").slice(-4).join("\n") : "",
       });
+
+      // golangci-lint（ADR-205）：补齐 Go 静态分析真空面（errcheck/unused/ineffassign/
+      // gocritic/gocyclo/staticcheck）。两条硬约束：
+      //   ① 只跑增量（--new-from-rev）——全量会撞 736 条存量债（errcheck 623 占 85%），
+      //      等于每次 push 必红，门禁即废。存量清零另案，不在此处惩罚。
+      //   ② 未安装 / 无基线 rev → 降级 debt（只记录不阻断），与 gofmt 不可用同口径
+      //      （.githooks/pre-commit:235）——不给未装工具的开发机或孤儿分支添堵。
+      const tGL = Date.now();
+      const glVer = procRun("golangci-lint", ["--version"], { cwd: ROOT });
+      if (!glVer.ok) {
+        record("golangci-lint（跳过：未安装）", true, {
+          time: Date.now() - tGL,
+          note: "未检测到 golangci-lint，跳过 Go 静态分析。安装：go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest",
+          blockPolicy: "debt",
+        });
+      } else {
+        const baseRev = resolveBaseRev(pushLocalOid, pushRemoteOid, pushLocalRef);
+        if (!baseRev) {
+          record("golangci-lint（跳过：无基线 rev）", true, {
+            time: Date.now() - tGL,
+            note: `golangci-lint ${glVer.out.split("\n")[0] ?? ""} 已安装，但无法解析 --new-from-rev 基线（孤儿分支/无远端）；全量跑会撞 736 条存量债，故跳过而非阻断`,
+            blockPolicy: "debt",
+          });
+        } else {
+          const glCmd = `golangci-lint run --new-from-rev=${baseRev} ./...`;
+          const gl = await shAsync(glCmd);
+          record(glCmd, gl.rc === 0, {
+            time: Date.now() - tGL,
+            note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量 736 条另案清零）`,
+            tail: gl.rc ? gl.out.trim().split("\n").slice(-8).join("\n") : "",
+          });
+        }
+      }
 
       // gofmt：只读校验（修复已下沉 pre-commit；此处检出即阻断，防止绕过提交）
       const t2 = Date.now();

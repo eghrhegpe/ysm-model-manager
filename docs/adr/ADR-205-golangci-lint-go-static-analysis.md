@@ -66,9 +66,17 @@ linters:
 
 `go1.26.3` 属较新版本，golangci-lint v1.5x 老版本解析新版 `go` directive 会直接失败。接入前必须锁定 **v1.64+ 或 v2.x** 并实测通过。此项不通过则整体不落地。
 
-### 2.5 增量前提须显式记录
+### 2.5 增量前提与「无基线」降级口径（实施期修正）
 
-`--new-from-rev` 依赖 merge-base 参照存在：push 到**无上游的新分支**时退化为全量跑，属已知且可接受行为（首分支创建低频）。缓存命中后单轮预期 10–30 秒，冷跑 1–3 分钟。
+`--new-from-rev` 依赖 merge-base 参照存在。**实施实测推翻了本条原案**：
+
+- 原案：无基线时「退化为全量跑，属已知且可接受」。
+- 实测：全量 = **736 条存量债**（errcheck 623 占 85%），退化为全量等于**每次 push 必红、门禁即废**，不可接受。
+- 修正：无基线（孤儿分支 / 无远端）或**未安装 golangci-lint** 时，一律**降级为 debt（只记录不阻断）跳过**，与 gofmt 不可用同口径（`.githooks/pre-commit:235`）。原则：宁可漏检，不可误堵。
+
+基线 rev 解析走 `resolveBaseRev()`（pre-push-gate.ts）：远端 oid → `merge-base origin/<branch>` → `origin/HEAD` → `origin/main` → `origin/master`。与 `resolveChanges()` 的 fallback 链**同口径**，改一处须同步另一处。
+
+缓存命中后单轮预期 10–30 秒；实测冷跑 18.8s（全量），增量 28.4s（含分析器加载）。
 
 ## 3. 后果（Consequences）
 
@@ -88,9 +96,10 @@ linters:
 
 | 项 | 处置 |
 |----|------|
-| 存量 lint 违规的基线化/清零策略 | 本 ADR 不裁定，实施期另立方案 |
-| golangci-lint 具体版本锁定与实测 | §2.4 前置门槛，未过不落地 |
-| 未安装时的降级路径 | 实施时明确为 warn-skip，与 `gofmt` 不可用时的处理对齐（`.githooks/pre-commit:235`） |
+| 736 条存量债（errcheck 623 / gocyclo 51 / gocritic 40 / staticcheck 12 / unused 6 / ineffassign 4） | 门禁靠 `--new-from-rev` 增量规避，不惩罚存量；清零或 baseline 账本另案（参照 jscpd-go 的 `scripts/baseline/` 范式） |
+| golangci-lint 版本锁定 | §2.4 门槛**已过**：实测 v2.13.2 built with go1.26.3 通过 |
+| 未安装 / 无基线时的降级路径 | 已实现为 debt（只记录不阻断），见 §2.5 |
+| 未推送改动已检出 23 条新增违规 | 本地 push 会被真实阻断，属预期行为（新代码不许新增 lint 问题），需修完再推 |
 
 ## 4. 数据溯源
 
@@ -102,5 +111,9 @@ linters:
 | gofmt 自研 stage 语义 | `.githooks/pre-commit:213-235` → `gofmt -w "$f" && git add "$f"`，含未暂存编辑守卫 |
 | jscpd-go 漂移账本 | `scripts/jscpd-go.ts` 头注释 + `scripts/baseline/jscpd-go-baseline.json` + `_lib/jscpd-pairs.ts` `matchDrift` |
 | TS 侧门禁零重叠 | `scripts/check-path-hygiene.ts` / `check-biome.ts` / `check-knowledge-drift.ts` 全为 TS 侧，golangci-lint 不消费 |
+| 版本门槛通过 | `golangci-lint --version` → v2.13.2 built with **go1.26.3**（与本机 `go version` 一致） |
+| 存量债规模 | `golangci-lint run ./...` → 736 issues（errcheck 623 / gocyclo 51 / gocritic 40 / staticcheck 12 / unused 6 / ineffassign 4），耗时 18.8s |
+| 增量过滤有效 | `golangci-lint run --new-from-rev=327d89e9 ./...` → 23 issues（3.1%），证明非全量泄漏 |
+| 接线实跑通过 | `printf '<ref> <oid> ...' \| node scripts/pre-push-gate.ts` → 输出含 `golangci-lint run --new-from-rev=327d89e9... 28.4s 增量基线 327d89e9` |
 
 <!-- 文件名: golangci-lint-go-static-analysis.md → 实际文件 ADR-205-golangci-lint-go-static-analysis.md -->

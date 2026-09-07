@@ -1,0 +1,47 @@
+# golangci-lint 配置（ADR-205：只补 Go 静态分析真空面，不接管自研 gofmt / jscpd-go）
+#
+# 设计约束（勿随意放宽）：
+#   1. default: none + 白名单 enable —— 只收当前零覆盖的 6 类 linter，不追求「一次到位」。
+#      全量开启会在首跑一次性抛数百条历史债，直接堵死 push 通道（增量门禁第一原则：不惩罚存量）。
+#   2. 不启用 govet —— 与既有 `go vet`（pre-push-gate.ts / CI）重复，避免「铺两层」。
+#   3. 不启用 gofmt / dupl —— 自研两套机制原地保留，理由见 ADR-205 §2.2：
+#        gofmt：pre-commit 有「自动修复 + git add」语义（.githooks/pre-commit:213-235），
+#               golangci-lint 的 gofmt linter 只报告不修复、更不 stage，接不住。
+#        dupl ：与 jscpd-go 算法不同源，且 jscpd-go 持有独立 baseline 账本 + 搬迁漂移匹配
+#               （scripts/baseline/jscpd-go-baseline.json / _lib/jscpd-pairs.ts matchDrift），
+#               golangci-lint 无等价机制，撤换即丢漂移检测。
+#
+# 版本门槛：golangci-lint >= v1.64（实测 v2.13.2 built with go1.26.3 通过）。
+# 老版本解析 go1.26 go directive 会失败，勿降级。
+
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck # 未检查的错误返回（go vet 结构上覆盖不到的盲区，最高价值项）
+    - unused # 未使用的标识符（死代码）
+    - ineffassign # 无效赋值
+    - gocritic # 风格 + 诊断（Go 惯用法检查）
+    - gocyclo # 圈复杂度
+    - staticcheck # go vet 的增量增强（非从零，但与 vet 检出集互补）
+
+  settings:
+    gocyclo:
+      # 门槛放宽到 20：本仓存在大量表驱动分支与平台分派函数，
+      # 默认 30 过松、10 过紧，20 为存量与新增之间的平衡点（收紧另案，需先清零存量）。
+      min-complexity: 20
+
+  exclusions:
+    # upstream/ 为第三方 vendor（Parser / Viewer / TouhouLittleMaid），非本仓代码，
+    # 不在 golangci-lint 默认跳过列表内，必须显式排除，否则首跑即淹没在外部债务里。
+    paths:
+      - upstream
+      - build
+      - node_modules
+
+issues:
+  # 不设上限：门禁只跑 --new-from-rev 增量，输出规模天然可控；
+  # 全量退化场景（无上游新分支）下截断输出反而掩盖真实规模。
+  max-issues-per-linter: 0
+  max-same-issues: 0

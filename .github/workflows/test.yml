@@ -146,6 +146,40 @@ jobs:
           go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配缓存则每次冷跑，缓存命中 10-30s。
+      - name: 缓存 golangci-lint 分析结果（命中免重分析）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\AppData\Local\golangci-lint' || '~/.cache/golangci-lint' }}
+          key: golangci-lint-${{ runner.os }}-${{ hashFiles('.golangci.yml', '**/go.sum') }}
+          restore-keys: |
+            golangci-lint-${{ runner.os }}-
+
+      # 版本门槛（ADR-205 §2.4）：须 >= v1.64——老版本解析 go1.26 的 go directive 直接失败。
+      - name: 安装 golangci-lint（v2 线，built with go1.26）
+        shell: pwsh
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+
+      - name: Go 静态分析（golangci-lint，仅增量）
+        shell: pwsh
+        run: |
+          # 增量而非全量：全量会撞 736 条存量债（errcheck 623 占 85%）→ 每次 CI 必红、门禁即废。
+          # 与本地 pre-push 同口径（ADR-205 §2.3）：PR 取 base ref 的 merge-base，push 取 HEAD~1。
+          # fetch-depth: 0 已保证历史可用；首个提交无基线则跳过（不惩罚，同 pre-push 降级口径）。
+          $base = ""
+          if ($env:GITHUB_BASE_REF) {
+            git fetch origin $env:GITHUB_BASE_REF --depth=1 2>$null
+            $base = git merge-base "origin/$env:GITHUB_BASE_REF" HEAD 2>$null
+          }
+          if (-not $base) { $base = git rev-parse HEAD~1 2>$null }
+          if (-not $base) {
+            Write-Host "无基线 rev（首个提交 / 浅历史），跳过 golangci-lint"
+            exit 0
+          }
+          Write-Host "golangci-lint 增量基线: $base"
+          golangci-lint run --new-from-rev=$base ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # 缓存 Rust 依赖仓库（registry/git）与两个 crate 的 target 编译产物——
       # cargo test + cargo build --release（生产 DLL）每次全量编译是校正流程最重的一环。
       # key 锚定两个 Cargo.lock，restore-keys 兜底低版本命中，参照 Go 模块缓存同款写法。

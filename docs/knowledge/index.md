@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 174 张知识卡
+> 总计: 175 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -122,7 +122,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（46 张）
+## go（47 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -170,6 +170,7 @@
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
 | 🏗 go_design_critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
 | 🏗 go_ts_golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
+| 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
 | 🏗 install_domain_split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
@@ -218,6 +219,7 @@
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
 - **go_design_critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
 - **go_ts_golden**（Go-TS 解析层 golden 对拍（ADR-154 双端互锁））：网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit…
+- **golangci-lint**（golangci-lint（Go 静态分析真空面））：Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入
 - **install_domain_split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…

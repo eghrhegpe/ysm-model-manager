@@ -409,6 +409,24 @@
 | RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
 
+## 🎯 门禁
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 为什么 Go 侧要引入 golangci-lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | .golangci.yml\|default: none | - |
+
+## 🎯 Go
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | scripts/pre-push-gate.ts\|--new-from-rev | - |
+
+## 🎯 静态分析
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | - | - |
+
 ## 🎯 install: queue / linkMode / launcher
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -792,6 +810,12 @@
 | watcher 未读 errs/done 通道 | - | goroutine 泄漏；必须 drain 通道 |
 | 前端手写 YSM 解析 | - | 与 Go 解析结果不一致；必须交 Go 解析 |
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
+| → 门禁只能跑 ，全量必红（errcheck 623 占 85%），存量清零另案 | `全量跑会撞 736 条存量债` | - |
+| → pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 | `未安装不是失败` | - |
+| → 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门 | `无基线 rev 不是失败` | - |
+| → 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter | `别开 enable-all` | - |
+| → govet 与既有  重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） | `别启用 govet/gofmt/dupl` | - |
+| → 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 | `版本 < v1.64 解析 go1.26 directive 直接失败` | - |
 | 参数值含 --- | - | - |
 | 参数值含 --- | - | - |
 | 参数值含 --- | - | - |

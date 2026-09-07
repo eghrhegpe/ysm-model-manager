@@ -39,17 +39,11 @@ vi.mock("../../preview-3d/adapters/vrm-adapter.ts", () => ({
 vi.mock("./vrm-3d.ts", () => ({ createVrm3D: createVrm3DMock }));
 vi.mock("./fbx-3d.ts", () => ({ createFbx3D: createFbx3DMock }));
 vi.mock("./scene-3d.ts", () => ({ createScene3D: createScene3DMock }));
-vi.mock("./mmd-siblings.ts", () => ({
-  resolveMmdSiblings: resolveMmdSiblingsMock,
-}));
-vi.mock("./fbx-siblings.ts", () => ({
-  resolveFbxSiblings: resolveFbxSiblingsMock,
-}));
 vi.mock("./siblings.ts", () => ({
+  resolveMmdSiblings: resolveMmdSiblingsMock,
+  resolveFbxSiblings: resolveFbxSiblingsMock,
   resolveSceneSiblings: resolveSceneSiblingsMock,
   resolveMorphSiblings: resolveMorphSiblingsMock,
-}));
-vi.mock("./stage-siblings.ts", () => ({
   resolveStageSiblings: resolveStageSiblingsMock,
 }));
 
@@ -72,6 +66,7 @@ function makeCtx(): PreviewCtx {
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
+    active3DClose: null,
   };
 }
 

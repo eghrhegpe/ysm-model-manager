@@ -168,7 +168,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     if (fab) {
       promoteTitleIfPresent(fab);
       fab.onclick = (): void => {
-        createPack3D(path).catch((e) => console.warn("[preview] pack3D:", e));
+        createPack3D(path).catch((e) => logWarn("preview", "pack3D 失败", e));
       };
     }
     // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）

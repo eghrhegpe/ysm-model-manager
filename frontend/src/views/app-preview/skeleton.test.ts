@@ -116,6 +116,7 @@ function makeCtx() {
     loadPreviewImage: vi.fn(() => Promise.resolve(null)),
     unsubs: [] as Array<() => void>,
     dragAbortCtrl: null,
+    active3DClose: null,
   };
   return ctx;
 }

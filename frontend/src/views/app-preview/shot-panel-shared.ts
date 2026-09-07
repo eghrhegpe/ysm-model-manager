@@ -8,6 +8,7 @@
 
 import { bus } from "@/bus";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { logError } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
@@ -44,7 +45,7 @@ function makeShotAction(
       // 导致实际截图走 renderMultiAngle fallback 而非活跃渲染器；此处顺手修正。
       await saveScreenshot(modelForSave, key, () => {}, screenshotFn ?? undefined);
     } catch (e) {
-      console.error("[3D 截图]", e);
+      logError("3D 截图", "截图保存失败", e);
       bus.emit("toast:show", {
         msg: `截图保存失败：${friendlyError(e)}`,
         duration: TOAST_MS.verbose,

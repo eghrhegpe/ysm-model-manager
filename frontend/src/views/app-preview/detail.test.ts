@@ -52,7 +52,7 @@ vi.mock("./vrm-3d.ts", () => ({
 vi.mock("./mmd-3d.ts", () => ({
   createMmd3D: createMmd3DMock,
 }));
-vi.mock("./mmd-siblings.ts", () => ({
+vi.mock("./siblings.ts", () => ({
   resolveMmdSiblings: resolveMmdSiblingsMock,
 }));
 
@@ -70,6 +70,7 @@ function makeCtx(): PreviewCtx {
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
+    active3DClose: null,
   };
 }
 

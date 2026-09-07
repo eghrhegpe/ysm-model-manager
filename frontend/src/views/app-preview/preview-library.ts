@@ -20,6 +20,7 @@ import {
   switchPreview,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import {
   extOf,
@@ -85,7 +86,7 @@ export async function openModel3DFullscreen(
   try {
     ({ DetectResourceType } = await getApp());
   } catch (e) {
-    console.warn("[preview-3d] 后端不可用，无法打开 3D:", e);
+    logWarn("preview-3d", "后端不可用，无法打开 3D", e);
     const { bus } = await import("@/bus");
     bus.emit("toast:show", {
       msg: t("preview.backendUnavailable"),

@@ -16,12 +16,15 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { detailGen } from "./detail.ts";
 import { createFbx3D } from "./fbx-3d.ts";
-import { resolveFbxSiblings } from "./fbx-siblings.ts";
 import { createMmd3D } from "./mmd-3d.ts";
-import { resolveMmdSiblings } from "./mmd-siblings.ts";
 import { createScene3D } from "./scene-3d.ts";
-import { resolveMorphSiblings, resolveSceneSiblings } from "./siblings.ts";
-import { resolveStageSiblings } from "./stage-siblings.ts";
+import {
+  resolveFbxSiblings,
+  resolveMmdSiblings,
+  resolveMorphSiblings,
+  resolveSceneSiblings,
+  resolveStageSiblings,
+} from "./siblings.ts";
 import type { PreviewCtx } from "./utils.ts";
 import { createVrm3D } from "./vrm-3d.ts";
 

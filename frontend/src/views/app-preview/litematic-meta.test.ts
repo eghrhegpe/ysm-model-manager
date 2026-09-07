@@ -57,6 +57,7 @@ beforeEach(() => {
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
+    active3DClose: null,
   };
   mocks.ReadLitematicMeta.mockResolvedValue({
     name: "建筑",

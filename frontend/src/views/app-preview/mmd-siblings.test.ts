@@ -16,7 +16,7 @@ vi.mock("../../utils/resource/types.ts", () => ({
   RESOURCE_TYPE_LABELS: { EntityPlayer: "角色模型" },
 }));
 
-import { resolveMmdSiblings } from "./mmd-siblings.ts";
+import { resolveMmdSiblings } from "./siblings.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

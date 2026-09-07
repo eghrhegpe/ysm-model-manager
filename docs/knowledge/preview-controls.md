@@ -32,7 +32,6 @@ auto_fields:
     - registerSchema
     - registerYsmModelSchema
     - resetSchemas
-    - resolveMmdSiblings
     - SchemaBuilder
     - showFbxPreview
     - showMmdPreview

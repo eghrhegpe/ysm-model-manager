@@ -15,7 +15,7 @@ vi.mock("../../utils/resource/types.ts", () => ({
   RESOURCE_TYPE_LABELS: { fbx: "FBX 模型" },
 }));
 
-import { resolveFbxSiblings } from "./fbx-siblings.ts";
+import { resolveFbxSiblings } from "./siblings.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();

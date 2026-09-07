@@ -242,7 +242,7 @@ async function dpToggle3D(state: MaidPreviewState, ctx: PreviewCtx, path: string
   const close3D = (): void => {
     cleanupMaid3D();
     state.model3dGuard.invalidate();
-    setActive3DClose(null);
+    setActive3DClose(ctx, null);
     if (unsubAndroidBack) {
       unsubAndroidBack();
       unsubAndroidBack = null;
@@ -251,14 +251,14 @@ async function dpToggle3D(state: MaidPreviewState, ctx: PreviewCtx, path: string
     if (idx !== undefined && idx > -1) ctx.unsubs?.splice(idx, 1);
   };
   const onClose = (): void => {
-    setActive3DClose(null);
+    setActive3DClose(ctx, null);
     if (unsubAndroidBack) {
       unsubAndroidBack();
       unsubAndroidBack = null;
     }
   };
   ctx.unsubs?.push(close3D);
-  setActive3DClose(() => close3D());
+  setActive3DClose(ctx, () => close3D());
   unsubAndroidBack = registerAndroidBackHandler(() => {
     close3D();
     return true;

@@ -4,6 +4,7 @@
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { logError, logWarn } from "@/utils/base/log.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -29,25 +30,21 @@ import { openFullPreview } from "./zoom.ts";
 
 // 2D 拖拽的 window 监听器使用 AbortController 管理，避免模块级单例竞态（审核 P3）
 // ⚠️ 原模块级 _prevAbort 已迁移至组件实例 ctx.dragAbortCtrl（P3 修复）
+// ⚠️ 原模块级 _active3DClose 已迁移至组件实例 ctx.active3DClose（P1 修复，同款模式）
 
 /**
- * P2 修复（审核）：3D overlay 挂 document.body，不随预览面板 shadow DOM 重建消失。
- * 后台 model:select（导入队列/回收站自动选择）在 3D 打开期间触发时，若只叠新 overlay
- * 不清旧的全屏层，会造成双全屏叠加 + 旧 renderer 死屏残留。此模块级钩子让调用方
- * （app-preview/index.ts 的 model:select handler）在切换模型前先关掉活跃 3D。
- * 注意：关闭时保留 _prefer3D（切模型保持 3D 预览），仅清理 DOM 与 WebGL 资源。
+ * 关闭当前活跃的 3D 全屏 overlay（若存在）。供 app-preview/index.ts 切换模型前调用。
+ * 状态挂组件实例 ctx（原模块级单例迁移，P1 修复）：overlay 挂 document.body 的语义不变，
+ * 但关闭钩子归实例持有——多实例场景互不串扰（对齐 ctx.dragAbortCtrl 的 P3 模式）。
  */
-let _active3DClose: (() => void) | null = null;
-
-/** 关闭当前活跃的 3D 全屏 overlay（若存在）。供 app-preview/index.ts 切换模型前调用。 */
-export function closeActive3DOverlay(): void {
-  _active3DClose?.();
-  _active3DClose = null;
+export function closeActive3DOverlay(ctx: PreviewRoot): void {
+  ctx.active3DClose?.();
+  ctx.active3DClose = null;
 }
 
 /** 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 */
-export function setActive3DClose(fn: (() => void) | null): void {
-  _active3DClose = fn;
+export function setActive3DClose(ctx: PreviewRoot, fn: (() => void) | null): void {
+  ctx.active3DClose = fn;
 }
 
 /** 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） */
@@ -101,7 +98,7 @@ export async function loadModel2D(
           rotation: _rotation,
         });
       } catch (e) {
-        console.warn("[preview] 2D 渲染跳过:", e);
+        logWarn("preview", "2D 渲染跳过", e);
       }
     };
     doRender();
@@ -193,7 +190,7 @@ export async function loadModel2D(
       _loading3D = true;
       const gen = model3dGuard.next();
       let unsubAndroidBack: (() => void) | null = null;
-      // 关闭当前 3D 会话：core 经 adapter.onClose 复位 _is3D/_active3DClose/android-back，
+      // 关闭当前 3D 会话：core 经 adapter.onClose 复位 _is3D/ctx.active3DClose/android-back，
       // 这里额外处理 ctx.unsubs 注销。
       const close3D = (keepPrefer = false): void => {
         const idx = ctx.unsubs?.indexOf(close3D);
@@ -208,13 +205,13 @@ export async function loadModel2D(
       };
       // core 关闭（ESC / 关闭按钮 / 切模型 cleanup）时复位骨架层状态 + 注销 android-back。
       // 区分用户主动关闭与切模型自动关层：切模型路径（closeActive3DOverlay）会先置
-      // _active3DClose = null，onClose 据此判断——用户主动关闭（ESC/✕/返回键）清 _prefer3D，
+      // ctx.active3DClose = null，onClose 据此判断——用户主动关闭（ESC/✕/返回键）清 _prefer3D，
       // 切模型保留（ADR-057 §2.5 + 知识卡口径：用户主动关闭才清偏好；P3 误改统一保留，
       // 导致退出 3D 后点资源仍自动弹全屏）。
       const onClose = (): void => {
-        const userClosed = _active3DClose !== null;
+        const userClosed = ctx.active3DClose !== null;
         _is3D = false;
-        _active3DClose = null;
+        ctx.active3DClose = null;
         if (userClosed) {
           _prefer3D = false;
           setPrefer3D(false);
@@ -225,7 +222,7 @@ export async function loadModel2D(
         }
       };
       ctx.unsubs?.push(close3D);
-      _active3DClose = () => close3D(true);
+      ctx.active3DClose = () => close3D(true);
       // P2 修复（TS 深层扫描延续）：android-back 注册须保存 unsub 并在关闭时注销，
       // 否则反复开关 3D 向返回键栈 push 恒 return true 的 handler 且永不注销。
       unsubAndroidBack = registerAndroidBackHandler(() => {
@@ -244,7 +241,7 @@ export async function loadModel2D(
         // 否则关闭后 1~2s 突然冒「加载失败」toast，掩盖用户主动关闭的意图。
         if (model3dGuard.stale(gen)) return;
         // 3D 渲染错误已由 core 统一 toast（t("preview.loadFailed")），此处仅防御性日志
-        console.error("[3D] 加载失败（core 已处理提示）:", e);
+        logError("3D", "加载失败（core 已处理提示）", e);
       }
       _loading3D = false;
     };

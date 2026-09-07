@@ -139,6 +139,8 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   unsubs: Array<() => void> = [];
   /** P3 修复：2D 拖拽的 AbortController，避免模块级单例在多实例场景下的竞态风险 */
   dragAbortCtrl: AbortController | null = null;
+  /** P1 迁移：活跃 3D overlay 关闭钩子（原 skeleton.ts 模块级 _active3DClose） */
+  active3DClose: (() => void) | null = null;
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
   /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
@@ -176,7 +178,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         // DOM 重建消失）。后台 model:select（导入队列/回收站自动选择）触发时不清旧层会
         // 双全屏叠加 + 旧 renderer 死屏残留。closeActive3DOverlay 保留 _prefer3D，
         // 新模型 loadModel2D 仍会按设计自动弹 3D（skeleton.ts:64）。
-        closeActive3DOverlay();
+        closeActive3DOverlay(this);
         // P2 修复（code_review）：任意新选择作废在途渲染——防跨类型污染
         // （litematic A 迟到写进 B 的 #preview-detail）
         // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费

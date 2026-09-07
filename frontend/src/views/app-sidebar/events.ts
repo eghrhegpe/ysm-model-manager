@@ -5,6 +5,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
+import { logWarn } from "@/utils/base/log.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -230,7 +231,7 @@ function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): vo
       }
     });
   } catch (e) {
-    console.warn("[sidebar] restoreSelectedCard:", e);
+    logWarn("sidebar", "restoreSelectedCard", e);
   }
 }
 
@@ -267,7 +268,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
         }
       } catch (e) {
         btn.textContent = `🎮 ${t("sidebar.notSet")}`;
-        console.warn("[sidebar] MC detection:", e);
+        logWarn("sidebar", "MC detection", e);
       }
     })();
   }

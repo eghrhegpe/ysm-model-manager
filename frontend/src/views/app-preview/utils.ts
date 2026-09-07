@@ -11,6 +11,13 @@ export interface PreviewRoot {
   unsubs?: Array<() => void>;
   /** P3 修复：2D 拖拽的 AbortController，避免模块级单例在多实例场景下的竞态风险 */
   dragAbortCtrl: AbortController | null;
+  /**
+   * 当前活跃 3D overlay 的关闭钩子（原模块级 _active3DClose，P1 迁移至实例）。
+   * 3D overlay 挂 document.body，不随预览面板 shadow DOM 重建消失——后台 model:select
+   * 在 3D 打开期间触发时，切换模型前先经 closeActive3DOverlay 关掉旧全屏层，防双全屏叠加。
+   * 关闭时保留 _prefer3D（切模型保持 3D 预览），仅清理 DOM 与 WebGL 资源。
+   */
+  active3DClose: (() => void) | null;
 }
 
 /** WASM 解码能力（loader/skeleton 消费） */

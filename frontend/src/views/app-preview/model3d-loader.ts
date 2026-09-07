@@ -105,8 +105,9 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       cacheSpec(model._modelPath!, specStr);
-      console.warn(
-        "[3D] GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）",
+      logWarn(
+        "model3d",
+        "GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）",
       );
       return spec;
     }
@@ -194,8 +195,9 @@ export async function preloadModel(model: ModelLike): Promise<{
   // 契约断裂（此前是 typed 序列化静默丢字段），全体组件会回落全局 texArr[texIdx] 错贴纹理。
   // 缺失时渲染仍继续（.ysm WASM 路径本就无该字段），但必须显式告警而非静默跳过。
   if ((spec.models?.length ?? 0) > 1 && !compTex) {
-    console.warn(
-      `[model3d] 契约预警: spec 含 ${spec.models?.length} 个组件但无 componentTextures —— perComponent 专属纹理缺失，组件将回落全局纹理槽（检查 Go 端 Model3DSpec 字段/注入链）`,
+    logWarn(
+      "model3d",
+      `契约预警: spec 含 ${spec.models?.length} 个组件但无 componentTextures —— perComponent 专属纹理缺失，组件将回落全局纹理槽（检查 Go 端 Model3DSpec 字段/注入链）`,
     );
   }
   if (compTex) {
@@ -233,8 +235,9 @@ export async function preloadModel(model: ModelLike): Promise<{
         .toLowerCase();
       if (!exp) continue; // 空值跳过：未命名纹理（P2）
       if (!present.has(exp)) {
-        console.warn(
-          `[model3d] R1 纹理缺失: 组件期望贴图 ${expRaw} 不在已加载纹理清单 [${actualNames.join(", ")}]（可能越界/缺纹理）`,
+        logWarn(
+          "model3d",
+          `R1 纹理缺失: 组件期望贴图 ${expRaw} 不在已加载纹理清单 [${actualNames.join(", ")}]（可能越界/缺纹理）`,
         );
         break;
       }

@@ -1,7 +1,10 @@
-// ===== 同类型候选列表通用底座（视图壳数据准备：GetRepoRoot → ScanModelEntriesFiltered）=====
-// 各格式（mmd / fbx / scene / ...）共享同一链路，Go 按注册表白名单过滤（ADR-044③ 对称范式）。
+// ===== 预览候选列表（同目录兄弟模型 / 场景 / 表情动画 / 舞台包）=====
+// 视图壳数据准备：GetRepoRoot → ScanModelEntriesFiltered（ADR-044③ 对称范式）。
 // 归位 views 层（ADR-072 根治：依赖 getApp 读仓库根，属视图壳数据能力，
 // 不该被 preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
+// 各格式（mmd / fbx / scene / morph / stage）共享同一底座，薄壳已合并回本文件
+// （P1 修复：原 mmd-siblings / fbx-siblings / stage-siblings 三壳合并，消费者统一引 ./siblings.ts）。
+
 import { getApp } from "@/backend/app.ts";
 import {
   extOf,
@@ -51,4 +54,51 @@ export async function resolveMorphSiblings(): Promise<string[]> {
     RESOURCE_TYPES.CUSTOM_MORPH,
     previewCandidateExtsOf(RESOURCE_TYPES.CUSTOM_MORPH),
   );
+}
+
+/** 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） */
+export async function resolveMmdSiblings(): Promise<string[]> {
+  return resolveSiblingsByType(RESOURCE_TYPES.MMD);
+}
+
+/** 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesFiltered 主文件 Path 列表）；失败返回 []（下拉不渲染） */
+export async function resolveFbxSiblings(): Promise<string[]> {
+  return resolveSiblingsByType(RESOURCE_TYPES.FBX);
+}
+
+// ===== StageAnim 舞台包资源扫描（只扫 StageAnim 目录的 VMD + 音频文件）=====
+// 直接用类型 ID 调 GetRepoRoot，后端返回 FilesRoot/mmd/StageAnim，无需前端回溯拼接
+// StageAnim 目录结构：
+//   StageAnim/<舞台包>/
+//     ├── *.vmd      角色动画 / 相机轨道
+//     ├── *.mp3      背景音乐
+//     ├── *.ogg      （可选）
+//     ├── *.wav      （可选）
+//     └── stage_config.json
+
+/** 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] */
+export async function resolveStageSiblings(): Promise<
+  Array<{
+    path: string;
+    kind: "vmd" | "audio" | "config" | "other";
+  }>
+> {
+  try {
+    const App = await getApp();
+    const stageRoot = await App.GetRepoRoot("StageAnim");
+    if (!stageRoot) return [];
+    const raw = await App.ScanModelEntriesFiltered(stageRoot, "StageAnim", "", "舞台动画");
+    const results: Array<{ path: string; kind: "vmd" | "audio" | "config" | "other" }> = [];
+    for (const e of raw || []) {
+      const p = e.Path || "";
+      if (!p) continue;
+      const ext = (p.split(/[/\\]/).pop() || "").toLowerCase();
+      if (ext.endsWith(".vmd")) results.push({ path: p, kind: "vmd" });
+      else if (/\.(mp3|ogg|wav)$/i.test(p)) results.push({ path: p, kind: "audio" });
+      else if (ext === "stage_config.json") results.push({ path: p, kind: "config" });
+    }
+    return results;
+  } catch {
+    return [];
+  }
 }

@@ -66,6 +66,7 @@ function makeCtx(over: Partial<PreviewCtx> = {}): PreviewCtx {
     decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
+    active3DClose: null,
     ...over,
   };
 }

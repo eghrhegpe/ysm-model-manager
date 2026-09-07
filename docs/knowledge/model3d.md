@@ -201,7 +201,6 @@ auto_fields:
     - encodeToKTX2Basis
     - Endianness
     - ensureFabStyles
-    - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
     - EnvCallback
@@ -209,7 +208,6 @@ auto_fields:
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
-    - EnvPresetLinkage
     - envState
     - EnvState
     - EnvStateSchema
@@ -311,7 +309,6 @@ auto_fields:
     - Ktx2EncodeResponse
     - Ktx2TextureLoader
     - Ktx2TextureLoaderDeps
-    - LIGHT_PRESETS
     - LightCapability
     - lightDirToPosition
     - LightParams
@@ -599,8 +596,6 @@ auto_fields:
     - setStateValue
     - setVrmMaterialOpacity
     - setVrmMaterialVisible
-    - SHADOW_PRESET_BY_MODEL
-    - SHADOW_PRESETS
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams

@@ -406,13 +406,11 @@ auto_fields:
     - ensureDir
     - ensureFabStyles
     - ensureTooltipStyles
-    - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - EnvironmentCapability
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
-    - EnvPresetLinkage
     - esc
     - EscFn
     - estimateTexGpuBytes
@@ -702,7 +700,6 @@ auto_fields:
     - LazyModule
     - lerp
     - lerpArray
-    - LIGHT_PRESETS
     - LightCapability
     - lightDirToPosition
     - LightParams
@@ -1226,7 +1223,6 @@ auto_fields:
     - setVrmMaterialOpacity
     - setVrmMaterialVisible
     - setVsRows
-    - SHADOW_PRESETS
     - ShadowCapability
     - ShadowParams
     - SharedInfra

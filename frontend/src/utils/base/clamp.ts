@@ -27,5 +27,5 @@ export function lerpArray(a: number[], b: number[], t: number): number[] {
 
 /** 百分比钳制到 [0, 100]。 */
 export function clampPct(v: number): number {
-  return Math.max(0, Math.min(100, v));
+  return clamp(v, 0, 100);
 }

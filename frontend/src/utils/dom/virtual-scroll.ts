@@ -22,6 +22,8 @@ export function calcVisibleRange(
 ): { startIdx: number; endIdx: number } {
   const st = scrollEl.scrollTop - topOffset;
   const vh = scrollEl.clientHeight;
+  // rowH<=0 是调用方参数错误，按「非法输入一律回退」不变量：整段可见
+  if (!Number.isFinite(rowH) || rowH <= 0) return { startIdx: 0, endIdx: totalRows };
   const startIdx = Math.max(0, Math.floor(st / rowH) - VS_BUFFER);
   const endIdx = Math.min(totalRows, Math.ceil((st + vh) / rowH) + VS_BUFFER);
   return { startIdx, endIdx };

@@ -15,7 +15,6 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
-    - bindPerfCopyHandlers
     - createDedupSession
     - DedupConfigShape
     - DedupFileLike
@@ -29,13 +28,9 @@ auto_fields:
     - loadRuntimeLogs
     - renderHealthReport
     - renderLoadTraceSection
-    - runGuiFlow
     - runHealthAudit
-    - runPerfLog
-    - runSingleBench
     - scanConflicts
     - scanSyncConflicts
-    - sectionHeader
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

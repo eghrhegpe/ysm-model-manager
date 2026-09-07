@@ -13,18 +13,23 @@ export const YSW_TOOLTIP_CSS = `
 
 let _injected = false;
 
-/** 幂等注入 tooltip 全局样式到 head（模式同 ensureFabStyles） */
-export function ensureTooltipStyles(): void {
+/** 幂等注入 tooltip 全局样式（默认 head；target 可指定 shadow root 等宿主） */
+export function ensureTooltipStyles(target?: HTMLElement | ShadowRoot): void {
   if (_injected) return;
   if (typeof document === "undefined") return;
-  if (document.getElementById(TOOLTIP_STYLE_ID)) {
-    _injected = true;
-    return;
+  const docTarget = target ?? document.head;
+  // head 兜底路径保留 id 去重；shadow root 目标每次宿主重建都需重注入
+  if (docTarget === document.head) {
+    const ex = document.getElementById(TOOLTIP_STYLE_ID);
+    if (ex) {
+      _injected = true;
+      return;
+    }
   }
   const style = document.createElement("style");
   style.id = TOOLTIP_STYLE_ID;
   style.textContent = YSW_TOOLTIP_CSS;
-  document.head.appendChild(style);
+  docTarget.appendChild(style);
   _injected = true;
 }
 

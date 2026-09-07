@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 180 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -443,9 +443,8 @@
 | dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 88 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 103 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 89 |
-| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 375 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
+| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 72 |
+| guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 25 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 266 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 164 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 292 |

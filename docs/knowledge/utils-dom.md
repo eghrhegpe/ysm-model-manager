@@ -15,10 +15,8 @@ auto_fields:
     - canWebAction
     - clearTrigger
     - copyText
-    - createIconButton
     - downloadTextFile
     - emitAndroidBack
-    - ensureFabStyles
     - ensureTooltipStyles
     - findTabbableAcrossShadow
     - FLASH_DURATION_MS
@@ -29,7 +27,6 @@ auto_fields:
     - formatBytes
     - friendlyError
     - getAndroidBridge
-    - IconButtonOpts
     - installScrollSync
     - isEditableTarget
     - isFileExistsError
@@ -60,7 +57,6 @@ auto_fields:
     - VIEWER_PURE_ACTIONS
     - VIEWER_WEB_ACTION_BINDINGS
     - WebComponentBase
-    - YSW_FAB_CSS
     - YSW_TOOLTIP_CSS
 quick_groups:
   - 跨组件通信与页面

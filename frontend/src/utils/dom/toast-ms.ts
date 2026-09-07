@@ -3,6 +3,8 @@
 // 禁止内联魔法数字或在本文件外另起同名命名（命名冲突会造成语义漂移）。
 // 改动本表须同步更新 toast-ms.test.ts 契约测试。
 
+import type { ToastPayload } from "../../bus.ts";
+
 export const TOAST_MS = {
   /** 瞬时提示（操作进行中、快速确认） */
   quick: 1500,
@@ -22,5 +24,5 @@ export const TOAST_MS = {
   sticky: 60000,
 } as const;
 
-/** toast:show 的 type 取值域（与 ToastPayload.type 对齐） */
-export type ToastType = "success" | "error" | "warn" | "info";
+/** toast:show 的 type 取值域——单一事实源 = bus.ts ToastPayload.type，编译期锁定对齐 */
+export type ToastType = NonNullable<ToastPayload["type"]>;

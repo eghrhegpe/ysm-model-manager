@@ -20,7 +20,6 @@ auto_fields:
     - CameraControlScene
     - cleanupPreview
     - closeActive3DOverlay
-    - Disposable
     - disposeDebugGroup
     - disposeObject3D
     - disposeSceneMeshes
@@ -44,6 +43,7 @@ auto_fields:
     - registerReRoute
     - removePerFrame
     - resetLoopState
+    - SafeDisposable
     - safeDispose
     - scanModelsByType
     - ScreenshotScene

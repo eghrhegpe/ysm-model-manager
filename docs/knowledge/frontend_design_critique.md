@@ -48,7 +48,6 @@ auto_fields:
     - createWorkerParser
     - DedupConfigShape
     - DedupSession
-    - Disposable
     - getFrameIntervalMs
     - getLastModelPath
     - getMaxFps

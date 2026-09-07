@@ -4,13 +4,13 @@
 
 import type * as THREE from "three";
 
-/** 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） */
-export interface Disposable {
+/** 可释放对象的可选 dispose 形状（Three.js 的 Texture/Material/Geometry 等均满足） */
+export interface SafeDisposable {
   dispose?: () => void;
 }
 
 /** 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） */
-export function safeDispose(obj: Disposable | null | undefined): void {
+export function safeDispose(obj: SafeDisposable | null | undefined): void {
   try {
     obj?.dispose?.();
   } catch (e) {

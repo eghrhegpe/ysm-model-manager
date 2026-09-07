@@ -4,13 +4,12 @@
 // 归位 utils/dom 理由：DOM 反馈原语与 toast-ms.ts 同域；同时消除与
 // utils/dom/feedback.ts（flashBtn 原地闪烁）的撞名。
 
-import type { ToastPayload } from "../../bus.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "./errors.ts";
-import { TOAST_MS } from "./toast-ms.ts";
+import { TOAST_MS, type ToastType } from "./toast-ms.ts";
 
-type ToastType = NonNullable<ToastPayload["type"]>;
+// ToastType 单一事实源 = toast-ms.ts；toast.ts 不再手写 union，避免语义漂移
 
 /** 显示 toast 通知 */
 export function toast(

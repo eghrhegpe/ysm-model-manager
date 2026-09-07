@@ -158,6 +158,7 @@ auto_fields:
     - createFbxParser
     - createFootIKController
     - createGazeController
+    - createIconButton
     - createLipSyncController
     - createListenerSet
     - createPmxParser
@@ -186,7 +187,6 @@ auto_fields:
     - devLog
     - DirectionalLightParams
     - dispatchEnvChange
-    - Disposable
     - DISPOSE_TEX_KEYS
     - disposeCustomCleanups
     - disposeDebugGroup
@@ -200,6 +200,7 @@ auto_fields:
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Endianness
+    - ensureFabStyles
     - ENV_PRESET_LINKAGE
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
@@ -286,6 +287,7 @@ auto_fields:
     - hasBoneRotation
     - hasSceneStats
     - hasSchema
+    - IconButtonOpts
     - IKChain
     - IKConfig
     - IKResult
@@ -555,6 +557,7 @@ auto_fields:
     - RolesSchemaDeps
     - runFailedMountCleanup
     - runFullCleanup
+    - SafeDisposable
     - safeDispose
     - sampleAdaptivePixelRatio
     - SceneCapability
@@ -701,6 +704,7 @@ auto_fields:
     - YsmObjectHandle
     - YsmPreloadedModel
     - ysmSemanticBoneMap
+    - YSW_FAB_CSS
     - zipFindEntry
 tests:
   - frontend/src/preview-3d/model3d-spec.test.ts

@@ -18,9 +18,7 @@ auto_fields:
     - clampPct
     - createBusyLock
     - debounce
-    - delay
     - Disposable
-    - fireAndForget
     - getCompound
     - isObj
     - lerp
@@ -30,7 +28,6 @@ auto_fields:
     - logWarn
     - setLogSink
     - swallowError
-    - waitForFrame
     - withLock
 quick_groups:
   - 跨组件通信与页面

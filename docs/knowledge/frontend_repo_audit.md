@@ -362,7 +362,6 @@ auto_fields:
     - DEFAULT_SKY_PARAMS
     - DEFAULT_TD_KEYMAP
     - DEFAULT_WATER_PARAMS
-    - delay
     - deriveTestIds
     - describeVersionRange
     - detailGen
@@ -473,7 +472,6 @@ auto_fields:
     - findControllerForAnimation
     - findTabbableAcrossShadow
     - findZipEntry
-    - fireAndForget
     - fireBlur
     - fireClick
     - fireDrag
@@ -1422,7 +1420,6 @@ auto_fields:
     - WailsAndroidBridge
     - waitFor
     - waitForElementToBeRemoved
-    - waitForFrame
     - warnedKeys
     - WasdReuse
     - WasmModuleLike

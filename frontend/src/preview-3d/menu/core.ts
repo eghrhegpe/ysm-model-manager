@@ -12,7 +12,6 @@ import {
   type SlideMenuHandle,
   type SlideMenuView,
 } from "../../ui/ui-slide-menu.ts";
-import { ensureFabStyles } from "../../utils/dom/fab.ts";
 import { pushInputBlock } from "../../utils/dom/focus-restore.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { sceneRegistry } from "../adapters/scene-registry.ts";
@@ -22,6 +21,7 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "../adapters/schema-registry.ts";
+import { ensureFabStyles } from "../fab.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "../overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "../state/preview-state.ts";
 import { renderCapControls } from "./cap-controls.ts";

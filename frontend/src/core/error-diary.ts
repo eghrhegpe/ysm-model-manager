@@ -2,10 +2,11 @@
 // error/warn toast 自动写入运行时日志环，诊断页可回溯。
 // ADR-189 D1：core 不感知 Wails——落盘通道 DiarySink 由装配层注入
 //（AddOpLog 适配见 backend/diary-sink.ts）；本模块只持净化/去重/截断策略。
+// ADR-189 D4：core→utils/base 允许（纯函数层），core→backend/features/views 禁止。
+// stripPathSegments 从 utils/dom/errors.ts 内联至此，消除 core→utils/dom 依赖。
 
 import { bus, type ToastPayload } from "../bus.ts";
-import { setLogSink } from "../utils/base/log.ts";
-import { stripPathSegments } from "../utils/dom/errors.ts";
+import { setLogSink } from "../utils/base/log.ts"; // ADR-189 D4：core→utils/base 允许（纯函数层），核心红线是 core→backend/features/views
 
 /** 日记状态（与 go/logs status 枚举对齐） */
 export type DiaryStatus = "failed" | "warn";
@@ -21,6 +22,12 @@ export interface DiaryEntry {
 
 /** 落盘通道：由装配层注入；实现须自行捕获异步失败，不得向调用方逸出未处理拒绝 */
 export type DiarySink = (entry: DiaryEntry) => void;
+
+// P0 修复：stripPathSegments 内联（原在 utils/dom/errors.ts），消除 core→utils 红线。
+// 净化 Go 端 AppError.Error() 拼入的内部路径段：`源路径：...` / `目标路径：...`
+function stripPathSegments(msg: string): string {
+  return msg.replace(/\s+(?:源路径|目标路径)：.*?(?=\s+(?:操作|目标路径|解决建议)：|$)/g, "");
+}
 
 let _registered = false;
 let _sink: DiarySink | undefined;

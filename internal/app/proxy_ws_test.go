@@ -74,11 +74,11 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	}()
 
 	// ssrfGuardDial 拦截回环地址——测试通过注入 dial 钩子直连假上游
-	origDial := ssrfDial
-	ssrfDial = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	origDial := getSSRFDial()
+	setSSRFDial(func(ctx context.Context, network, addr string) (net.Conn, error) {
 		return net.Dial(network, upstream.Addr().String())
-	}
-	defer func() { ssrfDial = origDial }()
+	})
+	defer setSSRFDial(origDial)
 
 	handlerErr := make(chan error, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -19,7 +19,9 @@
  *   - 默认 / --strict：biome check --changed（仅查相对 main 的变更文件，阻断 lint/format 违规）
  *   - --write：biome check --write --changed（本地/CI 自动修复，非阻断）
  *   - --files <paths...>：显式文件列表（pre-commit 接线，镜像 gofmt 只修 staged 文件）；
- *     路径接受相对库根（frontend/src/…，自动剥 frontend/ 前缀对齐 cwd）或相对 frontend（src/…）。
+ *     路径解析 cwd 无关——传入路径经 path.resolve(process.cwd(), p) 转绝对路径，
+ *     再 path.relative(FRONTEND_DIR) 对齐 biome cwd（frontend/），
+ *     支持任意调用目录 × 任意路径格式（相对/绝对，带/不带 frontend/ 前缀）。
  *     与 --changed 互斥：存在 --files 时用显式列表，否则回退 --changed。
  *
  * 边界：biome check 在「0 变更文件」时也退出 1（报 No files were processed / Checked 0 files），
@@ -52,11 +54,18 @@ const args = parseArgs(process.argv.slice(2), { bools: ['write', 'json', 'files'
 if (args.unknown.length) console.warn(`[check-biome] 忽略未知参数: ${args.unknown.join(', ')}`);
 const writeMode = args.write as boolean;
 const jsonMode = args.json as boolean;
-// --files <paths...>：布尔标记 + 后续位置参数收集（--files 后直到下一个 - 旗标），
-// 路径剥 frontend/ 前缀对齐 cwd（frontend/）；--files 存在但列表为空 → 报错（不静默回退 --changed）。
-const explicitFiles: string[] = args._.map((p) => p.replace(/\\/g, '/').replace(/^frontend\//, ''));
-
+// --files <paths...>：布尔标记 + 后续位置参数收集（--files 后直到下一个 - 旗标）。
+// 路径解析 cwd 无关：path.resolve(process.cwd(), p) → path.relative(FRONTEND_DIR, abs)，
+// 支持任意调用目录 × 任意路径格式（相对/绝对，带/不带 frontend/ 前缀）。
 const ROOT = getRoot();
+const FRONTEND_DIR = path.join(ROOT, 'frontend');
+const cwd = process.cwd();
+const explicitFiles: string[] = args._.map((p) => {
+  const abs = path.resolve(cwd, p);
+  const rel = path.relative(FRONTEND_DIR, abs);
+  return rel.replace(/\\/g, '/'); // Windows 反斜杠 → 正斜杠（biome cwd=frontend 用正斜杠）
+});
+
 const isWin = process.platform === 'win32';
 // 复用 pre-push-gate 的跨平台 bin 解析约定（win32 用 .cmd 包装）
 // monorepo 化后 biome 被 hoist 到 root node_modules/.bin（npm 10 workspace 安装位置），

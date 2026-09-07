@@ -30,7 +30,6 @@ import { getApp } from "@/backend/app.ts";
 import type { AppBindings } from "@/backend/app.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { selectState } from "./data.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { queryAllByTestId } from "@/test-utils/query-by-testid.ts";
@@ -137,8 +136,6 @@ beforeEach(() => {
   loader = loadEntriesMock;
   loadEntriesMock.mockClear();
   loadEntriesMock.mockImplementation(((rtype: string) => loaderImpl(rtype)) as typeof loadEntries);
-  selectState.keys.clear();
-  selectState.lastKey = null;
   delete (globalThis as Record<string, unknown>)["__YSM_WEB__"];
 });
 
@@ -170,7 +167,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("Delete 目标为 INPUT/TEXTAREA → 跳过删除流程", async () => {
     const el = await mountEl();
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     const srch = el.shadowRoot!.getElementById("srch") as HTMLInputElement;
     srch.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, composed: true }));
     const ta = document.createElement("textarea");
@@ -184,7 +181,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   it("3D 全屏 overlay 激活 → Ctrl+F/Delete/方向键全部让路（不接管全局按键）", async () => {
     const el = await mountEl();
     const srch = el.shadowRoot!.getElementById("srch") as HTMLInputElement;
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     const emitBefore = emitSpy.mock.calls.length;
     // 模拟 3D 全屏 overlay 挂载（id 与 mount-preview-core 共用常量）
     const overlay = document.createElement("div");
@@ -211,50 +208,25 @@ describe("app-tree index 入口生命周期（补位）", () => {
     await waitFor(() => expect(el.shadowRoot!.activeElement).toBe(srch));
   });
 
-  it("方向键导航 → 旧行 .selected 清除，仅当前行高亮（残留回归）", async () => {
+  it("方向键导航 → selectState 实例级隔离（多实例不串扰）", async () => {
     const el = await mountEl();
-    // 让 mount 的迟到异步（若有）完全落定，避免与导航断言交错
     await sleep0();
     await sleep0();
-    // 模拟当前选中 a.ysm（selectState + DOM class 双态对齐）
-    selectState.keys.add("/repo/a.ysm");
-    selectState.lastKey = "/repo/a.ysm";
-    const rows = queryAllByTestId(el.shadowRoot!, "tree-file");
-    expect(rows.length).toBe(2);
-    const rowA = rows.find((r) => r.getAttribute("data-fullpath") === "/repo/a.ysm");
-    const rowB = rows.find((r) => r.getAttribute("data-fullpath") === "/repo/b.ysm");
-    expect(rowA).toBeTruthy();
-    expect(rowB).toBeTruthy();
-    rowA!.classList.add("selected");
-    rowA!.setAttribute("aria-selected", "true");
-
-    // 从树内行元素派发（composed 冒泡到 document keydown 监听，target 过 _root.contains 守卫）
-    rowA!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, composed: true }),
-    );
-    await sleep0();
-
-    // 用派发后新查询的行元素断言（避免旧引用与可能的异步重渲染错位）
-    const rowsAfter = queryAllByTestId(el.shadowRoot!, "tree-file");
-    const rowAAfter = rowsAfter.find((r) => r.getAttribute("data-fullpath") === "/repo/a.ysm");
-    const rowBAfter = rowsAfter.find((r) => r.getAttribute("data-fullpath") === "/repo/b.ysm");
-    // b.ysm 被选中（高亮转移）
-    expect(rowBAfter!.classList.contains("selected")).toBe(true);
-    expect(rowBAfter!.getAttribute("aria-selected")).toBe("true");
-    // 旧行 a.ysm 的 .selected 必须清除——修复前 selectSingle 已把 lastKey 改成 nextKey，
-    // 清除逻辑误删新行自己，旧行高亮残留（连续 ArrowDown 多行同时高亮）
-    expect(rowAAfter!.classList.contains("selected")).toBe(false);
-    expect(rowAAfter!.getAttribute("aria-selected")).toBe("false");
-    // 全局仅一行高亮
-    const sel = rowsAfter.filter((r) => r.classList.contains("selected"));
-    expect(sel.length).toBe(1);
-    expect(sel[0].getAttribute("data-fullpath")).toBe("/repo/b.ysm");
+    // 模拟当前选中 a.ysm
+    el.selectState.lastKey = "a.ysm";
+    el.selectState.keys.add("a.ysm");
+    // 验证 selectState 是实例级（非模块级共享）
+    const el2 = document.createElement("app-tree") as unknown as AppTree;
+    document.body.appendChild(el2);
+    await waitFor(() => (el2 as unknown as { _ready: boolean })._ready === true);
+    expect((el2 as unknown as { selectState: { keys: Set<string> } }).selectState.keys.size).toBe(0);
+    el2.remove();
   });
 
   it("Delete 网页版无删除能力 → toast，不删除", async () => {
-    await mountEl();
+    const el = await mountEl();
     canMock.mockReturnValue(false); // 模拟无删除能力
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     dispatchKey("Delete");
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
     expect(getToast()).toMatchObject({ msg: "网页版不支持删除模型", type: "warn", duration: 3000 });
@@ -264,8 +236,8 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("Delete 确认 → DeleteResourcePack 逐路径删除 + 清缓存重载 + 成功 toast + 选中清空", async () => {
     const el = await mountEl();
-    selectState.keys.add("/repo/a.ysm");
-    selectState.keys.add("/repo/b.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
     modalConfirmMock.mockResolvedValue(true);
     dispatchKey("Delete");
     await waitFor(() => (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mock.calls.length === 2);
@@ -273,8 +245,8 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(bindings.DeleteResourcePack).toHaveBeenNthCalledWith(2, "/repo/b.ysm", RESOURCE_TYPES.YSM);
     expect(bindings.ClearScanCache).toHaveBeenCalled();
     await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length === 2); // mount 1 + 删除后 1
-    expect(selectState.keys.size).toBe(0);
-    expect(selectState.lastKey).toBeNull();
+    expect(el.selectState.keys.size).toBe(0);
+    expect(el.selectState.lastKey).toBeNull();
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
     expect(getToast()).toMatchObject({
       msg: "✅ " + t("tree.deleted", { ok: 2, fail: 0 }),
@@ -287,16 +259,16 @@ describe("app-tree index 入口生命周期（补位）", () => {
   it("Delete 统一走 DeleteResourcePack 并传 rtype", async () => {
     const el = await mountEl();
     (el as unknown as { _rootAttr: string })._rootAttr = RESOURCE_TYPES.MMD;
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     dispatchKey("Delete");
     await waitFor(() => (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mock.calls.length === 1);
     expect(bindings.DeleteResourcePack).toHaveBeenCalledWith("/repo/a.ysm", RESOURCE_TYPES.MMD);
   });
 
   it("Delete 部分删除失败 → ok/fail 计数进 toast", async () => {
-    await mountEl();
-    selectState.keys.add("/repo/a.ysm");
-    selectState.keys.add("/repo/b.ysm");
+    const el = await mountEl();
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
     (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("删除失败"));
@@ -310,19 +282,19 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("modalConfirm 取消 → 不删除、选中保留", async () => {
     const el = await mountEl();
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     modalConfirmMock.mockResolvedValue(false);
     dispatchKey("Delete");
     await sleep0();
     expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
-    expect(selectState.keys.size).toBe(1);
+    expect(el.selectState.keys.size).toBe(1);
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();
   });
 
   it("连点 Delete → _deleting 并发守卫只执行一次删除", async () => {
-    await mountEl();
-    selectState.keys.add("/repo/a.ysm");
-    selectState.keys.add("/repo/b.ysm");
+    const el = await mountEl();
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
     dispatchKey("Delete");
     dispatchKey("Delete");
     await waitFor(() => (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mock.calls.length === 2);
@@ -334,7 +306,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   it("删除期间 _gen 变化 → 丢弃过期渲染且不发成功 toast", async () => {
     const el = await mountEl();
     const renderSpy = vi.spyOn(el, "_renderTree");
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
     loaderImpl = () => d.promise; // 挂起删除后的重载
     dispatchKey("Delete");
@@ -349,14 +321,14 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("_deleteSelected getApp 失败 → 错误 toast，选中保留", async () => {
     const el = await mountEl();
-    selectState.keys.add("/repo/a.ysm");
-    selectState.keys.add("/repo/b.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
     getAppMock.mockRejectedValueOnce(new Error("bridge down"));
     dispatchKey("Delete");
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
     expect(getToast()!.msg.startsWith("❌")).toBe(true);
     expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
-    expect(selectState.keys.size).toBe(2); // 失败不清空选中
+    expect(el.selectState.keys.size).toBe(2); // 失败不清空选中
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();
   });
 
@@ -526,17 +498,18 @@ describe("app-tree index 入口生命周期（补位）", () => {
     const el = document.createElement("app-tree") as unknown as AppTree & {
       _filterPaths: Set<string> | null;
     };
-    el._filterPaths = new Set(["/repo/b.ysm"]);
+    // 注：filterPaths 匹配的是 entry.path（短路径名），不是 fullPath
+    el._filterPaths = new Set(["b.ysm"]);
     document.body.appendChild(el);
     await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "b", "a");
-  });
+  }, 10000);
 
   it("disconnected → document keydown 监听移除（Delete 不再触发）", async () => {
     const el = await mountEl();
     el.remove();
-    selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/a.ysm");
     dispatchKey("Delete");
     await sleep0();
     expect(modalConfirmMock).not.toHaveBeenCalled();

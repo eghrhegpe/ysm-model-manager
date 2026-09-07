@@ -13,6 +13,8 @@
  *   R2 目录深度     相对 src/ 的目录层级 > 3 → WARN（观察期）
  *   R3 import 上跳  相对路径 `../` 上跳 > 3 且目标仍在 src 内（真·内部深 wander）→ WARN（观察期）
  *   R4 跨仓根冻结   越过 frontend/src 边界且非 bindings 的引用条数 > 冻结基线 → FAIL
+ *   R5 同目录别名   import 用别名指向本文件同一目录（应写 ./）→ WARN（观察期；ADR-146 反桶补强）
+ *   R6 测试神桶     测试文件 import 一个 index 桶入口（裸 @/dir，或以 /index 结尾），会拉起整模块 → WARN（观察期）
  *   双写一致性      tsconfig.json paths 键集 必须 == vite.config.js alias find 键集 → FAIL
  *
  * R1 度量口径——按 re-export 来源模块数，不按行数/占比（ADR-146 §D3 校准）：
@@ -39,7 +41,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { walk, toPosix } from './_lib/scan-files.ts';
-import { classifyImport } from './_lib/alias-resolve.ts';
+import { classifyImport, classifyBarrelHygiene } from './_lib/alias-resolve.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -76,6 +78,8 @@ const warns: Finding[] = [];
 // R1 / R3 / R4 计数
 const r1Hits: string[] = [];
 const r3Hits: string[] = [];
+const r5Hits: string[] = [];
+const r6Hits: string[] = [];
 let r4Count = 0;
 
 // 提取一个文件内全部模块说明符（from '...' / import('...') / import '...'）
@@ -116,6 +120,17 @@ for (const { abs, rel } of files) {
     if (!spec) continue;
     const c = classifyImport(spec, abs);
     if (!c.resolved) continue; // 包导入 / 未登记别名（catch-all 已禁，双写一致性会 FAIL）
+    // 复用里指向本文件同目录 → 应写 ./（R5）；测试文件 import 桶入口 → 拉起整模块（R6）
+    const isTestFile = /\.(test|spec)\.[jt]sx?$/.test(relPosix);
+    const bh = classifyBarrelHygiene(spec, abs, isTestFile);
+    if (bh.sameDirAlias) {
+      r5Hits.push(`${relPosix} ← ${spec}`);
+      warns.push({ rule: 'R5', file: relPosix, detail: `同目录别名应改 ./（目标 ${dirname(c.targetAbs as string)}）` });
+    }
+    if (bh.testBarrelEntry) {
+      r6Hits.push(`${relPosix} ← ${spec}`);
+      warns.push({ rule: 'R6', file: relPosix, detail: `测试 import 桶入口，会拉起整个模块，改引具体文件` });
+    }
     if (c.isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
     // R3：真·内部深 wander（字面相对上跳 > 3 且目标仍在 src 内）——别名不触
     if (!c.isAlias && c.upLevels > R3_UPLEVEL_MAX && !c.escapesSrc) {
@@ -205,6 +220,8 @@ const summary = {
   r2_depth: { warns: warns.filter((w) => w.rule === 'R2').length },
   r3_uplevel: { hits: r3Hits.length, samples: r3Hits.slice(0, 5) },
   r4_cross_boundary: { count: r4Count, baseline, ok: r4Ok },
+  r5_same_dir_alias: { hits: r5Hits.length, samples: r5Hits.slice(0, 5) },
+  r6_test_barrel: { hits: r6Hits.length, samples: r6Hits.slice(0, 5) },
   consistency: { ok: consistencyOk, tsKeys: [...tsKeys].sort(), viteKeys: [...viteKeys].sort() },
 };
 
@@ -214,6 +231,8 @@ if (JSON_FLAG) {
   process.stdout.write(`check-path-hygiene: ${ok ? 'PASS' : 'FAIL'} (fail=${failCount} warn=${warnCount})\n`);
   if (r1Hits.length) process.stdout.write(`  R1 聚合桶嫌疑: ${r1Hits.join('; ')}\n`);
   if (r3Hits.length) process.stdout.write(`  R3 内部深 wander: ${r3Hits.slice(0, 5).join('; ')}\n`);
+  if (r5Hits.length) process.stdout.write(`  R5 同目录别名: ${r5Hits.slice(0, 5).join('; ')}\n`);
+  if (r6Hits.length) process.stdout.write(`  R6 测试神桶: ${r6Hits.slice(0, 5).join('; ')}\n`);
   process.stdout.write(`  R4 跨边界冻结: ${r4Count}/${baseline} ${r4Ok ? 'OK' : 'EXCEED'}\n`);
   if (!consistencyOk) process.stdout.write(`  一致性: tsconfig缺=[${missingInTs}] vite缺=[${missingInVite}]\n`);
 }

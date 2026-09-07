@@ -151,3 +151,34 @@ export function classifyImport(spec: string, fromFileAbs: string): SpecClass {
   const isMock = toPosix(targetAbs).replace(/\.ts$/, '') === toPosix(MOCK_DATA_ABS);
   return { resolved: true, targetAbs, upLevels, isAlias, escapesSrc: escaped, isBindings, isMockData: isMock };
 }
+
+/**
+ * 路径卫生新增规则（R5 同目录别名 / R6 测试神桶）纯判定——单一事实源，
+ * 供 check-path-hygiene.ts 接入 + tests/test_check_path_hygiene.ts 契约/极端单测复用。
+ *
+ * 动机（ADR-146 反桶契约补强）：降低 LLM 手写 import 时「选错入口 / 算错路径深度」的回归。
+ */
+export interface BarrelHygiene {
+  /** 是否为桶入口：裸 `@/dir`（指向目录 index），或以 `/index` 结尾。 */
+  isBarrelEntry: boolean;
+  /** R5：别名目标与本文件**同一目录**（应改 `./xxx`，别名是噪音）。 */
+  sameDirAlias: boolean;
+  /** R6：该文件是测试文件，且 import 一个桶入口 → 会把整个其他模块拉起。 */
+  testBarrelEntry: boolean;
+}
+
+/**
+ * 把一条 import 说明符归为 R5 / R6 判定所需结构。
+ * - 桶入口识别：`@/dir`（裸别名，指向该目录 index），或以 `/index` 结尾（`@/x/index` / `./index` / `../x/index`）。
+ * - 同目录别名：isAlias 且展开目标与本文件 dirname 相等 → 应写相对 `./`。
+ */
+export function classifyBarrelHygiene(spec: string, fromFileAbs: string, isTestFile: boolean): BarrelHygiene {
+  const bareAlias = /^@\/[^/]+$/.test(spec);
+  const indexGlobal = /\/index$/.test(spec);
+  const isBarrelEntry = bareAlias || indexGlobal;
+  const c = classifyImport(spec, fromFileAbs);
+  const sameDirAlias = !isBarrelEntry && c.resolved && c.isAlias && c.targetAbs !== null
+    ? path.dirname(c.targetAbs) === path.dirname(fromFileAbs)
+    : false;
+  return { isBarrelEntry, sameDirAlias, testBarrelEntry: isTestFile && isBarrelEntry };
+}

@@ -30,10 +30,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAIN_ACTIVITY = 'build/android/app/src/main/java/com/wails/app/MainActivity.java';
 const JS_BRIDGE = 'build/android/app/src/main/java/com/wails/app/WailsJSBridge.java';
 const PROGUARD = 'build/android/app/proguard-rules.pro';
-// ADR-123 P3：探测原语下沉 backend/platform.ts（android-bridge.ts 仅 re-export），
-// 命名契约需联合扫描两处，否则重构后误报漂移。
+// 探测原语自 ADR-123 P3 后下沉 frontend/src/backend/platform.ts；ADR-203 D2/D3 已将
+// utils/dom/android-bridge.ts 并入 backend/platform.ts（该文件已删），契约目标单一事实源 = backend/platform.ts。
 const FRONTEND_BRIDGE_FILES = [
-  path.join('frontend', 'src', 'utils', 'dom', 'android-bridge.ts'),
   path.join('frontend', 'src', 'backend', 'platform.ts'),
 ];
 

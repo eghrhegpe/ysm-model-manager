@@ -199,6 +199,17 @@ if [ "${YSM_SKIP_I18N_CHECK:-0}" != "1" ]; then
   node scripts/i18n-check.ts 2>&1 || echo "⚠️  i18n-check 发现漂移或执行失败"
 fi
 
+# ── 路径卫生提示（R5 同目录别名 / R6 测试神桶；非阻断；ADR-146）──
+# 秒级提示「选错入口 / 算错路径深度」的回归：R5 拒绝「同目录还用别名写深度」，
+# R6 拒绝「测试 import index 桶拉起一整个模块」。阻断由 pre-push 的 --strict 兜底，
+# 此处把发现提前到 commit 当下（与 css-layer / i18n 同级，WARN 观察期不 exit 1）。
+# 逃生阀：YSM_SKIP_PATH_HYGIENE=1
+if [ "${YSM_SKIP_PATH_HYGIENE:-0}" != "1" ]; then
+  echo ""
+  echo "[pre-commit] 路径卫生检查（R5 同目录别名 / R6 测试神桶）..."
+  node scripts/check-path-hygiene.ts 2>&1 || echo "⚠️  path-hygiene 发现 R5/R6 提示（观察期不阻断）或脚本异常"
+fi
+
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──
 # 修复必须发生在提交时：pre-push 内 commit --amend 是假成功（push 推的是钩子前快照 oid，
 # 钩子里 amend 只改本地 HEAD → 分叉，见 pre-push-gate.ts 已知坑 2026-08-12）。

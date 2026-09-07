@@ -33,6 +33,12 @@
 - 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，pre-commit 有 `check-redlines` 兜底）。
 - DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/`（原 `utils/core/`，勿再新建同名目录）。
 
+### 前端 import 路径约定（ADR-146，别让大模型手写错路径深度）
+- **跨目录**（src 内不同顶层目录间）→ 一律用 `@/<顶层目录>/具体文件`（如 `@/backend/app.ts`、`@/utils/dom/x.ts`）。别手算 `../` 深度——undefined 就写 `./`，跨目录就写 `@/`。
+- **同目录** → 用相对 `./xxx`；同目录还用别名是噪音（R5 会提示）。
+- **神桶红线**：import 只从**具体文件**进，禁止 `@/dir`（裸目录）或 `@/dir/index` 入口——尤其测试文件，防「一根测试拉起一整个模块」（R6 提示）。backend 无 `index.ts`，不新增。
+- 门禁：`check-path-hygiene` R5/R6。深 `../` 上跳 > 3 → R3 提示；越 `src` 边界 → R4 阻断。
+
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。

@@ -2,7 +2,7 @@
 // ===== perf-cli.ts 纯函数堆测试（补盲区）=====
 // 覆盖唯一导出 sectionHeader：icon + label + rawText → HTML 字符串。
 import { describe, it, expect } from "vitest";
-import { sectionHeader } from "./perf-cli.ts";
+import { sectionHeader } from "./perf-common.ts";
 
 describe("sectionHeader", () => {
   it("icon + label → 带 icon 和 label 的 HTML", () => {

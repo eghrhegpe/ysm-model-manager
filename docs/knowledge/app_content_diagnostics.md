@@ -11,10 +11,15 @@ source_files:
   - frontend/src/views/app-content/diagnostics/health.ts
   - frontend/src/views/app-content/diagnostics/conflicts.ts
   - frontend/src/views/app-content/diagnostics/perf.ts
-  - frontend/src/views/app-content/diagnostics/perf-cli.ts
+  - frontend/src/views/app-content/diagnostics/perf-common.ts
+  - frontend/src/views/app-content/diagnostics/perf-single-bench.ts
+  - frontend/src/views/app-content/diagnostics/perf-gui-flow.ts
+  - frontend/src/views/app-content/diagnostics/perf-log.ts
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
+    - bindPerfCopyHandlers
+    - CLIResp
     - createDedupSession
     - DedupConfigShape
     - DedupFileLike
@@ -28,21 +33,25 @@ auto_fields:
     - loadRuntimeLogs
     - renderHealthReport
     - renderLoadTraceSection
+    - runGuiFlow
     - runHealthAudit
+    - runPerfLog
+    - runSingleBench
     - scanConflicts
     - scanSyncConflicts
+    - sectionHeader
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts
     - frontend/src/views/app-content/diagnostics/init.test.ts
     - frontend/src/views/app-content/diagnostics/perf.test.ts
-    - frontend/src/views/app-content/diagnostics/perf-cli.test.ts
+    - frontend/src/views/app-content/diagnostics/perf-common.test.ts
 tests:
   - frontend/src/views/app-content/diagnostics/conflicts.test.ts
   - frontend/src/views/app-content/diagnostics/health.test.ts
   - frontend/src/views/app-content/diagnostics/init.test.ts
   - frontend/src/views/app-content/diagnostics/perf.test.ts
-  - frontend/src/views/app-content/diagnostics/perf-cli.test.ts
+  - frontend/src/views/app-content/diagnostics/perf-common.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
@@ -85,7 +94,12 @@ status: active
 - `dedup-policy.ts` — keep 保留策略纯函数层（`getDefaultKeepIdx` + reduce 家族 + `DedupFileLike`），自 `dedup.ts` 抽出（2026-09-03，ADR-040 拆分线延续）；零 mock 单测聚焦策略分支
 - `conflicts.ts` — 冲突列表渲染（依赖 `logs.ts` 的操作日志数据）
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
-- `perf.ts` / `perf-cli.ts` / `perf-trace.ts` — 性能面板：CLI 基准（`services/cli-bridge`）+ 加载轨迹（`preview-3d/load-trace.ts`）
+- `perf.ts` — 性能面板 facade：事件接线 + re-export，业务逻辑拆至：
+  - `perf-common.ts` — 共享工具层（sectionHeader / 复制按钮 / 守卫 / 错误辅助）
+  - `perf-single-bench.ts` — single-bench（CLI 文本流消费 + 柱状图 + 趋势图）
+  - `perf-gui-flow.ts` — gui-flow（6 阶段结构化消费）
+  - `perf-log.ts` — perf-log（优化历史卡片）
+  - `perf-trace.ts` — 加载剖析（load-trace store 消费）
 
 ## 对外 API / 入口
 

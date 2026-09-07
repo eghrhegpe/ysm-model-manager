@@ -19,11 +19,11 @@ import { registerEnvCallback } from "../state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
 import { ENV_PRESETS } from "./environment-state.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { persistState, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
 
 export type { EnvPreset, EnvPresetId };
@@ -596,14 +596,16 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   setPreset(modelType: string): void {
-    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const preset =
+      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     // ADR-196：统一数据源 MODEL_DEFAULTS；callback → buildEnvironment。
     const partial: Partial<EnvState> = {};
     const src = preset as Record<string, unknown>;
     if (src.envPreset !== undefined) partial.envPreset = src.envPreset as EnvPresetId;
     if (src.envIntensity !== undefined) partial.envIntensity = src.envIntensity as number;
     if (src.envResolution !== undefined) partial.envResolution = src.envResolution as number;
-    if (src.envUseAsBackground !== undefined) partial.envUseAsBackground = src.envUseAsBackground as boolean;
+    if (src.envUseAsBackground !== undefined)
+      partial.envUseAsBackground = src.envUseAsBackground as boolean;
     if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }
 

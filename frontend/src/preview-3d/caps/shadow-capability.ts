@@ -7,6 +7,7 @@ import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { registerEnvCallback } from "../state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
   oneOf,
@@ -15,7 +16,6 @@ import {
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { buildShadowNodes } from "./shadow-menu.ts";
 
 /** 阴影类型合法值 */
@@ -145,8 +145,10 @@ export class ShadowCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(adapterId: string): void {
     if (this.isStateLoaded) return;
-    const preset = MODEL_DEFAULTS[adapterId as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    if (preset.shadowType !== undefined) setEnvState({ shadowType: preset.shadowType }, { source: "auto-model" });
+    const preset =
+      MODEL_DEFAULTS[adapterId as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    if (preset.shadowType !== undefined)
+      setEnvState({ shadowType: preset.shadowType }, { source: "auto-model" });
   }
 
   /* -------- 内部：apply 管线 -------- */

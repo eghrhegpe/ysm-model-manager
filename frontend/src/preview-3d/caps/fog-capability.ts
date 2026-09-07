@@ -99,10 +99,19 @@ export class FogCapability implements SceneCapability {
 
   /** 按模型类别套用预设；持久化状态优先（setPreset 仅做合理默认） */
   setPreset(modelType: string): void {
-    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const preset =
+      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     const partial: Partial<EnvState> = {};
-    for (const key of ["fogEnabled", "fogMode", "fogColor", "fogNear", "fogFar", "fogDensity"] as const) {
-      if ((preset as Record<string, unknown>)[key] !== undefined) (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
+    for (const key of [
+      "fogEnabled",
+      "fogMode",
+      "fogColor",
+      "fogNear",
+      "fogFar",
+      "fogDensity",
+    ] as const) {
+      if ((preset as Record<string, unknown>)[key] !== undefined)
+        (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
     }
     if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }

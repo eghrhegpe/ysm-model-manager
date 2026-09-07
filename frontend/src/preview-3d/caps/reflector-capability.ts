@@ -6,12 +6,19 @@
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
-import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { registerEnvCallback } from "../state/env-dispatcher.ts";
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
-import { GROUND_LAYER_OFFSETS, persistState, restoreFields, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
+import {
+  GROUND_LAYER_OFFSETS,
+  persistState,
+  restoreFields,
+  restoreState,
+  ringLog,
+  type SceneCapability,
+} from "./scene-capability.ts";
 
 /** three r185 官方 ReflectorShader 静态属性（运行时存在，@types/three 未声明该静态属性，断言桥接） */
 type ReflectorShaderDef = {
@@ -164,10 +171,19 @@ export class ReflectorCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   setPreset(modelType: string): void {
     if (this.isStateLoaded) return;
-    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const preset =
+      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     const partial: Partial<EnvState> = {};
-    for (const key of ["reflectorEnabled", "reflectorOpacity", "reflectorSize", "reflectorResolution", "reflectorColor", "reflectorClipBias"] as const) {
-      if ((preset as Record<string, unknown>)[key] !== undefined) (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
+    for (const key of [
+      "reflectorEnabled",
+      "reflectorOpacity",
+      "reflectorSize",
+      "reflectorResolution",
+      "reflectorColor",
+      "reflectorClipBias",
+    ] as const) {
+      if ((preset as Record<string, unknown>)[key] !== undefined)
+        (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
     }
     if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
   }

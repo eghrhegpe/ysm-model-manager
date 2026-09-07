@@ -24,7 +24,14 @@ import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
 import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
-import { persistState, restoreFields, restoreState, ringLog, type SceneCapability, type SceneCapabilityLookup } from "./scene-capability.ts";
+import {
+  persistState,
+  restoreFields,
+  restoreState,
+  ringLog,
+  type SceneCapability,
+  type SceneCapabilityLookup,
+} from "./scene-capability.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
 
 /**
@@ -466,16 +473,20 @@ export class SkyCapability implements SceneCapability {
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
   setPreset(modelType: string): void {
-    const preset = MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
+    const preset =
+      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     // ADR-196 收口：统一数据源 MODEL_DEFAULTS；callback 各散射分支落地。
     const mapped: Partial<EnvState> = {};
     const src = preset as Record<string, unknown>;
     if (src.skyTurbidity !== undefined) mapped.skyTurbidity = src.skyTurbidity as number;
     if (src.skyRayleigh !== undefined) mapped.skyRayleigh = src.skyRayleigh as number;
-    if (src.skyMieCoefficient !== undefined) mapped.skyMieCoefficient = src.skyMieCoefficient as number;
-    if (src.skyMieDirectionalG !== undefined) mapped.skyMieDirectionalG = src.skyMieDirectionalG as number;
+    if (src.skyMieCoefficient !== undefined)
+      mapped.skyMieCoefficient = src.skyMieCoefficient as number;
+    if (src.skyMieDirectionalG !== undefined)
+      mapped.skyMieDirectionalG = src.skyMieDirectionalG as number;
     if (src.skyExposure !== undefined) mapped.skyExposure = src.skyExposure as number;
-    if (src.skySunIntensityScale !== undefined) mapped.skySunIntensityScale = src.skySunIntensityScale as number;
+    if (src.skySunIntensityScale !== undefined)
+      mapped.skySunIntensityScale = src.skySunIntensityScale as number;
     if (src.skySunDiscScale !== undefined) mapped.skySunDiscScale = src.skySunDiscScale as number;
     mapped.skyForceEnv = true;
     setEnvState(mapped, { source: "auto-model" });

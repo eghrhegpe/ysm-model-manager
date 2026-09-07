@@ -113,61 +113,8 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
   volumetric: { ...DEFAULT_VOLUMETRIC },
 };
 
-/** 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） */
-export const LIGHT_PRESETS: Record<string, Partial<LightParams>> = {
-  default: {
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  ysm: {
-    // 方块哑光，rim增强方块边缘识别
-    key: { ...DEFAULT_KEY, intensity: 1.3 },
-    fill: { ...DEFAULT_FILL, intensity: 0.5 },
-    rim: { ...DEFAULT_RIM, intensity: 0.45 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.8, angle: 30, penumbra: 0.4 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.4, fogPower: 1.2 },
-  },
-  vrm: {
-    // PBR 角色，rim 稍强勾勒轮廓
-    key: { ...DEFAULT_KEY, intensity: 1.0 },
-    fill: { ...DEFAULT_FILL, intensity: 0.5 },
-    rim: { ...DEFAULT_RIM, intensity: 0.6 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.5, angle: 28 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  mmd: {
-    // toon 材质易过曝，整体降 30%
-    key: { ...DEFAULT_KEY, intensity: 0.85 },
-    fill: { ...DEFAULT_FILL, intensity: 0.3 },
-    rim: { ...DEFAULT_RIM, intensity: 0.25 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.4 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  litematic: {
-    // 体素，均匀光照
-    key: { ...DEFAULT_KEY, intensity: 1.0, azimuth: 45, elevation: 60 },
-    fill: { ...DEFAULT_FILL, intensity: 0.4, azimuth: -45, elevation: 30 },
-    rim: { ...DEFAULT_RIM, intensity: 0.3, azimuth: 135, elevation: 30 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false },
-  },
-  resourcepack: {
-    // MC 方块/物品，顶光稍柔（alias for pack-model 兼容 adapter.id）
-    key: { ...DEFAULT_KEY, intensity: 1.3 },
-    fill: { ...DEFAULT_FILL, intensity: 0.4 },
-    rim: { ...DEFAULT_RIM, intensity: 0.35 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.8, angle: 30 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.4 },
-  },
-  "mmd-scene": {
-    // 场景模型：光照更均匀，体积光锥启用营造氛围
-    key: { ...DEFAULT_KEY, intensity: 1.2 },
-    fill: { ...DEFAULT_FILL, intensity: 0.55 },
-    rim: { ...DEFAULT_RIM, intensity: 0.4 },
-    spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.6, angle: 40, penumbra: 0.6 },
-    volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.35, fogPower: 1.0 },
-  },
-};
+// 注：LIGHT_PRESETS（v1.14 风格预设表）已并入 state/model-defaults.ts 的 MODEL_DEFAULTS，
+// applyModelPreset 不再读此文件。DEFAULT_LIGHT_PARAMS（参数默认值基线）保留。
 
 /* ============ 合并工具 ============ */
 

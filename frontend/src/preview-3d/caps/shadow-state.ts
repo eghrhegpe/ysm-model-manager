@@ -30,29 +30,5 @@ export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
   cameraSize: 15,
 };
 
-/** 预设（applyModelPreset 套用到不同模型类别） */
-export const SHADOW_PRESETS: Record<string, Partial<ShadowParams> | undefined> = {
-  default: { type: "hard" },
-  // v1.14: 启用 enabled:true；建筑类仍保持关闭以省 GPU
-  prop: { enabled: true, type: "soft", mapSize: 2048, cameraSize: 10 },
-  small: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 12 },
-  architecture: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 40 },
-  scene: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 30 },
-  character: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 15 },
-  creature: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 18 },
-};
-
-/** 预设与模型类别的映射（无则落回 default） */
-export const SHADOW_PRESET_BY_MODEL: Record<string, keyof typeof SHADOW_PRESETS> = {
-  // 角色别名→character preset (soft shadow + 1024 res)
-  mmd: "character",
-  vrm: "character",
-  ysm: "character",
-  litematic: "character",
-  prop: "prop",
-  small: "small",
-  architecture: "architecture",
-  scene: "scene",
-  character: "character",
-  creature: "creature",
-};
+// 注：SHADOW_PRESETS / SHADOW_PRESET_BY_MODEL（v1.14 风格预设表）已并入
+// state/model-defaults.ts 的 MODEL_DEFAULTS，applyModelPreset 不再读此文件。

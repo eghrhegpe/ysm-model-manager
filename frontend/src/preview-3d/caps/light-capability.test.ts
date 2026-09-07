@@ -5,7 +5,6 @@ import * as THREE from "three";
 import {
   LightCapability,
   DEFAULT_LIGHT_PARAMS,
-  LIGHT_PRESETS,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
@@ -406,7 +405,6 @@ describe("LightCapability — setParams 合并更新", () => {
     expect(DEFAULT_LIGHT_PARAMS.spotlight.enabled).toBe(false);
     expect(DEFAULT_LIGHT_PARAMS.volumetric.enabled).toBe(false);
     expect(DEFAULT_LIGHT_PARAMS.ambient.intensity).toBe(0.5);
-    expect(Object.keys(LIGHT_PRESETS).length).toBeGreaterThanOrEqual(6);
   });
 });
 
@@ -451,7 +449,7 @@ describe("LightCapability — 持久化", () => {
     // 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）：
     // 预设先套用，再用保存值覆盖，故此处 key=false / spotlight=true / volumetric=true 均须保住
     expect(p.key.enabled).toBe(false); // 用户关了主光，不被 mmd 预设（true）盖回
-    expect(p.ambient.intensity).toBe(0.9); // ambient 不在 LIGHT_PRESETS 合并范围，保留
+    expect(p.ambient.intensity).toBe(0.9); // ambient 不在 MODEL_DEFAULTS 的 light 合并范围，保留
     expect(p.spotlight.enabled).toBe(true); // 用户开了聚光，不被 mmd 预设（false）盖回
     expect(p.volumetric.enabled).toBe(true); // 用户开了体积光，不被 mmd 预设（false）盖回
     expect(cap2.getCurrentPreset()).toBe("mmd");

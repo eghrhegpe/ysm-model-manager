@@ -1,7 +1,6 @@
 // ===== 环境能力状态/序列化层（拆轴自 environment-capability.ts）=====
 // 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
-// （EnvPresetId / EnvPreset / ENV_PRESETS / EnvPresetLinkage / ENV_PRESET_LINKAGE /
-// EnvironmentParams / 默认值 / 模型映射），零 THREE 依赖、无顶层副作用；
+// （EnvPresetId / EnvPreset / ENV_PRESETS / EnvironmentParams / 默认值），零 THREE 依赖、无顶层副作用；
 // environment-capability.ts 保留 envMap 管线 / PMREM / canvas equirect 绘制 / HDR 加载等渲染轴。
 // 注意：sky-capability.ts 亦跨文件消费 ENV_PRESETS（sunPos 口径对齐），下沉后 import 路径更短。
 
@@ -92,53 +91,9 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
 };
 
 /**
- * 预设快捷联动表：选某预设时，除切 environment.preset 外，一并联动 sky/fog/env 参数，
- * 让「日落」「夜景」等预设呈现完整氛围，而非只换一张 envMap。
- *
- * 字段语义：
- *  - sky: { time, cloud } — 调 SkyCapability.setTime / setCloudCoverage
- *  - fog: { enabled, mode?, density?, near?, far? } — 调 FogCapability 对应 setter
- *  - envIntensity: number — 调 EnvironmentCapability.setIntensity
- *  - 仅列需要改的字段；未列的字段保持用户当前值（不覆盖）
+ * 注：EnvPresetLinkage / ENV_PRESET_LINKAGE 已由 atmosphere-presets.ts 的 ATMOSPHERE_PRESETS 取代
+ * （完整氛围快照 + auto-atmosphere source + 统一 setEnvState 派发），旧硬编码联动表不再消费。
  */
-export interface EnvPresetLinkage {
-  sky?: { time: number; cloud: number };
-  fog?: {
-    enabled: boolean;
-    mode?: "linear" | "exp2";
-    density?: number;
-    near?: number;
-    far?: number;
-  };
-  envIntensity?: number;
-}
-
-export const ENV_PRESET_LINKAGE: Record<Exclude<EnvPresetId, "custom">, EnvPresetLinkage> = {
-  sky: {
-    sky: { time: 9, cloud: 0.1 },
-    envIntensity: 1.0,
-  },
-  studio: {
-    sky: { time: 12, cloud: 0.0 },
-    fog: { enabled: false },
-    envIntensity: 1.6,
-  },
-  sunset: {
-    sky: { time: 18, cloud: 0.6 },
-    fog: { enabled: true, mode: "linear", density: 0.02, near: 50, far: 800 },
-    envIntensity: 1.4,
-  },
-  night: {
-    sky: { time: 22, cloud: 0.0 },
-    fog: { enabled: true, mode: "exp2", density: 0.015 },
-    envIntensity: 0.7,
-  },
-  forest: {
-    sky: { time: 10, cloud: 0.4 },
-    fog: { enabled: true, mode: "exp2", density: 0.03 },
-    envIntensity: 1.1,
-  },
-};
 
 export interface EnvironmentParams {
   enabled: boolean;

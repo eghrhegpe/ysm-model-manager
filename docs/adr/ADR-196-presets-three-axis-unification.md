@@ -61,12 +61,14 @@ ADR-195（cap 控件单类型化）与 ADR-196 同属菜单/状态体系收口�
 - ADR-196 刀 3 原写的「经 cap-to-node 桥接层替换闭包」**机制前提被 ADR-195 取代**——cap 已不经过桥，直接产节点。但刀 3 的**实质目标（菜单控件从 cap.setXxx 闭包改为 StatePath 直绑 envState）未因 ADR-195 自动完成**：ADR-195 只统一了类型载体，控件仍绑 `cap.setXxx(v)` 闭包（2026-09-07 实证：`getStateValue`/`setStateValue` 零消费，菜单 setter 全为闭包直调）。
 - 结论：ADR-195 取代 ADR-196 刀 3 的**机制路径**，刀 3 **目标保留**、落点改为「直接改各 cap 的 menu 节点工厂」（见上方刀 3 修订）。
 
-### 当前实施进度（2026-09-07 快照，详细见知识卡 preview_env_state）
+### 当前实施进度（2026-09-07 v2 快照，详细见知识卡 preview_env_state）
 
 - 刀 0：3/4（`env-state-schema.ts`/`env-state.ts`/`env-dispatcher.ts` 已建；`env-state-persist.ts` 未建，持久化仍由各 cap saveState 承担）
-- 刀 1：Sky 参数写入已走 setEnvState，但 `MODEL_SKY_PRESETS` 旧表未删、setter 仍双写 uniforms（残留）
+- 刀 1：Sky 参数写入已走 setEnvState，旧 `MODEL_SKY_PRESETS` 已删（3aeb60913）；setter 仍双写 uniforms（残留，不影响预设体系）
 - 刀 2：10/10（全部 cap 参数迁入 envState，schema 全量拍平 ~90 字段）
-- 刀 3-5：未落（本修订后推进）
+- 刀 4：`MODEL_DEFAULTS`（7 源合并）+ `ATMOSPHERE_PRESETS`（完整氛围快照）已建；`applyPreset` 硬编码 `if(link.sky)` → `setEnvState(ATMOSPHERE_PRESETS[id], {source:'auto-atmosphere'})`
+- 刀 5：**旧预设表清理完成度 6/7**——`MODEL_SKY_PRESETS`/`ENV_PRESET_BY_MODEL`/`ENV_PRESET_LINKAGE`（3aeb60913）/`SHADOW_PRESETS`+`SHADOW_PRESET_BY_MODEL`/`LIGHT_PRESETS`（本次）/`SceneCapability.setPreset` 接口（13b8b4e5f）均已删除；**唯一遗留** `POSTPROC_PRESETS` 未并入 MODEL_DEFAULTS（cap 侧效 enabled 无法被单次 setEnvState 等效替代，封存为 known gap）
+- 刀 3：**未落**（菜单控件闭包 → StatePath 直绑 envState 键）；知识卡已标注"控件闭包绑 cap setter/getter，刀3 换 StatePath 直绑"
 
 ### 刀序（实施见知识卡，ADR 不记进度）
 

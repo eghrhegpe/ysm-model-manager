@@ -92,17 +92,26 @@ export class ReflectorCapability implements SceneCapability {
     this.scene = opts.scene;
     this.enabled = opts.enabled ?? true;
 
-    // ADR-196：订阅 envState 变更
+    // ADR-196：订阅 envState 变更——细粒度分派（code_review P3 #5/#15/#20 单主化）：
+    // 结构性字段（enabled/size/resolution/clipBias）→ buildReflector 全量重建；
+    // 参数字段（opacity/color）→ 就地改 reflector material uniform（避免重建重活）。
     this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
       if (
         changed.has("reflectorEnabled") ||
         changed.has("reflectorSize") ||
         changed.has("reflectorResolution") ||
-        changed.has("reflectorColor") ||
-        changed.has("reflectorOpacity") ||
         changed.has("reflectorClipBias")
       ) {
         this.buildReflector();
+        return;
+      }
+      if (changed.has("reflectorOpacity")) {
+        const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
+        if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
+      }
+      if (changed.has("reflectorColor")) {
+        const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
+        if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(envState.reflectorColor);
       }
     });
   }
@@ -191,10 +200,8 @@ export class ReflectorCapability implements SceneCapability {
     // cap.setEnabled）须打通 envState.reflectorEnabled gate——buildReflector 的
     // `!envState.reflectorEnabled` 使 toggle ON 后 mesh 永空（唯一写者
     // setEnabledReflector 无生产调用方）；legacy {enabled:true} 存档无该键同样
-    // 恢复为永久关闭。setEnvState 同步 dispatch → env 回调 buildReflector；
-    // 下方 buildReflector 幂等兜底（perf 双跑 C 组收敛）。
+    // 恢复为永久关闭。ADR-196 收口：setEnvState 同步 dispatch → callback buildReflector。
     setEnvState({ reflectorEnabled: v }, { source: "manual" });
-    this.buildReflector();
   }
 
   isEnabled(): boolean {
@@ -205,8 +212,8 @@ export class ReflectorCapability implements SceneCapability {
   setPreset(modelType: string): void {
     if (this.isStateLoaded) return;
     const preset = REFLECTOR_PRESETS[modelType] ?? REFLECTOR_PRESETS.default;
+    // ADR-196 收口：纯写 envState；buildReflector 由 callback 落地。
     setEnvState(preset, { source: "auto-model" });
-    if (this.enabled) this.buildReflector();
   }
 
   setEnabledReflector(v: boolean): void {
@@ -214,30 +221,28 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   setOpacity(v: number): void {
+    // ADR-196 收口：纯写 envState；uniform 就地改由 callback 细粒度落地。
     setEnvState({ reflectorOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
-    const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-    if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
   }
 
   setColor(hex: number): void {
+    // ADR-196 收口：纯写 envState；uniform 就地改由 callback 细粒度落地。
     setEnvState({ reflectorColor: hex }, { source: "manual" });
-    const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-    if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(hex);
   }
 
   setSize(v: number): void {
+    // ADR-196 收口：纯写 envState；buildReflector 由 callback 落地。
     setEnvState({ reflectorSize: v }, { source: "manual" });
-    if (this.enabled) this.buildReflector();
   }
 
   setResolution(v: number): void {
+    // ADR-196 收口：纯写 envState；buildReflector 由 callback 落地。
     setEnvState({ reflectorResolution: v }, { source: "manual" });
-    if (this.enabled) this.buildReflector();
   }
 
   setClipBias(v: number): void {
+    // ADR-196 收口：纯写 envState；buildReflector 由 callback 落地。
     setEnvState({ reflectorClipBias: v }, { source: "manual" });
-    if (this.enabled) this.buildReflector();
   }
 
   getParams() {

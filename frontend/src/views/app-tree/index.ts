@@ -46,12 +46,12 @@ import { footerHTML, headerHTML, spinnerHTML } from "./tpl.ts";
 // 'tree-' 前缀白名单，从而同受 must-have 与孤儿双校验守护（裸 'tree' 只受前者）。
 export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
+import { can } from "@/backend/capabilities.ts";
 import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../features/dialogs/modal-confirm.ts";
 import { bindTreeDnD } from "../../features/dnd/import-dnd.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { can } from "../../utils/dom/capabilities.ts";
 import { rememberModelPath } from "../app-content/init-pages.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { selectSingle, selectState } from "./data.ts";

@@ -10,10 +10,10 @@
 // CLI_ALLOWLIST 是 curated 子集（有意排除需 Go 进程/落盘依赖的命令），数量差异是设计意图。
 // 详情见 frontend/src/backend/cli-allowlist.ts 文件头注释。
 
-import { getApp } from "../backend/app.ts";
-import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "../backend/cli-allowlist.ts";
-import { isWebPlatform } from "../backend/platform-web.ts";
-import { WebUnsupportedError } from "../backend/web-common.ts";
+import { getApp } from "@/backend/app.ts";
+import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "@/backend/cli-allowlist.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
+import { WebUnsupportedError } from "@/backend/web-common.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 
 // 兼容旧导出名（tests 仍 import ALLOWED_CLI_COMMANDS）

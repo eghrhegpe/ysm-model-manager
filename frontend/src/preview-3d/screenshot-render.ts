@@ -5,7 +5,7 @@
 // RenderMultiAngleOptions.decodeYsm 依赖注入，本文件不反向 import views。
 import * as THREE from "three";
 
-import { getApp } from "../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { lightDirToPosition } from "./caps/light-capability.ts";
 import type { Spec3D } from "./model3d.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";

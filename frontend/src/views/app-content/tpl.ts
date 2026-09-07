@@ -1,7 +1,7 @@
 // ===== app-content 页面模板 =====
 
+import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "../../core/i18n/t.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。

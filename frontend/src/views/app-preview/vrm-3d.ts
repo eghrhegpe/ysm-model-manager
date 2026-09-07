@@ -3,7 +3,7 @@
 // 本文件仅作兼容薄包装，保留 createVrm3D / cleanupVrm3D / invalidateVrmPreview
 // 公开符号，index.ts 与既有测试无需改动。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import {
   cleanupPreview,
   invalidatePreview,

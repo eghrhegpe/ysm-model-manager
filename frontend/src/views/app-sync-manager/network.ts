@@ -4,7 +4,7 @@
 // 依赖 DAG：index → network ← events（events 通过回调调用 network）
 // network → store（push/pull 后调 loadData 刷新数据）
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";

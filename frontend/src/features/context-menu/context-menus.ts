@@ -1,9 +1,10 @@
 // ===== 右键菜单映射（类型化版 — ADR-014 P3 core 收官；ADR-021 B 层声明式化）=====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 // 菜单结构来自 menu-defs.ts（唯一事实来源），此处只保留 orchestrator。
+
+import { canWebAction } from "@/backend/capabilities.ts";
+import { isViewerMode } from "@/backend/platform.ts";
 import { bus, type CtxShowPayload, type MenuItem } from "../../bus.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
-import { canWebAction } from "../../utils/dom/capabilities.ts";
 // P1 修复（ADR-040）：handler 表已拆至 context-menu-handlers.ts；此处仅消费 HANDLERS，
 // 不再 re-export 其余共享符号（无外部消费者，消除死代码）
 import { HANDLERS } from "./context-menu-handlers.ts";

@@ -2,7 +2,7 @@
 // 依赖注入（ADR-190 D2）：getApp / t / modalConfirm 经 initRecycleBin 的 deps 参数显式透传，
 // 测试可直接注入替身，无需 vi.mock 整个模块；缺省走生产实现。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../services/resource-registry.ts";

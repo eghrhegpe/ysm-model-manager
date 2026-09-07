@@ -3,7 +3,7 @@
 // JSON 是两套数据源；T2 仅归一「类型」，数据源保持现状）。
 // 本模块自 utils/resource/registry.ts 迁至 services/ —— 它是「数据加载服务」而非纯工具
 // （曾 reverse-import backend/app.ts，穿越纯工具层边界）。消费方 import 路径一并更新。
-import { getApp } from "../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import type { ResourceType } from "../utils/resource/schema.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 

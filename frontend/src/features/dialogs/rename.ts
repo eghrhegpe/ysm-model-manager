@@ -1,7 +1,7 @@
 // ===== 模型重命名对话框（类型化版 — ADR-014 P3 dialogs）=====
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 
 type GetAppFn = typeof getApp;
 

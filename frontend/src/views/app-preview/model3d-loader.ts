@@ -3,14 +3,14 @@
 // ADR-161 §2.1：spec 契约单一镜像——本地 unknown 袋 ModelSpec 退役，
 // 出口类型锚定 Go 绑定 Model3DSpec（字段含 texArrOrder/componentTextures/_cubeCount，不再静默丢）。
 import type * as THREE from "three";
+import { getApp } from "@/backend/app.ts";
+import { isViewerMode } from "@/backend/platform.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
 import { recordLoadTrace } from "../../preview-3d/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "../../preview-3d/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "../../preview-3d/texture-loader.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {

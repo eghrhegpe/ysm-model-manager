@@ -11,7 +11,7 @@ const { canMock } = vi.hoisted(() => ({
   canMock: vi.fn().mockReturnValue(true), // 默认桌面：ListVersionInstances 可用
 }));
 
-vi.mock("../../utils/dom/capabilities.ts", () => ({
+vi.mock("@/backend/capabilities.ts", () => ({
   can: canMock,
 }));
 
@@ -33,7 +33,7 @@ vi.mock("../../views/app-preview/empty-3d.ts", () => ({
 vi.mock("../../views/app-preview/preview-library.ts", () => ({
   openModel3DFullscreen: vi.fn(),
 }));
-import { getApp, type AppBindings } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "@/backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getLastModelPath } from "../../views/app-content/init-pages.ts";

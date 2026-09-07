@@ -1,6 +1,6 @@
 // ===== sidebar 事件层 =====
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { currentRepoType } from "../../features/repo/repo-rtype.ts";

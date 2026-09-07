@@ -11,18 +11,18 @@ import {
   githubHTML,
   workshopHTML,
 } from "./tpl.ts";
-import type { WailsAndroidBridge } from "../../backend/platform.ts";
+import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({
   getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
   isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
   isWebPlatformMock: vi.fn().mockReturnValue(false), // 默认桌面（非网页版）
 }));
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   getAndroidBridge: getAndroidBridgeMock,
   isViewerMode: isViewerModeMock,
 }));
-vi.mock("../../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
 

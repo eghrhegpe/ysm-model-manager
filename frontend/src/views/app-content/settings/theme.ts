@@ -3,7 +3,7 @@
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { applyTheme } from "../../../theme-core.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { cfg } from "./store.ts";

@@ -3,7 +3,7 @@
 // 覆盖：单文件直导、文件夹整组、执行入口分组、去重、ysm.json 引导
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "../../bus.ts";
-import { getApp, type AppBindings } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "@/backend/app.ts";
 import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./executor.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -22,8 +22,8 @@ vi.mock("@/backend/app.ts", () => ({
 // importWebFilesWithToast 依赖（仅该路径用到）：保留真实 MAX_IMPORT_BYTES，
 // 仅替换 importWebFiles 为可控 mock
 const importWebFilesMock = vi.hoisted(() => vi.fn());
-vi.mock("../../backend/browser-adapter.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../backend/browser-adapter.ts")>();
+vi.mock("@/backend/browser-adapter.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/browser-adapter.ts")>();
   return { ...actual, importWebFiles: importWebFilesMock };
 });
 vi.mock("./repo-rtype.ts", () => ({ currentRepoType: vi.fn(() => "ysm") }));

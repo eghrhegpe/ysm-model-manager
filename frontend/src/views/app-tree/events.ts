@@ -1,10 +1,10 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
+import { can } from "@/backend/capabilities.ts";
+import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
-import { can } from "../../utils/dom/capabilities.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { flashBtn } from "../../utils/dom/feedback.ts";
 import { safeSet } from "../../utils/dom/storage.ts";

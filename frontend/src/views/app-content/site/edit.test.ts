@@ -26,7 +26,7 @@ import type { SiteViewState } from "./types.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite, WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { fireDrag } from "../../../test-utils/events.ts";
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import * as communityData from "../community-data.ts";
 
 /** mock 后的 getApp（vi.mock 工厂产物），便于逐测试覆盖返回的绑定集 */

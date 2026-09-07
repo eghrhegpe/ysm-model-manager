@@ -5,7 +5,7 @@
 // 依赖 DAG：index → store / renderer / events / network / state（leaf modules 间无循环，
 // events 的 LAST_TYPE_KEY 等共享状态走 state.ts，不再反向依赖 index）
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";

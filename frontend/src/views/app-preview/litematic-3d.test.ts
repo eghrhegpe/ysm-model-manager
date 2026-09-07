@@ -304,7 +304,7 @@ vi.mock("../../preview-3d/caps/light-capability.ts", () => ({
   },
 }));
 
-import { getApp, type AppBindings } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";

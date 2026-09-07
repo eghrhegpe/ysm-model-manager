@@ -1,10 +1,10 @@
 // ===== 创意工坊纯数据层 =====
 
+import { getApp } from "@/backend/app.ts";
 import type {
   WorkshopCreator,
   WorkshopSite,
 } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { getApp } from "../../backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { invalidateCache, withCached } from "../../utils/cache/with-cached.ts";

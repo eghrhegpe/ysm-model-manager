@@ -68,15 +68,15 @@ vi.mock("../../../features/maintenance/version-updater.ts", () => ({ initVersion
 vi.mock("../../../utils/dom/errors.ts", () => ({ friendlyError }));
 // browser-adapter：本图内仅 init.ts 消费 FSA 三函数；browserAdapter 空垫是给
 // importOriginal 展开的真 platform-web 引用兜底（仅函数体内使用，不在此验证）
-vi.mock("../../../backend/browser-adapter.ts", () => ({
+vi.mock("@/backend/browser-adapter.ts", () => ({
   selectLocalRepo: selectLocalRepoMock,
   getFsaAuthState: getFsaAuthStateMock,
   rescanFsaRoot: rescanFsaRootMock,
   browserAdapter: {},
 }));
 // isWebPlatform 换可控开关（其余导出保持真实，避免切断 platform.ts 链）
-vi.mock("../../../backend/platform-web.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../backend/platform-web.ts")>();
+vi.mock("@/backend/platform-web.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/platform-web.ts")>();
   return { ...actual, isWebPlatform: isWebPlatformMock };
 });
 

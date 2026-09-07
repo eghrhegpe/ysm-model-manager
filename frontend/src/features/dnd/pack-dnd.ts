@@ -4,8 +4,8 @@
 // 职责归属：前端只收集/分组/编排，类型判定与落点全在 Go 侧 binding；
 // 收集口径与仓库页拖拽共用 dnd-shared.collectDropFiles。
 
-import { MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";

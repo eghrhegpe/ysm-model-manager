@@ -4,7 +4,7 @@
 // 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../../services/resource-registry.ts";

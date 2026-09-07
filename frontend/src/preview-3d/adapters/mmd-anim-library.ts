@@ -11,7 +11,7 @@ const ANIM_EXTS = [".vmd", ".vpd"];
  */
 export async function getCustomAnimPath(): Promise<string | null> {
   try {
-    const { getApp } = await import("../../backend/app.ts");
+    const { getApp } = await import("@/backend/app.ts");
     const { GetRepoRoot } = await getApp();
     const filesRoot = await GetRepoRoot("CustomAnim");
     return filesRoot || null;

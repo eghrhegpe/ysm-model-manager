@@ -18,8 +18,8 @@ const appPreviewStyle: CSSStyleSheet = (() => {
   return sheet;
 })();
 
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+import { getApp } from "@/backend/app.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "../../core/i18n/t.ts";
 import {
   cacheGet,

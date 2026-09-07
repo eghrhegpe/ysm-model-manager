@@ -1,9 +1,9 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
 
+import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "../../core/i18n/t.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
-import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
 import { esc } from "../../utils/html/html.ts";

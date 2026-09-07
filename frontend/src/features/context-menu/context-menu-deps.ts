@@ -5,7 +5,7 @@
 // vi.mock("@/backend/app.ts") 模块层拦截（context-menus.setup.ts），seam 是零测试的
 // 模块级可变全局，按 knip 死导出纪律移除；待真实组合根/挂载注入落地再恢复。）
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 
 /** 各 handler 表统一经此取后端绑定（本模块唯一出口） */
 export function contextMenuGetApp(): ReturnType<typeof getApp> {

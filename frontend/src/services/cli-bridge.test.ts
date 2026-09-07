@@ -21,11 +21,11 @@ vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 
-vi.mock("../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: vi.fn(() => false),
 }));
 
-vi.mock("../backend/web-common.ts", () => ({
+vi.mock("@/backend/web-common.ts", () => ({
   WebUnsupportedError: class extends Error {
     constructor(binding: string) {
       super(`[web] binding ${binding} 浏览器端未实现`);
@@ -34,10 +34,10 @@ vi.mock("../backend/web-common.ts", () => ({
   },
 }));
 
-import { getApp } from "../backend/app.ts";
-import type { AppBindings } from "../backend/types.ts";
-import { isWebPlatform } from "../backend/platform-web.ts";
-import { WebUnsupportedError } from "../backend/web-common.ts";
+import { getApp } from "@/backend/app.ts";
+import type { AppBindings } from "@/backend/types.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
+import { WebUnsupportedError } from "@/backend/web-common.ts";
 
 // 重置 mock
 beforeEach(() => {

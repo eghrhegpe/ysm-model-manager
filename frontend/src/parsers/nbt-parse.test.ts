@@ -6,7 +6,7 @@
 // makeSchematicGz/makeNbtStructureGz（nbtTag/nbtString/nbtInt/nbtCompound/nbtList/...）。
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { gzipSync } from "fflate";
-import { browserAdapter, importWebFiles } from "../backend/browser-adapter.ts";
+import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 import { parseNbtRoot } from "./nbt-parse.ts";
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，

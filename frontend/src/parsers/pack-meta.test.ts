@@ -4,7 +4,7 @@
 // browserAdapter.ReadPackMeta / ReadShaderpackLang 验证字段（成功路径 + 失败路径 "{}"）。
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { browserAdapter, importWebFiles } from "../backend/browser-adapter.ts";
+import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，
 // 与 browser-adapter 系一致——per-file vi.mock 在共享模块图下会捕获错位绑定）

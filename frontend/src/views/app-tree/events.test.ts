@@ -33,8 +33,8 @@ const {
 }));
 
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("../../utils/dom/capabilities.ts", () => ({ can: canMock }));
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/capabilities.ts", () => ({ can: canMock }));
+vi.mock("@/backend/platform.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
 // init-pages.ts 是页面装配大模块（含诊断/回收站等 import 链），events 只用 rememberModelPath

@@ -6,7 +6,7 @@
 // 加载 model），与 vrm/litematic 同构——core 的 switchTo(path) 对 ysm 生效，
 // 3D 内模型切换无需重建整个会话。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { cleanupPreview, mount3D } from "../../preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";

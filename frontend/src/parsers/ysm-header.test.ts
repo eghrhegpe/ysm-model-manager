@@ -25,7 +25,7 @@ const idbMock = (globalThis as unknown as {
   };
 }).__YSM_TEST_IDB__;
 
-import { browserAdapter, importWebFiles } from "../backend/browser-adapter.ts";
+import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 
 const enc = new TextEncoder();
 

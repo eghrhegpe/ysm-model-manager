@@ -1,5 +1,5 @@
 // ===== 创作者头像管理 =====
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 

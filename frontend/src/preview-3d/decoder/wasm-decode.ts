@@ -1,7 +1,7 @@
 // ===== WASM 解码层 =====
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
 import { swallowError } from "../../utils/base/async.ts";
 import { extractAnimGroupsAndConfigs } from "../../utils/format/ysm-anim-config.ts";

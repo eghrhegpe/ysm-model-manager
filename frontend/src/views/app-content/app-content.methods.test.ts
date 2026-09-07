@@ -434,7 +434,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
   it("github 有仓库 → 卡片渲染 + 点击走 showRepo（未找到模型列表）", async () => {
     const el = mountCustomElement("app-content") as unknown as ContentEl;
     await flushAsyncTurns();
-    const appMock = (await import("../../backend/app.ts")).getApp as unknown as ReturnType<typeof vi.fn>;
+    const appMock = (await import("@/backend/app.ts")).getApp as unknown as ReturnType<typeof vi.fn>;
     appMock.mockResolvedValue({
       LoadAppConfig: vi.fn().mockResolvedValue({}),
       GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
@@ -567,7 +567,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
     card!.click();
 
     // 验证 openUrl 被调用（通过 getApp mock 验证）
-    const { getApp } = await import("../../backend/app.ts");
+    const { getApp } = await import("@/backend/app.ts");
     const app = await getApp();
     expect((app as any).OpenInBrowser).toHaveBeenCalledOnce();
     expect(String(((app as any).OpenInBrowser as any).mock.calls[0][0])).toBe("https://bilibili.com");

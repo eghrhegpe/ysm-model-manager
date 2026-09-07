@@ -40,7 +40,7 @@ const {
 }));
 
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("../../backend/runtime.ts", () => ({ Events: { On: eventsOn } }));
+vi.mock("@/backend/runtime.ts", () => ({ Events: { On: eventsOn } }));
 vi.mock("./site/site-view.ts", () => ({ renderSiteView }));
 vi.mock("../../features/community/show-repo-models.ts", () => ({ showRepoModels }));
 vi.mock("./workshop-avatar.ts", () => ({ extractAvatars }));

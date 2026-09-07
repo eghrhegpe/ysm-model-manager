@@ -18,7 +18,7 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bindDragEvents } from "./drag.ts";
 import type { SiteViewState } from "./types.ts";
 import type { LocalCreatorLike } from "./site-view.ts";

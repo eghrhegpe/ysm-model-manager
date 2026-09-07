@@ -132,7 +132,7 @@ vi.mock("../screenshot.ts", () => ({
 }));
 
 import { buildMmdScene, type MmdDataPort, type MmdPanelHooks } from "./mmd-adapter.ts";
-import { getApp, type AppBindings } from "../../backend/app.ts";
+import { getApp, type AppBindings } from "@/backend/app.ts";
 
 /** 构造注入端口（对齐 ADR-072：适配器 0 backend import，数据经 port 注入） */
 function makePort(): MmdDataPort {

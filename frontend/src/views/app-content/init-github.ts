@@ -1,5 +1,5 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { tryFetchModels } from "../../features/community/data.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";

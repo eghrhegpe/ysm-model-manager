@@ -49,7 +49,7 @@ vi.mock("../../utils/dom/errors.ts", () => ({
     e instanceof Error ? e.message : fallback,
 }));
 
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   getAndroidBridge: mocks.getAndroidBridge,
 }));
 

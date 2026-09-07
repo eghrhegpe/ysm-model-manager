@@ -7,7 +7,7 @@
 //     ├── *.ogg      （可选）
 //     ├── *.wav      （可选）
 //     └── stage_config.json
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 
 /** 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] */
 export async function resolveStageSiblings(): Promise<

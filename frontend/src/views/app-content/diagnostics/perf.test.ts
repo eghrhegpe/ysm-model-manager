@@ -18,7 +18,7 @@ const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../services/cli-bridge.ts", () => ({ executeCLI }));
-vi.mock("../../../backend/platform-web.ts", () => ({ isWebPlatform }));
+vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

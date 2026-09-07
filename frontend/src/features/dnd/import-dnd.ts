@@ -2,8 +2,8 @@
 // 从 document 级 registerDnD 收敛为 <app-tree> 容器内绑定，去掉全局遮罩。
 // 收集器统一走 features/dnd-collector.ts，与导入页收集器一致。
 
-import { MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";

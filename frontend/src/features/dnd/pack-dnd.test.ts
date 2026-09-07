@@ -18,12 +18,12 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 // oversize 阈值压到 10 字节便于测试过滤分支
-vi.mock("../../backend/browser-adapter.ts", () => ({
+vi.mock("@/backend/browser-adapter.ts", () => ({
   MAX_IMPORT_BYTES: 10,
 }));
 
 import { bus } from "../../bus.ts";
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { handleInstanceDrop, bindPackCardDnD } from "./pack-dnd.ts";
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));

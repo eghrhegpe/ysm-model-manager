@@ -6,8 +6,8 @@
 // - workshop-avatar.ts: 创作者头像提取
 // - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
+import { Events } from "@/backend/runtime.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { Events } from "../../backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import { showRepoModels } from "../../features/community/show-repo-models.ts";

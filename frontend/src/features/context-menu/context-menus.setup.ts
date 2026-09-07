@@ -76,12 +76,12 @@ vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   RevealInExplorer: mocks.RevealInExplorerMock,
 }));
 // mock 查看器模式（android-bridge）——context-menus.ts 的 viewer-mode 过滤分支测试依赖
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   isViewerMode: mocks.isViewerModeMock,
 }));
 // canWebAction = 纯前端恒可达 + binding 走 can() 探测，mock 同步该语义
-vi.mock("../../utils/dom/capabilities.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../utils/dom/capabilities.ts")>();
+vi.mock("@/backend/capabilities.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/capabilities.ts")>();
   return {
     ...actual,
     can: mocks.canMock,

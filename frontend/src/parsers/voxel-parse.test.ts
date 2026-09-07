@@ -8,7 +8,7 @@
 // color/positions/size/truncated/maxBlocks 对齐 litematic-adapter.ts 消费）、失败路径 "{}"。
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { gzipSync } from "fflate";
-import { browserAdapter, importWebFiles } from "../backend/browser-adapter.ts";
+import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 import {
   readVarInt,
   extractBits,

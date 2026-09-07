@@ -8,7 +8,7 @@
 // backend/types.ts），删除 `as unknown as Record<string,...>` 手写签名断言——
 // Go 绑定签名变更时编译期报错而非运行时穿透。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 
 /** 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） */
 export async function readFileBytes(path: string): Promise<string | null> {

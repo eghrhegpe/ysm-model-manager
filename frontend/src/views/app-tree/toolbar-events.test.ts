@@ -67,10 +67,14 @@ vi.mock("../../utils/debug/debug.ts", () => ({
 }));
 
 // Android 双端桥（import-dir 分支）：桥存在判定 + 查看器模式门控 + 公共目录解析
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
-  getAndroidBridge: getAndroidBridgeMock,
-  isViewerMode: isViewerModeMock,
-}));
+vi.mock("@/backend/platform.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/platform.ts")>();
+  return {
+    ...actual,
+    getAndroidBridge: getAndroidBridgeMock,
+    isViewerMode: isViewerModeMock,
+  };
+});
 vi.mock("../../utils/dom/directory-picker.ts", () => ({
   resolveAndroidRepoDir: resolveAndroidRepoDirMock,
 }));

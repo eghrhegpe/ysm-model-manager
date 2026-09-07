@@ -44,12 +44,12 @@ const {
   fetchMock: vi.fn().mockResolvedValue(new Response(new Blob(["x"]))),
 }));
 
-vi.mock("../../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
 // store web 分支动态 import browser-adapter 拿 importWebFiles；其余导出保持原实现，
 // 防 graph 内其他消费方拿到 undefined 导出炸整条 import 链
-vi.mock("../../backend/browser-adapter.ts", async (importOriginal) => ({
+vi.mock("@/backend/browser-adapter.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   importWebFiles: importWebFilesMock,
 }));

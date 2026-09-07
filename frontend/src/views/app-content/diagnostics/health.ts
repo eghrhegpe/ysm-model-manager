@@ -3,7 +3,7 @@
 // 数据源：Go 端 RepoHealthAuditAll（go/repoaudit 全仓库审计，GUI/CLI 同源消双轨）——
 // 前端不再自算健康分，只做展示。
 
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { currentRepoType } from "../../../features/repo/repo-rtype.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";

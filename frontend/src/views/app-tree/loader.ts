@@ -1,9 +1,9 @@
 // ===== Go 数据加载层 =====
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
+import { getAndroidBridge } from "@/backend/platform.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { getAndroidBridge } from "../../utils/dom/android-bridge.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";

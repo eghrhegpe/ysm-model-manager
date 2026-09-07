@@ -1,6 +1,6 @@
 // ===== toolbar-search.ts — 工具栏搜索/筛选/导入逻辑（从 toolbar-events.ts 拆出，ADR-040 P1）=====
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 // 网页版数值条件降级标记消费（web-stats.ts 经 browserAdapter 链 re-export——与
 // searchWebModels 同一模块实例；Worker 批量统计不可用时置位，此处 toast 提示）
 import {
@@ -8,8 +8,8 @@ import {
   getStatsPoolSize,
   importWebFiles,
   onStatsProgress,
-} from "../../backend/browser-adapter.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+} from "@/backend/browser-adapter.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { type AdvFilterValue, modalAdvFilter } from "../../features/dialogs/adv-filter.ts";

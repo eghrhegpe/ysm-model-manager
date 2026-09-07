@@ -13,8 +13,8 @@
 // download-queue-progress.ts 承接 99% 卡进度守卫状态机；
 // download-queue.ts 保留 createDownloadQueue UI 控制器并对外 re-export（消费者零改动）。
 
-import { isWebPlatform } from "../../backend/platform-web.ts";
-import { Events } from "../../backend/runtime.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
+import { Events } from "@/backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
@@ -233,7 +233,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
     // 重入守卫丢弃后续入队 + web 模式无取消路径）。逐任务 AbortController 超时，
     // 超时走既有直链兜底；分支级 try/finally 保证任何意外异常都复位 idle。
     try {
-      const { importWebFiles } = await import("../../backend/browser-adapter.ts");
+      const { importWebFiles } = await import("@/backend/browser-adapter.ts");
       // 目标类型段：cmDqEnqueue 已把 GetRepoRoot 结果写入 saveDir，web 模式恒为
       // /web/<type>（web-fs.ts GetRepoRoot），从根反解即可，不改 enqueueDownloads 签名
       const webType = (tasks[0]?.saveDir || "").split("/")[2] || "";

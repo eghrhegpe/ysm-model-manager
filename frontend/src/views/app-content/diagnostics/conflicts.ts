@@ -1,8 +1,8 @@
 // ===== 诊断页：冲突扫描（scanConflicts） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
 
-import { getApp } from "../../../backend/app.ts";
-import { isWebPlatform } from "../../../backend/platform-web.ts";
+import { getApp } from "@/backend/app.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";

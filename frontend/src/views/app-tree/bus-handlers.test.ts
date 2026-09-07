@@ -80,7 +80,7 @@ vi.mock("../../features/dialogs/batch-rename.ts", () => ({
 }));
 
 // node 环境无 window，capabilities.ts → android-bridge.ts 访问 window 会崩溃
-vi.mock("../../utils/dom/capabilities.ts", () => ({
+vi.mock("@/backend/capabilities.ts", () => ({
   can: vi.fn(() => true),
 }));
 

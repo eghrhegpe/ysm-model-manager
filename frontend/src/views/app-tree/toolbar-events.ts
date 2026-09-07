@@ -1,12 +1,12 @@
 // ===== 工具栏事件绑定 =====
 
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+import { getApp } from "@/backend/app.ts";
+import { isViewerMode } from "@/backend/platform.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { currentRepoType } from "../../features/repo/repo-rtype.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { resolveAndroidRepoDir } from "../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { flashBtn } from "../../utils/dom/feedback.ts";

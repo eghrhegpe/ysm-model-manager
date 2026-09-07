@@ -4,7 +4,7 @@
 // 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）；
 // detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { cacheGet, cacheSet } from "../../preview-3d/decoder/cache.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";

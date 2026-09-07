@@ -499,7 +499,7 @@ describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）
 
   it("batch.move getApp 拒绝 → error toast 且 handler 不抛（P2 兜底）", async () => {
     modalPromptMock.mockResolvedValue("作者A");
-    const { getApp } = await import("../../backend/app.ts");
+    const { getApp } = await import("@/backend/app.ts");
     vi.mocked(getApp).mockRejectedValueOnce(new Error("boom"));
     await clickMove(["/a.ysm"]);
     expect(allToasts().some((m) => m.includes("❌"))).toBe(true);

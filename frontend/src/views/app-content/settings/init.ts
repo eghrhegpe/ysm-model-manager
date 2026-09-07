@@ -3,18 +3,14 @@
 // 主题 → theme.ts，3D 键位 → keymap.ts，UI 偏好 → ui-prefs.ts，共享状态 → store.ts。
 // 本文件保留为编排壳：加载 cfg/registry → 调用各模块初始化 → 组装其余事件绑定骨架。
 
-import { getApp } from "../../../backend/app.ts";
-import {
-  getFsaAuthState,
-  rescanFsaRoot,
-  selectLocalRepo,
-} from "../../../backend/browser-adapter.ts";
-import { isWebPlatform } from "../../../backend/platform-web.ts";
+import { getApp } from "@/backend/app.ts";
+import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
+import { isViewerMode } from "@/backend/platform.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { initVersionUpdater } from "../../../features/maintenance/version-updater.ts";
 import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { safeGet } from "../../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../../utils/dom/toast-ms.ts";

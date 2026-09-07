@@ -1,6 +1,6 @@
 // ===== 站点视图拖拽 JSON 导入（从 site-view.ts 拆出，ADR-034 方向①）=====
 
-import { getApp } from "../../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { WorkshopSite } from "../../../utils/types-re-export.ts";

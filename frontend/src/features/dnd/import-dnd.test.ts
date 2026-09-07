@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus, type ToastPayload } from "../../bus.ts";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
 import { fireDrop } from "../../test-utils/events.ts";
-import { MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
+import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
@@ -17,13 +17,13 @@ vi.mock("@/backend/app.ts", () => ({
 const { importWebFilesMock } = vi.hoisted(() => ({
   importWebFilesMock: vi.fn().mockResolvedValue({ imported: 1, failed: 0 }),
 }));
-vi.mock("../../backend/browser-adapter.ts", () => ({
+vi.mock("@/backend/browser-adapter.ts", () => ({
   importWebFiles: importWebFilesMock,
   MAX_IMPORT_BYTES: 100 * 1024 * 1024,
 }));
 
-import { getApp } from "../../backend/app.ts";
-import { importWebFiles } from "../../backend/browser-adapter.ts";
+import { getApp } from "@/backend/app.ts";
+import { importWebFiles } from "@/backend/browser-adapter.ts";
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -326,7 +326,7 @@ describe("handleTreeDrop — oversize 过滤", () => {
         ImportModelFolder: vi.fn().mockResolvedValue(undefined),
       }),
     }));
-    const { getApp: freshGetApp } = await import("../../backend/app.ts");
+    const { getApp: freshGetApp } = await import("@/backend/app.ts");
     const big1 = new File(["x"], "big1.ysm", { type: "application/octet-stream" });
     Object.defineProperty(big1, "size", { value: MAX_IMPORT_BYTES + 1, configurable: true });
     const toastSpy = vi.fn();

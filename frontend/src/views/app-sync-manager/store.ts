@@ -3,7 +3,7 @@
 // 纯函数，接收组件实例 self，通过 self 读写状态；无 DOM / 无 bus 副作用。
 // 依赖 DAG：index → store ← network（网络操作后调 loadData 刷新）
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { SyncManagerSelf } from "./index.ts";

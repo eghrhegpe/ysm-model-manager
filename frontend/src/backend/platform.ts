@@ -2,9 +2,7 @@
 // 判定网页版（无 Wails 壳的纯浏览器）以路由到 browser adapter。
 //
 // 本文件是平台判定原语的叶子模块：Tier 0/1 信号读取 + Tier 2 wails 桥存在性探测
-// （ADR-123 P3 审核补强——探测原语原驻 utils/dom/android-bridge.ts，造成
-// 「platform-web 想收编 isViewerMode 却与其成环」的放置问题；原语下沉后判定链
-// 单向化：android-bridge → platform-web → platform）。
+// + Android 返回键栈。
 //
 // Tier 0：入口 HTML 显式声明 globalThis.__YSM_BACKEND__（'go' | 'browser'）——权威信号。
 //          浏览器构建置 'browser' 后即便误嵌进 WebView 也强制走 browserAdapter，
@@ -13,6 +11,10 @@
 // Tier 2：运行时探测 window.go（Wails 桌面）或 window.wails（Android 桥）——纯浏览器
 //          两者都不存在。Phase 1 用同步判定（Tier 0/1 足够）；awaitWailsBridge 的
 //          冷启动等待（桌面 WebView2 注入竞态）留到 Phase 3 引入。
+//
+// ADR-203 D2（2026-09-07）：原 utils/dom/android-bridge.ts 的 re-export shim +
+// isViewerMode/registerAndroidBackHandler/emitAndroidBack 合并入本文件，
+// 消除 utils/dom → backend 反向依赖。
 
 /** Android Java 桥最小形状（MainActivity addJavascriptInterface 注册名 "wails"；桌面端无此桥） */
 export interface WailsAndroidBridge {
@@ -50,4 +52,53 @@ export function resolveWebMode(): boolean {
   const declared = readDeclaredBackend();
   if (declared !== undefined) return declared === "browser";
   return isWebEntryMode();
+}
+
+// ── Android 桥与返回键（ADR-203 D2：从 utils/dom/android-bridge.ts 合并入此）──
+
+/**
+ * 查看器模式判定（ADR-049 Phase 3）：
+ * Android（双端桥存在）或网页版（browser adapter）——均无本地文件系统写能力、
+ * 无桌面专属 UI。各按钮/功能守卫统一用本函数，禁止各自拼 getAndroidBridge()/resolveWebMode()。
+ * 委托 platform-web.isViewerPlatform()——信号拼装不再在此重复。
+ */
+export function isViewerPlatform(): boolean {
+  // 内联实现（避免环：platform.ts ← platform-web.ts → platform.ts）
+  const declared = readDeclaredBackend();
+  if (declared !== undefined) return declared === "browser";
+  if (isWebEntryMode()) return true;
+  return getAndroidBridge() !== null;
+}
+
+/** 别名：保持既有消费方命名兼容 */
+export const isViewerMode = isViewerPlatform;
+
+/**
+ * 安卓系统返回键处理器注册表（ADR-057 §2.5，对齐 MikuMikuAR handleAndroidBack）。
+ * 栈顶优先：android-events.ts 收到 MainActivity 的 android:back 事件后调用
+ * emitAndroidBack()，从栈顶向下询问已注册处理器；返回 true 表示已消费
+ * （如 3D overlay 打开时关层），否则透传上层。
+ */
+type AndroidBackHandler = () => boolean | undefined;
+const _androidBackHandlers: AndroidBackHandler[] = [];
+
+/** 注册安卓返回键处理器，返回取消函数（供调用方在自身销毁/关闭时注销）。 */
+export function registerAndroidBackHandler(fn: AndroidBackHandler): () => void {
+  _androidBackHandlers.push(fn);
+  return (): void => {
+    const i = _androidBackHandlers.indexOf(fn);
+    if (i > -1) _androidBackHandlers.splice(i, 1);
+  };
+}
+
+/**
+ * 系统返回键的前端触发入口：依次从栈顶触发已注册处理器。
+ * 当前由 android-events.ts 在收到 MainActivity 的 android:back 事件时调用；
+ * 返回 true 表示已被消费（阻止原生默认返回/退出）。
+ */
+export function emitAndroidBack(): boolean {
+  for (let i = _androidBackHandlers.length - 1; i >= 0; i--) {
+    if (_androidBackHandlers[i]() === true) return true;
+  }
+  return false;
 }

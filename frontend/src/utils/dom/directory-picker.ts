@@ -6,11 +6,11 @@
 //   /storage/emulated/0/YSM-Model-Manager，授权 MANAGE_EXTERNAL_STORAGE 后 Go os.*
 //   直读，用户把模型放入该目录即可使用，无需选择器）。
 
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
+import { getApp } from "@/backend/app.ts";
+import { getAndroidBridge, isViewerMode } from "@/backend/platform.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { getAndroidBridge, isViewerMode } from "./android-bridge.ts";
 import { TOAST_MS } from "./toast-ms.ts";
 
 /**

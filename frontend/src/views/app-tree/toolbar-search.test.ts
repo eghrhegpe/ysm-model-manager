@@ -33,7 +33,7 @@ vi.mock("../../features/dialogs/adv-filter.ts", () => ({
   modalAdvFilter: modalAdvFilterMock,
 }));
 // browser-adapter：toolbar-search 消费的 4 函数 + 真平台模块引用空垫
-vi.mock("../../backend/browser-adapter.ts", () => ({
+vi.mock("@/backend/browser-adapter.ts", () => ({
   importWebFiles: importWebFilesMock,
   consumeWebSearchDegraded: consumeWebSearchDegradedMock,
   onStatsProgress: onStatsProgressMock,
@@ -41,8 +41,8 @@ vi.mock("../../backend/browser-adapter.ts", () => ({
   browserAdapter: {},
 }));
 // isWebPlatform 换可控开关（其余导出保持真实）
-vi.mock("../../backend/platform-web.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../backend/platform-web.ts")>();
+vi.mock("@/backend/platform-web.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/platform-web.ts")>();
   return { ...actual, isWebPlatform: isWebPlatformMock };
 });
 

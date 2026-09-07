@@ -4,7 +4,7 @@
 // 返回 null）/ Android 已授权（GetDefaultRepoRoot 自动定位 + toast + 返回路径）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { pickDirectory, resolveAndroidRepoDir } from "./directory-picker.ts";
-import type { WailsAndroidBridge } from "./android-bridge.ts";
+import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
 // ── hoisted mocks（供 vi.mock 工厂引用）──
 const { mocks } = vi.hoisted(() => ({
@@ -26,12 +26,13 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("./android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   getAndroidBridge: mocks.getAndroidBridge,
   isViewerMode: mocks.isViewerMode,
+  isViewerPlatform: mocks.isViewerMode,
 }));
 
-vi.mock("../../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: mocks.isWebPlatform,
 }));
 

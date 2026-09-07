@@ -1,8 +1,8 @@
 // ===== 创意工坊站点打开器 =====
 
+import { getApp } from "@/backend/app.ts";
+import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { getApp } from "../../backend/app.ts";
-import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";

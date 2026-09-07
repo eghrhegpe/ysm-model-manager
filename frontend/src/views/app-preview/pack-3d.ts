@@ -6,7 +6,7 @@
 // 首个 entry 作为初始 path。适配器 build(ctx, entryPath) 走 switchTo 语义，
 // 由 core switch 面板驱动，不再自建 ◀/▶ 按钮。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import {
   cleanupPreview,
   invalidatePreview,

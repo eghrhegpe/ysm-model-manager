@@ -3,7 +3,7 @@
 // （showModelDetail/showResourcePack/showShaderpack）分离；共享代际 detailGen 从
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { readPmxStats } from "../../preview-3d/adapters/mmd-detail-stats.ts";

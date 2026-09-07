@@ -5,7 +5,7 @@
 // ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import type { VoxelData } from "../../parsers/voxel-parse.ts";
 import { makeLitematicAdapter } from "../../preview-3d/adapters/litematic-adapter.ts";
 import {

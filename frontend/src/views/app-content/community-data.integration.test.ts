@@ -27,7 +27,7 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: mocks.isWebPlatform,
 }));
 

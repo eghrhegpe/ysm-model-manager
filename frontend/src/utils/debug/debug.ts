@@ -96,7 +96,7 @@ export function safeStr(v: unknown): string {
 if (typeof window !== "undefined") {
   window.debugGetSpec = async (path?: string): Promise<unknown> => {
     try {
-      const { getApp } = await import("../../backend/app.ts");
+      const { getApp } = await import("@/backend/app.ts");
       const { GetModel3DSpec } = await getApp();
       const spec = await GetModel3DSpec(path || "");
       dbg("model3d", "spec:", spec);

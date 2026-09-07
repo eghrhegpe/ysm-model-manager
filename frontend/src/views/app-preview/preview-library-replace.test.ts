@@ -17,7 +17,7 @@ vi.mock("../../preview-3d/adapters/mount-preview-core.ts", async (importOriginal
 
 // 阻断 Wails runtime 加载链（openModel3DFullscreen 内部 getApp()）。
 // 注意路径：vi.mock 相对【测试文件】解析，preview-library.ts 的
-// `import { getApp } from "../backend/app.ts"` 相对【preview-library.ts】
+// `import { getApp } from "@/backend/app.ts"` 相对【preview-library.ts】
 // （src/views/app-preview/）→ src/backend/app.ts；测试文件在 __tests__/ 子目录，
 // 须再上一级 `../../../backend/app.ts` 才能命中同一模块（原 `../../` 解析到
 // src/views/backend/ 不存在 → mock 静默失效，被旧版顶部无条件 cleanup 掩盖）。

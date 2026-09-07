@@ -35,9 +35,13 @@ vi.mock("../dialogs/modal-core.ts", () => ({
   closeActiveDialog: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
-  emitAndroidBack: vi.fn().mockReturnValue(false),
-}));
+vi.mock("@/backend/platform.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/platform.ts")>();
+  return {
+    ...actual,
+    emitAndroidBack: vi.fn().mockReturnValue(false),
+  };
+});
 
 import { closeActiveDialog } from "../dialogs/modal-core.ts";
 

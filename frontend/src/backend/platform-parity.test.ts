@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { resolvePlatformMode } from "./platform-web.ts";
 import { resolveWebMode } from "./platform.ts";
-import { isViewerMode } from "../utils/dom/android-bridge.ts";
+import { isViewerMode } from "./platform.ts";
 
 const g = globalThis as Record<string, unknown>;
 

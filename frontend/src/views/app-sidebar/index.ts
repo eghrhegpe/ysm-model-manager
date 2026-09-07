@@ -23,7 +23,7 @@ const appSidebarStyle: CSSStyleSheet = (() => {
 
 export { appSidebarStyle };
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import { bindPackCardDnD } from "../../features/dnd/pack-dnd.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";

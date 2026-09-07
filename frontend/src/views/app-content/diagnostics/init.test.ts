@@ -22,11 +22,15 @@ const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.h
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
-vi.mock("../../../utils/dom/capabilities.ts", () => ({ can }));
-vi.mock("../../../utils/dom/android-bridge.ts", () => ({
-  isViewerMode,
-  getAndroidBridge: () => null,
-}));
+vi.mock("@/backend/capabilities.ts", () => ({ can }));
+vi.mock("@/backend/platform.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/backend/platform.ts")>();
+  return {
+    ...actual,
+    isViewerMode,
+    getAndroidBridge: () => null,
+  };
+});
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

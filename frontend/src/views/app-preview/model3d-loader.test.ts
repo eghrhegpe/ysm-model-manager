@@ -24,10 +24,10 @@ const { getAppMock, specMock, buildSpecMock, isViewerModeMock, isWebPlatformMock
 vi.mock("@/backend/app.ts", () => ({
   getApp: getAppMock,
 }));
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
-vi.mock("../../backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
 vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({

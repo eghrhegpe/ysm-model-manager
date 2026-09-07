@@ -18,7 +18,7 @@ const { busEmit, busOn, getApp, isWebPlatform } = vi.hoisted(() => ({
 
 vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("../../../backend/platform-web.ts", () => ({ isWebPlatform }));
+vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

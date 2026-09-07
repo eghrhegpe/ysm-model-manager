@@ -2,7 +2,7 @@
 // 各格式（mmd / fbx / scene / ...）共享同一链路，Go 按注册表白名单过滤（ADR-044③ 对称范式）。
 // 归位 views 层（ADR-072 根治：依赖 getApp 读仓库根，属视图壳数据能力，
 // 不该被 preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import {
   extOf,
   previewCandidateExtsOf,

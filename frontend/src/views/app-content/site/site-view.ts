@@ -1,11 +1,11 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
 
+import { isViewerMode } from "@/backend/platform.ts";
 import type {
   WorkshopCreator,
   WorkshopSite,
 } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "../../../bus.ts";
-import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
 import { bindDragEvents } from "./drag.ts";
 import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";

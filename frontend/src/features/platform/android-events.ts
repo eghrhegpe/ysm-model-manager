@@ -10,10 +10,10 @@
 // （2026-09 锐评整改：删除 ScreenLocked/BatteryChanged/ThemeChanged 三处空回调占位——
 //  空监听即死代码，需要时随真实消费逻辑一起注册。）
 
-import { Events } from "../../backend/runtime.ts";
+import { emitAndroidBack } from "@/backend/platform.ts";
+import { Events } from "@/backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { emitAndroidBack } from "../../utils/dom/android-bridge.ts";
 import { toast } from "../../utils/dom/toast.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { closeActiveDialog } from "../dialogs/modal-core.ts";

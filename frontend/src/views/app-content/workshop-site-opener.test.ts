@@ -17,13 +17,13 @@ const { isWebPlatform, busEmit, friendlyError } = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock("../../backend/platform-web.ts", () => ({ isWebPlatform }));
+vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 vi.mock("../../bus.ts", () => ({ bus: { emit: busEmit } }));
 vi.mock("../../utils/dom/errors.ts", () => ({ friendlyError }));
 // 替换全局 setup 的 t mock：避免拉起 locale.ts → bus 的真实链
 vi.mock("../../core/i18n/t.ts", () => ({ t: (key: string) => key }));
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import type { AppContentHost } from "./init-workshop.ts";

@@ -24,7 +24,7 @@ vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: vi.fn().mockResolvedValue(true),
 }));
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { bindRepoEvents, type RepoEventsContext } from "./events.ts";
 import { type WorkshopModel } from "./render.ts";
 import { fireClick, fireInput } from "../../test-utils/events.ts";

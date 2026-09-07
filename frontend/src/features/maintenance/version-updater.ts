@@ -1,10 +1,10 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 
-import { Events, Window } from "../../backend/runtime.ts";
+import { isViewerMode } from "@/backend/platform.ts";
+import { Events, Window } from "@/backend/runtime.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";
-import { isViewerMode } from "../../utils/dom/android-bridge.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";

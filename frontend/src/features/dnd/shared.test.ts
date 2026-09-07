@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { isImportableFile, isSupportedFile, getExt } from "../../utils/resource/importable.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { groupCollected, shouldEnterForm } from "./shared.ts";
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 
 // mock getApp 以隔离 Wails 调用
 vi.mock("@/backend/app.ts", () => ({

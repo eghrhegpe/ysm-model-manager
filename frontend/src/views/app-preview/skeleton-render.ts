@@ -1,8 +1,8 @@
 // ===== 骨骼渲染逻辑 =====
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
 
+import { getApp } from "@/backend/app.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
-import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";

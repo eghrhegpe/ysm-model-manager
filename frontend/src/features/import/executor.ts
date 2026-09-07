@@ -5,7 +5,7 @@
 // - inFlight 去重 + toast/stats/tree 广播
 // 与 go/importer + go/fileops.WriteModelFolder 后端对齐。
 
-import { importWebFiles, MAX_IMPORT_BYTES } from "../../backend/browser-adapter.ts";
+import { importWebFiles, MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { swallowError } from "../../utils/base/async.ts";

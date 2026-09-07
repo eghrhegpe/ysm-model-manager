@@ -47,7 +47,7 @@ vi.mock("./preview-library.ts", () => ({
   registerReRoute: vi.fn(),
   withPreviewExtras: (o: unknown) => o,
 }));
-vi.mock("../../utils/dom/android-bridge.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   registerAndroidBackHandler: androidBackMock,
 }));
 vi.mock("./skeleton.ts", () => ({

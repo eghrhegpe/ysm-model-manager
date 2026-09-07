@@ -11,7 +11,7 @@
 // opts.siblings（同目录兄弟，mount 时一次性过滤），点击即 switchTo 复用外壳重建，
 // 全程轻量获取文件——不再全量扫描各仓库、不再按扩展名分类贴标签。
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
 import type { Mount3DOptions } from "../../preview-3d/adapters/mount-preview-core.ts";
 import {

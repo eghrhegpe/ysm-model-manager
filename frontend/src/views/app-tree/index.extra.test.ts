@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 // can() 默认 true（桌面/常规语义）；"查看器模式"用例内设 false 模拟无能力
 const { canMock } = vi.hoisted(() => ({ canMock: vi.fn(() => true) }));
-vi.mock("../../utils/dom/capabilities.ts", () => ({ can: canMock }));
+vi.mock("@/backend/capabilities.ts", () => ({ can: canMock }));
 vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: vi.fn(),
 }));
@@ -26,8 +26,8 @@ vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { getApp } from "../../backend/app.ts";
-import type { AppBindings } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
+import type { AppBindings } from "@/backend/app.ts";
 import { modalConfirm } from "../../features/dialogs/modal-confirm.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { selectState } from "./data.ts";

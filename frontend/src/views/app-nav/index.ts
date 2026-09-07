@@ -1,11 +1,11 @@
 // ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:changed — 切换页面
 
-import { getApp } from "../../backend/app.ts";
+import { getApp } from "@/backend/app.ts";
+import { can } from "@/backend/capabilities.ts";
 import { bus, type PageName } from "../../bus.ts";
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { isValidPage, resolveInitialPage } from "../../core/page-store.ts";
-import { can } from "../../utils/dom/capabilities.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";

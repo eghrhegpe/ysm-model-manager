@@ -17,7 +17,7 @@ Android 端模型仓库 = **公共目录固定路径**（`internal/app/pathmgr_a
 
 | 方向 | 通道 | 实现 |
 |------|------|------|
-| JS → Java | `window.wails.*`（`addJavascriptInterface` 注册） | `WailsJSBridge.java`；前端唯一入口 `getAndroidBridge()`（`frontend/src/utils/dom/android-bridge.ts`，桌面无桥返回 null） |
+| JS → Java | `window.wails.*`（`addJavascriptInterface` 注册） | `WailsJSBridge.java`；前端唯一入口 `getAndroidBridge()`（`frontend/src/backend/platform.ts`，ADR-203 D2 并入；桌面无桥返回 null） |
 | Java → JS | `bridge.emitEvent` → JNI `nativeEmitEvent` → Wails **CustomEvent** 通道（**勿用 `emitSystemEvent`，后者仅达 Go 侧、永不到前端**） | 前端 `Events.On(...)`（`@wailsio/runtime`），集中消费在 `frontend/src/core/handlers/android-events.ts` |
 
 「目录/路径类」按钮的 Android 分支**统一复用** `resolveAndroidRepoDir()`（`frontend/src/utils/dom/directory-picker.ts`）——

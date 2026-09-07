@@ -79,7 +79,7 @@ function cleanText(text: unknown): string {
   if (typeof text !== "string") return "";
   return (
     text
-      .replace(/§[0-9a-fk-or]/gi, "")
+      .replace(/§[0-9a-fkor]/gi, "")
       // biome-ignore lint/suspicious/noControlCharactersInRegex: 故意匹配控制字符做清洗
       .replace(/[\x00-\x1f\x7f]/g, "")
       .trim()

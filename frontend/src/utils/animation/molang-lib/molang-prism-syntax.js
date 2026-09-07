@@ -1,3 +1,4 @@
+// Author: JannisX11, License: MIT
 Prism.languages.molang = {
 	'string': /("|')(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
     'function-name': /\b(?!\d)math\.\w+(?=[\t ]*\()/i,

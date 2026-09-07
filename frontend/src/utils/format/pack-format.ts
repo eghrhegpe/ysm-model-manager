@@ -10,7 +10,8 @@ const FORMAT_VERSION_MAP: Record<string, string> = _FORMAT_VERSION_MAP;
 export const LATEST_VERSION_SENTINEL = 9999;
 
 /** 已知最大 pack_format（超出视为「最新版本」），动态计算消灭硬编码魔数 */
-const MAX_KNOWN_FORMAT = Math.max(...Object.keys(FORMAT_VERSION_MAP).map(Number));
+const _maxRaw = Math.max(...Object.keys(FORMAT_VERSION_MAP).map(Number));
+const MAX_KNOWN_FORMAT: number = Number.isFinite(_maxRaw) ? _maxRaw : 0;
 
 /** ReadPackMeta 返回的 meta 对象（ADR-143 P1 后 Go 直出 typed struct，字段可空数组） */
 export interface PackMeta {

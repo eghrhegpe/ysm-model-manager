@@ -1,4 +1,5 @@
 // Based on https://gist.github.com/gre/1650294
+// Author: JannisX11 (adapted from gre/gist), License: MIT
 export class Easings {
 // No easing, no acceleration
 static linear( t ) {

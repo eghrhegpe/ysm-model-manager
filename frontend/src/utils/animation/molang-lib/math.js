@@ -1,3 +1,4 @@
+// Author: JannisX11, License: MIT
 const radify = n => (((n + 180) % 360) +180) % 360;
 
 export default {

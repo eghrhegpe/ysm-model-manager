@@ -31,7 +31,13 @@ const ENABLED =
   safeGet("_debug") !== "0";
 
 const RING_MAX = 200;
-if (typeof window !== "undefined") window._DBG_RING = window._DBG_RING || [];
+
+/** 惰性初始化环形缓冲（避免模块顶层副作用，首次 dbg 调用时才挂载 window._DBG_RING） */
+function ensureRing(): RingEntry[] {
+  if (typeof window === "undefined") return [];
+  if (!window._DBG_RING) window._DBG_RING = [];
+  return window._DBG_RING;
+}
 
 /** 输出调试日志（保留 tag 用于过滤） */
 export function dbg(tag: string, ...args: unknown[]): void {
@@ -40,7 +46,7 @@ export function dbg(tag: string, ...args: unknown[]): void {
   // eslint-disable-next-line no-console
   console.log(line, ...args);
   try {
-    const ring = window._DBG_RING;
+    const ring = ensureRing();
     ring.push({
       t: new Date().toISOString().slice(11, 23),
       tag,

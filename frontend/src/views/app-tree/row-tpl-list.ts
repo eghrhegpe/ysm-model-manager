@@ -1,7 +1,7 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 
 import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 

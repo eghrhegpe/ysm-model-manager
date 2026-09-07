@@ -4,9 +4,9 @@
 import { getApp } from "../../../backend/app.ts";
 import { type LocaleKey, t } from "../../../core/i18n/t.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
-import { renderDisplayName } from "../../../utils/dom/display.ts";
+import { renderDisplayName } from "../../../utils/model-name/display.ts";
 
-/** 转义函数签名（单一事实源 = utils/dom/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
+/** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
 export type EscFn = (s: unknown) => string;
 
 // P3 修复（子代理审计，代际守卫）：日志加载模块级序号——刷新/筛选/tab 切换可并发

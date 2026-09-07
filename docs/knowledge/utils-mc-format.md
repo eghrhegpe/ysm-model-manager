@@ -11,7 +11,6 @@ auto_fields:
     - describeVersionRange
     - LATEST_VERSION_SENTINEL
     - PackMeta
-    - renderFormattedText
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

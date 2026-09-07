@@ -310,9 +310,9 @@ function runChecks() {
 
   add('R10', 'private esc implementations',
     rgTracked('replace\\(/&/g, "&amp;"\\)', 'frontend/src', ['*.ts', '*.js'])
-      .filter((l) => !l.includes('utils/dom/html.ts'))
+      .filter((l) => !l.includes('utils/dom/html.ts') && !l.includes('utils/html/html.ts'))
       .filter((l) => { const [f] = parseRgLine(l); return !f.includes('.test.'); }),
-    'import { esc } from utils/dom/html.ts (5-replace 单点，致命陷阱 #15)');
+    'import { esc } from utils/html/html.ts (5-replace 单点，致命陷阱 #15)');
 
   // W1 排除正则/转义误报：[/\] 字符类、replace(/\\/g 归一化、\n \t \. \w \d \s \b 等
   // 额外豁免：i18n 语言包（locales/）、测试文件、正则字面量内的反斜杠、文件名非法字符正则

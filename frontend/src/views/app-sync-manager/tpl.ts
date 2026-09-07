@@ -3,8 +3,8 @@
 import { t } from "../../core/i18n/t.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/dom/html.ts";
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { esc } from "../../utils/html/html.ts";
+import { renderFormattedText } from "../../utils/html/mc-format.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。

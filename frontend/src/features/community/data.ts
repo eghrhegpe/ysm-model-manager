@@ -1,7 +1,7 @@
 // ===== 创意工坊数据加载（类型化版 — ADR-014 P3 features）=====
 // tryFetchModels + 进度条
 
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { hasRecycleSegment } from "../../utils/recycle-path.ts";
 
 /**

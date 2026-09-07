@@ -1,9 +1,9 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
 import { t } from "../../core/i18n/t.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
+import { renderDisplayName } from "../../utils/model-name/display.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。

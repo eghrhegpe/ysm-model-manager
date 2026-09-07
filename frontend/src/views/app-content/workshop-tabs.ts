@@ -3,9 +3,9 @@
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
-import { esc as escUtil } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { esc as escUtil } from "../../utils/html/html.ts";
 import { getSiteIcon } from "../../utils/icon/workshop-icons.ts";
 import {
   type CommunityData,

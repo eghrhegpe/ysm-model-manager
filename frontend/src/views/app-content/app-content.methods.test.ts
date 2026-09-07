@@ -6,7 +6,7 @@
 // heavy feature 模块全 mock（副作用 import 断开），页面 HTML 用真实 tpl。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 
 // 去重会话工厂 mock 走hoisted：init-pages 在模块内部创建会话，测试需捕获其方法做断言
 const { dedupStartMock, dedupInitConfigMock } = vi.hoisted(() => ({

@@ -4,7 +4,7 @@
 // 依赖 DAG：index → renderer ← events（events 点击触发 render）
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./index.ts";
 import { applyFilter, tabStatus } from "./store.ts";

@@ -12,9 +12,9 @@ import { modalPicker } from "../../features/dialogs/modal-picker.ts";
 import { modalSelect } from "../../features/dialogs/modal-select.ts";
 import { pickDirectory } from "../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { esc } from "../../utils/html/html.ts";
 
 interface LauncherInstance {
   launcher: string;

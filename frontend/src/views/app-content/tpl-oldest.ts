@@ -3,9 +3,9 @@
 // 数据获取与评分分档仍归 features（loadOldestModel 经 deps.renderPage 注入本模块）。
 import { t } from "../../core/i18n/t.ts";
 import type { ModelEntry, RepoStats } from "../../features/maintenance/oldest-models.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
+import { renderDisplayName } from "../../utils/model-name/display.ts";
 
 // ===== 展示常量（渲染侧；评分分档 80/60 留守 features）=====
 const MS_PER_DAY = 86400000;

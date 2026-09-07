@@ -163,7 +163,7 @@ function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElemen
   e.stopPropagation();
   const path = haPreview.dataset.path;
   const name = path?.split(/[/\\]/).pop() || "";
-  import("../../utils/dom/display.ts")
+  import("../../utils/model-name/display.ts")
     .then(({ parseModelName }) => {
       const { author } = parseModelName(name);
       if (author) {

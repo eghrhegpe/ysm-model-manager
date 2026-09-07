@@ -4,9 +4,9 @@
 import { t } from "../../core/i18n/t.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
+import { esc } from "../../utils/html/html.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { fillAuthorsAsync, loadModelData } from "./loader.ts";

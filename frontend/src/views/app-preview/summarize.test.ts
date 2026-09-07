@@ -2,7 +2,7 @@
 // ===== YSM 摘要卡片 HTML 测试（ADR-021 扩展）=====
 // summaryCardHTML：占位 / 加密头部卡片 / 完整摘要 / 转义 / 徽章。
 import { describe, it, expect } from "vitest";
-import { summaryCardHTML } from "./summarize.ts";
+import { summaryCardHTML } from "./tpl-summary.ts";
 
 describe("summaryCardHTML 占位与兜底", () => {
   it("summary 与 header 都为空 → 占位卡片", () => {

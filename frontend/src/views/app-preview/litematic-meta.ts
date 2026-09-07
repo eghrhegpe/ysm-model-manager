@@ -1,8 +1,8 @@
 import { getApp } from "../../backend/app.ts";
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
-import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { esc } from "../../utils/html/html.ts";
+import { renderFormattedText } from "../../utils/html/mc-format.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "../../utils/resource/types.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import { GenGuard } from "./gen-guard.ts";

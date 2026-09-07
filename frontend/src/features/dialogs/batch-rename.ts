@@ -4,10 +4,10 @@
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
-import { type ParsedModelName, parseModelName } from "../../utils/dom/display.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
+import { esc } from "../../utils/html/html.ts";
+import { type ParsedModelName, parseModelName } from "../../utils/model-name/display.ts";
 import { applyReplaceToName, rebuildParsedName } from "./batch-rename-util.ts";
 import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 

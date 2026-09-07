@@ -1,6 +1,6 @@
 // ===== 文件名 → 图标（类型化版 — ADR-014 P2）=====
 
-import { stripDisableSuffix } from "../dom/display.ts";
+import { stripDisableSuffix } from "../model-name/display.ts";
 import { RESOURCE_EXTS } from "../resource/extensions.ts";
 import { RESOURCE_TYPES, typeIconOf } from "../resource/types.ts";
 

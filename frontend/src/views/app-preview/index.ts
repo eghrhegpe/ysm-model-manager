@@ -30,7 +30,7 @@ import {
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import type { DecodedYsm } from "../../preview-3d/decoder/utils.ts";
 import { decodeYsmViaWasm } from "../../preview-3d/decoder/wasm-decode.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import {
   extOf,
   isYsmWasmPreview,

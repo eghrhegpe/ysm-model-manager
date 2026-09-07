@@ -41,7 +41,7 @@ vi.mock("../../utils/dom/android-bridge.ts", () => ({
 vi.mock("../app-content/init-pages.ts", () => ({
   rememberModelPath: rememberModelPathMock,
 }));
-vi.mock("../../utils/dom/display.ts", () => ({
+vi.mock("../../utils/model-name/display.ts", () => ({
   parseModelName: parseModelNameMock,
 }));
 

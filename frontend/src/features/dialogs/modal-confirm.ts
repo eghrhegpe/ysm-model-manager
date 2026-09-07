@@ -3,7 +3,7 @@
 // 用法: const ok = await modalConfirm({ title, icon, message, danger })
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalConfirm 选项 */

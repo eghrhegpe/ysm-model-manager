@@ -92,6 +92,7 @@ auto_fields:
     - resolveSceneSiblings
     - resolveSiblingsByType
     - resolveStageSiblings
+    - safeUrl
     - saveScreenshot
     - scanModelsByType
     - setActive3DClose
@@ -112,17 +113,23 @@ auto_fields:
     - showVrmMeta
     - statsCardHTML
     - StatsCardModel
+    - SummaryAnimGroup
+    - SummaryAuthor
+    - summaryCardHTML
+    - SummaryConfigMenu
     - VrmMaterialControlBridge
     - vrmModelInfoNodes
     - vrmShotNodes
     - withPreviewExtras
     - YsmControlsContext
     - YsmDecoder
+    - YSMHeader
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots
     - YsmOpenOptions
     - ysmShotNodes
+    - YsmSummary
   tests:
     - frontend/src/views/app-nav/index.test.ts
     - frontend/src/views/app-preview/utils.test.ts

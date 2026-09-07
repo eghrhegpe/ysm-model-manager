@@ -3,7 +3,7 @@
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalPrompt 选项 */

@@ -15,8 +15,8 @@ import {
 import { makeYsmAdapter } from "../../preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "../../preview-3d/decoder/geometry.ts";
 import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
+import { esc } from "../../utils/html/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { detailGen } from "./detail.ts";
 import { GenGuard } from "./gen-guard.ts";

@@ -3,7 +3,7 @@
 // 用法: const choice = await modalSelect({ title, icon, items })
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 
 /** modalSelect 选项 */

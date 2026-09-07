@@ -8,8 +8,8 @@ import { countMissing, renderRepoHeaderHTML } from "../../features/community/ren
 import { stagger } from "../../utils/animation/stagger.ts";
 import { swallowError } from "../../utils/base/async.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { stripDisableSuffix } from "../../utils/dom/display.ts";
-import { esc as escUtil } from "../../utils/dom/html.ts";
+import { esc as escUtil } from "../../utils/html/html.ts";
+import { stripDisableSuffix } from "../../utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { AppContentHost } from "./init-workshop.ts";
 import type { RepoCacheEntry } from "./state.ts";

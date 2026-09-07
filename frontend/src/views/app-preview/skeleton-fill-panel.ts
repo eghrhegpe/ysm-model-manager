@@ -6,7 +6,7 @@ import { multiModelSelectNode } from "../../preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "../../preview-3d/menu/node-types.ts";
 import type { BoneSelectInfo, Spec3D } from "../../preview-3d/model3d.ts";
 import type { PreviewSnapshot } from "../../preview-3d/state/preview-state.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
 export interface PanelHandle {

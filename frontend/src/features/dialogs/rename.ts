@@ -6,8 +6,8 @@ import { getApp } from "../../backend/app.ts";
 type GetAppFn = typeof getApp;
 
 import { t } from "../../core/i18n/t.ts";
-import { parseModelName } from "../../utils/dom/display.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
+import { parseModelName } from "../../utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { createDialog } from "./modal-core.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";

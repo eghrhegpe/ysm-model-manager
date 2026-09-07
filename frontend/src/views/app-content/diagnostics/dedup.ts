@@ -8,9 +8,9 @@ import { getApp } from "../../../backend/app.ts";
 import { bus } from "../../../bus.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { loadResourceRegistry } from "../../../services/resource-registry.ts";
-import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { fileIcon } from "../../../utils/icon/icon.ts";
+import { renderDisplayName } from "../../../utils/model-name/display.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { EscFn } from "./logs.ts";
 

@@ -2,7 +2,7 @@
 
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { dbg } from "../../utils/debug/debug.ts";
-import { stripDisableSuffix } from "../../utils/dom/display.ts";
+import { stripDisableSuffix } from "../../utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { currentRepoType } from "../repo/repo-rtype.ts";
 import { communityGetApp } from "./community-deps.ts";

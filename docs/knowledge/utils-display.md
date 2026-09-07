@@ -6,14 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/dom/display.ts
 auto_fields:
-  symbols_with_lines:
-    - ParsedModelName
-    - parseModelName
-    - renderDisplayName
-    - renderModelName
-    - renderModelNameWithHighlight
-    - stripBanSuffix
-    - stripDisableSuffix
+  symbols_with_lines: []
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

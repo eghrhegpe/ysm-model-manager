@@ -1,12 +1,12 @@
 // ===== 树渲染层（虚拟滚动版）=====
 import { t } from "../../core/i18n/t.ts";
 import { animateNumber } from "../../utils/animation/animate.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
 import { fmtDate, formatBytes } from "../../utils/dom/format.ts";
-import { hl } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { calcVisibleRange, installScrollSync } from "../../utils/dom/virtual-scroll.ts";
+import { hl } from "../../utils/html/html.ts";
 import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
+import { renderDisplayName } from "../../utils/model-name/display.ts";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";

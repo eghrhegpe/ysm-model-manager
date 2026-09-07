@@ -6,10 +6,10 @@ import { bus, type PageName } from "../../bus.ts";
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
 import { isValidPage, resolveInitialPage } from "../../core/page-store.ts";
 import { can } from "../../utils/dom/capabilities.ts";
-import { esc } from "../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
+import { esc } from "../../utils/html/html.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import {
   GROUP_META,

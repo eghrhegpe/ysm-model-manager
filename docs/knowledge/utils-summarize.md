@@ -6,14 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/format/summarize.ts
 auto_fields:
-  symbols_with_lines:
-    - safeUrl
-    - SummaryAnimGroup
-    - SummaryAuthor
-    - summaryCardHTML
-    - SummaryConfigMenu
-    - YSMHeader
-    - YsmSummary
+  symbols_with_lines: []
   tests:
     - frontend/src/utils/format/summarize.test.ts
 quick_groups:

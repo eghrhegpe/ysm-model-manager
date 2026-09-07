@@ -43,7 +43,7 @@ vi.mock("../dialogs/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
 
-vi.mock("../../utils/dom/display.ts", () => ({
+vi.mock("../../utils/model-name/display.ts", () => ({
   renderDisplayName: mocks.renderDisplayName,
 }));
 

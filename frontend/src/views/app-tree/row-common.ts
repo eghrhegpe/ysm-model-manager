@@ -2,8 +2,9 @@
 // grid（row-tpl.ts）与 list（row-tpl-list.ts）两套模板共享的计算与骨架。
 // 抽自 jscpd 报的 36 行跨文件重复：p/fp/checked/ban/typeIcon/pad 计算一字不差，
 // 文件夹行 8 个局部变量（fi/nc/lk/ar/ac/ckCls/dispName/pad）完全一致。
-import { renderDisplayName } from "../../utils/dom/display.ts";
-import { esc } from "../../utils/dom/html.ts";
+
+import { esc } from "../../utils/html/html.ts";
+import { renderDisplayName } from "../../utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { TreeEntry } from "./loader.ts";
 

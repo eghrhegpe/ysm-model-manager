@@ -1,7 +1,7 @@
 // ===== sidebar HTML 模板 =====
 
 import { type LocaleKey, t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
 import {
   ALL_RESOURCE_TYPES,

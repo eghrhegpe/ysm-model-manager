@@ -5,9 +5,9 @@
 import { t } from "../../core/i18n/t.ts";
 import type { RecycleBinEntry } from "../../features/maintenance/recycle-bin.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
-import { renderDisplayName } from "../../utils/dom/display.ts";
 import { formatBytes } from "../../utils/dom/format.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
+import { renderDisplayName } from "../../utils/model-name/display.ts";
 
 export function recycleHTML(): string {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">

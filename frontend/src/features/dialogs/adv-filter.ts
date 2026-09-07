@@ -10,7 +10,7 @@ import { getApp } from "../../backend/app.ts";
 type GetAppFn = typeof getApp;
 
 import { t } from "../../core/i18n/t.ts";
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../utils/html/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
 import { createDialog } from "./modal-core.ts";
 

@@ -53,6 +53,7 @@ func loadParityFixture(t *testing.T) *parityFixture {
 }
 
 func TestParity_StripDisableSuffix(t *testing.T) {
+	t.Parallel()
 	f := loadParityFixture(t)
 	for _, c := range f.Strip {
 		if got := StripDisableSuffix(c[0]); got != c[1] {
@@ -62,6 +63,7 @@ func TestParity_StripDisableSuffix(t *testing.T) {
 }
 
 func TestParity_IsYsmEntryJSON(t *testing.T) {
+	t.Parallel()
 	f := loadParityFixture(t)
 	for _, c := range f.IsYsmEntryJSON {
 		want := c[1] == "true"
@@ -72,6 +74,7 @@ func TestParity_IsYsmEntryJSON(t *testing.T) {
 }
 
 func TestParity_IsDisableSuffix(t *testing.T) {
+	t.Parallel()
 	f := loadParityFixture(t)
 	for _, c := range f.IsDisable {
 		want := c[1] == "true"

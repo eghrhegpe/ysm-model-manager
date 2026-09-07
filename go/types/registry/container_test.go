@@ -9,6 +9,7 @@ import (
 // 容器扩展名判定（IsContainerExt / ContainerExts）：
 // .zip/.7z 是通用容器（ADR-067），类型归属必须走内容指纹，容器集合单源在此。
 func TestIsContainerExt(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ext  string
 		want bool
@@ -33,6 +34,7 @@ func TestIsContainerExt(t *testing.T) {
 }
 
 func TestContainerExts_SetStable(t *testing.T) {
+	t.Parallel()
 	got := ContainerExts()
 	want := []string{".zip", ".7z"}
 	if !cmp.Equal(got, want) {

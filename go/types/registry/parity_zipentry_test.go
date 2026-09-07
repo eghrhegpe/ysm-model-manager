@@ -39,6 +39,7 @@ func loadZipentryParityFixture(t *testing.T) *zipentryParityFixture {
 // 任何一条 input→output 与 fixture 不符即红；TS 侧由
 // frontend/src/backend/zipentry.parity.test.ts 消费同一 fixture。
 func TestParity_MatchZipEntry(t *testing.T) {
+	t.Parallel()
 	f := loadZipentryParityFixture(t)
 	for _, c := range f.Pairs {
 		if got := MatchZipEntry(c[0]); got != c[1] {

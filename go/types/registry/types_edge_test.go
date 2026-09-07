@@ -7,6 +7,7 @@ import (
 )
 
 func TestIsDirLevelSync(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		rtype    string
 		expected bool
@@ -33,6 +34,7 @@ func TestIsDirLevelSync(t *testing.T) {
 }
 
 func TestIsScanInstance(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		rtype    string
 		expected bool
@@ -58,6 +60,7 @@ func TestIsScanInstance(t *testing.T) {
 }
 
 func TestInstallExtsFor(t *testing.T) {
+	t.Parallel()
 	exts := InstallExtsFor("ysm")
 	if len(exts) != 5 {
 		t.Fatalf("InstallExtsFor('ysm') 长度 = %d, 期望 5", len(exts))
@@ -106,6 +109,7 @@ func TestInstallExtsFor(t *testing.T) {
 }
 
 func TestMatchZipEntry(t *testing.T) {
+	t.Parallel()
 	// pack.mcmeta → resourcepack（exact 匹配）
 	if got := MatchZipEntry("pack.mcmeta"); got != "resourcepack" {
 		t.Errorf("MatchZipEntry('pack.mcmeta') = %q, 期望 'resourcepack'", got)

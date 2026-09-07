@@ -6,6 +6,7 @@ import (
 )
 
 func TestTypeByLocation(t *testing.T) {
+	t.Parallel()
 	reg := LoadRegistry()
 
 	cases := []struct {
@@ -36,6 +37,7 @@ func TestTypeByLocation(t *testing.T) {
 }
 
 func TestTypeByLocation_NilRegistry(t *testing.T) {
+	t.Parallel()
 	if got := TypeByLocation(`/repo/mmd/PMX/x.zip`, nil); got != "" {
 		t.Errorf("nil registry 应返回空, got %q", got)
 	}

@@ -17,7 +17,11 @@ import (
 var bundledRegistryJSON []byte
 
 // SetBundledRegistryJSON 由根包 main 注入编译期内嵌的注册表字节（单源：仓库根 resource_types.json）。
+// 加锁保护：与 SetRegistryPath 同源（写 bundledRegistryJSON 与并发 LoadRegistry 读存在数据竞争，
+// ADR-202 刀1——包内 t.Parallel 前置地基）。
 func SetBundledRegistryJSON(b []byte) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	bundledRegistryJSON = b
 }
 

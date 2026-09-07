@@ -15,6 +15,7 @@
 | 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132 |
 | 3D 渲染循环优化、Vector3 复用 | [3D 区审核与修复模式提炼](./3d-patterns.md) | 3D 资源释放必须走 dispose 链路，禁止依赖 GC | - |
 | 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
+| 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196 |
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
 | 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
 | 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
@@ -32,6 +33,7 @@
 | 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
 | 纹理缓存、AbortController 事件管理 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
 | 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
+| 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196 |
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
 | 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
 | 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | ADR-138 |
@@ -39,6 +41,7 @@
 | 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
 | 资源生命周期 dispose、循环依赖破壁 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
 | AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
+| cap 参数存哪 / 怎么改不生效 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196 |
 | createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
 | isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
 | MEMFS / node 解码 / callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
@@ -841,6 +844,9 @@
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |
+| 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState | - | - |
+| cap 忘记 registerEnvCallback / dispose 不退订 | - | 状态变更不落地或泄漏回调 |
+| 测试不 beforeEach resetEnvState | - | envState 单例跨用例串扰 |
 | 跨场景共用 schema key | - | 多模型同框时 schema 冲突、菜单项混乱；必须用 per-scene 键 |
 | switch-preview 未清 schema 注册表 | - | 旧模型 schema 残留；必须经 switch-preview 清理 |
 | 新加相机按钮 | - | 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单 |

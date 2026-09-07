@@ -10,6 +10,13 @@
 //   - SceneCapability 接口 + 注册表驱动：菜单自动渲染所有控件
 //   - setPreset 按模型类别分：方块/体素 = Bloom 薄 + 关 SSAO（无明显细节）；VRM/MMD = SSAO 中档 + Bloom 柔光
 //   - reflectionMode 三档：envmap-only (SSR off) / envmap+ssr (默认，SSR 叠上 envmap 反射当屏外 fallback) / ssr-only (SSR 无屏外补全)
+//
+// ADR-196 刀2：参数真值源从 this.params 迁移到全局 envState 单例。
+// - 构造只留 scene/renderer/camera/enabled（enabled 默认 false，与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
+// - setter 收口为 setEnvState({ppXxx: v}, {source:'manual'})；callback 就地同步 pass 属性
+// - 结构性变化（ssaoEnabled/reflectionMode）→ callback 内 rebuild composer
+// - getParams() 从 envState 组装新对象（兼容层，供 menu/测试读）
+// - saveState/loadState 沿用旧 params 键名（向后兼容已有存档），读写走 envState
 
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
@@ -21,6 +28,10 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import type { PostprocessingLike } from "../adapters/postprocessing.ts";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
 import { previewPixelRatio } from "../render-budget.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉
@@ -29,16 +40,14 @@ import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // toneMappingValue()（惰性，测试 mock 约束见 state 文件头注释）。
 import {
   DEFAULT_POSTPROC_PARAMS,
-  POSTPROC_PERSIST_FIELDS,
   POSTPROC_PRESETS,
   type PostprocessingParams,
   type ReflectionMode,
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
-  bindFieldRestorers,
+  oneOf,
   persistState,
-  pickPersistFields,
   restoreFields,
   restoreState,
   type SceneCapability,
@@ -77,7 +86,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
   private camera: THREE.PerspectiveCamera;
-  private params: PostprocessingParams;
   private enabled: boolean;
 
   // composer
@@ -98,18 +106,20 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private prevOutputColorSpace: string;
   private prevExposure: number;
 
+  // ADR-196：取消订阅函数
+  private unsubscribeEnv: () => void;
+
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
-    params?: Partial<PostprocessingParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
     this.camera = opts.camera;
-    this.params = { ...DEFAULT_POSTPROC_PARAMS, ...(opts.params ?? {}) };
-    this.enabled = opts.enabled ?? this.params.enabled;
+    // ADR-196：enabled 默认 false（与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
+    this.enabled = opts.enabled ?? false;
 
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
@@ -117,7 +127,77 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
     // 曝光归权：enabled=false 时绝不触碰 renderer（保留 SkyCapability 的低曝光值）
     if (this.enabled) this.applyToneMapping();
+
+    // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer
+    this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged);
   }
+
+  /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
+
+  private onEnvChanged = (changed: Set<string>, state: EnvState): void => {
+    // 结构性变化（影响 pass 组合）→ 重建 composer（若已存在）
+    if (changed.has("ppSsaoEnabled") || changed.has("ppReflectionMode")) {
+      if (this.composer) this.buildComposer();
+      return; // rebuild 创建新 pass，无需逐项同步
+    }
+
+    // 独立辉光开关 → 旁路 bloomPass
+    if (changed.has("ppBloomEnabled") && this.bloomPass) {
+      this.bloomPass.enabled = state.ppBloomEnabled;
+    }
+
+    // Bloom 参数（base 值；render() 时 syncBloomPass 应用体积光联动）
+    if (
+      this.bloomPass &&
+      (changed.has("ppBloomStrength") ||
+        changed.has("ppBloomThreshold") ||
+        changed.has("ppBloomRadius"))
+    ) {
+      this.bloomPass.strength = state.ppBloomStrength;
+      this.bloomPass.threshold = state.ppBloomThreshold;
+      this.bloomPass.radius = state.ppBloomRadius;
+    }
+
+    // SSAO 参数
+    if (
+      this.ssaoPass &&
+      (changed.has("ppSsaoRadius") || changed.has("ppSsaoMinDist") || changed.has("ppSsaoMaxDist"))
+    ) {
+      this.ssaoPass.kernelRadius = state.ppSsaoRadius;
+      this.ssaoPass.minDistance = state.ppSsaoMinDist;
+      this.ssaoPass.maxDistance = state.ppSsaoMaxDist;
+    }
+
+    // SSR 参数
+    if (
+      this.ssrPass &&
+      (changed.has("ppSsrOpacity") ||
+        changed.has("ppSsrMaxDistance") ||
+        changed.has("ppSsrThickness") ||
+        changed.has("ppSsrBlur") ||
+        changed.has("ppSsrDistanceAttenuation") ||
+        changed.has("ppSsrFresnel") ||
+        changed.has("ppSsrBouncing"))
+    ) {
+      this.ssrPass.opacity = state.ppReflectionMode === "ssr-only" ? 1 : state.ppSsrOpacity;
+      this.ssrPass.maxDistance = state.ppSsrMaxDistance;
+      this.ssrPass.thickness = state.ppSsrThickness;
+      this.ssrPass.blur = state.ppSsrBlur;
+      this.ssrPass.distanceAttenuation = state.ppSsrDistanceAttenuation;
+      this.ssrPass.fresnel = state.ppSsrFresnel;
+      this.ssrPass.bouncing = state.ppSsrBouncing;
+    }
+
+    // 色彩映射 / 曝光
+    if (this.enabled && (changed.has("ppExposure") || changed.has("ppToneMapping"))) {
+      this.applyToneMapping();
+    }
+
+    // Reflector 联动
+    if (changed.has("ppReflectorDisableWhenSSR")) {
+      this.applyReflectorSync();
+    }
+  };
 
   /* -------- 内部：构建/销毁 composer -------- */
 
@@ -148,14 +228,14 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   }
 
   private attachSSAOPass(composer: EffectComposer): void {
-    if (!this.params.ssaoEnabled) return;
+    if (!envState.ppSsaoEnabled) return;
     const logicalSize = this.renderer.getSize(new THREE.Vector2());
     const w = Math.max(logicalSize.x, 1);
     const h = Math.max(logicalSize.y, 1);
     this.ssaoPass = new SSAOPass(this.scene, this.camera, w, h, 32);
-    this.ssaoPass.kernelRadius = this.params.ssaoRadius;
-    this.ssaoPass.minDistance = this.params.ssaoMinDist;
-    this.ssaoPass.maxDistance = this.params.ssaoMaxDist;
+    this.ssaoPass.kernelRadius = envState.ppSsaoRadius;
+    this.ssaoPass.minDistance = envState.ppSsaoMinDist;
+    this.ssaoPass.maxDistance = envState.ppSsaoMaxDist;
     this.ssaoPass.output =
       (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
@@ -170,9 +250,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(w, h),
-      this.params.bloomStrength,
-      this.params.bloomRadius,
-      this.params.bloomThreshold,
+      envState.ppBloomStrength,
+      envState.ppBloomRadius,
+      envState.ppBloomThreshold,
     );
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const outputPassIndex = composer.passes.indexOf(this.outputPass!);
@@ -187,16 +267,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
         height: h,
         selects: null,
         groundReflector: null,
-        isBouncing: this.params.ssrBouncing,
+        isBouncing: envState.ppSsrBouncing,
       });
       this.ssrPass.output = SSRPASS_OUTPUT_DEFAULT;
-      this.ssrPass.opacity = this.params.ssrOpacity;
-      this.ssrPass.maxDistance = this.params.ssrMaxDistance;
-      this.ssrPass.thickness = this.params.ssrThickness;
-      this.ssrPass.blur = this.params.ssrBlur;
-      this.ssrPass.distanceAttenuation = this.params.ssrDistanceAttenuation;
-      this.ssrPass.fresnel = this.params.ssrFresnel;
-      if (this.params.reflectionMode === "ssr-only") this.ssrPass.opacity = 1;
+      this.ssrPass.opacity = envState.ppSsrOpacity;
+      this.ssrPass.maxDistance = envState.ppSsrMaxDistance;
+      this.ssrPass.thickness = envState.ppSsrThickness;
+      this.ssrPass.blur = envState.ppSsrBlur;
+      this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
+      this.ssrPass.fresnel = envState.ppSsrFresnel;
+      if (envState.ppReflectionMode === "ssr-only") this.ssrPass.opacity = 1;
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       const bloomIndex = composer.passes.indexOf(this.bloomPass!);
       composer.passes.splice(bloomIndex + 1, 0, this.ssrPass);
@@ -205,7 +285,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   private buildComposer(): void {
     this.disposeComposer();
-    const useSSR = this.params.reflectionMode !== "envmap-only";
+    const useSSR = envState.ppReflectionMode !== "envmap-only";
     this.composer = this.createComposerBase();
     this.attachSSAOPass(this.composer);
     this.attachSSRAndBloomPasses(this.composer, useSSR);
@@ -230,13 +310,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- Reflector 联动：SSR on 时可自动禁用 ReflectorCapability 单平面镜面 -------- */
 
   private ssrIsActive(): boolean {
-    return this.params.reflectionMode !== "envmap-only";
+    return envState.ppReflectionMode !== "envmap-only";
   }
 
   private applyReflectorSync(): void {
     if (!this.reflectorCap) return;
     // SSR 活动 + 用户设置了 reflectorDisableWhenSSR
-    const shouldDisableReflector = this.ssrIsActive() && this.params.reflectorDisableWhenSSR;
+    const shouldDisableReflector = this.ssrIsActive() && envState.ppReflectorDisableWhenSSR;
     if (shouldDisableReflector) {
       if (this.reflectorPrevEnabled === undefined) {
         this.reflectorPrevEnabled = this.reflectorCap.isEnabled();
@@ -265,48 +345,48 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- 参数应用 -------- */
 
   private applyToneMapping(): void {
-    this.renderer.toneMapping = toneMappingValue(this.params.toneMapping);
+    this.renderer.toneMapping = toneMappingValue(envState.ppToneMapping);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMappingExposure = this.params.exposure;
+    this.renderer.toneMappingExposure = envState.ppExposure;
   }
 
   private syncBloomPass(lightCap: LightCapability | null): void {
     if (!this.bloomPass) return;
     // 独立辉光开关：false 时整个 bloomPass 旁路（Pass.enabled=false），不影响 SSAO/SSR
-    this.bloomPass.enabled = this.params.bloomEnabled;
-    if (!this.params.bloomEnabled) return;
-    if (this.params.bloomFollowVolumetric && lightCap) {
+    this.bloomPass.enabled = envState.ppBloomEnabled;
+    if (!envState.ppBloomEnabled) return;
+    if (envState.ppBloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
       // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
       // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
-      this.bloomPass.threshold = this.params.bloomThreshold * (1 - 0.2 * vol.opacity);
-      this.bloomPass.strength = this.params.bloomStrength * (1 + 0.2 * vol.opacity);
-      this.bloomPass.radius = this.params.bloomRadius;
+      this.bloomPass.threshold = envState.ppBloomThreshold * (1 - 0.2 * vol.opacity);
+      this.bloomPass.strength = envState.ppBloomStrength * (1 + 0.2 * vol.opacity);
+      this.bloomPass.radius = envState.ppBloomRadius;
     } else {
-      this.bloomPass.threshold = this.params.bloomThreshold;
-      this.bloomPass.strength = this.params.bloomStrength;
-      this.bloomPass.radius = this.params.bloomRadius;
+      this.bloomPass.threshold = envState.ppBloomThreshold;
+      this.bloomPass.strength = envState.ppBloomStrength;
+      this.bloomPass.radius = envState.ppBloomRadius;
     }
   }
 
   private syncSSAOPass(): void {
     if (!this.ssaoPass) return;
-    this.ssaoPass.kernelRadius = this.params.ssaoRadius;
-    this.ssaoPass.minDistance = this.params.ssaoMinDist;
-    this.ssaoPass.maxDistance = this.params.ssaoMaxDist;
+    this.ssaoPass.kernelRadius = envState.ppSsaoRadius;
+    this.ssaoPass.minDistance = envState.ppSsaoMinDist;
+    this.ssaoPass.maxDistance = envState.ppSsaoMaxDist;
   }
 
   private syncSSRPass(): void {
     if (!this.ssrPass) return;
-    this.ssrPass.opacity = this.params.reflectionMode === "ssr-only" ? 1 : this.params.ssrOpacity;
-    this.ssrPass.maxDistance = this.params.ssrMaxDistance;
-    this.ssrPass.thickness = this.params.ssrThickness;
-    this.ssrPass.blur = this.params.ssrBlur;
-    this.ssrPass.distanceAttenuation = this.params.ssrDistanceAttenuation;
-    this.ssrPass.fresnel = this.params.ssrFresnel;
-    this.ssrPass.bouncing = this.params.ssrBouncing;
+    this.ssrPass.opacity = envState.ppReflectionMode === "ssr-only" ? 1 : envState.ppSsrOpacity;
+    this.ssrPass.maxDistance = envState.ppSsrMaxDistance;
+    this.ssrPass.thickness = envState.ppSsrThickness;
+    this.ssrPass.blur = envState.ppSsrBlur;
+    this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
+    this.ssrPass.fresnel = envState.ppSsrFresnel;
+    this.ssrPass.bouncing = envState.ppSsrBouncing;
   }
 
   /* -------- 兼容旧 PostprocessingManager 对外 API -------- */
@@ -352,7 +432,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.params.enabled = v;
     if (v) {
       // 切到 on：立刻写入当前 tone mapping / exposure 到 renderer
       this.buildComposer();
@@ -384,23 +463,46 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     return this.enabled;
   }
 
+  /** ADR-196：从 envState 组装 PostprocessingParams 新对象（兼容层，供 menu/测试读） */
   getParams(): PostprocessingParams {
-    return this.params;
+    return {
+      enabled: this.enabled,
+      bloomStrength: envState.ppBloomStrength,
+      bloomThreshold: envState.ppBloomThreshold,
+      bloomRadius: envState.ppBloomRadius,
+      bloomFollowVolumetric: envState.ppBloomFollowVolumetric,
+      bloomEnabled: envState.ppBloomEnabled,
+      ssaoEnabled: envState.ppSsaoEnabled,
+      ssaoRadius: envState.ppSsaoRadius,
+      ssaoMinDist: envState.ppSsaoMinDist,
+      ssaoMaxDist: envState.ppSsaoMaxDist,
+      toneMapping: envState.ppToneMapping,
+      exposure: envState.ppExposure,
+      reflectionMode: envState.ppReflectionMode,
+      ssrOpacity: envState.ppSsrOpacity,
+      ssrMaxDistance: envState.ppSsrMaxDistance,
+      ssrThickness: envState.ppSsrThickness,
+      ssrBlur: envState.ppSsrBlur,
+      ssrDistanceAttenuation: envState.ppSsrDistanceAttenuation,
+      ssrFresnel: envState.ppSsrFresnel,
+      ssrBouncing: envState.ppSsrBouncing,
+      reflectorDisableWhenSSR: envState.ppReflectorDisableWhenSSR,
+    };
   }
 
   setPreset(modelType: string): void {
     const preset = POSTPROC_PRESETS[modelType] ?? POSTPROC_PRESETS.default;
-    // 反射模式（SSR 三档）是用户显式选择：预设只做合理默认，不覆盖 loadState 恢复的持久化值
-    // （对齐 fog「预设不强制覆盖用户选择」口径，修复重启后 SSR 模式被静默重置为 envmap-only）
-    const { reflectionMode: _presetMode, ...presetRest } = preset;
-    this.params = { ...this.params, ...presetRest };
-    // 统一亮度口径：per-type 预设仅携带 enabled 开关；bloomStrength/threshold/exposure
-    // 等亮度参数统一继承 DEFAULT（光影包全局值），不按类型分别调。
+    // per-type 门禁 enabled（不入 schema，单独携带）
+    const { enabled: presetEnabled, ...presetEnv } = preset;
+
+    // envState 亮度/参数覆盖（统一亮度口径：preset 当前为空，全部继承 envState 默认）
+    if (Object.keys(presetEnv).length > 0) {
+      setEnvState(presetEnv, { source: "auto-model" });
+    }
+
     // 关键修复：将预设 enabled 落库到实例字段 this.enabled，使 per-type 开关真正生效
-    // —— 此前 this.enabled 只被构造/setEnabled/loadState 更新，setPreset 改了 params.enabled
-    //    却从不更新 this.enabled → needComposer/render 读取的开关永远是旧值，per-type 预设形同虚设。
-    if (this.params.enabled !== this.enabled) {
-      this.enabled = this.params.enabled;
+    if (presetEnabled !== undefined && presetEnabled !== this.enabled) {
+      this.enabled = presetEnabled;
       if (this.enabled) {
         this.buildComposer();
         this.applyToneMapping();
@@ -409,97 +511,77 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       }
       this.applyReflectorSync();
     } else if (this.enabled) {
-      // enabled 未变但 loadState 可能更新了曝光等参数：重建 composer 同步 pass 组合
+      // enabled 未变但 envState 可能更新了参数：重建 composer 同步 pass 组合
       // （重建只此一条路径——翻转分支已构建过，末尾不再无条件重建，避免 double build）
       if (this.composer) this.buildComposer();
       this.applyToneMapping();
     }
   }
 
-  /* -------- 参数 setter -------- */
+  /* -------- 参数 setter（ADR-196：收口为 setEnvState）-------- */
 
   setBloomStrength(v: number): void {
-    this.params.bloomStrength = v;
-    if (this.bloomPass) this.bloomPass.strength = v;
+    setEnvState({ ppBloomStrength: v }, { source: "manual" });
   }
   setBloomThreshold(v: number): void {
-    this.params.bloomThreshold = v;
-    if (this.bloomPass) this.bloomPass.threshold = v;
+    setEnvState({ ppBloomThreshold: v }, { source: "manual" });
   }
   setBloomRadius(v: number): void {
-    this.params.bloomRadius = v;
-    if (this.bloomPass) this.bloomPass.radius = v;
+    setEnvState({ ppBloomRadius: v }, { source: "manual" });
   }
   setBloomFollowVolumetric(v: boolean): void {
-    this.params.bloomFollowVolumetric = v;
+    setEnvState({ ppBloomFollowVolumetric: v }, { source: "manual" });
   }
   setBloomEnabled(v: boolean): void {
-    this.params.bloomEnabled = v;
-    if (this.bloomPass) this.bloomPass.enabled = v;
+    setEnvState({ ppBloomEnabled: v }, { source: "manual" });
   }
 
   setSSAOEnabled(v: boolean): void {
-    this.params.ssaoEnabled = v;
-    if (this.composer) this.buildComposer();
+    setEnvState({ ppSsaoEnabled: v }, { source: "manual" });
   }
   setSSAORadius(v: number): void {
-    this.params.ssaoRadius = v;
-    this.syncSSAOPass();
+    setEnvState({ ppSsaoRadius: v }, { source: "manual" });
   }
   setSSAOMinDist(v: number): void {
-    this.params.ssaoMinDist = v;
-    this.syncSSAOPass();
+    setEnvState({ ppSsaoMinDist: v }, { source: "manual" });
   }
   setSSAOMaxDist(v: number): void {
-    this.params.ssaoMaxDist = v;
-    this.syncSSAOPass();
+    setEnvState({ ppSsaoMaxDist: v }, { source: "manual" });
   }
 
   setToneMapping(v: PostprocessingParams["toneMapping"]): void {
-    this.params.toneMapping = v;
-    // 曝光归权：enabled=false 时只更新 params，不写 renderer（让 SkyCapability 的低曝光生效）
-    if (this.enabled) this.applyToneMapping();
+    setEnvState({ ppToneMapping: v }, { source: "manual" });
   }
   setExposure(v: number): void {
-    this.params.exposure = v;
-    if (this.enabled) this.applyToneMapping();
+    setEnvState({ ppExposure: v }, { source: "manual" });
   }
 
   setReflectionMode(v: ReflectionMode): void {
-    this.params.reflectionMode = v;
-    if (this.composer) this.buildComposer(); // SSRPass 组合改变，必须重建
+    setEnvState({ ppReflectionMode: v }, { source: "manual" });
   }
   setSSROpacity(v: number): void {
-    this.params.ssrOpacity = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrOpacity: v }, { source: "manual" });
   }
   setSSRMaxDistance(v: number): void {
-    this.params.ssrMaxDistance = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrMaxDistance: v }, { source: "manual" });
   }
   setSSRThickness(v: number): void {
-    this.params.ssrThickness = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrThickness: v }, { source: "manual" });
   }
   setSSRBlur(v: boolean): void {
-    this.params.ssrBlur = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrBlur: v }, { source: "manual" });
   }
   setSSRDistanceAttenuation(v: boolean): void {
-    this.params.ssrDistanceAttenuation = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrDistanceAttenuation: v }, { source: "manual" });
   }
   setSSRFresnel(v: boolean): void {
-    this.params.ssrFresnel = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrFresnel: v }, { source: "manual" });
   }
   setSSRBouncing(v: boolean): void {
-    this.params.ssrBouncing = v;
-    this.syncSSRPass();
+    setEnvState({ ppSsrBouncing: v }, { source: "manual" });
   }
   setReflectorDisableWhenSSR(v: boolean): void {
-    this.params.reflectorDisableWhenSSR = v;
-    this.applyReflectorSync();
+    setEnvState({ ppReflectorDisableWhenSSR: v }, { source: "manual" });
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
@@ -514,23 +596,72 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      ...pickPersistFields(this.params, POSTPROC_PERSIST_FIELDS),
+      bloomStrength: envState.ppBloomStrength,
+      bloomThreshold: envState.ppBloomThreshold,
+      bloomRadius: envState.ppBloomRadius,
+      bloomFollowVolumetric: envState.ppBloomFollowVolumetric,
+      bloomEnabled: envState.ppBloomEnabled,
+      ssaoEnabled: envState.ppSsaoEnabled,
+      ssaoRadius: envState.ppSsaoRadius,
+      ssaoMinDist: envState.ppSsaoMinDist,
+      ssaoMaxDist: envState.ppSsaoMaxDist,
+      toneMapping: envState.ppToneMapping,
+      exposure: envState.ppExposure,
+      reflectionMode: envState.ppReflectionMode,
+      ssrOpacity: envState.ppSsrOpacity,
+      ssrMaxDistance: envState.ppSsrMaxDistance,
+      ssrThickness: envState.ppSsrThickness,
+      ssrBlur: envState.ppSsrBlur,
+      ssrDistanceAttenuation: envState.ppSsrDistanceAttenuation,
+      ssrFresnel: envState.ppSsrFresnel,
+      ssrBouncing: envState.ppSsrBouncing,
+      reflectorDisableWhenSSR: envState.ppReflectorDisableWhenSSR,
     });
   }
 
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    // 表驱动恢复：种别表键集与 params 编译期互锁（POSTPROC_PERSIST_FIELDS）
-    restoreFields(state, bindFieldRestorers(this.params, POSTPROC_PERSIST_FIELDS));
+
+    // 表驱动恢复：存档键（params 名）→ envState 键，类型校验后写回
     restoreFields(state, {
       enabled: {
         boolean: (v) => {
           this.enabled = v;
-          this.params.enabled = v;
         },
       },
+      bloomStrength: { number: (v) => setEnvState({ ppBloomStrength: v }, { source: "manual" }) },
+      bloomThreshold: { number: (v) => setEnvState({ ppBloomThreshold: v }, { source: "manual" }) },
+      bloomRadius: { number: (v) => setEnvState({ ppBloomRadius: v }, { source: "manual" }) },
+      bloomFollowVolumetric: {
+        boolean: (v) => setEnvState({ ppBloomFollowVolumetric: v }, { source: "manual" }),
+      },
+      bloomEnabled: { boolean: (v) => setEnvState({ ppBloomEnabled: v }, { source: "manual" }) },
+      ssaoEnabled: { boolean: (v) => setEnvState({ ppSsaoEnabled: v }, { source: "manual" }) },
+      ssaoRadius: { number: (v) => setEnvState({ ppSsaoRadius: v }, { source: "manual" }) },
+      ssaoMinDist: { number: (v) => setEnvState({ ppSsaoMinDist: v }, { source: "manual" }) },
+      ssaoMaxDist: { number: (v) => setEnvState({ ppSsaoMaxDist: v }, { source: "manual" }) },
+      toneMapping: oneOf(["none", "linear", "reinhard", "aces", "cineon"], (v) =>
+        setEnvState({ ppToneMapping: v }, { source: "manual" }),
+      ),
+      exposure: { number: (v) => setEnvState({ ppExposure: v }, { source: "manual" }) },
+      reflectionMode: oneOf(["envmap-only", "envmap+ssr", "ssr-only"], (v) =>
+        setEnvState({ ppReflectionMode: v }, { source: "manual" }),
+      ),
+      ssrOpacity: { number: (v) => setEnvState({ ppSsrOpacity: v }, { source: "manual" }) },
+      ssrMaxDistance: { number: (v) => setEnvState({ ppSsrMaxDistance: v }, { source: "manual" }) },
+      ssrThickness: { number: (v) => setEnvState({ ppSsrThickness: v }, { source: "manual" }) },
+      ssrBlur: { boolean: (v) => setEnvState({ ppSsrBlur: v }, { source: "manual" }) },
+      ssrDistanceAttenuation: {
+        boolean: (v) => setEnvState({ ppSsrDistanceAttenuation: v }, { source: "manual" }),
+      },
+      ssrFresnel: { boolean: (v) => setEnvState({ ppSsrFresnel: v }, { source: "manual" }) },
+      ssrBouncing: { boolean: (v) => setEnvState({ ppSsrBouncing: v }, { source: "manual" }) },
+      reflectorDisableWhenSSR: {
+        boolean: (v) => setEnvState({ ppReflectorDisableWhenSSR: v }, { source: "manual" }),
+      },
     });
+
     // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
     if (this.enabled) this.applyToneMapping();
     this.applyReflectorSync();
@@ -544,6 +675,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.reflectorCap.setEnabled(this.reflectorPrevEnabled);
       this.reflectorPrevEnabled = undefined;
     }
+    this.unsubscribeEnv();
     this.disposeComposer();
     this.renderer.toneMapping = this.prevToneMapping;
     this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;

@@ -8,6 +8,8 @@ import {
   LIGHT_PRESETS,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
+import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { resetEnvState } from "../state/env-state.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {
@@ -18,11 +20,11 @@ function makeFakeRenderer() {
   return renderer;
 }
 
-function newCap(opts: { enabled?: boolean; params?: unknown; target?: THREE.Vector3; targetHeight?: number } = {}) {
+function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?: number } = {}) {
   return new LightCapability({
     scene: new THREE.Scene(),
     renderer: makeFakeRenderer(),
-    ...(opts as unknown as Record<string, unknown>),
+    ...opts,
   });
 }
 
@@ -44,6 +46,8 @@ function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
 }
 
 describe("LightCapability — 构造函数与默认值", () => {
+  beforeEach(() => resetEnvState());
+
   it("构造默认值完整", () => {
     const cap = newCap();
     const p = cap.getParams();
@@ -60,7 +64,9 @@ describe("LightCapability — 构造函数与默认值", () => {
   });
 
   it("params 覆盖生效", () => {
-    const cap = newCap({ params: { ambient: { intensity: 0.9 } } });
+    // ADR-196：参数经 envState 读入，setEnvState → callback → Three 应用
+    const cap = newCap();
+    cap.setParams({ ambient: { intensity: 0.9 } });
     expect(cap.getParams().ambient.intensity).toBe(0.9);
   });
 
@@ -74,6 +80,8 @@ describe("LightCapability — 构造函数与默认值", () => {
 });
 
 describe("LightCapability — apply / setEnabled / dispose", () => {
+  beforeEach(() => resetEnvState());
+
   it("apply 挂入全部灯光到场景", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
@@ -115,8 +123,11 @@ describe("LightCapability — apply / setEnabled / dispose", () => {
 });
 
 describe("LightCapability — 聚光灯 setSpotlight", () => {
+  beforeEach(() => resetEnvState());
+
   it("启用聚光灯", () => {
-    const cap = newCap({ params: { spotlight: { enabled: true } } });
+    const cap = newCap();
+    cap.setSpotlight({ enabled: true });
     const p = cap.getParams();
     expect(p.spotlight.enabled).toBe(true);
     expect(p.spotlight.angle).toBe(25);
@@ -135,12 +146,15 @@ describe("LightCapability — 聚光灯 setSpotlight", () => {
 });
 
 describe("LightCapability — 体积光锥 setVolumetric", () => {
+  beforeEach(() => resetEnvState());
+
   it("启用体积光锥 + 聚光灯时挂载锥组", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: true }, volumetric: { enabled: true } },
     });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     const cone = scene.getObjectByName("ysm-light-volumetric-cone");
     expect(cone).toBeDefined();
@@ -151,8 +165,8 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: false }, volumetric: { enabled: true } },
     });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
@@ -161,8 +175,9 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: true }, volumetric: { enabled: true } },
     });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
     cap.setVolumetric({ enabled: false });
@@ -174,8 +189,9 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: true }, volumetric: { enabled: true } },
     });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     cap.setVolumetric({ opacity: 0.8, fogPower: 2.5 });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
@@ -185,6 +201,8 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
 });
 
 describe("LightCapability — 聚光灯定位 setTarget / setTargetHeight", () => {
+  beforeEach(() => resetEnvState());
+
   it("setTarget 更新 target 位置", () => {
     const cap = new LightCapability({
       scene: new THREE.Scene(), renderer: makeFakeRenderer(),
@@ -204,6 +222,8 @@ describe("LightCapability — 聚光灯定位 setTarget / setTargetHeight", () =
 });
 
 describe("LightCapability — setPreset", () => {
+  beforeEach(() => resetEnvState());
+
   it("ysm 预设：方块顶光稍柔", () => {
     const cap = newCap();
     cap.setPreset("ysm");
@@ -259,6 +279,8 @@ describe("LightCapability — setPreset", () => {
 });
 
 describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folder 表达）", () => {
+  beforeEach(() => resetEnvState());
+
   it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -267,7 +289,7 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
     // 其余节点在 folder children 内
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
-    const childIds = folder.children!.map((c) => c.id);
+    const childIds = folder.children!.map((c: { id: string }) => c.id);
     expect(childIds).toContain("light-fill");
     expect(childIds).toContain("light-rim");
     expect(childIds).toContain("light-ambient");
@@ -282,6 +304,8 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
 });
 
 describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  beforeEach(() => resetEnvState());
+
   it("完整树 = light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -295,7 +319,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
-    expect(folder.children!.map((c) => c.id)).toEqual([
+    expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
       "light-fill",
       "light-rim",
       "light-ambient",
@@ -310,10 +334,10 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   it("slider/toggle 节点读写闭包直连 cap（fill/ambient）", () => {
     const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;
-    const fill = folder.children!.find((c) => c.id === "light-fill")!;
+    const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill")!;
     fill.control!.set!(true);
     expect(cap.getParams().fill.enabled).toBe(true);
-    const ambient = folder.children!.find((c) => c.id === "light-ambient")!;
+    const ambient = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient")!;
     ambient.control!.set!(1.5);
     expect(cap.getParams().ambient.intensity).toBe(1.5);
   });
@@ -321,7 +345,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   it("light-preset select 直连 cap 预设", () => {
     const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;
-    const preset = folder.children!.find((c) => c.id === "light-preset")!;
+    const preset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
     expect(preset.control!.options!.length).toBe(6);
     preset.control!.set!("mmd");
     expect(cap.getCurrentPreset()).toBe("mmd");
@@ -329,6 +353,8 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 });
 
 describe("LightCapability — setVolumetricEngine", () => {
+  beforeEach(() => resetEnvState());
+
   it("cone 模式默认", () => {
     const cap = newCap();
     expect(cap.getVolumetricEngine()).toBe("cone");
@@ -338,8 +364,9 @@ describe("LightCapability — setVolumetricEngine", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: true }, volumetric: { enabled: true } },
     });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
     cap.setVolumetricEngine("postprocess");
@@ -351,8 +378,9 @@ describe("LightCapability — setVolumetricEngine", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
-      params: { spotlight: { enabled: true }, volumetric: { enabled: true } },
     });
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
     cap.apply();
     cap.setVolumetricEngine("postprocess");
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
@@ -362,8 +390,11 @@ describe("LightCapability — setVolumetricEngine", () => {
 });
 
 describe("LightCapability — setParams 合并更新", () => {
+  beforeEach(() => resetEnvState());
+
   it("只覆盖指定字段", () => {
-    const cap = newCap({ params: { key: { intensity: 0.5 }, fill: { intensity: 0.3 } } });
+    const cap = newCap();
+    cap.setParams({ key: { intensity: 0.5 }, fill: { intensity: 0.3 } });
     cap.setParams({ ambient: { color: 0xffffff, intensity: 0.8 } });
     const p = cap.getParams();
     expect(p.ambient.intensity).toBe(0.8);
@@ -380,6 +411,8 @@ describe("LightCapability — setParams 合并更新", () => {
 });
 
 describe("LightCapability — 场景边界", () => {
+  beforeEach(() => resetEnvState());
+
   it("apply 到空场景后无灯光残留时重复 apply 不追加", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
@@ -399,7 +432,7 @@ describe("LightCapability — 场景边界", () => {
 });
 // ============ 持久化（saveState / loadState）============
 describe("LightCapability — 持久化", () => {
-  beforeEach(() => { localStorage.clear(); });
+  beforeEach(() => { resetEnvState(); localStorage.clear(); });
   afterEach(() => { localStorage.clear(); });
 
   it("saveState/loadState 往返：布尔/数值/引擎/预设全还原", () => {
@@ -453,9 +486,9 @@ describe("LightCapability — 持久化", () => {
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = newCap({ params: { ambient: { intensity: 1.5 } } });
+    const cap = newCap();
     cap.loadState();
-    expect(cap.getParams().ambient.intensity).toBe(1.5);
+    expect(cap.getParams().ambient.intensity).toBe(0.5);
   });
 
   it("loadState 非法 volumetricEngine 跳过；仅 currentPreset 时走自动恢复", () => {
@@ -494,6 +527,8 @@ describe("LightCapability — 持久化", () => {
 
 // ============ 锥组挂载态下的更新路径 ============
 describe("LightCapability — 锥组挂载态更新路径", () => {
+  beforeEach(() => resetEnvState());
+
   function coneCap(scene: THREE.Scene): LightCapability {
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     // 顺序敏感：rebuildCone 需要 spotlight+volumetric 双开才建锥组，
@@ -587,11 +622,13 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
 
 // ============ 菜单控件联动（节点 control 闭包）============
 describe("LightCapability — 菜单控件联动", () => {
+  beforeEach(() => resetEnvState());
+
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     const folder = nodes[1]!;
-    const by = (id: string) => folder.children!.find((c) => c.id === id)!;
+    const by = (id: string) => folder.children!.find((c: PreviewMenuNode) => c.id === id)!;
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
     by("light-fill").control!.set!(false);
@@ -613,7 +650,7 @@ describe("LightCapability — 菜单控件联动", () => {
   it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
     const cap = newCap();
     const folder = cap.getMenuNodes()[1]!;
-    const presetNode = folder.children!.find((c) => c.id === "light-preset")!;
+    const presetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
     presetNode.control!.set!("ysm");
     expect(cap.getCurrentPreset()).toBe("ysm");
     cap.setPreset("mmd"); // 自动入口被手动压制

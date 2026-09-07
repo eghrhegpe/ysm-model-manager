@@ -41,3 +41,10 @@ export function dispatchEnvChange(changed: Set<string>, state: EnvState): void {
 export function getEnvCallbackCount(): number {
   return _callbacks.size;
 }
+
+/**
+ * 清空所有回调（测试用，防止 cap 泄漏跨测试）。
+ */
+export function clearEnvCallbacks(): void {
+  _callbacks.clear();
+}

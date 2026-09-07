@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 172 张知识卡
+> 总计: 173 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -222,7 +222,7 @@
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## rendering（14 张）
+## rendering（15 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -240,6 +240,7 @@
 | 🏗 preview-menu | 3D 预览声明式菜单 preview-menu | architecture | — | 3D 预览菜单, 声明式菜单节点, visibleWhen 谓词, 面板 schema 注册, SlideMenu 多层导航 |
 | 🏗 preview-paths | 预览状态路径契约 preview-paths | architecture | — | 预览状态路径, KNOWN_PATHS 扩展, PreviewStatePath 类型, 状态层快照契约 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
+| 🏗 preview_env_state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / setPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 
@@ -255,6 +256,7 @@
 - **preview-menu**（3D 预览声明式菜单 preview-menu）：3D 预览底部根菜单的声明式菜单系统（ADR-076 v3）。对齐 MikuMikuAR 范式：底部根按钮 → `createSlideMenu` 多层导航。菜单即数据——`PreviewMenuNode` 树 + `visibleWhen…
 - **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
 - **preview_core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
+- **preview_env_state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
 
 ## ui（36 张）
 
@@ -408,7 +410,7 @@
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_env_state, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, optimization_log, utils-export |
 | single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts_readme_index, ysm-wasm |

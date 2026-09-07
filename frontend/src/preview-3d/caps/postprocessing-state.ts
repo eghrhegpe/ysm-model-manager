@@ -1,3 +1,4 @@
+import type { EnvState } from "../state/env-state-schema.ts";
 import type { FieldKind } from "./scene-capability.ts";
 
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====
@@ -72,9 +73,12 @@ export const TONE_MAPPING_KEYS = ["none", "linear", "reinhard", "aces", "cineon"
 
 /**
  * 持久化字段种别表（2026-09 锐评 P2-1）：键集与 PostprocessingParams 全键（除 enabled）
- * 编译期互锁——params 加字段没进表、或表里写了 params 没有的字段，satisfies 双向报错；
- * saveState 走 pickPersistFields、loadState 走 bindFieldRestorers，键集自动跟随本表。
- * enabled 除外：params.enabled + this.enabled 双写语义，cap 内保留显式行。
+ * 编译期互锁——params 加字段没进表、或表里写了 params 没有的字段，satisfies 双向报错。
+ *
+ * ADR-196 刀2：本表语义从"params 种别表"退化为"存档键声明"——save/load 直接读写
+ * envState（键名沿用旧 params 名向后兼容已有存档），不再依赖 this.params。
+ * 键集契约测试（postprocessing-capability.test.ts）仍校验本表 + enabled 与
+ * PostprocessingParams 全键全等。
  */
 export const POSTPROC_PERSIST_FIELDS = {
   bloomStrength: "number",
@@ -98,6 +102,34 @@ export const POSTPROC_PERSIST_FIELDS = {
   ssrBouncing: "boolean",
   reflectorDisableWhenSSR: "boolean",
 } as const satisfies Record<Exclude<keyof PostprocessingParams, "enabled">, FieldKind>;
+
+/**
+ * params 键 → envState 键映射（ADR-196 刀2）：
+ * 构造覆盖 seed / 测试 seed / save→load 反向映射 共用。
+ * 注意：enabled 不入 schema，由 this.enabled 单独携带。
+ */
+export const PP_PARAMS_TO_ENV: Record<Exclude<keyof PostprocessingParams, "enabled">, string> = {
+  bloomStrength: "ppBloomStrength",
+  bloomThreshold: "ppBloomThreshold",
+  bloomRadius: "ppBloomRadius",
+  bloomFollowVolumetric: "ppBloomFollowVolumetric",
+  bloomEnabled: "ppBloomEnabled",
+  ssaoEnabled: "ppSsaoEnabled",
+  ssaoRadius: "ppSsaoRadius",
+  ssaoMinDist: "ppSsaoMinDist",
+  ssaoMaxDist: "ppSsaoMaxDist",
+  toneMapping: "ppToneMapping",
+  exposure: "ppExposure",
+  reflectionMode: "ppReflectionMode",
+  ssrOpacity: "ppSsrOpacity",
+  ssrMaxDistance: "ppSsrMaxDistance",
+  ssrThickness: "ppSsrThickness",
+  ssrBlur: "ppSsrBlur",
+  ssrDistanceAttenuation: "ppSsrDistanceAttenuation",
+  ssrFresnel: "ppSsrFresnel",
+  ssrBouncing: "ppSsrBouncing",
+  reflectorDisableWhenSSR: "ppReflectorDisableWhenSSR",
+} as const;
 
 export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
   enabled: false,
@@ -124,17 +156,19 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
 };
 
 /**
- * 模型类别后处理预设 —— 统一亮度口径
+ * 模型类别后处理预设（ADR-196 刀2）—— envState 键 partial + per-type enabled 门禁
  *
- * bloomStrength / bloomThreshold / bloomRadius / exposure / toneMapping 一律继承
- * DEFAULT_POSTPROC_PARAMS（光影包全局值），**不按类型分别调**：同一光影包 → 同一观感，
- * 消除「YSM/车万女仆爆亮、MMD/VRM 无反应」的不对称（材质差异不应由 per-type 亮度补偿）。
+ * 亮度参数（bloomStrength/threshold/radius/exposure/toneMapping）一律继承 envState 默认值
+ * （光影包全局值），**不按类型分别调**：同一光影包 → 同一观感，消除「YSM/车万女仆爆亮、
+ * MMD/VRM 无反应」的不对称（材质差异不应由 per-type 亮度补偿）。
  *
- * per-type 预设只保留 `enabled`，语义收紧为「该类模型是否允许走后处理」——纯性能/视觉门禁。
- * 最终生效开关 = 性能档位 `render.bloom`（总闸：低档=false 全关）&& 此处 `enabled`（per-type 门禁）。
+ * per-type 预设只携带 `enabled`（能力级门禁，不入 schema）+ envState 亮度覆盖（当前为空，
+ * 全部继承默认）。最终生效开关 = 性能档位 `render.bloom`（总闸）&& 此处 `enabled`（per-type 门禁）。
+ *
+ * setPreset 读取 preset.enabled 落库 this.enabled，其余 envState 键走 setEnvState({source:'auto-model'})。
  */
-export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
-  default: { ...DEFAULT_POSTPROC_PARAMS },
+export const POSTPROC_PRESETS: Record<string, Partial<EnvState> & { enabled?: boolean }> = {
+  default: {},
   ysm: { enabled: false }, // 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮
   vrm: { enabled: true }, // PBR 角色：开柔光
   mmd: { enabled: true }, // toon：开辉光

@@ -52,8 +52,12 @@ describe("cap *_PRESETS 结构完整性", () => {
     expect(typeof REFLECTOR_PRESETS.vrm?.reflectorOpacity).toBe("number");
   });
 
+  // ADR-196 刀2：POSTPROC_PRESETS.default 退化为空 partial（亮度参数全部继承 envState 默认），
+  // 仅 per-type preset（vrm/mmd 等）携带 enabled 门禁。对齐 FOG_PRESETS 断言风格。
   it("POSTPROC_PRESETS has default key", () => {
     expect(POSTPROC_PRESETS.default).toBeDefined();
-    expect(typeof POSTPROC_PRESETS.default!.bloomStrength).toBe("number");
+    expect(typeof POSTPROC_PRESETS.default).toBe("object");
+    // per-type preset 携带 enabled 门禁（能力级开关，不入 schema）
+    expect(typeof POSTPROC_PRESETS.vrm?.enabled).toBe("boolean");
   });
 });

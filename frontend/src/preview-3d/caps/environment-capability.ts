@@ -7,36 +7,27 @@
 //   4) dispose 时 dispose PMREM 产物、custom HDR 缓存、并还原 scene.environment
 // 缓存策略（经验 637368）：custom HDR 成功解码后，保存 decoded DataTexture + 文件名缓存，
 // preset 来回切换 custom 时不重复解码；更换/清空 HDR 或 dispose 时 dispose 旧纹理 + revoke blob。
+//
+// ADR-196 刀2：参数量（preset/intensity/resolution/useAsBackground）已迁移至全局 envState 单例，
+// 能力级 enabled 留 cap 私有 this.enabled。setter 收口 setEnvState(source:'manual')，
+// 渲染由 registerEnvCallback 回调落地，setter 内不再直接 buildEnvironment（防双写/双重建）。
 
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
-import type {
-  EnvironmentParams,
-  EnvPreset,
-  EnvPresetId,
-  EnvPresetLinkage,
-} from "./environment-state.ts";
-// 状态/序列化轴（EnvPreset* / EnvironmentParams / 默认值 / 模型映射）已下沉
-// environment-state.ts；此处透传导出，保持既有调用方（environment-capability.test.ts、
-// preview-3d/menu/env.ts 等）的 import 路径不破坏。
-import {
-  DEFAULT_ENV_PARAMS,
-  ENV_PRESET_BY_MODEL,
-  ENV_PRESET_LINKAGE,
-  ENV_PRESETS,
-} from "./environment-state.ts";
-import {
-  persistState,
-  restoreFields,
-  restoreState,
-  ringLog,
-  type SceneCapability,
-} from "./scene-capability.ts";
+import type { EnvPreset, EnvPresetId, EnvPresetLinkage } from "./environment-state.ts";
+// ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
+import { ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS } from "./environment-state.ts";
+import { persistState, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
 
-export type { EnvironmentParams, EnvPreset, EnvPresetId, EnvPresetLinkage };
-export { DEFAULT_ENV_PARAMS, ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS };
+export type { EnvPreset, EnvPresetId, EnvPresetLinkage };
+// ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
+export { ENV_PRESET_BY_MODEL, ENV_PRESET_LINKAGE, ENV_PRESETS };
 
 /** 给 canvas 2D ctx 填充 equirectangular 环境贴图（程序化） */
 export function drawEnvEquirect(canvas: HTMLCanvasElement, p: EnvPreset): void {
@@ -174,7 +165,7 @@ export class EnvironmentCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
-  private params: EnvironmentParams;
+  /** 能力总开关（不入 envState，getMasterNodeId 返回 'env-enabled'） */
   private enabled: boolean;
 
   private pmrem: THREE.PMREMGenerator | null = null;
@@ -200,18 +191,36 @@ export class EnvironmentCapability implements SceneCapability {
   /** 用户选 preset=custom 但没有缓存 DataTexture 时，是否已经向环形日志面板告警过（避免重复刷屏） */
   private customHdrWarnedMissing = false;
 
+  /** ADR-196：取消订阅函数 */
+  private unsubscribeEnv: () => void;
+  /** 防递归标记：buildEnvironment 内部 setEnvState 触发回调时跳过 */
+  private isBuilding = false;
+
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    params?: Partial<EnvironmentParams>;
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
-    this.params = { ...DEFAULT_ENV_PARAMS, ...(opts.params ?? {}) };
-    this.enabled = opts.enabled ?? this.params.enabled;
+    this.enabled = opts.enabled ?? true;
     this.prevEnvironment = this.scene.environment;
     this.prevBackground = (this.scene.background as THREE.Texture | THREE.Color | null) ?? null;
+
+    // ADR-196：订阅 envState 变更，渲染由回调落地
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
+      if (this.isBuilding) return;
+      const structural =
+        changed.has("envPreset") ||
+        changed.has("envResolution") ||
+        changed.has("envUseAsBackground");
+      if (structural && this.enabled) {
+        this.buildEnvironment();
+      }
+      if (changed.has("envIntensity")) {
+        applyEnvIntensity([this.scene], envState.envIntensity);
+      }
+    });
   }
 
   /* -------- 内部：自定义 HDR 管线 -------- */
@@ -270,27 +279,27 @@ export class EnvironmentCapability implements SceneCapability {
     }
   }
 
-  /** 用户交互入口：按钮点击 → pick file → decode → buildEnvironment */
+  /** 用户交互入口：按钮点击 → pick file → decode → setEnvState → callback build */
   async onPickCustomHdr(): Promise<void> {
     const f = await pickHdrFile();
     if (!f) return;
     const ok = await this.loadCustomHdrFromFile(f);
     if (ok) {
-      this.params.preset = "custom";
-      // 重建环境贴图：用刚解码的 customHdrTex 走 PMREM
-      this.buildEnvironment();
+      // 成功：写 preset=custom → 触发 callback build
+      setEnvState({ envPreset: "custom" }, { source: "manual" });
     } else {
       // 解码失败 → 回退 studio 预设（保证反射始终有内容，不出现黑镜，教训 433477-4）
-      this.params.preset = "studio";
-      this.buildEnvironment();
+      setEnvState({ envPreset: "studio" }, { source: "manual" });
     }
   }
 
   /** 用户交互入口：清空 custom HDR，回到 studio */
   onClearCustomHdr(): void {
     this.disposeCustomCache();
-    if (this.params.preset === "custom") this.params.preset = "studio";
-    this.buildEnvironment();
+    if (envState.envPreset === "custom") {
+      // 仅 custom 时写回 studio → 触发 callback build；非 custom 保持当前预设
+      setEnvState({ envPreset: "studio" }, { source: "manual" });
+    }
   }
 
   /** 当前是否已有 custom HDR 缓存（用于按钮 hint / preset=custom 不告警） */
@@ -396,7 +405,7 @@ export class EnvironmentCapability implements SceneCapability {
       this.backgroundSrcTex.dispose();
     }
     this.backgroundSrcTex = null;
-    if (!this.enabled || !this.params.useAsBackground || !srcTex) {
+    if (!this.enabled || !envState.envUseAsBackground || !srcTex) {
       // 不使用：还原构造时的 prevBackground（不是 null 的话保留实例——也可能是 Color）
       this.scene.background = this.prevBackground;
       return;
@@ -407,8 +416,8 @@ export class EnvironmentCapability implements SceneCapability {
 
   private buildPresetEquirectTex(): THREE.Texture | null {
     const preset =
-      ENV_PRESETS[this.params.preset as Exclude<EnvPresetId, "custom">] ?? ENV_PRESETS.sky;
-    const W = this.params.resolution;
+      ENV_PRESETS[envState.envPreset as Exclude<EnvPresetId, "custom">] ?? ENV_PRESETS.sky;
+    const W = envState.envResolution;
     const H = Math.floor(W / 2);
     const canvas = document.createElement("canvas");
     canvas.width = W;
@@ -423,7 +432,7 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   private buildCustomHdrTex(): THREE.Texture | null {
-    if (this.params.preset !== "custom") return null;
+    if (envState.envPreset !== "custom") return null;
     if (this.customHdrTex) return this.customHdrTex;
     if (!this.customHdrWarnedMissing) {
       this.customHdrWarnedMissing = true;
@@ -434,7 +443,8 @@ export class EnvironmentCapability implements SceneCapability {
         () => console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设"),
       );
     }
-    this.params.preset = "studio";
+    // 回退 studio：写 setEnvState 触发 callback build（isBuilding 守卫防递归）
+    setEnvState({ envPreset: "studio" }, { source: "manual" });
     return null;
   }
 
@@ -463,20 +473,26 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   private buildEnvironment(): void {
-    this.disposeEnvironment();
-    if (!this.enabled) {
-      this.scene.environment = this.prevEnvironment;
-      this.applyBackground(null);
-      return;
+    if (this.isBuilding) return;
+    this.isBuilding = true;
+    try {
+      this.disposeEnvironment();
+      if (!this.enabled) {
+        this.scene.environment = this.prevEnvironment;
+        this.applyBackground(null);
+        return;
+      }
+      let srcTex: THREE.Texture | null = null;
+      if (envState.envPreset === "custom") {
+        srcTex = this.buildCustomHdrTex();
+      }
+      if (!srcTex) {
+        srcTex = this.buildPresetEquirectTex();
+      }
+      this.pmremToSceneEnv(srcTex);
+    } finally {
+      this.isBuilding = false;
     }
-    let srcTex: THREE.Texture | null = null;
-    if (this.params.preset === "custom") {
-      srcTex = this.buildCustomHdrTex();
-    }
-    if (!srcTex) {
-      srcTex = this.buildPresetEquirectTex();
-    }
-    this.pmremToSceneEnv(srcTex);
   }
 
   /**
@@ -564,14 +580,13 @@ export class EnvironmentCapability implements SceneCapability {
   /** 对外：切换模型后同步所有 mesh 的 envMapIntensity
    *  由 mount-preview-core 在 build 完成后和 switchToSession 后调用 */
   syncMeshIntensity(roots: THREE.Object3D[]): void {
-    applyEnvIntensity(roots, this.params.intensity);
+    applyEnvIntensity(roots, envState.envIntensity);
   }
 
   /* -------- 公共 API -------- */
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    this.params.enabled = v;
     this.buildEnvironment();
   }
 
@@ -582,52 +597,52 @@ export class EnvironmentCapability implements SceneCapability {
   setPreset(modelType: string): void {
     const modelPreset = ENV_PRESET_BY_MODEL[modelType] ?? ENV_PRESET_BY_MODEL.default;
     // setPreset 是"模型类别初始化"入口，不应该跳到 custom（custom 由用户主动选 HDR 才进）
-    const safe: Partial<EnvironmentParams> = { ...modelPreset };
-    if (safe.preset === "custom") safe.preset = "studio";
-    this.params = { ...this.params, ...safe };
-    this.buildEnvironment();
+    const partial: Partial<EnvState> = {};
+    const safePreset: EnvPresetId | undefined =
+      modelPreset.preset === "custom" ? "studio" : modelPreset.preset;
+    if (safePreset !== undefined) partial.envPreset = safePreset;
+    if (modelPreset.intensity !== undefined) partial.envIntensity = modelPreset.intensity;
+    if (Object.keys(partial).length > 0) {
+      setEnvState(partial, { source: "manual" });
+      // callback → buildEnvironment（无需显式调用）
+    }
   }
 
   setPresetId(id: EnvPresetId): void {
     if (id === "custom" && !this.customHdrTex) {
-      // preset=custom 但没缓存 → 不 build（没内容），提示用户点"选择 HDR"按钮，保持现有预设
+      // preset=custom 但没缓存 → 不 setEnvState（没内容），提示用户点"选择 HDR"按钮，保持现有预设
       ringLog("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
       return;
     }
-    this.params.preset = id;
-    this.buildEnvironment();
+    setEnvState({ envPreset: id }, { source: "manual" });
+    // callback → buildEnvironment
   }
 
   getPresetId(): EnvPresetId {
-    return this.params.preset;
+    return envState.envPreset;
   }
 
   setIntensity(v: number): void {
-    this.params.intensity = Math.max(0, Math.min(5, v));
-    // 只对所有 mesh 直接赋值即可（scan scene.children 不会把 camera/light 当内容父节点误伤；
-    // 简化版直接对 scene 根 traverse，保证无遗漏）
-    applyEnvIntensity([this.scene], this.params.intensity);
+    setEnvState({ envIntensity: Math.max(0, Math.min(5, v)) }, { source: "manual" });
+    // callback → applyEnvIntensity（无需显式调用）
   }
 
   getIntensity(): number {
-    return this.params.intensity;
+    return envState.envIntensity;
   }
 
   setResolution(v: number): void {
-    this.params.resolution = v;
-    if (this.enabled) this.buildEnvironment();
+    setEnvState({ envResolution: v }, { source: "manual" });
+    // callback → buildEnvironment（enabled 时）
   }
 
   setUseAsBackground(v: boolean): void {
-    this.params.useAsBackground = v;
-    // 切换开关只需要重新 assign background，不需要重跑 PMREM（canvas / DataTexture 源都还在）
-    // 但简化实现直接 buildEnvironment：程序化分支会走同一张 canvas，但 applyBackground 会正确设置/还原
-    // useAsBackground=true 时程序化 CanvasTexture 不会立即 dispose，false 时立即释放。
-    this.buildEnvironment();
+    setEnvState({ envUseAsBackground: v }, { source: "manual" });
+    // callback → buildEnvironment
   }
 
   isUseAsBackground(): boolean {
-    return this.params.useAsBackground;
+    return envState.envUseAsBackground;
   }
 
   /* -------- 菜单控件（声明式驱动）-------- */
@@ -654,30 +669,30 @@ export class EnvironmentCapability implements SceneCapability {
     // 保存 preset 时：若当前是 custom + 有缓存 → 存 preset=custom；
     // 若当前是 custom + 无缓存（告警回退到 studio 时还没 buildEnvironment 成功）→ 存 studio
     const savePreset: EnvPresetId =
-      this.params.preset === "custom" && !this.customHdrTex ? "studio" : this.params.preset;
+      envState.envPreset === "custom" && !this.customHdrTex ? "studio" : envState.envPreset;
     persistState(this.id, {
       enabled: this.enabled,
       preset: savePreset,
-      intensity: this.params.intensity,
-      resolution: this.params.resolution,
-      useAsBackground: this.params.useAsBackground,
+      intensity: envState.envIntensity,
+      resolution: envState.envResolution,
+      useAsBackground: envState.envUseAsBackground,
     });
   }
 
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    restoreFields(state, {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
-          this.params.enabled = v;
-        },
-      },
-    });
+
+    // 能力级 enabled 不入 envState，直接恢复
+    if (typeof state.enabled === "boolean") {
+      this.enabled = state.enabled;
+    }
+
+    // 收集 envState 恢复值
+    const partial: Partial<EnvState> = {};
+
     if (typeof state.preset === "string") {
       const p = state.preset as EnvPresetId;
-      // 只有 custom=custom 且已有缓存（不可能，因为存的时候不存 HDR，这里只做二次保险）时保留
       if (p === "custom") {
         if (!this.customHdrTex) {
           // 持久化读回 custom 但没缓存 → 静默回退 studio + 告警一次
@@ -693,19 +708,25 @@ export class EnvironmentCapability implements SceneCapability {
                 ),
             );
           }
-          this.params.preset = "studio";
+          partial.envPreset = "studio";
         } else {
-          this.params.preset = "custom";
+          partial.envPreset = "custom";
         }
       } else if (ENV_PRESETS[p as Exclude<EnvPresetId, "custom">]) {
-        this.params.preset = p;
+        partial.envPreset = p;
       }
     }
-    restoreFields(state, {
-      intensity: { number: (v) => (this.params.intensity = v) },
-      resolution: { number: (v) => (this.params.resolution = v) },
-      useAsBackground: { boolean: (v) => (this.params.useAsBackground = v) },
-    });
+
+    if (typeof state.intensity === "number") partial.envIntensity = state.intensity;
+    if (typeof state.resolution === "number") partial.envResolution = state.resolution;
+    if (typeof state.useAsBackground === "boolean")
+      partial.envUseAsBackground = state.useAsBackground;
+
+    if (Object.keys(partial).length > 0) {
+      setEnvState(partial, { source: "manual" });
+    }
+
+    // 恢复后显式 build（callback 可能因值未变而跳过，确保初始状态正确）
     this.buildEnvironment();
   }
 
@@ -716,6 +737,7 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   dispose(): void {
+    this.unsubscribeEnv();
     this.scene.environment = this.prevEnvironment;
     this.scene.background = this.prevBackground;
     this.disposeEnvironment();

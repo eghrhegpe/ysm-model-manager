@@ -16,16 +16,19 @@
 //   - 预留 setVolumetricEngine("cone" | "postprocess") 枚举，后续升级不动对外 API
 //   - 本类不持有 backend 引用，纯 Three.js 侧逻辑
 //   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
+//   - ADR-196 刀2：参数真值源从 this.params 迁到 envState 单例
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "../menu-node-types.ts";
+import { registerEnvCallback } from "../state/env-dispatcher.ts";
+// ADR-196：统一状态层
+import { envState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes } from "./light-controls.ts";
 import {
-  DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
   type DirectionalLightParams,
-  deepMergeLightParams,
   LIGHT_PRESETS,
   type LightParams,
   type SpotlightParams,
@@ -65,6 +68,223 @@ export function attenuateAmbientForSky(intensity: number, skyEnvOn: boolean): nu
   return intensity * (skyEnvOn ? SKY_ENV_AMBIENT_ATTENUATION : 1);
 }
 
+// ======== ADR-196：嵌套 ↔ 扁平映射 ========
+
+/** 从 envState 读取方向灯参数 */
+function readDirParams(
+  which: "key" | "fill" | "rim",
+  state: EnvState = envState,
+): DirectionalLightParams {
+  const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}` as const;
+  return {
+    enabled: state[`${prefix}Enabled` as keyof EnvState] as boolean,
+    color: state[`${prefix}Color` as keyof EnvState] as number,
+    intensity: state[`${prefix}Intensity` as keyof EnvState] as number,
+    azimuth: state[`${prefix}Azimuth` as keyof EnvState] as number,
+    elevation: state[`${prefix}Elevation` as keyof EnvState] as number,
+  };
+}
+
+/** 从 envState 读取聚光灯参数 */
+function readSpotParams(state: EnvState = envState): SpotlightParams {
+  return {
+    enabled: state.lightSpotEnabled,
+    color: state.lightSpotColor,
+    intensity: state.lightSpotIntensity,
+    angle: state.lightSpotAngle,
+    penumbra: state.lightSpotPenumbra,
+    distance: state.lightSpotDistance,
+    decay: state.lightSpotDecay,
+  };
+}
+
+/** 从 envState 读取体积光参数 */
+function readVolParams(state: EnvState = envState): VolumetricParams {
+  return {
+    enabled: state.lightVolumetricEnabled,
+    opacity: state.lightVolumetricOpacity,
+    fogPower: state.lightVolumetricFogPower,
+    edgeFade: state.lightVolumetricEdgeFade,
+    baseStrength: state.lightVolumetricBaseStrength,
+    tipStrength: state.lightVolumetricTipStrength,
+  };
+}
+
+/** 从 envState 组装完整 LightParams（getParams 用） */
+function getParamsFromEnvState(state: EnvState = envState): LightParams {
+  return {
+    key: readDirParams("key", state),
+    fill: readDirParams("fill", state),
+    rim: readDirParams("rim", state),
+    ambient: {
+      color: state.lightAmbientColor,
+      intensity: state.lightAmbientIntensity,
+    },
+    spotlight: readSpotParams(state),
+    volumetric: readVolParams(state),
+  };
+}
+
+function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvState> {
+  // 用 Record<string, unknown> 收集中间态，最后一次性 cast 为 Partial<EnvState>。
+  // 原因：EnvState 各 key 类型各异（number/boolean/string），增量构建时 TS 无法从 keyof EnvState + unknown
+  // 推导出具体值类型；中间态用宽松类型承载，最终 cast 的安全性由上方 if 守卫保证（类型与 key 恒等）。
+  const out: Record<string, unknown> = {};
+  if (p.key) {
+    const k = p.key;
+    if (k.enabled !== undefined) {
+      out.lightKeyEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightKeyColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightKeyIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightKeyAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightKeyElevation = k.elevation;
+    }
+  }
+  if (p.fill) {
+    const k = p.fill;
+    if (k.enabled !== undefined) {
+      out.lightFillEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightFillColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightFillIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightFillAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightFillElevation = k.elevation;
+    }
+  }
+  if (p.rim) {
+    const k = p.rim;
+    if (k.enabled !== undefined) {
+      out.lightRimEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightRimColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightRimIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightRimAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightRimElevation = k.elevation;
+    }
+  }
+  if (p.ambient) {
+    if (p.ambient.color !== undefined) {
+      out.lightAmbientColor = p.ambient.color;
+    }
+    if (p.ambient.intensity !== undefined) {
+      out.lightAmbientIntensity = p.ambient.intensity;
+    }
+  }
+  if (p.spotlight) {
+    const k = p.spotlight;
+    if (k.enabled !== undefined) {
+      out.lightSpotEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightSpotColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightSpotIntensity = k.intensity;
+    }
+    if (k.angle !== undefined) {
+      out.lightSpotAngle = k.angle;
+    }
+    if (k.penumbra !== undefined) {
+      out.lightSpotPenumbra = k.penumbra;
+    }
+    if (k.distance !== undefined) {
+      out.lightSpotDistance = k.distance;
+    }
+    if (k.decay !== undefined) {
+      out.lightSpotDecay = k.decay;
+    }
+  }
+  if (p.volumetric) {
+    const k = p.volumetric;
+    if (k.enabled !== undefined) {
+      out.lightVolumetricEnabled = k.enabled;
+    }
+    if (k.opacity !== undefined) {
+      out.lightVolumetricOpacity = k.opacity;
+    }
+    if (k.fogPower !== undefined) {
+      out.lightVolumetricFogPower = k.fogPower;
+    }
+    if (k.edgeFade !== undefined) {
+      out.lightVolumetricEdgeFade = k.edgeFade;
+    }
+    if (k.baseStrength !== undefined) {
+      out.lightVolumetricBaseStrength = k.baseStrength;
+    }
+    if (k.tipStrength !== undefined) {
+      out.lightVolumetricTipStrength = k.tipStrength;
+    }
+  }
+  return out as Partial<EnvState>;
+}
+
+// ======== 变更分组（callback 分派用） ========
+
+const DIR_KEY_CHANGES = new Set([
+  "lightKeyEnabled",
+  "lightKeyColor",
+  "lightKeyIntensity",
+  "lightKeyAzimuth",
+  "lightKeyElevation",
+]);
+const DIR_FILL_CHANGES = new Set([
+  "lightFillEnabled",
+  "lightFillColor",
+  "lightFillIntensity",
+  "lightFillAzimuth",
+  "lightFillElevation",
+]);
+const DIR_RIM_CHANGES = new Set([
+  "lightRimEnabled",
+  "lightRimColor",
+  "lightRimIntensity",
+  "lightRimAzimuth",
+  "lightRimElevation",
+]);
+const SPOT_CHANGES = new Set([
+  "lightSpotEnabled",
+  "lightSpotColor",
+  "lightSpotIntensity",
+  "lightSpotAngle",
+  "lightSpotPenumbra",
+  "lightSpotDistance",
+  "lightSpotDecay",
+]);
+const VOL_PARAM_CHANGES = new Set([
+  "lightVolumetricOpacity",
+  "lightVolumetricFogPower",
+  "lightVolumetricEdgeFade",
+  "lightVolumetricBaseStrength",
+  "lightVolumetricTipStrength",
+]);
+
+function hasAny(changed: Set<string>, keys: Set<string>): boolean {
+  for (const k of keys) if (changed.has(k)) return true;
+  return false;
+}
+
 export class LightCapability implements SceneCapability {
   readonly id = "light";
   readonly labelKey = "preview.lighting";
@@ -73,7 +293,6 @@ export class LightCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private caps?: SceneCapabilityLookup;
-  private params: LightParams;
   private enabled: boolean;
   private target: THREE.Vector3; // 对象中心，聚光灯瞄准点
   private targetHeight: number; // 聚光灯位于对象上方的高度
@@ -89,7 +308,7 @@ export class LightCapability implements SceneCapability {
   // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
   private cone: VolumetricCone;
 
-  // 体积光锥引擎（预留：后续支持 postprocess 模式）
+  // 体积光锥引擎（运行时态，不入 envState）
   private volumetricEngine: "cone" | "postprocess" = "cone";
 
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
@@ -97,10 +316,12 @@ export class LightCapability implements SceneCapability {
   /** 手动 preset 记忆（light-preset select 显式选择；非空时自动套模型预设不覆盖——[doc:adr-126-p5] 手动优先） */
   private manualPreset: string | null = null;
 
+  // ADR-196：取消订阅函数
+  private unsubscribeEnv: () => void;
+
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    params?: DeepPartial<LightParams>;
     enabled?: boolean;
     target?: THREE.Vector3;
     targetHeight?: number;
@@ -109,27 +330,28 @@ export class LightCapability implements SceneCapability {
   }) {
     this.scene = opts.scene;
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.params = deepMergeLightParams(DEFAULT_LIGHT_PARAMS, opts.params ?? {});
     this.enabled = opts.enabled ?? true;
     this.target = opts.target ?? new THREE.Vector3(0, 0, 0);
     this.targetHeight = opts.targetHeight ?? 8;
 
-    this.keyLight = this.createDirectional(this.params.key);
-    this.fillLight = this.createDirectional(this.params.fill);
-    this.rimLight = this.createDirectional(this.params.rim);
+    // 从 envState 读取初始值（ADR-196：真值源迁移）
+    this.keyLight = this.createDirectional(readDirParams("key"));
+    this.fillLight = this.createDirectional(readDirParams("fill"));
+    this.rimLight = this.createDirectional(readDirParams("rim"));
     this.ambientLight = new THREE.AmbientLight(
-      this.params.ambient.color,
-      this.params.ambient.intensity,
+      envState.lightAmbientColor,
+      envState.lightAmbientIntensity,
     );
 
     // 聚光灯：位于对象正上方，向下照射
+    const sp = readSpotParams();
     this.spotlight = new THREE.SpotLight(
-      this.params.spotlight.color,
-      this.params.spotlight.intensity,
-      this.params.spotlight.distance,
-      degToRad(this.params.spotlight.angle),
-      this.params.spotlight.penumbra,
-      this.params.spotlight.decay,
+      sp.color,
+      sp.intensity,
+      sp.distance,
+      degToRad(sp.angle),
+      sp.penumbra,
+      sp.decay,
     );
     this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
     this.spotlightTarget = new THREE.Object3D();
@@ -139,12 +361,65 @@ export class LightCapability implements SceneCapability {
 
     // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
     this.cone = new VolumetricCone(this.scene);
-    this.cone.rebuild(
-      this.targetHeight,
-      this.params.spotlight,
-      this.params.volumetric,
-      this.spotlight.position,
-    );
+    this.cone.rebuild(this.targetHeight, sp, readVolParams(), this.spotlight.position);
+
+    // ADR-196：订阅 envState 变更 → 分派到 Three 应用
+    this.unsubscribeEnv = registerEnvCallback(this, (changed, state) => {
+      this.onEnvChanged(changed, state);
+    });
+  }
+
+  /* ----- envState 变更回调：分派到 Three 应用 ----- */
+
+  private onEnvChanged(changed: Set<string>, state: EnvState): void {
+    // key/fill/rim 方向灯
+    if (hasAny(changed, DIR_KEY_CHANGES)) {
+      this.updateDirectional(this.keyLight, readDirParams("key", state));
+    }
+    if (hasAny(changed, DIR_FILL_CHANGES)) {
+      this.updateDirectional(this.fillLight, readDirParams("fill", state));
+    }
+    if (hasAny(changed, DIR_RIM_CHANGES)) {
+      this.updateDirectional(this.rimLight, readDirParams("rim", state));
+    }
+
+    // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
+    this.refreshAmbientFromSky(state);
+
+    // spotlight → 应用属性 + rebuild 锥组 + 挂载态
+    if (hasAny(changed, SPOT_CHANGES)) {
+      this.applySpotlightToThree(state);
+      this.cone.rebuild(
+        this.targetHeight,
+        readSpotParams(state),
+        readVolParams(state),
+        this.spotlight.position,
+      );
+      if (state.lightVolumetricEnabled && state.lightSpotEnabled) {
+        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
+      }
+    }
+
+    // volumetric → rebuild（若 volumetric 刚启用且 spotlight 已开）+ 更新 uniforms + 挂载态
+    const volEnabledChanged = changed.has("lightVolumetricEnabled");
+    if (volEnabledChanged && state.lightVolumetricEnabled && state.lightSpotEnabled) {
+      // volumetric 从关到开且 spotlight 已开 → 需要 rebuild 锥组（spotlight 之前的 rebuild 因 volumetric 关跳过）
+      this.cone.rebuild(
+        this.targetHeight,
+        readSpotParams(state),
+        readVolParams(state),
+        this.spotlight.position,
+      );
+    } else if (volEnabledChanged || hasAny(changed, VOL_PARAM_CHANGES)) {
+      this.cone.updateUniforms(readSpotParams(state), readVolParams(state));
+    }
+    if (volEnabledChanged) {
+      if (state.lightVolumetricEnabled && state.lightSpotEnabled && this.cone.hasGroup()) {
+        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
+      } else {
+        if (this.cone.isMounted()) this.cone.detach();
+      }
+    }
   }
 
   /* ----- 方向灯方向更新 ----- */
@@ -180,7 +455,7 @@ export class LightCapability implements SceneCapability {
     if (!this.rimLight.target.parent) this.scene.add(this.rimLight.target);
     if (this.spotlightTarget && !this.spotlightTarget.parent) this.scene.add(this.spotlightTarget);
     if (!this.spotlight.parent) this.scene.add(this.spotlight);
-    if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.cone.hasGroup()) {
+    if (envState.lightVolumetricEnabled && envState.lightSpotEnabled && this.cone.hasGroup()) {
       if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
     }
   }
@@ -226,8 +501,8 @@ export class LightCapability implements SceneCapability {
     const wasMounted = this.cone.isMounted();
     this.cone.rebuild(
       this.targetHeight,
-      this.params.spotlight,
-      this.params.volumetric,
+      readSpotParams(),
+      readVolParams(),
       this.spotlight.position,
     );
     if (wasMounted && this.cone.hasGroup()) this.cone.attach(this.spotlight.position);
@@ -242,89 +517,48 @@ export class LightCapability implements SceneCapability {
     }
     const preset = LIGHT_PRESETS[modelType] ?? LIGHT_PRESETS.default;
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
-    this.params = deepMergeLightParams(this.params, preset);
-    this.syncLightsFromParams();
-    this.cone.rebuild(
-      this.targetHeight,
-      this.params.spotlight,
-      this.params.volumetric,
-      this.spotlight.position,
-    );
-    this.syncConeMount();
+    // 预设总是以 manual 源写入（与旧实现"预设总是覆盖 params"一致；
+    // 手动优先的守卫在上方 return，不在 source 层级）。
+    // callback 处理 Three 应用 + 锥组 rebuild + 挂载态。
+    setEnvState(flattenLightParams(preset), { source: "manual" });
   }
 
   /**
-   * 锥组挂载态与当前 params 同步（setPreset / loadState 复用）。
-   * 只在锥组已挂载时处理卸载与定位——挂载动作由 setSpotlight / setVolumetric /
-   * setVolumetricEngine 负责（本方法不重挂：外层守卫已保证 cone 已挂载，
-   * 曾经的 else-if 重挂分支是死代码，已删）。
+   * 锥组挂载态与当前 envState 同步（setPreset / loadState 复用）。
+   * 只在锥组已挂载时处理卸载与定位。
    */
   private syncConeMount(): void {
     if (this.cone.hasGroup() && this.cone.isMounted()) {
-      // 启用状态关闭 → 卸载（锥组仍在场景中时）
-      if (!this.params.volumetric.enabled || !this.params.spotlight.enabled) {
+      if (!envState.lightVolumetricEnabled || !envState.lightSpotEnabled) {
         this.cone.detach();
       }
       this.cone.syncPosition(this.spotlight.position);
     }
   }
 
-  /** 聚光灯参数更新 */
+  /** 聚光灯参数更新（经 envState） */
   setSpotlight(p: Partial<SpotlightParams>): void {
-    Object.assign(this.params.spotlight, p);
-    const sp = this.params.spotlight;
-    this.spotlight.color.setHex(sp.color);
-    this.spotlight.intensity = sp.intensity;
-    this.spotlight.distance = sp.distance;
-    this.spotlight.angle = degToRad(sp.angle);
-    this.spotlight.penumbra = sp.penumbra;
-    this.spotlight.decay = sp.decay;
-    this.spotlight.visible = sp.enabled;
-    this.cone.rebuild(
-      this.targetHeight,
-      this.params.spotlight,
-      this.params.volumetric,
-      this.spotlight.position,
-    );
-    if (this.cone.isMounted()) {
-      this.cone.syncPosition(this.spotlight.position);
-    } else if (this.params.volumetric.enabled) {
-      this.cone.attach(this.spotlight.position);
-    }
+    setEnvState(flattenLightParams({ spotlight: p }), { source: "manual" });
+    // callback 处理 Three 应用 + rebuild + 挂载态
   }
 
-  /** 体积光锥参数更新（含 enable/disable 切换） */
+  /** 体积光锥参数更新（经 envState） */
   setVolumetric(p: Partial<VolumetricParams>): void {
-    Object.assign(this.params.volumetric, p);
-    this.cone.updateUniforms(this.params.spotlight, this.params.volumetric);
-    if (p.enabled !== undefined) {
-      if (this.params.volumetric.enabled && this.params.spotlight.enabled && this.cone.hasGroup()) {
-        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
-      } else {
-        if (this.cone.isMounted()) this.cone.detach();
-      }
-    }
+    setEnvState(flattenLightParams({ volumetric: p }), { source: "manual" });
+    // callback 处理 uniforms + 挂载态
   }
 
   /** 切换体积光锥引擎（预留：当前仅 "cone"） */
   setVolumetricEngine(engine: "cone" | "postprocess"): void {
     this.volumetricEngine = engine;
-    // postprocess 模式暂不渲染体积光锥，同步关闭 volumetric.enabled 避免 toggle 状态矛盾
     if (engine === "postprocess") {
-      this.params.volumetric.enabled = false;
-      if (this.cone.isMounted()) this.cone.detach();
-    } else if (engine === "cone" && this.params.spotlight.enabled) {
+      // postprocess 模式暂不渲染体积光锥，同步关闭 volumetric.enabled 避免 toggle 状态矛盾
+      setEnvState({ lightVolumetricEnabled: false }, { source: "manual" });
+      // callback 处理 detach
+    } else if (engine === "cone" && envState.lightSpotEnabled) {
       // 切回 cone：重新启用 volumetric 并重建锥组
-      this.params.volumetric.enabled = true;
-      this.cone.rebuild(
-        this.targetHeight,
-        this.params.spotlight,
-        this.params.volumetric,
-        this.spotlight.position,
-      );
-      if (this.cone.hasGroup() && !this.cone.isMounted()) {
-        this.cone.attach(this.spotlight.position);
-      }
+      setEnvState({ lightVolumetricEnabled: true }, { source: "manual" });
+      // callback 处理 rebuild + attach
     }
   }
 
@@ -332,25 +566,14 @@ export class LightCapability implements SceneCapability {
     return this.volumetricEngine;
   }
 
-  /** 合并式参数更新（只覆盖给定字段） */
+  /** 合并式参数更新（只覆盖给定字段，经 envState） */
   setParams(p: DeepPartial<LightParams>): void {
-    this.params = deepMergeLightParams(this.params, p);
-    this.syncLightsFromParams();
-    this.cone.rebuild(
-      this.targetHeight,
-      this.params.spotlight,
-      this.params.volumetric,
-      this.spotlight.position,
-    );
-    if (this.cone.hasGroup() && this.params.volumetric.enabled && this.params.spotlight.enabled) {
-      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
-    } else if (this.cone.isMounted()) {
-      this.cone.detach();
-    }
+    setEnvState(flattenLightParams(p), { source: "manual" });
+    // callback 处理全部 Three 应用 + 锥组 rebuild + 挂载态
   }
 
   getParams(): LightParams {
-    return deepMergeLightParams(DEFAULT_LIGHT_PARAMS, this.params);
+    return getParamsFromEnvState();
   }
 
   /** 当前预设名（ADR-085 S2：fillLighting 只读初始化，消灭启发式派生） */
@@ -370,19 +593,52 @@ export class LightCapability implements SceneCapability {
   saveState(): void {
     persistState(this.id, {
       enabled: this.enabled,
-      keyEnabled: this.params.key.enabled,
-      fillEnabled: this.params.fill.enabled,
-      rimEnabled: this.params.rim.enabled,
+      keyEnabled: envState.lightKeyEnabled,
+      fillEnabled: envState.lightFillEnabled,
+      rimEnabled: envState.lightRimEnabled,
       // 方向灯全量持久化（azimuth/elevation/color/intensity），跨会话不丢方向/强度/颜色
-      key: { ...this.params.key },
-      fill: { ...this.params.fill },
-      rim: { ...this.params.rim },
-      // ambient color 也持久化（旧实现只存 intensity）
-      ambient: { ...this.params.ambient },
-      // spotlight 全量参数持久化（旧实现只存 enabled 布尔）
-      spotlight: { ...this.params.spotlight },
-      // volumetric 全量参数持久化（旧实现只存 enabled 布尔）
-      volumetric: { ...this.params.volumetric },
+      key: {
+        enabled: envState.lightKeyEnabled,
+        color: envState.lightKeyColor,
+        intensity: envState.lightKeyIntensity,
+        azimuth: envState.lightKeyAzimuth,
+        elevation: envState.lightKeyElevation,
+      },
+      fill: {
+        enabled: envState.lightFillEnabled,
+        color: envState.lightFillColor,
+        intensity: envState.lightFillIntensity,
+        azimuth: envState.lightFillAzimuth,
+        elevation: envState.lightFillElevation,
+      },
+      rim: {
+        enabled: envState.lightRimEnabled,
+        color: envState.lightRimColor,
+        intensity: envState.lightRimIntensity,
+        azimuth: envState.lightRimAzimuth,
+        elevation: envState.lightRimElevation,
+      },
+      ambient: {
+        color: envState.lightAmbientColor,
+        intensity: envState.lightAmbientIntensity,
+      },
+      spotlight: {
+        enabled: envState.lightSpotEnabled,
+        color: envState.lightSpotColor,
+        intensity: envState.lightSpotIntensity,
+        angle: envState.lightSpotAngle,
+        penumbra: envState.lightSpotPenumbra,
+        distance: envState.lightSpotDistance,
+        decay: envState.lightSpotDecay,
+      },
+      volumetric: {
+        enabled: envState.lightVolumetricEnabled,
+        opacity: envState.lightVolumetricOpacity,
+        fogPower: envState.lightVolumetricFogPower,
+        edgeFade: envState.lightVolumetricEdgeFade,
+        baseStrength: envState.lightVolumetricBaseStrength,
+        tipStrength: envState.lightVolumetricTipStrength,
+      },
       volumetricEngine: this.volumetricEngine,
       currentPreset: this.currentPreset,
       manualPreset: this.manualPreset,
@@ -390,26 +646,31 @@ export class LightCapability implements SceneCapability {
   }
 
   /** 从 localStorage 恢复状态 */
-  /** 恢复方向灯全量字段（key/fill/rim），逐字段 typeof 校验后写入。 */
+  /** 恢复方向灯全量字段（key/fill/rim），逐字段 typeof 校验后写入 envState。 */
   private restoreDir(which: "key" | "fill" | "rim", saved: unknown): void {
     if (!saved || typeof saved !== "object") return;
     const s = saved as Record<string, unknown>;
-    const dst = this.params[which];
-    if (typeof s.enabled === "boolean") dst.enabled = s.enabled;
-    if (typeof s.color === "number") dst.color = s.color;
-    if (typeof s.intensity === "number") dst.intensity = s.intensity;
-    if (typeof s.azimuth === "number") dst.azimuth = s.azimuth;
-    if (typeof s.elevation === "number") dst.elevation = s.elevation;
+    const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}`;
+    const assignments: Record<string, unknown> = {};
+    if (typeof s.enabled === "boolean") assignments[`${prefix}Enabled`] = s.enabled;
+    if (typeof s.color === "number") assignments[`${prefix}Color`] = s.color;
+    if (typeof s.intensity === "number") assignments[`${prefix}Intensity`] = s.intensity;
+    if (typeof s.azimuth === "number") assignments[`${prefix}Azimuth`] = s.azimuth;
+    if (typeof s.elevation === "number") assignments[`${prefix}Elevation`] = s.elevation;
+    if (Object.keys(assignments).length > 0) {
+      setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+    }
   }
 
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
     if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    if (typeof state.ambientIntensity === "number")
-      this.params.ambient.intensity = state.ambientIntensity;
+    if (typeof state.ambientIntensity === "number") {
+      setEnvState({ lightAmbientIntensity: state.ambientIntensity }, { source: "manual" });
+    }
     // ① 预设先套用（内含 rebuildCone / 锥组挂载判定）。必须在灯开关恢复之前：
-    //    deepMergeLightParams(this.params, preset) 以预设为准，后恢复的开关才会生效。
+    //    预设以 envState 为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
       this.manualPreset = state.manualPreset; // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）
       this.setPreset(state.manualPreset, { manual: true });
@@ -417,63 +678,77 @@ export class LightCapability implements SceneCapability {
       this.setPreset(state.currentPreset);
     }
     // ② 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）。
-    //    旧实现把这一步放在 setPreset 之前，导致开关被预设值静默覆盖——跨会话丢失。
-    if (typeof state.keyEnabled === "boolean") this.params.key.enabled = state.keyEnabled;
-    if (typeof state.fillEnabled === "boolean") this.params.fill.enabled = state.fillEnabled;
-    if (typeof state.rimEnabled === "boolean") this.params.rim.enabled = state.rimEnabled;
-    if (typeof state.spotlightEnabled === "boolean")
-      this.params.spotlight.enabled = state.spotlightEnabled;
-    if (typeof state.volumetricEnabled === "boolean")
-      this.params.volumetric.enabled = state.volumetricEnabled;
-    // ②.b 全量参数恢复（旧实现只存布尔/单一字段，跨会话丢方向/颜色/强度/锥角等）。
-    //     字段名与 params 对象一致；逐字段 typeof 校验后写入，非法值跳过。
-    //     不在此调 apply()：保持现有行为，依赖外部统一 apply。
+    if (typeof state.keyEnabled === "boolean") {
+      setEnvState({ lightKeyEnabled: state.keyEnabled }, { source: "manual" });
+    }
+    if (typeof state.fillEnabled === "boolean") {
+      setEnvState({ lightFillEnabled: state.fillEnabled }, { source: "manual" });
+    }
+    if (typeof state.rimEnabled === "boolean") {
+      setEnvState({ lightRimEnabled: state.rimEnabled }, { source: "manual" });
+    }
+    if (typeof state.spotlightEnabled === "boolean") {
+      setEnvState({ lightSpotEnabled: state.spotlightEnabled }, { source: "manual" });
+    }
+    if (typeof state.volumetricEnabled === "boolean") {
+      setEnvState({ lightVolumetricEnabled: state.volumetricEnabled }, { source: "manual" });
+    }
+    // ②.b 全量参数恢复
     this.restoreDir("key", state.key);
     this.restoreDir("fill", state.fill);
     this.restoreDir("rim", state.rim);
     if (state.ambient && typeof state.ambient === "object") {
       const amb = state.ambient as Record<string, unknown>;
-      if (typeof amb.intensity === "number") this.params.ambient.intensity = amb.intensity;
-      if (typeof amb.color === "number") this.params.ambient.color = amb.color;
+      const assignments: Record<string, unknown> = {};
+      if (typeof amb.intensity === "number") assignments.lightAmbientIntensity = amb.intensity;
+      if (typeof amb.color === "number") assignments.lightAmbientColor = amb.color;
+      if (Object.keys(assignments).length > 0) {
+        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      }
     }
     if (state.spotlight && typeof state.spotlight === "object") {
       const sp = state.spotlight as Record<string, unknown>;
-      if (typeof sp.enabled === "boolean") this.params.spotlight.enabled = sp.enabled;
-      if (typeof sp.color === "number") this.params.spotlight.color = sp.color;
-      if (typeof sp.intensity === "number") this.params.spotlight.intensity = sp.intensity;
-      if (typeof sp.angle === "number") this.params.spotlight.angle = sp.angle;
-      if (typeof sp.penumbra === "number") this.params.spotlight.penumbra = sp.penumbra;
-      if (typeof sp.distance === "number") this.params.spotlight.distance = sp.distance;
-      if (typeof sp.decay === "number") this.params.spotlight.decay = sp.decay;
+      const assignments: Record<string, unknown> = {};
+      if (typeof sp.enabled === "boolean") assignments.lightSpotEnabled = sp.enabled;
+      if (typeof sp.color === "number") assignments.lightSpotColor = sp.color;
+      if (typeof sp.intensity === "number") assignments.lightSpotIntensity = sp.intensity;
+      if (typeof sp.angle === "number") assignments.lightSpotAngle = sp.angle;
+      if (typeof sp.penumbra === "number") assignments.lightSpotPenumbra = sp.penumbra;
+      if (typeof sp.distance === "number") assignments.lightSpotDistance = sp.distance;
+      if (typeof sp.decay === "number") assignments.lightSpotDecay = sp.decay;
+      if (Object.keys(assignments).length > 0) {
+        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      }
     }
     if (state.volumetric && typeof state.volumetric === "object") {
       const vm = state.volumetric as Record<string, unknown>;
-      if (typeof vm.enabled === "boolean") this.params.volumetric.enabled = vm.enabled;
-      if (typeof vm.opacity === "number") this.params.volumetric.opacity = vm.opacity;
-      if (typeof vm.fogPower === "number") this.params.volumetric.fogPower = vm.fogPower;
-      if (typeof vm.edgeFade === "number") this.params.volumetric.edgeFade = vm.edgeFade;
-      if (typeof vm.baseStrength === "number")
-        this.params.volumetric.baseStrength = vm.baseStrength;
-      if (typeof vm.tipStrength === "number") this.params.volumetric.tipStrength = vm.tipStrength;
+      const assignments: Record<string, unknown> = {};
+      if (typeof vm.enabled === "boolean") assignments.lightVolumetricEnabled = vm.enabled;
+      if (typeof vm.opacity === "number") assignments.lightVolumetricOpacity = vm.opacity;
+      if (typeof vm.fogPower === "number") assignments.lightVolumetricFogPower = vm.fogPower;
+      if (typeof vm.edgeFade === "number") assignments.lightVolumetricEdgeFade = vm.edgeFade;
+      if (typeof vm.baseStrength === "number") {
+        assignments.lightVolumetricBaseStrength = vm.baseStrength;
+      }
+      if (typeof vm.tipStrength === "number") {
+        assignments.lightVolumetricTipStrength = vm.tipStrength;
+      }
+      if (Object.keys(assignments).length > 0) {
+        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      }
     }
-    // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步（setPreset 的判定基于覆盖前的预设值）
+    // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步
     this.syncConeMount();
-    // ④ 引擎最后恢复：仅 "postprocess" 走 setVolumetricEngine——其「postprocess ⇒
-    //    volumetric 关闭」一致性约束是有意的；"cone" 恢复引擎字段，且当恢复后的
-    //    params 真启用（volumetric + spotlight 均开）时重建并挂载锥组——setVolumetricEngine
-    //    的 cone 分支被弃用后，这是 loadState 中唯一的锥组挂载路径（审核复核 P1：
-    //    纯字段赋值会让保存 volumetric=true 的会话在 loadState 后锥组静默消失）。
-    //    不强制翻转 volumetric.enabled——只按②恢复的用户值判定，与「用户保存的
-    //    开关优先」不变量一致。
+    // ④ 引擎最后恢复
     if (state.volumetricEngine === "postprocess") {
       this.setVolumetricEngine("postprocess");
     } else if (state.volumetricEngine === "cone") {
       this.volumetricEngine = "cone";
-      if (this.params.volumetric.enabled && this.params.spotlight.enabled) {
+      if (envState.lightVolumetricEnabled && envState.lightSpotEnabled) {
         this.cone.rebuild(
           this.targetHeight,
-          this.params.spotlight,
-          this.params.volumetric,
+          readSpotParams(),
+          readVolParams(),
           this.spotlight.position,
         );
         if (this.cone.hasGroup() && !this.cone.isMounted()) {
@@ -481,30 +756,29 @@ export class LightCapability implements SceneCapability {
         }
       }
     }
-    this.syncLightsFromParams();
   }
 
   /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
-   *  也由 syncLightsFromParams 复用——ambient 应用单一出口，预览/截图同构）。
+   *  也由 callback 复用——ambient 应用单一出口，预览/截图同构）。
    *  sky 环境开关经构造注入的查询器读取（全局版 isSkyEnvironmentOn 在组合根 registry）；
    *  让位系数/公式走 attenuateAmbientForSky 单源 */
-  refreshAmbientFromSky(): void {
+  refreshAmbientFromSky(state: EnvState = envState): void {
     const skyEnvOn =
       (
         this.caps?.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null | undefined
       )?.isEnvironmentEnabled?.() ?? false;
-    this.ambientLight.color.setHex(this.params.ambient.color);
-    this.ambientLight.intensity = attenuateAmbientForSky(this.params.ambient.intensity, skyEnvOn);
+    this.ambientLight.color.setHex(state.lightAmbientColor);
+    this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, skyEnvOn);
   }
 
-  private syncLightsFromParams(): void {
-    this.updateDirectional(this.keyLight, this.params.key);
-    this.updateDirectional(this.fillLight, this.params.fill);
-    this.updateDirectional(this.rimLight, this.params.rim);
-    // [doc:adr-126-p5] 双间接光协调：PMREM 环境光（IBL）开启时 ambient 自动衰减（×0.5）——
-    // 两套间接光叠加会过亮/互相稀释，环境贴图开则 ambient 让位（光系统统一性 #3）
-    this.refreshAmbientFromSky();
-    this.setSpotlight({ ...this.params.spotlight });
+  private applySpotlightToThree(state: EnvState = envState): void {
+    this.spotlight.color.setHex(state.lightSpotColor);
+    this.spotlight.intensity = state.lightSpotIntensity;
+    this.spotlight.distance = state.lightSpotDistance;
+    this.spotlight.angle = degToRad(state.lightSpotAngle);
+    this.spotlight.penumbra = state.lightSpotPenumbra;
+    this.spotlight.decay = state.lightSpotDecay;
+    this.spotlight.visible = state.lightSpotEnabled;
   }
 
   private detach(): void {
@@ -527,6 +801,7 @@ export class LightCapability implements SceneCapability {
   }
 
   dispose(): void {
+    this.unsubscribeEnv();
     this.detach();
     this.cone.dispose();
     this.keyLight.dispose();

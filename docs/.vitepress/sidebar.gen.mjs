@@ -1660,6 +1660,10 @@ export const autoSidebar = [
             "link": "/knowledge/preview_core"
           },
           {
+            "text": "3D 预览统一状态层 envState（ADR-196）",
+            "link": "/knowledge/preview_env_state"
+          },
+          {
             "text": "3D 预览声明式菜单 preview-menu",
             "link": "/knowledge/preview-menu"
           },

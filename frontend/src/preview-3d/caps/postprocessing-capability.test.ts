@@ -11,9 +11,22 @@ import {
   POSTPROC_PRESETS,
 } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
-import { POSTPROC_PERSIST_FIELDS } from "./postprocessing-state.ts";
+import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-state.ts";
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
+// ADR-196：统一状态层（测试隔离）
+import { resetEnvState, setEnvState } from "../state/env-state.ts";
+import type { EnvState } from "../state/env-state-schema.ts";
+import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
+
+// 顶层隔离：每个测试前重置 envState 单例 + 清空回调注册表（防止 cap 泄漏跨测试）
+beforeEach(() => {
+  resetEnvState();
+  clearEnvCallbacks();
+});
+afterEach(() => {
+  clearEnvCallbacks();
+});
 
 // buildComposer 的 EffectComposer/RenderPass/UnrealBloomPass/SSAOPass/SSRPass/OutputPass
 // 均为纯数据构造（WebGLRenderTarget 不依赖 GL context），happy-dom 下可真实构建；
@@ -58,12 +71,21 @@ function newCap(opts: { enabled?: boolean; params?: Partial<import("./postproces
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
+  // ADR-196：构造不再收 params，覆盖走 envState seed（resetEnvState 已在 beforeEach 清空）
+  if (opts.params) {
+    const seed: Partial<EnvState> = {};
+    for (const [pk, evk] of Object.entries(PP_PARAMS_TO_ENV)) {
+      const v = opts.params[pk as keyof import("./postprocessing-capability.ts").PostprocessingParams];
+      if (v !== undefined) {
+        (seed as Record<string, unknown>)[evk] = v;
+      }
+    }
+    if (Object.keys(seed).length > 0) setEnvState(seed, { source: "manual" });
+  }
   return new PostprocessingCapability({
     scene,
     renderer,
     camera,
-    ...(opts.params !== undefined ? { params: opts.params } : {}),
     ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
   });
 }
@@ -393,7 +415,9 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.1);
-    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true, params: { exposure: 1.2 } });
+    // ADR-196：构造不再收 params，覆盖走 envState seed
+    setEnvState({ ppExposure: 1.2 }, { source: "manual" });
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
     cap.apply();
     expect(renderer.toneMappingExposure).toBeCloseTo(1.2, 4);
   });
@@ -557,14 +581,13 @@ describe("PostprocessingCapability — 总闸与 setPreset 构建次数", () => 
     );
   }
 
-  it("setMasterEnabled 只写生效开关，不抹 per-type 门禁 params.enabled（off→on 循环可恢复）", () => {
-    const cap = newCap({ enabled: false, params: { enabled: true } }); // 门禁开、总闸关（vrm 初始态）
+  // ADR-196：this.enabled 已是唯一真值源（无 params.enabled 双写），setMasterEnabled 直接切换
+  it("setMasterEnabled 切换生效开关并构建/销毁 composer", () => {
+    const cap = newCap({ enabled: false });
     cap.setMasterEnabled(true);
     expect(cap.isEnabled()).toBe(true);
-    expect(cap.getParams().enabled).toBe(true); // 门禁未被抹
     cap.setMasterEnabled(false);
     expect(cap.isEnabled()).toBe(false);
-    expect(cap.getParams().enabled).toBe(true); // 门禁保留 → 再开可恢复
     cap.setMasterEnabled(true);
     expect(cap.isEnabled()).toBe(true);
   });
@@ -605,11 +628,21 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    // ADR-196：构造不再收 params，覆盖走 envState seed
+    if (opts.params) {
+      const seed: Partial<EnvState> = {};
+      for (const [pk, evk] of Object.entries(PP_PARAMS_TO_ENV)) {
+        const v = opts.params[pk as keyof import("./postprocessing-capability.ts").PostprocessingParams];
+        if (v !== undefined) {
+          (seed as Record<string, unknown>)[evk] = v;
+        }
+      }
+      if (Object.keys(seed).length > 0) setEnvState(seed, { source: "manual" });
+    }
     const cap = new PostprocessingCapability({
       scene,
       renderer,
       camera,
-      ...(opts.params !== undefined ? { params: opts.params } : {}),
       ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
     });
     if (opts.reflectorCap !== undefined) cap.setReflectorCap(opts.reflectorCap);
@@ -827,10 +860,12 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     const renderer = makeFakeRenderer();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const reflector = new ReflectorCapability({ scene, renderer, enabled: true });
-    const cap = new PostprocessingCapability({
-      scene, renderer, camera,
-      params: { reflectionMode: opts.mode ?? "envmap+ssr", reflectorDisableWhenSSR: opts.disableWhenSSR ?? true },
-    });
+    // ADR-196：构造不再收 params，覆盖走 envState seed
+    setEnvState({
+      ppReflectionMode: opts.mode ?? "envmap+ssr",
+      ppReflectorDisableWhenSSR: opts.disableWhenSSR ?? true,
+    }, { source: "manual" });
+    const cap = new PostprocessingCapability({ scene, renderer, camera });
     return { cap, reflector, renderer };
   }
 

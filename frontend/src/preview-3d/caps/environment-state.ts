@@ -151,14 +151,6 @@ export interface EnvironmentParams {
   useAsBackground: boolean;
 }
 
-export const DEFAULT_ENV_PARAMS: EnvironmentParams = {
-  enabled: true,
-  preset: "sky",
-  intensity: 1.0,
-  resolution: 1024,
-  useAsBackground: false,
-};
-
 /** 模型类别环境默认 preset（YSM 方块=sky，VRM/MMD=studio 柔光更友好，体素=forest） */
 export const ENV_PRESET_BY_MODEL: Record<string, Partial<EnvironmentParams>> = {
   default: { preset: "sky", intensity: ENV_PRESETS.sky.defaultIntensity },

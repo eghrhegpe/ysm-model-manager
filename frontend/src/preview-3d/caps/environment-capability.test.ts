@@ -9,17 +9,21 @@
 //   其余 three 导出取 actual。真实 WebGL 上传路径不在单测范围。
 // - custom HDR 文件解码（RGBELoader.load → blob fetch）属 IO 集成路径，用 spy 标记
 //   loadCustomHdrFromFile 成败来驱动 onPickCustomHdr 的两个分支。
+// - ADR-196：参数量走全局 envState 单例。测试通过 setEnvState 预设环境参数，
+//   beforeEach 调 resetEnvState() 防止跨测试泄漏；afterEach 调 clearEnvCallbacks() 防止 cap 泄漏。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   EnvironmentCapability,
-  DEFAULT_ENV_PARAMS,
   ENV_PRESETS,
   ENV_PRESET_BY_MODEL,
   drawEnvEquirect,
   type EnvPreset,
   type EnvPresetId,
 } from "./environment-capability.ts";
+// ADR-196：统一状态层
+import { resetEnvState, setEnvState } from "../state/env-state.ts";
+import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
 vi.mock("three", async (importOriginal) => {
@@ -102,17 +106,12 @@ function makeFakeRenderer() {
   } as unknown as THREE.WebGLRenderer;
 }
 
-function newCap(opts: {
-  enabled?: boolean;
-  params?: Partial<import("./environment-capability.ts").EnvironmentParams>;
-} = {}) {
+function newCap(opts: { enabled?: boolean } = {}) {
   const scene = new THREE.Scene();
   const renderer = makeFakeRenderer();
-  // params/enabled 为构造参数可选键——仅真实存在时附带，避免显式 undefined 流入
   return new EnvironmentCapability({
     scene,
     renderer,
-    ...(opts.params !== undefined ? { params: opts.params as import("./environment-capability.ts").EnvironmentParams } : {}),
     ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
   });
 }
@@ -130,10 +129,12 @@ function makeFakeHdrTexture(w = 4, h = 2, luminance = 0.5): THREE.DataTexture {
 }
 
 beforeEach(() => {
+  resetEnvState(); // ADR-196：防止跨测试状态泄漏
   spyCanvas(); // 默认 mock canvas，所有 build 路径可用
 });
 afterEach(() => {
   unspyCanvas();
+  clearEnvCallbacks(); // ADR-196：防止 cap 泄漏跨测试
   vi.restoreAllMocks();
   delete (globalThis as Record<string, unknown>).__ysmRingLog;
 });
@@ -155,8 +156,9 @@ describe("EnvironmentCapability — 构造与默认值", () => {
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("params 覆盖生效", () => {
-    const cap = newCap({ params: { preset: "studio", intensity: 1.5, useAsBackground: true } });
+  it("envState 覆盖生效", () => {
+    setEnvState({ envPreset: "studio", envIntensity: 1.5, envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     expect(cap.getPresetId()).toBe("studio");
     expect(cap.getIntensity()).toBe(1.5);
     expect(cap.isUseAsBackground()).toBe(true);
@@ -192,7 +194,8 @@ describe("EnvironmentCapability — 预设切换", () => {
   });
 
   it("setPresetId('custom') 有缓存时切换并复用 HDR 纹理（不 dispose）", () => {
-    const cap = newCap({ params: { useAsBackground: true } });
+    setEnvState({ envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     const hdr = makeFakeHdrTexture();
     (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
     (cap as unknown as Record<string, unknown>).customHdrName = "my.hdr";
@@ -279,7 +282,8 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
   });
 
   it("程序化背景源在切换/禁用时被 dispose，custom HDR 缓存不被误 dispose", () => {
-    const cap = newCap({ params: { useAsBackground: true } });
+    setEnvState({ envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     cap.apply();
     const bgSrc = (cap as unknown as { backgroundSrcTex: THREE.Texture }).backgroundSrcTex;
     const disposeSpy = vi.spyOn(bgSrc, "dispose");
@@ -305,13 +309,13 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     (globalThis as Record<string, unknown>).__ysmRingLog = log;
     const cap = newCap();
     // 直接置 preset=custom（模拟内部状态），触发 buildEnvironment
-    (cap as unknown as { params: { preset: EnvPresetId } }).params.preset = "custom";
+    setEnvState({ envPreset: "custom" }, { source: "manual" });
     cap.apply();
     expect(log).toHaveBeenCalledWith("env", expect.stringContaining("HDR"), "warn");
     // 告警后回退 studio
     expect(cap.getPresetId()).toBe("studio");
     // 第二次不再告警（customHdrWarnedMissing 去重）
-    (cap as unknown as { params: { preset: EnvPresetId } }).params.preset = "custom";
+    setEnvState({ envPreset: "custom" }, { source: "manual" });
     cap.apply();
     expect(log).toHaveBeenCalledTimes(1);
   });
@@ -319,7 +323,7 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
   it("preset=custom 无缓存且无 __ysmRingLog 时走 console.warn", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const cap = newCap();
-    (cap as unknown as { params: { preset: EnvPresetId } }).params.preset = "custom";
+    setEnvState({ envPreset: "custom" }, { source: "manual" });
     cap.apply();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("custom"));
     warnSpy.mockRestore();
@@ -444,7 +448,8 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
   });
 
   it("onClearCustomHdr 非 custom 预设时保持当前预设", () => {
-    const cap = newCap({ params: { preset: "night" } });
+    setEnvState({ envPreset: "night" }, { source: "manual" });
+    const cap = newCap();
     const hdr = makeFakeHdrTexture();
     (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
     cap.onClearCustomHdr();
@@ -512,7 +517,8 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
   });
 
   it("getLuminanceHistogram 程序化背景分支：读 canvas 像素", () => {
-    const cap = newCap({ params: { useAsBackground: true } });
+    setEnvState({ envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     cap.apply(); // backgroundSrcTex = mock canvas（默认 ctx）
     const hist = cap.getLuminanceHistogram();
     // mock getImageData 返回 4 像素全 0（黑）→ bin 0
@@ -521,7 +527,8 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
   });
 
   it("getLuminanceHistogram canvas 读取抛错时静默返回全 0", () => {
-    const cap = newCap({ params: { useAsBackground: true } });
+    setEnvState({ envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     cap.apply();
     // 把 backgroundSrcTex 换成会抛错的 canvas
     const throwing = makeMockCanvas({ ctx: null });
@@ -576,7 +583,8 @@ describe("EnvironmentCapability — 强度控制", () => {
   it("syncMeshIntensity 对指定 roots 下发当前强度", () => {
     const std = new THREE.MeshStandardMaterial();
     const root = new THREE.Mesh(new THREE.BoxGeometry(), std);
-    const cap = newCap({ params: { intensity: 1.8 } });
+    setEnvState({ envIntensity: 1.8 }, { source: "manual" });
+    const cap = newCap();
     cap.syncMeshIntensity([root]);
     expect(std.envMapIntensity).toBe(1.8);
   });
@@ -610,7 +618,8 @@ describe("EnvironmentCapability — 持久化", () => {
   });
 
   it("saveState / loadState 完整周期", () => {
-    const cap = newCap({ params: { preset: "sunset", intensity: 1.4, useAsBackground: true } });
+    setEnvState({ envPreset: "sunset", envIntensity: 1.4, envUseAsBackground: true }, { source: "manual" });
+    const cap = newCap();
     cap.saveState();
     // 新 cap 从 localStorage 恢复
     const cap2 = newCap();
@@ -623,14 +632,15 @@ describe("EnvironmentCapability — 持久化", () => {
 
   it("saveState：custom 无缓存时落盘为 studio", () => {
     const cap = newCap();
-    (cap as unknown as { params: { preset: EnvPresetId } }).params.preset = "custom";
+    setEnvState({ envPreset: "custom" }, { source: "manual" });
     cap.saveState();
     const saved = JSON.parse(localStorage.getItem("ysm-scene-cap-environment") ?? "{}") as { preset: string };
     expect(saved.preset).toBe("studio");
   });
 
   it("loadState 空存储时保持默认值", () => {
-    const cap = newCap({ params: { preset: "night" } });
+    setEnvState({ envPreset: "night" }, { source: "manual" });
+    const cap = newCap();
     cap.loadState(); // 无存储 → 不覆盖
     expect(cap.getPresetId()).toBe("night");
   });
@@ -655,7 +665,8 @@ describe("EnvironmentCapability — 持久化", () => {
 
   it("loadState 非法 preset 字符串不覆盖当前值", () => {
     localStorage.setItem("ysm-scene-cap-environment", JSON.stringify({ preset: "bogus", intensity: "high", resolution: "big", useAsBackground: "yes" }));
-    const cap = newCap({ params: { preset: "night" } });
+    setEnvState({ envPreset: "night" }, { source: "manual" });
+    const cap = newCap();
     cap.loadState();
     expect(cap.getPresetId()).toBe("night");
     expect(cap.getIntensity()).toBe(1.0); // 默认值未被 "high" 覆盖
@@ -765,14 +776,6 @@ describe("EnvironmentCapability — 预设数据完整性", () => {
     for (const t of expectedTypes) {
       expect(ENV_PRESET_BY_MODEL[t]).toBeDefined();
     }
-  });
-
-  it("DEFAULT_ENV_PARAMS 默认值完整", () => {
-    expect(DEFAULT_ENV_PARAMS.enabled).toBe(true);
-    expect(DEFAULT_ENV_PARAMS.preset).toBe("sky");
-    expect(typeof DEFAULT_ENV_PARAMS.intensity).toBe("number");
-    expect(DEFAULT_ENV_PARAMS.resolution).toBeGreaterThan(0);
-    expect(DEFAULT_ENV_PARAMS.useAsBackground).toBe(false);
   });
 });
 

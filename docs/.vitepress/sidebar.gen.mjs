@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-204：废弃 check-circular-go 与收敛 type-consistency 为派生守卫",
+        "link": "/adr/ADR-204-check-circular-go-type-consistency"
+      },
+      {
         "text": "ADR-203：平台门控归位 backend——断 utils/dom→backend 依赖环",
         "link": "/adr/ADR-203-platform-gate-backend"
       },

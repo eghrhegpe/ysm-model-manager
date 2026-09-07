@@ -72,7 +72,7 @@ invariant_anchors:
 
 **前端域**（plan.frontend）：`check-layering`（R1/R2 零容忍 + R3/R4 基线）→ `check-path-hygiene`（ADR-146：反桶/深度/上跳/跨边界冻结/双写一致性）→ `check-menu-health`（ADR-085：菜单表 id/labelKey/i18n/dockGroup/kind/render·run 完备）→ `check-ctx-menu-i18n`（tr() key 必须存在于 zh-CN 基准包）→ npm 三件套并行（`vite build` ∥ `tsc --noEmit`）→ `vitest run --maxWorkers 8` 串行在后
 
-**数据域**（plan.data）：`type-consistency`（resource_types.json ↔ extensions.js 一致）
+**数据域**（plan.data）：`type-consistency`（resource_types.json 单一事实来源派生守卫：extensions.ts 必须派生自 JSON，禁手写 RESOURCE_EXTS 副本；ADR-204 收敛，JSON↔JS 字面量比对已不可达废弃）
 
 **文档域**（plan.docs）：`link-checker`（断链）→ `release-notes-gen --check`（git tag 单一事实源）→ `gen-docs-index --check`（docs/adr 变更时）
 

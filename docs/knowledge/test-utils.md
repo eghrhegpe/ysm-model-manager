@@ -97,7 +97,7 @@ invariant_anchors:
   - frontend/src/test-utils/events.ts|fireEvent
   - frontend/src/test-utils/query-by-testid.ts|queryByTestId
   - frontend/src/test-utils/render.ts|renderComponent
-  - frontend/src/test-utils/index.ts|mountCustomElement
+  - frontend/src/test-utils/render.ts|mountCustomElement
   - tests/test_testid_contract.ts|isKeyTestid
   - frontend/src/views/app-nav/index.test.ts|describe
   - frontend/src/views/app-sync-manager/index.test.ts|describe

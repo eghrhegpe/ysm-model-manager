@@ -31,7 +31,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/fsutil/crossdevice_other.go|IsCrossDeviceErr
-  - go/recycle/recycle.go|deleted_link
+  - go/recycle/recycle.go|moveEx
 quick_groups:
   - 文件操作与标签
 quick_intents:

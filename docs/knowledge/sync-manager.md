@@ -232,7 +232,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **busy 语义对称**：download/toggle 两个 handler 的 busy 命中都显式反馈，不静默吞事件
 - **`sync:download:missing` 载荷 rtype 必填**：缺参显式失败（P2 修复）
 - **`tree:reload` 仅在真正做过安装时广播**（handler P2）：配置缺失短路时无任何写操作
-- **`_lastEmittedPkg` 去重**：同组件 reload 不复位（防反复重发 `package:selected` → 反复重建 sync-manager 丢状态）
+- **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位（防反复重发 `package:selected` → 反复重建 sync-manager 丢状态），宿主持有状态
 - **`_syncInProgress/_loading` 卸载时复位**：否则重挂载后按钮点击被静默 return
 - **Storage**：一律用 `safeGet/safeSet/safeRemove`（ADR-044），防隐私模式 `localStorage` 禁用抛错
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`

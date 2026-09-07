@@ -68,7 +68,7 @@ quick_risk_lines:
   - 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API
 pitfalls:
   - events.ts 里直接调 PushSingleResource → 绕过排队，并发冲突；必须经 runPush/runPull
-  - _lastEmittedPkg 未更新 → 拖拽导入重复触发；每次导入必须刷新该锚点
+  - 去重状态机未复位 → 拖拽导入重复触发；宿主必须实现 SidebarHost 并复位 lastEmittedPkg
 use_when:
   - 侧边栏
   - 整合包列表
@@ -77,7 +77,7 @@ use_when:
   - 拉取
   - 同步状态卡片
 invariant_anchors:
-  - frontend/src/views/app-sidebar/events.ts|_lastEmittedPkg
+  - frontend/src/views/app-sidebar/events.ts|SidebarHost
 status: active
 ---
 
@@ -123,7 +123,7 @@ status: active
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_packDndCleanup`（document 级 DnD）/ `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
 - 模块级 `_checkedSets`（按 rtype 隔离的 Map，定义在 `sync-flow.ts`）跨重渲染持久化勾选状态；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
-- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重 `_lastEmittedPkg` 跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现复位移到 `resetSelectedEmit()`，由 `disconnectedCallback` 调用，仅新挂载会话重置）
+- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重由宿主注入的去重状态机（`SidebarHost`/`EmitDedupe`）跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现状态由宿主实例持有，同组件 reload 不复位，仅新挂载会话经宿主的 `resetSelectedEmit()` 重置，由 `disconnectedCallback` 调用）
 - **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 
 ## 相关

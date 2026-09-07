@@ -6,15 +6,26 @@ category: go
 source_files:
   - go/internal/testutil/testutil.go
   - go/internal/testutil/testutil_windows.go
+  - go/internal/testutil/assert.go
+  - go/internal/testutil/determinism.go
 auto_fields:
   symbols_with_lines:
     - BytesZip
+    - CleanAbsPath
     - CreateTestFile
+    - ErrorContains
+    - ErrorIs
+    - FileExists
+    - FileNotExists
     - InjectRootRegistry
     - LockDirExclusive
     - MakeZipBytes
+    - Nil
+    - NoError
+    - NotNil
     - WaitForCall
     - WaitForCallNoSleep
+    - WithFixedClock
     - WriteFile
     - WriteTestFile
     - WriteTestFileBytes

@@ -24,7 +24,7 @@ use_when:
   - version
   - ldflags
 invariant_anchors:
-  - go/version/version.go|ldflags
+  - go/version/version.go|Version
 status: active
 ---
 

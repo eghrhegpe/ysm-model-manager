@@ -51,7 +51,7 @@ invariant_anchors:
 | 共享核 | 消费方 | 消除的重复 |
 |--------|--------|-----------|
 | `diff-coverage-core.ts` | `check-diff-coverage.ts` / `check-go-diff-coverage.ts` | git 变更收集 + rename 处理 + 建议区块（~250 行） |
-| `cycles.ts` | `check-circular.ts` / `check-circular-go.ts` | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
+| `cycles.ts` | `check-circular.ts`（check-circular-go 已废弃 ADR-204，cycles.ts 现仅服务前端） | DFS 三色环检测 findCycles（~75 行，两处 37 行逐行相同） |
 
 演进方向与 `scan-files.ts` 注释「删除各脚本内联 walk/resolveImport 样板」一致：**语言无关的纯函数抽核，语言专属策略留在入口**。
 
@@ -70,7 +70,7 @@ invariant_anchors:
 ## 与其他子系统关系
 
 - 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.ts`（run）。
-- `check-circular-go.ts` 的目录遍历（`collectGo` 自定义 walk go/+internal/+根级不递归）不抽核——目录结构特殊，非共享样板。
+- `check-circular.ts` 的目录遍历（自定义 walk frontend/ ESM 图）不抽核——目录结构特殊，非共享样板（check-circular-go 已废弃 ADR-204，原 `collectGo` 逻辑随文件删除）。
 - `port-align.ts` / `line-counter.ts`（已归档 `scripts/_attic/`）仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
 
 ## 不变量

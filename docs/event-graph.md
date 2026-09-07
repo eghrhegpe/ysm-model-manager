@@ -58,24 +58,24 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 205 |
-
-**订阅方（on）：**
-| 函数 | 文件 | 行 |
-|------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 27 |
-
-### `batch:enable-all`
-
-**发射方：**
-| 函数 | 文件 | 行 |
-|------|------|----|
 | atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 204 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
+
+### `batch:enable-all`
+
+**发射方：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 203 |
+
+**订阅方（on）：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 25 |
 
 ### `batch:rename`
 
@@ -87,7 +87,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 49 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 48 |
 
 ### `community:clearCache`
 
@@ -127,7 +127,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 44 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 43 |
 
 ### `dir:mkdir`
 
@@ -139,7 +139,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 34 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 33 |
 
 ### `dir:recycle`
 
@@ -151,7 +151,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 39 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 38 |
 
 ### `dir:rename`
 
@@ -163,7 +163,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 29 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 28 |
 
 ### `instance:clear`
 
@@ -224,8 +224,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 275 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 356 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 274 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 355 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 160 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 246 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 450 |
@@ -233,7 +233,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 164 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 176 |
 
 ### `nav:changed`
 
@@ -246,7 +246,7 @@
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 41 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 202 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
-| atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 117 |
+| atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -337,9 +337,9 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 161 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 325 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 156 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 119 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 186 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 83 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 118 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 185 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 104 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 390 |
 
@@ -380,7 +380,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 348 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 347 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 102 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 498 |
 
@@ -493,10 +493,10 @@
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 290 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 370 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 299 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 323 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 289 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 369 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 311 |
+| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 335 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
@@ -524,19 +524,19 @@
 | show | `frontend/src/views/app-toast/index.ts` | 135 |
 | show | `frontend/src/views/app-toast/index.ts` | 154 |
 | show | `frontend/src/views/app-toast/index.ts` | 163 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 85 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
-| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 145 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 190 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 196 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 213 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 226 |
-| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 245 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 282 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 298 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 351 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 357 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 120 |
+| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 144 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 189 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 195 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 212 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 225 |
+| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 244 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 281 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 297 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 305 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 350 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 356 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 75 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 83 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 108 |
@@ -557,13 +557,13 @@
 | _deleteSelected | `frontend/src/views/app-tree/index.ts` | 509 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
-| atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 49 |
-| atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 60 |
-| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 162 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 302 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 320 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 326 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 337 |
+| atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 48 |
+| atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 59 |
+| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 301 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 319 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 325 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
 | advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 159 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 178 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 208 |
@@ -601,7 +601,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 54 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 53 |
 
 ### `tree:set-search`
 

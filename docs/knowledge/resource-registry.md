@@ -62,7 +62,7 @@ status: active
 ## 不变量
 
 - 新增资源类型必须在 `resource_types.json` 中添加，不可在 Go/Frontend 中手写新条目
-- 一致性测试（`type-consistency.py`）自动校验 JSON ↔ Go ↔ JS 一致性
+- 派生守卫（`type-consistency.ts`，ADR-204 收敛）：守护 extensions.ts 必须派生自 resource_types.json（禁手写 RESOURCE_EXTS 副本）；JSON↔JS 字面量比对已不可达废弃，dup id 等结构性校验移交 Go `resource_types_consistency_test.go`
 - **MMD 子类型 `instanceDir` 防回归（2026-08-23）**：游戏实际在整合包生成 6 个 `3d-skin/` 子目录——`SceneModel` / `EntityPlayer` / `CustomMorph` / `CustomAnim` / `DefaultMorph` / `DefaultAnim`，这些类型的 `instanceDir` **必须**精确为 `3d-skin/<子名>`（含子级），漏写一级（只写 `3d-skin`）会导致右键「打开文件夹」打开到错误父目录差一级。`StageAnim` / `mmd-shader` 游戏未实际生成独立子目录，`instanceDir` 保持 `3d-skin` 父目录兜底（打开到父级仍可定位，不报错）。`OpenInstanceFolder` → `resolveInstDirTarget` 只用 `rtype.instanceDir` 拼路径、`subdir` 参数已不参与路由（app_scan.go OpenInstanceFolder），所以「兜底」完全依赖 `instanceDir` 数据正确——**纯数据层契约，无代码猜测**。回归测试 `TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix` 锁定这 6 个类型的子目录。
 
 ## 相关

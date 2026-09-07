@@ -104,9 +104,10 @@ a.queue = NewDownloadQueue(
 
 ## 与其他子系统关系
 
-- **`check-circular-go.mjs`（治理脚本）**：只扫**包级（import）循环**，明确**不覆盖对象级循环**。
-  本仓包级环由 `go build` 天然拒绝；对象级环经本范式已清零，故该盲区当前无实际债。
-  ⚠️ 若未来有人把 `*App` 反向指针加回子组件，该脚本**不会报警**——须靠本卡 + code review 守住。
+- **`check-circular-go`（治理脚本，已废弃 ADR-204）**：原只扫**包级（import）循环**，明确**不覆盖对象级循环**；
+  因与 `go build ./go/...` 完全冗余（编译器编译期即拒包级环），文件已删除。本仓包级环由 `go build` 天然拒绝；
+  对象级环经本范式已清零，故该盲区当前无实际债。
+  ⚠️ 若未来有人把 `*App` 反向指针加回子组件，须靠本卡 + code review 守住（原脚本本就不报警，现亦无脚本）。
 - **ADR-002 / ADR-002 P1**：决策与落地记录（DownloadQueue↔App 环已破、解锁独立测试）。
 - **Wails 绑定生成**：`App` 方法经 `window.go` 暴露给前端；子组件经 App 方法间接可达，不直连。
 
@@ -139,5 +140,5 @@ a.queue = NewDownloadQueue(
 - `docs/adr/ADR-002-project-health-assessment.md`（P1：DownloadQueue↔App 环打破）
 - `docs/adr/ADR-134-container-type-cache-component.md`（将 `containerTypeCache` 包级全局收进组件的最小重构决策，已落地）
 - `internal/app/app_container_cache.go` + `app_container_cache_test.go`（ADR-134 落地：组件 + 注入式单测）
-- `scripts/check-circular-go.ts`（包级环检测，不含对象级——盲区由本卡覆盖）
+- `scripts/check-circular-go.ts`（已废弃 ADR-204：包级环由 `go build` 守，对象级盲区由本卡覆盖）
 - `internal/app/app_download_test.go`（注入后独立测试样板）

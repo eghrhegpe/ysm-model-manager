@@ -24,7 +24,6 @@ auto_fields:
     - SetErrorSink
 use_when:
   - 扫描
-  - 扫描条目
   - 文件树
   - 哈希
   - 缓存

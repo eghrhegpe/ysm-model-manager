@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **201** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **202** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 4 |
-| [✅ 已采纳](#已采纳) | 187 |
+| [✅ 已采纳](#已采纳) | 188 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -34,10 +34,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（187）
+### ✅ 已采纳（188）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-204](./ADR-204-check-circular-go-type-consistency.md) | 废弃 check-circular-go 与收敛 type-consistency 为派生守卫 | ✅ 已采纳 |
 | [ADR-202](./ADR-202-go-registry-go.md) | Go 测试执行结构收敛：registry 并发安全 + 锁协议注入 + 包内并行解锁（测试税减负 Go 版） | ✅ 已采纳 |
 | [ADR-201](./ADR-201-test-naming-convention.md) | 测试文件命名规范 | ✅ 已采纳 |
 | [ADR-200](./ADR-200-cli-structured-output.md) | CLI 输出契约结构化：命令返回结果对象，--json 载荷去文本化 | ✅ 已采纳 |
@@ -250,6 +251,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-204 | 废弃 check-circular-go 与收敛 type-consistency 为派生守卫 | ✅ 已采纳 | 2026-09-08 |
 | ADR-203 | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 | 2026-09-07 |
 | ADR-202 | Go 测试执行结构收敛：registry 并发安全 + 锁协议注入 + 包内并行解锁（测试税减负 Go 版） | ✅ 已采纳 | 2026-09-07 |
 | ADR-201 | 测试文件命名规范 | ✅ 已采纳 | 2026-09-07 |

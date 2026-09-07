@@ -9,6 +9,7 @@ source_files:
   - go/geometry/parse.go
   - go/geometry/archive.go
   - go/geometry/ysm_parser.go
+  - go/geometry/maid_l0.go
 auto_fields:
   symbols_with_lines:
     - ExtractFirstPNGFrom7z

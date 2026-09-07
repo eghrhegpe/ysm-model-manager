@@ -259,6 +259,16 @@ export class SkyCapability implements SceneCapability {
         this.updateGodRays();
         this.updateSunsetTint();
       }
+      if (changed.has("skyElevation")) {
+        this.elevation = state.skyElevation;
+      }
+      if (changed.has("skyAzimuth")) {
+        this.azimuth = state.skyAzimuth;
+      }
+      // code_review 57aeefdb4 #1/#2/#4/#7（P2）：字段同步必须在 writeUniforms/烘焙
+      // 之前——writeUniforms 与 regenerateEnvironment 读 this.elevation/azimuth 实例
+      // 字段，原顺序（先写后同步）使 setSun 派发的 uniform/IBL 全用旧太阳位置
+      // （松手停在倒数第二值，测试断言 length≈1 无法捕获方向错）
       if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
         if (this.enabled) {
           this.writeUniforms(this.sky);
@@ -268,18 +278,18 @@ export class SkyCapability implements SceneCapability {
           }
         }
       }
-      if (changed.has("skyElevation")) {
-        this.elevation = state.skyElevation;
-      }
-      if (changed.has("skyAzimuth")) {
-        this.azimuth = state.skyAzimuth;
-      }
       if (changed.has("skyCloudCoverage")) {
         if (this.enabled) {
           this.sky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
           this.envSky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
-          // regenerate=true（setCloudCoverage 第二参）→ 云量影响环境烘焙，重刷 IBL
-          if (state.skyForceEnv && state.skyEnvironment) this.regenerateEnvironment();
+          // regenerate=true（setCloudCoverage 第二参）→ 云量影响环境烘焙，重刷 IBL。
+          // code_review 57aeefdb4 #5/#6/#8/#10（P2）：用本次派发的 changed 集判定
+          // 而非读粘滞的 state.skyForceEnv——skyForceEnv 默认 true 且手动
+          // setTime/setSun/setPreset 均置 true 从不复位（autoRotate 关时），读粘滞值
+          // 会让默认 regenerate=false 的云量滑块每 tick 全量 PMREM 烘焙（GPU 熔炉）
+          if (changed.has("skyForceEnv") && state.skyEnvironment) {
+            this.regenerateEnvironment();
+          }
         }
       }
       if (changed.has("skyTurbidity")) {
@@ -467,6 +477,11 @@ export class SkyCapability implements SceneCapability {
     // （预设切换是离散动作，散射参数变化应刷新环境烘焙——callback 各分支不互知，
     //  单一 changed 集内多键无法各自触发 rebuild，故此处保留一次显式 regenerate）。
     setEnvState({ ...mapped, skyForceEnv: true }, { source: "auto-model" });
+    // code_review 57aeefdb4 #3（P2）：烘焙前刷新 envSky uniforms——regenerateEnvironment
+    // 从 this.envScene 烘焙 IBL，而 callback 散射 key 分支（skyTurbidity 等）只写
+    // this.sky 不写 this.envSky——不刷 envSky 则 IBL 用旧预设散射参数烘焙，
+    // 切模型类型后模型反射/环境光与主天空不一致（整场会话残留）
+    if (this.enabled) this.writeUniforms(this.envSky);
     if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 

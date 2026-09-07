@@ -218,6 +218,22 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     expect(renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
   });
 
+  it("分派契约：param-only（bias）in-place 不触发 apply 重建；structural（mapSize）才重建", () => {
+    // code_review c979305a9 #4（P3）：structural（mapSize/type）触发 apply 重建
+    // （renderer.shadowMap.needsUpdate），param-only（bias/cameraSize）in-place 改灯
+    // （仅灯级 shadow.needsUpdate）不得走 apply——若误触发 apply，会把快照/结构值
+    // 全量重写（disable→enable 循环泄漏用户调整）
+    const { renderer, lights, cap } = setup();
+    cap.setEnabled(true); // apply：置 renderer.shadowMap.needsUpdate=true
+    renderer.shadowMap.needsUpdate = false; // 清标志（区分后续是否走 apply）
+    cap.setBias(0.1); // param-only dispatch：in-place 改灯
+    expect(lights.dir.shadow.bias).toBe(0.1); // in-place 生效
+    expect(renderer.shadowMap.needsUpdate).toBe(false); // 未触发 apply 重建
+    cap.setMapSize(2048); // structural dispatch：apply 重建
+    expect(renderer.shadowMap.needsUpdate).toBe(true);
+    expect(lights.dir.shadow.mapSize.x).toBe(2048);
+  });
+
   it("不可见 spot 只快照不应用参数（visible=false 跳过）", () => {
     const { lights, cap } = setup({ spot: true });
     lights.spot!.visible = false;

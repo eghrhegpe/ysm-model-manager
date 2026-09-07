@@ -83,16 +83,41 @@ export class ShadowCapability implements SceneCapability {
         this.apply();
         return;
       }
+      // code_review c979305a9 #2/#3/#5（P3）：param 键守卫——collectLights 分配数组
+      // 并遍历灯（dirs/spots 两数组 + 两 Set），对无关 envState 派发（雾/天空/地面
+      // 每次 slider 都触发本回调）无条件执行是热路径纯浪费（旧实现字段短路零工作）
+      if (
+        !changed.has("shadowBias") &&
+        !changed.has("shadowNormalBias") &&
+        !changed.has("shadowCameraSize")
+      ) {
+        return;
+      }
       const { dirs, spots } = this.collectLights();
       if (changed.has("shadowBias")) {
         const v = envState.shadowBias;
-        for (const l of dirs) l.shadow.bias = v;
-        for (const sp of spots) sp.shadow.bias = v;
+        for (const l of dirs) {
+          l.shadow.bias = v;
+          // code_review c979305a9 #1（P2）：in-place 改 bias 后须置脏——预渲染的
+          // shadow map 不标记 needsUpdate 则拖 bias 滑杆可见阴影不更新（cameraSize
+          // 分支与 applyDirLightShadow/applySpotShadow 均置，唯独此循环漏）
+          l.shadow.needsUpdate = true;
+        }
+        for (const sp of spots) {
+          sp.shadow.bias = v;
+          sp.shadow.needsUpdate = true;
+        }
       }
       if (changed.has("shadowNormalBias")) {
         const v = envState.shadowNormalBias;
-        for (const l of dirs) l.shadow.normalBias = v;
-        for (const sp of spots) sp.shadow.normalBias = v;
+        for (const l of dirs) {
+          l.shadow.normalBias = v;
+          l.shadow.needsUpdate = true;
+        }
+        for (const sp of spots) {
+          sp.shadow.normalBias = v;
+          sp.shadow.needsUpdate = true;
+        }
       }
       if (changed.has("shadowCameraSize")) {
         const s = envState.shadowCameraSize;

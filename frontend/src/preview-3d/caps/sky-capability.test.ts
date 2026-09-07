@@ -152,6 +152,23 @@ describe("SkyCapability — 云量控制", () => {
     cap.setCloudCoverage(-0.5);
     expect(cap.getCloudCoverage()).toBe(0);
   });
+
+  it("setCloudCoverage(regenerate=false) 不触发 PMREM 重建（changed 集判定回归锚）", () => {
+    // code_review 57aeefdb4 #5/#6/#8/#10（P2）回归锁：callback 云量分支曾读粘滞的
+    // skyForceEnv（默认 true + 手动 setSun 置 true 从不复位）→ regenerate=false 的
+    // 云量滑块拖动每 tick 全量 PMREM 烘焙（GPU 熔炉）；改 changed.has("skyForceEnv")
+    // 判定后仅 regenerate=true 的派发携带该键才重建
+    const cap = newCap();
+    const spy = vi
+      .spyOn(cap as unknown as { regenerateEnvironment: () => void }, "regenerateEnvironment")
+      .mockImplementation(() => {});
+    cap.setSun(30, 200); // 置 skyForceEnv=true（粘滞场景：旧实现此处会污染后续云量判定）
+    spy.mockClear();
+    cap.setCloudCoverage(0.5); // 默认 regenerate=false
+    expect(spy).not.toHaveBeenCalled();
+    cap.setCloudCoverage(0.7, true); // regenerate=true → 恰好一次重建
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("SkyCapability — 环境 IBL 开关", () => {
@@ -809,8 +826,14 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(p.elevation).toBe(30);
     expect(p.azimuth).toBe(200);
     const sunU = (cap as unknown as { sky: Sky }).sky.material.uniforms["sunPosition"].value as THREE.Vector3;
-    // 仰角 30 方位 200 → sunPosition 非默认值
+    // code_review 57aeefdb4 #9（P3）：方向断言——callback 字段同步曾滞后一拍（先
+    // writeUniforms 后同步 this.elevation），uniform 恒用旧太阳位置；换算
+    // phi=degToRad(90-elevation)=60°、theta=degToRad(200) →
+    // y=cos(phi)=0.5、x=sin(phi)sin(theta)<0（方位 200° 偏西）。length≈1 的单位向量
+    // 断言捕获不到「方向陈旧」回归，此处 pin 分量。
     expect(sunU.length()).toBeCloseTo(1, 5);
+    expect(sunU.y).toBeCloseTo(Math.cos(THREE.MathUtils.degToRad(60)), 5); // elevation 30 → 0.5
+    expect(sunU.x).toBeLessThan(0); // azimuth 200 → 西侧（x<0）
     expect(scene.environment).not.toBeNull(); // regenerate 已跑
   });
 

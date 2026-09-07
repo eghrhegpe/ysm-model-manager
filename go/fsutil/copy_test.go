@@ -402,3 +402,130 @@ func TestRelJoin(t *testing.T) {
 		}
 	}
 }
+
+// TestRecoverAtomicRename_Recovery 验证 AtomicRename 崩溃窗口的自愈：
+// 模拟 Rename(dst, backup) 成功、Rename(tmpDir, dst) 之前的崩溃状态，
+// RecoverAtomicRename 应能检测到 backup 并恢复。
+func TestRecoverAtomicRename_Recovery(t *testing.T) {
+	dir := t.TempDir()
+
+	// 模拟崩溃状态：dst 缺失，backup 残留
+	backup := filepath.Join(dir, "mydir.bak-1234567890")
+	if err := os.MkdirAll(filepath.Join(backup, "sub"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(backup, "a.txt"), []byte("recovered"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 确认 dst 不存在
+	dst := filepath.Join(dir, "mydir")
+	if _, err := os.Stat(dst); err == nil {
+		t.Fatal("测试前提：dst 不应存在")
+	}
+
+	// 执行恢复
+	recovered, err := RecoverAtomicRename(dir)
+	if err != nil {
+		t.Fatalf("RecoverAtomicRename 失败: %v", err)
+	}
+	if recovered != 1 {
+		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
+	}
+
+	// 验证恢复结果
+	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
+	if err != nil || string(data) != "recovered" {
+		t.Fatalf("恢复后内容不符: %q %v", string(data), err)
+	}
+	// backup 应被删除
+	if _, err := os.Stat(backup); err == nil {
+		t.Fatal("恢复后 backup 应被删除")
+	}
+}
+
+// TestRecoverAtomicRename_AlreadyRecovered 验证原始目录已存在时跳过
+func TestRecoverAtomicRename_AlreadyRecovered(t *testing.T) {
+	dir := t.TempDir()
+
+	// 原始目录已存在
+	dst := filepath.Join(dir, "mydir")
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// backup 也存在（残留）
+	backup := filepath.Join(dir, "mydir.bak-1234567890")
+	if err := os.MkdirAll(backup, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	recovered, err := RecoverAtomicRename(dir)
+	if err != nil {
+		t.Fatalf("RecoverAtomicRename 失败: %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("原始目录已存在时应跳过，实际恢复 %d", recovered)
+	}
+	// backup 应保留（未被错误恢复）
+	if _, err := os.Stat(backup); err != nil {
+		t.Fatal("原始目录已存在时 backup 应保留")
+	}
+}
+
+// TestRecoverAtomicRename_MultipleBackups 验证多个 backup 时取最新
+func TestRecoverAtomicRename_MultipleBackups(t *testing.T) {
+	dir := t.TempDir()
+
+	// 两个 backup，时间戳不同
+	backup1 := filepath.Join(dir, "mydir.bak-100")
+	backup2 := filepath.Join(dir, "mydir.bak-200")
+	if err := os.MkdirAll(backup1, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(backup2, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(backup1, "old.txt"), []byte("old"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(backup2, "new.txt"), []byte("new"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	recovered, err := RecoverAtomicRename(dir)
+	if err != nil {
+		t.Fatalf("RecoverAtomicRename 失败: %v", err)
+	}
+	if recovered != 1 {
+		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
+	}
+
+	// 应恢复最新的 backup2
+	data, err := os.ReadFile(filepath.Join(dir, "mydir", "new.txt"))
+	if err != nil || string(data) != "new" {
+		t.Fatalf("应恢复最新 backup，实际内容: %q %v", string(data), err)
+	}
+}
+
+// TestRecoverAtomicRename_EmptyDir 验证空目录不报错
+func TestRecoverAtomicRename_EmptyDir(t *testing.T) {
+	dir := t.TempDir()
+	recovered, err := RecoverAtomicRename(dir)
+	if err != nil {
+		t.Fatalf("空目录不应报错: %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("空目录应恢复 0，实际 %d", recovered)
+	}
+}
+
+// TestRecoverAtomicRename_NonExistentDir 验证目录不存在时返回 0
+func TestRecoverAtomicRename_NonExistentDir(t *testing.T) {
+	recovered, err := RecoverAtomicRename(filepath.Join(t.TempDir(), "nope"))
+	if err != nil {
+		t.Fatalf("目录不存在不应报错: %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("目录不存在应恢复 0，实际 %d", recovered)
+	}
+}

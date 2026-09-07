@@ -267,3 +267,69 @@ func relJoin(dst, src, p string) (string, error) {
 	}
 	return filepath.Join(dst, rel), nil
 }
+
+// RecoverAtomicRename 扫描目录下的 .bak-* 备份目录，将未完成的 AtomicRename 恢复。
+// 用于启动时自愈：若上次 CopyDirRecursive 的 AtomicRename 分支在
+// Rename(dst, backup) 成功、Rename(tmpDir, dst) 之前崩溃，dst 缺失而 backup 残留。
+// 本函数将 backup rename 回 dst 完成恢复。多个 backup 时取字典序最大（最新）。
+// 返回恢复的 backup 数量。
+func RecoverAtomicRename(dir string) (int, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	// 收集所有 .bak-* 条目，按原始目录名分组
+	type backupInfo struct {
+		path string
+		ts   string // 时间戳后缀，用于排序
+	}
+	backups := make(map[string][]backupInfo) // 原始目录名 → []backupInfo
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		const prefix = ".bak-"
+		// 查找 .bak- 后缀
+		if idx := strings.LastIndex(name, prefix); idx >= 0 {
+			origName := name[:idx]
+			ts := name[idx+len(prefix):]
+			if origName == "" || ts == "" {
+				continue
+			}
+			backups[origName] = append(backups[origName], backupInfo{
+				path: filepath.Join(dir, name),
+				ts:   ts,
+			})
+		}
+	}
+
+	recovered := 0
+	for origName, list := range backups {
+		origPath := filepath.Join(dir, origName)
+		// 如果原始目录已存在，说明已恢复或正常，跳过
+		if _, err := os.Lstat(origPath); err == nil {
+			continue
+		}
+		// 取最新的 backup（字典序最大）
+		latest := list[0]
+		for _, b := range list[1:] {
+			if b.ts > latest.ts {
+				latest = b
+			}
+		}
+		// 恢复
+		if err := os.Rename(latest.path, origPath); err != nil {
+			log.Printf("[fsutil] 恢复 AtomicRename 备份失败 %s → %s: %v", latest.path, origPath, err)
+			continue
+		}
+		recovered++
+		log.Printf("[fsutil] 已恢复 AtomicRename 备份: %s → %s", latest.path, origPath)
+	}
+	return recovered, nil
+}

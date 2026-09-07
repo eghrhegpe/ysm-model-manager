@@ -157,6 +157,7 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	var totalSize int64
 	var largestFile string
 	var largestSize int64
+	var textureFiles int // 可缓存的纹理文件数（命中率分母）
 	resources := map[string]int{}
 	// 注册表加载提升到 walk 外——per-file TypeByLocation 不再
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
@@ -194,6 +195,11 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		size := info.Size()
 		result.Resources.TotalFiles++
 		totalSize += size
+
+		// 统计可缓存的纹理文件数（命中率分母）
+		if registry.IsTextureExt(ext) {
+			textureFiles++
+		}
 
 		// 禁用文件统计：单一口径 registry.IsDisableSuffix（.disabled/.ban，大小写不敏感）
 		if registry.IsDisableSuffix(d.Name()) {
@@ -248,23 +254,22 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		result.Completeness.Percentage = 100.0
 	}
 
-	// 缓存状态 + 命中率估算（以模型文件数为基准）
+	// 缓存状态 + 命中率估算（以可缓存纹理文件数为基准）
 	stats := texture_cache.GetCacheStats()
 	result.Cache.CacheDir = stats.Dir
 	result.Cache.CacheFiles = stats.FileCount
 	result.Cache.CacheSize = stats.TotalSize
 	result.Cache.ShouldWarn = stats.ShouldWarn
 
-	// 缓存命中率：缓存文件数 / 仓库总文件数（口径稳定，不依赖类型分类）
-	totalFiles := result.Resources.TotalFiles
-	if totalFiles > 0 {
-		hitRate := float64(stats.FileCount) / float64(totalFiles) * 100
+	// 缓存命中率：缓存文件数 / 可缓存纹理文件数（分母为纹理文件总数，非全部文件）
+	if textureFiles > 0 {
+		hitRate := float64(stats.FileCount) / float64(textureFiles) * 100
 		if hitRate > 100 {
 			hitRate = 100
 		}
 		result.Cache.HitRate = hitRate
 		result.Cache.Hits = stats.FileCount
-		result.Cache.Misses = totalFiles - stats.FileCount
+		result.Cache.Misses = int(textureFiles) - stats.FileCount
 		if result.Cache.Misses < 0 {
 			result.Cache.Misses = 0
 		}

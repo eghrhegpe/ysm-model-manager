@@ -75,7 +75,7 @@ type vec3 struct{ x, y, z float64 }
 func Build(model types.BedrockModel) (string, error) {
 	mg, err := buildModelGroup(model, "main", 0)
 	if err != nil {
-		return "{}", err
+		return "", err
 	}
 	if mg.Bones == nil && mg.MeshGroups == nil {
 		return "{}", nil // 无骨骼 → 空 spec
@@ -83,7 +83,7 @@ func Build(model types.BedrockModel) (string, error) {
 	spec := Model3DSpec{Models: []ModelGroup{mg}}
 	data, err := json.Marshal(spec)
 	if err != nil {
-		return "{}", fmt.Errorf("threejs.Build marshal spec: %w", err)
+		return "", fmt.Errorf("threejs.Build marshal spec: %w", err)
 	}
 	return string(data), nil
 }
@@ -106,7 +106,7 @@ func BuildMulti(models []types.BedrockModel, texIdxBase []int) (string, error) {
 		}
 		mg, err := buildModelGroup(m, fmt.Sprintf("comp_%d", i), base)
 		if err != nil {
-			return "{}", err
+			return "", err
 		}
 		groups = append(groups, mg)
 	}
@@ -116,7 +116,7 @@ func BuildMulti(models []types.BedrockModel, texIdxBase []int) (string, error) {
 	spec := Model3DSpec{Models: groups}
 	data, err := json.Marshal(spec)
 	if err != nil {
-		return "{}", fmt.Errorf("threejs.BuildMulti marshal spec: %w", err)
+		return "", fmt.Errorf("threejs.BuildMulti marshal spec: %w", err)
 	}
 	return string(data), nil
 }

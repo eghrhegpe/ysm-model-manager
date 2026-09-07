@@ -273,6 +273,27 @@ func TestCheckDstSymlinkSegments_OutsideSymlink(t *testing.T) {
 	}
 }
 
+// TestCheckDstSymlinkSegments_MaxDepth 验证超过 256 层时返回错误而非无限循环
+func TestCheckDstSymlinkSegments_MaxDepth(t *testing.T) {
+	mcRoot := t.TempDir()
+	mc := filepath.Join(mcRoot, ".minecraft")
+	if err := os.MkdirAll(mc, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// 构造一个超过 256 层的路径（不实际创建目录）
+	deepPath := mc
+	for i := 0; i < 300; i++ {
+		deepPath = filepath.Join(deepPath, "deep")
+	}
+
+	err := checkDstSymlinkSegments(deepPath)
+	var ae types.AppError
+	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
+		t.Fatalf("超过 256 层应返回 INVALID_PATH, got %v", err)
+	}
+}
+
 // ====== Install（src 在仓库子目录 → 相对路径保持）======
 
 func TestInstall_SubdirRelPath(t *testing.T) {

@@ -206,22 +206,16 @@ func findYsmEntryInZip(r zipEntriesReader) container.Entry {
 }
 
 // extractYsmRootFromZip 从 ZIP 内的 ysm.json 条目读取并解析为 ysmRoot。
-// 保留手写 LimitReader+1（未接入 fsutil.ReadLimitedEntry）：调用方需区分「读取失败」
-// 与「超限」两种错误消息，fsutil 版对两者统一返回 nil（ADR-044 策略 A 例外说明）。
+// 走 fsutil.ReadLimitedEntry（ADR-044 策略 A 统一口径）：limit+1 探测截断，超限/读错返回 nil。
 func extractYsmRootFromZip(f container.Entry) (*ysmRoot, error) {
 	rc, err := f.Open()
 	if err != nil {
 		return nil, fmt.Errorf("读取 ysm.json 失败: %w", err)
 	}
-	defer rc.Close()
-
-	const maxYsmJSON = registry.MaxReadLimit
-	data, err := io.ReadAll(io.LimitReader(rc, maxYsmJSON+1))
-	if err != nil {
-		return nil, fmt.Errorf("读取 ysm.json 失败: %w", err)
-	}
-	if len(data) > maxYsmJSON {
-		return nil, fmt.Errorf("ysm.json 超过 %dMB 上限，已拒绝解析", maxYsmJSON>>20)
+	// ReadLimitedEntry 内部 Close rc，无需 defer
+	data := fsutil.ReadLimitedEntry(rc, registry.MaxReadLimit)
+	if data == nil {
+		return nil, fmt.Errorf("ysm.json 超过 %dMB 上限或读取失败", registry.MaxReadLimit>>20)
 	}
 
 	var root ysmRoot

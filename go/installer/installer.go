@@ -370,9 +370,12 @@ func sameDir(srcDir, dstDir string) bool {
 // 会跟随它在真实位置创建目录并写入穿透（字符串守卫 ContainsMinecraftMarker 不追踪
 // symlink，会被绕过）。与 src 侧条目级拦截同口径：命中 symlink 时 EvalSymlinks
 // 解析真实路径后重新校验。
+//
+// 防无限循环：最大迭代深度 256 层（防异常文件系统下 Dir 行为不一致导致循环不终止）。
 func checkDstSymlinkSegments(finalDst string) error {
 	p := cleanAbs(finalDst)
-	for {
+	const maxDepth = 256
+	for i := 0; i < maxDepth; i++ {
 		if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 			if resolved, err := filepath.EvalSymlinks(p); err == nil && !paths.ContainsMinecraftMarker(resolved) {
 				return types.AppError{Code: types.ErrInvalidPath, Operation: "安装目录", SourcePath: p, Reason: "目标父链符号链接指向 .minecraft 外", Suggestion: "请移除指向外部目录的符号链接"}
@@ -384,6 +387,7 @@ func checkDstSymlinkSegments(finalDst string) error {
 		}
 		p = parent
 	}
+	return types.AppError{Code: types.ErrInvalidPath, Operation: "安装目录", SourcePath: finalDst, Reason: "目标路径父链过深（超过 256 层）或存在循环", Suggestion: "请简化目录结构"}
 }
 
 // isAllowedEntryName 纯函数：判断目录条目文件名是否允许落地（原 installDirRecursive 内 isAllowed 闭包升格）。

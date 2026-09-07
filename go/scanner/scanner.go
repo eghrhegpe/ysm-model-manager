@@ -237,6 +237,11 @@ func OnCacheInvalidated(fn func()) {
 	cacheInvalidatorsMu.Unlock()
 }
 
+// notifyCacheInvalidated 在锁外调用所有已注册的失效回调。
+// 实现要点：先在 cacheInvalidatorsMu 保护下复制回调切片，释放锁后再遍历调用。
+//
+// ⚠️ 回调内禁止调用 OnCacheInvalidated（注册新回调），否则会重入 cacheInvalidatorsMu 的
+// Lock 造成 self-dead锁（sync.Mutex 不可重入）。回调仅应做「清理派生缓存」等幂等操作。
 func notifyCacheInvalidated() {
 	cacheInvalidatorsMu.Lock()
 	fns := append([]func(){}, cacheInvalidators...)

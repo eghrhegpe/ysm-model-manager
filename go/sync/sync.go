@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -258,12 +259,13 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		return 0, 0, fmt.Errorf("仓库中未找到模型文件")
 	}
 
-	// 阶段 1：收集待 Rename 的文件（不修改目录结构）
-	type renameOp struct {
-		src string
-		dst string
+	// 阶段 1：收集实例目录中的文件路径（不计算哈希）
+	type fileInfo struct {
+		path              string
+		isCurrentlyBanned bool
+		actualPath        string
 	}
-	var ops []renameOp
+	var fileInfos []fileInfo
 	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 	filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -274,8 +276,6 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			return nil
 		}
 		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
-		// 原整路径子串 Contains 会误跳过文件名含 ".recycle" 的正常模型
-		//（如 my.recycle.backup.ysm 不参与启禁同步）
 		if hasRecycleSegment(p) {
 			return nil
 		}
@@ -288,16 +288,53 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		if !registry.IsSupportedExt(ext) {
 			return nil
 		}
+		fileInfos = append(fileInfos, fileInfo{
+			path:              p,
+			isCurrentlyBanned: isCurrentlyBanned,
+			actualPath:        actualPath,
+		})
+		return nil
+	})
 
+	// 阶段 2：释放锁，预计算 relKey miss 文件的哈希
+	// 锁外哈希评估 TOCTOU 风险：文件在锁外被外部进程修改/替换的概率极低（用户主动操作除外），
+	// 且哈希仅作 relKey miss 时的改名/移动文件的内容关联兜底，改名场景下文件名已变、
+	// 内容匹配是近似判定。若文件被修改导致哈希变化，纯文件名 fallback 仍会兜底匹配。
+	installer.InstallLocker.Unlock()
+
+	// 收集 relKey miss 的文件路径
+	relKeyMissPaths := make([]string, 0, len(fileInfos))
+	for _, fi := range fileInfos {
+		pLower := strings.ToLower(fi.path)
+		var matched bool
+		if strings.HasPrefix(pLower, customDirClean) {
+			rel := strings.TrimPrefix(pLower, customDirClean)
+			rel = registry.StripDisableSuffix(rel)
+			_, matched = repoName[rel]
+		}
+		if !matched {
+			relKeyMissPaths = append(relKeyMissPaths, fi.path)
+		}
+	}
+
+	// 预计算哈希（锁外）
+	precomputedHashes := make(map[string]string, len(relKeyMissPaths))
+	for _, p := range relKeyMissPaths {
+		precomputedHashes[p] = computeHash(p)
+	}
+
+	// 重新持锁，执行匹配 + rename
+	installer.InstallLocker.Lock()
+
+	// 阶段 3：匹配并收集待 Rename 的文件
+	type renameOp struct {
+		src string
+		dst string
+	}
+	var ops []renameOp
+	for _, fi := range fileInfos {
+		p := fi.path
 		// 匹配顺序：relKey（路径对应）→ 哈希（内容对应）→ 纯文件名兜底。
-		// 原实现每个实例文件先全量 SHA256——>500MB 的 computeHash 可达秒级，
-		// 大整合包 × 800ms 防抖触发下持 InstallLock 逐文件哈希会饿死安装操作。绝大多数
-		// 实例文件与仓库目录树同构，relKey 命中即免哈希；哈希仅作 relKey miss（实例文件
-		// 被改名/移动，relKey 与仓库脱钩）时的内容关联兜底——改名场景原语义完整保留。
-		// 哈希计算持锁是有意设计（P3-1 确认）：SyncToggleStatus 修改文件系统
-		// （rename 加/去 .disabled 后缀），必须持锁防止与安装并发。把哈希移到锁外
-		// 会引入 TOCTOU（哈希算完后文件被改）。>500MB 文件 computeHash 返回空，
-		// 自动跳过哈希走纯文件名兜底。
 		var shouldBeBanned bool
 		var matched bool
 		pLower := strings.ToLower(p)
@@ -308,51 +345,45 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			shouldBeBanned, matched = repoName[rel]
 		}
 		if !matched {
-			hash := computeHash(p)
+			hash := precomputedHashes[p]
 			if hash != "" {
 				shouldBeBanned, matched = repoHash[hash]
 			}
 		}
 		if !matched {
 			// fallback：纯文件名（旧仓库或同名不同路径的特例）
-			baseName := strings.ToLower(filepath.Base(actualPath))
+			baseName := strings.ToLower(filepath.Base(fi.actualPath))
 			shouldBeBanned, matched = repoName[baseName]
 		}
 		if !matched {
-			return nil
+			continue
 		}
 
-		if shouldBeBanned && !isCurrentlyBanned {
+		if shouldBeBanned && !fi.isCurrentlyBanned {
 			// 禁用统一收敛到 DisableSuffixes[0]（.disabled，新标准）。
-			// 历史 .ban 文件 toggle 启用→再禁用时也会变成 .disabled——
-			// 这是有意收敛，非 bug。
 			newPath := p + registry.DisableSuffixes[0]
 			if _, err := os.Stat(newPath); err == nil {
-				return nil // 目标已存在，跳过
+				continue // 目标已存在，跳过
 			}
 			ops = append(ops, renameOp{src: p, dst: newPath})
-		} else if !shouldBeBanned && isCurrentlyBanned {
+		} else if !shouldBeBanned && fi.isCurrentlyBanned {
 			newPath := registry.StripDisableSuffix(p)
-			// 启用分支补目标存在性检查——与禁用分支「存在即跳过」
-			// 对称；原 os.Rename 会静默覆盖既有同名文件（内容不同则数据丢失，仅 Windows
-			// 目标被占用时失败）；目标已存在且非禁用后缀时跳过本次改名
+			// 启用分支补目标存在性检查
 			if _, err := os.Stat(newPath); err == nil {
-				return nil
+				continue
 			}
 			ops = append(ops, renameOp{src: p, dst: newPath})
 		}
-		return nil
-	})
+	}
 
-	// 阶段 2：统一执行 Rename（目录结构已稳定，无竞态）
+	// 阶段 4：统一执行 Rename（目录结构已稳定，无竞态）
 	disableCount := 0
 	enableCount := 0
 	var failures []string
 	for _, op := range ops {
 		err := os.Rename(op.src, op.dst)
 		if err != nil && isFileLocked(err) {
-			// Windows 共享锁瞬时争用（播放器/编辑器短暂持有）：等待后重试一次，
-			// 避免瞬时占用永久跳过启禁；重试仍锁才静默跳过
+			// Windows 共享锁瞬时争用：等待后重试一次
 			time.Sleep(50 * time.Millisecond)
 			err = os.Rename(op.src, op.dst)
 		}
@@ -481,6 +512,12 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 
 	// 冲突检测（如果配置了冲突策略）
 	if config != nil && config.ConflictPolicy != "" {
+		// 锁契约断言（仅测试构建）：config.ConflictPolicy 非空时，
+		// 调用方必须已持有 installer.InstallLock，否则 ResolveConflictsLocked 会
+		// self-deadlock（sync.Mutex 不可重入）。
+		// 生产路径经 PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行，
+		// 此断言用于捕获直接调用 SyncResourcesWithConfig 但未持锁的违规场景。
+		assertInstallLockHeld()
 		report, err := DetectConflicts(instanceDir, globalDir, rtypeID)
 		if err != nil {
 			log.Printf("[sync] 冲突检测失败: %v", err)
@@ -504,6 +541,21 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 	}
 
 	return result
+}
+
+// assertInstallLockHeld 断言调用方已持有 installer.InstallLock。
+// 使用 TryLock 实现：若 TryLock 成功说明锁未被持有 → 调用方违规 → panic；
+// 若 TryLock 失败说明锁已被持有（调用方或他人）→ 放行。
+// 注意：TryLock 无法区分「本 goroutine 持有」与「其他 goroutine 持有」，
+// 但在 SyncResourcesWithConfig 的调用约定下（调用方必须持锁），此断言足够捕获违规。
+func assertInstallLockHeld() {
+	// InstallLocker 是 sync.Locker 接口，需类型断言到 *sync.Mutex 才能使用 TryLock
+	if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
+		if mu.TryLock() {
+			mu.Unlock()
+			panic("SyncResourcesWithConfig: config.ConflictPolicy 非空时调用方必须已持有 installer.InstallLock")
+		}
+	}
 }
 
 // SortEntries 按名称排序模型条目

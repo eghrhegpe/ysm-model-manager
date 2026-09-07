@@ -5,7 +5,7 @@
 - **日期**：2026-09-07
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/dom/android-bridge.ts,capabilities.ts,directory-picker.ts;frontend/src/backend/platform.ts,platform-web.ts`
-- **前置**：[ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md)（core 准入准则，含「core 不依赖 utils/features/views/backend」红线），[ADR-123](./ADR-123-platform-gating-triage.md)（platform-web 三态能力矩阵收口）
+- **前置**：[ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md)（core 准入准则，含「core 不依赖 utils/features/views/backend」红线），[ADR-123](./ADR-123-cross-environment-downgrade-strategy.md)（platform-web 三态能力矩阵收口）
 
 ---
 

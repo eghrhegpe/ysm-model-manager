@@ -11,7 +11,6 @@ auto_fields:
     - ANDROID_UNAVAILABLE
     - canBinding
     - Events
-    - isViewerPlatform
     - isWebPlatform
     - PlatformMode
     - resolvePlatformMode

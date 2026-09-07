@@ -92,8 +92,14 @@ describe("applyModelDefaults / applyPostProcDefaults（ADR-196 装配链收敛�
     applyModelDefaults("vrm", deps as never);
     for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
     for (const spy of spies) expect(spy).toHaveBeenCalledWith("vrm");
-    // 调用顺序：sky 最早、environment 最晚
-    expect(spies[0].mock.invocationCallOrder[0]).toBeLessThan(spies[5].mock.invocationCallOrder[0]);
+    // 调用顺序：sky→light→fog→shadow→reflector→environment 逐字复刻原 7 处散落
+    // setPreset 顺序——code_review 13b8b4e5f #4：全序断言（原只比首尾，中间序互换
+    // 全过）。invocationCallOrder 是全局计数（非本次调用从 1 起，实测前置测试已
+    // 消耗计数），故断言相对严格递增而非硬编码 [1..6]
+    const order = spies.map((s) => s.mock.invocationCallOrder[0]);
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i]).toBeGreaterThan(order[i - 1]);
+    }
   });
 
   it("未知 modelType 透传到各 cap（内部回落 default 的文案保留在 cap 侧，装配层不吞）", async () => {

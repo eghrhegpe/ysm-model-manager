@@ -205,7 +205,7 @@ describe("EnvironmentCapability — 预设切换", () => {
     expect(cap.getCustomHdrName()).toBe("my.hdr");
   });
 
-  it("setPreset 按模型类别套用（ENV_PRESET_BY_MODEL）", () => {
+  it("applyModelPreset 按模型类别套用（ENV_PRESET_BY_MODEL）", () => {
     const cap = newCap();
     cap.applyModelPreset("vrm");
     // vrm → studio
@@ -216,7 +216,7 @@ describe("EnvironmentCapability — 预设切换", () => {
     expect(cap.getPresetId()).toBe("forest");
   });
 
-  it("setPreset 未知模型类型回退 default（sky）", () => {
+  it("applyModelPreset 未知模型类型回退 default（sky）", () => {
     const cap = newCap();
     cap.applyModelPreset("unknown_type");
     // unknown → MODEL_DEFAULTS.default → envPreset: "sky"

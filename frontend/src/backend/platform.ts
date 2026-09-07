@@ -60,7 +60,10 @@ export function resolveWebMode(): boolean {
  * 查看器模式判定（ADR-049 Phase 3）：
  * Android（双端桥存在）或网页版（browser adapter）——均无本地文件系统写能力、
  * 无桌面专属 UI。各按钮/功能守卫统一用本函数，禁止各自拼 getAndroidBridge()/resolveWebMode()。
- * 委托 platform-web.isViewerPlatform()——信号拼装不再在此重复。
+ * code_review 6efe049e9 #2/#3/#5/#6：本实现即唯一事实源（platform.ts 为叶子，
+ * 不能反向 import platform-web）——platform-web 原 isViewerPlatform 副本已删，
+ * parity 契约②由 platform-parity.test.ts 与本文件对拍守护（语义 =
+ * platform-web 原 resolvePlatformMode() !== "desktop"）。
  */
 export function isViewerPlatform(): boolean {
   // 内联实现（避免环：platform.ts ← platform-web.ts → platform.ts）

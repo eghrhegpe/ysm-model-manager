@@ -262,7 +262,7 @@ vi.mock("../../preview-3d/caps/sky-capability.ts", () => ({
   SkyCapability: class {
     apply = vi.fn();
     dispose = vi.fn();
-    setPreset = vi.fn();
+    applyModelPreset = vi.fn(); // code_review 13b8b4e5f #1/#2：setPreset 已改名 applyModelPreset
     getTimeOfDay = vi.fn(() => 12);
     setTime = vi.fn();
     setCloudCoverage = vi.fn();
@@ -295,7 +295,7 @@ vi.mock("../../preview-3d/caps/light-capability.ts", () => ({
   LightCapability: class {
     apply = vi.fn();
     dispose = vi.fn();
-    setPreset = vi.fn();
+    applyModelPreset = vi.fn(); // code_review 13b8b4e5f #1/#2：setPreset 已改名 applyModelPreset
     setTarget = vi.fn();
     setTargetHeight = vi.fn();
     getVolumetricEngine = vi.fn(() => "none");

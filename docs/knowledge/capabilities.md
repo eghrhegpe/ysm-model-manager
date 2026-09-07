@@ -12,7 +12,6 @@ auto_fields:
     - can
     - canBinding
     - canWebAction
-    - isViewerPlatform
     - isWebPlatform
     - PlatformMode
     - resolvePlatformMode

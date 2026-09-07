@@ -24,15 +24,15 @@ import { registerEnvCallback } from "../state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "../state/env-state.ts";
 import type { EnvState } from "../state/env-state-schema.ts";
+import { MODEL_DEFAULTS } from "../state/model-defaults.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes } from "./light-controls.ts";
-import {
-  type DeepPartial,
-  type DirectionalLightParams,
-  LIGHT_PRESETS,
-  type LightParams,
-  type SpotlightParams,
-  type VolumetricParams,
+import type {
+  DeepPartial,
+  DirectionalLightParams,
+  LightParams,
+  SpotlightParams,
+  VolumetricParams,
 } from "./light-presets.ts";
 import {
   persistState,
@@ -513,14 +513,49 @@ export class LightCapability implements SceneCapability {
     if (opts?.manual) {
       this.manualPreset = modelType;
     } else if (this.manualPreset) {
-      return; // [doc:adr-126-p5] 自动套模型预设被手动选择压制（切模型/重建预览不覆盖用户偏好）
+      return; // [doc:adr-126-p5] 自动套模型预设被手动选择压制
     }
-    const preset = LIGHT_PRESETS[modelType] ?? LIGHT_PRESETS.default;
+    const preset =
+      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
-    // 预设总是以 manual 源写入（与旧实现"预设总是覆盖 params"一致；
-    // 手动优先的守卫在上方 return，不在 source 层级）。
-    // callback 处理 Three 应用 + 锥组 rebuild + 挂载态。
-    setEnvState(flattenLightParams(preset), { source: "manual" });
+    // ADR-196：统一数据源 MODEL_DEFAULTS；读所有 light 相关键写入 envState。
+    const partial: Partial<EnvState> = {};
+    const src = preset as Record<string, unknown>;
+    for (const key of [
+      "lightKeyEnabled",
+      "lightKeyColor",
+      "lightKeyIntensity",
+      "lightKeyAzimuth",
+      "lightKeyElevation",
+      "lightFillEnabled",
+      "lightFillColor",
+      "lightFillIntensity",
+      "lightFillAzimuth",
+      "lightFillElevation",
+      "lightRimEnabled",
+      "lightRimColor",
+      "lightRimIntensity",
+      "lightRimAzimuth",
+      "lightRimElevation",
+      "lightAmbientColor",
+      "lightAmbientIntensity",
+      "lightSpotEnabled",
+      "lightSpotColor",
+      "lightSpotIntensity",
+      "lightSpotAngle",
+      "lightSpotPenumbra",
+      "lightSpotDistance",
+      "lightSpotDecay",
+      "lightVolumetricEnabled",
+      "lightVolumetricOpacity",
+      "lightVolumetricFogPower",
+      "lightVolumetricEdgeFade",
+      "lightVolumetricBaseStrength",
+      "lightVolumetricTipStrength",
+    ] as const) {
+      if (src[key] !== undefined) (partial as Record<string, unknown>)[key] = src[key];
+    }
+    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "manual" });
   }
 
   /**

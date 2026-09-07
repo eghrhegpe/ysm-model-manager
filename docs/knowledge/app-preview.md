@@ -249,14 +249,14 @@ status: active
 - `model:select` 回调进入即 `_previewGuard.invalidate()`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (this._previewGuard.stale(gen)) return`（含 catch 分支），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览。代际守卫统一为 `gen-guard.ts` 的 `GenGuard` 类。
 - `showLitematic` 有独立模块级代际 `litematicGen`
 - `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `_unsubs` 挂销毁清理
-- 2D 拖拽的 window 监听先移除上一轮再绑定——用 `AbortController`（`skeleton.ts` 模块级 `_prevAbort`：`_prevAbort?.abort()` → `new AbortController()` → 监听带 `signal`，`ctx.unsubs` 注册 abort 清理），替代旧的手动 `_prevWindowMove`/`_prevWindowUp` 产消模式，无竞态
+- 2D 拖拽的 window 监听先移除上一轮再绑定——用 `AbortController`（**`ctx.dragAbortCtrl` 挂组件实例**，原模块级 `_prevAbort` 已迁移至实例——多实例互不串扰，P3 修复）：`ctx.dragAbortCtrl?.abort()` → `new AbortController()` → 监听带 `signal`，`ctx.unsubs` 注册 abort 清理，替代旧的手动 `_prevWindowMove`/`_prevWindowUp` 产消模式，无竞态
 - **`loadModel2D` 挂载守卫（P1 修复 2026-09）**：rAF 自动弹 3D（`_prefer3D` 路径）回调内必须先查 `ctx.root.isConnected`——rAF 不随 `disconnectedCallback` 取消，组件销毁后仍会 `btn3d.click()` → `createYsm3D` 把全屏 overlay 挂到已卸载 DOM
 - 预览缓存淘汰时必须 `URL.revokeObjectURL` 释放 blob URL
 - mount-preview-core 拆分为 `mount3D`（shell 装配 + infra 创建 + 输入绑定 + rAF 管线）+ `cleanupPreview` / `switchPreview` / `_resetSingletons`
 - Three.js 现为静态依赖（`litematic-3d.ts` / `model3d-loader.ts` / `screenshot-render.ts` / `model3d.ts` 均静态 `import * as THREE`）
 - 坐标变换遵循 ysmview 口径（改 model2d/model3d 前先 grep bug-chronicle）
 - **纹理口径对称**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
-- **3D overlay 单例钩子**（`skeleton.ts` 模块级 `_active3DClose`）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `_active3DClose`（`keepPrefer=true` 保留 `_prefer3D`）
+- **3D overlay 单例钩子**（`ctx.active3DClose` 挂组件实例，原模块级 `_active3DClose` 已迁移至实例——P1 修复，多实例互不串扰）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `ctx.active3DClose`（`keepPrefer=true` 保留 `_prefer3D`）
 - **3D 内模型切换**：`PreviewHandle.switchTo(path)` 复用 renderer/rAF/controls/灯光重建内容层；`mount3D` 可选 `Mount3DOptions.siblings`（同类型候选 ≥2 时 topBar 渲染切换下拉）
 - **YSM 骨骼动画（ADR-100）**：动画数据优先取 `model._animClips`（loader 统一挂载），无内嵌时兜底扫同目录 `*.animation.json` → `createYsmAnimPlayer` 驱动骨骼
 - **`openModel3DFullscreen` 自洽兜底（P2 修复 2026-09）**：入口 `getApp()` 若后端不可用会 reject——函数内 try-catch + toast（`preview.backendUnavailable`）后 return，不依赖所有调用方各自 catch（app-nav FAB 有兜底，但 litematic-3d 裸调用无）

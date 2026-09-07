@@ -12,7 +12,7 @@ source_files:
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/detail-3d.ts
   - frontend/src/views/app-preview/view-shell.ts
-  - frontend/src/views/app-preview/mmd-siblings.ts
+  - frontend/src/views/app-preview/siblings.ts
   - frontend/src/preview-3d/adapters/camera-controls.ts
   - frontend/src/preview-3d/adapters/schema-registry.ts
 auto_fields:
@@ -32,6 +32,12 @@ auto_fields:
     - registerSchema
     - registerYsmModelSchema
     - resetSchemas
+    - resolveFbxSiblings
+    - resolveMmdSiblings
+    - resolveMorphSiblings
+    - resolveSceneSiblings
+    - resolveSiblingsByType
+    - resolveStageSiblings
     - SchemaBuilder
     - showFbxPreview
     - showMmdPreview
@@ -94,7 +100,7 @@ status: active
 - **受控 schema 注册**：`registerYsmModelSchema` 注册 `buildYsmModelSchema` 到 per-scene 键 `ysm-model-{sessionId}`
 - **截图能力桥接**：向截图面板提供 `screenshotFn`（MMD/YSM 六角度，VRM 仅 current）
 - **材质 bridge**：`MaterialControlBridge` / `VrmMaterialControlBridge` 显隐/透明度，逻辑下沉到 `mmd-materials.ts` / `vrm-materials.ts`（[ADR-180] 骨架收编 `materials-shared.ts`——list/setVisible/setOpacity/detail 骨架共享，格式差异参数化）
-- **模型切换**：zip 内多 pmx/pmd 候选 `multiModelSelectNode`，跨类型走 `switchExternal`
+- **模型切换**：zip 内多 pmx/pmd 候选 `multiModelSelectNode`，跨类型走 `switchExternal`；siblings 三壳（mmd/fbx/stage）已合并为 `siblings.ts` 单文件（`resolveSiblingsByType` 统一入口 + 各格式 `resolve*` 薄封装）
 
 ## 三控制器对比
 

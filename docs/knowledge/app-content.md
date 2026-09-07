@@ -22,6 +22,7 @@ source_files:
   - frontend/src/views/app-content/init-github.ts
   - frontend/src/views/app-content/page-registry.ts
   - frontend/src/views/app-content/state.ts
+  - frontend/src/views/app-content/host.ts
   - frontend/src/views/app-content/subscription-bucket.ts
   - frontend/src/views/app-content/community-data.ts
   - frontend/src/views/app-content/workshop-avatar.ts
@@ -31,6 +32,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - aboutHTML
+    - AppContentHost
     - AppContentState
     - appContentStyle
     - bindSiteEvents

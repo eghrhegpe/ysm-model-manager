@@ -5,7 +5,7 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/app-modules.ts
-  - frontend/src/utils/module-loader.ts
+  - frontend/src/theme-core.ts
   - frontend/src/startup-reveal.ts
 auto_fields:
   symbols_with_lines:
@@ -41,7 +41,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/utils/module-loader.ts|loadView
+  - frontend/src/app-modules.ts|loadView
   - frontend/src/app-modules.ts|registerCoiServiceWorker
 status: active
 ---
@@ -56,10 +56,12 @@ status: active
 
 - `app-modules.ts` —
   - loader 直连：`loadInstances`（app-sidebar/loader）与 `loadEntries`（app-tree/loader）由各自 `loader.ts` 导出、组件直接 import（原 `services/registry.ts` 服务注册表已删，见 `frontend/AGENTS.md` §目录结构）
+  - `loadView(name, importer)` — 懒加载 Web Component 统一入口（**原 `utils/module-loader.ts` 单消费者已并入本文件**，`export` 保持测试可读）：收敛 5 处 `import(...).catch` 模板，失败 `console.warn` + `toast:show` 反馈
   - 静态导入轻量组件：`context-menu.ts` / `app-toast.ts`（失败直接报错，不 try/catch 以免静默吞错）
   - 动态导入重组件：`app-nav` / `app-tree` / `app-sidebar` / `app-content` / `app-sync-manager`（字面量路径确保 Vite 构建解析，`.catch` 输出 `console.warn` 告警不阻塞）——其中 `app-nav` 通过启动 IIFE（`await initI18n()` 后 `await import`）延迟加载，避免首帧渲染时 i18n bundle 尚未就绪导致 `[i18n]` 缺失 key 警告；`app-resource-manager` 已于 2026-08-24 删除
   - 右键菜单注册：`registerContextMenus()` 由 `app-content` 的 `connectedCallback` 直调（ADR-188 去壳后无 `core/handlers/global.ts` 汇编层；app-modules.ts 不直接调用）
   - 主题：`applyTheme`（cyber/warm/pro/sakura/ocean/mint/system 白名单，system 跟随 `prefers-color-scheme`）挂 `window.applyTheme`；`initTheme` 从 Go `LoadAppConfig` 或 localStorage 读主题，**归一化后回写合法值**（白名单外回落 system，防脏值污染持久层）；`applyUIPrefs`（定义在 `views/app-content/settings/ui-prefs.ts`，本文件启动 IIFE 内 import 调用）应用字号（`--fs-scale`）/字体/密度/动画开关（`.no-animations`）
+  - **文件级别名注册（ADR-146）**：`@/bus`→`./src/bus.ts`、`@/theme-core`→`./src/theme-core.ts` 在 `tsconfig.json` paths 白名单登记（`check-path-hygiene` R0 白名单 + 构建解析共同拦截），src 根文件用别名而非相对路径，`normalizeTheme`/`applyTheme`/`initTheme` 在 `theme-core.ts`（纯逻辑无顶层副作用），本文件 re-export 保持启动链稳定
   - 启动 IIFE：`initTheme()` → `applyUIPrefs()` → `checkUpdateSilent()` 静默检查更新（**静态导入** `features/maintenance/version-updater.ts`，非动态 import）
 - **窗口显示**：经 `startup-reveal.ts` 的 `revealMainWindow(show)` 控制——等待 DOM 升级 + 两帧 rAF 完成后调 `show()`；rAF 节流兜底 1.5s 超时强制显示（防止隐藏窗口下 Chromium/WebView2 节流导致窗口永久不可见）
   - 杂项：capture 阶段拦截旧版 document 拖拽处理器（`#ws-page` / `#dl-drop` / `.ws-page` 区域）；dev 模式（`?dev=1` 或 localStorage `_devtools`）启用 F12/Ctrl+Shift+I 打开 DevTools（`Window.OpenDevTools`）
@@ -81,6 +83,7 @@ status: active
 ## 不变量
 
 - 新组件一律在此登记 import；轻量组件静态导入（失败显式报错），重组件动态导入（失败 `console.warn` 告警不阻塞启动）
+- `loadView` 内联于本文件（原 `utils/module-loader.ts` 已并入）：字面量路径确保 Vite 构建解析，`.catch` 统一 toast 反馈
 - 右键菜单只注册一次（由 `app-content` 的 `connectedCallback` 直调 `registerContextMenus`），重复注册会造成菜单 handler 翻倍（ADR-008）
 - 不引入 `window.__*` 全局变量（治理红线 §3.1）；唯一例外是显式声明类型的 `window.applyTheme`
 - 主题白名单外的值一律回落 `system`；动画全局开关经 `document.documentElement` 的 `.no-animations` 类控制，组件动画必须响应该类

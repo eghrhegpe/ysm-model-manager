@@ -10,6 +10,7 @@ source_files:
   - frontend/src/views/app-sidebar/loader.ts
   - frontend/src/views/app-sidebar/render.ts
   - frontend/src/views/app-sidebar/events.ts
+  - frontend/src/views/app-sidebar/sync-flow.ts
   - frontend/src/views/app-sidebar/sidebar-css.ts
   - frontend/src/views/app-sidebar/launcher-detect.ts
 auto_fields:
@@ -17,6 +18,8 @@ auto_fields:
     - appSidebarStyle
     - bindCardEvents
     - bindFooter
+    - bindSelectAll
+    - bindSyncSelected
     - footerHTML
     - groupMmdVariants
     - headerHTML
@@ -26,6 +29,7 @@ auto_fields:
     - MmdVariantGroups
     - renderVersionCards
     - resetSelectedEmit
+    - restoreCheckboxes
     - runLauncherDetect
     - runMcSearch
     - sidebarCSS
@@ -93,6 +97,7 @@ status: active
 - `events.ts` — `bindCardEvents`（事件委托在 `#sidebar-instance-list`，点击派发 `package:selected`、右键派发 `ctx:show` type=instance；localStorage `sb_selectedName_<rtype>` 恢复选中；点击 handler 顶部先拦截空态两按钮再进卡片逻辑）+ `bindFooter`（MC 路径按钮、完全同步计数动画）
 - `launcher-detect.ts` — 空态就地配 mcRoot 两入口（**自 settings/launcher-detection.ts 搬家，2026-08-29**；settings 版按钮 + MutationObserver 注入已删，`app-modules.ts` 不再注册）：`runMcSearch`（`GetMinecraftPaths` 扫常见安装位，多结果 `modalSelect` 选择）与 `runLauncherDetect`（`pickDirectory` 选启动器目录 → `DetectLauncherInstances` 解析 HMCL/PCL/Minecraft 多实例 → 弹层选实例 → `SaveAppConfig` 写 mcRoot，勾选「用作 YSM 根目录」时 `SetResourceRoot("ysm", customDir)`，失败回滚 mcRoot）；成功后派发 `stats:refresh`（sidebar 防抖重载实例列表）。模块级 `_busy` 守卫两类入口并发（都在改 mcRoot）。实例选择弹层原为自建 overlay 骨架，已在 2026-08-29 审核修复中收敛为 `modalPicker`（复用统一弹窗脚手架：单例/焦点陷阱/Esc/退场动画），流程文案走 `launcher.*` i18n keys（见知识卡 `dialog_modal`）
 - **整合包卡片拖拽导入**（2026-08-29，见知识卡 `import_queue` 的 `pack-dnd.ts` 节）：`index.ts` `connectedCallback` 调 `features/dnd/pack-dnd.ts` 的 `bindPackCardDnD(root, () => this._instances)`（document 层监听 + cleanup 存 `_packDndCleanup`），拖文件到实例卡片 = 先入仓库再推送进该实例；`.dnd-over` 高亮样式在 `sidebar-css.ts`
+- `sync-flow.ts` — 同步流程层（2026-09-08 从 `index.ts` 拆出，P1-3）：`runPush`/`runPull`（整包级 push/pull 执行链）、`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes`（勾选状态管理 + 全选/同步所选）；模块级 `_checkedSets`（按 rtype 隔离的 Map）跨重渲染持久化；`SYNC_TIMEOUT_MS`（30s 推送等待/兜底超时）；`index.ts` 仅保留 Web Component 生命周期与渲染编排
 - `sidebar-css.ts` — Shadow DOM 样式表（adoptedStyleSheets）。其中 `fadeSlideLeft` 本地化 keyframe 受「app-content 本地化 keyframe 契约」约束：须与 `content-layout.ts` / `components.css` 副本**参数值一致**（`translateX(-8px)` 的 translate 数值，不要求字节级格式一致），由机检 1c 硬校验，改任一处须同步（2026-08-24 复盘第 1/2 条）
 
 ## 对外 API / 入口
@@ -115,7 +120,7 @@ status: active
 
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_packDndCleanup`（document 级 DnD）/ `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
-- 模块级 `_checkedSets`（按 rtype 隔离的 Map）跨重渲染持久化勾选状态；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
+- 模块级 `_checkedSets`（按 rtype 隔离的 Map，定义在 `sync-flow.ts`）跨重渲染持久化勾选状态；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
 - 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重 `_lastEmittedPkg` 跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现复位移到 `resetSelectedEmit()`，由 `disconnectedCallback` 调用，仅新挂载会话重置）
 - **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 

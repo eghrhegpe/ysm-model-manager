@@ -37,7 +37,7 @@ pitfalls:
   - "isModelFileValid 拒绝空对象/数组——畸形 JSON 标记无效不报错"
   - "Classify(ext) 经 extClassifierCache（atomic.Value + 注册表实例指针失效范式，与 go/types 的 extCache 对齐），cache hit 零锁；实例变即重建 map（963d4d36 从 sync.Once 替换，永久缓存空 map 的旧缺陷消失）"
   - "HealthReportFor 包含去重扫描——大仓库可能耗时数秒"
-  - "缓存命中率计算基数是模型文件数而非总文件数"
+  - "缓存命中率计算基数是可缓存纹理文件数（`registry.IsTextureExt` 过滤后计数），非全部文件数"
   - "Audit 返回的 Result 不含去重结果——去重必须走 HealthReportFor"
 quick_intents:
   - "仓库健康审计（Audit）"

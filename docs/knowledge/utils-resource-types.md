@@ -91,7 +91,7 @@ status: active
 
 `resource-types.ts`（同步常量，知识卡旧文「resource-types.ts」文件名漂移，实际为 `types.ts`）：
 - `RESOURCE_TYPES: Record<string, string>` — 15 个 ID 常量（与 `resource_types.json` 对齐）：YSM/MMD/SCENE/CUSTOM_ANIM/CUSTOM_MORPH/STAGE/MMD_SHADER/DEFAULT_ANIM/DEFAULT_MORPH/PACK/SHADER/BLUEPRINT/LITEMATIC/MAID/FBX → "ysm"/"EntityPlayer"/"SceneModel"/... 完整列表见 `types.ts` 源码
-- `RESOURCE_TYPE_LABELS: Record<string, string>` — ID → 中文标签（YSM 模型/角色模型/场景模型/自定义动画/... 共 15 项；**与 JSON `name` 是不同文案**——LABELS 为缩写「角色模型」，JSON name 为「MMD 角色模型」，同一类型 UI 不同处显示不同）
+- `RESOURCE_TYPE_LABELS: Record<string, string>` — ID → 中文标签（YSM 模型/角色模型/场景模型/自定义动画/... 共 15 项）；**派生自 `resource_types.json` 的 `name` 字段**（`allResourceTypes.filter(t => t.name).map(t => [t.id, t.name])`），单一事实源，新增类型只需改 JSON，无需手动维护双表
 - `ALL_RESOURCE_TYPES: string[]` — 全部 ID 列表
 - **能力元数据派生层（ADR-066 P0 + ADR-067 S4，由 `resource_types.json` 派生，单一事实来源；T2 起 JSON 解析收口到 `schema.ts` 的 `allResourceTypes`，`types.ts`/`extensions.ts` 同源共享）**：
   - `extOf(path)` — 路径→小写扩展名（含点）

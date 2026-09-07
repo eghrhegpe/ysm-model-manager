@@ -15,6 +15,7 @@ source_files:
   - frontend/src/views/app-sidebar/loader.ts
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/render.ts
+  - frontend/src/views/app-sidebar/sync-flow.ts
   - frontend/src/features/sync.ts
 auto_fields:
   symbols_with_lines:
@@ -26,6 +27,8 @@ auto_fields:
     - bindCardEvents
     - bindDelegatedEvents
     - bindFooter
+    - bindSelectAll
+    - bindSyncSelected
     - containerHTML
     - emptyHintHTML
     - EventSelf
@@ -43,6 +46,7 @@ auto_fields:
     - render
     - renderVersionCards
     - resetSelectedEmit
+    - restoreCheckboxes
     - setLastSelectedType
     - STATUS_COLOR
     - STATUS_ICON
@@ -95,8 +99,8 @@ use_when:
   - PullSingleResource
   - sync:download:missing
 invariant_anchors:
-  - frontend/src/views/app-sidebar/index.ts|runPush
-  - frontend/src/views/app-sidebar/index.ts|runPull
+  - frontend/src/views/app-sidebar/sync-flow.ts|runPush
+  - frontend/src/views/app-sidebar/sync-flow.ts|runPull
   - frontend/src/views/app-sync-manager/network.ts|performSingleOp
   - frontend/src/views/app-sync-manager/store.ts|applyFilter
   - frontend/src/views/app-sync-manager/index.ts|_gen
@@ -128,6 +132,7 @@ status: active
 - **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
+- **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
 ### `features/sync.ts`（bus 调度）
 - **`sync:download:missing`**：`downloadFlag.busy` 守卫 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 遍历 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）
@@ -218,7 +223,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 
 - **依赖 DAG 无循环**（index.ts 顶部注释）：`index → store/renderer/events/network/state`；leaf 模块互不反向依赖；共享状态下沉至 `state.ts` 打破 `index↔events` 循环
 - **组件实例单注册**：`customElements.get("app-sync-manager")` 守卫；`registerSync` 顶层调一次
-- **`_singleBusy` 连点守卫**（network.ts）：单行 push/pull 串行，按钮视觉 disabled+opacity=0.55+cursor=wait，finally 复位
+- **`_singleBusy` 按 path 粒度防重入**（network.ts，P2 修复）：`Set<string>` 而非全局布尔——不同行可并发 push/pull，同一行防重入；busy 视觉由 `_singleBusy.size > 0` 派生（原无条件 `setButtonsBusy(false)` 会把另一在途行按钮提前复位，两半自相矛盾）
 - **代际守卫**：所有异步加载函数用 `_gen` 丢弃过期结果（`gen !== self._gen` 早退），防 `await` 期间 attribute 切换导致脏写入
 - **`_dirOpen` 显式折叠优先于 `_forceOpenPaths` 强制展开**（renderer.ts）：`??` 而非 `||`——用户点过折叠即尊重；只有 undefined 才允许 status 筛选强制展开
 - **筛选口径一致性**（store.ts `applyFilter`）：`tabStatus` 把 `diverged` 折叠进 `missing` tab，renderer 计数与递归 `filterNode` 复用同一 `tabStatus`，保证"徽标数 = 列表可见行数"

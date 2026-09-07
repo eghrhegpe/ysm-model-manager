@@ -9,10 +9,12 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/go/types"
 )
 
 func buildZipB64T(t *testing.T, entries map[string]string) string {
@@ -116,5 +118,66 @@ func TestInstallModelFile_SrcGuard(t *testing.T) {
 	}
 	if _, err := os.Stat(dst); err != nil {
 		t.Fatalf("落地文件不存在: %v", err)
+	}
+}
+
+// TestInstallModelFile_SrcInCustomRoot 覆盖 ensureSrcInRepo 的多根遍历：
+// src 位于 CustomRoots 覆盖根（FilesRoot 之外）也应放行——修复后不误拒外部自定义仓库；
+// 空 CustomRoots 值（""）不得干扰遍历（跳过空根不 panic）。
+func TestInstallModelFile_SrcInCustomRoot(t *testing.T) {
+	base := t.TempDir()
+	custom := t.TempDir()
+	a := repoApp(t, types.AppConfig{
+		FilesRoot: base,
+		CustomRoots: map[string]string{
+			"mmd":   custom,
+			"empty": "",
+		},
+	})
+
+	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
+
+	inCustom := filepath.Join(custom, "m.ysm")
+	if err := os.WriteFile(inCustom, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dst, err := a.InstallModelFile(inCustom, mcRoot)
+	if err != nil {
+		t.Fatalf("CustomRoots 根内 src 应安装成功: %v", err)
+	}
+	if _, err := os.Stat(dst); err != nil {
+		t.Fatalf("落地文件不存在: %v", err)
+	}
+
+	inFiles := filepath.Join(base, "skip.ysm")
+	if err := os.WriteFile(inFiles, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.InstallModelFile(inFiles, mcRoot); err != nil {
+		t.Fatalf("FilesRoot 内 src 不应被空 CustomRoots 值干扰: %v", err)
+	}
+}
+
+// TestInstallModelFile_SymlinkEscapeRejected 覆盖 ensureSrcInRepo 的 EvalSymlinks
+// 二次判定：仓库内 symlink 指向仓库外 → 词法 IsInside 命中但解析后越权 → 拒绝
+// （与 installer.validateInstallPaths 的 src 侧解析守卫同口径）。
+func TestInstallModelFile_SymlinkEscapeRejected(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows 无特权创建 os.Symlink")
+	}
+	a, ysm := guardedApp(t)
+
+	outside := t.TempDir()
+	secret := filepath.Join(outside, "secret.ysm")
+	if err := os.WriteFile(secret, []byte("S"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(ysm, "leak.ysm")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Skip("symlink 创建失败: " + err.Error())
+	}
+
+	if _, err := a.InstallModelFile(link, t.TempDir()); err == nil {
+		t.Error("仓库内指向仓库外的 symlink 应被拒绝")
 	}
 }

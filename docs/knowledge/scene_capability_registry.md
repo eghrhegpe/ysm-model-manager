@@ -82,7 +82,6 @@ auto_fields:
     - rcMasterToggleNode
     - REFLECTION_MODES
     - ReflectionMode
-    - REFLECTOR_PRESETS
     - ReflectorCapability
     - RenderModeCapability
     - restoreFields

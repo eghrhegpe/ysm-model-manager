@@ -1055,7 +1055,6 @@ auto_fields:
     - RecycleHost
     - recycleHTML
     - ReflectionMode
-    - REFLECTOR_PRESETS
     - ReflectorCapability
     - refreshAdoptedStyleSheets
     - refreshUI

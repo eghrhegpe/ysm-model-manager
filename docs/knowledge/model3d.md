@@ -415,12 +415,14 @@ auto_fields:
     - mmdSemanticMorphMap
     - MmdZipConfig
     - mockMenuHandle
+    - MODEL_DEFAULTS
     - MODEL_SKY_PRESETS
     - modelDetailView
     - ModelEntry
     - modelEntryFor
     - ModelGroup
     - ModelLike
+    - ModelType
     - MorphMeshLike
     - morphNodes
     - motionDetailView
@@ -510,7 +512,6 @@ auto_fields:
     - recordLoadTrace
     - REFLECTION_MODES
     - ReflectionMode
-    - REFLECTOR_PRESETS
     - ReflectorCapability
     - registerBoneRaycast
     - registerBuiltScene

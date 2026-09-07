@@ -114,11 +114,11 @@ afterAll(() => { vi.unstubAllGlobals(); });
 
 ### 模式 3：mock 顶层模块，阻断 import 链
 
-当 import 链中的模块（如 `capabilities.ts` → `android-bridge.ts` → `window`）在函数体内访问 `window`，且测试不直接调用该函数：
+当 import 链中的模块（如 `backend/capabilities.ts` → `backend/platform.ts` → `window`）在函数体内访问 `window`，且测试不直接调用该函数：
 
 ```ts
 // capabilities.ts 被 bus-handlers.ts 导入，但 can() 只在运行时调用
-vi.mock("../../utils/dom/capabilities.ts", () => ({
+vi.mock("@/backend/capabilities.ts", () => ({
   can: vi.fn(() => true),
 }));
 ```
@@ -168,7 +168,7 @@ getAppMock.mockResolvedValue({
 |------|---------|---------|
 | `app-modules.test.ts` | 神桶拆分 + 直接标注 | **源码侧先拆分**：`normalizeTheme/applyTheme/initTheme` 移至 `theme-core.ts`（无顶层副作用），app-modules.ts 保留装配并 re-export；测试直测 theme-core，删 12 个针对启动 IIFE 的 vi.mock（见模式 6） |
 | `backend/app.test.ts` | 标注 + 模式1 | `beforeAll` stubGlobal window（window.go 注入路径）；被测 `backend/app.ts` 顶层无副作用 |
-| `utils/dom/android-bridge.test.ts` | 标注 + 模式1 | 同款 stubGlobal（window.wails 判定）；被测源码顶层无副作用 |
+| `backend/platform.test.ts` | 标注 + 模式1 | 同款 stubGlobal（window.wails 判定）；被测源码顶层无副作用；返回键栈测试已并入本文件（原 `utils/dom/android-bridge.test.ts` 随 ADR-203 D2 迁移删除） |
 
 **WebComponentBase 治理（源码侧，配套 8 处视图）**：`views/{context-menu,app-toast,app-content,app-nav,app-preview,app-sidebar,app-sync-manager,app-tree}/index.ts` 的 `class X extends HTMLElement` 统一改 `extends WebComponentBase`（`frontend/src/utils/dom/web-component-base.ts`：浏览器=HTMLElement，node=空类，类型恒为 typeof HTMLElement）——node 环境 import 视图不再炸，无需 vi.mock 视图（见模式 5）。`app-resource-manager` 已于 2026-08-24 删除。
 

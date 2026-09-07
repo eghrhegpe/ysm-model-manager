@@ -59,7 +59,7 @@ status: active
 - **`@wailsio/runtime`** — 真值来源（`Events as WailsEvents` / `Window as WailsWindow`）；业务模块禁止直 import。
 - **`utils/debug/debug.ts` `dbg`** — web no-op 桩操作留痕（`runtime-bridge` tag），可观测。
 - **`backend/app.ts`** — 桥接上层：`getApp()` 返回类型化绑定；本模块是更底层的原语抽象。
-- **业务消费方**：`features/community/download-queue-store.ts`（4 组 `Events.On` 注册）、`core/android-bridge.ts`、`core/context-menus.ts`、`views/*` 等所有使用 Wails 事件 / 窗口 API 的模块。
+- **业务消费方**：`features/community/download-queue-store.ts`（4 组 `Events.On` 注册）、`backend/platform.ts`（`getAndroidBridge`/`registerAndroidBackHandler`，ADR-203 D2 已并入）、`core/context-menus.ts`、`views/*` 等所有使用 Wails 事件 / 窗口 API 的模块。
 
 ## 不变量
 

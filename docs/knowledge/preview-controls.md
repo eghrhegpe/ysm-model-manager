@@ -135,7 +135,7 @@ status: active
 ```
 app-preview/  (入口层)
   ├─ detail-3d.ts     → 入口卡 + FAB；FAB.onclick → createXxx3D(path, {siblings})
-  ├─ mmd-siblings.ts  → 委托 resolveSiblingsByType(MMD)
+  ├─ siblings.ts      → resolveSiblingsByType 统一入口（mmd/fbx/stage 三壳已合并）
   ├─ view-shell.ts    → readFileBytes / addOpLog（被多 xxx-3d.ts 复用）
   └─ mmd/vrm/ysm-controls.ts → 产出 PreviewMenuNode[] + 桥接口
 

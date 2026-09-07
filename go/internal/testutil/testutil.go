@@ -1,4 +1,3 @@
-// Package testutil 提供跨包复用的 Go 单元测试辅助函数。
 package testutil
 
 import (
@@ -7,10 +6,40 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"ysm-model-manager/go/types/registry"
 )
+
+// WaitForCall 轮询等待计数器大于 0，超时后失败。
+// 替代各 test file 里重复的 time.Sleep 循环，统一超时配置。
+func WaitForCall(t *testing.T, c *atomic.Int32, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if c.Load() > 0 {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("call not received within timeout")
+}
+
+// WaitForCallNoSleep 轮询等待而不阻塞（用于 spin-wait 场景）。
+// 轮询间隔 10ms，总超时 timeout。
+func WaitForCallNoSleep(t *testing.T, c *atomic.Int32, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if c.Load() > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("call not received within timeout")
+}
 
 // InjectRootRegistry 读取仓库根 resource_types.json 并注入为测试基线。
 // 通过从当前工作目录逐层向上查找 resource_types.json，避免相对路径随包深度变化而断裂。

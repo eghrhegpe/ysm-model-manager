@@ -123,6 +123,7 @@ auto_fields:
     - CapControlView
     - captureTextureName
     - cleanupPreview
+    - clearEnvCallbacks
     - clearFolderCollapsedState
     - clearLoadTraces
     - clearModelRoots
@@ -170,7 +171,6 @@ auto_fields:
     - decodeYsmViaWasm
     - deepMergeLightParams
     - DeepPartial
-    - DEFAULT_ENV_PARAMS
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
@@ -478,6 +478,7 @@ auto_fields:
     - PostprocessingCapability
     - PostprocessingLike
     - PostprocessingParams
+    - PP_PARAMS_TO_ENV
     - preloadModel
     - prepareMmdZipInput
     - PREVIEW_FRAME_INTERVAL_MS

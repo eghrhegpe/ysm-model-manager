@@ -31,7 +31,6 @@ auto_fields:
     - createListenerSet
     - deepMergeLightParams
     - DeepPartial
-    - DEFAULT_ENV_PARAMS
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
@@ -79,6 +78,7 @@ auto_fields:
     - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
+    - PP_PARAMS_TO_ENV
     - rcMasterToggleNode
     - REFLECTION_MODES
     - ReflectionMode

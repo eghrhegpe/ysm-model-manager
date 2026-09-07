@@ -13,6 +13,8 @@ auto_fields:
     - InjectRootRegistry
     - LockDirExclusive
     - MakeZipBytes
+    - WaitForCall
+    - WaitForCallNoSleep
     - WriteFile
     - WriteTestFile
     - WriteTestFileBytes

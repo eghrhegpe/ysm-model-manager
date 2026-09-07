@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -26,19 +27,6 @@ func setupMinecraftRoot(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
-}
-
-// waitForCall 轮询等待 scanFn 被调用（替代固定 sleep，事件传播不拖长测试时长）
-func waitForCall(t *testing.T, c *atomic.Int32, timeout time.Duration) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if c.Load() > 0 {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	t.Fatal("scanFn 未在超时内被调用")
 }
 
 func TestNew(t *testing.T) {
@@ -136,7 +124,7 @@ func TestFileEventTriggersSync(t *testing.T) {
 	}
 
 	// 条件等待防抖（800ms）+ syncAll 执行，替代固定 sleep
-	waitForCall(t, &callCount, 3*time.Second)
+	testutil.WaitForCall(t, &callCount, 3*time.Second)
 }
 
 func TestRenameEventTriggersSync(t *testing.T) {
@@ -167,7 +155,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	waitForCall(t, &callCount, 3*time.Second)
+	testutil.WaitForCall(t, &callCount, 3*time.Second)
 }
 
 func TestDebounceMergesRapidEvents(t *testing.T) {
@@ -195,7 +183,7 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 		time.Sleep(30 * time.Millisecond)
 	}
 
-	waitForCall(t, &callCount, 3*time.Second)
+	testutil.WaitForCall(t, &callCount, 3*time.Second)
 
 	// waitForCall 在首个同步调用出现时即返回——此时
 	// 后续事件的防抖窗口（debounceDelay=800ms）尚未走完，直接采样 n 会把「防抖失效」
@@ -236,7 +224,7 @@ func TestStartStopRestart(t *testing.T) {
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	waitForCall(t, &callCount, 3*time.Second)
+	testutil.WaitForCall(t, &callCount, 3*time.Second)
 }
 
 // TestSyncAllSerialized 并发触发多次同步应串行执行（防抖合并调度，syncAll 合并执行）
@@ -334,7 +322,7 @@ func TestCreateSubdirTriggersSync(t *testing.T) {
 		}
 		time.Sleep(150 * time.Millisecond)
 	}
-	waitForCall(t, &callCount, 3*time.Second)
+	testutil.WaitForCall(t, &callCount, 3*time.Second)
 }
 
 // TestStopWaitsForSync Stop 必须等待 in-flight 同步完成，避免退出后仍有后台写盘

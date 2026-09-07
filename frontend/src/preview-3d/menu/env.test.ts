@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
+import { resetEnvState, envState } from "../state/env-state.ts";
+import { ATMOSPHERE_PRESETS } from "../state/atmosphere-presets.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { CameraControlBridge } from "../adapters/camera-controls.ts";
 import type { SlideMenuHandle } from "../../ui/ui-slide-menu.ts";
@@ -272,35 +274,22 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(listeners.size).toBe(0);
   });
 
-  it("预设 select：set 走 ENV_PRESET_LINKAGE 跨 cap 联动（sky 时间 + fog + environment.setPresetId）", () => {
-    const skySetTime = vi.fn();
-    const fogSetEnabled = vi.fn();
-    const envSetPreset = vi.fn();
-    const sky = makeCap("sky", "preview.sky", [], { setTime: skySetTime, setCloudCoverage: vi.fn() });
-    const fog = makeCap("fog", "preview.fog", [], {
-      setEnabled: fogSetEnabled,
-      setMode: vi.fn(),
-      setDensity: vi.fn(),
-      setLinearRange: vi.fn(),
-    });
-    const env = makeCap("environment", "preview.environment", [], {
-      setPresetId: envSetPreset,
-      setIntensity: vi.fn(),
-    });
+  it("预设 select：set 走 ATMOSPHERE_PRESETS 快照经 setEnvState 联动（sky/fog/env 一次写入）", () => {
+    resetEnvState();
+    const sky = makeCap("sky", "preview.sky", []);
+    const fog = makeCap("fog", "preview.fog", []);
+    const env = makeCap("environment", "preview.environment", []);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky, fog, env]);
-    vi.spyOn(sceneCapabilityRegistry, "getById").mockImplementation((id: string) => {
-      if (id === "sky") return sky as unknown as SceneCapability;
-      if (id === "fog") return fog as unknown as SceneCapability;
-      if (id === "environment") return env as unknown as SceneCapability;
-      return undefined;
-    });
     const menu = makeMenu();
     const preset = buildEnvSchema(makeCtx(), menu)[0]!;
     expect(preset.control!.options).toHaveLength(5); // studio/sunset/night/forest/sky
     preset.control!.set!("sunset");
-    expect(skySetTime).toHaveBeenCalledWith(18); // LINKAGE.sunset.sky.time
-    expect(fogSetEnabled).toHaveBeenCalledWith(true);
-    expect(envSetPreset).toHaveBeenCalledWith("sunset");
+    // ATMOSPHERE_PRESETS.sunset 完整快照落到 envState（不再逐 cap 调 setter）
+    expect(envState.skyTimeOfDay).toBe(ATMOSPHERE_PRESETS.sunset.skyTimeOfDay); // 18
+    expect(envState.fogEnabled).toBe(true);
+    expect(envState.fogMode).toBe("linear");
+    expect(envState.envPreset).toBe("sunset");
+    expect(envState.envIntensity).toBeCloseTo(ATMOSPHERE_PRESETS.sunset.envIntensity! as number, 5);
     expect(menu.refresh).toHaveBeenCalled(); // 联动后重渲染兄弟控件
   });
 

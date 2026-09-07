@@ -9,10 +9,11 @@
 
 import { tr } from "../../core/i18n/tr.ts";
 import type { SlideMenuHandle, SlideMenuView } from "../../ui/ui-slide-menu.ts";
-import { ENV_PRESET_LINKAGE, type EnvPresetId } from "../caps/environment-capability.ts";
+import type { EnvPresetId } from "../caps/environment-capability.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
-import type { SkyCapability } from "../caps/sky-capability.ts";
+import { ATMOSPHERE_PRESETS } from "../state/atmosphere-presets.ts";
+import { setEnvState } from "../state/env-state.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderMenu } from "./render.ts";
 
@@ -64,43 +65,17 @@ function orderedCaps(allCaps: SceneCapability[]): SceneCapability[] {
   );
 }
 function applyPreset(
-  ctx: PreviewMenuCtx,
+  _ctx: PreviewMenuCtx,
   presetId: Exclude<EnvPresetId, "custom">,
   menu?: SlideMenuHandle,
 ): void {
-  const link = ENV_PRESET_LINKAGE[presetId];
-  if (!link) return;
-  if (link.sky) {
-    const skyCap = sceneCapabilityRegistry.getById("sky");
-    if (skyCap) {
-      skyCap.setTime?.(link.sky.time);
-      skyCap.setCloudCoverage?.(link.sky.cloud, true);
-    } else {
-      const fc = ctx.getCap("sky") as
-        | (SkyCapability & {
-            setTime?(h: number): void;
-            setCloudCoverage?(v: number, regen?: boolean): void;
-          })
-        | null;
-      fc?.setTime?.(link.sky.time);
-      fc?.setCloudCoverage?.(link.sky.cloud, true);
-    }
-  }
-  if (link.fog) {
-    const fogCap = sceneCapabilityRegistry.getById("fog");
-    if (fogCap) {
-      fogCap.setEnabled(link.fog.enabled);
-      if (link.fog.mode) fogCap.setMode(link.fog.mode);
-      if (link.fog.density !== undefined) fogCap.setDensity(link.fog.density);
-      if (link.fog.near !== undefined || link.fog.far !== undefined)
-        fogCap.setLinearRange(link.fog.near, link.fog.far);
-    }
-  }
-  const envCap = sceneCapabilityRegistry.getById("environment");
-  if (envCap) {
-    envCap.setPresetId(presetId);
-    if (link.envIntensity !== undefined) envCap.setIntensity(link.envIntensity);
-  }
+  // ADR-196 刀4：氛围预设收口——ATMOSPHERE_PRESETS[presetId] 完整快照经 setEnvState
+  // 统一派发到各 cap callback（取代 ENV_PRESET_LINKAGE 硬编码 if(link.sky) 联动）。
+  // 守卫：auto-atmosphere source < manual——用户手动调过的字段不被覆盖。
+  const snapshot = ATMOSPHERE_PRESETS[presetId];
+  if (!snapshot) return;
+  setEnvState(snapshot, { source: "auto-atmosphere" });
+  // env.ts 行/select 依赖 menu.refresh 重渲染读最新 envState
   menu?.refresh();
 }
 

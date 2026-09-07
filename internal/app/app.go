@@ -18,6 +18,7 @@ import (
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/tags"
+	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/updater"
@@ -96,6 +97,9 @@ func NewApp() *App {
 		logger:      logs.NewLogger(configDir()),
 		runtimeLogs: logs.NewRuntimeBuffer(logs.DefaultRuntimeCap),
 	}
+	// 写后淘汰后台 goroutine 接应用生命周期：退出即放弃在途淘汰（风险表🟡#3）
+	texture_cache.SetShutdownCtx(appCtx)
+
 	// 头像缓存收敛到平台数据根（与 logs/tags 同根，ADR-046 P2）：
 	// 不再贴在 exe 旁——安卓只读 APK 路径会导致 MkdirAll/WriteFile 静默失败；
 	// 平台数据根缺失时返回 ""（no-op，不降级为相对路径写 CWD）。

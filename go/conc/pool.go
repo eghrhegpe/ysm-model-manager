@@ -7,7 +7,7 @@ package conc
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"runtime"
 	"sync"
 )
@@ -64,7 +64,9 @@ func ParallelCtx[T, R any](ctx context.Context, items []T, fn func(ctx context.C
 						if r := recover(); r != nil {
 							// fn panic 不崩整个批次：标记该位 ok=false，其余 worker 继续
 							ok[idx] = false
-							fmt.Printf("[conc] Parallel worker panic at idx=%d: %v\n", idx, r)
+							// 走标准库 log（非 fmt）：App 启动期 log.SetOutput(runtimeLogs)
+							// 已将其重定向至环形日志面板，fmt 直出会绕过捕获、排障盲飞。
+							log.Printf("[conc] Parallel worker panic at idx=%d: %v", idx, r)
 						}
 					}()
 					r, keep := fn(ctx, idx, items[idx])

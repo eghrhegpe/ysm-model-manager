@@ -69,7 +69,7 @@ func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string)
 		}
 		lastErr = err
 	}
-	return "", fmt.Errorf("所有源均失败: %s", lastErr)
+	return "", fmt.Errorf("所有源均失败: %w", lastErr)
 }
 
 // emitDownloadProgress 下载进度回调 → Wails 事件（go/download 包内已做 200ms 节流与 final 兜底）

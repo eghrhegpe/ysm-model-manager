@@ -10,6 +10,7 @@
 package texture_cache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -280,6 +281,19 @@ func SetCacheLimits(maxBytes int64, maxAge, interval time.Duration) {
 	pruneInterval = interval
 }
 
+// pruneShutdownCh 应用生命周期退出信号（由 App 在 NewApp 注入 appCtx.Done()）。
+// 写后淘汰的后台 goroutine 启动前select它：应用退出即放弃本轮淘汰，避免关停期
+// 仍对真实缓存目录做 pruneDir 扫描/删除（测试 restore 全局后的竞态与真实污染风险）。
+// nil 时（CLI/测试未注入）退化为原行为——始终执行淘汰。
+var pruneShutdownCh <-chan struct{}
+
+// SetShutdownCtx 注入应用生命周期 context；传 nil 视为不清（保持默认执行）。
+func SetShutdownCtx(ctx context.Context) {
+	if ctx != nil {
+		pruneShutdownCh = ctx.Done()
+	}
+}
+
 // PruneResult 一次淘汰的结果（供日志与测试断言）
 type PruneResult struct {
 	RemovedCount int   // 成功删除的文件数
@@ -420,6 +434,14 @@ func maybePrune() {
 	dir := CacheDir()
 	go func() {
 		defer pruneInFlight.Store(false)
+		// 应用退出：放弃本轮后台淘汰（详见 pruneShutdownCh）
+		if pruneShutdownCh != nil {
+			select {
+			case <-pruneShutdownCh:
+				return
+			default:
+			}
+		}
 		if _, err := pruneDir(dir); err != nil {
 			log.Printf("texture_cache: 写后淘汰失败: %v", err)
 		}

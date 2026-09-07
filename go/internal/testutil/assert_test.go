@@ -80,3 +80,21 @@ func TestFileNotExists_Pass(t *testing.T) {
 	FileNotExists(t, filepath.Join(dir, "missing.txt"))
 	FileNotExists(t, filepath.Join(dir, "missing.txt"), "带上下文")
 }
+
+func TestNil_Pass(t *testing.T) {
+	t.Parallel()
+	Nil(t, nil)
+	Nil(t, (*struct{ A int })(nil)) // typed nil 指针
+	Nil(t, []string(nil))           // nil 切片
+	Nil(t, map[string]int(nil))     // nil map
+	Nil(t, nil, "带上下文")
+}
+
+func TestNotNil_Pass(t *testing.T) {
+	t.Parallel()
+	NotNil(t, &struct{ A int }{1})
+	NotNil(t, []string{})
+	NotNil(t, map[string]int{})
+	NotNil(t, 0) // 非 nilable 零值也算非 nil
+	NotNil(t, &struct{ A int }{}, "带上下文")
+}

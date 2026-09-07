@@ -16,8 +16,14 @@ import {
   buildSuggestBlock,
   isExemptLifecycle,
   isExemptEntry,
+  isExemptAssert,
   isRewriteLine,
   isRewriteOnlyDiff,
+  isGoTestSource,
+  isBareFatalAssertLine,
+  addedLinesFromDiffText,
+  findBareFatalAddedLines,
+  buildBareAssertBlock,
 } from '../scripts/check-go-diff-coverage.ts';
 
 const errors = [];
@@ -139,6 +145,16 @@ check('isExemptEntry 普通文件不豁免', () => {
   assert.equal(isExemptEntry('internal/app/app.go'), false);
 });
 
+// ── 8.5 isExemptAssert（断言器实现文件豁免）──
+check('isExemptAssert 断言器文件豁免', () => {
+  assert.equal(isExemptAssert('go/internal/testutil/assert.go'), true);
+});
+
+check('isExemptAssert 普通文件不豁免', () => {
+  assert.equal(isExemptAssert('go/internal/testutil/testutil.go'), false);
+  assert.equal(isExemptAssert('go/download/download.go'), false);
+});
+
 // ── 9. isRewriteLine（纯结构行识别）──
 check('isRewriteLine 识别签名/引用/注释/断言行', () => {
   assert.equal(isRewriteLine('func benchSerialAnalyze(a AppService, models []string) concurrentBenchResult {'), true);
@@ -181,6 +197,91 @@ check('isRewriteOnlyDiff 含逻辑行 → 不豁免', () => {
 check('isRewriteOnlyDiff 空/null → false', () => {
   assert.equal(isRewriteOnlyDiff(null), false);
   assert.equal(isRewriteOnlyDiff(''), false);
+});
+
+// ── 11. 测试断言增量红线（ADR-202 刀5）──
+check('isGoTestSource 只认 *_test.go', () => {
+  assert.equal(isGoTestSource('go/scanner/scanner_test.go'), true);
+  assert.equal(isGoTestSource('go/scanner/scanner.go'), false);
+  assert.equal(isGoTestSource('go/scanner/testdata/fix.go'), false);   // 夹具目录排除
+  assert.equal(isGoTestSource('go/scanner/scan_test.go'), true);
+});
+
+check('isBareFatalAssertLine 命中裸 t.Fatal/t.Fatalf', () => {
+  assert.equal(isBareFatalAssertLine('\t\tt.Fatalf("want %d got %d", want, got)'), true);
+  assert.equal(isBareFatalAssertLine('\tt.Fatal(err)'), true);
+  assert.equal(isBareFatalAssertLine('t.Fatalf("boom: %v", err)'), true);
+});
+
+check('isBareFatalAssertLine 放行非裸形态', () => {
+  // testutil 调用不命中
+  assert.equal(isBareFatalAssertLine('testutil.NoError(t, err)'), false);
+  assert.equal(isBareFatalAssertLine('testutil.Equal(t, got, want)'), false);
+  // benchmark 的 b.Fatalf 不命中
+  assert.equal(isBareFatalAssertLine('b.Fatalf("ScanEntries returned %d", n)'), false);
+  // t.Error/t.Errorf 有意不拦（循环/goroutine 收集多失败是惯用法）
+  assert.equal(isBareFatalAssertLine('t.Errorf("goroutine %d failed: %v", i, err)'), false);
+  assert.equal(isBareFatalAssertLine('t.Error("no tags expected")'), false);
+  // 自定义函数、非断言调用不命中
+  assert.equal(isBareFatalAssertLine('fatal(code)'), false);
+  assert.equal(isBareFatalAssertLine('t.Helper()'), false);
+  assert.equal(isBareFatalAssertLine('t.Parallel()'), false);
+  assert.equal(isBareFatalAssertLine('t.Logf("ok: %v", err)'), false);
+  // 纯注释/空行放行（说明文字不得当代码罚）
+  assert.equal(isBareFatalAssertLine('// 此处用 t.Fatalf 判定'), false);
+  assert.equal(isBareFatalAssertLine(''), false);
+  // 非 t 前缀的 t.Fatal 文本（字符串字面量里的提及）
+  assert.equal(isBareFatalAssertLine('msg := "t.Fatalf("'), false);
+});
+
+check('addedLinesFromDiffText 提取新增行内容与行号', () => {
+  const diff = [
+    '@@ -10,6 +10,8 @@',
+    ' aaa',
+    '+testutil.NoError(t, err)',
+    '+t.Fatalf("boom")',
+    ' bbb',
+    ' ccc',
+    '-removed',
+    '+t.Error("collect")',
+  ].join('\n');
+  const out = addedLinesFromDiffText(diff);
+  // 新增块第 10 行起：第 11 行 NoError、第 12 行 Fatalf、第 15 行 Error
+  assert.deepEqual(out, [
+    { line: 11, text: 'testutil.NoError(t, err)' },
+    { line: 12, text: 't.Fatalf("boom")' },
+    { line: 15, text: 't.Error("collect")' },
+  ]);
+});
+
+check('findBareFatalAddedLines 只筛出裸 t.Fatal 新增行', () => {
+  const diff = [
+    '@@ -1,3 +1,5 @@',
+    ' package x',
+    '+import "testing"',
+    '+func TestX(t *testing.T) {',
+    '+testutil.NoError(t, nil)',
+    '+t.Fatalf("boom")',
+    '+}',
+  ].join('\n');
+  const hits = findBareFatalAddedLines(diff);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].line, 5);
+  assert.ok(hits[0].text.includes('t.Fatalf("boom")'));
+});
+
+check('findBareFatalAddedLines 空/null diff → 空', () => {
+  assert.deepEqual(findBareFatalAddedLines(null), []);
+  assert.deepEqual(findBareFatalAddedLines(''), []);
+});
+
+check('buildBareAssertBlock 生成建议区块', () => {
+  const block = buildBareAssertBlock([
+    { file: 'go/x/x_test.go', items: [{ line: 12, text: 't.Fatalf("boom")' }] },
+  ]);
+  assert.ok(block.includes('## Go 裸断言建议（非阻断）'));
+  assert.ok(block.includes('go/x/x_test.go:12'));
+  assert.ok(block.includes('testutil.Equal(t, got, want)'));
 });
 
 if (errors.length) {

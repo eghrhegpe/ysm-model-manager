@@ -8,8 +8,10 @@
 package testutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -53,11 +55,53 @@ func ErrorContains(t *testing.T, err error, substr string, msgAndArgs ...any) {
 	}
 }
 
+// ErrorIs 断言 err 非 nil 且 errors.Is(err, target) 成立（错误链可分类）。
+// 替代 `if !errors.Is(err, target) { t.Fatalf(...) }`（#11 错误分类正解）。
+func ErrorIs(t *testing.T, err error, target error, msgAndArgs ...any) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("%sexpected error matching %v, got nil", prefixFromArgs(msgAndArgs...), target)
+	}
+	if !errors.Is(err, target) {
+		t.Fatalf("%serror %q does not match %v (errors.Is=false)", prefixFromArgs(msgAndArgs...), err.Error(), target)
+	}
+}
+
 // Equal 断言 got == want（go-cmp 深度比较），失败时输出 diff。
 func Equal[T any](t *testing.T, got, want T, msgAndArgs ...any) {
 	t.Helper()
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Fatalf("%sunexpected diff (-want +got):\n%s", prefixFromArgs(msgAndArgs...), diff)
+	}
+}
+
+// isNil 判定 any 值是否为 nil（含 typed nil：指针/切片/map/chan/func/interface）。
+func isNil(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return rv.IsNil()
+	default:
+		return false
+	}
+}
+
+// Nil 断言 v 为 nil（含 typed nil 指针/切片/map）。替代 `if v != nil { t.Fatalf }`。
+func Nil(t *testing.T, v any, msgAndArgs ...any) {
+	t.Helper()
+	if !isNil(v) {
+		t.Fatalf("%sexpected nil, got %T: %+v", prefixFromArgs(msgAndArgs...), v, v)
+	}
+}
+
+// NotNil 断言 v 非 nil。替代 `if v == nil { t.Fatal }`。
+func NotNil(t *testing.T, v any, msgAndArgs ...any) {
+	t.Helper()
+	if isNil(v) {
+		t.Fatalf("%sexpected non-nil, got nil", prefixFromArgs(msgAndArgs...))
 	}
 }
 

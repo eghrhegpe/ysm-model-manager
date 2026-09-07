@@ -36,6 +36,13 @@
  *   node scripts/check-go-diff-coverage.ts --files a.go,b.go        # 跳过 git，直接给文件列表（调试）
  *   node scripts/check-go-diff-coverage.ts --suggest                # 非阻断建议（输出 commit message 建议区块，永远 exit 0）
  *   node scripts/check-go-diff-coverage.ts --json                   # JSON（CI / 子代理消费）
+ *   node scripts/check-go-diff-coverage.ts --bare-assert=off        # 逃生阀：关闭测试断言增量红线（ADR-202 刀5）
+ *
+ * 除变更行覆盖率门禁外，本脚本还承担「测试断言增量红线」（ADR-202 刀5）：
+ * 新增/变更的 *_test.go 行若裸调 t.Fatal/t.Fatalf（未走 testutil，失败即弃权），
+ * 默认阻断（exit 1）；--suggest 时降为非阻断建议区块；--bare-assert=off 逃生。
+ * 豁免：go/internal/testutil/ 自身、纯注释行；有意不拦 t.Error/t.Errorf
+ * （循环/goroutine 收集多失败是 Go 惯用法，testutil 无「记录不致命」等价面）。
  *
  * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（git 失败或 go 不可用）。
  * 说明：Go 无持久覆盖率产物，本脚本对受影响包现跑 `go test -coverprofile`（单包 ~0.5s），
@@ -168,6 +175,113 @@ export function isRewriteOnlyDiff(diffText: string | null) {
   return sawAdded;
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// 测试断言增量红线（ADR-202 刀5 落地）：新增/变更测试行禁止裸 t.Fatal/t.Fatalf。
+// 反模式：失败即弃权（第一个断言失败丢弃同函数剩余断言信息，调试往返翻倍）；
+// 正解：改用 testutil（NoError / Equal / ErrorContains / FileExists），统一 diff 输出。
+// 只拦截测试文件（*_test.go）的「新增行」（diff + 行）；存量行不罚，纯增量红线。
+// 豁免：① go/internal/testutil/ 自身（它内部就是用 t.Fatalf 实现断言器的）；② 纯注释行。
+// 有意不拦 t.Error/t.Errorf：循环/goroutine 内收集多失败判读是 Go 惯用法，且
+// testutil 无「记录不致命」等价面，拦了反而误伤。
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 测试源文件（*_test.go，排除 testdata 夹具目录）。 */
+export function isGoTestSource(f: string) {
+  return f.endsWith('_test.go') && !f.includes('/testdata/');
+}
+
+/** 本次改动的 Go 测试文件（repo-root 相对路径）。 */
+export function getChangedGoTestFiles(base: string, head: string, uncommitted: boolean, staged: boolean) {
+  const out = getChangedFiles(base, head, uncommitted, staged);
+  if (out === null) return null;
+  return out.filter(isGoTestSource);
+}
+
+/**
+ * 判定一行是否为「裸 t.Fatal/t.Fatalf 断言调用」（未走 testutil）。
+ * 只认 token 形态 `t.Fatal(` / `t.Fatalf(`——`b.Fatalf`（benchmark）、
+ * `fatal(`（自定义函数）、`t.Error(` 等均不命中。纯注释行放行（说明文字
+ * 不得当代码罚）；字符串字面量（"..."、`...`）先剥离，字符串里提及
+ * `t.Fatalf(` 不当调用罚。导出供单测。
+ */
+export function isBareFatalAssertLine(line: string): boolean {
+  const t = line.trim();
+  if (!t) return false;
+  if (t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('#')) return false;
+  // 先剥字符串字面量（双引号 + 反引号），避免字面量内容被误判为调用 token
+  const code = t.replace(/"(?:\\.|[^"\\])*"/g, '').replace(/`[^`]*`/g, '');
+  return /\bt\.Fatal(f)?\(/.test(code);
+}
+
+/**
+ * 提取 `--unified=0` diff 文本中的新增行（含解析行号与内容）。
+ * 与 diff-coverage-core.addLinesFromDiff 同构，但返回「行内容」而非仅行号。
+ * 导出供单测。
+ */
+export function addedLinesFromDiffText(diffText: string | null): { line: number; text: string }[] {
+  if (!diffText) return [];
+  const out: { line: number; text: string }[] = [];
+  let currentLine = 0;
+  for (const line of diffText.split('\n')) {
+    const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
+    if (hdr) {
+      currentLine = parseInt(hdr[1]!, 10);
+      continue;
+    }
+    if (currentLine === 0) continue;
+    if (line.startsWith('+')) {
+      out.push({ line: currentLine, text: line.slice(1) });
+      currentLine++;
+    } else if (line.startsWith(' ')) {
+      // 上下文行（未变更），仍计入行号
+      currentLine++;
+    }
+    // '-' 行在新文件中不存在，不递增行号
+  }
+  return out;
+}
+
+/** 测试文件 diff 中的裸 t.Fatal/t.Fatalf 新增行清单（ADR-202 刀5 增量红线）。导出供单测。 */
+export function findBareFatalAddedLines(diffText: string | null) {
+  return addedLinesFromDiffText(diffText).filter((l) => isBareFatalAssertLine(l.text));
+}
+
+/**
+ * 非阻断建议区块（测试断言红线版）：列明违规文件:行 + 改写指引。
+ * 仅 suggest 模式使用；首行即 ADD_BLOCK_START 标记，幂等剥离由钩子负责。
+ */
+export function buildBareAssertBlock(hits: { file: string; items: { line: number; text: string }[] }[]) {
+  const lines: string[] = [];
+  for (const h of hits) {
+    for (const it of h.items) lines.push(`- \`${h.file}:${it.line}\`: \`${it.text.trim()}\``);
+  }
+  return [
+    '## Go 裸断言建议（非阻断）',
+    '',
+    '以下新增测试行直接调用 t.Fatal/t.Fatalf（失败即弃权）。请改用 testutil 断言：',
+    '',
+    ...lines,
+    '',
+    '提示：`testutil.NoError(t, err)` / `testutil.Equal(t, got, want)` / `testutil.ErrorContains(t, err, sub)` 等价替代，失败输出带 diff。',
+  ].join('\n');
+}
+
+/**
+ * 断言器实现文件豁免：testutil 断言的失败分支走 t.Fatalf → runtime.Goexit，
+ * 进程内 recover 拦不住，失败路径结构性不可直测（assert_test.go 头部注释已述）。
+ * 正常路径由同包 assert_test.go 覆盖；失败行为由消费包测试的失败断言反证
+ * （断言若失效，消费测试即红）——项目既定策略，非「真裸奔」。
+ * 新增须注释理由；禁止把「懒得写测试的真裸奔」塞进来。
+ */
+const EXEMPT_ASSERT_FILES = new Set([
+  'go/internal/testutil/assert.go', // 断言失败分支 t.Fatalf → Goexit 不可捕获
+]);
+
+/** 是否命中断言器实现文件豁免。导出供单测。 */
+export function isExemptAssert(f: string) {
+  return EXEMPT_ASSERT_FILES.has(f);
+}
+
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
 export function runCoverProfile(packagePattern: string, tmp: string) {
   const r1 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
@@ -278,10 +392,10 @@ export function buildSuggestBlock(failures: any[], threshold: number) {
 function main() {
   const args = parseArgs(process.argv.slice(2), {
     bools: ['uncommitted', 'json', 'suggest', 'staged'],
-    strings: ['threshold', 'base', 'head', 'files'],
+    strings: ['threshold', 'base', 'head', 'files', 'bare-assert'],
   });
   if (args.unknown.length) {
-    console.error(`[check-go-diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json）`);
+    console.error(`[check-go-diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json/--bare-assert=off）`);
     process.exit(USAGE_ERROR);
   }
   const base = (args.base as string) ?? 'origin/main';
@@ -353,12 +467,18 @@ function main() {
         let envMismatch = false;
         let exemptLifecycle = false;
         let exemptEntry = false;
+        let exemptAssert = false;
         let rewrite = false;
         if (isExemptEntry(f)) {
           // 入口文件豁免：变更行在 func main() 内，go test 不执行 main → 覆盖数据
           // 不可达（如 ADR-145 的 cli.RunCLI(app.NewApp(), ...) 组装行）。非「裸奔」。
           pct = 100;
           exemptEntry = true;
+        } else if (isExemptAssert(f)) {
+          // 断言器实现文件豁免：失败分支 t.Fatalf → Goexit 不可捕获，结构性不可直测；
+          // 正常路径由同包 assert_test.go 覆盖，失败行为由消费包测试反证。非「裸奔」。
+          pct = 100;
+          exemptAssert = true;
         } else if (isExemptLifecycle(f)) {
           // 编译可达但 headless 单测不可达的窗口事件/生命周期文件：显式豁免，保留可见标记
           // （其变更行落在 Wails WindowClosing 等钩子闭包内，需真实窗口生命周期触发；
@@ -391,16 +511,40 @@ function main() {
         }
         const missing = !profileText || !blocksByFile.has(f);
         const renamed = renameMap.has(f);
-        rows.push({ file: f, pct, missing, renamed, envMismatch, exemptLifecycle, exemptEntry, rewrite });
-        if (!envMismatch && !exemptLifecycle && !exemptEntry && !rewrite && pct < threshold) failures.push({ file: f, pct, renamed });
+        rows.push({ file: f, pct, missing, renamed, envMismatch, exemptLifecycle, exemptEntry, exemptAssert, rewrite });
+        if (!envMismatch && !exemptLifecycle && !exemptEntry && !exemptAssert && !rewrite && pct < threshold) failures.push({ file: f, pct, renamed });
       }
     }
   } finally {
     try { fs.unlinkSync(tmp); } catch { /* 忽略 */ }
   }
 
+  // ── 测试断言增量红线（ADR-202 刀5）：新增/变更测试行裸 t.Fatal/t.Fatalf → 拦 ──
+  // 只查测试文件的「新增行」，存量行不罚；go/internal/testutil/ 自身豁免
+  // （它内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
+  const bareAssertOff = (args['bare-assert'] as string | null) === 'off';
+  const testChanged = args.files
+    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean)
+        .filter((f) => isGoTestSource(f) && !f.startsWith('go/internal/testutil/'))
+    : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? [])
+        .filter((f) => !f.startsWith('go/internal/testutil/'));
+  const bareAssertHits: { file: string; items: { line: number; text: string }[] }[] = [];
+  for (const f of testChanged) {
+    const renameOld = renameMap.get(f)?.from;
+    // 与 rewriteDiff 同源的 diff 文本获取：staged → --cached；rename → 两点 blob diff
+    const d = staged
+      ? (renameOld ? git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${f}`]) : git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', f]))
+      : (renameOld
+          ? git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${f}`])
+          : git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', f]));
+    const items = findBareFatalAddedLines(d);
+    if (items.length > 0) bareAssertHits.push({ file: f, items });
+  }
+  const bareFail = bareAssertHits.length > 0 && !bareAssertOff;
+
   if (suggest) {
     if (failures.length > 0) console.log(buildSuggestBlock(failures, threshold));
+    if (bareAssertHits.length > 0) console.log(buildBareAssertBlock(bareAssertHits));
     process.exit(0);
   }
 
@@ -410,20 +554,22 @@ function main() {
         threshold,
         files: rows.length,
         failed: failures.length,
-        exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry).length,
+        exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry || r.exemptAssert).length,
+        bareAssert: bareAssertHits.length,
       },
       rows,
       failures,
+      bareAssert: bareAssertHits,
     }, null, 2));
-    process.exit(failures.length > 0 ? COVERAGE_FAILURE : 0);
+    process.exit(failures.length > 0 || bareFail ? COVERAGE_FAILURE : 0);
   }
 
     console.log(`\n[check-go-diff-coverage] 变更 Go 源码 ${rows.length} 个，阈值 ${threshold}%（变更行覆盖率）：`);
   console.log('  ' + '文件'.padEnd(68) + '覆盖%');
   console.log('  ' + '-'.repeat(68) + '------');
   for (const r of rows) {
-    const flag = r.exemptEntry ? 'ENTRY' : (r.exemptLifecycle ? 'EXEMPT' : (r.envMismatch ? 'SKIP' : (r.rewrite ? 'REWRITE' : (r.pct < threshold ? 'X' : 'OK'))));
-    const tag = (r.renamed ? 'R' : ' ') + (r.envMismatch ? '~' : ' ') + (r.exemptLifecycle ? '#' : ' ') + (r.exemptEntry ? 'E' : ' ') + (r.rewrite ? 'w' : ' ');
+    const flag = r.exemptEntry ? 'ENTRY' : (r.exemptLifecycle ? 'EXEMPT' : (r.envMismatch ? 'SKIP' : (r.exemptAssert ? 'ASSERT' : (r.rewrite ? 'REWRITE' : (r.pct < threshold ? 'X' : 'OK')))));
+    const tag = (r.renamed ? 'R' : ' ') + (r.envMismatch ? '~' : ' ') + (r.exemptLifecycle ? '#' : ' ') + (r.exemptEntry ? 'E' : ' ') + (r.exemptAssert ? 'A' : ' ') + (r.rewrite ? 'w' : ' ');
     console.log(`  [${flag}] [${tag.trim()}] ${r.file.padEnd(60)} ${r.pct.toFixed(1)}`);
   }
   // 平台/标签专属文件豁免说明（非真裸奔，当前 GOOS=<x> 裸 go test 不带 rust_backend 不编译）
@@ -450,8 +596,27 @@ function main() {
     console.log(`\n[check-go-diff-coverage] 豁免 ${rewrites.length} 个重构型变更文件（变更行全为签名/引用/注释/断言，无新逻辑）：`);
     for (const s of rewrites) console.log(`  w ${s.file}`);
   }
+  // 断言器实现文件豁免说明（失败分支 t.Fatalf → Goexit 结构性不可直测，非「裸奔」）
+  const asserts = rows.filter((r) => r.exemptAssert);
+  if (asserts.length > 0) {
+    console.log(`\n[check-go-diff-coverage] 豁免 ${asserts.length} 个断言器实现文件（失败分支 Goexit 不可直测，正常路径同包自测覆盖）：`);
+    for (const s of asserts) console.log(`  A ${s.file}`);
+  }
+  // 测试断言增量红线报告（ADR-202 刀5）
+  if (bareAssertHits.length > 0) {
+    const off = bareAssertOff ? '（--bare-assert=off 逃生，不阻断）' : '';
+    console.error(`\n[check-go-diff-coverage] 测试断言红线：${bareAssertHits.length} 个测试文件新增了裸 t.Fatal/t.Fatalf 断言${off}：`);
+    for (const h of bareAssertHits) {
+      for (const it of h.items) console.error(`  ${h.file}:${it.line}: ${it.text.trim()}`);
+    }
+    console.error('  请改用 testutil 断言（NoError / Equal / ErrorContains / FileExists），失败输出带 diff。');
+  }
   if (failures.length > 0) {
     console.error(`\n[check-go-diff-coverage] 失败：${failures.length} 个改动 Go 文件覆盖率低于 ${threshold}%。请为新增/重构逻辑补测试。`);
+    process.exit(COVERAGE_FAILURE);
+  }
+  if (bareFail) {
+    console.error(`\n[check-go-diff-coverage] 失败：测试断言红线违例 ${bareAssertHits.length} 个文件（新增裸 t.Fatal/t.Fatalf，ADR-202 刀5）。`);
     process.exit(COVERAGE_FAILURE);
   }
   console.log(`\n[check-go-diff-coverage] 全部达标（>= ${threshold}%）。通过。`);

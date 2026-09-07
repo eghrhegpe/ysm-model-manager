@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // startRawHTTPServer 启动一个原始 TCP HTTP 服务器，精确控制 Content-Length 与实际 body 的匹配
@@ -213,27 +215,21 @@ func TestHTTP_ContentLength_TruncationDetected(t *testing.T) {
 	}
 }
 
-// TestHTTP_ContentLength_OverSent_NoValidation
+// TestHTTP_ContentLength_OverSent_TruncatedByProtocol
 // 服务端声明 Content-Length: 100 但实际发送 200 字节
 // HTTP 客户端受 Content-Length 限制只读 100 字节，downloaded=100, total=100
-// 标记: HTTP 协议本身限制了读取量，无额外校验需求
-func TestHTTP_ContentLength_OverSent_NoValidation(t *testing.T) {
+// 断言：成功且文件恰为声明长度（多余字节由协议层截断，无需额外校验——确定性行为）。
+func TestHTTP_ContentLength_OverSent_TruncatedByProtocol(t *testing.T) {
 	url, cleanup := startRawHTTPServer(t, 200, 100, make([]byte, 200))
 	defer cleanup()
 
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "oversent.txt")
 	err := dl.File(context.Background(), url, savePath, nil)
-	if err != nil {
-		t.Logf("错误（可能预期）: %v", err)
-		return
-	}
-	data, _ := os.ReadFile(savePath)
-	if len(data) == 100 {
-		t.Log("OK: 服务端声明 100 发送 200 字节，HTTP 客户端按 Content-Length 限制只读 100 字节，文件正确写入。HTTP 协议层已保证一致性，无需额外校验。")
-	} else {
-		t.Logf("注意: 文件写入 %d 字节（非预期 100），需进一步分析 HTTP 客户端行为", len(data))
-	}
+	testutil.NoError(t, err, "Content-Length 决定 body 边界，多余字节应被协议截断而非报错")
+	data, rErr := os.ReadFile(savePath)
+	testutil.NoError(t, rErr, "读取下载文件失败")
+	testutil.Equal(t, len(data), 100, "文件应恰为 Content-Length 声明的 100 字节（协议截断）")
 }
 
 // ============================================================================
@@ -607,6 +603,8 @@ func TestHTTP_ErrorClassification_NonBinaryContentType(t *testing.T) {
 // TestHTTP_ErrorClassification_CtxCanceled
 // ctx 取消时，downloadTo 应返回包装了 context.Canceled 的错误，
 // 调用方可用 errors.Is(err, context.Canceled) 分类（#11 错误分类）。
+// 确定性：download.go 三条取消路径（client.Do 失败 / 读循环 select / 读错误）
+// 均 `fmt.Errorf("下载被取消: %w", ctx.Err())` 包装 ctxErr → errors.Is 必然成立。
 func TestHTTP_ErrorClassification_CtxCanceled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < 1000; i++ {
@@ -623,26 +621,17 @@ func TestHTTP_ErrorClassification_CtxCanceled(t *testing.T) {
 		cancel()
 	}()
 
-	dl := New()
-	err := dl.File(ctx, ts.URL, filepath.Join(t.TempDir(), "cancel.txt"), nil)
-	if err == nil {
-		t.Fatal("expected cancellation error, got nil")
-	}
-
-	// 验证错误可被分类为 context.Canceled（无论中间包了几层 %w）
-	if !errors.Is(err, context.Canceled) {
-		t.Logf("注意: errors.Is(err, context.Canceled) = false, err=%T: %v", err, err)
-		// 不 Fatal——某些 Go 版本 transport 行为可能不同，关键是有错误返回
-	} else {
-		t.Logf("OK: ctx 取消错误可通过 errors.Is(err, context.Canceled) 分类")
-	}
-
-	// 确保文件未被写入（截断/取消不应装盘半截文件）
+	// 同一 savePath 贯穿调用与断言（早前版本误用两个 t.TempDir()，
+	// 「取消后文件未写入」断言永远命中不存在路径，属无效断言）。
 	savePath := filepath.Join(t.TempDir(), "cancel.txt")
-	if _, errStat := os.Stat(savePath); !os.IsNotExist(errStat) {
-		// 文件可能已被 rename——检查内容是否完整
-		t.Logf("注意: 取消后 savePath 存在（可能已 rename 半截文件）")
-	}
+
+	dl := New()
+	err := dl.File(ctx, ts.URL, savePath, nil)
+	// 错误必须可分类为 context.Canceled（download.go 各取消路径均包装 ctxErr）
+	testutil.ErrorIs(t, err, context.Canceled, "download.go 取消路径统一 %w ctx.Err()")
+
+	// 取消后 savePath 不得装盘（截断/取消不应写半截文件）
+	testutil.FileNotExists(t, savePath, "取消后不应有半截文件装盘")
 }
 
 // TestHTTP_ErrorClassification_NoTruncationOnFullDownload

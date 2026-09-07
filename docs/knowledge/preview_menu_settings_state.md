@@ -130,6 +130,22 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点），切档套用后 `menu?.refresh()` 刷新兄弟控件显示。
 - 进入预览时 `mount-preview-core` 在 `loadAll → applyModelPreset(模型类别)` **之后**调 `applyPerfPreset(getPerfPreset())`——用户显式档位最后覆盖模型预设。
 
+### P5 归属判定：横切项 vs cap 自报项（2026-09-07 翻明）
+
+settings 面板是**聚合器**：横切项（P1 本层管）与 cap 自报项（P2 带 settingsOrder）都被转成 `PreviewMenuNode[]` 进同一张面板，渲染走同一 renderMenu——**看起来一样，底下是两套状态层 + 两套键轨**。新增"渲染设置"开关时，归属判定口诀：
+
+> **跟某一 cap 能力绑定（该 cap 的显隐/生命周期/守卫驱动它）→ 该 cap 自报（加 `settingsOrder`）；与具体能力无关的全局显示/性能设置 → 横切（preview-state 本层管）。**
+
+分界判据（自上而下问三句，任一句命中"cap"即归 cap）：
+1. **有无能力宿主**——它是否为某 cap 的能力/参数（wireframe→render-mode、bloom→postprocessing、pmrem→sky）？是 → cap。
+2. **有无预设仲裁需求**——需不需要被 model 预设 (auto-model) / 用户手动 (manual) 仲裁（应属 cap 的 `lastWriteSource` 守卫）？需要 → cap。
+3. **有无 cap 私有状态依赖**——依赖 `this.enabled` / `isStateLoaded` 等 cap 私有运行时态？依赖 → cap。
+全部否定 → 横切（frustumCull/maxFps/maxPixelRatio 即此例：无宿主、无仲裁、无私有态）。
+
+**历史动机 vs 规则**：frustumCull/maxFps/maxPixelRatio 归横切是 ADR-125 P1 时代"settings-state"遗产（无 cap 归属）；wireframe 等归 cap 是同一能力注销时"真值源归属 cap"。规则把历史分歧收敛为可判定口诀，避免新增设置主观选边。
+
+**已知缝隙（非 bug，记录）**：preview-state 的 cap 派生路径（bindings 中"cap 派生项不落盘"备注）使 preview-state **兼作状态 + 转发代理**——`render.bloom` 经 set 转发给 postprocessing cap（`setMasterEnabled`），本层不落盘。这是"本层是状态层还是代理"的模糊点；因跨 cap 聚合总闸语义无法完全下沉，现状可接受，勿再新增此类代理 path（新能力级开关走 P2 cap 自报，不复制进本层）。
+
 ## 对外 API / 入口
 
 ```ts

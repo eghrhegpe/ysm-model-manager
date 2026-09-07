@@ -103,8 +103,26 @@ invariant_anchors:
 
 - caps/*-capability.ts：构造注册 callback 监听自己的 envState 键 → 分派 Three 应用（结构字段 rebuild 容器、参数字段就地改材质/uniform）。setter 不再直接改 Three（防双写双重建）。
 - menu 层（ADR-195 刀2 直产节点）：控件闭包绑 cap setter/getter。**ADR-196 刀3 字面 StatePath 化已决策不采纳**（2026-09-07）——cap setter 已直通 envState（见「对外 API」），菜单控件闭包即状态驱动；`getStateValue/setStateValue` 保留为可选实现细节，非菜单绑定要求。
-- 持久化：各 cap `saveState/loadState` 仍写 localStorage（旧键轨向后兼容），恢复时映射 setEnvState。envState 层自身持久化（env-state-persist.ts）**明确不做**（2026-09-07 决断：避免与 cap saveState 双写双恢复冲突，schedulePersistEnvState 空壳已删）。
 - 测试：各 cap 测试 `beforeEach(() => resetEnvState())` 隔离单例；`clearEnvCallbacks()` 清泄漏。
+
+## 持久化设计（2026-09-07 翻明）
+
+一句话：**状态运行时唯一真值在 `envState` 单例；落盘时各 cap 从 envState 摘自己关心的键写 localStorage；启动时逐 cap 恢复回 envState。envState 层自身不做第二层持久化。**
+
+核心机制（`caps/scene-capability.ts` 的 `persistState/restoreState/restoreFields` 三件套）：
+- **键轨**：`localStorage["ysm-scene-cap-" + capId]`，JSON 序列化（如 `ysm-scene-cap-fog`）。
+- **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
+- **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"manual"})` 写回 envState → cap apply 落地 Three。
+- **触发时机**：进入 3D → `sceneCapabilityRegistry.loadAll()`（shared-infra.ts:239）；离开 3D → `sceneCapabilityRegistry.saveAll()`（mount-session.ts:267）。
+
+**与预设的共存（守卫链）**：装配序 `loadAll()`（恢复用户存档 source:"manual" **且** shadow/reflector 置 `isStateLoaded=true`）→ `applyModelDefaults`（读 MODEL_DEFAULTS source:"auto-model"）。`shouldOverwrite` 裁决 `manual > auto-atmosphere > auto-model` → 用户手动值（含恢复的存档）不被预设覆盖；shadow/reflector 额外用 `isStateLoaded` 早退连套用都不执行。双重机制保「上次调的雾/灯切模型不被重置」。
+
+**envState 层为何不做全量持久化（刀0 空壳已删）**：
+1. **键轨冲突**——envState 全量快照 vs 各 cap 的 `ysm-scene-cap-*` 双套并存会双写双恢复（同参数存两份，启动恢复两遍，行为取决顺序易回归）。
+2. **恢复语义丢失**——envState 全量恢复经 `setEnvState` 只能写参数，写不了能力级 `this.enabled`（shadow/reflector `isStateLoaded` 置位、fog 私有 enabled 均 cap 独占）。
+3. **迁移逻辑在 cap**——fog 的 legacy 旧键迁移按 cap 语义写，envState 层代劳不了。
+
+职责边界：**cap 管「摘哪些键、怎么恢复、带什么守卫」；envState 管「运行时唯一真值 + 写入来源仲裁」**。
 
 ## 不变量
 

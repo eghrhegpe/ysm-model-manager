@@ -1,7 +1,7 @@
 // ========== 容器类型指纹缓存组件（ADR-134）==========
 // 从 app_scan.go 的包级全局 `var containerTypeCache sync.Map` 抽离为组件，
 // 消除「全局可变状态跨文件隐式耦合」（非循环依赖——Go 编译器本就拒包级导入环，
-// check-circular-go 不覆盖的对象级环已由 ADR-002 P1 回调注入破净）。
+// 对象级环已由 ADR-002 P1 回调注入破净；包级环由 go build 守（check-circular-go 已废弃 ADR-204）。
 //
 // 组件持有指纹 map + mutex + 可注入 detectFn（复用 DownloadQueue 回调注入范式）：
 // detectFn 默认指向 packs.DetectResourceType，测试可注入假实现断言缓存短路语义，

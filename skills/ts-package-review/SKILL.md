@@ -12,7 +12,7 @@ description: "前端TS包代码评审：分层结构/惯用TS/命名/坏味道/�
 1. 先跑治理工具，人工评审聚焦工具覆盖不到的语义问题：
 ```bash
 node scripts/check-redlines.mjs        # R1-R9 + W 系列附加扫描（Error 级已兜底，人工复核 Warn 级与变体逃逸）
-node scripts/type-consistency.mjs      # 资源类型常量一致性
+node scripts/type-consistency.ts       # 资源类型单一事实来源派生守卫（extensions.ts 必须派生，禁手写副本）
 node scripts/binding-check.mjs         # 绑定契约
 cd frontend && npm run typecheck       # tsc --noEmit（遗留基线错误用 Select-String 过滤目标文件判定归属）
 ```

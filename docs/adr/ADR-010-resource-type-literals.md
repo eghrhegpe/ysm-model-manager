@@ -102,5 +102,5 @@ CLEANUP_RULES.md 第 7 条明确规定：**禁止在 JS 中使用 `"ysm"` / `"mm
   `shortLabel`（显示名映射）、preview-litematic-meta 的 `"schematic"` / `"nbt"`
   （文件类型标签，非资源类型 ID）
 
-验证：`type-consistency.mjs` 全一致、`tsc --noEmit` 通过、`check-deadcode-baseline` 0 ERROR、
+验证：`type-consistency.ts` 派生链路校验通过（extensions.ts 必须派生，ADR-204 收敛）、`tsc --noEmit` 通过、`check-deadcode-baseline` 0 ERROR、
 `doctor` 全绿（退出码 0）。

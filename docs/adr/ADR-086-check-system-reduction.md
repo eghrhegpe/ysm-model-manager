@@ -66,7 +66,7 @@
 | check-layering R1/R2 零容忍 | 分层公理的硬约束，不可降级 |
 | check-redlines fail-closed | 扫描失败必须阻断，否则红线门禁静默放行 |
 | adr-check | ADR 登记表一致性，秒级，零成本 |
-| type-consistency | resource_types.json ↔ extensions.js 单一事实来源守护 |
+| type-consistency | resource_types.json ↔ extensions.js 单一事实来源守护 | **🧊 已废弃比对职责（ADR-204）**：T2 后 extensions.ts 构建期派生，JSON↔JS 比对块不可达；脚本收敛为「派生守卫」单职责（拦手写副本回潮），`dup_id` 检查移交 Go `resource_types_consistency_test.go` |
 | binding-check | Wails Go↔TS 绑定契约，ADR-014 红线 |
 | check-menu-health | ADR-085 菜单表健康门禁，秒级正则扫描 |
 | i18n-check / i18n-ui-check | 三语一致性，秒级 |
@@ -195,7 +195,7 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 | check-dynamic-import.mjs | 5 (0.1s) | 4 | 5 | ⭐⭐⭐⭐½ | 动态 import() 合理性审查（失败处理 / 空吞 / .js 残留 / 轻量误动态） | pre-push / CI |
 | check-orphan-exports.mjs | 4 (0.3s) | 3 | 4 | ⭐⭐⭐⭐ | 孤儿导出检测（0 消费者符号审计），WARN 不阻断 | pre-push / CI |
 | check-workflow-refs.mjs | 5 (0.1s) | 4 | 5 | ⭐⭐⭐⭐ | GitHub Actions workflow 引用脚本/目录存在性卡点 | pre-push / CI |
-| check-circular-go.mjs | 5 (0.1s) | 4 | 4 | ⭐⭐⭐⭐ | Go 包级循环依赖检测（与前端 check-circular 对称，不依赖完整编译） | pre-push / CI（Go 域变更时） |
+| check-circular-go.mjs | 5 (0.1s) | 4 | 4 | ⭐⭐⭐⭐ | **❌ 已废弃（ADR-204）**：与 `go build ./go/...` 完全冗余，编译期即拒包级环；文件已删除，共享核心 `cycles.ts` 保留供前端 `check-circular.ts` | pre-push / CI（Go 域变更时） |
 | check-adr-health.mjs | 5 (0.1s) | 4 | 3 | ⭐⭐⭐⭐ | ADR 状态机合法性 + 登记表同步 + 技术债清单 | pre-push / CI |
 | check-doc-drift.mjs | 5 (0.1s) | 4 | 3 | ⭐⭐⭐⭐ | 文档三一致检查（ADR 登记表 / 知识卡 / 架构树反引号路径） | pre-push / CI |
 | check-knowledge-drift.mjs | 5 (0.2s) | 4 | 3 | ⭐⭐⭐⭐ | 知识卡 source_files 漂移 + frontmatter 必填 + 索引断链（含 --affected 主动防御） | pre-push / CI |
@@ -212,7 +212,7 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 | **P1** | check-knowledge-drift ↔ check-doc-drift（知识卡维度） | **中**（source_files/frontmatter/索引断链三项语义完全重叠） | 保留 check-knowledge-drift 作单一事实来源；check-doc-drift 移除知识卡块，聚焦 ADR + 架构树 |
 | **P2** | check-adr-health ↔ check-doc-drift（ADR 登记表维度） | **中高**（两者都检测 ADR 文件 vs index.md 登记表不一致） | 保留 check-doc-drift 作 ADR 登记表一致性单一事实来源；check-adr-health 降为「状态机合法性 + 技术债清单」专项，移除登记同步块 |
 | **P3** | check-orphan-exports ↔ check-deadcode-baseline（孤儿检测子集重叠） | **中**（孤儿导出是 knip 死代码检测的子集） | 分层触发：check-orphan-exports 留 pre-push 快速反馈（秒级）；check-deadcode-baseline 移出 pre-push，改 `npm run audit:deadcode` 周度审计（1.7s 太慢） |
-| P4 | check-circular ↔ check-circular-go | 低（对称设计，不同语言域） | 两者保留，职责正交 |
+| P4 | check-circular ↔ check-circular-go | 低（对称设计，不同语言域） | **check-circular-go 已废弃（ADR-204），仅前端 check-circular 保留**；go build 兜 Go 包级环 |
 | P5 | check-redlines ↔ comment-checker（W3/W4） | 低（已治理：W3/W4 已移交 comment-checker） | 无需降级 |
 
 ### 4.3 AI 调用公约（防「一轮打三次」）

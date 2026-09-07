@@ -22,7 +22,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 | R4 | 禁止 `display: none/block` 做动画切换 | Warn | `check-redlines.mjs R4` |
 | R5 | 禁止硬编码颜色值 | Warn | `check-redlines.mjs R5` + `doctor.mjs` |
 | R6 | 禁止 `public/` 下放 JS | Error | `check-redlines.mjs R6` |
-| R7 | 禁止魔法字符串资源类型字面量 | Warn | `check-redlines.mjs R7` + `type-consistency.mjs` |
+| R7 | 禁止魔法字符串资源类型字面量 | Warn | `check-redlines.mjs R7` + `type-consistency.ts`（派生守卫，禁手写 RESOURCE_EXTS 副本） |
 | R8 | 禁止未转义拼接 HTML | Error | `check-redlines.mjs R8` + `doctor.mjs` |
 | R9 | 禁止侧边栏手动拼接 | Warn | `check-redlines.mjs R9` |
 | R10 | 禁止重复实现 esc 转义 | Error | `check-redlines.mjs R10` |

@@ -43,9 +43,7 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   'check-doc-drift.ts',
   'check-adr-health.ts',
   'check-boolean-naming.ts',
-  'check-circular.ts',
-  'check-circular-go.ts',
-  'check-orphan-exports.ts',
+  'check-circular.ts',  'check-orphan-exports.ts',
   'check-deadcode-baseline.ts',
   'jscpd-go.ts',
   'check-tpl-refs.ts',
@@ -121,7 +119,6 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
  * Go 域 push 模式补挂静态工具（plan.go=true 时追加）。
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
-  'check-circular-go.ts',
   'jscpd-go.ts',
   'check-go-diff-coverage.ts',
 ];

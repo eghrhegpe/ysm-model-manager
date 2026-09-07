@@ -106,7 +106,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |
-| `check-redlines` / `type-consistency` / `binding-check` | 治理红线 / 类型 / 绑定契约检查 |
+| `check-redlines` / `type-consistency` / `binding-check` | 治理红线 / 单一事实来源派生守卫 / 绑定契约检查 |
 
 ## ADR 与审核
 

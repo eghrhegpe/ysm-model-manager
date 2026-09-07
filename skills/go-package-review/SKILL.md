@@ -9,7 +9,7 @@ description: "Go包代码评审：包结构/惯用Go/命名/坏味道/测试覆�
 只研究、绝不改文件。全程只读工具；改动另起任务。
 
 ## 流程
-1. 先跑治理工具（`check-redlines` / `type-consistency` / `binding-check`），人工评审聚焦工具覆盖不到的：超长函数、重复代码、语义问题。
+1. 先跑治理工具（`check-redlines` / `type-consistency`（派生守卫）/ `binding-check`），人工评审聚焦工具覆盖不到的：超长函数、重复代码、语义问题。
 2. LS go/ 确认真实目录（包名拼写可能不准，以 LS 为准，如 go/path 实为 paths）。常用命令：
 ```bash
 $ for d in go/*/; do files=$(ls "$d"*.go 2>/dev/null | wc -l); loc=$(cat "$d"*.go 2>/dev/null | wc -l); echo "$d $files files, $loc LOC"; done

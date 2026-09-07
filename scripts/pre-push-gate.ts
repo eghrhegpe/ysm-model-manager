@@ -722,7 +722,7 @@ async function main() {
         issues === null
           ? "输出解析失败（scripts/type-consistency.ts 缺失？）"
           : ok
-            ? "resource_types.json ↔ extensions.js 一致"
+            ? "extensions.ts 派生链路完好（单一事实来源守护通过）"
             : `${issues} 个不一致`,
     });
   }

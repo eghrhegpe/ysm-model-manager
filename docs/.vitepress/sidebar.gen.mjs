@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-201：测试文件命名规范",
+        "link": "/adr/ADR-201-test-naming-convention"
+      },
+      {
         "text": "ADR-200：CLI 输出契约结构化：命令返回结果对象，--json 载荷去文本化",
         "link": "/adr/ADR-200-cli-structured-output"
       },

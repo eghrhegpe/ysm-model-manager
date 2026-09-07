@@ -242,6 +242,19 @@ export class SkyCapability implements SceneCapability {
         if (this.enabled) {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
+          // PMREM 重建门控收敛于此（原散落在 setTime/update/setSun 双写）：
+          //  - skyForceEnv=true（手动 setTime/setSun）→ 无条件重建（滑块/时间轴体验不降级）
+          //  - skyForceEnv=false（昼夜循环 update）→ 太阳高度角变化 ≥ 阈值才重建（GPU 熔炉治理）
+          if (state.skyEnvironment) {
+            if (state.skyForceEnv) {
+              this.regenerateEnvironment();
+            } else {
+              const el = this.elevation;
+              const dirty =
+                Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
+              if (dirty) this.regenerateEnvironment();
+            }
+          }
         }
         this.updateGodRays();
         this.updateSunsetTint();
@@ -265,6 +278,8 @@ export class SkyCapability implements SceneCapability {
         if (this.enabled) {
           this.sky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
           this.envSky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
+          // regenerate=true（setCloudCoverage 第二参）→ 云量影响环境烘焙，重刷 IBL
+          if (state.skyForceEnv && state.skyEnvironment) this.regenerateEnvironment();
         }
       }
       if (changed.has("skyTurbidity")) {
@@ -406,15 +421,12 @@ export class SkyCapability implements SceneCapability {
 
   /** 调整太阳位置（度） */
   setSun(elevation: number, azimuth: number): void {
+    // ADR-196 收口：纯写 envState；渲染应用（writeUniforms/PMREM 重建）统一走
+    // callback 的 skyElevation/skyAzimuth 分支（forceEnv=true → 无条件重建）。
     setEnvState(
       { skyElevation: elevation, skyAzimuth: azimuth, skyForceEnv: true },
       { source: "manual" },
     );
-    this.elevation = elevation;
-    this.azimuth = azimuth;
-    this.writeUniforms(this.sky);
-    this.writeUniforms(this.envSky);
-    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   setEnabled(v: boolean): void {
@@ -428,12 +440,11 @@ export class SkyCapability implements SceneCapability {
   }
 
   setEnvironmentEnabled(v: boolean): void {
+    // ADR-196 收口：纯写 envState；regenerate/clear 由 callback 的 skyEnvironment 分支落地。
     setEnvState({ skyEnvironment: v }, { source: "manual" });
-    if (!this.enabled) return;
-    if (v) this.regenerateEnvironment();
-    else this.clearEnvironment();
     // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）——
-    // 经构造注入的查询器（组合根 createAll 传入），不 import registry（防模块环）
+    // 经构造注入的查询器（组合根 createAll 传入），不 import registry（防模块环）。
+    // 跨 cap 通知非 envState 派发范畴（light 的 ambient 衰减读 sky 开关做派生），setter 保留。
     (
       this.caps?.getById("light") as { refreshAmbientFromSky?: () => void } | null | undefined
     )?.refreshAmbientFromSky?.();
@@ -452,39 +463,38 @@ export class SkyCapability implements SceneCapability {
     if (preset.sunIntensityScale !== undefined)
       mapped.skySunIntensityScale = preset.sunIntensityScale;
     if (preset.sunDiscScale !== undefined) mapped.skySunDiscScale = preset.sunDiscScale;
-    setEnvState(mapped, { source: "auto-model" });
-    if (!this.enabled) return;
-    this.writeUniforms(this.sky);
-    this.writeUniforms(this.envSky);
-    if (envState.skyEnvironment) this.regenerateEnvironment();
+    // ADR-196 收口：纯写 envState；uniform 由 callback 各键分支落地 + 末尾强制重建一次
+    // （预设切换是离散动作，散射参数变化应刷新环境烘焙——callback 各分支不互知，
+    //  单一 changed 集内多键无法各自触发 rebuild，故此处保留一次显式 regenerate）。
+    setEnvState({ ...mapped, skyForceEnv: true }, { source: "auto-model" });
+    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
   setCloudCoverage(v: number, regenerate = false): void {
     const clamped = Math.max(0, Math.min(1, v));
-    setEnvState({ skyCloudCoverage: clamped }, { source: "manual" });
-    this.sky.material.uniforms.cloudCoverage.value = clamped;
-    this.envSky.material.uniforms.cloudCoverage.value = clamped;
-    if (regenerate && this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
+    // ADR-196 收口：纯写 envState；uniform 由 callback 的 skyCloudCoverage 分支落地；
+    // regenerate 语义保留（置 skyForceEnv 由 callback 判定重建）。
+    setEnvState(
+      { skyCloudCoverage: clamped, ...(regenerate ? { skyForceEnv: true } : {}) },
+      { source: "manual" },
+    );
   }
 
   /** §4 解耦：设置太阳强度对天空底色的耦合尺度（0.5~1.0，默认 0.75）；
    *  1.0 = 原生 Preetham 强度（正午最白），越低天空越不被太阳光绑架。 */
   setSunIntensityScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
+    // ADR-196 收口：纯写 envState；uniform 由 callback 落地。
     setEnvState({ skySunIntensityScale: clamped }, { source: "manual" });
-    const u = this.sky.material.uniforms;
-    if (u.sunIntensityScale !== undefined) u.sunIntensityScale.value = clamped;
-    // 环境贴图 envSky 不受这个参数影响（保持原生 Preetham，PBR 反射更真实）。
   }
 
   /** §4 解耦：设置太阳盘白光的尺度（0.2~1.0，默认 0.5）；
    *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
   setSunDiscScale(v: number): void {
     const clamped = Math.max(0, Math.min(1.5, v));
+    // ADR-196 收口：纯写 envState；uniform 由 callback 落地。
     setEnvState({ skySunDiscScale: clamped }, { source: "manual" });
-    const u = this.sky.material.uniforms;
-    if (u.sunDiscScale !== undefined) u.sunDiscScale.value = clamped;
   }
 
   /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */
@@ -553,10 +563,10 @@ export class SkyCapability implements SceneCapability {
     if (!this.enabled) return;
     this.godRaysTime.value += dt;
     if (!this.autoRotateOn) return;
-    // 昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建（锐评 P1 GPU 熔炉修复）。
-    // code_review df84baefb #1/#14（P1）：force 跳过 shouldOverwrite——autoRotate 推进
-    // timeOfDay 是动画自身行为，用户拖过一次时间滑杆（manual 写入）后 auto-model 写被
-    // 永久拒绝 → 昼夜循环冻结；force 恢复 ADR-196 前 update 直接推进 params 的语义。
+    // 昼夜循环每帧驱动 timeOfDay，PMREM 按太阳高度角阈值重建（callback 的 skyTimeOfDay
+    // 分支统一门控——锐评 P1 GPU 熔炉修复 + code_review #1/#14 force 语义）。
+    // force 跳过 shouldOverwrite：autoRotate 推进是动画自身行为，用户拖过一次时间滑杆
+    // （manual 写入）后 auto-model 写被永久拒绝 → 昼夜循环冻结；force 恢复推进语义。
     setEnvState(
       {
         skyTimeOfDay:
@@ -565,18 +575,6 @@ export class SkyCapability implements SceneCapability {
       },
       { source: "auto-model", force: true },
     );
-    this.syncSunFromTime();
-    if (envState.skyEnvironment) {
-      const el = this.elevation;
-      const dirty =
-        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
-      if (dirty) {
-        this.regenerateEnvironment();
-        this.lastPmremElevation = el;
-      }
-    }
-    this.updateGodRays();
-    this.updateSunsetTint();
   }
 
   /** 由 timeOfDay 推导太阳 elevation/azimuth（单一事实来源，避免与 setSun 双写冲突） */
@@ -616,20 +614,12 @@ export class SkyCapability implements SceneCapability {
    */
   setTime(hour: number, opts?: { forceEnv?: boolean }): void {
     const forceEnv = opts?.forceEnv ?? true;
+    // ADR-196 收口：纯写 envState，渲染应用（syncSun/writeUniforms/PMREM 门控/godrays/tint）
+    // 统一走 registerEnvCallback 的 skyTimeOfDay 分支。
     setEnvState(
       { skyTimeOfDay: ((hour % 24) + 24) % 24, skyForceEnv: forceEnv },
       { source: "manual" },
     );
-    this.syncSunFromTime();
-    if (!this.enabled) return;
-    this.writeUniforms(this.sky);
-    this.writeUniforms(this.envSky);
-    if (envState.skyEnvironment && forceEnv) {
-      this.regenerateEnvironment();
-    }
-    // 更新 god rays 和 sunset tint
-    this.updateGodRays();
-    this.updateSunsetTint();
   }
 
   getTimeOfDay(): number {

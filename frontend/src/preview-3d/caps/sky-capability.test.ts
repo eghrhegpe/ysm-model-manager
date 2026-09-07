@@ -15,7 +15,15 @@ import {
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
 import { envState, resetEnvState, setEnvState } from "../state/env-state.ts";
+import { clearEnvCallbacks } from "../state/env-dispatcher.ts";
 import type { SceneCapability } from "./scene-capability.ts";
+
+// ADR-196 单例化：SkyCapability 构造即注册 envState 回调（dispatch 广播），
+// 测试若不清理，残留实例会响应后续 setEnvState/update 的派发（fromScene 计数污染）。
+// 每个测试后清空回调注册表，保证 dispatch 只达当前测试的 cap。
+afterEach(() => {
+  clearEnvCallbacks();
+});
 
 // PMREMGenerator 扩展 mock：fromScene 返回带 dispose 的对象（真实返回 WebGLRenderTarget），
 // 否则 regenerateEnvironment 二次调用 dispose 旧 RT 时 TypeError

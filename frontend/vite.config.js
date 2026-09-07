@@ -12,7 +12,7 @@ const SRC_DIR = fileURLToPath(new URL("./src", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 /** 手写源码顶层目录白名单（与 tsconfig.json paths 必须一致；D3 一致性校验兜底）。 */
 const ALIAS_DIRS = [
-  "preview-3d", "views", "utils", "backend", "core",
+  "bindings", "preview-3d", "views", "utils", "backend", "core",
   "ui", "features", "workers", "services", "wasm", "test-utils", "web-spike",
   "locales", "parsers",
 ];

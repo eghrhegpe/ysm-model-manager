@@ -26,6 +26,7 @@
     "allowImportingTsExtensions": true,
     "types": ["vite/client"],
     "paths": {
+      "@/bindings/*": ["./bindings/*"],
       "@/preview-3d/*": ["./src/preview-3d/*"],
       "@/views/*": ["./src/views/*"],
       "@/utils/*": ["./src/utils/*"],

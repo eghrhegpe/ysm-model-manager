@@ -29,7 +29,8 @@ vi.mock("./loader.ts", async (importOriginal) => {
 import { bus } from "@/bus";
 import { loadEntries } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
+import { sleep, waitFor } from "@/test-utils/wait.ts";
+import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 
 describe("app-tree 生命周期配对", () => {
   let loadSpy: ReturnType<typeof vi.fn>;

@@ -30,7 +30,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
 import { renderVersionCards } from "./render.ts";
-import { waitFor } from "@/test-utils/index.ts";
+import { waitFor } from "@/test-utils/wait.ts";
 import type { SidebarInstance } from "./data.ts";
 
 function instance(name: string): SidebarInstance {

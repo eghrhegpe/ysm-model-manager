@@ -15,7 +15,7 @@ vi.mock("./edit.ts", () => ({ bindEditEvents: binds.bindEditEvents }));
 vi.mock("./drag.ts", () => ({ bindDragEvents: binds.bindDragEvents }));
 
 import { renderSiteView, type RenderSiteViewCtx, type LocalCreatorLike } from "./site-view.ts";
-import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 
 function makeCtx(over: Partial<RenderSiteViewCtx> = {}): {
   ctx: RenderSiteViewCtx;

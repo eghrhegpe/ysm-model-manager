@@ -26,7 +26,8 @@ import "./index.ts"; // 触发 customElements.define("app-sidebar")
 // 正向等待一律 waitFor 条件轮询（原固定 sleep 慢机不够即假红，审计 P2）；
 // 仅两处防抖/清理的**负向窗口**保留真实 sleep（须等满定时器窗口才能断言「没发生」），
 // 已在各处注释标明。waitFor 定义见 src/test-utils/index.ts。
-import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
+import { sleep, waitFor } from "@/test-utils/wait.ts";
+import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 
 /** loadInstances 调用计数（vi.mock 注入 spy，验证 _reload 触发与清理） */
 const loadInstancesMock = vi.mocked(loadInstances);

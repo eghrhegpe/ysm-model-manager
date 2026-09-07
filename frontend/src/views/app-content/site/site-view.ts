@@ -4,7 +4,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import type {
   WorkshopCreator,
   WorkshopSite,
-} from "../../../../bindings/ysm-model-manager/go/types/models.ts";
+} from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { bindDragEvents } from "./drag.ts";
 import { bindEditEvents } from "./edit.ts";

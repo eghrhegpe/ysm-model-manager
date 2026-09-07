@@ -33,7 +33,8 @@ import { bindToolbarEvents } from "./toolbar-events.ts";
 import { selectState } from "./data.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-import { waitFor, queryAllByTestId } from "@/test-utils/index.ts";
+import { queryAllByTestId } from "@/test-utils/query-by-testid.ts";
+import { waitFor } from "@/test-utils/wait.ts";
 import type { AppTree } from "./index.ts";
 
 const getAppMock = vi.mocked(getApp);

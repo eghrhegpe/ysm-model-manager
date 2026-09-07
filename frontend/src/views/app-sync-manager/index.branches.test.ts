@@ -6,7 +6,8 @@
 // 注意：store.load* 与 loadRepoRoots 内部吞错永不 reject，各 .catch 仅由
 // _doRender 内 render 同步抛错触发——这是刻意的 mock 契约，不是绕过。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { waitFor, sleep, unmountElement } from "@/test-utils/index.ts";
+import { waitFor, sleep } from "@/test-utils/wait.ts";
+import { unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 

@@ -25,7 +25,7 @@ interface DgCfInstanceFile {
 
 // ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
 // DetectConflicts / ResolveConflicts 现返回 typed struct，失败走 error 通道（Promise reject）
-import type { FileConflict } from "../../../../bindings/ysm-model-manager/go/sync/models.ts";
+import type { FileConflict } from "@/bindings/ysm-model-manager/go/sync/models.ts";
 
 // 兼容旧 interface，实际使用 binding 生成的类型
 type DgCfFileConflict = FileConflict;

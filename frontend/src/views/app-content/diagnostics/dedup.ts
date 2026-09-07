@@ -54,7 +54,7 @@ interface ScanGroupResult {
   groups: ScanGroup[];
 }
 
-import type { Group as DedupGroup } from "../../../../bindings/ysm-model-manager/go/dedup/models.ts";
+import type { Group as DedupGroup } from "@/bindings/ysm-model-manager/go/dedup/models.ts";
 
 type GetRepoRootFn = (rtype: string) => Promise<string>;
 type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;

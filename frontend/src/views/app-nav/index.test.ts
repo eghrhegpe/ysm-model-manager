@@ -4,7 +4,9 @@
 // 无「请求/响应」双事件；app-nav 点击直接 emit nav:changed，自身监听更新高亮。
 // 单独挂载 app-nav 时 nav:changed 的页面消费方（app-content）不在场，但 emit 可被自身监听捕获。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
+import { getByTestId, getAllByTestId } from "@/test-utils/query-by-testid.ts";
+import { waitFor, sleep } from "@/test-utils/wait.ts";
+import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
 
 const { canMock } = vi.hoisted(() => ({

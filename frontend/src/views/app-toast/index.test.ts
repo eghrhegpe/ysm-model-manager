@@ -1,7 +1,8 @@
 // ===== <app-toast> 组件级测试（G-1 — ADR-035 / Design.md §19.1）=====
 // 断言基于 data-testid 稳定钩子；交互走 bus.emit 事件驱动。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, queryByTestId, waitFor, sleep } from "@/test-utils/index.ts";
+import { getByTestId, getAllByTestId, queryByTestId } from "@/test-utils/query-by-testid.ts";
+import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { bus } from "@/bus";
 import "./index.ts"; // 触发 customElements.define("app-toast")
 

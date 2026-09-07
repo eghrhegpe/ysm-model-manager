@@ -19,7 +19,8 @@ vi.mock("./loader.ts", () => ({ loadInstances: vi.fn() }));
 import { bus } from "@/bus";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
-import { mountCustomElement, unmountElement, waitFor } from "@/test-utils/index.ts";
+import { waitFor } from "@/test-utils/wait.ts";
+import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import type { SidebarInstance } from "./data.ts";
 
 /** loader mock 句柄（各用例 mockImplementation 设假数据，beforeEach mockReset 防泄漏） */

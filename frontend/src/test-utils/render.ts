@@ -66,3 +66,23 @@ export function renderComponent<T extends Element = HTMLElement>(
     },
   };
 }
+
+/**
+ * 同步渲染自定义元素到 body，返回已创建元素。
+ * 与 renderComponent 不同：不返回 RenderResult，适合简单测试。
+ */
+export function mountCustomElement<T extends Element = HTMLElement>(
+  tagName: string,
+  container: Element = document.body,
+): T {
+  const el = document.createElement(tagName) as unknown as T;
+  container.appendChild(el);
+  return el;
+}
+
+/**
+ * 卸载元素：从 DOM 移除。
+ */
+export function unmountElement(el: Element): void {
+  el.remove();
+}

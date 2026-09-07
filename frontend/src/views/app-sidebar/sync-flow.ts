@@ -11,14 +11,13 @@ import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { SidebarInstance } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
-// ⚠️ 使用模块级 Map 而非组件实例：系统只存在一个 <app-sidebar> 实例，
-// 需要跨 disconnectedCallback/connectedCallback 周期保持勾选状态（见 sync.test.ts）
-const _checkedSets = new Map<string, Set<string>>();
-function checkedSetFor(rtype: string): Set<string> {
-  let s = _checkedSets.get(rtype);
+// 通过 getter 注入实例属性，生命周期随组件（见 sync.test.ts）
+function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<string>>): Set<string> {
+  const checkedSets = getCheckedSets();
+  let s = checkedSets.get(rtype);
   if (!s) {
     s = new Set<string>();
-    _checkedSets.set(rtype, s);
+    checkedSets.set(rtype, s);
   }
   return s;
 }
@@ -27,12 +26,17 @@ function checkedSetFor(rtype: string): Set<string> {
 const SYNC_TIMEOUT_MS = 30_000;
 
 // ---------- bindSelectAll ----------
-export function bindSelectAll(root: ShadowRoot, rtype: string, instances: SidebarInstance[]): void {
+export function bindSelectAll(
+  root: ShadowRoot,
+  rtype: string,
+  instances: SidebarInstance[],
+  getCheckedSets: () => Map<string, Set<string>>,
+): void {
   const cb = root.getElementById("sb-select-all") as HTMLInputElement | null;
   if (!cb) return;
   cb.addEventListener("change", () => {
     const checked = cb.checked;
-    const set = checkedSetFor(rtype);
+    const set = checkedSetFor(rtype, getCheckedSets);
     root.querySelectorAll(".chk").forEach((c) => {
       const input = c as HTMLInputElement;
       input.checked = checked;
@@ -50,9 +54,10 @@ export function restoreCheckboxes(
   root: ShadowRoot,
   rtype: string,
   instances: SidebarInstance[],
+  getCheckedSets: () => Map<string, Set<string>>,
 ): void {
-  const set = checkedSetFor(rtype);
-  // 恢复勾选状态（从模块级 checkedSets 读取，支持跨重新挂载恢复）
+  const set = checkedSetFor(rtype, getCheckedSets);
+  // 恢复勾选状态（从实例属性 checkedSets 读取，支持跨重新挂载恢复）
   root.querySelectorAll(".chk").forEach((c) => {
     const input = c as HTMLInputElement;
     const idx = parseInt(input.dataset.idx || "", 10);

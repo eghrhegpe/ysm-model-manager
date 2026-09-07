@@ -30,6 +30,7 @@ auto_fields:
     - bindSelectAll
     - bindSyncSelected
     - containerHTML
+    - EmitDedupe
     - emptyHintHTML
     - EventSelf
     - groupMmdVariants
@@ -45,9 +46,9 @@ auto_fields:
     - registerSync
     - render
     - renderVersionCards
-    - resetSelectedEmit
     - restoreCheckboxes
     - setLastSelectedType
+    - SidebarHost
     - STATUS_COLOR
     - STATUS_ICON
     - statusColorOf

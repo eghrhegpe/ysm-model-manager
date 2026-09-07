@@ -11,6 +11,13 @@ import type { BrowseMode } from "@/views/app-content/site/workshop-browse-mode.t
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { AppContentHost } from "./host.ts";
 
+// 扩展 HTMLIFrameElement 以携带加载超时 AbortController（实例级，非模块级）
+declare global {
+  interface HTMLIFrameElement {
+    _wsLoadAbort?: AbortController;
+  }
+}
+
 /** 内嵌浏览加载超时（15s 未完成加载 → 提示此站点不允许内嵌浏览） */
 const WS_EMBED_TIMEOUT_MS = 15000;
 
@@ -43,6 +50,8 @@ export function openSite(
 
 /**
  * 内嵌浏览：直连官网（仅 openSite 的 embed 分支调用，模块私有）
+ * 用 AbortController 替代模块级 timer：每次打开新页面时 abort 上一轮，确保只有
+ * 当前页面的 load 完成 / 超时触发；返回按钮同样 abort，彻底消除 timer 残留。
  */
 function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): void {
   const root = host._root;
@@ -51,23 +60,25 @@ function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): v
   const urlEl = root.getElementById("ws-url") as HTMLElement | null;
   const blockedEl = root.getElementById("ws-blocked") as HTMLElement | null;
 
+  // abort 上一轮 timer（如有）：防止快速连续打开时旧 timer 残留触发 blocked 弹层
+  if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
+
   if (urlEl) urlEl.textContent = url;
   if (blockedEl) blockedEl.style.display = "none";
   if (browserEl) browserEl.style.display = "flex";
   if (iframe) {
     iframe.style.display = "";
+    const ab = new AbortController();
+    iframe._wsLoadAbort = ab;
     iframe.src = url;
-    // 加载超时兜底：15s 未完成加载 → 提示「此站点不允许内嵌浏览」+ 外链打开
-    // 句柄必须写模块级 wsLoadTimer（返回按钮的 clearTimeout 消费同一变量）；
-    // 此前局部 const 遮蔽模块级变量 → 返回按钮清的是 undefined，旧 timer 残留仍会弹 blocked
-    window.clearTimeout(wsLoadTimer); // 防残留：上一次内嵌打开的 timer 未清时先作废
-    // 局部句柄 + 模块级同赋：onload 清「本次」句柄而非「最新」，避免返回后极速再开时
-    // 旧空文档的迟到 load 误清新 timer（审核建议：消除理论竞态）
     const timer = window.setTimeout(() => {
-      if (blockedEl) blockedEl.style.display = "flex";
+      if (!ab.signal.aborted && blockedEl) blockedEl.style.display = "flex";
     }, WS_EMBED_TIMEOUT_MS);
-    wsLoadTimer = timer;
-    iframe.onload = () => window.clearTimeout(timer);
+    iframe.onload = () => {
+      ab.abort();
+      clearTimeout(timer);
+    };
+    ab.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
   }
 }
 
@@ -77,13 +88,13 @@ function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): v
 export function bindSiteEvents(host: AppContentHost): void {
   const root = host._root;
 
-  // 返回按钮
+  // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
   root.getElementById("ws-back")?.addEventListener("click", () => {
     const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
+    if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
     if (iframe) iframe.src = "";
     const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
     if (browserEl) browserEl.style.display = "none";
-    window.clearTimeout(wsLoadTimer);
   });
 
   // 打开当前站点
@@ -164,6 +175,3 @@ export function bindSiteEvents(host: AppContentHost): void {
     }
   });
 }
-
-// 模块级变量（用于闭包捕获）
-let wsLoadTimer: number | undefined;

@@ -28,10 +28,22 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   SaveAppConfig: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
+import { bindCardEvents, bindFooter, type SidebarHost } from "./events.ts";
 import { renderVersionCards } from "./render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
 import type { SidebarInstance } from "./data.ts";
+
+const mockHost: SidebarHost = (() => {
+  let lastEmitted: string | null = null;
+  let busy = false;
+  return {
+    getLastEmittedPkg() { return lastEmitted; },
+    setLastEmittedPkg(v: string | null) { lastEmitted = v; },
+    resetSelectedEmit() { lastEmitted = null; },
+    getBusy() { return busy; },
+    setBusy(v: boolean) { busy = v; },
+  };
+})();
 
 function instance(name: string): SidebarInstance {
   return {
@@ -58,7 +70,7 @@ function mount(instances: SidebarInstance[]) {
   root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
   const container = root.getElementById("sidebar-instance-list")!;
   renderVersionCards(container, instances);
-  const cleanup = bindCardEvents(root, instances);
+  const cleanup = bindCardEvents(root, instances, mockHost);
   return { root, container, cleanup };
 }
 
@@ -68,7 +80,7 @@ beforeEach(() => {
   runLauncherDetectMock.mockClear();
   currentRepoTypeMock.mockReturnValue("ysm");
   localStorage.clear();
-  resetSelectedEmit(); // 隔离模块级 _lastEmittedPkg 状态（P3 补测：去重状态机跨用例不串）
+  mockHost.resetSelectedEmit(); // 隔离去重状态机跨用例串扰
 });
 
 describe("bindCardEvents — list 复用数据陈旧回归（P2）", () => {
@@ -83,7 +95,7 @@ describe("bindCardEvents — list 复用数据陈旧回归（P2）", () => {
     // 模拟 _reload：同一容器重渲染（#sidebar-instance-list 元素不变）+ 重新绑定（走 list 复用早退分支）
     const B = [instance("B1"), instance("B2")];
     renderVersionCards(container, B);
-    bindCardEvents(container.getRootNode() as ShadowRoot, B);
+    bindCardEvents(container.getRootNode() as ShadowRoot, B, mockHost);
 
     // 修复前：旧闭包捕获首次的 A 数组 → 点击 emit A[0]（陈旧）；
     // 修复后：currentInstances 已更新为 B → emit B[0]
@@ -139,7 +151,7 @@ describe("restoreSelectedCard 去重状态机（P2 复核修复回归护栏）",
     await flushRaf();
     expect(emitMock).toHaveBeenCalledTimes(1);
 
-    resetSelectedEmit(); // 模拟组件卸载
+    mockHost.resetSelectedEmit(); // 模拟组件卸载
     mountWithSavedSelection("A1");
     await flushRaf();
     expect(emitMock).toHaveBeenCalledTimes(2); // 新挂载会话重新 emit
@@ -177,7 +189,7 @@ describe("restoreSelectedCard 去重状态机（P2 复核修复回归护栏）",
     root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
     const container = root.getElementById("sidebar-instance-list")!;
     renderVersionCards(container, [rp]);
-    bindCardEvents(root, [rp]);
+    bindCardEvents(root, [rp], mockHost);
     await flushRaf();
     expect(emitMock).toHaveBeenCalledTimes(2);
     void container;
@@ -193,7 +205,7 @@ describe("bindCardEvents — 多实例并存互不干扰（模块级状态收敛
     const B = mount([instance("B1")]);
     // 模拟 A 的 _reload：同一容器重渲染 + 重新绑定
     renderVersionCards(A.container, [instance("A2")]);
-    bindCardEvents(A.container.getRootNode() as ShadowRoot, [instance("A2")]);
+    bindCardEvents(A.container.getRootNode() as ShadowRoot, [instance("A2")], mockHost);
     // B 的监听必须仍然有效，且点击读到的是 B 的实例数据
     (B.container.querySelector(".instance-card-header") as HTMLElement).click();
     expect(emitMock).toHaveBeenLastCalledWith("package:selected", instance("B1"));
@@ -342,7 +354,7 @@ describe("bindCardEvents — 点击早退分支（P1/P2 闭包内的守卫）", 
     root2.innerHTML =
       '<div class="list" id="sidebar-instance-list">' +
       '<div class="instance-card" data-idx="0"></div></div>';
-    bindCardEvents(root2, [instance("A1")]);
+    bindCardEvents(root2, [instance("A1")], mockHost);
     (root2.querySelector(".instance-card") as HTMLElement).click();
     expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
     void root;
@@ -433,7 +445,7 @@ describe("bindCardEvents — 绑定生命周期", () => {
     root.innerHTML =
       '<div class="list" id="sidebar-instance-list"></div>' +
       '<div class="instance-card-context-menu">stale</div>';
-    bindCardEvents(root, []);
+    bindCardEvents(root, [], mockHost);
     expect(root.querySelector(".instance-card-context-menu")).toBeNull();
   });
 
@@ -441,7 +453,7 @@ describe("bindCardEvents — 绑定生命周期", () => {
     const host = document.createElement("div");
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML = "<div></div>";
-    const cleanup = bindCardEvents(root, []);
+    const cleanup = bindCardEvents(root, [], mockHost);
     expect(typeof cleanup).toBe("function");
     expect(() => cleanup()).not.toThrow();
   });
@@ -459,12 +471,12 @@ describe("bindCardEvents — 绑定生命周期", () => {
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
     const oldList = root.getElementById("sidebar-instance-list")!;
-    bindCardEvents(root, [instance("A1")]);
+    bindCardEvents(root, [instance("A1")], mockHost);
 
     // 模拟 list 整体替换（innerHTML 重建）
     root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
     const newList = root.getElementById("sidebar-instance-list")!;
-    bindCardEvents(root, [instance("B1")]);
+    bindCardEvents(root, [instance("B1")], mockHost);
 
     // 旧 list（已脱离 DOM）点击 → 无 emit（监听已移除）
     const hdrOld = document.createElement("div");
@@ -496,7 +508,7 @@ describe("restoreSelectedCard 兜底分支", () => {
     root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
     const container = root.getElementById("sidebar-instance-list")!;
     renderVersionCards(container, [instance("A1")]);
-    bindCardEvents(root, [instance("A1"), instance("B1")]);
+    bindCardEvents(root, [instance("A1"), instance("B1")], mockHost);
     await flushRaf();
     expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
   });
@@ -508,7 +520,7 @@ describe("restoreSelectedCard 兜底分支", () => {
     root.innerHTML =
       '<div class="list" id="sidebar-instance-list">' +
       '<div class="instance-card" data-idx="0"></div></div>';
-    bindCardEvents(root, [instance("A1")]);
+    bindCardEvents(root, [instance("A1")], mockHost);
     await flushRaf();
     expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
   });
@@ -541,7 +553,7 @@ describe("restoreSelectedCard 兜底分支", () => {
     const host = document.createElement("div");
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
-    expect(() => bindCardEvents(root, [])).not.toThrow();
+    expect(() => bindCardEvents(root, [], mockHost)).not.toThrow();
     await flushRaf();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

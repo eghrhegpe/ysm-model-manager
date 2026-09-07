@@ -20,10 +20,9 @@ auto_fields:
     - appTreeStyle
     - batchStatsWebModels
     - bindToolbarEvents
-    - buildTree
     - cleanupVirtualScroll
     - consumeWebSearchDegraded
-    - flattenVisible
+    - createTreeRenderCtx
     - getRenderMode
     - getStatsPoolSize
     - getVsMode
@@ -42,6 +41,7 @@ auto_fields:
     - setVsRows
     - terminateStatsWorker
     - TreeNode
+    - TreeRenderCtx
     - TreeRow
     - updateStat
     - validateAdvFilter

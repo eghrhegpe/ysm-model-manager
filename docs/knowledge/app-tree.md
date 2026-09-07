@@ -14,12 +14,11 @@ auto_fields:
     - bindBusEvents
     - bindToolbarEvents
     - bindTreeEvents
-    - buildTree
     - cleanupVirtualScroll
+    - createTreeRenderCtx
     - emptyStateHTML
     - fileRowCommon
     - fileRowHTML
-    - flattenVisible
     - folderRowCommon
     - folderRowHTML
     - footerHTML
@@ -38,7 +37,7 @@ auto_fields:
     - ROW_H_GRID
     - ROW_H_LIST
     - selectSingle
-    - selectState
+    - SelectState
     - setRenderMode
     - setVsRows
     - spinnerHTML
@@ -46,6 +45,7 @@ auto_fields:
     - treeCSS
     - TreeEntry
     - TreeNode
+    - TreeRenderCtx
     - TreeRow
     - updateSelectCount
     - updateStat

@@ -20,6 +20,8 @@ auto_fields:
     - bindFooter
     - bindSelectAll
     - bindSyncSelected
+    - BusyGuard
+    - EmitDedupe
     - footerHTML
     - groupMmdVariants
     - headerHTML
@@ -28,11 +30,11 @@ auto_fields:
     - loadInstances
     - MmdVariantGroups
     - renderVersionCards
-    - resetSelectedEmit
     - restoreCheckboxes
     - runLauncherDetect
     - runMcSearch
     - sidebarCSS
+    - SidebarHost
     - SidebarInstance
     - VIEW_TESTIDS
   tests:

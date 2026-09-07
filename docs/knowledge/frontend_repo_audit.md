@@ -186,7 +186,6 @@ auto_fields:
     - buildStatsCard
     - buildStatsPanel
     - buildToggleRow
-    - buildTree
     - buildVrmBoneNodes
     - buildVrmBoneTree
     - buildVrmScene
@@ -484,7 +483,6 @@ auto_fields:
     - FLASH_DURATION_MS
     - flashBtn
     - FlashOptions
-    - flattenVisible
     - flushPromises
     - fmtDate
     - fmtMB
@@ -1107,7 +1105,6 @@ auto_fields:
     - resetEncoderState
     - resetSceneInfra
     - resetSchemas
-    - resetSelectedEmit
     - resetSettingsListeners
     - resetSettingsStore
     - resolveAndroidRepoDir
@@ -1188,7 +1185,6 @@ auto_fields:
     - sectionHeader
     - selectLocalRepo
     - selectSingle
-    - selectState
     - SEMANTIC_BONE_IDS
     - SEMANTIC_MORPH_IDS
     - SemanticBoneEntry

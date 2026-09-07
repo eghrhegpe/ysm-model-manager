@@ -14,6 +14,15 @@ vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("../../utils/dom/directory-picker.ts", () => ({ pickDirectory: pickDirMock }));
 
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
+import type { BusyGuard } from "./launcher-detect.ts";
+
+const mockGuard: BusyGuard = (() => {
+  let busy = false;
+  return {
+    getBusy() { return busy; },
+    setBusy(v: boolean) { busy = v; },
+  };
+})();
 
 type MockFn = ReturnType<typeof vi.fn>;
 
@@ -80,7 +89,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue(null);
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect();
+      await runLauncherDetect(mockGuard);
       expect(app.DetectLauncherInstances).not.toHaveBeenCalled();
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(0);
@@ -94,7 +103,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue("/picked");
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect();
+      await runLauncherDetect(mockGuard);
       expect(app.DetectLauncherInstances).toHaveBeenCalledWith("/picked");
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toEqual([
@@ -113,7 +122,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue("/picked");
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect();
+      await runLauncherDetect(mockGuard);
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
@@ -130,7 +139,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue("/picked");
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      const p = runLauncherDetect();
+      const p = runLauncherDetect(mockGuard);
       const picker = await openPicker();
       (picker.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
       await p;
@@ -154,7 +163,7 @@ describe("runLauncherDetect", () => {
     const { events: toasts, off: offToast } = watchBus("toast:show");
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
-      const p = runLauncherDetect();
+      const p = runLauncherDetect(mockGuard);
       const picker = await openPicker();
       // esc 转义：实例名中的 HTML 注入片段被转义后才进入弹层
       expect(picker.innerHTML).toContain("Fab&lt;b&gt;ulous");
@@ -184,7 +193,7 @@ describe("runLauncherDetect", () => {
       DetectLauncherInstances: vi.fn().mockResolvedValue([makeInstance()]),
     });
     pickDirMock.mockResolvedValue("/picked");
-    const p = runLauncherDetect();
+    const p = runLauncherDetect(mockGuard);
     const picker = await openPicker();
     (picker.querySelector("[data-launcher-default]") as HTMLInputElement).checked = false;
     (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
@@ -202,7 +211,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue("/picked");
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      const p = runLauncherDetect();
+      const p = runLauncherDetect(mockGuard);
       const picker = await openPicker();
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
@@ -223,7 +232,7 @@ describe("runMcSearch", () => {
     const app = mockApp(); // GetMinecraftPaths → []
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runMcSearch();
+      await runMcSearch(mockGuard);
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("warn");
@@ -239,7 +248,7 @@ describe("runMcSearch", () => {
     const { events: toasts, off: offToast } = watchBus("toast:show");
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
-      await runMcSearch();
+      await runMcSearch(mockGuard);
       expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "dark");
       expect(stats).toHaveLength(1);
       expect(toasts).toHaveLength(1);

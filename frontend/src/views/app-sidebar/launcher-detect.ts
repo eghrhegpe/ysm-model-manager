@@ -31,8 +31,11 @@ interface LauncherSelection {
   useAsYsmRoot: boolean;
 }
 
-/** 检测/搜索进行中守卫（两类入口共享：都在改 mcRoot，不并发） */
-let _busy = false;
+/** 并发守卫访问器（由 AppSidebar 实例实现，每实例独立守卫） */
+export interface BusyGuard {
+  getBusy(): boolean;
+  setBusy(v: boolean): void;
+}
 
 const toastError = (error: unknown): void => {
   bus.emit("toast:show", {
@@ -57,9 +60,9 @@ async function saveMcRoot(mcRoot: string, app?: Awaited<ReturnType<typeof getApp
 }
 
 /** 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） */
-export async function runMcSearch(): Promise<void> {
-  if (_busy) return;
-  _busy = true;
+export async function runMcSearch(guard: BusyGuard): Promise<void> {
+  if (guard.getBusy()) return;
+  guard.setBusy(true);
   try {
     const App = await getApp();
     const paths = await App.GetMinecraftPaths();
@@ -91,7 +94,7 @@ export async function runMcSearch(): Promise<void> {
   } catch (error) {
     toastError(error);
   } finally {
-    _busy = false;
+    guard.setBusy(false);
   }
 }
 
@@ -125,9 +128,9 @@ function showLauncherInstancePicker(
 }
 
 /** 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） */
-export async function runLauncherDetect(): Promise<void> {
-  if (_busy) return;
-  _busy = true;
+export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
+  if (guard.getBusy()) return;
+  guard.setBusy(true);
   try {
     const launcherDir = await pickDirectory();
     if (!launcherDir) return;
@@ -167,6 +170,6 @@ export async function runLauncherDetect(): Promise<void> {
   } catch (error) {
     toastError(error);
   } finally {
-    _busy = false;
+    guard.setBusy(false);
   }
 }

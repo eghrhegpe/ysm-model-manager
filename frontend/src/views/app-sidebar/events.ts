@@ -35,17 +35,21 @@ const bindStates = new WeakMap<ShadowRoot, CardBindState>();
 /** 构建卡片点击处理器闭包（心跳式：高亮 + 涟漪 + 去重状态机 + 空 rtype 拦截）。
  * 引用 root（高亮/涟漪作用于完整列表与头部）与 st（读写最新实例与绑定态）。
  * P1/P2/P2-1 修复注释随闭包迁移，见原 bindCardEvents。 */
-function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEvent) => void {
+function bindCardClickHandler(
+  root: ShadowRoot,
+  st: CardBindState,
+  host: SidebarHost,
+): (e: MouseEvent) => void {
   return (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
     // 空态就地配置入口（render.ts ws-empty 内按钮，走列表事件委托）
     if (target.closest("[data-sidebar-mc-search]")) {
-      void runMcSearch();
+      void runMcSearch(host);
       return;
     }
     if (target.closest("[data-sidebar-launcher-detect]")) {
-      void runLauncherDetect();
+      void runLauncherDetect(host);
       return;
     }
     if (target.closest("button") || target.closest(".chk")) return;
@@ -82,7 +86,7 @@ function bindCardClickHandler(root: ShadowRoot, st: CardBindState): (e: MouseEve
       // reload 后再次 emit package:selected，app-content 反复重建 <app-sync-manager>
       // （丢用户状态/闪烁回归）。
       // 点击允许 fallback 到 YSM（预览/选择无害），与右键拒绝 fallback 形成对称设计
-      _lastEmittedPkg = `${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`;
+      host.setLastEmittedPkg(`${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`);
       safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
     }
   };
@@ -134,7 +138,11 @@ function bindCardContextHandler(_root: ShadowRoot, st: CardBindState): (e: Mouse
   };
 }
 
-export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): () => void {
+export function bindCardEvents(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+  host: SidebarHost,
+): () => void {
   // 先清掉旧的右键容器（防止重复）
   // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   root.querySelectorAll(".instance-card-context-menu").forEach((el) => el.remove());
@@ -153,7 +161,7 @@ export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): 
 
   // 如果监听的 list 元素没变，用旧的 handler 引用避免重复绑定
   if (st.list === list && st.click && st.ctx) {
-    restoreSelectedCard(root, instances);
+    restoreSelectedCard(root, instances, host);
     return () => {};
   }
 
@@ -162,13 +170,8 @@ export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): 
     st.list.removeEventListener("click", st.click);
     st.list.removeEventListener("contextmenu", st.ctx);
   }
-  // P2 修复（code_review）+ P2 复核修复：list 替换 = 同组件 reload（非新挂载），
-  // 不再复位 _lastEmittedPkg——原实现每次 reload 都复位，restoreSelectedCard 的
-  // emitKey 去重恒真失效，每次重发 package:selected，app-content 反复重建
-  // <app-sync-manager>（状态丢失/闪烁回归）。真正卸载（disconnectedCallback）才复位，
-  // 由 resetSelectedEmit() 显式调用。
 
-  const clickHandler = bindCardClickHandler(root, st);
+  const clickHandler = bindCardClickHandler(root, st, host);
   const contextHandler = bindCardContextHandler(root, st);
 
   list.addEventListener("click", clickHandler);
@@ -179,7 +182,7 @@ export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): 
   st.ctx = contextHandler;
 
   // 恢复上次选中的整合包
-  restoreSelectedCard(root, instances);
+  restoreSelectedCard(root, instances, host);
 
   return () => {
     list.removeEventListener("click", clickHandler);
@@ -189,16 +192,24 @@ export function bindCardEvents(root: ShadowRoot, instances: SidebarInstance[]): 
   };
 }
 
-/** 根据 localStorage 选中最匹配的整合包 */
-let _lastEmittedPkg: string | null = null; // P2 修复：模块级去重——原每次 _reload 都重发 package:selected，app-content 反复重建右侧面板
-
-/** 复位去重标记：组件真正卸载（disconnectedCallback）时调用——
- * 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） */
-export function resetSelectedEmit(): void {
-  _lastEmittedPkg = null;
+/** 去重状态机读写器接口（由 AppSidebar 实例实现） */
+export interface EmitDedupe {
+  getLastEmittedPkg(): string | null;
+  setLastEmittedPkg(v: string | null): void;
+  resetSelectedEmit(): void;
 }
 
-function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): void {
+/** 并发守卫 + 去重状态机聚合接口（AppSidebar 实现，bindCardEvents 透传） */
+export interface SidebarHost extends EmitDedupe {
+  getBusy(): boolean;
+  setBusy(v: boolean): void;
+}
+
+function restoreSelectedCard(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+  host: SidebarHost,
+): void {
   try {
     const rtypeKey = instances[0]?.rtype || currentRepoType();
     const savedName = safeGet(`sb_selectedName_${rtypeKey}`);
@@ -215,18 +226,18 @@ function restoreSelectedCard(root: ShadowRoot, instances: SidebarInstance[]): vo
       // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发，
       // app-content 每次收到都 innerHTML 重建 <app-sync-manager>（状态丢失/闪烁）
       const emitKey = `${rtypeKey}:${savedName}`;
-      if (_lastEmittedPkg !== emitKey) {
+      if (host.getLastEmittedPkg() !== emitKey) {
         const pkg = instances[idx];
         // P3 修复：与点击路径同构——空 rtype 拦截报错，不 emit。
         // restore 恢复 localStorage 残留的漏 rtype 实例时，init-pages 的防御性
         // return 会静默丢面板，须与点击路径一致给用户 toast 反馈。
         if (!pkg?.rtype) {
           // P3 修复：设 emitKey 后再 return，让去重状态机抑制后续 reload 重复 toast
-          _lastEmittedPkg = emitKey;
+          host.setLastEmittedPkg(emitKey);
           toastEmptyRtype();
           return;
         }
-        _lastEmittedPkg = emitKey;
+        host.setLastEmittedPkg(emitKey);
         bus.emit("package:selected", pkg);
       }
     });

@@ -25,7 +25,7 @@ export { appSidebarStyle };
 import { t } from "@/core/i18n/t.ts";
 import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
 import type { SidebarInstance } from "./data.ts";
-import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
+import { bindCardEvents, bindFooter, type SidebarHost } from "./events.ts";
 import { loadInstances } from "./loader.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindSelectAll, bindSyncSelected, restoreCheckboxes } from "./sync-flow.ts";
@@ -37,6 +37,8 @@ function renderCards(
   rtype: string,
   instances: SidebarInstance[],
   cardCleanup: (() => void) | null,
+  getCheckedSets: () => Map<string, Set<string>>,
+  host: SidebarHost,
 ): { cardCleanup: (() => void) | null } {
   const container = root.getElementById("sidebar-instance-list");
   if (!container) return { cardCleanup };
@@ -45,8 +47,8 @@ function renderCards(
     cardCleanup();
     cardCleanup = null;
   }
-  cardCleanup = bindCardEvents(root, instances);
-  restoreCheckboxes(root, rtype, instances);
+  cardCleanup = bindCardEvents(root, instances, host);
+  restoreCheckboxes(root, rtype, instances, getCheckedSets);
   return { cardCleanup };
 }
 
@@ -70,6 +72,12 @@ class AppSidebar extends WebComponentBase {
   private _reloadGen = 0;
   /** _loading 进行中又有新请求 → 标记待补跑（完成后用最新 rtype 再跑一次） */
   private _pendingReload = false;
+  /** 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰；实例属性，生命周期随组件 */
+  private _checkedSets = new Map<string, Set<string>>();
+  /** 去重状态机：仅选中项实际变化时才 emit package:selected */
+  private _lastEmittedPkg: string | null = null;
+  /** 启动器检测/搜索并发守卫（两类入口共享：都在改 mcRoot，不并发） */
+  private _busy = false;
 
   constructor() {
     super();
@@ -134,7 +142,7 @@ class AppSidebar extends WebComponentBase {
   }
 
   private _bindSelectAll(): void {
-    bindSelectAll(this._root, this._rtype, this._instances);
+    bindSelectAll(this._root, this._rtype, this._instances, () => this._checkedSets);
   }
 
   private _bindSyncSelected(): void {
@@ -162,8 +170,27 @@ class AppSidebar extends WebComponentBase {
       this._rtype,
       this._instances,
       this._cardCleanup,
+      () => this._checkedSets,
+      this,
     );
     this._cardCleanup = cardCleanup;
+  }
+
+  // SidebarHost 实现：去重状态机 + 并发守卫（实例级）
+  getLastEmittedPkg(): string | null {
+    return this._lastEmittedPkg;
+  }
+  setLastEmittedPkg(v: string | null): void {
+    this._lastEmittedPkg = v;
+  }
+  resetSelectedEmit(): void {
+    this._lastEmittedPkg = null;
+  }
+  getBusy(): boolean {
+    return this._busy;
+  }
+  setBusy(v: boolean): void {
+    this._busy = v;
   }
 
   private async _reload(force = false): Promise<void> {
@@ -227,7 +254,7 @@ class AppSidebar extends WebComponentBase {
     }
     this._pendingReload = false;
     // P2 复核修复：组件真正卸载时复位去重标记（同组件 reload 不复位、去重跨 reload 生效）
-    resetSelectedEmit();
+    this.resetSelectedEmit();
     // 清理 DOM 事件监听
     if (this._cardCleanup) {
       this._cardCleanup();
@@ -241,7 +268,7 @@ class AppSidebar extends WebComponentBase {
       document.removeEventListener("click", this._docClickHandler);
       this._docClickHandler = null;
     }
-    // 注意：_checkedSets 保持模块级（sync-flow.ts），跨重新挂载持久化勾选状态
+    // _checkedSets / _lastEmittedPkg / _busy 均为实例属性，随组件 GC 自然回收
   }
 
   private _renderLayout(): void {

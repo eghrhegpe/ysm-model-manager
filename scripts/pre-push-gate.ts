@@ -487,22 +487,20 @@ async function main() {
       // 实测（-count=1 强制新鲜）：全量 -race 42.5s → 分级+过滤 18.9s（-55%）。
       const racePkgs =
         "./go/sync/... ./go/conc/... ./go/download/... ./go/instance/... ./go/installer/... ./go/watcher/... ./go/scanner/...";
-      const goTest = await shAsync(
+      // code_review fd349a91a #6：命令提为变量供 label 复用——原标签含 `...`/中文伪
+      // 命令不可执行且省略真实 flags（-count=1/-timeout 60s/go list grep）
+      const goTestCmd =
         `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
-          `&& go test $(go list ./go/... ./internal/app/ | grep -vE 'go/(sync|conc|download|instance|installer|watcher|scanner)($|/)') ${freshGoTest ? "-count=1 " : ""}-timeout 60s`,
-      );
+        `&& go test $(go list ./go/... ./internal/app/ | grep -vE 'go/(sync|conc|download|instance|installer|watcher|scanner)($|/)') ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
+      const goTest = await shAsync(goTestCmd);
       // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
-      record(
-        "go test -race ./go/sync/... ./go/conc/... ... + 普通 go test ./go/... ./internal/app/",
-        goTest.rc === 0,
-        {
-          time: Date.now() - t1,
-          tail: goTest.rc ? goTest.out.trim().split("\n").slice(-4).join("\n") : "",
-          note: freshGoTest
-            ? "YSM_FRESH_GO_TEST=1 强制新鲜跑"
-            : "ADR-202 刀5：-race 仅并发敏感包 + 普通全量",
-        },
-      );
+      record(goTestCmd, goTest.rc === 0, {
+        time: Date.now() - t1,
+        tail: goTest.rc ? goTest.out.trim().split("\n").slice(-4).join("\n") : "",
+        note: freshGoTest
+          ? "YSM_FRESH_GO_TEST=1 强制新鲜跑"
+          : "ADR-202 刀5：-race 仅并发敏感包 + 普通全量",
+      });
 
       const tV = Date.now();
       const goVet = await shAsync("go vet ./go/... ./internal/app/...");
@@ -514,7 +512,10 @@ async function main() {
       // gofmt：只读校验（修复已下沉 pre-commit；此处检出即阻断，防止绕过提交）
       const t2 = Date.now();
       const unformatted = gofmtCheck(goFiles);
-      record("gofmt -w .", unformatted.length === 0, {
+      // code_review fd349a91a #1/#2/#4/#7：标签须与实际执行一致——门禁只跑只读
+      // `gofmt -l <变更文件>`，原标签 "gofmt -w ." 冒充全仓库写盘命令（门禁从不执行
+      // 写盘，dry-run 契约 + FAIL 时照抄会全库格式化变更集外的并行文件）
+      record("gofmt -l（只读校验，未格式化文件见 tail）", unformatted.length === 0, {
         time: Date.now() - t2,
         note: unformatted.length
           ? `检出 ${unformatted.length} 个未格式化文件（pre-commit 应已自动修复；疑似 --no-verify 绕过）`
@@ -635,7 +636,10 @@ async function main() {
         /* parse fail */
       }
       const buOk = bu.rc === 0 && buz && buz.ok === true;
-      record("node scripts/check-binding-usage.ts --json", buOk, {
+      // code_review fd349a91a #5：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
+      // 仓库根 scripts/ 下无此脚本）——原标签照抄从根执行 ENOENT；与同域 vite/tsc
+      // vitest 标签的 "cd frontend &&" 约定对齐
+      record("cd frontend && node scripts/check-binding-usage.ts --json", buOk, {
         time: Date.now() - tB,
         note:
           buz === null
@@ -847,7 +851,10 @@ async function main() {
     const t0 = Date.now();
     const tests = await runContractTestsParallel(contractFiles);
     const ok = tests.length === 0 || tests.every((t) => t.ok);
-    record(`for f in tests/*.ts; do node "$f"; done (${tests.length})`, ok, {
+    // code_review fd349a91a #3：标签如实描述执行面——原 `for f in tests/*.ts` glob 声称
+    // 全量（实际 selectContractTests 按域裁剪子集 + _ 前缀排除 + spawn 有界并发，
+    // push/files 模式只跑相关子集——假保证 + glob 语法 Windows 不可执行）
+    record(`contract tests (${tests.length}${allMode ? "，全量" : "，按域裁剪"})`, ok, {
       time: Date.now() - t0,
       note:
         tests.length === 0
@@ -959,8 +966,9 @@ async function main() {
   logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
   logPush("详情见上方 [FAIL] 块（已前置到结果表最前）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
-  // label 已升级为完整命令，改用 .endsWith() 匹配
-  const gofmt = results.find((r) => r.label.includes("gofmt") && r.label.includes("-w"));
+  // code_review fd349a91a #1/#2/#4/#7：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
+  // 原虚构标签 "gofmt -w ." 而来，标签如实化后子串匹配会静默失效；gofmt 标签唯一）
+  const gofmt = results.find((r) => r.label.includes("gofmt"));
   let gofmtHint = "";
   if (gofmt && !gofmt.ok) {
     gofmtHint = "gofmt 检出未格式化——gofmt -w 修复后 git add + git commit 重推。";

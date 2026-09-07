@@ -13,8 +13,8 @@ import (
 // 持锁调用 ResolveConflictsLocked：空冲突返回全 0。
 // 锁契约现为文档约束（调用方须自行确保持锁），持锁路径仍须正确放行。
 func TestResolveConflictsLocked_HeldLock(t *testing.T) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	resolved, failed, manual := ResolveConflictsLocked(nil, ResolveManual, "", "")
 	if resolved != 0 || failed != 0 || manual != 0 {
 		t.Fatalf("空冲突应全 0, got %d/%d/%d", resolved, failed, manual)

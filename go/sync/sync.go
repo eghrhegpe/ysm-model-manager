@@ -226,8 +226,8 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 
 // SyncToggleStatus 同步启用/禁用状态
 func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int, int, error) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
 	if scanFn == nil {
 		return 0, 0, fmt.Errorf("scanFn 为空")

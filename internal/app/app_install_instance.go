@@ -66,8 +66,8 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	// 删除/回收整合包子目录文件 = 对实例目录做 Rename/Remove，与安装、同步
 	// （SyncToggleStatus 阶段 2）并发操作同一批文件 → 统一纳入 InstallLock 互斥（共享单锁闭环）
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	insName = strings.TrimSpace(insName)
 	if insName == "" {
 		return 0, fmt.Errorf("整合包名为空")

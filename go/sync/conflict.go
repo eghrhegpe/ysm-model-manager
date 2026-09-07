@@ -204,8 +204,8 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 
 // ResolveConflicts 批量解决冲突（公开入口，整段持 installer.InstallLock）。
 func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	return ResolveConflictsLocked(conflicts, defaultStrategy, localDir, remoteDir)
 }
 

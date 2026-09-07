@@ -20,8 +20,8 @@ import (
 // （共享单锁闭环，与 ClearInstanceResources 同口径）。
 // ⚠️ 这些绑定不得在已持 InstallLock 的路径内被调用（非重入锁，会自死锁）。
 func (a *App) MoveToRecycle(src string) error {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	// 尝试所有可能的资源根目录，找到包含 src 的那个
 	root := a.findRecycleRoot(src)
 	if root == "" {
@@ -107,8 +107,8 @@ func (a *App) ListRecycleBin(recyclePath string) []types.ModelEntry {
 }
 
 func (a *App) RestoreFromRecycle(src, filesRoot string) error {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	// 尝试所有根目录恢复
 	cfg := a.LoadAppConfig()
 	for _, r := range a.allRecycleRoots(cfg) {
@@ -130,8 +130,8 @@ func (a *App) RestoreFromRecycle(src, filesRoot string) error {
 }
 
 func (a *App) DeleteFromRecycle(src string) error {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	cfg := a.LoadAppConfig()
 	for _, r := range a.allRecycleRoots(cfg) {
 		if recycle.New(r).RecycleDir() == "" {
@@ -148,8 +148,8 @@ func (a *App) DeleteFromRecycle(src string) error {
 // src 参数保留以兼容既有前端绑定契约（批次4 P2 参数命名）：历史遗留占位，
 // 实际清空全部回收站而非按单目录，Go 端不消费该值。
 func (a *App) EmptyRecycleBin(src string) (int, error) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	cfg := a.LoadAppConfig()
 	total := 0
 	failed := []string{}

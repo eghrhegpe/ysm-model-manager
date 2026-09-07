@@ -1,9 +1,12 @@
-// ===== recycle 绑定 InstallLock 不变量测试（R24 review #3）=====
+// ===== recycle 绑定 InstallLock 不变量测试（R24 review #3 / ADR-202 刀3 改造）=====
 // R24 P3 修复后，回收站五绑定（MoveToRecycle/MoveToRecycleEx/RestoreFromRecycle/
 // DeleteFromRecycle/EmptyRecycleBin）统一持 installer.InstallLock（非重入锁）——
 // 两个不变量需固化：
 //  1. 不得在已持 InstallLock 的路径内调用（重入即自死锁，R21 同型事故）；
 //  2. 并发调用互斥串行（回收站操作与 sync/install 共享单锁闭环，无竞态）。
+//
+// ADR-202 刀3：锁协议断言注入 recordingLocker stub（t.Cleanup 恢复全局 InstallLocker），
+// 确定性触发、零 goroutine/超时/手动释放编排（替代 685829f70 式脆弱补丁）。
 package app
 
 import (
@@ -16,43 +19,52 @@ import (
 	"ysm-model-manager/go/installer"
 )
 
+// recordingLocker 记录 Lock/Unlock 调用与重入请求的 stub 锁（ADR-202 刀3）。
+// 非阻塞（不会自死锁），专供锁协议断言：验证绑定确实请求持锁、且在已持锁
+// 路径内调用会触发重入请求（R21 同型事故防护）。
+type recordingLocker struct {
+	mu        sync.Mutex
+	locked    bool
+	lockCalls int
+	reentrant bool
+}
+
+func (r *recordingLocker) Lock() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.locked {
+		r.reentrant = true
+	}
+	r.locked = true
+	r.lockCalls++
+}
+
+func (r *recordingLocker) Unlock() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.locked = false
+}
+
 // TestRecycleBindings_NonReentrantUnderLock 固定「非重入」不变量：
-// 已持 InstallLock 时调用 MoveToRecycle 必须阻塞（不得返回）——若某次改动让绑定
-// 不再持锁（回归），done 会立即关闭、本测试立刻失败；解锁后调用必须完成。
-// code_review P2：失败路径（t.Fatal）也必须释放全局锁，否则测试套件后续用例
-// 全部死锁挂 10 分钟（把「干净失败」变成「套件挂起」）。
+// 绑定必须请求持锁（lockCalls > 0）；已持锁路径内调用必须触发重入请求
+// （reentrant=true，若绑定漏加锁或语义漂移则断言失败）。
 func TestRecycleBindings_NonReentrantUnderLock(t *testing.T) {
+	stub := &recordingLocker{}
+	installer.InstallLocker = stub
+	t.Cleanup(func() { installer.InstallLocker = &installer.InstallLock })
+
 	a := &App{}
 	src := filepath.Join(t.TempDir(), "model.ysm")
 
-	installer.InstallLock.Lock()
-	unlocked := false
-	defer func() {
-		if !unlocked {
-			installer.InstallLock.Unlock() // 失败路径兜底释放，防套件挂起
-		}
-	}()
+	stub.Lock() // 模拟外层已持锁路径
+	_ = a.MoveToRecycle(src)
+	stub.Unlock()
 
-	done := make(chan struct{})
-	go func() {
-		_ = a.MoveToRecycle(src)
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		t.Fatal("持锁调用 MoveToRecycle 不应返回（非重入锁：已持 InstallLock 的路径内调用会自死锁，R21 同型）")
-	case <-time.After(300 * time.Millisecond):
-		// 预期：阻塞中（重入挂死被固定为已知不变量）
+	if stub.lockCalls == 0 {
+		t.Fatal("MoveToRecycle 未请求持锁（锁契约回归：绑定不再持 InstallLock）")
 	}
-
-	installer.InstallLock.Unlock()
-	unlocked = true
-	select {
-	case <-done:
-		// 解锁后正常完成
-	case <-time.After(3 * time.Second):
-		t.Fatal("解锁后 MoveToRecycle 应完成")
+	if !stub.reentrant {
+		t.Fatal("非重入契约失效：已持锁路径内调用未触发重入请求（R21 同型事故防护）")
 	}
 }
 

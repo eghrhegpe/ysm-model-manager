@@ -36,8 +36,8 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// 整段持 installer.InstallLock（ADR-056）：差集（SyncResources）在锁外计算会让陈旧
 	// diff 在两次 Install 之间被并发 Pull/Relink 改写目标目录后继续安装——与同文件
 	// PullResources/RelinkDir 的整段持锁口径对齐。循环内改用 *Locked 变体防重入死锁。
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 推送会改实例/全局目录，清同步扫盘缓存防陈旧
 	count := 0
 	failed := 0
@@ -105,8 +105,8 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 // 持 InstallLock：从实例目录复制文件回仓库，与 SyncToggleStatus/RelinkDir
 // 等并发操作同一实例目录文件互斥（ADR-056 共享单锁）
 func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, error) {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
 	// 找出 extra 的文件并复制到全局
 	// 对 YSM/MMD 使用文件夹级同步
@@ -206,8 +206,8 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 // PullSingleResource 拉取单个资源（文件夹/文件）回仓库
 // 持 InstallLock：从实例目录复制文件回仓库，与并发同步操作互斥（ADR-056）
 func PullSingleResource(globalDir, targetDir, srcPath string) error {
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
 	// 文件夹级拉取：整体复制文件夹到全局（保留相对 targetDir 的子类层级）。
 	// 越界（srcPath 不在 targetDir 内）直接报错——与文件分支 mapSrcToGlobal 严格口径

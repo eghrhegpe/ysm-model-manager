@@ -18,6 +18,7 @@ auto_fields:
     - InstallDirRelLocked
     - InstallLock
     - InstallLocked
+    - InstallLocker
     - InstallToGlobal
     - InstallWithOverlay
     - IsValidRepoRoot

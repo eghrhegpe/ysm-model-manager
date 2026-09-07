@@ -24,8 +24,8 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	// 互斥，这些目录级写操作不能只靠 installer 内部文件级锁覆盖。内部对
 	// installer.Install/InstallDir/CopyFile 的调用改用对应 *Locked 变体，避免同一
 	// goroutine 重入非重入 mutex 死锁（第六轮整段持锁 + 调用公开函数的死锁回归）。
-	installer.InstallLock.Lock()
-	defer installer.InstallLock.Unlock()
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
 
 	customDir = strings.TrimSpace(customDir)

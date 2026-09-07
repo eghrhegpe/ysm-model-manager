@@ -21,6 +21,13 @@ import (
 // Rename 同一 custom 目录文件 → 竞态/丢更新；ADR-056 统一为共享单锁）
 var InstallLock sync.Mutex
 
+// InstallLocker 是 InstallLock 的可换入口（ADR-202 刀3）：
+// 生产默认实现恒为全局 InstallLock（语义零变化，所有消费点经它加锁）；
+// 锁协议测试可注入 stub（t.Cleanup 恢复），使持锁/非重入断言确定性触发，
+// 不再依赖「真实全局锁 + goroutine + 超时」的脆弱编排（685829f70 类补丁）。
+// ⚠️ 生产代码不得重赋值此变量。
+var InstallLocker sync.Locker = &InstallLock
+
 // ErrPartialInstall 标记目录安装「部分成功」——目录已建、部分条目已落地，
 // 但个别条目（文件拷贝/子目录递归）失败。与致命错误（目录创建/读取失败）区分：
 // 致命错误触发整树回滚清理残渣；partial 错误保留已成功落地的兄弟文件，
@@ -49,8 +56,8 @@ func isSupportedModelExt(src string) bool {
 
 // Install 安装模型到目标目录（支持链接模式）
 func Install(src, customDir, filesRoot, linkMode string) error {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return InstallLocked(src, customDir, filesRoot, linkMode)
 }
 
@@ -173,8 +180,8 @@ func evalSymlinksOrKeep(p string) string {
 // 多层物理路径场景请使用 InstallDirRel 保留仓库层级。
 // rtype 用于过滤文件类型（如 MMD 排除 .vrm）。
 func InstallDir(srcDir, dstDir, filesRoot, linkMode, rtype string) error {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return installDirAtLocked(srcDir, dstDir, "", filesRoot, linkMode, rtype)
 }
 
@@ -183,8 +190,8 @@ func InstallDir(srcDir, dstDir, filesRoot, linkMode, rtype string) error {
 // 空字符串回退到 InstallDir 原语义（basename 落位）。
 // 用于多层物理路径同步——避免目录级推送拍扁层级结构。
 func InstallDirRel(srcDir, dstRoot, relSlash, filesRoot, linkMode, rtype string) error {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return installDirAtLocked(srcDir, dstRoot, relSlash, filesRoot, linkMode, rtype)
 }
 
@@ -521,8 +528,8 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) er
 
 // InstallToGlobal 安装到全局 custom 目录
 func InstallToGlobal(src, mcRoot string) (string, error) {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 
 	if src == "" || mcRoot == "" {
 		return "", types.AppError{Code: types.ErrInvalidParam, Operation: "安装到全局", Reason: "参数为空", Suggestion: "请检查输入"}
@@ -549,8 +556,8 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 // 注意：无 filesRoot 参数 → src 无仓库内 IsInside 守卫（目标侧有 .minecraft 守卫，源侧仅靠调用方约束）；
 // 前端已 0 消费（Deprecated 绑定，上层 InstallModelWithOverlay 仅兼容旧绑定面），待发版清理。
 func InstallWithOverlay(src, customDir string) (string, error) {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 
 	if src == "" || customDir == "" {
 		return "", types.AppError{Code: types.ErrInvalidParam, Operation: "安装模型（覆盖检查）", Reason: "参数为空", Suggestion: "请检查输入"}
@@ -633,8 +640,8 @@ func mapStepToAppError(step, src, dst string, err error) types.AppError {
 
 // CopyFile 复制文件到目标目录（带互斥锁）
 func CopyFile(src, dstDir string) (string, error) {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return CopyFileLocked(src, dstDir)
 }
 
@@ -673,8 +680,8 @@ func linkOrCopyLocked(src, dstDir string) error {
 
 // linkOrCopy 以硬链接落地 src 到 dstDir（带互斥锁）
 func linkOrCopy(src, dstDir string) error {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return linkOrCopyLocked(src, dstDir)
 }
 
@@ -711,8 +718,8 @@ func symlinkOrCopyLocked(src, dstDir string) error {
 
 // symlinkOrCopy 以符号链接落地 src 到 dstDir（带互斥锁）
 func symlinkOrCopy(src, dstDir string) error {
-	InstallLock.Lock()
-	defer InstallLock.Unlock()
+	InstallLocker.Lock()
+	defer InstallLocker.Unlock()
 	return symlinkOrCopyLocked(src, dstDir)
 }
 

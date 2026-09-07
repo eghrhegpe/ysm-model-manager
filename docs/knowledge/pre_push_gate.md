@@ -68,7 +68,7 @@ invariant_anchors:
 
 ### 域级检查（Go ∥ 前端，Promise.all 并行）
 
-**Go 域**（plan.go）：updater helper 前置构建（go:embed 依赖）→ `go build ./go/...` → `go test -race ./go/... ./internal/app/ -timeout 60s`（默认吃官方 test cache，源码未变 → (cached) 秒回；`YSM_FRESH_GO_TEST=1` 强制 `-count=1` 新鲜跑，2026-09-04 恢复缓存）→ `go vet` → gofmt 只读检出 → `binding-check`
+**Go 域**（plan.go）：updater helper 前置构建（go:embed 依赖）→ `go build ./go/...` → `go test -race ./go/... ./internal/app/ -timeout 60s`（默认吃官方 test cache，源码未变 → (cached) 秒回；`YSM_FRESH_GO_TEST=1` 强制 `-count=1` 新鲜跑，2026-09-04 恢复缓存）→ `go vet` → **`golangci-lint run --new-from-rev=<base> ./...`**（ADR-205：补 Go 静态分析真空面；只跑增量，全量会撞 736 条存量债；未安装/无基线 → 降级 debt 跳过）→ gofmt 只读检出 → `binding-check`
 
 **前端域**（plan.frontend）：`check-layering`（R1/R2 零容忍 + R3/R4 基线）→ `check-path-hygiene`（ADR-146：反桶/深度/上跳/跨边界冻结/双写一致性）→ `check-menu-health`（ADR-085：菜单表 id/labelKey/i18n/dockGroup/kind/render·run 完备）→ `check-ctx-menu-i18n`（tr() key 必须存在于 zh-CN 基准包）→ npm 三件套并行（`vite build` ∥ `tsc --noEmit`）→ `vitest run --maxWorkers 8` 串行在后
 

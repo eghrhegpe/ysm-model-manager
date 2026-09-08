@@ -207,40 +207,8 @@ export const autoSidebar = [
         "link": "/architecture"
       },
       {
-        "text": "YSM 模型管理器 — Design.md",
-        "link": "/Design"
-      },
-      {
-        "text": "前端治理规则手册",
-        "link": "/governance-rules"
-      },
-      {
         "text": "项目结构地图",
-        "link": "/project-map"
-      },
-      {
-        "text": "项目维护手册",
-        "link": "/maintenance"
-      },
-      {
-        "text": "致命陷阱手册",
-        "link": "/pitfalls"
-      },
-      {
-        "text": "YSM — 🥉 ui-helpers 组件库迁移与设计集成",
-        "link": "/3d-DESIGN"
-      },
-      {
-        "text": "MikuMikuAR — DESIGN.md（视觉 / 品牌规范）",
-        "link": "/3d-ui-DESIGN"
-      },
-      {
-        "text": "Android 开发手册（ADR-046 P2）",
-        "link": "/android-dev"
-      },
-      {
-        "text": "架构演进摘要",
-        "link": "/architecture-evolution-summary"
+        "link": "/aduit-scr-map"
       },
       {
         "text": "CLI 命令参考",
@@ -251,8 +219,12 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
-        "text": "YSM 知识库全量体检报告",
-        "link": "/knowledge-audit-20260705"
+        "text": "YSM 模型管理器 — Design.md",
+        "link": "/UI-Design"
+      },
+      {
+        "text": "项目维护手册",
+        "link": "/VitePress-maintenance"
       }
     ]
   },
@@ -1829,6 +1801,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "Android 开发手册（ADR-046 P2）",
+            "link": "/knowledge/android-dev"
           }
         ]
       }

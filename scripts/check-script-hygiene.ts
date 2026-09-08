@@ -170,10 +170,13 @@ function checkHeader(file: string, text: string) {
 const HANDWRITTEN_ARGV_RE =
   /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]|new Set\(process\.argv\)/;
 /** 位置参数消费特征：手写「跳过 -- 开头取裸参」find、直接取 argv[2]/argv[0] 当值、
- *  或 `.indexOf('--flag')` 手搓白名单（parseArgs 的 unknown 拦截本应接管）。
- *  2026-09-04 收敛：10 个手写 argv 脚本已迁 parseArgs，故此处收紧为严格口径不再误拦。 */
+ *  或 `.indexOf('--flag')` 手搓白名单（parseArgs 的 unknown 拦截本应接管）、
+ *  或 `for (let i=0; i<args.length; i++)` 手写遍历 argv（align git argv[i] 索引）。
+ *  2026-09-04 收敛：10 个手写 argv 脚本已迁 parseArgs，故此处收紧为严格口径不再误拦。
+ *  R5（2026-09-08）：补 for-length 遍历特征，抓 commit-with-check 旧式的
+ *  `process.argv.slice(2)` + `for(i<args.length)` 手写解析。 */
 const HANDWRITTEN_POSITIONAL_RE =
-  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]|\.indexOf\('--/;
+  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]|\.indexOf\('--|for\s*\(\s*let\s+\w+\s*=\s*0\s*;\s*\w+\.length/;
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
 // 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.ts 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。

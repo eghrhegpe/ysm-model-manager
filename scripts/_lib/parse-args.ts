@@ -30,16 +30,18 @@ export function parseArgs(
   {
     bools = [],
     strings = [],
+    arrays = [],
     defaults = {},
-  }: { bools?: string[]; strings?: string[]; defaults?: Record<string, unknown> } = {},
+  }: { bools?: string[]; strings?: string[]; arrays?: string[]; defaults?: Record<string, unknown> } = {},
 ): ParseArgsResult {
   const result: ParseArgsResult = { _: [], ...defaults, unknown: [], help: false };
 
-  // 预填 bools/strings 默认值
+  // 预填 bools/strings/arrays 默认值
   for (const k of bools) if (!(k in result)) result[k] = false;
   for (const k of strings) if (!(k in result)) result[k] = null;
+  for (const k of arrays) if (!(k in result)) result[k] = [];
 
-  const known = new Set([...bools, ...strings]);
+  const known = new Set([...bools, ...strings, ...arrays]);
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -66,6 +68,7 @@ export function parseArgs(
     const inline = eq === -1 ? undefined : arg.slice(eq + 1);
     const isBool = bools.includes(name);
     const isString = strings.includes(name);
+    const isArray = arrays.includes(name);
 
     if (!known.has(name)) {
       // P1（code_review）：未知 flag 记录到 unknown 数组（调用方白名单拦截、退 1，
@@ -78,6 +81,16 @@ export function parseArgs(
     if (isBool) {
       if (inline === undefined) result[name] = true;
       else result[name] = /^(1|true|yes)$/i.test(inline); // --check=false → false（P2）
+    } else if (isArray) {
+      // arrays 多值 flag（R5，2026-09-08）：收集后续所有非 `--` 开头参数到数组，
+      // 支持内联 `--files=a,b,c`（push 原样，调用方自定分隔）。值不进位置参数 `_`。
+      if (inline !== undefined) {
+        (result[name] as string[]).push(inline);
+        continue;
+      }
+      while (i + 1 < argv.length && !argv[i + 1]?.startsWith("--")) {
+        (result[name] as string[]).push(argv[++i]!);
+      }
     } else if (isString) {
       if (inline !== undefined) {
         result[name] = inline;

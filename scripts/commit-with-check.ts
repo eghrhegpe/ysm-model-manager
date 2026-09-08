@@ -44,46 +44,47 @@ import { run } from "./_lib/proc.ts";
  *       _lib/commit-temp-index / _lib/gen-cmds
  */
 import { ROOT } from "./_lib/scan-files.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
 
-// ── 参数解析 ──
-const args = process.argv.slice(2);
-let message = "";
-let docsMode = false;
-let checkOnly = false;
-let keepIndex = false;
-const files: string[] = [];
+// ── 参数解析（R5，2026-09-08：迁统一 parse-args，消灭手写 argv；arrays 支持 --files 变长）──
+const parsed = parseArgs(process.argv.slice(2), {
+  bools: ["docs", "check", "keep-index"],
+  strings: ["message"],
+  arrays: ["files"],
+});
+const docsMode = parsed.docs as boolean;
+const checkOnly = parsed.check as boolean;
+const keepIndex = parsed["keep-index"] as boolean;
+let message = (parsed.message as string) ?? "";
+// -m 短别名兼容：parseArgs 不认单横杠 flag，会把 `-m VAL` 当位置参数（首元素 -m）
+const mTok = parsed._.indexOf("-m");
+if (mTok !== -1 && parsed._[mTok + 1] !== undefined) message = parsed._[mTok + 1]!;
+// --files 兼容逗号/空格/重复：arrays 收集后逐元素 split（对齐旧 --files=a,b 语义）
+const files: string[] = (
+  (parsed.files as string[] | undefined) ?? []
+).flatMap((f) => f.split(/[, ]+/).filter(Boolean));
 
-for (let i = 0; i < args.length; i++) {
-  const a = args[i]!; // noUncheckedIndexedAccess：循环内 i 恒 < length，非空断言安全
-  if (a === "-m" || a === "--message") {
-    message = args[++i] || "";
-  } else if (a === "--docs") {
-    docsMode = true;
-  } else if (a === "--check") {
-    checkOnly = true;
-  } else if (a === "--keep-index") {
-    keepIndex = true;
-  } else if (a === "--files") {
-    // 收集后续所有非 `-` 开头参数作为白名单路径（可跨空格；重复 --files 累加）
-    while (i + 1 < args.length && !args[i + 1]?.startsWith("-")) {
-      files.push(args[++i]!);
-    }
-  } else if (a.startsWith("--files=")) {
-    files.push(...a.slice("--files=".length).split(/[, ]+/).filter(Boolean));
-  } else if (a === "--fast") {
-    console.warn(
-      "⚠️  --fast 已移除：轻量提交校验只跑按文件裁剪的检查，不跑重型门禁（go build/vite build 等留待 pre-push）。",
-    );
-  } else if (a === "-h" || a === "--help") {
-    console.log(`用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check] [--keep-index]
+if (parsed.help) {
+  console.log(`用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check] [--keep-index]
   -m, --message    commit message（必填，除非 --check）
   --files <paths>  白名单路径直取（无需先 git add；不传则读主 index staged 清单）
   --docs           仅文档域轻量检查（红线/文档漂移/文档契约测试）
   --check          仅验证不提交
   --keep-index     提交后不清主 index（默认清理已提交路径的暂存态）
   --fast           已移除（thin wrapper 统一全量门禁）`);
-    process.exit(0);
-  }
+  process.exit(0);
+}
+
+// 未知 flag 白名单拦截（parseArgs unknown 契约：拼错静默当默认行为是坑，R5 自证合规）。
+// --fast 曾为合法 flag 已移除：给友好提示后继续，不误拦。
+const fastIdx = parsed.unknown.indexOf("--fast");
+if (fastIdx !== -1) {
+  console.warn("⚠️  --fast 已移除：轻量提交校验只跑按文件裁剪的检查，不跑重型门禁（go build/vite build 等留待 pre-push）。");
+  parsed.unknown.splice(fastIdx, 1);
+}
+if (parsed.unknown.length) {
+  console.error(`未知参数: ${parsed.unknown.join(", ")}（仅支持 -m/--message/--docs/--check/--keep-index/--files）`);
+  process.exit(2);
 }
 
 if (!checkOnly && !message) {

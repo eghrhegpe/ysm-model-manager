@@ -155,3 +155,39 @@ test('parseArgs multiple string flags', () => {
   assert.equal(args.format, 'json');
   assert.deepEqual(args._, []);
 });
+
+// ── arrays 多值 flag（R5，2026-09-08：commit-with-check 的 --files 变长收集泛化）──
+
+test('parseArgs array flag collects multiple values until next flag', () => {
+  const args = parseArgs(['--files', 'a.ts', 'b.ts', '--strict'], {
+    bools: ['strict'], arrays: ['files'], defaults: {},
+  });
+  assert.deepEqual(args.files, ['a.ts', 'b.ts'], '--files a b 应收集到数组，且不被当位置参数');
+  assert.equal(args.strict, true, '下一个 flag 应正常解析');
+  assert.deepEqual(args._, [], 'arrays 值不应落入位置参数');
+});
+
+test('parseArgs array flag inline value', () => {
+  const args = parseArgs(['--files=a.ts,b.ts'], {
+    bools: [], arrays: ['files'], defaults: {},
+  });
+  assert.deepEqual(args.files, ['a.ts,b.ts'], '--files=a,b 应收集 inline 原样（调用方 split）');
+});
+
+test('parseArgs array flag missing → empty array', () => {
+  const args = parseArgs([], { bools: [], arrays: ['files'], defaults: {} });
+  assert.deepEqual(args.files, [], '无值应为空数组');
+});
+
+test('parseArgs array flag single value', () => {
+  const args = parseArgs(['--files', 'x.ts'], { bools: [], arrays: ['files'], defaults: {} });
+  assert.deepEqual(args.files, ['x.ts']);
+});
+
+test('parseArgs array values do not leak into positionals after flag', () => {
+  const args = parseArgs(['pos', '--files', 'a', 'b'], {
+    bools: [], arrays: ['files'], defaults: {},
+  });
+  assert.deepEqual(args._, ['pos'], '位置参数与 arrays 值要隔离');
+  assert.deepEqual(args.files, ['a', 'b']);
+});

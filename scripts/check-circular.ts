@@ -72,7 +72,7 @@ function main() {
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
       const allTypeNamed = braceM
-        ? braceM[1]
+        ? braceM[1]!
             ?.split(",")
             .map((s: string) => s.trim())
             .filter(Boolean).length > 0 &&

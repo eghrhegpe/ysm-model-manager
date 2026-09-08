@@ -59,7 +59,7 @@ function renderCommands(commands: CliCommand[]) {
   const byCat: Record<string, any[]> = {};
   for (const c of commands) {
     if (!byCat[c.category]) byCat[c.category] = [];
-    byCat[c.category].push(c);
+    byCat[c.category]!.push(c);
   }
 
   const parts: string[] = [];

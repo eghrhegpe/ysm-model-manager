@@ -104,7 +104,7 @@ function extractFlags(body: string): CliFlag[] {
     const strs = [...call.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((a) => a[1]);
     const entry = {
       flag: nameM[1]!,
-      type: m[1]?.toLowerCase().replace(/var$/, ""),
+      type: m[1]?.toLowerCase().replace(/var$/, "") ?? "",
       help: strs.length >= 2 ? strs[strs.length - 1]! : "",
       def: "",
     };
@@ -136,7 +136,7 @@ function collectSubDescByFunc(): Record<string, Record<string, string>> {
       if (!/^print\w+Usage$/.test(fn.name)) continue;
       const desc: Record<string, string> = {};
       const re = /fmt\.Println\(" {2}([a-z0-9-]+)\s{2,}([^"]*)"\)/g;
-      for (const m of fn.body.matchAll(re)) desc[m[1]!] = m[2]?.trim();
+      for (const m of fn.body.matchAll(re)) desc[m[1]!] = m[2]?.trim() ?? "";
       byFunc[fn.name] = desc;
     }
   }

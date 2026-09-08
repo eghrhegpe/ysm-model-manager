@@ -339,7 +339,7 @@ async function main() {
     // 提升到外层供 Go 域 golangci-lint 复用（ADR-205 基线解析）
     pushLocalRef = localRef;
     pushLocalOid = localOid;
-    pushRemoteOid = pushed[0]?.remoteOid;
+    pushRemoteOid = pushed[0]!.remoteOid;
     const multiRef = pushed.length > 1;
     console.log(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,

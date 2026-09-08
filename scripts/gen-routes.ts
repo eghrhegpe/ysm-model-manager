@@ -67,7 +67,7 @@ function extractSummary(text: string) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return "";
-  const summary = m[1]
+  const summary = m[1]!
     ?.replace(/\n{2,}/g, " ")
     .replace(/\s+/g, " ")
     .trim();

@@ -95,7 +95,7 @@ function readBusContract() {
     const m = st.match(/\s*"([^"]+)"\s*:\s*([\s\S]*)/);
     if (!m) return;
     names.add(m[1]!);
-    if (/^void\b/.test(m[2]?.trim())) voidDeclarations.add(m[1]!);
+    if (/^void\b/.test(m[2]!.trim())) voidDeclarations.add(m[1]!);
   };
   for (const ch of body) {
     if (ch === "{" || ch === "[" || ch === "(") d++;

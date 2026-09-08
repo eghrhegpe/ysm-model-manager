@@ -234,7 +234,7 @@ function checkAgentsTree() {
     infos.push("[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过");
     return;
   }
-  const lines = blockM[1]?.split(/\r?\n/);
+  const lines = blockM[1]!.split(/\r?\n/);
   const rootIdx = lines.findIndex((l) => l.includes("frontend/src/"));
   if (rootIdx < 0) return;
   for (const line of lines.slice(rootIdx + 1)) {

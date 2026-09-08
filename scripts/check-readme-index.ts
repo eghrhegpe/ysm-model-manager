@@ -157,7 +157,7 @@ export function ghostReferences(readmeText: string): string[] {
   for (let k = 0; k < sections.length; k++) {
     const s = sections[k]!;
     if (!s.title.startsWith("### 已删除")) continue;
-    const end = k + 1 < sections.length ? sections[k + 1]?.start : lines.length;
+    const end = k + 1 < sections.length ? sections[k + 1]!.start : lines.length;
     ranges.push([s.start, end]);
     for (let i = s.start + 1; i < end; i++) {
       const name = firstColScript(lines[i]!);

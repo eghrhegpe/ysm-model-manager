@@ -191,7 +191,7 @@ function main() {
   const renameMap = detectRenames(base, head, staged);
   const srcFiles = changed?.filter(isSourceFile);
 
-  if (srcFiles.length === 0) {
+  if ((srcFiles?.length ?? 0) === 0) {
     // suggest 模式下提示走 stderr：消费方 coverage-suggest-hint 把 stdout 原样包进建议区块，
     // 不能让「无改动源码」提示被当成建议输出（code_review P3）
     const msg = `[diff-coverage] 本次无改动源码需要检查（阈值 ${threshold}%）。通过。`;
@@ -203,7 +203,7 @@ function main() {
   const rows: any[] = [];
   const failures: any[] = [];
   const useFilesMode = Boolean(args.files); // --files 模式无 git 上下文，回退到全文件检查
-  for (const f of srcFiles) {
+  for (const f of srcFiles ?? []) {
     const key = matchCoverageKey(f, covKeys);
     let pct: number;
     if (!key) {
@@ -256,7 +256,7 @@ function main() {
   }
 
   console.log(
-    `\n[diff-coverage] 变更源码 ${srcFiles.length} 个，阈值 ${threshold}%（变更行覆盖率）：`,
+    `\n[diff-coverage] 变更源码 ${srcFiles?.length ?? 0} 个，阈值 ${threshold}%（变更行覆盖率）：`,
   );
   console.log(`  ${"文件".padEnd(70)}覆盖%`);
   console.log(`  ${"-".repeat(70)}------`);

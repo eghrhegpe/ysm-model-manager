@@ -62,7 +62,7 @@ export function applyFixes(suggestions: Array<{ file: string; missing: any[] }>)
     const fileLines = text.split("\n");
     let insertAt = 0;
     while (insertAt < fileLines.length) {
-      const t = fileLines[insertAt]?.trim();
+      const t = fileLines[insertAt]?.trim() ?? "";
       if (t === "" || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) {
         insertAt++;
         continue;

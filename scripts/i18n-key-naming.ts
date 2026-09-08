@@ -285,7 +285,7 @@ function classifySecondSegment(seg: string) {
     const match = seg.match(/^([a-z]+)([A-Z][a-z]+)$/);
     if (match) {
       const [, entity, rolePart] = match;
-      const rolePartLower = rolePart?.toLowerCase();
+      const rolePartLower = rolePart!.toLowerCase();
       // rolePart 本身是已知角色 → role
       if (KNOWN_ROLES.has(rolePartLower)) return "role";
       // entity + 整体都在 COMMON_ENTITIES → role

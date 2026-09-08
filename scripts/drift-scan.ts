@@ -72,7 +72,7 @@ function findMatches(
     const m = lines[i]?.match(regex);
     if (m) {
       // 应用过滤器
-      if (filter && !filter(lines[i]?.trim(), content, i)) continue;
+      if (filter && !filter(lines[i]!.trim(), content, i)) continue;
       results.push({
         file: relative(ROOT, filePath),
         line: i + 1,

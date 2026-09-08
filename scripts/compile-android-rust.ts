@@ -61,7 +61,7 @@ const arches = archArg === "all" ? Object.keys(ARCHES) : [archArg];
 console.log("[compile-android-rust] 检查 Rust Android targets …");
 const targets = run("rustup", ["target", "list", "--installed"], { cwd: ROOT });
 for (const arch of arches) {
-  const target = ARCHES[arch]?.rustTarget;
+  const target = ARCHES[arch]!.rustTarget;
   if (!targets.out.includes(target)) {
     console.log(`[compile-android-rust] 安装 target: ${target}`);
     const r = run("rustup", ["target", "add", target], { cwd: ROOT, timeout: 60_000 });

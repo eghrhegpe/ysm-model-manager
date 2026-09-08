@@ -23,7 +23,7 @@ export function getScalar(fm: string | null, key: string): string | undefined {
   if (!fm) return undefined;
   const line = fm.match(new RegExp(`^${escapeRe(key)}\\s*:\\s*(.+)$`, "m"));
   if (!line) return undefined;
-  const v = line[1]?.trim();
+  const v = line[1]?.trim() ?? "";
   if (v === "" || v.startsWith("<")) return undefined;
   // 仅当 # 前有空白才按行内注释剥离（code_review P2）：`name: C# 指南` 的 # 属合法值
   // 不得截断，`name: Foo  # 说明` 的 # 前有空白才是注释
@@ -39,7 +39,7 @@ export function getAllScalars(fm: string): Record<string, string> {
   const map: Record<string, string> = {};
   for (const line of fm.split(/\r?\n/)) {
     const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
-    if (m) map[m[1]!] = m[2]?.trim();
+    if (m) map[m[1]!] = m[2]?.trim() ?? "";
   }
   return map;
 }
@@ -150,7 +150,7 @@ export function parseAdrHeader(filePath: string):
       line.match(/^#\s+ADR-(\d{3})\s*[：:]\s*(.+)/) || line.match(/^#\s+ADR-(\d{3})\s+(.+)/);
     if (mTitle && num === null) {
       num = parseInt(mTitle[1]!, 10);
-      title = mTitle[2]?.trim();
+      title = mTitle[2]?.trim() ?? "";
       continue;
     }
 
@@ -160,7 +160,7 @@ export function parseAdrHeader(filePath: string):
       line.match(/^[-*]\s*\*\*状态\*\*\s*[：:]\s*(.+)/) ||
       line.match(/^\|\s*\*\*状态\*\*\s*\|\s*(.+?)\s*\|\s*$/);
     if (mStatus) {
-      status = mStatus[1]?.trim();
+      status = mStatus[1]?.trim() ?? "";
       statusLine = i;
       continue;
     }
@@ -170,7 +170,7 @@ export function parseAdrHeader(filePath: string):
       line.match(/^[-*]\s*\*\*日期\*\*\s*[：:]\s*(.+)/) ||
       line.match(/^\|\s*\*\*日期\*\*\s*\|\s*(.+?)\s*\|\s*$/);
     if (mDate) {
-      date = mDate[1]?.trim();
+      date = mDate[1]?.trim() ?? "";
       continue;
     }
 
@@ -184,7 +184,7 @@ export function parseAdrHeader(filePath: string):
     // **被补充**：[ADR-NNN]（后续 ADR 对本 ADR 的补充/扩展）
     const mSup = line.match(/^[-*]\s*\*\*被补充\*\*\s*[：:]\s*(.+)/);
     if (mSup && !supersedes) {
-      supersedes = mSup[1]?.trim();
+      supersedes = mSup[1]?.trim() ?? "";
       continue;
     }
 

@@ -17,13 +17,11 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
-import { disposeObject3D } from "@/preview-3d/safe-dispose.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
-import { ENV_PRESETS } from "./environment-capability.ts";
 import {
   persistState,
   restoreFields,
@@ -33,6 +31,7 @@ import {
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
+import { godRaysIntensity, SunBeams } from "./sun-beams.ts";
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
@@ -185,12 +184,8 @@ export class SkyCapability implements SceneCapability {
   private static toneRefCount = new WeakMap<THREE.WebGLRenderer, number>();
   private static prevToneMap = new WeakMap<THREE.WebGLRenderer, THREE.ToneMapping>();
   private static prevExposureMap = new WeakMap<THREE.WebGLRenderer, number>();
-  /** God Rays（体积光束）*/
-  private godRays: THREE.Group | null = null;
-  private godRaysEnabled = false;
-  private godRaysTime: { value: number };
-  /** Sunset Tint Overlay（日落暖色渐变）*/
-  private sunsetTintMesh: THREE.Mesh | null = null;
+  /** 日落光束 + tint overlay（拆轴自本类：sun-beams.ts 持有完整视觉状态机） */
+  private beams: SunBeams;
   /** ADR-196：运行时太阳位置（从 envState.skyTimeOfDay 推导） */
   private elevation = 0;
   private azimuth = 180;
@@ -220,11 +215,8 @@ export class SkyCapability implements SceneCapability {
     });
     this.envScene = new THREE.Scene();
     this.envScene.add(this.envSky);
-    // God Rays 初始化（默认禁用）
-    this.godRaysTime = { value: 0 };
-    this.createGodRays();
-    // Sunset Tint 初始化
-    this.createSunsetTintMesh();
+    // 日落光束 + tint overlay（默认禁用；SunBeams 内聚 cones/tint/time 状态机）
+    this.beams = new SunBeams(this.scene, envState.skyScale);
 
     // ADR-196：初始化运行时太阳位置
     this.elevation = envState.skyElevation;
@@ -251,8 +243,7 @@ export class SkyCapability implements SceneCapability {
             }
           }
         }
-        this.updateGodRays();
-        this.updateSunsetTint();
+        this.beams.sync(this.elevation, this.azimuth);
       }
       if (changed.has("skyElevation")) {
         this.elevation = state.skyElevation;
@@ -339,7 +330,7 @@ export class SkyCapability implements SceneCapability {
         }
       }
       if (changed.has("skyGodRaysEnabled")) {
-        if (this.enabled) this.updateGodRays();
+        if (this.enabled) this.beams.sync(this.elevation, this.azimuth);
       }
       if (changed.has("skyAutoRotate")) {
         // autoRotate 仅影响 update(dt) 行为，无需立即响应
@@ -390,9 +381,8 @@ export class SkyCapability implements SceneCapability {
     this.renderer.toneMappingExposure = envState.skyExposure;
     if (envState.skyEnvironment) this.regenerateEnvironment();
     else this.clearEnvironment();
-    // 更新 god rays 和 sunset tint
-    this.updateGodRays();
-    this.updateSunsetTint();
+    // 同步日落光束 + tint overlay 挂载（按当前太阳角度决策）
+    this.beams.sync(this.elevation, this.azimuth);
   }
 
   private writeUniforms(sky: Sky): void {
@@ -590,7 +580,7 @@ export class SkyCapability implements SceneCapability {
    *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
     if (!this.enabled) return;
-    this.godRaysTime.value += dt;
+    this.beams.tick(dt);
     if (!this.autoRotateOn) return;
     // 昼夜循环每帧驱动 timeOfDay，PMREM 按太阳高度角阈值重建（callback 的 skyTimeOfDay
     // 分支统一门控——锐评 P1 GPU 熔炉修复 + code_review #1/#14 force 语义）。
@@ -665,226 +655,27 @@ export class SkyCapability implements SceneCapability {
     return envState.skyCloudCoverage;
   }
 
-  // ── God Rays ──
+  // ── 日落光束 + Sunset Tint（实现已下沉 sun-beams.ts；本类仅保留公开面并委派）──
 
-  /** 创建 sunset tint overlay mesh */
-  private createSunsetTintMesh(): void {
-    const scale = envState.skyScale * 0.999; // 略小于 sky，避免 z-fighting
-
-    const geometry = new THREE.PlaneGeometry(scale, scale);
-
-    const sunsetPreset = ENV_PRESETS.sunset;
-    const uniforms = {
-      uIntensity: { value: 0 },
-      uSunPosition: { value: new THREE.Vector3() },
-      uTintHorizon: { value: new THREE.Color(sunsetPreset.horizon) }, // 0xff8a5c 橙
-      uTintZenith: { value: new THREE.Color(sunsetPreset.zenith) }, // 0x2a1855 暗蓝紫
-    };
-
-    const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: `
-        #include <common>
-        varying vec3 vDir;
-        void main() {
-          vDir = normalize((modelMatrix * vec4(position, 1.0)).xyz);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying vec3 vDir;
-        uniform float uIntensity;
-        uniform vec3 uSunPosition;
-        uniform vec3 uTintHorizon;
-        uniform vec3 uTintZenith;
-
-        void main() {
-          vec3 dir = normalize(vDir);
-          // 地平线混合：direction.y 越低越接近地平线
-          float horizonBlend = max(0.0, 1.0 - dir.y);
-          // 太阳方向加强：靠近太阳的方向 tint 更强
-          float sunProximity = max(0.0, dot(dir, normalize(uSunPosition)));
-          float sunBoost = smoothstep(-0.5, 1.0, sunProximity);
-          // 综合 tint 强度
-          float tintStrength = uIntensity * mix(horizonBlend * 0.8, 1.0, sunBoost * 0.3);
-          vec3 tintColor = mix(uTintZenith, uTintHorizon, horizonBlend);
-          gl_FragColor = vec4(tintColor * tintStrength, tintStrength * 0.6);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.BackSide,
-    });
-
-    this.sunsetTintMesh = new THREE.Mesh(geometry, material);
-    this.sunsetTintMesh.visible = false;
+  /** 获取 god rays intensity（0~1，elevation<20° 时激活） */
+  getGodRaysIntensity(): number {
+    return godRaysIntensity(this.elevation);
   }
 
   /** 获取 sunset tint intensity（与 god rays 共用同一强度曲线） */
   getSunsetTintIntensity(): number {
-    return this.getGodRaysIntensity();
-  }
-
-  /** 更新 sunset tint mesh 的 uniform */
-  private updateSunsetTint(): void {
-    if (!this.sunsetTintMesh) return;
-    const intensity = this.getSunsetTintIntensity();
-    const mat = this.sunsetTintMesh.material as THREE.ShaderMaterial;
-    if (mat.uniforms) {
-      mat.uniforms.uIntensity.value = intensity;
-      mat.uniforms.uSunPosition.value.copy(this.sky.material.uniforms.sunPosition.value);
-    }
-  }
-
-  private createConeShaderMaterial(): THREE.ShaderMaterial {
-    const uniforms = {
-      uColor: { value: new THREE.Color(1.0, 0.7, 0.3) },
-      uIntensity: { value: 0 },
-      uTime: this.godRaysTime,
-    };
-
-    return new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: `
-        #include <common>
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying vec2 vUv;
-        uniform vec3 uColor;
-        uniform float uIntensity;
-        uniform float uTime;
-
-        void main() {
-          float verticalFade = 1.0 - vUv.y;
-          verticalFade = pow(verticalFade, 1.5);
-          float radialDist = abs(vUv.x - 0.5) * 2.0;
-          float radialFade = 1.0 - radialDist * radialDist;
-          float shimmer = sin(uTime * 2.0 + vUv.y * 6.28) * 0.05 + 1.0;
-          float alpha = uIntensity * verticalFade * radialFade * shimmer;
-          if (alpha < 0.01) discard;
-          gl_FragColor = vec4(uColor * alpha, alpha);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-  }
-
-  private createConePlanes(): THREE.Group {
-    const scale = envState.skyScale;
-    const width = scale * 0.3;
-    const height = scale * 0.4;
-
-    const geo1 = new THREE.PlaneGeometry(width, height, 1, 1);
-    const geo2 = new THREE.PlaneGeometry(width, height, 1, 1);
-    const material = this.createConeShaderMaterial();
-
-    const mesh1 = new THREE.Mesh(geo1, material);
-    const mesh2 = new THREE.Mesh(geo2, material);
-    mesh2.rotation.z = Math.PI / 2;
-
-    mesh1.position.y = height * 0.5;
-    mesh2.position.y = height * 0.5;
-
-    const group = new THREE.Group();
-    group.add(mesh1);
-    group.add(mesh2);
-    group.visible = false;
-    return group;
-  }
-
-  /** 创建体积光束 geometry + material（仅构造期调用一次；重建入口从未启用，不承担 dispose 旧实例职责） */
-  private createGodRays(): void {
-    this.godRays = this.createConePlanes();
-  }
-
-  /** 获取 god rays 太阳色（跟随 sunset 预设的 sunColor） */
-  private getGodRaysColor(): THREE.Color {
-    // 日落预设的 sunColor = 0xffe0a8（暖橙），最贴合日出日落光束
-    const sunsetPreset = ENV_PRESETS.sunset;
-    return new THREE.Color(sunsetPreset.sunColor);
-  }
-
-  /** 获取 god rays intensity（0~1，elevation<20° 时激活） */
-  getGodRaysIntensity(): number {
-    if (this.elevation > 20) return 0;
-    return Math.min(1, Math.max(0, (20 - this.elevation) / 30));
-  }
-
-  /** 按太阳位置更新 god rays 旋转和 intensity */
-  private updateGodRays(): void {
-    if (!this.godRays) return;
-    if (!this.godRaysEnabled) {
-      if (this.godRays.parent) this.godRays.parent.remove(this.godRays);
-      this.godRays.visible = false;
-      return;
-    }
-    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
-    const elRad = THREE.MathUtils.degToRad(elevation);
-    // 旋转 group：先绕 X 轴调整仰角，再绕 Y 轴调整方位
-    this.godRays.rotation.x = -elRad; // 负：仰角越高，beam 越往下压
-    this.godRays.rotation.y = THREE.MathUtils.degToRad(azimuth - 90); // 0°=东, 90°=南
-
-    // 更新 intensity
-    const intensity = this.getGodRaysIntensity();
-    const mat = this.godRays.children[0] as THREE.Mesh;
-    if (mat.material instanceof THREE.ShaderMaterial && mat.material.uniforms?.uIntensity) {
-      mat.material.uniforms.uIntensity.value = intensity;
-    }
-
-    // 挂载/卸载
-    if (intensity > 0 && !this.godRays.parent) {
-      // 挂载时初始化颜色为 sunset 预设的 sunColor
-      const mat = this.godRays.children[0] as THREE.Mesh;
-      if (mat.material instanceof THREE.ShaderMaterial) {
-        mat.material.uniforms.uColor.value.copy(this.getGodRaysColor());
-      }
-      this.scene.add(this.godRays);
-      this.godRays.visible = true;
-    } else if (intensity === 0 && this.godRays.parent) {
-      this.godRays.parent.remove(this.godRays);
-      this.godRays.visible = false;
-    }
-
-    // 同步 sunset tint mesh 的挂载状态
-    if (
-      intensity > 0 &&
-      this.godRaysEnabled &&
-      this.sunsetTintMesh &&
-      !this.sunsetTintMesh.parent
-    ) {
-      this.scene.add(this.sunsetTintMesh);
-      this.sunsetTintMesh.visible = true;
-    } else if (
-      this.sunsetTintMesh &&
-      (intensity === 0 || !this.godRaysEnabled) &&
-      this.sunsetTintMesh.parent
-    ) {
-      this.sunsetTintMesh.parent.remove(this.sunsetTintMesh);
-      this.sunsetTintMesh.visible = false;
-    }
+    return godRaysIntensity(this.elevation);
   }
 
   /** 是否启用 god rays */
   isGodRaysEnabled(): boolean {
-    return this.godRaysEnabled;
+    return this.beams.isEnabled();
   }
 
-  /** 切换 god rays 开关 */
+  /** 切换 god rays 开关（enabled 时立即按当前太阳角同步挂载） */
   setGodRaysEnabled(v: boolean): void {
-    this.godRaysEnabled = v;
-    if (!this.enabled) return;
-    this.updateGodRays();
+    this.beams.setEnabled(v);
+    if (this.enabled) this.beams.sync(this.elevation, this.azimuth);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
@@ -902,7 +693,7 @@ export class SkyCapability implements SceneCapability {
       cloudCoverage: envState.skyCloudCoverage,
       environment: envState.skyEnvironment,
       enabled: this.enabled,
-      godRaysEnabled: this.godRaysEnabled,
+      godRaysEnabled: this.beams.isEnabled(),
       // §4 解耦：持久化用户调整的太阳耦合尺度
       sunIntensityScale: envState.skySunIntensityScale,
       sunDiscScale: envState.skySunDiscScale,
@@ -934,7 +725,7 @@ export class SkyCapability implements SceneCapability {
       },
       godRaysEnabled: {
         boolean: (v) => {
-          this.godRaysEnabled = v;
+          this.beams.setEnabled(v);
         },
       },
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
@@ -954,8 +745,7 @@ export class SkyCapability implements SceneCapability {
   private detach(): void {
     if (this.sky.parent) this.sky.parent.remove(this.sky);
     this.clearEnvironment();
-    if (this.godRays?.parent) this.godRays.parent.remove(this.godRays);
-    if (this.sunsetTintMesh?.parent) this.sunsetTintMesh.parent.remove(this.sunsetTintMesh);
+    this.beams.detach();
     // 回滚 tone mapping：setEnabled(false) 时天空消失但 renderer 仍 ACESFilmic 的问题。
     // 引用计数仲裁多 session 共享 renderer，只在最后一个贡献过的 session 退出时还原。
     this.releaseTone();
@@ -1002,11 +792,8 @@ export class SkyCapability implements SceneCapability {
     this.envSky.geometry.dispose();
     (this.envSky.material as THREE.Material).dispose();
     this.pmrem?.dispose();
-    // 释放 god rays / sunset tint（disposeObject3D uuid 去重——god rays 两 mesh 共享 material 只释放一次）
-    disposeObject3D(this.godRays);
-    this.godRays = null;
-    // 释放 sunset tint mesh
-    disposeObject3D(this.sunsetTintMesh);
-    this.sunsetTintMesh = null;
+    // 释放日落光束 + tint overlay（SunBeams.dispose：disposeObject3D uuid 去重——
+    // 光束两 mesh 共享 material 只释放一次）
+    this.beams.dispose();
   }
 }

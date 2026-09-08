@@ -13,6 +13,7 @@ import {
   SkyCapability,
   injectSkySunScalePatch,
 } from "./sky-capability.ts";
+import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -450,7 +451,7 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
 
   it("构造时自动创建 sunsetTintMesh，geometry 是 PlaneGeometry", () => {
     const cap = newCap();
-    const mesh = (cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh;
+    const mesh = (cap as unknown as { beams: SunBeams }).beams.tintMesh;
     expect(mesh).toBeInstanceOf(THREE.Mesh);
     expect(mesh!.geometry).toBeInstanceOf(THREE.PlaneGeometry);
     // 初始未挂载
@@ -502,7 +503,7 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
     const cap = newCap();
     cap.setGodRaysEnabled(false);
     cap.setTime(18);
-    const mesh = (cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh;
+    const mesh = (cap as unknown as { beams: SunBeams }).beams.tintMesh;
     expect(mesh?.parent).toBeNull();
   });
 });
@@ -767,12 +768,13 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     cap.apply();
     cap.setGodRaysEnabled(true);
     cap.setTime(18); // 日落 → godRays + tint 挂载
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBe(scene);
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group!.parent).toBe(scene);
     cap.setEnabled(false);
     expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
     expect(scene.environment).toBeNull();
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
-    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBeNull();
+    expect(beams.group!.parent).toBeNull();
+    expect(beams.tintMesh!.parent).toBeNull();
   });
 
   it("dispose 还原 tone mapping/exposure 并释放资源", () => {
@@ -789,8 +791,9 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
     expect(scene.environment).toBeNull();
     expect((cap as unknown as { renderTarget: { dispose: () => void } | null }).renderTarget).toBeNull();
-    expect((cap as unknown as { godRays: THREE.Group | null }).godRays).toBeNull();
-    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh).toBeNull();
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group).toBeNull();
+    expect(beams.tintMesh).toBeNull();
     expect(pmremSpy).toHaveBeenCalled();
   });
 
@@ -916,7 +919,7 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
   it("[锐评 P3] enabled=false 时 update 冻结全部时间轴（timeOfDay/godRaysTime 不漂移）", () => {
     const cap = newCap({ enabled: false });
     cap.startAutoRotate();
-    const t = (cap as unknown as { godRaysTime: { value: number } }).godRaysTime;
+    const t = (cap as unknown as { beams: SunBeams }).beams.time;
     cap.update(2);
     expect(cap.getTimeOfDay()).toBe(envState.skyTimeOfDay);
     expect(t.value).toBe(0);
@@ -974,7 +977,8 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.setGodRaysEnabled(true);
     cap.setTime(18); // elevation≈0 → intensity>0
-    const group = (cap as unknown as { godRays: THREE.Group }).godRays;
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    const group = beams.group!;
     expect(group.parent).toBe(scene);
     expect(group.visible).toBe(true);
     const mesh = group.children[0] as THREE.Mesh;
@@ -983,7 +987,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     // 挂载时颜色初始化为 sunset sunColor
     expect(mat.uniforms.uColor.value.getHex()).toBe(0xffe0a8);
     // sunset tint 同步挂载
-    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBe(scene);
+    expect(beams.tintMesh!.parent).toBe(scene);
   });
 
   it("正午时 godRays intensity=0 → group 卸载", () => {
@@ -991,10 +995,11 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.setGodRaysEnabled(true);
     cap.setTime(18);
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBe(scene);
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group!.parent).toBe(scene);
     cap.setTime(12); // 正午 → intensity=0 → 卸载
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
-    expect((cap as unknown as { sunsetTintMesh: THREE.Mesh }).sunsetTintMesh!.parent).toBeNull();
+    expect(beams.group!.parent).toBeNull();
+    expect(beams.tintMesh!.parent).toBeNull();
   });
 
   it("godRays 关闭后 setTime 把已挂载的 group 移除", () => {
@@ -1004,12 +1009,12 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     cap.setTime(18);
     cap.setGodRaysEnabled(false);
     cap.setTime(18); // updateGodRays 走 disabled 分支 → remove
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+    expect((cap as unknown as { beams: SunBeams }).beams.group!.parent).toBeNull();
   });
 
   it("[锐评 P1 死时间轴] update(dt) 推进 godRaysTime（shimmer 动画独立于昼夜循环活着）", () => {
     const cap = newCap();
-    const t = (cap as unknown as { godRaysTime: { value: number } }).godRaysTime;
+    const t = (cap as unknown as { beams: SunBeams }).beams.time;
     const before = t.value;
     cap.update(0.5); // 未开昼夜循环也要推进——shader sin(uTime*2.0+...) 依赖此时间轴
     expect(t.value).toBeCloseTo(before + 0.5, 5);
@@ -1021,7 +1026,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     cap.setEnabled(false);
     cap.setGodRaysEnabled(true);
     expect(cap.isGodRaysEnabled()).toBe(true);
-    expect((cap as unknown as { godRays: THREE.Group }).godRays.parent).toBeNull();
+    expect((cap as unknown as { beams: SunBeams }).beams.group!.parent).toBeNull();
   });
 
   it("applyModelPreset 在 disabled 时只合并参数不写 uniforms", () => {

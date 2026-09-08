@@ -26,51 +26,54 @@
  */
 type BlockPolicy = "hard" | "debt" | "failClosed";
 
-/** 静态工具条目：字符串（简单调用）或带参数对象。 */
-export type GateTool =
-  | string
-  | {
-      tool: string;
-      args?: string[];
-      autoFix?: boolean;
-      allowRc2?: boolean;
-      blockPolicy?: BlockPolicy;
-    };
+/**
+ * 静态工具条目：**必须为 object，且 blockPolicy 必填**。
+ * 2026-09-08（脚本体系锐评 R3）：此前允许 string 条目 + blockPolicy 可省略，导致
+ * 隐式「string 永远 hard」的语义靠人记住（类型系统不保护）。现改为 full object +
+ * 必填 blockPolicy：新增条目未声明阻断策略即编译报错，消灭隐式 hard 的歧义。
+ */
+export interface GateTool {
+  tool: string;
+  args?: string[];
+  autoFix?: boolean;
+  allowRc2?: boolean;
+  blockPolicy: BlockPolicy;
+}
 
 /**
  * 全量模式静态工具清单（doctor --all / pre-push-gate --all）。
  * 覆盖 Go + 前端 + 文档 + 脚本治理全栈；与域检查重叠的项（check-layering / binding-check）已剔除。
  */
 export const ALL_STATIC_TOOLS: GateTool[] = [
-  "check-doc-drift.ts",
-  "check-adr-health.ts",
+  { tool: "check-doc-drift.ts", blockPolicy: "hard" },
+  { tool: "check-adr-health.ts", blockPolicy: "hard" },
   { tool: "check-boolean-naming.ts", blockPolicy: "debt" },
   { tool: "check-circular.ts", blockPolicy: "debt" },
   { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
   { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
-  "check-tpl-refs.ts",
-  "check-dynamic-import.ts",
-  { tool: "auto-import.ts", args: ["--strict"] },
-  { tool: "event-graph.ts", args: ["--check"], autoFix: true },
+  { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
+  { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
+  { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "event-graph.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "build-novel-index.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
   { tool: "gen-routes.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
   { tool: "gen-routes-quick.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
   { tool: "gen-cli-doc.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
   { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
   { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
-  { tool: "check-script-hygiene.ts", args: ["--strict"] },
+  { tool: "check-script-hygiene.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-proc-adoption.ts", blockPolicy: "debt" },
   { tool: "check-lib-adoption.ts", blockPolicy: "debt" },
-  "check-workflow-refs.ts",
+  { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "failClosed" },
-  { tool: "i18n-check.ts", args: ["--strict"] },
-  "i18n-ui-check.ts",
-  { tool: "css-layer-check.ts", args: ["--strict"] },
+  { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
+  { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
-  "check-android-unavailable.ts",
+  { tool: "check-android-unavailable.ts", blockPolicy: "hard" },
 ];
 
 /**
@@ -78,26 +81,29 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
  * 仅含 docs/ 域相关项（link-checker / adr-check 由域检查覆盖，不在此处重复）。
  */
 export const DOC_STATIC_TOOLS: GateTool[] = [
-  "check-doc-drift.ts",
-  "check-adr-health.ts",
-  { tool: "event-graph.ts", args: ["--check"], autoFix: true },
-  { tool: "build-novel-index.ts", args: ["--check"], autoFix: true },
-  { tool: "gen-routes.ts", args: ["--check"], autoFix: true },
-  { tool: "gen-routes-quick.ts", args: ["--check"], autoFix: true },
-  { tool: "gen-cli-doc.ts", args: ["--check"], autoFix: true },
-  { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true },
-  { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true },
-  { tool: "check-script-hygiene.ts", args: ["--strict"] },
-  "check-proc-adoption.ts",
-  "check-workflow-refs.ts",
-  "check-readme-index.ts",
+  { tool: "check-doc-drift.ts", blockPolicy: "hard" },
+  { tool: "check-adr-health.ts", blockPolicy: "hard" },
+  { tool: "event-graph.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
+  { tool: "build-novel-index.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "gen-routes.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "gen-routes-quick.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "gen-cli-doc.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true, blockPolicy: "failClosed" },
+  { tool: "check-script-hygiene.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "check-proc-adoption.ts", blockPolicy: "debt" },
+  { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
+  { tool: "check-readme-index.ts", blockPolicy: "failClosed" },
 ];
 
 /**
  * 文档额外检查（--all / --docs 模式下与 DOC_STATIC_TOOLS 合并执行）。
  * 仅含未被域检查覆盖的 drift 守护项。
  */
-export const DOC_EXTRA_SCRIPTS: GateTool[] = ["check-knowledge-drift.ts", "check-adr-drift.ts"];
+export const DOC_EXTRA_SCRIPTS: GateTool[] = [
+  { tool: "check-knowledge-drift.ts", blockPolicy: "hard" },
+  { tool: "check-adr-drift.ts", blockPolicy: "hard" },
+];
 
 /**
  * 前端域 push 模式补挂静态工具（plan.frontend=true 时追加）。
@@ -108,14 +114,14 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "check-boolean-naming.ts", blockPolicy: "debt" },
   { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
   { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
-  "check-tpl-refs.ts",
-  "check-dynamic-import.ts",
-  { tool: "auto-import.ts", args: ["--strict"] },
-  { tool: "i18n-check.ts", args: ["--strict"] },
-  "i18n-ui-check.ts",
-  { tool: "event-graph.ts", args: ["--strict"] },
+  { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
+  { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
+  { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
+  { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
-  { tool: "check-biome.ts", args: ["--strict"] },
+  { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
 ];
 
 /**
@@ -123,7 +129,7 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
-  "check-go-diff-coverage.ts",
+  { tool: "check-go-diff-coverage.ts", blockPolicy: "hard" },
 ];
 
 /**
@@ -134,4 +140,5 @@ export const SCRIPTS_TYPECHECK: GateTool = {
   tool: "tsc",
   args: ["--noEmit", "-p", "scripts/tsconfig.json"],
   allowRc2: true, // TS18003 无输入 = 尚未有 .ts，非错误
+  blockPolicy: "hard",
 };

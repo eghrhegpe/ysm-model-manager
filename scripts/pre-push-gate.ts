@@ -37,6 +37,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fallbackBranchRevs, resolveBaseRev } from "./_lib/gate-resolve.ts";
 import { runContractTestsParallel, selectContractTests } from "./_lib/contract-tests.ts";
 import {
   domainSummaryText,
@@ -129,11 +130,13 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
   const branchName = localRef.startsWith("refs/heads/")
     ? localRef.slice("refs/heads/".length)
     : null;
-  const mb =
-    (branchName && mergeBase(`origin/${branchName}`)) ||
-    mergeBase("origin/HEAD") ||
-    mergeBase("origin/main") ||
-    mergeBase("origin/master");
+  const mb = (() => {
+    for (const ref of fallbackBranchRevs(localRef)) {
+      const m = mergeBase(ref);
+      if (m) return m;
+    }
+    return "";
+  })();
   if (mb) {
     const { rc, out } = git(["diff", "--name-only", `${mb}..${localOid}`]);
     if (rc === 0) return out.trim().split("\n").filter(Boolean);
@@ -146,34 +149,11 @@ function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
 }
 
 /**
- * 解析「比对基线 rev」——与上方 resolveChanges 的 fallback 链同口径（远端 oid →
- * merge-base origin/<branch> → origin/HEAD → origin/main → origin/master）。
- *
- * 抽出为模块级函数供 golangci-lint 的 `--new-from-rev` 复用（ADR-205）：lint 需要的是
- * **rev** 而非文件集，而 resolveChanges 只吐文件名。
- * 口径同步约束：改动 fallback 链时本函数与 resolveChanges 须同改，否则 lint 的
- * 「新增代码」判定与门禁的「变更文件」判定会漂移（一个漏检一个拦下）。
- *
- * @returns 基线 rev；取不到（孤儿分支 / 无远端 / merge-base 全失败）返回 ""，由调用方降级。
+ * 基线 rev 解析已收敛至 _lib/gate-resolve.ts（2026-09-08 锐评 R4）：
+ * fallbackBranchRevs 单一事实源 + resolveBaseRev，供本解析链与 golangci-lint 复用。
+ * 从本模块 import（纯模块无顶层 main 副作用，契约测试可安全直达）。
+ * 口径：远端 oid → merge-base origin/<branch> → origin/HEAD → origin/main → origin/master。
  */
-function resolveBaseRev(localOid: string, remoteOid: string, localRef: string): string {
-  // 已存在远端分支且非同源：remoteOid 即权威基线（等价于 resolveChanges 首个 diff 分支）
-  if (!/^0+$/.test(remoteOid || "") && remoteOid !== localOid) return remoteOid;
-  const mergeBase = (ref: string) => {
-    const r = git(["merge-base", localOid, ref]);
-    return r.rc === 0 ? r.out.trim() : "";
-  };
-  const branchName = localRef.startsWith("refs/heads/")
-    ? localRef.slice("refs/heads/".length)
-    : null;
-  return (
-    (branchName && mergeBase(`origin/${branchName}`)) ||
-    mergeBase("origin/HEAD") ||
-    mergeBase("origin/main") ||
-    mergeBase("origin/master") ||
-    ""
-  );
-}
 
 /* ---------------- 检查执行 ---------------- */
 
@@ -374,12 +354,11 @@ async function main() {
   // 恢复串行 runTools——域间并行（Go ∥ 前端）留作后续 Take巧，静态工具段不并行
   const runTools = (tools: any[]) => {
     for (const entry of tools) {
-      const tool = typeof entry === "string" ? entry : entry.tool;
-      const extraArgs = typeof entry === "string" ? [] : entry.args || [];
+      const tool = entry.tool;
+      const extraArgs = entry.args || [];
       // 解法 C：gen-*.ts 自动继承 autoFix=true（命名约定驱动）
-      // 显式声明 autoFix 优先（obj 看自身字段，string 条目按 tool.startsWith('gen-') 判定）
-      const effectiveAutoFix =
-        typeof entry === "object" && "autoFix" in entry ? entry.autoFix : tool.startsWith("gen-");
+      // 显式声明 autoFix 优先；否则按 tool.startsWith('gen-') 判定
+      const effectiveAutoFix = entry.autoFix ?? tool.startsWith("gen-");
       // 文件驱动模式（commit-with-check 等）下，check-go-diff-coverage 必须按
       // --staged 只查本次暂存区——否则回退 base=origin/main 全库 diff，把
       // origin/main 之后所有未推送改动（含并行会话提交）误算进本次覆盖门禁，
@@ -422,7 +401,7 @@ async function main() {
         raw: r.out,
         // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
         tail: !ok ? tail || r.out.trim().split("\n").slice(-12).join("\n") : "",
-        blockPolicy: typeof entry === "object" ? entry.blockPolicy : undefined,
+        blockPolicy: entry.blockPolicy,
       });
     }
   };
@@ -951,8 +930,8 @@ async function main() {
       // 文件驱动模式：doc-drift / knowledge-drift 按 --files 裁剪（与 check-redlines 同款），
       // 避免并行会话留在 docs/knowledge/ 的未跟踪草稿卡（如 commit-with-check.md）阻断本次 commit。
       // 二者从通用 runTools 摘除（否则无 --files 全扫），改由 runScopedDocDrift 数组式传 --files。
-      runTools(DOC_STATIC_TOOLS.filter((t) => t !== "check-doc-drift.ts"));
-      runTools(DOC_EXTRA_SCRIPTS.filter((t) => t !== "check-knowledge-drift.ts"));
+      runTools(DOC_STATIC_TOOLS.filter((t) => t.tool !== "check-doc-drift.ts"));
+      runTools(DOC_EXTRA_SCRIPTS.filter((t) => t.tool !== "check-knowledge-drift.ts"));
       runScopedDocDrift(files);
     }
   }

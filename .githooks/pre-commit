@@ -1,12 +1,16 @@
 #!/bin/sh
-# YMM pre-commit — 秒级文档/索引自动同步（非阻断）
+# YMM pre-commit — 秒级文档/索引自动同步 + 少量硬阻断守卫
 # 职责：commit 前自动跑全部秒级 gen 脚本，同步文档/索引/知识卡机器生成区，并 stage 生成文件。
 #       文档与源码同步在 commit 时自动完成，push 时 pre-push 全量门禁兜底。
 # 安装：git config core.hooksPath .githooks（仓库已配置）
 # 逃生阀：YSM_SKIP_GEN=1 git commit  或  git commit --no-verify
 # 设计原则：
-#   - 只做「快速更新 + stage」，不做阻断检查（阻断留给 pre-push）
-#   - 任何 gen 失败仅提示，不阻断 commit
+#   - 「大部分」段只做「快速更新 + stage」，不做阻断检查（阻断留给 pre-push）
+#   - 但存在两处 **硬阻断（exit 1）**，非提示：
+#       ① Android 平台黑名单守卫（T1 编译期差集 / T2 ADR-047 守卫未登记 → exit 1）
+#       ② biome 行级增量闸（本次提交新增 biome 违规行 → exit 1，防 --no-verify 绕过）
+#     —— 见文件内两段 exit 1；若误撞，按提示加白名单/改写违规后重新 git add 再提交。
+#   - 其余 gen/格式/i18n/路径卫生段 失败仅提示，不阻断 commit
 #   - 幂等：文档已同步时无 diff，git add docs/ 无副作用
 #   - 输出全走 stderr（exec 1>&2）：Windows git hook 下 stdout 管道易断，且 stderr 是 AI 必看的终端通道
 exec 1>&2
@@ -320,6 +324,7 @@ git diff --cached --stat 2>/dev/null | tail -10 || true
 #   T1 GOOS=android go list 文件差集（编译期缺失）、T2 *App 方法体 ADR-047 平台守卫（运行期降级）
 #   → 命中且未登记 ANDROID_UNAVAILABLE 即 exit 1 阻断；T3 命名可疑 / T4 反向漏检仅提示。
 # go 工具链不可用时脚本自动降级为 T3/T4（degraded 标记），不会因此误伤提交。
+# ── 硬阻断①（exit 1，非提示）：Android 黑名单完整守卫 ──
 if command -v node >/dev/null 2>&1; then
   echo ""
   echo "[pre-commit] Android 平台黑名单检查..."
@@ -343,6 +348,7 @@ fi
 # 顺序说明：本段在 biome --write 自动修复段（上方）之后，查的是修复后重新 stage 的内容；
 #   可自动修的违规已被 --write 清掉，残留且位于新增行的才在此被拦。
 # 逃生阀：YSM_SKIP_BIOME_LINES=1
+# ── 硬阻断②（exit 1，非提示）：biome 行级增量闸，防 --no-verify 绕过 ──
 if [ "${YSM_SKIP_BIOME_LINES:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
   if ! node scripts/check-biome-lines.ts 2>&1; then
     echo "[pre-commit] ❌ 本次提交新增 biome 违规，已阻断（见上）。存量债（非本次新增行）不受影响；"

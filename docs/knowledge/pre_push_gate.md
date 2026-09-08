@@ -14,7 +14,6 @@ auto_fields:
     - ALL_STATIC_TOOLS
     - DOC_EXTRA_SCRIPTS
     - DOC_STATIC_TOOLS
-    - fallbackBranchRevs
     - firstErrors
     - formatFailSummary
     - FRONTEND_STATIC_TOOLS
@@ -24,7 +23,6 @@ auto_fields:
     - ParsedToolOutput
     - parseToolOutput
     - reportPathFor
-    - resolveBaseRev
     - SCRIPTS_TYPECHECK
     - tryParseJson
     - tryParseSummary

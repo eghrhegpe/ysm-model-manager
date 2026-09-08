@@ -111,6 +111,11 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_scripts_json.ts": ["tests"],
   "test_scripts_lib.ts": ["tests"],
   "test_orphan_exports_smart.ts": ["tests", "frontend"],
+  "test_scan_files_shared.ts": ["tests"],
+  "test_git_ref.ts": ["tests"],
+  "test_contract_tests.ts": ["tests"],
+  "test_ripgrep_contract.ts": ["tests"],
+  "test_gate_fallback.ts": ["tests"],
 };
 
 /**
@@ -225,6 +230,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_gate_policy_baseline.ts": ["scripts/_lib/gate-config.ts", "scripts/pre-push-gate.ts"],
   "test_jscpd_go_smart.ts": ["scripts/_lib/jscpd-pairs.ts", "scripts/jscpd-go.ts"],
   "test_orphan_exports_smart.ts": ["scripts/check-orphan-exports.ts"],
+  "test_scan_files_shared.ts": ["scripts/_lib/scan-files.ts"],
+  "test_git_ref.ts": ["scripts/_lib/git-ref.ts"],
+  "test_contract_tests.ts": ["scripts/_lib/contract-tests.ts"],
+  "test_ripgrep_contract.ts": ["scripts/_lib/ripgrep.ts"],
+  "test_gate_fallback.ts": ["scripts/_lib/gate-resolve.ts"],
 };
 
 /**

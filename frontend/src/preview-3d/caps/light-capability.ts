@@ -5,6 +5,7 @@
 //   - 灯光对象管理（key/fill/rim/ambient/spotlight + 阴影协作）保留本类（核心职责①）
 //   - 体积光锥体② → light-cone.ts（VolumetricCone）
 //   - 预设数据③ → light-presets.ts（经 export * 重导出，外部 import 零改动）
+//   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-presets.ts（P3 下沉：纯映射样板，不触 cap 状态）
 //   - 菜单 UI 定义④ → light-controls.ts（getLightMenuControls）
 //   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
 //
@@ -27,12 +28,13 @@ import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes } from "./light-controls.ts";
-import type {
-  DeepPartial,
-  DirectionalLightParams,
-  LightParams,
-  SpotlightParams,
-  VolumetricParams,
+import {
+  type DeepPartial,
+  type DirectionalLightParams,
+  flattenLightParams,
+  type LightParams,
+  type SpotlightParams,
+  type VolumetricParams,
 } from "./light-presets.ts";
 import {
   persistState,
@@ -123,121 +125,6 @@ function getParamsFromEnvState(state: EnvState = envState): LightParams {
     spotlight: readSpotParams(state),
     volumetric: readVolParams(state),
   };
-}
-
-function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvState> {
-  // 用 Record<string, unknown> 收集中间态，最后一次性 cast 为 Partial<EnvState>。
-  // 原因：EnvState 各 key 类型各异（number/boolean/string），增量构建时 TS 无法从 keyof EnvState + unknown
-  // 推导出具体值类型；中间态用宽松类型承载，最终 cast 的安全性由上方 if 守卫保证（类型与 key 恒等）。
-  const out: Record<string, unknown> = {};
-  if (p.key) {
-    const k = p.key;
-    if (k.enabled !== undefined) {
-      out.lightKeyEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightKeyColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightKeyIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightKeyAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightKeyElevation = k.elevation;
-    }
-  }
-  if (p.fill) {
-    const k = p.fill;
-    if (k.enabled !== undefined) {
-      out.lightFillEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightFillColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightFillIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightFillAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightFillElevation = k.elevation;
-    }
-  }
-  if (p.rim) {
-    const k = p.rim;
-    if (k.enabled !== undefined) {
-      out.lightRimEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightRimColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightRimIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightRimAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightRimElevation = k.elevation;
-    }
-  }
-  if (p.ambient) {
-    if (p.ambient.color !== undefined) {
-      out.lightAmbientColor = p.ambient.color;
-    }
-    if (p.ambient.intensity !== undefined) {
-      out.lightAmbientIntensity = p.ambient.intensity;
-    }
-  }
-  if (p.spotlight) {
-    const k = p.spotlight;
-    if (k.enabled !== undefined) {
-      out.lightSpotEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightSpotColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightSpotIntensity = k.intensity;
-    }
-    if (k.angle !== undefined) {
-      out.lightSpotAngle = k.angle;
-    }
-    if (k.penumbra !== undefined) {
-      out.lightSpotPenumbra = k.penumbra;
-    }
-    if (k.distance !== undefined) {
-      out.lightSpotDistance = k.distance;
-    }
-    if (k.decay !== undefined) {
-      out.lightSpotDecay = k.decay;
-    }
-  }
-  if (p.volumetric) {
-    const k = p.volumetric;
-    if (k.enabled !== undefined) {
-      out.lightVolumetricEnabled = k.enabled;
-    }
-    if (k.opacity !== undefined) {
-      out.lightVolumetricOpacity = k.opacity;
-    }
-    if (k.fogPower !== undefined) {
-      out.lightVolumetricFogPower = k.fogPower;
-    }
-    if (k.edgeFade !== undefined) {
-      out.lightVolumetricEdgeFade = k.edgeFade;
-    }
-    if (k.baseStrength !== undefined) {
-      out.lightVolumetricBaseStrength = k.baseStrength;
-    }
-    if (k.tipStrength !== undefined) {
-      out.lightVolumetricTipStrength = k.tipStrength;
-    }
-  }
-  return out as Partial<EnvState>;
 }
 
 // ======== 变更分组（callback 分派用） ========

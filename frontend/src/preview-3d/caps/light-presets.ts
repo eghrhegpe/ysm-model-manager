@@ -2,6 +2,12 @@
 // 从 light-capability.ts 抽离：参数类型、默认值、模型类别预设、合并函数。
 // 行为与原实现逐字节一致；light-capability.ts 经 `export *` 重导出本文件全部符号，
 // 外部 import（screenshot-lights.ts 的 DirectionalLightParams）零改动。
+// P3 下沉（对齐 P1 sun-beams.ts / ADR-177 light-cone.ts 拆出先例）：纯参数映射样板
+// flattenLightParams（嵌套 DeepPartial<LightParams> → 扁平 Partial<EnvState>）自
+// light-capability.ts 下沉至本层——纯函数、不触达任何 cap 私有状态，正文与注释逐字
+// 等价保留；light-capability.ts 的 `export *` 重导出覆盖新符号，外部 import 仍零改动。
+
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 
 /* ============ 参数类型 ============ */
 
@@ -141,4 +147,121 @@ export function deepMergeLightParams(
     spotlight: mergeSpot(base.spotlight, override.spotlight),
     volumetric: mergeVol(base.volumetric, override.volumetric),
   };
+}
+
+/* ============ 嵌套 ↔ 扁平映射（ADR-196，P3 下沉自 light-capability.ts） ============ */
+
+export function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvState> {
+  // 用 Record<string, unknown> 收集中间态，最后一次性 cast 为 Partial<EnvState>。
+  // 原因：EnvState 各 key 类型各异（number/boolean/string），增量构建时 TS 无法从 keyof EnvState + unknown
+  // 推导出具体值类型；中间态用宽松类型承载，最终 cast 的安全性由上方 if 守卫保证（类型与 key 恒等）。
+  const out: Record<string, unknown> = {};
+  if (p.key) {
+    const k = p.key;
+    if (k.enabled !== undefined) {
+      out.lightKeyEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightKeyColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightKeyIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightKeyAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightKeyElevation = k.elevation;
+    }
+  }
+  if (p.fill) {
+    const k = p.fill;
+    if (k.enabled !== undefined) {
+      out.lightFillEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightFillColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightFillIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightFillAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightFillElevation = k.elevation;
+    }
+  }
+  if (p.rim) {
+    const k = p.rim;
+    if (k.enabled !== undefined) {
+      out.lightRimEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightRimColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightRimIntensity = k.intensity;
+    }
+    if (k.azimuth !== undefined) {
+      out.lightRimAzimuth = k.azimuth;
+    }
+    if (k.elevation !== undefined) {
+      out.lightRimElevation = k.elevation;
+    }
+  }
+  if (p.ambient) {
+    if (p.ambient.color !== undefined) {
+      out.lightAmbientColor = p.ambient.color;
+    }
+    if (p.ambient.intensity !== undefined) {
+      out.lightAmbientIntensity = p.ambient.intensity;
+    }
+  }
+  if (p.spotlight) {
+    const k = p.spotlight;
+    if (k.enabled !== undefined) {
+      out.lightSpotEnabled = k.enabled;
+    }
+    if (k.color !== undefined) {
+      out.lightSpotColor = k.color;
+    }
+    if (k.intensity !== undefined) {
+      out.lightSpotIntensity = k.intensity;
+    }
+    if (k.angle !== undefined) {
+      out.lightSpotAngle = k.angle;
+    }
+    if (k.penumbra !== undefined) {
+      out.lightSpotPenumbra = k.penumbra;
+    }
+    if (k.distance !== undefined) {
+      out.lightSpotDistance = k.distance;
+    }
+    if (k.decay !== undefined) {
+      out.lightSpotDecay = k.decay;
+    }
+  }
+  if (p.volumetric) {
+    const k = p.volumetric;
+    if (k.enabled !== undefined) {
+      out.lightVolumetricEnabled = k.enabled;
+    }
+    if (k.opacity !== undefined) {
+      out.lightVolumetricOpacity = k.opacity;
+    }
+    if (k.fogPower !== undefined) {
+      out.lightVolumetricFogPower = k.fogPower;
+    }
+    if (k.edgeFade !== undefined) {
+      out.lightVolumetricEdgeFade = k.edgeFade;
+    }
+    if (k.baseStrength !== undefined) {
+      out.lightVolumetricBaseStrength = k.baseStrength;
+    }
+    if (k.tipStrength !== undefined) {
+      out.lightVolumetricTipStrength = k.tipStrength;
+    }
+  }
+  return out as Partial<EnvState>;
 }

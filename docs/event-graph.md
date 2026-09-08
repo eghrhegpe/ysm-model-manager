@@ -499,8 +499,8 @@
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 32 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 57 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 34 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 59 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 120 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 41 |

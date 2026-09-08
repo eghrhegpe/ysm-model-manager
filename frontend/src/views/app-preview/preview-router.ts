@@ -1,8 +1,10 @@
 // ===== 预览路由分发 =====
 // 从 index.ts 拆分：_showModelDetail / _showPackInfo / _typeMeta 独立为纯函数。
 // 通过 PreviewRouterCtx 最小面接入，避免循环依赖（不 import index.ts）。
-// 注：PREVIEW_HANDLERS 的 show 函数签名要求 PreviewCtx，
-// handler 调用处需将 ctx as unknown as PreviewCtx 转型（AppPreview 实例运行时满足）。
+// code_review 4c485675e #1（P3）：路由函数首参为 PreviewCtx & PreviewRouterCtx——
+// PREVIEW_HANDLERS 的 show 签名要求完整 PreviewCtx，用 `as unknown as` 双重断言
+// 会绕过编译期契约校验（最小面 mock 编译过、运行时缺成员才崩）；收紧后编译器
+// 重新校验完整契约，AppPreview 同时实现两者、调用方无需任何 cast。
 
 import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -21,7 +23,7 @@ import type { PreviewCtx, PreviewRouterCtx } from "./utils.ts";
  * 原 _showModelDetail 逻辑，第一个参数改为 PreviewRouterCtx（无 this 耦合）。
  */
 export async function routeModelPreview(
-  ctx: PreviewRouterCtx,
+  ctx: PreviewCtx & PreviewRouterCtx,
   path: string,
   rtypeHint?: string,
 ): Promise<void> {
@@ -34,7 +36,7 @@ export async function routeModelPreview(
       duration: TOAST_MS.normal,
       type: "warn",
     });
-    showSimplePreview(ctx as unknown as PreviewCtx, path, routeTypeMeta(ctx, RESOURCE_TYPES.YSM));
+    showSimplePreview(ctx, path, routeTypeMeta(ctx, RESOURCE_TYPES.YSM));
     return;
   }
 
@@ -59,7 +61,7 @@ export async function routeModelPreview(
       duration: TOAST_MS.normal,
       type: "warn",
     });
-    showSimplePreview(ctx as unknown as PreviewCtx, path, {
+    showSimplePreview(ctx, path, {
       icon: "❓",
       label: t("preview.unrecognizedType"),
     });
@@ -70,9 +72,9 @@ export async function routeModelPreview(
   const previewKey = resolvePreviewKey(path, rtype);
   const handler = PREVIEW_HANDLERS[`${rtype}:${previewKey}`] ?? PREVIEW_HANDLERS[rtype];
   if (handler) {
-    handler(ctx as unknown as PreviewCtx, path, routeTypeMeta(ctx, rtype));
+    handler(ctx, path, routeTypeMeta(ctx, rtype));
   } else {
-    showSimplePreview(ctx as unknown as PreviewCtx, path, routeTypeMeta(ctx, rtype));
+    showSimplePreview(ctx, path, routeTypeMeta(ctx, rtype));
   }
 }
 
@@ -80,7 +82,10 @@ export async function routeModelPreview(
  * 资源包详情路由：直连 GetPackInfo，渲染 pack.mcmeta + pack.png。
  * 原 _showPackInfo 逻辑，第一个参数改为 PreviewRouterCtx。
  */
-export async function routePackInfo(ctx: PreviewRouterCtx, dirPath: string): Promise<void> {
+export async function routePackInfo(
+  ctx: PreviewCtx & PreviewRouterCtx,
+  dirPath: string,
+): Promise<void> {
   const gen = ctx.previewGuard.current;
   ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
 

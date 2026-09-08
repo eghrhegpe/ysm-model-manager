@@ -1803,16 +1803,6 @@ export const autoSidebar = [
             "link": "/knowledge/vitest-env-switch"
           }
         ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "Android 开发手册（ADR-046 P2）",
-            "link": "/knowledge/android-dev"
-          }
-        ]
       }
     ]
   },

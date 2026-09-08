@@ -38,8 +38,13 @@ let _writeScope: Record<string, number> | null = null;
  * @param scope 每播放器 v.* 变量容器；传 null 恢复默认（v.* 不跨帧持久）
  * @deprecated 使用 createMolangParser() 创建独立实例，避免多播放器互盖
  */
+let _deprecationWarned = false;
 export function setMolangScope(scope: Record<string, number> | null): void {
-  logWarn("molang", "setMolangScope is deprecated, use createMolangParser() instead");
+  // one-shot：player 每帧调用本函数（apply + finally 共 2 次/帧），逐帧警告会刷屏
+  if (!_deprecationWarned) {
+    _deprecationWarned = true;
+    logWarn("molang", "setMolangScope is deprecated, use createMolangParser() instead");
+  }
   _writeScope = scope;
   parser.variableHandler = scope
     ? (key: string): number => {
@@ -147,14 +152,9 @@ export function createMolangParser(): MolangParser {
 
   function setScope(scope: Record<string, number> | null): void {
     instanceScope = scope;
+    // 复用 lookupScope（v.→variable. 归一化单一实现，防三副本漂移——审核 P3）
     instanceParser.variableHandler = scope
-      ? (key: string): number => {
-          const norm = key.startsWith("v.") ? `variable${key.slice(1)}` : key;
-          if (norm.startsWith("variable.") && typeof scope[norm] === "number") {
-            return scope[norm];
-          }
-          return 0;
-        }
+      ? (key: string): number => lookupScope(scope, key)
       : () => 0;
   }
 

@@ -2,6 +2,7 @@
 // 基于 key+namespace+ttl 的内存缓存，支持 STALE / NORMAL / FORCE 策略
 // 特性：并发去重（stampede guard）、失败不缓存、命名空间隔离
 
+import { logWarn } from "@/utils/base/log.ts";
 import { dbg, isDebugEnabled } from "@/utils/debug/debug.ts";
 
 /** 缓存条目 */
@@ -37,6 +38,11 @@ let _config: CacheConfig = { maxSize: 128 };
  */
 export function configureCache(partial: Partial<CacheConfig>): void {
   _config = { ..._config, ...partial };
+  // 防御：负值会让 evictLru 的 while(_cache.size > maxSize) 在清空后仍 0 > -1 恒真 → 死循环
+  if (_config.maxSize < 1) {
+    logWarn("cache", `configureCache: maxSize=${_config.maxSize} 非法，回落 128`);
+    _config.maxSize = 128;
+  }
 }
 
 /** LRU 淘汰：超出容量时 shift 最久未用条目（Map 插入顺序 = 访问顺序） */

@@ -542,8 +542,8 @@ func TestIsBlockedIPPublic(t *testing.T) {
 }
 
 func TestCookieJarConcurrentAccess(t *testing.T) {
-	// cookieJar 非并发安全（无锁），此测试验证并发场景下不 panic，
-	// 并用 -race 运行来检测潜在 data race。
+	// cookieJar 内部有 sync.Mutex 保护（proxy.go: mu sync.Mutex）；此测试在 -race 下
+	// 验证并发 Set/Cookies 无 data race。
 	// 不加 t.Parallel()：避免与其他测试共享状态时放大 race 窗口。
 	jar := newCookieJar()
 	u, _ := url.Parse("https://example.com")

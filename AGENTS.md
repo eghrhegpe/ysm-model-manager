@@ -65,11 +65,11 @@ git log --oneline -5 -- <file>      # 这文件最近谁提交过
 git reflog                          # 我改过但没了
 git commit --amend                  # 修改提交说明（进入提交阶段后请勿使用）
 git checkout -- <file>              # 精确恢复单文件（进入提交阶段后请勿使用）
-git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（进入提交阶段后请勿使用）
+git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（你真的需要用的这个指令吗，几乎不可能需要吧，禁止对无害改动使用）
 ```
 
 - 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts`（biome 增量闸门）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
-- 临时回退用 `git commit` + `git reset --soft HEAD~1` 记录问题文件；不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
+- 不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
 
@@ -102,7 +102,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 |------|------|
 | `doctor` | 全量闸门（`--docs` 文档轻量版） |
 | `commit-with-check` | 验证 + 提交一体，按 staged 文件裁剪门禁 |
-| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（仅查相对 main 的变更文件，M 状态请裸跑 biome 或等 pre-commit --files）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`） |
+| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（M 状态请裸跑 biome 或等 pre-commit --files）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`）能清除债务就用这个清除，禁止回退 |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |

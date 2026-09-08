@@ -49,7 +49,7 @@ function extractBooleanNames(code: string): string[] {
     for (const m of code.matchAll(re)) {
       // 函数返回类型的函数名本身不是布尔变量，跳过
       if (key === "funcReturn") continue;
-      names.add(m[1]!);
+      if (m[1]) names.add(m[1]);
     }
   }
   return [...names];
@@ -276,8 +276,8 @@ try {
     { cwd: ROOT, encoding: "utf8", timeout: 30000 },
   );
   const data = JSON.parse(out);
-  const names = new Set(data.findings.map((f: any) => f.name));
-  const firstWords = new Set(data.findings.map((f: any) => f.firstWord));
+  const names = new Set(data.findings.map((f: { name: string }) => f.name));
+  const firstWords = new Set(data.findings.map((f: { firstWord: string }) => f.firstWord));
 
   console.log(`   真实仓库扫描: ${data._summary.scanned} 文件, ${data._summary.findings} 违规`);
   console.log(`   高频 firstWord: ${[...firstWords].sort().slice(0, 20).join(", ")}`);
@@ -302,9 +302,9 @@ try {
 
   console.log("  ✓ 真实仓库扫描：findings 确实是有 :boolean 注解的变量");
   console.log("     （脚本扫描逻辑正确，问题在白名单 + blockPolicy）");
-} catch (e: any) {
+} catch (e) {
   if (e instanceof assert.AssertionError) throw e;
-  console.log(`   (跳过真实仓库扫描: ${e?.message || e})`);
+  console.log(`   (跳过真实仓库扫描: ${e instanceof Error ? e.message : e})`);
   console.log("  ~ 真实仓库扫描跳过（脚本未就绪或环境问题）——纯函数断言已覆盖核心逻辑");
 }
 

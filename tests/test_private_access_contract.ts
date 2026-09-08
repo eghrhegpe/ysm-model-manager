@@ -25,9 +25,9 @@
  *
  * 运行：node tests/test_private_access_contract.ts
  */
-import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP_TREE_DIR = path.join(ROOT, "frontend/src/views/app-tree");
@@ -63,8 +63,7 @@ function extractClassPrivateFields(filePath) {
   // 允许任意修饰符序列（private/protected/public/async/static，如 `private async _deleteSelected`）。
   // 方法也算入 declared：测试合法 stub 方法（`el._load = vi.fn()`），排除会误报孤儿。
   const re = /^\s{2}(?:(?:private|protected|public|async|static)\s+)*_([a-zA-Z]\w*)\s*(?=[:=(])/gm;
-  let m;
-  while ((m = re.exec(body)) !== null) fields.add(m[1]);
+  for (const m of body.matchAll(re)) fields.add(m[1]);
   return fields;
 }
 
@@ -76,8 +75,7 @@ function scanTestRefs(filePath) {
   // 写入形态：`. _xxx =`（排除 `==`/`===`/`=>`）——逐行即可（写入不跨行）
   for (let i = 0; i < lines.length; i++) {
     const writeRe = /\.\s*_([a-zA-Z]\w*)\s*=(?!=)/g;
-    let m;
-    while ((m = writeRe.exec(lines[i])) !== null) {
+    for (const m of lines[i].matchAll(writeRe)) {
       hits.push({ field: m[1], line: i + 1, kind: "write" });
     }
   }
@@ -86,19 +84,20 @@ function scanTestRefs(filePath) {
   //  toolbar-events.test.ts `as HTMLElement & {` 亦如此）。对整文件匹配断言起点，
   //  括号平衡取窗口，收集窗口内全部 `_xxx`（含嵌套花括号，如 `Array<{...}>`）。
   const castRe = /as\s+(?:unknown\s+as\s+)?[^{;]*?\{/g;
-  let cm;
-  while ((cm = castRe.exec(content)) !== null) {
+  // 手动 exec 循环：需在窗口消费后前移 lastIndex（closeIdx+1）跳过已匹配断言，
+  // matchAll 无法表达该跳过语义
+  let cm = castRe.exec(content);
+  while (cm !== null) {
     const openIdx = content.indexOf("{", cm.index);
     if (openIdx < 0) continue;
     const closeIdx = findBalancedBrace(content, openIdx);
     if (closeIdx < 0) continue;
     const window = content.slice(openIdx, closeIdx + 1);
-    const fRe = /_([a-zA-Z]\w*)/g;
-    let f;
-    while ((f = fRe.exec(window)) !== null) {
+    for (const f of window.matchAll(/_([a-zA-Z]\w*)/g)) {
       hits.push({ field: f[1], line: lineAt(content, openIdx), kind: "assert" });
     }
     castRe.lastIndex = closeIdx + 1; // 从窗口末尾继续，避免同一断言重复扫描
+    cm = castRe.exec(content);
   }
   return hits;
 }
@@ -110,13 +109,22 @@ function findBalancedBrace(content, openIdx) {
   for (let i = openIdx; i < content.length; i++) {
     const ch = content[i];
     if (inStr) {
-      if (ch === "\\") { i++; continue; }
+      if (ch === "\\") {
+        i++;
+        continue;
+      }
       if (ch === inStr) inStr = null;
       continue;
     }
-    if (ch === '"' || ch === "'" || ch === "`") { inStr = ch; continue; }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      inStr = ch;
+      continue;
+    }
     if (ch === "{") depth++;
-    else if (ch === "}") { depth--; if (depth === 0) return i; }
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
   }
   return -1;
 }
@@ -147,11 +155,15 @@ for (const f of testFiles) {
     refCount++;
     if (h.kind === "write") writeCount++;
     if (!declared.has(h.field) && !KNOWN_EXTERNAL.has(h.field)) {
-      fail(`${f.rel}:${h.line} 引用私有字段 _${h.field}（${h.kind}），但 AppTree 类已无此声明（孤儿引用，需清理）`);
+      fail(
+        `${f.rel}:${h.line} 引用私有字段 _${h.field}（${h.kind}），但 AppTree 类已无此声明（孤儿引用，需清理）`,
+      );
     }
   }
 }
-console.log(`[info] 扫描测试文件 ${testFiles.length} 个；私有字段引用 ${refCount} 处（其中写入 ${writeCount} 处）`);
+console.log(
+  `[info] 扫描测试文件 ${testFiles.length} 个；私有字段引用 ${refCount} 处（其中写入 ${writeCount} 处）`,
+);
 
 if (failed > 0) {
   console.error(`\n契约失败: ${failed} 项 — 测试引用了已删除的私有字段，请清理残留断言`);

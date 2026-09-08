@@ -3,12 +3,12 @@
  * 契约测试：AppConfig JSON 结构校验。匹配 Go types.AppConfig。
  * 由 tests/python/test_config_defaults.py 迁移（2026-08-03），校验逻辑逐点保真。
  */
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * 解析 AppConfig 实际落点（与 Go 端 configPath() 对齐）。
@@ -18,16 +18,16 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
  */
 function configPath() {
   let base = null;
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     base = process.env.APPDATA ?? null;
-  } else if (process.platform === 'darwin') {
-    base = path.join(os.homedir(), 'Library', 'Application Support');
+  } else if (process.platform === "darwin") {
+    base = path.join(os.homedir(), "Library", "Application Support");
   } else {
-    base = path.join(os.homedir(), '.config');
+    base = path.join(os.homedir(), ".config");
   }
   const candidates = [];
-  if (base) candidates.push(path.join(base, 'YSM-Model-Manager', 'ysm_config.json'));
-  candidates.push(path.join(ROOT, 'ysm_config.json')); // 遗留位置（迁移兼容）
+  if (base) candidates.push(path.join(base, "YSM-Model-Manager", "ysm_config.json"));
+  candidates.push(path.join(ROOT, "ysm_config.json")); // 遗留位置（迁移兼容）
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
@@ -39,16 +39,47 @@ function configPath() {
 // litematicRoot/mmdRoot/vrcRoot）已废弃为 omitempty + CustomRoots map，新 schema 落盘不再包含，
 // 故移出必填列表；仍保留在 STRING_FIELDS 做可选类型检查（旧配置若残留须为 string）。
 const ALWAYS_REQUIRED = [
-  'filesRoot', 'mcRoot', 'linkMode', 'theme', 'mirror',
-  'winX', 'winY', 'winW', 'winH', 'winRelX', 'winRelY', 'winScrW', 'winScrH',
+  "filesRoot",
+  "mcRoot",
+  "linkMode",
+  "theme",
+  "mirror",
+  "winX",
+  "winY",
+  "winW",
+  "winH",
+  "winRelX",
+  "winRelY",
+  "winScrW",
+  "winScrH",
 ];
 const STRING_FIELDS = [
-  'filesRoot', 'mcRoot', 'linkMode', 'theme', 'mirror',
+  "filesRoot",
+  "mcRoot",
+  "linkMode",
+  "theme",
+  "mirror",
   // 废弃 root 字段（ADR-095，omitempty，出现时仍须为 string）
-  'ysmRoot', 'resourcepackRoot', 'shaderpackRoot', 'schematicRoot',
-  'mmdRoot', 'vrcRoot', 'litematicRoot', 'repoRoot',
+  "ysmRoot",
+  "resourcepackRoot",
+  "shaderpackRoot",
+  "schematicRoot",
+  "mmdRoot",
+  "vrcRoot",
+  "litematicRoot",
+  "repoRoot",
 ];
-const INT_FIELDS = ['winX', 'winY', 'winW', 'winH', 'winRelX', 'winRelY', 'winScrW', 'winScrH', 'voxelMaxBlocks'];
+const INT_FIELDS = [
+  "winX",
+  "winY",
+  "winW",
+  "winH",
+  "winRelX",
+  "winRelY",
+  "winScrW",
+  "winScrH",
+  "voxelMaxBlocks",
+];
 
 function validate() {
   const errors = [];
@@ -58,9 +89,9 @@ function validate() {
     return errors;
   }
 
-  let data;
+  let data: unknown;
   try {
-    data = JSON.parse(fs.readFileSync(cfg, 'utf-8'));
+    data = JSON.parse(fs.readFileSync(cfg, "utf-8"));
   } catch (e) {
     errors.push(`SYNTAX: ${cfg} 解析失败: ${e.message}`);
     return errors;
@@ -74,30 +105,30 @@ function validate() {
 
   for (const field of STRING_FIELDS) {
     const val = data[field];
-    if (val !== undefined && val !== null && typeof val !== 'string') {
+    if (val !== undefined && val !== null && typeof val !== "string") {
       errors.push(`TYPE: '${field}' must be string (got ${typeof val})`);
     }
   }
 
   for (const field of INT_FIELDS) {
     const val = data[field];
-    if (val !== undefined && val !== null && typeof val !== 'number') {
+    if (val !== undefined && val !== null && typeof val !== "number") {
       errors.push(`TYPE: '${field}' must be int (got ${typeof val})`);
     }
   }
 
-  const vm = data['voxelMaxBlocks'];
-  if (vm !== undefined && vm !== null && typeof vm !== 'number') {
+  const vm = data.voxelMaxBlocks;
+  if (vm !== undefined && vm !== null && typeof vm !== "number") {
     errors.push(`TYPE: 'voxelMaxBlocks' must be int (got ${typeof vm})`);
   }
 
-  const link_mode = data['linkMode'] ?? '';
-  if (link_mode && !['copy', 'hardlink', 'symlink', ''].includes(link_mode)) {
+  const link_mode = data.linkMode ?? "";
+  if (link_mode && !["copy", "hardlink", "symlink", ""].includes(link_mode)) {
     errors.push(`VALUE: 'linkMode' must be copy/hardlink/symlink (got '${link_mode}')`);
   }
 
-  const theme = data['theme'] ?? '';
-  const valid_themes = new Set(['cyber', 'warm', 'pro', 'sakura', 'ocean', 'mint', 'system', '']);
+  const theme = data.theme ?? "";
+  const valid_themes = new Set(["cyber", "warm", "pro", "sakura", "ocean", "mint", "system", ""]);
   if (theme && !valid_themes.has(theme)) {
     errors.push(`VALUE: 'theme' must be one of ${[...valid_themes]} (got '${theme}')`);
   }
@@ -111,5 +142,5 @@ if (errors.length) {
   for (const e of errors) console.error(`  ${e}`);
   process.exit(1);
 } else {
-  console.log('OK: config schema checks passed');
+  console.log("OK: config schema checks passed");
 }

@@ -10,45 +10,47 @@
  * 本测试动态挑选「非当前 GOOS」的 bridge 文件传入 --files，断言被 envMismatch 豁免且无失败，
  * 跨平台（win/linux/darwin/android）稳定：每平台都有 1 个他平台文件应被豁免。
  */
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function runNode(args) {
-  try { return execFileSync('node', args, { cwd: ROOT, encoding: 'utf8' }); }
-  catch (e) { return e.stdout ?? ''; }
+  try {
+    return execFileSync("node", args, { cwd: ROOT, encoding: "utf8" });
+  } catch (e) {
+    return e.stdout ?? "";
+  }
 }
 function runGo(args) {
-  try { return execFileSync('go', args, { cwd: ROOT, encoding: 'utf8' }).trim(); }
-  catch { return process.platform; }
+  try {
+    return execFileSync("go", args, { cwd: ROOT, encoding: "utf8" }).trim();
+  } catch {
+    return process.platform;
+  }
 }
 
-const goos = runGo(['env', 'GOOS']);
+const goos = runGo(["env", "GOOS"]);
 
 // ADR-139 L2 合并后：bridge 只剩两个文件。
 // bridge_windows.go（syscall/DLL）仅在 windows 平台纳入；
 // bridge_cgo.go（CGO 静态链接）在 darwin/linux/android 纳入，当前 GOOS=windows 不编译。
 const BRIDGE = {
-  windows: 'bridge_windows.go',
-  cgo: 'bridge_cgo.go',
+  windows: "bridge_windows.go",
+  cgo: "bridge_cgo.go",
 };
 const others = Object.entries(BRIDGE)
   .filter(([os]) => os !== goos)
   .map(([, f]) => `go/rustbridge/${f}`);
 
 if (others.length === 0) {
-  console.log('OK: 无他平台 bridge 文件可验（当前 GOOS 覆盖全部）');
+  console.log("OK: 无他平台 bridge 文件可验（当前 GOOS 覆盖全部）");
   process.exit(0);
 }
 
-const out = runNode([
-  'scripts/check-go-diff-coverage.ts',
-  '--files', others.join(','),
-  '--json',
-]);
-let json;
+const out = runNode(["scripts/check-go-diff-coverage.ts", "--files", others.join(","), "--json"]);
+let json: unknown;
 try {
   json = JSON.parse(out);
 } catch {
@@ -61,7 +63,7 @@ const failed = json._summary?.failed ?? -1;
 
 if (skipped.length !== others.length) {
   console.error(`FAIL: 期望 ${others.length} 个非当前平台 bridge 被豁免，实际 ${skipped.length}`);
-  console.error(`  others=${others.join(', ')}`);
+  console.error(`  others=${others.join(", ")}`);
   console.error(`  rows=${JSON.stringify(json.rows)}`);
   process.exit(1);
 }
@@ -70,6 +72,8 @@ if (failed > 0) {
   process.exit(1);
 }
 
-console.log(`OK: GOOS=${goos} 下 ${skipped.length} 个平台专属 bridge 文件被正确豁免 (envMismatch)，无覆盖率误报拦截。`);
-console.log('  ' + skipped.map((s) => s.file).join('\n  '));
+console.log(
+  `OK: GOOS=${goos} 下 ${skipped.length} 个平台专属 bridge 文件被正确豁免 (envMismatch)，无覆盖率误报拦截。`,
+);
+console.log(`  ${skipped.map((s) => s.file).join("\n  ")}`);
 process.exit(0);

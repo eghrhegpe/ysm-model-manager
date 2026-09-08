@@ -87,7 +87,7 @@ function globMatch(pattern: string, target: string): boolean {
   let s = pattern.replace(/\*\*/g, DS).replace(/\*/g, SS);
   s = s.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
   s = s.split(DS).join(".*").split(SS).join("[^/]*");
-  return new RegExp("^" + s + "$").test(target);
+  return new RegExp(`^${s}$`).test(target);
 }
 
 // 分类 28 个真实 orphan

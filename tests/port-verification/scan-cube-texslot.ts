@@ -24,46 +24,49 @@
  *   - 投射物模型（arrow/trident）的 cube.TexSlot 应该指向对应的投射物纹理
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join, basename } from 'node:path';
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = join(__dirname, '..', '..');
-const FOX = join(ROOT, 'upstream', '[YSM模型]官方开源wine_fox_json');
+const ROOT = join(__dirname, "..", "..");
+const FOX = join(ROOT, "upstream", "[YSM模型]官方开源wine_fox_json");
 
 // ===== 归一化 =====
 function normalizeTexName(rawPath) {
   let tn = rawPath;
-  if (tn.includes('/')) tn = tn.slice(tn.lastIndexOf('/') + 1);
-  if (tn.includes('\\')) tn = tn.slice(tn.lastIndexOf('\\') + 1);
-  tn = tn.toLowerCase().replace(/\.png$/, '').replace(/\.jpg$/, '');
+  if (tn.includes("/")) tn = tn.slice(tn.lastIndexOf("/") + 1);
+  if (tn.includes("\\")) tn = tn.slice(tn.lastIndexOf("\\") + 1);
+  tn = tn
+    .toLowerCase()
+    .replace(/\.png$/, "")
+    .replace(/\.jpg$/, "");
   return tn;
 }
 
 // ===== 解析 ysm.json，建立"模型文件 → 应绑纹理名"映射 =====
 function buildModelTexMap(ysmPath) {
-  const raw = JSON.parse(readFileSync(ysmPath, 'utf-8'));
+  const raw = JSON.parse(readFileSync(ysmPath, "utf-8"));
   const files = raw.files || raw.Files || {};
 
   const modelTexMap = {}; // 模型文件相对路径 → 应绑纹理名
-  const texOrder = [];    // 权威纹理顺序（小写 basename 去扩展名）
+  const texOrder = []; // 权威纹理顺序（小写 basename 去扩展名）
 
   // --- player.texture[] → texOrder（可切换皮肤集）---
   const playerTex = files.player?.texture;
   if (Array.isArray(playerTex)) {
     for (const t of playerTex) {
-      if (typeof t === 'string') texOrder.push(normalizeTexName(t));
-      else if (t && typeof t === 'object') {
+      if (typeof t === "string") texOrder.push(normalizeTexName(t));
+      else if (t && typeof t === "object") {
         const uv = t.uv || t.texture;
         if (uv) texOrder.push(normalizeTexName(uv));
       }
     }
-  } else if (typeof playerTex === 'object' && playerTex !== null) {
+  } else if (typeof playerTex === "object" && playerTex !== null) {
     const uv = playerTex.uv || playerTex.texture;
     if (uv) texOrder.push(normalizeTexName(uv));
-  } else if (typeof playerTex === 'string') {
+  } else if (typeof playerTex === "string") {
     texOrder.push(normalizeTexName(playerTex));
   }
 
@@ -73,18 +76,18 @@ function buildModelTexMap(ysmPath) {
   if (pModel) {
     if (Array.isArray(pModel)) {
       for (const item of pModel) {
-        if (typeof item === 'string') modelTexMap[item] = defaultSkin;
-        else if (item && typeof item === 'object') {
+        if (typeof item === "string") modelTexMap[item] = defaultSkin;
+        else if (item && typeof item === "object") {
           const p = item.path || item.name;
           if (p) modelTexMap[p] = defaultSkin;
         }
       }
-    } else if (typeof pModel === 'object') {
+    } else if (typeof pModel === "object") {
       for (const key of Object.keys(pModel)) {
         const val = pModel[key];
-        if (typeof val === 'string') modelTexMap[val] = defaultSkin;
+        if (typeof val === "string") modelTexMap[val] = defaultSkin;
       }
-    } else if (typeof pModel === 'string') {
+    } else if (typeof pModel === "string") {
       modelTexMap[pModel] = defaultSkin;
     }
   }
@@ -92,18 +95,21 @@ function buildModelTexMap(ysmPath) {
   // --- projectiles/vehicles/arrow → 投射物/载具/单实体模型，绑各自纹理 ---
   //   两种形态：list（[config,...]）或 dict（{minecraft:xxx: config,...}）
   //   arrow 段是单实体直接声明（{model,texture}），按 dict 路径处理
-  for (const segKey of ['projectiles', 'Projectiles', 'vehicles', 'Vehicles', 'arrow', 'Arrow']) {
+  for (const segKey of ["projectiles", "Projectiles", "vehicles", "Vehicles", "arrow", "Arrow"]) {
     const segRaw = files[segKey];
     if (!segRaw) continue;
-    let entries;
+    let entries: unknown[];
     if (Array.isArray(segRaw)) {
       entries = segRaw;
-    } else if (typeof segRaw === 'object' && segRaw !== null) {
+    } else if (typeof segRaw === "object" && segRaw !== null) {
       // 区分两种 dict 形态：
       //   {minecraft:arrow: {model,texture}} → values 是 config dict
       //   {model, texture} → 自身就是 config dict
       const vals = Object.values(segRaw);
-      const isConfigDict = typeof segRaw.model === 'string' || typeof segRaw.texture === 'string' || typeof segRaw.texture === 'object';
+      const isConfigDict =
+        typeof segRaw.model === "string" ||
+        typeof segRaw.texture === "string" ||
+        typeof segRaw.texture === "object";
       if (isConfigDict) {
         entries = [segRaw]; // 单实体直接声明
       } else {
@@ -113,11 +119,11 @@ function buildModelTexMap(ysmPath) {
       continue;
     }
     for (const p of entries) {
-      if (!p || typeof p !== 'object') continue;
+      if (!p || typeof p !== "object") continue;
       const tex = p.texture;
       let texName = null;
-      if (typeof tex === 'string') texName = normalizeTexName(tex);
-      else if (tex && typeof tex === 'object') {
+      if (typeof tex === "string") texName = normalizeTexName(tex);
+      else if (tex && typeof tex === "object") {
         const uv = tex.uv || tex.texture;
         if (uv) texName = normalizeTexName(uv);
       }
@@ -141,8 +147,8 @@ function simulateCubeTexSlots(ysmPath, modelDir) {
   for (const [modelPath, _texName] of Object.entries(modelTexMap)) {
     // basename 去 .json
     let bn = modelPath;
-    if (bn.includes('/')) bn = bn.slice(bn.lastIndexOf('/') + 1);
-    bn = bn.replace(/\.geo\.json$/, '').replace(/\.json$/, '');
+    if (bn.includes("/")) bn = bn.slice(bn.lastIndexOf("/") + 1);
+    bn = bn.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
     // TexSlot = 这个模型对应的纹理在 texOrder 里的位置
     const texName = modelTexMap[modelPath];
     const slot = texOrder.indexOf(texName);
@@ -150,16 +156,18 @@ function simulateCubeTexSlots(ysmPath, modelDir) {
   }
 
   // 读取 models/ 目录下所有 .json，模拟 cube.TexSlot
-  const modelsDir = join(modelDir, 'models');
+  const modelsDir = join(modelDir, "models");
   const cubeTexSlots = {}; // 模型 basename → TexSlot
 
   let modelFiles = [];
   try {
-    modelFiles = readdirSync(modelsDir).filter(f => f.endsWith('.json'));
-  } catch { /* 无 models 目录 */ }
+    modelFiles = readdirSync(modelsDir).filter((f) => f.endsWith(".json"));
+  } catch {
+    /* 无 models 目录 */
+  }
 
   for (const mf of modelFiles) {
-    const bn = mf.replace(/\.geo\.json$/, '').replace(/\.json$/, '');
+    const bn = mf.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
     // archive.go 的 texIdxMap 查找：如果 bn 在 texIdxMap 里，用那个值；否则用 0
     const slot = texIdxMap[bn] !== undefined ? texIdxMap[bn] : 0;
     cubeTexSlots[bn] = slot;
@@ -171,7 +179,7 @@ function simulateCubeTexSlots(ysmPath, modelDir) {
 // ===== 对拍单套模型 =====
 function scanModel(modelDir) {
   const name = basename(modelDir);
-  const ysmPath = join(modelDir, 'ysm.json');
+  const ysmPath = join(modelDir, "ysm.json");
 
   const { modelTexMap, texOrder, defaultSkin } = buildModelTexMap(ysmPath);
   const { cubeTexSlots, texIdxMap } = simulateCubeTexSlots(ysmPath, modelDir);
@@ -181,17 +189,19 @@ function scanModel(modelDir) {
   // 对每个模型文件，检查 cube.TexSlot 是否指向正确的纹理
   for (const [modelPath, expectedTexName] of Object.entries(modelTexMap)) {
     let bn = modelPath;
-    if (bn.includes('/')) bn = bn.slice(bn.lastIndexOf('/') + 1);
-    bn = bn.replace(/\.geo\.json$/, '').replace(/\.json$/, '');
+    if (bn.includes("/")) bn = bn.slice(bn.lastIndexOf("/") + 1);
+    bn = bn.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
 
     const actualSlot = cubeTexSlots[bn];
     const expectedSlot = texOrder.indexOf(expectedTexName);
-    const actualTexName = actualSlot >= 0 && actualSlot < texOrder.length
-      ? texOrder[actualSlot] : `(越界 slot=${actualSlot})`;
+    const actualTexName =
+      actualSlot >= 0 && actualSlot < texOrder.length
+        ? texOrder[actualSlot]
+        : `(越界 slot=${actualSlot})`;
 
     if (actualSlot !== expectedSlot) {
       issues.push({
-        type: 'TexSlot 错误',
+        type: "TexSlot 错误",
         model: bn,
         expected: `${expectedTexName} (slot=${expectedSlot})`,
         actual: `${actualTexName} (slot=${actualSlot})`,
@@ -200,25 +210,31 @@ function scanModel(modelDir) {
   }
 
   // 检查是否有模型文件没在 modelTexMap 里（未声明模型）
-  const modelsDir = join(modelDir, 'models');
+  const modelsDir = join(modelDir, "models");
   let modelFiles = [];
   try {
-    modelFiles = readdirSync(modelsDir).filter(f => f.endsWith('.json'));
-  } catch { /* 无 models 目录 */ }
+    modelFiles = readdirSync(modelsDir).filter((f) => f.endsWith(".json"));
+  } catch {
+    /* 无 models 目录 */
+  }
 
   for (const mf of modelFiles) {
-    const bn = mf.replace(/\.geo\.json$/, '').replace(/\.json$/, '');
+    const bn = mf.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
     // 检查这个模型文件是否在 modelTexMap 里有对应
     let found = false;
     for (const [modelPath, _] of Object.entries(modelTexMap)) {
       let mpBn = modelPath;
-      if (mpBn.includes('/')) mpBn = mpBn.slice(mpBn.lastIndexOf('/') + 1);
-      mpBn = mpBn.replace(/\.geo\.json$/, '').replace(/\.json$/, '');
-      if (mpBn === bn) { found = true; break; }
+      if (mpBn.includes("/")) mpBn = mpBn.slice(mpBn.lastIndexOf("/") + 1);
+      mpBn = mpBn.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
+      if (mpBn === bn) {
+        found = true;
+        break;
+      }
     }
-    if (!found && bn !== 'arm') { // arm 通常被排除
+    if (!found && bn !== "arm") {
+      // arm 通常被排除
       issues.push({
-        type: '未声明模型',
+        type: "未声明模型",
         model: bn,
         detail: `${mf} 不在 ysm.json 的 player.model 或 projectiles 里`,
       });
@@ -229,19 +245,19 @@ function scanModel(modelDir) {
 }
 
 // ===== 执行 =====
-console.log('cube TexSlot 对拍 mjs：ysm.json 权威 vs archive.go 实际 cube.TexSlot');
-console.log('目标：定位错误使用材质的 cube');
-console.log('日期: 2026-08-22\n');
+console.log("cube TexSlot 对拍 mjs：ysm.json 权威 vs archive.go 实际 cube.TexSlot");
+console.log("目标：定位错误使用材质的 cube");
+console.log("日期: 2026-08-22\n");
 
 const modelDirs = readdirSync(FOX)
-  .filter(f => f.startsWith('.') === false && statSync(join(FOX, f)).isDirectory())
+  .filter((f) => f.startsWith(".") === false && statSync(join(FOX, f)).isDirectory())
   .sort()
-  .map(f => join(FOX, f));
+  .map((f) => join(FOX, f));
 
 const results = [];
 for (const dir of modelDirs) {
   try {
-    statSync(join(dir, 'ysm.json'));
+    statSync(join(dir, "ysm.json"));
   } catch {
     continue;
   }
@@ -250,7 +266,7 @@ for (const dir of modelDirs) {
 
 // ===== 输出每套模型的扫描结果 =====
 for (const r of results) {
-  const status = r.issues.length === 0 ? '✅' : '❌';
+  const status = r.issues.length === 0 ? "✅" : "❌";
   console.log(`${status} ${r.name}`);
   console.log(`   texOrder: ${JSON.stringify(r.texOrder)}`);
   console.log(`   defaultSkin: ${r.defaultSkin}`);
@@ -267,26 +283,26 @@ for (const r of results) {
 }
 
 // ===== 汇总 =====
-console.log('===== 汇总 =====');
+console.log("===== 汇总 =====");
 console.log(`共扫描 ${results.length} 套模型`);
 
-const okModels = results.filter(r => r.issues.length === 0);
-const ngModels = results.filter(r => r.issues.length > 0);
+const okModels = results.filter((r) => r.issues.length === 0);
+const ngModels = results.filter((r) => r.issues.length > 0);
 console.log(`\n✅ 无问题模型: ${okModels.length} 套`);
 if (okModels.length > 0) {
-  console.log(`  ${okModels.map(r => r.name).join(', ')}`);
+  console.log(`  ${okModels.map((r) => r.name).join(", ")}`);
 }
 
 console.log(`\n❌ 有问题模型: ${ngModels.length} 套`);
 if (ngModels.length > 0) {
   for (const r of ngModels) {
-    console.log(`  ${r.name}: ${r.issues.map(i => i.type).join(', ')}`);
+    console.log(`  ${r.name}: ${r.issues.map((i) => i.type).join(", ")}`);
   }
 }
 
 // ===== 问题类型统计 =====
 if (ngModels.length > 0) {
-  console.log('\n===== 问题类型统计 =====');
+  console.log("\n===== 问题类型统计 =====");
   const issueTypeCount = {};
   for (const r of ngModels) {
     for (const i of r.issues) {

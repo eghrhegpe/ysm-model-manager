@@ -8,9 +8,9 @@
 //
 // 运行：node tests/test_mock_contract.mjs
 
-import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let failed = 0;
@@ -28,8 +28,7 @@ function extractBindingFunctions(filePath) {
   const content = readFileSync(filePath, "utf8");
   const re = /export function (\w+)\(/g;
   const names = new Set();
-  let m;
-  while ((m = re.exec(content)) !== null) {
+  for (const m of content.matchAll(re)) {
     names.add(m[1]);
   }
   return names;
@@ -62,7 +61,7 @@ function extractMockKeys(filePath) {
   let inObj = false;
   const keys = new Set();
   // 匹配 KeyName: 或 "KeyName": — mock-data.ts 用无引号键（Go export 风格）
-  const topLevelKeyRe = /^  (\w+)\s*:/;
+  const topLevelKeyRe = /^ {2}(\w+)\s*:/;
 
   for (let i = startIdx; i < lines.length; i++) {
     const line = lines[i];
@@ -125,9 +124,7 @@ for (const k of staleInMock) {
 
 // 5. 汇总
 if (failed > 0) {
-  console.error(
-    `\n契约失败: ${failed} 项 — mock-data.ts 与 binding 导出不对齐，请同步修正`,
-  );
+  console.error(`\n契约失败: ${failed} 项 — mock-data.ts 与 binding 导出不对齐，请同步修正`);
   process.exit(1);
 }
 console.log("[OK] mock-binding 契约通过（双向对齐）");

@@ -12,27 +12,27 @@
  * doctor 全量过慢、bug-search/inspect_ysm 需参数、auto-import 由其他 AI 维护）。
  * 零依赖（仅 node:fs / node:path / node:url / node:child_process）。
  */
-import { spawnSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SCRIPTS = path.join(ROOT, 'scripts');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const SCRIPTS = path.join(ROOT, "scripts");
 const NODE = process.execPath;
 
 // [脚本名, 参数] —— 只测无参数即可输出 JSON 的快速脚本
 const JSON_SCRIPTS = [
-  ['check-redlines.ts', '--json'],
-  ['check-circular.ts', '--json'],
-  ['check-orphan-exports.ts', '--json'],
-  ['check-boolean-naming.ts', '--json'],
-  ['check-adr-health.ts', '--json'],
-  ['check-knowledge-drift.ts', '--json'],
-  ['check-doc-drift.ts', '--json'],
-  ['comment-checker.ts', '--json'],
-  ['type-consistency.ts', '--json'],
-  ['link-checker.ts', '--json'],
-  ['adr-check.ts', '--json'],
+  ["check-redlines.ts", "--json"],
+  ["check-circular.ts", "--json"],
+  ["check-orphan-exports.ts", "--json"],
+  ["check-boolean-naming.ts", "--json"],
+  ["check-adr-health.ts", "--json"],
+  ["check-knowledge-drift.ts", "--json"],
+  ["check-doc-drift.ts", "--json"],
+  ["comment-checker.ts", "--json"],
+  ["type-consistency.ts", "--json"],
+  ["link-checker.ts", "--json"],
+  ["adr-check.ts", "--json"],
 ];
 
 const errors = [];
@@ -42,29 +42,35 @@ function assert(cond, msg) {
 }
 
 for (const [name, flag] of JSON_SCRIPTS) {
-  const r = spawnSync(NODE, [path.join(SCRIPTS, name), flag], { encoding: 'utf-8', timeout: 60000, maxBuffer: 32 * 1024 * 1024 });
-  const out = (r.stdout || '').trim();
+  const r = spawnSync(NODE, [path.join(SCRIPTS, name), flag], {
+    encoding: "utf-8",
+    timeout: 60000,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  const out = (r.stdout || "").trim();
 
   // 1. 可解析
   let data = null;
   try {
     data = JSON.parse(out);
   } catch (e) {
-    errors.push(`[${name}] --json 输出非合法 JSON: ${e.message.slice(0, 80)} | stdout=${out.slice(0, 120)}`);
+    errors.push(
+      `[${name}] --json 输出非合法 JSON: ${e.message.slice(0, 80)} | stdout=${out.slice(0, 120)}`,
+    );
     continue;
   }
-  assert(data !== null && typeof data === 'object', `[${name}] JSON 顶层应为对象`);
+  assert(data !== null && typeof data === "object", `[${name}] JSON 顶层应为对象`);
 
   // 2. 顶层 _summary
   assert(
-    data._summary && typeof data._summary === 'object' && !Array.isArray(data._summary),
-    `[${name}] 顶层缺 _summary 对象（keys=${Object.keys(data).join(',')}）`
+    data._summary && typeof data._summary === "object" && !Array.isArray(data._summary),
+    `[${name}] 顶层缺 _summary 对象（keys=${Object.keys(data).join(",")}）`,
   );
   if (data._summary) {
     const keys = Object.keys(data._summary);
     assert(keys.length > 0, `[${name}] _summary 应为非空对象`);
-    const hasCount = keys.some((k) => typeof data._summary[k] === 'number');
-    assert(hasCount, `[${name}] _summary 应含至少一个计数键（keys=${keys.join(',')}）`);
+    const hasCount = keys.some((k) => typeof data._summary[k] === "number");
+    assert(hasCount, `[${name}] _summary 应含至少一个计数键（keys=${keys.join(",")}）`);
   }
 
   // 3. 退出码可映射（-1 = 超时/异常；0/1 均为正常门禁语义）
@@ -75,28 +81,32 @@ for (const [name, flag] of JSON_SCRIPTS) {
 
 // ── comment-checker 专项：_summary 含分类计数 + 截断标记 ─
 {
-  const r = spawnSync(NODE, [path.join(SCRIPTS, 'comment-checker.ts'), '--json'], { encoding: 'utf-8', timeout: 60000, maxBuffer: 32 * 1024 * 1024 });
-  const data = JSON.parse((r.stdout || '').trim());
-  const CATS = ['AI_fluff', 'empty_jsdoc', 'commented_code', 'todo_no_ticket', 'debug_log'];
+  const r = spawnSync(NODE, [path.join(SCRIPTS, "comment-checker.ts"), "--json"], {
+    encoding: "utf-8",
+    timeout: 60000,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  const data = JSON.parse((r.stdout || "").trim());
+  const CATS = ["AI_fluff", "empty_jsdoc", "commented_code", "todo_no_ticket", "debug_log"];
   for (const cat of CATS) {
     assert(
-      typeof data._summary?.[cat] === 'number',
-      `[comment-checker] _summary 缺分类计数 ${cat}（keys=${Object.keys(data._summary || {}).join(',')}）`
+      typeof data._summary?.[cat] === "number",
+      `[comment-checker] _summary 缺分类计数 ${cat}（keys=${Object.keys(data._summary || {}).join(",")}）`,
     );
     assert(
-      typeof data[cat] === 'undefined' || Array.isArray(data[cat]),
-      `[comment-checker] 顶层 ${cat} 应为数组`
+      typeof data[cat] === "undefined" || Array.isArray(data[cat]),
+      `[comment-checker] 顶层 ${cat} 应为数组`,
     );
     if (Array.isArray(data[cat])) {
       // 默认截断：分类计数 = 全量，顶层数组 ≤ 50（--full 才全量）
       assert(data[cat].length <= data._summary[cat], `[comment-checker] ${cat} 数组不应超过计数`);
-      assert(data[cat].length <= 50, `[comment-checker] ${cat} 默认应截断至 ≤50 条（got ${data[cat].length}）`);
+      assert(
+        data[cat].length <= 50,
+        `[comment-checker] ${cat} 默认应截断至 ≤50 条（got ${data[cat].length}）`,
+      );
     }
   }
-  assert(
-    typeof data._summary?.total === 'number',
-    `[comment-checker] _summary 缺 total 计数`
-  );
+  assert(typeof data._summary?.total === "number", `[comment-checker] _summary 缺 total 计数`);
 }
 
 // ── 输出 ─────────────────────────────────────────────

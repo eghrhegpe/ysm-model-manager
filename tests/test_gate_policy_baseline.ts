@@ -57,8 +57,8 @@ function countPolicies(tools: typeof ALL_STATIC_TOOLS) {
 }
 
 const allCount = countPolicies(ALL_STATIC_TOOLS);
-const feCount = countPolicies(FRONTEND_STATIC_TOOLS);
-const goCount = countPolicies(GO_STATIC_TOOLS);
+const _feCount = countPolicies(FRONTEND_STATIC_TOOLS);
+const _goCount = countPolicies(GO_STATIC_TOOLS);
 
 console.log("  当前 ALL_STATIC_TOOLS 声明:");
 console.log(
@@ -181,7 +181,7 @@ console.log('    - check-deadcode-baseline.ts → blockPolicy: "debt"');
 console.log("    - jscpd-go.ts → 移到 debt 或先修（过滤 *_test.go）");
 console.log("");
 console.log("  第二步（完整分层）：声明全部 23 项有明确期望的 blockPolicy");
-console.log("    hard=" + expectedHard + ", debt=" + expectedDebt + ", failClosed=" + expectedFc);
+console.log(`    hard=${expectedHard}, debt=${expectedDebt}, failClosed=${expectedFc}`);
 
 // ── 6. pre-push-gate.ts 的 record() 会自动尊重 blockPolicy ──
 

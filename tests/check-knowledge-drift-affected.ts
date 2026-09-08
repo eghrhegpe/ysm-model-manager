@@ -9,10 +9,10 @@
  *
  * 用法：node tests/check-knowledge-drift-affected.mjs
  */
-import { spawnSync } from 'node:child_process';
-import path from 'node:path';
+import { spawnSync } from "node:child_process";
+import path from "node:path";
 
-const SCRIPTS = path.join(process.cwd(), 'scripts');
+const SCRIPTS = path.join(process.cwd(), "scripts");
 const NODE = process.execPath;
 const errors = [];
 
@@ -22,14 +22,15 @@ function runAffected(...files) {
   // 进程正常跑完却退出码非 0 → 不重试，交断言判真实回归（2026-08-31 审计加固）。
   let r = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    r = spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.ts'), '--affected', ...files], {
-      encoding: 'utf-8',
+    r = spawnSync(NODE, [path.join(SCRIPTS, "check-knowledge-drift.ts"), "--affected", ...files], {
+      encoding: "utf-8",
       timeout: 30000,
     });
-    if (!(r.error && /ENOENT|EMFILE|spawn/i.test(r.error.message || ''))) break;
+    if (!(r.error && /ENOENT|EMFILE|spawn/i.test(r.error.message || ""))) break;
   }
-  if (r.status !== 0) errors.push(`--affected 退出码非 0: ${r.status} | stderr=${r.stderr?.slice(0, 120)}`);
-  return r.stdout || '';
+  if (r.status !== 0)
+    errors.push(`--affected 退出码非 0: ${r.status} | stderr=${r.stderr?.slice(0, 120)}`);
+  return r.stdout || "";
 }
 
 function assert(stdout, needle, label) {
@@ -40,32 +41,32 @@ function assert(stdout, needle, label) {
   }
 }
 
-console.log('=== check-knowledge-drift --affected 契约 ===');
+console.log("=== check-knowledge-drift --affected 契约 ===");
 
 // 1. 文件精确命中
-const out1 = runAffected('frontend/src/services/resource-registry.ts');
-assert(out1, 'resource-registry', '文件精确命中 → resource-registry');
+const out1 = runAffected("frontend/src/services/resource-registry.ts");
+assert(out1, "resource-registry", "文件精确命中 → resource-registry");
 
 // 2. 目录前缀命中
-const out2 = runAffected('go/avatar/');
-assert(out2, 'go-avatar', '目录前缀命中 → go-avatar');
+const out2 = runAffected("go/avatar/");
+assert(out2, "go-avatar", "目录前缀命中 → go-avatar");
 
 // 3. 多文件混合
-const out3 = runAffected('frontend/src/services/resource-registry.ts', 'go/avatar/');
-assert(out3, 'resource-registry', '多文件 → resource-registry');
-assert(out3, 'go-avatar', '多文件 → go-avatar');
+const out3 = runAffected("frontend/src/services/resource-registry.ts", "go/avatar/");
+assert(out3, "resource-registry", "多文件 → resource-registry");
+assert(out3, "go-avatar", "多文件 → go-avatar");
 
 // 4. 无关文件不命中
-const out4 = runAffected('package.json');
-assert(out4, '✅', '无关文件 → 无需复核');
+const out4 = runAffected("package.json");
+assert(out4, "✅", "无关文件 → 无需复核");
 
 // 5. 无参数 → 用法提示（退出码仍 0）
 const out5 = runAffected();
-assert(out5, '用法', '无参数 → 打印用法提示');
+assert(out5, "用法", "无参数 → 打印用法提示");
 
 if (errors.length) {
   console.log(`FAILED: ${errors.length} issue(s)`);
   for (const e of errors) console.log(`  ✗ ${e}`);
   process.exit(1);
 }
-console.log('OK: check-knowledge-drift --affected 契约全过');
+console.log("OK: check-knowledge-drift --affected 契约全过");

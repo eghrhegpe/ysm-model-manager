@@ -4,12 +4,12 @@
  * type/role 是自由标签，只校验必填字段和格式。
  * 由 tests/python/test_creators_schema.py 迁移（2026-08-03），校验逻辑逐点保真。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const JSON_FILE = path.join(ROOT, 'creators.json');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const JSON_FILE = path.join(ROOT, "creators.json");
 
 function validate() {
   const errors = [];
@@ -19,31 +19,31 @@ function validate() {
     return errors;
   }
 
-  let data;
+  let data: unknown;
   try {
-    data = JSON.parse(fs.readFileSync(JSON_FILE, 'utf-8'));
+    data = JSON.parse(fs.readFileSync(JSON_FILE, "utf-8"));
   } catch (e) {
     errors.push(`SYNTAX: creators.json 解析失败: ${e.message}`);
     return errors;
   }
 
   if (!Array.isArray(data) || data.length === 0) {
-    errors.push('SCHEMA: must be a non-empty array');
+    errors.push("SCHEMA: must be a non-empty array");
     return errors;
   }
 
   const names = new Set();
   for (let i = 0; i < data.length; i++) {
     const creator = data[i];
-    if (typeof creator !== 'object' || creator === null) {
-      errors.push(`[${i}] 条目必须为对象（got ${creator === null ? 'null' : typeof creator}）`);
+    if (typeof creator !== "object" || creator === null) {
+      errors.push(`[${i}] 条目必须为对象（got ${creator === null ? "null" : typeof creator}）`);
       continue;
     }
 
-    const prefix = `[${i}] ${creator?.name ?? '?'}`;
+    const prefix = `[${i}] ${creator?.name ?? "?"}`;
 
-    const name = creator?.name ?? '';
-    if (!name || typeof name !== 'string') {
+    const name = creator?.name ?? "";
+    if (!name || typeof name !== "string") {
       errors.push(`${prefix}: 'name' must be non-empty string`);
     }
     // 默认拒绝重复 name
@@ -52,9 +52,9 @@ function validate() {
     }
     names.add(name);
 
-    for (const field of ['desc', 'type', 'role']) {
-      const val = creator?.[field] ?? '';
-      if (val && typeof val !== 'string') {
+    for (const field of ["desc", "type", "role"]) {
+      const val = creator?.[field] ?? "";
+      if (val && typeof val !== "string") {
         errors.push(`${prefix}: '${field}' must be string`);
       }
     }
@@ -69,5 +69,5 @@ if (errors.length) {
   for (const e of errors) console.error(`  ${e}`);
   process.exit(1);
 } else {
-  console.log('OK: all creators passed schema checks');
+  console.log("OK: all creators passed schema checks");
 }

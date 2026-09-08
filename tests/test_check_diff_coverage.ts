@@ -10,36 +10,36 @@
  *
  * 零依赖（仅 node:assert）。运行：node tests/test_check_diff_coverage.mjs
  */
-import assert from 'node:assert';
+import assert from "node:assert";
 import {
   addLinesFromDiff,
+  buildSuggestBlock,
   parseRenameStatus,
   statementPctForChangedLines,
-  buildSuggestBlock,
-} from '../scripts/check-diff-coverage.ts';
+} from "../scripts/check-diff-coverage.ts";
 
 const fails = [];
 function check(name, fn) {
   try {
     fn();
-    console.log('✓', name);
+    console.log("✓", name);
   } catch (e) {
     fails.push(`${name}: ${e.message}`);
-    console.error('✗', name, '-', e.message);
+    console.error("✗", name, "-", e.message);
   }
 }
 
-check('addLinesFromDiff 仅取 + 行号，上下文行递增，- 行不递增', () => {
+check("addLinesFromDiff 仅取 + 行号，上下文行递增，- 行不递增", () => {
   const diff = [
-    'diff --git a/old b/new',
-    '--- a/old',
-    '+++ b/new',
-    '@@ -10,3 +10,3 @@',
-    ' context',
-    '-removed',
-    '+added',
-    ' context2',
-  ].join('\n');
+    "diff --git a/old b/new",
+    "--- a/old",
+    "+++ b/new",
+    "@@ -10,3 +10,3 @@",
+    " context",
+    "-removed",
+    "+added",
+    " context2",
+  ].join("\n");
   const out = new Set();
   addLinesFromDiff(out, diff);
   // 行号推演：@@ +10 → 10；" context"( )→11；"-removed" 不递增(11)；
@@ -47,13 +47,8 @@ check('addLinesFromDiff 仅取 + 行号，上下文行递增，- 行不递增', 
   assert.deepEqual([...out], [11]);
 });
 
-check('addLinesFromDiff 多 hunk 各自独立起始', () => {
-  const diff = [
-    '@@ -1,1 +1,1 @@',
-    '+only',
-    '@@ -50,1 +50,1 @@',
-    '+fifty',
-  ].join('\n');
+check("addLinesFromDiff 多 hunk 各自独立起始", () => {
+  const diff = ["@@ -1,1 +1,1 @@", "+only", "@@ -50,1 +50,1 @@", "+fifty"].join("\n");
   const out = new Set();
   addLinesFromDiff(out, diff);
   assert.deepEqual(
@@ -62,25 +57,25 @@ check('addLinesFromDiff 多 hunk 各自独立起始', () => {
   );
 });
 
-check('parseRenameStatus 解析 R 行，忽略 M/A/D', () => {
+check("parseRenameStatus 解析 R 行，忽略 M/A/D", () => {
   const out = [
-    'R098\tfrontend/src/views/app-content/site/edit.ts\tfrontend/src/views/app-content/site/editor.ts',
-    'R100\ta/b.ts\ta/c.ts',
-    'M\tx/y.ts',
-    'A\tz/new.ts',
-  ].join('\n');
+    "R098\tfrontend/src/views/app-content/site/edit.ts\tfrontend/src/views/app-content/site/editor.ts",
+    "R100\ta/b.ts\ta/c.ts",
+    "M\tx/y.ts",
+    "A\tz/new.ts",
+  ].join("\n");
   const map = parseRenameStatus(out);
   assert.equal(map.size, 2);
-  assert.deepEqual(map.get('frontend/src/views/app-content/site/editor.ts'), {
-    from: 'frontend/src/views/app-content/site/edit.ts',
+  assert.deepEqual(map.get("frontend/src/views/app-content/site/editor.ts"), {
+    from: "frontend/src/views/app-content/site/edit.ts",
     sim: 98,
   });
-  assert.deepEqual(map.get('a/c.ts'), { from: 'a/b.ts', sim: 100 });
-  assert.equal(map.has('x/y.ts'), false);
-  assert.equal(map.has('z/new.ts'), false);
+  assert.deepEqual(map.get("a/c.ts"), { from: "a/b.ts", sim: 100 });
+  assert.equal(map.has("x/y.ts"), false);
+  assert.equal(map.has("z/new.ts"), false);
 });
 
-check('statementPctForChangedLines 变更行上无语句 → 100', () => {
+check("statementPctForChangedLines 变更行上无语句 → 100", () => {
   const entry = {
     s: { 0: 0 },
     statementMap: { 0: { start: { line: 5 }, end: { line: 5 } } },
@@ -89,7 +84,7 @@ check('statementPctForChangedLines 变更行上无语句 → 100', () => {
   assert.equal(statementPctForChangedLines(entry, new Set([7])), 100);
 });
 
-check('statementPctForChangedLines 纯改名（仅 import 行无语句）→ 100', () => {
+check("statementPctForChangedLines 纯改名（仅 import 行无语句）→ 100", () => {
   // 模拟 rename 重构：改动行 20/30/40/50 均为 import 改写，无 statement
   const entry = {
     s: { 0: 1, 1: 1 },
@@ -101,7 +96,7 @@ check('statementPctForChangedLines 纯改名（仅 import 行无语句）→ 100
   assert.equal(statementPctForChangedLines(entry, new Set([20, 30, 40, 50])), 100);
 });
 
-check('statementPctForChangedLines 部分覆盖按比例', () => {
+check("statementPctForChangedLines 部分覆盖按比例", () => {
   const entry = {
     s: { 0: 1, 1: 0 },
     statementMap: {
@@ -114,21 +109,21 @@ check('statementPctForChangedLines 部分覆盖按比例', () => {
   assert.equal(statementPctForChangedLines(entry, new Set([10])), 0);
 });
 
-check('statementPctForChangedLines 空 statementMap → 100', () => {
+check("statementPctForChangedLines 空 statementMap → 100", () => {
   assert.equal(statementPctForChangedLines({ s: {}, statementMap: {} }, new Set([1])), 100);
 });
 
-check('buildSuggestBlock 输出可追加进 commit message 的 Markdown 区块', () => {
+check("buildSuggestBlock 输出可追加进 commit message 的 Markdown 区块", () => {
   const block = buildSuggestBlock(
     [
-      { file: 'frontend/src/views/app-content/site/edit.ts', pct: 25.0 },
-      { file: 'frontend/src/views/app-preview/loader.ts', pct: 8.3 },
+      { file: "frontend/src/views/app-content/site/edit.ts", pct: 25.0 },
+      { file: "frontend/src/views/app-preview/loader.ts", pct: 8.3 },
     ],
     60,
   );
-  const lines = block.split('\n');
+  const lines = block.split("\n");
   // 首行即钩子 stripBlock 的 BLOCK_START 标记，保证幂等剥离可对位
-  assert.equal(lines[0], '## 覆盖率建议（非阻断）');
+  assert.equal(lines[0], "## 覆盖率建议（非阻断）");
   assert.match(block, /低于 60%/);
   assert.match(block, /`frontend\/src\/views\/app-content\/site\/edit.ts` — 25\.0%/);
   assert.match(block, /`frontend\/src\/views\/app-preview\/loader.ts` — 8\.3%/);
@@ -137,8 +132,8 @@ check('buildSuggestBlock 输出可追加进 commit message 的 Markdown 区块',
   assert.doesNotMatch(block, /\[X\]/);
 });
 
-check('buildSuggestBlock 单文件亦生成合法区块', () => {
-  const block = buildSuggestBlock([{ file: 'frontend/src/preview-3d/model3d.ts', pct: 0 }], 60);
+check("buildSuggestBlock 单文件亦生成合法区块", () => {
+  const block = buildSuggestBlock([{ file: "frontend/src/preview-3d/model3d.ts", pct: 0 }], 60);
   assert.match(block, /`frontend\/src\/preview-3d\/model3d.ts` — 0\.0%/);
 });
 
@@ -147,4 +142,4 @@ if (fails.length) {
   for (const f of fails) console.error(`  - ${f}`);
   process.exit(1);
 }
-console.log('\n✅ 全部用例通过');
+console.log("\n✅ 全部用例通过");

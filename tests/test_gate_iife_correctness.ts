@@ -1,28 +1,9 @@
 #!/usr/bin/env node
-/**
- * 契约测试：pre-push-gate.ts Promise.all IIFE 调用括号完整性守护。
- *
- * 背景（2026-09-01 实证）：commit fd3d0431 发现两个 async IIFE 漏写 () 调用括号，
- * 导致 go build/test、vite build/vitest、check-layering 等 13 项域级检查从 8/17 起
- * 静默跳过——pre-push-gate 变成「静态工具串行 + 契约测试」的假重。
- *
- * 本测试锁定「所有 (async () => {...}) 必须带调用括号」规则，防止未来重构时再次引入。
- * 规则来源：pre_push_gate.md 不变量第一条 + ADR-152 实证。
- *
- * 覆盖：
- *   1. 所有 async IIFE 模式 `(async () => {` 后必须有 `)()` 调用
- *   2. 主入口 main().then(async ...) 必须带调用（已验证）
- *   3. 统计 IIFE 数量，与预定义期望值比对（防意外增减未登记）
- *
- * 用法：node tests/test_gate_iife_correctness.ts
- * 退出码：0 = 通过；1 = 失败。
- */
-import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
 const ROOT = process.cwd();
-const GATE_FILE = path.join(ROOT, 'scripts', 'pre-push-gate.ts');
+const GATE_FILE = path.join(ROOT, "scripts", "pre-push-gate.ts");
 
 // 期望的 IIFE 数量（Go 域 + 前端域 + main().then async）
 const EXPECTED_IIFE_COUNT = 3;
@@ -36,9 +17,9 @@ function check(cond: boolean, msg: string) {
 // ---- 1. 读取 gate 源码 ----
 let gateSrc: string;
 try {
-  gateSrc = fs.readFileSync(GATE_FILE, 'utf8');
-} catch (e: any) {
-  console.error(`❌ 无法读取 ${GATE_FILE}: ${e.message}`);
+  gateSrc = fs.readFileSync(GATE_FILE, "utf8");
+} catch (e) {
+  console.error(`❌ 无法读取 ${GATE_FILE}: ${e instanceof Error ? e.message : e}`);
   process.exit(1);
 }
 
@@ -46,11 +27,13 @@ try {
 const iifePattern = /\(async\s*\([^)]*\)\s*=>\s*\{/g;
 const iifeAllMatches = gateSrc.match(iifePattern) || [];
 
-check(iifeAllMatches.length === EXPECTED_IIFE_COUNT,
-  `期望 ${EXPECTED_IIFE_COUNT} 个 async IIFE，实际匹配 ${iifeAllMatches.length} 个`);
+check(
+  iifeAllMatches.length === EXPECTED_IIFE_COUNT,
+  `期望 ${EXPECTED_IIFE_COUNT} 个 async IIFE，实际匹配 ${iifeAllMatches.length} 个`,
+);
 
 // ---- 3. 验证每个 IIFE 都有调用括号 )() ----
-const lines = gateSrc.split('\n');
+const lines = gateSrc.split("\n");
 const iifeLines: number[] = [];
 for (let i = 0; i < lines.length; i++) {
   if (/\(async\s*\([^)]*\)\s*=>\s*\{/.test(lines[i])) {
@@ -58,13 +41,15 @@ for (let i = 0; i < lines.length; i++) {
   }
 }
 
-check(iifeLines.length === EXPECTED_IIFE_COUNT,
-  `期望 ${EXPECTED_IIFE_COUNT} 个 async IIFE，实际找到 ${iifeLines.length} 个`);
+check(
+  iifeLines.length === EXPECTED_IIFE_COUNT,
+  `期望 ${EXPECTED_IIFE_COUNT} 个 async IIFE，实际找到 ${iifeLines.length} 个`,
+);
 
 // 收集所有包含 )() 的行号
 const callLineNumbers: number[] = [];
 for (let i = 0; i < lines.length; i++) {
-  if (lines[i].includes(')()')) {
+  if (lines[i].includes(")()")) {
     callLineNumbers.push(i + 1);
   }
 }
@@ -75,8 +60,8 @@ for (const startLine of iifeLines) {
   // 注意：本仓写法是 `main()` 换行后 `.then(async (code) => {`，起始行只含 `.then(async`，
   // 单行 includes('main().then') 永远为假 → 误判「漏调用括号」（2026-09-08 实证红灯）。
   // 取「上一行 + 当前行」合并判断，容忍跨行书写。
-  const curLine = gateSrc.split('\n')[startLine - 1] ?? '';
-  const prevLine = gateSrc.split('\n')[startLine - 2] ?? '';
+  const curLine = gateSrc.split("\n")[startLine - 1] ?? "";
+  const prevLine = gateSrc.split("\n")[startLine - 2] ?? "";
   if (/main\(\)\s*\.then\(async/.test(prevLine + curLine)) {
     continue;
   }
@@ -87,27 +72,28 @@ for (const startLine of iifeLines) {
   if (nextCall && (!nextIife || nextCall < nextIife)) {
     continue; // 找到匹配的调用
   }
-  check(false,
-    `IIFE 漏调用括号（起始行 ${startLine}）：未在后续行找到 )() 调用`);
+  check(false, `IIFE 漏调用括号（起始行 ${startLine}）：未在后续行找到 )() 调用`);
 }
 
 // ---- 4. 专项验证：main().then(async ...) 必须有调用 ----
 // 同上：`main()` 与 `.then(async` 允许跨行（\s* 覆盖换行）
 const mainThenMatch = gateSrc.match(/main\(\)\s*\.then\(async/);
-check(!!mainThenMatch, 'main().then(async ...) 必须存在（门禁入口）');
+check(!!mainThenMatch, "main().then(async ...) 必须存在（门禁入口）");
 
 // ---- 5. 验证 Go 域和前端域 IIFE 都存在 ----
-const goDomainIIFE = gateSrc.includes('(async () => {\n      if (!plan.go) return;');
-const frontendDomainIIFE = gateSrc.includes('(async () => {\n      if (!plan.frontend) return;');
-check(goDomainIIFE, 'Go 域 IIFE 必须存在');
-check(frontendDomainIIFE, '前端域 IIFE 必须存在');
+const goDomainIIFE = gateSrc.includes("(async () => {\n      if (!plan.go) return;");
+const frontendDomainIIFE = gateSrc.includes("(async () => {\n      if (!plan.frontend) return;");
+check(goDomainIIFE, "Go 域 IIFE 必须存在");
+check(frontendDomainIIFE, "前端域 IIFE 必须存在");
 
 // ---- 汇总 ----
 if (fails.length === 0) {
-  console.log(`✅ test_gate_iife_correctness 全部通过（${iifeAllMatches.length} 个 IIFE，调用括号完整）`);
+  console.log(
+    `✅ test_gate_iife_correctness 全部通过（${iifeAllMatches.length} 个 IIFE，调用括号完整）`,
+  );
   process.exit(0);
 } else {
-  console.log('❌ test_gate_iife_correctness 失败:');
+  console.log("❌ test_gate_iife_correctness 失败:");
   for (const f of fails) console.log(`  - ${f}`);
   process.exit(1);
 }

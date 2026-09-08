@@ -12,18 +12,34 @@
  *      加关键元素忘登记 → 红（消除病根 1「漏登」）。
  * 手工集中清单 TESTID_REGISTRY 已移除（病根 1 结构性消除）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const FE = path.join(ROOT, 'frontend');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const FE = path.join(ROOT, "frontend");
 
 // 关键命名约定（收窄作用域，避免装饰性 testid 误伤）；与阶段 A 孤儿扫描一致。
 // 阶段 C+ 增补 'diag-' / 'ws-' / 'set-' / 'ins-'：这几族原先只有 #id、无 testid，e2e 靠
 // getElementById / locator("#id") 绕过契约通道；补钩子后须一并纳入孤儿扫描，否则新增关键元素仍可漏登。
-const KEY_PREFIXES = ['tree-', 'sm-', 'gh-', 'ctx-', 'dlg-', 'recy-', 'sidebar-', 'nav-', 'content-', 'toast', 'diag-', 'ws-', 'set-', 'ins-'];
-const isKeyTestid = (id) => KEY_PREFIXES.some((p) => id === p.replace(/-$/, '') || id.startsWith(p));
+const KEY_PREFIXES = [
+  "tree-",
+  "sm-",
+  "gh-",
+  "ctx-",
+  "dlg-",
+  "recy-",
+  "sidebar-",
+  "nav-",
+  "content-",
+  "toast",
+  "diag-",
+  "ws-",
+  "set-",
+  "ins-",
+];
+const isKeyTestid = (id) =>
+  KEY_PREFIXES.some((p) => id === p.replace(/-$/, "") || id.startsWith(p));
 
 const errors = [];
 const REGISTRY = {}; // testid -> 声明它的源文件（相对 frontend/）
@@ -41,16 +57,18 @@ const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
-      if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('dist')) continue;
+      if (e.name === "node_modules" || e.name === ".git" || e.name.startsWith("dist")) continue;
       walkSource(p);
       continue;
     }
     if (!/\.(ts|tsx|js|jsx)$/.test(e.name) || isTestFile(e.name)) continue;
-    const c = fs.readFileSync(p, 'utf8');
+    const c = fs.readFileSync(p, "utf8");
     // 1. VIEW_TESTIDS 声明 → 注册表（首个声明为准）
-    const m = c.match(/export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/);
+    const m = c.match(
+      /export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/,
+    );
     if (m) {
-      const rel = path.relative(FE, p).replace(/\\/g, '/');
+      const rel = path.relative(FE, p).replace(/\\/g, "/");
       for (const idm of m[1].matchAll(/['"]([a-z0-9-]+)['"]/g)) {
         const id = idm[1];
         if (!(id in REGISTRY)) REGISTRY[id] = rel;
@@ -60,14 +78,14 @@ const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
     for (const hm of c.matchAll(/data-testid="([a-z0-9-]+)"/g)) seen.add(hm[1]);
     for (const hm of c.matchAll(/dataset\.testid\s*=\s*"([a-z0-9-]+)"/g)) seen.add(hm[1]);
   }
-})(path.join(FE, 'src'));
+})(path.join(FE, "src"));
 
 // ── 1. must-have：声明了就必须有钩子（保 G-1 删能红） ──
 for (const [testid, relFile] of Object.entries(REGISTRY)) {
   if (!seen.has(testid)) {
     errors.push(
       `MISSING: testid="${testid}" 声明于 ${relFile} 的 VIEW_TESTIDS，但源码无对应 data-testid/dataset.testid 钩子。\n` +
-      `      ↳ canonical fix（ADR-133 阶段 B）：删除 ${relFile} 中 VIEW_TESTIDS 的 '${testid}' 项（功能已删）；禁止为过门禁补无 handler 假按钮。`
+        `      ↳ canonical fix（ADR-133 阶段 B）：删除 ${relFile} 中 VIEW_TESTIDS 的 '${testid}' 项（功能已删）；禁止为过门禁补无 handler 假按钮。`,
     );
   }
 }
@@ -77,22 +95,22 @@ for (const id of seen) {
   if (isKeyTestid(id) && !(id in REGISTRY)) {
     errors.push(
       `ORPHAN: data-testid="${id}" 命中关键命名约定但未声明于任何视图的 VIEW_TESTIDS。\n` +
-      `      ↳ canonical fix（ADR-133 阶段 B）：在其所属视图文件导出 VIEW_TESTIDS 中加入 '${id}'。`
+        `      ↳ canonical fix（ADR-133 阶段 B）：在其所属视图文件导出 VIEW_TESTIDS 中加入 '${id}'。`,
     );
   }
 }
 
 // ── G-1 ③④ 文件存在性守护（与 testid 注册表正交，保留） ──
-if (!fs.existsSync(path.join(FE, 'src/test-utils/index.ts'))) {
-  errors.push('MISSING: src/test-utils/index.ts（G-1 测试基础设施 helper 缺失）');
+if (!fs.existsSync(path.join(FE, "src/test-utils/index.ts"))) {
+  errors.push("MISSING: src/test-utils/index.ts（G-1 测试基础设施 helper 缺失）");
 }
-if (!fs.existsSync(path.join(FE, 'src/views/app-tree/app-tree.state.test.ts'))) {
-  errors.push('MISSING: src/views/app-tree/app-tree.state.test.ts（G-1 首个组件测试缺失）');
+if (!fs.existsSync(path.join(FE, "src/views/app-tree/app-tree.state.test.ts"))) {
+  errors.push("MISSING: src/views/app-tree/app-tree.state.test.ts（G-1 首个组件测试缺失）");
 }
 
 if (errors.length > 0) {
-  console.error('❌ 契约测试失败：关键 data-testid 缺失 / 孤儿未登记');
-  for (const e of errors) console.error('  ', e);
+  console.error("❌ 契约测试失败：关键 data-testid 缺失 / 孤儿未登记");
+  for (const e of errors) console.error("  ", e);
   process.exit(1);
 } else {
   const count = Object.keys(REGISTRY).length;

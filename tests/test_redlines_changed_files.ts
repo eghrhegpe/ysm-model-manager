@@ -19,7 +19,7 @@
  * 用法：node tests/test_redlines_changed_files.mjs
  * 退出码：0 = 通过；1 = 失败。
  */
-import { redlineFilterKeysByChangedFiles } from '../scripts/check-redlines.ts';
+import { redlineFilterKeysByChangedFiles } from "../scripts/check-redlines.ts";
 
 const failures = [];
 let assertCount = 0;
@@ -32,36 +32,35 @@ function assert(cond, msg) {
 function splitEq(keys, want, msg) {
   const got = keys.slice().sort();
   const w = want.slice().sort();
-  assert(got.length === w.length && got.every((v, i) => v === w[i]), `${msg} | got=${JSON.stringify(keys)} want=${JSON.stringify(want)}`);
+  assert(
+    got.length === w.length && got.every((v, i) => v === w[i]),
+    `${msg} | got=${JSON.stringify(keys)} want=${JSON.stringify(want)}`,
+  );
 }
 
-const A = 'frontend/src/views/app-content/diagnostics/perf-cli.ts';
-const B = 'go/scanner/scanner.go';
-const keys = [
-  `${A}:R5:#ff0000:12`,
-  `${A}:W2:cafebabe:40`,
-  `${B}:R1:deadbeef:1`,
-];
+const A = "frontend/src/views/app-content/diagnostics/perf-cli.ts";
+const B = "go/scanner/scanner.go";
+const keys = [`${A}:R5:#ff0000:12`, `${A}:W2:cafebabe:40`, `${B}:R1:deadbeef:1`];
 
 // 1. 无 changedSet → 原样（兼容旧全库行为）
-splitEq(redlineFilterKeysByChangedFiles(keys, null), keys, '无 changedSet 应返回原样');
+splitEq(redlineFilterKeysByChangedFiles(keys, null), keys, "无 changedSet 应返回原样");
 
 // 2. changedSet 命中 A → 只留 A 的两个键
 splitEq(
   redlineFilterKeysByChangedFiles(keys, new Set([A])),
   [`${A}:R5:#ff0000:12`, `${A}:W2:cafebabe:40`],
-  'changedSet 命中 A 应只保留 A 的键',
+  "changedSet 命中 A 应只保留 A 的键",
 );
 
 // 3. changedSet 命中 B → 只留 B
 splitEq(
   redlineFilterKeysByChangedFiles(keys, new Set([B])),
   [`${B}:R1:deadbeef:1`],
-  'changedSet 命中 B 应只保留 B 的键',
+  "changedSet 命中 B 应只保留 B 的键",
 );
 
 // 4. 空 changedSet（零文件）→ 全过滤
-splitEq(redlineFilterKeysByChangedFiles(keys, new Set()), [], '空 changedSet 应全过滤');
+splitEq(redlineFilterKeysByChangedFiles(keys, new Set()), [], "空 changedSet 应全过滤");
 
 if (failures.length) {
   console.error(`✗ ${failures.length} 个断言失败（共 ${assertCount}）:`);

@@ -14,76 +14,83 @@
  *
  * 用法：node tests/check-knowledge-fm-delimiter.ts
  */
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
-import { ok, finish } from './_lib.mts';
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { finish, ok } from "./_lib.mts";
 
 const ROOT = process.cwd();
-const SCRIPTS = path.join(ROOT, 'scripts');
-const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
+const SCRIPTS = path.join(ROOT, "scripts");
+const KC_DIR = path.join(ROOT, "docs", "knowledge");
 const NODE = process.execPath;
 
-const TMP_CARD = path.join(KC_DIR, 'zzz-fm-delimiter-tmp.md');
+const TMP_CARD = path.join(KC_DIR, "zzz-fm-delimiter-tmp.md");
 
 function runDriftJson() {
-  return spawnSync(NODE, [path.join(SCRIPTS, 'check-knowledge-drift.ts'), '--json'], {
-    encoding: 'utf-8',
+  return spawnSync(NODE, [path.join(SCRIPTS, "check-knowledge-drift.ts"), "--json"], {
+    encoding: "utf-8",
     timeout: 60000,
   });
 }
 
 /** 写临时卡：delimiter 为 frontmatter 首行（--- 正常 / *** 畸形重排），restLines 为后续行。 */
 function writeTmpCard(delimiter, restLines) {
-  fs.writeFileSync(TMP_CARD, [delimiter, ...restLines, '---', '', '# zzz-fm-delimiter-tmp', ''].join('\r\n'), 'utf8');
+  fs.writeFileSync(
+    TMP_CARD,
+    [delimiter, ...restLines, "---", "", "# zzz-fm-delimiter-tmp", ""].join("\r\n"),
+    "utf8",
+  );
 }
 
-console.log('=== 知识卡 frontmatter 分隔符显式校验 ===');
+console.log("=== 知识卡 frontmatter 分隔符显式校验 ===");
 
 try {
   // 1. 正常 `---` 卡 → 放行
-  writeTmpCard('---', [
-    'kind: zzz-fm-delimiter-tmp',
-    'name: frontmatter 分隔符测试临时卡',
-    'tier: leaf',
-    'category: utils',
-    'source_files:',
-    '  - frontend/src/utils/array.ts',
-    'use_when:',
-    '  - 临时测试',
+  writeTmpCard("---", [
+    "kind: zzz-fm-delimiter-tmp",
+    "name: frontmatter 分隔符测试临时卡",
+    "tier: leaf",
+    "category: utils",
+    "source_files:",
+    "  - frontend/src/utils/array.ts",
+    "use_when:",
+    "  - 临时测试",
   ]);
   let r = runDriftJson();
   const legal = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
   ok(
-    '`---` 正常卡无 ERROR',
-    !legal.errors.some((e) => e.includes('zzz-fm-delimiter-tmp')),
-    `不应出现针对临时卡的 ERROR: ${legal.errors.filter((e) => e.includes('zzz-fm-delimiter-tmp')).join('; ').slice(0, 200)}`
+    "`---` 正常卡无 ERROR",
+    !legal.errors.some((e) => e.includes("zzz-fm-delimiter-tmp")),
+    `不应出现针对临时卡的 ERROR: ${legal.errors
+      .filter((e) => e.includes("zzz-fm-delimiter-tmp"))
+      .join("; ")
+      .slice(0, 200)}`,
   );
 
   // 2. `***` 开头畸形卡（重排事故指纹）→ ERROR 且指引可操作
-  writeTmpCard('***', [
-    'kind: zzz-fm-delimiter-tmp',
-    'name: 重排事故模拟卡',
-    'source_files:',
-    '  - frontend/src/utils/array.ts',
+  writeTmpCard("***", [
+    "kind: zzz-fm-delimiter-tmp",
+    "name: 重排事故模拟卡",
+    "source_files:",
+    "  - frontend/src/utils/array.ts",
   ]);
   r = runDriftJson();
-  ok('畸形卡退出码 1', r.status === 1, `status=${r.status}`);
+  ok("畸形卡退出码 1", r.status === 1, `status=${r.status}`);
   const bad = r.stdout ? JSON.parse(r.stdout) : { errors: [] };
-  const hit = bad.errors.find((e) => e.includes('zzz-fm-delimiter-tmp'));
-  ok('畸形卡报 ERROR 且含卡名', Boolean(hit), `期望含卡名: ${bad.errors.join('; ').slice(0, 300)}`);
+  const hit = bad.errors.find((e) => e.includes("zzz-fm-delimiter-tmp"));
+  ok("畸形卡报 ERROR 且含卡名", Boolean(hit), `期望含卡名: ${bad.errors.join("; ").slice(0, 300)}`);
   ok(
-    'ERROR 标注「分隔符异常」',
-    Boolean(hit && hit.includes('分隔符异常')),
-    `期望含「分隔符异常」: ${(hit || '').slice(0, 200)}`
+    "ERROR 标注「分隔符异常」",
+    Boolean(hit?.includes("分隔符异常")),
+    `期望含「分隔符异常」: ${(hit || "").slice(0, 200)}`,
   );
   ok(
-    'ERROR 含「重排」事故指引',
-    Boolean(hit && hit.includes('重排')),
-    `期望含重排指引: ${(hit || '').slice(0, 200)}`
+    "ERROR 含「重排」事故指引",
+    Boolean(hit?.includes("重排")),
+    `期望含重排指引: ${(hit || "").slice(0, 200)}`,
   );
 } finally {
   if (fs.existsSync(TMP_CARD)) fs.unlinkSync(TMP_CARD);
 }
 
-finish('frontmatter 分隔符显式校验契约全过');
+finish("frontmatter 分隔符显式校验契约全过");

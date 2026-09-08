@@ -11,178 +11,197 @@
  * 零依赖（仅 node:fs / node:path / node:child_process）。
  * 运行：node tests/test_check_readme_index.mjs
  */
-import assert from 'node:assert';
-import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import assert from "node:assert";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  missingFromReadme,
-  findReadmeRow,
   assertionViolations,
   duplicateRegistrations,
+  findReadmeRow,
   ghostReferences,
-} from '../scripts/check-readme-index.ts';
-import { check, finish } from './_lib.mts';
+  missingFromReadme,
+} from "../scripts/check-readme-index.ts";
+import { check, finish } from "./_lib.mts";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 function runCheck(args) {
   try {
-    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'check-readme-index.ts'), ...args], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    });
+    const out = execFileSync(
+      process.execPath,
+      [path.join(ROOT, "scripts", "check-readme-index.ts"), ...args],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+      },
+    );
     return { rc: 0, out };
   } catch (e) {
-    return { rc: e.status ?? 1, out: (e.stdout || '') + (e.stderr || '') };
+    return { rc: e.status ?? 1, out: (e.stdout || "") + (e.stderr || "") };
   }
 }
 
-check('missingFromReadme：README 含 basename → 已登记', () => {
-  const missing = missingFromReadme(['doctor.ts', 'check-redlines.ts'], '| `doctor.ts` | 全量闸门 |\n| `check-redlines.ts` | 红线 |');
-  assert.deepEqual(missing, [], '两个脚本均已提及 → 不应有缺失');
+check("missingFromReadme：README 含 basename → 已登记", () => {
+  const missing = missingFromReadme(
+    ["doctor.ts", "check-redlines.ts"],
+    "| `doctor.ts` | 全量闸门 |\n| `check-redlines.ts` | 红线 |",
+  );
+  assert.deepEqual(missing, [], "两个脚本均已提及 → 不应有缺失");
 });
 
-check('missingFromReadme：README 缺 basename → 零提及', () => {
-  const missing = missingFromReadme(['doctor.ts', 'gen-routes.ts'], '| `doctor.ts` | 全量闸门 |');
-  assert.deepEqual(missing, ['gen-routes.ts'], 'gen-routes.ts 未提及 → 应报缺失');
+check("missingFromReadme：README 缺 basename → 零提及", () => {
+  const missing = missingFromReadme(["doctor.ts", "gen-routes.ts"], "| `doctor.ts` | 全量闸门 |");
+  assert.deepEqual(missing, ["gen-routes.ts"], "gen-routes.ts 未提及 → 应报缺失");
 });
 
-check('missingFromReadme：子目录脚本（hooks/）按 basename 判定', () => {
-  const missing = missingFromReadme(['hooks/knowledge-affected-hint.ts'], '| `knowledge-affected-hint.ts` | 知识卡提示 |');
-  assert.deepEqual(missing, [], 'hooks/ 脚本以 basename 登记 → 不应误报');
+check("missingFromReadme：子目录脚本（hooks/）按 basename 判定", () => {
+  const missing = missingFromReadme(
+    ["hooks/knowledge-affected-hint.ts"],
+    "| `knowledge-affected-hint.ts` | 知识卡提示 |",
+  );
+  assert.deepEqual(missing, [], "hooks/ 脚本以 basename 登记 → 不应误报");
 });
 
-check('missingFromReadme：同名前缀不误判（doctor vs doctor-x）', () => {
+check("missingFromReadme：同名前缀不误判（doctor vs doctor-x）", () => {
   // README 提及 doctor-x.ts 不应让 doctor.ts 误判为已登记（basename 精确匹配，非前缀）
-  const missing = missingFromReadme(['doctor.ts'], '| `doctor-x.ts` | 别的 |');
-  assert.deepEqual(missing, ['doctor.ts'], 'doctor.ts 未被精确提及 → 应报缺失');
+  const missing = missingFromReadme(["doctor.ts"], "| `doctor-x.ts` | 别的 |");
+  assert.deepEqual(missing, ["doctor.ts"], "doctor.ts 未被精确提及 → 应报缺失");
 });
 
-check('全量扫描当前仓库应 0 缺失（rc=0 + --json 契约）', () => {
-  const { rc, out } = runCheck(['--json']);
+check("全量扫描当前仓库应 0 缺失（rc=0 + --json 契约）", () => {
+  const { rc, out } = runCheck(["--json"]);
   const data = JSON.parse(out);
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 500)}`);
   assert.equal(data._summary.missing, 0, `预期 0 缺失，实际 ${data._summary.missing}`);
-  assert.ok(data._summary.scripts > 0, '脚本计数应 > 0');
+  assert.ok(data._summary.scripts > 0, "脚本计数应 > 0");
 });
 
-check('门禁拦截路径：漂移 README 缺脚本 → rc=1 且列出缺失', () => {
+check("门禁拦截路径：漂移 README 缺脚本 → rc=1 且列出缺失", () => {
   // 用 --json 输出的 missing 数组反证：若手工制造一个不存在的登记要求无法注入，
   // 则验证缺失检测的纯函数路径（上）+ 真实仓库 0 缺失（上）已构成闭环。
   // 此处验证：把真实脚本清单里第一个脚本从 README 全文剔除 → missingFromReadme 必报它。
-  const { out } = runCheck(['--json']);
+  const { out } = runCheck(["--json"]);
   const data = JSON.parse(out);
-  const first = data._summary.scripts > 0 ? 'doctor.ts' : null;
+  const first = data._summary.scripts > 0 ? "doctor.ts" : null;
   if (first) {
-    const fakeReadme = '没有任何脚本登记的空文档';
+    const fakeReadme = "没有任何脚本登记的空文档";
     const missing = missingFromReadme([first], fakeReadme);
-    assert.deepEqual(missing, [first], '空 README 应报所有脚本缺失（拦截路径真实执行）');
+    assert.deepEqual(missing, [first], "空 README 应报所有脚本缺失（拦截路径真实执行）");
   }
 });
 
 // ── ADR-158：README 描述过时断言（提及了但说错了）──
-check('findReadmeRow：定位 commit-with-check 表格行', () => {
-  const readme = fs.readFileSync(path.join(ROOT, 'scripts/README.md'), 'utf8');
-  const row = findReadmeRow(readme, 'commit-with-check.ts');
-  assert.ok(row, '应能定位 commit-with-check.ts 表格行');
-  assert.ok(row!.includes('_lib/commit-check'), '当前行应含新委托模块 _lib/commit-check');
+check("findReadmeRow：定位 commit-with-check 表格行", () => {
+  const readme = fs.readFileSync(path.join(ROOT, "scripts/README.md"), "utf8");
+  const row = findReadmeRow(readme, "commit-with-check.ts");
+  assert.ok(row, "应能定位 commit-with-check.ts 表格行");
+  assert.ok(row?.includes("_lib/commit-check"), "当前行应含新委托模块 _lib/commit-check");
 });
 
-check('assertionViolations：当前 README 应 0 违规', () => {
-  const readme = fs.readFileSync(path.join(ROOT, 'scripts/README.md'), 'utf8');
+check("assertionViolations：当前 README 应 0 违规", () => {
+  const readme = fs.readFileSync(path.join(ROOT, "scripts/README.md"), "utf8");
   const violations = assertionViolations(readme);
-  assert.deepEqual(violations, [], `当前 README 不应有过时描述，实际：${violations.join(' | ')}`);
+  assert.deepEqual(violations, [], `当前 README 不应有过时描述，实际：${violations.join(" | ")}`);
 });
 
-check('assertionViolations：回退旧措辞应被捕获（mustNotInclude 命中 + mustInclude 缺失）', () => {
+check("assertionViolations：回退旧措辞应被捕获（mustNotInclude 命中 + mustInclude 缺失）", () => {
   const staleRow =
-    '| `commit-with-check.ts` | xxx | **验证全部委托 pre-push-gate（单一源头）**，门禁全绿才 commit |';
+    "| `commit-with-check.ts` | xxx | **验证全部委托 pre-push-gate（单一源头）**，门禁全绿才 commit |";
   const readme = `前言\n\n${staleRow}\n\n后记`;
   const violations = assertionViolations(readme);
-  assert.ok(violations.length >= 2, `应捕获 commit-with-check 的过时描述（mustNotInclude + mustInclude），实际：${violations.join(' | ')}`);
-  assert.ok(violations.some((v) => v.includes('验证全部委托 pre-push-gate')), '应捕获 mustNotInclude 命中');
-  assert.ok(violations.some((v) => v.includes('_lib/commit-check')), '应捕获 mustInclude 缺失');
+  assert.ok(
+    violations.length >= 2,
+    `应捕获 commit-with-check 的过时描述（mustNotInclude + mustInclude），实际：${violations.join(" | ")}`,
+  );
+  assert.ok(
+    violations.some((v) => v.includes("验证全部委托 pre-push-gate")),
+    "应捕获 mustNotInclude 命中",
+  );
+  assert.ok(
+    violations.some((v) => v.includes("_lib/commit-check")),
+    "应捕获 mustInclude 缺失",
+  );
 });
 
-check('全量扫描当前仓库应 0 描述违规（rc=0 + --json 含 assertionViolations）', () => {
-  const { rc, out } = runCheck(['--json']);
+check("全量扫描当前仓库应 0 描述违规（rc=0 + --json 含 assertionViolations）", () => {
+  const { rc, out } = runCheck(["--json"]);
   const data = JSON.parse(out);
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
-  assert.equal(data._summary.assertionViolations, 0, `预期 0 描述违规，实际 ${data._summary.assertionViolations}`);
+  assert.equal(
+    data._summary.assertionViolations,
+    0,
+    `预期 0 描述违规，实际 ${data._summary.assertionViolations}`,
+  );
 });
 
 // ── 登记处自洽（锐评三刀 #4：README 自身漂移检测）──
 // duplicateRegistrations：同一脚本 basename 在「登记性表格」（第一列）出现 ≥2 行 → 重复登记。
 // ghostReferences：已删除区块登记的脚本名仍被其它区块引用 → 幽灵引用。
-check('duplicateRegistrations：同区块表格行重复登记 → 报重复', () => {
-  const readme = [
-    '| `check-x.ts` | 说明 |',
-    '| `check-x.ts` | 又说明 |',
-  ].join('\n');
+check("duplicateRegistrations：同区块表格行重复登记 → 报重复", () => {
+  const readme = ["| `check-x.ts` | 说明 |", "| `check-x.ts` | 又说明 |"].join("\n");
   const dups = duplicateRegistrations(readme);
-  assert.deepEqual(dups, ['check-x.ts'], '同一表格列出现 2 行应报重复登记');
+  assert.deepEqual(dups, ["check-x.ts"], "同一表格列出现 2 行应报重复登记");
 });
 
-check('duplicateRegistrations：跨区块合法引用不误报（映射表/正文提及不算登记）', () => {
+check("duplicateRegistrations：跨区块合法引用不误报（映射表/正文提及不算登记）", () => {
   // 治理红线映射表、一致性校验表等「工具映射」多行引用同一脚本是合法设计（如 comment-checker
   // 在红线映射出现 2 次）——只有「登记性表格第一列」的重复才算重复登记。
   const readme = [
-    '| 红线 | 工具 |',
-    '| 空 JSDoc | `comment-checker.ts` |',
-    '| TODO 无编号 | `comment-checker.ts` |',
-    '正文也提 `comment-checker.ts`',
-  ].join('\n');
+    "| 红线 | 工具 |",
+    "| 空 JSDoc | `comment-checker.ts` |",
+    "| TODO 无编号 | `comment-checker.ts` |",
+    "正文也提 `comment-checker.ts`",
+  ].join("\n");
   const dups = duplicateRegistrations(readme);
-  assert.deepEqual(dups, [], '映射表多行 + 正文提及不是重复登记');
+  assert.deepEqual(dups, [], "映射表多行 + 正文提及不是重复登记");
 });
 
-check('duplicateRegistrations：前缀同名不误报（build-release.ps1 vs build-release.sh）', () => {
-  const readme = [
-    '| `build-release.ps1` | Windows |',
-    '| `build-release.sh` | bash 版 |',
-  ].join('\n');
+check("duplicateRegistrations：前缀同名不误报（build-release.ps1 vs build-release.sh）", () => {
+  const readme = ["| `build-release.ps1` | Windows |", "| `build-release.sh` | bash 版 |"].join(
+    "\n",
+  );
   const dups = duplicateRegistrations(readme);
-  assert.deepEqual(dups, [], 'ps1 与 sh 是不同脚本，不应误报');
+  assert.deepEqual(dups, [], "ps1 与 sh 是不同脚本，不应误报");
 });
 
-check('duplicateRegistrations：全量扫描当前仓库应 0 重复（rc=0 + --json 含 duplicates）', () => {
-  const { rc, out } = runCheck(['--json']);
+check("duplicateRegistrations：全量扫描当前仓库应 0 重复（rc=0 + --json 含 duplicates）", () => {
+  const { rc, out } = runCheck(["--json"]);
   const data = JSON.parse(out);
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
   assert.equal(data._summary.duplicates, 0, `预期 0 重复登记，实际 ${data._summary.duplicates}`);
 });
 
-check('ghostReferences：已删除脚本名仍被引用 → 报幽灵', () => {
+check("ghostReferences：已删除脚本名仍被引用 → 报幽灵", () => {
   const readme = [
-    '### 已删除（2026-09 清理）',
-    '| `dead-tool.mjs` | 被 event-graph.ts 接管 |',
-    '',
-    '### 一致性校验',
-    '| 事件审计 | `dead-tool.mjs` |',
-  ].join('\n');
+    "### 已删除（2026-09 清理）",
+    "| `dead-tool.mjs` | 被 event-graph.ts 接管 |",
+    "",
+    "### 一致性校验",
+    "| 事件审计 | `dead-tool.mjs` |",
+  ].join("\n");
   const ghosts = ghostReferences(readme);
-  assert.deepEqual(ghosts, ['dead-tool.mjs'], '已删区块外的引用应报幽灵');
+  assert.deepEqual(ghosts, ["dead-tool.mjs"], "已删区块外的引用应报幽灵");
 });
 
-check('ghostReferences：已删除区块自身登记 + 接管者提及不误报', () => {
+check("ghostReferences：已删除区块自身登记 + 接管者提及不误报", () => {
   const readme = [
-    '### 已删除（2026-09 清理）',
-    '| `dead-tool.mjs` | 被 `event-graph.ts` 接管 |',
-    '',
-    '### 一致性校验',
-    '| 事件审计 | `event-graph.ts` |',
-  ].join('\n');
+    "### 已删除（2026-09 清理）",
+    "| `dead-tool.mjs` | 被 `event-graph.ts` 接管 |",
+    "",
+    "### 一致性校验",
+    "| 事件审计 | `event-graph.ts` |",
+  ].join("\n");
   const ghosts = ghostReferences(readme);
-  assert.deepEqual(ghosts, [], '删除区块自身 + 接管者 event-graph.ts 不是幽灵');
+  assert.deepEqual(ghosts, [], "删除区块自身 + 接管者 event-graph.ts 不是幽灵");
 });
 
-check('ghostReferences：全量扫描当前仓库应 0 幽灵（rc=0 + --json 含 ghosts）', () => {
-  const { rc, out } = runCheck(['--json']);
+check("ghostReferences：全量扫描当前仓库应 0 幽灵（rc=0 + --json 含 ghosts）", () => {
+  const { rc, out } = runCheck(["--json"]);
   const data = JSON.parse(out);
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
   assert.equal(data._summary.ghosts, 0, `预期 0 幽灵引用，实际 ${data._summary.ghosts}`);
 });
 
-finish('契约测试全过');
-console.log('\n全部通过');
+finish("契约测试全过");
+console.log("\n全部通过");

@@ -2,14 +2,14 @@
 // 用法: node tests/verify-adr-042.ts
 // 目的: 验证 ADR-042 记录的"四项未建模"是否仍然成立。
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
-const has = (p) => existsSync(join(root, p));
+const _has = (p) => existsSync(join(root, p));
 
 const results = [];
 
@@ -34,8 +34,11 @@ function checkScale() {
     },
     {
       name: "evaluateClip 按 BONE_CHANNELS 逐通道求值（含 scale）",
-      pass: animTs.includes("for (const ch of BONE_CHANNELS)") && animTs.includes("transform[ch] = val"),
-      evidence: "animation.ts:660-662 遍历 BONE_CHANNELS(rotation/position/scale) 逐通道求值写回 transform[ch]",
+      pass:
+        animTs.includes("for (const ch of BONE_CHANNELS)") &&
+        animTs.includes("transform[ch] = val"),
+      evidence:
+        "animation.ts:660-662 遍历 BONE_CHANNELS(rotation/position/scale) 逐通道求值写回 transform[ch]",
     },
     {
       name: "父子 scale 累积由 THREE 场景图层承担（evaluateClip 纯局部，51a7c5e1 起）",
@@ -44,12 +47,18 @@ function checkScale() {
     },
     {
       name: "ysm-animation-player 应用 scale 到 THREE.Group/Bone",
-      pass: playerTs.includes("transform?.scale") && playerTs.includes("scratch.scale.set(sx, sy, sz)") && playerTs.includes("node.scale.copy(rest.scale).lerp(scratch.scale, alpha)"),
-      evidence: "ysm-animation-player.ts:179-188 transform.scale → scratch.scale.set(sx,sy,sz); :205 node.scale.copy(rest.scale).lerp(scratch.scale, alpha)",
+      pass:
+        playerTs.includes("transform?.scale") &&
+        playerTs.includes("scratch.scale.set(sx, sy, sz)") &&
+        playerTs.includes("node.scale.copy(rest.scale).lerp(scratch.scale, alpha)"),
+      evidence:
+        "ysm-animation-player.ts:179-188 transform.scale → scratch.scale.set(sx,sy,sz); :205 node.scale.copy(rest.scale).lerp(scratch.scale, alpha)",
     },
     {
       name: "scale=0 → node.visible=false（对齐上游 calculateBoneMatrix:213-215）",
-      pass: playerTs.includes("sx === 0 && sy === 0 && sz === 0") && playerTs.includes("node.visible = false"),
+      pass:
+        playerTs.includes("sx === 0 && sy === 0 && sz === 0") &&
+        playerTs.includes("node.visible = false"),
       evidence: "ysm-animation-player.ts:123-126",
     },
   ];
@@ -126,8 +135,13 @@ function checkGlow() {
     },
     {
       name: "mesh-builder.ts glow 骨骼用 MeshStandardMaterial + emissive",
-      pass: meshBuilderTs.includes("glow") && meshBuilderTs.includes("emissive") && meshBuilderTs.includes("MeshStandardMaterial"),
-      evidence: meshBuilderTs.includes("emissive") ? "mesh-builder.ts MeshStandardMaterial + emissive" : "(缺失)",
+      pass:
+        meshBuilderTs.includes("glow") &&
+        meshBuilderTs.includes("emissive") &&
+        meshBuilderTs.includes("MeshStandardMaterial"),
+      evidence: meshBuilderTs.includes("emissive")
+        ? "mesh-builder.ts MeshStandardMaterial + emissive"
+        : "(缺失)",
     },
   ];
 
@@ -161,7 +175,8 @@ function checkWorldCoord() {
     item: "世界坐标回填未建模",
     status: allPass ? "NOT_NEEDED" : "GAP_FOUND",
     checks,
-    conclusion: "世界坐标回填是上游 GPU 渲染内部用；我们用 Three.js CPU 渲染，THREE.Bone.getWorldPosition() 可替代。molang 若需读绝对位置，调用 getWorldPosition 即可。",
+    conclusion:
+      "世界坐标回填是上游 GPU 渲染内部用；我们用 Three.js CPU 渲染，THREE.Bone.getWorldPosition() 可替代。molang 若需读绝对位置，调用 getWorldPosition 即可。",
   });
 }
 
@@ -175,7 +190,14 @@ checkWorldCoord();
 console.log("===== ADR-042 四项落地状态验证 =====\n");
 
 for (const r of results) {
-  const icon = r.status === "ALREADY_LANDED" ? "✅" : r.status === "GAP_FOUND" ? "❌" : r.status === "NOT_NEEDED" ? "⏭️" : "❓";
+  const icon =
+    r.status === "ALREADY_LANDED"
+      ? "✅"
+      : r.status === "GAP_FOUND"
+        ? "❌"
+        : r.status === "NOT_NEEDED"
+          ? "⏭️"
+          : "❓";
   console.log(`${icon} ${r.item}`);
   console.log(`  状态: ${r.status}`);
   for (const c of r.checks) {
@@ -197,16 +219,24 @@ console.log(`确实未建模: ${gaps} / 4`);
 console.log(`无需实现: ${notNeeded} / 4`);
 console.log();
 console.log("结论：ADR-042 四项全部核对完毕，3 项已落地、1 项无需实现。");
-console.log("- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip 局部求值 → 场景图层复合 → ysm-animation-player）");
+console.log(
+  "- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip 局部求值 → 场景图层复合 → ysm-animation-player）",
+);
 console.log("- 隐藏联动: setBoneVisible 用 traverse 递归子骨骼");
-console.log("- glow: Go isGlowBone 前缀检测 + BoneData.Glow → 前端 glowByBoneId 反查 → MeshStandardMaterial + emissive");
+console.log(
+  "- glow: Go isGlowBone 前缀检测 + BoneData.Glow → 前端 glowByBoneId 反查 → MeshStandardMaterial + emissive",
+);
 console.log("- 世界坐标回填: 无需实现（Three.js getWorldPosition 可替代）");
 console.log();
-console.log("ADR-042 §2.2 bone 层二进制直读已落地（C++ YSMParserV3.cpp:862-876 直读 pivot/rotation）；cube 层反推猜错属另一条链路待解决。");
+console.log(
+  "ADR-042 §2.2 bone 层二进制直读已落地（C++ YSMParserV3.cpp:862-876 直读 pivot/rotation）；cube 层反推猜错属另一条链路待解决。",
+);
 
 // ===== 门禁：任何 GAP_FOUND 必须非零退出，阻断 pre-push =====
 if (gaps > 0) {
-  console.error(`\n❌ 门禁失败：${gaps} 项 ADR-042 声明仍处 GAP_FOUND（未建模）状态，需修复后再合并。`);
+  console.error(
+    `\n❌ 门禁失败：${gaps} 项 ADR-042 声明仍处 GAP_FOUND（未建模）状态，需修复后再合并。`,
+  );
   process.exit(1);
 }
 console.log("\n✅ ADR-042 四项核对闸门通过：无缺口（已落地 / 无需实现）。");

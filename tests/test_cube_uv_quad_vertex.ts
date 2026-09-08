@@ -53,7 +53,9 @@ const eastUV = mesh.uvs.slice(0, 8);
 const wantEast = [0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25];
 for (let i = 0; i < 8; i++) {
   if (Math.abs(eastUV[i] - wantEast[i]) > 1e-9) {
-    fail(`East face uvs[${i}] = ${eastUV[i]}, 期望 ${wantEast[i]} (四角顶点序 [u0,v0,u1,v0,u0,v1,u1,v1])`);
+    fail(
+      `East face uvs[${i}] = ${eastUV[i]}, 期望 ${wantEast[i]} (四角顶点序 [u0,v0,u1,v0,u0,v1,u1,v1])`,
+    );
   }
 }
 
@@ -100,10 +102,14 @@ if (!mirrorMesh) {
     const base = fi * 8;
     const f = mirrorMesh.uvs.slice(base, base + 8);
     if (f[1] !== f[3]) {
-      fail(`mirror ${faceNames[fi]} face: 顶点 0、1 的 v 不同 (${f[1]} vs ${f[3]})——mirror + 对角重复回归`);
+      fail(
+        `mirror ${faceNames[fi]} face: 顶点 0、1 的 v 不同 (${f[1]} vs ${f[3]})——mirror + 对角重复回归`,
+      );
     }
     if (f[5] !== f[7]) {
-      fail(`mirror ${faceNames[fi]} face: 顶点 2、3 的 v 不同 (${f[5]} vs ${f[7]})——mirror + 对角重复回归`);
+      fail(
+        `mirror ${faceNames[fi]} face: 顶点 2、3 的 v 不同 (${f[5]} vs ${f[7]})——mirror + 对角重复回归`,
+      );
     }
   }
 }

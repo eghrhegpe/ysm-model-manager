@@ -7,6 +7,7 @@ source_files:
   - scripts/pre-push-gate.ts
   - .githooks/pre-push
   - scripts/_lib/gate-config.ts
+  - scripts/_lib/gate-parse.ts
 auto_fields:
   symbols_with_lines:
     - ALL_STATIC_TOOLS
@@ -15,16 +16,20 @@ auto_fields:
     - FRONTEND_STATIC_TOOLS
     - GateTool
     - GO_STATIC_TOOLS
+    - ParsedToolOutput
+    - parseToolOutput
     - SCRIPTS_TYPECHECK
+    - tryParseJson
+    - tryParseSummary
 use_when:
   - 推送门禁
   - 质量门禁
-  - 域级检查
   - 门禁阻断
+  - 域级检查
   - go build
   - vite build
   - 契约测试
-  - Promise.all
+  - 工具输出解析
 quick_groups:
   - 提交与钩子
 quick_intents:
@@ -85,8 +90,8 @@ invariant_anchors:
 ### 静态工具（`runTools`，串行）
 
 - 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 26 项 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS`）；gate 只调度不改清单
-- 审计类工具退出码不可靠（恒 0），必须解析 `--json` 的 `_summary` 判定（`s.ok` / `s.errors`）
-- autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验
+- 审计类工具退出码不可靠（恒 0），必须解析 `--json` 的 `_summary` 判定——**判定语义收敛到 `_lib/gate-parse.ts`**（2026-09 锐评三刀 #3）：`parseToolOutput(out, rc, tool?)` 统一实现「`_summary.ok` → `errors===0` → 退回 rc」优先级链，`tryParseSummary` / `tryParseJson` 供域检查块/特殊块取字段；契约测试 `tests/test_gate_parse_output.ts` 锁死判定与 fail-closed 回退（非 JSON 输出 note 必须明示「回退 rc 判定」，不许静默假绿）
+- autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验（重验判定同样走 `parseToolOutput`）
 - `check-go-diff-coverage` 在文件驱动模式加 `--staged`（只查本次暂存区，否则把 origin/main 之后所有未推送改动误算进覆盖门禁）
 - 静态工具段不并行（回退 ADR-088：spawn 开销吃掉 sub-second 工具收益）
 
@@ -114,6 +119,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - `scripts/doctor.ts`：`--gate/--all/--docs` 的单一实现源头（2026-08-14 合并）
 - `scripts/commit-with-check.ts`：走 `--files --dry-run` 模式按 staged 文件裁剪门禁；commit 成功后自己打印横幅（`--no-banner` 抑制）
 - `scripts/_lib/gate-config.ts`：工具清单单一配置层
+- `scripts/_lib/gate-parse.ts`：工具输出统一解析（`parseToolOutput` / `tryParseSummary` / `tryParseJson`）——2026-09 收敛前 gate 内联 11 处 `JSON.parse`，runTools / runScopedDocDrift / 5 个域检查块 / issues / broken / 红线块各自手写一套 try/parse，判定口径漂移即门禁结论不可复现；收敛后全部走共享层，契约测试锁死优先级链
 - `scripts/_lib/domain-classify.ts`：`planFromFiles` / `groupByDomain` / `domainSummaryText`
 - `scripts/_lib/contract-tests.ts`：契约测试并行执行器（双层防线防 Windows spawn 饱和 flaky：spawn 层「进程未启动」重试 + 整文件层**有界并发 8 worker 池 + 失败串行复跑 1 次**——真回归复跑必二次失败不掩盖，负载瞬态复跑转绿，2026-09-04 加固）
 - `scripts/_lib/proc.ts`：`procRun`（超时/错误分类契约；数组参数直走 CreateProcess 避 cmd.exe 8191 限制）
@@ -124,7 +130,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 - **IIFE 必须带调用括号**（2026-09-01 实证，commit `fd3d0431`）：Promise.all 里的 `(async () => {...})()` 漏 `()` 会导致 async 函数**静默不执行**——8/17 起 `go build/test`、`vite build/vitest`、`check-layering` 等 13 项域级检查从未执行，门禁成了「静态工具串行 + 契约测试」的假重（commit `1e4aa81d` 引入）。改门禁并行结构后必须 dry-run 验证各域真的跑了
 - **严禁在 pre-push 内 commit --amend**：git push 在调用钩子前已快照要推送的 oid，钩子里 amend 只改本地 HEAD，推送的仍是旧 oid → 本地与远端分叉、二次 push 必被拒（2026-08-12 实测：gofmt amend 3291cb16 假成功，实际推送 b644e96b）
-- **link-checker / type-consistency 退出码恒 0**，必须用 `--json` 解析 `_summary` 判定，不得依赖退出码
+- **link-checker / type-consistency 退出码恒 0**，必须用 `--json` 解析 `_summary` 判定，不得依赖退出码（判定走 `_lib/gate-parse.ts` 的 `parseToolOutput`，优先级链 `_summary.ok` → `errors===0` → 退回 rc）
 - **红线扫描不可用（rg 缺失）必须阻断**（fail-closed）；基线债务（红线新增）不阻断，推送后修
 - **变更集解析失败必须阻断**，不静默空跑放行（fail-closed）
 - Windows 下 npx 是 npx.cmd，node spawn 需 `shell: true`

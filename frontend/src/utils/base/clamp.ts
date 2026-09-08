@@ -2,10 +2,22 @@
 // 独立自 MikuMikuAR @/core/utils 去桶化（原误记 ADR-191，ADR-189 D5 更正）：纯几何/物理模块直接从此处导入，
 // 避免从神桶拖起整套应用工具层。
 
+/**
+ * 将数值钳制到 [lo, hi] 区间
+ * @param v 待钳制值
+ * @param lo 下界
+ * @param hi 上界
+ * @returns 钳制后的值
+ */
 export function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
+/**
+ * 将数值钳制到 [0, 1] 区间
+ * @param v 待钳制值
+ * @returns 钳制后的值
+ */
 export function clamp01(v: number): number {
   return clamp(v, 0, 1);
 }

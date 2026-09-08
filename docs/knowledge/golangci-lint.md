@@ -7,6 +7,10 @@ status: active
 source_files:
   - .golangci.yml
   - scripts/pre-push-gate.ts
+auto_fields:
+  symbols_with_lines:
+    - fallbackBranchRevs
+    - resolveBaseRev
 use_when:
   - golangci-lint
   - Go 静态分析

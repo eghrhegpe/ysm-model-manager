@@ -24,6 +24,8 @@ const flashTimers = new WeakMap<HTMLElement, number>();
 /**
  * 按钮/行闪烁反馈：加 flash class，duration 后移除。
  * null 安全；同一元素重复调用会重置计时（防连点堆积）。
+ * @el 目标元素（null 时静默返回）
+ * @opts 闪烁配置（时长、色系）
  */
 export function flashBtn(el: HTMLElement | null, opts?: FlashOptions): void {
   if (!el) return;

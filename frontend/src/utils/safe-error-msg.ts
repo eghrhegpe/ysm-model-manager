@@ -15,6 +15,8 @@
  * - 含 `.message` 属性的对象 → `.message`
  * - 其他 → `String(err)`
  * - null/undefined → `"unknown error"`
+ * @param err 任意错误对象（Error / 含 message 的对象 / 其他值 / null）
+ * @returns 提取的可读消息字符串
  */
 export function safeErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;

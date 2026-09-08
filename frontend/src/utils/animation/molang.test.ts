@@ -3,7 +3,7 @@
 // 覆盖：算术/anim_time 绑定/q. 别名/未知查询降级/角度制/三元/非法表达式。
 // 内嵌 molangjs 源码，无外部依赖，同步可用。
 import { describe, it, expect, vi } from "vitest";
-import { compileMolang, getMolangParser } from "./molang.ts";
+import { compileMolang, createMolangParser, getMolangParser } from "./molang.ts";
 import Molang from "./molang-lib/molang.js";
 import * as log from "@/utils/base/log.ts";
 
@@ -124,5 +124,51 @@ describe("compileMolang（内嵌 molangjs）", () => {
     expect(scopeB["variable.flag"]).toBe(2);
     // 模块级 activeScope 未被污染
     // （setMolangScope 未调用，activeScope 为 null）
+  });
+});
+
+describe("createMolangParser（工厂实例隔离）", () => {
+  it("双实例 scope 隔离：各自 setScope 互不影响", () => {
+    const parserA = createMolangParser();
+    const parserB = createMolangParser();
+    const scopeA = { "variable.x": 10 };
+    const scopeB = { "variable.x": 20 };
+    parserA.setScope(scopeA);
+    parserB.setScope(scopeB);
+    // 编译表达式（不传闭包 scope，依赖 setScope 全局设置）
+    const fnA = parserA.compileMolang("v.x")!;
+    const fnB = parserB.compileMolang("v.x")!;
+    expect(fnA(0)).toBe(10);
+    expect(fnB(0)).toBe(20);
+  });
+
+  it("setScope 后置影响：setScope 后编译的表达式能访问新 scope 变量", () => {
+    const parser = createMolangParser();
+    const scope = { "variable.val": 42 };
+    parser.setScope(scope);
+    // setScope 后编译 → 能访问新 scope
+    const fn = parser.compileMolang("v.val")!;
+    expect(fn(0)).toBe(42);
+    // 更换 scope 后，已编译的表达式仍写回原 scope（闭包捕获），
+    // 新编译的表达式使用新 scope
+    const newScope = { "variable.val": 99 };
+    parser.setScope(newScope);
+    const fnNew = parser.compileMolang("v.val")!;
+    expect(fnNew(0)).toBe(99);
+    // 原表达式写回原 scope
+    fn(0);
+    expect(scope["variable.val"]).toBe(42);
+  });
+
+  it("编译失败不污染实例：一个表达式编译失败不影响同实例其他表达式", () => {
+    const parser = createMolangParser();
+    const scope = { "variable.a": 5 };
+    parser.setScope(scope);
+    // 编译失败（空串 → null）
+    const fail = parser.compileMolang("");
+    expect(fail).toBeNull();
+    // 同实例其他表达式正常编译
+    const ok = parser.compileMolang("v.a")!;
+    expect(ok(0)).toBe(5);
   });
 });

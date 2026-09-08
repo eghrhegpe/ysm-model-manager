@@ -4,16 +4,6 @@ import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
 import { extOf, RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 
-function getExt(name: string): string {
-  // P3 修复（子代理审计）：null/undefined 入参守卫——app-tree/render.ts:182,186 的
-  // e.name 来自 Go 数据，异常时 null 会直接 .split 抛 TypeError
-  // 2026-08-24：先剥禁用后缀（.disabled/.ban）——禁用态文件仍是原名命名的真类型
-  // 文件，`xxx.zip.disabled` 若直接取末段得 `.disabled` 落 🧊 兜底；剥后缀后
-  // `xxx.zip` → `zip` → 📦（对齐 Go scanner 的禁用后缀恢复 + display.ts 口径）
-  // 统一调用 extOf 收敛三重复（importable.ts / icon.ts / types.ts），无点需求用 replace 适配
-  return extOf(stripDisableSuffix(name ?? "")).replace(/^\./, "");
-}
-
 /** 注册表扩展名 → 图标（由 RESOURCE_EXTS 遍历 + JSON icon 派生生成，单一事实来源） */
 const REGISTRY_EXT_ICONS: Record<string, string> = (() => {
   const m: Record<string, string> = {};
@@ -36,7 +26,11 @@ const REGISTRY_EXT_ICONS: Record<string, string> = (() => {
 
 /** 按扩展名返回图标 emoji */
 export function fileIcon(name: string): string {
-  const ext = getExt(name);
+  // 先剥禁用后缀（.disabled/.ban）——禁用态文件仍是原名命名的真类型文件，
+  // `xxx.zip.disabled` 若直接取末段得 `.disabled` 落 🧊 兜底；剥后缀后
+  // `xxx.zip` → `zip` → 📦（对齐 Go scanner 的禁用后缀恢复 + display.ts 口径）
+  // 统一走 extOf（types.ts 单一来源），无点需求用 replace(/^\./, "") 适配
+  const ext = extOf(stripDisableSuffix(name ?? "")).replace(/^\./, "");
   // 注册表扩展名优先：ysm/pmx/pmd/vrca/vrm/litematic/nbt/schematic/zip 等
   // 由 RESOURCE_EXTS 遍历生成，注册表新增/改名扩展名自动生效
   const regIcon = REGISTRY_EXT_ICONS[ext];

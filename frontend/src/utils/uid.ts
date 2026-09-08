@@ -10,6 +10,7 @@ let fallbackSeq = 0;
 /**
  * 生成唯一 id。
  * @param prefix 可选前缀（便于 DOM 中辨识来源，如 "vec3-"）
+ * @returns 唯一 id 字符串（含前缀，若提供）
  */
 export function uid(prefix = ""): string {
   const rnd =

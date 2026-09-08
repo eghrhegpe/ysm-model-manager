@@ -20,7 +20,7 @@
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
 | 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
-| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, 脚本登记, check-readme-index, 脚本漂移, 脚本对账 |
+| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, check-readme-index, 脚本漂移, 脚本对账, 重复登记, 幽灵引用 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
@@ -355,7 +355,7 @@
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
 | 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离 |
-| 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 域级检查, 门禁阻断, go build, vite build, 契约测试, Promise.all |
+| 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
 | 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |
 | 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图 |

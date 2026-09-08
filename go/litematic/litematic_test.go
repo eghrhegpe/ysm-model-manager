@@ -1,4 +1,4 @@
-// ===== go/litematic 单测（覆盖率 0% → 补全）=====
+// ===== go/litematic 单测（覆盖率补全）=====
 package litematic
 
 import (
@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,11 +37,11 @@ func nbtCompound(name string, children ...[]byte) []byte {
 }
 
 // makeLitematicGz 构造最小 litematic（gzip 压缩 NBT，root 含 Metadata）
-func makeLitematicGz(t *testing.T) []byte {
+func makeLitematicGz(t *testing.T, version int32, extraRootTags ...[]byte) []byte {
 	t.Helper()
 	metadata := nbtCompound("Metadata",
-		nbtString("Name", "测试投影"),
-		nbtString("Author", "作者A"),
+		nbtString("Name", "test_projection"),
+		nbtString("Author", "authorA"),
 		nbtInt("TotalBlocks", 42),
 		nbtInt("TotalVolume", 100),
 		nbtCompound("EnclosingSize",
@@ -48,9 +49,12 @@ func makeLitematicGz(t *testing.T) []byte {
 		),
 	)
 	root := nbtCompound("",
-		nbtInt("Version", 5),
+		nbtInt("Version", version),
 		metadata,
 	)
+	for _, tag := range extraRootTags {
+		root = append(root, tag...)
+	}
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
@@ -66,48 +70,100 @@ func makeLitematicGz(t *testing.T) []byte {
 
 func TestParseMeta_Success(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.litematic")
-	if err := os.WriteFile(path, makeLitematicGz(t), 0644); err != nil {
+	if err := os.WriteFile(path, makeLitematicGz(t, 5), 0644); err != nil {
 		t.Fatal(err)
 	}
 	meta, err := ParseMeta(path)
 	if err != nil {
 		t.Fatalf("ParseMeta 失败: %v", err)
 	}
-	if meta.Name != "测试投影" || meta.Author != "作者A" {
-		t.Fatalf("元数据错误: %+v", meta)
+	if meta.Name != "test_projection" || meta.Author != "authorA" {
+		t.Errorf("元数据错误: Name=%q Author=%q", meta.Name, meta.Author)
 	}
 	if meta.TotalBlocks != 42 || meta.TotalVolume != 100 {
-		t.Fatalf("统计错误: %+v", meta)
+		t.Errorf("统计错误: TotalBlocks=%d TotalVolume=%d", meta.TotalBlocks, meta.TotalVolume)
 	}
 	if meta.EnclosingSize != [3]int{16, 16, 16} {
-		t.Fatalf("尺寸错误: %+v", meta.EnclosingSize)
+		t.Errorf("尺寸错误: got %v", meta.EnclosingSize)
+	}
+	if meta.Version != 5 {
+		t.Errorf("Version 字段应为 5, got %d", meta.Version)
 	}
 }
 
 func TestParseMeta_Errors(t *testing.T) {
+	tests := []struct {
+		name            string
+		makeFile        func(t *testing.T, path string)
+		wantErrContains string
+	}{
+		{
+			name: "非 gzip 数据",
+			makeFile: func(t *testing.T, path string) {
+				if err := os.WriteFile(path, []byte("notgzip"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			wantErrContains: "",
+		},
+		{
+			name: "缺 Metadata compound",
+			makeFile: func(t *testing.T, path string) {
+				root := nbtCompound("", nbtInt("Version", 5))
+				var buf bytes.Buffer
+				gz := gzip.NewWriter(&buf)
+				gz.Write(root)
+				gz.Close()
+				if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			wantErrContains: "Metadata",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.litematic")
+			tt.makeFile(t, path)
+			_, err := ParseMeta(path)
+			if err == nil {
+				t.Fatal("应报错")
+			}
+			if tt.wantErrContains != "" && !strings.Contains(err.Error(), tt.wantErrContains) {
+				t.Errorf("错误信息应包含 %q, got: %v", tt.wantErrContains, err)
+			}
+		})
+	}
+
 	// 文件不存在
 	if _, err := ParseMeta(filepath.Join(t.TempDir(), "nope.litematic")); err == nil {
 		t.Fatal("不存在文件应报错")
 	}
-	// 非 gzip 数据
-	bad := filepath.Join(t.TempDir(), "bad.litematic")
-	if err := os.WriteFile(bad, []byte("notgzip"), 0644); err != nil {
-		t.Fatal(err)
+}
+
+// TestParseMeta_VersionField 验证 Version 字段被正确读取
+func TestParseMeta_VersionField(t *testing.T) {
+	tests := []struct {
+		version int32
+	}{
+		{version: 5},
+		{version: 99},
+		{version: 0},
 	}
-	if _, err := ParseMeta(bad); err == nil {
-		t.Fatal("非 gzip 应报错")
-	}
-	// 缺 Metadata compound
-	root := nbtCompound("", nbtInt("Version", 5))
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	_, _ = gz.Write(root)
-	_ = gz.Close()
-	noMeta := filepath.Join(t.TempDir(), "nometa.litematic")
-	if err := os.WriteFile(noMeta, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ParseMeta(noMeta); err == nil {
-		t.Fatal("缺 Metadata 应报错")
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.litematic")
+			if err := os.WriteFile(path, makeLitematicGz(t, tt.version), 0644); err != nil {
+				t.Fatal(err)
+			}
+			meta, err := ParseMeta(path)
+			if err != nil {
+				t.Fatalf("ParseMeta 失败: %v", err)
+			}
+			if int(meta.Version) != int(tt.version) {
+				t.Errorf("Version 应为 %d, got %d", tt.version, meta.Version)
+			}
+		})
 	}
 }

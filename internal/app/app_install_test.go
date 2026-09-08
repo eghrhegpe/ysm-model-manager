@@ -1,4 +1,4 @@
-// ===== app_install.go 薄壳级单测（零测试层补测）=====
+// ===== app_install.go 单测（覆盖安装/回收相关函数）=====
 // 覆盖：countMatchingInDir 同名计数 / isResourcePackFolder 检测 / findRecycleRoot 多类型根命中。
 // 避开 Wails runtime 与真实用户配置目录。
 package app
@@ -20,6 +20,7 @@ func installApp(t *testing.T, cfg types.AppConfig) *App {
 	return a
 }
 
+// TestCountMatchingInDir 统计实例目录中与仓库同名的文件数（大小写不敏感）
 func TestCountMatchingInDir(t *testing.T) {
 	base := t.TempDir()
 	repo := filepath.Join(base, "repo")
@@ -29,27 +30,47 @@ func TestCountMatchingInDir(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// 仓库：a.ysm / b.ysm
-	if err := os.WriteFile(filepath.Join(repo, "a.ysm"), []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(repo, "b.ysm"), []byte("2"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	// 实例：a.ysm（同名）/ c.ysm（独有）/ d.ZIP（大小写不敏感同名）
-	if err := os.WriteFile(filepath.Join(inst, "a.ysm"), []byte("3"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(inst, "c.ysm"), []byte("4"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(inst, "d.ZIP"), []byte("5"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	a := installApp(t, types.AppConfig{})
-	if got := a.countMatchingInDir(inst, repo); got != 1 {
-		t.Errorf("应计 1 个同名文件（a.ysm）, got %d", got)
-	}
+
+	t.Run("单个同名文件", func(t *testing.T) {
+		os.WriteFile(filepath.Join(repo, "a.ysm"), []byte("1"), 0o644)
+		os.WriteFile(filepath.Join(inst, "a.ysm"), []byte("3"), 0o644)
+		if got := a.countMatchingInDir(inst, repo); got != 1 {
+			t.Errorf("应计 1 个同名文件, got %d", got)
+		}
+	})
+	t.Run("跨大小写同名", func(t *testing.T) {
+		os.RemoveAll(inst)
+		os.MkdirAll(inst, 0o755)
+		os.RemoveAll(repo)
+		os.MkdirAll(repo, 0o755)
+		os.WriteFile(filepath.Join(repo, "b.ysm"), []byte("2"), 0o644)
+		os.WriteFile(filepath.Join(inst, "B.YSM"), []byte("4"), 0o644)
+		if got := a.countMatchingInDir(inst, repo); got != 1 {
+			t.Errorf("跨大小写应命中 1 个同名文件, got %d", got)
+		}
+	})
+	t.Run("多同名文件", func(t *testing.T) {
+		os.RemoveAll(inst)
+		os.MkdirAll(inst, 0o755)
+		os.RemoveAll(repo)
+		os.MkdirAll(repo, 0o755)
+		os.WriteFile(filepath.Join(repo, "x.ysm"), []byte("1"), 0o644)
+		os.WriteFile(filepath.Join(repo, "y.ysm"), []byte("2"), 0o644)
+		os.WriteFile(filepath.Join(inst, "x.ysm"), []byte("3"), 0o644)
+		os.WriteFile(filepath.Join(inst, "y.ysm"), []byte("4"), 0o644)
+		if got := a.countMatchingInDir(inst, repo); got != 2 {
+			t.Errorf("应计 2 个同名文件, got %d", got)
+		}
+	})
+	t.Run("空仓库返回0", func(t *testing.T) {
+		os.RemoveAll(repo)
+		os.MkdirAll(repo, 0o755)
+		os.WriteFile(filepath.Join(inst, "z.ysm"), []byte("5"), 0o644)
+		if got := a.countMatchingInDir(inst, repo); got != 0 {
+			t.Errorf("空仓库应返回 0, got %d", got)
+		}
+	})
 }
 
 func TestIsResourcePackFolder(t *testing.T) {
@@ -102,8 +123,8 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 		}
 	})
 
-	t.Run("未配置根不参与（空跳过）", func(t *testing.T) {
-		// ShaderpackRoot 未配置 → 不参与候选；路径落到 FilesRoot 内 → 命中 ysm 子目录
+	t.Run("FilesRoot 默认命中", func(t *testing.T) {
+		// ysm 子目录在 FilesRoot 内 → 应命中默认根
 		ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if err := os.MkdirAll(ysm, 0o755); err != nil {
 			t.Fatal(err)

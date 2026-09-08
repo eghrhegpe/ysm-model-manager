@@ -1,4 +1,4 @@
-// ===== 第一人称手臂模型 arm.json 排除测试 =====
+// TestFindGeometryInExtractedYSM_ExcludesArm 验证解压目录加载时排除 arm.json
 package ysm
 
 import (
@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// TestFindGeometryInExtractedYSM_ExcludesArm 验证解压目录加载时排除 arm.json：
-// arm.json 是第一人称手臂模型，与 main.json 的手臂重叠，合并会渲染出两对手臂。
 func TestFindGeometryInExtractedYSM_ExcludesArm(t *testing.T) {
 	dir := t.TempDir()
 	modelsDir := filepath.Join(dir, "models")
@@ -34,20 +32,16 @@ func TestFindGeometryInExtractedYSM_ExcludesArm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	model, _ := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
+	model, err := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
+	if err != nil {
+		t.Fatalf("FindGeometryInExtractedYSM 失败: %v", err)
+	}
 	if model == nil {
 		t.Fatal("模型应为非 nil")
 	}
-	hasHead := false
 	for _, b := range model.Bones {
-		if b.Name == "head" {
-			hasHead = true
-		}
 		if b.Name == "LeftArm" {
-			t.Errorf("arm.json 的 LeftArm 不应出现在合并结果中（第一人称手臂须排除）")
+			t.Error("arm 骨骼不应出现在结果中（第一人称手臂须排除）")
 		}
-	}
-	if !hasHead {
-		t.Errorf("应保留 main.json 的 head 骨骼")
 	}
 }

@@ -912,6 +912,8 @@
 | 脚本改名后未同步更新 README | - | 旧名不匹配，新名未登记，产生漂移 |
 | 误把  共享层或测试文件当作需要登记的脚本（它们被排除在外） | `_lib/` | - |
 | 删除脚本时简单删行而非移入区 | `已删除` | 与磁盘状态不一致导致误报 |
+| 同一脚本在登记性表格（第一列）出现 ≥2 行 | - | duplicateRegistrations 报重复登记（check-go-coverage-threshold 曾错放生成器表） |
+| 已删脚本名仍在区块之外被引用 | `已删除` | ghostReferences 报幽灵引用（event-audit 曾残留于检查类定义与一致性校验表） |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
 | app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；必须经 sync-manager 排队 |

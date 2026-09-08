@@ -23,32 +23,46 @@
  * 退出码：发现 ERROR → 1；否则 0（INFO/WARN 不阻断）。
  * 设计意图：文档漂移检查器（代码现实 vs 架构文档声称）
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseFrontmatter, parseSourceFiles, parseAdrHeader } from './_lib/frontmatter.ts';
-import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseAdrHeader, parseFrontmatter, parseSourceFiles } from "./_lib/frontmatter.ts";
+import {
+  getUntrackedCards,
+  hasFrontmatterDelimiter,
+  missingRequiredCardFields,
+  stripBom,
+} from "./_lib/knowledge-common.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
-const ADR_DIR = path.join(ROOT, 'docs/adr');
-const KC_DIR = path.join(ROOT, 'docs/knowledge');
-const ARCH_DOCS = ['docs/archive/architecture.md', 'docs/archive/3D/3D-RENDERING-PLAN.md', 'docs/archive/3D/3d-rendering-report.md'];
-const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/doc-drift-baseline.json');
+const ADR_DIR = path.join(ROOT, "docs/adr");
+const KC_DIR = path.join(ROOT, "docs/knowledge");
+const ARCH_DOCS = [
+  "docs/archive/architecture.md",
+  "docs/archive/3D/3D-RENDERING-PLAN.md",
+  "docs/archive/3D/3d-rendering-report.md",
+];
+const BASELINE_FILE = path.join(ROOT, "scripts/baseline/doc-drift-baseline.json");
 
 const args = parseArgs(process.argv.slice(2), {
-  bools: ['json', 'fix'],
-  strings: ['files'],
-  defaults: { json: false, fix: false, files: '' },
+  bools: ["json", "fix"],
+  strings: ["files"],
+  defaults: { json: false, fix: false, files: "" },
 });
-if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(", ")}`);
 const JSON_OUT = args.json as boolean;
 const FIX_MODE = args.fix as boolean;
 // 文件驱动模式（commit-check / push 门禁传入）：--files 为换行分隔的仓库相对路径，
 // 仅校验本次变更的知识卡，避免并行会话留在 docs/knowledge/ 下的未跟踪草稿卡（如 commit-with-check.md）阻断本次提交。
 // 与 check-redlines --files 同款裁剪；无 --files 时退化为全量扫描（向后兼容 doctor --all）。
-const FILES_RAW = (args.files as string) ?? '';
+const FILES_RAW = (args.files as string) ?? "";
 const FILES_SET: Set<string> | null = FILES_RAW
-  ? new Set(FILES_RAW.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
+  ? new Set(
+      FILES_RAW.split("\n")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => path.basename(p)),
+    )
   : null;
 
 const errors: string[] = [];
@@ -60,7 +74,7 @@ const infos: string[] = [];
 function readText(rel: string) {
   const p = path.join(ROOT, rel);
   try {
-    return fs.readFileSync(p, 'utf-8');
+    return fs.readFileSync(p, "utf-8");
   } catch {
     return null;
   }
@@ -70,12 +84,15 @@ function readText(rel: string) {
 
 function checkAdr() {
   if (!fs.existsSync(ADR_DIR)) {
-    errors.push('[ADR] docs/adr/ 目录不存在');
+    errors.push("[ADR] docs/adr/ 目录不存在");
     return;
   }
-  const files = fs.readdirSync(ADR_DIR).filter((f) => /^ADR-\d{3}-.*\.md$/.test(f)).sort();
+  const files = fs
+    .readdirSync(ADR_DIR)
+    .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
+    .sort();
   if (!files.length) {
-    errors.push('[ADR] adr/ 目录下没有 ADR 文件');
+    errors.push("[ADR] adr/ 目录下没有 ADR 文件");
     return;
   }
 
@@ -88,24 +105,32 @@ function checkAdr() {
     }
     const num = hdr.num;
     if (fileMeta[num]) {
-      errors.push(`[ADR] 编号 ADR-${String(num).padStart(3, '0')} 撞号：${fileMeta[num].file} 与 ${f}`);
+      errors.push(
+        `[ADR] 编号 ADR-${String(num).padStart(3, "0")} 撞号：${fileMeta[num].file} 与 ${f}`,
+      );
     }
     fileMeta[num] = { file: f, num, title: hdr.title };
   }
 
-  const regText = readText('docs/adr/index.md');
+  const regText = readText("docs/adr/index.md");
   if (regText === null) {
-    errors.push('[ADR] adr/index.md 登记表不存在');
+    errors.push("[ADR] adr/index.md 登记表不存在");
     return;
   }
   const regNums = new Set<number>();
   for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) regNums.add(parseInt(m[1]!, 10));
 
-  for (const num of Object.keys(fileMeta).map(Number).sort((a, b) => a - b)) {
-    if (!regNums.has(num)) errors.push(`[ADR] ADR-${String(num).padStart(3, '0')} (${fileMeta[num].file}) 未在登记表占号`);
+  for (const num of Object.keys(fileMeta)
+    .map(Number)
+    .sort((a, b) => a - b)) {
+    if (!regNums.has(num))
+      errors.push(
+        `[ADR] ADR-${String(num).padStart(3, "0")} (${fileMeta[num].file}) 未在登记表占号`,
+      );
   }
   for (const num of [...regNums].sort((a, b) => a - b)) {
-    if (!fileMeta[num]) errors.push(`[ADR] 登记表有 ADR-${String(num).padStart(3, '0')}，但磁盘无对应文件`);
+    if (!fileMeta[num])
+      errors.push(`[ADR] 登记表有 ADR-${String(num).padStart(3, "0")}，但磁盘无对应文件`);
   }
   return { files: files.length, registered: regNums.size };
 }
@@ -117,15 +142,17 @@ function checkKnowledge() {
   // 未跟踪草稿跳过仅在 --files（commit/push 裁剪）模式启用：全局模式（doctor --all /
   // 契约测试）须扫全部卡（含未跟踪草稿），否则会漏检。与 check-knowledge-drift 对齐。
   const untracked = FILES_SET ? getUntrackedCards(ROOT) : new Set<string>();
-  const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f));
+  const files = fs
+    .readdirSync(KC_DIR)
+    .filter((f) => f.endsWith(".md") && !/^(readme|agents)\.md$/i.test(f));
   let count = 0;
   for (const cf of files) {
     if (FILES_SET) {
-      if (untracked.has(cf)) continue;          // 跳过未跟踪草稿（并行会话残留，不打分）
-      if (!FILES_SET.has(cf)) continue;         // 仅查本次变更卡
+      if (untracked.has(cf)) continue; // 跳过未跟踪草稿（并行会话残留，不打分）
+      if (!FILES_SET.has(cf)) continue; // 仅查本次变更卡
     }
     // 带 BOM 剥除 + `^---` 锚定统一走 _lib/knowledge-common（stripBom/hasFrontmatterDelimiter）。
-    const text = stripBom(fs.readFileSync(path.join(KC_DIR, cf), 'utf-8'));
+    const text = stripBom(fs.readFileSync(path.join(KC_DIR, cf), "utf-8"));
     if (!hasFrontmatterDelimiter(text)) continue;
     count++;
     const fm = parseFrontmatter(text);
@@ -144,16 +171,18 @@ function checkKnowledge() {
     // 行为一致；此前手写双解析存在分叉风险，code_review P3）
     const srcItems = parseSourceFiles(fm);
     for (const v of srcItems) {
-      if (!fs.existsSync(path.join(ROOT, v))) errors.push(`[知识卡] ${cf} 的 source_files 引用不存在: ${v}`);
+      if (!fs.existsSync(path.join(ROOT, v)))
+        errors.push(`[知识卡] ${cf} 的 source_files 引用不存在: ${v}`);
     }
   }
   // 索引断链（全局一致性检查，仅非裁剪模式执行）
   if (!FILES_SET) {
-    for (const idx of ['index.md']) {
+    for (const idx of ["index.md"]) {
       const idxText = readText(`docs/knowledge/${idx}`);
       if (!idxText) continue;
       for (const m of idxText.matchAll(/\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g)) {
-        if (!fs.existsSync(path.join(KC_DIR, m[1]!))) errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
+        if (!fs.existsSync(path.join(KC_DIR, m[1]!)))
+          errors.push(`[知识卡] 索引 ${idx} 链接指向不存在的卡: ${m[1]}`);
       }
     }
   }
@@ -170,9 +199,12 @@ function checkArchRefs() {
   if (fs.existsSync(BASELINE_FILE)) {
     // ADR-043 fail-closed：基线 JSON 损坏不得静默当空——staleRefs 清空会让此前
     // 登记为 stale 的引用全部重新报 ERROR（假阳性淹没真问题）
-    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); }
-    catch (e) {
-      errors.push(`[架构树] 基线文件损坏（${BASELINE_FILE}）：${(e as Error).message}——请修复或删除后重跑，切勿静默放行`);
+    try {
+      baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, "utf-8"));
+    } catch (e) {
+      errors.push(
+        `[架构树] 基线文件损坏（${BASELINE_FILE}）：${(e as Error).message}——请修复或删除后重跑，切勿静默放行`,
+      );
       baseline = { staleRefs: [] };
     }
   }
@@ -195,22 +227,24 @@ function checkArchRefs() {
 
 /** AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN，可能是规划中目录）。 */
 function checkAgentsTree() {
-  const text = readText('AGENTS.md');
+  const text = readText("AGENTS.md");
   if (text === null) return;
   const blockM = text.match(/### 4\.2 前端[\s\S]*?```\s*\n([\s\S]*?)```/);
   if (!blockM) {
-    infos.push('[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过');
+    infos.push("[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过");
     return;
   }
-  const lines = blockM[1]!.split(/\r?\n/);
-  const rootIdx = lines.findIndex((l) => l.includes('frontend/src/'));
+  const lines = blockM[1]?.split(/\r?\n/);
+  const rootIdx = lines.findIndex((l) => l.includes("frontend/src/"));
   if (rootIdx < 0) return;
   for (const line of lines.slice(rootIdx + 1)) {
     const segM = line.match(/^\s{2}([^\s—]+)/);
     if (!segM) continue;
     const seg = segM[1]!;
-    if (!fs.existsSync(path.join(ROOT, 'frontend/src', seg))) {
-      warns.push(`[架构树] AGENTS.md §4.2 描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`);
+    if (!fs.existsSync(path.join(ROOT, "frontend/src", seg))) {
+      warns.push(
+        `[架构树] AGENTS.md §4.2 描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`,
+      );
     }
   }
 }
@@ -219,9 +253,9 @@ function checkAgentsTree() {
 function collectSourceModules() {
   const out: string[] = [];
   const roots: Array<[string, (d: string) => boolean]> = [
-    ['frontend/src', (d) => /^[a-z][a-z0-9-]*$/.test(d) && d !== 'css'],
-    ['go', (d) => /^[a-z][a-z0-9-]*$/.test(d)],
-    ['internal', (d) => /^[a-z][a-z0-9-]*$/.test(d)],
+    ["frontend/src", (d) => /^[a-z][a-z0-9-]*$/.test(d) && d !== "css"],
+    ["go", (d) => /^[a-z][a-z0-9-]*$/.test(d)],
+    ["internal", (d) => /^[a-z][a-z0-9-]*$/.test(d)],
   ];
   for (const [rel, filter] of roots) {
     const dir = path.join(ROOT, rel);
@@ -237,15 +271,18 @@ function collectSourceModules() {
 /** 架构文档未登记模块 → INFO；--fix 刷新基线。 */
 function checkArchCoverage() {
   const modules = collectSourceModules();
-  const archText = ARCH_DOCS.map((d) => readText(d) || '').join('\n');
+  const archText = ARCH_DOCS.map((d) => readText(d) || "").join("\n");
   const unregistered = modules.filter((m) => !archText.includes(m));
 
   let baseline: Record<string, any> = { unregistered: [] };
   if (fs.existsSync(BASELINE_FILE)) {
     // ADR-043 fail-closed：同上——损坏基线不得静默当空（--fix 前无法正确比对）
-    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); }
-    catch (e) {
-      errors.push(`[架构树] 基线文件损坏（${BASELINE_FILE}）：${(e as Error).message}——请修复或删除后重跑 --fix`);
+    try {
+      baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, "utf-8"));
+    } catch (e) {
+      errors.push(
+        `[架构树] 基线文件损坏（${BASELINE_FILE}）：${(e as Error).message}——请修复或删除后重跑 --fix`,
+      );
       baseline = { unregistered: [] };
     }
   }
@@ -255,18 +292,22 @@ function checkArchCoverage() {
     // 守卫：工具缺失（knip/jscpd）禁止写盘，防止空基线洗白债务。
     // 移除「只许减少」守卫：AI 友好，避免因新增项拒绝写入导致 AI 绕 10K token 元认知。
     if (errors.length > 0) {
-      console.log(errors.join('\n'));
-      console.log('✖ 基线未更新（存在守卫拦截）');
+      console.log(errors.join("\n"));
+      console.log("✖ 基线未更新（存在守卫拦截）");
       process.exit(1);
     }
     fs.mkdirSync(path.dirname(BASELINE_FILE), { recursive: true });
-    fs.writeFileSync(BASELINE_FILE, JSON.stringify({ generated: new Date().toISOString(), unregistered }, null, 2) + '\n');
+    fs.writeFileSync(
+      BASELINE_FILE,
+      `${JSON.stringify({ generated: new Date().toISOString(), unregistered }, null, 2)}\n`,
+    );
     infos.push(`[架构树] --fix 已刷新基线（${unregistered.length} 个未登记模块）`);
     return;
   }
 
   for (const m of unregistered) {
-    if (!known.has(m)) infos.push(`[架构树] 源码模块 ${m} 未在架构文档登记（INFO，--fix 纳入基线）`);
+    if (!known.has(m))
+      infos.push(`[架构树] 源码模块 ${m} 未在架构文档登记（INFO，--fix 纳入基线）`);
   }
 }
 
@@ -280,30 +321,49 @@ function main() {
   checkAgentsTree();
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { errors: errors.length, warns: warns.length, infos: infos.length, adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc }, errors, warns, infos, summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc } }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: {
+            errors: errors.length,
+            warns: warns.length,
+            infos: infos.length,
+            adrFiles: adr?.files,
+            adrRegistered: adr?.registered,
+            knowledgeCards: kc,
+          },
+          errors,
+          warns,
+          infos,
+          summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc },
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(errors.length ? 1 : 0);
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' 文档三一致检查 (check-doc-drift)');
-  console.log('══════════════════════════════════════');
-  console.log(`ADR 维度     : ${adr ? `${adr.files} 文件 / 登记 ${adr.registered}` : 'FAILED'}`);
+  console.log("══════════════════════════════════════");
+  console.log(" 文档三一致检查 (check-doc-drift)");
+  console.log("══════════════════════════════════════");
+  console.log(`ADR 维度     : ${adr ? `${adr.files} 文件 / 登记 ${adr.registered}` : "FAILED"}`);
   console.log(`知识卡维度   : ${kc ?? 0} 卡`);
   console.log(`ERROR       : ${errors.length}`);
   console.log(`WARN        : ${warns.length}`);
   console.log(`INFO        : ${infos.length}`);
-  console.log('──────────────────────────────────────');
+  console.log("──────────────────────────────────────");
 
   if (warns.length) for (const w of warns) console.log(`⚠ ${w}`);
   if (infos.length) for (const i of infos) console.log(`ℹ ${i}`);
   if (errors.length) {
     for (const e of errors) console.log(`❌ ${e}`);
-    console.log('→ 修复: node scripts/check-doc-drift.ts --fix（刷新架构树基线）');
-    console.log('\n退出码 1（可接 CI 卡点）。');
+    console.log("→ 修复: node scripts/check-doc-drift.ts --fix（刷新架构树基线）");
+    console.log("\n退出码 1（可接 CI 卡点）。");
     process.exit(1);
   }
-  console.log('✅ 三一致通过：ADR 登记、知识卡、架构树均无 ERROR 级漂移。');
+  console.log("✅ 三一致通过：ADR 登记、知识卡、架构树均无 ERROR 级漂移。");
 }
 
 main();

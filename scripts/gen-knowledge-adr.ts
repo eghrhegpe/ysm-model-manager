@@ -21,18 +21,18 @@
  * 退出码：1（失败）
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseFrontmatter, getScalar } from './_lib/frontmatter.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { getScalar } from "./_lib/frontmatter.ts";
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 /** 提取 frontmatter 块。 */
 function fmBlock(text: string) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1]! : '';
+  return m ? m[1]! : "";
 }
 
 /** 提取 frontmatter 列表字段全部项。 */
@@ -41,18 +41,18 @@ function fmList(text: string, key: string) {
   const out: string[] = [];
   let inList = false;
   for (const line of lines) {
-    const head = line.match(new RegExp('^' + key + '\\s*:\\s*(.*)$'));
+    const head = line.match(new RegExp(`^${key}\\s*:\\s*(.*)$`));
     if (head) {
       inList = true;
-      const inline = head[1]!.replace(/#.*$/, '').trim();
-      if (inline && !inline.startsWith('<')) out.push(inline);
+      const inline = head[1]?.replace(/#.*$/, "").trim();
+      if (inline && !inline.startsWith("<")) out.push(inline);
       continue;
     }
     if (!inList) continue;
     const item = line.match(/^\s*-\s*(.+)$/);
     if (item) {
-      const v = item[1]!.replace(/#.*$/, '').trim();
-      if (v && !v.startsWith('<')) out.push(v);
+      const v = item[1]?.replace(/#.*$/, "").trim();
+      if (v && !v.startsWith("<")) out.push(v);
     } else if (/^\S/.test(line)) {
       inList = false;
     }
@@ -66,17 +66,15 @@ function scanDocAdrMarkers(sourceFiles: string[]) {
   for (const sf of sourceFiles) {
     const abs = path.join(ROOT, sf);
     if (!fs.existsSync(abs)) continue;
-    let src;
+    let src: string;
     try {
-      src = fs.readFileSync(abs, 'utf8');
+      src = fs.readFileSync(abs, "utf8");
     } catch {
       continue;
     }
     for (const m of src.matchAll(/\[doc:adr-(\d+)\]/g)) found.add(parseInt(m[1]!, 10));
   }
-  return [...found]
-    .sort((a, b) => a - b)
-    .map((n) => `ADR-${String(n).padStart(3, '0')}`);
+  return [...found].sort((a, b) => a - b).map((n) => `ADR-${String(n).padStart(3, "0")}`);
 }
 
 /** 把 adr 列表写入 frontmatter：移除旧的空 `adr:` 键（`adr: []` 行内空列表 / `adr:` 空块），再在 `tier:` 行后插入 `adr:` 块。 */
@@ -88,56 +86,57 @@ function writeAdrBlock(text: string, adrList: string[]) {
   // 注意：只删「空」键——有内容的块（手写 adr 列表）由 main() 的 existing 守卫跳过，
   // 这里不得用 `(\n\s*-[^\n]*)*` 吞掉非空列表（code_review P3 契约矛盾）
   const fmNoEmptyAdr = fm
-    .replace(/^adr\s*:\s*\[\]\s*$/m, '')
-    .replace(/^adr\s*:\s*$/m, '')
-    .replace(/\n{2,}/g, '\n');
-  const adrBlock = adrList.map((a) => `  - ${a}`).join('\n');
-  const newFm = fmNoEmptyAdr.replace(
-    /^(tier:\s*.+)$/m,
-    `$1\nadr:\n${adrBlock}`
-  );
+    .replace(/^adr\s*:\s*\[\]\s*$/m, "")
+    .replace(/^adr\s*:\s*$/m, "")
+    .replace(/\n{2,}/g, "\n");
+  const adrBlock = adrList.map((a) => `  - ${a}`).join("\n");
+  const newFm = fmNoEmptyAdr.replace(/^(tier:\s*.+)$/m, `$1\nadr:\n${adrBlock}`);
   return text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
 }
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["check"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check）`);
     process.exit(1);
   }
   const { check: isCheck } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
-    console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');
+    console.error("❌ docs/knowledge/ 不存在，请确认在仓库根目录运行");
     process.exit(1);
   }
 
   // 收集：architecture 卡且 frontmatter 无 adr 关联
   const targets: Array<{ file: string; text: string; adrs: string[] }> = [];
-  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith('.md'))) {
+  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith(".md"))) {
     if (NON_CARDS.has(f)) continue;
-    const text = fs.readFileSync(path.join(KNOW_DIR, f), 'utf8');
+    const text = fs.readFileSync(path.join(KNOW_DIR, f), "utf8");
     const fmTxt = fmBlock(text);
     if (!fmTxt) continue;
-    const tier = getScalar(fmTxt, 'tier');
-    if (tier !== 'architecture') continue;
-    const existing = fmList(text, 'adr').filter((a) => a !== '[]');
+    const tier = getScalar(fmTxt, "tier");
+    if (tier !== "architecture") continue;
+    const existing = fmList(text, "adr").filter((a) => a !== "[]");
     if (existing.length) continue; // 已有手写关联，不动
     // YSM 双栈：source_files 支持 go/、frontend/、internal/ 三前缀（P2-1：此前漏 internal/，
     // 指向 internal/ 包的卡无法补全 adr 关联，--check 假绿）
-    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend|internal)\/\S+)\s*$/gm)].map((m) => m[1]!);
+    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend|internal)\/\S+)\s*$/gm)].map(
+      (m) => m[1]!,
+    );
     const adrs = scanDocAdrMarkers(sources);
     if (adrs.length) targets.push({ file: f, text, adrs });
   }
 
   if (isCheck) {
     if (targets.length) {
-      console.error(`❌ ${targets.length} 张 architecture 卡缺 adr 关联（源码有 [doc:adr-] 标记），请运行：node scripts/gen-knowledge-adr.ts`);
-      for (const t of targets) console.error(`   - ${t.file} → ${t.adrs.join(', ')}`);
+      console.error(
+        `❌ ${targets.length} 张 architecture 卡缺 adr 关联（源码有 [doc:adr-] 标记），请运行：node scripts/gen-knowledge-adr.ts`,
+      );
+      for (const t of targets) console.error(`   - ${t.file} → ${t.adrs.join(", ")}`);
       process.exit(1);
     }
-    console.log('✅ 所有 architecture 卡均已登记 adr 关联');
+    console.log("✅ 所有 architecture 卡均已登记 adr 关联");
     return;
   }
 
@@ -145,11 +144,11 @@ function main() {
   for (const t of targets) {
     const newText = writeAdrBlock(t.text, t.adrs);
     if (newText === t.text) continue;
-    fs.writeFileSync(path.join(KNOW_DIR, t.file), newText, 'utf8');
+    fs.writeFileSync(path.join(KNOW_DIR, t.file), newText, "utf8");
     written++;
-    console.log(`✍️  ${t.file} → ${t.adrs.join(', ')}`);
+    console.log(`✍️  ${t.file} → ${t.adrs.join(", ")}`);
   }
-  console.log(written ? `✅ 已补全 ${written} 张卡的 adr 关联` : '✅ 无需补全');
+  console.log(written ? `✅ 已补全 ${written} 张卡的 adr 关联` : "✅ 无需补全");
 }
 
 main();

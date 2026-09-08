@@ -27,39 +27,38 @@ const _RE_ACCEPTED = /已采纳|采纳|Accepted|accepted|✅/;
  * 返回 { key, raw }；key ∈ 'accepted'|'partial'|'deprecated'|'superseded'|'unknown'。
  */
 export function normalizeState(raw: string): { key: string; raw: string } {
-  if (!raw) return { key: 'unknown', raw: '(未标注状态)' };
+  if (!raw) return { key: "unknown", raw: "(未标注状态)" };
   const s = raw.trim();
   // ❌ 行首优先：`❌ 已取代（xxx 决策废弃 xxx）` 中「决策废弃」是描述性正文，
   // 非状态标识，不能被 _RE_DEPRECATED 的「废弃」子串误抢（ADR-050 回归用例）
-  if (/^❌/.test(s)) return { key: 'superseded', raw: s };
-  if (/^🧊/.test(s)) return { key: 'deprecated', raw: s };
-  if (_RE_PARTIAL.test(s)) return { key: 'partial', raw: s };
-  if (_RE_DEPRECATED.test(s)) return { key: 'deprecated', raw: s };
-  if (_RE_SUPERSEDED.test(s) && !_RE_ACCEPTED.test(s))
-    return { key: 'superseded', raw: s };
-  if (_RE_ACCEPTED.test(s)) return { key: 'accepted', raw: s };
-  return { key: 'unknown', raw: s };
+  if (/^❌/.test(s)) return { key: "superseded", raw: s };
+  if (/^🧊/.test(s)) return { key: "deprecated", raw: s };
+  if (_RE_PARTIAL.test(s)) return { key: "partial", raw: s };
+  if (_RE_DEPRECATED.test(s)) return { key: "deprecated", raw: s };
+  if (_RE_SUPERSEDED.test(s) && !_RE_ACCEPTED.test(s)) return { key: "superseded", raw: s };
+  if (_RE_ACCEPTED.test(s)) return { key: "accepted", raw: s };
+  return { key: "unknown", raw: s };
 }
 
 export const STATE_LABEL: Record<string, string> = {
-  accepted: '✅ 已采纳',
-  partial: '🔄 部分采纳',
-  deprecated: '🧊 已废弃',
-  superseded: '❌ 已取代',
-  replaced: '❌ 已取代', // classifyStatus 返回 'replaced'（与 DISPLAY_GROUPS.key 对齐），normalizeState 返回 'superseded'
-  unknown: '❓ 未知',
-  unfixed: '⚠️ 已采纳（违规或未修复）',
+  accepted: "✅ 已采纳",
+  partial: "🔄 部分采纳",
+  deprecated: "🧊 已废弃",
+  superseded: "❌ 已取代",
+  replaced: "❌ 已取代", // classifyStatus 返回 'replaced'（与 DISPLAY_GROUPS.key 对齐），normalizeState 返回 'superseded'
+  unknown: "❓ 未知",
+  unfixed: "⚠️ 已采纳（违规或未修复）",
 };
 
 // ── 规范索引分组（gen-docs-index 用）──
 // 5 个索引桶 + unknown 兜底；顺序与 INDEX_GROUPS 常量同步。
 export const DISPLAY_GROUPS = [
-  { key: 'unfixed', label: '⚠️ 已采纳但遗留未修复', anchor: '已采纳但遗留未修复' },
-  { key: 'partial', label: '🔄 部分采纳', anchor: '部分采纳' },
-  { key: 'accepted', label: '✅ 已采纳', anchor: '已采纳' },
-  { key: 'replaced', label: '❌ 已取代', anchor: '已取代' },
-  { key: 'deprecated', label: '🧊 已废弃', anchor: '已废弃' },
-  { key: 'unknown', label: '❓ 未归类', anchor: '未归类' },
+  { key: "unfixed", label: "⚠️ 已采纳但遗留未修复", anchor: "已采纳但遗留未修复" },
+  { key: "partial", label: "🔄 部分采纳", anchor: "部分采纳" },
+  { key: "accepted", label: "✅ 已采纳", anchor: "已采纳" },
+  { key: "replaced", label: "❌ 已取代", anchor: "已取代" },
+  { key: "deprecated", label: "🧊 已废弃", anchor: "已废弃" },
+  { key: "unknown", label: "❓ 未归类", anchor: "未归类" },
 ];
 
 /**
@@ -71,26 +70,39 @@ export const DISPLAY_GROUPS = [
 export function classifyStatus(raw: string) {
   const s = raw.trim();
   // 行首 emoji 优先
-  if (/^❌/.test(s)) return 'replaced';
-  if (/^🧊/.test(s)) return 'deprecated';
-  if (/^🔄/.test(s)) return 'partial';
-  if (/^⚠️/.test(s)) return 'unfixed';
+  if (/^❌/.test(s)) return "replaced";
+  if (/^🧊/.test(s)) return "deprecated";
+  if (/^🔄/.test(s)) return "partial";
+  if (/^⚠️/.test(s)) return "unfixed";
   const { key } = normalizeState(raw);
-  if (key === 'accepted' && (/违规|不一致|未修复/.test(s)) && !/已修复/.test(s))
-    return 'unfixed';
-  if (key === 'accepted') return 'accepted';
-  if (key === 'partial') return 'partial';
-  if (key === 'deprecated') return 'deprecated';
-  if (key === 'superseded') return 'replaced';
-  if (key === 'unknown') return 'unknown';
-  return 'unknown';
+  if (key === "accepted" && /违规|不一致|未修复/.test(s) && !/已修复/.test(s)) return "unfixed";
+  if (key === "accepted") return "accepted";
+  if (key === "partial") return "partial";
+  if (key === "deprecated") return "deprecated";
+  if (key === "superseded") return "replaced";
+  if (key === "unknown") return "unknown";
+  return "unknown";
 }
 
 // ── 技术债关键词 ──
 export const TECHNICAL_DEBT_KEYWORDS = [
-  '已废弃', '已放弃', '已搁置', '搁置', '废弃',
-  '待立项', '草案', '提案', 'Proposed',
-  '规划中', '部分实现', '待推进',
-  '已过时', '已淘汰', '已替换', '已取代',
-  '违规', '不一致', '未修复',
+  "已废弃",
+  "已放弃",
+  "已搁置",
+  "搁置",
+  "废弃",
+  "待立项",
+  "草案",
+  "提案",
+  "Proposed",
+  "规划中",
+  "部分实现",
+  "待推进",
+  "已过时",
+  "已淘汰",
+  "已替换",
+  "已取代",
+  "违规",
+  "不一致",
+  "未修复",
 ];

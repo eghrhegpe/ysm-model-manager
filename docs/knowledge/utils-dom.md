@@ -12,7 +12,9 @@ auto_fields:
     - btnBaseCSS
     - calcVisibleRange
     - clearTrigger
+    - CopyResult
     - copyText
+    - DirPickResult
     - disposeTooltipCore
     - downloadTextFile
     - ensureTooltipStyles
@@ -28,6 +30,7 @@ auto_fields:
     - isEditableTarget
     - isFileExistsError
     - isInputBlocked
+    - isStorageAccessible
     - pickDirectory
     - popInputBlock
     - promoteTitle

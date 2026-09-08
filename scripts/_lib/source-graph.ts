@@ -10,27 +10,38 @@
  *     from './_lib/source-graph.ts';
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { toPosix } from './to-posix.ts';
-import { walk } from './scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { walk } from "./scan-files.ts";
+import { toPosix } from "./to-posix.ts";
 
-export const EXCLUDE_DIRS = new Set(['__tests__', '__mocks__', 'node_modules', 'wailsjs', 'bindings', 'dist']);
+export const EXCLUDE_DIRS = new Set([
+  "__tests__",
+  "__mocks__",
+  "node_modules",
+  "wailsjs",
+  "bindings",
+  "dist",
+]);
 export const EXCLUDE_FILES = [/\.d\.ts$/, /\.test\.tsx?$/, /\.spec\.tsx?$/, /\.gen\.tsx?$/];
 /** 前端源码扩展名（.ts/.tsx + 存量 .js/.jsx，ADR-014 混编期两者并存）。 */
-export const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
-const IMPORT_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+export const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
+const IMPORT_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 export function isSourceFile(name: string, extensions = SOURCE_EXTENSIONS) {
-  return extensions.some((ext) => name.endsWith(ext))
-    && !EXCLUDE_FILES.some((re) => re.test(name));
+  return extensions.some((ext) => name.endsWith(ext)) && !EXCLUDE_FILES.some((re) => re.test(name));
 }
 
 export function shouldTraverseDir(name: string) {
-  return !name.startsWith('.') && !EXCLUDE_DIRS.has(name);
+  return !name.startsWith(".") && !EXCLUDE_DIRS.has(name);
 }
 
-export function walkSourceFiles(srcDir: string, dir: string = srcDir, base: string = '', extensions: string[] = SOURCE_EXTENSIONS) {
+export function walkSourceFiles(
+  srcDir: string,
+  dir: string = srcDir,
+  base: string = "",
+  extensions: string[] = SOURCE_EXTENSIONS,
+) {
   return walk(dir, {
     exts: extensions,
     skipDir: (name) => !shouldTraverseDir(name),
@@ -54,10 +65,10 @@ function resolveCandidates(basePath: string) {
 }
 
 export function resolveSourceImport(spec: string, importerFile: string, srcDir: string) {
-  let basePath;
-  if (spec.startsWith('@/')) {
+  let basePath: string;
+  if (spec.startsWith("@/")) {
     basePath = path.join(srcDir, spec.slice(2));
-  } else if (spec.startsWith('.')) {
+  } else if (spec.startsWith(".")) {
     basePath = path.resolve(path.dirname(importerFile), spec);
   } else {
     return null;
@@ -74,7 +85,7 @@ export interface ImportEdge {
 }
 
 export function parseSourceImports(filePath: string, srcDir: string): ImportEdge[] {
-  const text = fs.readFileSync(filePath, 'utf8');
+  const text = fs.readFileSync(filePath, "utf8");
   const imports: ImportEdge[] = [];
   const specs = new Map<string, boolean>(); // spec -> isTypeOnly
 
@@ -82,7 +93,8 @@ export function parseSourceImports(filePath: string, srcDir: string): ImportEdge
   // 边界：关键字与 from 之间禁止引号与分号——旧写法用 `[\s\S]*?` 会越过语句末尾，
   // 把 `import './a';` 一路吞到后面某条语句（实测连字符串里的 `from './zzz'` 都被解析成依赖）。
   // 捕获组 1 = `import type` 的 type 标记；捕获组 2 = 模块说明符。
-  const reFrom = /(?:^|\n)[ \t]*(?:\/\/[^\n]*\n)*[ \t]*(?:import|export)\s+(type\s+)?[^'";]*?\bfrom\s+['"]([^'"]+)['"]/gm;
+  const reFrom =
+    /(?:^|\n)[ \t]*(?:\/\/[^\n]*\n)*[ \t]*(?:import|export)\s+(type\s+)?[^'";]*?\bfrom\s+['"]([^'"]+)['"]/gm;
   // 正则 B: import '...'（纯 side-effect，无 from）
   const reSide = /(?:^|\n)[ \t]*(?:\/\/[^\n]*\n)*[ \t]*import\s+['"]([^'"]+)['"]/gm;
   // 正则 C: await import('...') — 任意位置（不要求行首）
@@ -98,10 +110,9 @@ export function parseSourceImports(filePath: string, srcDir: string): ImportEdge
     specs.set(spec, isTypeOnly);
   };
 
-  let match;
-  while ((match = reFrom.exec(text))) put(match[2]!, Boolean(match[1]!));
-  while ((match = reSide.exec(text))) put(match[1]!, false);
-  while ((match = reDyna.exec(text))) put(match[1]!, false);
+  for (const match of text.matchAll(reFrom)) put(match[2]!, Boolean(match[1]!));
+  for (const match of text.matchAll(reSide)) put(match[1]!, false);
+  for (const match of text.matchAll(reDyna)) put(match[1]!, false);
 
   for (const [spec, isTypeOnly] of specs) {
     const resolved = resolveSourceImport(spec, filePath, srcDir);
@@ -116,7 +127,10 @@ export interface SourceGraphResult {
   graph: Map<string, Set<string>>;
 }
 
-export function scanSourceGraph(srcDir: string, { scope = null, localOnly = false }: { scope?: string | null; localOnly?: boolean } = {}): SourceGraphResult {
+export function scanSourceGraph(
+  srcDir: string,
+  { scope = null, localOnly = false }: { scope?: string | null; localOnly?: boolean } = {},
+): SourceGraphResult {
   // 始终扫描全部文件构建全量图
   const files = walkSourceFiles(srcDir);
   const graph = new Map<string, Set<string>>(files.map(({ rel }) => [rel, new Set<string>()]));
@@ -130,7 +144,9 @@ export function scanSourceGraph(srcDir: string, { scope = null, localOnly = fals
   // scope 过滤
   if (!scope) return { files, graph };
 
-  const scopeSet = new Set(files.filter(({ rel }) => rel.startsWith(`${scope}/`)).map((f) => f.rel));
+  const scopeSet = new Set(
+    files.filter(({ rel }) => rel.startsWith(`${scope}/`)).map((f) => f.rel),
+  );
 
   if (localOnly) {
     // localOnly: 只保留 scope 内节点，不展开依赖
@@ -141,7 +157,10 @@ export function scanSourceGraph(srcDir: string, { scope = null, localOnly = fals
         localGraph.set(rel, new Set([...edges].filter((d) => scopeSet.has(d))));
       }
     }
-    return { files: [...scopeSet].sort().map((rel) => ({ file: path.join(srcDir, rel), rel })), graph: localGraph };
+    return {
+      files: [...scopeSet].sort().map((rel) => ({ file: path.join(srcDir, rel), rel })),
+      graph: localGraph,
+    };
   }
 
   // 默认 scope 模式：递归展开所有可达依赖
@@ -175,7 +194,7 @@ export function scanSourceGraph(srcDir: string, { scope = null, localOnly = fals
  * 实现见 tsDecls(text, exportedOnly=true)。
  */
 export function getExportedSymbols(filePath: string, textOverride: string | null | undefined) {
-  const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
+  const text = textOverride ?? fs.readFileSync(filePath, "utf8");
   return [...tsDecls(text, true)].sort();
 }
 
@@ -185,13 +204,13 @@ export function getExportedSymbols(filePath: string, textOverride: string | null
  * 实现见 goDecls(text, exportedOnly=true)。
  */
 export function getGoExportedSymbols(filePath: string, textOverride: string | null | undefined) {
-  const text = textOverride ?? fs.readFileSync(filePath, 'utf8');
+  const text = textOverride ?? fs.readFileSync(filePath, "utf8");
   return [...goDecls(text, true)].sort();
 }
 
 /** 按扩展名分发：.go → Go 提取；其余 → JS/TS 提取。 */
 export function getExportedSymbolsAny(filePath: string, textOverride: string | null | undefined) {
-  if (filePath.toLowerCase().endsWith('.go')) return getGoExportedSymbols(filePath, textOverride);
+  if (filePath.toLowerCase().endsWith(".go")) return getGoExportedSymbols(filePath, textOverride);
   return getExportedSymbols(filePath, textOverride);
 }
 
@@ -214,26 +233,27 @@ export function getExportedSymbolsAny(filePath: string, textOverride: string | n
 function goDecls(text: string, exportedOnly: boolean) {
   const out = new Set();
   const isExp = (n: string) => !!n && /^[A-Z]/.test(n);
-  const add = (n: string) => { if (n && (!exportedOnly || isExp(n))) out.add(n); };
-  let m;
+  const add = (n: string) => {
+    if (n && (!exportedOnly || isExp(n))) out.add(n);
+  };
 
   // 剥离块注释（等长空格替换，保持行数与列位不变，行号语义不受影响）。
   // 必需：块注释内可独立成行写 `func Phantom(`，行首锚定挡不住它。
   // 不剥行注释：行首锚定已能排除 `// func Ghost(`，而剥离会把字符串里的 `//`
   // （如 URL 常量）误当注释、破坏源码结构——故只处理块注释。
-  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m0: string) => m0.replace(/[^\n]/g, ' '));
+  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m0: string) => m0.replace(/[^\n]/g, " "));
 
   // func Name(...) / func (r *T) Name(...)
   // 行首锚定（容忍缩进）：注释里的 `// func Ghost(` 天然被排除。
   // 方法记为 `Type.Method`（裸方法名不是包级导出标识符，且不同 receiver 的同名方法会被 Set 吞掉）；
   // 泛型接收者 `r *Foo[T]` 末尾无裸标识符，提取失败时回退裸方法名而非丢弃。
   const reFunc = /^[ \t]*func\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
-  while ((m = reFunc.exec(src))) {
+  for (const m of src.matchAll(reFunc)) {
     const name = m[2]!;
     if (exportedOnly && !isExp(name)) continue;
     if (m[1]) {
       const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-      const t = tm ? tm[1] : '';
+      const t = tm ? tm[1] : "";
       // 未导出类型上的导出方法包外不可达，导出口径下不计
       if (exportedOnly && t && !isExp(t)) continue;
       add(t ? `${t}.${name}` : name);
@@ -244,7 +264,7 @@ function goDecls(text: string, exportedOnly: boolean) {
 
   // type Name ... / const Name = ... / var Name = ...（单行形式）
   const reDecl = /^[ \t]*(?:type|const|var)\s+([A-Za-z0-9_]+)/gm;
-  while ((m = reDecl.exec(src))) add(m[1]!);
+  for (const dm of src.matchAll(reDecl)) add(dm[1]!);
 
   // 分组声明 `const ( A = ... )`、`var (...)`、`type (...)`。
   // 块结束不依赖 `\n)`（缩进闭合会失配、成员内嵌 `\n)` 会越界）——
@@ -253,16 +273,17 @@ function goDecls(text: string, exportedOnly: boolean) {
   // 量词不嵌套（单层 `(?:...)?`），规避旧写法 `(?:\s+[...]+)*` 的灾难性回溯。
   const reGroupHead = /^[ \t]*(?:const|var|type)\s*\(/gm;
   const reGroupBody = /^[ \t]*([A-Za-z0-9_]+)(?:[ \t]+[A-Za-z0-9_[\].*]+)?[ \t]*(?:=|[{]|$|,)/gm;
-  let gm;
-  while ((gm = reGroupHead.exec(src))) {
+  for (const gm of src.matchAll(reGroupHead)) {
     let blockEnd = -1;
-    const lines = src.slice(gm.index).split('\n');
+    const lines = src.slice(gm.index).split("\n");
     for (let li = 1; li < lines.length; li++) {
-      if (/^[ \t]*\)/.test(lines[li]!)) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
+      if (/^[ \t]*\)/.test(lines[li]!)) {
+        blockEnd = gm.index + lines.slice(0, li).join("\n").length + 1;
+        break;
+      }
     }
-    const block = blockEnd > gm.index ? src.slice(gm.index, blockEnd) : '';
-    let bm;
-    while ((bm = reGroupBody.exec(block))) add(bm[1]!);
+    const block = blockEnd > gm.index ? src.slice(gm.index, blockEnd) : "";
+    for (const bm of block.matchAll(reGroupBody)) add(bm[1]!);
   }
 
   return out;
@@ -277,48 +298,60 @@ function goDecls(text: string, exportedOnly: boolean) {
  */
 function tsDecls(text: string, exportedOnly: boolean) {
   const out = new Set();
-  const add = (n: string) => { if (n) out.add(n); };
-  const E = exportedOnly ? 'export\\s+' : '(?:export\\s+)?';
-  let m;
+  const add = (n: string) => {
+    if (n) out.add(n);
+  };
+  const E = exportedOnly ? "export\\s+" : "(?:export\\s+)?";
 
   // function / class / interface / type / enum
   // 覆盖 `export default class Widget`、`export default async function f`、
   // `export declare function f`（`async`/`declare`/`default` 均为可选前缀）
   const reDecl = new RegExp(
     `^${E}(?:default\\s+)?(?:declare\\s+)?(?:async\\s+)?(?:function|class|interface|type|enum)\\s+([A-Za-z0-9_$]+)`,
-    'gm',
+    "gm",
   );
-  while ((m = reDecl.exec(text))) add(m[1]!);
+  for (const m of text.matchAll(reDecl)) add(m[1]!);
 
   // const / let / var 赋值。`const enum E` 的符号名是 enum 之后的标识符——
   // 旧实现会把关键字 `enum` 本身当符号名（实测 `export const enum E` → `enum`）。
   const reVal = new RegExp(
     `^${E}(?:declare\\s+)?(?:const|let|var)\\s+(?:enum\\s+)?([A-Za-z0-9_$]+)`,
-    'gm',
+    "gm",
   );
-  while ((m = reVal.exec(text))) add(m[1]!);
+  for (const m of text.matchAll(reVal)) add(m[1]!);
 
   // 解构声明 `export const { a, b } = obj`（含默认值 `{ a = 1 }`）
-  const reDestr = new RegExp(`^${E}(?:const|let|var)\\s*\\{([^}]+)\\}`, 'gm');
-  while ((m = reDestr.exec(text))) {
-    for (const part of m[1]!.split(',')) {
-      const name = part.trim().split(/\s*[:=]\s*/)[0]!.trim();
-      if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
+  const reDestr = new RegExp(`^${E}(?:const|let|var)\\s*\\{([^}]+)\\}`, "gm");
+  for (const m of text.matchAll(reDestr)) {
+    const body = m[1];
+    if (!body) continue;
+    for (const part of body.split(",")) {
+      const name = part
+        .trim()
+        .split(/\s*[:=]\s*/)[0]
+        ?.trim();
+      if (name && /^[A-Za-z0-9_$]+$/.test(name)) add(name);
     }
   }
 
   // `export { a, b as c }` / `export type { T }`（取 as 之后的对外名）
   const reRe = /^export\s*(?:type\s*)?\{([^}]+)\}/gm;
-  while ((m = reRe.exec(text))) {
-    for (const part of m[1]!.split(',')) {
-      const name = part.trim().split(/\s+as\s+/).pop()!.trim();
-      if (/^[A-Za-z0-9_$]+$/.test(name)) add(name);
+  for (const m of text.matchAll(reRe)) {
+    const body = m[1];
+    if (!body) continue;
+    for (const part of body.split(",")) {
+      const name = part
+        .trim()
+        .split(/\s+as\s+/)
+        .pop()
+        ?.trim();
+      if (name && /^[A-Za-z0-9_$]+$/.test(name)) add(name);
     }
   }
 
   // `export default Name;`（容忍行尾分号：这是最常见写法，`\s*$` 会被 `;` 挡掉）
   const reDefaultId = /^export\s+default\s+([A-Za-z0-9_$]+)\s*;?\s*$/gm;
-  while ((m = reDefaultId.exec(text))) add(m[1]!);
+  for (const m of text.matchAll(reDefaultId)) add(m[1]!);
 
   return out;
 }
@@ -335,17 +368,17 @@ export function tsTopDecls(text: string) {
 
 /** 按扩展名分发顶层声明提取：.go → goTopFuncs；其余 → tsTopDecls。 */
 export function topDeclsAny(path: string, text: string) {
-  return path.toLowerCase().endsWith('.go') ? goTopFuncs(text) : tsTopDecls(text);
+  return path.toLowerCase().endsWith(".go") ? goTopFuncs(text) : tsTopDecls(text);
 }
 
 /** 方法符号 Type.Method 的裸方法名（调用方文本匹配用）。 */
 export function searchName(sym: string) {
-  return sym.includes('.') ? sym.split('.').pop()! : sym;
+  return sym.includes(".") ? sym.split(".").pop()! : sym;
 }
 
 /** 行数口径：换行数 +（非空且不以换行结尾 ? 1 : 0），与 line-counter 一致。 */
 export function countLines(text: string | null) {
-  if (text === null || typeof text !== 'string') return null;
+  if (text === null || typeof text !== "string") return null;
   const nl = (text.match(/\n/g) || []).length;
-  return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
+  return nl + (text.length > 0 && !text.endsWith("\n") ? 1 : 0);
 }

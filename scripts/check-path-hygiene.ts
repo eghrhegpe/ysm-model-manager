@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 /**
  * check-path-hygiene.ts — ADR-146 路径卫生门禁。
  *
@@ -37,25 +38,24 @@
  * 退出码：0 通过（WARN 不阻断）/ 1 含 FAIL（R0 / R4 / 一致性）。
  * 依赖：node:fs / node:path / node:url / 本地模块 _lib/scan-files.ts
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { walk, toPosix } from './_lib/scan-files.ts';
-import { classifyImport, classifyBarrelHygiene } from './_lib/alias-resolve.ts';
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { classifyBarrelHygiene, classifyImport } from "./_lib/alias-resolve.ts";
+import { toPosix, walk } from "./_lib/scan-files.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..');
-const SRC_ROOT = resolve(REPO_ROOT, 'frontend', 'src');
-const TSCONFIG = resolve(REPO_ROOT, 'frontend', 'tsconfig.json');
-const VITE_CONFIG = resolve(REPO_ROOT, 'frontend', 'vite.config.js');
-const BASELINE_FILE = resolve(REPO_ROOT, 'docs', '.path-hygiene-baseline.json');
+const REPO_ROOT = resolve(__dirname, "..");
+const SRC_ROOT = resolve(REPO_ROOT, "frontend", "src");
+const TSCONFIG = resolve(REPO_ROOT, "frontend", "tsconfig.json");
+const VITE_CONFIG = resolve(REPO_ROOT, "frontend", "vite.config.js");
+const BASELINE_FILE = resolve(REPO_ROOT, "docs", ".path-hygiene-baseline.json");
 
-const JSON_FLAG = process.argv.includes('--json');
-const UPDATE_FLAG = process.argv.includes('--update');
+const JSON_FLAG = process.argv.includes("--json");
+const UPDATE_FLAG = process.argv.includes("--update");
 
 // ---- 规则常量 ----
-const R1_BARREL_WHITELIST = new Set(['utils/types-re-export.ts']); // 来源数=1 的 bindings 转发垫层（relPosix 相对 SRC_ROOT，无 src/ 前缀）
+const R1_BARREL_WHITELIST = new Set(["utils/types-re-export.ts"]); // 来源数=1 的 bindings 转发垫层（relPosix 相对 SRC_ROOT，无 src/ 前缀）
 const R1_BARREL_THRESHOLD = 3; // re-export 来源模块数 ≥ 3 → 嫌疑
 const R2_DEPTH_MAX = 3; // 目录层级 > 3 → WARN
 const R3_UPLEVEL_MIN = 1; // 任何 in-src 相对上跳（../）即 FAIL——相对深度已全仓归零（2026-09-07 锁定回归）
@@ -65,20 +65,26 @@ const R3_DIRTY_SKIP = loadGitDirtySrcAbs(); // 并行未提交 WIP 跳过 R3（�
 function loadGitDirtySrcAbs(): Set<string> {
   const s = new Set<string>();
   try {
-    const raw = execFileSync('git', ['-C', REPO_ROOT, 'status', '--porcelain', '--', 'frontend/src'], { encoding: 'utf8' });
+    const raw = execFileSync(
+      "git",
+      ["-C", REPO_ROOT, "status", "--porcelain", "--", "frontend/src"],
+      { encoding: "utf8" },
+    );
     for (const line of raw.split(/\r?\n/)) {
       const p = line.slice(3).trim();
       if (p) s.add(resolve(REPO_ROOT, p));
     }
-  } catch { /* git 不可用：静默为空（不跳过，宁严勿漏） */ }
+  } catch {
+    /* git 不可用：静默为空（不跳过，宁严勿漏） */
+  }
   return s;
 }
 
 // 解析前剥离注释，避免注释/反引号字符串里的 `from '...'` 被误判为真实 import
 // （例：types-re-export.ts 文档注释含消费方示例，曾致 R4/R0 误报）。保留 `://` 协议头。
 function stripComments(src: string): string {
-  let s = src.replace(/\/\*[\s\S]*?\*\//g, '');
-  s = s.replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  let s = src.replace(/\/\*[\s\S]*?\*\//g, "");
+  s = s.replace(/(^|[^:])\/\/[^\n]*/g, "$1");
   return s;
 }
 
@@ -86,7 +92,11 @@ function stripComments(src: string): string {
 const files = walk(SRC_ROOT, { rel: true }) as Array<{ abs: string; rel: string }>;
 
 // ---- 收集结果 ----
-interface Finding { rule: string; file: string; detail: string; }
+interface Finding {
+  rule: string;
+  file: string;
+  detail: string;
+}
 const fails: Finding[] = [];
 const warns: Finding[] = [];
 
@@ -103,34 +113,37 @@ const SPEC_RE = /(?:^|[^.\w$])(?:from|import)\s*(?:\(\s*)?(['"])([^'"]+)\1/g;
 const REXPORT_RE = /^\s*export\s+(?:type\s+)?(?:\*\s+from|[\s\S]*?\bfrom\s+)(['"])([^'"]+)\1/;
 
 for (const { abs, rel } of files) {
-  const code = stripComments(readFileSync(abs, 'utf-8'));
+  const code = stripComments(readFileSync(abs, "utf-8"));
   const relPosix = toPosix(rel);
 
   // ---- R1 聚合桶嫌疑（按 re-export 来源模块数）----
   const reexportSources = new Set<string>();
-  for (const line of code.split('\n')) {
+  for (const line of code.split("\n")) {
     const rm = REXPORT_RE.exec(line);
     const reexportSpec = rm?.[2];
     if (reexportSpec) reexportSources.add(reexportSpec);
   }
   if (reexportSources.size >= R1_BARREL_THRESHOLD && !R1_BARREL_WHITELIST.has(relPosix)) {
     r1Hits.push(`${relPosix}（来源数 ${reexportSources.size}）`);
-    warns.push({ rule: 'R1', file: relPosix, detail: `re-export 来源模块数 ${reexportSources.size} ≥ ${R1_BARREL_THRESHOLD}` });
+    warns.push({
+      rule: "R1",
+      file: relPosix,
+      detail: `re-export 来源模块数 ${reexportSources.size} ≥ ${R1_BARREL_THRESHOLD}`,
+    });
   }
 
   // ---- R2 目录深度 ----
-  const segs = relPosix.split('/');
+  const segs = relPosix.split("/");
   const dirDepth = segs.length - 1; // 减文件本身
   if (dirDepth > R2_DEPTH_MAX) {
-    warns.push({ rule: 'R2', file: relPosix, detail: `目录层级 ${dirDepth} > ${R2_DEPTH_MAX}` });
+    warns.push({ rule: "R2", file: relPosix, detail: `目录层级 ${dirDepth} > ${R2_DEPTH_MAX}` });
   }
 
   // ---- R3 上跳 / R4 跨边界（别名感知：复用 alias-resolve.classifyImport）----
   // R3 仅对非别名的「字面相对 wander」触发（别名说明符字面无 `../`，切别名后 R3 自然归零，符合 D5）；
   // R4 按展开后真实跨边界触发（#root/resource_types.json 仍计，冻结基线 14 不变）。
-  let m: RegExpExecArray | null;
-  SPEC_RE.lastIndex = 0;
-  while ((m = SPEC_RE.exec(code)) !== null) {
+  // matchAll 内部克隆正则，不再依赖/推进共享 SPEC_RE.lastIndex（原逐文件 reset 语义等价）
+  for (const m of code.matchAll(SPEC_RE)) {
     const spec = m[2];
     if (!spec) continue;
     const c = classifyImport(spec, abs);
@@ -140,18 +153,30 @@ for (const { abs, rel } of files) {
     const bh = classifyBarrelHygiene(spec, abs, isTestFile);
     if (bh.sameDirAlias) {
       r5Hits.push(`${relPosix} ← ${spec}`);
-      warns.push({ rule: 'R5', file: relPosix, detail: `同目录别名应改 ./（目标 ${dirname(c.targetAbs as string)}）` });
+      warns.push({
+        rule: "R5",
+        file: relPosix,
+        detail: `同目录别名应改 ./（目标 ${dirname(c.targetAbs as string)}）`,
+      });
     }
     if (bh.testBarrelEntry) {
       r6Hits.push(`${relPosix} ← ${spec}`);
-      warns.push({ rule: 'R6', file: relPosix, detail: `测试 import 桶入口，会拉起整个模块，改引具体文件` });
+      warns.push({
+        rule: "R6",
+        file: relPosix,
+        detail: `测试 import 桶入口，会拉起整个模块，改引具体文件`,
+      });
     }
     if (c.isBindings) continue; // bindings 由 wails 插件解析，R3/R4 均不计
     // R3：任何 in-src 相对上跳（../）即 FAIL ——相对深度已全仓归零，任何再引入即违规。
     // 并行未提交 WIP（R3_DIRTY_SKIP）跳过：锁定的是「已合入/clean 代码」不回归，不误伤并发半成品。
     if (!c.isAlias && c.upLevels >= R3_UPLEVEL_MIN && !c.escapesSrc && !R3_DIRTY_SKIP.has(abs)) {
       r3Hits.push(`${relPosix} ← ${spec}`);
-      fails.push({ rule: 'R3', file: relPosix, detail: `in-src 相对上跳，应写 @/ 或 ./（仅精确同目录）` });
+      fails.push({
+        rule: "R3",
+        file: relPosix,
+        detail: `in-src 相对上跳，应写 @/ 或 ./（仅精确同目录）`,
+      });
     }
     // R4：越界（展开后落 src 外，含 #root 别名逃逸）或 == frontend/e2e/mock-data.ts（真实位置，ADR 内定入基线）
     // ADR-174 D5 豁免：parity 对账测试消费黄金语料（tests/fixtures/parity/）——双端单一事实源
@@ -168,14 +193,14 @@ for (const { abs, rel } of files) {
 // vite 的 find 由 ALIAS_DIRS 动态拼出（模板字面量），无法靠 `find:` 正则还原，
 // 故直接在 vite 源码解析 ALIAS_DIRS 数组重建 find 集合，与 tsconfig 键集比对。
 function loadTsconfigPathsKeys(): Set<string> {
-  const j = JSON.parse(readFileSync(TSCONFIG, 'utf-8'));
-  const paths = (j.compilerOptions && j.compilerOptions.paths) || {};
+  const j = JSON.parse(readFileSync(TSCONFIG, "utf-8"));
+  const paths = j.compilerOptions?.paths || {};
   const keys = new Set<string>();
-  for (const k of Object.keys(paths)) keys.add(k.replace(/\/\*$/, '')); // `@/x/*` → `@/x`
+  for (const k of Object.keys(paths)) keys.add(k.replace(/\/\*$/, "")); // `@/x/*` → `@/x`
   return keys;
 }
 function loadViteAliasFinds(): Set<string> {
-  const txt = readFileSync(VITE_CONFIG, 'utf-8');
+  const txt = readFileSync(VITE_CONFIG, "utf-8");
   const keys = new Set<string>();
   const m = txt.match(/ALIAS_DIRS\s*=\s*\[([\s\S]*?)\]/);
   if (m) {
@@ -187,11 +212,11 @@ function loadViteAliasFinds(): Set<string> {
       }
     }
   }
-  if (/find:\s*["']#root["']/.test(txt)) keys.add('#root');
+  if (/find:\s*["']#root["']/.test(txt)) keys.add("#root");
   // 字面量 find 条目：文件级别名（@/bus、@/theme-core 等，单独声明，不在 ALIAS_DIRS 模板内）
   for (const fm of txt.matchAll(/find:\s*["']([^"']+)["']/g)) {
     const find = fm[1];
-    if (find && find !== '#root') keys.add(find);
+    if (find && find !== "#root") keys.add(find);
   }
   // FILE_ALIASES 对象键（模板字面量拼 find，等价于字面量；供双写一致性核对）
   const fam = txt.match(/FILE_ALIASES\s*=\s*\{([\s\S]*?)\}/);
@@ -212,27 +237,43 @@ const consistencyOk = missingInVite.length === 0 && missingInTs.length === 0;
 // ---- R4 冻结基线 ----
 let baseline = 14; // ADR-146 文档意图值（非 bindings 跨边界 14 条）
 if (existsSync(BASELINE_FILE)) {
-  try { baseline = JSON.parse(readFileSync(BASELINE_FILE, 'utf-8')).crossBoundaryNonBindings; } catch { /* 损坏则用默认 */ }
+  try {
+    baseline = JSON.parse(readFileSync(BASELINE_FILE, "utf-8")).crossBoundaryNonBindings;
+  } catch {
+    /* 损坏则用默认 */
+  }
 } else {
   // 首跑冻结：以当前实际值写入基线文件（只减不增的锚点）
-  writeFileSync(BASELINE_FILE, JSON.stringify({ crossBoundaryNonBindings: r4Count }, null, 2) + '\n', 'utf-8');
+  writeFileSync(
+    BASELINE_FILE,
+    `${JSON.stringify({ crossBoundaryNonBindings: r4Count }, null, 2)}\n`,
+    "utf-8",
+  );
   baseline = r4Count;
 }
 if (UPDATE_FLAG && r4Count < baseline) {
   baseline = r4Count;
-  writeFileSync(BASELINE_FILE, JSON.stringify({ crossBoundaryNonBindings: r4Count }, null, 2) + '\n', 'utf-8');
+  writeFileSync(
+    BASELINE_FILE,
+    `${JSON.stringify({ crossBoundaryNonBindings: r4Count }, null, 2)}\n`,
+    "utf-8",
+  );
 }
 const r4Ok = r4Count <= baseline;
 if (!r4Ok) {
-  fails.push({ rule: 'R4', file: '（仓库级）', detail: `跨边界非 bindings 引用 ${r4Count} > 冻结基线 ${baseline}（只减不增）` });
+  fails.push({
+    rule: "R4",
+    file: "（仓库级）",
+    detail: `跨边界非 bindings 引用 ${r4Count} > 冻结基线 ${baseline}（只减不增）`,
+  });
 }
 
 // ---- 一致性 FAIL ----
 if (!consistencyOk) {
   fails.push({
-    rule: 'CONSISTENCY',
-    file: 'frontend/{tsconfig.json,vite.config.js}',
-    detail: `别名键集不一致：tsconfig有vite缺=[${missingInVite.join(',')}] / vite有tsconfig缺=[${missingInTs.join(',')}]`,
+    rule: "CONSISTENCY",
+    file: "frontend/{tsconfig.json,vite.config.js}",
+    detail: `别名键集不一致：tsconfig有vite缺=[${missingInVite.join(",")}] / vite有tsconfig缺=[${missingInTs.join(",")}]`,
   });
 }
 
@@ -246,7 +287,7 @@ const summary = {
   fail: failCount,
   warn: warnCount,
   r1_barrel: { hits: r1Hits.length, samples: r1Hits.slice(0, 5) },
-  r2_depth: { warns: warns.filter((w) => w.rule === 'R2').length },
+  r2_depth: { warns: warns.filter((w) => w.rule === "R2").length },
   r3_uplevel: { hits: r3Hits.length, samples: r3Hits.slice(0, 5) },
   r4_cross_boundary: { count: r4Count, baseline, ok: r4Ok },
   r5_same_dir_alias: { hits: r5Hits.length, samples: r5Hits.slice(0, 5) },
@@ -255,15 +296,19 @@ const summary = {
 };
 
 if (JSON_FLAG) {
-  process.stdout.write(JSON.stringify({ _summary: summary, fails, warns }, null, 2) + '\n');
+  process.stdout.write(`${JSON.stringify({ _summary: summary, fails, warns }, null, 2)}\n`);
 } else {
-  process.stdout.write(`check-path-hygiene: ${ok ? 'PASS' : 'FAIL'} (fail=${failCount} warn=${warnCount})\n`);
-  if (r1Hits.length) process.stdout.write(`  R1 聚合桶嫌疑: ${r1Hits.join('; ')}\n`);
-  if (r3Hits.length) process.stdout.write(`  R3 in-src 相对上跳（FAIL）: ${r3Hits.slice(0, 5).join('; ')}\n`);
-  if (r5Hits.length) process.stdout.write(`  R5 同目录别名: ${r5Hits.slice(0, 5).join('; ')}\n`);
-  if (r6Hits.length) process.stdout.write(`  R6 测试神桶: ${r6Hits.slice(0, 5).join('; ')}\n`);
-  process.stdout.write(`  R4 跨边界冻结: ${r4Count}/${baseline} ${r4Ok ? 'OK' : 'EXCEED'}\n`);
-  if (!consistencyOk) process.stdout.write(`  一致性: tsconfig缺=[${missingInTs}] vite缺=[${missingInVite}]\n`);
+  process.stdout.write(
+    `check-path-hygiene: ${ok ? "PASS" : "FAIL"} (fail=${failCount} warn=${warnCount})\n`,
+  );
+  if (r1Hits.length) process.stdout.write(`  R1 聚合桶嫌疑: ${r1Hits.join("; ")}\n`);
+  if (r3Hits.length)
+    process.stdout.write(`  R3 in-src 相对上跳（FAIL）: ${r3Hits.slice(0, 5).join("; ")}\n`);
+  if (r5Hits.length) process.stdout.write(`  R5 同目录别名: ${r5Hits.slice(0, 5).join("; ")}\n`);
+  if (r6Hits.length) process.stdout.write(`  R6 测试神桶: ${r6Hits.slice(0, 5).join("; ")}\n`);
+  process.stdout.write(`  R4 跨边界冻结: ${r4Count}/${baseline} ${r4Ok ? "OK" : "EXCEED"}\n`);
+  if (!consistencyOk)
+    process.stdout.write(`  一致性: tsconfig缺=[${missingInTs}] vite缺=[${missingInVite}]\n`);
 }
 
 process.exit(ok ? 0 : 1);

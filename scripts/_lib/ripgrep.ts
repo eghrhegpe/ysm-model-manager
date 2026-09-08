@@ -10,10 +10,9 @@
  *
  * 零依赖（仅 node:child_process / node:path / node:url）。
  */
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { getRoot } from './scan-files.ts';
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { getRoot } from "./scan-files.ts";
 
 // 注：ROOT 由 execFileSync 的 cwd 选项使用（见 rg()），不再单独存模块级常量
 
@@ -28,13 +27,14 @@ export function rg(pattern: string, paths: string | string[], globs: string[] | 
   // P1（code_review）：路径契约校验——传绝对路径给 rg 会让输出带绝对路径前缀，
   // 消费者 parseRgLine 按 `:` 切分拿错路径（Windows 盘符冒号尤其）；undefined/空数组
   // 会抛 TypeError 或误扫整个 ROOT。统一在入口拒绝，把编程错误与扫描失败分开。
-  if (!pattern) throw new Error('ripgrep: pattern 不能为空');
+  if (!pattern) throw new Error("ripgrep: pattern 不能为空");
   const targets = Array.isArray(paths) ? paths : [paths];
-  if (targets.length === 0) throw new Error('ripgrep: paths 为空，至少需要一个相对仓库根的路径');
-  const cmd = ['--no-heading', '-n', '--path-separator', '/', pattern];
-  for (const g of (globs || [])) cmd.push('-g', g);
+  if (targets.length === 0) throw new Error("ripgrep: paths 为空，至少需要一个相对仓库根的路径");
+  const cmd = ["--no-heading", "-n", "--path-separator", "/", pattern];
+  for (const g of globs || []) cmd.push("-g", g);
   for (const p of targets) {
-    if (typeof p !== 'string' || !p) throw new TypeError(`ripgrep: paths 元素必须为非空字符串（got ${typeof p}）`);
+    if (typeof p !== "string" || !p)
+      throw new TypeError(`ripgrep: paths 元素必须为非空字符串（got ${typeof p}）`);
     // P1（code_review）：显式拒绝绝对路径——path.join(ROOT, abs) 在 Windows 不重置、
     // path.relative 又可能还原出盘符路径，导致 rg 实际去扫系统目录（os error 32/5 实证）。
     // isAbsolute 才是可靠判定：rg 输出须为相对仓库根路径，parseRgLine 才能正确切分。
@@ -45,17 +45,26 @@ export function rg(pattern: string, paths: string | string[], globs: string[] | 
     // cwd 用 getRoot()（code_review P2）：paths 按文档契约相对仓库根——若不设 cwd，
     // rg 会按调用方 process.cwd() 解析相对路径，非 ROOT 目录调用会扫错树 → rgSafe 假绿。
     // 注意不能引用已删除的模块级 ROOT 常量（ReferenceError 会被 catch 成 status=unknown）
-    const out = execFileSync('rg', cmd, { cwd: getRoot(), encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
-    if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());
+    const out = execFileSync("rg", cmd, {
+      cwd: getRoot(),
+      encoding: "utf-8",
+      timeout: 30000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (out.trim())
+      return out
+        .trim()
+        .split("\n")
+        .filter((l) => l.trim());
     return []; // rg 退出码 1：无匹配
   } catch (e) {
     const err = e as Error & { status?: number; code?: string };
     // 退出码 1 = 无匹配（正常返回空）；其余视为扫描不可信，向上抛错让调用方知情
     if (err.status === 1) return [];
-    if (err.code === 'ENOENT') {
+    if (err.code === "ENOENT") {
       throw new Error(`ripgrep(rg) 未安装或不在 PATH，无法执行扫描：pattern=${pattern}`);
     }
-    throw new Error(`ripgrep 执行失败（status=${err.status ?? 'unknown'}）：pattern=${pattern}`);
+    throw new Error(`ripgrep 执行失败（status=${err.status ?? "unknown"}）：pattern=${pattern}`);
   }
 }
 

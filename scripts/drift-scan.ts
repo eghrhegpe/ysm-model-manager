@@ -26,7 +26,7 @@
  * 切片/路径操作、错误链断裂、资源泄漏、重复实现等跨轨不一致，一次扫出。
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
@@ -60,18 +60,23 @@ function readSrc(path: string) {
 }
 
 /** 在内容中搜索正则，返回所有匹配行 */
-function findMatches(content: string, regex: RegExp, filePath: string, filter: ((line: string, content: string, lineIdx: number) => boolean) | undefined) {
+function findMatches(
+  content: string,
+  regex: RegExp,
+  filePath: string,
+  filter: ((line: string, content: string, lineIdx: number) => boolean) | undefined,
+) {
   const results: any[] = [];
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i]!.match(regex);
+    const m = lines[i]?.match(regex);
     if (m) {
       // 应用过滤器
-      if (filter && !filter(lines[i]!.trim(), content, i)) continue;
+      if (filter && !filter(lines[i]?.trim(), content, i)) continue;
       results.push({
         file: relative(ROOT, filePath),
         line: i + 1,
-        text: lines[i]!.trim(),
+        text: lines[i]?.trim(),
         match: m[0],
       });
     }
@@ -98,7 +103,7 @@ const RULES = [
     regex: /os\.WriteFile\([^,]+,[^,]+,\s*(?:0o)?0644\)/,
     exclude: [/test/],
     // 排除 heredoc 字符串（如 GitHub Actions workflow）
-    filter: (line: string) => !line.startsWith("os.WriteFile(\"index.json\""),
+    filter: (line: string) => !line.startsWith('os.WriteFile("index.json"'),
   },
   {
     id: "HARDCODED_READ_LIMIT",
@@ -113,12 +118,13 @@ const RULES = [
   {
     id: "INLINE_BAN_STRIP",
     severity: "error",
-    desc: "内联 .ban 后缀剥离 [:len(name)-4] 或 [:len(name)-len(\".ban\")]（应使用 types.StripBanSuffix）",
+    desc: '内联 .ban 后缀剥离 [:len(name)-4] 或 [:len(name)-len(".ban")]（应使用 types.StripBanSuffix）',
     glob: "*.go",
     regex: /\[:len\([^)]+\)-(?:4|len\("\.ban"\))\]/,
     exclude: [/types\/extensions\.go/, /test/],
     // 排除注释行和函数定义本身
-    filter: (line: string) => !line.startsWith("//") && !line.startsWith("return name[:len(name)-4]"),
+    filter: (line: string) =>
+      !line.startsWith("//") && !line.startsWith("return name[:len(name)-4]"),
   },
   {
     id: "INLINE_ILLEGAL_CHARS",
@@ -168,10 +174,10 @@ const RULES = [
     exclude: [/fsutil\/copy\.go/, /test/],
     // 薄包装降噪：函数体若委托 fsutil.CopyDirRecursive 即为已收敛适配器（ADR-044），
     // 仅标记真正独立实现（如 importer.go 的原子整树复制，语义独特暂不可收敛）。
-    filter: (line: string, content: string, lineIdx: number) => {
+    filter: (_line: string, content: string, lineIdx: number) => {
       const lines = content.split("\n");
       for (let i = lineIdx; i < Math.min(lineIdx + 20, lines.length); i++) {
-        if (lines[i]!.includes("fsutil.CopyDirRecursive")) return false;
+        if (lines[i]?.includes("fsutil.CopyDirRecursive")) return false;
       }
       return true;
     },
@@ -207,7 +213,8 @@ const RULES = [
       if (trimmed.startsWith("//")) return false;
 
       // 排除 return os.Open(...) 模式（调用方负责 close）
-      if (trimmed.startsWith("return os.Open") || trimmed.startsWith("return os.Create")) return false;
+      if (trimmed.startsWith("return os.Open") || trimmed.startsWith("return os.Create"))
+        return false;
 
       // 提取变量名（f, err := os.Open(...)）
       const varMatch = trimmed.match(/^(\w+),\s*(?:err|_)\s*:=\s*os\.(Open|Create)\(/);
@@ -216,11 +223,11 @@ const RULES = [
 
       // 检查当前行及后 15 行是否有 defer close 或显式 close
       for (let i = lineIdx; i < Math.min(lineIdx + 16, lines.length); i++) {
-        if (lines[i]!.includes(`${varName}.Close()`)) {
+        if (lines[i]?.includes(`${varName}.Close()`)) {
           return false;
         }
         // 所有权转移豁免：传给 ReadLimitedEntry 等自管 close 的封装函数（内部 defer Close）
-        if (lines[i]!.includes(`ReadLimitedEntry(${varName}`)) {
+        if (lines[i]?.includes(`ReadLimitedEntry(${varName}`)) {
           return false;
         }
       }
@@ -242,7 +249,7 @@ const RULES = [
     glob: "*.ts",
     regex: /\b(\w+)\s*=\s*(?:window\.)?(?:setInterval|setTimeout)\(/,
     exclude: [/test/],
-    filter: (line: string, content: string, lineIdx: number) => {
+    filter: (line: string, content: string, _lineIdx: number) => {
       const trimmed = line.trim();
       // 排除注释行
       if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false;
@@ -258,8 +265,8 @@ const RULES = [
       // 3. 批量清理：timers.forEach(clearTimeout) 或 arr.forEach(t => clearTimeout(t))
       const clearRegex = new RegExp(
         `clear(?:Timeout|Interval)\\s*\\([^)]*\\b${varName}\\b[^)]*\\)` +
-        `|forEach\\s*\\(\\s*clear(?:Timeout|Interval)\\s*\\)` +
-        `|forEach\\s*\\([^)]*=>\\s*clear(?:Timeout|Interval)\\s*\\([^)]*\\b${varName}\\b`
+          `|forEach\\s*\\(\\s*clear(?:Timeout|Interval)\\s*\\)` +
+          `|forEach\\s*\\([^)]*=>\\s*clear(?:Timeout|Interval)\\s*\\([^)]*\\b${varName}\\b`,
       );
       return !clearRegex.test(content);
     },
@@ -339,7 +346,9 @@ function formatOutput(findings: any[], json: boolean) {
 
   const total = findings.length;
   console.log(`\n📊 总计: ${total} 处漂移`);
-  console.log(`   严重: ${bySeverity.error.length} | 警告: ${bySeverity.warn.length} | 提示: ${bySeverity.info.length}`);
+  console.log(
+    `   严重: ${bySeverity.error.length} | 警告: ${bySeverity.warn.length} | 提示: ${bySeverity.info.length}`,
+  );
 }
 
 // ===== 入口 =====

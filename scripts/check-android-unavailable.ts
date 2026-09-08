@@ -42,9 +42,18 @@ import { ROOT } from "./_lib/scan-files.ts";
 
 /** 直接执行判定：被 import（单测）时不跑 main，避免顶层 process.exit 提前终止测试进程 */
 export const invokedDirectly = (): boolean =>
-  Boolean(process.argv[1]) && resolve(process.argv[1] as string) === resolve(fileURLToPath(import.meta.url));
+  Boolean(process.argv[1]) &&
+  resolve(process.argv[1] as string) === resolve(fileURLToPath(import.meta.url));
 
-const BINDINGS_APP_TS = join(ROOT, "frontend", "bindings", "ysm-model-manager", "internal", "app", "app.ts");
+const BINDINGS_APP_TS = join(
+  ROOT,
+  "frontend",
+  "bindings",
+  "ysm-model-manager",
+  "internal",
+  "app",
+  "app.ts",
+);
 const PLATFORM_WEB_TS = join(ROOT, "frontend", "src", "backend", "platform-web.ts");
 const PLATFORM_WEB_TEST_TS = join(ROOT, "frontend", "src", "backend", "platform-web.test.ts");
 const GO_APP_PKG = "./internal/app/";
@@ -170,7 +179,8 @@ function listGoFiles(goos?: string): { files: string[] } | { error: string } {
     env: goos ? { ...process.env, GOOS: goos } : process.env,
   });
   if (res.error) return { error: `go list 执行失败: ${res.error.message}` };
-  if (res.status !== 0) return { error: `go list 退出码 ${res.status}: ${(res.stderr ?? "").trim().slice(0, 200)}` };
+  if (res.status !== 0)
+    return { error: `go list 退出码 ${res.status}: ${(res.stderr ?? "").trim().slice(0, 200)}` };
   // 输出形如 `[a.go b.go]`
   const files = (res.stdout ?? "")
     .trim()
@@ -237,7 +247,9 @@ async function collect(report: Report): Promise<void> {
       const androidSet = new Set(android.files);
       const missing = new Set<string>();
       for (const file of desktop.files.filter((f) => !androidSet.has(f))) {
-        const content = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(() => "");
+        const content = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(
+          () => "",
+        );
         for (const name of extractAppMethods(content)) {
           if (bindingSet.has(name) && !blacklist.has(name)) missing.add(name);
         }
@@ -258,12 +270,16 @@ async function collect(report: Report): Promise<void> {
 
   // ── T3：命名语义可疑（对新增命名生效）──
   report.suspects = dedupeSorted(
-    bindings.filter((name) => !blacklist.has(name) && DESKTOP_HINT_PATTERNS.some((re) => re.test(name))),
+    bindings.filter(
+      (name) => !blacklist.has(name) && DESKTOP_HINT_PATTERNS.some((re) => re.test(name)),
+    ),
   );
 
   // ── T4：反向漏检 ──
   report.stale = dedupeSorted([...blacklist].filter((name) => !bindingSet.has(name)));
-  report.baselineRemoved = dedupeSorted([...BASELINE_DESKTOP_ONLY].filter((name) => !blacklist.has(name)));
+  report.baselineRemoved = dedupeSorted(
+    [...BASELINE_DESKTOP_ONLY].filter((name) => !blacklist.has(name)),
+  );
 
   const testList = readTestBlacklist(await readFile(PLATFORM_WEB_TEST_TS, "utf-8").catch(() => ""));
   if (testList.size > 0) {
@@ -287,20 +303,28 @@ function printText(r: Report): void {
     console.error("请在 frontend/src/backend/platform-web.ts 的 ANDROID_UNAVAILABLE 中添加。");
   }
   if (r.suspects.length > 0) {
-    console.warn(`[android-guard] ℹ️ 命名疑似桌面专属但未登记（${r.suspects.length}）：${r.suspects.join(", ")}`);
+    console.warn(
+      `[android-guard] ℹ️ 命名疑似桌面专属但未登记（${r.suspects.length}）：${r.suspects.join(", ")}`,
+    );
   }
   if (r.stale.length > 0) {
-    console.warn(`[android-guard] ℹ️ 黑名单项已从 bindings 消失（Go 侧可能已删）：${r.stale.join(", ")}`);
+    console.warn(
+      `[android-guard] ℹ️ 黑名单项已从 bindings 消失（Go 侧可能已删）：${r.stale.join(", ")}`,
+    );
   }
   if (r.baselineRemoved.length > 0) {
-    console.warn(`[android-guard] ℹ️ 基线项被移出黑名单（确认是否有意）：${r.baselineRemoved.join(", ")}`);
+    console.warn(
+      `[android-guard] ℹ️ 基线项被移出黑名单（确认是否有意）：${r.baselineRemoved.join(", ")}`,
+    );
   }
   if (r.testDrift.length > 0) {
-    console.warn(`[android-guard] ℹ️ platform-web.test.ts 硬编码名单漂移：${r.testDrift.join(", ")}`);
+    console.warn(
+      `[android-guard] ℹ️ platform-web.test.ts 硬编码名单漂移：${r.testDrift.join(", ")}`,
+    );
   }
   if (r.missingAtCompile.length === 0 && r.guardedAtRuntime.length === 0) {
     console.log(
-      `[android-guard] ✅ ${r.scanned} bindings / ${r.blacklistSize} 黑名单，无硬失败` + (r.degraded ? "（降级模式）" : ""),
+      `[android-guard] ✅ ${r.scanned} bindings / ${r.blacklistSize} 黑名单，无硬失败${r.degraded ? "（降级模式）" : ""}`,
     );
   }
 }
@@ -329,13 +353,16 @@ async function main(): Promise<number> {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
       // T0：bindings 是 git 入库文件，缺失属异常——除非显式 --allow-missing
-      const msg = "[android-guard] ❌ bindings/app.ts 或 platform-web.ts 缺失（二者均入库，属异常）";
+      const msg =
+        "[android-guard] ❌ bindings/app.ts 或 platform-web.ts 缺失（二者均入库，属异常）";
       if (allowMissing) {
         console.log(`${msg}——--allow-missing 已放行`);
         return 0;
       }
       console.error(msg);
-      console.error("  先跑 `cd frontend && npm run generate:bindings`；CI 冷启动可用 --allow-missing 逃生。");
+      console.error(
+        "  先跑 `cd frontend && npm run generate:bindings`；CI 冷启动可用 --allow-missing 逃生。",
+      );
       return 1;
     }
     console.error("[android-guard] 检测异常:", err);

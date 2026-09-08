@@ -22,14 +22,14 @@
  *
  * 退出码：默认 0（提示工具，WARN 不阻断）；--strict 且存在违规 → 1。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { SCRIPTS_DIR, collectScripts } from './_lib/collect-scripts.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { collectScripts, SCRIPTS_DIR } from "./_lib/collect-scripts.ts";
 
-const LIB_DIR = path.join(SCRIPTS_DIR, '_lib');
+const LIB_DIR = path.join(SCRIPTS_DIR, "_lib");
 
-const JSON_OUT = process.argv.includes('--json');
-const STRICT = process.argv.includes('--strict');
+const JSON_OUT = process.argv.includes("--json");
+const STRICT = process.argv.includes("--strict");
 
 /**
  * 规则表：_lib 模块 → 手搓特征 / 采用特征 / 迁移建议。
@@ -38,38 +38,46 @@ const STRICT = process.argv.includes('--strict');
  */
 const RULES = [
   {
-    lib: 'scan-files.ts',
-    capability: '文件遍历 / 仓库根定位',
-    smells: [/^function (?:walk|walkDir|collectFiles|scanDir|collectScripts)\s*\(/m, /^const (?:walk|walkDir)\s*=/m],
+    lib: "scan-files.ts",
+    capability: "文件遍历 / 仓库根定位",
+    smells: [
+      /^function (?:walk|walkDir|collectFiles|scanDir|collectScripts)\s*\(/m,
+      /^const (?:walk|walkDir)\s*=/m,
+    ],
     advice: "import { walk, ROOT } from './_lib/scan-files.ts'",
   },
   {
-    lib: 'parse-args.ts',
-    capability: 'CLI 参数解析（含 unknown 白名单拦截）',
+    lib: "parse-args.ts",
+    capability: "CLI 参数解析（含 unknown 白名单拦截）",
     smells: [/^function (?:parseArgs|parseCli)\s*\(/m, /^const parseArgs\s*=/m],
     advice: "import { parseArgs } from './_lib/parse-args.ts'",
   },
   {
-    lib: 'frontmatter.ts',
-    capability: 'YAML frontmatter 解析',
-    smells: [/^function (?:parseFrontmatter|readFrontmatter|splitFrontmatter|parseMeta)\s*\(/m, /split\(\s*['"]---['"]\s*\)/],
+    lib: "frontmatter.ts",
+    capability: "YAML frontmatter 解析",
+    smells: [
+      /^function (?:parseFrontmatter|readFrontmatter|splitFrontmatter|parseMeta)\s*\(/m,
+      /split\(\s*['"]---['"]\s*\)/,
+    ],
     advice: "import { parseFrontmatter } from './_lib/frontmatter.ts'",
   },
   {
-    lib: 'source-graph.ts',
-    capability: '源码符号 / 顶层声明提取',
-    smells: [/^function (?:getExportedSymbols|getGoExportedSymbols|getJsExportedSymbols|goTopFuncs|tsTopDecls|collectSymbols)\s*\(/m],
+    lib: "source-graph.ts",
+    capability: "源码符号 / 顶层声明提取",
+    smells: [
+      /^function (?:getExportedSymbols|getGoExportedSymbols|getJsExportedSymbols|goTopFuncs|tsTopDecls|collectSymbols)\s*\(/m,
+    ],
     advice: "import { getExportedSymbolsAny, topDeclsAny } from './_lib/source-graph.ts'",
   },
   {
-    lib: 'to-posix.ts',
-    capability: 'Windows 反斜杠 → 正斜杠归一',
+    lib: "to-posix.ts",
+    capability: "Windows 反斜杠 → 正斜杠归一",
     smells: [/\.replace\(\/\\\\\/g,\s*['"]\/['"]\)/],
     advice: "import { toPosix } from './_lib/to-posix.ts'",
   },
   {
-    lib: 'git-ref.ts',
-    capability: 'git ref / commit oid 解析',
+    lib: "git-ref.ts",
+    capability: "git ref / commit oid 解析",
     smells: [/^function (?:resolveRef|toOid|parseRef|gitRef)\s*\(/m],
     advice: "import { resolveRef } from './_lib/git-ref.ts'",
   },
@@ -77,14 +85,20 @@ const RULES = [
 
 /** 采用特征：脚本 import 了该模块即视为已接入（自动豁免同规则的 smell）。 */
 function adoptedRe(lib: string) {
-  return new RegExp(`_lib[\\\\/]${lib.replace('.', '\\.')}`);
+  return new RegExp(`_lib[\\\\/]${lib.replace(".", "\\.")}`);
 }
 
 /** 收集 _lib 共享模块（排除测试）。 */
 function collectLibs() {
   if (!fs.existsSync(LIB_DIR)) return [];
-  return fs.readdirSync(LIB_DIR)
-    .filter((f) => (f.endsWith('.mjs') || f.endsWith('.ts')) && !f.endsWith('.test.mjs') && !f.endsWith('.test.ts'))
+  return fs
+    .readdirSync(LIB_DIR)
+    .filter(
+      (f) =>
+        (f.endsWith(".mjs") || f.endsWith(".ts")) &&
+        !f.endsWith(".test.mjs") &&
+        !f.endsWith(".test.ts"),
+    )
     .sort();
 }
 
@@ -99,7 +113,7 @@ function adoptionTable(files: string[], texts: Map<string, string>, libs: string
 
 function main() {
   const files = collectScripts();
-  const texts = new Map(files.map((f) => [f, fs.readFileSync(path.join(SCRIPTS_DIR, f), 'utf8')]));
+  const texts = new Map(files.map((f) => [f, fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8")]));
   const libs = collectLibs();
 
   // 违规：手搓了某模块能覆盖的能力，却未 import 该模块
@@ -111,7 +125,12 @@ function main() {
       if (adopted.test(text)) continue; // 已接入共享层 → 豁免
       const hit = rule.smells.find((re) => re.test(text));
       if (hit) {
-        violations.push({ script: f, lib: rule.lib, capability: rule.capability, advice: rule.advice });
+        violations.push({
+          script: f,
+          lib: rule.lib,
+          capability: rule.capability,
+          advice: rule.advice,
+        });
       }
     }
   }
@@ -121,45 +140,56 @@ function main() {
 
   if (JSON_OUT) {
     const ok = STRICT ? violations.length === 0 : true;
-    console.log(JSON.stringify({
-      _summary: {
-        scripts: files.length,
-        libs: libs.length,
-        violations: violations.length,
-        unusedLibs: unused.length,
-        ok,
-      },
-      adoption: table.map(({ lib, users }) => ({ lib, users })),
-      violations,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: {
+            scripts: files.length,
+            libs: libs.length,
+            violations: violations.length,
+            unusedLibs: unused.length,
+            ok,
+          },
+          adoption: table.map(({ lib, users }) => ({ lib, users })),
+          violations,
+        },
+        null,
+        2,
+      ),
+    );
     if (STRICT && violations.length) process.exit(1);
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' _lib 共享层采用率检查 (check-lib-adoption)');
-  console.log('══════════════════════════════════════');
-  console.log(`扫描 ${files.length} 个脚本 × ${libs.length} 个 _lib 模块，违规 ${violations.length} 条`);
-  console.log('──────────────────────────────────────');
+  console.log("══════════════════════════════════════");
+  console.log(" _lib 共享层采用率检查 (check-lib-adoption)");
+  console.log("══════════════════════════════════════");
+  console.log(
+    `扫描 ${files.length} 个脚本 × ${libs.length} 个 _lib 模块，违规 ${violations.length} 条`,
+  );
+  console.log("──────────────────────────────────────");
   if (violations.length) {
-    console.log('【有能力未用】手搓了 _lib 已提供的能力，却未 import：');
+    console.log("【有能力未用】手搓了 _lib 已提供的能力，却未 import：");
     for (const v of violations) {
       console.log(`⚠ ${v.script}：手搓「${v.capability}」→ ${v.advice}`);
     }
   } else {
-    console.log('✅ 未发现「有能力未用」的脚本。');
+    console.log("✅ 未发现「有能力未用」的脚本。");
   }
 
-  console.log('\n【采用率全景】被引用脚本数 / 脚本总数');
+  console.log("\n【采用率全景】被引用脚本数 / 脚本总数");
   for (const { lib, users } of table) {
-    const bar = users === 0 ? '—' : '█'.repeat(Math.min(20, Math.max(1, Math.round((users / files.length) * 20))));
+    const bar =
+      users === 0
+        ? "—"
+        : "█".repeat(Math.min(20, Math.max(1, Math.round((users / files.length) * 20))));
     console.log(`  ${lib.padEnd(30)} ${String(users).padStart(3)}  ${bar}`);
   }
   if (unused.length) {
-    console.log(`\n⚠ 零引用模块 ${unused.length} 个：${unused.map((u) => u.lib).join(', ')}`);
-    console.log('  （可能是写得过早的抽象，或已被取代——建议评估归档）');
+    console.log(`\n⚠ 零引用模块 ${unused.length} 个：${unused.map((u) => u.lib).join(", ")}`);
+    console.log("  （可能是写得过早的抽象，或已被取代——建议评估归档）");
   }
-  console.log('\n（WARN 不阻断；加 --strict 后退出码 1）');
+  console.log("\n（WARN 不阻断；加 --strict 后退出码 1）");
   if (STRICT && violations.length) process.exit(1);
 }
 

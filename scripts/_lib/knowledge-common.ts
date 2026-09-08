@@ -9,19 +9,19 @@
  * 依赖：node:path / _lib/proc.ts（run）/ _lib/frontmatter.ts（getScalar）。
  * 零外部依赖。
  */
-import path from 'node:path';
-import { run } from './proc.ts';
-import { getScalar } from './frontmatter.ts';
+import path from "node:path";
+import { getScalar } from "./frontmatter.ts";
+import { run } from "./proc.ts";
 
 /** 知识卡必填字段（kind/name/category/tier）——两类漂移检查器共用同一枚举与判定。 */
-export const REQUIRED_CARD_FIELDS = ['kind', 'name', 'category', 'tier'] as const;
+export const REQUIRED_CARD_FIELDS = ["kind", "name", "category", "tier"] as const;
 
 /**
  * 去除文件开头的 UTF-8 BOM。
  * frontmatter 锚定 `^---` 前须先剥 BOM，否则带 BOM 的知识卡整卡被静默跳过（假绿）。
  */
 export function stripBom(text: string): string {
-  return text.replace(/^\uFEFF/, '');
+  return text.replace(/^\uFEFF/, "");
 }
 
 /**
@@ -34,16 +34,21 @@ export function hasFrontmatterDelimiter(text: string): boolean {
 
 /** doc/knowledge 下未跟踪草稿集合（git ls-files --others）。草稿不参与漂移打分——
  *  fail-open：git 不可用时返回空集不阻断。 */
-export function getUntrackedCards(cwd: string, gitPath = 'docs/knowledge'): Set<string> {
-  const r = run('git', ['ls-files', '--others', '--exclude-standard', '--', gitPath], { cwd });
+export function getUntrackedCards(cwd: string, gitPath = "docs/knowledge"): Set<string> {
+  const r = run("git", ["ls-files", "--others", "--exclude-standard", "--", gitPath], { cwd });
   if (!r.ok) return new Set();
-  return new Set(r.out.split('\n').filter(Boolean).map((p) => path.basename(p)));
+  return new Set(
+    r.out
+      .split("\n")
+      .filter(Boolean)
+      .map((p) => path.basename(p)),
+  );
 }
 
 /** 返回知识卡缺失的必填字段清单（value 为 undefined 或空串即视为缺失）。fm 为 parseFrontmatter 产出的 frontmatter 块字符串。 */
 export function missingRequiredCardFields(fm: string | null): string[] {
   return REQUIRED_CARD_FIELDS.filter((k) => {
     const v = getScalar(fm, k);
-    return v === undefined || v === '';
+    return v === undefined || v === "";
   });
 }

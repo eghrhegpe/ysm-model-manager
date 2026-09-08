@@ -15,24 +15,24 @@
  *   node scripts/_lib/gen-cmds.ts        # 逐行输出命令清单（sh 侧管道消费）
  */
 export const GEN_CMDS: string[] = [
-  'gen-docs-index.ts',
-  'event-graph.ts',
-  'gen-knowledge-index.ts',
-  'build-novel-index.ts',
-  'gen-vitepress-sidebar.ts',
-  'gen-knowledge-h1.ts',
-  'gen-knowledge-symbols.ts',
-  'gen-knowledge-adr.ts',
-  'gen-knowledge-tests.ts',
-  'gen-knowledge-autogen.ts',
-  'gen-routes.ts',
-  'gen-routes-quick.ts',
-  'gen-cli-doc.ts',
-  'gen-cli-completion.ts',
-  'generate-locale-json.ts',
+  "gen-docs-index.ts",
+  "event-graph.ts",
+  "gen-knowledge-index.ts",
+  "build-novel-index.ts",
+  "gen-vitepress-sidebar.ts",
+  "gen-knowledge-h1.ts",
+  "gen-knowledge-symbols.ts",
+  "gen-knowledge-adr.ts",
+  "gen-knowledge-tests.ts",
+  "gen-knowledge-autogen.ts",
+  "gen-routes.ts",
+  "gen-routes-quick.ts",
+  "gen-cli-doc.ts",
+  "gen-cli-completion.ts",
+  "generate-locale-json.ts",
 ];
 
 // 直接运行时逐行输出（sh 侧 node scripts/_lib/gen-cmds.ts | while read）
-if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('_lib/gen-cmds.ts')) {
+if (process.argv[1]?.replace(/\\/g, "/").endsWith("_lib/gen-cmds.ts")) {
   for (const c of GEN_CMDS) console.log(c);
 }

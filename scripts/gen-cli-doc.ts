@@ -17,45 +17,50 @@
  *
  * 退出码：--check 过期 → 1；否则 0（WARN 不阻断）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.ts';
-import { parseCliCommands, CAT_NAMES, CAT_ORDER, type CliCommand } from './_lib/cli-registry.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { CAT_NAMES, CAT_ORDER, type CliCommand, parseCliCommands } from "./_lib/cli-registry.ts";
+import { ROOT, readText, writeText } from "./_lib/scan-files.ts";
 
-const OUT = path.join(ROOT, 'docs', 'cli-commands.md');
+const OUT = path.join(ROOT, "docs", "cli-commands.md");
 
-const CHECK = process.argv.includes('--check');
-const JSON_OUT = process.argv.includes('--json');
+const CHECK = process.argv.includes("--check");
+const JSON_OUT = process.argv.includes("--json");
 
 /* ---------------- 渲染 ---------------- */
 
 function flagTypeLabel(type: string) {
-  return ({ string: 'string', bool: 'bool', int: 'int', float64: 'float' } as Record<string, string>)[type] || type;
+  return (
+    ({ string: "string", bool: "bool", int: "int", float64: "float" } as Record<string, string>)[
+      type
+    ] || type
+  );
 }
 
 function renderFlags(flags: Array<{ flag: string; type: string; help: string; def?: string }>) {
-  if (flags.length === 0) return '';
+  if (flags.length === 0) return "";
   const rows = flags
     .map((fl) => {
-      const def = fl.def ? `（默认: ${fl.def}）` : '';
+      const def = fl.def ? `（默认: ${fl.def}）` : "";
       const help = fl.help ? ` ${def}— ${fl.help}` : def;
-      return `| \`--${fl.flag}\` | ${flagTypeLabel(fl.type)}${help || ''} |`;
+      return `| \`--${fl.flag}\` | ${flagTypeLabel(fl.type)}${help || ""} |`;
     })
-    .join('\n');
+    .join("\n");
   return `\n| 选项 | 类型 | 说明 |\n|------|------|------|\n${rows}\n`;
 }
 
 function renderSubcommands(cmdName: string, subs: Array<{ name: string; desc: string }>) {
-  if (subs.length === 0) return '';
-  const rows = subs
-    .map((s) => `| \`${s.name}\` | ${s.desc || '—'} |`)
-    .join('\n');
+  if (subs.length === 0) return "";
+  const rows = subs.map((s) => `| \`${s.name}\` | ${s.desc || "—"} |`).join("\n");
   return `\n**子命令**（用法：\`app --cli --files-root <路径> ${cmdName} <子命令> [选项...]\`）：\n\n| 子命令 | 说明 |\n|--------|------|\n${rows}\n`;
 }
 
 function renderCommands(commands: CliCommand[]) {
   const byCat: Record<string, any[]> = {};
-  for (const c of commands) (byCat[c.category] ||= []).push(c);
+  for (const c of commands) {
+    if (!byCat[c.category]) byCat[c.category] = [];
+    byCat[c.category].push(c);
+  }
 
   const parts: string[] = [];
   for (const cat of CAT_ORDER) {
@@ -65,15 +70,15 @@ function renderCommands(commands: CliCommand[]) {
     for (const c of list) {
       parts.push(`### \`${c.name}\``);
       parts.push(c.description);
-      parts.push('');
+      parts.push("");
       const usage = `app --cli --files-root <路径> ${c.name} [选项...]`;
       parts.push(`\`\`\`bash\n${usage}\n\`\`\``);
       parts.push(renderSubcommands(c.name, c.subcommands));
       parts.push(renderFlags(c.flags));
-      parts.push('');
+      parts.push("");
     }
   }
-  return parts.join('\n');
+  return parts.join("\n");
 }
 
 /* ---------------- 主流程 ---------------- */
@@ -96,16 +101,22 @@ ${body}
 
 let rc = 0;
 if (CHECK) {
-  const onDisk = fs.existsSync(OUT) ? readText(OUT) : '';
+  const onDisk = fs.existsSync(OUT) ? readText(OUT) : "";
   if (onDisk !== md) {
     rc = 1;
-    if (!JSON_OUT) console.error(`[gen-cli-doc] docs/cli-commands.md 过期，运行 \`node scripts/gen-cli-doc.ts\` 刷新。`);
+    if (!JSON_OUT)
+      console.error(
+        `[gen-cli-doc] docs/cli-commands.md 过期，运行 \`node scripts/gen-cli-doc.ts\` 刷新。`,
+      );
   } else if (!JSON_OUT) {
-    console.log('[gen-cli-doc] docs/cli-commands.md 最新。');
+    console.log("[gen-cli-doc] docs/cli-commands.md 最新。");
   }
 } else {
   writeText(OUT, md);
-  if (!JSON_OUT) console.log(`[gen-cli-doc] 已写入 ${path.relative(ROOT, OUT)}（${commands.length} 个顶层命令）`);
+  if (!JSON_OUT)
+    console.log(
+      `[gen-cli-doc] 已写入 ${path.relative(ROOT, OUT)}（${commands.length} 个顶层命令）`,
+    );
 }
 
 if (JSON_OUT) {

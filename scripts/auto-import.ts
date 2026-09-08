@@ -36,24 +36,32 @@
  * 退出码：默认 0（提示工具）；--strict 且存在缺失建议 → 1。
  * 设计意图：自动导入修复工具
  */
-import fs from 'node:fs';
-import { SRC_DIR, relPosix } from './_lib/scan-files.ts';
-import { run } from './auto-import-detect.ts';
-import { applyFixes, fmtText, fmtJson } from './auto-import-fix.ts';
+import fs from "node:fs";
+import { relPosix, SRC_DIR } from "./_lib/scan-files.ts";
+import { run } from "./auto-import-detect.ts";
+import { applyFixes, fmtJson, fmtText } from "./auto-import-fix.ts";
 
 // ── CLI ─────────────────────────────────────────────
 
 const ARGS = process.argv.slice(2);
-if (ARGS.includes('--help') || ARGS.includes('-h')) { console.log('用法: node scripts/auto-import.ts [文件...] [--include-js|--strict|--fix|--json|--watch]'); process.exit(0); }
-const KNOWN_FLAGS = new Set(['--include-js', '--strict', '--fix', '--json', '--watch']);
-const unknown = ARGS.filter((a) => a.startsWith('--') && !KNOWN_FLAGS.has(a));
-if (unknown.length) { console.error('[FAIL] 未知参数: ' + unknown.join(', ') + '（--help 查看用法）'); process.exit(1); }
-const WATCH = ARGS.includes('--watch');
-const INCLUDE_JS = ARGS.includes('--include-js');
-const STRICT = ARGS.includes('--strict');
-const FIX = ARGS.includes('--fix');
-const JSON_OUT = ARGS.includes('--json');
-const TARGETS = ARGS.filter((a) => !a.startsWith('--'));
+if (ARGS.includes("--help") || ARGS.includes("-h")) {
+  console.log(
+    "用法: node scripts/auto-import.ts [文件...] [--include-js|--strict|--fix|--json|--watch]",
+  );
+  process.exit(0);
+}
+const KNOWN_FLAGS = new Set(["--include-js", "--strict", "--fix", "--json", "--watch"]);
+const unknown = ARGS.filter((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
+if (unknown.length) {
+  console.error(`[FAIL] 未知参数: ${unknown.join(", ")}（--help 查看用法）`);
+  process.exit(1);
+}
+const WATCH = ARGS.includes("--watch");
+const INCLUDE_JS = ARGS.includes("--include-js");
+const STRICT = ARGS.includes("--strict");
+const FIX = ARGS.includes("--fix");
+const JSON_OUT = ARGS.includes("--json");
+const TARGETS = ARGS.filter((a) => !a.startsWith("--"));
 
 function main() {
   const opts = { srcDir: SRC_DIR, targets: TARGETS, includeJs: INCLUDE_JS };
@@ -62,12 +70,14 @@ function main() {
     const { fixed, skipped } = applyFixes(result.suggestions);
     // 写回后重跑一轮，输出修复后状态（幂等自检：第二次应无新增）
     const after = run(opts);
-    process.stdout.write(`--fix：写入 ${fixed} 行 import（歧义跳过 ${skipped}），修复后剩余 ${after.totals.totalMissing} 条建议。\n`);
-    process.stdout.write((JSON_OUT ? fmtJson(after) : fmtText(after, SRC_DIR)) + '\n');
+    process.stdout.write(
+      `--fix：写入 ${fixed} 行 import（歧义跳过 ${skipped}），修复后剩余 ${after.totals.totalMissing} 条建议。\n`,
+    );
+    process.stdout.write(`${JSON_OUT ? fmtJson(after) : fmtText(after, SRC_DIR)}\n`);
     if (STRICT && after.totals.totalMissing > 0) process.exit(1);
     return;
   }
-  process.stdout.write((JSON_OUT ? fmtJson(result) : fmtText(result, SRC_DIR)) + '\n');
+  process.stdout.write(`${JSON_OUT ? fmtJson(result) : fmtText(result, SRC_DIR)}\n`);
   if (STRICT && result.totals.totalMissing > 0) process.exit(1);
 }
 
@@ -79,7 +89,7 @@ if (WATCH) {
   const rerun = () => {
     clearTimeout(timer!);
     timer = setTimeout(() => {
-      console.log('\n--- 重扫 ---');
+      console.log("\n--- 重扫 ---");
       main();
     }, 300);
   };

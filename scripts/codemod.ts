@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * codemod.ts — AST 感知的代码批量重构工具（基于 ts-morph）。
  *
@@ -38,16 +39,16 @@
  * 退出码：0（成功）/ 1（失败）。
  */
 
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import fs from 'node:fs';
-import path from 'node:path';
-import { toPosix } from './_lib/to-posix.ts';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { ROOT } from "./_lib/scan-files.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
-const FRONTEND = path.join(ROOT, 'frontend');
-const require_ = createRequire(path.join(FRONTEND, 'package.json'));
-const TS_CONFIG = path.join(FRONTEND, 'tsconfig.json');
+const FRONTEND = path.join(ROOT, "frontend");
+const require_ = createRequire(path.join(FRONTEND, "package.json"));
+const TS_CONFIG = path.join(FRONTEND, "tsconfig.json");
 const FILESELF = fileURLToPath(import.meta.url);
 
 // ts-morph 惰性加载：只有 rename/move/add-param 执行路径才 require。
@@ -60,22 +61,22 @@ function ensureTsMorph() {
   if (project) return;
   if (!fs.existsSync(TS_CONFIG)) {
     console.error(`❌ 未找到 tsconfig: ${TS_CONFIG}`);
-    console.error('请在项目根目录运行此脚本');
+    console.error("请在项目根目录运行此脚本");
     process.exit(1);
   }
   try {
-    ({ Project, SyntaxKind } = require_('ts-morph'));
+    ({ Project, SyntaxKind } = require_("ts-morph"));
     project = new Project({
       tsConfigFilePath: TS_CONFIG,
       skipAddingFilesFromTsConfig: false,
     });
   } catch (e: any) {
-    if (e?.code === 'MODULE_NOT_FOUND') {
-      console.error('❌ 未找到 ts-morph 依赖（frontend/node_modules 缺失）。');
-      console.error('   请先在 frontend/ 下执行 npm install 后再运行重命名/移动/加参命令；');
-      console.error('   help 与旗标守卫无需该依赖。');
+    if (e?.code === "MODULE_NOT_FOUND") {
+      console.error("❌ 未找到 ts-morph 依赖（frontend/node_modules 缺失）。");
+      console.error("   请先在 frontend/ 下执行 npm install 后再运行重命名/移动/加参命令；");
+      console.error("   help 与旗标守卫无需该依赖。");
     } else {
-      console.error('❌ 初始化 ts-morph 失败:', e?.message ?? e);
+      console.error("❌ 初始化 ts-morph 失败:", e?.message ?? e);
     }
     process.exit(1);
   }
@@ -89,13 +90,13 @@ function findExportDecl(name: string) {
     // 函数声明
     for (const fn of sf.getFunctions()) {
       if (fn.isExported() && fn.getName() === name) {
-        return { sourceFile: sf, node: fn, kind: 'function' };
+        return { sourceFile: sf, node: fn, kind: "function" };
       }
     }
     // 类
     const cls = sf.getClass(name);
-    if (cls && cls.isExported()) {
-      return { sourceFile: sf, node: cls, kind: 'class' };
+    if (cls?.isExported()) {
+      return { sourceFile: sf, node: cls, kind: "class" };
     }
     // 变量声明（const/let）
     for (const vd of sf.getVariableDeclarations()) {
@@ -105,7 +106,7 @@ function findExportDecl(name: string) {
           const vStmt = parent.getParent();
           if (vStmt && vStmt.getKind() === SyntaxKind.VariableStatement) {
             if (vStmt.isExported()) {
-              return { sourceFile: sf, node: vd, kind: 'variable' };
+              return { sourceFile: sf, node: vd, kind: "variable" };
             }
           }
         }
@@ -132,7 +133,11 @@ function saveWithRollback() {
     project.saveSync();
   } catch (e) {
     for (const [p, content] of backups) {
-      try { fs.writeFileSync(p, content); } catch { /* 回滚失败仅留日志位，不吞原始错误 */ }
+      try {
+        fs.writeFileSync(p, content);
+      } catch {
+        /* 回滚失败仅留日志位，不吞原始错误 */
+      }
     }
     throw e;
   }
@@ -158,39 +163,45 @@ function callExprOf(ref: any, funcName: string) {
 /** 在 frontend/src 下 grep 字符串匹配（纯 Node.js，跨平台） */
 function grepString(pattern: string) {
   // ysm 源码目录为 frontend/src（联邦为 frontend/src）
-  const srcDir = path.join(FRONTEND, 'src');
+  const srcDir = path.join(FRONTEND, "src");
   const results: string[] = [];
-  const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
   walkAndGrep(srcDir, results, re);
   return results;
 }
 
 function walkAndGrep(dir: string, results: string[], regex: RegExp) {
-  let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
   for (const e of entries) {
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
-      if (e.name !== 'node_modules' && e.name !== 'wailsjs' && !e.name.startsWith('__')) {
+      if (e.name !== "node_modules" && e.name !== "wailsjs" && !e.name.startsWith("__")) {
         walkAndGrep(full, results, regex);
       }
     } else if (e.isFile() && /\.(ts|js)$/.test(e.name)) {
       try {
-        const content = fs.readFileSync(full, 'utf8');
+        const content = fs.readFileSync(full, "utf8");
         // 全局正则跨文件共享：test() 成功后 lastIndex 推进，不清零会让下一个
         // 文件/行从错误起点搜索而漏检（假安全信号）。每次 test 前显式重置。
         regex.lastIndex = 0;
         if (regex.test(content)) {
-          const lines = content.split('\n');
+          const lines = content.split("\n");
           for (let i = 0; i < lines.length; i++) {
             regex.lastIndex = 0;
             if (regex.test(lines[i]!)) {
               const rel = toPosix(path.relative(FRONTEND, full));
-              results.push(`${rel}:${i + 1}: ${lines[i]!.trim().slice(0, 120)}`);
+              results.push(`${rel}:${i + 1}: ${lines[i]?.trim().slice(0, 120)}`);
             }
           }
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
   }
 }
@@ -236,10 +247,15 @@ function resolveFunctionImports(funcNode: any, srcSf: any) {
 }
 
 /** 向目标文件添加 import（自动去重） */
-function ensureImport(destSf: any, moduleSpecifier: string, defaultName: string | null | undefined, namedNames: string[]) {
-  const existing = destSf.getImportDeclarations().filter(
-    (imp: any) => imp.getModuleSpecifierValue() === moduleSpecifier
-  );
+function ensureImport(
+  destSf: any,
+  moduleSpecifier: string,
+  defaultName: string | null | undefined,
+  namedNames: string[],
+) {
+  const existing = destSf
+    .getImportDeclarations()
+    .filter((imp: any) => imp.getModuleSpecifierValue() === moduleSpecifier);
 
   if (existing.length === 0) {
     // 全新添加
@@ -279,28 +295,28 @@ function cmdRenameFunction(oldName: string, newName: string) {
   saveWithRollback();
 
   console.log(`✅ 重命名完成: "${oldName}" → "${newName}"`);
-  console.log('   ts-morph 已自动更新所有引用');
+  console.log("   ts-morph 已自动更新所有引用");
 
   // 搜索可能遗漏的字符串引用
   const hits = grepString(oldName);
   if (hits.length > 0) {
     // 过滤掉已经是新名的匹配
-    const realHits = hits.filter(
-      (h) => h.includes(oldName) && !h.includes(newName)
-    );
+    const realHits = hits.filter((h) => h.includes(oldName) && !h.includes(newName));
     if (realHits.length > 0) {
       console.log(`⚠️  以下 ${realHits.length} 处可能包含未更新的字符串引用：`);
       for (const h of realHits.slice(0, 20)) {
         console.log(`   ${h}`);
       }
       if (realHits.length > 20) {
-        console.log(`   ...（还有 ${realHits.length - 20} 处，完整搜索: grep -rn "${oldName}" frontend/src/）`);
+        console.log(
+          `   ...（还有 ${realHits.length - 20} 处，完整搜索: grep -rn "${oldName}" frontend/src/）`,
+        );
       }
     } else {
-      console.log('   grep 未检出旧名残留');
+      console.log("   grep 未检出旧名残留");
     }
   } else {
-    console.log('   grep 未检出旧名残留');
+    console.log("   grep 未检出旧名残留");
   }
 }
 
@@ -325,11 +341,13 @@ function cmdMoveFunction(funcName: string, destRelPath: string) {
   // P1-2：kind='variable'（const 箭头函数/常量）时 stmt 是 VariableDeclaration，
   // 只含 `name = () => {}` 无 const/export，直接搬会写出裸赋值（ESM ReferenceError）。
   // 取整条 VariableStatement（含 export const）并校验多声明符（a, b 同语句无法安全拆分）。
-  let moveText;
-  if (target.kind === 'variable') {
+  let moveText: string;
+  if (target.kind === "variable") {
     const vStmt = stmt.getParent().getParent();
     if (vStmt.getDeclarations().length > 1) {
-      console.error(`❌ "${funcName}" 与其它声明共用一条 export const（a, b 同语句），无法安全移动，请先拆分`);
+      console.error(
+        `❌ "${funcName}" 与其它声明共用一条 export const（a, b 同语句），无法安全移动，请先拆分`,
+      );
       process.exit(1);
     }
     moveText = vStmt.getFullText();
@@ -344,8 +362,7 @@ function cmdMoveFunction(funcName: string, destRelPath: string) {
   console.log(`📦 检测到 ${usedImports.length} 组 import 被函数引用`);
 
   // 2. 从源文件移除函数
-  const parentToRemove =
-    target.kind === 'variable' ? stmt.getParent().getParent() : stmt;
+  const parentToRemove = target.kind === "variable" ? stmt.getParent().getParent() : stmt;
   parentToRemove.remove();
 
   // 3. 清理源文件的孤立 import
@@ -365,9 +382,7 @@ function cmdMoveFunction(funcName: string, destRelPath: string) {
     // 检查是否有 default import 仍被使用
     const defaultStillUsed = defaultName && remainingNames.has(defaultName);
     // 检查 named imports 哪些仍被使用
-    const stillUsedNamed = namedBindings.filter((ni: any) =>
-      remainingNames.has(ni.getName())
-    );
+    const stillUsedNamed = namedBindings.filter((ni: any) => remainingNames.has(ni.getName()));
 
     if (namedBindings.length === 0 && !defaultStillUsed) {
       // namespace import 或裸 import：仅当命名空间名不再被源文件其余代码使用才移除
@@ -378,7 +393,10 @@ function cmdMoveFunction(funcName: string, destRelPath: string) {
         imp.remove();
         removedCount++;
       }
-    } else if (stillUsedNamed.length === namedBindings.length && (defaultStillUsed || !defaultName)) {
+    } else if (
+      stillUsedNamed.length === namedBindings.length &&
+      (defaultStillUsed || !defaultName)
+    ) {
       // 仍然全部在用，不动
     } else if (stillUsedNamed.length > 0 || defaultStillUsed) {
       // 部分仍用：移除不再用的 named
@@ -414,21 +432,21 @@ function cmdMoveFunction(funcName: string, destRelPath: string) {
       destSf,
       ui.moduleSpecifier,
       ui.default,
-      ui.named.map((n: any) => n.name)
+      ui.named.map((n: any) => n.name),
     );
     addedCount++;
   }
 
   // 5. 追加函数体到目标文件末尾
   destSf.addStatements(text.trim());
-  if (!text.endsWith('\n')) destSf.addStatements('\n');
+  if (!text.endsWith("\n")) destSf.addStatements("\n");
 
   saveWithRollback();
 
   console.log(`✅ "${funcName}" 已移至 ${absDest}`);
   console.log(`   源文件 ${srcPath}`);
   console.log(`   自动迁移 ${addedCount} 组 import 到目标文件`);
-  console.log('⚠️  建议运行 npm run check 验证类型无误');
+  console.log("⚠️  建议运行 npm run check 验证类型无误");
 }
 
 // ── add-param ──────────────────────────────────────────────────────────
@@ -439,7 +457,7 @@ function cmdAddParam(funcName: string, paramSignature: string, defaultValue: str
     console.error(`❌ 未找到导出符号 "${funcName}"`);
     process.exit(1);
   }
-  if (target.kind !== 'function') {
+  if (target.kind !== "function") {
     console.error(`❌ "${funcName}" 不是函数（是 ${target.kind}）`);
     process.exit(1);
   }
@@ -448,13 +466,15 @@ function cmdAddParam(funcName: string, paramSignature: string, defaultValue: str
   const sf = target.sourceFile;
 
   // 解析参数名和类型
-  const [paramName, ...typeParts] = paramSignature.split(':').map((s) => s.trim());
-  const paramType = typeParts.join(':').trim() || undefined;
+  const [paramName, ...typeParts] = paramSignature.split(":").map((s) => s.trim());
+  const paramType = typeParts.join(":").trim() || undefined;
 
   // P2-4 幂等守卫：add-param 非幂等（重复运行会给定义叠加同名参数、给调用方叠 undefined），
   // 参数已存在时直接拒绝，避免二次破坏
   if (fn.getParameters().some((p: any) => p.getName() === paramName)) {
-    console.error(`❌ "${funcName}" 已存在参数 "${paramName}"；add-param 非幂等，重复运行会叠加，请先 git checkout 还原再执行`);
+    console.error(
+      `❌ "${funcName}" 已存在参数 "${paramName}"；add-param 非幂等，重复运行会叠加，请先 git checkout 还原再执行`,
+    );
     process.exit(1);
   }
 
@@ -483,7 +503,7 @@ function cmdAddParam(funcName: string, paramSignature: string, defaultValue: str
     for (const ref of fn.findReferencesAsNodes()) {
       const callExpr = callExprOf(ref, funcName);
       if (callExpr) {
-        callExpr.addArgument('undefined');
+        callExpr.addArgument("undefined");
       }
     }
   }
@@ -498,9 +518,9 @@ function cmdAddParam(funcName: string, paramSignature: string, defaultValue: str
     console.log(`   无默认值，已更新 ${callerCount} 个调用方（${callerFiles.size} 个文件）`);
     console.log(`   📍 定义位置: ${sf.getFilePath()}`);
     if (callerFiles.size > 0) {
-      console.log('   涉事文件:');
+      console.log("   涉事文件:");
       for (const f of callerFiles) {
-        console.log(`     ${f.replace(FRONTEND + '/', '')}`);
+        console.log(`     ${f.replace(`${FRONTEND}/`, "")}`);
       }
     }
   }
@@ -512,16 +532,21 @@ const args = process.argv.slice(2);
 const cmd = args[0];
 
 function printHelp() {
-  const content = fs.readFileSync(FILESELF, 'utf-8');
-  const start = content.indexOf('/**');
-  const end = content.indexOf('*/');
-  console.log(content.slice(start, end + 2).replace(/^ \* ?/gm, '').trim());
+  const content = fs.readFileSync(FILESELF, "utf-8");
+  const start = content.indexOf("/**");
+  const end = content.indexOf("*/");
+  console.log(
+    content
+      .slice(start, end + 2)
+      .replace(/^ \* ?/gm, "")
+      .trim(),
+  );
 }
 
 // 未知 flag 白名单拦截（致命陷阱 #12）：只拦截 `--` 开头的明确旗标（如 `--dry-run`），
 // 绝不让其落入位置参数位被静默吞掉或当参数值（P1-1）；单横杠 token 可能是合法位置
 // 参数值（如 add-param 默认值 `-1`），不得误判为 flag（code_review P3）
-const UNKNOWN_FLAG = args.find((a) => a.startsWith('--') && a !== '--help');
+const UNKNOWN_FLAG = args.find((a) => a.startsWith("--") && a !== "--help");
 if (UNKNOWN_FLAG) {
   console.error(`❌ 未知 flag: ${UNKNOWN_FLAG}（本工具不支持任何旗标，见 help）`);
   printHelp();
@@ -529,37 +554,37 @@ if (UNKNOWN_FLAG) {
 }
 
 // --help / -h 退 0（陷阱 #12 要求）；裸 help 同语义（任意位置出现均触发）
-if (!cmd || cmd === 'help' || args.includes('--help') || args.includes('-h')) {
+if (!cmd || cmd === "help" || args.includes("--help") || args.includes("-h")) {
   printHelp();
   process.exit(0);
 }
 
 switch (cmd) {
-  case 'rename-function': {
+  case "rename-function": {
     ensureTsMorph();
     const [, oldName, newName] = args;
     if (!oldName || !newName) {
-      console.error('用法: node scripts/codemod.ts rename-function <旧名> <新名>');
+      console.error("用法: node scripts/codemod.ts rename-function <旧名> <新名>");
       process.exit(1);
     }
     cmdRenameFunction(oldName, newName);
     break;
   }
-  case 'move-function': {
+  case "move-function": {
     ensureTsMorph();
     const [, funcName, destPath] = args;
     if (!funcName || !destPath) {
-      console.error('用法: node scripts/codemod.ts move-function <函数名> <目标文件>');
+      console.error("用法: node scripts/codemod.ts move-function <函数名> <目标文件>");
       process.exit(1);
     }
     cmdMoveFunction(funcName, destPath);
     break;
   }
-  case 'add-param': {
+  case "add-param": {
     ensureTsMorph();
     const [, funcName, paramSignature, defaultValue] = args;
     if (!funcName || !paramSignature) {
-      console.error('用法: node scripts/codemod.ts add-param <函数名> <参数签名> [默认值]');
+      console.error("用法: node scripts/codemod.ts add-param <函数名> <参数签名> [默认值]");
       process.exit(1);
     }
     cmdAddParam(funcName, paramSignature, defaultValue);
@@ -567,7 +592,7 @@ switch (cmd) {
   }
   default:
     console.error(`未知命令: ${cmd}`);
-    console.error('可用命令: rename-function, move-function, add-param, help');
+    console.error("可用命令: rename-function, move-function, add-param, help");
     printHelp();
     process.exit(1);
 }

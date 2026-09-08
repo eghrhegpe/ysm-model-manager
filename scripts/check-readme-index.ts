@@ -22,21 +22,21 @@
  *
  * 退出码：0 全部登记 / 1 存在零提及脚本（阻断）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
-import { collectScripts } from './_lib/collect-scripts.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { collectScripts } from "./_lib/collect-scripts.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
-const SCRIPTS_DIR = path.join(ROOT, 'scripts');
+const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
-const JSON_OUT = process.argv.includes('--json');
+const JSON_OUT = process.argv.includes("--json");
 
 /** 判定：README 中出现脚本 basename（含 .mjs）即视为已登记。
  *  basename 足够精确（README 表格列出的就是 basename），且能覆盖正文/口令表引用。
  *  纯函数供契约测试复用。 */
 export function missingFromReadme(files: string[], readmeText: string) {
   return files.filter((f) => {
-    const base = f.includes('/') ? f.slice(f.lastIndexOf('/') + 1) : f;
+    const base = f.includes("/") ? f.slice(f.lastIndexOf("/") + 1) : f;
     return !readmeText.includes(base);
   });
 }
@@ -57,27 +57,27 @@ export interface ReadmeAssertion {
 
 export const README_ASSERTIONS: ReadmeAssertion[] = [
   {
-    script: 'commit-with-check.ts',
-    mustInclude: ['_lib/commit-check'],
-    mustNotInclude: ['验证全部委托 pre-push-gate'],
-    note: 'ADR-155：commit-with-check 已解耦为独立轻量清单（_lib/commit-check），不再复用 pre-push-gate 重型门禁',
+    script: "commit-with-check.ts",
+    mustInclude: ["_lib/commit-check"],
+    mustNotInclude: ["验证全部委托 pre-push-gate"],
+    note: "ADR-155：commit-with-check 已解耦为独立轻量清单（_lib/commit-check），不再复用 pre-push-gate 重型门禁",
   },
   {
-    script: 'contract-tests.ts',
-    mustInclude: ['tests 域不再全量'],
-    mustNotInclude: ['tests 域仍全量'],
-    note: 'ADR-156/157：tests 域已按 CONTRACT_TEST_TARGETS 精确裁剪，不再全量',
+    script: "contract-tests.ts",
+    mustInclude: ["tests 域不再全量"],
+    mustNotInclude: ["tests 域仍全量"],
+    note: "ADR-156/157：tests 域已按 CONTRACT_TEST_TARGETS 精确裁剪，不再全量",
   },
 ];
 
 function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** 在 README 中定位含 `…script…` 表格 token 的行（纯函数，供契约测试复用）。 */
 export function findReadmeRow(readmeText: string, script: string): string | null {
-  const re = new RegExp('`[^`]*' + escapeRegExp(script) + '[^`]*`');
-  for (const line of readmeText.split('\n')) {
+  const re = new RegExp(`\`[^\`]*${escapeRegExp(script)}[^\`]*\``);
+  for (const line of readmeText.split("\n")) {
     if (re.test(line)) return line;
   }
   return null;
@@ -93,10 +93,12 @@ export function assertionViolations(
     const row = findReadmeRow(readmeText, a.script);
     if (!row) continue; // 零提及由 missingFromReadme 负责
     for (const need of a.mustInclude ?? []) {
-      if (!row.includes(need)) out.push(`[README断言] ${a.script} 描述应含「${need}」却未出现（${a.note ?? ''}）`);
+      if (!row.includes(need))
+        out.push(`[README断言] ${a.script} 描述应含「${need}」却未出现（${a.note ?? ""}）`);
     }
     for (const forbid of a.mustNotInclude ?? []) {
-      if (row.includes(forbid)) out.push(`[README断言] ${a.script} 描述仍含过时措辞「${forbid}」（${a.note ?? ''}）`);
+      if (row.includes(forbid))
+        out.push(`[README断言] ${a.script} 描述仍含过时措辞「${forbid}」（${a.note ?? ""}）`);
     }
   }
   return out;
@@ -108,16 +110,16 @@ const SCRIPT_NAME_RE = /^`([\w.-]+\.(?:ts|mjs|ps1|sh|py|bat))`$/;
 /** 提取表格行第一列的脚本名；非脚本名第一列（表头/映射表第一列）返回 null。 */
 function firstColScript(line: string): string | null {
   const t = line.trim();
-  if (!t.startsWith('|')) return null;
-  const cols = t.split('|');
+  if (!t.startsWith("|")) return null;
+  const cols = t.split("|");
   if (cols.length < 2) return null;
-  const m = cols[1]!.trim().match(SCRIPT_NAME_RE);
+  const m = cols[1]?.trim().match(SCRIPT_NAME_RE);
   return m ? (m[1] ?? null) : null;
 }
 
 /** 脚本名 → 词干（去扩展名），用于幽灵引用的宽松匹配（event-audit.mjs 命中 event-audit 裸词）。 */
 function stemOf(name: string): string {
-  return name.replace(/\.(?:ts|mjs|ps1|sh|py|bat)$/, '');
+  return name.replace(/\.(?:ts|mjs|ps1|sh|py|bat)$/, "");
 }
 
 /**
@@ -128,7 +130,7 @@ function stemOf(name: string): string {
  */
 export function duplicateRegistrations(readmeText: string): string[] {
   const count = new Map<string, number>();
-  for (const line of readmeText.split('\n')) {
+  for (const line of readmeText.split("\n")) {
     const name = firstColScript(line);
     if (name) count.set(name, (count.get(name) ?? 0) + 1);
   }
@@ -142,7 +144,7 @@ export function duplicateRegistrations(readmeText: string): string[] {
  * 只在区块外搜索，避免把删除记录本身误报。
  */
 export function ghostReferences(readmeText: string): string[] {
-  const lines = readmeText.split('\n');
+  const lines = readmeText.split("\n");
   // 定位 ### 区块边界
   const sections: Array<{ title: string; start: number }> = [];
   lines.forEach((l, i) => {
@@ -154,8 +156,8 @@ export function ghostReferences(readmeText: string): string[] {
   const ranges: Array<[number, number]> = [];
   for (let k = 0; k < sections.length; k++) {
     const s = sections[k]!;
-    if (!s.title.startsWith('### 已删除')) continue;
-    const end = k + 1 < sections.length ? sections[k + 1]!.start : lines.length;
+    if (!s.title.startsWith("### 已删除")) continue;
+    const end = k + 1 < sections.length ? sections[k + 1]?.start : lines.length;
     ranges.push([s.start, end]);
     for (let i = s.start + 1; i < end; i++) {
       const name = firstColScript(lines[i]!);
@@ -180,13 +182,17 @@ export function ghostReferences(readmeText: string): string[] {
 
 function main() {
   const files = collectScripts({ includeNonTs: true }); // 含 hooks/ + scripts/ 下 .sh/.ps1（构建/发布脚本同样要登记）
-  const readme = fs.readFileSync(path.join(SCRIPTS_DIR, 'README.md'), 'utf8');
+  const readme = fs.readFileSync(path.join(SCRIPTS_DIR, "README.md"), "utf8");
 
   const missing = missingFromReadme(files, readme);
   const violations = assertionViolations(readme);
   const duplicates = duplicateRegistrations(readme);
   const ghosts = ghostReferences(readme);
-  const clean = missing.length === 0 && violations.length === 0 && duplicates.length === 0 && ghosts.length === 0;
+  const clean =
+    missing.length === 0 &&
+    violations.length === 0 &&
+    duplicates.length === 0 &&
+    ghosts.length === 0;
 
   if (JSON_OUT) {
     console.log(
@@ -214,19 +220,21 @@ function main() {
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' README 索引对账 (check-readme-index)');
-  console.log('══════════════════════════════════════');
-  console.log(`磁盘脚本 ${files.length} 个，README 已登记 ${files.length - missing.length} 个，零提及 ${missing.length} 个`);
-  console.log('──────────────────────────────────────');
+  console.log("══════════════════════════════════════");
+  console.log(" README 索引对账 (check-readme-index)");
+  console.log("══════════════════════════════════════");
+  console.log(
+    `磁盘脚本 ${files.length} 个，README 已登记 ${files.length - missing.length} 个，零提及 ${missing.length} 个`,
+  );
+  console.log("──────────────────────────────────────");
   for (const m of missing) console.log(`❌ README 未提及: ${m}`);
-  if (!missing.length) console.log('✅ 所有脚本均已登记在 scripts/README.md。');
+  if (!missing.length) console.log("✅ 所有脚本均已登记在 scripts/README.md。");
   for (const v of violations) console.log(`❌ ${v}`);
-  if (!violations.length) console.log('✅ README 关键描述均无过时措辞漂移。');
+  if (!violations.length) console.log("✅ README 关键描述均无过时措辞漂移。");
   for (const d of duplicates) console.log(`❌ README 重复登记: ${d}`);
-  if (!duplicates.length) console.log('✅ README 登记性表格无重复登记。');
+  if (!duplicates.length) console.log("✅ README 登记性表格无重复登记。");
   for (const g of ghosts) console.log(`❌ README 幽灵引用（已删脚本仍被引用）: ${g}`);
-  if (!ghosts.length) console.log('✅ README 无幽灵引用。');
+  if (!ghosts.length) console.log("✅ README 无幽灵引用。");
   if (!clean) process.exit(1);
 }
 

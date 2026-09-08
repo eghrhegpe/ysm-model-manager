@@ -209,7 +209,7 @@ export function resolvePorcelain(porcelainFile: string): string | null {
 }
 
 // 直接运行时走 CLI（sh 侧）
-const isCli = process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("_lib/gen-stage.ts");
+const isCli = process.argv[1]?.replace(/\\/g, "/").endsWith("_lib/gen-stage.ts");
 if (isCli) {
   const snapBeforeFile = process.argv[2] ?? "";
   // 第三参 = gen 前 porcelain 文件（pre-commit 与 snap 同刻采集；无则 fallback 现采）
@@ -233,9 +233,7 @@ if (isCli) {
   // 滞留机器区收编（ADR-184）：gen 刷出未搭车的纯机器区 diff / 生成物整文件，
   // 因 gen 前已 dirty 被 computeStageList 排除——此处按机器区判定追回收编。
   // 人工策展区（正文/use_when/pitfalls 等）dirty 仍排除，并发隔离不放松。
-  const strandedDirty = dirty
-    .filter((d) => !(d.x === "?" && d.y === "?"))
-    .map((d) => d.path);
+  const strandedDirty = dirty.filter((d) => !(d.x === "?" && d.y === "?")).map((d) => d.path);
   const stageSet = new Set(stage);
   for (const p of strandedStageList(strandedDirty)) {
     if (!stageSet.has(p)) {

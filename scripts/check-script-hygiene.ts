@@ -37,17 +37,17 @@
  * 注意：doctor / pre-push-gate 经 gate-config 挂 `--strict`（硬门禁）——
  *       新脚本/改动脚本必须文件头合规；纯本机自查可不带 --strict。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
-import { collectScripts } from './_lib/collect-scripts.ts';
-import { findOrphans } from './_lib/orphan-classify.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { collectScripts } from "./_lib/collect-scripts.ts";
+import { findOrphans } from "./_lib/orphan-classify.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
-const SCRIPTS_DIR = path.join(ROOT, 'scripts');
+const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
-const args = parseArgs(process.argv.slice(2), { bools: ['json', 'strict'] });
-if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(', ')}`);
+const args = parseArgs(process.argv.slice(2), { bools: ["json", "strict"] });
+if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(", ")}`);
 const JSON_OUT = args.json as boolean;
 const STRICT = args.strict as boolean;
 
@@ -60,11 +60,13 @@ function checkExitCode(text: string) {
   const hasProcessExit = /process\.exit\(/.test(text);
   // 只从 `function main(` 位置向后判定 return 失败码——避免误把
   // main 之前的内部函数（如排序比较器 return 1）算作 main 的失败返回。
-  const mainIdx = text.indexOf('function main(');
+  const mainIdx = text.indexOf("function main(");
   const tail = mainIdx >= 0 ? text.slice(mainIdx) : text;
   const mainReturnsFailure = /\breturn\s+[1-9]\d*\s*;/.test(tail);
   if (!hasProcessExit && mainReturnsFailure) {
-    return ['裸 main(); 调用且 main 内 return 失败码、无 process.exit 兜底 → 退出码恒 0，建议 process.exit(main())'];
+    return [
+      "裸 main(); 调用且 main 内 return 失败码、无 process.exit 兜底 → 退出码恒 0，建议 process.exit(main())",
+    ];
   }
   return [];
 }
@@ -73,7 +75,8 @@ function checkExitCode(text: string) {
 
 const INLINE_WALK_RE = /^function walk\(|^const walk\s*=/m;
 const INLINE_RG_RE = /^function rg\(|^const rg\s*=|execFileSync\([^)]*['"]rg['"]/m;
-const INLINE_BOILERPLATE_RE = /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)\)|const __dirname = path\.dirname\(fileURLToPath\(import\.meta\.url\)\);\r?\nconst ROOT = path\.resolve\(__dirname, '\.\.'\)/;
+const INLINE_BOILERPLATE_RE =
+  /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)\)|const __dirname = path\.dirname\(fileURLToPath\(import\.meta\.url\)\);\r?\nconst ROOT = path\.resolve\(__dirname, '\.\.'\)/;
 const INLINE_PARSEARGS_RE = /^function parseArgs\(|^const parseArgs\s*=/m;
 
 // 领域收集器特征：带显式扩展名过滤 / 跳过集合 / 回调的专用 walk 视为合法内联，不告警。
@@ -99,18 +102,20 @@ function isDomainWalk(text: string) {
 function checkSharedLayer(text: string) {
   const out: string[] = [];
   if (INLINE_WALK_RE.test(text) && !isDomainWalk(text)) {
-    out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.ts）');
+    out.push("内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.ts）");
   }
-  if (INLINE_RG_RE.test(text)) out.push('内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.ts）');
+  if (INLINE_RG_RE.test(text))
+    out.push("内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.ts）");
   if (INLINE_PARSEARGS_RE.test(text)) {
-    out.push('内联 parseArgs() 定义（应 import 共享层 _lib/，如 _lib/parse-args.ts）');
+    out.push("内联 parseArgs() 定义（应 import 共享层 _lib/，如 _lib/parse-args.ts）");
   }
   if (INLINE_BOILERPLATE_RE.test(text)) {
-    out.push('内联 ROOT 样板 path.resolve(dirname(fileURLToPath(...)))（新脚本应 import 共享层 _lib/ 的 ROOT/getRoot）');
+    out.push(
+      "内联 ROOT 样板 path.resolve(dirname(fileURLToPath(...)))（新脚本应 import 共享层 _lib/ 的 ROOT/getRoot）",
+    );
   }
   return out;
 }
-
 
 // ── 检查 3：--json 契约 ────────────────────────────────
 
@@ -119,10 +124,10 @@ const CHECK_TOOL_RE =
 
 function checkJsonContract(file: string, text: string) {
   if (!CHECK_TOOL_RE.test(file)) return [];
-  const hasJsonFlag = /['"]--json['"]|\-\-json/.test(text);
+  const hasJsonFlag = /['"]--json['"]|--json/.test(text);
   const hasJsonOutput = /JSON\.stringify\(/.test(text);
   if (!hasJsonFlag && !hasJsonOutput) {
-    return ['检查类脚本无 --json flag 也无 JSON.stringify 输出 → 子代理/CI 无法稳定消费'];
+    return ["检查类脚本无 --json flag 也无 JSON.stringify 输出 → 子代理/CI 无法稳定消费"];
   }
   return [];
 }
@@ -131,9 +136,9 @@ function checkJsonContract(file: string, text: string) {
 
 /** 提取文件顶部第一个 JSDoc 块（不含后续注释）。 */
 function extractHeader(text: string) {
-  const start = text.indexOf('/**');
+  const start = text.indexOf("/**");
   if (start < 0) return null;
-  const end = text.indexOf('*/', start);
+  const end = text.indexOf("*/", start);
   if (end < 0) return null;
   return text.slice(start, end + 2);
 }
@@ -162,7 +167,8 @@ function checkHeader(file: string, text: string) {
 
 // ── 检查 5：positional 脚本须走 parse-args ──────────────
 
-const HANDWRITTEN_ARGV_RE = /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]|new Set\(process\.argv\)/;
+const HANDWRITTEN_ARGV_RE =
+  /process\.argv\.slice\(2\)|process\.argv\.includes\(|process\.argv\[2\]|new Set\(process\.argv\)/;
 /** 位置参数消费特征：手写「跳过 -- 开头取裸参」find、直接取 argv[2]/argv[0] 当值、
  *  或 `.indexOf('--flag')` 手搓白名单（parseArgs 的 unknown 拦截本应接管）。
  *  2026-09-04 收敛：10 个手写 argv 脚本已迁 parseArgs，故此处收紧为严格口径不再误拦。 */
@@ -171,13 +177,16 @@ const HANDWRITTEN_POSITIONAL_RE =
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
 // 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.ts 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。
-const PARSEARGS_IMPORT_RE = /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.(mjs|ts)['"];?/m;
+const PARSEARGS_IMPORT_RE =
+  /^[ \t]*import\s+\{[^}]*\}\s+from\s+['"]\.\/_lib\/parse-args\.(mjs|ts)['"];?/m;
 
 function checkArgvContract(text: string) {
   const usesParseArgs = PARSEARGS_IMPORT_RE.test(text);
   if (!usesParseArgs) {
     if (HANDWRITTEN_ARGV_RE.test(text) && HANDWRITTEN_POSITIONAL_RE.test(text)) {
-      return ['手写 argv 解析且消费 positional 参数 → 应迁 _lib/parse-args.ts（unknown 白名单拦截，防 --jso 拼错静默放行）'];
+      return [
+        "手写 argv 解析且消费 positional 参数 → 应迁 _lib/parse-args.ts（unknown 白名单拦截，防 --jso 拼错静默放行）",
+      ];
     }
     return [];
   }
@@ -185,12 +194,12 @@ function checkArgvContract(text: string) {
   // 两种合法消费形态都认：属性访问 `args.unknown.length`（含别名如 raw.unknown）与
   // 解构 `const { unknown } = parseArgs(...)`——i18n-check.ts 曾因解构形式被误报。
   const consumesUnknown =
-    /\.unknown\b/.test(text) ||           // 属性访问（args.unknown / raw.unknown）
+    /\.unknown\b/.test(text) || // 属性访问（args.unknown / raw.unknown）
     /\{\s*[^}]*\bunknown\b[^}]*\}\s*=\s*parseArgs\s*\(/.test(text) || // 解构取值
-    /\bunknown\s*&&\s*unknown\.length/.test(text) ||                  // 直接消费
-    /\bunknown\s*\.length/.test(text);                                // 别名消费
+    /\bunknown\s*&&\s*unknown\.length/.test(text) || // 直接消费
+    /\bunknown\s*\.length/.test(text); // 别名消费
   if (!consumesUnknown) {
-    return ['import parseArgs 但未消费 args.unknown 白名单（应 unknown.length 时退非 0）'];
+    return ["import parseArgs 但未消费 args.unknown 白名单（应 unknown.length 时退非 0）"];
   }
   return [];
 }
@@ -215,7 +224,7 @@ function main() {
 
   const warns: string[] = [];
   for (const f of files) {
-    const text = fs.readFileSync(path.join(SCRIPTS_DIR, f), 'utf8');
+    const text = fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8");
     const issues = [
       ...checkExitCode(text).map((m) => `${f}: ${m}`),
       ...checkSharedLayer(text).map((m) => `${f}: ${m}`),
@@ -235,19 +244,28 @@ function main() {
     // 在 tail 截断下看不到内容，摘要进 _summary 让 FAIL 块可读，2026-09-01 可观测性修复）。
     const ok = STRICT ? warns.length === 0 : true;
     const warnsList = warns.slice(0, 5);
-    console.log(JSON.stringify({ _summary: { scripts: files.length, warns: warns.length, ok, warns_list: warnsList }, warns }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: { scripts: files.length, warns: warns.length, ok, warns_list: warnsList },
+          warns,
+        },
+        null,
+        2,
+      ),
+    );
     if (STRICT && warns.length) process.exit(1);
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' 脚本卫生检查 (check-script-hygiene)');
-  console.log('══════════════════════════════════════');
+  console.log("══════════════════════════════════════");
+  console.log(" 脚本卫生检查 (check-script-hygiene)");
+  console.log("══════════════════════════════════════");
   console.log(`扫描 ${files.length} 个脚本，WARN ${warns.length} 条`);
-  console.log('──────────────────────────────────────');
+  console.log("──────────────────────────────────────");
   for (const w of warns) console.log(`⚠ ${w}`);
-  if (!warns.length) console.log('✅ 未发现脚本卫生问题。');
-  else console.log('\n（WARN 不阻断；加 --strict 后退出码 1）');
+  if (!warns.length) console.log("✅ 未发现脚本卫生问题。");
+  else console.log("\n（WARN 不阻断；加 --strict 后退出码 1）");
   if (STRICT && warns.length) process.exit(1);
 }
 

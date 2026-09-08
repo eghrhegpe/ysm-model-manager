@@ -34,13 +34,16 @@
  *
  * 退出码：0 = 门禁通过（放行推送）；1 = 门禁失败（阻断推送）；2 = 用法错误。
  */
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { runContractTestsParallel, selectContractTests } from "./_lib/contract-tests.ts";
-import { domainSummaryText, groupByDomain, planFromFiles } from "./_lib/domain-classify.ts";
-import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
-import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
+import {
+  domainSummaryText,
+  groupByDomain,
+  type Plan,
+  planFromFiles,
+} from "./_lib/domain-classify.ts";
 import {
   ALL_STATIC_TOOLS,
   DOC_EXTRA_SCRIPTS,
@@ -48,6 +51,8 @@ import {
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
 } from "./_lib/gate-config.ts";
+import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
+import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { logPush } from "./_lib/log-push.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { run as procRun, shq } from "./_lib/proc.ts";
@@ -247,7 +252,7 @@ async function main() {
     if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true;
   };
 
-  let plan;
+  let plan: Plan;
   let domainSummary = "";
   let byDomain: Record<string, string[]> = {};
   let files: string[] = []; // 本次变更文件集（--files / push 模式填充；--all / --docs 保持为空）
@@ -354,7 +359,7 @@ async function main() {
     // 提升到外层供 Go 域 golangci-lint 复用（ADR-205 基线解析）
     pushLocalRef = localRef;
     pushLocalOid = localOid;
-    pushRemoteOid = pushed[0]!.remoteOid;
+    pushRemoteOid = pushed[0]?.remoteOid;
     const multiRef = pushed.length > 1;
     console.log(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,
@@ -390,7 +395,7 @@ async function main() {
       const parsed = parseToolOutput(r.out, r.rc, tool);
       let ok = parsed.ok;
       let note = parsed.note;
-      let tail = parsed.tail;
+      const tail = parsed.tail;
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
       // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
@@ -430,7 +435,7 @@ async function main() {
     if (changedFiles.length === 0) return;
     for (const tool of ["check-doc-drift.ts", "check-knowledge-drift.ts"]) {
       const t0 = Date.now();
-      const r = procRun("node", ["scripts/" + tool, "--json", "--files", changedFiles.join("\n")], {
+      const r = procRun("node", [`scripts/${tool}`, "--json", "--files", changedFiles.join("\n")], {
         cwd: ROOT,
         timeout: TIMEOUT,
       });

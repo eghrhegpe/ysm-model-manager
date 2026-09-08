@@ -23,27 +23,34 @@
  * 零依赖（仅 node:fs / node:path / node:url）。
  * 退出码：发现违规 → 1；否则 0。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from '../_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "../_lib/scan-files.ts";
 
-const JSON_OUT = process.argv.includes('--json');
+const JSON_OUT = process.argv.includes("--json");
 
 // 裸 wails 命令：wails + 子命令，且 wails 后不是 3（wails3 豁免）
 const RE = /\bwails(?!3)\s+(generate|build|dev|bindings|doctor)\b/g;
 
 // 排除目录（相对 ROOT）：历史冻结 / 历史发布记录 / 创作内容 / 生成物
 const EXCLUDE_DIRS = new Set([
-  'docs/archive', 'docs/releases', 'docs/novel',
-  '.task', 'node_modules', '.git', 'dist', 'build/bin', 'build/ysmparser-cache',
+  "docs/archive",
+  "docs/releases",
+  "docs/novel",
+  ".task",
+  "node_modules",
+  ".git",
+  "dist",
+  "build/bin",
+  "build/ysmparser-cache",
 ]);
 
 // 单文件豁免：ADR-001 v2→v3 迁移对照表（左列刻意写旧命令）
-const EXCLUDE_FILES = new Set(['docs/adr/ADR-001-wails3-migration.md']);
+const EXCLUDE_FILES = new Set(["docs/adr/ADR-001-wails3-migration.md"]);
 
 /** 递归遍历，跳过排除目录；子目录/文件读取失败（权限/竞态）跳过不崩溃（code_review P3）。 */
 function* walk(dir: string, rel: string): Generator<{ full: string; relPath: string }> {
-  let names;
+  let names: string[];
   try {
     names = fs.readdirSync(dir);
   } catch {
@@ -52,7 +59,7 @@ function* walk(dir: string, rel: string): Generator<{ full: string; relPath: str
   for (const name of names) {
     const full = path.join(dir, name);
     const relPath = rel ? `${rel}/${name}` : name;
-    let st;
+    let st: fs.Stats;
     try {
       st = fs.statSync(full);
     } catch {
@@ -67,58 +74,64 @@ function* walk(dir: string, rel: string): Generator<{ full: string; relPath: str
   }
 }
 
-const fileExts = new Set(['.md', '.yml', '.yaml', '.ps1', '.sh', '.mjs', '.json']);
+const fileExts = new Set([".md", ".yml", ".yaml", ".ps1", ".sh", ".mjs", ".json"]);
 const results: string[] = [];
 let scanned = 0;
 
 function scanFile(full: string, relPath: string) {
   if (EXCLUDE_FILES.has(relPath)) return;
-  let text;
+  let text: string;
   try {
-    text = fs.readFileSync(full, 'utf8');
+    text = fs.readFileSync(full, "utf8");
   } catch {
     return;
   }
   scanned++;
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     RE.lastIndex = 0;
     const m = RE.exec(lines[i]!);
     if (m) {
       results.push(
-        `${relPath}:${i + 1}  「${lines[i]!.trim().slice(0, 100)}」 → v3 CLI 应写 wails3 ${m[1]}`,
+        `${relPath}:${i + 1}  「${lines[i]?.trim().slice(0, 100)}」 → v3 CLI 应写 wails3 ${m[1]}`,
       );
     }
   }
 }
 
 // 根级单文件
-for (const f of ['AGENTS.md', 'Taskfile.yml', 'README.md']) {
+for (const f of ["AGENTS.md", "Taskfile.yml", "README.md"]) {
   const full = path.join(ROOT, f);
   if (fs.existsSync(full)) scanFile(full, f);
 }
 
 // 目录递归（docs 除 archive；frontend 仅 package.json 是命令入口）
-for (const dir of ['docs', 'cmd', 'scripts', 'build', 'frontend']) {
+for (const dir of ["docs", "cmd", "scripts", "build", "frontend"]) {
   const abs = path.join(ROOT, dir);
   if (!fs.existsSync(abs)) continue;
   for (const { full, relPath } of walk(abs, dir)) {
     if (!fileExts.has(path.extname(relPath))) continue;
-    if (relPath.startsWith('frontend/') && relPath !== 'frontend/package.json') continue;
+    if (relPath.startsWith("frontend/") && relPath !== "frontend/package.json") continue;
     scanFile(full, relPath);
   }
 }
 
 if (results.length) {
   if (JSON_OUT) {
-    console.log(JSON.stringify({
-      _summary: { scanned, violations: results.length },
-      violations: results,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: { scanned, violations: results.length },
+          violations: results,
+        },
+        null,
+        2,
+      ),
+    );
   } else {
     console.log(`❌ 发现 ${results.length} 处裸 wails 命令（应写 wails3）:`);
     for (const r of results) console.log(`  ${r}`);
-    console.log('\n退出码 1：v3 项目禁止 `wails X`，统一 `wails3 X`。');
+    console.log("\n退出码 1：v3 项目禁止 `wails X`，统一 `wails3 X`。");
   }
   process.exit(1);
 }

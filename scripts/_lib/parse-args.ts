@@ -25,7 +25,14 @@ export interface ParseArgsResult {
   [key: string]: unknown;
 }
 
-export function parseArgs(argv: string[] = [], { bools = [], strings = [], defaults = {} }: { bools?: string[]; strings?: string[]; defaults?: Record<string, unknown> } = {}): ParseArgsResult {
+export function parseArgs(
+  argv: string[] = [],
+  {
+    bools = [],
+    strings = [],
+    defaults = {},
+  }: { bools?: string[]; strings?: string[]; defaults?: Record<string, unknown> } = {},
+): ParseArgsResult {
   const result: ParseArgsResult = { _: [], ...defaults, unknown: [], help: false };
 
   // 预填 bools/strings 默认值
@@ -37,14 +44,14 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     // P2（code_review）：--help / -h 显式支持，不再被当未知参数/位置参数
-    if (arg === '--help' || arg === '-h') {
+    if (arg === "--help" || arg === "-h") {
       result.help = true;
       continue;
     }
-    if (!arg.startsWith('--') || arg === '--') {
+    if (!arg.startsWith("--") || arg === "--") {
       // 位置参数（-- 作为分隔符，后续所有参数均为位置参数）
       result._.push(arg);
-      if (arg === '--') {
+      if (arg === "--") {
         // 把剩余所有参数都当作位置参数
         for (let j = i + 1; j < argv.length; j++) result._.push(argv[j]!);
         break;
@@ -54,7 +61,7 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
 
     // P2（code_review）：支持 `--flag=value`（--dir=X / --check=false）——
     // 此前 name='dir=X' 被当未知参数丢弃，连值一起丢
-    const eq = arg.indexOf('=');
+    const eq = arg.indexOf("=");
     const name = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
     const inline = eq === -1 ? undefined : arg.slice(eq + 1);
     const isBool = bools.includes(name);
@@ -72,8 +79,11 @@ export function parseArgs(argv: string[] = [], { bools = [], strings = [], defau
       if (inline === undefined) result[name] = true;
       else result[name] = /^(1|true|yes)$/i.test(inline); // --check=false → false（P2）
     } else if (isString) {
-      if (inline !== undefined) { result[name] = inline; continue; } // --dir=X（P2）
-      if (i + 1 >= argv.length || argv[i + 1]!.startsWith('--')) {
+      if (inline !== undefined) {
+        result[name] = inline;
+        continue;
+      } // --dir=X（P2）
+      if (i + 1 >= argv.length || argv[i + 1]?.startsWith("--")) {
         console.warn(`⚠️  参数 --${name} 缺少值，使用默认值: ${JSON.stringify(result[name])}`);
         continue;
       }

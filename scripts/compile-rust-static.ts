@@ -15,19 +15,20 @@
  * 设计意图：Linux 构建链的 Rust 侧单步——编 staticlib 供 Go CGO 静态链接，
  * build/linux/Taskfile.yml 的 compile:rust 任务调用。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { getRoot } from './_lib/scan-files.ts';
-import { run } from './_lib/proc.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { run } from "./_lib/proc.ts";
+import { getRoot } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
-const RUST_DIR = path.join(ROOT, 'rust-wails-bridge');
+const RUST_DIR = path.join(ROOT, "rust-wails-bridge");
 const args = parseArgs(process.argv.slice(2), {
-  strings: ['output', 'target'],
-  defaults: { output: path.join(ROOT, 'go', 'rustbridge', 'static-lib'), target: null },
+  strings: ["output", "target"],
+  defaults: { output: path.join(ROOT, "go", "rustbridge", "static-lib"), target: null },
 });
-if (args.unknown.length) console.warn(`[compile-rust-static] 忽略未知参数: ${args.unknown.join(', ')}`);
+if (args.unknown.length)
+  console.warn(`[compile-rust-static] 忽略未知参数: ${args.unknown.join(", ")}`);
 const OUTPUT_DIR = args.output as string;
 const targetArg = (args.target as string | null) ?? undefined;
 
@@ -38,26 +39,38 @@ function fail(msg: string) {
 
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-const cargoArgs = ['build', '--release', '--locked',
-  '--manifest-path', path.join(RUST_DIR, 'Cargo.toml'),
-  '--lib'];
-if (targetArg) cargoArgs.push('--target', targetArg);
+const cargoArgs = [
+  "build",
+  "--release",
+  "--locked",
+  "--manifest-path",
+  path.join(RUST_DIR, "Cargo.toml"),
+  "--lib",
+];
+if (targetArg) cargoArgs.push("--target", targetArg);
 
-console.log(`[compile-rust-static] cargo build` + (targetArg ? ` --target=${targetArg}` : '') + ` → ${OUTPUT_DIR}`);
-const r = run('cargo', cargoArgs, { cwd: ROOT, timeout: 120_000 });
-if (!r.ok) fail(`cargo build 失败：
+console.log(
+  `[compile-rust-static] cargo build${targetArg ? ` --target=${targetArg}` : ""} → ${OUTPUT_DIR}`,
+);
+const r = run("cargo", cargoArgs, { cwd: ROOT, timeout: 120_000 });
+if (!r.ok)
+  fail(`cargo build 失败：
 ${r.out.slice(-800)}`);
 
 // 查找产物：Unix 用 .a，Windows MSVC 用 .lib（统一复制为 .a 供 Go -l: 使用）
-const targetDir = targetArg ? path.join(RUST_DIR, 'target', targetArg, 'release') : path.join(RUST_DIR, 'target', 'release');
+const targetDir = targetArg
+  ? path.join(RUST_DIR, "target", targetArg, "release")
+  : path.join(RUST_DIR, "target", "release");
 // .rlib 是 Rust 静态库（Go CGO 可直链）；.a 是 Unix ar 归档；.lib 是 MSVC import lib（太大、不可直链）
 const candidateFiles = [
-  path.join(targetDir, 'libysm_model_manager_wails_bridge.rlib'),
-  path.join(targetDir, 'libysm_model_manager_wails_bridge.a'),
+  path.join(targetDir, "libysm_model_manager_wails_bridge.rlib"),
+  path.join(targetDir, "libysm_model_manager_wails_bridge.a"),
 ];
-const libFile = candidateFiles.find(f => fs.existsSync(f));
+const libFile = candidateFiles.find((f) => fs.existsSync(f));
 if (!libFile) fail(`静态库未找到，已搜索: \n  [REDACTED]`);
 // 统一输出为 libysm_model_manager_wails_bridge.a（Go -l: 期望的命名）
-const outName = 'libysm_model_manager_wails_bridge.a';
+const outName = "libysm_model_manager_wails_bridge.a";
 fs.copyFileSync(libFile!, path.join(OUTPUT_DIR, outName));
-console.log(`[compile-rust-static] ✅ ${path.join(OUTPUT_DIR, outName)}（源: ${path.basename(libFile!)}，${(fs.statSync(libFile!).size / 1024 / 1024).toFixed(1)} MB）`);
+console.log(
+  `[compile-rust-static] ✅ ${path.join(OUTPUT_DIR, outName)}（源: ${path.basename(libFile!)}，${(fs.statSync(libFile!).size / 1024 / 1024).toFixed(1)} MB）`,
+);

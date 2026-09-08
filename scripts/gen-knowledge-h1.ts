@@ -14,48 +14,48 @@
  * 退出码：1（失败）
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseFrontmatter, getScalar } from './_lib/frontmatter.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { getScalar, parseFrontmatter } from "./_lib/frontmatter.ts";
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
 
 /** 解析 frontmatter：返回 { name, body, h1Exists }。 */
 function parseCard(text: string) {
   const fm = parseFrontmatter(text);
   if (!fm) return null;
-  const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   // P2：name 解析改走共享 getScalar（与 check-knowledge-drift 同口径，支持行内注释剥离；
   // 注：getScalar 仅处理列 0 键 + 单行标量，引号/多行值不在其能力内，与旧正则一致）
-  const name = getScalar(fm, 'name');
+  const name = getScalar(fm, "name");
   const h1Exists = /^#\s+.+$/m.test(body);
   return { name: name ? name.trim() : null, body, h1Exists };
 }
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["check"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check）`);
     process.exit(1);
   }
   const { check: isCheck } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
-    console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');
+    console.error("❌ docs/knowledge/ 不存在，请确认在仓库根目录运行");
     process.exit(1);
   }
 
   const missing: Array<{ file: string; name: string; text: string; filePath: string }> = [];
   const noName: string[] = [];
   const failures: string[] = []; // 读/写失败计数：CI 模式下不可静默通过（code_review P2）
-  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith('.md'))) {
+  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith(".md"))) {
     if (NON_CARDS.has(f.toLowerCase())) continue; // P3-8：大小写不敏感，与 check-knowledge-drift 一致
     const filePath = path.join(KNOW_DIR, f);
-    let text;
+    let text: string;
     try {
-      text = fs.readFileSync(filePath, 'utf8');
+      text = fs.readFileSync(filePath, "utf8");
     } catch (e) {
       failures.push(f); // 记录而非仅 warn——check 模式须以非零退出暴露未校验卡
       console.warn(`⚠️ 读取失败（跳过）: ${f} — ${(e as Error).message}`);
@@ -71,12 +71,16 @@ function main() {
   }
 
   if (noName.length) {
-    console.warn(`⚠️  ${noName.length} 张卡缺 name 字段（跳过）: ${noName.slice(0, 5).join(', ')}${noName.length > 5 ? '…' : ''}`);
+    console.warn(
+      `⚠️  ${noName.length} 张卡缺 name 字段（跳过）: ${noName.slice(0, 5).join(", ")}${noName.length > 5 ? "…" : ""}`,
+    );
   }
 
   if (isCheck) {
     if (missing.length) {
-      console.error(`❌ ${missing.length} 张知识卡正文缺 # 标题，请运行：node scripts/gen-knowledge-h1.ts`);
+      console.error(
+        `❌ ${missing.length} 张知识卡正文缺 # 标题，请运行：node scripts/gen-knowledge-h1.ts`,
+      );
       for (const t of missing.slice(0, 20)) console.error(`   - ${t.file}（name: ${t.name}）`);
       process.exit(1);
     }
@@ -87,23 +91,22 @@ function main() {
     }
     // P2：读取失败同样使 check 失败——有卡未校验不得绿灯
     if (failures.length) {
-      console.error(`❌ ${failures.length} 张卡读取失败（未校验），请检查文件权限/损坏: ${failures.slice(0, 5).join(', ')}${failures.length > 5 ? '…' : ''}`);
+      console.error(
+        `❌ ${failures.length} 张卡读取失败（未校验），请检查文件权限/损坏: ${failures.slice(0, 5).join(", ")}${failures.length > 5 ? "…" : ""}`,
+      );
       process.exit(1);
     }
-    console.log('✅ 所有知识卡正文均有 # 标题');
+    console.log("✅ 所有知识卡正文均有 # 标题");
     return;
   }
 
   let written = 0;
   for (const t of missing) {
     // 在 frontmatter 结束的 --- 后补 `# name` + 空行；正文原有内容保持不变
-    const newText = t.text.replace(
-      /^(---\r?\n[\s\S]*?\r?\n---)\r?\n?/,
-      `$1\n\n# ${t.name}\n`
-    );
+    const newText = t.text.replace(/^(---\r?\n[\s\S]*?\r?\n---)\r?\n?/, `$1\n\n# ${t.name}\n`);
     if (newText === t.text) continue;
     try {
-      fs.writeFileSync(t.filePath, newText, 'utf8');
+      fs.writeFileSync(t.filePath, newText, "utf8");
     } catch (e) {
       console.error(`❌ 写入失败: ${t.file} — ${(e as Error).message}`);
       continue; // P3-5：写失败不中断整轮
@@ -111,7 +114,7 @@ function main() {
     written++;
     console.log(`✍️  ${t.file} → # ${t.name}`);
   }
-  console.log(written ? `✅ 已补齐 ${written} 张知识卡的 # 标题` : '✅ 无需补齐');
+  console.log(written ? `✅ 已补齐 ${written} 张知识卡的 # 标题` : "✅ 无需补齐");
 }
 
 main();

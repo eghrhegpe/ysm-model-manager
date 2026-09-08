@@ -18,17 +18,17 @@
  * 设计意图：gen-project-map 工具脚本（结构自动扫描，用途从文档自身复用）
  * 退出码：0（无 process.exit 调用）
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { getRoot, readText, writeText } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { getRoot, readText, writeText } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
-const OUT = path.join(ROOT, 'docs', 'project-map.md');
+const OUT = path.join(ROOT, "docs", "project-map.md");
 
 // ── 参数 ──
 const args = new Set(process.argv.slice(2));
-const CHECK = args.has('--check');
-const JSON_OUT = args.has('--json');
+const CHECK = args.has("--check");
+const JSON_OUT = args.has("--json");
 
 /**
  * 从现有 docs/project-map.md 的 GEN 区表格读回「路径 → 用途」人工知识。
@@ -39,19 +39,19 @@ const JSON_OUT = args.has('--json');
 function loadUsageFromDoc() {
   const usage: Record<string, string> = {};
   if (!fs.existsSync(OUT)) return usage;
-  const text = readText(OUT).replace(/^\uFEFF/, '');
-  for (const line of text.split('\n')) {
-    if (!line.startsWith('|') || !line.includes('`')) continue;
-    const firstBar = line.indexOf('`');
-    const closeBar = line.indexOf('`', firstBar + 1);
+  const text = readText(OUT).replace(/^\uFEFF/, "");
+  for (const line of text.split("\n")) {
+    if (!line.startsWith("|") || !line.includes("`")) continue;
+    const firstBar = line.indexOf("`");
+    const closeBar = line.indexOf("`", firstBar + 1);
     if (closeBar === -1) continue;
     const label = line.slice(firstBar + 1, closeBar).trim();
-    const rest = line.slice(closeBar + 1).replace(/^\s*\|\s*/, '');
-    const lastBar = rest.lastIndexOf('|');
+    const rest = line.slice(closeBar + 1).replace(/^\s*\|\s*/, "");
+    const lastBar = rest.lastIndexOf("|");
     const desc = lastBar === -1 ? rest.trim() : rest.slice(0, lastBar).trim();
     // 剥离自动形态尾巴（〔...〕，由脚本生成并读回，避免二次追加）
-    const bare = desc.replace(/\s*〔[^〕]*〕$/, '');
-    if (label && bare && !bare.startsWith('⚠️')) usage[label] = bare;
+    const bare = desc.replace(/\s*〔[^〕]*〕$/, "");
+    if (label && bare && !bare.startsWith("⚠️")) usage[label] = bare;
   }
   return usage;
 }
@@ -59,32 +59,48 @@ function loadUsageFromDoc() {
 /** 一级子目录名（跳过隐藏项）。 */
 function subdirs(dir: string) {
   if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
-    .map((d) => d.name)
-    // 字节序比较（排序名全 ASCII，见 code_review P1-1）：localeCompare 依赖 ICU/CLDR
-    // 版本，跨平台排序可能不一致导致 --check 幂等误报；字节序与 locale 无关，确定性最强
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return (
+    fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+      .map((d) => d.name)
+      // 字节序比较（排序名全 ASCII，见 code_review P1-1）：localeCompare 依赖 ICU/CLDR
+      // 版本，跨平台排序可能不一致导致 --check 幂等误报；字节序与 locale 无关，确定性最强
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+  );
 }
 
 /** 一级文件名的子集（按扩展名过滤，跳过隐藏项与工具产物）。
  * 工具产出（link-checker-out.json / opencode.json）已在 .gitignore 显式排除，
  * 此处同步过滤，避免它们出现在项目地图里污染「根级结构」视图。 */
-const ROOT_EXCLUDED = new Set(['link-checker-out.json', 'opencode.json']);
+const ROOT_EXCLUDED = new Set(["link-checker-out.json", "opencode.json"]);
 
 function topFiles(dir: string, exts: string[]) {
   if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isFile() && !d.name.startsWith('.') && !ROOT_EXCLUDED.has(d.name) && exts.some((e) => d.name.endsWith(e)))
-    .map((d) => d.name)
-    // 字节序比较（排序名全 ASCII）：locale 无关，跨 ICU/CLDR 版本确定性最强（code_review P1-1）
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return (
+    fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter(
+        (d) =>
+          d.isFile() &&
+          !d.name.startsWith(".") &&
+          !ROOT_EXCLUDED.has(d.name) &&
+          exts.some((e) => d.name.endsWith(e)),
+      )
+      .map((d) => d.name)
+      // 字节序比较（排序名全 ASCII）：locale 无关，跨 ICU/CLDR 版本确定性最强（code_review P1-1）
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+  );
 }
 
 /** 渲染一行表格；文档未登记用途的条目显示占位并计入漂移提示。 */
-function row(label: string, usage: string, drift: { unregistered: string[] }, kind: string, tail = '') {
+function row(
+  label: string,
+  usage: string,
+  drift: { unregistered: string[] },
+  kind: string,
+  tail = "",
+) {
   if (!usage) {
     drift.unregistered.push(`${kind}:${label}`);
     return `| \`${label}\` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句）${tail} |`;
@@ -104,10 +120,15 @@ function isSourceFile(name: string) {
 
 /** 目录形态扫描：{ source: [], test: [], other: [], dirs: [] }（直接子项，字节序排序）。 */
 function scanShape(dir: string) {
-  const shape: { source: string[]; test: string[]; other: string[]; dirs: string[] } = { source: [], test: [], other: [], dirs: [] };
+  const shape: { source: string[]; test: string[]; other: string[]; dirs: string[] } = {
+    source: [],
+    test: [],
+    other: [],
+    dirs: [],
+  };
   if (!fs.existsSync(dir)) return shape;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name.startsWith('.')) continue;
+    if (e.name.startsWith(".")) continue;
     if (e.isDirectory()) {
       shape.dirs.push(e.name);
     } else if (isTestFile(e.name)) {
@@ -118,12 +139,16 @@ function scanShape(dir: string) {
       shape.other.push(e.name);
     }
   }
-  for (const k of Object.keys(shape)) (shape as Record<string, string[]>)[k]!.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const k of Object.keys(shape))
+    (shape as Record<string, string[]>)[k]?.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return shape;
 }
 
 /** 形态缓存：同一目录只扫一次磁盘（shapeTail 生成 markdown 与 --json 输出共用）。 */
-const shapeCache = new Map<string, { source: string[]; test: string[]; other: string[]; dirs: string[] }>();
+const shapeCache = new Map<
+  string,
+  { source: string[]; test: string[]; other: string[]; dirs: string[] }
+>();
 function scanShapeCached(dir: string) {
   if (!shapeCache.has(dir)) shapeCache.set(dir, scanShape(dir));
   return shapeCache.get(dir)!;
@@ -140,15 +165,18 @@ function shapeTail(dir: string) {
   const parts: string[] = [];
   if (sh.source.length > 0) {
     if (sh.source.length <= SOURCE_LIST_MAX) {
-      const list = sh.source.join(' ');
-      parts.push(`源码 ${sh.source.length}: ${list.length <= SOURCE_LIST_CHARS ? list : list.slice(0, SOURCE_LIST_CHARS - 3) + '…'}`);
+      const list = sh.source.join(" ");
+      parts.push(
+        `源码 ${sh.source.length}: ${list.length <= SOURCE_LIST_CHARS ? list : `${list.slice(0, SOURCE_LIST_CHARS - 3)}…`}`,
+      );
     } else {
       parts.push(`源码 ${sh.source.length}`);
     }
   }
   if (sh.test.length > 0) parts.push(`测试 ${sh.test.length}`);
-  if (sh.dirs.length > 0) parts.push(`子目录 ${sh.dirs.length}: ${sh.dirs.map((d) => d + '/').join(' ')}`);
-  return parts.length > 0 ? ` 〔${parts.join(' · ')}〕` : '';
+  if (sh.dirs.length > 0)
+    parts.push(`子目录 ${sh.dirs.length}: ${sh.dirs.map((d) => `${d}/`).join(" ")}`);
+  return parts.length > 0 ? ` 〔${parts.join(" · ")}〕` : "";
 }
 
 /** 生成完整 markdown（内存态，不落盘）。 */
@@ -156,30 +184,30 @@ function build() {
   const usage = loadUsageFromDoc();
   const drift = { unregistered: [] };
 
-  const goDirs = subdirs(path.join(ROOT, 'go'));
-  const internalDirs = subdirs(path.join(ROOT, 'internal'));
-  const feDirs = subdirs(path.join(ROOT, 'frontend', 'src'));
-  const feFiles = topFiles(path.join(ROOT, 'frontend', 'src'), ['.ts', '.js']);
-  const rootFiles = topFiles(ROOT, ['.go', '.json', '.md']);
+  const goDirs = subdirs(path.join(ROOT, "go"));
+  const internalDirs = subdirs(path.join(ROOT, "internal"));
+  const feDirs = subdirs(path.join(ROOT, "frontend", "src"));
+  const feFiles = topFiles(path.join(ROOT, "frontend", "src"), [".ts", ".js"]);
+  const rootFiles = topFiles(ROOT, [".go", ".json", ".md"]);
 
   const goRows = goDirs
-    .map((d) => row(d + '/', usage[d + '/']!, drift, 'go', shapeTail(path.join(ROOT, 'go', d))))
-    .join('\n');
+    .map((d) => row(`${d}/`, usage[`${d}/`]!, drift, "go", shapeTail(path.join(ROOT, "go", d))))
+    .join("\n");
   const intRows = internalDirs
-    .map((d) => row(d + '/', usage[d + '/']!, drift, 'internal', shapeTail(path.join(ROOT, 'internal', d))))
-    .join('\n');
+    .map((d) =>
+      row(`${d}/`, usage[`${d}/`]!, drift, "internal", shapeTail(path.join(ROOT, "internal", d))),
+    )
+    .join("\n");
   const feRows = [...feDirs, ...feFiles]
     .map((n) => {
       // subdirs/topFiles 返回不带斜杠的名字：目录判定用「无扩展名」与 key 同源
-      const isDir = !n.includes('.');
-      const key = isDir ? n + '/' : n;
-      const tail = isDir ? shapeTail(path.join(ROOT, 'frontend', 'src', n)) : '';
-      return row(key, usage[key]!, drift, 'frontend', tail);
+      const isDir = !n.includes(".");
+      const key = isDir ? `${n}/` : n;
+      const tail = isDir ? shapeTail(path.join(ROOT, "frontend", "src", n)) : "";
+      return row(key, usage[key]!, drift, "frontend", tail);
     })
-    .join('\n');
-  const rootRows = rootFiles
-    .map((n) => row(n, usage[n]!, drift, 'root'))
-    .join('\n');
+    .join("\n");
+  const rootRows = rootFiles.map((n) => row(n, usage[n]!, drift, "root")).join("\n");
 
   const md = `# 项目结构地图
 
@@ -235,7 +263,13 @@ ${rootRows}
     md,
     drift,
     usage,
-    zones: { go: goDirs, internal: internalDirs, frontend: feDirs, frontendFiles: feFiles, root: rootFiles },
+    zones: {
+      go: goDirs,
+      internal: internalDirs,
+      frontend: feDirs,
+      frontendFiles: feFiles,
+      root: rootFiles,
+    },
   };
 }
 
@@ -246,17 +280,20 @@ let rc = 0;
 if (drift.unregistered.length > 0) {
   console.warn(`[gen-project-map] ${drift.unregistered.length} 个磁盘目录/文件未登记用途：`);
   for (const d of drift.unregistered) console.warn(`  - ${d}`);
-  console.warn('  → 在 docs/project-map.md 对应表格行补一句用途说明后重跑本脚本。');
+  console.warn("  → 在 docs/project-map.md 对应表格行补一句用途说明后重跑本脚本。");
 }
 
 if (CHECK) {
-  const onDisk = fs.existsSync(OUT) ? readText(OUT) : '';
-  const normalized = onDisk.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  const onDisk = fs.existsSync(OUT) ? readText(OUT) : "";
+  const normalized = onDisk.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   if (normalized !== md) {
     rc = 1;
-    if (!JSON_OUT) console.error(`[gen-project-map] docs/project-map.md 过期，运行 \`node scripts/gen-project-map.ts\` 刷新。`);
+    if (!JSON_OUT)
+      console.error(
+        `[gen-project-map] docs/project-map.md 过期，运行 \`node scripts/gen-project-map.ts\` 刷新。`,
+      );
   } else if (!JSON_OUT) {
-    console.log('[gen-project-map] docs/project-map.md 最新。');
+    console.log("[gen-project-map] docs/project-map.md 最新。");
   }
 } else {
   writeText(OUT, md); // 保留原行尾风格（CRLF 文件不被改写为 LF，--check 幂等不失效，code_review P2-1）
@@ -267,24 +304,29 @@ if (JSON_OUT) {
   // 结构化输出：目录形态（源码/测试/其他/子目录）+ 用途——fast worker 程序化消费，
   // 绕开 markdown 表格解析（根治「猜路径抓空」）。
   const structure: Record<string, any> = {};
-  for (const zone of ['go', 'internal', 'frontend']) {
+  for (const zone of ["go", "internal", "frontend"]) {
     structure[zone] = {};
     for (const d of (zones as Record<string, string[]>)[zone]!) {
-      const key = d + '/';
-      structure[zone][key] = { usage: usage[key] || null, ...scanShapeCached(path.join(ROOT, zone === 'frontend' ? 'frontend/src' : zone, d)) };
+      const key = `${d}/`;
+      structure[zone][key] = {
+        usage: usage[key] || null,
+        ...scanShapeCached(path.join(ROOT, zone === "frontend" ? "frontend/src" : zone, d)),
+      };
     }
   }
   structure.frontendFiles = {};
   for (const f of zones.frontendFiles) structure.frontendFiles[f] = { usage: usage[f] || null };
   structure.root = {};
   for (const f of zones.root) structure.root[f] = { usage: usage[f] || null };
-  console.log(JSON.stringify({
-    ok: rc === 0,
-    check: CHECK,
-    generated: !CHECK,
-    drift: { unregistered: drift.unregistered },
-    structure,
-  }));
+  console.log(
+    JSON.stringify({
+      ok: rc === 0,
+      check: CHECK,
+      generated: !CHECK,
+      drift: { unregistered: drift.unregistered },
+      structure,
+    }),
+  );
 }
 
 process.exitCode = rc;

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { existsAt as gitExistsAt, gitMaybe, showAt as gitShowAt } from "./_lib/git-ref.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
 /**
  * audit-split.ts — 拆分/重构提交审计工具（主动情报型）。
  *
@@ -16,9 +18,7 @@
  *   node scripts/audit-split.ts <commit> --compact  # 摘要模式：迁移/新文件明细折叠为计数 + 头部若干条
  * 退出码：0 审计成功；--redline 且存在 >400 行文件 → 1；缺参/commit 无效 → 2（其余 0）。
  */
-import { getExportedSymbolsAny, topDeclsAny, countLines } from './_lib/source-graph.ts';
-import { gitMaybe, showAt as gitShowAt, existsAt as gitExistsAt } from './_lib/git-ref.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import { countLines, getExportedSymbolsAny, topDeclsAny } from "./_lib/source-graph.ts";
 
 // ADR-040：拆分后每文件 ≤400 行
 const REDLINE = 400;
@@ -42,28 +42,31 @@ function existsAt(ref: string, path: string) {
 // ── 提交信息 ──
 
 function commitMeta(ref: string) {
-  const fmt = '%H%x09%h%x09%an%x09%ad%x09%s';
-  const line = (gitMaybe(['show', '-s', `--format=${fmt}`, '--date=short', ref]) || '').trim();
+  const fmt = "%H%x09%h%x09%an%x09%ad%x09%s";
+  const line = (gitMaybe(["show", "-s", `--format=${fmt}`, "--date=short", ref]) || "").trim();
   if (!line) return null;
-  const [hash, short, author, date, ...rest] = line.split('\t');
-  return { hash, short, author, date, subject: rest.join('\t') };
+  const [hash, short, author, date, ...rest] = line.split("\t");
+  return { hash, short, author, date, subject: rest.join("\t") };
 }
 
 /** numstat 解析文件清单：adds	dels	path（--no-renames 防 rename 花括号污染）。 */
 function fileList(commit: string) {
-  const out = (gitMaybe(['show', '--numstat', '--format=', '--no-renames', commit]) || '').trim();
+  const out = (gitMaybe(["show", "--numstat", "--format=", "--no-renames", commit]) || "").trim();
   if (!out) return [];
-  return out.split('\n').map((l) => {
-    const [adds, dels, ...rest] = l.split('\t');
-    const path = rest.join('\t').trim();
-    if (!path) return null;
-    return {
-      path,
-      insertions: adds === '-' ? null : Number(adds),
-      deletions: dels === '-' ? null : Number(dels),
-      binary: adds === '-',
-    };
-  }).filter(Boolean);
+  return out
+    .split("\n")
+    .map((l) => {
+      const [adds, dels, ...rest] = l.split("\t");
+      const path = rest.join("\t").trim();
+      if (!path) return null;
+      return {
+        path,
+        insertions: adds === "-" ? null : Number(adds),
+        deletions: dels === "-" ? null : Number(dels),
+        binary: adds === "-",
+      };
+    })
+    .filter(Boolean);
 }
 
 // ── 分类：被拆主文件 / 新子文件 / 被移文件 / 边角修改 ──
@@ -72,17 +75,17 @@ function fileList(commit: string) {
  *  {a => b} 只含局部名——须拼回公共前缀/后缀得到完整路径，否则目录级 rename
  *  丢失前缀被误分类 removed（code review P2 修复）。 */
 function detectRenames(commit: string) {
-  const out = gitMaybe(['show', '--numstat', '--format=', '--find-renames', commit]) || '';
+  const out = gitMaybe(["show", "--numstat", "--format=", "--find-renames", commit]) || "";
   const renames: { from: string; to: string }[] = [];
-  for (const line of out.split('\n')) {
+  for (const line of out.split("\n")) {
     const m = line.match(/^\d+\t\d+\t(.+)$/);
     if (!m) continue;
     const path = m[1]!;
     const rm = path.match(/\{(.+?) => (.+?)\}/);
     if (rm) {
       // 拼回完整路径：prefix + {a => b} + suffix
-      const prefix = path.slice(0, path.indexOf('{'));
-      const suffix = path.slice(path.indexOf('}') + 1);
+      const prefix = path.slice(0, path.indexOf("{"));
+      const suffix = path.slice(path.indexOf("}") + 1);
       renames.push({ from: prefix + rm[1]! + suffix, to: prefix + rm[2]! + suffix });
     }
   }
@@ -92,17 +95,23 @@ function detectRenames(commit: string) {
 function classify(files: any[], commit: string, renameFroms: Set<string>) {
   const mainThreshold = 80; // 删除 ≥80 行才视为「被拆主文件」
   for (const f of files) {
-    if (f.binary) { f.kind = 'binary'; continue; }
+    if (f.binary) {
+      f.kind = "binary";
+      continue;
+    }
     const after = existsAt(commit, f.path);
     if (!after && f.deletions > 0) {
       // 提交后不存在：纯删除文件；若同时在 rename from 侧则是改名（0 0 纯改名
       // 不会进 removed——insertions/deletions 均 0，但 --no-renames 下可能列出，用 from 集排除）
-      f.kind = renameFroms.has(f.path) ? 'renamed-away' : 'removed';
+      f.kind = renameFroms.has(f.path) ? "renamed-away" : "removed";
       continue;
     }
     const before = existsAt(`${commit}^`, f.path);
-    if (!before) { f.kind = 'new'; continue; }
-    f.kind = (f.deletions >= mainThreshold && f.deletions > f.insertions) ? 'split-main' : 'modified';
+    if (!before) {
+      f.kind = "new";
+      continue;
+    }
+    f.kind = f.deletions >= mainThreshold && f.deletions > f.insertions ? "split-main" : "modified";
   }
   return files;
 }
@@ -117,10 +126,15 @@ function removedFileTrace(commit: string, rmPath: string, allPaths: string[]) {
     const t = showAt(commit, p);
     fileSyms.set(p, t === null ? new Set() : new Set(topDeclsAny(p, t)));
   }
-  const merged: Record<string, any> = {}, gone: any[] = [];
+  const merged: Record<string, any> = {},
+    gone: any[] = [];
   for (const sym of oldAll) {
     let where = null;
-    for (const [p, s] of fileSyms) if (s.has(sym)) { where = p; break; }
+    for (const [p, s] of fileSyms)
+      if (s.has(sym)) {
+        where = p;
+        break;
+      }
     if (where) merged[sym] = where;
     else gone.push(sym);
   }
@@ -140,7 +154,8 @@ function deletedSyms(commit: string, path: string) {
   const oldAll = new Set(topDeclsAny(path, oldText));
   const newAll = new Set(topDeclsAny(path, newText));
   const oldExp = getExportedSymbolsAny(path, oldText);
-  return [...oldAll].filter((s) => !newAll.has(s))
+  return [...oldAll]
+    .filter((s) => !newAll.has(s))
     .map((s) => ({ name: s, wasExport: oldExp.includes(s) }));
 }
 
@@ -153,18 +168,32 @@ function funcMigration(commit: string, mainPath: string, allPaths: string[]) {
   for (const p of allPaths) {
     const t = showAt(commit, p);
     const empty = new Set();
-    if (t === null) { fileAll.set(p, empty); fileExp.set(p, empty); continue; }
+    if (t === null) {
+      fileAll.set(p, empty);
+      fileExp.set(p, empty);
+      continue;
+    }
     fileAll.set(p, new Set(topDeclsAny(p, t)));
     fileExp.set(p, new Set(getExportedSymbolsAny(p, t)));
   }
   const mainNew = fileAll.get(mainPath) ?? new Set();
-  const kept: string[] = [], moved: Record<string, any> = {}, deleted: any[] = [];
+  const kept: string[] = [],
+    moved: Record<string, any> = {},
+    deleted: any[] = [];
   for (const sym of oldAll) {
-    if (mainNew.has(sym)) { kept.push(sym); continue; } // 留在主文件（壳）
-    let where = null, exported = false;
+    if (mainNew.has(sym)) {
+      kept.push(sym);
+      continue;
+    } // 留在主文件（壳）
+    let where = null,
+      exported = false;
     for (const [p, s] of fileAll) {
       if (p === mainPath) continue; // 已确认不在主文件，只看子文件
-      if (s.has(sym)) { where = p; exported = fileExp.get(p)?.has(sym) ?? false; break; }
+      if (s.has(sym)) {
+        where = p;
+        exported = fileExp.get(p)?.has(sym) ?? false;
+        break;
+      }
     }
     if (where) moved[sym] = { to: where, exported, wasExport: oldExp.includes(sym) };
     else deleted.push({ name: sym, wasExport: oldExp.includes(sym) });
@@ -193,74 +222,94 @@ interface AuditReport {
 function human(report: AuditReport, compact = false) {
   const c = report.commit;
   const L: string[] = [];
-  L.push('═'.repeat(66));
+  L.push("═".repeat(66));
   L.push(` audit-split —— ${c.short} ${c.subject}`);
-  L.push(` (${c.author} · ${c.date})  ${report.files.length} 文件, +${report.totalIns}/-${report.totalDel}`);
-  L.push('═'.repeat(66));
+  L.push(
+    ` (${c.author} · ${c.date})  ${report.files.length} 文件, +${report.totalIns}/-${report.totalDel}`,
+  );
+  L.push("═".repeat(66));
 
-  L.push('');
-  L.push('① 文件清单与分类');
+  L.push("");
+  L.push("① 文件清单与分类");
   for (const f of report.files) {
-    const ins = f.insertions ?? 'Bin', del = f.deletions ?? 'Bin';
-    const tag = f.kind === 'split-main' ? '拆' : f.kind === 'new' ? '新' : f.kind === 'removed' ? '删' : f.kind === 'renamed-away' ? '名' : f.kind === 'binary' ? '二' : '改';
-    const lines = f.linesAtCommit ?? '-';
+    const ins = f.insertions ?? "Bin",
+      del = f.deletions ?? "Bin";
+    const tag =
+      f.kind === "split-main"
+        ? "拆"
+        : f.kind === "new"
+          ? "新"
+          : f.kind === "removed"
+            ? "删"
+            : f.kind === "renamed-away"
+              ? "名"
+              : f.kind === "binary"
+                ? "二"
+                : "改";
+    const lines = f.linesAtCommit ?? "-";
     const col = f.path.length > 45 ? f.path : f.path.padEnd(45);
-    L.push(`   [${tag}] ${col}  ${String(ins).padStart(4)}+/${String(del).padStart(4)}-  ${String(lines).padStart(4)}行`);
+    L.push(
+      `   [${tag}] ${col}  ${String(ins).padStart(4)}+/${String(del).padStart(4)}-  ${String(lines).padStart(4)}行`,
+    );
   }
 
-  L.push('');
-  L.push('② 函数级迁移（旧导出符号去向）');
-  const mains = report.files.filter((f) => f.kind === 'split-main');
+  L.push("");
+  L.push("② 函数级迁移（旧导出符号去向）");
+  const mains = report.files.filter((f) => f.kind === "split-main");
   if (!mains.length) {
-    L.push('   （无被拆主文件，跳过）');
+    L.push("   （无被拆主文件，跳过）");
   }
   for (const m of mains) {
     const mg = report.migrations[m.path];
     const mv = Object.entries(mg.moved as Record<string, any>);
-    L.push(`   ▸ ${m.path}  顶层声明 ${mg.oldAll}（导出 ${mg.oldExports}）→ 保留 ${mg.kept.length} · 搬家 ${mv.length} · 真删 ${mg.deleted.length}`);
+    L.push(
+      `   ▸ ${m.path}  顶层声明 ${mg.oldAll}（导出 ${mg.oldExports}）→ 保留 ${mg.kept.length} · 搬家 ${mv.length} · 真删 ${mg.deleted.length}`,
+    );
     const mvShown = compact ? mv.slice(0, 5) : mv;
     for (const [sym, info] of mvShown) {
-      const tag = info.exported ? '导出' : '私有';
+      const tag = info.exported ? "导出" : "私有";
       L.push(`       ↳ [${tag}] ${sym}  →  ${info.to}`);
     }
     if (compact && mv.length > 5) L.push(`       …其余 ${mv.length - 5} 条去向（--json 全量）`);
     for (const d of mg.deleted) {
-      const tag = d.wasExport ? '导出' : '私有';
+      const tag = d.wasExport ? "导出" : "私有";
       L.push(`       ✗ [${tag}] ${d.name}  （彻底删除）`);
     }
   }
   const cleans = Object.entries(report.cleans);
   if (cleans.length) {
-    L.push('');
-    L.push('②b 修改文件清理洞察（本文件内真删的顶层声明）');
+    L.push("");
+    L.push("②b 修改文件清理洞察（本文件内真删的顶层声明）");
     for (const [p, list] of cleans) {
       if (compact) {
         L.push(`   ▸ ${p}  真删 ${list.length} 个（--json 全量）`);
       } else {
-        const tags = list.map((d) => `[${d.wasExport ? '导出' : '私有'}] ${d.name}`);
-        L.push(`   ▸ ${p}  真删 ${list.length} 个 — ${tags.join(', ')}`);
+        const tags = list.map((d) => `[${d.wasExport ? "导出" : "私有"}] ${d.name}`);
+        L.push(`   ▸ ${p}  真删 ${list.length} 个 — ${tags.join(", ")}`);
       }
     }
   }
 
-  const newFiles = report.files.filter((f) => f.kind === 'new');
+  const newFiles = report.files.filter((f) => f.kind === "new");
   if (newFiles.length) {
-    L.push('');
-    L.push('③ 新文件入口（导出符号）');
+    L.push("");
+    L.push("③ 新文件入口（导出符号）");
     for (const n of newFiles) {
       const ex = report.newExports[n.path] || [];
-      const detail = compact ? `导出 ${ex.length} 个` : (ex.length ? ex.join(', ') : '—');
+      const detail = compact ? `导出 ${ex.length} 个` : ex.length ? ex.join(", ") : "—";
       L.push(`   ▸ ${n.path}  (${n.linesAtCommit}行) ${detail}`);
     }
   }
 
   const removedEntries = Object.entries(report.removals as Record<string, any>);
   if (removedEntries.length) {
-    L.push('');
-    L.push('②c 删除文件追踪（本次移除的文件 — 符号合入去向）');
+    L.push("");
+    L.push("②c 删除文件追踪（本次移除的文件 — 符号合入去向）");
     for (const [p, tr] of removedEntries) {
       const mergedN = Object.keys(tr.merged).length;
-      L.push(`   ▸ ${p}  顶层声明 ${tr.syms.length} → 合入 ${mergedN} · 彻底删除 ${tr.gone.length}`);
+      L.push(
+        `   ▸ ${p}  顶层声明 ${tr.syms.length} → 合入 ${mergedN} · 彻底删除 ${tr.gone.length}`,
+      );
       if (!compact) {
         for (const [sym, to] of Object.entries(tr.merged)) L.push(`       ↳ ${sym}  →  ${to}`);
         for (const sym of tr.gone) L.push(`       ✗ ${sym}  （彻底删除）`);
@@ -268,33 +317,41 @@ function human(report: AuditReport, compact = false) {
     }
   }
   if (report.renames.length) {
-    L.push('');
+    L.push("");
     L.push(`②d 重命名检测（${report.renames.length} 对）`);
     const shown = compact ? report.renames.slice(0, 10) : report.renames;
     for (const r of shown) L.push(`   ▸ ${r.from}  →  ${r.to}`);
-    if (compact && report.renames.length > 10) L.push(`   …其余 ${report.renames.length - 10} 对（--json 全量）`);
+    if (compact && report.renames.length > 10)
+      L.push(`   …其余 ${report.renames.length - 10} 对（--json 全量）`);
   }
 
-  L.push('');
-  L.push('④ 红线 ADR-040（拆分后 ≤400 行）');
+  L.push("");
+  L.push("④ 红线 ADR-040（拆分后 ≤400 行）");
   if (report.redline.over.length) {
     for (const o of report.redline.over) {
-      const note = o.kind === 'split-main' ? '（[拆]主文件残留，ADR-040 目标为拆分后新文件 ≤400，残留属下一轮瘦身待办）' : '';
+      const note =
+        o.kind === "split-main"
+          ? "（[拆]主文件残留，ADR-040 目标为拆分后新文件 ≤400，残留属下一轮瘦身待办）"
+          : "";
       L.push(`   ✗ ${o.path}  ${o.lines} 行 > 400 ${note}`);
     }
   } else {
     L.push(`   ✅ 全部合规（本提交涉及文件最大 ${report.redline.max} 行）`);
   }
 
-  L.push('');
-  L.push('⑤ 受影响文件历史提交（拆/新/移除文件，各至多 5 条）');
-  const auditFiles = [...mains, ...newFiles, ...report.files.filter((f) => f.kind === 'removed' || f.kind === 'renamed-away')];
+  L.push("");
+  L.push("⑤ 受影响文件历史提交（拆/新/移除文件，各至多 5 条）");
+  const auditFiles = [
+    ...mains,
+    ...newFiles,
+    ...report.files.filter((f) => f.kind === "removed" || f.kind === "renamed-away"),
+  ];
   for (const f of auditFiles) {
     const h = report.history[f.path] || [];
     L.push(`   ▸ ${f.path}`);
     for (const line of h) L.push(`       ${line}`);
   }
-  return L.join('\n');
+  return L.join("\n");
 }
 
 // ── 主流程 ──
@@ -320,26 +377,27 @@ function audit(commit: string): any {
     f.linesAtCommit = f.binary ? null : countLines(showAt(commit, f.path));
     if (!f.binary && f.linesAtCommit !== null) {
       max = Math.max(max, f.linesAtCommit);
-      if (f.linesAtCommit > REDLINE) over.push({ path: f.path, lines: f.linesAtCommit, kind: f.kind });
+      if (f.linesAtCommit > REDLINE)
+        over.push({ path: f.path, lines: f.linesAtCommit, kind: f.kind });
     }
-    if (f.kind === 'split-main') migrations[f.path] = funcMigration(commit, f.path, paths);
-    else if (f.kind === 'modified') {
+    if (f.kind === "split-main") migrations[f.path] = funcMigration(commit, f.path, paths);
+    else if (f.kind === "modified") {
       const d = deletedSyms(commit, f.path);
       if (d.length) cleans[f.path] = d;
     }
-    if (f.kind === 'removed') removals[f.path] = removedFileTrace(commit, f.path, paths);
-    if (f.kind === 'new') {
+    if (f.kind === "removed") removals[f.path] = removedFileTrace(commit, f.path, paths);
+    if (f.kind === "new") {
       const t = showAt(commit, f.path);
       newExports[f.path] = t ? getExportedSymbolsAny(f.path, t) : [];
     }
-    if (f.kind === 'split-main' || f.kind === 'new') {
-      const log = gitMaybe(['log', '--oneline', '-5', '--', f.path]);
-      history[f.path] = log ? log.trim().split('\n').filter(Boolean) : [];
+    if (f.kind === "split-main" || f.kind === "new") {
+      const log = gitMaybe(["log", "--oneline", "-5", "--", f.path]);
+      history[f.path] = log ? log.trim().split("\n").filter(Boolean) : [];
     }
   }
 
   return {
-    kind: 'audit-split',
+    kind: "audit-split",
     commit: meta,
     files,
     totalIns,
@@ -356,13 +414,13 @@ function audit(commit: string): any {
 
 // ── CLI ──
 
-const args = parseArgs(process.argv.slice(2), { bools: ['json', 'redline', 'compact'] });
+const args = parseArgs(process.argv.slice(2), { bools: ["json", "redline", "compact"] });
 if (args.help) {
-  console.log('用法: node scripts/audit-split.ts <commit> [--json|--redline|--compact]');
+  console.log("用法: node scripts/audit-split.ts <commit> [--json|--redline|--compact]");
   process.exit(0);
 }
 if (args.unknown.length) {
-  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  console.error(`❌ 未知参数: ${args.unknown.join(", ")}（--help 查看用法）`);
   process.exit(2);
 }
 const { json, redlineOnly, compact, commitArg } = {
@@ -370,11 +428,11 @@ const { json, redlineOnly, compact, commitArg } = {
   redlineOnly: args.redline,
   compact: args.compact as boolean,
   // 位置参数：沿用旧口径排除 `..`/`..` 开头（commit range `a..b` 走 --redline 等场景外的裸参误判防御）
-  commitArg: args._.find((a) => !a.endsWith('..') && !a.startsWith('..')),
+  commitArg: args._.find((a) => !a.endsWith("..") && !a.startsWith("..")),
 };
 
 if (!commitArg) {
-  console.error('用法: node scripts/audit-split.ts <commit> [--json|--redline]（--help 查看用法）');
+  console.error("用法: node scripts/audit-split.ts <commit> [--json|--redline]（--help 查看用法）");
   process.exit(2);
 }
 
@@ -389,5 +447,5 @@ if (json) {
 } else {
   console.log(human(report, compact));
 }
-if (redlineOnly && report.redline!.over.length) process.exit(1);
+if (redlineOnly && report.redline?.over.length) process.exit(1);
 process.exit(0);

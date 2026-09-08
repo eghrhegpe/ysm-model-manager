@@ -15,9 +15,9 @@
 // 写入 frontend/public/locales/*.json（运行时 fetch 消费）。
 // --check 模式解决 #8 开发/运行双源不对称：改 TS 未重生成 → 构建即失败。
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
-import { join, basename } from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -59,7 +59,9 @@ async function loadTsObject(file: string): Promise<Record<string, unknown>> {
   const obj =
     typeof exported.default === "object" && exported.default !== null
       ? exported.default
-      : Object.values(exported).find((v) => typeof v === "object" && v !== null && !Array.isArray(v));
+      : Object.values(exported).find(
+          (v) => typeof v === "object" && v !== null && !Array.isArray(v),
+        );
   if (!obj || typeof obj !== "object") {
     throw new Error(`${file}: 未找到有效的导出对象`);
   }
@@ -85,7 +87,9 @@ if (CHECK) {
       const missing = tsKeys.filter((k) => !jsonKeys.includes(k));
       const extra = jsonKeys.filter((k) => !tsKeys.includes(k));
       if (missing.length > 0 || extra.length > 0) {
-        console.error(`[locale-gen:check] ${lang}: TS↔JSON 键不一致（缺 ${missing.length} / 多 ${extra.length}）`);
+        console.error(
+          `[locale-gen:check] ${lang}: TS↔JSON 键不一致（缺 ${missing.length} / 多 ${extra.length}）`,
+        );
         if (missing.length > 0) console.error(`  缺失: ${missing.slice(0, 10).join(", ")}`);
         if (extra.length > 0) console.error(`  多余: ${extra.slice(0, 10).join(", ")}`);
         failed++;
@@ -98,7 +102,9 @@ if (CHECK) {
     }
   }
   if (failed > 0) {
-    console.error(`[locale-gen:check] ${failed}/${tsFiles.length} 个语言包 TS↔JSON 不一致（改 TS 后需重生成）`);
+    console.error(
+      `[locale-gen:check] ${failed}/${tsFiles.length} 个语言包 TS↔JSON 不一致（改 TS 后需重生成）`,
+    );
     process.exit(1);
   }
   console.log(`[locale-gen:check] 全部 ${tsFiles.length} 个语言包 TS↔JSON 一致`);
@@ -114,7 +120,7 @@ for (const file of tsFiles) {
   try {
     const obj = await loadTsObject(file);
     const outPath = join(OUT_DIR, `${lang}.json`);
-    writeFileSync(outPath, JSON.stringify(obj, null, 2) + "\n", "utf-8");
+    writeFileSync(outPath, `${JSON.stringify(obj, null, 2)}\n`, "utf-8");
     const keyCount = Object.keys(obj).length;
     console.log(`[locale-gen] ${lang}.json ← ${file} (${keyCount} keys)`);
   } catch (e) {

@@ -19,21 +19,20 @@
  * 设计意图：知识卡测试生成器
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseFrontmatter } from './_lib/frontmatter.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
 // [ADR-114 §被补充] 常量共享层
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
-const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'src');
+const FRONTEND_JS_DIR = path.join(ROOT, "frontend", "src");
 
 /** 递归收集前端测试文件相对仓库路径（.test/.spec + .ts/.js）。 */
 function collectTestFiles() {
   const out: string[] = [];
   const walk = (dir: string, rel: string) => {
-    let entries;
+    let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
@@ -46,19 +45,19 @@ function collectTestFiles() {
       else if (/\.(test|spec)\.(ts|js)$/.test(e.name)) out.push(relPath);
     }
   };
-  if (fs.existsSync(FRONTEND_JS_DIR)) walk(FRONTEND_JS_DIR, 'frontend/src');
+  if (fs.existsSync(FRONTEND_JS_DIR)) walk(FRONTEND_JS_DIR, "frontend/src");
   return out;
 }
 
 /** 提取 frontmatter 块。 */
 function fmBlock(text: string) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : '';
+  return m ? m[1] : "";
 }
 
 /** 测试文件 basename（去 .test/.spec + 扩展名后缀）。 */
 function testBase(rel: string) {
-  return path.basename(rel).replace(/\.(test|spec)\.(ts|js)$/, '');
+  return path.basename(rel).replace(/\.(test|spec)\.(ts|js)$/, "");
 }
 
 /** 卡与测试的匹配判定：测试 basename 含卡名，或卡 source_files basename 含测试 basename 前缀。 */
@@ -67,10 +66,13 @@ function matchTests(cardName: string, sourceBases: string[], testFiles: string[]
   for (const tf of testFiles) {
     const tb = testBase(tf);
     const rel = tf;
-    if (tb === cardName) { hit.push(rel); continue; }
+    if (tb === cardName) {
+      hit.push(rel);
+      continue;
+    }
     // source_files basename 前缀匹配（支持点分隔与破折号分隔：data → data.test / display → display.test）
     for (const sb of sourceBases) {
-      if (tb === sb || tb.startsWith(sb + '.') || tb.startsWith(sb + '-')) {
+      if (tb === sb || tb.startsWith(`${sb}.`) || tb.startsWith(`${sb}-`)) {
         hit.push(rel);
         break;
       }
@@ -87,13 +89,13 @@ function writeTests(text: string, tests: string[]) {
   // 注意：块边界用 `\n\s*$`（空行/文件尾）而非 `\s*$`——后者在 m 模式下匹配任意行尾，会把块截断在首行
   const testsBlock = fm.match(/^tests:\s*\n([\s\S]*?)(?=^[a-z_]+:|\n\s*$)/m);
   const existing = testsBlock
-    ? [...testsBlock[1]!.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
+    ? [...(testsBlock[1] ?? "").matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
     : [];
   const merged = [...new Set([...existing, ...tests])].sort();
-  const lines = merged.map((t) => `  - ${t}`).join('\n');
+  const lines = merged.map((t) => `  - ${t}`).join("\n");
 
   // 移除旧 tests 字段（覆盖 `tests: []` / `tests:` 空块 / 非空列表 / 完全无字段四种情况）
-  let newFm = fm.replace(/^tests:[\s\S]*?(?=^[a-z_]+:|\n\s*$)/m, '').replace(/\n{3,}/g, '\n\n');
+  let newFm = fm.replace(/^tests:[\s\S]*?(?=^[a-z_]+:|\n\s*$)/m, "").replace(/\n{3,}/g, "\n\n");
 
   // 在 source_files 块结束后插入新的 tests 块
   const sfEnd = newFm.match(/^(source_files:[\s\S]*?)(?=^[a-z_]+:|\n\s*$)/m);
@@ -107,16 +109,16 @@ function writeTests(text: string, tests: string[]) {
 }
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["check"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check）`);
     process.exit(1);
   }
   const { check: isCheck } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
-    console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');
+    console.error("❌ docs/knowledge/ 不存在，请确认在仓库根目录运行");
     process.exit(1);
   }
   const testFiles = collectTestFiles();
@@ -124,35 +126,39 @@ function main() {
 
   // 收集「architecture 卡 + tests 为空」
   const targets: Array<{ file: string; text: string; tests: string[] }> = [];
-  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith('.md'))) {
+  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith(".md"))) {
     if (NON_CARDS.has(f)) continue;
-    const text = fs.readFileSync(path.join(KNOW_DIR, f), 'utf8');
+    const text = fs.readFileSync(path.join(KNOW_DIR, f), "utf8");
     const fmTxt = fmBlock(text);
     if (!fmTxt) continue;
     const tier = (fmTxt.match(/^tier\s*:\s*(.+)$/m) || [])[1]?.trim();
-    if (tier !== 'architecture') continue;
-    const testsEmpty = /^tests:\s*\[\]$/m.test(fmTxt) || !fmTxt.includes('tests');
+    if (tier !== "architecture") continue;
+    const testsEmpty = /^tests:\s*\[\]$/m.test(fmTxt) || !fmTxt.includes("tests");
     // tests 非空但含重复条目（历史重复登记）也需清理
     const testsBlock = fmTxt.match(/^tests:\s*\n([\s\S]*?)(?=^[a-z_]+:)/m);
     const existingTests = testsBlock
-      ? [...testsBlock[1]!.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1])
+      ? [...(testsBlock[1] ?? "").matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map(
+          (m) => m[1],
+        )
       : [];
     const testsHasDup = existingTests.length !== new Set(existingTests).size;
     if (!testsEmpty && !testsHasDup) continue;
-    const cardName = f.replace(/\.md$/, '');
+    const cardName = f.replace(/\.md$/, "");
     const sources = [...fmTxt.matchAll(/^\s*-\s*(frontend\/\S+\.(ts|js))\s*$/gm)].map((m) => m[1]!);
-    const sourceBases = sources.map((s) => path.basename(s).replace(/\.(ts|js)$/, ''));
+    const sourceBases = sources.map((s) => path.basename(s).replace(/\.(ts|js)$/, ""));
     const tests = matchTests(cardName, sourceBases, testFiles);
     if (tests.length) targets.push({ file: f, text, tests });
   }
 
   if (isCheck) {
     if (targets.length) {
-      console.error(`❌ ${targets.length} 张卡 tests 未登记（存在对应测试文件），请运行：node scripts/gen-knowledge-tests.ts`);
-      for (const t of targets.slice(0, 10)) console.error(`   - ${t.file} → ${t.tests.join(', ')}`);
+      console.error(
+        `❌ ${targets.length} 张卡 tests 未登记（存在对应测试文件），请运行：node scripts/gen-knowledge-tests.ts`,
+      );
+      for (const t of targets.slice(0, 10)) console.error(`   - ${t.file} → ${t.tests.join(", ")}`);
       process.exit(1);
     }
-    console.log('✅ 所有有测试文件的卡均已登记 tests');
+    console.log("✅ 所有有测试文件的卡均已登记 tests");
     return;
   }
 
@@ -160,11 +166,11 @@ function main() {
   for (const t of targets) {
     const newText = writeTests(t.text, t.tests);
     if (newText === t.text) continue;
-    fs.writeFileSync(path.join(KNOW_DIR, t.file), newText, 'utf8');
+    fs.writeFileSync(path.join(KNOW_DIR, t.file), newText, "utf8");
     written++;
     console.log(`✍️  ${t.file} → ${t.tests.length} 个测试`);
   }
-  console.log(written ? `✅ 已登记 ${written} 张卡的 tests` : '✅ 无需登记');
+  console.log(written ? `✅ 已登记 ${written} 张卡的 tests` : "✅ 无需登记");
 }
 
 main();

@@ -43,47 +43,53 @@
  * 只查相对 main 的变更文件，避免对存量未 lint 代码误伤；pre-commit 侧用 --files
  * 显式列出 staged 文件做自动修复（见 .githooks/pre-commit biome 段）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { getRoot } from './_lib/scan-files.ts';
-import { run } from './_lib/proc.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { run } from "./_lib/proc.ts";
+import { getRoot } from "./_lib/scan-files.ts";
 
 // 统一参数解析：--files 为多值布尔标记（文件路径经位置参数 _ 收集），--write/--json 为布尔。
-const args = parseArgs(process.argv.slice(2), { bools: ['write', 'json', 'files'] });
-if (args.unknown.length) console.warn(`[check-biome] 忽略未知参数: ${args.unknown.join(', ')}`);
+const args = parseArgs(process.argv.slice(2), { bools: ["write", "json", "files"] });
+if (args.unknown.length) console.warn(`[check-biome] 忽略未知参数: ${args.unknown.join(", ")}`);
 const writeMode = args.write as boolean;
 const jsonMode = args.json as boolean;
 // --files <paths...>：布尔标记 + 后续位置参数收集（--files 后直到下一个 - 旗标）。
 // 路径解析 cwd 无关：path.resolve(process.cwd(), p) → path.relative(FRONTEND_DIR, abs)，
 // 支持任意调用目录 × 任意路径格式（相对/绝对，带/不带 frontend/ 前缀）。
 const ROOT = getRoot();
-const FRONTEND_DIR = path.join(ROOT, 'frontend');
+const FRONTEND_DIR = path.join(ROOT, "frontend");
 const cwd = process.cwd();
 const explicitFiles: string[] = args._.map((p) => {
   const abs = path.resolve(cwd, p);
   const rel = path.relative(FRONTEND_DIR, abs);
-  return rel.replace(/\\/g, '/'); // Windows 反斜杠 → 正斜杠（biome cwd=frontend 用正斜杠）
+  return rel.replace(/\\/g, "/"); // Windows 反斜杠 → 正斜杠（biome cwd=frontend 用正斜杠）
 });
 
-const isWin = process.platform === 'win32';
+const isWin = process.platform === "win32";
 // 复用 pre-push-gate 的跨平台 bin 解析约定（win32 用 .cmd 包装）
 // monorepo 化后 biome 被 hoist 到 root node_modules/.bin（npm 10 workspace 安装位置），
 // 老结构仍在 frontend/node_modules/.bin——两处都找，兼容两种安装布局。
-const binName = isWin ? 'biome.cmd' : 'biome';
+const binName = isWin ? "biome.cmd" : "biome";
 const biomeCandidates = [
-  path.join(ROOT, 'node_modules', '.bin', binName),
-  path.join(ROOT, 'frontend', 'node_modules', '.bin', binName),
+  path.join(ROOT, "node_modules", ".bin", binName),
+  path.join(ROOT, "frontend", "node_modules", ".bin", binName),
 ];
 const biomeBin = biomeCandidates.find((p) => fs.existsSync(p));
 
 if (!biomeBin) {
   if (jsonMode) {
-    process.stdout.write(JSON.stringify({
-      _summary: { ok: false, errors: -1, note: 'biome 未安装（node_modules 缺失）——请 npm ci 后重推' },
-    }));
+    process.stdout.write(
+      JSON.stringify({
+        _summary: {
+          ok: false,
+          errors: -1,
+          note: "biome 未安装（node_modules 缺失）——请 npm ci 后重推",
+        },
+      }),
+    );
   } else {
-    console.error('[check-biome] biome 未安装（node_modules 缺失）——请 npm ci 后重推');
+    console.error("[check-biome] biome 未安装（node_modules 缺失）——请 npm ci 后重推");
   }
   process.exit(1);
 }
@@ -92,24 +98,27 @@ if (!biomeBin) {
 // 注意：Biome 2.x 无 --json reporter，故绝不下传 --json 给 biome
 // --files 为布尔标记 + 位置参数收集（顶部解析）：--files 存在但列表为空 → 报错而非静默回退 --changed
 if (args.files && explicitFiles.length === 0) {
-  console.error('[check-biome] --files 后未提供任何文件路径');
+  console.error("[check-biome] --files 后未提供任何文件路径");
   process.exit(1);
 }
-const cmd = explicitFiles.length > 0
-  ? writeMode ? ['check', '--write', ...explicitFiles] : ['check', ...explicitFiles]
-  : writeMode ? ['check', '--write', '--changed'] : ['check', '--changed'];
+const cmd =
+  explicitFiles.length > 0
+    ? writeMode
+      ? ["check", "--write", ...explicitFiles]
+      : ["check", ...explicitFiles]
+    : writeMode
+      ? ["check", "--write", "--changed"]
+      : ["check", "--changed"];
 
 /** 跑 biome，捕获退出码与合并输出（biome 诊断 stdout/stderr 分布不固定）
  * 必须用 shell:true——Windows 上 .cmd 脚本（biome.cmd）无法被直接 spawn
  * （EINVAL），需经 cmd.exe 运行（proc.mjs run 的 shell 透传）；POSIX 上 shell:true 同样安全。 */
 function runBiome() {
   const r = run(biomeBin!, cmd, {
-    cwd: path.join(ROOT, 'frontend'),
+    cwd: path.join(ROOT, "frontend"),
     shell: true,
   });
-  return r.ok
-    ? { status: 0, out: r.out }
-    : { status: r.rc > 0 ? r.rc : 1, out: r.out };
+  return r.ok ? { status: 0, out: r.out } : { status: r.rc > 0 ? r.rc : 1, out: r.out };
 }
 
 /** 从 biome 文本输出解析 "Found N errors. / Found N warnings." 概要（Biome 2.x 格式） */
@@ -134,26 +143,33 @@ if (jsonMode) {
     process.stdout.write(JSON.stringify({ _summary: { ok: true, errors: 0, warnings: 0 } }));
   } else {
     const s = parseSummary(out);
-    process.stdout.write(JSON.stringify({
-      _summary: {
-        ok: false,
-        errors: s.errors,
-        warnings: s.warnings,
-        note: s.errors > 0 ? `biome 检出 ${s.errors} 处违规（变更文件）` : 'biome 检出违规（见上方诊断）',
-      },
-    }));
+    process.stdout.write(
+      JSON.stringify({
+        _summary: {
+          ok: false,
+          errors: s.errors,
+          warnings: s.warnings,
+          note:
+            s.errors > 0
+              ? `biome 检出 ${s.errors} 处违规（变更文件）`
+              : "biome 检出违规（见上方诊断）",
+        },
+      }),
+    );
   }
   process.exit(ok ? 0 : 1);
 }
 
 // 人类可读模式：诊断透传（stdio inherit 已在 runBiome 用 pipe，此处补打关键行）
 if (noFiles) {
-  console.log('[check-biome] 无变更文件需检查 ✅');
+  console.log("[check-biome] 无变更文件需检查 ✅");
 } else if (ok) {
-  console.log('[check-biome] 变更文件 lint/format 检查通过 ✅');
+  console.log("[check-biome] 变更文件 lint/format 检查通过 ✅");
 } else if (writeMode) {
-  console.error('[check-biome] 自动修复后仍残留不可自动修复的违规，请手动处理');
+  console.error("[check-biome] 自动修复后仍残留不可自动修复的违规，请手动处理");
 } else {
-  console.error('[check-biome] 变更文件存在 Biome 违规（已阻断）— 本地跑 `node scripts/check-biome.ts --write` 修复后重推');
+  console.error(
+    "[check-biome] 变更文件存在 Biome 违规（已阻断）— 本地跑 `node scripts/check-biome.ts --write` 修复后重推",
+  );
 }
 process.exit(ok ? 0 : 1);

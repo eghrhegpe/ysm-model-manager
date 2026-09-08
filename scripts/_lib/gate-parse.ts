@@ -38,26 +38,26 @@ const COUNT_KEY = /count|total|errors|issues|warns|violations|orphan|missing|fla
  */
 export function parseToolOutput(out: string, rc: number, tool?: string): ParsedToolOutput {
   let ok = rc === 0;
-  let note = '';
-  let tail = '';
+  let note = "";
+  let tail = "";
   try {
     const parsed = JSON.parse(out);
     const s = parsed._summary || parsed;
-    if (typeof s.ok === 'boolean') ok = s.ok;
-    else if (typeof s.errors === 'number') ok = s.errors === 0;
+    if (typeof s.ok === "boolean") ok = s.ok;
+    else if (typeof s.errors === "number") ok = s.errors === 0;
     // 有结构化计数时填充 note（替代空 OK 的假绿）
     const cnt = Object.entries(s)
-      .filter(([k, v]) => COUNT_KEY.test(k) && typeof v === 'number')
+      .filter(([k, v]) => COUNT_KEY.test(k) && typeof v === "number")
       .map(([k, v]) => `${k}=${v}`)
-      .join(' ');
+      .join(" ");
     if (cnt) note = cnt;
     // 仅 FAIL 时提取 warns_list 摘要——缩进 JSON 的数组内容在 tail 截断下不可见
     if (!ok && Array.isArray(s.warns_list) && s.warns_list.length) {
-      tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join('\n')}`;
+      tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join("\n")}`;
     }
   } catch {
     // 非 JSON 输出，退回 rc 判定；必须明示回退，不许静默假绿
-    if (!ok) note = note || `${tool ? `${tool} ` : ''}输出解析失败（非 JSON），退回 rc 判定`;
+    if (!ok) note = note || `${tool ? `${tool} ` : ""}输出解析失败（非 JSON），退回 rc 判定`;
   }
   return { ok, note, tail };
 }

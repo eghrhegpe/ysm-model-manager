@@ -22,9 +22,9 @@
  *
  * 退出码：本模块无独立 CLI（被 pre-push-gate.ts import）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "./scan-files.ts";
 
 /**
  * 从工具输出提取前 n 条错误详情（纯函数）。
@@ -43,7 +43,7 @@ export function firstErrors(out: string, n: number): string[] {
     const candidates: Record<string, unknown>[] = [parsed, s];
     const arrs: string[][] = [];
     // 优先 known 键序：errors → warns_list → 其它非空字符串数组
-    for (const key of ['errors', 'warns_list']) {
+    for (const key of ["errors", "warns_list"]) {
       for (const obj of candidates) {
         if (Array.isArray((obj as any)[key]) && ((obj as any)[key] as string[]).length) {
           arrs.push((obj as any)[key]);
@@ -53,8 +53,8 @@ export function firstErrors(out: string, n: number): string[] {
     if (!arrs.length) {
       for (const obj of candidates) {
         for (const [k, v] of Object.entries(obj)) {
-          if (k === '_summary' || k === 'summary') continue;
-          if (Array.isArray(v) && v.length && v.every((x) => typeof x === 'string')) {
+          if (k === "_summary" || k === "summary") continue;
+          if (Array.isArray(v) && v.length && v.every((x) => typeof x === "string")) {
             arrs.push(v as string[]);
           }
         }
@@ -67,7 +67,7 @@ export function firstErrors(out: string, n: number): string[] {
     /* 非 JSON，走下方回退 */
   }
   // 2. 非 JSON：原始输出末 n 行（构建/编译错误的常见形态）
-  return out.trim().split('\n').filter(Boolean).slice(-n);
+  return out.trim().split("\n").filter(Boolean).slice(-n);
 }
 
 export interface GateResultItem {
@@ -78,7 +78,7 @@ export interface GateResultItem {
   tail: string;
   /** 工具原始输出（record 时保留，cap 64KB 尾部）——首错提取的事实源。 */
   raw?: string;
-  blockPolicy?: 'hard' | 'debt' | 'failClosed';
+  blockPolicy?: "hard" | "debt" | "failClosed";
 }
 
 /**
@@ -90,9 +90,9 @@ export interface GateResultItem {
  *          2026-09-08 实证：docs 模式把并行会话留下的存量债标成本次引入，误导归因）。
  */
 function policyTag(p: string | undefined, attributable: boolean): string {
-  if (p === 'debt') return '存量债';
-  if (p === 'failClosed') return '失守';
-  return attributable ? '本次引入' : '待归因';
+  if (p === "debt") return "存量债";
+  if (p === "failClosed") return "失守";
+  return attributable ? "本次引入" : "待归因";
 }
 
 /**
@@ -101,7 +101,7 @@ function policyTag(p: string | undefined, attributable: boolean): string {
  * 绝不能当首错展示；raw 是 record 时保留的原始输出，结构化提取的事实源。
  */
 function firstErrorLine(item: GateResultItem): string {
-  const none = '无错误详情（见完整报告）';
+  const none = "无错误详情（见完整报告）";
   if (item.raw) {
     let isJson = false;
     try {
@@ -117,14 +117,14 @@ function firstErrorLine(item: GateResultItem): string {
     }
   }
   // 策展 tail：跳过 parseToolOutput 的 'warns_list:' 头部行，剥 '- ' 列表前缀
-  const lines = (item.tail || '')
-    .split('\n')
+  const lines = (item.tail || "")
+    .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
-    .filter((l) => l !== 'warns_list:');
+    .filter((l) => l !== "warns_list:");
   if (lines.length) {
     const l = lines[0]!;
-    return l.startsWith('- ') ? l.slice(2) : l;
+    return l.startsWith("- ") ? l.slice(2) : l;
   }
   if (item.raw) {
     const fe = firstErrors(item.raw, 1);
@@ -155,7 +155,7 @@ export function formatFailSummary(
   attributable = true,
 ): string {
   const tag = policyTag(item.blockPolicy, attributable);
-  const head = `[FAIL][${tag}] ${item.label}  ${passCount}/${total} 通过 ${(item.time / 1000).toFixed(1)}s  ${item.note || ''}`;
+  const head = `[FAIL][${tag}] ${item.label}  ${passCount}/${total} 通过 ${(item.time / 1000).toFixed(1)}s  ${item.note || ""}`;
   const body = `\n      → ${truncate(firstErrorLine(item))}`;
   const tail = `\n      复现: ${item.label}`;
   return `${head}${body}${tail}`;
@@ -163,7 +163,7 @@ export function formatFailSummary(
 
 /** 报告文件固定前缀（.git 下不被 git 跟踪）。 */
 export function reportPathFor(ts: string): string {
-  return path.join(ROOT, '.git', `gate-report-${ts}.json`);
+  return path.join(ROOT, ".git", `gate-report-${ts}.json`);
 }
 
 /**
@@ -177,7 +177,7 @@ export function writeGateReport(
   meta: { mode: string; blocked: boolean; domainSummary: string },
 ): string | null {
   try {
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const p = reportPathFor(ts);
     const payload = {
       ts,
@@ -190,7 +190,7 @@ export function writeGateReport(
       results,
     };
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(payload, null, 2), 'utf-8');
+    fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf-8");
     return p;
   } catch {
     return null; // 报告写入失败不阻断门禁

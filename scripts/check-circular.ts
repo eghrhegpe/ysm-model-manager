@@ -16,13 +16,14 @@
  * 退出码：发现环 → 1；否则 0。
  * 设计意图：循环依赖检查（source-graph 分析）
  */
-import fs from 'node:fs';
-import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.ts';
-import { findCycles } from './_lib/cycles.ts';
+import fs from "node:fs";
+import { findCycles } from "./_lib/cycles.ts";
+import { relPosix, resolveImport, SRC_DIR, walk } from "./_lib/scan-files.ts";
 
-const JSON_OUT = process.argv.includes('--json');
+const JSON_OUT = process.argv.includes("--json");
 
-const IMPORT_RE = /(?:^|\n)\s*(?:import[\s\S]*?\sfrom\s+|import\s+|export\s*\{[^}]*\}\s*from\s+|export\s+\*\s+from\s+)['"]([^'"]+)['"]/g;
+const IMPORT_RE =
+  /(?:^|\n)\s*(?:import[\s\S]*?\sfrom\s+|import\s+|export\s*\{[^}]*\}\s*from\s+|export\s+\*\s+from\s+)['"]([^'"]+)['"]/g;
 // 动态 import('...')：任意位置（不要求行首/await），`import("x").catch(...)` 与 `await import("x")` 均覆盖。
 // 前导排除标识符字符，避免误匹配（如 import.meta / 变量名含 import 前缀的写法）。
 const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
@@ -36,16 +37,20 @@ const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*
  */
 function stripNoise(text: string) {
   return text
-    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, ' '));
+    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, " "));
 }
 
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    console.log(JSON_OUT ? JSON.stringify({ cycles: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
+    console.log(
+      JSON_OUT
+        ? JSON.stringify({ cycles: [], error: "frontend/src 不存在" })
+        : "frontend/src 目录不存在",
+    );
     process.exit(1);
   }
 
@@ -55,7 +60,7 @@ function main() {
 
   for (const f of files) {
     // 先剥离注释/模板字面量再提取 import——注释/字符串中的 import 文本不再被当依赖边
-    const text = stripNoise(fs.readFileSync(f, 'utf-8'));
+    const text = stripNoise(fs.readFileSync(f, "utf-8"));
     const deps = new Set<string>();
     for (const m of text.matchAll(IMPORT_RE)) {
       // type-only import（`import type {...} from`）编译期擦除，不构成运行时依赖——
@@ -67,8 +72,15 @@ function main() {
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
       const allTypeNamed = braceM
-        ? braceM[1]!.split(',').map((s: string) => s.trim()).filter(Boolean).length > 0 &&
-          braceM[1]!.split(',').map((s: string) => s.trim()).filter(Boolean).every((s: string) => /^type\s+/.test(s))
+        ? braceM[1]
+            ?.split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean).length > 0 &&
+          braceM[1]
+            ?.split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .every((s: string) => /^type\s+/.test(s))
         : false;
       // 默认导入（`import store, { type State }`）是运行时值依赖，即使花括号全 type
       // 也不能跳过——否则丢失 f→./store 依赖边造成假阴性环（code_review P3）。
@@ -89,28 +101,38 @@ function main() {
   const cyclesRel = cycles.map((cyc) => cyc.map((p) => relPosix(p)));
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { modules: files.length, cycles: cyclesRel.length }, modules: files.length, cycles: cyclesRel }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: { modules: files.length, cycles: cyclesRel.length },
+          modules: files.length,
+          cycles: cyclesRel,
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(cyclesRel.length ? 1 : 0);
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' 循环依赖检查 (check-circular)');
-  console.log('══════════════════════════════════════');
+  console.log("══════════════════════════════════════");
+  console.log(" 循环依赖检查 (check-circular)");
+  console.log("══════════════════════════════════════");
   console.log(`扫描模块 : ${files.length}`);
   console.log(`循环     : ${cyclesRel.length}`);
-  console.log('──────────────────────────────────────');
+  console.log("──────────────────────────────────────");
 
   if (!cyclesRel.length) {
-    console.log('✅ 未发现循环依赖。');
+    console.log("✅ 未发现循环依赖。");
     return;
   }
   cyclesRel.forEach((c, i) => {
     console.log(`\n🔴 环 ${i + 1}（${c.length} 个模块）：`);
     for (const m of c) console.log(`   ${m}`);
   });
-  console.log('\n退出码 1（可接 CI 卡点）。');
-  console.log('→ 修复: 检查环中模块的 import 链，拆分或重构打破循环依赖');
+  console.log("\n退出码 1（可接 CI 卡点）。");
+  console.log("→ 修复: 检查环中模块的 import 链，拆分或重构打破循环依赖");
   process.exit(1);
 }
 

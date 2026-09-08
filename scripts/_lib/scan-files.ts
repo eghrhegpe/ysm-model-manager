@@ -14,25 +14,26 @@
  *   import { walk, resolveImport, readText, getRoot, SRC_DIR } from './_lib/scan-files.ts';
  *   import { toPosix } from './_lib/to-posix.ts';
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { toPosix } from './to-posix.ts';
-import { tryResolveAlias } from './alias-resolve.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { tryResolveAlias } from "./alias-resolve.ts";
+import { toPosix } from "./to-posix.ts";
+
 export { toPosix };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** 仓库根目录。 */
 export function getRoot() {
-  return path.resolve(__dirname, '..', '..');
+  return path.resolve(__dirname, "..", "..");
 }
 
 export const ROOT = getRoot();
-export const SRC_DIR = path.join(ROOT, 'frontend/src');
+export const SRC_DIR = path.join(ROOT, "frontend/src");
 
 /** 可扫描的前端源码扩展名。 */
-export const SRC_EXTS = ['.js', '.ts'];
+export const SRC_EXTS = [".js", ".ts"];
 
 /**
  * 递归收集 dir 下满足条件的源文件；共享底层遍历，供 source-graph.walkSourceFiles 复用。
@@ -59,43 +60,55 @@ export interface WalkOpts {
   skipTest?: boolean;
 }
 
-export function walk(dir: string = SRC_DIR, opts: WalkOpts = {}): Array<string | { abs: string; rel: string }> {
-  const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base', 'skipTest']);
+export function walk(
+  dir: string = SRC_DIR,
+  opts: WalkOpts = {},
+): Array<string | { abs: string; rel: string }> {
+  const KNOWN_WALK_OPTS = new Set(["exts", "skipDir", "skipFile", "rel", "base", "skipTest"]);
   for (const k of Object.keys(opts)) {
     if (!KNOWN_WALK_OPTS.has(k) && !warnedWalkOpts.has(k)) {
       warnedWalkOpts.add(k);
-      console.warn(`[scan-files.walk] 忽略未知选项 "${k}"（已知：${[...KNOWN_WALK_OPTS].join('/')}）`);
+      console.warn(
+        `[scan-files.walk] 忽略未知选项 "${k}"（已知：${[...KNOWN_WALK_OPTS].join("/")}）`,
+      );
     }
   }
   const {
     exts = SRC_EXTS,
-    skipDir = (n: string) => n.startsWith('.') || n === 'node_modules' || n === 'css',
+    skipDir = (n: string) => n.startsWith(".") || n === "node_modules" || n === "css",
     skipFile = null,
     rel = false,
-    base = '',
+    base = "",
     skipTest = false,
   } = opts;
   const out: Array<string | { abs: string; rel: string }> = [];
   if (!fs.existsSync(dir)) return out;
-  let entries;
+  let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch (e) {
     // 子目录权限拒绝/超长路径等：跳过该目录，不让单点异常炸掉整棵扫描树
     const err = e as NodeJS.ErrnoException;
-    if (err.code === 'EACCES' || err.code === 'EPERM' || err.code === 'ENOTDIR' || err.code === 'ENAMETOOLONG') return out;
+    if (
+      err.code === "EACCES" ||
+      err.code === "EPERM" ||
+      err.code === "ENOTDIR" ||
+      err.code === "ENAMETOOLONG"
+    )
+      return out;
     throw e;
   }
   for (const d of entries) {
     if (d.isDirectory()) {
       if (skipDir(d.name)) continue;
-      if (skipTest && d.name === '__tests__') continue;
+      if (skipTest && d.name === "__tests__") continue;
       const childBase = rel ? (base ? `${base}/${d.name}` : d.name) : base;
       out.push(...walk(path.join(dir, d.name), { ...opts, base: childBase }));
     } else if (d.isFile()) {
       if (!exts.some((ext) => d.name.endsWith(ext))) continue;
       if (skipTest && /\.(test|spec)\.[jt]s$/.test(d.name)) continue;
-      if (skipFile && (skipFile instanceof RegExp ? skipFile.test(d.name) : skipFile(d.name))) continue;
+      if (skipFile && (skipFile instanceof RegExp ? skipFile.test(d.name) : skipFile(d.name)))
+        continue;
       const abs = path.join(dir, d.name);
       out.push(rel ? { abs, rel: base ? `${base}/${d.name}` : d.name } : abs);
     }
@@ -104,7 +117,7 @@ export function walk(dir: string = SRC_DIR, opts: WalkOpts = {}): Array<string |
 }
 
 /** TS/JS 相对导入补全候选扩展名顺序。 */
-const IMPORT_EXTS = ['ts', 'js'];
+const IMPORT_EXTS = ["ts", "js"];
 
 /**
  * 解析相对导入目标（自动补 .ts/.js 及 index.ts/index.js）。
@@ -118,7 +131,7 @@ export function resolveImport(fromFile: string, spec: string, moduleSet: Set<str
   // tryResolveAlias 对非别名 spec（相对/裸包名）返回 null，自然落入下方相对路径分支。
   const aliasAbs = tryResolveAlias(spec);
   if (aliasAbs) return matchModule(aliasAbs, moduleSet);
-  if (!spec.startsWith('./') && !spec.startsWith('../')) return null; // 包导入跳过
+  if (!spec.startsWith("./") && !spec.startsWith("../")) return null; // 包导入跳过
   return matchModule(path.join(path.dirname(fromFile), spec), moduleSet);
 }
 
@@ -144,7 +157,10 @@ export function relPosix(p: string) {
 
 /** 容错读文本：去 BOM + 统一 CRLF → LF（Windows 下编辑的源文件常见）。 */
 export function readText(fp: string) {
-  return fs.readFileSync(fp, 'utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  return fs
+    .readFileSync(fp, "utf-8")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n");
 }
 
 /**
@@ -153,9 +169,11 @@ export function readText(fp: string) {
  * 生成器在 CRLF 检出（Windows autocrlf）下 --check 幂等判定不失效。
  */
 export function writeText(fp: string, content: string) {
-  let eol = '\n';
+  let eol = "\n";
   try {
-    if (fs.readFileSync(fp, 'utf-8').includes('\r\n')) eol = '\r\n';
-  } catch { /* 文件不存在等：默认 LF */ }
-  fs.writeFileSync(fp, eol === '\r\n' ? content.replace(/\n/g, '\r\n') : content, 'utf-8');
+    if (fs.readFileSync(fp, "utf-8").includes("\r\n")) eol = "\r\n";
+  } catch {
+    /* 文件不存在等：默认 LF */
+  }
+  fs.writeFileSync(fp, eol === "\r\n" ? content.replace(/\n/g, "\r\n") : content, "utf-8");
 }

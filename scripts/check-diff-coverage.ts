@@ -27,23 +27,30 @@
  *   rename 中新增的真实逻辑仍受覆盖约束。
  * 依赖：node:fs / node:path / node:url / _lib
  */
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
-  git,
-  getChangedFiles,
   addLinesFromDiff,
-  parseRenameStatus,
-  detectRenames,
-  getChangedLines,
   buildSuggestBlock as buildSuggestBlockCore,
-} from './_lib/diff-coverage-core.ts';
+  detectRenames,
+  getChangedFiles,
+  getChangedLines,
+  git,
+  parseRenameStatus,
+} from "./_lib/diff-coverage-core.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 // ── re-export（契约测试 import 路径锁：tests/test_check_diff_coverage.ts）──
-export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };
+export {
+  addLinesFromDiff,
+  detectRenames,
+  getChangedFiles,
+  getChangedLines,
+  git,
+  parseRenameStatus,
+};
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
@@ -51,24 +58,24 @@ const COVERAGE_FAILURE = 1;
 /** 仅保留应纳入 diff 门禁的源码：frontend/src 下、非测试、非 index/wails 绑定产物。 */
 function isSourceFile(f: string) {
   return (
-    f.endsWith('.ts') &&
-    f.includes('src/') &&
-    !f.endsWith('.test.ts') &&
-    !f.includes('__tests__/') &&
-    !f.endsWith('/index.ts') &&
-    !f.includes('/wails/') // Wails v3 绑定产物（自动生成，无测试价值）
+    f.endsWith(".ts") &&
+    f.includes("src/") &&
+    !f.endsWith(".test.ts") &&
+    !f.includes("__tests__/") &&
+    !f.endsWith("/index.ts") &&
+    !f.includes("/wails/") // Wails v3 绑定产物（自动生成，无测试价值）
   );
 }
 
 /** 把 repo 相对路径映射到 coverage-final.json 的绝对路径 key。 */
 function matchCoverageKey(rel: string, covKeys: string[]) {
-  const norm = rel.split('/').join('/');
-  const stripped = norm.replace(/^frontend\//, '');
+  const norm = rel.split("/").join("/");
+  const stripped = norm.replace(/^frontend\//, "");
   for (const k of covKeys) {
-    const nk = k.split('/').join('/');
+    const nk = k.split("/").join("/");
     if (nk === norm) return k;
-    if (nk.endsWith('/' + norm)) return k;
-    if (nk.endsWith('/' + stripped)) return k;
+    if (nk.endsWith(`/${norm}`)) return k;
+    if (nk.endsWith(`/${stripped}`)) return k;
   }
   return null;
 }
@@ -108,21 +115,23 @@ export function buildSuggestBlock(failures: any[], threshold: number) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ['uncommitted', 'json', 'suggest', 'staged'],
-    strings: ['threshold', 'base', 'head', 'files', 'coverage'],
+    bools: ["uncommitted", "json", "suggest", "staged"],
+    strings: ["threshold", "base", "head", "files", "coverage"],
   });
   if (args.unknown.length) {
-    console.error(`[diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--coverage/--uncommitted/--staged/--suggest/--json）`);
+    console.error(
+      `[diff-coverage] 未知参数: ${args.unknown.join(" ")}（支持 --threshold/--base/--head/--files/--coverage/--uncommitted/--staged/--suggest/--json）`,
+    );
     process.exit(USAGE_ERROR);
   }
   const coveragePath = args.coverage
     ? resolve(ROOT, args.coverage as string)
-    : resolve(ROOT, 'frontend', 'coverage', 'coverage-final.json');
-  const base = (args.base as string) ?? 'origin/main';
-  const head = (args.head as string) ?? 'HEAD';
-  const threshold = Number(args.threshold ?? '60');
+    : resolve(ROOT, "frontend", "coverage", "coverage-final.json");
+  const base = (args.base as string) ?? "origin/main";
+  const head = (args.head as string) ?? "HEAD";
+  const threshold = Number(args.threshold ?? "60");
   if (!Number.isFinite(threshold)) {
-    console.error(`[diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
+    console.error(`[diff-coverage] --threshold 需为数字，收到：${args.threshold ?? "60"}`);
     process.exit(USAGE_ERROR);
   }
   const uncommitted = Boolean(args.uncommitted);
@@ -134,7 +143,9 @@ function main() {
     if (suggest) {
       // 非阻断建议模式：无覆盖率数据时静默跳过，不阻塞提交。
       // 提示走 stderr，保持 stdout 干净（消费方 coverage-suggest-hint 把 stdout 原样包进区块）
-      console.error(`[diff-coverage] 未找到覆盖率文件：${coveragePath}（建议模式：先跑 \`vitest run --coverage\` 可生成建议）`);
+      console.error(
+        `[diff-coverage] 未找到覆盖率文件：${coveragePath}（建议模式：先跑 \`vitest run --coverage\` 可生成建议）`,
+      );
       process.exit(0);
     }
     console.error(`[diff-coverage] 未找到覆盖率文件：${coveragePath}`);
@@ -142,8 +153,8 @@ function main() {
     process.exit(USAGE_ERROR);
   }
 
-  const cov = JSON.parse(readFileSync(coveragePath, 'utf8'));
-  const covKeys = Object.keys(cov).filter((k) => k !== 'total');
+  const cov = JSON.parse(readFileSync(coveragePath, "utf8"));
+  const covKeys = Object.keys(cov).filter((k) => k !== "total");
 
   // 门禁前置校验：git 环境异常时绝不“空跑报通过”。
   // git() 在命令失败时返回 ''（catch 吞错），若不加校验，base 不可达/浅克隆未 fetch
@@ -158,24 +169,27 @@ function main() {
     process.exit(USAGE_ERROR);
   };
   if (!args.files) {
-    if (!git(['rev-parse', 'HEAD'])) {
-      failOrWarn('无法解析 HEAD（git 环境异常/不在仓库内）');
+    if (!git(["rev-parse", "HEAD"])) {
+      failOrWarn("无法解析 HEAD（git 环境异常/不在仓库内）");
     }
-    if (!staged && !git(['rev-parse', '--verify', base])) {
+    if (!staged && !git(["rev-parse", "--verify", base])) {
       failOrWarn(`基准分支不可达：${base}（请先 \`git fetch\` 或改用 --base 指向本地分支）`);
     }
   }
 
   const changed = args.files
-    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean)
+    ? (args.files as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : getChangedFiles(base, head, uncommitted, staged);
 
   if (changed === null) {
-    failOrWarn('git diff 执行失败（对象/索引异常），拒绝空跑放行');
+    failOrWarn("git diff 执行失败（对象/索引异常），拒绝空跑放行");
   }
 
   const renameMap = detectRenames(base, head, staged);
-  const srcFiles = changed!.filter(isSourceFile);
+  const srcFiles = changed?.filter(isSourceFile);
 
   if (srcFiles.length === 0) {
     // suggest 模式下提示走 stderr：消费方 coverage-suggest-hint 把 stdout 原样包进建议区块，
@@ -191,17 +205,22 @@ function main() {
   const useFilesMode = Boolean(args.files); // --files 模式无 git 上下文，回退到全文件检查
   for (const f of srcFiles) {
     const key = matchCoverageKey(f, covKeys);
-    let pct;
+    let pct: number;
     if (!key) {
       pct = 0; // 无覆盖率条目 → 视为 0% 未覆盖
     } else if (useFilesMode) {
-      pct = statementPctForChangedLines(cov[key], new Set(Object.keys(cov[key].statementMap).flatMap((id) => {
-        const loc = cov[key].statementMap[id];
-        if (!loc) return [];
-        const lines: number[] = [];
-        for (let l = loc.start.line; l <= (loc.end?.line ?? loc.start.line); l++) lines.push(l);
-        return lines;
-      }))); // --files 模式：视所有行均为变更行 = 全文件检查
+      pct = statementPctForChangedLines(
+        cov[key],
+        new Set(
+          Object.keys(cov[key].statementMap).flatMap((id) => {
+            const loc = cov[key].statementMap[id];
+            if (!loc) return [];
+            const lines: number[] = [];
+            for (let l = loc.start.line; l <= (loc.end?.line ?? loc.start.line); l++) lines.push(l);
+            return lines;
+          }),
+        ),
+      ); // --files 模式：视所有行均为变更行 = 全文件检查
     } else {
       const renameOld = renameMap.get(f)?.from;
       const changedLines = getChangedLines(f, base, head, uncommitted, renameOld, staged);
@@ -222,20 +241,28 @@ function main() {
   }
 
   if (json) {
-    console.log(JSON.stringify({
-      _summary: { threshold, files: rows.length, failed: failures.length },
-      rows,
-      failures,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: { threshold, files: rows.length, failed: failures.length },
+          rows,
+          failures,
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(failures.length > 0 ? COVERAGE_FAILURE : 0);
   }
 
-  console.log(`\n[diff-coverage] 变更源码 ${srcFiles.length} 个，阈值 ${threshold}%（变更行覆盖率）：`);
-  console.log('  ' + '文件'.padEnd(70) + '覆盖%');
-  console.log('  ' + '-'.repeat(70) + '------');
+  console.log(
+    `\n[diff-coverage] 变更源码 ${srcFiles.length} 个，阈值 ${threshold}%（变更行覆盖率）：`,
+  );
+  console.log(`  ${"文件".padEnd(70)}覆盖%`);
+  console.log(`  ${"-".repeat(70)}------`);
   for (const r of rows) {
-    const flag = r.pct < threshold ? 'X' : 'OK';
-    const tag = r.renamed ? 'R' : ' ';
+    const flag = r.pct < threshold ? "X" : "OK";
+    const tag = r.renamed ? "R" : " ";
     console.log(`  [${flag}] [${tag}] ${r.file.padEnd(62)} ${r.pct.toFixed(1)}`);
   }
 
@@ -247,7 +274,7 @@ function main() {
         (renamedFails.length
           ? ` 其中 ${renamedFails.length} 个为 rename 重构（真实改动行已评估），` +
             `若仍失败说明 rename 中新增了未覆盖的真实逻辑，需补测试。`
-          : '')
+          : ""),
     );
     process.exit(COVERAGE_FAILURE);
   }

@@ -77,9 +77,8 @@ function maskComments(src: string) {
  * 且其声称要防的"正则含引号被误当字符串"全仓零发生（去掉后零新误报）。已删除。
  */
 function maskTsTypeIndex(src: string) {
-  return src.replace(
-    /:\s*[A-Za-z$_][\w$]*\s*\[\s*["'][^"']*["']\s*\]/g,
-    (m) => m.replace(/[^\n]/g, " "),
+  return src.replace(/:\s*[A-Za-z$_][\w$]*\s*\[\s*["'][^"']*["']\s*\]/g, (m) =>
+    m.replace(/[^\n]/g, " "),
   );
 }
 
@@ -99,10 +98,12 @@ function scanFile(file: string) {
   const masked = maskTsTypeIndex(maskComments(raw));
   const hits: { line: number; snippet: string }[] = [];
   STR_RE.lastIndex = 0;
-  let m;
-  while ((m = STR_RE.exec(masked)) !== null) {
-    const lit = m[2]!;
-    const start = m.index;
+  let m = STR_RE.exec(masked);
+  while (m !== null) {
+    const cur = m; // 本轮快照：各 continue 分支不影响顶部统一递进
+    m = STR_RE.exec(masked);
+    const lit = cur[2]!;
+    const start = cur.index;
     if (!HAN.test(lit)) continue;
     if (!HTML_SIGNAL.test(lit)) continue;
     if (/\bt\(\s*$/.test(masked.slice(0, start))) continue; // 已翻译
@@ -111,7 +112,7 @@ function scanFile(file: string) {
       const strippedT = lit.replace(/\bt\s*\(\s*"[^"]*"(?:\s*,\s*\{[^}]*\})?\s*\)/gs, "");
       if (!HAN.test(strippedT)) continue;
     }
-    if (m[1] === "`") {
+    if (cur[1] === "`") {
       // 模板字符串：剥离所有 ${...} 插值块（支持嵌套大括号），若剩余不含中文则已翻译。
       // 插值块内要么是 t() 调用、要么是 JS 逻辑/数据值，都不作为 UI 文本判定。
       let stripped = "";
@@ -134,12 +135,15 @@ function scanFile(file: string) {
             depth--;
           }
         }
-        i = (j < lit.length ? j + 1 : j); // 跳到插值块之后
+        i = j < lit.length ? j + 1 : j; // 跳到插值块之后
       }
       if (!HAN.test(stripped)) continue;
     }
     if (LANG_PICKER.test(lit)) continue; // 语言选择器原生名
-    hits.push({ line: lineOf(masked, start), snippet: lit.length > 60 ? lit.slice(0, 57) + "…" : lit });
+    hits.push({
+      line: lineOf(masked, start),
+      snippet: lit.length > 60 ? `${lit.slice(0, 57)}…` : lit,
+    });
   }
   return hits;
 }

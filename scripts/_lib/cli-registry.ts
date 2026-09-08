@@ -16,11 +16,11 @@
  *   { name, category, description, subcommands: [{name, desc}], flags: [{flag, type, help, def}] }
  * 退出码：无（纯数据层，不写盘不 exit）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT, readText } from './scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT, readText } from "./scan-files.ts";
 
-const CLI_DIR = path.join(ROOT, 'go', 'cli');
+const CLI_DIR = path.join(ROOT, "go", "cli");
 
 /**
  * 顶层命令注册：RegisterCommandC("name", CatX, "desc", runFn[, ParamSpec{...}...])。支持跨行。
@@ -28,19 +28,27 @@ const CLI_DIR = path.join(ROOT, 'go', 'cli');
  * （name/category/desc/runFn），故不强制收尾 `)`——契约测试与生成器同口径，避免
  * 尾随变参导致整条注册脱配（2026-09-03 教训：变参拆行曾使 5 命令从注册表解析中消失）。
  */
-const CMD_RE = /RegisterCommandC\(\s*"([a-z0-9-]+)"\s*,\s*(\w+)\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*(\w+)/g;
+const CMD_RE =
+  /RegisterCommandC\(\s*"([a-z0-9-]+)"\s*,\s*(\w+)\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*(\w+)/g;
 
 /** 分类名常量（与 go/cli/registry.go 一致）。 */
 export const CAT_NAMES = {
-  CatModel: '模型管理',
-  CatPerf: '性能诊断',
-  CatCache: '缓存管理',
-  CatResource: '资源仓库',
-  CatConfig: '配置',
-  CatOther: '其他',
+  CatModel: "模型管理",
+  CatPerf: "性能诊断",
+  CatCache: "缓存管理",
+  CatResource: "资源仓库",
+  CatConfig: "配置",
+  CatOther: "其他",
 };
 /** 分类展示顺序（与 go/cli/cli.go printCLIHelp 一致）。 */
-export const CAT_ORDER = ['CatModel', 'CatPerf', 'CatCache', 'CatResource', 'CatConfig', 'CatOther'];
+export const CAT_ORDER = [
+  "CatModel",
+  "CatPerf",
+  "CatCache",
+  "CatResource",
+  "CatConfig",
+  "CatOther",
+];
 
 /** Go 顶层函数块。 */
 interface FuncBlock {
@@ -80,13 +88,12 @@ interface CliFlag {
 function extractFlags(body: string): CliFlag[] {
   const flags: CliFlag[] = [];
   const re = /fs\.(String|Bool|Int|Float64|StringVar|BoolVar|IntVar|Float64Var)\(/g;
-  let m;
-  while ((m = re.exec(body))) {
+  for (const m of body.matchAll(re)) {
     let depth = 0;
     let i = m.index + m[0].length;
     for (; i < body.length; i++) {
-      if (body[i] === '(') depth++;
-      else if (body[i] === ')') {
+      if (body[i] === "(") depth++;
+      else if (body[i] === ")") {
         if (depth === 0) break;
         depth--;
       }
@@ -97,9 +104,9 @@ function extractFlags(body: string): CliFlag[] {
     const strs = [...call.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((a) => a[1]);
     const entry = {
       flag: nameM[1]!,
-      type: m[1]!.toLowerCase().replace(/var$/, ''),
-      help: strs.length >= 2 ? strs[strs.length - 1]! : '',
-      def: '',
+      type: m[1]?.toLowerCase().replace(/var$/, ""),
+      help: strs.length >= 2 ? strs[strs.length - 1]! : "",
+      def: "",
     };
     // 三字符串形态：name, 默认值, help（默认值为字符串字面量）
     if (strs.length >= 3) entry.def = strs[strs.length - 2]!;
@@ -112,11 +119,10 @@ function extractFlags(body: string): CliFlag[] {
 /** 提取函数体内子命令（父命令统一 `switch sub {` 分发，case "xxx" 即子命令；排除 *format/ext 等值 switch）。 */
 function extractSubcommands(body: string): string[] {
   const out: string[] = [];
-  const sw = body.indexOf('switch sub {');
+  const sw = body.indexOf("switch sub {");
   if (sw < 0) return out;
   const re = /case\s+"([a-z0-9-]+)":/g;
-  let m;
-  while ((m = re.exec(body.slice(sw)))) out.push(m[1]!);
+  for (const m of body.slice(sw).matchAll(re)) out.push(m[1]!);
   return out;
 }
 
@@ -124,14 +130,13 @@ function extractSubcommands(body: string): string[] {
 function collectSubDescByFunc(): Record<string, Record<string, string>> {
   const byFunc: Record<string, Record<string, string>> = {};
   for (const f of fs.readdirSync(CLI_DIR)) {
-    if (!f.endsWith('.go') || f.endsWith('_test.go')) continue;
+    if (!f.endsWith(".go") || f.endsWith("_test.go")) continue;
     const text = readText(path.join(CLI_DIR, f));
     for (const fn of funcBlocks(text)) {
       if (!/^print\w+Usage$/.test(fn.name)) continue;
       const desc: Record<string, string> = {};
-      const re = /fmt\.Println\("  ([a-z0-9-]+)\s{2,}([^"]*)"\)/g;
-      let m;
-      while ((m = re.exec(fn.body))) desc[m[1]!] = m[2]!.trim();
+      const re = /fmt\.Println\(" {2}([a-z0-9-]+)\s{2,}([^"]*)"\)/g;
+      for (const m of fn.body.matchAll(re)) desc[m[1]!] = m[2]?.trim();
       byFunc[fn.name] = desc;
     }
   }
@@ -170,12 +175,11 @@ export function parseCliCommands(): CliCommand[] {
   const regs: CliReg[] = [];
   const blocks: FuncBlock[] = [];
   for (const f of fs.readdirSync(CLI_DIR)) {
-    if (!f.endsWith('.go') || f.endsWith('_test.go')) continue;
+    if (!f.endsWith(".go") || f.endsWith("_test.go")) continue;
     const text = readText(path.join(CLI_DIR, f));
     blocks.push(...funcBlocks(text));
-    const local = new RegExp(CMD_RE.source, 'g');
-    let m;
-    while ((m = local.exec(text))) {
+    const local = new RegExp(CMD_RE.source, "g");
+    for (const m of text.matchAll(local)) {
       regs.push({ name: m[1]!, category: m[2]!, description: m[3]!, runFn: m[4]!, file: f });
     }
   }
@@ -183,7 +187,7 @@ export function parseCliCommands(): CliCommand[] {
   const subDescByFunc = collectSubDescByFunc();
   const commands = regs.map((r) => {
     const fn = findFunc(blocks, r.runFn);
-    const body = fn ? fn.body : '';
+    const body = fn ? fn.body : "";
     const subs = extractSubcommands(body);
     const usageFn = findUsageFunc(body);
     const subDesc = (usageFn && subDescByFunc[usageFn]) || {};
@@ -191,7 +195,7 @@ export function parseCliCommands(): CliCommand[] {
       name: r.name,
       category: r.category,
       description: r.description,
-      subcommands: subs.map((s) => ({ name: s, desc: subDesc[s] || '' })),
+      subcommands: subs.map((s) => ({ name: s, desc: subDesc[s] || "" })),
       flags: extractFlags(body),
     };
   });

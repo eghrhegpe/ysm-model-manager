@@ -10,38 +10,38 @@
  *   node scripts/bug-search.ts --json # JSON 输出（CI/子代理消费）
  * 退出码：0（无 process.exit 调用）
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from '../_lib/scan-files.ts';
-import { parseArgs } from '../_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseArgs } from "../_lib/parse-args.ts";
+import { ROOT } from "../_lib/scan-files.ts";
 
-const BUG_FILE = path.join(ROOT, 'docs/archive/bug-chronicle.md');
+const BUG_FILE = path.join(ROOT, "docs/archive/bug-chronicle.md");
 
 function loadBugs() {
   /** 将 bug-chronicle 解析为 bug 列表。 */
-  const text = fs.readFileSync(BUG_FILE, 'utf-8');
+  const text = fs.readFileSync(BUG_FILE, "utf-8");
   const bugs: any[] = [];
   let current: any = null;
-  let currentSection = '';
+  let currentSection = "";
 
-  for (const line of text.split('\n')) {
+  for (const line of text.split("\n")) {
     const m = line.match(/^## (\d+\.\s*.+)$/);
     if (m) {
       if (current) bugs.push(current);
       current = { title: m[1], sections: {} };
-      currentSection = '';
+      currentSection = "";
       continue;
     }
 
     const m2 = line.match(/^### (.+)$/);
     if (m2 && current) {
       currentSection = m2[1]!;
-      current.sections[currentSection] = '';
+      current.sections[currentSection] = "";
       continue;
     }
 
     if (current && currentSection) {
-      current.sections[currentSection] += line + '\n';
+      current.sections[currentSection] += `${line}\n`;
     }
   }
 
@@ -60,9 +60,9 @@ function search(keyword: string, bugs: any[]) {
   return results;
 }
 
-const args = parseArgs(process.argv.slice(2), { bools: ['json'] });
+const args = parseArgs(process.argv.slice(2), { bools: ["json"] });
 if (args.unknown.length) {
-  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  console.error(`❌ 未知参数: ${args.unknown.join(", ")}（--help 查看用法）`);
   process.exit(2);
 }
 const jsonMode = args.json;
@@ -74,7 +74,7 @@ const summary = { total_bugs: bugs.length, matched: results.length };
 
 if (jsonMode) {
   const out = { _summary: summary, bugs: results };
-  process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+  process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
 } else {
   if (!keywordArg) {
     console.log(`共 ${bugs.length} 条 bug 记录`);
@@ -84,7 +84,7 @@ if (jsonMode) {
       console.log(`  ## ${b.title}`);
       for (const [sec, text] of Object.entries(b.sections as Record<string, any>)) {
         const trimmed = text.trim();
-        const firstLine = trimmed ? trimmed.split('\n')[0].slice(0, 80) : '';
+        const firstLine = trimmed ? trimmed.split("\n")[0].slice(0, 80) : "";
         console.log(`    ${sec}: ${firstLine}`);
       }
     }

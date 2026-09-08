@@ -29,11 +29,11 @@
  *
  * 零依赖（node:fs / node:path + ./proc.ts / ./scan-files.ts）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
-import { run } from './proc.ts';
-import { ROOT } from './scan-files.ts';
+import { run } from "./proc.ts";
+import { ROOT } from "./scan-files.ts";
 
 /** commitWithTempIndex 选项。 */
 export interface CommitTempIndexOptions {
@@ -67,9 +67,9 @@ export interface CommitTempIndexResult {
  *  智能 stage 只收 *.test.* / *.spec.*（.githooks/pre-commit:160 ADR-087）。 */
 export function isHookArtifact(f: string): boolean {
   return (
-    f.startsWith('docs/') ||
-    f.startsWith('frontend/public/locales/') ||
-    f.startsWith('completions/') ||
+    f.startsWith("docs/") ||
+    f.startsWith("frontend/public/locales/") ||
+    f.startsWith("completions/") ||
     /\.(test|spec)\.[jt]s$/.test(f)
   );
 }
@@ -82,7 +82,7 @@ function git(args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv; timeo
   const runOpts: { cwd: string; env?: NodeJS.ProcessEnv; timeout?: number } = { cwd: opts.cwd };
   if (opts.env) runOpts.env = opts.env;
   if (opts.timeoutMs !== undefined) runOpts.timeout = opts.timeoutMs;
-  return run('git', ['-c', 'core.quotepath=false', ...args], runOpts);
+  return run("git", ["-c", "core.quotepath=false", ...args], runOpts);
 }
 
 /**
@@ -91,12 +91,17 @@ function git(args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv; timeo
  */
 export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempIndexResult {
   const cwd = opts.cwd ?? ROOT;
-  const paths = opts.paths.filter((p) => p && p.trim() !== '');
-  const fail = (error: string): CommitTempIndexResult =>
-    ({ ok: false, committedFiles: [], outOfScope: [], interleaved: false, error });
+  const paths = opts.paths.filter((p) => p && p.trim() !== "");
+  const fail = (error: string): CommitTempIndexResult => ({
+    ok: false,
+    committedFiles: [],
+    outOfScope: [],
+    interleaved: false,
+    error,
+  });
 
   // gitdir 定位（worktree 场景返回独立 gitdir，临时索引随仓库隔离）
-  const gd = git(['rev-parse', '--git-dir'], { cwd });
+  const gd = git(["rev-parse", "--git-dir"], { cwd });
   if (!gd.ok) return fail(`git rev-parse --git-dir 失败: ${gd.err}`);
   const gitDir = path.resolve(cwd, gd.out.trim());
 
@@ -106,54 +111,56 @@ export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempInd
 
   try {
     // HEAD_BEFORE：插队检测基准。空仓库（无 HEAD）首提交场景容错为 ''（无父可比，interleaved=false）
-    const headBeforeR = git(['rev-parse', 'HEAD'], { cwd });
-    const headBefore = headBeforeR.ok ? headBeforeR.out.trim() : '';
+    const headBeforeR = git(["rev-parse", "HEAD"], { cwd });
+    const headBefore = headBeforeR.ok ? headBeforeR.out.trim() : "";
 
     // ① 临时索引从 HEAD 构建（空树起点会误删全部未白名单文件）
     // 无 HEAD（全新仓库首提交）时 read-tree 失败 → 降级：临时索引保持空，git add 建 initial commit
     //（与旧裸 `git commit` 在空仓库建首提交的行为一致，不回归）
-    const rt = git(['read-tree', 'HEAD'], { cwd, env: tmpEnv });
+    const rt = git(["read-tree", "HEAD"], { cwd, env: tmpEnv });
     if (!rt.ok) {
-      const headChk = git(['rev-parse', '--verify', 'HEAD'], { cwd });
+      const headChk = git(["rev-parse", "--verify", "HEAD"], { cwd });
       if (headChk.ok) return fail(`git read-tree HEAD 失败: ${rt.err}`);
       // headChk 失败 = 无 HEAD（空仓库），降级继续
     }
 
     // ② 白名单路径入临时索引（内容取工作区，不依赖主 index 已暂存）
-    const add = git(['add', '--', ...paths], { cwd, env: tmpEnv });
+    const add = git(["add", "--", ...paths], { cwd, env: tmpEnv });
     if (!add.ok) return fail(`git add -- 失败: ${add.err}`);
 
     // 无变更检查（临时索引视角）：diff --cached 为空 = 白名单无改动
-    const staged = git(['diff', '--cached', '--name-only'], { cwd, env: tmpEnv });
-    const stagedFiles = staged.ok ? staged.out.split('\n').filter(Boolean) : [];
-    if (stagedFiles.length === 0) return fail('无变更可提交（临时索引为空，白名单路径相对 HEAD 无改动）');
+    const staged = git(["diff", "--cached", "--name-only"], { cwd, env: tmpEnv });
+    const stagedFiles = staged.ok ? staged.out.split("\n").filter(Boolean) : [];
+    if (stagedFiles.length === 0)
+      return fail("无变更可提交（临时索引为空，白名单路径相对 HEAD 无改动）");
 
     // ③ 提交：无 --only、无 pathspec；钩子继承 GIT_INDEX_FILE，stage 落临时索引 → 进本次提交
     // 10 分钟超时：pre-commit 钩子（gen 串行 + gofmt + 智能 stage + 串行 go test）可远超 30s 默认
-    const commit = git(['commit', '-m', opts.message], { cwd, env: tmpEnv, timeoutMs: 600_000 });
-    if (!commit.ok) return fail(`git commit 失败（可能 pre-commit 钩子拦截或 message 格式问题）: ${commit.err}`);
+    const commit = git(["commit", "-m", opts.message], { cwd, env: tmpEnv, timeoutMs: 600_000 });
+    if (!commit.ok)
+      return fail(`git commit 失败（可能 pre-commit 钩子拦截或 message 格式问题）: ${commit.err}`);
 
-    const shaR = git(['rev-parse', 'HEAD'], { cwd });
+    const shaR = git(["rev-parse", "HEAD"], { cwd });
     const sha = shaR.ok ? shaR.out.trim() : undefined;
 
     // ④a 提交内容校验：越界文件 = 不在 paths ∪ 白名单
-    const show = git(['show', '--name-only', '--format=', 'HEAD'], { cwd });
-    const committedFiles = show.ok ? show.out.split('\n').filter(Boolean) : [];
+    const show = git(["show", "--name-only", "--format=", "HEAD"], { cwd });
+    const committedFiles = show.ok ? show.out.split("\n").filter(Boolean) : [];
     const pathSet = new Set(paths);
     const outOfScope = committedFiles.filter((f) => !pathSet.has(f) && !isHookArtifact(f));
 
     // ④b 插队检测：HEAD^ != HEAD_BEFORE（root commit 无父时 HEAD^ 失败 → 不算插队）
-    const parentR = git(['rev-parse', 'HEAD^'], { cwd });
+    const parentR = git(["rev-parse", "HEAD^"], { cwd });
     const interleaved = parentR.ok ? parentR.out.trim() !== headBefore : false;
 
     // ⑤ 收尾：清主 index（仅当主 index 含已提交路径；keepIndex 关闭）——
     //    避免提交后 git status 仍显示「已暂存」（内容已入库，暂存是陈旧态）
     if (!opts.keepIndex && committedFiles.length > 0) {
-      const mainStagedR = git(['diff', '--cached', '--name-only'], { cwd }); // 无 tmpEnv → 主 index
-      const mainStaged = mainStagedR.ok ? mainStagedR.out.split('\n').filter(Boolean) : [];
+      const mainStagedR = git(["diff", "--cached", "--name-only"], { cwd }); // 无 tmpEnv → 主 index
+      const mainStaged = mainStagedR.ok ? mainStagedR.out.split("\n").filter(Boolean) : [];
       const toReset = committedFiles.filter((f) => mainStaged.includes(f));
       if (toReset.length > 0) {
-        git(['reset', '-q', 'HEAD', '--', ...toReset], { cwd });
+        git(["reset", "-q", "HEAD", "--", ...toReset], { cwd });
       }
     }
 
@@ -166,7 +173,9 @@ export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempInd
     for (const f of [tmpIndex, `${tmpIndex}.lock`]) {
       try {
         fs.rmSync(f, { force: true });
-      } catch { /* 清理失败忽略（下次提交用新 pid 文件名，不冲突） */ }
+      } catch {
+        /* 清理失败忽略（下次提交用新 pid 文件名，不冲突） */
+      }
     }
   }
 }

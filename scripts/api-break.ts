@@ -18,14 +18,12 @@
  *
  * 退出码：0 成功；`--redline` 且存在 >400 行文件 → 1；缺参/ref 无效 → 2。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import {
-  showAt, existsAt, renamePairs, gitMaybe, lsTree,
-} from './_lib/git-ref.ts';
-import { getExportedSymbolsAny, topDeclsAny, searchName, countLines } from './_lib/source-graph.ts';
-import { walk, ROOT, toPosix } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { existsAt, gitMaybe, lsTree, renamePairs, showAt } from "./_lib/git-ref.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT, toPosix, walk } from "./_lib/scan-files.ts";
+import { countLines, getExportedSymbolsAny, searchName, topDeclsAny } from "./_lib/source-graph.ts";
 
 const REDLINE = 400; // ADR-040：单文件 ≤400 行
 
@@ -45,7 +43,7 @@ interface BreakReport {
 // ── 核心比对 ──
 // 优化：只用 git diff --name-only 拿变更文件清单（而非 diffTree 全量遍历），
 // 大幅减少 showAt 调用次数。对大 diff（如 merge base → HEAD）可快 10x+。
-const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.go']);
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".go"]);
 function isSourceFile(p: string) {
   const ext = path.extname(p).toLowerCase();
   return SOURCE_EXTS.has(ext);
@@ -53,12 +51,12 @@ function isSourceFile(p: string) {
 
 function gitDiffNames(older: string, newer: string) {
   // git diff --name-only older newer：只列变更路径，O(1) 次调用
-  const out = gitMaybe(['diff', '--name-only', older, newer]);
+  const out = gitMaybe(["diff", "--name-only", older, newer]);
   if (!out) return [];
-  return out.trim().split('\n').filter(Boolean);
+  return out.trim().split("\n").filter(Boolean);
 }
 
-function compare(older: string, newer: string, scope: string | undefined): BreakReport {
+function compare(older: string, newer: string, _scope: string | undefined): BreakReport {
   // 1. 变更文件清单（git diff --name-only，只列实际变化的文件）
   const allChanged = gitDiffNames(older, newer);
   // 2. rename 配对（用于从"删除"和"新增"中排除 rename 产生的假象）
@@ -101,7 +99,10 @@ function compare(older: string, newer: string, scope: string | undefined): Break
     if (deleted.length || added.length) {
       mods.push({
         path: p,
-        deleted, added, deletedExp, addedExp,
+        deleted,
+        added,
+        deletedExp,
+        addedExp,
         oldLines: countLines(oldText),
         newLines,
         redline: newLines !== null && newLines > REDLINE,
@@ -134,10 +135,13 @@ function compare(older: string, newer: string, scope: string | undefined): Break
   }
 
   return {
-    older, newer,
+    older,
+    newer,
     renames,
-    mods, removedTraces,
-    addedFiles: finalAdded, removedFiles: finalRemoved,
+    mods,
+    removedTraces,
+    addedFiles: finalAdded,
+    removedFiles: finalRemoved,
     modifiedCount: modifiedFiles.length,
     redlineFiles,
   };
@@ -149,16 +153,16 @@ function compare(older: string, newer: string, scope: string | undefined): Break
 function scanCallersInRef(terms: string[], newer: string, scope: string | undefined) {
   if (!terms.length) return new Map();
   const callers = new Map();
-  const exts = ['.ts', '.tsx', '.js', '.jsx', '.go'];
+  const exts = [".ts", ".tsx", ".js", ".jsx", ".go"];
   const skipFileRe = /\.(test|spec)\.[jt]sx?$/;
   const scanRoots: string[] = [];
   if (scope) {
-    const abs = scope.startsWith('/') || scope.startsWith('C:\\') ? scope : path.join(ROOT, scope);
+    const abs = scope.startsWith("/") || scope.startsWith("C:\\") ? scope : path.join(ROOT, scope);
     if (fs.existsSync(abs)) scanRoots.push(abs);
   } else {
     // 只扫源码目录（和 rollback-impact 默认口径一致）
-    const goDir = ROOT + '/go';
-    const srcDir = ROOT + '/frontend/src';
+    const goDir = `${ROOT}/go`;
+    const srcDir = `${ROOT}/frontend/src`;
     if (fs.existsSync(goDir)) scanRoots.push(goDir);
     if (fs.existsSync(srcDir)) scanRoots.push(srcDir);
   }
@@ -172,10 +176,10 @@ function scanCallersInRef(terms: string[], newer: string, scope: string | undefi
     try {
       const files = walk(dir, { exts, skipFile: (n) => skipFileRe.test(n) });
       for (const f of files) {
-        if (typeof f !== 'string') continue;
+        if (typeof f !== "string") continue;
         const rel = toPosix(path.relative(ROOT, f));
         // 跳过二进制 / 不存在于 newer 的文件（避免 git show 噪声）
-        if (rel.endsWith('.png') || rel.endsWith('.gif') || rel.endsWith('.jpg')) continue;
+        if (rel.endsWith(".png") || rel.endsWith(".gif") || rel.endsWith(".jpg")) continue;
         // R5 修复：showAt 的 toGitPath 假设绝对路径（path.relative(ROOT, p)），
         // 传相对路径 rel 在 cwd≠ROOT 时解析错位 → 漏报断链调用方；walk 返回绝对路径 f
         if (!refFiles.has(rel)) continue; // 磁盘有但 newer ref 无（并行拆分的在建文件）→ 跳过，否则 git show 报 fatal 噪声
@@ -183,11 +187,14 @@ function scanCallersInRef(terms: string[], newer: string, scope: string | undefi
         if (!text) continue;
         for (const sym of terms) {
           const nm = searchName(sym);
-          const escaped = nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const re = new RegExp('\\b' + escaped + '\\b', 'g');
+          const escaped = nm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`\\b${escaped}\\b`, "g");
           if (re.test(text)) {
             let arr = callers.get(sym);
-            if (!arr) { arr = []; callers.set(sym, arr); }
+            if (!arr) {
+              arr = [];
+              callers.set(sym, arr);
+            }
             arr.push(rel);
           }
         }
@@ -202,25 +209,28 @@ function scanCallersInRef(terms: string[], newer: string, scope: string | undefi
 // ── 输出 ──
 function human(report: BreakReport, callers: Map<string, string[]>, compact: boolean) {
   const L: string[] = [];
-  L.push('\u2550'.repeat(66));
+  L.push("\u2550".repeat(66));
   L.push(` api-break —— ${report.older} ←→ ${report.newer}`);
-  L.push('\u2550'.repeat(66));
-  L.push('');
-  L.push('① 文件变更概览');
-  L.push(`   新增: ${report.addedFiles.length} · 删除: ${report.removedFiles.length} · 修改: ${report.mods.length} · 重命名: ${report.renames.length} 对`);
+  L.push("\u2550".repeat(66));
+  L.push("");
+  L.push("① 文件变更概览");
+  L.push(
+    `   新增: ${report.addedFiles.length} · 删除: ${report.removedFiles.length} · 修改: ${report.mods.length} · 重命名: ${report.renames.length} 对`,
+  );
   if (report.renames.length && !compact) {
     for (const r of report.renames.slice(0, 10)) {
       L.push(`   ▸ ${r.oldPath}  →  ${r.newPath}`);
     }
-    if (report.renames.length > 10) L.push(`   … 以及 ${report.renames.length - 10} 对（--json 全量）`);
+    if (report.renames.length > 10)
+      L.push(`   … 以及 ${report.renames.length - 10} 对（--json 全量）`);
   }
 
-  const allDeletedExp = report.mods.flatMap((m) => m.deletedExp).concat(
-    report.removedTraces.flatMap((r) => [...r.exp].map((s) => s))
-  );
+  const allDeletedExp = report.mods
+    .flatMap((m) => m.deletedExp)
+    .concat(report.removedTraces.flatMap((r) => [...r.exp].map((s) => s)));
   if (allDeletedExp.length) {
-    L.push('');
-    L.push('② 破坏性变更（导出符号消失）');
+    L.push("");
+    L.push("② 破坏性变更（导出符号消失）");
     let totalCalls = 0;
     for (const m of report.mods) {
       if (!m.deletedExp.length) continue;
@@ -251,17 +261,19 @@ function human(report: BreakReport, callers: Map<string, string[]>, compact: boo
         }
       }
     }
-    L.push('');
-    L.push('   共 ' + allDeletedExp.length + ' 个导出符号消失' + (totalCalls ? ` · ${totalCalls} 处潜在断链` : ' · 当前无断链'));
+    L.push("");
+    L.push(
+      `   共 ${allDeletedExp.length} 个导出符号消失${totalCalls ? ` · ${totalCalls} 处潜在断链` : " · 当前无断链"}`,
+    );
   } else {
-    if (!compact) L.push('');
-    L.push('② 破坏性变更：✅ 无导出符号消失');
+    if (!compact) L.push("");
+    L.push("② 破坏性变更：✅ 无导出符号消失");
   }
 
   const allAddedExp = report.mods.flatMap((m) => m.addedExp);
   if (allAddedExp.length) {
-    L.push('');
-    L.push('③ 新增导出符号（' + allAddedExp.length + ' 个）');
+    L.push("");
+    L.push(`③ 新增导出符号（${allAddedExp.length} 个）`);
     for (const m of report.mods) {
       if (!m.addedExp.length) continue;
       L.push(`   ▸ ${m.path}`);
@@ -271,43 +283,43 @@ function human(report: BreakReport, callers: Map<string, string[]>, compact: boo
 
   const redlineFiles = report.redlineFiles;
   if (redlineFiles.length) {
-    L.push('');
-    L.push('④ 红线 ADR-040（单文件 > ' + REDLINE + ' 行）');
+    L.push("");
+    L.push(`④ 红线 ADR-040（单文件 > ${REDLINE} 行）`);
     for (const m of redlineFiles) {
       L.push(`   ✗ ${m.path}  ${m.newLines} 行 > ${REDLINE}`);
     }
   }
 
-  L.push('');
-  L.push('⑤ 综合结论');
+  L.push("");
+  L.push("⑤ 综合结论");
   const broken = allDeletedExp.length;
   const newExports = allAddedExp.length;
   const overRedline = redlineFiles.length;
-  if (!broken && !newExports && !overRedline) L.push('   ✅ 无破坏性变更，两条 ref 兼容');
+  if (!broken && !newExports && !overRedline) L.push("   ✅ 无破坏性变更，两条 ref 兼容");
   else {
     const parts: string[] = [];
-    if (broken) parts.push(broken + ' 个导出消失');
+    if (broken) parts.push(`${broken} 个导出消失`);
     if (allDeletedExp.length && callers) {
       const totalC = allDeletedExp.reduce((s, sym) => s + (callers.get(sym) || []).length, 0);
-      if (totalC) parts.push(totalC + ' 处潜在断链');
+      if (totalC) parts.push(`${totalC} 处潜在断链`);
     }
-    if (newExports) parts.push(newExports + ' 个新增导出');
-    if (overRedline) parts.push(overRedline + ' 个超红线文件');
-    L.push('   ⚠️  ' + parts.join(' · '));
+    if (newExports) parts.push(`${newExports} 个新增导出`);
+    if (overRedline) parts.push(`${overRedline} 个超红线文件`);
+    L.push(`   ⚠️  ${parts.join(" · ")}`);
   }
-  return L.join('\n');
+  return L.join("\n");
 }
 
 function toJ(report: BreakReport, callers: Map<string, string[]>) {
-  const allDeletedExp = report.mods.flatMap((m) => m.deletedExp).concat(
-    report.removedTraces.flatMap((r) => [...r.exp])
-  );
+  const allDeletedExp = report.mods
+    .flatMap((m) => m.deletedExp)
+    .concat(report.removedTraces.flatMap((r) => [...r.exp]));
   const allAddedExp = report.mods.flatMap((m) => m.addedExp);
   const redlineFiles = report.redlineFiles;
   let totalCalls = 0;
   for (const sym of allDeletedExp) totalCalls += (callers.get(sym) || []).length;
   return {
-    kind: 'api-break',
+    kind: "api-break",
     older: report.older,
     newer: report.newer,
     fileSummary: {
@@ -318,9 +330,7 @@ function toJ(report: BreakReport, callers: Map<string, string[]>) {
     },
     renames: report.renames,
     breakingChanges: allDeletedExp.length,
-    callers: Object.fromEntries(
-      allDeletedExp.map((sym) => [sym, callers.get(sym) || []])
-    ),
+    callers: Object.fromEntries(allDeletedExp.map((sym) => [sym, callers.get(sym) || []])),
     totalCallers: totalCalls,
     newExports: allAddedExp.length,
     newExportDetails: report.mods.map((m) => ({
@@ -342,15 +352,17 @@ function toJ(report: BreakReport, callers: Map<string, string[]>) {
 // 位置参数 <older> <newer>，走 parse-args（unknown 白名单拦截，防 --jso 拼错静默放行）
 
 const args = parseArgs(process.argv.slice(2), {
-  bools: ['json', 'quiet', 'redline', 'compact'],
-  strings: ['scope'],
+  bools: ["json", "quiet", "redline", "compact"],
+  strings: ["scope"],
 });
 if (args.help) {
-  console.log('用法: node scripts/api-break.ts <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]');
+  console.log(
+    "用法: node scripts/api-break.ts <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]",
+  );
   process.exit(0);
 }
 if (args.unknown.length) {
-  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  console.error(`❌ 未知参数: ${args.unknown.join(", ")}（--help 查看用法）`);
   process.exit(2);
 }
 const JSON_OUT = args.json;
@@ -360,34 +372,35 @@ const SCOPE = args.scope as string | undefined;
 const COMPACT = args.compact;
 const nonOpts = args._;
 if (nonOpts.length < 2) {
-  console.error('用法: node scripts/api-break.ts <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]');
+  console.error(
+    "用法: node scripts/api-break.ts <older> <newer> [--scope <dir>] [--json] [--quiet] [--redline] [--compact]",
+  );
   process.exit(2);
 }
-const older = nonOpts[0]!, newer = nonOpts[1]!;
+const older = nonOpts[0]!,
+  newer = nonOpts[1]!;
 
 // ref 有效性校验：git diff 失败会被 gitMaybe 吞成空清单 → 无效 ref 会得到
 // 静默的「兼容」假结论（门禁工具危险信号）；先 rev-parse 验证两个 ref，无效退出 2
 for (const ref of [older, newer]) {
-  if (!gitMaybe(['rev-parse', '--verify', '--quiet', ref + '^{commit}'])) {
+  if (!gitMaybe(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`])) {
     console.error(`无效 ref: ${ref}`);
     process.exit(2);
   }
 }
 
 const report = compare(older, newer, SCOPE);
-const allDeletedExp = report.mods.flatMap((m) => m.deletedExp).concat(
-  report.removedTraces.flatMap((r) => [...r.exp])
-);
-const callers = allDeletedExp.length
-  ? scanCallersInRef(allDeletedExp, newer, SCOPE)
-  : new Map();
+const allDeletedExp = report.mods
+  .flatMap((m) => m.deletedExp)
+  .concat(report.removedTraces.flatMap((r) => [...r.exp]));
+const callers = allDeletedExp.length ? scanCallersInRef(allDeletedExp, newer, SCOPE) : new Map();
 
 if (JSON_OUT) {
   console.log(JSON.stringify(toJ(report, callers), null, 2));
 } else if (QUIET && allDeletedExp.length === 0 && report.redlineFiles.length === 0) {
   // 静默模式（--quiet）：无破坏性变更且无红线文件时只输出一行结论（Q1 实现；
   // 与 --redline 退出码一致——有红线时走下方 ⚠️ 行并 exit 1）
-  console.log('✅ 无破坏性变更');
+  console.log("✅ 无破坏性变更");
 } else if (QUIET && allDeletedExp.length === 0) {
   console.log(`⚠️ ${report.redlineFiles.length} 个超红线文件（ADR-040）`);
 } else {

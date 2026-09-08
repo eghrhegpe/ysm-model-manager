@@ -14,11 +14,11 @@
  *   import { collectScripts } from './_lib/collect-scripts.ts';
  *   collectScripts({ skipHooks: true });  // 默认含 hooks/（proc/readme 口径）
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "./scan-files.ts";
 
-export const SCRIPTS_DIR = path.join(ROOT, 'scripts');
+export const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
 /**
  * 递归收集 dir 下所有 .mjs（默认 scripts/）。
@@ -30,11 +30,13 @@ export const SCRIPTS_DIR = path.join(ROOT, 'scripts');
  *   - dir {string}         起始目录，默认 SCRIPTS_DIR（测试可注入临时目录）
  * @returns {string[]} 相对起始目录的 posix 路径，排序后返回
  */
-export function collectScripts(opts: { skipHooks?: boolean; includeNonTs?: boolean; dir?: string } = {}): string[] {
+export function collectScripts(
+  opts: { skipHooks?: boolean; includeNonTs?: boolean; dir?: string } = {},
+): string[] {
   const { skipHooks = false, includeNonTs = false, dir = SCRIPTS_DIR } = opts;
   const out: string[] = [];
   const visit = (d: string) => {
-    let entries;
+    let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(d, { withFileTypes: true });
     } catch {
@@ -44,16 +46,16 @@ export function collectScripts(opts: { skipHooks?: boolean; includeNonTs?: boole
       const abs = path.join(d, entry.name);
       if (entry.isDirectory()) {
         // _ 前缀共享层（_lib 等）不纳入；hooks 按选项取舍（语义差异见文件头）
-        if (entry.name.startsWith('_') || (skipHooks && entry.name === 'hooks')) continue;
+        if (entry.name.startsWith("_") || (skipHooks && entry.name === "hooks")) continue;
         visit(abs);
       } else if (
         // 2026-09 顶层 .mjs→.ts 迁移完成：仅收 .ts（.mjs 已全量断除）；
         // includeNonTs 时另收 scripts/ 下的 .sh/.ps1 构建发布脚本（对账 readme-index 口径）
-        !entry.name.startsWith('_') &&
-        ((entry.name.endsWith('.ts') && !/\.test\.ts$/.test(entry.name)) ||
-          (includeNonTs && (entry.name.endsWith('.sh') || entry.name.endsWith('.ps1'))))
+        !entry.name.startsWith("_") &&
+        ((entry.name.endsWith(".ts") && !/\.test\.ts$/.test(entry.name)) ||
+          (includeNonTs && (entry.name.endsWith(".sh") || entry.name.endsWith(".ps1"))))
       ) {
-        out.push(path.relative(dir, abs).replace(/\\/g, '/'));
+        out.push(path.relative(dir, abs).replace(/\\/g, "/"));
       }
     }
   };

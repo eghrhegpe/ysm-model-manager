@@ -49,25 +49,32 @@
  *   数据新鲜但比前端慢——故默认只对「变更文件所在包」跑，不跑全量。
  * 依赖：node:child_process / node:fs / node:os / node:path / node:url / 本地模块
  */
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { run } from './_lib/proc.ts';
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
-  git,
-  getChangedFiles,
   addLinesFromDiff,
-  parseRenameStatus,
-  detectRenames,
-  getChangedLines,
   buildSuggestBlock as buildSuggestBlockCore,
-} from './_lib/diff-coverage-core.ts';
+  detectRenames,
+  getChangedFiles,
+  getChangedLines,
+  git,
+  parseRenameStatus,
+} from "./_lib/diff-coverage-core.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { run } from "./_lib/proc.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 // ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.ts）──
-export { addLinesFromDiff, parseRenameStatus, detectRenames, getChangedLines, getChangedFiles, git };
+export {
+  addLinesFromDiff,
+  detectRenames,
+  getChangedFiles,
+  getChangedLines,
+  git,
+  parseRenameStatus,
+};
 
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
@@ -75,15 +82,17 @@ const COVERAGE_FAILURE = 1;
 /** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非根覆盖产物 go-cover。 */
 export function isGoSource(f: string) {
   return (
-    f.endsWith('.go') &&
-    !f.endsWith('_test.go') &&
-    f !== 'go-cover' &&
-    !f.includes('/testdata/')
+    f.endsWith(".go") && !f.endsWith("_test.go") && f !== "go-cover" && !f.includes("/testdata/")
   );
 }
 
 /** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
-export function getChangedGoFiles(base: string, head: string, uncommitted: boolean, staged: boolean) {
+export function getChangedGoFiles(
+  base: string,
+  head: string,
+  uncommitted: boolean,
+  staged: boolean,
+) {
   const out = getChangedFiles(base, head, uncommitted, staged);
   if (out === null) return null;
   return out.filter(isGoSource);
@@ -102,7 +111,7 @@ export function getChangedGoFiles(base: string, head: string, uncommitted: boole
  * 新增须注释理由；禁止把「懒得写测试的真裸奔」塞进来。
  */
 const EXEMPT_LIFECYCLE_FILES = new Set([
-  'internal/app/plaza_window.go', // 变更行在 WindowClosing 钩子闭包内，需真实窗口关闭事件触发
+  "internal/app/plaza_window.go", // 变更行在 WindowClosing 钩子闭包内，需真实窗口关闭事件触发
 ]);
 
 /**
@@ -112,7 +121,7 @@ const EXEMPT_LIFECYCLE_FILES = new Set([
  * 属声明非逻辑行）。新增须注释理由；禁止把「真裸奔」塞进来。
  */
 const EXEMPT_ENTRY_FILES = new Set([
-  'main.go', // 变更行在 main() 内（如 ADR-145 的 cli.RunCLI(app.NewApp(), ...) 组装行）
+  "main.go", // 变更行在 main() 内（如 ADR-145 的 cli.RunCLI(app.NewApp(), ...) 组装行）
 ]);
 
 /** 是否命中生命周期/窗口事件豁免（编译可达但 headless 不可达）。导出供单测。 */
@@ -128,7 +137,7 @@ export function isExemptEntry(f: string) {
 /** 把改动文件映射到 go test 包模式（模块根相对，如 go/scanner → ./go/scanner/...）。 */
 export function packagePatternFor(file: string) {
   const dir = path.posix.dirname(file);
-  if (dir === '.') return '.';
+  if (dir === ".") return ".";
   return `./${dir}/...`;
 }
 
@@ -149,12 +158,12 @@ export function packagePatternFor(file: string) {
 export function isRewriteLine(line: string) {
   const t = line.trim();
   if (!t) return true; // 空行
-  if (t.startsWith('//') || t.startsWith('/*') || t.startsWith('*')) return true;
-  if (t.startsWith('import')) return true;
-  if (t.startsWith('func ')) return true;
-  if (t.startsWith('type ')) return true;
-  if (t.startsWith('const ')) return true;
-  if (t.startsWith('var _ ')) return true; // 编译期断言（仅 `var _` 形态，普通 var 是逻辑）
+  if (t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) return true;
+  if (t.startsWith("import")) return true;
+  if (t.startsWith("func ")) return true;
+  if (t.startsWith("type ")) return true;
+  if (t.startsWith("const ")) return true;
+  if (t.startsWith("var _ ")) return true; // 编译期断言（仅 `var _` 形态，普通 var 是逻辑）
   if (t.startsWith('"') || t.startsWith('_ "')) return true; // import 块内的包路径行
   return false;
 }
@@ -167,8 +176,8 @@ export function isRewriteLine(line: string) {
 export function isRewriteOnlyDiff(diffText: string | null) {
   if (!diffText) return false;
   let sawAdded = false;
-  for (const line of diffText.split('\n')) {
-    if (!line.startsWith('+') || line.startsWith('+++')) continue;
+  for (const line of diffText.split("\n")) {
+    if (!line.startsWith("+") || line.startsWith("+++")) continue;
     sawAdded = true;
     if (!isRewriteLine(line.slice(1))) return false;
   }
@@ -187,11 +196,16 @@ export function isRewriteOnlyDiff(diffText: string | null) {
 
 /** 测试源文件（*_test.go，排除 testdata 夹具目录）。 */
 export function isGoTestSource(f: string) {
-  return f.endsWith('_test.go') && !f.includes('/testdata/');
+  return f.endsWith("_test.go") && !f.includes("/testdata/");
 }
 
 /** 本次改动的 Go 测试文件（repo-root 相对路径）。 */
-export function getChangedGoTestFiles(base: string, head: string, uncommitted: boolean, staged: boolean) {
+export function getChangedGoTestFiles(
+  base: string,
+  head: string,
+  uncommitted: boolean,
+  staged: boolean,
+) {
   const out = getChangedFiles(base, head, uncommitted, staged);
   if (out === null) return null;
   return out.filter(isGoTestSource);
@@ -207,16 +221,17 @@ export function getChangedGoTestFiles(base: string, head: string, uncommitted: b
 export function isBareFatalAssertLine(line: string): boolean {
   const t = line.trim();
   if (!t) return false;
-  if (t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('#')) return false;
+  if (t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") || t.startsWith("#"))
+    return false;
   // 先剥字符串字面量（双引号 + 反引号），避免字面量内容被误判为调用 token
   // code_review 5cdfa23d0 #2/#3（P2）：再剥尾随 // 注释与内联 /* */ 注释——原实现只放行
   // 整行注释，`errCh <- err // 勿用 t.Fatalf(这里)`（collect-errors 惯用法注释）与多行
   // 反引号 raw-string 内的 t.Fatalf( 文本会被误判为裸断言 → 硬阻断合规提交（强制逃生）
   const code = t
-    .replace(/"(?:\\.|[^"\\])*"/g, '')
-    .replace(/`[^`]*`/g, '')
-    .replace(/\/\/.*$/, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
+    .replace(/"(?:\\.|[^"\\])*"/g, "")
+    .replace(/`[^`]*`/g, "")
+    .replace(/\/\/.*$/, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
   return /\bt\.Fatal(f)?\(/.test(code);
 }
 
@@ -229,17 +244,17 @@ export function addedLinesFromDiffText(diffText: string | null): { line: number;
   if (!diffText) return [];
   const out: { line: number; text: string }[] = [];
   let currentLine = 0;
-  for (const line of diffText.split('\n')) {
+  for (const line of diffText.split("\n")) {
     const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
     if (hdr) {
       currentLine = parseInt(hdr[1]!, 10);
       continue;
     }
     if (currentLine === 0) continue;
-    if (line.startsWith('+')) {
+    if (line.startsWith("+")) {
       out.push({ line: currentLine, text: line.slice(1) });
       currentLine++;
-    } else if (line.startsWith(' ')) {
+    } else if (line.startsWith(" ")) {
       // 上下文行（未变更），仍计入行号
       currentLine++;
     }
@@ -257,20 +272,22 @@ export function findBareFatalAddedLines(diffText: string | null) {
  * 非阻断建议区块（测试断言红线版）：列明违规文件:行 + 改写指引。
  * 仅 suggest 模式使用；首行即 ADD_BLOCK_START 标记，幂等剥离由钩子负责。
  */
-export function buildBareAssertBlock(hits: { file: string; items: { line: number; text: string }[] }[]) {
+export function buildBareAssertBlock(
+  hits: { file: string; items: { line: number; text: string }[] }[],
+) {
   const lines: string[] = [];
   for (const h of hits) {
     for (const it of h.items) lines.push(`- \`${h.file}:${it.line}\`: \`${it.text.trim()}\``);
   }
   return [
-    '## Go 裸断言建议（非阻断）',
-    '',
-    '以下新增测试行直接调用 t.Fatal/t.Fatalf（失败即弃权）。请改用 testutil 断言：',
-    '',
+    "## Go 裸断言建议（非阻断）",
+    "",
+    "以下新增测试行直接调用 t.Fatal/t.Fatalf（失败即弃权）。请改用 testutil 断言：",
+    "",
     ...lines,
-    '',
-    '提示：`testutil.NoError(t, err)` / `testutil.Equal(t, got, want)` / `testutil.ErrorContains(t, err, sub)` 等价替代，失败输出带 diff。',
-  ].join('\n');
+    "",
+    "提示：`testutil.NoError(t, err)` / `testutil.Equal(t, got, want)` / `testutil.ErrorContains(t, err, sub)` 等价替代，失败输出带 diff。",
+  ].join("\n");
 }
 
 /**
@@ -281,7 +298,7 @@ export function buildBareAssertBlock(hits: { file: string; items: { line: number
  * 新增须注释理由；禁止把「懒得写测试的真裸奔」塞进来。
  */
 const EXEMPT_ASSERT_FILES = new Set([
-  'go/internal/testutil/assert.go', // 断言失败分支 t.Fatalf → Goexit 不可捕获
+  "go/internal/testutil/assert.go", // 断言失败分支 t.Fatalf → Goexit 不可捕获
 ]);
 
 /** 是否命中断言器实现文件豁免。导出供单测。 */
@@ -291,8 +308,10 @@ export function isExemptAssert(f: string) {
 
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
 export function runCoverProfile(packagePattern: string, tmp: string) {
-  const r1 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
-    cwd: ROOT, stdio: 'ignore', timeout: 120000,
+  const r1 = run("go", ["test", `-coverprofile=${tmp}`, packagePattern, "-count=1"], {
+    cwd: ROOT,
+    stdio: "ignore",
+    timeout: 120000,
     // 2026-08-29 超时 30s→120s：冷缓存下 internal/app 全包（Wails app 层）覆盖插桩
     // 编译可远超 30s，而 pre-push 预跑的 go test -race 是独立构建缓存、不预热普通
     // coverprofile 构建 → 冷 push 首跑超时返回 null → 误报 missing/pct=0 阻断。
@@ -302,15 +321,17 @@ export function runCoverProfile(packagePattern: string, tmp: string) {
     // （实测 `go test -cover` 92.9% 包覆盖、连续 11 次复跑全过，但整包 -coverprofile
     // 偶发 1 次 TestDetectContainerTypeFromBase64Tail 失败）——单次失败即 null 会让整包
     // 误报 0% 阻断推送（假 0）。重试后仍失败 = 真缺陷，照旧拦截。
-    const r2 = run('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
-      cwd: ROOT, stdio: 'ignore', timeout: 120000,
+    const r2 = run("go", ["test", `-coverprofile=${tmp}`, packagePattern, "-count=1"], {
+      cwd: ROOT,
+      stdio: "ignore",
+      timeout: 120000,
     });
     if (!r2.ok) {
       return null; // 编译失败/测试失败 → 该包无数据
     }
   }
   try {
-    return fs.readFileSync(tmp, 'utf8');
+    return fs.readFileSync(tmp, "utf8");
   } catch {
     return null;
   }
@@ -326,20 +347,21 @@ export function runCoverProfile(packagePattern: string, tmp: string) {
  * 失败返回 null（保守：不豁免，沿用旧 0% 行为）。
  */
 export function goListGoFiles(packagePattern: string) {
-  const r = run('go', ['list', '-f', '{{.GoFiles}}', packagePattern], {
-    cwd: ROOT, timeout: 30000,
+  const r = run("go", ["list", "-f", "{{.GoFiles}}", packagePattern], {
+    cwd: ROOT,
+    timeout: 30000,
   });
   if (!r.ok) return null;
   const names = new Set();
-  for (const m of r.out.matchAll(/([^\/\s]+\.go)/g)) names.add(m[1]);
+  for (const m of r.out.matchAll(/([^/\s]+\.go)/g)) names.add(m[1]);
   return names;
 }
 
 /** 解析 Go coverprofile 文本 → Map<repoRootRelPath, Array<{sl,el,n,count}>>。导出供单测。 */
 export function parseGoCover(profileText: string) {
   const byFile = new Map();
-  for (const line of profileText.split('\n')) {
-    if (line.startsWith('mode:')) continue;
+  for (const line of profileText.split("\n")) {
+    if (line.startsWith("mode:")) continue;
     if (!line.trim()) continue;
     const m = line.match(/^(.+?):(\d+)\.(\d+),(\d+)\.(\d+)\s+(\d+)\s+(\d+)$/);
     if (!m) continue;
@@ -359,11 +381,11 @@ export function parseGoCover(profileText: string) {
 
 /** 去掉模块根前缀（ysm-model-manager/... → repo-root 相对）。 */
 export function stripModulePrefix(fullPath: string) {
-  const idx = fullPath.indexOf('/go/');
+  const idx = fullPath.indexOf("/go/");
   if (idx >= 0) return fullPath.slice(idx + 1);
-  const i2 = fullPath.indexOf('/internal/');
+  const i2 = fullPath.indexOf("/internal/");
   if (i2 >= 0) return fullPath.slice(i2 + 1);
-  const i3 = fullPath.indexOf('/main.go');
+  const i3 = fullPath.indexOf("/main.go");
   if (i3 >= 0) return fullPath.slice(i3 + 1);
   return fullPath;
 }
@@ -390,35 +412,37 @@ export function stmtPctForChangedLines(blocks: any[], changedLines: Set<number>)
 /** Go 版建议区块（标题/称谓/提示与前端版区分，契约测试锁定文案）。 */
 export function buildSuggestBlock(failures: any[], threshold: number) {
   return buildSuggestBlockCore(failures, threshold, {
-    title: '## Go 覆盖率建议（非阻断）',
-    noun: 'Go 文件',
-    hint: '本建议基于本次改动包 `go test -coverprofile` 实跑结果。',
+    title: "## Go 覆盖率建议（非阻断）",
+    noun: "Go 文件",
+    hint: "本建议基于本次改动包 `go test -coverprofile` 实跑结果。",
   });
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ['uncommitted', 'json', 'suggest', 'staged'],
-    strings: ['threshold', 'base', 'head', 'files', 'bare-assert'],
+    bools: ["uncommitted", "json", "suggest", "staged"],
+    strings: ["threshold", "base", "head", "files", "bare-assert"],
   });
   if (args.unknown.length) {
-    console.error(`[check-go-diff-coverage] 未知参数: ${args.unknown.join(' ')}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json/--bare-assert=off）`);
+    console.error(
+      `[check-go-diff-coverage] 未知参数: ${args.unknown.join(" ")}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json/--bare-assert=off）`,
+    );
     process.exit(USAGE_ERROR);
   }
-  const base = (args.base as string) ?? 'origin/main';
-  const head = (args.head as string) ?? 'HEAD';
-  const threshold = Number(args.threshold ?? '60');
+  const base = (args.base as string) ?? "origin/main";
+  const head = (args.head as string) ?? "HEAD";
+  const threshold = Number(args.threshold ?? "60");
   const uncommitted = Boolean(args.uncommitted);
   const staged = Boolean(args.staged);
   const json = Boolean(args.json);
   const suggest = Boolean(args.suggest);
   const hostGOOS = (() => {
-    const r = run('go', ['env', 'GOOS'], { cwd: ROOT });
+    const r = run("go", ["env", "GOOS"], { cwd: ROOT });
     return r.ok ? r.out.trim() : os.platform();
   })();
 
   if (!Number.isFinite(threshold)) {
-    console.error(`[check-go-diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
+    console.error(`[check-go-diff-coverage] --threshold 需为数字，收到：${args.threshold ?? "60"}`);
     process.exit(USAGE_ERROR);
   }
 
@@ -431,17 +455,21 @@ function main() {
     process.exit(USAGE_ERROR);
   };
   if (!args.files) {
-    if (!git(['rev-parse', 'HEAD'])) failOrWarn('无法解析 HEAD（git 环境异常）');
-    if (!staged && !git(['rev-parse', '--verify', base])) {
+    if (!git(["rev-parse", "HEAD"])) failOrWarn("无法解析 HEAD（git 环境异常）");
+    if (!staged && !git(["rev-parse", "--verify", base])) {
       failOrWarn(`基准分支不可达：${base}（请先 git fetch 或 --base 指向本地分支）`);
     }
   }
 
   const changed = args.files
-    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean).filter(isGoSource)
+    ? (args.files as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter(isGoSource)
     : getChangedGoFiles(base, head, uncommitted, staged);
 
-  if (changed === null) failOrWarn('git diff 执行失败，拒绝空跑放行');
+  if (changed === null) failOrWarn("git diff 执行失败，拒绝空跑放行");
 
   const renameMap = detectRenames(base, head, staged);
 
@@ -451,12 +479,16 @@ function main() {
   // code_review 5cdfa23d0 #1/#4（P2）：红线块必须位于「无改动源码提前退出」之前——
   // 原位置在 changed.length===0 exit(0) 之后，而 changed 排除 *_test.go → 纯测试文件
   // 变更（红线最典型目标场景）直接提前退出，红线形同虚设
-  const bareAssertOff = (args['bare-assert'] as string | null) === 'off';
+  const bareAssertOff = (args["bare-assert"] as string | null) === "off";
   const testChanged = args.files
-    ? (args.files as string).split(',').map((s) => s.trim()).filter(Boolean)
-        .filter((f) => isGoTestSource(f) && !f.startsWith('go/internal/testutil/'))
-    : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? [])
-        .filter((f) => !f.startsWith('go/internal/testutil/'));
+    ? (args.files as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((f) => isGoTestSource(f) && !f.startsWith("go/internal/testutil/"))
+    : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? []).filter(
+        (f) => !f.startsWith("go/internal/testutil/"),
+      );
   const bareAssertHits: { file: string; items: { line: number; text: string }[] }[] = [];
   for (const f of testChanged) {
     const renameOld = renameMap.get(f)?.from;
@@ -465,14 +497,16 @@ function main() {
     // （base...HEAD 只含已提交行，本地预检模式漏检工作区新增裸断言，与覆盖率侧
     // getChangedLines 的 uncommitted 感知口径分裂）
     const d = staged
-      ? (renameOld ? git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${f}`]) : git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', f]))
+      ? renameOld
+        ? git(["diff", "--unified=0", `HEAD:${renameOld}`, `:${f}`])
+        : git(["diff", "--cached", "--unified=0", "--find-renames=30", "--", f])
       : uncommitted
-        ? (renameOld
-            ? git(['diff', '--unified=0', `${base}:${renameOld}`, `:${f}`])
-            : git(['diff', '--unified=0', '--', f]))
-        : (renameOld
-            ? git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${f}`])
-            : git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', f]));
+        ? renameOld
+          ? git(["diff", "--unified=0", `${base}:${renameOld}`, `:${f}`])
+          : git(["diff", "--unified=0", "--", f])
+        : renameOld
+          ? git(["diff", "--unified=0", `${base}:${renameOld}`, `${head}:${f}`])
+          : git(["diff", "--unified=0", "--find-renames=30", `${base}...${head}`, "--", f]);
     const items = findBareFatalAddedLines(d);
     if (items.length > 0) bareAssertHits.push({ file: f, items });
   }
@@ -504,7 +538,7 @@ function main() {
       const compiled = profileText ? goListGoFiles(pat) : null;
       for (const f of files) {
         const fname = path.posix.basename(f);
-        let pct;
+        let pct: number;
         let envMismatch = false;
         let exemptLifecycle = false;
         let exemptEntry = false;
@@ -542,22 +576,44 @@ function main() {
           // 签名行必然被误判为块内未覆盖——见 isRewriteLine 注释）。
           // 判定直接看 diff 文本（--unified=0，与 changedLines 同源）。
           const rewriteDiff = staged
-            ? git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', f])
-            : (renameOld
-                ? git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${f}`])
-                : git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', f]));
+            ? git(["diff", "--cached", "--unified=0", "--find-renames=30", "--", f])
+            : renameOld
+              ? git(["diff", "--unified=0", `${base}:${renameOld}`, `${head}:${f}`])
+              : git(["diff", "--unified=0", "--find-renames=30", `${base}...${head}`, "--", f]);
           const isRewrite = isRewriteOnlyDiff(rewriteDiff);
           pct = isRewrite ? 100 : stmtPctForChangedLines(blocksByFile.get(f), changedLines);
           rewrite = isRewrite;
         }
         const missing = !profileText || !blocksByFile.has(f);
         const renamed = renameMap.has(f);
-        rows.push({ file: f, pct, missing, renamed, envMismatch, exemptLifecycle, exemptEntry, exemptAssert, rewrite });
-        if (!envMismatch && !exemptLifecycle && !exemptEntry && !exemptAssert && !rewrite && pct < threshold) failures.push({ file: f, pct, renamed });
+        rows.push({
+          file: f,
+          pct,
+          missing,
+          renamed,
+          envMismatch,
+          exemptLifecycle,
+          exemptEntry,
+          exemptAssert,
+          rewrite,
+        });
+        if (
+          !envMismatch &&
+          !exemptLifecycle &&
+          !exemptEntry &&
+          !exemptAssert &&
+          !rewrite &&
+          pct < threshold
+        )
+          failures.push({ file: f, pct, renamed });
       }
     }
   } finally {
-    try { fs.unlinkSync(tmp); } catch { /* 忽略 */ }
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* 忽略 */
+    }
   }
 
   // ── 测试断言增量红线（ADR-202 刀5）已上移至「无改动提前退出」之前（见上方）──
@@ -569,74 +625,118 @@ function main() {
   }
 
   if (json) {
-    console.log(JSON.stringify({
-      _summary: {
-        threshold,
-        files: rows.length,
-        failed: failures.length,
-        exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry || r.exemptAssert).length,
-        bareAssert: bareAssertHits.length,
-      },
-      rows,
-      failures,
-      bareAssert: bareAssertHits,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: {
+            threshold,
+            files: rows.length,
+            failed: failures.length,
+            exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry || r.exemptAssert).length,
+            bareAssert: bareAssertHits.length,
+          },
+          rows,
+          failures,
+          bareAssert: bareAssertHits,
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(failures.length > 0 || bareFail ? COVERAGE_FAILURE : 0);
   }
 
-    console.log(`\n[check-go-diff-coverage] 变更 Go 源码 ${rows.length} 个，阈值 ${threshold}%（变更行覆盖率）：`);
-  console.log('  ' + '文件'.padEnd(68) + '覆盖%');
-  console.log('  ' + '-'.repeat(68) + '------');
+  console.log(
+    `\n[check-go-diff-coverage] 变更 Go 源码 ${rows.length} 个，阈值 ${threshold}%（变更行覆盖率）：`,
+  );
+  console.log(`  ${"文件".padEnd(68)}覆盖%`);
+  console.log(`  ${"-".repeat(68)}------`);
   for (const r of rows) {
-    const flag = r.exemptEntry ? 'ENTRY' : (r.exemptLifecycle ? 'EXEMPT' : (r.envMismatch ? 'SKIP' : (r.exemptAssert ? 'ASSERT' : (r.rewrite ? 'REWRITE' : (r.pct < threshold ? 'X' : 'OK')))));
-    const tag = (r.renamed ? 'R' : ' ') + (r.envMismatch ? '~' : ' ') + (r.exemptLifecycle ? '#' : ' ') + (r.exemptEntry ? 'E' : ' ') + (r.exemptAssert ? 'A' : ' ') + (r.rewrite ? 'w' : ' ');
+    const flag = r.exemptEntry
+      ? "ENTRY"
+      : r.exemptLifecycle
+        ? "EXEMPT"
+        : r.envMismatch
+          ? "SKIP"
+          : r.exemptAssert
+            ? "ASSERT"
+            : r.rewrite
+              ? "REWRITE"
+              : r.pct < threshold
+                ? "X"
+                : "OK";
+    const tag =
+      (r.renamed ? "R" : " ") +
+      (r.envMismatch ? "~" : " ") +
+      (r.exemptLifecycle ? "#" : " ") +
+      (r.exemptEntry ? "E" : " ") +
+      (r.exemptAssert ? "A" : " ") +
+      (r.rewrite ? "w" : " ");
     console.log(`  [${flag}] [${tag.trim()}] ${r.file.padEnd(60)} ${r.pct.toFixed(1)}`);
   }
   // 平台/标签专属文件豁免说明（非真裸奔，当前 GOOS=<x> 裸 go test 不带 rust_backend 不编译）
   const skipped = rows.filter((r) => r.envMismatch);
   if (skipped.length > 0) {
-    console.log(`\n[check-go-diff-coverage] 跳过 ${skipped.length} 个平台/标签专属文件（GOOS=${hostGOOS} 裸测试不编译，非覆盖率缺口）：`);
+    console.log(
+      `\n[check-go-diff-coverage] 跳过 ${skipped.length} 个平台/标签专属文件（GOOS=${hostGOOS} 裸测试不编译，非覆盖率缺口）：`,
+    );
     for (const s of skipped) console.log(`  ~ ${s.file}`);
   }
   // 入口文件豁免说明（main() 内变更行不可被 go test 覆盖，非「裸奔」）
   const entries = rows.filter((r) => r.exemptEntry);
   if (entries.length > 0) {
-    console.log(`\n[check-go-diff-coverage] 豁免 ${entries.length} 个入口文件（变更行在 func main() 内，go test 不可达）：`);
+    console.log(
+      `\n[check-go-diff-coverage] 豁免 ${entries.length} 个入口文件（变更行在 func main() 内，go test 不可达）：`,
+    );
     for (const s of entries) console.log(`  E ${s.file}`);
   }
   // 窗口事件/生命周期文件豁免说明（编译可达但 headless 单测不可达，非真裸奔）
   const exempt = rows.filter((r) => r.exemptLifecycle);
   if (exempt.length > 0) {
-    console.log(`\n[check-go-diff-coverage] 豁免 ${exempt.length} 个窗口事件/生命周期文件（headless 单测不可达，非覆盖率缺口）：`);
+    console.log(
+      `\n[check-go-diff-coverage] 豁免 ${exempt.length} 个窗口事件/生命周期文件（headless 单测不可达，非覆盖率缺口）：`,
+    );
     for (const s of exempt) console.log(`  # ${s.file}`);
   }
   // 重构型变更豁免说明（纯签名/引用/注释/断言，无新逻辑，非「裸奔」）
   const rewrites = rows.filter((r) => r.rewrite);
   if (rewrites.length > 0) {
-    console.log(`\n[check-go-diff-coverage] 豁免 ${rewrites.length} 个重构型变更文件（变更行全为签名/引用/注释/断言，无新逻辑）：`);
+    console.log(
+      `\n[check-go-diff-coverage] 豁免 ${rewrites.length} 个重构型变更文件（变更行全为签名/引用/注释/断言，无新逻辑）：`,
+    );
     for (const s of rewrites) console.log(`  w ${s.file}`);
   }
   // 断言器实现文件豁免说明（失败分支 t.Fatalf → Goexit 结构性不可直测，非「裸奔」）
   const asserts = rows.filter((r) => r.exemptAssert);
   if (asserts.length > 0) {
-    console.log(`\n[check-go-diff-coverage] 豁免 ${asserts.length} 个断言器实现文件（失败分支 Goexit 不可直测，正常路径同包自测覆盖）：`);
+    console.log(
+      `\n[check-go-diff-coverage] 豁免 ${asserts.length} 个断言器实现文件（失败分支 Goexit 不可直测，正常路径同包自测覆盖）：`,
+    );
     for (const s of asserts) console.log(`  A ${s.file}`);
   }
   // 测试断言增量红线报告（ADR-202 刀5）
   if (bareAssertHits.length > 0) {
-    const off = bareAssertOff ? '（--bare-assert=off 逃生，不阻断）' : '';
-    console.error(`\n[check-go-diff-coverage] 测试断言红线：${bareAssertHits.length} 个测试文件新增了裸 t.Fatal/t.Fatalf 断言${off}：`);
+    const off = bareAssertOff ? "（--bare-assert=off 逃生，不阻断）" : "";
+    console.error(
+      `\n[check-go-diff-coverage] 测试断言红线：${bareAssertHits.length} 个测试文件新增了裸 t.Fatal/t.Fatalf 断言${off}：`,
+    );
     for (const h of bareAssertHits) {
       for (const it of h.items) console.error(`  ${h.file}:${it.line}: ${it.text.trim()}`);
     }
-    console.error('  请改用 testutil 断言（NoError / Equal / ErrorContains / FileExists），失败输出带 diff。');
+    console.error(
+      "  请改用 testutil 断言（NoError / Equal / ErrorContains / FileExists），失败输出带 diff。",
+    );
   }
   if (failures.length > 0) {
-    console.error(`\n[check-go-diff-coverage] 失败：${failures.length} 个改动 Go 文件覆盖率低于 ${threshold}%。请为新增/重构逻辑补测试。`);
+    console.error(
+      `\n[check-go-diff-coverage] 失败：${failures.length} 个改动 Go 文件覆盖率低于 ${threshold}%。请为新增/重构逻辑补测试。`,
+    );
     process.exit(COVERAGE_FAILURE);
   }
   if (bareFail) {
-    console.error(`\n[check-go-diff-coverage] 失败：测试断言红线违例 ${bareAssertHits.length} 个文件（新增裸 t.Fatal/t.Fatalf，ADR-202 刀5）。`);
+    console.error(
+      `\n[check-go-diff-coverage] 失败：测试断言红线违例 ${bareAssertHits.length} 个文件（新增裸 t.Fatal/t.Fatalf，ADR-202 刀5）。`,
+    );
     process.exit(COVERAGE_FAILURE);
   }
   console.log(`\n[check-go-diff-coverage] 全部达标（>= ${threshold}%）。通过。`);

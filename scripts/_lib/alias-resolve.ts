@@ -16,16 +16,16 @@
  * 用法：被 scan-files.resolveImport（治 check-circular 假阴性）与 check-layering.resolveTarget
  * （稳健化 slice(2)）复用。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { toPosix } from './to-posix.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { toPosix } from "./to-posix.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
 /** frontend/src 绝对路径（与 scan-files.SRC_DIR 同源，供契约测试复用）。 */
-export const SRC_ROOT = path.join(REPO_ROOT, 'frontend', 'src');
-const TSCONFIG = path.join(REPO_ROOT, 'frontend', 'tsconfig.json');
+export const SRC_ROOT = path.join(REPO_ROOT, "frontend", "src");
+const TSCONFIG = path.join(REPO_ROOT, "frontend", "tsconfig.json");
 const FRONTEND_DIR = path.dirname(TSCONFIG); // frontend/
 
 interface AliasEntry {
@@ -47,7 +47,7 @@ export function loadAliases(): AliasEntry[] {
   const entries: AliasEntry[] = [];
   let raw: any = {};
   try {
-    raw = JSON.parse(fs.readFileSync(TSCONFIG, 'utf-8'));
+    raw = JSON.parse(fs.readFileSync(TSCONFIG, "utf-8"));
   } catch {
     cache = entries; // tsconfig 缺失 → 无别名（fail-soft）
     return entries;
@@ -55,9 +55,9 @@ export function loadAliases(): AliasEntry[] {
   const paths = (raw?.compilerOptions?.paths || {}) as Record<string, string | string[]>;
   for (const [k, v] of Object.entries(paths)) {
     const targetPattern = Array.isArray(v) ? v[0] : v;
-    if (!targetPattern || typeof targetPattern !== 'string') continue;
-    const prefix = k.replace(/\/\*$/, ''); // '@/preview-3d' / '#root'
-    const targetNoStar = targetPattern.replace(/\/\*$/, ''); // './src/preview-3d' / '../'
+    if (!targetPattern || typeof targetPattern !== "string") continue;
+    const prefix = k.replace(/\/\*$/, ""); // '@/preview-3d' / '#root'
+    const targetNoStar = targetPattern.replace(/\/\*$/, ""); // './src/preview-3d' / '../'
     const targetAbs = path.resolve(FRONTEND_DIR, targetNoStar);
     entries.push({ prefix, targetAbs });
   }
@@ -72,10 +72,10 @@ export function loadAliases(): AliasEntry[] {
  * 非别名 spec（相对路径或裸包名，即不以 @/ 或 #root 开头）→ null。
  */
 export function tryResolveAlias(spec: string): string | null {
-  if (!spec.startsWith('@/') && !spec.startsWith('#root')) return null;
+  if (!spec.startsWith("@/") && !spec.startsWith("#root")) return null;
   for (const { prefix, targetAbs } of loadAliases()) {
     if (spec === prefix) return targetAbs; // 整段别名（无子路径，指向目录）
-    if (spec.startsWith(prefix + '/')) {
+    if (spec.startsWith(`${prefix}/`)) {
       return path.join(targetAbs, spec.slice(prefix.length + 1));
     }
   }
@@ -90,7 +90,7 @@ export function resolveAliasToSrcRel(spec: string): string | null {
   const abs = tryResolveAlias(spec);
   if (!abs) return null;
   const rel = toPosix(path.relative(SRC_ROOT, abs));
-  return rel.startsWith('..') ? null : rel;
+  return rel.startsWith("..") ? null : rel;
 }
 
 /** classifyImport 的结构化输出，供 check-path-hygiene 的 R3/R4 判定复用。 */
@@ -112,7 +112,7 @@ export interface SpecClass {
 }
 
 /** 真实物理位置 frontend/e2e/mock-data（src 外；真实引用 3 层 `../` 展开后经 escapesSrc 或 isMockData 计 R4）。 */
-const MOCK_DATA_ABS = path.join(REPO_ROOT, 'frontend', 'e2e', 'mock-data');
+const MOCK_DATA_ABS = path.join(REPO_ROOT, "frontend", "e2e", "mock-data");
 
 /**
  * 把一个 import 说明符分类为 R3/R4 判定所需的真实解析结果（别名感知）。
@@ -130,26 +130,50 @@ const MOCK_DATA_ABS = path.join(REPO_ROOT, 'frontend', 'e2e', 'mock-data');
 export function classifyImport(spec: string, fromFileAbs: string): SpecClass {
   let targetAbs: string | null = null;
   let isAlias = false;
-  if (spec.startsWith('@/') || spec.startsWith('#root/')) {
+  if (spec.startsWith("@/") || spec.startsWith("#root/")) {
     const a = tryResolveAlias(spec);
     if (!a) {
       // 未登记别名：白名单目录级，catch-all 已禁；双写一致性会 FAIL，此处跳过避免误判。
-      return { resolved: false, targetAbs: null, upLevels: 0, isAlias: true, escapesSrc: false, isBindings: false, isMockData: false };
+      return {
+        resolved: false,
+        targetAbs: null,
+        upLevels: 0,
+        isAlias: true,
+        escapesSrc: false,
+        isBindings: false,
+        isMockData: false,
+      };
     }
     targetAbs = a;
     isAlias = true;
-  } else if (spec.startsWith('./') || spec.startsWith('../')) {
+  } else if (spec.startsWith("./") || spec.startsWith("../")) {
     targetAbs = path.resolve(path.dirname(fromFileAbs), spec);
   } else {
-    return { resolved: false, targetAbs: null, upLevels: 0, isAlias: false, escapesSrc: false, isBindings: false, isMockData: false };
+    return {
+      resolved: false,
+      targetAbs: null,
+      upLevels: 0,
+      isAlias: false,
+      escapesSrc: false,
+      isBindings: false,
+      isMockData: false,
+    };
   }
   // 相对路径取字面 `../` 层数（spec 可能越界，path.relative 展开后会失真）。
   // 别名说明符字面无 `../` → upLevels 恒 0：R3 对别名短路（!c.isAlias 守卫），无 off-by-one 语义。
   const upLevels = (spec.match(/\.\.\//g) || []).length;
-  const escaped = toPosix(path.relative(SRC_ROOT, targetAbs)).startsWith('..');
-  const isBindings = toPosix(targetAbs).split('/').includes('bindings');
-  const isMock = toPosix(targetAbs).replace(/\.ts$/, '') === toPosix(MOCK_DATA_ABS);
-  return { resolved: true, targetAbs, upLevels, isAlias, escapesSrc: escaped, isBindings, isMockData: isMock };
+  const escaped = toPosix(path.relative(SRC_ROOT, targetAbs)).startsWith("..");
+  const isBindings = toPosix(targetAbs).split("/").includes("bindings");
+  const isMock = toPosix(targetAbs).replace(/\.ts$/, "") === toPosix(MOCK_DATA_ABS);
+  return {
+    resolved: true,
+    targetAbs,
+    upLevels,
+    isAlias,
+    escapesSrc: escaped,
+    isBindings,
+    isMockData: isMock,
+  };
 }
 
 /**
@@ -172,18 +196,27 @@ export interface BarrelHygiene {
  * - 桶入口识别：`@/dir`（裸别名，指向该目录 index），或以 `/index` 结尾（`@/x/index` / `./index` / `../x/index`）。
  * - 同目录别名：isAlias 且展开目标与本文件 dirname 相等 → 应写相对 `./`。
  */
-export function classifyBarrelHygiene(spec: string, fromFileAbs: string, isTestFile: boolean): BarrelHygiene {
+export function classifyBarrelHygiene(
+  spec: string,
+  fromFileAbs: string,
+  isTestFile: boolean,
+): BarrelHygiene {
   const indexGlobal = /\/index$/.test(spec);
   const bareAlias = /^@\/[^/]+$/.test(spec);
   const c = classifyImport(spec, fromFileAbs);
   // 裸 `@/x` 只有在展开后是【目录】（有 index 聚合）才叫桶入口；文件级别名（@/bus→bus.ts 等）是具体叶，不算。
   let dirBarrel = false;
   if (bareAlias && c.targetAbs) {
-    try { dirBarrel = fs.statSync(c.targetAbs).isDirectory(); } catch { dirBarrel = false; }
+    try {
+      dirBarrel = fs.statSync(c.targetAbs).isDirectory();
+    } catch {
+      dirBarrel = false;
+    }
   }
   const isBarrelEntry = indexGlobal || dirBarrel;
-  const sameDirAlias = !isBarrelEntry && c.resolved && c.isAlias && c.targetAbs !== null
-    ? path.dirname(c.targetAbs) === path.dirname(fromFileAbs)
-    : false;
+  const sameDirAlias =
+    !isBarrelEntry && c.resolved && c.isAlias && c.targetAbs !== null
+      ? path.dirname(c.targetAbs) === path.dirname(fromFileAbs)
+      : false;
   return { isBarrelEntry, sameDirAlias, testBarrelEntry: isTestFile && isBarrelEntry };
 }

@@ -14,43 +14,43 @@
  * 设计意图：性能工具——给已确认无 DOM 依赖的纯逻辑测试文件批量加
  * @vitest-environment node 标注，省去 happy-dom 环境重建开销（~1.2s/文件）。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from '../_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "../_lib/scan-files.ts";
 
-const FRONTEND = path.join(ROOT, 'frontend', 'src');
+const FRONTEND = path.join(ROOT, "frontend", "src");
 
 const files = [
   // backend — 纯逻辑（NBT 解析/zip 提取/IDB 日志/web worker 编排）
-  'parsers/extract.test.ts',
-  'parsers/nbt-parse.test.ts',
-  'parsers/voxel-parse.test.ts',
-  'backend/web-stats.test.ts',
-  'backend/web-store.logs.test.ts',
-  'workers/coi-sw.test.ts',
+  "parsers/extract.test.ts",
+  "parsers/nbt-parse.test.ts",
+  "parsers/voxel-parse.test.ts",
+  "backend/web-stats.test.ts",
+  "backend/web-store.logs.test.ts",
+  "workers/coi-sw.test.ts",
   // core — 纯逻辑
-  'core/context-menus.test.ts',
-  'core/handlers/instance-ops.test.ts',
+  "core/context-menus.test.ts",
+  "core/handlers/instance-ops.test.ts",
   // features — 纯逻辑
-  'features/dnd-collector.test.ts',
+  "features/dnd-collector.test.ts",
   // preview-3d — 纯逻辑（骨骼语义/MMD 材质/解析/感知/能力）
-  'preview-3d/semantic-bones.test.ts',
-  'preview-3d/semantic-morphs.test.ts',
-  'preview-3d/mmd-bones.test.ts',
-  'preview-3d/mmd-materials.test.ts',
-  'preview-3d/bone-tools.test.ts',
-  'preview-3d/parse-java-model.test.ts',
-  'preview-3d/perception/autodance.test.ts',
-  'preview-3d/perception/beat-detector.test.ts',
-  'preview-3d/perception/blink.test.ts',
-  'preview-3d/perception/breath.test.ts',
-  'preview-3d/perception/gaze.test.ts',
-  'preview-3d/perception/lipsync.test.ts',
-  'preview-3d/caps/ground-capability.test.ts',
-  'preview-3d/caps/light-capability.test.ts',
+  "preview-3d/semantic-bones.test.ts",
+  "preview-3d/semantic-morphs.test.ts",
+  "preview-3d/mmd-bones.test.ts",
+  "preview-3d/mmd-materials.test.ts",
+  "preview-3d/bone-tools.test.ts",
+  "preview-3d/parse-java-model.test.ts",
+  "preview-3d/perception/autodance.test.ts",
+  "preview-3d/perception/beat-detector.test.ts",
+  "preview-3d/perception/blink.test.ts",
+  "preview-3d/perception/breath.test.ts",
+  "preview-3d/perception/gaze.test.ts",
+  "preview-3d/perception/lipsync.test.ts",
+  "preview-3d/caps/ground-capability.test.ts",
+  "preview-3d/caps/light-capability.test.ts",
 ];
 
-const annotation = '// @vitest-environment node\n';
+const annotation = "// @vitest-environment node\n";
 
 let ok = 0;
 let skip = 0;
@@ -61,7 +61,7 @@ for (const rel of files) {
     skip++;
     continue;
   }
-  const content = fs.readFileSync(fp, 'utf8');
+  const content = fs.readFileSync(fp, "utf8");
   if (content.startsWith(annotation)) {
     console.log(`[SKIP] 已有标注: ${rel}`);
     skip++;

@@ -15,16 +15,17 @@
  */
 // ── 导出符号表 ───────────────────────────────────────
 
-const EXPORT_NAMED_RE = /export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
+const EXPORT_NAMED_RE =
+  /export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
 const EXPORT_BLOCK_RE = /export\s*\{([^}]*)\}(?!\s*from)/g;
 const EXPORT_TYPE_RE = /export\s+(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
 
 /** 拆分导出块内条目（含 `type X` 内联修饰符），返回 [{name, isType}]。 */
 export function splitBlockEntries(raw: string) {
   const out: { name: string; isType: boolean }[] = [];
-  for (const part of raw.split(',')) {
+  for (const part of raw.split(",")) {
     const m = part.trim().match(/^(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
-    if (m) out.push({ name: (m[2] || m[1])!, isType: part.trim().startsWith('type') });
+    if (m) out.push({ name: (m[2] || m[1])!, isType: part.trim().startsWith("type") });
   }
   return out;
 }
@@ -37,15 +38,15 @@ export function splitBlockEntries(raw: string) {
 export function extractExports(text: string) {
   const out: { name: string; isType: boolean; line: number }[] = [];
   for (const m of text.matchAll(EXPORT_NAMED_RE)) {
-    const line = text.slice(0, m.index).split('\n').length;
+    const line = text.slice(0, m.index).split("\n").length;
     out.push({ name: m[1]!, isType: false, line });
   }
   for (const m of text.matchAll(EXPORT_BLOCK_RE)) {
-    const line = text.slice(0, m.index).split('\n').length;
+    const line = text.slice(0, m.index).split("\n").length;
     for (const e of splitBlockEntries(m[1]!)) out.push({ ...e, line });
   }
   for (const m of text.matchAll(EXPORT_TYPE_RE)) {
-    const line = text.slice(0, m.index).split('\n').length;
+    const line = text.slice(0, m.index).split("\n").length;
     out.push({ name: m[1]!, isType: true, line });
   }
   return out;
@@ -62,8 +63,8 @@ const DEFINED_TYPE_RE = /\b(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
 export function matchParen(text: string, openIdx: number) {
   let depth = 0;
   for (let i = openIdx; i < text.length; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')') {
+    if (text[i] === "(") depth++;
+    else if (text[i] === ")") {
       depth--;
       if (depth === 0) return i;
     }
@@ -75,13 +76,13 @@ export function matchParen(text: string, openIdx: number) {
 export function splitTopLevelCommas(s: string) {
   const out: string[] = [];
   let depth = 0;
-  let cur = '';
+  let cur = "";
   for (const ch of s) {
-    if ('({['.includes(ch)) depth++;
-    else if (')}]'.includes(ch)) depth--;
-    if (ch === ',' && depth === 0) {
+    if ("({[".includes(ch)) depth++;
+    else if (")}]".includes(ch)) depth--;
+    if (ch === "," && depth === 0) {
       out.push(cur);
-      cur = '';
+      cur = "";
     } else {
       cur += ch;
     }
@@ -115,7 +116,7 @@ export function collectParams(stripped: string, startRe: RegExp) {
   const names = new Set();
   for (const m of stripped.matchAll(startRe)) {
     const open = m.index + m[0].length - 1;
-    if (stripped[open] !== '(') continue;
+    if (stripped[open] !== "(") continue;
     const close = matchParen(stripped, open);
     if (close < 0) continue;
     for (const seg of splitTopLevelCommas(stripped.slice(open + 1, close))) {
@@ -131,7 +132,8 @@ export function collectParams(stripped: string, startRe: RegExp) {
 // 全局导出表（如 download-queue-store 的 notify）——详见 05fe24b7 引入的 cap 私有 notify 误报。
 // `\??` 支持接口可选方法（showModelGroup?(i: number): void;）——名字后跟 `?` 再 `(`，
 // 否则可选方法名被误判为缺失 import（2026-08-17 修复）。
-const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*(?:(?:public|private|protected|readonly|static|abstract|async)\s+)*([A-Za-z_$][\w$]*)\??\s*\(/g;
+const METHOD_START_RE =
+  /(?:\{|\}|,|;|\n)\s*(?:(?:public|private|protected|readonly|static|abstract|async)\s+)*([A-Za-z_$][\w$]*)\??\s*\(/g;
 
 /** 收集对象字面量/类体中的方法定义名（`foo(): void {` 形式）及其形参名。 */
 export function collectMethods(stripped: string) {
@@ -143,7 +145,11 @@ export function collectMethods(stripped: string) {
     let k = close + 1;
     while (k < stripped.length && /\s/.test(stripped[k]!)) k++;
     // 方法定义：右括号后跟 `{`（方法体）或 `:`（返回类型注解）或 `=>`（箭头）
-    if (stripped[k] === '{' || stripped[k] === ':' || (stripped[k] === '=' && stripped[k + 1] === '>')) {
+    if (
+      stripped[k] === "{" ||
+      stripped[k] === ":" ||
+      (stripped[k] === "=" && stripped[k + 1] === ">")
+    ) {
       names.add(m[1]);
       // P2 修复（审核）：同时收集方法形参（如 Proxy handler 的 `get(t, prop)` 的 t），
       // 否则参数名撞导出符号表时被误报为缺失 import
@@ -189,21 +195,21 @@ export function extractDefined(stripped: string) {
     while (k < stripped.length && /\s/.test(stripped[k]!)) k++;
     // 支持带返回类型注解的箭头函数 `(t: string): string[] => ...`：
     // 参数 `)` 后先遇到 `:`（返回类型），须跳过类型到顶层 `=>` 才判为箭头函数。
-    if (stripped[k] === ':') {
+    if (stripped[k] === ":") {
       let depth = 0;
       for (let j = k + 1; j < stripped.length; j++) {
         const cc = stripped[j];
-        if (cc === '(') depth++;
-        else if (cc === ')') depth--;
-        else if (depth === 0 && cc === '=' && stripped[j + 1] === '>') {
+        if (cc === "(") depth++;
+        else if (cc === ")") depth--;
+        else if (depth === 0 && cc === "=" && stripped[j + 1] === ">") {
           k = j;
           break;
-        } else if (depth === 0 && (cc === '{' || cc === ';' || cc === '\n')) {
+        } else if (depth === 0 && (cc === "{" || cc === ";" || cc === "\n")) {
           break; // 非箭头函数（对象类型/其他语境），放弃
         }
       }
     }
-    if (stripped[k] === '=' && stripped[k + 1] === '>') {
+    if (stripped[k] === "=" && stripped[k + 1] === ">") {
       for (const seg of splitTopLevelCommas(stripped.slice(m.index + 1, close))) {
         for (const n of paramNamesOfSegment(seg)) out.add(n);
       }
@@ -215,7 +221,8 @@ export function extractDefined(stripped: string) {
 
 // 注意：在剥离后的文本上匹配，字符串路径已被剥成空格，
 // 因此不能要求结尾 `['"]...['"]`，识别到 from 关键字即止。
-const IMPORT_RE = /import\s+(?:(?:type\s+)?([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\{([^}]*)\})?\s*(?:from\s*)?/g;
+const IMPORT_RE =
+  /import\s+(?:(?:type\s+)?([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\{([^}]*)\})?\s*(?:from\s*)?/g;
 const IMPORT_NS_RE = /import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*/g;
 
 /**
@@ -228,8 +235,10 @@ export function extractImported(stripped: string) {
   for (const m of stripped.matchAll(IMPORT_RE)) {
     if (m[1]) out.add(m[1]);
     if (m[2]) {
-      for (const part of m[2].split(',')) {
-        const mm = part.trim().match(/^(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
+      for (const part of m[2].split(",")) {
+        const mm = part
+          .trim()
+          .match(/^(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
         if (mm) {
           out.add(mm[1]);
           if (mm[2]) out.add(mm[2]);

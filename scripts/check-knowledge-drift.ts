@@ -29,35 +29,58 @@
  * 退出码：发现 ERROR → 1；否则 0（WARN 不阻断；--affected 恒为 0）。
  * 设计意图：知识卡漂移检查（与代码现实比对）+ 源码变更主动防御。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT, walk } from './_lib/scan-files.ts';
-import { toPosix } from './_lib/to-posix.ts';
-import { parseFrontmatter, getScalar, getList, parseSourceFiles, getAllScalars } from './_lib/frontmatter.ts';
-import { PERF_TAGS, CARD_STATUS, KNOWLEDGE_NON_CARDS, KNOWLEDGE_ORDER } from './_lib/knowledge-cards.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { stripBom, hasFrontmatterDelimiter, getUntrackedCards, missingRequiredCardFields } from './_lib/knowledge-common.ts';
-import { gitMaybe } from './_lib/git-ref.ts';
+import fs from "node:fs";
+import path from "node:path";
+import {
+  getAllScalars,
+  getList,
+  getScalar,
+  parseFrontmatter,
+  parseSourceFiles,
+} from "./_lib/frontmatter.ts";
+import { gitMaybe } from "./_lib/git-ref.ts";
+import {
+  CARD_STATUS,
+  KNOWLEDGE_NON_CARDS,
+  KNOWLEDGE_ORDER,
+  PERF_TAGS,
+} from "./_lib/knowledge-cards.ts";
+import {
+  getUntrackedCards,
+  hasFrontmatterDelimiter,
+  missingRequiredCardFields,
+  stripBom,
+} from "./_lib/knowledge-common.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT, walk } from "./_lib/scan-files.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 // 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
 // --kc-dir：隔离模式，指向临时知识卡目录（契约测试用，避免临时卡污染 docs/knowledge/ 生成物）
-const ARGS = parseArgs(process.argv.slice(2), { bools: ['json', 'verbose', 'quiet', 'affected'], strings: ['files', 'kc-dir'] });
+const ARGS = parseArgs(process.argv.slice(2), {
+  bools: ["json", "verbose", "quiet", "affected"],
+  strings: ["files", "kc-dir"],
+});
 if (ARGS.help) {
-  console.log('用法: node scripts/check-knowledge-drift.ts [--json|--verbose|--affected <f>…|--quiet]');
-  console.log('  --json      机读 JSON（doctor --docs 调用）');
-  console.log('  --verbose   文本报告 + 未覆盖文件完整清单');
-  console.log('  --affected <f>…  源码变更即列出受影响知识卡（配合 git diff --name-only）');
-  console.log('  --quiet     仅 --affected 使用：只输出卡 stem，供钩子机读');
-  console.log('  --kc-dir <dir>  隔离模式：扫描指定目录而非 docs/knowledge/（契约测试打桩用）');
+  console.log(
+    "用法: node scripts/check-knowledge-drift.ts [--json|--verbose|--affected <f>…|--quiet]",
+  );
+  console.log("  --json      机读 JSON（doctor --docs 调用）");
+  console.log("  --verbose   文本报告 + 未覆盖文件完整清单");
+  console.log("  --affected <f>…  源码变更即列出受影响知识卡（配合 git diff --name-only）");
+  console.log("  --quiet     仅 --affected 使用：只输出卡 stem，供钩子机读");
+  console.log("  --kc-dir <dir>  隔离模式：扫描指定目录而非 docs/knowledge/（契约测试打桩用）");
   process.exit(0);
 }
 if (ARGS.unknown.length) {
-  console.error(`❌ 未知参数: ${ARGS.unknown.join(', ')}（--help 查看用法）`);
+  console.error(`❌ 未知参数: ${ARGS.unknown.join(", ")}（--help 查看用法）`);
   process.exit(2);
 }
 // 知识卡目录：默认 docs/knowledge/；--kc-dir 覆盖为临时目录（隔离契约测试的临时卡，
 // 使其不被 gen-vitepress-sidebar / gen-knowledge-index 等生成器扫入 sidebar.gen.mjs 等产物）
-const KC_DIR = ARGS['kc-dir'] ? path.resolve(String(ARGS['kc-dir'])) : path.join(ROOT, 'docs', 'knowledge');
+const KC_DIR = ARGS["kc-dir"]
+  ? path.resolve(String(ARGS["kc-dir"]))
+  : path.join(ROOT, "docs", "knowledge");
 const JSON_OUT = ARGS.json;
 const VERBOSE = ARGS.verbose;
 const AFFECTED_MODE = ARGS.affected;
@@ -65,7 +88,13 @@ const AFFECTED_PATHS = ARGS._;
 // 文件驱动模式（commit-with-check / push 门禁传入）：--files 为换行分隔的仓库相对路径，
 // 仅校验本次变更的知识卡，避免并行会话未跟踪草稿卡阻断本次提交。无 --files 退化为全量。
 const FILES_SET: Set<string> | null = ARGS.files
-  ? new Set(String(ARGS.files).split('\n').map((p) => p.trim()).filter(Boolean).map((p) => path.basename(p)))
+  ? new Set(
+      String(ARGS.files)
+        .split("\n")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => path.basename(p)),
+    )
   : null;
 // --quiet：--affected 仅输出受影响卡 stem（每行一个），供钩子机读消费
 const QUIET = ARGS.quiet;
@@ -74,7 +103,7 @@ const warns: string[] = [];
 
 // ── 枚举 ──────────────────────────────────────────────
 const CATEGORY_ENUM = new Set(KNOWLEDGE_ORDER);
-const TIER_ENUM = new Set(['architecture', 'leaf']);
+const TIER_ENUM = new Set(["architecture", "leaf"]);
 const KIND_RE = /^[a-z0-9][a-z0-9_-]*$/;
 const PLACEHOLDER_RE = /^<.*>$/;
 
@@ -98,18 +127,20 @@ const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路�
 function loadKnowledgeCards(opts: { filesSet?: Set<string> | null } = {}) {
   if (!fs.existsSync(KC_DIR)) return [];
   const untracked = opts.filesSet ? getUntrackedCards(ROOT) : new Set<string>();
-  const files = fs.readdirSync(KC_DIR).filter(
-    (f) =>
-      f.endsWith('.md') &&
-      !/^(readme|agents)\.md$/i.test(f) &&
-      !untracked.has(f) &&
-      (!opts.filesSet || opts.filesSet.has(f))
-  );
+  const files = fs
+    .readdirSync(KC_DIR)
+    .filter(
+      (f) =>
+        f.endsWith(".md") &&
+        !/^(readme|agents)\.md$/i.test(f) &&
+        !untracked.has(f) &&
+        (!opts.filesSet || opts.filesSet.has(f)),
+    );
   return files.map((cf) => {
     // P1 修复（子代理审计）：带 BOM 的知识卡 `^---` 失配 → 整卡静默跳过（假绿）；
     // 对齐 hooks/knowledge-affected-hint.mjs 的 `^\uFEFF?---` 容错
-    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
-    return { cf, stem: cf.replace(/\.md$/, ''), text, fm: parseFrontmatter(text) };
+    const text = fs.readFileSync(path.join(KC_DIR, cf), "utf8");
+    return { cf, stem: cf.replace(/\.md$/, ""), text, fm: parseFrontmatter(text) };
   });
 }
 
@@ -127,17 +158,20 @@ function checkKnowledgeMeta(cards: any[]) {
         // 序列化（---→*** 水平线改写、\_ 转义、列表空行平铺 + 嵌套错乱），会绕过 parseFrontmatter 的 ^---
         // 匹配令 gen 静默跳过、索引漏登。历史两次受害：frontend_repo_audit.md（bd86a916 修复）、
         // context-menu.md（cabb0e8b 回滚）。给可操作指引（定位重排提交回滚），区别于泛化「旧格式残留」。
-        const head = (stripBom(text).split(/\r?\n/, 1)[0] || '').trim();
+        const head = (stripBom(text).split(/\r?\n/, 1)[0] || "").trim();
         errors.push(
-          head === '***' || head === '~~~'
+          head === "***" || head === "~~~"
             ? `知识卡 ${cf} frontmatter 分隔符异常「${head}」——疑似整卡 Markdown 重排事故（frontmatter 被当正文序列化：---→***、\\_ 转义、列表平铺嵌套错乱；历史两次：frontend_repo_audit / context-menu）——须 git log 定位重排提交回滚该卡，或重组 frontmatter 为 --- 开头`
-            : `幽灵卡 ${cf} 无 YAML frontmatter（首行 ${JSON.stringify(head.slice(0, 40))}；旧格式残留或误放文件）——须补 frontmatter 或移入 KNOWLEDGE_NON_CARDS`
+            : `幽灵卡 ${cf} 无 YAML frontmatter（首行 ${JSON.stringify(head.slice(0, 40))}；旧格式残留或误放文件）——须补 frontmatter 或移入 KNOWLEDGE_NON_CARDS`,
         );
       }
       continue;
     }
     count++;
-    if (!fm) { errors.push(`知识卡 ${cf} 缺少 YAML frontmatter`); continue; }
+    if (!fm) {
+      errors.push(`知识卡 ${cf} 缺少 YAML frontmatter`);
+      continue;
+    }
 
     // 必填字段（统一走 _lib/knowledge-common）
     for (const key of missingRequiredCardFields(fm)) {
@@ -147,57 +181,67 @@ function checkKnowledgeMeta(cards: any[]) {
     // 模板占位符
     const fmFields = getAllScalars(fm);
     for (const [k, v] of Object.entries(fmFields)) {
-      if (v !== '' && PLACEHOLDER_RE.test(v)) {
+      if (v !== "" && PLACEHOLDER_RE.test(v)) {
         errors.push(`知识卡 ${cf} 的 ${k} 含未填充占位符: ${v}`);
       }
     }
 
     // kind 格式
-    const kind = getScalar(fm, 'kind');
+    const kind = getScalar(fm, "kind");
     if (kind && !KIND_RE.test(kind)) {
-      errors.push(`知识卡 ${cf} 的 kind 非法: ${kind}（应为小写 kebab-case，兼容历史 snake_case，允许 - 与 _）`);
+      errors.push(
+        `知识卡 ${cf} 的 kind 非法: ${kind}（应为小写 kebab-case，兼容历史 snake_case，允许 - 与 _）`,
+      );
     }
 
     // kind 与文件名同源（单一不变量：文件名是命名事实源）
     if (kind && kind !== stem) {
-      errors.push(`知识卡 ${cf} 的 kind「${kind}」与文件名「${stem}」不一致（kind 应等于文件名 kebab 形式）`);
+      errors.push(
+        `知识卡 ${cf} 的 kind「${kind}」与文件名「${stem}」不一致（kind 应等于文件名 kebab 形式）`,
+      );
     }
 
     // category 值域
-    const category = getScalar(fm, 'category');
+    const category = getScalar(fm, "category");
     if (category && !CATEGORY_ENUM.has(category)) {
-      errors.push(`知识卡 ${cf} 的 category 非法: ${category}（应为 ${[...CATEGORY_ENUM].join('|')} 之一）`);
+      errors.push(
+        `知识卡 ${cf} 的 category 非法: ${category}（应为 ${[...CATEGORY_ENUM].join("|")} 之一）`,
+      );
     }
 
     // tier 值域
-    const tier = getScalar(fm, 'tier');
+    const tier = getScalar(fm, "tier");
     if (tier && !TIER_ENUM.has(tier)) {
-      errors.push(`知识卡 ${cf} 的 tier 非法: ${tier}（应为 ${[...TIER_ENUM].join('|')} 之一）`);
+      errors.push(`知识卡 ${cf} 的 tier 非法: ${tier}（应为 ${[...TIER_ENUM].join("|")} 之一）`);
     }
 
     // perf 性能画像值域（受控词表，单一事实源 = _lib/knowledge-cards.ts PERF_TAGS）
     const PERF_ENUM = Object.keys(PERF_TAGS);
-    for (const t of getList(fm, 'perf')) {
+    for (const t of getList(fm, "perf")) {
       if (!PERF_ENUM.includes(t)) {
-        errors.push(`知识卡 ${cf} 的 perf 标签非法: ${t}（词表见 _lib/knowledge-cards.ts PERF_TAGS: ${PERF_ENUM.join('|')}）`);
+        errors.push(
+          `知识卡 ${cf} 的 perf 标签非法: ${t}（词表见 _lib/knowledge-cards.ts PERF_TAGS: ${PERF_ENUM.join("|")}）`,
+        );
       }
     }
 
     // status 生命周期值域（受控词表，单一事实源 = _lib/knowledge-cards.ts CARD_STATUS；
     // 2026-09 收编野生 status 字段——此前 151 卡自发手写、零校验零消费）
-    const statusVal = getScalar(fm, 'status');
+    const statusVal = getScalar(fm, "status");
     if (statusVal && !(statusVal in CARD_STATUS)) {
       errors.push(
-        `知识卡 ${cf} 的 status 非法: ${statusVal}（应为 ${Object.keys(CARD_STATUS).join('|')} 之一——词表见 _lib/knowledge-cards.ts CARD_STATUS；卡生命周期状态，非 ADR 采纳状态）`
+        `知识卡 ${cf} 的 status 非法: ${statusVal}（应为 ${Object.keys(CARD_STATUS).join("|")} 之一——词表见 _lib/knowledge-cards.ts CARD_STATUS；卡生命周期状态，非 ADR 采纳状态）`,
       );
     }
     // status: snapshot 必须配 affected: false（快照/报告型卡退出 --affected 匹配，AGENTS.md 口径）
-    if (statusVal === 'snapshot' && getScalar(fm, 'affected') !== 'false') {
-      warns.push(`知识卡 ${cf} 的 status: snapshot 未配 affected: false（快照/报告型卡应退出 --affected 匹配，见 AGENTS.md affected 字段语义）`);
+    if (statusVal === "snapshot" && getScalar(fm, "affected") !== "false") {
+      warns.push(
+        `知识卡 ${cf} 的 status: snapshot 未配 affected: false（快照/报告型卡应退出 --affected 匹配，见 AGENTS.md affected 字段语义）`,
+      );
     }
 
     // H1 vs name 一致性（WARN）
-    const name = getScalar(fm, 'name');
+    const name = getScalar(fm, "name");
     const h1Match = text.match(/^#\s+(.+)$/m);
     if (h1Match && name && h1Match[1].trim() !== name) {
       warns.push(`知识卡 ${cf} 的 H1 标题「${h1Match[1].trim()}」与 name「${name}」不一致`);
@@ -228,12 +272,12 @@ let _renameMap: Map<string, string> | null = null;
 function buildRenameMap(): Map<string, string> {
   if (_renameMap) return _renameMap;
   _renameMap = new Map();
-  const out = gitMaybe(['log', '--all', '--diff-filter=R', '--name-status', '--format=']);
+  const out = gitMaybe(["log", "--all", "--diff-filter=R", "--name-status", "--format="]);
   if (!out) return _renameMap;
-  for (const line of out.trim().split('\n')) {
+  for (const line of out.trim().split("\n")) {
     // --name-status 的 rename 行格式：`R<similarity>\t<old>\t<new>`（tab 分隔）
     const m = line.match(/^R\d+\t(.+)\t(.+)$/);
-    if (m && m[1] && m[2]) _renameMap.set(m[1], m[2]);
+    if (m?.[1] && m[2]) _renameMap.set(m[1], m[2]);
   }
   return _renameMap;
 }
@@ -246,7 +290,9 @@ function checkKnowledgeSources(cards: any[]) {
     for (const { raw, norm } of sources) {
       // [ERROR] 路径格式：反斜杠 / 绝对路径 / .. 逃逸 → 不可移植，CI 其他平台 404
       if (ROOT_ESCAPE_RE.test(raw)) {
-        errors.push(`知识卡 ${cf} 的 source_files 路径格式非法: ${raw}（禁止反斜杠/绝对路径/..，必须仓库相对 POSIX 路径）`);
+        errors.push(
+          `知识卡 ${cf} 的 source_files 路径格式非法: ${raw}（禁止反斜杠/绝对路径/..，必须仓库相对 POSIX 路径）`,
+        );
         continue;
       }
       // [ERROR] 文件不存在（硬 404，源码删除/移动/重命名即触发）
@@ -256,17 +302,21 @@ function checkKnowledgeSources(cards: any[]) {
         errors.push(
           target
             ? `知识卡 ${cf} 的 source_files 引用不存在: ${norm}（疑似历史重命名迁移至 ${target}，请改指新路径）`
-            : `知识卡 ${cf} 的 source_files 引用不存在: ${norm}`
+            : `知识卡 ${cf} 的 source_files 引用不存在: ${norm}`,
         );
         continue;
       }
       // [WARN] 指向生成物（bindings/dist/node_modules）→ 非源码事实源，重构后静默失真
       if (GEN_RE.test(norm)) {
-        warns.push(`知识卡 ${cf} 的 source_files 指向生成物: ${norm}（应引用源码实现，而非构建产物）`);
+        warns.push(
+          `知识卡 ${cf} 的 source_files 指向生成物: ${norm}（应引用源码实现，而非构建产物）`,
+        );
       }
       // [WARN] 指向测试文件 → 卡片事实源应是实现，测试应放 tests: 字段
       if (TEST_RE.test(norm)) {
-        warns.push(`知识卡 ${cf} 的 source_files 指向测试文件: ${norm}（实现放 source_files，测试放 tests:）`);
+        warns.push(
+          `知识卡 ${cf} 的 source_files 指向测试文件: ${norm}（实现放 source_files，测试放 tests:）`,
+        );
       }
     }
   }
@@ -298,46 +348,58 @@ const ANCHOR_DEF_RE_GO =
  *   - ref-only：无定义形态、无真实消费，仅 import/export 列表/注释/字符串提及（锚疑似指引用处）
  *   - absent：连子串都不含（本函数不负责，外层 includes 已判 ERROR）
  */
-function anchorDefKind(content: string, sym: string): 'defined' | 'consumed' | 'ref-only' | 'absent' {
-  if (!content.includes(sym)) return 'absent';
-  const re = new RegExp(`\\b${sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+function anchorDefKind(
+  content: string,
+  sym: string,
+): "defined" | "consumed" | "ref-only" | "absent" {
+  if (!content.includes(sym)) return "absent";
+  const re = new RegExp(`\\b${sym.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
   // 定义形态：TS/JS 与 Go 双正则各扫一遍
   const defRegexes = [ANCHOR_DEF_RE, ANCHOR_DEF_RE_GO];
   for (const dr of defRegexes) {
     dr.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = dr.exec(content)) !== null) {
-      if (m.slice(1).includes(sym)) return 'defined';
+    let m = dr.exec(content);
+    while (m !== null) {
+      if (m.slice(1).includes(sym)) return "defined";
+      m = dr.exec(content);
     }
   }
   // 定义形态兜底：Go 常见 `X = iota` / 短声明域内定义 / TS `class X` 属性 `readonly X` /
   // TS interface 成员 `X?:` / `X:`
   if (
     new RegExp(
-      `(?:^|[\\s\\n;{}])(?:readonly\\s+|private\\s+|protected\\s+|public\\s+)?${re.source}\\s*[=:(]|\\b${re.source}\\??\\s*:\\s*(?:\\w+|\\[|\\{|\\(|<|\\([^)]*\\)\\s*=>)`
+      `(?:^|[\\s\\n;{}])(?:readonly\\s+|private\\s+|protected\\s+|public\\s+)?${re.source}\\s*[=:(]|\\b${re.source}\\??\\s*:\\s*(?:\\w+|\\[|\\{|\\(|<|\\([^)]*\\)\\s*=>)`,
     ).test(content)
   ) {
     // 排除 import/export 列表内的 `X,`（逗号后无冒号/等号/括号）
-    if (!new RegExp(`import[^;\\n]*\\b${re.source}\\b|export\\s*\\{[^}]*\\b${re.source}\\b`).test(content)) return 'defined';
+    if (
+      !new RegExp(`import[^;\\n]*\\b${re.source}\\b|export\\s*\\{[^}]*\\b${re.source}\\b`).test(
+        content,
+      )
+    )
+      return "defined";
   }
   // 真实消费：调用 `X(`、成员访问 `X.`、类型标注 `: X`、泛型 `X<`、数组/集合 `X[`、
   // 函数实参 `(X)`（如 runTools(ALL_STATIC_TOOLS)）——排除声明形态
   if (
     new RegExp(
-      `\\b${re.source}\\s*\\(|\\b${re.source}\\s*\\.|\\b${re.source}\\s*<|:\\s*\\b${re.source}\\b|\\b${re.source}\\s*\\[|\\(\\s*\\b${re.source}\\s*\\)`
+      `\\b${re.source}\\s*\\(|\\b${re.source}\\s*\\.|\\b${re.source}\\s*<|:\\s*\\b${re.source}\\b|\\b${re.source}\\s*\\[|\\(\\s*\\b${re.source}\\s*\\)`,
     ).test(content)
-  ) return 'consumed';
-  return 'ref-only';
+  )
+    return "consumed";
+  return "ref-only";
 }
 
 function checkKnowledgeAnchors(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
-    const anchors = getList(fm, 'invariant_anchors');
+    const anchors = getList(fm, "invariant_anchors");
     for (const raw of anchors) {
-      const sep = raw.lastIndexOf('|');
+      const sep = raw.lastIndexOf("|");
       if (sep < 0) {
-        errors.push(`知识卡 ${cf} 的 invariant_anchors 格式非法: ${raw}（应为「文件相对路径|应含模式」）`);
+        errors.push(
+          `知识卡 ${cf} 的 invariant_anchors 格式非法: ${raw}（应为「文件相对路径|应含模式」）`,
+        );
         continue;
       }
       const file = toPosix(raw.slice(0, sep).trim());
@@ -354,13 +416,15 @@ function checkKnowledgeAnchors(cards: any[]) {
       // TOCTOU 防护：existsSync 与 readFileSync 之间文件可能被删/改名
       let content: string;
       try {
-        content = fs.readFileSync(full, 'utf8');
+        content = fs.readFileSync(full, "utf8");
       } catch (e) {
-        errors.push(`知识卡 ${cf} 的机制锚文件读取失败: ${file}（${(e as NodeJS.ErrnoException).message}）`);
+        errors.push(
+          `知识卡 ${cf} 的机制锚文件读取失败: ${file}（${(e as NodeJS.ErrnoException).message}）`,
+        );
         continue;
       }
       let hit = false;
-      if (pat.startsWith('re:')) {
+      if (pat.startsWith("re:")) {
         try {
           hit = new RegExp(pat.slice(3)).test(content);
         } catch (e) {
@@ -371,15 +435,17 @@ function checkKnowledgeAnchors(cards: any[]) {
         hit = content.includes(pat);
       }
       if (!hit) {
-        errors.push(`知识卡 ${cf} 的机制锚失效: 声称 ${file} 含「${pat}」，实际不存在（机制描述漂移——重构触及锚即红，请同步知识卡正文）`);
+        errors.push(
+          `知识卡 ${cf} 的机制锚失效: 声称 ${file} 含「${pat}」，实际不存在（机制描述漂移——重构触及锚即红，请同步知识卡正文）`,
+        );
         continue;
       }
       // 增强（WARN）：纯标识符锚且无定义/消费 → 疑似指引用处而非定义处
-      if (/^[A-Za-z_$][\w$]*$/.test(pat) && !pat.startsWith('re:')) {
+      if (/^[A-Za-z_$][\w$]*$/.test(pat) && !pat.startsWith("re:")) {
         const kind = anchorDefKind(content, pat);
-        if (kind === 'ref-only') {
+        if (kind === "ref-only") {
           warns.push(
-            `知识卡 ${cf} 的机制锚 ${file}|${pat} 疑似指向引用处而非定义处：该符号在文件中仅以 import / re-export / 注释 / 字符串出现，无定义形态亦无调用消费。若锚语义是「文件含该机制」可忽略；若想表达「符号定义于此」，请改指定义文件（grep 定位）`
+            `知识卡 ${cf} 的机制锚 ${file}|${pat} 疑似指向引用处而非定义处：该符号在文件中仅以 import / re-export / 注释 / 字符串出现，无定义形态亦无调用消费。若锚语义是「文件含该机制」可忽略；若想表达「符号定义于此」，请改指定义文件（grep 定位）`,
           );
         }
       }
@@ -389,14 +455,14 @@ function checkKnowledgeAnchors(cards: any[]) {
 
 // ── 检查 3：索引断链（index.md 中 ./xxx.md 链接）──
 
-const INDEX_FILES = ['index.md'];
+const INDEX_FILES = ["index.md"];
 const LINK_RE = /\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g;
 
 function checkIndexLinks() {
   for (const idx of INDEX_FILES) {
     const file = path.join(KC_DIR, idx);
     if (!fs.existsSync(file)) continue;
-    const text = fs.readFileSync(file, 'utf8');
+    const text = fs.readFileSync(file, "utf8");
     for (const m of text.matchAll(LINK_RE)) {
       const target = m[1]!;
       if (!fs.existsSync(path.join(KC_DIR, target))) {
@@ -409,12 +475,14 @@ function checkIndexLinks() {
 // ── 检查 4：AGENTS.md 手写事实索引（WARN）──
 
 function checkAgentsNoHandcraftedIndex() {
-  const targets = ['AGENTS.md'];
+  const targets = ["AGENTS.md"];
   for (const rel of targets) {
-    const text = fs.existsSync(path.join(ROOT, rel)) ? fs.readFileSync(path.join(ROOT, rel), 'utf8') : '';
+    const text = fs.existsSync(path.join(ROOT, rel))
+      ? fs.readFileSync(path.join(ROOT, rel), "utf8")
+      : "";
     if (!text) continue;
     let treeHits = 0;
-    for (const line of text.split('\n')) {
+    for (const line of text.split("\n")) {
       if (/^[│├└]\s*[├└]──\s/.test(line) || /^\s*├──\s/.test(line) || /^\s*└──\s/.test(line)) {
         treeHits++;
       }
@@ -445,26 +513,34 @@ function checkKnowledgeQuality(cards: any[]) {
     if (!fm) continue;
     // tier 从 frontmatter 取（code review P2 修复）：loadKnowledgeCards 返回的卡片
     // 对象无 tier 字段，从 cards 解构 tier 恒 undefined → architecture 卡检查永不触发
-    const tier = getScalar(fm, 'tier');
+    const tier = getScalar(fm, "tier");
     // use_when 上限
-    const uw = getList(fm, 'use_when');
+    const uw = getList(fm, "use_when");
     if (uw.length > USE_WHEN_ERROR) {
-      errors.push(`知识卡 ${cf} 的 use_when 过量: ${uw.length} 条（上限 ${USE_WHEN_ERROR}，超 ${uw.length - USE_WHEN_ERROR} 条）——请合并或移除冗余关键词`);
+      errors.push(
+        `知识卡 ${cf} 的 use_when 过量: ${uw.length} 条（上限 ${USE_WHEN_ERROR}，超 ${uw.length - USE_WHEN_ERROR} 条）——请合并或移除冗余关键词`,
+      );
     } else if (uw.length > USE_WHEN_WARN) {
       warns.push(`知识卡 ${cf} 的 use_when 略多: ${uw.length} 条（建议上限 ${USE_WHEN_WARN}）`);
     }
     // quick_intents 上限
-    const qi = getList(fm, 'quick_intents');
+    const qi = getList(fm, "quick_intents");
     if (qi.length > QUICK_INTENTS_ERROR) {
-      errors.push(`知识卡 ${cf} 的 quick_intents 过量: ${qi.length} 条（上限 ${QUICK_INTENTS_ERROR}）——请合并为复合查询词`);
+      errors.push(
+        `知识卡 ${cf} 的 quick_intents 过量: ${qi.length} 条（上限 ${QUICK_INTENTS_ERROR}）——请合并为复合查询词`,
+      );
     } else if (qi.length > QUICK_INTENTS_WARN) {
-      warns.push(`知识卡 ${cf} 的 quick_intents 略多: ${qi.length} 条（建议上限 ${QUICK_INTENTS_WARN}）`);
+      warns.push(
+        `知识卡 ${cf} 的 quick_intents 略多: ${qi.length} 条（建议上限 ${QUICK_INTENTS_WARN}）`,
+      );
     }
     // invariant_anchors 缺失（architecture 卡必须声明）
-    if (tier === 'architecture') {
-      const inv = getList(fm, 'invariant_anchors');
+    if (tier === "architecture") {
+      const inv = getList(fm, "invariant_anchors");
       if (inv.length === 0) {
-        warns.push(`知识卡 ${cf}（architecture）缺少 invariant_anchors——请声明机制锚点（格式：文件路径|应含模式）`);
+        warns.push(
+          `知识卡 ${cf}（architecture）缺少 invariant_anchors——请声明机制锚点（格式：文件路径|应含模式）`,
+        );
       }
     }
   }
@@ -476,22 +552,24 @@ function checkKnowledgeQuality(cards: any[]) {
 // source_files 引用了它（目录条目按前缀匹配，文件条目按精确匹配）。
 // 未覆盖 = 代码有模块、知识库无卡片 → WARN 提醒补登，不阻断 CI。
 
-const SOURCE_ROOTS = ['frontend/src', 'go'];
+const SOURCE_ROOTS = ["frontend/src", "go"];
 // 排除：node_modules / dist / bindings / test 目录 / .test. / _test.（Go *_test.go） / .spec. / web-spike（ADR-049 Phase 0 spike，ephemeral 验证入口，非生产代码）
 // 同时匹配 / 与 \（Windows 下 path.join 产反斜杠路径，仅正斜杠会漏排除——code_review P3）
-const WALK_EXCLUDE_RE = /(node_modules|[\\/]dist[\\/]|[\\/]bindings[\\/]|[\\/]test[\\/]|web-spike[\\/]|\.test\.|_test\.|\.spec\.)/;
+const WALK_EXCLUDE_RE =
+  /(node_modules|[\\/]dist[\\/]|[\\/]bindings[\\/]|[\\/]test[\\/]|web-spike[\\/]|\.test\.|_test\.|\.spec\.)/;
 
 /** 某卡 source_files 条目是否覆盖源文件 rel：文件精确匹配 / 目录前缀匹配。 */
 function covers(rel: string, entry: string) {
-  const e = entry.replace(/\/+$/, '');
-  return rel === e || rel.startsWith(e + '/');
+  const e = entry.replace(/\/+$/, "");
+  return rel === e || rel.startsWith(`${e}/`);
 }
 
 /** 源码文件单遍收集（_lib/scan-files.walk，领域排除走 skipDir/skipFile）。 */
 function walkSources(dir: string): string[] {
   return walk(dir, {
-    exts: ['.ts', '.js', '.go'],
-    skipDir: (n) => /^(node_modules|dist|bindings|test|web-spike)$/.test(n) || WALK_EXCLUDE_RE.test(n),
+    exts: [".ts", ".js", ".go"],
+    skipDir: (n) =>
+      /^(node_modules|dist|bindings|test|web-spike)$/.test(n) || WALK_EXCLUDE_RE.test(n),
     skipFile: (n) => WALK_EXCLUDE_RE.test(n),
   }) as string[];
 }
@@ -502,7 +580,7 @@ function checkKnowledgeCoverage(cards: any[]) {
   for (const { fm } of cards) {
     if (!fm) continue;
     for (const src of parseSourceFiles(fm)) {
-      if (/\.(ts|js|go)$/.test(src) || src.endsWith('/')) referenced.add(src.replace(/\/+$/, ''));
+      if (/\.(ts|js|go)$/.test(src) || src.endsWith("/")) referenced.add(src.replace(/\/+$/, ""));
     }
   }
   // 扫描源码文件，未覆盖的按顶层目录分组
@@ -516,7 +594,7 @@ function checkKnowledgeCoverage(cards: any[]) {
       if (hit) continue;
       total++;
       uncoveredFiles.push(rel);
-      const top = rel.split('/').slice(0, 2).join('/');
+      const top = rel.split("/").slice(0, 2).join("/");
       byDir.set(top, (byDir.get(top) || 0) + 1);
     }
   }
@@ -525,15 +603,17 @@ function checkKnowledgeCoverage(cards: any[]) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([d, n]) => `${d}×${n}`)
-    .join('  ');
-  warns.push(`代码→卡片覆盖盲区：${total} 个源码文件未被任何知识卡引用（TOP: ${topSummary}）。非阻断提醒，建议补登知识卡。`);
+    .join("  ");
+  warns.push(
+    `代码→卡片覆盖盲区：${total} 个源码文件未被任何知识卡引用（TOP: ${topSummary}）。非阻断提醒，建议补登知识卡。`,
+  );
   // --verbose 时输出完整文件列表
   if (VERBOSE) {
-    const indent = '  ';
+    const indent = "  ";
     console.log(`\n${indent}未覆盖文件清单（${total} 个）：`);
     const bySub = new Map();
     for (const f of uncoveredFiles) {
-      const sub = f.split('/').slice(0, 3).join('/');
+      const sub = f.split("/").slice(0, 3).join("/");
       if (!bySub.has(sub)) bySub.set(sub, []);
       bySub.get(sub).push(f);
     }
@@ -551,9 +631,13 @@ function checkKnowledgeCoverage(cards: any[]) {
 
 function runAffected(changed: string[]) {
   if (changed.length === 0) {
-    console.log('用法: node scripts/check-knowledge-drift.ts --affected <变更文件...>');
-    console.log('  常与 git 联动: git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}');
-    console.log('  机读模式:      node scripts/check-knowledge-drift.ts --affected --quiet <变更文件...>  （仅输出卡 stem）');
+    console.log("用法: node scripts/check-knowledge-drift.ts --affected <变更文件...>");
+    console.log(
+      "  常与 git 联动: git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}",
+    );
+    console.log(
+      "  机读模式:      node scripts/check-knowledge-drift.ts --affected --quiet <变更文件...>  （仅输出卡 stem）",
+    );
     process.exit(0);
     return;
   }
@@ -564,9 +648,9 @@ function runAffected(changed: string[]) {
   const index: { card: string; sources: string[] }[] = [];
   for (const { cf, fm } of loadKnowledgeCards()) {
     if (!fm) continue;
-    if (getScalar(fm, 'affected') === 'false') continue;
+    if (getScalar(fm, "affected") === "false") continue;
     const sources = parseSourceFiles(fm).map((s) => toPosix(s));
-    if (sources.length) index.push({ card: cf.replace(/\.md$/, ''), sources });
+    if (sources.length) index.push({ card: cf.replace(/\.md$/, ""), sources });
   }
   const hits = new Map();
   for (const ch of changed.map((c) => toPosix(c))) {
@@ -578,7 +662,8 @@ function runAffected(changed: string[]) {
     }
   }
   if (hits.size === 0) {
-    if (!QUIET) console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
+    if (!QUIET)
+      console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
     process.exit(0);
     return;
   }
@@ -590,7 +675,7 @@ function runAffected(changed: string[]) {
   }
   console.log(`⚠ 以下 ${hits.size} 张知识卡引用了本次变更的文件，建议复核:`);
   for (const [card, files] of [...hits.entries()].sort()) {
-    console.log(`  - ${card}  ←  ${[...files].join(', ')}`);
+    console.log(`  - ${card}  ←  ${[...files].join(", ")}`);
   }
   process.exit(0);
 }
@@ -602,19 +687,21 @@ function checkCuratedFields(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
     // use_when 缺失提醒（非 architecture 卡也提示，但仅 WARN）
-    const uw = getList(fm, 'use_when');
+    const uw = getList(fm, "use_when");
     if (uw.length === 0) {
-      warns.push(`知识卡 ${cf} 缺少 use_when 字段（影响路由命中）——请在 frontmatter 补充关键词列表`);
+      warns.push(
+        `知识卡 ${cf} 缺少 use_when 字段（影响路由命中）——请在 frontmatter 补充关键词列表`,
+      );
     }
     // pitfalls 缺失提醒（architecture 卡优先提示）
-    const tier = getScalar(fm, 'tier');
-    const pits = getList(fm, 'pitfalls');
-    if (tier === 'architecture' && pits.length === 0) {
+    const tier = getScalar(fm, "tier");
+    const pits = getList(fm, "pitfalls");
+    if (tier === "architecture" && pits.length === 0) {
       warns.push(`知识卡 ${cf}（architecture）缺少 pitfalls 字段（建议补充常见陷阱）`);
     }
     // quick_intents 缺失提醒
-    const qi = getList(fm, 'quick_intents');
-    if (qi.length === 0 && tier === 'architecture') {
+    const qi = getList(fm, "quick_intents");
+    if (qi.length === 0 && tier === "architecture") {
       warns.push(`知识卡 ${cf}（architecture）缺少 quick_intents 字段（影响高频路由表生成）`);
     }
   }
@@ -627,7 +714,7 @@ function checkCuratedFields(cards: any[]) {
 function checkAutoFieldsFormat(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
-    const af = getList(fm, 'auto_fields');
+    const af = getList(fm, "auto_fields");
     if (af.length === 0) continue; // 无 auto_fields 字段，跳过
     // auto_fields 块列表格式校验：每项应为 "key: value" 或纯 value
     for (const item of af) {
@@ -637,15 +724,17 @@ function checkAutoFieldsFormat(cards: any[]) {
       }
     }
     // symbols_with_lines 条目格式：应包含符号名（字母数字下划线）
-    const symLines = af.filter((v) => v.includes('symbols_with_lines'));
+    const symLines = af.filter((v) => v.includes("symbols_with_lines"));
     for (const sl of symLines) {
       // 解析 "symbols_with_lines:" 后的条目
       const symMatch = sl.match(/^symbols_with_lines:\s*(.+)$/);
       if (symMatch) {
-        const val = symMatch[1]!.trim();
+        const val = symMatch[1]?.trim();
         // 允许：纯符号名（行号已减噪，见 ADR-159；保留 :\d+ 兼容旧卡片）
         if (val && !/^[A-Za-z0-9_$.]+(:\d+)?$/.test(val)) {
-          warns.push(`知识卡 ${cf} 的 auto_fields.symbols_with_lines 格式异常: ${val}（应为符号名）`);
+          warns.push(
+            `知识卡 ${cf} 的 auto_fields.symbols_with_lines 格式异常: ${val}（应为符号名）`,
+          );
         }
       }
     }
@@ -659,13 +748,13 @@ function checkAutoFieldsFormat(cards: any[]) {
 // context-menu P2-1 条目读不到、go-android-platform-guard 整卡被路由跳过）。
 // 规范：人工策展字段一律顶格；auto_fields 只容纳机器推导字段（symbols_with_lines/symbols/tests）。
 const CURATED_SUBFIELDS = new Set([
-  'quick_groups',
-  'quick_intents',
-  'quick_risk_lines',
-  'pitfalls',
-  'use_when',
-  'perf',
-  'invariant_anchors',
+  "quick_groups",
+  "quick_intents",
+  "quick_risk_lines",
+  "pitfalls",
+  "use_when",
+  "perf",
+  "invariant_anchors",
 ]);
 
 function checkNoCuratedInAutoFields(cards: any[]) {
@@ -674,13 +763,16 @@ function checkNoCuratedInAutoFields(cards: any[]) {
     const lines = fm.split(/\r?\n/);
     let inAuto = false;
     for (const line of lines) {
-      if (/^auto_fields\s*:/.test(line)) { inAuto = true; continue; }
+      if (/^auto_fields\s*:/.test(line)) {
+        inAuto = true;
+        continue;
+      }
       if (inAuto && /^\S/.test(line)) break; // 块结束
       if (!inAuto) continue;
       const sub = line.match(/^ {2,}(\w+)\s*:/);
       if (sub && CURATED_SUBFIELDS.has(sub[1]!)) {
         errors.push(
-          `知识卡 ${cf} 的 auto_fields 内含人工策展字段 ${sub[1]}（gen 只读顶格，嵌套版是死数据）——请上提为顶格字段并删除嵌套块`
+          `知识卡 ${cf} 的 auto_fields 内含人工策展字段 ${sub[1]}（gen 只读顶格，嵌套版是死数据）——请上提为顶格字段并删除嵌套块`,
         );
         break; // 每卡报一次即可
       }
@@ -720,15 +812,18 @@ const BODY_LINE_RE_FINAL =
   /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
 /** 提取 frontmatter 块结束后的正文行（带行号）。 */
 function bodyLinesWithNumbers(text: string): Array<{ lineNo: number; line: string }> {
-  const clean = text.replace(/^\uFEFF/, '');
+  const clean = text.replace(/^\uFEFF/, "");
   // 第一次 `---` 与第二次 `---` 之间 = frontmatter；之后 = 正文
   const lines = clean.split(/\r?\n/);
   let inFrontmatter = false;
   const body: Array<{ lineNo: number; line: string }> = [];
   for (let i = 0; i < lines.length; i++) {
-    const t = lines[i]!.trim();
-    if (t === '---') {
-      if (!inFrontmatter) { inFrontmatter = true; continue; }
+    const t = lines[i]?.trim();
+    if (t === "---") {
+      if (!inFrontmatter) {
+        inFrontmatter = true;
+        continue;
+      }
       inFrontmatter = false;
       continue;
     }
@@ -742,25 +837,29 @@ function scanBodyLineRefs(text: string): Array<{ lineNo: number; text: string; f
   const hits: Array<{ lineNo: number; text: string; full: string }> = [];
   for (const { lineNo, line } of bodyLinesWithNumbers(text)) {
     BODY_LINE_RE_FINAL.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = BODY_LINE_RE_FINAL.exec(line)) !== null) {
+    let m = BODY_LINE_RE_FINAL.exec(line);
+    while (m !== null) {
       hits.push({ lineNo, text: m[0], full: line.trim().slice(0, 90) });
+      m = BODY_LINE_RE_FINAL.exec(line);
     }
   }
   return hits;
 }
 // 豁免：生成物（禁手改，随源卡走）与快照/报告卡（affected:false，行号是历史事实记录）
-const BODY_REFS_SKIP_CARDS = new Set(['index.md', 'routes.md', 'routes-quick.md']);
+const BODY_REFS_SKIP_CARDS = new Set(["index.md", "routes.md", "routes-quick.md"]);
 function checkBodyLineRefs(cards: any[]) {
   for (const { cf, fm, text } of cards) {
     if (!text) continue;
     if (BODY_REFS_SKIP_CARDS.has(cf)) continue; // 生成物禁手改，不参与手写治理
-    if (getScalar(fm, 'affected') === 'false') continue; // 快照/报告卡：行号为当时事实，不漂移
+    if (getScalar(fm, "affected") === "false") continue; // 快照/报告卡：行号为当时事实，不漂移
     const hits = scanBodyLineRefs(text);
     if (hits.length === 0) continue;
-    const sample = hits.slice(0, 3).map((h) => `L${h.lineNo}「${h.text}」`).join('、');
+    const sample = hits
+      .slice(0, 3)
+      .map((h) => `L${h.lineNo}「${h.text}」`)
+      .join("、");
     warns.push(
-      `知识卡 ${cf} 正文含硬编码行号/行数/计数引用: ${sample}（ADR-162 精神：正文引用一律写「文件|符号」而非行坐标——行号位移会静默漂移，符号存在性由机器校验）`
+      `知识卡 ${cf} 正文含硬编码行号/行数/计数引用: ${sample}（ADR-162 精神：正文引用一律写「文件|符号」而非行坐标——行号位移会静默漂移，符号存在性由机器校验）`,
     );
   }
 }
@@ -786,10 +885,10 @@ function main() {
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
   checkKnowledgeQuality(cards);
-  checkCuratedFields(cards);       // 解法 B：人工策展字段漂移（WARN）
-  checkAutoFieldsFormat(cards);    // 解法 B：机器推导字段格式校验
+  checkCuratedFields(cards); // 解法 B：人工策展字段漂移（WARN）
+  checkAutoFieldsFormat(cards); // 解法 B：机器推导字段格式校验
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
-  checkBodyLineRefs(cards);        // P1：正文散文禁硬编码行号/行数/计数（WARN）
+  checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };
@@ -800,12 +899,12 @@ function main() {
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' 知识卡漂移检查 (check-knowledge-drift)');
-  console.log('══════════════════════════════════════');
+  console.log("══════════════════════════════════════");
+  console.log(" 知识卡漂移检查 (check-knowledge-drift)");
+  console.log("══════════════════════════════════════");
   console.log(`ERROR  : ${errors.length}`);
   console.log(`WARN   : ${warns.length}`);
-  console.log('──────────────────────────────────────');
+  console.log("──────────────────────────────────────");
 
   if (warns.length) {
     for (const w of warns) console.log(`⚠ ${w}`);
@@ -813,11 +912,11 @@ function main() {
 
   if (errors.length) {
     for (const e of errors) console.log(`❌ ${e}`);
-    console.log('→ 修复: 按上方错误更新对应知识卡，或检查 docs/knowledge/ 下文件与源码引用一致性');
+    console.log("→ 修复: 按上方错误更新对应知识卡，或检查 docs/knowledge/ 下文件与源码引用一致性");
     console.log(`\n退出码 1（可接 CI 卡点）。`);
     process.exit(1);
   } else {
-    console.log('✅ 未检测到 ERROR 级漂移。');
+    console.log("✅ 未检测到 ERROR 级漂移。");
   }
 }
 

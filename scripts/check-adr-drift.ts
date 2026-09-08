@@ -25,12 +25,12 @@
  * 设计意图：阻止 ADR 描述与代码现实脱节——文档侧"已还债仍标开放"与代码侧
  * "声明已实现但实际违反"双向漂移都会被抓出，避免 AI 把完成的活反复当开放债。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "./_lib/scan-files.ts";
 
 const args = process.argv.slice(2);
-const jsonMode = args.includes('--json');
+const jsonMode = args.includes("--json");
 
 // ---- 已知"已还债但历史文档可能仍标开放"的表述（文档侧漂移特征串）----
 // 每条用 tokens（必须同时出现的子串）+ exclude（出现则排除漂移，即已翻牌）判定。
@@ -39,26 +39,26 @@ const jsonMode = args.includes('--json');
 const KNOWN_REPAID = [
   {
     // 原表述「app_install.go（1,315 行）仍未下沉」的高区分度组合
-    tokens: ['1,315', '仍未下沉'],
-    fact: 'app_install.go 已还债：现为薄壳（< 50 行），逻辑迁至 app_install_instance.go',
+    tokens: ["1,315", "仍未下沉"],
+    fact: "app_install.go 已还债：现为薄壳（< 50 行），逻辑迁至 app_install_instance.go",
   },
   {
     // 原表述「分散在 17 个文件中」且未加翻牌注记
-    tokens: ['分散在', '17', '个文件'],
-    exclude: ['评估时点'],
-    fact: 'god-object 散布文件数已变（实测 21 个），且 app_install.go 已下沉，原 17 文件表述失真',
+    tokens: ["分散在", "17", "个文件"],
+    exclude: ["评估时点"],
+    fact: "god-object 散布文件数已变（实测 21 个），且 app_install.go 已下沉，原 17 文件表述失真",
   },
   {
     // 原表述「DownloadQueue ↔ App 存在对象级循环引用（NewDownloadQueue(a) 持有 *App）」
-    tokens: ['DownloadQueue', '↔', 'App', '对象级循环引用', '持有', '*App'],
-    fact: 'DownloadQueue↔App 循环已打破：改为回调注入（downloadFn/emitFn/logFn），无 *App 字段',
+    tokens: ["DownloadQueue", "↔", "App", "对象级循环引用", "持有", "*App"],
+    fact: "DownloadQueue↔App 循环已打破：改为回调注入（downloadFn/emitFn/logFn），无 *App 字段",
   },
   {
     // 误判「app_scan.go（691 行）仍需进一步下沉」——实测核心已下沉 go/scanner，691 行为门面 + helper
     // 命中条件：文档同时含 app_scan.go（行数）+ 明确「未下沉/进一步下沉/下沉重心」债务表述
-    tokens: ['app_scan.go', '下沉'],
-    exclude: ['已下沉', 'go/scanner', '门面', '非未还债', '核心逻辑已下沉'],
-    fact: 'app_scan.go 核心已下沉 go/scanner（扫描/哈希/缓存/作者提取/索引）；691 行是 Binding 门面 + helper，非未还债',
+    tokens: ["app_scan.go", "下沉"],
+    exclude: ["已下沉", "go/scanner", "门面", "非未还债", "核心逻辑已下沉"],
+    fact: "app_scan.go 核心已下沉 go/scanner（扫描/哈希/缓存/作者提取/索引）；691 行是 Binding 门面 + helper，非未还债",
   },
 ];
 
@@ -66,25 +66,25 @@ const KNOWN_REPAID = [
 // 若复核段被删除/篡改，说明有人试图把已还债重新标为开放债，报 DRIFT。
 // 判定：文件必须存在且含「状态复核（2026-08-23）」锚点。
 const AUDIT_REVIEWED = [
-  'docs/audit/archive/audit-r1-3d-engine-core-2026-08-18.md',
-  'docs/audit/archive/audit-r7-performance-memory-2026-08-18.md',
-  'docs/audit/archive/audit-r9-3d-preview-resource-management-2026-08-18.md',
-  'docs/audit/archive/audit-r10-animation-resource-management-2026-08-18.md',
-  'docs/audit/archive/audit-r11-texture-lifecycle-2026-08-18.md',
-  'docs/audit/archive/audit-r12-scene-switch-race-2026-08-18.md',
-  'docs/audit/audit-r14-coverage-2026-08-18.md',
+  "docs/audit/archive/audit-r1-3d-engine-core-2026-08-18.md",
+  "docs/audit/archive/audit-r7-performance-memory-2026-08-18.md",
+  "docs/audit/archive/audit-r9-3d-preview-resource-management-2026-08-18.md",
+  "docs/audit/archive/audit-r10-animation-resource-management-2026-08-18.md",
+  "docs/audit/archive/audit-r11-texture-lifecycle-2026-08-18.md",
+  "docs/audit/archive/audit-r12-scene-switch-race-2026-08-18.md",
+  "docs/audit/audit-r14-coverage-2026-08-18.md",
 ];
 
 // 文档侧漂移：含全部 token 的段落中，存在「无翻牌排除词」的段落 → 命中
 function docHasDrift(text: string, item: { tokens: string[]; exclude?: string[]; fact: string }) {
   const hit = item.tokens.every((t) => text.includes(t));
   if (!hit) return false;
-  if (!item.exclude || !item.exclude.length) return true;
+  if (!item.exclude?.length) return true;
   // 段落级判断：翻牌标记须与漂移表述同段才算数。
   // 若存在任一含 token 段落且不含任何排除词 → 漂移（该段落未被翻牌覆盖）。
   const paras = text.split(/\n\s*\n/);
   const tokenParas = paras.filter((p) => item.tokens.every((t) => p.includes(t)));
-  return tokenParas.some((p) => !item.exclude!.some((x) => p.includes(x)));
+  return tokenParas.some((p) => !item.exclude?.some((x) => p.includes(x)));
 }
 
 // ---- 代码侧正向断言（事实源 = 源码）----
@@ -93,101 +93,128 @@ function codeAsserts() {
   const results: any[] = [];
 
   // 1. app_install.go 应为薄壳（< 50 行）
-  const installPath = path.join(ROOT, 'internal/app/app_install.go');
+  const installPath = path.join(ROOT, "internal/app/app_install.go");
   try {
-    const lines = fs.readFileSync(installPath, 'utf-8').split('\n').length;
+    const lines = fs.readFileSync(installPath, "utf-8").split("\n").length;
     results.push({
-      name: 'app_install.go 薄壳',
+      name: "app_install.go 薄壳",
       ok: lines < 50,
       detail: `app_install.go = ${lines} 行（阈值 < 50，薄壳判定）`,
     });
   } catch (e) {
-    results.push({ name: 'app_install.go 薄壳', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "app_install.go 薄壳",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 2. DownloadQueue 结构体不应含 *App 字段
-  const dlPath = path.join(ROOT, 'internal/app/app_download.go');
+  const dlPath = path.join(ROOT, "internal/app/app_download.go");
   try {
-    const text = fs.readFileSync(dlPath, 'utf-8');
+    const text = fs.readFileSync(dlPath, "utf-8");
     const structM = text.match(/type DownloadQueue struct\s*\{([\s\S]*?)\n\}/);
-    const body = structM ? structM[1]! : '';
+    const body = structM ? structM[1]! : "";
     const hasAppField = /\*\s*App\b/.test(body);
     results.push({
-      name: 'DownloadQueue 无 *App 字段',
+      name: "DownloadQueue 无 *App 字段",
       ok: !hasAppField,
       detail: hasAppField
-        ? 'DownloadQueue 仍持有 *App 字段（循环未打破）'
-        : 'DownloadQueue 无 *App 字段（循环已打破，回调注入）',
+        ? "DownloadQueue 仍持有 *App 字段（循环未打破）"
+        : "DownloadQueue 无 *App 字段（循环已打破，回调注入）",
     });
   } catch (e) {
-    results.push({ name: 'DownloadQueue 无 *App 字段', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "DownloadQueue 无 *App 字段",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 3. scripts/ 下不应残留 .py 一次性脚本（Python→Node 全量迁移 295ac07e 已清理）
-  const scriptsDir = path.join(ROOT, 'scripts');
+  const scriptsDir = path.join(ROOT, "scripts");
   try {
-    const pyFiles = fs.readdirSync(scriptsDir).filter((f) => f.endsWith('.py'));
+    const pyFiles = fs.readdirSync(scriptsDir).filter((f) => f.endsWith(".py"));
     results.push({
-      name: 'scripts/ 无残留 .py 脚本',
+      name: "scripts/ 无残留 .py 脚本",
       ok: pyFiles.length === 0,
-      detail: pyFiles.length === 0
-        ? 'scripts/ 零 .py 文件（Python→Node 迁移已完成）'
-        : `残留 ${pyFiles.length} 个 .py：${pyFiles.slice(0, 5).join(', ')}…（应迁移为 .mjs 或删除）`,
+      detail:
+        pyFiles.length === 0
+          ? "scripts/ 零 .py 文件（Python→Node 迁移已完成）"
+          : `残留 ${pyFiles.length} 个 .py：${pyFiles.slice(0, 5).join(", ")}…（应迁移为 .mjs 或删除）`,
     });
   } catch (e) {
-    results.push({ name: 'scripts/ 无残留 .py 脚本', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "scripts/ 无残留 .py 脚本",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 4. site-view 拆分防倒退：旧 community/site-view.js 不应复活；site-view.ts 应保持薄壳（≤200 行）
-  const oldSiteView = path.join(ROOT, 'frontend/src/views/app-content/community/site-view.js');
-  const newSiteView = path.join(ROOT, 'frontend/src/views/app-content/site-view.ts');
+  const oldSiteView = path.join(ROOT, "frontend/src/views/app-content/community/site-view.js");
+  const newSiteView = path.join(ROOT, "frontend/src/views/app-content/site-view.ts");
   try {
     const oldExists = fs.existsSync(oldSiteView);
-    let detail = oldExists ? '旧 community/site-view.js 已复活（应删除/迁移）' : 'community/site-view.js 已拆除';
+    let detail = oldExists
+      ? "旧 community/site-view.js 已复活（应删除/迁移）"
+      : "community/site-view.js 已拆除";
     let ok = !oldExists;
     if (!oldExists && fs.existsSync(newSiteView)) {
-      const lines = fs.readFileSync(newSiteView, 'utf-8').split('\n').length;
-      detail += `；site-view.ts ${lines} 行` + (lines <= 200 ? '（薄壳达标）' : `（超 200 行薄壳阈值：${lines}）`);
+      const lines = fs.readFileSync(newSiteView, "utf-8").split("\n").length;
+      detail += `；site-view.ts ${lines} 行${lines <= 200 ? "（薄壳达标）" : `（超 200 行薄壳阈值：${lines}）`}`;
       if (lines > 200) ok = false;
     }
-    results.push({ name: 'site-view 拆分防倒退', ok, detail });
+    results.push({ name: "site-view 拆分防倒退", ok, detail });
   } catch (e) {
-    results.push({ name: 'site-view 拆分防倒退', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "site-view 拆分防倒退",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 5. r12 P1 并发切换抑制防倒退：switch-preview.ts 必须含 inFlight 守卫
-  const switchPreviewPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/switch-preview.ts');
+  const switchPreviewPath = path.join(ROOT, "frontend/src/preview-3d/adapters/switch-preview.ts");
   try {
-    const text = fs.existsSync(switchPreviewPath) ? fs.readFileSync(switchPreviewPath, 'utf-8') : '';
+    const text = fs.existsSync(switchPreviewPath)
+      ? fs.readFileSync(switchPreviewPath, "utf-8")
+      : "";
     // code review P3：放宽格式敏感——加花括号/删 : boolean 注解的合法重构不误报
-    const hasInFlight = /inFlight\s*(:\s*boolean)?\b/.test(text) && /if\s*\(\s*ctx\.inFlight\s*\)\s*\{?\s*return/.test(text);
+    const hasInFlight =
+      /inFlight\s*(:\s*boolean)?\b/.test(text) &&
+      /if\s*\(\s*ctx\.inFlight\s*\)\s*\{?\s*return/.test(text);
     results.push({
-      name: 'r12 P1 并发抑制守卫',
+      name: "r12 P1 并发抑制守卫",
       ok: hasInFlight,
       detail: hasInFlight
-        ? 'switch-preview.ts 含 inFlight 守卫（r12 P1 已修，防倒退）'
-        : 'switch-preview.ts 缺失 inFlight 并发抑制（r12 P1 倒退）',
+        ? "switch-preview.ts 含 inFlight 守卫（r12 P1 已修，防倒退）"
+        : "switch-preview.ts 缺失 inFlight 并发抑制（r12 P1 倒退）",
     });
   } catch (e) {
-    results.push({ name: 'r12 P1 并发抑制守卫', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "r12 P1 并发抑制守卫",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd 释放路径必含 uncacheRoot + 全纹理槽释放
   //    mmd 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
-  const mmdAdapterPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-adapter.ts');
-  const mmdUtilsPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-utils.ts');
-  const mmdResultPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-build-result.ts');
-  const mmdSharedPath = path.join(ROOT, 'frontend/src/preview-3d/adapters/mmd-shared.ts');
+  const mmdAdapterPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-adapter.ts");
+  const mmdUtilsPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-utils.ts");
+  const mmdResultPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-build-result.ts");
+  const mmdSharedPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-shared.ts");
   try {
-    const textA = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, 'utf-8') : '';
-    const textU = fs.existsSync(mmdUtilsPath) ? fs.readFileSync(mmdUtilsPath, 'utf-8') : '';
+    const textA = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, "utf-8") : "";
+    const textU = fs.existsSync(mmdUtilsPath) ? fs.readFileSync(mmdUtilsPath, "utf-8") : "";
     // ADR-167 拆分后释放主体：mmd-build-result.ts（Stage6 Dispose 区：uncacheRoot L154 /
     // revokeObjectURL L167）+ mmd-shared.ts（disposeMmdMesh 遍历 DISPOSE_TEX_KEYS 释放槽位）；
     // mmd-utils.ts 持 DISPOSE_TEX_KEYS 定义。合并四文件扫描，守卫语义不变：
     // uncacheRoot + 全纹理槽释放 + blobUrl 撤销 必须共存
-    const textR = fs.existsSync(mmdResultPath) ? fs.readFileSync(mmdResultPath, 'utf-8') : '';
-    const textS = fs.existsSync(mmdSharedPath) ? fs.readFileSync(mmdSharedPath, 'utf-8') : '';
-    const text = textA + '\n' + textU + '\n' + textR + '\n' + textS;
+    const textR = fs.existsSync(mmdResultPath) ? fs.readFileSync(mmdResultPath, "utf-8") : "";
+    const textS = fs.existsSync(mmdSharedPath) ? fs.readFileSync(mmdSharedPath, "utf-8") : "";
+    const text = `${textA}\n${textU}\n${textR}\n${textS}`;
     const hasUncacheRoot = /uncacheRoot\s*\(/.test(text);
     // 全槽释放：emissiveMap 槽位存在 + 实际 dispose 调用（safeDispose 包装或裸 tex/mat.dispose——
     // 2026-09 起释放统一走 safeDispose 包装，正则须同收两种形态防误报）+ blobUrl 撤销
@@ -197,78 +224,98 @@ function codeAsserts() {
       /blobUrls?/.test(text);
     const ok = hasUncacheRoot && hasFullSlotDispose;
     results.push({
-      name: 'r10/r11 MMD 生命周期',
+      name: "r10/r11 MMD 生命周期",
       ok,
       detail: ok
-        ? 'mmd 释放链含 uncacheRoot + 全纹理槽释放 + blobUrl 撤销（r10/r11 已修，防倒退；ADR-167 后扫描 mmd-adapter/mmd-utils/mmd-build-result）'
+        ? "mmd 释放链含 uncacheRoot + 全纹理槽释放 + blobUrl 撤销（r10/r11 已修，防倒退；ADR-167 后扫描 mmd-adapter/mmd-utils/mmd-build-result）"
         : `mmd 释放链缺失关键释放（uncacheRoot=${hasUncacheRoot}, 全槽dispose=${hasFullSlotDispose}）`,
     });
   } catch (e) {
-    results.push({ name: 'r10/r11 MMD 生命周期', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "r10/r11 MMD 生命周期",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 7. r1/r11 capability dispose 体系防倒退：caps/ 下 light + postprocessing 必须存在 dispose 体
-  const lightCapPath = path.join(ROOT, 'frontend/src/preview-3d/caps/light-capability.ts');
-  const postCapPath = path.join(ROOT, 'frontend/src/preview-3d/caps/postprocessing-capability.ts');
+  const lightCapPath = path.join(ROOT, "frontend/src/preview-3d/caps/light-capability.ts");
+  const postCapPath = path.join(ROOT, "frontend/src/preview-3d/caps/postprocessing-capability.ts");
   try {
-    const lightOk = fs.existsSync(lightCapPath) && /dispose\s*\(\)/.test(fs.readFileSync(lightCapPath, 'utf-8'));
-    const postOk = fs.existsSync(postCapPath) && /disposeComposer|dispose\s*\(\)/.test(fs.readFileSync(postCapPath, 'utf-8'));
+    const lightOk =
+      fs.existsSync(lightCapPath) && /dispose\s*\(\)/.test(fs.readFileSync(lightCapPath, "utf-8"));
+    const postOk =
+      fs.existsSync(postCapPath) &&
+      /disposeComposer|dispose\s*\(\)/.test(fs.readFileSync(postCapPath, "utf-8"));
     results.push({
-      name: 'r1/r11 capability dispose 体系',
+      name: "r1/r11 capability dispose 体系",
       ok: lightOk && postOk,
-      detail: lightOk && postOk
-        ? 'caps/light + postprocessing 含 dispose 体系（r1 P2-2/5/6、r11 已修，防倒退）'
-        : `capability 缺失 dispose（light=${lightOk}, post=${postOk}）`,
+      detail:
+        lightOk && postOk
+          ? "caps/light + postprocessing 含 dispose 体系（r1 P2-2/5/6、r11 已修，防倒退）"
+          : `capability 缺失 dispose（light=${lightOk}, post=${postOk}）`,
     });
   } catch (e) {
-    results.push({ name: 'r1/r11 capability dispose 体系', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "r1/r11 capability dispose 体系",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 8. r14 P1 updater 重复声明修复防倒退：_Critical 版测试文件必须存在
-  const updaterCriticalPath = path.join(ROOT, 'go/updater/updater_critical_test.go');
+  const updaterCriticalPath = path.join(ROOT, "go/updater/updater_critical_test.go");
   try {
     const exists = fs.existsSync(updaterCriticalPath);
     results.push({
-      name: 'r14 P1 updater 重复声明修复',
+      name: "r14 P1 updater 重复声明修复",
       ok: exists,
       detail: exists
-        ? 'updater_critical_test.go 存在（重复声明已改名修复，防倒退）'
-        : 'updater_critical_test.go 缺失（r14 P1 修复倒退，CI 将再阻塞）',
+        ? "updater_critical_test.go 存在（重复声明已改名修复，防倒退）"
+        : "updater_critical_test.go 缺失（r14 P1 修复倒退，CI 将再阻塞）",
     });
   } catch (e) {
-    results.push({ name: 'r14 P1 updater 重复声明修复', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "r14 P1 updater 重复声明修复",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   // 9. ADR-029 WASM glue patch 防倒退：glue 生成处必须注入 HEAPU8（防 _getGlueCode bug 倒退）。
   // ADR-164 后脚本/子进程/护栏收敛到 go/avatar（wasm_decoder.go 仅剩薄封装），断言跟随实现唯一副本。
-  const glueImplPaths = ['go/avatar/avatar_decode.go', 'internal/app/wasm_decoder.go'];
+  const glueImplPaths = ["go/avatar/avatar_decode.go", "internal/app/wasm_decoder.go"];
   try {
     const ok = glueImplPaths.some((p) => {
       const fp = path.join(ROOT, p);
-      const text = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf-8') : '';
+      const text = fs.existsSync(fp) ? fs.readFileSync(fp, "utf-8") : "";
       return /HEAPU8/.test(text) && /ReplaceAll/.test(text);
     });
     results.push({
-      name: 'ADR-029 WASM glue HEAPU8 注入',
+      name: "ADR-029 WASM glue HEAPU8 注入",
       ok,
       detail: ok
-        ? 'go/avatar/avatar_decode.go 含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退；ADR-164 收敛后实现唯一副本）'
-        : 'go/avatar/avatar_decode.go 缺失 HEAPU8 注入（ADR-029 _getGlueCode bug 倒退风险）',
+        ? "go/avatar/avatar_decode.go 含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退；ADR-164 收敛后实现唯一副本）"
+        : "go/avatar/avatar_decode.go 缺失 HEAPU8 注入（ADR-029 _getGlueCode bug 倒退风险）",
     });
   } catch (e) {
-    results.push({ name: 'ADR-029 WASM glue HEAPU8 注入', ok: false, detail: `读取失败: ${(e as Error).message}` });
+    results.push({
+      name: "ADR-029 WASM glue HEAPU8 注入",
+      ok: false,
+      detail: `读取失败: ${(e as Error).message}`,
+    });
   }
 
   return results;
 }
 
 // ---- 主流程 ----
-const adr002Path = path.join(ROOT, 'docs/adr/ADR-002-project-health-assessment.md');
-const drifts: string[] = [];      // 硬漂移（文档标开放但代码已还债 / 代码断言失败）
+const adr002Path = path.join(ROOT, "docs/adr/ADR-002-project-health-assessment.md");
+const drifts: string[] = []; // 硬漂移（文档标开放但代码已还债 / 代码断言失败）
 const warnings: string[] = [];
 
 if (fs.existsSync(adr002Path)) {
-  const adrText = fs.readFileSync(adr002Path, 'utf-8');
+  const adrText = fs.readFileSync(adr002Path, "utf-8");
   for (const item of KNOWN_REPAID) {
     if (docHasDrift(adrText, item)) {
       drifts.push(`DOC_DRIFT: ADR-002 仍含已还债表述「${item.fact}」——请同步翻牌`);
@@ -290,8 +337,8 @@ for (const rel of AUDIT_REVIEWED) {
     drifts.push(`AUDIT_DRIFT: ${rel} 缺失（复核翻牌文件被删）`);
     continue;
   }
-  const txt = fs.readFileSync(abs, 'utf-8');
-  if (!txt.includes('状态复核（2026-08-23）')) {
+  const txt = fs.readFileSync(abs, "utf-8");
+  if (!txt.includes("状态复核（2026-08-23）")) {
     drifts.push(`AUDIT_DRIFT: ${rel} 复核段被移除——已还债条目可能正被重新标为开放债`);
   }
 }
@@ -306,16 +353,16 @@ const summary = {
 
 if (jsonMode) {
   process.stdout.write(
-    JSON.stringify({ _summary: summary, codeAsserts: codeResults, drifts, warnings }, null, 2) + '\n',
+    `${JSON.stringify({ _summary: summary, codeAsserts: codeResults, drifts, warnings }, null, 2)}\n`,
   );
 } else {
-  console.log('=== ADR 漂移检测 ===');
+  console.log("=== ADR 漂移检测 ===");
   console.log(`代码侧断言：${codeResults.length} 项`);
   for (const r of codeResults) {
-    console.log(`  ${r.ok ? '✅' : '❌'} ${r.name} — ${r.detail}`);
+    console.log(`  ${r.ok ? "✅" : "❌"} ${r.name} — ${r.detail}`);
   }
   if (warnings.length) {
-    console.log('\n警告：');
+    console.log("\n警告：");
     for (const w of warnings) console.log(`  ⚠️  ${w}`);
   }
   if (drifts.length) {
@@ -323,7 +370,7 @@ if (jsonMode) {
     for (const d of drifts) console.log(`  [${d}]`);
     process.exit(1);
   } else {
-    console.log('\nOK: ADR 描述与代码现实一致，无漂移');
+    console.log("\nOK: ADR 描述与代码现实一致，无漂移");
   }
 }
 

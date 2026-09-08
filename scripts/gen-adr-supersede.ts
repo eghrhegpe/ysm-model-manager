@@ -18,37 +18,37 @@
  * 退出码：1（失败）
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseAdrHeader } from './_lib/frontmatter.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseAdrHeader } from "./_lib/frontmatter.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 import {
-  RE_SUPERSEDED_BY,
-  RE_PARTIAL,
+  globalOf,
   RE_CLAIM_A,
   RE_CLAIM_B,
-  RE_SELF_DEPRECATED,
   RE_DEPRECATED_WORD,
   RE_NEGATED,
   RE_NEGATED_CLAIM,
+  RE_PARTIAL,
+  RE_SELF_DEPRECATED,
+  RE_SUPERSEDED_BY,
   RE_TABLE_FIRST_COL,
-  RE_TABLE_VERB,
   RE_TABLE_NEGATED,
-  globalOf,
-} from './_lib/supersede-regex.ts';
+  RE_TABLE_VERB,
+} from "./_lib/supersede-regex.ts";
 
 const RE_CLAIM_A_G = globalOf(RE_CLAIM_A);
 const RE_CLAIM_B_G = globalOf(RE_CLAIM_B);
-const RE_NEGATED_CLAIM_G = globalOf(RE_NEGATED_CLAIM);
+const _RE_NEGATED_CLAIM_G = globalOf(RE_NEGATED_CLAIM);
 
-const ADR_DIR = path.join(ROOT, 'docs', 'adr');
-const FLAG_CHECK = process.argv.includes('--check');
-const FLAG_QUIET = process.argv.includes('--quiet');
+const ADR_DIR = path.join(ROOT, "docs", "adr");
+const FLAG_CHECK = process.argv.includes("--check");
+const FLAG_QUIET = process.argv.includes("--quiet");
 
 // ── 已知勘误注记白名单（人工核对后登记，非取代关系，不再报 ④） ──
 //   92-111  ADR-092 §0 背景勘误：MMD 目录结构「初稿冻结已解冻」提及 ADR-111，
 //            属勘误注记而非取代（ADR-092 仍有效，ADR-111 是 variants 解耦新决策）
-const KNOWN_ERRATA = new Set(['92-111']);
+const KNOWN_ERRATA = new Set(["92-111"]);
 
 // [ADR-114 §被补充] 首部解析统一走共享库 parseAdrHeader（_lib/frontmatter.ts），
 // 兼容 list/blockquote/table 三种格式 + 中文冒号。原局部实现与共享库并行，已消除。
@@ -57,11 +57,12 @@ const KNOWN_ERRATA = new Set(['92-111']);
 
 function main() {
   if (!fs.existsSync(ADR_DIR)) {
-    console.error('❌ docs/adr/ 目录不存在');
+    console.error("❌ docs/adr/ 目录不存在");
     process.exit(1);
   }
 
-  const files = fs.readdirSync(ADR_DIR)
+  const files = fs
+    .readdirSync(ADR_DIR)
     .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
     .sort();
 
@@ -91,18 +92,23 @@ function main() {
   // 第二遍：逐篇判定
   for (const meta of adrList) {
     const num = meta.num;
-    const text = fs.readFileSync(path.join(ADR_DIR, meta.file), 'utf8');
+    const text = fs.readFileSync(path.join(ADR_DIR, meta.file), "utf8");
     const lines = text.split(/\r?\n/);
 
     // ① 状态行声明「被 ADR-NNN 取代」，或独立 `- **被取代**：` 行（new-adr --supersedes 写入，P1-1）
-    const mBy = meta.status.match(RE_SUPERSEDED_BY)
-      ?? (meta.supersededBy != null ? { 1: String(meta.supersededBy) } : null);
+    const mBy =
+      meta.status.match(RE_SUPERSEDED_BY) ??
+      (meta.supersededBy != null ? { 1: String(meta.supersededBy) } : null);
     const isPartial = Boolean(mBy) && RE_PARTIAL.test(meta.status);
     if (mBy && parseInt(mBy[1], 10) !== num) {
       // ①b 校验取代者编号存在性：指向不存在 ADR 的错写（非法编号/幽灵号）应报可疑而非照录已登记（P2-3）
       const byNum = parseInt(mBy[1], 10);
       if (!adrNums.has(byNum)) {
-        suspicious.push({ num, target: byNum, line: `状态行/被取代行指向不存在的 ADR-${byNum}: ${meta.status.slice(0, 80)}` });
+        suspicious.push({
+          num,
+          target: byNum,
+          line: `状态行/被取代行指向不存在的 ADR-${byNum}: ${meta.status.slice(0, 80)}`,
+        });
       } else {
         const entry = { old: num, by: byNum, source: meta.status };
         (isPartial ? partial : registered).push(entry);
@@ -122,9 +128,10 @@ function main() {
     for (const target of statusClaims) {
       if (target !== num && adrNums.has(target)) {
         const tMeta = adrList.find((e) => e.num === target);
-        const tMarked = RE_SUPERSEDED_BY.test(tMeta.status)
-          || (tMeta.supersededBy != null)
-          || RE_SELF_DEPRECATED.test(tMeta.status);
+        const tMarked =
+          RE_SUPERSEDED_BY.test(tMeta.status) ||
+          tMeta.supersededBy != null ||
+          RE_SELF_DEPRECATED.test(tMeta.status);
         if (!tMarked) {
           unmarked.push({ claimedBy: num, target, line: `[状态行] ${meta.status.slice(0, 120)}` });
         }
@@ -132,9 +139,10 @@ function main() {
     }
 
     // ② / ④ 正文扫描（跳过首部状态行；状态行宣称已在上方单独处理）
-    const headerEnd = meta.statusLine >= 0
-      ? Math.min(lines.length, meta.statusLine + 1)
-      : Math.min(lines.length, 20);
+    const headerEnd =
+      meta.statusLine >= 0
+        ? Math.min(lines.length, meta.statusLine + 1)
+        : Math.min(lines.length, 20);
     for (let i = headerEnd; i < lines.length; i++) {
       const line = lines[i]!;
 
@@ -149,7 +157,10 @@ function main() {
           claimedThisLine.push(target);
           const tMeta = adrList.find((e) => e.num === target);
           // 与 ①/状态行② 同口径：独立 `- **被取代**：` 行（new-adr --supersedes）也是有效回标（code_review P2）
-          const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || tMeta.supersededBy != null || RE_SELF_DEPRECATED.test(tMeta.status);
+          const tMarked =
+            RE_SUPERSEDED_BY.test(tMeta.status) ||
+            tMeta.supersededBy != null ||
+            RE_SELF_DEPRECATED.test(tMeta.status);
           if (!tMarked) {
             unmarked.push({ claimedBy: num, target, line: line.trim().slice(0, 120) });
           }
@@ -157,20 +168,34 @@ function main() {
       }
 
       // ④ 可疑信号
-      const selfMarked = (RE_SUPERSEDED_BY.test(meta.status) && !isPartial)
-        || RE_SELF_DEPRECATED.test(meta.status);
-      if (claimedThisLine.length === 0 && !selfMarked && RE_DEPRECATED_WORD.test(line) && !RE_NEGATED.test(line)) {
-        const others = [...new Set([...line.matchAll(/ADR-(\d+)/g)].map((m) => parseInt(m[1]!, 10)))]
-          .filter((n) => n !== num && adrNums.has(n));
+      const selfMarked =
+        (RE_SUPERSEDED_BY.test(meta.status) && !isPartial) || RE_SELF_DEPRECATED.test(meta.status);
+      if (
+        claimedThisLine.length === 0 &&
+        !selfMarked &&
+        RE_DEPRECATED_WORD.test(line) &&
+        !RE_NEGATED.test(line)
+      ) {
+        const others = [
+          ...new Set([...line.matchAll(/ADR-(\d+)/g)].map((m) => parseInt(m[1]!, 10))),
+        ].filter((n) => n !== num && adrNums.has(n));
         const anyOtherMarked = others.some((o) => {
           const t = adrList.find((e) => e.num === o);
           // 与 ② 同口径：独立被取代行也是有效回标（code_review P2）
-          return t && (RE_SUPERSEDED_BY.test(t.status) || t.supersededBy != null || RE_SELF_DEPRECATED.test(t.status));
+          return (
+            t &&
+            (RE_SUPERSEDED_BY.test(t.status) ||
+              t.supersededBy != null ||
+              RE_SELF_DEPRECATED.test(t.status))
+          );
         });
         if (!anyOtherMarked) {
           for (const other of others) {
             const tMeta = adrList.find((e) => e.num === other);
-            const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || tMeta.supersededBy != null || RE_SELF_DEPRECATED.test(tMeta.status);
+            const tMarked =
+              RE_SUPERSEDED_BY.test(tMeta.status) ||
+              tMeta.supersededBy != null ||
+              RE_SELF_DEPRECATED.test(tMeta.status);
             if (!tMarked && !KNOWN_ERRATA.has(`${num}-${other}`)) {
               suspicious.push({ num, target: other, line: line.trim().slice(0, 120) });
             }
@@ -184,8 +209,9 @@ function main() {
         const target = parseInt(mTable[1]!, 10);
         if (target !== num && adrNums.has(target)) {
           const tMeta = adrList.find((e) => e.num === target);
-          const numPat = String(num).replace('.', '\\.');
-          const alreadyBackMarked = tMeta && new RegExp(`ADR-0*${numPat}(?!\\d)`).test(tMeta.status);
+          const numPat = String(num).replace(".", "\\.");
+          const alreadyBackMarked =
+            tMeta && new RegExp(`ADR-0*${numPat}(?!\\d)`).test(tMeta.status);
           if (!alreadyBackMarked) {
             tableClaims.push({ num, target, line: line.trim().slice(0, 120) });
           }
@@ -196,7 +222,7 @@ function main() {
 
   // ── 输出 ──
   if (!FLAG_QUIET) {
-    console.log('📄 ADR 取代关系扫描\n');
+    console.log("📄 ADR 取代关系扫描\n");
 
     console.log(`① 已登记取代（${registered.length}）：`);
     for (const r of registered) {
@@ -223,7 +249,9 @@ function main() {
       console.log(`   ADR-${s.num} 提及 ADR-${s.target} [${s.line}]`);
     }
 
-    console.log(`\n⑤ 表格弱宣称 — 行首 ADR 编号 + 「本 ADR…替代/取代」跨列关系（${tableClaims.length}）：`);
+    console.log(
+      `\n⑤ 表格弱宣称 — 行首 ADR 编号 + 「本 ADR…替代/取代」跨列关系（${tableClaims.length}）：`,
+    );
     for (const t of tableClaims) {
       console.log(`   ADR-${t.num} 声称替代 ADR-${t.target} [${t.line}]`);
     }
@@ -233,7 +261,9 @@ function main() {
   // --check 模式：仅漏标（②）是流程错误 → 退出码 1
   if (FLAG_CHECK && unmarked.length > 0) {
     if (!FLAG_QUIET) {
-      console.error(`\n⚠️ 存在 ${unmarked.length} 处漏标（正文宣称取代但首部未回标），请补标首部状态行。`);
+      console.error(
+        `\n⚠️ 存在 ${unmarked.length} 处漏标（正文宣称取代但首部未回标），请补标首部状态行。`,
+      );
     }
     process.exit(1);
   }

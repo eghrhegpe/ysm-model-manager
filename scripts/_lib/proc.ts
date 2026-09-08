@@ -13,7 +13,7 @@
  *   const r = run('git', ['status', '--short'], { cwd: ROOT });
  *   const hits = runSafe('rg', [...], { cwd: ROOT });
  */
-import { execFileSync, type ExecFileSyncOptions, type StdioOptions } from 'node:child_process';
+import { type ExecFileSyncOptions, execFileSync, type StdioOptions } from "node:child_process";
 
 /** 默认超时：30s（长任务显式覆盖）。 */
 export const DEFAULT_TIMEOUT = 30_000;
@@ -65,7 +65,7 @@ export function run(
     mergeStderr?: boolean;
   } = {},
 ): ProcResult {
-  const o: ExecFileSyncOptions = { cwd, encoding: 'utf-8', timeout, maxBuffer };
+  const o: ExecFileSyncOptions = { cwd, encoding: "utf-8", timeout, maxBuffer };
   // 显式 shell:true 时按平台选 shell（win32 自动 cmd.exe / POSIX 自动 /bin/sh），
   // 承载管道/重定向命令（pre-push-gate sh()）；默认无 shell，避免 cmd.exe 找不到
   // Git Bash 工具（doctor run() 实证）与 `2>/dev/null` 类 POSIX 重定向被 cmd.exe 误解析
@@ -76,21 +76,27 @@ export function run(
   if (stdio) o.stdio = stdio;
   try {
     const stdout = execFileSync(bin, args, o);
-    return { ok: true, rc: 0, out: (stdio && stdio !== 'pipe') ? '' : String(stdout) };
+    return { ok: true, rc: 0, out: stdio && stdio !== "pipe" ? "" : String(stdout) };
   } catch (e: unknown) {
-    const err = e as Error & { status?: number; code?: string; killed?: boolean; stdout?: string | Buffer; stderr?: string | Buffer };
-    if (err.code === 'ENOENT') {
-      return { ok: false, rc: -1, out: '', err: `command not found: ${bin}` };
+    const err = e as Error & {
+      status?: number;
+      code?: string;
+      killed?: boolean;
+      stdout?: string | Buffer;
+      stderr?: string | Buffer;
+    };
+    if (err.code === "ENOENT") {
+      return { ok: false, rc: -1, out: "", err: `command not found: ${bin}` };
     }
     // mergeStderr=false：失败时 out 仅 stdout（JSON 消费方语义，perf-gate/gui-flow-gate
     // 需要 stdout-only 的 JSON 响应，stderr 多为 watcher/编译噪音会污染 JSON.parse）
     const out = mergeStderr
-      ? String(String(err.stdout || '') + String(err.stderr || ''))
-      : String(err.stdout || '');
-    const stderrText = mergeStderr ? '' : String(err.stderr || '');
+      ? String(String(err.stdout || "") + String(err.stderr || ""))
+      : String(err.stdout || "");
+    const stderrText = mergeStderr ? "" : String(err.stderr || "");
     // 超时判定：POSIX 抛 e.killed=true；Windows 抛 code='ETIMEDOUT'
-    if (err.killed || err.code === 'ETIMEDOUT') {
-      const timeoutMsg = `command timed out after ${timeout}ms: ${bin} ${args.join(' ')}`;
+    if (err.killed || err.code === "ETIMEDOUT") {
+      const timeoutMsg = `command timed out after ${timeout}ms: ${bin} ${args.join(" ")}`;
       return {
         ok: false,
         rc: -2,
@@ -101,7 +107,7 @@ export function run(
     if (err.status === 1 && allowExit1) {
       return { ok: true, rc: 1, out };
     }
-    const errMsg = `${bin} 执行失败（rc=${err.status ?? 'unknown'}）`;
+    const errMsg = `${bin} 执行失败（rc=${err.status ?? "unknown"}）`;
     return {
       ok: false,
       rc: err.status ?? -1,
@@ -117,13 +123,13 @@ export function run(
 export function runSafe(bin: string, args: string[], opts?: Parameters<typeof run>[2]): string {
   const r = run(bin, args, opts);
   if (r.ok) return r.out;
-  console.error(`[warn] ${bin} 执行跳过（${r.err || '未知失败'}）`);
-  return '';
+  console.error(`[warn] ${bin} 执行跳过（${r.err || "未知失败"}）`);
+  return "";
 }
 
 /** Windows 兼容的文件名转义（cmd.exe 双引号包裹；POSIX 用单引号）。 */
 export function shq(s: string): string {
   const str = String(s);
-  if (process.platform === 'win32') return `"${str.replace(/"/g, '""')}"`;
+  if (process.platform === "win32") return `"${str.replace(/"/g, '""')}"`;
   return `'${str.replace(/'/g, `'\\''`)}'`;
 }

@@ -23,29 +23,39 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { run } from "./_lib/proc.ts";
 import { getRoot } from "./_lib/scan-files.ts";
-import { run } from './_lib/proc.ts';
 
 const ROOT = getRoot();
-const SRC = path.join(ROOT, "frontend/src");
+const _SRC = path.join(ROOT, "frontend/src");
 
 const MAP = {
-  1500: "quick", 2000: "success", 2500: "info", 3000: "normal",
-  4000: "verbose", 5000: "long", 10000: "persist", 60000: "sticky",
+  1500: "quick",
+  2000: "success",
+  2500: "info",
+  3000: "normal",
+  4000: "verbose",
+  5000: "long",
+  10000: "persist",
+  60000: "sticky",
 };
 
 const reEmit = /bus\.emit\(\s*"toast:show"[\s\S]{0,1200}?duration:\s*(\d+)/g;
-const reHelper = /(?<![\w.$])toast\(\s*([\s\S]+?)\s*,\s*(\d+)(?:\s*,\s*((?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^`])*`|[\w.$]+)))?\)/g;
+const reHelper =
+  /(?<![\w.$])toast\(\s*([\s\S]+?)\s*,\s*(\d+)(?:\s*,\s*((?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^`])*`|[\w.$]+)))?\)/g;
 
-let files;
+let files: string[];
 const jsonOut = process.argv.includes("--json");
-const r = run('git', ['-C', ROOT, 'ls-files', 'frontend/src'], {});
+const r = run("git", ["-C", ROOT, "ls-files", "frontend/src"], {});
 if (!r.ok) {
-  if (jsonOut) console.log(JSON.stringify({ _summary: { ok: true, violations: 0, skipped: true } }));
+  if (jsonOut)
+    console.log(JSON.stringify({ _summary: { ok: true, violations: 0, skipped: true } }));
   else console.log("[WARN] check-toast-duration: 无法列举 frontend/src，跳过");
   process.exit(0);
 }
-files = r.out.split("\n").filter(Boolean)
+files = r.out
+  .split("\n")
+  .filter(Boolean)
   .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
   .map((f) => path.join(ROOT, f));
 
@@ -54,13 +64,17 @@ for (const file of files) {
   const src = readFileSync(file, "utf8");
   const scan = (re: RegExp, kind: string) => {
     re.lastIndex = 0;
-    let m;
-    while ((m = re.exec(src))) {
+    // re 是共享 /g 正则（scan 两次复用不同 src），保留手动 exec 推进而非 matchAll
+    let m: RegExpExecArray | null = re.exec(src);
+    while (m !== null) {
       const n = m[1]!;
       const key = (MAP as Record<string, string>)[n];
-      if (!key) continue; // 不在档位表的裸数字（如未来新增档位前）——跳过，避免误报
-      const line = src.slice(0, m.index).split("\n").length;
-      violations.push({ file: path.relative(ROOT, file), line, n, key, kind });
+      if (key) {
+        // 不在档位表的裸数字（如未来新增档位前）——跳过 push，避免误报
+        const line = src.slice(0, m.index).split("\n").length;
+        violations.push({ file: path.relative(ROOT, file), line, n, key, kind });
+      }
+      m = re.exec(src);
     }
   };
   scan(reEmit, "toast:show");
@@ -74,9 +88,13 @@ if (violations.length === 0) {
 }
 
 if (jsonOut) {
-  console.log(JSON.stringify({ _summary: { ok: true, violations: violations.length }, violations }));
+  console.log(
+    JSON.stringify({ _summary: { ok: true, violations: violations.length }, violations }),
+  );
 } else {
-  console.log(`[WARN] check-toast-duration: 发现 ${violations.length} 处 toast 裸时长（违反 R7 单一事实源）`);
+  console.log(
+    `[WARN] check-toast-duration: 发现 ${violations.length} 处 toast 裸时长（违反 R7 单一事实源）`,
+  );
   for (const v of violations) {
     console.log(`  ${v.file}:${v.line}  ${v.kind} 裸 duration: ${v.n} → 应改为 TOAST_MS.${v.key}`);
   }

@@ -24,9 +24,9 @@
  * 依赖：零三方；仅 node 内置 + 上述 _lib 模块。
  */
 
-import { run } from './proc.ts';
-import { classify, type Domain } from './domain-classify.ts';
-import { selectContractTests, runContractTestsParallel } from './contract-tests.ts';
+import { runContractTestsParallel, selectContractTests } from "./contract-tests.ts";
+import { classify, type Domain } from "./domain-classify.ts";
+import { run } from "./proc.ts";
 
 const ROOT = process.cwd();
 const TIMEOUT = 120_000;
@@ -71,30 +71,37 @@ export async function runCommitChecks(
     if (!item.ok) blocked = true;
   };
 
-  const joined = files.join('\n');
+  const joined = files.join("\n");
 
   /* --- 1. 红线合规（按 --files 裁剪，仅查变更文件内新增违规）--- */
   {
     const t0 = Date.now();
-    const r = runFn(process.execPath, ['scripts/check-redlines.ts', '--json', '--baseline', '--files', joined], {
-      cwd: ROOT,
-      shell: false,
-      timeout: TIMEOUT,
-    });
+    const r = runFn(
+      process.execPath,
+      ["scripts/check-redlines.ts", "--json", "--baseline", "--files", joined],
+      {
+        cwd: ROOT,
+        shell: false,
+        timeout: TIMEOUT,
+      },
+    );
     let ok = false;
     let scanHealthy = false;
-    let note = '';
+    let note = "";
     try {
-      const s = JSON.parse(r.out || r.err || '{}')._summary || {};
+      const s = JSON.parse(r.out || r.err || "{}")._summary || {};
       ok = s.ok === true;
       // 扫描健康门（fail-closed）：rg 缺失/执行失败时 scanHealthy=false → 必须阻断
       scanHealthy = s.scanHealthy === true;
       const nv = s.newViolations ?? null;
-      note = nv === null ? '输出解析失败（rg 不可用？）' : `新增违规 ${nv}（基线 ${s.baselineViolations ?? 0}）`;
+      note =
+        nv === null
+          ? "输出解析失败（rg 不可用？）"
+          : `新增违规 ${nv}（基线 ${s.baselineViolations ?? 0}）`;
     } catch {
       ok = false;
       scanHealthy = false;
-      note = '输出解析失败（非 JSON）';
+      note = "输出解析失败（非 JSON）";
     }
     // 阻断语义（fail-closed 合取，2026-09-02 code_review P1 修复）：
     //   ok=false（变更文件内存在新增红线违规或基线缺失）→ 必须阻断；
@@ -103,7 +110,7 @@ export async function runCommitChecks(
     // 原 `ok || scanHealthy` 在「扫描健康 + 有新增违规」时恒放行，红线检查形同虚设。
     const pass = ok && scanHealthy;
     record({
-      label: '红线合规',
+      label: "红线合规",
       ok: pass,
       time: Date.now() - t0,
       note,
@@ -112,31 +119,31 @@ export async function runCommitChecks(
   }
 
   /* --- 2. 文档/知识卡漂移（仅当变更含 docs/.md 时跑，避免无关提交空转）--- */
-  const hasDocs = files.some((f) => f.startsWith('docs/') || f.endsWith('.md'));
+  const hasDocs = files.some((f) => f.startsWith("docs/") || f.endsWith(".md"));
   if (hasDocs) {
-    for (const tool of ['check-doc-drift.ts', 'check-knowledge-drift.ts'] as const) {
+    for (const tool of ["check-doc-drift.ts", "check-knowledge-drift.ts"] as const) {
       const t0 = Date.now();
-      const r = runFn(process.execPath, ['scripts/' + tool, '--json', '--files', joined], {
+      const r = runFn(process.execPath, [`scripts/${tool}`, "--json", "--files", joined], {
         cwd: ROOT,
         shell: false,
         timeout: TIMEOUT,
       });
       let ok = true;
-      let note = '';
+      let note = "";
       try {
-        const parsed = JSON.parse(r.out || r.err || '{}');
+        const parsed = JSON.parse(r.out || r.err || "{}");
         const s = parsed._summary || parsed;
-        if (typeof s.ok === 'boolean') ok = s.ok;
-        else if (typeof s.errors === 'number') ok = s.errors === 0;
+        if (typeof s.ok === "boolean") ok = s.ok;
+        else if (typeof s.errors === "number") ok = s.errors === 0;
         else {
           // 缺 ok/errors 双键 = summary 契约缺失，fail-closed（code_review P3 加固：
           // 未来 drift 工具改名 summary key 时不得静默放行）
           ok = false;
         }
-        note = `errors=${s.errors ?? '?'} warns=${s.warns ?? '?'}`;
+        note = `errors=${s.errors ?? "?"} warns=${s.warns ?? "?"}`;
       } catch {
         ok = false;
-        note = '输出解析失败（非 JSON）';
+        note = "输出解析失败（非 JSON）";
       }
       record({ label: tool, ok, time: Date.now() - t0, note });
     }
@@ -150,13 +157,16 @@ export async function runCommitChecks(
       const t0 = Date.now();
       const tests = await runTestsFn(selected);
       const ok = tests.length === 0 || tests.every((t) => t.ok);
-      const failed = tests.filter((t) => !t.ok).map((t) => `${t.name}\n${t.out}`).join('\n');
+      const failed = tests
+        .filter((t) => !t.ok)
+        .map((t) => `${t.name}\n${t.out}`)
+        .join("\n");
       record({
         label: `契约测试（${tests.length}）`,
         ok,
         time: Date.now() - t0,
-        note: ok ? '全部通过' : failed.slice(0, 400),
-        tail: ok ? '' : failed,
+        note: ok ? "全部通过" : failed.slice(0, 400),
+        tail: ok ? "" : failed,
       });
     }
   }

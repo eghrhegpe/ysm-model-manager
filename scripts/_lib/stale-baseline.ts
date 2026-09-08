@@ -25,7 +25,7 @@ export const STALE_DAYS = 30;
 export function checkStale(generatedISO: string | undefined, label: string): string | null {
   if (!generatedISO) return null;
   const ts = new Date(generatedISO).getTime();
-  if (isNaN(ts)) return null;
+  if (Number.isNaN(ts)) return null;
   const days = (Date.now() - ts) / 86_400_000;
   if (days > STALE_DAYS) {
     return `⚠️  ${label} baseline 已 ${Math.round(days)} 天未刷新（阈值 ${STALE_DAYS} 天），门禁容忍度可能过时。运行 --update-baseline 更新。`;

@@ -21,8 +21,13 @@
  *   cycles：每条为环上的节点顺序链（[a,b]，a 在栈中，首尾相接成环）；
  *   truncated：是否因达到 maxCycles 而截断（区别于「恰好枚举完」）。
  */
-export function findCycles(graph: Map<string, string[]>, maxCycles = 100): { cycles: string[][]; truncated: boolean } {
-  const WHITE = 0, GRAY = 1, BLACK = 2;
+export function findCycles(
+  graph: Map<string, string[]>,
+  maxCycles = 100,
+): { cycles: string[][]; truncated: boolean } {
+  const WHITE = 0,
+    GRAY = 1,
+    BLACK = 2;
   const color = new Map<string, number>();
   const stack: string[] = [];
   const cycles = new Map<string, string[]>(); // key（排序去重）→ 原始顺序环链
@@ -34,14 +39,17 @@ export function findCycles(graph: Map<string, string[]>, maxCycles = 100): { cyc
     for (const next of graph.get(node) || []) {
       const c = color.get(next) ?? WHITE;
       if (c === WHITE) {
-        if (cycles.size >= maxCycles) { truncated = true; continue; }
+        if (cycles.size >= maxCycles) {
+          truncated = true;
+          continue;
+        }
         dfs(next);
       } else if (c === GRAY) {
         // 找到环：stack 中 next 位置截取，去掉首尾重复（next 即栈内起点）
         const start = stack.indexOf(next);
         if (start < 0) continue; // 防御：颜色残留兜底（正常流程 GRAY 必在栈内）
         const display = stack.slice(start); // [a, b]（a 在栈中）
-        const key = [...display].sort().join('→');
+        const key = [...display].sort().join("→");
         cycles.set(key, display);
         if (cycles.size >= maxCycles) truncated = true; // 枚举上限，防稠密环区指数爆炸
       }

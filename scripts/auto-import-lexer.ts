@@ -17,56 +17,264 @@
 
 export const KEYWORDS = new Set([
   // 控制流/声明
-  'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default',
-  'delete', 'do', 'else', 'enum', 'export', 'extends', 'false', 'finally', 'for',
-  'function', 'if', 'import', 'in', 'instanceof', 'new', 'null', 'return', 'super',
-  'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with',
-  'yield', 'let', 'static', 'await', 'async', 'of', 'from', 'as', 'satisfies',
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "enum",
+  "export",
+  "extends",
+  "false",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "null",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "true",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
+  "let",
+  "static",
+  "await",
+  "async",
+  "of",
+  "from",
+  "as",
+  "satisfies",
   // TS 专用
-  'type', 'interface', 'implements', 'declare', 'readonly', 'keyof', 'infer', 'is',
-  'namespace', 'module', 'require', 'get', 'set', 'public', 'private', 'protected',
-  'abstract', 'any', 'unknown', 'never', 'string', 'number', 'boolean', 'symbol',
-  'bigint', 'object', 'undefined', 'asserts', 'unique', 'out', 'override', 'accessor',
-  'using', 'intrinsic',
+  "type",
+  "interface",
+  "implements",
+  "declare",
+  "readonly",
+  "keyof",
+  "infer",
+  "is",
+  "namespace",
+  "module",
+  "require",
+  "get",
+  "set",
+  "public",
+  "private",
+  "protected",
+  "abstract",
+  "any",
+  "unknown",
+  "never",
+  "string",
+  "number",
+  "boolean",
+  "symbol",
+  "bigint",
+  "object",
+  "undefined",
+  "asserts",
+  "unique",
+  "out",
+  "override",
+  "accessor",
+  "using",
+  "intrinsic",
 ]);
 
 export const GLOBALS = new Set([
   // 浏览器环境
-  'window', 'document', 'console', 'navigator', 'localStorage', 'sessionStorage',
-  'location', 'history', 'screen', 'fetch', 'setTimeout', 'clearTimeout',
-  'setInterval', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame',
-  'queueMicrotask', 'structuredClone', 'performance', 'crypto', 'atob', 'btoa',
-  'alert', 'confirm', 'prompt', 'getComputedStyle', 'getSelection', 'customElements',
-  'self', 'globalThis', 'requestIdleCallback', 'cancelIdleCallback',
+  "window",
+  "document",
+  "console",
+  "navigator",
+  "localStorage",
+  "sessionStorage",
+  "location",
+  "history",
+  "screen",
+  "fetch",
+  "setTimeout",
+  "clearTimeout",
+  "setInterval",
+  "clearInterval",
+  "requestAnimationFrame",
+  "cancelAnimationFrame",
+  "queueMicrotask",
+  "structuredClone",
+  "performance",
+  "crypto",
+  "atob",
+  "btoa",
+  "alert",
+  "confirm",
+  "prompt",
+  "getComputedStyle",
+  "getSelection",
+  "customElements",
+  "self",
+  "globalThis",
+  "requestIdleCallback",
+  "cancelIdleCallback",
   // JS 内置
-  'Promise', 'Map', 'Set', 'WeakMap', 'WeakSet', 'Symbol', 'BigInt', 'Number',
-  'String', 'Boolean', 'Array', 'Object', 'Function', 'Date', 'Math', 'JSON',
-  'RegExp', 'Error', 'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError',
-  'EvalError', 'URIError', 'AggregateError', 'parseInt', 'parseFloat', 'isNaN',
-  'isFinite', 'encodeURIComponent', 'decodeURIComponent', 'encodeURI', 'decodeURI',
-  'eval', 'NaN', 'Infinity', 'Reflect', 'Proxy', 'WeakRef', 'FinalizationRegistry',
-  'Intl', 'TextEncoder', 'TextDecoder', 'AbortController', 'AbortSignal', 'URL',
-  'URLSearchParams', 'Blob', 'File', 'FileReader', 'FormData', 'Headers', 'Request',
-  'Response', 'WebSocket', 'EventSource', 'atomics', 'structuredClone',
+  "Promise",
+  "Map",
+  "Set",
+  "WeakMap",
+  "WeakSet",
+  "Symbol",
+  "BigInt",
+  "Number",
+  "String",
+  "Boolean",
+  "Array",
+  "Object",
+  "Function",
+  "Date",
+  "Math",
+  "JSON",
+  "RegExp",
+  "Error",
+  "TypeError",
+  "RangeError",
+  "SyntaxError",
+  "ReferenceError",
+  "EvalError",
+  "URIError",
+  "AggregateError",
+  "parseInt",
+  "parseFloat",
+  "isNaN",
+  "isFinite",
+  "encodeURIComponent",
+  "decodeURIComponent",
+  "encodeURI",
+  "decodeURI",
+  "eval",
+  "NaN",
+  "Infinity",
+  "Reflect",
+  "Proxy",
+  "WeakRef",
+  "FinalizationRegistry",
+  "Intl",
+  "TextEncoder",
+  "TextDecoder",
+  "AbortController",
+  "AbortSignal",
+  "URL",
+  "URLSearchParams",
+  "Blob",
+  "File",
+  "FileReader",
+  "FormData",
+  "Headers",
+  "Request",
+  "Response",
+  "WebSocket",
+  "EventSource",
+  "atomics",
+  "structuredClone",
   // DOM/事件
-  'HTMLElement', 'Element', 'Node', 'Text', 'Comment', 'DocumentFragment',
-  'ShadowRoot', 'Document', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent',
-  'TouchEvent', 'WheelEvent', 'FocusEvent', 'InputEvent', 'DragEvent',
-  'ClipboardEvent', 'PointerEvent', 'UIEvent', 'TransitionEvent', 'AnimationEvent',
-  'MessageEvent', 'PopStateEvent', 'ErrorEvent', 'BeforeUnloadEvent',
-  'HTMLInputElement', 'HTMLButtonElement', 'HTMLDivElement', 'HTMLSpanElement',
-  'HTMLSelectElement', 'HTMLTextAreaElement', 'HTMLImageElement', 'HTMLCanvasElement',
-  'HTMLAnchorElement', 'HTMLFormElement', 'HTMLLabelElement', 'HTMLUListElement',
-  'HTMLLIElement', 'HTMLTableElement', 'HTMLTableRowElement', 'HTMLTableCellElement',
-  'HTMLOptionElement', 'HTMLDialogElement', 'HTMLVideoElement', 'HTMLAudioElement',
-  'HTMLIFrameElement', 'SVGElement', 'Path2D', 'CanvasRenderingContext2D',
-  'OffscreenCanvas', 'Image', 'ImageData', 'DOMParser', 'XMLSerializer',
-  'MutationObserver', 'IntersectionObserver', 'ResizeObserver', 'PerformanceObserver',
+  "HTMLElement",
+  "Element",
+  "Node",
+  "Text",
+  "Comment",
+  "DocumentFragment",
+  "ShadowRoot",
+  "Document",
+  "CustomEvent",
+  "Event",
+  "MouseEvent",
+  "KeyboardEvent",
+  "TouchEvent",
+  "WheelEvent",
+  "FocusEvent",
+  "InputEvent",
+  "DragEvent",
+  "ClipboardEvent",
+  "PointerEvent",
+  "UIEvent",
+  "TransitionEvent",
+  "AnimationEvent",
+  "MessageEvent",
+  "PopStateEvent",
+  "ErrorEvent",
+  "BeforeUnloadEvent",
+  "HTMLInputElement",
+  "HTMLButtonElement",
+  "HTMLDivElement",
+  "HTMLSpanElement",
+  "HTMLSelectElement",
+  "HTMLTextAreaElement",
+  "HTMLImageElement",
+  "HTMLCanvasElement",
+  "HTMLAnchorElement",
+  "HTMLFormElement",
+  "HTMLLabelElement",
+  "HTMLUListElement",
+  "HTMLLIElement",
+  "HTMLTableElement",
+  "HTMLTableRowElement",
+  "HTMLTableCellElement",
+  "HTMLOptionElement",
+  "HTMLDialogElement",
+  "HTMLVideoElement",
+  "HTMLAudioElement",
+  "HTMLIFrameElement",
+  "SVGElement",
+  "Path2D",
+  "CanvasRenderingContext2D",
+  "OffscreenCanvas",
+  "Image",
+  "ImageData",
+  "DOMParser",
+  "XMLSerializer",
+  "MutationObserver",
+  "IntersectionObserver",
+  "ResizeObserver",
+  "PerformanceObserver",
   // TS lib 工具类型
-  'Partial', 'Required', 'Readonly', 'Pick', 'Omit', 'Exclude', 'Extract',
-  'NonNullable', 'Parameters', 'ReturnType', 'ConstructorParameters',
-  'InstanceType', 'ThisType', 'Record', 'ArrayLike', 'ReadonlyArray', 'PromiseLike',
-  'Iterable', 'Iterator', 'AsyncIterable', 'AsyncIterator', 'Generator',
+  "Partial",
+  "Required",
+  "Readonly",
+  "Pick",
+  "Omit",
+  "Exclude",
+  "Extract",
+  "NonNullable",
+  "Parameters",
+  "ReturnType",
+  "ConstructorParameters",
+  "InstanceType",
+  "ThisType",
+  "Record",
+  "ArrayLike",
+  "ReadonlyArray",
+  "PromiseLike",
+  "Iterable",
+  "Iterator",
+  "AsyncIterable",
+  "AsyncIterator",
+  "Generator",
 ]);
 
 // ── 词法剥离 + 标识符收集 ───────────────────────────
@@ -81,43 +289,43 @@ export function tokenize(text: string) {
   // 用 split('') 而非 [...text]：前者按 UTF-16 code unit 拆分，与下方 text.slice()/
   // split('\n') 的行号计算坐标一致；后者按 code point（emoji 占 1 元素）拆分，
   // 会导致含 emoji 的文件（如 toast 文案 📦）token 名/行号整体错位（误报缺失 import）。
-  const chars = text.split('');
+  const chars = text.split("");
   const stripped = [...chars]; // 逐字符置空格，保留长度与换行
   const tokens: { name: string; start: number; line: number }[] = [];
   let i = 0;
   const n = chars.length;
 
   // 正则字面量识别：`/` 前一个非空白字符属于这些时，视为正则开头
-  const REGEX_PRECEDERS = new Set(['(', '=', ':', ',', '!', '&', '|', '?', '{', ';', '[']);
+  const REGEX_PRECEDERS = new Set(["(", "=", ":", ",", "!", "&", "|", "?", "{", ";", "["]);
 
   const backChar = (idx: number) => {
     let j = idx - 1;
     while (j >= 0 && /\s/.test(chars[j]!)) j--;
-    return j >= 0 ? chars[j]! : '';
+    return j >= 0 ? chars[j]! : "";
   };
 
   while (i < n) {
     const c = chars[i]!;
     // 行注释
-    if (c === '/' && chars[i + 1] === '/') {
-      while (i < n && chars[i] !== '\n') {
-        stripped[i] = ' ';
+    if (c === "/" && chars[i + 1] === "/") {
+      while (i < n && chars[i] !== "\n") {
+        stripped[i] = " ";
         i++;
       }
       continue;
     }
     // 块注释
-    if (c === '/' && chars[i + 1] === '*') {
-      stripped[i] = ' ';
-      stripped[i + 1] = ' ';
+    if (c === "/" && chars[i + 1] === "*") {
+      stripped[i] = " ";
+      stripped[i + 1] = " ";
       i += 2;
-      while (i < n && !(chars[i] === '*' && chars[i + 1] === '/')) {
-        stripped[i] = ' ';
+      while (i < n && !(chars[i] === "*" && chars[i + 1] === "/")) {
+        stripped[i] = " ";
         i++;
       }
       if (i < n) {
-        stripped[i] = ' ';
-        stripped[i + 1] = ' ';
+        stripped[i] = " ";
+        stripped[i + 1] = " ";
         i += 2;
       }
       continue;
@@ -125,48 +333,48 @@ export function tokenize(text: string) {
     // 字符串字面量
     if (c === "'" || c === '"') {
       const q = c;
-      stripped[i] = ' ';
+      stripped[i] = " ";
       i++;
       while (i < n) {
-        if (chars[i] === '\\') {
-          stripped[i] = ' ';
-          if (i + 1 < n) stripped[i + 1] = ' ';
+        if (chars[i] === "\\") {
+          stripped[i] = " ";
+          if (i + 1 < n) stripped[i + 1] = " ";
           i += 2;
           continue;
         }
         if (chars[i] === q) {
-          stripped[i] = ' ';
+          stripped[i] = " ";
           i++;
           break;
         }
-        stripped[i] = ' ';
+        stripped[i] = " ";
         i++;
       }
       continue;
     }
     // 模板字面量（整体剥离，插值 ${} 不分析——已知局限）
-    if (c === '`') {
-      stripped[i] = ' ';
+    if (c === "`") {
+      stripped[i] = " ";
       i++;
       while (i < n) {
-        if (chars[i] === '\\') {
-          stripped[i] = ' ';
-          if (i + 1 < n) stripped[i + 1] = ' ';
+        if (chars[i] === "\\") {
+          stripped[i] = " ";
+          if (i + 1 < n) stripped[i + 1] = " ";
           i += 2;
           continue;
         }
-        if (chars[i] === '`') {
-          stripped[i] = ' ';
+        if (chars[i] === "`") {
+          stripped[i] = " ";
           i++;
           break;
         }
-        stripped[i] = ' ';
+        stripped[i] = " ";
         i++;
       }
       continue;
     }
     // 正则字面量（启发式：前导符为 = ( : , ! & | ? { ; [ 时可能）
-    if (c === '/' && chars[i + 1] !== '/' && chars[i + 1] !== '*') {
+    if (c === "/" && chars[i + 1] !== "/" && chars[i + 1] !== "*") {
       const prev = backChar(i);
       if (REGEX_PRECEDERS.has(prev)) {
         // 先探测闭合：从 i+1 起找未被转义的 `/`（处理 \\ 转义与字符类 [...] 内的 `/`），
@@ -177,21 +385,21 @@ export function tokenize(text: string) {
         let probeClosed = false;
         let inClass = false;
         while (probe < n) {
-          if (chars[probe] === '\\') {
+          if (chars[probe] === "\\") {
             probe += 2;
             continue;
           }
-          if (!inClass && chars[probe] === '[') {
+          if (!inClass && chars[probe] === "[") {
             inClass = true;
             probe++;
             continue;
           }
-          if (inClass && chars[probe] === ']') {
+          if (inClass && chars[probe] === "]") {
             inClass = false;
             probe++;
             continue;
           }
-          if (!inClass && chars[probe] === '/') {
+          if (!inClass && chars[probe] === "/") {
             probeClosed = true;
             break;
           }
@@ -201,42 +409,42 @@ export function tokenize(text: string) {
           i++; // 判定失败，退回普通字符，外层循环继续
           continue;
         }
-        stripped[i] = ' ';
+        stripped[i] = " ";
         i++;
-        let closed = false;
+        let _closed = false;
         while (i < n) {
-          if (chars[i] === '\\') {
-            stripped[i] = ' ';
-            if (i + 1 < n) stripped[i + 1] = ' ';
+          if (chars[i] === "\\") {
+            stripped[i] = " ";
+            if (i + 1 < n) stripped[i + 1] = " ";
             i += 2;
             continue;
           }
-          if (!inClass && chars[i] === '[') {
+          if (!inClass && chars[i] === "[") {
             // 2026-08-17 修复：与 probe 阶段同口径——字符类 [...] 内的 `/` 不是闭合符，
             // 否则 `/[\\/:*?"<>|]/` 提前闭合污染后续字符串剥离（web-fs.ts "toast:show" 误判）
             inClass = true;
-            stripped[i] = ' ';
+            stripped[i] = " ";
             i++;
             continue;
           }
-          if (inClass && chars[i] === ']') {
+          if (inClass && chars[i] === "]") {
             inClass = false;
-            stripped[i] = ' ';
+            stripped[i] = " ";
             i++;
             continue;
           }
-          if (!inClass && chars[i] === '/') {
-            stripped[i] = ' ';
+          if (!inClass && chars[i] === "/") {
+            stripped[i] = " ";
             i++;
             // 吞 flags
             while (i < n && /[a-z]/i.test(chars[i]!)) {
-              stripped[i] = ' ';
+              stripped[i] = " ";
               i++;
             }
-            closed = true;
+            _closed = true;
             break;
           }
-          stripped[i] = ' ';
+          stripped[i] = " ";
           i++;
         }
         continue;
@@ -249,11 +457,11 @@ export function tokenize(text: string) {
       const start = i;
       while (i < n && /[A-Za-z0-9_$]/.test(chars[i]!)) i++;
       const name = text.slice(start, i);
-      const line = text.slice(0, start).split('\n').length;
+      const line = text.slice(0, start).split("\n").length;
       tokens.push({ name, start, line });
       continue;
     }
     i++;
   }
-  return { stripped: stripped.join(''), tokens };
+  return { stripped: stripped.join(""), tokens };
 }

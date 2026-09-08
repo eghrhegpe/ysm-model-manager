@@ -32,7 +32,13 @@ function decodePng(buf: Buffer) {
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   if (!buf.subarray(0, 8).equals(sig)) throw new Error("非 PNG");
   let pos = 8;
-  let ihdr: { width: number; height: number; bitDepth: number; colorType: number; interlace: number } | null = null;
+  let ihdr: {
+    width: number;
+    height: number;
+    bitDepth: number;
+    colorType: number;
+    interlace: number;
+  } | null = null;
   const idat: Buffer[] = [];
   const palette: Buffer[] = [];
   let trns: Buffer | null = null;
@@ -80,7 +86,9 @@ function decodePng(buf: Buffer) {
       else if (filter === 3) v += (a + b) >> 1;
       else if (filter === 4) {
         const p = a + b - c;
-        const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+        const pa = Math.abs(p - a),
+          pb = Math.abs(p - b),
+          pc = Math.abs(p - c);
         v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
       }
       cur[x] = v & 0xff;
@@ -89,14 +97,22 @@ function decodePng(buf: Buffer) {
       const o = (y * width + x) * 4;
       if (colorType === 6) out.set(cur.subarray(x * 4, x * 4 + 4), o);
       else if (colorType === 2) {
-        out[o] = cur[x * 3]!; out[o + 1] = cur[x * 3 + 1]!; out[o + 2] = cur[x * 3 + 2]!; out[o + 3] = 255;
+        out[o] = cur[x * 3]!;
+        out[o + 1] = cur[x * 3 + 1]!;
+        out[o + 2] = cur[x * 3 + 2]!;
+        out[o + 3] = 255;
       } else if (colorType === 4) {
-        out[o] = out[o + 1] = out[o + 2] = cur[x * 2]!; out[o + 3] = cur[x * 2 + 1]!;
+        out[o] = out[o + 1] = out[o + 2] = cur[x * 2]!;
+        out[o + 3] = cur[x * 2 + 1]!;
       } else if (colorType === 0) {
-        out[o] = out[o + 1] = out[o + 2] = cur[x]!; out[o + 3] = 255;
+        out[o] = out[o + 1] = out[o + 2] = cur[x]!;
+        out[o + 3] = 255;
       } else if (colorType === 3) {
         const idx = cur[x]!;
-        out[o] = pal![idx * 3]!; out[o + 1] = pal![idx * 3 + 1]!; out[o + 2] = pal![idx * 3 + 2]!;
+        const palBytes = pal ?? new Uint8Array(3); // 缺 PLTE 时降级为黑色索引（与原 pal?.[…]! 的 undefined 写入等价的安全兜底）
+        out[o] = palBytes[idx * 3] ?? 0;
+        out[o + 1] = palBytes[idx * 3 + 1] ?? 0;
+        out[o + 2] = palBytes[idx * 3 + 2] ?? 0;
         out[o + 3] = trns && idx < trns.length ? trns[idx]! : 255;
       }
     }
@@ -108,7 +124,9 @@ function decodePng(buf: Buffer) {
 // ---------- AlphaIndex：像素 flags + 8×8 tile + 前缀和区域查询 ----------
 
 const TILE = 8;
-const F_VISIBLE = 1, F_HOLE = 2, F_TRANSLUCENT = 4;
+const F_VISIBLE = 1,
+  F_HOLE = 2,
+  F_TRANSLUCENT = 4;
 
 function flagsForAlpha(a: number) {
   if (a === 255) return F_VISIBLE;
@@ -135,25 +153,34 @@ class AlphaIndex {
       for (let x = 0; x < this.width; x++) {
         const f = flagsForAlpha(px[(y * this.width + x) * 4 + 3]!);
         const cell = (Math.floor(y / TILE) + 1) * this.stride + (Math.floor(x / TILE) + 1);
-        this.grids[f]![cell] = this.grids[f]![cell]! + 1;
+        const grid = this.grids[f];
+        if (!grid) continue; // 理论不可达：f 只能是三张预建网格之一
+        grid[cell] = (grid[cell] ?? 0) + 1;
       }
     }
     for (const g of Object.values(this.grids)) {
       for (let ty = 1; ty < rows + 1; ty++)
         for (let tx = 1; tx < cols + 1; tx++)
-          g[ty * this.stride + tx]! += g[(ty - 1) * this.stride + tx]! + g[ty * this.stride + tx - 1]! - g[(ty - 1) * this.stride + tx - 1]!;
+          g[ty * this.stride + tx]! +=
+            g[(ty - 1) * this.stride + tx]! +
+            g[ty * this.stride + tx - 1]! -
+            g[(ty - 1) * this.stride + tx - 1]!;
     }
   }
 
   /** 查询像素矩形 [x0..x1]×[y0..y1] 内各 flags 是否出现 */
   query(x0: number, y0: number, x1: number, y1: number) {
-    const t0x = Math.floor(Math.max(0, x0) / TILE), t1x = Math.floor(Math.min(this.width - 1, x1) / TILE);
-    const t0y = Math.floor(Math.max(0, y0) / TILE), t1y = Math.floor(Math.min(this.height - 1, y1) / TILE);
+    const t0x = Math.floor(Math.max(0, x0) / TILE),
+      t1x = Math.floor(Math.min(this.width - 1, x1) / TILE);
+    const t0y = Math.floor(Math.max(0, y0) / TILE),
+      t1y = Math.floor(Math.min(this.height - 1, y1) / TILE);
     let flags = 0;
     for (const [f, g] of Object.entries(this.grids)) {
       const n =
-        g[(t1y + 1) * this.stride + (t1x + 1)]! - g[t0y * this.stride + (t1x + 1)]! -
-        g[(t1y + 1) * this.stride + t0x]! + g[t0y * this.stride + t0x]!;
+        g[(t1y + 1) * this.stride + (t1x + 1)]! -
+        g[t0y * this.stride + (t1x + 1)]! -
+        g[(t1y + 1) * this.stride + t0x]! +
+        g[t0y * this.stride + t0x]!;
       if (n > 0) flags |= Number(f);
     }
     return flags;
@@ -199,8 +226,14 @@ function boxUvFaces(cube: any) {
     if (!f?.uv) continue;
     let [u0, v0] = f.uv;
     let [uw, vh] = f.uv_size ?? [0, 0];
-    if (uw < 0) { u0 += uw; uw = -uw; }
-    if (vh < 0) { v0 += vh; vh = -vh; }
+    if (uw < 0) {
+      u0 += uw;
+      uw = -uw;
+    }
+    if (vh < 0) {
+      v0 += vh;
+      vh = -vh;
+    }
     out.push({ face, u0, v0, w: uw, h: vh });
   }
   return out;
@@ -240,23 +273,32 @@ function analyzeModel(modelDir: string, modelName: string) {
   const texGlobalMode = modesOld.get(primary);
   const texGlobalModeThr = modesThr.get(primary);
 
-  let totalFaces = 0, divergent = 0, blendFaces = 0, cutoutFaces = 0;
-  let divArea = 0, totalArea = 0;
-  let divergentThr = 0, divAreaThr = 0;
+  let totalFaces = 0,
+    divergent = 0,
+    blendFaces = 0,
+    cutoutFaces = 0;
+  let divArea = 0,
+    totalArea = 0;
+  let divergentThr = 0,
+    divAreaThr = 0;
   const modelFiles = fs.readdirSync(geoDir).filter((f) => f.endsWith(".json"));
 
   for (const mf of modelFiles) {
-    let geo;
+    let geo: unknown;
     try {
       geo = JSON.parse(fs.readFileSync(path.join(geoDir, mf), "utf8"));
-    } catch { continue; }
+    } catch {
+      continue;
+    }
     const bones = geo["minecraft:geometry"]?.[0]?.bones ?? [];
     for (const bone of bones) {
       for (const cube of bone.cubes ?? []) {
         for (const f of boxUvFaces(cube)) {
           if (f.w <= 0 || f.h <= 0) continue;
-          const x0 = Math.floor(f.u0 + 0.01), x1 = Math.floor(f.u0 + f.w - 0.01);
-          const y0 = Math.floor(f.v0 + 0.01), y1 = Math.floor(f.v0 + f.h - 0.01);
+          const x0 = Math.floor(f.u0 + 0.01),
+            x1 = Math.floor(f.u0 + f.w - 0.01);
+          const y0 = Math.floor(f.v0 + 0.01),
+            y1 = Math.floor(f.v0 + f.h - 0.01);
           if (x1 < x0 || y1 < y0) continue;
           totalFaces++;
           const area = (x1 - x0 + 1) * (y1 - y0 + 1);
@@ -264,19 +306,36 @@ function analyzeModel(modelDir: string, modelName: string) {
           const fm = modeOfFlags(idx.query(x0, y0, x1, y1));
           if (fm === "blend") blendFaces++;
           if (fm === "cutout") cutoutFaces++;
-          if (fm !== texGlobalMode) { divergent++; divArea += area; }
+          if (fm !== texGlobalMode) {
+            divergent++;
+            divArea += area;
+          }
           // code review：复用上方 hoisted 的 texGlobalModeThr（230 行），
           // 面级循环内不再重复 Map.get(primary)（全模型面数级热循环）
-          if (fm !== texGlobalModeThr) { divergentThr++; divAreaThr += area; }
+          if (fm !== texGlobalModeThr) {
+            divergentThr++;
+            divAreaThr += area;
+          }
         }
       }
     }
   }
-  return { modelName, primary, texGlobalMode, texGlobalModeThr,
-    totalFaces, divergent, blendFaces, cutoutFaces,
-    divergentThr, divAreaRatioThr: totalArea ? (divAreaThr / totalArea) : 0,
-    divAreaRatio: totalArea ? (divArea / totalArea) : 0,
-    mixedTextures: [...modesOld.entries()].filter(([, m]) => m !== "opaque").map(([n, m]) => `${n}:${m}`) };
+  return {
+    modelName,
+    primary,
+    texGlobalMode,
+    texGlobalModeThr,
+    totalFaces,
+    divergent,
+    blendFaces,
+    cutoutFaces,
+    divergentThr,
+    divAreaRatioThr: totalArea ? divAreaThr / totalArea : 0,
+    divAreaRatio: totalArea ? divArea / totalArea : 0,
+    mixedTextures: [...modesOld.entries()]
+      .filter(([, m]) => m !== "opaque")
+      .map(([n, m]) => `${n}:${m}`),
+  };
 }
 
 // 入口：每个参数目录递归一层找含 ysm.json 的模型夹
@@ -289,9 +348,11 @@ if (!roots.length) {
 const dirs: string[] = [];
 for (const root of roots) {
   if (fs.existsSync(path.join(root, "ysm.json"))) dirs.push(root);
-  else for (const e of fs.readdirSync(root, { withFileTypes: true })) {
-    if (e.isDirectory() && fs.existsSync(path.join(root, e.name, "ysm.json"))) dirs.push(path.join(root, e.name));
-  }
+  else
+    for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+      if (e.isDirectory() && fs.existsSync(path.join(root, e.name, "ysm.json")))
+        dirs.push(path.join(root, e.name));
+    }
 }
 dirs.sort();
 
@@ -303,25 +364,37 @@ for (const d of dirs) {
 }
 
 console.log(
-  "模型".padEnd(18) + "旧→新模式".padEnd(12) +
-  "总面数".padStart(7) + "错路面".padStart(7) + "错路面积%".padStart(9) +
-  "新错路面".padStart(8) + "blend面".padStart(8) + "cutout面".padStart(8)
+  "模型".padEnd(18) +
+    "旧→新模式".padEnd(12) +
+    "总面数".padStart(7) +
+    "错路面".padStart(7) +
+    "错路面积%".padStart(9) +
+    "新错路面".padStart(8) +
+    "blend面".padStart(8) +
+    "cutout面".padStart(8),
 );
 for (const r of rows) {
   console.log(
     r.modelName.slice(0, 16).padEnd(18) +
-    `${r.texGlobalMode}→${r.texGlobalModeThr}`.padEnd(12) +
-    String(r.totalFaces).padStart(7) + String(r.divergent).padStart(7) +
-    (r.divAreaRatio * 100).toFixed(1).padStart(8) + "%" +
-    String(r.divergentThr).padStart(8) +
-    String(r.blendFaces).padStart(8) + String(r.cutoutFaces).padStart(8)
+      `${r.texGlobalMode}→${r.texGlobalModeThr}`.padEnd(12) +
+      String(r.totalFaces).padStart(7) +
+      String(r.divergent).padStart(7) +
+      (r.divAreaRatio * 100).toFixed(1).padStart(8) +
+      "%" +
+      String(r.divergentThr).padStart(8) +
+      String(r.blendFaces).padStart(8) +
+      String(r.cutoutFaces).padStart(8),
   );
 }
 const totFaces = rows.reduce((s, r) => s + r.totalFaces, 0);
 const totDiv = rows.reduce((s, r) => s + r.divergent, 0);
 const totDivThr = rows.reduce((s, r) => s + r.divergentThr, 0);
 console.log(`\n合计 ${rows.length} 模型 ${totFaces} 面`);
-console.log(`  旧口径（无阈值）错路 ${totDiv} 面` +
-  (totFaces ? `（${((totDiv / totFaces) * 100).toFixed(1)}%）` : ""));
-console.log(`  新口径（阈值 0.5%）错路 ${totDivThr} 面` +
-  (totFaces ? `（${((totDivThr / totFaces) * 100).toFixed(1)}%）` : ""));
+console.log(
+  `  旧口径（无阈值）错路 ${totDiv} 面` +
+    (totFaces ? `（${((totDiv / totFaces) * 100).toFixed(1)}%）` : ""),
+);
+console.log(
+  `  新口径（阈值 0.5%）错路 ${totDivThr} 面` +
+    (totFaces ? `（${((totDivThr / totFaces) * 100).toFixed(1)}%）` : ""),
+);

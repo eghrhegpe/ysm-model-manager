@@ -7,6 +7,7 @@ source_files:
   - frontend/src/utils/dom/storage.ts
 auto_fields:
   symbols_with_lines:
+    - isStorageAccessible
     - safeGet
     - safeGetJSON
     - safeRemove

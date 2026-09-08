@@ -15,8 +15,8 @@
  *   normalizeGitPath('C:\\repo\\docs\\x.md', 'C:\\repo') // → 'C:\\repo\\docs\\x.md'（绝对直返）
  *   normalizeGitPath('docs/x.md', 'C:\\repo')            // → 'C:\\repo\\docs\\x.md'（相对 join root）
  */
-import path from 'node:path';
-import { toNative } from '../to-posix.ts';
+import path from "node:path";
+import { toNative } from "../to-posix.ts";
 
 /**
  * 归一化 Git 传递的路径为可用于 fs 的绝对路径。
@@ -28,9 +28,9 @@ export function normalizeGitPath(p: string, root: string) {
   if (!p) return p;
   // msys 风格 /c/Users/... → C:/Users/... 仅发生在 win32（Git Bash 特有）。
   // 非 win32 平台不做此变换，避免把 /home/x 误判成 msys（h:/...）再 join root。
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     const m = p.match(/^\/([a-zA-Z])\/(.*)$/);
-    if (m) p = `${m[1]!.toUpperCase()}:/${m[2]!}`;
+    if (m) p = `${m[1]?.toUpperCase()}:/${m[2]!}`;
   }
   return path.isAbsolute(p) ? toNative(p) : path.join(root, p);
 }

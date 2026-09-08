@@ -31,38 +31,43 @@
  * 退出码：干净 → 0；--strict 且有缺失 → 1；非 strict 恒 0（靠 _summary.ok 判据）。
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 // ── 被扫描的源文件（相对 ROOT）──
 const SOURCE_FILES = [
-  'frontend/src/core/menu-defs.ts',
-  'frontend/src/core/context-menu-handlers.ts',
-  'frontend/src/core/context-menu-file-handlers.ts',
-  'frontend/src/core/context-menu-dir-handlers.ts',
-  'frontend/src/core/context-menu-shared.ts',
+  "frontend/src/core/menu-defs.ts",
+  "frontend/src/core/context-menu-handlers.ts",
+  "frontend/src/core/context-menu-file-handlers.ts",
+  "frontend/src/core/context-menu-dir-handlers.ts",
+  "frontend/src/core/context-menu-shared.ts",
 ];
-const LOCALE_FILE = 'frontend/src/locales/zh-CN.ts';
+const LOCALE_FILE = "frontend/src/locales/zh-CN.ts";
 
 // ── 参数（仅 CLI 入口解析；模块被 import 时不执行）──
 function parseCliArgs() {
   const { json, strict, help, unknown } = parseArgs(process.argv.slice(2), {
-    bools: ['json', 'strict'],
+    bools: ["json", "strict"],
     strings: [],
     defaults: {},
   });
   if (help) {
-    const src = fs.readFileSync(process.argv[1]!, 'utf-8');
-    const s = src.indexOf('/**');
-    const e = src.indexOf('*/', s);
-    console.log(src.slice(s, e + 2).replace(/^ \* ?/gm, '').trim());
+    const src = fs.readFileSync(process.argv[1]!, "utf-8");
+    const s = src.indexOf("/**");
+    const e = src.indexOf("*/", s);
+    console.log(
+      src
+        .slice(s, e + 2)
+        .replace(/^ \* ?/gm, "")
+        .trim(),
+    );
     process.exit(0);
   }
-  if (unknown && unknown.length) {
-    console.error(`❌ 未知参数: ${unknown.join(', ')}（--help 查看用法）`);
+  if (unknown?.length) {
+    console.error(`❌ 未知参数: ${unknown.join(", ")}（--help 查看用法）`);
     process.exit(2);
   }
   return { json, strict };
@@ -70,7 +75,7 @@ function parseCliArgs() {
 
 // ── 注释剥离（保留字符串，避免误删含 // 或 /* 的字面量）──
 function stripComments(src: string): string {
-  let out = '';
+  let out = "";
   let i = 0;
   let inStr: string | null = null;
   let esc = false;
@@ -80,22 +85,22 @@ function stripComments(src: string): string {
     if (inStr) {
       out += c;
       if (esc) esc = false;
-      else if (c === '\\') esc = true;
+      else if (c === "\\") esc = true;
       else if (c === inStr) inStr = null;
       i++;
       continue;
     }
-    if (c === '/' && n === '/') {
-      while (i < src.length && src[i] !== '\n') i++;
+    if (c === "/" && n === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
       continue;
     }
-    if (c === '/' && n === '*') {
+    if (c === "/" && n === "*") {
       i += 2;
-      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
       i += 2;
       continue;
     }
-    if (c === '"' || c === "'" || c === '`') {
+    if (c === '"' || c === "'" || c === "`") {
       inStr = c;
       out += c;
       i++;
@@ -115,9 +120,9 @@ function collectUsedKeys(): Map<string, string> {
   for (const rel of SOURCE_FILES) {
     const abs = path.resolve(ROOT, rel);
     if (!fs.existsSync(abs)) continue; // 文件若被移除不误阻断
-    const src = stripComments(fs.readFileSync(abs, 'utf-8'));
-    let m: RegExpExecArray | null;
-    while ((m = TR_LITERAL_RE.exec(src)) !== null) {
+    const src = stripComments(fs.readFileSync(abs, "utf-8"));
+    // matchAll 内部克隆正则，不推进 TR_LITERAL_RE.lastIndex，与原 exec 循环逐文件扫描语义一致
+    for (const m of src.matchAll(TR_LITERAL_RE)) {
       const key = m[2]!;
       if (!map.has(key)) map.set(key, rel);
     }
@@ -128,11 +133,10 @@ function collectUsedKeys(): Map<string, string> {
 // zh-CN 基准语言包的全部 key（与 i18n-check.ts extractKeys 同源）
 function collectZhCNKeys(): Set<string> {
   const abs = path.resolve(ROOT, LOCALE_FILE);
-  const text = fs.readFileSync(abs, 'utf-8');
+  const text = fs.readFileSync(abs, "utf-8");
   const keys = new Set<string>();
   const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) keys.add(m[1]!);
+  for (const m of text.matchAll(re)) keys.add(m[1]!);
   return keys;
 }
 
@@ -163,7 +167,9 @@ function main() {
   };
 
   if (json) {
-    console.log(JSON.stringify({ _summary: summary, scope: SOURCE_FILES, locale: LOCALE_FILE }, null, 2));
+    console.log(
+      JSON.stringify({ _summary: summary, scope: SOURCE_FILES, locale: LOCALE_FILE }, null, 2),
+    );
     process.exit(ok || !strict ? 0 : 1);
   }
 
@@ -176,7 +182,7 @@ function main() {
     for (const { key, file } of missing) {
       console.log(`  ${key}  ←  ${file}`);
     }
-    console.log('  请在 frontend/src/locales/zh-CN.ts 补该 key，然后重跑本脚本。');
+    console.log("  请在 frontend/src/locales/zh-CN.ts 补该 key，然后重跑本脚本。");
     if (strict) {
       console.error(`\n[check-ctx-menu-i18n] --strict: ${missing.length} 缺失 key → 阻断。`);
       process.exit(1);

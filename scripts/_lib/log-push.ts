@@ -15,11 +15,11 @@
  *
  * 依赖：node:fs / node:path
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "./scan-files.ts";
 
-const LOG_FILE = path.join(ROOT, '.git', 'push-log');
+const LOG_FILE = path.join(ROOT, ".git", "push-log");
 
 /**
  * 双写日志：stdout（stderr）+ 追加到 .git/push-log。
@@ -27,7 +27,7 @@ const LOG_FILE = path.join(ROOT, '.git', 'push-log');
  */
 export function logPush(line: string) {
   // 1. stderr 写终端（stdout 可能被 git pre-push 钩子吞掉）
-  process.stderr.write(line + '\n');
+  process.stderr.write(`${line}\n`);
   // 2. 追加到 .git/push-log（持久化，不被 git 跟踪）
   try {
     const timestamp = new Date().toISOString();

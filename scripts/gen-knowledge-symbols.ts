@@ -23,14 +23,14 @@
  *   node scripts/gen-knowledge-symbols.ts --check # 启用 check
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseFrontmatter, parseSourceFiles } from './_lib/frontmatter.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { getExportedSymbolsAny, EXCLUDE_DIRS } from './_lib/source-graph.ts';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseFrontmatter, parseSourceFiles } from "./_lib/frontmatter.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
+import { EXCLUDE_DIRS, getExportedSymbolsAny } from "./_lib/source-graph.ts";
 
-const KNOWLEDGE_DIR = path.join(ROOT, 'docs', 'knowledge');
+const KNOWLEDGE_DIR = path.join(ROOT, "docs", "knowledge");
 
 // ---------- symbols 字段解析 ----------
 
@@ -49,9 +49,9 @@ function parseSymbols(fm: string) {
   for (let i = idx + 1; i < lines.length; i++) {
     const line = lines[i]!;
     if (/^\S/.test(line)) break; // 下一个顶格 key
-    if (line.trim() === '') break; // 空行（块结束）
+    if (line.trim() === "") break; // 空行（块结束）
     const item = line.match(/^\s*-\s*(.+?)\s*$/);
-    if (item) out.push(item[1]!.replace(/^['"]|['"]$/g, ''));
+    if (item) out.push(item[1]?.replace(/^['"]|['"]$/g, ""));
   }
   return out;
 }
@@ -70,12 +70,12 @@ function withUpdatedSymbols(fm: string, newSymbols: string[]) {
   let end = idx + 1;
   while (end < lines.length) {
     const line = lines[end]!;
-    if (/^\S/.test(line) || line.trim() === '') break;
+    if (/^\S/.test(line) || line.trim() === "") break;
     end++;
   }
-  const block = ['symbols:'];
-  for (const s of newSymbols) block.push('  - ' + s);
-  return [...lines.slice(0, idx), ...block, ...lines.slice(end)].join('\n');
+  const block = ["symbols:"];
+  for (const s of newSymbols) block.push(`  - ${s}`);
+  return [...lines.slice(0, idx), ...block, ...lines.slice(end)].join("\n");
 }
 
 // ---------- 符号收集 ----------
@@ -100,7 +100,9 @@ function collectSymbols(sourceFiles: string[]) {
       } catch {
         continue;
       }
-      syms.forEach((s) => set.add(s));
+      syms.forEach((s) => {
+        set.add(s);
+      });
     }
   }
   return [...set].sort();
@@ -110,14 +112,18 @@ function collectSymbols(sourceFiles: string[]) {
 function walkDir(dir: string, out: string[] = []) {
   if (!fs.existsSync(dir)) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name.startsWith('.')) continue;
+    if (e.name.startsWith(".")) continue;
     // 复用共享层 EXCLUDE_DIRS（__tests__/__mocks__/node_modules/wailsjs/bindings/dist）：
     // 自研递归此前不排除生成物目录，source_files 指向整包目录时会深入 bindings/dist（code_review P2-2）
     if (e.isDirectory() && EXCLUDE_DIRS.has(e.name)) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
       walkDir(p, out);
-    } else if (e.isFile() && /\.(ts|tsx|js|jsx|go)$/.test(e.name) && !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)) {
+    } else if (
+      e.isFile() &&
+      /\.(ts|tsx|js|jsx|go)$/.test(e.name) &&
+      !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)
+    ) {
       out.push(p);
     }
   }
@@ -134,20 +140,22 @@ function setsEqual(a: string[], b: string[]) {
 // ---------- 主流程 ----------
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["check"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check）`);
     process.exit(1);
   }
   const { check: checkMode } = parsed;
   if (!fs.existsSync(KNOWLEDGE_DIR)) {
-    console.log('知识卡目录不存在：' + KNOWLEDGE_DIR);
+    console.log(`知识卡目录不存在：${KNOWLEDGE_DIR}`);
     process.exit(0);
   }
   const cards = fs
     .readdirSync(KNOWLEDGE_DIR)
-    .filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md' && f.toLowerCase() !== 'index.md');
+    .filter(
+      (f) => f.endsWith(".md") && f.toLowerCase() !== "readme.md" && f.toLowerCase() !== "index.md",
+    );
 
   let updated = 0;
   let drift = 0;
@@ -155,7 +163,7 @@ function main() {
 
   for (const cf of cards) {
     const file = path.join(KNOWLEDGE_DIR, cf);
-    const text = fs.readFileSync(file, 'utf8');
+    const text = fs.readFileSync(file, "utf8");
     const fm = parseFrontmatter(text);
     if (!fm) continue;
     const sources = parseSourceFiles(fm);
@@ -175,16 +183,13 @@ function main() {
       const added = target.filter((s) => !existing.includes(s));
       const removed = existing.filter((s) => !target.includes(s));
       const parts: string[] = [];
-      if (added.length) parts.push('+[' + added.join(', ') + ']');
-      if (removed.length) parts.push('-[' + removed.join(', ') + ']');
-      console.log(`⚠ ${cf} symbols 漂移 ${parts.join(' ')}`);
+      if (added.length) parts.push(`+[${added.join(", ")}]`);
+      if (removed.length) parts.push(`-[${removed.join(", ")}]`);
+      console.log(`⚠ ${cf} symbols 漂移 ${parts.join(" ")}`);
     } else {
       const newFm = withUpdatedSymbols(fm, target);
       if (newFm === null) continue;
-      const newText = text.replace(
-        /^---\r?\n[\s\S]*?\r?\n---/,
-        '---\n' + newFm + '\n---'
-      );
+      const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
       fs.writeFileSync(file, newText);
       updated++;
     }
@@ -193,12 +198,12 @@ function main() {
   if (checkMode) {
     if (drift === 0) {
       console.log(
-        `✅ 知识卡 symbols: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无字段 ${skippedNoField} 张）`
+        `✅ 知识卡 symbols: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无字段 ${skippedNoField} 张）`,
       );
       process.exit(0);
     }
     console.log(
-      `❌ ${drift} 张卡 symbols 漂移，请运行：node scripts/gen-knowledge-symbols.ts 同步`
+      `❌ ${drift} 张卡 symbols 漂移，请运行：node scripts/gen-knowledge-symbols.ts 同步`,
     );
     process.exit(1);
   }
@@ -206,7 +211,7 @@ function main() {
   console.log(
     updated === 0
       ? `✅ 知识卡 symbols: 已是最新，无需修改（扫描 ${cards.length} 张卡）`
-      : `✅ 已同步 ${updated} 张卡的 symbols: 字段`
+      : `✅ 已同步 ${updated} 张卡的 symbols: 字段`,
   );
   process.exit(0);
 }

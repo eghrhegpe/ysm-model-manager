@@ -16,36 +16,81 @@
  * 退出码：main(（失败）
  * 依赖：node:fs / node:path / 本地模块
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT, readText, writeText } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT, readText, writeText } from "./_lib/scan-files.ts";
 
-const NOVEL_DIR = path.join(ROOT, 'docs', 'novel');
-const OUT_FILE = path.join(NOVEL_DIR, 'index.md');
+const NOVEL_DIR = path.join(ROOT, "docs", "novel");
+const OUT_FILE = path.join(NOVEL_DIR, "index.md");
 
 const args = process.argv.slice(2);
-const CHECK = args.includes('--check');
+const CHECK = args.includes("--check");
 
 // ── 区域元数据（单一事实源：docs/novel/AGENTS.md 下篇·续写宪法 §八）──────────
 
 const REGIONS = [
-  { dir: '01-解码与几何', anchor: '`go/ysm` `go/geometry` `go/threejs` `frontend/src/wasm` `app-preview`', theme: 'YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体' },
-  { dir: '02-模型仓库', anchor: '`go/importer` `installer` `instance` `packs` `scanner` `dedup` `resource_types.json` `app-tree` `services`', theme: '导入/安装/实例/整合包/扫描/去重、资源注册表' },
-  { dir: '03-UI器官', anchor: '`frontend/src/components` `dialogs` `features`', theme: 'Web Components、对话框、功能页、卡片 UI' },
-  { dir: '04-事件中枢', anchor: '`frontend/src/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）', theme: '事件总线、全局处理器、页面状态、菜单定义' },
-  { dir: '05-同步与更新', anchor: '`go/sync` `download` `updater` `handler-sync`', theme: '同步、下载、更新器、进度队列' },
-  { dir: '06-创作者社区', anchor: '`go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community`', theme: '创作者库、头像、工坊站点、社区索引' },
-  { dir: '07-文件与路径', anchor: '`go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded`', theme: '硬链接/复制、路径安全、回收站、监听、嵌入资源' },
-  { dir: '08-配置与状态', anchor: '`go/version` `logs` `errors` `tags` `settings` `page-store`', theme: '版本、日志、错误、标签、设置持久化' },
-  { dir: '09-工具链', anchor: '`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `codemod`', theme: '自检/审计、构建发布、代码迁移工具' },
-  { dir: '10-文档治理', anchor: '`AGENTS.md` `docs/knowledge` `docs/adr` `docs/archive/bug-chronicle.md` `audits`', theme: '文档宪法、知识卡、ADR、审计' },
+  {
+    dir: "01-解码与几何",
+    anchor: "`go/ysm` `go/geometry` `go/threejs` `frontend/src/wasm` `app-preview`",
+    theme: "YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体",
+  },
+  {
+    dir: "02-模型仓库",
+    anchor:
+      "`go/importer` `installer` `instance` `packs` `scanner` `dedup` `resource_types.json` `app-tree` `services`",
+    theme: "导入/安装/实例/整合包/扫描/去重、资源注册表",
+  },
+  {
+    dir: "03-UI器官",
+    anchor: "`frontend/src/components` `dialogs` `features`",
+    theme: "Web Components、对话框、功能页、卡片 UI",
+  },
+  {
+    dir: "04-事件中枢",
+    anchor:
+      "`frontend/src/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）",
+    theme: "事件总线、全局处理器、页面状态、菜单定义",
+  },
+  {
+    dir: "05-同步与更新",
+    anchor: "`go/sync` `download` `updater` `handler-sync`",
+    theme: "同步、下载、更新器、进度队列",
+  },
+  {
+    dir: "06-创作者社区",
+    anchor: "`go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community`",
+    theme: "创作者库、头像、工坊站点、社区索引",
+  },
+  {
+    dir: "07-文件与路径",
+    anchor: "`go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded`",
+    theme: "硬链接/复制、路径安全、回收站、监听、嵌入资源",
+  },
+  {
+    dir: "08-配置与状态",
+    anchor: "`go/version` `logs` `errors` `tags` `settings` `page-store`",
+    theme: "版本、日志、错误、标签、设置持久化",
+  },
+  {
+    dir: "09-工具链",
+    anchor: "`scripts` `Taskfile.yml` `wails.json` `scripts/build-release.ps1` `doctor` `codemod`",
+    theme: "自检/审计、构建发布、代码迁移工具",
+  },
+  {
+    dir: "10-文档治理",
+    anchor: "`AGENTS.md` `docs/knowledge` `docs/adr` `docs/archive/bug-chronicle.md` `audits`",
+    theme: "文档宪法、知识卡、ADR、审计",
+  },
 ];
 
 const APPENDIX = [
-  { dir: 'appendix/跨模块重构', theme: '多模块同时动刀的工程事件（全仓体检、逆天审计、大重构）' },
-  { dir: 'appendix/Go后端', theme: 'Go 代码与 Wails 框架（`app.go` `internal/app` `main.go` 绑定 `wails.json`）' },
-  { dir: 'appendix/安全横切', theme: '横切多模块的安全问题（XSS、路径穿越、权限）' },
-  { dir: 'appendix/其他', theme: '原始稿存档、代码块附录' },
+  { dir: "appendix/跨模块重构", theme: "多模块同时动刀的工程事件（全仓体检、逆天审计、大重构）" },
+  {
+    dir: "appendix/Go后端",
+    theme: "Go 代码与 Wails 框架（`app.go` `internal/app` `main.go` 绑定 `wails.json`）",
+  },
+  { dir: "appendix/安全横切", theme: "横切多模块的安全问题（XSS、路径穿越、权限）" },
+  { dir: "appendix/其他", theme: "原始稿存档、代码块附录" },
 ];
 
 // ── 扫描 ──────────────────────────────────────────────
@@ -60,18 +105,18 @@ function scanChapters(dir: string, regionDir: string) {
   if (!fs.existsSync(full)) return [];
   const entries = fs.readdirSync(full, { withFileTypes: true });
   const mdFiles = entries
-    .filter((e) => e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md')
+    .filter((e) => e.isFile() && e.name.endsWith(".md") && e.name !== "README.md")
     .map((e) => {
       const name = e.name;
       const m = name.match(/^(\d+)-(.+)\.md$/);
       const num = m ? parseInt(m[1]!, 10) : Infinity;
-      const title = m ? m[2] : name.replace(/\.md$/, '');
+      const title = m ? m[2] : name.replace(/\.md$/, "");
       return { name, num, title };
     })
     .sort((a, b) => {
       if (a.num !== b.num) return a.num - b.num;
       // 用固定 locale（zh-Hans-CN）比较，避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P2-3）
-      return a.name.localeCompare(b.name, 'zh-Hans-CN');
+      return a.name.localeCompare(b.name, "zh-Hans-CN");
     });
   return mdFiles;
 }
@@ -82,21 +127,31 @@ function extractH1(dir: string, regionDir: string, fileName: string) {
   try {
     // 用 readText 去 BOM + 统一 CRLF→LF：带 BOM 的章节文件首行 `# 标题` 才会被正则命中（code_review P2-1）
     const content = readText(full);
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     for (const line of lines) {
       const m = line.match(/^#\s+(.+?)\s*$/);
       if (m) return m[1]!;
     }
-  } catch { /* fall through */ }
-  return fileName.replace(/\.md$/, '');
+  } catch {
+    /* fall through */
+  }
+  return fileName.replace(/\.md$/, "");
 }
 
 // ── act-* 三部曲（冻结，固定 16 章）──────────────────
 
 const ACTS = [
-  { dir: 'act-1-babel', label: '第一幕 · 巴别塔（觉醒）', desc: '系统发现自己的器官互不理解。' },
-  { dir: 'act-2-walls', label: '第二幕 · 筑墙者（激化）', desc: '系统试图筑更多墙来保护自己，每堵新墙都开了新裂缝。' },
-  { dir: 'act-3-cartographer', label: '第三幕 · 绘图师（和解）', desc: '系统放弃消灭裂缝，转而绘制裂缝地图。' },
+  { dir: "act-1-babel", label: "第一幕 · 巴别塔（觉醒）", desc: "系统发现自己的器官互不理解。" },
+  {
+    dir: "act-2-walls",
+    label: "第二幕 · 筑墙者（激化）",
+    desc: "系统试图筑更多墙来保护自己，每堵新墙都开了新裂缝。",
+  },
+  {
+    dir: "act-3-cartographer",
+    label: "第三幕 · 绘图师（和解）",
+    desc: "系统放弃消灭裂缝，转而绘制裂缝地图。",
+  },
 ];
 
 function buildActs() {
@@ -107,12 +162,14 @@ function buildActs() {
     const rows = chapters.map((c) => {
       const h1 = extractH1(NOVEL_DIR, act.dir, c.name);
       const link = `${act.dir}/${c.name}`;
-      const numCol = c.num === Infinity ? '—' : c.num;
+      const numCol = c.num === Infinity ? "—" : c.num;
       return `| ${numCol} | [${escCell(h1)}](${link}) |`;
     });
-    blocks.push(`### ${act.label}\n\n${act.desc}\n\n| 章 | 标题 |\n|----|------|\n${rows.join('\n')}`);
+    blocks.push(
+      `### ${act.label}\n\n${act.desc}\n\n| 章 | 标题 |\n|----|------|\n${rows.join("\n")}`,
+    );
   }
-  return blocks.join('\n\n---\n\n');
+  return blocks.join("\n\n---\n\n");
 }
 
 // ── 区域志（vol 4+）──────────────────────────────────
@@ -125,19 +182,19 @@ function buildRegions() {
     const rows = chapters.map((c) => {
       const h1 = extractH1(NOVEL_DIR, r.dir, c.name);
       const link = `${r.dir}/${c.name}`;
-      const numCol = c.num === Infinity ? '—' : c.num;
+      const numCol = c.num === Infinity ? "—" : c.num;
       return `| ${numCol} | [${escCell(h1)}](${link}) |`;
     });
-    const tableBody = rows.length > 0 ? rows.join('\n') : '| — | _（待续写）_ |';
+    const tableBody = rows.length > 0 ? rows.join("\n") : "| — | _（待续写）_ |";
     blocks.push(
       `### ${r.dir}\n\n` +
-      `> 锚定代码：${r.anchor}\n` +
-      `> 主题：${r.theme}\n` +
-      `> 章节数：${count}\n\n` +
-      `| 章 | 标题 |\n|----|------|\n${tableBody}`,
+        `> 锚定代码：${r.anchor}\n` +
+        `> 主题：${r.theme}\n` +
+        `> 章节数：${count}\n\n` +
+        `| 章 | 标题 |\n|----|------|\n${tableBody}`,
     );
   }
-  return blocks.join('\n\n---\n\n');
+  return blocks.join("\n\n---\n\n");
 }
 
 // ── appendix ─────────────────────────────────────────
@@ -150,24 +207,26 @@ function buildAppendix() {
     const rows = chapters.map((c) => {
       const h1 = extractH1(NOVEL_DIR, a.dir, c.name);
       const link = `${a.dir}/${c.name}`;
-      const numCol = c.num === Infinity ? '—' : c.num;
+      const numCol = c.num === Infinity ? "—" : c.num;
       return `| ${numCol} | [${escCell(h1)}](${link}) |`;
     });
-    const tableBody = rows.length > 0 ? rows.join('\n') : '| — | _（待续写）_ |';
+    const tableBody = rows.length > 0 ? rows.join("\n") : "| — | _（待续写）_ |";
     blocks.push(
       `### ${a.dir}\n\n` +
-      `> 主题：${a.theme}\n` +
-      `> 章节数：${count}\n\n` +
-      `| 章 | 标题 |\n|----|------|\n${tableBody}`,
+        `> 主题：${a.theme}\n` +
+        `> 章节数：${count}\n\n` +
+        `| 章 | 标题 |\n|----|------|\n${tableBody}`,
     );
   }
-  return blocks.join('\n\n---\n\n');
+  return blocks.join("\n\n---\n\n");
 }
 
 // ── 统计 ─────────────────────────────────────────────
 
 function countAll() {
-  let acts = 0, regions = 0, appendix = 0;
+  let acts = 0,
+    regions = 0,
+    appendix = 0;
   for (const act of ACTS) acts += scanChapters(NOVEL_DIR, act.dir).length;
   for (const r of REGIONS) regions += scanChapters(NOVEL_DIR, r.dir).length;
   for (const a of APPENDIX) appendix += scanChapters(NOVEL_DIR, a.dir).length;
@@ -176,15 +235,14 @@ function countAll() {
 
 // ── 渲染 ─────────────────────────────────────────────
 
-const escCell = (x: string) => x.replace(/\|/g, '\\|');
+const escCell = (x: string) => x.replace(/\|/g, "\\|");
 
 function renderIndex() {
   const stats = countAll();
   const actsBlock = buildActs();
   const regionsBlock = buildRegions();
   const appendixBlock = buildAppendix();
-  return (
-`# 编码奇谭：YSM 巴别塔演义 · 目录
+  return `# 编码奇谭：YSM 巴别塔演义 · 目录
 
 > 在一座由四种语言搭建的巴别塔里，每堵墙本该保护你，却在暗处开了裂缝。
 
@@ -228,8 +286,7 @@ ${appendixBlock}
 ## 相关文档
 
 - [续写宪法](AGENTS.md) — 小说续写唯一必读指引（上篇·故事圣经 + 下篇·续写宪法）
-`
-  );
+`;
 }
 
 // ── 主流程 ───────────────────────────────────────────

@@ -16,11 +16,14 @@
  */
 
 export const DATA_FILES = new Set([
-  'resource_types.json', 'creators.json', 'workshop_sites.json', 'workshop-github.json',
+  "resource_types.json",
+  "creators.json",
+  "workshop_sites.json",
+  "workshop-github.json",
 ]);
 
 /** 变更域。 */
-export type Domain = 'go' | 'frontend' | 'data' | 'docs' | 'tests' | 'other';
+export type Domain = "go" | "frontend" | "data" | "docs" | "tests" | "other";
 
 /** 检查计划（planFromFiles 返回值）。 */
 export interface Plan {
@@ -38,14 +41,14 @@ export interface Plan {
  * @param f 相对仓库根的 POSIX 路径（如 'go/ysm/ysm_test.go'）。
  */
 export function classify(f: string): Domain {
-  if (f.endsWith('.go')) return 'go';
-  if (f === 'go.mod' || f === 'go.sum') return 'go';
-  if (f === 'wails.json') return 'frontend';
-  if (f.startsWith('frontend/')) return 'frontend';
-  if (DATA_FILES.has(f)) return 'data';
-  if (f.startsWith('docs/') || f.endsWith('.md')) return 'docs';
-  if (f.startsWith('tests/') || f.startsWith('scripts/')) return 'tests';
-  return 'other';
+  if (f.endsWith(".go")) return "go";
+  if (f === "go.mod" || f === "go.sum") return "go";
+  if (f === "wails.json") return "frontend";
+  if (f.startsWith("frontend/")) return "frontend";
+  if (DATA_FILES.has(f)) return "data";
+  if (f.startsWith("docs/") || f.endsWith(".md")) return "docs";
+  if (f.startsWith("tests/") || f.startsWith("scripts/")) return "tests";
+  return "other";
 }
 
 /**
@@ -53,15 +56,23 @@ export function classify(f: string): Domain {
  * @param {string[]} files 相对仓库根的路径数组。
  */
 export function planFromFiles(files: string[]): Plan {
-  const p: Plan = { go: false, frontend: false, data: false, docs: false, adr: false, contractTests: false, redlines: false };
+  const p: Plan = {
+    go: false,
+    frontend: false,
+    data: false,
+    docs: false,
+    adr: false,
+    contractTests: false,
+    redlines: false,
+  };
   for (const f of files) {
     const d = classify(f);
-    if (d === 'go') p.go = true;
-    if (d === 'frontend') p.frontend = true;
-    if (d === 'data') p.data = true;
-    if (d === 'docs') p.docs = true;
-    if (d === 'tests') p.contractTests = true;
-    if (f.startsWith('docs/adr/') || f.startsWith('docs/architecture/adr/')) p.adr = true;
+    if (d === "go") p.go = true;
+    if (d === "frontend") p.frontend = true;
+    if (d === "data") p.data = true;
+    if (d === "docs") p.docs = true;
+    if (d === "tests") p.contractTests = true;
+    if (f.startsWith("docs/adr/") || f.startsWith("docs/architecture/adr/")) p.adr = true;
   }
   // redlines 门禁：任意非纯文档/纯测试变更都触发——红线规则覆盖 go 与 frontend，
   // 纯 docs/contracts 变更无代码面无需跑（code_review F 落地：把 R1-R10/W1-W6 从运动式
@@ -79,7 +90,12 @@ export function planFromFiles(files: string[]): Plan {
  */
 export function groupByDomain(files: string[]): Record<string, string[]> {
   const byDomain: Record<string, string[]> = {};
-  for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);
+  for (const f of files) {
+    const d = classify(f);
+    const list = byDomain[d] || [];
+    list.push(f);
+    byDomain[d] = list;
+  }
   return byDomain;
 }
 
@@ -90,6 +106,8 @@ export function groupByDomain(files: string[]): Record<string, string[]> {
  */
 export function domainSummaryText(byDomain: Record<string, string[]>): string {
   return Object.keys(byDomain).length
-    ? Object.entries(byDomain).map(([d, fs]) => `${d}:${fs.length}`).join('  ')
-    : '无变更';
+    ? Object.entries(byDomain)
+        .map(([d, fs]) => `${d}:${fs.length}`)
+        .join("  ")
+    : "无变更";
 }

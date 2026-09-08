@@ -15,33 +15,33 @@
  *
  * 零依赖（仅 node:path）。
  */
-import path from 'node:path';
-import { ROOT } from './scan-files.ts';
+import path from "node:path";
+import { ROOT } from "./scan-files.ts";
 
 /** 知识卡分类展示顺序（sidebar / 索引共用）。 */
-export const KNOWLEDGE_ORDER = ['core', 'go', 'ui', 'feature', 'rendering', 'utils', 'config'];
+export const KNOWLEDGE_ORDER = ["core", "go", "ui", "feature", "rendering", "utils", "config"];
 
 /** 分类 → 中文标签（sidebar / 索引 / 路由表共用）。 */
 export const CATEGORY_LABELS = {
-  core: '核心基础设施（事件总线、页面状态、Wails 桥接）',
-  go: 'Go 后端包（安装、下载、回收站、YSM 解析等）',
-  ui: '前端 UI 组件（tree、sidebar、preview、content）',
-  feature: '业务功能（导入队列、同步、社区）',
-  rendering: '3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）',
-  utils: '工具函数（display、fmt、dom、animation）',
-  config: '配置与注册表（resource_types、AppConfig）',
+  core: "核心基础设施（事件总线、页面状态、Wails 桥接）",
+  go: "Go 后端包（安装、下载、回收站、YSM 解析等）",
+  ui: "前端 UI 组件（tree、sidebar、preview、content）",
+  feature: "业务功能（导入队列、同步、社区）",
+  rendering: "3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）",
+  utils: "工具函数（display、fmt、dom、animation）",
+  config: "配置与注册表（resource_types、AppConfig）",
 };
 
 /** 非知识卡目录成员（索引 / 路由表 / 操作手册 / 机器生成地图）。 */
 export const KNOWLEDGE_NON_CARDS = new Set([
-  'index.md',
-  'README.md',
-  'AGENTS.md',
-  'routes.md',       // gen-routes 产出（ADR-114 §被补充）
-  'routes-quick.md', // gen-routes-quick 产出（AI 高频场景路由表）
-  'menu-map.md',     // 若后续 gen-menu-map 产出（BABY 预留）
-  'graph.md',        // 若后续 gen-knowledge-graph 产出（BABY 预留）
-  'tier-review.md',  // BABY 预留
+  "index.md",
+  "README.md",
+  "AGENTS.md",
+  "routes.md", // gen-routes 产出（ADR-114 §被补充）
+  "routes-quick.md", // gen-routes-quick 产出（AI 高频场景路由表）
+  "menu-map.md", // 若后续 gen-menu-map 产出（BABY 预留）
+  "graph.md", // 若后续 gen-knowledge-graph 产出（BABY 预留）
+  "tier-review.md", // BABY 预留
 ]);
 
 /**
@@ -54,12 +54,12 @@ export const KNOWLEDGE_NON_CARDS = new Set([
  * 扩展新维度（远期能耗 energy-* 等）只改本常量，检查器/生成器自动跟上。
  */
 export const PERF_TAGS = {
-  'cpu-bound': 'CPU 密集（解析/编译/解算/编码）',
-  'io-bound': 'IO 密集（批量读写/RPC/网络）',
-  'gpu-bound': 'GPU/显存敏感（纹理/3D 渲染）',
-  'concurrent': '多核并行（goroutine 池/Worker 池/pthread/Promise 竞速）',
-  'single-thread': '单线程顺序执行（顺序流水线/串行队列）',
-  'memory-heavy': '内存/显存大户（大缓冲/长驻缓存）',
+  "cpu-bound": "CPU 密集（解析/编译/解算/编码）",
+  "io-bound": "IO 密集（批量读写/RPC/网络）",
+  "gpu-bound": "GPU/显存敏感（纹理/3D 渲染）",
+  concurrent: "多核并行（goroutine 池/Worker 池/pthread/Promise 竞速）",
+  "single-thread": "单线程顺序执行（顺序流水线/串行队列）",
+  "memory-heavy": "内存/显存大户（大缓冲/长驻缓存）",
 };
 
 /**
@@ -74,12 +74,12 @@ export const PERF_TAGS = {
  * 扩展新状态只改本常量（checker/gen 自动跟上）。
  */
 export const CARD_STATUS: Record<string, string> = {
-  active: '当前有效，随源码演进维护',
-  draft: '起草中/未定稿（模板默认；定稿后改 active）',
-  snapshot: '一次性快照/报告（应配 affected: false）',
-  archived: '已归档（不再适用，留档备查）',
-  superseded: '被更新卡取代（应在正文标注取代关系）',
+  active: "当前有效，随源码演进维护",
+  draft: "起草中/未定稿（模板默认；定稿后改 active）",
+  snapshot: "一次性快照/报告（应配 affected: false）",
+  archived: "已归档（不再适用，留档备查）",
+  superseded: "被更新卡取代（应在正文标注取代关系）",
 };
 
 /** 知识卡目录（供各 gen-* 脚本复用，避免各自 path.join 漂移）。 */
-export const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');
+export const KNOW_DIR = path.join(ROOT, "docs", "knowledge");

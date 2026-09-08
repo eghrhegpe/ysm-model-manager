@@ -26,9 +26,9 @@ export interface SnapTarget {
  * 新增 gen 目标请在此登记，并同步更新 .githooks/pre-commit。
  */
 export const SNAP_TARGETS: SnapTarget[] = [
-  { dir: 'docs', patterns: ['*.md', '.vitepress/**', 'knowledge/**', 'adr/**'] },
-  { dir: 'frontend/public/locales', patterns: ['*.json'] },
-  { dir: 'completions', patterns: ['*'] },
+  { dir: "docs", patterns: ["*.md", ".vitepress/**", "knowledge/**", "adr/**"] },
+  { dir: "frontend/public/locales", patterns: ["*.json"] },
+  { dir: "completions", patterns: ["*"] },
 ];
 
 /** 快照根目录列表（便捷访问，兼容旧代码）。 */

@@ -24,25 +24,22 @@
  *
  * 逃生阀：YSM_SKIP_GEN_STAGE=1（gen-stage.ts CLI 读取，恢复旧行为全排除）。
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync } from "node:child_process";
 
 /** 无人工复用区的生成物整文件（GEN_CMDS 直接产出全量态）。 */
 export const GEN_WHOLE_OUTPUTS: readonly string[] = [
-  'docs/event-graph.md',
-  'docs/knowledge/index.md',
-  'docs/knowledge/routes.md',
-  'docs/knowledge/routes-quick.md',
-  'docs/novel/index.md',
-  'docs/.vitepress/sidebar.gen.mjs',
-  'docs/cli-commands.md',
-  'docs/adr/index.md',
+  "docs/event-graph.md",
+  "docs/knowledge/index.md",
+  "docs/knowledge/routes.md",
+  "docs/knowledge/routes-quick.md",
+  "docs/novel/index.md",
+  "docs/.vitepress/sidebar.gen.mjs",
+  "docs/cli-commands.md",
+  "docs/adr/index.md",
 ];
 
 /** 前缀匹配的生成物整文件目录（递归全量态）。 */
-export const GEN_WHOLE_PREFIXES: readonly string[] = [
-  'frontend/public/locales/',
-  'completions/',
-];
+export const GEN_WHOLE_PREFIXES: readonly string[] = ["frontend/public/locales/", "completions/"];
 
 /**
  * 机器区键行：auto_fields / symbols / symbols_with_lines 声明。
@@ -61,13 +58,13 @@ const MACHINE_ITEM_RE = /^\s{2,}-\s+[A-Za-z_][A-Za-z0-9_.]*\s*$/;
 
 /** 路径是否命中生成物整文件清单（正斜杠归一）。 */
 export function isGenWholeOutput(p: string): boolean {
-  const n = p.replace(/\\/g, '/');
+  const n = p.replace(/\\/g, "/");
   if (GEN_WHOLE_OUTPUTS.includes(n)) return true;
   return GEN_WHOLE_PREFIXES.some((pre) => n.startsWith(pre));
 }
 
 /** 滞留 dirty 文件分类结果。 */
-export type StrandedKind = 'whole' | 'machine' | 'manual';
+export type StrandedKind = "whole" | "machine" | "manual";
 
 /**
  * 分类滞留 dirty 文件可否自动收编。
@@ -92,70 +89,70 @@ export type StrandedKind = 'whole' | 'machine' | 'manual';
  * manual（漏收编无害——滞留旧态；误收编有害——吞并行手改，ADR-151 红线方向保守）。
  */
 export function classifyStranded(p: string, diffText: string): StrandedKind {
-  if (isGenWholeOutput(p)) return 'whole';
-  if (!diffText.trim()) return 'manual'; // 无变更内容（防御）
+  if (isGenWholeOutput(p)) return "whole";
+  if (!diffText.trim()) return "manual"; // 无变更内容（防御）
   const lines = diffText.split(/\r?\n/);
   let inHunk = false;
-  let hunkZone: 'machine' | 'human' | 'unknown' = 'unknown';
+  let hunkZone: "machine" | "human" | "unknown" = "unknown";
   let sawMachineChange = false; // 是否见过被判定为机器区的变更行
   for (const raw of lines) {
-    if (raw.startsWith('@@')) {
+    if (raw.startsWith("@@")) {
       inHunk = /^@@ -\d+(?:,\d+)? \+\d+/.test(raw);
-      hunkZone = 'unknown'; // 每个 hunk 独立定块（上下文 3 行不跨 hunk 泄漏）
+      hunkZone = "unknown"; // 每个 hunk 独立定块（上下文 3 行不跨 hunk 泄漏）
       if (inHunk) {
         // git funcname section 头：`@@ -66,9 +66,11 @@ auto_fields:` → 整 hunk 判机器区
-        const section = raw.split('@@').pop() ?? '';
+        const section = raw.split("@@").pop() ?? "";
         const trimmed = section.trim();
-        if (MACHINE_KEY_RE.test(trimmed)) hunkZone = 'machine';
-        else if (trimmed !== '') hunkZone = 'human';
+        if (MACHINE_KEY_RE.test(trimmed)) hunkZone = "machine";
+        else if (trimmed !== "") hunkZone = "human";
       }
       continue;
     }
     if (!inHunk) continue; // diff --git / index / --- / +++ / \ No newline 等文件头
     const mark = raw.charAt(0);
-    if (mark !== ' ' && mark !== '+' && mark !== '-') continue; // \ No newline 等
+    if (mark !== " " && mark !== "+" && mark !== "-") continue; // \ No newline 等
     const content = raw.slice(1);
-    if (content.trim() === '') continue; // 空内容行（上下文/空行变更均中性）
-    const isChange = mark === '+' || mark === '-';
+    if (content.trim() === "") continue; // 空内容行（上下文/空行变更均中性）
+    const isChange = mark === "+" || mark === "-";
     const atCol0 = !/^[ \t]/.test(content);
     if (atCol0) {
       // 顶格行 = YAML 块边界：机器键行进机器块，其他行（人工键/正文/表格/bullet）出块
       if (MACHINE_KEY_RE.test(content)) {
-        hunkZone = 'machine';
+        hunkZone = "machine";
         if (isChange) sawMachineChange = true;
       } else {
-        hunkZone = 'human';
-        if (isChange) return 'manual'; // 顶格人工内容变更 → 排除
+        hunkZone = "human";
+        if (isChange) return "manual"; // 顶格人工内容变更 → 排除
       }
       continue;
     }
     // 缩进行：上下文行不改变块状态
     if (!isChange) continue;
-    if (hunkZone === 'machine') {
+    if (hunkZone === "machine") {
       // 机器块内：缩进机器子键行（`  symbols_with_lines:`，gen 首次整块插入时入 diff）
       // 与裸符号列表项（`    - AllExts`）均为机器变更；其他形态 → 人工渗入 → manual
       if (MACHINE_KEY_RE.test(content) || MACHINE_ITEM_RE.test(content)) {
         sawMachineChange = true;
         continue;
       }
-      return 'manual';
+      return "manual";
     }
     // 缩进变更行落在人工区（use_when/pitfalls/quick_intents 的 2 空格 bullet——
     // 中文长句/含连字符 token，形态上本就不匹配 MACHINE_ITEM_RE；若恰好是裸符号形态，
     // 也因未处机器块信号内而保守排除）或未知区 → manual
-    return 'manual';
+    return "manual";
   }
   // 无任何机器变更行（纯上下文/纯空行 diff）→ 保守不收编
-  return sawMachineChange ? 'machine' : 'manual';
+  return sawMachineChange ? "machine" : "manual";
 }
 
 /** 该路径是否属于快照扫描域（docs / locales / completions）。 */
 export function inSnapScope(p: string): boolean {
-  const n = p.replace(/\\/g, '/');
+  const n = p.replace(/\\/g, "/");
   return (
-    n.startsWith('docs/') ||
-    n.startsWith('frontend/public/locales/') ||
-    n.startsWith('completions/')
+    n.startsWith("docs/") ||
+    n.startsWith("frontend/public/locales/") ||
+    n.startsWith("completions/")
   );
 }
 
@@ -167,12 +164,12 @@ export function inSnapScope(p: string): boolean {
  * @returns 应自动收编的滞留文件清单（逐行，正斜杠）
  */
 export function strandedStageList(dirtyPaths: string[]): string[] {
-  if (process.env.YSM_SKIP_GEN_STAGE === '1') return [];
+  if (process.env.YSM_SKIP_GEN_STAGE === "1") return [];
   // 先过滤候选（快照域 + 可收编类别），命中才进 git 调用
   const candidates: string[] = [];
   for (const p of dirtyPaths) {
     if (!inSnapScope(p)) continue;
-    const n = p.replace(/\\/g, '/');
+    const n = p.replace(/\\/g, "/");
     if (isGenWholeOutput(p) || /^docs\/(knowledge|adr)\//.test(n)) candidates.push(p);
   }
   if (candidates.length === 0) return [];
@@ -181,24 +178,27 @@ export function strandedStageList(dirtyPaths: string[]): string[] {
     // 候选路径已知（porcelain dirty 清单）→ 不从 diff 头反解路径：
     // quotepath=false 让非 ASCII 原样输出，再用「整头全等」把每个 chunk 归属到候选，
     // 彻底规避 git C 风格引用（八进制转义）/空格截断等反解歧义；匹配失败保守跳过。
-    const all = execFileSync('git', ['-c', 'core.quotepath=false', 'diff', '--', ...candidates], {
+    const all = execFileSync("git", ["-c", "core.quotepath=false", "diff", "--", ...candidates], {
       cwd: process.cwd(),
-      encoding: 'utf8',
+      encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
     }) as string;
     if (!all.trim()) return out;
     // 候选归一化路径（正斜杠）；预期 diff 头 = `diff --git a/<p> b/<p>`
-    const normCands = candidates.map((p) => p.replace(/\\/g, '/'));
+    const normCands = candidates.map((p) => p.replace(/\\/g, "/"));
     const chunks = all.split(/\r?\n(?=diff --git )/);
     for (const chunk of chunks) {
-      const header = (chunk.split(/\r?\n/, 1)[0] ?? '').trimEnd();
+      const header = (chunk.split(/\r?\n/, 1)[0] ?? "").trimEnd();
       let hit = -1;
       for (let i = 0; i < normCands.length; i++) {
-        if (header === `diff --git a/${normCands[i]} b/${normCands[i]}`) { hit = i; break; }
+        if (header === `diff --git a/${normCands[i]} b/${normCands[i]}`) {
+          hit = i;
+          break;
+        }
       }
       if (hit < 0) continue; // 头归属失败（引号路径等异常）→ 保守跳过（不收编）
       const p = normCands[hit]!;
-      if (chunk.trim() && classifyStranded(p, chunk) !== 'manual') out.push(p);
+      if (chunk.trim() && classifyStranded(p, chunk) !== "manual") out.push(p);
     }
   } catch {
     /* git diff 失败跳过（保守：不收编） */

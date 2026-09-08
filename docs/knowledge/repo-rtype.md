@@ -15,6 +15,7 @@ auto_fields:
     - BusEvents
     - CtxShowPayload
     - currentRepoType
+    - isStorageAccessible
     - MenuItem
     - ModelSelectPayload
     - NavPagePayload

@@ -23,12 +23,12 @@
  * 退出码：1（check 模式发现漂移）
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.ts';
-import { parseArgs } from './_lib/parse-args.ts';
-import { ROOT } from './_lib/scan-files.ts';
-import { KNOWLEDGE_NON_CARDS as NON_CARDS, KNOW_DIR } from './_lib/knowledge-cards.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { getList, getScalar, parseFrontmatter } from "./_lib/frontmatter.ts";
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 // ---------- auto_fields 字段解析 ----------
 
@@ -48,20 +48,20 @@ function parseAutoFields(fm: string) {
   }
   if (idx === -1) return null;
   const out: Record<string, string[]> = {};
-  let currentKey = '';
+  let currentKey = "";
   for (let i = idx + 1; i < lines.length; i++) {
     const line = lines[i]!;
     // 无缩进（顶格）→ 新键或结束
     if (/^\S/.test(line)) {
       // 检查是否是新键（如 "tests:"）
       const keyMatch = line.match(/^(\w+)\s*:/);
-      if (keyMatch && keyMatch[1] !== 'auto_fields') {
+      if (keyMatch && keyMatch[1] !== "auto_fields") {
         // 遇到下一个顶层键 → 结束 auto_fields 块
         break;
       }
       continue;
     }
-    if (line.trim() === '') continue;
+    if (line.trim() === "") continue;
     // 有缩进 → 可能是子键或列表项
     // 子键格式：`  symbols_with_lines:`（2 空格缩进）；宽松匹配任意缩进以兼容 tab
     const subKeyMatch = line.match(/^\s+(\w+)\s*:/);
@@ -73,7 +73,7 @@ function parseAutoFields(fm: string) {
     // 列表项格式：`    - SymbolName:42`（4 空格缩进）；宽松匹配任意缩进 + 可选空格
     const item = line.match(/^\s+-\s+(.+?)\s*$/);
     if (item && currentKey) {
-      out[currentKey]!.push(item[1]!.trim());
+      out[currentKey]?.push(item[1]?.trim());
     }
   }
   return out;
@@ -93,12 +93,18 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
   if (idx === -1) {
     let sfIdx = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (/^source_files\s*:/.test(lines[i]!)) { sfIdx = i; break; }
+      if (/^source_files\s*:/.test(lines[i]!)) {
+        sfIdx = i;
+        break;
+      }
     }
     if (sfIdx === -1) {
       // 无 source_files（罕见）→ 在 tier 行后插入
       for (let i = 0; i < lines.length; i++) {
-        if (/^tier\s*:/.test(lines[i]!)) { sfIdx = i; break; }
+        if (/^tier\s*:/.test(lines[i]!)) {
+          sfIdx = i;
+          break;
+        }
       }
     }
     if (sfIdx === -1) return null; // 无法定位插入点
@@ -106,10 +112,10 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
     let end = sfIdx + 1;
     while (end < lines.length) {
       const line = lines[end]!;
-      if (/^\S/.test(line) || line.trim() === '') break;
+      if (/^\S/.test(line) || line.trim() === "") break;
       end++;
     }
-    const block: string[] = ['auto_fields:'];
+    const block: string[] = ["auto_fields:"];
     for (const [key, values] of Object.entries(newFields)) {
       if (values.length === 0) {
         block.push(`  ${key}: []`);
@@ -118,7 +124,7 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
         for (const v of values) block.push(`    - ${v}`);
       }
     }
-    return [...lines.slice(0, end), ...block, ...lines.slice(end)].join('\n');
+    return [...lines.slice(0, end), ...block, ...lines.slice(end)].join("\n");
   }
   // 有现有 auto_fields 块 → 替换
   // 边界规则与 parseAutoFields 对齐：块内空行跳过（历史卡存在「符号+空行交替」格式，
@@ -126,11 +132,14 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
   let end = idx + 1;
   while (end < lines.length) {
     const line = lines[end]!;
-    if (line.trim() === '') { end++; continue; }
+    if (line.trim() === "") {
+      end++;
+      continue;
+    }
     if (/^\S/.test(line)) break;
     end++;
   }
-  const block: string[] = ['auto_fields:'];
+  const block: string[] = ["auto_fields:"];
   for (const [key, values] of Object.entries(newFields)) {
     if (values.length === 0) {
       block.push(`  ${key}: []`);
@@ -139,7 +148,7 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
       for (const v of values) block.push(`    - ${v}`);
     }
   }
-  return [...lines.slice(0, idx), ...block, ...lines.slice(end)].join('\n');
+  return [...lines.slice(0, idx), ...block, ...lines.slice(end)].join("\n");
 }
 
 // ---------- 符号+行号提取 ----------
@@ -149,14 +158,14 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
  * 返回 { symbol, line } 列表，按 symbol 排序。
  */
 function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line: number }> {
-  const text = fs.readFileSync(filePath, 'utf8');
+  const text = fs.readFileSync(filePath, "utf8");
   const result: Array<{ symbol: string; line: number }> = [];
 
   // 剥离块注释（保持行数不变）
-  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '));
+  const src = text.replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, " "));
   const srcLines = src.split(/\r?\n/);
 
-  if (filePath.toLowerCase().endsWith('.go')) {
+  if (filePath.toLowerCase().endsWith(".go")) {
     // Go: func / type / const / var（首字母大写）
     const reFunc = /^[ \t]*func\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/;
     const reDecl = /^[ \t]*(?:type|const|var)\s+([A-Za-z0-9_]+)/;
@@ -172,7 +181,7 @@ function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line
           let sym = name;
           if (mFunc[1]) {
             const tm = mFunc[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
-            const t = tm ? tm[1] : '';
+            const t = tm ? tm[1] : "";
             if (t && /^[A-Z]/.test(t)) sym = `${t}.${name}`;
           }
           result.push({ symbol: sym, line: i + 1 });
@@ -189,18 +198,21 @@ function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line
       if (mGroup) {
         for (let j = i + 1; j < srcLines.length; j++) {
           const gline = srcLines[j]!;
-          if (/^[ \t]*\)/.test(gline)) { i = j; break; }
+          if (/^[ \t]*\)/.test(gline)) {
+            i = j;
+            break;
+          }
           const gm = gline.match(reGroupBody);
           if (gm && /^[A-Z]/.test(gm[1]!)) {
             result.push({ symbol: gm[1]!, line: j + 1 });
           }
         }
-        continue;
       }
     }
   } else {
     // TS/JS: export function/class/interface/type/enum/const/let/var + export { a, b as c }
-    const reDecl = /^export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_$]+)/;
+    const reDecl =
+      /^export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_$]+)/;
     const reVal = /^export\s+(?:declare\s+)?(?:const|let|var)\s+(?:enum\s+)?([A-Za-z0-9_$]+)/;
     const reDestr = /^export\s+(?:const|let|var)\s*\{([^}]+)\}/;
     const reRe = /^export\s*(?:type\s*)?\{([^}]+)\}/;
@@ -209,27 +221,42 @@ function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line
     for (let i = 0; i < srcLines.length; i++) {
       const line = srcLines[i]!;
       const m = line.match(reDecl);
-      if (m) { result.push({ symbol: m[1]!, line: i + 1 }); continue; }
+      if (m) {
+        result.push({ symbol: m[1]!, line: i + 1 });
+        continue;
+      }
       const mv = line.match(reVal);
-      if (mv) { result.push({ symbol: mv[1]!, line: i + 1 }); continue; }
+      if (mv) {
+        result.push({ symbol: mv[1]!, line: i + 1 });
+        continue;
+      }
       const md = line.match(reDestr);
       if (md) {
-        for (const part of md[1]!.split(',')) {
-          const name = part.trim().split(/\s*[:=]\s*/)[0]!.trim();
+        for (const part of (md[1] ?? "").split(",")) {
+          const name = part
+            .trim()
+            .split(/\s*[:=]\s*/)[0]
+            ?.trim();
           if (/^[A-Za-z0-9_$]+$/.test(name)) result.push({ symbol: name, line: i + 1 });
         }
         continue;
       }
       const mr = line.match(reRe);
       if (mr) {
-        for (const part of mr[1]!.split(',')) {
-          const name = part.trim().split(/\s+as\s+/).pop()!.trim();
+        for (const part of (mr[1] ?? "").split(",")) {
+          const name = part
+            .trim()
+            .split(/\s+as\s+/)
+            .pop()
+            ?.trim();
           if (/^[A-Za-z0-9_$]+$/.test(name)) result.push({ symbol: name, line: i + 1 });
         }
         continue;
       }
       const mdef = line.match(reDefault);
-      if (mdef) { result.push({ symbol: mdef[1]!, line: i + 1 }); }
+      if (mdef) {
+        result.push({ symbol: mdef[1]!, line: i + 1 });
+      }
     }
   }
 
@@ -242,17 +269,20 @@ function collectSymbolsWithLines(sourceFiles: string[]): Array<{ symbol: string;
   for (const src of sourceFiles) {
     const abs = path.join(ROOT, src);
     if (!fs.existsSync(abs)) continue;
-    let targets = [abs];
+    const targets = [abs];
     if (fs.statSync(abs).isDirectory()) {
       // 递归收集目录下源文件
       function walkDir(dir: string) {
         if (!fs.existsSync(dir)) return;
         for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-          if (e.name.startsWith('.')) continue;
+          if (e.name.startsWith(".")) continue;
           const p = path.join(dir, e.name);
           if (e.isDirectory()) walkDir(p);
-          else if (e.isFile() && /\.(ts|tsx|js|jsx|go)$/.test(e.name)
-            && !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)) {
+          else if (
+            e.isFile() &&
+            /\.(ts|tsx|js|jsx|go)$/.test(e.name) &&
+            !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)
+          ) {
             targets.push(p);
           }
         }
@@ -268,31 +298,32 @@ function collectSymbolsWithLines(sourceFiles: string[]): Array<{ symbol: string;
             map.set(s.symbol, s.line);
           }
         }
-      } catch {
-        continue;
-      }
+      } catch {}
     }
   }
-  return [...map.entries()].map(([symbol, line]) => ({ symbol, line })).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  return [...map.entries()]
+    .map(([symbol, line]) => ({ symbol, line }))
+    .sort((a, b) => a.symbol.localeCompare(b.symbol));
 }
 
 // ---------- 主流程 ----------
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['check', 'full', 'json'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["check", "full", "json"] });
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check --full --json）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check --full --json）`);
     process.exit(1);
   }
   const { check: isCheck, full: isFull, json: wantJson } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
-    console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');
+    console.error("❌ docs/knowledge/ 不存在，请确认在仓库根目录运行");
     process.exit(1);
   }
 
-  const cards = fs.readdirSync(KNOW_DIR)
-    .filter((f) => f.endsWith('.md') && !NON_CARDS.has(f.toLowerCase()));
+  const cards = fs
+    .readdirSync(KNOW_DIR)
+    .filter((f) => f.endsWith(".md") && !NON_CARDS.has(f.toLowerCase()));
 
   let updated = 0;
   let skippedNoSources = 0;
@@ -302,11 +333,11 @@ function main() {
 
   for (const cf of cards) {
     const file = path.join(KNOW_DIR, cf);
-    const text = fs.readFileSync(file, 'utf8');
+    const text = fs.readFileSync(file, "utf8");
     const fm = parseFrontmatter(text);
     if (!fm) continue;
 
-    const sources = getList(fm, 'source_files');
+    const sources = getList(fm, "source_files");
     if (sources.length === 0) {
       skippedNoSources++;
       continue;
@@ -316,9 +347,9 @@ function main() {
     // 整表豁免保留（新增符号不进卡，防提交噪音），但「已删符号残留」必须清理——
     // 实证：b91f21fd 删 buildPresetChipGroup 等，frontend_repo_audit 索引残留数月无人知。
     // --check 只报冻结卡的 removed 漂移（不报 added）；--full 同样只增量清理。
-    if (getScalar(fm, 'affected') === 'false') {
+    if (getScalar(fm, "affected") === "false") {
       const frozenParsed = parseAutoFields(fm);
-      const frozenExisting = frozenParsed?.['symbols_with_lines'] ?? [];
+      const frozenExisting = frozenParsed?.symbols_with_lines ?? [];
       // 共享 checkout 暂缺源守卫（2026-09-05 code_review P3）：并行会话切分支/检出中间态下
       // source_files 可能部分暂缺——collectSymbolsWithLines 对缺失路径静默跳过，若照常清理会
       // 把「暂缺源文件的符号」误判为「已删」从冻结卡永久删索引（冻结豁免 added，误删不自动恢复）。
@@ -329,30 +360,36 @@ function main() {
         // source_files」（源文件真被删而未同步 frontmatter），此 WARN 让清理/漂移
         // 长期失效有迹可查（CI 能看到），提示应同步卡片或确认为并发检出中间态。
         console.error(
-          `⚠️ ${cf} → 冻结快照清理跳过：${frozenMissing.length} 个 source_files 当前缺失（${frozenMissing.join(', ')}）——若为永久陈旧源请同步卡片 frontmatter`
+          `⚠️ ${cf} → 冻结快照清理跳过：${frozenMissing.length} 个 source_files 当前缺失（${frozenMissing.join(", ")}）——若为永久陈旧源请同步卡片 frontmatter`,
         );
         skippedFrozen++;
         continue;
       }
       const frozenTarget = collectSymbolsWithLines(sources).map((s) => s.symbol);
       // 源文件全部在场但无可提取符号 → 保守跳过，避免空扫被误判为「全部已删」清空索引
-      if (frozenTarget.length === 0) { skippedFrozen++; continue; }
+      if (frozenTarget.length === 0) {
+        skippedFrozen++;
+        continue;
+      }
       const frozenRemoved = frozenExisting.filter((s) => !frozenTarget.includes(s));
-      if (frozenRemoved.length === 0) { skippedFrozen++; continue; } // 无残留 → 冻结原样
-      if (isCheck) { drifts.push({ file: cf, added: [], removed: frozenRemoved, moved: [] }); continue; }
+      if (frozenRemoved.length === 0) {
+        skippedFrozen++;
+        continue;
+      } // 无残留 → 冻结原样
+      if (isCheck) {
+        drifts.push({ file: cf, added: [], removed: frozenRemoved, moved: [] });
+        continue;
+      }
       const kept = frozenExisting.filter((s) => frozenTarget.includes(s));
       const newFrozenFields: Record<string, string[]> = { symbols_with_lines: kept };
       if (frozenParsed) {
         for (const [k, v] of Object.entries(frozenParsed)) {
-          if (k !== 'symbols_with_lines') newFrozenFields[k] = v;
+          if (k !== "symbols_with_lines") newFrozenFields[k] = v;
         }
       }
       const newFm = withUpdatedAutoFields(fm, newFrozenFields);
       if (newFm === null) continue;
-      const newText = text.replace(
-        /^---\r?\n[\s\S]*?\r?\n---/,
-        '---\n' + newFm + '\n---'
-      );
+      const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
       fs.writeFileSync(file, newText);
       frozenCleaned++;
       console.log(`🧹 ${cf} → 冻结快照增量清理 ${frozenRemoved.length} 个已删符号`);
@@ -365,7 +402,7 @@ function main() {
 
     // 解析现有 auto_fields
     const existing = parseAutoFields(fm);
-    const existingSymbols = existing?.['symbols_with_lines'] ?? [];
+    const existingSymbols = existing?.symbols_with_lines ?? [];
 
     // 仅按符号名集合比对（顺序无关）。行号不进卡片（ADR-162 行号减噪）：
     // 行号漂移不再触发重写；只有符号真实增删（改名/新增/移除）才重写该卡。
@@ -389,16 +426,13 @@ function main() {
     // 保留已有其他子字段
     if (existing) {
       for (const [k, v] of Object.entries(existing)) {
-        if (k !== 'symbols_with_lines') newFields[k] = v;
+        if (k !== "symbols_with_lines") newFields[k] = v;
       }
     }
 
     const newFm = withUpdatedAutoFields(fm, newFields);
     if (newFm === null) continue;
-    const newText = text.replace(
-      /^---\r?\n[\s\S]*?\r?\n---/,
-      '---\n' + newFm + '\n---'
-    );
+    const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
     fs.writeFileSync(file, newText);
     updated++;
     console.log(`✍️  ${cf} → auto_fields.symbols_with_lines (${targetSymbols.length} 个符号)`);
@@ -407,34 +441,69 @@ function main() {
   if (isCheck) {
     if (drifts.length) {
       if (wantJson) {
-        console.log(JSON.stringify({ _summary: { ok: false, drifts: drifts.length, scanned: cards.length, frozen: skippedFrozen } }));
+        console.log(
+          JSON.stringify({
+            _summary: {
+              ok: false,
+              drifts: drifts.length,
+              scanned: cards.length,
+              frozen: skippedFrozen,
+            },
+          }),
+        );
       } else {
-        console.error(`❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`);
+        console.error(
+          `❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`,
+        );
         for (const d of drifts) {
           const parts: string[] = [];
-          if (d.added.length) parts.push('+[' + d.added.slice(0, 5).join(', ') + (d.added.length > 5 ? '…' : '') + ']');
-          if (d.removed.length) parts.push('-[' + d.removed.slice(0, 5).join(', ') + (d.removed.length > 5 ? '…' : '') + ']');
-          if (d.moved.length) parts.push('~[' + d.moved.slice(0, 5).join(', ') + (d.moved.length > 5 ? '…' : '') + ']');
-          console.error(`   - ${d.file} 漂移: ${parts.join(' ')}`);
+          if (d.added.length)
+            parts.push(`+[${d.added.slice(0, 5).join(", ")}${d.added.length > 5 ? "…" : ""}]`);
+          if (d.removed.length)
+            parts.push(`-[${d.removed.slice(0, 5).join(", ")}${d.removed.length > 5 ? "…" : ""}]`);
+          if (d.moved.length)
+            parts.push(`~[${d.moved.slice(0, 5).join(", ")}${d.moved.length > 5 ? "…" : ""}]`);
+          console.error(`   - ${d.file} 漂移: ${parts.join(" ")}`);
         }
       }
       process.exit(1);
     }
     if (wantJson) {
-      console.log(JSON.stringify({ _summary: { ok: true, scanned: cards.length, skipped: skippedNoSources, frozen: skippedFrozen } }));
+      console.log(
+        JSON.stringify({
+          _summary: {
+            ok: true,
+            scanned: cards.length,
+            skipped: skippedNoSources,
+            frozen: skippedFrozen,
+          },
+        }),
+      );
     } else {
-      console.log(`✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张，冻结快照 ${skippedFrozen} 张，增量清理 ${frozenCleaned} 张）`);
+      console.log(
+        `✅ 知识卡 auto_fields: 与源码导出符号一致（扫描 ${cards.length} 张卡，跳过无 source_files ${skippedNoSources} 张，冻结快照 ${skippedFrozen} 张，增量清理 ${frozenCleaned} 张）`,
+      );
     }
     process.exit(0);
   }
 
   if (wantJson) {
-    console.log(JSON.stringify({ _summary: { ok: true, updated, scanned: cards.length, frozen: skippedFrozen, frozenCleaned } }));
+    console.log(
+      JSON.stringify({
+        _summary: {
+          ok: true,
+          updated,
+          scanned: cards.length,
+          frozen: skippedFrozen,
+          frozenCleaned,
+        },
+      }),
+    );
   } else {
     console.log(
       updated === 0 && frozenCleaned === 0
         ? `✅ 知识卡 auto_fields: 已是最新，无需修改（扫描 ${cards.length} 张卡，冻结快照 ${skippedFrozen} 张豁免不刷）`
-        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段，增量清理冻结快照 ${frozenCleaned} 张（冻结快照 ${skippedFrozen} 张无残留豁免不刷）`
+        : `✅ 已更新 ${updated} 张卡的 auto_fields: 字段，增量清理冻结快照 ${frozenCleaned} 张（冻结快照 ${skippedFrozen} 张无残留豁免不刷）`,
     );
   }
   process.exit(0);

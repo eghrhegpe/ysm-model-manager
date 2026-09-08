@@ -56,7 +56,7 @@ const IMPORT_RE =
   /import\s+(?:([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g;
 
 /** 提取模块导出符号（含行号）。 */
-function extractExports(file: string, text: string) {
+function extractExports(_file: string, text: string) {
   const out: any[] = [];
   for (const m of text.matchAll(EXPORT_NAMED_RE)) {
     const line = text.slice(0, m.index).split("\n").length;
@@ -64,7 +64,10 @@ function extractExports(file: string, text: string) {
   }
   for (const m of text.matchAll(EXPORT_BLOCK_RE)) {
     const line = text.slice(0, m.index).split("\n").length;
-    for (const raw of m[1]!.split(",")) {
+    // EXPORT_BLOCK_RE 的 group 1 为 `[^}]*`（无空格分支），匹配成功必然非空，此处仅作类型收窄
+    const blockBody = m[1];
+    if (!blockBody) continue;
+    for (const raw of blockBody.split(",")) {
       const n = raw.trim().match(/^([A-Za-z_$][\w$]*)/);
       if (n) out.push({ name: n[1], line });
     }
@@ -90,7 +93,7 @@ const THEN_NS_ALIAS_RE = /import\(\s*['"]([^'"]+)['"]\s*\)\.then\(\s*\(\s*([A-Za
 function resolveDynImport(file: string, spec: string, moduleSet: Set<string>) {
   let target = resolveImport(file, spec, moduleSet);
   if (!target && spec.endsWith(".js")) {
-    target = resolveImport(file, spec.slice(0, -3) + ".ts", moduleSet);
+    target = resolveImport(file, `${spec.slice(0, -3)}.ts`, moduleSet);
   }
   return target;
 }
@@ -246,7 +249,7 @@ function orphanGlob(pattern: string, target: string): boolean {
   let s = pattern.replace(/\*\*/g, DS).replace(/\*/g, SS);
   s = s.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
   s = s.split(DS).join(".*").split(SS).join("[^/]*");
-  return new RegExp("^" + s + "$").test(target);
+  return new RegExp(`^${s}$`).test(target);
 }
 
 /** 判定孤儿是否应豁免（设计/生成/重构中间态）。返回 null = 不豁免。 */

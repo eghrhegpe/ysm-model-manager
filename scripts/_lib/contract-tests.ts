@@ -14,17 +14,20 @@
  *
  * 依赖：node:child_process / node:fs / node:path
  */
-import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './scan-files.ts';
-import type { Domain } from './domain-classify.ts';
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import type { Domain } from "./domain-classify.ts";
+import { ROOT } from "./scan-files.ts";
 
 /** 列出 tests/ 目录下所有 .ts 文件（按文件名排序）。 */
 export function collectContractTests() {
-  const dir = path.join(ROOT, 'tests');
+  const dir = path.join(ROOT, "tests");
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.ts') && !f.startsWith('_')).sort();
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".ts") && !f.startsWith("_"))
+    .sort();
 }
 
 /**
@@ -38,76 +41,76 @@ export function collectContractTests() {
  */
 export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // —— docs ——
-  'check-knowledge-drift-affected.ts': ['docs'],
-  'check-knowledge-fm-delimiter.ts': ['docs'],
-  'check-knowledge-hook.ts': ['docs'],
-  'check-knowledge-perf-tags.ts': ['docs'],
-  'check-knowledge-body-line-refs.ts': ['docs', 'tests'],
-  'check-knowledge-anchor-def-kind.ts': ['docs', 'tests'],
-  'check-knowledge-card-status.ts': ['docs', 'tests'],
-  'check-knowledge-rename-migration.ts': ['docs', 'tests'],
-  'test_check_readme_index.ts': ['docs', 'tests'],
-  'test_sidebar_gen.ts': ['docs', 'tests'],
-  'verify-adr-042.ts': ['docs'],
+  "check-knowledge-drift-affected.ts": ["docs"],
+  "check-knowledge-fm-delimiter.ts": ["docs"],
+  "check-knowledge-hook.ts": ["docs"],
+  "check-knowledge-perf-tags.ts": ["docs"],
+  "check-knowledge-body-line-refs.ts": ["docs", "tests"],
+  "check-knowledge-anchor-def-kind.ts": ["docs", "tests"],
+  "check-knowledge-card-status.ts": ["docs", "tests"],
+  "check-knowledge-rename-migration.ts": ["docs", "tests"],
+  "test_check_readme_index.ts": ["docs", "tests"],
+  "test_sidebar_gen.ts": ["docs", "tests"],
+  "verify-adr-042.ts": ["docs"],
   // —— data ——
-  'test_creators_schema.ts': ['data'],
-  'test_resource_schema.ts': ['data'],
-  'test_workshop_schema.ts': ['data'],
+  "test_creators_schema.ts": ["data"],
+  "test_resource_schema.ts": ["data"],
+  "test_workshop_schema.ts": ["data"],
   // —— go ——
-  'test_cli_completion_parity.ts': ['go'],
-  'test_cli_doc_parity.ts': ['go', 'docs'],
-  'test_config_defaults.ts': ['go'],
-  'test_rust_bridge_tags.ts': ['go'],
+  "test_cli_completion_parity.ts": ["go"],
+  "test_cli_doc_parity.ts": ["go", "docs"],
+  "test_config_defaults.ts": ["go"],
+  "test_rust_bridge_tags.ts": ["go"],
   // —— frontend ——
-  'test_bus_contract.ts': ['frontend'],
-  'test_check_ctx_menu_i18n.ts': ['frontend'],
-  'test_check_layering.ts': ['frontend'],
-  'test_check_menu_health.ts': ['frontend'],
-  'test_e2e_location_contract.ts': ['frontend'],
-  'test_html_integrity.ts': ['frontend'],
-  'test_i18n_key_naming.ts': ['frontend'],
-  'test_mock_contract.ts': ['frontend', 'go'],
-  'test_private_access_contract.ts': ['frontend'],
-  'test_testid_contract.ts': ['frontend'],
+  "test_bus_contract.ts": ["frontend"],
+  "test_check_ctx_menu_i18n.ts": ["frontend"],
+  "test_check_layering.ts": ["frontend"],
+  "test_check_menu_health.ts": ["frontend"],
+  "test_e2e_location_contract.ts": ["frontend"],
+  "test_html_integrity.ts": ["frontend"],
+  "test_i18n_key_naming.ts": ["frontend"],
+  "test_mock_contract.ts": ["frontend", "go"],
+  "test_private_access_contract.ts": ["frontend"],
+  "test_testid_contract.ts": ["frontend"],
   // —— mixed（跨端契约，任一端变更都触发）——
-  'test_android_bridge_contract.ts': ['frontend', 'go'],
-  'test_cli_gui_flow_contract.ts': ['go', 'frontend'],
-  'test_config_syntax.ts': ['go', 'frontend'],
-  'test_cube_uv_quad_vertex.ts': ['go', 'frontend'],
+  "test_android_bridge_contract.ts": ["frontend", "go"],
+  "test_cli_gui_flow_contract.ts": ["go", "frontend"],
+  "test_config_syntax.ts": ["go", "frontend"],
+  "test_cube_uv_quad_vertex.ts": ["go", "frontend"],
   // —— tests（验证 scripts 工具 / _lib 共享层自身，工具改动 → 全量）——
-  'coverage-suggest-hint.ts': ['tests'],
-  'go-coverage-hint.ts': ['tests'],
-  'test_alias-resolve.ts': ['tests'],
-  'test_check_path_hygiene.ts': ['frontend', 'tests'],
-  'test_api_break.ts': ['tests'],
-  'test_auto_import.ts': ['tests'],
+  "coverage-suggest-hint.ts": ["tests"],
+  "go-coverage-hint.ts": ["tests"],
+  "test_alias-resolve.ts": ["tests"],
+  "test_check_path_hygiene.ts": ["frontend", "tests"],
+  "test_api_break.ts": ["tests"],
+  "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
-  'test_check_android_unavailable.ts': ['tests', 'go', 'frontend'],
-  'test_check_diff_coverage.ts': ['tests'],
-  'test_check_go_diff_coverage_skip.ts': ['tests'],
-  'test_check_go_diff_coverage.ts': ['tests'],
-  'test_codemod_guards.ts': ['tests'],
-  'test_collect_scripts_lib.ts': ['tests'],
-  'test_commit_check_gate.ts': ['tests'],
-  'test_commit_temp_index.ts': ['tests'],
-  'test_contract_domain_select.ts': ['tests'],
-  'test_check_boolean_smart.ts': ['tests', 'frontend'],
-  'test_deadcode_attrib.ts': ['tests'],
-  'test_domain_classify.ts': ['tests'],
-  'test_gen_stage.ts': ['tests'],
-  'test_machine_diff.ts': ['tests'],
-  'test_gate_config.ts': ['tests'],
-  'test_gate_iife_correctness.ts': ['tests'],
-  'test_gate_parse_output.ts': ['tests'],
-  'test_gate_policy_baseline.ts': ['tests'],
-  'test_gate_report.ts': ['tests'],
-  'test_jscpd_go_smart.ts': ['tests', 'go'],
-  'test_jscpd_pairs.ts': ['tests'],
-  'test_knowledge_common.ts': ['tests'],
-  'test_redlines_changed_files.ts': ['tests'],
-  'test_scripts_json.ts': ['tests'],
-  'test_scripts_lib.ts': ['tests'],
-  'test_orphan_exports_smart.ts': ['tests', 'frontend'],
+  "test_check_android_unavailable.ts": ["tests", "go", "frontend"],
+  "test_check_diff_coverage.ts": ["tests"],
+  "test_check_go_diff_coverage_skip.ts": ["tests"],
+  "test_check_go_diff_coverage.ts": ["tests"],
+  "test_codemod_guards.ts": ["tests"],
+  "test_collect_scripts_lib.ts": ["tests"],
+  "test_commit_check_gate.ts": ["tests"],
+  "test_commit_temp_index.ts": ["tests"],
+  "test_contract_domain_select.ts": ["tests"],
+  "test_check_boolean_smart.ts": ["tests", "frontend"],
+  "test_deadcode_attrib.ts": ["tests"],
+  "test_domain_classify.ts": ["tests"],
+  "test_gen_stage.ts": ["tests"],
+  "test_machine_diff.ts": ["tests"],
+  "test_gate_config.ts": ["tests"],
+  "test_gate_iife_correctness.ts": ["tests"],
+  "test_gate_parse_output.ts": ["tests"],
+  "test_gate_policy_baseline.ts": ["tests"],
+  "test_gate_report.ts": ["tests"],
+  "test_jscpd_go_smart.ts": ["tests", "go"],
+  "test_jscpd_pairs.ts": ["tests"],
+  "test_knowledge_common.ts": ["tests"],
+  "test_redlines_changed_files.ts": ["tests"],
+  "test_scripts_json.ts": ["tests"],
+  "test_scripts_lib.ts": ["tests"],
+  "test_orphan_exports_smart.ts": ["tests", "frontend"],
 };
 
 /**
@@ -126,58 +129,102 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
  */
 export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // —— 精确：test_scripts_json 仅对 11 个 --json 脚本敏感；test_codemod_guards 仅 codemod.ts ——
-  'test_scripts_json.ts': [
-    'scripts/check-redlines.ts', 'scripts/check-circular.ts', 'scripts/check-orphan-exports.ts',
-    'scripts/check-boolean-naming.ts', 'scripts/check-adr-health.ts', 'scripts/check-knowledge-drift.ts',
-    'scripts/check-doc-drift.ts', 'scripts/comment-checker.ts', 'scripts/type-consistency.ts',
-    'scripts/link-checker.ts', 'scripts/adr-check.ts',
+  "test_scripts_json.ts": [
+    "scripts/check-redlines.ts",
+    "scripts/check-circular.ts",
+    "scripts/check-orphan-exports.ts",
+    "scripts/check-boolean-naming.ts",
+    "scripts/check-adr-health.ts",
+    "scripts/check-knowledge-drift.ts",
+    "scripts/check-doc-drift.ts",
+    "scripts/comment-checker.ts",
+    "scripts/type-consistency.ts",
+    "scripts/link-checker.ts",
+    "scripts/adr-check.ts",
   ],
-  'test_codemod_guards.ts': ['scripts/codemod.ts'],
+  "test_codemod_guards.ts": ["scripts/codemod.ts"],
   // —— 精确：仅改对应源文件才触发 ——
-  'coverage-suggest-hint.ts': ['scripts/hooks/coverage-suggest-hint.ts', 'scripts/test-coverage-report.ts', 'scripts/hooks/knowledge-affected-hint.ts'],
-  'go-coverage-hint.ts': ['scripts/hooks/go-coverage-hint.ts'],
-  'test_alias-resolve.ts': ['scripts/_lib/alias-resolve.ts', 'scripts/_lib/scan-files.ts'],
-  'test_check_path_hygiene.ts': ['scripts/check-path-hygiene.ts', 'scripts/_lib/alias-resolve.ts', 'scripts/_lib/scan-files.ts', 'frontend/tsconfig.json', 'frontend/vite.config.js'],
-  'test_api_break.ts': ['scripts/api-break.ts'],
-  'test_auto_import.ts': ['scripts/auto-import-lexer.ts', 'scripts/auto-import-symbols.ts', 'scripts/auto-import-detect.ts'],
-  // 守卫事实源：脚本自身 + 前端黑名单/测试副本/bindings + internal/app/ 目录哨兵（T1 文件差集 / T2 守卫扫描源）
-  'test_check_android_unavailable.ts': [
-    'scripts/check-android-unavailable.ts',
-    'frontend/src/backend/platform-web.ts',
-    'frontend/src/backend/platform-web.test.ts',
-    'frontend/bindings/ysm-model-manager/internal/app/app.ts',
-    'internal/app/',
+  "coverage-suggest-hint.ts": [
+    "scripts/hooks/coverage-suggest-hint.ts",
+    "scripts/test-coverage-report.ts",
+    "scripts/hooks/knowledge-affected-hint.ts",
   ],
-  'test_check_diff_coverage.ts': ['scripts/check-diff-coverage.ts'],
-  'test_check_go_diff_coverage.ts': ['scripts/check-go-diff-coverage.ts'],
-  'test_check_go_diff_coverage_skip.ts': ['scripts/check-go-diff-coverage.ts'],
-  'test_collect_scripts_lib.ts': ['scripts/_lib/collect-scripts.ts'],
-  'test_commit_check_gate.ts': ['scripts/_lib/commit-check.ts', 'scripts/commit-with-check.ts'],
-  'test_commit_temp_index.ts': ['scripts/_lib/commit-temp-index.ts', 'scripts/commit-with-check.ts', 'scripts/_lib/commit-check.ts'],
-  'test_contract_domain_select.ts': ['scripts/_lib/contract-tests.ts'],
-  'test_deadcode_attrib.ts': ['scripts/_lib/deadcode-attrib.ts'],
-  'test_domain_classify.ts': ['scripts/_lib/domain-classify.ts'],
-  'test_gen_stage.ts': ['scripts/_lib/gen-stage.ts'],
-  'test_machine_diff.ts': ['scripts/_lib/machine-diff.ts', 'scripts/_lib/gen-stage.ts'],
-  'test_jscpd_pairs.ts': ['scripts/_lib/jscpd-pairs.ts'],
-  'test_knowledge_common.ts': ['scripts/_lib/knowledge-common.ts', 'scripts/check-knowledge-drift.ts', 'scripts/check-doc-drift.ts'],
-  'check-knowledge-body-line-refs.ts': ['scripts/check-knowledge-drift.ts', 'docs/knowledge/AGENTS.md'],
-  'check-knowledge-anchor-def-kind.ts': ['scripts/check-knowledge-drift.ts', 'docs/knowledge/AGENTS.md'],
-  'check-knowledge-card-status.ts': ['scripts/check-knowledge-drift.ts', 'scripts/_lib/knowledge-cards.ts', 'docs/knowledge/AGENTS.md'],
-  'check-knowledge-rename-migration.ts': ['scripts/check-knowledge-drift.ts'],
-  'test_redlines_changed_files.ts': ['scripts/check-redlines.ts'],
-  'test_scripts_lib.ts': ['scripts/_lib/scan-files.ts', 'scripts/_lib/to-posix.ts', 'scripts/_lib/ripgrep.ts', 'scripts/_lib/rg-line.ts'],
+  "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
+  "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
+  "test_check_path_hygiene.ts": [
+    "scripts/check-path-hygiene.ts",
+    "scripts/_lib/alias-resolve.ts",
+    "scripts/_lib/scan-files.ts",
+    "frontend/tsconfig.json",
+    "frontend/vite.config.js",
+  ],
+  "test_api_break.ts": ["scripts/api-break.ts"],
+  "test_auto_import.ts": [
+    "scripts/auto-import-lexer.ts",
+    "scripts/auto-import-symbols.ts",
+    "scripts/auto-import-detect.ts",
+  ],
+  // 守卫事实源：脚本自身 + 前端黑名单/测试副本/bindings + internal/app/ 目录哨兵（T1 文件差集 / T2 守卫扫描源）
+  "test_check_android_unavailable.ts": [
+    "scripts/check-android-unavailable.ts",
+    "frontend/src/backend/platform-web.ts",
+    "frontend/src/backend/platform-web.test.ts",
+    "frontend/bindings/ysm-model-manager/internal/app/app.ts",
+    "internal/app/",
+  ],
+  "test_check_diff_coverage.ts": ["scripts/check-diff-coverage.ts"],
+  "test_check_go_diff_coverage.ts": ["scripts/check-go-diff-coverage.ts"],
+  "test_check_go_diff_coverage_skip.ts": ["scripts/check-go-diff-coverage.ts"],
+  "test_collect_scripts_lib.ts": ["scripts/_lib/collect-scripts.ts"],
+  "test_commit_check_gate.ts": ["scripts/_lib/commit-check.ts", "scripts/commit-with-check.ts"],
+  "test_commit_temp_index.ts": [
+    "scripts/_lib/commit-temp-index.ts",
+    "scripts/commit-with-check.ts",
+    "scripts/_lib/commit-check.ts",
+  ],
+  "test_contract_domain_select.ts": ["scripts/_lib/contract-tests.ts"],
+  "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
+  "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],
+  "test_gen_stage.ts": ["scripts/_lib/gen-stage.ts"],
+  "test_machine_diff.ts": ["scripts/_lib/machine-diff.ts", "scripts/_lib/gen-stage.ts"],
+  "test_jscpd_pairs.ts": ["scripts/_lib/jscpd-pairs.ts"],
+  "test_knowledge_common.ts": [
+    "scripts/_lib/knowledge-common.ts",
+    "scripts/check-knowledge-drift.ts",
+    "scripts/check-doc-drift.ts",
+  ],
+  "check-knowledge-body-line-refs.ts": [
+    "scripts/check-knowledge-drift.ts",
+    "docs/knowledge/AGENTS.md",
+  ],
+  "check-knowledge-anchor-def-kind.ts": [
+    "scripts/check-knowledge-drift.ts",
+    "docs/knowledge/AGENTS.md",
+  ],
+  "check-knowledge-card-status.ts": [
+    "scripts/check-knowledge-drift.ts",
+    "scripts/_lib/knowledge-cards.ts",
+    "docs/knowledge/AGENTS.md",
+  ],
+  "check-knowledge-rename-migration.ts": ["scripts/check-knowledge-drift.ts"],
+  "test_redlines_changed_files.ts": ["scripts/check-redlines.ts"],
+  "test_scripts_lib.ts": [
+    "scripts/_lib/scan-files.ts",
+    "scripts/_lib/to-posix.ts",
+    "scripts/_lib/ripgrep.ts",
+    "scripts/_lib/rg-line.ts",
+  ],
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
-  'test_gate_iife_correctness.ts': ['scripts/pre-push-gate.ts'],
-  'test_gate_config.ts': ['scripts/_lib/gate-config.ts'],
-  'test_gate_parse_output.ts': ['scripts/_lib/gate-parse.ts', 'scripts/pre-push-gate.ts'],
-  'test_gate_report.ts': ['scripts/_lib/gate-report.ts', 'scripts/pre-push-gate.ts'],
-  'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
-  'test_sidebar_gen.ts': ['scripts/gen-vitepress-sidebar.ts'],
-  'test_check_boolean_smart.ts': ['scripts/check-boolean-naming.ts'],
-  'test_gate_policy_baseline.ts': ['scripts/_lib/gate-config.ts', 'scripts/pre-push-gate.ts'],
-  'test_jscpd_go_smart.ts': ['scripts/_lib/jscpd-pairs.ts', 'scripts/jscpd-go.ts'],
-  'test_orphan_exports_smart.ts': ['scripts/check-orphan-exports.ts'],
+  "test_gate_iife_correctness.ts": ["scripts/pre-push-gate.ts"],
+  "test_gate_config.ts": ["scripts/_lib/gate-config.ts"],
+  "test_gate_parse_output.ts": ["scripts/_lib/gate-parse.ts", "scripts/pre-push-gate.ts"],
+  "test_gate_report.ts": ["scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
+  "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
+  "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
+  "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],
+  "test_gate_policy_baseline.ts": ["scripts/_lib/gate-config.ts", "scripts/pre-push-gate.ts"],
+  "test_jscpd_go_smart.ts": ["scripts/_lib/jscpd-pairs.ts", "scripts/jscpd-go.ts"],
+  "test_orphan_exports_smart.ts": ["scripts/check-orphan-exports.ts"],
 };
 
 /**
@@ -207,14 +254,14 @@ export function selectContractTests(
 
   // 未提供 changedFiles：保持原行为（pre-push / doctor 仍全量回落）
   if (!changedFiles || changedFiles.length === 0) {
-    if (domains.has('tests')) return all;
+    if (domains.has("tests")) return all;
     return byDomain;
   }
 
   // 提供 changedFiles 且变更含 tests 域：用「按文件精确裁剪」替代全量回落
-  if (domains.has('tests')) {
-    const testsDomain = byDomain.filter((f) => (CONTRACT_TEST_DOMAINS[f] || []).includes('tests'));
-    const nonTests = byDomain.filter((f) => !(CONTRACT_TEST_DOMAINS[f] || []).includes('tests'));
+  if (domains.has("tests")) {
+    const testsDomain = byDomain.filter((f) => (CONTRACT_TEST_DOMAINS[f] || []).includes("tests"));
+    const nonTests = byDomain.filter((f) => !(CONTRACT_TEST_DOMAINS[f] || []).includes("tests"));
     const precise = testsDomain.filter((f) => targetsHit(f, changedFiles));
     // fail-safe：改动未被任何 tests 域测试覆盖 → 回落全量，避免零验证漏检
     if (precise.length === 0) return all;
@@ -229,9 +276,9 @@ function targetsHit(testFile: string, changedFiles: readonly string[]): boolean 
   const targets = CONTRACT_TEST_TARGETS[testFile];
   if (!targets || targets.length === 0) return true; // 未登记 → 保守保留（不漏检）
   return targets.some((t) => {
-    if (t.endsWith('/')) {
+    if (t.endsWith("/")) {
       const dir = t.slice(0, -1);
-      return changedFiles.some((c) => c === dir || c.startsWith(dir + '/'));
+      return changedFiles.some((c) => c === dir || c.startsWith(`${dir}/`));
     }
     return changedFiles.includes(t);
   });
@@ -272,18 +319,18 @@ function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
   return new Promise((resolve) => {
     // 注意：spawn 的 SpawnOptions 无 maxBuffer（那是 execFileSync 的选项），
     // 传了会让 TS overload 解析失败返回 never——stdout/stderr 用流式 chunk 累积即可。
-    const proc = spawn(process.execPath, [path.join('tests', file)], {
+    const proc = spawn(process.execPath, [path.join("tests", file)], {
       cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     const chunks: Buffer[] = [];
-    proc.stdout!.on('data', (c: Buffer) => chunks.push(c));
-    proc.stderr!.on('data', (c: Buffer) => chunks.push(c));
-    proc.on('close', (code) => {
-      const out = Buffer.concat(chunks).toString('utf8');
-      resolve({ stdout: out, stderr: '', status: code ?? 1 });
+    proc.stdout?.on("data", (c: Buffer) => chunks.push(c));
+    proc.stderr?.on("data", (c: Buffer) => chunks.push(c));
+    proc.on("close", (code) => {
+      const out = Buffer.concat(chunks).toString("utf8");
+      resolve({ stdout: out, stderr: "", status: code ?? 1 });
     });
-    proc.on('error', (e) => resolve({ stdout: '', stderr: e.message, status: 1, spawnError: e }));
+    proc.on("error", (e) => resolve({ stdout: "", stderr: e.message, status: 1, spawnError: e }));
   });
 }
 
@@ -293,10 +340,10 @@ async function runTest(file: string): Promise<SpawnOnceResult> {
     const r = await spawnTestOnce(file);
     // 仅「进程未起来」（spawn 瞬时 ENOENT / EMFILE 等）重试；
     // 进程正常跑完但断言失败 → 立即返回，交上层判失败，不掩盖真实回归。
-    if (r.spawnError && /ENOENT|EMFILE|spawn/i.test(r.stderr || r.spawnError.message || '')) {
+    if (r.spawnError && /ENOENT|EMFILE|spawn/i.test(r.stderr || r.spawnError.message || "")) {
       spawnFailureCount++;
       if (spawnFailureCount > 5) {
-        console.warn('[contract-tests] 进程表饱和频繁（累计 5+ 次），考虑降低并发或检查系统负载');
+        console.warn("[contract-tests] 进程表饱和频繁（累计 5+ 次），考虑降低并发或检查系统负载");
       }
       last = r;
       continue;
@@ -317,8 +364,8 @@ export async function runContractTestsParallel(files?: string[]) {
   const results: { name: string; ok: boolean; out: string }[] = new Array(testFiles.length);
   const runOne = async (f: string) => {
     const { stdout, stderr, status } = await runTest(f);
-    const outStr = status !== 0 ? stdout || stderr : '';
-    return { name: f, ok: status === 0, out: outStr.trim().split('\n').slice(-4).join('\n') };
+    const outStr = status !== 0 ? stdout || stderr : "";
+    return { name: f, ok: status === 0, out: outStr.trim().split("\n").slice(-4).join("\n") };
   };
   // 有界并发 worker 池（见 CONCURRENCY 注释：51 全并发 Windows spawn 饱和 flaky，
   // 8 路实测耗时持平——慢测试拖尾决定墙钟，降并发零成本）。
@@ -340,14 +387,16 @@ export async function runContractTestsParallel(files?: string[]) {
       if (again.ok) {
         retried.push(r.name);
         r.ok = true;
-        r.out = '';
+        r.out = "";
         break;
       }
       r.out = again.out; // 复跑仍败 → 以复跑输出为准（更贴近当前状态）
     }
   }
   if (retried.length) {
-    console.warn(`[contract-tests] ${retried.length} 个测试首跑失败、串行复跑通过（疑系统瞬时负载）: ${retried.join(', ')}`);
+    console.warn(
+      `[contract-tests] ${retried.length} 个测试首跑失败、串行复跑通过（疑系统瞬时负载）: ${retried.join(", ")}`,
+    );
   }
   return results;
 }

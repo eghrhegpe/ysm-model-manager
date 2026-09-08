@@ -39,7 +39,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { walk } from './_lib/scan-files.ts';
+import { walk } from "./_lib/scan-files.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -66,7 +66,11 @@ if (process.env.YSM_SKIP_CSS_LAYER === "1") {
 const CSS_MARKER = /export const [A-Za-z]+CSS|:host\b|adoptedStyleSheets/;
 
 function walkDir(dir: string): string[] {
-  return walk(dir, { exts: [".ts"], skipDir: () => false, skipFile: (n) => n.endsWith(".test.ts") }) as string[];
+  return walk(dir, {
+    exts: [".ts"],
+    skipDir: () => false,
+    skipFile: (n) => n.endsWith(".test.ts"),
+  }) as string[];
 }
 
 function discoverShadowDomains() {
@@ -109,37 +113,52 @@ const DOCUMENT_LAYER_FILE = "frontend/css/components.css";
 //   cr-avatar-fallback — 与 .cr-avatar 同用，子修饰钩子
 //   cr-input-name/cr-order-up/cr-order-down/cr-del/cr-add/cr-del-preset — 与 .cr-input/.cr-btn-icon 等基础类组合，纯 JS 点击锚点
 const KNOWN_NO_CSS_CLASSES = new Set([
-  "recy-page", "repo-left", "diag-log-filter", "ws-creators-list", "ws-browser-bar", "ws-url",
-  "gh-repo-card", "ws-name", "ws-desc",
-  "cr-avatar-fallback", "cr-input-name", "cr-order-up", "cr-order-down", "cr-del", "cr-add", "cr-del-preset",
+  "recy-page",
+  "repo-left",
+  "diag-log-filter",
+  "ws-creators-list",
+  "ws-browser-bar",
+  "ws-url",
+  "gh-repo-card",
+  "ws-name",
+  "ws-desc",
+  "cr-avatar-fallback",
+  "cr-input-name",
+  "cr-order-up",
+  "cr-order-down",
+  "cr-del",
+  "cr-add",
+  "cr-del-preset",
 ]);
 
 // 提取 CSS 文本中的类名（.foo / .foo-bar）与 @keyframes 名
 function extractClasses(cssText: string) {
   const classes = new Set();
   const re = /\.([a-zA-Z][a-zA-Z0-9-]*)/g;
-  let m;
-  while ((m = re.exec(cssText)) !== null) classes.add(m[1]);
+  for (const m of cssText.matchAll(re)) classes.add(m[1]);
   return classes;
 }
 function extractKeyframes(cssText: string) {
   const kf = new Set();
   const re = /@keyframes\s+([a-zA-Z0-9_-]+)/g;
-  let m;
-  while ((m = re.exec(cssText)) !== null) kf.add(m[1]);
+  for (const m of cssText.matchAll(re)) kf.add(m[1]);
   return kf;
 }
 // 提取 animation: 引用的 keyframe 名（含简写 animation: name dur ...）
 function extractAnimationRefs(cssText: string) {
   const refs = new Set();
   const re = /animation\s*:\s*([^;]+)/g;
-  let m;
-  while ((m = re.exec(cssText)) !== null) {
+  for (const m of cssText.matchAll(re)) {
     const body = m[1]!;
     if (/\bnone\b/.test(body)) continue;
     // 取第一个 token 作为关键帧名（animation: name duration ...）
     const first = body.trim().split(/\s+/)[0];
-    if (first && !/^(infinite|both|forwards|backwards|linear|ease|ease-in|ease-out|ease-in-out|alternate|normal|\d|\.)/.test(first)) {
+    if (
+      first &&
+      !/^(infinite|both|forwards|backwards|linear|ease|ease-in|ease-out|ease-in-out|alternate|normal|\d|\.)/.test(
+        first,
+      )
+    ) {
       refs.add(first);
     }
   }
@@ -149,9 +168,8 @@ function extractAnimationRefs(cssText: string) {
 function extractHtmlClasses(htmlText: string) {
   const classes = new Set<string>();
   const re = /class\s*=\s*"([^"]*)"/g;
-  let m;
-  while ((m = re.exec(htmlText)) !== null) {
-    for (const c of m[1]!.split(/\s+/)) {
+  for (const m of htmlText.matchAll(re)) {
+    for (const c of (m[1] ?? "").split(/\s+/)) {
       // 仅收「字母开头、仅含字母数字连字符」的 token；排除 ' + ( ? : ) 等模板拼接碎片
       if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(c)) classes.add(c);
     }
@@ -162,7 +180,23 @@ function extractHtmlClasses(htmlText: string) {
 // 各域「专属前缀」：本域内定义、不应出现在 document 层/其他域的专属类。
 // 仅当类名匹配本域专属前缀且本域无定义时 WARN（精准锁定"自己域的专属类漏定义"）。
 const DOMAIN_PREFIXES = {
-  "app-content": ["stg-", "repo-", "cr-", "gh-", "ws-", "diag-", "recy-", "rm-", "set-", "settings-", "page", "section-title", "stat-card", "placeholder-box", "ptag"],
+  "app-content": [
+    "stg-",
+    "repo-",
+    "cr-",
+    "gh-",
+    "ws-",
+    "diag-",
+    "recy-",
+    "rm-",
+    "set-",
+    "settings-",
+    "page",
+    "section-title",
+    "stat-card",
+    "placeholder-box",
+    "ptag",
+  ],
   sidebar: ["instance-card", "card-", "footer", "sk-", "tag", "pkg-icon", "list"],
   "app-tree": ["tree-", "node-"],
   "app-preview": ["preview", "dp-"],
@@ -181,12 +215,8 @@ function readSafe(p: string) {
 // 兼容多行（components.css）与单行（shadow 侧）写法；忽略空格/分号差异，只比对参数值。
 // 返回 null 表示未找到该 keyframe 或 from 无 translate。
 function extractKeyframeTranslate(cssText: string, name: string) {
-  const re = new RegExp(
-    "@keyframes\\s+" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*\\{",
-    "g",
-  );
-  let m;
-  while ((m = re.exec(cssText)) !== null) {
+  const re = new RegExp(`@keyframes\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{`, "g");
+  for (const m of cssText.matchAll(re)) {
     // 取从 { 到下一个顶级 } 的区间（keyframe 体）
     const start = m.index + m[0].length;
     let depth = 1;
@@ -203,7 +233,7 @@ function extractKeyframeTranslate(cssText: string, name: string) {
     const fromMatch = body.match(/from\s*\{[^}]*\}/);
     if (!fromMatch) continue;
     const tr = fromMatch[0].match(/transform\s*:\s*translate[XY]\s*\(([^)]+)\)/);
-    if (tr) return tr[1]!.replace(/\s+/g, "");
+    if (tr) return tr[1]?.replace(/\s+/g, "");
   }
   return null;
 }
@@ -217,14 +247,16 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += "\n" + t;
+    if (t) cssAgg += `\n${t}`;
   }
   const kf = extractKeyframes(cssAgg);
   const refs = extractAnimationRefs(cssAgg);
   for (const r of refs) {
     if (!kf.has(r)) {
       errorCount++;
-      problems.push(`[ERROR] ${dom.name}: animation 引用 @keyframes '${r}' 但在本 shadow 层无定义（跨 shadow keyframe 静默失效）`);
+      problems.push(
+        `[ERROR] ${dom.name}: animation 引用 @keyframes '${r}' 但在本 shadow 层无定义（跨 shadow keyframe 静默失效）`,
+      );
     }
   }
 }
@@ -244,7 +276,7 @@ const shadowKfSources = [
 let shadowKfAgg = "";
 for (const f of shadowKfSources) {
   const t = readSafe(f);
-  if (t) shadowKfAgg += "\n" + t;
+  if (t) shadowKfAgg += `\n${t}`;
 }
 for (const name of KF_PARAM_NAMES) {
   const globalVal = extractKeyframeTranslate(compCssText, name);
@@ -253,13 +285,17 @@ for (const name of KF_PARAM_NAMES) {
     // 任一侧缺失定义：检查 1 已覆盖 shadow 侧缺失；此处仅补全局侧缺失提示
     if (globalVal === null) {
       errorCount++;
-      problems.push(`[ERROR] ${DOCUMENT_LAYER_FILE} 缺失 @keyframes '${name}' 的 from translate（本地化契约基准丢失）`);
+      problems.push(
+        `[ERROR] ${DOCUMENT_LAYER_FILE} 缺失 @keyframes '${name}' 的 from translate（本地化契约基准丢失）`,
+      );
     }
     continue;
   }
   if (globalVal !== shadowVal) {
     errorCount++;
-    problems.push(`[ERROR] 本地化 keyframe 契约违例：'${name}' from translate 全局=${globalVal} / shadow=${shadowVal} 不一致（components.css 与 shadow 侧须参数值一致，见评审 2026-08-24 第 2 条）`);
+    problems.push(
+      `[ERROR] 本地化 keyframe 契约违例：'${name}' from translate 全局=${globalVal} / shadow=${shadowVal} 不一致（components.css 与 shadow 侧须参数值一致，见评审 2026-08-24 第 2 条）`,
+    );
   }
 }
 
@@ -270,7 +306,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += "\n" + t;
+    if (t) cssAgg += `\n${t}`;
   }
   const kf = extractKeyframes(cssAgg);
   for (const f of dom.html) {
@@ -280,7 +316,9 @@ for (const dom of SHADOW_DOMAINS) {
     for (const r of refs) {
       if (!kf.has(r)) {
         errorCount++;
-        problems.push(`[ERROR] ${dom.name}: tpl ${path.basename(f)} 内联 style 引用 @keyframes '${r}' 但在本 shadow 层无定义（跨 shadow keyframe 静默失效）`);
+        problems.push(
+          `[ERROR] ${dom.name}: tpl ${path.basename(f)} 内联 style 引用 @keyframes '${r}' 但在本 shadow 层无定义（跨 shadow keyframe 静默失效）`,
+        );
       }
     }
   }
@@ -288,11 +326,18 @@ for (const dom of SHADOW_DOMAINS) {
 
 // ── 检查 2：反向断言 components.css 不含已回迁 shadow 的类 ──
 const compCss = readSafe(DOCUMENT_LAYER_FILE) || "";
-for (const forbidden of [/\.stg-[a-z-]+/, /\.tab-body\b/, /\.settings-group\b/, /\.setting-row\b/]) {
+for (const forbidden of [
+  /\.stg-[a-z-]+/,
+  /\.tab-body\b/,
+  /\.settings-group\b/,
+  /\.setting-row\b/,
+]) {
   const re = new RegExp(forbidden.source, "g");
   if (re.test(compCss)) {
     errorCount++;
-    problems.push(`[ERROR] ${DOCUMENT_LAYER_FILE} 仍含已回迁 shadow 的类（${forbidden}）—— 全局副本是漂移源，应仅在 shadow 层定义`);
+    problems.push(
+      `[ERROR] ${DOCUMENT_LAYER_FILE} 仍含已回迁 shadow 的类（${forbidden}）—— 全局副本是漂移源，应仅在 shadow 层定义`,
+    );
   }
 }
 
@@ -301,7 +346,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += "\n" + t;
+    if (t) cssAgg += `\n${t}`;
   }
   const cssClasses = extractClasses(cssAgg);
   const prefixes = (DOMAIN_PREFIXES as Record<string, string[]>)[dom.name] || [];
@@ -313,7 +358,9 @@ for (const dom of SHADOW_DOMAINS) {
       const isOwnPrefix = prefixes.some((p) => c === p || c.startsWith(p));
       if (isOwnPrefix && !cssClasses.has(c) && !KNOWN_NO_CSS_CLASSES.has(c)) {
         warnCount++;
-        problems.push(`[WARN] ${dom.name}: tpl ${path.basename(f)} 使用本域专属类 '${c}' 但在本 shadow 层无定义（疑似漏迁/误归全局，需人工确认）`);
+        problems.push(
+          `[WARN] ${dom.name}: tpl ${path.basename(f)} 使用本域专属类 '${c}' 但在本 shadow 层无定义（疑似漏迁/误归全局，需人工确认）`,
+        );
       }
     }
   }
@@ -326,10 +373,15 @@ if (problems.length === 0) {
   process.exit(0);
 }
 if (JSON_OUT) {
-  console.log(JSON.stringify({ _summary: { ok: !(STRICT && errorCount > 0), errors: errorCount, warns: warnCount }, problems }));
+  console.log(
+    JSON.stringify({
+      _summary: { ok: !(STRICT && errorCount > 0), errors: errorCount, warns: warnCount },
+      problems,
+    }),
+  );
 } else {
-  console.log("[css-layer-check] 发现 " + errorCount + " 个 ERROR / " + warnCount + " 个 WARN：");
-  for (const p of problems) console.log("  " + p);
+  console.log(`[css-layer-check] 发现 ${errorCount} 个 ERROR / ${warnCount} 个 WARN：`);
+  for (const p of problems) console.log(`  ${p}`);
 }
 if (STRICT && errorCount > 0) {
   if (!JSON_OUT) console.log("[css-layer-check] --strict: ERROR 阻断（pre-push 门禁）");

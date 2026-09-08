@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 /**
  * i18n-key-naming.ts — i18n 键名三段式规范检查（ADR-124）
  *
@@ -24,38 +25,94 @@
  *
  * 退出码：通过 → 0；违规且 CI 模式 → 1；--list-violations 不阻断。
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve, basename } from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { toPosix } from './_lib/to-posix.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locales');
+const LOCALES_DIR = resolve(__dirname, "..", "frontend", "src", "core", "i18n", "locales");
 
 // ── 模块白名单（宽松：不在白名单不阻断，只在 --list-violations 报告）──
-const KNOWN_NAMESPACES = new Set([
-  'preview', 'settings', 'diagnostics', 'content', 'dialog', 'tree', 'import',
-  'about', 'workshop', 'error', 'format', 'common', 'syncManager', 'webFs',
-  'menu', 'web', 'sync', 'recycle', 'nav', 'downloads', 'credits', 'sidebar',
-  'update', 'downloadQueue', 'community', 'ctx', 'repo', 'skeleton', 'advFilter',
-  'toast', 'perf', 'lang', 'resource', 'android', 'app', 'instances', 'oldest',
-  'dedup', 'rtype', 'gh',
+const _KNOWN_NAMESPACES = new Set([
+  "preview",
+  "settings",
+  "diagnostics",
+  "content",
+  "dialog",
+  "tree",
+  "import",
+  "about",
+  "workshop",
+  "error",
+  "format",
+  "common",
+  "syncManager",
+  "webFs",
+  "menu",
+  "web",
+  "sync",
+  "recycle",
+  "nav",
+  "downloads",
+  "credits",
+  "sidebar",
+  "update",
+  "downloadQueue",
+  "community",
+  "ctx",
+  "repo",
+  "skeleton",
+  "advFilter",
+  "toast",
+  "perf",
+  "lang",
+  "resource",
+  "android",
+  "app",
+  "instances",
+  "oldest",
+  "dedup",
+  "rtype",
+  "gh",
 ]);
 
 // ── 已知合法的两段 entity（classify 是 role，但整体是不可拆分的业务术语，两段保留）──
 // 格式：完整 segment 名（如 "skeletonTab"）→ 允许两段，不报错
 const KNOWN_TWO_SEG_ENTITIES = new Set([
-  'skeletonTab', 'boneLabels', 'bonesLabel', 'boneCount',
-  'assetsBones', 'minGtMaxBones',
+  "skeletonTab",
+  "boneLabels",
+  "bonesLabel",
+  "boneCount",
+  "assetsBones",
+  "minGtMaxBones",
 ]);
 
 // ── 角色白名单（UI 角色，必须从语义上回答"在 UI 中扮演什么角色"）──
 const KNOWN_ROLES = new Set([
-  'tab', 'section', 'label', 'metric', 'action', 'hint', 'msg', 'dialog',
-  'option', 'state', 'event', 'field', 'tip', 'placeholder', 'status',
-  'page', 'header', 'row', 'col', 'group', 'sub', 'item',
+  "tab",
+  "section",
+  "label",
+  "metric",
+  "action",
+  "hint",
+  "msg",
+  "dialog",
+  "option",
+  "state",
+  "event",
+  "field",
+  "tip",
+  "placeholder",
+  "status",
+  "page",
+  "header",
+  "row",
+  "col",
+  "group",
+  "sub",
+  "item",
 ]);
 
 // ── entity 派生 segment（classify 为 role，但 segment 整体本身也是完整业务术语）──
@@ -68,25 +125,30 @@ const ENTITY_DERIVED_SEGMENTS = KNOWN_TWO_SEG_ENTITIES;
 
 // ── 例外命名空间：自身就是角色，不强制三段式（menu/error/nav/...）──
 // 这些命名空间下的两段键，两段本身合法（dialog 就是角色，不是子命名空间）
-const EXEMPT_NAMESPACES = new Set(['menu', 'error', 'nav', 'lang', 'ctx', 'app', 'dialog']);
+const EXEMPT_NAMESPACES = new Set(["menu", "error", "nav", "lang", "ctx", "app", "dialog"]);
 
 // ── 参数解析（仅直接执行时解析 argv；被 import 时跳过，见文件尾 main() guard）──
 function parseCliArgs() {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ['list-violations', 'help'],
-    strings: ['entity', 'check'],
+    bools: ["list-violations", "help"],
+    strings: ["entity", "check"],
     defaults: {},
   });
 
   if (args.help) {
-    const _src = readFileSync(process.argv[1]!, 'utf-8');
-    const _s = _src.indexOf('/**');
-    const _e = _src.indexOf('*/', _s);
-    console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());
+    const _src = readFileSync(process.argv[1]!, "utf-8");
+    const _s = _src.indexOf("/**");
+    const _e = _src.indexOf("*/", _s);
+    console.log(
+      _src
+        .slice(_s, _e + 2)
+        .replace(/^ \* ?/gm, "")
+        .trim(),
+    );
     process.exit(0);
   }
-  if (args.unknown && args.unknown.length) {
-    console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+  if (args.unknown?.length) {
+    console.error(`❌ 未知参数: ${args.unknown.join(", ")}（--help 查看用法）`);
     process.exit(1);
   }
 
@@ -95,28 +157,25 @@ function parseCliArgs() {
   return { args, allCheckKeys };
 }
 
-
 // ── 提取键 ──────────────────────────────────────────
 /** 纯文本 → 键集合（checkCI 对 git show 输出直接复用，免落临时文件）。 */
 function extractKeysFromText(text: string) {
   const keys = new Set<string>();
   // 匹配 "key": "value" 或 'key': 'value'，排除函数类型
-  const re = /^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm;
-  let m;
-  while ((m = re.exec(text)) !== null) {
+  for (const m of text.matchAll(/^\s*['"]([^'"]+)['"]\s*:\s*(?!function\b|\()/gm)) {
     keys.add(m[1]!);
   }
   return keys;
 }
 
 function extractKeys(file: string) {
-  return extractKeysFromText(readFileSync(file, 'utf8'));
+  return extractKeysFromText(readFileSync(file, "utf8"));
 }
 
 function loadAllKeys() {
   const result: Record<string, Set<string>> = {};
-  for (const file of readdirSync(LOCALES_DIR).filter((f) => f.endsWith('.ts'))) {
-    const lang = basename(file, '.ts');
+  for (const file of readdirSync(LOCALES_DIR).filter((f) => f.endsWith(".ts"))) {
+    const lang = basename(file, ".ts");
     result[lang] = extractKeys(resolve(LOCALES_DIR, file));
   }
   return result;
@@ -124,15 +183,75 @@ function loadAllKeys() {
 
 // ── 常见实体名集合（用于判断"是业务实体还是子命名空间"）──
 const COMMON_ENTITIES = new Set([
-  'bones', 'bone', 'texture', 'textures', 'model', 'models', 'pack', 'packs',
-  'count', 'size', 'total', 'name', 'names', 'title', 'desc', 'hint', 'type',
-  'id', 'path', 'url', 'file', 'files', 'dir', 'dirs', 'folder', 'folders',
-  'tab', 'tabs', 'sort', 'search', 'filter', 'status', 'state', 'mode',
-  'color', 'opacity', 'brightness', 'contrast', 'light', 'shadow',
-  'camera', 'zoom', 'rotate', 'axis', 'angle', 'time', 'date', 'author',
-  'version', 'format', 'group', 'item', 'items', 'row', 'rows', 'key', 'keys',
-  'value', 'values', 'enable', 'disable', 'show', 'hide', 'open', 'close',
-  'td', 'fov', 'fovx', 'fovy',
+  "bones",
+  "bone",
+  "texture",
+  "textures",
+  "model",
+  "models",
+  "pack",
+  "packs",
+  "count",
+  "size",
+  "total",
+  "name",
+  "names",
+  "title",
+  "desc",
+  "hint",
+  "type",
+  "id",
+  "path",
+  "url",
+  "file",
+  "files",
+  "dir",
+  "dirs",
+  "folder",
+  "folders",
+  "tab",
+  "tabs",
+  "sort",
+  "search",
+  "filter",
+  "status",
+  "state",
+  "mode",
+  "color",
+  "opacity",
+  "brightness",
+  "contrast",
+  "light",
+  "shadow",
+  "camera",
+  "zoom",
+  "rotate",
+  "axis",
+  "angle",
+  "time",
+  "date",
+  "author",
+  "version",
+  "format",
+  "group",
+  "item",
+  "items",
+  "row",
+  "rows",
+  "key",
+  "keys",
+  "value",
+  "values",
+  "enable",
+  "disable",
+  "show",
+  "hide",
+  "open",
+  "close",
+  "td",
+  "fov",
+  "fovx",
+  "fovy",
 ]);
 
 // ── 子命名空间 vs 角色 判断 ─────────────────────────
@@ -152,51 +271,57 @@ const COMMON_ENTITIES = new Set([
  * @returns {'role' | 'subns'}
  */
 function classifySecondSegment(seg: string) {
-  if (KNOWN_ROLES.has(seg)) return 'role';
+  if (KNOWN_ROLES.has(seg)) return "role";
 
   // 子命名空间特征
-  if (/_/.test(seg)) return 'subns';                  // env_group, preview3d_settings
-  if (/^\d/.test(seg)) return 'subns';                // 3dPreview
-  if (/^[a-z]{1,3}\d*$/.test(seg)) return 'subns';    // td (three.js), fov, fovX
+  if (/_/.test(seg)) return "subns"; // env_group, preview3d_settings
+  if (/^\d/.test(seg)) return "subns"; // 3dPreview
+  if (/^[a-z]{1,3}\d*$/.test(seg)) return "subns"; // td (three.js), fov, fovX
 
   // 含大写字母：可能是驼峰 entity+RoleType（如 boneCount, boneLabels, skeletonTab）
   if (/[A-Z]/.test(seg)) {
     // 整体在 entity 派生 segment 表里 → role（即使能拆出 rolePart）
-    if (ENTITY_DERIVED_SEGMENTS.has(seg)) return 'role';
+    if (ENTITY_DERIVED_SEGMENTS.has(seg)) return "role";
     const match = seg.match(/^([a-z]+)([A-Z][a-z]+)$/);
     if (match) {
       const [, entity, rolePart] = match;
-      const rolePartLower = rolePart!.toLowerCase();
+      const rolePartLower = rolePart?.toLowerCase();
       // rolePart 本身是已知角色 → role
-      if (KNOWN_ROLES.has(rolePartLower)) return 'role';
+      if (KNOWN_ROLES.has(rolePartLower)) return "role";
       // entity + 整体都在 COMMON_ENTITIES → role
-      if (COMMON_ENTITIES.has(entity!) && COMMON_ENTITIES.has(seg.toLowerCase())) return 'role';
+      if (COMMON_ENTITIES.has(entity!) && COMMON_ENTITIES.has(seg.toLowerCase())) return "role";
     }
-    return 'subns'; // 其他驼峰视为子命名空间
+    return "subns"; // 其他驼峰视为子命名空间
   }
 
   // 短纯英文小写词：bones, count, sort, name, title, desc, hint, type
-  if (COMMON_ENTITIES.has(seg)) return 'role';
+  if (COMMON_ENTITIES.has(seg)) return "role";
 
   // 默认：短纯小写词视为角色（更严格，便于 CI 发现问题）
-  if (/^[a-z]+$/.test(seg) && seg.length <= 8) return 'role';
+  if (/^[a-z]+$/.test(seg) && seg.length <= 8) return "role";
 
-  return 'subns'; // 其余视为子命名空间（保守）
+  return "subns"; // 其余视为子命名空间（保守）
 }
 
 // ── 启发式：根据实体名猜测角色（用于违规建议）──
 function guessRole(entity: string) {
   const e = entity.toLowerCase();
-  if (/tab$|nav$|page$/.test(e)) return 'tab';
-  if (/^(export|import|copy|paste|delete|remove|add|open|close|save|reload|clear|reset|apply|cancel|submit|confirm|refresh|retry|download|upload|install|uninstall|enable|disable|run|stop|start|pause|resume|toggle|select|deselect|choose)/.test(e)) return 'action';
-  if (/count$|size$|total$|num$|amount$|number$|len$|length$|width$|height$|depth$/.test(e)) return 'metric';
-  if (/hint$|tip$|help$|desc$|description$|placeholder$/.test(e)) return 'hint';
-  if (/label$|title$|name$|caption$|heading$/.test(e)) return 'label';
-  if (/state$|status$/.test(e)) return 'state';
-  if (/msg$|message$|text$|content$/.test(e)) return 'msg';
-  if (/field$|col$|column$|attr$|attribute$/.test(e)) return 'field';
-  if (/group$|section$|panel$/.test(e)) return 'section';
-  return 'section'; // 默认
+  if (/tab$|nav$|page$/.test(e)) return "tab";
+  if (
+    /^(export|import|copy|paste|delete|remove|add|open|close|save|reload|clear|reset|apply|cancel|submit|confirm|refresh|retry|download|upload|install|uninstall|enable|disable|run|stop|start|pause|resume|toggle|select|deselect|choose)/.test(
+      e,
+    )
+  )
+    return "action";
+  if (/count$|size$|total$|num$|amount$|number$|len$|length$|width$|height$|depth$/.test(e))
+    return "metric";
+  if (/hint$|tip$|help$|desc$|description$|placeholder$/.test(e)) return "hint";
+  if (/label$|title$|name$|caption$|heading$/.test(e)) return "label";
+  if (/state$|status$/.test(e)) return "state";
+  if (/msg$|message$|text$|content$/.test(e)) return "msg";
+  if (/field$|col$|column$|attr$|attribute$/.test(e)) return "field";
+  if (/group$|section$|panel$/.test(e)) return "section";
+  return "section"; // 默认
 }
 
 // ── 校验单键 ────────────────────────────────────────
@@ -204,7 +329,7 @@ function guessRole(entity: string) {
  * @returns {{ ok: boolean, reason?: string, suggestion?: string }}
  */
 function validateKey(key: string) {
-  const parts = key.split('.');
+  const parts = key.split(".");
 
   // 单段键允许（很少，如 lang）
   if (parts.length < 2) return { ok: true };
@@ -225,7 +350,7 @@ function validateKey(key: string) {
     // 第二段是角色 → 违规，但 KNOWN_TWO_SEG_ENTITIES 里的保留（preview.skeletonTab 等复合实体）
     const second = parts[1]!;
     const classify = classifySecondSegment(second);
-    if (classify === 'role') {
+    if (classify === "role") {
       // 在已知合法两段 entity 表里 → 保留（整体是不可拆分的业务术语）
       if (KNOWN_TWO_SEG_ENTITIES.has(second)) return { ok: true };
       const roleGuess = guessRole(second);
@@ -250,7 +375,7 @@ function validateKey(key: string) {
 // ── 子命令：--list-violations ──────────────────────
 function listViolations() {
   const all = loadAllKeys();
-  const baseLang = 'zh-CN';
+  const baseLang = "zh-CN";
   if (!all[baseLang]) {
     console.error(`❌ 找不到基准语言包 ${baseLang}`);
     process.exit(1);
@@ -265,7 +390,7 @@ function listViolations() {
   // 按"实体违规次数"降序（高频歧义优先）
   const entityCount = new Map();
   for (const v of violations) {
-    const parts = v.key.split('.');
+    const parts = v.key.split(".");
     if (parts.length === 2) {
       const ent = parts[1];
       entityCount.set(ent, (entityCount.get(ent) || 0) + 1);
@@ -273,8 +398,8 @@ function listViolations() {
   }
 
   violations.sort((a, b) => {
-    const ea = a.key.split('.')[1] || '';
-    const eb = b.key.split('.')[1] || '';
+    const ea = a.key.split(".")[1] || "";
+    const eb = b.key.split(".")[1] || "";
     return (entityCount.get(eb) || 0) - (entityCount.get(ea) || 0);
   });
 
@@ -285,7 +410,7 @@ function listViolations() {
   // 按实体分组输出 TOP
   const grouped = new Map();
   for (const v of violations) {
-    const parts = v.key.split('.');
+    const parts = v.key.split(".");
     if (parts.length === 2) {
       const ent = parts[1];
       if (!grouped.has(ent)) grouped.set(ent, []);
@@ -297,7 +422,8 @@ function listViolations() {
   const TOP = 15;
   for (const [ent, items] of sortedEntities.slice(0, TOP)) {
     console.log(`📌 "${ent}"（${items.length} 处违规）：`);
-    for (const v of items.slice(0, 3)) { // 每实体最多显示 3 个示例
+    for (const v of items.slice(0, 3)) {
+      // 每实体最多显示 3 个示例
       console.log(`   ❌ ${v.key}`);
       console.log(`      原因：${v.reason}`);
       if (v.suggestion) console.log(`      → ${v.suggestion}`);
@@ -312,8 +438,12 @@ function listViolations() {
 
   console.log(`\n[统计]`);
   console.log(`  总违规键：${violations.length}`);
-  console.log(`  高频歧义实体（>5处违规）：${sortedEntities.filter(([_, v]) => v.length > 5).length}`);
-  console.log(`  中频（2-5处）：${sortedEntities.filter(([_, v]) => v.length >= 2 && v.length <= 5).length}`);
+  console.log(
+    `  高频歧义实体（>5处违规）：${sortedEntities.filter(([_, v]) => v.length > 5).length}`,
+  );
+  console.log(
+    `  中频（2-5处）：${sortedEntities.filter(([_, v]) => v.length >= 2 && v.length <= 5).length}`,
+  );
   console.log(`  孤立（1处）：${sortedEntities.filter(([_, v]) => v.length === 1).length}`);
 
   return violations;
@@ -322,7 +452,7 @@ function listViolations() {
 // ── 子命令：--entity <name> ──────────────────────────
 function listByEntity(entity: string) {
   const all = loadAllKeys();
-  const baseLang = 'zh-CN';
+  const baseLang = "zh-CN";
   const lower = entity.toLowerCase();
 
   const found: string[] = [];
@@ -338,40 +468,40 @@ function listByEntity(entity: string) {
   console.log(`[实体] 搜索含 "${entity}" 的所有键（共 ${found.length} 个）：\n`);
   for (const key of found.sort()) {
     const result = validateKey(key);
-    console.log(`  ${result.ok ? '✅' : '❌'} ${key}`);
-    if (!result.ok) console.log(`       原因：${result.reason}  → ${result.suggestion || ''}`);
+    console.log(`  ${result.ok ? "✅" : "❌"} ${key}`);
+    if (!result.ok) console.log(`       原因：${result.reason}  → ${result.suggestion || ""}`);
   }
 }
 
 // ── CI 模式：检查新增/修改的键 ──────────────────────
 function checkCI() {
-  const r = spawnSync('git', ['diff', '--name-only', 'HEAD', '--', 'frontend/src/locales'], {
-    encoding: 'utf-8',
-    cwd: resolve(__dirname, '..'),
+  const r = spawnSync("git", ["diff", "--name-only", "HEAD", "--", "frontend/src/locales"], {
+    encoding: "utf-8",
+    cwd: resolve(__dirname, ".."),
   });
   if (r.status !== 0) {
     // 无 git 或失败 → 跳过
-    console.log('[i18n-key-naming] 无法获取 git diff，跳过新增键检查');
+    console.log("[i18n-key-naming] 无法获取 git diff，跳过新增键检查");
     return;
   }
 
-  const changedFiles = r.stdout.trim().split('\n').filter(Boolean);
+  const changedFiles = r.stdout.trim().split("\n").filter(Boolean);
   if (changedFiles.length === 0) {
-    console.log('[i18n-key-naming] 无语言包改动，跳过');
+    console.log("[i18n-key-naming] 无语言包改动，跳过");
     return;
   }
 
   // 找新增键（current - HEAD）
   const newKeys = new Set<string>();
   for (const relPath of changedFiles) {
-    const fullPath = resolve(__dirname, '..', relPath.replace(/\//g, '\\'));
+    const fullPath = resolve(__dirname, "..", relPath.replace(/\//g, "\\"));
     if (!existsSync(fullPath)) continue;
     const current = extractKeys(fullPath);
 
     // 尝试从 git HEAD 读旧版本（git show 输出直接走纯文本提取，不落临时文件——
     // 只读环境/并行下安全，且省一次写删 IO）
     const gitPath = toPosix(relPath);
-    const headResult = spawnSync('git', ['show', `HEAD:${gitPath}`], { encoding: 'utf-8' });
+    const headResult = spawnSync("git", ["show", `HEAD:${gitPath}`], { encoding: "utf-8" });
     let headKeys = new Set();
     if (headResult.status === 0) {
       headKeys = extractKeysFromText(headResult.stdout);
@@ -430,7 +560,7 @@ function checkKeys(keys: string[]) {
 // ── 主入口（仅直接执行时运行；被 import 时跳过，便于单元测试）──
 function main() {
   const { args, allCheckKeys } = parseCliArgs();
-  if (args['list-violations']) {
+  if (args["list-violations"]) {
     listViolations();
   } else if (args.entity) {
     listByEntity(args.entity as string);
@@ -446,4 +576,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
 }
 
 // 导出纯函数供测试 import（见 tests/test_i18n_key_naming.ts）
-export { validateKey, classifySecondSegment, guessRole, extractKeys, loadAllKeys };
+export { classifySecondSegment, extractKeys, guessRole, loadAllKeys, validateKey };

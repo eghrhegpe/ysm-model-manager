@@ -18,9 +18,9 @@
  *   import { showAt, existsAt, logPath, diffTree, renamePairs }
  *     from './_lib/git-ref.ts';
  */
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { ROOT, toPosix } from './scan-files.ts';
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { ROOT, toPosix } from "./scan-files.ts";
 
 /**
  * Windows 安全 git 命令执行器。
@@ -33,19 +33,23 @@ import { ROOT, toPosix } from './scan-files.ts';
  * @returns {string}       stdout 文本
  */
 function git(args: string[]) {
-  return execFileSync('git', ['-c', 'core.quotepath=false', ...args], {
+  return execFileSync("git", ["-c", "core.quotepath=false", ...args], {
     cwd: ROOT,
-    encoding: 'utf8',
+    encoding: "utf8",
     maxBuffer: 128 * 1024 * 1024,
     // Windows 上 execFileSync 默认 stdio 会把 git 的 stderr 透传到父进程
     // （cat-file -e 失败等探测路径会刷 fatal 噪声）；显式 pipe 捕获进 error.stderr
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 }
 
 /** git 命令，失败返回 null（如路径不存在 / 二进制 / 非 git 仓库）。 */
 export function gitMaybe(args: string[]) {
-  try { return git(args); } catch { return null; }
+  try {
+    return git(args);
+  } catch {
+    return null;
+  }
 }
 
 /** 把本地路径归一化为 git 内部路径格式（正斜杠，相对仓库根）。
@@ -68,8 +72,8 @@ function toGitPath(p: string) {
  * @returns {string|null} 文件文本内容；不存在/失败 → null
  */
 export function showAt(ref: string, p: string) {
-  const gp = typeof p === 'string' ? toGitPath(p) : p;
-  return gitMaybe(['show', `${ref}:${gp}`]);
+  const gp = typeof p === "string" ? toGitPath(p) : p;
+  return gitMaybe(["show", `${ref}:${gp}`]);
 }
 
 /**
@@ -79,7 +83,7 @@ export function showAt(ref: string, p: string) {
  * @returns {boolean}
  */
 export function existsAt(ref: string, p: string) {
-  return gitMaybe(['cat-file', '-e', `${ref}:${toGitPath(p)}`]) !== null;
+  return gitMaybe(["cat-file", "-e", `${ref}:${toGitPath(p)}`]) !== null;
 }
 
 /**
@@ -92,7 +96,7 @@ export function lineCountAt(ref: string, p: string) {
   const text = showAt(ref, p);
   if (!text) return null;
   const nl = (text.match(/\n/g) || []).length;
-  return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
+  return nl + (text.length > 0 && !text.endsWith("\n") ? 1 : 0);
 }
 
 /**
@@ -106,18 +110,25 @@ export function lineCountAt(ref: string, p: string) {
  * @param {boolean} [opts.long]   用完整 hash（%H）而非缩写（%h）
  * @returns {string[]}  每行一条：hash + subject（可能为空字符串数组）
  */
-export function logPath(p: string, opts: { limit?: number; follow?: boolean; long?: boolean } = {}) {
+export function logPath(
+  p: string,
+  opts: { limit?: number; follow?: boolean; long?: boolean } = {},
+) {
   const { limit = 30, follow = true, long = false } = opts;
-  const fmt = long ? '%H%x09%s' : '%h%x09%s';
-  const args = ['log', `--format=${fmt}`];
-  if (follow) args.push('--follow');
-  args.push(`-${limit}`, '--', toGitPath(p));
+  const fmt = long ? "%H%x09%s" : "%h%x09%s";
+  const args = ["log", `--format=${fmt}`];
+  if (follow) args.push("--follow");
+  args.push(`-${limit}`, "--", toGitPath(p));
   const out = gitMaybe(args);
   if (!out) return [];
-  return out.trim().split('\n').map((l) => {
-    const [hash, ...rest] = l.split('\t');
-    return `${hash} ${rest.join('\t')}`;
-  }).filter(Boolean);
+  return out
+    .trim()
+    .split("\n")
+    .map((l) => {
+      const [hash, ...rest] = l.split("\t");
+      return `${hash} ${rest.join("\t")}`;
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -131,21 +142,31 @@ export function logPath(p: string, opts: { limit?: number; follow?: boolean; lon
  */
 export function logPathDetail(p: string, opts: { limit?: number; follow?: boolean } = {}) {
   const { limit = 30, follow = true } = opts;
-  const args = ['log'];
-  if (follow) args.push('--follow');
-  args.push('--format=%H%x09%h%x09%an%x09%ad%x09%s', '--date=short', `-${limit}`, '--', toGitPath(p));
+  const args = ["log"];
+  if (follow) args.push("--follow");
+  args.push(
+    "--format=%H%x09%h%x09%an%x09%ad%x09%s",
+    "--date=short",
+    `-${limit}`,
+    "--",
+    toGitPath(p),
+  );
   const out = gitMaybe(args);
   if (!out) return [];
-  return out.trim().split('\n').map((l) => {
-    const parts = l.split('\t');
-    return {
-      hash: parts[0] || '',
-      short: parts[1] || '',
-      author: parts[2] || '',
-      date: parts[3] || '',
-      subject: parts.slice(4).join('\t') || '',
-    };
-  }).filter((c) => c.hash);
+  return out
+    .trim()
+    .split("\n")
+    .map((l) => {
+      const parts = l.split("\t");
+      return {
+        hash: parts[0] || "",
+        short: parts[1] || "",
+        author: parts[2] || "",
+        date: parts[3] || "",
+        subject: parts.slice(4).join("\t") || "",
+      };
+    })
+    .filter((c) => c.hash);
 }
 
 /**
@@ -156,12 +177,12 @@ export function logPathDetail(p: string, opts: { limit?: number; follow?: boolea
  * @param {string} [dir] 目录（默认仓库根）
  * @returns {string[]}  相对仓库根的正斜杠路径列表
  */
-export function lsTree(ref: string, dir = '') {
-  const args = ['ls-tree', '-r', '--name-only', ref];
-  if (dir) args.push('--', dir);
+export function lsTree(ref: string, dir = "") {
+  const args = ["ls-tree", "-r", "--name-only", ref];
+  if (dir) args.push("--", dir);
   const out = gitMaybe(args);
   if (!out) return [];
-  return out.trim().split('\n').filter(Boolean);
+  return out.trim().split("\n").filter(Boolean);
 }
 
 /**
@@ -174,14 +195,19 @@ export function lsTree(ref: string, dir = '') {
  * @param {string} [dir]   限定目录（可选）
  * @returns {{added:string[], removed:string[], common:string[], all:string[]}}
  */
-export function diffTree(older: string, newer: string, dir = ''): { added: string[]; removed: string[]; common: string[]; all: string[] } {
+export function diffTree(
+  older: string,
+  newer: string,
+  dir = "",
+): { added: string[]; removed: string[]; common: string[]; all: string[] } {
   const oldFiles = new Set(lsTree(older, dir));
   const newFiles = new Set(lsTree(newer, dir));
   const added: string[] = [];
   const removed: string[] = [];
   const common: string[] = [];
   for (const f of newFiles) {
-    if (oldFiles.has(f)) common.push(f); else added.push(f);
+    if (oldFiles.has(f)) common.push(f);
+    else added.push(f);
   }
   for (const f of oldFiles) {
     if (!newFiles.has(f)) removed.push(f);
@@ -205,17 +231,22 @@ export function diffTree(older: string, newer: string, dir = ''): { added: strin
  * @param {number} [similarityThreshold]  相似度假说（0-100），默认 50
  * @returns {{oldPath:string, newPath:string, similarity:number}[]}
  */
-export function renamePairs(older: string, newer: string, similarityThreshold = 50): Array<{ oldPath: string; newPath: string; similarity: number }> {
-  const out = gitMaybe(['diff', '--name-status', '-M' + similarityThreshold, older, newer]);
+export function renamePairs(
+  older: string,
+  newer: string,
+  similarityThreshold = 50,
+): Array<{ oldPath: string; newPath: string; similarity: number }> {
+  const out = gitMaybe(["diff", "--name-status", `-M${similarityThreshold}`, older, newer]);
   if (!out) return [];
   const pairs: Array<{ oldPath: string; newPath: string; similarity: number }> = [];
-  for (const line of out.trim().split('\n')) {
+  for (const line of out.trim().split("\n")) {
     const m = line.match(/^R(\d+)\t(.+)\t(.+)$/);
-    if (m) pairs.push({
-      similarity: Number(m[1]!),
-      oldPath: m[2]!,
-      newPath: m[3]!,
-    });
+    if (m)
+      pairs.push({
+        similarity: Number(m[1]!),
+        oldPath: m[2]!,
+        newPath: m[3]!,
+      });
   }
   return pairs;
 }

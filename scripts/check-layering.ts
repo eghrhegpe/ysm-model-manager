@@ -25,44 +25,45 @@
  * 退出码：0 通过 / 1 违规。
  * 依赖：node:fs / node:path / node:url / 本地模块
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, relative } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parseArgs } from './_lib/parse-args.ts';
-import { walk, toPosix } from './_lib/scan-files.ts';
-import { resolveAliasToSrcRel } from './_lib/alias-resolve.ts';
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveAliasToSrcRel } from "./_lib/alias-resolve.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { toPosix, walk } from "./_lib/scan-files.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..');
-const SRC_ROOT = resolve(REPO_ROOT, 'frontend', 'src');
-const BASELINE_FILE = resolve(REPO_ROOT, 'docs', '.layering-baseline.json');
+const REPO_ROOT = resolve(__dirname, "..");
+const SRC_ROOT = resolve(REPO_ROOT, "frontend", "src");
+const BASELINE_FILE = resolve(REPO_ROOT, "docs", ".layering-baseline.json");
 
 // 分层（自上而下）：views → features → services → utils → core
 // wasm / backend 不入层（胶水/绑定产物），layerOf 返回 null → 天然跳过
-const LAYER_ORDER = ['views', 'features', 'services', 'utils', 'core'];
+const LAYER_ORDER = ["views", "features", "services", "utils", "core"];
 
 // R1/R2 零容忍：from 层不得 import to 层（当前已满足，防回退）
 const ZERO_TOLERANCE = [
-  { from: 'utils', to: ['views', 'features', 'services'] },
-  { from: 'services', to: ['views', 'features'] },
+  { from: "utils", to: ["views", "features", "services"] },
+  { from: "services", to: ["views", "features"] },
 ];
 
 // R3/R4 基线管理：from 层不得 import to 层（现状存在违反，防新增）
 const TRACKED_RULES = [
-  { from: 'core', to: ['views', 'features'] },
-  { from: 'features', to: ['views'] },
+  { from: "core", to: ["views", "features"] },
+  { from: "features", to: ["views"] },
 ];
 
 /* ---------- 收集源文件（复用 _lib/scan-files 共享遍历层） ---------- */
 const SCAN_OPTS = {
-  exts: ['.ts', '.tsx'],
-  skipDir: (n: string) => n.startsWith('.') || n === 'node_modules' || n === '__tests__' || n === 'test-utils',
+  exts: [".ts", ".tsx"],
+  skipDir: (n: string) =>
+    n.startsWith(".") || n === "node_modules" || n === "__tests__" || n === "test-utils",
   skipFile: /\.(d|test|spec)\.tsx?$/,
 };
 
 /** 文件所属层：'views' | 'features' | 'services' | 'utils' | 'core' | null */
 function layerOf(srcRelPath: string) {
-  const top = srcRelPath.split('/')[0]!;
+  const top = srcRelPath.split("/")[0]!;
   return LAYER_ORDER.includes(top) ? top : null;
 }
 
@@ -72,10 +73,10 @@ function resolveTarget(spec: string, fromSrcRel: string) {
   // '@/...' 落 src 内 → 返回相对路径；'#root...' 落 src 外 → null（不污染分层判定）。
   const aliasRel = resolveAliasToSrcRel(spec);
   if (aliasRel !== null) return aliasRel;
-  if (spec.startsWith('.')) {
+  if (spec.startsWith(".")) {
     const abs = resolve(dirname(resolve(SRC_ROOT, fromSrcRel)), spec);
     const rel = toPosix(relative(SRC_ROOT, abs));
-    return rel.startsWith('..') ? null : rel;
+    return rel.startsWith("..") ? null : rel;
   }
   return null; // 裸包名（@wailsio 等）不参与分层判定
 }
@@ -94,9 +95,9 @@ const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/gm;
  */
 function stripNoise(text: string) {
   return text
-    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, ' '))
-    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, ' '));
+    .replace(/`(?:\\.|[^`\\])*`/g, (m: string) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/.*$/gm, (m: string) => m.replace(/[^\n]/g, " "));
 }
 
 /**
@@ -111,20 +112,20 @@ export function matchImports(text: string) {
     // `import type … from`（整句 type-only），或具名项全部带 `type` 前缀
     const typeOnly =
       Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]!);
-    out.push({ spec: m[3]!, typeOnly, line: clean.slice(0, m.index).split('\n').length });
+    out.push({ spec: m[3]!, typeOnly, line: clean.slice(0, m.index).split("\n").length });
   }
   for (const b of clean.matchAll(BARE_IMPORT_RE)) {
-    out.push({ spec: b[1]!, typeOnly: false, line: clean.slice(0, b.index).split('\n').length }); // 副作用导入，必为运行时
+    out.push({ spec: b[1]!, typeOnly: false, line: clean.slice(0, b.index).split("\n").length }); // 副作用导入，必为运行时
   }
   return out;
 }
 
 /* ---------- 主流程 ---------- */
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝，不静默落入默认值（此前 --foo 类误用被忽略）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --json / --update）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --json / --update）`);
     process.exit(1);
   }
   const { json, update } = parsed;
@@ -133,14 +134,21 @@ function main() {
     console.error(`❌ frontend/src 目录不存在（${SRC_ROOT}），扫描不完整，拒绝放行`);
     process.exit(1);
   }
-  const violations: Array<{ rule: string; from: string; line: number; to: string; fromLayer: string; toLayer: string }> = [];
+  const violations: Array<{
+    rule: string;
+    from: string;
+    line: number;
+    to: string;
+    fromLayer: string;
+    toLayer: string;
+  }> = [];
 
   for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
     const srcRel = toPosix(relative(SRC_ROOT, abs));
     const fromLayer = layerOf(srcRel);
-    if (!fromLayer || fromLayer === 'views') continue; // views 是顶层，向下依赖合法
+    if (!fromLayer || fromLayer === "views") continue; // views 是顶层，向下依赖合法
 
-    const text = readFileSync(abs, 'utf8');
+    const text = readFileSync(abs, "utf8");
     for (const { spec, typeOnly, line } of matchImports(text)) {
       const target = resolveTarget(spec, srcRel);
       if (!target) continue;
@@ -150,15 +158,15 @@ function main() {
 
       let rule: string | null = null;
       for (let i = 0; i < ZERO_TOLERANCE.length; i++) {
-        if (fromLayer === ZERO_TOLERANCE[i]!.from && ZERO_TOLERANCE[i]!.to.includes(toLayer)) {
+        if (fromLayer === ZERO_TOLERANCE[i]?.from && ZERO_TOLERANCE[i]?.to.includes(toLayer)) {
           rule = `R${i + 1}`;
           break;
         }
       }
       if (!rule) {
         for (let i = 0; i < TRACKED_RULES.length; i++) {
-          if (fromLayer === TRACKED_RULES[i]!.from && TRACKED_RULES[i]!.to.includes(toLayer)) {
-            rule = i === 0 ? 'R3' : 'R4';
+          if (fromLayer === TRACKED_RULES[i]?.from && TRACKED_RULES[i]?.to.includes(toLayer)) {
+            rule = i === 0 ? "R3" : "R4";
             break;
           }
         }
@@ -171,19 +179,23 @@ function main() {
 
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
-  const rZero = violations.filter((v) => v.rule === 'R1' || v.rule === 'R2');
-  const tracked = violations.filter((v) => v.rule === 'R3' || v.rule === 'R4');
+  const rZero = violations.filter((v) => v.rule === "R1" || v.rule === "R2");
+  const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
 
-  const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, 'utf8')) : null;
+  const baseline = existsSync(BASELINE_FILE)
+    ? JSON.parse(readFileSync(BASELINE_FILE, "utf8"))
+    : null;
 
   if (update) {
     // P1 守卫（2026-08-17）：基线只许减少（注释已声明，实现此前未拦截）——
     // 新增反向边拒绝写入，除非显式 --force（门禁锐评 P1-3）。
-    const force = process.argv.includes('--force');
+    const force = process.argv.includes("--force");
     const knownPrev = new Set(baseline?.entries ?? []);
     const added = tracked.filter((v) => !knownPrev.has(key(v))).map(key);
     if (added.length > 0 && !force) {
-      console.log(`[基线守卫] 新增 ${added.length} 条反向边违规，拒绝更新基线（只许减少）——确认后加 --force 覆盖`);
+      console.log(
+        `[基线守卫] 新增 ${added.length} 条反向边违规，拒绝更新基线（只许减少）——确认后加 --force 覆盖`,
+      );
       console.log(`✖ 基线未更新（存在守卫拦截）`);
       process.exit(1);
     }
@@ -192,19 +204,21 @@ function main() {
     // 反向边无增减时被无谓改写 → 触发 git 跟踪 churn（守护契约不受日期影响）。
     const prevSorted = Array.isArray(baseline?.entries) ? [...baseline.entries].sort() : [];
     const unchanged =
-      prevSorted.length === newEntries.length &&
-      prevSorted.every((e, i) => e === newEntries[i]);
+      prevSorted.length === newEntries.length && prevSorted.every((e, i) => e === newEntries[i]);
     if (unchanged) {
       console.log(`[layering] 基线无变化（${newEntries.length} 条反向边），跳过写入`);
       process.exit(0);
     }
     const data = {
-      _comment: '前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update',
+      _comment:
+        "前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
       generatedAt: new Date().toISOString().slice(0, 10),
       entries: newEntries,
     };
-    writeFileSync(BASELINE_FILE, JSON.stringify(data, null, 2) + '\n');
-    console.log(`[layering] 基线已更新: ${relative(REPO_ROOT, BASELINE_FILE)}（${newEntries.length} 条反向边）${force && added.length ? `（--force 覆盖 ${added.length} 条新增）` : ''}`);
+    writeFileSync(BASELINE_FILE, `${JSON.stringify(data, null, 2)}\n`);
+    console.log(
+      `[layering] 基线已更新: ${relative(REPO_ROOT, BASELINE_FILE)}（${newEntries.length} 条反向边）${force && added.length ? `（--force 覆盖 ${added.length} 条新增）` : ""}`,
+    );
     process.exit(0);
   }
 
@@ -213,42 +227,52 @@ function main() {
   const fixed = [...known].filter((k) => !tracked.some((v) => key(v) === k));
 
   if (json) {
-    console.log(JSON.stringify({
-      _summary: {
-        zero_tolerance: rZero.length,
-        tracked: tracked.length,
-        regressions: regressions.length,
-        fixed: fixed.length,
-      },
-      zero_tolerance_violations: rZero,
-      regressions,
-      fixed,
-      baseline: known.size,
-      debt: [...tracked.map(key)].sort(), // 当前基线内分层债务（待清理）
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: {
+            zero_tolerance: rZero.length,
+            tracked: tracked.length,
+            regressions: regressions.length,
+            fixed: fixed.length,
+          },
+          zero_tolerance_violations: rZero,
+          regressions,
+          fixed,
+          baseline: known.size,
+          debt: [...tracked.map(key)].sort(), // 当前基线内分层债务（待清理）
+        },
+        null,
+        2,
+      ),
+    );
     process.exit(rZero.length || regressions.length ? 1 : 0);
   }
 
   /* ---------- 报告 ---------- */
-  console.log('=== 前端分层依赖方向检查 ===');
-  console.log('分层: views → features → services → utils → core\n');
+  console.log("=== 前端分层依赖方向检查 ===");
+  console.log("分层: views → features → services → utils → core\n");
 
   if (rZero.length) {
     console.error(`❌ R1/R2 违规（零容忍：utils/services 向上依赖）${rZero.length} 条：`);
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
-    console.log('✅ R1/R2 utils/services → 上层：0 条');
+    console.log("✅ R1/R2 utils/services → 上层：0 条");
   }
 
   const trackedEdges = new Set(tracked.map(key));
-  console.log(`\nR3/R4 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处 import（基线 ${known.size} 条）`);
+  console.log(
+    `\nR3/R4 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处 import（基线 ${known.size} 条）`,
+  );
   if (regressions.length) {
     console.error(`❌ 新增 ${regressions.length} 条反向边（超出基线）：`);
     for (const v of regressions) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   }
   if (fixed.length) {
-    console.log(`🎉 已消除 ${fixed.length} 条：${fixed.slice(0, 5).join(', ')}${fixed.length > 5 ? ' …' : ''}`);
-    console.log('   运行 `node scripts/check-layering.ts --update` 收紧基线');
+    console.log(
+      `🎉 已消除 ${fixed.length} 条：${fixed.slice(0, 5).join(", ")}${fixed.length > 5 ? " …" : ""}`,
+    );
+    console.log("   运行 `node scripts/check-layering.ts --update` 收紧基线");
   }
   if (trackedEdges.size) {
     console.log(`\n📋 分层债务（基线内待清理，不阻断）：`);
@@ -256,7 +280,7 @@ function main() {
   }
 
   const failed = rZero.length > 0 || regressions.length > 0;
-  console.log(failed ? '\n❌ 分层检查未通过' : '\n✅ 分层检查通过');
+  console.log(failed ? "\n❌ 分层检查未通过" : "\n✅ 分层检查通过");
   process.exit(failed ? 1 : 0);
 }
 

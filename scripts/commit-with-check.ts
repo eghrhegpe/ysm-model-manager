@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+import { runCommitChecks } from "./_lib/commit-check.ts";
+import { commitWithTempIndex } from "./_lib/commit-temp-index.ts";
+import { domainSummaryText, groupByDomain } from "./_lib/domain-classify.ts";
+import { GEN_CMDS } from "./_lib/gen-cmds.ts";
+import { run } from "./_lib/proc.ts";
 /**
  * commit-with-check.ts — 验证 + 自动提交（轻量级提交校验，2026-09-02 重构；
  * ADR-151 临时索引白名单提交，2026-09-01）
@@ -38,41 +43,38 @@
  * 依赖：_lib/scan-files / _lib/domain-classify / _lib/proc / _lib/commit-check /
  *       _lib/commit-temp-index / _lib/gen-cmds
  */
-import { ROOT } from './_lib/scan-files.ts';
-import { groupByDomain, domainSummaryText } from './_lib/domain-classify.ts';
-import { run } from './_lib/proc.ts';
-import { runCommitChecks } from './_lib/commit-check.ts';
-import { commitWithTempIndex } from './_lib/commit-temp-index.ts';
-import { GEN_CMDS } from './_lib/gen-cmds.ts';
+import { ROOT } from "./_lib/scan-files.ts";
 
 // ── 参数解析 ──
 const args = process.argv.slice(2);
-let message = '';
+let message = "";
 let docsMode = false;
 let checkOnly = false;
 let keepIndex = false;
-let files: string[] = [];
+const files: string[] = [];
 
 for (let i = 0; i < args.length; i++) {
   const a = args[i]!; // noUncheckedIndexedAccess：循环内 i 恒 < length，非空断言安全
-  if (a === '-m' || a === '--message') {
-    message = args[++i] || '';
-  } else if (a === '--docs') {
+  if (a === "-m" || a === "--message") {
+    message = args[++i] || "";
+  } else if (a === "--docs") {
     docsMode = true;
-  } else if (a === '--check') {
+  } else if (a === "--check") {
     checkOnly = true;
-  } else if (a === '--keep-index') {
+  } else if (a === "--keep-index") {
     keepIndex = true;
-  } else if (a === '--files') {
+  } else if (a === "--files") {
     // 收集后续所有非 `-` 开头参数作为白名单路径（可跨空格；重复 --files 累加）
-    while (i + 1 < args.length && !args[i + 1]!.startsWith('-')) {
+    while (i + 1 < args.length && !args[i + 1]?.startsWith("-")) {
       files.push(args[++i]!);
     }
-  } else if (a.startsWith('--files=')) {
-    files.push(...a.slice('--files='.length).split(/[, ]+/).filter(Boolean));
-  } else if (a === '--fast') {
-    console.warn('⚠️  --fast 已移除：轻量提交校验只跑按文件裁剪的检查，不跑重型门禁（go build/vite build 等留待 pre-push）。');
-  } else if (a === '-h' || a === '--help') {
+  } else if (a.startsWith("--files=")) {
+    files.push(...a.slice("--files=".length).split(/[, ]+/).filter(Boolean));
+  } else if (a === "--fast") {
+    console.warn(
+      "⚠️  --fast 已移除：轻量提交校验只跑按文件裁剪的检查，不跑重型门禁（go build/vite build 等留待 pre-push）。",
+    );
+  } else if (a === "-h" || a === "--help") {
     console.log(`用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check] [--keep-index]
   -m, --message    commit message（必填，除非 --check）
   --files <paths>  白名单路径直取（无需先 git add；不传则读主 index staged 清单）
@@ -85,7 +87,9 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!checkOnly && !message) {
-  console.error('用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check]');
+  console.error(
+    '用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check]',
+  );
   process.exit(2);
 }
 
@@ -93,8 +97,8 @@ if (!checkOnly && !message) {
 // Q0 修复（子代理锐评）：加 -c core.quotepath=false，解非 ASCII 文件名八进制转义
 // 否则 git diff --cached --name-only 输出转义串 → classify 判 'other' → 零检查静默放行+自动提交
 function git(args: string[]) {
-  const r = run('git', ['-c', 'core.quotepath=false', ...args], { cwd: ROOT });
-  return r.ok ? r.out.trim() : '';
+  const r = run("git", ["-c", "core.quotepath=false", ...args], { cwd: ROOT });
+  return r.ok ? r.out.trim() : "";
 }
 
 // ── 1. 白名单路径：--files 直取；否则读主 index staged 清单（向后兼容旧用法）──
@@ -110,150 +114,170 @@ if (files.length > 0) {
   checkPaths = files;
 } else if (docsMode) {
   // docs 模式无 --files：提交范围 = staged docs；校验范围 = staged ∪ 工作树 docs
-  const stagedDocs = git(['diff', '--cached', '--name-only', '--', 'docs/'])
-    .split('\n').map((s) => s.trim()).filter(Boolean);
-  const unstagedDocs = git(['diff', '--name-only', '--', 'docs/'])
-    .split('\n').map((s) => s.trim()).filter(Boolean);
+  const stagedDocs = git(["diff", "--cached", "--name-only", "--", "docs/"])
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const unstagedDocs = git(["diff", "--name-only", "--", "docs/"])
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
   paths = stagedDocs;
   checkPaths = [...new Set([...stagedDocs, ...unstagedDocs])];
 } else {
-  const stagedRaw = git(['diff', '--cached', '--name-only']);
-  paths = stagedRaw ? stagedRaw.split('\n').filter(Boolean) : [];
+  const stagedRaw = git(["diff", "--cached", "--name-only"]);
+  paths = stagedRaw ? stagedRaw.split("\n").filter(Boolean) : [];
   checkPaths = paths;
 }
 
 if (paths.length === 0 && checkPaths.length === 0) {
-  console.error('⚠️  无提交目标。先 git add 再跑，或传 --files <paths> 直取白名单。');
+  console.error("⚠️  无提交目标。先 git add 再跑，或传 --files <paths> 直取白名单。");
   process.exit(1);
 }
 if (paths.length === 0 && !checkOnly) {
   // docs 模式仅检测到未暂存 docs：只提交已暂存文件，未暂存 WIP 需显式 git add 或 --files
   //（0a0fa360 回归修复：此前会把未暂存 docs 静默卷进提交）
-  console.error('⚠️  仅检测到未暂存的 docs 改动。先 git add docs/ 再跑，或传 --files <paths> 白名单直取（--check 可只校验不提交）。');
+  console.error(
+    "⚠️  仅检测到未暂存的 docs 改动。先 git add docs/ 再跑，或传 --files <paths> 白名单直取（--check 可只校验不提交）。",
+  );
   process.exit(1);
 }
 // 白名单路径来自 staged 清单（或 --files），但 commitWithTempIndex 按 paths 从
 // 工作区取内容入库（git add -- paths）——staged 后又继续编辑的文件会把未暂存 WIP
 // 内容静默提交（code review P2 修复）。检测分叉路径并警告，由用户决定是否继续。
 if (files.length === 0 && !docsMode && !checkOnly) {
-  const unstaged = git(['diff', '--name-only']).split('\n').map((s) => s.trim()).filter(Boolean);
+  const unstaged = git(["diff", "--name-only"])
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const divergent = paths.filter((p) => unstaged.includes(p));
   if (divergent.length > 0) {
-    console.warn(`⚠️  以下文件存在未暂存改动:\n  ${divergent.join('\n  ')}\n  提交将包含工作区内容，如需提交暂存版本，请先 git add 这些文件或取消未暂存改动。`);
+    console.warn(
+      `⚠️  以下文件存在未暂存改动:\n  ${divergent.join("\n  ")}\n  提交将包含工作区内容，如需提交暂存版本，请先 git add 这些文件或取消未暂存改动。`,
+    );
   }
 }
 
 const byDomain = groupByDomain(paths);
 const domainSummary = domainSummaryText(byDomain);
 
-console.log('========== commit-with-check（轻量级提交校验）==========');
+console.log("========== commit-with-check（轻量级提交校验）==========");
 console.log(`变更域: ${domainSummary}`);
-console.log('门禁: 轻量清单（红线 / 文档漂移 / 变更域契约测试；重型构建留给 pre-push）');
-console.log('');
+console.log("门禁: 轻量清单（红线 / 文档漂移 / 变更域契约测试；重型构建留给 pre-push）");
+console.log("");
 
 (async () => {
-// gen 预刷新（仅文档相关变更）：避免 gen 产物过期 fail-closed
-if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
-  let genOk = 0, genFail = 0;
-  for (const cmd of GEN_CMDS) {
-    const r = run(process.execPath, [`scripts/${cmd}`], {
-      cwd: ROOT, stdio: 'ignore', timeout: 30_000,
+  // gen 预刷新（仅文档相关变更）：避免 gen 产物过期 fail-closed
+  if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
+    let genOk = 0,
+      genFail = 0;
+    for (const cmd of GEN_CMDS) {
+      const r = run(process.execPath, [`scripts/${cmd}`], {
+        cwd: ROOT,
+        stdio: "ignore",
+        timeout: 30_000,
+      });
+      if (r.ok) genOk++;
+      else genFail++;
+    }
+    console.log(
+      `[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 脚本${genFail ? `（${genFail} 个失败，不阻断）` : "（全绿）"}`,
+    );
+  }
+
+  // 轻量校验：独立清单，不复用 pre-push-gate（避免重型构建/全量静态工具双重付费）
+  // 校验范围用 checkPaths（--docs 下含未暂存 docs 的校验裁剪）；提交白名单仍是 paths。
+  const t0 = Date.now();
+  const check = await runCommitChecks(checkPaths);
+  const gateMs = Date.now() - t0;
+
+  for (const it of check.results) {
+    const mark = it.ok ? "✅" : "❌";
+    const t = `${(it.time / 1000).toFixed(1)}s`;
+    console.log(`${mark} ${it.label}  (${t})${it.note ? `  ${it.note}` : ""}`);
+  }
+  console.log(`门禁耗时: ${(gateMs / 1000).toFixed(1)}s`);
+
+  if (!check.ok) {
+    console.log("");
+    console.log("结论: FAIL ❌ 轻量门禁未通过，未提交");
+    process.exit(1);
+  }
+
+  if (checkOnly) {
+    console.log("");
+    console.log("结论: PASS ✅ 轻量门禁全绿（仅验证，未提交）");
+    process.exit(0);
+  }
+
+  // ── 3. 全绿后临时索引白名单提交（ADR-151 并发隔离）──
+  // 只提交 paths ∪ pre-commit 钩子 stage 的生成物/测试；主 index 零接触。
+  const commitResult = commitWithTempIndex({ paths, message, keepIndex });
+
+  if (!commitResult.ok) {
+    console.error(`❌ git commit 失败（临时索引白名单提交）: ${commitResult.error}`);
+    process.exit(1);
+  }
+
+  // ── 4. 提交后双条件校验 ──
+  // a) 越界文件（不在 paths ∪ 生成物/测试白名单）→ 自动回退 HEAD 后 exit 1 打印清单
+  if (commitResult.outOfScope.length > 0) {
+    console.error("❌ 提交包含越界文件（不在白名单 paths ∪ 生成物/测试清单），请核查：");
+    for (const f of commitResult.outOfScope) console.error(`    ${f}`);
+    // 自动回退已提交的 HEAD（--soft 保留工作区改动），AI 不会忽略提示直接 push
+    // 注：git() 仅返回 stdout 字符串、吞掉错误，无法判 exitCode；
+    //     故回退段直接用 run() 取 ok 标志（ADR-155 重写时遗留的 .exitCode 类型 bug）
+    const rollback = run("git", ["-c", "core.quotepath=false", "reset", "--soft", "HEAD~1"], {
+      cwd: ROOT,
     });
-    if (r.ok) genOk++;
-    else genFail++;
+    if (!rollback.ok) {
+      console.error("❌ 自动回退失败：git reset --soft HEAD~1 未成功执行。");
+      console.error("提示：手动执行 git reset --soft HEAD~1 后重新用 --files 白名单提交。");
+    } else {
+      console.error("已自动回退 HEAD~1（工作区改动保留），请重新用 --files 白名单提交。");
+    }
+    process.exit(1);
   }
-  console.log(`[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 脚本${genFail ? `（${genFail} 个失败，不阻断）` : '（全绿）'}`);
-}
+  // b) 并发插队（HEAD^ != HEAD_BEFORE）→ 仅 notice 不失败（用户拍板：插队良性，天然 rebase 语义）
+  if (commitResult.interleaved) {
+    console.log("ℹ️  并发提交已插队：本次提交基于插队后的最新 HEAD（HEAD^ != HEAD_BEFORE）。");
+  }
 
-// 轻量校验：独立清单，不复用 pre-push-gate（避免重型构建/全量静态工具双重付费）
-// 校验范围用 checkPaths（--docs 下含未暂存 docs 的校验裁剪）；提交白名单仍是 paths。
-const t0 = Date.now();
-const check = await runCommitChecks(checkPaths);
-const gateMs = Date.now() - t0;
+  // ── 5. 提交后自动显示 SHA + status ──
+  const sha = git(["rev-parse", "--short", "HEAD"]);
+  const subject = git(["log", "-1", "--format=%s"]);
+  console.log(`✅ 已提交: ${sha} ${subject}`);
+  console.log("");
 
-for (const it of check.results) {
-  const mark = it.ok ? '✅' : '❌';
-  const t = `${(it.time / 1000).toFixed(1)}s`;
-  console.log(`${mark} ${it.label}  (${t})${it.note ? '  ' + it.note : ''}`);
-}
-console.log(`门禁耗时: ${(gateMs / 1000).toFixed(1)}s`);
+  console.log("════════════════════════════════════════");
+  console.log("  ✅ 轻量门禁全绿 + 已提交，建议派子代理复核改动");
+  console.log("  重型门禁 go build/vite build 等由 pre-push 钩子兜底");
+  console.log("════════════════════════════════════════");
+  console.log("");
 
-if (!check.ok) {
-  console.log('');
-  console.log('结论: FAIL ❌ 轻量门禁未通过，未提交');
-  process.exit(1);
-}
-
-if (checkOnly) {
-  console.log('');
-  console.log('结论: PASS ✅ 轻量门禁全绿（仅验证，未提交）');
-  process.exit(0);
-}
-
-// ── 3. 全绿后临时索引白名单提交（ADR-151 并发隔离）──
-// 只提交 paths ∪ pre-commit 钩子 stage 的生成物/测试；主 index 零接触。
-const commitResult = commitWithTempIndex({ paths, message, keepIndex });
-
-if (!commitResult.ok) {
-  console.error(`❌ git commit 失败（临时索引白名单提交）: ${commitResult.error}`);
-  process.exit(1);
-}
-
-// ── 4. 提交后双条件校验 ──
-// a) 越界文件（不在 paths ∪ 生成物/测试白名单）→ 自动回退 HEAD 后 exit 1 打印清单
-if (commitResult.outOfScope.length > 0) {
-  console.error('❌ 提交包含越界文件（不在白名单 paths ∪ 生成物/测试清单），请核查：');
-  for (const f of commitResult.outOfScope) console.error(`    ${f}`);
-  // 自动回退已提交的 HEAD（--soft 保留工作区改动），AI 不会忽略提示直接 push
-  // 注：git() 仅返回 stdout 字符串、吞掉错误，无法判 exitCode；
-  //     故回退段直接用 run() 取 ok 标志（ADR-155 重写时遗留的 .exitCode 类型 bug）
-  const rollback = run('git', ['-c', 'core.quotepath=false', 'reset', '--soft', 'HEAD~1'], { cwd: ROOT });
-  if (!rollback.ok) {
-    console.error('❌ 自动回退失败：git reset --soft HEAD~1 未成功执行。');
-    console.error('提示：手动执行 git reset --soft HEAD~1 后重新用 --files 白名单提交。');
+  const status = git(["status", "--short"]);
+  if (status) {
+    console.log("剩余未暂存改动，注意配合并发会话:");
+    console.log(status);
   } else {
-    console.error('已自动回退 HEAD~1（工作区改动保留），请重新用 --files 白名单提交。');
+    console.log("工作区干净，无剩余改动。");
   }
-  process.exit(1);
-}
-// b) 并发插队（HEAD^ != HEAD_BEFORE）→ 仅 notice 不失败（用户拍板：插队良性，天然 rebase 语义）
-if (commitResult.interleaved) {
-  console.log('ℹ️  并发提交已插队：本次提交基于插队后的最新 HEAD（HEAD^ != HEAD_BEFORE）。');
-}
 
-// ── 5. 提交后自动显示 SHA + status ──
-const sha = git(['rev-parse', '--short', 'HEAD']);
-const subject = git(['log', '-1', '--format=%s']);
-console.log(`✅ 已提交: ${sha} ${subject}`);
-console.log('');
+  // --json 契约（检查类脚本）：末尾无条件输出结构化摘要，供 CI/子代理稳定消费
+  console.log(
+    JSON.stringify({
+      _summary: {
+        ok: true,
+        mode: docsMode ? "docs" : "files",
+        checkOnly: !!checkOnly,
+        committed: !checkOnly,
+        files: paths.length,
+        sha: !checkOnly ? git(["rev-parse", "--short", "HEAD"]) : null,
+        outOfScope: commitResult.outOfScope,
+        interleaved: commitResult.interleaved,
+      },
+    }),
+  );
 
-console.log('════════════════════════════════════════');
-console.log('  ✅ 轻量门禁全绿 + 已提交，建议派子代理复核改动');
-console.log('  重型门禁 go build/vite build 等由 pre-push 钩子兜底');
-console.log('════════════════════════════════════════');
-console.log('');
-
-const status = git(['status', '--short']);
-if (status) {
-  console.log('剩余未暂存改动，注意配合并发会话:');
-  console.log(status);
-} else {
-  console.log('工作区干净，无剩余改动。');
-}
-
-// --json 契约（检查类脚本）：末尾无条件输出结构化摘要，供 CI/子代理稳定消费
-console.log(JSON.stringify({
-  _summary: {
-    ok: true,
-    mode: docsMode ? 'docs' : 'files',
-    checkOnly: !!checkOnly,
-    committed: !checkOnly,
-    files: paths.length,
-    sha: !checkOnly ? git(['rev-parse', '--short', 'HEAD']) : null,
-    outOfScope: commitResult.outOfScope,
-    interleaved: commitResult.interleaved,
-  },
-}));
-
-process.exit(0);
+  process.exit(0);
 })();

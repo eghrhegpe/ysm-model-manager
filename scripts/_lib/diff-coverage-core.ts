@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { run } from "./proc.ts";
 /**
  * diff-coverage-core.ts — 变更行覆盖率门禁共享核。
  *
@@ -13,12 +14,11 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url / _lib）。
  */
-import { ROOT } from './scan-files.ts';
-import { run } from './proc.ts';
+import { ROOT } from "./scan-files.ts";
 
 /** 跑 git（失败返回 null，区别于“成功但无输出”的 ''）：调用方 fail-closed，拒绝空跑放行。 */
 export function git(args: string[]): string | null {
-  const r = run('git', args, { cwd: ROOT });
+  const r = run("git", args, { cwd: ROOT });
   return r.ok ? r.out.trim() : null;
 }
 
@@ -32,30 +32,52 @@ export function getChangedFiles(base: string, head: string, uncommitted: boolean
   // --staged：仅本次暂存区（prepare-commit-msg 场景 = 本次 commit 的文件），
   // 避免 --base origin/main 在本地领先时把历史未推送改动也纳入噪音。
   if (staged) {
-    const g = git(['diff', '--cached', '--find-renames=30', '--name-only']);
+    const g = git(["diff", "--cached", "--find-renames=30", "--name-only"]);
     if (g === null) return null;
-    g.split('\n').forEach((l) => l && out.add(l));
+    g.split("\n").forEach((l) => {
+      if (l) out.add(l);
+    });
     return [...out];
   }
   // 三圆点：PR 分支相对 main 合并基的改动
   // --find-renames=30：强制激活 rename 检测（不依赖 git config），
   // 避免 base...head 相对合并基时把 rename 拆成 A+D，导致纯改名被当新增惩罚。
-  const g1 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${base}...${head}`]);
+  const g1 = git([
+    "diff",
+    "--diff-filter=ACMR",
+    "--find-renames=30",
+    "--name-only",
+    `${base}...${head}`,
+  ]);
   if (g1 === null) return null;
-  g1.split('\n').forEach((l) => l && out.add(l));
+  g1.split("\n").forEach((l) => {
+    if (l) out.add(l);
+  });
   // 兜底：直推 main 时三圆点可能为空，退化为上一提交
   if (out.size === 0) {
-    const g2 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${head}~1...${head}`]);
+    const g2 = git([
+      "diff",
+      "--diff-filter=ACMR",
+      "--find-renames=30",
+      "--name-only",
+      `${head}~1...${head}`,
+    ]);
     if (g2 === null) return null;
-    g2.split('\n').forEach((l) => l && out.add(l));
+    g2.split("\n").forEach((l) => {
+      if (l) out.add(l);
+    });
   }
   if (uncommitted) {
-    const g3 = git(['diff', '--find-renames=30', '--name-only']);
+    const g3 = git(["diff", "--find-renames=30", "--name-only"]);
     if (g3 === null) return null;
-    g3.split('\n').forEach((l) => l && out.add(l));
-    const g4 = git(['diff', '--cached', '--find-renames=30', '--name-only']);
+    g3.split("\n").forEach((l) => {
+      if (l) out.add(l);
+    });
+    const g4 = git(["diff", "--cached", "--find-renames=30", "--name-only"]);
     if (g4 === null) return null;
-    g4.split('\n').forEach((l) => l && out.add(l));
+    g4.split("\n").forEach((l) => {
+      if (l) out.add(l);
+    });
   }
   return [...out];
 }
@@ -63,7 +85,7 @@ export function getChangedFiles(base: string, head: string, uncommitted: boolean
 /** 解析 `--unified=0` diff 输出，提取新增行号。 */
 export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
   if (!diff) return;
-  const lines = diff.split('\n');
+  const lines = diff.split("\n");
   let currentLine = 0;
   for (const line of lines) {
     const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
@@ -72,10 +94,10 @@ export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
       continue;
     }
     if (currentLine === 0) continue;
-    if (line.startsWith('+')) {
+    if (line.startsWith("+")) {
       out.add(currentLine);
       currentLine++;
-    } else if (line.startsWith(' ')) {
+    } else if (line.startsWith(" ")) {
       // 上下文行（未变更），仍计入行号
       currentLine++;
     }
@@ -86,7 +108,7 @@ export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
 /** 解析 `git diff --name-status` 的 R 行（R<sim>\t<from>\t<to>）→ Map<to, {from, sim}>。 */
 export function parseRenameStatus(out: string) {
   const map = new Map();
-  out.split('\n').forEach((l) => {
+  out.split("\n").forEach((l) => {
     const m = l.match(/^R(\d+)\t(.+?)\t(.+)$/);
     if (m) map.set(m[3], { from: m[2], sim: Number(m[1]) });
   });
@@ -96,19 +118,28 @@ export function parseRenameStatus(out: string) {
 export function detectRenames(base: string, head: string, staged: boolean) {
   // --staged：用暂存区 name-status 检测 rename（prepare-commit-msg 场景）
   if (staged) {
-    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30'])!);
+    return parseRenameStatus(git(["diff", "--cached", "--name-status", "--find-renames=30"])!);
   }
   // 三圆点：PR 相对 main 合并基
-  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`])!);
+  const map = parseRenameStatus(
+    git(["diff", "--name-status", "--find-renames=30", `${base}...${head}`])!,
+  );
   // 兜底：直推 main 时三圆点可能为空，退化为两点
   if (map.size === 0) {
-    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head])!);
+    return parseRenameStatus(git(["diff", "--name-status", "--find-renames=30", base, head])!);
   }
   return map;
 }
 
 /** 获取变更文件的具体行号集合（新文件行号）。 */
-export function getChangedLines(file: string, base: string, head: string, uncommitted: boolean, renameOld: string | undefined, staged: boolean) {
+export function getChangedLines(
+  file: string,
+  base: string,
+  head: string,
+  uncommitted: boolean,
+  renameOld: string | undefined,
+  staged: boolean,
+) {
   const out = new Set<number>();
   // --staged：仅暂存区变更行（本次 commit 的文件）
   if (staged) {
@@ -117,26 +148,38 @@ export function getChangedLines(file: string, base: string, head: string, uncomm
     // 与下方非 staged 的 rename 分支同思路：renameOld 存在时用「HEAD 旧 blob ↔
     // 索引新 blob」两点 diff 取真实最小 hunk，否则回退 --cached 常规 diff。
     if (renameOld) {
-      addLinesFromDiff(out, git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${file}`]));
+      addLinesFromDiff(out, git(["diff", "--unified=0", `HEAD:${renameOld}`, `:${file}`]));
       return out;
     }
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
+    addLinesFromDiff(
+      out,
+      git(["diff", "--cached", "--unified=0", "--find-renames=30", "--", file]),
+    );
     return out;
   }
   // rename 重构：用两点 blob diff 取「旧路径→新路径」的真实最小 hunk，
   // 避免 base...head 三圆点把 rename 当 add 时整文件被判为新增行。
   if (renameOld) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${file}`]));
+    addLinesFromDiff(out, git(["diff", "--unified=0", `${base}:${renameOld}`, `${head}:${file}`]));
     if (out.size > 0) return out;
   }
-  addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', file]));
+  addLinesFromDiff(
+    out,
+    git(["diff", "--unified=0", "--find-renames=30", `${base}...${head}`, "--", file]),
+  );
   // 兜底：直推 main 时三圆点可能为空
   if (out.size === 0) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${head}~1...${head}`, '--', file]));
+    addLinesFromDiff(
+      out,
+      git(["diff", "--unified=0", "--find-renames=30", `${head}~1...${head}`, "--", file]),
+    );
   }
   if (uncommitted) {
-    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', '--', file]));
-    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
+    addLinesFromDiff(out, git(["diff", "--unified=0", "--find-renames=30", "--", file]));
+    addLinesFromDiff(
+      out,
+      git(["diff", "--cached", "--unified=0", "--find-renames=30", "--", file]),
+    );
   }
   return out;
 }
@@ -151,15 +194,23 @@ export function getChangedLines(file: string, base: string, head: string, uncomm
  *   - noun  {string}  文件称谓（默认「文件」；Go 版传「Go 文件」）
  *   - hint  {string}  数据来源提示行（默认前端 vitest 文案；Go 版传 go test -coverprofile 文案）
  */
-export function buildSuggestBlock(failures: { file: string; pct: number }[], threshold: number, { title = '## 覆盖率建议（非阻断）', noun = '文件', hint = '本建议基于最近一次 `vitest --coverage` 产物；新逻辑未跑测试时数据可能滞后。' }: { title?: string; noun?: string; hint?: string } = {}) {
+export function buildSuggestBlock(
+  failures: { file: string; pct: number }[],
+  threshold: number,
+  {
+    title = "## 覆盖率建议（非阻断）",
+    noun = "文件",
+    hint = "本建议基于最近一次 `vitest --coverage` 产物；新逻辑未跑测试时数据可能滞后。",
+  }: { title?: string; noun?: string; hint?: string } = {},
+) {
   const lines = failures.map((f) => `- \`${f.file}\` — ${f.pct.toFixed(1)}%`);
   return [
     title,
-    '',
+    "",
     `以下改动${noun}变更行覆盖率低于 ${threshold}%，建议后续补测试（不阻塞提交/合并）：`,
-    '',
+    "",
     ...lines,
-    '',
+    "",
     `提示：${hint}`,
-  ].join('\n');
+  ].join("\n");
 }

@@ -14,20 +14,22 @@
  *   node scripts/doctor.ts --json   # 透传 pre-push-gate 原始输出（契约见 check-script-hygiene）
  * 退出码：任何非零检查([FAIL])均透传退出码阻断；仅 WARN/skip 不阻断
  */
-import { spawnSync } from 'node:child_process';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 // 统一参数解析：--check/--strict 为兼容旧参数声明为 bool（保持被静默忽略的既有行为，不落入 unknown）
-const args = parseArgs(process.argv.slice(2), { bools: ['json', 'docs', 'gate', 'check', 'strict'] });
-if (args.unknown.length) console.warn(`[doctor] 忽略未知参数: ${args.unknown.join(', ')}`);
+const args = parseArgs(process.argv.slice(2), {
+  bools: ["json", "docs", "gate", "check", "strict"],
+});
+if (args.unknown.length) console.warn(`[doctor] 忽略未知参数: ${args.unknown.join(", ")}`);
 const JSON_MODE = args.json as boolean;
 const DOCS_MODE = args.docs as boolean;
 const GATE_MODE = args.gate as boolean;
 
 // 顶层兜底：spawnSync 异常（ENOENT/git 缺失等）避免裸栈追踪
-process.on('uncaughtException', (e) => {
+process.on("uncaughtException", (e) => {
   console.error(`[doctor] 异常: ${e.message}`);
   process.exit(1);
 });
@@ -35,12 +37,13 @@ process.on('uncaughtException', (e) => {
 /** 委托 pre-push-gate.ts 并透传退出码（stdin 可选，供 --gate 传 ref 行）。 */
 function delegate(gateArgs: string[], { stdin }: { stdin?: string } = {}) {
   // --json 透传：gate 未来实现结构化输出时自动生效（契约见 check-script-hygiene）
-  const args = JSON_MODE ? [...gateArgs, '--json'] : gateArgs;
-  const gateResult = spawnSync(
-    'node',
-    [path.join('scripts', 'pre-push-gate.ts'), ...args],
-    { cwd: ROOT, input: stdin ? Buffer.from(stdin) : undefined, stdio: ['pipe', 'inherit', 'inherit'], encoding: 'utf8' },
-  );
+  const args = JSON_MODE ? [...gateArgs, "--json"] : gateArgs;
+  const gateResult = spawnSync("node", [path.join("scripts", "pre-push-gate.ts"), ...args], {
+    cwd: ROOT,
+    input: stdin ? Buffer.from(stdin) : undefined,
+    stdio: ["pipe", "inherit", "inherit"],
+    encoding: "utf8",
+  });
   // 打印 pre-push-gate 原始输出（已含 ====== YSM 本地质量门禁 ====== 标题与 [OK]/[FAIL] 标记）
   if (gateResult.stdout) process.stdout.write(gateResult.stdout);
   if (gateResult.stderr) process.stderr.write(gateResult.stderr);
@@ -53,33 +56,38 @@ if (GATE_MODE) {
   //   ref 默认 HEAD；也可传具体 commit oid。
   //   与 pre-push-gate 共享同一套域分类 + 检查链，不做 gofmt amend（只读校验）。
   const GATE_SKIP = process.env.YSM_SKIP_GATE;
-  if (GATE_SKIP === '1') {
-    console.log('[--gate] YSM_SKIP_GATE=1, 跳过');
+  if (GATE_SKIP === "1") {
+    console.log("[--gate] YSM_SKIP_GATE=1, 跳过");
     process.exit(0);
   }
   // 解析 ref → oid（--gate 后为位置参数，parseArgs 收集到 _[0]）
   const refArg = args._[0] as string | undefined;
-  const baseRef = refArg || 'HEAD';
-  const oidR = spawnSync('git', ['rev-parse', '--verify', baseRef], { cwd: ROOT, encoding: 'utf8' });
+  const baseRef = refArg || "HEAD";
+  const oidR = spawnSync("git", ["rev-parse", "--verify", baseRef], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
   if (oidR.status !== 0) {
     console.log(`[--gate] 无法解析 ref "${baseRef}"，退化为全量`);
-    delegate(['--all', '--dry-run']);
+    delegate(["--all", "--dry-run"]);
   }
-  const localOid = (oidR.stdout || '').trim();
+  const localOid = (oidR.stdout || "").trim();
   // 构造 stdin 行（remoteOid 全 0 → pre-push-gate 走新分支 fallback：merge-base origin/<branch>/origin/HEAD/origin/main/origin/master → 上次提交）
-  const branchR = spawnSync('git', ['branch', '--show-current'], { cwd: ROOT, encoding: 'utf8' });
-  const branch = (branchR.stdout || '').trim();
-  const localRef = branch ? `refs/heads/${branch}` : 'HEAD';
+  const branchR = spawnSync("git", ["branch", "--show-current"], { cwd: ROOT, encoding: "utf8" });
+  const branch = (branchR.stdout || "").trim();
+  const localRef = branch ? `refs/heads/${branch}` : "HEAD";
   const stdinLine = `${localRef} ${localOid} ${localRef} 0000000000000000000000000000000000000000`;
-  delegate(['--dry-run', 'origin', 'git@github.com:placeholder/placeholder.git'], { stdin: stdinLine });
+  delegate(["--dry-run", "origin", "git@github.com:placeholder/placeholder.git"], {
+    stdin: stdinLine,
+  });
 } else if (DOCS_MODE) {
   // 文档模式：轻量（仅文档/ADR/索引/静态文档工具，跳过 Go/前端编译与测试）
-  delegate(['--docs', '--dry-run']);
+  delegate(["--docs", "--dry-run"]);
 } else {
   // 全量模式：编译 + 构建 + 文件 + 红线 + Git（全量体检）。
   // --strict 不再忽略（2026-08-17 门禁锐评 P2-4）：runTools 已解析 _summary 判定
   // （i18n-check/auto-import/script-hygiene 挂 --strict 硬门禁——新脚本必须文件头合规；
   // orphan/boolean-naming 为审计类默认报告数量、退出码恒 0——与 deadcode/redlines
   // 基线债务同口径：推送后修。2026-09-01 对齐注释与 gate-config 实际挂载）。
-  delegate(['--all', '--dry-run']);
+  delegate(["--all", "--dry-run"]);
 }

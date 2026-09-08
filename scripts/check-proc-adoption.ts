@@ -22,19 +22,20 @@
  *
  * 退出码：默认 0（提示工具，WARN 不阻断）；--strict 且存在 WARN → 1。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { getRoot } from './_lib/scan-files.ts';
-import { collectScripts } from './_lib/collect-scripts.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { collectScripts } from "./_lib/collect-scripts.ts";
+import { getRoot } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
-const SCRIPTS_DIR = path.join(ROOT, 'scripts');
+const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
-const JSON_OUT = process.argv.includes('--json');
-const STRICT = process.argv.includes('--strict');
+const JSON_OUT = process.argv.includes("--json");
+const STRICT = process.argv.includes("--strict");
 
 // 直调特征：import 块含 execFileSync/execSync，来源 node:child_process
-const DIRECT_EXEC_IMPORT_RE = /import\s*\{[^}]*\b(?:execFileSync|execSync)\b[^}]*\}\s*from\s*['"]node:child_process['"]/;
+const DIRECT_EXEC_IMPORT_RE =
+  /import\s*\{[^}]*\b(?:execFileSync|execSync)\b[^}]*\}\s*from\s*['"]node:child_process['"]/;
 // 已接入共享层：import 了 _lib/proc（.mjs 迁移 .ts 后兼容两种后缀）
 const PROC_ADOPTED_RE = /from\s*['"].*_lib[\\/]proc\.(?:mjs|ts)['"]/;
 
@@ -43,30 +44,39 @@ function main() {
   const direct: string[] = [];
 
   for (const f of files) {
-    const text = fs.readFileSync(path.join(SCRIPTS_DIR, f), 'utf8');
+    const text = fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8");
     if (DIRECT_EXEC_IMPORT_RE.test(text) && !PROC_ADOPTED_RE.test(text)) {
       direct.push(f);
     }
   }
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({
-      _summary: { scripts: files.length, directExec: direct.length },
-      direct: direct,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          _summary: { scripts: files.length, directExec: direct.length },
+          direct: direct,
+        },
+        null,
+        2,
+      ),
+    );
     if (STRICT && direct.length) process.exit(1);
     return;
   }
 
   const pct = files.length ? Math.round((1 - direct.length / files.length) * 100) : 100;
-  console.log('══════════════════════════════════════');
-  console.log(' 子进程收敛检查 (check-proc-adoption)');
-  console.log('══════════════════════════════════════');
-  console.log(`扫描 ${files.length} 个脚本，直调 execFileSync/execSync 未走 proc.mjs：${direct.length} 个（非直调占比 ${pct}%）`);
-  console.log('──────────────────────────────────────');
-  for (const f of direct) console.log(`⚠ ${f}：直调 execFileSync/execSync（应 import _lib/proc.mjs 的 run/runSafe）`);
-  if (!direct.length) console.log('✅ 所有脚本均已接入 _lib/proc.mjs（或未直调子进程）。');
-  else console.log('\n（WARN 不阻断；加 --strict 后退出码 1）');
+  console.log("══════════════════════════════════════");
+  console.log(" 子进程收敛检查 (check-proc-adoption)");
+  console.log("══════════════════════════════════════");
+  console.log(
+    `扫描 ${files.length} 个脚本，直调 execFileSync/execSync 未走 proc.mjs：${direct.length} 个（非直调占比 ${pct}%）`,
+  );
+  console.log("──────────────────────────────────────");
+  for (const f of direct)
+    console.log(`⚠ ${f}：直调 execFileSync/execSync（应 import _lib/proc.mjs 的 run/runSafe）`);
+  if (!direct.length) console.log("✅ 所有脚本均已接入 _lib/proc.mjs（或未直调子进程）。");
+  else console.log("\n（WARN 不阻断；加 --strict 后退出码 1）");
   if (STRICT && direct.length) process.exit(1);
 }
 

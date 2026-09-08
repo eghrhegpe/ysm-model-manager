@@ -27,11 +27,19 @@
 // cpp-base64/zlib/fpng）——首次需先经 CMake 构建（wasm-release preset）或复用既有
 // build-wasm 目录。emsdk 路径可用 EMSDK 环境变量覆盖。
 
-import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statSync, renameSync } from "node:fs";
-import { join, dirname, basename, delimiter as PATH_DELIM } from "node:path";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
+import { basename, dirname, join, delimiter as PATH_DELIM } from "node:path";
 import { fileURLToPath } from "node:url";
-import { run } from '../_lib/proc.ts';
+import { run } from "../_lib/proc.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -44,12 +52,9 @@ const SKIP_BUILD = process.argv.includes("--skip-build");
 // EMSDK 定位（批次4 P1）：不硬编码用户路径。优先环境变量，其次探测常见安装位，
 // 全部未命中则 fail-closed 提示设置 EMSDK，避免在别人机器上静默失败/走错 emsdk。
 function detectEmsdk() {
-  const candidates = [
-    process.env.EMSDK,
-    join(homedir(), "emsdk"),
-    "C:/emsdk",
-    "D:/emsdk",
-  ].filter(Boolean);
+  const candidates = [process.env.EMSDK, join(homedir(), "emsdk"), "C:/emsdk", "D:/emsdk"].filter(
+    Boolean,
+  );
   for (const c of candidates) {
     if (existsSync(join(c as string, "upstream", "emscripten"))) return c;
   }
@@ -85,10 +90,18 @@ if (!SKIP_BUILD) {
 
   // include 修正：json 在 external/json、city 头在 external/cityhash/src（build-wasi.ps1 漏了这两项）
   const inc = [
-    "-I.", "-Iexternal", "-Iexternal/json", "-Iexternal/zlib",
-    "-Iexternal/zstd/lib", "-Iexternal/zstd/lib/common", "-Iexternal/cityhash/src",
-    "-Iexternal/xchacha20/src", "-Iexternal/AES/src", "-Iexternal/md5",
-    "-Iexternal/cpp-base64", "-Iexternal/fpng/src",
+    "-I.",
+    "-Iexternal",
+    "-Iexternal/json",
+    "-Iexternal/zlib",
+    "-Iexternal/zstd/lib",
+    "-Iexternal/zstd/lib/common",
+    "-Iexternal/cityhash/src",
+    "-Iexternal/xchacha20/src",
+    "-Iexternal/AES/src",
+    "-Iexternal/md5",
+    "-Iexternal/cpp-base64",
+    "-Iexternal/fpng/src",
   ];
 
   // 库路径修正：预编译静态库在 build-wasm/external/ 下（build-wasi.ps1 写 external/ 不存在）
@@ -111,15 +124,26 @@ if (!SKIP_BUILD) {
 
   mkdirSync(OUT_DIR, { recursive: true });
   const args = [
-    "-std=c++20", "-O3", "-DNDEBUG", "-fexceptions",
+    "-std=c++20",
+    "-O3",
+    "-DNDEBUG",
+    "-fexceptions",
     `-DYSM_PARSER_VERSION="${version}"`,
-    "-sFORCE_FILESYSTEM=1", "-sALLOW_MEMORY_GROWTH=1", "-sMAXIMUM_MEMORY=536870912",
-    "-sEXIT_RUNTIME=0", "-sINVOKE_RUN=0",
-    "-sENVIRONMENT=web", "-sMODULARIZE=1", "-sEXPORT_NAME=YSMParserModule",
+    "-sFORCE_FILESYSTEM=1",
+    "-sALLOW_MEMORY_GROWTH=1",
+    "-sMAXIMUM_MEMORY=536870912",
+    "-sEXIT_RUNTIME=0",
+    "-sINVOKE_RUN=0",
+    "-sENVIRONMENT=web",
+    "-sMODULARIZE=1",
+    "-sEXPORT_NAME=YSMParserModule",
     "-sEXPORTED_RUNTIME_METHODS=['FS','callMain','ccall','cwrap']",
     "-sEXPORTED_FUNCTIONS=['_main','_ysm_decode_from_memory','_ysm_detect_version','_ysm_diag_header','_malloc','_free']",
-    "-o", join(OUT_DIR, "YSMParser.js"),
-    ...src, ...inc, ...libs,
+    "-o",
+    join(OUT_DIR, "YSMParser.js"),
+    ...src,
+    ...inc,
+    ...libs,
   ];
   console.log("[build] em++ 编译中...");
   const r = run(EMXX, args, {
@@ -147,7 +171,9 @@ if (!glueProbe.includes(";updateMemoryViews()")) {
   console.error("glue 缺少 ;updateMemoryViews() 补丁锚点（wasm_decoder.go 依赖），拒绝打包/拷贝");
   process.exit(1);
 }
-console.log("[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/_attic/test-decode-from-memory.mjs 实测解码");
+console.log(
+  "[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/_attic/test-decode-from-memory.mjs 实测解码",
+);
 
 // 前端 base64 打包（与 pack-wasm.ps1 同格式）
 // wasm 文件：_getWasmBinary 返回 ArrayBuffer；glue 文件：_getGlueCode 返回 string
@@ -155,10 +181,9 @@ console.log("[verify] ✅ glue 补丁锚点存在；建议跑 node scripts/_atti
 function toDataFile(filePath: string, fnName: string, comment: string, isGlue: boolean) {
   const b64 = readFileSync(filePath).toString("base64");
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
-  const decode =
-    isGlue
-      ? `  const raw = atob(b64);\n  const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));\n  return new TextDecoder().decode(bytes);\n`
-      : `  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));\n  return bin.buffer;\n`;
+  const decode = isGlue
+    ? `  const raw = atob(b64);\n  const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));\n  return new TextDecoder().decode(bytes);\n`
+    : `  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));\n  return bin.buffer;\n`;
   return (
     `// 自动生成：${comment} (base64)\n` +
     `// 编译时间: ${now}\n` +
@@ -168,8 +193,18 @@ function toDataFile(filePath: string, fnName: string, comment: string, isGlue: b
     `}\n`
   );
 }
-const wasmData = toDataFile(join(OUT_DIR, "YSMParser.wasm"), "_getWasmBinary", "YSMParser.wasm", false);
-const glueData = toDataFile(join(OUT_DIR, "YSMParser.js"), "_getGlueCode", "YSMParser.js 胶水代码", true);
+const wasmData = toDataFile(
+  join(OUT_DIR, "YSMParser.wasm"),
+  "_getWasmBinary",
+  "YSMParser.wasm",
+  false,
+);
+const glueData = toDataFile(
+  join(OUT_DIR, "YSMParser.js"),
+  "_getGlueCode",
+  "YSMParser.js 胶水代码",
+  true,
+);
 // P3-3（code_review）：原子写（临时文件 + renameSync）——直接 writeFileSync 在断点/失败时
 // 留下半截 base64 产物，前端 eval 直接坏；rename 同目录原子替换，产物要么旧要么完整
 function atomicWrite(target: string, content: string) {
@@ -179,7 +214,9 @@ function atomicWrite(target: string, content: string) {
 }
 atomicWrite(join(FRONT_SRC, "ysm-wasm-data.js"), wasmData);
 atomicWrite(join(FRONT_SRC, "ysm-glue-data.js"), glueData);
-console.log(`[pack] ✅ 前端 data: ${statSync(join(FRONT_SRC, "ysm-wasm-data.js")).size}B / ${statSync(join(FRONT_SRC, "ysm-glue-data.js")).size}B`);
+console.log(
+  `[pack] ✅ 前端 data: ${statSync(join(FRONT_SRC, "ysm-wasm-data.js")).size}B / ${statSync(join(FRONT_SRC, "ysm-glue-data.js")).size}B`,
+);
 
 // Go embed 拷贝（temp+rename 原子写，防中途留半截产物）
 const atomicCopy = (src: string, dst: string) => {
@@ -189,7 +226,9 @@ const atomicCopy = (src: string, dst: string) => {
 };
 atomicCopy(join(OUT_DIR, "YSMParser.js"), join(FRONT_PUBLIC, "YSMParser.js"));
 atomicCopy(join(OUT_DIR, "YSMParser.wasm"), join(FRONT_PUBLIC, "YSMParser.wasm"));
-console.log(`[pack] ✅ Go 拷贝: ${statSync(join(FRONT_PUBLIC, "YSMParser.wasm")).size}B / ${statSync(join(FRONT_PUBLIC, "YSMParser.js")).size}B`);
+console.log(
+  `[pack] ✅ Go 拷贝: ${statSync(join(FRONT_PUBLIC, "YSMParser.wasm")).size}B / ${statSync(join(FRONT_PUBLIC, "YSMParser.js")).size}B`,
+);
 
 // P3-4（code_review）：Go embed 实际嵌入 frontend/dist/wasm/（embed.go:12 是
 // `//go:embed frontend/dist/wasm/YSMParser.wasm`，不是 public/）——只跑本脚本后

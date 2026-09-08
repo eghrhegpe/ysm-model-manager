@@ -16,14 +16,14 @@
  *
  * 退出码：--check 过期 → 1；否则 0。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT, writeText } from './_lib/scan-files.ts';
-import { parseCliCommands, type CliCommand } from './_lib/cli-registry.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { type CliCommand, parseCliCommands } from "./_lib/cli-registry.ts";
+import { ROOT, writeText } from "./_lib/scan-files.ts";
 
-const OUT_DIR = path.join(ROOT, 'completions');
-const CHECK = process.argv.includes('--check');
-const JSON_OUT = process.argv.includes('--json');
+const OUT_DIR = path.join(ROOT, "completions");
+const CHECK = process.argv.includes("--check");
+const JSON_OUT = process.argv.includes("--json");
 
 /* ---------------- 候选数据 ---------------- */
 
@@ -38,33 +38,38 @@ function buildCandidates(commands: CliCommand[]) {
   // 命令 → 选项列表（含 --help 兜底）
   const cmdFlags: Record<string, string[]> = {};
   for (const c of commands) {
-    cmdFlags[c.name] = ['--help', ...c.flags.map((f) => `--${f.flag}`)];
+    cmdFlags[c.name] = ["--help", ...c.flags.map((f) => `--${f.flag}`)];
   }
   return { topNames, parentSubs, cmdFlags, count: commands.length };
 }
 
 /* ---------------- 渲染：bash ---------------- */
 
-function renderBash({ topNames, parentSubs, cmdFlags, count }: {
+function renderBash({
+  topNames,
+  parentSubs,
+  cmdFlags,
+  count,
+}: {
   topNames: string[];
   parentSubs: Record<string, string[]>;
   cmdFlags: Record<string, string[]>;
   count: number;
 }) {
   const caseBranch = (cmd: string, subs: string[]) =>
-    `    ${cmd}) COMPREPLY=( $(compgen -W "${subs.join(' ')}" -- "$cur") ); return ;;`;
+    `    ${cmd}) COMPREPLY=( $(compgen -W "${subs.join(" ")}" -- "$cur") ); return ;;`;
 
   const subCases = Object.entries(parentSubs)
     .map(([cmd, subs]) => caseBranch(cmd, subs))
-    .join('\n');
+    .join("\n");
 
   // 选项候选：无子命令的命令直接按命令名取 flags；有子命令的仅第一参数补全子命令
   const flagCases = Object.entries(cmdFlags)
     .map(
       ([cmd, flags]) =>
-        `    ${cmd}) COMPREPLY=( $(compgen -W "${flags.join(' ')}" -- "$cur") ); return ;;`,
+        `    ${cmd}) COMPREPLY=( $(compgen -W "${flags.join(" ")}" -- "$cur") ); return ;;`,
     )
-    .join('\n');
+    .join("\n");
 
   return `# ysm CLI — bash 补全（自动生成，勿手改；来源：go/cli 注册表）
 # 生成：node scripts/gen-cli-completion.ts（顶层命令 ${count} 个）
@@ -76,32 +81,32 @@ _ysm_complete() {
   words="\${COMP_WORDS[@]}"
 
   # 第一参数：顶层命令
-  if [ "\$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( \$(compgen -W "${topNames.join(' ')}" -- "\$cur") )
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "${topNames.join(" ")}" -- "$cur") )
     return
   fi
 
   cmd="\${COMP_WORDS[1]}"
   # 父命令第二参数：子命令
-  case "\$cmd" in
+  case "$cmd" in
 ${subCases}
   esac
 
   # 选项补全：--xxx 或首字符为 -
-  case "\$cur" in
+  case "$cur" in
     -*)
-      case "\$cmd" in
+      case "$cmd" in
 ${flagCases}
       esac
       ;;
     *)
       # 常见取值提示
-      case "\$prev" in
-        --format) COMPREPLY=( \$(compgen -W "table json text" -- "\$cur") ); return ;;
-        --mode)   COMPREPLY=( \$(compgen -W "symlink hardlink copy" -- "\$cur") ); return ;;
-        --link-mode) COMPREPLY=( \$(compgen -W "symlink hardlink copy" -- "\$cur") ); return ;;
+      case "$prev" in
+        --format) COMPREPLY=( $(compgen -W "table json text" -- "$cur") ); return ;;
+        --mode)   COMPREPLY=( $(compgen -W "symlink hardlink copy" -- "$cur") ); return ;;
+        --link-mode) COMPREPLY=( $(compgen -W "symlink hardlink copy" -- "$cur") ); return ;;
       esac
-      COMPREPLY=( \$(compgen -f -- "\$cur") )
+      COMPREPLY=( $(compgen -f -- "$cur") )
       ;;
   esac
 }
@@ -111,7 +116,12 @@ complete -F _ysm_complete ysm app ysm-cli
 
 /* ---------------- 渲染：pwsh ---------------- */
 
-function renderPwsh({ topNames, parentSubs, cmdFlags, count }: {
+function renderPwsh({
+  topNames,
+  parentSubs,
+  cmdFlags,
+  count,
+}: {
   topNames: string[];
   parentSubs: Record<string, string[]>;
   cmdFlags: Record<string, string[]>;
@@ -119,15 +129,15 @@ function renderPwsh({ topNames, parentSubs, cmdFlags, count }: {
 }) {
   // hashtable 逐行生成（避免嵌套引号拼接出错），如：  'avatar' = @('batch', 'cached', 'cache')
   const subsLines = Object.entries(parentSubs)
-    .map(([k, v]) => `  '${k}' = @(${v.map((s) => `'${s}'`).join(', ')})`)
-    .join('\n');
+    .map(([k, v]) => `  '${k}' = @(${v.map((s) => `'${s}'`).join(", ")})`)
+    .join("\n");
   const flagsLines = Object.entries(cmdFlags)
-    .map(([k, v]) => `  '${k}' = @(${v.map((s) => `'${s}'`).join(', ')})`)
-    .join('\n');
+    .map(([k, v]) => `  '${k}' = @(${v.map((s) => `'${s}'`).join(", ")})`)
+    .join("\n");
   return `# ysm CLI — PowerShell 补全（自动生成，勿手改；来源：go/cli 注册表）
 # 生成：node scripts/gen-cli-completion.ts（顶层命令 ${count} 个）
 # 启用：Add-Content $PROFILE ". $(Resolve-Path ./completions/_ysm.ps1)"
-$ysmTopCommands = @(${topNames.map((n) => `'${n}'`).join(', ')})
+$ysmTopCommands = @(${topNames.map((n) => `'${n}'`).join(", ")})
 $ysmSubs = @{
 ${subsLines}
 }
@@ -135,13 +145,13 @@ $ysmFlags = @{
 ${flagsLines}
 }
 Register-ArgumentCompleter -Native -CommandName ysm,app,ysm-cli -ScriptBlock {
-  param(\$wordToComplete, \$commandAst, \$cursorPosition)
-  \$els = \$commandAst.CommandElements | ForEach-Object { \$_.ToString() } | Select-Object -Skip 1
-  \$n = \$els.Count
-  if (\$n -le 1) { return \$ysmTopCommands | Where-Object { \$_ -like "\$wordToComplete*" } }
-  \$cmd = \$els[0]
-  if (\$n -eq 2 -and \$ysmSubs.ContainsKey(\$cmd)) { return \$ysmSubs[\$cmd] | Where-Object { \$_ -like "\$wordToComplete*" } }
-  if (\$ysmFlags.ContainsKey(\$cmd)) { return \$ysmFlags[\$cmd] | Where-Object { \$_ -like "\$wordToComplete*" } }
+  param($wordToComplete, $commandAst, $cursorPosition)
+  $els = $commandAst.CommandElements | ForEach-Object { $_.ToString() } | Select-Object -Skip 1
+  $n = $els.Count
+  if ($n -le 1) { return $ysmTopCommands | Where-Object { $_ -like "$wordToComplete*" } }
+  $cmd = $els[0]
+  if ($n -eq 2 -and $ysmSubs.ContainsKey($cmd)) { return $ysmSubs[$cmd] | Where-Object { $_ -like "$wordToComplete*" } }
+  if ($ysmFlags.ContainsKey($cmd)) { return $ysmFlags[$cmd] | Where-Object { $_ -like "$wordToComplete*" } }
   return @()
 }
 `;
@@ -149,33 +159,38 @@ Register-ArgumentCompleter -Native -CommandName ysm,app,ysm-cli -ScriptBlock {
 
 /* ---------------- 渲染：zsh ---------------- */
 
-function renderZsh({ topNames, parentSubs, cmdFlags, count }: {
+function renderZsh({
+  topNames,
+  parentSubs,
+  cmdFlags,
+  count,
+}: {
   topNames: string[];
   parentSubs: Record<string, string[]>;
   cmdFlags: Record<string, string[]>;
   count: number;
 }) {
   const subCases = Object.entries(parentSubs)
-    .map(([cmd, subs]) => `    ${cmd}) _values '${cmd} 子命令' ${subs.map((s) => s).join(' ')} ;;`)
-    .join('\n');
+    .map(([cmd, subs]) => `    ${cmd}) _values '${cmd} 子命令' ${subs.map((s) => s).join(" ")} ;;`)
+    .join("\n");
   return `#compdef ysm app ysm-cli
 # ysm CLI — zsh 补全（自动生成，勿手改；来源：go/cli 注册表）
 # 生成：node scripts/gen-cli-completion.ts（顶层命令 ${count} 个）
-# 启用：在 fpath 中包含本文件（如 cp completions/_ysm ~/.zfunc/ && echo 'fpath=(~/.zfunc \$fpath)' >> ~/.zshrc）
+# 启用：在 fpath 中包含本文件（如 cp completions/_ysm ~/.zfunc/ && echo 'fpath=(~/.zfunc $fpath)' >> ~/.zshrc）
 _ysm() {
   local -a commands
-  commands=(${topNames.map((n) => `'${n}'`).join(' ')})
+  commands=(${topNames.map((n) => `'${n}'`).join(" ")})
   if (( CURRENT == 2 )); then
     _describe 'ysm 命令' commands
     return
   fi
   local cmd=\${words[2]}
-  case \$cmd in
+  case $cmd in
 ${subCases}
   esac
   _files
 }
-_ysm "\$@"
+_ysm "$@"
 `;
 }
 
@@ -185,28 +200,34 @@ const commands = parseCliCommands();
 const cand = buildCandidates(commands);
 
 const outputs = {
-  'ysm.bash': renderBash(cand),
-  '_ysm.ps1': renderPwsh(cand),
-  '_ysm': renderZsh(cand),
+  "ysm.bash": renderBash(cand),
+  "_ysm.ps1": renderPwsh(cand),
+  _ysm: renderZsh(cand),
 };
 
 let rc = 0;
 if (CHECK) {
   for (const [file, content] of Object.entries(outputs)) {
     const p = path.join(OUT_DIR, file);
-    const onDisk = fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : '';
+    const onDisk = fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n") : "";
     if (onDisk !== content) {
       rc = 1;
-      if (!JSON_OUT) console.error(`[gen-cli-completion] completions/${file} 过期，运行 \`node scripts/gen-cli-completion.ts\` 刷新。`);
+      if (!JSON_OUT)
+        console.error(
+          `[gen-cli-completion] completions/${file} 过期，运行 \`node scripts/gen-cli-completion.ts\` 刷新。`,
+        );
     }
   }
-  if (rc === 0 && !JSON_OUT) console.log('[gen-cli-completion] completions/ 三脚本最新。');
+  if (rc === 0 && !JSON_OUT) console.log("[gen-cli-completion] completions/ 三脚本最新。");
 } else {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   for (const [file, content] of Object.entries(outputs)) {
     writeText(path.join(OUT_DIR, file), content);
   }
-  if (!JSON_OUT) console.log(`[gen-cli-completion] 已写入 completions/（bash+pwsh+zsh，${cand.count} 个顶层命令）`);
+  if (!JSON_OUT)
+    console.log(
+      `[gen-cli-completion] 已写入 completions/（bash+pwsh+zsh，${cand.count} 个顶层命令）`,
+    );
 }
 
 if (JSON_OUT) {

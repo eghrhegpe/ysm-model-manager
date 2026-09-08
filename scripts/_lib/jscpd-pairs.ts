@@ -19,18 +19,18 @@
 
 /** 把 `a#b` 对归一化为排序稳定形式（`b#a` 与 `a#b` 同一对）。 */
 export function normPair(p: string): string {
-  const [a, b] = p.split('#');
-  return [a, b].sort().join('#');
+  const [a, b] = p.split("#");
+  return [a, b].sort().join("#");
 }
 
 /** 取 posix 路径的 basename。 */
 function base(p: string): string {
-  return p.split('/').pop() || p;
+  return p.split("/").pop() || p;
 }
 
 /** 取 `a#b` 对的 basename 集合（排序，供交集比较）。 */
 function basenameSet(pair: string): string[] {
-  return pair.split('#').map(base).sort();
+  return pair.split("#").map(base).sort();
 }
 
 /** 两个 basename 集的交集元素。 */
@@ -49,10 +49,10 @@ export function pairsFrom(report: {
 }): string[] {
   const set = new Set<string>();
   for (const d of report.duplicates || []) {
-    const a = (d.firstFile?.name || '').split('\\').join('/');
-    const b = (d.secondFile?.name || '').split('\\').join('/');
+    const a = (d.firstFile?.name || "").split("\\").join("/");
+    const b = (d.secondFile?.name || "").split("\\").join("/");
     if (!a || !b) continue; // schema 异常条目跳过（调用方有结构校验兜底）
-    set.add([a, b].sort().join('#'));
+    set.add([a, b].sort().join("#"));
   }
   return [...set].sort();
 }
@@ -63,29 +63,29 @@ export interface DriftMatch {
   /** 旧对（baseline 消失），即漂移来源 */
   fixed: string;
   /** exact = 纯搬迁（basename 集相同）；partial = 拆/并文件（部分交集） */
-  type: 'exact' | 'partial';
+  type: "exact" | "partial";
   /** 交集的 basename 列表（partial 时至少 1 个；exact 时 2 个） */
   shared: string[];
 }
 
 /** Go 测试文件判定：*_test.go 或 /testdata/ 目录下。 */
 export function isGoTestFile(p: string): boolean {
-  const base = p.split('/').pop() || p;
-  if (base.endsWith('_test.go')) return true;
-  if (p.includes('/testdata/')) return true;
+  const base = p.split("/").pop() || p;
+  if (base.endsWith("_test.go")) return true;
+  if (p.includes("/testdata/")) return true;
   return false;
 }
 
 /** pair 的两边是否都是测试文件。 */
 export function isTestOnlyPair(pair: string): boolean {
-  const [a, b] = pair.split('#');
-  return isGoTestFile(a ?? '') && isGoTestFile(b ?? '');
+  const [a, b] = pair.split("#");
+  return isGoTestFile(a ?? "") && isGoTestFile(b ?? "");
 }
 
 /** pair 是否涉及至少一个测试文件（prod-test / test-test）。 */
 export function involvesTest(pair: string): boolean {
-  const [a, b] = pair.split('#');
-  return isGoTestFile(a ?? '') || isGoTestFile(b ?? '');
+  const [a, b] = pair.split("#");
+  return isGoTestFile(a ?? "") || isGoTestFile(b ?? "");
 }
 
 /** 从 pairs 集合中过滤掉 test-test 对，只保留涉及生产代码的。 */
@@ -104,9 +104,9 @@ export function classifyDupes(pairs: string[]) {
   const prod_test: string[] = [];
   const test_test: string[] = [];
   for (const pair of pairs) {
-    const [a, b] = pair.split('#');
-    const ta = isGoTestFile(a ?? '');
-    const tb = isGoTestFile(b ?? '');
+    const [a, b] = pair.split("#");
+    const ta = isGoTestFile(a ?? "");
+    const tb = isGoTestFile(b ?? "");
     if (!ta && !tb) prod_prod.push(pair);
     else if (ta && tb) test_test.push(pair);
     else prod_test.push(pair);
@@ -127,16 +127,14 @@ export function matchDrift(added: string[], fixed: string[]): DriftMatch[] {
   const out: DriftMatch[] = [];
   for (const pair of added) {
     const set = basenameSet(pair);
-    let best: { pair: string; type: 'exact' | 'partial'; shared: string[] } | null = null;
+    let best: { pair: string; type: "exact" | "partial"; shared: string[] } | null = null;
     for (const f of fixedSets) {
       const shared = intersect(set, f.set);
       if (shared.length === 0) continue;
-      const type = shared.length === set.length && set.length === f.set.length ? 'exact' : 'partial';
+      const type =
+        shared.length === set.length && set.length === f.set.length ? "exact" : "partial";
       // exact 优先；同型取字典序首个（确定性，防调用方 diff 抖动）
-      if (
-        !best ||
-        (type === 'exact' && best.type === 'partial')
-      ) {
+      if (!best || (type === "exact" && best.type === "partial")) {
         best = { pair: f.pair, type, shared };
       }
     }

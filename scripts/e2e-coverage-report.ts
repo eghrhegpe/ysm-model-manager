@@ -21,38 +21,38 @@
  * 退出码：0（正常）；1（产物缺失）。
  * 设计意图：端到端广度覆盖率报告，读取 Playwright V8 coverage 产物，输出「哪些源文件被真实交互走到」。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { getRoot, toPosix, relPosix } from './_lib/scan-files.ts';
-import { parseArgs } from './_lib/parse-args.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { getRoot, toPosix } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
-const DEFAULT_INPUT = path.join(ROOT, 'frontend/e2e-coverage/coverage.json');
+const DEFAULT_INPUT = path.join(ROOT, "frontend/e2e-coverage/coverage.json");
 
 const args = parseArgs(process.argv.slice(2), {
-  bools: ['json', 'all'],
-  strings: ['input'],
+  bools: ["json", "all"],
+  strings: ["input"],
   defaults: { input: DEFAULT_INPUT },
 });
-if (args.unknown.length) console.warn(`[e2e-coverage] 忽略未知参数: ${args.unknown.join(', ')}`);
+if (args.unknown.length) console.warn(`[e2e-coverage] 忽略未知参数: ${args.unknown.join(", ")}`);
 const jsonMode = args.json as boolean;
 const allMode = args.all as boolean;
 const inputPath = args.input as string;
 
 if (!fs.existsSync(inputPath)) {
   console.error(`[e2e-coverage] 未找到采集产物 ${inputPath}`);
-  console.error('  请先运行: cd frontend && npx playwright test coverage-breadth');
+  console.error("  请先运行: cd frontend && npx playwright test coverage-breadth");
   process.exit(1);
 }
 
 /** V8 precise coverage 条目：{ url, functions: [{ ranges: [{start,end}], ... }], source? } */
-const entries = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+const entries = JSON.parse(fs.readFileSync(inputPath, "utf8"));
 
 /** 按 url 聚合（同一源文件可能被多次采到）：函数级「被走到」比例 */
 function aggregate(entriesList: any[]) {
   const byUrl = new Map();
   for (const e of entriesList) {
-    if (!e || typeof e.url !== 'string' || !e.functions) continue;
+    if (!e || typeof e.url !== "string" || !e.functions) continue;
     const url = e.url;
     if (!byUrl.has(url)) {
       byUrl.set(url, { hit: 0, total: 0, ranges: 0 });
@@ -83,8 +83,8 @@ for (const [url, agg] of byUrl) {
     // 非 URL（直接文件路径的产物）保留原样
   }
   // 仅关注 src 下源文件（跳过 wasm/绑定/第三方）
-  const srcRel = toPosix(pathPart.replace(/^\/+/, ''));
-  if (!srcRel.startsWith('src/') || !srcRel.endsWith('.ts')) continue;
+  const srcRel = toPosix(pathPart.replace(/^\/+/, ""));
+  if (!srcRel.startsWith("src/") || !srcRel.endsWith(".ts")) continue;
   rows.push({
     file: srcRel,
     hit: agg.hit,
@@ -97,25 +97,31 @@ for (const [url, agg] of byUrl) {
 rows.sort((a, b) => a.pct - b.pct || a.file.localeCompare(b.file));
 
 if (jsonMode) {
-  console.log(JSON.stringify({ total: rows.length, touched: rows.filter(r => r.touched).length, rows }, null, 2));
+  console.log(
+    JSON.stringify(
+      { total: rows.length, touched: rows.filter((r) => r.touched).length, rows },
+      null,
+      2,
+    ),
+  );
   process.exit(0);
 }
 
-const touched = rows.filter(r => r.touched).length;
+const touched = rows.filter((r) => r.touched).length;
 const untoched = rows.length - touched;
 console.log(`\n📡 端到端广度报告（ADR-035 G-4）— ${rows.length} 个 src 源文件`);
 console.log(`   被真实交互走到: ${touched}  |  未走到: ${untoched}\n`);
-console.log('未走到（覆盖空白，人工核对是否应有交互）:');
-for (const r of rows.filter(r => !r.touched)) {
+console.log("未走到（覆盖空白，人工核对是否应有交互）:");
+for (const r of rows.filter((r) => !r.touched)) {
   console.log(`  ⬜ ${r.file}`);
 }
-if (allMode || rows.filter(r => !r.touched).length === 0) {
-  console.log('\n全部文件（按函数覆盖比例升序）:');
+if (allMode || rows.filter((r) => !r.touched).length === 0) {
+  console.log("\n全部文件（按函数覆盖比例升序）:");
   for (const r of rows.slice(0, 20)) {
-    const mark = r.touched ? '✅' : '⬜';
+    const mark = r.touched ? "✅" : "⬜";
     console.log(`  ${mark} ${r.pct}%  ${r.file} (${r.hit}/${r.total})`);
   }
   if (rows.length > 20) console.log(`  … 共 ${rows.length} 个，--all 查看全部`);
 }
-console.log('\n[边界] 此报告仅人工观察面，不并入 vitest 门禁、不做 CI 红线（ADR-035 G-4）。');
+console.log("\n[边界] 此报告仅人工观察面，不并入 vitest 门禁、不做 CI 红线（ADR-035 G-4）。");
 process.exit(0);

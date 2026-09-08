@@ -16,22 +16,22 @@
  *
  * 退出码：0 通过 / 1 存在失效引用。
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { ROOT } from './_lib/scan-files.ts';
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT } from "./_lib/scan-files.ts";
 
-const WF_DIR = path.join(ROOT, '.github', 'workflows');
+const WF_DIR = path.join(ROOT, ".github", "workflows");
 
 // run: 命令中的 scripts/ 或 cmd/ 路径引用（兼容 ./scripts/、.\scripts\、裸 scripts/ 三种写法）。
 // 要求前置边界（行首/空白/;|&），排除外部 Go 模块 URL 如 github.com/wailsapp/wails/v3/cmd/wails3
 const REF_RE = /(^|[\s;|&])(?:\.\/|\.\\)?(scripts|cmd)[\\/]([a-zA-Z0-9._-]+)/gm;
 
-const JSON_OUT = process.argv.includes('--json');
+const JSON_OUT = process.argv.includes("--json");
 
 function main() {
   let wfFiles: string[] = [];
   try {
-    wfFiles = fs.readdirSync(WF_DIR).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+    wfFiles = fs.readdirSync(WF_DIR).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
   } catch {
     // .github/workflows 缺失时无法扫描，直接按无引用处理（仓库结构异常另由其他检查兜底）
     wfFiles = [];
@@ -40,7 +40,7 @@ function main() {
   const errors: string[] = [];
   const refs: any[] = [];
   for (const f of wfFiles) {
-    const text = fs.readFileSync(path.join(WF_DIR, f), 'utf8');
+    const text = fs.readFileSync(path.join(WF_DIR, f), "utf8");
     for (const m of text.matchAll(REF_RE)) {
       const rel = `${m[2]}/${m[3]}`;
       const abs = path.join(ROOT, m[2]!, m[3]!);
@@ -54,7 +54,11 @@ function main() {
   if (JSON_OUT) {
     console.log(
       JSON.stringify(
-        { _summary: { workflows: wfFiles.length, refs: refs.length, errors: errors.length }, errors, refs },
+        {
+          _summary: { workflows: wfFiles.length, refs: refs.length, errors: errors.length },
+          errors,
+          refs,
+        },
         null,
         2,
       ),
@@ -63,13 +67,15 @@ function main() {
     return;
   }
 
-  console.log('══════════════════════════════════════');
-  console.log(' 工作流引用完整性 (check-workflow-refs)');
-  console.log('══════════════════════════════════════');
-  console.log(`扫描 ${wfFiles.length} 个 workflow，引用 ${refs.length} 处，ERROR ${errors.length} 条`);
-  console.log('──────────────────────────────────────');
+  console.log("══════════════════════════════════════");
+  console.log(" 工作流引用完整性 (check-workflow-refs)");
+  console.log("══════════════════════════════════════");
+  console.log(
+    `扫描 ${wfFiles.length} 个 workflow，引用 ${refs.length} 处，ERROR ${errors.length} 条`,
+  );
+  console.log("──────────────────────────────────────");
   for (const e of errors) console.log(`❌ ${e}`);
-  if (!errors.length) console.log('✅ 所有 run: 路径引用均存在。');
+  if (!errors.length) console.log("✅ 所有 run: 路径引用均存在。");
   if (errors.length) process.exit(1);
 }
 

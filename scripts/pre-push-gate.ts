@@ -37,7 +37,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fallbackBranchRevs, resolveBaseRev } from "./_lib/gate-resolve.ts";
 import { runContractTestsParallel, selectContractTests } from "./_lib/contract-tests.ts";
 import {
   domainSummaryText,
@@ -54,6 +53,7 @@ import {
 } from "./_lib/gate-config.ts";
 import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
+import { resolveBaseRev, resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { run as procRun, shq } from "./_lib/proc.ts";
@@ -103,50 +103,9 @@ function git(args: string[], { cwd = ROOT } = {}) {
 }
 
 /* ---------------- 变更域分析 ---------------- */
-
-function resolveChanges(localRef: string, localOid: string, remoteOid: string) {
-  /**
-   * 计算本次 push 的变更文件集（相对被推送的 localOid，而非当前检出 HEAD——
-   * 推非当前分支时 HEAD 与推送对象不一致，用 HEAD 会分析错快照，2026-08-12 排查）。
-   * remoteOid 全 0（新分支/新仓库）→ 回退最近一次提交；
-   * 无祖先提交 → 首个提交的完整文件清单。
-   * 返回文件数组；解析彻底失败（git diff/show 均不可用）返回 null，
-   * 由调用方阻断推送而非静默空跑放行（fail-closed）。
-   */
-  const isNew = /^0+$/.test(remoteOid || "");
-  if (!isNew && remoteOid !== localOid) {
-    const { rc, out } = git(["diff", "--name-only", `${remoteOid}..${localOid}`]);
-    if (rc === 0) return out.trim().split("\n").filter(Boolean); // 成功即权威答案（空 = 本次无变更）
-  }
-  // 新分支：优先 merge-base（有远端追踪分支时），否则 fallback 链
-  // origin/<分支名> → origin/HEAD → origin/main → origin/master，最后才最近提交，
-  // 避免多提交新分支只看 HEAD~1..HEAD 漏检中间提交（code_review P3）。
-  // 分支名取自 stdin 的 localRef（推非当前分支时不能用 CURRENT_BRANCH）。
-  // 不用 `2>/dev/null`：cmd.exe 下会解析为 dev\null 相对路径并中止整条命令（code_review P3）
-  const mergeBase = (ref: string) => {
-    const r = git(["merge-base", localOid, ref]);
-    return r.rc === 0 ? r.out.trim() : "";
-  };
-  const branchName = localRef.startsWith("refs/heads/")
-    ? localRef.slice("refs/heads/".length)
-    : null;
-  const mb = (() => {
-    for (const ref of fallbackBranchRevs(localRef)) {
-      const m = mergeBase(ref);
-      if (m) return m;
-    }
-    return "";
-  })();
-  if (mb) {
-    const { rc, out } = git(["diff", "--name-only", `${mb}..${localOid}`]);
-    if (rc === 0) return out.trim().split("\n").filter(Boolean);
-  }
-  const { rc, out } = git(["diff", "--name-only", `${localOid}~1..${localOid}`]);
-  if (rc === 0) return out.trim().split("\n").filter(Boolean);
-  // 首个提交（diff-tree 对 root commit 默认忽略，须用 git show）
-  const t = git(["show", "--name-only", "--format=", localOid]);
-  return t.rc === 0 && t.out.trim() ? t.out.trim().split("\n").filter(Boolean) : null;
-}
+// resolveChanges 已收敛至 _lib/gate-resolve.ts（ADR-206 阶段 1 迁址，2026-09-08）：
+// 与 resolveBaseRev 同源单一事实源，本模块经 import 使用（原私有副本删除，
+// 终结双副本各自漂移——code_review P2：副本曾与 _lib 版 fallback 链实现分叉）。
 
 /**
  * 基线 rev 解析已收敛至 _lib/gate-resolve.ts（2026-09-08 锐评 R4）：

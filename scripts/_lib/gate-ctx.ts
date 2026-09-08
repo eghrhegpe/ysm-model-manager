@@ -13,9 +13,9 @@
  * 依赖：node:child_process / _lib/proc / _lib/scan-files / _lib/domain-classify
  */
 import { spawn } from "node:child_process";
+import type { Plan } from "./domain-classify.ts";
 import { run as procRun, shq } from "./proc.ts";
 import { ROOT } from "./scan-files.ts";
-import type { Plan } from "./domain-classify.ts";
 
 const TIMEOUT = 300_000;
 
@@ -23,6 +23,18 @@ const TIMEOUT = 300_000;
 export interface ExecResult {
   rc: number;
   out: string;
+}
+
+/** record() 推入 results 的单条结果（与 writeGateReport 消费形状对齐）。 */
+export interface GateResult {
+  label: string;
+  ok: boolean;
+  time: number;
+  note: string;
+  tail: string;
+  // 显式 | undefined：exactOptionalPropertyTypes 下 record() 的 rawCapped（string|undefined）
+  // 直接赋给 raw? 会报 TS2379
+  raw?: string | undefined;
 }
 
 /** record() 的可选参数。 */
@@ -42,8 +54,9 @@ export interface GateCtx {
   pushLocalRef: string;
   pushLocalOid: string;
   pushRemoteOid: string;
-  results: any[];
-  blocked: boolean;
+  results: GateResult[];
+  /** 活值 getter：反映 record()/setBlocked() 的最新阻断状态（值快照会恒 false → fail-open）。 */
+  readonly blocked: boolean;
   /** 供 failClosed 特例（如 redlines scanHealthy=false）在 record 外置阻断。 */
   setBlocked(v: boolean): void;
   record(label: string, ok: boolean, opts?: RecordOpts): void;
@@ -62,7 +75,7 @@ export function createGateCtx(init: {
   pushLocalOid: string;
   pushRemoteOid: string;
 }): GateCtx {
-  const results: any[] = [];
+  const results: GateResult[] = [];
   let blocked = false;
 
   const sh = (cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}): ExecResult => {
@@ -74,11 +87,28 @@ export function createGateCtx(init: {
 
   const shAsync = (cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}): Promise<ExecResult> =>
     new Promise((resolve) => {
-      const child = spawn(cmd, [], { cwd, shell: true, timeout, stdio: ["ignore", "pipe", "pipe"] });
+      const child = spawn(cmd, [], {
+        cwd,
+        shell: true,
+        timeout,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      // 输出上限：超限停止追加（尾部保留），与 record() 的 64KB raw cap 同纪律，
+      // 防 go test/vite 级刷屏输出在 gate 进程内无界膨胀。
+      const OUT_CAP = 1 << 20; // 1MB
       let buf = "";
-      child.stdout.on("data", (d) => (buf += d.toString()));
-      child.stderr.on("data", (d) => (buf += d.toString()));
-      child.on("close", (code) => resolve({ rc: code ?? -1, out: buf }));
+      let capped = false;
+      child.stdout.on("data", (d) => {
+        if (buf.length < OUT_CAP) buf += d.toString();
+        else capped = true;
+      });
+      child.stderr.on("data", (d) => {
+        if (buf.length < OUT_CAP) buf += d.toString();
+        else capped = true;
+      });
+      child.on("close", (code) =>
+        resolve({ rc: code ?? -1, out: capped ? `${buf}\n…(输出超 1MB 截断)` : buf }),
+      );
       child.on("error", (err) => resolve({ rc: -1, out: err.message }));
     });
 
@@ -100,6 +130,8 @@ export function createGateCtx(init: {
   };
 
   const gofmtCheck = (goFiles: string[]): string[] => {
+    // 空列表早退：裸 `gofmt -l`（无文件参数）会读 stdin，gate 可能挂死到超时。
+    if (goFiles.length === 0) return [];
     // gofmt -l 只读检出未格式化文件（不修改）。修复由 pre-commit 提交时自动完成；
     // 此处仍检出说明提交绕过了 pre-commit（--no-verify 等），阻断并提示手动修复。
     return sh(`gofmt -l ${goFiles.map(shq).join(" ")}`)
@@ -111,7 +143,11 @@ export function createGateCtx(init: {
   return {
     ...init,
     results,
-    blocked,
+    // 活值 getter（P1 修复）：`blocked,` 值快照在创建时拷贝 false，此后 record()/setBlocked()
+    // 只改闭包变量，消费者读 ctx.blocked 永远 false → 失败检查静默放行（fail-open）。
+    get blocked() {
+      return blocked;
+    },
     setBlocked: (v: boolean) => (blocked = v),
     record,
     sh,

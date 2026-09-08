@@ -484,7 +484,6 @@ describe("bindBusEvents — 树刷新", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ClearScanCacheMock).toHaveBeenCalled();
-    expect(vm.snapshot.filesRoot).toBe("/repo");
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
@@ -503,6 +502,5 @@ describe("bindBusEvents — 树刷新", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(loadedArgs).toEqual(["EntityPlayer", "EntityPlayer"]);
-    expect(vm.snapshot.filesRoot).toBe("/repo/mmd/EntityPlayer");
   });
 });

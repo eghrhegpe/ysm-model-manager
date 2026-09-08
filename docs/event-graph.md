@@ -224,11 +224,11 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 369 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 466 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 370 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 467 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 593 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 599 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -494,8 +494,8 @@
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 333 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 416 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 417 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
@@ -551,11 +551,11 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 489 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 499 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 75 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 369 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 517 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 525 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 645 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 652 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 375 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 523 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 531 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 651 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 658 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 48 |
@@ -614,4 +614,4 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 296 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 302 |

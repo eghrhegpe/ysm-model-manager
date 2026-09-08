@@ -43,17 +43,14 @@ func TestHideWindow_Windows_SetsSysProcAttr(t *testing.T) {
 	}
 }
 
-// TestHideWindow_PanicsNilCmd 验证传入 nil cmd 时是否 panic（Windows 源码会 panic，Unix 不会）。
-func TestHideWindow_PanicsNilCmd(t *testing.T) {
+// TestHideWindow_NilCmdNoPanic 验证 nil cmd 输入跨平台安全（no-op，不 panic）：
+// 原 Windows 平台会解引用 nil panic，已加 nil guard（hidewindows.go 头注释），两平台语义对齐。
+func TestHideWindow_NilCmdNoPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("HideWindow(nil) 不应 panic（nil guard 失效）: %v", r)
+		}
+	}()
 	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		// Windows 平台：访问 nil cmd 的字段会 panic，这是已知行为
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatal("Windows 平台：HideWindow(nil) 应 panic")
-			}
-		}()
-	}
 	HideWindow(cmd)
-	// Unix 平台不 panic，执行到此即通过
 }

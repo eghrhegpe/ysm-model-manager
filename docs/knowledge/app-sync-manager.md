@@ -31,6 +31,7 @@ auto_fields:
     - statusTabHTML
     - syncDirRowHTML
     - SyncItem
+    - SyncManagerFields
     - SyncManagerSelf
     - SyncRenderSelf
     - SyncStoreSelf

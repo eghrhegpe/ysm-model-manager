@@ -569,8 +569,11 @@ async function main() {
         // 静默丢）→ run 必失败且硬阻断，违背「宁可漏检不可误堵」；按地板降级 debt
         const glVerLine = glVer.out.split("\n")[0] ?? "";
         const vM = glVerLine.match(/v?(\d+)\.(\d+)\.(\d+)/);
-        const glMaj = vM ? parseInt(vM[1], 10) : 0;
-        const glMin = vM ? parseInt(vM[2], 10) : 0;
+        // code_review 9403a4dff #4 修复补（TS2345）：vM[1]/vM[2] 是 match 数组索引
+        // （string | undefined）——parseInt 收 string 报 TS 错误；`?? "0"` 安抚类型
+        // 且防极端空组 NaN（match 成功时组必在，兜底不改变正常语义）
+        const glMaj = vM ? parseInt(vM[1] ?? "0", 10) : 0;
+        const glMin = vM ? parseInt(vM[2] ?? "0", 10) : 0;
         const belowFloor = glMaj !== 0 && (glMaj < 1 || (glMaj === 1 && glMin < 64) || glMaj > 2);
         if (belowFloor) {
           record("golangci-lint（跳过：版本低于地板 v1.64+/v2 线）", true, {

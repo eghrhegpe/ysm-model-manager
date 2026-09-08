@@ -233,19 +233,18 @@ func TestParseFaceUV_InvalidJSON(t *testing.T) {
 }
 
 func TestParseFaceUV_PartialFaces(t *testing.T) {
-	// 只提供 east 和 west 面
+	// 只提供 east 面（west 等其余面应维持零值）
 	uvStr := `{"east":{"uv":[0,0],"uv_size":[8,8]}}`
 	var faces [6][8]float64
 	ok := parseFaceUV(uvStr, &faces, 64, 64)
 	if !ok {
 		t.Fatal("parseFaceUV 应返回 true")
 	}
-	if faces[0][0] == 0 && faces[0][1] == 0 {
-		// east face 应有值
-	} else {
-		t.Errorf("east face 应有 UV 值, got %v", faces[0])
+	// east face 应解析到 u0=0/64=0, v0=0/64=0
+	if faces[0][0] != 0 || faces[0][1] != 0 {
+		t.Errorf("east face u0,v0 = %v,%v, 期望 0,0", faces[0][0], faces[0][1])
 	}
-	// west face 未提供，应保持 [0,0,0,0,0,0,0,0]
+	// west face（索引 1，即 faces[1]）未提供，应保持零值
 	if faces[1] != [8]float64{} {
 		t.Errorf("west face 应保持零值, got %v", faces[1])
 	}

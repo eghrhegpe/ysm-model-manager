@@ -26,21 +26,16 @@ func TestExtractKeys_Object(t *testing.T) {
 }
 
 func TestExtractKeys_Array(t *testing.T) {
+	// 数组形态：extractKeys 将下标映射为 "动画 N"（summary.go:584），用于 extra_animation_classify 分组名
 	raw := json.RawMessage(`[1,2,3]`)
 	keys := extractKeys(raw)
 	if len(keys) != 3 {
 		t.Fatalf("期望 3 个 key, 得到 %d", len(keys))
 	}
+	want := []string{"动画 1", "动画 2", "动画 3"}
 	for i, k := range keys {
-		want := "动画 1"
-		if i == 1 {
-			want = "动画 2"
-		}
-		if i == 2 {
-			want = "动画 3"
-		}
-		if k != want {
-			t.Errorf("keys[%d] = %q, want %q", i, k, want)
+		if k != want[i] {
+			t.Errorf("keys[%d] = %q, want %q", i, k, want[i])
 		}
 	}
 }

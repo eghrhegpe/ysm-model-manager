@@ -364,28 +364,26 @@ const maidOldFormatGeo = `{"format_version":"1.10.0","geometry.model":{"texturew
 func TestParseFromZip_MaidModelNamespaceFilter(t *testing.T) {
 	// 模拟车万女仆 ZIP：多 namespace，每个含 maid_model.json + entity JSON
 	// 应只加载首个 namespace（按条目序）的 entity，跳过描述符和其他 namespace
-	data := testutil.MakeZipBytes(t, map[string]string{
-		"assets/ns_a/maid_model.json":            `{"pack_name":"ns_a","model_list":[]}`,
-		"assets/ns_a/models/entity/reimu.json":   maidOldFormatGeo,
-		"assets/ns_a/textures/entity/reimu.png":  "PNGDATA_REIMU",
-		"assets/ns_b/maid_model.json":            `{"pack_name":"ns_b","model_list":[]}`,
-		"assets/ns_b/models/entity/marisa.json":  maidOldFormatGeo,
-		"assets/ns_b/textures/entity/marisa.png": "PNGDATA_MARISA",
-	})
+	// 使用 makeZipRaw（slice-of-pairs）而非 MakeZipBytes（map，迭代序随机）以消除 flaky。
+	entries := []rawZipEntry{
+		{name: "assets/ns_a/maid_model.json", method: 0, data: `{"pack_name":"ns_a","model_list":[]}`},
+		{name: "assets/ns_a/models/entity/reimu.json", method: 0, data: maidOldFormatGeo},
+		{name: "assets/ns_a/textures/entity/reimu.png", method: 0, data: "PNGDATA_REIMU"},
+		{name: "assets/ns_b/maid_model.json", method: 0, data: `{"pack_name":"ns_b","model_list":[]}`},
+		{name: "assets/ns_b/models/entity/marisa.json", method: 0, data: maidOldFormatGeo},
+		{name: "assets/ns_b/textures/entity/marisa.png", method: 0, data: "PNGDATA_MARISA"},
+	}
+	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	if model == nil {
 		t.Fatal("应解析成功")
 	}
-	// 只保留首个 namespace（ns_a 或 ns_b 取决于 map 迭代顺序——MakeZipBytes 用 Go map
-	// 构造，ZIP 条目序随机，不得钉死 head；发现4 P3 去顺序依赖）
+	// ns_a 在条目序中先于 ns_b → 应只加载 ns_a（骨骼名固定为 head）
 	if model.BoneCount != 1 {
-		t.Errorf("BoneCount = %d, 期望 1（仅首个 namespace）", model.BoneCount)
+		t.Errorf("BoneCount = %d, 期望 1（仅首个 namespace ns_a）", model.BoneCount)
 	}
-	if model.BoneCount > 0 {
-		n := model.Bones[0].Name
-		if n != "head" && n != "marisa" {
-			t.Errorf("骨骼名 = %q, 期望 head（ns_a）或 marisa（ns_b）", n)
-		}
+	if model.BoneCount > 0 && model.Bones[0].Name != "head" {
+		t.Errorf("骨骼名 = %q, 期望 head（ns_a 首个 namespace 的骨骼）", model.Bones[0].Name)
 	}
 	// 只有首个 namespace 的纹理
 	if len(pngs) != 1 {

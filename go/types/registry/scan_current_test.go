@@ -8,7 +8,7 @@ import (
 )
 
 // TestSchemaGuard_ScanCurrentResourceTypes 用守卫扫描当前 resource_types.json，
-// 输出所有红线违规。这是诊断测试，不硬断言——用于确认隔壁 AI 三刀后剩余的债。
+// 发现红线违规即失败（CI 不能容忍静默 pass）。用于拦截 AI 三刀后遗留的债。
 func TestSchemaGuard_ScanCurrentResourceTypes(t *testing.T) {
 	t.Parallel()
 	data, err := os.ReadFile("../../../resource_types.json")
@@ -44,4 +44,5 @@ func TestSchemaGuard_ScanCurrentResourceTypes(t *testing.T) {
 	}
 	t.Logf("分类: 壳越权=%d, storageSubDir 冲突=%d, configField 歧义=%d",
 		shellCount, subDirCount, cfgCount)
+	t.Fail() // 有违规 → 让 CI 红，不能只打日志
 }

@@ -317,8 +317,12 @@ func TestExtractYsmSummary_EmptyAuthorsNilContact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("空 author + nil contact 应容错: %v", err)
 	}
-	if len(sum.Authors) != 1 || sum.Authors[0].Bilibili != "" {
-		t.Logf("Author contact nil 处理: %+v", sum.Authors)
+	// contact 为 nil 时 Bilibili 应回退到空串；author 列表长度应保留
+	if len(sum.Authors) != 1 {
+		t.Errorf("Authors 长度 = %d, 期望 1（空 name 的 author 条目仍应被保留）", len(sum.Authors))
+	}
+	if len(sum.Authors) > 0 && sum.Authors[0].Bilibili != "" {
+		t.Errorf("Authors[0].Bilibili = %q, 期望空串（contact=nil 时无 Bilibili 字段）", sum.Authors[0].Bilibili)
 	}
 }
 

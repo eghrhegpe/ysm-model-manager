@@ -303,7 +303,7 @@ async function runBatchToggle(
     });
     return;
   }
-  if (vm._batchBusy || vm._toggleBusy) {
+  if (vm.batchBusy || vm.toggleBusy) {
     bus.emit("toast:show", {
       msg: t("tree.batchBusyWait"),
       duration: TOAST_MS.quick,
@@ -311,7 +311,7 @@ async function runBatchToggle(
     });
     return;
   }
-  vm._batchBusy = true;
+  vm.batchBusy = true;
   try {
     const { ToggleEnable } = await getApp();
     const prefix = opts.prefix?.replace(/\\/g, "/");
@@ -361,7 +361,7 @@ async function runBatchToggle(
       type: "error",
     });
   } finally {
-    vm._batchBusy = false;
+    vm.batchBusy = false;
   }
 }
 

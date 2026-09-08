@@ -240,8 +240,14 @@ export class AppTree extends WebComponentBase {
   get toggleBusy(): boolean {
     return this._toggleBusy;
   }
+  set toggleBusy(v: boolean) {
+    this._toggleBusy = v;
+  }
   get batchBusy(): boolean {
     return this._batchBusy;
+  }
+  set batchBusy(v: boolean) {
+    this._batchBusy = v;
   }
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约）+ subdir（ADR-094 子类型子目录） */

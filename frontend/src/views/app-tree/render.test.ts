@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 树构建/扁平化纯函数测试（ADR-021 扩展）=====
-// buildTree：排序（name/size/date）/ search 过滤 / filterPaths 交集 / Windows 路径归一。
-// flattenVisible：目录展开/折叠 / 搜索自动展开 / 文件行 key 用 fullPath。
+// buildTree：排序（name/size/date）/ filterPaths 交集 / Windows 路径归一。
+// flattenVisible：目录展开/折叠 / search 过滤 / 搜索自动展开 / 文件行 key 用 fullPath。
 import { describe, it, expect, beforeEach } from "vitest";
 import { buildTree, flattenVisible, getRenderMode, setRenderMode } from "./render.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
@@ -35,7 +35,6 @@ describe("buildTree 排序", () => {
     const root = buildTree(
       [entry("b.ysm", "b.ysm"), entry("a.ysm", "a.ysm"), entry("c.ysm", "c.ysm")],
       "name",
-      "",
       null,
     );
     expect(treeKeys(root)).toEqual(["a.ysm", "b.ysm", "c.ysm"]);
@@ -45,7 +44,6 @@ describe("buildTree 排序", () => {
     const root = buildTree(
       [entry("small.ysm", "small.ysm", 100), entry("big.ysm", "big.ysm", 5000)],
       "size",
-      "",
       null,
     );
     expect(treeKeys(root)).toEqual(["big.ysm", "small.ysm"]);
@@ -55,7 +53,6 @@ describe("buildTree 排序", () => {
     const root = buildTree(
       [entry("old.ysm", "old.ysm", 0, 100), entry("new.ysm", "new.ysm", 0, 500)],
       "date",
-      "",
       null,
     );
     expect(treeKeys(root)).toEqual(["new.ysm", "old.ysm"]);
@@ -65,7 +62,6 @@ describe("buildTree 排序", () => {
     const root = buildTree(
       [entry("z.ysm", "folder/z.ysm"), entry("a.ysm", "a.ysm")],
       "name",
-      "",
       null,
     );
     expect(treeKeys(root)).toEqual(["a.ysm", "folder"]);
@@ -77,24 +73,23 @@ describe("buildTree 过滤", () => {
     const root = buildTree(
       [entry("hero.ysm", "hero.ysm"), entry("villain.ysm", "villain.ysm")],
       "name",
-      "hero",
       null,
     );
-    expect(treeKeys(root)).toEqual(["hero.ysm"]);
+    const rows = flattenVisible(root, "", "hero", "name", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["hero.ysm"]);
   });
 
   it("filterPaths 只保留集合内的 fullPath", () => {
     const root = buildTree(
       [entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm"), entry("b.ysm", "b.ysm", 0, 0, "/repo/b.ysm")],
       "name",
-      "",
       new Set(["/repo/b.ysm"]),
     );
     expect(treeKeys(root)).toEqual(["b.ysm"]);
   });
 
   it("Windows 分隔符路径归一为嵌套目录", () => {
-    const root = buildTree([entry("a.ysm", "folder\\sub\\a.ysm")], "name", "", null);
+    const root = buildTree([entry("a.ysm", "folder\\sub\\a.ysm")], "name", null);
     const folder = root["folder"];
     expect(folder).toBeDefined();
     expect(Object.keys(folder as Record<string, unknown>)).toEqual(["sub"]);
@@ -106,7 +101,6 @@ describe("flattenVisible", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -120,7 +114,6 @@ describe("flattenVisible", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm"), entry("b.ysm", "folder/sub/b.ysm")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", { "folder": true, "folder/sub": true }, 0, "grid");
@@ -132,7 +125,6 @@ describe("flattenVisible", () => {
     const root = buildTree(
       [entry("target.ysm", "folder/target.ysm")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "target", "name", {}, 0, "grid");
@@ -145,7 +137,6 @@ describe("flattenVisible", () => {
     const root = buildTree(
       [entry("a.ysm", "hero/char/a.ysm"), entry("b.ysm", "other/b.ysm")],
       "name",
-      "hero",
       null,
     );
     const rows = flattenVisible(root, "", "hero", "name", {}, 0, "grid");
@@ -155,7 +146,7 @@ describe("flattenVisible", () => {
   });
 
   it("搜索带首尾空白 → trim 后仍能匹配（与 buildTree 一致）", () => {
-    const root = buildTree([entry("a.ysm", "hero/a.ysm")], "name", "", null);
+    const root = buildTree([entry("a.ysm", "hero/a.ysm")], "name", null);
     const rows = flattenVisible(root, "", "  hero  ", "name", {}, 0, "grid");
     expect(rows.some((r) => r.type === "file")).toBe(true);
   });
@@ -164,12 +155,11 @@ describe("flattenVisible", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm", 0, 0, "/repo/folder/a.ysm")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", { "folder": true }, 0, "grid");
     const fileRow = rows.find((r) => r.type === "file");
-    expect(fileRow?.key).toBe("/repo/folder/a.ysm");
+    expect(fileRow?.key).toBe("folder/a.ysm");
   });
 });
 
@@ -178,7 +168,6 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm"), entry("b.ysm", "folder/b.ysm")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -193,7 +182,6 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
         { ...entry("b.ysm", "folder/b.ysm"), banned: true },
       ],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -209,7 +197,6 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
         { ...entry("b.ysm", "folder/b.ysm"), banned: true },
       ],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -221,7 +208,6 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
     const root = buildTree(
       [{ ...entry("deep.ysm", "top/mid/deep.ysm"), banned: true }],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -234,7 +220,6 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
     const root = buildTree(
       [{ ...entry("ok.ysm", "top/mid/ok.ysm"), banned: false }],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
@@ -245,7 +230,7 @@ describe("flattenVisible — 文件夹启禁用标记（P2b 短路判定）", ()
   it("深链（1000 级）：全禁用条目埋在底端 → 顶层与中层判定正确", () => {
     const depth = 1000;
     const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/deep.ysm";
-    const root = buildTree([{ ...entry("deep.ysm", path), banned: true }], "name", "", null);
+    const root = buildTree([{ ...entry("deep.ysm", path), banned: true }], "name", null);
     // 默认不展开 → 顶层 d0 可见；展开到 d500 让中层也进入渲染窗口
     const dirOpen: Record<string, boolean> = {};
     const acc: string[] = [];
@@ -274,7 +259,7 @@ describe("annotateDirNodes — O(n²) 回归绊线（深链全启用无早退）
       const depth = 10000;
       const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/f.ysm";
       const t0 = performance.now();
-      const root = buildTree([entry("f.ysm", path)], "name", "", null);
+      const root = buildTree([entry("f.ysm", path)], "name", null);
       const elapsed = performance.now() - t0;
       expect(root).toBeDefined();
       // O(n) 后序合并应亚毫秒级；O(n²) 重扫子树在 10000 级深链实测 ~2.9s。
@@ -300,7 +285,6 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     const root = buildTree(
       [webEntry("狐狸.ysm", "/分类1/狐狸"), webEntry("猫咪.ysm", "/分类1/猫咪")],
       "name",
-      "",
       null,
     );
     expect(treeKeys(root)).toEqual(["分类1"]);
@@ -315,7 +299,6 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     const root = buildTree(
       [webEntry("狐狸.ysm", "/分类1/狐狸"), webEntry("猫咪.ysm", "/分类1/猫咪")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(
@@ -334,9 +317,9 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     expect(keys).toContain("分类1");
     expect(keys).toContain("分类1/狐狸");
     expect(keys).toContain("分类1/猫咪");
-    // 文件行 key 用 fullPath（带前导 /，对齐选中匹配依据）
-    expect(keys).toContain("/分类1/狐狸/狐狸.ysm");
-    expect(keys).toContain("/分类1/猫咪/猫咪.ysm");
+    // 文件行 key 用路径段拼接（对齐树导航依据）
+    expect(keys).toContain("分类1/狐狸/狐狸.ysm");
+    expect(keys).toContain("分类1/猫咪/猫咪.ysm");
     const fileRows = rows.filter((r) => r.type === "file");
     expect(fileRows.every((r) => r.depth === 2)).toBe(true);
   });
@@ -345,7 +328,6 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     const root = buildTree(
       [webEntry("狐狸.ysm", "/分类1/狐狸"), webEntry("main.json", "/分类1/狐狸")],
       "name",
-      "",
       null,
     );
     const rows = flattenVisible(
@@ -359,9 +341,9 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     );
     const fileRows = rows.filter((r) => r.type === "file");
     expect(fileRows).toHaveLength(2);
-    // 文件行 key = fullPath；顺序不敏感（含中文排序），用成员断言
+    // 文件行 key = 路径段拼接；顺序不敏感（含中文排序），用成员断言
     expect(fileRows.map((r) => r.key)).toEqual(
-      expect.arrayContaining(["/分类1/狐狸/狐狸.ysm", "/分类1/狐狸/main.json"]),
+      expect.arrayContaining(["分类1/狐狸/狐狸.ysm", "分类1/狐狸/main.json"]),
     );
   });
 });
@@ -445,7 +427,7 @@ describe("flattenVisible — 深链 + 搜索态栈溢出回归绊线（P2 修复
     () => {
       const depth = 10000;
       const path = Array.from({ length: depth }, (_, i) => `d${i}`).join("/") + "/f.ysm";
-      const root = buildTree([entry("f.ysm", path, 0, 0, "/repo/" + path)], "name", "", null);
+      const root = buildTree([entry("f.ysm", path, 0, 0, "/repo/" + path)], "name", null);
       expect(root).toBeDefined();
       // 搜索命中 → 所有目录 shouldOpen=true → 全量展开（旧实现递归到栈溢出）
       const rows = flattenVisible(root, "", "f.ysm", "name", {}, 0, "grid");
@@ -455,7 +437,7 @@ describe("flattenVisible — 深链 + 搜索态栈溢出回归绊线（P2 修复
       // 末行为叶子文件（深度 = 树深）
       const last = rows[rows.length - 1];
       expect(last.type).toBe("file");
-      expect(last.key).toBe("/repo/" + path);
+      expect(last.key).toBe(path);
     },
     15000,
   );

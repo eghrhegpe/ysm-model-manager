@@ -78,7 +78,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       });
       return true;
     }
-    if (vm._toggleBusy || vm._batchBusy) {
+    if (vm.toggleBusy || vm.batchBusy) {
       bus.emit("toast:show", {
         msg: t("ctx.busyWait"),
         duration: TOAST_MS.quick,
@@ -86,7 +86,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       });
       return true;
     }
-    vm._toggleBusy = true;
+    vm.toggleBusy = true;
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
     const fl = flCk.closest(".fl, .fl-list") as HTMLElement | null;
     flashBtn(fl);
@@ -113,7 +113,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
         });
       })
       .finally(() => {
-        vm._toggleBusy = false;
+        vm.toggleBusy = false;
       });
     return true;
   }
@@ -420,7 +420,7 @@ function collectDirEntries(entries: TreeEntry[], prefix: string): TreeEntry[] {
 
 // ===== 文件夹批量启用/禁用 =====
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
-  if (vm._batchBusy || vm._toggleBusy) {
+  if (vm.batchBusy || vm.toggleBusy) {
     bus.emit("toast:show", {
       msg: t("ctx.busyWait"),
       duration: TOAST_MS.quick,
@@ -436,7 +436,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     });
     return;
   }
-  vm._batchBusy = true;
+  vm.batchBusy = true;
   try {
     const { ToggleEnable } = await getApp();
     const ck = fhEl.querySelector(".ck");
@@ -502,7 +502,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
       type: "error",
     });
   } finally {
-    vm._batchBusy = false;
+    vm.batchBusy = false;
   }
 }
 

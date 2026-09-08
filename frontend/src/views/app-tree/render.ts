@@ -73,7 +73,7 @@ function getBuildTreeCached(
     return cached.root; // ← 命中缓存，跳过 buildTree
   }
 
-  const root = buildTree(entries, sort, "", filterPaths);
+  const root = buildTree(entries, sort, filterPaths);
   buildCache.set(ctx, { key: cacheKey, root });
   return root;
 }
@@ -109,7 +109,7 @@ function annotateDirNodes(root: TreeNode): void {
     const top = stack[stack.length - 1];
     const keys = Object.keys(top.node).filter((k) => k !== "_e");
     if (top.childIdx < keys.length) {
-      const child = top.node[top.childIdx] as TreeNode | undefined;
+      const child = top.node[keys[top.childIdx]] as TreeNode | undefined;
       top.childIdx++;
       if (child && typeof child === "object" && !child._e) {
         stack.push({ node: child, childIdx: 0 });
@@ -201,45 +201,70 @@ export function flattenVisible(
   mode: RenderMode,
 ): TreeRow[] {
   const rows: TreeRow[] = [];
-  const isSearch = search.trim().length > 0;
-  const searchLower = search.toLowerCase();
-  const entries = Object.keys(root)
-    .filter((k) => k !== "_e")
-    .map((k) => ({ key: k, node: root[k] as TreeNode | TreeEntry }))
-    .filter(({ node }) => node && typeof node === "object");
-  // 排序：文件夹在前，文件在后；同类按名称排序
-  entries.sort((a, b) => {
-    const aIsDir = !(a.node && (a.node as TreeNode)._e);
-    const bIsDir = !(b.node && (b.node as TreeNode)._e);
-    if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
-    const aName = a.key.toLowerCase();
-    const bName = b.key.toLowerCase();
-    return sort === "date" ? 0 : aName < bName ? -1 : aName > bName ? 1 : 0;
-  });
-  for (const { key: name, node } of entries) {
-    const fullPath = prefix ? `${prefix}/${name}` : name;
-    if (node && (node as TreeNode)._e) {
-      const entry = (node as TreeNode)._e as TreeEntry;
-      if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
-      const html = fileRowFromEntry(entry, depth, mode);
-      rows.push({ id: rows.length, type: "file", key: fullPath, depth, html });
-    } else if (node) {
-      const isOpen = dirOpen[fullPath] || false;
-      const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
-      const html = folderRowFromNode(name, fullPath, depth, isOpen, flags, mode);
-      rows.push({ id: rows.length, type: "folder", key: fullPath, depth, html, isOpen });
-      if (isOpen || isSearch) {
-        const childRows = flattenVisible(
-          node as TreeNode,
-          fullPath,
-          search,
-          sort,
-          dirOpen,
-          depth + 1,
-          mode,
-        );
-        rows.push(...childRows);
+  const searchTrimmed = search.trim();
+  const isSearch = searchTrimmed.length > 0;
+  const searchLower = searchTrimmed.toLowerCase();
+  // 显式栈迭代（防深链栈溢出）：每帧 = (节点, 前缀, 深度, 子键迭代器)
+  interface Frame {
+    node: TreeNode;
+    prefix: string;
+    depth: number;
+    childKeys: string[];
+    childIdx: number;
+  }
+  const stack: Frame[] = [{ node: root, prefix, depth, childKeys: [], childIdx: 0 }];
+  while (stack.length) {
+    const top = stack[stack.length - 1];
+    if (top.childIdx === 0) {
+      // 首次进入该帧：计算排序后的子键列表
+      const entries = Object.keys(top.node)
+        .filter((k) => k !== "_e")
+        .map((k) => ({ key: k, node: top.node[k] as TreeNode | TreeEntry }))
+        .filter(({ node }) => node && typeof node === "object");
+      entries.sort((a, b) => {
+        const aIsDir = !(a.node && (a.node as TreeNode)._e);
+        const bIsDir = !(b.node && (b.node as TreeNode)._e);
+        if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
+        const aName = a.key.toLowerCase();
+        const bName = b.key.toLowerCase();
+        return sort === "date" ? 0 : aName < bName ? -1 : aName > bName ? 1 : 0;
+      });
+      top.childKeys = entries.map((e) => e.key);
+    }
+    if (top.childIdx < top.childKeys.length) {
+      const name = top.childKeys[top.childIdx];
+      top.childIdx++;
+      const node = top.node[name] as TreeNode | TreeEntry;
+      const fullPath = top.prefix ? `${top.prefix}/${name}` : name;
+      if (node && (node as TreeNode)._e) {
+        const entry = (node as TreeNode)._e as TreeEntry;
+        if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
+        const html = fileRowFromEntry(entry, top.depth, mode);
+        rows.push({ id: rows.length, type: "file", key: fullPath, depth: top.depth, html });
+      } else if (node) {
+        const isOpen = dirOpen[fullPath] || false;
+        const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
+        const html = folderRowFromNode(name, fullPath, top.depth, isOpen, flags, mode);
+        rows.push({
+          id: rows.length,
+          type: "folder",
+          key: fullPath,
+          depth: top.depth,
+          html,
+          isOpen,
+        });
+        if (isOpen || isSearch) {
+          stack.push({
+            node: node as TreeNode,
+            prefix: fullPath,
+            depth: top.depth + 1,
+            childKeys: [],
+            childIdx: 0,
+          });
+        }
       }
+    } else {
+      stack.pop();
     }
   }
   return rows;
@@ -249,13 +274,12 @@ export function flattenVisible(
 export function buildTree(
   entries: TreeEntry[],
   _sort: string,
-  _search: string,
   filterPaths: Set<string> | null,
 ): TreeNode {
   const root: TreeNode = {};
-  const filtered = filterPaths ? entries.filter((e) => filterPaths.has(e.path)) : entries;
+  const filtered = filterPaths ? entries.filter((e) => filterPaths.has(e.fullPath)) : entries;
   for (const entry of filtered) {
-    const parts = entry.path.split("/").filter(Boolean);
+    const parts = entry.path.replace(/\\/g, "/").split("/").filter(Boolean);
     let current = root;
     for (let i = 0; i < parts.length - 1; i++) {
       const p = parts[i];

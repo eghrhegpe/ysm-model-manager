@@ -5,6 +5,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { routeModelPreview, routePackInfo } from "./preview-router.ts";
+import type { PreviewRouterCtx } from "./utils.ts";
 
 // ── mock 链 ──────────────────────────────────────
 const appObj = vi.hoisted(() => ({
@@ -52,8 +54,6 @@ function mountPreview() {
     loadPreviewImage(path: string): Promise<string | null>;
     decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
     appendDebug(container: HTMLElement | null, msg: string): void;
-    _showModelDetail(path: string): Promise<void>;
-    _showPackInfo(dirPath: string): Promise<void>;
   } & Element;
 }
 
@@ -121,7 +121,7 @@ describe("_showModelDetail — 类型分流", () => {
   it("PACK → showResourcePack", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.PACK);
-    await el._showModelDetail("/repo/pack");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/pack");
     expect(detailSpies.showResourcePack).toHaveBeenCalledWith(el, "/repo/pack");
     unmountElement(el);
   });
@@ -129,9 +129,9 @@ describe("_showModelDetail — 类型分流", () => {
   it("YSM → showModelDetail；空检测 → toast + showSimplePreview（不假装 YSM）", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.YSM);
-    await el._showModelDetail("/repo/m.ysm");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/m.ysm");
     appObj.DetectResourceType.mockResolvedValue("");
-    await el._showModelDetail("/repo/unknown");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/unknown");
     // 精确断言（原只查次数，不验参数——传错 path 也会误过）
     expect(detailSpies.showModelDetail).toHaveBeenCalledWith(el, "/repo/m.ysm");
     // ADR-082 续：识别不出不再假装 YSM——空检测走 showSimplePreview（unrecognizedType 提示）
@@ -147,9 +147,9 @@ describe("_showModelDetail — 类型分流", () => {
   it("LITEMATIC / BLUEPRINT → showLitematic", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.LITEMATIC);
-    await el._showModelDetail("/repo/a.litematic");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/a.litematic");
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.BLUEPRINT);
-    await el._showModelDetail("/repo/b.blueprint");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/b.blueprint");
     expect(litematicSpies.showLitematic).toHaveBeenCalledTimes(2);
     unmountElement(el);
   });
@@ -157,7 +157,7 @@ describe("_showModelDetail — 类型分流", () => {
   it("shaderpack → showShaderpack（lang 提取显示名）", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.SHADER);
-    await el._showModelDetail("/repo/s.zip");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/s.zip");
     expect(detailSpies.showShaderpack).toHaveBeenCalledWith(
       el,
       "/repo/s.zip",
@@ -170,7 +170,7 @@ describe("_showModelDetail — 类型分流", () => {
   it("EntityPlayer → showMmdPreview（文件名 + FAB 进 3D）", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.MMD);
-    await el._showModelDetail("/repo/m.pmx");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/m.pmx");
     expect(detailSpies.showMmdPreview).toHaveBeenCalledWith(
       el,
       "/repo/m.pmx",
@@ -184,7 +184,7 @@ describe("_showModelDetail — 类型分流", () => {
     const el = mountPreview();
     // ADR-111：.vrm 现在被检测为 EntityPlayer，但 resolvePreviewKey 会路由到 "vrm"
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.MMD);
-    await el._showModelDetail("/repo/avatar.vrm");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/avatar.vrm");
     expect(detailSpies.showVrmMeta).toHaveBeenCalledWith(
       el,
       "/repo/avatar.vrm",
@@ -198,7 +198,7 @@ describe("_showModelDetail — 类型分流", () => {
     const el = mountPreview();
     // ADR-111：.vrca 已从注册表移除（私有格式无解析器），DetectResourceType 返回空
     appObj.DetectResourceType.mockResolvedValue("");
-    await el._showModelDetail("/repo/avatar.vrca");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/avatar.vrca");
     // 空 rtype 走 unrecognizedType 分支：toast + showSimplePreview
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
@@ -212,7 +212,7 @@ describe("_showModelDetail — 类型分流", () => {
   it("未注册类型 → showSimplePreview 兜底（查表未命中）", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue("no-such-type");
-    await el._showModelDetail("/repo/x.xyz");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/x.xyz");
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
       "/repo/x.xyz",
@@ -224,7 +224,7 @@ describe("_showModelDetail — 类型分流", () => {
   it("DetectResourceType 抛错 → 空类型走 unrecognizedType 提示（不假装 YSM）", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockRejectedValue(new Error("no-detect"));
-    await el._showModelDetail("/repo/e.ysm");
+    await routeModelPreview(el as unknown as PreviewRouterCtx,"/repo/e.ysm");
     expect(detailSpies.showModelDetail).not.toHaveBeenCalled();
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
@@ -239,7 +239,7 @@ describe("_showPackInfo", () => {
   it("有信息 → 渲染包名与描述", async () => {
     const el = mountPreview();
     appObj.GetPackInfo.mockResolvedValue({ name: "我的整合包", description: "desc" });
-    await el._showPackInfo("/repo/pack");
+    await routePackInfo(el as unknown as PreviewRouterCtx,"/repo/pack");
     const text = el.root.querySelector("#preview-content")?.textContent || "";
     expect(text).toContain("我的整合包");
     expect(text).toContain("desc");
@@ -248,7 +248,7 @@ describe("_showPackInfo", () => {
 
   it("无信息 → 渲染文件夹名 + folderNoInfo", async () => {
     const el = mountPreview();
-    await el._showPackInfo("/repo/pack-folder");
+    await routePackInfo(el as unknown as PreviewRouterCtx,"/repo/pack-folder");
     const text = el.root.querySelector("#preview-content")?.textContent || "";
     expect(text).toContain("pack-folder");
     // test-setup 全局 t() mock 返回 zhCN 中文文案
@@ -259,7 +259,7 @@ describe("_showPackInfo", () => {
   it("GetPackInfo 抛错 → packReadFailed", async () => {
     const el = mountPreview();
     appObj.GetPackInfo.mockRejectedValue(new Error("read-fail"));
-    await el._showPackInfo("/repo/pack");
+    await routePackInfo(el as unknown as PreviewRouterCtx,"/repo/pack");
     const text = el.root.querySelector("#preview-content")?.textContent || "";
     expect(text).toContain("无法读取整合包信息");
     unmountElement(el);

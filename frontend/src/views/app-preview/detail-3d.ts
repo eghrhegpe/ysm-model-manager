@@ -103,9 +103,10 @@ export async function showVrmMeta(
     icon,
     label,
     fetchMeta: async (_ctx, path, App) => readVrmMeta(path, App.ReadFileBytes),
-    renderCard: (_ctx, path, meta) => {
+    renderCard: (_ctx, path, meta: unknown) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      if (!meta || (!meta.name && !meta.authors?.length)) {
+      const m = meta as Record<string, unknown> | null;
+      if (!m || (!m.name && !(m.authors as string[])?.length)) {
         // 无 meta（非标准 VRM 或解析失败）→ 仅名称 + FAB
         return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
@@ -115,22 +116,22 @@ export async function showVrmMeta(
   </div>
 </div>`;
       }
-      const authors = meta.authors.filter(Boolean).join("、");
-      const thumb = meta.thumbnail
-        ? `<img src="${esc(meta.thumbnail)}" alt="thumbnail" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+      const authors = (m.authors as string[] | undefined)?.filter(Boolean).join("、") ?? "";
+      const thumb = (m.thumbnail as string | undefined)
+        ? `<img src="${esc(m.thumbnail as string)}" alt="thumbnail" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
         : "";
       // VRM0 授权约束徽章
-      const r = meta.restrictions;
+      const r = m.restrictions as Record<string, unknown> | undefined;
       const badge = (label: string, ok: boolean | undefined, icon: string): string => {
         const v = ok === undefined ? "—" : ok ? "✅" : "❌";
         return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.06);font-size:11px;margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
       };
       const refBadge = r?.reference
-        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference)}</div>`
+        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference as string)}</div>`
         : "";
       // ADR-131 P2：readVrmMeta 顺带采集的渲染期统计（traverse 口径；标注「渲染实测」
       // 与 YSM 模型面板的 Go AnalyzeBedrockModel 口径区分，避免双口径困惑——审核建议 ②）
-      const s = meta.stats;
+      const s = m.stats as Record<string, number> | undefined;
       const statsRow =
         s && (s.meshCount > 0 || s.boneCount > 0)
           ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
@@ -147,13 +148,13 @@ export async function showVrmMeta(
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${thumb}
-    <div><strong>${renderFormattedText(meta.name || basename)}</strong></div>
+    <div><strong>${renderFormattedText((m.name as string) || basename)}</strong></div>
     ${authors ? `<div style="color:var(--muted)">👤 ${esc(authors)}</div>` : ""}
-    ${meta.version ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(meta.version)}</div>` : ""}
-    ${meta.contact ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📮 ${esc(meta.contact)}</div>` : ""}
-    ${meta.license ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📜 ${esc(meta.license)}</div>` : ""}
+    ${(m.version as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(m.version as string)}</div>` : ""}
+    ${(m.contact as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📮 ${esc(m.contact as string)}</div>` : ""}
+    ${(m.license as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📜 ${esc(m.license as string)}</div>` : ""}
     ${refBadge}
-    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial, "💰")}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", "👥")}${badge(t("preview.sexual"), r.sexual, "🔞")}${badge(t("preview.violent"), r.violent, "⚔️")}</div>` : ""}
+    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, "💰")}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", "👥")}${badge(t("preview.sexual"), r.sexual as boolean, "🔞")}${badge(t("preview.violent"), r.violent as boolean, "⚔️")}</div>` : ""}
     ${statsRow}
     <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
   </div>

@@ -4,7 +4,6 @@
 import { getApp } from "@/backend/app.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { swallowError } from "@/utils/base/async.ts";
-import { extractAnimGroupsAndConfigs } from "@/utils/format/ysm-anim-config.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { sniffTexSize } from "@/utils/tex-size.ts";
 import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "@/wasm/ysm-parser.ts";
@@ -13,6 +12,7 @@ import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.t
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
 import { type DecodedYsm, devLog, stripYsgpTextHeader } from "./utils.ts";
+import { type DecodedFile, type MdWsYsmMeta, parseYsmMetaFromFiles } from "./ysm-meta-parser.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
  *  无此守卫时 preloadModel 并行发起的两次 decodeYsmViaWasm 会各自完整解码
@@ -30,12 +30,6 @@ export function decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> 
   return p;
 }
 
-/** WASM 解码输出文件 */
-interface DecodedFile {
-  path: string;
-  data: Uint8Array;
-}
-
 /** 纹理尺寸 */
 interface TexDim {
   w: number;
@@ -49,22 +43,6 @@ interface MdWsInflightCtx {
   modelPath: string;
   baseDir: string;
   ReadFileBytes: (path: string) => Promise<string | null>;
-}
-
-/** ysm.json 元数据解析结果（WASM 输出路径使用，JSON spec 路径 ysmMeta 内联） */
-interface MdWsYsmMeta {
-  ysmTexOrder: unknown[] | null;
-  ysmModelOrder: unknown[] | null;
-  ysmDefaultTex: string | null;
-  animGroups: DecodedYsm["animGroups"];
-  configMenus: DecodedYsm["configMenus"];
-  authors: Array<{
-    name: string;
-    role: string;
-    avatarUrl: string | null;
-    avatarPath: string;
-  }>;
-  avatars: Record<string, string>;
 }
 
 /** WASM 输出的纹理累加器（collectTexturesAndAvatars 产出，供后续 model/anim 阶段读） */
@@ -387,92 +365,6 @@ function mdWsMatchTexKey(
   return texLowerMap[lower] || null;
 }
 
-function mdWsParseYsmMetaFromFiles(files: DecodedFile[]): {
-  meta: MdWsYsmMeta;
-  hasYsmMeta: boolean;
-} {
-  const emptyMeta: MdWsYsmMeta = {
-    ysmTexOrder: null,
-    ysmModelOrder: null,
-    ysmDefaultTex: null,
-    animGroups: [],
-    configMenus: [],
-    authors: [],
-    avatars: {},
-  };
-  const ysmMetaFile = files.find((f) => f.path.endsWith("ysm.json"));
-  if (!ysmMetaFile) return { meta: emptyMeta, hasYsmMeta: false };
-
-  let parsedJson: {
-    files?: { player?: { texture?: unknown; model?: unknown } };
-    properties?: {
-      default_texture?: string | null;
-      extra_animation?: Record<string, unknown> | null;
-      extra_animation_classify?: Array<{
-        id?: string;
-        name?: string;
-        extra_animation?: Record<string, unknown> | null;
-      }> | null;
-      extra_animation_buttons?: Array<{
-        id?: string;
-        name?: string;
-        config_forms?: unknown;
-      }> | null;
-    };
-    metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
-  } | null = null;
-
-  try {
-    const txt = new TextDecoder().decode(ysmMetaFile.data);
-    parsedJson = JSON.parse(txt);
-  } catch (e) {
-    devLog(`[YSM] ysm.json 元信息解析失败: ${safeErrorMessage(e)}`);
-    return { meta: emptyMeta, hasYsmMeta: true };
-  }
-
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  const json = parsedJson!;
-  const ysmTexOrder = json?.files?.player?.texture
-    ? Array.isArray(json.files.player.texture)
-      ? json.files.player.texture
-      : [json.files.player.texture]
-    : null;
-  const ysmModelOrder = Array.isArray(json?.files?.player?.model)
-    ? json.files.player.model
-    : json?.files?.player?.model
-      ? [json.files.player.model]
-      : null;
-  const ysmDefaultTex = json?.properties?.default_texture || null;
-  const animCfg = extractAnimGroupsAndConfigs(json?.properties);
-
-  const authors: MdWsYsmMeta["authors"] = [];
-  if (json?.metadata?.authors) {
-    for (const au of json.metadata.authors) {
-      if (!au.name) continue;
-      const avatarPath = au.avatar || "";
-      authors.push({
-        name: au.name,
-        role: au.role || "",
-        avatarUrl: null,
-        avatarPath,
-      });
-    }
-  }
-
-  return {
-    meta: {
-      ysmTexOrder,
-      ysmModelOrder,
-      ysmDefaultTex,
-      animGroups: animCfg.animGroups,
-      configMenus: animCfg.configMenus,
-      authors,
-      avatars: {},
-    },
-    hasYsmMeta: true,
-  };
-}
-
 function mdWsCollectTexturesAndAvatars(files: DecodedFile[]): MdWsTexAccum {
   const textures: Record<string, string> = {};
   const texNameMap: Record<string, string> = {};
@@ -733,7 +625,7 @@ async function mdWsHandleWasmDecode(
   const files = await mdWsInitAndDecodeWasm(modelPath, bytes);
   if (!files?.length) return null;
 
-  const { meta, hasYsmMeta } = mdWsParseYsmMetaFromFiles(files);
+  const { meta, hasYsmMeta } = parseYsmMetaFromFiles(files);
   const texAccum = mdWsCollectTexturesAndAvatars(files);
   meta.avatars = texAccum.avatars;
 

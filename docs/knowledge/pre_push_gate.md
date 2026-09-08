@@ -8,19 +8,25 @@ source_files:
   - .githooks/pre-push
   - scripts/_lib/gate-config.ts
   - scripts/_lib/gate-parse.ts
+  - scripts/_lib/gate-report.ts
 auto_fields:
   symbols_with_lines:
     - ALL_STATIC_TOOLS
     - DOC_EXTRA_SCRIPTS
     - DOC_STATIC_TOOLS
+    - firstErrors
+    - formatFailSummary
     - FRONTEND_STATIC_TOOLS
+    - GateResultItem
     - GateTool
     - GO_STATIC_TOOLS
     - ParsedToolOutput
     - parseToolOutput
+    - reportPathFor
     - SCRIPTS_TYPECHECK
     - tryParseJson
     - tryParseSummary
+    - writeGateReport
 use_when:
   - 推送门禁
   - 质量门禁
@@ -94,6 +100,15 @@ invariant_anchors:
 - autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验（重验判定同样走 `parseToolOutput`）
 - `check-go-diff-coverage` 在文件驱动模式加 `--staged`（只查本次暂存区，否则把 origin/main 之后所有未推送改动误算进覆盖门禁）
 - 静态工具段不并行（回退 ADR-088：spawn 开销吃掉 sub-second 工具收益）
+
+### FAIL 明细与报告落盘（2026-09 锐评「输出运行过程而非返回信息」）
+
+AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴——JSON 输出末尾是 `}`，错误详情全被截掉，AI 不知道错在哪、是不是自己的问题，思维链被存量债堵死。现行机制（`_lib/gate-report.ts`，契约测试 `tests/test_gate_report.ts`）：
+
+- **record 保留 raw**：每个检查点存工具原始输出（cap 64KB 尾部），首错结构化提取的事实源；完整 results 含 raw 落盘报告
+- **FAIL 明细三行块**（贴结论放，保证落在尾部阅读窗口；OK 明细在前供人扫读——旧「FAIL 前置」被取代）：`[FAIL][归属] 命令  pass/total 通过 耗s note` / `→ 首错（≤120 字符）` / `复现: 命令`
+- **归属标签语义**：`debt→存量债`、`failClosed→失守`、`hard→(push/files 模式)本次引入｜(全扫 --all/--docs)待归因`——全扫无法归因，不冒充「本次引入」（实证：docs 模式曾把并行会话留下的存量债标成本次引入，误导归因）
+- **报告落盘**：`.git/gate-report-<ts>.json`（mode/blocked/results 含 raw），stderr 只给相对路径指针——深挖读报告（无行数限制），验证抄复现命令
 
 ### 其他
 

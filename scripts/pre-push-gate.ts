@@ -1014,7 +1014,7 @@ async function main() {
     logPush(
       `结论: PASS ✅ ${dryRun ? "（DRY-RUN）" : "放行推送"} ${passCount}/${results.length} 项通过`,
     );
-    if (reportPath) logPush(`完整报告: ${reportPath}`);
+    if (reportPath) logPush(`完整报告: ${path.relative(ROOT, reportPath)}`);
     // P0 修复（子代理锐评）：横幅移到 dry-run 分支——AI 验证完（dry-run）时看到「可直接 push」，
     // 真实 push 时（!dryRun）已在执行，复读机提示无意义。
     // Q1 修复（子代理再洗礼）：--no-banner 抑制横幅，由调用方（commit-with-check）在 commit 成功后自己打印
@@ -1034,8 +1034,7 @@ async function main() {
   // 失败项清单（2026-08-29 可观测性）：一行点名全部失败指令，无需在结果表里逐行找
   const fails = results.filter((r) => !r.ok);
   logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
-  if (reportPath) logPush(`完整报告: ${reportPath}（每个 FAIL 的完整错误/基线/耗时）`);
-  logPush("详情见上方 [FAIL] 块（已前置到结果表最前）");
+  logPush("明细见上方 FAIL 块（归属/首错/复现；完整报告见明细区头路径）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
   // code_review fd349a91a #1/#2/#4/#7：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
   // 原虚构标签 "gofmt -w ." 而来，标签如实化后子串匹配会静默失效；gofmt 标签唯一）

@@ -14,7 +14,9 @@ function hasExtensions(t: ResourceType): t is ResourceType & { extensions: strin
 
 /** 每种资源类型对应的扩展名（从 resource_types.json 派生，单一事实来源） */
 export const RESOURCE_EXTS: Record<string, string[]> = Object.fromEntries(
-  allResourceTypes.filter(hasExtensions).map((t) => [t.id, t.extensions]),
+  allResourceTypes
+    .filter(hasExtensions)
+    .map((t) => [t.id, t.extensions.map((e) => e.toLowerCase())]),
 );
 
 /** 所有支持的扩展名列表（去重，用于 UI 提示文案） */

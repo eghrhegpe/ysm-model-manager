@@ -1,15 +1,23 @@
 // @vitest-environment node
 // ===== short-label.ts 运行时翻译回归测试 =====
 // 验证 t() 在 shortLabelOf 调用期求值（非常量表烘焙），切语言后返回新语言标签。
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// vi.hoisted 让 mockT 在 vi.mock 工厂之前初始化（vi.mock 被提升到文件顶）
-const { mockT } = vi.hoisted(() => ({ mockT: vi.fn((key: string) => `translated:${key}`) }));
+// vi.hoisted 让 mockT / mockGetLang 在 vi.mock 工厂之前初始化（vi.mock 被提升到文件顶）
+const { mockT, mockGetLang } = vi.hoisted(() => ({
+  mockT: vi.fn((key: string) => `translated:${key}`),
+  mockGetLang: vi.fn(() => "zh-CN"),
+}));
 
 vi.mock("@/core/i18n/t.ts", () => ({ t: mockT }));
+vi.mock("@/core/i18n/locale.ts", () => ({ getLang: mockGetLang }));
 
-import { shortLabelOf } from "./short-label.ts";
+import { shortLabelOf, _resetShortLabelCache } from "./short-label.ts";
 import { RESOURCE_TYPES } from "./types.ts";
+
+beforeEach(() => {
+  _resetShortLabelCache();
+});
 
 describe("shortLabelOf — 运行时翻译", () => {
   it("YSM/MMD 返回英文短名（不经过 t）", () => {
@@ -29,18 +37,24 @@ describe("shortLabelOf — 运行时翻译", () => {
     expect(shortLabelOf("")).toBe("ysm"); // 空串兜底 YSM
   });
 
-  it("核心不变量：t() 在每次 shortLabelOf 调用时执行（非模块加载期烘焙）", () => {
+  it("核心不变量：语言未变时缓存命中，t() 不重复调用（P1 缓存优化）", () => {
     mockT.mockClear();
+    mockGetLang.mockReturnValue("zh-CN");
     mockT.mockReturnValue("资源包-语言A");
+    // 首次调用：构建缓存，t() 被调用 5 次（5 个 i18n 条目）
     expect(shortLabelOf(RESOURCE_TYPES.PACK)).toBe("资源包-语言A");
-    // 模拟切语言：t() 返回值变化
-    mockT.mockReturnValue("资源包-语言B");
-    expect(shortLabelOf(RESOURCE_TYPES.PACK)).toBe("资源包-语言B");
-    // 每次调用 buildShortLabelMap() 都会对所有 i18n 条目调 t()（5 个条目），
-    // 两次 shortLabelOf → t() 被调用 5×2 = 10 次，且每次取最新返回值
-    expect(mockT).toHaveBeenCalledTimes(10);
-    // 验证 rtype.pack 的翻译随 mockReturnValue 变化（调用期求值证据）
+    expect(mockT).toHaveBeenCalledTimes(5);
+    // 第二次调用（同语言）：缓存命中，t() 不再调用
+    mockT.mockClear();
+    expect(shortLabelOf(RESOURCE_TYPES.PACK)).toBe("资源包-语言A");
+    expect(mockT).toHaveBeenCalledTimes(0);
+    // 模拟切语言：getLang 返回新语言 → 缓存失效 → 重建映射
+    mockGetLang.mockReturnValue("en");
+    mockT.mockReturnValue("Resource Pack");
+    expect(shortLabelOf(RESOURCE_TYPES.PACK)).toBe("Resource Pack");
+    expect(mockT).toHaveBeenCalledTimes(5); // 重建缓存，5 个 i18n 条目各调一次
+    // 验证 rtype.pack 的翻译随语言变化（调用期求值证据）
     const packCalls = mockT.mock.calls.filter((c) => c[0] === "rtype.pack");
-    expect(packCalls.length).toBe(2);
+    expect(packCalls.length).toBe(1);
   });
 });

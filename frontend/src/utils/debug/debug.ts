@@ -26,11 +26,22 @@ declare global {
 // safeGet 静默降级返回 null（= 开启调试，等价于无 _debug 键）
 // 运行时求值（非模块加载期常量）：SPA 路由切换或用户手动添加 ?nodebug=1 时即时生效。
 // node 测试环境无 window.location（vitest @vitest-environment node）→ isDebugEnabled()=false
+// P2 优化：缓存 URLSearchParams 实例 + window.location.search 引用变化时重建，
+// 避免热路径中反复创建短命对象。
+let cachedSearch: string | undefined;
+let cachedParams: URLSearchParams | undefined;
+function getSearchParams(): URLSearchParams | undefined {
+  if (typeof window === "undefined") return undefined;
+  const search = window.location.search;
+  if (cachedSearch !== search) {
+    cachedSearch = search;
+    cachedParams = new URLSearchParams(search);
+  }
+  return cachedParams;
+}
 export function isDebugEnabled(): boolean {
   return (
-    typeof window !== "undefined" &&
-    !new URLSearchParams(window.location.search).has("nodebug") &&
-    safeGet("_debug") !== "0"
+    typeof window !== "undefined" && !getSearchParams()?.has("nodebug") && safeGet("_debug") !== "0"
   );
 }
 

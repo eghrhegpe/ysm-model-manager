@@ -1,7 +1,7 @@
 // ===== HTML 转义 / 搜索高亮（类型化版 — ADR-014 P2）=====
 
 /** HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） */
-export function esc(s: string): string {
+export function esc(s: string | null | undefined): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -13,7 +13,7 @@ export function esc(s: string): string {
 // ===== 搜索高亮（返回 HTML 字符串）=====
 
 /** 关键词高亮：转义 + <mark> 包裹命中段 */
-export function hl(text: string, query?: string): string {
+export function hl(text: string | null | undefined, query?: string): string {
   if (text == null) return "";
   if (!query) return esc(text);
   const lq = query.toLowerCase();

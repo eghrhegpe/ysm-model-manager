@@ -72,6 +72,12 @@ describe("isSupportedExt", () => {
   it("recognizes .YSM (case)", () => expect(isSupportedExt(".YSM")).toBe(true));
   it("rejects .xyz", () => expect(isSupportedExt(".xyz")).toBe(false));
   it("rejects empty", () => expect(isSupportedExt("")).toBe(false));
+  // P0 补测：JSON 含大写扩展名时，isSupportedExt 小写查询仍命中（RESOURCE_EXTS 归一化小写）
+  it("大写扩展名归一化：JSON 含大写扩展名时小写查询仍命中", () => {
+    expect(isSupportedExt(".YSM")).toBe(true);
+    expect(isSupportedExt(".ZIP")).toBe(true);
+    expect(isSupportedExt(".LITEMATIC")).toBe(true);
+  });
 });
 
 describe("extBelongsTo", () => {

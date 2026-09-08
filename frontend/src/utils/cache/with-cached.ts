@@ -2,7 +2,7 @@
 // 基于 key+namespace+ttl 的内存缓存，支持 STALE / NORMAL / FORCE 策略
 // 特性：并发去重（stampede guard）、失败不缓存、命名空间隔离
 
-import { dbg } from "@/utils/debug/debug.ts";
+import { dbg, isDebugEnabled } from "@/utils/debug/debug.ts";
 
 /** 缓存条目 */
 interface CacheEntry<T> {
@@ -83,7 +83,8 @@ export async function withCached<T>(
     // 缓存命中 → LRU 触摸：delete + re-set 移到末尾（Map 插入顺序 = 访问顺序）
     _cache.delete(fullKey);
     _cache.set(fullKey, entry);
-    dbg("cache", `[hit] ${fullKey} (${Math.round((entry.expiryMs - now) / 1000)}s 后过期)`);
+    if (isDebugEnabled())
+      dbg("cache", `[hit] ${fullKey} (${Math.round((entry.expiryMs - now) / 1000)}s 后过期)`);
     return entry.value;
   }
 

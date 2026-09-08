@@ -4,6 +4,7 @@
 // 与 RESOURCE_TYPE_LABELS（全名，硬编码中文）互补——短标签优先，
 // 未命中回退全名（兜底覆盖 maid-model 等新类型，无需改本文件）。
 
+import { getLang } from "@/core/i18n/locale.ts";
 import { t } from "@/core/i18n/t.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "./types.ts";
 
@@ -25,8 +26,22 @@ function buildShortLabelMap(): Record<string, string> {
   };
 }
 
+/** 模块级缓存：语言未变时直接返回 cachedMap，避免每次调用重建映射 */
+let cachedLang: string | undefined;
+let cachedMap: Record<string, string> | undefined;
+
+/** 重置缓存（仅测试用，验证语言切换后缓存失效） */
+export function _resetShortLabelCache(): void {
+  cachedLang = undefined;
+  cachedMap = undefined;
+}
+
 /** 资源类型短标签：map 命中 → 短名；否则全名（RESOURCE_TYPE_LABELS）→ 原始 id（兜底） */
 export function shortLabelOf(rtype: string): string {
-  const map = buildShortLabelMap();
-  return map[rtype] || RESOURCE_TYPE_LABELS[rtype] || rtype || RESOURCE_TYPES.YSM;
+  const lang = getLang();
+  if (cachedLang !== lang || !cachedMap) {
+    cachedLang = lang;
+    cachedMap = buildShortLabelMap();
+  }
+  return cachedMap[rtype] || RESOURCE_TYPE_LABELS[rtype] || rtype || RESOURCE_TYPES.YSM;
 }

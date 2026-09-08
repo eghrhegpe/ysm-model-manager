@@ -499,8 +499,9 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("_filterPaths 过滤渲染（只渲染命中路径的行）", async () => {
     const el = document.createElement("app-tree") as unknown as AppTree;
-    // 注：filterPaths 匹配的是 entry.path（短路径名），不是 fullPath
-    el.setFilterPaths(new Set(["b.ysm"]));
+    // 注：filterPaths 匹配 entry.fullPath（commit 518e19237 起，render.test.ts 锁定），
+    // 非短路径名——Set 须放 fullPath 才能命中
+    el.setFilterPaths(new Set(["/repo/b.ysm"]));
     document.body.appendChild(el);
     await waitFor(() => el.ready === true);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);

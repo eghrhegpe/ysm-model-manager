@@ -57,7 +57,7 @@ import {
   showStagePreview,
 } from "./detail-3d.ts";
 
-function makeCtx(): PreviewCtx {
+function makeCtx(detailGen?: GenGuard): PreviewCtx {
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   return {
@@ -70,7 +70,9 @@ function makeCtx(): PreviewCtx {
     active3DClose: null,
     getPrefer3D: vi.fn().mockReturnValue(false),
     setPrefer3D: vi.fn(),
-    detailGen: new GenGuard(),
+    // 跨入口卡互相作废的场景须传同一 guard（生产 = 同一 AppPreview 实例同一 ctx，
+    // commit 058b6c82f 起 detailGen 为实例属性注入，不再有模块级隐式共享）
+    detailGen: detailGen ?? new GenGuard(),
   };
 }
 
@@ -186,10 +188,11 @@ describe("showVrmMeta 分支补全", () => {
           release = res;
         }),
     );
-    const ctx1 = makeCtx();
+    const sharedGen = new GenGuard();
+    const ctx1 = makeCtx(sharedGen);
     const p1 = showVrmMeta(ctx1, "/repo/slow.vrm");
-    // 并发的 MMD 入口卡同步 invalidate 共享 detailGen
-    const ctx2 = makeCtx();
+    // 并发的 MMD 入口卡共用同一 detailGen（生产 = 同一 AppPreview 实例）
+    const ctx2 = makeCtx(sharedGen);
     await showMmdPreview(ctx2, "/repo/other.pmx");
     release({ name: "迟到模型", authors: ["A"] });
     await p1;
@@ -206,9 +209,10 @@ describe("showVrmMeta 分支补全", () => {
           reject = rej;
         }),
     );
-    const ctx1 = makeCtx();
+    const sharedGen = new GenGuard();
+    const ctx1 = makeCtx(sharedGen);
     const p1 = showVrmMeta(ctx1, "/repo/slow2.vrm");
-    const ctx2 = makeCtx();
+    const ctx2 = makeCtx(sharedGen);
     await showMmdPreview(ctx2, "/repo/other2.pmx");
     reject(new Error("late boom"));
     await p1;

@@ -317,6 +317,23 @@ describe("disposeTooltipCore — scroll 监听 ref-count 清理", () => {
     }).not.toThrow();
   });
 
+  it("dispose 后 _injected 复位，可重新注入样式", async () => {
+    const { ensureTooltipStyles, disposeTooltipCore } = await freshTooltip();
+    ensureTooltipStyles();
+    expect(document.getElementById("ysw-tooltip-styles")).not.toBeNull();
+
+    // 移除样式元素（模拟 HMR 清理或外部移除）
+    document.getElementById("ysw-tooltip-styles")?.remove();
+    expect(document.getElementById("ysw-tooltip-styles")).toBeNull();
+
+    // dispose 后 _injected 应复位
+    disposeTooltipCore();
+
+    // 再次注入应成功（若 _injected 未复位，ensureTooltipStyles 会短路跳过）
+    ensureTooltipStyles();
+    expect(document.getElementById("ysw-tooltip-styles")).not.toBeNull();
+  });
+
   it("ref-count 跟踪：attach → cleanup → attach 仍正常工作", async () => {
     const { attachTooltip } = await freshTooltip();
     const btn = document.createElement("button");

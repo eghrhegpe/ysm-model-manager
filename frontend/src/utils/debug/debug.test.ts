@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== debug.safeStr 纯函数测试（ADR-023 L3）=====
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { safeStr } from "./debug.ts";
 
 describe("safeStr", () => {
@@ -63,7 +63,10 @@ describe("safeStr", () => {
     expect(safeStr(c)).toBe("[object Object]");
   });
 
-  it("bigint（JSON.stringify 抛错）兜底为 String(v)", () => {
+  it("bigint（JSON.stringify 抛错）兜底为 String(v) 并写 console.warn", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(safeStr(123n)).toBe("123");
+    expect(spy).toHaveBeenCalledWith("[debug] safeStr 序列化失败:", expect.anything());
+    spy.mockRestore();
   });
 });

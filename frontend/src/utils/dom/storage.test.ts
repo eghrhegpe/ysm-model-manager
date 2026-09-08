@@ -5,6 +5,7 @@
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { safeGet, safeSet, safeRemove, safeGetJSON } from "./storage.ts";
+import * as log from "@/utils/base/log.ts";
 
 // node 环境无 localStorage——内存实现（对齐 happy-dom 语义；makeStorageThrow 覆盖抛错版）
 const memStorage = (() => {
@@ -101,5 +102,37 @@ describe("storage 安全读写", () => {
     safeRemove("a");
     expect(safeGet("a")).toBeNull();
     expect(safeGet("b")).toBe("2");
+  });
+
+  it("safeGet 抛错时写日志（logWarn）", () => {
+    makeStorageThrow();
+    const spy = vi.spyOn(log, "logWarn");
+    safeGet("k1");
+    expect(spy).toHaveBeenCalledWith("storage", expect.stringContaining("safeGet"), expect.anything());
+    spy.mockRestore();
+  });
+
+  it("safeSet 抛错时写日志（logWarn）", () => {
+    makeStorageThrow();
+    const spy = vi.spyOn(log, "logWarn");
+    safeSet("k2", "v2");
+    expect(spy).toHaveBeenCalledWith("storage", expect.stringContaining("safeSet"), expect.anything());
+    spy.mockRestore();
+  });
+
+  it("safeRemove 抛错时写日志（logWarn）", () => {
+    makeStorageThrow();
+    const spy = vi.spyOn(log, "logWarn");
+    safeRemove("k3");
+    expect(spy).toHaveBeenCalledWith("storage", expect.stringContaining("safeRemove"), expect.anything());
+    spy.mockRestore();
+  });
+
+  it("safeGetJSON 解析失败时写日志（logWarn）", () => {
+    safeSet("json-bad", "{not json");
+    const spy = vi.spyOn(log, "logWarn");
+    safeGetJSON("json-bad", { ok: false });
+    expect(spy).toHaveBeenCalledWith("storage", expect.stringContaining("safeGetJSON"), expect.anything());
+    spy.mockRestore();
   });
 });

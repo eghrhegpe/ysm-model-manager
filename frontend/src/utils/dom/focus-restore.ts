@@ -1,4 +1,6 @@
 // ===== 焦点记忆 / 恢复 + 跨 Shadow DOM 焦点陷阱（无障碍统一入口）=====
+import { logWarn } from "@/utils/base/log.ts";
+
 // 用途：
 // - rememberTrigger / returnFocus 配对：打开模态/浮层/全屏前记下当前 activeElement，
 //   关闭时把焦点还给触发器（弹窗/3D overlay/上下文菜单统一受益）。
@@ -50,7 +52,8 @@ export function returnFocus(): boolean {
   try {
     el.focus();
     return true;
-  } catch {
+  } catch (err) {
+    logWarn("focus-restore", "焦点恢复失败", err);
     return false;
   }
 }

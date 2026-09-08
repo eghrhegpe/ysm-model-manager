@@ -2,12 +2,14 @@
 // 隐私模式 / 存储禁用下 localStorage 读写会抛错——裸调会中断启动链（initTheme/applyUIPrefs）、
 // 初始化（settings.initSettings）或事件回调。全项目统一经本模块读写，禁止裸调 localStorage。
 // 收敛自：app-modules.ts 的模块级 safeGet/safeSet、settings/init.ts 的 themeGet/themeSet。
+import { logWarn } from "@/utils/base/log.ts";
 
 /** 安全读：存储不可用时返回 null（调用方走默认值回退） */
 export function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key);
-  } catch {
+  } catch (err) {
+    logWarn("storage", `safeGet(${key}) 失败`, err);
     return null;
   }
 }
@@ -16,8 +18,8 @@ export function safeGet(key: string): string | null {
 export function safeSet(key: string, val: string): void {
   try {
     localStorage.setItem(key, val);
-  } catch {
-    /* 隐私模式：忽略持久化 */
+  } catch (err) {
+    logWarn("storage", `safeSet(${key}) 失败`, err);
   }
 }
 
@@ -25,8 +27,8 @@ export function safeSet(key: string, val: string): void {
 export function safeRemove(key: string): void {
   try {
     localStorage.removeItem(key);
-  } catch {
-    /* 隐私模式：忽略删除 */
+  } catch (err) {
+    logWarn("storage", `safeRemove(${key}) 失败`, err);
   }
 }
 
@@ -36,7 +38,8 @@ export function safeGetJSON<T>(key: string, fallback: T): T {
   if (raw == null) return fallback;
   try {
     return JSON.parse(raw) as T;
-  } catch {
+  } catch (err) {
+    logWarn("storage", `safeGetJSON(${key}) 解析失败`, err);
     return fallback;
   }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // ===== focus-restore.ts 焦点记忆 / 恢复 / 跨 Shadow 焦点陷阱 测试 =====
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   rememberTrigger,
   returnFocus,
@@ -9,6 +9,7 @@ import {
   findTabbableAcrossShadow,
   trapFocusAcrossShadow,
 } from "./focus-restore.ts";
+import * as log from "@/utils/base/log.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -83,6 +84,22 @@ describe("rememberTrigger / returnFocus 配对", () => {
     rememberTrigger();
     clearTrigger();
     expect(__getTriggerForTest()).toBeNull();
+  });
+
+  it("焦点恢复失败时写日志（logWarn）", () => {
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    btn.focus();
+    rememberTrigger();
+    // 模拟 focus() 抛错
+    const origFocus = btn.focus;
+    btn.focus = () => { throw new Error("focus fail"); };
+    const spy = vi.spyOn(log, "logWarn");
+    const result = returnFocus();
+    expect(result).toBe(false);
+    expect(spy).toHaveBeenCalledWith("focus-restore", "焦点恢复失败", expect.anything());
+    spy.mockRestore();
+    btn.focus = origFocus;
   });
 });
 

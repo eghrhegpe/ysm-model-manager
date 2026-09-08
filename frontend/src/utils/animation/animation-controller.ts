@@ -2,6 +2,7 @@
 // 解析 .animation_controllers.json，构建状态机图，每帧评估转换条件。
 // 与 animation.ts 的 Timeline 事件配合：Timeline 写 v.* 变量，Controller 读变量决定状态切换。
 
+import { logWarn } from "@/utils/base/log.ts";
 import { compileMolang, type MolangFn } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
@@ -222,8 +223,8 @@ export class AnimationControllerRuntime {
         try {
           // 用 timeInState 作为 anim_time：时间条件（query.anim_time >= 1）才能触发
           conditionMet = trans.condition(this.timeInState) !== 0;
-        } catch {
-          // 条件表达式执行失败，跳过
+        } catch (err) {
+          logWarn("anim-ctrl", "条件表达式执行失败", err);
         }
       } else if (trans.unconditional) {
         // 显式无条件转换（空表达式）：总是触发
@@ -240,8 +241,8 @@ export class AnimationControllerRuntime {
         for (const fn of this.currentState.onExit) {
           try {
             fn(0);
-          } catch {
-            // on_exit 执行失败，静默忽略
+          } catch (err) {
+            logWarn("anim-ctrl", "on_exit 执行失败", err);
           }
         }
 

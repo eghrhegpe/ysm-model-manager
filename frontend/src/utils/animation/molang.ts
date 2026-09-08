@@ -13,6 +13,7 @@
 // 按 MIT 许可保留原始版权头，本地路径 import，彻底避开 ESM/CJS 混用坑。
 
 import Molang from "@/utils/animation/molang-lib/molang.js";
+import { logWarn } from "@/utils/base/log.ts";
 
 /** Molang 求值函数：入参为当前动画时间（秒，即 query.anim_time） */
 export type MolangFn = (animTime: number) => number;
@@ -111,11 +112,13 @@ export function compileMolang(
         // L4：编译成功但运行时产生 Infinity/NaN（如 1e999、除以零）→ 零占位
         // 对齐 P1 Infinity 守卫口径，避免 NaN 穿透到渲染层
         return typeof v === "number" && Number.isFinite(v) ? v : 0;
-      } catch {
+      } catch (err) {
+        logWarn("molang", "运行时求值失败", err);
         return 0;
       }
     };
-  } catch {
+  } catch (err) {
+    logWarn("molang", `表达式编译失败: ${expr}`, err);
     return null;
   }
 }

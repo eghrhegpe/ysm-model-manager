@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== Animation Controller 状态机测试（animation-controller.ts）=====
 // 解析 .animation_controllers.json + 运行时状态转换评估。
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   parseAnimationControllerJSON,
   AnimationControllerRuntime,
@@ -9,6 +9,7 @@ import {
   type AnimationController,
 } from "./animation-controller.ts";
 import { setMolangScope } from "./molang.ts";
+import * as log from "@/utils/base/log.ts";
 
 afterEach(() => {
   setMolangScope(null);
@@ -171,6 +172,43 @@ describe("AnimationControllerRuntime 状态机", () => {
     const rt = new AnimationControllerRuntime(ctrl);
     expect(rt.update(0)).toBe(true); // 转换仍触发
     expect(rt.current_state).toBe("b");
+  });
+
+  it("条件表达式执行失败时写日志（logWarn）", () => {
+    // 构造 condition 求值时抛错的条件
+    const ctrl: AnimationController = {
+      name: "c",
+      initialState: "a",
+      states: new Map([
+        ["a", { name: "a", animations: [], onExit: [], blendTransition: 0.2, transitions: [
+          { target: "b", condition: () => { throw new Error("eval fail"); }, raw: "throw", unconditional: false },
+        ] }],
+        ["b", { name: "b", animations: ["b"], onExit: [], blendTransition: 0.2, transitions: [] }],
+      ]),
+    };
+    const rt = new AnimationControllerRuntime(ctrl);
+    const spy = vi.spyOn(log, "logWarn");
+    rt.update(1);
+    expect(spy).toHaveBeenCalledWith("anim-ctrl", "条件表达式执行失败", expect.anything());
+    spy.mockRestore();
+  });
+
+  it("on_exit 执行失败时写日志（logWarn）", () => {
+    const ctrl: AnimationController = {
+      name: "c",
+      initialState: "a",
+      states: new Map([
+        ["a", { name: "a", animations: [], onExit: [() => { throw new Error("exit fail"); }], blendTransition: 0.2, transitions: [
+          { target: "b", condition: null, raw: "", unconditional: true },
+        ] }],
+        ["b", { name: "b", animations: ["b"], onExit: [], blendTransition: 0.2, transitions: [] }],
+      ]),
+    };
+    const rt = new AnimationControllerRuntime(ctrl);
+    const spy = vi.spyOn(log, "logWarn");
+    rt.update(0);
+    expect(spy).toHaveBeenCalledWith("anim-ctrl", "on_exit 执行失败", expect.anything());
+    spy.mockRestore();
   });
 
   it("reset 回到初始状态、清空 timeInState", () => {

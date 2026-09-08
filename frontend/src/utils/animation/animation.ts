@@ -4,6 +4,7 @@
  * 编译失败零占位降级），求值时机在 evaluateKeyframes（anim_time = 求值时间 t）。
  */
 
+import { logWarn } from "@/utils/base/log.ts";
 import { compileMolang, type MolangFn } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
@@ -342,6 +343,7 @@ function parseAndValidateAnimRoot(jsonStr: string): {
     }
     return { anims, errors: [] };
   } catch (e) {
+    logWarn("anim", "动画 JSON 解析失败", e);
     return { anims: null, errors: [`JSON 解析失败: ${(e as Error).message}`] };
   }
 }

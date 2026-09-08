@@ -88,7 +88,9 @@ export function safeStr(v: unknown): string {
     const s = JSON.stringify(v);
     if (s === undefined) return String(v);
     return s.length > 200 ? `${s.slice(0, 200)}…` : s;
-  } catch (_) {
+  } catch (err) {
+    // debug 基础设施：用 console.warn 兜底，避免循环依赖 logWarn
+    console.warn("[debug] safeStr 序列化失败:", err);
     return String(v);
   }
 }

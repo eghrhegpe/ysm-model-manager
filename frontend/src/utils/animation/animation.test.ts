@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 骨骼动画计算测试（ADR-021 扩展，坐标高危区）=====
 // evaluateKeyframes（插值）/ parseBedrockAnimationJSON（解析）/ evaluateClip（局部变换）。
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   evaluateKeyframes,
   parseBedrockAnimationJSON,
@@ -9,6 +9,7 @@ import {
   ysmAnimClipLabels,
 } from "./animation.ts";
 import type { Keyframe, AnimationClip } from "./animation.ts";
+import * as log from "@/utils/base/log.ts";
 
 const KFS: Keyframe[] = [
   { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "linear" },
@@ -65,6 +66,13 @@ describe("parseBedrockAnimationJSON 解析", () => {
     const r = parseBedrockAnimationJSON("{}");
     expect(r.clips).toEqual([]);
     expect(r.errors[0]).toContain("缺少 animations");
+  });
+
+  it("非法 JSON 解析失败时写日志（logWarn）", () => {
+    const spy = vi.spyOn(log, "logWarn");
+    parseBedrockAnimationJSON("{not json");
+    expect(spy).toHaveBeenCalledWith("anim", "动画 JSON 解析失败", expect.anything());
+    spy.mockRestore();
   });
 
   it("解析动画的 loop / 骨骼通道 / 长度", () => {

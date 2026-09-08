@@ -96,6 +96,8 @@ export function disposeTooltipCore(): void {
     document.removeEventListener("scroll", _scrollHandler, true);
     _scrollHandler = null;
   }
+  // dispose 后复位注入标记，确保 HMR 或样式被移除后能重新注入
+  _injected = false;
 }
 
 function cancelTimer(): void {

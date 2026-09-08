@@ -65,8 +65,6 @@ auto_fields:
     - TimingInfo
   tests:
     - frontend/src/services/cli-bridge.test.ts
-tests:
-  - frontend/src/services/cli-bridge.test.ts
 use_when:
   - CLI
   - 质量摸排

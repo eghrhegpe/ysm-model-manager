@@ -15,8 +15,6 @@ auto_fields:
     - showBatchRenameDialog
   tests:
     - frontend/src/features/dialogs/batch-rename.test.ts
-tests:
-  - frontend/src/features/dialogs/batch-rename.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

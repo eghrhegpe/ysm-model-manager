@@ -32,8 +32,6 @@ quick_intents:
   - UV 对不上 / 贴图错位定位
   - 烘焙数据反推原理理解
   - WASM 解析器版本更新
-tests:
-  - frontend/src/preview-3d/decoder/geometry.test.ts
 use_when:
   - 烘焙
   - 几何反推

@@ -14,10 +14,6 @@ auto_fields:
     - frontend/src/preview-3d/debug-render.test.ts
     - frontend/src/utils/debug/debug.ring.test.ts
     - frontend/src/utils/debug/debug.test.ts
-tests:
-  - frontend/src/preview-3d/debug-render.test.ts
-  - frontend/src/utils/debug/debug.ring.test.ts
-  - frontend/src/utils/debug/debug.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

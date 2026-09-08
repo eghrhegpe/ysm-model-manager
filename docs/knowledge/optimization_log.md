@@ -104,11 +104,6 @@ auto_fields:
     - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.test.ts
     - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.test.ts
     - frontend/src/utils/main-thread-watch.test.ts
-tests:
-  - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
-  - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.test.ts
-  - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.test.ts
-  - frontend/src/utils/main-thread-watch.test.ts
 use_when:
   - 性能优化
   - KTX2 编码

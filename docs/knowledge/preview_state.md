@@ -35,8 +35,6 @@ auto_fields:
     - toStatePath
   tests:
     - frontend/src/preview-3d/state/preview-state.test.ts
-tests:
-  - frontend/src/preview-3d/state/preview-state.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

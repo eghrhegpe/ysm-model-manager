@@ -13,8 +13,6 @@ auto_fields:
     - YSW_FAB_CSS
   tests:
     - frontend/src/preview-3d/fab.test.ts
-tests:
-  - frontend/src/preview-3d/fab.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

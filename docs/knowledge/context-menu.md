@@ -40,15 +40,6 @@ auto_fields:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-toast/index.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/features/context-menu/context-menus.test.ts
-  - frontend/src/features/context-menu/context-menus-async.test.ts
-  - frontend/src/features/context-menu/context-menus.setup.ts
-  - frontend/src/features/pack-ops/instance-ops.test.ts
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 右键菜单
   - 右键

@@ -19,8 +19,6 @@ auto_fields:
     - ToastPayload
   tests:
     - frontend/src/bus.test.ts
-tests:
-  - frontend/src/bus.test.ts
 use_when:
   - 事件
   - 事件总线

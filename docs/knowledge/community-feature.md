@@ -62,13 +62,6 @@ auto_fields:
     - frontend/src/features/community/download-tasks.test.ts
     - frontend/src/views/app-tree/data.test.ts
     - frontend/src/views/app-tree/render.test.ts
-tests:
-  - frontend/src/features/community/data.test.ts
-  - frontend/src/features/community/download-queue.test.ts
-  - frontend/src/features/community/download-queue-ui.test.ts
-  - frontend/src/features/community/download-tasks.test.ts
-  - frontend/src/views/app-tree/data.test.ts
-  - frontend/src/views/app-tree/render.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:

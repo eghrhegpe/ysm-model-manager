@@ -34,8 +34,6 @@ auto_fields:
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/dialogs/modal.test.ts
-tests:
-  - frontend/src/features/dialogs/modal.test.ts
 use_when:
   - 弹窗
   - 对话框

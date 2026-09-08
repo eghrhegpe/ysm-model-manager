@@ -29,12 +29,6 @@ auto_fields:
     - frontend/src/core/handlers/instance-ops.test.ts
     - frontend/src/core/handlers/sync.test.ts
     - frontend/src/features/dnd-shared.test.ts
-tests:
-  - frontend/src/core/error-diary.test.ts
-  - frontend/src/features/import-dnd.test.ts
-  - frontend/src/core/handlers/instance-ops.test.ts
-  - frontend/src/core/handlers/sync.test.ts
-  - frontend/src/features/dnd-shared.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

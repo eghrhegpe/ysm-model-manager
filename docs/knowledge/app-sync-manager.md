@@ -39,8 +39,6 @@ auto_fields:
     - VIEW_TESTIDS
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
-tests:
-  - frontend/src/views/app-sync-manager/index.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

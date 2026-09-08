@@ -18,9 +18,6 @@ auto_fields:
   tests:
     - frontend/src/features/dialogs/rename-format.test.ts
     - frontend/src/features/dialogs/rename.test.ts
-tests:
-  - frontend/src/features/dialogs/rename-format.test.ts
-  - frontend/src/features/dialogs/rename.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

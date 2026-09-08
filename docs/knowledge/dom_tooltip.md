@@ -16,8 +16,6 @@ auto_fields:
     - YSW_TOOLTIP_CSS
   tests:
     - frontend/src/utils/dom/tooltip.test.ts
-tests:
-  - frontend/src/utils/dom/tooltip.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

@@ -19,8 +19,6 @@ auto_fields:
     - ScanManifest
   tests:
     - tests/test_rust_bridge_tags.ts
-tests:
-  - tests/test_rust_bridge_tags.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

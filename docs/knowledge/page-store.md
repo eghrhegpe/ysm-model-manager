@@ -13,8 +13,6 @@ auto_fields:
     - resolveInitialPage
   tests:
     - frontend/src/core/page-store.test.ts
-tests:
-  - frontend/src/core/page-store.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

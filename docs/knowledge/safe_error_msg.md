@@ -10,8 +10,6 @@ auto_fields:
     - safeErrorMessage
   tests:
     - frontend/src/utils/safe-error-msg.test.ts
-tests:
-  - frontend/src/utils/safe-error-msg.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

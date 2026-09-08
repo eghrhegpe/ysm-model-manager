@@ -48,14 +48,6 @@ auto_fields:
     - frontend/src/views/app-content/site/drag.test.ts
     - frontend/src/views/app-content/site/workshop-data.test.ts
     - frontend/src/views/app-content/site/workshop-browse-mode.test.ts
-tests:
-  - frontend/src/views/app-content/site/site-view.test.ts
-  - frontend/src/views/app-content/site/render.test.ts
-  - frontend/src/views/app-content/site/events.test.ts
-  - frontend/src/views/app-content/site/edit.test.ts
-  - frontend/src/views/app-content/site/drag.test.ts
-  - frontend/src/views/app-content/site/workshop-data.test.ts
-  - frontend/src/views/app-content/site/workshop-browse-mode.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

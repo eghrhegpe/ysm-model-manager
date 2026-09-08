@@ -14,8 +14,6 @@ auto_fields:
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/maintenance/recycle-bin.integration.test.ts
-tests:
-  - frontend/src/features/maintenance/recycle-bin.integration.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:

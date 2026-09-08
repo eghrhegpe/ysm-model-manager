@@ -23,9 +23,6 @@ auto_fields:
   tests:
     - frontend/src/features/version-updater.test.ts
     - tests/test_android_bridge_contract.ts
-tests:
-  - frontend/src/features/version-updater.test.ts
-  - tests/test_android_bridge_contract.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

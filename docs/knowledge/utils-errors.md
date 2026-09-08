@@ -12,8 +12,6 @@ auto_fields:
     - stripPathSegments
   tests:
     - frontend/src/utils/dom/errors.test.ts
-tests:
-  - frontend/src/utils/dom/errors.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

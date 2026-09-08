@@ -14,8 +14,6 @@ auto_fields:
     - SidecarOutput
   tests:
     - go/cli/cli_test.go
-tests:
-  - go/cli/cli_test.go
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

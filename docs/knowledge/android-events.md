@@ -10,8 +10,6 @@ auto_fields:
     - registerAndroidEvents
   tests:
     - frontend/src/features/dialogs/modal.test.ts
-tests:
-  - frontend/src/features/dialogs/modal.test.ts
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

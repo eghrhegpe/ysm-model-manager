@@ -65,12 +65,6 @@ auto_fields:
     - frontend/src/preview-3d/adapters/switch-preview.test.ts
     - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
     - frontend/src/views/app-preview/ysm-controls.test.ts
-tests:
-  - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
-  - frontend/src/preview-3d/adapters/schema-registry.test.ts
-  - frontend/src/preview-3d/adapters/switch-preview.test.ts
-  - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
-  - frontend/src/views/app-preview/ysm-controls.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

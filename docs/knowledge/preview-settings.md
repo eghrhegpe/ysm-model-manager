@@ -90,23 +90,6 @@ auto_fields:
     - frontend/src/views/app-toast/index.test.ts
     - frontend/src/views/app-tree/index.extra.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/preview-3d/decoder/utils.test.ts
-  - frontend/src/preview-3d/render-budget.test.ts
-  - frontend/src/preview-3d/state/preview-state.test.ts
-  - frontend/src/test-utils/index.test.ts
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-preview/model2d/model2d.test.ts
-  - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
-  - frontend/src/views/app-preview/skeleton-render.test.ts
-  - frontend/src/views/app-preview/skeleton.test.ts
-  - frontend/src/views/app-preview/utils.test.ts
-  - frontend/src/views/app-preview/zoom.test.ts
-  - frontend/src/views/app-sync-manager/index.branches.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/views/app-tree/index.extra.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

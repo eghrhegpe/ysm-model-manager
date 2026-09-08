@@ -59,11 +59,6 @@ auto_fields:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-toast/index.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

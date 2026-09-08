@@ -1,9 +1,9 @@
 # Android 开发手册（ADR-046 P2）
 
 > 面向在 ysm-model-manager 上做 Android 适配的开发者（人类 + AI）。本手册是 Android 开发的**枢纽总览**：
-> 决策看 [ADR-046](adr/ADR-046-cross-platform-feasibility.md)，实现细节看知识卡
-> （[android-bridge](knowledge/android-bridge.md) / [android-events](knowledge/android-events.md) /
-> [go-android-platform-guard](knowledge/go-android-platform-guard.md) / [wails-bridge](knowledge/wails-bridge.md)），
+> 决策看 [ADR-046](../adr/ADR-046-cross-platform-feasibility.md)，实现细节看知识卡
+> （[android-bridge](android-bridge.md) / [android-events](android-events.md) /
+> [go-android-platform-guard](go-android-platform-guard.md) / [wails-bridge](wails-bridge.md)），
 > 本页收拢**现状快照、双端桥机制、按钮适配清单、构建链路、坑点速查**。
 
 ## 平台定位（查看器模式）
@@ -102,7 +102,7 @@ Wails v3 官方 `dialogs_android.go` **明确拒绝 Android 目录选择**（SAF
 
 ## 相关
 
-- [ADR-046 全平台化可行性调查](adr/ADR-046-cross-platform-feasibility.md)
-- 知识卡：[android-bridge](knowledge/android-bridge.md) / [android-events](knowledge/android-events.md) / [go-android-platform-guard](knowledge/go-android-platform-guard.md) / [wails-bridge](knowledge/wails-bridge.md)
+- [ADR-046 全平台化可行性调查](../adr/ADR-046-cross-platform-feasibility.md)
+- 知识卡：[android-bridge](android-bridge.md) / [android-events](android-events.md) / [go-android-platform-guard](go-android-platform-guard.md) / [wails-bridge](wails-bridge.md)
 - Go 平台隔离：`internal/app/pathmgr_*.go`（build tags：desktop / android 双实现）
 - Android 工程：`build/android/`（gradle + Java 源码 + Taskfile）

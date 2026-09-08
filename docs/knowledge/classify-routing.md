@@ -48,9 +48,6 @@ auto_fields:
   tests:
     - go/packs/classify_test.go
     - go/packs/model_file_test.go
-tests:
-  - go/packs/classify_test.go
-  - go/packs/model_file_test.go
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

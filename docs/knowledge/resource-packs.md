@@ -12,8 +12,6 @@ auto_fields:
   tests:
     - frontend/src/views/app-preview/detail.test.ts
 affected: false
-tests:
-  - frontend/src/views/app-preview/detail.test.ts
 invariant_anchors:
   - frontend/src/views/app-preview/detail.ts|showResourcePack
   - frontend/src/views/app-preview/detail.ts|showShaderpack

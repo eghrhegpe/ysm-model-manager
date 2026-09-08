@@ -42,6 +42,7 @@ export const KNOWLEDGE_NON_CARDS = new Set([
   "menu-map.md", // 若后续 gen-menu-map 产出（BABY 预留）
   "graph.md", // 若后续 gen-knowledge-graph 产出（BABY 预留）
   "tier-review.md", // BABY 预留
+  "android-dev.md", // Android 开发手册（枢纽总览，操作手册类，非单卡）
 ]);
 
 /**

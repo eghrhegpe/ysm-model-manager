@@ -12,8 +12,6 @@ auto_fields:
     - ResourceTypeEntry
   tests:
     - frontend/src/services/resource-registry.test.ts
-tests:
-  - frontend/src/services/resource-registry.test.ts
 use_when:
   - 资源类型
   - 注册表

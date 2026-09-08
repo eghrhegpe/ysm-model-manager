@@ -24,9 +24,6 @@ auto_fields:
   tests:
     - rust-core/src/tests.rs
     - go/rustbridge/parse_test.go
-tests:
-  - rust-core/src/tests.rs
-  - go/rustbridge/parse_test.go
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

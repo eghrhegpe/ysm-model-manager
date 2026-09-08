@@ -36,12 +36,6 @@ auto_fields:
     - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
     - frontend/src/views/app-tree/app-tree.component.test.ts
     - frontend/src/views/app-tree/app-tree.state.test.ts
-tests:
-  - frontend/src/views/app-content/app-content.component.test.ts
-  - frontend/src/views/app-preview/app-preview.component.test.ts
-  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
-  - frontend/src/views/app-tree/app-tree.component.test.ts
-  - frontend/src/views/app-tree/app-tree.state.test.ts
 use_when:
   - Wails
   - 桥接

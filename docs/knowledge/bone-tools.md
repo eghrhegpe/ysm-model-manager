@@ -39,11 +39,6 @@ auto_fields:
     - frontend/src/preview-3d/adapters/vrm-bone.test.ts
     - frontend/src/preview-3d/adapters/vrm-bone-ui.test.ts
     - frontend/src/preview-3d/mmd-bones.test.ts
-tests:
-  - frontend/src/preview-3d/bone-tools.test.ts
-  - frontend/src/preview-3d/adapters/vrm-bone.test.ts
-  - frontend/src/preview-3d/adapters/vrm-bone-ui.test.ts
-  - frontend/src/preview-3d/mmd-bones.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

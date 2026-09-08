@@ -46,11 +46,6 @@ auto_fields:
     - ADR-061-3d (含勘误记录)
     - ADR-100 (YSM 骨骼动画)
     - ADR-113 (Molang 表达式支持)
-tests:
-  - frontend/src/preview-3d/ysm-animation-player.test.ts
-  - frontend/src/utils/animation/animation-controller.test.ts
-  - frontend/src/utils/animation/animation.test.ts
-  - frontend/src/utils/animation/molang.test.ts
 use_when:
   - YSM 动画
   - 基岩动画

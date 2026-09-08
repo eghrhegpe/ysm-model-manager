@@ -15,8 +15,6 @@ auto_fields:
     - RepoStats
   tests:
     - frontend/src/features/maintenance/oldest-models.test.ts
-tests:
-  - frontend/src/features/maintenance/oldest-models.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

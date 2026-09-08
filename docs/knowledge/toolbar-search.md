@@ -13,8 +13,6 @@ auto_fields:
     - pickWebFilesAndImport
   tests:
     - frontend/src/views/app-tree/toolbar-events.test.ts
-tests:
-  - frontend/src/views/app-tree/toolbar-events.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

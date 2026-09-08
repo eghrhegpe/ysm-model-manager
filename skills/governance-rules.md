@@ -7,7 +7,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 
 > ⚠️ **以脚本为唯一事实来源**：规则集以 `scripts/check-redlines.mjs` 实现为准（已含 R10 / W6 / W7 / W8 等新增规则），本手册为人工维护的说明性子集，冲突时以脚本为准。
 > 规则条文 + 严重度 + 替代方案 + 检测工具说明如下：
-> 决策背景与事故驱动过程见 [ADR-005](./adr/ADR-005-frontend-governance-rules.md)；检测脚本实现见「脚本体系全景」（仓库 `scripts/README.md`）「治理红线」表。
+> 决策背景与事故驱动过程见 [ADR-005](../docs/adr/ADR-005-frontend-governance-rules.md)；检测脚本实现见「脚本体系全景」（仓库 `scripts/README.md`）「治理红线」表。
 > 本手册承接原 `docs/core/CLEANUP_RULES.md`（2026-08-03 曾整本并入 ADR-005，2026-08-04 归位独立手册——规则条文与决策依据各司其职）。
 
 ---
@@ -96,7 +96,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 | 文档 | 职责 |
 |------|------|
 | 本手册 | 规则条文唯一事实来源（改规则改这里） |
-| [ADR-005](./adr/ADR-005-frontend-governance-rules.md) | 决策依据：为何立规、事故驱动过程、严重度分级决策 |
+| [ADR-005](../docs/adr/ADR-005-frontend-governance-rules.md) | 决策依据：为何立规、事故驱动过程、严重度分级决策 |
 | `AGENTS.md` §三 | AI 常驻摘要（3 条红线 = 本手册 Error 级子集） |
 | 脚本体系全景（仓库 `scripts/README.md`） | 检测工具实现与红线→脚本映射 |
 | [致命陷阱手册](./pitfalls.md) | 项目特定事故教训（规则之外的情境坑） |

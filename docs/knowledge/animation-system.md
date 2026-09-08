@@ -52,11 +52,6 @@ auto_fields:
     - frontend/src/utils/animation/animation.test.ts
     - frontend/src/utils/animation/stagger.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts
-tests:
-  - frontend/src/utils/animation/animate.test.ts
-  - frontend/src/utils/animation/animation.test.ts
-  - frontend/src/utils/animation/stagger.test.ts
-  - frontend/src/utils/animation/animation-controller.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

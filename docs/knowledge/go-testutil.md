@@ -33,8 +33,6 @@ auto_fields:
     - WriteZipFile
   tests:
     - go/internal/testutil/testutil_test.go
-tests:
-  - go/internal/testutil/testutil_test.go
 use_when:
   - 跨包复用测试 helper
   - 创建测试文件

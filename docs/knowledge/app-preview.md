@@ -145,16 +145,6 @@ auto_fields:
     - frontend/src/views/app-toast/index.test.ts
     - frontend/src/utils/dom/feedback.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-preview/utils.test.ts
-  - frontend/src/views/app-preview/app-preview.component.test.ts
-  - frontend/src/views/app-preview/maid-3d.test.ts
-  - frontend/src/views/app-sidebar/loader.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/utils/dom/feedback.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 quick_groups:
   - 3D 预览面板与模型追加
 quick_intents:

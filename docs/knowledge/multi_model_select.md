@@ -54,13 +54,6 @@ auto_fields:
     - frontend/src/preview-3d/adapters/litematic-adapter.test.ts
     - frontend/src/views/app-preview/litematic-3d.test.ts
     - internal/app/container_entries_test.go
-tests:
-  - frontend/src/preview-3d/adapters/pack-model-adapter.test.ts
-  - frontend/src/preview-3d/menu/multi-model.test.ts
-  - frontend/src/views/app-preview/mmd-controls.test.ts
-  - frontend/src/preview-3d/adapters/litematic-adapter.test.ts
-  - frontend/src/views/app-preview/litematic-3d.test.ts
-  - internal/app/container_entries_test.go
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

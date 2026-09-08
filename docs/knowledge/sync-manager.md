@@ -71,15 +71,6 @@ auto_fields:
     - frontend/src/views/app-sidebar/events.test.ts
     - frontend/src/views/app-sidebar/loader.test.ts
     - frontend/src/views/app-sidebar/render.test.ts
-tests:
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-sync-manager/index.branches.test.ts
-  - frontend/src/views/app-sync-manager/tpl.test.ts
-  - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
-  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
-  - frontend/src/views/app-sidebar/events.test.ts
-  - frontend/src/views/app-sidebar/loader.test.ts
-  - frontend/src/views/app-sidebar/render.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

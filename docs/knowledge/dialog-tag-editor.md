@@ -14,8 +14,6 @@ auto_fields:
     - TagSetResult
   tests:
     - frontend/src/features/dialogs/tag-editor.test.ts
-tests:
-  - frontend/src/features/dialogs/tag-editor.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

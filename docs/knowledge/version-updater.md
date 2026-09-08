@@ -12,8 +12,6 @@ auto_fields:
     - UpdateInfo
   tests:
     - frontend/src/features/maintenance/version-updater.test.ts
-tests:
-  - frontend/src/features/maintenance/version-updater.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -98,8 +98,6 @@ use_when:
   - Node.js
   - watcher 守卫 / fsnotify
 
-tests:
-  - internal/app/app_config_test.go
 quick_groups:
   - 后端桥接与数据存储
 status: active

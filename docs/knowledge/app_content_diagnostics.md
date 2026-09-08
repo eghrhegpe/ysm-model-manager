@@ -46,12 +46,6 @@ auto_fields:
     - frontend/src/views/app-content/diagnostics/init.test.ts
     - frontend/src/views/app-content/diagnostics/perf.test.ts
     - frontend/src/views/app-content/diagnostics/perf-common.test.ts
-tests:
-  - frontend/src/views/app-content/diagnostics/conflicts.test.ts
-  - frontend/src/views/app-content/diagnostics/health.test.ts
-  - frontend/src/views/app-content/diagnostics/init.test.ts
-  - frontend/src/views/app-content/diagnostics/perf.test.ts
-  - frontend/src/views/app-content/diagnostics/perf-common.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

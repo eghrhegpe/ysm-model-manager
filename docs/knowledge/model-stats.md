@@ -32,8 +32,6 @@ auto_fields:
     - WebModelStatsWithPath
   tests:
     - frontend/src/workers/stats-core.test.ts
-tests:
-  - frontend/src/workers/stats-core.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

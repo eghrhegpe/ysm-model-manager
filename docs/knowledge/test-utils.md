@@ -51,14 +51,6 @@ auto_fields:
     - frontend/src/views/app-content/app-content.methods.test.ts
     - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/views/app-tree/render.test.ts
-  - frontend/src/views/app-content/app-content.methods.test.ts
-  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 测试工具
   - testid

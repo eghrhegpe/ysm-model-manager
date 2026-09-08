@@ -35,10 +35,6 @@ auto_fields:
     - frontend/src/views/app-content/settings/init.test.ts
     - frontend/src/views/app-content/settings/keymap.test.ts
     - frontend/src/views/app-content/settings/theme.test.ts
-tests:
-  - frontend/src/views/app-content/settings/init.test.ts
-  - frontend/src/views/app-content/settings/keymap.test.ts
-  - frontend/src/views/app-content/settings/theme.test.ts
 quick_groups:
   - 配置与注册表
 quick_intents:

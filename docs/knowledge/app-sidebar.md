@@ -47,16 +47,6 @@ auto_fields:
     - frontend/src/views/app-tree/data.test.ts
     - frontend/src/views/app-tree/render.test.ts
     - frontend/src/views/context-menu/index.test.ts
-tests:
-  - frontend/src/features/community/data.test.ts
-  - frontend/src/views/app-nav/index.test.ts
-  - frontend/src/views/app-sidebar/loader.test.ts
-  - frontend/src/views/app-sidebar/launcher-detect.test.ts
-  - frontend/src/views/app-sync-manager/index.test.ts
-  - frontend/src/views/app-toast/index.test.ts
-  - frontend/src/views/app-tree/data.test.ts
-  - frontend/src/views/app-tree/render.test.ts
-  - frontend/src/views/context-menu/index.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

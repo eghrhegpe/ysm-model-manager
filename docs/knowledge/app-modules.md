@@ -17,8 +17,6 @@ auto_fields:
     - unregisterDevtools
   tests:
     - frontend/src/app-modules.test.ts
-tests:
-  - frontend/src/app-modules.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

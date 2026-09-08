@@ -63,11 +63,6 @@ auto_fields:
     - frontend/src/preview-3d/adapters/morph-controls.test.ts
     - frontend/src/views/app-preview/mmd-controls.test.ts
     - frontend/src/views/app-preview/ysm-controls.test.ts
-tests:
-  - frontend/src/preview-3d/menu/items.test.ts
-  - frontend/src/preview-3d/adapters/morph-controls.test.ts
-  - frontend/src/views/app-preview/mmd-controls.test.ts
-  - frontend/src/views/app-preview/ysm-controls.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

@@ -21,7 +21,7 @@
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
 > 📖 **详细说明见 [用户指南](docs/guide/index.md)**，包含 FAQ、故障排查、链接模式详解等。
-> 🎨 **设计规范见 [Design.md](docs/Design.md)**， 包含 UI 设计指南。
+> 🎨 **设计规范见 [UI-Design.md](docs/UI-Design.md)**， 包含 UI 设计指南。
 > 🧭 **主站介绍见 [docs/index.md](docs/index.md)**，包含 项目进展。
 > AI 协作规则见 [AGENTS.md](AGENTS.md)。
 
@@ -317,7 +317,7 @@ ysm-model-manager/
 │       └── wasm/               —— YSMParser WASM 解码（ysm-wasm-data.js）
 └── docs/                      ← 文档（GitHub Pages 主站）
     ├── index.md              —— 主站落地页：站点地图 + 功能一览 + 界面预览
-    ├── Design.md             —— UI 设计规范（CSS 变量、布局、字体）
+    ├── UI-Design.md          —— UI 设计规范（CSS 变量、布局、字体）
     ├── adr/                  —— 架构决策记录 ADR-001~123（index.md 自动生成）
     ├── guide/                —— 用户指南（用户手册，index.md 索引）
     ├── knowledge/            —— AI 知识卡索引（index.md 自动生成）
@@ -387,16 +387,13 @@ node scripts/android-install.mjs
 | 文档                                                                               | 内容                                                      |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | [`docs/guide/用户指南.md`](docs/guide/用户指南.md)                                 | **用户手册**：安装、配置、功能详解、FAQ                   |
-| [`docs/archive/architecture.md`](docs/archive/architecture.md)                     | 前端架构规范 + 组件拆分指南（已归档）                     |
-| [`docs/Design.md`](docs/Design.md)                                                 | UI 设计规范（CSS 变量、布局、字体）                       |
-| [`docs/archive/bug-chronicle.md`](docs/archive/bug-chronicle.md)                   | Bug 排查记录（含 Debug Path Review，已归档）              |
-| [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md) | **3D 渲染引擎开发报告**（已归档）                         |
+| [`docs/UI-Design.md`](docs/UI-Design.md)                                           | UI 设计规范（CSS 变量、布局、字体）                       |
 | [`docs/releases/index.md`](docs/releases/index.md)                                 | 各版本发版说明（索引）                                    |
 | [`docs/index.md`](docs/index.md)                                                   | **主站介绍**（功能一览 + 站点地图 + 界面预览）            |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                               | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
 | [`docs/adr/index.md`](docs/adr/index.md)                                           | **ADR 决策记录登记表**（架构决策追踪）                    |
-| [`docs/governance-rules.md`](docs/governance-rules.md)                             | 前端治理规则手册（9 条规则 × 严重度 × 检测工具）          |
-| [`docs/pitfalls.md`](docs/pitfalls.md)                                             | 致命陷阱手册（11 条事故教训全量版）                       |
+| [`skills/governance-rules.md`](skills/governance-rules.md)                         | 前端治理规则手册（规则条文 × 严重度 × 检测工具）          |
+| [`skills/pitfalls.md`](skills/pitfalls.md)                                         | 致命陷阱手册（11 条事故教训全量版）                       |
 | [`frontend/AGENTS.md`](frontend/AGENTS.md)                                         | 前端专属 AI 行为手册（DnD/调试/组件约束）                 |
 | [`docs/architecture.md`](docs/architecture.md)                                     | 架构（3D 渲染标准 + YSMParser WASM 内嵌）                 |
 

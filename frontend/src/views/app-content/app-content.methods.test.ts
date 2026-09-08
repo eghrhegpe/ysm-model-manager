@@ -597,11 +597,14 @@ import {
   initSettingsPage,
   rememberModelPath,
   getLastModelPath,
+  __resetLastModelPathForTest,
 } from "./init-pages.ts";
 import type { AppContentHost } from "./host.ts";
 import type { Mock } from "vitest";
 
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
+  afterEach(__resetLastModelPathForTest);
+
   it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
     const el = mountContent();
     const diag = await import("@/views/app-content/diagnostics/init.ts");

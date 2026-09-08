@@ -31,6 +31,7 @@ source_files:
   - frontend/src/utils/icon/workshop-icons.ts
 auto_fields:
   symbols_with_lines:
+    - __resetLastModelPathForTest
     - aboutHTML
     - AppContentHost
     - AppContentState

@@ -315,3 +315,9 @@ export function rememberModelPath(path: string | null): void {
 export function getLastModelPath(): string | null {
   return _lastModelPath;
 }
+
+/** 测试钩子：重置 _lastModelPath（isolate:false 共享模块图下，兄弟用例残留会泄漏到
+ *  后续用例的 getLastModelPath 断言；modal-core.__resetModalStateForTest 同款范式） */
+export function __resetLastModelPathForTest(): void {
+  _lastModelPath = null;
+}

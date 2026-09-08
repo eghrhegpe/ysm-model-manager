@@ -53,7 +53,7 @@ export function setEnvState(
   const changedKeys = new Set<string>();
   for (const key of Object.keys(migrated) as Array<keyof EnvState>) {
     if (force || shouldOverwrite(key as string, source)) {
-      (envState as any)[key] = migrated[key];
+      (envState as unknown as Record<string, unknown>)[key as string] = migrated[key];
       _writeSource[key as string] = source;
       changedKeys.add(key as string);
     }
@@ -68,7 +68,7 @@ export function setEnvState(
  * StatePath 读（菜单控件用）。
  */
 export function getStateValue(path: string): unknown {
-  return (envState as any)[path];
+  return (envState as unknown as Record<string, unknown>)[path];
 }
 
 /**
@@ -84,7 +84,7 @@ export function setStateValue(path: string, value: unknown): void {
 export function resetEnvState(): void {
   const defaults = deriveDefaultEnvState();
   for (const key of Object.keys(defaults) as Array<keyof EnvState>) {
-    (envState as any)[key] = defaults[key];
+    (envState as unknown as Record<string, unknown>)[key as string] = defaults[key];
   }
   for (const key of Object.keys(_writeSource)) {
     delete _writeSource[key];

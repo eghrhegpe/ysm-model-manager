@@ -28,10 +28,6 @@
 // │  §16 binding 装配        → 下文    webFsBindings（Top 6 注册表驱动）           │
 // └──────────────────────────────────────────────────────────────────────────────┘
 
-// 复用 dnd-shared 的导入白名单（.json 仅放行 ysm.json，其余须 ALL_EXTS 成员），
-// 避免 browser-adapter 另起一套扩展名校验导致漂移
-import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
-import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 // R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { detectContainerType } from "@/parsers/extract.ts";
@@ -56,6 +52,10 @@ import {
 import { getExts } from "@/utils/resource/extensions.ts";
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "@/utils/resource/types.ts";
+// 复用 dnd-shared 的导入白名单（.json 仅放行 ysm.json，其余须 ALL_EXTS 成员），
+// 避免 browser-adapter 另起一套扩展名校验导致漂移
+import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
+import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
 import { type IdbOp, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbTx } from "./idb.ts";
 import {
   base64ToBytes,

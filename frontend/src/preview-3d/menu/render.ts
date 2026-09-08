@@ -302,8 +302,7 @@ function rmAppendDynamicRow(
     radio.dataset.testid = "row-radio";
     radio.textContent = node.radio.active ? "●" : "○";
     radio.title = node.radio.title;
-    radio.className =
-      "cc-btn cc-btn-ghost rm-inline-btn" + (node.radio.active ? " row-radio-active" : "");
+    radio.className = `cc-btn cc-btn-ghost rm-inline-btn${node.radio.active ? " row-radio-active" : ""}`;
     radio.style.marginRight = "6px";
     radio.onclick = (ev): void => {
       ev.stopPropagation();

@@ -13,12 +13,7 @@ import {
   type Mount3DOptions,
   mount3D,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
-import {
-  extOf,
-  isContainerExt,
-  RESOURCE_TYPES,
-  VOXEL_RPC_BY_EXT,
-} from "@/utils/resource/types.ts";
+import { extOf, isContainerExt, RESOURCE_TYPES, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
 import { openModel3DFullscreen, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */

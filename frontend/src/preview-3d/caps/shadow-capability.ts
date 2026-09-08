@@ -252,7 +252,9 @@ export class ShadowCapability implements SceneCapability {
 
     const { dirs, spots } = this.collectLights();
     this.snapshotDirLights(dirs);
-    dirs.forEach((l) => this.applyDirLightShadow(l));
+    dirs.forEach((l) => {
+      this.applyDirLightShadow(l);
+    });
     const spotSnaps: Array<[THREE.SpotLight, LightShadowSnapshot]> = [];
     for (const sp of spots) {
       const snap: LightShadowSnapshot = {

@@ -54,7 +54,7 @@ export function openSite(
  * 当前页面的 load 完成 / 超时触发；返回按钮同样 abort，彻底消除 timer 残留。
  */
 function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): void {
-  const root = host._root;
+  const root = host.state.root;
   const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
   const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
   const urlEl = root.getElementById("ws-url") as HTMLElement | null;
@@ -86,7 +86,7 @@ function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): v
  * 绑定站点打开相关事件
  */
 export function bindSiteEvents(host: AppContentHost): void {
-  const root = host._root;
+  const root = host.state.root;
 
   // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
   root.getElementById("ws-back")?.addEventListener("click", () => {
@@ -99,7 +99,7 @@ export function bindSiteEvents(host: AppContentHost): void {
 
   // 打开当前站点
   const openCurrent = (): void => {
-    const cs = host._currentSite;
+    const cs = host.state.currentSite;
     if (cs) {
       swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
     }
@@ -109,7 +109,7 @@ export function bindSiteEvents(host: AppContentHost): void {
 
   // 🖥️ 窗口模式：在预热 WebView2 窗口中直连打开（ADR-050）
   root.getElementById("ws-win-open")?.addEventListener("click", () => {
-    const cs = host._currentSite;
+    const cs = host.state.currentSite;
     if (cs) {
       // 网页版无 WebView2 预热窗口，回退系统浏览器打开
       if (isWebPlatform()) {

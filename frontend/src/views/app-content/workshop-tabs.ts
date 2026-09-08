@@ -46,7 +46,7 @@ export function createWorkshopRefs(): WorkshopRefs {
  * 初始化创意工坊 Tab
  */
 export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void {
-  const root = host._root;
+  const root = host.state.root;
 
   // 本地扫描作者的后台补充：首屏渲染不依赖磁盘扫描（曾阻塞 tab 栏秒级~分钟级），
   // 扫描完成后再合并进 allCreatorsRef 并重渲染当前站点视图。
@@ -60,7 +60,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
         const localAuthors = await loadLocalAuthors();
         if (localAuthors.length) {
           refs.allCreatorsRef.v = mergeLocalAuthorsInto(refs.allCreatorsRef.v, localAuthors);
-          _showSiteView(host._currentSite);
+          _showSiteView(host.state.currentSite);
         }
       } catch {
         // 补充失败不影响首屏（首屏已可用），静默降级
@@ -80,14 +80,14 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
       refs.repoAuthorsRef.v = (authors || []) as RepoAuthorLike[];
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
-      host._setCurrentSite(site);
+      host.state.setCurrentSite(site);
       safeSet("ysm-ws-last-tab", site.id);
       // tab 切换高亮
       // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
       root.querySelectorAll(".repo-tab").forEach((t) => t.classList.remove("active"));
       root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
-      _showSiteView(host._currentSite);
-      // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回旧值）
+      _showSiteView(host.state.currentSite);
+      // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回）
       maybeEnrich();
     } catch (e) {
       // P2 修复（审核）：async handler 最外层 catch 出口（ADR-044 ①）——
@@ -101,7 +101,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
   };
 
   // 默认显示第一个站点
-  host._setWorkshopTimer(
+  host.state.setWorkshopTimer(
     setTimeout(async () => {
       try {
         const data = await loadCommunityData();

@@ -37,6 +37,21 @@ function callArgs(mock: unknown, index: number): unknown[] {
   return calls[index] ?? [];
 }
 
+/** 假 host 结构（测试用，对齐 AppContentHost 接口） */
+interface MockGithubHost {
+  state: {
+    root: HTMLElement;
+    githubCache: Map<string, RepoCacheEntry> | null;
+    repoEventsCleanup: (() => Promise<void>) | null;
+    setGithubCache: (c: Map<string, RepoCacheEntry> | null) => void;
+    setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => void;
+  };
+  subs: {
+    pageUnsubs: Array<() => void>;
+    globalUnsubs: Array<() => void>;
+  };
+}
+
 /** 组装 initGithubPage 需要的假 host（gh-grid / gh-results-body / gh-source-info） */
 function makeHost() {
   const el = document.createElement("div");
@@ -47,24 +62,18 @@ function makeHost() {
   `;
   (el as unknown as { getElementById: (id: string) => Element | null }).getElementById =
     (id: string) => el.querySelector(`#${id}`);
-  const raw: Record<string, unknown> = {
-    _root: el,
-    _unsubs: [],
-    _globalUnsubs: [],
-    _currentSite: null,
-    _setCurrentSite: () => {},
-    _avatarCache: {},
-    _setAvatarCache: () => {},
-    _workshopCache: null,
-    _setWorkshopCache: () => {},
-    _githubCache: null as Map<string, RepoCacheEntry> | null,
-    _setGithubCache: (c: Map<string, RepoCacheEntry> | null) => { raw._githubCache = c; },
-    _repoEventsCleanup: null as (() => Promise<void>) | null,
-    _setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => { raw._repoEventsCleanup = fn; },
-    _workshopTimer: null,
-    _setWorkshopTimer: () => {},
-    _avatarRefreshRegistered: false,
-    _setAvatarRefreshRegistered: () => {},
+  const raw: MockGithubHost = {
+    state: {
+      root: el,
+      githubCache: null,
+      repoEventsCleanup: null,
+      setGithubCache: (c: Map<string, RepoCacheEntry> | null) => { raw.state.githubCache = c; },
+      setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => { raw.state.repoEventsCleanup = fn; },
+    },
+    subs: {
+      pageUnsubs: [],
+      globalUnsubs: [],
+    },
   };
   return { host: raw as unknown as AppContentHost, raw, el };
 }
@@ -157,7 +166,7 @@ describe("githubShowRepo — 缓存命中", () => {
   /** 预置 o/r1 缓存并初始化页面，点进仓库（触发缓存命中的 showRepo 路径） */
   async function cacheHost(entry: RepoCacheEntry) {
     const { host, raw, el } = makeHost();
-    raw._githubCache = new Map<string, RepoCacheEntry>([["o/r1", entry]]);
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([["o/r1", entry]]);
     mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
     initGithubPage(host);
     await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 1);
@@ -239,7 +248,7 @@ describe("githubShowRepo — 镜像竞速与本地扫描", () => {
     // 缺失徽章：ghost 不在本地 → missingCount 1
     expect(bodyOf(el).innerHTML).toContain("gh-model-badge-missing");
     // 结果入库（下次命中）
-    const entry = (raw._githubCache as Map<string, RepoCacheEntry>).get("o/r1")!;
+    const entry = (raw.state.githubCache as Map<string, RepoCacheEntry>).get("o/r1")!;
     expect(entry.models).toHaveLength(2);
     expect(entry.source).toBe("jsd");
   });
@@ -322,7 +331,7 @@ describe("githubShowRepo — 竞态守卫", () => {
   it("切仓后旧仓库的迟到 fetch 响应被丢弃（不 renderModels、仅入库）", async () => {
     const { host, raw, el } = makeHost();
     // r2 预置缓存：点击即命中渲染
-    raw._githubCache = new Map<string, RepoCacheEntry>([
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r2", { models: [{ name: "m2", path: "p2" }], source: "api" }],
     ]);
     mockApp({
@@ -346,7 +355,7 @@ describe("githubShowRepo — 竞态守卫", () => {
     await flushPromises();
     // 迟到响应：不触发新渲染，仅写缓存
     expect(bindRepoEvents).toHaveBeenCalledTimes(1);
-    expect((raw._githubCache as Map<string, RepoCacheEntry>).has("o/r1")).toBe(true);
+    expect((raw.state.githubCache as Map<string, RepoCacheEntry>).has("o/r1")).toBe(true);
   });
 });
 
@@ -354,9 +363,9 @@ describe("githubRenderModels — 清理与异常", () => {
   it("prevCleanup 存在 → 先 await 清理再绑定，并把新 cleanup 登记回 host", async () => {
     const { host, raw, el } = makeHost();
     const prevCleanup = vi.fn(async () => {});
-    raw._repoEventsCleanup = prevCleanup;
+    raw.state.repoEventsCleanup = prevCleanup;
     mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
-    raw._githubCache = new Map<string, RepoCacheEntry>([
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
     ]);
 
@@ -366,16 +375,16 @@ describe("githubRenderModels — 清理与异常", () => {
     await waitFor(() => bindRepoEvents.mock.calls.length > 0);
 
     expect(prevCleanup).toHaveBeenCalledTimes(1);
-    expect(raw._repoEventsCleanup).toBe(repoCleanup); // 新 cleanup 已登记
+    expect(raw.state.repoEventsCleanup).toBe(repoCleanup); // 新 cleanup 已登记
   });
 
   it("prevCleanup reject → 不阻断新绑定（c7cd6363 模式回归）", async () => {
     const { host, raw, el } = makeHost();
-    raw._repoEventsCleanup = vi.fn(async () => {
+    raw.state.repoEventsCleanup = vi.fn(async () => {
       throw new Error("cleanup boom");
     });
     mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
-    raw._githubCache = new Map<string, RepoCacheEntry>([
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
     ]);
 
@@ -406,7 +415,7 @@ describe("githubRenderModels — 清理与异常", () => {
   it("ctx 接线：bindCtx.showRepoModels() → 重新 showRepo；bindCtx.backToSite() → 重新 loadRepos", async () => {
     const { host, raw, el } = makeHost();
     mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
-    raw._githubCache = new Map<string, RepoCacheEntry>([
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
     ]);
 
@@ -429,8 +438,8 @@ describe("githubRenderModels — 清理与异常", () => {
 
 /** 给 host 预置 o/r1 的缓存条目（renderModels 路径复用） */
 function raw_cacheHost(host: AppContentHost, repo: string): void {
-  const raw = host as unknown as { _githubCache: Map<string, RepoCacheEntry> | null };
-  raw._githubCache = new Map<string, RepoCacheEntry>([
+  const raw = host as unknown as MockGithubHost;
+  raw.state.githubCache = new Map<string, RepoCacheEntry>([
     [repo, { models: [{ name: "m1", path: "p1" }], source: "raw" }],
   ]);
 }

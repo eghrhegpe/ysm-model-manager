@@ -1,6 +1,6 @@
 // ===== <app-content> 入口（ADR-040：≤400 行红线）=====
 
-import { bus, type PageName } from "@/bus";
+import { bus } from "@/bus";
 import { resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
@@ -32,7 +32,6 @@ import { swallowError } from "@/utils/base/async.ts";
 import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { clearAllCommunityCache } from "./community-data.ts";
 import { initGithubPage } from "./init-github.ts";
 import {
@@ -44,93 +43,14 @@ import {
 import { initPreviewResize } from "./init-preview.ts";
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
-import { AppContentState, type RepoCacheEntry } from "./state.ts";
+import { AppContentState } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
 
 class AppContent extends WebComponentBase {
   /** 状态容器（15 字段 + 9 setter 抽出，index.ts 瘦身为协调器） */
-  private state: AppContentState;
+  readonly state: AppContentState;
   /** 订阅桶管理器（3 桶清理逻辑抽出） */
-  private subs: SubscriptionBucket;
-
-  // ===== 兼容外部调用方（init-workshop / init-github / init-preview）的委托访问器 =====
-  // 这些 getter/setter 保持 AppContentHost 接口不变，内部委托给 state/subs。
-  get _root(): ShadowRoot {
-    return this.state.root;
-  }
-  get _current(): PageName {
-    return this.state.current;
-  }
-  set _current(v: PageName) {
-    this.state.current = v;
-  }
-  get _globalUnsubs(): Array<() => void> {
-    return this.subs.globalUnsubs;
-  }
-  get _repoEventsCleanup(): (() => Promise<void>) | null {
-    return this.state.repoEventsCleanup;
-  }
-  get _unsubs(): Array<() => void> {
-    return this.subs.pageUnsubs;
-  }
-  get _resizeMove(): ((e: PointerEvent) => void) | null {
-    return this.state.resizeMove;
-  }
-  get _resizeUp(): ((e: PointerEvent) => void) | null {
-    return this.state.resizeUp;
-  }
-  get _insListenerReg(): boolean {
-    return this.state.insListenerReg;
-  }
-  set _insListenerReg(v: boolean) {
-    this.state.setInsListenerReg(v);
-  }
-  get _avatarRefreshRegistered(): boolean {
-    return this.state.avatarRefreshRegistered;
-  }
-  get _currentSite(): WorkshopSite | null {
-    return this.state.currentSite;
-  }
-  get _avatarCache(): Record<string, string> {
-    return this.state.avatarCache;
-  }
-  get _workshopCache(): Map<string, RepoCacheEntry> | null {
-    return this.state.workshopCache;
-  }
-  get _githubCache(): Map<string, RepoCacheEntry> | null {
-    return this.state.githubCache;
-  }
-  get _workshopTimer(): ReturnType<typeof setTimeout> | null {
-    return this.state.workshopTimer;
-  }
-
-  _setResizeMove(fn: ((e: PointerEvent) => void) | null): void {
-    this.state.setResizeMove(fn);
-  }
-  _setResizeUp(fn: ((e: PointerEvent) => void) | null): void {
-    this.state.setResizeUp(fn);
-  }
-  _setCurrentSite(site: WorkshopSite | null): void {
-    this.state.setCurrentSite(site);
-  }
-  _setAvatarCache(cache: Record<string, string>): void {
-    this.state.setAvatarCache(cache);
-  }
-  _setWorkshopCache(cache: Map<string, RepoCacheEntry> | null): void {
-    this.state.setWorkshopCache(cache);
-  }
-  _setGithubCache(cache: Map<string, RepoCacheEntry> | null): void {
-    this.state.setGithubCache(cache);
-  }
-  _setWorkshopTimer(timer: ReturnType<typeof setTimeout> | null): void {
-    this.state.setWorkshopTimer(timer);
-  }
-  _setAvatarRefreshRegistered(v: boolean): void {
-    this.state.setAvatarRefreshRegistered(v);
-  }
-  _setRepoEventsCleanup(fn: (() => Promise<void>) | null): void {
-    this.state.setRepoEventsCleanup(fn);
-  }
+  readonly subs: SubscriptionBucket;
 
   constructor() {
     super();
@@ -213,7 +133,7 @@ class AppContent extends WebComponentBase {
    *   保留树展开/滚动位置/输入焦点，消灭「再进 dedup 永久卡死」（busy 锁 finally 必复位 + 不再重复 init）。
    * - 单面板挂载：root 下同一时刻仅保留当前面板（复用节点从缓存取回重挂），
    *   其余面板分离 DOM 但引用仍在缓存——这样 root 内 id 天然唯一，页内
-   *   `host._root.getElementById` 无跨页冲突（无需页内查询作用域化）。
+   *   `host.state.root.getElementById` 无跨页冲突（无需页内查询作用域化）。
    */
   _render(): void {
     // 清理 workshop 延迟加载定时器（切页/语言热切换时防空跑网络请求）
@@ -222,8 +142,8 @@ class AppContent extends WebComponentBase {
       this.state.setWorkshopTimer(null);
     }
     try {
-      const page = PAGE_REGISTRY[this._current] ?? PAGE_REGISTRY.instances;
-      const cached = this.state.getCachedPanel(this._current);
+      const page = PAGE_REGISTRY[this.state.current] ?? PAGE_REGISTRY.instances;
+      const cached = this.state.getCachedPanel(this.state.current);
       const isNew = !cached;
       let panel: HTMLElement;
       if (cached) {
@@ -232,7 +152,7 @@ class AppContent extends WebComponentBase {
         panel = document.createElement("div");
         panel.className = "page";
         panel.innerHTML = page.html();
-        this.state.cachePanel(this._current, panel);
+        this.state.cachePanel(this.state.current, panel);
       }
       // 单面板挂载：先分离 root 下其余页面面板（复用节点状态保留在缓存引用中），
       // 再挂回当前面板，保证同一时刻 root 下仅一个 .page。
@@ -241,7 +161,7 @@ class AppContent extends WebComponentBase {
         if (child !== panel && child.classList.contains("page")) child.remove();
       }
       root.appendChild(panel);
-      // init 必须在面板挂载后执行（init 经 host._root.getElementById 查询面板内容）
+      // init 必须在面板挂载后执行（init 经 host.state.root.getElementById 查询面板内容）
       if (isNew) {
         // P1-1（子代理审核）：消费注册表 init 字段，替代手动 if/else 链——
         // 新增页面只需在 PAGE_REGISTRY 添加一行，init 自动执行（不再有死代码）。
@@ -274,8 +194,8 @@ class AppContent extends WebComponentBase {
     });
     // 重置页面状态为仓库页，防止 nav 高亮与内容脱节；
     // 已在 repository 页时跳过，避免无效 nav:changed 触发链
-    if (this._current !== "repository") {
-      this._current = "repository";
+    if (this.state.current !== "repository") {
+      this.state.current = "repository";
       bus.emit("nav:changed", { page: "repository" });
     }
   }

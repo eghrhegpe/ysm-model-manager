@@ -62,6 +62,31 @@ function lastCallArgs(mock: unknown): unknown[] {
   return calls[calls.length - 1] ?? [];
 }
 
+/** 假 host 结构（测试用，对齐 AppContentHost 接口） */
+interface MockHost {
+  state: {
+    root: HTMLElement;
+    currentSite: unknown;
+    avatarCache: Record<string, string>;
+    workshopCache: Map<string, unknown> | null;
+    githubCache: unknown;
+    workshopTimer: unknown;
+    repoEventsCleanup: unknown;
+    avatarRefreshRegistered: boolean;
+    setCurrentSite: (s: unknown) => void;
+    setWorkshopCache: (c: Map<string, unknown>) => void;
+    setAvatarCache: (c: Record<string, string>) => void;
+    setRepoEventsCleanup: (fn: unknown) => void;
+    setAvatarRefreshRegistered: (v: boolean) => void;
+  };
+  subs: {
+    pageUnsubs: Array<() => void>;
+    globalUnsubs: Array<() => void>;
+    addGlobal: (fn: () => void) => void;
+    addPage: (fn: () => void) => void;
+  };
+}
+
 /** 组装 initWorkshopPage 需要的假 host（真实 DOM 承载 getElementById / querySelectorAll） */
 function makeHost(cardsHTML = "") {
   const el = document.createElement("div");
@@ -73,22 +98,28 @@ function makeHost(cardsHTML = "") {
   // 假 ShadowRoot：普通 div 无 getElementById，补一个按 id 查询的实现
   (el as unknown as { getElementById: (id: string) => Element | null }).getElementById =
     (id: string) => el.querySelector(`#${id}`);
-  const raw: Record<string, unknown> = {
-    _root: el,
-    _unsubs: [],
-    _globalUnsubs: [],
-    _currentSite: null,
-    _avatarCache: {} as Record<string, string>,
-    _workshopCache: null as Map<string, unknown> | null,
-    _githubCache: null,
-    _workshopTimer: null,
-    _repoEventsCleanup: null,
-    _avatarRefreshRegistered: false,
-    _setCurrentSite: (s: unknown) => { raw._currentSite = s; },
-    _setWorkshopCache: (c: Map<string, unknown>) => { raw._workshopCache = c; },
-    _setAvatarCache: (c: Record<string, string>) => { raw._avatarCache = c; },
-    _setRepoEventsCleanup: (fn: unknown) => { raw._repoEventsCleanup = fn; },
-    _setAvatarRefreshRegistered: (v: boolean) => { raw._avatarRefreshRegistered = v; },
+  const raw: MockHost = {
+    state: {
+      root: el,
+      currentSite: null,
+      avatarCache: {},
+      workshopCache: null,
+      githubCache: null,
+      workshopTimer: null,
+      repoEventsCleanup: null,
+      avatarRefreshRegistered: false,
+      setCurrentSite: (s: unknown) => { raw.state.currentSite = s; },
+      setWorkshopCache: (c: Map<string, unknown>) => { raw.state.workshopCache = c; },
+      setAvatarCache: (c: Record<string, string>) => { raw.state.avatarCache = c; },
+      setRepoEventsCleanup: (fn: unknown) => { raw.state.repoEventsCleanup = fn; },
+      setAvatarRefreshRegistered: (v: boolean) => { raw.state.avatarRefreshRegistered = v; },
+    },
+    subs: {
+      pageUnsubs: [],
+      globalUnsubs: [],
+      addGlobal: (fn: () => void) => { raw.subs.globalUnsubs.push(fn); },
+      addPage: (fn: () => void) => { raw.subs.pageUnsubs.push(fn); },
+    },
   };
   createdHosts.push(raw);
   return { host: raw as unknown as AppContentHost, raw, el };
@@ -101,7 +132,7 @@ function getShowSiteView(): (site: unknown) => void {
   return call[0] as (site: unknown) => void;
 }
 
-const createdHosts: Array<Record<string, unknown>> = [];
+const createdHosts: Array<MockHost> = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -112,8 +143,8 @@ beforeEach(() => {
 afterEach(() => {
   // 回收真实 bus 上的 avatar:refresh 订阅，防止跨测试泄漏触发旧 host 副作用
   createdHosts.forEach((h) => {
-    (h._globalUnsubs as Array<() => void>).forEach((u) => u());
-    h._globalUnsubs = [];
+    h.subs.globalUnsubs.forEach((u) => u());
+    h.subs.globalUnsubs = [];
   });
   createdHosts.length = 0;
   resetAvatarConfigLoaded();
@@ -127,9 +158,9 @@ describe("initWorkshopPage — 初始化装配", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
 
-    expect(raw._currentSite).toBeNull();
-    expect(raw._workshopCache).toBeInstanceOf(Map);
-    expect(raw._avatarCache).toEqual({});
+    expect(raw.state.currentSite).toBeNull();
+    expect(raw.state.workshopCache).toBeInstanceOf(Map);
+    expect(raw.state.avatarCache).toEqual({});
     expect(extractAvatars).toHaveBeenCalledWith(host);
     expect(initWorkshopTabs).toHaveBeenCalledTimes(1);
     expect(callArgs(initWorkshopTabs, 0)[0]).toBe(host);
@@ -143,10 +174,10 @@ describe("initWorkshopPage — 初始化装配", () => {
   it("已有缓存/已注册的 host 二次 init：不重复建 cache、不重复注册 avatar:refresh", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
-    const cache = raw._workshopCache;
+    const cache = raw.state.workshopCache;
     initWorkshopPage(host);
-    expect(raw._workshopCache).toBe(cache); // if (!host._workshopCache) 守卫
-    expect(raw._globalUnsubs).toHaveLength(1); // _avatarRefreshRegistered 守卫
+    expect(raw.state.workshopCache).toBe(cache); // if (!host.state.workshopCache) 守卫
+    expect(raw.subs.globalUnsubs).toHaveLength(1); // _avatarRefreshRegistered 守卫
   });
 });
 
@@ -210,7 +241,7 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     ctx.backToSite(); // _currentSite 仍为 null
     expect(renderSiteView).toHaveBeenCalledTimes(1);
 
-    (raw._setCurrentSite as (s: unknown) => void)(site2);
+    (raw.state.setCurrentSite as (s: unknown) => void)(site2);
     ctx.backToSite();
     expect(renderSiteView).toHaveBeenCalledTimes(2);
     expect(callArgs(renderSiteView, 1)[0]).toBe(site2);
@@ -249,10 +280,10 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(showRepoModels).toHaveBeenCalledTimes(1);
     const args = callArgs(showRepoModels, 0);
     expect(args[0]).toBeTypeOf("function"); // esc
-    expect(args[1]).toBe(raw._repoEventsCleanup);
-    expect(args[2]).toBe(raw._setRepoEventsCleanup);
-    expect(args[3]).toBe(raw._currentSite);
-    expect(args[4]).toBe(raw._setCurrentSite);
+    expect(args[1]).toBe(raw.state.repoEventsCleanup);
+    expect(args[2]).toBe(raw.state.setRepoEventsCleanup);
+    expect(args[3]).toBe(raw.state.currentSite);
+    expect(args[4]).toBe(raw.state.setCurrentSite);
     expect(args[5]).toBe("o/r");
     expect(args[6]).toEqual(models);
     expect(args[7]).toBe("raw");
@@ -266,12 +297,12 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
   it("命中卡片：更新 img.src 与缓存", () => {
     const { host, raw, el } = makeHost(cardHTML);
     initWorkshopPage(host);
-    expect(raw._globalUnsubs).toHaveLength(1);
+    expect(raw.subs.globalUnsubs).toHaveLength(1);
 
     bus.emit("avatar:refresh", { author: "alice", dataUri: "data:image/png;base64,AAA" });
     const img = el.querySelector(".cr-avatar") as HTMLImageElement;
     expect(img.src).toBe("data:image/png;base64,AAA");
-    expect((raw._avatarCache as Record<string, string>).alice).toBe(
+    expect((raw.state.avatarCache as Record<string, string>).alice).toBe(
       "data:image/png;base64,AAA",
     );
   });
@@ -283,7 +314,7 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
 
     bus.emit("avatar:refresh", { author: "bob", dataUri: "X" });
     expect(qsa).toHaveBeenCalledTimes(1);
-    expect((raw._avatarCache as Record<string, string>).bob).toBe("X");
+    expect((raw.state.avatarCache as Record<string, string>).bob).toBe("X");
 
     // 同 author 同 dataUri → 提前 return，不再 querySelectorAll
     bus.emit("avatar:refresh", { author: "bob", dataUri: "X" });
@@ -298,7 +329,7 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
   it("未命中卡片但有 _currentSite → showSiteView 重渲染当前站点", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
-    (raw._setCurrentSite as (s: unknown) => void)(site);
+    (raw.state.setCurrentSite as (s: unknown) => void)(site);
     getShowSiteView()(site); // 先渲染一次，占位
     renderSiteView.mockClear();
 
@@ -312,9 +343,9 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
     const h2 = makeHost();
     initWorkshopPage(h1.host);
     initWorkshopPage(h1.host); // 同 host 守卫
-    expect(h1.raw._globalUnsubs).toHaveLength(1);
+    expect(h1.raw.subs.globalUnsubs).toHaveLength(1);
     initWorkshopPage(h2.host); // 新 host 注册
-    expect(h2.raw._globalUnsubs).toHaveLength(1);
+    expect(h2.raw.subs.globalUnsubs).toHaveLength(1);
   });
 });
 
@@ -351,5 +382,5 @@ describe("config-loaded 事件与 resetAvatarConfigLoaded", () => {
 
 /** 从 host 上取 workshopCache（测试辅助，类型收窄用） */
 function raw_workshopCache(host: AppContentHost): Map<string, unknown> | null {
-  return (host as unknown as { _workshopCache: Map<string, unknown> | null })._workshopCache;
+  return (host as unknown as MockHost).state.workshopCache;
 }

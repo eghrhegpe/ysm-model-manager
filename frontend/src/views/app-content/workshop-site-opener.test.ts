@@ -38,7 +38,7 @@ function makeHost() {
     "ws-blocked": { style: {} },
   };
   const host = {
-    _root: { getElementById: (id: string) => nodes[id] ?? null },
+    state: { root: { getElementById: (id: string) => nodes[id] ?? null } },
   } as unknown as AppContentHost;
   return { host, nodes };
 }
@@ -170,12 +170,14 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
       <div id="ws-browser"></div>
       <div id="ws-blocked" style="display:none"></div>
     `;
-    const raw: Record<string, unknown> = { _root: el, _currentSite: null as unknown };
+    const raw: { state: { root: HTMLElement; currentSite: unknown } } = {
+      state: { root: el, currentSite: null },
+    };
     const host = raw as unknown as AppContentHost;
     return {
       host,
       el,
-      setCurrentSite: (s: typeof site) => { raw._currentSite = s; },
+      setCurrentSite: (s: typeof site) => { raw.state.currentSite = s; },
       btn: (id: string) => el.querySelector(`#${id}`) as HTMLElement,
       iframe: el.querySelector("#ws-iframe") as HTMLIFrameElement,
       browser: el.querySelector("#ws-browser") as HTMLElement,
@@ -267,7 +269,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
       <button id="ws-export-btn"></button>
       <button id="ws-import-btn"></button>
     `;
-    const host = { _root: el, _currentSite: null } as unknown as AppContentHost;
+    const host = { state: { root: el, currentSite: null } } as unknown as AppContentHost;
     return { host, el, btn: (id: string) => el.querySelector(`#${id}`) as HTMLElement };
   }
 

@@ -38,16 +38,16 @@ import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./worksho
  * 初始化创意工坊页（编排入口）
  */
 export function initWorkshopPage(host: AppContentHost): void {
-  const root = host._root;
+  const root = host.state.root;
   const searchResults = root.getElementById("ws-search-results") as HTMLElement | null;
   const creatorView = root.getElementById("ws-creator-view") as HTMLElement | null;
 
-  host._setCurrentSite(null);
+  host.state.setCurrentSite(null);
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
-  if (!host._workshopCache) host._setWorkshopCache(new Map());
-  const repoModelCache = host._workshopCache;
+  if (!host.state.workshopCache) host.state.setWorkshopCache(new Map());
+  const repoModelCache = host.state.workshopCache;
 
   // 浏览模式：单源 ref（{ v }）＋ setter——setBrowseMode 改 .v 即让
   // re-render 高亮与 openUrl 打开同时读到新值，无需退出页面、无值拷贝 stale。
@@ -58,7 +58,7 @@ export function initWorkshopPage(host: AppContentHost): void {
   };
 
   // 后台批量提取创作者头像
-  host._setAvatarCache({});
+  host.state.setAvatarCache({});
   extractAvatars(host);
 
   // 配置加载完成后重新提取
@@ -102,10 +102,10 @@ export function initWorkshopPage(host: AppContentHost): void {
       showRepoModels: async (repo, models, source) => {
         await showRepoModels(
           (s) => esc(String(s || "")),
-          host._repoEventsCleanup,
-          host._setRepoEventsCleanup,
-          host._currentSite,
-          host._setCurrentSite,
+          host.state.repoEventsCleanup,
+          host.state.setRepoEventsCleanup,
+          host.state.currentSite,
+          host.state.setCurrentSite,
           repo,
           models as WorkshopModel[],
           source,
@@ -117,13 +117,13 @@ export function initWorkshopPage(host: AppContentHost): void {
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       repoModelCache: repoModelCache!,
       openUrl,
-      avatarCache: host._avatarCache,
+      avatarCache: host.state.avatarCache,
       browseMode: browseModeRef,
       setBrowseMode,
       activeTag: safeGet("ysm-ws-active-tag") || "",
       searchKw: safeGet("ysm-ws-search-kw") || "",
       backToSite: () => {
-        if (host._currentSite) showSiteView(host._currentSite);
+        if (host.state.currentSite) showSiteView(host.state.currentSite);
       },
       // 重渲染（编辑切换/保存/拖拽/搜索等）经同一 wrapper：先跑旧 cleanup 再存新
       // cleanup（见 runPrevSiteViewCleanup 注释），供 site-view 的 refreshView 调用。
@@ -145,12 +145,12 @@ export function initWorkshopPage(host: AppContentHost): void {
   bindSiteEvents(host);
 
   // 下载完成后增量刷新创作者头像
-  if (!host._avatarRefreshRegistered) {
-    host._setAvatarRefreshRegistered(true);
-    host._globalUnsubs.push(
+  if (!host.state.avatarRefreshRegistered) {
+    host.state.setAvatarRefreshRegistered(true);
+    host.subs.addGlobal(
       bus.on("avatar:refresh", ({ author, dataUri }) => {
-        if (host._avatarCache[author] === dataUri) return;
-        host._avatarCache[author] = dataUri;
+        if (host.state.avatarCache[author] === dataUri) return;
+        host.state.avatarCache[author] = dataUri;
         let found = false;
         root.querySelectorAll(".cr-creator-card").forEach((c) => {
           if ((c as HTMLElement).dataset.name === author) {
@@ -159,7 +159,7 @@ export function initWorkshopPage(host: AppContentHost): void {
             found = true;
           }
         });
-        if (!found && host._currentSite) showSiteView(host._currentSite);
+        if (!found && host.state.currentSite) showSiteView(host.state.currentSite);
       }),
     );
   }
@@ -179,5 +179,3 @@ export function resetAvatarConfigLoaded(): void {
   }
   _avatarConfigLoadedRegistered = false;
 }
-
-// AppContentHost 接口已迁至 ./host.ts（P1-1 归属归位）

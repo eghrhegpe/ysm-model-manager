@@ -80,6 +80,7 @@ vi.mock("./settings/init.ts", () => ({
 vi.mock("./community-data.ts", () => ({
   loadCommunityData: vi.fn().mockResolvedValue({ sites: [], creators: [], authors: [] }),
   fillSearch: vi.fn(),
+  clearAllCommunityCache: vi.fn(),
 }));
 vi.mock("./site/site-view.ts", () => ({ renderSiteView: vi.fn(() => () => {}) }));
 vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }));
@@ -108,10 +109,8 @@ async function flushAsyncTurns(): Promise<void> {
 
 type ContentEl = {
   shadowRoot: ShadowRoot;
-  _current: string;
-  _root: ShadowRoot;
-  _globalUnsubs: Array<() => void>;
-  _unsubs: Array<() => void>;
+  state: { current: string; root: ShadowRoot };
+  subs: { globalUnsubs: Array<() => void>; pageUnsubs: Array<() => void> };
   _render(): void;
   _initPreviewResize(): void;
   _initRepository(): void;
@@ -147,7 +146,7 @@ describe("_render — 页面分支", () => {
   it("repository → 仓库页（.repo-tab，无本地双下拉——资源类型由导航栏全局切换器驱动）", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     expect(el.shadowRoot.querySelector(".repo-tab")).not.toBeNull();
     // ADR-092/094 收敛：仓库页不再持有本地 subtabs（资源切换器已上移导航栏 app-nav）
@@ -159,10 +158,10 @@ describe("_render — 页面分支", () => {
   it("instances 与未知页 → 整合包页（.ins-content）", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "instances";
+    el.state.current = "instances";
     el._render();
     expect(el.shadowRoot.querySelector(".ins-content")).not.toBeNull();
-    el._current = "weird-page";
+    el.state.current = "weird-page";
     el._render(); // default 分支回落 instances
     expect(el.shadowRoot.querySelector(".ins-content")).not.toBeNull();
     unmountElement(el);
@@ -171,18 +170,18 @@ describe("_render — 页面分支", () => {
   it("settings → .stg-tab；diagnostics/oldest → 诊断页；workshop → #ws-tabs；github → #gh-grid", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "settings";
+    el.state.current = "settings";
     el._render();
     expect(el.shadowRoot.querySelector(".stg-tab")).not.toBeNull();
-    el._current = "diagnostics";
+    el.state.current = "diagnostics";
     el._render();
     // P3 修复（审核）：原断言 .repo-tab 是全部页面模板的通用类名（tpl.ts 各页都有），
     // 诊断页渲染错误也会通过——改断言诊断页专属 .diag-wrapper
     expect(el.shadowRoot.querySelector(".diag-wrapper")).not.toBeNull();
-    el._current = "workshop";
+    el.state.current = "workshop";
     el._render();
     expect(el.shadowRoot.querySelector("#ws-tabs")).not.toBeNull();
-    el._current = "github";
+    el.state.current = "github";
     el._render();
     expect(el.shadowRoot.querySelector("#gh-grid")).not.toBeNull();
     unmountElement(el);
@@ -191,7 +190,7 @@ describe("_render — 页面分支", () => {
   it("init 抛错 → toast:show 而非中断（bus 收到错误事件）", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "settings";
+    el.state.current = "settings";
     // P1-1（子代理审核）：_render 改直调 PAGE_REGISTRY.init（不再经私有 _initSettings），
     // 故替换注册表 init 为 reject 验证 async 失败路径 → _pageInitFailed → toast
     const origInit = PAGE_REGISTRY.settings.init;
@@ -214,7 +213,7 @@ describe("_render — 页面分支", () => {
 describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle tab → initRecycleBin 注册", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const btn = el.shadowRoot.querySelector('.repo-tab[data-tab="recycle"]') as HTMLElement;
     btn.click();
@@ -227,7 +226,7 @@ describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle ta
   it("点击 oldest tab → loadOldestModel 注册", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const btn = el.shadowRoot.querySelector('.repo-tab[data-tab="oldest"]') as HTMLElement;
     btn.click();
@@ -240,7 +239,7 @@ describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle ta
   it("点击 dedup tab → 渲染去重按钮；点击按钮与 rtype-changed 均触发 startDedup", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const btn = el.shadowRoot.querySelector('.repo-tab[data-tab="dedup"]') as HTMLElement;
     btn.click();
@@ -262,7 +261,7 @@ describe("_initRepository — 订阅全局资源类型（ADR-092/094 收敛）",
   it("repo:rtype-changed → 重建文件树 root=EntityPlayer（subdir 从 localStorage 读）", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const unsub = bus.on("repo:rtype-changed", () => {});
     try {
@@ -289,7 +288,7 @@ describe("_initRepository — 订阅全局资源类型（ADR-092/094 收敛）",
   it("repo:rtype-changed → 切到 resourcepack（无 subdir）重建树", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     try {
       bus.emit("repo:rtype-changed", "resourcepack");
@@ -312,7 +311,7 @@ describe("_initRepository — 订阅全局资源类型（ADR-092/094 收敛）",
     localStorage.setItem("repo_rtype", "resourcepack");
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     try {
       await waitFor(() => {
@@ -330,7 +329,7 @@ describe("_initPreviewResize — 拖拽调宽", () => {
   it("拖拽 handle → preview 宽度变化 + 保存 localStorage", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const handle = el.shadowRoot.getElementById("preview-resize-handle") as HTMLElement | null;
     const preview = el.shadowRoot.getElementById("app-preview") as HTMLElement | null;
@@ -349,7 +348,7 @@ describe("_initPreviewResize — 拖拽调宽", () => {
     localStorage.setItem("preview-width", "999"); // 超上限 → 500
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     const preview = el.shadowRoot.getElementById("app-preview") as HTMLElement | null;
     expect(preview?.style.width).toBe("500px");
@@ -395,7 +394,7 @@ describe("事件订阅", () => {
   it("package:selected → ins-content 渲染 app-sync-manager", async () => {
     const el = mountContent();
     await flushAsyncTurns();
-    el._current = "instances";
+    el.state.current = "instances";
     el._render(); // 真实 _initInstances 注册 package:selected 订阅
     bus.emit("package:selected", { name: "MyPack", rtype: "ysm" });
     // 原 sleep(10)：等订阅回调同步渲染完成——改条件轮询
@@ -418,7 +417,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
   it("github 无仓库 → 「暂无 GitHub 仓库」占位", async () => {
     const el = mountCustomElement("app-content") as unknown as ContentEl;
     await flushAsyncTurns();
-    el._current = "github";
+    el.state.current = "github";
     el._render(); // 真实 _initGithub → loadRepos → LoadGitHubRepos(mock [])
     // 原 sleep(20)：等异步 loadRepos 完成刷新占位文案——改条件轮询
     await waitFor(() => {
@@ -443,7 +442,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
     });
     vi.mocked(tryFetchModels).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof tryFetchModels>>); // 未找到模型列表分支
-    el._current = "github";
+    el.state.current = "github";
     el._render();
     await waitFor(() => el.shadowRoot.querySelector(".gh-repo-card") !== null);
     const card = el.shadowRoot.querySelector(".gh-repo-card") as HTMLElement;
@@ -469,7 +468,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       creators: [],
       authors: [],
     });
-    el._current = "workshop";
+    el.state.current = "workshop";
     el._render();
     // _initWorkshop 用 setTimeout(100) 延迟加载站点——原 sleep(200) 换条件轮询
     await waitFor(() => {
@@ -510,7 +509,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       authors: mockAuthors,
     });
 
-    el._current = "workshop";
+    el.state.current = "workshop";
     el._render();
     // 原 sleep(300)：setTimeout(100) 延迟加载 + 内部 async 完成后 renderSiteView 才收到带数据的 ctx——
     // 改条件轮询直接等目标状态（creators/authors 都进入最后一次调用的 ctx），与机器速度解耦
@@ -556,7 +555,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
         .addEventListener("click", () => ctx.openUrl(site.url));
       return () => {};
     });
-    el._current = "workshop";
+    el.state.current = "workshop";
     el._render();
     // 原 sleep(200)：等 initWorkshopTabs 的 setTimeout(100) 延迟加载落地——改条件轮询
     await waitFor(() => el.shadowRoot.querySelector(".cr-site-card") !== null);
@@ -607,17 +606,17 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
     const el = mountContent();
     const diag = await import("@/views/app-content/diagnostics/init.ts");
     initDiagnosticsPage(el as unknown as AppContentHost);
-    expect(diag.initDiagnostics).toHaveBeenCalledWith(el._root, expect.any(Function));
+    expect(diag.initDiagnostics).toHaveBeenCalledWith(el.state.root, expect.any(Function));
   });
 
   it("initInstancesPage 幂等（33）：二次调用不再注册监听；package:selected 空 rtype 早退（42）", async () => {
     const el = mountContent();
     initInstancesPage(el as unknown as AppContentHost); // 首次 → 注册 package:selected
-    const before = el._unsubs.length;
+    const before = el.subs.pageUnsubs.length;
     initInstancesPage(el as unknown as AppContentHost); // 二次 → insKey 早退（33）
-    expect(el._unsubs.length).toBe(before);
+    expect(el.subs.pageUnsubs.length).toBe(before);
     // 渲染 instances 页拿到 #ins-content → 空 rtype 防御性 return（42）
-    el._current = "instances";
+    el.state.current = "instances";
     el._render();
     await flushAsyncTurns();
     bus.emit("package:selected", { name: "X", rtype: "" });
@@ -628,17 +627,18 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   });
 
   it("空 root host → bindTabs 无 tab 早退（100）+ mountTree 无树体兜底（68）", () => {
+    const pageUnsubs: Array<() => void> = [];
     const host = {
-      _root: document.createElement("div").attachShadow({ mode: "open" }),
-      _unsubs: [] as Array<() => void>,
+      state: { root: document.createElement("div").attachShadow({ mode: "open" }) },
+      subs: { pageUnsubs, addPage: (fn: () => void) => { pageUnsubs.push(fn); } },
     };
     initRepositoryPage(host as unknown as AppContentHost);
-    expect(host._unsubs).toHaveLength(1); // 仅 repo:rtype-changed 订阅
+    expect(host.subs.pageUnsubs).toHaveLength(1); // 仅 repo:rtype-changed 订阅
   });
 
   it("initSettingsPage：initSettings 拒绝 → logError + toast（280-281）", async () => {
     const el = mountContent();
-    el._current = "settings";
+    el.state.current = "settings";
     el._render();
     await flushAsyncTurns();
     const settingsMod = await import("@/views/app-content/settings/init.ts");
@@ -666,7 +666,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
 describe("_bindTabs — WAI-ARIA 键盘导航（188-212）", () => {
   async function renderRepo() {
     const el = mountContent();
-    el._current = "repository";
+    el.state.current = "repository";
     el._render();
     await flushAsyncTurns();
     const tabs = Array.from(el.shadowRoot.querySelectorAll<HTMLElement>(".repo-tab"));

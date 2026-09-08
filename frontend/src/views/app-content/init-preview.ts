@@ -1,29 +1,24 @@
 // ===== 预览面板拖拽调整（为 app-content/index.ts 减负，ADR-040）=====
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import type { AppContentHost } from "./host.ts";
 
 /**
  * 初始化预览面板拖拽调整宽度
  * @param host - app-content 组件实例
  */
-export function initPreviewResize(host: {
-  _root: ShadowRoot;
-  _resizeMove: ((e: PointerEvent) => void) | null;
-  _resizeUp: ((e: PointerEvent) => void) | null;
-  _setResizeMove(fn: ((e: PointerEvent) => void) | null): void;
-  _setResizeUp(fn: ((e: PointerEvent) => void) | null): void;
-}): void {
+export function initPreviewResize(host: AppContentHost): void {
   // 先移除上一轮 _render 遗留的 document 监听器，防止切页累积泄漏——
   // 必须在 handle/preview 缺失的 early-return 之前执行：否则切到无预览页时
   // 上一轮监听器（闭包引用已卸载 DOM）会残留到下一次带预览的渲染（陷阱 #2）
-  if (host._resizeMove) document.removeEventListener("pointermove", host._resizeMove);
-  if (host._resizeUp) document.removeEventListener("pointerup", host._resizeUp);
+  if (host.state.resizeMove) document.removeEventListener("pointermove", host.state.resizeMove);
+  if (host.state.resizeUp) document.removeEventListener("pointerup", host.state.resizeUp);
 
-  const handle = host._root.getElementById("preview-resize-handle");
-  const preview = host._root.getElementById("app-preview") as HTMLElement | null;
+  const handle = host.state.root.getElementById("preview-resize-handle");
+  const preview = host.state.root.getElementById("app-preview") as HTMLElement | null;
   if (!handle || !preview) {
     // 同步清空存储的处理器，避免陈旧闭包被后续 render 重复移除/误用
-    host._setResizeMove(null);
-    host._setResizeUp(null);
+    host.state.setResizeMove(null);
+    host.state.setResizeUp(null);
     return;
   }
 
@@ -62,8 +57,8 @@ export function initPreviewResize(host: {
     // 保存宽度到 localStorage
     safeSet("preview-width", preview.style.width);
   };
-  host._setResizeMove(onMove);
-  host._setResizeUp(onUp);
+  host.state.setResizeMove(onMove);
+  host.state.setResizeUp(onUp);
   document.addEventListener("pointermove", onMove);
   document.addEventListener("pointerup", onUp);
 }

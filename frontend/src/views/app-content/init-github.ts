@@ -283,18 +283,20 @@ async function githubRenderModels(
  * 初始化 GitHub 页（纯分派：创建 ctx + 初始化缓存 + 触发 loadRepos）
  */
 export function initGithubPage(host: AppContentHost): void {
-  if (!host._githubCache) host._setGithubCache(new Map());
+  if (!host.state.githubCache) host.state.setGithubCache(new Map());
   // _currentRepo 用于检测过时的异步响应（竞态防护），多闭包共享同一代际
   let _currentRepo = "";
   const ctx = {
-    _root: host._root,
-    _githubCache: () => host._githubCache,
-    _setGithubCache: (cache: Map<string, RepoCacheEntry> | null) => host._setGithubCache(cache),
-    _repoEventsCleanup: () => host._repoEventsCleanup,
-    _setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => host._setRepoEventsCleanup(fn),
-    grid: host._root.getElementById("gh-grid") as HTMLElement | null,
-    resultsBody: host._root.getElementById("gh-results-body") as HTMLElement | null,
-    sourceInfo: host._root.getElementById("gh-source-info") as HTMLElement | null,
+    _root: host.state.root,
+    _githubCache: () => host.state.githubCache,
+    _setGithubCache: (cache: Map<string, RepoCacheEntry> | null) =>
+      host.state.setGithubCache(cache),
+    _repoEventsCleanup: () => host.state.repoEventsCleanup,
+    _setRepoEventsCleanup: (fn: (() => Promise<void>) | null) =>
+      host.state.setRepoEventsCleanup(fn),
+    grid: host.state.root.getElementById("gh-grid") as HTMLElement | null,
+    resultsBody: host.state.root.getElementById("gh-results-body") as HTMLElement | null,
+    sourceInfo: host.state.root.getElementById("gh-source-info") as HTMLElement | null,
     getCurrentRepo: () => _currentRepo,
     setCurrentRepo: (repo: string): void => {
       _currentRepo = repo;

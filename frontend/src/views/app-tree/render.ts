@@ -36,6 +36,48 @@ export interface TreeNode {
 /** 渲染模式 */
 export type RenderMode = "grid" | "list";
 
+// ——— buildTree 缓存（memoization：搜索击键只重跑 flattenVisible，跳过 buildTree） ———
+
+/** 缓存条目 */
+interface BuildCacheEntry {
+  key: string;
+  root: TreeNode;
+}
+
+/** 绑定到 TreeRenderCtx 实例的缓存（WeakMap —— ctx GC 自动回收） */
+const buildCache = new WeakMap<TreeRenderCtx, BuildCacheEntry>();
+
+/**
+ * 带缓存的 buildTree。
+ * 缓存 key = entries 长度 + 首尾 path + sort + dirOpen 序列化 + filterPaths 大小。
+ * 仅 search 变化时命中缓存，跳过 buildTree + annotateDirNodes 整段 O(n) 计算。
+ */
+function getBuildTreeCached(
+  ctx: TreeRenderCtx,
+  entries: TreeEntry[],
+  sort: string,
+  dirOpen: Record<string, boolean>,
+  filterPaths: Set<string> | null,
+): TreeNode {
+  const cacheKey = [
+    entries.length,
+    entries[0]?.path ?? "",
+    entries[entries.length - 1]?.path ?? "",
+    sort,
+    Object.keys(dirOpen).sort().join(","),
+    filterPaths?.size ?? "null",
+  ].join("|");
+
+  const cached = buildCache.get(ctx);
+  if (cached && cached.key === cacheKey) {
+    return cached.root; // ← 命中缓存，跳过 buildTree
+  }
+
+  const root = buildTree(entries, sort, "", filterPaths);
+  buildCache.set(ctx, { key: cacheKey, root });
+  return root;
+}
+
 // localStorage key for render mode
 const RENDER_MODE_KEY = "ysm-render-mode";
 
@@ -367,7 +409,7 @@ export function renderTree(
     cleanupVirtualScroll(ctx, container);
     return;
   }
-  const root = buildTree(entries, sort, search, filterPaths);
+  const root = getBuildTreeCached(ctx, entries, sort, dirOpen, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
     container.innerHTML = emptyStateHTML("🔍", t("tree.noMatchFiles"));

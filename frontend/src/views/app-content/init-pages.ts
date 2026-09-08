@@ -20,7 +20,7 @@ import type { AppContentHost } from "./host.ts";
  * 初始化诊断页
  */
 export function initDiagnosticsPage(host: AppContentHost): void {
-  initDiagnostics(host._root, (s) => esc(String(s || "")));
+  initDiagnostics(host.state.root, (s) => esc(String(s || "")));
 }
 
 /**
@@ -30,12 +30,12 @@ export function initInstancesPage(host: AppContentHost): void {
   bindTabs(host, ".repo-tab", "ins", ["versions"]);
 
   // 只注册一次，避免重复监听
-  if (host._insListenerReg) return;
-  host._insListenerReg = true;
+  if (host.state.insListenerReg) return;
+  host.state.insListenerReg = true;
 
-  host._unsubs.push(
+  host.subs.addPage(
     bus.on("package:selected", (pkg) => {
-      const content = host._root.getElementById("ins-content");
+      const content = host.state.root.getElementById("ins-content");
       if (!content) return;
       // P1 修复：去掉 || RESOURCE_TYPES.YSM 静默兜底。
       // 发射点（app-sidebar/events.ts）已拦空 rtype，这里防御性 return。
@@ -60,7 +60,7 @@ export function initRepositoryPage(host: AppContentHost): void {
 
   // 资源类型由导航栏全局切换器驱动（app-nav 双下拉 → repo:rtype-changed + repo_rtype/repo_subdir 落盘）。
   // 仓库页不再持有本地 subtabs，只订阅全局事件重建文件树（单一入口，ADR-092/094 收敛）。
-  const root = host._root;
+  const root = host.state.root;
   const treeBody = root.getElementById("repo-tab-tree");
 
   // 重建文件树：按 rtype + 可选 subdir（mmd 子目录）挂载 app-tree
@@ -75,7 +75,7 @@ export function initRepositoryPage(host: AppContentHost): void {
   };
 
   // 全局 rtype 变化 → 重建文件树（app-nav 切换器 emit；subdir 从 localStorage 读）
-  host._unsubs.push(
+  host.subs.addPage(
     bus.on("repo:rtype-changed", (rt) => {
       mountTree(rt, safeGet("repo_subdir") || "");
     }),
@@ -91,7 +91,7 @@ export function initRepositoryPage(host: AppContentHost): void {
  *   bindTabs(host, ".repo-tab", "ins", ["versions"]) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-versions
  */
 function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids: string[]): void {
-  const tabs = Array.from(host._root.querySelectorAll<HTMLElement>(tabSelector));
+  const tabs = Array.from(host.state.root.querySelectorAll<HTMLElement>(tabSelector));
   if (!tabs.length) return;
 
   // ARIA 语义化：tablist + tab + tabpanel（一次性注入，避免重复 setAttribute）
@@ -106,7 +106,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     btn.setAttribute("id", `${prefix}-tab-btn-${tabId}`);
     btn.setAttribute("aria-controls", panelId);
     btn.setAttribute("tabindex", i === 0 ? "0" : "-1"); // roving tabindex
-    const panel = host._root.getElementById(panelId);
+    const panel = host.state.root.getElementById(panelId);
     if (panel) {
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", btn.id);
@@ -128,7 +128,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     });
     // 切换内容卡
     ids.forEach((id) => {
-      const el = host._root.getElementById(`${prefix}-tab-${id}`);
+      const el = host.state.root.getElementById(`${prefix}-tab-${id}`);
       if (!el) return;
       if (id === tab) {
         el.style.display = "";
@@ -140,7 +140,7 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     });
     // 首次切换到非默认 tab 时初始化内容
     if (!inited[tab] && tab !== ids[0]) {
-      const container = host._root.getElementById(`${prefix}-tab-${tab}`);
+      const container = host.state.root.getElementById(`${prefix}-tab-${tab}`);
       if (!container) return;
       // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
       // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
@@ -150,13 +150,13 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
       try {
         if (tab === "recycle") {
           const recycleCleanup = await initRecycleTab(host, container);
-          if (recycleCleanup) host._unsubs.push(recycleCleanup);
+          if (recycleCleanup) host.subs.addPage(recycleCleanup);
         } else if (tab === "dedup") {
           const unsub = await initDedupTab(host, container);
-          if (unsub) host._unsubs.push(unsub);
+          if (unsub) host.subs.addPage(unsub);
         } else if (tab === "oldest") {
           const oldestCleanup = await initOldestTab(host, container);
-          if (oldestCleanup) host._unsubs.push(oldestCleanup);
+          if (oldestCleanup) host.subs.addPage(oldestCleanup);
         }
       } catch (e) {
         inited[tab] = false;
@@ -218,7 +218,10 @@ async function initRecycleTab(
   const { recycleHTML, renderRecycleListHtml } = await import("./tpl-recycle.ts");
   container.innerHTML = recycleHTML();
   // ADR-190 D1a：列表条目渲染属 views 职责，经 deps 注入 features 编排层
-  const recycleCleanup = initRecycleBin(host, { renderListHtml: renderRecycleListHtml });
+  const recycleCleanup = initRecycleBin(
+    { _root: host.state.root },
+    { renderListHtml: renderRecycleListHtml },
+  );
   return recycleCleanup;
 }
 
@@ -285,9 +288,9 @@ async function initOldestTab(
 export async function initSettingsPage(host: AppContentHost): Promise<void> {
   bindTabs(host, ".stg-tab", "stg", ["basic", "ui", "parser", "about", "credits"]);
   try {
-    await initSettings(host._root);
+    await initSettings(host.state.root);
     // 组件卸载/切页时移除 document keydown 捕获监听，防全局劫持泄漏
-    host._unsubs.push(cleanupKeymap);
+    host.subs.addPage(cleanupKeymap);
   } catch (e) {
     logError("settings", "初始化失败", e);
     bus.emit("toast:show", {

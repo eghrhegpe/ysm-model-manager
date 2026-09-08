@@ -80,9 +80,7 @@ auto_fields:
     - mergeLocalAuthorsInto
     - openSite
     - PAGE_REGISTRY
-    - PageContext
     - PageDefinition
-    - PageSubscriptions
     - recycleHTML
     - rememberModelPath
     - renderRecycleListHtml

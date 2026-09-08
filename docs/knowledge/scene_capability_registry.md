@@ -29,6 +29,7 @@ auto_fields:
     - CapabilityId
     - CapabilityMap
     - createListenerSet
+    - customHdrThumbnail
     - deepMergeLightParams
     - DeepPartial
     - DEFAULT_GROUND_SURFACE_PARAMS
@@ -47,6 +48,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - flattenLightParams
     - FogCapability
     - FogMode
     - generateSurfacePixels
@@ -64,6 +66,7 @@ auto_fields:
     - LightCapability
     - lightDirToPosition
     - LightParams
+    - luminanceHistogram
     - MAX_MODELS
     - ModelEntry
     - oneOf

@@ -172,6 +172,7 @@ auto_fields:
     - CUBE_EPS
     - Cube2D
     - cullModelGroups
+    - customHdrThumbnail
     - DecodedTexture
     - DecodedYsm
     - decodeYsmViaWasm
@@ -238,6 +239,7 @@ auto_fields:
     - fitCameraToRoots
     - fitCameraToScene
     - flagsForAlpha
+    - flattenLightParams
     - FogCapability
     - FogMode
     - FootIKController
@@ -335,6 +337,7 @@ auto_fields:
     - LoadTraceAssets
     - LoadTraceStage
     - LoadTraceTexture
+    - luminanceHistogram
     - makeBonePanelRenderer
     - makeBonesPanelItem
     - makeFbxAdapter

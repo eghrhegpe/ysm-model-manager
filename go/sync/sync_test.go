@@ -185,8 +185,16 @@ func TestListVersions_VanillaLayout(t *testing.T) {
 		t.Fatalf("expected 2 instances, got %d", len(results))
 	}
 
-	if results[0].Name != "1.19.2" && results[0].Name != "1.20.1" {
-		t.Errorf("unexpected instance name: %s", results[0].Name)
+	// 顺序无关：验证两个版本名都在结果中（结果顺序取决于 os.ReadDir 实现，
+	// 不做 results[0] 顺序依赖检查；下方循环已按名字逐项验证属性）
+	names := map[string]bool{}
+	for _, r := range results {
+		names[r.Name] = true
+	}
+	for _, want := range []string{"1.19.2", "1.20.1"} {
+		if !names[want] {
+			t.Errorf("missing instance %q in results: %v", want, names)
+		}
 	}
 	for _, r := range results {
 		if r.Name == "1.20.1" {

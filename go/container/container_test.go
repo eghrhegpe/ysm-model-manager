@@ -206,7 +206,8 @@ func TestOpenZipPath_EntriesAndSize(t *testing.T) {
 }
 
 func TestOpen7zBytes_BadData(t *testing.T) {
-	// 7z 只读库无 Writer（ADR-068 负面），仅能覆盖坏数据路径：
+	// 7z 只读库无写入接口——ADR-068 容器契约的「负面」含义即写能力是设计上缺席
+	// （而非遗漏）：只读容器不暴露 Writer，故 7z 的负面测试只能覆盖坏数据路径：
 	// 非 7z 魔数 → sevenzip.NewReader 必须报错，不得 panic 或静默返回空容器
 	bad := []byte("this is definitely not a 7z archive")
 	if _, err := Open7zBytes(bad, int64(len(bad))); err == nil {

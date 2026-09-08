@@ -132,6 +132,14 @@ func TestLogger_LoadFromInvalidFile(t *testing.T) {
 	if len(logs) != 0 {
 		t.Errorf("非法 JSON 文件应加载为空日志, 得到 %d", len(logs))
 	}
+	// 损坏现场必须备份为 .corrupt 再置空（load 解析失败分支，logs.go L120-128）：
+	// 原文件被 rename 走、.corrupt 备份在场，损坏可溯
+	if _, err := os.Stat(path + ".corrupt"); err != nil {
+		t.Errorf("损坏 JSON 应备份为 .corrupt: %v", err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("原损坏文件应已被 rename 为 .corrupt, 不应仍在原位: %v", err)
+	}
 }
 
 func TestLogger_LoadFromNonExistent(t *testing.T) {

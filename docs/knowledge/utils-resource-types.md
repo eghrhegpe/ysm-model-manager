@@ -11,6 +11,7 @@ tests:
   - frontend/src/features/repo-rtype.test.ts
 auto_fields:
   symbols_with_lines:
+    - _resetShortLabelCache
     - ALL_EXTS
     - ALL_RESOURCE_TYPES
     - allResourceTypes

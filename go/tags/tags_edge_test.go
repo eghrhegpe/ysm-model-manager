@@ -136,15 +136,9 @@ func TestStore_SetTags_ExtremelyLongTag(t *testing.T) {
 }
 
 // ---------- 5. 空 configDir ----------
-func TestStore_EmptyConfigDir(t *testing.T) {
-	store := NewStore("")
-	err := store.SetTags("model.ysm", []string{"test"})
-	if err != nil {
-		t.Logf("INFO(INFO-EMPTY-CFG): 空 configDir SetTags 被拒绝: %v", err)
-		return
-	}
-	t.Log("FIXED(INFO-EMPTY-CFG): 空 configDir SetTags 内存态成功（不落盘）")
-}
+// 空 configDir 内存态契约（SetTags 报错 + 绝不落相对路径 tags.json）由
+// tags_extra_test.go TestNewStore_EmptyConfigDirMemoryMode 全量断言，
+// 原零断言探针已删除（2026-09 测试锐评核实：该测试纯 log 无断言且完全重叠）。
 
 // ---------- 6. configDir 含 NUL ----------
 func TestStore_NULInConfigDir(t *testing.T) {

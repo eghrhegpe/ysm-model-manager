@@ -260,7 +260,9 @@ func TestExtractAvatarURI_FromJSONNoAvatarDir(t *testing.T) {
 // ====== SetNodeJS ======
 
 func TestSetNodeJS(t *testing.T) {
-	// 验证 SetNodeJS 不会 panic
+	oldNode, oldGlue, oldWasm := getEnv()
+	t.Cleanup(func() { SetNodeJS(oldNode, oldGlue, oldWasm) })
+
 	nodePath := "/usr/bin/node"
 	glueCalled := false
 	wasmCalled := false
@@ -270,10 +272,23 @@ func TestSetNodeJS(t *testing.T) {
 		func() []byte { wasmCalled = true; return []byte{1, 2, 3} },
 	)
 
-	// 验证全局变量被设置（通过 DecodeYSMFiles 间接验证）
-	// 由于 DecodeYSMFiles 需要真实 Node.js，这里只验证函数调用不 panic
-	_ = glueCalled
-	_ = wasmCalled
+	// 语义验证：注入必须真实生效于 getEnv 快照（原测试只验证不 panic，注入失效无法被发现）
+	p, glueFn, wasmFn := getEnv()
+	if p != nodePath {
+		t.Errorf("getEnv nodePath = %q, 期望 %q", p, nodePath)
+	}
+	if got := glueFn(); got != "glue code" {
+		t.Errorf("注入 glueFn 输出 = %q, 期望 %q", got, "glue code")
+	}
+	if !glueCalled {
+		t.Error("注入 glueFn 未被 getEnv 快照调用")
+	}
+	if got := wasmFn(); !bytes.Equal(got, []byte{1, 2, 3}) {
+		t.Errorf("注入 wasmFn 输出 = %v, 期望 [1 2 3]", got)
+	}
+	if !wasmCalled {
+		t.Error("注入 wasmFn 未被 getEnv 快照调用")
+	}
 }
 
 // TestAvatarCacheDirEmpty_NoOp 锁定 ADR-046 P2：平台数据根缺失（CacheDir==""）时，

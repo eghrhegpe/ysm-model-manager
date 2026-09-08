@@ -258,7 +258,8 @@ func TestLogger_Save_MkdirFail(t *testing.T) {
 	l.save() // MkdirAll 失败 → 仅日志
 }
 
-// TestLogger_Save_WriteFileAtomicFail 落盘失败（目标是已存在目录 → rename 失败）仅记录不 panic
+// TestLogger_Save_WriteFileAtomicFail 落盘失败（目标是已存在目录 → rename 失败）仅记录不 panic，
+// 且失败路径无 .atomic-*.tmp 残渣（fsutil.WriteFileAtomic 清理不变量，对齐 fsutil/write_fail_test.go）
 func TestLogger_Save_WriteFileAtomicFail(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
@@ -266,7 +267,16 @@ func TestLogger_Save_WriteFileAtomicFail(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := &Logger{path: path, logs: []types.ImportLog{{ModelName: "m"}}}
-	l.save() // 仅日志
+	l.save() // 仅日志，不 panic
+	// 失败清理不变量：无临时文件残渣
+	matches, _ := filepath.Glob(filepath.Join(dir, ".atomic-*.tmp"))
+	if len(matches) != 0 {
+		t.Errorf("save 失败后不应残留临时文件: %v", matches)
+	}
+	// 目标目录占位不应被破坏
+	if fi, err := os.Stat(path); err != nil || !fi.IsDir() {
+		t.Errorf("logs.json 目录占位应原样保留: %v", err)
+	}
 }
 
 // ====== addOp ======

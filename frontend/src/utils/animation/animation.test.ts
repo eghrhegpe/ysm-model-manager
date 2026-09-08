@@ -411,3 +411,52 @@ describe("catmullrom 插值（官方模型 lerp_mode 不再降级 linear）", ()
     expect(kfs[1].post).toEqual([0, -30 * (Math.PI / 180), 0]);
   });
 });
+
+describe("热路径输出缓冲区（避免每帧分配）", () => {
+  it("线性插值热路径：连续调用结果正确且互不干扰", () => {
+    const kfs: Keyframe[] = [
+      { time: 0, post: [1, 2, 3], pre: [1, 2, 3], lerp: "linear" },
+      { time: 1, post: [4, 5, 6], pre: [4, 5, 6], lerp: "linear" },
+    ];
+    const r1 = evaluateKeyframes(kfs, 0.5);
+    // 线性插值 t=0.5: [2.5, 3.5, 4.5]
+    expect(r1).toEqual([2.5, 3.5, 4.5]);
+    // 再次调用验证 scratch 缓冲区未污染
+    const r2 = evaluateKeyframes(kfs, 0.5);
+    expect(r2).toEqual([2.5, 3.5, 4.5]);
+  });
+
+  it("sampleCatmullRom 输出正确（行为等价于内联计算）", () => {
+    // 使用 evaluateKeyframes 的 catmullrom 路径验证 sampleCatmullRom 行为
+    const CAT: Keyframe[] = [
+      { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "catmullrom" },
+      { time: 1, post: [0, 10, 0], pre: [0, 10, 0], lerp: "catmullrom" },
+      { time: 2, post: [10, 20, 0], pre: [10, 20, 0], lerp: "catmullrom" },
+      { time: 3, post: [20, 10, 0], pre: [20, 10, 0], lerp: "catmullrom" },
+    ];
+    // s=0.5 标准 uniform Catmull-Rom：x=4.375, y=16.25
+    const r1 = evaluateKeyframes(CAT, 1.5);
+    expect(r1).toEqual([4.375, 16.25, 0]);
+    // 再次调用验证 scratch 缓冲区未污染后续结果
+    const r2 = evaluateKeyframes(CAT, 1.5);
+    expect(r2).toEqual([4.375, 16.25, 0]);
+    // 两点 catmullrom（无邻点钳制）
+    const two: Keyframe[] = [
+      { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "catmullrom" },
+      { time: 1, post: [1, 1, 1], pre: [1, 1, 1], lerp: "catmullrom" },
+    ];
+    expect(evaluateKeyframes(two, 0.5)).toEqual([0.5, 0.5, 0.5]);
+  });
+
+  it("连续调用 evaluateKeyframes 结果互不干扰（scratch 缓冲区独立性）", () => {
+    const KFS: Keyframe[] = [
+      { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "linear" },
+      { time: 1, post: [10, 20, 30], pre: [10, 20, 30], lerp: "linear" },
+    ];
+    const r1 = evaluateKeyframes(KFS, 0.25);
+    const r2 = evaluateKeyframes(KFS, 0.75);
+    // r1 不应被 r2 覆盖
+    expect(r1).toEqual([2.5, 5, 7.5]);
+    expect(r2).toEqual([7.5, 15, 22.5]);
+  });
+});

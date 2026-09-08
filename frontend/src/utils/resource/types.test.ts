@@ -18,6 +18,7 @@ import {
   getPreviewableTypeTabs,
   previewCandidateExtsOf,
 } from "./types.ts";
+import { allResourceTypes } from "./schema.ts";
 import resourceTypesJson from "#root/resource_types.json";
 
 /** JSON 中全部资源类型 ID */
@@ -82,6 +83,27 @@ describe("与 resource_types.json 对账（单一事实来源）", () => {
 
   it("无重复 ID", () => {
     expect(new Set(ALL_RESOURCE_TYPES).size).toBe(ALL_RESOURCE_TYPES.length);
+  });
+});
+
+// ===== RESOURCE_TYPES ↔ allResourceTypes 双向对账（防双源漂移）=====
+// RESOURCE_TYPES 是手写短标签映射，allResourceTypes 来自 resource_types.json（单一事实来源）。
+// 双向子集断言：JSON 新增类型时若漏改 RESOURCE_TYPES，此测试响亮暴露。
+describe("RESOURCE_TYPES ↔ allResourceTypes 双向对账（防双源漂移）", () => {
+  const rtypeValues = Object.values(RESOURCE_TYPES);
+  const schemaIds = allResourceTypes.map((t) => t.id);
+
+  it("RESOURCE_TYPES 的 value 集合 ⊆ allResourceTypes id 集合（手写不超 JSON）", () => {
+    for (const id of rtypeValues) {
+      expect(schemaIds, `allResourceTypes 缺少 RESOURCE_TYPES value: ${id}`).toContain(id);
+    }
+  });
+
+  it("allResourceTypes 每个 id 都在 RESOURCE_TYPES values 中存在（JSON 不超手写）", () => {
+    const valueSet = new Set(rtypeValues);
+    for (const id of schemaIds) {
+      expect(valueSet.has(id), `RESOURCE_TYPES 缺少 JSON 类型: ${id}`).toBe(true);
+    }
   });
 });
 
@@ -511,5 +533,51 @@ describe("previewCandidateExtsOf 预览候选白名单（锐评 G2 收口）", (
 
   it("未知名 rtype → []（不抛错，调用方下拉不渲染）", () => {
     expect(previewCandidateExtsOf("no-such-type")).toEqual([]);
+  });
+});
+
+// ===== extOf 统一扩展名提取（三重复收敛：importable.ts / icon.ts / types.ts）=====
+// extOf 已在文件上方 line 318 导入，此处直接使用
+
+describe("extOf — 统一扩展名提取（含点小写，无扩展名返回空串）", () => {
+  it("标准单点扩展名", () => {
+    expect(extOf("model.ysm")).toBe(".ysm");
+    expect(extOf("archive.zip")).toBe(".zip");
+  });
+
+  it("多点文件名取最后一段", () => {
+    expect(extOf("a.b.c.ysm")).toBe(".ysm");
+    expect(extOf("archive.tar.gz")).toBe(".gz");
+    expect(extOf("model.backup.2024.pmx")).toBe(".pmx");
+  });
+
+  it("大小写混合统一转小写", () => {
+    expect(extOf("Model.YSM")).toBe(".ysm");
+    expect(extOf("AVATAR.VRM")).toBe(".vrm");
+    expect(extOf("Data.JSON")).toBe(".json");
+  });
+
+  it("无扩展名返回空串", () => {
+    expect(extOf("Makefile")).toBe("");
+    expect(extOf("/repo/Makefile")).toBe("");
+    expect(extOf("README")).toBe("");
+    expect(extOf("")).toBe("");
+  });
+
+  it("隐藏文件（点开头）不算扩展名", () => {
+    expect(extOf(".Makefile")).toBe("");
+    expect(extOf(".gitignore")).toBe("");
+    expect(extOf(".ysm")).toBe("");
+    expect(extOf("/repo/.bashrc")).toBe("");
+  });
+
+  it("含路径：先取 basename 再提取", () => {
+    expect(extOf("a/b/model.ysm")).toBe(".ysm");
+    expect(extOf("C:\\Users\\test\\file.pmx")).toBe(".pmx");
+    expect(extOf("/root/.Makefile")).toBe("");
+  });
+
+  it("尾点 → 空扩展名含点", () => {
+    expect(extOf("foo.")).toBe(".");
   });
 });

@@ -4,6 +4,7 @@
 // 内嵌 molangjs 源码，无外部依赖，同步可用。
 import { describe, it, expect } from "vitest";
 import { compileMolang } from "./molang.ts";
+import Molang from "./molang-lib/molang.js";
 
 describe("compileMolang（内嵌 molangjs）", () => {
   it("纯算术表达式", () => {
@@ -55,5 +56,38 @@ describe("compileMolang（内嵌 molangjs）", () => {
     expect(elapsed).toBeLessThan(100);
     expect(result).toBeGreaterThanOrEqual(0);
     expect(result).toBeLessThanOrEqual(1e4);
+  });
+
+  it("Molang 实例化 + parse 调用符合 .d.ts 签名（无 as unknown as 强转）", () => {
+    // 直接 new Molang() —— 验证 .d.ts 提供的 new 签名完整，无需类型强转
+    const m = new Molang();
+    expect(m.variables).toEqual({});
+    expect(m.variableHandler).toBeNull();
+    expect(m.cache_enabled).toBe(true);
+    // parse 签名：(input: string, variables?: Record<string, number>) => number
+    expect(m.parse("1 + 2")).toBe(3);
+    m.variables["variable.x"] = 42;
+    expect(m.parse("v.x")).toBe(42);
+    m.resetVariables();
+    expect(m.variables).toEqual({});
+    // variableHandler 签名：((key: string, variables: object) => number) | null
+    m.variableHandler = (key: string): number => (key === "query.custom" ? 99 : 0);
+    expect(m.parse("query.custom")).toBe(99);
+  });
+
+  it("两个播放器 scope 互不干扰（闭包捕获 vs 模块级 activeScope）", () => {
+    const scopeA = { "variable.flag": 0 };
+    const scopeB = { "variable.flag": 0 };
+    // 编译时传入作用域：闭包捕获，不再依赖模块级 activeScope
+    const fnA = compileMolang("v.flag = 1", scopeA)!;
+    const fnB = compileMolang("v.flag = 2", scopeB)!;
+    // 交错求值，验证各自写回各自作用域
+    fnA(0);
+    fnB(0);
+    fnA(0);
+    expect(scopeA["variable.flag"]).toBe(1);
+    expect(scopeB["variable.flag"]).toBe(2);
+    // 模块级 activeScope 未被污染
+    // （setMolangScope 未调用，activeScope 为 null）
   });
 });

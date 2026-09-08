@@ -48,6 +48,7 @@ let _observer: MutationObserver | null = null;
  *  等多数调用方不接收 cleanup 返回值 → 监听随按钮/菜单重建永久累积（无声泄漏）。
  *  收敛为单例后 document 级监听恒为 1，且不依赖调用方记得清理。 */
 let _scrollHandler: (() => void) | null = null;
+let _scrollRef = 0;
 
 function ensureTooltipEl(): HTMLDivElement {
   if (!st.el?.isConnected) {
@@ -72,15 +73,29 @@ function ensureObserver(): MutationObserver | null {
 }
 
 /** 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）。
- *  幂等注册：首个 attachTooltip 即挂上，此后所有实例共享此监听。 */
+ *  幂等注册 + ref-count：首个 attachTooltip 即挂上（0→1），归零时自动移除。
+ *  HMR 安全：disposeTooltipCore 显式归零移除，模块重执行时旧 handler 不累积。 */
 function ensureScrollHandler(): void {
-  if (_scrollHandler || typeof document === "undefined") return;
-  _scrollHandler = () => {
-    // 统一取消 pending timer + 隐藏当前 tooltip（hide 内含 cancelTimer）。
-    // 单例 target 全局唯一：滚动时无论 tooltip 归谁，清掉必是用户预期。
-    if (st.timer !== null || st.target) hide();
-  };
-  document.addEventListener("scroll", _scrollHandler, true);
+  if (typeof document === "undefined") return;
+  if (_scrollRef === 0) {
+    _scrollHandler = () => {
+      // 统一取消 pending timer + 隐藏当前 tooltip（hide 内含 cancelTimer）。
+      // 单例 target 全局唯一：滚动时无论 tooltip 归谁，清掉必是用户预期。
+      if (st.timer !== null || st.target) hide();
+    };
+    document.addEventListener("scroll", _scrollHandler, true);
+  }
+  _scrollRef++;
+}
+
+/** 递减 scroll 监听引用计数，归零时自动移除 document 级 scroll 监听。
+ *  供 attachTooltip cleanup、测试、HMR cleanup 调用。 */
+export function disposeTooltipCore(): void {
+  if (_scrollRef > 0) _scrollRef--;
+  if (_scrollRef === 0 && _scrollHandler && typeof document !== "undefined") {
+    document.removeEventListener("scroll", _scrollHandler, true);
+    _scrollHandler = null;
+  }
 }
 
 function cancelTimer(): void {
@@ -166,6 +181,7 @@ export function attachTooltip(
     el.removeEventListener("mouseenter", onEnter);
     el.removeEventListener("mouseleave", onLeave);
     el.removeEventListener("blur", onLeave);
+    disposeTooltipCore();
   };
 }
 

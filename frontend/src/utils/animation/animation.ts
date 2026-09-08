@@ -229,11 +229,13 @@ const DEG2RAD = Math.PI / 180;
 function convertRotationKeyframes(kfs: Keyframe[]): Keyframe[] {
   // 归一化 -0→+0：取负零值轴产出 -0，下游 toEqual 快照/序列化按 Object.is 判不等
   const norm = (n: number): number => (n === 0 ? 0 : n);
-  const convVec = (v: Vec3): Vec3 => [
-    norm(-v[0] * DEG2RAD),
-    norm(-v[1] * DEG2RAD),
-    norm(v[2] * DEG2RAD),
-  ];
+  const convVec = (v: Vec3, out?: Vec3): Vec3 => {
+    const o = out || [0, 0, 0];
+    o[0] = norm(-v[0] * DEG2RAD);
+    o[1] = norm(-v[1] * DEG2RAD);
+    o[2] = norm(v[2] * DEG2RAD);
+    return o;
+  };
   const wrapFn = (fn: MolangFn | null, sign: -1 | 1): MolangFn | null =>
     fn ? (t: number) => norm(sign * fn(t) * DEG2RAD) : null;
   return kfs.map((kf) => {
@@ -513,12 +515,19 @@ export function parseBedrockAnimationJSON(jsonStr: string): {
   return { clips, errors };
 }
 
-/** L4：解析帧的 Molang 动态轴（anim_time = 求值时间 t）；无动态轴原样返回数字基底 */
-function resolveFramePost(kf: Keyframe, t: number): Vec3 {
+/**
+ * L4：解析帧的 Molang 动态轴（anim_time = 求值时间 t）；无动态轴原样返回数字基底。
+ * @param out 可选输出缓冲区——热路径调用方预分配复用，避免每帧每骨骼每通道分配。
+ */
+function resolveFramePost(kf: Keyframe, t: number, out?: Vec3): Vec3 {
   const fns = kf.postMolang;
   const base = kf.post || [0, 0, 0];
   if (!fns) return base;
-  return [fns[0] ? fns[0](t) : base[0], fns[1] ? fns[1](t) : base[1], fns[2] ? fns[2](t) : base[2]];
+  const o = out || [0, 0, 0];
+  o[0] = fns[0] ? fns[0](t) : base[0];
+  o[1] = fns[1] ? fns[1](t) : base[1];
+  o[2] = fns[2] ? fns[2](t) : base[2];
+  return o;
 }
 
 /**
@@ -526,26 +535,31 @@ function resolveFramePost(kf: Keyframe, t: number): Vec3 {
  * 经过两端控制点 p1/p2，切点由相邻点决定：m0=(p2-p0)/2、m1=(p3-p1)/2。
  * s∈[0,1] 为区间内的归一化位置（沿用 Bedrock/常见 loader 的按索引参数化口径）。
  * 逐轴计算，避免中间分配。
+ * @param out 可选输出缓冲区——热路径调用方预分配复用，避免每帧分配。
  */
-function sampleCatmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, s: number): Vec3 {
+function sampleCatmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, s: number, out?: Vec3): Vec3 {
   const s2 = s * s;
   const s3 = s2 * s;
-  const m0 = [0, 0, 0] as Vec3;
-  const m1 = [0, 0, 0] as Vec3;
+  const o = out || [0, 0, 0];
   for (let a = 0; a < 3; a++) {
-    m0[a] = (p2[a] - p0[a]) / 2;
-    m1[a] = (p3[a] - p1[a]) / 2;
-  }
-  const out: Vec3 = [0, 0, 0];
-  for (let a = 0; a < 3; a++) {
-    out[a] =
-      (2 * p1[a] - 2 * p2[a] + m0[a] + m1[a]) * s3 +
-      (-3 * p1[a] + 3 * p2[a] - 2 * m0[a] - m1[a]) * s2 +
-      m0[a] * s +
+    // 切点逐轴计算，不分配 m0/m1 中间数组
+    const m0 = (p2[a] - p0[a]) / 2;
+    const m1 = (p3[a] - p1[a]) / 2;
+    o[a] =
+      (2 * p1[a] - 2 * p2[a] + m0 + m1) * s3 +
+      (-3 * p1[a] + 3 * p2[a] - 2 * m0 - m1) * s2 +
+      m0 * s +
       p1[a];
   }
-  return out;
+  return o;
 }
+
+// 热路径复用缓冲区（模块级预分配，避免每帧每骨骼每通道分配）
+const _scratchP0: Vec3 = [0, 0, 0];
+const _scratchP1: Vec3 = [0, 0, 0];
+const _scratchP2: Vec3 = [0, 0, 0];
+const _scratchP3: Vec3 = [0, 0, 0];
+const _scratchCat: Vec3 = [0, 0, 0];
 
 /**
  * 在指定时间 t 对一组关键帧求值
@@ -560,9 +574,10 @@ export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null
   if (!Number.isFinite(t)) return [...(keyframes[0].post || [0, 0, 0])];
 
   // 超出范围（Molang 轴仍按当前 t 求值，对齐 Bedrock q.anim_time 语义）
-  if (t <= keyframes[0].time) return [...resolveFramePost(keyframes[0], t)];
+  // 热路径：用 scratch 缓冲区承接 resolveFramePost，仅最终返回时拷贝
+  if (t <= keyframes[0].time) return [...resolveFramePost(keyframes[0], t, _scratchP0)];
   if (t >= keyframes[keyframes.length - 1].time)
-    return [...resolveFramePost(keyframes[keyframes.length - 1], t)];
+    return [...resolveFramePost(keyframes[keyframes.length - 1], t, _scratchP0)];
 
   const lo = findKeyframeLowerIndex(keyframes, t);
   const hi = lo + 1;
@@ -571,25 +586,27 @@ export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null
   const b = keyframes[hi];
 
   // step 插值：直接返回当前帧的 post 值
-  if (a.lerp === "step") return [...resolveFramePost(a, t)];
+  if (a.lerp === "step") return [...resolveFramePost(a, t, _scratchP0)];
 
   const dt = b.time - a.time;
-  if (dt <= 0) return [...resolveFramePost(a, t)];
+  if (dt <= 0) return [...resolveFramePost(a, t, _scratchP0)];
   const frac = (t - a.time) / dt;
 
   // catmullrom：取前后各一邻帧做 C1 三次样条（标准 uniform Catmull-Rom）。
   // 区间端点本身即控制点；lo/hi 已在首尾帧内，p0/p3 越界时钳制到端点帧。
+  // 热路径：4 个 control point 写入独立 scratch，sampleCatmullRom 输出到 _scratchCat，最终拷贝返回。
   if (a.lerp === "catmullrom") {
-    const p0 = resolveFramePost(keyframes[Math.max(0, lo - 1)], t);
-    const p1 = resolveFramePost(a, t);
-    const p2 = resolveFramePost(b, t);
-    const p3 = resolveFramePost(keyframes[Math.min(keyframes.length - 1, hi + 1)], t);
-    return sampleCatmullRom(p0, p1, p2, p3, frac);
+    const p0 = resolveFramePost(keyframes[Math.max(0, lo - 1)], t, _scratchP0);
+    const p1 = resolveFramePost(a, t, _scratchP1);
+    const p2 = resolveFramePost(b, t, _scratchP2);
+    const p3 = resolveFramePost(keyframes[Math.min(keyframes.length - 1, hi + 1)], t, _scratchP3);
+    return [...sampleCatmullRom(p0, p1, p2, p3, frac, _scratchCat)];
   }
 
   // 线性插值（端点先 Molang 求值再 lerp，对齐 GeckoLib/ModernYSM 口径）
-  const ap = resolveFramePost(a, t);
-  const bp = resolveFramePost(b, t);
+  // 热路径：ap/bp 写入独立 scratch，结果数组无法复用（返回给调用方持有）。
+  const ap = resolveFramePost(a, t, _scratchP0);
+  const bp = resolveFramePost(b, t, _scratchP1);
   return [
     ap[0] + (bp[0] - ap[0]) * frac,
     ap[1] + (bp[1] - ap[1]) * frac,

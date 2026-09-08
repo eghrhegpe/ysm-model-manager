@@ -187,7 +187,8 @@ export function groupStorageRootOf(typeId: string): string {
 export function extOf(path: string): string {
   const base = path.split(/[/\\]/).pop() || "";
   const i = base.lastIndexOf(".");
-  return i >= 0 ? base.slice(i).toLowerCase() : "";
+  // i > 0：点不能在首位置（隐藏文件如 .Makefile 不算扩展名）
+  return i > 0 ? base.slice(i).toLowerCase() : "";
 }
 
 /** 单一资源类型的能力视图（派生自 resource_types.json + 短标签映射） */

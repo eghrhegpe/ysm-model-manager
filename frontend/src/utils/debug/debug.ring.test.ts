@@ -1,6 +1,6 @@
 // ===== debug.dbg 环形缓冲 + debugGetSpec 测试（happy-dom 版）=====
-// 兄弟文件 debug.test.ts 为 node 环境（ENABLED=false，dbg 直通）；本文件用 happy-dom
-// 让 ENABLED=true，锁 dbg 的 console 输出、_DBG_RING 环形缓冲（200 上限一次性截断）、
+// 兄弟文件 debug.test.ts 为 node 环境（isDebugEnabled()=false，dbg 直通）；本文件用 happy-dom
+// 让 isDebugEnabled()=true，锁 dbg 的 console 输出、_DBG_RING 环形缓冲（200 上限一次性截断）、
 // ring 写入失败兜底、safeStr JSON.stringify undefined 分支、window.debugGetSpec 装配。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 

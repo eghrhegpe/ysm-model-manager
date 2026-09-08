@@ -18,24 +18,18 @@ import Molang from "@/utils/animation/molang-lib/molang.js";
 export type MolangFn = (animTime: number) => number;
 
 // 单例解析器（cache_enabled 默认 true，跨 clip 复用表达式缓存）
-// molangjs src/molang.js 是 IIFE 自执行模块，TypeScript 类型定义不完整（无 new 签名），
-// 用 as unknown as 绕过——运行时确认可正常 new 实例化。
-const parser = new (
-  Molang as unknown as new () => {
-    parse(expr: string, variables: Record<string, number>): number;
-    resetVariables(): void;
-    variables: Record<string, number>;
-    variableHandler: ((key: string, variables: object) => number) | null;
-  }
-)();
+// 类型签名由 molang.d.ts 提供，直接 new Molang()——无 as unknown as 强转。
+const parser = new Molang();
 
 // 每播放器持久变量作用域（控制器 v.* 跨帧持久化，ADR-100 L4 语义：v. 每实体持久、
 // temp. 每帧重置）。默认 null = 无作用域，行为与原先一致（每次求值 reset、v.* 不持久）。
 // 启用方式：播放器在 timeline + 控制器求值段 setMolangScope(scope)，结束后 setMolangScope(null)。
+// ⚠️ 模块级 activeScope 仅作为向后兼容兜底；新代码应优先经 compileMolang(expr, scope)
+// 传入播放器自有作用域，闭包捕获后不再依赖全局——避免多播放器 setMolangScope 互盖。
 let activeScope: Record<string, number> | null = null;
 
 /**
- * 设置/清除当前持久变量作用域。
+ * 设置/清除当前持久变量作用域（模块级向后兼容路径）。
  * @param scope 每播放器 v.* 变量容器；传 null 恢复默认（v.* 不跨帧持久）
  */
 export function setMolangScope(scope: Record<string, number> | null): void {
@@ -54,6 +48,15 @@ export function setMolangScope(scope: Record<string, number> | null): void {
     : () => 0;
 }
 
+/** 从 key 归一化到 variable.* 形式并查作用域 */
+function lookupScope(scope: Record<string, number>, key: string): number {
+  const norm = key.startsWith("v.") ? `variable${key.slice(1)}` : key;
+  if (norm.startsWith("variable.") && typeof scope[norm] === "number") {
+    return scope[norm];
+  }
+  return 0;
+}
+
 /** 构建 anim_time 上下文（molangjs 精确键匹配，q./query. 双写） */
 function makeVariables(animTime: number): Record<string, number> {
   return {
@@ -68,10 +71,19 @@ function makeVariables(animTime: number): Record<string, number> {
 
 /**
  * 编译 Molang 表达式为求值闭包。
+ * @param expr Molang 表达式字符串
+ * @param scope 可选：每播放器 v.* 变量容器。传入时闭包捕获该作用域，
+ *                       不再依赖模块级 activeScope——多播放器可各持独立作用域互不干扰。
+ *                       不传时回退到模块级 activeScope（向后兼容，但多播放器会互盖）。
  * @returns 求值函数；表达式非法/为空返回 null（调用方走零占位降级）
  */
-export function compileMolang(expr: string): MolangFn | null {
+export function compileMolang(
+  expr: string,
+  scope?: Record<string, number> | null,
+): MolangFn | null {
   if (typeof expr !== "string" || expr.trim() === "") return null;
+  // 闭包捕获的作用域：优先用传入的，否则回退到模块级 activeScope（运行时读取）
+  const capturedScope = scope ?? null;
   try {
     // 每次求值前重置可变变量：molangjs 的 temp./variable. 赋值会写进单例 parser 的
     // self.variables，不重置则跨帧/clip/模型泄漏（Bedrock 语义 temp. 每帧重置，审核 P3）
@@ -80,12 +92,20 @@ export function compileMolang(expr: string): MolangFn | null {
     return (animTime: number): number => {
       try {
         parser.resetVariables();
+        // 有捕获作用域时，临时把 parser.variableHandler 指向该作用域（求值完恢复）；
+        // 无捕获作用域时，依赖模块级 activeScope + setMolangScope 设置的 handler。
+        const prevHandler = parser.variableHandler;
+        if (capturedScope) {
+          parser.variableHandler = (key: string): number => lookupScope(capturedScope, key);
+        }
         const v = parser.parse(expr, makeVariables(animTime));
+        parser.variableHandler = prevHandler;
         // 持久作用域启用时，把本次解析产生的 v.* 写入并入作用域（跨帧可见）。
-        // 无作用域时跳过——保持原先「每次求值 reset、v.* 不持久」语义不变。
-        if (activeScope) {
+        // 有捕获作用域写捕获的；无捕获写模块级 activeScope（向后兼容）。
+        const writeScope = capturedScope ?? activeScope;
+        if (writeScope) {
           for (const k in parser.variables) {
-            if (k.startsWith("variable.")) activeScope[k] = parser.variables[k];
+            if (k.startsWith("variable.")) writeScope[k] = parser.variables[k];
           }
         }
         // L4：编译成功但运行时产生 Infinity/NaN（如 1e999、除以零）→ 零占位

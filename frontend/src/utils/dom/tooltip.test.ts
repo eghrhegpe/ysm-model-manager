@@ -289,3 +289,53 @@ describe("promoteTitle — 原生 title 升级为自定义 tooltip", () => {
     expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
   });
 });
+
+describe("disposeTooltipCore — scroll 监听 ref-count 清理", () => {
+  it("dispose 后 scroll 不再触发隐藏（ref-count 归零移除监听）", async () => {
+    const { attachTooltip, disposeTooltipCore } = await freshTooltip();
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    attachTooltip(btn, "提示", { delayMs: 0 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+
+    // disposeTooltipCore 移除 scroll 监听（ref-count 1→0）
+    disposeTooltipCore();
+
+    // scroll 不再触发 hide → tooltip 仍显示
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+  });
+
+  it("多次 dispose 不抛错（ref-count 不会为负）", async () => {
+    const { disposeTooltipCore } = await freshTooltip();
+    expect(() => {
+      disposeTooltipCore();
+      disposeTooltipCore();
+      disposeTooltipCore();
+    }).not.toThrow();
+  });
+
+  it("ref-count 跟踪：attach → cleanup → attach 仍正常工作", async () => {
+    const { attachTooltip } = await freshTooltip();
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+
+    // 第一次 attach + cleanup
+    const off1 = attachTooltip(btn, "第一次", { delayMs: 0 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+    off1(); // ref-count → 0，监听移除
+
+    // 第二次 attach 应重新注册监听
+    const off2 = attachTooltip(btn, "第二次", { delayMs: 0 });
+    btn.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+    document.dispatchEvent(new Event("scroll"));
+    expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
+    off2();
+  });
+});

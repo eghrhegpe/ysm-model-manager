@@ -24,11 +24,15 @@ declare global {
 // P3 修复（审核）：模块顶层裸调 localStorage 改 safeGet——隐私模式（存储禁用）下
 // getItem 抛错会中断 debug 模块加载链（debug 被全库 import，牵连启动流程）；
 // safeGet 静默降级返回 null（= 开启调试，等价于无 _debug 键）
-// node 测试环境无 window.location（vitest @vitest-environment node）→ ENABLED=false
-const ENABLED =
-  typeof window !== "undefined" &&
-  !new URLSearchParams(window.location.search).has("nodebug") &&
-  safeGet("_debug") !== "0";
+// 运行时求值（非模块加载期常量）：SPA 路由切换或用户手动添加 ?nodebug=1 时即时生效。
+// node 测试环境无 window.location（vitest @vitest-environment node）→ isDebugEnabled()=false
+export function isDebugEnabled(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !new URLSearchParams(window.location.search).has("nodebug") &&
+    safeGet("_debug") !== "0"
+  );
+}
 
 const RING_MAX = 200;
 
@@ -41,7 +45,7 @@ function ensureRing(): RingEntry[] {
 
 /** 输出调试日志（保留 tag 用于过滤） */
 export function dbg(tag: string, ...args: unknown[]): void {
-  if (!ENABLED) return;
+  if (!isDebugEnabled()) return;
   const line = `[DBG:${tag}]`;
   // eslint-disable-next-line no-console
   console.log(line, ...args);

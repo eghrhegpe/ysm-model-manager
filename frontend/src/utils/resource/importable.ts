@@ -4,8 +4,10 @@
 // backend/web-fs-auth 与 features/dnd/shared.ts（内部依赖，不再 re-export）直引本文件。
 
 import { ALL_EXTS } from "./extensions.ts";
+import { extOf } from "./types.ts";
 
-export const getExt = (name: string): string => `.${(name.split(".").pop() || "").toLowerCase()}`;
+// 统一扩展名提取口径（extOf：含点小写，无扩展名返回空串——消除与 types.ts/icon.ts 的三重复）
+export const getExt = (name: string): string => extOf(name);
 
 /** 扩展名是否在支持列表 */
 export const isSupportedFile = (name: string): boolean => ALL_EXTS.includes(getExt(name));

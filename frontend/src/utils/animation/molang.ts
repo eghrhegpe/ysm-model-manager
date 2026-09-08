@@ -20,7 +20,9 @@ export type MolangFn = (animTime: number) => number;
 
 // 单例解析器（cache_enabled 默认 true，跨 clip 复用表达式缓存）
 // 类型签名由 molang.d.ts 提供，直接 new Molang()——无 as unknown as 强转。
+// 导出供测试 spy parse 方法（验证编译/运行时错误处理）
 const parser = new Molang();
+export const getMolangParser = (): typeof parser => parser;
 
 /**
  * 当前写回作用域（仅用于未传 scope 的 compileMolang 写回）。

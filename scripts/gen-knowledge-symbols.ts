@@ -51,7 +51,7 @@ function parseSymbols(fm: string) {
     if (/^\S/.test(line)) break; // 下一个顶格 key
     if (line.trim() === "") break; // 空行（块结束）
     const item = line.match(/^\s*-\s*(.+?)\s*$/);
-    if (item) out.push(item[1]?.replace(/^['"]|['"]$/g, ""));
+    if (item) out.push(item[1]!.replace(/^['"]|['"]$/g, ""));
   }
   return out;
 }

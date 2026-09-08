@@ -73,7 +73,7 @@ function parseAutoFields(fm: string) {
     // 列表项格式：`    - SymbolName:42`（4 空格缩进）；宽松匹配任意缩进 + 可选空格
     const item = line.match(/^\s+-\s+(.+?)\s*$/);
     if (item && currentKey) {
-      out[currentKey]?.push(item[1]?.trim());
+      out[currentKey]?.push(item[1]!.trim());
     }
   }
   return out;
@@ -235,8 +235,8 @@ function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line
         for (const part of (md[1] ?? "").split(",")) {
           const name = part
             .trim()
-            .split(/\s*[:=]\s*/)[0]
-            ?.trim();
+            .split(/\s*[:=]\s*/)[0]!
+            .trim();
           if (/^[A-Za-z0-9_$]+$/.test(name)) result.push({ symbol: name, line: i + 1 });
         }
         continue;
@@ -247,8 +247,8 @@ function extractSymbolsWithLines(filePath: string): Array<{ symbol: string; line
           const name = part
             .trim()
             .split(/\s+as\s+/)
-            .pop()
-            ?.trim();
+            .pop()!
+            .trim();
           if (/^[A-Za-z0-9_$]+$/.test(name)) result.push({ symbol: name, line: i + 1 });
         }
         continue;

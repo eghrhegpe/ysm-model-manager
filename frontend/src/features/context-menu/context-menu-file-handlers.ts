@@ -115,13 +115,13 @@ export const FILE_HANDLERS = {
   "file.copy-path": async (ctx) => {
     // 复用 utils/dom/clipboard.ts copyText（Clipboard API + textarea fallback），
     // 与 batch.copy-paths 同一实现——不再手写 navigator/textarea 双路径
-    const ok = await copyText(ctx.path || "");
+    const result = await copyText(ctx.path || "");
     toast(
-      ok
+      result.ok
         ? tr("ctx.copyPathOk", "✅ Path copied to clipboard")
         : tr("ctx.copyPathFail", "❌ Copy failed, please copy the path manually"),
-      ok ? TOAST_MS.success : TOAST_MS.normal,
-      ok ? undefined : "error",
+      result.ok ? TOAST_MS.success : TOAST_MS.normal,
+      result.ok ? undefined : "error",
     );
   },
 } satisfies Record<Extract<MenuAction, `file.${string}`>, (ctx: FileCtx) => void>;

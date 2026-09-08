@@ -86,7 +86,7 @@ afterEach(() => {
 describe("runLauncherDetect", () => {
   it("用户取消目录选择 → 不检测、不保存、无 toast", async () => {
     const app = mockApp();
-    pickDirMock.mockResolvedValue(null);
+    pickDirMock.mockResolvedValue({ ok: false, reason: "cancelled" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
       await runLauncherDetect(mockGuard);
@@ -100,7 +100,7 @@ describe("runLauncherDetect", () => {
 
   it("未发现实例 → warn toast，不弹选择器、不保存", async () => {
     const app = mockApp(); // DetectLauncherInstances → []
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
       await runLauncherDetect(mockGuard);
@@ -119,7 +119,7 @@ describe("runLauncherDetect", () => {
     const app = mockApp({
       DetectLauncherInstances: vi.fn().mockRejectedValue(new Error("detect boom")),
     });
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
       await runLauncherDetect(mockGuard);
@@ -136,7 +136,7 @@ describe("runLauncherDetect", () => {
     const app = mockApp({
       DetectLauncherInstances: vi.fn().mockResolvedValue([makeInstance()]),
     });
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
       const p = runLauncherDetect(mockGuard);
@@ -159,7 +159,7 @@ describe("runLauncherDetect", () => {
         makeInstance({ launcher: "PCL", name: "Two", gameRoot: "/mc/root2", customDir: "/mc/custom2" }),
       ]),
     });
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off: offToast } = watchBus("toast:show");
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
@@ -192,7 +192,7 @@ describe("runLauncherDetect", () => {
     const app = mockApp({
       DetectLauncherInstances: vi.fn().mockResolvedValue([makeInstance()]),
     });
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const p = runLauncherDetect(mockGuard);
     const picker = await openPicker();
     (picker.querySelector("[data-launcher-default]") as HTMLInputElement).checked = false;
@@ -208,7 +208,7 @@ describe("runLauncherDetect", () => {
       DetectLauncherInstances: vi.fn().mockResolvedValue([makeInstance()]),
       SetResourceRoot: vi.fn().mockRejectedValue(new Error("set-root boom")),
     });
-    pickDirMock.mockResolvedValue("/picked");
+    pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
       const p = runLauncherDetect(mockGuard);

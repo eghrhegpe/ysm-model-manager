@@ -4,6 +4,17 @@
 // 收敛自：app-modules.ts 的模块级 safeGet/safeSet、settings/init.ts 的 themeGet/themeSet。
 import { logWarn } from "@/utils/base/log.ts";
 
+/** 检测 localStorage 是否可用（隐私模式/存储禁用下返回 false，供调用方区分「key 不存在」vs「存储不可用」） */
+export function isStorageAccessible(): boolean {
+  try {
+    const probe = "__access_probe__";
+    localStorage.getItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** 安全读：存储不可用时返回 null（调用方走默认值回退） */
 export function safeGet(key: string): string | null {
   try {

@@ -68,9 +68,9 @@ export function bindPathClick(
     setBusy(true);
     try {
       // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
-      const dir = await pickDirectory();
-      if (!dir) return;
-      await onSelect(dir);
+      const pickResult = await pickDirectory();
+      if (!pickResult.ok) return;
+      await onSelect(pickResult.dir);
       refresh();
       refreshAdvanced();
       bus.emit("stats:refresh");
@@ -244,12 +244,12 @@ export function initAdvancedGrid(
         const rtype = (el as HTMLElement).dataset.rtype || "";
         try {
           // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
-          const dir = await pickDirectory();
-          if (!dir) return;
+          const pickResult = await pickDirectory();
+          if (!pickResult.ok) return;
           const { SetResourceRoot } = await getApp();
-          await SetResourceRoot(rtype, dir);
+          await SetResourceRoot(rtype, pickResult.dir);
           const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found?.cfgKey) cfgAny[found.cfgKey] = dir;
+          if (found?.cfgKey) cfgAny[found.cfgKey] = pickResult.dir;
           refreshAdvanced();
           bus.emit("toast:show", {
             msg: t("settings.path.set"),

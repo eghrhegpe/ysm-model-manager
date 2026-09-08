@@ -31,49 +31,65 @@ describe("copyText", () => {
     vi.restoreAllMocks();
   });
 
-  it("Clipboard API 成功 → true", async () => {
+  it("Clipboard API 成功 → {ok:true}", async () => {
     stubClipboard({ writeText: vi.fn(async () => {}) });
-    await expect(copyText("hi")).resolves.toBe(true);
+    await expect(copyText("hi")).resolves.toEqual({ ok: true });
     expect(document.querySelector("textarea")).toBeNull();
   });
 
-  it("Clipboard API 拒绝且 execCommand 成功 → true 并清理 textarea", async () => {
+  it("Clipboard API 拒绝且 execCommand 成功 → {ok:true} 并清理 textarea", async () => {
     stubClipboard({ writeText: vi.fn(async () => { throw new Error("denied"); }) });
     Object.defineProperty(document, "execCommand", {
       value: vi.fn(() => true),
       configurable: true,
     });
-    await expect(copyText("hi")).resolves.toBe(true);
+    await expect(copyText("hi")).resolves.toEqual({ ok: true });
     expect(document.querySelector("textarea")).toBeNull();
   });
 
-  it("Clipboard API 拒绝且 execCommand 返回 false → false 并清理 textarea", async () => {
+  it("Clipboard API 拒绝且 execCommand 返回 false → {ok:false, reason:'denied'} 并清理 textarea", async () => {
     stubClipboard({ writeText: vi.fn(async () => { throw new Error("denied"); }) });
     Object.defineProperty(document, "execCommand", {
       value: vi.fn(() => false),
       configurable: true,
     });
-    await expect(copyText("hi")).resolves.toBe(false);
+    await expect(copyText("hi")).resolves.toEqual({ ok: false, reason: "denied" });
     expect(document.querySelector("textarea")).toBeNull();
   });
 
   it("navigator.clipboard 不存在（非安全上下文）→ 走降级路径", async () => {
-    delete (navigator as unknown as { clipboard?: unknown }).clipboard;
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    });
     Object.defineProperty(document, "execCommand", {
       value: vi.fn(() => true),
       configurable: true,
     });
-    await expect(copyText("hi")).resolves.toBe(true);
+    await expect(copyText("hi")).resolves.toEqual({ ok: true });
     expect(document.querySelector("textarea")).toBeNull();
   });
 
-  it("execCommand 抛错 → false 且清理 textarea", async () => {
+  it("navigator.clipboard 不存在且 execCommand 返回 false → {ok:false, reason:'unsupported'}", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    });
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn(() => false),
+      configurable: true,
+    });
+    await expect(copyText("hi")).resolves.toEqual({ ok: false, reason: "unsupported" });
+    expect(document.querySelector("textarea")).toBeNull();
+  });
+
+  it("execCommand 抛错 → {ok:false, reason:'denied'} 且清理 textarea", async () => {
     stubClipboard({ writeText: vi.fn(async () => { throw new Error("denied"); }) });
     Object.defineProperty(document, "execCommand", {
       value: vi.fn(() => { throw new Error("no user gesture"); }),
       configurable: true,
     });
-    await expect(copyText("hi")).resolves.toBe(false);
+    await expect(copyText("hi")).resolves.toEqual({ ok: false, reason: "denied" });
     expect(document.querySelector("textarea")).toBeNull();
   });
 
@@ -114,7 +130,7 @@ describe("copyText", () => {
       return el;
     });
 
-    await expect(copyText("hi")).resolves.toBe(true);
+    await expect(copyText("hi")).resolves.toEqual({ ok: true });
     expect(select).toHaveBeenCalled();
     expect(document.querySelector("textarea")).toBeNull();
   });

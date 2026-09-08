@@ -4,7 +4,7 @@
 // 覆盖 safeGet/safeSet 正常路径）。此处覆盖：正常透传、存储抛错降级（safeGet→null、
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { safeGet, safeSet, safeRemove, safeGetJSON } from "./storage.ts";
+import { safeGet, safeSet, safeRemove, safeGetJSON, isStorageAccessible } from "./storage.ts";
 import * as log from "@/utils/base/log.ts";
 
 // node 环境无 localStorage——内存实现（对齐 happy-dom 语义；makeStorageThrow 覆盖抛错版）
@@ -134,5 +134,14 @@ describe("storage 安全读写", () => {
     safeGetJSON("json-bad", { ok: false });
     expect(spy).toHaveBeenCalledWith("storage", expect.stringContaining("safeGetJSON"), expect.anything());
     spy.mockRestore();
+  });
+
+  it("isStorageAccessible 正常环境 → true", () => {
+    expect(isStorageAccessible()).toBe(true);
+  });
+
+  it("isStorageAccessible 隐私模式（localStorage 抛错）→ false", () => {
+    makeStorageThrow();
+    expect(isStorageAccessible()).toBe(false);
   });
 });

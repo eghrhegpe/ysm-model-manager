@@ -64,24 +64,29 @@ beforeEach(() => {
 describe("pickDirectory — 桌面（非查看器模式）", () => {
   it("isViewerMode=false 时走 Wails Dialog（SelectDirectory）", async () => {
     mocks.isViewerMode.mockReturnValue(false);
-    const dir = await pickDirectory();
+    const result = await pickDirectory();
     expect(mocks.SelectDirectory).toHaveBeenCalledTimes(1);
-    expect(dir).toBe("/desktop/path");
+    expect(result).toEqual({ ok: true, dir: "/desktop/path" });
     expect(mocks.GetDefaultRepoRoot).not.toHaveBeenCalled();
   });
 
-  it("桌面：SelectDirectory 返回空串（用户取消）→ 归一 null", async () => {
+  it("桌面：SelectDirectory 返回空串（用户取消）→ {ok:false, reason:'cancelled'}", async () => {
     mocks.isViewerMode.mockReturnValue(false);
     mocks.SelectDirectory.mockResolvedValue("");
-    const dir = await pickDirectory();
-    expect(dir).toBeNull();
+    const result = await pickDirectory();
+    expect(result).toEqual({ ok: false, reason: "cancelled" });
   });
 
-  it("桌面：SelectDirectory 抛错 → 归一 null，不 unhandled rejection", async () => {
+  it("桌面：SelectDirectory 抛错 → {ok:false, reason:'error', error}，不 unhandled rejection", async () => {
     mocks.isViewerMode.mockReturnValue(false);
-    mocks.SelectDirectory.mockRejectedValue(new Error("dialog cancelled"));
-    const dir = await pickDirectory();
-    expect(dir).toBeNull();
+    const err = new Error("dialog cancelled");
+    mocks.SelectDirectory.mockRejectedValue(err);
+    const result = await pickDirectory();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("error");
+      expect(result.error).toBe(err);
+    }
   });
 
   it("网页版（isViewerMode=true）→ 走 resolveAndroidRepoDir 定位虚拟根，不调 SelectDirectory", async () => {
@@ -89,10 +94,10 @@ describe("pickDirectory — 桌面（非查看器模式）", () => {
     mocks.getAndroidBridge.mockReturnValue(null);
     mocks.isWebPlatform.mockReturnValue(true);
     mocks.GetDefaultRepoRoot.mockResolvedValue("/web");
-    const dir = await pickDirectory();
+    const result = await pickDirectory();
     expect(mocks.SelectDirectory).not.toHaveBeenCalled();
     expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
-    expect(dir).toBe("/web");
+    expect(result).toEqual({ ok: true, dir: "/web" });
   });
 });
 
@@ -131,13 +136,13 @@ describe("resolveAndroidRepoDir — 桌面（无 Android 桥）", () => {
 });
 
 describe("pickDirectory — Android 未授权", () => {
-  it("引导 requestStoragePermission 并返回 null", async () => {
+  it("引导 requestStoragePermission 并返回 {ok:false, reason:'cancelled'}", async () => {
     const bridge = makeBridge();
     mocks.getAndroidBridge.mockReturnValue(bridge);
     mocks.isViewerMode.mockReturnValue(true);
-    const dir = await pickDirectory();
+    const result = await pickDirectory();
 
-    expect(dir).toBeNull();
+    expect(result).toEqual({ ok: false, reason: "cancelled" });
     expect(bridge.requestStoragePermission).toHaveBeenCalledTimes(1);
     // 引导 toast（needStoragePermission）
     expect(mocks.busEmit).toHaveBeenCalledWith(
@@ -153,9 +158,9 @@ describe("pickDirectory — Android 已授权", () => {
     const bridge = makeBridge({ hasStoragePermission: () => true });
     mocks.getAndroidBridge.mockReturnValue(bridge);
     mocks.isViewerMode.mockReturnValue(true);
-    const dir = await pickDirectory();
+    const result = await pickDirectory();
 
-    expect(dir).toBe("/storage/emulated/0/YSM-Model-Manager");
+    expect(result).toEqual({ ok: true, dir: "/storage/emulated/0/YSM-Model-Manager" });
     expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
     expect(bridge.requestStoragePermission).not.toHaveBeenCalled();
     // 定位成功 toast（autoRepoRoot）
@@ -165,14 +170,14 @@ describe("pickDirectory — Android 已授权", () => {
     );
   });
 
-  it("GetDefaultRepoRoot 返回空时返回 null 且不发成功 toast", async () => {
+  it("GetDefaultRepoRoot 返回空时返回 {ok:false, reason:'cancelled'} 且不发成功 toast", async () => {
     const bridge = makeBridge({ hasStoragePermission: () => true });
     mocks.getAndroidBridge.mockReturnValue(bridge);
     mocks.isViewerMode.mockReturnValue(true);
     mocks.GetDefaultRepoRoot.mockResolvedValue("");
-    const dir = await pickDirectory();
+    const result = await pickDirectory();
 
-    expect(dir).toBeNull();
+    expect(result).toEqual({ ok: false, reason: "cancelled" });
     // 不应出现成功定位 toast（autoRepoRoot 未消费）
     expect(mocks.busEmit).not.toHaveBeenCalledWith(
       "toast:show",

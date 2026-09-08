@@ -76,7 +76,7 @@ function extractSummary(text: string) {
   // 匹配 ## 概览 到下一个 ## 标题之间的内容
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return "";
-  const summary = m[1]
+  const summary = m[1]!
     ?.replace(/\n{2,}/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -125,7 +125,7 @@ function buildIndex() {
   const groups: Record<string, any[]> = {};
   for (const c of cards) {
     if (!groups[c.category]) groups[c.category] = [];
-    groups[c.category].push(c);
+    groups[c.category]!.push(c);
   }
 
   let out = "<!-- 本文件由 scripts/gen-knowledge-index.ts 自动生成，禁止手改 -->\n\n";

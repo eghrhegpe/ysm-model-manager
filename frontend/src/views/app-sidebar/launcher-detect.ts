@@ -133,9 +133,9 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
   guard.setBusy(true);
   try {
     const launcherDir = await pickDirectory();
-    if (!launcherDir) return;
+    if (!launcherDir.ok) return;
     const App = await getApp();
-    const instances = await App.DetectLauncherInstances(launcherDir);
+    const instances = await App.DetectLauncherInstances(launcherDir.dir);
     if (!instances?.length) {
       bus.emit("toast:show", {
         msg: t("launcher.detect.noInstances"),

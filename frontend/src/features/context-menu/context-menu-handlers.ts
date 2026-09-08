@@ -242,11 +242,11 @@ export const HANDLERS = {
   },
   "batch.copy-paths": async (ctx) => {
     // DOM 操作下沉 utils/dom（core 层不直接操作 document/navigator.clipboard）
-    const ok = await copyText(ctx.paths.join("\n"));
+    const result = await copyText(ctx.paths.join("\n"));
     toast(
-      ok ? t("ctx.copyPathsOk", { n: ctx.paths.length }) : t("ctx.copyPathsFail"),
-      ok ? TOAST_MS.success : TOAST_MS.normal,
-      ok ? undefined : "error",
+      result.ok ? t("ctx.copyPathsOk", { n: ctx.paths.length }) : t("ctx.copyPathsFail"),
+      result.ok ? TOAST_MS.success : TOAST_MS.normal,
+      result.ok ? undefined : "error",
     );
   },
   "batch.export-list": (ctx) => {

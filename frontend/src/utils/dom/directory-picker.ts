@@ -63,22 +63,30 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
   return dir;
 }
 
+/** pickDirectory 返回类型：区分成功 / 用户取消 / 系统错误 */
+export type DirPickResult =
+  | { ok: true; dir: string }
+  | { ok: false; reason: "cancelled" | "error"; error?: unknown };
+
 /** 选择目录：桌面走系统对话框；查看器模式（Android/网页版）走授权检查 + 自动定位公共目录 */
-export async function pickDirectory(): Promise<string | null> {
+export async function pickDirectory(): Promise<DirPickResult> {
   // 统一门控入口（ADR-049 Phase 3）：Android 或网页版均走 resolveAndroidRepoDir——
   // 网页版其内部定位虚拟根 /web（browser adapter 的 GetDefaultRepoRoot），
   // 而非调用桌面专属 SelectDirectory（browser adapter 未实现，fail-fast 抛
   // WebUnsupportedError，违反「各按钮守卫统一用 isViewerMode」约定）。
-  if (isViewerMode()) return resolveAndroidRepoDir();
+  if (isViewerMode()) {
+    const dir = await resolveAndroidRepoDir();
+    return dir != null ? { ok: true, dir } : { ok: false, reason: "cancelled" };
+  }
   // 桌面：Wails Dialog
   const { SelectDirectory } = await getApp();
   try {
     const d = await SelectDirectory();
-    // Go 绑定 (string, error)：取消时返回 "" 而非 null；空串归一为 null
-    if (!d) return null;
-    return d;
-  } catch {
-    // Go error 路径 → 归一 null，不变 unhandled rejection
-    return null;
+    // Go 绑定 (string, error)：取消时返回 "" 而非 null；空串 → cancelled
+    if (!d) return { ok: false, reason: "cancelled" };
+    return { ok: true, dir: d };
+  } catch (err) {
+    // Go error 路径 → 区分系统错误，不吞异常信息
+    return { ok: false, reason: "error", error: err };
   }
 }

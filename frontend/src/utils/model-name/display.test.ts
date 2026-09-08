@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { parseModelName, renderDisplayName, renderModelName, renderModelNameWithHighlight } from "./display.ts";
+import { parseModelName, renderDisplayName } from "./display.ts";
 
 describe("parseModelName", () => {
   it("parses [author]name.ysm", () => {
@@ -99,40 +99,6 @@ describe("renderDisplayName", () => {
   });
 });
 
-describe("renderModelName", () => {
-  it("等价 renderDisplayName（无 showExt）", () => {
-    expect(renderModelName("[作者]角色.ysm")).toBe('<span class="tag-author">[作者]</span>角色');
-  });
-
-  it("showExt 追加 tag-ext span", () => {
-    expect(renderModelName("[作者]角色.ysm", { showExt: true })).toBe(
-      '<span class="tag-author">[作者]</span>角色<span class="tag-ext">.ysm</span>'
-    );
-  });
-
-  it("showExt 但无扩展名不追加", () => {
-    expect(renderModelName("[作者]角色", { showExt: true })).toBe('<span class="tag-author">[作者]</span>角色');
-  });
-});
-
-describe("renderModelNameWithHighlight", () => {
-  it("无 keyword 等价 renderDisplayName", () => {
-    expect(renderModelNameWithHighlight("角色模型")).toBe("角色模型");
-  });
-
-  it("keyword 包裹 <mark>", () => {
-    expect(renderModelNameWithHighlight("角色模型", "模型")).toBe("角色<mark>模型</mark>");
-  });
-
-  it("keyword 含正则特殊字符被转义（+ 不当量词）", () => {
-    expect(renderModelNameWithHighlight("文件a+b", "a+b")).toBe("文件<mark>a+b</mark>");
-  });
-
-  it("keyword 大小写不敏感", () => {
-    expect(renderModelNameWithHighlight("文件ABC", "abc")).toBe("文件<mark>ABC</mark>");
-  });
-});
-
 // P3 补测（code_review）：日期命中与括号段区间重叠谓词——括号内日期不得产 tag-date
 // span 且不得泄漏 %%TOKEN%% 残渣；括号外日期仍须高亮
 describe("renderDisplayName — 日期括号重叠守卫", () => {
@@ -217,21 +183,4 @@ describe("renderDisplayName — 占位符碰撞（%%TOKEN%% 字面量保留）",
   });
 });
 
-// P3 补测（审核）：高亮版 XSS 转义 + showExt 组合
-describe("renderModelNameWithHighlight — XSS 与 showExt", () => {
-  it("文件名含 HTML 时高亮段与正文均转义（不注入标签）", () => {
-    const html = renderModelNameWithHighlight("<img src=x onerror=alert(1)>模型", "模型");
-    expect(html).toBe("&lt;img src=x onerror=alert(1)&gt;<mark>模型</mark>");
-    // 关键不变量：原始 <img> 标签不得以未转义形式出现（否则 onerror 会执行）
-    expect(html).not.toContain("<img");
-  });
 
-  it("keyword 未命中 → 纯转义输出", () => {
-    expect(renderModelNameWithHighlight("角色<脚本>", "不存在")).toBe("角色&lt;脚本&gt;");
-  });
-
-  it("showExt 与高亮组合", () => {
-    const html = renderModelNameWithHighlight("角色模型.ysm", "模型", { showExt: true });
-    expect(html).toBe('角色<mark>模型</mark><span class="tag-ext">.ysm</span>');
-  });
-});

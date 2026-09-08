@@ -4,18 +4,14 @@
 // browser-adapter.ts 从本文件 import 组装 webImpls。
 
 import { swallowError } from "@/utils/base/async.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
 import { idbDel, idbGet, idbGetAll, idbSet } from "./idb.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---
 const CFG_KEY = "ysm:config";
 
 function loadWebConfig(): Record<string, unknown> {
-  try {
-    return JSON.parse(safeGet(CFG_KEY) ?? "{}") as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+  return safeGetJSON<Record<string, unknown>>(CFG_KEY, {});
 }
 
 function saveWebConfig(cfg: Record<string, unknown>): void {

@@ -10,9 +10,6 @@ auto_fields:
     - ParsedModelName
     - parseModelName
     - renderDisplayName
-    - renderModelName
-    - renderModelNameWithHighlight
-    - stripBanSuffix
     - stripDisableSuffix
 quick_groups:
   - 跨组件通信与页面

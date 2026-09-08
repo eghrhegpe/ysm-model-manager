@@ -218,7 +218,6 @@ auto_fields:
     - checkUpdateSilent
     - clamp
     - clamp01
-    - clampInt
     - clampPct
     - classifyDownloadSize
     - classifyWasmError
@@ -677,7 +676,6 @@ auto_fields:
     - isWebEntryMode
     - isWebPath
     - isWebPlatform
-    - isYsmName
     - isYsmWasmPreview
     - itemHTML
     - ja
@@ -693,8 +691,6 @@ auto_fields:
     - LangCode
     - LAST_TYPE_KEY
     - LazyModule
-    - lerp
-    - lerpArray
     - LightCapability
     - lightDirToPosition
     - LightParams
@@ -1074,8 +1070,6 @@ auto_fields:
     - RenderMode
     - RenderModeCapability
     - renderModel2D
-    - renderModelName
-    - renderModelNameWithHighlight
     - renderMultiAngle
     - RenderMultiAngleOptions
     - RenderOptions
@@ -1290,7 +1284,6 @@ auto_fields:
     - statusIconOf
     - statusTabHTML
     - Store
-    - stripBanSuffix
     - stripDisableSuffix
     - stripPathSegments
     - stripYsgpTextHeader

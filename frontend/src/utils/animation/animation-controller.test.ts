@@ -191,6 +191,56 @@ describe("AnimationControllerRuntime 状态机", () => {
     const rt = new AnimationControllerRuntime(ctrl);
     expect(rt.currentAnimation).toBe("");
   });
+
+  it("自环转换（A→A）不重置 timeInState、不触发 onStateChange", () => {
+    const changes: string[] = [];
+    const ctrl = parseAnimationControllerJSON(`{
+      "animation_controllers": { "c": {
+        "states": {
+          "a": { "animations": ["a"], "transitions": [ { "a": "" } ] }
+        }
+      }}
+    }`).controllers[0];
+    const rt = new AnimationControllerRuntime(ctrl, (name) => { changes.push(name); });
+    // 无条件自环转换应被跳过，timeInState 持续增长，不触发任何回调
+    expect(rt.update(0.5)).toBe(false);
+    expect(rt.update(0.5)).toBe(false);
+    expect(rt.current_state).toBe("a");
+    expect(changes).toEqual([]);
+  });
+
+  it("显式 initial_state 优先于首个声明状态", () => {
+    const ctrl = parseAnimationControllerJSON(`{
+      "animation_controllers": { "c": {
+        "initial_state": "run",
+        "states": {
+          "idle": { "animations": ["idle"] },
+          "run": { "animations": ["run"] }
+        }
+      }}
+    }`).controllers[0];
+    expect(ctrl.initialState).toBe("run");
+    const rt = new AnimationControllerRuntime(ctrl);
+    expect(rt.current_state).toBe("run");
+    expect(rt.currentAnimation).toBe("run");
+  });
+
+  it("单字符串 on_exit 生效（与数组形态等价）", () => {
+    const scope: Record<string, number> = {};
+    setMolangScope(scope);
+    const ctrl = parseAnimationControllerJSON(`{
+      "animation_controllers": { "c": {
+        "states": {
+          "a": { "on_exit": "variable.done = 1", "transitions": [ { "b": "" } ] },
+          "b": { "animations": ["b"] }
+        }
+      }}
+    }`).controllers[0];
+    const rt = new AnimationControllerRuntime(ctrl);
+    expect(rt.update(0)).toBe(true);
+    expect(rt.current_state).toBe("b");
+    expect(scope["variable.done"]).toBe(1); // 单字符串 on_exit 被正确编译执行
+  });
 });
 
 // ── 控制器查找 ────────────────────────────────────────

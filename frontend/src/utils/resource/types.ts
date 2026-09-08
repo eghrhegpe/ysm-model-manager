@@ -193,8 +193,6 @@ export function extOf(path: string): string {
 /** 单一资源类型的能力视图（派生自 resource_types.json + 短标签映射） */
 interface ResourceCap {
   id: string;
-  name: string; // JSON 全名（如 "YSM 模型"）
-  label: string; // 短标签（如 "模型"，参与 Go 扫描匹配）
   icon: string;
   extensions: string[]; // 小写、含点，如 [".ysm",".zip",".json"]
   preview: string; // "3d" | "thumbnail" | "none" ...
@@ -206,8 +204,6 @@ for (const t of allResourceTypes) {
   if (!t.id) continue;
   RESOURCE_CAPS[t.id] = {
     id: t.id,
-    name: t.name || t.id,
-    label: RESOURCE_TYPE_LABELS[t.id] || t.name || t.id,
     icon: t.icon || "📦",
     extensions: (t.extensions || []).map((e) => e.toLowerCase()),
     preview: t.preview || "none",

@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - safeGet
+    - safeGetJSON
     - safeRemove
     - safeSet
 tests: []

@@ -204,6 +204,28 @@ describe("数值安全（P1 反推修复）", () => {
     expect(kf.post).toEqual([0, 2, 3]);
     expect(kf.post.every((n) => Number.isFinite(n))).toBe(true);
   });
+
+  it("标量 Molang 字符串溢出（1e999 / Infinity）→ 回退默认值，不产出 Infinity/NaN", () => {
+    // 标量路径：parseKeyValue 字符串分支原缺 isFinite 守卫，foldMolangConstant("1e999")
+    // 走 Number() 返回 Infinity 直接穿透 → 三轴同 Infinity 传播渲染层
+    for (const bad of ["1e999", "Infinity"]) {
+      const res = parseBedrockAnimationJSON(
+        JSON.stringify({
+          animations: {
+            x: {
+              animation_length: 1,
+              bones: { b: { position: { "0": bad } } },
+            },
+          },
+        }),
+      );
+      expect(res.errors).toEqual([]);
+      const kf = res.clips[0].bones.b!.position![0];
+      // Infinity 被守卫后走 compileMolang 降级 → 零占位（molangjs 编译失败返回 null → undefined → [0,0,0]）
+      expect(kf.post.every((n) => Number.isFinite(n))).toBe(true);
+      expect(kf.post).toEqual([0, 0, 0]);
+    }
+  });
 });
 
 describe("ysmAnimClipLabels 标签策略（L3 全 clip 列表）", () => {

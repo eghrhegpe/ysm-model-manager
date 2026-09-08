@@ -8,7 +8,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - fileIcon
-    - isYsmName
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

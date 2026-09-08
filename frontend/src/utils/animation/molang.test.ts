@@ -44,4 +44,16 @@ describe("compileMolang（内嵌 molangjs）", () => {
     expect(compileMolang("")).toBeNull();
     // molangjs 对 `(((` 不抛错，会解析为部分表达式；此处仅测试可确定的行为
   });
+
+  it("大迭代数 math.die_roll 在合理时间内完成（安全预算 clamp 生效）", () => {
+    const fn = compileMolang("math.die_roll(100000000, 0, 1)")!;
+    expect(fn).not.toBeNull();
+    const start = performance.now();
+    const result = fn(0);
+    const elapsed = performance.now() - start;
+    // 1e8 次迭代被 clamp 到 1e4，应在 100ms 内完成；未 clamp 则 WebView2 主线程卡死
+    expect(elapsed).toBeLessThan(100);
+    expect(result).toBeGreaterThanOrEqual(0);
+    expect(result).toBeLessThanOrEqual(1e4);
+  });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { fileIcon, isYsmName } from "./icon.ts";
+import { fileIcon } from "./icon.ts";
 import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
 import { typeIconOf } from "@/utils/resource/types.ts";
 
@@ -60,8 +60,4 @@ describe("fileIcon", () => {
   });
 });
 
-describe("isYsmName", () => {
-  it("returns true for .ysm", () => expect(isYsmName("model.ysm")).toBe(true));
-  it("returns false for .zip", () => expect(isYsmName("pack.zip")).toBe(false));
-  it("returns false for no ext", () => expect(isYsmName("README")).toBe(false));
-});
+

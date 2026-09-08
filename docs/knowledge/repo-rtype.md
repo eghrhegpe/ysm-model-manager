@@ -20,6 +20,7 @@ auto_fields:
     - NavPagePayload
     - PageName
     - safeGet
+    - safeGetJSON
     - safeRemove
     - safeSet
     - ToastPayload

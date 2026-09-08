@@ -71,4 +71,25 @@ describe("refreshAdoptedStyleSheets", () => {
 
     el.remove();
   });
+
+  it("分 sheet 替换：目标组件已有其它 adoptedStyleSheets 不被清掉", () => {
+    const el = document.createElement("div");
+    el.className = "hmr-multi-sheet";
+    const root = el.attachShadow({ mode: "open" });
+    document.body.append(el);
+
+    // 先安装一张"其它"样式表（模拟 mount-preview-core 双 sheet 先例）
+    const other = new CSSStyleSheet();
+    other.replaceSync(".other { display: block; }");
+    root.adoptedStyleSheets = [other];
+    expect(root.adoptedStyleSheets).toHaveLength(1);
+
+    // 再通过 HMR 刷新——其它 sheet 应保留，新 sheet 追加
+    refreshAdoptedStyleSheets(".hmr { color: red; }", ".hmr-multi-sheet");
+    expect(root.adoptedStyleSheets).toHaveLength(2);
+    expect(root.adoptedStyleSheets[0]).toBe(other); // 其它 sheet 未被洗掉
+    expect(root.adoptedStyleSheets[1].cssRules.length).toBe(1); // 新 sheet 已追加
+
+    el.remove();
+  });
 });

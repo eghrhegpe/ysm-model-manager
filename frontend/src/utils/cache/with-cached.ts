@@ -96,7 +96,7 @@ export async function withCached<T>(
   const p = (async () => {
     try {
       const value = await fn();
-      _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, now) });
+      _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
       return value;
     } catch (e) {
       // 失败不写入缓存——下次调用仍会重试 fn()

@@ -119,6 +119,29 @@ describe("withCached", () => {
     expect(fn).toHaveBeenCalledTimes(1); // 只执行一次
   });
 
+  it("慢 fn + 短 ttl：写入用 Date.now() 算过期，第二次调用命中缓存（fn 只调 1 次）", async () => {
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn(async () => {
+        // 模拟 fn 耗时超过 ttl
+        await new Promise((r) => setTimeout(r, 200));
+        return "slow-result";
+      });
+      // ttl=100ms，fn 耗时 200ms → 若用请求开始时刻算过期，条目诞生即过期
+      const p1 = withCached("slow-ttl-key", 100, fn, "NORMAL");
+      await vi.advanceTimersByTimeAsync(200); // fn 完成
+      const r1 = await p1;
+      expect(r1).toBe("slow-result");
+      // 写入完成后再过 50ms（< ttl），第二次调用应命中缓存
+      await vi.advanceTimersByTimeAsync(50);
+      const r2 = await withCached("slow-ttl-key", 100, fn, "NORMAL");
+      expect(r2).toBe("slow-result");
+      expect(fn).toHaveBeenCalledTimes(1); // 命中缓存，fn 未再调
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fn 抛错时不写入缓存，下次调用仍重试", async () => {
     const fn = vi.fn()
       .mockRejectedValueOnce(new Error("boom"))

@@ -72,5 +72,13 @@ export async function pickDirectory(): Promise<string | null> {
   if (isViewerMode()) return resolveAndroidRepoDir();
   // 桌面：Wails Dialog
   const { SelectDirectory } = await getApp();
-  return SelectDirectory();
+  try {
+    const d = await SelectDirectory();
+    // Go 绑定 (string, error)：取消时返回 "" 而非 null；空串归一为 null
+    if (!d) return null;
+    return d;
+  } catch {
+    // Go error 路径 → 归一 null，不变 unhandled rejection
+    return null;
+  }
 }

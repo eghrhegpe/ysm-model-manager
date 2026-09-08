@@ -145,7 +145,8 @@ function parseKeyValue(v: unknown): ParsedKeyValue | null {
   }
   if (typeof v === "string") {
     const folded = foldMolangConstant(v);
-    if (folded !== null) return { vec: [folded, folded, folded] };
+    // 标量折叠：foldMolangConstant 对 "1e999" 返回 Infinity，需 isFinite 守卫（与 parseAxisItem 对称）
+    if (folded !== null && Number.isFinite(folded)) return { vec: [folded, folded, folded] };
     // L4：标量 Molang 字符串 → 三轴同式编译（旧口径整帧丢弃；编译失败零占位保留帧）
     const fn = compileMolang(v);
     return { vec: [0, 0, 0], molang: fn ? [fn, fn, fn] : undefined };

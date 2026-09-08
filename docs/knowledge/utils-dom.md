@@ -37,6 +37,7 @@ auto_fields:
     - resolveAndroidRepoDir
     - returnFocus
     - safeGet
+    - safeGetJSON
     - safeRemove
     - safeSet
     - sizeColor

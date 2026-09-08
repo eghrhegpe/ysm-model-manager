@@ -16,9 +16,6 @@ export function stripDisableSuffix(name: string): string {
   return name.replace(DISABLE_RE, "");
 }
 
-/** @deprecated 用 stripDisableSuffix（保留别名防外部断链） */
-export const stripBanSuffix = stripDisableSuffix;
-
 /** 解析后的模型文件名字段 */
 export interface ParsedModelName {
   raw: string;
@@ -141,10 +138,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
 
   // 匹配括号段（注册表驱动，索引 4.7）：[作者]/【作品】/《作品》共用 BRACKET_STYLES
   for (const style of BRACKET_STYLES) {
-    const re = new RegExp(
-      `${escRegex(style.open)}([^${escRegex(style.close)}]+?)${escRegex(style.close)}`,
-      "g",
-    );
+    const re = new RegExp(bracketRe(style).source, "g");
     let m: RegExpExecArray | null;
     // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
     while ((m = re.exec(name)) !== null) {
@@ -201,49 +195,4 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
   html += renderFormattedText(name.slice(cursor));
 
   return html;
-}
-
-/** renderModelName = renderDisplayName 别名，options.showExt 支持 */
-export function renderModelName(
-  raw: string,
-  options: { tpl?: unknown; showExt?: boolean } = {},
-): string {
-  const p = parseModelName(raw);
-  return (
-    renderDisplayName(raw, options.tpl) +
-    (options.showExt && p.ext ? `<span class="tag-ext">.${esc(p.ext)}</span>` : "")
-  );
-}
-
-/** 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM */
-export function renderModelNameWithHighlight(
-  raw: string,
-  keyword?: string,
-  options: { tpl?: unknown; showExt?: boolean } = {},
-): string {
-  const p = parseModelName(raw);
-  // 对纯文本（不含扩展名）做高亮
-  const plain = raw.replace(/\.\w+$/, "");
-  let highlighted = plain;
-  if (keyword) {
-    const re = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    highlighted = highlighted.replace(re, "<mark>$1</mark>");
-  }
-  // P2 修复：高亮结果必须逐段转义后再拼回（<mark> 除外）——
-  // 原实现直接拼接 highlighted（文件名含 <script>/<img onerror> 时注入 HTML），
-  // 且绕过 renderDisplayName 的 esc 契约，是 display 管线唯一未转义输出口。
-  // 策略：拆出 <mark>…</mark> 段，内容 esc 后重组。
-  let safe = "";
-  const rest = highlighted;
-  let m: RegExpExecArray | null;
-  const markRe = /<mark>(.*?)<\/mark>/g;
-  let last = 0;
-  // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
-  while ((m = markRe.exec(rest)) !== null) {
-    safe += `${esc(rest.slice(last, m.index))}<mark>${esc(m[1])}</mark>`;
-    last = m.index + m[0].length;
-  }
-  safe += esc(rest.slice(last));
-  const extHtml = options.showExt && p.ext ? `<span class="tag-ext">.${esc(p.ext)}</span>` : "";
-  return safe + extHtml;
 }

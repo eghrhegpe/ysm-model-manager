@@ -70,6 +70,20 @@ describe("pickDirectory — 桌面（非查看器模式）", () => {
     expect(mocks.GetDefaultRepoRoot).not.toHaveBeenCalled();
   });
 
+  it("桌面：SelectDirectory 返回空串（用户取消）→ 归一 null", async () => {
+    mocks.isViewerMode.mockReturnValue(false);
+    mocks.SelectDirectory.mockResolvedValue("");
+    const dir = await pickDirectory();
+    expect(dir).toBeNull();
+  });
+
+  it("桌面：SelectDirectory 抛错 → 归一 null，不 unhandled rejection", async () => {
+    mocks.isViewerMode.mockReturnValue(false);
+    mocks.SelectDirectory.mockRejectedValue(new Error("dialog cancelled"));
+    const dir = await pickDirectory();
+    expect(dir).toBeNull();
+  });
+
   it("网页版（isViewerMode=true）→ 走 resolveAndroidRepoDir 定位虚拟根，不调 SelectDirectory", async () => {
     mocks.isViewerMode.mockReturnValue(true);
     mocks.getAndroidBridge.mockReturnValue(null);

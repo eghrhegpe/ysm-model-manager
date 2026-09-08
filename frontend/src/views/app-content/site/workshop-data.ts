@@ -2,7 +2,7 @@
 // 依赖 workshop-icons.js 的 SVG 图标
 
 import { t } from "@/core/i18n/t.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";
@@ -62,11 +62,7 @@ export function parseDescTags(desc?: string): string[] {
 
 // ===== 收藏工具 =====
 export function loadFavs(): string[] {
-  try {
-    return JSON.parse(safeGet(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return safeGetJSON<string[]>(STORAGE_KEY, []);
 }
 
 function saveFavs(names: string[]): void {

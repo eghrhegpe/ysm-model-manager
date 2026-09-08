@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 数值钳制工具测试（clamp.ts）=====
 import { describe, it, expect } from "vitest";
-import { clamp, clampInt, clamp01, lerp, lerpArray, clampPct } from "./clamp.ts";
+import { clamp, clamp01, clampPct } from "./clamp.ts";
 
 describe("clamp — 数值钳制", () => {
   it("值在范围内原样返回", () => {
@@ -29,24 +29,6 @@ describe("clamp — 数值钳制", () => {
   });
 });
 
-describe("clampInt — 整数钳制", () => {
-  it("浮点数四舍五入", () => {
-    expect(clampInt(5.7, 0, 10)).toBe(6);
-  });
-
-  it("浮点数四舍五入（下取整）", () => {
-    expect(clampInt(5.3, 0, 10)).toBe(5);
-  });
-
-  it("超出范围先钳制再取整", () => {
-    expect(clampInt(15.9, 0, 10)).toBe(10);
-  });
-
-  it("负数四舍五入", () => {
-    expect(clampInt(-3.6, -10, 0)).toBe(-4);
-  });
-});
-
 describe("clamp01 — [0,1] 钳制", () => {
   it("0.5 返回 0.5", () => {
     expect(clamp01(0.5)).toBe(0.5);
@@ -66,42 +48,6 @@ describe("clamp01 — [0,1] 钳制", () => {
 
   it("1 返回 1", () => {
     expect(clamp01(1)).toBe(1);
-  });
-});
-
-describe("lerp — 线性插值", () => {
-  it("t=0 返回起点", () => {
-    expect(lerp(10, 20, 0)).toBe(10);
-  });
-
-  it("t=1 返回终点", () => {
-    expect(lerp(10, 20, 1)).toBe(20);
-  });
-
-  it("t=0.5 返回中点", () => {
-    expect(lerp(10, 20, 0.5)).toBe(15);
-  });
-
-  it("t 超出 [0,1] 可外推", () => {
-    expect(lerp(0, 10, 2)).toBe(20);
-  });
-
-  it("负值区间插值", () => {
-    expect(lerp(-10, 10, 0.5)).toBe(0);
-  });
-});
-
-describe("lerpArray — 逐元素线性插值数组", () => {
-  it("逐元素插值", () => {
-    expect(lerpArray([0, 0, 0], [10, 20, 30], 0.5)).toEqual([5, 10, 15]);
-  });
-
-  it("t=0 返回起点数组", () => {
-    expect(lerpArray([1, 2], [3, 4], 0)).toEqual([1, 2]);
-  });
-
-  it("t=1 返回终点数组", () => {
-    expect(lerpArray([1, 2], [3, 4], 1)).toEqual([3, 4]);
   });
 });
 

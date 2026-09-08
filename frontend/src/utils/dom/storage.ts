@@ -29,3 +29,14 @@ export function safeRemove(key: string): void {
     /* 隐私模式：忽略删除 */
   }
 }
+
+/** 安全读 JSON：解析失败（损坏/非法）时返回 fallback，不抛错中断启动链 */
+export function safeGetJSON<T>(key: string, fallback: T): T {
+  const raw = safeGet(key);
+  if (raw == null) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}

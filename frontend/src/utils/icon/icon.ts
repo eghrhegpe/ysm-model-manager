@@ -52,8 +52,3 @@ export function fileIcon(name: string): string {
   if (["txt", "md", "json", "xml", "yml", "yaml", "cfg", "conf", "ini"].includes(ext)) return "📄";
   return "🧊";
 }
-
-/** 是否为 YSM 文件 */
-export function isYsmName(name: string): boolean {
-  return getExt(name) === RESOURCE_TYPES.YSM;
-}

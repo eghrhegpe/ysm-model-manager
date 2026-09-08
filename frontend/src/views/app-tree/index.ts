@@ -4,7 +4,7 @@ import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { treeCSS } from "./app-tree-styles.ts";
@@ -273,11 +273,7 @@ export class AppTree extends WebComponentBase {
     // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
     const gen = ++this._gen;
 
-    try {
-      Object.assign(this._state.dirOpen, JSON.parse(safeGet("dirOpenState") || "{}"));
-    } catch (e) {
-      logWarn("app-tree", "parse dirOpenState:", e);
-    }
+    Object.assign(this._state.dirOpen, safeGetJSON<Record<string, boolean>>("dirOpenState", {}));
 
     // code_review 47e68917b #1（P2）：恢复 render-mode 持久化水化——TreeState 重构删了
     // `_renderMode = getRenderMode()` 实例字段后，TreeState.renderMode 硬编码默认

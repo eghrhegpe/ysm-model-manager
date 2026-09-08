@@ -70,12 +70,14 @@ export function parseAnimationControllerJSON(jsonStr: string): {
 
   for (const [controllerName, controllerRaw] of Object.entries(acs)) {
     if (!controllerRaw || typeof controllerRaw !== "object") continue;
-    const controllerObj = controllerRaw as { states?: Record<string, unknown> };
+    const controllerObj = controllerRaw as {
+      states?: Record<string, unknown>;
+      initial_state?: string;
+    };
     const statesRaw = controllerObj.states;
     if (!statesRaw || typeof statesRaw !== "object") continue;
 
     const states = new Map<string, ControllerState>();
-    let initialState: string | null = null;
 
     for (const [stateName, stateRaw] of Object.entries(statesRaw)) {
       if (!stateRaw || typeof stateRaw !== "object") continue;
@@ -89,14 +91,18 @@ export function parseAnimationControllerJSON(jsonStr: string): {
       // 解析动画名
       const animations = Array.isArray(stateObj.animations) ? stateObj.animations : [];
 
-      // 解析 on_exit 动作
+      // 解析 on_exit 动作（容错：单字符串与数组形态均支持，与 transitions 一致）
       const onExit: MolangFn[] = [];
-      if (Array.isArray(stateObj.on_exit)) {
-        for (const expr of stateObj.on_exit) {
-          if (typeof expr === "string") {
-            const fn = compileMolang(expr);
-            if (fn) onExit.push(fn);
-          }
+      const rawExit = stateObj.on_exit;
+      const exitExprs = Array.isArray(rawExit)
+        ? rawExit
+        : typeof rawExit === "string"
+          ? [rawExit]
+          : [];
+      for (const expr of exitExprs) {
+        if (typeof expr === "string") {
+          const fn = compileMolang(expr);
+          if (fn) onExit.push(fn);
         }
       }
 
@@ -132,11 +138,19 @@ export function parseAnimationControllerJSON(jsonStr: string): {
         transitions,
         blendTransition,
       });
+    }
 
-      // 首个遇到的状态作为初始状态（对齐 Bedrock default 语义）
-      if (initialState === null) {
-        initialState = stateName;
-      }
+    // 初始状态优先级：显式 initial_state > "default" > 首个声明状态
+    let initialState: string | null = null;
+    if (
+      typeof controllerObj.initial_state === "string" &&
+      states.has(controllerObj.initial_state)
+    ) {
+      initialState = controllerObj.initial_state;
+    } else if (states.has("default")) {
+      initialState = "default";
+    } else {
+      initialState = states.keys().next().value ?? null;
     }
 
     if (states.size > 0 && initialState) {
@@ -218,6 +232,10 @@ export class AnimationControllerRuntime {
       // else: 条件编译失败 → 跳过不触发（不再 fail-open 成无条件转换）
 
       if (conditionMet) {
+        // 自环转换（A→A）跳过：避免每帧 onExit → 切自身 → timeInState 归零 → 下帧再触发，
+        // 导致 onStateChange 轰炸播放器。
+        if (trans.target === this.currentState.name) continue;
+
         // 执行当前状态的 on_exit 动作
         for (const fn of this.currentState.onExit) {
           try {

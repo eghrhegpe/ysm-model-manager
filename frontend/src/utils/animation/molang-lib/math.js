@@ -16,7 +16,8 @@ export default {
 		return a + Math.floor(Math.random() * (b - a + 1));
 	},
 	dieRoll(num, low, high) {
-		num = this.clamp(num, 0, 1e9);
+		// 安全预算：clamp 到 1e4 防 WebView2 主线程挂起（手滑 math.die_roll(1e6, 0, 1) 直接卡死）
+		num = this.clamp(num, 0, 1e4);
 		let sum = 0;
 		for (var i = 0; i < num; i++) {
 			sum += this.random(low, high);
@@ -24,7 +25,8 @@ export default {
 		return sum;
 	},
 	dieRollInt(num, low, high) {
-		num = this.clamp(num, 0, 1e9);
+		// 安全预算：同上
+		num = this.clamp(num, 0, 1e4);
 		let sum = 0;
 		for (var i = 0; i < num; i++) {
 			sum += this.randomInt(low, high);

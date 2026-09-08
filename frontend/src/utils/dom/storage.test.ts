@@ -4,7 +4,7 @@
 // 覆盖 safeGet/safeSet 正常路径）。此处覆盖：正常透传、存储抛错降级（safeGet→null、
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { safeGet, safeSet, safeRemove } from "./storage.ts";
+import { safeGet, safeSet, safeRemove, safeGetJSON } from "./storage.ts";
 
 // node 环境无 localStorage——内存实现（对齐 happy-dom 语义；makeStorageThrow 覆盖抛错版）
 const memStorage = (() => {
@@ -77,6 +77,20 @@ describe("storage 安全读写", () => {
   it("safeRemove 存储抛错 → 静默不抛", () => {
     makeStorageThrow();
     expect(() => safeRemove("k3")).not.toThrow();
+  });
+
+  it("safeGetJSON 正常解析已存 JSON", () => {
+    safeSet("json-k", JSON.stringify({ a: 1, b: "x" }));
+    expect(safeGetJSON("json-k", { a: 0, b: "" })).toEqual({ a: 1, b: "x" });
+  });
+
+  it("safeGetJSON 未命中 key → 返回 fallback", () => {
+    expect(safeGetJSON("json-missing", [])).toEqual([]);
+  });
+
+  it("safeGetJSON 损坏 JSON → 返回 fallback（不抛错中断启动链）", () => {
+    safeSet("json-corrupt", "{not valid json[");
+    expect(safeGetJSON("json-corrupt", { ok: false })).toEqual({ ok: false });
   });
 
   it("safeGet/safeSet/safeRemove 互不污染（不同 key 独立）", () => {

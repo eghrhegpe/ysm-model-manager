@@ -88,8 +88,8 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-// _checkedSets 是模块级持久 Map（跨重新渲染保持勾选）：每个测试用唯一 rtype 隔离，
-// 避免上一个测试的勾选被 _restoreCheckboxes 自动恢复污染下一个测试
+// _checkedSets 是实例属性（74850d4a8 泄漏修复重构），同一组件实例内 reload 保持勾选；
+// 各用例独立 mount 自带干净实例，rtype 隔离已非必须——uniqueRtype 保留供跨 rtype 场景
 let rtypeSeq = 0;
 const uniqueRtype = (): string => `ysm-test-${++rtypeSeq}`;
 
@@ -130,14 +130,18 @@ describe("app-sidebar — 全选/恢复勾选", () => {
     chks.forEach((c) => expect(c.checked).toBe(true));
   });
 
-  it("重新挂载 → 恢复已勾选状态", async () => {
-    const rtype = "restore-test";
-    const el = await mountSidebar(makeInstances(), rtype);
+  it("同一实例 reload → 恢复已勾选状态", async () => {
+    const el = await mountSidebar();
     checkFirst(el);
 
-    unmountElement(el);
-    const el2 = await mountSidebar(makeInstances(), rtype);
-    const restored = el2.shadowRoot!.querySelector(".chk") as HTMLInputElement;
+    // 触发 reload：stats:refresh → 300ms 防抖 → _reload → _renderCards → restoreCheckboxes
+    bus.emit("stats:refresh");
+    // 等 reload 清旧 DOM、渲染新卡片、restoreCheckboxes 从实例级 _checkedSets 恢复勾选
+    await waitFor(() => {
+      const c = el.shadowRoot!.querySelector(".chk") as HTMLInputElement | null;
+      return c?.checked === true;
+    });
+    const restored = el.shadowRoot!.querySelector(".chk") as HTMLInputElement;
     expect(restored.checked).toBe(true);
   });
 });

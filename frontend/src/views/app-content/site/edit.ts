@@ -2,7 +2,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
-import { moveItem } from "@/utils/array.ts";
+import { moveItemMut } from "@/utils/array.ts";
 import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { safeSet } from "@/utils/dom/storage.ts";
@@ -406,7 +406,7 @@ function eeBindCreatorsDrag(
           ds.srcIdx = -1;
           return;
         }
-        moveItem(allCreators, realSrc, realTgt);
+        moveItemMut(allCreators, realSrc, realTgt);
         ds.srcIdx = -1;
         refreshView();
       },
@@ -556,7 +556,7 @@ function eeBindPresetsDrag(
         const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         if (ds.presetSrcIdx < 0 || ds.presetSrcIdx === targetIdx || !site.presetSearches) return;
         eeSyncAllEditInputs(searchResults, creators, site);
-        moveItem(site.presetSearches, ds.presetSrcIdx, targetIdx);
+        moveItemMut(site.presetSearches, ds.presetSrcIdx, targetIdx);
         ds.presetSrcIdx = -1;
         refreshView();
       },

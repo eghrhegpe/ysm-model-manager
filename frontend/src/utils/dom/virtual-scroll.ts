@@ -4,8 +4,8 @@
 // toolbar/队列状态区，经 topOffset 补偿行起点偏移）。
 // 前提：定高行；不等高布局（如创作者卡片网格）不适用，需分批渲染 + 哨兵续批。
 
-/** 可见行缓冲：上下各多渲染 BUFFER 行，保证快速滚动不露白 */
-const VS_BUFFER = 15;
+/** 可见行缓冲默认值：上下各多渲染 BUFFER 行，保证快速滚动不露白 */
+const VS_BUFFER_DEFAULT = 15;
 
 /**
  * 根据滚动位置计算可见行范围。
@@ -13,19 +13,21 @@ const VS_BUFFER = 15;
  * @param totalRows - 总行数
  * @param rowH - 单行高度（px，含 margin）
  * @param topOffset - 首行相对滚动内容顶部的偏移（列表上方有其他区块时传入）
+ * @param buffer - 可见行缓冲行数（上下各多渲染 buffer 行，默认 VS_BUFFER_DEFAULT）
  */
 export function calcVisibleRange(
   scrollEl: HTMLElement,
   totalRows: number,
   rowH: number,
   topOffset = 0,
+  buffer = VS_BUFFER_DEFAULT,
 ): { startIdx: number; endIdx: number } {
   const st = scrollEl.scrollTop - topOffset;
   const vh = scrollEl.clientHeight;
   // rowH<=0 是调用方参数错误，按「非法输入一律回退」不变量：整段可见
   if (!Number.isFinite(rowH) || rowH <= 0) return { startIdx: 0, endIdx: totalRows };
-  const startIdx = Math.max(0, Math.floor(st / rowH) - VS_BUFFER);
-  const endIdx = Math.min(totalRows, Math.ceil((st + vh) / rowH) + VS_BUFFER);
+  const startIdx = Math.max(0, Math.floor(st / rowH) - buffer);
+  const endIdx = Math.min(totalRows, Math.ceil((st + vh) / rowH) + buffer);
   return { startIdx, endIdx };
 }
 

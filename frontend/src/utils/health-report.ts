@@ -54,7 +54,13 @@ export function parseHealthReport(raw: HealthReport | null): HealthReport | null
     raw.completeness &&
     typeof raw.completeness.percentage === "number" &&
     typeof raw.completeness.valid === "number" &&
-    typeof raw.completeness.invalid === "number"
+    typeof raw.completeness.invalid === "number" &&
+    // cache 结构校验：防 cache_dir/hit_rate 漂移时渲染层访问 undefined
+    raw.cache &&
+    typeof raw.cache.hit_rate === "number" &&
+    // resources 结构校验：防 by_type/total_files 漂移时渲染层访问 undefined
+    raw.resources &&
+    typeof raw.resources.total_files === "number"
   )
     return raw;
   return null;

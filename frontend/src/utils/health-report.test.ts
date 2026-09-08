@@ -94,9 +94,9 @@ describe("parseHealthReport — 运行时结构校验", () => {
     expect(parseHealthReport({} as HealthReport)).toBeNull();
   });
 
-  it("resources 缺失 → 仍返回 raw（resources 不参与校验）", () => {
+  it("resources 缺失 → 返回 null（resources.total_files 参与校验）", () => {
     const raw = makeReport({ resources: undefined as unknown as HealthReport["resources"] });
-    expect(parseHealthReport(raw)).toBe(raw);
+    expect(parseHealthReport(raw)).toBeNull();
   });
 
   it("resources 各字段为 0 → 仍返回 raw", () => {
@@ -109,5 +109,24 @@ describe("parseHealthReport — 运行时结构校验", () => {
   it("warnings 缺失 → 仍返回 raw（warnings 不参与校验）", () => {
     const { warnings: _warnings, ...rest } = makeReport();
     expect(parseHealthReport(rest)).toBe(rest);
+  });
+
+  it("cache 缺失 → 返回 null（cache.hit_rate 参与校验）", () => {
+    const raw = makeReport({ cache: undefined as unknown as HealthReport["cache"] });
+    expect(parseHealthReport(raw)).toBeNull();
+  });
+
+  it("cache.hit_rate 为非数字 → 返回 null", () => {
+    const raw = makeReport({
+      cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: "high" as unknown as number },
+    });
+    expect(parseHealthReport(raw)).toBeNull();
+  });
+
+  it("resources.total_files 为非数字 → 返回 null", () => {
+    const raw = makeReport({
+      resources: { total_files: "many" as unknown as number, total_size: 0, by_type: null },
+    });
+    expect(parseHealthReport(raw)).toBeNull();
   });
 });

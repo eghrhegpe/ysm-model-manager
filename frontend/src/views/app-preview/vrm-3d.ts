@@ -26,16 +26,6 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
   return await App.ListAllFilePaths(dir);
 }
 
-/** ADR-072 诊断端口：环形日志面板写入（当前 no-op，后续通过 bus 或 port 注入） */
-async function addOpLog(
-  _op: string,
-  _msg: string,
-  _status: "ok" | "fail" | "warn",
-  _err?: string,
-): Promise<void> {
-  // TODO: 接入真实环形日志面板
-}
-
 const vrmPanelHooks: VrmPanelHooks = {
   // [doc:adr-126-p4-b-1] model 面板走 children 声明式（对齐 MMD）；此前 makeModelPanelRenderer
   // 从未注入（no-op 空面板），迁 children 顺带补上模型信息内容
@@ -48,7 +38,6 @@ const vrmPanelHooks: VrmPanelHooks = {
 
 // ADR-161 §2.5：挂载入口统一走 make<Format>Adapter 工厂（vrm-adapter.ts），本文件仅组装 deps
 const vrmAdapter: PreviewAdapter = makeVrmAdapter({
-  port: { addOpLog },
   readFileBytes,
   panels: vrmPanelHooks,
   listAllFilePaths,

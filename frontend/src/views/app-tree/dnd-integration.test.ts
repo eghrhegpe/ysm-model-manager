@@ -49,7 +49,7 @@ async function mountEl(): Promise<AppTree> {
   const el = document.createElement("app-tree") as unknown as AppTree;
   el.setAttribute("root", "EntityPlayer");
   document.body.appendChild(el);
-  await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
+  await waitFor(() => el.ready === true);
   return el;
 }
 

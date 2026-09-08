@@ -33,6 +33,7 @@ import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { clearAllCommunityCache } from "./community-data.ts";
 import { initGithubPage } from "./init-github.ts";
 import {
   initDiagnosticsPage,
@@ -171,6 +172,9 @@ class AppContent extends WebComponentBase {
         this._render();
       }),
     );
+    // 社区缓存统一失效（原社区-data.ts 模块级 bus.on 迁移至生命周期桶，
+    // 组件 disconnectedCallback 经 SubscriptionBucket.cleanupAll 自动退订，防泄漏）
+    this.subs.addGlobal(bus.on("community:clearCache", clearAllCommunityCache));
     this._render();
     // core 内核 + features 全局 handler（ADR-188：core/handlers/global 汇编壳已删，
     // app-content 直接注册 registerPageStore / registerSync——core 不设壳层）

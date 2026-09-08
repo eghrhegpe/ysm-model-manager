@@ -49,6 +49,8 @@ auto_fields:
     - TreeNode
     - TreeRenderCtx
     - TreeRow
+    - TreeSnapshot
+    - TreeState
     - updateSelectCount
     - updateStat
     - VIEW_TESTIDS

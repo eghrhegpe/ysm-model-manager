@@ -44,8 +44,8 @@ vi.mock("./loader.ts", () => ({
 }));
 
 interface TreeLike extends HTMLElement {
-  _dirOpen: Record<string, boolean>;
-  _filterPaths: Set<string> | null;
+  dirOpen: Record<string, boolean>;
+  filterPaths: Set<string> | null;
   selectState: { keys: Set<string>; lastKey: string | null };
 }
 
@@ -78,8 +78,8 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
 
   afterEach(() => {
     document.querySelectorAll("app-tree").forEach((el) => el.remove());
-    // events.ts 展开文件夹会写 localStorage["at_dirs"]，不清理会污染后续用例
-    localStorage.removeItem("at_dirs");
+    // events.ts 展开文件夹会写 localStorage["dirOpenState"]，不清理会污染后续用例
+    localStorage.removeItem("dirOpenState");
     // 2026-08-17 isolate:false 审核模式发现：全局残留（stubGlobal/window 挂载）
     // 会让连点防重入用例 5000ms 超时——补 unstubAllGlobals 防跨文件污染。
     vi.unstubAllGlobals();
@@ -143,13 +143,13 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
     const el = await mountTree();
     const dirRow = queryAllByTestId(el.shadowRoot!, "tree-dir")[0];
     dirRow.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    const keys = Object.keys(el._dirOpen);
+    const keys = Object.keys(el.dirOpen);
     expect(keys.length).toBeGreaterThan(0);
-    expect(el._dirOpen[keys[0]]).toBe(true);
+    expect(el.dirOpen[keys[0]]).toBe(true);
     // _renderTree 已重建 DOM（旧引用失效），重新获取行再点第二次
     const dirRow2 = queryAllByTestId(el.shadowRoot!, "tree-dir")[0];
     dirRow2.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(el._dirOpen[keys[0]]).toBe(false);
+    expect(el.dirOpen[keys[0]]).toBe(false);
   });
 
   it("8. 文件夹开关不触发文件选中（selectState 不变）", async () => {

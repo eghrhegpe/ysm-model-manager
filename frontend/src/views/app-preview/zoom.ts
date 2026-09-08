@@ -11,13 +11,13 @@ const zoomCss = `
 .zoom-canvas { max-width:90vw; max-height:80vh; border-radius:8px; background:rgba(0,0,0,.2); touch-action:none; }
 .zoom-hint { font-size:11px; color:var(--muted); margin-top:6px; }
 `;
-let _zoomStylesInjected = false;
+let _zoomStyleEl: HTMLStyleElement | null = null;
 function ensureZoomStyles(): void {
-  if (_zoomStylesInjected) return;
-  _zoomStylesInjected = true;
+  if (_zoomStyleEl) return;
   const el = document.createElement("style");
   el.textContent = zoomCss;
   document.head.appendChild(el);
+  _zoomStyleEl = el;
 }
 
 export async function openFullPreview(
@@ -42,12 +42,15 @@ export async function openFullPreview(
     rotation = 0;
   // BedrockGeometry.uv 含 string 形态（对象序列化），model2d 的 BedrockCube.uv 仅 number[]——cast 兼容
   const model2d = model as Parameters<typeof renderModel2D>[1];
-  const doRender = (): void =>
-    renderModel2D(bigCanvas, model2d, textureImg, {
+  let hoverCleanup: (() => void) | null = null;
+  const doRender = (): void => {
+    hoverCleanup?.();
+    hoverCleanup = renderModel2D(bigCanvas, model2d, textureImg, {
       showLabels: labelsOn,
       zoom,
       rotation,
     });
+  };
   doRender();
   bigCanvas.addEventListener(
     "wheel",
@@ -99,6 +102,7 @@ export async function openFullPreview(
   const close = (): void => {
     if (closed) return;
     closed = true;
+    hoverCleanup?.();
     window.removeEventListener("pointermove", onWindowMove);
     window.removeEventListener("pointerup", onWindowUp);
     window.removeEventListener("pointercancel", onWindowCancel);
@@ -106,6 +110,8 @@ export async function openFullPreview(
     window.removeEventListener("popstate", onPopState);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     if (overlay.parentNode) document.body.removeChild(overlay);
+    _zoomStyleEl?.remove();
+    _zoomStyleEl = null;
   };
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();

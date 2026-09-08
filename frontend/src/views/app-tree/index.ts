@@ -4,7 +4,7 @@ import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { safeGet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { treeCSS } from "./app-tree-styles.ts";
@@ -31,18 +31,19 @@ import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
   cleanupVirtualScroll,
   createTreeRenderCtx,
-  getRenderMode,
   getVsMode,
   getVsRows,
   type RenderMode,
   ROW_H_GRID,
   ROW_H_LIST,
   renderTree,
+  setRenderMode,
   type TreeRenderCtx,
   updateStat,
 } from "./render.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { footerHTML, headerHTML, spinnerHTML } from "./tpl.ts";
+import { type TreeSnapshot, TreeState } from "./tree-state.ts";
 
 // ADR-133 阶段 B/C+：本文件内钩子的稳定 testid 声明（G-1 单一事实源，与钩子同处）。
 // 树容器 id="tree" 供 handler/CSS 锚定，testid 取 'tree-root'——落入契约孤儿扫描的
@@ -80,21 +81,14 @@ function toastThrottled(e: unknown, fallback: string): void {
 
 export class AppTree extends WebComponentBase {
   _root: ShadowRoot;
-  _entries: TreeEntry[] = [];
-  _search = "";
-  _sort = "name";
-  _rootAttr = ""; // 由 root 属性指定（ADR-147：_typeFilter 已移除，root 是唯一 rtype 来源）
-  _subdirAttr = ""; // 由 subdir 属性指定，ADR-094 位置路由：mmd 子类型扫子目录
-  _dirOpen: Record<string, boolean> = {};
-  _filesRoot = "";
   _authors: Array<AuthorInfo | string> = [];
-  _filterPaths: Set<string> | null = null; // Set 或 null，来自 SearchModels 结果
-  _renderMode: RenderMode = getRenderMode(); // 'grid' | 'list'
   _unsubs: Array<() => void> = [];
   /** 批量启用/禁用进行中（防连点菜单重叠循环二次 Toggle 把状态打回原形） */
   _batchBusy = false;
   /** 单文件开关进行中（防连点翻转状态） */
   _toggleBusy = false;
+  /** 搜索防抖 timer（实例级，HMR 重入时可被 disconnectedCallback 清理） */
+  _searchTimer: ReturnType<typeof setTimeout> | null = null;
   private _keydownHandler: EventListener | null = null;
   /** 批量删除进行中（防连点 Delete 二次触发） */
   private _deleting = false;
@@ -103,10 +97,152 @@ export class AppTree extends WebComponentBase {
   /** root 属性切换代际计数：快速切换时丢弃过期加载的渲染 */
   _gen = 0;
 
-  /** 多选状态（实例级，多实例隔离防串扰） */
-  selectState: SelectState = { keys: new Set(), lastKey: null };
   /** 渲染上下文（实例级，含 WeakMap 缓存） */
   treeRenderCtx: TreeRenderCtx = createTreeRenderCtx();
+
+  // ── TreeState 容器（封装 10 个可变状态字段）──
+  private _state = new TreeState();
+
+  /** 只读快照给子模块消费 */
+  get snapshot(): TreeSnapshot {
+    return this._state.getSnapshot();
+  }
+
+  // ── 状态修改方法（子模块写状态走这些入口）──
+  setSearch(v: string): void {
+    this._state.search = v;
+  }
+
+  setSort(v: string): void {
+    this._state.sort = v;
+  }
+
+  toggleDir(dir: string): void {
+    const isOpen = this._state.dirOpen[dir];
+    this._state.dirOpen[dir] = !isOpen;
+    if (isOpen) {
+      const prefix = `${dir}/`.replace(/\\/g, "/");
+      for (const key of Object.keys(this._state.dirOpen)) {
+        const nk = key.replace(/\\/g, "/");
+        if (nk !== dir && nk.startsWith(prefix)) delete this._state.dirOpen[key];
+      }
+    }
+    safeSet("dirOpenState", JSON.stringify(this._state.dirOpen));
+  }
+
+  setFilterPaths(paths: Set<string> | null): void {
+    this._state.filterPaths = paths;
+  }
+
+  setRenderMode(mode: RenderMode): void {
+    this._state.renderMode = mode;
+    setRenderMode(mode);
+  }
+
+  /** @deprecated 使用 snapshot.selectState 或 _state.selectState */
+  get selectState(): SelectState {
+    return this._state.selectState;
+  }
+  set selectState(v: SelectState) {
+    this._state.selectState = v;
+  }
+
+  // ── Deprecated 兼容访问器（转发到 _state，供旧代码渐进迁移）──
+  /** @deprecated 使用 snapshot.entries */
+  get _entries(): TreeEntry[] {
+    return this._state.entries;
+  }
+  set _entries(v: TreeEntry[]) {
+    this._state.entries = v;
+  }
+  /** @deprecated 使用 snapshot.search */
+  get _search(): string {
+    return this._state.search;
+  }
+  set _search(v: string) {
+    this._state.search = v;
+  }
+  /** @deprecated 使用 snapshot.sort */
+  get _sort(): string {
+    return this._state.sort;
+  }
+  set _sort(v: string) {
+    this._state.sort = v;
+  }
+  /** @deprecated 使用 snapshot.rootAttr */
+  get _rootAttr(): string {
+    return this._state.rootAttr;
+  }
+  set _rootAttr(v: string) {
+    this._state.rootAttr = v;
+  }
+  /** @deprecated 使用 snapshot.subdirAttr */
+  get _subdirAttr(): string {
+    return this._state.subdirAttr;
+  }
+  set _subdirAttr(v: string) {
+    this._state.subdirAttr = v;
+  }
+  /** @deprecated 使用 snapshot.dirOpen */
+  get _dirOpen(): Record<string, boolean> {
+    return this._state.dirOpen;
+  }
+  set _dirOpen(v: Record<string, boolean>) {
+    this._state.dirOpen = v;
+  }
+  /** @deprecated 使用 snapshot.filesRoot */
+  get _filesRoot(): string {
+    return this._state.filesRoot;
+  }
+  set _filesRoot(v: string) {
+    this._state.filesRoot = v;
+  }
+  /** @deprecated 使用 snapshot.filterPaths */
+  get _filterPaths(): Set<string> | null {
+    return this._state.filterPaths;
+  }
+  set _filterPaths(v: Set<string> | null) {
+    this._state.filterPaths = v;
+  }
+  /** @deprecated 使用 snapshot.renderMode */
+  get _renderMode(): RenderMode {
+    return this._state.renderMode;
+  }
+  set _renderMode(v: RenderMode) {
+    this._state.renderMode = v;
+  }
+
+  // ── 公共 getter（供集成测试和外部消费者使用）──
+  get ready(): boolean {
+    return this._ready;
+  }
+  get deleting(): boolean {
+    return this._deleting;
+  }
+  get entries(): TreeEntry[] {
+    return this._state.entries;
+  }
+  get rootAttr(): string {
+    return this._state.rootAttr;
+  }
+  get subdirAttr(): string {
+    return this._state.subdirAttr;
+  }
+  get filesRoot(): string {
+    return this._state.filesRoot;
+  }
+  get filterPaths(): Set<string> | null {
+    return this._state.filterPaths;
+  }
+  get dirOpen(): Record<string, boolean> {
+    return this._state.dirOpen;
+  }
+  get toggleBusy(): boolean {
+    return this._toggleBusy;
+  }
+  get batchBusy(): boolean {
+    return this._batchBusy;
+  }
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约）+ subdir（ADR-094 子类型子目录） */
   static get observedAttributes(): string[] {
@@ -120,20 +256,20 @@ export class AppTree extends WebComponentBase {
   }
 
   async connectedCallback(): Promise<void> {
-    this._rootAttr = this.getAttribute("root") || "";
-    this._subdirAttr = this.getAttribute("subdir") || "";
+    this._state.rootAttr = this.getAttribute("root") || "";
+    this._state.subdirAttr = this.getAttribute("subdir") || "";
     // 挂载入口快照：与补载判定共用——root/subdir 在途切换 = 当前属性 ≠ 入口快照。
     // 同步段内不可能有 attributeChanged（JS 单线程），此值即「挂载开始时的事实」。
-    const initRoot = this._rootAttr;
-    const initSubdir = this._subdirAttr;
+    const initRoot = this._state.rootAttr;
+    const initSubdir = this._state.subdirAttr;
     // 挂载代际捕获：二次挂载时若 root 在途被切换（attributeChangedCallback 已 ++_gen），
     // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
     const gen = ++this._gen;
 
     try {
-      Object.assign(this._dirOpen, JSON.parse(safeGet("at_dirs") || "{}"));
+      Object.assign(this._state.dirOpen, JSON.parse(safeGet("dirOpenState") || "{}"));
     } catch (e) {
-      logWarn("app-tree", "parse at_dirs:", e);
+      logWarn("app-tree", "parse dirOpenState:", e);
     }
 
     try {
@@ -153,7 +289,7 @@ export class AppTree extends WebComponentBase {
       // 仓库页 DnD 绑定（组件级，ADR-060）；透传当前树类型作导入落盘上下文。
       // P2 审核修复：传 getter 而非按值——root 支持动态切换，闭包惰性解析防旧类型残留
       const treeDnDEl = this._root.getElementById("tree");
-      if (treeDnDEl) this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._rootAttr));
+      if (treeDnDEl) this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._state.rootAttr));
 
       // 监听创作者详情→搜索本地模型
       this._unsubs.push(
@@ -177,7 +313,7 @@ export class AppTree extends WebComponentBase {
       // 取代原 _pendingRoot 事后纠错（原实现 attributeChanged 未 ready 分支不 ++_gen，
       // 首代渲染不被丢弃 → 需 pendingRoot 补载纠错 + 未连接 setAttribute 冗余双加载）。
       // 首代 _load 已用最新 _rootAttr 完成 → 渲染无错配；仅快照差时补载一次。
-      if (this._rootAttr !== initRoot || this._subdirAttr !== initSubdir) {
+      if (this._state.rootAttr !== initRoot || this._state.subdirAttr !== initSubdir) {
         await this._reloadAfterMountSwitch();
       }
     } catch (e) {
@@ -200,8 +336,8 @@ export class AppTree extends WebComponentBase {
       if (gen2 === this._gen) this._renderTree();
     } catch (e) {
       logError("app-tree", "pendingRoot Error", e);
-      // 补载失败：_entries 保留首代数据 → 兜底渲染避免空白树（gen 未被再次作废时）
-      if (gen2 === this._gen && this._entries.length) this._renderTree();
+      // 补载失败：entries 保留首代数据 → 兜底渲染避免空白树（gen 未被再次作废时）
+      if (gen2 === this._gen && this._state.entries.length) this._renderTree();
       toastThrottled(e, t("tree.treeLoadFailed"));
     }
   }
@@ -209,8 +345,8 @@ export class AppTree extends WebComponentBase {
   /** root/subdir 属性变更 → 重新加载并渲染（首次挂载由 connectedCallback 负责，避免重复加载） */
   attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (oldVal === newVal) return;
-    if (name === "root") this._rootAttr = newVal || "";
-    if (name === "subdir") this._subdirAttr = newVal || "";
+    if (name === "root") this._state.rootAttr = newVal || "";
+    if (name === "subdir") this._state.subdirAttr = newVal || "";
     if (!this._ready || !this.isConnected) {
       // 挂载未完成：递增代际作废在途首代 _load 的迟到渲染（否则首代渲染「新 rootAttr +
       // 旧 entries」错配帧上屏）；connected 末尾用入口快照差量补载，无冗余双加载。
@@ -240,6 +376,10 @@ export class AppTree extends WebComponentBase {
   disconnectedCallback(): void {
     // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     this._unsubs?.forEach((fn) => fn?.());
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
     if (this._keydownHandler) {
       document.removeEventListener("keydown", this._keydownHandler);
       this._keydownHandler = null;
@@ -261,21 +401,21 @@ export class AppTree extends WebComponentBase {
 
   async _load(): Promise<void> {
     try {
-      const rtype = this._rootAttr;
+      const rtype = this._state.rootAttr;
       // ADR-094：仅当有子目录时才传 subdir（无 subdir 保持单参，向后兼容）
-      const r = this._subdirAttr
-        ? await loadEntries(rtype, this._subdirAttr)
+      const r = this._state.subdirAttr
+        ? await loadEntries(rtype, this._state.subdirAttr)
         : await loadEntries(rtype);
       if (r?.entries) {
-        this._filesRoot = r.filesRoot;
-        this._entries = r.entries;
+        this._state.filesRoot = r.filesRoot;
+        this._state.entries = r.entries;
       } else {
-        this._entries = [];
+        this._state.entries = [];
       }
     } catch (e) {
       // 目录加载失败降级为空树——用户侧「空目录」与「加载失败」不可区分，留痕供排查
       logWarn("app-tree", "entries 加载失败:", e);
-      this._entries = [];
+      this._state.entries = [];
     }
   }
 
@@ -298,35 +438,37 @@ export class AppTree extends WebComponentBase {
     const c = this._root.getElementById("tree");
     // 清理旧的虚拟滚动监听（cleanupVirtualScroll：断开 cleanup/resizeObserver + 复位状态）
     if (c) cleanupVirtualScroll(this.treeRenderCtx, c);
-    const filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
+    const filtered: TreeEntry[] = Array.isArray(this._state.entries) ? this._state.entries : [];
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(
       "_renderTree",
       "entries=" +
         filtered.length +
         " search=" +
-        JSON.stringify(this._search) +
+        JSON.stringify(this._state.search) +
         " filterPaths=" +
-        (this._filterPaths ? this._filterPaths.size : "null"),
+        (this._state.filterPaths ? this._state.filterPaths.size : "null"),
     );
     renderTree(
       this.treeRenderCtx,
       c as HTMLElement,
       filtered,
-      this._search,
-      this._sort,
-      this._dirOpen,
-      this._filterPaths,
-      this._renderMode,
+      this._state.search,
+      this._state.sort,
+      this._state.dirOpen,
+      this._state.filterPaths,
+      this._state.renderMode,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
-    if (!this.selectState.keys.size) {
+    if (!this._state.selectState.keys.size) {
       updateStat(this.treeRenderCtx, this._root.getElementById("ftr-stat"), filtered);
     }
     // 仓库路径显示在按钮上
     const repoBtn = this._root.getElementById("btn-repo");
     if (repoBtn)
-      repoBtn.textContent = this._filesRoot ? `📁 ${this._filesRoot}` : t("tree.repoNotSet");
+      repoBtn.textContent = this._state.filesRoot
+        ? `📁 ${this._state.filesRoot}`
+        : t("tree.repoNotSet");
     // 注意：_authors 仅作组件字段保留（曾写 _root._treeAuthors 伪字段，死写无读取方已删）
   }
 
@@ -398,7 +540,7 @@ export class AppTree extends WebComponentBase {
       }))
     )
       return true;
-    const rtype = this._rootAttr || RESOURCE_TYPES.YSM;
+    const rtype = this._state.rootAttr || RESOURCE_TYPES.YSM;
     this._deleteSelected(paths, rtype);
     return true;
   }
@@ -421,7 +563,8 @@ export class AppTree extends WebComponentBase {
     if (!fileRows.length) return;
     e.preventDefault();
 
-    const currentIdx = fileRows.findIndex((r) => r.key === this.selectState.lastKey);
+    const ss = this._state.selectState;
+    const currentIdx = fileRows.findIndex((r) => r.key === ss.lastKey);
     const nextIdx =
       e.key === "ArrowDown"
         ? Math.min(currentIdx + 1, fileRows.length - 1)
@@ -430,8 +573,8 @@ export class AppTree extends WebComponentBase {
     // 在 selectSingle（内部会把 lastKey 改为 nextKey）之前捕获旧行 key，用它清除旧行
     // 高亮——原代码在 selectSingle 后读 selectState.lastKey，拿到的已是新行，清除逻辑
     // 误删新行自己，旧行 .selected 残留（连续 ArrowDown 多行同时高亮）。
-    const oldKey = this.selectState.lastKey;
-    selectSingle(this.selectState, nextKey);
+    const oldKey = ss.lastKey;
+    selectSingle(ss, nextKey);
 
     if (oldKey && oldKey !== nextKey) {
       const oldEl = container.querySelector(`[data-fullpath="${CSS.escape(oldKey)}"]`);
@@ -446,8 +589,8 @@ export class AppTree extends WebComponentBase {
       newEl.setAttribute("aria-selected", "true");
     }
 
-    updateSelectCount(this._root, this.selectState);
-    bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || RESOURCE_TYPES.YSM });
+    updateSelectCount(this._root, ss);
+    bus.emit("model:select", { path: nextKey, rtype: this._state.rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 
     const allRows = getVsRows(this.treeRenderCtx, container);
@@ -484,8 +627,8 @@ export class AppTree extends WebComponentBase {
           else fail++;
         }
       }
-      this.selectState.keys.clear();
-      this.selectState.lastKey = null;
+      this._state.selectState.keys.clear();
+      this._state.selectState.lastKey = null;
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中
       // 30s scanCache（Go 侧 DeleteModelFile 无 InvalidateCache，watcher 清缓存异步），
       // 刚删除的文件会立即"复活"显示。与 bus-handlers.reload() 的 ClearScanCache 链对齐。

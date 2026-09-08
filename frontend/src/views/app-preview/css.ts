@@ -82,4 +82,13 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 /* === P1 批次10:loadModel2D 加载占位盒 / detail 统计容器(shadow 内元素,规则须在 adopted 样式表) === */
 .sk-loading-box { margin-bottom:8px; opacity:0.6; }
 .dp-stats { margin-top:10px; }
+
+/* === skeleton-fill-panel 集中样式(P1 批次7+shadow 迁移：原 ensureSfpStyles 已从 light DOM 迁到 adopted) === */
+.stat-section.sfp-sec { font-weight:600;color:rgba(255,255,255,0.9);font-size:11px;margin-top:0;margin-bottom:4px;border-top:none;padding-top:0; }
+.stat-section.sfp-sec-bordered { margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px; }
+.sfp-irow { display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);padding:1px 0; }
+.sfp-trow { display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:10px;color:rgba(255,255,255,0.7);padding:1px 0; }
+.sfp-trow-left { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0; }
+.sfp-trow-right { flex-shrink:0;color:rgba(255,255,255,0.5); }
+.sfp-cap { display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);padding:1px 0;margin-bottom:2px; }
 `;

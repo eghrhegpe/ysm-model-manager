@@ -459,7 +459,6 @@ auto_fields:
     - fileRowCommon
     - fileRowHTML
     - fileToBase64
-    - fill3DPanel
     - fillAuthorsAsync
     - fillSearch
     - filterAnimFiles
@@ -921,7 +920,6 @@ auto_fields:
     - PageDefinition
     - PageName
     - PageStore
-    - PanelHandle
     - parseAnimationControllerJSON
     - parseBedrockAnimationJSON
     - parseBedrockGeometryFromJSON

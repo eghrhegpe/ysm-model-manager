@@ -20,9 +20,8 @@ import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
 import { containerHTML, loadingHTML } from "./tpl.ts";
 
-/** 合并四子模块（store / renderer / events / network）对组件实例的接口需求，
- * 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 */
-export interface SyncManagerSelf {
+/** 自定义字段（子模块通过 SyncManagerSelf 读写） */
+export interface SyncManagerFields {
   _gen: number;
   _instance: string;
   _selectedType: string;
@@ -51,14 +50,25 @@ export interface SyncManagerSelf {
       warningParams?: { label: string; dir: string; subDir: string };
     }
   >;
-  isConnected?: boolean;
-  innerHTML: string;
+  /** 当前回调引用容器（bindDelegatedEvents 一次性绑定后，后续 _init 仅更新此对象） */
+  _cbRef:
+    | {
+        cb: {
+          doRender: () => void;
+          doPerformOp: (op: "push" | "pull", path: string) => Promise<void>;
+        };
+      }
+    | undefined;
+  /** click handler 引用（一次性绑定后存储，供 disconnectedCallback 清理） */
+  _clickHandler: ((e: Event) => void) | null;
+  /** 收窄 querySelector 返回类型（DOM 原生返回 Element，消费方需要 HTMLElement） */
   querySelector(sel: string): HTMLElement | null;
-  querySelectorAll(sel: string): NodeList;
-  /** 容器级事件委托挂载点（绑定在组件根 light DOM，render 重建后无需重绑） */
-  addEventListener(type: "click", listener: (e: Event) => void): void;
-  removeEventListener(type: "click", listener: (e: Event) => void): void;
 }
+
+/** 合并四子模块（store / renderer / events / network）对组件实例的接口需求，
+ * 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。
+ * DOM 能力由 HTMLElement 继承（Omit 移除原生 querySelector 后由 SyncManagerFields 覆盖返回类型）。 */
+export type SyncManagerSelf = Omit<HTMLElement, "querySelector"> & SyncManagerFields;
 
 import { bindDelegatedEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
@@ -86,21 +96,32 @@ export class AppSyncManager extends WebComponentBase {
     return ["instance", "default-type"];
   }
 
-  private _instance = "";
+  _instance = "";
   private _defaultType = RESOURCE_TYPES.YSM;
-  private _selectedType = RESOURCE_TYPES.YSM;
+  _selectedType = RESOURCE_TYPES.YSM;
   _statusFilter = "all";
-  private _subtype = "";
-  private _allItems: SyncItem[] = [];
+  _subtype = "";
+  _allItems: SyncItem[] = [];
   _filteredItems: SyncItem[] = [];
   _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
   _loading = false;
-  private _gen = 0;
+  _gen = 0;
+  private _initGen = 0;
+  _eventsBound = false;
+  _clickHandler: ((e: Event) => void) | null = null;
   private _unsubs: Array<() => void> = [];
   _singleBusy = new Set<string>();
   _dirOpen: Record<string, boolean> = {};
   _filesRoots: Record<string, string> = {};
   _scanDirs: Record<string, { global: string; instance: string; warning?: string }> = {};
+  _cbRef:
+    | {
+        cb: {
+          doRender: () => void;
+          doPerformOp: (op: "push" | "pull", path: string) => Promise<void>;
+        };
+      }
+    | undefined;
 
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";
@@ -129,10 +150,19 @@ export class AppSyncManager extends WebComponentBase {
       this._unsubs.forEach((fn) => fn());
       this._unsubs = [];
     }
+    // 显式移除 click handler 并复位绑定标记（防御 bindDelegatedEvents 未返回 unsub 的边界）
+    if (this._eventsBound && this._clickHandler) {
+      this.removeEventListener("click", this._clickHandler);
+      this._clickHandler = null;
+    }
+    this._eventsBound = false;
+    // 清除回调引用，防止重连时残留旧闭包
+    this._cbRef = undefined;
   }
 
   async _init(): Promise<void> {
-    const self = this as unknown as SyncManagerSelf;
+    const self = this as SyncManagerSelf;
+    const initGen = ++this._initGen;
     const gen = ++this._gen;
     this._loading = true;
     this.innerHTML = containerHTML();
@@ -146,8 +176,10 @@ export class AppSyncManager extends WebComponentBase {
     }
 
     // 一次性容器级事件委托（render 重建 DOM 后无需重绑，消除并发 _doRender 双绑竞态）
-    this._unsubs.push(
-      bindDelegatedEvents(self, {
+    // 并发重入防护：仅首次 _init 绑定 click handler，后续 _init 仅更新回调引用
+    if (!this._eventsBound) {
+      this._clickHandler = null;
+      const unsub = bindDelegatedEvents(self, {
         doRender: () => this._doRender(),
         doPerformOp: (op, path) =>
           performSingleOp(self, op, path, {
@@ -155,8 +187,26 @@ export class AppSyncManager extends WebComponentBase {
             doRender: () => this._doRender(),
             doEmitStats: () => bus.emit("stats:refresh"),
           }),
-      }),
-    );
+      });
+      this._eventsBound = true;
+      this._unsubs.push(unsub);
+    } else {
+      // 后续 _init：仅更新 cbRef 中的回调引用，不重复 addEventListener
+      if (self._cbRef) {
+        self._cbRef.cb = {
+          doRender: () => this._doRender(),
+          doPerformOp: (op, path) =>
+            performSingleOp(self, op, path, {
+              doLoadData: () => loadData(self),
+              doRender: () => this._doRender(),
+              doEmitStats: () => bus.emit("stats:refresh"),
+            }),
+        };
+      }
+    }
+
+    // 并发代入守卫：过期代际/已卸载直接丢弃
+    if (initGen !== this._initGen || !this.isConnected) return;
 
     await loadTypeConfig(self);
     await loadData(self);
@@ -245,7 +295,7 @@ export class AppSyncManager extends WebComponentBase {
 
   /** 渲染统一入口（供 _init 和 stats:refresh 复用） */
   private _doRender(): void {
-    const self = this as unknown as SyncManagerSelf;
+    const self = this as SyncManagerSelf;
     // render 是 async（内部 await renderList）；事件已由 _init 一次性委托绑定，
     // render 重建 DOM 后无需重绑（原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
     render(self).catch((e) => logError("sync-manager", "render 失败:", e));

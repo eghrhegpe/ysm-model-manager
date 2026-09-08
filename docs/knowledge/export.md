@@ -28,7 +28,6 @@ auto_fields:
     - CacheValue
     - collectBlobUrls
     - componentCountsFromSpec
-    - fill3DPanel
     - loadTextures
     - makeYsmAdapter
     - releaseTextureUrls

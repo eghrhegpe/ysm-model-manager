@@ -96,18 +96,69 @@ function makeHarness(): Harness {
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<div id="ftr-stat"></div>`;
   const stat = root.getElementById("ftr-stat") as HTMLElement;
+  const dirOpenState: Record<string, boolean> = {};
+  const entriesState: TreeEntry[] = [];
+  let rootAttrVal: string | null = null;
+  let toggleBusyState = false;
+  let batchBusyState = false;
   const vm = {
-    _rootAttr: null,
-    _dirOpen: {} as Record<string, boolean>,
+    get rootAttr() { return rootAttrVal; },
+    set rootAttr(v: string | null) { rootAttrVal = v; },
     _gen: 0,
     _load: vi.fn().mockResolvedValue(undefined),
     _renderTree: vi.fn(),
     _root: root,
-    _toggleBusy: false,
-    _batchBusy: false,
-    _entries: [] as TreeEntry[],
+    get toggleBusy() { return toggleBusyState; },
+    set toggleBusy(v: boolean) { toggleBusyState = v; },
+    get batchBusy() { return batchBusyState; },
+    set batchBusy(v: boolean) { batchBusyState = v; },
     selectState: { keys: new Set<string>(), lastKey: null as string | null },
     treeRenderCtx,
+    toggleDir(dir: string) {
+      const isOpen = dirOpenState[dir];
+      dirOpenState[dir] = !isOpen;
+      if (isOpen) {
+        const prefix = `${dir}/`.replace(/\\/g, "/");
+        for (const key of Object.keys(dirOpenState)) {
+          const nk = key.replace(/\\/g, "/");
+          if (nk !== dir && nk.startsWith(prefix)) delete dirOpenState[key];
+        }
+      }
+      localStorage.setItem("dirOpenState", JSON.stringify(dirOpenState));
+    },
+    get snapshot() {
+      return {
+        entries: entriesState,
+        search: "",
+        sort: "name",
+        dirOpen: dirOpenState,
+        filterPaths: null,
+        renderMode: "grid",
+        rootAttr: vm.rootAttr ?? "",
+        subdirAttr: "",
+        filesRoot: "",
+      };
+    },
+    // ── 兼容旧测试断言（直接读写 dirOpenState / entriesState）──
+    get dirOpenState() {
+      return dirOpenState;
+    },
+    set dirOpenState(v: Record<string, boolean>) {
+      Object.assign(dirOpenState, v);
+    },
+    get dirOpen() {
+      return dirOpenState;
+    },
+    set dirOpen(v: Record<string, boolean>) {
+      Object.assign(dirOpenState, v);
+    },
+    get entriesState() {
+      return entriesState;
+    },
+    set entriesState(v: TreeEntry[]) {
+      entriesState.length = 0;
+      entriesState.push(...v);
+    },
   } as unknown as AppTree;
   return { container, vm, root, stat };
 }
@@ -186,8 +237,8 @@ describe("click 行分派（文件夹展开/收起）", () => {
     h.container.appendChild(folderRow("dirA", "目录A"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fh") as Element);
-    expect(h.vm._dirOpen["dirA"]).toBe(true);
-    expect(JSON.parse(localStorage.getItem("at_dirs") || "{}")).toEqual({ dirA: true });
+    expect(h.vm.dirOpen["dirA"]).toBe(true);
+    expect(JSON.parse(localStorage.getItem("dirOpenState") || "{}")).toEqual({ dirA: true });
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
     expect(emitted("model:select")).toEqual([{ path: "dirA", isDir: true }]);
     expect(rememberModelPathMock).toHaveBeenCalledWith(null);
@@ -195,7 +246,7 @@ describe("click 行分派（文件夹展开/收起）", () => {
 
   it("再次点击收起 → 子目录键清理 + 不再发射 model:select", () => {
     const h = makeHarness();
-    (h.vm as unknown as { _dirOpen: Record<string, boolean> })._dirOpen = {
+    (h.vm as unknown as { dirOpen: Record<string, boolean> }).dirOpen = {
       dirA: true,
       "dirA/sub": true,
       other: true,
@@ -203,7 +254,7 @@ describe("click 行分派（文件夹展开/收起）", () => {
     h.container.appendChild(folderRow("dirA", "目录A"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fh") as Element);
-    const dirOpen = (h.vm as unknown as { _dirOpen: Record<string, boolean> })._dirOpen;
+    const dirOpen = h.vm.dirOpen;
     expect(dirOpen["dirA"]).toBe(false);
     expect(dirOpen["dirA/sub"]).toBeUndefined(); // 前缀清理
     expect(dirOpen["other"]).toBe(true); // 非前缀保留
@@ -337,12 +388,12 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
     expect(emitted("sync:toggle:status").length).toBe(1); // rtype=ysm 才发
     expect(emitted("stats:refresh").length).toBe(1);
-    expect((h.vm as unknown as { _toggleBusy: boolean })._toggleBusy).toBe(false);
+    expect(h.vm.toggleBusy).toBe(false);
   });
 
   it("非 YSM rtype → 不发 sync:toggle:status", async () => {
     const h = makeHarness();
-    h.vm._rootAttr = "mmd";
+    h.vm.rootAttr = "mmd";
     h.container.appendChild(fileRow("/repo/a.pmx", "a.pmx"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl .ck") as Element);
@@ -353,7 +404,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
 
   it("toggle 进行中 → toast「⏳ 操作进行中」，不重复调用", async () => {
     const h = makeHarness();
-    (h.vm as unknown as { _toggleBusy: boolean })._toggleBusy = true;
+    (h.vm as unknown as { toggleBusy: boolean }).toggleBusy = true;
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl .ck") as Element);
@@ -389,14 +440,14 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(
       toasts.some((t) => t.msg.includes("切换失败") && t.msg.includes("a.ysm") && t.type === "error"),
     ).toBe(true);
-    expect((h.vm as unknown as { _toggleBusy: boolean })._toggleBusy).toBe(false);
+    expect(h.vm.toggleBusy).toBe(false);
   });
 });
 
 describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
   it("混合状态 → 启用：仅对 banned 项调 ToggleEnable，翻转 banned + renderTree + toast success", async () => {
     const h = makeHarness();
-    h.vm._entries = [
+    h.vm.entriesState = [
       makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
       makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", true),
       makeEntry("other/c.ysm", "/repo/other/c.ysm", true), // 前缀外，不参与
@@ -407,19 +458,19 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     await flush();
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
     expect(ToggleEnableMock).toHaveBeenCalledWith("/repo/dirA/b.ysm");
-    expect(h.vm._entries[1].banned).toBe(false);
+    expect(h.vm.entriesState[1].banned).toBe(false);
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
     expect(emitted("sync:toggle:status").length).toBe(1);
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(
       toasts.some((t) => t.msg === "文件夹启用: 1 成功, 0 失败" && t.type === "success"),
     ).toBe(true);
-    expect((h.vm as unknown as { _batchBusy: boolean })._batchBusy).toBe(false);
+    expect(h.vm.batchBusy).toBe(false);
   });
 
   it("全部已启用 → 禁用：逐项 ToggleEnable 并置 banned=true，toast「文件夹禁用」", async () => {
     const h = makeHarness();
-    h.vm._entries = [
+    h.vm.entriesState = [
       makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
       makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
     ];
@@ -428,7 +479,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     click(h.container.querySelector(".fh .ck") as Element);
     await flush();
     expect(ToggleEnableMock).toHaveBeenCalledTimes(2);
-    expect(h.vm._entries.every((e) => e.banned)).toBe(true);
+    expect(h.vm.entriesState.every((e) => e.banned)).toBe(true);
     const toasts = emitted("toast:show") as Array<{ msg: string }>;
     expect(toasts.some((t) => t.msg === "文件夹禁用: 2 成功, 0 失败")).toBe(true);
   });
@@ -438,7 +489,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     ToggleEnableMock
       .mockRejectedValueOnce(new Error("lock"))
       .mockResolvedValueOnce(undefined);
-    h.vm._entries = [
+    h.vm.entriesState = [
       makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
       makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
     ];
@@ -450,14 +501,14 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(toasts.some((t) => t.msg === "文件夹禁用: 1 成功, 1 失败" && t.type === "warn")).toBe(true);
     // 修复后：只翻转成功项；失败项保持原状，不依赖重载纠正
     // （mock 顺序：a.ysm 首次调用 rejected、b.ysm 第二次 resolved）
-    expect(h.vm._entries[0].banned).toBe(false); // 失败项 a.ysm 保持现状
-    expect(h.vm._entries[1].banned).toBe(true); // 成功项 b.ysm 翻转
+    expect(h.vm.entriesState[0].banned).toBe(false); // 失败项 a.ysm 保持现状
+    expect(h.vm.entriesState[1].banned).toBe(true); // 成功项 b.ysm 翻转
   });
 
   it("全部失败 → toast warn 含失败计数；不翻转 banned、不 renderTree、不发 sync（ok=0 短路）", async () => {
     const h = makeHarness();
     ToggleEnableMock.mockRejectedValue(new Error("lock"));
-    h.vm._entries = [
+    h.vm.entriesState = [
       makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
       makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
     ];
@@ -468,14 +519,14 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg === "文件夹禁用: 0 成功, 2 失败" && t.type === "warn")).toBe(true);
     // ok=0 → 不进 if (ok>0)：失败项全部保持原状，不重绘不广播
-    expect(h.vm._entries.every((e) => e.banned === false)).toBe(true);
+    expect(h.vm.entriesState.every((e) => e.banned === false)).toBe(true);
     expect(h.vm._renderTree).not.toHaveBeenCalled();
     expect(emitted("sync:toggle:status").length).toBe(0);
   });
 
   it("批量进行中 → toast「⏳ 操作进行中」，不调 getApp", async () => {
     const h = makeHarness();
-    (h.vm as unknown as { _batchBusy: boolean })._batchBusy = true;
+    (h.vm as unknown as { batchBusy: boolean }).batchBusy = true;
     h.container.appendChild(folderRow("dirA", "目录A"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fh .ck") as Element);
@@ -483,7 +534,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg.includes("操作进行中"))).toBe(true);
     expect(getAppMock).not.toHaveBeenCalled();
-    (h.vm as unknown as { _batchBusy: boolean })._batchBusy = false;
+    (h.vm as unknown as { batchBusy: boolean }).batchBusy = false;
   });
 
   it("can=false → warn toast，不进批量流程", async () => {
@@ -510,7 +561,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(
       toasts.some((t) => t.msg.includes("批量启用/禁用失败") && t.type === "error"),
     ).toBe(true);
-    expect((h.vm as unknown as { _batchBusy: boolean })._batchBusy).toBe(false);
+    expect(h.vm.batchBusy).toBe(false);
     getAppMock.mockResolvedValue({
       ToggleEnable: ToggleEnableMock,
       RenameFile: RenameFileMock,

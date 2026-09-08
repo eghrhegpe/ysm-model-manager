@@ -1,7 +1,6 @@
 // ===== 创意工坊纯数据层 =====
 
 import { getApp } from "@/backend/app.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/log.ts";
 import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
@@ -81,10 +80,6 @@ export function clearAllCommunityCache(): void {
   invalidateCache(SITES_FETCH_KEY);
   dbg("cache", "all community cache cleared");
 }
-
-// 解耦 features → views：features 层（download-queue）经 bus 触发社区缓存失效，
-// 此处集中订阅（模块级注册一次，ESM 单例不会重复）。ADR-039 范式。
-bus.on("community:clearCache", clearAllCommunityCache);
 
 /**
  * 加载站点 + 创作者数据（纯数据，不碰 DOM）——首屏快路径。

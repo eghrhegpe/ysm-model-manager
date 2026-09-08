@@ -181,12 +181,44 @@ function makeMockCtx(w = 180, h = 180): MockCtx {
 
 function makeMockCanvas(w = 180, h = 180) {
   const ctx = makeMockCtx(w, h);
+  const listeners = new Map<string, Array<{ fn: Function; signal?: AbortSignal }>>();
+  const removeEventListener = vi.fn((event: string, fn: Function) => {
+    const arr = listeners.get(event);
+    if (arr) {
+      const idx = arr.findIndex((e) => e.fn === fn);
+      if (idx !== -1) arr.splice(idx, 1);
+    }
+  });
+  const addEventListener = vi.fn(
+    (event: string, fn: Function, options?: { signal?: AbortSignal }) => {
+      if (!listeners.has(event)) listeners.set(event, []);
+      const entry: { fn: Function; signal?: AbortSignal } = { fn };
+      if (options?.signal) entry.signal = options.signal;
+      listeners.get(event)!.push(entry);
+      if (options?.signal) {
+        options.signal.addEventListener(
+          "abort",
+          () => {
+            const arr = listeners.get(event);
+            if (arr) {
+              const idx = arr.indexOf(entry);
+              if (idx !== -1) {
+                arr.splice(idx, 1);
+                removeEventListener(event, fn);
+              }
+            }
+          },
+          { once: true },
+        );
+      }
+    },
+  );
   return {
     width: w,
     height: h,
     getContext: () => ctx,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
+    addEventListener,
+    removeEventListener,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }),
     _ctx: ctx,
   };
@@ -216,8 +248,12 @@ describe("renderModel2D 冒烟（canvas 2D mock）", () => {
     renderModel2D(canvas as unknown as HTMLCanvasElement, SIMPLE_MODEL, null, {});
     expect(canvas._ctx.clearRect).toHaveBeenCalled();
     expect(canvas._ctx.fillRect).toHaveBeenCalled();
-    expect(canvas.addEventListener).toHaveBeenCalledWith("pointermove", expect.any(Function));
-    expect(canvas.addEventListener).toHaveBeenCalledWith("pointerleave", expect.any(Function));
+    expect(canvas.addEventListener).toHaveBeenCalledWith("pointermove", expect.any(Function), {
+      signal: expect.any(AbortSignal),
+    });
+    expect(canvas.addEventListener).toHaveBeenCalledWith("pointerleave", expect.any(Function), {
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it("showLabels 默认开启 → fillText 绘制骨骼名", () => {
@@ -257,11 +293,13 @@ describe("renderModel2D 冒烟（canvas 2D mock）", () => {
     ).not.toThrow();
   });
 
-  it("二次渲染触发 _hoverCleanup 清理旧监听", () => {
+  it("调用返回的清理函数可移除旧监听（AbortController 模式）", () => {
     const canvas = makeMockCanvas();
-    renderModel2D(canvas as unknown as HTMLCanvasElement, SIMPLE_MODEL, null, {});
-    renderModel2D(canvas as unknown as HTMLCanvasElement, SIMPLE_MODEL, null, {});
+    const cleanup = renderModel2D(canvas as unknown as HTMLCanvasElement, SIMPLE_MODEL, null, {});
+    expect(canvas.removeEventListener).not.toHaveBeenCalled();
+    cleanup();
     expect(canvas.removeEventListener).toHaveBeenCalledWith("pointermove", expect.any(Function));
+    expect(canvas.removeEventListener).toHaveBeenCalledWith("pointerleave", expect.any(Function));
   });
 
   it("pointermove 触发重绘（命中或离开均重绘一次）", () => {

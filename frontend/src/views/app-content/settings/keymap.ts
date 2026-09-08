@@ -10,6 +10,17 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
 let _activeCapture: ((e: KeyboardEvent) => void) | null = null;
+// 追踪注册监听时的 root，用于 onKey 回调中自检与 cleanupKeymap 复位
+let _activeRoot: ShadowRoot | null = null;
+
+/** 移除 document keydown 捕获监听并复位模块状态（供 settings 页卸载/组件销毁时调用） */
+export function cleanupKeymap(): void {
+  if (_activeCapture) {
+    document.removeEventListener("keydown", _activeCapture, true);
+    _activeCapture = null;
+    _activeRoot = null;
+  }
+}
 
 // 魔法数值收敛：相机速度默认值（与 preview-3d/keymap.ts loadTdCamSpeed 默认 20 同源）、键位按钮最小宽度、
 // 成功/冲突提示 toast 时长（ms）
@@ -57,10 +68,8 @@ const tdSaveKeymap = (km: Record<TdKeyAction, string>): void => {
 
 function tdRenderKeymap(root: ShadowRoot): void {
   // 重建网格前取消任何进行中的捕获，避免叠加/残留
-  if (_activeCapture) {
-    document.removeEventListener("keydown", _activeCapture, true);
-    _activeCapture = null;
-  }
+  cleanupKeymap();
+  _activeRoot = root;
   const grid = root.getElementById("td-keymap-grid");
   if (!grid) return;
   const km = loadTdKeymap();
@@ -77,22 +86,17 @@ function tdRenderKeymap(root: ShadowRoot): void {
     btn.style.minWidth = KEY_BTN_MIN_WIDTH;
     btn.addEventListener("click", () => {
       // 取消上一次未完成的捕获，保证同一时刻仅一个
-      if (_activeCapture) {
-        document.removeEventListener("keydown", _activeCapture, true);
-        _activeCapture = null;
-      }
+      cleanupKeymap();
       btn.textContent = t("settings.keymap.pressKey");
       const onKey = (ev: KeyboardEvent): void => {
-        // 设置页已卸载（grid 不存在）则放弃捕获，先判后拦截，杜绝全局 keydown 劫持
-        if (!root.getElementById("td-keymap-grid")) {
-          document.removeEventListener("keydown", onKey, true);
-          _activeCapture = null;
+        // 设置页已卸载（root 失效或 grid 不存在）则放弃捕获，先判后拦截，杜绝全局 keydown 劫持
+        if (!_activeRoot?.getElementById("td-keymap-grid")) {
+          cleanupKeymap();
           return;
         }
         ev.preventDefault();
         ev.stopPropagation();
-        document.removeEventListener("keydown", onKey, true);
-        _activeCapture = null;
+        cleanupKeymap();
         if (ev.code === "Escape") {
           tdRenderKeymap(root);
           return;

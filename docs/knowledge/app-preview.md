@@ -44,7 +44,6 @@ auto_fields:
     - DetailGenGuard
     - drawMiniView
     - drawView
-    - fill3DPanel
     - fillAuthorsAsync
     - GenGuard
     - getRegisteredRoutes
@@ -73,7 +72,6 @@ auto_fields:
     - openFullPreview
     - openModel3DFullscreen
     - OpenModel3DOptions
-    - PanelHandle
     - playNodes
     - Prefer3DState
     - preloadModel

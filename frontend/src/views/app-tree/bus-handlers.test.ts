@@ -97,29 +97,67 @@ function makeEntry(over: Partial<TreeEntry> = {}): TreeEntry {
 }
 
 interface VM {
-  _rootAttr: string;
-  _subdirAttr: string;
-  _batchBusy: boolean;
+  batchBusy: boolean;
   _toggleBusy: boolean;
-  _entries: TreeEntry[];
-  _filesRoot: string | null;
+  entries: TreeEntry[];
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
   selectState: { keys: Set<string>; lastKey: string | null };
+  rootAttr: string;
+  subdirAttr: string;
+  filesRoot: string | null;
+  setRootAttr: (v: string) => void;
+  setSubdirAttr: (v: string) => void;
+  setFilesRoot: (v: string | null) => void;
+  snapshot: {
+    readonly entries: TreeEntry[];
+    readonly search: string;
+    readonly sort: string;
+    readonly dirOpen: Record<string, boolean>;
+    readonly filterPaths: Set<string> | null;
+    readonly renderMode: string;
+    readonly rootAttr: string;
+    readonly subdirAttr: string;
+    readonly filesRoot: string;
+  };
 }
 
 function makeVM(entries: TreeEntry[] = []): VM {
-  return {
-    _rootAttr: "ysm",
-    _subdirAttr: "",
-    _batchBusy: false,
+  let rootAttrVal = "ysm";
+  let subdirAttrVal = "";
+  let filesRootVal: string | null = null;
+  const vm: VM = {
+    batchBusy: false,
     _toggleBusy: false,
-    _entries: entries,
-    _filesRoot: null,
+    entries: entries,
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),
     selectState: { keys: new Set(), lastKey: null },
+    // getter/setter（无下划线前缀）
+    get rootAttr() { return rootAttrVal; },
+    set rootAttr(v: string) { rootAttrVal = v; },
+    get subdirAttr() { return subdirAttrVal; },
+    set subdirAttr(v: string) { subdirAttrVal = v; },
+    get filesRoot() { return filesRootVal; },
+    set filesRoot(v: string | null) { filesRootVal = v; },
+    setRootAttr(v: string) { rootAttrVal = v; },
+    setSubdirAttr(v: string) { subdirAttrVal = v; },
+    setFilesRoot(v: string | null) { filesRootVal = v; },
+    get snapshot() {
+      return {
+        entries: vm.entries,
+        search: "",
+        sort: "name",
+        dirOpen: {},
+        filterPaths: null,
+        renderMode: "grid",
+        rootAttr: rootAttrVal,
+        subdirAttr: subdirAttrVal,
+        filesRoot: filesRootVal ?? "",
+      };
+    },
   };
+  return vm;
 }
 
 // bus 事件收集
@@ -221,7 +259,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
   it("并发守卫：_batchBusy 在途 → 后续批量操作忽略", async () => {
     const vm = makeVM([makeEntry({ banned: true })]);
     await bind(vm);
-    vm._batchBusy = true;
+    vm.batchBusy = true;
 
     bus.emit("batch:enable-all");
     await new Promise((r) => setTimeout(r, 0));
@@ -231,7 +269,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
 
   it("YSM 树 batch toggle 成功 → 发 sync:toggle:status（YSM 同步链）", async () => {
     const vm = makeVM([makeEntry({ fullPath: "/repo/a.ysm", banned: true })]);
-    vm._rootAttr = "ysm"; // YSM 树（默认）
+    vm.setRootAttr("ysm"); // YSM 树（默认）
     await bind(vm);
 
     bus.emit("batch:enable-all");
@@ -246,7 +284,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
     // GetRepoRoot(YSM)），非 YSM 树 toggle 走 McRoot/CustomRoots，触发只会弹
     // 「请先配置目录」或对 YSM 做无谓 WalkDir+Rename——必须按当前树类型门控。
     const vm = makeVM([makeEntry({ fullPath: "/repo/pack.zip", banned: true })]);
-    vm._rootAttr = "resourcepack";
+    vm.setRootAttr("resourcepack");
     await bind(vm);
 
     bus.emit("batch:enable-all");
@@ -446,14 +484,14 @@ describe("bindBusEvents — 树刷新", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ClearScanCacheMock).toHaveBeenCalled();
-    expect(vm._filesRoot).toBe("/repo");
+    expect(vm.snapshot.filesRoot).toBe("/repo");
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
   it("tree:reload → 保留 _subdirAttr（ADR-094，不丢失子目录上下文）", async () => {
     const vm = makeVM();
-    vm._rootAttr = "EntityPlayer";
-    vm._subdirAttr = "EntityPlayer";
+    vm.setRootAttr("EntityPlayer");
+    vm.setSubdirAttr("EntityPlayer");
     let loadedArgs: [string, string?] = ["EntityPlayer"];
     loadEntriesMock.mockImplementation(async (...args: [string, string?]) => {
       loadedArgs = args;
@@ -465,6 +503,6 @@ describe("bindBusEvents — 树刷新", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(loadedArgs).toEqual(["EntityPlayer", "EntityPlayer"]);
-    expect(vm._filesRoot).toBe("/repo/mmd/EntityPlayer");
+    expect(vm.snapshot.filesRoot).toBe("/repo/mmd/EntityPlayer");
   });
 });

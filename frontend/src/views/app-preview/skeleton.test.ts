@@ -66,8 +66,6 @@ vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 vi.mock("./ysm-3d.ts", () => ({ createYsm3D, cleanupYsm3D }));
 
 import { loadModel2D, closeActive3DOverlay, setActive3DClose } from "./skeleton.ts";
-import { fill3DPanel } from "./skeleton-render.ts";
-import type { Spec3D } from "@/preview-3d/model3d.ts";
 
 /** 可控 Image：src setter 同步 onload（happy-dom 无真实网络） */
 class FakeImage {
@@ -117,27 +115,6 @@ function makeCtx() {
     setPrefer3D: vi.fn(),
   };
   return ctx;
-}
-
-function make3DHandle() {
-  return {
-    cleanup: vi.fn(),
-    dispose: vi.fn(),
-    screenshot: vi.fn(() => null),
-    resetCamera: vi.fn(),
-    onBoneSelect: null as null | ((info: unknown) => void),
-    getModelGroupCount: vi.fn(() => 1),
-    getBoneList: vi.fn(() => []),
-    setBoneVisible: vi.fn(),
-    toggleBone: vi.fn(),
-    setDebugMode: vi.fn(),
-    setRotationMode: vi.fn(),
-    setSpeed: vi.fn(),
-    showModelGroup: vi.fn(),
-    _timeTimer: undefined as undefined | ReturnType<typeof setInterval>,
-    _keyHandler: null as null | ((e: KeyboardEvent) => void),
-    _boneDetailEl: null as null | HTMLElement,
-  };
 }
 
 beforeEach(() => {
@@ -447,114 +424,8 @@ describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，share
   });
 });
 
-// ── fill3DPanel（skeleton-fill-panel.ts，审核盲区补建）────────────
-describe("fill3DPanel", () => {
-  const makeFakeTex = (over: Record<string, unknown> = {}): unknown => ({
-    userData: { imgWidth: 64, imgHeight: 32 },
-    image: null, // happy-dom drawImage 不接受普通对象，置空跳过绘制分支
-    ...over,
-  });
-
-  function setup(over: {
-    bones?: Array<{ id: string; name: string; parentId: string | null }>;
-    groupCount?: number;
-    cubeCounts?: number[];
-    textures?: string[] | null;
-    textureNames?: string[];
-  } = {}) {
-    const panel = document.createElement("div");
-    panel.id = "preview-panel";
-    document.body.appendChild(panel);
-    const model = makeModel({
-      textures: over.textures ?? ["t1.png", "t2.png"],
-      textureNames: over.textureNames ?? ["skin", "tail"],
-    }) as unknown as Parameters<typeof fill3DPanel>[1];
-    const count = over.groupCount ?? 1;
-    const spec = {
-      models: Array.from({ length: Math.max(count, 1) }, () => ({
-        bones: (over.cubeCounts ?? [2, 3]).map((c) => ({ _cubeCount: c })),
-        textureWidth: 64,
-        textureHeight: 32,
-      })),
-    } as unknown as Spec3D;
-    const handle = make3DHandle();
-    handle.getModelGroupCount = vi.fn(() => count) as typeof handle.getModelGroupCount;
-    handle.getBoneList = vi.fn(() => over.bones ?? []) as typeof handle.getBoneList;
-    const modelSel = document.createElement("select");
-    return { panel, model, handle, modelSel, spec };
-  }
-
-  it("统计 + 纹理列表 + 多组件选择器（骨骼已移至 id:bones 独立菜单项）", () => {
-    const { panel, model, handle, modelSel, spec } = setup({
-      groupCount: 2,
-      bones: [
-        { id: "root", name: "根", parentId: null },
-        { id: "arm", name: "手臂", parentId: "root" },
-      ],
-    });
-    const texArr = [
-      makeFakeTex(),
-      makeFakeTex({ userData: {}, image: null }), // 无尺寸信息 → 0×0
-    ] as unknown as import("three").Texture[];
-
-    fill3DPanel(panel, model, texArr, spec, handle, modelSel);
-
-    // 统计：多组件初始默认「All」→ 两组件骨骼/立方体汇总（2+2 根 / 5+5 个）
-    expect(panel.textContent).toContain("4 根");
-    expect(panel.textContent).toContain("10 个");
-    expect(panel.textContent).toContain("64×32");
-    // 纹理列表：声明/加载分离——声明=模型声明 64×32；texArr[1] 无 userData → 加载 ?
-    expect(panel.textContent).toContain("纹理 (2)");
-    expect(panel.textContent).toContain("skin");
-    expect(panel.textContent).toContain("tail");
-    // 声明尺寸 / 加载尺寸经 t 参数传入（mock 拼回为 decl=… / size=…），
-    // 验证「声明 64×32 / 加载 64×32 / 加载 ?」三态均正确（locale 无关）
-    expect(panel.textContent).toContain("decl=64×32");
-    expect(panel.textContent).toContain("size=64×32");
-    expect(panel.textContent).toContain("size=?");
-    // 多组件：选择器显示 + all 选项 + 2 个组件
-    expect(modelSel.style.display).not.toBe("none");
-    expect(modelSel.options.length).toBe(3);
-    expect(modelSel.options[0]!.textContent).toContain("preview.allComponents");
-    // 骨骼列表/详情框已移除——fill3DPanel 不再内嵌骨骼 section
-    expect(panel.querySelector(".bone-list")).toBeNull();
-    expect(panel.querySelector(".bone-detail")).toBeNull();
-    expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
-    document.body.removeChild(panel);
-  });
-
-  it("当前组件绑定：perComponent 组件按 componentTextures 显示组件专属纹理，而非兜底 全量", () => {
-    const panel = document.createElement("div");
-    panel.id = "preview-panel";
-    document.body.appendChild(panel);
-    const model = makeModel({
-      textures: ["t.png"],
-      textureNames: ["skin"],
-    }) as unknown as Parameters<typeof fill3DPanel>[1];
-    const handle = make3DHandle();
-    handle.getModelGroupCount = vi.fn(() => 2) as typeof handle.getModelGroupCount;
-    handle.getBoneList = vi.fn(() => []) as typeof handle.getBoneList;
-    const modelSel = document.createElement("select");
-    // 多组件 spec：main 走全局 texArrOrder（skin），arrow 是 perComponent（texArrOrder 空串）
-    const spec = {
-      models: [
-        { name: "main", bones: [{ _cubeCount: 1 }], textureWidth: 64, textureHeight: 32 },
-        { name: "arrow", bones: [{ _cubeCount: 1 }], textureWidth: 64, textureHeight: 32 },
-      ],
-      texArrOrder: ["skin", ""],
-      componentTextures: { arrow: ["data:image/png;base64,QUJD"] },
-    } as unknown as Spec3D;
-    const texArr = [makeFakeTex()] as unknown as import("three").Texture[];
-    fill3DPanel(panel, model, texArr, spec, handle, modelSel);
-    expect(panel.textContent).toContain("skeleton.currentBinding");
-    // 切到 arrow（perComponent 组件）→ 绑定行须显示组件专属纹理，不得吞成 全量
-    modelSel.value = "1";
-    modelSel.dispatchEvent(new Event("change"));
-    expect(panel.textContent).toContain("arrow");
-    expect(panel.textContent).not.toContain("全量");
-    document.body.removeChild(panel);
-  });
-});
+// fill3DPanel 命令式旧轨已删除（ADR-126 P5 声明式迁移完成）；
+// 其测试覆盖的统计/纹理/组件选择语义已由 buildYsmModelSchema + ysmModelStats 承接。
 
 describe("active3DClose 实例隔离（a760aece0 模块级→实例级迁移回归锚）", () => {
   // code_review a760aece0 #2/#3（P3）：active3DClose 从模块级单例迁实例 ctx——

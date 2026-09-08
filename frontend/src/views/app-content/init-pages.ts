@@ -13,6 +13,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
 import { initSettings } from "@/views/app-content/settings/init.ts";
+import { cleanupKeymap } from "@/views/app-content/settings/keymap.ts";
 import type { AppContentHost } from "./host.ts";
 
 /**
@@ -285,6 +286,8 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
   bindTabs(host, ".stg-tab", "stg", ["basic", "ui", "parser", "about", "credits"]);
   try {
     await initSettings(host._root);
+    // 组件卸载/切页时移除 document keydown 捕获监听，防全局劫持泄漏
+    host._unsubs.push(cleanupKeymap);
   } catch (e) {
     logError("settings", "初始化失败", e);
     bus.emit("toast:show", {

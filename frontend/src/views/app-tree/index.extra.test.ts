@@ -90,7 +90,7 @@ async function mountEl(rootAttr?: string): Promise<AppTree> {
   const el = document.createElement("app-tree") as unknown as AppTree;
   if (rootAttr !== undefined) el.setAttribute("root", rootAttr);
   document.body.appendChild(el);
-  await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
+  await waitFor(() => el.ready === true);
   return el;
 }
 
@@ -141,7 +141,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
-  localStorage.removeItem("at_dirs");
+  localStorage.removeItem("dirOpenState");
   delete (globalThis as Record<string, unknown>)["__YSM_WEB__"];
 });
 
@@ -221,8 +221,8 @@ describe("app-tree index 入口生命周期（补位）", () => {
     el.selectState.keys.add("/repo/a.ysm");
     const el2 = document.createElement("app-tree") as unknown as AppTree;
     document.body.appendChild(el2);
-    await waitFor(() => (el2 as unknown as { _ready: boolean })._ready === true);
-    expect((el2 as unknown as { selectState: { keys: Set<string> } }).selectState.keys.size).toBe(0);
+    await waitFor(() => el2.ready === true);
+    expect(el2.selectState.keys.size).toBe(0);
     el2.remove();
   });
 
@@ -261,7 +261,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("Delete 统一走 DeleteResourcePack 并传 rtype", async () => {
     const el = await mountEl();
-    (el as unknown as { _rootAttr: string })._rootAttr = RESOURCE_TYPES.MMD;
+    el.setAttribute("root", RESOURCE_TYPES.MMD);
     el.selectState.keys.add("/repo/a.ysm");
     dispatchKey("Delete");
     await waitFor(() => (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mock.calls.length === 1);
@@ -319,7 +319,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     await sleep0();
     expect(renderSpy).not.toHaveBeenCalled();
     expect(getToast()).toBeUndefined();
-    expect((el as unknown as { _deleting: boolean })._deleting).toBe(false);
+    expect(el.deleting).toBe(false);
   });
 
   it("_deleteSelected getApp 失败 → 错误 toast，选中保留", async () => {
@@ -341,7 +341,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     el.setAttribute("root", RESOURCE_TYPES.MMD);
     await waitFor(() => (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mock.calls.length === 1);
     expect(loader).toHaveBeenCalledWith(RESOURCE_TYPES.MMD);
-    expect((el as unknown as { _entries: TreeEntry[] })._entries.map((e) => e.name)).toEqual(["m1.mmd"]);
+    expect(el.entries.map((e) => e.name)).toEqual(["m1.mmd"]);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "m1");
   });
@@ -381,16 +381,16 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("root 变更为空字符串 → _rootAttr 置空并按空 rtype 重载", async () => {
     const el = await mountEl();
-    expect((el as unknown as { _rootAttr: string })._rootAttr).toBe("");
+    expect(el.rootAttr).toBe("");
     el.setAttribute("root", "");
     await waitFor(() => (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mock.calls.length === 1);
-    expect((el as unknown as { _rootAttr: string })._rootAttr).toBe("");
+    expect(el.rootAttr).toBe("");
     expect(loader).toHaveBeenLastCalledWith("");
   });
 
   it("_entries 非数组（防御）→ 过滤为空渲染空态不崩溃", async () => {
     const el = await mountEl();
-    (el as unknown as { _entries: unknown })._entries = null;
+    el["_state"].entries = [];
     el._renderTree(); // 直接调用渲染，触发 Array.isArray 兜底
     expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain("暂无模型文件");
   });
@@ -411,7 +411,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     // ADR-111：VRM 已合并进 EntityPlayer 的 variants，用 "resourcepack" 测 root 预置
     el.setAttribute("root", "resourcepack"); // 未连接：attributeChanged 同步 _rootAttr + ++_gen
     document.body.appendChild(el);
-    await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
+    await waitFor(() => el.ready === true);
     // 单次加载（旧实现：预连接 setAttribute 置 _pendingRoot → connected 末尾补载 = 双加载）
     expect(loader.mock.calls.map((c) => c[0])).toEqual(["resourcepack"]);
     expect(bindings.ClearScanCache).not.toHaveBeenCalled();
@@ -432,7 +432,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     // ADR-111：用 PACK 作第二类型测在途切换
     el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换：attributeChanged ++_gen 作废首代
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] }); // 首代恢复 → gen 不匹配
-    await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
+    await waitFor(() => el.ready === true);
     expect(loader.mock.calls.map((c) => c[0])).toEqual([RESOURCE_TYPES.MMD, RESOURCE_TYPES.PACK]);
     expect(bindings.ClearScanCache).toHaveBeenCalledTimes(1);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
@@ -473,20 +473,20 @@ describe("app-tree index 入口生命周期（补位）", () => {
     const el = await mountEl();
     expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toBe(t("tree.treeLoadFailed"));
     expect(loader).not.toHaveBeenCalled(); // _load 未及执行
-    expect((el as unknown as { _ready: boolean })._ready).toBe(true);
+    expect(el.ready).toBe(true);
   });
 
   it("_load 返回无 entries 字段 → _entries 置空渲染空态", async () => {
     loaderImpl = () => Promise.resolve({ filesRoot: "/repo" });
     const el = await mountEl();
-    expect((el as unknown as { _entries: TreeEntry[] })._entries).toEqual([]);
+    expect(el.entries).toEqual([]);
     expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain("暂无模型文件");
   });
 
   it("_load 抛错 → _entries 置空且挂载不崩溃", async () => {
     loaderImpl = () => Promise.reject(new Error("scan boom"));
     const el = await mountEl();
-    expect((el as unknown as { _entries: TreeEntry[] })._entries).toEqual([]);
+    expect(el.entries).toEqual([]);
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();
   });
 
@@ -498,13 +498,11 @@ describe("app-tree index 入口生命周期（补位）", () => {
   });
 
   it("_filterPaths 过滤渲染（只渲染命中路径的行）", async () => {
-    const el = document.createElement("app-tree") as unknown as AppTree & {
-      _filterPaths: Set<string> | null;
-    };
+    const el = document.createElement("app-tree") as unknown as AppTree;
     // 注：filterPaths 匹配的是 entry.path（短路径名），不是 fullPath
-    el._filterPaths = new Set(["b.ysm"]);
+    el.setFilterPaths(new Set(["b.ysm"]));
     document.body.appendChild(el);
-    await waitFor(() => (el as unknown as { _ready: boolean })._ready === true);
+    await waitFor(() => el.ready === true);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "b", "a");
   }, 10000);

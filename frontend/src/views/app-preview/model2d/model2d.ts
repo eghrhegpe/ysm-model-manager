@@ -41,27 +41,21 @@ export interface Model2DOptions {
   boneTransforms?: Map<string, BoneTransform>;
 }
 
-declare global {
-  interface HTMLCanvasElement {
-    /** 悬停事件清理函数（renderModel2D 绑定，防止重复监听） */
-    _hoverCleanup?: () => void;
-  }
-}
-
 /**
  * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）
  * @param canvas 目标 canvas
  * @param model AnalyzeBedrockModel 返回的 BedrockModel
  * @param textureImg 纹理图（可选）
  * @param opts 选项
+ * @returns 清理函数（abort 内部 AbortController，移除悬停监听）
  */
 export function renderModel2D(
   canvas: HTMLCanvasElement,
   model: BedrockModel,
   textureImg: HTMLImageElement | null,
   opts: Model2DOptions = {},
-): void {
-  if (!canvas || !model?.bones?.length) return;
+): () => void {
+  if (!canvas || !model?.bones?.length) return () => {};
   // ADR-047：2D hover 用 pointer 事件 + 禁触屏手势默认，桌面零回归
   if (canvas.style) canvas.style.touchAction = "none";
 
@@ -72,7 +66,7 @@ export function renderModel2D(
   const sinA = Math.sin(angle);
   const boneTransforms = opts?.boneTransforms || null;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!ctx) return () => {};
   const W = canvas.width;
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -159,12 +153,10 @@ export function renderModel2D(
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };
-  canvas.addEventListener("pointermove", onMove);
-  canvas.addEventListener("pointerleave", onLeave);
-  // 清理旧监听（防止重复绑定）
-  canvas._hoverCleanup?.();
-  canvas._hoverCleanup = (): void => {
-    canvas.removeEventListener("pointermove", onMove);
-    canvas.removeEventListener("pointerleave", onLeave);
+  const ac = new AbortController();
+  canvas.addEventListener("pointermove", onMove, { signal: ac.signal });
+  canvas.addEventListener("pointerleave", onLeave, { signal: ac.signal });
+  return (): void => {
+    ac.abort();
   };
 }

@@ -68,10 +68,7 @@ export async function loadModel2D(
       return;
     }
     container.style.opacity = "1";
-    // 清理 canvas 悬停监听器（防止泄漏：innerHTML="" 移除 DOM 但不触发监听器移除）
-    container.querySelectorAll("canvas").forEach((c) => {
-      c._hoverCleanup?.();
-    });
+    let hoverCleanup: (() => void) | null = null;
     container.innerHTML = "";
     const { canvas, textureImg } = await setup2DCanvas(container, model);
     if (!container.isConnected) return;
@@ -90,7 +87,8 @@ export async function loadModel2D(
     const model2d = model as Parameters<typeof renderModel2D>[1];
     const doRender = (): void => {
       try {
-        renderModel2D(canvas, model2d, textureImg, {
+        hoverCleanup?.();
+        hoverCleanup = renderModel2D(canvas, model2d, textureImg, {
           showLabels: getLabelsOn(),
           zoom: _zoom,
           rotation: _rotation,

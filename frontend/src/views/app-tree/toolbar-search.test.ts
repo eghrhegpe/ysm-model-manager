@@ -46,6 +46,27 @@ vi.mock("@/backend/platform-web.ts", async (importOriginal) => {
   return { ...actual, isWebPlatform: isWebPlatformMock };
 });
 
+/** vm 桩类型（无下划线前缀的 getter/setter） */
+interface SearchVM {
+  _filesRoot: string;
+  _renderTree: ReturnType<typeof vi.fn>;
+  search: string;
+  filterPaths: Set<string> | null;
+  setSearch: (v: string) => void;
+  setFilterPaths: (v: Set<string> | null) => void;
+  snapshot: {
+    readonly entries: unknown[];
+    readonly search: string;
+    readonly sort: string;
+    readonly dirOpen: Record<string, boolean>;
+    readonly filterPaths: Set<string> | null;
+    readonly renderMode: string;
+    readonly rootAttr: string;
+    readonly subdirAttr: string;
+    readonly filesRoot: string;
+  };
+}
+
 /** 构造工具栏 DOM（srch + 数值条件 inline 面板输入）与 vm 桩 */
 function setupDom(filesRoot = "/repo") {
   const host = document.createElement("div");
@@ -57,13 +78,32 @@ function setupDom(filesRoot = "/repo") {
   `;
   document.body.appendChild(host);
   const $ = (id: string): HTMLElement | null => host.querySelector(`#${id}`);
-  const vm = {
+  let searchVal = "";
+  let filterPathsVal: Set<string> | null = null;
+  const vm: SearchVM = {
     _filesRoot: filesRoot,
-    _search: "",
-    _filterPaths: null as Set<string> | null,
     _renderTree: vi.fn(),
+    get search() { return searchVal; },
+    set search(v: string) { searchVal = v; },
+    get filterPaths() { return filterPathsVal; },
+    set filterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    setSearch(v: string) { searchVal = v; },
+    setFilterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    get snapshot() {
+      return {
+        entries: [],
+        search: searchVal,
+        sort: "name",
+        dirOpen: {},
+        filterPaths: filterPathsVal,
+        renderMode: "grid",
+        rootAttr: "ysm",
+        subdirAttr: "",
+        filesRoot: vm._filesRoot,
+      };
+    },
   };
-  return { $, vm: vm as unknown as Parameters<typeof openAdvFilterDialog>[1], host };
+  return { $, vm, host };
 }
 
 beforeEach(() => {
@@ -87,16 +127,16 @@ describe("openAdvFilterDialog — 全空筛选早退（advFilterEarlyEmpty）", 
   it("弹窗取消（null）→ 无后续动作", async () => {
     const { $, vm } = setupDom();
     modalAdvFilterMock.mockResolvedValue(null);
-    await openAdvFilterDialog($, vm);
+    await openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
     expect(vm._renderTree).not.toHaveBeenCalled();
-    expect(vm._filterPaths).toBeNull();
+    expect(vm.filterPaths).toBeNull();
   });
 
   it("条件全空 → _filterPaths 置 null + 重渲染（清除筛选）", async () => {
     const { $, vm } = setupDom();
     modalAdvFilterMock.mockResolvedValue({ keyword: "", tag: "" });
-    await openAdvFilterDialog($, vm);
-    expect(vm._filterPaths).toBeNull();
+    await openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
+    expect(vm.filterPaths).toBeNull();
     expect(vm._renderTree).toHaveBeenCalledTimes(1);
     expect(emitMock).not.toHaveBeenCalledWith("toast:show", expect.anything());
   });
@@ -123,7 +163,7 @@ describe("openAdvFilterDialog — 网页版统计角标 + Worker 降级提示", 
         }),
     });
     modalAdvFilterMock.mockResolvedValue({ keyword: "", minBones: "2" });
-    const pending = openAdvFilterDialog($, vm);
+    const pending = openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
     await vi.waitFor(() => expect(progressCbs.length).toBeGreaterThan(0));
     const badge = document.getElementById("web-stats-badge")!;
     badgeEl = badge;
@@ -151,7 +191,7 @@ describe("openAdvFilterDialog — 网页版统计角标 + Worker 降级提示", 
     consumeWebSearchDegradedMock.mockReturnValue(true);
     onStatsProgressMock.mockImplementation(() => {});
     modalAdvFilterMock.mockResolvedValue({ keyword: "", minBones: "2" });
-    const pending = openAdvFilterDialog($, vm);
+    const pending = openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
     await vi.advanceTimersByTimeAsync(0);
     await pending;
     const badge = document.getElementById("web-stats-badge")!;

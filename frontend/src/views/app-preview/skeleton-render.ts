@@ -15,8 +15,8 @@ import { statsCardHTML } from "./tpl.ts";
 import { safeUrl } from "./tpl-summary.ts";
 import type { PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
 
-// P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
-export { fill3DPanel } from "./skeleton-fill-panel.ts";
+// fill3DPanel 命令式旧轨已删除（ADR-126 P5 声明式迁移完成）；
+// 骨骼渲染逻辑保留在本文件。
 
 /**
  * 创建 2D 骨骼画布并异步加载纹理

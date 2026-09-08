@@ -52,12 +52,13 @@ export interface VrmDataPort {
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
 async function vrmDiag(
-  port: VrmDataPort,
+  port: VrmDataPort | undefined,
   op: string,
   msg: string,
   status: "ok" | "fail" | "warn",
   err?: string,
 ): Promise<void> {
+  if (!port) return;
   try {
     await port.addOpLog(op, msg, status, err);
   } catch {
@@ -264,7 +265,7 @@ function mdVrParseGlbVrm1(vrm: VRM, gltf: GLTF): void {
 async function mdVrStage1ReadParse(
   ctx: PreviewBuildCtx,
   path: string,
-  port: VrmDataPort,
+  port: VrmDataPort | undefined,
   readFn: (p: string) => Promise<string | null>,
 ): Promise<MdVrParseResult> {
   renderLoadingState(ctx.loadingEl, "🥽", "preview.loadingModel");
@@ -514,7 +515,7 @@ function mdVrStage4MenuPanels(
 function mdVrStage5BuildResult(
   ctx: PreviewBuildCtx,
   path: string,
-  port: VrmDataPort,
+  port: VrmDataPort | undefined,
   parseRes: MdVrParseResult,
   boneAssy: MdVrBoneAssembly,
   vrmMaterials: THREE.Material[],
@@ -632,7 +633,7 @@ function mdVrStage5BuildResult(
 export async function buildVrmScene(
   ctx: PreviewBuildCtx,
   path: string,
-  port: VrmDataPort,
+  port: VrmDataPort | undefined,
   readFn: (p: string) => Promise<string | null>,
   panels?: VrmPanelHooks,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
@@ -705,11 +706,11 @@ export interface VrmMenuItemsOpts {
 /**
  * ADR-161 §2.5 工厂：VRM 挂载主入口（make<Format>Adapter 命名章程）。
  * 依赖（IO/面板 hooks）由视图层组装经 deps 注入——adapters 层不反向依赖 views。
- * 用法：`const adapter = makeVrmAdapter({ port, readFileBytes, panels, listAllFilePaths }); mount3D(adapter, path)`
+ * 用法：`const adapter = makeVrmAdapter({ readFileBytes, panels, listAllFilePaths }); mount3D(adapter, path)`
  */
 export interface VrmAdapterDeps {
-  /** 诊断端口（addOpLog 等） */
-  port: VrmDataPort;
+  /** 诊断端口（addOpLog 等）；可选——未注入时诊断日志静默跳过 */
+  port?: VrmDataPort;
   /** 包内文件读取（view-shell 注入） */
   readFileBytes: (p: string) => Promise<string | null>;
   /** 面板 UI hooks（model/shot/play 菜单节点，视图层组装） */

@@ -21,7 +21,6 @@ auto_fields:
     - buildYsmScene
     - CameraControlScene
     - cleanupPreview
-    - fill3DPanel
     - getSchema
     - GroupedScene
     - hasActivePreview
@@ -33,7 +32,6 @@ auto_fields:
     - makeYsmModelSchemaId
     - mount3D
     - Mount3DOptions
-    - PanelHandle
     - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx

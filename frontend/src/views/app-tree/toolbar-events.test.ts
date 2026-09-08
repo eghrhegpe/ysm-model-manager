@@ -121,31 +121,76 @@ function makeRoot(): { root: ShadowRoot; get: (id: string) => HTMLElement | null
 
 interface VM {
   _root: ShadowRoot;
-  _filesRoot: string | null;
-  _search: string;
-  _sort: string;
-  _renderMode: string;
   _rootAttr: string;
   _authors: Array<{ Name?: string; Count?: number } | string>;
-  _filterPaths: Set<string> | null;
   selectState: { keys: Set<string>; lastKey: string | null };
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
+  search: string;
+  sort: string;
+  renderMode: string;
+  filterPaths: Set<string> | null;
+  filesRoot: string | null;
+  setSearch: (v: string) => void;
+  setSort: (v: string) => void;
+  setFilterPaths: (v: Set<string> | null) => void;
+  setRenderMode: (v: string) => void;
+  setFilesRoot: (v: string | null) => void;
+  snapshot: {
+    readonly entries: unknown[];
+    readonly search: string;
+    readonly sort: string;
+    readonly dirOpen: Record<string, boolean>;
+    readonly filterPaths: Set<string> | null;
+    readonly renderMode: string;
+    readonly rootAttr: string;
+    readonly subdirAttr: string;
+    readonly filesRoot: string;
+  };
 }
 
 function makeVM(root: ShadowRoot): VM {
+  let searchVal = "";
+  let sortVal = "name";
+  let renderModeVal = "list";
+  let filterPathsVal: Set<string> | null = null;
+  let filesRootVal: string | null = "/repo";
   const vm: VM = {
     _root: root,
-    _filesRoot: "/repo",
-    _search: "",
-    _sort: "name",
-    _renderMode: "list",
     _rootAttr: "ysm",
     _authors: [],
-    _filterPaths: null,
     selectState: { keys: new Set(), lastKey: null },
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),
+    // getter/setter（无下划线前缀）
+    get search() { return searchVal; },
+    set search(v: string) { searchVal = v; },
+    get sort() { return sortVal; },
+    set sort(v: string) { sortVal = v; },
+    get renderMode() { return renderModeVal; },
+    set renderMode(v: string) { renderModeVal = v; },
+    get filterPaths() { return filterPathsVal; },
+    set filterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    get filesRoot() { return filesRootVal; },
+    set filesRoot(v: string | null) { filesRootVal = v; },
+    setSearch(v: string) { searchVal = v; },
+    setSort(v: string) { sortVal = v; },
+    setFilterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    setRenderMode(v: string) { renderModeVal = v; },
+    setFilesRoot(v: string | null) { filesRootVal = v; },
+    get snapshot() {
+      return {
+        entries: [],
+        search: searchVal,
+        sort: sortVal,
+        dirOpen: {},
+        filterPaths: filterPathsVal,
+        renderMode: renderModeVal,
+        rootAttr: "ysm",
+        subdirAttr: "",
+        filesRoot: filesRootVal ?? "",
+      };
+    },
   };
   return vm;
 }
@@ -219,7 +264,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
   it("弹窗返回全空条件 → 清空筛选并渲染", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    vm._filterPaths = new Set(["/a.ysm"]);
+    vm.filterPaths = new Set(["/a.ysm"]);
     modalAdvFilterMock.mockResolvedValue({
       cleared: true,
       keyword: undefined,
@@ -236,7 +281,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(vm._filterPaths).toBeNull();
+    expect(vm.filterPaths).toBeNull();
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
@@ -261,8 +306,8 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     // 交集：tag ∩ search = /r/a.ysm
-    expect(vm._filterPaths).toEqual(new Set(["/r/a.ysm"]));
-    expect(vm._search).toBe("Alex");
+    expect(vm.filterPaths).toEqual(new Set(["/r/a.ysm"]));
+    expect(vm.search).toBe("Alex");
     expect((getByTestId("tree-af-min-bones") as HTMLInputElement).value).toBe("2");
     expect(ListByTagMock).toHaveBeenCalledWith("近代");
     expect(SearchModelsMock).toHaveBeenCalledWith(
@@ -298,7 +343,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(vm._filterPaths).toEqual(new Set(["/r/t1.ysm"]));
+    expect(vm.filterPaths).toEqual(new Set(["/r/t1.ysm"]));
     expect(SearchModelsMock).not.toHaveBeenCalled();
   });
 
@@ -321,7 +366,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(vm._filterPaths).toEqual(new Set(["/r/s1.ysm"]));
+    expect(vm.filterPaths).toEqual(new Set(["/r/s1.ysm"]));
     expect(ListByTagMock).not.toHaveBeenCalled();
   });
 
@@ -344,14 +389,14 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     getByTestId("tree-adv-filter")!.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(vm._filterPaths?.size).toBe(0);
+    expect(vm.filterPaths?.size).toBe(0);
     expect(toasts.some((t) => t.type === "warn" && t.msg.includes("无匹配"))).toBe(true);
   });
 
   it("_filesRoot 空 → warn toast 且不搜索", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    vm._filesRoot = null; // toolbar-search.ts 读 vm._filesRoot，非 GetRepoRoot
+    vm.setFilesRoot(null); // toolbar-search.ts 读 vm._filesRoot，非 GetRepoRoot
     modalAdvFilterMock.mockResolvedValue({
       keyword: "x",
       minBones: null,
@@ -392,7 +437,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("标签查询失败"))).toBe(true);
-    expect(vm._filterPaths).toEqual(new Set(["/r/a.ysm"]));
+    expect(vm.filterPaths).toEqual(new Set(["/r/a.ysm"]));
   });
 
   it("SearchModels 失败 → error toast + 清空筛选", async () => {
@@ -415,7 +460,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("高级筛选失败"))).toBe(true);
-    expect(vm._filterPaths).toBeNull();
+    expect(vm.filterPaths).toBeNull();
     expect(vm._renderTree).toHaveBeenCalled();
   });
 });
@@ -474,7 +519,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
       srch.value = "neko";
       srch.dispatchEvent(new Event("input", { bubbles: true }));
 
-      expect(vm._search).toBe("neko"); // 状态立即更新
+      expect(vm.search).toBe("neko"); // 状态立即更新
       expect(vm._renderTree).not.toHaveBeenCalled(); // 渲染延迟
       vi.advanceTimersByTime(200);
       expect(vm._renderTree).toHaveBeenCalledTimes(1);
@@ -497,7 +542,7 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
         vi.advanceTimersByTime(50); // 每次间隔 <150ms，定时器持续重置
       });
 
-      expect(vm._search).toBe("neko");
+      expect(vm.search).toBe("neko");
       expect(vm._renderTree).not.toHaveBeenCalled(); // 全部被合并
       vi.advanceTimersByTime(200);
       expect(vm._renderTree).toHaveBeenCalledTimes(1);
@@ -515,32 +560,31 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     sort.value = "date";
     sort.dispatchEvent(new Event("change", { bubbles: true }));
 
-    expect(vm._sort).toBe("date");
+    expect(vm.sort).toBe("date");
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
-  it("btn-view-mode 点击 → 切换 list⇄grid + setRenderMode + 图标更新", () => {
+  it("btn-view-mode 点击 → 切换 list⇄grid + 图标更新", () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    vm._renderMode = "list";
+    vm.renderMode = "list";
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-view-mode")!.click();
 
-    expect(vm._renderMode).toBe("grid");
-    expect(setRenderModeMock).toHaveBeenCalledWith("grid");
+    expect(vm.renderMode).toBe("grid");
     // 使用点接线：flashBtn 同步加 flash class（审核回归锁）
     expect(getByTestId("tree-view-mode")!.classList.contains("flash")).toBe(true);
 
     getByTestId("tree-view-mode")!.click();
-    expect(vm._renderMode).toBe("list");
+    expect(vm.renderMode).toBe("list");
   });
 
   it("af-clear → 清空全部输入与筛选", () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    vm._filterPaths = new Set(["/r/a.ysm"]);
-    vm._search = "x";
+    vm.filterPaths = new Set(["/r/a.ysm"]);
+    vm.search = "x";
     (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "5";
     (getByTestId("tree-srch") as HTMLInputElement).value = "x";
     bindToolbarEvents(root, vm as unknown as AppTree);
@@ -549,8 +593,8 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
 
     expect((getByTestId("tree-af-min-bones") as HTMLInputElement).value).toBe("");
     expect((getByTestId("tree-srch") as HTMLInputElement).value).toBe("");
-    expect(vm._search).toBe("");
-    expect(vm._filterPaths).toBeNull();
+    expect(vm.search).toBe("");
+    expect(vm.filterPaths).toBeNull();
     expect(vm._renderTree).toHaveBeenCalled();
   });
 });
@@ -595,7 +639,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
       (menu.querySelector('[data-author="Alex"]') as HTMLButtonElement).click();
 
       expect((getByTestId("tree-srch") as HTMLInputElement).value).toBe("Alex");
-      expect(vm._search).toBe("Alex"); // 状态立即更新
+      expect(vm.search).toBe("Alex"); // 状态立即更新
       expect(vm._renderTree).not.toHaveBeenCalled();
       vi.advanceTimersByTime(200);
       expect(vm._renderTree).toHaveBeenCalledTimes(1);
@@ -647,7 +691,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
   it("menu-more open-folder 未配置仓库 → 不调后端", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    vm._filesRoot = null;
+    vm.setFilesRoot(null);
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-open-folder") as HTMLElement;

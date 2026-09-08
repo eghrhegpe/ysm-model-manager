@@ -31,7 +31,6 @@ auto_fields:
     - componentCountsFromSpec
     - createAdaptiveRenderBudget
     - DetailGenGuard
-    - fill3DPanel
     - getFrameIntervalMs
     - getMaxFps
     - getMaxPixelRatio
@@ -45,7 +44,6 @@ auto_fields:
     - MAX_PIXEL_RATIO_KEY
     - Model2DOptions
     - openFullPreview
-    - PanelHandle
     - Prefer3DState
     - PREVIEW_FRAME_INTERVAL_MS
     - PreviewCtx

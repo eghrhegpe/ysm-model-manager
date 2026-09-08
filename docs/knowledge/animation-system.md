@@ -24,6 +24,7 @@ auto_fields:
     - compileMolang
     - ControllerState
     - ControllerTransition
+    - createMolangParser
     - createYsmAnimPlayer
     - Easings
     - evaluateClip
@@ -35,6 +36,7 @@ auto_fields:
     - Molang
     - MolangAxes
     - MolangFn
+    - MolangParser
     - parseAnimationControllerJSON
     - parseBedrockAnimationJSON
     - setMolangScope

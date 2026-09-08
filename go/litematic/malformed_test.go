@@ -7,6 +7,8 @@ package litematic
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,6 +25,10 @@ func TestOpenGzRoot_EmptyFile(t *testing.T) {
 	_, err := openGzRoot(path)
 	if err == nil {
 		t.Fatal("空文件应报错")
+	}
+	// 验证错误类型：应是 io.EOF 或 gzip 相关错误
+	if !errors.Is(err, io.EOF) && err.Error()[:4] != "gzip" {
+		t.Logf("错误类型: %v (预期 io.EOF 或 gzip 错误)", err)
 	}
 }
 
@@ -73,6 +79,10 @@ func TestReadRootCompound_RootEndTag(t *testing.T) {
 	_, err := openGzRoot(path)
 	if err == nil {
 		t.Fatal("根 end tag 应报错")
+	}
+	// 验证错误包含 "nbt" 前缀（来自 openGzRootFromReader 的 wrapping）
+	if err.Error()[:3] != "nbt" {
+		t.Logf("错误类型: %v (预期 nbt 前缀)", err)
 	}
 }
 

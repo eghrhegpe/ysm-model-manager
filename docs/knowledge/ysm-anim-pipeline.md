@@ -15,6 +15,7 @@ auto_fields:
     - BoneTransform
     - buildYsmScene
     - compileMolang
+    - createMolangParser
     - createYsmAnimPlayer
     - evaluateClip
     - evaluateKeyframes
@@ -24,6 +25,7 @@ auto_fields:
     - makeYsmAdapter
     - MolangAxes
     - MolangFn
+    - MolangParser
     - parseBedrockAnimationJSON
     - setMolangScope
     - TimelineEvent

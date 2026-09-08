@@ -49,23 +49,26 @@ const buildCache = new WeakMap<TreeRenderCtx, BuildCacheEntry>();
 
 /**
  * 带缓存的 buildTree。
- * 缓存 key = entries 长度 + 首尾 path + sort + dirOpen 序列化 + filterPaths 大小。
- * 仅 search 变化时命中缓存，跳过 buildTree + annotateDirNodes 整段 O(n) 计算。
+ * 缓存 key = entries 内容指纹（全路径 + banned 位）+ sort + filterPaths 全量序列化。
+ * 输入内容不变时命中缓存，跳过 buildTree + annotateDirNodes 整段 O(n) 计算；
+ * 任一输入变化（改名/banned 翻转/过滤集替换）即重建——键即内容指纹，无失效钩子依赖。
  */
 function getBuildTreeCached(
   ctx: TreeRenderCtx,
   entries: TreeEntry[],
   sort: string,
-  dirOpen: Record<string, boolean>,
   filterPaths: Set<string> | null,
 ): TreeNode {
+  // code_review ee7c6077a #1/#2/#3（P1/P2）：缓存键必须是 buildTree 输入的内容指纹
+  // ——原键只含 length + 首末 path + filterPaths.size，中间项改名/banned 翻转/等尺寸
+  // 过滤集替换全部碰撞 → 服务过期树（旧行名/旧勾选态/点击指向已不存在路径）。
+  // 改为内容派生：全路径 + banned 位拼串（O(n) 远廉于其守卫的 buildTree）+
+  // filterPaths 排序全量序列化；dirOpen 项删除——buildTree 不消费它，留着只会
+  // 造成折叠/展开时的无谓 miss + 误导性地宣称依赖
   const cacheKey = [
-    entries.length,
-    entries[0]?.path ?? "",
-    entries[entries.length - 1]?.path ?? "",
+    entries.map((e) => (e.banned ? `*${e.path}` : e.path)).join("\n"),
     sort,
-    Object.keys(dirOpen).sort().join(","),
-    filterPaths?.size ?? "null",
+    filterPaths ? [...filterPaths].sort().join("\n") : "null",
   ].join("|");
 
   const cached = buildCache.get(ctx);
@@ -433,7 +436,7 @@ export function renderTree(
     cleanupVirtualScroll(ctx, container);
     return;
   }
-  const root = getBuildTreeCached(ctx, entries, sort, dirOpen, filterPaths);
+  const root = getBuildTreeCached(ctx, entries, sort, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
     container.innerHTML = emptyStateHTML("🔍", t("tree.noMatchFiles"));

@@ -3,7 +3,7 @@
 // 覆盖：算术/anim_time 绑定/q. 别名/未知查询降级/角度制/三元/非法表达式。
 // 内嵌 molangjs 源码，无外部依赖，同步可用。
 import { describe, it, expect, vi } from "vitest";
-import { compileMolang } from "./molang.ts";
+import { compileMolang, getMolangParser } from "./molang.ts";
 import Molang from "./molang-lib/molang.js";
 import * as log from "@/utils/base/log.ts";
 
@@ -78,27 +78,35 @@ describe("compileMolang（内嵌 molangjs）", () => {
 
   it("表达式编译失败时写日志（logWarn）", () => {
     const spy = vi.spyOn(log, "logWarn");
-    // molangjs 对绝大多数表达式容错；用空串触发编译路径的 null 返回（不抛错不写日志）
-    // 此处验证 compileMolang 在遇到真正非法语法时写日志
-    compileMolang("1 +"); // 部分非法表达式
-    // molangjs 可能容错解析；仅验证无抛错
-    expect(true).toBe(true);
+    const parser = getMolangParser();
+    // mock parse 抛错 → 触发编译失败 catch 块
+    const parseSpy = vi.spyOn(parser, "parse").mockImplementation(() => {
+      throw new Error("syntax error: unexpected token");
+    });
+    const result = compileMolang("1 +");
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledWith("molang", expect.stringContaining("表达式编译失败"), expect.anything());
+    parseSpy.mockRestore();
     spy.mockRestore();
   });
 
   it("运行时求值失败时写日志（logWarn）", () => {
-    // 构造编译成功但运行时抛错的表达式：molangjs 对 "1+1" 正常；
-    // 此处用 spy 模拟运行时抛错
     const spy = vi.spyOn(log, "logWarn");
+    const parser = getMolangParser();
+    // 第一次 parse（编译）成功，第二次 parse（运行时求值）抛错
+    let callCount = 0;
+    const parseSpy = vi.spyOn(parser, "parse").mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return 0; // 编译成功
+      throw new Error("runtime: variable undefined"); // 运行时抛错
+    });
     const fn = compileMolang("q.anim_time * 10");
     expect(fn).not.toBeNull();
-    // molangjs 正常求值不抛错；仅验证无抛错且无日志
-    if (fn) {
-      const result = fn(0.5);
-      expect(result).toBeCloseTo(5, 5);
-    }
-    // 不写日志（正常路径）
-    expect(spy).not.toHaveBeenCalled();
+    // 运行时抛错 → 返回 0 并写日志
+    const result = fn!(0.5);
+    expect(result).toBe(0);
+    expect(spy).toHaveBeenCalledWith("molang", expect.stringContaining("运行时求值失败"), expect.anything());
+    parseSpy.mockRestore();
     spy.mockRestore();
   });
 

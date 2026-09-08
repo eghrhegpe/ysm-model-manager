@@ -1,4 +1,4 @@
-// ===== CSS Shadow Sheet HMR 热刷新（治理：消除 CSS 动态 import 的 as any 模板重复）=====
+// ===== CSS Shadow Sheet HMR 热刷新（治理：消除 CSS 动态 import 的 as any 模板重复；调用侧仍有个别 as Element 强转，因 HTMLElement.shadowRoot 类型需要）=====
 // 四个视图组件（sidebar / tree / content / preview）各自的 CSS HMR accept 回调
 // 模式完全同构（new CSSStyleSheet → replaceSync → adoptedStyleSheets），
 // 此前每处都写一遍，且因 Vite 无 .css.ts 的类型声明不得不 (newCssMod as any).xxxCSS。

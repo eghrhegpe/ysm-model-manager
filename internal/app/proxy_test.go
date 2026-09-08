@@ -542,12 +542,18 @@ func TestIsBlockedIPPublic(t *testing.T) {
 }
 
 func TestCookieJarConcurrentAccess(t *testing.T) {
+	// cookieJar 非并发安全（无锁），此测试验证并发场景下不 panic，
+	// 并用 -race 运行来检测潜在 data race。
+	// 不加 t.Parallel()：避免与其他测试共享状态时放大 race 窗口。
 	jar := newCookieJar()
 	u, _ := url.Parse("https://example.com")
+
+	done := make(chan struct{}, 20)
 
 	// Concurrent writes
 	for i := 0; i < 10; i++ {
 		go func() {
+			defer func() { done <- struct{}{} }()
 			jar.SetCookies(u, []*http.Cookie{{Name: "test", Value: "val", Domain: "example.com"}})
 		}()
 	}
@@ -555,8 +561,14 @@ func TestCookieJarConcurrentAccess(t *testing.T) {
 	// Concurrent reads
 	for i := 0; i < 10; i++ {
 		go func() {
+			defer func() { done <- struct{}{} }()
 			_ = jar.Cookies(u)
 		}()
+	}
+
+	// 等所有 goroutine 结束（不检查最终一致性，只验证不 panic）
+	for i := 0; i < 20; i++ {
+		<-done
 	}
 }
 

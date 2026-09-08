@@ -22,23 +22,25 @@ const miniGeo = `{
 // TestParseComponentsFromZip 多组件 zip 解析：每个模型文件独立组件（含 arm），
 // main 优先排序，TexSlot 全局化。
 func TestParseComponentsFromZip(t *testing.T) {
+	// 用 slice-of-pairs 代替 map 遍历，确保 zip 条目写入序确定（Go map 迭代序随机）。
+	type entry struct{ name, content string }
+	entries := []entry{
+		{"ysm.json", `{"files":{"player":{"model":{"main":"models/main.json","arm":"models/arm.json"},"texture":["textures/skin.png"]}}}`},
+		{"models/main.json", miniGeo},
+		{"models/arm.json", miniGeo},
+		{"models/arrow.json", miniGeo},
+		{"textures/skin.png", "fake-png"},
+		{"textures/arrow.png", "fake-png"},
+		{"animations/main.animation.json", `{"format_version":"1.8.0","animations":{}}`},
+	}
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
-	entries := map[string]string{
-		"ysm.json":                       `{"files":{"player":{"model":{"main":"models/main.json","arm":"models/arm.json"},"texture":["textures/skin.png"]}}}`,
-		"models/main.json":               miniGeo,
-		"models/arm.json":                miniGeo,
-		"models/arrow.json":              miniGeo,
-		"textures/skin.png":              "fake-png",
-		"textures/arrow.png":             "fake-png",
-		"animations/main.animation.json": `{"format_version":"1.8.0","animations":{}}`,
-	}
-	for name, content := range entries {
-		w, err := zw.Create(name)
+	for _, e := range entries {
+		w, err := zw.Create(e.name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := w.Write([]byte(content)); err != nil {
+		if _, err := w.Write([]byte(e.content)); err != nil {
 			t.Fatal(err)
 		}
 	}

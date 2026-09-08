@@ -143,7 +143,7 @@ func TestNameSizeHash_ComputeHash(t *testing.T) {
 	// NameSizeHash uses fmt.Sprintf("%s_%d", name, info.Size())
 	expectedHash := "test.txt_" + itoa(int64(len(content)))
 	if hash != expectedHash {
-		t.Logf("NameSizeHash (期望 %s): %s", expectedHash, hash)
+		t.Fatalf("NameSizeHash 期望 %s, 实际 %s", expectedHash, hash)
 	}
 }
 
@@ -264,7 +264,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	}
 	// NameSizeHash 基于文件名+大小，不同文件名不会被判定为重复
 	if len(groups) != 0 {
-		t.Logf("NameSizeHash: 不同文件名 + 相同大小 → %d 组重复（可能受内容相同影响）", len(groups))
+		t.Fatalf("NameSizeHash: 不同文件名+相同大小期望 0 组重复，实际 %d 组（内容相同不影响 name_size 策略）", len(groups))
 	}
 
 	// 相同文件名 + 相同大小 → 应判定为重复
@@ -280,9 +280,9 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// NameSizeHash: x.txt_test content vs y.txt_test content → 不同 hash
+	// NameSizeHash: x.txt_test content vs y.txt_test content → 不同 hash（文件名不同）
 	if len(groups2) != 0 {
-		t.Logf("NameSizeHash: 不同文件名相同内容 → %d 组（NameSizeHash 基于文件名+大小，不同名不同 hash）", len(groups2))
+		t.Fatalf("NameSizeHash: 不同文件名相同内容期望 0 组，实际 %d 组（name_size 基于文件名+大小，不同名应不同 hash）", len(groups2))
 	}
 }
 

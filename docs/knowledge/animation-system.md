@@ -32,6 +32,7 @@ auto_fields:
     - executeTimeline
     - findControllerForAnimation
     - foldMolangConstant
+    - getMolangParser
     - Keyframe
     - Molang
     - MolangAxes

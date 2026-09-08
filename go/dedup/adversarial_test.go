@@ -63,16 +63,19 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 	}
 }
 
-// Bug 2 (INFO): Relative path traversal — FindDuplicateFiles("..", false)
+// Bug 2 (MEDIUM): Relative path traversal — FindDuplicateFiles("..", false)
 // resolves to the parent of CWD and walks it without restriction.
-// 设计取舍：dedup 不限制目录归属，调用方负责传入合法绝对路径。
+// 修复后：必须拒绝或返回 error；若调用方传入相对路径，应报错。
 func TestAdversarial_RelativePathTraversal(t *testing.T) {
+	// 相对路径 ".." 指向父目录——这是真实安全隐患。
+	// 测试目标：确认 FindDuplicateFiles 对相对路径有防护（返回 error 或拒绝）。
 	_, err := FindDuplicateFiles("..", false)
 	if err != nil {
-		t.Logf("FindDuplicateFiles(\"..\") correctly returned error: %v", err)
+		t.Logf("FindDuplicateFiles(\"..\") returned error (guard active): %v", err)
 		return
 	}
-	t.Log("INFO(BUG-2): FindDuplicateFiles(\"..\") 放行相对路径——by design，调用方负责传入绝对路径")
+	// 未返回 error：若仍返回结果则说明无守卫，调用方可扫描父目录
+	t.Fatalf("BUG-2: FindDuplicateFiles(\"..\") 未返回 error，相对路径穿越未防护——调用方可扫描父目录")
 }
 
 // Bug 3 (MEDIUM): NUL byte injection in the path argument.
@@ -95,10 +98,14 @@ func TestAdversarial_NULByteInPath(t *testing.T) {
 		return
 	}
 
-	if runtime.GOOS == "linux" {
-		t.Log("INFO(BUG-3): Linux 上 NUL 字节被 filepath.Abs 截断——潜在路径混淆，需调用方保证输入安全")
-	} else {
-		t.Log("INFO(BUG-3): Windows 上 NUL 字节路径被 Lstat 拒绝但 FindDuplicateFiles 吞掉错误——by design，调用方负责传入绝对路径")
+	// NUL 字节未被拒绝——这是路径混淆漏洞
+	switch runtime.GOOS {
+	case "linux":
+		t.Fatalf("BUG-3: Linux 上 NUL 字节路径未被拒绝，filepath.Abs 可能截断路径导致意外扫描")
+	default:
+		// Windows 下 NUL 通常被 filepath.Abs 或 Lstat 拒绝；
+		// 若此处未返回 error，说明守卫缺失
+		t.Fatalf("BUG-3: Windows 上 NUL 字节路径未被拒绝，FindDuplicateFiles 应报错")
 	}
 }
 

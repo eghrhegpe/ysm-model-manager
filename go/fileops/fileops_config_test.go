@@ -10,7 +10,7 @@ import (
 
 func TestPreviewReadLimit_NilFallback(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	// 未注入配置源时回退默认值 maxPreviewRead (50MB)
 	if got := previewReadLimit(); got != maxPreviewRead {
@@ -20,7 +20,7 @@ func TestPreviewReadLimit_NilFallback(t *testing.T) {
 
 func TestPreviewReadLimit_Injected(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	config.Set(func() types.AppConfig {
 		return types.AppConfig{PreviewReadLimitMB: 100}
@@ -35,7 +35,7 @@ func TestPreviewReadLimit_Injected(t *testing.T) {
 
 func TestPreviewReadLimit_ZeroValueFallback(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	// 注入但字段为 0 → 应回退默认
 	config.Set(func() types.AppConfig {
@@ -49,7 +49,7 @@ func TestPreviewReadLimit_ZeroValueFallback(t *testing.T) {
 
 func TestPreviewReadLimit_Override(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	config.Set(func() types.AppConfig {
 		return types.AppConfig{PreviewReadLimitMB: 50}
@@ -69,7 +69,7 @@ func TestPreviewReadLimit_Override(t *testing.T) {
 
 func TestPreviewReadLimit_NilAfterSet(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	config.Set(func() types.AppConfig {
 		return types.AppConfig{PreviewReadLimitMB: 75}

@@ -15,7 +15,7 @@ import (
 
 func TestDownloadTimeout_Injected(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	// 注入自定义配置
 	called := false
@@ -42,7 +42,7 @@ func TestDownloadTimeout_Injected(t *testing.T) {
 
 func TestDownloadTimeout_ZeroValueFallback(t *testing.T) {
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 
 	// 注入返回零值 AppConfig（DownloadTimeoutSec=0）→ 回退默认
 	config.Set(func() types.AppConfig {
@@ -52,7 +52,6 @@ func TestDownloadTimeout_ZeroValueFallback(t *testing.T) {
 	if timeout != defaultTimeout {
 		t.Errorf("零值 AppConfig 应回退默认超时, got %v", timeout)
 	}
-	config.Set(nil)
 }
 
 func TestNewWithClient(t *testing.T) {
@@ -71,7 +70,7 @@ func TestNewWithClient(t *testing.T) {
 func TestNew_DefaultTimeout(t *testing.T) {
 	// 确保无注入时 New() 使用默认超时
 	config.Set(nil)
-	defer config.Set(nil)
+	t.Cleanup(func() { config.Set(nil) })
 	d := New()
 	if d == nil {
 		t.Fatal("New 返回 nil")

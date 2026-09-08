@@ -13,7 +13,6 @@ import (
 func TestHasTextHeader_WithTextHeader(t *testing.T) {
 	content := "YSGP\n--- [Metadata]\n<name>TestModel</name>\n---\n"
 	path := writeTempFile(t, content)
-	defer os.Remove(path)
 
 	if !hasTextHeader(path) {
 		t.Error("expected hasTextHeader = true for file with text header")
@@ -24,7 +23,6 @@ func TestHasTextHeader_WithBOMAndTextHeader(t *testing.T) {
 	// UTF-8 BOM + YSGP + text header
 	content := "\xef\xbb\xbfYSGP\n--- [Metadata]\n<name>Test</name>\n"
 	path := writeTempFile(t, content)
-	defer os.Remove(path)
 
 	if !hasTextHeader(path) {
 		t.Error("expected hasTextHeader = true for BOM + text header")
@@ -40,7 +38,6 @@ func TestHasTextHeader_PureBinary(t *testing.T) {
 		buf = append(buf, byte(i))
 	}
 	path := writeTempFile(t, string(buf))
-	defer os.Remove(path)
 
 	if hasTextHeader(path) {
 		t.Error("expected hasTextHeader = false for pure binary file")
@@ -49,7 +46,6 @@ func TestHasTextHeader_PureBinary(t *testing.T) {
 
 func TestHasTextHeader_TooShort(t *testing.T) {
 	path := writeTempFile(t, "YSGP")
-	defer os.Remove(path)
 
 	if hasTextHeader(path) {
 		t.Error("expected hasTextHeader = false for file < 16 bytes")
@@ -58,7 +54,6 @@ func TestHasTextHeader_TooShort(t *testing.T) {
 
 func TestHasTextHeader_EmptyFile(t *testing.T) {
 	path := writeTempFile(t, "")
-	defer os.Remove(path)
 
 	if hasTextHeader(path) {
 		t.Error("expected hasTextHeader = false for empty file")

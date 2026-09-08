@@ -12,11 +12,12 @@ import (
 
 func TestSyncScanCache_LoadStore(t *testing.T) {
 	var cache sync.Map
-	key := syncDirectoryScanKey{kind: "folder", root: "/tmp", rtype: "ysm"}
-	storeSyncScanCache(&cache, key, map[string]string{"a": "/tmp/a"})
+	root := filepath.Join(t.TempDir(), "scan")
+	key := syncDirectoryScanKey{kind: "folder", root: root, rtype: "ysm"}
+	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")})
 
 	got, ok := loadSyncScanCache[map[string]string](&cache, key)
-	if !ok || got["a"] != "/tmp/a" {
+	if !ok || got["a"] != filepath.Join(root, "a") {
 		t.Fatalf("缓存应命中并返回值，got=%v ok=%v", got, ok)
 	}
 }
@@ -24,9 +25,12 @@ func TestSyncScanCache_LoadStore(t *testing.T) {
 func TestSyncScanCache_ScannerInvalidateClears(t *testing.T) {
 	// 钩子注册已从隐式 init 改为显式调用（app 层启动时注册），测试自备同款前置
 	RegisterInvalidationHook()
-	key := syncDirectoryScanKey{kind: "folder", root: "/scanner-clear", rtype: "ysm"}
+	// t.Cleanup 保证即使测试 panic 也能恢复钩子状态
+	t.Cleanup(func() { RegisterInvalidationHook() }) // 重新注册以恢复默认状态
+	root := filepath.Join(t.TempDir(), "scanner-clear")
+	key := syncDirectoryScanKey{kind: "folder", root: root, rtype: "ysm"}
 	syncFolderScanCache.Store(key, &syncDirectoryScanEntry{
-		value:     map[string]string{"a": "/scanner-clear/a"},
+		value:     map[string]string{"a": filepath.Join(root, "a")},
 		expiresAt: time.Now().Add(time.Hour),
 	})
 

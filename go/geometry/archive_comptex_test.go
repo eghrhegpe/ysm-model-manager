@@ -30,8 +30,9 @@ func TestComponentTextures_Declared_HasEntry(t *testing.T) {
 	}
 	var arrowComp *types.BedrockModel
 	for i := range models {
-		if strings.HasSuffix(models[i].SourceName, "arrow") {
+		if models[i].SourceName == "arrow" {
 			arrowComp = &models[i]
+			break
 		}
 	}
 	if arrowComp == nil {
@@ -62,8 +63,9 @@ func TestComponentTextures_Undeclared_SameNameFallback(t *testing.T) {
 	}
 	var armComp *types.BedrockModel
 	for i := range models {
-		if strings.HasSuffix(models[i].SourceName, "arm") {
+		if models[i].SourceName == "arm" {
 			armComp = &models[i]
+			break
 		}
 	}
 	if armComp == nil {
@@ -91,8 +93,9 @@ func TestComponentTextures_Undeclared_NoSameNameFile(t *testing.T) {
 	}
 	var armComp *types.BedrockModel
 	for i := range models {
-		if strings.HasSuffix(models[i].SourceName, "arm") {
+		if models[i].SourceName == "arm" {
 			armComp = &models[i]
+			break
 		}
 	}
 	if armComp == nil {

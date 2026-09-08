@@ -21,6 +21,7 @@ auto_fields:
     - evaluateKeyframes
     - executeTimeline
     - foldMolangConstant
+    - getMolangParser
     - Keyframe
     - makeYsmAdapter
     - MolangAxes

@@ -1,31 +1,24 @@
 package ysm
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// TestFindComponentsInExtractedYSM_WineFoxReal 用 upstream 真实 wine_fox 目录验证：
+// TestFindComponentsInExtractedYSM_WineFoxReal 用 tests/fixtures/ysm/01_taisho_maid
+// （精简版 wine_fox 数据，含 7 个组件 geometry + 皮肤贴图）验证：
 // 7 个组件各绑定正确纹理，未声明组件走 perComponent（TexSlot=0 + ComponentTextures 有条目）。
 func TestFindComponentsInExtractedYSM_WineFoxReal(t *testing.T) {
-	dir := filepath.Join("..", "..", "upstream", "[YSM模型]官方开源wine_fox_json", "01_taisho_maid")
-	ysmPath := filepath.Join(dir, "ysm.json")
-	// upstream 不入库（.gitignore 排除），CI/干净 checkout 无真实数据——缺失时跳过而非失败
-	if _, err := os.Stat(ysmPath); os.IsNotExist(err) {
-		t.Skipf("跳过：真实 wine_fox 数据不在仓库（upstream 不入库）: %s", ysmPath)
-	}
+	ysmPath := filepath.Join("..", "..", "tests", "fixtures", "ysm", "01_taisho_maid", "ysm.json")
 	comps, texNames := FindComponentsInExtractedYSM(ysmPath)
 
 	if len(comps) != 7 {
 		t.Fatalf("组件数 = %d, 期望 7", len(comps))
 	}
 
-	// 声明组件：main(0)→skin, arm(1)→skin_white
-	// 注意 arm 的 texSlot=1 对应 skin_white（声明序位置），不是共享 skin
+	// 声明组件：main→skin(声明序0)，arm 与 main 共用 skin（ModernYSM 权威，texNames 置空）
 	wantDecl := map[string]bool{"main": true, "arm": true}
-	wantDeclTex := map[string]int{"main": 0, "arm": 1}
 	for i, c := range comps {
 		isDecl := wantDecl[c.SourceName]
 		var texSlot int
@@ -42,15 +35,17 @@ func TestFindComponentsInExtractedYSM_WineFoxReal(t *testing.T) {
 		hasCompTex := len(c.ComponentTextures) > 0
 
 		if isDecl {
-			// 已声明：全局 texArr 模式，texSlot = 声明序位置
-			if cubeCount > 0 && texSlot != wantDeclTex[c.SourceName] {
-				t.Errorf("[%d] %s: texSlot=%d, 期望 %d", i, c.SourceName, texSlot, wantDeclTex[c.SourceName])
+			// 已声明：全局 texArr 模式。arm 与 main 共用同一套皮肤 → texSlot=0, texNames 置空。
+			// （extracted.go:880-881：arm 分支 texNames 直接 append ""）
+			if cubeCount > 0 && texSlot != 0 {
+				t.Errorf("[%d] %s: texSlot=%d, 期望 0（arm 与 main 共用皮肤）", i, c.SourceName, texSlot)
 			}
 			if hasCompTex {
 				t.Errorf("[%d] %s: 已声明组件不应有 ComponentTextures", i, c.SourceName)
 			}
-			if texNames[i] == "" {
-				t.Errorf("[%d] %s: texNames 不应为空", i, c.SourceName)
+			// arm 的 texNames 置空（非 main）
+			if c.SourceName == "arm" && texNames[i] != "" {
+				t.Errorf("[%d] %s: texNames 应为空（arm 与 main 共用皮肤）, 实际 %q", i, c.SourceName, texNames[i])
 			}
 		} else {
 			// 未声明：perComponent，TexSlot=0，ComponentTextures 有条目，texNames 为空
@@ -77,7 +72,7 @@ func TestFindComponentsInExtractedYSM_WineFoxReal(t *testing.T) {
 		}
 	}
 
-	// 汇总：日志只打 main（第一次匹配），其余 6 个在补扫段通过同名兜底
+	// 汇总
 	var declCount, undeclCount int
 	for _, c := range comps {
 		if wantDecl[c.SourceName] {
@@ -93,7 +88,6 @@ func TestFindComponentsInExtractedYSM_WineFoxReal(t *testing.T) {
 		t.Errorf("未声明组件数 = %d, 期望 5", undeclCount)
 	}
 	t.Logf("组件分布: 已声明=%d(main/arm), 未声明=%d(arrow/trident/foxcar/minecart/boat)", declCount, undeclCount)
-	// 打印组件名序列（调试用，不阻断）
 	var names []string
 	for _, c := range comps {
 		names = append(names, c.SourceName)

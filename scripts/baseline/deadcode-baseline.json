@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-08T08:50:04.039Z",
+  "generated": "2026-09-08T17:36:33.273Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -149,6 +149,7 @@
     "src/preview-3d/adapters/vrm-adapter.ts#src/preview-3d/adapters/ysm-adapter.ts",
     "src/preview-3d/adapters/worker-bridge.test.ts#src/preview-3d/adapters/worker-bridge.test.ts",
     "src/preview-3d/adapters/ysm-3d.test.ts#src/preview-3d/adapters/ysm-3d.test.ts",
+    "src/preview-3d/adapters/ysm-adapter.test.ts#src/preview-3d/adapters/ysm-adapter.test.ts",
     "src/preview-3d/camera-setup.test.ts#src/preview-3d/camera-setup.test.ts",
     "src/preview-3d/caps/environment-capability.test.ts#src/preview-3d/caps/reflector-capability.test.ts",
     "src/preview-3d/caps/environment-capability.test.ts#src/preview-3d/caps/sky-capability.test.ts",
@@ -163,7 +164,7 @@
     "src/preview-3d/caps/postprocessing-capability.ts#src/preview-3d/caps/postprocessing-capability.ts",
     "src/preview-3d/caps/postprocessing-capability.ts#src/preview-3d/caps/reflector-capability.ts",
     "src/preview-3d/decoder/mmd-ktx2-encoder.test.ts#src/preview-3d/decoder/mmd-ktx2-encoder.test.ts",
-    "src/preview-3d/decoder/wasm-decode.ts#src/utils/format/ysm-anim-config.ts",
+    "src/preview-3d/decoder/ysm-meta-parser.ts#src/utils/format/ysm-anim-config.ts",
     "src/preview-3d/ik-solver.test.ts#src/preview-3d/ik-solver.test.ts",
     "src/preview-3d/menu/core.test.ts#src/preview-3d/menu/core.test.ts",
     "src/preview-3d/menu/env.test.ts#src/preview-3d/menu/env.test.ts",

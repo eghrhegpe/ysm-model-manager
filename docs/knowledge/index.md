@@ -367,7 +367,7 @@
 | 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存淘汰, blob URL 释放 |
 | 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
 | 🍃 utils-fmt | 格式化工具 fmt | leaf | — | 文件大小, 字节格式化, KB MB, 日期格式化, 友好日期, 文件大小颜色 |
-| 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon, 判断 YSM 文件 |
+| 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon |
 | 🍃 utils-mc-format | MC 格式判定 mc-format | leaf | — | 分节符, § 颜色, MC 颜色码, pack_format, MC 版本, 资源包版本, renderFormattedText, 版本兼容 |
 | 🏗 utils-misc | 常量与调试 constants/debug | architecture | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
 | 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |

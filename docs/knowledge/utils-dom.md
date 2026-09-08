@@ -13,6 +13,7 @@ auto_fields:
     - calcVisibleRange
     - clearTrigger
     - copyText
+    - disposeTooltipCore
     - downloadTextFile
     - ensureTooltipStyles
     - findTabbableAcrossShadow

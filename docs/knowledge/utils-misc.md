@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - dbg
+    - isDebugEnabled
     - safeStr
   tests:
     - frontend/src/preview-3d/debug-render.test.ts

@@ -12,22 +12,18 @@ quick_groups:
   - 跨组件通信与页面
 quick_intents:
   - 图标、emoji、文件图标、fileIcon
-  - isYsmName
 quick_risk_lines:
   - 文件图标必须走 icon.ts 的 fileIcon，禁止手写文件名→图标映射
 pitfalls:
   - 手写文件名→图标映射 → 与 fileIcon 不一致、新类型缺图标；必须经 fileIcon
-  - isYsmName 判定不准确 → 图标错位；必须经 isYsmName 的统一判定
 
 use_when:
   - 图标
   - emoji
   - 文件图标
   - fileIcon
-  - 判断 YSM 文件
 invariant_anchors:
   - frontend/src/utils/icon/icon.ts|fileIcon
-  - frontend/src/utils/icon/icon.ts|isYsmName
 status: active
 ---
 
@@ -45,7 +41,6 @@ status: active
 ## 对外 API / 入口
 
 - `fileIcon(name: string): string` — 按扩展名返回 emoji 图标：**注册表驱动**——`REGISTRY_EXT_ICONS` 由 `RESOURCE_EXTS`（`utils/resource/` 类型扩展名注册表）遍历 + `typeIconOf(rt)` 映射构建，扩展名 → 图标自动派生，无需手写映射表。兜底 `🧊`（未知类型）；禁用后缀（`.disabled`/`.ban`）剥离后取原扩展名判定。**2026-08-24 注册表化**：原硬编码表已迁移为 `RESOURCE_EXTS` + `typeIconOf` 派生，新增类型只需在资源类型注册表声明图标即可
-- `isYsmName(name: string): boolean` — 扩展名是否等于 `RESOURCE_TYPES.YSM`
 
 ## 与其他子系统关系
 

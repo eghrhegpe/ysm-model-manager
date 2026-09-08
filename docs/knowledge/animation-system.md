@@ -12,7 +12,6 @@ source_files:
   - frontend/src/utils/animation/molang-lib/molang.js
   - frontend/src/utils/animation/molang-lib/easing.js
   - frontend/src/utils/animation/molang-lib/math.js
-  - frontend/src/utils/animation/molang-lib/molang-prism-syntax.js
   - frontend/src/preview-3d/ysm-animation-player.ts
 auto_fields:
   symbols_with_lines:

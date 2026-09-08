@@ -127,7 +127,8 @@ use_when:
   - 仓库页
   - 全局 handler
 invariant_anchors:
-  - frontend/src/views/app-content/index.ts|_unsubs
+  - frontend/src/views/app-content/index.ts|AppContent
+  - frontend/src/views/app-content/state.ts|AppContentState
 status: active
 ---
 
@@ -183,7 +184,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 全局事件 handler 只在 `app-content` 的 `connectedCallback` 注册一次（致命陷阱 #2），返回的 unsub 全部收进 `_globalUnsubs`
 - 初始页面**三源同源**：`app-nav`、`app-content`、`PageStore` 都只能通过 `resolveInitialPage()` 取初始页，禁止任一处硬编码页面名，否则 UI 与 `PageStore` 脱节（旧版 DnD 遮罩曾依赖该守卫误判；现 DnD 已组件化，不再依赖）
 - `resolveInitialPage()` 的 localStorage 取值必须过 `sanitizePage()` 白名单（`VALID_PAGES`）：历史页面名 `resources` 映射为 `repository`，其余未知/损坏值一律回退 `repository`，防止 `_render()` 落入 `default` 分支却无对应 init 分发而形成死页
-- 所有 `bus.on` 订阅（`_unsub` / `_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`_unsubs` 在 `_render()` 开头同样清理（防 app-content 常驻下跨访问累积）；`document` 级 resize 监听先移除再重绑
+- 所有 `bus.on` 订阅（`_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`_unsubs` 在 `_render()` 开头同样清理（防 app-content 常驻下跨访问累积）；`document` 级 resize 监听先移除再重绑
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空

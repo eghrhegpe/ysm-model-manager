@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - attachTooltip
+    - disposeTooltipCore
     - ensureTooltipStyles
     - promoteTitle
     - promoteTitleIfPresent

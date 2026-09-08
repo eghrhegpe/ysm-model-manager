@@ -86,5 +86,9 @@ export function bindDelegatedEvents(self: EventSelf, cb: EventCallbacks): () => 
       self.removeEventListener("click", self._clickHandler);
       self._clickHandler = null;
     }
+    // code_review 47e68917b #3（P2）：unsub 需与 disconnectedCallback 对齐清 cbRef——
+    // 否则重连后 _eventsBound=true 且 _cbRef=undefined，else 分支 `if (self._cbRef)`
+    // 不命中 → 委托监听器永不重绑（push/pull/状态页签/目录行点击全死）
+    self._cbRef = undefined;
   };
 }

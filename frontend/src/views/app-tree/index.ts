@@ -31,6 +31,7 @@ import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
   cleanupVirtualScroll,
   createTreeRenderCtx,
+  getRenderMode,
   getVsMode,
   getVsRows,
   type RenderMode,
@@ -277,6 +278,12 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       logWarn("app-tree", "parse dirOpenState:", e);
     }
+
+    // code_review 47e68917b #1（P2）：恢复 render-mode 持久化水化——TreeState 重构删了
+    // `_renderMode = getRenderMode()` 实例字段后，TreeState.renderMode 硬编码默认
+    // "grid"（tree-state.ts:29），写侧（setRenderMode 持久化）存活但读侧断裂 →
+    // 用户保存的 list 视图每次挂载被静默重置回 grid；在首次渲染前水化一次
+    this._state.renderMode = getRenderMode();
 
     try {
       this._renderLayout();

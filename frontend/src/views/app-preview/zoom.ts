@@ -110,8 +110,10 @@ export async function openFullPreview(
     window.removeEventListener("popstate", onPopState);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     if (overlay.parentNode) document.body.removeChild(overlay);
-    _zoomStyleEl?.remove();
-    _zoomStyleEl = null;
+    // code_review 47e68917b #2（P2）：样式保持会话级——_zoomStyleEl 是模块级单例
+    // （ensureZoomStyles 守卫重入），本会话可能同时存在多个 zoom overlay（异步
+    // openFullPreview 可重入）；此处 remove 会把第二个仍在显示的 overlay 的样式
+    // 连根拔掉（.zoom-* 全失效）——回归旧行为（注入一次不回收，~10 行 CSS）
   };
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();

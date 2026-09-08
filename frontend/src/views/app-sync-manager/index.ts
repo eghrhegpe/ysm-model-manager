@@ -206,6 +206,10 @@ export class AppSyncManager extends WebComponentBase {
     }
 
     // 并发代入守卫：过期代际/已卸载直接丢弃
+    // code_review 47e68917b #5（P3）：失败者 bailing 前复位 _loading——败方已置
+    // _loading=true 并渲染 spinner 容器；若胜方 loadTypeConfig/loadData 随后抛错，
+    // 无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
+    this._loading = false;
     if (initGen !== this._initGen || !this.isConnected) return;
 
     await loadTypeConfig(self);

@@ -26,6 +26,26 @@ describe("parseAnimationControllerJSON 解析", () => {
     expect(r.errors[0]).toMatch(/animation_controllers/);
   });
 
+  it("转换目标不存在时写入 errors（P1 修复）", () => {
+    const json = `{
+      "animation_controllers": {
+        "player.test": {
+          "states": {
+            "idle": {
+              "animations": ["idle"],
+              "transitions": [ { "nonexistent_state": "query.anim_time >= 1" } ]
+            },
+            "walk": { "animations": ["walk"] }
+          }
+        }
+      }
+    }`;
+    const r = parseAnimationControllerJSON(json);
+    expect(r.errors.length).toBeGreaterThan(0);
+    expect(r.errors.some((e) => e.includes("转换目标不存在"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("nonexistent_state"))).toBe(true);
+  });
+
   it("解析状态：动画列表 / transitions / on_exit / blend_transition", () => {
     const json = `{
       "animation_controllers": {

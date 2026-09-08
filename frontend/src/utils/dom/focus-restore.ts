@@ -72,23 +72,43 @@ export function __getTriggerForTest(): HTMLElement | null {
 // 输入阻断栈（菜单/弹窗接管键盘时，相机等外层停止消费 WASD/方向键）
 // ────────────────────────────────────────────────────────────────────
 
-/** 栈：push 后 isInputBlocked()=true，pop 后恢复 */
-const _inputBlockStack: string[] = [];
+/** 栈深度上限（防无限膨胀）：超限 push 写日志并忽略 */
+const MAX_STACK_SIZE = 10;
+
+/** 栈：push 后 isInputBlocked()=true，pop 后恢复（Map<id, count> 防重复 push 无限膨胀） */
+const _inputBlockStack = new Map<string, number>();
 
 /** 挂起外层键盘消费（菜单弹出时调用，id 唯一标识阻断源） */
 export function pushInputBlock(id: string): void {
-  _inputBlockStack.push(id);
+  const depth = _inputBlockStack.size;
+  if (depth >= MAX_STACK_SIZE) {
+    logWarn("focus-restore", `输入阻断栈超上限(${MAX_STACK_SIZE})，忽略 push(${id})`);
+    return;
+  }
+  _inputBlockStack.set(id, (_inputBlockStack.get(id) ?? 0) + 1);
 }
 
 /** 解除挂起（菜单关闭时传同一 id） */
 export function popInputBlock(id: string): void {
-  const idx = _inputBlockStack.lastIndexOf(id);
-  if (idx >= 0) _inputBlockStack.splice(idx, 1);
+  const count = _inputBlockStack.get(id);
+  if (count === undefined) return;
+  if (count <= 1) _inputBlockStack.delete(id);
+  else _inputBlockStack.set(id, count - 1);
 }
 
 /** 外层键盘消费（相机 WASD 等）是否应暂停 */
 export function isInputBlocked(): boolean {
-  return _inputBlockStack.length > 0;
+  return _inputBlockStack.size > 0;
+}
+
+/** 当前栈深度（调试用） */
+export function getStackDepth(): number {
+  return _inputBlockStack.size;
+}
+
+/** 测试钩子：清空输入阻断栈（业务代码不应调用） */
+export function __resetInputBlockStackForTest(): void {
+  _inputBlockStack.clear();
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -162,9 +182,22 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     _activeCleanup();
     _activeCleanup = null;
   }
+  // 缓存 tabbable 列表 + Set（includes → Set.has 优化，防每次 Tab 全树 O(n) 扫描）
+  let cachedTabbable: HTMLElement[] = [];
+  let cachedTabbableSet = new Set<HTMLElement>();
+  const refreshTabbable = (): void => {
+    cachedTabbable = findTabbableAcrossShadow(overlay);
+    cachedTabbableSet = new Set(cachedTabbable);
+  };
+  refreshTabbable();
+  // MutationObserver 监听 overlay 子树变化时刷新缓存
+  const observer = new MutationObserver(() => {
+    refreshTabbable();
+  });
+  observer.observe(overlay, { childList: true, subtree: true });
   const handler = (e: KeyboardEvent): void => {
     if (e.key !== "Tab") return;
-    const tabbable = findTabbableAcrossShadow(overlay);
+    const tabbable = cachedTabbable;
     if (tabbable.length === 0) return;
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const first = tabbable[0]!;
@@ -172,14 +205,14 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     const last = tabbable[tabbable.length - 1]!;
     // 深焦解析：document.activeElement 对 shadow 内聚焦元素做 retargeting，
     // 返回的是 host 而非内层元素——沿 shadowRoot.activeElement 下钻到真实聚焦元素，
-    // 否则 tabbable.includes(active) 对 shadow 恒为 false，Tab 退化成 first/last 乒乓。
+    // 否则 Set.has(active) 对 shadow 恒为 false，Tab 退化成 first/last 乒乓。
     let active: Element | null = document.activeElement as Element | null;
     while (active?.shadowRoot?.activeElement) {
       active = active.shadowRoot.activeElement;
     }
     // 焦点落在 tabbable 元素上（含 shadow 内，深焦解析后）才允许浏览器自然 Tab 循环；
     // 否则（overlay 背景 / overlay 外）一律收拢回 first/last——防焦点逃出 overlay。
-    const onTabbable = tabbable.includes(active as HTMLElement);
+    const onTabbable = cachedTabbableSet.has(active as HTMLElement);
     if (e.shiftKey) {
       if (active === first || !onTabbable) {
         e.preventDefault();
@@ -193,6 +226,7 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
   document.addEventListener("keydown", handler);
   const cleanup = (): void => {
     document.removeEventListener("keydown", handler);
+    observer.disconnect();
   };
   _activeCleanup = cleanup;
   // 身份守卫：只清自己那一份（旧实现无条件执行 _activeCleanup，A 建立→B 建立→

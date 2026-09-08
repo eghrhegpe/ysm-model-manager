@@ -147,6 +147,15 @@ export function parseAnimationControllerJSON(jsonStr: string): {
       });
     }
 
+    // 校验转换目标 ∈ states（防静默跳过）：不在 states 的 target 写入 errors
+    for (const [stateName, state] of states) {
+      for (const trans of state.transitions) {
+        if (!states.has(trans.target)) {
+          errors.push(`[${controllerName}.${stateName}] 转换目标不存在: ${trans.target}`);
+        }
+      }
+    }
+
     // 初始状态优先级：显式 initial_state > "default" > 首个声明状态
     let initialState: string | null = null;
     if (

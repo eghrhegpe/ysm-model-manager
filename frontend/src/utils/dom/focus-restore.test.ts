@@ -8,12 +8,18 @@ import {
   __getTriggerForTest,
   findTabbableAcrossShadow,
   trapFocusAcrossShadow,
+  pushInputBlock,
+  popInputBlock,
+  isInputBlocked,
+  getStackDepth,
+  __resetInputBlockStackForTest,
 } from "./focus-restore.ts";
 import * as log from "@/utils/base/log.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
   clearTrigger();
+  __resetInputBlockStackForTest();
   // 清理可能残留的 trapFocus 监听（单例）
   const dummyOverlay = document.createElement("div");
   document.body.appendChild(dummyOverlay);
@@ -389,5 +395,72 @@ describe("trapFocusAcrossShadow Tab 循环", () => {
     } finally {
       cleanup();
     }
+  });
+
+  it("连续 Tab 使用缓存（MutationObserver 刷新前复用同一 tabbable 列表）", () => {
+    const overlay = document.createElement("div");
+    overlay.innerHTML = `<button id="first">F</button><button id="last">L</button>`;
+    document.body.appendChild(overlay);
+    const cleanup = trapFocusAcrossShadow(overlay);
+    try {
+      // 第一次 Tab：last → first
+      const last = overlay.querySelector<HTMLElement>("#last")!;
+      last.focus();
+      const ev1 = dispatchTab(document, false);
+      expect(ev1.defaultPrevented).toBe(true);
+      // 第二次 Tab：first → last（缓存命中，不重新扫描）
+      const first = overlay.querySelector<HTMLElement>("#first")!;
+      first.focus();
+      const ev2 = dispatchTab(document, true);
+      expect(ev2.defaultPrevented).toBe(true);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe("输入阻断栈（pushInputBlock / popInputBlock）", () => {
+  it("push 后 isInputBlocked()=true，pop 后恢复 false", () => {
+    pushInputBlock("menu");
+    expect(isInputBlocked()).toBe(true);
+    popInputBlock("menu");
+    expect(isInputBlocked()).toBe(false);
+  });
+
+  it("重复 push 只计数（Map 去重，同 id 不膨胀）", () => {
+    pushInputBlock("menu");
+    pushInputBlock("menu");
+    // Map 去重：同 id 只占一个 key，depth=1（栈深度不随重复 push 膨胀）
+    expect(getStackDepth()).toBe(1);
+    popInputBlock("menu");
+    // 引用计数：push 两次 → count=2，pop 一次 → count=1，仍阻断
+    expect(isInputBlocked()).toBe(true);
+    popInputBlock("menu");
+    // count=0 → 删除 key → 解除阻断
+    expect(isInputBlocked()).toBe(false);
+  });
+
+  it("超限 push 写日志并忽略（MAX_STACK_SIZE=10）", () => {
+    const spy = vi.spyOn(log, "logWarn");
+    for (let i = 0; i < 10; i++) {
+      pushInputBlock(`id-${i}`);
+    }
+    expect(getStackDepth()).toBe(10);
+    pushInputBlock("overflow");
+    expect(getStackDepth()).toBe(10);
+    expect(spy).toHaveBeenCalledWith(
+      "focus-restore",
+      expect.stringContaining("超上限"),
+    );
+    spy.mockRestore();
+  });
+
+  it("pop 不存在 id 安全（不抛错、不误删其他）", () => {
+    pushInputBlock("menu");
+    popInputBlock("nonexistent");
+    expect(isInputBlocked()).toBe(true);
+    expect(getStackDepth()).toBe(1);
+    popInputBlock("menu");
+    expect(isInputBlocked()).toBe(false);
   });
 });

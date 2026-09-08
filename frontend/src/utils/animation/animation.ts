@@ -411,7 +411,12 @@ function parseClipBones(clip: AnimationClip, bones: Record<string, unknown> | nu
  * [子函数 4/5] 解析 timeline 事件：时间戳 → Molang 表达式收集 → 编译 → 排序。
  * 发现任一合法事件时写入 clip.timeline 并标记 clip.hasMolang。
  */
-function parseClipTimeline(clip: AnimationClip, hasTimeline: boolean, animObj: RawAnimEntry): void {
+function parseClipTimeline(
+  clip: AnimationClip,
+  hasTimeline: boolean,
+  animObj: RawAnimEntry,
+  errors: string[],
+): void {
   if (!hasTimeline || !animObj.timeline) return;
   const timeline = animObj.timeline as Record<string, unknown>;
   const events: TimelineEvent[] = [];
@@ -431,11 +436,15 @@ function parseClipTimeline(clip: AnimationClip, hasTimeline: boolean, animObj: R
     }
     if (exprs.length === 0) continue;
 
-    // 编译所有表达式（编译失败的静默跳过，对齐 Molang 零占位降级口径）
+    // 编译所有表达式（编译失败的写入 errors，对齐 Molang 零占位降级口径）
     const actions: MolangFn[] = [];
     for (const expr of exprs) {
       const fn = compileMolang(expr);
-      if (fn) actions.push(fn);
+      if (fn) {
+        actions.push(fn);
+      } else {
+        errors.push(`[${clip.name}] timeline 编译失败: ${expr} (t=${t})`);
+      }
     }
     if (actions.length > 0) {
       events.push({ time: t, actions, raw: exprs });
@@ -508,7 +517,7 @@ export function parseBedrockAnimationJSON(jsonStr: string): {
     parseClipBones(clip, bones);
 
     // 阶段4：Timeline 事件解析（Molang 表达式编译+排序）
-    parseClipTimeline(clip, hasTimeline, animObj);
+    parseClipTimeline(clip, hasTimeline, animObj, errors);
 
     // 阶段5：长度补算 + 入队判定
     finalizeClipLengthAndEnqueue(clip, clips);
@@ -641,20 +650,33 @@ export function executeTimeline(
   currentTime: number,
 ): string[][] | null {
   if (!timeline?.length) return null;
+  const fired: string[][] = [];
+  // 循环回绕（prevTime > currentTime）：拆成两段扫描 [prevTime, length) 和 [0, currentTime]
+  const wrapped = prevTime > currentTime;
   // 找到第一个 > prevTime 的事件索引
   let start = 0;
   while (start < timeline.length && timeline[start].time <= prevTime) {
     start++;
   }
-  const fired: string[][] = [];
+  // 第一段扫描：从 start 到末尾（回绕时扫 [prevTime, length)，非回绕时扫到 currentTime）
   for (let i = start; i < timeline.length; i++) {
     const ev = timeline[i];
-    if (ev.time > currentTime) break;
-    // 执行所有动作
+    if (!wrapped && ev.time > currentTime) break;
     for (const fn of ev.actions) {
       fn(currentTime); // anim_time = 当前时间
     }
     fired.push(ev.raw);
+  }
+  // 回绕第二段扫描：从 0 到 currentTime
+  if (wrapped) {
+    for (let i = 0; i < timeline.length; i++) {
+      const ev = timeline[i];
+      if (ev.time > currentTime) break;
+      for (const fn of ev.actions) {
+        fn(currentTime);
+      }
+      fired.push(ev.raw);
+    }
   }
   return fired.length > 0 ? fired : null;
 }

@@ -7,9 +7,23 @@ import {
   parseBedrockAnimationJSON,
   evaluateClip,
   ysmAnimClipLabels,
+  executeTimeline,
 } from "./animation.ts";
-import type { Keyframe, AnimationClip } from "./animation.ts";
+import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
 import * as log from "@/utils/base/log.ts";
+
+// 可控 compileMolang mock：默认透传真实实现，测试中可置失败标记
+let _failExpr: string | null = null;
+vi.mock("./molang.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./molang.ts")>();
+  return {
+    ...actual,
+    compileMolang: (expr: string, scope?: Record<string, number> | null) => {
+      if (_failExpr !== null && expr === _failExpr) return null;
+      return actual.compileMolang(expr, scope);
+    },
+  };
+});
 
 const KFS: Keyframe[] = [
   { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "linear" },
@@ -466,5 +480,61 @@ describe("热路径输出缓冲区（避免每帧分配）", () => {
     // r1 不应被 r2 覆盖
     expect(r1).toEqual([2.5, 5, 7.5]);
     expect(r2).toEqual([7.5, 15, 22.5]);
+  });
+});
+
+describe("executeTimeline 循环回绕（P0 修复）", () => {
+  it("循环回绕触发两段事件（prevTime > currentTime 时不丢 0 附近事件）", () => {
+    const calls: number[] = [];
+    const timeline: TimelineEvent[] = [
+      { time: 0.1, actions: [(t: number) => calls.push(t)], raw: ["e1"] },
+      { time: 0.5, actions: [(t: number) => calls.push(t)], raw: ["e2"] },
+      { time: 0.9, actions: [(t: number) => calls.push(t)], raw: ["e3"] },
+    ];
+    // 回绕：prevTime=0.8 → currentTime=0.1，应触发 e3（(0.8, length)）和 e1（[0, 0.1]）
+    const fired = executeTimeline(timeline, 0.8, 0.1);
+    expect(fired).not.toBeNull();
+    expect(fired!).toHaveLength(2);
+    expect(fired!.map((f) => f[0])).toEqual(["e3", "e1"]);
+  });
+
+  it("非回绕正常触发 [prevTime, currentTime] 区间事件", () => {
+    const timeline: TimelineEvent[] = [
+      { time: 0.1, actions: [], raw: ["e1"] },
+      { time: 0.5, actions: [], raw: ["e2"] },
+      { time: 0.9, actions: [], raw: ["e3"] },
+    ];
+    const fired = executeTimeline(timeline, 0.2, 0.7);
+    expect(fired).not.toBeNull();
+    expect(fired!.map((f) => f[0])).toEqual(["e2"]);
+  });
+});
+
+describe("timeline 编译失败写入 errors（P2 修复）", () => {
+  it("timeline 表达式编译失败时 errors 数组收集失败信息", () => {
+    // molangjs 极其宽容，几乎不会抛错；通过模块级 mock 标记失败表达式
+    _failExpr = "BAD_EXPR";
+    try {
+      const json = JSON.stringify({
+        animations: {
+          test_clip: {
+            timeline: {
+              "0.5": "BAD_EXPR", // 模拟编译失败
+              "1.0": "v.x = 1", // 合法
+            },
+          },
+        },
+      });
+      const r = parseBedrockAnimationJSON(json);
+      // 编译失败的表达式应写入 errors
+      expect(r.errors.length).toBeGreaterThan(0);
+      expect(r.errors.some((e) => e.includes("timeline 编译失败"))).toBe(true);
+      expect(r.errors.some((e) => e.includes("BAD_EXPR"))).toBe(true);
+      // 合法表达式仍应被解析
+      expect(r.clips).toHaveLength(1);
+      expect(r.clips[0].timeline).toBeDefined();
+    } finally {
+      _failExpr = null;
+    }
   });
 });

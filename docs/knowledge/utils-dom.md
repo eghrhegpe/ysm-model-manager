@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __getTriggerForTest
+    - __resetInputBlockStackForTest
     - attachTooltip
     - btnBaseCSS
     - calcVisibleRange
@@ -26,6 +27,7 @@ auto_fields:
     - focusVisibleCSS
     - formatBytes
     - friendlyError
+    - getStackDepth
     - installScrollSync
     - isEditableTarget
     - isFileExistsError

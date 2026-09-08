@@ -273,6 +273,7 @@ auto_fields:
     - getTextureDecoder
     - getTintColorSync
     - getVrmMaterialDetail
+    - godRaysIntensity
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
@@ -630,6 +631,7 @@ auto_fields:
     - stripYsgpTextHeader
     - SubModel
     - subscribeSettings
+    - SunBeams
     - surfaceSpecKey
     - SwitchContext
     - switchNormPath

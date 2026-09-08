@@ -18,7 +18,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 // 从 _lib/gate-resolve import（纯模块，无 pre-push-gate 顶层 main() 副作用）——
 // pre-push-gate 顶层会 main() 读 stdin，import 它会污染契约测试。
-import { resolveBaseRev, fallbackBranchRevs } from '../scripts/_lib/gate-resolve.ts';
+import { resolveBaseRev, resolveChanges, fallbackBranchRevs } from '../scripts/_lib/gate-resolve.ts';
 
 function sh(cmd: string): string {
   return execFileSync('git', cmd.split(' '), { encoding: 'utf-8' }).trim();
@@ -57,5 +57,18 @@ if (base !== '') {
     'fallback 基线应等于其与 localOid 的 merge-base');
 }
 console.log(`  ✓ resolveBaseRev：remoteOid 权威优先 + 新分支走 fallback 链（base=${base.slice(0, 7) || '(空/孤儿)'}）`);
+
+// ── 3. resolveChanges（ADR-206 阶段 1 迁址自 pre-push-gate）──
+
+// remoteOid === localOid（同源）：跳过远程 diff，走 fallback 到最近提交
+const chg = resolveChanges(`refs/heads/${branch}`, localOid, localOid);
+assert.ok(Array.isArray(chg), 'resolveChanges 同源应返回数组');
+assert.ok(chg!.length > 0, 'resolveChanges 应解析到最近一次提交的变更文件集');
+
+// 新仓库（remoteOid 全 0）：应能解析到首提交文件集或合并基点 diff 文件集
+const chgNew = resolveChanges(`refs/heads/${branch}`, localOid, '0000000000000000000000000000000000000000');
+assert.ok(Array.isArray(chgNew), 'resolveChanges 新仓库应返回数组');
+
+console.log('  ✓ resolveChanges：同源/新仓库路径解析正确（ADR-206 迁址）');
 
 console.log('\nOK: gate fallback 单一事实源契约测试全过');

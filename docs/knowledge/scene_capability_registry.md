@@ -50,6 +50,7 @@ auto_fields:
     - FogCapability
     - FogMode
     - generateSurfacePixels
+    - godRaysIntensity
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
@@ -95,6 +96,7 @@ auto_fields:
     - SkyModelType
     - SkyParams
     - SpotlightParams
+    - SunBeams
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE

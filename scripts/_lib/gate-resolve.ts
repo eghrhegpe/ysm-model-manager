@@ -59,3 +59,32 @@ export function resolveBaseRev(localOid: string, remoteOid: string, localRef: st
   }
   return "";
 }
+
+/**
+ * 计算本次 push 的变更文件集（ADR-206 阶段 1：从 pre-push-gate 迁入）。
+ * 相对被推送的 localOid（而非当前检出 HEAD——推非当前分支时 HEAD 与推送对象不一致）。
+ *   remoteOid 全 0（新分支/新仓库）→ 回退合并基点或最近提交；
+ *   无祖先提交 → 首个提交的完整文件清单。
+ * 返回文件数组；解析彻底失败（git diff/show 均不可用）返回 null，由调用方阻断推送
+ * （fail-closed，不静默空跑放行）。
+ */
+export function resolveChanges(localRef: string, localOid: string, remoteOid: string): string[] | null {
+  const isNew = /^0+$/.test(remoteOid || "");
+  if (!isNew && remoteOid !== localOid) {
+    const { rc, out } = git(["diff", "--name-only", `${remoteOid}..${localOid}`]);
+    if (rc === 0) return out.trim().split("\n").filter(Boolean); // 权威答案（空 = 本次无变更）
+  }
+  // 新分支：优先合并基点（有远端追踪分支时），否则 fallback 链 -> 最近提交
+  for (const ref of fallbackBranchRevs(localRef)) {
+    const r = git(["merge-base", localOid, ref]);
+    const mb = r.rc === 0 ? r.out.trim() : "";
+    if (!mb) continue;
+    const { rc, out } = git(["diff", "--name-only", `${mb}..${localOid}`]);
+    if (rc === 0) return out.trim().split("\n").filter(Boolean);
+  }
+  const { rc, out } = git(["diff", "--name-only", `${localOid}~1..${localOid}`]);
+  if (rc === 0) return out.trim().split("\n").filter(Boolean);
+  // 首个提交（diff-tree 对 root commit 默认忽略，须用 git show）
+  const t = git(["show", "--name-only", "--format=", localOid]);
+  return t.rc === 0 && t.out.trim() ? t.out.trim().split("\n").filter(Boolean) : null;
+}

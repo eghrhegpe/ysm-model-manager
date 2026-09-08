@@ -16,6 +16,7 @@ auto_fields:
     - clearAllCache
     - closeActiveDialog
     - closeDlg
+    - configureCache
     - createDialog
     - getBundle
     - getCacheTtlMs

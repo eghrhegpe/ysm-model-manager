@@ -224,8 +224,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 370 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 467 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 375 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 473 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 602 |
@@ -428,7 +428,7 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 656 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 657 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
 | resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
@@ -494,8 +494,8 @@
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 417 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 339 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 423 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |

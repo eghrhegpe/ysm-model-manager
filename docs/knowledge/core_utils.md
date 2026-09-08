@@ -8,9 +8,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - addDisposableListener
-    - asArray
-    - asNumber
-    - asString
     - BusyLock
     - clamp
     - clamp01
@@ -18,8 +15,6 @@ auto_fields:
     - createBusyLock
     - debounce
     - Disposable
-    - getCompound
-    - isObj
     - logError
     - LogSink
     - logWarn

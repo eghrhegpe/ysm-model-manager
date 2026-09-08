@@ -16,9 +16,13 @@ auto_fields:
     - ALL_RESOURCE_TYPES
     - allResourceTypes
     - AMBIGUOUS_EXTS
+    - asArray
+    - asNumber
+    - asString
     - currentRepoType
     - extBelongsTo
     - extOf
+    - getCompound
     - getExt
     - getExts
     - getPreviewableTypeTabs
@@ -30,6 +34,7 @@ auto_fields:
     - GroupTypeOption
     - isContainerExt
     - isImportableFile
+    - isObj
     - isSupportedExt
     - isSupportedFile
     - isYsmWasmPreview

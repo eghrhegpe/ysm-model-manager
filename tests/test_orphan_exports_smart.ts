@@ -234,8 +234,8 @@ const gateConfigSrc = fs.readFileSync(
 );
 for (const script of SHOULD_BE_DEBT) {
   assert.ok(
-    gateConfigSrc.includes(`'${script}'`) && gateConfigSrc.includes(`blockPolicy: 'debt'`),
-    `${script} 应在 gate-config.ts 声明 blockPolicy: 'debt'（设计产物/重构中间态，不影响运行）`,
+    gateConfigSrc.includes(`"${script}"`) && gateConfigSrc.includes(`blockPolicy: "debt"`),
+    `${script} 应在 gate-config.ts 声明 blockPolicy: "debt"（设计产物/重构中间态，不影响运行）`,
   );
 }
 

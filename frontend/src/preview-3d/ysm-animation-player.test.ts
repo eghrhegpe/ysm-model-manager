@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { createYsmAnimPlayer } from "./ysm-animation-player.ts";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
-import { compileMolang } from "@/utils/animation/molang.ts";
+import { compileMolang, createMolangParser } from "@/utils/animation/molang.ts";
 import type { AnimationController } from "@/utils/animation/animation-controller.ts";
 
 function makeClip(length = 2.0, boneName = "root"): AnimationClip {
@@ -367,6 +367,7 @@ describe("createYsmAnimPlayer", () => {
     const controller: AnimationController = {
       name: "test",
       initialState: "idle",
+      molangParser: createMolangParser(),
       states: new Map([
         ["idle", {
           name: "idle",
@@ -407,6 +408,7 @@ describe("createYsmAnimPlayer", () => {
     const controller: AnimationController = {
       name: "test",
       initialState: "idle",
+      molangParser: createMolangParser(),
       states: new Map([
         ["idle", {
           name: "idle",

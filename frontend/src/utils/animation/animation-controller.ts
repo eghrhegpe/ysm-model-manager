@@ -3,7 +3,7 @@
 // 与 animation.ts 的 Timeline 事件配合：Timeline 写 v.* 变量，Controller 读变量决定状态切换。
 
 import { logWarn } from "@/utils/base/log.ts";
-import { compileMolang, type MolangFn } from "./molang.ts";
+import { createMolangParser, type MolangFn, type MolangParser } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
 
@@ -41,6 +41,8 @@ export interface AnimationController {
   states: Map<string, ControllerState>;
   /** 初始状态名 */
   initialState: string;
+  /** 独立 Molang 解析器实例（工厂模式，根除多播放器 activeScope 互盖） */
+  molangParser: MolangParser;
 }
 
 // ── 解析 ────────────────────────────────────────
@@ -80,6 +82,9 @@ export function parseAnimationControllerJSON(jsonStr: string): {
 
     const states = new Map<string, ControllerState>();
 
+    // 每个控制器持有独立 Molang 解析器实例（工厂模式，根除多播放器 activeScope 互盖）
+    const localParser = createMolangParser();
+
     for (const [stateName, stateRaw] of Object.entries(statesRaw)) {
       if (!stateRaw || typeof stateRaw !== "object") continue;
       const stateObj = stateRaw as {
@@ -102,7 +107,8 @@ export function parseAnimationControllerJSON(jsonStr: string): {
           : [];
       for (const expr of exitExprs) {
         if (typeof expr === "string") {
-          const fn = compileMolang(expr);
+          // 使用控制器自有 parser 实例编译（工厂模式，隔离多播放器作用域）
+          const fn = localParser.compileMolang(expr);
           if (fn) onExit.push(fn);
         }
       }
@@ -118,7 +124,7 @@ export function parseAnimationControllerJSON(jsonStr: string): {
             // 空表达式 = 显式无条件转换（总是触发）；非空但编译失败 = 条件非法，
             // 运行期跳过不触发（不 fail-open），并上报错误便于排查。
             const unconditional = condExpr.trim() === "";
-            const condition = compileMolang(condExpr);
+            const condition = localParser.compileMolang(condExpr);
             if (!unconditional && !condition) {
               errors.push(
                 `[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`,
@@ -159,6 +165,7 @@ export function parseAnimationControllerJSON(jsonStr: string): {
         name: controllerName,
         states,
         initialState,
+        molangParser: localParser,
       });
     }
   }
@@ -207,8 +214,16 @@ export class AnimationControllerRuntime {
   }
 
   /**
+   * 设置/清除当前控制器的持久变量作用域（委托给自有 parser 实例）。
+   * @param scope 每播放器 v.* 变量容器；传 null 恢复默认
+   */
+  setMolangScope(scope: Record<string, number> | null): void {
+    this.controller.molangParser.setScope(scope);
+  }
+
+  /**
    * 每帧更新：评估转换条件，必要时切换状态。
-   * v.* 变量经 molang.ts 的 setMolangScope 持久作用域读取（timeline 写入跨帧可见），
+   * v.* 变量经控制器自有 parser 实例的 setScope 持久作用域读取（timeline 写入跨帧可见），
    * 此处不再接收变量快照。
    * @param dt 帧间隔（秒）
    * @returns 是否发生了状态切换

@@ -16,6 +16,10 @@ export const isSupportedFile = (name: string): boolean => ALL_EXTS.includes(getE
  *  包内 geometry/animation/语言 json（main.json / *.animation.json / zh_cn.json 等）不得单独导入
  *  与 go/scanner/scanner.go:80-87 的 ysm.json 白名单对齐（base name 级判断，任意子目录均适用） */
 export const isImportableFile = (name: string): boolean => {
-  if (getExt(name) === ".json") return name.toLowerCase() === "ysm.json";
+  if (getExt(name) === ".json") {
+    // base name 级判断：路径含点（如 /path/to/file.backup/ysm.json）仍应命中白名单
+    const base = name.split(/[/\\]/).pop() || name;
+    return base.toLowerCase() === "ysm.json";
+  }
   return isSupportedFile(name);
 };

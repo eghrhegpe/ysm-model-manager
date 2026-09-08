@@ -10,23 +10,21 @@
  * @param selector  目标元素选择器，如 "app-sidebar"
  * @note 调用侧用 `newCssMod?.xxxCSS` 防御 undefined（Vite HMR 可能传 undefined）
  */
-/** 自定义标记：用于在 adoptedStyleSheets 数组中定位本函数管理的 sheet，实现分 sheet 替换 */
-const HMR_MARKER = "__hmrSelector";
+/** WeakMap 存储 sheet → selector 标记（不阻止 GC，旧 sheet 被替换后自动释放） */
+const sheetMarker = new WeakMap<CSSStyleSheet, string>();
 
 export function refreshAdoptedStyleSheets(cssText: string | undefined, selector: string): void {
   if (cssText === undefined) return;
   const style = new CSSStyleSheet();
   style.replaceSync(cssText);
-  // 标记归属：分 sheet 替换时用于定位目标，不污染 adoptedStyleSheets 数组里的其他 sheet
-  (style as CSSStyleSheet & { [HMR_MARKER]?: string })[HMR_MARKER] = selector;
+  // 标记归属：分 sheet 替换时用于定位目标，WeakMap 不阻止 GC
+  sheetMarker.set(style, selector);
   document.querySelectorAll(selector).forEach((el) => {
     const root = (el as Element).shadowRoot;
     if (!root) return;
     const sheets = [...root.adoptedStyleSheets];
     // 找旧的同标记 sheet，只替换那一个，保留其他 sheet 不被洗掉
-    const idx = sheets.findIndex(
-      (s) => (s as CSSStyleSheet & { [HMR_MARKER]?: string })[HMR_MARKER] === selector,
-    );
+    const idx = sheets.findIndex((s) => sheetMarker.get(s) === selector);
     if (idx >= 0) {
       sheets[idx] = style;
     } else {

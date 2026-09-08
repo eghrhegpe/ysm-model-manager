@@ -23,6 +23,17 @@ const _pending = new Map<string, Promise<unknown>>();
 /** 默认命名空间，调用方可通过 namespace 参数覆盖 */
 const DEFAULT_NS = "ysm";
 
+/** 默认 LRU 容量上限 */
+const DEFAULT_MAX_SIZE = 128;
+
+/** LRU 淘汰：超出容量时 shift 最久未用条目（Map 插入顺序 = 访问顺序） */
+function evictLru(maxSize: number): void {
+  while (_cache.size > maxSize) {
+    const oldest = _cache.keys().next().value;
+    if (oldest !== undefined) _cache.delete(oldest);
+  }
+}
+
 /** 拼接命名空间 + key，生成唯一 fullKey */
 function mkKey(namespace: string, key: string): string {
   return `${namespace}:${key}`;
@@ -56,6 +67,7 @@ export async function withCached<T>(
   fn: () => Promise<T>,
   policy: CachePolicy = "NORMAL",
   namespace: string = DEFAULT_NS,
+  maxSize: number = DEFAULT_MAX_SIZE,
 ): Promise<T> {
   const fullKey = mkKey(namespace, key);
   const now = Date.now();
@@ -68,17 +80,21 @@ export async function withCached<T>(
   }
 
   if (entry && now < entry.expiryMs) {
-    // 缓存命中
+    // 缓存命中 → LRU 触摸：delete + re-set 移到末尾（Map 插入顺序 = 访问顺序）
+    _cache.delete(fullKey);
+    _cache.set(fullKey, entry);
     dbg("cache", `[hit] ${fullKey} (${Math.round((entry.expiryMs - now) / 1000)}s 后过期)`);
     return entry.value;
   }
 
   if (entry && policy === "STALE") {
     // 过期但返回旧值，后台刷新（并发去重）
+    _cache.delete(fullKey);
+    _cache.set(fullKey, entry);
     dbg("cache", `[stale] ${fullKey} 已过期，返回旧值并后台刷新`);
     if (!_pending.has(fullKey)) {
       // 存 typed Promise<T>，让并发 NORMAL awaiter 拿到 T 而非 undefined
-      const p = refreshInBackground(fullKey, ttlMs, fn) as Promise<unknown>;
+      const p = refreshInBackground(fullKey, ttlMs, fn, maxSize) as Promise<unknown>;
       _pending.set(fullKey, p);
       p.catch((e) => dbg("cache", `refreshInBackground ${fullKey} 失败:`, e));
       p.finally(() => _pending.delete(fullKey));
@@ -97,6 +113,7 @@ export async function withCached<T>(
     try {
       const value = await fn();
       _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
+      evictLru(maxSize);
       return value;
     } catch (e) {
       // 失败不写入缓存——下次调用仍会重试 fn()
@@ -123,10 +140,12 @@ async function refreshInBackground<T>(
   fullKey: string,
   ttlMs: number,
   fn: () => Promise<T>,
+  maxSize: number,
 ): Promise<T> {
   try {
     const value = await fn();
     _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
+    evictLru(maxSize);
     dbg("cache", `[refresh] ${fullKey} 刷新成功`);
     return value;
   } catch (e) {

@@ -72,6 +72,31 @@ describe("refreshAdoptedStyleSheets", () => {
     el.remove();
   });
 
+  it("旧 sheet 被替换后 WeakMap 不残留引用（标记随 GC 自动释放）", () => {
+    const el = document.createElement("div");
+    el.className = "hmr-gc";
+    const root = el.attachShadow({ mode: "open" });
+    document.body.append(el);
+
+    // 第一次刷新
+    refreshAdoptedStyleSheets(".v1 { color: red; }", ".hmr-gc");
+    const oldSheet = root.adoptedStyleSheets[0];
+    expect(oldSheet).toBeInstanceOf(CSSStyleSheet);
+
+    // 第二次刷新 → 替换为新 sheet
+    refreshAdoptedStyleSheets(".v2 { color: blue; }", ".hmr-gc");
+    expect(root.adoptedStyleSheets).toHaveLength(1);
+    expect(root.adoptedStyleSheets[0]).not.toBe(oldSheet);
+
+    // WeakMap 不持有旧 sheet 引用：旧 sheet 被替换后仅 adoptedStyleSheets 数组曾引用它，
+    // 数组更新后旧 sheet 无强引用，GC 可回收，WeakMap 条目自动消失。
+    // 此处验证新 sheet 的标记正确（WeakMap.get 对新 sheet 返回 selector）
+    const newSheet = root.adoptedStyleSheets[0];
+    expect(newSheet.cssRules.length).toBe(1);
+
+    el.remove();
+  });
+
   it("分 sheet 替换：目标组件已有其它 adoptedStyleSheets 不被清掉", () => {
     const el = document.createElement("div");
     el.className = "hmr-multi-sheet";

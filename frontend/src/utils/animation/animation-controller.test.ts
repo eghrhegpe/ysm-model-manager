@@ -1,19 +1,15 @@
 // @vitest-environment node
 // ===== Animation Controller 状态机测试（animation-controller.ts）=====
 // 解析 .animation_controllers.json + 运行时状态转换评估。
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   parseAnimationControllerJSON,
   AnimationControllerRuntime,
   findControllerForAnimation,
   type AnimationController,
 } from "./animation-controller.ts";
-import { setMolangScope } from "./molang.ts";
+import { createMolangParser } from "./molang.ts";
 import * as log from "@/utils/base/log.ts";
-
-afterEach(() => {
-  setMolangScope(null);
-});
 
 // ── 解析 ────────────────────────────────────────
 
@@ -139,6 +135,7 @@ describe("AnimationControllerRuntime 状态机", () => {
     const ctrl: AnimationController = {
       name: "c",
       initialState: "a",
+      molangParser: createMolangParser(),
       states: new Map([
         ["a", { name: "a", animations: [], onExit: [], blendTransition: 0.2, transitions: [
           { target: "b", condition: null, raw: "(", unconditional: false },
@@ -153,8 +150,8 @@ describe("AnimationControllerRuntime 状态机", () => {
 
   it("转换触发时执行 on_exit（经 v.* 持久作用域可见）", () => {
     const scope: Record<string, number> = {};
-    setMolangScope(scope); // 控制器求值段开启持久作用域
     const rt = new AnimationControllerRuntime(buildController());
+    rt.setMolangScope(scope); // 控制器求值段开启持久作用域（工厂实例）
     expect(rt.update(99)).toBe(true); // 触发到 walk
     rt.update(0.5); // 处于 walk，无转换
     expect(scope["variable.hit"]).toBe(1); // on_exit 写入的变量跨帧持久
@@ -179,6 +176,7 @@ describe("AnimationControllerRuntime 状态机", () => {
     const ctrl: AnimationController = {
       name: "c",
       initialState: "a",
+      molangParser: createMolangParser(),
       states: new Map([
         ["a", { name: "a", animations: [], onExit: [], blendTransition: 0.2, transitions: [
           { target: "b", condition: () => { throw new Error("eval fail"); }, raw: "throw", unconditional: false },
@@ -197,6 +195,7 @@ describe("AnimationControllerRuntime 状态机", () => {
     const ctrl: AnimationController = {
       name: "c",
       initialState: "a",
+      molangParser: createMolangParser(),
       states: new Map([
         ["a", { name: "a", animations: [], onExit: [() => { throw new Error("exit fail"); }], blendTransition: 0.2, transitions: [
           { target: "b", condition: null, raw: "", unconditional: true },
@@ -265,7 +264,6 @@ describe("AnimationControllerRuntime 状态机", () => {
 
   it("单字符串 on_exit 生效（与数组形态等价）", () => {
     const scope: Record<string, number> = {};
-    setMolangScope(scope);
     const ctrl = parseAnimationControllerJSON(`{
       "animation_controllers": { "c": {
         "states": {
@@ -275,6 +273,7 @@ describe("AnimationControllerRuntime 状态机", () => {
       }}
     }`).controllers[0];
     const rt = new AnimationControllerRuntime(ctrl);
+    rt.setMolangScope(scope); // 控制器求值段开启持久作用域（工厂实例）
     expect(rt.update(0)).toBe(true);
     expect(rt.current_state).toBe("b");
     expect(scope["variable.done"]).toBe(1); // 单字符串 on_exit 被正确编译执行

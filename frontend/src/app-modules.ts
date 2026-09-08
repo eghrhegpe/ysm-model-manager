@@ -51,7 +51,7 @@ loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 
 // ===== 全局主题控制 =====
 
-import { safeGet } from "@/utils/dom/storage.ts";
+import { safeGet } from "@/utils/base/storage.ts";
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
 import { applyTheme, initTheme, normalizeTheme } from "./theme-core.ts";

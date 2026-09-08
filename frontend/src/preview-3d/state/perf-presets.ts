@@ -10,7 +10,7 @@
 //    套用无副作用
 //  - custom = 不套用（保持用户手调）
 
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 import type { PreviewStatePath } from "./preview-paths.ts";
 import { setStateValue } from "./preview-state.ts";
 

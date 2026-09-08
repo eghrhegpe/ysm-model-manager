@@ -1,5 +1,5 @@
 // ===== 预览面板拖拽调整（为 app-content/index.ts 减负，ADR-040）=====
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 import type { AppContentHost } from "./host.ts";
 
 /**

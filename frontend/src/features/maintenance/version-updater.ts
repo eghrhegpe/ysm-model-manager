@@ -8,8 +8,8 @@ import { backendGetApp } from "@/features/backend-deps.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { modalProgress } from "@/features/dialogs/modal-progress.ts";
 import { swallowError } from "@/utils/base/async.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -48,7 +48,7 @@ async function currentCheckInterval(): Promise<number> {
 async function canCheck(): Promise<boolean> {
   const interval = await currentCheckInterval();
   // P3（审核发现）：裸调 localStorage 改 safeGet——隐私模式/存储禁用下 getItem 抛错
-  // 会中断启动链（ADR-044 策略 A：统一收敛至 utils/dom/storage.ts）
+  // 会中断启动链（ADR-044 策略 A：统一收敛至 utils/base/storage.ts）
   const raw = parseInt(safeGet(CHECK_KEY) || "0", 10);
   // 守卫：存储值损坏为非数字时 parseInt→NaN，NaN 比较恒 false 会永久禁用更新检查
   const last = Number.isNaN(raw) ? 0 : raw;

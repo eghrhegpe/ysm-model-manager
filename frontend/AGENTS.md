@@ -49,7 +49,7 @@ frontend/src/
 
 ## 存储与隐私模式（ADR-044）
 
-- **永远用 `safeGet` / `safeSet` / `safeRemove`**（`utils/dom/storage.ts`），不要裸调 `localStorage`
+- **永远用 `safeGet` / `safeSet` / `safeRemove`**（`utils/base/storage.ts`），不要裸调 `localStorage`
 - 隐私模式（`localStorage` 禁用）下裸调会抛错，`safe*` 静默降级
 - `app-modules.ts` 顶层启动链依赖 `safeGet`——改存储逻辑前先 grep 消费者
 

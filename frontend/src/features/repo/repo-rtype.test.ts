@@ -5,12 +5,12 @@ import { bus } from "@/bus";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // safeGet 隔离 localStorage 真实状态（隐私模式 / 并发写入不影响断言）
-vi.mock("@/utils/dom/storage.ts", () => ({
+vi.mock("@/utils/base/storage.ts", () => ({
   safeGet: vi.fn(),
 }));
 
 import { currentRepoType, useCurrentResourceType } from "./repo-rtype.ts";
-import { safeGet } from "@/utils/dom/storage.ts";
+import { safeGet } from "@/utils/base/storage.ts";
 
 const offs: Array<() => void> = [];
 

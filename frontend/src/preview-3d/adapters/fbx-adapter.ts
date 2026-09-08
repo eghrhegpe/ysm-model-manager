@@ -19,7 +19,7 @@ import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
-import { safeGet } from "@/utils/dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
+import { safeGet } from "@/utils/base/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";

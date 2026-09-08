@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 const { safeGetMock } = vi.hoisted(() => ({ safeGetMock: vi.fn() }));
-vi.mock("@/utils/dom/storage.ts", () => ({ safeGet: safeGetMock }));
+vi.mock("@/utils/base/storage.ts", () => ({ safeGet: safeGetMock }));
 
 import { currentRepoType } from "./repo-rtype.ts";
 import { RESOURCE_TYPES } from "./types.ts";

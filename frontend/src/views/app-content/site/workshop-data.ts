@@ -2,7 +2,7 @@
 // 依赖 workshop-icons.js 的 SVG 图标
 
 import { t } from "@/core/i18n/t.ts";
-import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
+import { safeGetJSON, safeSet } from "@/utils/base/storage.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";

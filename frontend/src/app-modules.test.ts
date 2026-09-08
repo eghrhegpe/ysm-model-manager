@@ -4,7 +4,7 @@
 // initTheme 白名单归一化+回写、_devtools 隐私模式降级。
 // 原 app-modules.ts 承载启动装配（Web Component import / 启动 IIFE / window 挂载），
 // import 即触发全部顶层副作用——神桶拆分后 theme-core.ts 无顶层副作用，测试直测。
-// ADR-044 策略 A：safeGet/safeSet 已收敛至 utils/dom/storage.ts（app-modules 不再导出）。
+// ADR-044 策略 A：safeGet/safeSet 已收敛至 utils/base/storage.ts（app-modules 不再导出）。
 // 2026-08-17 切 node 环境：test-setup.ts 已注入全局 localStorage 内存实现；
 // applyTheme 断言 document.body.classList + window.matchMedia → 下方 stubGlobal 最小 DOM。
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
@@ -14,7 +14,7 @@ import {
   initTheme,
 } from "./theme-core.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 
 /** 隐私模式模拟：让 localStorage 读写抛错（node 环境 test-setup 注入的全局 localStorage，必须 vi.spyOn） */
 function breakLocalStorage() {

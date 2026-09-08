@@ -2,9 +2,9 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/log.ts";
+import { safeGetJSON, safeSet } from "@/utils/base/storage.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { treeCSS } from "./app-tree-styles.ts";

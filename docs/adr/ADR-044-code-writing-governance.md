@@ -19,7 +19,7 @@
 
 | 工具函数 | 现状（散落位置） | 收敛目标 |
 |---------|----------------|---------|
-| `safeGet/safeSet`（localStorage 隐私模式防护） | app-modules.ts 模块级、settings/community.ts 局部 | 新建 `frontend/src/utils/dom/storage.ts` 统一导出，全项目替换裸调 |
+| `safeGet/safeSet`（localStorage 隐私模式防护） | app-modules.ts 模块级、settings/community.ts 局部 | 新建 `frontend/src/utils/base/storage.ts` 统一导出，全项目替换裸调 |
 | `WriteFileAtomic`（tmp+rename+chmod 原子落地） | go/importer 已抽、app_install 复用 | 提升为公共函数，tags/logs/fileops 全部接入 |
 | `readLimitedEntry`（ADR-033 limit+1 截断探测） | go/geometry 已抽 | 提升为 `go/fsutil` 公共函数，ysm/packs/updater 统一 |
 | `isRecycleDir`（EqualFold 回收站判定） | fsutil/dedup/scanner 各一份 | 收敛到 `go/fsutil`，三处统一引用 |

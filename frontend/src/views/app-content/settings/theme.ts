@@ -1,12 +1,12 @@
 // ===== 设置页：主题段（ADR-040 拆分自 init.ts）=====
-// ADR-044 策略 A：主题段读写统一走 utils/dom/storage.ts 的 safeGet/safeSet——
+// ADR-044 策略 A：主题段读写统一走 utils/base/storage.ts 的 safeGet/safeSet——
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
 import { getApp } from "@/backend/app.ts";
 import { applyTheme } from "@/theme-core";
 import { logWarn } from "@/utils/base/log.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 import { cfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber

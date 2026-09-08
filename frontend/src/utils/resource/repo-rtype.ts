@@ -3,7 +3,7 @@
 // 权威源，为避免 backend → features 反向依赖（backend 是胶水层，只许向下），
 // 把无事件的时刻值读取下沉至此，features/repo/repo-rtype.ts re-export 兼容下游。
 
-import { safeGet } from "@/utils/dom/storage.ts";
+import { safeGet } from "@/utils/base/storage.ts";
 import { RESOURCE_TYPES } from "./types.ts";
 
 /**

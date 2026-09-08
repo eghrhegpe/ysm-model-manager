@@ -7,7 +7,7 @@ import { bus, type PageName } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/log.ts";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";

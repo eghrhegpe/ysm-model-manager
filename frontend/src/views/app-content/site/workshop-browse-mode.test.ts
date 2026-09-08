@@ -1,6 +1,6 @@
 // ===== 创作者频道浏览模式（external/embed/window）单元测试 =====
 // 纯 localStorage 逻辑（safeGet/safeSet 包装）：默认值 / 新键往返 / 旧 boolean 键兼容。
-// import 链只到 utils/dom/storage.ts（无 DOM 顶层副作用），默认 happy-dom 提供 localStorage。
+// import 链只到 utils/base/storage.ts（无 DOM 顶层副作用），默认 happy-dom 提供 localStorage。
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   createBrowseModeRef,

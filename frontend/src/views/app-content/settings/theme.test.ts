@@ -8,7 +8,7 @@ const { safeGet, safeSet, getApp, applyTheme } = vi.hoisted(() => ({
   applyTheme: vi.fn((_name: string) => {}),
 }));
 
-vi.mock("@/utils/dom/storage.ts", () => ({
+vi.mock("@/utils/base/storage.ts", () => ({
   safeGet: (...a: unknown[]) => safeGet(...(a as [string])),
   safeSet: (...a: unknown[]) => safeSet(...(a as [string, string])),
 }));

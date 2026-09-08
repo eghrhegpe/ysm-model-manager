@@ -11,6 +11,9 @@
  * 规则：
  *   R1（零容忍）  utils/**    不得运行时 import  views/、features/、services/
  *   R2（零容忍）  services/** 不得运行时 import  views/、features/
+ *   R0（零容忍）  core/**     不得运行时 import  utils/dom/（DOM 原语层；ADR-189
+ *                             D4 红线，utils/base 纯函数基元层允许——core 仅依赖其
+ *                             log/storage，见 core/page-store.ts、core/error-diary.ts）
  *   R3（防回退）  core/**     不得运行时 import  views/、features/（现有违反走基线）
  *   R4（防回退）  features/** 不得运行时 import  views/（现有违反走基线）
  *
@@ -18,7 +21,7 @@
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2 违规或 R3/R4 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0 违规或 R3/R4 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
  *   node scripts/check-layering.ts --update   # 更新 R3/R4 基线（含当前全部反向边）
  *
@@ -41,10 +44,12 @@ const BASELINE_FILE = resolve(REPO_ROOT, "docs", ".layering-baseline.json");
 // wasm / backend 不入层（胶水/绑定产物），layerOf 返回 null → 天然跳过
 const LAYER_ORDER = ["views", "features", "services", "utils", "core"];
 
-// R1/R2 零容忍：from 层不得 import to 层（当前已满足，防回退）
+// R1/R2/R0 零容忍：from 层不得 import to 层（当前已满足，防回退）
+// R0 为 core→utils/dom（ADR-189 D4）：pathPrefix 限定子目录粒度（utils/base 放行）
 const ZERO_TOLERANCE = [
   { from: "utils", to: ["views", "features", "services"] },
   { from: "services", to: ["views", "features"] },
+  { from: "core", to: ["utils"], pathPrefix: "utils/dom/", ruleId: "R0" },
 ];
 
 // R3/R4 基线管理：from 层不得 import to 层（现状存在违反，防新增）
@@ -158,10 +163,12 @@ function main() {
 
       let rule: string | null = null;
       for (let i = 0; i < ZERO_TOLERANCE.length; i++) {
-        if (fromLayer === ZERO_TOLERANCE[i]?.from && ZERO_TOLERANCE[i]?.to.includes(toLayer)) {
-          rule = `R${i + 1}`;
-          break;
-        }
+        const zt = ZERO_TOLERANCE[i]!;
+        if (fromLayer !== zt.from || !zt.to.includes(toLayer)) continue;
+        // pathPrefix：子目录粒度限定（R0 仅拦 core→utils/dom/，utils/base 放行）
+        if (zt.pathPrefix && !target.startsWith(zt.pathPrefix)) continue;
+        rule = zt.ruleId ?? `R${i + 1}`;
+        break;
       }
       if (!rule) {
         for (let i = 0; i < TRACKED_RULES.length; i++) {
@@ -179,7 +186,7 @@ function main() {
 
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
-  const rZero = violations.filter((v) => v.rule === "R1" || v.rule === "R2");
+  const rZero = violations.filter((v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0");
   const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
 
   const baseline = existsSync(BASELINE_FILE)
@@ -254,10 +261,10 @@ function main() {
   console.log("分层: views → features → services → utils → core\n");
 
   if (rZero.length) {
-    console.error(`❌ R1/R2 违规（零容忍：utils/services 向上依赖）${rZero.length} 条：`);
+    console.error(`❌ R1/R2/R0 违规（零容忍：utils/services 向上依赖、core→utils/dom）${rZero.length} 条：`);
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
-    console.log("✅ R1/R2 utils/services → 上层：0 条");
+    console.log("✅ R1/R2/R0 utils/services → 上层、core→utils/dom：0 条");
   }
 
   const trackedEdges = new Set(tracked.map(key));

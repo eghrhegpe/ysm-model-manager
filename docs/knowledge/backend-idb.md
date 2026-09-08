@@ -200,7 +200,7 @@ status: active
 ## 与其他子系统关系
 
 - `wasm/ysm-parser.ts`: 头像提取、模型解码复用前端 WASM 能力
-- `utils/dom/storage.ts`: 配置持久化用 `safeGet`/`safeSet` 包装 `localStorage`
+- `utils/base/storage.ts`: 配置持久化用 `safeGet`/`safeSet` 包装 `localStorage`
 - `resource_types.json`: 资源类型注册表驱动扫描目录映射
 - `bindings/`: Wails v3 生成的 Go 绑定（桌面/Android 路径）
 - `frontend/src/`: 业务代码统一调 `getApp()` 取得绑定，不感知平台差异

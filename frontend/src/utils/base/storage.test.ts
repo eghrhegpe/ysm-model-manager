@@ -5,7 +5,7 @@
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { safeGet, safeSet, safeRemove, safeGetJSON, isStorageAccessible } from "./storage.ts";
-import * as log from "@/utils/base/log.ts";
+import * as log from "./log.ts";
 
 // node 环境无 localStorage——内存实现（对齐 happy-dom 语义；makeStorageThrow 覆盖抛错版）
 const memStorage = (() => {

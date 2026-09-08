@@ -4,7 +4,7 @@ name: localStorage 安全读写 safeGet/safeSet
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/dom/storage.ts
+  - frontend/src/utils/base/storage.ts
 auto_fields:
   symbols_with_lines:
     - isStorageAccessible
@@ -30,8 +30,8 @@ use_when:
   - safeSet
   - storage
 invariant_anchors:
-  - frontend/src/utils/dom/storage.ts|safeGet
-  - frontend/src/utils/dom/storage.ts|safeSet
+  - frontend/src/utils/base/storage.ts|safeGet
+  - frontend/src/utils/base/storage.ts|safeSet
 status: active
 ---
 

@@ -4,7 +4,7 @@
 // browser-adapter.ts 从本文件 import 组装 webImpls。
 
 import { swallowError } from "@/utils/base/async.ts";
-import { safeGetJSON, safeSet } from "@/utils/dom/storage.ts";
+import { safeGetJSON, safeSet } from "@/utils/base/storage.ts";
 import { idbDel, idbGet, idbGetAll, idbSet } from "./idb.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---

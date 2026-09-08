@@ -3,7 +3,7 @@
 // 语言包缓存也收归本模块，避免与 t.ts 循环依赖。
 
 import { bus } from "@/bus";
-import { safeGet, safeSet } from "@/utils/dom/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/storage.ts";
 
 const STORAGE_KEY = "uiLang";
 
@@ -27,12 +27,8 @@ let _langReqGen = 0;
 /** 已加载的语言包缓存 */
 const bundles: Record<string, Bundle> = {};
 
-/**
- * 无参 getBundle() 的活跃包引用缓存。t() 是渲染热路径（每次调用原实现要
- * Object.keys 扫 1437 key 包两次），退化为一次属性读取。
- * ADR-189 D5：缓存失效记账收敛——bundles 唯一写点（doLoadLocale）与
- * _currentLang 唯一写点（setCurrentLang）各自触发刷新，不再散落多处。
- */
+/** 无参 getBundle() 的活跃包引用缓存。t() 是渲染热路径，退化为一次属性读取
+ *  （ADR-189 D5：bundles/_currentLang 各有唯一写点，各自触发缓存刷新） */
 let _activeBundle: Bundle | undefined;
 
 /** 非空包判定（{} 是 truthy，直接判布尔会让空包短路 zh-CN 兜底） */
@@ -40,11 +36,9 @@ function isNonEmpty(b: Bundle | undefined): b is Bundle {
   return !!b && Object.keys(b).length > 0;
 }
 
-/** 刷新活跃包缓存（bundles / _currentLang 任一变更后调用） */
+/** 刷新活跃包缓存（bundles / _currentLang 任一变更后调用）；
+ *  平铺 early-return：每候选只取一次，避免 Object.keys 全量扫描重复执行 */
 function refreshActiveBundle(): void {
-  // 平铺 if/early-return（禁嵌套三目）：每候选只取一次，避免 isNonEmpty 的
-  // Object.keys 全量扫描重复执行（code_review 1df34c8d：原三层嵌套三目让
-  // bundles[_currentLang]/bundles["zh-CN"] 各取两次，fallback 路径每 refresh 扫 3 遍）
   const cur = bundles[_currentLang];
   if (isNonEmpty(cur)) {
     _activeBundle = cur;
@@ -59,7 +53,7 @@ export const warnedKeys = new Set<string>();
 
 // ── 语言包加载 ──────────────────────────────────────
 
-/** 在途加载表（lang → Promise）：并发 setLang/initI18n 同一未缓存语言只发一次 fetch（P3 审核修复，同 cli-bridge dynamicFetchPromise 范式） */
+/** 在途加载表（lang → Promise）：并发 setLang/initI18n 同一未缓存语言只发一次 fetch */
 const pendingLoads = new Map<string, Promise<void>>();
 
 /**
@@ -83,9 +77,8 @@ async function doLoadLocale(lang: string): Promise<void> {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     bundles[lang] = await resp.json();
   } catch (e) {
-    // P2（code_review）：失败不缓存空对象——`if (bundles[lang]) return` 会把 {} 当
-    // "已加载"阻断重试，且 getBundle 的空对象 truthy 让 zh-CN 兜底永不触发。
-    // 删除键允许后续 setLang/initI18n 重试（瞬态网络失败可自愈）。
+    // 失败不缓存空对象——`if (bundles[lang]) return` 会把 {} 当「已加载」阻断重试，
+    // 且空对象 truthy 让 zh-CN 兜底永不触发；删除键允许瞬态网络失败后自愈重试
     console.warn(`[i18n] 加载 ${lang} 失败（未缓存，可重试）:`, e);
     delete bundles[lang];
   } finally {
@@ -129,7 +122,7 @@ export async function setLang(code: LangCode): Promise<void> {
   setCurrentLang(code);
   safeSet(STORAGE_KEY, code);
   applyHtmlLang(code);
-  // 切语言后清空缺失 key 告警节流——warnedKeys 原为全局 Set 跨语言复用，
+  // 切语言后清空缺失 key 告警节流——warnedKeys 是全局 Set 跨语言复用，
   // zh-CN 期记录的 key 会吃掉 en/ja 期同 key 的告警（静默缺译）
   warnedKeys.clear();
   bus.emit("lang:changed", { lang: code });
@@ -138,9 +131,8 @@ export async function setLang(code: LangCode): Promise<void> {
 // ── 系统语言检测 ──────────────────────────────────────
 
 function detectSystemLang(): LangCode | null {
-  // P2 修复（子代理审计）：navigator.languages 无防御性检查——个别老旧 WebView 下
-  // 为 undefined 会抛 TypeError，而 initI18n 被 app-modules.ts 顶层 await，会把整个
-  // 启动链打挂；兜底单语言数组
+  // navigator.languages 在个别老旧 WebView 下可能为 undefined（initI18n 被
+  // app-modules 顶层 await，抛错会打挂整个启动链），兜底单语言数组
   const langs = navigator.languages ?? [navigator.language ?? ""];
   for (const tag of langs) {
     const lower = tag.toLowerCase();
@@ -167,8 +159,8 @@ function applyHtmlLang(code: string): void {
 /**
  * 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。
  * 组件渲染可能早于语言包就绪（customElements.define 在模块顶层同步执行，
- * 而 fetch 异步），故加载成功后补发一次 lang:changed，让 app-nav / app-content
- * 等首帧渲染时拿到空 bundle 的组件重渲染（与 setLang 热切换走同一通道）。
+ * 而 fetch 异步），故加载成功后补发一次 lang:changed，让首帧拿到空 bundle
+ * 的组件重渲染（与 setLang 热切换走同一通道）。
  */
 export async function initI18n(): Promise<void> {
   const saved = safeGet(STORAGE_KEY) as LangCode | null;
@@ -179,7 +171,6 @@ export async function initI18n(): Promise<void> {
 
   applyHtmlLang(_currentLang);
   await loadLocale(_currentLang);
-  // 活跃包缓存由 doLoadLocale 的 finally 与 setCurrentLang 刷新，此处无需重复
   // 仅当语言包确实加载成功（非空）才通知重渲染；失败留待重试，不污染订阅通道
   const loaded = bundles[_currentLang];
   if (loaded && Object.keys(loaded).length > 0) {

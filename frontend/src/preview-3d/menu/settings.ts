@@ -18,7 +18,7 @@ import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
-import { safeSet } from "@/utils/dom/storage.ts";
+import { safeSet } from "@/utils/base/storage.ts";
 import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 

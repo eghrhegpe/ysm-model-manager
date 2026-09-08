@@ -247,36 +247,12 @@ export const autoSidebar = [
         "link": "/cli-commands"
       },
       {
-        "text": "CLI 发展规划（Roadmap）",
-        "link": "/cli-roadmap"
-      },
-      {
-        "text": "契约测试现状查证（任务 #1 交付物）",
-        "link": "/contract-tests-audit"
-      },
-      {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
       },
       {
-        "text": "frontend-src 锐评 G6 / P1 勘察报告（2026-09-03）",
-        "link": "/frontend-src-critique-g6p1-survey"
-      },
-      {
-        "text": "frontend/src 架构锐评处置状态（2026-09-03）",
-        "link": "/frontend-src-critique-status"
-      },
-      {
         "text": "YSM 知识库全量体检报告",
         "link": "/knowledge-audit-20260705"
-      },
-      {
-        "text": "YSM 前后端统一 & 架构问题研究与修复方案",
-        "link": "/sharp-review-fix-plan"
-      },
-      {
-        "text": "子代理代码审查 Prompt 模板(锐评 v2)",
-        "link": "/subagent-code-review-prompt"
       }
     ]
   },
@@ -1107,28 +1083,7 @@ export const autoSidebar = [
     "text": "审计",
     "link": "/audit/",
     "collapsed": true,
-    "items": [
-      {
-        "text": "C1 GPU 资源生命周期专项审核报告",
-        "link": "/audit/audit-c1-gpu-lifecycle-2026-09-03"
-      },
-      {
-        "text": "Track C2 — 锐评遗留闭环（#1/#4/#6/#8/#9/#10）",
-        "link": "/audit/audit-c2-sharp-review-remain-2026-09-03"
-      },
-      {
-        "text": "R14 — 全量测试覆盖率审计报告",
-        "link": "/audit/audit-r14-coverage-2026-08-18"
-      },
-      {
-        "text": "R34 审核：8 个小规模包（texture_cache / repoaudit / launcher / logs / watcher / tags / packs / instance）",
-        "link": "/audit/audit-r34-go-small-packages-2026-08-31"
-      },
-      {
-        "text": "YSM model manager 文件布局梳理 · 修复趋势 · 审核计划",
-        "link": "/audit/audit-review-plan-2026-09-03"
-      }
-    ]
+    "items": []
   },
   {
     "text": "知识卡",

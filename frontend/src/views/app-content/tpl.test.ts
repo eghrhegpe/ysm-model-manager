@@ -10,7 +10,7 @@ import {
   workshopHTML,
 } from "./tpl.ts";
 import { settingsHTML } from "./settings/tpl-settings.ts";
-import { recycleHTML } from "./tpl-recycle.ts";
+import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({
@@ -140,6 +140,13 @@ describe("app-content 模板", () => {
     const html = recycleHTML();
     expect(html).toContain('id="recy-empty"');
     expect(html).toContain("清空回收站");
+  });
+
+  it("renderRecycleListHtml 渲染 recy-restore / recy-del 按钮及 recy-item", () => {
+    const html = renderRecycleListHtml([{ Name: "test.ysm", Path: "/mc/test.ysm", Size: 1024 }]);
+    expect(html).toContain('data-testid="recy-item"');
+    expect(html).toContain('data-testid="recy-restore"');
+    expect(html).toContain('data-testid="recy-del"');
   });
 
   it("githubHTML 包含仓库网格与提示", () => {

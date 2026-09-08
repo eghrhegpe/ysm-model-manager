@@ -1,9 +1,15 @@
 // ===== 回收站 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 =====
 export const contentUtilCSS: string = `
 /* ===== 回收站动画 ===== */
+.recy-page { flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px; }
 .recy-item { animation: fadeSlideUp .2s ease both; transition:opacity var(--tr-normal), transform var(--tr-normal); }
 .recy-item.leaving { opacity:0; transform:translateX(20px); pointer-events:none; }
 @keyframes recyItemIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+/* 恢复/删除按钮：继承 .btn-base sm 基础样式，recy-del 覆盖为危险色 */
+.recy-restore { cursor:pointer; }
+.recy-restore:hover { background:var(--hover); }
+.recy-del { cursor:pointer; }
+.recy-del:hover { background:color-mix(in srgb, var(--paid) 12%, transparent); }
 
 /* ===== 资源管理器动画 ===== */
 .rm-item { animation: fadeSlideUp .2s ease both; }

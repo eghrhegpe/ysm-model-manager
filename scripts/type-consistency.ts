@@ -14,7 +14,10 @@
  *   故本脚本收敛为「派生守卫」单一职责：确保 extensions.ts 仍从 JSON 派生，
  *   而非回潮为手写副本（手写副本 tsc 抓不到，只有此正则守卫能拦）。
  *
+ * 依赖：node:fs / node:path / _lib/scan-files.ts（getRoot）。
+ *
  * 退出码：派生完好 → 0（无 issues）；派生被破坏（手写副本）→ 1（fatal，_summary.issues=9999）。
+ *
  * 用法：
  *   node scripts/type-consistency.ts            # 文本报告
  *   node scripts/type-consistency.ts --json     # JSON 输出（CI / 子代理 / pre-push-gate 消费）

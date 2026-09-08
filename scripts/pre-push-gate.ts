@@ -40,6 +40,7 @@ import path from "node:path";
 import { runContractTestsParallel, selectContractTests } from "./_lib/contract-tests.ts";
 import { domainSummaryText, groupByDomain, planFromFiles } from "./_lib/domain-classify.ts";
 import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
+import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import {
   ALL_STATIC_TOOLS,
   DOC_EXTRA_SCRIPTS,
@@ -219,6 +220,9 @@ async function main() {
    *   hard（默认）     → blocked=true
    *   debt             → 只记录，不阻断
    *   failClosed       → 只记录，不阻断（调用方须在 record() 外自行判断 fail-closed 场景）
+   * raw：工具原始输出（2026-09 锐评「输出运行过程而非返回信息」）——FAIL 摘要的
+   * 结构化首错提取（gate-report.firstErrorLine）与落盘报告的事实源；cap 64KB 尾部
+   * 防超大输出（go test/vite）撑爆报告，JSON 检查输出远小于此不受影响。
    */
   const record = (
     label: string,
@@ -227,15 +231,19 @@ async function main() {
       time = 0,
       note = "",
       tail = "",
+      raw,
       blockPolicy,
     }: {
       time?: number;
       note?: string;
       tail?: string;
+      raw?: string;
       blockPolicy?: "hard" | "debt" | "failClosed";
     },
   ) => {
-    results.push({ label, ok, time, note, tail });
+    const rawCapped =
+      raw === undefined ? undefined : raw.length > 65536 ? `…${raw.slice(-65536)}` : raw;
+    results.push({ label, ok, time, note, tail, raw: rawCapped });
     if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true;
   };
 
@@ -406,6 +414,7 @@ async function main() {
       record(cmdLabel, ok, {
         time: Date.now() - t0,
         note,
+        raw: r.out,
         // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
         tail: !ok ? tail || r.out.trim().split("\n").slice(-12).join("\n") : "",
         blockPolicy: typeof entry === "object" ? entry.blockPolicy : undefined,
@@ -435,6 +444,7 @@ async function main() {
       record(`node scripts/${tool} --json`, ok, {
         time: Date.now() - t0,
         note,
+        raw: out,
         tail: !ok ? tail : "",
       });
     }
@@ -599,6 +609,7 @@ async function main() {
       const bc = await shAsync("node scripts/binding-check.ts --json");
       record("node scripts/binding-check.ts --json", bc.rc === 0, {
         time: Date.now() - t3,
+        raw: bc.out,
         tail: bc.rc ? bc.out.trim().split("\n").slice(-4).join("\n") : "",
       });
     })(),
@@ -611,6 +622,7 @@ async function main() {
       const lOk = ll.rc === 0;
       record("node scripts/check-layering.ts --json", lOk, {
         time: Date.now() - tL,
+        raw: ll.out,
         note:
           lz === null
             ? "输出解析失败（scripts/check-layering.ts 缺失？）"
@@ -628,6 +640,7 @@ async function main() {
       const pOk = ph.rc === 0;
       record("node scripts/check-path-hygiene.ts --json", pOk, {
         time: Date.now() - tP,
+        raw: ph.out,
         note:
           pz === null
             ? "输出解析失败（scripts/check-path-hygiene.ts 缺失？）"
@@ -644,6 +657,7 @@ async function main() {
       const mOk = mh.rc === 0 && mz && mz.ok === true;
       record("node scripts/check-menu-health.ts --json", mOk, {
         time: Date.now() - tM,
+        raw: mh.out,
         note:
           mz === null
             ? "输出解析失败"
@@ -663,6 +677,7 @@ async function main() {
       const cOk = ci.rc === 0 && cz && cz.ok === true;
       record("node scripts/check-ctx-menu-i18n.ts --json", cOk, {
         time: Date.now() - tC,
+        raw: ci.out,
         note:
           cz === null
             ? "输出解析失败"
@@ -686,6 +701,7 @@ async function main() {
       // vitest 标签的 "cd frontend &&" 约定对齐
       record("cd frontend && node scripts/check-binding-usage.ts --json", buOk, {
         time: Date.now() - tB,
+        raw: bu.out,
         note:
           buz === null
             ? "输出解析失败"
@@ -759,6 +775,7 @@ async function main() {
     const ok = issues === 0;
     record("node scripts/type-consistency.ts --json", ok, {
       time: Date.now() - t0,
+      raw: tc.out,
       note:
         issues === null
           ? "输出解析失败（scripts/type-consistency.ts 缺失？）"
@@ -776,6 +793,7 @@ async function main() {
     const ok = broken === 0;
     record("node scripts/link-checker.ts --json", ok, {
       time: Date.now() - t0,
+      raw: lc.out,
       note:
         broken === null
           ? "输出解析失败（scripts/link-checker.ts 缺失？）"
@@ -841,6 +859,7 @@ async function main() {
     // failClosed：扫描本身不可用（rg 缺失/fail-closed）才阻断——由下方 !scanHealthy 兜底
     record("node scripts/check-redlines.ts --json --baseline", ok, {
       time: Date.now() - t0,
+      raw: rl.out,
       blockPolicy: "failClosed",
       // note 顺序：newV===null 唯一标识 JSON parse 失败（rg 不可用时 newViolations
       // 非 null——runBaseline fail-closed 返回 allKeys），必须先于 scanHealthy 判定
@@ -861,6 +880,7 @@ async function main() {
     const ac = sh("node scripts/adr-check.ts");
     record("node scripts/adr-check.ts", ac.rc === 0, {
       time: Date.now() - t0,
+      raw: ac.out,
       tail: ac.rc ? ac.out.trim().split("\n").slice(-4).join("\n") : "",
     });
   }
@@ -871,6 +891,7 @@ async function main() {
     const gd = sh("node scripts/gen-docs-index.ts --check");
     record("node scripts/gen-docs-index.ts --check", gd.rc === 0, {
       time: Date.now() - t0,
+      raw: gd.out,
       tail: gd.rc ? gd.out.trim().split("\n").slice(-4).join("\n") : "",
     });
   }
@@ -947,6 +968,7 @@ async function main() {
     const tscOk = tscResult.rc === 0 || tscResult.rc === 2; // rc=2 = TS18003 无输入，容忍
     record("npx tsc --noEmit -p scripts/tsconfig.json", tscOk, {
       time: Date.now() - tSC0,
+      raw: tscResult.out,
       note:
         tscResult.rc === 2
           ? "无 .ts 文件（待 _lib/ 迁移后生效）"
@@ -959,17 +981,27 @@ async function main() {
 
   /* --- 聚合摘要 --- */
   logPush("------------------- 结果 -------------------");
-  // FAIL 前置（2026-08-29 可观测性）：失败项先出，不被 OK 洪流淹没——
-  // 28 项全跑完才出结论，若 FAIL 混排在末尾用户找不到是哪个指令有问题。
-  // 比较器：Number(true)-Number(false) = 1 → ok 排后；fail(0) 自然排前。
-  const sortedResults = [...results].sort((a, b) => Number(a.ok) - Number(b.ok));
-  for (const r of sortedResults) {
-    const status = r.ok ? B.OK : B.FAIL;
-    // label = 完整命令（方案 A，2026-09-08）：直接显示可执行命令，AI 失败时可直接抄
-    // 时间右对齐（5 字符宽含 1 位小数 + s），无固定 label 宽度约束（命令长度不一）
-    logPush(`${status} ${r.label}  ${((r.time / 1000).toFixed(1)).padStart(5)}s  ${r.note || ""}`);
-    if (r.tail) {
-      for (const line of r.tail.split("\n")) logPush(`       ${line}`);
+  // FAIL 后置（2026-09-08 锐评「AI 只读末尾 ~25 行」）：OK 明细在前供人扫读，
+  // FAIL 明细块（归属→首错→复现）贴着结论放——保证落在尾部阅读窗口内。
+  // 旧「FAIL 前置」(2026-08-29) 服务整页自上而下阅读，现由落盘报告 + 明细块取代。
+  // 完整报告落盘（运行过程而非一次性返回信息）：结构化 JSON 存 .git/，
+  // stderr 只给相对路径指针；写入失败不阻断门禁。
+  const okResults = results.filter((r) => r.ok);
+  const failResults = results.filter((r) => !r.ok);
+  const reportPath = writeGateReport(results, {
+    mode: allMode ? "all" : docsMode ? "docs" : filesMode ? "files" : "push",
+    blocked,
+    domainSummary,
+  });
+  for (const r of okResults) {
+    logPush(`${B.OK} ${r.label}  ${((r.time / 1000).toFixed(1)).padStart(5)}s  ${r.note || ""}`);
+  }
+  if (failResults.length) {
+    const display = reportPath ? path.relative(ROOT, reportPath) : "（报告写入失败）";
+    logPush(`------ FAIL 明细（归属 → 首错 → 复现）｜ 完整报告: ${display} ------`);
+    for (const r of failResults) {
+      // hard 失败的归属：push/files 模式（files 非空）可归因本次变更；全扫（--all/--docs）待归因
+      logPush(formatFailSummary(r, okResults.length, results.length, files.length > 0));
     }
   }
   logPush("");
@@ -982,6 +1014,7 @@ async function main() {
     logPush(
       `结论: PASS ✅ ${dryRun ? "（DRY-RUN）" : "放行推送"} ${passCount}/${results.length} 项通过`,
     );
+    if (reportPath) logPush(`完整报告: ${reportPath}`);
     // P0 修复（子代理锐评）：横幅移到 dry-run 分支——AI 验证完（dry-run）时看到「可直接 push」，
     // 真实 push 时（!dryRun）已在执行，复读机提示无意义。
     // Q1 修复（子代理再洗礼）：--no-banner 抑制横幅，由调用方（commit-with-check）在 commit 成功后自己打印
@@ -1001,6 +1034,7 @@ async function main() {
   // 失败项清单（2026-08-29 可观测性）：一行点名全部失败指令，无需在结果表里逐行找
   const fails = results.filter((r) => !r.ok);
   logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
+  if (reportPath) logPush(`完整报告: ${reportPath}（每个 FAIL 的完整错误/基线/耗时）`);
   logPush("详情见上方 [FAIL] 块（已前置到结果表最前）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
   // code_review fd349a91a #1/#2/#4/#7：匹配基于稳定前缀而非 "-w" 子串（-w 仅因

@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-206：pre-push-gate 收敛分拆为 gate-blocks",
+        "link": "/adr/ADR-206-pre-push-gate-gate-blocks"
+      },
+      {
         "text": "ADR-205：Go 静态分析引入 golangci-lint（仅补真空面，不接管自研 gofmt/jscpd-go）",
         "link": "/adr/ADR-205-golangci-lint-go-static-analysis"
       },

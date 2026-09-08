@@ -300,6 +300,29 @@ export class AnimationControllerRuntime {
 }
 
 /**
+ * 构建动画名 → 控制器的索引。
+ * O(n×m) 一次性构建，后续查找 O(1)。
+ * wine_fox 等模型有 10+ 控制器、每控制器 5+ 状态时，
+ * 每次切换动画从全量扫描改为直接命中。
+ */
+export function buildControllerAnimationIndex(
+  controllers: AnimationController[],
+): Map<string, AnimationController> {
+  const index = new Map<string, AnimationController>();
+  for (const ctrl of controllers) {
+    for (const state of ctrl.states.values()) {
+      for (const animName of state.animations) {
+        // 只记录首次命中（与 findControllerForAnimation 语义一致）
+        if (!index.has(animName)) {
+          index.set(animName, ctrl);
+        }
+      }
+    }
+  }
+  return index;
+}
+
+/**
  * 从多个控制器中查找匹配指定动画名的控制器。
  * wine_fox 等模型的控制器名通常与动画文件名对应。
  */
@@ -307,12 +330,7 @@ export function findControllerForAnimation(
   controllers: AnimationController[],
   animationName: string,
 ): AnimationController | null {
-  for (const ctrl of controllers) {
-    for (const state of ctrl.states.values()) {
-      if (state.animations.includes(animationName)) {
-        return ctrl;
-      }
-    }
-  }
-  return null;
+  // 构建索引后 O(1) 查找，避免 O(n×m) 线性扫描
+  const index = buildControllerAnimationIndex(controllers);
+  return index.get(animationName) ?? null;
 }

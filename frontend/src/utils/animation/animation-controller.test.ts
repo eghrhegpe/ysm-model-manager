@@ -6,6 +6,7 @@ import {
   parseAnimationControllerJSON,
   AnimationControllerRuntime,
   findControllerForAnimation,
+  buildControllerAnimationIndex,
   type AnimationController,
 } from "./animation-controller.ts";
 import { createMolangParser } from "./molang.ts";
@@ -310,5 +311,22 @@ describe("findControllerForAnimation", () => {
 
   it("未匹配返回 null", () => {
     expect(findControllerForAnimation([buildController()], "nonexistent")).toBeNull();
+  });
+});
+
+describe("buildControllerAnimationIndex", () => {
+  it("构建动画名到控制器的映射", () => {
+    const c = buildController();
+    const index = buildControllerAnimationIndex([c]);
+    expect(index.get("walk")).toBe(c);
+    expect(index.get("nonexistent")).toBeUndefined();
+  });
+
+  it("多个控制器取首次命中", () => {
+    const c1 = buildController();
+    const c2 = buildController();
+    const index = buildControllerAnimationIndex([c1, c2]);
+    // 两个控制器都有 "walk"，应返回第一个
+    expect(index.get("walk")).toBe(c1);
   });
 });

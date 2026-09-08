@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 175 张知识卡
+> 总计: 176 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -31,7 +31,7 @@
 - **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（21 张）
+## core（22 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -43,6 +43,7 @@
 | 🍃 backend-runtime | Wails runtime 抽象 backend-runtime | leaf | — | Wails 事件订阅, Wails 窗口操作, 桌面/网页版运行时切换, no-op 桩消费 |
 | 🏗 backend_web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, browser adapter, IndexedDB, 跨域隔离 |
 | 🏗 binding_json_cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
+| 🍃 core-error-diary | UI 报错落日记 error-diary | leaf | — | error-diary, 报错日记, toast error warn 落盘, 运行时日志环, DiarySink |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
 | 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
 | 🏗 frontend_parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel-parse / ysm-header / nbt-parse 定位 |
@@ -66,6 +67,7 @@
 - **backend-idb**（浏览器后端 IndexedDB 封装）：`backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id…
 - **backend-runtime**（Wails runtime 抽象 backend-runtime）：`@wailsio/runtime` 统一桥（ADR-049 Phase 1 收尾：value import 全量迁移）。业务模块禁止再直 import `@wailsio/runtime`；统一经此桥，桌面走真 runtime、网页版（无…
 - **binding_json_cleanup**（string-JSON 绑定铲债清单）：ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc…
+- **core-error-diary**（UI 报错落日记 error-diary）：把 UI 层的错误/告警（toast、未捕获异常、未处理拒绝、logWarn/logError）统一净化后写入运行时日志环（go/logs），诊断页可回溯。**core 不感知 Wails**：落盘通道 `DiarySink` 由装配层注入…
 - **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
 - **frontend_parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel）、zip 解包、pack.mcmeta、方块颜色映射六类解析器。真叶子层——…
 - **frontend_test_audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（…

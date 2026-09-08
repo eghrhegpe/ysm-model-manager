@@ -162,12 +162,25 @@ function smRenderTop(
 ): void {
   const top = stack[stack.length - 1];
   if (!top) return;
+
+  // 刷新前记住焦点位置（索引），刷新后恢复
+  const focusedIdx = Array.from(list.children).findIndex((el) => el === document.activeElement);
+
   list.innerHTML = "";
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
   backBtn.textContent = atRoot ? (opts?.closeIcon ?? "✕") : "←";
   backBtn.title = atRoot ? "关闭" : "返回";
   top.render(list);
+
+  // 恢复焦点到原索引位置的菜单项
+  if (focusedIdx >= 0) {
+    const newItems = list.children;
+    const target = newItems[Math.min(focusedIdx, newItems.length - 1)];
+    if (target instanceof HTMLElement) {
+      target.focus();
+    }
+  }
 }
 
 function smBindBackButton(backBtn: HTMLSpanElement, handleBack: () => void): void {

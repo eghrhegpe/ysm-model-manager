@@ -15,9 +15,14 @@ auto_fields:
     - createBusyLock
     - debounce
     - Disposable
+    - isStorageAccessible
     - logError
     - LogSink
     - logWarn
+    - safeGet
+    - safeGetJSON
+    - safeRemove
+    - safeSet
     - setLogSink
     - swallowError
     - withLock

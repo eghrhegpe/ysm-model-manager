@@ -193,3 +193,48 @@ describe("生命周期", () => {
     await p;
   });
 });
+
+// ===================================================================
+// 8. setTimeout 泄漏防护：旧 timeout 不应移除新 overlay
+// ===================================================================
+describe("setTimeout 泄漏防护", () => {
+  it("overlay 在 setTimeout 触发前被移除，timeout 回调不应抛错", async () => {
+    // 启动加载
+    const p = withLoadingIndicator("safe", async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    // 立即移除 overlay（在 200ms timeout 之前）
+    const overlay = document.body.querySelector(".loading-overlay")!;
+    overlay.remove();
+
+    // 等待 timeout 触发（300ms > 200ms）
+    await new Promise((r) => setTimeout(r, 300));
+
+    // 不应抛错
+    await p;
+    expect(document.body.querySelector(".loading-overlay")).toBeNull();
+  });
+
+  it("连续调用：旧 timeout 不应移除新 overlay", async () => {
+    // 第一个加载（短耗时）
+    await withLoadingIndicator("first", async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    // 手动移除第一个 overlay（模拟外部提前清理）
+    const firstOverlay = document.body.querySelector(".loading-overlay");
+    firstOverlay?.remove();
+
+    // 第二个加载
+    await withLoadingIndicator("second", async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    // 等待可能残留的 timeout
+    await new Promise((r) => setTimeout(r, 300));
+
+    // 不应有残留 overlay
+    expect(document.body.querySelector(".loading-overlay")).toBeNull();
+  });
+});

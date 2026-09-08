@@ -740,9 +740,12 @@ export function addInlineToggleRow(
   lbl.textContent = label;
   const sw = document.createElement("span");
   sw.className = `toggle-switch${value ? " active" : ""}`;
+  sw.setAttribute("role", "switch");
+  sw.setAttribute("aria-checked", String(value));
   sw.addEventListener("click", () => {
     const v = !sw.classList.contains("active");
     sw.classList.toggle("active", v);
+    sw.setAttribute("aria-checked", String(v));
     onChange(v);
   });
   row.appendChild(lbl);

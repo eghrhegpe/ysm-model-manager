@@ -58,3 +58,58 @@ export function clearControls(): void {
 export function getControlCount(): number {
   return _controls.size;
 }
+
+// ===================================================================
+// registerControlWithElement — DOM 断连自动清扫（防内存泄漏）
+// ===================================================================
+
+// 元素 → 控件 id 集合（一个元素可挂多个控件）。
+const _elementControls = new Map<Element, Set<string>>();
+
+// 共享 MutationObserver：监听 document.body 子树变化，断连时自动清扫。
+let _gcObserver: MutationObserver | null = null;
+
+function _ensureGcObserver(): void {
+  if (_gcObserver) {
+    return;
+  }
+  _gcObserver = new MutationObserver(() => {
+    // 遍历所有跟踪的元素，检查是否仍连接 DOM。
+    for (const [el, ids] of _elementControls) {
+      if (!el.isConnected) {
+        for (const id of ids) {
+          _controls.delete(id);
+        }
+        _elementControls.delete(el);
+      }
+    }
+  });
+  // 监听 body 子树变化（childList + subtree 覆盖所有节点增删）。
+  if (typeof document !== "undefined" && document.body) {
+    _gcObserver.observe(document.body, { childList: true, subtree: true });
+  }
+}
+
+/**
+ * 注册控件并关联 DOM 元素。元素断连（从 DOM 移除）时自动 unregister。
+ * 用于替代裸 registerControl，防止菜单重渲染后旧控件残留注册表。
+ *
+ * @param id   唯一控件 id
+ * @param fn   更新回调
+ * @param el   关联的 DOM 元素（行/滑块/开关等）
+ */
+export function registerControlWithElement(id: string, fn: ControlUpdater, el: Element): void {
+  // 先注册到主表
+  registerControl(id, fn);
+
+  // 记录元素 → id 映射
+  const existing = _elementControls.get(el);
+  if (existing) {
+    existing.add(id);
+  } else {
+    _elementControls.set(el, new Set([id]));
+  }
+
+  // 确保 observer 已启动
+  _ensureGcObserver();
+}

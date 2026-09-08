@@ -1,5 +1,6 @@
-// @vitest-environment node
-// 纯逻辑注册表，无 DOM 依赖，node 环境（~0ms 启动，省 happy-dom 重建开销）。
+// @vitest-environment happy-dom
+// 纯逻辑注册表 + DOM 断连自动清扫测试。
+// 原 node 环境无法观测 isConnected，切到 happy-dom。
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
@@ -10,6 +11,7 @@ import {
     iterateControls,
     clearControls,
     getControlCount,
+    registerControlWithElement,
 } from "./control-registry.ts";
 
 // 每个用例前后重置全局状态，防串测试。
@@ -192,6 +194,112 @@ describe("getControlCount", () => {
         registerControl("1", () => {}); // 重新注册
         expect(getControlCount()).toBe(2);
         clearControls();
+        expect(getControlCount()).toBe(0);
+    });
+});
+
+// ===================================================================
+// registerControlWithElement — DOM 断连自动清扫（防内存泄漏）
+// ===================================================================
+// 背景：initControl（ui-rows.ts）每次渲染都 registerControl，但控件对应的 DOM 行
+// 在菜单刷新时被销毁，注册表里的 updater 仍持有旧 DOM 引用 → 泄漏 + 空转。
+// 修复方向：registerControlWithElement 在元素断连时自动 unregister。
+
+describe("registerControlWithElement", () => {
+    beforeEach(() => {
+        clearControls();
+        setControlRegistry(null);
+        document.body.innerHTML = "";
+    });
+
+    afterEach(() => {
+        clearControls();
+        setControlRegistry(null);
+        document.body.innerHTML = "";
+    });
+
+    it("注册后控件可被 getControl 取出", () => {
+        const el = document.createElement("div");
+        document.body.appendChild(el);
+        const fn = vi.fn();
+        registerControlWithElement("el-test", fn, el);
+        expect(getControl("el-test")).toBe(fn);
+        expect(getControlCount()).toBe(1);
+    });
+
+    it("元素断连后控件应自动 unregister（核心：防泄漏）", async () => {
+        const el = document.createElement("div");
+        document.body.appendChild(el);
+        const fn = vi.fn();
+        registerControlWithElement("el-gc", fn, el);
+        expect(getControlCount()).toBe(1);
+        expect(getControl("el-gc")).toBe(fn);
+
+        // 模拟 DOM 行被销毁（菜单刷新）
+        el.remove();
+
+        // MutationObserver 异步清扫，等待完成
+        await vi.waitFor(() => {
+            expect(getControl("el-gc")).toBeUndefined();
+        });
+        expect(getControlCount()).toBe(0);
+    });
+
+    it("元素未断连时控件保留", () => {
+        const el = document.createElement("div");
+        document.body.appendChild(el);
+        const fn = vi.fn();
+        registerControlWithElement("el-keep", fn, el);
+        expect(getControlCount()).toBe(1);
+
+        // 元素仍在 DOM 中
+        expect(document.body.contains(el)).toBe(true);
+        expect(getControl("el-keep")).toBe(fn);
+        expect(getControlCount()).toBe(1);
+    });
+
+    it("多个控件：仅断连的被清扫，未断连的保留", async () => {
+        const el1 = document.createElement("div");
+        const el2 = document.createElement("div");
+        document.body.appendChild(el1);
+        document.body.appendChild(el2);
+
+        const fn1 = vi.fn();
+        const fn2 = vi.fn();
+        registerControlWithElement("el-multi-1", fn1, el1);
+        registerControlWithElement("el-multi-2", fn2, el2);
+        expect(getControlCount()).toBe(2);
+
+        // 只断开 el1
+        el1.remove();
+
+        // MutationObserver 异步清扫
+        await vi.waitFor(() => {
+            expect(getControl("el-multi-1")).toBeUndefined();
+        });
+        expect(getControl("el-multi-2")).toBe(fn2);
+        expect(getControlCount()).toBe(1);
+    });
+
+    it("重复注册同一 id + 不同元素：以最后一次为准", async () => {
+        const el1 = document.createElement("div");
+        const el2 = document.createElement("div");
+        document.body.appendChild(el1);
+        document.body.appendChild(el2);
+
+        const fn1 = vi.fn();
+        const fn2 = vi.fn();
+        registerControlWithElement("el-dup", fn1, el1);
+        registerControlWithElement("el-dup", fn2, el2);
+
+        expect(getControlCount()).toBe(1);
+        expect(getControl("el-dup")).toBe(fn2);
+
+        // 断开 el2 → 控件应被清扫
+        el2.remove();
+        await vi.waitFor(() => {
+            expect(getControl("el-dup")).toBeUndefined();
+        });
         expect(getControlCount()).toBe(0);
     });
 });

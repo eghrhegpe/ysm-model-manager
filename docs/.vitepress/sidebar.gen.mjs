@@ -1091,6 +1091,10 @@ export const autoSidebar = [
             "link": "/knowledge/binding_json_cleanup"
           },
           {
+            "text": "UI 报错落日记 error-diary",
+            "link": "/knowledge/core-error-diary"
+          },
+          {
             "text": "事件总线 bus.ts",
             "link": "/knowledge/event-bus"
           },

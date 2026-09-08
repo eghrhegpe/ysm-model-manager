@@ -32,7 +32,6 @@ auto_fields:
     - isEditableTarget
     - isFileExistsError
     - isInputBlocked
-    - isStorageAccessible
     - pickDirectory
     - popInputBlock
     - promoteTitle
@@ -42,10 +41,6 @@ auto_fields:
     - rememberTrigger
     - resolveAndroidRepoDir
     - returnFocus
-    - safeGet
-    - safeGetJSON
-    - safeRemove
-    - safeSet
     - sizeColor
     - stripPathSegments
     - toast

@@ -48,6 +48,7 @@ auto_fields:
     - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
     - registerControl
+    - registerControlWithElement
     - ROLE
     - setControlRegistry
     - slideMenuCss

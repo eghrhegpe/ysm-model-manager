@@ -657,3 +657,56 @@ describe("createSlideMenu onShow/onHide", () => {
     expect(() => h.onHide()).not.toThrow();
   });
 });
+
+// ===================================================================
+// refresh() 焦点保留（P1：innerHTML = "" 暴力重建导致焦点丢失）
+// ===================================================================
+describe("createSlideMenu refresh 焦点保留", () => {
+    const makeFocusableView = (titles: string[], title = "nav"): SlideMenuView => ({
+        title,
+        render: (list: HTMLElement) => {
+            list.innerHTML = "";
+            titles.forEach((txt) => {
+                const row = document.createElement("button");
+                row.className = "slide-item";
+                row.textContent = txt;
+                list.appendChild(row);
+            });
+        },
+    });
+
+    beforeEach(() => {
+        document.body.innerHTML = "";
+        vi.clearAllMocks();
+    });
+
+    it("refresh 后焦点应保留在原先聚焦的菜单项", () => {
+        const h = mountMenu();
+        h.home(makeFocusableView(["A", "B", "C"]));
+        const items = Array.from(h.list.children) as HTMLElement[];
+
+        // 聚焦到第二项
+        items[1]!.focus();
+        expect(document.activeElement).toBe(items[1]);
+
+        // 刷新
+        h.refresh();
+
+        // 焦点应仍在第二项（同索引位置）
+        const newItems = Array.from(h.list.children) as HTMLElement[];
+        expect(document.activeElement).toBe(newItems[1]);
+    });
+
+    it("refresh 后原先聚焦项的文本内容不变", () => {
+        const h = mountMenu();
+        h.home(makeFocusableView(["A", "B", "C"]));
+        const items = Array.from(h.list.children) as HTMLElement[];
+
+        items[2]!.focus();
+        h.refresh();
+
+        const newItems = Array.from(h.list.children) as HTMLElement[];
+        expect(newItems[2]!.textContent).toBe("C");
+        expect(document.activeElement).toBe(newItems[2]);
+    });
+});

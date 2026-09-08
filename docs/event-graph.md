@@ -194,8 +194,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| setLang | `frontend/src/core/i18n/locale.ts` | 135 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 186 |
+| setLang | `frontend/src/core/i18n/locale.ts` | 128 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 177 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -251,7 +251,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerPageStore | `frontend/src/core/page-store.ts` | 86 |
+| registerPageStore | `frontend/src/core/page-store.ts` | 81 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 69 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 176 |
 
@@ -577,7 +577,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerErrorDiaryInner | `frontend/src/core/error-diary.ts` | 96 |
+| registerErrorDiaryInner | `frontend/src/core/error-diary.ts` | 89 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 70 |
 
 ### `tree:reload`

@@ -700,4 +700,24 @@ describe("addInlineToggleRow", () => {
         sw.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
         expect(spy).toHaveBeenCalledTimes(2);
     });
+
+    // ARIA 可达性：toggle-switch 应语义化为 switch 角色
+    it("toggle-switch 应带 role='switch' 和 aria-checked", () => {
+        const container = mkContainer();
+        addInlineToggleRow(container, "无障碍", true, vi.fn());
+        const sw = container.querySelector(".toggle-switch")!;
+        expect(sw.getAttribute("role")).toBe("switch");
+        expect(sw.getAttribute("aria-checked")).toBe("true");
+    });
+
+    it("toggle-switch 点击后 aria-checked 同步更新", () => {
+        const container = mkContainer();
+        const onChange = vi.fn();
+        addInlineToggleRow(container, "动态", false, onChange);
+        const sw = container.querySelector(".toggle-switch") as HTMLElement;
+        expect(sw.getAttribute("aria-checked")).toBe("false");
+        sw.click();
+        expect(sw.getAttribute("aria-checked")).toBe("true");
+        expect(onChange).toHaveBeenCalledWith(true);
+    });
 });

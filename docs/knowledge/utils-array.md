@@ -7,7 +7,6 @@ source_files:
   - frontend/src/utils/array.ts
 auto_fields:
   symbols_with_lines:
-    - moveItem
     - moveItemMut
   tests:
     - frontend/src/utils/array.test.ts

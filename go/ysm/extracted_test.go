@@ -99,10 +99,3 @@ func TestFindGeometryInExtractedYSM_MainInvalidFallback(t *testing.T) {
 		t.Logf("fallback 命中: %d 骨骼", len(model.Bones))
 	}
 }
-
-// TestParseMeta_EnclosingSizePartial 验证 EnclosingSize 缺子字段时的行为
-// 注：此测试属于 litematic 包，移至 go/litematic/litematic_test.go
-func _TestParseMeta_EnclosingSizePartial_Skip(t *testing.T) {
-	// 跳过：跨包调用不允许
-	t.Skip("此测试属于 litematic 包")
-}

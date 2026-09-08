@@ -883,7 +883,6 @@ auto_fields:
     - Mount3DOptions
     - mountCustomElement
     - mountPreviewRootMenu
-    - moveItem
     - MultiLipSyncCallback
     - multiModelSelectNode
     - MultiModelSelectOpts

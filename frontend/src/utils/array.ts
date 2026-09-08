@@ -4,15 +4,6 @@
 /**
  * 将 arr[from] 移到 arr[to]（原地修改，返回同一数组）。
  * 越界 / from===to 时原样返回。语义与「先 splice 移除再在 to 处插入」一致。
- * @deprecated 用 `moveItemMut` 替代——命名显式标记原地突变，与纯函数层其他函数区分。
- */
-export function moveItem<T>(arr: T[], from: number, to: number): T[] {
-  return moveItemMut(arr, from, to);
-}
-
-/**
- * 将 arr[from] 移到 arr[to]（原地修改，返回同一数组）。
- * 越界 / from===to 时原样返回。语义与「先 splice 移除再在 to 处插入」一致。
  */
 export function moveItemMut<T>(arr: T[], from: number, to: number): T[] {
   if (from < 0 || to < 0 || from >= arr.length || to >= arr.length || from === to) {

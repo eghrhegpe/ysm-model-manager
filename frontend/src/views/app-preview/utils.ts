@@ -62,3 +62,18 @@ export interface PreviewCtx
     PreviewImageLoader,
     Prefer3DState,
     DetailGenGuard {}
+
+/**
+ * 路由层上下文：preview-router.ts 消费的最小面接口。
+ * 包含渲染容器 + 预览守卫（代际校验）+ 类型元数据懒加载缓存，
+ * 使路由纯函数脱离 AppPreview 类实例独立可测。
+ * 注：PREVIEW_HANDLERS 的 show 函数签名要求 PreviewCtx（含 detailGen），
+ * 调用方需将 ctx as unknown as PreviewCtx 转型（AppPreview 实例运行时满足）。
+ */
+export interface PreviewRouterCtx {
+  root: ShadowRoot;
+  /** 预览代际守卫：快速点 A→B 时丢弃过期加载的渲染，防并发覆盖 */
+  previewGuard: GenGuard;
+  /** 类型元数据缓存（LoadResourceTypes 结果） */
+  typeCache: Array<{ id: string; name?: string; icon?: string }>;
+}

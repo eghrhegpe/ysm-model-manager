@@ -51,6 +51,7 @@ auto_fields:
     - PreviewImageLoader
     - previewPixelRatio
     - PreviewRoot
+    - PreviewRouterCtx
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath

@@ -233,7 +233,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 176 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 92 |
 
 ### `nav:changed`
 
@@ -282,7 +282,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 79 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 258 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 194 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 255 |
@@ -448,7 +448,7 @@
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 32 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 190 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 163 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 293 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 296 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 127 |
@@ -496,11 +496,11 @@
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 333 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 416 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 311 |
-| _showModelDetail | `frontend/src/views/app-preview/index.ts` | 335 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 32 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 57 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 120 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 41 |

@@ -75,11 +75,16 @@ auto_fields:
     - playNodes
     - Prefer3DState
     - preloadModel
+    - PREVIEW_CLEANUP
+    - PREVIEW_HANDLERS
+    - PREVIEW_INVALIDATE
     - previewCSS
     - PreviewCtx
     - PreviewDebugger
     - PreviewImageLoader
     - PreviewRoot
+    - PreviewRouterCtx
+    - PreviewShowFn
     - readFileBytes
     - registerReRoute
     - registerYsmModelSchema
@@ -90,6 +95,9 @@ auto_fields:
     - resolveSceneSiblings
     - resolveSiblingsByType
     - resolveStageSiblings
+    - routeModelPreview
+    - routePackInfo
+    - routeTypeMeta
     - safeUrl
     - saveScreenshot
     - scanModelsByType

@@ -49,25 +49,48 @@ func TestMove_CrossDevice_File(t *testing.T) {
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("跨设备 move 后源文件应已删除")
 	}
-	if got := tm.List(); len(got) != 1 {
-		t.Fatalf("回收站应有 1 条, 得到 %d", len(got))
+	entries := tm.List()
+	if len(entries) != 1 {
+		t.Fatalf("回收站应有 1 条, 得到 %d", len(entries))
+	}
+	// 条目名保持源文件名（收敛自原 recycle_moveex_test.go 同名测试的增量断言）
+	if entries[0].Name != "cdn.ysm" {
+		t.Errorf("条目名 = %q, 期望 cdn.ysm", entries[0].Name)
 	}
 }
 
 // 跨设备目录 move：rename 报 EXDEV → 回退 copyDirForMove → 源删除 → recycled。
-// 覆盖 moveEx 目录分支（复制成功路径）。
+// 覆盖 moveEx 目录分支（复制成功路径）。fixture 对齐原 recycle_moveex_test.go 的
+// 文件夹模型整组（ysm.json → List 整组合并 + 内容完整复制断言，ADR-038 D3.4）。
 func TestMove_CrossDevice_Dir(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	setupCrossDevice(tm)
 
 	modelDir := makeModelDir(t, dir)
+	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	res := tm.MoveEx(modelDir)
 	if res.Action != "recycled" {
 		t.Fatalf("跨设备目录 move 应 recycled, got %s (%s)", res.Action, res.Reason)
 	}
 	if _, err := os.Stat(modelDir); !os.IsNotExist(err) {
 		t.Error("跨设备 move 后源目录应已删除")
+	}
+	entries := tm.List()
+	if len(entries) != 1 {
+		t.Fatalf("回收站应有 1 个整组条目, 得到 %d", len(entries))
+	}
+	if entries[0].Name != "model" {
+		t.Errorf("条目名 = %q, 期望 model", entries[0].Name)
+	}
+	// 目录内文件应完整复制（ADR-038 D3.4 整组保留）
+	if _, err := os.Stat(filepath.Join(entries[0].Path, "model.pmx")); err != nil {
+		t.Fatalf("目录内文件未复制: %v", err)
 	}
 }
 

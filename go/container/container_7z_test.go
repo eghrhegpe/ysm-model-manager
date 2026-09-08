@@ -9,11 +9,13 @@ import (
 	"testing"
 )
 
-// 复用 geometry 包已有的 7z 测试夹具（7z_full.7z 含完整模型结构）
+// 复用 geometry 包已有的 7z 测试夹具（7z_full.7z 含完整模型结构）。
+// go test 的测试二进制 CWD 恒为包源目录（go/container），相对上跳一级到
+// geometry/testdata 后用 filepath.Abs 固定——不靠 os.Getwd() 向上爬
+// （包被移动 / 非 go test 入口时 Getwd 结果漂移即断，跨包路径耦合）。
 func testdata7z(name string) string {
-	// 从 container 包目录向上到仓库根，再进入 geometry/testdata
-	wd, _ := os.Getwd()
-	return filepath.Join(wd, "..", "geometry", "testdata", name)
+	abs, _ := filepath.Abs(filepath.Join("..", "geometry", "testdata", name))
+	return abs
 }
 
 func TestOpen7zPath_EntriesAndRead(t *testing.T) {

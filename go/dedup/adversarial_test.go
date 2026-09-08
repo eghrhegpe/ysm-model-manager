@@ -1,6 +1,7 @@
 package dedup
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,23 +66,21 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 
 // Bug 2 (MEDIUM): Relative path traversal — FindDuplicateFiles("..", false)
 // resolves to the parent of CWD and walks it without restriction.
-// 修复后：必须拒绝或返回 error；若调用方传入相对路径，应报错。
+// 已修复（resolveScanRoot）：相对路径一律拒绝，返回 ErrRelativePath
+// （调用方 CLI/GUI 均传绝对路径，dedup 层是最后一道防线）。
 func TestAdversarial_RelativePathTraversal(t *testing.T) {
-	// 相对路径 ".." 指向父目录——这是真实安全隐患。
-	// 测试目标：确认 FindDuplicateFiles 对相对路径有防护（返回 error 或拒绝）。
+	// 相对路径 ".." 指向父目录——这是真实安全隐患；
+	// 守卫必须显式返回 ErrRelativePath（errors.Is 可分类，禁文本匹配）。
 	_, err := FindDuplicateFiles("..", false)
-	if err != nil {
-		t.Logf("FindDuplicateFiles(\"..\") returned error (guard active): %v", err)
-		return
+	if !errors.Is(err, ErrRelativePath) {
+		t.Fatalf("BUG-2: FindDuplicateFiles(\"..\") 应返回 ErrRelativePath（相对路径穿越未防护），got: %v", err)
 	}
-	// 未返回 error：若仍返回结果则说明无守卫，调用方可扫描父目录
-	t.Fatalf("BUG-2: FindDuplicateFiles(\"..\") 未返回 error，相对路径穿越未防护——调用方可扫描父目录")
 }
 
 // Bug 3 (MEDIUM): NUL byte injection in the path argument.
-// On Windows, filepath.Abs rejects NUL and returns an error.
-// On Linux, filepath.Abs may accept it, leading to a walk of an unintended
-// path or silent truncation.
+// Windows 下 filepath.Abs 拒 NUL，Linux 下 Abs 放行（放行后 WalkDir→Lstat
+// 失败被 log-and-skip 吞掉 = 假绿）——resolveScanRoot 已在入口统一显式拒绝，
+// 行为跨平台一致，不再需要平台分支。
 func TestAdversarial_NULByteInPath(t *testing.T) {
 	validDir, err := os.MkdirTemp("", "nul-test")
 	if err != nil {
@@ -92,20 +91,8 @@ func TestAdversarial_NULByteInPath(t *testing.T) {
 	// Inject NUL byte after the valid prefix
 	badPath := validDir + "\x00" + "dir"
 
-	_, err = FindDuplicateFiles(badPath, false)
-	if err != nil {
-		t.Logf("FindDuplicateFiles with NUL byte returned error (good): %v", err)
-		return
-	}
-
-	// NUL 字节未被拒绝——这是路径混淆漏洞
-	switch runtime.GOOS {
-	case "linux":
-		t.Fatalf("BUG-3: Linux 上 NUL 字节路径未被拒绝，filepath.Abs 可能截断路径导致意外扫描")
-	default:
-		// Windows 下 NUL 通常被 filepath.Abs 或 Lstat 拒绝；
-		// 若此处未返回 error，说明守卫缺失
-		t.Fatalf("BUG-3: Windows 上 NUL 字节路径未被拒绝，FindDuplicateFiles 应报错")
+	if _, err := FindDuplicateFiles(badPath, false); err == nil {
+		t.Fatalf("BUG-3: NUL 字节路径未被拒绝——调用方可扫描非预期路径（路径混淆）")
 	}
 }
 

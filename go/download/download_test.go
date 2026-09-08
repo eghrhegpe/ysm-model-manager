@@ -132,10 +132,19 @@ func TestResolveSavePathValidNested(t *testing.T) {
 }
 
 func TestDownloadCtxCancel(t *testing.T) {
+	// 确定性取消：服务端发出第一个分块（firstChunk 关闭）即证明下载已进行，
+	// 此时 cancel 必能截断进行中的流——不再依赖 time.Sleep(5ms) 与流竞态
+	// （快机上 4MB 流可能 5ms 内读完，err=nil flaky）。
+	// New() 默认不重试（retry=nil），handler 只会被访问一次，close 安全。
+	firstChunk := make(chan struct{})
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher := w.(http.Flusher)
 		for i := 0; i < 1000; i++ {
 			w.Write(make([]byte, 4096))
-			w.(http.Flusher).Flush()
+			flusher.Flush()
+			if i == 0 {
+				close(firstChunk)
+			}
 			time.Sleep(1 * time.Millisecond)
 		}
 	}))
@@ -143,7 +152,7 @@ func TestDownloadCtxCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		time.Sleep(5 * time.Millisecond)
+		<-firstChunk // 流确已进行，cancel 立即触发（总时长 ≥1s，远长于首分块时刻）
 		cancel()
 	}()
 

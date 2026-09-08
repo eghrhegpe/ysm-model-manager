@@ -134,32 +134,6 @@ function bindToggleMenu(btn: HTMLButtonElement, menu: HTMLElement, onToggle: () 
   menu.addEventListener("click", (e) => e.stopPropagation());
 }
 
-// ---------- handlePushMenuClick ----------
-function handlePushMenuClick(
-  e: Event,
-  pushBtn: HTMLButtonElement,
-  pushMenu: HTMLElement,
-  pullMenu: HTMLElement,
-  root: ShadowRoot,
-  getInstances: () => SidebarInstance[],
-  syncInProgress: { val: boolean },
-): void {
-  const selected = beginSync(
-    e,
-    t("sidebar.verbPush"),
-    root,
-    getInstances(),
-    syncInProgress,
-    () => closeAllMenus(pushMenu, pullMenu),
-    pushBtn,
-  );
-  if (!selected) return;
-  const types = resolveTypes(
-    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
-  );
-  void runPush(selected, types, pushBtn, syncInProgress);
-}
-
 /** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind */
 async function pushOne(insName: string, rt: string): Promise<void> {
   const token = `${insName}:${rt}:${Date.now()}`;
@@ -208,6 +182,50 @@ function pushErrorKind(e: unknown): "skipped" | "timeout" | undefined {
   return (e as Error & { kind?: "skipped" | "timeout" })?.kind;
 }
 
+// ---------- 公共类型 / 工具 ----------
+
+type SyncVerb = "push" | "pull";
+
+/** 按钮复位（push/pull finally 块共用） */
+function resetButton(btn: HTMLButtonElement, verb: SyncVerb): void {
+  const arrow = verb === "push" ? "⬆️" : "⬇️";
+  const key = verb === "push" ? "sidebar.pushSelected" : "sidebar.pullSelected";
+  btn.textContent = `${arrow} ${t(key)} ▾`;
+  btn.disabled = false;
+}
+
+// ---------- handleSyncMenuClick（push/handler 合并） ----------
+
+function handleSyncMenuClick(
+  verb: SyncVerb,
+  e: Event,
+  btn: HTMLButtonElement,
+  pushMenu: HTMLElement,
+  pullMenu: HTMLElement,
+  root: ShadowRoot,
+  getInstances: () => SidebarInstance[],
+  syncInProgress: { val: boolean },
+): void {
+  const selected = beginSync(
+    e,
+    verb === "push" ? t("sidebar.verbPush") : t("sidebar.verbPull"),
+    root,
+    getInstances(),
+    syncInProgress,
+    () => closeAllMenus(pushMenu, pullMenu),
+    btn,
+  );
+  if (!selected) return;
+  const types = resolveTypes(
+    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
+  );
+  if (verb === "push") {
+    void runPush(selected, types, btn, syncInProgress);
+  } else {
+    void runPull(selected, types, btn, syncInProgress);
+  }
+}
+
 /** 推送主流程：顺序逐包逐类型推送，跳过的按类型计数 → 汇总 toast + 按钮复位统一收口 */
 async function runPush(
   selected: string[],
@@ -252,36 +270,9 @@ async function runPush(
       type: "error",
     });
   } finally {
-    pushBtn.textContent = `⬆️ ${t("sidebar.pushSelected")} ▾`;
-    pushBtn.disabled = false;
+    resetButton(pushBtn, "push");
     syncInProgress.val = false;
   }
-}
-
-// ---------- handlePullMenuClick ----------
-function handlePullMenuClick(
-  e: Event,
-  pullBtn: HTMLButtonElement,
-  pushMenu: HTMLElement,
-  pullMenu: HTMLElement,
-  root: ShadowRoot,
-  getInstances: () => SidebarInstance[],
-  syncInProgress: { val: boolean },
-): void {
-  const selected = beginSync(
-    e,
-    t("sidebar.verbPull"),
-    root,
-    getInstances(),
-    syncInProgress,
-    () => closeAllMenus(pushMenu, pullMenu),
-    pullBtn,
-  );
-  if (!selected) return;
-  const types = resolveTypes(
-    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
-  );
-  void runPull(selected, types, pullBtn, syncInProgress);
 }
 
 /** 拉取主流程：并行拉取各类型资源，计数成功/失败 → 汇总 toast + 刷新统计与树 */
@@ -331,8 +322,7 @@ async function runPull(
       type: "error",
     });
   } finally {
-    pullBtn.textContent = `⬇️ ${t("sidebar.pullSelected")} ▾`;
-    pullBtn.disabled = false;
+    resetButton(pullBtn, "pull");
     syncInProgress.val = false;
   }
 }
@@ -368,7 +358,7 @@ export function bindSyncSelected(
   document.addEventListener("click", getDocClickHandler()!);
 
   pushMenu.addEventListener("click", (e) =>
-    handlePushMenuClick(e, pushBtn, pushMenu, pullMenu, root, getInstances, {
+    handleSyncMenuClick("push", e, pushBtn, pushMenu, pullMenu, root, getInstances, {
       get val() {
         return getSyncInProgress();
       },
@@ -378,7 +368,7 @@ export function bindSyncSelected(
     }),
   );
   pullMenu.addEventListener("click", (e) =>
-    handlePullMenuClick(e, pullBtn, pushMenu, pullMenu, root, getInstances, {
+    handleSyncMenuClick("pull", e, pullBtn, pushMenu, pullMenu, root, getInstances, {
       get val() {
         return getSyncInProgress();
       },

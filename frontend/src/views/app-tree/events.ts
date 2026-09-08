@@ -8,7 +8,6 @@ import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
-import { safeSet } from "@/utils/dom/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -54,7 +53,7 @@ function atTeStartRename(ctx: AtTeCtx, path: string): void {
 }
 
 function atTeGetRtype(vm: AppTree): string {
-  return vm._rootAttr || RESOURCE_TYPES.YSM;
+  return vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
 }
 
 // ===== 事件段 1：DnD 拖入 — 由 import-dnd.ts bindTreeDnD 在 document 层处理，此处不重复注册 =====
@@ -145,16 +144,8 @@ function atTeClickRowFolder(ctx: AtTeCtx, e: MouseEvent, fh: HTMLElement): boole
   e.stopPropagation();
   const dir = fh.dataset.dir;
   if (!dir) return true;
-  const isOpen = vm._dirOpen[dir];
-  vm._dirOpen[dir] = !isOpen;
-  if (isOpen) {
-    const prefix = `${dir}/`.replace(/\\/g, "/");
-    for (const key of Object.keys(vm._dirOpen)) {
-      const nk = key.replace(/\\/g, "/");
-      if (nk !== dir && nk.startsWith(prefix)) delete vm._dirOpen[key];
-    }
-  }
-  safeSet("at_dirs", JSON.stringify(vm._dirOpen));
+  const isOpen = vm.snapshot.dirOpen[dir];
+  vm.toggleDir(dir);
   vm._renderTree();
   if (!isOpen) {
     bus.emit("model:select", { path: dir, isDir: true });
@@ -453,7 +444,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     const dirKey = fhEl.dataset.dir;
     if (!dirKey) return;
     const prefix = dirKey.replace(/\\/g, "/");
-    const targets = collectDirEntries(vm._entries, prefix);
+    const targets = collectDirEntries(vm.snapshot.entries, prefix);
     if (!targets.length) return;
     const allEnabled = targets.every((e) => !e.banned);
     const enable = !allEnabled;
@@ -491,7 +482,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     if (ok > 0) {
       // ⚠️ 不直接 mutate Go 端原始 entry 对象，reload 取真值防幽灵状态
       await vm._load();
-      if ((vm._rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
+      if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }
     }

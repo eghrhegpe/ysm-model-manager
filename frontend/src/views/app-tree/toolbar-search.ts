@@ -128,7 +128,7 @@ function advFilterBackfillInlinePanel(
   const srchEl = $("srch") as HTMLInputElement | null;
   if (srchEl && rv.keyword !== undefined) {
     srchEl.value = rv.keyword;
-    vm._search = rv.keyword;
+    vm.setSearch(rv.keyword);
   }
   const kw = srchEl?.value || "";
   const hasTag = !!(rv.tag && !(rv.tag === ""));
@@ -146,7 +146,7 @@ function advFilterBackfillInlinePanel(
 }
 
 function advFilterEarlyEmpty(vm: AppTree): void {
-  vm._filterPaths = null;
+  vm.setFilterPaths(null);
   vm._renderTree();
 }
 
@@ -173,7 +173,7 @@ async function advFilterSearchModelPaths(
   kw: string,
   hasNumRange: boolean,
 ): Promise<advFilterSearchResult> {
-  const filesRoot = vm._filesRoot;
+  const filesRoot = vm.snapshot.filesRoot;
   if (!filesRoot) {
     bus.emit("toast:show", {
       msg: t("tree.needRepoDir"),
@@ -237,25 +237,25 @@ function advFilterIntersectPaths(
   modelPaths: Set<string> | null,
 ): void {
   if (tagPaths && modelPaths) {
-    vm._filterPaths = new Set([...tagPaths].filter((p) => modelPaths.has(p)));
+    vm.setFilterPaths(new Set([...tagPaths].filter((p) => modelPaths.has(p))));
   } else if (tagPaths) {
-    vm._filterPaths = tagPaths;
+    vm.setFilterPaths(tagPaths);
   } else if (modelPaths) {
-    vm._filterPaths = modelPaths;
+    vm.setFilterPaths(modelPaths);
   } else {
-    vm._filterPaths = null;
+    vm.setFilterPaths(null);
   }
 }
 
 function advFilterToastAndRender(vm: AppTree): void {
-  const size = vm._filterPaths?.size ?? 0;
+  const size = vm.snapshot.filterPaths?.size ?? 0;
   if (size > 0) {
     bus.emit("toast:show", {
       msg: t("tree.filterFound", { n: size }),
       duration: TOAST_MS.quick,
       type: "success",
     });
-  } else if (vm._filterPaths && size === 0) {
+  } else if (vm.snapshot.filterPaths && size === 0) {
     bus.emit("toast:show", {
       msg: t("tree.filterNone"),
       duration: TOAST_MS.success,
@@ -267,7 +267,7 @@ function advFilterToastAndRender(vm: AppTree): void {
 
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
 export async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
-  dbg("adv-filter", "open:start", { filesRoot: vm._filesRoot });
+  dbg("adv-filter", "open:start", { filesRoot: vm.snapshot.filesRoot });
   const rv = await advFilterReadCurAndOpenDialog($);
   if (!rv) return;
 

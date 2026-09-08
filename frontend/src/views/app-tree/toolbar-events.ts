@@ -16,7 +16,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AuthorInfo } from "./authors.ts";
 import { updateSelectCount } from "./events.ts";
 import type { AppTree } from "./index.ts";
-import { getVsRows, type RenderMode, setRenderMode } from "./render.ts";
+import { getVsRows, type RenderMode } from "./render.ts";
 // P1 修复（ADR-040）：搜索/筛选/导入逻辑已拆至 toolbar-search.ts
 import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
 import { spinnerHTML } from "./tpl.ts";
@@ -120,7 +120,7 @@ function atTlBindRepoSwitch(ctx: AtTlCtx): void {
 function atTlBindSortToggle(ctx: AtTlCtx): void {
   const { vm, $ } = ctx;
   $("sort")?.addEventListener("change", () => {
-    vm._sort = ($("sort") as HTMLSelectElement | null)?.value || "name";
+    vm.setSort(($("sort") as HTMLSelectElement | null)?.value || "name");
     vm._renderTree();
   });
 }
@@ -129,11 +129,11 @@ function atTlBindViewMode(ctx: AtTlCtx): void {
   const { vm, $ } = ctx;
   const viewModeBtn = $("btn-view-mode");
   if (!viewModeBtn) return;
-  viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
+  viewModeBtn.textContent = vm.snapshot.renderMode === "list" ? "▦" : "☰";
   viewModeBtn.addEventListener("click", () => {
-    vm._renderMode = (vm._renderMode === "list" ? "grid" : "list") as RenderMode;
-    setRenderMode(vm._renderMode);
-    viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
+    const next = (vm.snapshot.renderMode === "list" ? "grid" : "list") as RenderMode;
+    vm.setRenderMode(next);
+    viewModeBtn.textContent = next === "list" ? "▦" : "☰";
     vm._renderTree();
     flashBtn(viewModeBtn);
   });
@@ -141,18 +141,13 @@ function atTlBindViewMode(ctx: AtTlCtx): void {
 
 function atTlBindSearch(ctx: AtTlCtx): void {
   const { vm, $ } = ctx;
-  let srchTimer: ReturnType<typeof setTimeout> | null = null;
   $("srch")?.addEventListener("input", () => {
-    vm._search = ($("srch") as HTMLInputElement | null)?.value || "";
-    if (srchTimer) clearTimeout(srchTimer);
-    srchTimer = setTimeout(() => {
-      srchTimer = null;
+    vm.setSearch(($("srch") as HTMLInputElement | null)?.value || "");
+    if (vm._searchTimer) clearTimeout(vm._searchTimer);
+    vm._searchTimer = setTimeout(() => {
+      vm._searchTimer = null;
       vm._renderTree();
     }, 150);
-  });
-  // 组件卸载时清 timer，防 disconnectedCallback 后 _renderTree 在已卸载实例执行
-  vm._unsubs.push(() => {
-    if (srchTimer) clearTimeout(srchTimer);
   });
 }
 
@@ -179,9 +174,9 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
     const srchEl = $("srch") as HTMLInputElement | null;
     if (srchEl) {
       srchEl.value = "";
-      vm._search = "";
+      vm.setSearch("");
     }
-    vm._filterPaths = null;
+    vm.setFilterPaths(null);
     vm._renderTree();
   });
 }
@@ -212,7 +207,7 @@ function atTlBindBatchMenu(ctx: AtTlCtx): void {
 
 async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
   const { vm } = ctx;
-  const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+  const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
   if (isViewerMode()) {
     await pickWebFilesAndImport(
       rtype,
@@ -239,7 +234,7 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
 
 async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
   const { vm } = ctx;
-  const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+  const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
   if (isWebPlatform()) {
     const gen = vm._gen;
     await pickWebFilesAndImport(
@@ -280,9 +275,9 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
           await resolveAndroidRepoDir();
           return;
         }
-        if (!vm._filesRoot) return;
+        if (!vm.snapshot.filesRoot) return;
         const { OpenFolder } = await getApp();
-        await OpenFolder(vm._filesRoot);
+        await OpenFolder(vm.snapshot.filesRoot);
       } else if (action === "import-file") {
         await atTlHandleImportFile(ctx);
       } else if (action === "import-dir") {

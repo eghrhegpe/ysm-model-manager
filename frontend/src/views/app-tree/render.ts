@@ -4,10 +4,14 @@ import { animateNumber } from "@/utils/animation/animate.ts";
 import { formatBytes } from "@/utils/dom/format.ts";
 import { safeGet, safeSet } from "@/utils/dom/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
+import { renderDisplayName } from "@/utils/model-name/display.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
 import { emptyStateHTML } from "./tpl.ts";
+
+/** 每级缩进像素（树深 → padding-left） */
+const INDENT_PER_LEVEL = 16;
 
 /** 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入） */
 export const ROW_H_GRID = 28;
@@ -97,6 +101,53 @@ function annotateDirNodes(root: TreeNode): void {
   }
 }
 
+// ——— 语义调用包装：树参数 → 行模板渲染参数 ———
+// flattenVisible 只持有 (entry/fullPath/depth) 语义信息，row-tpl 需要
+// (nmHtml, icon, dateStr, nmCls, indent, rowCls, ariaLevel) 渲染参数。
+// 两个包装函数负责桥接，让调用方类型合法、@ts-expect-error 不必存在。
+
+/** 文件行包装：entry + depth → 完整 fileRowHTML / listFileRowHTML 调用 */
+function fileRowFromEntry(entry: TreeEntry, depth: number, mode: RenderMode): string {
+  const nmHtml = renderDisplayName(entry.name);
+  const indent = depth * INDENT_PER_LEVEL;
+  return mode === "list"
+    ? listFileRowHTML(entry, nmHtml, "📄", "", indent, "", depth + 1)
+    : fileRowHTML(entry, nmHtml, "📄", "", "", indent, "", depth + 1);
+}
+
+/** 文件夹行包装：name + depth + isOpen + flags → 完整 folderRowHTML / listFolderRowHTML 调用 */
+function folderRowFromNode(
+  name: string,
+  fullPath: string,
+  depth: number,
+  isOpen: boolean,
+  flags: { hasEnabled: boolean; hasDisabled: boolean },
+  mode: RenderMode,
+): string {
+  const indent = depth * INDENT_PER_LEVEL;
+  return mode === "list"
+    ? listFolderRowHTML(
+        name,
+        fullPath,
+        isOpen,
+        false,
+        flags.hasEnabled,
+        flags.hasDisabled,
+        indent,
+        depth + 1,
+      )
+    : folderRowHTML(
+        name,
+        fullPath,
+        isOpen,
+        false,
+        flags.hasEnabled,
+        flags.hasDisabled,
+        indent,
+        depth + 1,
+      );
+}
+
 // ——— 扁平化可见行（虚拟滚动数据源） ———
 export function flattenVisible(
   root: TreeNode,
@@ -128,21 +179,12 @@ export function flattenVisible(
     if (node && (node as TreeNode)._e) {
       const entry = (node as TreeNode)._e as TreeEntry;
       if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
-      const html =
-        mode === "list"
-          ? // @ts-expect-error pre-existing: listFileRowHTML signature mismatch (out of scope)
-            listFileRowHTML(entry, fullPath, depth)
-          : // @ts-expect-error pre-existing: fileRowHTML signature mismatch (out of scope)
-            fileRowHTML(entry, fullPath, depth);
+      const html = fileRowFromEntry(entry, depth, mode);
       rows.push({ id: rows.length, type: "file", key: fullPath, depth, html });
     } else if (node) {
       const isOpen = dirOpen[fullPath] || false;
-      const html =
-        mode === "list"
-          ? // @ts-expect-error pre-existing: listFolderRowHTML signature mismatch (out of scope)
-            listFolderRowHTML(name, fullPath, depth, isOpen)
-          : // @ts-expect-error pre-existing: folderRowHTML signature mismatch (out of scope)
-            folderRowHTML(name, fullPath, depth, isOpen);
+      const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
+      const html = folderRowFromNode(name, fullPath, depth, isOpen, flags, mode);
       rows.push({ id: rows.length, type: "folder", key: fullPath, depth, html, isOpen });
       if (isOpen || isSearch) {
         const childRows = flattenVisible(

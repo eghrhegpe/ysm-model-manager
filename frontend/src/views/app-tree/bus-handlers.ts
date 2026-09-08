@@ -108,7 +108,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
   if (!name) return;
   try {
     const { RenameDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+    const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     await RenameDir(absDir, name.trim());
@@ -135,7 +135,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
   if (!name) return;
   try {
     const { CreateDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+    const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}/${name.trim()}` : `${dir}/${name.trim()}`;
     await CreateDir(absDir);
@@ -160,7 +160,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
   if (!confirmed) return;
   try {
     const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+    const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const allFiles = await ListAllFilePaths(absDir);
@@ -203,7 +203,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
 async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void> {
   try {
     const { ScanModelEntriesFiltered, GetRepoRoot } = await getApp();
-    const rtype = vm._rootAttr || RESOURCE_TYPES.YSM;
+    const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
@@ -265,8 +265,10 @@ async function reload(vm: AppTree): Promise<void> {
   }
   const gen = vm._gen;
   try {
-    const rtype = vm._rootAttr || "";
-    const r = vm._subdirAttr ? await loadEntries(rtype, vm._subdirAttr) : await loadEntries(rtype);
+    const rtype = vm.snapshot.rootAttr || "";
+    const r = vm.snapshot.subdirAttr
+      ? await loadEntries(rtype, vm.snapshot.subdirAttr)
+      : await loadEntries(rtype);
     if (atBeGenGuard(vm, gen)) return;
     if (r) {
       vm._filesRoot = r.filesRoot;
@@ -313,7 +315,7 @@ async function runBatchToggle(
   try {
     const { ToggleEnable } = await getApp();
     const prefix = opts.prefix?.replace(/\\/g, "/");
-    const snapshot = vm._entries
+    const snapshot = vm.snapshot.entries
       .filter(
         (e) =>
           e.path &&
@@ -343,7 +345,7 @@ async function runBatchToggle(
     }
     if (ok > 0) {
       await reload(vm);
-      if ((vm._rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
+      if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }
     }

@@ -98,7 +98,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_machine_diff.ts': ['tests'],
   'test_gate_config.ts': ['tests'],
   'test_gate_iife_correctness.ts': ['tests'],
+  'test_gate_parse_output.ts': ['tests'],
   'test_gate_policy_baseline.ts': ['tests'],
+  'test_gate_report.ts': ['tests'],
   'test_jscpd_go_smart.ts': ['tests', 'go'],
   'test_jscpd_pairs.ts': ['tests'],
   'test_knowledge_common.ts': ['tests'],
@@ -168,6 +170,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   'test_gate_iife_correctness.ts': ['scripts/pre-push-gate.ts'],
   'test_gate_config.ts': ['scripts/_lib/gate-config.ts'],
+  'test_gate_parse_output.ts': ['scripts/_lib/gate-parse.ts', 'scripts/pre-push-gate.ts'],
+  'test_gate_report.ts': ['scripts/_lib/gate-report.ts', 'scripts/pre-push-gate.ts'],
   'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
   'test_sidebar_gen.ts': ['scripts/gen-vitepress-sidebar.ts'],
   'test_check_boolean_smart.ts': ['scripts/check-boolean-naming.ts'],

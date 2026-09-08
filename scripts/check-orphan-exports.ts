@@ -181,6 +181,63 @@ function extractImports(file: string, text: string, moduleSet: Set<string>) {
 
 // ── 主流程 ────────────────────────────────────────────
 
+// 孤儿豁免规则（2026-09-08 门禁鸡肋审查）：设计产物 / 生成物 / 重构中间态不该被 flag。
+// 三层匹配：
+//   symbol     —— 符号名精确匹配
+//   symbolGlob —— 符号名 glob（DEFAULT_*_PARAMS 等）
+//   pathGlob   —— 相对路径 glob（Emscripten 产物 wasm/*.js 等）
+// 规则的 reason 注明来源（ADR/commit/设计产物），供维护者追责。
+// export：契约测试 tests/test_orphan_exports_smart.ts import 校验（单一事实源）。
+export const ORPHAN_EXEMPT_RULES = [
+  // 规则 1：模板共享空导出 VIEW_TESTIDS —— 设计产物（所有 tpl.ts 的清一色 testid 集合）
+  { type: 'symbol', pattern: 'VIEW_TESTIDS', reason: '模板共享空导出（所有 tpl.ts 都有，供测试 query）' },
+  // 规则 2：caps 默认参数/类型枚举 —— ADR-196 统一数据源暂存
+  { type: 'symbolGlob', pattern: 'DEFAULT_*_PARAMS', reason: 'ADR-196 caps 统一数据源暂存' },
+  { type: 'symbolGlob', pattern: '*_TYPES', reason: 'caps 类型枚举导出' },
+  // 规则 3：Emscripten 产物路径（wasm/ 下的 .js/.d.ts）
+  { type: 'pathGlob', pattern: '**/wasm/*.js', reason: 'Emscripten 自动生成产物' },
+  { type: 'pathGlob', pattern: '**/wasm/*.d.ts', reason: 'Emscripten 自动生成产物' },
+  // 规则 4：wasm glue 符号前缀
+  { type: 'symbolGlob', pattern: '_getWasmBinary*', reason: 'Emscripten glue code' },
+  { type: 'symbolGlob', pattern: '_getGlueCode*', reason: 'Emscripten glue code' },
+  // 规则 5：ADR-196 env-state/light 统一数据源 refactor 中间态 getter
+  { type: 'symbolGlob', pattern: 'get*Value', reason: 'ADR-196 env-state 统一数据源 refactor 中间态' },
+  { type: 'symbolGlob', pattern: 'set*Value', reason: 'ADR-196 env-state 统一数据源 refactor 中间态' },
+  { type: 'symbol', pattern: 'getPresetKeys', reason: 'ADR-196 env-state 统一数据源 refactor 中间态' },
+  { type: 'symbol', pattern: 'getEnvCallbackCount', reason: 'ADR-196 env-state 统一数据源 refactor 中间态' },
+  { type: 'symbol', pattern: 'deepMergeLightParams', reason: 'ADR-196 light-capability 统一数据源 refactor 中间态' },
+];
+
+/** 简化 glob 匹配：** = 任意（含 /）跨目录，* = 不含 /；其余正则特殊字符转义。 */
+function orphanGlob(pattern: string, target: string): boolean {
+  const DS = '\u0000DS\u0000';
+  const SS = '\u0000SS\u0000';
+  let s = pattern.replace(/\*\*/g, DS).replace(/\*/g, SS);
+  s = s.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  s = s.split(DS).join('.*').split(SS).join('[^/]*');
+  return new RegExp('^' + s + '$').test(target);
+}
+
+/** 判定孤儿是否应豁免（设计/生成/重构中间态）。返回 null = 不豁免。 */
+export function isOrphanExempt(symbol: string, relFile: string): string | null {
+  const posix = relFile.replace(/\\/g, '/');
+  const baseFile = posix.split('/').pop() || posix;
+  for (const rule of ORPHAN_EXEMPT_RULES) {
+    switch (rule.type) {
+      case 'symbol':
+        if (symbol === rule.pattern) return rule.reason;
+        break;
+      case 'symbolGlob':
+        if (orphanGlob(rule.pattern, symbol)) return rule.reason;
+        break;
+      case 'pathGlob':
+        if (orphanGlob(rule.pattern, posix) || orphanGlob(rule.pattern, baseFile)) return rule.reason;
+        break;
+    }
+  }
+  return null;
+}
+
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
     console.log(JSON_OUT ? JSON.stringify({ orphan: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
@@ -247,14 +304,22 @@ function main() {
       });
     }
   }
-  const orphan = report.filter((r) => r.consumers === 0);
+  const orphan = report.filter((r) => {
+    if (r.consumers !== 0) return false;
+    // 设计产物 / 生成物 / 重构中间态豁免（2026-09-08）：VIEW_TESTIDS / DEFAULT_*_PARAMS /
+    // wasm glue / ADR-196 env-state getter 等不计入孤儿。豁免原因随 JSON 输出，供追责。
+    return !isOrphanExempt(r.symbol, r.file);
+  });
+  // 豁免命中明细（JSON 输出 exempted 字段；文本模式给 open `⚠ 由 ...` 说明）
+  const exempted = report.filter((r) => r.consumers === 0 && isOrphanExempt(r.symbol, r.file))
+    .map((r) => ({ ...r, reason: isOrphanExempt(r.symbol, r.file) }));
   const threshold = report.filter((r) => r.consumers <= MIN_CONSUMERS);
   const top = [...report].sort((a, b) => b.consumers - a.consumers).slice(0, 10);
   const flagged = MIN_CONSUMERS > 0 ? threshold : orphan;
   const fail = STRICT && flagged.length > 0;
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { symbols: report.length, orphan: orphan.length, flagged: flagged.length }, symbols: report.length, orphan, top, minConsumers: MIN_CONSUMERS, flagged, strict: STRICT }, null, 2));
+    console.log(JSON.stringify({ _summary: { symbols: report.length, orphan: orphan.length, flagged: flagged.length, exempted: exempted.length }, symbols: report.length, orphan, top, exempted, minConsumers: MIN_CONSUMERS, flagged, strict: STRICT }, null, 2));
     process.exit(fail ? 1 : 0);
     return;
   }
@@ -274,6 +339,18 @@ function main() {
       console.log(`  ⚠ ${r.file}:${r.line}  ${r.symbol}`);
     }
     if (orphan.length > 40) console.log(`  … 其余 ${orphan.length - 40} 条（--json 全量）`);
+  }
+
+  if (exempted.length) {
+    console.log(`\n【豁免孤儿（设计/生成/重构中间态，${exempted.length} 条，不计入）】`);
+    const shown = new Set<string>();
+    for (const e of exempted) {
+      const k = `${e.symbol}@${e.reason}`;
+      if (shown.has(k)) continue;
+      shown.add(k);
+      console.log(`  · ${e.symbol}（${e.reason}）`);
+    }
+    if (shown.size > 12) console.log(`  … 其余 ${shown.size - 12} 种符号（--json 全量）`);
   }
 
   if (top.length) {

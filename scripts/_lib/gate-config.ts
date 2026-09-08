@@ -42,29 +42,30 @@ export type GateTool = string | {
 export const ALL_STATIC_TOOLS: GateTool[] = [
   'check-doc-drift.ts',
   'check-adr-health.ts',
-  'check-boolean-naming.ts',
-  'check-circular.ts',  'check-orphan-exports.ts',
-  'check-deadcode-baseline.ts',
-  'jscpd-go.ts',
+  { tool: 'check-boolean-naming.ts', blockPolicy: 'debt' },
+  { tool: 'check-circular.ts', blockPolicy: 'debt' },
+  { tool: 'check-orphan-exports.ts', blockPolicy: 'debt' },
+  { tool: 'check-deadcode-baseline.ts', blockPolicy: 'debt' },
+  { tool: 'jscpd-go.ts', blockPolicy: 'debt' },
   'check-tpl-refs.ts',
   'check-dynamic-import.ts',
   { tool: 'auto-import.ts', args: ['--strict'] },
   { tool: 'event-graph.ts', args: ['--check'], autoFix: true },
-  { tool: 'build-novel-index.ts', args: ['--check'], autoFix: true },
-  { tool: 'gen-routes.ts', args: ['--check'], autoFix: true },
-  { tool: 'gen-routes-quick.ts', args: ['--check'], autoFix: true },
-  { tool: 'gen-cli-doc.ts', args: ['--check'], autoFix: true },
-  { tool: 'gen-cli-completion.ts', args: ['--check'], autoFix: true },
-  { tool: 'gen-knowledge-autogen.ts', args: ['--check'], autoFix: true },
+  { tool: 'build-novel-index.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
+  { tool: 'gen-routes.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
+  { tool: 'gen-routes-quick.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
+  { tool: 'gen-cli-doc.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
+  { tool: 'gen-cli-completion.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
+  { tool: 'gen-knowledge-autogen.ts', args: ['--check'], autoFix: true, blockPolicy: 'failClosed' },
   { tool: 'check-script-hygiene.ts', args: ['--strict'] },
-  'check-proc-adoption.ts',
-  'check-lib-adoption.ts',
+  { tool: 'check-proc-adoption.ts', blockPolicy: 'debt' },
+  { tool: 'check-lib-adoption.ts', blockPolicy: 'debt' },
   'check-workflow-refs.ts',
-  'check-readme-index.ts',
+  { tool: 'check-readme-index.ts', blockPolicy: 'failClosed' },
   { tool: 'i18n-check.ts', args: ['--strict'] },
   'i18n-ui-check.ts',
   { tool: 'css-layer-check.ts', args: ['--strict'] },
-  'check-toast-duration.ts',
+  { tool: 'check-toast-duration.ts', blockPolicy: 'debt' },
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
   'check-android-unavailable.ts',
@@ -104,17 +105,17 @@ export const DOC_EXTRA_SCRIPTS: GateTool[] = [
  * 与 ALL_STATIC_TOOLS 分工：后者全量扫描，此项增量门禁——只拦本次变更引入的新违规。
  */
 export const FRONTEND_STATIC_TOOLS: GateTool[] = [
-  'check-circular.ts',
-  'check-boolean-naming.ts',
-  'check-orphan-exports.ts',
-  'check-deadcode-baseline.ts',
+  { tool: 'check-circular.ts', blockPolicy: 'debt' },
+  { tool: 'check-boolean-naming.ts', blockPolicy: 'debt' },
+  { tool: 'check-orphan-exports.ts', blockPolicy: 'debt' },
+  { tool: 'check-deadcode-baseline.ts', blockPolicy: 'debt' },
   'check-tpl-refs.ts',
   'check-dynamic-import.ts',
   { tool: 'auto-import.ts', args: ['--strict'] },
   { tool: 'i18n-check.ts', args: ['--strict'] },
   'i18n-ui-check.ts',
   { tool: 'event-graph.ts', args: ['--strict'] },
-  'check-toast-duration.ts',
+  { tool: 'check-toast-duration.ts', blockPolicy: 'debt' },
   { tool: 'check-biome.ts', args: ['--strict'] },
 ];
 
@@ -122,7 +123,7 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
  * Go 域 push 模式补挂静态工具（plan.go=true 时追加）。
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
-  'jscpd-go.ts',
+  { tool: 'jscpd-go.ts', blockPolicy: 'debt' },
   'check-go-diff-coverage.ts',
 ];
 

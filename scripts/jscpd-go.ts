@@ -21,7 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.ts';
 import { checkStale } from './_lib/stale-baseline.ts';
-import { normPair, pairsFrom, matchDrift } from './_lib/jscpd-pairs.ts';
+import { normPair, pairsFrom, matchDrift, filterTestDupes } from './_lib/jscpd-pairs.ts';
 
 // 仓库根由共享层 scan-files.ts 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
 // monorepo 化后 jscpd 被 hoist 到根 node_modules（workspaces 依赖提升），
@@ -158,10 +158,18 @@ function main() {
       process.exitCode = 2;
       return; // finally 清理 tmp
     }
+    // 测试文件过滤（2026-09-08 门禁鸡肋修复）：table-driven 测试 / benchmark 内部 loop /
+    // 测试工具自引用必然同构，JSCPD 会误报为「新增重复对」。只对涉及生产代码的对跑门禁。
+    // current 与 base 两侧都过滤——baseline 历史里的 test-test 对自然降为「已修复」消失，
+    // 不会产生 added 噪音（测试锁: tests/test_jscpd_go_smart.ts）。
+    const currentProd = filterTestDupes(current);
+    if (!JSON_MODE && currentProd.length !== current.length) {
+      console.log(`[jscpd-go] 过滤 ${current.length - currentProd.length} 个测试文件重复对(不算技术债)，剩 ${currentProd.length} 个生产重复对`);
+    }
     warnStale(base);
-    const baseSet = new Set(base.clones || []);
-    const added = current.filter((p) => !baseSet.has(p));
-    const fixed = (base.clones || []).filter((p: string) => !current.includes(p));
+    const baseSet = new Set(filterTestDupes(base.clones || []));
+    const added = currentProd.filter((p) => !baseSet.has(p));
+    const fixed = filterTestDupes(base.clones || []).filter((p: string) => !currentProd.includes(p));
     // 搬迁漂移识别（2026-09-01 ADR-144 复盘）：文件搬迁/拆分会让重复对 key 变路径，
     // 增量门禁误报「新增」——added ↔ fixed 按 basename 集匹配漂移，给人肉确认提供实据。
     // 漂移是「提示」不是「豁免」：仍计入 added，放行与否由人看过后 --update 决定。

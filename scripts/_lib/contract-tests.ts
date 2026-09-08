@@ -91,17 +91,21 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   'test_commit_check_gate.ts': ['tests'],
   'test_commit_temp_index.ts': ['tests'],
   'test_contract_domain_select.ts': ['tests'],
+  'test_check_boolean_smart.ts': ['tests', 'frontend'],
   'test_deadcode_attrib.ts': ['tests'],
   'test_domain_classify.ts': ['tests'],
   'test_gen_stage.ts': ['tests'],
   'test_machine_diff.ts': ['tests'],
   'test_gate_config.ts': ['tests'],
   'test_gate_iife_correctness.ts': ['tests'],
+  'test_gate_policy_baseline.ts': ['tests'],
+  'test_jscpd_go_smart.ts': ['tests', 'go'],
   'test_jscpd_pairs.ts': ['tests'],
   'test_knowledge_common.ts': ['tests'],
   'test_redlines_changed_files.ts': ['tests'],
   'test_scripts_json.ts': ['tests'],
   'test_scripts_lib.ts': ['tests'],
+  'test_orphan_exports_smart.ts': ['tests', 'frontend'],
 };
 
 /**
@@ -166,6 +170,10 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   'test_gate_config.ts': ['scripts/_lib/gate-config.ts'],
   'test_check_readme_index.ts': ['scripts/check-readme-index.ts'],
   'test_sidebar_gen.ts': ['scripts/gen-vitepress-sidebar.ts'],
+  'test_check_boolean_smart.ts': ['scripts/check-boolean-naming.ts'],
+  'test_gate_policy_baseline.ts': ['scripts/_lib/gate-config.ts', 'scripts/pre-push-gate.ts'],
+  'test_jscpd_go_smart.ts': ['scripts/_lib/jscpd-pairs.ts', 'scripts/jscpd-go.ts'],
+  'test_orphan_exports_smart.ts': ['scripts/check-orphan-exports.ts'],
 };
 
 /**

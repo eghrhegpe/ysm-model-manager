@@ -30,7 +30,8 @@ const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
 const STRICT = ARGS.has('--strict');
 
-const VALID_PREFIXES = new Set([
+// 供契约测试 import（tests/test_check_boolean_smart.ts 断言状态词在名单内，单一事实源）
+export const VALID_PREFIXES = new Set([
   'is', 'has', 'can', 'should', 'will', 'may', 'must',
   'allow', 'enable', 'enabled', 'disable', 'disabled',
   'visible', 'selected', 'loading', 'checked', 'active', 'ready',
@@ -41,6 +42,20 @@ const VALID_PREFIXES = new Set([
   // 补充状态词（与头注释「语义动词/状态词」规范对齐，防合规命名误报，code_review P2-5）
   'available', 'locked', 'cancelled', 'ok', 'hidden', 'complete',
   'connected', 'installed', 'expired',
+  // 2026-09-08 门禁鸡肋审查补全：真实扫描发现的合法布尔状态语义词。
+  // 都是 :boolean 注解或初始化的真实布尔变量（抽查实证：busy=锁忙/disposed=析构/changed=变更检测/
+  // orbit=camera 模式/castShadow:boolean/useSSR:boolean/depthTest:boolean 等），首词非缩写、语义单一。
+  // 分类 A — 动态状态/生命周期/查询判定：busy(锁忙) disposed(析构) changed(变更) found(查到)
+  //   exists(存在) settled(稳定) prev(上一态) early(早退) skip(跳过) timed(超时) banned(封禁)
+  //   sub(子路径/子项判定) applied(已应用) released/achieved/applied/patched/closed(完成态过去分词)
+  'busy', 'disposed', 'changed', 'found', 'exists', 'settled',
+  'prev', 'early', 'skip', 'sub', 'timed', 'banned', 'closed',
+  'applied', 'patched', 'released', 'achieved',
+  // 分类 B — 属性/渲染模式布尔（three.js 契约字段，Semantic 名/属性名，非缩写）
+  'orbit', 'cast', 'depth', 'wireframe', 'transparent', 'environment',
+  'reflector', 'glow', 'float', 'premultiply', 'pivot', 'mirror',
+  // 分类 C — 通用判定动词（usable 前缀 + 保留字语义）
+  'use', 'same', 'multi', 'load', 'default', 'matches', 'needs',
 ]);
 
 const findings: any[] = [];

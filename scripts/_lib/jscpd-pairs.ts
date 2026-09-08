@@ -68,6 +68,52 @@ export interface DriftMatch {
   shared: string[];
 }
 
+/** Go 测试文件判定：*_test.go 或 /testdata/ 目录下。 */
+export function isGoTestFile(p: string): boolean {
+  const base = p.split('/').pop() || p;
+  if (base.endsWith('_test.go')) return true;
+  if (p.includes('/testdata/')) return true;
+  return false;
+}
+
+/** pair 的两边是否都是测试文件。 */
+export function isTestOnlyPair(pair: string): boolean {
+  const [a, b] = pair.split('#');
+  return isGoTestFile(a ?? '') && isGoTestFile(b ?? '');
+}
+
+/** pair 是否涉及至少一个测试文件（prod-test / test-test）。 */
+export function involvesTest(pair: string): boolean {
+  const [a, b] = pair.split('#');
+  return isGoTestFile(a ?? '') || isGoTestFile(b ?? '');
+}
+
+/** 从 pairs 集合中过滤掉 test-test 对，只保留涉及生产代码的。 */
+export function filterTestDupes(pairs: string[]): string[] {
+  return pairs.filter((p) => !isTestOnlyPair(p));
+}
+
+/**
+ * 把 pairs 按三个类别归档：
+ *   prod_prod = 两边都是生产代码（真正的技术债）
+ *   prod_test = 一边生产一边测试（可能合法，测试常复制生产代码片段）
+ *   test_test = 两边都是测试（table-driven 同构，不算债）
+ */
+export function classifyDupes(pairs: string[]) {
+  const prod_prod: string[] = [];
+  const prod_test: string[] = [];
+  const test_test: string[] = [];
+  for (const pair of pairs) {
+    const [a, b] = pair.split('#');
+    const ta = isGoTestFile(a ?? '');
+    const tb = isGoTestFile(b ?? '');
+    if (!ta && !tb) prod_prod.push(pair);
+    else if (ta && tb) test_test.push(pair);
+    else prod_test.push(pair);
+  }
+  return { prod_prod, prod_test, test_test };
+}
+
 /**
  * 识别 added 对中的「搬迁漂移」：对每个 added，在 fixed 里找 basename 集相同
  * （exact）或部分交集（partial）的旧对，一个 added 只取一条最优（exact > partial；

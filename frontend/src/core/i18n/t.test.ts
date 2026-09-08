@@ -4,7 +4,7 @@
 // test-setup.ts 全局 mock 了 t.ts（查 zhCN），此处 vi.unmock 取真实实现。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// isolate:false 共享模块图下，兄弟文件的 per-file vi.mock("../../core/i18n/t.ts")
+// isolate:false 共享模块图下，兄弟文件的 per-file vi.mock("@/core/i18n/t.ts")
 // （如 errors.test.ts 的 key 版 mock）先到先得会固化 t.ts 绑定，unmock 无法改写
 // 已求值模块 → 本文件拿到 key 版 t()（命中 key 返回 key 而非翻译）。
 // resetModules + 动态 import 把真实 t.ts 的求值限定在本文件作用域内。
@@ -16,7 +16,7 @@ const { getBundle } = vi.hoisted(() => ({
   getBundle: vi.fn(),
 }));
 
-vi.mock("../../core/i18n/locale.ts", async () => {
+vi.mock("@/core/i18n/locale.ts", async () => {
   const actual = await vi.importActual<typeof import("./locale.ts")>("../../core/i18n/locale.ts");
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）

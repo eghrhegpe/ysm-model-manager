@@ -36,8 +36,8 @@ const {
   getApp: vi.fn(),
 }));
 
-vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
-vi.mock("../../../utils/debug/debug.ts", () => ({ dbg }));
+vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
+vi.mock("@/utils/debug/debug.ts", () => ({ dbg }));
 vi.mock("./workshop-data.ts", () => ({
   getCreatorIdentity,
   getTagFromRole,
@@ -46,7 +46,7 @@ vi.mock("./workshop-data.ts", () => ({
   isFaved,
   toggleFav,
 }));
-vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
+vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getSiteIcon,
   getTagIconFromRole,
 }));

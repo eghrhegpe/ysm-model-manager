@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // 部分 mock：保留原模块真实导出，仅覆盖 cleanupPreview / hasActivePreview / switchPreview 供断言
-vi.mock("../../preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
+vi.mock("@/preview-3d/adapters/mount-preview-core.ts", async (importOriginal) => {
   const mod = (await importOriginal()) as Record<string, unknown>;
   return {
     ...mod,

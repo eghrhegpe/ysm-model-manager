@@ -12,7 +12,7 @@ const { mocks } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../wasm/ysm-worker-loader.ts", () => ({
+vi.mock("@/wasm/ysm-worker-loader.ts", () => ({
   initYsmParserInWorker: mocks.initYsmParserInWorker,
   initYsmParserInWorkerMt: mocks.initYsmParserInWorkerMt,
   decodeYsmInWorker: vi.fn(),
@@ -21,21 +21,21 @@ vi.mock("../wasm/ysm-worker-loader.ts", () => ({
 
 // ADR-153：mock 动态 import 返回 stub 模块（测试环境无需真实 WASM 数据）
 // base 与 mt 均需桩：loader 内两组数据都是动态 import，缺桩会在 vitest 解析时报错
-vi.mock("../wasm/ysm-wasm-data.js", () => ({
+vi.mock("@/wasm/ysm-wasm-data.js", () => ({
   _getWasmBinary: () => new ArrayBuffer(0),
 }));
-vi.mock("../wasm/ysm-glue-data.js", () => ({
+vi.mock("@/wasm/ysm-glue-data.js", () => ({
   _getGlueCode: () => "",
 }));
-vi.mock("../wasm/ysm-wasm-data-mt.js", () => ({
+vi.mock("@/wasm/ysm-wasm-data-mt.js", () => ({
   _getWasmBinaryMt: () => new ArrayBuffer(0),
 }));
-vi.mock("../wasm/ysm-glue-data-mt.js", () => ({
+vi.mock("@/wasm/ysm-glue-data-mt.js", () => ({
   _getGlueCodeMt: () => "",
 }));
 
 vi.mock("@/backend/idb.ts", () => ({ idbGet: vi.fn().mockResolvedValue(null) }));
-vi.mock("../preview-3d/decoder/utils.ts", () => ({ stripYsgpTextHeader: vi.fn() }));
+vi.mock("@/preview-3d/decoder/utils.ts", () => ({ stripYsgpTextHeader: vi.fn() }));
 vi.mock("./stats-core.ts", () => ({
   statsFromDecodedFiles: vi.fn(),
   statsFromJsonBytes: vi.fn(),

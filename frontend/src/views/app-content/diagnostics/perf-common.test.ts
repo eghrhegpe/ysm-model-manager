@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 // 先 mock bus（bindPerfCopyHandlers 用得到）
-vi.mock("../../../bus.ts", () => ({
+vi.mock("@/bus", () => ({
   bus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 

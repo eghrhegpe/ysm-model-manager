@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from "vitest";
 // 与 test-setup 全局 zhCN mock 竞争同一模块，先到先得会让本文件或兄弟文件拿错绑定
 // （期望 key 收到中文 / 期望中文收到 key）。用 resetModules + 动态 import 把 errors.ts
 // 的求值限定在本文件 mock 表内，互不污染。
-vi.mock("../../core/i18n/t.ts", () => ({
+vi.mock("@/core/i18n/t.ts", () => ({
   t: (key: string): string => key,
 }));
 vi.resetModules();

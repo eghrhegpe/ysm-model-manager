@@ -13,7 +13,7 @@ vi.mock("@/backend/app.ts", () => ({
     LoadResourceTypes: vi.fn().mockResolvedValue("{}"),
   }),
 }));
-vi.mock("../community-data.ts", () => ({
+vi.mock("@/views/app-content/community-data.ts", () => ({
   fetchCommunityCreators: vi.fn(),
   fetchCommunitySites: vi.fn(),
   mergeCommunityCreators: vi.fn(),

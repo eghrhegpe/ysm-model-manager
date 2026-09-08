@@ -51,51 +51,51 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../vrm-materials.ts", () => ({
+vi.mock("@/preview-3d/vrm-materials.ts", () => ({
   listVrmMaterials: vi.fn(() => []),
   getVrmMaterialDetail: vi.fn(() => ({})),
   setVrmMaterialVisible: vi.fn(),
   setVrmMaterialOpacity: vi.fn(),
 }));
-vi.mock("../bone-tools.ts", () => ({
+vi.mock("@/preview-3d/bone-tools.ts", () => ({
   buildBoneTree: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
 }));
 vi.mock("./vrm-bone-ui.ts", () => ({
   makeBonePanelRenderer: vi.fn(() => () => () => {}),
 }));
-vi.mock("../semantic-bones.ts", () => ({
+vi.mock("@/preview-3d/semantic-bones.ts", () => ({
   vrmSemanticBoneMap: vi.fn(() => ({})),
 }));
-vi.mock("../perception/breath.ts", () => ({
+vi.mock("@/preview-3d/perception/breath.ts", () => ({
   createBreathController: vi.fn(() => ({
     apply: vi.fn(),
     reset: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("../perception/gaze.ts", () => ({
+vi.mock("@/preview-3d/perception/gaze.ts", () => ({
   createGazeController: vi.fn(() => ({
     apply: vi.fn(),
     reset: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("../perception/blink.ts", () => ({
+vi.mock("@/preview-3d/perception/blink.ts", () => ({
   createBlinkController: vi.fn(() => ({
     apply: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("../mmd-foot-ik.ts", () => ({
+vi.mock("@/preview-3d/mmd-foot-ik.ts", () => ({
   createFootIKController: vi.fn(() => ({
     apply: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("../screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
-vi.mock("../frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/frustum-cull.ts", () => ({
   registerModelRoot: vi.fn(),
   unregisterModelRoot: vi.fn(),
 }));

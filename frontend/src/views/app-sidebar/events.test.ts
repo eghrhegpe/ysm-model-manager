@@ -10,13 +10,13 @@ const { emitMock, runMcSearchMock, runLauncherDetectMock, currentRepoTypeMock } 
   currentRepoTypeMock: vi.fn(() => "ysm"),
 }));
 
-vi.mock("../../bus.ts", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
+vi.mock("@/bus", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
 // 2026-08-29 覆盖率补强：mc-search / launcher-detect 按钮路径 + restore 兜底可注入
 vi.mock("./launcher-detect.ts", () => ({
   runMcSearch: runMcSearchMock,
   runLauncherDetect: runLauncherDetectMock,
 }));
-vi.mock("../../features/repo/repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
+vi.mock("@/features/repo/repo-rtype.ts", () => ({ currentRepoType: currentRepoTypeMock }));
 vi.mock("./tpl.ts", () => ({
   instanceCardHeaderHTML: () => '<div class="instance-card-header"><div class="name"></div></div>',
 }));

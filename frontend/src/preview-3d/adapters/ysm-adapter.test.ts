@@ -61,26 +61,26 @@ const h = vi.hoisted(() => ({
   makeBonesPanelItem: vi.fn(),
 }));
 
-vi.mock("../ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
-vi.mock("../camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
-vi.mock("../bone-raycast.ts", () => ({
+vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
+vi.mock("@/preview-3d/camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
+vi.mock("@/preview-3d/bone-raycast.ts", () => ({
   buildBoneHierarchy: h.buildBoneHierarchy,
   registerBoneRaycast: h.registerBoneRaycast,
 }));
-vi.mock("../bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
-vi.mock("../cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
-vi.mock("../debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
-vi.mock("../frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
+vi.mock("@/preview-3d/cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
+vi.mock("@/preview-3d/debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
+vi.mock("@/preview-3d/frustum-cull.ts", () => ({
   registerModelRoot: h.registerModelRoot,
   unregisterModelRoot: h.unregisterModelRoot,
 }));
-vi.mock("../load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
-vi.mock("../perception/breath.ts", () => ({ createBreathController: h.createBreath }));
-vi.mock("../perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
-vi.mock("../screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));
-vi.mock("../ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
-vi.mock("../../utils/base/log.ts", () => ({ logWarn: h.logWarn }));
-vi.mock("../../utils/dom/editable-target.ts", () => ({ isEditableTarget: h.isEditableTarget }));
+vi.mock("@/preview-3d/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
+vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
+vi.mock("@/preview-3d/perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
+vi.mock("@/preview-3d/screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));
+vi.mock("@/preview-3d/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
+vi.mock("@/utils/base/log.ts", () => ({ logWarn: h.logWarn }));
+vi.mock("@/utils/dom/editable-target.ts", () => ({ isEditableTarget: h.isEditableTarget }));
 vi.mock("./bones-panel-node.ts", () => ({ makeBonesPanelItem: h.makeBonesPanelItem }));
 
 // ── 假依赖工厂 ─────────────────────────────────────────────

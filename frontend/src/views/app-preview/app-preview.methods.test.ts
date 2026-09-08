@@ -27,7 +27,7 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 const decodeYsmViaWasm = vi.hoisted(() => vi.fn());
-vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm }));
+vi.mock("@/preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm }));
 
 const detailSpies = vi.hoisted(() => ({
   showModelDetail: vi.fn(),

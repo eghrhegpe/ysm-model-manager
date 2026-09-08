@@ -11,7 +11,7 @@ const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({
   scanFilteredMock: vi.fn(),
 }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("../../utils/resource/types.ts", () => ({
+vi.mock("@/utils/resource/types.ts", () => ({
   RESOURCE_TYPES: { MMD: "EntityPlayer" },
   RESOURCE_TYPE_LABELS: { EntityPlayer: "角色模型" },
 }));

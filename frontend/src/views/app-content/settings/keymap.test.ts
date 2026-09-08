@@ -29,17 +29,17 @@ const { safeGet, safeSet, safeRemove, busEmit, loadTdKeymap } = vi.hoisted(() =>
   })),
 }));
 
-vi.mock("../../../utils/dom/storage.ts", () => ({
+vi.mock("@/utils/dom/storage.ts", () => ({
   safeGet: (...a: unknown[]) => safeGet(...(a as [string])),
   safeSet: (...a: unknown[]) => safeSet(...(a as [string, string])),
   safeRemove: (...a: unknown[]) => safeRemove(...(a as [string])),
 }));
 
-vi.mock("../../../bus.ts", () => ({
+vi.mock("@/bus", () => ({
   bus: { emit: (...a: unknown[]) => busEmit(...a) },
 }));
 
-vi.mock("../../../preview-3d/model3d.ts", () => ({
+vi.mock("@/preview-3d/model3d.ts", () => ({
   loadTdKeymap: () => loadTdKeymap(),
 }));
 

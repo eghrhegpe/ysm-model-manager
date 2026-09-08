@@ -29,11 +29,11 @@ const mocks = {
   modalConfirm,
 };
 
-vi.mock("../require-mcroot.ts", () => ({
+vi.mock("@/features/require-mcroot.ts", () => ({
   requireMcRoot: vi.fn().mockResolvedValue("/mc"),
 }));
 
-vi.mock("../dialogs/modal-confirm.ts", () => ({
+vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
   modalConfirm,
 }));
 

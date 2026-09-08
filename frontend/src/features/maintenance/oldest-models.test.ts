@@ -22,7 +22,7 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../services/resource-registry.ts", () => ({
+vi.mock("@/services/resource-registry.ts", () => ({
   loadResourceRegistry: vi.fn().mockResolvedValue({
     ysm: { icon: "📦" },
     mmd: { icon: "🎭" },

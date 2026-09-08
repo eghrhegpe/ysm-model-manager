@@ -11,7 +11,7 @@ const { getAppMock, pickDirMock } = vi.hoisted(() => ({
   pickDirMock: vi.fn(),
 }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("../../utils/dom/directory-picker.ts", () => ({ pickDirectory: pickDirMock }));
+vi.mock("@/utils/dom/directory-picker.ts", () => ({ pickDirectory: pickDirMock }));
 
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
 import type { BusyGuard } from "./launcher-detect.ts";

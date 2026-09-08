@@ -38,13 +38,13 @@ vi.mock("@/backend/app.ts", async () => {
   return setupAppMock();
 });
 
-vi.mock("../dialogs/modal-confirm.ts", () => ({
+vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
-vi.mock("../dialogs/modal-progress.ts", () => ({
+vi.mock("@/features/dialogs/modal-progress.ts", () => ({
   modalProgress: mocks.modalProgress,
 }));
-vi.mock("../../utils/format/fmt-mb.ts", () => ({
+vi.mock("@/utils/format/fmt-mb.ts", () => ({
   fmtMB: (n: number): string => (n / 1024 / 1024).toFixed(1) + " MB",
 }));
 
@@ -53,7 +53,7 @@ vi.mock("@wailsio/runtime", () => ({
   Window: { SetTitle: mocks.windowSetTitle },
 }));
 
-vi.mock("../../utils/dom/errors.ts", () => ({
+vi.mock("@/utils/dom/errors.ts", () => ({
   friendlyError: (e: unknown): string =>
     e instanceof Error ? e.message : String(e),
 }));

@@ -31,7 +31,7 @@ vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: mocks.isWebPlatform,
 }));
 
-vi.mock("../../utils/debug/debug.ts", () => ({
+vi.mock("@/utils/debug/debug.ts", () => ({
   dbg: vi.fn(),
 }));
 

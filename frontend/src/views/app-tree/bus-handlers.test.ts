@@ -67,14 +67,14 @@ vi.mock("./loader.ts", () => ({
   loadEntries: loadEntriesMock,
 }));
 
-vi.mock("../../features/dialogs/modal-prompt.ts", () => ({
+vi.mock("@/features/dialogs/modal-prompt.ts", () => ({
   modalPrompt: modalPromptMock,
 }));
-vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
+vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: modalConfirmMock,
 }));
 
-vi.mock("../../features/dialogs/batch-rename.ts", () => ({
+vi.mock("@/features/dialogs/batch-rename.ts", () => ({
   showBatchRenameDialog: showBatchRenameDialogMock,
 }));
 

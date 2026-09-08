@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   cleanupPreview: vi.fn(),
 }));
 vi.mock("@/backend/app.ts", () => ({ getApp: mocks.getAppMock }));
-vi.mock("../../preview-3d/adapters/mount-preview-core.ts", () => ({
+vi.mock("@/preview-3d/adapters/mount-preview-core.ts", () => ({
   switchPreview: mocks.switchPreview,
   hasActivePreview: mocks.hasActivePreview,
   cleanupPreview: mocks.cleanupPreview,

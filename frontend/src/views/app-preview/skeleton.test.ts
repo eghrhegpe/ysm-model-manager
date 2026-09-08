@@ -41,7 +41,7 @@ const {
 // t 与 locale 解耦：返回 key，并把收到的插值参数拼回（decl/size 等数值可见，
 // 便于断言验证真实传入 t 的声明/加载尺寸，无需加载真实语言包——真实 t 在无该
 // 命名空间时同样返回 key）。无参数时退化为纯 key（与旧行为一致）。
-vi.mock("../../core/i18n/t.ts", () => ({
+vi.mock("@/core/i18n/t.ts", () => ({
   t: (key: string, params?: Record<string, unknown>) => {
     if (!params || Object.keys(params).length === 0) return key;
     const ps = Object.entries(params)
@@ -54,11 +54,11 @@ vi.mock("./loader.ts", () => ({ loadModelData, fillAuthorsAsync: vi.fn().mockRes
 vi.mock("./model2d/model2d.ts", () => ({ renderModel2D }));
 vi.mock("./zoom.ts", () => ({ openFullPreview }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("../../bus.ts", () => ({ bus: { emit: busEmit } }));
-vi.mock("../../utils/dom/errors.ts", () => ({ friendlyError }));
+vi.mock("@/bus", () => ({ bus: { emit: busEmit } }));
+vi.mock("@/utils/dom/errors.ts", () => ({ friendlyError }));
 vi.mock("./tpl.ts", () => ({ statsCardHTML }));
 vi.mock("./bone-names.ts", () => ({ buildBoneNamesText }));
-vi.mock("../../preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
+vi.mock("@/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
 vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
 // §5.7 shared 化：3D 打开收敛到 ysm-3d（path 驱动），骨架层测试 mock 编排层——
 // shared 外壳（挂 scene/导航/raycast）集成由 ysm-3d.test.ts（three stub）覆盖

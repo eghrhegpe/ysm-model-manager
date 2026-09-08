@@ -40,11 +40,11 @@ vi.mock("@/backend/app.ts", async () => {
   return setupAppMock();
 });
 
-vi.mock("../../utils/resource/types.ts", () => ({
+vi.mock("@/utils/resource/types.ts", () => ({
   RESOURCE_TYPE_LABELS: { ysm: "YSM模型", pack: "资源包", SceneModel: "场景模型" },
 }));
 
-vi.mock("../../utils/dom/errors.ts", () => ({
+vi.mock("@/utils/dom/errors.ts", () => ({
   friendlyError: (e: unknown, fallback: string): string =>
     e instanceof Error ? e.message : fallback,
 }));

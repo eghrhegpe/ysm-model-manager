@@ -16,7 +16,7 @@ const { cacheGetMock, cacheSetMock, AnalyzeMock, parseAnimMock, ExtractSummaryMo
     CachedAvatarMock: vi.fn(),
   }));
 
-vi.mock("../../preview-3d/decoder/cache.ts", () => ({
+vi.mock("@/preview-3d/decoder/cache.ts", () => ({
   cacheGet: cacheGetMock,
   cacheSet: cacheSetMock,
 }));
@@ -30,7 +30,7 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../utils/animation/animation.ts", () => ({
+vi.mock("@/utils/animation/animation.ts", () => ({
   parseBedrockAnimationJSON: parseAnimMock,
 }));
 

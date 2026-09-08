@@ -258,7 +258,7 @@ vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 // 本测试 three 全 stub 无 WebGL——mock SkyCapability 为 no-op，隔离体素渲染逻辑。
 // 方法面同步 mount-preview-core 的 shared 初始化路径（setPreset/apply/getTimeOfDay 即时调用；
 // setTime/setCloudCoverage 是滑块回调，一并 mock 防 undefined）
-vi.mock("../../preview-3d/caps/sky-capability.ts", () => ({
+vi.mock("@/preview-3d/caps/sky-capability.ts", () => ({
   SkyCapability: class {
     apply = vi.fn();
     dispose = vi.fn();
@@ -279,7 +279,7 @@ const { _noopHandler } = vi.hoisted(() => {
 // 注册表 createAll 会触发真实 cap 工厂（EnvironmentCapability.buildEnvironment 等），
 // 需要完整 THREE 环境——本测试 three 全 stub，mock 注册表为 no-op。
 // getById 返回 Proxy，任意方法调用都是 vi.fn()，不用逐个列举。
-vi.mock("../../preview-3d/caps/scene-capability-registry.ts", () => ({
+vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
   sceneCapabilityRegistry: {
     createAll: vi.fn(() => []),
     loadAll: vi.fn(),
@@ -291,7 +291,7 @@ vi.mock("../../preview-3d/caps/scene-capability-registry.ts", () => ({
 }));
 // ADR-081 LightCapability 依赖真实 WebGL/THREE（聚光灯/体积光锥/方向光 position.copy），
 // 本测试 three 全 stub 无 WebGL——mock 为 no-op，隔离体素渲染逻辑（同 SkyCapability）。
-vi.mock("../../preview-3d/caps/light-capability.ts", () => ({
+vi.mock("@/preview-3d/caps/light-capability.ts", () => ({
   LightCapability: class {
     apply = vi.fn();
     dispose = vi.fn();

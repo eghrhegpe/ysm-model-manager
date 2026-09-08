@@ -27,9 +27,9 @@ const {
   getStatsPoolSizeMock: vi.fn(() => 2),
 }));
 
-vi.mock("../../bus.ts", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
+vi.mock("@/bus", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("../../features/dialogs/adv-filter.ts", () => ({
+vi.mock("@/features/dialogs/adv-filter.ts", () => ({
   modalAdvFilter: modalAdvFilterMock,
 }));
 // browser-adapter：toolbar-search 消费的 4 函数 + 真平台模块引用空垫

@@ -27,14 +27,14 @@ const nbtp = vi.hoisted(() => ({
   nbtStructureView: vi.fn(),
   schematicSummaryView: vi.fn(),
 }));
-vi.mock("../parsers/nbt-parse.ts", () => nbtp);
+vi.mock("@/parsers/nbt-parse.ts", () => nbtp);
 const vox = vi.hoisted(() => ({
   decodeVoxelNbt: vi.fn(),
   nbtVoxelView: vi.fn(),
   litematicVoxelView: vi.fn(),
   schematicVoxelView: vi.fn(),
 }));
-vi.mock("../parsers/voxel-parse.ts", () => vox);
+vi.mock("@/parsers/voxel-parse.ts", () => vox);
 
 // ── IDB 内存 store（test-setup 全局共享）──
 const idb = (globalThis as unknown as {

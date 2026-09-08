@@ -39,23 +39,23 @@ Object.assign(mocks, {
 
 
 
-vi.mock("../dialogs/modal-confirm.ts", () => ({
+vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
 
-vi.mock("../../utils/model-name/display.ts", () => ({
+vi.mock("@/utils/model-name/display.ts", () => ({
   renderDisplayName: mocks.renderDisplayName,
 }));
 
-vi.mock("../../utils/dom/errors.ts", () => ({
+vi.mock("@/utils/dom/errors.ts", () => ({
   friendlyError: mocks.friendlyError,
 }));
 
-vi.mock("../../services/resource-registry.ts", () => ({
+vi.mock("@/services/resource-registry.ts", () => ({
   loadResourceRegistry: mocks.loadResourceRegistry,
 }));
 
-vi.mock("../../utils/resource/types.ts", () => ({
+vi.mock("@/utils/resource/types.ts", () => ({
   RESOURCE_TYPES: { YSM: "ysm", PACK: "resourcepack" },
 }));
 

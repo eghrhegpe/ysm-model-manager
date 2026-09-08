@@ -39,21 +39,21 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 // heavy feature 模块 mock（断开 import 副作用链；ADR-188：core/handlers/global 壳
 // 已删，改为分别 mock core/page-store 与 features/sync）
-vi.mock("../../core/page-store.ts", () => ({
+vi.mock("@/core/page-store.ts", () => ({
   registerPageStore: vi.fn(),
   resolveInitialPage: () => "repository",
   PageStore: { get currentPage() { return "repository" as const; } },
 }));
-vi.mock("../../features/sync.ts", () => ({
+vi.mock("@/features/sync.ts", () => ({
   registerSync: vi.fn(),
 }));
-vi.mock("../../features/context-menu/context-menus.ts", () => ({
+vi.mock("@/features/context-menu/context-menus.ts", () => ({
   registerContextMenus: vi.fn(() => []),
 }));
-vi.mock("../../features/pack-ops/instance-ops.ts", () => ({
+vi.mock("@/features/pack-ops/instance-ops.ts", () => ({
   registerInstanceOps: vi.fn(() => []),
 }));
-vi.mock("../../features/platform/android-events.ts", () => ({
+vi.mock("@/features/platform/android-events.ts", () => ({
   registerAndroidEvents: vi.fn(() => []),
 }));
 vi.mock("./diagnostics/init.ts", () => ({
@@ -69,11 +69,11 @@ vi.mock("./diagnostics/dedup.ts", () => ({
     resetConfig: vi.fn(),
   }),
 }));
-vi.mock("../../features/maintenance/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
-vi.mock("../../features/maintenance/oldest-models.ts", () => ({
+vi.mock("@/features/maintenance/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
+vi.mock("@/features/maintenance/oldest-models.ts", () => ({
   loadOldestModel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../features/community/data.ts", () => ({ tryFetchModels: vi.fn() }));
+vi.mock("@/features/community/data.ts", () => ({ tryFetchModels: vi.fn() }));
 vi.mock("./settings/init.ts", () => ({
   initSettings: vi.fn().mockResolvedValue(undefined),
 }));
@@ -83,8 +83,8 @@ vi.mock("./community-data.ts", () => ({
   clearAllCommunityCache: vi.fn(),
 }));
 vi.mock("./site/site-view.ts", () => ({ renderSiteView: vi.fn(() => () => {}) }));
-vi.mock("../../features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }));
-vi.mock("../../utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => "") }));
+vi.mock("@/features/community/events.ts", () => ({ bindRepoEvents: vi.fn() }));
+vi.mock("@/utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => "") }));
 
 import { bus } from "@/bus";
 import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";

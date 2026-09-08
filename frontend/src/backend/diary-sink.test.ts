@@ -15,7 +15,7 @@ vi.mock("./app.ts", () => ({
 
 // P1-6 修复：diary-sink 改用 dbg 环形缓冲替代 console.warn——
 // 测试同步 spy dbg 模块，验证落盘失败有留痕
-vi.mock("../utils/debug/debug.ts", () => ({
+vi.mock("@/utils/debug/debug.ts", () => ({
   dbg: dbgMock,
 }));
 

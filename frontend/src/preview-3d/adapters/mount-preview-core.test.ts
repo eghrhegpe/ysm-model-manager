@@ -102,7 +102,7 @@ const capsById = new Map<string, Record<string, unknown>>(
     (id) => [id, makeCap(id)],
   ),
 );
-vi.mock("../caps/scene-capability-registry.ts", () => ({
+vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
   sceneCapabilityRegistry: {
     createAll: vi.fn(() => [...capsById.values()]),
     getById: vi.fn((id: string) => capsById.get(id) ?? null),
@@ -113,7 +113,7 @@ vi.mock("../caps/scene-capability-registry.ts", () => ({
 }));
 
 // ---- 菜单壳 / 输入 / 焦点 / 视锥裁剪：桩 ----
-vi.mock("../menu/core.ts", () => ({
+vi.mock("@/preview-3d/menu/core.ts", () => ({
   mountPreviewRootMenu: vi.fn((_overlay: unknown, ctx: Record<string, unknown>) => {
     h.menuOpts = ctx;
     h.menuHandle = {
@@ -133,7 +133,7 @@ vi.mock("../../../utils/dom/focus-restore.ts", () => ({
   returnFocus: vi.fn(),
   trapFocusAcrossShadow: vi.fn(() => vi.fn()),
 }));
-vi.mock("../frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/frustum-cull.ts", () => ({
   isFrustumCullEnabled: vi.fn(() => false),
   restoreModelGroupsVisible: vi.fn(),
   cullModelGroups: vi.fn(),

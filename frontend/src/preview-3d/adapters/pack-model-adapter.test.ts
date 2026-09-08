@@ -9,10 +9,10 @@ const hoisted = vi.hoisted(() => ({
   renderable: vi.fn(() => true),
 }));
 
-vi.mock("../screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
-vi.mock("../texture-cache.ts", () => ({
+vi.mock("@/preview-3d/texture-cache.ts", () => ({
   textureCache: {
     acquire: vi.fn((u: string, _f: (u: string) => THREE.Texture) => {
       const img = new Image(); img.src = u;
@@ -21,11 +21,11 @@ vi.mock("../texture-cache.ts", () => ({
     release: vi.fn(),
   },
 }));
-vi.mock("../parse-java-model.ts", () => ({
+vi.mock("@/preview-3d/parse-java-model.ts", () => ({
   parseJavaModel: hoisted.parseMock,
   isRenderableModel: hoisted.renderable,
 }));
-vi.mock("../mc-tints.ts", () => ({
+vi.mock("@/preview-3d/mc-tints.ts", () => ({
   loadMcTints: vi.fn(() => Promise.resolve()),
   getTintColorSync: vi.fn(() => 0x4a9d2b),
 }));

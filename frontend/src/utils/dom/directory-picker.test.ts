@@ -36,11 +36,11 @@ vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: mocks.isWebPlatform,
 }));
 
-vi.mock("../../bus.ts", () => ({
+vi.mock("@/bus", () => ({
   bus: { emit: mocks.busEmit },
 }));
 
-vi.mock("../../core/i18n/t.ts", () => ({
+vi.mock("@/core/i18n/t.ts", () => ({
   t: mocks.t,
 }));
 

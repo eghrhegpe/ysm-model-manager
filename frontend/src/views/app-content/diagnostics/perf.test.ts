@@ -17,7 +17,7 @@ const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   isWebPlatform: vi.fn(() => false),
 }));
 
-vi.mock("../../../services/cli-bridge.ts", () => ({ executeCLI }));
+vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
 const esc = (s: unknown): string =>

@@ -13,10 +13,10 @@ vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 // can() 默认 true（桌面/常规语义）；"查看器模式"用例内设 false 模拟无能力
 const { canMock } = vi.hoisted(() => ({ canMock: vi.fn(() => true) }));
 vi.mock("@/backend/capabilities.ts", () => ({ can: canMock }));
-vi.mock("../../features/dialogs/modal-confirm.ts", () => ({
+vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
   modalConfirm: vi.fn(),
 }));
-vi.mock("../../features/dialogs/modal-prompt.ts", () => ({
+vi.mock("@/features/dialogs/modal-prompt.ts", () => ({
   modalPrompt: vi.fn(),
 }));
 vi.mock("./toolbar-events.ts", () => ({ bindToolbarEvents: vi.fn() }));

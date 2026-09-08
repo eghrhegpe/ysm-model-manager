@@ -11,6 +11,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   SaveAppConfig: vi.fn().mockResolvedValue(undefined),
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
   PullResourceFromInstance: vi.fn().mockResolvedValue(0),
+  ClearScanCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 // registry.ts 已删（架构锐评 P1-2 修正版）：loader 假实现注入改标准 vi.mock

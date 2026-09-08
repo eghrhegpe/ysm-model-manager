@@ -13,10 +13,10 @@ const { getApp, screenshotFn, renderMultiAngle, saveFile } = vi.hoisted(() => ({
   saveFile: vi.fn(),
 }));
 
-vi.mock("../../core/i18n/t.ts", () => ({ t: (k: string) => k }));
+vi.mock("@/core/i18n/t.ts", () => ({ t: (k: string) => k }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("../../preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
-vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
+vi.mock("@/preview-3d/screenshot-render.ts", () => ({ renderMultiAngle }));
+vi.mock("@/preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)) }));
 
 import { setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow, saveScreenshot } from "./skeleton-render.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";

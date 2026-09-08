@@ -19,9 +19,9 @@ const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.h
   isViewerMode: vi.fn(() => false),
 }));
 
-vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
+vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("../../../services/resource-registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("@/backend/capabilities.ts", () => ({ can }));
 vi.mock("@/backend/platform.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/backend/platform.ts")>();

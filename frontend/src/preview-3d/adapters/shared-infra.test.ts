@@ -16,11 +16,11 @@ const { registryMocks } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../caps/scene-capability-registry.ts", () => ({
+vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
   sceneCapabilityRegistry: registryMocks,
 }));
 
-vi.mock("../state/preview-state.ts", () => ({
+vi.mock("@/preview-3d/state/preview-state.ts", () => ({
   setSceneCapabilityLookup: vi.fn(),
 }));
 

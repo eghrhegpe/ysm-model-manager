@@ -11,7 +11,7 @@ const { getTagFromRole, getTagIconFromRole, loadFavs } = vi.hoisted(() => ({
 }));
 
 vi.mock("./workshop-data.ts", () => ({ getTagFromRole, loadFavs }));
-vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
+vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getSiteIcon: vi.fn(() => "🌐"),
   getTagIconFromRole,
 }));

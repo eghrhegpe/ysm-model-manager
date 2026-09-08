@@ -85,7 +85,7 @@ vi.mock("./mmd-texture-decoder.ts", async (importOriginal) => {
     applyWorkerDecodedTextures: hoisted.applyTexturesMock,
   };
 });
-vi.mock("../load-trace.ts", async (importOriginal) => {
+vi.mock("@/preview-3d/load-trace.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/preview-3d/load-trace.ts")>();
   return {
     ...actual,
@@ -113,11 +113,11 @@ vi.mock("./mmd-pmx-parser.ts", async (importOriginal) => {
     },
   };
 });
-vi.mock("../decoder/mmd-ktx2-encoder.ts", () => ({
+vi.mock("@/preview-3d/decoder/mmd-ktx2-encoder.ts", () => ({
   scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
 }));
-vi.mock("../../utils/main-thread-watch.ts", async (importOriginal) => {
+vi.mock("@/utils/main-thread-watch.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/utils/main-thread-watch.ts")>();
   return {
     ...actual,
@@ -127,7 +127,7 @@ vi.mock("../../utils/main-thread-watch.ts", async (importOriginal) => {
     },
   };
 });
-vi.mock("../screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot.ts", () => ({
   screenshotFromRenderer: (...args: unknown[]) => hoisted.screenshotMock(...args),
 }));
 

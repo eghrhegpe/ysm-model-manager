@@ -26,13 +26,13 @@ vi.mock("@/backend/app.ts", () => ({
 
 // FAB 3D 一键跳转的动态 import 链（_viewerFabClick 内 await import）——
 // 三模块均不在本测试 import 链上静态加载，mock 后只被 _viewerFabClick 消费
-vi.mock("../../views/app-content/init-pages.ts", () => ({
+vi.mock("@/views/app-content/init-pages.ts", () => ({
   getLastModelPath: vi.fn(),
 }));
-vi.mock("../../views/app-preview/empty-3d.ts", () => ({
+vi.mock("@/views/app-preview/empty-3d.ts", () => ({
   openEmpty3DFullscreen: vi.fn(),
 }));
-vi.mock("../../views/app-preview/preview-library.ts", () => ({
+vi.mock("@/views/app-preview/preview-library.ts", () => ({
   openModel3DFullscreen: vi.fn(),
 }));
 import { getApp, type AppBindings } from "@/backend/app.ts";

@@ -5,12 +5,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // mock bus —— toast.ts 通过 bus.emit("toast:show", ...) 发送通知
 const mockEmit = vi.fn();
-vi.mock("../../bus.ts", () => ({
+vi.mock("@/bus", () => ({
   bus: { emit: mockEmit },
 }));
 
 // mock i18n t() —— 返回 key 本身
-vi.mock("../../core/i18n/t.ts", () => ({
+vi.mock("@/core/i18n/t.ts", () => ({
   t: (key: string): string => key,
 }));
 

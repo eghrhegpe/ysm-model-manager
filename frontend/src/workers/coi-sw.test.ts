@@ -18,7 +18,7 @@ const storageMock = vi.hoisted(() => ({
   safeGet: vi.fn<(key: string) => string | null>(() => null),
   safeSet: vi.fn(),
 }));
-vi.mock("../utils/dom/storage.ts", () => storageMock);
+vi.mock("@/utils/dom/storage.ts", () => storageMock);
 
 const registerMock = vi.fn();
 const reloadMock = vi.fn();

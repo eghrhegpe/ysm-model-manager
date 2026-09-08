@@ -51,7 +51,7 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("../../features/dialogs/adv-filter.ts", () => ({
+vi.mock("@/features/dialogs/adv-filter.ts", () => ({
   modalAdvFilter: modalAdvFilterMock,
 }));
 
@@ -61,7 +61,7 @@ vi.mock("./render.ts", () => ({
   getVsRows: getVsRowsMock,
 }));
 
-vi.mock("../../utils/debug/debug.ts", () => ({
+vi.mock("@/utils/debug/debug.ts", () => ({
   dbg: vi.fn(),
 }));
 
@@ -74,7 +74,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
     isViewerMode: isViewerModeMock,
   };
 });
-vi.mock("../../utils/dom/directory-picker.ts", () => ({
+vi.mock("@/utils/dom/directory-picker.ts", () => ({
   resolveAndroidRepoDir: resolveAndroidRepoDirMock,
 }));
 

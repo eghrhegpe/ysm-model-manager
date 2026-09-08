@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from "vitest";
 
 // resource_types.json mock：typeFromWebDir 依赖
-vi.mock("../utils/resource/resource-types.json", () => ({
+vi.mock("@/utils/resource/resource-types.json", () => ({
   default: {
     resourceTypes: [
       { id: "ysm", instanceDir: "ysm-assets" },

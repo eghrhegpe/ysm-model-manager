@@ -38,10 +38,10 @@ vi.mock("@/backend/platform.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
 // init-pages.ts 是页面装配大模块（含诊断/回收站等 import 链），events 只用 rememberModelPath
-vi.mock("../app-content/init-pages.ts", () => ({
+vi.mock("@/views/app-content/init-pages.ts", () => ({
   rememberModelPath: rememberModelPathMock,
 }));
-vi.mock("../../utils/model-name/display.ts", () => ({
+vi.mock("@/utils/model-name/display.ts", () => ({
   parseModelName: parseModelNameMock,
 }));
 

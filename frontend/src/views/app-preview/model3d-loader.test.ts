@@ -30,14 +30,14 @@ vi.mock("@/backend/platform.ts", () => ({
 vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
 }));
-vi.mock("../../preview-3d/decoder/wasm-decode.ts", () => ({
+vi.mock("@/preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
 }));
-vi.mock("../../preview-3d/spec-builder.ts", () => ({
+vi.mock("@/preview-3d/spec-builder.ts", () => ({
   buildSpecFromGeometryJSON: tsSpecBuilderMock,
 }));
 
-vi.mock("../../preview-3d/texture-cache.ts", () => ({
+vi.mock("@/preview-3d/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 

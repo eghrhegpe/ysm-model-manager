@@ -102,12 +102,91 @@ export function assertionViolations(
   return out;
 }
 
+/** 脚本名正则：反引号包裹的 basename（含 .ts/.mjs/.ps1/.sh；已删除区块还可能有 .py/.bat 历史）。 */
+const SCRIPT_NAME_RE = /^`([\w.-]+\.(?:ts|mjs|ps1|sh|py|bat))`$/;
+
+/** 提取表格行第一列的脚本名；非脚本名第一列（表头/映射表第一列）返回 null。 */
+function firstColScript(line: string): string | null {
+  const t = line.trim();
+  if (!t.startsWith('|')) return null;
+  const cols = t.split('|');
+  if (cols.length < 2) return null;
+  const m = cols[1]!.trim().match(SCRIPT_NAME_RE);
+  return m ? (m[1] ?? null) : null;
+}
+
+/** 脚本名 → 词干（去扩展名），用于幽灵引用的宽松匹配（event-audit.mjs 命中 event-audit 裸词）。 */
+function stemOf(name: string): string {
+  return name.replace(/\.(?:ts|mjs|ps1|sh|py|bat)$/, '');
+}
+
+/**
+ * 重复登记检测（纯函数，供契约测试复用）：同一脚本 basename 出现在
+ * 「登记性表格第一列」≥2 行 → 重复登记。
+ * 口径：只数第一列（`| \`xxx.ts\` | 说明 |`），映射表（红线→工具，工具在第二列）
+ * 与正文提及不算登记；ps1/sh 同名不同扩展名是不同脚本不误报。
+ */
+export function duplicateRegistrations(readmeText: string): string[] {
+  const count = new Map<string, number>();
+  for (const line of readmeText.split('\n')) {
+    const name = firstColScript(line);
+    if (name) count.set(name, (count.get(name) ?? 0) + 1);
+  }
+  return [...count.entries()].filter(([, c]) => c > 1).map(([n]) => n);
+}
+
+/**
+ * 幽灵引用检测（纯函数，供契约测试复用）：「已删除」区块登记过的脚本名，
+ * 若在已删除区块之外仍被引用（完整名或词干）→ 幽灵引用。
+ * 口径：已删除区块自身登记行 + 其「接管者」提及（如 event-graph.ts）不算幽灵；
+ * 只在区块外搜索，避免把删除记录本身误报。
+ */
+export function ghostReferences(readmeText: string): string[] {
+  const lines = readmeText.split('\n');
+  // 定位 ### 区块边界
+  const sections: Array<{ title: string; start: number }> = [];
+  lines.forEach((l, i) => {
+    const t = l.trim();
+    if (/^###\s/.test(t)) sections.push({ title: t, start: i });
+  });
+  // 已删除区块范围 + 区块内第一列脚本名集合
+  const deleted = new Set<string>();
+  const ranges: Array<[number, number]> = [];
+  for (let k = 0; k < sections.length; k++) {
+    const s = sections[k]!;
+    if (!s.title.startsWith('### 已删除')) continue;
+    const end = k + 1 < sections.length ? sections[k + 1]!.start : lines.length;
+    ranges.push([s.start, end]);
+    for (let i = s.start + 1; i < end; i++) {
+      const name = firstColScript(lines[i]!);
+      if (name) deleted.add(name);
+    }
+  }
+  if (!deleted.size) return [];
+  // 在已删除区块之外搜索：完整名 或 词干（裸词引用也命中）
+  const ghosts: string[] = [];
+  for (const name of deleted) {
+    const patterns = [name, stemOf(name)];
+    let found = false;
+    for (let i = 0; i < lines.length && !found; i++) {
+      if (ranges.some(([a, b]) => i >= a && i < b)) continue;
+      const line = lines[i]!;
+      if (patterns.some((p) => line.includes(p))) found = true;
+    }
+    if (found) ghosts.push(name);
+  }
+  return ghosts;
+}
+
 function main() {
   const files = collectScripts({ includeNonTs: true }); // 含 hooks/ + scripts/ 下 .sh/.ps1（构建/发布脚本同样要登记）
   const readme = fs.readFileSync(path.join(SCRIPTS_DIR, 'README.md'), 'utf8');
 
   const missing = missingFromReadme(files, readme);
   const violations = assertionViolations(readme);
+  const duplicates = duplicateRegistrations(readme);
+  const ghosts = ghostReferences(readme);
+  const clean = missing.length === 0 && violations.length === 0 && duplicates.length === 0 && ghosts.length === 0;
 
   if (JSON_OUT) {
     console.log(
@@ -118,15 +197,20 @@ function main() {
             registered: files.length - missing.length,
             missing: missing.length,
             assertionViolations: violations.length,
+            duplicates: duplicates.length,
+            ghosts: ghosts.length,
+            ok: clean,
           },
           missing,
           assertionViolations: violations,
+          duplicates,
+          ghosts,
         },
         null,
         2,
       ),
     );
-    if (missing.length || violations.length) process.exit(1);
+    if (!clean) process.exit(1);
     return;
   }
 
@@ -139,7 +223,11 @@ function main() {
   if (!missing.length) console.log('✅ 所有脚本均已登记在 scripts/README.md。');
   for (const v of violations) console.log(`❌ ${v}`);
   if (!violations.length) console.log('✅ README 关键描述均无过时措辞漂移。');
-  if (missing.length || violations.length) process.exit(1);
+  for (const d of duplicates) console.log(`❌ README 重复登记: ${d}`);
+  if (!duplicates.length) console.log('✅ README 登记性表格无重复登记。');
+  for (const g of ghosts) console.log(`❌ README 幽灵引用（已删脚本仍被引用）: ${g}`);
+  if (!ghosts.length) console.log('✅ README 无幽灵引用。');
+  if (!clean) process.exit(1);
 }
 
 main();

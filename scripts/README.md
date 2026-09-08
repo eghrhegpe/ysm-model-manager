@@ -18,7 +18,7 @@
 
 硬规则：
 
-- 检查类脚本（`check-*` / `*-check` / `review` / `doctor` / `link-checker` / `type-consistency` / `event-audit` / `binding-check`）必须支持 `--json` 或默认输出 JSON，供 CI / 子代理稳定消费。
+- 检查类脚本（`check-*` / `*-check` / `review` / `doctor` / `link-checker` / `type-consistency` / `event-graph` / `binding-check`）必须支持 `--json` 或默认输出 JSON，供 CI / 子代理稳定消费。
 
 - 共享能力（`walk` / `rg` / `ROOT` / `frontmatter` 解析）一律 `import` 自 `scripts` 共享层，**禁止内联通用样板**；领域专用的文件收集器（带扩展名过滤 / 跳过集合 / 回调，如 `gen-vitepress-sidebar` 的 md walker）属合法内联，不计入违规。
 
@@ -117,7 +117,6 @@
 | 脚本                                 | 说明                                                                                                                                                                                                                                                                                     |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gen-knowledge-index.ts`           | 知识卡索引生成（docs/knowledge/index.md）                                                                                                                                                                                                                                                       |
-| `check-go-coverage-threshold.ts`   | Go 包级覆盖率阈值门禁：解析 `go tool cover -func` 输出按包聚合比对阈值（DEFAULT_THRESHOLDS + `--thresholds` 追加；SKIP_PACKAGES 跳过；`--json` 机读）                                                                                                                                     |
 | `check-knowledge-drift.ts`         | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费）                                                                                                                                                                                           |
 | `hooks/knowledge-affected-hint.ts` | `prepare-commit-msg` 钩子辅助脚本：stderr 摘要提示受影响知识卡（非阻断、幂等，AI 终端可见），并检测「本次 diff 已引入新写法而卡仍写过时旧词」的疑似过时句精确指行（ADR-047 增强，迁移对表 STALE\_KEYWORD\_PAIRS），归一化 Git Bash msys 路径                                                                                                                        |
 | `hooks/coverage-suggest-hint.ts`   | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`）；v2：并入 **check-diff-coverage --suggest --staged** 的「📈 变更行覆盖率建议」区块（本次暂存变更文件，双区块幂等剥离）                                                               |
@@ -238,7 +237,7 @@
 | --------------------------------------------------------------------- | --------------------- |
 | `resource_types.json` → `extensions.ts` 派生链路校验（ADR-014 单一事实来源，非字面量比对） | `type-consistency.ts` |
 | Markdown 内部链接断链检测                                                     | `link-checker.ts`     |
-| `EventsOn`/`bus.on` 注册位置审计                                            | `event-audit.mjs`     |
+| `EventsOn`/`bus.on` 注册位置审计                                            | `event-graph.ts`     |
 | AI 废话注释（「用于」「这是」「检查…是否」）                                              | `comment-checker.ts`  |
 | 注释掉的代码行                                                               | `comment-checker.ts`  |
 | `console.log` 调试残留                                                    | `comment-checker.ts`  |

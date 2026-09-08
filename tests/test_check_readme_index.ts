@@ -16,7 +16,13 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { missingFromReadme, findReadmeRow, assertionViolations } from '../scripts/check-readme-index.ts';
+import {
+  missingFromReadme,
+  findReadmeRow,
+  assertionViolations,
+  duplicateRegistrations,
+  ghostReferences,
+} from '../scripts/check-readme-index.ts';
 import { check, finish } from './_lib.mts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -104,6 +110,78 @@ check('全量扫描当前仓库应 0 描述违规（rc=0 + --json 含 assertionV
   const data = JSON.parse(out);
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
   assert.equal(data._summary.assertionViolations, 0, `预期 0 描述违规，实际 ${data._summary.assertionViolations}`);
+});
+
+// ── 登记处自洽（锐评三刀 #4：README 自身漂移检测）──
+// duplicateRegistrations：同一脚本 basename 在「登记性表格」（第一列）出现 ≥2 行 → 重复登记。
+// ghostReferences：已删除区块登记的脚本名仍被其它区块引用 → 幽灵引用。
+check('duplicateRegistrations：同区块表格行重复登记 → 报重复', () => {
+  const readme = [
+    '| `check-x.ts` | 说明 |',
+    '| `check-x.ts` | 又说明 |',
+  ].join('\n');
+  const dups = duplicateRegistrations(readme);
+  assert.deepEqual(dups, ['check-x.ts'], '同一表格列出现 2 行应报重复登记');
+});
+
+check('duplicateRegistrations：跨区块合法引用不误报（映射表/正文提及不算登记）', () => {
+  // 治理红线映射表、一致性校验表等「工具映射」多行引用同一脚本是合法设计（如 comment-checker
+  // 在红线映射出现 2 次）——只有「登记性表格第一列」的重复才算重复登记。
+  const readme = [
+    '| 红线 | 工具 |',
+    '| 空 JSDoc | `comment-checker.ts` |',
+    '| TODO 无编号 | `comment-checker.ts` |',
+    '正文也提 `comment-checker.ts`',
+  ].join('\n');
+  const dups = duplicateRegistrations(readme);
+  assert.deepEqual(dups, [], '映射表多行 + 正文提及不是重复登记');
+});
+
+check('duplicateRegistrations：前缀同名不误报（build-release.ps1 vs build-release.sh）', () => {
+  const readme = [
+    '| `build-release.ps1` | Windows |',
+    '| `build-release.sh` | bash 版 |',
+  ].join('\n');
+  const dups = duplicateRegistrations(readme);
+  assert.deepEqual(dups, [], 'ps1 与 sh 是不同脚本，不应误报');
+});
+
+check('duplicateRegistrations：全量扫描当前仓库应 0 重复（rc=0 + --json 含 duplicates）', () => {
+  const { rc, out } = runCheck(['--json']);
+  const data = JSON.parse(out);
+  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
+  assert.equal(data._summary.duplicates, 0, `预期 0 重复登记，实际 ${data._summary.duplicates}`);
+});
+
+check('ghostReferences：已删除脚本名仍被引用 → 报幽灵', () => {
+  const readme = [
+    '### 已删除（2026-09 清理）',
+    '| `dead-tool.mjs` | 被 event-graph.ts 接管 |',
+    '',
+    '### 一致性校验',
+    '| 事件审计 | `dead-tool.mjs` |',
+  ].join('\n');
+  const ghosts = ghostReferences(readme);
+  assert.deepEqual(ghosts, ['dead-tool.mjs'], '已删区块外的引用应报幽灵');
+});
+
+check('ghostReferences：已删除区块自身登记 + 接管者提及不误报', () => {
+  const readme = [
+    '### 已删除（2026-09 清理）',
+    '| `dead-tool.mjs` | 被 `event-graph.ts` 接管 |',
+    '',
+    '### 一致性校验',
+    '| 事件审计 | `event-graph.ts` |',
+  ].join('\n');
+  const ghosts = ghostReferences(readme);
+  assert.deepEqual(ghosts, [], '删除区块自身 + 接管者 event-graph.ts 不是幽灵');
+});
+
+check('ghostReferences：全量扫描当前仓库应 0 幽灵（rc=0 + --json 含 ghosts）', () => {
+  const { rc, out } = runCheck(['--json']);
+  const data = JSON.parse(out);
+  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}；输出：${out.slice(0, 600)}`);
+  assert.equal(data._summary.ghosts, 0, `预期 0 幽灵引用，实际 ${data._summary.ghosts}`);
 });
 
 finish('契约测试全过');

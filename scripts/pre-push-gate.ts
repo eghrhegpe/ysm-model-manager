@@ -39,6 +39,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { runContractTestsParallel, selectContractTests } from "./_lib/contract-tests.ts";
 import { domainSummaryText, groupByDomain, planFromFiles } from "./_lib/domain-classify.ts";
+import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
 import {
   ALL_STATIC_TOOLS,
   DOC_EXTRA_SCRIPTS,
@@ -376,34 +377,12 @@ async function main() {
       const r = sh(`node scripts/${tool} --json ${stagedArg} ${extraArgs.join(" ")}`);
       // P1 修复（2026-08-17）：审计类工具退出码不可靠（i18n/孤儿/命名/卫生默认恒 0），
       // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
-      let ok = r.rc === 0;
-      let note = "";
-      let tail = "";
-      try {
-        const parsed = JSON.parse(r.out);
-        const s = parsed._summary || parsed;
-        if (typeof s.ok === "boolean") ok = s.ok;
-        else if (typeof s.errors === "number") ok = s.errors === 0;
-        // 有结构化计数时填充 note（替代空 OK 的假绿）
-        const cnt = Object.entries(s)
-          .filter(
-            ([k, v]) =>
-              /count|total|errors|issues|warns|violations|orphan|missing|flagged/.test(k) &&
-              typeof v === "number",
-          )
-          .map(([k, v]) => `${k}=${v}`)
-          .join(" ");
-        if (cnt) note = cnt;
-        // 可观测性（2026-09-01）：FAIL 时 tail 优先用 _summary.warns_list 摘要——
-        // 缩进 JSON 的数组内容在 tail 截断下不可见，摘要进 _summary 让 FAIL 块直接可读。
-        // 无 warns_list（如 binding-check 等 issues 形态）回退原始输出尾部。
-        if (!ok && Array.isArray(s.warns_list) && s.warns_list.length) {
-          tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join("\n")}`;
-        }
-      } catch {
-        /* 非 JSON 输出，退回 rc 判定 */
-        if (!ok) note = note || `${tool} 输出解析失败（非 JSON），退回 rc 判定`;
-      }
+      // 判定语义收敛到 _lib/gate-parse.ts（parseToolOutput，契约测试锁死）：
+      //   _summary.ok → errors===0 → 退回 rc；解析失败 note 明示非 JSON 回退。
+      const parsed = parseToolOutput(r.out, r.rc, tool);
+      let ok = parsed.ok;
+      let note = parsed.note;
+      let tail = parsed.tail;
       // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
       // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
@@ -411,15 +390,7 @@ async function main() {
         const fixR = sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
         if (fixR.rc === 0) {
           const re = sh(`node scripts/${tool} --json ${extraArgs.join(" ")}`);
-          let reOk = re.rc === 0;
-          try {
-            const s2 = JSON.parse(re.out);
-            const sm = s2._summary || s2;
-            if (typeof sm.ok === "boolean") reOk = sm.ok;
-            else if (typeof sm.errors === "number") reOk = sm.errors === 0;
-          } catch {
-            /* 非 JSON 输出，退回 rc 判定 */
-          }
+          const reOk = parseToolOutput(re.out, re.rc).ok;
           if (reOk) {
             ok = true;
             note = `autoFix: node scripts/${tool} 已自动刷新`;
@@ -455,27 +426,11 @@ async function main() {
         timeout: TIMEOUT,
       });
       const out = r.out || r.err || "";
-      let ok = r.rc === 0;
-      let note = "";
-      let tail = "";
-      try {
-        const parsed = JSON.parse(out);
-        const s = parsed._summary || parsed;
-        if (typeof s.ok === "boolean") ok = s.ok;
-        else if (typeof s.errors === "number") ok = s.errors === 0;
-        const cnt = Object.entries(s)
-          .filter(
-            ([k, v]) =>
-              /count|total|errors|issues|warns|violations|orphan|missing|flagged/.test(k) &&
-              typeof v === "number",
-          )
-          .map(([k, v]) => `${k}=${v}`)
-          .join(" ");
-        if (cnt) note = cnt;
-      } catch {
-        if (!ok) note = "输出解析失败（非 JSON），退回 rc 判定";
-      }
-      if (!ok) tail = out.trim().split("\n").slice(-12).join("\n");
+      const parsed = parseToolOutput(out, r.rc, tool);
+      const ok = parsed.ok;
+      const note = parsed.note;
+      // doc-drift/knowledge-drift 无 warns_list 契约，统一回退原始输出尾部
+      const tail = !ok ? out.trim().split("\n").slice(-12).join("\n") : "";
       // label = 完整命令（--files 为内部裁剪机制，AI 手动复查时直接全扫即可）
       record(`node scripts/${tool} --json`, ok, {
         time: Date.now() - t0,
@@ -652,12 +607,7 @@ async function main() {
       // 分层守护：前端目录间反向依赖（R1/R2 零容忍 + R3/R4 基线，现基线 0 条）
       const tL = Date.now();
       const ll = await shAsync("node scripts/check-layering.ts --json");
-      let lz: any = null;
-      try {
-        lz = JSON.parse(ll.out)._summary;
-      } catch {
-        /* parse fail */
-      }
+      const lz = tryParseSummary(ll.out);
       const lOk = ll.rc === 0;
       record("node scripts/check-layering.ts --json", lOk, {
         time: Date.now() - tL,
@@ -674,12 +624,7 @@ async function main() {
       // 写别名通过门禁（WARN 不阻断，仅 R4/一致性 FAIL 才会 rc≠0）。
       const tP = Date.now();
       const ph = await shAsync("node scripts/check-path-hygiene.ts --json");
-      let pz: any = null;
-      try {
-        pz = JSON.parse(ph.out)._summary;
-      } catch {
-        /* parse fail */
-      }
+      const pz = tryParseSummary(ph.out);
       const pOk = ph.rc === 0;
       record("node scripts/check-path-hygiene.ts --json", pOk, {
         time: Date.now() - tP,
@@ -695,12 +640,7 @@ async function main() {
       // 校验：id 唯一 / labelKey 非空 / i18n 三语齐全 / dockGroup 合法 / kind 合法 / render·run 完备。
       const tM = Date.now();
       const mh = await shAsync("node scripts/check-menu-health.ts --json");
-      let mz: any = null;
-      try {
-        mz = JSON.parse(mh.out)._summary;
-      } catch {
-        /* parse fail */
-      }
+      const mz = tryParseSummary(mh.out);
       const mOk = mh.rc === 0 && mz && mz.ok === true;
       record("node scripts/check-menu-health.ts --json", mOk, {
         time: Date.now() - tM,
@@ -719,12 +659,7 @@ async function main() {
       // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。
       const tC = Date.now();
       const ci = await shAsync("node scripts/check-ctx-menu-i18n.ts --json");
-      let cz: any = null;
-      try {
-        cz = JSON.parse(ci.out)._summary;
-      } catch {
-        /* parse fail */
-      }
+      const cz = tryParseSummary(ci.out);
       const cOk = ci.rc === 0 && cz && cz.ok === true;
       record("node scripts/check-ctx-menu-i18n.ts --json", cOk, {
         time: Date.now() - tC,
@@ -744,12 +679,7 @@ async function main() {
       const bu = await shAsync("node scripts/check-binding-usage.ts --json", {
         cwd: path.join(ROOT, "frontend"),
       });
-      let buz: any = null;
-      try {
-        buz = JSON.parse(bu.out)._summary;
-      } catch {
-        /* parse fail */
-      }
+      const buz = tryParseSummary(bu.out);
       const buOk = bu.rc === 0 && buz && buz.ok === true;
       // code_review fd349a91a #5：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
       // 仓库根 scripts/ 下无此脚本）——原标签照抄从根执行 ENOENT；与同域 vite/tsc
@@ -824,12 +754,8 @@ async function main() {
   if (plan.data) {
     const t0 = Date.now();
     const tc = sh("node scripts/type-consistency.ts --json");
-    let issues = null;
-    try {
-      issues = JSON.parse(tc.out)._summary?.issues ?? 0;
-    } catch {
-      /* parse fail */
-    }
+    // 特殊块：只取 _summary.issues 数值；解析失败 → null（fail-closed 阻断，不静默放行）
+    const issues = tryParseSummary(tc.out)?.issues ?? null;
     const ok = issues === 0;
     record("node scripts/type-consistency.ts --json", ok, {
       time: Date.now() - t0,
@@ -846,12 +772,7 @@ async function main() {
   if (plan.docs) {
     const t0 = Date.now();
     const lc = sh("node scripts/link-checker.ts --json");
-    let broken = null;
-    try {
-      broken = JSON.parse(lc.out)._summary?.links_broken ?? 0;
-    } catch {
-      /* parse fail */
-    }
+    const broken = tryParseSummary(lc.out)?.links_broken ?? null;
     const ok = broken === 0;
     record("node scripts/link-checker.ts --json", ok, {
       time: Date.now() - t0,
@@ -891,9 +812,10 @@ async function main() {
       scanHealthy = false,
       baseCount = 0,
       rlTail = "";
-    try {
-      const parsed = JSON.parse(rl.out);
-      const s = parsed._summary;
+    // 特殊块：需要整对象（顶层 results 供 tail 展示 + _summary 判定），解析失败 → fail-closed 阻断
+    const rlParsed = tryParseJson(rl.out) as { _summary?: any; results?: any[] } | null;
+    if (rlParsed) {
+      const s = rlParsed._summary;
       newV = s.newViolations ?? null;
       baseCount = s.baselineViolations ?? 0;
       ok = s.ok === true;
@@ -901,8 +823,8 @@ async function main() {
       // scanHealthy:false——必须阻断推送，否则红线门禁静默放行（P1 修复）
       scanHealthy = s.scanHealthy === true;
       // 违规详情（供 tail 展示方向，不阻断推送）
-      if (!ok && Array.isArray(parsed.results)) {
-        rlTail = parsed.results
+      if (!ok && Array.isArray(rlParsed.results)) {
+        rlTail = rlParsed.results
           .filter((r: any) => r.count > 0)
           .map(
             (r: any) =>
@@ -911,7 +833,7 @@ async function main() {
           )
           .join("\n");
       }
-    } catch {
+    } else {
       /* parse fail */ ok = false;
       scanHealthy = false;
     }

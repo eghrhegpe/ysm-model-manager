@@ -12,6 +12,7 @@
       "**/*.tsx",
       "!bindings",
       "!upstream",
+      "!**/_attic",
       "!src/core/i18n/locales",
       "!dist",
       "!**/*.test.ts",

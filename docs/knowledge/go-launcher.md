@@ -48,4 +48,4 @@ status: active
 
 ## 相关
 
-- go:launcher/ 目录登记（project-map）
+- go:launcher/ 目录登记（audit-src-map）

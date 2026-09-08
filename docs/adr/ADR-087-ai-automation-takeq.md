@@ -203,7 +203,7 @@ echo "[pre-commit] drift 检查受影响知识卡..."
 CHANGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
 if [ -n "$CHANGED_FILES" ]; then
   # 过滤生成物
-  FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -v '^docs/knowledge/index.md$' | grep -v '^docs/funcmap.md$' | grep -v '^docs/project-map.md$' | grep -v '^frontend/public/locales/' || true)
+  FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -v '^docs/knowledge/index.md$' | grep -v '^docs/funcmap.md$' | grep -v '^docs/audit-src-map.md$' | grep -v '^frontend/public/locales/' || true)
   if [ -n "$FILTERED" ]; then
     # 批量调用：一次 node 进程 + 一次索引构建（~0.3s）
     node scripts/check-knowledge-drift.mjs --affected $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"

@@ -2,17 +2,17 @@
 /**
  * gen-project-map.ts — 项目结构地图生成器
  *
- * 扫描磁盘目录结构 → 生成 docs/project-map.md。
+ * 扫描磁盘目录结构 → 生成 docs/audit-src-map.md。
  * 目录结构自动扫描防漂移；目录用途是人工知识，直接维护在
- * docs/project-map.md 自身的 GEN 区表格里（脚本从现文档读回已有用途复用，
+ * docs/audit-src-map.md 自身的 GEN 区表格里（脚本从现文档读回已有用途复用，
  * 不再依赖外部基线 JSON，消除双源漂移/幽灵基线维护负担）。
  *
  * 用法：
- *   node scripts/gen-project-map.ts            # 写入 docs/project-map.md
+ *   node scripts/gen-project-map.ts            # 写入 docs/audit-src-map.md
  *   node scripts/gen-project-map.ts --check    # 只对比不写盘（doctor 守护）
  *   node scripts/gen-project-map.ts --json     # JSON 摘要输出（子代理消费）
  *
- * 输出：docs/project-map.md，含 4 个 GEN 标记区：
+ * 输出：docs/audit-src-map.md，含 4 个 GEN 标记区：
  *   go-structure / internal-structure / frontend-structure / root-files
  * 零依赖（仅 node:fs / node:path + scripts/_lib/scan-files.ts 共享层）。
  * 设计意图：gen-project-map 工具脚本（结构自动扫描，用途从文档自身复用）
@@ -23,7 +23,7 @@ import path from "node:path";
 import { getRoot, readText, writeText } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
-const OUT = path.join(ROOT, "docs", "project-map.md");
+const OUT = path.join(ROOT, "docs", "audit-src-map.md");
 
 // ── 参数 ──
 const args = new Set(process.argv.slice(2));
@@ -31,7 +31,7 @@ const CHECK = args.has("--check");
 const JSON_OUT = args.has("--json");
 
 /**
- * 从现有 docs/project-map.md 的 GEN 区表格读回「路径 → 用途」人工知识。
+ * 从现有 docs/audit-src-map.md 的 GEN 区表格读回「路径 → 用途」人工知识。
  * 这是唯一事实来源：脚本只扫结构，用途复用文档里已登记的内容。
  * 逐行解析（避免跨整行正则在含特殊字符描述上误截断），取首个反引号对为
  * label、末个 `|` 之前为 desc。返回 { 'avatar/': '...', 'bus.ts': '...', ... }。
@@ -103,7 +103,7 @@ function row(
 ) {
   if (!usage) {
     drift.unregistered.push(`${kind}:${label}`);
-    return `| \`${label}\` | ⚠️ 用途待补（在 docs/project-map.md 本表补一句）${tail} |`;
+    return `| \`${label}\` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句）${tail} |`;
   }
   return `| \`${label}\` | ${usage}${tail} |`;
 }
@@ -280,7 +280,7 @@ let rc = 0;
 if (drift.unregistered.length > 0) {
   console.warn(`[gen-project-map] ${drift.unregistered.length} 个磁盘目录/文件未登记用途：`);
   for (const d of drift.unregistered) console.warn(`  - ${d}`);
-  console.warn("  → 在 docs/project-map.md 对应表格行补一句用途说明后重跑本脚本。");
+  console.warn("  → 在 docs/audit-src-map.md 对应表格行补一句用途说明后重跑本脚本。");
 }
 
 if (CHECK) {
@@ -290,10 +290,10 @@ if (CHECK) {
     rc = 1;
     if (!JSON_OUT)
       console.error(
-        `[gen-project-map] docs/project-map.md 过期，运行 \`node scripts/gen-project-map.ts\` 刷新。`,
+        `[gen-project-map] docs/audit-src-map.md 过期，运行 \`node scripts/gen-project-map.ts\` 刷新。`,
       );
   } else if (!JSON_OUT) {
-    console.log("[gen-project-map] docs/project-map.md 最新。");
+    console.log("[gen-project-map] docs/audit-src-map.md 最新。");
   }
 } else {
   writeText(OUT, md); // 保留原行尾风格（CRLF 文件不被改写为 LF，--check 幂等不失效，code_review P2-1）

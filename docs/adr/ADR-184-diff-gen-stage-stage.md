@@ -32,7 +32,7 @@ dirty → 被当作「并行半成品」排除 → 永远自动 stage 不进去�
 快照域文件（docs / locales / completions）追加判定：
 
 - **生成物整文件**（GEN_WHOLE_OUTPUTS 清单 + 前缀）：内容 = 全体输入的纯函数，无人工
-  策展区 → 无条件收编。`project-map.md` 刻意排除出清单：其 GEN 区用途表是人工知识
+  策展区 → 无条件收编。`audit-src-map.md` 刻意排除出清单：其 GEN 区用途表是人工知识
   （loadUsageFromDoc 读回），无条件收编会吞并行手改；`routes.md`/`routes-quick.md`
   在清单内：描述列源在卡片 frontmatter（gen-routes 读回），自身无人工维护区。
 - **知识卡**（knowledge/ 与 adr/ 下手写卡）：`git diff` 变更行**全部**匹配机器区行模式
@@ -58,7 +58,7 @@ dirty → 被当作「并行半成品」排除 → 永远自动 stage 不进去�
   （罕见；契约测试已锁「表格/正文列表 → manual」的典型形态）；
 - 生成物整文件清单需人工维护（新增 gen 产出文件时补 GEN_WHOLE_OUTPUTS，与
   gen-config.ts SNAP_TARGETS 同责）；
-- project-map.md 的用途表人工区滞留仍需手动提交（刻意保留）。
+- audit-src-map.md 的用途表人工区滞留仍需手动提交（刻意保留）。
 
 ## 4. 数据溯源
 
@@ -66,7 +66,7 @@ dirty → 被当作「并行半成品」排除 → 永远自动 stage 不进去�
 - frontend_repo_audit.md auto_fields 残留 addClearRow/buildDepthMap/buildPresetChipGroup
   （b91f21fd 已删）→ 机器区列表项，收编后 gen 增量清理（8e888d83）；
 - go-types.md auto_fields 新增 IsRenderableTextureExt/IsTextureExt（纯机器区）→ machine 收编；
-- project-map.md 用途表人工区 diff → manual 排除（不误收编）；
+- audit-src-map.md 用途表人工区 diff → manual 排除（不误收编）；
 - gen-stage.ts 注释实证 event-graph.md 8a03beaa 滞留案例 → 收编机制覆盖。
 
 <!-- 文件名: diff-gen-stage-stage.md → 实际文件 ADR-184-diff-gen-stage-stage.md -->

@@ -208,7 +208,7 @@ export const autoSidebar = [
       },
       {
         "text": "项目结构地图",
-        "link": "/aduit-scr-map"
+        "link": "/audit-src-map"
       },
       {
         "text": "CLI 命令参考",

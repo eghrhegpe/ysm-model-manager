@@ -29,6 +29,6 @@ main.go     @JiangKaslana
 # 生成物（自动生成，无需 owner 审查）
 /docs/knowledge/index.md     @JiangKaslana
 /docs/funcmap.md             @JiangKaslana
-/docs/project-map.md         @JiangKaslana
+/docs/audit-src-map.md         @JiangKaslana
 /docs/cli-commands.md        @JiangKaslana
 /frontend/public/locales/    @JiangKaslana

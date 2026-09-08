@@ -138,7 +138,7 @@ const ARCH_ORDER = [
   "Design.md",
   "governance-rules.md",
   "funcmap.md",
-  "project-map.md",
+  "audit-src-map.md",
   "maintenance.md",
   "pitfalls.md",
   "review-report.md",

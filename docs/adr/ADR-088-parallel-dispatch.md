@@ -142,7 +142,7 @@ check-layering → check-menu-health → vite build → vitest → tsc
 总耗时: 1.0s → 0.4s（节省 60%）
 ```
 
-**理由**：gen 脚本均为秒级且相互独立（各自写不同文件：`docs/adr/index.md` / `docs/knowledge/index.md` / `docs/project-map.md` 等）。
+**理由**：gen 脚本均为秒级且相互独立（各自写不同文件：`docs/adr/index.md` / `docs/knowledge/index.md` / `docs/audit-src-map.md` 等）。
 
 ---
 

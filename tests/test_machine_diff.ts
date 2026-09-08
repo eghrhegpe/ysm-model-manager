@@ -17,7 +17,7 @@
  * 覆盖：
  *   1. 生成物整文件（event-graph.md 等）→ whole（无条件，不读 diff 内容）
  *   2. 生成物前缀（locales/completions）→ whole
- *   3. 清单关键路径：routes 在、project-map.md 刻意排除
+ *   3. 清单关键路径：routes 在、audit-src-map.md 刻意排除
  *   4. 机器区 hunk（section 头 auto_fields + `+    - 裸符号`）→ machine
  *   5. 机器区纯删除（符号移除清理）→ machine
  *   6. 机器区无 section 头但 hunk 内含 auto_fields 键行上下文 → machine（键行信号路径）
@@ -31,7 +31,7 @@
  *   14. 非快照域路径（scripts/ 等）→ inSnapScope false
  *   15. 逃生阀 YSM_SKIP_GEN_STAGE=1 → strandedStageList 空清单
  *   16. 路径归一化（反斜杠/正斜杠）
- *   17. project-map.md 用途表人工区（表格行）→ manual
+ *   17. audit-src-map.md 用途表人工区（表格行）→ manual
  *   18. 人工 bullet 恰好是裸符号形态但在 use_when 人工块内 → manual（块信号兜底）
  *
  * 用法：node tests/test_machine_diff.ts
@@ -74,16 +74,16 @@ check("生成物前缀（locales/completions）→ whole", () => {
   assert.ok(isGenWholeOutput("completions/_ysm"));
 });
 
-check("清单内关键路径齐全（routes 有源、project-map 刻意排除）", () => {
+check("清单内关键路径齐全（routes 有源、audit-src-map 刻意排除）", () => {
   // routes.md/routes-quick.md 描述列源在卡片 frontmatter（gen 读回），自身无人工区 → 在清单
   assert.ok(GEN_WHOLE_OUTPUTS.includes("docs/knowledge/routes.md"), "routes.md 应在清单");
   assert.ok(
     GEN_WHOLE_OUTPUTS.includes("docs/knowledge/routes-quick.md"),
     "routes-quick.md 应在清单",
   );
-  // project-map.md 用途表是人工知识（loadUsageFromDoc 读回）→ 不在整文件清单
-  assert.ok(!GEN_WHOLE_OUTPUTS.includes("docs/project-map.md"), "project-map.md 不得在整文件清单");
-  assert.ok(!isGenWholeOutput("docs/project-map.md"));
+  // audit-src-map.md 用途表是人工知识（loadUsageFromDoc 读回）→ 不在整文件清单
+  assert.ok(!GEN_WHOLE_OUTPUTS.includes("docs/audit-src-map.md"), "audit-src-map.md 不得在整文件清单");
+  assert.ok(!isGenWholeOutput("docs/audit-src-map.md"));
 });
 
 // ── 2. 机器区 hunk（section 头信号）→ machine ──
@@ -321,15 +321,15 @@ check("strandedStageList 空输入 → 空清单（不触发 git）", () => {
   assert.deepEqual(strandedStageList([]), []);
 });
 
-// ── 14. project-map.md 按 diff 内容判定 ──
-check("project-map.md 用途表人工区（表格行）→ manual（不误收编）", () => {
+// ── 14. audit-src-map.md 按 diff 内容判定 ──
+check("audit-src-map.md 用途表人工区（表格行）→ manual（不误收编）", () => {
   const diff = [
-    "--- a/docs/project-map.md",
-    "+++ b/docs/project-map.md",
+    "--- a/docs/audit-src-map.md",
+    "+++ b/docs/audit-src-map.md",
     "@@ -20,2 +20,3 @@",
     "+| upstream/ | 第三方 vendor（人工维护用途） |",
   ].join("\n");
-  assert.strictEqual(classifyStranded("docs/project-map.md", diff), "manual");
+  assert.strictEqual(classifyStranded("docs/audit-src-map.md", diff), "manual");
 });
 
 if (fails.length) {

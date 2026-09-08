@@ -81,6 +81,7 @@ export function stripPathSegments(msg: string): string {
  * 文案只需改本函数。
  */
 export function isFileExistsError(err: unknown): boolean {
+  if (err == null) return false;
   const code = extractAppErrorCode(err);
   if (code === "FILE_EXISTS" || code === "ALREADY_EXISTS") return true;
   const msg = typeof err === "string" ? err : String((err as { message?: unknown }).message || err);

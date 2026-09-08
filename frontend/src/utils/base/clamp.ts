@@ -4,12 +4,14 @@
 
 /**
  * 将数值钳制到 [lo, hi] 区间
- * @param v 待钳制值
+ * @param v 待钳制值（NaN → 返回 lo）
  * @param lo 下界
- * @param hi 上界
+ * @param hi 上界（若 lo > hi 自动交换）
  * @returns 钳制后的值
  */
 export function clamp(v: number, lo: number, hi: number): number {
+  if (Number.isNaN(v)) return lo;
+  if (lo > hi) [lo, hi] = [hi, lo];
   return Math.min(hi, Math.max(lo, v));
 }
 

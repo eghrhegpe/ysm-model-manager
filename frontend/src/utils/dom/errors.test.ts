@@ -12,7 +12,7 @@ vi.mock("../../core/i18n/t.ts", () => ({
   t: (key: string): string => key,
 }));
 vi.resetModules();
-const { friendlyError, stripPathSegments } = await import("./errors.ts");
+const { friendlyError, stripPathSegments, isFileExistsError } = await import("./errors.ts");
 
 describe("friendlyError 空值与中文直通", () => {
   it("null/undefined/空串 → 未知错误", () => {
@@ -139,5 +139,27 @@ describe("stripPathSegments — 内部路径剥离（导出直测）", () => {
 
   it("无路径标记的文案原样保留", () => {
     expect(stripPathSegments("文件内容为空")).toBe("文件内容为空");
+  });
+});
+
+describe("isFileExistsError — 文件冲突判定", () => {
+  it("结构化 Code: FILE_EXISTS / ALREADY_EXISTS → true", () => {
+    expect(isFileExistsError({ cause: { Code: "FILE_EXISTS" } })).toBe(true);
+    expect(isFileExistsError({ cause: { Code: "ALREADY_EXISTS" } })).toBe(true);
+    expect(isFileExistsError({ Code: "FILE_EXISTS" })).toBe(true);
+  });
+
+  it("字符串匹配: 目标已存在 / 文件已存在 → true", () => {
+    expect(isFileExistsError("目标已存在，请更换名称")).toBe(true);
+    expect(isFileExistsError("文件已存在")).toBe(true);
+    expect(isFileExistsError("FILE_EXISTS: duplicate")).toBe(true);
+  });
+
+  it("非冲突错误 → false", () => {
+    expect(isFileExistsError({ cause: { Code: "IO_ERROR" } })).toBe(false);
+    expect(isFileExistsError("网络超时")).toBe(false);
+    expect(isFileExistsError(null)).toBe(false);
+    expect(isFileExistsError(undefined)).toBe(false);
+    expect(isFileExistsError("")).toBe(false);
   });
 });

@@ -243,7 +243,8 @@ export async function loadModel2D(
     };
     const btn3d = ctx.root.getElementById("btn-3d-preview");
     if (btn3d) {
-      promoteTitleIfPresent(btn3d);
+      const cleanup = promoteTitleIfPresent(btn3d);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       btn3d.onclick = (): void => {
         _toggle3D();
       };

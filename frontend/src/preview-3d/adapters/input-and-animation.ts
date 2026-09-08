@@ -18,7 +18,7 @@
 import type * as THREE from "three";
 import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/keymap.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
-import { isInputBlocked } from "@/utils/dom/focus-restore.ts";
+import { isInputBlocked } from "@/utils/dom/input-block-stack.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 
 // ---------------------------------------------------------------------------

@@ -160,9 +160,10 @@ export async function showVrmMeta(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         void createVrm3D(path);
       };
@@ -192,9 +193,10 @@ export async function showMmdPreview(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         // 3D 内换模型（ADR-066 §5.6）：先取同类型候选列表，随 siblings 传入渲染 topBar 切换下拉
         void (async () => {
@@ -252,9 +254,10 @@ export async function showFbxPreview(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         // 3D 内换模型（ADR-066 §5.6）：先取同类型 FBX 候选列表，随 siblings 传入渲染 topBar 切换下拉
         void (async () => {
@@ -288,9 +291,10 @@ export async function showScenePreview(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         void (async () => {
           const siblings = await resolveSceneSiblings();
@@ -326,9 +330,10 @@ export async function showMorphPreview(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         // P2: morph:apply 零订阅，删发射；保留 toast 反馈
         bus.emit("toast:show", {
@@ -409,9 +414,10 @@ export async function showStagePreview(
   </div>
 </div>`;
     },
-    wireFab: (_ctx, _path, fab) => {
+    wireFab: (ctx, _path, fab) => {
       if (!fab) return;
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         // P2: stage:load 零订阅，删发射；保留 toast 反馈
         bus.emit("toast:show", {

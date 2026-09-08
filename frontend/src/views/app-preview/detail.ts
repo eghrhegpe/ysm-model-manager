@@ -165,7 +165,8 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
 <button class="preview-fab" id="btn-pack-model-3d" title="${t("preview.blockItemModel3d")}" aria-label="${t("preview.blockItemModel3d")}"><span class="preview-ic">&#x1F3D7;&#xFE0F;</span></button>`;
     const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
     if (fab) {
-      promoteTitleIfPresent(fab);
+      const cleanup = promoteTitleIfPresent(fab);
+      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
         createPack3D(path).catch((e) => logWarn("preview", "pack3D 失败", e));
       };

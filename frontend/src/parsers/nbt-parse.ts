@@ -14,7 +14,7 @@
 // 输入同时支持 gzip（魔数 1f 8b → gunzipSync）与已解压原始 NBT（按魔数判断）。
 
 import { gunzipSync } from "fflate";
-import { asArray, asNumber, asString, getCompound, isObj } from "@/utils/base/nbt-guards.ts";
+import { asArray, asNumber, asString, getCompound, isObj } from "@/utils/resource/nbt-guards.ts";
 
 // --- NBT 标签类型常量 ---
 const TAG_END = 0;

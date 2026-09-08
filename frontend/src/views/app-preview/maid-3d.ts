@@ -223,7 +223,8 @@ function dpRenderPanel(
   // FAB 接线（进整包 3D；角色切换在 3D 内「组件」下拉）
   const btn3d = ctx.root.getElementById("btn-3d-preview");
   if (btn3d) {
-    promoteTitleIfPresent(btn3d);
+    const cleanup = promoteTitleIfPresent(btn3d);
+    if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
     btn3d.onclick = () => {
       void onToggle3d();
     };

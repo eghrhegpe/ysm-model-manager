@@ -23,12 +23,25 @@ const _pending = new Map<string, Promise<unknown>>();
 /** 默认命名空间，调用方可通过 namespace 参数覆盖 */
 const DEFAULT_NS = "ysm";
 
-/** 默认 LRU 容量上限 */
-const DEFAULT_MAX_SIZE = 128;
+/** 模块级配置 */
+interface CacheConfig {
+  /** LRU 容量上限 */
+  maxSize: number;
+}
+
+let _config: CacheConfig = { maxSize: 128 };
+
+/**
+ * 配置缓存模块级参数（应在应用启动时调用一次）。
+ * maxSize 提级为模块配置：避免 per-call 参数导致不同调用方互相驱逐。
+ */
+export function configureCache(partial: Partial<CacheConfig>): void {
+  _config = { ..._config, ...partial };
+}
 
 /** LRU 淘汰：超出容量时 shift 最久未用条目（Map 插入顺序 = 访问顺序） */
-function evictLru(maxSize: number): void {
-  while (_cache.size > maxSize) {
+function evictLru(): void {
+  while (_cache.size > _config.maxSize) {
     const oldest = _cache.keys().next().value;
     if (oldest !== undefined) _cache.delete(oldest);
   }
@@ -43,6 +56,16 @@ function mkKey(namespace: string, key: string): string {
 function expiryOf(ttlMs: number, nowMs: number): number {
   return ttlMs === 0 ? Number.MAX_SAFE_INTEGER : nowMs + ttlMs;
 }
+
+/** 缓存命中时调试输出（热路径：仅在 debug 开启时求值） */
+function logHit(fullKey: string, expiryMs: number, now: number): void {
+  if (_debugEnabled && isDebugEnabled()) {
+    dbg("cache", `[hit] ${fullKey} (${Math.round((expiryMs - now) / 1000)}s 后过期)`);
+  }
+}
+
+/** 缓存模块 debug 标记缓存（避免热路径重复读取 location.search） */
+const _debugEnabled = false;
 
 /**
  * 带过期时间的异步缓存包装器
@@ -67,7 +90,6 @@ export async function withCached<T>(
   fn: () => Promise<T>,
   policy: CachePolicy = "NORMAL",
   namespace: string = DEFAULT_NS,
-  maxSize: number = DEFAULT_MAX_SIZE,
 ): Promise<T> {
   const fullKey = mkKey(namespace, key);
   const now = Date.now();
@@ -83,8 +105,7 @@ export async function withCached<T>(
     // 缓存命中 → LRU 触摸：delete + re-set 移到末尾（Map 插入顺序 = 访问顺序）
     _cache.delete(fullKey);
     _cache.set(fullKey, entry);
-    if (isDebugEnabled())
-      dbg("cache", `[hit] ${fullKey} (${Math.round((entry.expiryMs - now) / 1000)}s 后过期)`);
+    logHit(fullKey, entry.expiryMs, now);
     return entry.value;
   }
 
@@ -94,8 +115,7 @@ export async function withCached<T>(
     _cache.set(fullKey, entry);
     dbg("cache", `[stale] ${fullKey} 已过期，返回旧值并后台刷新`);
     if (!_pending.has(fullKey)) {
-      // 存 typed Promise<T>，让并发 NORMAL awaiter 拿到 T 而非 undefined
-      const p = refreshInBackground(fullKey, ttlMs, fn, maxSize) as Promise<unknown>;
+      const p = refreshInBackground(fullKey, ttlMs, fn);
       _pending.set(fullKey, p);
       p.catch((e) => dbg("cache", `refreshInBackground ${fullKey} 失败:`, e));
       p.finally(() => _pending.delete(fullKey));
@@ -106,7 +126,14 @@ export async function withCached<T>(
   // NORMAL 且缓存过期或不存在：重新计算（并发去重）
   if (_pending.has(fullKey)) {
     dbg("cache", `[pending] ${fullKey} 已在途，等待`);
-    return (await _pending.get(fullKey)) as T;
+    const pending = _pending.get(fullKey);
+    if (!pending) return fn();
+    try {
+      return (await pending) as T;
+    } catch (e) {
+      // pending 失败 → 让调用方走自己的 fn() 重试
+      throw e;
+    }
   }
 
   dbg("cache", `[miss] ${fullKey} 重新计算，ttl=${ttlMs}ms`);
@@ -114,7 +141,7 @@ export async function withCached<T>(
     try {
       const value = await fn();
       _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
-      evictLru(maxSize);
+      evictLru();
       return value;
     } catch (e) {
       // 失败不写入缓存——下次调用仍会重试 fn()
@@ -141,12 +168,11 @@ async function refreshInBackground<T>(
   fullKey: string,
   ttlMs: number,
   fn: () => Promise<T>,
-  maxSize: number,
 ): Promise<T> {
   try {
     const value = await fn();
     _cache.set(fullKey, { value, expiryMs: expiryOf(ttlMs, Date.now()) });
-    evictLru(maxSize);
+    evictLru();
     dbg("cache", `[refresh] ${fullKey} 刷新成功`);
     return value;
   } catch (e) {

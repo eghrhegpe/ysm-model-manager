@@ -6,14 +6,18 @@ import {
   returnFocus,
   clearTrigger,
   __getTriggerForTest,
-  findTabbableAcrossShadow,
-  trapFocusAcrossShadow,
+} from "./focus-restore.ts";
+import {
   pushInputBlock,
   popInputBlock,
   isInputBlocked,
   getStackDepth,
   __resetInputBlockStackForTest,
-} from "./focus-restore.ts";
+} from "./input-block-stack.ts";
+import {
+  findTabbableAcrossShadow,
+  trapFocusAcrossShadow,
+} from "./trap-focus-across-shadow.ts";
 import * as log from "@/utils/base/log.ts";
 
 beforeEach(() => {
@@ -449,7 +453,7 @@ describe("输入阻断栈（pushInputBlock / popInputBlock）", () => {
     pushInputBlock("overflow");
     expect(getStackDepth()).toBe(10);
     expect(spy).toHaveBeenCalledWith(
-      "focus-restore",
+      "input-block-stack",
       expect.stringContaining("超上限"),
     );
     spy.mockRestore();

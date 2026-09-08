@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { withCached, invalidateCache, clearAllCache, getCacheTtlMs } from "./with-cached.ts";
+import { withCached, invalidateCache, clearAllCache, getCacheTtlMs, configureCache } from "./with-cached.ts";
 
 beforeEach(() => {
-  // 清除缓存状态
+  // 清除缓存状态 + 恢复默认配置
   clearAllCache();
+  configureCache({ maxSize: 128 });
 });
 
 describe("withCached", () => {
@@ -143,19 +144,20 @@ describe("withCached", () => {
   });
 
   it("LRU 淘汰：maxSize=2，第三次调用后第一次的缓存被淘汰", async () => {
+    configureCache({ maxSize: 2 });
     const fn1 = vi.fn(async () => "a");
     const fn2 = vi.fn(async () => "b");
     const fn3 = vi.fn(async () => "c");
     // maxSize=2：缓存最多保留 2 条
-    await withCached("lru-a", 60000, fn1, "NORMAL", "ysm", 2);
-    await withCached("lru-b", 60000, fn2, "NORMAL", "ysm", 2);
+    await withCached("lru-a", 60000, fn1, "NORMAL", "ysm");
+    await withCached("lru-b", 60000, fn2, "NORMAL", "ysm");
     // 第三次写入 → 超限 → 淘汰最久未用的 lru-a
-    await withCached("lru-c", 60000, fn3, "NORMAL", "ysm", 2);
+    await withCached("lru-c", 60000, fn3, "NORMAL", "ysm");
     // lru-a 已被淘汰 → 重新调用 fn1（第 2 次）
-    await withCached("lru-a", 60000, fn1, "NORMAL", "ysm", 2);
+    await withCached("lru-a", 60000, fn1, "NORMAL", "ysm");
     expect(fn1).toHaveBeenCalledTimes(2);
     // 重插 lru-a 后缓存为 [c, a]；lru-c 仍在缓存 → fn3 只调 1 次
-    await withCached("lru-c", 60000, fn3, "NORMAL", "ysm", 2);
+    await withCached("lru-c", 60000, fn3, "NORMAL", "ysm");
     expect(fn3).toHaveBeenCalledTimes(1);
   });
 

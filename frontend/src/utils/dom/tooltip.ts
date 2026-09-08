@@ -190,16 +190,21 @@ export function attachTooltip(
 /**
  * 把元素上的原生 title 升级为自定义 tooltip（模板里已写 title 的按钮一行接入）。
  * 摘除原生 title 防双气泡；aria-label 缺失时用 title 文本补齐可达性。
+ * @returns cleanup 函数（摘除监听 + 递减 scroll ref-count）；调用方应在元素离文档时调用
  */
-export function promoteTitle(el: HTMLElement): void {
+export function promoteTitle(el: HTMLElement): () => void {
   const title = el.getAttribute("title");
-  if (!title) return;
+  if (!title) return () => {};
   el.removeAttribute("title");
   if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", title);
-  attachTooltip(el, title);
+  return attachTooltip(el, title);
 }
 
-/** promoteTitle + 空值守卫（querySelector 结果可能为 null 的绑定点一行接入） */
-export function promoteTitleIfPresent(el: HTMLElement | null): void {
-  if (el) promoteTitle(el);
+/**
+ * promoteTitle + 空值守卫（querySelector 结果可能为 null 的绑定点一行接入）。
+ * @returns cleanup 函数；可推入 ctx.unsubs 等生命周期收集器
+ */
+export function promoteTitleIfPresent(el: HTMLElement | null): () => void {
+  if (!el) return () => {};
+  return promoteTitle(el);
 }

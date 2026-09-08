@@ -27,6 +27,22 @@ describe("clamp — 数值钳制", () => {
   it("上下界相等时返回该值", () => {
     expect(clamp(5, 3, 3)).toBe(3);
   });
+
+  it("NaN → 返回下界", () => {
+    expect(clamp(NaN, 0, 10)).toBe(0);
+  });
+
+  it("lo > hi 自动交换", () => {
+    expect(clamp(5, 10, 0)).toBe(5);
+    expect(clamp(15, 10, 0)).toBe(10);
+    expect(clamp(-5, 10, 0)).toBe(0);
+  });
+
+  it("Infinity 边界", () => {
+    expect(clamp(Infinity, 0, 10)).toBe(10);
+    expect(clamp(-Infinity, 0, 10)).toBe(0);
+    expect(clamp(5, -Infinity, Infinity)).toBe(5);
+  });
 });
 
 describe("clamp01 — [0,1] 钳制", () => {

@@ -9,7 +9,7 @@
 // 每个 long 的 LSB 开始连续排列，可跨 64 位容器边界。
 
 import { base64ToBytes } from "@/backend/web-common.ts";
-import { asArray, asNumber, getCompound, isObj } from "@/utils/base/nbt-guards.ts";
+import { asArray, asNumber, getCompound, isObj } from "@/utils/resource/nbt-guards.ts";
 import { parseNbtRootExact } from "./nbt-parse.ts";
 import { mapColor, resolveBlockName } from "./voxel-colors.ts";
 

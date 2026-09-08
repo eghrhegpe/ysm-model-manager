@@ -47,8 +47,9 @@ import { installUiComponentsStyles, uiComponentsStyleSheet } from "@/ui/ui-compo
 import { PREVIEW_OVERLAY_ID } from "@/ui/ui-constants.ts";
 import { slideMenuStyleSheet } from "@/ui/ui-slide-menu-styles.ts";
 import { logError, logWarn } from "@/utils/base/log.ts";
-import { rememberTrigger, trapFocusAcrossShadow } from "@/utils/dom/focus-restore.ts";
+import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { InputOptions } from "./input-and-animation.ts";
 import { bindInputHandlers } from "./input-and-animation.ts";

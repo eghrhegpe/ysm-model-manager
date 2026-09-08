@@ -167,15 +167,23 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 	return results
 }
 
+// ErrRelativePath 调用方传入相对路径（含 ".." 段）——拒绝扫描，防止越界到扫描根之外。
+var ErrRelativePath = errors.New("dedup: 拒绝相对路径，请传入绝对路径")
+
 // resolveScanRoot 入口校验公共段（FindDuplicateFiles/CountDuplicates 共用）：
-// TrimSpace → 空判 → Abs 化。相对路径下 FileEntry.Path 为相对路径，下游
-// recycle.Move 按 CWD 解析可能移到错误位置；Abs 失败（如 Windows 含 NUL 字节）
-// 必须显式报错——静默退回入参形态会让 WalkDir→Lstat 失败被 log 吞掉并返回
-// 「无重复」= 假绿（与 ErrSymlinkRoot 同类的静默漏扫）。
+// TrimSpace → 空判 → 拒绝含 ".." 的相对路径（防路径穿越）→ Abs 化。
+// 相对路径下 FileEntry.Path 为相对路径，下游 recycle.Move 按 CWD 解析可能移到错误位置；
+// Abs 失败（如 Windows 含 NUL 字节）必须显式报错——静默退回入参形态会让 WalkDir→Lstat
+// 失败被 log 吞掉并返回「无重复」= 假绿（与 ErrSymlinkRoot 同类的静默漏扫）。
 func resolveScanRoot(dir string) (string, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return "", fmt.Errorf("目录为空")
+	}
+	// 拒绝含 ".." 段的相对路径：防止调用方传入 ".." 等穿越到扫描根之外
+	// （Bug-2 安全防护：TestAdversarial_RelativePathTraversal）
+	if strings.Contains(dir, "..") {
+		return "", fmt.Errorf("%w: %q 含相对路径段", ErrRelativePath, dir)
 	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {

@@ -11,6 +11,7 @@ auto_fields:
     - DeepHash
     - DeepHash.ComputeHash
     - DeepHash.Name
+    - ErrRelativePath
     - ErrSymlinkRoot
     - FileEntry
     - FindDuplicateFiles

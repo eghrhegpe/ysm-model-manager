@@ -101,6 +101,11 @@ func TestIsResourcePackFolder(t *testing.T) {
 			t.Error("不存在的目录应返回 false")
 		}
 	})
+	t.Run("空路径 → false", func(t *testing.T) {
+		if fsutil.IsResourcePackFolder("") {
+			t.Error("空路径应返回 false")
+		}
+	})
 }
 
 func TestFindRecycleRoot_MultiType(t *testing.T) {

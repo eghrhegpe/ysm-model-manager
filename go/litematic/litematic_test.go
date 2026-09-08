@@ -167,3 +167,37 @@ func TestParseMeta_VersionField(t *testing.T) {
 		})
 	}
 }
+
+// TestParseMeta_EnclosingSizePartial 验证 EnclosingSize 缺子字段时的行为
+func TestParseMeta_EnclosingSizePartial(t *testing.T) {
+	// 只含 x/y，缺 z
+	root := nbtCompound("",
+		nbtInt("Version", 5),
+		nbtCompound("Metadata",
+			nbtString("Name", "test"),
+			nbtCompound("EnclosingSize",
+				nbtInt("x", 10),
+				nbtInt("y", 10),
+				// z 缺失
+			),
+		),
+	)
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	gz.Write(root)
+	gz.Close()
+
+	path := filepath.Join(t.TempDir(), "test.litematic")
+	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	meta, err := ParseMeta(path)
+	if err != nil {
+		t.Fatalf("ParseMeta 失败: %v", err)
+	}
+	// z 缺失时应为 0（Go 零值）
+	if meta.EnclosingSize[2] != 0 {
+		t.Errorf("缺失的 z 应为 0, got %d", meta.EnclosingSize[2])
+	}
+}

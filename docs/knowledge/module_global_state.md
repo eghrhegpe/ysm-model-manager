@@ -17,6 +17,8 @@ auto_fields:
     - closeActiveDialog
     - closeDlg
     - createDialog
+    - detectFromLangs
+    - FALLBACK_LANG
     - getBundle
     - getCacheTtlMs
     - getLang
@@ -24,8 +26,10 @@ auto_fields:
     - invalidateCache
     - LangCode
     - loadLocale
+    - LocaleHost
     - registerDlg
     - setLang
+    - setLocaleHost
     - SUPPORTED_LANGS
     - trapFocus
     - VIEW_TESTIDS

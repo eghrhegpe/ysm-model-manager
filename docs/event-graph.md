@@ -195,8 +195,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| setLang | `frontend/src/core/i18n/locale.ts` | 134 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 183 |
+| setLang | `frontend/src/core/i18n/locale.ts` | 159 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 210 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -394,9 +394,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 28 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 87 |
-| (顶层) | `frontend/src/app-modules.ts` | 152 |
+| (顶层) | `frontend/src/app-modules.ts` | 29 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 88 |
+| (顶层) | `frontend/src/app-modules.ts` | 157 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
@@ -576,7 +576,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| logUiMsg | `frontend/src/core/error-diary.ts` | 112 |
+| logUiMsg | `frontend/src/core/error-diary.ts` | 124 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 71 |
 
 ### `tree:reload`

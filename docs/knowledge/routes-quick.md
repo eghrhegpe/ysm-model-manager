@@ -160,31 +160,31 @@
 | 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
 | 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
-| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | tr()/trDynamic() 依赖 tOf 缺失返回 key 本身——判定单一事实源 | ADR-124, ADR-207 |
+| 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | LocaleHost 未注入 → loadLocale 告警一次跳过（fail-open），装配层漏 setLocaleHost 不挂启动链 | ADR-124, ADR-207, ADR-210 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fire-and-forget 场景必须经 swallowError 兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
-| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207 |
+| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；缺失键多级回退 current → FALLBACK_LANG(en) → 裸 key；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207, ADR-210 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-207 |
+| 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-207, ADR-210 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
-| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-207 |
+| 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-207, ADR-210 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面名合法性守卫 isValidPage | [页面状态管理 page-store.ts](./page-store.md) | page-store 只提供纯函数（isValidPage / resolveInitialPage），不持有状态、不镜像；页面挂载 / 卸载是 app-content 的职责 | - |
 | 页面状态管理、page store | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
-| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207 |
+| 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207, ADR-210 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
@@ -818,12 +818,12 @@
 | → govet 与既有  重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） | `别启用 govet/gofmt/dupl` | - |
 | → 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 | `版本 < v1.64 解析 go1.26 directive 直接失败` | - |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
-| navigator.languages 在老旧 WebView 可能 undefined | - | 兜底 navigator.language 防启动链打挂 |
+| LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |
 | getBundle 空对象 truthy | - | 用 Object.keys().length > 0 判空，否则 zh-CN 兜底永不触发 |
 | 缺失 key 告警收编 locale.warnMissingKey（每 key 一次；不再导出可变 Set 跨模块共享，ADR-207 D3），发版前须主动扫裸 key | - | - |
 | 键名迁移无 legacy-key-map 兼容表；改名须同步改调用点 + 测试 + 三语言包 | - | - |
-| tr()/trDynamic() 强耦合 tOf 缺失行为（v === key 判定单一事实源），tOf 行为变化需同步 tr/trDynamic | - | - |
+| FALLBACK_LANG（en）单一事实源在 locale.ts：t.ts 兜底链与 locales-consistency 成员守卫共用，勿另立 DEFAULT_LANG | - | - |
 | 模板含 {n} 而调用漏传 params | - | 裸占位符上屏；interpolate 残留守卫按签名告警一次（每残留组合一次） |
 | 各组件各自调 ImportModel | - | 并发冲突、队列状态混乱；必须经 import-executor |
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |

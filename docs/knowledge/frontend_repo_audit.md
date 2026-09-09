@@ -1305,7 +1305,6 @@ auto_fields:
     - TooltipOptions
     - toScreenshotLights
     - toStatePath
-    - tr
     - trapFocus
     - trapFocusAcrossShadow
     - treeCSS

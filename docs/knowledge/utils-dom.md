@@ -25,11 +25,11 @@ auto_fields:
     - focusVisibleCSS
     - friendlyError
     - getStackDepth
-    - installGlobalErrorListeners
     - installScrollSync
     - isEditableTarget
     - isFileExistsError
     - isInputBlocked
+    - makeLocaleHost
     - popInputBlock
     - promoteTitle
     - promoteTitleIfPresent

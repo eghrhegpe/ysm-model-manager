@@ -5,7 +5,7 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/community/
-  - frontend/src/utils/gh-links.ts
+  - frontend/src/utils/base/gh-links.ts
 auto_fields:
   symbols_with_lines:
     - addQueueError
@@ -33,6 +33,9 @@ auto_fields:
     - filterModels
     - getState
     - getStateSnapshot
+    - GH_DOCS
+    - GH_RELEASES
+    - GH_REPO
     - isActiveStatus
     - isModelMissing
     - markCurrentFile

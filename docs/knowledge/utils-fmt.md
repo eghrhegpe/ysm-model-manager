@@ -4,9 +4,12 @@ name: 格式化工具 fmt
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/dom/format.ts
+  - frontend/src/utils/format/format.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - fmtDate
+    - formatBytes
+    - sizeColor
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -26,7 +29,7 @@ use_when:
   - 友好日期
   - 文件大小颜色
 invariant_anchors:
-  - frontend/src/utils/dom/format.ts|Number.isFinite
+  - frontend/src/utils/format/format.ts|formatBytes
 status: active
 ---
 
@@ -62,4 +65,4 @@ status: active
 ## 相关
 
 - [app_tree](./app-tree.md) — 主要消费方
-- `frontend/src/utils/dom/format.test.ts` — 单元测试（验证入口）
+- `frontend/src/utils/format/format.test.ts` — 单元测试（验证入口）

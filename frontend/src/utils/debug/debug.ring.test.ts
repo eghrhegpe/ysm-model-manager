@@ -1,11 +1,9 @@
-// ===== debug.dbg 环形缓冲 + debugGetSpec 测试（happy-dom 版）=====
+// ===== debug.dbg 环形缓冲测试（happy-dom 版）=====
 // 兄弟文件 debug.test.ts 为 node 环境（isDebugEnabled()=false，dbg 直通）；本文件用 happy-dom
 // 让 isDebugEnabled()=true，锁 dbg 的 console 输出、_DBG_RING 环形缓冲（200 上限一次性截断）、
-// ring 写入失败兜底、safeStr JSON.stringify undefined 分支、window.debugGetSpec 装配。
+// ring 写入失败兜底、safeStr JSON.stringify undefined 分支。
+// 注：debugGetSpec 测试已搬至 app-modules.boot.test.ts（ADR-214：钩子搬离 debug.ts）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
-vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
 import { dbg, safeStr } from "./debug.ts";
 
@@ -59,22 +57,4 @@ describe("safeStr JSON.stringify undefined 分支", () => {
   });
 });
 
-describe("window.debugGetSpec 装配", () => {
-  it("GetModel3DSpec 成功 → 返回解析后的 spec 并写 dbg ring", async () => {
-    getAppMock.mockResolvedValue({
-      GetModel3DSpec: vi.fn().mockResolvedValue({ bones: [1, 2] }),
-    });
-    const spec = await window.debugGetSpec("/models/a.ysm");
-    expect(spec).toEqual({ bones: [1, 2] });
-    expect(window._DBG_RING.some((e) => e.tag === "model3d")).toBe(true);
-  });
 
-  it("GetModel3DSpec 拒绝 → console.error + 返回 null", async () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    getAppMock.mockResolvedValue({
-      GetModel3DSpec: vi.fn().mockRejectedValue(new Error("spec down")),
-    });
-    expect(await window.debugGetSpec()).toBeNull();
-    expect(err).toHaveBeenCalledWith("[DEBUG]", expect.any(Error));
-  });
-});

@@ -17,7 +17,6 @@ interface RingEntry {
 declare global {
   interface Window {
     _DBG_RING: RingEntry[];
-    debugGetSpec: (path?: string) => Promise<unknown>;
   }
 }
 
@@ -104,23 +103,4 @@ export function safeStr(v: unknown): string {
     console.warn("[debug] safeStr 序列化失败:", err);
     return String(v);
   }
-}
-
-// 调试：控制台可调 window.debugGetSpec(path) 获取 Go spec 骨骼数据
-// node 测试环境无 window，跳过挂载
-// 断环：模块顶层不再静态依赖 backend/app.ts——本文件为叶子工具，
-// 控制台钩子仅在调用时动态 import 桥（浏览器运行时按需加载，无静态环）。
-if (typeof window !== "undefined") {
-  window.debugGetSpec = async (path?: string): Promise<unknown> => {
-    try {
-      const { getApp } = await import("@/backend/app.ts");
-      const { GetModel3DSpec } = await getApp();
-      const spec = await GetModel3DSpec(path || "");
-      dbg("model3d", "spec:", spec);
-      return spec;
-    } catch (e) {
-      console.error("[DEBUG]", e);
-      return null;
-    }
-  };
 }

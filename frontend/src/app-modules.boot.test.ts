@@ -448,3 +448,65 @@ describe("app-modules devtools 快捷键接线", () => {
     expect(plain.defaultPrevented).toBe(false);
   });
 });
+
+describe("app-modules debugGetSpec 控制台钩子（ADR-214）", () => {
+  const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
+  // debugGetSpec 类型声明（app-modules.ts 用类型断言绕过 Window 接口冲突）
+  type DebugGetSpec = (path?: string) => Promise<unknown>;
+
+  beforeEach(() => {
+    vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
+    // _devMode 判定：?dev=1 或 _devtools=1
+    localStorage.setItem("_devtools", "1");
+    // isDebugEnabled 判定：无 ?nodebug=1 且 _debug !== "0"
+    localStorage.setItem("_debug", "1");
+  });
+
+  it("_devMode + isDebugEnabled → 挂载 window.debugGetSpec，调用返回 spec", async () => {
+    getAppMock.mockResolvedValue({
+      GetModel3DSpec: vi.fn().mockResolvedValue({ bones: [1, 2] }),
+    });
+    await boot();
+    // 等待动态 import 链完成（debug.ts 的 isDebugEnabled 检查 + debugGetSpec 挂载）
+    await flushMicro();
+
+    expect((window as unknown as { debugGetSpec?: DebugGetSpec }).debugGetSpec).toBeDefined();
+    const spec = await (window as unknown as { debugGetSpec: DebugGetSpec }).debugGetSpec(
+      "/models/a.ysm",
+    );
+    expect(spec).toEqual({ bones: [1, 2] });
+  });
+
+  it("GetModel3DSpec 拒绝 → console.error + 返回 null", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    getAppMock.mockResolvedValue({
+      GetModel3DSpec: vi.fn().mockRejectedValue(new Error("spec down")),
+    });
+    await boot();
+    await flushMicro();
+
+    expect(await (window as unknown as { debugGetSpec: DebugGetSpec }).debugGetSpec()).toBeNull();
+    expect(err).toHaveBeenCalledWith("[DEBUG]", expect.any(Error));
+  });
+
+  it("非 _devMode → 不挂载 debugGetSpec", async () => {
+    // 清理上一用例残留的 window.debugGetSpec（resetModules 不清理 window 属性）
+    delete (window as unknown as Record<string, unknown>).debugGetSpec;
+    localStorage.removeItem("_devtools");
+    // 需要清除 URL search 中的 dev 参数
+    const origSearch = window.location.search;
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "" },
+      writable: true,
+    });
+    await boot();
+    await flushMicro();
+
+    expect((window as unknown as { debugGetSpec?: DebugGetSpec }).debugGetSpec).toBeUndefined();
+    // 恢复
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: origSearch },
+      writable: true,
+    });
+  });
+});

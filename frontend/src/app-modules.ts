@@ -195,3 +195,32 @@ export function unregisterDevtools(): void {
     document.removeEventListener("keydown", _devtoolsKeydown);
   }
 }
+
+// ===== 控制台 debugGetSpec 钩子（ADR-214）=====
+// 开发/调试环境挂载 window.debugGetSpec(path) 获取 Go spec 骨骼数据。
+// 职责纯度：debug.ts 是叶子工具不应绑桥，钩子生命周期由装配层管理。
+// 复用 _devMode 判定（?dev=1 / _devtools），不发明第二个 debug 开关。
+// 注意：不与 declare global 合并——app-modules 已 import Window from runtime.ts，
+// 同名 interface 会触发 noRedeclare；此处用类型断言绕过。
+if (_devMode && typeof window !== "undefined") {
+  import("@/utils/debug/debug.ts")
+    .then(({ isDebugEnabled }) => {
+      if (!isDebugEnabled()) return;
+      (window as unknown as { debugGetSpec: (path?: string) => Promise<unknown> }).debugGetSpec =
+        async (path?: string): Promise<unknown> => {
+          try {
+            const { getApp } = await import("@/backend/app.ts");
+            const { GetModel3DSpec } = await getApp();
+            const spec = await GetModel3DSpec(path || "");
+            // 动态导入 dbg 避免循环依赖
+            const { dbg } = await import("@/utils/debug/debug.ts");
+            dbg("model3d", "spec:", spec);
+            return spec;
+          } catch (e) {
+            console.error("[DEBUG]", e);
+            return null;
+          }
+        };
+    })
+    .catch((e) => console.warn("[app-modules] debugGetSpec 挂载失败:", e));
+}

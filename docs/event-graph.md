@@ -398,9 +398,9 @@
 | (顶层) | `frontend/src/app-modules.ts` | 27 |
 | runStartupSteps | `frontend/src/app-modules.ts` | 86 |
 | (顶层) | `frontend/src/app-modules.ts` | 148 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 36 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 47 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 59 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 274 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |

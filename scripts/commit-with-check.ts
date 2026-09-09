@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { runCommitChecks } from "./_lib/commit-check.ts";
-import { commitWithTempIndex } from "./_lib/commit-temp-index.ts";
+import { commitWithTempIndex, expandPathspecs } from "./_lib/commit-temp-index.ts";
 import { domainSummaryText, groupByDomain } from "./_lib/domain-classify.ts";
 import { GEN_CMDS } from "./_lib/gen-cmds.ts";
 import { run } from "./_lib/proc.ts";
@@ -114,8 +114,10 @@ function git(args: string[]) {
 let paths: string[];
 let checkPaths: string[];
 if (files.length > 0) {
-  paths = files;
-  checkPaths = files;
+  // 目录 pathspec 展开为具体文件：修正 --files 传目录时 pathSet 与 git show
+  // 展开后的单文件路径不匹配 → 误判越界自动回退 HEAD 的缺陷（commit-temp-index 越界守卫）
+  paths = expandPathspecs(files);
+  checkPaths = paths;
 } else if (docsMode) {
   // docs 模式无 --files：提交范围 = staged docs；校验范围 = staged ∪ 工作树 docs
   const stagedDocs = git(["diff", "--cached", "--name-only", "--", "docs/"])

@@ -15,7 +15,11 @@ auto_fields:
     - CommitTempIndexResult
     - commitWithTempIndex
     - computeStageList
+    - expandPathspecs
     - GEN_CMDS
+    - GitLsRunner
+    - IsDirFn
+    - isDirOnDisk
     - isHookArtifact
     - normPath
     - parsePorcelain

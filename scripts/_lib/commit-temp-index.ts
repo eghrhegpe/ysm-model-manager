@@ -62,6 +62,54 @@ export interface CommitTempIndexResult {
   error?: string;
 }
 
+/** 路径是否磁盘真实目录（仅目录才展开；文件/不存在/错误一律原样保留）。 */
+export function isDirOnDisk(p: string, cwd: string): boolean {
+  try {
+    return fs.statSync(path.join(cwd, p)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** git 执行器契约（expandPathspecs 注入用，便于单测桩）。 */
+export type GitLsRunner = (args: string[]) => { ok: boolean; out: string };
+
+/** 目录判定契约（expandPathspecs 注入用，便于单测桩）。 */
+export type IsDirFn = (p: string, cwd: string) => boolean;
+
+/**
+ * 把目录 pathspec 展开为具体文件清单（已跟踪 + 未跟踪，尊重 .gitignore），
+ * 单文件/不存在路径原样保留。
+ *
+ * 修正 commit-with-check --files 传目录时：commitWithTempIndex 用 pathSet（含目录串）
+ * 比对 git show 展开后的单文件路径 → 全部判越界 → 自动回退 HEAD 的缺陷。
+ * 展开后 paths 与 committedFiles 同为单文件路径，越界守卫语义不变、误判消除。
+ */
+export function expandPathspecs(
+  paths: string[],
+  opts: { cwd?: string; gitRun?: GitLsRunner; isDir?: IsDirFn } = {},
+): string[] {
+  const cwd = opts.cwd ?? ROOT;
+  const gitRun =
+    opts.gitRun ??
+    ((args: string[]) => run("git", ["-c", "core.quotepath=false", ...args], { cwd }));
+  const dirCheck = opts.isDir ?? isDirOnDisk;
+  const out: string[] = [];
+  for (const p of paths) {
+    if (!p || p.trim() === "") continue;
+    if (dirCheck(p, cwd)) {
+      const tracked = gitRun(["ls-files", "--", p]).out.split("\n").filter(Boolean);
+      const untracked = gitRun(["ls-files", "--others", "--exclude-standard", "--", p]).out
+        .split("\n")
+        .filter(Boolean);
+      out.push(...tracked, ...untracked);
+    } else {
+      out.push(p);
+    }
+  }
+  return [...new Set(out)];
+}
+
 /** 生成物/测试白名单判定：pre-commit 钩子合法 stage 的非 paths 产物。
  *  gen 产物落 docs/、frontend/public/locales/、completions/（.githooks/pre-commit 快照目录）；
  *  智能 stage 只收 *.test.* / *.spec.*（.githooks/pre-commit:160 ADR-087）。 */
@@ -91,7 +139,9 @@ function git(args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv; timeo
  */
 export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempIndexResult {
   const cwd = opts.cwd ?? ROOT;
-  const paths = opts.paths.filter((p) => p && p.trim() !== "");
+  // 目录 pathspec 展开为具体文件：修正 pathSet（含目录串）比对 git show 展开后的
+  // 单文件路径 → 误判越界自动回退 HEAD 的缺陷（归属本模块，所有调用方受益）
+  const paths = expandPathspecs(opts.paths.filter((p) => p && p.trim() !== ""), { cwd });
   const fail = (error: string): CommitTempIndexResult => ({
     ok: false,
     committedFiles: [],

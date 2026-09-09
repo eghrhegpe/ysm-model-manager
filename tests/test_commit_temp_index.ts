@@ -20,7 +20,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { commitWithTempIndex, isHookArtifact } from "../scripts/_lib/commit-temp-index.ts";
+import {
+  commitWithTempIndex,
+  expandPathspecs,
+  isHookArtifact,
+} from "../scripts/_lib/commit-temp-index.ts";
 
 const fails: string[] = [];
 function check(name: string, fn: () => void) {
@@ -208,6 +212,52 @@ check("用例8: 单提交场景 interleaved=false", () => {
   const r = commitWithTempIndex({ paths: ["a.ts"], message: "il", cwd: dir });
   assert.ok(r.ok);
   assert.equal(r.interleaved, false, "无并发插队时 interleaved 应为 false");
+});
+
+// ── 用例 9：--files 传目录 pathspec（回归：此前会误判越界自动回退）──
+check("用例9: --files 传目录 pathspec 展开为具体文件、提交成功且无越界回退", () => {
+  const dir = makeRepo(describe);
+  // 建子目录并提交基线
+  fs.mkdirSync(path.join(dir, "feat"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "feat", "x.ts"), "x1", "utf8");
+  fs.writeFileSync(path.join(dir, "feat", "y.ts"), "y1", "utf8");
+  git(["add", "."], dir);
+  git(["commit", "-q", "-m", "feat-base"], dir);
+  // 修改子目录下全部文件（未 git add，模拟 --files 目录直取）
+  fs.writeFileSync(path.join(dir, "feat", "x.ts"), "x2", "utf8");
+  fs.writeFileSync(path.join(dir, "feat", "y.ts"), "y2", "utf8");
+
+  const r = commitWithTempIndex({ paths: ["feat/"], message: "feat-dir", cwd: dir });
+  assert.ok(r.ok, `目录提交应成功（此前会误判越界回退）: ${r.error}`);
+  assert.ok(r.outOfScope.length === 0, `不应有越界文件: ${r.outOfScope}`);
+  const committed = git(["show", "--name-only", "--format=", "HEAD"], dir)
+    .split("\n")
+    .filter(Boolean);
+  assert.ok(committed.includes("feat/x.ts"), `应含 feat/x.ts: ${committed}`);
+  assert.ok(committed.includes("feat/y.ts"), `应含 feat/y.ts: ${committed}`);
+  assert.equal(git(["show", "HEAD:feat/x.ts"], dir), "x2");
+  assert.equal(git(["show", "HEAD:feat/y.ts"], dir), "y2");
+});
+
+// ── 用例 10：expandPathspecs 纯函数（目录→已跟踪+未跟踪，文件原样，去重）──
+check("用例10: expandPathspecs 目录展开(已跟踪+未跟踪)、文件原样、去重", () => {
+  const fakeGit = (args: string[]): { ok: boolean; out: string } => {
+    const spec = args[args.length - 1];
+    if (args.includes("--others")) {
+      return { ok: true, out: spec === "dir/" ? "dir/c.ts" : "" };
+    }
+    return { ok: true, out: spec === "dir/" ? "dir/a.ts\ndir/b.ts" : "" };
+  };
+  const isDir = (p: string) => p === "dir/";
+  const res = expandPathspecs(["dir/", "file.ts"], { cwd: "/tmp/x", gitRun: fakeGit, isDir });
+  assert.deepEqual(
+    res.sort(),
+    ["dir/a.ts", "dir/b.ts", "dir/c.ts", "file.ts"].sort(),
+    `目录应展开含未跟踪且去重: ${res}`,
+  );
+  // 非目录单文件原样保留
+  const res2 = expandPathspecs(["solo.ts"], { cwd: "/tmp/x", gitRun: fakeGit, isDir });
+  assert.deepEqual(res2, ["solo.ts"]);
 });
 
 if (fails.length) {

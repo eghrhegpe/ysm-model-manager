@@ -152,6 +152,11 @@ export function payloadCtx(type: CtxShowPayload["type"]): CtxShowPayload {
   if (type === "instance")
     return { ...base, instanceName: "测试整合包", rtype: RESOURCE_TYPES.YSM };
   if (type === "batch") return { ...base, count: 3 };
+  if (type === "workshop")
+    return {
+      ...base,
+      workshop: { name: "工坊模型.ysm", path: "repo/工坊模型.ysm", hash: "abc", size: 1024 },
+    };
   return base;
 }
 

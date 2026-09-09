@@ -195,17 +195,21 @@ function cmReBindContextMenu(ctx: CmReCtx, listeners: ListenerRef[]): void {
       const name = row.dataset.name || "";
       const m = models.find((x) => x.name === name);
       if (!m) return;
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const sizeStr = (m.size ?? 0) > 0 ? `${(m.size! / 1024).toFixed(0)}KB` : "?KB";
-      bus.emit("menu:show", {
+      // ADR-208 D3：右键展示项移植 menu-defs（type "workshop"，4 条纯展示项挂 noop）——
+      // ctx:show 走 orchestrator 过滤链（visibleWhen 护栏 / canWebAction / divider 折叠），
+      // 杀灭裸发 menu:show + 空 onClick 幽灵菜单 + m.size! 非空断言
+      // （exactOptionalPropertyTypes：条件携带可选字段，不显式传 undefined）
+      const workshop: { name: string; path: string; hash?: string; size?: number } = {
+        name: m.name,
+        path: m.path,
+      };
+      if (m.hash !== undefined) workshop.hash = m.hash;
+      if (m.size !== undefined) workshop.size = m.size;
+      bus.emit("ctx:show", {
         x: e.clientX,
         y: e.clientY,
-        items: [
-          { label: `📄 ${m.name}`, onClick: () => {} },
-          { label: `📂 ${m.path}`, onClick: () => {} },
-          { label: `🔐 ${m.hash ? m.hash : "—"}`, onClick: () => {} },
-          { label: `📏 ${sizeStr}`, onClick: () => {} },
-        ],
+        type: "workshop",
+        workshop,
       });
     });
   }

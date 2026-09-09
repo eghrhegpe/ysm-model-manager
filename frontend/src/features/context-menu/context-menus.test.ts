@@ -70,9 +70,14 @@ describe("registerContextMenus 四类菜单声明", () => {
     expectItemsMatchDef(payload, "dir");
   });
 
-  it("MENU_DEFS 覆盖全部四种类型", () => {
+  it("workshop：items 载荷与 MENU_DEFS 一致（4 条展示项全 noop，ADR-208 D3）", () => {
+    const payload = showMenu("workshop", payloadCtx("workshop"));
+    expectItemsMatchDef(payload, "workshop");
+  });
+
+  it("MENU_DEFS 覆盖全部五种类型", () => {
     const types = MENU_DEFS.map((d) => d.type);
-    expect(types.sort()).toEqual(["batch", "dir", "file", "instance"]);
+    expect(types.sort()).toEqual(["batch", "dir", "file", "instance", "workshop"]);
   });
 
   it("MENU_DEFS 全部 action 均注册 handler（零失配警告）", async () => {

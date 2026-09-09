@@ -195,19 +195,24 @@ describe("community 仓库页事件编排（G-1 样板）", () => {
     unsub();
   });
 
-  it("10. 右键模型行 → bus menu:show 携带索引信息", () => {
+  it("10. 右键模型行 → ctx:show（type workshop，携带模型细节）；裸发 menu:show 已杀灭（ADR-208 D3）", () => {
+    const ctxSpy = vi.fn();
+    const ctxUnsub = bus.on("ctx:show", ctxSpy);
     const menuSpy = vi.fn();
-    const unsub = bus.on("menu:show", menuSpy);
+    const menuUnsub = bus.on("menu:show", menuSpy);
     const { sr } = mount();
     const row = sr.querySelector('[data-testid="gh-row"][data-name="角色A.ysm"]') as HTMLElement;
     row.dispatchEvent(
       new MouseEvent("contextmenu", { bubbles: true, clientX: 1, clientY: 2 }),
     );
-    expect(menuSpy).toHaveBeenCalledTimes(1);
-    const payload = menuSpy.mock.calls[0][0];
-    expect(payload.items).toHaveLength(4);
-    expect(payload.items[0].label).toContain("角色A.ysm");
-    unsub();
+    expect(ctxSpy).toHaveBeenCalledTimes(1);
+    const payload = ctxSpy.mock.calls[0][0];
+    expect(payload.type).toBe("workshop");
+    expect(payload.workshop).toMatchObject({ name: "角色A.ysm", path: "repo/角色A.ysm", size: 1024 });
+    // 幽灵菜单回归防线：社区域不得再绕过 menu-defs 单一事实源裸发 menu:show
+    expect(menuSpy).not.toHaveBeenCalled();
+    ctxUnsub();
+    menuUnsub();
   });
 
   it("11. B站搜索按钮 → OpenInBrowser（作者提取）", async () => {

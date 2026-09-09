@@ -324,7 +324,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | parsers/ 依赖 backend/web-common（跨簇单向,ADR-170 已知残留,待二段归位） | - |
+| 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | parsers/ 是纯解析层,勿塞业务;web-fs 装配层在 backend/ | - |
 
 ## 🎯 重构与技术债评估
 
@@ -710,13 +710,14 @@
 | safeDispose 静默吞错会让 dispose 抛错零信号——至少 console.warn 留痕 | - | - |
 | 帧循环内禁止 new THREE.Quaternion/Euler/Vector3——prealloc 闭包 scratch 复用（mount-preview-core 的 R1-P1-1 模式） | - | - |
 | 性能预算不要用冒充（MAX_MODELS=8 是计数不是预算）——要查 draw call/三角面/纹理字节 | `数量上限` | - |
-| ysm-header.ts extractYsmSummaryFromBytes 失败返回空 YsmSummary 而非 reject(对齐 Go app_model.go:41-65 吞错误语义),消费方不得 expect throw | - | - |
-| voxel-parse.ts decodeVoxelNbt 使用 bigint 处理 LongArray(>2^53 精度损失),勿替换为 number | - | - |
+| ysm-header.ts extractYsmSummaryFromBytes 失败返回空 YsmSummary 而非 reject(对齐 Go app 层吞错误契约),消费方不得 expect throw | - | - |
+| voxel-io.ts decodeVoxelNbt / nbt-parse.ts parseNbtRootExact 使用 bigint 处理 LongArray(>2^53 精度损失),勿替换为 number | - | - |
 | nbt-parse.ts parseNbtRootExact 与 parseNbtRoot 二选一:精确版(64 位 long)用于体素解码,标准版用于普通 NBT | - | - |
 | pack-meta.ts 依赖 resource_types.json 派生的 extensions,改类型配置须同步更新 pack 探测逻辑 | - | - |
-| extract.ts findZipEntry 使用中央目录搜索,超大 zip(>500MB)可能慢,web-fs 侧有 maxMaterializeBytes 512MB 封顶防护 | - | - |
+| pack-meta.ts findZipEntry 对 entries 全量线性扫描(大小写不敏感),超大 zip 可能慢,web-fs 侧有 maxMaterializeBytes 512MB 封顶防护 | - | - |
+| extract.ts detectContainerType 走中央目录口径(parseZipCentralDir),勿回退 LFLH 游走(data descriptor/zip64 漏条目,Go 侧明令禁用) | - | - |
 | voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码 | - | - |
-| ADR-170 二段归位(web-* 族下沉)后,voxel-parse/pack-meta 对 web-common 的跨簇依赖应消除,当前是已知技术债 | - | - |
+| ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动 | - | - |
 | 修改 innerHTML 注入前必须 esc()；静态注册表值（app-nav gid/label）同样要走 esc()，不可因"来源可控"跳过 | - | - |
 | 骨骼名/用户路径等外部数据写入 DOM 走 textContent/createTextNode，不要 esc() 后拼进 innerHTML | - | - |
 | 模块级 let 可变全局（_dedupBusy / _dedupStrategy）必须有 reset 路径或注释豁免理由，否则并发测试会串扰 | - | - |

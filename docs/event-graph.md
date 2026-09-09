@@ -16,7 +16,7 @@
 | `batch:enable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:rename` | 1 | 1 | 0 | 0 | ✅ |
 | `community:clearCache` | 1 | 1 | 0 | 0 | ✅ |
-| `ctx:show` | 5 | 1 | 0 | 0 | ✅ |
+| `ctx:show` | 6 | 1 | 0 | 0 | ✅ |
 | `dir:batch-rename` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:mkdir` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:recycle` | 1 | 1 | 0 | 0 | ✅ |
@@ -24,7 +24,7 @@
 | `instance:clear` | 1 | 1 | 0 | 0 | ✅ |
 | `instance:export-list` | 1 | 1 | 0 | 0 | ✅ |
 | `lang:changed` | 2 | 2 | 0 | 0 | ✅ |
-| `menu:show` | 2 | 1 | 0 | 0 | ✅ |
+| `menu:show` | 1 | 1 | 0 | 0 | ✅ |
 | `model:select` | 8 | 1 | 0 | 0 | ✅ |
 | `nav:changed` | 7 | 3 | 0 | 0 | ✅ |
 | `package:selected` | 2 | 1 | 0 | 0 | ✅ |
@@ -106,6 +106,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
+| cmReBindContextMenu | `frontend/src/features/community/events.ts` | 208 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 144 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 127 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 279 |
@@ -208,7 +209,6 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmReBindContextMenu | `frontend/src/features/community/events.ts` | 200 |
 | registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 92 |
 
 **订阅方（on）：**
@@ -406,9 +406,9 @@
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
-| cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 226 |
-| cmReBindRowClick | `frontend/src/features/community/events.ts` | 276 |
-| cmReBindRowClick | `frontend/src/features/community/events.ts` | 310 |
+| cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 230 |
+| cmReBindRowClick | `frontend/src/features/community/events.ts` | 280 |
+| cmReBindRowClick | `frontend/src/features/community/events.ts` | 314 |
 | dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename.ts` | 101 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 430 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 444 |

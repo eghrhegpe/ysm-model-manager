@@ -194,6 +194,33 @@ export const MENU_DEFS: MenuDef[] = [
       },
     ],
   },
+  {
+    // 创意工坊模型行右键（community/events.ts 发射 ctx:show type="workshop"，ADR-208 D3）：
+    // 纯展示项（名称/路径/哈希/大小），行为挂 noop——与 instance/batch 标题项同款模式，
+    // 替代原 community 域手搓 menu:show + 空 onClick 的幽灵菜单（视觉行为等价）。
+    type: "workshop",
+    items: [
+      {
+        action: "noop",
+        label: (ctx) => `📄 ${ctx.workshop?.name ?? ""}`,
+      },
+      {
+        action: "noop",
+        label: (ctx) => `📂 ${ctx.workshop?.path ?? ""}`,
+      },
+      {
+        action: "noop",
+        label: (ctx) => `🔐 ${ctx.workshop?.hash || "—"}`,
+      },
+      {
+        action: "noop",
+        label: (ctx) => {
+          const size = ctx.workshop?.size ?? 0;
+          return size > 0 ? `📏 ${(size / 1024).toFixed(0)}KB` : "📏 ?KB";
+        },
+      },
+    ],
+  },
 ];
 
 /** 测试辅助：按 type 取声明（不存在返回 undefined） */

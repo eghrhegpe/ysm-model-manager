@@ -4,7 +4,7 @@
 // VRMA 动作加载（同目录 .vrma → createVRMAnimationClip）、
 // 错误路径（空字节/解析失败）、GPU 释放（deepDispose + uncacheRoot）。
 // @pixiv/three-vrm 全 mock；three 用真实实现（Box3/Vector3/LoadingManager）。
-import type { BoneTree } from "@/preview-3d/bone-tools.ts"
+import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts"
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
@@ -57,13 +57,13 @@ vi.mock("@/preview-3d/vrm-materials.ts", () => ({
   setVrmMaterialVisible: vi.fn(),
   setVrmMaterialOpacity: vi.fn(),
 }));
-vi.mock("@/preview-3d/bone-tools.ts", () => ({
+vi.mock("@/preview-3d/bone/bone-tools.ts", () => ({
   buildBoneTree: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
 }));
 vi.mock("./vrm-bone-ui.ts", () => ({
   makeBonePanelRenderer: vi.fn(() => () => () => {}),
 }));
-vi.mock("@/preview-3d/semantic-bones.ts", () => ({
+vi.mock("@/preview-3d/bone/semantic-bones.ts", () => ({
   vrmSemanticBoneMap: vi.fn(() => ({})),
 }));
 vi.mock("@/preview-3d/perception/breath.ts", () => ({
@@ -86,7 +86,7 @@ vi.mock("@/preview-3d/perception/blink.ts", () => ({
     dispose: vi.fn(),
   })),
 }));
-vi.mock("@/preview-3d/mmd-foot-ik.ts", () => ({
+vi.mock("@/preview-3d/bone/mmd-foot-ik.ts", () => ({
   createFootIKController: vi.fn(() => ({
     apply: vi.fn(),
     dispose: vi.fn(),

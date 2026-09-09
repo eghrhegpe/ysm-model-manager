@@ -17,7 +17,7 @@ import {
   getSemanticBone,
   type SemanticBoneId,
   type SemanticBoneMap,
-} from "@/preview-3d/semantic-bones.ts";
+} from "@/preview-3d/bone/semantic-bones.ts";
 
 /** 注视驱动的语义骨骼：head 为主，eyes 为辅 */
 const GAZE_BONES: SemanticBoneId[] = ["head", "leftEye", "rightEye"];

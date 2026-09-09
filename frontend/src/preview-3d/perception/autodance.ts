@@ -16,7 +16,7 @@ import {
   getSemanticBone,
   type SemanticBoneId,
   type SemanticBoneMap,
-} from "@/preview-3d/semantic-bones.ts";
+} from "@/preview-3d/bone/semantic-bones.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */

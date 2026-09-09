@@ -15,7 +15,7 @@ import {
   assembleBoneSelectInfo,
   registerBoneRaycast,
 } from "./bone-raycast.ts";
-import type { BoneSelectInfo } from "./model3d.ts";
+import type { BoneSelectInfo } from "@/preview-3d/model3d.ts";
 
 /** 骨骼声明 fixture：hips → head 两级 */
 function makeSpec() {

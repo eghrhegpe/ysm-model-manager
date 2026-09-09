@@ -18,7 +18,7 @@ import {
   getSemanticBone,
   type SemanticBoneId,
   type SemanticBoneMap,
-} from "@/preview-3d/semantic-bones.ts";
+} from "@/preview-3d/bone/semantic-bones.ts";
 import { isPerceptionPaused } from "./core.ts";
 
 /** 呼吸驱动的语义骨骼列表（躯干段）：顺序即优先级，先 chest 再 fallback spine/shoulders */

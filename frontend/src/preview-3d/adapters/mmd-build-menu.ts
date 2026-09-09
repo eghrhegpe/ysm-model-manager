@@ -1,10 +1,11 @@
 // ===== mmd-build-menu.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import type * as THREE from "three";
-import { buildBoneTree } from "@/preview-3d/bone-tools.ts";
+import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
+import { mmdBonesToBoneNodes } from "@/preview-3d/bone/mmd-bones.ts";
+import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts";
+import { mmdSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import { mmdBonesToBoneNodes } from "@/preview-3d/mmd-bones.ts";
-import { createFootIKController } from "@/preview-3d/mmd-foot-ik.ts";
 import {
   getMmdMaterialDetail,
   listMmdMaterials,
@@ -17,7 +18,6 @@ import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { createGazeController } from "@/preview-3d/perception/gaze.ts";
 import { buildLipMorphIndices, createLipSyncController } from "@/preview-3d/perception/lipsync.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
-import { mmdSemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { mmdSemanticMorphMap } from "@/preview-3d/semantic-morphs.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { MmdBottomNavCtx } from "./content-bridges.ts";

@@ -22,6 +22,7 @@ import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
@@ -42,7 +43,6 @@ import {
   setOverlayStyleTarget,
 } from "@/preview-3d/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
-import type { SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { installUiComponentsStyles, uiComponentsStyleSheet } from "@/ui/ui-components-styles.ts";
 import { PREVIEW_OVERLAY_ID } from "@/ui/ui-constants.ts";
 import { slideMenuStyleSheet } from "@/ui/ui-slide-menu-styles.ts";

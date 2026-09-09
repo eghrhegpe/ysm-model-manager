@@ -11,8 +11,8 @@
 //     （这些属外壳层，由调用方决定：renderModel3D 自建壳 / 统一核心 shared 模式）
 
 import type * as THREE from "three";
-import { getBoneList } from "./bone-list.ts";
-import { setBoneVisible, showModelGroup, toggleBone } from "./bone-visibility.ts";
+import { getBoneList } from "@/preview-3d/bone/bone-list.ts";
+import { setBoneVisible, showModelGroup, toggleBone } from "@/preview-3d/bone/bone-visibility.ts";
 import { disposeSceneMeshes } from "./cleanup-helper.ts";
 import { type MeshFragment, splitMeshByFaceAlpha } from "./face-split.ts";
 import { buildSceneMesh, compKey } from "./mesh.ts";

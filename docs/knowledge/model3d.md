@@ -45,11 +45,7 @@ auto_fields:
     - BasisModuleLike
     - BeatDetectorLike
     - BeatDetectorOptions
-    - BedrockBone
-    - BedrockCube
-    - BedrockGeometry
     - BedrockModel
-    - BedrockSubModel
     - bindFieldRestorers
     - bindInputHandlers
     - BlinkCallback
@@ -448,8 +444,8 @@ auto_fields:
     - PackDeps
     - PackEntryReader
     - packTextureLabel
-    - parseBedrockGeometryFromJSON
     - parseJavaModel
+    - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
     - PerceptionCapability
@@ -512,6 +508,7 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - RawYsmAuthor
     - rcMasterToggleNode
     - readPmxStats
     - readVrmMeta
@@ -701,6 +698,8 @@ auto_fields:
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer
+    - YsmAuthor
+    - YsmAuthorMetadata
     - YsmContentHandle
     - YsmControlsContext
     - ysmMenuItems

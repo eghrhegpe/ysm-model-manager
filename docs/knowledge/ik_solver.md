@@ -7,14 +7,7 @@ source_files:
   - frontend/src/preview-3d/ik-solver.ts
   - frontend/src/preview-3d/mmd-foot-ik.ts
 auto_fields:
-  symbols_with_lines:
-    - createFootIKController
-    - extractIKChainFromTree
-    - FootIKController
-    - IKChain
-    - IKConfig
-    - IKResult
-    - solveIK
+  symbols_with_lines: []
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

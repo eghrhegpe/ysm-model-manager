@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-217：backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛",
+        "link": "/adr/ADR-217-backend-parsers-tier"
+      },
+      {
         "text": "ADR-216：域状态订阅提级原语层：createListenerSet",
         "link": "/adr/ADR-216-listener-set-primitive"
       },

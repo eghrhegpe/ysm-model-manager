@@ -11,9 +11,9 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
-import { buildBoneTree } from "@/preview-3d/bone-tools.ts";
+import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
+import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
-import { fbxBonesToBoneNodes } from "@/preview-3d/fbx-bones.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";

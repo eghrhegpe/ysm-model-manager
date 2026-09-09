@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { createBreathController } from "./breath.ts";
-import { type SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
+import { type SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 
 /** 构造带 object 引用的语义骨骼 map（用于真实应用测试） */
 function fakeSemanticMap(entries: Record<string, THREE.Object3D>): SemanticBoneMap {

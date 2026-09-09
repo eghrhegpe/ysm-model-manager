@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
-import type { BoneTree } from "@/preview-3d/bone-tools.ts";
+import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "@/preview-3d/model3d.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
@@ -63,11 +63,11 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
 vi.mock("@/preview-3d/camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
-vi.mock("@/preview-3d/bone-raycast.ts", () => ({
+vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
   buildBoneHierarchy: h.buildBoneHierarchy,
   registerBoneRaycast: h.registerBoneRaycast,
 }));
-vi.mock("@/preview-3d/bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
+vi.mock("@/preview-3d/bone/bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
 vi.mock("@/preview-3d/cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
 vi.mock("@/preview-3d/debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
 vi.mock("@/preview-3d/frustum-cull.ts", () => ({

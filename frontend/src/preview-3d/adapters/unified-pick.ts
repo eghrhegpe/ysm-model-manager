@@ -2,7 +2,7 @@
 // 仅 count>=2 激活，单模型完全沿用逐模型 registerBoneRaycast，零回归。
 // renderer/camera/scene 显式注入，语义骨骼映射经模块级导入消费。
 import * as THREE from "three";
-import { assembleBoneSelectInfo, getMeshBoneId } from "@/preview-3d/bone-raycast.ts";
+import { assembleBoneSelectInfo, getMeshBoneId } from "@/preview-3d/bone/bone-raycast.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
 /** 拖拽误触阈值（px）：orbit 旋转/平移结束的松手也触发 click，位移超过此值不算点击 */

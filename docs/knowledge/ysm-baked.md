@@ -8,12 +8,7 @@ source_files:
   - frontend/src/preview-3d/decoder/geometry.ts
 auto_fields:
   symbols_with_lines:
-    - BedrockBone
-    - BedrockCube
-    - BedrockGeometry
-    - BedrockSubModel
     - decodeYsmViaWasm
-    - parseBedrockGeometryFromJSON
   tests:
     - frontend/src/preview-3d/decoder/geometry.test.ts
 pitfalls:

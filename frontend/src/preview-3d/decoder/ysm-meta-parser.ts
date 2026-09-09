@@ -16,6 +16,7 @@
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { extractAnimGroupsAndConfigs } from "@/utils/format/ysm-anim-config.ts";
 import { type DecodedYsm, devLog } from "./utils.ts";
+import { parseYsmAuthors, type YsmAuthor } from "./ysm-authors.ts";
 
 /** WASM 解码输出文件 */
 export interface DecodedFile {
@@ -30,12 +31,7 @@ export interface MdWsYsmMeta {
   ysmDefaultTex: string | null;
   animGroups: DecodedYsm["animGroups"];
   configMenus: DecodedYsm["configMenus"];
-  authors: Array<{
-    name: string;
-    role: string;
-    avatarUrl: string | null;
-    avatarPath: string;
-  }>;
+  authors: YsmAuthor[];
   avatars: Record<string, string>;
 }
 
@@ -97,19 +93,7 @@ export function parseYsmMetaFromFiles(files: DecodedFile[]): {
   const ysmDefaultTex = json?.properties?.default_texture || null;
   const animCfg = extractAnimGroupsAndConfigs(json?.properties);
 
-  const authors: MdWsYsmMeta["authors"] = [];
-  if (json?.metadata?.authors) {
-    for (const au of json.metadata.authors) {
-      if (!au.name) continue;
-      const avatarPath = au.avatar || "";
-      authors.push({
-        name: au.name,
-        role: au.role || "",
-        avatarUrl: null,
-        avatarPath,
-      });
-    }
-  }
+  const authors = parseYsmAuthors(json?.metadata);
 
   return {
     meta: {

@@ -15,8 +15,9 @@
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
 import { b64ToBytes } from "@/preview-3d/base64.ts";
-import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone-raycast.ts";
-import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone-tools.ts";
+import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone/bone-raycast.ts";
+import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
+import { ysmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { fitCameraToScene } from "@/preview-3d/camera-setup.ts";
 import { disposeDebugGroup } from "@/preview-3d/cleanup-helper.ts";
 import { rebuildDebug } from "@/preview-3d/debug-render.ts";
@@ -28,7 +29,6 @@ import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
 import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
-import { ysmSemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "@/preview-3d/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import {
@@ -192,7 +192,7 @@ interface MdYsPanelAnim {
   boneTree: BoneTree;
   animPlayer: YsmAnimPlayer | null;
   animBridge: MmdPlayBridge | null;
-  semanticBones: import("@/preview-3d/semantic-bones.ts").SemanticBoneMap | null;
+  semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null;
   breath: ReturnType<typeof createBreathController> | null;
 }
 
@@ -371,7 +371,7 @@ async function mdYsBuildBonePanelAndAnim(
   const isGenericMode = opts.mode === "generic";
   let animPlayer: YsmAnimPlayer | null = null;
   let animBridge: MmdPlayBridge | null = null;
-  let semanticBones: import("@/preview-3d/semantic-bones.ts").SemanticBoneMap | null = null;
+  let semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null = null;
   let breath: ReturnType<typeof createBreathController> | null = null;
 
   if (!isGenericMode) {

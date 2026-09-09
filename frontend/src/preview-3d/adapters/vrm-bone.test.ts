@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { buildVrmBoneNodes, buildVrmBoneTree } from "./vrm-bone.ts";
-import { listBonesWithDepth } from "@/preview-3d/bone-tools.ts";
+import { listBonesWithDepth } from "@/preview-3d/bone/bone-tools.ts";
 import type { VRM } from "@pixiv/three-vrm";
 
 /** 构造 fake VRM：humanBones 结构对齐 three-vrm（key=boneName，node=Object3D） */

@@ -19,7 +19,7 @@ import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import type { YsmModel, YsmContentHandle } from "@/preview-3d/adapters/content-bridges.ts";
 import type { Spec3D } from "@/preview-3d/model3d.ts";
 import { makeMenuCtx } from "@/preview-3d/adapters/menu-test-fixtures.ts";
-import type { BoneTree } from "@/preview-3d/bone-tools.ts";
+import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import {
   expectContainsAtLeast,
   expectNotContains,

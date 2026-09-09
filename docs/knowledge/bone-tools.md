@@ -12,27 +12,11 @@ source_files:
   - frontend/src/preview-3d/mmd-bones.ts
 auto_fields:
   symbols_with_lines:
-    - BoneDetail
-    - BoneListItem
-    - BoneNode
     - boneRowActiveBg
-    - BoneTree
-    - buildBoneTree
     - buildVrmBoneNodes
     - buildVrmBoneTree
-    - findAncestorBoneId
-    - getBoneDetail
-    - getBonePath
-    - getBonePosition
-    - listBonesWithDepth
     - makeBonePanelRenderer
-    - MmdBonePickResult
-    - mmdBonesToBoneNodes
-    - pickBone
-    - pickMmdBone
     - RenderVrmBonePanel
-    - setBoneNodeVisible
-    - toggleBoneVisible
     - VrmBonePanelCtx
   tests:
     - frontend/src/preview-3d/bone-tools.test.ts

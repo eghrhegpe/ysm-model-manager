@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import { t } from "@/core/i18n/t.ts";
-import type { VoxelData } from "@/parsers/voxel-parse.ts";
+import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";

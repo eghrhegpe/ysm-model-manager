@@ -31,6 +31,7 @@
 import { t } from "@/core/i18n/t.ts";
 // R2 导入增强：detectContainerType 供 DetectResourceType 歧义容器内容指纹（ADR-066 web 识别层）
 import { detectContainerType } from "@/parsers/extract.ts";
+import { litematicVoxelView } from "@/parsers/litematic-voxel.ts";
 // ADR-070 M1：蓝图/投影 meta 读取（NBT 解析 + 三个视图提取，TS 平移 go/litematic/parser.go）
 import {
   litematicMetaView,
@@ -38,7 +39,8 @@ import {
   parseNbtRoot,
   schematicSummaryView,
 } from "@/parsers/nbt-parse.ts";
-import { litematicVoxelView, nbtVoxelView, schematicVoxelView } from "@/parsers/voxel-parse.ts";
+import { nbtVoxelView } from "@/parsers/nbt-voxel.ts";
+import { schematicVoxelView } from "@/parsers/schematic-voxel.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）

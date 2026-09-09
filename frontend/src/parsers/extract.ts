@@ -122,7 +122,7 @@ export function parseZipCentralDir(data: Uint8Array): ZipEntryMeta[] {
       fflateKey = utf8DecodeBytes(nameBytes);
     } else {
       // Latin-1 解码（逐字节映射到同值 Unicode code point）
-      fflateKey = latin1DecodeBytes(nameBytes);
+      fflateKey = decodeLatin1(nameBytes);
     }
 
     metas.push({
@@ -204,7 +204,7 @@ export function detectContainerType(data: Uint8Array): ZipType {
     }
 
     // 读文件名字节（按 Latin-1 处理，大小写折叠仅影响 ASCII）
-    const nameLow = lowerLatin1(data.subarray(nameStart, nameStart + nameLen));
+    const nameLow = decodeLatin1(data.subarray(nameStart, nameStart + nameLen), true);
 
     // ADR-082 S4：注册表驱动指纹（matchZipEntryTS，与 Go types.MatchZipEntry 同构——
     // 任意层级段后缀语义，pack.mcmeta/shaders/ysm.json/类型后缀命中任意层级，
@@ -231,21 +231,15 @@ function utf8DecodeBytes(bytes: Uint8Array): string {
   }
 }
 
-/** Latin-1 字节序列解码（逐字节 → 同值 Unicode code point） */
-function latin1DecodeBytes(bytes: Uint8Array): string {
-  let s = "";
-  for (let i = 0; i < bytes.length; i++) {
-    s += String.fromCharCode(bytes[i]);
-  }
-  return s;
-}
-
-/** Latin-1 字节序列小写化（仅影响 ASCII 范围） */
-function lowerLatin1(bytes: Uint8Array): string {
+/**
+ * Latin-1 字节序列解码（逐字节 → 同值 Unicode code point）。
+ * toLower=true 时仅 ASCII A-Z（0x41-0x5A）小写化，用于文件名大小写折叠匹配。
+ */
+function decodeLatin1(bytes: Uint8Array, toLower = false): string {
   let s = "";
   for (let i = 0; i < bytes.length; i++) {
     const c = bytes[i];
-    s += c >= 0x41 && c <= 0x5a ? String.fromCharCode(c + 0x20) : String.fromCharCode(c);
+    s += toLower && c >= 0x41 && c <= 0x5a ? String.fromCharCode(c + 0x20) : String.fromCharCode(c);
   }
   return s;
 }

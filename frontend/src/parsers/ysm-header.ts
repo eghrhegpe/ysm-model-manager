@@ -14,6 +14,7 @@
 // 失败不 reject：头部返回全空 YSMHeader，摘要返回最小空 YsmSummary（对齐 Go internal/app
 // app_model.go:41-65 的单返回值签名：错误被吞、返回最小结构，消费方容错）。
 
+import { asRecord, toInt } from "@/utils/base/guards.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { extractZip } from "./extract.ts";
 
@@ -177,6 +178,76 @@ function hasTextHeaderBytes(input: Uint8Array): boolean {
   );
 }
 
+/** 解析段头 --- [Section] → 段名（对齐 header.go:57-67） */
+function parseSectionHeader(line: string): string {
+  if (line.includes("Metadata")) return "metadata";
+  if (line.includes("Tips")) return "tips";
+  if (line.includes("Export")) return "export";
+  if (line.includes("Codec")) return "codec";
+  if (line.includes("SHA-256") || line.includes("Source")) return "source";
+  return "";
+}
+
+/** 解析 metadata 段的 <tag>value（对齐 header.go:88-125） */
+function parseMetadataTag(tag: string, value: string, h: YsmHeaderShape): void {
+  switch (tag.toLowerCase()) {
+    case "name":
+      h.name = value;
+      break;
+    case "free":
+      h.isFree = value === "true";
+      h.hasFree = true;
+      break;
+    case "hash":
+      h.hash = value;
+      break;
+    case "license":
+      if (value !== "") h.license = value; // 对齐 Go continue：空值跳过
+      break;
+    case "link-home":
+      h.linkHome = value;
+      break;
+    case "link-update":
+    case "link_update":
+      h.linkUpdate = value;
+      break;
+  }
+}
+
+/** 解析 codec 段的 <tag>value（对齐 header.go:126-130） */
+function parseCodecTag(tag: string, value: string, h: YsmHeaderShape): void {
+  switch (tag) {
+    case "format":
+      h.format = parseHeaderInt(value);
+      break;
+    case "crypto":
+      h.crypto = parseHeaderInt(value);
+      break;
+  }
+}
+
+/** 解析段外的作者信息 <tag>value（对齐 header.go:132-150） */
+function parseAuthorTag(tag: string, value: string, h: YsmHeaderShape): void {
+  switch (tag) {
+    case "name":
+      if (!h.authorName) h.authorName = value; // 对齐 Go：首位作者优先
+      break;
+    case "role":
+      h.authorRole = value;
+      break;
+    case "contact-bilibili":
+    case "contact_bilibili":
+    case "contactbilibili":
+      h.authorBilibili = value;
+      break;
+    case "contact-afdian":
+    case "contact_afdian":
+    case "contactafdian":
+      h.authorAfdian = value;
+      break;
+  }
+}
+
 /** scanHeader：逐行扫描文本头部（1:1 平移 header.go:46-169，含注释前缀清理 → tips） */
 function scanHeaderFromText(text: string): YsmHeaderShape {
   const h = emptyYsmHeader();
@@ -188,21 +259,15 @@ function scanHeaderFromText(text: string): YsmHeaderShape {
   let i = 0;
   while (i < lines.length && limit < MAX_HEADER_LINES) {
     limit++;
-    // 对齐 strings.TrimLeft(line, "\uFEFF")：去除前导 BOM
-    const line = lines[i++].replace(/^\uFEFF+/, "");
+    const line = lines[i++].replace(/^\uFEFF+/, ""); // 对齐 strings.TrimLeft(line, "\uFEFF")
 
     if (line === YSGP_MAGIC) {
       h.isYsm = true;
       continue;
     }
-    // 段头：--- [Metadata] / [Tips] / [Export] / [Codec] / [SHA-256|Source]
+    // 段头：--- [Section]
     if (line.startsWith("---") && line.includes("[")) {
-      if (line.includes("Metadata")) currentSection = "metadata";
-      else if (line.includes("Tips")) currentSection = "tips";
-      else if (line.includes("Export")) currentSection = "export";
-      else if (line.includes("Codec")) currentSection = "codec";
-      else if (line.includes("SHA-256") || line.includes("Source")) currentSection = "source";
-      else currentSection = "";
+      currentSection = parseSectionHeader(line);
       continue;
     }
     if (line.startsWith("===")) break;
@@ -211,93 +276,42 @@ function scanHeaderFromText(text: string): YsmHeaderShape {
       while (i < lines.length && lines[i].trim() === "") i++;
       break;
     }
+    // 标签行：<tag>value
     if (line.startsWith("<")) {
       const idx = line.indexOf(">");
       if (idx > 0) {
         const tag = line.slice(1, idx).trim();
         const value = stripClosingTag(line.slice(idx + 1).trim());
-        switch (currentSection) {
-          case "metadata":
-            switch (tag.toLowerCase()) {
-              case "name":
-                h.name = value;
-                break;
-              case "free":
-                h.isFree = value === "true";
-                h.hasFree = true;
-                break;
-              case "hash":
-                h.hash = value;
-                break;
-              case "license":
-                if (value === "") break; // 对齐 Go continue：空值跳过
-                h.license = value;
-                break;
-              case "link-home":
-                h.linkHome = value;
-                break;
-              case "link-update":
-              case "link_update":
-                h.linkUpdate = value;
-                break;
-            }
-            break;
-          case "export":
-            break;
-          case "codec":
-            switch (tag) {
-              case "format":
-                h.format = parseHeaderInt(value);
-                break;
-              case "crypto":
-                h.crypto = parseHeaderInt(value);
-                break;
-            }
-            break;
-        }
+        if (currentSection === "metadata") parseMetadataTag(tag, value, h);
+        else if (currentSection === "codec") parseCodecTag(tag, value, h);
+        // export / source / tips 段无标签解析
       }
       if (currentSection !== "") continue;
     }
+    // Tips 段：收集非空行
     if (currentSection === "tips" && line.trim() !== "") {
       tipsLines.push(line.trim());
     }
-    // 段外的 <name>/<role>/<contact-*> 属作者信息（对齐 header.go:132-150）
+    // 段外的作者信息（<name>/<role>/<contact-*>）
     if (line.trim().startsWith("<") && line.includes(">")) {
       const trimmed = line.trim();
       const idx = trimmed.indexOf(">");
       if (idx > 0) {
         const tag = trimmed.slice(1, idx).toLowerCase();
         const value = stripClosingTag(trimmed.slice(idx + 1).trim());
-        switch (tag) {
-          case "name":
-            // 对齐 Go `if h.AuthorName == ""`：undefined 视为空（首位作者优先）
-            if (!h.authorName) h.authorName = value;
-            break;
-          case "role":
-            h.authorRole = value;
-            break;
-          case "contact-bilibili":
-          case "contact_bilibili":
-          case "contactbilibili":
-            h.authorBilibili = value;
-            break;
-          case "contact-afdian":
-          case "contact_afdian":
-          case "contactafdian":
-            h.authorAfdian = value;
-            break;
-        }
+        parseAuthorTag(tag, value, h);
       }
     }
+    // 段外的非空行 → 前导注释（备选 tips）
     if (currentSection === "" && line.trim() !== "") {
       preambleLines.push(line);
     }
   }
 
+  // 组装 tips：优先 Tips 段内容，否则用前导注释行（清理 // # ; 前缀）
   if (tipsLines.length > 0) {
     h.tips = tipsLines.join("\n");
   } else if (preambleLines.length > 0) {
-    // 无 Tips 段时用前导注释行作 tips，清理 // # ; 前缀（对齐 header.go:158-167）
     h.tips = preambleLines
       .map((l) => {
         let c = l.trim();
@@ -384,8 +398,9 @@ function fillSummaryFromHeader(h: YsmHeaderShape, out: YsmSummaryShape): void {
     out.authors = [author];
   }
   if (h.linkHome || h.linkUpdate) {
-    const links: { home?: string; donate?: string } = {};
+    const links: { home?: string; donate?: string; update?: string } = {};
     if (h.linkHome) links.home = h.linkHome;
+    if (h.linkUpdate) links.update = h.linkUpdate;
     out.links = links;
   }
   if (out.name === "") out.name = stripExt(out.source);
@@ -757,23 +772,18 @@ function extractControlTypes(raw: unknown): string[] {
 
 const _utf8 = new TextDecoder("utf-8");
 
+/**
+ * 字节 → UTF-8 字符串（容错降级：非法字节序列 → 空串 + console.warn）。
+ * 仅用于二进制扫描路径（头部/zip 降级），JSON 解析路径请用
+ * `new TextDecoder("utf-8", { fatal: true }).decode()` 让错误上浮。
+ */
 function utf8Decode(bytes: Uint8Array): string {
   try {
     return _utf8.decode(bytes);
   } catch {
+    console.warn("[ysm-header] UTF-8 解码失败（非法字节序列），降级为空串");
     return "";
   }
-}
-
-function asRecord(v: unknown): Record<string, unknown> | undefined {
-  return typeof v === "object" && v !== null && !Array.isArray(v)
-    ? (v as Record<string, unknown>)
-    : undefined;
-}
-
-/** 对齐 Go int：number 取整，非数字 → 0 */
-function toInt(v: unknown): number {
-  return typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0;
 }
 
 /** 去扩展名（对齐 Go strings.TrimSuffix(source, filepath.Ext(source))） */

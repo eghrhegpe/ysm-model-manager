@@ -34,7 +34,10 @@ const vox = vi.hoisted(() => ({
   litematicVoxelView: vi.fn(),
   schematicVoxelView: vi.fn(),
 }));
-vi.mock("@/parsers/voxel-parse.ts", () => vox);
+vi.mock("@/parsers/voxel-io.ts", () => ({ decodeVoxelNbt: vox.decodeVoxelNbt }));
+vi.mock("@/parsers/nbt-voxel.ts", () => ({ nbtVoxelView: vox.nbtVoxelView }));
+vi.mock("@/parsers/litematic-voxel.ts", () => ({ litematicVoxelView: vox.litematicVoxelView }));
+vi.mock("@/parsers/schematic-voxel.ts", () => ({ schematicVoxelView: vox.schematicVoxelView }));
 
 // ── IDB 内存 store（test-setup 全局共享）──
 const idb = (globalThis as unknown as {

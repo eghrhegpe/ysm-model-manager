@@ -9,7 +9,7 @@
 
 import { extractZip } from "@/parsers/extract.ts";
 import { findZipEntry } from "@/parsers/pack-meta.ts";
-import type { VoxelData } from "@/parsers/voxel-parse.ts";
+import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { readWebFile, readWebZipEntries, voxelFromBase64 } from "./web-fs-read.ts";
 

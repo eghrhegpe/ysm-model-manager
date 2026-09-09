@@ -269,7 +269,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
 
     if (btn3d) {
       // 按扩展名单点映射体素 RPC（ADR-066 解墙）；web 端由 web-fs.ts 的
-      // Get*VoxelData TS 实现提供数据（ADR-070 M2 voxel-parse.ts 平移）。
+      // Get*VoxelData TS 实现提供数据（ADR-070 M2 litematic-voxel.ts / nbt-voxel.ts / schematic-voxel.ts 平移）。
       // FAB 形态无按钮级 loading 态（3D 全屏 overlay 自带加载占位），对齐 VRM/MMD；
       // catch 防 unhandled rejection（陷阱 #3：异步点击不得产生未处理拒绝）
       const voxelFn = VOXEL_RPC_BY_EXT[ext] || "GetLitematicVoxelData";

@@ -9,16 +9,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { gzipSync } from "fflate";
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
-import {
-  readVarInt,
-  extractBits,
-  unpackBlockStates,
-  bitsPerEntry,
-  litematicVoxelView,
-  nbtVoxelView,
-  schematicVoxelView,
-  decodeVoxelNbt,
-} from "./voxel-parse.ts";
+import { readVarInt, extractBits, unpackBlockStates, bitsPerEntry } from "./voxel-bits.ts";
+import { litematicVoxelView } from "./litematic-voxel.ts";
+import { nbtVoxelView } from "./nbt-voxel.ts";
+import { schematicVoxelView } from "./schematic-voxel.ts";
+import { decodeVoxelNbt } from "./voxel-io.ts";
 import { mapColor } from "./voxel-colors.ts";
 // 测试直接构造 NBT 字节 → parseNbtRootExact（与 binding 层同一精确 LongArray 解码）
 import { parseNbtRootExact } from "./nbt-parse.ts";

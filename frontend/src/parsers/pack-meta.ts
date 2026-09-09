@@ -35,6 +35,25 @@ function stripUtf8Bom(s: string): string {
   return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 }
 
+/** 文本组件（对齐 go types.descString 的 text/extra 结构） */
+interface TextComponent {
+  text?: string;
+  extra?: TextComponent[];
+}
+
+/** 未知值是否为 TextComponent */
+function isTextComponent(v: unknown): v is TextComponent {
+  return typeof v === "object" && v !== null && ("text" in v || "extra" in v);
+}
+
+/** 从 TextComponent 递归提取全部文本（text + extra[].text） */
+function extractComponentText(comp: TextComponent): string {
+  let out = "";
+  if (comp.text) out += comp.text;
+  for (const e of comp.extra ?? []) out += extractComponentText(e);
+  return out;
+}
+
 /**
  * description 可读文本提取（对齐 go types.descString：string / {text} 对象 /
  * [{text, extra:[{text}]}] 数组；不支持形状返回空串）。
@@ -44,18 +63,11 @@ function descText(value: unknown): string {
   if (Array.isArray(value)) {
     let out = "";
     for (const c of value) {
-      const comp = c as { text?: unknown; extra?: Array<{ text?: unknown }> };
-      if (comp && typeof comp.text === "string" && comp.text) out += comp.text;
-      for (const e of comp?.extra ?? []) {
-        if (e && typeof e.text === "string" && e.text) out += e.text;
-      }
+      if (isTextComponent(c)) out += extractComponentText(c);
     }
     return out;
   }
-  if (value && typeof value === "object") {
-    const v = value as { text?: unknown };
-    if (typeof v.text === "string") return v.text;
-  }
+  if (isTextComponent(value)) return extractComponentText(value);
   return "";
 }
 

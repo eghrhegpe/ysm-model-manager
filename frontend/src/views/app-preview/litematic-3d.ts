@@ -6,7 +6,7 @@
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
 import { getApp } from "@/backend/app.ts";
-import type { VoxelData } from "@/parsers/voxel-parse.ts";
+import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { makeLitematicAdapter } from "@/preview-3d/adapters/litematic-adapter.ts";
 import {
   cleanupPreview,

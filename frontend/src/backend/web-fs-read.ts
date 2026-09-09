@@ -6,7 +6,8 @@
 // 的语义（key 规约见 web-fs-shared.ts）。
 
 import { extractZip } from "@/parsers/extract.ts";
-import { decodeVoxelNbt, type VoxelData } from "@/parsers/voxel-parse.ts";
+import { decodeVoxelNbt } from "@/parsers/voxel-io.ts";
+import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { idbGet, idbKeys } from "./idb.ts";
 import {
   arrayBufferToBase64,
@@ -72,7 +73,7 @@ export async function readVoxelJson(
     const b64 = await readWebFile(path);
     if (!b64) return null;
     // IO（读文件）与解码（b64 → NBT root）解耦：decodeVoxelNbt 为纯函数
-    // （voxel-parse.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → typed VoxelData
+    // （voxel-io.ts），此处只做装配——读文件 → 纯解码 → 纯视图 → typed VoxelData
     return voxelFromBase64(b64, view);
   } catch {
     // ADR-143 P1：失败走 null（error 通道语义由 binding 层处理）

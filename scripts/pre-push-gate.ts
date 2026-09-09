@@ -433,13 +433,27 @@ async function main() {
       const freshGoTest = process.env.YSM_FRESH_GO_TEST === "1";
       // 并发敏感包 -race；其余包经 go list 过滤（排除并发包，避免重复跑两遍）。
       // 实测（-count=1 强制新鲜）：全量 -race 42.5s → 分级+过滤 18.9s（-55%）。
+      // 跨平台修复：095b3d911 原命令含 `$(go list ...)` bash 替换——Windows cmd.exe
+      // 不展开字面 `$(...)`（go 收到畸形包名恒 FAIL），自 ADR-202 刀5 起 Windows
+      // gate 该项持续红（90+ commit 积压未推的直接原因）。改为 JS 侧先取包清单
+      // 再拼字面命令，双平台等价（grep -vE 'go/(…)(\/|$)' → 等价正则在 JS 实现）。
       const racePkgs =
         "./go/sync/... ./go/conc/... ./go/download/... ./go/instance/... ./go/installer/... ./go/watcher/... ./go/scanner/...";
+      const racePkgRe = /(^|\/)go\/(sync|conc|download|instance|installer|watcher|scanner)(\/|$)/;
+      const goList = await shAsync("go list ./go/... ./internal/app/");
+      if (goList.rc !== 0) {
+        record("go list ./go/... ./internal/app/", false, { tail: goList.out.trim().split("\n").slice(-4).join("\n") });
+        return;
+      }
+      const otherPkgs = goList.out
+        .trim()
+        .split(/\s+/)
+        .filter((p) => p && !racePkgRe.test(p));
       // code_review fd349a91a #6：命令提为变量供 label 复用——原标签含 `...`/中文伪
       // 命令不可执行且省略真实 flags（-count=1/-timeout 60s/go list grep）
       const goTestCmd =
         `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
-        `&& go test $(go list ./go/... ./internal/app/ | grep -vE 'go/(sync|conc|download|instance|installer|watcher|scanner)($|/)') ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
+        `&& go test ${otherPkgs.join(" ")} ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
       const goTest = await shAsync(goTestCmd);
       // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
       record(goTestCmd, goTest.rc === 0, {

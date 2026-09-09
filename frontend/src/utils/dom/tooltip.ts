@@ -132,8 +132,11 @@ function show(target: HTMLElement, text: string): void {
   tip.classList.add("ysw-tooltip--show");
   place(target);
   st.target = target;
-  // tooltip 可见期间才观察目标脱离 DOM，隐藏即停（避免 subtree 全量观察常驻空转）
-  ensureObserver()?.observe(document.body, { childList: true, subtree: true });
+  // 仅观察目标父节点的子列表变化（目标被移除时触发），避免全量观察 document.body
+  const parent = target.parentElement;
+  if (parent) {
+    ensureObserver()?.observe(parent, { childList: true, subtree: false });
+  }
 }
 
 function hide(): void {

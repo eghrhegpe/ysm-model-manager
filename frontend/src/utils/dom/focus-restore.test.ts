@@ -52,7 +52,7 @@ describe("rememberTrigger / returnFocus 配对", () => {
     expect(document.activeElement).toBe(btn);
   });
 
-  it("多次 rememberTrigger 取最后一次", () => {
+  it("多次 rememberTrigger 压栈 → returnFocus 后进先出（LIFO）", () => {
     const a = document.createElement("button");
     a.id = "a";
     const b = document.createElement("button");
@@ -64,18 +64,36 @@ describe("rememberTrigger / returnFocus 配对", () => {
     b.focus();
     rememberTrigger();
 
-    returnFocus();
+    // 后进先出：先恢复 b
+    expect(returnFocus()).toBe(true);
     expect(document.activeElement).toBe(b);
+    // 再恢复 a
+    expect(returnFocus()).toBe(true);
+    expect(document.activeElement).toBe(a);
+    // 栈空 → false
+    expect(returnFocus()).toBe(false);
   });
 
-  it("returnFocus 后记忆清空 → 第二次静默", () => {
-    const btn = document.createElement("button");
-    document.body.appendChild(btn);
-    btn.focus();
-    rememberTrigger();
-    expect(returnFocus()).toBe(true);
-    expect(__getTriggerForTest()).toBeNull();
+  it("栈空时 returnFocus 静默返回 false", () => {
     expect(returnFocus()).toBe(false);
+  });
+
+  it("returnFocus 跳过已离文档的触发器", () => {
+    const a = document.createElement("button");
+    a.id = "a";
+    const b = document.createElement("button");
+    b.id = "b";
+    document.body.append(a, b);
+
+    a.focus();
+    rememberTrigger();
+    b.focus();
+    rememberTrigger();
+    b.remove(); // b 离文档
+
+    // b 被跳过 → 恢复 a
+    expect(returnFocus()).toBe(true);
+    expect(document.activeElement).toBe(a);
   });
 
   it("触发器已离文档 → returnFocus 跳过（不抛错）", () => {
@@ -87,13 +105,22 @@ describe("rememberTrigger / returnFocus 配对", () => {
     expect(returnFocus()).toBe(false);
   });
 
-  it("clearTrigger 显式清除", () => {
-    const btn = document.createElement("button");
-    document.body.appendChild(btn);
-    btn.focus();
+  it("clearTrigger 清空整个栈", () => {
+    const a = document.createElement("button");
+    a.id = "a";
+    const b = document.createElement("button");
+    b.id = "b";
+    document.body.append(a, b);
+
+    a.focus();
     rememberTrigger();
+    b.focus();
+    rememberTrigger();
+    expect(__getTriggerForTest()).toBe(b);
+
     clearTrigger();
     expect(__getTriggerForTest()).toBeNull();
+    expect(returnFocus()).toBe(false);
   });
 
   it("焦点恢复失败时写日志（logWarn）", () => {

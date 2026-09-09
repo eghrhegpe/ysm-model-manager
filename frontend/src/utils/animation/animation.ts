@@ -83,7 +83,7 @@ interface RawKeyframeObject {
  * 保留理由仅剩「跳过闭包创建」；未来重构解析链时整体移除，由 compileMolang 统一承接。
  * 详见 docs/knowledge/animation-system.md
  *
- * 导出供 bench 实证编译开销（bench-fold-molang.ts），解析链外勿调用。
+ * 非导出：仅供 animation.ts 内部使用（Molang 编译热路径）。
  */
 function foldMolangConstant(str: unknown): number | null {
   if (typeof str !== "string") return null;
@@ -565,12 +565,7 @@ function sampleCatmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, s: number, out
   return o;
 }
 
-// 热路径复用缓冲区（模块级预分配，避免每帧每骨骼每通道分配）
-const _scratchP0: Vec3 = [0, 0, 0];
-const _scratchP1: Vec3 = [0, 0, 0];
-const _scratchP2: Vec3 = [0, 0, 0];
-const _scratchP3: Vec3 = [0, 0, 0];
-const _scratchCat: Vec3 = [0, 0, 0];
+// evaluateKeyframes 内局部分配 scratch buffer（避免模块级可变状态导致 Molang 重入时缓冲区被覆盖）
 
 /**
  * 在指定时间 t 对一组关键帧求值
@@ -584,11 +579,17 @@ export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null
   // NaN 无法喂 Molang，取数字基底）
   if (!Number.isFinite(t)) return [...(keyframes[0].post || [0, 0, 0])];
 
+  // 局部分配 scratch buffer（避免模块级可变状态导致 Molang 重入时缓冲区被覆盖）
+  const sp0: Vec3 = [0, 0, 0];
+  const sp1: Vec3 = [0, 0, 0];
+  const sp2: Vec3 = [0, 0, 0];
+  const sp3: Vec3 = [0, 0, 0];
+  const scat: Vec3 = [0, 0, 0];
+
   // 超出范围（Molang 轴仍按当前 t 求值，对齐 Bedrock q.anim_time 语义）
-  // 热路径：用 scratch 缓冲区承接 resolveFramePost，仅最终返回时拷贝
-  if (t <= keyframes[0].time) return [...resolveFramePost(keyframes[0], t, _scratchP0)];
+  if (t <= keyframes[0].time) return [...resolveFramePost(keyframes[0], t, sp0)];
   if (t >= keyframes[keyframes.length - 1].time)
-    return [...resolveFramePost(keyframes[keyframes.length - 1], t, _scratchP0)];
+    return [...resolveFramePost(keyframes[keyframes.length - 1], t, sp0)];
 
   const lo = findKeyframeLowerIndex(keyframes, t);
   const hi = lo + 1;
@@ -597,27 +598,24 @@ export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null
   const b = keyframes[hi];
 
   // step 插值：直接返回当前帧的 post 值
-  if (a.lerp === "step") return [...resolveFramePost(a, t, _scratchP0)];
+  if (a.lerp === "step") return [...resolveFramePost(a, t, sp0)];
 
   const dt = b.time - a.time;
-  if (dt <= 0) return [...resolveFramePost(a, t, _scratchP0)];
+  if (dt <= 0) return [...resolveFramePost(a, t, sp0)];
   const frac = (t - a.time) / dt;
 
   // catmullrom：取前后各一邻帧做 C1 三次样条（标准 uniform Catmull-Rom）。
-  // 区间端点本身即控制点；lo/hi 已在首尾帧内，p0/p3 越界时钳制到端点帧。
-  // 热路径：4 个 control point 写入独立 scratch，sampleCatmullRom 输出到 _scratchCat，最终拷贝返回。
   if (a.lerp === "catmullrom") {
-    const p0 = resolveFramePost(keyframes[Math.max(0, lo - 1)], t, _scratchP0);
-    const p1 = resolveFramePost(a, t, _scratchP1);
-    const p2 = resolveFramePost(b, t, _scratchP2);
-    const p3 = resolveFramePost(keyframes[Math.min(keyframes.length - 1, hi + 1)], t, _scratchP3);
-    return [...sampleCatmullRom(p0, p1, p2, p3, frac, _scratchCat)];
+    const p0 = resolveFramePost(keyframes[Math.max(0, lo - 1)], t, sp0);
+    const p1 = resolveFramePost(a, t, sp1);
+    const p2 = resolveFramePost(b, t, sp2);
+    const p3 = resolveFramePost(keyframes[Math.min(keyframes.length - 1, hi + 1)], t, sp3);
+    return [...sampleCatmullRom(p0, p1, p2, p3, frac, scat)];
   }
 
   // 线性插值（端点先 Molang 求值再 lerp，对齐 GeckoLib/ModernYSM 口径）
-  // 热路径：ap/bp 写入独立 scratch，结果数组无法复用（返回给调用方持有）。
-  const ap = resolveFramePost(a, t, _scratchP0);
-  const bp = resolveFramePost(b, t, _scratchP1);
+  const ap = resolveFramePost(a, t, sp0);
+  const bp = resolveFramePost(b, t, sp1);
   return [
     ap[0] + (bp[0] - ap[0]) * frac,
     ap[1] + (bp[1] - ap[1]) * frac,

@@ -102,14 +102,14 @@ status: active
 
 | 模块 | 文件 | 用途 |
 |------|------|------|
-| 行排列 | `ui-rows.ts` | `addToggleRow`/`addSliderRow`/`toggleRow`/`addFieldRow`/`initControl`（绑定后即时 update） |
+| 行排列 | `ui-rows.ts` | `addSliderRow`/`addModeRow`/`addFieldRow`/`initControl`（绑定后即时 update）；toggle 族（`addToggleRow`/`toggleRow`/`addInlineToggleRow`）已删除，能力下沉至 `ui-header-toggle|createHeaderToggle.forceToggle` 与 `preview-3d/menu/cap-controls|renderCapToggle` |
 | 高级行 | `ui-advanced-rows.ts` | `addColorSliderRow`/`addModeSlider`/`addVector3SliderRow`（带额外控制的滑块行） |
 | 折叠面板 | `ui-collapsible.ts` | `addCollapsible`（含 header toggle / mat 变体）/`addSectionTitle`/`addPresetChip`；折叠状态经 `panel.inert` 移出 Tab 序（可访问性） |
 | 幻灯片菜单 | `ui-slide-menu.ts` | `createSlideMenu` → `SlideMenuHandle`（轻量导航栈外壳，见 [ui_slide_menu](./ui-slide-menu.md)） |
 | 幻灯片行 | `ui-slide-row.ts` | `slideRow` 单行构建 |
 | 卡片 | `ui-card.ts` | `cardContainer(container, fn)` — 包一层 `.lcard`，返回内部 dispose |
 | 加载 | `ui-loading.ts` | `withLoadingIndicator` 自包含加载遮罩 |
-| 顶部切换 | `ui-header-toggle.ts` | `createHeaderToggle` 紧凑 toggle；bind 注册用唯一 id `header-toggle-bind#<seq>`（防多实例 Map 覆盖）+ 两击断连清扫 |
+| 顶部切换 | `ui-header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；bind 注册用唯一 id `header-toggle-bind#<seq>`（防多实例 Map 覆盖）+ 两击断连清扫 |
 | 滑块 | `ui-slider-controller.ts` | 数值范围滑块控件 |
 | 图标 | `icons.ts` | `createIcon` 图标工厂（Iconify + emoji 回退） |
 | 样式 | `ui-components-styles.ts` | `uiComponentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installUiComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
@@ -137,3 +137,4 @@ status: active
 - 控件自更新：默认 `registerControl` 为 no-op（依赖各 `initControl` 挂载时立即 update），接入 `setControlRegistry` 后持续自更新才生效
 - header-toggle 多实例：bind updater 各持唯一 id，注册前 `_sweepDetached()` 两击清扫——断连一轮入宽限集、连续两轮注销、恢复连接销记；从未挂载实例豁免（挂载历史 = MutationObserver.takeRecords 同步收割 + 扫描时 isConnected 补记，后者兜底 Shadow DOM）；update 不加 isConnected 守卫（保未挂载直调语义）
 - 行/面板 role/class 一律取自 `dom-contract.ts`，禁止手写字符串
+- toggle 行能力演进：`addToggleRow`/`toggleRow`/`addInlineToggleRow` 因生产零消费已删除；「整行点击切换（target 落在 `.toggle` 内跳过、防双触发）+ bind 自更新」语义并入 `ui-header-toggle|createHeaderToggle.forceToggle`，由 `preview-3d/menu/cap-controls|renderCapToggle` 消费（点 label 区翻转、点开关本体走原生 label 逻辑）。3D 菜单 toggle 唯一路径 = MenuNode schema → renderCapToggle，勿再引入第二套 toggle builder（红线：双轨必杀）

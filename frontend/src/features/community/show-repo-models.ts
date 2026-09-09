@@ -1,4 +1,7 @@
 // ===== 仓库模型显示（共享逻辑，供 init-workshop.ts 和 init-github.ts 复用）=====
+//
+// P0 整改：代际守卫封装为 createRepoRenderGuard() 工厂，消除模块级可变全局。
+// 模块级 defaultRepoGuard 保持既有消费者零改动。
 
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -11,17 +14,47 @@ import type { WorkshopModel } from "./render.ts";
 import { countMissing, renderRepoHeaderHTML } from "./render.ts";
 
 /**
- * 模块级仓库渲染代际 token：每次用户请求递增，await 后若已被更新调用超越
- *（快速切换仓库乱序）则丢弃过期结果。原实现用函数局部 `_currentRepo`
- * 在入口处赋值为 repo，`_currentRepo !== repo` 恒为 false——防竞态守卫是死代码。
+ * 仓库渲染代际守卫：每次用户请求递增，await 后若已被更新调用超越
+ *（快速切换仓库乱序）则丢弃过期结果。
  *
  * 代际只认「用户请求」（2026-09-05 code_review #3 收窄）：bindRepoEvents 内部
  * doneTimer 下载完成重秀（internalRefresh=true）不 bump 代际——否则用户切到
  * 新仓 A 的慢扫描在途期间，旧仓 B 迟到的 doneTimer 重秀会 bump 掉 A（A 永不
  * 渲染）。内部重秀仅当目标 repo 仍是最近用户请求的 repo 才继续渲染。
  */
-let _repoRenderGen = 0;
-let _userRequestedRepo = ""; // 最近一次用户请求的 repo（workshop 单容器场景）
+export interface RepoRenderGuard {
+  /** 用户请求时调用：递增代际并更新目标 repo */
+  bump(repo: string): void;
+  /** 内部重秀时调用：检查目标 repo 是否仍是最新用户请求 */
+  isCurrent(repo: string): boolean;
+  /** 获取当前代际 token */
+  readonly generation: number;
+}
+
+/**
+ * 创建独立的仓库渲染代际守卫（测试可注入）。
+ * 生产代码使用模块级 defaultRepoGuard，无需手动创建。
+ */
+export function createRepoRenderGuard(): RepoRenderGuard {
+  let repoRenderGen = 0;
+  let userRequestedRepo = "";
+
+  return {
+    bump(repo: string): void {
+      userRequestedRepo = repo;
+      repoRenderGen++;
+    },
+    isCurrent(repo: string): boolean {
+      return repo === userRequestedRepo;
+    },
+    get generation(): number {
+      return repoRenderGen;
+    },
+  };
+}
+
+/** 模块级默认代际守卫（生产代码消费方零改动） */
+const defaultRepoGuard = createRepoRenderGuard();
 
 /**
  * 显示 GitHub 仓库模型列表（比对本地已有文件）
@@ -37,6 +70,8 @@ let _userRequestedRepo = ""; // 最近一次用户请求的 repo（workshop 单�
  * @param source - 数据源标识（"raw" | "jsd" | "api"）
  * @param searchResults - 搜索结果容器 DOM 元素
  * @param rtype - 资源类型（缺省取 currentRepoType()，GitHub 页显式传 YSM）
+ * @param internalRefresh - 是否内部重秀（doneTimer 回跳）
+ * @param guard - 代际守卫（缺省走模块级 defaultRepoGuard）
  */
 export async function showRepoModels(
   esc: (s: unknown) => string,
@@ -50,19 +85,16 @@ export async function showRepoModels(
   searchResults: HTMLElement,
   rtype?: string,
   internalRefresh = false,
+  guard: RepoRenderGuard = defaultRepoGuard,
 ): Promise<void> {
   const effectiveRtype = rtype || currentRepoType();
-  // 代际守卫：仅「用户请求」递增代际并更新目标 repo；内部 doneTimer 重秀
-  //（bindRepoEvents 下载完成回跳）不 bump——避免旧仓迟到重秀杀掉用户新切仓的
-  // 在途扫描（code_review #3）。内部重秀若目标已非最近用户请求的 repo → 直接
-  // 退出（用户已切走，旧仓刷新作废）。
+  // 代际守卫：仅「用户请求」递增代际并更新目标 repo；内部 doneTimer 重秀不 bump
   if (internalRefresh) {
-    if (repo !== _userRequestedRepo) return; // 用户已切到别的仓，旧仓重秀作废
+    if (!guard.isCurrent(repo)) return; // 用户已切到别的仓，旧仓重秀作废
   } else {
-    _userRequestedRepo = repo;
-    _repoRenderGen++;
+    guard.bump(repo);
   }
-  const myGen = _repoRenderGen;
+  const myGen = guard.generation;
 
   // 加载本地仓库已有文件列表 + 镜像配置
   const localMap = new Map<string, string>();
@@ -88,7 +120,7 @@ export async function showRepoModels(
     // 加载失败不影响列表显示，但本地哈希对比会静默失效（「已安装」判断降级）——留痕
     console.warn("[community] 本地扫描失败，已安装对比降级:", e);
   }
-  if (myGen !== _repoRenderGen) return; // 已有更新调用，丢弃过期结果
+  if (myGen !== guard.generation) return; // 已有更新调用，丢弃过期结果
 
   // 下载 URL 统一用 raw 前缀：Go 端 downloadFileWithQueue 按 LoadAppConfig().Mirror
   // 重排 raw/jsd/api 顺序（jsdelivr 直通会令 ResolveSavePath 解析失败、回退失效、子目录被扁平化）
@@ -110,7 +142,7 @@ export async function showRepoModels(
 
   const missingCount = countMissing(models, localMap);
 
-  if (myGen !== _repoRenderGen) return; // 已有更新调用，丢弃
+  if (myGen !== guard.generation) return; // 已有更新调用，丢弃
   searchResults.innerHTML = renderRepoHeaderHTML({
     esc,
     repo,
@@ -129,7 +161,7 @@ export async function showRepoModels(
       dbg("repo-events", "清理旧仓库事件失败:", (e as Error)?.message);
     }
   }
-  if (myGen !== _repoRenderGen) return; // 清理期间已有更新调用，丢弃
+  if (myGen !== guard.generation) return; // 清理期间已有更新调用，丢弃
 
   // 委托 bindRepoEvents 管理所有事件 + 内部状态 (showAll/selectedSet/renderList)
   const { renderList, cleanup } = bindRepoEvents(searchResults, {
@@ -153,6 +185,7 @@ export async function showRepoModels(
         // 内部 doneTimer 重秀：不 bump 代际、仅当仍是最新用户目标时才渲染
         //（code_review #3：防止旧仓迟到重秀杀掉用户新切仓在途扫描）
         true,
+        guard,
       ),
     backToSite: () => {
       if (currentSite) {

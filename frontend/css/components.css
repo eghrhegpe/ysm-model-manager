@@ -265,13 +265,74 @@
   color: var(--txt);
   font-size: 11px;
   box-sizing: border-box;
+  flex: 1;
+  width: 0;
+  min-width: 0;
 }
 .afv-inp:focus {
   outline: none;
   border-color: var(--accent);
 }
+.afv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+.afv-label {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.afv-input-kw {
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+.afv-input-kw:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.afv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.afv-range-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.afv-sep {
+  color: var(--muted);
+}
+.afv-tag-hint {
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.afv-footer {
+  padding: 0;
+  display: flex;
+  gap: 6px;
+}
+.afv-clear {
+  margin-right: auto;
+}
 
 /* ===== 标签编辑弹窗 ===== */
+.te-box {
+  gap: 10px;
+  width: 380px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
 .te-tag {
   display: inline-flex;
   align-items: center;
@@ -308,6 +369,59 @@
 .te-sug-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+.te-path {
+  font-size: 10px;
+  color: var(--muted);
+  word-break: break-all;
+}
+.te-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px;
+  border: 1px solid var(--bd);
+  border-radius: 5px;
+  background: var(--bg);
+  align-content: flex-start;
+}
+.te-input-row {
+  display: flex;
+  gap: 4px;
+}
+.te-input {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 11px;
+}
+.te-add-btn {
+  padding: 4px 10px;
+}
+.te-suggest-details {
+  font-size: 10px;
+}
+.te-suggest-summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.te-suggest-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+}
+.te-suggest-empty {
+  color: var(--muted);
+}
+.te-footer {
+  padding: 0;
+  display: flex;
+  gap: 6px;
 }
 .dlg-header {
   padding: 12px 16px;

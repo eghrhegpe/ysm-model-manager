@@ -52,7 +52,7 @@ function dgTeRenderSuggestions(shell: DgTeShell, allTags: string[]): void {
     ? unused
         .map((tag) => `<button class="te-sug-btn" data-tag="${esc(tag)}">+${esc(tag)}</button>`)
         .join("")
-    : `<span style="color:var(--muted)">${t("dialog.noOtherTags")}</span>`;
+    : `<span class="te-suggest-empty">${t("dialog.noOtherTags")}</span>`;
   shell.suggestEl.querySelectorAll(".te-sug-btn").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => {
       const tag = (btn as HTMLElement).dataset.tag;
@@ -77,39 +77,26 @@ function dgTeAddTag(shell: DgTeShell, raw: string): void {
   shell.inputEl.value = "";
 }
 
-/** 标签编辑弹窗补充布局(P1 批次12:cssText 抽类;box 挂 body light DOM,head 注入适用;dlg-box/pad 规则在全局 components.css) */
-const teCss = `
-.te-box { gap:10px; width:380px; max-height:80vh; display:flex; flex-direction:column; }
-`;
-let _teStylesInjected = false;
-function ensureTeStyles(): void {
-  if (_teStylesInjected) return;
-  _teStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = teCss;
-  document.head.appendChild(el);
-}
-
-/** 弹窗内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3） */
+/** 弹窗内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
 function dgTeBuildBoxHTML(modelPath: string): string {
   return `
-    <div style="font-size:10px;color:var(--muted);word-break:break-all">${esc(modelPath)}</div>
+    <div class="te-path">${esc(modelPath)}</div>
 
-    <div id="te-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;padding:4px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);align-content:flex-start"></div>
+    <div id="te-tags" class="te-tags"></div>
 
-    <div style="display:flex;gap:4px">
-      <input id="te-input" maxlength="20" placeholder="${t("dialog.tagInputHint")}" style="flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-      <button id="te-add" class="dlg-btn dlg-btn-primary" style="padding:4px 10px">+ ${t("dialog.add")}</button>
+    <div class="te-input-row">
+      <input id="te-input" class="te-input" maxlength="20" placeholder="${t("dialog.tagInputHint")}">
+      <button id="te-add" class="dlg-btn dlg-btn-primary te-add-btn">+ ${t("dialog.add")}</button>
     </div>
 
-    <details style="font-size:10px">
-      <summary style="cursor:pointer;color:var(--muted)">📋 ${t("dialog.existingTags")}</summary>
-      <div id="te-suggest" style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 0"></div>
+    <details class="te-suggest-details">
+      <summary class="te-suggest-summary">📋 ${t("dialog.existingTags")}</summary>
+      <div id="te-suggest" class="te-suggest-wrap"></div>
     </details>
 
     <div id="te-err" class="dlg-err"></div>
 
-    <div class="dlg-footer" style="padding:0;display:flex;gap:6px">
+    <div class="dlg-footer te-footer">
       <button id="te-cancel" class="dlg-btn">${t("common.cancel")}</button>
       <button id="te-save" class="dlg-btn dlg-btn-primary">💾 ${t("common.save")}</button>
     </div>
@@ -117,8 +104,6 @@ function dgTeBuildBoxHTML(modelPath: string): string {
 }
 
 function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
-  ensureTeStyles(); // P1 批次12:cssText 抽类注入(幂等)
-
   let shell!: DgTeShell;
   const {
     overlay,

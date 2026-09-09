@@ -1,5 +1,8 @@
 // ===== context-menu-handlers.ts — instance/batch handler 表（ADR-040 P1 第2轮拆分）=====
 // file/dir handler 已拆至 context-menu-file-handlers.ts / context-menu-dir-handlers.ts
+//
+// P0 整改：busy 锁移入 createContextMenuHandlers() 工厂闭包，消除模块级可变全局。
+// 模块级 defaultHandlers 保持既有消费者零改动。
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -59,74 +62,6 @@ const BATCH_TPL: Record<
   },
 };
 
-async function runBatchFileOp(
-  ctx: MenuCtx,
-  op: {
-    mode: BatchMode;
-    binding: "MoveModelFile" | "CopyModelFile";
-    busy: BusyLock;
-  },
-): Promise<void> {
-  if (!op.busy.tryStart()) {
-    toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
-    return;
-  }
-  const tpl = BATCH_TPL[op.mode];
-  try {
-    const resolved = await resolveDstDir(
-      {
-        title: trDynamic(tpl.dialogTitle, "Move to Folder"),
-        icon: tpl.icon,
-        okText: trDynamic(tpl.dialogOk, "Move"),
-        emptyMsg: trDynamic(tpl.emptyMsg, "❌ Configure a storage path first"),
-      },
-      ctx.rtype,
-    );
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const app = await contextMenuGetApp();
-    toast(
-      trDynamic(tpl.progress, "📦 Moving {n} files to {folder}...", {
-        n: ctx.paths.length,
-        folder,
-      }),
-      TOAST_MS.normal,
-    );
-    let ok = 0;
-    let fail = 0;
-    for (const p of ctx.paths) {
-      try {
-        // 方法调用形态保持 this 绑定（const fn = app[op.binding] 解绑后调用有 this 风险）
-        await app[op.binding](p, dstDir);
-        ok++;
-      } catch (e) {
-        fail++;
-        dbg(`batch-${op.mode}-fail`, p, e);
-      }
-    }
-    if (ok > 0) {
-      toast(
-        fail > 0
-          ? trDynamic(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
-          : trDynamic(tpl.okAll, "✅ Moved {n} files to {folder}", { n: ctx.paths.length, folder }),
-        TOAST_MS.verbose,
-      );
-    } else {
-      toast(trDynamic(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
-    }
-    refreshUI();
-  } catch (e) {
-    toastError(e);
-  } finally {
-    op.busy.finish();
-  }
-}
-
-// 模块初始化时为每个 verb 各创建独立 busy flag（move / copy / recycle 互不耦合）
-const moveBusy = createBusyLock();
-const copyBusy = createBusyLock();
-const recycleBusy = createBusyLock();
-
 export type MenuCtx = import("@/bus").CtxShowPayload & { paths: string[] };
 
 // P2-1 表级窄化：file/dir 两张表各拿掉对立字段，编译期防跨表误取——
@@ -136,132 +71,219 @@ export type MenuCtx = import("@/bus").CtxShowPayload & { paths: string[] };
 export type FileCtx = Omit<MenuCtx, "dir">;
 export type DirCtx = Omit<MenuCtx, "path">;
 
-/** 行为 handler 表（instance + batch + merge file/dir）；satisfies 断言覆盖 MENU_ACTIONS，漏挂拼错即编译错误 */
-export const HANDLERS = {
-  noop: () => {},
-  ...FILE_HANDLERS,
-  ...DIR_HANDLERS,
+/** 右键菜单 handler 表（instance + batch + merge file/dir） */
+export type HandlerTable = Record<MenuAction, (ctx: MenuCtx) => void>;
 
-  // ── instance ──
-  "instance.open-folder": async (ctx) => {
-    if (!ctx.path) {
-      toast(tr("ctx.missingPath", "❌ Pack directory not found"), TOAST_MS.normal, "error");
-      return;
-    }
-    try {
-      const { OpenInstanceFolder } = await contextMenuGetApp();
-      // 扁平化架构下，打开精确到 {instanceDir}（如 3d-skin）；
-      // subdir 参数保留为 Wails 绑定兼容，已不参与路由
-      await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
-    } catch (e) {
-      toastError(e, tr("ctx.openFolderFail", "Failed to open folder"));
-    }
-  },
-  "instance.export-list": (ctx) => {
-    // rtype 契约必填（bus.ts 收紧）：发射点编译期强制提供非空；
-    // 运行期守卫与消费方（instance-ops）的 !rtype 失败守卫对称，双保险。
-    if (!ctx.rtype) {
-      toastEmptyRtype();
-      return;
-    }
-    bus.emit("instance:export-list", {
-      name: ctx.instanceName || "",
-      rtype: ctx.rtype,
-    });
-  },
-  "instance.clear": (ctx) => {
-    if (!ctx.rtype) {
-      toastEmptyRtype();
-      return;
-    }
-    bus.emit("instance:clear", {
-      name: ctx.instanceName || "",
-      rtype: ctx.rtype,
-    });
-  },
+/** 右键菜单 handlers 实例（busy 锁内聚于此） */
+export interface ContextMenuHandlers {
+  HANDLERS: HandlerTable;
+}
 
-  // ── batch ──
-  "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
-  "batch.move": (ctx) =>
-    runBatchFileOp(ctx, {
-      mode: "move",
-      binding: "MoveModelFile",
-      busy: moveBusy,
-    }),
-  "batch.copy": (ctx) =>
-    runBatchFileOp(ctx, {
-      mode: "copy",
-      binding: "CopyModelFile",
-      busy: copyBusy,
-    }),
-  "batch.recycle": async (ctx) => {
-    if (!recycleBusy.tryStart()) {
+/**
+ * 创建独立的右键菜单 handlers 实例（busy 锁隔离，测试可注入）。
+ * 生产代码使用模块级 defaultHandlers，无需手动创建。
+ */
+export function createContextMenuHandlers(): ContextMenuHandlers {
+  // 每个 verb 各创建独立 busy flag（move / copy / recycle 互不耦合）
+  const moveBusy = createBusyLock();
+  const copyBusy = createBusyLock();
+  const recycleBusy = createBusyLock();
+
+  async function runBatchFileOp(
+    ctx: MenuCtx,
+    op: {
+      mode: BatchMode;
+      binding: "MoveModelFile" | "CopyModelFile";
+      busy: BusyLock;
+    },
+  ): Promise<void> {
+    if (!op.busy.tryStart()) {
       toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
       return;
     }
+    const tpl = BATCH_TPL[op.mode];
     try {
-      const ok2 = await modalConfirm({
-        title: tr("ctx.recycleTitle", "Recycle Selected"),
-        icon: "♻️",
-        message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", {
+      const resolved = await resolveDstDir(
+        {
+          title: trDynamic(tpl.dialogTitle, "Move to Folder"),
+          icon: tpl.icon,
+          okText: trDynamic(tpl.dialogOk, "Move"),
+          emptyMsg: trDynamic(tpl.emptyMsg, "❌ Configure a storage path first"),
+        },
+        ctx.rtype,
+      );
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const app = await contextMenuGetApp();
+      toast(
+        trDynamic(tpl.progress, "📦 Moving {n} files to {folder}...", {
           n: ctx.paths.length,
+          folder,
         }),
-        okText: tr("ctx.recycleOkText", "♻️ Recycle"),
-        danger: true,
-      });
-      if (!ok2) return;
-      const { MoveToRecycle } = await contextMenuGetApp();
+        TOAST_MS.normal,
+      );
+      let ok = 0;
       let fail = 0;
-      let lastErr: unknown = null;
       for (const p of ctx.paths) {
         try {
-          await MoveToRecycle(p);
+          // 方法调用形态保持 this 绑定（const fn = app[op.binding] 解绑后调用有 this 风险）
+          await app[op.binding](p, dstDir);
+          ok++;
         } catch (e) {
           fail++;
-          lastErr = e;
+          dbg(`batch-${op.mode}-fail`, p, e);
         }
       }
-      if (fail > 0) {
+      if (ok > 0) {
         toast(
-          tr("ctx.recycleFailN", "❌ Failed to recycle {fail} files: {err}", {
-            fail,
-            err: friendlyError(lastErr, tr("ctx.moveFail", "Move failed")),
-          }),
-          TOAST_MS.long,
-          "error",
+          fail > 0
+            ? trDynamic(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
+            : trDynamic(tpl.okAll, "✅ Moved {n} files to {folder}", {
+                n: ctx.paths.length,
+                folder,
+              }),
+          TOAST_MS.verbose,
         );
       } else {
-        toast(
-          tr("ctx.recycleOkN", "✅ Moved {n} files to recycle bin", { n: ctx.paths.length }),
-          TOAST_MS.normal,
-        );
+        toast(trDynamic(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
       }
       refreshUI();
     } catch (e) {
       toastError(e);
     } finally {
-      recycleBusy.finish();
+      op.busy.finish();
     }
-  },
-  "batch.copy-paths": async (ctx) => {
-    // DOM 操作下沉 utils/dom（core 层不直接操作 document/navigator.clipboard）
-    const result = await copyText(ctx.paths.join("\n"));
-    toast(
-      result.ok ? t("ctx.copyPathsOk", { n: ctx.paths.length }) : t("ctx.copyPathsFail"),
-      result.ok ? TOAST_MS.success : TOAST_MS.normal,
-      result.ok ? undefined : "error",
-    );
-  },
-  "batch.export-list": (ctx) => {
-    const names = ctx.paths
-      .map((p) => p.split(/[/\\]/).pop())
-      .filter(Boolean)
-      .join("\n");
-    // DOM 职责下沉（utils/dom/download-text.ts）——handler 不再直接操作 document/URL
-    downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
-    toast(
-      tr("ctx.exportListOk", "✅ Exported {n} file names", { n: ctx.paths.length }),
-      TOAST_MS.success,
-    );
-  },
-} satisfies Record<MenuAction, (ctx: MenuCtx) => void>;
+  }
+
+  /** 行为 handler 表（instance + batch + merge file/dir）；satisfies 断言覆盖 MENU_ACTIONS，漏挂拼错即编译错误 */
+  const HANDLERS: HandlerTable = {
+    noop: () => {},
+    ...FILE_HANDLERS,
+    ...DIR_HANDLERS,
+
+    // ── instance ──
+    "instance.open-folder": async (ctx) => {
+      if (!ctx.path) {
+        toast(tr("ctx.missingPath", "❌ Pack directory not found"), TOAST_MS.normal, "error");
+        return;
+      }
+      try {
+        const { OpenInstanceFolder } = await contextMenuGetApp();
+        await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
+      } catch (e) {
+        toastError(e, tr("ctx.openFolderFail", "Failed to open folder"));
+      }
+    },
+    "instance.export-list": (ctx) => {
+      if (!ctx.rtype) {
+        toastEmptyRtype();
+        return;
+      }
+      bus.emit("instance:export-list", {
+        name: ctx.instanceName || "",
+        rtype: ctx.rtype,
+      });
+    },
+    "instance.clear": (ctx) => {
+      if (!ctx.rtype) {
+        toastEmptyRtype();
+        return;
+      }
+      bus.emit("instance:clear", {
+        name: ctx.instanceName || "",
+        rtype: ctx.rtype,
+      });
+    },
+
+    // ── batch ──
+    "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
+    "batch.move": (ctx) =>
+      runBatchFileOp(ctx, {
+        mode: "move",
+        binding: "MoveModelFile",
+        busy: moveBusy,
+      }),
+    "batch.copy": (ctx) =>
+      runBatchFileOp(ctx, {
+        mode: "copy",
+        binding: "CopyModelFile",
+        busy: copyBusy,
+      }),
+    "batch.recycle": async (ctx) => {
+      if (!recycleBusy.tryStart()) {
+        toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
+        return;
+      }
+      try {
+        const ok2 = await modalConfirm({
+          title: tr("ctx.recycleTitle", "Recycle Selected"),
+          icon: "♻️",
+          message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", {
+            n: ctx.paths.length,
+          }),
+          okText: tr("ctx.recycleOkText", "♻️ Recycle"),
+          danger: true,
+        });
+        if (!ok2) return;
+        const { MoveToRecycle } = await contextMenuGetApp();
+        let fail = 0;
+        let lastErr: unknown = null;
+        for (const p of ctx.paths) {
+          try {
+            await MoveToRecycle(p);
+          } catch (e) {
+            fail++;
+            lastErr = e;
+          }
+        }
+        if (fail > 0) {
+          toast(
+            tr("ctx.recycleFailN", "❌ Failed to recycle {fail} files: {err}", {
+              fail,
+              err: friendlyError(lastErr, tr("ctx.moveFail", "Move failed")),
+            }),
+            TOAST_MS.long,
+            "error",
+          );
+        } else {
+          toast(
+            tr("ctx.recycleOkN", "✅ Moved {n} files to recycle bin", { n: ctx.paths.length }),
+            TOAST_MS.normal,
+          );
+        }
+        refreshUI();
+      } catch (e) {
+        toastError(e);
+      } finally {
+        recycleBusy.finish();
+      }
+    },
+    "batch.copy-paths": async (ctx) => {
+      const result = await copyText(ctx.paths.join("\n"));
+      toast(
+        result.ok ? t("ctx.copyPathsOk", { n: ctx.paths.length }) : t("ctx.copyPathsFail"),
+        result.ok ? TOAST_MS.success : TOAST_MS.normal,
+        result.ok ? undefined : "error",
+      );
+    },
+    "batch.export-list": (ctx) => {
+      const names = ctx.paths
+        .map((p) => p.split(/[/\\]/).pop())
+        .filter(Boolean)
+        .join("\n");
+      downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
+      toast(
+        tr("ctx.exportListOk", "✅ Exported {n} file names", { n: ctx.paths.length }),
+        TOAST_MS.success,
+      );
+    },
+  } satisfies Record<MenuAction, (ctx: MenuCtx) => void>;
+
+  return { HANDLERS };
+}
+
+/** 模块级默认 handlers（生产代码消费方零改动） */
+const defaultHandlers = createContextMenuHandlers();
+
+/** @deprecated 使用 defaultHandlers.HANDLERS 或 createContextMenuHandlers() 注入 */
+export const HANDLERS = defaultHandlers.HANDLERS;

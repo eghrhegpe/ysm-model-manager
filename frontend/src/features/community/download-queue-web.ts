@@ -8,6 +8,7 @@
 // 单一写入纪律（store 文件头）：STATE 写入一律经 store 导出写函数——本模块经 ctx 注入
 // 取得，对 store 零运行时依赖（DownloadTask 为 type-only，编译期擦除 → check-circular 无环）。
 
+import { importWebFiles } from "@/backend/browser-adapter.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -57,7 +58,6 @@ export async function runWebEnqueue(tasks: DownloadTask[], ctx: WebEnqueueCtx): 
   // 重入守卫丢弃后续入队 + web 模式无取消路径）。逐任务 AbortController 超时，
   // 超时走既有直链兜底；分支级 try/finally 保证任何意外异常都复位 idle。
   try {
-    const { importWebFiles } = await import("@/backend/browser-adapter.ts");
     // 目标类型段：cmDqEnqueue 已把 GetRepoRoot 结果写入 saveDir，web 模式恒为
     // /web/<type>（web-fs.ts GetRepoRoot），从根反解即可，不改 enqueueDownloads 签名
     const webType = (tasks[0]?.saveDir || "").split("/")[2] || "";

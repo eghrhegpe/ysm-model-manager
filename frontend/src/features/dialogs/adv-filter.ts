@@ -49,56 +49,56 @@ function advFilterCollect(
   };
 }
 
-/** 渲染弹窗表单 HTML（纯函数，无 DOM 副作用；标题行由 createDialog 统一渲染 — ADR-190 D3） */
+/** 渲染弹窗表单 HTML（纯函数，无 DOM 副作用；标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
 function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
   return `
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:11px">
+      <div class="afv-form">
         <div>
-          <label for="afv-kw" style="display:block;color:var(--muted);margin-bottom:3px">🔍 ${t("dialog.keyword")}</label>
-          <input id="afv-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="${t("dialog.matchAll")}" style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px;box-sizing:border-box">
+          <label for="afv-kw" class="afv-label">🔍 ${t("dialog.keyword")}</label>
+          <input id="afv-kw" class="afv-input-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="${t("dialog.matchAll")}">
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="afv-grid">
           <div>
-            <label for="afv-minBones" style="display:block;color:var(--muted);margin-bottom:3px">🦴 ${t("dialog.bones")}</label>
-            <div style="display:flex;gap:4px;align-items:center">
-              <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp" style="flex:1;width:0;min-width:0">
-              <span style="color:var(--muted)">—</span>
-              <input id="afv-maxBones" type="number" min="0" value="${esc(String(v.maxBones ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.bones")} ${t("dialog.max")}" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <label for="afv-minBones" class="afv-label">🦴 ${t("dialog.bones")}</label>
+            <div class="afv-range-row">
+              <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
+              <span class="afv-sep">—</span>
+              <input id="afv-maxBones" type="number" min="0" value="${esc(String(v.maxBones ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.bones")} ${t("dialog.max")}" class="afv-inp">
             </div>
           </div>
           <div>
-            <label for="afv-minCubes" style="display:block;color:var(--muted);margin-bottom:3px">🧊 ${t("dialog.cubes")}</label>
-            <div style="display:flex;gap:4px;align-items:center">
-              <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp" style="flex:1;width:0;min-width:0">
-              <span style="color:var(--muted)">—</span>
-              <input id="afv-maxCubes" type="number" min="0" value="${esc(String(v.maxCubes ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.cubes")} ${t("dialog.max")}" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <label for="afv-minCubes" class="afv-label">🧊 ${t("dialog.cubes")}</label>
+            <div class="afv-range-row">
+              <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
+              <span class="afv-sep">—</span>
+              <input id="afv-maxCubes" type="number" min="0" value="${esc(String(v.maxCubes ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.cubes")} ${t("dialog.max")}" class="afv-inp">
             </div>
           </div>
         </div>
 
         <div>
-          <label for="afv-minTex" style="display:block;color:var(--muted);margin-bottom:3px">🖼 ${t("dialog.textureSize")}</label>
-          <div style="display:flex;gap:4px;align-items:center">
-            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp" style="flex:1;width:0;min-width:0">
-            <span style="color:var(--muted)">—</span>
-            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.textureSize")} ${t("dialog.max")}" class="afv-inp" style="flex:1;width:0;min-width:0">
+          <label for="afv-minTex" class="afv-label">🖼 ${t("dialog.textureSize")}</label>
+          <div class="afv-range-row">
+            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
+            <span class="afv-sep">—</span>
+            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.textureSize")} ${t("dialog.max")}" class="afv-inp">
           </div>
         </div>
 
         <div>
-          <label for="afv-tag" style="display:block;color:var(--muted);margin-bottom:3px">🏷️ ${t("dialog.tags")}</label>
-          <div style="display:flex;gap:4px;align-items:center">
-            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="${t("dialog.tagPlaceholder")}" class="afv-inp" style="flex:1;width:0;min-width:0">
-            <span id="afv-tag-hint" style="font-size:9px;color:var(--muted);white-space:nowrap"></span>
+          <label for="afv-tag" class="afv-label">🏷️ ${t("dialog.tags")}</label>
+          <div class="afv-range-row">
+            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="${t("dialog.tagPlaceholder")}" class="afv-inp">
+            <span id="afv-tag-hint" class="afv-tag-hint"></span>
           </div>
         </div>
       </div>
 
       <div id="afv-err" class="dlg-err"></div>
 
-      <div class="dlg-footer" style="padding:0;display:flex;gap:6px">
-        <button id="afv-clear" class="dlg-btn" style="margin-right:auto">🧹 ${t("dialog.clearAll")}</button>
+      <div class="dlg-footer afv-footer">
+        <button id="afv-clear" class="dlg-btn afv-clear">🧹 ${t("dialog.clearAll")}</button>
         <button id="afv-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
         <button id="afv-ok" class="dlg-btn dlg-btn-primary">🔍 ${t("dialog.applyEnter")}</button>
       </div>
@@ -180,12 +180,11 @@ export function modalAdvFilter(
       title: t("dialog.advFilter"),
       icon: "⚙️",
       width: "420px",
-      boxClass: "dlg-box dlg-pad",
+      boxClass: "dlg-box dlg-pad dlg-gap",
       tabIndex: 0,
       cancelValue: null,
       resolve,
       buildBox: (el) => {
-        el.style.gap = "10px";
         el.innerHTML = buildAdvFilterFormHTML(v);
       },
     });

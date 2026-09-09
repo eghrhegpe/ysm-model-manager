@@ -6,6 +6,22 @@
 import { t } from "@/core/i18n/t.ts";
 import { type DownloadState, isActiveStatus, resetProgress } from "./download-queue-store.ts";
 
+// ===== 进度条守卫时序常量 =====
+/** 小文件阈值（≤此值走快速 300ms 强制 100% 路径） */
+const TINY_FILE_BYTES = 100 * 1024;
+/** 大文件阈值（>此值走 2s 转菊花路径） */
+const LARGE_FILE_BYTES = 1024 * 1024;
+/** 小文件卡 99% 后强制 100% 的延迟 */
+const STUCK_TINY_MS = 300;
+/** 大文件卡 99% 后转菊花的延迟 */
+const STUCK_LARGE_MS = 2000;
+/** 菊花点动画间隔 */
+const DOT_INTERVAL_MS = 400;
+/** 进度 100% 后收口 completeTimer 的延迟 */
+const COMPLETE_DELAY_MS = 3000;
+/** 进度锁定触发的起始阈值（_lastPct < 此值才触发） */
+const STUCK_PCT_THRESHOLD = 10;
+
 /** 进度条元素的自定义属性（点动画） */
 type PctEl = HTMLElement & {
   _dotTimer?: ReturnType<typeof setInterval> | null;
@@ -96,7 +112,7 @@ function cmPgCalcPct(s: DownloadState): CmPgCalcPctResult {
     pct = Math.min(Math.round((dl / total) * 100), 100);
     label = `${pct}%`;
   }
-  const isTiny = total > 0 && total <= 100 * 1024;
+  const isTiny = total > 0 && total <= TINY_FILE_BYTES;
   return { pct, label, isTiny, total };
 }
 
@@ -111,7 +127,7 @@ function cmPgApplyLock(
   let outPct = pct;
   let outLabel = label;
 
-  if (isTiny && ctx._lastPct < 10 && pct >= 99 && !ctx.completeTimer) {
+  if (isTiny && ctx._lastPct < STUCK_PCT_THRESHOLD && pct >= 99 && !ctx.completeTimer) {
     outLabel = "99%";
     outPct = 99;
     ctx._stuckLocked = true;
@@ -129,11 +145,17 @@ function cmPgApplyLock(
       }
       ctx._stuckTimer = null;
       ctx._stuckLocked = false;
-    }, 300);
+    }, STUCK_TINY_MS);
   }
 
   const hasCL = total > 0 && pct > 0;
-  if (hasCL && !isTiny && ctx._lastPct < 10 && pct >= 99 && total > 1024 * 1024) {
+  if (
+    hasCL &&
+    !isTiny &&
+    ctx._lastPct < STUCK_PCT_THRESHOLD &&
+    pct >= 99 &&
+    total > LARGE_FILE_BYTES
+  ) {
     outLabel = "99%";
     outPct = 99;
     ctx._stuckLocked = true;
@@ -162,10 +184,10 @@ function cmPgApplyLock(
           }
           pctEl._dots = ((pctEl._dots || 0) + 1) % 4;
           pctEl.textContent = `⏳${".".repeat(pctEl._dots)}`;
-        }, 400);
+        }, DOT_INTERVAL_MS);
       }
       if (fillEl) fillEl.style.width = "99%";
-    }, 2000);
+    }, STUCK_LARGE_MS);
   } else if (!ctx._stuckLocked) {
     if (ctx._stuckTimer) {
       clearTimeout(ctx._stuckTimer);
@@ -208,7 +230,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
           "</div>";
       }
       ctx.onTimedCompletion(summary);
-    }, 3000);
+    }, COMPLETE_DELAY_MS);
   } else {
     cmPgClearCompleteTimer(ctx);
   }

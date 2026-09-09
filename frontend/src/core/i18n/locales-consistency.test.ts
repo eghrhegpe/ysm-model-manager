@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 import { zhCN } from "@/locales/zh-CN.ts";
 import { en } from "@/locales/en.ts";
 import { ja } from "@/locales/ja.ts";
-import { BASE_LANG, FALLBACK_LANG, SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
+import { BASE_LANG, FALLBACK_LANG, SUPPORTED_LANGS } from "./locale.ts";
 
 const bundles: Array<[string, Record<string, string>]> = [
   ["en", en],

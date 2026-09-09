@@ -94,7 +94,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 107 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 115 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -317,7 +317,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 168 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 49 |
@@ -401,8 +401,8 @@
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 300 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 324 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 230 |
@@ -585,7 +585,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 121 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 50 |

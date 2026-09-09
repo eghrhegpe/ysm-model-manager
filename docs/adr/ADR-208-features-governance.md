@@ -70,7 +70,10 @@ features 层模块锐评（2026-09）发现四条「红线靠注释、不靠门�
   switch 的新消费者需感知 `"workshop"`；check-layering 新增 R5 后，后续新增 features 文件误引
   `backend/app.ts` 会直接红（这是预期行为，不是误报）。
 - **已知遗留**：dialogs 域其余内嵌 HTML 文件（rename/adv-filter/tag-editor，均 <400 行未越红线）
-  暂不做 D1a 模板外抽——按「改动即顺手收敛」原则，留待下次触碰时迁移，避免 23 文件大爆炸；
+  与 community 域手拼 HTML（`render.ts` 的 `renderRepoHeaderHTML`/`buildModelRow`、
+  `download-queue.ts` 进度 DOM、`show-repo-models.ts:146`、`data.ts:18`，均 <400 行未越红线）
+  暂不做 D1a 模板外抽——按「改动即顺手收敛」原则，留待下次触碰时迁移，避免 23 文件大爆炸
+  （含 event-types.ts 下沉 community 的联动判断：纯下沉不捆绑 D1a 抽取）；
   ADR-039 §2.2 Events.On 常驻注册豁免本身不变（生命周期=应用生命周期）。
 
 ## 4. 数据溯源

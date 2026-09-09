@@ -29,7 +29,6 @@ auto_fields:
     - extractZip
     - findZipEntry
     - litematicMetaView
-    - litematicVoxelView
     - mapColor
     - nbtStructureView
     - nbtVoxelView

@@ -5,9 +5,12 @@ tier: leaf
 category: utils
 status: active
 source_files:
-  - frontend/src/utils/dom/directory-picker.ts
+  - frontend/src/backend/directory-picker.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - DirPickResult
+    - pickDirectory
+    - resolveAndroidRepoDir
 use_when:
   - 目录选择
   - 选择文件夹
@@ -29,17 +32,17 @@ quick_intents:
 quick_risk_lines:
   - 需要目录路径的场景必须经 directory-picker 统一入口（pickDirectory / resolveAndroidRepoDir），禁止各调用方自行实现授权引导或裸调桌面对话框
 invariant_anchors:
-  - frontend/src/utils/dom/directory-picker.ts|pickDirectory
-  - frontend/src/utils/dom/directory-picker.ts|resolveAndroidRepoDir
+  - frontend/src/backend/directory-picker.ts|pickDirectory
+  - frontend/src/backend/directory-picker.ts|resolveAndroidRepoDir
 ---
 
 # 跨平台目录选择器
 
 ## 概览
 
-`frontend/src/utils/dom/directory-picker.ts`：跨平台「要一个目录路径」的统一入口（ADR-046 P2、ADR-049 Phase 3）。三端三分支——桌面走 Wails 系统目录对话框（`SelectDirectory`）；Android 无选择器（Wails 官方拒绝 + SAF 废弃），走「授权检查 → 自动定位公共仓库目录」（`GetDefaultRepoRoot`）；网页版无对话框（browser adapter fail-fast），走定位虚拟根 `/web`。
+`frontend/src/backend/directory-picker.ts`（2026-09 自 `utils/dom/` 迁至 `backend/`，消除 utils→backend 反向依赖）：跨平台「要一个目录路径」的统一入口（ADR-046 P2、ADR-049 Phase 3）。三端三分支——桌面走 Wails 系统目录对话框（`SelectDirectory`）；Android 无选择器（Wails 官方拒绝 + SAF 废弃），走「授权检查 → 自动定位公共仓库目录」（`GetDefaultRepoRoot`）；网页版无对话框（browser adapter fail-fast），走定位虚拟根 `/web`。
 
-**归位结论（2026-09 评估）**：永久留守 `utils/dom/`，**不纳入 `src/core`**（ADR-189 D4 准入逐条否决，详见下文「不变量」）。
+**归位结论（2026-09 评估 + 迁移收口）**：本模块本质是 **Wails 绑定适配器**（import `backend/app.ts`/`backend/platform.ts`），永久不纳入 `src/core`（ADR-189 D4 准入逐条否决，详见下文「不变量」）；归宿 = `backend/`（与 platform 桥同目录），原「留守 utils/dom」结论随反向依赖治理作废。
 
 ## 核心职责
 
@@ -56,14 +59,13 @@ invariant_anchors:
 
 - **调用方**（三处）：`app-content/settings/path-cards.ts`（设置页路径卡片）、`app-tree/toolbar-events.ts`（树「打开/导入文件夹」）、`app-sidebar/launcher-detect.ts`（启动器目录检测）
 - **平台依赖**：`backend/app.ts`（`getApp` → `SelectDirectory`/`GetDefaultRepoRoot`）、`backend/platform.ts`（`getAndroidBridge`/`isViewerMode`）、`backend/platform-web.ts`（`isWebPlatform`）
-- **UI 依赖**：`bus`（toast 反馈）、`core/i18n/t.ts`（文案）、`./toast-ms.ts`（时长档）
+- **UI 依赖**：`bus`（toast 反馈）、`core/i18n/t.ts`（文案）、`utils/dom/toast-ms.ts`（时长档）
 - `docs/android-dev.md` 明示：目录/路径类按钮的 Android 分支统一复用 `resolveAndroidRepoDir()`
 
 ## 不变量
 
 - **D4 不入 core（ADR-189 准入三条件逐条否决）**：①引擎无关 ✗——直接 `import { getApp } from "@/backend/app.ts"`（Wails 绑定）+ `getAndroidBridge`（平台桥）；②不依赖上层 ✗——`backend/` 恰是 D4 禁止直连的形状；③无 Wails 可单测 ✗——测试全靠 `vi.mock("@/backend/app.ts")`。它本质是平台适配 + 用户交互（弹系统框、发 toast、引导授权），强塞 core 需同时注入 getApp/toast/桥三依赖，收益为零；调用方（views 层）本应直调平台适配器。
-- **现状合规**：D4 只约束 `core/`，不约束 `utils/dom/`；directory-picker 与 platform 桥（现居 `backend/platform.ts`，ADR-203 D2 自 `utils/dom/android-bridge.ts` 并入）同居职责相邻层，非漏网之鱼。
-- **唯一钉子户观察**：全 `utils/` 仅此文件静态 import `backend/*`（其余为 DOM 原语）。这不违规——`utils/3d` 才有 ADR-072 的「0 backend import」纯净边界，`utils/dom` 从未有此约束。若未来给 `utils/dom` 立同款边界（新决策，须另出 ADR），它是首个待处理对象，可走「`getApp` 由调用方注入」或「下沉 `services/` 平台服务层」。
+- **现状合规（迁移后）**：D4 只约束 `core/`；directory-picker 现居 `backend/`（与 platform 桥同目录，ADR-203 D2 自 `utils/dom/android-bridge.ts` 并入的同层），静态 import `backend/*` 属同层内部引用，`utils/` 的「0 backend import」纯净边界随之不再被本文件触碰（该边界约束对象 = utils/3d，本就无涉）。
 - 需要目录路径场景必须经本卡统一入口，禁止各调用方复制授权逻辑或裸调桌面对话框（web 端 fail-fast 即因绕过统一门控而炸过，ADR-049 Phase 3 收口）。
 
 ## 相关

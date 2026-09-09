@@ -5,16 +5,19 @@ tier: architecture
 category: core
 source_files:
   - frontend/src/backend/platform.ts
-  - frontend/src/utils/dom/directory-picker.ts
+  - frontend/src/backend/directory-picker.ts
 auto_fields:
   symbols_with_lines:
+    - DirPickResult
     - emitAndroidBack
     - getAndroidBridge
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
+    - pickDirectory
     - readDeclaredBackend
     - registerAndroidBackHandler
+    - resolveAndroidRepoDir
     - resolveWebMode
     - WailsAndroidBridge
   tests:

@@ -9,7 +9,12 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - applyReplaceToName
+    - BatchEntry
+    - BatchItem
     - BatchRenameChange
+    - BatchRenameTpl
+    - BrRowView
+    - DgBrShell
     - rebuildParsedName
     - ReplaceResult
     - showBatchRenameDialog

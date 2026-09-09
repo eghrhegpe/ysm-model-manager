@@ -11,6 +11,7 @@
 // 拆分说明（ADR-040 ≤400 行红线）：自 download-queue.ts（829 行）拆出，
 // 类型/STATE/Go 调用/后端事件注册全部内聚于此；
 // download-queue-progress.ts 承接 99% 卡进度守卫状态机；
+// download-queue-web.ts 承接网页版 fetch→IDB/直链兜底入队分支（ADR-208 D2 二次拆分）；
 // download-queue.ts 保留 createDownloadQueue UI 控制器并对外 re-export（消费者零改动）。
 
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -18,8 +19,8 @@ import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { communityGetApp } from "./community-deps.ts";
+import { runWebEnqueue } from "./download-queue-web.ts";
 
 // ============================================================
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）
@@ -83,6 +84,23 @@ export function rollbackToIdle(): void {
 /** 外部写入入口：进度守卫重置进度为 0（不调 notify，避免在 notify 回调链内触发递归） */
 export function resetProgress(): void {
   STATE.progress = { dl: 0, total: 0 };
+}
+
+/** 外部写入入口（web 分支经 ctx 注入）：设当前下载文件并 notify */
+export function markCurrentFile(name: string): void {
+  STATE.currentFile = name;
+  notify();
+}
+
+/** 外部写入入口（web 分支经 ctx 注入）：剩余计数 -1 并 notify */
+export function decrementRemaining(): void {
+  STATE.remaining = Math.max(0, STATE.remaining - 1);
+  notify();
+}
+
+/** 外部写入入口（web 分支经 ctx 注入）：累积队列错误（notify 延迟到下一次 decrementRemaining） */
+export function addQueueError(name: string, err: string): void {
+  STATE.errorList.push({ name, err });
 }
 
 const listeners = new Set<(s: DownloadState) => void>();
@@ -181,28 +199,11 @@ export function isActiveStatus(s: DownloadState): boolean {
   return s.status === "downloading" || s.status === "enqueued";
 }
 
-// ADR-123 P1：web 下载入库大小上限——超限回退浏览器直链（fetch 整文件进内存 +
-// base64 转换对大文件内存压力大，web-common 的 DetectContainerType 同款 50MB 量级守卫）
-const WEB_DOWNLOAD_IDB_LIMIT = 50 * 1024 * 1024;
-/** 网页版单文件 fetch 超时（code_review P2）：挂起服务器不永久卡队列，超时走直链兜底 */
-const WEB_DOWNLOAD_FETCH_TIMEOUT_MS = 15_000;
-
-/** 触发浏览器直链保存（web 下载回退分支：大文件 / 协议不符 / fetch 失败） */
-function triggerAnchorDownload(url: string, name: string): void {
-  if (!url) throw new Error("空下载地址");
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name || "";
-  a.target = "_blank";
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
 /**
  * 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。
  * UI 层应在此之前完成配置检查和 DOM 初始化。
+ * 网页版下载入库分支（fetch→IDB / 直链兜底）已拆至 ./download-queue-web.ts（ADR-208 D2），
+ * 经 ctx 注入本模块写函数保持单一写入纪律 + 零运行时环。
  */
 export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   dbg("enqueue:start", tasks.length);
@@ -221,75 +222,16 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
 
   // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
   tasks.forEach((t) => (t.saveDir = t.saveDir || ""));
-  // 网页版（ADR-123 P1）：下载与导入统一走 IndexedDB 入库——逐个 fetch(url) 转 File
-  // 复用 browser-adapter.importWebFiles 落库（与拖拽导入同一条 IDB/刷新/反馈链路）。
-  // 回退分支：非 http(s) 协议、单文件超 50MB、fetch/HTTP 失败 → 浏览器直链 <a download>
-  // （用户仍拿到文件但不入库）。完成后置 idle 避免队列 UI 卡「下载中」。
+  // 网页版（ADR-123 P1）：下载与导入统一走 IndexedDB 入库（fetch→IDB / 直链兜底），
+  // 实现已拆至 ./download-queue-web.ts（ADR-208 D2）；STATE 写入经下方 ctx 注入的
+  // 本模块写函数（单一写入纪律）。完成后置 idle 避免队列 UI 卡「下载中」。
   if (isWebPlatform()) {
-    let imported = 0;
-    let failed = 0;
-    let fallback = 0;
-    // P2 修复（code_review）：fetch 无超时 → 挂起服务器可永久卡队列（downloading 态 +
-    // 重入守卫丢弃后续入队 + web 模式无取消路径）。逐任务 AbortController 超时，
-    // 超时走既有直链兜底；分支级 try/finally 保证任何意外异常都复位 idle。
-    try {
-      const { importWebFiles } = await import("@/backend/browser-adapter.ts");
-      // 目标类型段：cmDqEnqueue 已把 GetRepoRoot 结果写入 saveDir，web 模式恒为
-      // /web/<type>（web-fs.ts GetRepoRoot），从根反解即可，不改 enqueueDownloads 签名
-      const webType = (tasks[0]?.saveDir || "").split("/")[2] || "";
-      for (const task of tasks) {
-        STATE.currentFile = task.name;
-        notify();
-        let handled = false;
-        if (/^https?:\/\//i.test(task.url || "") && (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT) {
-          const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), WEB_DOWNLOAD_FETCH_TIMEOUT_MS);
-          try {
-            const resp = await fetch(task.url, { signal: ctrl.signal });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const blob = await resp.blob();
-            const r = await importWebFiles([new File([blob], task.name || "model")], webType);
-            imported += r.imported;
-            failed += r.failed; // 导入层的扩展名/大小校验跳过属预期过滤，不回退直链
-            handled = true;
-          } catch (e) {
-            dbg("enqueue:web-idb-fail", task.url, e); // 超时/CORS/网络失败 → 直链兜底
-          } finally {
-            clearTimeout(timer);
-          }
-        }
-        if (!handled) {
-          try {
-            triggerAnchorDownload(task.url, task.name);
-            fallback++;
-          } catch (e) {
-            failed++;
-            STATE.errorList.push({ name: task.name, err: String((e as Error)?.message || e) });
-          }
-        }
-        STATE.remaining = Math.max(0, STATE.remaining - 1);
-        notify();
-      }
-      // 汇总反馈对齐导入链路语义（importWebFilesWithToast 同款 toast + 刷新广播）
-      bus.emit("toast:show", {
-        msg:
-          failed > 0
-            ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
-            : fallback > 0
-              ? t("community.downloadQueue.webDlFallback", { imported, fallback })
-              : t("community.downloadQueue.webDlOk", { imported }),
-        duration: TOAST_MS.verbose,
-        type: failed > 0 ? "warn" : "success",
-      });
-      bus.emit("tree:reload");
-      bus.emit("stats:refresh");
-    } catch (e) {
-      dbg("enqueue:web-branch-fail", e); // 意外异常不留 downloading 残态
-    } finally {
-      STATE.status = "idle";
-      STATE.currentFile = "";
-      notify();
-    }
+    await runWebEnqueue(tasks, {
+      markCurrentFile,
+      decrementRemaining,
+      addQueueError,
+      rollbackToIdle,
+    });
     return;
   }
   try {

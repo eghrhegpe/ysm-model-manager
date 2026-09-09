@@ -423,6 +423,7 @@ describe("bindBusEvents — 批量重命名", () => {
         { Name: "b.ysm", Path: "/repo/目录/b.ysm" },
       ],
       expect.any(Function),
+      expect.anything(), // ADR-208 D2：第 4 参 = DOM 模板注入（views/app-tree/tpl-batch-rename.ts）
     );
 
     RenameFileMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("x"));
@@ -456,6 +457,7 @@ describe("bindBusEvents — 批量重命名", () => {
         { Name: "b.ysm", Path: "/repo/x/b.ysm" },
       ],
       expect.any(Function),
+      expect.anything(), // ADR-208 D2：第 4 参 = DOM 模板注入（views/app-tree/tpl-batch-rename.ts）
     );
 
     vm.selectState.keys.add("/repo/x/a.ysm");

@@ -26,10 +26,12 @@ vi.mock("./modal-core.ts", () => ({
 
 import { showBatchRenameDialog } from "./batch-rename.ts";
 import type { BatchRenameChange } from "./batch-rename.ts";
+// ADR-208 D2：HTML 模板外移 views 后经 BatchRenameTpl 注入——测试直接复用生产模板，零桩漂移
+import { batchRenameTpl } from "@/views/app-tree/tpl-batch-rename.ts";
 
 async function open(entries: Array<{ Name: string; Path?: string }>) {
   const onApply = vi.fn().mockResolvedValue(undefined);
-  const pending = showBatchRenameDialog("/dir", entries, onApply);
+  const pending = showBatchRenameDialog("/dir", entries, onApply, batchRenameTpl);
   await new Promise((r) => setTimeout(r, 0));
   const dlg = document.querySelector(".dlg-overlay")!;
   return { onApply, pending, dlg };
@@ -145,6 +147,7 @@ describe("showBatchRenameDialog — 解析模式批量应用", () => {
         { Name: "bar2024.ysm", Path: "/dir/bar2024.ysm" },
       ],
       onApply,
+      batchRenameTpl,
     );
     const dlg = document.querySelector(".dlg-overlay") as HTMLElement;
     const author = dlg.querySelector("#br-batch-author") as HTMLInputElement;
@@ -208,7 +211,7 @@ describe("showBatchRenameDialog — 解析模式批量应用", () => {
 
 describe("showBatchRenameDialog — 替换模式", () => {
   const openReplace = (entries: Array<{ Name: string; Path?: string }>): HTMLElement => {
-    showBatchRenameDialog("/dir", entries, vi.fn().mockResolvedValue(undefined));
+    showBatchRenameDialog("/dir", entries, vi.fn().mockResolvedValue(undefined), batchRenameTpl);
     const dlg = document.querySelector(".dlg-overlay") as HTMLElement;
     const mode = dlg.querySelector("#br-mode") as HTMLSelectElement;
     mode.value = "replace";
@@ -318,7 +321,7 @@ describe("showBatchRenameDialog — 替换模式", () => {
 describe("showBatchRenameDialog — 应用失败与单例收尾", () => {
   it("onApply 抛错 → 错误 toast + 按钮恢复可用 + 弹窗关闭（陷阱 #3 防按钮卡死）", async () => {
     const onApply = vi.fn().mockRejectedValue(new Error("boom"));
-    const pending = showBatchRenameDialog("/dir", [{ Name: "a2024.ysm" }], onApply);
+    const pending = showBatchRenameDialog("/dir", [{ Name: "a2024.ysm" }], onApply, batchRenameTpl);
     const dlg = document.querySelector(".dlg-overlay") as HTMLElement;
     const toastSpy = vi.fn();
     const unsubToast = bus.on("toast:show", (p) => toastSpy(p.msg));
@@ -336,7 +339,12 @@ describe("showBatchRenameDialog — 应用失败与单例收尾", () => {
 
   it("重复打开：旧弹窗 pending 先被结算，旧 cancelClose 不误关新弹窗（身份捕获）", async () => {
     const onApplyA = vi.fn().mockResolvedValue(undefined);
-    const pendingA = showBatchRenameDialog("/a", [{ Name: "a2024.ysm" }], onApplyA);
+    const pendingA = showBatchRenameDialog(
+      "/a",
+      [{ Name: "a2024.ysm" }],
+      onApplyA,
+      batchRenameTpl,
+    );
     const [, cancelA] = registerDlgMock.mock.calls[0] as unknown as [HTMLElement, () => void];
 
     // 打开第二个弹窗 → 首个弹窗被 close() 结算（旧 pending 不悬挂）
@@ -344,6 +352,7 @@ describe("showBatchRenameDialog — 应用失败与单例收尾", () => {
       "/b",
       [{ Name: "b2024.ysm" }],
       vi.fn().mockResolvedValue(undefined),
+      batchRenameTpl,
     );
     await pendingA;
     expect(closeDlgMock).toHaveBeenCalledTimes(1);

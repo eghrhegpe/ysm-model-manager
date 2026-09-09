@@ -14,6 +14,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppTree } from "./index.ts";
 import { loadEntries } from "./loader.ts";
+import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
 function atBeGenGuard(vm: AppTree, gen: number): boolean {
   return gen !== vm._gen;
@@ -220,6 +221,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
       absDir,
       entries.map((e) => ({ Name: e.Name, Path: e.Path })),
       (renames) => runBatchRename(vm, renames),
+      batchRenameTpl,
     );
   } catch (e) {
     bus.emit("toast:show", {
@@ -237,8 +239,11 @@ async function atBeHandleBatchRename(vm: AppTree, paths: string[]): Promise<void
       Name: p.split(/[/\\]/).pop() || "",
       Path: p,
     }));
-    await showBatchRenameDialog(t("dialog.batchRenameTitle"), entries, (renames) =>
-      runBatchRename(vm, renames),
+    await showBatchRenameDialog(
+      t("dialog.batchRenameTitle"),
+      entries,
+      (renames) => runBatchRename(vm, renames),
+      batchRenameTpl,
     );
   } catch (e) {
     bus.emit("toast:show", {

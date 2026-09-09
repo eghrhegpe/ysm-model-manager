@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 406 |
+| eventArr | `frontend/src/features/community/download-queue-store.ts` | 348 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -63,7 +63,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 27 |
 
 ### `batch:enable-all`
 
@@ -75,7 +75,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 25 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 26 |
 
 ### `batch:rename`
 
@@ -87,7 +87,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 48 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 49 |
 
 ### `community:clearCache`
 
@@ -128,7 +128,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 43 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 44 |
 
 ### `dir:mkdir`
 
@@ -140,7 +140,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 33 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 34 |
 
 ### `dir:recycle`
 
@@ -152,7 +152,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 38 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 39 |
 
 ### `dir:rename`
 
@@ -164,7 +164,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 28 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 29 |
 
 ### `instance:clear`
 
@@ -317,7 +317,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 285 |
+| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 168 |
@@ -338,9 +338,9 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 188 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 202 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 83 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 118 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 185 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 119 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 186 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 381 |
 
@@ -381,7 +381,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 349 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 354 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 101 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 486 |
 
@@ -401,7 +401,7 @@
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 274 |
+| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
@@ -409,10 +409,10 @@
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 230 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 280 |
 | cmReBindRowClick | `frontend/src/features/community/events.ts` | 314 |
-| dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename.ts` | 101 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 430 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 444 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename.ts` | 463 |
+| dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename-form.ts` | 50 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 265 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 279 |
+| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 298 |
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 45 |
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 63 |
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 82 |
@@ -525,19 +525,19 @@
 | show | `frontend/src/views/app-toast/index.ts` | 136 |
 | show | `frontend/src/views/app-toast/index.ts` | 155 |
 | show | `frontend/src/views/app-toast/index.ts` | 164 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 120 |
-| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 144 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 189 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 195 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 212 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 225 |
-| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 244 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 283 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 299 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 307 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 352 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 358 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 85 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
+| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 145 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 190 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 196 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 213 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 227 |
+| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 249 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 288 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 304 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 312 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 357 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 363 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 74 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 82 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 107 |
@@ -585,7 +585,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 284 |
+| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
@@ -602,7 +602,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 53 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 54 |
 
 ### `tree:set-search`
 

@@ -9,10 +9,12 @@ source_files:
   - frontend/src/features/community/download-queue.ts
 auto_fields:
   symbols_with_lines:
+    - addQueueError
     - buildDownloadTasks
     - cancelDownloads
     - classifyDownloadSize
     - createDownloadQueue
+    - decrementRemaining
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
@@ -24,6 +26,7 @@ auto_fields:
     - getState
     - getStateSnapshot
     - isActiveStatus
+    - markCurrentFile
     - QueueController
     - QueueControllerOptions
     - QueueError

@@ -23,10 +23,15 @@ auto_fields:
     - __resetModalStateForTest
     - AdvFilterResult
     - AdvFilterValue
+    - BatchEntry
+    - BatchItem
     - BatchRenameChange
+    - BatchRenameTpl
+    - BrRowView
     - closeActiveDialog
     - closeDlg
     - createDialog
+    - DgBrShell
     - modalAdvFilter
     - modalTagEditor
     - registerDlg

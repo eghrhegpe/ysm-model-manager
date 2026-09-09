@@ -11,6 +11,7 @@ auto_fields:
     - AppTree
     - appTreeStyle
     - AuthorInfo
+    - batchRenameTpl
     - bindBusEvents
     - bindToolbarEvents
     - bindTreeEvents

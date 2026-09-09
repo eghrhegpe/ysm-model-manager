@@ -11,11 +11,13 @@ source_files:
   - frontend/src/backend/runtime.ts
 auto_fields:
   symbols_with_lines:
+    - addQueueError
     - buildDownloadTasks
     - cancelDownloads
     - classifyDownloadSize
     - createDownloadQueue
     - createProgressGuard
+    - decrementRemaining
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
@@ -28,6 +30,7 @@ auto_fields:
     - getState
     - getStateSnapshot
     - isActiveStatus
+    - markCurrentFile
     - ProgressGuard
     - ProgressGuardHooks
     - QueueController

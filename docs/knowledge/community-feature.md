@@ -8,6 +8,7 @@ source_files:
   - frontend/src/utils/gh-links.ts
 auto_fields:
   symbols_with_lines:
+    - addQueueError
     - bindRepoEvents
     - buildDownloadTasks
     - buildModelRow
@@ -18,6 +19,7 @@ auto_fields:
     - createDownloadQueue
     - createProgressGuard
     - createVirtualList
+    - decrementRemaining
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
@@ -35,6 +37,7 @@ auto_fields:
     - GH_REPO
     - isActiveStatus
     - isModelMissing
+    - markCurrentFile
     - ModelRowCtx
     - ProgressGuard
     - ProgressGuardHooks
@@ -47,6 +50,7 @@ auto_fields:
     - resetProgress
     - resume
     - rollbackToIdle
+    - runWebEnqueue
     - showProgress
     - showRepoModels
     - subscribe
@@ -54,6 +58,7 @@ auto_fields:
     - VIEW_TESTIDS
     - VirtualList
     - VirtualListOpts
+    - WebEnqueueCtx
     - WorkshopModel
   tests:
     - frontend/src/features/community/data.test.ts

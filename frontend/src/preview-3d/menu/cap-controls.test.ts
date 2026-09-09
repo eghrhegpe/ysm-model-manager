@@ -2,7 +2,7 @@
 // formatCapSliderValue 是纯函数（无 DOM 依赖），node 环境直接测四分支：
 //   h（钟点 → HH:MM）/ %（百分比）/ 带单位（拼接）/ 无单位（toFixed2）。
 // 该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
@@ -110,5 +110,61 @@ describe("renderCapControls — 全 kind testid 覆盖（2026-09 补齐）", () 
       { id: "c-img-empty", kind: "image", labelKey: "c", fallback: "c", getValue: () => null, setValue: () => {} },
     ]);
     expect(list.querySelector('[data-testid="cap-c-img-empty"]')).toBeNull();
+  });
+});
+
+describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉）", () => {
+  function mkToggle() {
+    let val = false;
+    const setValue = vi.fn((v: unknown) => { val = Boolean(v); });
+    const onChange = vi.fn();
+    const def: PreviewControlDef = {
+      id: "tg",
+      kind: "toggle",
+      labelKey: "tg",
+      fallback: "TG",
+      getValue: () => val,
+      setValue,
+      onChange,
+    };
+    return { def, setValue, onChange };
+  }
+
+  it("点击 label 文本区（.cc-labelbox）翻转开关并触发 setValue + onChange", () => {
+    const { def, setValue, onChange } = mkToggle();
+    const list = document.createElement("div");
+    renderCapControls(list, [def]);
+    const row = list.querySelector('[data-testid="cap-tg"]') as HTMLElement;
+    const labelBox = row.querySelector(".cc-labelbox") as HTMLElement;
+    expect(labelBox).not.toBeNull();
+
+    labelBox.click();
+    expect(setValue).toHaveBeenCalledWith(true);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it("点击 toggle 本体只触发 createHeaderToggle 原生逻辑一次（防双触发）", () => {
+    const { def, setValue } = mkToggle();
+    const list = document.createElement("div");
+    renderCapControls(list, [def]);
+    const toggle = list.querySelector("label.toggle") as HTMLElement;
+    expect(toggle).not.toBeNull();
+
+    toggle.click();
+    // createHeaderToggle 自身 handler 翻转一次；row 级监听须跳过 toggle 区域不重复翻转
+    expect(setValue).toHaveBeenCalledTimes(1);
+    expect(setValue).toHaveBeenCalledWith(true);
+  });
+
+  it("连续点击 label 区：状态来回翻转", () => {
+    const { def, setValue } = mkToggle();
+    const list = document.createElement("div");
+    renderCapControls(list, [def]);
+    const labelBox = list.querySelector(".cc-labelbox") as HTMLElement;
+
+    labelBox.click();
+    labelBox.click();
+    expect(setValue).toHaveBeenNthCalledWith(1, true);
+    expect(setValue).toHaveBeenNthCalledWith(2, false);
   });
 });

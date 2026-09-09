@@ -356,3 +356,58 @@ describe("多实例 bind 注册", () => {
     expect(getControlCount()).toBe(4);
   });
 });
+
+// ===== forceToggle（程序化翻转；整行点击能力自 addToggleRow 下沉后由 cap 栈消费）=====
+
+describe("forceToggle", () => {
+  it("正常态：翻转 input.checked 并触发 onChange（新值）", () => {
+    const onChange = vi.fn();
+    const toggle = createHeaderToggle(makeConfig({ value: false, onChange }));
+    const input = toggle.querySelector("input") as HTMLInputElement;
+
+    toggle.forceToggle();
+    expect(input.checked).toBe(true);
+    expect(onChange).toHaveBeenCalledWith(true);
+
+    toggle.forceToggle();
+    expect(input.checked).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("disabled 且无 onDisabledClick：no-op（checked 不变、onChange 不触发）", () => {
+    const onChange = vi.fn();
+    const toggle = createHeaderToggle(
+      makeConfig({ value: true, disabled: true, onChange }),
+    );
+    const input = toggle.querySelector("input") as HTMLInputElement;
+
+    toggle.forceToggle();
+    expect(input.checked).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("disabled 且有 onDisabledClick：触发 onDisabledClick，不翻转", () => {
+    const onDisabledClick = vi.fn();
+    const onChange = vi.fn();
+    const toggle = createHeaderToggle(
+      makeConfig({ value: true, disabled: true, onChange, onDisabledClick }),
+    );
+    const input = toggle.querySelector("input") as HTMLInputElement;
+
+    toggle.forceToggle();
+    expect(onDisabledClick).toHaveBeenCalledTimes(1);
+    expect(input.checked).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("与用户点击语义一致：bind 存在时 forceToggle 不额外触发 bind 求值", () => {
+    const onChange = vi.fn();
+    const bind = vi.fn(() => false);
+    const toggle = createHeaderToggle(makeConfig({ value: false, onChange, bind }));
+    bind.mockClear(); // 清掉注册阶段可能的求值（createHeaderToggle 阶段不调 bind）
+
+    toggle.forceToggle();
+    expect(onChange).toHaveBeenCalledWith(true);
+    expect(bind).not.toHaveBeenCalled();
+  });
+});

@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeAll } from "vitest";
 import {
-    addToggleRow,
     addSliderRow,
     addModeRow,
     addEmptyRow,
@@ -11,10 +10,8 @@ import {
     addInfoGrid,
     addInfoCard,
     sliderRow,
-    toggleRow,
     addActionRow,
     addDisabledRow,
-    addInlineToggleRow,
 } from "./ui-rows.ts";
 
 // ===================================================================
@@ -28,131 +25,6 @@ beforeAll(() => {
 });
 
 const mkContainer = (): HTMLElement => document.createElement("div");
-
-// ===================================================================
-// addToggleRow
-// ===================================================================
-describe("addToggleRow", () => {
-    it("基本渲染：生成 .toggle-row 结构（left + toggle label + checkbox）", () => {
-        const container = mkContainer();
-        addToggleRow(container, "开关", false, vi.fn());
-        expect(container.children.length).toBe(1);
-        const row = container.firstElementChild!;
-        expect(row.className).toBe("toggle-row");
-        // 内部应有 toggle-left 和 toggle
-        const left = row.querySelector(".toggle-left");
-        const toggle = row.querySelector(".toggle");
-        expect(left).not.toBeNull();
-        expect(toggle).not.toBeNull();
-    });
-
-    it("标签文本渲染到 toggle-label", () => {
-        const container = mkContainer();
-        addToggleRow(container, "启用通知", true, vi.fn());
-        const lbl = container.querySelector(".toggle-label")!;
-        expect(lbl.textContent).toBe("启用通知");
-    });
-
-    it("checkbox 初始 checked 与 value 一致", () => {
-        const container = mkContainer();
-        addToggleRow(container, "A", true, vi.fn());
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        expect(cb.checked).toBe(true);
-    });
-
-    it("默认 false 时 checkbox 未勾选", () => {
-        const container = mkContainer();
-        addToggleRow(container, "A", false, vi.fn());
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        expect(cb.checked).toBe(false);
-    });
-
-    it("图标图标：传入 icon 时在 toggle-left 内生成 .cs-icon", () => {
-        const container = mkContainer();
-        addToggleRow(container, "启用", false, vi.fn(), "⚙");
-        const icon = container.querySelector(".cs-icon");
-        expect(icon).not.toBeNull();
-        expect(icon!.textContent).toBe("⚙");
-    });
-
-    it("无图标时渲染 fallback 首字（cs-icon-fallback）", () => {
-        const container = mkContainer();
-        // iconify 名冒号样式，createIcon 返回 null
-        addToggleRow(container, "Settings", false, vi.fn(), "lucide:settings");
-        const fb = container.querySelector(".cs-icon-fallback");
-        expect(fb).not.toBeNull();
-        expect(fb!.textContent).toBe("S");
-    });
-
-    it("整行点击（避开 toggle）切换 checkbox 并触发 onChange", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addToggleRow(container, "行", false, onChange);
-        const row = container.firstElementChild!;
-        const left = row.querySelector(".toggle-left") as HTMLElement;
-        left.click();
-        expect(onChange).toHaveBeenCalledWith(true);
-    });
-
-    it("checkbox change 事件触发 onChange 回调", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addToggleRow(container, "行", false, onChange);
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        cb.checked = true;
-        cb.dispatchEvent(new Event("change", { bubbles: true }));
-        expect(onChange).toHaveBeenCalledWith(true);
-    });
-
-    it("点击 toggle label 被整行 click 的 closest 短路（不触发 row onChange）", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addToggleRow(container, "行", false, onChange);
-        const toggleLabel = container.querySelector(".toggle") as HTMLElement;
-        toggleLabel.click();
-        // .toggle 被 closest 拦截：row 级 click handler 直接 return，
-        // 不会执行 toggle.checked 翻转 + onChange 调用
-        expect(onChange).not.toHaveBeenCalled();
-    });
-
-    it("aria 属性正确设置 role=switch + aria-checked", () => {
-        const container = mkContainer();
-        addToggleRow(container, "开关", true, vi.fn());
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        expect(cb.getAttribute("role")).toBe("switch");
-        expect(cb.getAttribute("aria-checked")).toBe("true");
-        expect(cb.getAttribute("aria-label")).toBe("开关");
-    });
-
-    it("testId 设置在 row 上", () => {
-        const container = mkContainer();
-        addToggleRow(container, "A", false, vi.fn(), undefined, undefined, "my-toggle");
-        expect(container.firstElementChild!.getAttribute("data-testid")).toBe("my-toggle");
-    });
-
-    it("initControl + bind：bind 在挂载时立即调用一次 update（即时初始化）", () => {
-        const container = mkContainer();
-        let boundValue = true;
-        const onChange = vi.fn();
-        addToggleRow(container, "A", false, onChange, undefined, { bind: () => boundValue });
-        // initControl 在挂载时立即调用一次 update()；bind() 返回 true，
-        // apply 将 toggle.checked 设为 true，cached 更新为 true
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        expect(cb.checked).toBe(true);
-        expect(cb.getAttribute("aria-checked")).toBe("true");
-    });
-
-    it("checkbox 程序化赋值 + change 事件触发 onChange 与 aria 同步", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addToggleRow(container, "A", false, onChange);
-        const cb = container.querySelector("input[type=checkbox]") as HTMLInputElement;
-        cb.checked = true;
-        cb.dispatchEvent(new Event("change", { bubbles: true }));
-        expect(onChange).toHaveBeenCalledWith(true);
-        expect(cb.getAttribute("aria-checked")).toBe("true");
-    });
-});
 
 // ===================================================================
 // addSliderRow
@@ -306,22 +178,6 @@ describe("sliderRow", () => {
         sliderRow(container, "W", 10, 0, 100, 1, "📏", onDragEnd);
         expect(container.querySelector(".cs-row")).not.toBeNull();
         expect(container.querySelector(".cs-icon")!.textContent).toBe("📏");
-    });
-});
-
-// ===================================================================
-// toggleRow (addToggleRow 简化版)
-// ===================================================================
-describe("toggleRow", () => {
-    it("onChange 和 onSave 都触发", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        const onSave = vi.fn();
-        toggleRow(container, "T", false, "✓", onChange, onSave);
-        const left = container.querySelector(".toggle-left") as HTMLElement;
-        left.click();
-        expect(onChange).toHaveBeenCalledWith(true);
-        expect(onSave).toHaveBeenCalled();
     });
 });
 
@@ -636,88 +492,3 @@ describe("addDisabledRow", () => {
     });
 });
 
-// ===================================================================
-// addInlineToggleRow
-// ===================================================================
-describe("addInlineToggleRow", () => {
-    it("基本渲染：生成 .toggle-row 含 .toggle-label 和 .toggle-switch", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "开关", false, vi.fn());
-        const row = container.firstElementChild!;
-        expect(row.className).toBe("toggle-row");
-        expect(row.querySelector(".toggle-label")).not.toBeNull();
-        expect(row.querySelector(".toggle-switch")).not.toBeNull();
-    });
-
-    it("初始 value=true 时 toggle-switch 带 active class", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "T", true, vi.fn());
-        const sw = container.querySelector(".toggle-switch")!;
-        expect(sw.classList.contains("active")).toBe(true);
-    });
-
-    it("初始 value=false 时 toggle-switch 无 active class", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "T", false, vi.fn());
-        const sw = container.querySelector(".toggle-switch")!;
-        expect(sw.classList.contains("active")).toBe(false);
-    });
-
-    it("点击 toggle-switch 切换 active 并触发 onChange", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addInlineToggleRow(container, "T", false, onChange);
-        const sw = container.querySelector(".toggle-switch") as HTMLElement;
-        sw.click();
-        expect(sw.classList.contains("active")).toBe(true);
-        expect(onChange).toHaveBeenCalledWith(true);
-    });
-
-    it("再次点击切换回 false", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addInlineToggleRow(container, "T", true, onChange);
-        const sw = container.querySelector(".toggle-switch") as HTMLElement;
-        sw.click();
-        expect(sw.classList.contains("active")).toBe(false);
-        expect(onChange).toHaveBeenCalledWith(false);
-    });
-
-    it("testId 设置在 row 上", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "T", false, vi.fn(), { testId: "inline-toggle" });
-        expect(container.firstElementChild!.getAttribute("data-testid")).toBe("inline-toggle");
-    });
-
-    it("mouseenter/mouseleave 事件可在 toggle-switch 上派发（验证交互可触发）", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "T", false, vi.fn());
-        const sw = container.querySelector(".toggle-switch")!;
-        const spy = vi.fn();
-        sw.addEventListener("mouseenter", spy);
-        sw.addEventListener("mouseleave", spy);
-        sw.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-        sw.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-        expect(spy).toHaveBeenCalledTimes(2);
-    });
-
-    // ARIA 可达性：toggle-switch 应语义化为 switch 角色
-    it("toggle-switch 应带 role='switch' 和 aria-checked", () => {
-        const container = mkContainer();
-        addInlineToggleRow(container, "无障碍", true, vi.fn());
-        const sw = container.querySelector(".toggle-switch")!;
-        expect(sw.getAttribute("role")).toBe("switch");
-        expect(sw.getAttribute("aria-checked")).toBe("true");
-    });
-
-    it("toggle-switch 点击后 aria-checked 同步更新", () => {
-        const container = mkContainer();
-        const onChange = vi.fn();
-        addInlineToggleRow(container, "动态", false, onChange);
-        const sw = container.querySelector(".toggle-switch") as HTMLElement;
-        expect(sw.getAttribute("aria-checked")).toBe("false");
-        sw.click();
-        expect(sw.getAttribute("aria-checked")).toBe("true");
-        expect(onChange).toHaveBeenCalledWith(true);
-    });
-});

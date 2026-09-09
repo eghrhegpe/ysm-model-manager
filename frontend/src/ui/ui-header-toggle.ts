@@ -88,13 +88,21 @@ export interface HeaderToggleConfig {
   disabledHint?: string;
 }
 
+/** createHeaderToggle 返回值：label 开关 + 程序化翻转出口。
+ *  forceToggle 供外部触发（如整行点击）复用「用户点击开关」语义：
+ *  未禁用 → 翻转 checked + onChange；禁用 → 转交 onDisabledClick（无则 no-op）。
+ *  能力自 addToggleRow 下沉（原 handleToggleRowClick 的翻转语义）。 */
+export interface HeaderToggleElement extends HTMLLabelElement {
+  forceToggle(): void;
+}
+
 /**
  * 创建标题栏小型开关。返回 `<label class="toggle header-toggle">`，
  * 含双触发去重（跳过 target===input 的 synthetic click + preventDefault）。
  * onChange 接收新状态；若需附加 DOM 副作用（如 row.classList.toggle），调用方自行处理。
  */
-export function createHeaderToggle(config: HeaderToggleConfig): HTMLLabelElement {
-  const toggle = document.createElement("label");
+export function createHeaderToggle(config: HeaderToggleConfig): HeaderToggleElement {
+  const toggle = document.createElement("label") as HeaderToggleElement;
   toggle.className = "toggle header-toggle";
   if (config.disabled) {
     toggle.classList.add("toggle-disabled");
@@ -144,6 +152,17 @@ export function createHeaderToggle(config: HeaderToggleConfig): HTMLLabelElement
     _sweepDetached();
     registerControl(ID_PREFIX + ++_bindSeq, update);
   }
+
+  // 程序化翻转出口：与用户点击开关本体同语义（disabled → onDisabledClick / no-op）。
+  // 直接改 checked + 调 onChange，不派发 click 事件（避免与 label 原生二次派发纠缠）。
+  toggle.forceToggle = (): void => {
+    if (config.disabled) {
+      config.onDisabledClick?.();
+      return;
+    }
+    input.checked = !input.checked;
+    config.onChange(input.checked);
+  };
 
   return toggle;
 }

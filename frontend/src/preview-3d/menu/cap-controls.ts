@@ -178,6 +178,13 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
     bind: (): boolean => v.getValue() as boolean,
   });
   row.append(labelBox, toggle);
+  // [能力移植 · addToggleRow] 整行点击切换：点 label/hint 区域 = 翻转开关。
+  // target 落在 toggle 内时由 createHeaderToggle 原生 label 逻辑接管（防双触发，
+  // 与 addToggleRow handleToggleRowClick 的 closest(".toggle") 守卫同款语义）。
+  row.addEventListener("click", (e: MouseEvent): void => {
+    if (toggle.contains(e.target as Node)) return;
+    toggle.forceToggle();
+  });
   parent.appendChild(row);
 }
 

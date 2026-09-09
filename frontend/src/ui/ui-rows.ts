@@ -1,6 +1,9 @@
-// [doc:architecture] ui-rows — 菜单行控件（toggle/slider/mode）
-// addToggleRow / addSliderRow / addModeRow / sliderRow / toggleRow
+// [doc:architecture] ui-rows — 菜单行控件（slider/mode/信息/动作行）
+// addSliderRow / addModeRow / sliderRow / addEmptyRow / addInfoGrid 等
 // 自 MikuMikuAR 迁移：解耦 render-context(i18n/iconify)，依赖改为本库与 utils/base。
+// toggle 族（addToggleRow/toggleRow/addInlineToggleRow）已于能力下沉后删除：
+// 整行点击 + bind 自更新语义并入 createHeaderToggle.forceToggle（ui-header-toggle.ts）
+// 与 renderCapToggle（preview-3d/menu/cap-controls.ts），见 ui-header-toggle.test / cap-controls.test。
 
 import { clamp01, clampPct } from "@/utils/base/clamp.ts";
 import { registerControl } from "./control-registry.ts";
@@ -16,139 +19,6 @@ import type { ControlOptions } from "./ui-types.ts";
 // createIconBox 现为 icons.ts 导出（icon 渲染工具，消除多文件重复）：
 // 创建 <span.cs-icon> 元素：有图标则插入 createIcon 结果，无图标则用首字 fallback。
 // ===================================================================
-
-// 自增计数器，用于生成稳定的唯一 ID
-let nextToggleId = 0;
-
-/** Toggle DOM 元素包，供各子函数传递引用 */
-interface ToggleElements {
-  row: HTMLDivElement;
-  toggle: HTMLInputElement;
-}
-
-/**
- * [子函数 1/4] 构建 Toggle 全套 DOM 元素：row / left / icon / label / toggle(input) / slider。
- * 返回元素包供后续阶段消费。
- */
-function buildToggleElements(
-  label: string,
-  value: boolean,
-  icon: string | undefined,
-  testId: string | undefined,
-): ToggleElements {
-  const row = document.createElement("div");
-  row.className = "toggle-row";
-  if (testId) {
-    row.setAttribute("data-testid", testId);
-  }
-
-  const left = document.createElement("div");
-  left.className = "toggle-left";
-
-  if (icon) {
-    createIconBox(icon, label, left);
-  }
-
-  const lbl = document.createElement("span");
-  lbl.className = "toggle-label";
-  lbl.textContent = label;
-  lbl.id = `toggle-${++nextToggleId}`;
-  left.appendChild(lbl);
-
-  const toggleLabel = document.createElement("label");
-  toggleLabel.className = "toggle";
-  const toggle = document.createElement("input");
-  toggle.type = "checkbox";
-  toggle.checked = value;
-  toggle.setAttribute("role", ROLE.switch);
-  toggle.setAttribute(ARIA_ATTR.label, label);
-  toggle.setAttribute(ARIA_ATTR.checked, String(value));
-  toggle.setAttribute(ARIA_ATTR.labelledby, lbl.id);
-
-  const slider = document.createElement("span");
-  slider.className = "slider";
-  toggleLabel.appendChild(toggle);
-  toggleLabel.appendChild(slider);
-
-  row.appendChild(left);
-  row.appendChild(toggleLabel);
-
-  return { row, toggle };
-}
-
-/**
- * [子函数 2/4] 同步 Toggle 状态：input.checked + ARIA checked。
- * 用于 checkbox change、整行点击、自更新三处共享逻辑，消除重复。
- */
-function updateToggleState(toggle: HTMLInputElement, v: boolean): void {
-  toggle.checked = v;
-  toggle.setAttribute(ARIA_ATTR.checked, String(v));
-}
-
-/**
- * [子函数 3/4] 整行点击切换（除 toggle 开关本体外的区域）。
- * 点击开关本身时由原生 change 事件接管，避免重复触发 onChange。
- */
-function handleToggleRowClick(
-  e: MouseEvent,
-  toggle: HTMLInputElement,
-  onChange: (v: boolean) => void,
-): void {
-  if ((e.target as HTMLElement).closest(".toggle")) {
-    return;
-  }
-  const next = !toggle.checked;
-  updateToggleState(toggle, next);
-  onChange(next);
-}
-
-/**
- * [子函数 4/4] 注册自更新支持：外部 bind/onUpdate 触发时同步更新 checked/ARIA 状态。
- */
-function initToggleControl(
-  els: ToggleElements,
-  opts: ControlOptions<boolean> | undefined,
-  initial: boolean,
-): void {
-  initControl(els.row, opts, initial, (v, cached) => {
-    const b = !!v;
-    if (b === cached) {
-      return false;
-    }
-    updateToggleState(els.toggle, b);
-    return true;
-  });
-}
-
-// ===================================================================
-// addToggleRow — 主函数
-// ===================================================================
-
-export function addToggleRow(
-  container: HTMLElement,
-  label: string,
-  value: boolean,
-  onChange: (v: boolean) => void,
-  icon?: string,
-  opts?: ControlOptions<boolean>,
-  testId?: string,
-): void {
-  // 阶段1：构建 DOM 元素
-  const els = buildToggleElements(label, value, icon, testId);
-
-  // 阶段2：绑定 checkbox change 监听（复用 updateToggleState）
-  els.toggle.addEventListener("change", () => {
-    updateToggleState(els.toggle, els.toggle.checked);
-    onChange(els.toggle.checked);
-  });
-
-  // 阶段3：整行点击切换
-  els.row.addEventListener("click", (e) => handleToggleRowClick(e, els.toggle, onChange));
-
-  // 阶段4：挂载 + 自更新注册
-  container.appendChild(els.row);
-  initToggleControl(els, opts, value);
-}
 
 // ===================================================================
 // initControl — 控件自更新注册 + 立即初始化
@@ -624,30 +494,6 @@ export function sliderRow(
 }
 
 // ===================================================================
-// toggleRow — addToggleRow 的简化版，onChange 后自动调用 onSave
-// ===================================================================
-
-export function toggleRow(
-  container: HTMLElement,
-  label: string,
-  value: boolean,
-  icon: string,
-  onChange: (v: boolean) => void,
-  onSave?: () => void,
-): void {
-  addToggleRow(
-    container,
-    label,
-    value,
-    (v) => {
-      onChange(v);
-      onSave?.();
-    },
-    icon,
-  );
-}
-
-// ===================================================================
 // ADR-143 主题 6：收敛三个内联 DOM 孤岛
 // ===================================================================
 // 注：addWatchDirRow（监听目录行）已于 G3 复查确认生产零引用，删除（2026-09-04）。
@@ -715,41 +561,6 @@ export function addDisabledRow(
     val.textContent = value;
     row.appendChild(val);
   }
-  container.appendChild(row);
-  return row;
-}
-
-/** 创建一个内联 toggle 行（替代手写 toggle-row + toggle-label + toggle-switch）。
- * 视觉上与 addToggleRow 保持一致，但用 span 模拟而非 input checkbox，
- * 适用于不需要 aria/accessibility 完整性的菜单内联场景。 */
-export function addInlineToggleRow(
-  container: HTMLElement,
-  label: string,
-  value: boolean,
-  onChange: (v: boolean) => void,
-  opts?: { testId?: string },
-): HTMLElement {
-  const { testId } = opts ?? {};
-  const row = document.createElement("div");
-  row.className = "toggle-row";
-  if (testId) {
-    row.setAttribute("data-testid", testId);
-  }
-  const lbl = document.createElement("span");
-  lbl.className = "toggle-label";
-  lbl.textContent = label;
-  const sw = document.createElement("span");
-  sw.className = `toggle-switch${value ? " active" : ""}`;
-  sw.setAttribute("role", "switch");
-  sw.setAttribute("aria-checked", String(value));
-  sw.addEventListener("click", () => {
-    const v = !sw.classList.contains("active");
-    sw.classList.toggle("active", v);
-    sw.setAttribute("aria-checked", String(v));
-    onChange(v);
-  });
-  row.appendChild(lbl);
-  row.appendChild(sw);
   container.appendChild(row);
   return row;
 }

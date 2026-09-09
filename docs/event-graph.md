@@ -196,7 +196,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | setLang | `frontend/src/core/i18n/locale.ts` | 159 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 210 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 208 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

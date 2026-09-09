@@ -4,13 +4,11 @@
 // 拼错 key 编译期报错——三语言包 key 集严格一致（locales-consistency 测试保证），
 // zh-CN 作单一类型源。
 // 双入口（ADR-207 D3）：t（严格字面量 key）/ tOf（string 版，动态 key）——
-// 缺失键语义一致（返回 key 本身 + warnMissingKey 单次告警），tr/trDynamic 共用 tOf。
+// 缺失键语义一致（多级回退 current → FALLBACK_LANG → key 本身 + warnMissingKey 单次告警）；
+// tr/trDynamic 是 tOf 前身，生产调用点归零后随 ADR-210 D3 删除。
 
 import type { zhCN } from "@/locales/zh-CN.ts";
-import { getBundle, getLang, warnMissingKey } from "./locale.ts";
-
-/** 默认语言（缺失键兜底用） */
-const DEFAULT_LANG = "en";
+import { FALLBACK_LANG, getBundle, getLang, warnMissingKey } from "./locale.ts";
 
 /** 全部合法 i18n key（扁平化命名空间 key，如 "nav.repository"） */
 export type LocaleKey = keyof typeof zhCN;
@@ -52,27 +50,27 @@ export function interpolate(text: string, params?: LocaleParams, context?: strin
  * 翻译函数（严格字面量 key 入口）。
  * @param key - 扁平化 key，如 "nav.repository"（keyof 校验：字面量拼错编译期报错）
  * @param params - 插值参数，如 { n: 3 } 替换 "{n}"
- * @returns 翻译后的字符串，缺失时返回 key 本身（warnMissingKey 单次告警）
+ * @returns 翻译后的字符串，缺失时多级回退（见 tOf）
  *
- * 数据驱动 key（labelKey/group 数据字段等运行时 string）→ trDynamic（tr.ts），勿在此收窄。
+ * 数据驱动 key（labelKey/group 数据字段等运行时 string）→ tOf，勿在此收窄。
  */
 export function t(key: LocaleKey, params?: LocaleParams): string {
   return tOf(key, params);
 }
 
 /**
- * string 版 t（动态 key 入口）：多级回退链 current → en → 裸 key + 单次告警。
- * 缺失键先回退到默认语言（en），再无则返回裸 key（warnMissingKey 告警）。
- * tr / trDynamic 共用（ADR-207 D3），现已内置回退，tr() 标记 deprecated。
+ * string 版 t（动态 key 入口）：多级回退链 current → FALLBACK_LANG → 裸 key + 单次告警。
+ * 缺失键先回退到兜底语言（FALLBACK_LANG，locale.ts 定义——与 SUPPORTED_LANGS 同处，
+ * 单一事实源，成员守卫见 locales-consistency.test.ts，ADR-210 D4），再无则返回裸 key（warnMissingKey 告警）。
  */
 export function tOf(key: string, params?: LocaleParams): string {
   // 1. 当前 locale
   const bundle = getBundle();
   const text = bundle[key];
   if (text !== undefined) return interpolate(text, params, key);
-  // 2. 默认 locale（en）兜底
-  if (getLang() !== DEFAULT_LANG) {
-    const fallback = getBundle(DEFAULT_LANG);
+  // 2. 兜底语言（FALLBACK_LANG）
+  if (getLang() !== FALLBACK_LANG) {
+    const fallback = getBundle(FALLBACK_LANG);
     const fallbackText = fallback[key];
     if (fallbackText !== undefined) return interpolate(fallbackText, params, key);
   }

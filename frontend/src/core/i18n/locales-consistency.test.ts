@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import { zhCN } from "@/locales/zh-CN.ts";
 import { en } from "@/locales/en.ts";
 import { ja } from "@/locales/ja.ts";
+import { FALLBACK_LANG, SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 
 const bundles: Array<[string, Record<string, string>]> = [
   ["en", en],
@@ -61,5 +62,11 @@ describe("语言包 key 对齐（基准 zh-CN）", () => {
         expect(t, `${name}.${k} 占位符不一致`).toEqual(zh);
       }
     }
+  });
+});
+
+describe("兜底语言单一事实源（ADR-210 D4）", () => {
+  it("FALLBACK_LANG ∈ SUPPORTED_LANGS codes（en 被移出支持列表时此测先红）", () => {
+    expect(SUPPORTED_LANGS.map((l) => l.code)).toContain(FALLBACK_LANG);
   });
 });

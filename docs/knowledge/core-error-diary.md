@@ -61,7 +61,7 @@ status: active
 
 - `registerErrorDiary(sink: DiarySink): DiaryHandle` — 注册（注入式，幂等；返回 handle 供 dispose）
 - `unregisterErrorDiary(): void` — 注销（幂等，向后兼容薄壳，委托 currentHandle?.dispose()）
-- `pushToDiary(msg: string, status: DiaryStatus): void` — 全局错误转发入口（ADR-189 D4 拆分新增）：供 `utils/dom/global-error-listeners.ts` 的 window 监听调用，把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略；未注册时为 no-op
+- `pushToDiary(msg: string, status: DiaryStatus): void` — 全局错误转发入口（ADR-189 D4 拆分新增）：供 window 监听层（`backend/global-error-listeners.ts`）调用，把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略；**未注册时告警一次并跳过（ADR-210 D5：失活须留痕，不再静默 no-op），注册成功后标志复位，再失活可再告警**
 - `DiaryHandle { dispose(): void }` — 生命周期句柄（幂等，dispose 后 toast + logSink 监听全拆；window 监听归 `utils/dom` 层，由该层 disposer 独立移除）
 - `DiarySink = (entry: DiaryEntry) => void` — 落盘通道类型；实现须自行捕获异步失败
 - `DiaryEntry { title, detail, status: "failed" | "warn" }` — 净化后条目（title→AddOpLog modelName 位，detail→errMsg 位，status 与 go/logs 枚举对齐）
@@ -82,4 +82,5 @@ status: active
 ## 相关
 
 - [ADR-189](./../adr/ADR-189-frontend-core-backend-utils-core-feedback.md)（core 准入 + D1 断环）
+- [ADR-210](./../adr/ADR-210-core-convergence-locale-host.md)（D5：pushToDiary 未注册态告警一次 + 注册成功复位）
 - `docs/knowledge/event-bus.md`（bus 契约）

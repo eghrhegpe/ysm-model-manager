@@ -32,6 +32,8 @@ const DEDUP_MAX_KEYS = 32;
 let currentHandle: DiaryHandle | null = null;
 // 当前活跃策略闭包（pushToDiary 入口转发目标；window 监听层经此进 core，core 不摸 window）
 let currentPush: ((msg: string, status: DiaryStatus) => void) | null = null;
+// 未注册态告警一次（ADR-210 D5：日记系统静默失活须留痕；注册成功复位，再失活可再告警）
+let pushUnregisteredWarned = false;
 
 /** 注销日记监听（与 registerErrorDiary 对称的正式生命周期 API，幂等）。 */
 export function unregisterErrorDiary(): void {
@@ -39,12 +41,22 @@ export function unregisterErrorDiary(): void {
 }
 
 /**
- * 全局错误转发入口：供 utils/dom/global-error-listeners.ts 的 window 监听调用，
+ * 全局错误转发入口：供 window 监听层（utils/dom / backend 的 global-error-listeners）
  * 把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略。core 自身不挂 window 监听（ADR-189 D4）。
- * 未注册（currentHandle 为空）时为 no-op，不抛错。
+ * 未注册时告警一次并返回（ADR-210 D5：装配顺序漏 registerErrorDiary 会让全局错误静默丢失，
+ * 不再静默 no-op；后续调用抑制，避免风暴）。
  */
 export function pushToDiary(msg: string, status: DiaryStatus): void {
-  currentPush?.(msg, status);
+  if (!currentPush) {
+    if (!pushUnregisteredWarned) {
+      pushUnregisteredWarned = true;
+      console.warn(
+        "[error-diary] pushToDiary 未注册态调用：此错误未记录（装配层漏 registerErrorDiary?），后续调用静默",
+      );
+    }
+    return;
+  }
+  currentPush(msg, status);
 }
 
 export function registerErrorDiary(sink: DiarySink): DiaryHandle {
@@ -135,5 +147,6 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
 
   const handle: DiaryHandle = { dispose };
   currentHandle = handle;
+  pushUnregisteredWarned = false; // 注册成功复位失活告警：再卸载-未注册可重新告警（ADR-210 D5）
   return handle;
 }

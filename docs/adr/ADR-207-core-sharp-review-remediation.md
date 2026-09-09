@@ -1,10 +1,10 @@
 # ADR-207：frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫
 
-- **状态**：✅ 已采纳（Accepted）
+- **状态**：🔄 部分采纳（D3 之 tr/trDynamic 双入口被 [ADR-210](./ADR-210-core-convergence-locale-host.md) D3 根除——生产调用点为零，回退语义由 tOf 承载；D1/D2/D3 之 tOf/warnMissingKey 收编/残留占位符守卫仍有效）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理（锐评发起 + 整改实施）
-- **相关**：[ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md)（core 准入 D1/D4/D6 注释纪律）、`docs/knowledge/core-error-diary.md`、`docs/knowledge/i18n.md`
+- **相关**：[ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md)（core 准入 D1/D4/D6 注释纪律）、[ADR-210](./ADR-210-core-convergence-locale-host.md)（core 收编：LocaleHost / _activeBundle / tr 根除 / FALLBACK_LANG / pushToDiary 失活留痕）、`docs/knowledge/core-error-diary.md`、`docs/knowledge/i18n.md`
 
 ---
 

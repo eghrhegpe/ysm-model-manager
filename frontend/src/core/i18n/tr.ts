@@ -8,7 +8,7 @@ import { interpolate, type LocaleKey, type LocaleParams, tOf } from "./t.ts";
  * i18n 安全取值（严格字面量 key）：键缺失时回退到 fallback（经同参插值），杜绝裸 key 上屏。
  * @param key - 翻译键字面量（拼错编译期报错；数据驱动 string key 用 trDynamic）
  * @param fallback - 键缺失时的兜底字符串（建议用英文/原 key 之外的稳定文案）
- * @param params - 插值参数，透传 t(key, params)（同 t 的 {n} 语法）
+ * @param params - 插值参数，透传 tOf(key, params)（同 t 的 {n} 语法）
  * @returns 翻译结果；缺失则返回 interpolate(fallback, params)
  */
 export function tr(key: LocaleKey, fallback: string, params?: LocaleParams): string {

@@ -26,6 +26,7 @@ quick_risk_lines:
 pitfalls:
   - core 里直 import backend → 违反 ADR-189 D1 断环；落盘通道必须注入（backend/diary-sink.ts 适配 AddOpLog）
   - 注册不幂等 / 失败不回滚 → 重试叠加监听，同条 toast 落两遍日记
+  - 注册失败 catch 后 fall-through 重新占位 currentHandle → 僵尸句柄致模块永久静默失效（回滚须返回空 handle、不占位）
   - 日记写入失败外溢 → 必须 try/catch 兜底，不影响 toast 链路
   - Go AppError 文案（`源路径：`/`目标路径：`全角冒号 token）变更须同步 fixture + stripAppErrorPaths 正则（双侧测试钉契约，ADR-207 D2）
 use_when:
@@ -52,7 +53,7 @@ status: active
 - **净化策略**（留在 core，属内核策略非 IO）：剥 `❌/⚠️` emoji 前缀（含 U+FE0F 变体选择器）、剥离 Go 端 AppError 拼入的内部路径段（ADR-051 日记持久化不引入完整路径；剥离正则本体在 `utils/base/apperror-text.ts` `stripAppErrorPaths`，跨语言契约 fixture 见下）、截断 title 200 / detail 500（前端冗余防御，Go 侧 maxFieldLen 会再截断）
 - **写入放大防护**：去重键 = `status + 净化后 title`（先净化后算键——仅路径段不同的原始文本塌缩为同键），按 key 独立 5s 窗口（`dedupAt: Map`，上限 32 键，超限淘汰最旧 fail-open）；A-B 交错风暴按 key 各自抑制（ADR-207 D1，取代旧「交错风暴逐条记录」语义）
 - **AppError 文案跨语言契约**（ADR-207 D2）：`stripAppErrorPaths` 匹配 Go `AppError.Error()` 的 `源路径：`/`目标路径：`（全角冒号）token；共享 fixture `tests/fixtures/apperror-sample.json` 双端钉——Go 侧 `go/types/apperror_test.go` 断言 `Error()` 全串 == fixture，Node 契约测试 `tests/test_apperror_strip.ts` 读 fixture 跑净化断言路径段剥净；Go 改文案 → Go 测试先红 → 同 PR 同步 fixture + 前端正则
-- **注册语义**：幂等可重复调用；任一监听挂载失败整体回滚（unregisterErrorDiary），防部分注册后重试叠加；`unregisterErrorDiary` 为对称正式生命周期（拆除四路监听 + 重置去重状态 + 清 log sink），应用生命周期内通常只在测试中使用
+- **注册语义**：幂等可重复调用；任一监听挂载失败整体回滚（unregisterErrorDiary），防部分注册后重试叠加；**回滚路径返回空 handle 且不占位 currentHandle**——若 fall-through 重新赋值，僵尸（disposed）句柄会让后续注册恒 no-op、unregister 也清不掉（dispose 早退），模块永久静默失效（二轮锐评 P1 修复，有跨测试泄漏用例守护）；`unregisterErrorDiary` 为对称正式生命周期（拆除四路监听 + 重置去重状态 + 清 log sink），应用生命周期内通常只在测试中使用
 - **失败兜底**：sink 同步抛错或异步拒绝均不外溢（异步由 sink 实现自行截断），日记写入失败只 console.warn
 
 ## 对外 API / 入口

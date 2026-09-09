@@ -223,6 +223,23 @@ describe("registerErrorDiary", () => {
     }
   });
 
+  it("注册失败回滚后重注册可恢复（僵尸 handle 不占位——bus.on 抛错场景）", async () => {
+    const onSpy = vi.spyOn(bus, "on").mockImplementation(() => {
+      throw new Error("bus boom");
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failedHandle = registerErrorDiary(sinkSpy);
+    failedHandle.dispose(); // 调用方按句柄契约清理（失败时本就 no-op）
+    onSpy.mockRestore();
+    // 回滚后 currentHandle 必须为空 → 重注册真正生效（缺陷态：僵尸 handle 占位 → 永久静默失效）
+    registerErrorDiary(sinkSpy);
+    bus.emit("toast:show", { msg: "❌ 注册失败后可恢复", duration: 3000, type: "error" });
+    await flushPromises();
+    expect(sinkSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+    unregisterErrorDiary();
+  });
+
   it("unregisterErrorDiary 拆除 toast 监听：reset 后 error toast 不再落盘", async () => {
     registerErrorDiary(sinkSpy);
     unregisterErrorDiary();

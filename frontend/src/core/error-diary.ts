@@ -130,9 +130,13 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     });
     logSinkInstalled = true;
   } catch (e) {
-    // 部分注册失败 → 整体回滚，模块不会永久静默失效
+    // 部分注册失败 → 整体回滚；返回空 handle 且**不占位 currentHandle**——
+    // 若 fall-through 到下方 currentHandle = handle，僵尸（disposed）句柄会让后续
+    // registerErrorDiary 恒返回 no-op、unregisterErrorDiary 也清不掉（dispose 早退），
+    // 模块永久静默失效（二轮锐评 P1：回滚后可重试是注释契约，必须兑现）
     dispose();
     console.warn("[error-diary] 注册失败（已回滚，可重试）:", e);
+    return { dispose() {} };
   }
 
   const handle: DiaryHandle = { dispose };

@@ -72,18 +72,34 @@ func TestSchemaGuard_UniqueStorageSubDir_NoWarn(t *testing.T) {
 	}
 }
 
-// ===== 守卫 2：configField 全局唯一 =====
+// ===== 守卫 2：configField 组内唯一（同组共享合法，跨组声明违规）=====
 
-func TestSchemaGuard_DuplicateConfigField_Warns(t *testing.T) {
+func TestSchemaGuard_DuplicateConfigFieldCrossGroup_Warns(t *testing.T) {
 	payload := `{
 		"resourceTypes": [
 			{"id": "a", "name": "A", "group": "g", "configField": "SharedRoot", "extensions": [".a"]},
-			{"id": "b", "name": "B", "group": "g", "configField": "SharedRoot", "extensions": [".b"]}
+			{"id": "b", "name": "B", "group": "h", "configField": "SharedRoot", "extensions": [".b"]}
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "SharedRoot") || !hasViolation(violations, "配置槽查询歧义") {
-		t.Fatalf("期望 configField 重复违规，实际: %v", violations)
+	if !hasViolation(violations, "SharedRoot") || !hasViolation(violations, "配置槽归属歧义") {
+		t.Fatalf("期望跨组 configField 重复违规，实际: %v", violations)
+	}
+}
+
+func TestSchemaGuard_SameGroupSharedConfigField_NoWarn(t *testing.T) {
+	// mmd 家族形态：同组多个类型共享 MmdRoot 配置槽（用户配一次、组内各
+	// storageSubDir 挂其下）——合法，零违规。
+	payload := `{
+		"resourceTypes": [
+			{"id": "EntityPlayer", "name": "角色模型", "group": "mmd", "storageSubDir": "PMX", "configField": "MmdRoot", "extensions": [".pmx"]},
+			{"id": "SceneModel", "name": "场景模型", "group": "mmd", "storageSubDir": "SceneModel", "configField": "MmdRoot", "extensions": [".pmd"]},
+			{"id": "fbx", "name": "FBX", "group": "mmd", "storageSubDir": "FBX", "configField": "MmdRoot", "extensions": [".fbx"]}
+		]
+	}`
+	violations := guardViolations(t, payload)
+	if hasViolation(violations, "MmdRoot") {
+		t.Fatalf("同组共享 configField 不应触发违规，实际: %v", violations)
 	}
 }
 

@@ -260,17 +260,29 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 		}
 	}
 
-	// 守卫 2：configField 全局唯一
-	configOwners := make(map[string][]string) // configField → []typeID
+	// 守卫 2：configField 组内唯一
+	// 同组共享合法（mmd 家族 9 类型共享 MmdRoot 配置槽——用户配一次、组内各
+	// storageSubDir 挂其下；守卫 3 范例 L「vrc 经 configFallback 回退 MmdRoot」同
+	// 一族多消费方设计）；违规仅限同一字段被**不同组**的类型声明——配置槽归属歧义。
+	configOwners := make(map[string]map[string][]string) // configField → group → []typeID
 	for _, rt := range reg.ResourceTypes {
 		if rt.ConfigField != "" {
-			configOwners[rt.ConfigField] = append(configOwners[rt.ConfigField], rt.ID)
+			byGroup := configOwners[rt.ConfigField]
+			if byGroup == nil {
+				byGroup = make(map[string][]string)
+				configOwners[rt.ConfigField] = byGroup
+			}
+			byGroup[rt.Group] = append(byGroup[rt.Group], rt.ID)
 		}
 	}
-	for cfg, owners := range configOwners {
-		if len(owners) > 1 {
+	for cfg, byGroup := range configOwners {
+		if len(byGroup) > 1 {
+			ids := make([]string, 0, len(byGroup))
+			for _, gIDs := range byGroup {
+				ids = append(ids, gIDs...)
+			}
 			violations = append(violations, fmt.Sprintf(
-				"configField=%q 被多个类型声明: %v——配置槽查询歧义", cfg, owners))
+				"configField=%q 被多个组的类型声明: %v——配置槽归属歧义", cfg, ids))
 		}
 	}
 

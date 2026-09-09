@@ -4,13 +4,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
 import { registerErrorDiary, unregisterErrorDiary, type DiaryEntry } from "./error-diary.ts";
+import { installGlobalErrorListeners } from "@/utils/dom/global-error-listeners.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
 const sinkSpy = vi.fn<(e: DiaryEntry) => void>();
+// 全局 window 监听由 utils/dom 层单独安装，测试须显式装/卸以防跨用例泄漏
+let disposeGlobal: (() => void) | undefined;
 
 beforeEach(() => {
   sinkSpy.mockClear();
   unregisterErrorDiary();
+  disposeGlobal?.();
+  disposeGlobal = undefined;
 });
 
 describe("registerErrorDiary", () => {
@@ -73,6 +78,7 @@ describe("registerErrorDiary", () => {
 
   it("window.onerror → sink called", async () => {
     registerErrorDiary(sinkSpy);
+    disposeGlobal = installGlobalErrorListeners();
     const errorEvent = new ErrorEvent("error", {
       message: "脚本执行出错",
       error: new Error("脚本执行出错"),
@@ -89,6 +95,7 @@ describe("registerErrorDiary", () => {
 
   it("unhandledrejection → sink called", async () => {
     registerErrorDiary(sinkSpy);
+    disposeGlobal = installGlobalErrorListeners();
     const reason = new Error("API 请求失败");
     // happy-dom 未实现全局 PromiseRejectionEvent 构造器（jsdom 有），
     // 用局部构造器兜底：真实浏览器均支持该事件，生产代码依赖的只是 reason 字段

@@ -18,6 +18,7 @@ auto_fields:
     - countMissing
     - createDownloadQueue
     - createProgressGuard
+    - createRepoRenderGuard
     - createVirtualList
     - decrementRemaining
     - DOWNLOAD_CONFIRM_BYTES
@@ -47,6 +48,7 @@ auto_fields:
     - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle
+    - RepoRenderGuard
     - resetProgress
     - resume
     - rollbackToIdle

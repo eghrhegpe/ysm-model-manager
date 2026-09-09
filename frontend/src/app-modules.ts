@@ -7,6 +7,7 @@ import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { installGlobalErrorListeners } from "@/utils/dom/global-error-listeners.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
 import { registerCoiServiceWorker } from "@/workers/coi-sw.ts";
@@ -100,7 +101,10 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
       {
         tag: "error-diary",
         failMsg: "错误日志注册失败:",
-        run: () => registerErrorDiary(makeDiarySink()),
+        run: () => {
+          registerErrorDiary(makeDiarySink());
+          installGlobalErrorListeners();
+        },
       },
     ]);
     // ADR-079 M1：网页版注册 COI Service Worker（补 COOP/COEP → crossOriginIsolated，

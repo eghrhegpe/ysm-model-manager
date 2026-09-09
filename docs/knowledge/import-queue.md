@@ -19,6 +19,7 @@ auto_fields:
     - collectDropFiles
     - CollectedEntry
     - collectFiles
+    - createImportSession
     - directImport
     - executeCollected
     - fileToBase64
@@ -28,6 +29,7 @@ auto_fields:
     - handleTreeDrop
     - ImportFile
     - importFolder
+    - ImportSession
     - importWebFilesWithToast
     - isEditableTarget
     - isImportableFile

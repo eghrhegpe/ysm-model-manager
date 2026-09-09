@@ -1,6 +1,8 @@
 // ===== UI 报错落日记：error/warn toast → 日记系统（go/logs）=====
-// core 不感知 Wails：落盘通道 DiarySink 由装配层注入（backend/diary-sink.ts 适配 AddOpLog）；
-// 本模块只持净化/去重/截断策略（ADR-189 D1）。设计沿革与陷阱 → docs/knowledge/core-error-diary.md
+// core 不感知 Wails、不摸 window：落盘通道 DiarySink 由装配层注入（backend/diary-sink.ts 适配 AddOpLog）；
+// 全局错误监听（window error/unhandledrejection）下沉 utils/dom/global-error-listeners.ts，
+// 经本模块 pushToDiary 入口收口（ADR-189 D4：DOM 原语不进 core）。本模块只持净化/去重/截断策略。
+// 设计沿革与陷阱 → docs/knowledge/core-error-diary.md
 import { bus, type ToastPayload } from "@/bus";
 import { stripAppErrorPaths } from "@/utils/base/apperror-text.ts";
 import { setLogSink } from "@/utils/base/log.ts";
@@ -28,10 +30,21 @@ const DEDUP_MAX_KEYS = 32;
 
 // 模块级唯一状态：当前活跃 handle（注册守卫 + 注销入口）
 let currentHandle: DiaryHandle | null = null;
+// 当前活跃策略闭包（pushToDiary 入口转发目标；window 监听层经此进 core，core 不摸 window）
+let currentPush: ((msg: string, status: DiaryStatus) => void) | null = null;
 
 /** 注销日记监听（与 registerErrorDiary 对称的正式生命周期 API，幂等）。 */
 export function unregisterErrorDiary(): void {
   currentHandle?.dispose();
+}
+
+/**
+ * 全局错误转发入口：供 utils/dom/global-error-listeners.ts 的 window 监听调用，
+ * 把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略。core 自身不挂 window 监听（ADR-189 D4）。
+ * 未注册（currentHandle 为空）时为 no-op，不抛错。
+ */
+export function pushToDiary(msg: string, status: DiaryStatus): void {
+  currentPush?.(msg, status);
 }
 
 export function registerErrorDiary(sink: DiarySink): DiaryHandle {
@@ -44,8 +57,6 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
   // ── 闭包状态（registerErrorDiary 调用间隔离；重注册即重置去重窗口）──
   const dedupAt = new Map<string, number>();
   let unsubToast: (() => void) | undefined;
-  let unsubError: ((e: ErrorEvent) => void) | undefined;
-  let unsubRejection: ((e: PromiseRejectionEvent) => void) | undefined;
   let logSinkInstalled = false;
   let disposed = false;
 
@@ -54,18 +65,11 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     disposed = true;
     unsubToast?.();
     unsubToast = undefined;
-    if (unsubError) {
-      window.removeEventListener("error", unsubError as EventListener);
-      unsubError = undefined;
-    }
-    if (unsubRejection) {
-      window.removeEventListener("unhandledrejection", unsubRejection as EventListener);
-      unsubRejection = undefined;
-    }
     if (logSinkInstalled) {
       setLogSink(null);
       logSinkInstalled = false;
     }
+    currentPush = null;
     currentHandle = null;
   };
 
@@ -101,26 +105,16 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
   }
 
   try {
+    // 收口入口：window 监听层（utils/dom/global-error-listeners.ts）经 pushToDiary 注入本策略
+    currentPush = logUiMsg;
+
     // 1. error/warn toast → 日记
     unsubToast = bus.on("toast:show", (p: ToastPayload) => {
       if (p.type !== "error" && p.type !== "warn") return;
       logUiMsg(p.msg, p.type === "error" ? "failed" : "warn");
     });
 
-    // 2. 未捕获异常 / 未处理拒绝 → 日记
-    unsubError = (e: ErrorEvent): void => {
-      const msg = e.message || String(e.error || "未知脚本错误");
-      logUiMsg(msg, "failed");
-    };
-    window.addEventListener("error", unsubError);
-
-    unsubRejection = (e: PromiseRejectionEvent): void => {
-      const msg = e.reason?.message || String(e.reason || "未处理的 Promise 拒绝");
-      logUiMsg(msg, "failed");
-    };
-    window.addEventListener("unhandledrejection", unsubRejection);
-
-    // 3. logWarn/logError 透写日记：经 log.ts 的注入式 sink 收敛到本模块落盘，复用去重窗口
+    // 2. logWarn/logError 透写日记：经 log.ts 的注入式 sink 收敛到本模块落盘，复用去重窗口
     setLogSink((level, tag, msg, err) => {
       const detail = err instanceof Error ? err.message : err === undefined ? "" : String(err);
       logUiMsg(

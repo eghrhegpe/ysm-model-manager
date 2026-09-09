@@ -27,6 +27,7 @@ auto_fields:
     - formatBytes
     - friendlyError
     - getStackDepth
+    - installGlobalErrorListeners
     - installScrollSync
     - isEditableTarget
     - isFileExistsError

@@ -14,12 +14,15 @@ source_files:
   - frontend/src/features/pack-ops/instance-ops.ts
 auto_fields:
   symbols_with_lines:
+    - ContextMenuHandlers
+    - createContextMenuHandlers
     - DIR_HANDLERS
     - DirCtx
     - FILE_HANDLERS
     - FileCtx
     - getMenuDef
     - HANDLERS
+    - HandlerTable
     - isUnsafeFolderName
     - MENU_DEFS
     - MenuAction

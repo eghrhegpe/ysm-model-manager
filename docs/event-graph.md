@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| eventArr | `frontend/src/features/community/download-queue-store.ts` | 348 |
+| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 336 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 184 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 196 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -171,7 +171,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 177 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 189 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -183,7 +183,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 167 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 179 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -321,8 +321,8 @@
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 114 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 168 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 35 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 194 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 43 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 170 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
@@ -395,9 +395,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 27 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 86 |
-| (顶层) | `frontend/src/app-modules.ts` | 148 |
+| (顶层) | `frontend/src/app-modules.ts` | 28 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 87 |
+| (顶层) | `frontend/src/app-modules.ts` | 152 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
@@ -420,9 +420,9 @@
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 110 |
 | bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 215 |
 | (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 37 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 30 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 185 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 198 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 38 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 161 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 174 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 267 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
@@ -577,7 +577,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| logUiMsg | `frontend/src/core/error-diary.ts` | 105 |
+| logUiMsg | `frontend/src/core/error-diary.ts` | 112 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 71 |
 
 ### `tree:reload`
@@ -589,8 +589,8 @@
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 113 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 36 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 193 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 44 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 169 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |

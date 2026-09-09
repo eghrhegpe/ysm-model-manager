@@ -8,9 +8,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - DiaryEntry
+    - DiaryHandle
     - DiarySink
     - DiaryStatus
-    - DiaryHandle
+    - pushToDiary
     - registerErrorDiary
     - unregisterErrorDiary
   tests:
@@ -45,11 +46,11 @@ status: active
 
 ## 概览
 
-把 UI 层的错误/告警（toast、未捕获异常、未处理拒绝、logWarn/logError）统一净化后写入运行时日志环（go/logs），诊断页可回溯。**core 不感知 Wails**：落盘通道 `DiarySink` 由装配层注入，`AddOpLog` 适配在 `backend/diary-sink.ts`，装配层（app-modules）接线（ADR-189 D1 断环）。
+把 UI 层的错误/告警（toast、未捕获异常、未处理拒绝、logWarn/logError）统一净化后写入运行时日志环（go/logs），诊断页可回溯。**core 不感知 Wails、不摸 window**：落盘通道 `DiarySink` 由装配层注入，`AddOpLog` 适配在 `backend/diary-sink.ts`，装配层（app-modules）接线（ADR-189 D1 断环）；全局错误监听（`window` error / `unhandledrejection`）下沉 `utils/dom/global-error-listeners.ts`，经本模块 `pushToDiary` 入口收口（ADR-189 D4：DOM 原语不进 core）。
 
 ## 核心职责
 
-- **四路监听收口**：① error/warn toast（`toast:show`）② `window.onerror` ③ `unhandledrejection` ④ `logWarn`/`logError` 透写——后者经 `utils/base/log.ts` 的注入式 `setLogSink` 收敛到本模块，复用同一套净化/去重
+- **监听分层收口**：① error/warn toast（`toast:show`）④ `logWarn`/`logError` 透写——两者在 core 内收口（`setLogSink` 注入式，复用同一套净化/去重）；②③ 未捕获异常 / 未处理拒绝的 `window` 监听**不在此模块**，由 `utils/dom/global-error-listeners.ts` 注册并调用 `pushToDiary(msg, "failed")` 转发进本模块策略，core 自身零 `window` 调用（ADR-189 D4）
 - **净化策略**（留在 core，属内核策略非 IO）：剥 `❌/⚠️` emoji 前缀（含 U+FE0F 变体选择器）、剥离 Go 端 AppError 拼入的内部路径段（ADR-051 日记持久化不引入完整路径；剥离正则本体在 `utils/base/apperror-text.ts` `stripAppErrorPaths`，跨语言契约 fixture 见下）、截断 title 200 / detail 500（前端冗余防御，Go 侧 maxFieldLen 会再截断）
 - **写入放大防护**：去重键 = `status + 净化后 title`（先净化后算键——仅路径段不同的原始文本塌缩为同键），按 key 独立 5s 窗口（`dedupAt: Map`，上限 32 键，超限淘汰最旧 fail-open）；A-B 交错风暴按 key 各自抑制（ADR-207 D1，取代旧「交错风暴逐条记录」语义）
 - **AppError 文案跨语言契约**（ADR-207 D2）：`stripAppErrorPaths` 匹配 Go `AppError.Error()` 的 `源路径：`/`目标路径：`（全角冒号）token；共享 fixture `tests/fixtures/apperror-sample.json` 双端钉——Go 侧 `go/types/apperror_test.go` 断言 `Error()` 全串 == fixture，Node 契约测试 `tests/test_apperror_strip.ts` 读 fixture 跑净化断言路径段剥净；Go 改文案 → Go 测试先红 → 同 PR 同步 fixture + 前端正则
@@ -60,7 +61,8 @@ status: active
 
 - `registerErrorDiary(sink: DiarySink): DiaryHandle` — 注册（注入式，幂等；返回 handle 供 dispose）
 - `unregisterErrorDiary(): void` — 注销（幂等，向后兼容薄壳，委托 currentHandle?.dispose()）
-- `DiaryHandle { dispose(): void }` — 生命周期句柄（幂等，dispose 后四路监听全拆）
+- `pushToDiary(msg: string, status: DiaryStatus): void` — 全局错误转发入口（ADR-189 D4 拆分新增）：供 `utils/dom/global-error-listeners.ts` 的 window 监听调用，把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略；未注册时为 no-op
+- `DiaryHandle { dispose(): void }` — 生命周期句柄（幂等，dispose 后 toast + logSink 监听全拆；window 监听归 `utils/dom` 层，由该层 disposer 独立移除）
 - `DiarySink = (entry: DiaryEntry) => void` — 落盘通道类型；实现须自行捕获异步失败
 - `DiaryEntry { title, detail, status: "failed" | "warn" }` — 净化后条目（title→AddOpLog modelName 位，detail→errMsg 位，status 与 go/logs 枚举对齐）
 
@@ -68,6 +70,7 @@ status: active
 
 - `backend/diary-sink.ts`：AddOpLog 适配器（含 reject 截断防死循环），测试在 `backend/diary-sink.test.ts`
 - `utils/base/log.ts`：`setLogSink` 注入点（core→utils/base 属 ADR-189 D4 允许边）
+- `utils/dom/global-error-listeners.ts`：`installGlobalErrorListeners()` 注册 `window` error / `unhandledrejection`，转发 `pushToDiary`（utils/dom → core 合法边，与 `errors.ts`/`toast.ts` 同构）
 - `@/bus`：消费 `toast:show` 事件
 
 ## 不变量

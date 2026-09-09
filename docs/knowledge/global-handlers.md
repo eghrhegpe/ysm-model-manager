@@ -19,6 +19,7 @@ auto_fields:
     - DiarySink
     - DiaryStatus
     - handleTreeDrop
+    - pushToDiary
     - registerErrorDiary
     - registerInstanceOps
     - registerSync
@@ -68,7 +69,7 @@ status: active
 - `sync.ts`（registerSync）：`sync:download:missing` — 按 `GetResourceInstanceStatus` 的 Missing 列表逐文件 `InstallModelTo`/`InstallResourceToInstance`，完成后 `InvalidateScanCache`，`finally` 必发 `sync:download:done`（带 token）；`tree:reload` 仅在实际完成安装时广播（P2 审核修复：配置缺失短路无写操作不触发全树重扫）；`sync:toggle:status` — 遍历整合包 `SyncModelToggleStatus` 同步启用/禁用并写 `AddImportLog`，`finally` 发 `tree:reload`（致命陷阱 #3 的解法；`_toggleBusy` 并发守卫防连点竞态）
 - `instance-ops.ts`（registerInstanceOps）：`instance:export-list` — `GetSubDirMap` + `ListFileNames` 汇总清单写剪贴板；`instance:clear` — `CountInstanceResources` 统计后 `modalConfirm` 二次确认，`ClearInstanceResources` 执行（走回收站可恢复）
 - `require-mcroot.ts`（`requireMcRoot()`）：读取游戏目录（`LoadAppConfig` 的 mcRoot），未配置时发 warn toast 并返回 null（配置守卫，去重 D-1）
-- `error-diary.ts`（`registerErrorDiary()`）：`toast:show` 的 error/warn → `AddOpLog` 落日记，另捕获 `window.onerror`/`unhandledrejection`；注册在 app-modules 启动期，不属于 app-content 编排
+- `error-diary.ts`（`registerErrorDiary()` + `pushToDiary`）：`toast:show` 的 error/warn → `AddOpLog` 落日记；`window.onerror`/`unhandledrejection` 由 `utils/dom/global-error-listeners.ts` 经 `pushToDiary` 收口（core 不摸 window，ADR-189 D4）；注册在 app-modules 启动期，不属于 app-content 编排
 
 ## 对外 API / 入口
 

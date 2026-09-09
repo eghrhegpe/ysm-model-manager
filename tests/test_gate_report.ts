@@ -8,12 +8,13 @@
  *
  *   1. firstErrors(out, n)：JSON errors/warns_list/任意非空字符串数组 → 前 n 条；
  *      非 JSON → 原始输出末 n 行。
- *   2. formatFailSummary(item, pass, total, attributable)：三行 FAIL 块——
- *      [FAIL][归属] 命令  pass/total 通过 耗s note / → 首错 / 复现: 命令
+ *   2. formatFailSummary(item, pass, total, attributable)：FAIL 块——
+ *      [FAIL][归属] 命令  pass/total 通过 耗s note / → 前 ≤4 条错误 / […还有 N 条] / 复现: 命令
  *      归属语义：debt→存量债、failClosed→失守、hard→attributable?本次引入:待归因
  *      （全扫模式无法归因，不许冒充「本次引入」）。
  *      详情优先级：raw(JSON) > 策展 tail > raw 末行 > note
- *      ——回归锚：tail 可能是 slice(-12) 的 JSON 碎片，绝不能当首错。
+ *      ——回归锚：tail 可能是 slice(-12) 的 JSON 碎片，绝不能当详情。
+ *      数据透明化（2026-09）：多条错误展示前 4 条，超出加「…还有 N 条」尾行；单条 = 3 行块（与旧行为兼容）。
  *
  * 零依赖（仅 node:assert + _lib/gate-report.ts 本身）。
  * 运行：node tests/test_gate_report.ts
@@ -74,7 +75,7 @@ const BASE = {
   note: "errors=3 warns=0",
 };
 
-check("formatFailSummary：归属+首错+复现 三行块（raw JSON 供详情）", () => {
+check("formatFailSummary：归属+前 N 错+复现 块（raw JSON 供详情，2 条错误 → 4 行无尾行）", () => {
   const item = {
     ...BASE,
     tail: "",
@@ -88,9 +89,38 @@ check("formatFailSummary：归属+首错+复现 三行块（raw JSON 供详情�
   assert.ok(s.includes("[存量债]"), `应有归属标签，实际:\n${s}`);
   assert.ok(s.includes("knowledge-drift"), "应含命令");
   assert.ok(s.includes("知识卡 animation-system.md"), "应含 raw 提取的首错");
+  assert.ok(s.includes("卡B"), "应含第 2 条错误（多条全列）");
   assert.ok(s.includes("复现: node scripts/check-knowledge-drift.ts --json"), "应含复现命令");
   assert.ok(s.includes("16/20"), "应含通过计数");
-  assert.equal(s.split("\n").length, 3, `应为 3 行，实际:\n${s}`);
+  assert.ok(!s.includes("还有"), "未超 cap 不应有「还有 N 条」尾行");
+  assert.equal(s.split("\n").length, 4, `head + 2 详情行 + 复现 = 4 行，实际:\n${s}`);
+});
+
+check("formatFailSummary：单条错误 → 3 行块（与旧行为兼容）", () => {
+  const item = {
+    ...BASE,
+    tail: "",
+    blockPolicy: "debt" as const,
+    raw: JSON.stringify({ _summary: { errors: 1 }, errors: ["唯一错误：卡A 引用不存在"] }),
+  };
+  const s = formatFailSummary(item, 16, 20, true);
+  assert.ok(s.includes("唯一错误：卡A 引用不存在"), "应含该错误");
+  assert.equal(s.split("\n").length, 3, `head + 1 详情行 + 复现 = 3 行，实际:\n${s}`);
+});
+
+check("formatFailSummary：6 条错误 → cap 4 展示 + 「还有 2 条」尾行", () => {
+  const six = ["错误A", "错误B", "错误C", "错误D", "错误E", "错误F"];
+  const item = {
+    ...BASE,
+    tail: "",
+    blockPolicy: "debt" as const,
+    raw: JSON.stringify({ _summary: { errors: 6 }, errors: six }),
+  };
+  const s = formatFailSummary(item, 16, 20, true);
+  for (const e of six.slice(0, 4)) assert.ok(s.includes(e), `应展示前 4 条内的 ${e}`);
+  assert.ok(!s.includes("错误E"), "cap 外错误不展示");
+  assert.ok(s.includes("还有 2 条"), "应含「还有 N 条」尾行");
+  assert.ok(s.includes("完整报告"), "尾行应指向完整报告");
 });
 
 check("formatFailSummary：raw(JSON) 优先于 tail 碎片（回归锚：tail 是 slice(-12) 残渣）", () => {

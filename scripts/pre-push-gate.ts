@@ -165,7 +165,7 @@ async function main() {
    *   debt             → 只记录，不阻断
    *   failClosed       → 只记录，不阻断（调用方须在 record() 外自行判断 fail-closed 场景）
    * raw：工具原始输出（2026-09 锐评「输出运行过程而非返回信息」）——FAIL 摘要的
-   * 结构化首错提取（gate-report.firstErrorLine）与落盘报告的事实源；cap 64KB 尾部
+   * 结构化前 ≤4 条错误提取（gate-report errorDetailLines）与落盘报告的事实源；cap 64KB 尾部
    * 防超大输出（go test/vite）撑爆报告，JSON 检查输出远小于此不受影响。
    */
   const record = (
@@ -925,7 +925,7 @@ async function main() {
   /* --- 聚合摘要 --- */
   logPush("------------------- 结果 -------------------");
   // FAIL 后置（2026-09-08 锐评「AI 只读末尾 ~25 行」）：OK 明细在前供人扫读，
-  // FAIL 明细块（归属→首错→复现）贴着结论放——保证落在尾部阅读窗口内。
+  // FAIL 明细块（归属→前 ≤4 条错误→复现）贴着结论放——保证落在尾部阅读窗口内。
   // 旧「FAIL 前置」(2026-08-29) 服务整页自上而下阅读，现由落盘报告 + 明细块取代。
   // 完整报告落盘（运行过程而非一次性返回信息）：结构化 JSON 存 .git/，
   // stderr 只给相对路径指针；写入失败不阻断门禁。
@@ -941,7 +941,7 @@ async function main() {
   }
   if (failResults.length) {
     const display = reportPath ? path.relative(ROOT, reportPath) : "（报告写入失败）";
-    logPush(`------ FAIL 明细（归属 → 首错 → 复现）｜ 完整报告: ${display} ------`);
+    logPush(`------ FAIL 明细（归属 → 前 ≤4 条错误 → 复现）｜ 完整报告: ${display} ------`);
     for (const r of failResults) {
       // hard 失败的归属：push/files 模式（files 非空）可归因本次变更；全扫（--all/--docs）待归因
       logPush(formatFailSummary(r, okResults.length, results.length, files.length > 0));

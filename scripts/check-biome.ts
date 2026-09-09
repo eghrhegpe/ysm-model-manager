@@ -19,9 +19,10 @@
  *   - 默认 / --strict：biome check --changed（仅查相对 main 的变更文件，阻断 lint/format 违规）
  *   - --write：biome check --write --changed（本地/CI 自动修复，非阻断）
  *   - --files <paths...>：显式文件列表（pre-commit 接线，镜像 gofmt 只修 staged 文件）；
- *     路径解析 cwd 无关——传入路径经 path.resolve(process.cwd(), p) 转绝对路径，
- *     再 path.relative(FRONTEND_DIR) 对齐 biome cwd（frontend/），
- *     支持任意调用目录 × 任意路径格式（相对/绝对，带/不带 frontend/ 前缀）。
+ *     路径经 path.resolve(process.cwd(), p) 解析——**相对路径以当前工作目录为基准**：
+ *     仓库根下调用传 `frontend/src/...`，frontend/ 下调用传 `src/...`（absolute 路径任意目录可用）。
+ *     注意：在 frontend/ 下误传 `frontend/src/...` 会解析出 `frontend/frontend/...` 翻倍路径
+ *     ——执行前 fs.existsSync 逐一预检，路径缺失即快速失败（不再让 io 错流入 biome 被误报为「违规」）。
  *     与 --changed 互斥：存在 --files 时用显式列表，否则回退 --changed。
  *
  * 边界：biome check 在「0 变更文件」时也退出 1（报 No files were processed / Checked 0 files），
@@ -55,8 +56,8 @@ if (args.unknown.length) console.warn(`[check-biome] 忽略未知参数: ${args.
 const writeMode = args.write as boolean;
 const jsonMode = args.json as boolean;
 // --files <paths...>：布尔标记 + 后续位置参数收集（--files 后直到下一个 - 旗标）。
-// 路径解析 cwd 无关：path.resolve(process.cwd(), p) → path.relative(FRONTEND_DIR, abs)，
-// 支持任意调用目录 × 任意路径格式（相对/绝对，带/不带 frontend/ 前缀）。
+// 路径解析 cwd 相关：path.resolve(process.cwd(), p) → path.relative(FRONTEND_DIR, abs)，
+// 相对路径以「调用时的当前目录」为基准（仓库根 → 传 frontend/src/...；frontend/ 内 → 传 src/...）。
 const ROOT = getRoot();
 const FRONTEND_DIR = path.join(ROOT, "frontend");
 const cwd = process.cwd();
@@ -101,6 +102,32 @@ if (args.files && explicitFiles.length === 0) {
   console.error("[check-biome] --files 后未提供任何文件路径");
   process.exit(1);
 }
+// 路径预检：不存在的文件不流入 biome（否则以 internalError/io 形式浮出，被误判成「代码违规」
+// 且修复指引失准——2026-09 数据透明化治理项，翻倍路径坑的根治）。
+if (explicitFiles.length) {
+  const missing = explicitFiles.filter((rel) => !fs.existsSync(path.join(FRONTEND_DIR, rel)));
+  if (missing.length) {
+    const detail =
+      `[check-biome] 以下 ${missing.length} 个文件路径不存在: ${missing.join(", ")}\n` +
+      `[check-biome] 相对路径按当前工作目录 ${cwd} 解析——仓库根下传 "frontend/src/…"，frontend/ 内传 "src/…"。` +
+      `这是路径/环境错误，非代码违规。`;
+    if (jsonMode) {
+      process.stdout.write(
+        JSON.stringify({
+          _summary: {
+            ok: false,
+            errors: -1,
+            missing,
+            note: "--files 指定路径不存在（路径/环境错误，非代码违规）",
+          },
+        }),
+      );
+    } else {
+      console.error(detail);
+    }
+    process.exit(1);
+  }
+}
 const cmd =
   explicitFiles.length > 0
     ? writeMode
@@ -143,16 +170,21 @@ if (jsonMode) {
     process.stdout.write(JSON.stringify({ _summary: { ok: true, errors: 0, warnings: 0 } }));
   } else {
     const s = parseSummary(out);
+    const ioErr = /internalError|cannot find|系统找不到/i.test(out);
+    // 数据透明化：门禁消费方此前只见 _summary 计数，违规定详情（diagnostics）在此一并给出
+    const diag = out.length > 32768 ? `${out.slice(0, 32768)}\n…（诊断截断，共 ${out.length} 字符）` : out;
     process.stdout.write(
       JSON.stringify({
         _summary: {
           ok: false,
           errors: s.errors,
           warnings: s.warnings,
-          note:
-            s.errors > 0
-              ? `biome 检出 ${s.errors} 处违规（变更文件）`
-              : "biome 检出违规（见上方诊断）",
+          note: ioErr
+            ? "biome 报路径/环境错误（internalError/io）——非代码违规；先核对 --files 路径与调用目录（诊断见上方 io 错原文已由预检拦截，此处为兜底）"
+            : s.errors > 0
+              ? `biome 检出 ${s.errors} 处违规（变更文件），明细见 diagnostics`
+              : "biome 检出违规，明细见 diagnostics",
+          ...(ioErr ? {} : { diagnostics: diag }),
         },
       }),
     );
@@ -160,16 +192,21 @@ if (jsonMode) {
   process.exit(ok ? 0 : 1);
 }
 
-// 人类可读模式：诊断透传（stdio inherit 已在 runBiome 用 pipe，此处补打关键行）
+// 人类可读模式：失败时透传 biome 原始诊断（数据透明化：此前 out 被 pipe 捕获后丢弃，
+// 失败只知道「有违规」不知道违了什么，只能手动 npx biome 重查）；成功只给单行摘要。
 if (noFiles) {
   console.log("[check-biome] 无变更文件需检查 ✅");
 } else if (ok) {
   console.log("[check-biome] 变更文件 lint/format 检查通过 ✅");
-} else if (writeMode) {
-  console.error("[check-biome] 自动修复后仍残留不可自动修复的违规，请手动处理");
 } else {
-  console.error(
-    "[check-biome] 变更文件存在 Biome 违规（已阻断）— 本地跑 `node scripts/check-biome.ts --write` 修复后重推",
-  );
+  process.stdout.write(`${out}\n`);
+  const ioErr = /internalError|cannot find|系统找不到/i.test(out);
+  if (ioErr) {
+    console.error("[check-biome] biome 报路径/环境错误（internalError/io）——非代码违规；先核对 --files 路径与调用目录（诊断见上方输出）");
+  } else if (writeMode) {
+    console.error("[check-biome] 自动修复后仍残留不可自动修复的违规，请手动处理（明细见上方诊断）");
+  } else {
+    console.error("[check-biome] 变更文件存在 Biome 违规（已阻断）— 本地跑 `node scripts/check-biome.ts --write` 修复后重推（违规明细见上方诊断）");
+  }
 }
 process.exit(ok ? 0 : 1);

@@ -9,9 +9,10 @@
  *
  *   - firstErrors(out, n)：从工具输出提取前 n 条错误——JSON 取 `errors` 数组
  *     （字符串项），无 errors 回退 `warns_list`，再回退原始输出末 n 行；
- *   - formatFailSummary(item, pass, total, reportPath)：样式 C 渲染——
- *     `[FAIL][归属] 命令  通过/总数  首个错误（截断）  复现: 命令  报告: <path>`
- *     让 AI 在 25 行尾部内一次拿到「归属 / 错误 / 复现 / 深挖入口」四要素；
+ *   - formatFailSummary(item, pass, total, attributable)：样式 C 渲染——
+ *     `[FAIL][归属] 命令  通过/总数  note / → 前 ≤4 条错误（单条截断）/ […还有 N 条] / 复现: 命令`
+ *     让 AI 在 25 行尾部内一次拿到「归属 / 错误 / 复现 / 深挖入口」四要素
+ *     （2026-09 数据透明化：多条错误全列出前 4，超出的指向完整报告路径）；
  *   - writeGateReport(results, mode)：完整运行过程落盘 .git/gate-report-<ts>.json
  *     （结构化，无行数限制），stderr 只给路径指针。
  *
@@ -27,26 +28,25 @@ import path from "node:path";
 import { ROOT } from "./scan-files.ts";
 
 /**
- * 从工具输出提取前 n 条错误详情（纯函数）。
- * 优先级：JSON `errors` 数组（字符串项）→ `warns_list` → 原始输出末 n 行。
- * @param out  工具 stdout/stderr 合并输出
- * @param n    最多取几条
+ * 从 JSON 输出提取**全量**错误详情数组（内部；纯函数）。
+ * 优先级：known 键序（errors → warns_list）→ 任意非空字符串数组键（泛化提取）。
+ * @returns JSON 且可提取 → 全量数组（无 cap）；JSON 但无可提取数组 → []；非 JSON → null（调用方走回退）
  */
-export function firstErrors(out: string, n: number): string[] {
-  if (!out || n <= 0) return [];
-  // 1. JSON 形态：错误详情可能藏在任意「非空字符串数组」键下——顶层与 _summary 的
-  //    errors/warns_list/missing/duplicates/ghosts/violations 等都是列表型错误详情。
-  //    不做键名穷举，按「值是非空 string[]」泛化提取，优先 known 键（errors/warns_list）。
+function fullJsonErrors(out: string): string[] | null {
   try {
     const parsed = JSON.parse(out);
     const s = parsed._summary || parsed;
-    const candidates: Record<string, unknown>[] = [parsed, s];
+    // s === parsed 时（无 _summary）candidates 同对象，按数组引用去重防全量重复（旧首错 cap=1 掩盖过此坑）
+    const candidates: Record<string, unknown>[] = s === parsed ? [parsed] : [parsed, s];
     const arrs: string[][] = [];
+    const seen = new Set<unknown>();
     // 优先 known 键序：errors → warns_list → 其它非空字符串数组
     for (const key of ["errors", "warns_list"]) {
       for (const obj of candidates) {
-        if (Array.isArray((obj as any)[key]) && ((obj as any)[key] as string[]).length) {
-          arrs.push((obj as any)[key]);
+        const v = (obj as any)[key];
+        if (Array.isArray(v) && v.length && !seen.has(v)) {
+          seen.add(v);
+          arrs.push(v as string[]);
         }
       }
     }
@@ -60,13 +60,24 @@ export function firstErrors(out: string, n: number): string[] {
         }
       }
     }
-    if (arrs.length) {
-      return arrs.flat().map(String).filter(Boolean).slice(0, n);
-    }
+    if (arrs.length) return arrs.flat().map(String).filter(Boolean);
+    return []; // JSON 但无可提取数组
   } catch {
-    /* 非 JSON，走下方回退 */
+    return null; // 非 JSON
   }
-  // 2. 非 JSON：原始输出末 n 行（构建/编译错误的常见形态）
+}
+
+/**
+ * 从工具输出提取前 n 条错误详情（纯函数，导出给消费方/测试）。
+ * 优先级：JSON 结构化提取（fullJsonErrors）→ 原始输出末 n 行（构建/编译错误的常见形态）。
+ * @param out  工具 stdout/stderr 合并输出
+ * @param n    最多取几条
+ */
+export function firstErrors(out: string, n: number): string[] {
+  if (!out || n <= 0) return [];
+  const json = fullJsonErrors(out);
+  if (json !== null && json.length) return json.slice(0, n);
+  // 非 JSON（null）或 JSON 但无可提取数组（[]）→ 回退原始输出末 n 行
   return out.trim().split("\n").filter(Boolean).slice(-n);
 }
 
@@ -96,24 +107,20 @@ function policyTag(p: string | undefined, attributable: boolean): string {
 }
 
 /**
- * 首错提取（内部）。详情优先级：raw(JSON) > 策展 tail > raw 末行 > note。
- * 回归锚：tail 可能是 runTools slice(-12) 的 JSON 碎片（`{` / `"x": 0,`），
- * 绝不能当首错展示；raw 是 record 时保留的原始输出，结构化提取的事实源。
+ * 错误详情提取（内部，纯函数）。详情优先级：raw(JSON 结构化) > 策展 tail > raw 末行 > note。
+ * 回归锚：tail 可能是 runTools slice(-12) 的 JSON 碎片（`{` / `"x": 0,`），绝不能当详情展示；
+ * raw 是 record 时保留的原始输出，结构化提取的事实源。
+ * 返回 { lines: 展示行（≤cap）, total: 提取到的详情总条数（tail/note 回退路径 = lines 长度）}——
+ * total > lines.length 时调用方补「…还有 N 条」尾行（2026-09 数据透明化：FAIL 不只给首错）。
  */
-function firstErrorLine(item: GateResultItem): string {
+function errorDetailLines(item: GateResultItem, cap = 4): { lines: string[]; total: number } {
   const none = "无错误详情（见完整报告）";
   if (item.raw) {
-    let isJson = false;
-    try {
-      JSON.parse(item.raw);
-      isJson = true;
-    } catch {
-      /* 非 JSON */
-    }
-    if (isJson) {
-      const fe = firstErrors(item.raw, 1);
-      if (fe.length) return fe[0]!;
-      return item.note || none; // JSON 但无可提取数组（如 type-consistency 只有计数）
+    const json = fullJsonErrors(item.raw);
+    if (json !== null) {
+      // JSON 输出：结构化提取为事实源。无可提取数组 → note（不回退 tail/末行——保持首错语义）
+      if (json.length) return { lines: json.slice(0, cap), total: json.length };
+      return { lines: [item.note || none], total: 1 };
     }
   }
   // 策展 tail：跳过 parseToolOutput 的 'warns_list:' 头部行，剥 '- ' 列表前缀
@@ -121,16 +128,15 @@ function firstErrorLine(item: GateResultItem): string {
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
-    .filter((l) => l !== "warns_list:");
-  if (lines.length) {
-    const l = lines[0]!;
-    return l.startsWith("- ") ? l.slice(2) : l;
-  }
+    .filter((l) => l !== "warns_list:")
+    .map((l) => (l.startsWith("- ") ? l.slice(2) : l));
+  if (lines.length) return { lines: lines.slice(0, cap), total: lines.length };
   if (item.raw) {
-    const fe = firstErrors(item.raw, 1);
-    if (fe.length) return fe[0]!;
+    // 非 JSON raw：末 cap 行（构建/编译错误的常见形态）
+    const fe = firstErrors(item.raw, cap);
+    return { lines: fe, total: fe.length };
   }
-  return item.note || none;
+  return { lines: [item.note || none], total: 1 };
 }
 
 /** 单行截断（防超长错误撑爆 25 行预算）。 */
@@ -147,6 +153,9 @@ function truncate(s: string, max = 120): string {
  * @param passCount    已通过项数（整体进度）
  * @param total        总项数
  * @param attributable hard 失败是否可归因于本次变更（push/files=true；全扫=false）
+ *
+ * 详情行数：单条错误 → 3 行块（head/→/复现，与旧行为兼容）；多条 → 展示前 4 条 +
+ * 「…还有 N 条（完整报告见明细区头路径）」尾行；单条截断 ~120 字符（防 25 行预算撑爆）。
  */
 export function formatFailSummary(
   item: GateResultItem,
@@ -156,9 +165,12 @@ export function formatFailSummary(
 ): string {
   const tag = policyTag(item.blockPolicy, attributable);
   const head = `[FAIL][${tag}] ${item.label}  ${passCount}/${total} 通过 ${(item.time / 1000).toFixed(1)}s  ${item.note || ""}`;
-  const body = `\n      → ${truncate(firstErrorLine(item))}`;
+  const d = errorDetailLines(item, 4);
+  const body = d.lines.map((l) => `\n      → ${truncate(l)}`).join("");
+  const more =
+    d.total > d.lines.length ? `\n      … 还有 ${d.total - d.lines.length} 条（完整报告见本区头部路径）` : "";
   const tail = `\n      复现: ${item.label}`;
-  return `${head}${body}${tail}`;
+  return `${head}${body}${more}${tail}`;
 }
 
 /** 报告文件固定前缀（.git 下不被 git 跟踪）。 */

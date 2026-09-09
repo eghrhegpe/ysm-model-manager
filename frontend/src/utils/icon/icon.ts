@@ -4,8 +4,10 @@ import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_EXTS } from "@/utils/resource/extensions.ts";
 import { extOf, RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 
-/** 注册表扩展名 → 图标（由 RESOURCE_EXTS 遍历 + JSON icon 派生生成，单一事实来源） */
-const REGISTRY_EXT_ICONS: Record<string, string> = (() => {
+/** 注册表扩展名 → 图标（lazy init：首次调用时构建并缓存，避免模块加载期全量遍历） */
+let _registryExtIconsCache: Record<string, string> | null = null;
+function getRegistryExtIcons(): Record<string, string> {
+  if (_registryExtIconsCache) return _registryExtIconsCache;
   const m: Record<string, string> = {};
   for (const [rt, exts] of Object.entries(RESOURCE_EXTS)) {
     const icon = typeIconOf(rt);
@@ -21,8 +23,9 @@ const REGISTRY_EXT_ICONS: Record<string, string> = (() => {
       m[key] = icon;
     }
   }
+  _registryExtIconsCache = m;
   return m;
-})();
+}
 
 /** 按扩展名返回图标 emoji */
 export function fileIcon(name: string): string {
@@ -33,7 +36,7 @@ export function fileIcon(name: string): string {
   const ext = extOf(stripDisableSuffix(name ?? "")).replace(/^\./, "");
   // 注册表扩展名优先：ysm/pmx/pmd/vrca/vrm/litematic/nbt/schematic/zip 等
   // 由 RESOURCE_EXTS 遍历生成，注册表新增/改名扩展名自动生效
-  const regIcon = REGISTRY_EXT_ICONS[ext];
+  const regIcon = getRegistryExtIcons()[ext];
   if (regIcon) return regIcon;
   // 超集分支保留为显式兜底：注册表外扩展名 + ysm 的归档(.zip/.7z)/清单(.json) 语义
   if (["zip", "7z", "rar", "tar", "gz"].includes(ext)) return "📦";

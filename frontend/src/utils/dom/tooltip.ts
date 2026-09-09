@@ -11,26 +11,21 @@ export const YSW_TOOLTIP_CSS = `
 .ysw-tooltip--show{opacity:1}
 `;
 
-let _injected = false;
-
-/** 幂等注入 tooltip 全局样式（默认 head；target 可指定 shadow root 等宿主） */
+/** 幂等注入 tooltip 全局样式（默认 head；target 可指定 shadow root 等宿主）
+ *  不依赖模块级布尔标记：DOM 实时检查，HMR/样式被外部移除后能自动恢复。
+ *  document.head 目标走 id 去重；shadow root 目标每次宿主重建都需重注入
+ *  （shadow root 是新树，document.getElementById 查不到，自然走注入路径）。 */
 export function ensureTooltipStyles(target?: HTMLElement | ShadowRoot): void {
-  if (_injected) return;
   if (typeof document === "undefined") return;
   const docTarget = target ?? document.head;
-  // head 兜底路径保留 id 去重；shadow root 目标每次宿主重建都需重注入
+  // head 目标：DOM 实时检查，已存在则跳过
   if (docTarget === document.head) {
-    const ex = document.getElementById(TOOLTIP_STYLE_ID);
-    if (ex) {
-      _injected = true;
-      return;
-    }
+    if (document.getElementById(TOOLTIP_STYLE_ID)) return;
   }
   const style = document.createElement("style");
   style.id = TOOLTIP_STYLE_ID;
   style.textContent = YSW_TOOLTIP_CSS;
   docTarget.appendChild(style);
-  _injected = true;
 }
 
 interface TooltipState {
@@ -96,8 +91,6 @@ export function disposeTooltipCore(): void {
     document.removeEventListener("scroll", _scrollHandler, true);
     _scrollHandler = null;
   }
-  // dispose 后复位注入标记，确保 HMR 或样式被移除后能重新注入
-  _injected = false;
 }
 
 function cancelTimer(): void {

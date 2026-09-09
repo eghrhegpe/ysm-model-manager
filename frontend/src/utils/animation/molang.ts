@@ -32,11 +32,16 @@ export const getMolangParser = (): typeof parser => parser;
 let _writeScope: Record<string, number> | null = null;
 
 /**
- * 设置/清除全局持久变量作用域（deprecated：新代码应使用 createMolangParser() 工厂）。
- * 仍保留以兼容 ysm-animation-player 等存量调用方。
+ * 设置/清除全局持久变量作用域。
  * 内部设置单例 parser 的 variableHandler + 写回作用域。
  * @param scope 每播放器 v.* 变量容器；传 null 恢复默认（v.* 不跨帧持久）
- * @deprecated 使用 createMolangParser() 创建独立实例，避免多播放器互盖
+ * @deprecated 使用 createMolangParser() 创建独立实例，避免多播放器互盖。
+ *   ⛔ 不可直接删除：ysm-animation-player.ts:125 仍调本函数为 timeline 动作提供全局写回作用域。
+ *   根因：parseClipTimeline（animation.ts）将 timeline Molang 表达式编译到单例 parser 上，
+ *   executeTimeline 求值时依赖 _writeScope 写回 v.* 变量。
+ *   移除条件：重构 timeline 编译/求值链路，让 parseClipTimeline 接受独立 parser 实例，
+ *   executeTimeline 经该实例的 variableHandler 写回，彻底摆脱全局单例。
+ *   详见 docs/knowledge/animation-system.md
  */
 let _deprecationWarned = false;
 export function setMolangScope(scope: Record<string, number> | null): void {

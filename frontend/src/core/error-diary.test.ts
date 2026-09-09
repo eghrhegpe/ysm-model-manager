@@ -3,8 +3,13 @@
 // AddOpLog 适配（含 reject 截断防死循环）的用例见 backend/diary-sink.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { registerErrorDiary, unregisterErrorDiary, type DiaryEntry } from "./error-diary.ts";
-import { installGlobalErrorListeners } from "@/utils/dom/global-error-listeners.ts";
+import {
+  pushToDiary,
+  registerErrorDiary,
+  unregisterErrorDiary,
+  type DiaryEntry,
+} from "./error-diary.ts";
+import { installGlobalErrorListeners } from "@/backend/global-error-listeners.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
 const sinkSpy = vi.fn<(e: DiaryEntry) => void>();
@@ -305,5 +310,46 @@ describe("log sink 透写", () => {
     logWarn("tag", "reset 后的消息");
     await flushPromises();
     expect(sinkSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ===== pushToDiary 未注册态（ADR-210 D5：失活留痕，不再静默 no-op）=====
+describe("pushToDiary 未注册态", () => {
+  it("两次调用仅首次告警（节流防风暴），内容指向漏注册", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      pushToDiary("全局未捕获 X", "failed");
+      pushToDiary("全局未捕获 Y", "failed");
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain("未注册态");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("注册成功后标志复位：再次失活（unregister 后）可重新告警", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      registerErrorDiary(sinkSpy);
+      unregisterErrorDiary();
+      pushToDiary("全局未捕获 Z", "failed");
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain("未注册态");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("已注册态转发到 sink（不告警）", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      registerErrorDiary(sinkSpy);
+      pushToDiary("全局未捕获 E", "failed");
+      expect(warn).not.toHaveBeenCalled();
+      expect(sinkSpy).toHaveBeenCalledTimes(1);
+      expect(sinkSpy.mock.calls[0][0].title).toContain("E");
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

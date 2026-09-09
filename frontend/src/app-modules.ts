@@ -2,12 +2,13 @@
 
 import { prefetchStatsWorker } from "@/backend/browser-adapter.ts";
 import { makeDiarySink } from "@/backend/diary-sink.ts";
+import { installGlobalErrorListeners } from "@/backend/global-error-listeners.ts";
 import { Window } from "@/backend/runtime.ts";
 import { registerErrorDiary } from "@/core/error-diary.ts";
-import { initI18n } from "@/core/i18n/locale.ts";
+import { initI18n, setLocaleHost } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { installGlobalErrorListeners } from "@/utils/dom/global-error-listeners.ts";
+import { makeLocaleHost } from "@/utils/dom/locale-host.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
 import { registerCoiServiceWorker } from "@/workers/coi-sw.ts";
@@ -115,7 +116,11 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
         tag: "i18n",
         failMsg: "初始化失败，界面将缺翻译:",
         toast: { prefix: "⚠️ ", fallback: "语言资源加载失败" },
-        run: initI18n,
+        run: () => {
+          // ADR-210 D1：先接线 LocaleHost（DOM/网络副作用注入），再 initI18n（core 引擎无关）
+          setLocaleHost(makeLocaleHost());
+          return initI18n();
+        },
       },
       {
         tag: "module",

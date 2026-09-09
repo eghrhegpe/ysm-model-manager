@@ -1,6 +1,8 @@
-// ===== 全局错误监听（DOM 原语层）：window error / unhandledrejection → 日记 =====
+// ===== 全局错误监听（backend 装配层）：window error / unhandledrejection → 日记 =====
 // 此层才允许碰 window；事件转发经 core/error-diary 的 pushToDiary 入口收口进同一套净化/去重策略，
 // 故 core 保持引擎无关、不挂 window 监听。装配层（app-modules 启动期）调用一次即可，应用级常驻单例。
+// 自 utils/dom/ 迁至 backend/：本模块 import core/error-diary，属装配层逻辑，
+// 不应放 utils/（utils 只许被别人引，不得反向依赖 core）。
 
 import { pushToDiary } from "@/core/error-diary.ts";
 

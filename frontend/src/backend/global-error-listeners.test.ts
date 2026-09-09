@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// ===== 全局错误监听测试（global-error-listeners.ts）=====
+// ===== 全局错误监听测试（backend/global-error-listeners.ts）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 模拟 @/core/error-diary：pushToDiary 是全局错误监听的唯一出口

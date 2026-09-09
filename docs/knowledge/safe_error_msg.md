@@ -4,11 +4,12 @@ name: 安全错误消息提取 utils
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/base/safe-error-msg.ts
+  - frontend/src/utils/base/pure/safe-error-msg.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - safeErrorMessage
   tests:
-    - frontend/src/utils/base/safe-error-msg.test.ts
+    - frontend/src/utils/base/pure/safe-error-msg.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -27,7 +28,7 @@ use_when:
   - safeErrorMessage
   - 异常提取
 invariant_anchors:
-  - frontend/src/utils/base/safe-error-msg.ts|safeErrorMessage
+  - frontend/src/utils/base/pure/safe-error-msg.ts|safeErrorMessage
 status: active
 ---
 
@@ -35,7 +36,7 @@ status: active
 
 ## 概览
 
-`frontend/src/utils/base/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyError` 区别：本函数无 i18n 依赖、无 AppError 翻译，可在 Web Worker 内安全 import（Worker 无法访问 i18n 模块）。
+`frontend/src/utils/base/pure/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyError` 区别：本函数无 i18n 依赖、无 AppError 翻译，可在 Web Worker 内安全 import（Worker 无法访问 i18n 模块）。
 
 ## 核心职责
 

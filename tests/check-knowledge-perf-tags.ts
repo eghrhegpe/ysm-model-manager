@@ -24,7 +24,7 @@ function writeTmpCard(perfBlock) {
     "category: utils",
     ...(perfBlock ? perfBlock : []),
     "source_files:",
-    "  - frontend/src/utils/array.ts",
+    "  - frontend/src/utils/base/pure/array.ts",
     "use_when:",
     "  - 临时测试",
     "---",

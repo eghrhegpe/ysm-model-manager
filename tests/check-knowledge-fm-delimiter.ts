@@ -52,7 +52,7 @@ try {
     "tier: leaf",
     "category: utils",
     "source_files:",
-    "  - frontend/src/utils/array.ts",
+    "  - frontend/src/utils/base/pure/array.ts",
     "use_when:",
     "  - 临时测试",
   ]);
@@ -72,7 +72,7 @@ try {
     "kind: zzz-fm-delimiter-tmp",
     "name: 重排事故模拟卡",
     "source_files:",
-    "  - frontend/src/utils/array.ts",
+    "  - frontend/src/utils/base/pure/array.ts",
   ]);
   r = runDriftJson();
   ok("畸形卡退出码 1", r.status === 1, `status=${r.status}`);

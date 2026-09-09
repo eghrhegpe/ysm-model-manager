@@ -14,7 +14,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { stripAppErrorPaths } from "../frontend/src/utils/base/apperror-text.ts";
+import { stripAppErrorPaths } from "../frontend/src/utils/base/pure/apperror-text.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fx = JSON.parse(

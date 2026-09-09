@@ -20,7 +20,7 @@ function writeTmpCard(bodyExtraLines = []) {
     "tier: leaf",
     "category: utils",
     "source_files:",
-    "  - frontend/src/utils/array.ts",
+    "  - frontend/src/utils/base/pure/array.ts",
     "use_when:",
     "  - 临时测试",
     "symbols_with_lines:",

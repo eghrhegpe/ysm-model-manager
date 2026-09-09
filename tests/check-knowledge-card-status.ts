@@ -18,7 +18,7 @@ function writeTmpCard(statusLines) {
     "category: utils",
     ...statusLines,
     "source_files:",
-    "  - frontend/src/utils/array.ts",
+    "  - frontend/src/utils/base/pure/array.ts",
     "use_when:",
     "  - 临时测试",
     "---",

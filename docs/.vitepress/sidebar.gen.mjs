@@ -234,6 +234,22 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-215：dom 单例模式改工厂 + html hl 全匹配高亮",
+        "link": "/adr/ADR-215-dom-singleton-to-factory-and-hl-full-match"
+      },
+      {
+        "text": "ADR-214：debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入",
+        "link": "/adr/ADR-214-debug-remove-dynamic-backend-import"
+      },
+      {
+        "text": "ADR-213：molang.ts 全局单例全量迁移工厂模式",
+        "link": "/adr/ADR-213-molang-singleton-to-factory"
+      },
+      {
+        "text": "ADR-212：animation.ts 拆分为 parser + evaluator",
+        "link": "/adr/ADR-212-animation-split-parser-evaluator"
+      },
+      {
         "text": "ADR-211：clip 自带 MolangParser 实例替代全局单例",
         "link": "/adr/ADR-211-clip-molangparser"
       },

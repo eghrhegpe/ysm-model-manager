@@ -4,11 +4,12 @@ name: 数组工具 moveItem
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/utils/base/array.ts
+  - frontend/src/utils/base/pure/array.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - moveItemMut
   tests:
-    - frontend/src/utils/base/array.test.ts
+    - frontend/src/utils/base/pure/array.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -26,7 +27,7 @@ use_when:
   - moveItem
   - 列表 reorder
 invariant_anchors:
-  - frontend/src/utils/base/array.ts|moveItemMut
+  - frontend/src/utils/base/pure/array.ts|moveItemMut
 status: active
 ---
 

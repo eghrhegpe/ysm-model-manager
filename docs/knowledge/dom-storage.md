@@ -4,9 +4,14 @@ name: localStorage 安全读写 safeGet/safeSet
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/base/storage.ts
+  - frontend/src/utils/base/primitives/storage.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - isStorageAccessible
+    - safeGet
+    - safeGetJSON
+    - safeRemove
+    - safeSet
 tests: []
 quick_groups:
   - 跨组件通信与页面
@@ -25,8 +30,8 @@ use_when:
   - safeSet
   - storage
 invariant_anchors:
-  - frontend/src/utils/base/storage.ts|safeGet
-  - frontend/src/utils/base/storage.ts|safeSet
+  - frontend/src/utils/base/primitives/storage.ts|safeGet
+  - frontend/src/utils/base/primitives/storage.ts|safeSet
 status: active
 ---
 

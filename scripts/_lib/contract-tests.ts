@@ -153,7 +153,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_apperror_strip.ts": [
     "go/types/types.go",
     "go/types/apperror_test.go",
-    "frontend/src/utils/base/apperror-text.ts",
+    "frontend/src/utils/base/pure/apperror-text.ts",
     "tests/fixtures/apperror-sample.json",
   ],
   // —— 精确：仅改对应源文件才触发 ——

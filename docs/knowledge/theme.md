@@ -39,7 +39,7 @@ use_when:
   - 界面偏好
 invariant_anchors:
   - frontend/src/theme-core.ts|normalizeTheme
-  - frontend/src/utils/base/storage.ts|safeGet
+  - frontend/src/utils/base/primitives/storage.ts|safeGet
 status: active
 ---
 

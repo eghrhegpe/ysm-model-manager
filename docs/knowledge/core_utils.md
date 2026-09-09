@@ -63,7 +63,7 @@ use_when:
   - 防抖
   - 异步
 invariant_anchors:
-  - frontend/src/utils/base/async.ts|swallowError
+  - frontend/src/utils/base/primitives/async.ts|swallowError
 status: active
 ---
 
@@ -89,8 +89,8 @@ status: active
 每个工具独立导出，按需 import：
 
 ```ts
-import { clamp } from './utils/base/clamp';
-import { swallowError } from './utils/base/async';
+import { clamp } from './utils/base/pure/clamp';
+import { swallowError } from './utils/base/primitives/async';
 ```
 
 ## 不变量

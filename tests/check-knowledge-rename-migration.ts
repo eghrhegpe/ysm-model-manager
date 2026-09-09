@@ -105,7 +105,7 @@ try {
   );
 
   // 3. 真实存在、未 rename 的文件 → 无针对该卡的 ERROR（增强不误伤）
-  writeCard("frontend/src/utils/array.ts");
+  writeCard("frontend/src/utils/base/pure/array.ts");
   ({ status, out } = runDrift());
   const e3 = cardErrors(out);
   ok(

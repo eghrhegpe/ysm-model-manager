@@ -33,6 +33,12 @@
 - 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，pre-commit 有 `check-redlines` 兜底）。
 - DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/`（原 `utils/core/`，勿再新建同名目录）。
 
+### features→backend seam（ADR-190 D2 / ADR-208 D1，回归红线）
+- features 生产文件**禁止直接 import `backend/app.ts`**；唯一合法出口 = `*-deps.ts` seam 组合根
+  （features 根 `backend-deps.ts` 供零散模块 + 目录级 `community-deps.ts` / `context-menu-deps.ts`），
+  「生产默认 getApp」一律写 `deps?.fn || backendGetApp` 注入形态。check-layering 门禁 R5 兜底
+  （features 层规则，勿与 check-path-hygiene 同号 R5 混淆）。
+
 ### 前端 import 路径约定（ADR-146，别让大模型手写错路径深度）
 - **任何非精确同目录的 import**（跨顶层 **或** 同顶层内不同子目录）→ 一律 `@/<顶层目录>/具体文件`（如 `@/features/repo/x.ts`）。别手算 `../` 深度——精确同目录就写 `./`，其余就写 `@/`。
 - **精确同目录**（兄弟文件）→ 用相对 `./xxx`；同目录还用别名是噪音（R5 会提示）。src 根文件 `@/bus`、`@/theme-core`。

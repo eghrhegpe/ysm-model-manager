@@ -9,7 +9,9 @@ auto_fields:
   symbols_with_lines:
     - addDisposableListener
     - APP_ERROR_PATH_RE
+    - arrayBufferToBase64
     - asRecord
+    - base64ToBytes
     - BusyLock
     - clamp
     - clamp01
@@ -31,6 +33,7 @@ auto_fields:
     - stripAppErrorPaths
     - swallowError
     - toInt
+    - u8ToBase64
     - withLock
 quick_groups:
   - 跨组件通信与页面

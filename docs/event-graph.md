@@ -398,6 +398,9 @@
 | (顶层) | `frontend/src/app-modules.ts` | 27 |
 | runStartupSteps | `frontend/src/app-modules.ts` | 86 |
 | (顶层) | `frontend/src/app-modules.ts` | 148 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 36 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 47 |
+| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 59 |
 | enqueueDownloads | `frontend/src/features/community/download-queue-store.ts` | 274 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 279 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 305 |
@@ -431,9 +434,6 @@
 | assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 657 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
-| resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 35 |
-| resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 46 |
-| resolveAndroidRepoDir | `frontend/src/utils/dom/directory-picker.ts` | 58 |
 | toast | `frontend/src/utils/dom/toast.ts` | 20 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |

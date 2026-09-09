@@ -3,13 +3,13 @@
 // busy/toastError）统一走 store.ts 模块级，root/refreshAdvanced 显式参数传递。
 
 import { getApp } from "@/backend/app.ts";
+import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { modalPicker } from "@/features/dialogs/modal-picker.ts";
 import type { ResourceTypeEntry } from "@/services/resource-registry.ts";
 import { logWarn } from "@/utils/base/log.ts";
 import { safeGet } from "@/utils/base/storage.ts";
-import { pickDirectory } from "@/utils/dom/directory-picker.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";

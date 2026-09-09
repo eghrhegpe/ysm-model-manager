@@ -10,5 +10,5 @@ import { logWarn } from "./log.ts";
  * 不返回值——用于 fire-and-forget 场景。内部调用 logWarn，确保错误不沉默。
  */
 export function swallowError<T>(promise: Promise<T>): void {
-  promise.catch((err) => logWarn("swallow", "", err));
+  promise.catch((err) => logWarn("async", "swallowError 吞掉未处理异常", err));
 }

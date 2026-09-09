@@ -17,7 +17,7 @@ describe("swallowError", () => {
     const err = new Error("boom");
     swallowError(Promise.reject(err));
     await vi.waitFor(() => expect(logWarn).toHaveBeenCalled());
-    expect(logWarn).toHaveBeenCalledWith("swallow", "", err);
+    expect(logWarn).toHaveBeenCalledWith("async", "swallowError 吞掉未处理异常", err);
   });
 
   it("对 resolve 的 promise 无副作用", async () => {

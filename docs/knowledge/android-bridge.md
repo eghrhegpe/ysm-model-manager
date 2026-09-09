@@ -8,16 +8,13 @@ source_files:
   - frontend/src/utils/dom/directory-picker.ts
 auto_fields:
   symbols_with_lines:
-    - DirPickResult
     - emitAndroidBack
     - getAndroidBridge
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
-    - pickDirectory
     - readDeclaredBackend
     - registerAndroidBackHandler
-    - resolveAndroidRepoDir
     - resolveWebMode
     - WailsAndroidBridge
   tests:

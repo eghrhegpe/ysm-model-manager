@@ -7,10 +7,7 @@ status: active
 source_files:
   - frontend/src/utils/dom/directory-picker.ts
 auto_fields:
-  symbols_with_lines:
-    - DirPickResult
-    - pickDirectory
-    - resolveAndroidRepoDir
+  symbols_with_lines: []
 use_when:
   - 目录选择
   - 选择文件夹

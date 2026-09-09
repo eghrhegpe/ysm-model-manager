@@ -6,12 +6,12 @@
 // 原 settings 版按钮与 MutationObserver 注入逻辑已随搬家移除，功能收敛到实例页空态。
 
 import { getApp } from "@/backend/app.ts";
+import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { modalPicker } from "@/features/dialogs/modal-picker.ts";
 import { modalSelect } from "@/features/dialogs/modal-select.ts";
 import { safeGet } from "@/utils/base/storage.ts";
-import { pickDirectory } from "@/utils/dom/directory-picker.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";

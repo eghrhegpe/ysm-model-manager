@@ -202,6 +202,9 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   let summary: HTMLElement | null = null;
   if (s.errorList.length > 0) {
     const wrap = document.createElement("div");
+    // 摘要容器 class 钩子（A-3：DOM 化后原 flat 拼接失去天然层级，显式命名供
+    // 未来样式/测试定位；CSS 视觉等价——content-diag 无组合器规则）
+    wrap.className = "gh-queue-error-wrap";
     const title = document.createElement("div");
     title.className = "gh-queue-error";
     title.textContent = `⚠️ ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;

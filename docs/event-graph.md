@@ -396,13 +396,13 @@
 |------|------|----|
 | (顶层) | `frontend/src/app-modules.ts` | 29 |
 | runStartupSteps | `frontend/src/app-modules.ts` | 88 |
-| (顶层) | `frontend/src/app-modules.ts` | 157 |
+| (顶层) | `frontend/src/app-modules.ts` | 161 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 300 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 324 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 303 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 327 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
 | cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
 | cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 230 |
@@ -576,7 +576,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| logUiMsg | `frontend/src/core/error-diary.ts` | 124 |
+| registerErrorDiary | `frontend/src/core/error-diary.ts` | 113 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 71 |
 
 ### `tree:reload`

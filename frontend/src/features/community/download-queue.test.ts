@@ -160,6 +160,15 @@ describe("getStateSnapshot 快照独立性（深拷贝，修改快照不污染 S
     expect(getStateSnapshot().errorList[0].err).toBe("磁盘已满");
   });
 
+  it("errorList 元素级拷贝：快照改元素字段不污染 STATE（802deb2d1 修复护栏）", () => {
+    emit("queue:file-done", ["a.ysm", "fail", "磁盘已满"]);
+    const s1 = getStateSnapshot();
+    s1.errorList[0].err = "被改";
+    s1.errorList[0].name = "hack";
+    expect(getStateSnapshot().errorList[0].err).toBe("磁盘已满");
+    expect(getStateSnapshot().errorList[0].name).toBe("a.ysm");
+  });
+
   it("_lastDone 深拷贝：快照字段修改不污染 STATE", () => {
     emit("queue:file-done", ["b.ysm", "ok", ""]);
     const s1 = getStateSnapshot();

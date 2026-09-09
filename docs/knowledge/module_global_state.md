@@ -10,6 +10,7 @@ source_files:
   - frontend/src/utils/cache/with-cached.ts
 auto_fields:
   symbols_with_lines:
+    - __resetI18nStateForTest
     - __resetModalStateForTest
     - __resetWebLogStateForTest
     - BASE_LANG

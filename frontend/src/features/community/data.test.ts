@@ -40,6 +40,18 @@ describe("showProgress", () => {
     ).toBe(false);
   });
 
+  it("label 结构：[spin, 空格 textNode, text] 序列（空格是唯一间距——A-2 回归护栏）", () => {
+    const el = document.createElement("div");
+    showProgress(el, 30, "加载中…");
+    const label = el.querySelector(".gh-progress-label") as HTMLElement;
+    expect(
+      Array.from(label.childNodes).map((n) => n.nodeName),
+    ).toEqual(["SPAN", "#text", "SPAN"]);
+    expect((label.childNodes[1] as Text).data).toBe(" ");
+    expect(label.children[0].className).toBe("gh-progress-spin");
+    expect(label.children[1].className).toBe("gh-progress-text");
+  });
+
   it("钳制越界/非法 pct（P3 修复：NaN/负值/超 100 → [0,100]）", () => {
     const el = document.createElement("div");
     showProgress(el, Number.NaN, "x");

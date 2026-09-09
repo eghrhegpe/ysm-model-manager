@@ -218,6 +218,32 @@ describe("createDownloadQueue UI 层", () => {
     ctrl.destroy();
   });
 
+  it("done + 错误列表 → qs 唯一直接子节点为 gh-queue-error-wrap（旧进度行被清——A-3 层级钉住）", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const qs = sr.querySelector("#gh-queue-status") as HTMLElement;
+    emit("queue:file-start", ["f.ysm", 1, 1]); // 渲染进度行（旧内容）
+    emit("queue:file-done", ["f.ysm", "fail", "磁盘已满"]); // errorList+1，remaining 归 0
+    emit("queue:status", ["done", 1, undefined]); // 触发队列结束收口
+    expect(qs.children.length).toBe(1);
+    expect(qs.firstElementChild?.className).toBe("gh-queue-error-wrap");
+    expect(qs.innerHTML).toContain("1 个文件下载失败");
+    expect(qs.innerHTML).toContain("❌");
+    ctrl.destroy();
+  });
+
+  it("cancelled → qs 唯一直接子节点为已取消 span（无错误列表时不建 wrap）", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const qs = sr.querySelector("#gh-queue-status") as HTMLElement;
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("queue:status", ["cancelled", 0, undefined]);
+    expect(qs.children.length).toBe(1);
+    expect(qs.firstElementChild?.className).toBe("gh-queue-cancel");
+    expect(qs.textContent).toContain("已取消");
+    ctrl.destroy();
+  });
+
   it("file-done ok → 写入本地缓存 + 回调 onFileSuccess", async () => {
     const { localMap, onFileSuccess, ctrl } = createCtrl();
     await Promise.resolve();

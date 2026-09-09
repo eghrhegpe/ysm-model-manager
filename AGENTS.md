@@ -49,6 +49,7 @@
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
 - 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`（typecheck 与 vite build 同 cwd=frontend，勿在根目录跑 `tsc`，根无对应 script），失败就修到绿；前端改动再补 `node scripts/check-biome.ts --files <改动文件...>`（biome 增量闸门，须显式点名——`--changed` 默认模式在 main 直提下恒空转）复查格式化。
+  - ⚠️ PowerShell 会截断 `npm run typecheck` 输出：只尾部几行可见，易漏报错。**失败时补跑 `npx tsc --noEmit 2>&1 | Select-Object -First 30` 看全**。
 - 连续改同一文件时自下而上，避免行号漂移。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。
 

@@ -17,6 +17,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Domain } from "./domain-classify.ts";
 import { ROOT } from "./scan-files.ts";
 
@@ -95,6 +96,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_commit_check_gate.ts": ["tests"],
   "test_commit_temp_index.ts": ["tests"],
   "test_contract_domain_select.ts": ["tests"],
+  // 契约 runner 的 @/ 别名运行时解析基建（ts-alias-register/resolver + alias-resolve 表 + runner 接线）
+  "test_contract_alias_runtime.ts": ["tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
   "test_deadcode_attrib.ts": ["tests"],
   "test_domain_classify.ts": ["tests"],
@@ -196,6 +199,12 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/_lib/commit-check.ts",
   ],
   "test_contract_domain_select.ts": ["scripts/_lib/contract-tests.ts"],
+  "test_contract_alias_runtime.ts": [
+    "scripts/_lib/contract-tests.ts",
+    "scripts/_lib/ts-alias-register.ts",
+    "scripts/_lib/ts-alias-resolver.ts",
+    "scripts/_lib/alias-resolve.ts",
+  ],
   "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],
   "test_gen_stage.ts": ["scripts/_lib/gen-stage.ts"],
@@ -339,6 +348,15 @@ function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
     // 传了会让 TS overload 解析失败返回 never——stdout/stderr 用流式 chunk 累积即可。
     const proc = spawn(process.execPath, [path.join("tests", file)], {
       cwd: ROOT,
+      // --import 注入 @/#root 别名运行时解析（tsconfig paths 白名单，alias-resolve.ts
+      // 单一事实源）：Node 原生 TS 执行不解析 tsconfig paths，tests 的 import 链一旦
+      // 进入含 @/ 别名 import 的 frontend 源码即 ERR_MODULE_NOT_FOUND（首例 a1e76940b
+      // cube-mesh.ts → @/preview-3d/model/*，阻断 pre-push）。相对路径说明符（./、../）
+      // 与裸包名经 resolver 原样透传，零行为变更。护栏：test_contract_alias_runtime.ts。
+      execArgv: [
+        "--import",
+        pathToFileURL(path.join(ROOT, "scripts", "_lib", "ts-alias-register.ts")).href,
+      ],
       stdio: ["ignore", "pipe", "pipe"],
     });
     const chunks: Buffer[] = [];

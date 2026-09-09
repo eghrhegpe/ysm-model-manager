@@ -246,7 +246,7 @@ export const autoSidebar = [
         "link": "/adr/ADR-213-molang-singleton-to-factory"
       },
       {
-        "text": "ADR-212：animation.ts 拆分为 parser + evaluator",
+        "text": "ADR-212：animation.ts 瘦身——求值器拆出，解析器原位保留",
         "link": "/adr/ADR-212-animation-split-parser-evaluator"
       },
       {

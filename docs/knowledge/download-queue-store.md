@@ -89,12 +89,12 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 
 ## 核心职责
 
-- **`STATE: DownloadState`** — 模块级共享状态（status / total / remaining / currentFile / progress / errorList / _lastDone / _lastDoneSeq）。`getStateSnapshot()` 返回只读浅拷贝；`notify()` 广播变更。
+- **`STATE: DownloadState`** — 模块级共享状态（status / total / remaining / currentFile / progress / errorList / _lastDone / _lastDoneSeq）。`getStateSnapshot()` 返回只读深拷贝（嵌套 progress / errorList / _lastDone 均为独立引用）；`notify()` 广播变更。
 - **`DownloadTask`** — 下载任务接口（url / saveDir / name / size）。
 - **`QueueError`** — 队列错误项（name / err）。
 - **`DownloadState`** — 队列状态快照接口。
 - **`subscribe(fn) / notify()`** — 订阅 / 广播 STATE 变更。
-- **`getStateSnapshot(): Readonly<DownloadState>`** — 当前状态只读快照（拉取模型，返回独立引用）。
+- **`getStateSnapshot(): Readonly<DownloadState>`** — 当前状态只读快照（拉取模型，深拷贝：嵌套 progress / errorList / _lastDone 独立引用，修改快照不污染 STATE）。
 - **`resume()`** — 页面切回时从 Go 端恢复当前队列状态（`QueueStatus` binding 调用）。
 - **`isActiveStatus(s)`** — 队列是否处于活跃下载（同时认 `downloading` 和 `enqueued`，P1 修复：Go 端入队后只发 `enqueued`，从不发 `downloading`）。
 - **`enqueueDownloads(tasks: DownloadTask[])`** — 模块级入队（纯 Go 调用，不涉及 DOM）；web 分支委托 `download-queue-web.ts`（IndexedDB 入库 + 50MB 超限回退浏览器直链 + 15s fetch 超时兜底，经 `markCurrentFile` / `decrementRemaining` / `addQueueError` / `rollbackToIdle` 写函数注入）；Go 分支调 `EnqueueDownloads`。
@@ -134,7 +134,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 - **isActiveStatus 双状态**：必须同时认 `downloading` 和 `enqueued`（P1 修复：Go 端入队后只发 `enqueued`）。
 - **web 下载 50MB 上限**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_IDB_LIMIT`（与 `web-common` 的 `DetectContainerType` 同款量级守卫）；超限回退浏览器直链。
 - **fetch 15s 超时兜底**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_FETCH_TIMEOUT_MS`（防挂起服务器永久卡队列）。
-- **getStateSnapshot 只读**：调用方应只读快照、不可修改——修改会绕过通知链路。
+- **getStateSnapshot 只读**：调用方应只读快照、不可修改——修改会绕过通知链路。深拷贝（嵌套 progress / errorList / _lastDone 独立引用）使「只读快照」从君子协定变真保证；快照独立性回归护栏见 `download-queue.test.ts` 的「getStateSnapshot 快照独立性」describe。
 - **enqueue 失败回滚 idle**：模块级函数失败也回滚 `STATE.status = idle`，防永久卡 downloading。
 - **事件 payload 守卫**（P3 审计修复）：v3 事件 data 应为非空数组，非数组 / 空数组视为畸形直接丢弃。
 - **头像提取串行化**：`_avatarChain` Promise 链限并发 1；同一作者在途去重（`_avatarInFlight` Set）。

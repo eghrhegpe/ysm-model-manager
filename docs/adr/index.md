@@ -42,7 +42,7 @@ permalink: /adr/
 | [ADR-215](./ADR-215-dom-singleton-to-factory-and-hl-full-match.md) | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 |
 | [ADR-214](./ADR-214-debug-remove-dynamic-backend-import.md) | debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入 | ✅ 已采纳 |
 | [ADR-213](./ADR-213-molang-singleton-to-factory.md) | molang.ts 全局单例全量迁移工厂模式 | ✅ 已采纳 |
-| [ADR-212](./ADR-212-animation-split-parser-evaluator.md) | animation.ts 拆分为 parser + evaluator | ✅ 已采纳 |
+| [ADR-212](./ADR-212-animation-split-parser-evaluator.md) | animation.ts 瘦身——求值器拆出，解析器原位保留 | ✅ 已采纳 |
 | [ADR-211](./ADR-211-clip-molangparser.md) | clip 自带 MolangParser 实例替代全局单例 | ✅ 已采纳 |
 | [ADR-210](./ADR-210-core-convergence-locale-host.md) | core 收编：locale host 注入、手工缓存与死 API 清理 | ✅ 已采纳 |
 | [ADR-209](./ADR-209-pagestore-page-store.md) | 移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块 | ✅ 已采纳 |
@@ -265,7 +265,7 @@ permalink: /adr/
 | ADR-215 | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 | 2026-09-14 |
 | ADR-214 | debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入 | ✅ 已采纳 | 2026-09-14 |
 | ADR-213 | molang.ts 全局单例全量迁移工厂模式 | ✅ 已采纳 | 2026-09-14 |
-| ADR-212 | animation.ts 拆分为 parser + evaluator | ✅ 已采纳 | 2026-09-14 |
+| ADR-212 | animation.ts 瘦身——求值器拆出，解析器原位保留 | ✅ 已采纳 | 2026-09-14 |
 | ADR-211 | clip 自带 MolangParser 实例替代全局单例 | ✅ 已采纳 | 2026-09-09 |
 | ADR-210 | core 收编：locale host 注入、手工缓存与死 API 清理 | ✅ 已采纳 | 2026-09-09 |
 | ADR-209 | 移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块 | ✅ 已采纳 | 2026-09-09 |

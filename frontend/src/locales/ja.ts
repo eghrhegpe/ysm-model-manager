@@ -309,6 +309,7 @@ export const ja: Record<string, string> = {
   "import.noSupportedFiles": "対応するモデルファイルが見つかりません",
   "import.busyImporting": "インポート中です。しばらくお待ちください",
   "import.fileTooLarge": "100MBを超えています。リポジトリフォルダに直接配置してください",
+  "import.fileTooLargeSkipped": "「{name}」は{mb}MB上限を超えているためスキップしました",
   "import.processError": "インポート処理エラー。再試行してください",
   "import.contextRouteUnavailable":
     "ページのコンテキストルーティングが利用できないため、内容推測でフォールバックしました",

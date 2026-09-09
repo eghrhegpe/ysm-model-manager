@@ -47,7 +47,10 @@ export const directImport = async (file: File): Promise<void> => {
   // base64 进内存会撑爆内存峰值，前置拦截并提示，不进入在途集合
   if (file.size > MAX_IMPORT_BYTES) {
     toast(
-      `⚠️ ${file.name} 超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限，已跳过`,
+      t("import.fileTooLargeSkipped", {
+        name: file.name,
+        mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+      }),
       "warn",
       TOAST_MS.long,
     );

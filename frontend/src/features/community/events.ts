@@ -142,7 +142,7 @@ function cmReBindDlSelected(ctx: CmReCtx, listeners: ListenerRef[]): void {
     cmReListen(listeners, dlSelBtn, "click", async () => {
       if (queue.isDownloading()) {
         bus.emit("toast:show", {
-          msg: "下载进行中，请等待当前任务完成",
+          msg: t("workshop.downloading"),
           duration: TOAST_MS.success,
           type: "info",
         });

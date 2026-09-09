@@ -25,6 +25,7 @@ vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
 }));
 
 import { getApp } from "@/backend/app.ts";
+import { t } from "@/core/i18n/t.ts";
 import { bindRepoEvents, type RepoEventsContext } from "./events.ts";
 import { type WorkshopModel } from "./render.ts";
 import { fireClick, fireInput } from "@/test-utils/events.ts";
@@ -229,5 +230,21 @@ describe("community 仓库页事件编排（G-1 样板）", () => {
     expect(queueMock.destroy).toHaveBeenCalled();
     fireClick(sr.querySelector('[data-testid="gh-back"]') as HTMLElement);
     expect(ctx.backToSite).not.toHaveBeenCalled();
+  });
+
+  it("13. 下载选中 + 队列下载中 → i18n 守卫 toast（workshop.downloading），不 enqueue", async () => {
+    queueMock.isDownloading.mockReturnValueOnce(true);
+    const { sr } = mount();
+    const cb = sr.querySelector('[data-testid="gh-cb"]') as HTMLInputElement;
+    cb.checked = true;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+    const toastSpy = vi.fn();
+    const unsub = bus.on("toast:show", toastSpy);
+    fireClick(sr.querySelector('[data-testid="gh-dl-selected"]') as HTMLElement);
+    await vi.waitFor(() => expect(toastSpy).toHaveBeenCalledTimes(1));
+    unsub();
+    // 精确匹配 i18n 键渲染（防硬编码中文串回归，ADR-208 D4）
+    expect(toastSpy.mock.calls[0][0].msg).toBe(t("workshop.downloading"));
+    expect(queueMock.enqueue).not.toHaveBeenCalled();
   });
 });

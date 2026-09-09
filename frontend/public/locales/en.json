@@ -273,6 +273,7 @@
   "import.noSupportedFiles": "No supported model files detected",
   "import.busyImporting": "Import in progress, please wait…",
   "import.fileTooLarge": "Exceeds 100 MB, please place it directly in the repository folder",
+  "import.fileTooLargeSkipped": "{name} exceeds the {mb} MB limit and was skipped",
   "import.processError": "Import processing error, please retry",
   "import.contextRouteUnavailable": "Page context routing unavailable, fell back to content inference",
   "import.readFailed": "Failed to read file",

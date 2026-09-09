@@ -322,7 +322,7 @@
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 168 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 35 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 191 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 194 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 109 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 175 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
@@ -421,8 +421,8 @@
 | bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 215 |
 | (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 37 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 30 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 182 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 195 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 185 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 198 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 266 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
@@ -590,7 +590,7 @@
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 36 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 190 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 193 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |

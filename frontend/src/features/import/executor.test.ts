@@ -3,6 +3,7 @@
 // 覆盖：单文件直导、文件夹整组、执行入口分组、去重、ysm.json 引导
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { getApp, type AppBindings } from "@/backend/app.ts";
 import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./executor.ts";
 
@@ -19,12 +20,13 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-// importWebFilesWithToast 依赖（仅该路径用到）：保留真实 MAX_IMPORT_BYTES，
-// 仅替换 importWebFiles 为可控 mock
+// importWebFilesWithToast 依赖（仅该路径用到）：保留真实 importWebFiles 之外的导出形态，
+// MAX_IMPORT_BYTES 覆写为 4 字节让「单文件超限守卫」可在不分配 100MB 内存的前提下测试
+// （守卫只看数值比较，与真值 100MB 无语义耦合；importWebFiles 走 mock 不受影响）
 const importWebFilesMock = vi.hoisted(() => vi.fn());
 vi.mock("@/backend/browser-adapter.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/backend/browser-adapter.ts")>();
-  return { ...actual, importWebFiles: importWebFilesMock };
+  return { ...actual, importWebFiles: importWebFilesMock, MAX_IMPORT_BYTES: 4 };
 });
 vi.mock("./repo-rtype.ts", () => ({ currentRepoType: vi.fn(() => "ysm") }));
 
@@ -191,6 +193,18 @@ describe("directImport — 在途去重 / 失败释放（陷阱 #3）", () => {
     release();
     await p1;
     await p2;
+    off();
+  });
+
+  it("单文件超 MAX_IMPORT_BYTES → i18n 跳过 toast（带文件名），不进在途、不调后端", async () => {
+    const toasts: Array<{ msg: unknown; type?: unknown }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    const big = new File(["xxxxx"], "big.ysm"); // 5 字节 > 覆写值 4
+    await directImport(big);
+    expect(mocks.ImportModelFile).not.toHaveBeenCalled();
+    // 精确匹配 i18n 键渲染结果（非硬编码串）：实现改回裸中文串则本断言必挂
+    const expected = t("import.fileTooLargeSkipped", { name: "big.ysm", mb: 0 });
+    expect(toasts.some((x) => x.type === "warn" && x.msg === expected)).toBe(true);
     off();
   });
 

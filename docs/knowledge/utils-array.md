@@ -6,8 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/array.ts
 auto_fields:
-  symbols_with_lines:
-    - moveItemMut
+  symbols_with_lines: []
   tests:
     - frontend/src/utils/array.test.ts
 quick_groups:

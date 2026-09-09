@@ -33,9 +33,6 @@ auto_fields:
     - filterModels
     - getState
     - getStateSnapshot
-    - GH_DOCS
-    - GH_RELEASES
-    - GH_REPO
     - isActiveStatus
     - isModelMissing
     - markCurrentFile

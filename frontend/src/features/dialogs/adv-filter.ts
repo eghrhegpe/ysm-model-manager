@@ -180,7 +180,7 @@ export function modalAdvFilter(
       title: t("dialog.advFilter"),
       icon: "⚙️",
       width: "420px",
-      boxClass: "dlg-box dlg-pad dlg-gap",
+      boxClass: "dlg-box dlg-pad dlg-gap-lg",
       tabIndex: 0,
       cancelValue: null,
       resolve,

@@ -6,8 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/safe-error-msg.ts
 auto_fields:
-  symbols_with_lines:
-    - safeErrorMessage
+  symbols_with_lines: []
   tests:
     - frontend/src/utils/safe-error-msg.test.ts
 quick_groups:

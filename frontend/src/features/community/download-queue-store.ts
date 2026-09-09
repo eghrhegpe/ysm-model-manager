@@ -18,6 +18,12 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import type {
+  DownloadProgressPayload,
+  QueueFileDonePayload,
+  QueueFileStartPayload,
+  QueueStatusPayload,
+} from "@/features/event-types.ts";
 import { parseEventPayload } from "@/features/event-types.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { communityGetApp } from "./community-deps.ts";
@@ -270,7 +276,7 @@ if (!_registered) {
   _registered = true;
 
   Events.On("queue:status", (e: { data: unknown }) => {
-    const payload = parseEventPayload<[string, number, unknown]>(e, "queue:status");
+    const payload = parseEventPayload<QueueStatusPayload>(e, "queue:status");
     if (!payload) return;
     const [status, total, extra] = payload;
     dbg("event:queue:status", status, total, extra);
@@ -292,7 +298,7 @@ if (!_registered) {
   });
 
   Events.On("queue:file-start", (e: { data: unknown }) => {
-    const payload = parseEventPayload<[string, number, number]>(e, "queue:file-start");
+    const payload = parseEventPayload<QueueFileStartPayload>(e, "queue:file-start");
     if (!payload) return;
     const [name, total, remaining] = payload;
     dbg("event:queue:file-start", name, total, remaining);
@@ -304,7 +310,7 @@ if (!_registered) {
   });
 
   Events.On("queue:file-done", (e: { data: unknown }) => {
-    const payload = parseEventPayload<[string, string, string]>(e, "queue:file-done");
+    const payload = parseEventPayload<QueueFileDonePayload>(e, "queue:file-done");
     if (!payload) return;
     const [name, status, errMsg] = payload;
     dbg("event:queue:file-done", name, status, errMsg);
@@ -352,7 +358,7 @@ if (!_registered) {
   });
 
   Events.On("download:progress", (e: { data: unknown }) => {
-    const payload = parseEventPayload<[number, number]>(e, "download:progress");
+    const payload = parseEventPayload<DownloadProgressPayload>(e, "download:progress");
     if (!payload) return;
     const [dl, total] = payload;
     dbg("event:download:progress", dl, total, typeof dl, typeof total);

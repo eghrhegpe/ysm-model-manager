@@ -19,17 +19,27 @@ auto_fields:
     - createBusyLock
     - debounce
     - Disposable
+    - formatLongTask
+    - GH_DOCS
+    - GH_RELEASES
+    - GH_REPO
+    - hasRecycleSegment
     - isObj
     - isStorageAccessible
     - logError
     - LogSink
     - logWarn
+    - LongTaskInfo
+    - moveItemMut
     - resetLogSink
+    - safeErrorMessage
     - safeGet
     - safeGetJSON
     - safeRemove
     - safeSet
     - setLogSink
+    - sniffTexSize
+    - startMainThreadWatch
     - stripAppErrorPaths
     - swallowError
     - toInt

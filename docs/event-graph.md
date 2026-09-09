@@ -46,7 +46,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 336 |
+| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 342 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

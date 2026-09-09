@@ -19,7 +19,7 @@ cd .. && go build ./go/...        # 改 Go 后必跑（前端改动可跳过）
 frontend/src/
 ├── app-modules.ts         # 组件入口 + 主题/隐私模式启动链
 ├── backend/app.ts         # Wails 绑定桥（getApp() 唯一入口）
-├── core/                  # 基础设施：bus / i18n / page-store / context-menus
+├── core/                  # 基础设施：i18n / page-store / error-diary
 ├── features/              # 业务功能模块（import-queue / recycle-bin / community）
 ├── services/               # 服务层：resource-registry.ts（资源类型加载）/ cli-bridge.ts
 ├── test-utils/            # 测试工具（ADR-035）
@@ -42,7 +42,7 @@ frontend/src/
 ## i18n（ADR-045）
 
 - 翻译函数：`import { t } from "../../core/i18n/t.ts"` → `t("nav.repository", { n: 3 })`
-- 语言包：`core/i18n/locales/{zh-CN,en,ja}.ts`，格式为 `{ key: "value", "nested.key": "value" }`
+- 语言包：`locales/{zh-CN,en,ja}.ts`，格式为 `{ key: "value", "nested.key": "value" }`
 - 新增翻译 → **三个语言包同步补**，漏一个 `locales-consistency.test.ts` 会报
 - 缺失 key 不会崩（返回 key 本身），但会 `console.warn`——发版前清理缺失 key
 - 参数插值用 `{key}` 语法，值含 `$1` 等特殊字符走函数型替换（防正则注入）
@@ -91,7 +91,7 @@ frontend/src/
 
 ## 路径别名与反桶契约（ADR-146）
 
-- **目录级别名（已登记）**：新写跨目录 import 优先用 `@/<顶层目录>/...`（如 `@/utils/dom/...`、`@/core/bus/...`）；
+- **目录级别名（已登记）**：新写跨目录 import 优先用 `@/<顶层目录>/...`（如 `@/utils/dom/...`、`@/core/i18n/...`）；
   `#root/<file>` 仅用于读仓库根 JSON（过渡措施，只减不增）。catch-all `@/*` **永久禁止**。
 - **闸控**：`check-path-hygiene.ts` 的 R0 别名闸已随闸二（2026-09-01）整条删除——`check-layering`/`check-circular`/`check-path-hygiene` 自身 R3/R4 均已别名感知，写别名（已登记目录级名）通过门禁；
   未登记目录的别名（catch-all 式）由 `tsconfig.paths` 白名单 + 双写一致性 + 构建解析共同拦截。`check-tpl-refs`/`auto-import*` 经核验为 import 无关（仅查 `getElementById`/`id=` 与 import 符号名），无需别名感知。

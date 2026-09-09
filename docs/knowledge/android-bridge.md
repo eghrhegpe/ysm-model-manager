@@ -15,9 +15,11 @@ auto_fields:
     - isViewerPlatform
     - isWebEntryMode
     - pickDirectory
+    - PlatformMode
     - readDeclaredBackend
     - registerAndroidBackHandler
     - resolveAndroidRepoDir
+    - resolveTier
     - resolveWebMode
     - WailsAndroidBridge
   tests:

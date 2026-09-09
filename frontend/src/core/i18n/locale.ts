@@ -223,3 +223,19 @@ export async function initI18n(): Promise<void> {
     bus.emit("lang:changed", { lang: code });
   }
 }
+
+// ── 测试隔离 ──────────────────────────────────────────────
+
+/**
+ * 重置模块级状态（供测试 beforeEach 调用，替代 vi.resetModules + 动态 import 杂技）。
+ * 还原：当前语言 / 代际计数 / 语言包缓存 / 在途表 / host / 告警节流 / 缺失 key 节流。
+ */
+export function __resetI18nStateForTest(): void {
+  _currentLang = BASE_LANG;
+  _langReqGen = 0;
+  for (const k of Object.keys(bundles)) delete bundles[k];
+  pendingLoads.clear();
+  host = null;
+  warnedNoHost = false;
+  warnedKeys.clear();
+}

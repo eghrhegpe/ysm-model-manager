@@ -24,8 +24,10 @@ auto_fields:
     - isViewerPlatform
     - isWebEntryMode
     - parseZipCentralDir
+    - PlatformMode
     - readDeclaredBackend
     - registerAndroidBackHandler
+    - resolveTier
     - resolveWebMode
     - WailsAndroidBridge
     - ZipEntryMeta

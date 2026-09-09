@@ -54,10 +54,12 @@ auto_fields:
     - openDB
     - parseWebDirPath
     - parseWebPath
+    - PlatformMode
     - prefetchStatsWorker
     - readDeclaredBackend
     - readWebFile
     - registerAndroidBackHandler
+    - resolveTier
     - resolveWebMode
     - scanAllWebModels
     - scanWebModels

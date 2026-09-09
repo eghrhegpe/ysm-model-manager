@@ -359,6 +359,9 @@ export const MOCK_DATA = {
   SaveWorkshopSites: undefined,
   ScanModelEntries: undefined,
   SetApp: undefined,
+  // ADR-217（81ab1132b web 键名对齐批次）新增 CLI 进程内 runner 绑定；e2e 未触达，
+  // 补 undefined 最安全（mock 契约注释 L382 指引）
+  SetCLIInProcessRunner: undefined,
   SetDownloadMirror: undefined,
   SetMainWindow: undefined,
   SetModelTags: undefined,

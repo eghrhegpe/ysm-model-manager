@@ -4,6 +4,7 @@
 // ADR-051 决策：删除正则兜底表，只消费结构化 AppError.Code。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { APP_ERROR_PATH_RE } from "@/utils/base/apperror-text.ts";
 
 // CODE_KEYS 覆盖所有有明确分类语义的 Code；未列出的 Code（IO_ERROR/MKDIR_FAILED/
 // WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）语义靠 Reason 中文透传，
@@ -67,10 +68,9 @@ export function friendlyError(err: unknown, fallback?: string): string {
 // stripPathSegments 剥离 Go 端 AppError.Error() 拼入的内部路径段（ADR-051 透传截断）。
 // 格式：`问题描述：X 操作：Y 源路径：P 目标路径：Q 解决建议：R`——路径为内部绝对
 // 路径（Windows 驱动器号/UNC），用户侧 toast 不应泄漏。仅剥离标记段，保留其余文案。
-// P3 修复（审核）：导出供 error-diary 复用（写日记同样不应持久化完整内部路径）
+// 正则同源 base/apperror-text.ts 的 APP_ERROR_PATH_RE（Go 文案变更只改一处）
 export function stripPathSegments(msg: string): string {
-  // 路径可含空格：剥到下一个字段标记（操作/目标路径/解决建议）为止
-  return msg.replace(/\s+(?:源路径|目标路径)：.*?(?=\s+(?:操作|目标路径|解决建议)：|$)/g, "");
+  return msg.replace(APP_ERROR_PATH_RE, "");
 }
 
 /**

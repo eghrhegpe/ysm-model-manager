@@ -85,7 +85,7 @@ interface RawKeyframeObject {
  *
  * 导出供 bench 实证编译开销（bench-fold-molang.ts），解析链外勿调用。
  */
-export function foldMolangConstant(str: unknown): number | null {
+function foldMolangConstant(str: unknown): number | null {
   if (typeof str !== "string") return null;
   // 尝试直接解析为数字
   const direct = Number(str);

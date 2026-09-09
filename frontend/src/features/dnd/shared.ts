@@ -3,14 +3,15 @@
 // utils/resource/importable.ts（backend/web-fs-auth 直引同口径，消除 backend →
 // features 反向依赖）；本文件仅内部依赖 getExt / isImportableFile，不再 re-export。
 // CollectedEntry 事实源在 ./collector.ts——消费方请直引该文件，勿经本文件中转。
-import { getExt, isImportableFile } from "@/utils/resource/importable.ts";
+import { isImportableFile } from "@/utils/resource/importable.ts";
+import { extOf } from "@/utils/resource/types.ts";
 import { type CollectedEntry, collectFiles } from "./collector.ts";
 
 /** 判断文件是否需要进入命名表单
  *  2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认），
  *  不再强制命名表单；ysm.json 单文件保留表单提示（整组导入走文件夹路由）。 */
 export const shouldEnterForm = (name: string): boolean => {
-  const ext = getExt(name);
+  const ext = extOf(name);
   return ext === ".json" && name.toLowerCase() === "ysm.json";
 };
 

@@ -2,8 +2,7 @@
 // 基于 key+namespace+ttl 的内存缓存，支持 STALE / NORMAL / FORCE 策略
 // 特性：并发去重（stampede guard）、失败不缓存、命名空间隔离
 
-import { logWarn } from "@/utils/base/log.ts";
-import { dbg, isDebugEnabled } from "@/utils/debug/debug.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 
 /** 缓存条目 */
 interface CacheEntry<T> {
@@ -24,30 +23,12 @@ const _pending = new Map<string, Promise<unknown>>();
 /** 默认命名空间，调用方可通过 namespace 参数覆盖 */
 const DEFAULT_NS = "ysm";
 
-/** 模块级配置 */
-interface CacheConfig {
-  /** LRU 容量上限 */
-  maxSize: number;
-}
-
-let _config: CacheConfig = { maxSize: 128 };
-
-/**
- * 配置缓存模块级参数（应在应用启动时调用一次）。
- * maxSize 提级为模块配置：避免 per-call 参数导致不同调用方互相驱逐。
- */
-export function configureCache(partial: Partial<CacheConfig>): void {
-  _config = { ..._config, ...partial };
-  // 防御：负值会让 evictLru 的 while(_cache.size > maxSize) 在清空后仍 0 > -1 恒真 → 死循环
-  if (_config.maxSize < 1) {
-    logWarn("cache", `configureCache: maxSize=${_config.maxSize} 非法，回落 128`);
-    _config.maxSize = 128;
-  }
-}
+/** LRU 容量上限（模块级常量，避免 per-call 参数导致不同调用方互相驱逐） */
+const MAX_CACHE_SIZE = 128;
 
 /** LRU 淘汰：超出容量时 shift 最久未用条目（Map 插入顺序 = 访问顺序） */
 function evictLru(): void {
-  while (_cache.size > _config.maxSize) {
+  while (_cache.size > MAX_CACHE_SIZE) {
     const oldest = _cache.keys().next().value;
     if (oldest !== undefined) _cache.delete(oldest);
   }
@@ -63,11 +44,9 @@ function expiryOf(ttlMs: number, nowMs: number): number {
   return ttlMs === 0 ? Number.MAX_SAFE_INTEGER : nowMs + ttlMs;
 }
 
-/** 缓存命中时调试输出（热路径：仅在 debug 开启时求值） */
+/** 缓存命中时调试输出（热路径：dbg 内部已检查 isDebugEnabled） */
 function logHit(fullKey: string, expiryMs: number, now: number): void {
-  if (isDebugEnabled()) {
-    dbg("cache", `[hit] ${fullKey} (${Math.round((expiryMs - now) / 1000)}s 后过期)`);
-  }
+  dbg("cache", `[hit] ${fullKey} (${Math.round((expiryMs - now) / 1000)}s 后过期)`);
 }
 
 /**

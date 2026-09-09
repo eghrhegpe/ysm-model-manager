@@ -1,8 +1,9 @@
 // @vitest-environment node
 // ===== DnD 导入共享逻辑测试（dnd-shared.ts）=====
-// 覆盖：isSupportedFile、isImportableFile、shouldEnterForm、getExt
+// 覆盖：isSupportedFile、isImportableFile、shouldEnterForm、extOf
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isImportableFile, isSupportedFile, getExt } from "@/utils/resource/importable.ts";
+import { isImportableFile, isSupportedFile } from "@/utils/resource/importable.ts";
+import { extOf } from "@/utils/resource/types.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { groupCollected, shouldEnterForm } from "./shared.ts";
 import { getApp } from "@/backend/app.ts";
@@ -12,28 +13,28 @@ vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 
-describe("getExt — 扩展名提取", () => {
+describe("extOf — 扩展名提取", () => {
   it("提取单点文件名扩展名", () => {
-    expect(getExt("model.ysm")).toBe(".ysm");
+    expect(extOf("model.ysm")).toBe(".ysm");
   });
 
   it("提取多点文件名最后一个扩展名", () => {
-    expect(getExt("archive.zip.7z")).toBe(".7z");
+    expect(extOf("archive.zip.7z")).toBe(".7z");
   });
 
   it("无扩展名时返回空串（extOf 统一口径）", () => {
-    expect(getExt("README")).toBe("");
+    expect(extOf("README")).toBe("");
   });
 
   it("大写扩展名转小写", () => {
-    expect(getExt("Model.YSM")).toBe(".ysm");
+    expect(extOf("Model.YSM")).toBe(".ysm");
   });
 
   it("边界：隐藏文件(.ysm) / 尾点 / 空串 / 含路径", () => {
-    expect(getExt(".ysm")).toBe("");     // 隐藏文件，点不在末位 → 无扩展名
-    expect(getExt("foo.")).toBe(".");    // 尾点 → 空扩展名含点
-    expect(getExt("")).toBe("");         // 空串 → 无扩展名
-    expect(getExt("a/b/model.ysm")).toBe(".ysm");
+    expect(extOf(".ysm")).toBe("");     // 隐藏文件，点不在末位 → 无扩展名
+    expect(extOf("foo.")).toBe(".");    // 尾点 → 空扩展名含点
+    expect(extOf("")).toBe("");         // 空串 → 无扩展名
+    expect(extOf("a/b/model.ysm")).toBe(".ysm");
   });
 });
 

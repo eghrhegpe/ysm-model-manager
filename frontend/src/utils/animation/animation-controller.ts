@@ -323,14 +323,23 @@ export function buildControllerAnimationIndex(
 }
 
 /**
- * 从多个控制器中查找匹配指定动画名的控制器。
+ * 从多个控制器中查找匹配指定动画名的控制器（便捷入口，单次查找）。
  * wine_fox 等模型的控制器名通常与动画文件名对应。
+ *
+ * 实现是单遍早退线性扫描：命中即返回，通常远快于全量构建索引。
+ * 需要对同一批 controllers 做多次查找的调用方，应自行用
+ * buildControllerAnimationIndex 构建一次索引后复用（真正的 O(1) 命中）——
+ * 在本函数内每次调用重建索引是 O(n×m) + Map 分配，严格劣于早退扫描
+ * （code_review b9fdfffbe：旧「O(1)」注释与实现相悖，已更正）。
  */
 export function findControllerForAnimation(
   controllers: AnimationController[],
   animationName: string,
 ): AnimationController | null {
-  // 构建索引后 O(1) 查找，避免 O(n×m) 线性扫描
-  const index = buildControllerAnimationIndex(controllers);
-  return index.get(animationName) ?? null;
+  for (const ctrl of controllers) {
+    for (const state of ctrl.states.values()) {
+      if (state.animations.includes(animationName)) return ctrl;
+    }
+  }
+  return null;
 }

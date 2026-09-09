@@ -140,9 +140,15 @@ export class SunBeams {
    * apply 后调用。
    */
   sync(elevation: number, azimuth: number): void {
-    // disabled 分支：只摘锥组并隐藏（tint 不动——原 updateGodRays 同款）
+    // disabled 分支：摘锥组 + 卸 tint（对齐旧 updateSunsetTint 的
+    // `intensity===0 || !godRaysEnabled` 卸载分支——旧成对语义里 disabled 时
+    // tint 仍会被收口；原注释「等下一次 sync 收口」到不了判定即回归，code_review P2）
     if (!this.enabled || !this.group) {
       this.unmountCones();
+      if (this.tintMesh?.parent) {
+        this.tintMesh.parent.remove(this.tintMesh);
+        this.tintMesh.visible = false;
+      }
       return;
     }
     const elRad = degToRad(elevation);

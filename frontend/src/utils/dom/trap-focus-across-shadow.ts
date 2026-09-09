@@ -80,11 +80,21 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     cachedTabbableSet = new Set(cachedTabbable);
   };
   refreshTabbable();
-  // MutationObserver 监听 overlay 子树变化时刷新缓存
+  // MutationObserver 监听 overlay 子树变化时刷新缓存。
+  // attributes 必须监听：disabled/hidden/tabindex/class/style 变化不触发 childList，
+  // 只盯 childList 会让「trap 打开后按钮被 disable」的缓存永久过期（Tab 落到
+  // 不可聚焦元素上）——code_review b6a85ec9e P2。
+  // 注：shadow root 内部变化 host 侧 observer 看不见，由 handler 的缓存未命中
+  // 回退重扫兜底（深焦解析后 active 不在缓存但仍在 overlay 内 → 重扫一次）。
   const observer = new MutationObserver(() => {
     refreshTabbable();
   });
-  observer.observe(overlay, { childList: true, subtree: true });
+  observer.observe(overlay, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["disabled", "hidden", "tabindex", "class", "style"],
+  });
   const handler = (e: KeyboardEvent): void => {
     if (e.key !== "Tab") return;
     const tabbable = cachedTabbable;
@@ -102,7 +112,13 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     }
     // 焦点落在 tabbable 元素上（含 shadow 内，深焦解析后）才允许浏览器自然 Tab 循环；
     // 否则（overlay 背景 / overlay 外）一律收拢回 first/last——防焦点逃出 overlay。
-    const onTabbable = cachedTabbableSet.has(active as HTMLElement);
+    // 缓存未命中但焦点仍在 overlay 子树内 → 可能是 shadow 内部新增了可聚焦元素
+    // （host 侧 observer 看不见 shadow 内变化），回退重扫一次再判定。
+    let onTabbable = cachedTabbableSet.has(active as HTMLElement);
+    if (!onTabbable && active instanceof HTMLElement && overlay.contains(active)) {
+      refreshTabbable();
+      onTabbable = cachedTabbableSet.has(active);
+    }
     if (e.shiftKey) {
       if (active === first || !onTabbable) {
         e.preventDefault();

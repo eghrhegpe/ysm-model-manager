@@ -71,9 +71,11 @@ function main() {
       // 无需在此跳过（code_review P3 不可达分支已清理）。
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
+      // 组 1 必然参与（可能为空串但绝不 undefined），`!` 断言后统一用 `.`，
+      // 消除断言与可选链并存的矛盾写法（code_review 77b6d85eb）
       const allTypeNamed = braceM
         ? braceM[1]!
-            ?.split(",")
+            .split(",")
             .map((s: string) => s.trim())
             .filter(Boolean).length > 0 &&
           braceM[1]

@@ -72,11 +72,12 @@ describe("isSupportedExt", () => {
   it("recognizes .YSM (case)", () => expect(isSupportedExt(".YSM")).toBe(true));
   it("rejects .xyz", () => expect(isSupportedExt(".xyz")).toBe(false));
   it("rejects empty", () => expect(isSupportedExt("")).toBe(false));
-  // P0 补测：JSON 含大写扩展名时，isSupportedExt 小写查询仍命中（RESOURCE_EXTS 归一化小写）
-  it("大写扩展名归一化：JSON 含大写扩展名时小写查询仍命中", () => {
-    expect(isSupportedExt(".YSM")).toBe(true);
-    expect(isSupportedExt(".ZIP")).toBe(true);
-    expect(isSupportedExt(".LITEMATIC")).toBe(true);
+  // P0 补测：锁定 RESOURCE_EXTS 值本身已归一化小写（原断言走 isSupportedExt 的
+  // 查询侧 toLowerCase，回退 map 归一化也照样绿——与被改代码无因果，code_review P3）
+  it("RESOURCE_EXTS 表值全小写（归一化不变量）", () => {
+    for (const exts of Object.values(RESOURCE_EXTS)) {
+      for (const e of exts) expect(e).toBe(e.toLowerCase());
+    }
   });
 });
 

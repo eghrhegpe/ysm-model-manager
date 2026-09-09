@@ -44,7 +44,7 @@ func TestHideWindow_Windows_SetsSysProcAttr(t *testing.T) {
 }
 
 // TestHideWindow_NilCmdNoPanic 验证 nil cmd 输入跨平台安全（no-op，不 panic）：
-// 原 Windows 平台会解引用 nil panic，已加 nil guard（hidewindows.go 头注释），两平台语义对齐。
+// 原 Windows 平台会解引用 nil panic，已加 nil guard（hidewindow_windows.go 头注释），两平台语义对齐。
 func TestHideWindow_NilCmdNoPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {

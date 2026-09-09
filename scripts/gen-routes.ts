@@ -67,10 +67,8 @@ function extractSummary(text: string) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return "";
-  const summary = m[1]!
-    ?.replace(/\n{2,}/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  // 捕获组必然参与（(?:^##|$) 边界），`!` 断言后无需 `?.`（code_review 77b6d85eb）
+  const summary = m[1]!.replace(/\n{2,}/g, " ").replace(/\s+/g, " ").trim();
   if (summary.length <= 120) return summary;
   return `${Array.from(summary).slice(0, 120).join("")}…`;
 }

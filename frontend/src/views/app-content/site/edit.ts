@@ -2,7 +2,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
-import { moveItemMut } from "@/utils/array.ts";
+import { moveItemMut } from "@/utils/base/array.ts";
 import { logWarn } from "@/utils/base/log.ts";
 import { safeSet } from "@/utils/base/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";

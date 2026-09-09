@@ -5,8 +5,8 @@
 
 import * as THREE from "three";
 import { disposeObject3D, safeDispose } from "@/preview-3d/safe-dispose.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad */

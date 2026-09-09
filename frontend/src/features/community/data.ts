@@ -1,8 +1,8 @@
 // ===== 创意工坊数据加载（类型化版 — ADR-014 P3 features）=====
 // tryFetchModels + 进度条
 
+import { hasRecycleSegment } from "@/utils/base/recycle-path.ts";
 import { esc } from "@/utils/html/html.ts";
-import { hasRecycleSegment } from "@/utils/recycle-path.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
@@ -41,7 +41,7 @@ export interface FetchModelsResult {
 
 type MirrorStrategy = "" | "jsdelivr" | "githubapi";
 
-// 回收站段判定：[G5 收口] 由 utils/recycle-path.ts `hasRecycleSegment` 单一实现
+// 回收站段判定：[G5 收口] 由 utils/base/recycle-path.ts `hasRecycleSegment` 单一实现
 // （命名对齐 Go sync.hasRecycleSegment；原本地 isRecyclePath 已删除）。
 // 语义背景：仓库 index.json 可能把 `.recycle/…` 下已删/待清理文件也索引进列表——
 // 加载端须过滤，否则文件出现在创意工坊下载列表；且 Go 下载器会 stripRecycleSegments

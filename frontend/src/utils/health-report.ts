@@ -30,7 +30,8 @@ export function parseHealthReport(raw: HealthReport | null): HealthReport | null
     typeof raw.cache.hit_rate === "number" &&
     // resources 结构校验：防 by_type/total_files 漂移时渲染层访问 undefined
     raw.resources &&
-    typeof raw.resources.total_files === "number"
+    typeof raw.resources.total_files === "number" &&
+    raw.resources.by_type !== undefined
   )
     return raw;
   return null;

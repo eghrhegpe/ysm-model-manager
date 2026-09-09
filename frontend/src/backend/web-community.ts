@@ -7,10 +7,10 @@
 // i18n：错误消息统一走 t()（与 web-fs.ts 全量 t("webFs.*") 一致，避免硬编码中文
 // 漏掉 en/ja 三语言同步——friendlyError 对含中文消息直接透传，硬编码会在英文/日文用户侧裸显）
 import { t } from "@/core/i18n/t.ts";
+import { hasRecycleSegment } from "@/utils/base/recycle-path.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/storage.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
-import { hasRecycleSegment } from "@/utils/recycle-path.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 // 网页版头像提取复用前端 YSM 解包能力（替代 Go ExtractAvatarURI，ADR-049 缺口补齐）
 import { decodeYsmFile } from "@/wasm/ysm-parser.ts";
 // 社区/工坊默认数据源（bundled JSON，build 期内联；与 resource_types.json 同源范式）
@@ -317,7 +317,7 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
   return result;
 }
 
-// 回收站段判定：[G5 收口] 复用 utils/recycle-path.ts `hasRecycleSegment`（命名对齐 Go
+// 回收站段判定：[G5 收口] 复用 utils/base/recycle-path.ts `hasRecycleSegment`（命名对齐 Go
 // sync.hasRecycleSegment，段语义 EqualFold）；原本地 isRecycleRel 已删除。
 // 对齐语义：Go 桌面 scanner/sync 对路径任一 .recycle 段跳过（walk 逐目录 IsRecycleDir
 // 递归效果 = 段判定），此处 rel 已统一正斜杠，直接段判定等价。

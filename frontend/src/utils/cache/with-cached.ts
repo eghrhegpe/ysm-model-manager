@@ -60,7 +60,7 @@ function logHit(fullKey: string, expiryMs: number, now: number): void {
  * @returns 缓存结果或 fn 的执行结果
  *
  * 策略行为（优先级从高到低）：
- *   FORCE  — 忽略缓存，强制重新计算（不写入缓存）
+ *   FORCE  — 忽略缓存，强制重新计算（不写入缓存；不做并发去重，并发 FORCE 各跑一次 fn）
  *   STALE  — 命中缓存直接返回；过期则立即返回旧值 + 后台刷新（不阻塞，并发去重）
  *   NORMAL — 命中缓存直接返回；过期则重新计算并更新缓存（并发去重）
  *

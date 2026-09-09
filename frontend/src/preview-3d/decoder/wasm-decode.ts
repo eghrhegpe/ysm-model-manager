@@ -4,8 +4,8 @@
 import { getApp } from "@/backend/app.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { swallowError } from "@/utils/base/async.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
-import { sniffTexSize } from "@/utils/tex-size.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { sniffTexSize } from "@/utils/base/tex-size.ts";
 import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "@/wasm/ysm-parser.ts";
 import { cacheGet, cacheSet } from "./cache.ts";
 import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.ts";

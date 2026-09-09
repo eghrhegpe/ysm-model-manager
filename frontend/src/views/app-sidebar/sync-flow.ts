@@ -5,9 +5,9 @@
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import type { SidebarInstance } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰

@@ -12,7 +12,7 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { fbxSceneToData, captureTextureName, type FbxSceneData } from "./fbx-scene-to-data.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 
 /** 主线程 → Worker 请求 */
 export interface FbxParseRequest {

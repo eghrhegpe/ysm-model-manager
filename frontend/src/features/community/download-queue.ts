@@ -9,9 +9,9 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/async.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
 import {

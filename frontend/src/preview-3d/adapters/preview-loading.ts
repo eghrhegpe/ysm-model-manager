@@ -6,10 +6,10 @@
 
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
-import { safeErrorMessage } from "@/utils/safe-error-msg.ts";
 
 /** 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） */
 export type LoadingProgressMode = "indeterminate" | "determinate";

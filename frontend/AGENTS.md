@@ -23,7 +23,7 @@ frontend/src/
 ├── features/              # 业务功能模块（import-queue / recycle-bin / community）
 ├── services/               # 服务层：resource-registry.ts（资源类型加载）/ cli-bridge.ts
 ├── test-utils/            # 测试工具（ADR-035）
-├── utils/                 # 工具函数（dom / debug / format / icon / resource / 3d / animation）
+├── utils/                 # 工具函数（base 零依赖纯函数 / dom / debug / format / icon / resource / animation / cache / async / html / model-name）
 ├── views/app-xxx/         # Web Component 视图组件（按职责独立文件）
 └── wasm/                  # YSMParser WASM 胶水层
 ```

@@ -53,6 +53,21 @@ afterEach(() => {
   globalThis.fetch = origFetch;
 });
 
+describe("warnMissingKey（缺失 key 告警节流，ADR-207 D3 收编）", () => {
+  it("每 key 只告警一次", async () => {
+    const { locale } = await freshModule();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      locale.warnMissingKey("a.b");
+      locale.warnMissingKey("a.b");
+      locale.warnMissingKey("c.d");
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
 describe("loadLocale", () => {
   it("成功加载并缓存（幂等：二次调用不重复 fetch）", async () => {
     const { locale } = await freshModule();

@@ -74,6 +74,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_testid_contract.ts": ["frontend"],
   // —— mixed（跨端契约，任一端变更都触发）——
   "test_android_bridge_contract.ts": ["frontend", "go"],
+  "test_apperror_strip.ts": ["go", "frontend"],
   "test_cli_gui_flow_contract.ts": ["go", "frontend"],
   "test_config_syntax.ts": ["go", "frontend"],
   "test_cube_uv_quad_vertex.ts": ["go", "frontend"],
@@ -148,6 +149,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/adr-check.ts",
   ],
   "test_codemod_guards.ts": ["scripts/codemod.ts"],
+  // 跨端契约（ADR-207 D2）：Go AppError 文案 × 前端净化正则，共享 fixture 双端钉
+  "test_apperror_strip.ts": [
+    "go/types/types.go",
+    "go/types/apperror_test.go",
+    "frontend/src/utils/base/apperror-text.ts",
+    "tests/fixtures/apperror-sample.json",
+  ],
   // —— 精确：仅改对应源文件才触发 ——
   "coverage-suggest-hint.ts": [
     "scripts/hooks/coverage-suggest-hint.ts",

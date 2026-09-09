@@ -3,7 +3,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { tr } from "@/core/i18n/tr.ts";
+import { tr, trDynamic } from "@/core/i18n/tr.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { type BusyLock, createBusyLock } from "@/utils/base/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -75,10 +75,10 @@ async function runBatchFileOp(
   try {
     const resolved = await resolveDstDir(
       {
-        title: tr(tpl.dialogTitle, "Move to Folder"),
+        title: trDynamic(tpl.dialogTitle, "Move to Folder"),
         icon: tpl.icon,
-        okText: tr(tpl.dialogOk, "Move"),
-        emptyMsg: tr(tpl.emptyMsg, "❌ Configure a storage path first"),
+        okText: trDynamic(tpl.dialogOk, "Move"),
+        emptyMsg: trDynamic(tpl.emptyMsg, "❌ Configure a storage path first"),
       },
       ctx.rtype,
     );
@@ -86,7 +86,10 @@ async function runBatchFileOp(
     const { folder, dstDir } = resolved;
     const app = await contextMenuGetApp();
     toast(
-      tr(tpl.progress, "📦 Moving {n} files to {folder}...", { n: ctx.paths.length, folder }),
+      trDynamic(tpl.progress, "📦 Moving {n} files to {folder}...", {
+        n: ctx.paths.length,
+        folder,
+      }),
       TOAST_MS.normal,
     );
     let ok = 0;
@@ -104,12 +107,12 @@ async function runBatchFileOp(
     if (ok > 0) {
       toast(
         fail > 0
-          ? tr(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
-          : tr(tpl.okAll, "✅ Moved {n} files to {folder}", { n: ctx.paths.length, folder }),
+          ? trDynamic(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
+          : trDynamic(tpl.okAll, "✅ Moved {n} files to {folder}", { n: ctx.paths.length, folder }),
         TOAST_MS.verbose,
       );
     } else {
-      toast(tr(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
+      toast(trDynamic(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
     }
     refreshUI();
   } catch (e) {

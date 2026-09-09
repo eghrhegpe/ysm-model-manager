@@ -1,6 +1,7 @@
 // @vitest-environment node
 // ===== i18n 翻译函数测试 =====
-// 覆盖真实 t()：缺失 key 返回 key + 单次告警、参数插值、无参数不替换。
+// 覆盖真实 t()/tOf()：缺失 key 返回 key + warnMissingKey、参数插值、
+// 残留占位符守卫（模板有 {n} 漏传参 → 裸占位符上屏 + 单次告警）。
 // test-setup.ts 全局 mock 了 t.ts（查 zhCN），此处 vi.unmock 取真实实现。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -10,10 +11,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // resetModules + 动态 import 把真实 t.ts 的求值限定在本文件作用域内。
 vi.unmock("../../core/i18n/t.ts");
 vi.resetModules();
-const { t } = await import("./t.ts");
+const { t, tOf } = await import("./t.ts");
 
-const { getBundle } = vi.hoisted(() => ({
+const { getBundle, warnMissingKey } = vi.hoisted(() => ({
   getBundle: vi.fn(),
+  warnMissingKey: vi.fn(),
 }));
 
 vi.mock("@/core/i18n/locale.ts", async () => {
@@ -21,7 +23,7 @@ vi.mock("@/core/i18n/locale.ts", async () => {
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
     getBundle, // 覆盖为 mock（控制翻译表）
-    warnedKeys: new Set<string>(), // 节流测试用（warnedKeys 模块级共享）
+    warnMissingKey, // 覆盖为 mock（缺失告警节流本身由 locale.test.ts 覆盖）
   };
 });
 
@@ -45,25 +47,39 @@ describe("t()", () => {
     expect(t("import.addedToQueue", { n: 3 })).toBe("已加入队列: 3 个文件");
   });
 
-  it("缺失 key → 返回 key 本身 + console.warn", () => {
+  it("缺失 key → 返回 key 本身 + warnMissingKey", () => {
+    // 故意用非 LocaleKey 的运行时 key（变量绕开编译期 keyof 校验）测「JSON 语言包滞后」降级语义
+    const missingKey = "nav.notExist" as unknown as Parameters<typeof t>[0];
+    expect(t(missingKey)).toBe("nav.notExist");
+    expect(warnMissingKey).toHaveBeenCalledWith("nav.notExist");
+  });
+
+  it("tOf：string 版动态 key 入口（缺失语义与 t 同构）", () => {
+    const dynKey = "nav.repository" as string;
+    expect(tOf(dynKey)).toBe("模型仓库");
+    const missingKey = "nav.missingDyn" as string;
+    expect(tOf(missingKey)).toBe("nav.missingDyn");
+    expect(warnMissingKey).toHaveBeenCalledWith("nav.missingDyn");
+  });
+
+  it("残留占位符守卫：模板含 {n} 而漏传参 → 裸文本上屏 + 按签名告警一次", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      // 故意用非 LocaleKey 的运行时 key（变量绕开编译期 keyof 校验）测「JSON 语言包滞后」降级语义
-      const missingKey = "nav.notExist" as unknown as Parameters<typeof t>[0];
-      expect(t(missingKey)).toBe("nav.notExist");
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("缺失 key"));
+      expect(t("import.addedToQueue")).toBe("已加入队列: {n} 个文件");
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("残留插值占位符"));
+      const callsAfterFirst = warn.mock.calls.length;
+      t("import.addedToQueue"); // 同签名第二次 → 静默
+      expect(warn.mock.calls.length).toBe(callsAfterFirst);
     } finally {
       warn.mockRestore();
     }
   });
 
-  it("同一缺失 key 只告警一次（warnedKeys 节流）", () => {
+  it("残留占位符守卫：参数覆盖占位符 → 无告警", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const missingKey = "dup.missing" as unknown as Parameters<typeof t>[0];
-      t(missingKey);
-      t(missingKey);
-      expect(warn).toHaveBeenCalledTimes(1);
+      expect(t("import.addedToQueue", { n: 2 })).toBe("已加入队列: 2 个文件");
+      expect(warn).not.toHaveBeenCalled();
     } finally {
       warn.mockRestore();
     }

@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 181 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 184 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -170,7 +170,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 174 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 177 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -182,7 +182,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 164 |
+| (顶层) | `frontend/src/features/context-menu/context-menu-handlers.ts` | 167 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -251,7 +251,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerPageStore | `frontend/src/core/page-store.ts` | 81 |
+| registerPageStore | `frontend/src/core/page-store.ts` | 76 |
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 69 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 176 |
 

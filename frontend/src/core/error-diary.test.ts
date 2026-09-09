@@ -141,6 +141,52 @@ describe("registerErrorDiary", () => {
     expect(sinkSpy).toHaveBeenCalledTimes(3);
   });
 
+  it("ADR-207 D1：仅路径段不同的原始文本 → 净化后同类 → 只落一条", async () => {
+    registerErrorDiary(sinkSpy);
+    bus.emit("toast:show", {
+      msg: "❌ 写入失败 源路径：C:\\a.ysm 目标路径：D:\\b 解决建议：检查权限",
+      duration: 3000,
+      type: "error",
+    });
+    await flushPromises();
+    bus.emit("toast:show", {
+      msg: "❌ 写入失败 源路径：C:\\c.ysm 目标路径：D:\\d 解决建议：检查权限",
+      duration: 3000,
+      type: "error",
+    });
+    await flushPromises();
+    // 去重键 = 净化后（status + title）：两条原始文本塌缩同键 → 只记一条
+    expect(sinkSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("ADR-207 D1：A-B-A 交错风暴 → 按 key 独立窗口抑制（A 只落一条）", async () => {
+    registerErrorDiary(sinkSpy);
+    const fire = (msg: string) => bus.emit("toast:show", { msg, type: "error" });
+    fire("A 类错误");
+    await flushPromises();
+    fire("B 类错误");
+    await flushPromises();
+    fire("A 类错误");
+    await flushPromises();
+    // 原单槽 last-write 语义下第 3 条（A）会穿透；按 key 窗口后 A 被自身 5s 窗口抑制
+    expect(sinkSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("ADR-207 D1：超过 32 键 cap → 淘汰最旧键，被淘汰种类 fail-open 重记", async () => {
+    registerErrorDiary(sinkSpy);
+    sinkSpy.mockClear();
+    const fire = (msg: string) => bus.emit("toast:show", { msg, type: "error" });
+    for (let i = 0; i < 33; i++) {
+      fire(`err-${i} 类错误`);
+      await flushPromises();
+    }
+    expect(sinkSpy).toHaveBeenCalledTimes(33);
+    // 第 33 种（err-32）入窗时淘汰最旧（err-0）；err-0 重发 → 无窗口记录 → fail-open 再记
+    fire("err-0 类错误");
+    await flushPromises();
+    expect(sinkSpy).toHaveBeenCalledTimes(34);
+  });
+
   it("P2 路径剥离：源路径/目标路径段不进入日记（title 与 detail 双字段）", async () => {
     registerErrorDiary(sinkSpy);
     bus.emit("toast:show", {
@@ -183,6 +229,24 @@ describe("registerErrorDiary", () => {
     bus.emit("toast:show", { msg: "❌ reset 后的错误", duration: 3000, type: "error" });
     await flushPromises();
     expect(sinkSpy).not.toHaveBeenCalled();
+  });
+
+  it("registerErrorDiary 返回 handle，dispose 后 error toast 不再落盘", async () => {
+    const handle = registerErrorDiary(sinkSpy);
+    handle.dispose();
+    bus.emit("toast:show", { msg: "❌ dispose 后", duration: 3000, type: "error" });
+    await flushPromises();
+    expect(sinkSpy).not.toHaveBeenCalled();
+  });
+
+  it("registerErrorDiary 幂等：第二次返回空 handle，dispose 不影响第一次", async () => {
+    const handle1 = registerErrorDiary(sinkSpy);
+    const handle2 = registerErrorDiary(sinkSpy);
+    handle2.dispose(); // 空操作，不影响第一次注册
+    bus.emit("toast:show", { msg: "❌ 仍应落盘", duration: 3000, type: "error" });
+    await flushPromises();
+    expect(sinkSpy).toHaveBeenCalledTimes(1);
+    handle1.dispose();
   });
 });
 

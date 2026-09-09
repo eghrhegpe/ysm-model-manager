@@ -7,7 +7,7 @@
 // 统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
 // renderCapControls 的 PreviewControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { trDynamic } from "@/core/i18n/tr.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
@@ -46,9 +46,8 @@ export function capControlToView(c: PreviewControlDef): CapControlView {
   return c as unknown as CapControlView;
 }
 
-/** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
- *  key 有意接受 string（PreviewControlDef.labelKey/group 为数据字段 + group 原文兜底），
- *  内部经 LocaleKey 收窄——字面量拼错在声明处（cap 定义）编译期暴露。 */
+/** i18n 安全取值走 trDynamic（ADR-207 D3）：PreviewControlDef.labelKey/group/hintKey 为
+ *  数据字段（string）+ 原文兜底，无编译期收窄；字面量 key 站点请用 tr（拼错报红）。 */
 let _capStylesInjected = false;
 onOverlayStyleTargetReset(() => {
   _capStylesInjected = false;
@@ -125,7 +124,7 @@ function ensureCapSection(
   arrow.textContent = "▾";
   arrow.className = "cap-section-arrow";
   const title = document.createElement("span");
-  title.textContent = tr(group, group);
+  title.textContent = trDynamic(group, group);
   header.append(arrow, title);
   const body = document.createElement("div");
   body.className = "cap-section-body";
@@ -163,10 +162,10 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   labelBox.className = "cc-labelbox";
   const label = document.createElement("span");
   label.className = "slide-label cc-label-xs";
-  label.textContent = tr(v.labelKey, v.fallback);
+  label.textContent = trDynamic(v.labelKey, v.fallback);
   const hint = document.createElement("span");
   hint.className = "cc-hint";
-  hint.textContent = v.hintKey ? tr(v.hintKey, "") : "";
+  hint.textContent = v.hintKey ? trDynamic(v.hintKey, "") : "";
   labelBox.append(label, hint);
   const toggle = createHeaderToggle({
     value: v.getValue() as boolean,
@@ -211,7 +210,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   head.className = "cc-head";
   const name = document.createElement("span");
   name.className = "slide-label";
-  name.textContent = tr(v.labelKey, v.fallback);
+  name.textContent = trDynamic(v.labelKey, v.fallback);
   const val = document.createElement("span");
   const numVal = v.getValue() as number;
   val.textContent = formatCapSliderValue(v, numVal);
@@ -273,7 +272,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tr(v.labelKey, v.fallback);
+  label.textContent = trDynamic(v.labelKey, v.fallback);
   const sel = document.createElement("select");
   sel.className = "setting-select cc-select";
   for (const opt of v.select ?? []) {
@@ -300,16 +299,16 @@ function renderCapButton(parent: HTMLElement, c: PreviewControlDef): void {
   row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tr(c.labelKey, c.fallback);
+  label.textContent = trDynamic(c.labelKey, c.fallback);
   const btn = document.createElement("button");
   const variant = c.button?.variant ?? "ghost";
   btn.className = variant === "primary" ? "cc-btn cc-btn-primary" : "cc-btn cc-btn-ghost";
-  btn.textContent = c.button?.textKey ? tr(c.button.textKey, c.fallback) : c.fallback;
+  btn.textContent = c.button?.textKey ? trDynamic(c.button.textKey, c.fallback) : c.fallback;
   const hint = document.createElement("span");
   hint.className = "cc-hint cc-hint-45";
   const syncHint = (): void => {
     const v = c.button?.getHint ? c.button.getHint() : "";
-    hint.textContent = v ?? (c.button?.hintKey ? tr(c.button.hintKey, "") : "");
+    hint.textContent = v ?? (c.button?.hintKey ? trDynamic(c.button.hintKey, "") : "");
   };
   syncHint();
   let disabled = c.button?.disabled?.() ?? false;
@@ -342,7 +341,7 @@ function renderCapImage(parent: HTMLElement, c: PreviewControlDef): void {
   row.dataset.testid = `cap-${c.id}`;
   const img = document.createElement("img");
   img.src = url;
-  img.alt = tr(c.labelKey, c.fallback);
+  img.alt = trDynamic(c.labelKey, c.fallback);
   img.className = "cc-img-block";
   row.appendChild(img);
   parent.appendChild(row);
@@ -355,7 +354,7 @@ export function renderCapColor(parent: HTMLElement, v: CapControlView): void {
   row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tr(v.labelKey, v.fallback);
+  label.textContent = trDynamic(v.labelKey, v.fallback);
   const hex = v.getValue() as number;
   const toHexStr = (val: number): string => {
     const s = (val >>> 0).toString(16).padStart(6, "0").slice(-6);
@@ -384,7 +383,7 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   head.className = "cc-head-strong";
   const name = document.createElement("span");
   name.className = "slide-label";
-  name.textContent = tr(c.labelKey, c.fallback);
+  name.textContent = trDynamic(c.labelKey, c.fallback);
   const val = document.createElement("span");
   const numVal = c.getValue() as number;
   const fmtTime = (h: number): string =>
@@ -479,7 +478,7 @@ function renderCapHistogram(parent: HTMLElement, c: PreviewControlDef): void {
 
   const label = document.createElement("span");
   label.className = "slide-label cc-label-body";
-  label.textContent = tr(c.labelKey, c.fallback);
+  label.textContent = trDynamic(c.labelKey, c.fallback);
   row.appendChild(label);
 
   const canvas = document.createElement("canvas");
@@ -523,7 +522,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
   row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-dim";
-  label.textContent = tr(c.labelKey, c.fallback);
+  label.textContent = trDynamic(c.labelKey, c.fallback);
   row.appendChild(label);
   const grid = document.createElement("div");
   grid.className = "cc-grid";

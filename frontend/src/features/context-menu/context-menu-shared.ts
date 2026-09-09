@@ -5,7 +5,7 @@
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
 
 import { bus } from "@/bus";
-import { tr } from "@/core/i18n/tr.ts";
+import { tr, trDynamic } from "@/core/i18n/tr.ts";
 import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
 import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -107,7 +107,7 @@ export async function runSingleOp(
   try {
     const resolved = await resolveDstDir(
       {
-        title: tr(i18n.dialogTitle, isMove ? "Move to Folder" : "Copy to Folder"),
+        title: trDynamic(i18n.dialogTitle, isMove ? "Move to Folder" : "Copy to Folder"),
         icon: isMove ? "📂" : "📋",
         okText: tr(isMove ? "ctx.moveDialogOk" : "ctx.copyDialogOk", isMove ? "Move" : "Copy"),
         emptyMsg: tr(
@@ -124,7 +124,7 @@ export async function runSingleOp(
     const app = await contextMenuGetApp();
     await app[binding](pathOf, dstDir);
     toast(
-      tr(i18n.okMsg, isMove ? "✅ Moved to {folder}" : "✅ Copied to {folder}", { folder }),
+      trDynamic(i18n.okMsg, isMove ? "✅ Moved to {folder}" : "✅ Copied to {folder}", { folder }),
       TOAST_MS.normal,
     );
     refreshUI();

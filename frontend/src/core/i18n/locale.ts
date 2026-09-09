@@ -27,8 +27,8 @@ let _langReqGen = 0;
 /** 已加载的语言包缓存 */
 const bundles: Record<string, Bundle> = {};
 
-/** 无参 getBundle() 的活跃包引用缓存。t() 是渲染热路径，退化为一次属性读取
- *  （ADR-189 D5：bundles/_currentLang 各有唯一写点，各自触发缓存刷新） */
+/** 无参 getBundle() 的活跃包引用缓存：t() 是渲染热路径，退化为一次属性读取。
+ *  刷新契约：bundles/_currentLang 任一写点必须配对调 refreshActiveBundle（ADR-189 D5） */
 let _activeBundle: Bundle | undefined;
 
 /** 非空包判定（{} 是 truthy，直接判布尔会让空包短路 zh-CN 兜底） */
@@ -48,8 +48,14 @@ function refreshActiveBundle(): void {
   _activeBundle = isNonEmpty(base) ? base : undefined;
 }
 
-/** 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） */
-export const warnedKeys = new Set<string>();
+// 缺失 key 告警节流：每 key 只告警一次。可变状态保持私有，对外仅 warnMissingKey
+//（ADR-207 D3：原导出可变 warnedKeys Set 属跨模块泄漏，收编为 API）
+const warnedKeys = new Set<string>();
+export function warnMissingKey(key: string): void {
+  if (warnedKeys.has(key)) return;
+  warnedKeys.add(key);
+  console.warn(`[i18n] 缺失 key: ${key}`);
+}
 
 // ── 语言包加载 ──────────────────────────────────────
 

@@ -114,17 +114,23 @@ vi.mock("@wailsio/runtime", () => ({
 vi.mock("./src/core/i18n/t.ts", async () => {
   const actual =
     await vi.importActual<typeof import("./src/core/i18n/t.ts")>("./src/core/i18n/t.ts");
+  // t / tOf 共享同一查表实现（查全量 zhCN 源表）：
+  // tr/trDynamic 走 tOf（ADR-207 D3 双入口），测试环境无 fetch 包，
+  // 真实 getBundle() 恒空包会把所有 key 判成「缺失」走 fallback，
+  // 与 mock t 的 zhCN 查表口径分裂 → 必须同表同语义
+  const lookup = (key: string, params?: Record<string, string | number>): string => {
+    let text = zhCN[key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), () => String(v));
+      }
+    }
+    return text;
+  };
   return {
     ...actual,
-    t: (key: string, params?: Record<string, string | number>): string => {
-      let text = zhCN[key] ?? key;
-      if (params) {
-        for (const [k, v] of Object.entries(params)) {
-          text = text.replace(new RegExp(`\\{${k}\\}`, "g"), () => String(v));
-        }
-      }
-      return text;
-    },
+    t: (key: string, params?: Record<string, string | number>): string => lookup(key, params),
+    tOf: (key: string, params?: Record<string, string | number>): string => lookup(key, params),
   };
 });
 

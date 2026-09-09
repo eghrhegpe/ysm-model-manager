@@ -389,7 +389,9 @@ function main() {
       }
       const newFm = withUpdatedAutoFields(fm, newFrozenFields);
       if (newFm === null) continue;
-      const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
+      // 函数替换：替换串含 frontmatter 原文（pitfalls 等字段有 $&/$1 序列），
+      // 字符串替换会把 $& 展开为整个旧 frontmatter → 卡片自追加损坏（ADR-207 D5）
+      const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, () => `---\n${newFm}\n---`);
       fs.writeFileSync(file, newText);
       frozenCleaned++;
       console.log(`🧹 ${cf} → 冻结快照增量清理 ${frozenRemoved.length} 个已删符号`);
@@ -432,7 +434,9 @@ function main() {
 
     const newFm = withUpdatedAutoFields(fm, newFields);
     if (newFm === null) continue;
-    const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, `---\n${newFm}\n---`);
+    // 函数替换：newFm 含 frontmatter 原文（pitfalls 等字段有 $&/$1 序列），字符串替换会
+    // 把 $& 展开为整个旧 frontmatter → 卡片自追加损坏（ADR-207 D5）
+    const newText = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, () => `---\n${newFm}\n---`);
     fs.writeFileSync(file, newText);
     updated++;
     console.log(`✍️  ${cf} → auto_fields.symbols_with_lines (${targetSymbols.length} 个符号)`);

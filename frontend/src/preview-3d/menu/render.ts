@@ -6,7 +6,7 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { tr, trDynamic } from "@/core/i18n/tr.ts";
 import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import {
@@ -126,10 +126,10 @@ interface RenderMenuDeps {
   renderCustomDirect?: boolean;
 }
 
-/** 统一 label 取值：labelKey→tr(fallback)；无 labelKey 直接用 node.id */
+/** 统一 label 取值：labelKey→trDynamic(fallback)；无 labelKey 直接用 node.id（labelKey 为数据字段 string，ADR-207 D3） */
 function rmLabel(node: PreviewMenuNode, valueOverride?: unknown): string {
   if (node.labelKey)
-    return tr(
+    return trDynamic(
       node.labelKey,
       node.fallback ?? (valueOverride !== undefined ? String(valueOverride) : node.id),
     );
@@ -234,8 +234,8 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
   row.dataset.testid = `preview-${node.id}`;
   const k = document.createElement("span");
   k.className = "field-label";
-  k.textContent = node.labelKey ? tr(node.labelKey, node.id) : node.id;
-  const displayed = node.value ?? (node.labelKey ? tr(node.labelKey, node.id) : node.id);
+  k.textContent = node.labelKey ? trDynamic(node.labelKey, node.id) : node.id;
+  const displayed = node.value ?? (node.labelKey ? trDynamic(node.labelKey, node.id) : node.id);
   const v = document.createElement("span");
   v.className = "field-value";
   v.textContent = String(displayed);

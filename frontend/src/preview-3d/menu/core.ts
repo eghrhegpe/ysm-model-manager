@@ -6,7 +6,7 @@
 //   - 组内多个项 → home 到组根视图（项列表），点击项 navigate 下钻面板
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { tr, trDynamic } from "@/core/i18n/tr.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import {
   getSchema,
@@ -150,7 +150,7 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   ic.textContent = node.icon ?? "";
   ic.className = "cm-row-icon";
   const lb = document.createElement("span");
-  lb.textContent = tr(node.labelKey ?? node.id, node.fallback ?? node.id);
+  lb.textContent = trDynamic(node.labelKey ?? node.id, node.fallback ?? node.id);
   row.append(ic, lb);
   if (opts?.chevron) {
     const chev = document.createElement("span");
@@ -366,7 +366,7 @@ function previewMakePanelView(
   renderPanelFn: (list: HTMLElement, node: PreviewMenuNode) => void,
 ): SlideMenuView {
   return {
-    title: tr(node.labelKey ?? node.id, node.fallback ?? node.id),
+    title: trDynamic(node.labelKey ?? node.id, node.fallback ?? node.id),
     render: (list) => renderPanelFn(list, node),
   };
 }
@@ -382,7 +382,7 @@ function previewMakeGroupView(
   hideMenu: () => void,
 ): SlideMenuView {
   return {
-    title: tr(g.labelKey, g.fallback),
+    title: trDynamic(g.labelKey, g.fallback),
     render: (list) => {
       list.innerHTML = "";
       for (const node of groupItems) {
@@ -445,7 +445,7 @@ function renderPreviewDock(
     // 进去叫加载角色」的语义错位；机器可读 data-dock-group 供测试/诊断
     btn.dataset.dockGroup = g.id;
     btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
-    btn.innerHTML = `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tr(g.labelKey, g.fallback)}</span>`;
+    btn.innerHTML = `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${trDynamic(g.labelKey, g.fallback)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
       // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）。

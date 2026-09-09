@@ -23,10 +23,8 @@ export function resetLogSink(): void {
 export function logWarn(tag: string, msg: string, err?: unknown): void {
   // 无 err 时不追加空参数槽（code review #11：err ?? "" 会让控制台多一个空槽）
   if (err === undefined) {
-    // eslint-disable-next-line no-console
     console.warn(`[${tag}] ${msg}`);
   } else {
-    // eslint-disable-next-line no-console
     console.warn(`[${tag}] ${msg}`, err);
   }
   _sink?.("warn", tag, msg, err);

@@ -74,7 +74,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
     isViewerMode: isViewerModeMock,
   };
 });
-vi.mock("@/utils/dom/directory-picker.ts", () => ({
+vi.mock("@/backend/directory-picker.ts", () => ({
   resolveAndroidRepoDir: resolveAndroidRepoDirMock,
 }));
 

@@ -6,7 +6,7 @@
 // 状态（activeTab + 候选缓存）由 makeSwitchState 创建、buildPreviewMenuRouters 持有
 //（mount 级一次），builder 每次渲染重跑时读写同一 state——旧闭包 let activeTab 语义平移。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { t } from "@/core/i18n/t.ts";
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import { swallowError } from "@/utils/base/async.ts";
 import { safeGet, safeSet } from "@/utils/base/storage.ts";
@@ -110,9 +110,7 @@ function switchCandidateRows(
         id: "switch-empty",
         kind: "sectionTitle",
         labelKey: "",
-        fallback: viaType
-          ? tr("preview.noTypeModel", "（该类型暂无模型）")
-          : tr("preview.noOtherModel", "（无其他模型）"),
+        fallback: viaType ? t("preview.noTypeModel") : t("preview.noOtherModel"),
       },
     ];
   }
@@ -130,7 +128,7 @@ function switchCandidateRows(
         : {
             badge: {
               label: "➕",
-              title: tr("preview.appendModel", "追加到场景"),
+              title: t("preview.appendModel"),
               onClick: () => applySwitchRowClick(p, sameType, ctx, true),
             },
           }),
@@ -193,7 +191,7 @@ export function buildSwitchNodes(
       id: "switch-loading",
       kind: "sectionTitle",
       labelKey: "",
-      fallback: tr("preview.loadingModels", "加载中…"),
+      fallback: t("preview.loadingModels"),
     });
     return nodes;
   }

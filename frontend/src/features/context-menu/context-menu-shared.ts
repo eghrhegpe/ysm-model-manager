@@ -5,7 +5,7 @@
 // 依赖：bus / modalPrompt / getApp / RESOURCE_TYPES——均不引 handlers，本文件不在环内。
 
 import { bus } from "@/bus";
-import { tr, trDynamic } from "@/core/i18n/tr.ts";
+import { t, tOf } from "@/core/i18n/t.ts";
 import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
 import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -69,16 +69,12 @@ export async function resolveDstDir(
   const folder = await modalPrompt({
     title: opts.title,
     icon: opts.icon,
-    placeholder: tr("ctx.dstPlaceholder", "Enter target folder name, e.g. [author]"),
+    placeholder: t("ctx.dstPlaceholder"),
     okText: opts.okText,
   });
   if (!folder) return null;
   if (isUnsafeFolderName(folder)) {
-    toast(
-      tr("ctx.unsafeFolderName", "❌ Folder name contains illegal characters"),
-      TOAST_MS.normal,
-      "error",
-    );
+    toast(t("ctx.unsafeFolderName"), TOAST_MS.normal, "error");
     return null;
   }
   const { GetRepoRoot } = await contextMenuGetApp();
@@ -94,7 +90,7 @@ export async function resolveDstDir(
  * 单目标 move|copy 模板（2026-09-06 锐评 P2 #5 收敛）：file.move/file.copy/dir.move/dir.copy
  * 四胞胎共用 resolveDstDir → getApp → binding → toast → refreshUI → catch 同构段，
  * 与 batch 侧 runBatchFileOp + BATCH_TPL 同一屋檐。调用方只给差异项：路径、rtype、
- * 绑定名、弹窗标题与成功文案（i18n key，本函数内 tr）。
+ * 绑定名、弹窗标题与成功文案（i18n key，本函数内 t/tOf）。
  */
 export async function runSingleOp(
   pathOf: string,
@@ -107,15 +103,10 @@ export async function runSingleOp(
   try {
     const resolved = await resolveDstDir(
       {
-        title: trDynamic(i18n.dialogTitle, isMove ? "Move to Folder" : "Copy to Folder"),
+        title: tOf(i18n.dialogTitle),
         icon: isMove ? "📂" : "📋",
-        okText: tr(isMove ? "ctx.moveDialogOk" : "ctx.copyDialogOk", isMove ? "Move" : "Copy"),
-        emptyMsg: tr(
-          isMove ? "ctx.emptyMoveRoot" : "ctx.emptyCopyRoot",
-          isMove
-            ? "❌ Configure a storage path first"
-            : "❌ Configure a repository directory first",
-        ),
+        okText: t(isMove ? "ctx.moveDialogOk" : "ctx.copyDialogOk"),
+        emptyMsg: t(isMove ? "ctx.emptyMoveRoot" : "ctx.emptyCopyRoot"),
       },
       rtype,
     );
@@ -123,15 +114,9 @@ export async function runSingleOp(
     const { folder, dstDir } = resolved;
     const app = await contextMenuGetApp();
     await app[binding](pathOf, dstDir);
-    toast(
-      trDynamic(i18n.okMsg, isMove ? "✅ Moved to {folder}" : "✅ Copied to {folder}", { folder }),
-      TOAST_MS.normal,
-    );
+    toast(tOf(i18n.okMsg, { folder }), TOAST_MS.normal);
     refreshUI();
   } catch (e) {
-    toastError(
-      e,
-      tr(isMove ? "ctx.moveFail" : "ctx.copyFail", isMove ? "Move failed" : "Copy failed"),
-    );
+    toastError(e, t(isMove ? "ctx.moveFail" : "ctx.copyFail"));
   }
 }

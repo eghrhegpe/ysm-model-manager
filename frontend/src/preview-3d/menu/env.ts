@@ -7,7 +7,7 @@
 // 行渲染复用 render.ts 唯一 row 生成器（slide-item + radio/badge/headerToggle 槽位），
 // 与 roles 同构，消除「env 手风琴 vs 其余面板行列表」的形态割裂。
 
-import { trDynamic } from "@/core/i18n/tr.ts";
+import { tOf } from "@/core/i18n/t.ts";
 import type { EnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
@@ -126,7 +126,7 @@ function envCapSubview(cap: SceneCapability): SlideMenuView {
     } as unknown as PreviewActionMenuCtx,
   };
   return {
-    title: trDynamic(cap.labelKey, cap.id),
+    title: tOf(cap.labelKey),
     render: (list) => {
       list.replaceChildren();
       renderMenu(list, envCapSubNodes(cap), subviewDeps);
@@ -191,7 +191,7 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
       control: {
         options: PRESET_ORDER.map((p) => ({
           value: p.id,
-          label: `${p.icon} ${trDynamic(p.labelKey, p.id)}`,
+          label: `${p.icon} ${tOf(p.labelKey)}`,
         })),
         // code_review bc639ae0 #6/#7/#8：显示值读 environment cap 实际 preset
         // （applyPreset/预设 thumb/loadState 都经 envCap.setPresetId 写 params.preset，

@@ -10,7 +10,7 @@
 // ensureRolesStyles 及 roleBaseName 的实现已迁 roles-views.ts（navigate 目标视图工厂，
 // DOM 半身）——分开存放防后来者把 DOM 装配误当 buildRolesSchema 的写法复制。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { t } from "@/core/i18n/t.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
@@ -51,7 +51,7 @@ export function buildRolesSchema(
       id: "roles-empty",
       kind: "sectionTitle",
       labelKey: "",
-      fallback: tr("preview.noRoles", "（无已加载角色）"),
+      fallback: t("preview.noRoles"),
     });
   }
   for (const e of entries) {
@@ -73,7 +73,7 @@ export function buildRolesSchema(
         ),
       radio: {
         active: isActive,
-        title: tr("preview.roleFocus", "设为焦点"),
+        title: t("preview.roleFocus"),
         onClick: () => {
           sceneRegistry.setActive(e.id);
           // setActive 仅在 menuItems truthy 时经 menuSink 换菜单；无专属项的角色
@@ -84,7 +84,7 @@ export function buildRolesSchema(
       },
       badge: {
         label: "⚙",
-        title: tr("preview.roleTools", "模型工具"),
+        title: t("preview.roleTools"),
         onClick: () =>
           deps.actionCtx.navigate?.(
             frBuildToolsView(e, {

@@ -8,7 +8,7 @@
 // roleBaseName 单源落位本文件（modelDetailView/motionDetailView/frBuildToolsView 标题
 // 共用；roles.ts 单向 import，方向不反向）。
 
-import { tr } from "@/core/i18n/tr.ts";
+import { t } from "@/core/i18n/t.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
@@ -123,7 +123,7 @@ export function modelDetailView(
           if (!hadComponents) {
             const empty = document.createElement("div");
             empty.className = "fr-empty-note";
-            empty.textContent = tr("preview.roleNoDetail", "（该角色无可查看项）");
+            empty.textContent = t("preview.roleNoDetail");
             l.appendChild(empty);
           }
           return;
@@ -152,7 +152,7 @@ export function modelDetailView(
             console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
             const errRow = document.createElement("div");
             errRow.className = "fr-error-note";
-            errRow.textContent = `${tr("preview.renderFail", "Panel render failed")}: ${safeErrorMessage(err)}`;
+            errRow.textContent = `${t("preview.renderFail")}: ${safeErrorMessage(err)}`;
             l.appendChild(errRow);
           }
         }
@@ -199,7 +199,7 @@ export function motionDetailView(
       if (motionItems.length === 0) {
         const empty = document.createElement("div");
         empty.className = "fr-empty-note";
-        empty.textContent = tr("preview.roleNoMotion", "（该角色无可播放动作）");
+        empty.textContent = t("preview.roleNoMotion");
         l.appendChild(empty);
         return;
       }
@@ -221,12 +221,12 @@ export function frBuildToolsView(e: ModelEntry, deps: FrToolsDeps): SlideMenuVie
   // 调用 navigate 在 frBuildRoleToolsBtn 的 onclick 里完成，但原 onclick 调用的是 menu.navigate(toolsView(e))，
   // 而此函数返回的正好就是 SlideMenuView，供点击方调用。
   return {
-    title: `${roleBaseName(e)} ${tr("preview.roleTools", "模型工具")}`,
+    title: `${roleBaseName(e)} ${t("preview.roleTools")}`,
     render: (l) => {
       l.innerHTML = "";
       const unload = document.createElement("div");
       unload.dataset.testid = "preview-role-unload";
-      unload.textContent = `🗑 ${tr("preview.unloadModel", "卸载模型")}`;
+      unload.textContent = `🗑 ${t("preview.unloadModel")}`;
       unload.className = "fr-unload-row";
       unload.onclick = (): void => {
         deps.unloadModel(e.id);
@@ -267,7 +267,7 @@ function renderComponentsSection(
 
   const title = document.createElement("div");
   title.dataset.testid = "preview-components-title";
-  title.textContent = `${tr("preview.component", "组件")}（${components.length}）`;
+  title.textContent = `${t("preview.component")}（${components.length}）`;
   title.className = "fr-section-title";
   container.appendChild(title);
 
@@ -293,7 +293,7 @@ function renderComponentsSection(
       const append = document.createElement("button");
       append.dataset.testid = "preview-component-append";
       append.textContent = "➕";
-      attachTooltip(append, () => tr("preview.appendModel", "追加到场景"));
+      attachTooltip(append, () => t("preview.appendModel"));
       append.className = "fr-comp-add-btn";
       append.onclick = (ev): void => {
         ev.stopPropagation();

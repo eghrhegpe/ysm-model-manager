@@ -1,6 +1,6 @@
 // ===== context-menu-file-handlers.ts — file 类右键菜单 handler（从 context-menu-handlers.ts 拆出，ADR-040 P1）=====
 
-import { tr } from "@/core/i18n/tr.ts";
+import { t } from "@/core/i18n/t.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { modalSelect } from "@/features/dialogs/modal-select.ts";
 import { showRenameDialog } from "@/features/dialogs/rename.ts";
@@ -25,7 +25,7 @@ export const FILE_HANDLERS = {
       await RenameFile(ctx.path || "", newName);
       refreshUI();
     } catch (e) {
-      toastError(e, tr("ctx.renameFail", "Rename failed"));
+      toastError(e, t("ctx.renameFail"));
     }
   },
   "file.move": (ctx) =>
@@ -44,52 +44,51 @@ export const FILE_HANDLERS = {
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
-        toast(tr("ctx.pushNoMcRoot", "Configure the game directory first"), TOAST_MS.info, "warn");
+        toast(t("ctx.pushNoMcRoot"), TOAST_MS.info, "warn");
         return;
       }
       const instances = (await ListVersionInstances(mcRoot)) ?? [];
       if (!instances.length) {
-        toast(tr("ctx.pushNoInstances", "No packs found"), TOAST_MS.info, "warn");
+        toast(t("ctx.pushNoInstances"), TOAST_MS.info, "warn");
         return;
       }
       const names = instances.map((i) => i.Name);
       const chosen = await modalSelect({
-        title: tr("ctx.pushDialogTitle", "Push to Pack"),
+        title: t("ctx.pushDialogTitle"),
         icon: "📦",
         items: names,
-        okText: tr("ctx.pushOkText", "📦 Push"),
+        okText: t("ctx.pushOkText"),
       });
       if (!chosen) return;
       const match = instances.find((i) => i.Name === chosen);
       if (!match) return;
       try {
         await InstallModelTo(ctx.path || "", match.CustomDir);
-        toast(tr("ctx.pushOk", "✅ Pushed to {pack}", { pack: chosen }), TOAST_MS.success);
+        toast(t("ctx.pushOk", { pack: chosen }), TOAST_MS.success);
       } catch (e) {
-        toastError(e, tr("ctx.pushFail", "Push failed"));
+        toastError(e, t("ctx.pushFail"));
       }
     } catch (e) {
-      toastError(e, tr("ctx.pushFail", "Push failed"));
+      toastError(e, t("ctx.pushFail"));
     }
   },
   "file.edit-tags": async (ctx) => {
     try {
       const result = await modalTagEditor(ctx.path || "");
-      if (result)
-        toast(tr("ctx.tagsSaved", "🏷️ Saved {n} tags", { n: result.length }), TOAST_MS.success);
+      if (result) toast(t("ctx.tagsSaved", { n: result.length }), TOAST_MS.success);
     } catch (e) {
-      toastError(e, tr("ctx.tagsFail", "Failed to edit tags"));
+      toastError(e, t("ctx.tagsFail"));
     }
   },
   "file.recycle": async (ctx) => {
     try {
       const ok2 = await modalConfirm({
-        title: tr("ctx.fileRecycleTitle", "Recycle"),
+        title: t("ctx.fileRecycleTitle"),
         icon: "♻️",
-        message: tr("ctx.fileRecycleConfirm", "Move {name} to recycle bin?", {
+        message: t("ctx.fileRecycleConfirm", {
           name: (ctx.path || "").split(/[/\\]/).pop() || "",
         }),
-        okText: tr("ctx.recycleOkText", "♻️ Recycle"),
+        okText: t("ctx.recycleOkText"),
         danger: true,
       });
       if (!ok2) return;
@@ -98,10 +97,10 @@ export const FILE_HANDLERS = {
         await MoveToRecycle(ctx.path || "");
         refreshUI();
       } catch (e) {
-        toastError(e, tr("ctx.recycleFail", "Failed to recycle"));
+        toastError(e, t("ctx.recycleFail"));
       }
     } catch (e) {
-      toastError(e, tr("ctx.recycleFail", "Failed to recycle"));
+      toastError(e, t("ctx.recycleFail"));
     }
   },
   "file.reveal": async (ctx) => {
@@ -109,7 +108,7 @@ export const FILE_HANDLERS = {
       const { RevealInExplorer } = await contextMenuGetApp();
       await RevealInExplorer(ctx.path || "");
     } catch (e) {
-      toastError(e, tr("ctx.revealFail", "Failed to open"));
+      toastError(e, t("ctx.revealFail"));
     }
   },
   "file.copy-path": async (ctx) => {
@@ -117,9 +116,7 @@ export const FILE_HANDLERS = {
     // 与 batch.copy-paths 同一实现——不再手写 navigator/textarea 双路径
     const result = await copyText(ctx.path || "");
     toast(
-      result.ok
-        ? tr("ctx.copyPathOk", "✅ Path copied to clipboard")
-        : tr("ctx.copyPathFail", "❌ Copy failed, please copy the path manually"),
+      result.ok ? t("ctx.copyPathOk") : t("ctx.copyPathFail"),
       result.ok ? TOAST_MS.success : TOAST_MS.normal,
       result.ok ? undefined : "error",
     );

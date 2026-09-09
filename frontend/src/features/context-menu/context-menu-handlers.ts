@@ -5,8 +5,7 @@
 // 模块级 defaultHandlers 保持既有消费者零改动。
 
 import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
-import { tr, trDynamic } from "@/core/i18n/tr.ts";
+import { t, tOf } from "@/core/i18n/t.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { type BusyLock, createBusyLock } from "@/utils/base/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -98,17 +97,17 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
     },
   ): Promise<void> {
     if (!op.busy.tryStart()) {
-      toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
+      toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
       return;
     }
     const tpl = BATCH_TPL[op.mode];
     try {
       const resolved = await resolveDstDir(
         {
-          title: trDynamic(tpl.dialogTitle, "Move to Folder"),
+          title: tOf(tpl.dialogTitle),
           icon: tpl.icon,
-          okText: trDynamic(tpl.dialogOk, "Move"),
-          emptyMsg: trDynamic(tpl.emptyMsg, "❌ Configure a storage path first"),
+          okText: tOf(tpl.dialogOk),
+          emptyMsg: tOf(tpl.emptyMsg),
         },
         ctx.rtype,
       );
@@ -116,7 +115,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       const { folder, dstDir } = resolved;
       const app = await contextMenuGetApp();
       toast(
-        trDynamic(tpl.progress, "📦 Moving {n} files to {folder}...", {
+        tOf(tpl.progress, {
           n: ctx.paths.length,
           folder,
         }),
@@ -137,15 +136,15 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       if (ok > 0) {
         toast(
           fail > 0
-            ? trDynamic(tpl.okPartial, "✅ {ok} moved / ❌ {fail} failed", { ok, fail })
-            : trDynamic(tpl.okAll, "✅ Moved {n} files to {folder}", {
+            ? tOf(tpl.okPartial, { ok, fail })
+            : tOf(tpl.okAll, {
                 n: ctx.paths.length,
                 folder,
               }),
           TOAST_MS.verbose,
         );
       } else {
-        toast(trDynamic(tpl.failAll, "❌ Move failed"), TOAST_MS.verbose, "error");
+        toast(tOf(tpl.failAll), TOAST_MS.verbose, "error");
       }
       refreshUI();
     } catch (e) {
@@ -164,14 +163,14 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
     // ── instance ──
     "instance.open-folder": async (ctx) => {
       if (!ctx.path) {
-        toast(tr("ctx.missingPath", "❌ Pack directory not found"), TOAST_MS.normal, "error");
+        toast(t("ctx.missingPath"), TOAST_MS.normal, "error");
         return;
       }
       try {
         const { OpenInstanceFolder } = await contextMenuGetApp();
         await OpenInstanceFolder(ctx.path, ctx.rtype || "", ctx.subdir || "");
       } catch (e) {
-        toastError(e, tr("ctx.openFolderFail", "Failed to open folder"));
+        toastError(e, t("ctx.openFolderFail"));
       }
     },
     "instance.export-list": (ctx) => {
@@ -211,17 +210,17 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       }),
     "batch.recycle": async (ctx) => {
       if (!recycleBusy.tryStart()) {
-        toast(tr("ctx.busyWait", "⏳ Operation in progress, please wait"), TOAST_MS.quick, "info");
+        toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
         return;
       }
       try {
         const ok2 = await modalConfirm({
-          title: tr("ctx.recycleTitle", "Recycle Selected"),
+          title: t("ctx.recycleTitle"),
           icon: "♻️",
-          message: tr("ctx.recycleConfirm", "Move {n} selected files to recycle bin?", {
+          message: t("ctx.recycleConfirm", {
             n: ctx.paths.length,
           }),
-          okText: tr("ctx.recycleOkText", "♻️ Recycle"),
+          okText: t("ctx.recycleOkText"),
           danger: true,
         });
         if (!ok2) return;
@@ -238,18 +237,15 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
         }
         if (fail > 0) {
           toast(
-            tr("ctx.recycleFailN", "❌ Failed to recycle {fail} files: {err}", {
+            t("ctx.recycleFailN", {
               fail,
-              err: friendlyError(lastErr, tr("ctx.moveFail", "Move failed")),
+              err: friendlyError(lastErr, t("ctx.moveFail")),
             }),
             TOAST_MS.long,
             "error",
           );
         } else {
-          toast(
-            tr("ctx.recycleOkN", "✅ Moved {n} files to recycle bin", { n: ctx.paths.length }),
-            TOAST_MS.normal,
-          );
+          toast(t("ctx.recycleOkN", { n: ctx.paths.length }), TOAST_MS.normal);
         }
         refreshUI();
       } catch (e) {
@@ -272,10 +268,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
         .filter(Boolean)
         .join("\n");
       downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
-      toast(
-        tr("ctx.exportListOk", "✅ Exported {n} file names", { n: ctx.paths.length }),
-        TOAST_MS.success,
-      );
+      toast(t("ctx.exportListOk", { n: ctx.paths.length }), TOAST_MS.success);
     },
   } satisfies Record<MenuAction, (ctx: MenuCtx) => void>;
 

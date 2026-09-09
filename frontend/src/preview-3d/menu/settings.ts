@@ -11,7 +11,7 @@
 //     （后处理/环境）基座级，不再复制进设置页画质分组——设置页只留渲染模式类开关。
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
-import { trDynamic } from "@/core/i18n/tr.ts";
+import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
@@ -184,7 +184,7 @@ export function buildCrossCuttingControls(): PreviewControlDef[] {
       fallback: "帧率上限",
       select: FPS_OPTIONS.map((o) => ({
         value: o.value,
-        label: trDynamic(o.labelKey, o.fallback),
+        label: tOf(o.labelKey),
       })),
       getValue: () => String(getStateValue("render.maxFps")),
       setValue: (v) => setStateValue("render.maxFps", v),
@@ -275,7 +275,7 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
     control: {
       options: LEVELS.map((lv) => ({
         value: lv.value,
-        label: trDynamic(lv.labelKey, lv.fallback),
+        label: tOf(lv.labelKey),
       })),
       get: (): unknown => getPerfPreset(),
       set: (v): void => {

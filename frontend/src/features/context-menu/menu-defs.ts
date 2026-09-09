@@ -5,7 +5,7 @@
 // 节点级 `visibleWhen` 谓词吃 ctx 快照（与 AGENTS.md「3d菜单只允许 visibleWhen」
 // 的精神面一致），实现右键菜单与3D 菜单的声明式语义统一；未定义时行为不变。
 import type { CtxShowPayload } from "@/bus";
-import { tr } from "@/core/i18n/tr.ts";
+import { t } from "@/core/i18n/t.ts";
 
 /** 菜单项声明：结构（label/icon/danger/divider）+ 行为标识（action）+ 节点级显隐守卫 */
 interface MenuItemDef {
@@ -14,7 +14,7 @@ interface MenuItemDef {
   /**
    * 静态文案或按 ctx 动态生成（如标题项）；divider 项省略。
    * 2026-XX 收紧：原 `string | ((ctx) => string)` 的 string 分支已无消费者
-   * （所有声明均函数式：`() => tr(<key>, "Fallback")` 或 `(ctx) => 动态`），
+   * （所有声明均函数式：`() => t(<key>)` 或 `(ctx) => 动态`），
    * 收紧为纯函数式让「label 必须经 i18n 或 ctx 动态生成」成为类型级约束。
    */
   label?: (ctx: CtxShowPayload) => string;
@@ -85,19 +85,19 @@ export const MENU_DEFS: MenuDef[] = [
       { divider: true },
       {
         action: "instance.open-folder",
-        label: () => tr("menu.openFolder", "Open Folder"),
+        label: () => t("menu.openFolder"),
         icon: "📂",
       },
       { divider: true },
       {
         action: "instance.export-list",
-        label: () => tr("menu.copyModelList", "Copy Model List"),
+        label: () => t("menu.copyModelList"),
         icon: "📄",
       },
       { divider: true },
       {
         action: "instance.clear",
-        label: () => tr("menu.clearPack", "Clear Pack"),
+        label: () => t("menu.clearPack"),
         icon: "🗑️",
         danger: true,
       },
@@ -108,25 +108,24 @@ export const MENU_DEFS: MenuDef[] = [
     items: [
       {
         action: "noop",
-        label: (ctx) =>
-          tr("menu.batchSelected", "Selected {count} files", { count: ctx.count || 0 }),
+        label: (ctx) => t("menu.batchSelected", { count: ctx.count || 0 }),
       },
       { divider: true },
-      { action: "batch.rename", label: () => tr("menu.batchRename", "Batch Rename"), icon: "✂️" },
-      { action: "batch.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
-      { action: "batch.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },
+      { action: "batch.rename", label: () => t("menu.batchRename"), icon: "✂️" },
+      { action: "batch.move", label: () => t("menu.moveTo"), icon: "📂" },
+      { action: "batch.copy", label: () => t("menu.copyTo"), icon: "📋" },
       { divider: true },
       {
         action: "batch.recycle",
-        label: () => tr("menu.recycle", "Recycle"),
+        label: () => t("menu.recycle"),
         icon: "♻️",
         danger: true,
       },
       { divider: true },
-      { action: "batch.copy-paths", label: () => tr("menu.copyPaths", "Copy Paths"), icon: "📋" },
+      { action: "batch.copy-paths", label: () => t("menu.copyPaths"), icon: "📋" },
       {
         action: "batch.export-list",
-        label: () => tr("menu.exportList", "Export List"),
+        label: () => t("menu.exportList"),
         icon: "📄",
       },
     ],
@@ -138,35 +137,35 @@ export const MENU_DEFS: MenuDef[] = [
       // visibleWhen 首个真实消费者：菜单层直接不给出死动作，替代 handler 内 toast 教育
       {
         action: "file.rename",
-        label: () => tr("menu.rename", "Rename"),
+        label: () => t("menu.rename"),
         icon: "✂️",
         visibleWhen: (ctx) => (ctx.path || "").split(/[/\\]/).pop()?.toLowerCase() !== "ysm.json",
       },
-      { action: "file.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
-      { action: "file.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },
+      { action: "file.move", label: () => t("menu.moveTo"), icon: "📂" },
+      { action: "file.copy", label: () => t("menu.copyTo"), icon: "📋" },
       {
         action: "file.push-to-pack",
-        label: () => tr("menu.pushToPack", "Push to Pack"),
+        label: () => t("menu.pushToPack"),
         icon: "📦",
       },
       { divider: true },
-      { action: "file.edit-tags", label: () => tr("menu.editTags", "Edit Tags"), icon: "🏷️" },
+      { action: "file.edit-tags", label: () => t("menu.editTags"), icon: "🏷️" },
       { divider: true },
       {
         action: "file.recycle",
-        label: () => tr("menu.recycle", "Recycle"),
+        label: () => t("menu.recycle"),
         icon: "♻️",
         danger: true,
       },
       {
         action: "file.reveal",
-        label: () => tr("menu.openFileLocation", "Open File Location"),
+        label: () => t("menu.openFileLocation"),
         icon: "📂",
       },
       { divider: true },
       {
         action: "file.copy-path",
-        label: () => tr("menu.copyFilePath", "Copy File Path"),
+        label: () => t("menu.copyFilePath"),
         icon: "📋",
       },
     ],
@@ -174,21 +173,21 @@ export const MENU_DEFS: MenuDef[] = [
   {
     type: "dir",
     items: [
-      { action: "dir.rename", label: () => tr("menu.rename", "Rename"), icon: "✂️" },
+      { action: "dir.rename", label: () => t("menu.rename"), icon: "✂️" },
       {
         action: "dir.batch-rename",
-        label: () => tr("menu.batchRename", "Batch Rename"),
+        label: () => t("menu.batchRename"),
         icon: "📝",
       },
       { divider: true },
-      { action: "dir.move", label: () => tr("menu.moveTo", "Move To"), icon: "📂" },
-      { action: "dir.copy", label: () => tr("menu.copyTo", "Copy To"), icon: "📋" },
+      { action: "dir.move", label: () => t("menu.moveTo"), icon: "📂" },
+      { action: "dir.copy", label: () => t("menu.copyTo"), icon: "📋" },
       { divider: true },
-      { action: "dir.mkdir", label: () => tr("menu.newSubfolder", "New Subfolder"), icon: "🗂" },
+      { action: "dir.mkdir", label: () => t("menu.newSubfolder"), icon: "🗂" },
       { divider: true },
       {
         action: "dir.recycle",
-        label: () => tr("menu.recycle", "Recycle"),
+        label: () => t("menu.recycle"),
         icon: "♻️",
         danger: true,
       },

@@ -7,7 +7,10 @@
 // 缺失键语义一致（返回 key 本身 + warnMissingKey 单次告警），tr/trDynamic 共用 tOf。
 
 import type { zhCN } from "@/locales/zh-CN.ts";
-import { getBundle, warnMissingKey } from "./locale.ts";
+import { getBundle, getLang, warnMissingKey } from "./locale.ts";
+
+/** 默认语言（缺失键兜底用） */
+const DEFAULT_LANG = "en";
 
 /** 全部合法 i18n key（扁平化命名空间 key，如 "nav.repository"） */
 export type LocaleKey = keyof typeof zhCN;
@@ -58,16 +61,22 @@ export function t(key: LocaleKey, params?: LocaleParams): string {
 }
 
 /**
- * string 版 t（动态 key 入口）：缺失键语义与 t 同构（返回 key 本身 + 单次告警）——
- * 「v === key 即缺失」判定单一事实源，tr / trDynamic 共用（ADR-207 D3）。
+ * string 版 t（动态 key 入口）：多级回退链 current → en → 裸 key + 单次告警。
+ * 缺失键先回退到默认语言（en），再无则返回裸 key（warnMissingKey 告警）。
+ * tr / trDynamic 共用（ADR-207 D3），现已内置回退，tr() 标记 deprecated。
  */
 export function tOf(key: string, params?: LocaleParams): string {
+  // 1. 当前 locale
   const bundle = getBundle();
   const text = bundle[key];
-  if (text === undefined) {
-    warnMissingKey(key);
-    return key;
+  if (text !== undefined) return interpolate(text, params, key);
+  // 2. 默认 locale（en）兜底
+  if (getLang() !== DEFAULT_LANG) {
+    const fallback = getBundle(DEFAULT_LANG);
+    const fallbackText = fallback[key];
+    if (fallbackText !== undefined) return interpolate(fallbackText, params, key);
   }
-  // 一律经 interpolate：残留占位符守卫须覆盖「模板有 {n} 而 params 缺省」这一最需告警的场景
-  return interpolate(text, params, key);
+  // 3. 裸 key + warn
+  warnMissingKey(key);
+  return key;
 }

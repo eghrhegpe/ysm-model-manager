@@ -13,8 +13,9 @@ vi.unmock("../../core/i18n/t.ts");
 vi.resetModules();
 const { t, tOf } = await import("./t.ts");
 
-const { getBundle, warnMissingKey } = vi.hoisted(() => ({
+const { getBundle, getLang, warnMissingKey } = vi.hoisted(() => ({
   getBundle: vi.fn(),
+  getLang: vi.fn(),
   warnMissingKey: vi.fn(),
 }));
 
@@ -23,6 +24,7 @@ vi.mock("@/core/i18n/locale.ts", async () => {
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
     getBundle, // 覆盖为 mock（控制翻译表）
+    getLang, // 覆盖为 mock（控制当前语言）
     warnMissingKey, // 覆盖为 mock（缺失告警节流本身由 locale.test.ts 覆盖）
   };
 });
@@ -87,5 +89,52 @@ describe("t()", () => {
 
   it("SUPPORTED_LANGS 包含 zh-CN、en 与 ja", () => {
     expect(SUPPORTED_LANGS.map((l) => l.code)).toEqual(["zh-CN", "en", "ja"]);
+  });
+});
+
+describe("tOf() — 多级回退 current → en → key", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getLang.mockReturnValue("zh-CN");
+  });
+
+  it("当前 locale 命中 → 返回当前翻译，不查 en", () => {
+    getBundle.mockImplementation((lang?: string) => {
+      if (lang === "en") return { "ctx.busyWait": "Operation in progress" };
+      return { "ctx.busyWait": "操作进行中" };
+    });
+    expect(tOf("ctx.busyWait")).toBe("操作进行中");
+  });
+
+  it("当前 locale 缺失 → 回退到 en", () => {
+    getBundle.mockImplementation((lang?: string) => {
+      if (lang === "en") return { "ctx.busyWait": "Operation in progress" };
+      return {}; // zh-CN 缺失
+    });
+    expect(tOf("ctx.busyWait")).toBe("Operation in progress");
+  });
+
+  it("当前 locale + en 都缺失 → 返回裸 key + warn", () => {
+    getBundle.mockReturnValue({});
+    expect(tOf("ctx.missing")).toBe("ctx.missing");
+    expect(warnMissingKey).toHaveBeenCalledWith("ctx.missing");
+  });
+
+  it("当前 locale 就是 en → 不再回退（避免死循环）", () => {
+    getLang.mockReturnValue("en");
+    // getBundle() 无参 = 当前 locale → en 包（缺失）
+    // getBundle("en") 显式 = en 包（同样缺失）
+    getBundle.mockReturnValue({});
+    // 当前是 en，en 缺失 → 直接返回裸 key，不再回退 zh-CN
+    expect(tOf("ctx.busyWait")).toBe("ctx.busyWait");
+    expect(warnMissingKey).toHaveBeenCalledWith("ctx.busyWait");
+  });
+
+  it("en 回退 + 插值参数", () => {
+    getBundle.mockImplementation((lang?: string) => {
+      if (lang === "en") return { "ctx.moveOk": "Moved to {folder}" };
+      return {}; // zh-CN 缺失
+    });
+    expect(tOf("ctx.moveOk", { folder: "目标" })).toBe("Moved to 目标");
   });
 });

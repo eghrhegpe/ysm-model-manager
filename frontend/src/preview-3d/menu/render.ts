@@ -6,7 +6,7 @@
 //  - visibleWhen → 条件守卫（返回 false 不渲染）
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
-import { tr, trDynamic } from "@/core/i18n/tr.ts";
+import { t, tOf } from "@/core/i18n/t.ts";
 import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import {
@@ -28,7 +28,7 @@ import {
 import { MENU_DIVIDER_CSS, MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
-// i18n 取值统一走共享 tr()（core/i18n/tr.ts，支持缺失键兜底 + params 插值）
+// i18n 取值统一走共享 t()（core/i18n/t.ts，内置 current → en → key 多级回退）
 
 /**
  * 幂等注入 renderMenu 用的 CSS 类规则（仅注入一次，重复调用 no-op）。
@@ -126,13 +126,9 @@ interface RenderMenuDeps {
   renderCustomDirect?: boolean;
 }
 
-/** 统一 label 取值：labelKey→trDynamic(fallback)；无 labelKey 直接用 node.id（labelKey 为数据字段 string，ADR-207 D3） */
+/** 统一 label 取值：labelKey→tOf；无 labelKey 直接用 node.id（labelKey 为数据字段 string，ADR-207 D3） */
 function rmLabel(node: PreviewMenuNode, valueOverride?: unknown): string {
-  if (node.labelKey)
-    return trDynamic(
-      node.labelKey,
-      node.fallback ?? (valueOverride !== undefined ? String(valueOverride) : node.id),
-    );
+  if (node.labelKey) return tOf(node.labelKey);
   return valueOverride !== undefined ? String(valueOverride) : node.id;
 }
 
@@ -234,8 +230,8 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
   row.dataset.testid = `preview-${node.id}`;
   const k = document.createElement("span");
   k.className = "field-label";
-  k.textContent = node.labelKey ? trDynamic(node.labelKey, node.id) : node.id;
-  const displayed = node.value ?? (node.labelKey ? trDynamic(node.labelKey, node.id) : node.id);
+  k.textContent = node.labelKey ? tOf(node.labelKey) : node.id;
+  const displayed = node.value ?? (node.labelKey ? tOf(node.labelKey) : node.id);
   const v = document.createElement("span");
   v.className = "field-value";
   v.textContent = String(displayed);
@@ -435,7 +431,7 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   eye.className = "rm-eye";
   const eyeApply = (v: boolean): void => {
     eye.textContent = v ? "👁" : "🚫";
-    eye.title = v ? tr("preview.eyeHide", "Hide") : tr("preview.eyeShow", "Show");
+    eye.title = v ? t("preview.eyeHide") : t("preview.eyeShow");
   };
   const toggleEye = (): void => {
     const next = !node.eye?.get();

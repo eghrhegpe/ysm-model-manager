@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { createYsmAnimPlayer } from "./ysm-animation-player.ts";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
-import { compileMolang, createMolangParser } from "@/utils/animation/molang.ts";
+import { createMolangParser } from "@/utils/animation/molang.ts";
 import type { AnimationController } from "@/utils/animation/animation-controller.ts";
 
 function makeClip(length = 2.0, boneName = "root"): AnimationClip {
@@ -420,7 +420,7 @@ describe("createYsmAnimPlayer", () => {
           animations: ["idle"],
           onExit: [],
           transitions: [
-            { target: "run", condition: compileMolang("query.anim_time >= 0.5"), raw: "query.anim_time >= 0.5", unconditional: false },
+            { target: "run", condition: createMolangParser().compileMolang("query.anim_time >= 0.5"), raw: "query.anim_time >= 0.5", unconditional: false },
           ],
           blendTransition: 0.2,
         }],

@@ -13,16 +13,12 @@ import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
 import * as log from "@/utils/base/primitives/log.ts";
 
 // 可控 compileMolang mock：默认透传真实实现，测试中可置失败标记
+// ADR-213：模块级 compileMolang 已移除，mock 仅覆盖 createMolangParser 工厂
 let _failExpr: string | null = null;
 vi.mock("./molang.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./molang.ts")>();
   return {
     ...actual,
-    compileMolang: (expr: string, scope?: Record<string, number> | null) => {
-      if (_failExpr !== null && expr === _failExpr) return null;
-      return actual.compileMolang(expr, scope);
-    },
-    // ADR-211：parseClipTimeline 改用工厂实例的 compileMolang，mock 需覆盖
     createMolangParser: () => {
       const real = actual.createMolangParser();
       return {

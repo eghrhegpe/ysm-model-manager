@@ -1,16 +1,13 @@
 // ===== web-fs Bedrock 预览 fallback 链（ADR-040 拆分延续，自 web-fs.ts #5 拆出）=====
 // FindPreviewImage / ExtractPreviewTexture / AnalyzeBedrockModel / AnalyzeBedrockModelEntry
 // 的 web 实现：.zip 读 IDB → 解包 → 找 geometry JSON → 复用前端解析器
-// （parseBedrockGeometryFromJSON / parseYsmJsonDirect，preview-3d/decoder）；.json 扫模型组文件。
+// （parseBedrockGeometryFromJSON / parseYsmJsonDirect，已下沉 @/parsers）；.json 扫模型组文件。
 // 共享读取装配与路径反解（readWebFile / readWebZipEntries / listWebModelDirFiles）来自
 // web-fs-read.ts 叶子——断对 web-fs.ts 主文件的循环依赖。
 
+import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "@/parsers/bedrock-geometry.ts";
 import { extractZip } from "@/parsers/extract.ts";
-import {
-  type BedrockGeometry,
-  parseBedrockGeometryFromJSON,
-} from "@/preview-3d/decoder/geometry.ts";
-import { parseYsmJsonDirect } from "@/preview-3d/decoder/parse-ysm-json.ts";
+import { parseYsmJsonDirect } from "@/parsers/ysm-json.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { listWebModelDirFiles, readWebFile } from "./web-fs-read.ts";

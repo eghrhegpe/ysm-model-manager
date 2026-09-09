@@ -14,20 +14,18 @@
 // 暴露 isWebPlatform() 作为 web-only 语义的统一入口，19 处按需渐进迁移。
 
 import { browserAdapter } from "./browser-adapter.ts";
-import { getAndroidBridge, isWebEntryMode, readDeclaredBackend } from "./platform.ts";
+import type { PlatformMode } from "./platform.ts";
+import { resolveTier } from "./platform.ts";
 
-export type PlatformMode = "desktop" | "web" | "android";
+export type { PlatformMode };
 
 /**
  * 当前平台三态判定（同步）。Tier 0/1 复用 resolveWebMode 语义（tier 语义与 platform.ts 同源），
  * Tier 2 追加 Android 桥探测。
  */
 export function resolvePlatformMode(): PlatformMode {
-  const declared = readDeclaredBackend();
-  if (declared !== undefined) return declared === "browser" ? "web" : "desktop";
-  if (isWebEntryMode()) return "web";
-  // Tier 2（未实现 await 异步探测）：仅认 Android Java 桥的存在性
-  return getAndroidBridge() !== null ? "android" : "desktop";
+  // ADR-217 收敛：委托 platform.ts 的单一 resolveTier，消除 Tier 拼装重复
+  return resolveTier();
 }
 
 /** Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 backend 层 */

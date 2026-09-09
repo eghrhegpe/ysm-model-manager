@@ -44,14 +44,25 @@ export function isWebEntryMode(): boolean {
   return import.meta.env.MODE === "web";
 }
 
-/** 同步判定：当前是否应路由到 browser adapter（网页版）——薄委派，复用三态源（tier 语义由 platform-web 统一承载） */
-export function resolveWebMode(): boolean {
-  // 复用 Tier 0/1 语义：`mode === "web"` 与此谓词由 platform-parity 契约钉等价
-  // 避免在两个文件中各自拼装 `readDeclaredBackend()/isWebEntryMode()` 双实现漂移
-  // 不可直接 import platform-web（会成环：platform-web → platform），保留直读原语
+/** 平台三态（与 platform-web.ts 的 PlatformMode 同源；类型定义在叶子层避免环） */
+export type PlatformMode = "desktop" | "web" | "android";
+
+/**
+ * 平台 Tier 单一组合（ADR-217 收敛）：Tier 0 入口声明 > Tier 1 构建模式 > Tier 2 Android 桥探测。
+ * 所有平台谓词（resolveWebMode / isViewerPlatform / resolvePlatformMode）均从此派生，
+ * 消除三处重复拼装（原由 platform-parity 对拍守护双源漂移）。
+ */
+export function resolveTier(): PlatformMode {
   const declared = readDeclaredBackend();
-  if (declared !== undefined) return declared === "browser";
-  return isWebEntryMode();
+  if (declared === "browser") return "web";
+  if (declared === "go") return "desktop";
+  if (isWebEntryMode()) return "web";
+  return getAndroidBridge() !== null ? "android" : "desktop";
+}
+
+/** 同步判定：当前是否应路由到 browser adapter（网页版）——委托 resolveTier */
+export function resolveWebMode(): boolean {
+  return resolveTier() === "web";
 }
 
 // ── Android 桥与返回键（ADR-203 D2：从 utils/dom/android-bridge.ts 合并入此）──
@@ -66,11 +77,9 @@ export function resolveWebMode(): boolean {
  * platform-web 原 resolvePlatformMode() !== "desktop"）。
  */
 export function isViewerPlatform(): boolean {
-  // 内联实现（避免环：platform.ts ← platform-web.ts → platform.ts）
-  const declared = readDeclaredBackend();
-  if (declared !== undefined) return declared === "browser";
-  if (isWebEntryMode()) return true;
-  return getAndroidBridge() !== null;
+  // 委托 resolveTier（ADR-217 收敛）：viewer = web ∪ android
+  const t = resolveTier();
+  return t === "web" || t === "android";
 }
 
 /** 别名：保持既有消费方命名兼容 */

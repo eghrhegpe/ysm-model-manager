@@ -9,9 +9,9 @@ import {
   asLongArray,
   finalizeVoxelData,
   groupVoxelStream,
-  MAX_COORD,
+  INT16_MAX,
+  INT16_MIN,
   MAX_REGION_AXIS,
-  MIN_COORD,
   paletteToColors,
 } from "./voxel-pipeline.ts";
 
@@ -75,12 +75,12 @@ function buildRegionInfo(region: Record<string, unknown>): {
     return { info: null, err: `region Size 超出合理范围: ${sx}×${sy}×${sz}` };
   }
   if (
-    ox < MIN_COORD ||
-    ox + sx - 1 > MAX_COORD ||
-    oy < MIN_COORD ||
-    oy + sy - 1 > MAX_COORD ||
-    oz < MIN_COORD ||
-    oz + sz - 1 > MAX_COORD
+    ox < INT16_MIN ||
+    ox + sx - 1 > INT16_MAX ||
+    oy < INT16_MIN ||
+    oy + sy - 1 > INT16_MAX ||
+    oz < INT16_MIN ||
+    oz + sz - 1 > INT16_MAX
   ) {
     return {
       info: null,
@@ -168,9 +168,10 @@ export function litematicVoxelView(
       const totalInRegion = info.sizeX * info.sizeY * info.sizeZ;
       for (; i < totalInRegion; ) {
         const paletteIdx = extractBits(info.longs, i * info.bpe, info.bpe);
-        if (paletteIdx < 0 || paletteIdx >= info.palette.length || paletteIdx === 0) {
+        // extractBits 恒 ≥0：越界判定只需上界；paletteIdx === 0 → air（首条目约定）
+        if (paletteIdx >= info.palette.length || paletteIdx === 0) {
           i++;
-          continue; // air or invalid
+          continue; // air or out-of-bounds
         }
         // Minecraft 存储顺序 X→Z→Y（Y 最慢）：i = x + z*sizeX + y*sizeX*sizeZ
         const gx = info.originX + (i % info.sizeX);

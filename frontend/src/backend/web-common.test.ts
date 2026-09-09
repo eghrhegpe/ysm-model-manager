@@ -1,5 +1,6 @@
 // @vitest-environment node
-// ===== web-common.ts 测试（补盲区：路径解析 / 编码原语）=====
+// ===== web-common.ts 测试（补盲区：路径解析；base64 原语随实现下沉
+// utils/base/base64.ts，测试迁 utils/base/base64.test.ts，ADR-170 二段收口 2026-09）=====
 // 纯函数无 IO；isWebPath / parseWebPath / parseWebDirPath / webDirType 是
 // web-fs 全链路的路径语义单点（web-common.ts:18-49），锁定防回归。
 import { describe, it, expect } from "vitest";
@@ -8,8 +9,6 @@ import {
   parseWebPath,
   parseWebDirPath,
   webDirType,
-  arrayBufferToBase64,
-  base64ToBytes,
   WEB_ROOT,
   MAX_IMPORT_BYTES,
 } from "./web-common.ts";
@@ -65,34 +64,6 @@ describe("webDirType", () => {
   });
   it("非 /web 前缀 → null", () => {
     expect(webDirType("ysm/狐狸.ysm")).toBeNull();
-  });
-});
-
-describe("arrayBufferToBase64 / base64ToBytes 往返", () => {
-  it("二进制往返无损（含非 ASCII 字节）", () => {
-    const bytes = new Uint8Array([0, 1, 2, 255, 128, 65, 66]);
-    const b64 = arrayBufferToBase64(bytes.buffer as ArrayBuffer);
-    const back = base64ToBytes(b64);
-    expect(back).not.toBeNull();
-    expect(Array.from(back!)).toEqual(Array.from(bytes));
-  });
-
-  it("空 buffer 往返", () => {
-    const b64 = arrayBufferToBase64(new Uint8Array(0).buffer as ArrayBuffer);
-    expect(base64ToBytes(b64)).toEqual(new Uint8Array(0));
-  });
-
-  it("大 buffer 分块不炸（> 0x8000 chunk）", () => {
-    const bytes = new Uint8Array(200_000).map((_, i) => i % 256);
-    const b64 = arrayBufferToBase64(bytes.buffer as ArrayBuffer);
-    const back = base64ToBytes(b64);
-    expect(back).not.toBeNull();
-    expect(back!.length).toBe(200_000);
-    expect(back![123456]).toBe(bytes[123456]);
-  });
-
-  it("非法 base64 → null", () => {
-    expect(base64ToBytes("!!!not-base64!!!")).toBeNull();
   });
 });
 

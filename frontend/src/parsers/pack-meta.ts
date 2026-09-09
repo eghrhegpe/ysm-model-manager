@@ -8,7 +8,7 @@
 //   ReadShaderpackLang 失败 → {"name":"","entries":{}}
 // 限额对齐 go/packs/mcmeta.go：pack.mcmeta 1MB / pack.png 10MB / lang 1MB。
 
-import { u8ToBase64 } from "@/backend/web-common.ts";
+import { u8ToBase64 } from "@/utils/base/base64.ts";
 
 // 对齐 go/packs/mcmeta.go maxMcmetaSize / maxPackPng / maxLangSize
 const MAX_MCMETA_SIZE = 1 << 20;

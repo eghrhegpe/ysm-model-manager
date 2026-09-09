@@ -77,9 +77,10 @@ export function schematicVoxelView(
       }
       return null;
     }
-    // v1: raw Blocks byte array（blockDataBA=undefined 且 blocksBA≠undefined 才到此路径）
-    const blocks = blocksBA;
-    if (!blocks) return null;
+    // v1: raw Blocks byte array。到此路径时 blocksBA 有值（上方联合守卫 56 行 + v2 条件
+    // 不成立的组合）；「v2 BlockData 在而 Palette 缺」时 blocksBA 可能缺 → 空流，
+    // 与旧实现 return null 同结果（生成器耗尽即止），`?? []` 仅为类型收窄
+    const blocks = blocksBA ?? [];
     for (; i < total && i < blocks.length; ) {
       const blockID = blocks[i];
       i++;

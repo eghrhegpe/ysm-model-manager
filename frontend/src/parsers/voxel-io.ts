@@ -2,7 +2,7 @@
 // 纯函数：输入 b64 字符串，输出解析后的 root 对象；无任何 IO。
 // 装配层（web-fs-read.ts）只负责「读文件 → 调本函数 → 视图」。
 
-import { base64ToBytes } from "@/backend/web-common.ts";
+import { base64ToBytes } from "@/utils/base/base64.ts";
 import { parseNbtRootExact } from "./nbt-parse.ts";
 
 /**

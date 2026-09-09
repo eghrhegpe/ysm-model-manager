@@ -770,16 +770,18 @@ function extractControlTypes(raw: unknown): string[] {
 
 // ===== 工具函数 =====
 
-const _utf8 = new TextDecoder("utf-8");
+const _utf8Strict = new TextDecoder("utf-8", { fatal: true });
 
 /**
- * 字节 → UTF-8 字符串（容错降级：非法字节序列 → 空串 + console.warn）。
+ * 字节 → UTF-8 字符串（容错降级：含非法字节序列 → 空串 + console.warn）。
  * 仅用于二进制扫描路径（头部/zip 降级），JSON 解析路径请用
  * `new TextDecoder("utf-8", { fatal: true }).decode()` 让错误上浮。
+ * 注：非严格 TextDecoder 对非法序列从不抛错（静默 U+FFFD 替换），原「try 非严格
+ * 解码 catch 降级」是死代码——改严格先行 + 降级，降级分支方可达。
  */
 function utf8Decode(bytes: Uint8Array): string {
   try {
-    return _utf8.decode(bytes);
+    return _utf8Strict.decode(bytes);
   } catch {
     console.warn("[ysm-header] UTF-8 解码失败（非法字节序列），降级为空串");
     return "";

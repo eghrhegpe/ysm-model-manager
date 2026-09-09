@@ -31,10 +31,10 @@ export interface RegionInfo {
   bpe: number;
 }
 
-// --- 守卫常量（对齐 voxel.go:249-263 region Size/坐标 int16 表示范围）---
+// --- 守卫常量（对齐 voxel.go region Size/坐标 int16 表示范围）---
 export const MAX_REGION_AXIS = 1 << 21;
-export const MAX_COORD = 32767;
-export const MIN_COORD = -32768;
+// int16 坐标表示范围（单一户口：原 MAX_COORD/MIN_COORD 与 INT16_MAX/INT16_MIN 同值双户口，
+// 2026-09 收敛为 INT16_* 一套，消费方统一用 INT16 名）
 export const INT16_MAX = 32767;
 export const INT16_MIN = -32768;
 

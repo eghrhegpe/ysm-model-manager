@@ -1,5 +1,7 @@
 // @vitest-environment node
 // ===== voxel 数据构建测试（ADR-070 M2）=====
+// 2026-09 更名：原 voxel-parse.test.ts，被测对象 voxel-parse.ts 已拆为
+// voxel-bits（位解码）+ litematic/nbt/schematic-voxel（三视图）+ voxel-io/pipeline
 // 覆盖：readVarInt / extractBits / unpackBlockStates 位解码（期望值对照
 // go/litematic/malformed_test.go TestExtractBits_* / TestReadVarInt_ContinuationOverflow）、
 // 三个 voxelView（构造 gzip NBT，结构对齐 go/litematic/voxel_test.go 的 makeVoxelGz /

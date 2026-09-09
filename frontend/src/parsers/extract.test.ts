@@ -1,7 +1,8 @@
 // @vitest-environment node
 // ===== extract.ts 契约测试 =====
-// 覆盖：detectContainerType / parseZipCentralDir / extractZip / GBK 解码
+// 覆盖：detectContainerType（中央目录口径）/ parseZipCentralDir / extractZip / GBK 解码
 import { describe, it, expect } from "vitest";
+import { zipSync, strToU8 } from "fflate";
 import {
   detectContainerType,
   parseZipCentralDir,
@@ -22,11 +23,14 @@ interface ZipEntryParts {
 function buildZipEntry(
   nameBytes: Uint8Array,
   data: Uint8Array,
-  opts: { utf8?: boolean; uncompressedSize?: number; localHeaderOffset?: number } = {},
+  opts: { utf8?: boolean; uncompressedSize?: number; localHeaderOffset?: number; zeroLfhSizes?: boolean } = {},
 ): ZipEntryParts {
   const gpf = opts.utf8 ? 0x800 : 0;
   const uncompressedSize = opts.uncompressedSize ?? data.length;
   const localHeaderOffset = opts.localHeaderOffset ?? 0;
+  // zeroLfhSizes：模拟 data descriptor 形态（gpf bit 3 设 + LFLH 尺寸字段写 0，真实值只在中央目录）
+  const lfhCompressedSize = opts.zeroLfhSizes ? 0 : data.length;
+  const lfhUncompressedSize = opts.zeroLfhSizes ? 0 : uncompressedSize;
 
   // Local File Header (30 + nameLen + extraLen(0) + dataSize)
   const lfh = new Uint8Array(30);
@@ -37,8 +41,8 @@ function buildZipEntry(
   lfhDv.setUint16(8, 0, true); // compression (STORE)
   lfhDv.setUint16(14, 0, true); // mod time
   lfhDv.setUint16(16, 0, true); // mod date
-  lfhDv.setUint32(18, data.length, true); // compressed size
-  lfhDv.setUint32(22, uncompressedSize, true); // uncompressed size
+  lfhDv.setUint32(18, lfhCompressedSize, true); // compressed size
+  lfhDv.setUint32(22, lfhUncompressedSize, true); // uncompressed size
   lfhDv.setUint16(26, nameBytes.length, true); // name length
   lfhDv.setUint16(28, 0, true); // extra length
 
@@ -188,6 +192,26 @@ describe("detectContainerType", () => {
     ]);
     expect(detectContainerType(zip)).toBe("ysm");
   });
+
+  it("deflate 压缩形态（fflate 默认 level，中央目录带真实尺寸）→ 识别正确", () => {
+    // 中央目录口径对压缩形态无感（LFLH 尺寸字段不参与判定）
+    const zip = zipSync({ "pack.mcmeta": strToU8("{}"), "assets/a.png": strToU8("x") }, { level: 9 });
+    expect(detectContainerType(zip)).toBe("resourcepack");
+  });
+
+  it("data descriptor 形态（LFLH 尺寸字段=0，真实值仅在中央目录）→ 识别正确", () => {
+    // 旧 LFLH 游走实现在此形态下卡死首条 entry（compSize=0 → 跳不过数据区）→ 误判 null；
+    // 中央目录口径不受影响（Go archive/zip 同义）
+    const part = buildZipEntry(new TextEncoder().encode("pack.mcmeta"), new TextEncoder().encode("{}"), {
+      zeroLfhSizes: true,
+    });
+    const eocd = buildEocd({
+      cdeSize: part.cde.length + part.nameBytes.length,
+      cdeOffset: part.lfh.length + part.nameBytes.length + part.data.length,
+    });
+    const zip = assembleZip([part], eocd);
+    expect(detectContainerType(zip)).toBe("resourcepack");
+  });
 });
 
 // --- parseZipCentralDir ---
@@ -236,13 +260,12 @@ describe("parseZipCentralDir", () => {
     expect(metas).toHaveLength(0);
   });
 
-  it("detectContainerType 非 LFH 魔数 → break 终止循环", () => {
-    // 构造含非 LFH 魔数的数据：PK\x03\x04 后跟着垃圾字节，第二次读取时签名不匹配
+  it("detectContainerType 无中央目录（PK\x03\x04 头 + 垃圾字节，无 EOCD）→ null", () => {
+    // 中央目录口径：EOCD 扫描失败 → parseZipCentralDir 返回 [] → 无指纹 → null
+    // （旧 LFLH 游走在此数据上也是首条 entry 越界 break → null，行为一致）
     const data = new Uint8Array(60);
     data[0] = 0x50; data[1] = 0x4b; data[2] = 0x03; data[3] = 0x04;
-    // local file header 需要 30 字节 + 文件名，这里故意不填全，第 4 字节后直接垃圾
     for (let i = 4; i < 60; i++) data[i] = 0xff;
-    // 第一个 LFH 签名有效，读取 nameLen(0xff00) 后发现 nameStart+nameLen 超出范围 → break
     expect(detectContainerType(data)).toBeNull();
   });
 
@@ -342,6 +365,24 @@ describe("extractZip", () => {
     dv.setUint32(16, 0xFFFFFFFF, true);
     const result = parseZipCentralDir(eocd);
     expect(result).toHaveLength(0);
+  });
+
+  it("单 entry 超限 → 静默跳过但记入 dropped（entries/metas 缺口有信号，不再裸吞）", () => {
+    // 中央目录 uncompressedSize 谎报 200MB（> MAX_ZIP_FILE_BYTES 100MB，≤ 总量 512MB 不触发总量 throw）
+    // → unzipSync filter 丢弃该 entry，dropped 记录 fflateKey
+    const nameBytes = new TextEncoder().encode("big.bin");
+    const data = new Uint8Array([0x01]);
+    const fakeSize = 200 * 1024 * 1024;
+    const zip = buildZipWithNameBytes(nameBytes, data, { uncompressedSize: fakeSize });
+    const result = extractZip(zip);
+    expect(Object.keys(result.entries)).toHaveLength(0);
+    expect(result.dropped).toEqual(["big.bin"]);
+    expect(result.metas).toHaveLength(1);
+  });
+
+  it("正常 zip → dropped 恒空", () => {
+    const zip = buildMinimalZip("ysm.json", new Uint8Array([0x7b, 0x7d]));
+    expect(extractZip(zip).dropped).toEqual([]);
   });
 
   it("ZIP 炸弹防护：条目数超限（构造 10001 个 entry 的合法 ZIP）", () => {

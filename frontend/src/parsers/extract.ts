@@ -4,9 +4,10 @@
 //   1. parseZipCentralDir — 预解析 ZIP 中央目录，算出每个 entry 的 fflateKey（对齐 unzipSync 返回的 key）
 //      与 gpf bit 11 状态。中文 Windows GBK 文件名（gpf 未设）经 fflate Latin-1 解码后乱码，
 //      本函数提供 fflateKey → 原始字节 的反查，供调用方做 GBK 解码回真名。
-//   2. extractZip — unzipSync 全量解压 + ZIP 炸弹防护（条目数/总大小上限）
-//   3. detectContainerType — 扫描 ZIP local file header 文件名段（不解压数据）识别资源类型
-//      （Go DetectContainerType 的 TS 平移，go/importer/importer_file.go:122-151）
+//   2. extractZip — unzipSync 全量解压 + ZIP 炸弹防护（条目数/总大小上限，超限 entry 记入 dropped）
+//   3. detectContainerType — 按中央目录条目名识别资源类型（不解压数据；
+//      与 Go DetectContainerType 同走中央目录口径——Go 侧明令不手写 local-header 游走，
+//      data descriptor / zip64 / 加密特性会错位漏条目；原 TS LFLH 游走 2026-09 退役）
 //
 // 安全护栏：
 //   - MAX_ZIP_ENTRIES: 10000（防 zip bomb 条目膨胀）
@@ -19,7 +20,6 @@ import { matchZipEntryTS, type RESOURCE_TYPES } from "@/utils/resource/types.ts"
 // --- ZIP 格式常量 ---
 const EOCD_SIG = 0x06054b50; // End of Central Directory
 const CDE_SIG = 0x02014b50; // Central Directory Entry
-const LFLH_SIG = 0x04034b50; // Local File Header
 
 // --- ZIP 炸弹防护阈值 ---
 const MAX_ZIP_ENTRIES = 10_000;
@@ -51,6 +51,9 @@ export interface ExtractResult {
   metas: ZipEntryMeta[];
   /** 所有 entry 中 gpf bit 11 均设了 → 无需 GBK 回退 */
   allUtf8: boolean;
+  /** 因单 entry 超限（originalSize > MAX_ZIP_FILE_BYTES）被跳过的 fflateKey 清单。
+   *  非空时 entries 与 metas 条数对不上（metas 为全量中央目录），消费方据此识别缺口 */
+  dropped: string[];
 }
 
 /** detectContainerType 返回值 */
@@ -159,62 +162,45 @@ export function extractZip(data: Uint8Array): ExtractResult {
   }
 
   // unzipSync 解压（fflate ~8KB，同步 API，3-5x 快于 JSZip）
-  const rawEntries = unzipSync(data, {
+  const dropped: string[] = [];
+  const entries = unzipSync(data, {
     filter(file) {
-      // 跳过超大文件（ZIP 炸弹：单个 entry 膨胀）
-      return file.originalSize <= MAX_ZIP_FILE_BYTES;
+      // 跳过超大文件（ZIP 炸弹：单个 entry 膨胀）；记入 dropped 供消费方识别 entries/metas 缺口
+      if (file.originalSize > MAX_ZIP_FILE_BYTES) {
+        dropped.push(file.name);
+        return false;
+      }
+      return true;
     },
   });
 
-  // 组装 entries（unzipSync 返回 {path: Uint8Array}）
-  const entries: Record<string, Uint8Array> = {};
-  for (const key of Object.keys(rawEntries)) {
-    entries[key] = rawEntries[key];
-  }
-
   const allUtf8 = metas.length > 0 && metas.every((m) => m.gpfUtf8);
 
-  return { entries, metas, allUtf8 };
+  return { entries, metas, allUtf8, dropped };
 }
 
 /**
- * detectContainerType：扫描 ZIP local file header 文件名段（不解压数据），
- * 识别资源类型。Go DetectContainerType 的 1:1 TS 平移
- * （go/importer/importer_file.go:122-151）。
- * 只读 local file header 区（每 entry 约 30+nameLen 字节），
- * 不读压缩数据，O(n) 遍历 local headers 即可。
+ * detectContainerType：按 ZIP 中央目录条目名识别资源类型（不解压数据）。
+ * 与 Go DetectContainerType 同走中央目录口径（go/importer/importer_file.go
+ * DetectContainerType → container.OpenZipBytes + packs.DetectByEntries）——
+ * Go 侧明令「不手写 local-header 游走」（data descriptor / zip64 / 加密特性
+ * 会错位漏条目），原 TS LFLH 游走实现 2026-09 退役，统一复用 parseZipCentralDir：
+ * 只读中央目录区（每 entry 46+nameLen 字节），不读压缩数据，O(n) 即可。
+ * 条目名匹配走原始字节 + ASCII 大小写折叠（GBK/UTF-8 字节序不变，指纹匹配一致）。
  *
  * 消费方：web-fs.ts DetectResourceType（歧义 .zip/.7z 容器路由到内容指纹）——
  * 与 Go DetectResourceType/zipEntries 同语义（pack.mcmeta/shaders/ysm.json/类型后缀）。
  */
 export function detectContainerType(data: Uint8Array): ZipType {
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  let idx = 0;
-  while (idx + 30 <= data.length) {
-    // Local File Header 魔数 PK\x03\x04
-    if (dv.getUint32(idx, true) !== LFLH_SIG) {
-      break;
-    }
+  for (const meta of parseZipCentralDir(data)) {
+    // 原始文件名字节按 Latin-1 折叠（大小写折叠仅影响 ASCII，GBK/UTF-8 字节原样保留）
+    const nameLow = decodeLatin1(meta.nameBytes, true);
 
-    const nameLen = dv.getUint16(idx + 26, true);
-    const extraLen = dv.getUint16(idx + 28, true);
-    const nameStart = idx + 30;
-    if (nameStart + nameLen > data.length) {
-      break;
-    }
-
-    // 读文件名字节（按 Latin-1 处理，大小写折叠仅影响 ASCII）
-    const nameLow = decodeLatin1(data.subarray(nameStart, nameStart + nameLen), true);
-
-    // ADR-082 S4：注册表驱动指纹（matchZipEntryTS，与 Go types.MatchZipEntry 同构——
+    // ADR-082 S4：注册表驱动指纹（matchZipEntryTS，与 Go packs.DetectByEntries 同构——
     // 任意层级段后缀语义，pack.mcmeta/shaders/ysm.json/类型后缀命中任意层级，
     // 新增类型只改 resource_types.json）。原硬编码 if 链删除防前后端漂移。
     const rtype = matchZipEntryTS(nameLow);
     if (rtype) return rtype as ZipType;
-
-    // 跳到下一个 entry（跳过压缩数据）
-    const compSize = dv.getUint32(idx + 18, true);
-    idx += 30 + nameLen + extraLen + compSize;
   }
   return null; // 无特征返回 null（识别不出就是识别不出，不假装 YSM，与 Go DetectContainerType 对齐）
 }

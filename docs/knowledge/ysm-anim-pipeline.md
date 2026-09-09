@@ -20,7 +20,6 @@ auto_fields:
     - evaluateClip
     - evaluateKeyframes
     - executeTimeline
-    - foldMolangConstant
     - getMolangParser
     - Keyframe
     - makeYsmAdapter

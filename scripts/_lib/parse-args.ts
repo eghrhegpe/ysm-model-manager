@@ -88,7 +88,10 @@ export function parseArgs(
         (result[name] as string[]).push(inline);
         continue;
       }
-      while (i + 1 < argv.length && !argv[i + 1]?.startsWith("--")) {
+      // 截断条件 = 任意 `-` 前缀（对齐迁移前 commit-with-check 手写解析的旧契约）：
+      // 只截 `--` 会把单横杠 flag（`--files a -m msg` 的 `-m`/`msg`）吞进数组，
+      // -m 兼容 shim 取不到值 → 合法调用回归成 usage error（code_review P1）
+      while (i + 1 < argv.length && !argv[i + 1]?.startsWith("-")) {
         (result[name] as string[]).push(argv[++i]!);
       }
     } else if (isString) {

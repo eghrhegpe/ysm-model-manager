@@ -18,7 +18,6 @@ auto_fields:
     - extBelongsTo
     - fileToBase64
     - FolderGroup
-    - getExt
     - getExts
     - groupCollected
     - isImportableFile

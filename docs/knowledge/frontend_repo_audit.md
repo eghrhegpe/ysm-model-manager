@@ -487,7 +487,6 @@ auto_fields:
     - FolderGroup
     - folderRowCommon
     - folderRowHTML
-    - foldMolangConstant
     - footerHTML
     - FootIKController
     - forceRefreshCommunityMerge
@@ -521,7 +520,6 @@ auto_fields:
     - getCreatorIdentity
     - getCustomAnimPath
     - getDefaultKeepIdx
-    - getExt
     - getExts
     - getFrameIntervalMs
     - getFsaAuthState

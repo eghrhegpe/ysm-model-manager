@@ -23,7 +23,6 @@ auto_fields:
     - extBelongsTo
     - extOf
     - getCompound
-    - getExt
     - getExts
     - getPreviewableTypeTabs
     - GROUP_META

@@ -23,7 +23,6 @@ auto_fields:
     - executeCollected
     - fileToBase64
     - FolderGroup
-    - getExt
     - groupCollected
     - handleInstanceDrop
     - handleTreeDrop

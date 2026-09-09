@@ -101,14 +101,15 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   "check-lib-adoption.ts": "debt",
   "check-toast-duration.ts": "debt",
 
-  // —— failClosed ——
-  "build-novel-index.ts": "failClosed",
-  "gen-routes.ts": "failClosed",
-  "gen-routes-quick.ts": "failClosed",
-  "gen-cli-doc.ts": "failClosed",
-  "gen-cli-completion.ts": "failClosed",
-  "gen-knowledge-autogen.ts": "failClosed",
-  "check-readme-index.ts": "failClosed",
+  // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
+  //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——
+  "build-novel-index.ts": "hard",
+  "gen-routes.ts": "hard",
+  "gen-routes-quick.ts": "hard",
+  "gen-cli-doc.ts": "hard",
+  "gen-cli-completion.ts": "hard",
+  "gen-knowledge-autogen.ts": "hard",
+  "check-readme-index.ts": "hard",
 };
 
 const expectedDebt = Object.entries(EXPECTED_POLICY).filter(([, p]) => p === "debt").length;

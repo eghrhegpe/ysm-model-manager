@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - addDisposableListener
+    - APP_ERROR_PATH_RE
     - BusyLock
     - clamp
     - clamp01

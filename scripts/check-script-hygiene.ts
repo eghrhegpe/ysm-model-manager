@@ -176,7 +176,7 @@ const HANDWRITTEN_ARGV_RE =
  *  R5（2026-09-08）：补 for-length 遍历特征，抓 commit-with-check 旧式的
  *  `process.argv.slice(2)` + `for(i<args.length)` 手写解析。 */
 const HANDWRITTEN_POSITIONAL_RE =
-  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]|\.indexOf\('--|for\s*\(\s*let\s+\w+\s*=\s*0\s*;\s*\w+\.length/;
+  /\.find\(\s*\(?\w+\)?\s*=>\s*!\w+\.startsWith\('--'\)|process\.argv\[2\]|\.indexOf\('--|for\s*\(\s*let\s+\w+\s*=\s*0\s*;\s*\w+\s*<\s*(?:args|argv|ARGS)\.length/;
 // 仅匹配真实 import 语句（行首锚定 + `import {…} from`），避免误把建议文案里的
 // 字符串 `...from './_lib/parse-args.ts'`（如 check-lib-adoption.ts 的 advice 字段）
 // 当成脚本真的 import 了 parseArgs 而误报「未消费 unknown」（2026-08-31 审计修复）。

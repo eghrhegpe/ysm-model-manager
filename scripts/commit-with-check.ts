@@ -59,10 +59,13 @@ let message = (parsed.message as string) ?? "";
 // -m 短别名兼容：parseArgs 不认单横杠 flag，会把 `-m VAL` 当位置参数（首元素 -m）
 const mTok = parsed._.indexOf("-m");
 if (mTok !== -1 && parsed._[mTok + 1] !== undefined) message = parsed._[mTok + 1]!;
-// --files 兼容逗号/空格/重复：arrays 收集后逐元素 split（对齐旧 --files=a,b 语义）
-const files: string[] = (
-  (parsed.files as string[] | undefined) ?? []
-).flatMap((f) => f.split(/[, ]+/).filter(Boolean));
+// --files 兼容逗号/空格/重复：仅 inline 形态（--files=a,b）做 split——bare 值原样保留，
+// 对含空格路径做 split(/[, ]+/) 会拆成两个不存在的路径（code_review P2）；
+// arrays 收集遇到 `-` 前缀即截断（parse-args 旧契约），bare 值不可能内嵌逗号外空格边界，
+// 逗号分隔仍兼容（--files a,b 裸写）。
+const files: string[] = ((parsed.files as string[] | undefined) ?? []).flatMap((f) =>
+  f.includes(",") ? f.split(",").map((s) => s.trim()).filter(Boolean) : [f],
+);
 
 if (parsed.help) {
   console.log(`用法: node scripts/commit-with-check.ts -m "<msg>" [--files <paths>...] [--docs|--check] [--keep-index]

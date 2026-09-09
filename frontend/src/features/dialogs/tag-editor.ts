@@ -1,15 +1,15 @@
 // ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
-
-import { getApp } from "@/backend/app.ts";
-
-type GetAppFn = typeof getApp;
+// ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
 
 import { t } from "@/core/i18n/t.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { esc } from "@/utils/html/html.ts";
 import { createDialog } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
+
+type GetAppFn = typeof backendGetApp;
 
 interface DgTeShell {
   overlay: HTMLElement;
@@ -226,7 +226,7 @@ export function modalTagEditor(
   /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
   deps?: { getApp?: GetAppFn },
 ): Promise<string[] | null> {
-  const getAppFn = deps?.getApp || getApp;
+  const getAppFn = deps?.getApp || backendGetApp;
   return new Promise((resolve) => {
     const shell = dgTeBuildShell(modelPath, resolve);
     dgTeLoadData(shell, modelPath, getAppFn);

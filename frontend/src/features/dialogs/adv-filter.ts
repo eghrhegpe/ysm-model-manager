@@ -4,15 +4,15 @@
 // 样式：.afv-inp 已提取到 frontend/css/components.css（避免重复注入 <style>）
 // 后端约束：当前 Go SearchModels 只支持 (minBones, maxBones, minCubes, maxCubes, minTex, maxTex) 6 个范围 + 1 个关键字；
 //   不支持文件大小、排序（避免展示无效控件）
-
-import { getApp } from "@/backend/app.ts";
-
-type GetAppFn = typeof getApp;
+// ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
 
 import { t } from "@/core/i18n/t.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
 import { esc } from "@/utils/html/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
 import { createDialog } from "./modal-core.ts";
+
+type GetAppFn = typeof backendGetApp;
 
 export type { AdvFilterValue } from "./adv-filter-util.ts";
 
@@ -197,7 +197,7 @@ export function modalAdvFilter(
       box,
       close,
       () => advFilterCollect(box, kwInput, tagInput),
-      opts.getApp || getApp,
+      opts.getApp || backendGetApp,
     );
   });
 }

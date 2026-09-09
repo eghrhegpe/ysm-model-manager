@@ -1,10 +1,11 @@
 // ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
 // 依赖注入（ADR-190 D2）：getApp / t / modalConfirm 经 initRecycleBin 的 deps 参数显式透传，
 // 测试可直接注入替身，无需 vi.mock 整个模块；缺省走生产实现。
+// ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口（禁止直引 backend/app.ts）。
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { backendGetApp } from "@/features/backend-deps.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
@@ -39,7 +40,7 @@ export type { RecycleBinEntry };
 type ToastFn = (msg: string, duration: number, type: "success" | "error") => void;
 type TFn = typeof t;
 type ModalConfirmFn = typeof modalConfirm;
-type GetAppFn = typeof getApp;
+type GetAppFn = typeof backendGetApp;
 type GetCurrentTypeFn = () => (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];
 
 /** 可注入依赖（ADR-190 D2 注入真化）；测试传部分字段，其余回落生产实现 */
@@ -51,7 +52,7 @@ export interface RecycleDeps {
   renderListHtml: (entries: RecycleBinEntry[]) => string;
 }
 const PROD_DEPS: RecycleDeps = {
-  getApp,
+  getApp: backendGetApp,
   t,
   modalConfirm,
   // fail-loud：渲染属 views 职责，features 无合法默认实现；漏注入立即暴露而非静默空列表

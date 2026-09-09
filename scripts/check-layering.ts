@@ -16,12 +16,16 @@
  *                             log/storage，见 core/page-store.ts、core/error-diary.ts）
  *   R3（防回退）  core/**     不得运行时 import  views/、features/（现有违反走基线）
  *   R4（防回退）  features/** 不得运行时 import  views/（现有违反走基线）
+ *   R5（零容忍）  features/** 生产文件不得运行时 import  backend/app.ts（ADR-190 D2 seam
+ *                             单出口 + ADR-208 D1）：唯一白名单 = features 下文件名以
+ *                             -deps.ts 结尾的组合根（backend-deps / community-deps /
+ *                             context-menu-deps）；test 文件由扫描层豁免
  *
  *   `import type` 不构成运行时耦合，一律豁免。
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2/R0 违规或 R3/R4 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0/R5 违规或 R3/R4 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
  *   node scripts/check-layering.ts --update   # 更新 R3/R4 基线（含当前全部反向边）
  *
@@ -90,8 +94,11 @@ function resolveTarget(spec: string, fromSrcRel: string) {
 // 匹配 import / export-from 语句，捕获是否 type-only 与来源字符串。
 // 用 gm + matchAll 对全文匹配（[^'"]*? 可跨行）：多行具名 import（import {\n a,\n} from 'x'）
 // 的 from 在后续行时逐行 exec 会漏报（code_review 实证 frontend/src 存在多行 import）。
-const IMPORT_RE = /^\s*(?:import|export)\s+(type\s+)?([^'"]*?)from\s*['"]([^'"]+)['"]/gm;
-const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/gm;
+const IMPORT_RE =
+  /^[ \t]*(?:import|export)[ \t]+(type[ \t]+)?([^'"]*?)from[ \t]*['"]([^'"]+)['"]/gm;
+const BARE_IMPORT_RE = /^[ \t]*import[ \t]*['"]([^'"]+)['"]/gm;
+// （P2 修复：原 `^\\s*` 的 \\s 跨行——stripNoise 把注释行替换为等长空格后，贪婪 \\s* 从文件
+// 顶吞到首个 import，所有违规行号恒报 1；限 [ \\t] 保持逐行锚定，行号恢复真实）
 
 /**
  * 剥离注释与模板字面量（空格等长替换，保持行结构/行号）。
@@ -158,6 +165,24 @@ function main() {
       const target = resolveTarget(spec, srcRel);
       if (!target) continue;
       const toLayer = layerOf(target);
+      // R5（零容忍，ADR-208 D1）：features 生产文件禁直接 import 后端绑定桥
+      // backend/app.ts——唯一出口是 *-deps.ts seam（白名单按文件名）；type-only 豁免
+      if (
+        fromLayer === "features" &&
+        target === "backend/app.ts" &&
+        !typeOnly &&
+        !srcRel.endsWith("-deps.ts")
+      ) {
+        violations.push({
+          rule: "R5",
+          from: srcRel,
+          line,
+          to: target,
+          fromLayer,
+          toLayer: "backend",
+        });
+        continue;
+      }
       if (!toLayer) continue;
       if (typeOnly) continue; // type-only 豁免
 
@@ -186,7 +211,9 @@ function main() {
 
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
-  const rZero = violations.filter((v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0");
+  const rZero = violations.filter(
+    (v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0" || v.rule === "R5",
+  );
   const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
 
   const baseline = existsSync(BASELINE_FILE)
@@ -261,10 +288,14 @@ function main() {
   console.log("分层: views → features → services → utils → core\n");
 
   if (rZero.length) {
-    console.error(`❌ R1/R2/R0 违规（零容忍：utils/services 向上依赖、core→utils/dom）${rZero.length} 条：`);
+    console.error(
+      `❌ R1/R2/R0/R5 违规（零容忍：utils/services 向上依赖、core→utils/dom、features→backend/app.ts 非 seam）${rZero.length} 条：`,
+    );
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
-    console.log("✅ R1/R2/R0 utils/services → 上层、core→utils/dom：0 条");
+    console.log(
+      "✅ R1/R2/R0/R5 utils/services → 上层、core→utils/dom、features→backend/app 非 seam：0 条",
+    );
   }
 
   const trackedEdges = new Set(tracked.map(key));

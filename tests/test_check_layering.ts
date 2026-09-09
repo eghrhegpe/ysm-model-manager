@@ -60,6 +60,19 @@ check("--json 输出合法 JSON 且 _summary 契约齐全", () => {
   assert.equal(data._summary.regressions, 0);
 });
 
+// R5（ADR-208 D1）：features 生产文件禁直接 import backend/app.ts（*-deps.ts 白名单）。
+// 迁移后仓库应零 R5 违规；任何 features 新增直引 backend/app.ts 即 rc=1 阻断。
+check("R5 零 R5 违规（features→backend/app.ts 仅经 *-deps.ts seam）", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r5 = (data.zero_tolerance_violations ?? []).filter((v) => v.rule === "R5");
+  assert.equal(
+    r5.length,
+    0,
+    `R5 违规 ${r5.length} 条：${r5.map((v) => `${v.from}:${v.line}`).join(", ")}`,
+  );
+});
+
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {
   const basePath = path.join(ROOT, "docs", ".layering-baseline.json");
   assert.ok(fs.existsSync(basePath), "缺基线文件");

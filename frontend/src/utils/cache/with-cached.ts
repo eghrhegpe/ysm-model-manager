@@ -113,8 +113,11 @@ export async function withCached<T>(
     try {
       return (await pending) as T;
     } catch (e) {
-      // pending 失败 → 让调用方走自己的 fn() 重试
-      throw e;
+      // pending 失败（如 STALE 后台刷新 / 首个并发者 fn 抛错）→ 让调用方走自己的
+      // fn() 重试，而不是把在途失败直接抛给调用方（注释契约，P3 修复）
+      _pending.delete(fullKey);
+      dbg("cache", `[pending-fail] ${fullKey} 在途请求失败，调用方自行重试`, e);
+      return fn();
     }
   }
 

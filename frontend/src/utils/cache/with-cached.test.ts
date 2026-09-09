@@ -151,4 +151,21 @@ it("fn 抛错时不写入缓存，下次调用仍重试", async () => {
     expect(result).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(2);
   });
+
+  it("并发等待者：在途请求失败后调用方自行重试（P3 契约，不把在途失败抛给等待者）", async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error("在途失败"))
+      .mockResolvedValueOnce("retry-ok");
+    // 两个并发调用：首个触发 fn（失败），第二个等待在途请求 → 失败后自行重试
+    const [r1, r2] = await Promise.allSettled([
+      withCached("retry-key", 60000, fn),
+      withCached("retry-key", 60000, fn),
+    ]);
+    // 首个调用方仍拿到失败
+    expect(r1.status).toBe("rejected");
+    // 等待者不继承在途失败，而是走自己的 fn() 重试成功
+    expect(r2.status).toBe("fulfilled");
+    expect((r2 as PromiseFulfilledResult<string>).value).toBe("retry-ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });

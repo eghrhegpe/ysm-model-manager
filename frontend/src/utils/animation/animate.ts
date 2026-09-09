@@ -37,8 +37,8 @@ export function animateNumber(el: HTMLElement, to: number, duration = 700): () =
   for (let p = len - 1; p >= 0; p--) {
     let val = "";
     for (let i = 0; i < len; i++) {
+      // i < p 位保持旧值,≥ p 位进位到目标值(低位先转→高位)
       if (i < p) val += fromStr[i];
-      else if (i === p) val += numStr[i];
       else val += numStr[i];
     }
     frames.push(parseInt(val, 10));

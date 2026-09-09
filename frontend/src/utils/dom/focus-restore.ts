@@ -8,6 +8,9 @@
 
 import { logWarn } from "@/utils/base/log.ts";
 
+/** 触发器栈深度上限（防异常路径漏 close 静默累积——对齐 input-block-stack MAX_STACK_SIZE） */
+const MAX_TRIGGER_STACK = 10;
+
 /** 触发器栈（LIFO：最后打开的模态最先恢复） */
 const _triggerStack: HTMLElement[] = [];
 
@@ -18,6 +21,10 @@ const _triggerStack: HTMLElement[] = [];
  * Node 测试环境无 HTMLElement 全局，duck-typing 容错。
  */
 export function rememberTrigger(): void {
+  if (_triggerStack.length >= MAX_TRIGGER_STACK) {
+    logWarn("focus-restore", `触发栈超上限(${MAX_TRIGGER_STACK})，忽略 push（疑似漏 close）`);
+    return;
+  }
   const el = document.activeElement;
   // duck-typing 避免在 node 测试环境（无 HTMLElement 全局）下 ReferenceError
   if (el && typeof (el as HTMLElement).focus === "function") {

@@ -117,7 +117,6 @@ describe("rememberTrigger / returnFocus 配对", () => {
     b.focus();
     rememberTrigger();
     expect(__getTriggerForTest()).toBe(b);
-
     clearTrigger();
     expect(__getTriggerForTest()).toBeNull();
     expect(returnFocus()).toBe(false);
@@ -137,6 +136,29 @@ describe("rememberTrigger / returnFocus 配对", () => {
     expect(spy).toHaveBeenCalledWith("focus-restore", "焦点恢复失败", expect.anything());
     spy.mockRestore();
     btn.focus = origFocus;
+  });
+
+  it("触发栈超上限时忽略 push（防漏 close 累积）", () => {
+    const spy = vi.spyOn(log, "logWarn");
+    // 压满 10 层（MAX_TRIGGER_STACK）
+    const buttons: HTMLButtonElement[] = [];
+    for (let i = 0; i < 10; i++) {
+      const b = document.createElement("button");
+      b.id = `t${i}`;
+      document.body.appendChild(b);
+      buttons.push(b);
+      b.focus();
+      rememberTrigger();
+    }
+    expect(__getTriggerForTest()).toBe(buttons[9]);
+    // 第 11 次 push 被忽略：栈顶仍是最后一个合法 push
+    const extra = document.createElement("button");
+    document.body.appendChild(extra);
+    extra.focus();
+    rememberTrigger();
+    expect(__getTriggerForTest()).toBe(buttons[9]);
+    expect(spy).toHaveBeenCalledWith("focus-restore", expect.stringContaining("超上限"));
+    spy.mockRestore();
   });
 });
 

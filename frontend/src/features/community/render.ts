@@ -1,7 +1,7 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
 import { t } from "@/core/i18n/t.ts";
-import { formatBytes } from "@/utils/dom/format.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 

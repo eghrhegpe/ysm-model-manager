@@ -12,11 +12,11 @@ const { mockT, mockGetLang } = vi.hoisted(() => ({
 vi.mock("@/core/i18n/t.ts", () => ({ t: mockT }));
 vi.mock("@/core/i18n/locale.ts", () => ({ getLang: mockGetLang }));
 
-import { shortLabelOf, _resetShortLabelCache } from "./short-label.ts";
+import { shortLabelOf, __resetShortLabelCacheForTest } from "./short-label.ts";
 import { RESOURCE_TYPES } from "./types.ts";
 
 beforeEach(() => {
-  _resetShortLabelCache();
+  __resetShortLabelCacheForTest();
 });
 
 describe("shortLabelOf — 运行时翻译", () => {

@@ -2,7 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
-import { formatBytes } from "@/utils/dom/format.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 

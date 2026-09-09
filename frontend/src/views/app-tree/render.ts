@@ -2,8 +2,8 @@
 import { t } from "@/core/i18n/t.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
 import { safeGet, safeSet } from "@/utils/base/storage.ts";
-import { formatBytes } from "@/utils/dom/format.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";

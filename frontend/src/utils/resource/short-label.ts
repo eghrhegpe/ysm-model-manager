@@ -30,8 +30,8 @@ function buildShortLabelMap(): Record<string, string> {
 let cachedLang: string | undefined;
 let cachedMap: Record<string, string> | undefined;
 
-/** 重置缓存（仅测试用，验证语言切换后缓存失效） */
-export function _resetShortLabelCache(): void {
+/** 测试钩子：重置缓存（验证语言切换后缓存失效）；业务代码不应调用 */
+export function __resetShortLabelCacheForTest(): void {
   cachedLang = undefined;
   cachedMap = undefined;
 }

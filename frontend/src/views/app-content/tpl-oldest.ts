@@ -3,7 +3,7 @@
 // 数据获取与评分分档仍归 features（loadOldestModel 经 deps.renderPage 注入本模块）。
 import { t } from "@/core/i18n/t.ts";
 import type { ModelEntry, RepoStats } from "@/features/maintenance/oldest-models.ts";
-import { formatBytes } from "@/utils/dom/format.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 

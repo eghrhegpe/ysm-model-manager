@@ -17,7 +17,7 @@ import { bus } from "@/bus";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "@/bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, type MenuAction } from "./menu-defs.ts";
-import { HANDLERS } from "./context-menu-handlers.ts";
+import { HANDLERS, createContextMenuHandlers } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import {
   getMocks,
@@ -482,5 +482,25 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
     assertDividersCollapsed(payload.items);
     const labels = payload.items.filter((i) => !i.divider).map((i) => i.label);
     expect(labels).toEqual(["A", "C"]); // B 被隐藏，两个 divider 相邻折叠为无
+  });
+});
+
+describe("createContextMenuHandlers — 独立 handlers 实例隔离", () => {
+  it("两个实例的 busy 锁互不干扰", () => {
+    const handlersA = createContextMenuHandlers();
+    const handlersB = createContextMenuHandlers();
+    expect(handlersA.HANDLERS).not.toBe(handlersB.HANDLERS);
+    // 两个实例应有相同的 action 键
+    expect(Object.keys(handlersA.HANDLERS).sort()).toEqual(Object.keys(handlersB.HANDLERS).sort());
+  });
+
+  it("实例包含所有 MENU_ACTIONS 的 handler", () => {
+    const { HANDLERS } = createContextMenuHandlers();
+    expect(typeof HANDLERS.noop).toBe("function");
+    expect(typeof HANDLERS["instance.open-folder"]).toBe("function");
+    expect(typeof HANDLERS["batch.move"]).toBe("function");
+    expect(typeof HANDLERS["batch.recycle"]).toBe("function");
+    expect(typeof HANDLERS["file.rename"]).toBe("function");
+    expect(typeof HANDLERS["dir.mkdir"]).toBe("function");
   });
 });

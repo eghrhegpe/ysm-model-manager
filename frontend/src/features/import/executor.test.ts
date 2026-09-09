@@ -5,7 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { getApp, type AppBindings } from "@/backend/app.ts";
-import { executeCollected, directImport, importFolder, importWebFilesWithToast } from "./executor.ts";
+import {
+  executeCollected,
+  directImport,
+  importFolder,
+  importWebFilesWithToast,
+  createImportSession,
+} from "./executor.ts";
 
 const mocks = vi.hoisted(() => ({
   ImportModelFile: vi.fn().mockResolvedValue(undefined),
@@ -347,5 +353,51 @@ describe("importWebFilesWithToast — 网页版导入反馈（补零测试盲区
     off();
     expect(r).toEqual({ imported: 0, failed: files.length });
     expect(toasts.some((x) => x.type === "error" && String(x.msg).includes("QUOTA"))).toBe(true);
+  });
+});
+
+describe("createImportSession — 独立会话隔离", () => {
+  beforeEach(() => {
+    mocks.ImportModelFile.mockClear();
+  });
+
+  it("两个会话的 inFlight 互不干扰：会话 A 在途文件不被会话 B busy 拦截", async () => {
+    let releaseA: () => void = () => {};
+    mocks.ImportModelFile.mockImplementationOnce(
+      () => new Promise<void>((r) => (releaseA = r)),
+    );
+    const sessA = createImportSession();
+    const sessB = createImportSession();
+    const file = mkFile("隔离.ysm");
+    const pA = sessA.directImport(file);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.ImportModelFile).toHaveBeenCalledTimes(1);
+    // 同文件在会话 B 应独立发起，不被会话 A 的在途状态拦截
+    const pB = sessB.directImport(file);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.ImportModelFile).toHaveBeenCalledTimes(2);
+    releaseA();
+    await pA;
+    await pB;
+  });
+
+  it("同一会话内同文件并发 → busy 拦截（模块级默认行为保留）", async () => {
+    let release: () => void = () => {};
+    mocks.ImportModelFile.mockImplementationOnce(
+      () => new Promise<void>((r) => (release = r)),
+    );
+    const sess = createImportSession();
+    const file = mkFile("busy.ysm");
+    const toasts: Array<{ type?: unknown }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    const p1 = sess.directImport(file);
+    const p2 = sess.directImport(file);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.ImportModelFile).toHaveBeenCalledTimes(1);
+    expect(toasts.some((x) => x.type === "warn")).toBe(true);
+    release();
+    await p1;
+    await p2;
+    off();
   });
 });

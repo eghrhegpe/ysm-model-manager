@@ -21,7 +21,7 @@ vi.mock("@/features/repo/repo-rtype.ts", () => ({ currentRepoType: currentRepoTy
 vi.mock("./events.ts", () => ({ bindRepoEvents: bindRepoEventsMock }));
 vi.mock("@/utils/debug/debug.ts", () => ({ dbg: dbgMock }));
 
-import { showRepoModels } from "./show-repo-models.ts";
+import { showRepoModels, createRepoRenderGuard } from "./show-repo-models.ts";
 
 // 生产调用方传入的 esc 形状是 (s: unknown) => string，测试同构
 const escAny = (s: unknown): string => esc(String(s));
@@ -293,5 +293,31 @@ describe("showRepoModels", () => {
     await first;
     expect(bindRepoEventsMock).toHaveBeenCalledTimes(1);
     expect(bindRepoEventsMock.mock.calls[0][1].repo).toBe("user/repoB");
+  });
+});
+
+describe("createRepoRenderGuard — 代际守卫工厂", () => {
+  it("bump 递增代际并更新目标 repo", () => {
+    const guard = createRepoRenderGuard();
+    expect(guard.generation).toBe(0);
+    guard.bump("user/repoA");
+    expect(guard.generation).toBe(1);
+    expect(guard.isCurrent("user/repoA")).toBe(true);
+    expect(guard.isCurrent("user/repoB")).toBe(false);
+    guard.bump("user/repoB");
+    expect(guard.generation).toBe(2);
+    expect(guard.isCurrent("user/repoB")).toBe(true);
+    expect(guard.isCurrent("user/repoA")).toBe(false);
+  });
+
+  it("两个守卫实例互不干扰", () => {
+    const guardA = createRepoRenderGuard();
+    const guardB = createRepoRenderGuard();
+    guardA.bump("user/repoA");
+    guardB.bump("user/repoB");
+    expect(guardA.isCurrent("user/repoA")).toBe(true);
+    expect(guardA.isCurrent("user/repoB")).toBe(false);
+    expect(guardB.isCurrent("user/repoB")).toBe(true);
+    expect(guardB.isCurrent("user/repoA")).toBe(false);
   });
 });

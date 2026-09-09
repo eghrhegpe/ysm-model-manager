@@ -57,7 +57,11 @@ check("findMissingKeys：key 全部存在 → 0 违规", () => {
   ]);
   const base = new Set(["menu.ok", "ctx.ok", "other.unrelated"]);
   const missing = findMissingKeys(used, base);
-  assert.equal(missing.length, 0, "全部存在应为 0 违规");
+  assert.equal(
+    missing.length,
+    0,
+    `全部存在应为 0 违规，实际缺失: ${missing.map((m) => m.key).join(", ")}`,
+  );
 });
 
 check("findMissingKeys：注释里的伪 key（menu.xxx）不应被算作在用（由扫描端 strip 保证）", () => {
@@ -65,7 +69,12 @@ check("findMissingKeys：注释里的伪 key（menu.xxx）不应被算作在用�
   // 此处断言「若某 key 不在 used 则不会误报」，即函数只针对传入的 used 判缺失。
   const used = new Map([["menu.real", "frontend/src/core/menu-defs.ts"]]);
   const base = new Set(["menu.real"]);
-  assert.equal(findMissingKeys(used, base).length, 0, "真实 key 存在 → 不误报");
+  const missReal = findMissingKeys(used, base);
+  assert.equal(
+    missReal.length,
+    0,
+    `真实 key 存在 → 不误报，实际缺失: ${missReal.map((m) => m.key).join(", ")}`,
+  );
 });
 
 check("全量扫描当前仓库应 0 违规（rc=0）", () => {

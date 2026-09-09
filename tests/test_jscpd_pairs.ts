@@ -74,7 +74,11 @@ const driftNone = matchDrift(
   ["go/x/new_dup.go#go/y/other.go"],
   ["go/types/classify.go#go/types/location.go"],
 );
-assert.equal(driftNone.length, 0, "basename 集无交集不应标漂移");
+assert.equal(
+  driftNone.length,
+  0,
+  `basename 集无交集不应标漂移，实际标出: ${driftNone.map((d) => `${d.type} ${d.added} ↔ ${d.fixed}`).join(", ")}`,
+);
 
 // 3d. 边界：空输入
 assert.deepEqual(matchDrift([], ["a#b"]), [], "added 为空返回空");

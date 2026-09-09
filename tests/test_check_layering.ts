@@ -56,8 +56,16 @@ check("--json 输出合法 JSON 且 _summary 契约齐全", () => {
   assert.ok(Array.isArray(data.debt), "debt 应为数组");
   // 当前基线内：零容忍 0、无新增回归 → 应通过（rc 0）
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}`);
-  assert.equal(data._summary.zero_tolerance, 0);
-  assert.equal(data._summary.regressions, 0);
+  assert.equal(
+    data._summary.zero_tolerance,
+    0,
+    `zero_tolerance 应为 0，实际 ${data._summary.zero_tolerance}：${(data.zero_tolerance_violations ?? []).map((v) => `[${v.rule}] ${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
+  assert.equal(
+    data._summary.regressions,
+    0,
+    `regressions 应为 0，实际 ${data._summary.regressions}：${(data.regressions ?? []).map((v) => `[${v.rule}] ${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
 });
 
 // R5（ADR-208 D1）：features 生产文件禁直接 import backend/app.ts（*-deps.ts 白名单）。

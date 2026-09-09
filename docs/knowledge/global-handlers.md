@@ -15,6 +15,7 @@ auto_fields:
     - appContentStyle
     - bindTreeDnD
     - DiaryEntry
+    - DiaryHandle
     - DiarySink
     - DiaryStatus
     - handleTreeDrop

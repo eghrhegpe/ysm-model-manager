@@ -17,13 +17,11 @@ auto_fields:
     - addFieldRow
     - addInfoCard
     - addInfoGrid
-    - addInlineToggleRow
     - addModeRow
     - addModeSlider
     - addPresetChip
     - addSectionTitle
     - addSliderRow
-    - addToggleRow
     - addVector3SliderRow
     - ARIA_ATTR
     - cardContainer
@@ -42,6 +40,7 @@ auto_fields:
     - getControl
     - getControlCount
     - HeaderToggleConfig
+    - HeaderToggleElement
     - initControl
     - installSlideMenuStyles
     - installUiComponentsStyles
@@ -61,7 +60,6 @@ auto_fields:
     - slideRow
     - SlideRowExtra
     - sliderRow
-    - toggleRow
     - TrailingAction
     - uiComponentsCss
     - uiComponentsStyleSheet

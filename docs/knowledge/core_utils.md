@@ -19,6 +19,7 @@ auto_fields:
     - logError
     - LogSink
     - logWarn
+    - resetLogSink
     - safeGet
     - safeGetJSON
     - safeRemove

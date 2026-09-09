@@ -65,13 +65,10 @@ function expiryOf(ttlMs: number, nowMs: number): number {
 
 /** 缓存命中时调试输出（热路径：仅在 debug 开启时求值） */
 function logHit(fullKey: string, expiryMs: number, now: number): void {
-  if (_debugEnabled && isDebugEnabled()) {
+  if (isDebugEnabled()) {
     dbg("cache", `[hit] ${fullKey} (${Math.round((expiryMs - now) / 1000)}s 后过期)`);
   }
 }
-
-/** 缓存模块 debug 标记缓存（避免热路径重复读取 location.search） */
-const _debugEnabled = false;
 
 /**
  * 带过期时间的异步缓存包装器

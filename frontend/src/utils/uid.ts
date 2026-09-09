@@ -19,3 +19,8 @@ export function uid(prefix = ""): string {
       : `uid-${Date.now().toString(36)}-${(fallbackSeq++).toString(36)}`;
   return prefix ? `${prefix}${rnd}` : rnd;
 }
+
+/** 重置回退计数器（测试隔离用：防止 fallbackSeq 跨用例递增影响断言） */
+export function resetUidSeq(): void {
+  fallbackSeq = 0;
+}

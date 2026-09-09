@@ -37,7 +37,6 @@ auto_fields:
     - addFieldRow
     - addInfoCard
     - addInfoGrid
-    - addInlineToggleRow
     - addMeshToBoneGroup
     - addModeRow
     - addModeSlider
@@ -46,7 +45,6 @@ auto_fields:
     - addSectionTitle
     - addSliderRow
     - addTagToSet
-    - addToggleRow
     - addVector3SliderRow
     - AdvFilterResult
     - AdvFilterValue
@@ -1335,7 +1333,6 @@ auto_fields:
     - toggleBoneVisible
     - toggleFav
     - toggleMmdMaterialVisible
-    - toggleRow
     - toggleSelect
     - TooltipOptions
     - toScreenshotLights

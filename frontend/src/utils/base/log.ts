@@ -14,6 +14,11 @@ export function setLogSink(sink: LogSink | null): void {
   _sink = sink;
 }
 
+/** 重置 sink 为 null（测试隔离用：防止 setLogSink 注入的 sink 泄漏到后续用例） */
+export function resetLogSink(): void {
+  _sink = null;
+}
+
 /** 统一告警日志。tag 用于按模块聚合排查；err 可为任意错误值。 */
 export function logWarn(tag: string, msg: string, err?: unknown): void {
   // 无 err 时不追加空参数槽（code review #11：err ?? "" 会让控制台多一个空槽）

@@ -5,7 +5,7 @@
  */
 
 import { logWarn } from "@/utils/base/log.ts";
-import { compileMolang, type MolangFn } from "./molang.ts";
+import { compileMolang, createMolangParser, type MolangFn, type MolangParser } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────
 
@@ -51,6 +51,8 @@ export interface AnimationClip {
   hasMolang?: boolean;
   /** Timeline 事件（时间戳 → Molang 动作列表） */
   timeline?: TimelineEvent[];
+  /** 该 clip 的 timeline 表达式编译器实例（ADR-211：v.* 作用域隔离） */
+  molangParser?: MolangParser;
 }
 
 /** 骨骼变换（evaluateClip 结果值） */
@@ -410,12 +412,14 @@ function parseClipBones(clip: AnimationClip, bones: Record<string, unknown> | nu
 /**
  * [子函数 4/5] 解析 timeline 事件：时间戳 → Molang 表达式收集 → 编译 → 排序。
  * 发现任一合法事件时写入 clip.timeline 并标记 clip.hasMolang。
+ * @param parser 该 clip 的独立 MolangParser 实例（ADR-211：v.* 作用域隔离）
  */
 function parseClipTimeline(
   clip: AnimationClip,
   hasTimeline: boolean,
   animObj: RawAnimEntry,
   errors: string[],
+  parser: MolangParser,
 ): void {
   if (!hasTimeline || !animObj.timeline) return;
   const timeline = animObj.timeline as Record<string, unknown>;
@@ -439,7 +443,7 @@ function parseClipTimeline(
     // 编译所有表达式（编译失败的写入 errors，对齐 Molang 零占位降级口径）
     const actions: MolangFn[] = [];
     for (const expr of exprs) {
-      const fn = compileMolang(expr);
+      const fn = parser.compileMolang(expr);
       if (fn) {
         actions.push(fn);
       } else {
@@ -517,7 +521,10 @@ export function parseBedrockAnimationJSON(jsonStr: string): {
     parseClipBones(clip, bones);
 
     // 阶段4：Timeline 事件解析（Molang 表达式编译+排序）
-    parseClipTimeline(clip, hasTimeline, animObj, errors);
+    // ADR-211：每 clip 创建独立 MolangParser 实例，v.* 作用域隔离
+    const clipMolangParser = createMolangParser();
+    parseClipTimeline(clip, hasTimeline, animObj, errors, clipMolangParser);
+    clip.molangParser = clipMolangParser;
 
     // 阶段5：长度补算 + 入队判定
     finalizeClipLengthAndEnqueue(clip, clips);

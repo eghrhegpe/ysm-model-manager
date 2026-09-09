@@ -24,6 +24,7 @@ auto_fields:
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
+    - DownloadProgressPayload
     - DownloadQueue
     - DownloadSizeDecision
     - DownloadState
@@ -40,11 +41,15 @@ auto_fields:
     - isModelMissing
     - markCurrentFile
     - ModelRowCtx
+    - parseEventPayload
     - ProgressGuard
     - ProgressGuardHooks
     - QueueController
     - QueueControllerOptions
     - QueueError
+    - QueueFileDonePayload
+    - QueueFileStartPayload
+    - QueueStatusPayload
     - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle

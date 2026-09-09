@@ -40,7 +40,6 @@ auto_fields:
     - MolangParser
     - parseAnimationControllerJSON
     - parseBedrockAnimationJSON
-    - setMolangScope
     - stagger
     - TimelineEvent
     - Vec3
@@ -119,7 +118,7 @@ status: active
 - `parseAnimationControllerJSON(jsonStr): { controllers, errors }` — 解析 `.animation_controllers.json`；缺 `animation_controllers` 字段进 errors；每个状态含 animations 列表 / on_exit 动作 / transitions（target→Molang 条件表达式）/ blend_transition（缺省 0.2s）；**空条件表达式 = 显式无条件转换（unconditional=true，总是触发）**；首个遇到的 state 作为初始状态
 - `AnimationControllerRuntime` — 运行时状态机：`update(dt)` 每帧评估当前状态转换条件（首个满足的触发，condition 用 `animTime=timeInState` 求值），触发时先执行当前状态 on_exit 再切状态并回调 `onStateChange(animationName, blendTime)`；条件编译失败（condition=null 且非 unconditional）→ 跳过不触发（不 fail-open）
 - `findControllerForAnimation(controllers, animationName): AnimationController | null` — 按动画名反查控制器
-- 与 Timeline 配合（Bedrock 官方设计）：Timeline 经 molang `setMolangScope` 写 `v.*` 变量（每播放器持久作用域跨帧可见），Controller 条件读 `v.*` 决定状态切换；v.* 跨帧持久化依赖 molangjs 核心，弹簧物理等场景需改 molangjs 核心（已知限制）
+- 与 Timeline 配合（Bedrock 官方设计）：Timeline 经 clip 自有 MolangParser 实例写 `v.*` 变量（ADR-211：每播放器持久作用域跨帧可见），Controller 条件读 `v.*` 决定状态切换；v.* 跨帧持久化依赖 molangjs 核心，弹簧物理等场景需改 molangjs 核心（已知限制）
 
 ## 与其他子系统关系
 

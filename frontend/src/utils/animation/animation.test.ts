@@ -22,6 +22,17 @@ vi.mock("./molang.ts", async (importOriginal) => {
       if (_failExpr !== null && expr === _failExpr) return null;
       return actual.compileMolang(expr, scope);
     },
+    // ADR-211：parseClipTimeline 改用工厂实例的 compileMolang，mock 需覆盖
+    createMolangParser: () => {
+      const real = actual.createMolangParser();
+      return {
+        compileMolang: (expr: string, scope?: Record<string, number> | null) => {
+          if (_failExpr !== null && expr === _failExpr) return null;
+          return real.compileMolang(expr, scope);
+        },
+        setScope: real.setScope,
+      };
+    },
   };
 });
 

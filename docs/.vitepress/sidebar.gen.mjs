@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-211：clip 自带 MolangParser 实例替代全局单例",
+        "link": "/adr/ADR-211-clip-molangparser"
+      },
+      {
         "text": "ADR-210：core 收编：locale host 注入、手工缓存与死 API 清理",
         "link": "/adr/ADR-210-core-convergence-locale-host"
       },

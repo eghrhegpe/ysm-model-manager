@@ -347,13 +347,16 @@ describe("createYsmAnimPlayer", () => {
 
   it("控制器: timeline 写 v.* 后条件触发状态切换（跨帧持久作用域）", () => {
     const bone = makeBone("root");
+    // ADR-211：clip 自带 MolangParser 实例，timeline 编译用 clip 的 parser
+    const clipMolangParser = createMolangParser();
     const clipIdle: AnimationClip = {
       name: "idle",
       loop: true,
       length: 2,
       timeline: [
-        { time: 0.5, actions: [compileMolang("v.flag = 1")!], raw: ["v.flag = 1"] },
+        { time: 0.5, actions: [clipMolangParser.compileMolang("v.flag = 1")!], raw: ["v.flag = 1"] },
       ],
+      molangParser: clipMolangParser,
       bones: {
         root: {
           position: [
@@ -364,17 +367,19 @@ describe("createYsmAnimPlayer", () => {
       },
     };
     const clipRun = makeConstPosClip("run", "root", [1, 0, 0]);
+    // 先创建 controller 的 parser，供编译 condition 使用
+    const controllerParser = createMolangParser();
     const controller: AnimationController = {
       name: "test",
       initialState: "idle",
-      molangParser: createMolangParser(),
+      molangParser: controllerParser,
       states: new Map([
         ["idle", {
           name: "idle",
           animations: ["idle"],
           onExit: [],
           transitions: [
-            { target: "run", condition: compileMolang("v.flag != 0"), raw: "v.flag != 0", unconditional: false },
+            { target: "run", condition: controllerParser.compileMolang("v.flag != 0"), raw: "v.flag != 0", unconditional: false },
           ],
           blendTransition: 0.2,
         }],

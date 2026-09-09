@@ -20,47 +20,16 @@ export type MolangFn = (animTime: number) => number;
 
 // 单例解析器（cache_enabled 默认 true，跨 clip 复用表达式缓存）
 // 类型签名由 molang.d.ts 提供，直接 new Molang()——无 as unknown as 强转。
-// 导出供测试 spy parse 方法（验证编译/运行时错误处理）
 const parser = new Molang();
+
+/**
+ * 获取全局单例 parser（仅供测试 spy parse 方法）。
+ * @deprecated 生产代码应使用 createMolangParser() 工厂（ADR-211）。
+ */
 export const getMolangParser = (): typeof parser => parser;
 
-/**
- * 当前写回作用域（仅用于未传 scope 的 compileMolang 写回）。
- * setMolangScope 设置此值；compileMolang(expr) 无 scope 时写回至此。
- * ⚠️ 模块级变量，多播放器会互盖；新代码应使用 createMolangParser() 工厂。
- */
-let _writeScope: Record<string, number> | null = null;
-
-/**
- * 设置/清除全局持久变量作用域。
- * 内部设置单例 parser 的 variableHandler + 写回作用域。
- * @param scope 每播放器 v.* 变量容器；传 null 恢复默认（v.* 不跨帧持久）
- * @deprecated 使用 createMolangParser() 创建独立实例，避免多播放器互盖。
- *   ⛔ 不可直接删除：ysm-animation-player.ts:125 仍调本函数为 timeline 动作提供全局写回作用域。
- *   根因：parseClipTimeline（animation.ts）将 timeline Molang 表达式编译到单例 parser 上，
- *   executeTimeline 求值时依赖 _writeScope 写回 v.* 变量。
- *   移除条件：重构 timeline 编译/求值链路，让 parseClipTimeline 接受独立 parser 实例，
- *   executeTimeline 经该实例的 variableHandler 写回，彻底摆脱全局单例。
- *   详见 docs/knowledge/animation-system.md
- */
-let _deprecationWarned = false;
-export function setMolangScope(scope: Record<string, number> | null): void {
-  // one-shot：player 每帧调用本函数（apply + finally 共 2 次/帧），逐帧警告会刷屏
-  if (!_deprecationWarned) {
-    _deprecationWarned = true;
-    logWarn("molang", "setMolangScope is deprecated, use createMolangParser() instead");
-  }
-  _writeScope = scope;
-  parser.variableHandler = scope
-    ? (key: string): number => {
-        const norm = key.startsWith("v.") ? `variable${key.slice(1)}` : key;
-        if (norm.startsWith("variable.") && typeof scope[norm] === "number") {
-          return scope[norm];
-        }
-        return 0;
-      }
-    : () => 0;
-}
+// 全局单例 parser 已无模块级写回作用域（ADR-211：clip 自带 MolangParser 实例替代全局单例）。
+// 所有需 v.* 持久作用域的编译均走 createMolangParser() 工厂实例。
 
 /** 从 key 归一化到 variable.* 形式并查作用域 */
 function lookupScope(scope: Record<string, number>, key: string): number {
@@ -87,8 +56,8 @@ function makeVariables(animTime: number): Record<string, number> {
  * 编译 Molang 表达式为求值闭包。
  * @param expr Molang 表达式字符串
  * @param scope 可选：每播放器 v.* 变量容器。传入时闭包捕获该作用域，
- *                       不再依赖模块级 activeScope——多播放器可各持独立作用域互不干扰。
- *                       不传时回退到模块级 _writeScope（deprecated，多播放器会互盖）。
+ *                       多播放器可各持独立作用域互不干扰。
+ *                       不传时 v.* 写入不持久化（适用于 bone keyframes 等无 v.* 场景）。
  * @returns 求值函数；表达式非法/为空返回 null（调用方走零占位降级）
  */
 export function compileMolang(
@@ -96,7 +65,6 @@ export function compileMolang(
   scope?: Record<string, number> | null,
 ): MolangFn | null {
   if (typeof expr !== "string" || expr.trim() === "") return null;
-  // 闭包捕获的作用域：仅用传入的，不再回退到模块级 activeScope
   const capturedScope = scope ?? null;
   try {
     // 每次求值前重置可变变量：molangjs 的 temp./variable. 赋值会写进单例 parser 的
@@ -106,20 +74,16 @@ export function compileMolang(
     return (animTime: number): number => {
       try {
         parser.resetVariables();
-        // 有捕获作用域时，临时把 parser.variableHandler 指向该作用域（求值完恢复）；
-        // 无捕获作用域时，依赖 setMolangScope 设置的全局 handler（deprecated 路径）。
         const prevHandler = parser.variableHandler;
         if (capturedScope) {
           parser.variableHandler = (key: string): number => lookupScope(capturedScope, key);
         }
         const v = parser.parse(expr, makeVariables(animTime));
         parser.variableHandler = prevHandler;
-        // 持久作用域启用时，把本次解析产生的 v.* 写入并入作用域（跨帧可见）。
-        // 有捕获作用域写捕获的；无捕获写模块级 _writeScope（deprecated 路径）。
-        const writeScope = capturedScope ?? _writeScope;
-        if (writeScope) {
+        // 有捕获作用域时，把本次解析产生的 v.* 写入并入作用域（跨帧可见）
+        if (capturedScope) {
           for (const k in parser.variables) {
-            if (k.startsWith("variable.")) writeScope[k] = parser.variables[k];
+            if (k.startsWith("variable.")) capturedScope[k] = parser.variables[k];
           }
         }
         // L4：编译成功但运行时产生 Infinity/NaN（如 1e999、除以零）→ 零占位

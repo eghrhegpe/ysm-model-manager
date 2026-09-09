@@ -122,8 +122,7 @@ describe("compileMolang（内嵌 molangjs）", () => {
     fnA(0);
     expect(scopeA["variable.flag"]).toBe(1);
     expect(scopeB["variable.flag"]).toBe(2);
-    // 模块级 activeScope 未被污染
-    // （setMolangScope 未调用，activeScope 为 null）
+    // 模块级无 activeScope（ADR-211 已拆除全局单例写回）
   });
 });
 

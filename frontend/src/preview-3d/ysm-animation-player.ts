@@ -20,7 +20,6 @@ import {
   type AnimationController,
   AnimationControllerRuntime,
 } from "@/utils/animation/animation-controller.ts";
-import { setMolangScope } from "@/utils/animation/molang.ts";
 
 export interface YsmAnimPlayer {
   apply(dt: number): void;
@@ -115,14 +114,13 @@ function mdApAdvanceTimeAndController(dt: number, state: MdApState, ctx: MdApCtx
     state.playing = false;
   }
 
-  // 控制器求值段：v.* 双路挂同一容器（审核 P1 修复）。
-  // 全局 setMolangScope：timeline 动作编译在单例 parser 上，写入经 _writeScope 落入
-  //   controllerVariables（写侧，deprecated 路径仍被 executeTimeline 依赖）；
-  // rt.setMolangScope：transition 条件/on_exit 编译在 controller.molangParser 实例上，
-  //   原先 instanceScope=null → 读恒 0、写被丢弃，状态机永不迁移（读侧）。
+  // 控制器求值段：v.* 双路挂同一容器。
+  // clip.molangParser.setScope：timeline 动作编译在 clip 自有 parser 实例上（ADR-211），
+  //   写入经 instanceScope 落入 controllerVariables（写侧）；
+  // rt.setMolangScope：transition 条件/on_exit 编译在 controller.molangParser 实例上（读侧）。
   // 两侧指向同一 state.controllerVariables 对象 → 写入即时对读侧可见。
   if (state.controllerRuntime) {
-    setMolangScope(state.controllerVariables);
+    clip.molangParser?.setScope(state.controllerVariables);
     state.controllerRuntime.setMolangScope(state.controllerVariables);
   }
   try {
@@ -145,7 +143,7 @@ function mdApAdvanceTimeAndController(dt: number, state: MdApState, ctx: MdApCtx
     }
   } finally {
     if (state.controllerRuntime) {
-      setMolangScope(null);
+      clip.molangParser?.setScope(null);
       state.controllerRuntime.setMolangScope(null);
     }
   }
@@ -238,7 +236,6 @@ function mdApSetController(controller: AnimationController, state: MdApState, ct
 
 function mdApDispose(state: MdApState, ctx: MdApCtx): void {
   if (state.controllerRuntime) state.controllerRuntime.setMolangScope(null);
-  else setMolangScope(null); // 无控制器的旧路径：清理可能残留的全局作用域
   state.elapsed = 0;
   state.prevElapsed = 0;
   state.playing = true;

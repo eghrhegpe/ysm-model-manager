@@ -12,6 +12,7 @@ auto_fields:
   symbols_with_lines:
     - __resetModalStateForTest
     - __resetWebLogStateForTest
+    - BASE_LANG
     - CachePolicy
     - clearAllCache
     - closeActiveDialog

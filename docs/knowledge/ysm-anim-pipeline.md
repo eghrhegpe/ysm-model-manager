@@ -27,7 +27,6 @@ auto_fields:
     - MolangFn
     - MolangParser
     - parseBedrockAnimationJSON
-    - setMolangScope
     - TimelineEvent
     - Vec3
     - YsmAdapterOptions
@@ -97,7 +96,7 @@ loader/adapter → createYsmAnimPlayer(boneByName, clips, clipLabels?)
 
 // 2. 驱动阶段（Player.apply(dt) 每帧 rAF 调，内部串接两步）
 mdApAdvanceTimeAndController(dt, state, ctx)  // 推进时钟 + 控制器状态机
-                                              // 内含 setMolangScope(controllerVariables) 完成 @variable.time 等变量求值
+                                              // 内含 clip.molangParser.setScope + rt.setMolangScope 双路挂载 v.* 作用域
               ↓
 mdApApplyPose(dt, state, ctx)                 // 覆盖 THREE.Group.position/quaternion
                                               // 内部调 evaluateClip(clip, state.elapsed) 拿局部插值结果，层级由 Three.js 树传播
@@ -111,7 +110,7 @@ rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 | 模块 | 文件路径 | 职责 |
 |------|---------|------|
 | **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
-| **Molang 作用域桥** | `utils/animation/molang.ts` | 内嵌 molangjs 表达式求值器。`setMolangScope(vars)` 注入 `@variable.time` 等变量，由 `mdApAdvanceTimeAndController` 在每帧推 clock 时调用；见 animation-system.md。 |
+| **Molang 作用域桥** | `utils/animation/molang.ts` | 内嵌 molangjs 表达式求值器。clip 自带 MolangParser 实例（ADR-211），`clip.molangParser.setScope(vars)` 注入 `@variable.time` 等变量，由 `mdApAdvanceTimeAndController` 在每帧推 clock 时调用；见 animation-system.md。 |
 | **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。由 `mdApApplyPose` 内部在每帧调 `evaluateClip(clip, elapsed)` 拿当前时刻的局部变换序列（层级由 Three.js 场景树传播，2026-09 删 boneHierarchy 参数）。 |
 | **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码的 YSM 骨骼/动画/clip 数据喂入 `createYsmAnimPlayer`（在 `build()` 内），并注册到会话生命周期。 |
 

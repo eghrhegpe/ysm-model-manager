@@ -1163,7 +1163,6 @@ auto_fields:
     - setLastSelectedType
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
-    - setMolangScope
     - setPerceptionPaused
     - setPerfPreset
     - setRenderMode

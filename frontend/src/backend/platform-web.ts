@@ -71,14 +71,7 @@ export function canBinding(binding: string): boolean {
   }
 }
 
-/**
- * 网页版谓词 = 仅 web（非 Android）。与 platform.ts 的 resolveWebMode() 等价
- * （契约由 platform-parity.test.ts 钉死），是 19 处 web-only 分支的统一入口。
- * 查看器谓词 isViewerPlatform（web∪android）的单一实现位于 platform.ts
- * （code_review 6efe049e9 #2/#3/#5/#6：本文件原 isViewerPlatform 副本为孤儿导出，
- * 无消费方且与 platform.ts 内联副本构成双判定源——已删，parity 契约②由
- * platform-parity.test.ts 从 platform.ts 导入对拍）。
- */
-export function isWebPlatform(): boolean {
-  return resolvePlatformMode() === "web";
-}
+// ADR-217 环 B：isWebPlatform 已上移至 platform.ts 中性叶子（Tier 派生纯谓词），
+// 本模块仅 re-export 保持 19 处消费方命名兼容，消除 workers→platform-web 反向环。
+// 语义与 platform.ts 的 resolveWebMode() 等价（契约由 platform-parity.test.ts 钉死）。
+export { isWebPlatform } from "./platform.ts";

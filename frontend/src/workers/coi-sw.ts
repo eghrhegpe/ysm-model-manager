@@ -4,7 +4,7 @@
 // 仅网页版（isWebPlatform）注册；桌面走 Go CoopCoepMiddleware、Android 走
 // shouldInterceptRequest 注入（ADR-079 §1.3）。
 // 渐进增强：SW 注册失败/不支持 → 静默降级（无跨源隔离，单线程 WASM 兜底，功能不残）。
-import { isWebPlatform } from "@/backend/platform-web.ts";
+import { isWebPlatform } from "@/backend/platform.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 

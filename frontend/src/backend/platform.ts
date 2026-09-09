@@ -65,6 +65,14 @@ export function resolveWebMode(): boolean {
   return resolveTier() === "web";
 }
 
+/**
+ * 网页版谓词 = 仅 web（非 Android）。与 resolveWebMode 同源（均 = resolveTier() === "web"），
+ * 作为 19 处 web-only 分支的统一入口（ADR-217 环 B：上移中性叶子，断 workers→platform-web 反向环）。
+ */
+export function isWebPlatform(): boolean {
+  return resolveTier() === "web";
+}
+
 // ── Android 桥与返回键（ADR-203 D2：从 utils/dom/android-bridge.ts 合并入此）──
 
 /**

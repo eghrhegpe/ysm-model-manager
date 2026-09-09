@@ -15,38 +15,14 @@ export class WebUnsupportedError extends Error {
 /** 网页版虚拟仓库根（路径语义与桌面一致：/web/<type>/<name>/<rel>） */
 export const WEB_ROOT = "/web";
 
-// ===== 虚拟仓库路径解析（Top 10 收敛：原 /web 正则散落 5 处——web-fs.ts:25/241/256/273 +
-// browser-adapter.ts:140，统一为下方单点导出，新增/调整路径语义只改本文件）=====
-
-/** /web/<type>/<rest> 两段式（type 不含 /，rest 可含 /） */
-const WEB_DIR_RE = /^\/web\/([^/]+)\/(.+)$/;
-/** 目录形态 /web/<type>/<name>（name 可含多段路径，末尾可选 /） */
-const WEB_NAME_RE = /^\/web\/([^/]+)\/(.+?)\/?$/;
-
-/** 校验是否为 /web/ 虚拟仓库路径（含 type 段与至少一个后续段） */
-export function isWebPath(p: string): boolean {
-  return WEB_DIR_RE.test(p);
-}
-
-/** /web/<type>/<rest> → {type, rest}；非 /web/ 前缀或无 rest 返回 null */
-export function parseWebPath(p: string): { type: string; rest: string } | null {
-  const m = p.match(WEB_DIR_RE);
-  if (!m) return null;
-  return { type: m[1], rest: m[2] };
-}
-
-/** 目录形态 /web/<type>/<name> → {type, name}（name 可含多段路径）；非 /web/ 前缀返回 null */
-export function parseWebDirPath(p: string): { type: string; name: string } | null {
-  const m = p.match(WEB_NAME_RE);
-  if (!m) return null;
-  return { type: m[1], name: m[2] };
-}
-
-/** /web/ 之后的类型段（/web/ysm/xxx → "ysm"）；非 /web/ 前缀返回 null */
-export function webDirType(dir: string): string | null {
-  const m = dir.match(/^\/web\/([^/]+)/);
-  return m ? m[1] : null;
-}
+// ADR-217 环 B：虚拟仓库路径解析下沉 utils/base/web-path.ts（中性纯函数层），
+// 本模块仅 re-export 保持 web-fs 等消费方命名兼容，消除 workers→web-common 反向环。
+export {
+  isWebPath,
+  parseWebDirPath,
+  parseWebPath,
+  webDirType,
+} from "@/utils/base/web-path.ts";
 
 /** 导入大小上限 100MB（对齐 import-dnd.ts MAX_FILE_SIZE，桌面 oversize 过滤同口径） */
 export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;

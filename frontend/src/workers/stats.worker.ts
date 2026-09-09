@@ -5,8 +5,8 @@
 //  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → postMessage 进度 + 批量结果
 // 主线程编排（批量切分/超时/取消/降级）见 backend/web-stats.ts；协议见 stats-protocol.ts。
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
-import { idbGet } from "@/backend/idb.ts";
-import { parseWebPath } from "@/backend/web-common.ts";
+import { idbGet } from "@/utils/storage/idb.ts";
+import { parseWebPath } from "@/utils/base/web-path.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import {
   initYsmParserInWorker,

@@ -8,9 +8,8 @@ import { isCrossOriginIsolated, registerCoiServiceWorker } from "./coi-sw.ts";
 const { isWebPlatformMock } = vi.hoisted(() => ({
   isWebPlatformMock: vi.fn(() => true),
 }));
-vi.mock("@/backend/platform-web.ts", () => ({
+vi.mock("@/backend/platform.ts", () => ({
   isWebPlatform: isWebPlatformMock,
-  readDeclaredBackend: () => undefined,
 }));
 
 // safeGet/safeSet 走 storage.ts——mock 掉避免污染；safeGet 可逐用例控制返回值

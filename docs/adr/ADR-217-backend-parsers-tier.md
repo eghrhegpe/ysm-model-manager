@@ -51,9 +51,10 @@ worker 文件读取架构（下沉纯函数或改为 main-thread 经 postMessage
 
 ## 3. 后果（Consequences）
 
-- 正面：backend 不再运行期依赖渲染层；环 A 破；`parsers/` 成为纯解析函数单一归属层。
+- 正面：backend 不再运行期依赖渲染层（环 A 破）；workers 不再运行期依赖 backend（环 B 破）；
+  `parsers/` 成为纯解析函数单一归属层；`utils/storage` / `utils/base/web-path` 收纳原 backend 中性能力。
 - 负面：decoder 原文件退化为 re-export 转发（可接受，零回归）。
-- 遗留：环 B 待批；`parsers/ysm-json.ts` 因兄弟 AI 并行重构已将作者解析抽到 `preview-3d/decoder/ysm-authors.ts`，
+- 遗留：`parsers/ysm-json.ts` 因兄弟 AI 并行重构已将作者解析抽到 `preview-3d/decoder/ysm-authors.ts`，
   现运行期 `import { parseYsmAuthors }`（经 parsers 中转，backend 源码已无 `@/preview-3d` 直接依赖，环 A 直接边已断）；
   并仍 `import type { DecodedYsm }` 自 `preview-3d/decoder/utils.ts`（纯类型，无运行期环）。
 

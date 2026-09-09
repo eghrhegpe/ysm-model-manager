@@ -17,6 +17,7 @@ export type LocaleParams = Record<string, string | number>;
 
 // 残留占位符告警（每签名一次）：模板含 {ident} 而参数未传/未覆盖 → 裸占位符上屏是
 // 静默 UI bug 类，守卫兜底（ADR-207 D3）
+// 无上限：残留签名数 ≤ 语言包模板数（有界），无需淘汰
 const warnedResiduals = new Set<string>();
 const RESIDUAL_RE = /\{[a-zA-Z_$][\w$]*\}/g;
 

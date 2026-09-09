@@ -13,7 +13,8 @@ const VALID_PAGES = [
   "diagnostics",
   "settings",
 ] as const satisfies readonly PageName[];
-// 全量覆盖断言：PageName 新增页面而未同步本表时编译期报错（防 isValidPage 静默拒绝新页）
+// 全量覆盖断言：PageName 新增页面而未同步 VALID_PAGES 时编译期报错。
+// 报错形如 "Type 'X' is not assignable to type 'never'" → 修复：在 VALID_PAGES 追加 X
 type _AssertPageCoverage = PageName extends (typeof VALID_PAGES)[number] ? true : never;
 const _assertPageCoverage: _AssertPageCoverage = true;
 void _assertPageCoverage;

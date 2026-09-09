@@ -68,9 +68,8 @@ let warnedNoHost = false;
 
 /** 非空包判定（{} 是 truthy，直接判布尔会让空包短路 zh-CN 兜底） */
 function isNonEmpty(b: Bundle | undefined): b is Bundle {
-  // for-in 早退探针：零分配（Object.keys 每调用建 ~1500 元素 key 数组，
-  // 而本函数位于 t()/tOf() 渲染热路径上——ADR-210 D2 移除 _activeBundle
-  // 缓存后每次翻译查找都会走到这里，code_review d0c543bb2 P3）
+  // for-in 早退探针：非空时首键即返回，零分配（Object.keys 每次建 ~1500 元素数组，
+  // 本函数位于 getBundle 热路径——ADR-210 D2 移除 _activeBundle 缓存后每次翻译都经过）
   if (!b) return false;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const _ in b) return true;
@@ -79,6 +78,7 @@ function isNonEmpty(b: Bundle | undefined): b is Bundle {
 
 // 缺失 key 告警节流：每 key 只告警一次。可变状态保持私有，对外仅 warnMissingKey
 //（ADR-207 D3：原导出可变 warnedKeys Set 属跨模块泄漏，收编为 API）
+// 无上限：key 空间 = 当前语言缺失 key 数（有界），setLang 切换时 clear
 const warnedKeys = new Set<string>();
 export function warnMissingKey(key: string): void {
   if (warnedKeys.has(key)) return;
@@ -216,7 +216,9 @@ export async function initI18n(): Promise<void> {
   await Promise.all([loadLocale(code), loadLocale(FALLBACK_LANG), loadLocale(BASE_LANG)]);
   // 补发前对账：await 期间若 setLang 覆盖了 _currentLang，不替写者补发
   //（新语言事件 setLang 已自行 emit）；仅当 code 自身加载成功（非空）才通知重渲染，
-  // 失败留待重试，不污染订阅通道
+  // 失败留待重试，不污染订阅通道。
+  // 隐式契约：此对账依赖 setLang 一定写 _currentLang（initI18n 旁路不经 gen 守卫）；
+  // 若将来 setLang 加 guard 跳过写入，须同步修改此处对账逻辑
   if (code === _currentLang && isNonEmpty(bundles[code])) {
     bus.emit("lang:changed", { lang: code });
   }

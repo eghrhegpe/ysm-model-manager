@@ -249,7 +249,6 @@ auto_fields:
     - collectSettingsCapControls
     - collectVisiblePredicates
     - CommunityData
-    - compileMolang
     - compKey
     - componentCountsFromSpec
     - computeBoneLocalPos

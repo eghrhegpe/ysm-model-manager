@@ -22,7 +22,6 @@ auto_fields:
     - CapControlView
     - collectSettingsCapControls
     - collectVisiblePredicates
-    - createListenerSet
     - FieldKind
     - FieldRestorer
     - formatCapSliderValue

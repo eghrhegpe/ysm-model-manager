@@ -15,6 +15,9 @@ auto_fields:
     - clearTrigger
     - CopyResult
     - copyText
+    - createFocusRestoreManager
+    - createInputBlockStack
+    - createTooltipManager
     - disposeTooltipCore
     - downloadTextFile
     - ensureTooltipStyles
@@ -22,9 +25,11 @@ auto_fields:
     - FLASH_DURATION_MS
     - flashBtn
     - FlashOptions
+    - FocusRestoreManager
     - focusVisibleCSS
     - friendlyError
     - getStackDepth
+    - InputBlockStack
     - installScrollSync
     - isEditableTarget
     - isFileExistsError
@@ -43,6 +48,7 @@ auto_fields:
     - toastEmptyRtype
     - toastError
     - ToastType
+    - TooltipManager
     - TooltipOptions
     - trapFocusAcrossShadow
     - WebComponentBase

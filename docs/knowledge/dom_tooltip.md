@@ -8,10 +8,12 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - attachTooltip
+    - createTooltipManager
     - disposeTooltipCore
     - ensureTooltipStyles
     - promoteTitle
     - promoteTitleIfPresent
+    - TooltipManager
     - TooltipOptions
     - YSW_TOOLTIP_CSS
   tests:

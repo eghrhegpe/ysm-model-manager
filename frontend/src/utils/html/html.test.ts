@@ -41,4 +41,19 @@ describe("hl", () => {
     expect(out).toBe("AİB");
     expect(out).not.toContain("<mark></mark>");
   });
+  // 全匹配：多处命中均包裹 <mark>
+  it("全匹配：多处命中均包裹 <mark>", () => {
+    expect(hl("abcabcabc", "abc")).toBe("<mark>abc</mark><mark>abc</mark><mark>abc</mark>");
+  });
+  it("全匹配：重叠查询非重叠语义", () => {
+    // query="aa", text="aaa" → 非重叠：第一个 "aa" 命中后 cursor 跳到 index 2，
+    // 剩余 "a" 不够匹配 → 只命中一次
+    expect(hl("aaa", "aa")).toBe("<mark>aa</mark>a");
+  });
+  it("全匹配：大小写混合", () => {
+    expect(hl("Hello HELLO hello", "hello")).toBe("<mark>Hello</mark> <mark>HELLO</mark> <mark>hello</mark>");
+  });
+  it("全匹配：HTML 实体与命中混合", () => {
+    expect(hl("<a> & <a>", "a")).toBe("&lt;<mark>a</mark>&gt; &amp; &lt;<mark>a</mark>&gt;");
+  });
 });

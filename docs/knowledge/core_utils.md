@@ -17,6 +17,7 @@ auto_fields:
     - clamp01
     - clampPct
     - createBusyLock
+    - createListenerSet
     - debounce
     - Disposable
     - formatLongTask
@@ -26,6 +27,7 @@ auto_fields:
     - hasRecycleSegment
     - isObj
     - isStorageAccessible
+    - ListenerSet
     - logError
     - LogSink
     - logWarn

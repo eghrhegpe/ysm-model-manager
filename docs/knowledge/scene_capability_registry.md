@@ -28,7 +28,6 @@ auto_fields:
     - buildWaterNodes
     - CapabilityId
     - CapabilityMap
-    - createListenerSet
     - customHdrThumbnail
     - deepMergeLightParams
     - DeepPartial

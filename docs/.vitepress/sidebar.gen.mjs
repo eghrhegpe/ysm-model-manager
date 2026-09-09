@@ -234,11 +234,15 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-216：域状态订阅提级原语层：createListenerSet",
+        "link": "/adr/ADR-216-listener-set-primitive"
+      },
+      {
         "text": "ADR-215：dom 单例模式改工厂 + html hl 全匹配高亮",
         "link": "/adr/ADR-215-dom-singleton-to-factory-and-hl-full-match"
       },
       {
-        "text": "ADR-214：debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入",
+        "text": "ADR-214：debugGetSpec 控制台钩子搬离 debug.ts——职责纯度回归",
         "link": "/adr/ADR-214-debug-remove-dynamic-backend-import"
       },
       {

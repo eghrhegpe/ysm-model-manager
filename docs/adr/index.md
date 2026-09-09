@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **213** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **214** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 5 |
-| [✅ 已采纳](#已采纳) | 198 |
+| [✅ 已采纳](#已采纳) | 199 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -35,12 +35,13 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（198）
+### ✅ 已采纳（199）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-216](./ADR-216-listener-set-primitive.md) | 域状态订阅提级原语层：createListenerSet | ✅ 已采纳 |
 | [ADR-215](./ADR-215-dom-singleton-to-factory-and-hl-full-match.md) | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 |
-| [ADR-214](./ADR-214-debug-remove-dynamic-backend-import.md) | debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入 | ✅ 已采纳 |
+| [ADR-214](./ADR-214-debug-remove-dynamic-backend-import.md) | debugGetSpec 控制台钩子搬离 debug.ts——职责纯度回归 | ✅ 已采纳 |
 | [ADR-213](./ADR-213-molang-singleton-to-factory.md) | molang.ts 全局单例全量迁移工厂模式 | ✅ 已采纳 |
 | [ADR-212](./ADR-212-animation-split-parser-evaluator.md) | animation.ts 瘦身——求值器拆出，解析器原位保留 | ✅ 已采纳 |
 | [ADR-211](./ADR-211-clip-molangparser.md) | clip 自带 MolangParser 实例替代全局单例 | ✅ 已采纳 |
@@ -262,8 +263,9 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-216 | 域状态订阅提级原语层：createListenerSet | ✅ 已采纳 | 2026-09-09 |
 | ADR-215 | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 | 2026-09-14 |
-| ADR-214 | debug.ts 移除动态 import @/backend/app.ts——控制台钩子依赖注入 | ✅ 已采纳 | 2026-09-14 |
+| ADR-214 | debugGetSpec 控制台钩子搬离 debug.ts——职责纯度回归 | ✅ 已采纳 | 2026-09-14 |
 | ADR-213 | molang.ts 全局单例全量迁移工厂模式 | ✅ 已采纳 | 2026-09-14 |
 | ADR-212 | animation.ts 瘦身——求值器拆出，解析器原位保留 | ✅ 已采纳 | 2026-09-14 |
 | ADR-211 | clip 自带 MolangParser 实例替代全局单例 | ✅ 已采纳 | 2026-09-09 |

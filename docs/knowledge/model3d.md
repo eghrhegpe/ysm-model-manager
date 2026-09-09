@@ -161,7 +161,6 @@ auto_fields:
     - createGazeController
     - createIconButton
     - createLipSyncController
-    - createListenerSet
     - createPmxParser
     - createResolveModeBridge
     - createTextureDecoder

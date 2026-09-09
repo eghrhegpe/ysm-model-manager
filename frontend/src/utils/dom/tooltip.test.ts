@@ -19,8 +19,6 @@ afterEach(() => {
   vi.useRealTimers();
   document.getElementById("ysw-tooltip-styles")?.remove();
   document.querySelectorAll(".ysw-tooltip").forEach((n) => n.remove());
-  // freshTooltip() 调 vi.resetModules() 产生新模块实例，但旧实例的
-  // 模块级单例 scroll capture listener 不会被移除——跨测试累积
   vi.resetModules();
 });
 
@@ -178,7 +176,8 @@ describe("attachTooltip — 定位", () => {
 });
 
 describe("attachTooltip — cleanup 与兜底", () => {
-  it("cleanup 后不再响应 hover，且正在显示时立即隐藏", async () => {    const { attachTooltip } = await freshTooltip();
+  it("cleanup 后不再响应 hover，且正在显示时立即隐藏", async () => {
+    const { attachTooltip } = await freshTooltip();
     const btn = document.createElement("button");
     document.body.appendChild(btn);
     const off = attachTooltip(btn, "提示", { delayMs: 0 });
@@ -217,7 +216,7 @@ describe("attachTooltip — cleanup 与兜底", () => {
     expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
   });
 
-  it("显示中页面滚动 → 模块级单例监听统一隐藏", async () => {
+  it("显示中页面滚动 → 默认实例 scroll 监听统一隐藏", async () => {
     const { attachTooltip } = await freshTooltip();
     const btn = document.createElement("button");
     document.body.appendChild(btn);
@@ -240,7 +239,7 @@ describe("attachTooltip — cleanup 与兜底", () => {
     expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
   });
 
-  it("cleanup 后滚动不再有副作用（单例监听常驻但空操作）", async () => {
+  it("cleanup 后滚动不再有副作用（scroll ref 归零后监听移除）", async () => {
     const { attachTooltip } = await freshTooltip();
     const btn = document.createElement("button");
     document.body.appendChild(btn);
@@ -290,8 +289,8 @@ describe("promoteTitle — 原生 title 升级为自定义 tooltip", () => {
   });
 });
 
-describe("disposeTooltipCore — scroll 监听 ref-count 清理", () => {
-  it("dispose 后 scroll 不再触发隐藏（ref-count 归零移除监听）", async () => {
+describe("disposeTooltipCore — 默认实例全量清理", () => {
+  it("dispose 后 scroll 不再触发隐藏（默认实例清理全部资源）", async () => {
     const { attachTooltip, disposeTooltipCore } = await freshTooltip();
     const btn = document.createElement("button");
     document.body.appendChild(btn);
@@ -300,15 +299,14 @@ describe("disposeTooltipCore — scroll 监听 ref-count 清理", () => {
     vi.advanceTimersByTime(50);
     expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
 
-    // disposeTooltipCore 移除 scroll 监听（ref-count 1→0）
+    // disposeTooltipCore 清理默认实例（scroll listener + timer + observer + DOM 节点）
     disposeTooltipCore();
 
-    // scroll 不再触发 hide → tooltip 仍显示
-    document.dispatchEvent(new Event("scroll"));
-    expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
+    // dispose 后 tooltip DOM 节点已移除
+    expect(document.querySelector(".ysw-tooltip")).toBeNull();
   });
 
-  it("多次 dispose 不抛错（ref-count 不会为负）", async () => {
+  it("多次 dispose 不抛错（dispose 幂等）", async () => {
     const { disposeTooltipCore } = await freshTooltip();
     expect(() => {
       disposeTooltipCore();
@@ -317,42 +315,77 @@ describe("disposeTooltipCore — scroll 监听 ref-count 清理", () => {
     }).not.toThrow();
   });
 
-  it("dispose 后 _injected 复位，可重新注入样式", async () => {
-    const { ensureTooltipStyles, disposeTooltipCore } = await freshTooltip();
-    ensureTooltipStyles();
-    expect(document.getElementById("ysw-tooltip-styles")).not.toBeNull();
-
-    // 移除样式元素（模拟 HMR 清理或外部移除）
-    document.getElementById("ysw-tooltip-styles")?.remove();
-    expect(document.getElementById("ysw-tooltip-styles")).toBeNull();
-
-    // dispose 后 _injected 应复位
-    disposeTooltipCore();
-
-    // 再次注入应成功（若 _injected 未复位，ensureTooltipStyles 会短路跳过）
-    ensureTooltipStyles();
-    expect(document.getElementById("ysw-tooltip-styles")).not.toBeNull();
-  });
-
-  it("ref-count 跟踪：attach → cleanup → attach 仍正常工作", async () => {
-    const { attachTooltip } = await freshTooltip();
+  it("dispose 后 attachTooltip 可重新注册（新 attach 重建 scroll 监听）", async () => {
+    const { attachTooltip, disposeTooltipCore } = await freshTooltip();
     const btn = document.createElement("button");
     document.body.appendChild(btn);
 
-    // 第一次 attach + cleanup
-    const off1 = attachTooltip(btn, "第一次", { delayMs: 0 });
+    // 第一次 attach + dispose
+    attachTooltip(btn, "第一次", { delayMs: 0 });
     btn.dispatchEvent(new Event("mouseenter"));
     vi.advanceTimersByTime(50);
     expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
-    off1(); // ref-count → 0，监听移除
+    disposeTooltipCore();
 
-    // 第二次 attach 应重新注册监听
-    const off2 = attachTooltip(btn, "第二次", { delayMs: 0 });
+    // 第二次 attach 应重新注册 scroll 监听
+    attachTooltip(btn, "第二次", { delayMs: 0 });
     btn.dispatchEvent(new Event("mouseenter"));
     vi.advanceTimersByTime(50);
     expect(document.querySelector(".ysw-tooltip--show")).not.toBeNull();
     document.dispatchEvent(new Event("scroll"));
     expect(document.querySelector(".ysw-tooltip--show")).toBeNull();
-    off2();
+  });
+});
+
+describe("createTooltipManager — 工厂模式隔离", () => {
+  it("两个实例互不干扰（各自独立的 tooltip 状态）", async () => {
+    const { createTooltipManager } = await freshTooltip();
+    const mgr1 = createTooltipManager();
+    const mgr2 = createTooltipManager();
+
+    const btn1 = document.createElement("button");
+    const btn2 = document.createElement("button");
+    document.body.append(btn1, btn2);
+
+    mgr1.attachTooltip(btn1, "提示1", { delayMs: 0 });
+    mgr2.attachTooltip(btn2, "提示2", { delayMs: 0 });
+
+    btn1.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    btn2.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+
+    // 两个实例各自管理自己的 tooltip 节点
+    const tips = document.querySelectorAll(".ysw-tooltip");
+    expect(tips.length).toBe(2);
+  });
+
+  it("实例 dispose 只清理自身资源", async () => {
+    const { createTooltipManager } = await freshTooltip();
+    const mgr1 = createTooltipManager();
+    const mgr2 = createTooltipManager();
+
+    const btn1 = document.createElement("button");
+    const btn2 = document.createElement("button");
+    document.body.append(btn1, btn2);
+
+    mgr1.attachTooltip(btn1, "提示1", { delayMs: 0 });
+    mgr2.attachTooltip(btn2, "提示2", { delayMs: 0 });
+
+    btn1.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    btn2.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+
+    expect(document.querySelectorAll(".ysw-tooltip").length).toBe(2);
+
+    // dispose mgr1 只清理自己的 tooltip
+    mgr1.dispose();
+    expect(document.querySelectorAll(".ysw-tooltip").length).toBe(1);
+
+    // mgr2 的 tooltip 仍在
+    btn2.dispatchEvent(new Event("mouseenter"));
+    vi.advanceTimersByTime(50);
+    expect(document.querySelectorAll(".ysw-tooltip").length).toBe(1);
   });
 });

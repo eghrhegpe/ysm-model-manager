@@ -22,17 +22,12 @@ auto_fields:
     - BoneChannels
     - BoneTransform
     - buildControllerAnimationIndex
-    - compileMolang
     - ControllerState
     - ControllerTransition
     - createMolangParser
     - createYsmAnimPlayer
     - Easings
-    - evaluateClip
-    - evaluateKeyframes
-    - executeTimeline
     - findControllerForAnimation
-    - getMolangParser
     - Keyframe
     - Molang
     - MolangAxes
@@ -43,7 +38,6 @@ auto_fields:
     - stagger
     - TimelineEvent
     - Vec3
-    - ysmAnimClipLabels
     - YsmAnimPlayer
   tests:
     - frontend/src/utils/animation/animate.test.ts

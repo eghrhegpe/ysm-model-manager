@@ -7,6 +7,7 @@ source_files:
   - frontend/src/features/community/download-queue-store.ts
   - frontend/src/features/community/download-queue.ts
   - frontend/src/features/community/download-queue-progress.ts
+  - frontend/src/features/community/download-queue-web.ts
   - frontend/src/features/community/download-tasks.ts
   - frontend/src/backend/runtime.ts
 auto_fields:
@@ -39,7 +40,9 @@ auto_fields:
     - resetProgress
     - resume
     - rollbackToIdle
+    - runWebEnqueue
     - subscribe
+    - WebEnqueueCtx
     - Window
 tests:
   - frontend/src/backend/runtime.test.ts
@@ -80,7 +83,7 @@ status: active
 
 ## 概览
 
-创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久层——`Events.On` 在脚本加载时注册一次，页面切换不丢失事件。
+创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久层——`Events.On` 在脚本加载时注册一次，页面切换不丢失事件。ADR-208 D2 二次拆分：网页版 fetch→IDB/直链兜底入队分支拆至 `download-queue-web.ts`（经 ctx 注入本模块写函数保持单一写入纪律 + 零运行时环）。
 
 ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`queue:status` / `queue:file-start` / `queue:file-done` / `download:progress`），无对应 `Events.Off` 退出路径；认定为 app 级单例豁免（`_registered` 布尔守卫防重复注册）。
 
@@ -94,7 +97,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 - **`getStateSnapshot(): Readonly<DownloadState>`** — 当前状态只读快照（拉取模型，返回独立引用）。
 - **`resume()`** — 页面切回时从 Go 端恢复当前队列状态（`QueueStatus` binding 调用）。
 - **`isActiveStatus(s)`** — 队列是否处于活跃下载（同时认 `downloading` 和 `enqueued`，P1 修复：Go 端入队后只发 `enqueued`，从不发 `downloading`）。
-- **`enqueueDownloads(tasks: DownloadTask[])`** — 模块级入队（纯 Go 调用，不涉及 DOM）；web 下载分支走 IndexedDB 入库 + 50MB 超限回退浏览器直链 + 15s fetch 超时兜底；Go 分支调 `EnqueueDownloads`。
+- **`enqueueDownloads(tasks: DownloadTask[])`** — 模块级入队（纯 Go 调用，不涉及 DOM）；web 分支委托 `download-queue-web.ts`（IndexedDB 入库 + 50MB 超限回退浏览器直链 + 15s fetch 超时兜底，经 `markCurrentFile` / `decrementRemaining` / `addQueueError` / `rollbackToIdle` 写函数注入）；Go 分支调 `EnqueueDownloads`。
 - **`cancelDownloads()`** — 模块级取消（`CancelQueue` binding 调用）。
 - **Wails 事件注册** — 4 组事件：`queue:status`（状态变更）、`queue:file-start`（文件开始）、`queue:file-done`（文件完成 + 增量提取创作者头像）、`download:progress`（进度回调）。
 - **创作者头像增量提取**（`queue:file-done` handler）：`.ysm` 成功时经 `_avatarChain` Promise 链限并发 1，串行执行 `DebugExtractCreatorAvatar`（作者去重防重复排队）。
@@ -116,6 +119,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 
 - **`features/community/download-queue.ts`** — UI 控制器：re-export `DownloadState` / `DownloadTask` / `QueueError`；消费 `enqueueDownloads` / `cancelDownloads` / `subscribe`；`createDownloadQueue` 对外暴露。
 - **`features/community/download-queue-progress.ts`** — 99% 卡进度守卫状态机：消费 `STATE` / `isActiveStatus`。
+- **`features/community/download-queue-web.ts`** — 网页版下载入库分支（ADR-208 D2 拆出）：`runWebEnqueue(tasks, ctx)`；对 store 零运行时依赖（`DownloadTask` 仅 type-only，ctx 注入写函数——check-circular 防环设计）。
 - **`features/community/download-tasks.ts`** — 下载任务构建层：`buildDownloadTasks` 产出 `DownloadTask[]` 供 `enqueueDownloads` 消费。
 - **`backend/runtime.ts` `Events`** — Wails 事件抽象层；本模块顶层注册 4 组 `Events.On`。
 - **`backend/app.ts` `getApp()`** — 获取类型化绑定（`EnqueueDownloads` / `CancelQueue` / `QueueStatus` / `CachedCreatorAvatar` / `DebugExtractCreatorAvatar`）。
@@ -128,8 +132,8 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 
 - **app 级单例豁免**：`_registered` 布尔守卫防重复注册；禁止非 app 级模块复制此模式。
 - **isActiveStatus 双状态**：必须同时认 `downloading` 和 `enqueued`（P1 修复：Go 端入队后只发 `enqueued`）。
-- **web 下载 50MB 上限**：`WEB_DOWNLOAD_IDB_LIMIT`（与 `web-common` 的 `DetectContainerType` 同款量级守卫）；超限回退浏览器直链。
-- **fetch 15s 超时兜底**：`WEB_DOWNLOAD_FETCH_TIMEOUT_MS`（防挂起服务器永久卡队列）。
+- **web 下载 50MB 上限**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_IDB_LIMIT`（与 `web-common` 的 `DetectContainerType` 同款量级守卫）；超限回退浏览器直链。
+- **fetch 15s 超时兜底**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_FETCH_TIMEOUT_MS`（防挂起服务器永久卡队列）。
 - **getStateSnapshot 只读**：调用方应只读快照、不可修改——修改会绕过通知链路。
 - **enqueue 失败回滚 idle**：模块级函数失败也回滚 `STATE.status = idle`，防永久卡 downloading。
 - **事件 payload 守卫**（P3 审计修复）：v3 事件 data 应为非空数组，非数组 / 空数组视为畸形直接丢弃。

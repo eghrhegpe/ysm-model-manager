@@ -266,7 +266,7 @@
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
 | 滑块控制器、幻灯片菜单外壳、头部开关 | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | 进度弹窗（closable=false 防误关） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
-| 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise | - |
+| 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗单例槽位经 registerDlg 保证（状态在 DgBrShell 实例），重复打开先 close() 结算上一个 Promise | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 features/context-menu/context-menu-handlers.ts（HANDLERS 表） | - |
 | 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |

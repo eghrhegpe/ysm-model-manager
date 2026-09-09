@@ -50,7 +50,7 @@
 | 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
 | 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单、拓展点探索 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
 | FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) ⚠️歧义（另见 cli_quality_audit.md） | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
-| 批量重命名 / 标签编辑 / 高级筛选对话框、找对话框入口符号 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features_dialogs.md) | `frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座九对源+测试在此归位——… |
+| 批量重命名 / 标签编辑 / 高级筛选对话框、找对话框入口符号 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features_dialogs.md) | `frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整… |
 | 设计评审、前端设计、锐评、主题系统、3D 性能审查、生命周期审查、技术债 | [前端设计锐评](./frontend_design_critique.md) ⚠️歧义（另见 frontend_repo_audit.md） | 2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。… |
 | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射、voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | `frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack… |
 | 代码审核、代码审查、审计、前端质量、技术债、重构排期、XSS、innerHTML | [前端 TS 整包审计](./frontend_repo_audit.md) ⚠️歧义（另见 cli_quality_audit.md、frontend_test_audit.md、frontend_design_critique.md等） | 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全… |

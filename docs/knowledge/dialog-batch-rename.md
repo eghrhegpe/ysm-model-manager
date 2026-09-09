@@ -5,14 +5,18 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/features/dialogs/batch-rename.ts
+  - frontend/src/features/dialogs/batch-rename-form.ts
   - frontend/src/features/dialogs/batch-rename-util.ts
+  - frontend/src/views/app-tree/tpl-batch-rename.ts
 auto_fields:
   symbols_with_lines:
     - applyReplaceToName
     - BatchEntry
     - BatchItem
     - BatchRenameChange
+    - batchRenameTpl
     - BatchRenameTpl
+    - bindBatchRenameForm
     - BrRowView
     - DgBrShell
     - rebuildParsedName
@@ -27,7 +31,7 @@ quick_intents:
   - 统一作者 / 作品、5 个内置预设
   - showBatchRenameDialog
 quick_risk_lines:
-  - batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise
+  - batch-rename 弹窗单例槽位经 registerDlg 保证（状态在 DgBrShell 实例），重复打开先 close() 结算上一个 Promise
 pitfalls:
   - 重复打开 batch-rename 不 close → 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算
   - 正则替换不分离扩展名 → 把 .ext 一起替换掉；必须只对文件名主体替换
@@ -52,9 +56,11 @@ status: active
 
 `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 5 个内置预设）。预览区逐行展示 原名 → 新名，可勾选筛选，应用时把变更列表回调给调用方执行，弹窗负责 UI 与结算时机。
 
+ADR-208 D2 拆分（≤400 行红线）：`batch-rename.ts` = 公共 API + 弹窗壳（overlay/focus/close）+ 类型契约；`batch-rename-form.ts` = 表单接线层（`updateAll` / `applyReplace` / `renderPreview` / 五组事件绑定，`#br-changed` 查询走 shell.overlay 不再 document 全局）；DOM 模板外移 `views/app-tree/tpl-batch-rename.ts`（ADR-190 D1a，经 `BatchRenameTpl` 注入 `formHTML` / `previewHTML`，features 不自渲染）。
+
 ## 核心职责
 
-- `showBatchRenameDialog(dir, entries, onApply)`：模块级单例 `dialogEl`，重复打开先 `close()` 结算上一个 Promise，调用方 `await` 永不悬挂
+- `showBatchRenameDialog(dir, entries, onApply, tpl)`：单例槽位由 `registerDlg` 保证，重复打开先结算上一个 Promise，调用方 `await` 永不悬挂；`tpl`（`BatchRenameTpl`）为 DOM 模板注入参数（缺失即编译期 fail-loud，先例 `RecycleDeps.renderListHtml`）
 - 解析模式：`updateAll()` 按 `[作者]【作品】角色 (日期).ext` 重建新名（原名无扩展名时回落 `RESOURCE_TYPES.YSM`）；统一作者/作品输入 200ms 防抖后批量套用并保留勾选状态
 - 替换模式：`applyReplace(find, replace, isRegex)` 分离扩展名、只对文件名主体替换；正则无效时保持原名并 toast 提示（`dataset.regexErr` 去重，每次调用前重置）；预设含「去除年份」「去除版本 -v2」「【】→[]」「拍平为 作者-作品」「空格→下划线」
 - 预览与勾选：`renderPreview` 渲染全选/单行复选框（事件委托），`updateCount` 统计「选中且有变更」数量
@@ -63,11 +69,11 @@ status: active
 
 ## 对外 API / 入口
 
-- 导出：`showBatchRenameDialog(dir: string, entries: BatchEntry[], onApply: (changes: BatchRenameChange[]) => Promise<void>): Promise<void>`、`interface BatchRenameChange`（oldPath/oldName/newName）
+- 导出：`showBatchRenameDialog(dir: string, entries: BatchEntry[], onApply: (changes: BatchRenameChange[]) => Promise<void>, tpl: BatchRenameTpl): Promise<void>`、`interface BatchRenameChange`（oldPath/oldName/newName）、`interface BatchRenameTpl` / `BrRowView`（模板注入契约，views 侧 `tpl-batch-rename.ts` 提供实现 `batchRenameTpl`）
 - 派发 bus：`toast:show`（正则无效警告、无变更提示、onApply 失败告警）
 - 监听 bus：无
-- 依赖：`parseModelName`（utils/dom/display.ts）、`stagger`（utils/animation/stagger.ts）、`esc`（utils/dom/html.ts）、`registerDlg` / `closeDlg`（features/dialogs/modal-core.ts）、`RESOURCE_TYPES`（utils/resource/types.ts）
-- 调用方：`app-tree/bus-handlers.ts` 的 `dir:batch-rename`（目录右键，先 `ScanModelEntries` 取条目）与 `batch:rename`（Ctrl/Shift 多选，由路径拼条目）；两者的 onApply 均逐个 `RenameFile` 后 `reload` + `stats:refresh` 并汇总成功/失败
+- 依赖：`parseModelName`（utils/model-name/display.ts）、`registerDlg` / `closeDlg` / `trapFocus`（features/dialogs/modal-core.ts）；表单接线层另依赖 `applyReplaceToName` / `rebuildParsedName`（batch-rename-util.ts）；views 模板层依赖 `stagger`（utils/animation/stagger.ts）、`esc`（utils/html/html.ts）
+- 调用方：`app-tree/bus-handlers.ts` 的 `dir:batch-rename`（目录右键，先 `ScanModelEntries` 取条目）与 `batch:rename`（Ctrl/Shift 多选，由路径拼条目）；两者均注入 `views/app-tree/tpl-batch-rename.ts` 的 `batchRenameTpl`；onApply 均逐个 `RenameFile` 后 `reload` + `stats:refresh` 并汇总成功/失败
 
 ## 与其他子系统关系
 
@@ -77,7 +83,7 @@ status: active
 
 ## 不变量
 
-- 模块级 `dialogEl` 单例：新弹窗打开前必须先 `close()` 结算旧 `_pendingResolve`，杜绝悬挂 Promise 与双弹窗；**registerDlg 的 cancelClose 捕获本次元素引用**（P1 修复：原 `() => close()` 引用模块级 dialogEl，重复打开时旧 cancelClose 在 registerDlg 抢占中被调 → 误杀新弹窗 + `dialogEl.focus()` 抛 TypeError）
+- 单例槽位由 `registerDlg` 保证（弹窗状态收在 `DgBrShell` 实例，无模块级全局）：新弹窗打开前必须先 `close()` 结算旧 `_pendingResolve`，杜绝悬挂 Promise 与双弹窗；**registerDlg 的 cancelClose 捕获本次元素引用**（P1 修复：原 `() => close()` 引用模块级 dialogEl，重复打开时旧 cancelClose 在 registerDlg 抢占中被调 → 误杀新弹窗 + `dialogEl.focus()` 抛 TypeError）
 - 替换只作用于文件名主体，扩展名分离保护（`/(\.[^.]+)$/`）；**空查找串守卫**（P2 修复：`replaceAll("", x)` 每两字符间插入破坏预览）
 - 应用按钮必须先 disabled 再 `await onApply`，且「恢复按钮 + `close()`」只能放 `finally`——onApply 抛错时不得残留「⏳ 执行中...」死按钮或不关的弹窗（陷阱 #3）
 - 变更判定以 `newName !== Name` 为准，未变化条目不进 `onApply` 载荷

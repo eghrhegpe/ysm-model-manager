@@ -8,6 +8,7 @@ source_files:
   - frontend/src/features/dialogs/tag-editor.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
+  - frontend/src/features/dialogs/batch-rename-form.ts
   - frontend/src/features/dialogs/modal-core.ts
 tests:
   - frontend/src/features/dialogs/adv-filter-util.test.ts
@@ -27,6 +28,7 @@ auto_fields:
     - BatchItem
     - BatchRenameChange
     - BatchRenameTpl
+    - bindBatchRenameForm
     - BrRowView
     - closeActiveDialog
     - closeDlg
@@ -51,7 +53,7 @@ quick_risk_lines:
   - dialogs 各文件内部引用深度以 features/dialogs 为基准,vi.mock 路径须同步
   - modal-core.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合)
   - rename.ts 路径变更时需同步 vi.mock 字符串路径(ADR-170 实测教训:非 import 语句正则扫不到)
-  - batch-rename.ts stagger 动画依赖 animation/stagger.ts,改路径须保持同簇引用
+  - 批量重命名 DOM 模板（含 stagger 动画）在 views/app-tree/tpl-batch-rename.ts（ADR-208 D2 外移），features 经 BatchRenameTpl 注入；改模板走 views 侧，改接线走 features/dialogs
   - adv-filter.ts 后端约束:Go SearchModels 仅支持 6 范围 +1 关键字,前端不呈现其他控件(代码注释已注明)
 pitfalls:
   - 目录层级变动后,vi.mock 字符串路径与 import 同步重算(ADR-170 实测:非 import 语句正则扫不到 mock 路径变更)
@@ -67,7 +69,7 @@ invariant_anchors:
 
 ## 概览
 
-`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座九对源+测试在此归位——它们本是完整业务功能，不再误住 utils 叶子层。
+`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整业务功能，不再误住 utils 叶子层。
 
 ## 核心职责
 
@@ -75,7 +77,7 @@ invariant_anchors:
 |---|---|
 | modal-core.ts + modal-prompt/select/confirm/progress/picker.ts | 通用对话框底座 6 文件家族（ADR-187 D2 拆分；core=脚手架/单例/trapFocus，builder 各含 modalXxx 入口） |
 | rename.ts + rename-format.ts | 重命名对话框 + 文件名拼接/校验纯逻辑 |
-| batch-rename.ts + batch-rename-util.ts | 批量重命名 + 解析名重建纯逻辑 |
+| batch-rename.ts + batch-rename-form.ts + batch-rename-util.ts | 批量重命名：公共 API/弹窗壳 + 表单接线（状态更新/五组绑定）+ 解析名重建纯逻辑（ADR-208 D2 ≤400 行拆分；DOM 模板经 `BatchRenameTpl` 注入，views 侧实现 `views/app-tree/tpl-batch-rename.ts`） |
 | tag-editor.ts + tag-set.ts | 标签编辑器 + 标签集合运算 |
 | adv-filter.ts + adv-filter-util.ts | 高级筛选 + 校验纯逻辑 |
 
@@ -87,13 +89,13 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- 桥依赖：adv-filter/rename/tag-editor 经 `getApp` 调 backend（业务正确调桥，非穿透）。
+- 桥依赖：adv-filter/rename/tag-editor 经 `*-deps.ts` seam 调 backend（ADR-190 D2 注入真化 + ADR-208 D1：features 生产文件禁止直连 `backend/app.ts`，check-layering R5 门禁兜底）；本目录零 backend 直连。
 - i18n：核心文案走 `core/i18n/t.ts`。
 - modal-*.ts（core+builder）是共享底座，被 core/features/views 测试 vi.mock 拦截（mock 路径须指向符号实际所在文件：modalConfirm→modal-confirm.ts 等）
 
 ## 不变量
 
-- 本目录文件引用 src 下其他层用 `../../` 起（features/dialogs → src 两级）；**改动目录层级时 vi.mock 字符串路径须与 import 同步重算**（ADR-170 实测教训：非 import 语句正则扫不到）。
+- import 路径约定（ADR-146）：跨顶层/跨子目录一律 `@/` 别名，精确同目录才 `./`；**vi.mock 字符串路径须与 import 语句同步**（ADR-170 实测教训：非 import 语句正则扫不到 mock 路径变更）。
 - 不反向迁回 utils/dom（分类事故复发）。
 
 ## 相关

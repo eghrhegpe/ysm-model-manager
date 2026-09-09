@@ -86,13 +86,21 @@ function cmDqDlBtn(ctx: CmDqCtx): HTMLButtonElement | null {
   return ctx.sr.querySelector(".gh-dl-selected");
 }
 
-function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: string): void {
+/** 设置队列状态行（⬇️ 图标 + 文案）——preparing / downloading-remain 两处共用，DOM API 构建 */
+function cmDqSetStatusLine(qs: HTMLElement, text: string): void {
+  const icon = document.createElement("span");
+  icon.className = "gh-queue-icon";
+  icon.textContent = "⬇️";
+  qs.replaceChildren(icon, document.createTextNode(` ${text}`));
+}
+
+function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: HTMLElement | null): void {
   ctx.progressGuard.clearCompleteTimer();
   ctx.progressGuard.stuckGuardReset();
   const qs = cmDqQsEl(ctx);
   if (qs) {
     if (errorSummary) {
-      qs.innerHTML = errorSummary;
+      qs.replaceChildren(errorSummary);
     } else {
       qs.classList.remove("show");
     }
@@ -121,24 +129,32 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
   const qs = cmDqQsEl(ctx);
   if (qs) {
     const remain = s.total - done;
-    qs.innerHTML =
-      '<div class="gh-progress-row">' +
-      '<span class="gh-queue-icon">⬇️</span>' +
-      '<span class="gh-progress-name">' +
-      renderDisplayName(s.currentFile) +
-      "</span>" +
-      '<span class="gh-progress-pct">⏳</span>' +
-      (remain > 1
-        ? '<span class="gh-progress-remain">' +
-          t("community.downloadQueue.remain", { n: remain }) +
-          "</span>"
-        : "") +
-      '<button class="btn-base sm gh-cancel-queue" title="' +
-      t("common.cancel") +
-      '">✕</button>' +
-      "</div>" +
-      '<div class="gh-progress-bar-wrap"><div class="gh-progress-fill"></div></div>';
-    qs.querySelector(".gh-cancel-queue")?.addEventListener("click", async () => {
+    // DOM API 构建进度行（对齐 render.ts「非字符串拼接」范式）；name span 保留
+    // innerHTML——renderDisplayName 返回带 tag-author/tag-work 高亮 span 的受信任
+    // HTML（内部已 esc 原文，与 render.ts buildModelRow 同款模式）
+    const row = document.createElement("div");
+    row.className = "gh-progress-row";
+    const icon = document.createElement("span");
+    icon.className = "gh-queue-icon";
+    icon.textContent = "⬇️";
+    const name = document.createElement("span");
+    name.className = "gh-progress-name";
+    name.innerHTML = renderDisplayName(s.currentFile);
+    const pct = document.createElement("span");
+    pct.className = "gh-progress-pct";
+    pct.textContent = "⏳";
+    row.append(icon, name, pct);
+    if (remain > 1) {
+      const remainEl = document.createElement("span");
+      remainEl.className = "gh-progress-remain";
+      remainEl.textContent = t("community.downloadQueue.remain", { n: remain });
+      row.appendChild(remainEl);
+    }
+    const cancel = document.createElement("button");
+    cancel.className = "btn-base sm gh-cancel-queue";
+    cancel.title = t("common.cancel");
+    cancel.textContent = "✕";
+    cancel.addEventListener("click", async () => {
       if (cancelling) return;
       cancelling = true;
       try {
@@ -147,6 +163,13 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
         cancelling = false;
       }
     });
+    row.appendChild(cancel);
+    const barWrap = document.createElement("div");
+    barWrap.className = "gh-progress-bar-wrap";
+    const fill = document.createElement("div");
+    fill.className = "gh-progress-fill";
+    barWrap.appendChild(fill);
+    qs.replaceChildren(row, barWrap);
   }
 }
 
@@ -176,34 +199,34 @@ function cmDqUncheckByName(ctx: CmDqCtx, name: string): void {
 function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   if (!ctx.progressGuard.beginQueueEnded()) return;
   const cancelled = s.status === "cancelled";
-  let summary = "";
+  let summary: HTMLElement | null = null;
   if (s.errorList.length > 0) {
-    summary =
-      '<div class="gh-queue-error">⚠️ ' +
-      t("downloadQueue.failedListTitle", { n: s.errorList.length }) +
-      "</div>" +
-      s.errorList
-        .slice(0, 5)
-        .map(
-          (e) =>
-            '<div class="gh-queue-err-item">❌ ' +
-            renderDisplayName(e.name) +
-            ": " +
-            ctx.esc(e.err) +
-            "</div>",
-        )
-        .join("") +
-      (s.errorList.length > 5
-        ? '<div class="gh-queue-ellipsis">' +
-          t("downloadQueue.moreCount", { n: s.errorList.length - 5 }) +
-          "</div>"
-        : "");
+    const wrap = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "gh-queue-error";
+    title.textContent = `⚠️ ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;
+    wrap.appendChild(title);
+    for (const e of s.errorList.slice(0, 5)) {
+      const item = document.createElement("div");
+      item.className = "gh-queue-err-item";
+      // renderDisplayName 为受信任格式化（内部已 esc 原文），ctx.esc(err) 转义用户
+      // 数据——拼接无注入面（与 render.ts buildModelRow 的 nameSpan 同款模式）
+      item.innerHTML = `❌ ${renderDisplayName(e.name)}: ${ctx.esc(e.err)}`;
+      wrap.appendChild(item);
+    }
+    if (s.errorList.length > 5) {
+      const more = document.createElement("div");
+      more.className = "gh-queue-ellipsis";
+      more.textContent = t("downloadQueue.moreCount", { n: s.errorList.length - 5 });
+      wrap.appendChild(more);
+    }
+    summary = wrap;
   }
   if (cancelled) {
-    cmDqCleanupProgressUI(
-      ctx,
-      summary || `<span class="gh-queue-cancel">⏹ ${t("downloadQueue.cancelled")}</span>`,
-    );
+    const cancelSpan = document.createElement("span");
+    cancelSpan.className = "gh-queue-cancel";
+    cancelSpan.textContent = `⏹ ${t("downloadQueue.cancelled")}`;
+    cmDqCleanupProgressUI(ctx, summary || cancelSpan);
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);
   }
@@ -225,9 +248,7 @@ function cmDqHandleRun(ctx: CmDqCtx, s: DownloadState): void {
     if (s.currentFile) {
       cmDqHandleFileStart(ctx, s);
     } else {
-      qs.innerHTML =
-        '<span class="gh-queue-icon">⬇️</span> ' +
-        t("downloadQueue.downloadingRemain", { n: s.remaining || "?" });
+      cmDqSetStatusLine(qs, t("downloadQueue.downloadingRemain", { n: s.remaining || "?" }));
     }
   }
 }
@@ -292,9 +313,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     const qs = cmDqQsEl(ctx);
     if (qs) {
       qs.classList.add("show");
-      qs.innerHTML =
-        '<span class="gh-queue-icon">⬇️</span> ' +
-        t("downloadQueue.preparingTotal", { n: tasks.length });
+      cmDqSetStatusLine(qs, t("downloadQueue.preparingTotal", { n: tasks.length }));
     }
 
     ctx.prev.lastDoneSeq = 0;

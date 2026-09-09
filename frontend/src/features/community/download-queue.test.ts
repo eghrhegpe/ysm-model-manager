@@ -70,6 +70,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 let bus!: Bus;
 let getState!: () => DownloadState;
+let getStateSnapshot!: () => Readonly<DownloadState>;
 let subscribe!: (fn: (s: DownloadState) => void) => () => void;
 let enqueueDownloads!: (tasks: DownloadTask[]) => Promise<void>;
 let cancelDownloads!: () => Promise<void>;
@@ -93,6 +94,7 @@ beforeEach(async () => {
   vi.stubGlobal("fetch", fetchMock);
   const mod = await import("./download-queue.ts");
   getState = mod.getState;
+  getStateSnapshot = mod.getStateSnapshot;
   subscribe = mod.subscribe;
   enqueueDownloads = mod.enqueueDownloads;
   cancelDownloads = mod.cancelDownloads;
@@ -136,6 +138,34 @@ describe("下载队列 STATE", () => {
     unsub();
     emit("queue:status", ["done", 0, undefined]);
     expect(fn).toHaveBeenCalledTimes(1); // 取消订阅后不再通知
+  });
+});
+
+describe("getStateSnapshot 快照独立性（深拷贝，修改快照不污染 STATE）", () => {
+  it("progress 深拷贝：快照改 dl 不影响后续快照", () => {
+    emit("download:progress", [50, 100]);
+    const s1 = getStateSnapshot();
+    // Readonly<DownloadState> 只冻结顶层，嵌套 progress 仍可写——正因如此需要深拷贝
+    s1.progress.dl = 999;
+    expect(getStateSnapshot().progress.dl).toBe(50);
+    expect(getStateSnapshot().progress.total).toBe(100);
+  });
+
+  it("errorList 深拷贝：快照 push 不污染 STATE", () => {
+    emit("queue:file-done", ["a.ysm", "fail", "磁盘已满"]);
+    const s1 = getStateSnapshot();
+    s1.errorList.push({ name: "hack", err: "y" });
+    expect(getStateSnapshot().errorList).toHaveLength(1);
+    expect(getStateSnapshot().errorList[0].name).toBe("a.ysm");
+    expect(getStateSnapshot().errorList[0].err).toBe("磁盘已满");
+  });
+
+  it("_lastDone 深拷贝：快照字段修改不污染 STATE", () => {
+    emit("queue:file-done", ["b.ysm", "ok", ""]);
+    const s1 = getStateSnapshot();
+    if (s1._lastDone) s1._lastDone.name = "被改";
+    expect(getStateSnapshot()._lastDone?.name).toBe("b.ysm");
+    expect(getStateSnapshot()._lastDone?.status).toBe("ok");
   });
 });
 

@@ -32,8 +32,8 @@ type PctEl = HTMLElement & {
 export interface ProgressGuardHooks {
   /** 查找进度条容器（controller 注入其作用域根） */
   qsEl: () => HTMLElement | null;
-  /** completeTimer 3s 到期且守卫全部通过时收口（controller：cleanupProgressUI + onAllDone） */
-  onTimedCompletion: (summary?: string) => void;
+  /** completeTimer 3s 到期且守卫全部通过时收口（controller：cleanupProgressUI + onAllDone）；summary 为 DOM 节点 */
+  onTimedCompletion: (summary?: HTMLElement | null) => void;
 }
 
 /** 进度条守卫控制器 */
@@ -56,7 +56,7 @@ export interface ProgressGuard {
 /** 类型提级：CmPgCtx 收纳全部可变状态与 hooks 引用（community/progress-guard 域） */
 interface CmPgCtx {
   qsEl: () => HTMLElement | null;
-  onTimedCompletion: (summary?: string) => void;
+  onTimedCompletion: (summary?: HTMLElement | null) => void;
   _lastPct: number;
   _stuckLocked: boolean;
   _stuckTimer: ReturnType<typeof setTimeout> | null;
@@ -222,12 +222,13 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
       if (s._lastDoneSeq > 0 && s.status !== "downloading") return;
       if (ctx._doneNotified) return;
       ctx._doneNotified = true;
-      let summary: string | undefined;
+      // 错误摘要以 DOM 节点传递（对齐 controller 侧 cmDqCleanupProgressUI 的
+      // replaceChildren 收口，消除跨文件 HTML 字符串契约）
+      let summary: HTMLElement | null = null;
       if (s.errorList.length > 0) {
-        summary =
-          '<div class="gh-queue-error">⚠️ ' +
-          t("downloadQueue.failedCount", { n: s.errorList.length }) +
-          "</div>";
+        summary = document.createElement("div");
+        summary.className = "gh-queue-error";
+        summary.textContent = `⚠️ ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
       }
       ctx.onTimedCompletion(summary);
     }, COMPLETE_DELAY_MS);

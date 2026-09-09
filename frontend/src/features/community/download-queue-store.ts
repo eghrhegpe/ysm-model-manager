@@ -135,7 +135,7 @@ function notify(): void {
 }
 
 /**
- * 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。
+ * 当前状态的只读快照（深拷贝，不返回模块级 STATE 的原始引用）。
  *
  * 调用方应只读快照、不可修改——修改会绕过通知链路，导致订阅者看到陈旧状态。
  * 如需修改，请通过本模块提供的 enqueue/cancel/resume 等入口。
@@ -143,9 +143,18 @@ function notify(): void {
  * 与 notify() 的区别：
  * - notify() 推送模型，回调期内的 s 引用为活体，适合立即读取
  * - getStateSnapshot() 拉取模型，返回值独立于 STATE，适合一次性渲染快照
+ *
+ * 深拷贝范围：progress / errorList / _lastDone 均为嵌套可变结构，浅拷贝会让
+ * 快照与 STATE 共享引用——「只读快照」从君子协定变真保证（快照独立性测试见
+ * download-queue.test.ts「getStateSnapshot 快照独立性」describe）。
  */
 export function getStateSnapshot(): Readonly<DownloadState> {
-  return { ...STATE };
+  return {
+    ...STATE,
+    progress: { ...STATE.progress },
+    errorList: [...STATE.errorList],
+    _lastDone: STATE._lastDone ? { ...STATE._lastDone } : null,
+  };
 }
 
 /** @deprecated 请使用 getStateSnapshot()；当前等价于 getStateSnapshot()，保留为兼容 */

@@ -6,6 +6,9 @@ import { esc } from "@/utils/html/html.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
+ * DOM API 构建（对齐 render.ts「非字符串拼接」范式），结构等价于原 innerHTML 拼接：
+ * .gh-progress-box > (.gh-progress-label > .gh-progress-spin + .gh-progress-text)
+ *                  + (.gh-progress-track > .gh-progress-fill[.gh-striped])
  */
 export function showProgress(searchResults: HTMLElement, pct: number, label?: string): void {
   // P3 修复（审核发现）：pct 无钳制会输出 width:"NaN%"/"150%"/"-5%"——
@@ -15,22 +18,31 @@ export function showProgress(searchResults: HTMLElement, pct: number, label?: st
   // 全部使用硬编码字符串（无 XSS 风险），但函数是 export 的公共 API，
   // 未来若传入用户可控数据即构成 XSS；统一转义（硬编码字符串转义无副作用）
   const safeLabel = esc(label || "");
-  searchResults.innerHTML =
-    '<div class="gh-progress-box">' +
-    '<div class="gh-progress-label">' +
-    '<span class="gh-progress-spin">⏳</span> ' +
-    '<span class="gh-progress-text">' +
-    safeLabel +
-    "</span></div>" +
-    '<div class="gh-progress-track">' +
-    '<div class="gh-progress-fill' +
-    (clamped < 100 ? " gh-striped" : "") +
-    '" style="width:' +
-    clamped +
-    "%;transition:width 0.3s" +
-    '"></div>' +
-    "</div>" +
-    "</div>";
+
+  const box = document.createElement("div");
+  box.className = "gh-progress-box";
+
+  const labelRow = document.createElement("div");
+  labelRow.className = "gh-progress-label";
+  const spin = document.createElement("span");
+  spin.className = "gh-progress-spin";
+  spin.textContent = "⏳";
+  const text = document.createElement("span");
+  text.className = "gh-progress-text";
+  text.textContent = safeLabel;
+  labelRow.append(spin, text);
+  box.appendChild(labelRow);
+
+  const track = document.createElement("div");
+  track.className = "gh-progress-track";
+  const fill = document.createElement("div");
+  fill.className = `gh-progress-fill${clamped < 100 ? " gh-striped" : ""}`;
+  fill.style.width = `${clamped}%`;
+  fill.style.transition = "width 0.3s";
+  track.appendChild(fill);
+  box.appendChild(track);
+
+  searchResults.replaceChildren(box);
 }
 
 /** 抓取结果 */

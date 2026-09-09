@@ -14,7 +14,7 @@
 
 ### 归属原则——先分清「生成物」还是「手写文件」
 - **生成物**（`docs/` 下 index / audit-src-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。不承担提交归属，交就交当前全量态，被你提交了更好。
-- **手写文件**(提交/构建/测试) → 路径限定提交，`git status --short` 确认 staged 只含自己的文件（一瞥），然后直接：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
+- **手写文件**(提交/构建/测试) → 文件/目录路径限定提交，`git status --short` 确认 staged 只含自己的文件（一瞥），然后直接：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
 - 并行会话活跃时，放心让提交工具裁决提交归属。
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）

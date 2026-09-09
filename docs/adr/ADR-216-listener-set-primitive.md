@@ -24,9 +24,10 @@
 
 把**已被 3D 域验证**的 `createListenerSet` 工厂提级为 `utils/base/primitives/listener-set.ts` 共享原语，并泛型化 payload 形态：
 
-- 签名：`createListenerSet<T = void>()` → `{ subscribe(fn: (payload: T) => void): () => void; notify(payload?: T): void }`。
-  - 无参场景（scene/ground/water）：`createListenerSet()` + `notify()`，`T = void` 零改动；
+- 签名：`createListenerSet<T = void>()` → `{ subscribe(fn: (payload: T) => void): () => void; notify(payload: T): void }`。
+  - 无参场景（scene/ground/water）：`createListenerSet()` + `notify()`，`T = void` 时 TS void 参数可省实参，零改动；
   - 状态订阅场景（download-queue-store）：`createListenerSet<DownloadState>()` + `notify(STATE)`，`subscribe` / `notify` 对外 API 形状不变（薄包装），消费者零改动。
+  - 签名注记（code_review 12883e095）：实现取必参 `notify(payload: T)` 而非可选参 `payload?: T`——载荷形态下省参会向订阅者隐式传 `undefined`（单写纪律要防的静默漂移）；T = void 时必参写法因 TS void 语义仍可无参调用，两形态均兼容。
 - 落点 `utils/base/primitives/` 而非 `core`：零上层依赖满足 primitives 红线；与 `lock.ts` / `disposable.ts` 同为「资源句柄」族。core 准入三条虽满足但 core 现为 i18n / page-store / error-diary 三件套，为 2 个消费方扩核属 YAGNI。
 - **否决收口到 `bus`**：三重语义失配——① bus emit 吞 handler 异常（console.error），store notify 直接传播；② 活体 STATE 引用进全局事件流即给「单一写入纪律」（ADR-187 D3：STATE 修改必须经 store 写函数）开门——模块本地通道的保护力正是纪律的载体；③ 域状态 payload 稀释进全局 `BusEvents` 类型表。`bus` 保持「跨模块事件流」，`listener-set` 承载「域内订阅」，两层语义边界。
 

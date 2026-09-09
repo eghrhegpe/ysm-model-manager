@@ -62,7 +62,7 @@ export function parseModelName(raw: string): ParsedModelName {
   const aMatch = name.match(/\[\[([^\]]+?)\]\]/) || name.match(bracketRe(BRACKET_STYLES[0]));
   const wMatch =
     name.match(bracketRe(BRACKET_STYLES[1])) || name.match(bracketRe(BRACKET_STYLES[2]));
-  // P3 修复（子代理审计）：① 日期提取先剥括号段——`[作者]【2023】角色2024.ysm`
+  // ① 日期提取先剥括号段——`[作者]【2023】角色2024.ysm`
   // 原 dMatch 命中括号内 2023（静默取错日期）；② 修正则贪婪——`角色20230.ysm`
   // 原 `[-_.]?(\d{1,2})?` 把后随 0 当月份产出 `2023-0` 畸形日期
   // 剥离正则由注册表拼接（双括号作者段特判 + BRACKET_STYLES 三风格），与 render 共用
@@ -74,14 +74,14 @@ export function parseModelName(raw: string): ParsedModelName {
     "g",
   );
   const dateName = name.replace(bracketStripRe, "");
-  // P3 修复（code review）：无分隔符 YYYYMM 月份恢复——`角色202305.ysm` 原正则
+  // 无分隔符 YYYYMM 月份恢复——`角色202305.ysm` 原正则
   // 要求分隔符才取月份（202305 → 只 "2023" 丢月份）；补 `(\d{2})` 分支并在下方
   // 校验月份 01-12（`20230` 尾随 0 不是合法月份 → 仍只取年份，防畸形回退）
   const dMatch = dateName.match(/(\d{4})(?:[-_.](\d{1,2})|(\d{2}))?/);
 
   const author = (aMatch ? aMatch[1] : "").trim();
   const work = (wMatch ? wMatch[1] : "").trim();
-  // P3 修复（code review）：月份取值合并两分支（dMatch[2]=带分隔符、dMatch[3]=无分隔符
+  // 月份取值合并两分支（dMatch[2]=带分隔符、dMatch[3]=无分隔符
   // YYYYMM），且仅当月份 ∈ 01-12 才拼接——`20230` 尾随 0 不是合法月份 → 只取年份
   const rawMonth = dMatch ? dMatch[2] || dMatch[3] || "" : "";
   const monthNum = rawMonth ? parseInt(rawMonth, 10) : 0;
@@ -144,7 +144,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
     while ((m = re.exec(name)) !== null) {
       matches.push({
         idx: m.index,
-        // P3 修复（子代理审计，问题 14）：`[ ]` 是作者段——原标 tag-work 与头注释
+        // `[ ]` 是作者段——原标 tag-work 与头注释
         // 「--meta-author/--meta-work/--meta-date」及 summarize.ts:113 的 tag-author
         // 不一致（Design.md §3 语义色：作者青 / 作品灰）；【】/《》保持 tag-work
         html: `<span class="${style.tag}">${esc(m[0])}</span>`,
@@ -155,14 +155,14 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
 
   // 匹配日期
   if (p.date) {
-    // P3 修复（子代理审计）：分隔符通配检索——parseModelName 把 `2023.05`/`2023_05`
+    // 分隔符通配检索——parseModelName 把 `2023.05`/`2023_05`
     // 归一为 `2023-05`，原字面搜索对原文 `角色2023.05.ysm` 搜不到 → 日期永不高亮；
     // `-` 通配 `[-_.]` 三态分隔符（escRegex 已转义其余字符）
     const re4 = new RegExp(escRegex(p.date).replace(/-/g, "[-_.]"), "g");
     let m4: RegExpExecArray | null;
     // biome-ignore lint/suspicious/noAssignInExpressions: 正则 exec 循环惯用法
     while ((m4 = re4.exec(name)) !== null) {
-      // P3 修复：剔除与既有括号段（[ ]/【 】/《 》）区间重叠的日期命中——
+      // 剔除与既有括号段（[ ]/【 】/《 》）区间重叠的日期命中——
       // `【2023】角色.ysm` 中 date(2023) 与 work(【2023】) 区间重叠，反向替换后
       // 内部 token 泄漏到 UI（输出 `KEN%%】角色` 残渣）。日期在括号内时括号段已包含它。
       const overlaps = matches.some(
@@ -181,7 +181,7 @@ export function renderDisplayName(raw: string, _opts?: unknown): string {
   // 按文件中出现的顺序排序
   matches.sort((a, b) => a.idx - b.idx);
 
-  // P3 修复（审核）：光标式重组替换原占位符 token 方案——原 `%%TOKEN%%` 占位串
+  // 光标式重组替换原占位符 token 方案——原 `%%TOKEN%%` 占位串
   // 与文件名内文字面量碰撞时（文件名恰含 %%TOKEN%%）会静默丢字（实测
   // "角色%%TOKEN%%2023.ysm" 输出丢失 %%TOKEN%%）。改为按匹配区间直接切分原文：
   // 每段原文过 renderFormattedText（§ 分节符色 + 转义），区间处插入匹配 span。

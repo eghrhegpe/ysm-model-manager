@@ -1,7 +1,7 @@
 // ===== 可导入文件判定（纯函数叶子，utils 层）=====
-// 原生在 features/dnd/shared.ts；backend/web-fs-auth（FSA 扫描过滤）也要用同一口径，
-// 为避免 backend → features 反向依赖（backend 是胶水层，只许向下），下沉至此，
-// backend/web-fs-auth 与 features/dnd/shared.ts（内部依赖，不再 re-export）直引本文件。
+// backend/web-fs-auth（FSA 扫描过滤）与 features/dnd/shared.ts（内部依赖，不再
+// re-export）直引本文件同一口径——避免 backend → features 反向依赖
+// （backend 是胶水层，只许向下）。
 
 import { ALL_EXTS } from "./extensions.ts";
 import { extOf } from "./types.ts";

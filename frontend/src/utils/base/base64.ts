@@ -1,10 +1,6 @@
-// ===== base64 编码原语（自 backend/web-common.ts 下沉，ADR-170 二段收口 2026-09）=====
-// 零依赖纯函数层（atob/btoa 为宿主全局）：parsers/pack-meta、parsers/voxel-io 此前
-// 为这两个函数反向 import backend/web-common.ts，形成叶子层→装配层依赖（知识卡
-// frontend_parsers 跨簇例外 2 处）。下沉 utils/base 后 parsers 回归真叶子，
-// backend 消费方经 web-common.ts re-export 保持导出名/签名不变。
-//
-// 历史：code_review 494843c9 #2/#3 消双份全量拷贝（chunkedBase64 核心），此处原样平移。
+// ===== base64 编码原语（零依赖纯函数层，atob/btoa 为宿主全局）=====
+// parsers/pack-meta、parsers/voxel-io 等叶子经本层取 base64（避免叶子层反向依赖
+// backend 装配层）；backend 消费方经 web-common.ts re-export 保持导出名/签名不变。
 
 /** 分块 base64 核心（操作调用方私有的 bytes 视图，不再拷贝）。
  *  假设入参独占（调用方负责隔离），公开入口的防御拷贝各自保留。 */

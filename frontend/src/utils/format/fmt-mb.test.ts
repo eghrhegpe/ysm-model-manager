@@ -1,4 +1,4 @@
-// fmtMB 单测 —— 自 modal.test.ts 迁移（实现同批下沉至 format/fmt-mb.ts）。
+// fmtMB 单测 —— format/fmt-mb.ts 字节格式化契约。
 import { describe, expect, it } from "vitest";
 import { fmtMB } from "./fmt-mb.ts";
 

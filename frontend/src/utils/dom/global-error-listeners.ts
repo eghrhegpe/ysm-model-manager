@@ -1,4 +1,4 @@
-// ===== 全局错误监听（DOM 原语层，ADR-189 D4）：window error / unhandledrejection → 日记 =====
+// ===== 全局错误监听（DOM 原语层）：window error / unhandledrejection → 日记 =====
 // 此层才允许碰 window；事件转发经 core/error-diary 的 pushToDiary 入口收口进同一套净化/去重策略，
 // 故 core 保持引擎无关、不挂 window 监听。装配层（app-modules 启动期）调用一次即可，应用级常驻单例。
 

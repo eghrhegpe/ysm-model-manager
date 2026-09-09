@@ -14,7 +14,7 @@ const activeAnims = new WeakMap<HTMLElement, () => void>();
  */
 export function animateNumber(el: HTMLElement, to: number, duration = 700): () => void {
   if (!el) return () => {};
-  // P4 修复（审核）：新调用先取消同元素上一轮在途动画——原实现不清理，旧 timers
+  // 新调用先取消同元素上一轮在途动画——原实现不清理，旧 timers
   // 会继续按旧帧写入 textContent 覆盖新动画结果（消费者 updateStat 有外部取消，
   // 但本工具是最后一层防线，任何未取消的重复调用都会造成陈旧写回）
   const prevCancel = activeAnims.get(el);

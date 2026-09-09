@@ -67,7 +67,7 @@ export function describeVersionRange(meta: PackMeta): { format: string; version:
   }
   // 3. 单体 pack_format 兜底
   if (meta.pack_format != null) {
-    // P3 修复：改用 fmtVer 与 supported/min/max 分支口径一致——
+    // 改用 fmtVer 与 supported/min/max 分支口径一致——
     // 原 FORMAT_VERSION_MAP 直接索引 + `ver || ""` 使 pack_format > 88 返回空串，
     // 而同一数字经 supported_formats/min/max 分支会返回「最新版本」（fmtVer 兜底）
     return { format: String(meta.pack_format), version: fmtVer(meta.pack_format) };

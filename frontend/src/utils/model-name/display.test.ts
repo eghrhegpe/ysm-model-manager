@@ -72,7 +72,7 @@ describe("renderDisplayName", () => {
     expect(renderDisplayName("单纯文件名")).toBe("单纯文件名");
   });
 
-  it("[作者] 包裹为 tag-author span（P3：作者段语义色）", () => {
+  it("[作者] 包裹为 tag-author span（作者段语义色）", () => {
     expect(renderDisplayName("[作者A]角色")).toBe('<span class="tag-author">[作者A]</span>角色');
   });
 
@@ -99,7 +99,7 @@ describe("renderDisplayName", () => {
   });
 });
 
-// P3 补测（code_review）：日期命中与括号段区间重叠谓词——括号内日期不得产 tag-date
+// 日期命中与括号段区间重叠谓词——括号内日期不得产 tag-date
 // span 且不得泄漏 %%TOKEN%% 残渣；括号外日期仍须高亮
 describe("renderDisplayName — 日期括号重叠守卫", () => {
   it("括号内日期不产 tag-date（且无 token 残渣）", () => {
@@ -117,7 +117,7 @@ describe("renderDisplayName — 日期括号重叠守卫", () => {
   });
 });
 
-// P3 补测（审核）：日期分隔符三态 / 无分隔 YYYYMM / 尾随 0 防畸形——parseModelName
+// 日期分隔符三态 / 无分隔 YYYYMM / 尾随 0 防畸形——parseModelName
 // 归一化路径（2023.05/2023_05/202305 → 2023-05，20230 → 仅年份）
 describe("parseModelName — 日期分隔符与畸形回退", () => {
   it("点分隔 2023.05 → 2023-05", () => {
@@ -161,7 +161,7 @@ describe("parseModelName — 日期分隔符与畸形回退", () => {
   });
 });
 
-// P3 补测（审核）：占位符 token 与文件名碰撞回归——原实现用 %%TOKEN%% 占位，
+// 占位符 token 与文件名碰撞回归——原实现用 %%TOKEN%% 占位，
 // 文件名恰含 %%TOKEN%% 时静默丢字；修复后字面量必须保留
 describe("renderDisplayName — 占位符碰撞（%%TOKEN%% 字面量保留）", () => {
   it("文件名含 %%TOKEN%% 时原样保留", () => {

@@ -11,14 +11,14 @@ describe("formatBytes — 文件大小格式化", () => {
     expect(formatBytes(null as unknown as number)).toBe("");
   });
 
-  // P3 补测：±Infinity 与负值——原 P2 修复（Number.isFinite）无回归锁定，
+  // ±Infinity 与负值——Number.isFinite 回归锁定，
   // 且负值经 Number.isFinite 放行输出 "-5 B"（文件大小不可能为负，违反「非法输入一律返回空串」）
-  it("±Infinity → 空串（P2 回归锁定）", () => {
+  it("±Infinity → 空串（回归锁定）", () => {
     expect(formatBytes(Infinity)).toBe("");
     expect(formatBytes(-Infinity)).toBe("");
   });
 
-  it("负值 → 空串（P3 修复）", () => {
+  it("负值 → 空串", () => {
     expect(formatBytes(-5)).toBe("");
     expect(formatBytes(-1048576)).toBe("");
   });
@@ -54,18 +54,18 @@ describe("sizeColor — 大小颜色分区", () => {
     expect(sizeColor(NaN)).toBe("");
   });
 
-  // P3 补测：±Infinity 与负值——与 formatBytes 同守卫（Number.isFinite + 负值拒绝）
-  it("±Infinity → 空串（P2 回归锁定）", () => {
+  // ±Infinity 与负值——与 formatBytes 同守卫（Number.isFinite + 负值拒绝）
+  it("±Infinity → 空串（回归锁定）", () => {
     expect(sizeColor(Infinity)).toBe("");
     expect(sizeColor(-Infinity)).toBe("");
   });
 
-  it("负值 → 空串（P3 修复）", () => {
+  it("负值 → 空串", () => {
     expect(sizeColor(-5)).toBe("");
     expect(sizeColor(-1048576)).toBe("");
   });
 
-  // P3 补测（子代理审计）：0 与 formatBytes(0) 的「0=未知→空串」语义对齐——
+  // 0 与 formatBytes(0) 的「0=未知→空串」语义对齐——
   // 原 sizeColor(0) 落入 <MB 分支返回 sz-green，未知大小的行显示空文本+绿色 class 矛盾
   it("0 → 空串（与 formatBytes(0) 对齐）", () => {
     expect(sizeColor(0)).toBe("");
@@ -98,9 +98,9 @@ describe("fmtDate — 友好日期", () => {
     expect(fmtDate(Number.POSITIVE_INFINITY)).toBe("");
   });
 
-  // P3 补测（审核）：负时间戳与 formatBytes「非法输入一律空串」对齐——原实现把
+  // 负时间戳与 formatBytes「非法输入一律空串」对齐——原实现把
   // -1000 渲染成 "1970/1/1" 静默错值
-  it("负时间戳 → 空串（P3 修复）", () => {
+  it("负时间戳 → 空串", () => {
     expect(fmtDate(-1000)).toBe("");
     expect(fmtDate(-1)).toBe("");
   });

@@ -1,8 +1,6 @@
-// ===== 通知原语（toast 系收敛，ADR-185 下沉；ADR-189 D3 自 core/ 归位 utils/dom）=====
-// 从 features/context-menu/context-menu-shared.ts 下沉的跨层复用原语——
-// 消费方：context-menu 族 / pack-ops / sync / settings / app-sidebar 等。
-// 归位 utils/dom 理由：DOM 反馈原语与 toast-ms.ts 同域；同时消除与
-// utils/dom/feedback.ts（flashBtn 原地闪烁）的撞名。
+// ===== 通知原语（toast 系收敛）=====
+// 跨层复用原语——消费方：context-menu 族 / pack-ops / sync / settings / app-sidebar 等。
+// DOM 反馈原语归 utils/dom（与 toast-ms.ts 同域）；与 feedback.ts（flashBtn 原地闪烁）区分。
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";

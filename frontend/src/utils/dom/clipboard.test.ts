@@ -1,4 +1,4 @@
-// ===== clipboard.copyText 契约测试（审计④收口）=====
+// ===== clipboard.copyText 契约测试 =====
 // 覆盖：Clipboard API 成功 / 拒绝降级 textarea+execCommand 成功/失败 /
 //       navigator.clipboard 不存在（非安全上下文）走降级 / execCommand 抛错清理。
 // 默认 happy-dom 环境，可操作 document.body。

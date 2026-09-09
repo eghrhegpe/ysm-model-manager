@@ -2,7 +2,7 @@
 // 与 format/fmt-mb.ts 的 fmtMB 分工：本模块自适应单位（B/KB/MB/GB，非法值返空串），
 // fmtMB 固定 MB 文案（进度弹窗/窗口标题，非法值返 "0.0 MB"）——语义不同，勿合流。
 
-// 阈值具名常量（P3：魔法数值治理）
+// 阈值具名常量（魔法数值治理）
 const KB = 1024;
 const MB = KB * 1024;
 const GB = MB * 1024;
@@ -11,9 +11,9 @@ const RED_BOUND = 3 * MB;
 
 /** 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 */
 export function formatBytes(b: number): string {
-  // P2 修复：±Infinity 是 truthy，`!b && b !== 0` 挡不住 → 输出 "Infinity GB"。
+  // ±Infinity 是 truthy，`!b && b !== 0` 挡不住 → 输出 "Infinity GB"。
   // 用 Number.isFinite 一并拦截 NaN/±Infinity，落实「非法输入一律返回空串」不变量。
-  // P3 修复：负值/零值同样无效（文件大小不可能为 0——0 通常表示未知）
+  // 负值/零值同样无效（文件大小不可能为 0——0 通常表示未知）
   if (!Number.isFinite(b) || b <= 0) return "";
   if (b < KB) return `${b} B`;
   if (b < MB) return `${(b / KB).toFixed(1)} KB`;
@@ -23,7 +23,7 @@ export function formatBytes(b: number): string {
 
 /** 文件大小颜色 class：<1MB 绿色，1-3MB 正常，≥3MB 红色 */
 export function sizeColor(b: number): string {
-  // P3 修复（子代理审计）：b<=0 返回 ""——与 formatBytes(0) 的「0=未知→空串」语义
+  // b<=0 返回 ""——与 formatBytes(0) 的「0=未知→空串」语义
   // 对齐（原 b==0 落入 <MB 分支返回 sz-green，未知大小的行显示空文本+绿色 class 矛盾）
   if (!Number.isFinite(b) || b <= 0) return "";
   if (b < MB) return "sz-green";
@@ -35,7 +35,7 @@ export function sizeColor(b: number): string {
 
 /** 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D */
 export function fmtDate(ts: number): string {
-  // P3 修复（审核）：负时间戳与 NaN/0 同属非法输入——原实现把 -1000 渲染成
+  // 负时间戳与 NaN/0 同属非法输入——原实现把 -1000 渲染成
   // "1970/1/1"（静默错值），与「非法输入一律返回空串」不变量（formatBytes 同款）不符
   if (!Number.isFinite(ts) || ts <= 0) return "";
   const d = new Date(ts);

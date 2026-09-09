@@ -330,7 +330,7 @@ export function buildControllerAnimationIndex(
  * 需要对同一批 controllers 做多次查找的调用方，应自行用
  * buildControllerAnimationIndex 构建一次索引后复用（真正的 O(1) 命中）——
  * 在本函数内每次调用重建索引是 O(n×m) + Map 分配，严格劣于早退扫描
- * （code_review b9fdfffbe：旧「O(1)」注释与实现相悖，已更正）。
+ * （旧「O(1)」注释与实现相悖，已更正）。
  */
 export function findControllerForAnimation(
   controllers: AnimationController[],

@@ -1,7 +1,6 @@
 // @vitest-environment node
 // ===== storage.ts localStorage 安全读写独立测试 =====
-// 子代理审计 P3：storage 无独立测试且 safeRemove 零覆盖（仅 app-modules.test 间接
-// 覆盖 safeGet/safeSet 正常路径）。此处覆盖：正常透传、存储抛错降级（safeGet→null、
+// 覆盖：正常透传、存储抛错降级（safeGet→null、
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { safeGet, safeSet, safeRemove, safeGetJSON, isStorageAccessible } from "./storage.ts";

@@ -95,7 +95,7 @@ describe("renderFormattedText", () => {
     expect(renderFormattedText("a\r\nb")).toBe("a<br>b");
   });
 
-  // P3 补测：行尾孤立 § 原样保留（原实现 if(!part) continue 丢弃，修复无测试锁定）
+  // 行尾孤立 § 原样保留（原实现 if(!part) continue 丢弃，修复无测试锁定）
   it("行尾孤立 § 原样保留", () => {
     expect(renderFormattedText("abc§")).toBe("abc§");
   });

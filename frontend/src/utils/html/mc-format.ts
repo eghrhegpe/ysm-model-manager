@@ -73,7 +73,7 @@ export function renderFormattedText(text: string): string {
 
       for (let i = 1; i < parts.length; i++) {
         const part = parts[i];
-        // P3 修复：行尾孤立 §（"abc§" 的尾 part 为空）必须原样保留——
+        // 行尾孤立 §（"abc§" 的尾 part 为空）必须原样保留——
         // 原 `if (!part) continue` 直接丢弃，与「无效码与孤立 § 原样保留」契约不符。
         // 注意：连续 "§§code" 中间的空 part 仍跳过（走第二条码，测试锁定行为）。
         if (!part) {

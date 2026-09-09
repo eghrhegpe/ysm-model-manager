@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== utils/base/base64.ts 测试（自 backend/web-common.test.ts 随实现下沉迁来，ADR-170 二段收口 2026-09）=====
+// ===== utils/base/base64.ts 测试 =====
 import { describe, it, expect } from "vitest";
 import { arrayBufferToBase64, base64ToBytes, u8ToBase64 } from "./base64.ts";
 

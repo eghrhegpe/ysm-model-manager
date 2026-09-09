@@ -4,7 +4,6 @@
 // RESOURCE_EXTS 统一消费 schema.ts 的 allResourceTypes 派生（vite 构建期内联进 bundle，
 // 运行时零外置依赖），消灭手写副本漂移；Go 端运行时直读 JSON（无静态 ResourceExts 表，
 // go/types/extensions.go 全注册表驱动）。extensions.test.ts 双向对账保留作回归守护。
-// T2 收口：JSON 解析不再各自 import（此前与 types.ts 各解析一遍），同源同一 allResourceTypes。
 import { allResourceTypes, type ResourceType } from "./schema.ts";
 
 /** 自定义类型守卫：仅收窄 extensions 为 string[] 的条目（as 断言的可验证替代） */

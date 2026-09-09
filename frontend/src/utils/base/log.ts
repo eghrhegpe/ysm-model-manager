@@ -1,6 +1,6 @@
 // utils/base/log.ts — 极简日志出口，供 async 等叶模块复用。
 // 保持零应用层依赖：仅封装 console.warn / console.error，作为 ysm 统一告警通道的薄封装。
-// 透写环形日志（code review #6）：经可注入 sink 收敛——error-diary 注册时调
+// 透写环形日志：经可注入 sink 收敛——error-diary 注册时调
 // setLogSink 把告警接进 AddOpLog 日记（对齐 setSceneCapabilityLookup 注入范式，
 // 本模块仍不 import 应用层）；sink 为 null 时仅 console，行为同旧版。
 
@@ -21,7 +21,7 @@ export function resetLogSink(): void {
 
 /** 统一告警日志。tag 用于按模块聚合排查；err 可为任意错误值。 */
 export function logWarn(tag: string, msg: string, err?: unknown): void {
-  // 无 err 时不追加空参数槽（code review #11：err ?? "" 会让控制台多一个空槽）
+  // 无 err 时不追加空参数槽（err ?? "" 会让控制台多一个空槽）
   if (err === undefined) {
     console.warn(`[${tag}] ${msg}`);
   } else {

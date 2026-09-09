@@ -1,8 +1,6 @@
 // ===== 回收站路径段判定（单一实现，社区/parity 层共用）=====
-// [G5 收口] 原 features/community/data.ts `isRecyclePath` 与 backend/web-community.ts
-// `isRecycleRel` 逐字重复（拆段 EqualFold），且注释误引 Go `fsutil.IsRecycleDir`
-// （基名版）。本 helper 命名对齐 Go `sync.hasRecycleSegment`（sync.go:534，逐字同构），
-// 消除前端双实现与注释误导——后续对齐点检索只搜 hasRecycleSegment 一个名字。
+// 命名对齐 Go `sync.hasRecycleSegment`（sync.go:534，逐字同构）——
+// 前端单一实现，后续对齐点检索只搜 hasRecycleSegment 一个名字。
 
 /**
  * 路径任一段是否为回收站目录 `.recycle`（大小写不敏感 EqualFold）。

@@ -52,7 +52,7 @@ const SITE_ICON_MAP: Record<string, string> = {
 };
 
 export function getSiteIcon(siteId: string): string {
-  // P3 修复（子代理审计）：原型键穿透——`getSiteIcon("toString")`/`"constructor"`/
+  // 原型键穿透——`getSiteIcon("toString")`/`"constructor"`/
   // `"__proto__"` 会命中 Object.prototype 成员（truthy），绕过回退契约；消费方把
   // 返回值直接拼 innerHTML（当前 String() 结果无尖括号不构成 XSS，但回退语义失效）
   if (!Object.hasOwn(SITE_ICON_MAP, siteId)) return ICONS.CREATOR;

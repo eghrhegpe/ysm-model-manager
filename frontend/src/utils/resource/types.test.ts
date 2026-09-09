@@ -403,7 +403,7 @@ describe("resolvePreviewKeyByExt 按扩展名兜底解析预览器", () => {
   });
 });
 
-// ===== resolvePreviewKeyToRtype（ADR-111 逆向，批次6 P3 补测）=====
+// ===== resolvePreviewKeyToRtype（ADR-111 逆向）=====
 import { resolvePreviewKeyToRtype } from "./types.ts";
 
 describe("resolvePreviewKeyToRtype 预览键反解资源类型 ID", () => {
@@ -489,7 +489,7 @@ describe("getPreviewableTypeTabs 3D 切换面板 tab 派生", () => {
   });
 
   it("resourcepack 已标 preview='3d' 且有 3D opener，派生纳入对应 tab", () => {
-    // ADR-111 收口修正：resourcepack 有 pack-3d.ts opener，JSON 标注已从 thumbnail 升为 3d，
+    // ADR-111：resourcepack 有 pack-3d.ts opener，JSON 标注为 3d，
     // 派生结果应纳入，消除旧面板 resourcepack tab 回归。
     expect(keys).toContain("resourcepack");
   });
@@ -505,7 +505,7 @@ describe("getPreviewableTypeTabs 3D 切换面板 tab 派生", () => {
   });
 });
 
-describe("previewCandidateExtsOf 预览候选白名单（锐评 G2 收口）", () => {
+describe("previewCandidateExtsOf 预览候选白名单", () => {
   it("有 variants：命中 preview 组 → 该组 ext 并集（SceneModel + mmd-scene → .pmx/.pmd，不含 .vrm/.zip）", () => {
     expect(previewCandidateExtsOf("SceneModel", "mmd-scene")).toEqual([".pmx", ".pmd"]);
   });

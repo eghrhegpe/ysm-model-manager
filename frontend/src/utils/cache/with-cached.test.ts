@@ -152,7 +152,7 @@ it("fn 抛错时不写入缓存，下次调用仍重试", async () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("并发等待者：在途请求失败后调用方自行重试（P3 契约，不把在途失败抛给等待者）", async () => {
+  it("并发等待者：在途请求失败后调用方自行重试（不把在途失败抛给等待者）", async () => {
     const fn = vi.fn()
       .mockRejectedValueOnce(new Error("在途失败"))
       .mockResolvedValueOnce("retry-ok");

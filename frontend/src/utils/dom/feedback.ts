@@ -1,7 +1,6 @@
 // ===== 轻量原地反馈原语（ADR-044 策略 A：基础设施工具函数收敛）=====
 // flashBtn：操作成功的原地瞬时反馈——加 flash class，时长后移除。
-// 收敛自 views/app-tree/utils.ts（原树组件私有实现，已全局化供各视图复用，
-// 避免「想用只能复制」导致的私有实现扩散，R10 同款教训）。
+// 原树组件私有实现，已全局化供各视图复用。
 // 与 toast（全局重反馈）/ modal（模态槽位）并列，属轻量层。
 // 样式约定：.flash 基础高亮；非 success 色系追加 .flash--warn / .flash--error 修饰符，
 // 颜色由消费方组件样式用 --status-* 变量实现（如 app-tree 内 .hdr-btn.flash / .fl.flash）。

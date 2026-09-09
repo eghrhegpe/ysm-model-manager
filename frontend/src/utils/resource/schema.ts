@@ -1,12 +1,6 @@
-// ===== 资源类型 schema（T2 收敛：唯一前端 ResourceType + 单一 JSON 解析点）=====
-// 背景：此前 resource_types.json 被 4 份不完整的 TS 接口重复描述——
-//   types.ts 的 ResourceTypeIdEntry（id/group/subtypes/variants）与 RawResourceType
-//   （id/name/icon/extensions/preview/detector/instanceDir/zipEntries，两份互不完整）、
-//   extensions.ts 的 ResourceTypeJsonEntry（id/extensions）、registry.ts 的
-//   ResourceTypeEntry（id/storageSubDir/name + index signature）。
-// 同一份 JSON 被 3 个文件各自 import、多份字段子集，改字段漏一处即行为分叉。
-// 此处收为唯一 ResourceType：types.ts / extensions.ts 同源消费 allResourceTypes，
-// registry.ts 的 ResourceTypeEntry extends 本类型（数据源仍走 Go RPC，不动）。
+// ===== 资源类型 schema（唯一前端 ResourceType + 单一 JSON 解析点）=====
+// types.ts / extensions.ts 同源消费 allResourceTypes；registry.ts 的
+// ResourceTypeEntry extends 本类型（数据源仍走 Go RPC，不动）。
 //
 // 语义边界：本类型只建模「前端消费」的字段子集；完整 schema 事实源是 Go 端
 // go/types/resource.go（+ 根 resource_types.json）。Go 新增未被前端消费的字段

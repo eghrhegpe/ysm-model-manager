@@ -58,7 +58,7 @@ export function resolvePreviewKey(filePath: string, rtype: string): string {
 }
 
 /**
- * 某 rtype 的「裸文件预览候选」扩展名白名单（小写含点；JSON 单一源——锐评 G2 收口）。
+ * 某 rtype 的「裸文件预览候选」扩展名白名单（小写含点；JSON 单一源）。
  * 语义背景：Go `ScanModelEntriesFiltered` 白名单 = 类型归属全 extensions（含 .vrm 等
  * 异预览形态与 .zip/.7z 容器，仓库树/列表层正确）；而预览候选列表（siblings 下拉等）只需
  * 「本预览适配器可直接加载的裸文件」子集。此处由 resource_types.json 派生该子集，
@@ -339,7 +339,7 @@ export const AMBIGUOUS_EXTS: Set<string> = (() => {
 /**
  * 安全解析类型（ADR-067）：单归属扩展名直接命中；歧义扩展名（.zip/.7z 等可包裹任意资源）
  * 返回 null，调用方必须回退到 Go DetectResourceType 内容检测。
- * 新分发器（P1 VRM / P2 MMD 适配器）统一使用此函数，避免重蹈硬编码扩展名派发的覆辙。
+ * 新分发器（VRM/MMD 适配器等）统一使用此函数，避免重蹈硬编码扩展名派发的覆辙。
  */
 export function resolveTypeSafe(path: string): string | null {
   const ext = extOf(path);

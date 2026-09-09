@@ -83,7 +83,7 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
   // MutationObserver 监听 overlay 子树变化时刷新缓存。
   // attributes 必须监听：disabled/hidden/tabindex/class/style 变化不触发 childList，
   // 只盯 childList 会让「trap 打开后按钮被 disable」的缓存永久过期（Tab 落到
-  // 不可聚焦元素上）——code_review b6a85ec9e P2。
+  // 不可聚焦元素上）。
   // 注：shadow root 内部变化 host 侧 observer 看不见，由 handler 的缓存未命中
   // 回退重扫兜底（深焦解析后 active 不在缓存但仍在 overlay 内 → 重扫一次）。
   const observer = new MutationObserver(() => {

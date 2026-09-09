@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { RESOURCE_EXTS, ALL_EXTS, getExts, isSupportedExt, extBelongsTo } from "./extensions.ts";
-// P2 修复：直接 import 根目录 resource_types.json 做双向对账（仿 types.test.ts:9）——
+// 直接 import 根目录 resource_types.json 做双向对账（仿 types.test.ts）——
 // 原测试全部硬编码断言，三端一致性只靠退出码恒 0 陷阱的外部脚本守护
 import resourceTypesJson from "#root/resource_types.json" with { type: "json" };
 
-describe("RESOURCE_EXTS ↔ resource_types.json 双向对账（P2）", () => {
+describe("RESOURCE_EXTS ↔ resource_types.json 双向对账", () => {
   const jsonTypes = (resourceTypesJson as { resourceTypes: Array<{ id: string; extensions: string[] }> }).resourceTypes;
 
   it("JSON 每个类型的扩展名都存在于前端表（且大小写一致）", () => {
@@ -24,8 +24,8 @@ describe("RESOURCE_EXTS ↔ resource_types.json 双向对账（P2）", () => {
     }
   });
 
-  it("前端表每个扩展名都存在于 JSON 对应类型（反向对账，P3）", () => {
-    // P3 修复（code_review）：test 1 只验证 JSON→前端单向；若开发者在
+  it("前端表每个扩展名都存在于 JSON 对应类型（反向对账）", () => {
+    // 反向对账：test 1 只验证 JSON→前端单向；若开发者在
     // RESOURCE_EXTS.ysm 加 ".foo" 而不改 JSON，test 1/2 仍绿而前端
     // ALL_EXTS/extBelongsTo 与 Go 后端漂移。这里补前端→JSON 反向断言。
     const jsonById = new Map(jsonTypes.map((rt) => [rt.id, rt.extensions]));
@@ -72,8 +72,8 @@ describe("isSupportedExt", () => {
   it("recognizes .YSM (case)", () => expect(isSupportedExt(".YSM")).toBe(true));
   it("rejects .xyz", () => expect(isSupportedExt(".xyz")).toBe(false));
   it("rejects empty", () => expect(isSupportedExt("")).toBe(false));
-  // P0 补测：锁定 RESOURCE_EXTS 值本身已归一化小写（原断言走 isSupportedExt 的
-  // 查询侧 toLowerCase，回退 map 归一化也照样绿——与被改代码无因果，code_review P3）
+  // 锁定 RESOURCE_EXTS 值本身已归一化小写（原断言走 isSupportedExt 的
+  // 查询侧 toLowerCase，回退 map 归一化也照样绿——与被改代码无因果）
   it("RESOURCE_EXTS 表值全小写（归一化不变量）", () => {
     for (const exts of Object.values(RESOURCE_EXTS)) {
       for (const e of exts) expect(e).toBe(e.toLowerCase());

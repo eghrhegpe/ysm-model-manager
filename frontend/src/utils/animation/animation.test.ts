@@ -204,8 +204,8 @@ describe("evaluateClip 局部变换", () => {
   });
 });
 
-describe("数值安全（P1 反推修复）", () => {
-  it("动画关键帧字符串数值溢出（1e999→Infinity）→ 轴占位 0，不产出 NaN（P1 反推修复）", () => {
+describe("数值安全", () => {
+  it("动画关键帧字符串数值溢出（1e999→Infinity）→ 轴占位 0，不产出 NaN", () => {
     // 真实 Infinity 来源：字符串数值溢出 Number("1e999")=Infinity——
     // 走解析路径验证 parseKeyValue 的 Number.isFinite 守卫（直接构造数字 Keyframe
     // 绕过解析层，evaluateKeyframes 超范围按契约透传 post 拷贝）
@@ -483,7 +483,7 @@ describe("热路径输出缓冲区（避免每帧分配）", () => {
   });
 });
 
-describe("executeTimeline 循环回绕（P0 修复）", () => {
+describe("executeTimeline 循环回绕", () => {
   it("循环回绕触发两段事件（prevTime > currentTime 时不丢 0 附近事件）", () => {
     const calls: number[] = [];
     const timeline: TimelineEvent[] = [
@@ -510,7 +510,7 @@ describe("executeTimeline 循环回绕（P0 修复）", () => {
   });
 });
 
-describe("timeline 编译失败写入 errors（P2 修复）", () => {
+describe("timeline 编译失败写入 errors", () => {
   it("timeline 表达式编译失败时 errors 数组收集失败信息", () => {
     // molangjs 极其宽容，几乎不会抛错；通过模块级 mock 标记失败表达式
     _failExpr = "BAD_EXPR";

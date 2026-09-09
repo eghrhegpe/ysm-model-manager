@@ -95,7 +95,7 @@ export function compileMolang(
   const capturedScope = scope ?? null;
   try {
     // 每次求值前重置可变变量：molangjs 的 temp./variable. 赋值会写进单例 parser 的
-    // self.variables，不重置则跨帧/clip/模型泄漏（Bedrock 语义 temp. 每帧重置，审核 P3）
+    // self.variables，不重置则跨帧/clip/模型泄漏（Bedrock 语义 temp. 每帧重置）
     parser.resetVariables();
     parser.parse(expr, makeVariables(0)); // 试探编译，非法表达式此处抛错
     return (animTime: number): number => {
@@ -152,7 +152,7 @@ export function createMolangParser(): MolangParser {
 
   function setScope(scope: Record<string, number> | null): void {
     instanceScope = scope;
-    // 复用 lookupScope（v.→variable. 归一化单一实现，防三副本漂移——审核 P3）
+    // 复用 lookupScope（v.→variable. 归一化单一实现，防三副本漂移）
     instanceParser.variableHandler = scope
       ? (key: string): number => lookupScope(scope, key)
       : () => 0;

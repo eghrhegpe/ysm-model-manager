@@ -20,7 +20,7 @@ export function hl(text: string | null | undefined, query?: string): string {
   const lowered = text.toLowerCase();
   const idx = lowered.indexOf(lq);
   if (idx === -1) return esc(text);
-  // P3 修复：Unicode 大小写折叠可改变串长（如土耳其语 İ → "i̇" 2 码元）——
+  // Unicode 大小写折叠可改变串长（如土耳其语 İ → "i̇" 2 码元）——
   // 折叠后的 idx 用于切片原始 text 会静默错切（空 mark 或截断）；
   // text 折叠后长度变化时降级为纯转义，防错位（查 text 侧而非 query 侧——
   // İ 折叠发生在 text；query 如 "b" 折叠长度不变）

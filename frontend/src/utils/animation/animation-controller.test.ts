@@ -27,7 +27,7 @@ describe("parseAnimationControllerJSON 解析", () => {
     expect(r.errors[0]).toMatch(/animation_controllers/);
   });
 
-  it("转换目标不存在时写入 errors（P1 修复）", () => {
+  it("转换目标不存在时写入 errors", () => {
     const json = `{
       "animation_controllers": {
         "player.test": {

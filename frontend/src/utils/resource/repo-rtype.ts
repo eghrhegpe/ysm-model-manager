@@ -1,7 +1,7 @@
 // ===== 当前仓库资源类型·时刻读（utils 层叶子）=====
-// 原生在 features/repo/repo-rtype.ts；backend/web-fs-auth（FSA 导入落库）也要读同一
-// 权威源，为避免 backend → features 反向依赖（backend 是胶水层，只许向下），
-// 把无事件的时刻值读取下沉至此，features/repo/repo-rtype.ts re-export 兼容下游。
+// backend/web-fs-auth（FSA 导入落库）与 features/repo/repo-rtype.ts（re-export 兼容
+// 下游）直引本文件同一权威源——避免 backend → features 反向依赖
+// （backend 是胶水层，只许向下）。
 
 import { safeGet } from "@/utils/base/storage.ts";
 import { RESOURCE_TYPES } from "./types.ts";

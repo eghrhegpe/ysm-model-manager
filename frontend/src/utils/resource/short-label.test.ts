@@ -37,7 +37,7 @@ describe("shortLabelOf — 运行时翻译", () => {
     expect(shortLabelOf("")).toBe("ysm"); // 空串兜底 YSM
   });
 
-  it("核心不变量：语言未变时缓存命中，t() 不重复调用（P1 缓存优化）", () => {
+  it("核心不变量：语言未变时缓存命中，t() 不重复调用", () => {
     mockT.mockClear();
     mockGetLang.mockReturnValue("zh-CN");
     mockT.mockReturnValue("资源包-语言A");

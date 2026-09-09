@@ -104,7 +104,7 @@ describe("friendlyError 兜底与非结构化输入", () => {
   });
 });
 
-// P3 补测（审核）：非对象 truthy/falsy 输入 + cause.Code 嵌套对象 + stripPathSegments 直测
+// 边界输入：非对象 truthy/falsy 输入 + cause.Code 嵌套对象 + stripPathSegments 直测
 describe("friendlyError — 边界输入与嵌套 cause", () => {
   it("0 / false 等 falsy 值 → 未知错误", () => {
     expect(friendlyError(0)).toBe("error.unknown");

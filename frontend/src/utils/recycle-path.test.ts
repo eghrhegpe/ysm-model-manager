@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== recycle-path 段判定测试（G5 收口：helper 单测，迁移自 community data.test.ts）=====
+// ===== recycle-path 段判定测试 =====
 // 覆盖：.recycle 段命中（任意层级/大小写不敏感/反斜杠）、普通路径不误伤、
 // 文件名含 .recycle 不误伤（段语义 vs 子串 Contains 的关键区分）、空串。
 import { describe, it, expect } from "vitest";

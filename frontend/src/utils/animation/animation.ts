@@ -77,7 +77,7 @@ interface RawKeyframeObject {
  * 处理 "q.life_time * 0 + 30" → 30, "math.sin(0) * 0 + 45" → 45
  * 只处理「变量乘 0 后加减常数」的窄模式，含真实变量时返回 null。
  *
- * ⚠️ 勿扩展正则覆盖面：bench 实证（bench-fold-molang.ts，2026-09-01）
+ * ⚠️ 勿扩展正则覆盖面：bench 实证（bench-fold-molang.ts）
  * 折叠 ~578ns vs compileMolang ~625ns，收益 ≈ 0；molangjs parse 本身便宜，
  * 折叠无敌人可打，扩展正则只会徒增维护成本。
  * 保留理由仅剩「跳过闭包创建」；未来重构解析链时整体移除，由 compileMolang 统一承接。
@@ -136,12 +136,12 @@ function parseKeyValue(v: unknown): ParsedKeyValue | null {
     const items = v.map(parseAxisItem);
     const vec = [items[0].num, items[1].num, items[2].num] as Vec3;
     const fns: MolangAxes = [items[0].fn, items[1].fn, items[2].fn];
-    // P1 修复（反推审核）：isNaN 不挡 Infinity（isNaN(Infinity)=false）——Infinity
+    // isNaN 不挡 Infinity（isNaN(Infinity)=false）——Infinity
     // 轴值穿透后插值输出 NaN 传播渲染层；统一 Number.isFinite（parseAxisItem 已守卫）
     return { vec, molang: fns.some(Boolean) ? fns : undefined };
   }
   if (typeof v === "number") {
-    // P1 修复（反推审核）：单一数值同样挡 Infinity/NaN
+    // 单一数值同样挡 Infinity/NaN
     return Number.isFinite(v) ? { vec: [v, v, v] } : null;
   }
   if (typeof v === "string") {
@@ -177,7 +177,7 @@ function extractKeyframe(kv: unknown): {
   }
   if (typeof kv === "object") {
     const obj = kv as RawKeyframeObject;
-    // P3 修复（反推审核）：obj.post 为 0/空串等假值时原 `? :` 误判为缺省——
+    // obj.post 为 0/空串等假值时原 `? :` 误判为缺省——
     // 显式 null/undefined 判断（边界对称，ADR-044 ③）
     const post = obj.post != null ? parseKeyValue(obj.post) : null;
     const pre = obj.pre != null ? parseKeyValue(obj.pre) : post;
@@ -208,7 +208,7 @@ function extractKeyframe(kv: unknown): {
   }
   // 单数值
   const n = Number(kv);
-  // P2 修复（审核，NaN/Infinity 守卫）：原仅 isNaN——Infinity/±Inf 通过后
+  // NaN/Infinity 守卫：原仅 isNaN——Infinity/±Inf 通过后
   // 插值输出 NaN 传播到渲染层（相机/骨骼变换 NaN 冻结）
   if (!Number.isFinite(n)) return null;
   return { post: [n, n, n], pre: [n, n, n], lerp: "linear" };
@@ -262,7 +262,7 @@ function convertRotationKeyframes(kfs: Keyframe[]): Keyframe[] {
 /** 解析单个 channel（rotation/position/scale）的数据 */
 function parseChannel(channelData: unknown): Keyframe[] {
   if (!channelData || typeof channelData !== "object") return [];
-  // P4 修复（审核）：原实现 `Object.keys().map(Number)` 后拿数字下标回查
+  // 原实现 `Object.keys().map(Number)` 后拿数字下标回查
   // `channelData[t]`——JS 数字下标会转回规范字符串，非规范时间键（"0.0"/"1.50"）
   // 查不到对应 key 而整帧静默丢失；改为 entries 配对，时间值直接携带原始 raw。
   // 重复数值时间（"0" 与 "0.0"）去重保留排序后首个，与原「仅规范键生效」契约一致。
@@ -270,7 +270,7 @@ function parseChannel(channelData: unknown): Keyframe[] {
   return (
     Object.entries(channelData as Record<string, unknown>)
       .map(([k, raw]) => [Number(k), raw] as const)
-      // P2 修复（审核，NaN/Infinity 守卫）：原仅 !isNaN——Infinity 时间键通过后
+      // NaN/Infinity 守卫：原仅 !isNaN——Infinity 时间键通过后
       // 排序/插值区间异常（dt=Infinity → frac=0 恒等）；统一 Number.isFinite
       .filter(([t]) => Number.isFinite(t))
       .sort(([a], [b]) => a - b)
@@ -575,7 +575,7 @@ function sampleCatmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, s: number, out
  */
 export function evaluateKeyframes(keyframes: Keyframe[], t: number): Vec3 | null {
   if (!keyframes?.length) return null;
-  // P2 修复（审核，NaN 守卫）：非法时间直接返回首帧（防御调用方传 NaN/Infinity；
+  // NaN 守卫：非法时间直接返回首帧（防御调用方传 NaN/Infinity；
   // NaN 无法喂 Molang，取数字基底）
   if (!Number.isFinite(t)) return [...(keyframes[0].post || [0, 0, 0])];
 

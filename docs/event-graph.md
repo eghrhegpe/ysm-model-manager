@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 199 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 198 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -171,7 +171,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 192 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 191 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -183,7 +183,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 182 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 181 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -433,7 +433,7 @@
 | assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 657 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
-| toast | `frontend/src/utils/dom/toast.ts` | 20 |
+| toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |

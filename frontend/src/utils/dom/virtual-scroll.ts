@@ -1,5 +1,4 @@
 // ===== 虚拟滚动共享原语（定高行窗口化）=====
-// 从 views/app-tree/virtual-scroll.ts 下沉（工坊模型列表复用，社区上线后条目可达 2000 级）。
 // 消费方：app-tree（仓库树，topOffset=0）、community/virtual-list.ts（列表上方有
 // toolbar/队列状态区，经 topOffset 补偿行起点偏移）。
 // 前提：定高行；不等高布局（如创作者卡片网格）不适用，需分批渲染 + 哨兵续批。

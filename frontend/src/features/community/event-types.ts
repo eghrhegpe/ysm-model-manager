@@ -1,5 +1,6 @@
-// ===== Wails 事件 payload 类型定义 =====
-// 为 features 模块消费的 Wails Events.On 提供类型化 payload，
+// ===== 创意工坊下载队列 Wails 事件 payload 类型定义 =====
+// 2026-09-09 下沉自 features 根（唯一消费者 download-queue-store，放置错位修复——
+// 见 ADR-208 已知遗留段）；为 community 域消费的 Wails Events.On 提供类型化 payload，
 // 消除 `as [string, number, unknown]` 类型断言。
 // 形状 = 具名元组（对齐 Go Emit 多参打包的线上格式，code_review 04250e9a9：
 // 对象形状与 parseEventPayload<T extends unknown[]> 的元组契约相悖且零消费）。

@@ -4,7 +4,7 @@
 // 默认 happy-dom 环境，可操作 document.body。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { copyText } from "./clipboard.ts";
-import * as log from "@/utils/base/log.ts";
+import * as log from "@/utils/base/primitives/log.ts";
 
 function stubClipboard(value: unknown): void {
   Object.defineProperty(navigator, "clipboard", {

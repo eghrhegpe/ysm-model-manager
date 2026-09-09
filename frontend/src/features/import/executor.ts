@@ -15,7 +15,7 @@ import { backendGetApp } from "@/features/backend-deps.ts";
 import type { CollectedEntry } from "@/features/dnd/collector.ts";
 import { buildFolderItems, fileToBase64, groupCollected } from "@/features/dnd/shared.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
-import { swallowError } from "@/utils/base/async.ts";
+import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError, isFileExistsError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 

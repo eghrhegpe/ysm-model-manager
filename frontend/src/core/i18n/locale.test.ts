@@ -19,9 +19,11 @@ function makeFakeHost() {
   let langs: string[] = ["zh-CN"];
   const htmlLangCalls: string[] = [];
   let loadCalls = 0;
+  const loadAttempts: string[] = [];
   const host: LocaleHost = {
     loadBundle: async (lang: string) => {
       loadCalls++;
+      loadAttempts.push(lang);
       return loader(lang);
     },
     systemLanguages: () => langs,
@@ -39,6 +41,7 @@ function makeFakeHost() {
     },
     htmlLangCalls,
     loadCallCount: () => loadCalls,
+    loadAttempts,
   };
 }
 type FakeHost = ReturnType<typeof makeFakeHost>;
@@ -333,9 +336,52 @@ describe("initI18n", () => {
   });
 });
 
-describe("FALLBACK_LANG（ADR-210 D4：兜底语言单一事实源）", () => {
-  it("定义为 en（成员守卫归 locales-consistency.test.ts）", async () => {
+describe("initI18n 回退链可达（预载 FALLBACK + BASE）", () => {
+  it("预载当前语言 + FALLBACK_LANG + BASE_LANG（回退链各层冷启动即可达）", async () => {
+    const { locale, fake } = await freshModule();
+    fake.setSystemLanguages(["ja-JP"]);
+    await locale.initI18n();
+    expect(locale.getLang()).toBe("ja");
+    expect([...fake.loadAttempts].sort()).toEqual(["en", "ja", "zh-CN"]);
+  });
+
+  it("当前语言包加载失败 → getBundle 回落 BASE_LANG（rescue 层冷启动可达，非死层）", async () => {
+    const { locale, fake } = await freshModule();
+    fake.setSystemLanguages(["ja-JP"]);
+    fake.setLoadBundle(async (lang) => (lang === "ja" ? null : { hello: "你好" }));
+    await locale.initI18n();
+    // ja 包缺失 → getBundle() 内部 rescue 至 BASE(zh-CN)
+    expect(locale.getBundle()["hello"]).toBe("你好");
+  });
+
+  it("initI18n await 期间 setLang 覆盖 → 恢复后不替新语言补发事件（事件归 setLang）", async () => {
+    const { locale, bus, fake } = await freshModule();
+    const onChanged = vi.fn();
+    bus.on("lang:changed", onChanged);
+    localStorage.setItem("uiLang", "ja");
+    let resolveJa: (v: Record<string, string> | null) => void = () => {};
+    fake.setLoadBundle(async (lang) => {
+      if (lang === "ja") return new Promise((r) => { resolveJa = r; });
+      return { hello: "你好" };
+    });
+    const pInit = locale.initI18n(); // 挂起在 ja 语言包加载
+    await locale.setLang("en"); // 落于 init await 期间：_currentLang=en，setLang 已自行 emit
+    resolveJa(null);
+    await pInit;
+    // init 恢复后对账 code(ja) !== _currentLang(en) → 不替写者补发
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(onChanged).toHaveBeenCalledWith({ lang: "en" });
+  });
+});
+
+describe("兜底/基准语言单一事实源（ADR-210 D4 + BASE_LANG）", () => {
+  it("FALLBACK_LANG 定义为 en（成员守卫归 locales-consistency.test.ts）", async () => {
     const { locale } = await freshModule();
     expect(locale.FALLBACK_LANG).toBe("en");
+  });
+
+  it("BASE_LANG 定义为 zh-CN（LocaleKey 类型源 + getBundle 空包 rescue 目标）", async () => {
+    const { locale } = await freshModule();
+    expect(locale.BASE_LANG).toBe("zh-CN");
   });
 });

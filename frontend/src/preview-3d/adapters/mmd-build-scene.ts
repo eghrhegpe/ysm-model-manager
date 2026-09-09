@@ -5,7 +5,7 @@ import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { scheduleBackgroundEncoding } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { registerModelRoot } from "@/preview-3d/frustum-cull.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import type { MdMmStage3Ctx } from "./mmd-types.ts";

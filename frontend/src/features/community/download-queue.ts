@@ -8,8 +8,8 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
-import { swallowError } from "@/utils/base/async.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { swallowError } from "@/utils/base/primitives/async.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { communityGetApp } from "./community-deps.ts";

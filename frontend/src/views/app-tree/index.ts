@@ -1,8 +1,8 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 
 import { t } from "@/core/i18n/t.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
-import { safeGetJSON, safeSet } from "@/utils/base/storage.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";

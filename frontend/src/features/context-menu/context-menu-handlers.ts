@@ -7,7 +7,7 @@
 import { bus } from "@/bus";
 import { t, tOf } from "@/core/i18n/t.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
-import { type BusyLock, createBusyLock } from "@/utils/base/lock.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { copyText } from "@/utils/dom/clipboard.ts";
 import { downloadTextFile } from "@/utils/dom/download-text.ts";

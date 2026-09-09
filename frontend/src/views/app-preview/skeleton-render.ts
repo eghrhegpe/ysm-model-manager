@@ -7,7 +7,7 @@ import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { toScreenshotLights } from "@/preview-3d/screenshot-lights.ts";
 import { renderMultiAngle } from "@/preview-3d/screenshot-render.ts";
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { esc } from "@/utils/html/html.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { buildBoneNamesText } from "./bone-names.ts";

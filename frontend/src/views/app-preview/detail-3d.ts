@@ -9,7 +9,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { readPmxStats } from "@/preview-3d/adapters/mmd-detail-stats.ts";
 import { readVrmMeta } from "@/preview-3d/adapters/vrm-adapter.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";

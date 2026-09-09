@@ -21,7 +21,7 @@ import {
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
 } from "@/preview-3d/render-budget.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { getSceneCaps, type SharedInfra } from "./shared-infra.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
 

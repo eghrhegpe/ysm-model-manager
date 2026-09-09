@@ -46,7 +46,7 @@ import type { SemanticBoneMap } from "@/preview-3d/semantic-bones.ts";
 import { installUiComponentsStyles, uiComponentsStyleSheet } from "@/ui/ui-components-styles.ts";
 import { PREVIEW_OVERLAY_ID } from "@/ui/ui-constants.ts";
 import { slideMenuStyleSheet } from "@/ui/ui-slide-menu-styles.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";

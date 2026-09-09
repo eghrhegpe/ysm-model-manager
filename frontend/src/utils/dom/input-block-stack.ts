@@ -5,7 +5,7 @@
 // 设计：Map<id, count> 防重复 push 无限膨胀；栈深度上限 10 防意外膨胀。
 // 消费方：preview-3d menu core、ui-slide-menu 等。
 
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** 栈深度上限（防无限膨胀）：超限 push 写日志并忽略 */
 const MAX_STACK_SIZE = 10;

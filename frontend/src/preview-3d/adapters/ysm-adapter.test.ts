@@ -79,7 +79,7 @@ vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.
 vi.mock("@/preview-3d/perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
 vi.mock("@/preview-3d/screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));
 vi.mock("@/preview-3d/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
-vi.mock("@/utils/base/log.ts", () => ({ logWarn: h.logWarn }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: h.logWarn }));
 vi.mock("@/utils/dom/editable-target.ts", () => ({ isEditableTarget: h.isEditableTarget }));
 vi.mock("./bones-panel-node.ts", () => ({ makeBonesPanelItem: h.makeBonesPanelItem }));
 

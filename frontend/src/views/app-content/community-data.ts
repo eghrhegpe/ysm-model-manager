@@ -2,7 +2,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type {

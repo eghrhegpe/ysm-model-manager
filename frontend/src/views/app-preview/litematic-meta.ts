@@ -1,8 +1,8 @@
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
-import { logWarn } from "@/utils/base/log.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";

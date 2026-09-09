@@ -15,15 +15,10 @@ auto_fields:
     - BusEvents
     - CtxShowPayload
     - currentRepoType
-    - isStorageAccessible
     - MenuItem
     - ModelSelectPayload
     - NavPagePayload
     - PageName
-    - safeGet
-    - safeGetJSON
-    - safeRemove
-    - safeSet
     - ToastPayload
     - useCurrentResourceType
 quick_groups:

@@ -5,8 +5,8 @@
 
 import { getApp } from "@/backend/app.ts";
 import { applyTheme } from "@/theme-core";
-import { logWarn } from "@/utils/base/log.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { cfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber

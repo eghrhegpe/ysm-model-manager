@@ -2,7 +2,7 @@
 // 解析 .animation_controllers.json，构建状态机图，每帧评估转换条件。
 // 与 animation.ts 的 Timeline 事件配合：Timeline 写 v.* 变量，Controller 读变量决定状态切换。
 
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { createMolangParser, type MolangFn, type MolangParser } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────

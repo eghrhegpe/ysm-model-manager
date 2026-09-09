@@ -1,11 +1,11 @@
 // ===== UI 报错落日记：error/warn toast → 日记系统（go/logs）=====
 // core 不感知 Wails、不摸 window：落盘通道 DiarySink 由装配层注入（backend/diary-sink.ts 适配 AddOpLog）；
-// 全局错误监听（window error/unhandledrejection）下沉 utils/dom/global-error-listeners.ts，
+// 全局错误监听（window error/unhandledrejection）下沉 backend/global-error-listeners.ts（装配层，唯一碰 window 处），
 // 经本模块 pushToDiary 入口收口（ADR-189 D4：DOM 原语不进 core）。本模块只持净化/去重/截断策略。
 // 设计沿革与陷阱 → docs/knowledge/core-error-diary.md
 import { bus, type ToastPayload } from "@/bus";
-import { stripAppErrorPaths } from "@/utils/base/apperror-text.ts";
-import { setLogSink } from "@/utils/base/log.ts";
+import { setLogSink } from "@/utils/base/primitives/log.ts";
+import { stripAppErrorPaths } from "@/utils/base/pure/apperror-text.ts";
 
 export type DiaryStatus = "failed" | "warn";
 
@@ -41,7 +41,7 @@ export function unregisterErrorDiary(): void {
 }
 
 /**
- * 全局错误转发入口：供 window 监听层（utils/dom / backend 的 global-error-listeners）
+ * 全局错误转发入口：供 window 监听层（backend/global-error-listeners.ts）
  * 把未捕获异常 / 未处理拒绝收口进同一套净化/去重策略。core 自身不挂 window 监听（ADR-189 D4）。
  * 未注册时告警一次并返回（ADR-210 D5：装配顺序漏 registerErrorDiary 会让全局错误静默丢失，
  * 不再静默 no-op；后续调用抑制，避免风暴）。
@@ -88,7 +88,7 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
   function logUiMsg(msg: string, status: DiaryStatus): void {
     // 净化：剥 ❌/⚠️ 前缀（含 U+FE0F 变体选择器）+ 剥 Go AppError 内部路径段（ADR-051）+ 截断
     const stripped = stripAppErrorPaths(msg);
-    const title = stripped.replace(/^[❌❎⚠]️?\s*/, "").slice(0, DIARY_MODEL_MAX);
+    const title = stripped.replace(/^[❌⚠]️?\s*/, "").slice(0, DIARY_MODEL_MAX);
     const detail = stripped.slice(0, DIARY_ERRMSG_MAX);
     // 去重键 = 净化后（status + title）：仅路径段不同的原始文本塌缩为同键 → 同类 5s 落一条；
     // 按 key 独立窗口（A-B 交错风暴各自抑制），超 DEDUP_MAX_KEYS 淘汰最旧 fail-open（ADR-207 D1）
@@ -136,10 +136,9 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     });
     logSinkInstalled = true;
   } catch (e) {
-    // 部分注册失败 → 整体回滚；返回空 handle 且**不占位 currentHandle**——
-    // 若 fall-through 到下方 currentHandle = handle，僵尸（disposed）句柄会让后续
-    // registerErrorDiary 恒返回 no-op、unregisterErrorDiary 也清不掉（dispose 早退），
-    // 模块永久静默失效：回滚后保证可重试是必须兑现的契约——否则僵尸句柄令后续注册恒 no-op、注销也清不掉
+    // 部分注册失败 → 整体回滚，返回空 handle 且不占位 currentHandle：
+    // 僵尸（disposed）句柄会令后续注册恒 no-op、注销也清不掉，模块永久静默失效——
+    // 回滚后可重试是必须兑现的契约
     dispose();
     console.warn("[error-diary] 注册失败（已回滚，可重试）:", e);
     return { dispose() {} };

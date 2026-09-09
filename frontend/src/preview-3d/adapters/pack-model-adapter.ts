@@ -21,7 +21,7 @@ import {
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
 import { textureCache } from "@/preview-3d/texture-cache.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import type {
   CameraControlScene,
   PreviewAdapter,

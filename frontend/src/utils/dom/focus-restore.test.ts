@@ -18,7 +18,7 @@ import {
   findTabbableAcrossShadow,
   trapFocusAcrossShadow,
 } from "./trap-focus-across-shadow.ts";
-import * as log from "@/utils/base/log.ts";
+import * as log from "@/utils/base/primitives/log.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";

@@ -10,7 +10,7 @@ import {
   executeTimeline,
 } from "./animation.ts";
 import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
-import * as log from "@/utils/base/log.ts";
+import * as log from "@/utils/base/primitives/log.ts";
 
 // 可控 compileMolang mock：默认透传真实实现，测试中可置失败标记
 let _failExpr: string | null = null;

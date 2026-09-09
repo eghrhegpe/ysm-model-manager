@@ -11,7 +11,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { modalPicker } from "@/features/dialogs/modal-picker.ts";
 import { modalSelect } from "@/features/dialogs/modal-select.ts";
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";

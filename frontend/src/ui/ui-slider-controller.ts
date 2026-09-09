@@ -5,8 +5,8 @@
 // 被 MenuNode schema 声明式路线取代）——控制器与 cs-bar 样式作为能力叶保留并被 cap 栈接上。
 // 自 MikuMikuAR 迁移：依赖改为 utils/base 下的 disposable 与 clamp。
 
-import { clamp01 } from "@/utils/base/clamp.ts";
-import { addDisposableListener, type Disposable } from "@/utils/base/disposable.ts";
+import { addDisposableListener, type Disposable } from "@/utils/base/primitives/disposable.ts";
+import { clamp01 } from "@/utils/base/pure/clamp.ts";
 
 export interface DragSliderOptions {
   /** 当前值（内部可变） */

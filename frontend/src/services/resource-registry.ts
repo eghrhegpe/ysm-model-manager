@@ -4,7 +4,7 @@
 // 本模块自 utils/resource/registry.ts 迁至 services/ —— 它是「数据加载服务」而非纯工具
 // （曾 reverse-import backend/app.ts，穿越纯工具层边界）。消费方 import 路径一并更新。
 import { getApp } from "@/backend/app.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import type { ResourceType } from "@/utils/resource/schema.ts";
 
 /** 资源类型注册表条目（对应 resource_types.json 结构）。extends ResourceType 共享已知字段，

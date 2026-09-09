@@ -3,7 +3,7 @@
 import { MMDLoader } from "@moeru/three-mmd";
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo";
 import type * as THREE from "three";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { buildPmxScene } from "./mmd-pmx-parser.ts";
 import { disposeMmdMesh, mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";

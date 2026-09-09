@@ -20,7 +20,7 @@ import {
   switchPreview,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import {
   extOf,

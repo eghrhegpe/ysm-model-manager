@@ -6,7 +6,7 @@
 // 单一事实源：所有模态/浮层走 rememberTrigger + returnFocus，
 // 避免各组件重复实现焦点恢复。
 
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** 触发器栈深度上限（防异常路径漏 close 静默累积——对齐 input-block-stack MAX_STACK_SIZE） */
 const MAX_TRIGGER_STACK = 10;

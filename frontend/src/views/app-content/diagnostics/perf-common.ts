@@ -5,8 +5,8 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
-import { logError } from "@/utils/base/log.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { logError } from "@/utils/base/primitives/log.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import type { EscFn } from "./logs.ts";
 
 // ===== 区段头（带可选复制按钮）=====

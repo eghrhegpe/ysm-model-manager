@@ -4,7 +4,7 @@
 // 依赖 DAG：index → renderer ← events（events 点击触发 render）
 
 import { t } from "@/core/i18n/t.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { esc } from "@/utils/html/html.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./index.ts";

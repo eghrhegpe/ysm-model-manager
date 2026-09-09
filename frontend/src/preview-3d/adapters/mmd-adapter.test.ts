@@ -117,8 +117,8 @@ vi.mock("@/preview-3d/decoder/mmd-ktx2-encoder.ts", () => ({
   scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
 }));
-vi.mock("@/utils/base/main-thread-watch.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/utils/base/main-thread-watch.ts")>();
+vi.mock("@/utils/base/primitives/main-thread-watch.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/base/primitives/main-thread-watch.ts")>();
   return {
     ...actual,
     startMainThreadWatch: (cb: (info: unknown) => void): (() => void) => {

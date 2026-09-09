@@ -14,7 +14,7 @@ import {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";

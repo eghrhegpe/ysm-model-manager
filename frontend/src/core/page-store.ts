@@ -2,7 +2,7 @@
 // 本模块只提供共享纯函数：页面名合法性守卫（isValidPage）与启动初始页解析（resolveInitialPage）。
 // 导航事实由事件总线（bus "nav:changed"）承载，组件各自响应；本模块不持有状态、不镜像。
 import type { PageName } from "@/bus";
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 
 /** 合法页面名全集（与 bus.ts PageName 联合双向约束：satisfies 防多写 + 覆盖断言防漏写） */
 const VALID_PAGES = [

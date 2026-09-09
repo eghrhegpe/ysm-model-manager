@@ -5,7 +5,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { type BusyLock, createBusyLock, withLock } from "@/utils/base/lock.ts";
+import { type BusyLock, createBusyLock, withLock } from "@/utils/base/primitives/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { compileMolang, createMolangParser, getMolangParser } from "./molang.ts";
 import Molang from "./molang-lib/molang.js";
-import * as log from "@/utils/base/log.ts";
+import * as log from "@/utils/base/primitives/log.ts";
 
 describe("compileMolang（内嵌 molangjs）", () => {
   it("纯算术表达式", () => {

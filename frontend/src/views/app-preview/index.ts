@@ -3,7 +3,7 @@
 // 本类仅保留 Web Component 生命周期 + WASM 代理 + 调试 + 类型缓存懒加载。
 
 import { bus } from "@/bus";
-import { logError, logWarn } from "@/utils/base/log.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { previewCSS } from "./css.ts";

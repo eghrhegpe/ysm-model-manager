@@ -7,7 +7,7 @@
 // isObj 定义在 utils/base/guards.ts（通用层），本模块 re-export 保持消费方 import 路径不变。
 // 零依赖（纯类型守卫，无 IO）。
 
-import { isObj } from "@/utils/base/guards.ts";
+import { isObj } from "@/utils/base/pure/guards.ts";
 
 export { isObj };
 

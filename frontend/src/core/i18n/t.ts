@@ -4,8 +4,7 @@
 // 拼错 key 编译期报错——三语言包 key 集严格一致（locales-consistency 测试保证），
 // zh-CN 作单一类型源。
 // 双入口（ADR-207 D3）：t（严格字面量 key）/ tOf（string 版，动态 key）——
-// 缺失键语义一致（多级回退 current → FALLBACK_LANG → key 本身 + warnMissingKey 单次告警）；
-// tr/trDynamic 是 tOf 前身，生产调用点归零后随 ADR-210 D3 删除。
+// 缺失键语义一致（多级回退，见 tOf 注释）+ warnMissingKey 单次告警。
 
 import type { zhCN } from "@/locales/zh-CN.ts";
 import { FALLBACK_LANG, getBundle, getLang, warnMissingKey } from "./locale.ts";
@@ -59,9 +58,10 @@ export function t(key: LocaleKey, params?: LocaleParams): string {
 }
 
 /**
- * string 版 t（动态 key 入口）：多级回退链 current → FALLBACK_LANG → 裸 key + 单次告警。
- * 缺失键先回退到兜底语言（FALLBACK_LANG，locale.ts 定义——与 SUPPORTED_LANGS 同处，
- * 单一事实源，成员守卫见 locales-consistency.test.ts，ADR-210 D4），再无则返回裸 key（warnMissingKey 告警）。
+ * string 版 t（动态 key 入口）：多级回退 ① 当前语言包 ② FALLBACK_LANG 包 ③ 裸 key + warnMissingKey 单次告警。
+ * getBundle 对空包/未加载内部 rescue 至 BASE_LANG，故 ①② 取包时自带基准包兜底；
+ * initI18n 启动后 current / FALLBACK / BASE 三包在内存，回退链各层冷启动即可达。
+ * 两常量单一事实源在 locale.ts（与 SUPPORTED_LANGS 同处，成员守卫见 locales-consistency.test.ts，ADR-210 D4）。
  */
 export function tOf(key: string, params?: LocaleParams): string {
   // 1. 当前 locale

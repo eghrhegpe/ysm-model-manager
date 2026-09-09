@@ -6,12 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/base/storage.ts
 auto_fields:
-  symbols_with_lines:
-    - isStorageAccessible
-    - safeGet
-    - safeGetJSON
-    - safeRemove
-    - safeSet
+  symbols_with_lines: []
 tests: []
 quick_groups:
   - 跨组件通信与页面

@@ -2,7 +2,7 @@
 
 import { bus } from "@/bus";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
-import { logError } from "@/utils/base/log.ts";
+import { logError } from "@/utils/base/primitives/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -26,7 +26,7 @@ import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
 import { registerSync } from "@/features/sync.ts";
-import { swallowError } from "@/utils/base/async.ts";
+import { swallowError } from "@/utils/base/primitives/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";

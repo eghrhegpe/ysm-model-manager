@@ -21,7 +21,7 @@
 //   // 每帧按固定振幅产生虚拟能量，由 minInterval 节流出固定节奏
 //   detector.update(0.5); // 固定振幅 0.5
 
-import { clamp01 } from "@/utils/base/clamp.ts";
+import { clamp01 } from "@/utils/base/pure/clamp.ts";
 
 /** 节拍检测配置 */
 export interface BeatDetectorOptions {

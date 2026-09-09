@@ -4,7 +4,7 @@
 // ADR-051 决策：删除正则兜底表，只消费结构化 AppError.Code。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { APP_ERROR_PATH_RE } from "@/utils/base/apperror-text.ts";
+import { APP_ERROR_PATH_RE } from "@/utils/base/pure/apperror-text.ts";
 
 // CODE_KEYS 覆盖所有有明确分类语义的 Code；未列出的 Code（IO_ERROR/MKDIR_FAILED/
 // WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）语义靠 Reason 中文透传，

@@ -5,7 +5,7 @@ import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";

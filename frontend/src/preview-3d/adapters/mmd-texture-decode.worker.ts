@@ -3,7 +3,7 @@
 // 浏览器 createImageBitmap() 在 Worker 中可用，解码后产出 ImageBitmap（transferable），
 // 主线程拿到后直接喂给 THREE.Texture，跳过 HTMLImageElement 的主线程解码路径。
 
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 
 /** 主线程 → Worker 的请求 */
 export interface TexDecodeRequest {

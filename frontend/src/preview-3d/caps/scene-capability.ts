@@ -5,7 +5,7 @@
 //   2. 在 registry.add() 注册一行
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 // [ADR-195 刀2] 控件类型下沉 preview-3d/menu-node-types.ts
 // （共享类型叶，menu/ 与 caps/ 双域引用，破 caps→menu 纯类型环）——本文件 re-export

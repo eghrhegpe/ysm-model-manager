@@ -9,7 +9,7 @@
 // systemLanguages / setHtmlLang 缺省空候选 / no-op，不挂启动链。
 
 import { bus } from "@/bus";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 const STORAGE_KEY = "uiLang";
 
@@ -23,8 +23,12 @@ export const SUPPORTED_LANGS = [
 export type LangCode = (typeof SUPPORTED_LANGS)[number]["code"];
 type Bundle = Record<string, string>;
 
-/** 缺失键兜底语言（单一事实源：t.ts 引入使用；成员守卫在 locales-consistency.test.ts，ADR-210 D4） */
+/** 缺失键兜底语言（t.ts 回退链第 2 层；单一事实源与 SUPPORTED_LANGS 同处，成员守卫在 locales-consistency.test.ts，ADR-210 D4） */
 export const FALLBACK_LANG: LangCode = "en";
+
+/** 基准语言：LocaleKey 类型源（zh-CN 语言包）+ getBundle 空包 rescue 目标
+ *  （与 FALLBACK_LANG 同处单一事实源，勿另立第三语言常量；成员守卫同上） */
+export const BASE_LANG: LangCode = "zh-CN";
 
 // ── 宿主注入（ADR-210 D1）──────────────────────────────────
 
@@ -51,7 +55,7 @@ export function setLocaleHost(h: LocaleHost | null): void {
 
 // ── 模块级状态 ──────────────────────────────────────
 
-let _currentLang: LangCode = "zh-CN";
+let _currentLang: LangCode = BASE_LANG;
 
 /** setLang 请求代际计数：并发切换时慢请求后到可覆盖后选，据此丢弃过期写入 */
 let _langReqGen = 0;
@@ -64,7 +68,13 @@ let warnedNoHost = false;
 
 /** 非空包判定（{} 是 truthy，直接判布尔会让空包短路 zh-CN 兜底） */
 function isNonEmpty(b: Bundle | undefined): b is Bundle {
-  return !!b && Object.keys(b).length > 0;
+  // for-in 早退探针：零分配（Object.keys 每调用建 ~1500 元素 key 数组，
+  // 而本函数位于 t()/tOf() 渲染热路径上——ADR-210 D2 移除 _activeBundle
+  // 缓存后每次翻译查找都会走到这里，code_review d0c543bb2 P3）
+  if (!b) return false;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const _ in b) return true;
+  return false;
 }
 
 // 缺失 key 告警节流：每 key 只告警一次。可变状态保持私有，对外仅 warnMissingKey
@@ -121,16 +131,15 @@ async function doLoadLocale(lang: string): Promise<void> {
 }
 
 /**
- * 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。
- * ADR-210 D2：已删 _activeBundle 手工缓存——其「刷新契约」（bundles/_currentLang 任一
- * 写点必须配对调 refreshActiveBundle）是口头纪律，漏配对即幽灵缓存；无参退化直查表，
- * 多两次属性读取（纳秒级），不为它买正确性风险。
+ * 获取指定语言的翻译包（已加载时直接读缓存；空包/未加载 rescue 至非空 BASE_LANG，再无则空对象）。
+ * 勿加回手工 active 缓存：无参退化直查表（多两次属性读取，纳秒级），
+ * 手工缓存要求「任一写点配对刷新」，漏配对即幽灵缓存，不买这个正确性风险。
  * 注意与 getLang() 区分：getBundle 返回翻译表（对象），getLang 返回语言代码（字符串）。
  */
 export function getBundle(lang?: string): Bundle {
   const code = lang ?? _currentLang;
   if (isNonEmpty(bundles[code])) return bundles[code];
-  if (isNonEmpty(bundles["zh-CN"])) return bundles["zh-CN"];
+  if (isNonEmpty(bundles[BASE_LANG])) return bundles[BASE_LANG];
   return {};
 }
 
@@ -187,24 +196,28 @@ function htmlLangAttr(code: string): string {
 // ── 初始化 ──────────────────────────────────────────────
 
 /**
- * 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。
+ * 启动时调用：读取持久化/系统语言 → 同步 HTML 属性 → 并行预载语言包 → 补发一次 lang:changed。
  * 组件渲染可能早于语言包就绪（customElements.define 在模块顶层同步执行，
  * 加载异步），故加载成功后补发一次 lang:changed，让首帧拿到空 bundle
  * 的组件重渲染（与 setLang 热切换走同一通道）。
- * 未注入 host（装配层漏接线）：语言回落 zh-CN 默认 + 加载跳过告警一次（fail-open），
+ * 预载 current + FALLBACK_LANG + BASE_LANG 三包：tOf 回退链（→ FALLBACK）与
+ * getBundle 空包 rescue（→ BASE）冷启动即可达；语言包获取失败不悬挂启动链。
+ * 未注入 host（装配层漏接线）：语言回落 BASE_LANG 默认 + 加载跳过告警一次（fail-open），
  * 不抛错、不挂 app-modules 启动链。
  */
 export async function initI18n(): Promise<void> {
   const saved = safeGet(STORAGE_KEY) as LangCode | null;
   const detected = detectFromLangs(host?.systemLanguages() ?? []);
-  _currentLang =
-    saved && SUPPORTED_LANGS.some((l) => l.code === saved) ? saved : (detected ?? "zh-CN");
+  const code =
+    saved && SUPPORTED_LANGS.some((l) => l.code === saved) ? saved : (detected ?? BASE_LANG);
+  _currentLang = code;
 
-  host?.setHtmlLang(htmlLangAttr(_currentLang));
-  await loadLocale(_currentLang);
-  // 仅当语言包确实加载成功（非空）才通知重渲染；失败留待重试，不污染订阅通道
-  const loaded = bundles[_currentLang];
-  if (loaded && Object.keys(loaded).length > 0) {
-    bus.emit("lang:changed", { lang: _currentLang });
+  host?.setHtmlLang(htmlLangAttr(code));
+  await Promise.all([loadLocale(code), loadLocale(FALLBACK_LANG), loadLocale(BASE_LANG)]);
+  // 补发前对账：await 期间若 setLang 覆盖了 _currentLang，不替写者补发
+  //（新语言事件 setLang 已自行 emit）；仅当 code 自身加载成功（非空）才通知重渲染，
+  // 失败留待重试，不污染订阅通道
+  if (code === _currentLang && isNonEmpty(bundles[code])) {
+    bus.emit("lang:changed", { lang: code });
   }
 }

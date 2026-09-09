@@ -10,7 +10,7 @@ import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { extOf, RESOURCE_TYPES, resolvePreviewKey } from "@/utils/resource/types.ts";

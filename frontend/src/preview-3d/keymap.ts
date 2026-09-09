@@ -1,7 +1,7 @@
 // ===== 3D 操作键位 / 相机偏好（从 model3d.ts 拆出，ADR-040 P1）=====
 // 纯 localStorage 工具函数，无 Three.js 依赖，可独立单测。
 // 原 model3d.ts L70-115，已迁移至此；model3d.ts 保留 re-export 兼容。
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 
 // ── 类型 ──────────────────────────────────────────
 

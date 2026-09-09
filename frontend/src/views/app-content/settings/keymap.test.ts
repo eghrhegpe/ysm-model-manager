@@ -29,7 +29,7 @@ const { safeGet, safeSet, safeRemove, busEmit, loadTdKeymap } = vi.hoisted(() =>
   })),
 }));
 
-vi.mock("@/utils/base/storage.ts", () => ({
+vi.mock("@/utils/base/primitives/storage.ts", () => ({
   safeGet: (...a: unknown[]) => safeGet(...(a as [string])),
   safeSet: (...a: unknown[]) => safeSet(...(a as [string, string])),
   safeRemove: (...a: unknown[]) => safeRemove(...(a as [string])),

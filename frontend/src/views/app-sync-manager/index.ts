@@ -8,8 +8,8 @@
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";

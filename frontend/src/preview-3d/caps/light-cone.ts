@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import { disposeObject3D, safeDispose } from "@/preview-3d/safe-dispose.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";
 

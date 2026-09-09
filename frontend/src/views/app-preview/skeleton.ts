@@ -4,9 +4,9 @@
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { logError, logWarn } from "@/utils/base/log.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
-import { safeSet } from "@/utils/base/storage.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { safeSet } from "@/utils/base/primitives/storage.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";

@@ -13,7 +13,7 @@
 //   - parseYsmMetaFromFiles：原 mdWsParseYsmMetaFromFiles（去 mdWs 前缀，同 P1
 //     godRaysIntensity 风格），纯函数，正文与注释逐字保留
 
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { extractAnimGroupsAndConfigs } from "@/utils/format/ysm-anim-config.ts";
 import { type DecodedYsm, devLog } from "./utils.ts";
 

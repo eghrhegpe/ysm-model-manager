@@ -2,9 +2,9 @@
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
-import { moveItemMut } from "@/utils/base/array.ts";
-import { logWarn } from "@/utils/base/log.ts";
-import { safeSet } from "@/utils/base/storage.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
+import { safeSet } from "@/utils/base/primitives/storage.ts";
+import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import * as m from "@/views/app-content/community-data.ts";

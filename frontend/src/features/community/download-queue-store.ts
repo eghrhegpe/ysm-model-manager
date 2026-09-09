@@ -18,16 +18,16 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
+import { communityGetApp } from "./community-deps.ts";
+import { runWebEnqueue } from "./download-queue-web.ts";
 import type {
   DownloadProgressPayload,
   QueueFileDonePayload,
   QueueFileStartPayload,
   QueueStatusPayload,
-} from "@/features/event-types.ts";
-import { parseEventPayload } from "@/features/event-types.ts";
-import { dbg } from "@/utils/debug/debug.ts";
-import { communityGetApp } from "./community-deps.ts";
-import { runWebEnqueue } from "./download-queue-web.ts";
+} from "./event-types.ts";
+import { parseEventPayload } from "./event-types.ts";
 
 // ============================================================
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）

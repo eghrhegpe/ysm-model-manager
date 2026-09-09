@@ -1,5 +1,5 @@
 import { bytesToBase64 } from "@/preview-3d/base64.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====
 // 在浏览器中通过 WASM basis_encoder 将 PNG 纹理编码为 KTX2 格式，

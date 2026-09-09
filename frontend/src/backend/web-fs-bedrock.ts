@@ -11,7 +11,7 @@ import {
   parseBedrockGeometryFromJSON,
 } from "@/preview-3d/decoder/geometry.ts";
 import { parseYsmJsonDirect } from "@/preview-3d/decoder/parse-ysm-json.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { base64ToBytes, u8ToBase64 } from "./web-common.ts";
 import { listWebModelDirFiles, readWebFile } from "./web-fs-read.ts";
 

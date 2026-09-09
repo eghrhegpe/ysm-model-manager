@@ -8,8 +8,8 @@
 
 import { t } from "@/core/i18n/t.ts";
 import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
-import { swallowError } from "@/utils/base/async.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { swallowError } from "@/utils/base/primitives/async.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import {
   getPreviewableTypeTabs,
   RESOURCE_TYPE_LABELS,

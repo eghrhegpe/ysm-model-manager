@@ -1,5 +1,5 @@
 // ===== 创作者频道浏览模式（外链/内嵌/窗口）=====
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 /** 创作者频道浏览模式 */
 export type BrowseMode = "external" | "embed" | "window";

@@ -14,7 +14,7 @@ import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "@/ui/dom-contract.ts";
 import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
 import { DragSliderController } from "@/ui/ui-slider-controller.ts";
-import { clampPct } from "@/utils/base/clamp.ts";
+import { clampPct } from "@/utils/base/pure/clamp.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
 
 /**

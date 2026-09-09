@@ -4,7 +4,7 @@
  * 编译失败零占位降级），求值时机在 evaluateKeyframes（anim_time = 求值时间 t）。
  */
 
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { compileMolang, createMolangParser, type MolangFn, type MolangParser } from "./molang.ts";
 
 // ── 类型定义 ────────────────────────────────────────

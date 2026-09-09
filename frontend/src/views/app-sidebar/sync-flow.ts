@@ -5,7 +5,7 @@
 import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";

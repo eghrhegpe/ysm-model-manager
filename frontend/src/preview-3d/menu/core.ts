@@ -18,7 +18,7 @@ import { ensureFabStyles } from "@/preview-3d/fab.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { createSlideMenu, type SlideMenuHandle, type SlideMenuView } from "@/ui/ui-slide-menu.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";

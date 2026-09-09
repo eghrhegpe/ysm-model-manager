@@ -2,7 +2,7 @@
  * 剪贴板纯工具（DOM 职责下沉到 utils/dom，供 core 层调用——context-menu-handlers 等
  * 不再直接操作 document/navigator）。
  */
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** copyText 返回类型：区分成功 / 剪贴板拒绝 / 剪贴板不可用 / execCommand 失败 */
 export type CopyResult =

@@ -1,7 +1,7 @@
 // ===== 树渲染层（虚拟滚动版）=====
 import { t } from "@/core/i18n/t.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";

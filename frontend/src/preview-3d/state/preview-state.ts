@@ -40,7 +40,7 @@ import {
   MAX_FPS_KEY,
   MAX_PIXEL_RATIO_KEY,
 } from "@/preview-3d/render-budget.ts";
-import { safeSet } from "@/utils/base/storage.ts";
+import { safeSet } from "@/utils/base/primitives/storage.ts";
 import type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子
 // preview-paths.ts（断 caps/scene-capability ⇄ preview-state 纯 type 环）：

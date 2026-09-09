@@ -40,7 +40,7 @@ import {
   type AnimationController,
   parseAnimationControllerJSON,
 } from "@/utils/animation/animation-controller.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";

@@ -11,7 +11,8 @@ import { stripAppErrorPaths } from "./apperror-text.ts";
 type Fixture = { withPaths: string; noPaths: string };
 const FIXTURE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../../../tests/fixtures/apperror-sample.json",
+  // pure/ 比原 base/ 深一层（utils→base 迁移后二次下沉），相对路径多一层上跳
+  "../../../../../tests/fixtures/apperror-sample.json",
 );
 const fx = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Fixture;
 

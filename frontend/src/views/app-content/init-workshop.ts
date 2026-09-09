@@ -10,7 +10,7 @@ import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import type { WorkshopModel } from "@/features/community/render.ts";
 import { showRepoModels } from "@/features/community/show-repo-models.ts";
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { esc } from "@/utils/html/html.ts";
 import { type RenderSiteViewCtx, renderSiteView } from "@/views/app-content/site/site-view.ts";

@@ -2,7 +2,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";

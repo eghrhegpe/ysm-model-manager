@@ -6,7 +6,7 @@
 
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";

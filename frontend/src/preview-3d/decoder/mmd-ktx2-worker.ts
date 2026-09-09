@@ -3,7 +3,7 @@
 // 单次 ~10s 的同步编码阻塞主进程（首次加载卡死问题）。
 // 主线程 encodeToKTX2 → postMessage(RGBA + 尺寸) → 本 Worker 编码 → 回传 KTX2 ArrayBuffer。
 
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { encodeToKTX2Basis } from "./mmd-ktx2-basis.ts";
 
 /** 主线程 → Worker 的请求 */

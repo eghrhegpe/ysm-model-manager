@@ -3,7 +3,7 @@
 // 下游）直引本文件同一权威源——避免 backend → features 反向依赖
 // （backend 是胶水层，只许向下）。
 
-import { safeGet } from "@/utils/base/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { RESOURCE_TYPES } from "./types.ts";
 
 /**

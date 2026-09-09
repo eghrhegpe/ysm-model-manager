@@ -4,7 +4,7 @@ import { bus } from "@/bus";
 // 别名导入：show() 内局部变量 `t` 是 toast 元素，直接用 `t` 会被遮蔽；
 // 命名避开 core 的 tr（缺失键兜底安全取值）语义撞名（ADR-207 D3）
 import { t as translate } from "@/core/i18n/t.ts";
-import { logError } from "@/utils/base/log.ts";
+import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";

@@ -4,7 +4,7 @@ import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { swallowError } from "@/utils/base/async.ts";
+import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { BrowseMode } from "@/views/app-content/site/workshop-browse-mode.ts";

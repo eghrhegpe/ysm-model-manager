@@ -5,7 +5,7 @@
 // 浏览器读不了本地磁盘路径）→ 挂入核心场景 + 灯光 + 包围盒定相机。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
 
-import { safeErrorMessage } from "@/utils/base/safe-error-msg.ts";
+import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { mdMmStage4Anim } from "./mmd-build-anim.ts";
 import { mdMmDetectFormat, mdMmStage1Input, mdMmStage2LoadingManager } from "./mmd-build-load.ts";

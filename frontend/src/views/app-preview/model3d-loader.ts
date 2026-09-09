@@ -10,7 +10,7 @@ import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture-loader.ts";
-import { logWarn } from "@/utils/base/log.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */

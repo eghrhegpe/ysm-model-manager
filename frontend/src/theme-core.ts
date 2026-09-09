@@ -5,7 +5,7 @@
 // 拆出本文件：normalizeTheme/applyTheme/initTheme 无顶层副作用，测试可独立 import。
 // 主题变更通过 document.body.classList 直接生效，无需 bus 广播（P2：theme:change 零订阅，删发射）。
 import { getApp } from "@/backend/app.ts";
-import { safeGet, safeSet } from "@/utils/base/storage.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 const THEME_DARK = "cyber";
 // 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）

@@ -1,8 +1,9 @@
-// ===== 页面导航状态（类型化 — ADR-014 P3）=====
-// 页面状态唯一来源 PageStore（AGENTS.md 4.1）：nav:changed 广播（app-content 单向）
-// 经闭包 set 写入；运行时广播非法值一律拒绝（兜底重定向会把非用户意图写进状态）。
-// 历史教训（setCurrentPage 幽灵路径、resources 死页）→ docs/knowledge/page-store.md
-import { bus, type PageName } from "@/bus";
+// ===== 页面导航纯函数（类型化 — ADR-014 P3）=====
+// 本模块只提供共享纯函数：页面名合法性守卫（isValidPage）与启动初始页解析（resolveInitialPage）。
+// 导航事实由事件总线（bus "nav:changed"）承载，组件各自响应；本模块不持有状态、不镜像。
+// 历史：原 PageStore 状态机（模块级 currentPage + registerPageStore listener）经 ADR-209 移除——
+// 其为写-only 孤儿（生产零读取），且 bus 已是导航事实源，再镜像属冗余。详见 ADR-209。
+import type { PageName } from "@/bus";
 import { safeGet } from "@/utils/base/storage.ts";
 
 /** 合法页面名全集（与 bus.ts PageName 联合双向约束：satisfies 防多写 + 覆盖断言防漏写） */
@@ -31,7 +32,7 @@ function sanitizePage(v: string | null): PageName {
   return isValidPage(v) ? v : "repository";
 }
 
-/** 解析启动初始页面（app-nav / app-content / PageStore 三处同源调用）。
+/** 解析启动初始页面（app-nav / app-content 两处同源调用）。
  *  优先级：① 设置项「启动默认页面」（ui-default-page）② 上次停留页（nav_page）③ 仓库页 */
 export function resolveInitialPage(): PageName {
   const configured = safeGet("ui-default-page");
@@ -43,42 +44,4 @@ export function resolveInitialPage(): PageName {
     return sanitizePage(saved);
   }
   return "repository";
-}
-
-// 状态闭包（ADR-189 D5）：写入路径共两条——nav:changed listener 调 set（导航事实同步）
-// + get 首次触碰懒解析（消除模块求值期副作用）；文件内其他代码无法裸写
-const pageState = (() => {
-  let current: PageName | undefined;
-  return {
-    get(): PageName {
-      const cur = current;
-      if (cur !== undefined) return cur;
-      const init = resolveInitialPage();
-      current = init;
-      return init;
-    },
-    /** 导航写入：仅 registerPageStore 的 nav:changed listener 调用 */
-    set(p: PageName): void {
-      current = p;
-    },
-  };
-})();
-
-export const PageStore = {
-  get currentPage(): PageName {
-    return pageState.get();
-  },
-};
-
-/** 注册页面状态同步（app-content 编排调用，bus.on 的 unsub 收集进 unsubs 清理） */
-export function registerPageStore(unsubs: Array<() => void>): void {
-  unsubs.push(
-    bus.on("nav:changed", ({ page }) => {
-      // 非法 emit 直接忽略：兜底重定向会让 _currentPage 与真实视图脱节
-      if (!isValidPage(page)) return;
-      if (page !== pageState.get()) {
-        pageState.set(page);
-      }
-    }),
-  );
 }

@@ -8,19 +8,17 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - isValidPage
-    - PageStore
-    - registerPageStore
     - resolveInitialPage
   tests:
     - frontend/src/core/page-store.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
-  - 页面状态管理、当前页、page store
-  - resolveInitialPage / sanitizePage
-  - 启动初始页解析
+  - 页面名合法性守卫 isValidPage
+  - resolveInitialPage / sanitizePage 启动初始页解析
+  - 页面状态管理、page store
 quick_risk_lines:
-  - page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责
+  - page-store 只提供纯函数（isValidPage / resolveInitialPage），不持有状态、不镜像；页面挂载 / 卸载是 app-content 的职责
 pitfalls:
   - 在 page-store 里挂页面挂载 / 卸载逻辑 → 与 app-content 重复、状态串扰；必须分开
   - resolveInitialPage 无回退 → 隐私模式读不到 localStorage 时死页；必须经三优先级回退 repository

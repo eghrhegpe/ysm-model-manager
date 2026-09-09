@@ -131,7 +131,7 @@ status: active
 
 `app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工坊（github）、诊断与冲突（diagnostics/oldest）、设置（settings）。它监听 `nav:changed` 整块重渲染当前页，也是全部全局事件 handler 的唯一注册点（致命陷阱 #2 的解法）。
 
-构造器不再硬编码 `"repository"`，而是与 `app-nav`、`PageStore` 三源同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:changed`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `PageStore.currentPage` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
+构造器不再硬编码 `"repository"`，而是与 `app-nav` 两处同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:changed`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `app-nav` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
 
 UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `content.*`），改文案只改语言包。
 
@@ -143,7 +143,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 > - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
 > - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
 
-- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册五组全局 handler（`registerPageStore` / `registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `core/page-store.ts` / `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
+- `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册四组全局 handler（`registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
 - `css/content-css.ts` — 样式组合层：6 个域 CSS 文件（同在 `css/` 子目录）join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `css/content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
@@ -189,7 +189,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 - 全局 handler 五组直注册（ADR-188 去壳）：`registerPageStore`（`frontend/src/core/page-store.ts`）、`registerSync`（`frontend/src/features/sync.ts`）、`registerContextMenus`（`frontend/src/features/context-menu/context-menus.ts`）、`registerInstanceOps`（`frontend/src/features/pack-ops/instance-ops.ts`）、`registerAndroidEvents`（`frontend/src/features/platform/android-events.ts`）——unsub 收进 `globalUnsubs`
 - `frontend/src/views/app-tree/index.ts` — 仓库页 DnD 组件级绑定（`bindTreeDnD`）与显式 `tree-drop-hint`
-- `frontend/src/core/page-store.ts` — `resolveInitialPage` / `sanitizePage` / `PageStore`，初始页与页面状态的唯一来源
+- `frontend/src/core/page-store.ts` — `resolveInitialPage` / `sanitizePage` 纯函数（页面名校验 + 启动初始页解析），无状态持有（原 `PageStore` 经 ADR-209 移除）
 - `frontend/src/features/community/` — 仓库页数据/渲染/事件/下载队列（`data.ts` / `render.ts` / `events.ts` / `download-queue.ts`，`bindRepoEvents`、`tryFetchModels` 等由 index.ts 调用）
 - `frontend/src/views/app-content/site/` — 创意工坊站点视图子模块，与 `features/community/` 并存，index.ts 同时引用两套，改动前先确认归属
 - `frontend/src/views/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接

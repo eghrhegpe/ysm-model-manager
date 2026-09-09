@@ -40,9 +40,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // heavy feature 模块 mock（断开 import 副作用链；ADR-188：core/handlers/global 壳
 // 已删，改为分别 mock core/page-store 与 features/sync）
 vi.mock("@/core/page-store.ts", () => ({
-  registerPageStore: vi.fn(),
   resolveInitialPage: () => "repository",
-  PageStore: { get currentPage() { return "repository" as const; } },
 }));
 vi.mock("@/features/sync.ts", () => ({
   registerSync: vi.fn(),

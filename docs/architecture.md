@@ -454,7 +454,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 ### 6.4 事件总线与状态
 
 - **`js/bus.ts`**（~5.9KB）：类型化 bus，`BusEvents` 接口枚举约 **50 个事件名 → payload 类型**（:53-112）；`createBus()` 简单 listener map（:128-159）；`setBus()` 可替换；兼容挂载 `window.bus`（:178）；emit 内 `try/catch` 隔离异常（:145-148）。
-- **`js/core/page-store.ts`**（759B）：页面状态唯一来源，`registerPageStore` 的 `nav:changed` listener 单向同步（过 `sanitizePage` 白名单）；无公开 setter（旧 `setCurrentPage` 已删除——幽灵路径历史本体，禁止复活）。
+- **`js/core/page-store.ts`**：纯函数模块——`isValidPage`（运行时页面名守卫）+ `resolveInitialPage`（启动初始页解析，三优先级回退 repository）；不持有状态、不镜像。原 `PageStore`/`registerPageStore` 写-only 孤儿状态机经 ADR-209 移除（导航事实源为 bus `nav:changed`）。
 - **`js/services/registry.ts`**（1.6KB）：`Map<string, unknown>`，仅注册"有替换价值"的依赖（数据加载函数）；渲染/纯函数直接 import。
 
 ### 6.5 其他前端目录

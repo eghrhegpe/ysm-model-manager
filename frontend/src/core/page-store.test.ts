@@ -1,17 +1,11 @@
 // @vitest-environment node
-// ===== page-store 导航状态机测试（陷阱 #13 幽灵路径守护）=====
-// 唯一写入点：registerPageStore 的 nav:changed listener；
-// 页面名收窄为 PageName 联合（编译期拦截拼错，运行时信任 emit 方类型）。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus, type PageName } from "@/bus";
-import {
-  isValidPage,
-  PageStore,
-  registerPageStore,
-  resolveInitialPage,
-} from "./page-store.ts";
+// ===== page-store 纯函数测试 =====
+// 本模块只提供纯函数：isValidPage（运行时守卫）+ resolveInitialPage（启动恢复）。
+// 历史：原 PageStore 状态机（写-only 孤儿）经 ADR-209 移除。
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { isValidPage, resolveInitialPage } from "./page-store.ts";
 
-/** 隐私模式模拟：localStorage 读抛错（复用 app-modules.test.ts 的 breakLocalStorage 模式） */
+/** 隐私模式模拟：localStorage 读抛错 */
 function breakLocalStorageRead(): () => void {
   const getSpy = vi.spyOn(localStorage, "getItem").mockImplementation(() => {
     throw new Error("denied");
@@ -84,59 +78,5 @@ describe("isValidPage 运行时守卫", () => {
     expect(isValidPage(null)).toBe(false);
     expect(isValidPage(undefined)).toBe(false);
     expect(isValidPage(42)).toBe(false);
-  });
-});
-
-describe("PageStore 导航状态机", () => {
-  const unsubs: Array<() => void> = [];
-
-  beforeEach(() => {
-    unsubs.length = 0;
-    registerPageStore(unsubs);
-    bus.emit("nav:changed", { page: "repository" }); // 重置状态基线
-  });
-
-  afterEach(() => {
-    unsubs.forEach((fn) => fn());
-    unsubs.length = 0;
-  });
-
-  it("初始为仓库页", () => {
-    expect(PageStore.currentPage).toBe("repository");
-  });
-
-  it("nav:changed 广播后同步页面状态", () => {
-    bus.emit("nav:changed", { page: "settings" });
-    expect(PageStore.currentPage).toBe("settings");
-  });
-
-  it("同页重复广播幂等（状态不抖动）", () => {
-    bus.emit("nav:changed", { page: "instances" });
-    bus.emit("nav:changed", { page: "instances" });
-    expect(PageStore.currentPage).toBe("instances");
-  });
-
-  it("退订后不再同步（生命周期配对）", () => {
-    unsubs.pop()!();
-    bus.emit("nav:changed", { page: "github" });
-    expect(PageStore.currentPage).toBe("repository");
-  });
-
-  it("非法页 emit → 拒绝（状态不变，防兜底污染）", () => {
-    bus.emit("nav:changed", { page: "settings" });
-    bus.emit("nav:changed", { page: "bogus" as unknown as PageName });
-    expect(PageStore.currentPage).toBe("settings");
-  });
-
-  it("null/undefined 页 emit → 拒绝（状态不变）", () => {
-    bus.emit("nav:changed", { page: "github" });
-    bus.emit("nav:changed", { page: null as unknown as PageName });
-    expect(PageStore.currentPage).toBe("github");
-  });
-
-  it("广播侧历史名 resources → 拒绝（宽容映射只属启动恢复）", () => {
-    bus.emit("nav:changed", { page: "instances" });
-    bus.emit("nav:changed", { page: "resources" as unknown as PageName });
-    expect(PageStore.currentPage).toBe("instances");
   });
 });

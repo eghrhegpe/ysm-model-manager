@@ -160,7 +160,7 @@ class AppNav extends WebComponentBase {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    // 与 PageStore 同源初始化（原硬编码 "dashboard" 是幽灵值——PageName 中
+    // 与 app-content 同源（同走 resolveInitialPage；原硬编码 "dashboard" 是幽灵值——PageName 中
     // 不存在此页，启动时导航高亮缺失，靠 nav:changed 收敛后才恢复）
     this._current = resolveInitialPage();
     // 折叠态持久化（用户手动折叠记忆；workshop 页自动折叠走 persist=false 不落盘）

@@ -22,7 +22,6 @@ const appContentStyle: CSSStyleSheet = (() => {
 
 export { appContentStyle };
 
-import { registerPageStore } from "@/core/page-store.ts";
 import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
@@ -56,10 +55,10 @@ class AppContent extends WebComponentBase {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.adoptedStyleSheets = [appContentStyle];
-    // 与 PageStore 同源初始化：app-nav 的初始 nav:changed 在 app-content 动态
-    // import 完成前可能被吞（app-modules.ts 动态加载），此时若硬编码 "repository"
-    // 会导致 UI 渲染与 PageStore 脱节（守卫误拦 DnD 遮罩）。统一走
-    // resolveInitialPage，即使初始事件丢失，两者也保持一致。
+    // 与 app-nav 同源：两者均走 resolveInitialPage()，避免硬编码幽灵值（旧 "dashboard"）。
+    // app-content 经 app-modules.ts 动态加载，可能晚于 app-nav 派发的初始 nav:changed，
+    // 事件被吞后若硬编码首页会让 UI 实际渲染页与 app-nav 脱节。统一走 resolveInitialPage，
+    // 即使初始事件丢失，两者也保持一致。
     this.state = new AppContentState(root, resolveInitialPage());
     this.subs = new SubscriptionBucket();
   }
@@ -67,7 +66,7 @@ class AppContent extends WebComponentBase {
   connectedCallback(): void {
     this.subs.setNavUnsub(
       bus.on("nav:changed", ({ page }) => {
-        // 口径对齐 app-nav / PageStore：非法 page 拒绝（防 state.current 写脏 + DnD 遮罩守卫误判）
+        // 口径对齐 app-nav：非法 page 拒绝（防 state.current 写脏 + DnD 遮罩守卫误判）
         if (!isValidPage(page)) return;
         this.state.current = page;
         // 不再每次 nav:changed 清扫描缓存：30s 缓存由导入/同步/下载等实际数据变更处
@@ -99,9 +98,8 @@ class AppContent extends WebComponentBase {
     this.subs.addGlobal(bus.on("community:clearCache", clearAllCommunityCache));
     this._render();
     // core 内核 + features 全局 handler（ADR-188：core/handlers/global 汇编壳已删，
-    // app-content 直接注册 registerPageStore / registerSync——core 不设壳层）
+    // app-content 直接注册各 features 全局 handler——core 不设壳层）
     const globalUnsubs: Array<() => void> = [];
-    registerPageStore(globalUnsubs);
     registerSync(globalUnsubs);
     registerContextMenus(globalUnsubs);
     registerInstanceOps(globalUnsubs);

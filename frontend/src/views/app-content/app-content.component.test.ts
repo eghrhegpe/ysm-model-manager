@@ -114,7 +114,7 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
   });
 
-  it("运行时 nav:changed 非法 page → 忽略（isValidPage 守卫，与 app-nav/PageStore 口径一致）", async () => {
+  it("运行时 nav:changed 非法 page → 忽略（isValidPage 守卫，与 app-nav 口径一致）", async () => {
     const el = mountCustomElement("app-content");
     await sleep(150);
     bus.emit("nav:changed", { page: "settings" });

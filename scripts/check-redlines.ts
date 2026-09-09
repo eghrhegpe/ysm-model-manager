@@ -168,7 +168,7 @@ function runChecks() {
     "R1",
     "window.__ vars",
     rgTracked("window\\.__", "frontend/src", ["*.js", "*.ts"]),
-    "let + getter, PageStore",
+    "模块级 let + getter（单一事实源，禁止挂 window.__）",
   );
 
   // R2 repoRoot 命名：测试文件豁免、Wails bindings 自动生成文件豁免
@@ -744,13 +744,13 @@ function outputAudit() {
     "> 按维度逐一盘问，输出 P1-P4 风险表，结果落 docs/review-report.md",
     "",
     "【1. 审核思维准则（盘问代码）】",
-    "  [数据流]    状态从哪来？谁修改？流到哪？ → grep setter / bus.emit / PageStore. 写入点，查幽灵路径",
+    "  [数据流]    状态从哪来？谁修改？流到哪？ → grep setter / bus.emit 写入点，查幽灵路径",
     "  [生命周期]  订阅/监听创建与销毁是否同层配对？ → bus.on 有 _unsubs 清理？EventsOn 有 _registered 守卫？",
     "  [并发边界]  异步有过期标记？连点 3 次是否竞态？ → 查 _loading/_pending/generation counter",
     "  [异常契约]  抛异常后调用方还能安全用吗？ → catch 后状态一致？finally emit 完成事件？",
     "",
     "【2. 设计质量检查项】",
-    "  [状态唯一]  同一状态是否多处读写？ → PageStore/registry 唯一源 vs 模块级变量+localStorage 双源",
+    "  [状态唯一]  同一状态是否多处读写？ → registry/模块级单例 唯一源 vs 模块级变量+localStorage 双源",
     "  [副作用]    函数是否隐式改外部状态？ → 模块级变量被多处直接写入",
     "  [并发安全]  异步有去重/锁？ → _registered 守卫防重复注册",
     "  [错误边界]  异常不吞没不扩散？ → 静默 catch {} 或 Promise 无 .catch 即违规",

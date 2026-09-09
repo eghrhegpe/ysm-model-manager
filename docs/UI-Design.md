@@ -534,7 +534,7 @@ unsub();
 
 | 状态 | 位置 | 说明 |
 |------|------|------|
-| 页面导航 | `core/page-store.ts` | `_currentPage` 模块级；唯一写入点 = `registerPageStore` 的 `nav:changed` listener（过 `sanitizePage` 白名单）；**无公开 setter**（旧 `setCurrentPage(p)` 已删除——幽灵路径历史本体，禁止复活，见 §19.2 备注） |
+| 页面导航 | `core/page-store.ts` | `isValidPage`/`resolveInitialPage` 纯函数（页面名校验 + 启动页解析），无状态持有；原 `_currentPage`/`registerPageStore` 写-only 镜像经 ADR-209 移除 |
 | 树多选 | `app-tree/data.ts` | `selectState = { keys:Set, lastKey }` + `toggleSelect()`，跨节点共享 |
 | 跨组件搜索手递 | `app-tree/index.ts:17,20` | `setPendingTreeSearch(name)` / `takePendingTreeSearch()`：app-content 写入、app-tree 挂载消费 |
 | 同步选中类型 | `app-sync-manager` 模块级 `_lastSelectedType` | 记忆上次选中类型，供恢复 |

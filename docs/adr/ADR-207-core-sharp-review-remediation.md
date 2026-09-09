@@ -46,7 +46,7 @@ ADR-189 收敛 `src/core` 目录（断 core⇄backend 环 + 准入准则）后�
 - `interpolate` 增**残留占位符守卫**：替换后文本仍含 `{ident}` → 按残留签名 `console.warn` 一次（堵「模板有 `{n}` 漏传参」静默裸占位符类 bug；调用处传 key 作诊断上下文）；
 - `warnedKeys` 可变 Set 收编 `locale.ts` 内部，对外只暴露 `warnMissingKey(key)`（跨模块可变导出变 API）；
 - app-toast `import { t as tr }` → `import { t as translate }`（消与 core `tr` 的撞名，单参 t 语义不变）。
-- 命名裁决（不做的与理由）：diary 全家（`DiaryEntry/DiarySink/DiaryStatus/DiaryHandle/registerErrorDiary`）与 `PageStore/registerPageStore/isValidPage/sanitizePage/resolveInitialPage` **保留**——diary 是 ADR-189 D1 + 知识卡 + Go 侧既定隐喻，生产 import 面仅 2 文件，改名纯 churn；`LocaleParams` 保持 `Record<string, string|number>`（key→params 签名绑定需生成器，收益不成比例，残留守卫已覆盖主要风险）。
+- 命名裁决（不做的与理由）：diary 全家（`DiaryEntry/DiarySink/DiaryStatus/DiaryHandle/registerErrorDiary`）与 `isValidPage/sanitizePage/resolveInitialPage` **保留**——diary 是 ADR-189 D1 + 知识卡 + Go 侧既定隐喻，生产 import 面仅 2 文件，改名纯 churn；**`PageStore/registerPageStore` 保留项经 ADR-209 取代**（grep 实证为写-only 孤儿，bus 已是导航事实源，移除零运行时影响）；`LocaleParams` 保持 `Record<string, string|number>`（key→params 签名绑定需生成器，收益不成比例，残留守卫已覆盖主要风险）。
 - 理由：严格入口与动态入口共用一个名字 + cast 是「想同时服务两类调用方」的洗白设计；拆开是诚实 API，字面量站点免费获得编译期检查。
 
 ### D4 D6 注释纪律在 core 落地（锐评输入，一次收敛）
@@ -81,7 +81,7 @@ ADR-189 收敛 `src/core` 目录（断 core⇄backend 环 + 准入准则）后�
 
 - core「Wails 无关 ≠ 引擎无关」（locale.ts 的 `fetch(import.meta.env.BASE_URL)` / `document.documentElement.lang` / `navigator.languages`）不在本轮：D4 准入字面合规，改名/分层待 core 再膨胀时评估；
 - `PageName` 双源（bus.ts 联合 + page-store VALID_PAGES，satisfies 断言兜底）维持现状——page registry 属另起一轮的架构动作，不混入本轮；
-- `registerPageStore(unsubs)` 与 `registerErrorDiary(handle)` 两套生命周期范式保留（各负其责，统一说明写进知识卡）。
+- `registerErrorDiary(handle)` 生命周期范式保留（与已移除的 `registerPageStore` 各负其责；`registerPageStore` 经 ADR-209 移除）。
 
 ## 4. 数据溯源
 

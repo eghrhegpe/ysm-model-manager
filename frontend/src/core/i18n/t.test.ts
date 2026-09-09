@@ -1,17 +1,9 @@
 // @vitest-environment node
 // ===== i18n 翻译函数测试 =====
 // 覆盖真实 t()/tOf()：缺失 key 返回 key + warnMissingKey、参数插值、
-// 残留占位符守卫（模板有 {n} 漏传参 → 裸占位符上屏 + 单次告警）。
-// test-setup.ts 全局 mock 了 t.ts（查 zhCN），此处 vi.unmock 取真实实现。
+// 残留占位符守卫（模板有 {n} 而漏传参 → 裸占位符上屏 + 单次告警）。
+// test-setup.ts 全局 mock 了 t.ts（查 zhCN），此处以 vi.mock + importActual 取回真实实现（替代 vi.resetModules 动态 import 杂技）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// isolate:false 共享模块图下，兄弟文件的 per-file vi.mock("@/core/i18n/t.ts")
-// （如 errors.test.ts 的 key 版 mock）先到先得会固化 t.ts 绑定，unmock 无法改写
-// 已求值模块 → 本文件拿到 key 版 t()（命中 key 返回 key 而非翻译）。
-// resetModules + 动态 import 把真实 t.ts 的求值限定在本文件作用域内。
-vi.unmock("../../core/i18n/t.ts");
-vi.resetModules();
-const { t, tOf } = await import("./t.ts");
 
 const { getBundle, getLang, warnMissingKey } = vi.hoisted(() => ({
   getBundle: vi.fn(),
@@ -19,8 +11,14 @@ const { getBundle, getLang, warnMissingKey } = vi.hoisted(() => ({
   warnMissingKey: vi.fn(),
 }));
 
-vi.mock("@/core/i18n/locale.ts", async () => {
-  const actual = await vi.importActual<typeof import("./locale.ts")>("../../core/i18n/locale.ts");
+// 取回真实 t.ts（覆盖 test-setup 的全局 mock）
+vi.mock("./t.ts", async () => {
+  const actual = await vi.importActual<typeof import("./t.ts")>("./t.ts");
+  return { ...actual };
+});
+
+vi.mock("./locale.ts", async () => {
+  const actual = await vi.importActual<typeof import("./locale.ts")>("./locale.ts");
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
     getBundle, // 覆盖为 mock（控制翻译表）
@@ -29,10 +27,13 @@ vi.mock("@/core/i18n/locale.ts", async () => {
   };
 });
 
+import { t, tOf } from "./t.ts";
 import { SUPPORTED_LANGS } from "./locale.ts";
+import { __resetI18nResidualsForTest } from "./t.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetI18nResidualsForTest(); // 重置残留占位符告警节流（替代 vi.resetModules 状态隔离）
   getBundle.mockReturnValue({
     "nav.repository": "模型仓库",
     "import.addedToQueue": "已加入队列: {n} 个文件",
@@ -95,6 +96,7 @@ describe("t()", () => {
 describe("tOf() — 多级回退 current → en → key", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetI18nResidualsForTest();
     getLang.mockReturnValue("zh-CN");
   });
 

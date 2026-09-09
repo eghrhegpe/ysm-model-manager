@@ -7,6 +7,7 @@
 // 缺失键语义一致（多级回退，见 tOf 注释）+ warnMissingKey 单次告警。
 
 import type { zhCN } from "@/locales/zh-CN.ts";
+import { extractPlaceholders } from "@/utils/base/pure/i18n-placeholder.ts";
 import { FALLBACK_LANG, getBundle, getLang, warnMissingKey } from "./locale.ts";
 
 /** 全部合法 i18n key（扁平化命名空间 key，如 "nav.repository"） */
@@ -19,7 +20,6 @@ export type LocaleParams = Record<string, string | number>;
 // 静默 UI bug 类，守卫兜底（ADR-207 D3）
 // 无上限：残留签名数 ≤ 语言包模板数（有界），无需淘汰
 const warnedResiduals = new Set<string>();
-const RESIDUAL_RE = /\{[a-zA-Z_$][\w$]*\}/g;
 
 /**
  * 将 params 中的 {key} 占位符替换为对应值。
@@ -32,9 +32,8 @@ export function interpolate(text: string, params?: LocaleParams, context?: strin
       text = text.split(`{${k}}`).join(String(v));
     }
   }
-  const residual = text.match(RESIDUAL_RE);
-  if (residual) {
-    const names = [...new Set(residual)].sort();
+  const names = extractPlaceholders(text);
+  if (names.length > 0) {
     const sig = `${names.join("|")}${context ? `@${context}` : ""}`;
     if (!warnedResiduals.has(sig)) {
       warnedResiduals.add(sig);
@@ -78,4 +77,11 @@ export function tOf(key: string, params?: LocaleParams): string {
   // 3. 裸 key + warn
   warnMissingKey(key);
   return key;
+}
+
+// ── 测试隔离 ──────────────────────────────────────────────
+
+/** 重置残留占位符告警节流（供测试 beforeEach 调用，替代 vi.resetModules 杂技） */
+export function __resetI18nResidualsForTest(): void {
+  warnedResiduals.clear();
 }

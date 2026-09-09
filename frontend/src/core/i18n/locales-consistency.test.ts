@@ -7,21 +7,13 @@ import { describe, it, expect } from "vitest";
 import { zhCN } from "@/locales/zh-CN.ts";
 import { en } from "@/locales/en.ts";
 import { ja } from "@/locales/ja.ts";
+import { extractPlaceholders } from "@/utils/base/pure/i18n-placeholder.ts";
 import { BASE_LANG, FALLBACK_LANG, SUPPORTED_LANGS } from "./locale.ts";
 
 const bundles: Array<[string, Record<string, string>]> = [
   ["en", en],
   ["ja", ja],
 ];
-
-/** 提取字符串中的插值占位符 {n} / {path} 等 */
-function placeholders(s: string): string[] {
-  const out: string[] = [];
-  const re = /\{([a-zA-Z0-9_]+)\}/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(s)) !== null) out.push(m[1]);
-  return out.sort();
-}
 
 describe("语言包 key 对齐（基准 zh-CN）", () => {
   // zh-CN 无 index signature（keyof 类型化后），key 数组断言为 keyof 联合以便索引
@@ -57,8 +49,8 @@ describe("语言包 key 对齐（基准 zh-CN）", () => {
   it("占位符参数集合与 zh-CN 一致（不丢参数）", () => {
     for (const [name, b] of bundles) {
       for (const k of zhKeys) {
-        const zh = placeholders(zhCN[k]);
-        const t = placeholders(b[k] ?? "");
+        const zh = extractPlaceholders(zhCN[k]);
+        const t = extractPlaceholders(b[k] ?? "");
         expect(t, `${name}.${k} 占位符不一致`).toEqual(zh);
       }
     }

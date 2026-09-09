@@ -110,7 +110,7 @@ status: active
 | 卡片 | `ui-card.ts` | `cardContainer(container, fn)` — 包一层 `.lcard`，返回内部 dispose |
 | 加载 | `ui-loading.ts` | `withLoadingIndicator` 自包含加载遮罩 |
 | 顶部切换 | `ui-header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；bind 注册用唯一 id `header-toggle-bind#<seq>`（防多实例 Map 覆盖）+ 两击断连清扫 |
-| 滑块 | `ui-slider-controller.ts` | 数值范围滑块控件 |
+| 滑块 | `ui-slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls|renderCapSlider` 生产消费） |
 | 图标 | `icons.ts` | `createIcon` 图标工厂（Iconify + emoji 回退） |
 | 样式 | `ui-components-styles.ts` | `uiComponentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installUiComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
 | 常量 | `ui-constants.ts` | 组件尺寸/间距常量 |
@@ -138,3 +138,4 @@ status: active
 - header-toggle 多实例：bind updater 各持唯一 id，注册前 `_sweepDetached()` 两击清扫——断连一轮入宽限集、连续两轮注销、恢复连接销记；从未挂载实例豁免（挂载历史 = MutationObserver.takeRecords 同步收割 + 扫描时 isConnected 补记，后者兜底 Shadow DOM）；update 不加 isConnected 守卫（保未挂载直调语义）
 - 行/面板 role/class 一律取自 `dom-contract.ts`，禁止手写字符串
 - toggle 行能力演进：`addToggleRow`/`toggleRow`/`addInlineToggleRow` 因生产零消费已删除；「整行点击切换（target 落在 `.toggle` 内跳过、防双触发）+ bind 自更新」语义并入 `ui-header-toggle|createHeaderToggle.forceToggle`，由 `preview-3d/menu/cap-controls|renderCapToggle` 消费（点 label 区翻转、点开关本体走原生 label 逻辑）。3D 菜单 toggle 唯一路径 = MenuNode schema → renderCapToggle，勿再引入第二套 toggle builder（红线：双轨必杀）
+- slider 行能力演进：cap 栈滑块已从原生 `input[type=range]` 换为自绘 `.cs-bar`（fill 渐变 + thumb 细线 + 键盘 ←→/Home/End + pointer 触屏），由 `ui-slider-controller|DragSliderController` 驱动——控制器自 ui-rows `addSliderRow` 迁移（本次接入生产并补 pointer events：pointer 主 + mouse 兜底，`pointerDown` 互斥标志防真实鼠标双触发；`renderCapSlider` 补 click 跳转 onCommit 对齐原生 change 语义）。3D 菜单 slider 唯一路径 = MenuNode schema → renderCapSlider → cs-bar，勿再引入第二套滑块实现（红线：双轨必杀）。`addSliderRow` 本体（ui-rows）仍零生产消费，其能力已拆叶接入（cs-bar 样式经 uiComponentsStyleSheet、控制器经 cap 栈）

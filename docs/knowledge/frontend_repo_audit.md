@@ -1475,7 +1475,7 @@ quick_intents:
 status: snapshot
 
 invariant_anchors:
-  - frontend/src/backend/idb.ts|__resetDBForTest
+  - frontend/src/utils/storage/idb.ts|__resetDBForTest
 ---
 
 # 前端 TS 整包审计

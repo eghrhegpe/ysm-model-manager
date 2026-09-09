@@ -4,10 +4,17 @@ name: CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik
 tier: leaf
 category: core
 source_files:
-  - frontend/src/preview-3d/ik-solver.ts
-  - frontend/src/preview-3d/mmd-foot-ik.ts
+  - frontend/src/preview-3d/bone/ik-solver.ts
+  - frontend/src/preview-3d/bone/mmd-foot-ik.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - createFootIKController
+    - extractIKChainFromTree
+    - FootIKController
+    - IKChain
+    - IKConfig
+    - IKResult
+    - solveIK
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -76,4 +83,4 @@ status: active
 ## 相关
 
 - ADR-072（工具层纯净）/ ADR-066（babylon-mmd 提及）
-- frontend/src/preview-3d/bone-tools.ts、semantic-bones.ts、ik-solver.test.ts、mmd-foot-ik.test.ts
+- frontend/src/preview-3d/bone/bone-tools.ts、bone/semantic-bones.ts、bone/ik-solver.test.ts、bone/mmd-foot-ik.test.ts

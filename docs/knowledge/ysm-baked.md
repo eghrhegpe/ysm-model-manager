@@ -38,8 +38,8 @@ use_when:
   - RawYsmModel
 status: active
 invariant_anchors:
-  - frontend/src/preview-3d/decoder/geometry.ts|BedrockGeometry
-  - frontend/src/preview-3d/decoder/geometry.ts|BedrockBone
+  - frontend/src/parsers/bedrock-geometry.ts|BedrockGeometry
+  - frontend/src/parsers/bedrock-geometry.ts|BedrockBone
 ---
 # YSM 烘焙与几何反推
 
@@ -61,7 +61,7 @@ YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）�
 ## 对外 API / 入口
 
 - `frontend/src/preview-3d/decoder/wasm-decode.ts` — `decodeYsmViaWasm`：WASM 解码出文件列表 → 读 `ysm.json` 取模型/纹理顺序 → 反推出的 geometry JSON → `BedrockGeometry`；最终交 `loader.ts` 消费
-- `frontend/src/preview-3d/decoder/geometry.ts` `parseBedrockGeometryFromJSON` — 消费反推 JSON，UV 兼容数组 `[x,y]` / 对象 `{uv:[...],uv_size:[...]}` / JSON 字符串（faceUV）/ 兜底 `[0,0]` 四种形态（`geometry.ts` UV 形态解析）
+- `frontend/src/parsers/bedrock-geometry.ts` `parseBedrockGeometryFromJSON`（ADR-217 定义下沉至 parsers；`decoder/geometry.ts` 仅 re-export）— 消费反推 JSON，UV 兼容数组 `[x,y]` / 对象 `{uv:[...],uv_size:[...]}` / JSON 字符串（faceUV）/ 兜底 `[0,0]` 四种形态（`parsers/bedrock-geometry.ts` UV 形态解析）
 - Go 兜底侧见 [go_geometry](./go-geometry.md) `ParseBedrockGeometry` / `ParseFromZip`（同一份反推 JSON 的另一输入端）
 
 ## 与其他子系统关系
@@ -73,7 +73,7 @@ YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）�
 
 ## 不变量
 
-- **UV 基本可放心**：UV 以每面浮点原样烘焙（`RawFace.u/v[4]`），反推不丢贴图；贴图错位只可能出在 `geometry.ts` UV 形态解析或 texSlot 绑定（见 [go_geometry](./go-geometry.md)：`texSlot = 第 i 个模型 → 第 i 个纹理`）
+- **UV 基本可放心**：UV 以每面浮点原样烘焙（`RawFace.u/v[4]`），反推不丢贴图；贴图错位只可能出在 `parsers/bedrock-geometry.ts` UV 形态解析或 texSlot 绑定（见 [go_geometry](./go-geometry.md)：`texSlot = 第 i 个模型 → 第 i 个纹理`）
 - **bone pivot/rotation 是二进制保留值**：模组与（反推后的）预览根源相同；但 cube 的 origin/size/uv/rotation 是反推补全——预览与游戏内出现骨骼姿态差异、方块错位时，**先怀疑反推误判**而非文件损坏
 - 复杂嵌套旋转/重合顶点可能**渲染崩溃**——上游已知限制，不是本应用缺陷，不要在几何反推端打补丁硬修（等上游修复后同步）
 - 接入新上游版本时：WASM 资产（两个 *-data.js）与模组侧同一 C++ 源码但导出面不同（内存直解 vs callMain），更新需逐端同步重出（详见 [ysm_wasm](./ysm-wasm.md)）

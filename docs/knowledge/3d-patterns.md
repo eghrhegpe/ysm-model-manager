@@ -5,7 +5,7 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/preview-3d/debug-render.ts
-  - frontend/src/preview-3d/model-group-builder.ts
+  - frontend/src/preview-3d/model/model-group-builder.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/cleanup-helper.ts
   - frontend/src/preview-3d/safe-dispose.ts
@@ -17,6 +17,7 @@ auto_fields:
     - _resetSingletons
     - AssembledShell
     - BaseScene
+    - buildModelGroup
     - CameraControlScene
     - cleanupPreview
     - closeActive3DOverlay
@@ -89,7 +90,7 @@ pitfalls:
   - AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener
 invariant_anchors:
   - frontend/src/preview-3d/debug-render.ts|rebuildDebug
-  - frontend/src/preview-3d/model-group-builder.ts|buildModelGroup
+  - frontend/src/preview-3d/model/model-group-builder.ts|buildModelGroup
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
   - frontend/src/preview-3d/cleanup-helper.ts|disposeSceneMeshes
   - frontend/src/views/app-preview/preview-library.ts|registerReRoute
@@ -540,7 +541,7 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 - `frontend/src/preview-3d/adapters/render-loop.ts` — 渲染循环优化（Vector3 复用局部变量）
 - `frontend/src/preview-3d/safe-dispose.ts` — 安全释放原语
 - `frontend/src/preview-3d/debug-render.ts` — 纹理缓存
-- `frontend/src/preview-3d/model-group-builder.ts` — 函数抽取（mdMgFixOrphanBoneChain）
+- `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（mdMgFixOrphanBoneChain）
 - `frontend/src/preview-3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
 - `frontend/src/preview-3d/adapters/mount-session.ts` — 失败路径清理 runFailedMountCleanup
 - `frontend/src/views/app-preview/preview-library.ts` — 循环依赖破壁

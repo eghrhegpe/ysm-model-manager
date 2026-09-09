@@ -19,6 +19,9 @@ const results = [];
 // （51a7c5e1 起 evaluateClip 不再做父子累积，父子变换由 THREE 场景图天然复合）
 function checkScale() {
   const animTs = read("frontend/src/utils/animation/animation.ts");
+  // ADR-212（e61f75b85）起 evaluateClip 拆出 animation-evaluator.ts（解析器/求值器分家），
+  // 逐通道求值匹配目标随之搬家
+  const evaluatorTs = read("frontend/src/utils/animation/animation-evaluator.ts");
   const playerTs = read("frontend/src/preview-3d/ysm-animation-player.ts");
 
   const checks = [
@@ -35,10 +38,10 @@ function checkScale() {
     {
       name: "evaluateClip 按 BONE_CHANNELS 逐通道求值（含 scale）",
       pass:
-        animTs.includes("for (const ch of BONE_CHANNELS)") &&
-        animTs.includes("transform[ch] = val"),
+        evaluatorTs.includes("for (const ch of BONE_CHANNELS)") &&
+        evaluatorTs.includes("transform[ch] = val"),
       evidence:
-        "animation.ts:660-662 遍历 BONE_CHANNELS(rotation/position/scale) 逐通道求值写回 transform[ch]",
+        "animation-evaluator.ts evaluateClip 遍历 BONE_CHANNELS(rotation/position/scale) 逐通道求值写回 transform[ch]（ADR-212 拆分）",
     },
     {
       name: "父子 scale 累积由 THREE 场景图层承担（evaluateClip 纯局部，51a7c5e1 起）",
@@ -75,20 +78,20 @@ function checkScale() {
 
 // ===== 2. 隐藏联动（父隐子隐）是否建模 =====
 // 上游: setHidden(selfHidden, skipChildRendering) 双标记
-// 我们: bone-visibility.ts setBoneVisible 用 g.traverse 递归
+// 我们: bone/bone-visibility.ts setBoneVisible 用 g.traverse 递归（bc7ce7948 骨域收口改名进 bone/）
 function checkHiddenPropagation() {
-  const boneVisTs = read("frontend/src/preview-3d/bone-visibility.ts");
+  const boneVisTs = read("frontend/src/preview-3d/bone/bone-visibility.ts");
 
   const checks = [
     {
       name: "setBoneVisible 用 g.traverse 递归子骨骼",
       pass: boneVisTs.includes("g.traverse") && boneVisTs.includes("visible = visible"),
-      evidence: "bone-visibility.ts:13 g.traverse((c) => { c.visible = visible; })",
+      evidence: "bone/bone-visibility.ts setBoneVisible: g.traverse 递归设置 c.visible = visible",
     },
     {
       name: "toggleBone 也用 traverse 递归",
       pass: boneVisTs.includes("g.traverse") && boneVisTs.includes("!c.visible"),
-      evidence: "bone-visibility.ts:21 g.traverse((c) => { c.visible = !c.visible; })",
+      evidence: "bone/bone-visibility.ts toggleBone: g.traverse 翻转 c.visible = !c.visible",
     },
   ];
 
@@ -218,16 +221,20 @@ console.log(`已落地: ${landed} / 4`);
 console.log(`确实未建模: ${gaps} / 4`);
 console.log(`无需实现: ${notNeeded} / 4`);
 console.log();
-console.log("结论：ADR-042 四项全部核对完毕，3 项已落地、1 项无需实现。");
-console.log(
-  "- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip 局部求值 → 场景图层复合 → ysm-animation-player）",
-);
-console.log("- 隐藏联动: setBoneVisible 用 traverse 递归子骨骼");
-console.log(
-  "- glow: Go isGlowBone 前缀检测 + BoneData.Glow → 前端 glowByBoneId 反查 → MeshStandardMaterial + emissive",
-);
-console.log("- 世界坐标回填: 无需实现（Three.js getWorldPosition 可替代）");
-console.log();
+if (gaps === 0) {
+  console.log("结论：ADR-042 四项全部核对完毕，3 项已落地、1 项无需实现。");
+  console.log(
+    "- scale: 动画管线已完整支持（BoneChannels.scale → evaluateClip 局部求值 → 场景图层复合 → ysm-animation-player）",
+  );
+  console.log("- 隐藏联动: setBoneVisible 用 traverse 递归子骨骼");
+  console.log(
+    "- glow: Go isGlowBone 前缀检测 + BoneData.Glow → 前端 glowByBoneId 反查 → MeshStandardMaterial + emissive",
+  );
+  console.log("- 世界坐标回填: 无需实现（Three.js getWorldPosition 可替代）");
+  console.log();
+} else {
+  console.log(`结论：${gaps} 项处于 GAP_FOUND 状态（未建模），见上方明细——需核对是否为代码搬家导致的匹配器漂移。`);
+}
 console.log(
   "ADR-042 §2.2 bone 层二进制直读已落地（C++ YSMParserV3.cpp:862-876 直读 pivot/rotation）；cube 层反推猜错属另一条链路待解决。",
 );

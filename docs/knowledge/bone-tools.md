@@ -6,23 +6,39 @@ adr:
   - ADR-109
 category: rendering
 source_files:
-  - frontend/src/preview-3d/bone-tools.ts
+  - frontend/src/preview-3d/bone/bone-tools.ts
   - frontend/src/preview-3d/adapters/vrm-bone.ts
   - frontend/src/preview-3d/adapters/vrm-bone-ui.ts
-  - frontend/src/preview-3d/mmd-bones.ts
+  - frontend/src/preview-3d/bone/mmd-bones.ts
 auto_fields:
   symbols_with_lines:
+    - BoneDetail
+    - BoneListItem
+    - BoneNode
     - boneRowActiveBg
+    - BoneTree
+    - buildBoneTree
     - buildVrmBoneNodes
     - buildVrmBoneTree
+    - findAncestorBoneId
+    - getBoneDetail
+    - getBonePath
+    - getBonePosition
+    - listBonesWithDepth
     - makeBonePanelRenderer
+    - MmdBonePickResult
+    - mmdBonesToBoneNodes
+    - pickBone
+    - pickMmdBone
     - RenderVrmBonePanel
+    - setBoneNodeVisible
+    - toggleBoneVisible
     - VrmBonePanelCtx
   tests:
-    - frontend/src/preview-3d/bone-tools.test.ts
+    - frontend/src/preview-3d/bone/bone-tools.test.ts
     - frontend/src/preview-3d/adapters/vrm-bone.test.ts
     - frontend/src/preview-3d/adapters/vrm-bone-ui.test.ts
-    - frontend/src/preview-3d/mmd-bones.test.ts
+    - frontend/src/preview-3d/bone/mmd-bones.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -45,7 +61,7 @@ use_when:
 perf:
   - cpu-bound
 invariant_anchors:
-  - frontend/src/preview-3d/bone-tools.ts|buildBoneTree
+  - frontend/src/preview-3d/bone/bone-tools.ts|buildBoneTree
   - frontend/src/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
 status: active
 ---
@@ -54,7 +70,7 @@ status: active
 
 ## 概览
 
-`frontend/src/preview-3d/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两种形态的差异，统一为 `BoneNode` / `BoneTree` 抽象。纯逻辑零 DOM——UI 渲染不在本层（ADR-072 工具层纯净）。
+`frontend/src/preview-3d/bone/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D 层级树两种形态的差异，统一为 `BoneNode` / `BoneTree` 抽象。纯逻辑零 DOM——UI 渲染不在本层（ADR-072 工具层纯净）。
 
 ## 核心职责
 

@@ -7,7 +7,7 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/
-  - frontend/src/preview-3d/bone-tools.ts
+  - frontend/src/preview-3d/bone/bone-tools.ts
   - frontend/src/preview-3d/caps/sky-capability.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
   - internal/app/container_entries.go
@@ -28,9 +28,14 @@ auto_fields:
     - AssembledShell
     - BaseScene
     - bindInputHandlers
+    - BoneDetail
+    - BoneListItem
+    - BoneNode
     - BonePanelCleanupRef
     - boneRowActiveBg
     - BonesPanelItemOpts
+    - BoneTree
+    - buildBoneTree
     - buildFbxScene
     - buildFbxSceneFromData
     - buildLitematicScene
@@ -88,7 +93,11 @@ auto_fields:
     - fbxSceneToData
     - FbxSkeletonData
     - filterAnimFiles
+    - findAncestorBoneId
     - getActiveInputSession
+    - getBoneDetail
+    - getBonePath
+    - getBonePosition
     - getCustomAnimPath
     - getSceneCaps
     - getSchema
@@ -104,6 +113,7 @@ auto_fields:
     - InstalledPreviewInfra
     - invalidatePreview
     - isLikelyTga
+    - listBonesWithDepth
     - listSchemas
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
@@ -177,6 +187,7 @@ auto_fields:
     - PerceptionCapability
     - perceptionNodes
     - PerceptionState
+    - pickBone
     - pickPerceptionCaps
     - PmxBoneData
     - PmxBuilderConfig
@@ -226,6 +237,7 @@ auto_fields:
     - ScreenshotScene
     - SemanticScene
     - setActiveInputSession
+    - setBoneNodeVisible
     - SharedInfra
     - showLoadFailure
     - SkyCapability
@@ -241,6 +253,7 @@ auto_fields:
     - TexDecodeResponse
     - TEXTURE_EXTS
     - TextureDecoder
+    - toggleBoneVisible
     - typeFromWebDir
     - UnloadCtx
     - unloadModel

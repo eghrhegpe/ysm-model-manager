@@ -101,7 +101,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/backend/idb.ts|openDB
+  - frontend/src/utils/storage/idb.ts|openDB
   - frontend/src/backend/browser-adapter.ts|browserAdapter
 quick_groups:
   - 后端桥接与数据存储

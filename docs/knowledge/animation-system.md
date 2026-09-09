@@ -67,7 +67,7 @@ perf:
   - cpu-bound
 invariant_anchors:
   - frontend/src/utils/animation/animation.ts|parseBedrockAnimationJSON
-  - frontend/src/utils/animation/animation.ts|evaluateClip
+  - frontend/src/utils/animation/animation-evaluator.ts|evaluateClip
   - frontend/src/utils/animation/animate.ts|animateNumber
   - frontend/src/utils/animation/stagger.ts|stagger
 status: active

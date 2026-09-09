@@ -15,10 +15,13 @@ function makeReport(overrides: Partial<HealthReport> = {}): HealthReport {
       cache_files: 10,
       cache_size: 1024,
       hit_rate: 0.9,
+      hits: 9,
+      misses: 1,
     },
     resources: {
       total_files: 50,
       total_size: 2048,
+      banned: 0,
       by_type: { ysm: 30, pmx: 20 },
     },
     dedup: { groups: 2, extra_files: 3, reclaim_bytes: 512 },
@@ -101,7 +104,7 @@ describe("parseHealthReport — 运行时结构校验", () => {
 
   it("resources 各字段为 0 → 仍返回 raw", () => {
     const raw = makeReport({
-      resources: { total_files: 0, total_size: 0, by_type: null },
+      resources: { total_files: 0, total_size: 0, banned: 0, by_type: null },
     });
     expect(parseHealthReport(raw)).toBe(raw);
   });
@@ -118,14 +121,14 @@ describe("parseHealthReport — 运行时结构校验", () => {
 
   it("cache.hit_rate 为非数字 → 返回 null", () => {
     const raw = makeReport({
-      cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: "high" as unknown as number },
+      cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: "high" as unknown as number, hits: 0, misses: 0 },
     });
     expect(parseHealthReport(raw)).toBeNull();
   });
 
   it("resources.total_files 为非数字 → 返回 null", () => {
     const raw = makeReport({
-      resources: { total_files: "many" as unknown as number, total_size: 0, by_type: null },
+      resources: { total_files: "many" as unknown as number, total_size: 0, banned: 0, by_type: null },
     });
     expect(parseHealthReport(raw)).toBeNull();
   });

@@ -19,8 +19,8 @@ function buildReport() {
     directory: "/repo",
     score: 85,
     completeness: { checked: 10, valid: 9, invalid: 1, percentage: 90 },
-    cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024, hit_rate: 50 },
-    resources: { total_files: 12, total_size: 2048, by_type: { model: 10, texture: 2 } },
+    cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024, hit_rate: 50, hits: 5, misses: 0 },
+    resources: { total_files: 12, total_size: 2048, banned: 0, by_type: { model: 10, texture: 2 } },
     dedup: { groups: 1, extra_files: 2, reclaim_bytes: 4096 },
     warnings: ["模型完整性 90.0% 低于 95% 阈值"],
   };

@@ -3,42 +3,12 @@
 // 解析器放 utils 层供 views（诊断页）与 features（oldest 页）共用——分层规则
 // R4：features 不得 import views；原实现放 views 导致 oldest-models.ts 跨层
 // 导入回归（8ef58232 引入，check-layering 拦截）。本模块零依赖更高层。
-// 字段与 go/repoaudit.HealthReport JSON 对齐（ADR-143 P1 后 Go 返回 typed struct，
-// 此处仅保留运行时结构校验，不再 JSON.parse）。
+// 类型源：binding 生成（frontend/bindings/ysm-model-manager/go/repoaudit/models.ts），
+// 此处仅保留运行时结构校验，不再重复定义 interface（消灭手写镜像与绑定双源）。
 
-/** Go 端 repoaudit.HealthReport 的 JSON 结构（字段与 go/repoaudit 对齐；ADR-143 P1 后与绑定类型同源） */
-export interface HealthReport {
-  timestamp: string;
-  directory: string;
-  score: number;
-  completeness: {
-    checked: number;
-    valid: number;
-    invalid: number;
-    percentage: number;
-  };
-  cache: {
-    cache_dir: string;
-    cache_files: number;
-    cache_size: number;
-    hit_rate: number;
-    /** 容量接近上限（texture_cache 0.8 阈值），体检页可高亮提示 */
-    should_warn?: boolean;
-  };
-  resources: {
-    total_files: number;
-    total_size: number;
-    /** 禁用文件数（.disabled/.ban，Go types.IsDisableSuffix 单一口径） */
-    banned?: number;
-    by_type: { [key: string]: number | undefined } | null;
-  };
-  dedup: {
-    groups: number;
-    extra_files: number;
-    reclaim_bytes: number;
-  };
-  warnings?: string[] | null;
-}
+import type { HealthReport } from "../../bindings/ysm-model-manager/go/repoaudit/models.ts";
+
+export type { HealthReport };
 
 /** 校验 RepoHealthAudit 返回的 typed 报告（ADR-143 P1 后 Go 直出 struct）。
  * 返回有三种形态：

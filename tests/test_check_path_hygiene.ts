@@ -59,9 +59,18 @@ check("--json 输出合法且 _summary 含 R5/R6 键，当前基线 r5=0/r6=0", 
   assert.equal(typeof data._summary.r6_test_barrel.hits, "number");
   assert.equal(rc, 0, `预期 rc=0，实际 ${rc}`);
   assert.equal(data._summary.fail, 0, "不应有 FAIL");
-  // 存量已全别名 + 无桶导入（实证扫描）→ 观察期基线应零命中
-  assert.equal(data._summary.r5_same_dir_alias.hits, 0, "R5 应有零命中");
-  assert.equal(data._summary.r6_test_barrel.hits, 0, "R6 应有零命中");
+  // 存量已全别名 + 无桶导入（实证扫描）→ 观察期基线应零命中；命中即把违规样本拼进 message，
+  // 避免门禁只报一个数字、还要手动跑 --json 反查文件
+  assert.equal(
+    data._summary.r5_same_dir_alias.hits,
+    0,
+    `R5 应有零命中，实际 ${data._summary.r5_same_dir_alias.hits}：${JSON.stringify(data._summary.r5_same_dir_alias.samples)}`,
+  );
+  assert.equal(
+    data._summary.r6_test_barrel.hits,
+    0,
+    `R6 应有零命中，实际 ${data._summary.r6_test_barrel.hits}：${JSON.stringify(data._summary.r6_test_barrel.samples)}`,
+  );
 });
 
 // ── 极端 A：测试神桶（R6）──

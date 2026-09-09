@@ -6,10 +6,7 @@ category: utils
 source_files:
   - frontend/src/utils/dom/format.ts
 auto_fields:
-  symbols_with_lines:
-    - fmtDate
-    - formatBytes
-    - sizeColor
+  symbols_with_lines: []
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

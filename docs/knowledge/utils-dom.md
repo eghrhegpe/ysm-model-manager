@@ -22,9 +22,7 @@ auto_fields:
     - FLASH_DURATION_MS
     - flashBtn
     - FlashOptions
-    - fmtDate
     - focusVisibleCSS
-    - formatBytes
     - friendlyError
     - getStackDepth
     - installGlobalErrorListeners
@@ -39,7 +37,6 @@ auto_fields:
     - refreshAdoptedStyleSheets
     - rememberTrigger
     - returnFocus
-    - sizeColor
     - stripPathSegments
     - toast
     - TOAST_MS

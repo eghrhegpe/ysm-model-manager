@@ -3,8 +3,8 @@
 // 覆盖四分支：桌面（Wails Dialog）/ 网页版（定位虚拟根 /web）/ Android 未授权（引导 +
 // 返回 null）/ Android 已授权（GetDefaultRepoRoot 自动定位 + toast + 返回路径）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { pickDirectory, resolveAndroidRepoDir } from "@/backend/directory-picker.ts";
-import type { WailsAndroidBridge } from "@/backend/platform.ts";
+import { pickDirectory, resolveAndroidRepoDir } from "./directory-picker.ts";
+import type { WailsAndroidBridge } from "./platform.ts";
 
 // ── hoisted mocks（供 vi.mock 工厂引用）──
 const { mocks } = vi.hoisted(() => ({

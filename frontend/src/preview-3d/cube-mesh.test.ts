@@ -3,7 +3,7 @@
 // 对齐 Go threejs/spec.go buildCubeMeshData 口径，双边测试锁定（ADR-049 P2-2 范式）。
 import { describe, it, expect } from "vitest";
 import { buildCubeMeshData, mergeCubes, computeBoneLocalPos } from "./cube-mesh.ts";
-import type { Cube2D, Vec3 } from "./spec-builder.ts";
+import type { Cube2D, Vec3 } from "@/preview-3d/model/spec-builder.ts";
 
 /** 构造一份最小合法 Cube2D（1×1×1 立方体，无 inflate/mirror/rotation） */
 function buildCube(overrides: Partial<Cube2D> = {}): Cube2D {

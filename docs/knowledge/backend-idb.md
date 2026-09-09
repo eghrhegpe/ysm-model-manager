@@ -21,7 +21,6 @@ source_files:
   - frontend/src/workers/stats.worker.ts
 auto_fields:
   symbols_with_lines:
-    - __resetDBForTest
     - __resetWebLogStateForTest
     - __setStatsRunnerForTest
     - AppBindings
@@ -35,25 +34,14 @@ auto_fields:
     - getAndroidBridge
     - getApp
     - getStatsPoolSize
-    - idbDel
-    - idbGet
-    - idbGetAll
-    - idbGetAllMetadata
-    - idbKeys
-    - IdbOp
-    - idbSet
-    - idbTx
     - importWebFiles
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
-    - isWebPath
+    - isWebPlatform
     - MAX_IMPORT_BYTES
     - ModelStatsResult
     - onStatsProgress
-    - openDB
-    - parseWebDirPath
-    - parseWebPath
     - PlatformMode
     - prefetchStatsWorker
     - readDeclaredBackend
@@ -73,7 +61,6 @@ auto_fields:
     - StatsWorkerRequest
     - StatsWorkerResponse
     - StatsWorkerResult
-    - Store
     - terminateStatsWorker
     - typeFromWebDir
     - u8ToBase64
@@ -81,7 +68,6 @@ auto_fields:
     - WEB_ROOT
     - webCommonBindings
     - webCommunityBindings
-    - webDirType
     - webFsBindings
     - WebModelStats
     - WebModelStatsWithPath

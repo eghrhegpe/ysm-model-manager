@@ -141,7 +141,7 @@ vi.mock("./mesh.ts", () => ({
   compKey: (mi: number, boneId: string) => `${mi}:${boneId}`,
 }));
 vi.mock("./ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
-vi.mock("./spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
+vi.mock("@/preview-3d/model/spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
 vi.mock("three", () => threeStub);
 
 import { renderMultiAngle } from "./screenshot-render.ts";

@@ -15,7 +15,6 @@ source_files:
   - frontend/src/backend/web-community.ts
 auto_fields:
   symbols_with_lines:
-    - __resetDBForTest
     - __resetWebLogStateForTest
     - __setStatsRunnerForTest
     - AppBindings
@@ -28,28 +27,16 @@ auto_fields:
     - getAndroidBridge
     - getApp
     - getStatsPoolSize
-    - idbDel
-    - idbGet
-    - idbGetAll
-    - idbKeys
-    - IdbOp
-    - idbSet
-    - idbTx
     - importWebFiles
     - isWebEntryMode
-    - isWebPath
     - MAX_IMPORT_BYTES
     - onStatsProgress
-    - openDB
-    - parseWebDirPath
-    - parseWebPath
     - prefetchStatsWorker
     - readDeclaredBackend
     - readWebFile
     - resolveWebMode
     - scanAllWebModels
     - scanWebModels
-    - Store
     - terminateStatsWorker
     - typeFromWebDir
     - u8ToBase64
@@ -57,7 +44,6 @@ auto_fields:
     - WEB_ROOT
     - webCommonBindings
     - webCommunityBindings
-    - webDirType
     - webFsBindings
     - WebModelStats
     - webStoreBindings

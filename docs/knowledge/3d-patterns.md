@@ -17,7 +17,6 @@ auto_fields:
     - _resetSingletons
     - AssembledShell
     - BaseScene
-    - buildModelGroup
     - CameraControlScene
     - cleanupPreview
     - closeActive3DOverlay

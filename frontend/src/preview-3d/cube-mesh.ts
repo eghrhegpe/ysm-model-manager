@@ -4,9 +4,9 @@
 // 旋转工具已进一步拆至 quaternion.ts（ADR-040 ≤400 行红线），此处 re-export 保兼容。
 // ADR-052 P3: 坐标口径收敛——骨骼位置计算统一为此模块导出工具。
 
-import { CUBE_EPS } from "./model3d-spec.ts";
+import { CUBE_EPS } from "@/preview-3d/model/model3d-spec.ts";
+import type { Cube2D, MeshData, Vec3 } from "@/preview-3d/model/spec-builder.ts";
 import { eulerToQuaternion } from "./quaternion.ts";
-import type { Cube2D, MeshData, Vec3 } from "./spec-builder.ts";
 
 /**
  * 计算骨骼本地位置（对齐 YSMViewer/C# ConvertBones 口径）。

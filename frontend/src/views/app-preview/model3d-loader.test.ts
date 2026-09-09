@@ -33,7 +33,7 @@ vi.mock("@/backend/platform-web.ts", () => ({
 vi.mock("@/preview-3d/decoder/wasm-decode.ts", () => ({
   decodeYsmViaWasm: decodeWasmMock,
 }));
-vi.mock("@/preview-3d/spec-builder.ts", () => ({
+vi.mock("@/preview-3d/model/spec-builder.ts", () => ({
   buildSpecFromGeometryJSON: tsSpecBuilderMock,
 }));
 

@@ -28,12 +28,15 @@ auto_fields:
     - hasRecycleSegment
     - isObj
     - isStorageAccessible
+    - isWebPath
     - ListenerSet
     - logError
     - LogSink
     - logWarn
     - LongTaskInfo
     - moveItemMut
+    - parseWebDirPath
+    - parseWebPath
     - PLACEHOLDER_RE
     - safeErrorMessage
     - safeGet
@@ -47,6 +50,7 @@ auto_fields:
     - swallowError
     - toInt
     - u8ToBase64
+    - webDirType
     - withLock
 quick_groups:
   - 跨组件通信与页面

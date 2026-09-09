@@ -23,6 +23,7 @@ auto_fields:
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
+    - isWebPlatform
     - parseZipCentralDir
     - PlatformMode
     - readDeclaredBackend

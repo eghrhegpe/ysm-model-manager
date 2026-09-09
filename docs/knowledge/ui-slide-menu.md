@@ -22,7 +22,7 @@ quick_groups:
   - UI 交互与弹窗
 quick_intents:
   - slide-menu、slide 菜单、去桶化
-  - 两级菜单、轻量导航栈、createSlideMenu / slideRow
+  - 两级菜单、轻量导航栈、createSlideMenu
 quick_risk_lines:
   - slide-menu 外壳必须复用 ui-slide-menu 的轻量导航栈，禁止手写导航栈
 pitfalls:
@@ -36,7 +36,6 @@ use_when:
   - 两级菜单
   - 轻量导航栈
   - createSlideMenu
-  - slideRow
 invariant_anchors:
   - frontend/src/ui/ui-slide-menu.ts|createSlideMenu
   - frontend/src/ui/ui-slide-menu.ts|home
@@ -82,7 +81,7 @@ status: active
 ## 与其他子系统关系
 
 - 消费方：`mount-preview-core.ts` 的环境面板（🌍 时间/云量/IBL/地面开关）通过 `createSlideMenu` 构建（`preview-3d/menu/core.ts` 亦直接 `import { createSlideMenu } from "../../ui/ui-slide-menu.ts"`）
-- 原「🥉 行组件 barrel（`ui-helpers.ts` re-export）」已随 ADR-146 反桶运动删除（2026-08-26）：`cardContainer` 直引 `ui-card.ts`、`addFieldRow` 直引 `ui-rows.ts`、`createSlideMenu` 直引 `ui-slide-menu.ts`——无聚合桶（见 [ui_components](./ui_components.md)）
+- 原「🥉 行组件 barrel（`ui-helpers.ts` re-export）」已随 ADR-146 反桶运动删除（2026-08-26）：全部消费方从具体叶模块直引（`cardContainer` 直引 `ui-card.ts`、`createSlideMenu` 直引 `ui-slide-menu.ts`）；旧世界命令式行 builder 簇（`ui-rows`/`ui-advanced-rows`/`ui-slide-row` 等）已随拔管删除（见 [ui_components](./ui_components.md)）
 - **不消费**：MikuMikuAR 的 `ui-resource-panel` / `ui-fullscreen-overlay` / `ui-virtual-grid` 未纳入本批
 
 ## 不变量
@@ -101,5 +100,5 @@ status: active
 ## 相关
 
 - [preview_core](./preview_core.md) — 环境面板等消费方
-- [app-preview](./app-preview.md) — mmd-controls.ts 等消费方
+- [app-preview](./app-preview.md) — app-preview 侧 mmd-controls 等模块（现不再直接消费 ui 库，经 preview-3d/menu cap 栈渲染）
 - ADR-075（环境面板行式菜单）、ADR-076（根菜单 ⚙️ 收编）

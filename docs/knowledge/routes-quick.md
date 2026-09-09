@@ -264,21 +264,21 @@
 | 分类标记、全库标签建议 | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
-| 加载动画、滑块、行组件、预设 chip | [UI 组件库 ui-components](./ui_components.md) | - | - |
+| 滑块控制器、幻灯片菜单外壳、头部开关 | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | 进度弹窗（closable=false 防误关） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗必须是模块级单例 dialogEl，重复打开先 close() 结算上一个 Promise | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 features/context-menu/context-menu-handlers.ts（HANDLERS 表） | - |
 | 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
 | 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
-| createCard / createSlideMenu / createLoading | [UI 组件库 ui-components](./ui_components.md) | - | - |
+| cardContainer / createSlideMenu / withLoadingIndicator / DragSliderController | [UI 组件库 ui-components](./ui_components.md) | - | - |
 | FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 preview-3d/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
 | modalAdvFilter | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | modalTagEditor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | overlay、ADR-057、ensureFabStyles | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | - | - |
 | rename-format、showRenameDialog | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | showBatchRenameDialog | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
-| UI 组件库、卡片组件、折叠面板 | [UI 组件库 ui-components](./ui_components.md) | UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构 | - |
+| UI 组件库、卡片组件、加载遮罩 | [UI 组件库 ui-components](./ui_components.md) | UI 组件必须走 ui-components 的 helper 函数，禁止手写重复 DOM 结构 | - |
 
 ## 🎯 创意工坊下载
 

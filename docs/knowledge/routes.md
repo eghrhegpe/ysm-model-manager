@@ -37,7 +37,7 @@
 | 右键菜单、右键、上下文菜单、ctx:show、menu:show、批量操作、移入回收站 | [右键菜单系统](./context-menu.md) | 右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `me… |
 | 工具函数、工具方法、纯函数、防抖、异步 | [核心工具函数 core-utils](./core_utils.md) | `utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。 |
 | 高级筛选、筛选、骨骼数、立方体、纹理尺寸、按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) ⚠️歧义（另见 search.md、model-stats.md等） | `adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 … |
-| 批量重命名、批量改名、查找替换、正则替换、统一作者、预设、batch-rename | [批量重命名 batch-rename](./dialog-batch-rename.md) ⚠️歧义（另见 ui_components.md） | `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 … |
+| 批量重命名、批量改名、查找替换、正则替换、统一作者、预设、batch-rename | [批量重命名 batch-rename](./dialog-batch-rename.md) | `batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 … |
 | 弹窗、对话框、确认框、输入框弹窗、下拉选择弹窗、modal、prompt、confirm | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) ⚠️歧义（另见 android-events.md） | `modal.ts` 原上帝文件已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`： |
 | 重命名、改名、命名规范、作者 品牌 角色、rename、读取头部 | [重命名弹窗 rename](./dialog-rename.md) ⚠️歧义（另见 go-fileops.md） | `rename.ts` 提供单个模型的结构化重命名弹窗：把文件名按 `[作者]【品牌】角色-变体 (年月).ext` 规范拆成五个输入框，实时预览新文件名，可选「📖 读取头部」从 YSM 文件头提取作者/介绍。弹窗只负责产出新文件名，实际落… |
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
@@ -125,7 +125,7 @@
 | 整合包同步、推送、拉取、跨组件同步编排、缺包回拉、PullSingleResource、sync:download:missing | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
 | 测试税、测试文件过大、mock 复印机、双胞胎测试、墓碑测试、stubBlobUrls、夹具沉淀 | [测试税减负三刀方法论](./test_tax_reduction.md) | 测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。 |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) ⚠️歧义（另见 frontend_test_audit.md） | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sle… |
-| UI 组件、卡片组件、折叠面板、加载动画、滑块、行组件、预设、图标 | [UI 组件库 ui-components](./ui_components.md) ⚠️歧义（另见 dialog-batch-rename.md） | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 … |
+| UI 组件、卡片组件、加载动画、滑块、幻灯片菜单 | [UI 组件库 ui-components](./ui_components.md) | `frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、加载遮罩、滑块控制器、幻灯片菜单外壳、头部开关等无业务逻辑的 DOM 构建函数；旧世界… |
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
 | 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。… |

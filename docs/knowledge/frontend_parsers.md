@@ -20,12 +20,10 @@ tests:
   - frontend/src/parsers/ysm-header.test.ts
 auto_fields:
   symbols_with_lines:
-    - bitsPerEntry
     - decodeVoxelNbt
     - detectContainerType
     - emptyYsmHeader
     - emptyYsmSummary
-    - extractBits
     - ExtractResult
     - extractYsmSummaryFromBytes
     - extractZip
@@ -42,13 +40,9 @@ auto_fields:
     - parseShaderpackLang
     - parseYsmHeaderFromBytes
     - parseZipCentralDir
-    - readVarInt
     - resolveBlockName
     - schematicSummaryView
     - schematicVoxelView
-    - unpackBlockStates
-    - VoxelData
-    - VoxelGroup
     - YsmHeaderShape
     - YsmSummaryShape
     - ZipEntryMeta

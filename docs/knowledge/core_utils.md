@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - addDisposableListener
     - APP_ERROR_PATH_RE
+    - asRecord
     - BusyLock
     - clamp
     - clamp01
@@ -16,6 +17,7 @@ auto_fields:
     - createBusyLock
     - debounce
     - Disposable
+    - isObj
     - isStorageAccessible
     - logError
     - LogSink
@@ -28,6 +30,7 @@ auto_fields:
     - setLogSink
     - stripAppErrorPaths
     - swallowError
+    - toInt
     - withLock
 quick_groups:
   - 跨组件通信与页面

@@ -1,7 +1,7 @@
 // ===== <app-content> 入口（ADR-040：≤400 行红线）=====
 
 import { bus } from "@/bus";
-import { resolveInitialPage } from "@/core/page-store.ts";
+import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -67,6 +67,8 @@ class AppContent extends WebComponentBase {
   connectedCallback(): void {
     this.subs.setNavUnsub(
       bus.on("nav:changed", ({ page }) => {
+        // 口径对齐 app-nav / PageStore：非法 page 拒绝（防 state.current 写脏 + DnD 遮罩守卫误判）
+        if (!isValidPage(page)) return;
         this.state.current = page;
         // 不再每次 nav:changed 清扫描缓存：30s 缓存由导入/同步/下载等实际数据变更处
         // 显式清除（sync.ts / download-queue.ts），避免重复扫盘 + 刷屏扫描日志

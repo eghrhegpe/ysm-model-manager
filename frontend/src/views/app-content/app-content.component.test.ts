@@ -114,6 +114,20 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
   });
 
+  it("运行时 nav:changed 非法 page → 忽略（isValidPage 守卫，与 app-nav/PageStore 口径一致）", async () => {
+    const el = mountCustomElement("app-content");
+    await sleep(150);
+    bus.emit("nav:changed", { page: "settings" });
+    await sleep(200);
+    expect(el.shadowRoot?.querySelector(".stg-tab")).not.toBeNull();
+    const htmlBefore = el.shadowRoot?.innerHTML || "";
+    bus.emit("nav:changed", { page: "bogus-page" as unknown as import("@/bus").PageName });
+    await sleep(200);
+    // 非法 page 被守卫拒绝：渲染不变（不切页、不写脏 state）
+    expect(el.shadowRoot?.innerHTML).toBe(htmlBefore);
+    unmountElement(el);
+  });
+
   it("config-loaded 订阅生命周期：disconnected 退订 → 重建后重新注册（P1 回归）", async () => {
     // 子代理审核发现的 P1：index.ts 与 init-workshop.ts 各自持有同名模块级
     // _avatarConfigLoaded*，disconnectedCallback 清理的是自己的死拷贝，真实

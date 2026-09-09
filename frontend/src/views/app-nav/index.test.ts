@@ -404,5 +404,28 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     renderSpy.mockRestore();
     unmountElement(el);
   });
+
+  it("启动恢复广播不污染 nav_page（配置默认页≠最后停留页时，恢复值不得写盘）", async () => {
+    // 污染场景：设置项 ui-default-page=settings（优先级①）压过 nav_page=workshop（②）——
+    // app-nav 启动恢复广播 nav:changed(settings) 后，handler 若写盘会把「最后停留页」
+    // 篡改成 settings；用户日后清除设置项时恢复点从 workshop 漂移成 settings（静默漂移）。
+    localStorage.setItem("ui-default-page", "settings");
+    localStorage.setItem("nav_page", "workshop");
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    await sleep(50); // 等恢复微任务广播 + handler 处理完
+    expect(localStorage.getItem("nav_page")).toBe("workshop"); // 缺陷态：被写成 "settings"
+    unmountElement(el);
+  });
+
+  it("用户点击导航项仍正常写盘 nav_page（收敛写点不丢真实导航事实）", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    // 桌面模式 6 项：[repository, instances, workshop, github, diagnostics, settings]——点 workshop（异值迁移）
+    (getAllByTestId(root, "nav-item")[2] as HTMLElement).click();
+    await sleep(50);
+    expect(localStorage.getItem("nav_page")).toBe("workshop");
+    unmountElement(el);
+  });
 });
 

@@ -99,7 +99,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 97 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 99 |
 
 ### `ctx:show`
 
@@ -200,8 +200,8 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 88 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 90 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 197 |
 
 ### `menu:show`
 
@@ -240,11 +240,11 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 80 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 199 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 82 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 201 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 41 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 202 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 207 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
@@ -283,7 +283,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 79 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 194 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 199 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 259 |
 
@@ -298,7 +298,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 78 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 80 |
 
 ### `repo:subdir-changed`
 
@@ -446,7 +446,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 73 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 32 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 190 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 163 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 296 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
@@ -609,7 +609,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 82 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 84 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

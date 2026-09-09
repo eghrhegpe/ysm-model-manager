@@ -148,7 +148,7 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
 }
 
 class AppNav extends WebComponentBase {
-  _current: string;
+  _current: PageName;
   /** 导航折叠态：折叠后收成常驻窄条（仅图标），展开按钮/页面小图标始终可见 */
   _collapsed: boolean;
   _unsub: (() => void) | undefined;
@@ -178,8 +178,13 @@ class AppNav extends WebComponentBase {
       // 原 sanitizePage 兜底成 repository 会把非用户意图值写入 nav_page（启动时虽被兜底，
       // 会话期 UI 脱节 + 下次启动从脏值恢复）；广播是已发生事实，应拒绝而非重定向
       if (!isValidPage(page)) return;
+      // 写点收敛（P2 修复）：仅「值迁移」时写盘——用户点击/程序化切页才是「最后停留页」事实。
+      // 启动恢复广播/同值重放（nav:changed(resolveInitialPage())）不得写盘：ui-default-page 设置项
+      // 生效时恢复值来自设置（优先级①），写盘会把 nav_page（优先级②「最后停留页」源）污染成设置值，
+      // 日后清除设置项时恢复点静默漂移（workshop→settings 场景）
+      const isTransition = page !== this._current;
       this._current = page;
-      safeSet("nav_page", this._current);
+      if (isTransition) safeSet("nav_page", this._current);
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
         const isActive = (el as HTMLElement).dataset.page === this._current;

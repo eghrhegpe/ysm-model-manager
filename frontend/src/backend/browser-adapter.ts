@@ -48,15 +48,26 @@ import { webFsBindings } from "./web-fs.ts";
 import { webStoreBindings } from "./web-store.ts";
 
 // 注册表驱动装配：由五个职责模块自注册的 binding 片段合并而成。
-// 不加 Record<string, ...> 注解：让 typeof webImpls 保留字面量键（供下方类型级对账校验），
-// 用 satisfies 兜住原注解契约（每个实现都是 (...args: never[]) => Promise<unknown>）
+// P1-1 加固：键名对齐 Go 单一事实源 AppBindings（typeof Wails 生成绑定模块）。
+// 每个 web 实现的方法名必须命中 AppBindings 的导出函数，否则编译失败——
+// 拦截拼写错 / Go 侧删除 binding 后 web 残留孤儿名 / 实现与 Go 脱节。
+// 值类型放宽到 WebBinding（返回 Promise<unknown>）：Go 侧返回 $CancellablePromise，
+// 在 web 构建无对应 runtime，故不引入以免污染 web 包；参数/返回结构漂移由
+// scripts/web-binding-check.ts 深查。网页专属扩展键（GetFsaAuthState/SelectLocalRepo）
+// 因 satisfies Partial 默认允许额外属性，不报错。
+type WebBinding = (...args: never[]) => Promise<unknown>;
+type GoBindingShape = {
+  [K in keyof AppBindings as AppBindings[K] extends (...a: never[]) => unknown
+    ? K
+    : never]: WebBinding;
+};
 const webImpls = {
   ...webCommonBindings,
   ...webFsBindings,
   ...webStoreBindings,
   ...webCommunityBindings,
   ...webCliBindings,
-} satisfies Record<string, (...args: never[]) => Promise<unknown>>;
+} satisfies Partial<GoBindingShape>;
 
 // fail-fast 函数缓存：保证同一 binding 返回稳定引用（便于 Phase 3 能力探测 /
 // spyOn / 记忆化）——避免每次 get 新建函数导致 adapter.Foo !== adapter.Foo

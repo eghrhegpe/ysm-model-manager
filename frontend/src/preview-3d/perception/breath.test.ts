@@ -70,6 +70,20 @@ describe("createBreathController", () => {
     expect(chest.position.y).toBeCloseTo(1, 6);
   });
 
+  it("dispose 释放 resting 快照（销毁后不再驱动骨骼）", () => {
+    const chest = new THREE.Object3D();
+    chest.position.set(0, 1, 0);
+    const map = fakeSemanticMap({ chest });
+    const ctrl = createBreathController();
+    ctrl.apply(0.625, map); // 推至峰值
+    expect(chest.position.y).toBeGreaterThan(1);
+    ctrl.dispose();
+    // 手动复位（模拟切换模型），再 apply dt=0 → 新 warmup 快照当前位置，t=0 → breathe=0
+    chest.position.set(0, 1, 0);
+    ctrl.apply(0, map);
+    expect(chest.position.y).toBeCloseTo(1, 6);
+  });
+
   it("shoulders 权重低于 chest（同相位下位移更小）", () => {
     const chest = new THREE.Object3D();
     chest.position.set(0, 1, 0);

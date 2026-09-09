@@ -40,6 +40,20 @@ describe("createGazeController", () => {
     expect(() => ctrl.apply(0.016, {}, new THREE.Vector3())).not.toThrow();
   });
 
+  it("dispose 释放 snap 快照（销毁后不再驱动骨骼）", () => {
+    const head = new THREE.Object3D();
+    head.position.set(0, 1, 0);
+    const map = fakeMap({ head });
+    const ctrl = createGazeController();
+    ctrl.apply(0.016, map, new THREE.Vector3(-3, 1, 5)); // 向左驱动
+    expect(Math.abs(head.rotation.y)).toBeGreaterThan(0);
+    ctrl.dispose();
+    // dispose 后 snaps=null → 下次 apply 重新 warmup，slerp 从 restRot 起
+    head.rotation.set(0, 0, 0);
+    ctrl.apply(0.016, map, new THREE.Vector3(0, 1, 10)); // 正前方 → 无偏转
+    expect(head.rotation.y).toBeCloseTo(0, 4);
+  });
+
   it("reset 清除 snap 状态（切换模型后可重新 warmup）", () => {
     const head = new THREE.Object3D();
     head.rotation.set(0.1, 0.2, 0);

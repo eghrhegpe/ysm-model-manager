@@ -76,6 +76,7 @@ invariant_anchors:
   - frontend/src/features/community/download-queue-store.ts|cancelDownloads
   - frontend/src/features/community/download-queue-store.ts|subscribe
   - frontend/src/features/community/download-queue-store.ts|getStateSnapshot
+  - frontend/src/features/community/download-queue.ts|gh-queue-error-wrap
 status: active
 ---
 
@@ -139,6 +140,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 - **事件 payload 守卫**（P3 审计修复）：v3 事件 data 应为非空数组，非数组 / 空数组视为畸形直接丢弃。
 - **头像提取串行化**：`_avatarChain` Promise 链限并发 1；同一作者在途去重（`_avatarInFlight` Set）。
 - **进度边界守卫**：非法数值（NaN / ±Infinity / 负数）归一为 0（防 "NaNMB" 幽灵数值）。
+- **错误摘要容器结构**（`download-queue.ts|gh-queue-error-wrap`）：队列结束的错误摘要嵌套在单一 `.gh-queue-error-wrap` 容器内；`#gh-queue-status` 显示摘要时直接子节点唯一，旧进度行由 `replaceChildren` 清掉——结构护栏钉在 `download-queue-ui.test.ts` 的「done + 错误列表」「cancelled」两用例。
 
 ## 相关
 

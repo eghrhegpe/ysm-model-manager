@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-209：移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块",
+        "link": "/adr/ADR-209-pagestore-page-store"
+      },
+      {
         "text": "ADR-208：features 层治理收口：seam 门禁 / 400 行红线 / 菜单事实源 / i18n",
         "link": "/adr/ADR-208-features-governance"
       },

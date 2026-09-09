@@ -887,7 +887,6 @@ auto_fields:
     - PAGE_REGISTRY
     - PageDefinition
     - PageName
-    - PageStore
     - parseAnimationControllerJSON
     - parseBedrockAnimationJSON
     - parseBedrockGeometryFromJSON
@@ -1020,7 +1019,6 @@ auto_fields:
     - registerErrorDiary
     - registerInstanceOps
     - registerModelRoot
-    - registerPageStore
     - registerReRoute
     - registerSchema
     - registerSync

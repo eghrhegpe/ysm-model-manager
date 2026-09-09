@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **206** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **207** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 4 |
-| [✅ 已采纳](#已采纳) | 192 |
+| [✅ 已采纳](#已采纳) | 193 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -34,10 +34,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（192）
+### ✅ 已采纳（193）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-209](./ADR-209-pagestore-page-store.md) | 移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块 | ✅ 已采纳 |
 | [ADR-208](./ADR-208-features-governance.md) | features 层治理收口：seam 门禁 / 400 行红线 / 菜单事实源 / i18n | ✅ 已采纳 |
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | ✅ 已采纳 |
 | [ADR-206](./ADR-206-pre-push-gate-gate-blocks.md) | pre-push-gate 收敛分拆为 gate-blocks | ✅ 已采纳 |
@@ -255,6 +256,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-209 | 移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块 | ✅ 已采纳 | 2026-09-09 |
 | ADR-208 | features 层治理收口：seam 门禁 / 400 行红线 / 菜单事实源 / i18n | ✅ 已采纳 | 2026-09-09 |
 | ADR-207 | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | ✅ 已采纳 | 2026-09-09 |
 | ADR-206 | pre-push-gate 收敛分拆为 gate-blocks | ✅ 已采纳 | 2026-09-08 |

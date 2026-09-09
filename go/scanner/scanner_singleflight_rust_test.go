@@ -48,6 +48,8 @@ func waitForInflight(t *testing.T, want int) {
 	t.Fatalf("等待在途航班数 >= %d 超时（当前 %d）", want, inflightLen())
 }
 
+var _ = waitForInflight // 保留：与 !rust_backend 版对齐的辅助工具（当前用例经 sleep 窗口保证并入，见 L104 注释）
+
 // TestScanEntriesWithHit_Rust_ConcurrentSameDir_SingleScan Rust 快路径版单飞：
 // n 个并发同目录扫描共享一次 rust 扫描——非 owner 全部并入在途航班，
 // walkCount 恒 0（未走 Go 兜底），恰 1 个调用方 hit=false（owner 真扫）。

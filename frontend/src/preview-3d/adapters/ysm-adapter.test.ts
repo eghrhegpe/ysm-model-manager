@@ -644,7 +644,7 @@ describe("F 键调试模式", () => {
     // 密闭性前置：无残留监听器；build 后仅本 handle 一个
     expect(liveKeydown.size).toBe(1);
 
-    const pressF = (mod?: { shiftKey?: boolean; ctrlKey?: boolean; target?: unknown }) =>
+    const pressF = (mod?: { shiftKey?: boolean; ctrlKey?: boolean }) =>
       document.dispatchEvent(
         new KeyboardEvent("keydown", { key: "f", ...(mod ?? {}) }),
       );
@@ -732,7 +732,7 @@ describe("场景句柄能力面", () => {
     sceneHandle.dispose();
   });
 
-  it("update：动画激活 → setPerceptionPaused(true) + 呼吸驱动；失活 → false 且呼吸停摆", async () => {
+  it("update：动画激活 → setPerceptionPaused(true) + 呼吸驱动；失活 → false 且呼吸不受感知暂停影响仍驱动", async () => {
     const spec = specWith([["b1", "root"], ["b2", "上半身"]]);
     const { player, st } = makeFakePlayer();
     h.createYsmAnimPlayer.mockImplementation((_boneByName, clips, labels) => {

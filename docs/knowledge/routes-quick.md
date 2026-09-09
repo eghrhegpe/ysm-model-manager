@@ -170,7 +170,6 @@
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
-| 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-207 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
@@ -182,7 +181,8 @@
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
-| 页面状态管理、当前页、page store | [页面状态管理 page-store.ts](./page-store.md) | page-store 只管理当前页标识（只读 getter），不协调页面挂载 / 卸载，那是 app-content 的职责 | - |
+| 页面名合法性守卫 isValidPage | [页面状态管理 page-store.ts](./page-store.md) | page-store 只提供纯函数（isValidPage / resolveInitialPage），不持有状态、不镜像；页面挂载 / 卸载是 app-content 的职责 | - |
+| 页面状态管理、page store | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
@@ -201,7 +201,7 @@
 | pointerdown / pointermove / pointerup、触屏 + 桌面统一 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart | - |
 | PushSingleResource / PullSingleResource | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | registerGlobalHandlers、instance-ops | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
-| resolveInitialPage / sanitizePage | [页面状态管理 page-store.ts](./page-store.md) | - | - |
+| resolveInitialPage / sanitizePage 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
 | swallowError（fire-and-forget 错误兜底） | [核心工具函数 core-utils](./core_utils.md) | - | - |

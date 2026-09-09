@@ -31,7 +31,6 @@ auto_fields:
     - logWarn
     - LongTaskInfo
     - moveItemMut
-    - resetLogSink
     - safeErrorMessage
     - safeGet
     - safeGetJSON

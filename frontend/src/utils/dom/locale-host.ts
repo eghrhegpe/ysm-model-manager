@@ -1,7 +1,7 @@
 // ===== i18n LocaleHost DOM 适配器（ADR-210 D1）=====
 // core/i18n/locale.ts 定义 Locale 副作用接口（引擎无关），本文件提供 DOM 原语层实现：
 // 语言包 fetch / 系统语言读取 / <html lang> 同步——浏览器全局的访问集中在这一处。
-// utils/dom → core 为合法边（与 global-error-listeners.ts → error-diary.ts 同构）；
+// utils/dom → core 为合法边（backend/global-error-listeners.ts → error-diary.ts 为同型装配边）；
 // 装配层 app-modules.ts 在 i18n 启动步内 setLocaleHost(makeLocaleHost()) 接线（先于 initI18n）。
 import type { LocaleHost } from "@/core/i18n/locale.ts";
 

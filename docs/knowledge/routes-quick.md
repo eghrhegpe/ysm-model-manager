@@ -166,7 +166,7 @@
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fire-and-forget 场景必须经 swallowError 兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
-| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；缺失键多级回退 current → FALLBACK_LANG(en) → 裸 key；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207, ADR-210 |
+| 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；缺失键多级回退 current → FALLBACK_LANG(en) → 裸 key，getBundle 空包内部 rescue 至 BASE_LANG(zh-CN)；initI18n 启动预载三包（current + FALLBACK + BASE）使回退链各层冷启动可达；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207, ADR-210 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
@@ -820,10 +820,11 @@
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |
-| getBundle 空对象 truthy | - | 用 Object.keys().length > 0 判空，否则 zh-CN 兜底永不触发 |
+| getBundle 空对象 truthy | - | 用 isNonEmpty 判空（for-in 早退探针，零分配热路径），否则 BASE_LANG rescue 永不触发 |
 | 缺失 key 告警收编 locale.warnMissingKey（每 key 一次；不再导出可变 Set 跨模块共享，ADR-207 D3），发版前须主动扫裸 key | - | - |
 | 键名迁移无 legacy-key-map 兼容表；改名须同步改调用点 + 测试 + 三语言包 | - | - |
-| FALLBACK_LANG（en）单一事实源在 locale.ts：t.ts 兜底链与 locales-consistency 成员守卫共用，勿另立 DEFAULT_LANG | - | - |
+| FALLBACK_LANG（en，缺失键兜底）/ BASE_LANG（zh-CN，基准包 + getBundle 空包 rescue）双常量在 locale.ts：t.ts 兜底链与 locales-consistency 成员守卫共用，勿另立第三语言常量 | - | - |
+| initI18n await 期间 setLang 覆盖写 | - | 恢复后须对账 code === _currentLang 再补发事件，不替写者补发（新语言事件归 setLang 自己 emit） |
 | 模板含 {n} 而调用漏传 params | - | 裸占位符上屏；interpolate 残留守卫按签名告警一次（每残留组合一次） |
 | 各组件各自调 ImportModel | - | 并发冲突、队列状态混乱；必须经 import-executor |
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |

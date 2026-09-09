@@ -1,4 +1,4 @@
-// utils/base/log.ts — 极简日志出口，供 async 等叶模块复用。
+// utils/base/primitives/log.ts — 极简日志出口，供 async 等叶模块复用。
 // 保持零应用层依赖：仅封装 console.warn / console.error，作为 ysm 统一告警通道的薄封装。
 // 透写环形日志：经可注入 sink 收敛——error-diary 注册时调
 // setLogSink 把告警接进 AddOpLog 日记（对齐 setSceneCapabilityLookup 注入范式，
@@ -12,11 +12,6 @@ let _sink: LogSink | null = null;
 /** 注入/清除透写 sink（error-diary 注册时安装；传 null 恢复纯 console） */
 export function setLogSink(sink: LogSink | null): void {
   _sink = sink;
-}
-
-/** 重置 sink 为 null（测试隔离用：防止 setLogSink 注入的 sink 泄漏到后续用例） */
-export function resetLogSink(): void {
-  _sink = null;
 }
 
 /** 统一告警日志。tag 用于按模块聚合排查；err 可为任意错误值。 */

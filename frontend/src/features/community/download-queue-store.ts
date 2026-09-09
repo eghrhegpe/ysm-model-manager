@@ -18,6 +18,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { runWebEnqueue } from "./download-queue-web.ts";
@@ -110,7 +111,8 @@ export function addQueueError(name: string, err: string): void {
   STATE.errorList.push({ name, err });
 }
 
-const listeners = new Set<(s: DownloadState) => void>();
+/** 监听器集合（ADR-216 提级共享原语，替代原手搓 Set） */
+const listenerSet = createListenerSet<DownloadState>();
 let _registered = false;
 // P3 修复（审核）：头像提取串行化——每成功一个 .ysm 就调 DebugExtractCreatorAvatar
 // （内部跑 Node+WASM 解码，60s 超时）。批量下载 N 个不同作者文件会并发 N 个子进程，
@@ -120,18 +122,16 @@ const _avatarInFlight = new Set<string>();
 
 /**
  * 订阅 STATE 变更。返回取消订阅函数。
+ * 底层经共享原语 createListenerSet（ADR-216）；单一写入纪律不变——
+ * 状态修改仍只经本模块导出的写函数，notify 传通知时刻的 STATE 引用。
  */
 export function subscribe(fn: (s: DownloadState) => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return listenerSet.subscribe(fn);
 }
 
 /** 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） */
 function notify(): void {
-  // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-  listeners.forEach((fn) => fn(STATE));
+  listenerSet.notify(STATE);
 }
 
 /**

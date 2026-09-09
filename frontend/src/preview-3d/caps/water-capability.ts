@@ -9,8 +9,9 @@ import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+// ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import {
-  createListenerSet,
   GROUND_LAYER_OFFSETS,
   oneOf,
   persistState,

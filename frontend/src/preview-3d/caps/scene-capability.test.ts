@@ -10,7 +10,6 @@ import { SkyCapability } from "./sky-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
 import {
   bindFieldRestorers,
-  createListenerSet,
   pickPersistFields,
   restoreFields,
 } from "./scene-capability.ts";
@@ -173,34 +172,5 @@ describe("bindFieldRestorers / pickPersistFields — 表驱动持久化基建", 
     });
   });
 });
-
-describe("createListenerSet — 订阅/通知（ground/water 共用样板）", () => {
-  it("notify 触发全部已订阅监听器", () => {
-    const { subscribe, notify } = createListenerSet();
-    const a = vi.fn();
-    const b = vi.fn();
-    subscribe(a);
-    subscribe(b);
-    notify();
-    expect(a).toHaveBeenCalledTimes(1);
-    expect(b).toHaveBeenCalledTimes(1);
-  });
-
-  it("取消订阅后不再触发", () => {
-    const { subscribe, notify } = createListenerSet();
-    const a = vi.fn();
-    const unsub = subscribe(a);
-    unsub();
-    notify();
-    expect(a).not.toHaveBeenCalled();
-  });
-
-  it("多次 notify 每次触发；订阅回调可安全访问自身状态", () => {
-    const { subscribe, notify } = createListenerSet();
-    let count = 0;
-    subscribe(() => { count++; });
-    notify();
-    notify();
-    expect(count).toBe(2);
-  });
-});
+// createListenerSet 订阅/通知 3 用例已随 ADR-216 提级迁至
+// utils/base/primitives/listener-set.test.ts（本卡不再直测）。

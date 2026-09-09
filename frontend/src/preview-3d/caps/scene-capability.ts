@@ -255,25 +255,7 @@ export function restoreFields(
 }
 
 /**
- * 参数变更订阅器工厂（ground / water 的 subscribe + notify 样板收敛）。
- * 返回 { subscribe, notify }：
- *   - subscribe(listener)：登记监听器，返回取消订阅函数；
- *   - notify()：同步逐个触发（离散的模式切换触发，高频滑块不应 notify——语义同接口注释）。
+ * 参数变更订阅器（ground / water 的 subscribe + notify 样板）已提级共享原语
+ * `@/utils/base/primitives/listener-set.ts`（ADR-216：与 download-queue-store
+ * 手搓 Set 收敛单一事实源）——本文件不再定义/导出，消费方直引 primitives。
  */
-export function createListenerSet(): {
-  subscribe: (listener: () => void) => () => void;
-  notify: () => void;
-} {
-  const listeners = new Set<() => void>();
-  return {
-    subscribe(listener: () => void): () => void {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    notify(): void {
-      for (const l of listeners) l();
-    },
-  };
-}

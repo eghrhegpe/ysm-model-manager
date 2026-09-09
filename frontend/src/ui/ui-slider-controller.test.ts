@@ -694,3 +694,81 @@ describe("DragSliderController", () => {
         // 不抛错即为正常
     });
 });
+
+// =========================================================================
+// 10. pointer events（触屏/笔统一输入；cap 栈自绘滑块接入后消费）
+//     pointer 是 mouse 的超集：真实鼠标交互 pointerdown 先于 mousedown 派发，
+//     pointerActive 互斥标志让 mousedown 兜底分支跳过——单次交互只走一条路径。
+// =========================================================================
+describe("DragSliderController — pointer events", () => {
+    const pointerDown = (el: HTMLElement, clientX = 100, pointerId = 1): PointerEvent => {
+        const e = new PointerEvent("pointerdown", {
+            clientX,
+            bubbles: true,
+            cancelable: true,
+            pointerId,
+        });
+        el.dispatchEvent(e);
+        return e;
+    };
+    const pointerMove = (clientX: number, pointerId = 1): PointerEvent => {
+        const e = new PointerEvent("pointermove", { clientX, bubbles: true, pointerId });
+        document.dispatchEvent(e);
+        return e;
+    };
+    const pointerUp = (clientX: number, pointerId = 1): PointerEvent => {
+        const e = new PointerEvent("pointerup", { clientX, bubbles: true, pointerId });
+        document.dispatchEvent(e);
+        return e;
+    };
+
+    it("pointerdown + document pointermove/pointerup 拖拽调值", () => {
+        const onChange = vi.fn();
+        const { el, dispose } = setup({ value: 50, min: 0, max: 100, step: 1, onChange });
+        pointerDown(el, 100);
+        pointerMove(150);
+        pointerUp(150);
+        // 75% 位置 → 75
+        expect(onChange).toHaveBeenLastCalledWith(75);
+        dispose();
+    });
+
+    it("真实鼠标序列：pointerdown 后 mousedown 被互斥跳过（不双触发）", () => {
+        const onChange = vi.fn();
+        const { el, dispose } = setup({ value: 50, min: 0, max: 100, step: 1, onChange });
+        // 浏览器真实鼠标：pointerdown 先派发，随后 mousedown 到达
+        pointerDown(el, 100);
+        el.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, bubbles: true, cancelable: true }));
+        // 后续 move/up 走 pointer 路径
+        pointerMove(130);
+        pointerUp(130);
+        // 只经 pointer 一次调值（65），mouse 兜底被跳过，不重复计算
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenLastCalledWith(65);
+        dispose();
+    });
+
+    it("pointer 单击（无 move）：pointerup 按 !dragging 分支跳转到点击位置并触发 onDragEnd", () => {
+        const onChange = vi.fn();
+        const onDragEnd = vi.fn();
+        const { el, dispose } = setup({ value: 50, min: 0, max: 100, step: 1, onChange, onDragEnd });
+        // mkEl 条宽 200：clientX=50 = 25% → 值 25
+        pointerDown(el, 50);
+        pointerUp(50);
+        expect(onChange).toHaveBeenLastCalledWith(25);
+        expect(onDragEnd).toHaveBeenCalledWith(25);
+        dispose();
+    });
+
+    it("pointercancel（系统手势抢占）复位状态：后续 pointerup 不再调值", () => {
+        const onChange = vi.fn();
+        const { el, dispose } = setup({ value: 50, min: 0, max: 100, step: 1, onChange });
+        pointerDown(el, 100);
+        const pc = new PointerEvent("pointercancel", { bubbles: true, pointerId: 1 });
+        el.dispatchEvent(pc);
+        // cancel 后状态复位：再 up 不应走 !dragging 跳转（dragRect 已清）
+        pointerUp(200);
+        expect(onChange).not.toHaveBeenCalled();
+        dispose();
+    });
+});

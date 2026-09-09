@@ -29,6 +29,8 @@ export class DragSliderController {
   private dragRect: DOMRect | null = null;
   private moveDisp: Disposable | null = null;
   private endDisp: Disposable | null = null;
+  // pointer 主路径接管标志：真实交互 pointerdown 置位，mousedown 兜底分支跳过（防双触发）
+  private pointerDown = false;
 
   constructor(opts: DragSliderOptions) {
     this.opts = opts;
@@ -42,16 +44,36 @@ export class DragSliderController {
   /** 绑定 DOM 并注册事件，返回 Disposable */
   bind(el: HTMLElement): Disposable {
     const onMouseDown = (e: MouseEvent): void => {
-      e.preventDefault();
-      el.focus();
-      this.dragRect = el.getBoundingClientRect();
-      this.dragging = false;
+      // pointer 主路径互斥：真实鼠标交互 pointerdown 先于 mousedown 派发，
+      // pointerActive 期间 mousedown 兜底分支跳过（防双触发）。
+      // 无 pointer 支持的环境（或测试直接派发 mouse 事件）走本兜底路径。
+      if (this.pointerDown) {
+        return;
+      }
+      this.startDrag(e);
       // 先释放旧 document 监听再注册：mouseup 丢失（窗口外释放/切应用）
       // 后再次 mousedown 会直接覆盖引用，旧监听永久滞留并跨滑块串扰（幽灵调值）。
       this.moveDisp?.dispose();
       this.endDisp?.dispose();
       this.moveDisp = addDisposableListener(document, "mousemove", this.onDragMove);
       this.endDisp = addDisposableListener(document, "mouseup", this.onDragEnd);
+    };
+
+    const onPointerDown = (e: PointerEvent): void => {
+      // 触屏/笔/鼠标统一入口（pointer 是 mouse 超集）：本交互由 pointer 路径接管
+      this.pointerDown = true;
+      this.startDrag(e);
+      this.moveDisp?.dispose();
+      this.endDisp?.dispose();
+      this.moveDisp = addDisposableListener(document, "pointermove", this.onDragMove);
+      this.endDisp = addDisposableListener(document, "pointerup", this.onPointerUp);
+      // 指针捕获：拖出元素后 move/up 仍持续派发（timeline 控件同款先例）；
+      // 不支持的环境（happy-dom）no-op，document 级监听已保证可达
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      } catch {
+        /* 捕获失败不阻断：document 监听兜底 */
+      }
     };
 
     const onKeyDown = (e: KeyboardEvent): void => {
@@ -62,17 +84,24 @@ export class DragSliderController {
     el.addEventListener("click", this.onElClick);
 
     el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointercancel", this.onPointerCancel);
     el.addEventListener("keydown", onKeyDown);
 
     return {
       dispose: (): void => {
         el.removeEventListener("mousedown", onMouseDown);
+        el.removeEventListener("pointerdown", onPointerDown);
+        el.removeEventListener("pointercancel", this.onPointerCancel);
         el.removeEventListener("keydown", onKeyDown);
         el.removeEventListener("click", this.onElClick);
         this.moveDisp?.dispose();
         this.endDisp?.dispose();
         this.moveDisp = null;
         this.endDisp = null;
+        this.pointerDown = false;
+        this.dragRect = null;
+        this.dragging = false;
       },
     };
   }
@@ -80,6 +109,30 @@ export class DragSliderController {
   // -------------------------------------------------------------------------
   // 内部事件处理器（使用箭头函数，保证 removeEventListener 能正确匹配）
   // -------------------------------------------------------------------------
+
+  /** 拖拽启动公共逻辑（mousedown/pointerdown 共用）：preventDefault + 聚焦 + 快照 rect */
+  private startDrag(e: MouseEvent | PointerEvent): void {
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).focus();
+    this.dragRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    this.dragging = false;
+  }
+
+  private readonly onPointerUp = (e: PointerEvent): void => {
+    this.pointerDown = false;
+    this.onDragEnd(e);
+  };
+
+  /** pointercancel（系统手势抢占，如滚动接管）：复位状态，防后续 pointerup 误判 */
+  private readonly onPointerCancel = (): void => {
+    this.pointerDown = false;
+    this.moveDisp?.dispose();
+    this.endDisp?.dispose();
+    this.moveDisp = null;
+    this.endDisp = null;
+    this.dragRect = null;
+    this.dragging = false;
+  };
 
   private readonly onElClick = (e: MouseEvent): void => {
     e.preventDefault();

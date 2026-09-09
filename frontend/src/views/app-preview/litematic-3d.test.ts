@@ -513,12 +513,19 @@ describe("控件交互", () => {
     const sel = orbitRow.querySelector("select") as HTMLSelectElement;
     expect(sel).toBeTruthy();
     const spdRow = overlay.querySelector('[data-testid="cap-camera-speed"]') as HTMLElement;
-    const spd = spdRow.querySelector('input[type="range"]') as HTMLInputElement;
+    const spd = spdRow.querySelector(".cs-bar") as HTMLElement;
     expect(spd).toBeTruthy();
     sel.value = "free";
     sel.dispatchEvent(new Event("change"));
-    spd.value = "55";
-    spd.dispatchEvent(new Event("input"));
+    // 自绘滑块（DragSliderController）：mock rect 后 click 跳转到 55
+    // （camera-speed min=2/max=200/step=1；rect 宽取值域 198 使 clientX 直接对值）
+    const min = Number(spd.getAttribute("aria-valuemin"));
+    const max = Number(spd.getAttribute("aria-valuemax"));
+    Object.defineProperty(spd, "getBoundingClientRect", {
+      value: () => ({ left: 0, width: 198, right: 198, top: 0, bottom: 20, height: 20, x: 0, y: 0 }),
+      configurable: true,
+    });
+    spd.dispatchEvent(new MouseEvent("click", { clientX: ((55 - min) / (max - min)) * 198, bubbles: true }));
     // 持久化走旧键（td-rot-mode / td-cam-speed 逐字对齐旧 buildCameraControls）
     expect(localStorage.getItem("td-rot-mode")).toBe("free");
     expect(localStorage.getItem("td-cam-speed")).toBe("55");

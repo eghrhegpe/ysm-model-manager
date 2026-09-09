@@ -11,7 +11,10 @@ import { trDynamic } from "@/core/i18n/tr.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "@/ui/dom-contract.ts";
 import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
+import { DragSliderController } from "@/ui/ui-slider-controller.ts";
+import { clampPct } from "@/utils/base/clamp.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
 
 /**
@@ -78,7 +81,6 @@ ${MENU_SECTION_CSS}
 .cc-head-strong { display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.85); }
 .cc-hint { font-size:12px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .cc-hint-45 { max-width:45%; }
-.cc-range { width:100%;cursor:pointer;accent-color:var(--accent,#7c83ff); }
 .setting-select.cc-select { font-size:11px;padding:2px 4px; }
 .cc-img-block { width:100%;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block; }
 .cc-canvas-fill { width:100%;height:100%;display:block; }
@@ -201,7 +203,10 @@ export function formatCapSliderValue(v: CapControlView, num: number): string {
   return num.toFixed(2);
 }
 
-/** slider：label + 当前值 + range 拖动（[控件原语归一] 收编 rmAppendSlider：numeric 数字输入 + onChange 钩子） */
+/** slider：label + 当前值 + 自绘进度条（cs-bar 结构，DragSliderController 驱动）
+ *  [能力移植 · ui-rows addSliderRow] cap 栈滑块从原生 input[type=range] 换为自绘
+ *  cs-bar（fill 渐变 + thumb 细线 + 键盘 ←→/Home/End + pointer/触屏统一），
+ *  保留 numeric 数字输入 + unit 格式化 + onCommit 提交钩子。 */
 export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
@@ -212,55 +217,89 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   name.className = "slide-label";
   name.textContent = trDynamic(v.labelKey, v.fallback);
   const val = document.createElement("span");
-  const numVal = v.getValue() as number;
-  val.textContent = formatCapSliderValue(v, numVal);
   head.append(name, val);
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.min = String(v.slider?.min ?? 0);
-  slider.max = String(v.slider?.max ?? 1);
-  slider.step = String(v.slider?.step ?? 0.01);
-  slider.value = String(numVal);
-  slider.className = "cc-range";
+
+  const min = v.slider?.min ?? 0;
+  const max = v.slider?.max ?? 1;
+  const step = v.slider?.step ?? 0.01;
+  const numVal = v.getValue() as number;
+  const range = max - min;
+
+  // 自绘进度条（.cs-bar + .cs-fill + .cs-thumb；样式随 uiComponentsStyleSheet 已进 overlay）
+  const bar = document.createElement("div");
+  bar.className = SLIDER_BAR_CLASS;
+  bar.tabIndex = 0;
+  bar.setAttribute("role", ROLE.slider);
+  bar.setAttribute(ARIA_ATTR.label, trDynamic(v.labelKey, v.fallback));
+  bar.setAttribute(ARIA_ATTR.valuemin, String(min));
+  bar.setAttribute(ARIA_ATTR.valuemax, String(max));
+  bar.setAttribute(ARIA_ATTR.valuenow, String(numVal));
+  bar.dataset.step = String(step); // aria 无 step 标准属性，作测试钩子
+  const fill = document.createElement("div");
+  fill.className = "cs-fill";
+  const thumb = document.createElement("div");
+  thumb.className = "cs-thumb";
+  bar.append(fill, thumb);
+
+  const updateDisplay = (n: number): void => {
+    val.textContent = formatCapSliderValue(v, n);
+    const pct = range > 0 ? clampPct(((n - min) / range) * 100) : 0;
+    fill.style.width = `${pct}%`;
+    thumb.style.left = `${pct}%`;
+    bar.setAttribute(ARIA_ATTR.valuenow, String(n));
+    if (num) num.value = String(n);
+  };
+
+  const controller = new DragSliderController({
+    value: numVal,
+    min,
+    max,
+    step,
+    onChange: (n: number): void => {
+      updateDisplay(n);
+      v.setValue(n);
+      // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+      v.onChange?.(n);
+    },
+    onDragEnd: (n: number): void => {
+      // 提交（松手/键盘步进/单击跳转）：高频拖拽已实时写值，此处只做离散提交
+      // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。
+      v.slider?.onCommit?.(n);
+    },
+  });
+  controller.bind(bar);
+  // [行为对齐] 单击轨道跳转（onElClick）只触发 onChange；补 onCommit 提交钩子，
+  // 对齐原生 input[type=range] 的 change 语义（点击轨道后 change 触发 onCommit，
+  // 如 pixel-ratio 提交时 notify）。onElClick 先更新 aria-valuenow，后注册监听读新值。
+  bar.addEventListener("click", () => {
+    v.slider?.onCommit?.(Number(bar.getAttribute(ARIA_ATTR.valuenow)));
+  });
+
   // [控件原语归一] numeric：旁挂数字输入框（双向联动，onchange 走 min/max clamp——litematic 分层语义）
   let num: HTMLInputElement | null = null;
   if (v.slider?.numeric) {
     num = document.createElement("input");
     num.type = "number";
-    num.min = slider.min;
-    num.max = slider.max;
-    num.step = slider.step;
+    num.min = String(min);
+    num.max = String(max);
+    num.step = String(step);
     num.value = String(numVal);
     num.className = "rm-range-num";
-  }
-  slider.oninput = (): void => {
-    const cur = Number(slider.value);
-    v.setValue(cur);
-    val.textContent = formatCapSliderValue(v, cur);
-    if (num) num.value = String(cur);
-    v.onChange?.(cur);
-  };
-  if (num) {
     // const 收窄替代非空断言：num 在 if 块内确定存在，捕获为 numEl 供闭包引用（TS 对 const 收窄生效）
     const numEl = num;
     numEl.onchange = (): void => {
       const n = Number(numEl.value);
-      const cur = Number.isFinite(n)
-        ? Math.max(Number(slider.min), Math.min(Number(slider.max), n))
-        : Number(slider.value);
-      slider.value = String(cur);
+      const cur = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : numVal;
       numEl.value = String(cur);
+      controller.setValue(cur);
+      updateDisplay(cur);
       v.setValue(cur);
-      val.textContent = formatCapSliderValue(v, cur);
       v.onChange?.(cur);
     };
   }
-  // slider 提交（松手/change）：高频拖拽在 oninput 已写值，此处只做离散提交回调
-  // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。
-  slider.onchange = (): void => {
-    v.slider?.onCommit?.(Number(slider.value));
-  };
-  row.append(head, slider);
+
+  updateDisplay(numVal);
+  row.append(head, bar);
   if (num) row.append(num);
   parent.appendChild(row);
 }

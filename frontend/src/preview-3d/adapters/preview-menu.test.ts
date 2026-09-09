@@ -182,7 +182,7 @@ describe("renderCapControls", () => {
     expect(lastValue).toBe(true);
   });
 
-  it("slider：渲染出 range input 且显示值", () => {
+  it("slider：渲染出自绘 cs-bar 且显示值", () => {
     const list = mkList();
     renderCapControls(list, [
       mk("slider", {
@@ -192,12 +192,12 @@ describe("renderCapControls", () => {
     ]);
     const items = list.querySelectorAll(".slide-item");
     expect(items.length).toBe(1);
-    const input = items[0].querySelector("input[type=range]") as HTMLInputElement;
-    expect(input).not.toBeUndefined();
-    expect(input.min).toBe("0");
-    expect(input.max).toBe("10");
-    expect(input.step).toBe("0.1");
-    expect(input.value).toBe("3.14");
+    const bar = items[0].querySelector(".cs-bar") as HTMLElement;
+    expect(bar).not.toBeUndefined();
+    expect(bar.getAttribute("aria-valuemin")).toBe("0");
+    expect(bar.getAttribute("aria-valuemax")).toBe("10");
+    expect(bar.dataset.step).toBe("0.1");
+    expect(bar.getAttribute("aria-valuenow")).toBe("3.14");
     // 值显示
     const valSpan = items[0].querySelectorAll("span")[1];
     expect(valSpan).not.toBeNull();

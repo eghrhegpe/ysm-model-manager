@@ -487,17 +487,17 @@ describe("renderMenu 新 kind", () => {
     renderMenu(container, nodes, makeDeps() as any);
     const row = container.querySelector('[data-testid="cap-layer-slider"]') as HTMLElement;
     expect(row).not.toBeNull();
-    const range = row.querySelector('input[type="range"]') as HTMLInputElement;
-    expect(range).not.toBeNull();
-    expect(range.min).toBe("1");
-    expect(range.max).toBe("100");
-    expect(range.value).toBe("40");
-    range.value = "77";
-    range.dispatchEvent(new Event("input"));
-    expect(val).toBe(77);
+    const bar = row.querySelector(".cs-bar") as HTMLElement;
+    expect(bar).not.toBeNull();
+    expect(bar.getAttribute("aria-valuemin")).toBe("1");
+    expect(bar.getAttribute("aria-valuemax")).toBe("100");
+    expect(bar.getAttribute("aria-valuenow")).toBe("40");
+    // 自绘滑块（DragSliderController）：键盘步进驱动（←→/Home/End）
+    bar.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(val).toBe(41);
     // [ADR-195 刀 2.5] nodeControlToView 把 view.onChange 设为 setValue，renderCapSlider
-    // oninput 末尾再调 v.onChange → spec.onChange 双重触发（产码回归，已报告）。
-    expect(changed).toEqual([77, 77]);
+    // onChange 末尾再调 v.onChange → spec.onChange 双重触发（产码回归，已报告）。
+    expect(changed).toEqual([41, 41]);
   });
 
   it("slider: numeric=true 联动 number 输入框，number onchange 走 min/max clamp", () => {
@@ -512,20 +512,19 @@ describe("renderMenu 新 kind", () => {
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
     const row = container.querySelector('[data-testid="cap-num-slider"]') as HTMLElement;
-    const range = row.querySelector('input[type="range"]') as HTMLInputElement;
+    const bar = row.querySelector(".cs-bar") as HTMLElement;
     const num = row.querySelector('input[type="number"]') as HTMLInputElement;
     expect(num).not.toBeNull();
     expect(num.value).toBe("5");
-    // range 拖动 → number 同步
-    range.value = "8";
-    range.dispatchEvent(new Event("input"));
-    expect(num.value).toBe("8");
-    expect(val).toBe(8);
+    // bar 键盘步进（nodeControlToView 未声明 step → 默认 1）→ number 同步
+    bar.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(num.value).toBe("6");
+    expect(val).toBe(6);
     // number 越界输入 → clamp 到 max 后提交
     num.value = "99";
     num.dispatchEvent(new Event("change"));
     expect(val).toBe(10);
-    expect(range.value).toBe("10");
+    expect(bar.getAttribute("aria-valuenow")).toBe("10");
   });
 
   it("slider: 无 labelKey 时 cap 栈仍渲染 head + fallback/id 文案（视觉行为变化，结构已变）", () => {
@@ -537,7 +536,7 @@ describe("renderMenu 新 kind", () => {
     const row = container.querySelector('[data-testid="cap-bare-slider"]') as HTMLElement;
     // cap 栈 slider 恒有 head（label+当前值），slide-label 不再为 null
     expect(row.querySelector(".slide-label")).not.toBeNull();
-    expect(row.querySelector('input[type="range"]')).not.toBeNull();
+    expect(row.querySelector(".cs-bar")).not.toBeNull();
   });
 
   it("controls: 声明式节点直持 PreviewControlDef[]，委托 renderCapControls 渲染（cap-xxx testid）", () => {
@@ -571,7 +570,7 @@ describe("renderMenu 新 kind", () => {
     // cap 控件 testid 前缀 cap-（renderCapControls 口径；slider/toggle/select/button 有，
     // color/timeline/histogram/preset-thumb 为既有未覆盖，按输入类型断言）
     expect(container.querySelector('[data-testid="cap-light-intensity"]')).not.toBeNull();
-    expect(container.querySelector('input[type="range"]')).not.toBeNull();
+    expect(container.querySelector(".cs-bar")).not.toBeNull();
     expect(container.querySelector('input[type="color"]')).not.toBeNull();
   });
 

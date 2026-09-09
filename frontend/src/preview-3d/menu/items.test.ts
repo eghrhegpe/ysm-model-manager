@@ -473,7 +473,7 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
     handle.openPanel("camera");
     const popup = overlay.querySelector(".ysm-preview-menu") as HTMLElement;
     expect(popup.querySelector("select")).not.toBeNull();
-    expect(popup.querySelector('input[type="range"]')).not.toBeNull();
+    expect(popup.querySelector(".cs-bar")).not.toBeNull();
     handle.dispose();
   });
 
@@ -483,9 +483,9 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
     // 一级：cap 行（sky/ground）
     const skyRow = overlay.querySelector('[data-testid="preview-env-cap-sky"]') as HTMLElement;
     expect(skyRow).not.toBeNull();
-    // 二级：点行下钻 → 该 cap 参数页渲染 range 滑块（时间/云量）
+    // 二级：点行下钻 → 该 cap 参数页渲染自绘滑块（时间/云量）
     skyRow.click();
-    expect(overlay.querySelectorAll('input[type="range"]').length).toBeGreaterThanOrEqual(2);
+    expect(overlay.querySelectorAll(".cs-bar").length).toBeGreaterThanOrEqual(2);
     handle.dispose();
   });
 

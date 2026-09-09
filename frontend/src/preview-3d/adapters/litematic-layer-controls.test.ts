@@ -211,16 +211,16 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
   it("renderMenu 真渲染器：slider 显隐随切片模式（shell 闭包）变化（range+number 联动）", async () => {
     const { nodes } = await buildScene();
     // all：无滑条
-    expect(renderNodes(nodes).querySelectorAll('input[type="range"]').length).toBe(0);
+    expect(renderNodes(nodes).querySelectorAll(".cs-bar").length).toBe(0);
     // single：1 滑条 + 1 数字输入
     setMode(nodes, "single");
     let c = renderNodes(nodes);
-    expect(c.querySelectorAll('input[type="range"]').length).toBe(1);
+    expect(c.querySelectorAll(".cs-bar").length).toBe(1);
     expect(c.querySelectorAll('input[type="number"]').length).toBe(1);
     // range：2 滑条 + 2 数字输入（双滑块契约）
     setMode(nodes, "range");
     c = renderNodes(nodes);
-    expect(c.querySelectorAll('input[type="range"]').length).toBe(2);
+    expect(c.querySelectorAll(".cs-bar").length).toBe(2);
     expect(c.querySelectorAll('input[type="number"]').length).toBe(2);
   });
 
@@ -262,7 +262,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     const rebuilt = getSchema(sliceKey)!(previewSnapshot());
     const c2 = document.createElement("div");
     renderMenu(c2, rebuilt, deps);
-    expect(c2.querySelectorAll('input[type="range"]').length).toBe(1);
+    expect(c2.querySelectorAll(".cs-bar").length).toBe(1);
     expect(c2.querySelectorAll('input[type="number"]').length).toBe(1);
     // 轴 select 真实 change（闭包更新轴）→ 重建后 slider max 随轴（X 轴 sizeX=7）
     const axis = container.querySelector('[data-testid="cap-slice-axis"] select') as HTMLSelectElement;

@@ -168,3 +168,87 @@ describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉
     expect(setValue).toHaveBeenNthCalledWith(2, false);
   });
 });
+
+describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSliderRow 下沉）", () => {
+  function mkSlider(extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
+    return {
+      id: "s",
+      kind: "slider",
+      labelKey: "s",
+      fallback: "S",
+      getValue: () => 0.4,
+      setValue: () => {},
+      slider: { min: 0, max: 1, step: 0.01 },
+      ...extra,
+    };
+  }
+
+  it("渲染 .cs-bar + .cs-fill + .cs-thumb，role=slider + aria 带初始值，fill 宽度=值比例", () => {
+    const list = document.createElement("div");
+    renderCapControls(list, [mkSlider()]);
+    const row = list.querySelector('[data-testid="cap-s"]') as HTMLElement;
+    const bar = row.querySelector(".cs-bar") as HTMLElement;
+    expect(bar).not.toBeNull();
+    expect(bar.getAttribute("role")).toBe("slider");
+    expect(bar.getAttribute("aria-valuemin")).toBe("0");
+    expect(bar.getAttribute("aria-valuemax")).toBe("1");
+    expect(bar.getAttribute("aria-valuenow")).toBe("0.4");
+    const fill = row.querySelector(".cs-fill") as HTMLElement;
+    const thumb = row.querySelector(".cs-thumb") as HTMLElement;
+    expect(fill).not.toBeNull();
+    expect(thumb).not.toBeNull();
+    expect(fill.style.width).toBe("40%");
+    expect(thumb.style.left).toBe("40%");
+  });
+
+  it("键盘 ←→ 步进：更新值 + setValue + onChange + aria-valuenow", () => {
+    let val = 0;
+    const setValue = vi.fn((v: unknown) => { val = Number(v); });
+    const onChange = vi.fn();
+    const list = document.createElement("div");
+    renderCapControls(list, [mkSlider({
+      getValue: () => val,
+      setValue,
+      onChange,
+      slider: { min: 0, max: 10, step: 1 },
+    })]);
+    const bar = list.querySelector('[data-testid="cap-s"] .cs-bar') as HTMLElement;
+    bar.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(val).toBe(1);
+    expect(setValue).toHaveBeenCalledWith(1);
+    expect(onChange).toHaveBeenCalledWith(1);
+    expect(bar.getAttribute("aria-valuenow")).toBe("1");
+  });
+
+  it("单击轨道跳转触发 onChange + onCommit（对齐原生 range change 语义）", () => {
+    const onChange = vi.fn();
+    const onCommit = vi.fn();
+    const list = document.createElement("div");
+    renderCapControls(list, [mkSlider({
+      getValue: () => 0,
+      setValue: () => {},
+      onChange,
+      slider: { min: 0, max: 10, step: 1, onCommit },
+    })]);
+    const bar = list.querySelector('[data-testid="cap-s"] .cs-bar') as HTMLElement;
+    // mock rect 后 click 50% 位置 → 值 5
+    Object.defineProperty(bar, "getBoundingClientRect", {
+      value: () => ({ left: 0, width: 200, right: 200, top: 0, bottom: 20, height: 20, x: 0, y: 0 }),
+      configurable: true,
+    });
+    bar.dispatchEvent(new MouseEvent("click", { clientX: 100, bubbles: true }));
+    expect(onChange).toHaveBeenCalledWith(5);
+    expect(onCommit).toHaveBeenCalledWith(5);
+  });
+
+  it("unit='%' 时值显示百分比（formatCapSliderValue 联动）", () => {
+    const list = document.createElement("div");
+    renderCapControls(list, [mkSlider({
+      getValue: () => 0.42,
+      slider: { min: 0, max: 1, step: 0.05, unit: "%" },
+    })]);
+    const row = list.querySelector('[data-testid="cap-s"]') as HTMLElement;
+    const val = row.querySelector(".cc-head span:last-child") as HTMLElement;
+    expect(val.textContent).toBe("42%");
+  });
+});

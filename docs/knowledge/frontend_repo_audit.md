@@ -1394,7 +1394,6 @@ auto_fields:
     - WailsAndroidBridge
     - waitFor
     - waitForElementToBeRemoved
-    - warnedKeys
     - WasdReuse
     - WasmModuleLike
     - WaterCapability

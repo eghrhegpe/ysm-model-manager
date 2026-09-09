@@ -29,7 +29,7 @@
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 
 ### `src/core` 准入准则（ADR-189 D4）
-- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层与 DOM 原语层（features/views/backend/utils/dom 一律禁止；`utils/base` 零依赖纯函数层允许——core 现状仅依赖其 log/storage，依赖方向只许别人引它，check-layering R0 机制兜底）；③无 Wails 也能单测。
+- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层与 DOM 原语层（features/views/backend/utils/dom 一律禁止；`utils/base` 零依赖纯函数层允许——core 现状依赖 utils/base 的 log/storage、@/bus 及 @/locales/*（类型源），依赖方向只许别人引它，check-layering R0 机制兜底）；③无 Wails 也能单测。
 - 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，pre-commit 有 `check-redlines` 兜底）。
 - DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/`（原 `utils/core/`，勿再新建同名目录）。
 
@@ -42,7 +42,7 @@
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
-- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`（typecheck 与 vite build 同 cwd=frontend，勿在根目录跑 `tsc`，根无对应 script），失败就修到绿；前端改动再补 `node scripts/check-biome.ts`（biome 增量闸门）复查格式化。
+- 先写测试（TS/mjs/Go），再写实现；改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`（typecheck 与 vite build 同 cwd=frontend，勿在根目录跑 `tsc`，根无对应 script），失败就修到绿；前端改动再补 `node scripts/check-biome.ts --files <改动文件...>`（biome 增量闸门，须显式点名——`--changed` 默认模式在 main 直提下恒空转）复查格式化。
 - 连续改同一文件时自下而上，避免行号漂移。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。
 
@@ -68,7 +68,7 @@ git checkout -- <file>              # 精确恢复单文件（进入提交阶段
 git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（你真的需要用的这个指令吗，几乎不可能需要吧，禁止对无害改动使用）
 ```
 
-- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts`（biome 增量闸门）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
+- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts --files <改动文件...>`（biome 增量闸门，须显式点名）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
 - 不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
@@ -102,7 +102,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 |------|------|
 | `doctor` | 全量闸门（`--docs` 文档轻量版） |
 | `commit-with-check` | 验证 + 提交一体，按 staged 文件裁剪门禁 |
-| `check-biome` | biome 增量闸门：`node scripts/check-biome.ts`（M 状态请裸跑 biome 或等 pre-commit --files）；`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`）能清除债务就用这个清除，禁止回退 |
+| `check-biome` | biome 增量闸门：**必须显式点名** `node scripts/check-biome.ts --files <改动文件...>` 或裸跑 `npx biome check <files>`——无参/`--strict` 的 `--changed` 默认模式在 main 直提工作流下恒空转（三点 diff `main...HEAD` 恒空，实测恒绿），push 门禁里该闸是摆设；真正防线 = pre-commit 行级闸 `check-biome-lines`（拦「本次提交新增违规行」）。`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`）；能清除债务就用这个清除，禁止回退 |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |
@@ -137,7 +137,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 ```bash
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
-node scripts/check-biome.ts                           # biome 增量闸门（--write 自动修复；全量存量 errors 以相对 main 变更文件为准）
+node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 cli.go）
 for f in tests/*.ts; do node "$f"; done     # 契约测试
 node scripts/doctor.ts --docs               # 只改文档时（秒级）

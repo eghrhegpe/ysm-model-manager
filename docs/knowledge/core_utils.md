@@ -25,6 +25,7 @@ auto_fields:
     - safeRemove
     - safeSet
     - setLogSink
+    - stripAppErrorPaths
     - swallowError
     - withLock
 quick_groups:

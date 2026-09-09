@@ -30,7 +30,7 @@ auto_fields:
     - SUPPORTED_LANGS
     - trapFocus
     - VIEW_TESTIDS
-    - warnedKeys
+    - warnMissingKey
     - webStoreBindings
     - withCached
 use_when:

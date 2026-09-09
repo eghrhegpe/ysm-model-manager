@@ -194,8 +194,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| setLang | `frontend/src/core/i18n/locale.ts` | 128 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 177 |
+| setLang | `frontend/src/core/i18n/locale.ts` | 134 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 183 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -522,9 +522,9 @@
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
-| show | `frontend/src/views/app-toast/index.ts` | 135 |
-| show | `frontend/src/views/app-toast/index.ts` | 154 |
-| show | `frontend/src/views/app-toast/index.ts` | 163 |
+| show | `frontend/src/views/app-toast/index.ts` | 136 |
+| show | `frontend/src/views/app-toast/index.ts` | 155 |
+| show | `frontend/src/views/app-toast/index.ts` | 164 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 84 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 120 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 144 |
@@ -577,8 +577,8 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| logUiMsg | `frontend/src/core/error-diary.ts` | 102 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 70 |
+| logUiMsg | `frontend/src/core/error-diary.ts` | 105 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 71 |
 
 ### `tree:reload`
 

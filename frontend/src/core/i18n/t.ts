@@ -1,6 +1,6 @@
 // ===== i18n 翻译函数（ADR-045）=====
 // 纯查表 + 插值，语言包缓存与缺失告警状态由 locale.ts 管理（避免循环依赖）。
-// 类型化（ADR-189 锐评整改）：t 收窄 key 为 LocaleKey（zh-CN 基准包 key 联合），
+// 类型化：t 收窄 key 为 LocaleKey（zh-CN 基准包 key 联合），
 // 拼错 key 编译期报错——三语言包 key 集严格一致（locales-consistency 测试保证），
 // zh-CN 作单一类型源。
 // 双入口（ADR-207 D3）：t（严格字面量 key）/ tOf（string 版，动态 key）——

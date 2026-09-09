@@ -127,7 +127,7 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     // 部分注册失败 → 整体回滚；返回空 handle 且**不占位 currentHandle**——
     // 若 fall-through 到下方 currentHandle = handle，僵尸（disposed）句柄会让后续
     // registerErrorDiary 恒返回 no-op、unregisterErrorDiary 也清不掉（dispose 早退），
-    // 模块永久静默失效（二轮锐评 P1：回滚后可重试是注释契约，必须兑现）
+    // 模块永久静默失效：回滚后保证可重试是必须兑现的契约——否则僵尸句柄令后续注册恒 no-op、注销也清不掉
     dispose();
     console.warn("[error-diary] 注册失败（已回滚，可重试）:", e);
     return { dispose() {} };

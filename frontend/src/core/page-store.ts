@@ -1,8 +1,6 @@
 // ===== 页面导航纯函数（类型化 — ADR-014 P3）=====
 // 本模块只提供共享纯函数：页面名合法性守卫（isValidPage）与启动初始页解析（resolveInitialPage）。
 // 导航事实由事件总线（bus "nav:changed"）承载，组件各自响应；本模块不持有状态、不镜像。
-// 历史：原 PageStore 状态机（模块级 currentPage + registerPageStore listener）经 ADR-209 移除——
-// 其为写-only 孤儿（生产零读取），且 bus 已是导航事实源，再镜像属冗余。详见 ADR-209。
 import type { PageName } from "@/bus";
 import { safeGet } from "@/utils/base/storage.ts";
 

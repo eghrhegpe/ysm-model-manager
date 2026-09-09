@@ -2,7 +2,6 @@
 // tryFetchModels + 进度条
 
 import { hasRecycleSegment } from "@/utils/base/pure/recycle-path.ts";
-import { esc } from "@/utils/html/html.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
@@ -14,10 +13,10 @@ export function showProgress(searchResults: HTMLElement, pct: number, label?: st
   // P3 修复（审核发现）：pct 无钳制会输出 width:"NaN%"/"150%"/"-5%"——
   // 数值守卫范式（AGENTS §3.4 ②）拦截非有限值并钳制到 [0,100]
   const clamped = Number.isFinite(pct) ? Math.min(100, Math.max(0, Math.round(pct))) : 0;
-  // P3 修复（审核发现）：label 未经转义直接拼入 innerHTML——当前调用方
-  // 全部使用硬编码字符串（无 XSS 风险），但函数是 export 的公共 API，
-  // 未来若传入用户可控数据即构成 XSS；统一转义（硬编码字符串转义无副作用）
-  const safeLabel = esc(label || "");
+  // XSS 防线：本函数已 DOM 化（textContent 注入安全 by construction），
+  // 不再需要 esc——esc 产物喂 textContent 反而双重转义（"A & B" 显示成
+  // "A &amp; B"，code_review 5f7027748 P2）。若未来改回 innerHTML 拼接，
+  // 必须恢复 esc。
 
   const box = document.createElement("div");
   box.className = "gh-progress-box";
@@ -29,8 +28,10 @@ export function showProgress(searchResults: HTMLElement, pct: number, label?: st
   spin.textContent = "⏳";
   const text = document.createElement("span");
   text.className = "gh-progress-text";
-  text.textContent = safeLabel;
-  labelRow.append(spin, text);
+  text.textContent = label || "";
+  // 图标与文本间的分隔空格：旧 innerHTML 拼接自带 "⏳ "，DOM 化后需
+  // 显式补回（.gh-progress-label 无 flex/gap，空格是唯一间距）
+  labelRow.append(spin, document.createTextNode(" "), text);
   box.appendChild(labelRow);
 
   const track = document.createElement("div");

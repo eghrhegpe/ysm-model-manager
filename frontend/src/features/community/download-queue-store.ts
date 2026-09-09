@@ -152,7 +152,10 @@ export function getStateSnapshot(): Readonly<DownloadState> {
   return {
     ...STATE,
     progress: { ...STATE.progress },
-    errorList: [...STATE.errorList],
+    // QueueError 元素也需逐个浅拷贝：[...arr] 只拷数组壳，元素对象仍与
+    // STATE 共享——快照持有者改 errorList[0].err 会静默污染活状态
+    // （code_review 5f7027748 P3）
+    errorList: STATE.errorList.map((e) => ({ ...e })),
     _lastDone: STATE._lastDone ? { ...STATE._lastDone } : null,
   };
 }

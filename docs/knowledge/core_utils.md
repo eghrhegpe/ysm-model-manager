@@ -20,6 +20,7 @@ auto_fields:
     - createListenerSet
     - debounce
     - Disposable
+    - extractPlaceholders
     - formatLongTask
     - GH_DOCS
     - GH_RELEASES
@@ -33,6 +34,7 @@ auto_fields:
     - logWarn
     - LongTaskInfo
     - moveItemMut
+    - PLACEHOLDER_RE
     - safeErrorMessage
     - safeGet
     - safeGetJSON

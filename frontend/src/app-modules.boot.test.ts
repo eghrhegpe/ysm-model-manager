@@ -22,7 +22,7 @@ vi.setConfig({ testTimeout: 20000 });
 
 // ── hoisted mock 池（vi.mock factory 只能引用 hoisted 变量）──
 const m = vi.hoisted(() => ({
-  registerErrorDiary: vi.fn(() => ({ dispose: vi.fn() })),
+  registerErrorDiary: vi.fn(() => ({ taken: true, dispose: vi.fn() })),
   registerCoiServiceWorker: vi.fn(),
   prefetchStatsWorker: vi.fn(),
   initI18n: vi.fn(),

@@ -103,7 +103,11 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
         tag: "error-diary",
         failMsg: "错误日志注册失败:",
         run: () => {
-          registerErrorDiary(makeDiarySink());
+          // taken=false → 已有先前注册占位（装配层bug），sink 未生效，留痕告警
+          const diaryHandle = registerErrorDiary(makeDiarySink());
+          if (!diaryHandle.taken) {
+            console.warn("[module] error-diary 注册未接管（已有先前注册？sink 未生效）");
+          }
           installGlobalErrorListeners();
         },
       },

@@ -18,6 +18,8 @@ export interface DiaryEntry {
 export type DiarySink = (entry: DiaryEntry) => void;
 
 export interface DiaryHandle {
+  /** 本次注册是否实际接管了 sink（false = 已被先前注册占位 / 注册失败，dispose 为 no-op） */
+  readonly taken: boolean;
   dispose(): void;
 }
 
@@ -60,30 +62,15 @@ export function pushToDiary(msg: string, status: DiaryStatus): void {
 }
 
 export function registerErrorDiary(sink: DiarySink): DiaryHandle {
-  // 幂等：已注册则返回空 handle（dispose 为 no-op）
-  if (currentHandle) return { dispose() {} };
+  // 幂等：已注册则返回「未接管」句柄（taken=false 可区分「本人 sink 未生效」，不再静默 no-op）
+  if (currentHandle) return { taken: false, dispose() {} };
   if (typeof sink !== "function") {
     throw new TypeError("registerErrorDiary: sink 必须为函数");
   }
 
   // ── 闭包状态（registerErrorDiary 调用间隔离；重注册即重置去重窗口）──
   const dedupAt = new Map<string, number>();
-  let unsubToast: (() => void) | undefined;
-  let logSinkInstalled = false;
   let disposed = false;
-
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    unsubToast?.();
-    unsubToast = undefined;
-    if (logSinkInstalled) {
-      setLogSink(null);
-      logSinkInstalled = false;
-    }
-    currentPush = null;
-    currentHandle = null;
-  };
 
   function logUiMsg(msg: string, status: DiaryStatus): void {
     // 净化：剥 ❌/⚠️ 前缀（含 U+FE0F 变体选择器）+ 剥 Go AppError 内部路径段（ADR-051）+ 截断
@@ -116,10 +103,12 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     }
   }
 
+  // ── 挂载副作用（可能失败）──
+  // 全部成功后才提交 currentPush / currentHandle（见下），故部分失败时无僵尸句柄占用槽位——
+  // currentHandle 未赋值则后续注册不被短路，可安全重试（不再需要 dispose 整体回滚）。
+  let unsubToast: (() => void) | undefined;
+  let logSinkInstalled = false;
   try {
-    // 收口入口：window 监听层（utils/dom/global-error-listeners.ts）经 pushToDiary 注入本策略
-    currentPush = logUiMsg;
-
     // 1. error/warn toast → 日记
     unsubToast = bus.on("toast:show", (p: ToastPayload) => {
       if (p.type !== "error" && p.type !== "warn") return;
@@ -136,15 +125,32 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
     });
     logSinkInstalled = true;
   } catch (e) {
-    // 部分注册失败 → 整体回滚，返回空 handle 且不占位 currentHandle：
-    // 僵尸（disposed）句柄会令后续注册恒 no-op、注销也清不掉，模块永久静默失效——
-    // 回滚后可重试是必须兑现的契约
-    dispose();
+    // 部分挂载失败 → 拆除已挂载项；currentHandle 尚未赋值，无僵尸风险，可重试
+    unsubToast?.();
+    if (logSinkInstalled) {
+      setLogSink(null);
+      logSinkInstalled = false;
+    }
     console.warn("[error-diary] 注册失败（已回滚，可重试）:", e);
-    return { dispose() {} };
+    return { taken: false, dispose() {} };
   }
 
-  const handle: DiaryHandle = { dispose };
+  // ── 全部成功后才提交：赋值即生效（此前 pushToDiary 走未注册态告警，不会误收）──
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    unsubToast?.();
+    unsubToast = undefined;
+    if (logSinkInstalled) {
+      setLogSink(null);
+      logSinkInstalled = false;
+    }
+    currentPush = null;
+    currentHandle = null;
+  };
+
+  currentPush = logUiMsg;
+  const handle: DiaryHandle = { taken: true, dispose };
   currentHandle = handle;
   pushUnregisteredWarned = false; // 注册成功复位失活告警：再卸载-未注册可重新告警（ADR-210 D5）
   return handle;

@@ -123,10 +123,13 @@ describe("registerErrorDiary", () => {
     });
   });
 
-  it("registerErrorDiary is idempotent", async () => {
-    registerErrorDiary(sinkSpy);
-    registerErrorDiary(sinkSpy);
-    registerErrorDiary(sinkSpy);
+  it("registerErrorDiary is idempotent（首次 taken，后续未接管）", async () => {
+    const h1 = registerErrorDiary(sinkSpy);
+    const h2 = registerErrorDiary(sinkSpy);
+    const h3 = registerErrorDiary(sinkSpy);
+    expect(h1.taken).toBe(true);
+    expect(h2.taken).toBe(false);
+    expect(h3.taken).toBe(false);
     bus.emit("toast:show", { msg: "❌ 错误", duration: 3000, type: "error" });
     await flushPromises();
     // 只注册一次，所以只落一次
@@ -235,16 +238,18 @@ describe("registerErrorDiary", () => {
     }
   });
 
-  it("注册失败回滚后重注册可恢复（僵尸 handle 不占位——bus.on 抛错场景）", async () => {
+  it("注册失败回滚后重注册可恢复（失败 taken=false，不占位——bus.on 抛错场景）", async () => {
     const onSpy = vi.spyOn(bus, "on").mockImplementation(() => {
       throw new Error("bus boom");
     });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const failedHandle = registerErrorDiary(sinkSpy);
+    expect(failedHandle.taken).toBe(false); // 失败 = 未接管（不再静默 no-op）
     failedHandle.dispose(); // 调用方按句柄契约清理（失败时本就 no-op）
     onSpy.mockRestore();
-    // 回滚后 currentHandle 必须为空 → 重注册真正生效（缺陷态：僵尸 handle 占位 → 永久静默失效）
-    registerErrorDiary(sinkSpy);
+    // 失败后 currentHandle 未赋值（结构上不可能占位）→ 重注册真正生效
+    const okHandle = registerErrorDiary(sinkSpy);
+    expect(okHandle.taken).toBe(true);
     bus.emit("toast:show", { msg: "❌ 注册失败后可恢复", duration: 3000, type: "error" });
     await flushPromises();
     expect(sinkSpy).toHaveBeenCalledTimes(1);
@@ -268,9 +273,11 @@ describe("registerErrorDiary", () => {
     expect(sinkSpy).not.toHaveBeenCalled();
   });
 
-  it("registerErrorDiary 幂等：第二次返回空 handle，dispose 不影响第一次", async () => {
+  it("registerErrorDiary 幂等：第二次 taken=false（未接管），dispose 不影响第一次", async () => {
     const handle1 = registerErrorDiary(sinkSpy);
     const handle2 = registerErrorDiary(sinkSpy);
+    expect(handle1.taken).toBe(true);
+    expect(handle2.taken).toBe(false); // 幂等重复 = 未接管，可区分
     handle2.dispose(); // 空操作，不影响第一次注册
     bus.emit("toast:show", { msg: "❌ 仍应落盘", duration: 3000, type: "error" });
     await flushPromises();

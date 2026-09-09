@@ -3,11 +3,12 @@
 // 但不搬其菜单导航引擎（registry/schema/stack 等业务层）——而是在外壳层提供一组【轻量导航栈】能力
 // （home/navigate/back/refresh/isShowing/reset/isAtRoot），供调用方以最小成本组织多级菜单
 // （例如 YSM 的「模型信息 → 表情 / 切换模型」两级）。外壳仍是卡片视觉 + 标题栏 + 关闭/返回按钮，
-// 内容由调用方经视图（SlideMenuView.render）注入，通常填 🥉 行组件：slideRow/addCollapsible/...。
+// 内容由调用方经视图（SlideMenuView.render）注入——生产内容 = preview-3d/menu 的 renderMenu
+// 分派产物（MenuNode schema 声明式：folder 折叠组 / row 行动态行 / cap 栈控件）。
 //
 // 解耦要点：
 //  - 关闭/返回按钮用字面量 glyph（根级 ✕，子集 ←），不依赖 iconify 运行时；
-//  - 外壳恒含 🥉 行组件，故安装外壳样式时一并安装 ui-components 样式；
+//  - 外壳恒含行级组件样式（.slide-item/.cs-bar 等），故安装外壳样式时一并安装 ui-components 样式；
 //  - 零业务依赖，可被任意预览/面板复用；
 //  - 向后兼容：不调用 home/navigate 的调用方（直接操作 menu.list）行为不变——
 //    此时导航栈为空，slide-back 在根级仍触发 onClose（即关闭）。
@@ -164,7 +165,8 @@ function smRenderTop(
   if (!top) return;
 
   // 刷新前记住焦点位置（索引），刷新后恢复
-  const focusedIdx = Array.from(list.children).findIndex((el) => el === document.activeElement);
+  const active = document.activeElement;
+  const focusedIdx = active ? Array.from(list.children).indexOf(active) : -1;
 
   list.innerHTML = "";
   title.textContent = top.title;

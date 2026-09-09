@@ -1,6 +1,8 @@
 // [doc:architecture] ui-slider-controller — 统一滑块输入控制器
 // 封装 mousedown→mousemove→mouseup 拖拽、键盘方向键步进、游标点击跳转逻辑。
-// 供 addSliderRow / addColorSliderRow / addVector3SliderRow / addModeSlider 共用。
+// 供 cap 栈 renderCapSlider（preview-3d/menu/cap-controls.ts，生产唯一消费方）使用。
+// 历史注：原设计供 ui-rows addSliderRow 族共用，该族已随拔管删除（旧世界命令式行 builder，
+// 被 MenuNode schema 声明式路线取代）——控制器与 cs-bar 样式作为能力叶保留并被 cap 栈接上。
 // 自 MikuMikuAR 迁移：依赖改为 utils/base 下的 disposable 与 clamp。
 
 import { clamp01 } from "@/utils/base/clamp.ts";

@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-208：features 层治理收口：seam 门禁 / 400 行红线 / 菜单事实源 / i18n",
+        "link": "/adr/ADR-208-features-governance"
+      },
+      {
         "text": "ADR-207：frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫",
         "link": "/adr/ADR-207-core-sharp-review-remediation"
       },

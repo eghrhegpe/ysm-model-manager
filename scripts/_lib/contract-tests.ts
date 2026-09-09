@@ -346,19 +346,25 @@ function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
   return new Promise((resolve) => {
     // 注意：spawn 的 SpawnOptions 无 maxBuffer（那是 execFileSync 的选项），
     // 传了会让 TS overload 解析失败返回 never——stdout/stderr 用流式 chunk 累积即可。
-    const proc = spawn(process.execPath, [path.join("tests", file)], {
-      cwd: ROOT,
-      // --import 注入 @/#root 别名运行时解析（tsconfig paths 白名单，alias-resolve.ts
-      // 单一事实源）：Node 原生 TS 执行不解析 tsconfig paths，tests 的 import 链一旦
-      // 进入含 @/ 别名 import 的 frontend 源码即 ERR_MODULE_NOT_FOUND（首例 a1e76940b
-      // cube-mesh.ts → @/preview-3d/model/*，阻断 pre-push）。相对路径说明符（./、../）
-      // 与裸包名经 resolver 原样透传，零行为变更。护栏：test_contract_alias_runtime.ts。
-      execArgv: [
+    // --import 注入 @/#root 别名运行时解析（tsconfig paths 白名单，alias-resolve.ts
+    // 单一事实源）：Node 原生 TS 执行不解析 tsconfig paths，tests 的 import 链一旦
+    // 进入含 @/ 别名 import 的 frontend 源码即 ERR_MODULE_NOT_FOUND（首例 a1e76940b
+    // cube-mesh.ts → @/preview-3d/model/*，阻断 pre-push）。相对路径说明符（./、../）
+    // 与裸包名经 resolver 原样透传，零行为变更。护栏：test_contract_alias_runtime.ts。
+    // 走 node CLI flag（非 spawn options.execArgv——@types/node 26 的 SpawnOptions 重载
+    // 不收该字段，CLI 形态零类型摩擦）。
+    const proc = spawn(
+      process.execPath,
+      [
         "--import",
         pathToFileURL(path.join(ROOT, "scripts", "_lib", "ts-alias-register.ts")).href,
+        path.join("tests", file),
       ],
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+      {
+        cwd: ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
     const chunks: Buffer[] = [];
     proc.stdout?.on("data", (c: Buffer) => chunks.push(c));
     proc.stderr?.on("data", (c: Buffer) => chunks.push(c));
@@ -386,7 +392,9 @@ async function runTest(file: string): Promise<SpawnOnceResult> {
     }
     return r;
   }
-  return last!;
+  // 循环要么 return r 要么 continue（last 被赋值）；耗尽仍无 last = 逻辑不可达。
+  if (!last) throw new Error("[contract-tests] spawn 重试循环退出却无结果（不可达路径防御）");
+  return last;
 }
 
 /**
@@ -409,7 +417,9 @@ export async function runContractTestsParallel(files?: string[]) {
   const workers = Array.from({ length: Math.min(CONCURRENCY, testFiles.length) }, async () => {
     while (cursor < testFiles.length) {
       const i = cursor++;
-      results[i] = await runOne(testFiles[i]!);
+      const f = testFiles[i];
+      if (f === undefined) break; // cursor < length 前置保证 i 有效，此处仅为 TS 收窄
+      results[i] = await runOne(f);
     }
   });
   await Promise.all(workers);

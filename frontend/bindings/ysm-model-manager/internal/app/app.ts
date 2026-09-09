@@ -288,11 +288,11 @@ export function EnsureStorageDirs(): $CancellablePromise<void> {
 /**
  * ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定）
  * 
- * # GUI→CLI 参数链路（ADR-173 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
+ * # GUI→CLI 参数链路（ADR-173 + ADR-199 落地后：规格单一事实源在 go/cli 注册表，本注释不再承担契约）
  * 
  * 	frontend cli-bridge.executeCLI → buildArgsMap（Record<string,string|number|boolean>）
  * 	→ Wails map[string]interface{}（JSON 序列化过桥，数值一律 float64）
- * 	→ 本函数转 []string → os/exec 子进程 <exe> --cli <args> --json
+ * 	→ 本函数转 []string → cli.RunCLIInProcess(a, appCtx, args) 进程内直调（ADR-199，零自 fork）
  * 	→ go/cli ParseCommandArgs 剥离全局参数（--files-root/--json）
  * 	→ 各命令内部 flag.FlagSet 解析（go/cli/registry.go 注册）
  * 
@@ -736,7 +736,7 @@ export function LoadGitHubRepos(): $CancellablePromise<types$0.WorkshopCreator[]
 }
 
 /**
- * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/typereg.LoadRegistry）
+ * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types/registry.LoadRegistry）
  */
 export function LoadResourceTypes(): $CancellablePromise<registry$0.ResourceTypeRegistry | null> {
     return $Call.ByID(3636552016);
@@ -1205,6 +1205,15 @@ export function SetAllowedCommands(cmds: string[] | null): $CancellablePromise<v
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(2864115508, app);
+}
+
+/**
+ * SetCLIInProcessRunner 注入进程内 CLI 执行器（main.go 在装配期调用，
+ * 把 cli.RunCLIInProcess 包一层 *App→cli.AppService 的适配后传入）。
+ * 未注入时 ExecuteCLI 不再退化到 os/exec 自 fork，而是返回显式错误响应。
+ */
+export function SetCLIInProcessRunner(runner: $models.CLIInProcessRunner): $CancellablePromise<void> {
+    return $Call.ByID(847517909, runner);
 }
 
 export function SetDownloadMirror(mirror: string): $CancellablePromise<void> {

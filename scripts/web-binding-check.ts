@@ -2,7 +2,7 @@
 /**
  * web binding 契约检查（backend 适配层的 CI 闸补全）。
  *
- * 背景：browser-adapter.ts 的 webImpls 与 Go internal/app 导出的 Wails binding
+ * 设计意图（为何存在/适用场景）：browser-adapter.ts 的 webImpls 与 Go internal/app 导出的 Wails binding
  * 之间曾经零类型契约——Go 改签名 / 删 binding 后，web 实现静默漂移，只有用户
  * 点到了才抛 WebUnsupportedError。browser-adapter.ts 已用
  * `satisfies Partial<GoBindingShape>` 在编译期拦「键名拼写错 / Go 删 binding 后
@@ -17,6 +17,8 @@
  *   node scripts/web-binding-check.ts              # 报告
  *   node scripts/web-binding-check.ts --json      # JSON
  *   node scripts/web-binding-check.ts --fail-on-orphan
+ *
+ * 依赖：外部依赖 ./_lib/scan-files.ts（仅取 ROOT 常量）；标准库 node:fs / node:path。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -39,19 +41,15 @@ function scanGoBindings(): Set<string> {
   const set = new Set<string>();
   for (const f of listGoFiles()) {
     const s = fs.readFileSync(path.join(GO_DIR, f), "utf-8");
-    for (const m of s.matchAll(/^func \(a \*App\) ([A-Z]\w+)\(/gm)) set.add(m[1]);
+    for (const m of s.matchAll(/^func \(a \*App\) ([A-Z]\w+)\(/gm)) {
+      if (m[1]) set.add(m[1]);
+    }
   }
   return set;
 }
 
 // ── web 实现侧 binding ──
-const WEB_FILES = [
-  "web-common.ts",
-  "web-fs.ts",
-  "web-store.ts",
-  "web-community.ts",
-  "web-cli.ts",
-];
+const WEB_FILES = ["web-common.ts", "web-fs.ts", "web-store.ts", "web-community.ts", "web-cli.ts"];
 const WEB_DIR = path.join(ROOT, "frontend/src/backend");
 function scanWebBindings(): Set<string> {
   const set = new Set<string>();
@@ -62,7 +60,9 @@ function scanWebBindings(): Set<string> {
     const i = s.indexOf("Bindings = {");
     if (i < 0) continue;
     const seg = s.slice(i);
-    for (const m of seg.matchAll(/^\s{2}([A-Z]\w*):/gm)) set.add(m[1]);
+    for (const m of seg.matchAll(/^\s{2}([A-Z]\w*):/gm)) {
+      if (m[1]) set.add(m[1]);
+    }
   }
   return set;
 }
@@ -104,7 +104,9 @@ function main(): number {
     console.log(`web 专属扩展键        : ${webOnly.length}  [${webOnly.join(", ")}]`);
     console.log(`真·孤儿键             : ${orphans.length}  [${orphans.join(", ")}]`);
     if (unimplemented.length) {
-      console.log("\n-- 未实现 binding（网页版功能子集，设计预期；新增 Go binding 时建议评估是否补 web 实现）--");
+      console.log(
+        "\n-- 未实现 binding（网页版功能子集，设计预期；新增 Go binding 时建议评估是否补 web 实现）--",
+      );
       console.log(unimplemented.join("\n"));
     }
     if (orphans.length) {

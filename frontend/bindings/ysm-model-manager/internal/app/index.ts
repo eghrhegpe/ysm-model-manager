@@ -7,6 +7,7 @@ export {
 };
 
 export type {
+    CLIInProcessRunner,
     CachedTextureResult,
     CommandSpecDTO,
     ParamSpecDTO,

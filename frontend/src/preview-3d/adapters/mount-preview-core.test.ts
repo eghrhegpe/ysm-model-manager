@@ -131,6 +131,10 @@ vi.mock("./input-and-animation.ts", () => ({
 vi.mock("../../../utils/dom/focus-restore.ts", () => ({
   rememberTrigger: vi.fn(),
   returnFocus: vi.fn(),
+}));
+// trapFocusAcrossShadow 已迁至独立模块（685252fd3），生产 import 改指新路径——
+// mock 必须跟随，否则 mount 测试跑真实现（document keydown + MutationObserver 跨用例泄漏）
+vi.mock("../../../utils/dom/trap-focus-across-shadow.ts", () => ({
   trapFocusAcrossShadow: vi.fn(() => vi.fn()),
 }));
 vi.mock("@/preview-3d/frustum-cull.ts", () => ({

@@ -2,7 +2,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { createSlideMenu, type SlideMenuView } from "./ui-slide-menu.ts";
-import * as focusRestore from "@/utils/dom/input-block-stack.ts";
+import * as inputBlockStack from "@/utils/dom/input-block-stack.ts";
 
 /** 真实场景 menu.root 会被挂进 DOM（preview-menu/core.ts：popup.appendChild(menu.root)）；
  *  未连接的元素 focus() 在 happy-dom 无效（activeElement 停在 BODY）——测试必须挂载。 */
@@ -589,28 +589,28 @@ describe("createSlideMenu onShow/onHide", () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     // 清空模块级输入阻断栈残留（上一个测试 push 未 pop 会污染本测试）
-    while (focusRestore.isInputBlocked()) focusRestore.popInputBlock("slide-menu");
+    while (inputBlockStack.isInputBlocked()) inputBlockStack.popInputBlock("slide-menu");
   });
 
   it("onShow：push 输入阻断栈（isInputBlocked → true）", () => {
-    const pushSpy = vi.spyOn(focusRestore, "pushInputBlock");
+    const pushSpy = vi.spyOn(inputBlockStack, "pushInputBlock");
     const h = mountMenu();
     h.home(makeView("t"));
-    expect(focusRestore.isInputBlocked()).toBe(false);
+    expect(inputBlockStack.isInputBlocked()).toBe(false);
     h.onShow();
     expect(pushSpy).toHaveBeenCalledWith("slide-menu");
-    expect(focusRestore.isInputBlocked()).toBe(true);
+    expect(inputBlockStack.isInputBlocked()).toBe(true);
   });
 
   it("onHide：pop 输入阻断栈（isInputBlocked → false）", () => {
-    const popSpy = vi.spyOn(focusRestore, "popInputBlock");
+    const popSpy = vi.spyOn(inputBlockStack, "popInputBlock");
     const h = mountMenu();
     h.home(makeView("t"));
     h.onShow();
-    expect(focusRestore.isInputBlocked()).toBe(true);
+    expect(inputBlockStack.isInputBlocked()).toBe(true);
     h.onHide();
     expect(popSpy).toHaveBeenCalledWith("slide-menu");
-    expect(focusRestore.isInputBlocked()).toBe(false);
+    expect(inputBlockStack.isInputBlocked()).toBe(false);
   });
 
   it("onShow 记住触发元素 → onHide 把焦点还给触发元素", () => {

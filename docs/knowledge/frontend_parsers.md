@@ -20,7 +20,6 @@ tests:
   - frontend/src/parsers/ysm-header.test.ts
 auto_fields:
   symbols_with_lines:
-    - decodeVoxelNbt
     - detectContainerType
     - emptyYsmHeader
     - emptyYsmSummary
@@ -31,7 +30,6 @@ auto_fields:
     - litematicMetaView
     - mapColor
     - nbtStructureView
-    - nbtVoxelView
     - packPngToThumbnail
     - parseNbtRoot
     - parseNbtRootExact
@@ -41,7 +39,6 @@ auto_fields:
     - parseZipCentralDir
     - resolveBlockName
     - schematicSummaryView
-    - schematicVoxelView
     - YsmHeaderShape
     - YsmSummaryShape
     - ZipEntryMeta

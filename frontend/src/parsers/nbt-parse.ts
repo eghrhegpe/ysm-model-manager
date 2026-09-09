@@ -43,6 +43,8 @@ const MAX_NBT_BYTES = 100 << 20;
  * 合法 NBT 元数据通常 < 10MB；ISIZE ≥ MAX_NBT_BYTES 直接拒收，
  * 避免 gunzipSync 把 100MB 压缩数据膨胀到 TB 级再被事后校验拦住（时序缺陷）。
  * 注意：ISIZE 是模 2^32 的低位，真实值可能更大，但 ≥ MAX_NBT_BYTES 已足够拒收炸弹。
+ * 极小概率误杀：真实值 < MAX_NBT_BYTES 但模 2^32 后 ≥ MAX_NBT_BYTES（文件需 > 4GB），
+ * 接受此 trade-off（NBT 元数据不可能达 GB 级）。
  */
 function gzipIsizedUpperBound(bytes: Uint8Array): number | null {
   if (bytes.length < 8) return null; // gzip footer 至少 8 字节（4 ISIZE + 4 CRC32）
@@ -303,7 +305,7 @@ export function parseNbtRootExact(bytes: Uint8Array): Record<string, unknown> {
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
 }
 
-// ===== 类型守卫（isObj/asString/asNumber/asArray/getCompound 已收敛至 utils/base/nbt-guards.ts）=====
+// ===== 类型守卫（isObj/asString/asNumber/asArray/getCompound 已收敛至 utils/resource/nbt-guards.ts）=====
 
 // ===== 三个 binding 的视图提取（对齐 go/litematic/parser.go 输出字段）=====
 // 返回 null 表示「无法解析/无有效内容」→ 调用方输出 "{}"（对齐 Go binding 契约）。

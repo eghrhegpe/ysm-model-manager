@@ -123,26 +123,27 @@ describe("flattenVisible", () => {
 
   it("搜索时目录自动展开（shouldOpen = hasSearch || dirOpen）", () => {
     const root = buildTree(
-      [entry("target.ysm", "folder/target.ysm")],
+      [entry("target.ysm", "folder/target.ysm", 0, 0, "/repo/folder/target.ysm")],
       "name",
       null,
     );
     const rows = flattenVisible(root, "", "target", "name", {}, 0, "grid");
     const fileRow = rows.find((r) => r.type === "file");
     expect(fileRow).toBeDefined();
-    expect(fileRow?.key).toBe("folder/target.ysm");
+    // 键空间 = 磁盘 fullPath（ADR-222）；path 参数只参与树形构建与搜索过滤
+    expect(fileRow?.key).toBe("/repo/folder/target.ysm");
   });
 
   it("搜索命中目录名 → 保留子文件行（按路径过滤，不丢文件行）", () => {
     const root = buildTree(
-      [entry("a.ysm", "hero/char/a.ysm"), entry("b.ysm", "other/b.ysm")],
+      [entry("a.ysm", "hero/char/a.ysm", 0, 0, "/repo/hero/char/a.ysm"), entry("b.ysm", "other/b.ysm", 0, 0, "/repo/other/b.ysm")],
       "name",
       null,
     );
     const rows = flattenVisible(root, "", "hero", "name", {}, 0, "grid");
     const fileRows = rows.filter((r) => r.type === "file");
     expect(fileRows).toHaveLength(1);
-    expect(fileRows[0].key).toBe("hero/char/a.ysm");
+    expect(fileRows[0].key).toBe("/repo/hero/char/a.ysm");
   });
 
   it("搜索带首尾空白 → trim 后仍能匹配（与 buildTree 一致）", () => {

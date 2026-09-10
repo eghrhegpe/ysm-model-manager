@@ -68,14 +68,16 @@ import type { PreviewStatePath, PreviewSnapshot } from "../adapters/preview-menu
 
 ```
 features/preview-3d/
-├── menu/        ← preview-menu-* 家族（类型/渲染器/注册表/角色详情/cap 控件）
 ├── adapters/   ← ysm/mmd/vrm/fbx/litematic 适配器
 ├── caps/       ← cap 控件系统
+├── mesh/       ← 网格构建核心（mesh-builder/baker/cube-mesh/face-split/quaternion/model3d/mesh）
+├── infra/      ← 共享基础设施（frustum-cull/render-budget/camera-setup/safe-dispose/scene-stats/debug-render/cleanup-helper/semantic-morphs/load-trace/overlay-style-bridge）
+├── menu/       ← preview-menu-* 家族（类型/渲染器/注册表/角色详情/cap 控件）
 ├── state/      ← 状态层（PreviewSnapshot/PreviewStatePath 定义迁回此处，正地基）
 └── perception/
 ```
 
-升格后路径变短（`utils/3d/adapters/preview-menu-node-types.ts` → `features/preview-3d/menu/node-types.ts`）；依赖方向正（`state` 是 `menu` / `adapters` 的地基，不反向）。
+> 布局演变（2026-09）：原 `preview-3d/` 根级横切基础设施（网格构建 + 渲染/生命周期共享原语）已收敛进 `mesh/` 与 `infra/` 两个子目录——它们被 `adapters/menu/caps/bone/state` 多子目录混合共享，硬塞任一子目录会造成跨层反向依赖，故独立为共享层。ADR 只记决策方向，具体行号/实施见知识卡 `3d-patterns.md` / `model3d.md`。
 
 ### 2.2 三刀路线（分阶段决策，非实施进度）
 

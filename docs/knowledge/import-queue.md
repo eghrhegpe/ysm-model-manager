@@ -15,16 +15,9 @@ auto_fields:
   symbols_with_lines:
     - bindPackCardDnD
     - bindTreeDnD
-    - buildFolderItems
-    - collectDropFiles
-    - CollectedEntry
-    - collectFiles
     - createImportSession
     - directImport
     - executeCollected
-    - fileToBase64
-    - FolderGroup
-    - groupCollected
     - handleInstanceDrop
     - handleTreeDrop
     - ImportFile
@@ -36,7 +29,6 @@ auto_fields:
     - isSupportedFile
     - PackDndBusy
     - PackDndInstance
-    - shouldEnterForm
   tests:
     - frontend/src/features/import/executor.test.ts
     - frontend/src/features/dnd/import-dnd.test.ts
@@ -135,6 +127,7 @@ status: active
 ## 关键机制
 
 - **静默直导**：完成后 `stats:refresh` + `tree:reload` 双事件联动，无导入 tab 依赖
+- **串行发起 + Go 天然并行**：`executeCollected` 对 folders/singles 用 `for...await` 串行发起请求（前端 base64 编码毫秒级，不是瓶颈）；Go 侧 `ImportModelFile` 各自独立 goroutine 落盘/解压/清缓存，实际并行执行。前端不加 `Promise.all` 并发 base64 编码，Go 侧也不加队列——两边各管各的并发层，互不越界
 - **并发/重复守卫**：`_inFlight` 持 per-file 指纹（name+size+lastModified），同名不同源文件不误判；busy 命中 toast 反馈（不静默）
 - **逐文件容错**：文件夹导入中单个文件读取失败跳过（warn 日志），不拖垮整组
 - **上下文路由守卫**：`ImportModelFolderTo` 不可用时（旧桥/Android 时序）降级为内容推断 + warn toast，不静默错位
@@ -151,6 +144,7 @@ status: active
 
 ## 不变量
 
+- **归属边界**：类型路由（`DetectContainerType`）/冲突检测（`ErrFileExists`）/解压/扫描缓存失效（`ClearScanCache`）全在 Go；前端只做去重（`_inFlight`）/路由（单文件 vs 文件夹 vs 网页版）/广播（toast + refreshRepo）。**不接前端预检查**（哈希重复检测 Go 已做、缺失纹理归扫描阶段），**不接自动处理**（分类由 Go 路由自动确定、标签需用户手动输入）
 - `isImportableFile` 的 `.json` 白名单仅放行 `ysm.json`，与 `go/scanner/scanner.go` 白名单对齐
 - `groupCollected` 组内至少 1 个支持文件才整组导入（与后端 `isSupportedEntryFile` 对齐）
 - `_inFlight` 键 = `name:size:lastModified`，防止跨源同名文件误判在途

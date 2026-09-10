@@ -53,6 +53,19 @@ vi.mock("@/backend/app.ts", () => ({
 
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
+// 排空调度轮次（G-1 三分法「init 落定」解法）：setTimeout(0)+rAF 各 2 轮确定性 drain，
+// 替代固定 sleep 等挂载链 / 模块级状态落定（test-utils 卡：本地定义即可）
+async function flushAsyncTurns(): Promise<void> {
+  for (let i = 0; i < 2; i++) {
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
+    await new Promise<void>((r) => {
+      requestAnimationFrame(() => r());
+    });
+  }
+}
+
 describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -125,7 +138,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     await waitFor(() => el.querySelector(".sm-item") !== null, 5000);
     const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
     bus.emit("stats:refresh");
-    await sleep(500);
+    // 正等结果：重新加载（GetInstanceSyncStatus 调用 +1）
+    await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= callsBefore + 1, 5000);
     // 订阅有效 → 重新加载（GetInstanceSyncStatus 调用次数 +1）
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore + 1);
     unmountElement(el);
@@ -141,6 +155,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     unmountElement(el);
     // 断开后发射 stats:refresh，订阅应已清理 → 调用次数不变
     bus.emit("stats:refresh");
+    // 负向窗口：disconnected 后订阅已清理，emit 不应再触发 GetInstanceSyncStatus——waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟加载
     await sleep(100);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore);
   });
@@ -155,7 +170,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 发射全局焦点 → 订阅应重载数据（GetInstanceSyncStatus +1）
     const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
     bus.emit("repo:rtype-changed", "shaderpack");
-    await sleep(500);
+    // 正等结果：跟随重载（GetInstanceSyncStatus 调用 +1）
+    await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= callsBefore + 1, 5000);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore + 1);
     // 当前类型指示更新
     const cur = el.querySelector(".sm-cur-type") as HTMLElement;
@@ -163,7 +179,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     expect(cur.dataset.rtype).toBe("shaderpack");
     // 恢复全局焦点为 ysm（防模块级 _lastSelectedType 泄漏到后续用例）
     bus.emit("repo:rtype-changed", "ysm");
-    await sleep(100);
+    await flushAsyncTurns(); // 排空：重载落定，模块级状态稳定
     unmountElement(el);
   });
 
@@ -202,7 +218,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     mocks.ScanModelEntriesWithLabel.mockResolvedValue([]);
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：顶层文件夹行渲染（SceneModel / CustomAnim / 角色A）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length > 0);
     // 顶层文件夹：SceneModel、CustomAnim、角色A（根下无 subdir 的条目也成文件夹）
     let dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(3);
@@ -213,7 +230,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
     // 展开 SceneModel → 出现 children 行（isDir 契约——.sm-file 渲染）
     (dirs[0] as HTMLElement).click();
-    await sleep(200);
+    // 正等结果：展开后 SceneModel 的 children 以 .sm-file 渲染
+    await waitFor(() => el.querySelectorAll(".sm-file").length > 0);
     // 文件夹行仍在，且箭头变为 ▾（dirs 数不变——children 是 .sm-file 行）
     dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(3);
@@ -223,7 +241,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     expect(filesAfter).toEqual(expect.arrayContaining(["SceneModel/舞台.pmx"]));
     // 恢复全局状态
     bus.emit("repo:rtype-changed", "ysm");
-    await sleep(100);
+    await flushAsyncTurns(); // 排空：重载落定，模块级状态稳定
     unmountElement(el);
   });
 
@@ -239,7 +257,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 直接断言存在（去掉 if 空洞包裹）
     expect(missingTab).toBeTruthy();
     missingTab.click();
-    await sleep(100);
+    // 正等结果：激活筛选标签切到 missing
+    await waitFor(() => (el.querySelector('.sm-status-tab.active') as HTMLElement)?.dataset.status === "missing");
     const active = el.querySelector('.sm-status-tab.active') as HTMLElement;
     expect(active.dataset.status).toBe("missing");
     // 过滤后列表全部为 missing 状态
@@ -296,7 +315,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     pushBtn.click();
     pushBtn.click();
     pushBtn.click();
-    await sleep(400);
+    // 正等结果：重入守卫仅 1 次真正调到底层 API（delta=1；调用在点击时同步发生，>=1 轮询不可跳过）
+    await waitFor(() => mocks.PushSingleResourceToInstance.mock.calls.length - callsBefore >= 1);
     // 重入守卫：3 次点击仅 1 次真正调到底层 API（delta=1）
     const delta = mocks.PushSingleResourceToInstance.mock.calls.length - callsBefore;
     expect(delta).toBe(1);
@@ -364,14 +384,16 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     void mocks.ScanModelEntriesWithLabel;
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：文件夹行渲染（未展开，无子文件）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // 未展开：只有文件夹行
     let dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(1);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
     // 点击展开（isDir 契约——展开渲染 children）
     (dirs[0] as HTMLElement).click();
-    await sleep(300);
+    // 正等结果：展开后 children 以 .sm-file 渲染（2 个）
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 2);
     dirs = el.querySelectorAll(".sm-dir");
     const arrow = (dirs[0] as HTMLElement).querySelector(".sm-dir-arrow");
     expect(arrow?.textContent).toBe("▾");
@@ -381,7 +403,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     );
     // 点击折叠
     (dirs[0] as HTMLElement).click();
-    await sleep(300);
+    // 正等结果：折叠后 children 隐藏（.sm-file 归零）
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 0);
     dirs = el.querySelectorAll(".sm-dir");
     expect((dirs[0] as HTMLElement).querySelector(".sm-dir-arrow")?.textContent).toBe("▸");
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
@@ -417,13 +440,15 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {};
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：diverged 文件夹行渲染（含推送按钮）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // missing 筛选下 diverged 文件夹行可见（含推送按钮——继承可操作属性）
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelector('[data-testid="sm-push"]')).toBeTruthy();
     // 展开渲染 children（真实状态子文件）
     (el.querySelector(".sm-dir") as HTMLElement).click();
-    await sleep(200);
+    // 正等结果：展开后 children 渲染 1 行
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     unmountElement(el);
   });
@@ -463,13 +488,15 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._forceOpenPaths = new Set(["模型A"]);
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：显式折叠目录行渲染（子文件不渲染）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // 显式折叠优先：目录行可见但子文件不渲染
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
     // 再点一次展开仍可用（点击语义不被 forceOpen 吞掉）
     (el.querySelector(".sm-dir") as HTMLElement).click();
-    await sleep(200);
+    // 正等结果：点击展开后 children 渲染 1 行
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     unmountElement(el);
   });
@@ -507,25 +534,29 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {};
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：折叠态渲染（仅顶层 vendor 一个 sm-dir）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // 折叠：仅顶层 vendor 一个 sm-dir，无子项渲染
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
 
     // 逐层展开：vendor ▸ → authors ▸ → character ▸ → 渲染 model.ysm
     (el.querySelector(".sm-dir") as HTMLElement).click();
-    await sleep(150);
+    // 正等结果：展开 vendor → 出现 authors（2 个 sm-dir）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 2);
     expect(el.querySelectorAll(".sm-dir").length).toBe(2); // vendor + authors
     // 展开第二层 authors（data-path 精确匹配，避免误点 vendor）
     const authors = el.querySelector('.sm-dir[data-path="/repo/ysm/vendor/authors"]') as HTMLElement;
     expect(authors).toBeTruthy();
     authors.click();
-    await sleep(150);
+    // 正等结果：展开 authors → 出现 character（3 个 sm-dir）
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 3);
     expect(el.querySelectorAll(".sm-dir").length).toBe(3); // + character
     const character = el.querySelector('.sm-dir[data-path="/repo/ysm/vendor/authors/character"]') as HTMLElement;
     expect(character).toBeTruthy();
     character.click();
-    await sleep(150);
+    // 正等结果：展开全部 → model.ysm 文件行出现
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
     // 展开全部 → 出现 model.ysm 文件行
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     expect(el.querySelector('.sm-file[data-path="/repo/ysm/vendor/authors/character/model.ysm"]')).toBeTruthy();
@@ -564,7 +595,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {};
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：父链容器行渲染
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // 父链保留（容器行）+ disabled 子文件在 disabled tab 可见
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelector('.sm-file[data-path="packs/a.zip"]')).toBeTruthy();
@@ -603,7 +635,11 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {};
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：disabled 徽标渲染并递归计入（含 "1"）
+    await waitFor(() => {
+      const t = el.querySelector('.sm-status-tab[data-status="disabled"]');
+      return t !== null && t.textContent!.includes("1");
+    });
     // disabled 徽标应显示 1（子项递归计入），非 0/2
     const disabledTab = el.querySelector('.sm-status-tab[data-status="disabled"]');
     expect(disabledTab).toBeTruthy();
@@ -647,7 +683,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {}; // 全部折叠
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：命中子项经 forceOpen 强制展开可见
+    await waitFor(() => el.querySelector('[data-path="vendor/authors/character/model.ysm"]') !== null);
     // 无手动展开，但命中子项经 forceOpen 强制展开可见
     expect(el.querySelector('[data-path="vendor/authors/character/model.ysm"]')).toBeTruthy();
     // 非命中 synced 中间目录不强制展开其内部（此处仅验证命中路径即可见）
@@ -686,7 +723,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     self._dirOpen = {};
 
     self._doRender();
-    await sleep(100);
+    // 正等结果：目录自身命中 → 保留行
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
     // 目录自身命中 → 保留行
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     // 展开后不得出现 synced 子行（不变量：列表全为筛选态）
@@ -723,7 +761,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 模拟并发：连续两次 _doRender（原 bindEvents 每次 render 后全量重绑 → 双绑）
     self._doRender();
     self._doRender();
-    await sleep(200);
+    // 正等结果：两次渲染落定（初始折叠，目录行存在）
+    await waitFor(() => el.querySelector(".sm-dir") !== null);
 
     const dir = el.querySelector(".sm-dir") as HTMLElement;
     expect(dir).toBeTruthy();
@@ -731,7 +770,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
 
     // 点击一次：委托只触发一次翻转 → 展开（若双绑「点一次=翻转两次」会折回折叠）
     dir.click();
-    await sleep(200);
+    // 正等结果：展开后 children 渲染 1 行
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     expect(el.querySelector(".sm-dir .sm-dir-arrow")?.textContent).toBe("▾");
     unmountElement(el);

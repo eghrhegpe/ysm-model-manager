@@ -3,28 +3,27 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeLocaleHost } from "./locale-host.ts";
 
-const origFetch = globalThis.fetch;
-
+// P2：fetch stub 统一走 vi.stubGlobal + unstubAllGlobals（原手搓存原值覆写还原）
 afterEach(() => {
-  globalThis.fetch = origFetch;
+  vi.unstubAllGlobals();
 });
 
 describe("makeLocaleHost", () => {
   it("loadBundle 成功 → 返回 JSON 包", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ a: "b" }),
-    }) as unknown as typeof fetch;
+    }) as unknown as typeof fetch);
     const host = makeLocaleHost();
     expect(await host.loadBundle("en")).toEqual({ a: "b" });
   });
 
   it("loadBundle HTTP 非 2xx → null + 告警留痕（不缓存、可重试）", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
       json: async () => ({}),
-    }) as unknown as typeof fetch;
+    }) as unknown as typeof fetch);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const host = makeLocaleHost();
@@ -36,9 +35,9 @@ describe("makeLocaleHost", () => {
   });
 
   it("loadBundle 网络拒绝 → null（不抛出，core 侧按未载到处理）", async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(
       new TypeError("network down"),
-    ) as unknown as typeof fetch;
+    ) as unknown as typeof fetch);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const host = makeLocaleHost();

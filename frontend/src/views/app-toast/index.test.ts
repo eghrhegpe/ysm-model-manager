@@ -103,7 +103,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     const closeBtn = root.querySelector(".close-btn") as HTMLElement;
     expect(closeBtn).toBeTruthy();
     closeBtn.click();
-    await sleep(300); // 等待 slideOut 动画
+    await waitFor(() => queryByTestId(root, "toast") === null); // slideOut 动画后移除
     expect(queryByTestId(root, "toast")).toBeNull();
     unmount(el);
   });
@@ -119,7 +119,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     undoBtn.click();
     expect(undoFn).toHaveBeenCalled();
     // 撤销后显示「已撤销」
-    await sleep(100);
+    await waitFor(() => getAllByTestId(root, "toast").length >= 1);
     expect(getAllByTestId(root, "toast").length).toBeGreaterThanOrEqual(1);
     unmount(el);
   });
@@ -174,6 +174,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     const el = mountToast();
     unmount(el);
     bus.emit("toast:show", { msg: "断开后不应出现" });
+    // 负向窗口：disconnected 后 emit 不应再新增 toast——waitFor(null) 会立即返回（假绿），须走满窗口确认无延迟 handler 触发
     await sleep(100);
     const root = el.shadowRoot!;
     expect(queryByTestId(root, "toast")).toBeNull();
@@ -184,8 +185,8 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     bus.emit("toast:show", { msg: "短命", duration: 50 });
     const root = el.shadowRoot!;
     await waitFor(() => getByTestId(root, "toast") !== null);
-    // 50ms 到期 + 200ms 动画移除
-    await sleep(300);
+    // 50ms 到期 + 动画移除
+    await waitFor(() => queryByTestId(root, "toast") === null);
     expect(queryByTestId(root, "toast")).toBeNull();
     unmount(el);
   });

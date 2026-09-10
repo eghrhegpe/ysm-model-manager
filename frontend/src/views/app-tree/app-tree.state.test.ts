@@ -9,14 +9,12 @@ import { ToggleEnable } from "../../../bindings/ysm-model-manager/internal/app/a
 import "./index.ts"; // 注册 app-tree 自定义元素（constructor 里 attachShadow）
 import type { TreeEntry } from "./loader.ts";
 
-// happy-dom 已原生支持 ResizeObserver，空实现保留作兼容兜底
-if (typeof globalThis.ResizeObserver === "undefined") {
-  class MockResizeObserver {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  }
-  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+// happy-dom 原生支持 ResizeObserver；node 环境提供空实现（P2：统一 vi.stubGlobal，
+// afterEach 的 unstubAllGlobals 自动还原）。定义于模块级，仅「缺失才 stub」，避免覆盖原生。
+class MockResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
 }
 
 // 可配置的 mock 种子数据（vi.hoisted 避免工厂提升问题）
@@ -74,6 +72,11 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
   beforeEach(() => {
     mockData.entries = flatEntries();
     vi.clearAllMocks();
+    // 仅缺失时 stub ResizeObserver（node 环境）；happy-dom 有原生实现则守卫不命中。
+    // afterEach 的 vi.unstubAllGlobals() 自动还原，与 stub 配对不泄漏
+    if (typeof globalThis.ResizeObserver === "undefined") {
+      vi.stubGlobal("ResizeObserver", MockResizeObserver);
+    }
   });
 
   afterEach(() => {

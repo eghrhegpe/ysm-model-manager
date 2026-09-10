@@ -67,6 +67,8 @@ beforeEach(() => {
 
 afterEach(() => {
   container.remove();
+  // P2：__YSM_BACKEND__ 统一进 vi.stubGlobal 体系，unstub 统一还原防跨用例污染
+  vi.unstubAllGlobals();
 });
 
 // ===== bindTreeDnD 绑定/清理 =====
@@ -183,7 +185,7 @@ function makeBusyPair(): [() => boolean, (v: boolean) => void] {
 
 describe("handleTreeDrop — 网页版（ADR-049）", () => {
   it("isWebPlatform → importWebFiles + tree:reload + stats:refresh", async () => {
-    (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    vi.stubGlobal("__YSM_BACKEND__", "browser");
     const reloadSpy = vi.fn();
     const statsSpy = vi.fn();
     const unsubReload = bus.on("tree:reload", () => reloadSpy());
@@ -199,7 +201,7 @@ describe("handleTreeDrop — 网页版（ADR-049）", () => {
   });
 
   it("网页版拖入文件夹（files 为空）→ warn toast，不调 importWebFiles", async () => {
-    (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    vi.stubGlobal("__YSM_BACKEND__", "browser");
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     const [isBusy, setBusy] = makeBusyPair();
@@ -211,7 +213,7 @@ describe("handleTreeDrop — 网页版（ADR-049）", () => {
   });
 
   it("网页版 importWebFiles reject → onDrop 兜底：console.error + error toast，busy 复位", async () => {
-    (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    vi.stubGlobal("__YSM_BACKEND__", "browser");
     importWebFilesMock.mockRejectedValueOnce(new Error("boom"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const toastSpy = vi.fn();
@@ -281,7 +283,7 @@ describe("handleTreeDrop — 空 drop / 可编辑目标", () => {
   });
 
   it("drop 目标为 input → 直接 return，不导入不 toast", async () => {
-    (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    vi.stubGlobal("__YSM_BACKEND__", "browser");
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     const input = document.createElement("input");

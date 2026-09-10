@@ -51,6 +51,19 @@ import { bus } from "@/bus";
 import "./index.ts"; // 触发 customElements.define("app-content")
 import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
+// 排空调度轮次（G-1 三分法「init 落定」解法）：setTimeout(0)+rAF 各 2 轮确定性 drain，
+// 替代固定 sleep 等挂载/切页 init 链落定（本地定义即可，不必进公共层——test-utils 卡）
+async function flushAsyncTurns(): Promise<void> {
+  for (let i = 0; i < 2; i++) {
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
+    await new Promise<void>((r) => {
+      requestAnimationFrame(() => r());
+    });
+  }
+}
+
 describe("app-content 生命周期配对", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -72,17 +85,17 @@ describe("app-content 生命周期配对", () => {
 
   it("nav:changed → 切页渲染（页面内容变化）", async () => {
     const el = mountCustomElement("app-content");
-    await sleep(150);
+    await waitFor(() => el.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
     const before = el.shadowRoot?.innerHTML || "";
     bus.emit("nav:changed", { page: "settings" });
-    await sleep(200);
-    expect(el.shadowRoot?.innerHTML).not.toBe(before); // 已切换到 settings 页
+    await waitFor(() => (el.shadowRoot?.innerHTML || "") !== before); // 正等结果：已切到 settings
+    expect(el.shadowRoot?.innerHTML).not.toBe(before);
     unmountElement(el);
   });
 
   it("disconnected → 订阅清理 + 面板 DOM 释放（ADR-163：nav:changed 不重挂 detached 面板）", async () => {
     const el = mountCustomElement("app-content");
-    await sleep(150);
+    await waitFor(() => el.shadowRoot?.querySelector(".page") !== null); // init 落定
     // 挂载时已渲染 .page 面板（ADR-163 单面板挂载）
     expect(el.shadowRoot?.querySelector(".page")).not.toBeNull();
     // disconnectedCallback 同步做两件事：
@@ -91,6 +104,7 @@ describe("app-content 生命周期配对", () => {
     unmountElement(el);
     expect(el.shadowRoot?.querySelector(".page")).toBeNull(); // ① 面板已随 disconnect 释放
     bus.emit("nav:changed", { page: "settings" });
+    // 负向窗口：disconnected 后 emit 不应重挂面板——waitFor(null) 会立即返回（假绿），须走满窗口确认无延迟重挂
     await sleep(200);
     expect(el.shadowRoot?.querySelector(".page")).toBeNull(); // ② 订阅已清，不会再重挂
   });
@@ -98,7 +112,7 @@ describe("app-content 生命周期配对", () => {
   it("启动恢复 → nav_page=settings 时 mount 直接渲染设置页（resolveInitialPage 白名单）", async () => {
     localStorage.setItem("nav_page", "settings");
     const el = mountCustomElement("app-content");
-    await sleep(200);
+    await waitFor(() => el.shadowRoot?.querySelector(".stg-tab") !== null); // 正等结果：settings 页渲染
     // settings 页渲染：.stg-tab 存在、仓库页 .repo-tab 不渲染
     expect(el.shadowRoot?.querySelector(".stg-tab")).not.toBeNull();
     expect(el.shadowRoot?.querySelector(".repo-tab")).toBeNull();
@@ -108,7 +122,7 @@ describe("app-content 生命周期配对", () => {
   it("启动恢复 → 未知/损坏 nav_page 值回退仓库页（不死页）", async () => {
     localStorage.setItem("nav_page", "legacy-garbage");
     const el = mountCustomElement("app-content");
-    await sleep(200);
+    await waitFor(() => el.shadowRoot?.querySelector(".repo-tab")); // 正等结果：回退仓库页
     // 未知值应回退 repository（仓库页渲染，且绑定正常）
     expect(el.shadowRoot?.querySelector(".repo-tab")).toBeTruthy();
     unmountElement(el);
@@ -116,12 +130,14 @@ describe("app-content 生命周期配对", () => {
 
   it("运行时 nav:changed 非法 page → 忽略（isValidPage 守卫，与 app-nav 口径一致）", async () => {
     const el = mountCustomElement("app-content");
-    await sleep(150);
+    await waitFor(() => el.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
     bus.emit("nav:changed", { page: "settings" });
-    await sleep(200);
+    await waitFor(() => el.shadowRoot?.querySelector(".stg-tab") !== null); // 正等结果：已切 settings
+    await flushAsyncTurns(); // 排空：设置页 init 完全落定（版本字段 加载中…→settled），基线捕获需 settled 态
     expect(el.shadowRoot?.querySelector(".stg-tab")).not.toBeNull();
     const htmlBefore = el.shadowRoot?.innerHTML || "";
     bus.emit("nav:changed", { page: "bogus-page" as unknown as import("@/bus").PageName });
+    // 负向窗口：非法 page 被守卫拒绝，渲染应不变——waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟切页
     await sleep(200);
     // 非法 page 被守卫拒绝：渲染不变（不切页、不写脏 state）
     expect(el.shadowRoot?.innerHTML).toBe(htmlBefore);
@@ -138,9 +154,9 @@ describe("app-content 生命周期配对", () => {
     // 第一次 mount + 切 workshop 页 → 注册 config-loaded 订阅
     onMock.mockClear();
     const el = mountCustomElement("app-content");
-    await sleep(150);
+    await waitFor(() => el.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
     bus.emit("nav:changed", { page: "workshop" });
-    await sleep(250);
+    await waitFor(() => onMock.mock.calls.some((c) => c[0] === "config-loaded")); // 正等结果：订阅注册
     expect(onMock).toHaveBeenCalledWith("config-loaded", expect.any(Function));
     const unsub = onMock.mock.results[0]?.value as ReturnType<typeof vi.fn>;
     expect(typeof unsub).toBe("function");
@@ -152,9 +168,9 @@ describe("app-content 生命周期配对", () => {
     // 重建 + 再切 workshop → 重新注册（flag 已复位，新实例可注册）
     onMock.mockClear();
     const el2 = mountCustomElement("app-content");
-    await sleep(150);
+    await waitFor(() => el2.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
     bus.emit("nav:changed", { page: "workshop" });
-    await sleep(250);
+    await waitFor(() => onMock.mock.calls.some((c) => c[0] === "config-loaded")); // 正等结果：重新注册
     expect(onMock).toHaveBeenCalledWith("config-loaded", expect.any(Function));
     unmountElement(el2);
   });

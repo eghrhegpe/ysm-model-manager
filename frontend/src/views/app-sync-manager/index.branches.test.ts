@@ -53,6 +53,19 @@ function mount(instance = "test"): { el: HTMLElement; self: SelfView } {
   return { el, self: el as unknown as SelfView };
 }
 
+// 排空调度轮次（G-1 三分法「init 落定」解法）：setTimeout(0)+rAF 各 2 轮确定性 drain，
+// 替代固定 sleep 等挂载链 / 基线落定（test-utils 卡：本地定义即可）
+async function flushAsyncTurns(): Promise<void> {
+  for (let i = 0; i < 2; i++) {
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
+    await new Promise<void>((r) => {
+      requestAnimationFrame(() => r());
+    });
+  }
+}
+
 beforeEach(() => {
   document.body.innerHTML = "";
   localStorage.removeItem("ysm_syncLastType");
@@ -71,6 +84,7 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
     const calls0 = mocks.GetInstanceSyncStatus.mock.calls.length;
 
     el.setAttribute("instance", "test"); // 同值 → oldVal === newVal → no-op
+    // 负向窗口：同值早退，不新增 GetInstanceSyncStatus 调用——waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟重载
     await sleep(100);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(calls0);
 
@@ -83,7 +97,8 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
     expect(self._gen).toBe(2); // 每次进入 _init 代际 +1
 
     el.setAttribute("default-type", "vrm");
-    await sleep(50);
+    // 正等结果：_defaultType 字段更新为 vrm
+    await waitFor(() => self._defaultType === "vrm");
     expect(self._defaultType).toBe("vrm");
     unmountElement(el);
   });
@@ -100,7 +115,8 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
     await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= 2, 5000);
     renderMock.mockClear();
     resolveFirst(JSON.stringify([])); // 旧代际完成 → gen 守卫丢弃
-    await sleep(200);
+    // 正等结果：落定后共恰 1 次渲染（gen=2 正常；gen=1 被 gen 守卫丢弃）
+    await waitFor(() => renderMock.mock.calls.length >= 1, 5000);
     // gen=1 的收尾不得渲染；gen=2 正常渲染一次
     expect(renderMock).toHaveBeenCalledTimes(1);
     unmountElement(el);
@@ -123,7 +139,8 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
     const toasts: Array<{ msg: string; type?: string }> = [];
     const off = bus.on("toast:show", (p) => toasts.push(p as { msg: string; type?: string }));
     const { el } = mount();
-    await sleep(200);
+    // 正等结果：render 同步抛错 → catch 渲染错误块
+    await waitFor(() => el.innerHTML.includes("sync render boom"));
     expect(el.innerHTML).toContain("sync render boom");
     const err = toasts.find((t) => t.type === "error");
     expect(err?.msg).toContain("sync render boom");
@@ -134,13 +151,14 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
   it("stats:refresh 重载链 render 同步抛错 → console.warn（166）", async () => {
     const { el } = mount();
     await waitFor(() => renderMock.mock.calls.length > 0, 5000);
-    await sleep(300); // 等挂载链完全落定，避免残留异步触发 Once
+    await flushAsyncTurns(); // 排空：挂载链完全落定，避免残留异步触发 Once
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     renderMock.mockImplementationOnce(() => {
       throw new Error("refresh boom");
     });
     bus.emit("stats:refresh");
-    await sleep(200);
+    // 正等结果：.catch 触发 console.warn
+    await waitFor(() => warn.mock.calls.length > 0);
     expect(warn).toHaveBeenCalledWith(
       "[sync-manager] stats:refresh 重载失败:",
       expect.any(Error),
@@ -152,10 +170,11 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
   it("repo:rtype-changed：同值早退（176）；重载失败 warn（191）", async () => {
     const { el, self } = mount();
     await waitFor(() => renderMock.mock.calls.length > 0, 5000);
-    await sleep(300); // 等挂载链完全落定再取基线
+    await flushAsyncTurns(); // 排空：挂载链完全落定再取基线
     const calls0 = mocks.GetInstanceSyncStatus.mock.calls.length;
 
     bus.emit("repo:rtype-changed", self._selectedType); // 同值 → 早退
+    // 负向窗口：同值早退，不新增 GetInstanceSyncStatus 调用——waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟重载
     await sleep(150);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(calls0);
 
@@ -165,7 +184,8 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
       throw new Error("rtype boom");
     });
     bus.emit("repo:rtype-changed", "shaderpack");
-    await sleep(200);
+    // 正等结果：异值重载 render 抛错 → .catch 触发 warn
+    await waitFor(() => warn.mock.calls.length > 0);
     expect(warn).toHaveBeenCalledWith(
       "[sync-manager] rtype 跟随重载失败:",
       expect.any(Error),
@@ -173,17 +193,18 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
     warn.mockRestore();
     // 恢复全局类型，防模块级 _lastSelectedType 泄漏
     bus.emit("repo:rtype-changed", "ysm");
-    await sleep(100);
+    await flushAsyncTurns(); // 排空：重载落定，模块级状态稳定
     unmountElement(el);
   });
 
   it("repo:subdir-changed：同值早退（200）→ 异值重载渲染 → 失败 warn（209）", async () => {
     const { el, self } = mount();
     await waitFor(() => renderMock.mock.calls.length > 0, 5000);
-    await sleep(300); // 等挂载链完全落定再取基线
+    await flushAsyncTurns(); // 排空：挂载链完全落定再取基线
     const calls0 = mocks.GetInstanceSyncStatus.mock.calls.length;
 
     bus.emit("repo:subdir-changed", ""); // 与初始 _subtype 同值 → 早退
+    // 负向窗口：同值早退，不新增 GetInstanceSyncStatus 调用——waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟重载
     await sleep(150);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(calls0);
 
@@ -202,7 +223,8 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
       throw new Error("subdir boom");
     });
     bus.emit("repo:subdir-changed", "subB");
-    await sleep(200);
+    // 正等结果：异值重载 render 抛错 → .catch 触发 warn
+    await waitFor(() => warn.mock.calls.length > 0);
     expect(warn).toHaveBeenCalledWith(
       "[sync-manager] subdir 重载失败:",
       expect.any(Error),
@@ -218,7 +240,8 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
     err.mockClear();
     renderMock.mockRejectedValueOnce(new Error("render boom"));
     bus.emit("stats:refresh"); // 复用 _doRender 入口
-    await sleep(200);
+    // 正等结果：render promise reject → .catch 触发 console.error
+    await waitFor(() => err.mock.calls.length > 0);
     expect(err).toHaveBeenCalledWith("[sync-manager] render 失败:", expect.any(Error));
     err.mockRestore();
     unmountElement(el);

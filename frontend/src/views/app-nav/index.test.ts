@@ -46,6 +46,19 @@ import { openModel3DFullscreen } from "@/views/app-preview/preview-library.ts";
 
 import "./index.ts"; // 触发 customElements.define("app-nav")
 
+// 排空调度轮次（G-1 三分法「init 落定」解法）：setTimeout(0)+rAF 各 2 轮确定性 drain，
+// 替代固定 sleep 等启动恢复链落定（test-utils 卡：本地定义即可，不必进公共层）
+async function flushAsyncTurns(): Promise<void> {
+  for (let i = 0; i < 2; i++) {
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
+    await new Promise<void>((r) => {
+      requestAnimationFrame(() => r());
+    });
+  }
+}
+
 describe("app-nav（testid 钩子 + 导航交互）", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -142,7 +155,12 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     bus.emit("nav:changed", { page: "settings" });
-    await sleep(50);
+    // 正等结果：高亮更新落定（active 移到 settings）
+    await waitFor(() =>
+      getAllByTestId(root, "nav-item")
+        .filter((i) => i.classList.contains("active"))
+        .some((i) => (i as HTMLElement).dataset.page === "settings"),
+    );
     const items = getAllByTestId(root, "nav-item");
     const active = items.filter((i) => i.classList.contains("active"));
     expect(active.length).toBe(1);
@@ -158,6 +176,7 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     unmountElement(el);
     // 断开后发射：若订阅已清理，已卸载元素的高亮不应被更新（仍为 repository）
     bus.emit("nav:changed", { page: "settings" });
+    // 负向窗口：disconnected 后若订阅已清理，高亮不应更新——waitFor 会立即返回（假绿），须走满窗口确认无延迟高亮写入
     await sleep(50);
     const active = getAllByTestId(root, "nav-item").filter((i) =>
       i.classList.contains("active"),
@@ -186,14 +205,16 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     expect(el.hasAttribute("data-collapsed")).toBe(false);
     // 点击折叠
     (getByTestId(root, "nav-toggle") as HTMLElement).click();
-    await sleep(50);
+    // 正等结果：折叠落定 + 持久化 "1"
+    await waitFor(() => el.hasAttribute("data-collapsed") && localStorage.getItem("nav_collapsed") === "1");
     expect(el.hasAttribute("data-collapsed")).toBe(true);
     expect(localStorage.getItem("nav_collapsed")).toBe("1");
     // 折叠态窄条上按钮仍常驻（防意外找不回导航）
     expect(root.querySelector(".nav-toggle")).not.toBeNull();
     // 再点展开
     (root.querySelector(".nav-toggle") as HTMLElement)!.click();
-    await sleep(50);
+    // 正等结果：展开落定 + 持久化 "0"
+    await waitFor(() => !el.hasAttribute("data-collapsed") && localStorage.getItem("nav_collapsed") === "0");
     expect(el.hasAttribute("data-collapsed")).toBe(false);
     expect(localStorage.getItem("nav_collapsed")).toBe("0");
     unmountElement(el);
@@ -204,7 +225,8 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     (el as unknown as { setCollapsed(c: boolean, o?: { persist?: boolean }): void }).setCollapsed(true, { persist: false });
-    await sleep(50);
+    // 正等结果：折叠属性置位（persist=false 故不写 localStorage）
+    await waitFor(() => el.hasAttribute("data-collapsed"));
     expect(el.hasAttribute("data-collapsed")).toBe(true);
     // 不落盘：localStorage 仍为空
     expect(localStorage.getItem("nav_collapsed")).toBeNull();
@@ -218,7 +240,8 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     expect(el.hasAttribute("data-collapsed")).toBe(false);
     // 点击 label 而非箭头按钮——事件挂在整行 menu-head 上
     (root.querySelector(".menu-label") as HTMLElement).click();
-    await sleep(50);
+    // 正等结果：折叠属性置位
+    await waitFor(() => el.hasAttribute("data-collapsed"));
     expect(el.hasAttribute("data-collapsed")).toBe(true);
     unmountElement(el);
   });
@@ -348,6 +371,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     unmountElement(el);
     resolveVersion("v9.9.9");
+    // 负向窗口：disconnected 后 isConnected 守卫应使版本位不更新——waitFor 会立即返回（假绿），须走满窗口确认无延迟写入
     await sleep(50);
     // 守卫生效：已卸载组件的版本位停留在「加载中…」，未被 v9.9.9 改写
     expect(root.getElementById("nav-version")!.textContent).toBe(t("common.loading"));
@@ -416,7 +440,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     localStorage.setItem("nav_page", "workshop");
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
-    await sleep(50); // 等恢复微任务广播 + handler 处理完
+    await flushAsyncTurns(); // 排空：等启动恢复微任务广播 + handler 处理完（init 落定，非墙钟 sleep）
     expect(localStorage.getItem("nav_page")).toBe("workshop"); // 缺陷态：被写成 "settings"
     unmountElement(el);
   });
@@ -426,7 +450,8 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     // 桌面模式 6 项：[repository, instances, workshop, github, diagnostics, settings]——点 workshop（异值迁移）
     (getAllByTestId(root, "nav-item")[2] as HTMLElement).click();
-    await sleep(50);
+    // 正等结果：写入 nav_page=workshop（初值 null → workshop 真过渡）
+    await waitFor(() => localStorage.getItem("nav_page") === "workshop");
     expect(localStorage.getItem("nav_page")).toBe("workshop");
     unmountElement(el);
   });

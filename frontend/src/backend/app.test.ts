@@ -153,7 +153,7 @@ describe("getApp — 动态 import 路径语义（无 window.go 注入）", () =
   });
 
   it("__YSM_BACKEND__=browser → 路由 browserAdapter（ADR-049 Phase 1，业务零改动）", async () => {
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
+    vi.stubGlobal("__YSM_BACKEND__", "browser");
     const getApp = await freshGetApp();
     const app = await getApp();
     // 已实现的最小启动集：ScanModelEntries 诚实空（Phase 2 IndexedDB 前）

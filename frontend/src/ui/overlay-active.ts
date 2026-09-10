@@ -7,6 +7,11 @@
 //   - 零状态漂移：无需订阅/emit 维护布尔，天然跟随 DOM 生命周期
 // 消费方（app-tree 键盘门禁等）统一经本函数查询，禁止各自裸 getElementById——
 // 隐式契约收编为显式 API，模式可被后续组件安全复用而不扩散。
+//
+// ⚠️ 勿因「只有一个消费者」把本文件下沉到 views/app-tree：本文件是**契约收编点**，
+// 价值恰在于「所有视图共用同一权威查询」。一旦下沉，其它视图要用就得 view→view 互引
+// （越层）或各自裸 getElementById（契约失效、双轨）——两条都比现状糟。
+// 单消费者是有意为之，不是分类失误；新增消费方时直接 import 本文件即可。
 import { PREVIEW_OVERLAY_ID } from "./ui-constants.ts";
 
 /** 3D 全屏模态会话是否激活（overlay 容器是否存在于 document） */

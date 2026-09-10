@@ -13,17 +13,15 @@ auto_fields:
     - __setStatsRunnerForTest
     - batchStatsWebModels
     - consumeWebSearchDegraded
+    - EMPTY_ERROR
     - getStatsPoolSize
-    - ModelStatsResult
     - onStatsProgress
     - prefetchStatsWorker
     - STATS_BATCH_LIMIT
-    - StatsFileInput
     - statsFromDecodedFiles
     - statsFromJsonBytes
     - StatsRelReader
     - StatsWorkerError
-    - StatsWorkerProgress
     - StatsWorkerRequest
     - StatsWorkerResponse
     - StatsWorkerResult

@@ -77,7 +77,8 @@ status: active
 | 滑块 | `ui-slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls|renderCapSlider` 生产消费） |
 | 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——生产行图标经 textContent 直写 / 字面量 glyph |
 | 样式 | `ui-components-styles.ts` | `uiComponentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installUiComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
-| 常量 | `ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID，mount-preview-core / app-tree 快捷键门禁共用）；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |
+| 常量 | `ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID）——**仅 `mount-preview-core` 建、`ui/overlay-active|isPreviewOverlayActive` 查**两个出口，其它模块不得直接引用该常量裸查 DOM；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |
+| 契约查询 | `overlay-active.ts` | `isPreviewOverlayActive()` —— 3D 全屏模态会话是否激活（查 overlay host 是否在 document，零状态漂移）。**单消费者（app-tree 键盘门禁）是有意为之**：本文件是契约收编点，下沉会导致 view→view 互引或裸查扩散；新增消费方直接 import，勿下沉 |
 | 类型 | （已拔管） | `ui-types.ts`（`ControlOptions`）已删除——消费方为已拔管行 builder 簇 |
 | 工具 | （已删） | barrel re-export 已在 ADR-146 反桶运动中移除；全部消费方改为从具体叶模块直引 |
 | 控制注册 | `control-registry.ts` | 控件自更新注册表（可选接入外部响应式系统，默认 no-op） |

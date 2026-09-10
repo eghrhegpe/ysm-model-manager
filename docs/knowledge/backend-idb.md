@@ -31,6 +31,7 @@ auto_fields:
     - collectAllWebEntries
     - consumeWebSearchDegraded
     - emitAndroidBack
+    - EMPTY_ERROR
     - getAndroidBridge
     - getApp
     - getStatsPoolSize
@@ -40,7 +41,6 @@ auto_fields:
     - isWebEntryMode
     - isWebPlatform
     - MAX_IMPORT_BYTES
-    - ModelStatsResult
     - onStatsProgress
     - PlatformMode
     - prefetchStatsWorker
@@ -52,12 +52,10 @@ auto_fields:
     - scanAllWebModels
     - scanWebModels
     - STATS_BATCH_LIMIT
-    - StatsFileInput
     - statsFromDecodedFiles
     - statsFromJsonBytes
     - StatsRelReader
     - StatsWorkerError
-    - StatsWorkerProgress
     - StatsWorkerRequest
     - StatsWorkerResponse
     - StatsWorkerResult

@@ -1,4 +1,4 @@
-// ===== 模型统计纯计算（Worker 可测核心：无 IO、无 WASM 依赖）=====
+// ===== 模型统计纯计算（Worker 可测核心：无 IO、无 WASM 运行时依赖）=====
 // 输入为 WASM 解码产物（.ysm）或 JSON 直读字节（.json 主文件），输出统计数值。
 // 口径对齐 Go decodeYSMViaNodeJS（internal/app/wasm_decoder.go:224）与前端
 // decodeYsmViaWasm（preview-3d/decoder/wasm-decode.ts，ADR-137 归位）：
@@ -7,30 +7,34 @@
 //  - texWidth/texHeight：max(geometry description texture_width/height, 实际纹理嗅探)
 //    （Go 只取 geometry 描述；前端 wasm.ts 取 max(嗅探, 描述)——本文件取大者，语义超集）
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
+// 结构去重（ADR-218 D3）：统计结果单一形状源 = stats-protocol.ts WebModelStats；
+// 解码产物文件形状 = wasm/parser-shared.ts YsmDecodedFile（type-only import，无运行时耦合）
 import { parseBedrockGeometryFromJSON } from "@/preview-3d/decoder/geometry.ts";
 import { sniffTexSize } from "@/utils/base/pure/tex-size.ts";
+import type { YsmDecodedFile } from "@/wasm/parser-shared.ts";
+import type { WebModelStats } from "./stats-protocol.ts";
 
-/** 解码/直读产物文件（Worker 与主线程共用形状） */
-export interface StatsFileInput {
-  path: string;
-  data: Uint8Array;
-}
-
-/** 单模型统计结果（SearchResult 数值字段对齐） */
-export interface ModelStatsResult {
-  boneCount: number;
-  cubeCount: number;
-  texWidth: number;
-  texHeight: number;
-  hasError: boolean;
-}
-
-const EMPTY_ERROR: ModelStatsResult = {
+/** 统计失败的错误标记（单模型级；整批致命错误走协议 StatsWorkerError） */
+export const EMPTY_ERROR: WebModelStats = {
   boneCount: 0,
   cubeCount: 0,
   texWidth: 0,
   texHeight: 0,
   hasError: true,
+};
+
+/** 宽松 geometry root 形状（bones + 纹理描述；兼容形态见 parseAnyGeometry） */
+type LooseGeometryRoot = {
+  bones?: unknown[];
+  description?: { texture_width?: number; texture_height?: number };
+};
+
+/** 宽松 geometry 文档形状（标准 minecraft:geometry 之外的兼容形态） */
+type LooseGeometryDoc = {
+  minecraft?: { geometry?: LooseGeometryRoot[] };
+  geometry?: { model?: LooseGeometryRoot };
+  bones?: unknown[];
+  description?: { texture_width?: number; texture_height?: number };
 };
 
 /**
@@ -51,23 +55,9 @@ function parseAnyGeometry(
     };
   }
   try {
-    const obj = JSON.parse(jsonStr) as {
-      minecraft?: {
-        geometry?: Array<{
-          bones?: unknown[];
-          description?: { texture_width?: number; texture_height?: number };
-        }>;
-      };
-      geometry?: {
-        model?: {
-          bones?: unknown[];
-          description?: { texture_width?: number; texture_height?: number };
-        };
-      };
-      bones?: unknown[];
-      description?: { texture_width?: number; texture_height?: number };
-    };
-    const root = obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || (obj?.bones ? obj : null);
+    const obj = JSON.parse(jsonStr) as LooseGeometryDoc;
+    const root: LooseGeometryRoot | null =
+      obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || (obj?.bones ? obj : null);
     if (!root?.bones?.length) return null;
     let cubeCount = 0;
     for (const b of root.bones as Array<{ cubes?: unknown[] }>) {
@@ -89,7 +79,7 @@ function parseAnyGeometry(
  * 跳过 ysm.json（元信息，非 geometry）与 animations/（动画 JSON 解析恒 null，纯优化）。
  * hasError = 未解析到任何骨骼（对齐 Go BoneCount==0 语义：数值搜索中该模型不可用）。
  */
-export function statsFromDecodedFiles(files: StatsFileInput[]): ModelStatsResult {
+export function statsFromDecodedFiles(files: YsmDecodedFile[]): WebModelStats {
   let boneCount = 0;
   let cubeCount = 0;
   let texW = 0;
@@ -136,7 +126,7 @@ export type StatsRelReader = (rel: string) => Promise<Uint8Array | null>;
 export async function statsFromJsonBytes(
   bytes: Uint8Array,
   readRel: StatsRelReader,
-): Promise<ModelStatsResult> {
+): Promise<WebModelStats> {
   let json: unknown;
   try {
     json = JSON.parse(new TextDecoder("utf-8").decode(bytes));

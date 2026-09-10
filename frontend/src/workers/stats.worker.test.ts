@@ -39,10 +39,13 @@ vi.mock("@/preview-3d/decoder/utils.ts", () => ({ stripYsgpTextHeader: vi.fn() }
 vi.mock("./stats-core.ts", () => ({
   statsFromDecodedFiles: vi.fn(),
   statsFromJsonBytes: vi.fn(),
+  // ADR-218 D3：EMPTY_ERROR 收敛至 stats-core 单处导出（worker 经值 import 引入）
+  EMPTY_ERROR: { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true },
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  posts.length = 0; // 用例间隔离（posts 为模块级数组，clearAllMocks 不清）
   // worker 顶层读 self（node 环境无）：注入桩，onmessage 由被测模块回填
   vi.stubGlobal("self", {
     onmessage: null,

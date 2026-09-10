@@ -140,6 +140,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     onStatsProgress((done, total) => progress.push([done, total]));
     const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm", "/web/pmx/c.pmx"];
     const p1 = batchStatsWebModels(paths);
+    await flushMicrotasks(); // 单飞链（ADR-218）：批执行延后一拍到微任务，worker 此刻才创建
     const w = FakeWorker.instances[0];
     expect(w.posted).toHaveLength(1);
     expect(w.posted[0].type).toBe("stats");
@@ -161,6 +162,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(progress).toEqual([[3, 3], [3, 3]]); // 逐批 (done,total) + 全部完成
     // 第二批：池复用（不新建 Worker），requestId 自增隔离批次
     const p2 = batchStatsWebModels(["/web/ysm/d.ysm"]);
+    await flushMicrotasks();
     expect(FakeWorker.instances).toHaveLength(1);
     const posted2 = FakeWorker.instances[0].posted;
     expect(posted2).toHaveLength(2);
@@ -182,6 +184,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
     const paths = Array.from({ length: STATS_BATCH_LIMIT * 2 + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
+    await flushMicrotasks();
     const [w0, w1] = FakeWorker.instances;
     expect(w0.posted[0].paths).toHaveLength(200);
     expect(w1.posted[0].paths).toHaveLength(200);
@@ -219,11 +222,12 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(false);
   });
 
-  it("requestId 隔离：空消息 / 异批 result / progress 消息均被忽略，正确回包才 settle", async () => {
+  it("requestId 隔离：空消息 / 异批 result 被忽略，正确回包才 settle", async () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm"];
     const p = batchStatsWebModels(paths);
+    await flushMicrotasks();
     const w = FakeWorker.instances[0];
     const reqId = w.posted[0].requestId;
     w.onmessage?.({ data: null }); // !data → 忽略
@@ -234,7 +238,6 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
         results: [mkResult(paths[0], 999), mkResult(paths[1], 999)],
       },
     });
-    w.onmessage?.({ data: { type: "progress", requestId: reqId, done: 1, total: 2 } }); // 无消费 → 忽略
     w.onmessage?.({
       data: {
         type: "result",
@@ -252,6 +255,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
+    await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
     // w0 报 WASM 初始化失败（瞬态）→ 只 terminate w0，不杀池
     w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
@@ -278,6 +282,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
     w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
     await flushMicrotasks();
@@ -292,6 +297,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
     w0.onerror?.(new Error("trap escaped"));
     await flushMicrotasks();
@@ -314,6 +320,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
     w0.onerror?.(new Error("trap escaped"));
     await flushMicrotasks();
@@ -329,6 +336,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     // 201 条 → 2 片（200+1）：w0 取 chunk0、w1 取 chunk1，两 worker 并发在途
     const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
+    await flushMicrotasks();
     const [w0, w1] = FakeWorker.instances;
     expect(w0.posted[0].paths).toHaveLength(STATS_BATCH_LIMIT);
     expect(w1.posted[0].paths).toHaveLength(1);
@@ -369,6 +377,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
+    await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
     // chunk0（200 条）瞬态 error → 重试到新 worker w1
     w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
@@ -410,6 +419,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await vi.advanceTimersByTimeAsync(0); // fake timers 下 flush 微任务（单飞链延后一拍）
     const w = FakeWorker.instances[0];
     expect(w.terminated).toBe(false);
     await vi.advanceTimersByTimeAsync(60_000); // STATS_CHUNK_TIMEOUT_MS（源码常量，未导出）
@@ -433,6 +443,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     FakeWorker.failTerminate = true;
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
     expect(FakeWorker.instances).toHaveLength(1); // 池已建
     expect(() => terminateStatsWorker()).not.toThrow(); // terminate 抛错 → catch 吞掉
     await expect(p).resolves.toBeNull(); // 在途请求全部降级 settle，不挂起
@@ -445,6 +456,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
+    await flushMicrotasks();
     const w = FakeWorker.instances[0];
     w.onmessage?.({
       data: {
@@ -455,6 +467,76 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     });
     await expect(p).resolves.toBeNull();
     expect(consumeWebSearchDegraded()).toBe(true);
+  });
+
+  // ===== ADR-218 D1：池并发 = 批级单飞（batchChain 串行链）=====
+
+  it("双批并发 → 串行化：后批排队不覆写槽位，前批完成后接续（hc=1）", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const pA = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
+    const w = FakeWorker.instances[0];
+    const reqA = w.posted[0].requestId;
+    // 前批在途时发起第二批 → 必须排队（不发包、不覆写 onmessage 槽位）
+    const pB = batchStatsWebModels(["/web/ysm/b.ysm"]);
+    await flushMicrotasks();
+    expect(w.posted).toHaveLength(1); // B 尚未发包
+    // 回包 A → A 完成
+    w.onmessage?.({
+      data: { type: "result", requestId: reqA, results: [mkResult("/web/ysm/a.ysm", 1)] },
+    });
+    await expect(pA).resolves.toEqual([
+      { boneCount: 1, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
+    ]);
+    // A 完成 → B 出队，同一 worker 接续发包，requestId 继续自增
+    await flushMicrotasks();
+    expect(w.posted).toHaveLength(2);
+    expect(w.posted[1].requestId).toBe(reqA + 1);
+    w.onmessage?.({
+      data: { type: "result", requestId: w.posted[1].requestId, results: [mkResult("/web/ysm/b.ysm", 2)] },
+    });
+    await expect(pB).resolves.toEqual([
+      { boneCount: 2, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
+    ]);
+    expect(w.terminated).toBe(false); // 无杀池
+    expect(consumeWebSearchDegraded()).toBe(false); // 两批均完整
+  });
+
+  it("terminateStatsWorker 弃置排队批（池代际 +1）：在途批降级、未启动批直接 null", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const pA = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    const pB = batchStatsWebModels(["/web/ysm/b.ysm"]);
+    await flushMicrotasks();
+    const w = FakeWorker.instances[0];
+    expect(w.posted).toHaveLength(1); // B 排队中
+    terminateStatsWorker(); // 杀池 + 池代际 +1：A 在途 chunk 降级 settle，B 弃置
+    const [ra, rb] = await Promise.all([pA, pB]);
+    expect(ra).toBeNull(); // A：在途请求被终止 settle → 整批降级
+    expect(rb).toBeNull(); // B：未启动 → 弃置（防"取消后又偷偷重跑"）
+    expect(consumeWebSearchDegraded()).toBe(true);
+  });
+
+  it("回包乱序 → 合并层按 path 对齐（Map 查表），结果序不再承担契约（ADR-218 D2）", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm"];
+    const p = batchStatsWebModels(paths);
+    await flushMicrotasks();
+    const w = FakeWorker.instances[0];
+    // Worker 逆序回包（未来 worker 内并行解码可能乱序）
+    w.onmessage?.({
+      data: {
+        type: "result",
+        requestId: w.posted[0].requestId,
+        results: [mkResult(paths[1], 2), mkResult(paths[0], 1)],
+      },
+    });
+    const res = await p;
+    expect(res?.[0]?.boneCount).toBe(1); // 按 path 对齐回输入序
+    expect(res?.[1]?.boneCount).toBe(2);
+    expect(consumeWebSearchDegraded()).toBe(false);
   });
 });
 

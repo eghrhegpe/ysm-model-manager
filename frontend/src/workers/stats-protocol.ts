@@ -10,7 +10,7 @@ export interface WebModelStats {
   hasError: boolean;
 }
 
-/** 带 path 的统计结果（Worker 返回，主线程按 path 对齐防顺序漂移） */
+/** 带 path 的统计结果（Worker 返回；主线程合并层按 path 对齐——Map 查表，回包序不承担契约，ADR-218 D2） */
 export type WebModelStatsWithPath = WebModelStats & { path: string };
 
 /** 主线程 → Worker：批量统计任务 */
@@ -22,16 +22,7 @@ export interface StatsWorkerRequest {
   requestId: number;
 }
 
-/** Worker → 主线程：进度（每 10 个模型一条）。注意：当前无主线程消费方——
- * web-stats.ts onmessage 忽略本消息，UI 进度按 chunk 完成数推进（P3 审核：协议字段留作细粒度进度条扩展点，勿误认为已生效） */
-export interface StatsWorkerProgress {
-  type: "progress";
-  requestId: number;
-  done: number;
-  total: number;
-}
-
-/** Worker → 主线程：批量结果（与 paths 一一对应，含 path 便于主线程对齐） */
+/** Worker → 主线程：批量结果（合并层按 path 对齐，见 WebModelStatsWithPath） */
 export interface StatsWorkerResult {
   type: "result";
   requestId: number;
@@ -45,7 +36,10 @@ export interface StatsWorkerError {
   message: string;
 }
 
-export type StatsWorkerResponse = StatsWorkerProgress | StatsWorkerResult | StatsWorkerError;
+export type StatsWorkerResponse = StatsWorkerResult | StatsWorkerError;
+
+// 进度说明（ADR-218 D2）：worker 级细粒度进度消息已移除——UI 进度本就走主线程 chunk 级
+// onStatsProgress（web-stats.ts 逐批推进）；未来需要细粒度进度条时在 protocol 层扩展。
 
 /** 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） */
 export const STATS_BATCH_LIMIT = 200;

@@ -104,7 +104,7 @@ async function loadMtAssets(): Promise<ParserAssets> {
 
 /**
  * ADR-079 M3/M4 + ADR-153：pthread 多线程版初始化（需 crossOriginIsolated=true——SharedArrayBuffer
- * 前提，见 backend/coi-sw.ts）。差异点：
+ * 前提，见 workers/coi-sw.ts）。差异点：
  *  1. 用 mt 数据文件（pthread 编译产物，Atomics/SharedArrayBuffer/PThread）
  *  2. 注入 mainScriptUrlOrBlob（Blob URL）：Emscripten pthread worker 池从该 URL
  *     重新加载主胶水（new Worker(mainScriptUrlOrBlob)，worker 内 ENVIRONMENT_IS_PTHREAD

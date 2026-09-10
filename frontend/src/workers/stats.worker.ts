@@ -2,8 +2,8 @@
 // SearchModels 数值条件的统计来源（ADR-071 审计增强 #6 + 用户「多线程注入」要求）：
 //  1. Worker 内 open IndexedDB（同源）读文件字节 —— 免主线程 base64 大字符串传输
 //  2. Worker 内独立加载 YSMParser WASM（ysm-worker-loader.ts，不复用主线程 wasmModule 单例）
-//  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → postMessage 进度 + 批量结果
-// 主线程编排（批量切分/超时/取消/降级）见 backend/web-stats.ts；协议见 stats-protocol.ts。
+//  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → postMessage 整批结果（按 path 对齐）
+// 主线程编排（批量切分/超时/取消/降级/批级单飞 ADR-218）见 backend/web-stats.ts；协议见 stats-protocol.ts。
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
 import { idbGet } from "@/utils/storage/idb.ts";
 import { parseWebPath } from "@/utils/base/web-path.ts";
@@ -16,6 +16,7 @@ import {
 } from "@/wasm/ysm-worker-loader.ts";
 import { stripYsgpTextHeader } from "@/preview-3d/decoder/utils.ts";
 import {
+  EMPTY_ERROR,
   statsFromDecodedFiles,
   statsFromJsonBytes,
   type StatsRelReader,
@@ -34,8 +35,6 @@ const ctx = self as unknown as {
 };
 
 const post = (msg: StatsWorkerResponse): void => ctx.postMessage(msg);
-
-const ERROR_STATS: WebModelStats = { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true };
 
 /** 读模型主文件字节（/web/<type>/<rest> → IDB file:<type>/<rest>） */
 async function readModelBytes(path: string): Promise<Uint8Array | null> {
@@ -64,7 +63,7 @@ function readRelFor(mainPath: string): StatsRelReader {
 /** 单模型统计：.ysm → WASM 解码产物；.json → 直读解析（解压目录入口，ADR-038） */
 async function statsOne(path: string): Promise<WebModelStats> {
   const bytes = await readModelBytes(path);
-  if (!bytes || !bytes.length) return ERROR_STATS;
+  if (!bytes || !bytes.length) return EMPTY_ERROR;
   try {
     if (/\.json$/i.test(path)) {
       return statsFromJsonBytes(bytes, readRelFor(path));
@@ -82,11 +81,11 @@ async function statsOne(path: string): Promise<WebModelStats> {
     if (!files?.length) {
       files = await decodeYsmInWorkerMemfs(bytes);
     }
-    if (!files?.length) return ERROR_STATS;
+    if (!files?.length) return EMPTY_ERROR;
     return statsFromDecodedFiles(files);
   } catch {
     // 单模型解码异常不拖垮整批：该模型标记 hasError（数值条件过滤时被排除）
-    return ERROR_STATS;
+    return EMPTY_ERROR;
   }
 }
 
@@ -100,7 +99,6 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
     post({ type: "error", requestId, message: "paths 不是数组" });
     return;
   }
-  const total = paths.length;
   try {
     // ADR-079 M4：跨源隔离（SharedArrayBuffer 可用）→ pthread 多线程 WASM（WASM 线程池
     // 并行处理本批多模型）；否则单线程 WASM。crossOriginIsolated 在 worker 全局可读。
@@ -124,15 +122,11 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       return;
     }
     const results: Array<WebModelStatsWithPath> = [];
-    let done = 0;
     for (const p of paths) {
       results.push({ path: p, ...(await statsOne(p)) });
-      done++;
-      // 进度节流：每 10 个或最后一个上报一次（避免消息洪泛）
-      if (done % 10 === 0 || done === total) {
-        post({ type: "progress", requestId, done, total });
-      }
     }
+    // 整批一次回包（结果按 path 对齐，ADR-218 D2；worker 级细粒度进度消息已移除，
+    // UI 进度走主线程 chunk 级 onStatsProgress）
     post({ type: "result", requestId, results });
   } catch (e) {
     post({

@@ -3,12 +3,9 @@
 // 覆盖：纹理嗅探（PNG/JPEG）、WASM 解码产物统计（合并求和/跳过 ysm.json/animations/
 // avatar）、.json 主文件统计（ysm.json spec 关联文件 / 标准 geometry / 畸形输入）。
 import { describe, it, expect } from "vitest";
-import {
-  statsFromDecodedFiles,
-  statsFromJsonBytes,
-  type StatsFileInput,
-} from "./stats-core.ts";
+import { statsFromDecodedFiles, statsFromJsonBytes } from "./stats-core.ts";
 import { pngBytes } from "@/test-utils/tex-bytes.ts";
+import type { YsmDecodedFile } from "@/wasm/parser-shared.ts";
 
 const enc = new TextEncoder();
 
@@ -32,7 +29,7 @@ const geoB = JSON.stringify({
 
 describe("stats-core.statsFromDecodedFiles（.ysm WASM 产物统计）", () => {
   it("合并多 geometry 骨骼/立方体求和，纹理尺寸取 geometry 描述与嗅探的最大值", () => {
-    const files: StatsFileInput[] = [
+    const files: YsmDecodedFile[] = [
       { path: "models/a.json", data: enc.encode(geoA) },
       { path: "models/b.json", data: enc.encode(geoB) },
       { path: "ysm.json", data: enc.encode("{}") }, // 元信息，跳过

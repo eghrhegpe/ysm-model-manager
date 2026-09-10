@@ -2,10 +2,14 @@
 // 主线程只做消息编排：N 个 Worker（池大小 = hardwareConcurrency，上限 8）内独立加载
 // WASM + open IndexedDB（同源）逐个模型解码统计——多模型**并行**处理（路 B Worker 池：
 // 无 SharedArrayBuffer/COOP-COEP 依赖，GitHub Pages 可用），主线程零解析负载。
+// 池并发契约（ADR-218 D1）：**批级单飞**——同一时刻池上至多一个 batch 在跑；
+// 后续 batchStatsWebModels 经 batchChain 串行链排队（statsOneChunk 的 onmessage
+// 单槽位由串行化机器保护，不再依赖调用方纪律）；terminateStatsWorker 升池代际，
+// 排队（未启动）批弃置（降级 null），防"取消后又偷偷重跑"。
 // 降级契约：Worker 不支持（new Worker 抛错）/ 启动失败 / 运行时错误 / 超时
 // → 返回 null 并置降级标记（consumeWebSearchDegraded 消费，供 toolbar-search 提示）；
 // web-fs.searchWebModels 收到 null 走「数值 0 + hasError:false」降级路径。
-// 测试注入：__setStatsRunnerForTest 替换 Worker 路径（browser-adapter.test.ts 用）。
+// 测试注入：__setStatsRunnerForTest 替换 Worker 路径（browser-adapter.test.ts 用，不走串行链）。
 import {
   STATS_BATCH_LIMIT,
   type StatsWorkerRequest,
@@ -25,6 +29,11 @@ const POOL_MAX = 8;
 
 let workers: Worker[] = [];
 let requestSeq = 0;
+
+/** 批串行链（ADR-218 D1）：池并发 = 批级单飞，第二批起排队等前批整体完成 */
+let batchChain: Promise<unknown> = Promise.resolve();
+/** 池代际：terminateStatsWorker 升代——排队（未启动）批出队时见代际已变 → 弃置（降级 null） */
+let poolGen = 0;
 
 /** 单 chunk 结果：ok=true 携带结果；ok=false 携带是否可重试（瞬态 error 可换 worker 重试，超时/死循环不可） */
 type StatsChunkResult =
@@ -65,8 +74,11 @@ export function consumeWebSearchDegraded(): boolean {
   return d;
 }
 
-/** 终止并回收整个 Worker 池（取消在途任务：调用方在超时/失败后使用；外部也可主动取消） */
+/** 终止并回收整个 Worker 池（取消在途任务：调用方在超时/失败后使用；外部也可主动取消）
+ *  ADR-218 D1：升池代际——排队（未启动）的批出队时见代际已变，直接弃置（降级 null），
+ *  防"取消后又偷偷重跑"；在途批的 chunk 经在途表降级 settle。 */
 export function terminateStatsWorker(): void {
+  poolGen++;
   for (const w of workers) {
     try {
       w.terminate();
@@ -121,6 +133,8 @@ function createStatsWorker(): Worker {
  * 绝不复用池内既有 worker：多 worker 池里其他 worker 正被并发 runWorkerQueue 持有在途
  * 请求（单 onmessage 槽位契约），复用会把对方在途回复覆盖丢弃 → 挂 60s 超时杀整池。
  * P0 修复：池大小受 poolSize() 硬上限保护，超限不再 push，返回 null 让调用方降级。
+ * （ADR-218 D1：跨批互踩已由 batchChain 单飞机制机器强制，本规则守护的是批内
+ * 「每 worker 单在途」资源预算 + 槽位契约。）
  */
 function spawnReplacementWorker(): Worker | null {
   try {
@@ -152,9 +166,7 @@ function getWorkerPool(): Worker[] | null {
 export function prefetchStatsWorker(): void {
   if (typeof Worker === "undefined") return;
   try {
-    const w = new Worker(new URL("../workers/stats.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    const w = createStatsWorker();
     w.terminate();
   } catch {
     // 不支持/被屏蔽 → 静默降级，首次搜索时正常下载
@@ -185,7 +197,7 @@ function statsOneChunk(w: Worker, requestId: number, paths: string[]): Promise<S
 
     w.onmessage = (ev: MessageEvent<StatsWorkerResponse>): void => {
       const data = ev.data as StatsWorkerResponse;
-      if (!data || data.requestId !== requestId) return; // 旧批/进度消息忽略
+      if (!data || data.requestId !== requestId) return; // 旧批消息忽略
       if (data.type === "result") {
         settle({ ok: true, results: data.results });
       } else if (data.type === "error") {
@@ -194,7 +206,6 @@ function statsOneChunk(w: Worker, requestId: number, paths: string[]): Promise<S
         terminateWorker(w);
         settle({ ok: false, retryable: true });
       }
-      // progress：当前无 UI 消费，忽略
     };
 
     w.onerror = (): void => {
@@ -210,20 +221,43 @@ function statsOneChunk(w: Worker, requestId: number, paths: string[]): Promise<S
 /**
  * 批量统计模型（骨骼/立方体/纹理尺寸）。返回数组与输入 paths 一一对应；
  * Worker 池不可用 / 任一片失败 / 超时 → 返回 null（整体降级）。
+ * 池并发契约（ADR-218 D1）：同一时刻池上至多一个 batch 在跑——第二起调用经
+ * batchChain 串行链排队等前批完成；等待期间 terminateStatsWorker 升代则本批弃置。
  */
-export async function batchStatsWebModels(paths: string[]): Promise<WebModelStats[] | null> {
+export function batchStatsWebModels(paths: string[]): Promise<WebModelStats[] | null> {
   if (injectedRunner) {
-    try {
-      const res = await injectedRunner(paths);
-      if (res === null) markDegraded();
-      return res;
-    } catch {
-      // 注入 runner 抛错（对齐 Worker error 语义）→ 整批降级，不向上抛
-      markDegraded();
-      return null;
-    }
+    // 测试 seam：不占串行链，立即执行
+    return (async (): Promise<WebModelStats[] | null> => {
+      try {
+        const res = await injectedRunner(paths);
+        if (res === null) markDegraded();
+        return res;
+      } catch {
+        // 注入 runner 抛错（对齐 Worker error 语义）→ 整批降级，不向上抛
+        markDegraded();
+        return null;
+      }
+    })();
   }
-  if (!paths.length) return [];
+  if (!paths.length) return Promise.resolve([]); // 空批纯快路径，不占串行链
+  const gen = poolGen;
+  const job = batchChain.then((): Promise<WebModelStats[] | null> => {
+    if (gen !== poolGen) {
+      // 排队期间 terminateStatsWorker 升代 → 弃置本批（防"取消后又偷偷重跑"）
+      markDegraded();
+      return Promise.resolve(null);
+    }
+    return runPoolBatch(paths);
+  });
+  batchChain = job.then(
+    () => undefined,
+    () => undefined,
+  );
+  return job;
+}
+
+/** 池执行体：分片 → 池内轮询分发 → 合并（由 batchChain 保证单批在途） */
+async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
   const ws = getWorkerPool();
   if (!ws || ws.length === 0) {
     markDegraded();
@@ -277,13 +311,15 @@ export async function batchStatsWebModels(paths: string[]): Promise<WebModelStat
     markDegraded();
     return null;
   }
-  // 合并（chunks 顺序 = paths 顺序）：按原起始索引对齐
+  // 合并（chunks 顺序 = paths 顺序）：按 path 对齐（ADR-218 D2——Map 查表，结果回包序
+  // 不承担契约，为未来 worker 内并行解码留口；chunk 内 paths 唯一，重复输入不在契约内）
   const out: Array<WebModelStats | null> = new Array(paths.length);
   for (let ci = 0; ci < chunks.length; ci++) {
     const { slice, offset } = chunks[ci];
     const res = results[ci] as Array<WebModelStatsWithPath>;
+    const byPath = new Map(res.map((r) => [r.path, r]));
     for (let i = 0; i < slice.length; i++) {
-      const s = res[i];
+      const s = byPath.get(slice[i]);
       out[offset + i] = s
         ? {
             boneCount: s.boneCount,

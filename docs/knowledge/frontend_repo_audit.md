@@ -216,7 +216,6 @@ auto_fields:
     - cleanupYsm3D
     - clearAllCache
     - clearAllCommunityCache
-    - clearControls
     - clearLoadTraces
     - clearModelRoots
     - clearSceneCaps
@@ -264,7 +263,6 @@ auto_fields:
     - contentUtilCSS
     - ControllerState
     - ControllerTransition
-    - ControlUpdater
     - copyText
     - CORE_MENU_ITEMS
     - countMissing
@@ -491,8 +489,6 @@ auto_fields:
     - getByTestId
     - getCacheTtlMs
     - getCompound
-    - getControl
-    - getControlCount
     - getCreatorIdentity
     - getCustomAnimPath
     - getDefaultKeepIdx
@@ -1011,7 +1007,6 @@ auto_fields:
     - registerBoneRaycast
     - registerCoiServiceWorker
     - registerContextMenus
-    - registerControl
     - registerDlg
     - registerErrorDiary
     - registerInstanceOps
@@ -1154,7 +1149,6 @@ auto_fields:
     - setBoneNodeVisible
     - setBoneVisible
     - setBusy
-    - setControlRegistry
     - setFrustumCullEnabled
     - setLang
     - setLastSelectedType
@@ -1315,7 +1309,6 @@ auto_fields:
     - unloadModel
     - unmountElement
     - unpackBlockStates
-    - unregisterControl
     - unregisterDevtools
     - unregisterModelRoot
     - unregisterSchema

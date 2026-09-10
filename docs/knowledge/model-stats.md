@@ -68,17 +68,17 @@ status: active
 
 ## 核心职责
 
-- **`stats-core.ts`** — 纯计算核心（无 IO、无 WASM 依赖），输入为解码/直读产物文件，输出统计数值
+- **`stats-core.ts`** — 纯计算核心（无 IO、无 WASM 运行时依赖；`YsmDecodedFile` 为 type-only import，形状单一事实源 = `wasm/parser-shared.ts`，ADR-218 D3），输入为解码/直读产物文件，输出统计数值
   - `statsFromDecodedFiles(files)` — 批量统计：骨数 = `bones` 数组长度；立方体数 = 各 `bone.cubes` 长度之和（递归收集）；纹理宽高 = `max(嗅探, geometry description 描述)`
   - **纹理头魔数**：`PNG_SIG` / `JPG_SIG` / `GIF_SIG` / `BMP_SIG` / `TGA_SIG` — 单一事实源已收敛至 `frontend/src/utils/base/tex-size.ts` 的 `sniffTexSize`（2026-09 去重专项：从 stats-core / wasm.ts 抽出的公共纯函数），与 Go `imagePixelArea` 同口径，勿单独改
-  - 输出 `ModelStatsResult`（`boneCount` / `cubeCount` / `texWidth` / `texHeight` / `hasError`），口径对齐 Go `decodeYSMViaNodeJS`（`internal/app/wasm_decoder.go` decodeYSMViaNodeJS）与前端 `decodeYsmViaWasm`
+  - 输出 `WebModelStats`（`boneCount` / `cubeCount` / `texWidth` / `texHeight` / `hasError`；单一形状源 = `stats-protocol.ts`，`EMPTY_ERROR` 错误标记自此文件单处导出，ADR-218 D3），口径对齐 Go `decodeYSMViaNodeJS`（`internal/app/wasm_decoder.go` decodeYSMViaNodeJS）与前端 `decodeYsmViaWasm`
 
-- **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse` / `WebModelStats` / `WebModelStatsWithPath` 类型；`STATS_BATCH_LIMIT`（单批上限）
+- **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse`（result + error；worker 级细粒度 progress 消息已移除，UI 进度走主线程 chunk 级 `onStatsProgress`，ADR-218 D2）/ `WebModelStats`（唯一统计形状源）/ `WebModelStatsWithPath`（合并层按 path 对齐）类型；`STATS_BATCH_LIMIT`（单批上限）
 
-- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
+- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；整批一次回包（`result`，按 path 对齐）；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
 
 - **`web-stats.ts`** — 主线程编排：
-  - `batchStatsWebModels(paths)` — chunk 分发到池内 worker **并行**统计（`Promise.all(ws.map(runWorkerQueue))`，每 worker 单在途——见不变量），批超时 `STATS_CHUNK_TIMEOUT_MS`（60s）终止防僵尸
+  - `batchStatsWebModels(paths)` — **池并发 = 批级单飞**（ADR-218 D1：`batchChain` 串行链，第二起调用排队等前批整体完成；`terminateStatsWorker` 升池代际，排队批弃置）；批内 chunk 分发到池内 worker **并行**统计（`Promise.all(ws.map(runWorkerQueue))`，每 worker 单在途——见不变量），批超时 `STATS_CHUNK_TIMEOUT_MS`（60s）终止防僵尸；合并层按 path 对齐（Map 查表，回包序不承担契约，ADR-218 D2）
   - **降级契约**：Worker 不支持（`new Worker` 抛错）/ 启动失败 / 运行时错误 / 单批超时 → 返回 `null` 并置降级标记（`consumeWebSearchDegraded` 消费，供 toolbar-search 提示）；`web-fs.searchWebModels` 收到 `null` 走「数值 0 + `hasError: false`」降级路径
   - **测试注入**：`__setStatsRunnerForTest` 替换 Worker 路径（`browser-adapter.test.ts` / `web-stats.test.ts` 用）
 
@@ -92,9 +92,9 @@ status: active
 
 - 单批超时 60s 终止 Worker 防僵尸
 - 降级时 `hasError: false`（统计失败不影响搜索结果可用性，仅数值为 0）
-- **池内 chunk 并行 + 批间调用方串行**：单批内 chunk 经 `Promise.all(ws.map(runWorkerQueue))` 分发到池内 worker 并行处理（每 worker 单在途，见下条）；`requestSeq`/`requestId` **只做消息隔离**（过滤旧批/进度消息），不提供跨批串行——并发发起两个 `batchStatsWebModels` 会共享池 worker 的 `onmessage` 单槽位互踩（与 8cfbf2e7 重试占用他队 worker 同族根因），调用方必须保证同一时刻至多一个 batch 在跑
+- **池内 chunk 并行 + 批间机器强制串行（ADR-218 D1）**：单批内 chunk 经 `Promise.all(ws.map(runWorkerQueue))` 分发到池内 worker 并行处理（每 worker 单在途，见下条）；跨批并发由实现机器强制——`batchStatsWebModels` 经 `batchChain` 串行链单飞（同一时刻池上至多一个 batch，后批排队），`terminateStatsWorker` 升池代际（`poolGen`），排队（未启动）批弃置（降级 null，防"取消后又偷偷重跑"）。历史上的调用方纪律版（并发双批互踩 `onmessage` 单槽位 → 60s 超时杀整池互毁）已失效——不再依赖调用方保证
 - **单 worker 单在途 + 重试专属 replacement**（2026-09-05 code_review 修复 8cfbf2e7）：
-  - `statsOneChunk` 以 `w.onmessage` 单槽位按 `requestId` 过滤回包——每 worker 同时只允许一个在途请求（`runWorkerQueue` 池内并发各持一 worker）
+  - `statsOneChunk` 以 `w.onmessage` 单槽位按 `requestId` 过滤回包——每 worker 同时只允许一个在途请求（`runWorkerQueue` 池内并发各持一 worker；跨批安全由 ADR-218 D1 单飞链机器保证）
   - 瞬态 error（WASM init 失败 / trap 逃逸）只 `terminateWorker` 出错者；重试**必须新建专属 worker**（`spawnReplacementWorker` 补入池），**禁止复用池内既有 worker**——多 worker 池里其余 worker 正被并发队列持在途，复用会覆盖其 onmessage 槽位 → 对方回包被 requestId 丢弃 → 挂 60s 超时杀整池（重试特性反而整体降级）
   - 重试预算按「每次瞬态 error 一次」计：`retried` 在每片成功后复位，后片瞬态 error 独立享 1 次重试
   - 测试须覆盖 hc≥2 多 worker 并发（hc=1 下 terminate 清池 → 懒建新 worker，永远碰不到「抢他队 worker」冲突，是既有用例的盲区）
@@ -110,3 +110,4 @@ status: active
 - [backend-idb](./backend-idb.md) — `searchWebModels` 数值条件统计来源（本层被其消费）
 - [ysm-wasm](./ysm-wasm.md) — Worker 内 WASM 加载（`ysm-worker-loader.ts` 独立于主线程单例）
 - ADR-071（网页版审计增强 #7 移动/复制 + #8 日志持久化 + 统计数值条件）
+- ADR-218（stats worker 池并发契约与协议收敛：批级单飞 / progress 移除 / 类型去重）

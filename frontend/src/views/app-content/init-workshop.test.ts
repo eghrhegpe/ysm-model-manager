@@ -43,9 +43,9 @@ vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/backend/runtime.ts", () => ({ Events: { On: eventsOn } }));
 vi.mock("./site/site-view.ts", () => ({ renderSiteView }));
 vi.mock("@/features/community/show-repo-models.ts", () => ({ showRepoModels }));
-vi.mock("./workshop-avatar.ts", () => ({ extractAvatars }));
-vi.mock("./workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
-vi.mock("./workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
+vi.mock("./site/workshop-avatar.ts", () => ({ extractAvatars }));
+vi.mock("./site/workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
+vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
 vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";

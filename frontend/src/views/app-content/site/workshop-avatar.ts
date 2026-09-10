@@ -2,7 +2,7 @@
 
 import { dbg } from "@/utils/debug/debug.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { AppContentHost } from "./host.ts";
+import type { AppContentHost } from "../host.ts";
 
 /**
  * 提取创作者头像（后台批量）

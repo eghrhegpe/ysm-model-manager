@@ -23,9 +23,9 @@ import {
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { AppContentHost } from "./host.ts";
-import { extractAvatars } from "./workshop-avatar.ts";
-import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";
-import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./workshop-tabs.ts";
+import { extractAvatars } from "./site/workshop-avatar.ts";
+import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
+import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./site/workshop-tabs.ts";
 
 /**
  * 创建创意工坊页的共享 ref 对象——单一入口，tabs / showSiteView / edit 等全部从此处取。

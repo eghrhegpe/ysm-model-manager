@@ -107,7 +107,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmReBindContextMenu | `frontend/src/features/community/events.ts` | 208 |
+| cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 131 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 144 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 127 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 279 |
@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 199 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 195 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
@@ -297,15 +297,15 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 205 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 259 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 212 |
 
 ### `repo:search-creator`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 296 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 166 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 295 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -322,7 +322,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 282 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 235 |
 
 ### `stats:refresh`
 
@@ -348,8 +348,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 91 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 164 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 188 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 202 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 141 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 92 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -360,7 +360,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 239 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 192 |
 
 ### `sync:download:done`
 
@@ -416,11 +416,11 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 303 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 327 |
-| cmReBindDlSelected | `frontend/src/features/community/events.ts` | 144 |
-| cmReBindDlSelected | `frontend/src/features/community/events.ts` | 156 |
-| cmReHandleSingleDownload | `frontend/src/features/community/events.ts` | 230 |
-| cmReBindRowClick | `frontend/src/features/community/events.ts` | 280 |
-| cmReBindRowClick | `frontend/src/features/community/events.ts` | 314 |
+| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 67 |
+| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 79 |
+| cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 153 |
+| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 203 |
+| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 237 |
 | dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename-form.ts` | 50 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 265 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 279 |
@@ -485,18 +485,18 @@
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 59 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 93 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 115 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 124 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 109 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 133 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 140 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 226 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 233 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 249 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 263 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 58 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 92 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 114 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 123 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 108 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 132 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 139 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 225 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 232 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 248 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 143 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 262 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |
@@ -529,7 +529,7 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 232 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 185 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |

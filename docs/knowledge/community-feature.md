@@ -15,6 +15,19 @@ auto_fields:
     - cancelDownloads
     - classifyDownloadSize
     - clearAllCommunityCache
+    - cmReBindBack
+    - cmReBindContextMenu
+    - cmReBindDlSelected
+    - cmReBindRowClick
+    - cmReBindSearch
+    - cmReBindSelAll
+    - cmReBindSelChecks
+    - cmReBindToggle
+    - CmReCtx
+    - cmReListen
+    - cmReRenderList
+    - CmReState
+    - cmReUpdateSelectedUI
     - CommunityData
     - communityGetApp
     - countMissing
@@ -46,8 +59,10 @@ auto_fields:
     - GH_DOCS
     - GH_RELEASES
     - GH_REPO
+    - GH_ROW_H
     - isActiveStatus
     - isModelMissing
+    - ListenerRef
     - loadCommunityData
     - loadLocalAuthors
     - LocalAuthorLike

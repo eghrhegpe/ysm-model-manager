@@ -1,325 +1,35 @@
-// ===== 创意工坊事件绑定（类型化版 — ADR-014 P3 features）=====
-// 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
+// ===== 创意工坊仓库事件绑定 · 组装入口（ADR-014 P3 features）=====
+// 拆分说明（ADR-040 ≤400 行红线）：原 events.ts 429 行拆为三文件——
+// · repo-events-shared.ts：共享上下文/状态机常量 + 行渲染小助手 + 监听注册原语
+// · repo-events-bindings.ts：8 个 cmReBind*（DOM 注册块）+ 单文件下载决策
+// · 本文件：bindRepoEvents 组装（队列/虚拟列表装配 + 清理）+ 公共类型 re-export
+// 对外契约不变：bindRepoEvents / RepoEventsContext / RepoEventsHandle 仍从本文件导出
 
-import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
-import { friendlyError } from "@/utils/dom/errors.ts";
-import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { ICONS } from "@/utils/icon/workshop-icons.ts";
-import { parseModelName } from "@/utils/model-name/display.ts";
-import { communityGetApp } from "./community-deps.ts";
-import { createDownloadQueue, type DownloadQueue } from "./download-queue.ts";
-import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
-import { buildModelRow, filterModels, isModelMissing, type WorkshopModel } from "./render.ts";
-import { createVirtualList, type VirtualList } from "./virtual-list.ts";
+import { createDownloadQueue } from "./download-queue.ts";
+import { buildModelRow, type WorkshopModel } from "./render.ts";
+import {
+  cmReBindBack,
+  cmReBindContextMenu,
+  cmReBindDlSelected,
+  cmReBindRowClick,
+  cmReBindSearch,
+  cmReBindSelAll,
+  cmReBindSelChecks,
+  cmReBindToggle,
+} from "./repo-events-bindings.ts";
+import {
+  type CmReCtx,
+  type CmReState,
+  cmReRenderList,
+  cmReUpdateSelectedUI,
+  GH_ROW_H,
+  type ListenerRef,
+  type RepoEventsContext,
+  type RepoEventsHandle,
+} from "./repo-events-shared.ts";
+import { createVirtualList } from "./virtual-list.ts";
 
-/** bindRepoEvents 上下文 */
-export interface RepoEventsContext {
-  esc: (s: string) => string;
-  models: WorkshopModel[];
-  dlPrefix: string;
-  repo: string;
-  source: string;
-  showRepoModels: () => void;
-  backToSite: () => void;
-  localMap: Map<string, string>;
-}
-
-/** 绑定返回值 */
-export interface RepoEventsHandle {
-  renderList: (filter?: string) => void;
-  updateSelectedUI: () => void;
-  cleanup: () => Promise<void>;
-}
-
-interface CmReState {
-  showAll: boolean;
-  disposed: boolean;
-  currentFilter: string;
-  currentFiltered: WorkshopModel[];
-  /** onAllDone 回跳定时器引用：cmReCleanup 集中 clear（对齐 cmPgClearTimers 集中清理范式） */
-  doneTimer: ReturnType<typeof setTimeout> | null;
-}
-
-interface CmReCtx {
-  sr: HTMLElement;
-  esc: (s: string) => string;
-  models: WorkshopModel[];
-  dlPrefix: string;
-  repo: string;
-  source: string;
-  showRepoModels: () => void;
-  backToSite: () => void;
-  localMap: Map<string, string>;
-  state: CmReState;
-  selectedSet: Set<string>;
-  queue: DownloadQueue;
-  virtualList: VirtualList<WorkshopModel> | null;
-  /** 已注册的 DOM 监听（cleanup 时成对 removeEventListener，替代 cloneNode hack 清监听） */
-  listeners: ListenerRef[];
-}
-
-/** 单个已注册监听的引用（供 cmReCleanup 成对解绑） */
-interface ListenerRef {
-  el: EventTarget;
-  type: string;
-  handler: EventListenerOrEventListenerObject;
-}
-
-/** 注册监听并记录引用：addEventListener + 登记（K 泛型恢复事件类型推断，如 contextmenu→MouseEvent） */
-function cmReListen<K extends keyof HTMLElementEventMap>(
-  listeners: ListenerRef[],
-  el: HTMLElement,
-  type: K,
-  handler: (ev: HTMLElementEventMap[K]) => void,
-): void {
-  listeners.push({ el, type, handler: handler as EventListener });
-  el.addEventListener(type, handler);
-}
-
-const GH_ROW_H = 42;
-
-function cmReRenderList(ctx: CmReCtx, filter?: string): void {
-  const { state, models, virtualList, localMap } = ctx;
-  if (filter !== undefined) state.currentFilter = filter;
-  state.currentFiltered = filterModels(models, state.currentFilter, state.showAll, localMap);
-  virtualList?.refresh(state.currentFiltered);
-}
-
-function cmReUpdateSelectedUI(ctx: CmReCtx): void {
-  const { sr, selectedSet } = ctx;
-  const checked = selectedSet.size;
-  const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement | null;
-  if (btn) {
-    btn.textContent = `⬇️ ${t("workshop.downloadSelected", { n: checked })}`;
-    btn.disabled = checked === 0;
-  }
-}
-
-function cmReBindBack(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const el = ctx.sr.querySelector<HTMLElement>(".gh-back-repo");
-  if (el) cmReListen(listeners, el, "click", () => ctx.backToSite());
-}
-
-function cmReBindSearch(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const srch = ctx.sr.querySelector("#gh-repo-srch") as HTMLInputElement | null;
-  if (srch) cmReListen(listeners, srch, "input", () => cmReRenderList(ctx, srch.value));
-}
-
-function cmReBindToggle(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, state } = ctx;
-  const toggleBtn = sr.querySelector(".gh-toggle-missing") as HTMLElement | null;
-  if (toggleBtn) {
-    cmReListen(listeners, toggleBtn, "click", () => {
-      state.showAll = !state.showAll;
-      toggleBtn.textContent = state.showAll ? t("workshop.showAll") : t("workshop.showMissing");
-      toggleBtn.classList.toggle("active", state.showAll);
-      cmReRenderList(ctx);
-    });
-  }
-}
-
-function cmReBindSelChecks(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, selectedSet } = ctx;
-  const selContainer = sr.querySelector<HTMLElement>("#gh-repo-list");
-  if (selContainer) {
-    cmReListen(listeners, selContainer, "change", (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (!target.classList.contains("gh-sel")) return;
-      const name = target.dataset.name || "";
-      if (target.checked) selectedSet.add(name);
-      else selectedSet.delete(name);
-      cmReUpdateSelectedUI(ctx);
-    });
-  }
-}
-
-function cmReBindDlSelected(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, selectedSet, queue, models, dlPrefix } = ctx;
-  const dlSelBtn = sr.querySelector(".gh-dl-selected") as HTMLElement | null;
-  if (dlSelBtn) {
-    cmReListen(listeners, dlSelBtn, "click", async () => {
-      if (queue.isDownloading()) {
-        bus.emit("toast:show", {
-          msg: t("workshop.downloading"),
-          duration: TOAST_MS.success,
-          type: "info",
-        });
-        return;
-      }
-      if (!selectedSet.size) return;
-      try {
-        const tasks = buildDownloadTasks(models, selectedSet, dlPrefix);
-        await queue.enqueue(tasks);
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: friendlyError(e, "下载失败"),
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
-      }
-    });
-  }
-}
-
-function cmReBindSelAll(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, state, selectedSet, localMap } = ctx;
-  const selAllCb = sr.querySelector(
-    ".gh-select-all input[type=checkbox]",
-  ) as HTMLInputElement | null;
-  if (selAllCb) {
-    cmReListen(listeners, selAllCb, "change", () => {
-      const checked = selAllCb.checked;
-      for (const m of state.currentFiltered) {
-        if (isModelMissing(m, localMap)) {
-          if (checked) selectedSet.add(m.name);
-          else selectedSet.delete(m.name);
-        }
-      }
-      cmReUpdateSelectedUI(ctx);
-      cmReRenderList(ctx);
-    });
-  }
-}
-
-function cmReBindContextMenu(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, models } = ctx;
-  const listEl = sr.querySelector("#gh-repo-list") as HTMLElement | null;
-  if (listEl) {
-    cmReListen(listeners, listEl, "contextmenu", (e: MouseEvent) => {
-      const row = (e.target as Element).closest(".gh-row") as HTMLElement | null;
-      if (!row) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const name = row.dataset.name || "";
-      const m = models.find((x) => x.name === name);
-      if (!m) return;
-      // ADR-208 D3：右键展示项移植 menu-defs（type "workshop"，4 条纯展示项挂 noop）——
-      // ctx:show 走 orchestrator 过滤链（visibleWhen 护栏 / canWebAction / divider 折叠），
-      // 杀灭裸发 menu:show + 空 onClick 幽灵菜单 + m.size! 非空断言
-      // （exactOptionalPropertyTypes：条件携带可选字段，不显式传 undefined）
-      const workshop: { name: string; path: string; hash?: string; size?: number } = {
-        name: m.name,
-        path: m.path,
-      };
-      if (m.hash !== undefined) workshop.hash = m.hash;
-      if (m.size !== undefined) workshop.size = m.size;
-      bus.emit("ctx:show", {
-        x: e.clientX,
-        y: e.clientY,
-        type: "workshop",
-        workshop,
-      });
-    });
-  }
-}
-
-async function cmReHandleSingleDownload(
-  ctx: CmReCtx,
-  btn: HTMLElement,
-  row: Element | null,
-): Promise<void> {
-  const { selectedSet, queue } = ctx;
-  const cbName = btn.dataset.name || "";
-  const url = btn.dataset.url || "";
-  const parsedSize = parseInt(btn.dataset.size || "", 10);
-  const size = Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 0;
-  const decision = classifyDownloadSize(size);
-  if (decision === "reject") {
-    bus.emit("toast:show", {
-      msg: `📏 ${t("workshop.fileTooLarge")}`,
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return;
-  }
-  if (decision === "confirm") {
-    let ok: boolean;
-    try {
-      ok = await modalConfirm({
-        title: t("workshop.largeFile"),
-        icon: "📏",
-        message: `${(size / 1024 / 1024).toFixed(1)}MB，${t("workshop.confirmDownload")}`,
-        okText: t("workshop.download"),
-      });
-    } catch {
-      ok = false;
-    }
-    if (ctx.state.disposed) return;
-    if (!ok) return;
-  }
-
-  const cb = row?.querySelector(".gh-sel") as HTMLInputElement | null;
-  if (cb && cbName) {
-    cb.checked = true;
-    selectedSet.add(cbName);
-    cmReUpdateSelectedUI(ctx);
-  }
-
-  btn.innerHTML = ICONS.HOURGLASS;
-  try {
-    await queue.enqueue([{ url, saveDir: "", name: cbName, size }]);
-  } finally {
-    btn.innerHTML = ICONS.DOWNLOAD;
-  }
-}
-
-function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
-  const { sr, queue } = ctx;
-  const dlContainer = sr.querySelector("#gh-repo-list") as HTMLElement | null;
-  if (dlContainer) {
-    cmReListen(listeners, dlContainer, "click", async (e: MouseEvent) => {
-      try {
-        const target = e.target as HTMLElement;
-        if (target.classList.contains("gh-sel")) return;
-
-        const dlBtn = target.closest('.gh-icon-btn[data-action="download"]') as HTMLElement | null;
-        if (dlBtn) {
-          if (queue.isDownloading()) {
-            bus.emit("toast:show", {
-              msg: t("workshop.downloading"),
-              duration: TOAST_MS.success,
-              type: "info",
-            });
-            return;
-          }
-          const row = dlBtn.closest(".gh-row");
-          await cmReHandleSingleDownload(ctx, dlBtn, row);
-          return;
-        }
-
-        const searchBtn = target.closest(
-          '.gh-icon-btn[data-action="search-bili"]',
-        ) as HTMLElement | null;
-        if (searchBtn) {
-          e.stopPropagation();
-          const row = searchBtn.closest("[data-name]");
-          if (row) {
-            const { author } = parseModelName((row as HTMLElement).dataset.name || "");
-            if (author) {
-              try {
-                const { OpenInBrowser } = await communityGetApp();
-                OpenInBrowser(
-                  `https://search.bilibili.com/all?keyword=${encodeURIComponent(author)}`,
-                );
-              } catch (openErr) {
-                console.warn("[workshop] OpenInBrowser 失败:", openErr);
-              }
-            }
-          }
-          return;
-        }
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: friendlyError(e, "操作失败"),
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
-      }
-    });
-  }
-}
+export type { RepoEventsContext, RepoEventsHandle };
 
 async function cmReCleanup(ctx: CmReCtx): Promise<void> {
   const { state, virtualList, queue, selectedSet, listeners } = ctx;

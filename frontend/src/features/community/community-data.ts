@@ -9,6 +9,15 @@ import type {
   WorkshopSite,
 } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { communityGetApp } from "./community-deps.ts";
+// 远程拉取层（ADR-040 拆出）：本文件既在 tryAutoMergeCommunity 本地使用，又保留
+// re-export 以维持 `import * as m from community-data.ts` 既有契约（site/edit.ts 零改动）
+import {
+  DEFAULT_COMMUNITY_URL,
+  fetchCommunityCreators,
+  fetchCommunitySites,
+} from "./community-fetch.ts";
+
+export { DEFAULT_COMMUNITY_URL, fetchCommunityCreators, fetchCommunitySites };
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {
@@ -49,8 +58,7 @@ const SCAN_AUTHORS_KEY = "scan-authors";
 const SCAN_LITE_AUTHORS_TTL_MS = 30 * 1000; // 30 秒
 const SCAN_LITE_AUTHORS_KEY = "ListModelAuthors";
 
-// 站点索引 TTL：站点配置变更很少，30 分钟足够
-const SITES_FETCH_TTL_MS = 30 * 60 * 1000; // 30 分钟
+// 站点索引缓存 key（TTL 已随拉取层迁往 community-fetch.ts，此处仅保留失效 key）
 const SITES_FETCH_KEY = "community-sites";
 
 /** 供测试强制刷新缓存 */
@@ -217,79 +225,6 @@ export const fillSearch = (tpl: string, q: string): string =>
   tpl.replace(/\{\{q\}\}/g, encodeURIComponent(q));
 
 /**
- * 三路回退拉取 JSON 数组（raw → jsdelivr → GitHub API）。
- * mirror 为 "jsdelivr" / "githubapi" 时调整优先级；api 源经 atob 解码 base64 内容。
- * 每路 8s 超时（AbortController）；全部失败返回 []。
- * @param attempts - 候选源列表（按尝试顺序）
- * @param mirror - 镜像配置，调整回退优先级
- * @param dbgTag - debug 日志模块标签（默认 "community"）
- */
-async function fetchWithFallback<T>(
-  attempts: Array<{ name: string; url: string; label: string }>,
-  mirror?: string,
-  dbgTag = "community",
-): Promise<T[]> {
-  // 防御：attempts 可能不足 3 项（本地 URL 场景），重排后滤掉缺失项，避免 undefined.url
-  const order = mirror === "jsdelivr" ? [1, 0, 2] : mirror === "githubapi" ? [2, 0, 1] : null;
-  const sorted = order
-    ? order.map((i) => attempts[i]).filter((a): a is (typeof attempts)[number] => !!a)
-    : attempts;
-
-  for (const a of sorted) {
-    const ctrl = new AbortController();
-    const tmr = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const resp = await fetch(a.url, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      let data: unknown;
-      if (a.name === "api") {
-        const json = (await resp.json()) as { content?: string };
-        if (!json.content) throw new Error("no content");
-        data = JSON.parse(atob(json.content.replace(/\s/g, "")));
-      } else {
-        data = await resp.json();
-      }
-      if (Array.isArray(data)) return data as T[];
-    } catch (err) {
-      if (err && (err as Error)?.name !== "AbortError") {
-        dbg(dbgTag, `${a.name} failed:`, (err as Error)?.message);
-      }
-    } finally {
-      clearTimeout(tmr);
-    }
-  }
-  return [];
-}
-
-/**
- * 从 GitHub 拉取 creators.json（三路回退）
- */
-export async function fetchCommunityCreators(
-  url: string,
-  mirror?: string,
-): Promise<WorkshopCreator[]> {
-  const attempts: Array<{ name: string; url: string; label: string }> = [
-    { name: "raw", url, label: t("workshop.communityIndexLoading", { source: "raw" }) },
-  ];
-  // 仅在 raw URL 看起来有效时才加兜底
-  if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) {
-    attempts.push(
-      {
-        name: "jsd",
-        url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/creators.json",
-        label: t("workshop.communityIndexLoading", { source: "jsdelivr" }),
-      },
-      {
-        name: "api",
-        url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/creators.json",
-        label: t("workshop.communityIndexLoading", { source: "api" }),
-      },
-    );
-  }
-  return fetchWithFallback<WorkshopCreator>(attempts, mirror);
-}
-
-/**
  * 把 incoming 的 type 分号段并入 target（trim / 去空 / 去重），返回是否有变更。
  * 领域语义：name 是创作者唯一身份，type 是多站点集合（分号段）——
  * 与 mergeLocalAuthorsInto 的 P4 分号段精确比较同源，防子串/覆盖误判丢失站点。
@@ -352,41 +287,6 @@ export function mergeCommunityCreators(
 }
 
 /**
- * 从 GitHub 拉取 workshop_sites.json（三路回退，withCached 30min TTL）
- */
-export async function fetchCommunitySites(mirror?: string): Promise<WorkshopSite[]> {
-  return withCached(SITES_FETCH_KEY, SITES_FETCH_TTL_MS, () => _fetchCommunitySitesRaw(mirror));
-}
-
-/** 原始拉取实现（供 withCached 包裹） */
-async function _fetchCommunitySitesRaw(mirror?: string): Promise<WorkshopSite[]> {
-  const attempts: Array<{ name: string; url: string; label: string }> = [
-    {
-      name: "raw",
-      url: "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/workshop_sites.json",
-      label: t("workshop.siteIndexLoading", { source: "raw" }),
-    },
-    {
-      name: "jsd",
-      url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/workshop_sites.json",
-      label: t("workshop.siteIndexLoading", { source: "jsdelivr" }),
-    },
-    {
-      name: "api",
-      url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/workshop_sites.json",
-      label: t("workshop.siteIndexLoading", { source: "api" }),
-    },
-  ];
-  const sites = await fetchWithFallback<WorkshopSite>(attempts, mirror);
-  // 全部源失败 → fetchWithFallback 返回 []
-  // 抛错让 withCached 不缓存失败结果（失败不缓存契约）
-  if (sites.length === 0) {
-    throw new Error("fetchCommunitySites: all sources failed");
-  }
-  return sites;
-}
-
-/**
  * 合并社区站点到本地 workshop_sites.json
  */
 export function mergeCommunitySites(
@@ -405,10 +305,3 @@ export function mergeCommunitySites(
   }
   return { added };
 }
-
-/**
- * 社区索引的默认 URL（可配置为社区维护的独立 creators JSON）
- * 贡献通道：https://github.com/eghrhegpe/ysm-model-manager（仓库根目录 creators.json）
- */
-export const DEFAULT_COMMUNITY_URL =
-  "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/creators.json";

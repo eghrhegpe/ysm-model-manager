@@ -1,10 +1,10 @@
 // ===== ysm.json 直接解析（原 preview-3d/decoder/parse-ysm-json.ts，ADR-217 下沉）=====
 // 纯 JSON 格式 ysm.json 解压后直解析。不依赖 WASM/IO，输入 unknown JSON，输出 DecodedYsm | null。
-// 作者解析共用 preview-3d/decoder/ysm-authors.ts 的 parseYsmAuthors（与 WASM 通道同源，防双写分叉）；
+// 作者解析共用 parsers/ysm-authors.ts 的 parseYsmAuthors（与 WASM 通道同源，防双写分叉）；
 // 类型 DecodedYsm 仍源自 preview-3d/decoder/utils.ts（import type，纯类型依赖）。
 
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
-import { parseYsmAuthors } from "@/preview-3d/decoder/ysm-authors.ts";
+import { parseYsmAuthors } from "./ysm-authors.ts";
 
 /** 数值守卫：非有限数/字符串/NaN 回退 fallback（ADR-044 ②，防畸形 JSON 透传） */
 const finiteNum = (v: unknown, fallback: number): number =>

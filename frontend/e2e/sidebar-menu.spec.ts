@@ -11,12 +11,15 @@ import { gotoApp } from "./helpers.ts";
 async function gotoInstances(page: import("@playwright/test").Page): Promise<void> {
   await gotoApp(page);
 
-  // 等待 app-content 挂载完成（nav:change 监听器注册后点击才不丢失）
+  // 等待 app-content 挂载完成（nav:change 监听器注册后点击才不丢失）。
+  // 状态源 = app-content 实例的 state.current：原 _current 字段已在提交 32c2ae351
+  // 「状态容器抽取」中并入 AppContentState（state.ts:24），E2E 同步跟进。
   await page.evaluate(async () => {
+    type AppContentEl = { state?: { current?: string } };
     const deadline = Date.now() + 8000;
     while (Date.now() < deadline) {
-      const content = document.querySelector("app-content") as { _current?: string } | null;
-      if (content?._current) return;
+      const content = document.querySelector("app-content") as AppContentEl | null;
+      if (content?.state?.current) return;
       await new Promise((r) => setTimeout(r, 200));
     }
   });
@@ -28,12 +31,13 @@ async function gotoInstances(page: import("@playwright/test").Page): Promise<voi
     if (items?.[1]) (items[1] as HTMLElement).click();
   });
 
-  // 轮询等待 _current 切到 instances
+  // 轮询等待 state.current 切到 instances
   const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {
-    const current = await page.evaluate(
-      () => (document.querySelector("app-content") as { _current?: string } | null)?._current,
-    );
+    const current = await page.evaluate(() => {
+      type AppContentEl = { state?: { current?: string } };
+      return (document.querySelector("app-content") as AppContentEl | null)?.state?.current;
+    });
     if (current === "instances") break;
     await page.waitForTimeout(200);
   }

@@ -3,13 +3,13 @@
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
 
 import { t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { esc } from "@/utils/html/html.ts";
+import { dialogsGetApp } from "./dialogs-deps.ts";
 import { createDialog } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
 
-type GetAppFn = typeof backendGetApp;
+type GetAppFn = typeof dialogsGetApp;
 
 interface DgTeShell {
   overlay: HTMLElement;
@@ -211,7 +211,7 @@ export function modalTagEditor(
   /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
   deps?: { getApp?: GetAppFn },
 ): Promise<string[] | null> {
-  const getAppFn = deps?.getApp || backendGetApp;
+  const getAppFn = deps?.getApp || dialogsGetApp;
   return new Promise((resolve) => {
     const shell = dgTeBuildShell(modelPath, resolve);
     dgTeLoadData(shell, modelPath, getAppFn);

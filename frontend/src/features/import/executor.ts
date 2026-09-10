@@ -11,13 +11,13 @@
 import { importWebFiles, MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import type { CollectedEntry } from "@/features/dnd/collector.ts";
 import { buildFolderItems, fileToBase64, groupCollected } from "@/features/dnd/shared.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError, isFileExistsError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { importGetApp } from "./import-deps.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };
@@ -83,7 +83,7 @@ export function createImportSession(): ImportSession {
     inFlight.add(key);
     try {
       const base64 = await fileToBase64(file);
-      const { ImportModelFile } = await backendGetApp();
+      const { ImportModelFile } = await importGetApp();
       await ImportModelFile(file.name, base64);
       refreshRepo();
       toast(`${t("import.success")}: ${file.name}`, "success", TOAST_MS.success);
@@ -112,7 +112,7 @@ export function createImportSession(): ImportSession {
         toast(`❌ ${t("import.emptyFolder")}`, "error", TOAST_MS.verbose);
         return;
       }
-      const App = await backendGetApp();
+      const App = await importGetApp();
       if (rtype && typeof App.ImportModelFolderTo === "function") {
         await App.ImportModelFolderTo(folderName, subpath, rtype, items);
       } else {
@@ -145,7 +145,7 @@ export function createImportSession(): ImportSession {
   ): Promise<{ folders: number; singles: number }> {
     const log = (msg: string) =>
       swallowError(
-        backendGetApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")),
+        importGetApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")),
       );
     log(`执行导入 ${collected.length} 个条目`);
     const { folders, singles } = groupCollected(collected);

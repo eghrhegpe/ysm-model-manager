@@ -5,7 +5,6 @@
 
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
@@ -14,6 +13,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import type { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -40,7 +40,7 @@ export type { RecycleBinEntry };
 type ToastFn = (msg: string, duration: number, type: "success" | "error") => void;
 type TFn = typeof t;
 type ModalConfirmFn = typeof modalConfirm;
-type GetAppFn = typeof backendGetApp;
+type GetAppFn = typeof maintenanceGetApp;
 type GetCurrentTypeFn = () => (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];
 
 /** 可注入依赖（ADR-190 D2 注入真化）；测试传部分字段，其余回落生产实现 */
@@ -52,7 +52,7 @@ export interface RecycleDeps {
   renderListHtml: (entries: RecycleBinEntry[]) => string;
 }
 const PROD_DEPS: RecycleDeps = {
-  getApp: backendGetApp,
+  getApp: maintenanceGetApp,
   t,
   modalConfirm,
   // fail-loud：渲染属 views 职责，features 无合法默认实现；漏注入立即暴露而非静默空列表

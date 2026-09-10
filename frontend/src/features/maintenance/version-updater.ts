@@ -4,7 +4,6 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { Events, Window } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { modalProgress } from "@/features/dialogs/modal-progress.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
@@ -13,6 +12,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { esc } from "@/utils/html/html.ts";
+import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -34,7 +34,7 @@ const CHECK_TIMEOUT = 30 * 1000;
 /** 当前检查间隔：读取配置 updateCheckIntervalMs（>0 用之；0=关闭自动检查；缺省回退 6h） */
 async function currentCheckInterval(): Promise<number> {
   try {
-    const { LoadAppConfig } = await backendGetApp();
+    const { LoadAppConfig } = await maintenanceGetApp();
     const cfg = await LoadAppConfig();
     const ms = cfg.updateCheckIntervalMs;
     if (ms === 0) return Infinity; // 显式关闭自动检查：恒不触发（canCheck 比较恒 false）
@@ -65,7 +65,7 @@ async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise
   if (statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
-  const { DoUpdate, RestartApplication } = await backendGetApp();
+  const { DoUpdate, RestartApplication } = await maintenanceGetApp();
   // 全局标题进度（用户反馈：弹窗可被误关丢进度）：下载前记录原标题，
   // 进度事件同步 Window.SetTitle（标题栏永远可见），finally 恢复
   const origTitle = document.title || "YSM 模型管理器";
@@ -171,7 +171,7 @@ export async function checkUpdateSilent(): Promise<void> {
   // promise 会 reject（靠调用方 .catch 兜底而非模块内静默），违反「静默路径绝不向启动流程抛错」
   try {
     if (!(await canCheck())) return;
-    const { CheckUpdate } = await backendGetApp();
+    const { CheckUpdate } = await maintenanceGetApp();
     const info = (await CheckUpdate()) as UpdateInfo | null;
     // 检查成功才计入频次：失败（网络/API）不阻塞下次启动重试
     markChecked();
@@ -224,7 +224,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
     // finally 统一 clearTimeout 回收（Timeout 挂起则 reject 后清掉是幂等 no-op）
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      const { CheckUpdate } = await backendGetApp();
+      const { CheckUpdate } = await maintenanceGetApp();
       // P2 修复（审核，超时护栏）：手动路径原无前端超时——CheckUpdate 网络请求挂起
       // （Go 端 HTTP 卡死/代理黑洞）时 await 永不返回，按钮永久「检查中...」。
       // Promise.race 30s 超时 reject → catch toast + finally 恢复按钮；

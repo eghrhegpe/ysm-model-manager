@@ -1,6 +1,7 @@
 // ===== features 级后端依赖组合根（ADR-190 D2 注入真化）=====
-// 供未迁入目录级组合根（context-menu-deps / community-deps）的零散模块使用：
-// maintenance / dnd / import / sync / pack-ops / require-mcroot / dialogs。
+// 供未迁入目录级组合根的根级零散模块使用：sync / require-mcroot。
+// 已收敛为目录级组合根的目录（dialogs / dnd / import / maintenance / pack-ops /
+// community / context-menu）一律走各自 <dir>-deps.ts，不再经本模块。
 // 生产代码唯一合法 import backend/app.ts 的出口（ADR-208 D1）：check-layering R5 门禁
 // 白名单仅 features 下 *-deps.ts，其余 features 文件直引 backend/app.ts 即违规。
 // （code_review 088b1d36：set/reset seam 曾复制 context-menu-deps 已删模式——

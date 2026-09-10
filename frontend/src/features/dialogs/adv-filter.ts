@@ -7,12 +7,12 @@
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
 
 import { t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import { esc } from "@/utils/html/html.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
+import { dialogsGetApp } from "./dialogs-deps.ts";
 import { createDialog } from "./modal-core.ts";
 
-type GetAppFn = typeof backendGetApp;
+type GetAppFn = typeof dialogsGetApp;
 
 export type { AdvFilterValue } from "./adv-filter-util.ts";
 
@@ -196,7 +196,7 @@ export function modalAdvFilter(
       box,
       close,
       () => advFilterCollect(box, kwInput, tagInput),
-      opts.getApp || backendGetApp,
+      opts.getApp || dialogsGetApp,
     );
   });
 }

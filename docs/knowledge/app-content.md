@@ -34,7 +34,6 @@ auto_fields:
     - AppContentHost
     - AppContentState
     - appContentStyle
-    - bindSiteEvents
     - contentCreatorCSS
     - contentCSS
     - contentDiagCSS
@@ -42,10 +41,8 @@ auto_fields:
     - contentRepoCSS
     - contentStgCSS
     - contentUtilCSS
-    - createWorkshopRefs
     - creditsHTML
     - diagnosticsHTML
-    - extractAvatars
     - getSiteIcon
     - getTagIconFromRole
     - githubHTML
@@ -58,9 +55,7 @@ auto_fields:
     - initRepositoryPage
     - initSettingsPage
     - initWorkshopPage
-    - initWorkshopTabs
     - instancesHTML
-    - openSite
     - PAGE_REGISTRY
     - PageDefinition
     - recycleHTML
@@ -68,12 +63,10 @@ auto_fields:
     - RepoCacheEntry
     - repositoryHTML
     - resetAvatarConfigLoaded
-    - setShowSiteView
     - settingsHTML
     - SubscriptionBucket
     - VIEW_TESTIDS
     - workshopHTML
-    - WorkshopRefs
   tests:
     - frontend/src/utils/resource/types.test.ts
     - frontend/src/views/app-nav/index.test.ts

@@ -5,11 +5,11 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { backendGetApp } from "@/features/backend-deps.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { parseHealthReport } from "@/utils/health-report.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 // ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
 
@@ -46,7 +46,7 @@ function handleContainerClick(e: MouseEvent): void {
 /** 仓库统计：调 Go RepoHealthAudit（与诊断页/CLI 同源单一口径），
  * 前端只做分档展示，不自算评分。失败（Go error 通道）由 render 的 catch 统一展示。 */
 async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
-  const { RepoHealthAudit } = await backendGetApp();
+  const { RepoHealthAudit } = await maintenanceGetApp();
   const report = parseHealthReport(await RepoHealthAudit(filesRoot));
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
@@ -94,7 +94,7 @@ export async function loadOldestModel(
     const gen = guard.next();
     container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">⏳ ${t("oldest.scanning")}</div>`;
     try {
-      const { ScanModelEntriesWithLabel, GetRepoRoot } = await backendGetApp();
+      const { ScanModelEntriesWithLabel, GetRepoRoot } = await maintenanceGetApp();
       const filesRoot = await GetRepoRoot(getCurrentType());
       if (guard.stale(gen)) return;
       if (!filesRoot) {

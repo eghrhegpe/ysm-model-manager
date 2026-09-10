@@ -26,8 +26,8 @@ import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import type { PostprocessingLike } from "@/preview-3d/adapters/postprocessing.ts";
+import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
-import { previewPixelRatio } from "@/preview-3d/render-budget.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

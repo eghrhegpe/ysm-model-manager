@@ -15,7 +15,7 @@ source_files:
   - frontend/src/views/app-preview/index.ts
   - frontend/src/views/app-preview/model2d/model2d.ts
   - frontend/src/preview-3d/state/preview-state.ts
-  - frontend/src/preview-3d/render-budget.ts
+  - frontend/src/preview-3d/infra/render-budget.ts
 auto_fields:
   symbols_with_lines:
     - AdaptiveRenderBudget
@@ -75,7 +75,7 @@ auto_fields:
     - ysmModelTextureSlots
   tests:
     - frontend/src/preview-3d/decoder/utils.test.ts
-    - frontend/src/preview-3d/render-budget.test.ts
+    - frontend/src/preview-3d/infra/render-budget.test.ts
     - frontend/src/preview-3d/state/preview-state.test.ts
     - frontend/src/test-utils/index.test.ts
     - frontend/src/views/app-nav/index.test.ts
@@ -111,7 +111,7 @@ invariant_anchors:
   - frontend/src/preview-3d/state/preview-paths.ts|KNOWN_PATHS
   - frontend/src/preview-3d/state/preview-state.ts|setStateValue
   - frontend/src/views/app-preview/skeleton-render.ts|buildToggleRow
-  - frontend/src/preview-3d/render-budget.ts|MAX_FPS_DEFAULT
+  - frontend/src/preview-3d/infra/render-budget.ts|MAX_FPS_DEFAULT
 status: active
 ---
 

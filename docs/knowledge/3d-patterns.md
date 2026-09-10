@@ -4,11 +4,11 @@ name: 3D 区审核与修复模式提炼
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/preview-3d/debug-render.ts
+  - frontend/src/preview-3d/infra/debug-render.ts
   - frontend/src/preview-3d/model/model-group-builder.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
-  - frontend/src/preview-3d/cleanup-helper.ts
-  - frontend/src/preview-3d/safe-dispose.ts
+  - frontend/src/preview-3d/infra/cleanup-helper.ts
+  - frontend/src/preview-3d/infra/safe-dispose.ts
   - frontend/src/preview-3d/adapters/render-loop.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
@@ -60,8 +60,8 @@ auto_fields:
     - withPreviewExtras
   tests:
     - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
-    - frontend/src/preview-3d/cleanup-helper.test.ts
-    - frontend/src/preview-3d/debug-render.test.ts
+    - frontend/src/preview-3d/infra/cleanup-helper.test.ts
+    - frontend/src/preview-3d/infra/debug-render.test.ts
     - frontend/src/views/app-preview/preview-library-cooperate.test.ts
     - frontend/src/views/app-preview/preview-library-replace.test.ts
     - frontend/src/views/app-preview/preview-library.test.ts
@@ -89,10 +89,10 @@ pitfalls:
   - Vector3 频繁 new 造成 GC 抖动；必须复用或池化
   - AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener
 invariant_anchors:
-  - frontend/src/preview-3d/debug-render.ts|rebuildDebug
+  - frontend/src/preview-3d/infra/debug-render.ts|rebuildDebug
   - frontend/src/preview-3d/model/model-group-builder.ts|buildModelGroup
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-  - frontend/src/preview-3d/cleanup-helper.ts|disposeSceneMeshes
+  - frontend/src/preview-3d/infra/cleanup-helper.ts|disposeSceneMeshes
   - frontend/src/views/app-preview/preview-library.ts|registerReRoute
   - frontend/src/views/app-preview/skeleton.ts|loadModel2D
 
@@ -539,8 +539,8 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 ## 相关文件
 
 - `frontend/src/preview-3d/adapters/render-loop.ts` — 渲染循环优化（Vector3 复用局部变量）
-- `frontend/src/preview-3d/safe-dispose.ts` — 安全释放原语
-- `frontend/src/preview-3d/debug-render.ts` — 纹理缓存
+- `frontend/src/preview-3d/infra/safe-dispose.ts` — 安全释放原语
+- `frontend/src/preview-3d/infra/debug-render.ts` — 纹理缓存
 - `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（mdMgFixOrphanBoneChain）
 - `frontend/src/preview-3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
 - `frontend/src/preview-3d/adapters/mount-session.ts` — 失败路径清理 runFailedMountCleanup

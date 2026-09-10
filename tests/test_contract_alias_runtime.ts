@@ -10,7 +10,7 @@
 // 运行：node tests/test_contract_alias_runtime.ts
 
 import { clamp } from "@/utils/base/pure/clamp.ts";
-import { buildCubeMeshData } from "../frontend/src/preview-3d/cube-mesh.ts";
+import { buildCubeMeshData } from "../frontend/src/preview-3d/mesh/cube-mesh.ts";
 
 let failed = 0;
 function fail(msg: string): void {

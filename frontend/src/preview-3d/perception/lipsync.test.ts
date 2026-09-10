@@ -2,7 +2,7 @@
 // ===== 感知层：LipSync 测试（lipsync.ts）=====
 import { describe, expect, it } from "vitest";
 import { createLipSyncController, buildLipMorphIndices } from "./lipsync.ts";
-import { type SemanticMorphMap } from "@/preview-3d/semantic-morphs.ts";
+import { type SemanticMorphMap } from "@/preview-3d/infra/semantic-morphs.ts";
 
 describe("createLipSyncController", () => {
   it("静音（amplitude=0）→ weight=0", () => {

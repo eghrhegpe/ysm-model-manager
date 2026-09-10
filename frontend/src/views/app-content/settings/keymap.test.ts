@@ -39,7 +39,7 @@ vi.mock("@/bus", () => ({
   bus: { emit: (...a: unknown[]) => busEmit(...a) },
 }));
 
-vi.mock("@/preview-3d/model3d.ts", () => ({
+vi.mock("@/preview-3d/mesh/model3d.ts", () => ({
   loadTdKeymap: () => loadTdKeymap(),
 }));
 

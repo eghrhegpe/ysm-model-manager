@@ -376,7 +376,7 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 4.6 存档
 
-- 当前稳定版为 `frontend/src/preview-3d/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
+- 当前稳定版为 `frontend/src/preview-3d/mesh/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
 - 旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry` 方案永久废弃，不允许再提及或恢复。
 
 ---
@@ -755,7 +755,7 @@ core/handler-dnd.ts 拦截 drop
   → emit tree:reload
   → 选中触发 model:select → app-preview
   → preview-3d/decoder/wasm-decode.ts decodeYsmViaWasm (§4.2，ADR-137 归位)
-  → preview-3d/model3d.ts + Three.js 渲染
+  → preview-3d/mesh/model3d.ts + Three.js 渲染
 ```
 
 ### (b) 模型树 / 仓库页填充

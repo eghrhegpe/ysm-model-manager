@@ -4,7 +4,7 @@
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/model3d.ts";
+import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 

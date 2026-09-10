@@ -2,7 +2,7 @@
 // disposeDebugGroup / disposeSceneMeshes / disposeRenderer —— handle.cleanup 中的
 // Three.js 资源释放逻辑已迁移至此，避免 renderModel3D 闭包膨胀。
 import type * as THREE from "three";
-import { disposeMaterial } from "./mesh.ts";
+import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 
 /** 类型联合：Mesh / Line / Sprite，用于遍历 debugGroup */
 type DebugObj = THREE.Mesh | THREE.Line | THREE.Sprite;

@@ -8,7 +8,7 @@
 // （sky-capability.test.ts 的 God Rays 挂载分支用例为契约）。
 
 import * as THREE from "three";
-import { disposeObject3D } from "@/preview-3d/safe-dispose.ts";
+import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad */

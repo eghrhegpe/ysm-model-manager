@@ -7,9 +7,9 @@
  * 渲染器状态故留在 model3d.ts。
  */
 import * as THREE from "three";
+import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { Spec3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
-import { safeDispose } from "./safe-dispose.ts";
 
 /** 模型显示缩放（基岩标准 16px = 1m，严格对齐 YSMViewer ExportScale，索引 2.14 收敛） */
 const MODEL_SCALE = 1 / 16;

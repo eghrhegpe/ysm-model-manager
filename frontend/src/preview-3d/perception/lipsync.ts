@@ -23,7 +23,7 @@ import {
   getSemanticMorph,
   type SemanticMorphId,
   type SemanticMorphMap,
-} from "@/preview-3d/semantic-morphs.ts";
+} from "@/preview-3d/infra/semantic-morphs.ts";
 import { clamp01 } from "@/utils/base/pure/clamp.ts";
 import { isPerceptionPaused } from "./core.ts";
 

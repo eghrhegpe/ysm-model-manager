@@ -1,8 +1,8 @@
 // ===== 3D 骨骼射线拾取（从 model3d.ts 拆出，ADR-040 P1）=====
 // 骨骼层级映射 + raycaster 拾取 + click 回调组装 BoneSelectInfo。
 import * as THREE from "three";
-import type { BoneSelectInfo } from "@/preview-3d/model3d.ts";
-import { isIdentityQuat } from "@/preview-3d/quaternion.ts";
+import type { BoneSelectInfo } from "@/preview-3d/mesh/model3d.ts";
+import { isIdentityQuat } from "@/preview-3d/mesh/quaternion.ts";
 
 /** 无父级骨骼的哨兵父 id（childrenMap 根级聚合键，索引 2.2 魔数收敛） */
 const ROOT_PARENT_ID = "__root__";

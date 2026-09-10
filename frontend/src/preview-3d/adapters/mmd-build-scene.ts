@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { scheduleBackgroundEncoding } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
-import { registerModelRoot } from "@/preview-3d/frustum-cull.ts";
+import { registerModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";

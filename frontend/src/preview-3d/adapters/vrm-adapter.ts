@@ -16,15 +16,15 @@ import { b64ToBytes } from "@/preview-3d/base64.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
-import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
-import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
+import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
+import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
+import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { createBlinkController } from "@/preview-3d/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
 import { createGazeController } from "@/preview-3d/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
-import { collectSceneStats, type SceneStats } from "@/preview-3d/scene-stats.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）

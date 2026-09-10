@@ -13,13 +13,13 @@
 import type * as THREE from "three";
 import { getBoneList } from "@/preview-3d/bone/bone-list.ts";
 import { setBoneVisible, showModelGroup, toggleBone } from "@/preview-3d/bone/bone-visibility.ts";
+import { disposeSceneMeshes } from "@/preview-3d/infra/cleanup-helper.ts";
+import { type MeshFragment, splitMeshByFaceAlpha } from "@/preview-3d/mesh/face-split.ts";
+import { buildSceneMesh, compKey } from "@/preview-3d/mesh/mesh.ts";
+import { bakeMeshFragments } from "@/preview-3d/mesh/mesh-baker.ts";
+import { addMeshToBoneGroup } from "@/preview-3d/mesh/mesh-builder.ts";
+import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import { getTextureAlphaMode } from "@/preview-3d/texture/texture-alpha.ts";
-import { disposeSceneMeshes } from "./cleanup-helper.ts";
-import { type MeshFragment, splitMeshByFaceAlpha } from "./face-split.ts";
-import { buildSceneMesh, compKey } from "./mesh.ts";
-import { bakeMeshFragments } from "./mesh-baker.ts";
-import { addMeshToBoneGroup } from "./mesh-builder.ts";
-import type { Spec3D } from "./model3d.ts";
 
 /** YSM 内容场景句柄：挂进任意 scene 后的内容层操作与释放 */
 export interface YsmObjectHandle {

@@ -101,7 +101,7 @@ tests:
   - frontend/src/preview-3d/menu/roles.test.ts
   - frontend/src/preview-3d/menu/stats.test.ts
   - frontend/src/preview-3d/perception/core.test.ts
-  - frontend/src/preview-3d/render-budget.test.ts
+  - frontend/src/preview-3d/infra/render-budget.test.ts
   - frontend/src/test-utils/render.test.ts
   - frontend/src/views/app-content/site/render.test.ts
   - frontend/src/views/app-sidebar/render.test.ts
@@ -179,7 +179,7 @@ status: active
 - **`preview-3d/adapters/scene-registry.ts`** — 活跃角色详情（motion 组动态直达特例）。
 - **`core/i18n/t.ts`** — 菜单文案 i18n（`tOf(node.labelKey)` 多级兜底；原 `core/i18n/tr.ts` 双入口随 ADR-210 D3 根除）。
 - **`utils/dom/fab.ts` / `utils/dom/focus-restore.ts`** — FAB 样式 + 输入阻断栈。
-- **`preview-3d/overlay-style-bridge.ts`** — overlay 样式注入根（ADR-175 M1 目标切换重注入）。
+- **`preview-3d/infra/overlay-style-bridge.ts`** — overlay 样式注入根（ADR-175 M1 目标切换重注入）。
 
 ## 不变量
 

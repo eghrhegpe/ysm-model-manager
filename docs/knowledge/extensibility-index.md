@@ -58,7 +58,7 @@ invariant_anchors:
 
 | # | 类型 | 位置 | 一句话 | 价值 |
 |---|------|------|--------|------|
-| 1 | ①+⑥ | `frontend/src/preview-3d/model3d.ts` 全文 | RenderSession 完整对象化（camera/renderer/controls/container 收敛 + 16 回调方法化，~数百处引用）——**已裁决独立立项待启动，勿在常规轮次内 rush**（陷阱 #11 高危） | 高 |
+| 1 | ①+⑥ | `frontend/src/preview-3d/mesh/model3d.ts` 全文 | RenderSession 完整对象化（camera/renderer/controls/container 收敛 + 16 回调方法化，~数百处引用）——**已裁决独立立项待启动，勿在常规轮次内 rush**（陷阱 #11 高危） | 高 |
 | 2 | ⑥ | `go/importer/importer_file.go` + `go/packs/mcmeta.go` | 两套资源类型检测器并存，均应注册表驱动；新增类型须改两处 | 高 |
 | 3 | ③ | `go/sync/sync_dirlevel.go` / `sync_push.go` / `instance.go` / `installer.go` | 文件夹级/目录型 rtype 判定 6+ 处硬编码，应改用 registry `isDir` | 高 |
 | 4 | ② | `go/fsutil/` `copyFile×6` / `copyDirRecursive×4` | 原子复制原语成对重复，应收敛进 fsutil | 高 |

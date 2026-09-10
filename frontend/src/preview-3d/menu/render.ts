@@ -8,7 +8,10 @@
 
 import { t, tOf } from "@/core/i18n/t.ts";
 import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
 import {
   isPathAvailable,
   type KNOWN_PATHS,

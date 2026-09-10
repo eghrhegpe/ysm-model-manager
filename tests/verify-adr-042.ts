@@ -111,9 +111,9 @@ function checkHiddenPropagation() {
 function checkGlow() {
   const specGo = read("go/threejs/spec.go");
   const specBonesGo = read("go/threejs/spec-bones.go");
-  const meshBuilderTs = read("frontend/src/preview-3d/mesh-builder.ts");
+  const meshBuilderTs = read("frontend/src/preview-3d/mesh/mesh-builder.ts");
   const ysmObjectTs = read("frontend/src/preview-3d/ysm-object.ts");
-  const model3dTs = read("frontend/src/preview-3d/model3d.ts");
+  const model3dTs = read("frontend/src/preview-3d/mesh/model3d.ts");
 
   const checks = [
     {

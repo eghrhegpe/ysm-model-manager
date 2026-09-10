@@ -9,7 +9,8 @@
 // （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
-import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
+import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
+import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
@@ -18,7 +19,6 @@ import {
   type JavaModelResult,
   parseJavaModel,
 } from "@/preview-3d/parse-java-model.ts";
-import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";

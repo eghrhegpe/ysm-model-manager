@@ -4,7 +4,7 @@
 // 挂载判定语义与原实现逐行对齐（light-capability.test.ts 的锥组状态机用例为契约）。
 
 import * as THREE from "three";
-import { disposeObject3D, safeDispose } from "@/preview-3d/safe-dispose.ts";
+import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";

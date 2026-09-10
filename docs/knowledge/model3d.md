@@ -733,7 +733,7 @@ auto_fields:
     - YSW_FAB_CSS
     - zipFindEntry
 tests:
-  - frontend/src/preview-3d/model3d-spec.test.ts
+  - frontend/src/preview-3d/model/model3d-spec.test.ts
 use_when:
   - 3D 渲染层
   - Three.js
@@ -744,10 +744,10 @@ use_when:
   - 纹理加载
   - spec 兜底
 invariant_anchors:
-  - frontend/src/preview-3d/model3d.ts|Spec3D
+  - frontend/src/preview-3d/mesh/model3d.ts|Spec3D
   - frontend/src/views/app-preview/model3d-loader.ts|preloadModel
-  - frontend/src/preview-3d/cube-mesh.ts|computeBoneLocalPos
-  - frontend/src/preview-3d/mesh-builder.ts|addMeshToBoneGroup
+  - frontend/src/preview-3d/mesh/cube-mesh.ts|computeBoneLocalPos
+  - frontend/src/preview-3d/mesh/mesh-builder.ts|addMeshToBoneGroup
 quick_groups:
   - 3D 渲染与预览核心
   - 多模型同框与场景管理

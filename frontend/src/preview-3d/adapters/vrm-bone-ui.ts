@@ -14,7 +14,10 @@ import {
   pickBone,
   toggleBoneVisible,
 } from "@/preview-3d/bone/bone-tools.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
 
 /** 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） */
 export interface VrmBonePanelCtx {

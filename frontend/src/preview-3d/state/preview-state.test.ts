@@ -34,7 +34,7 @@ import { collectVisiblePredicates } from "@/preview-3d/menu/cap-controls.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
-import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/render-budget.ts";
+import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/infra/render-budget.ts";
 
 /** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
 const renderMenuStubDeps = {

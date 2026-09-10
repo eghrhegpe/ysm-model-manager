@@ -9,11 +9,11 @@ vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
 // frustum-cull 模块级注册表：测试环境空实现（真模块可跑，但避免跨用例 state 串扰）
-vi.mock("@/preview-3d/frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   registerModelRoot: vi.fn(),
   unregisterModelRoot: vi.fn(),
 }));
-vi.mock("@/preview-3d/load-trace.ts", () => ({
+vi.mock("@/preview-3d/infra/load-trace.ts", () => ({
   recordLoadTrace: vi.fn(),
 }));
 

@@ -8,7 +8,7 @@ import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { YsmModel, YsmContentHandle } from "./content-bridges.ts";
-import type { Spec3D } from "@/preview-3d/model3d.ts";
+import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: mocks.buildYsmObject }));
-vi.mock("@/preview-3d/camera-setup.ts", () => ({ fitCameraToScene: mocks.fitCameraToScene }));
+vi.mock("@/preview-3d/infra/camera-setup.ts", () => ({ fitCameraToScene: mocks.fitCameraToScene }));
 vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
   buildBoneHierarchy: () => ({ nameMap: new Map(), parentMap: new Map(), childrenMap: new Map() }),
   registerBoneRaycast: mocks.registerBoneRaycast,

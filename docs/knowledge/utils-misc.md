@@ -11,7 +11,7 @@ auto_fields:
     - isDebugEnabled
     - safeStr
   tests:
-    - frontend/src/preview-3d/debug-render.test.ts
+    - frontend/src/preview-3d/infra/debug-render.test.ts
     - frontend/src/utils/debug/debug.ring.test.ts
     - frontend/src/utils/debug/debug.test.ts
 quick_groups:

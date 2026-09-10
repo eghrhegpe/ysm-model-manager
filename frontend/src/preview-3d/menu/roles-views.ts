@@ -10,7 +10,10 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";

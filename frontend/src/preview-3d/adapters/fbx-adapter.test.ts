@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adapter.ts";
-import { getModelRootCount } from "@/preview-3d/frustum-cull.ts";
+import { getModelRootCount } from "@/preview-3d/infra/frustum-cull.ts";
 import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
 
 const hoisted = vi.hoisted(() => {

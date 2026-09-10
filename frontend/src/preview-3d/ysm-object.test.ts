@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
-import type { Spec3D } from "./model3d.ts";
+import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 
 /** 构造含单 quad cube 的最小 Spec3D（无纹理 → opaque → 走烘焙批路径） */
 function makeMinSpec(): Spec3D {

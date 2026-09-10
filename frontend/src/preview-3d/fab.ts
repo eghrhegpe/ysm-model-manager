@@ -6,8 +6,11 @@
 // 目标切换经 onOverlayStyleTargetReset 复位重注入）。
 // 触发 FAB 在预览面板 Shadow DOM 内（.preview-fab 见 css.ts，因 Shadow DOM 隔离需本地样式）。
 
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "./overlay-style-bridge.ts";
 
 export const YSW_FAB_CSS = `
 /* ===== 3D overlay 控制层样式（挂 document.body 的 light DOM 顶栏按钮/下拉/标签） =====

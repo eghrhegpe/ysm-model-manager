@@ -31,7 +31,7 @@
 // [ADR-168] 状态层不 import 组合根单例（scene-capability-registry）——cap 查询走注入点
 // setSceneCapabilityLookup（shared-infra createAll 后注入），断 preview-state→registry 运行时环。
 import type { SceneCapability, SceneCapabilityLookup } from "@/preview-3d/caps/scene-capability.ts";
-import { isFrustumCullEnabled, setFrustumCullEnabled } from "@/preview-3d/frustum-cull.ts";
+import { isFrustumCullEnabled, setFrustumCullEnabled } from "@/preview-3d/infra/frustum-cull.ts";
 import {
   getMaxFps,
   getMaxPixelRatio,
@@ -39,7 +39,7 @@ import {
   MAX_FPS_DEFAULT,
   MAX_FPS_KEY,
   MAX_PIXEL_RATIO_KEY,
-} from "@/preview-3d/render-budget.ts";
+} from "@/preview-3d/infra/render-budget.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子

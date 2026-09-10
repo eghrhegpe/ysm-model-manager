@@ -105,7 +105,7 @@ status: active
 
 - `go-logs`（Go 操作日志）→ `diagnostics/logs.ts` 消费端
 - `go-repoaudit`（Go 仓库审计）→ `diagnostics/health.ts` 消费端
-- `preview-3d/load-trace.ts` → `diagnostics/perf-trace.ts` 加载轨迹
+- `preview-3d/infra/load-trace.ts` → `diagnostics/perf-trace.ts` 加载轨迹
 - 主卡 `app-content` 负责页面编排与分发；本卡只管诊断页自身的初始化与渲染
 
 ## 不变量

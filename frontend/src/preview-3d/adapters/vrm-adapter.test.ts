@@ -95,7 +95,7 @@ vi.mock("@/preview-3d/bone/mmd-foot-ik.ts", () => ({
 vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
-vi.mock("@/preview-3d/frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   registerModelRoot: vi.fn(),
   unregisterModelRoot: vi.fn(),
 }));

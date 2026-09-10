@@ -14,7 +14,7 @@ source_files:
   - frontend/src/views/app-nav/index.ts
   - frontend/src/preview-3d/perception/gaze.ts
   - frontend/src/preview-3d/perception/autodance.ts
-  - frontend/src/preview-3d/safe-dispose.ts
+  - frontend/src/preview-3d/infra/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
   - frontend/src/features/dialogs/modal-core.ts
@@ -25,7 +25,7 @@ source_files:
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-preview/detail-3d.ts
   - frontend/src/preview-3d/adapters/worker-bridge.ts
-  - frontend/src/preview-3d/render-budget.ts
+  - frontend/src/preview-3d/infra/render-budget.ts
   - frontend/src/wasm/ysm-worker-loader.ts
   - frontend/src/backend/web-stats.ts
 auto_fields:
@@ -91,8 +91,8 @@ tests:
   - frontend/src/preview-3d/menu/roles.test.ts
   - frontend/src/preview-3d/perception/autodance.test.ts
   - frontend/src/preview-3d/perception/gaze.test.ts
-  - frontend/src/preview-3d/render-budget.test.ts
-  - frontend/src/preview-3d/safe-dispose.test.ts
+  - frontend/src/preview-3d/infra/render-budget.test.ts
+  - frontend/src/preview-3d/infra/safe-dispose.test.ts
   - frontend/src/test-utils/index.test.ts
   - frontend/src/features/dialogs/modal.test.ts
   - frontend/src/services/resource-registry.test.ts

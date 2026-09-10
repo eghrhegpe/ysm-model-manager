@@ -9,7 +9,7 @@ import {
   hasBoneRotation,
   isIdentityQuat,
   mergeCubes,
-} from "@/preview-3d/cube-mesh.ts";
+} from "@/preview-3d/mesh/cube-mesh.ts";
 import type { BedrockModel, BoneData, Cube2D, MeshData, ModelGroup, Vec3 } from "./spec-builder.ts";
 
 /** buildModelGroup 内部：骨骼首次出现信息 */

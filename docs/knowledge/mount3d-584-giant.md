@@ -73,7 +73,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 **§5 二次拆分已落地**：8-27 记录的 5 个包级 `mp*` 子函数已全部外移为独立文件并去 `mp` 前缀——
 `shared-infra.ts`（buildSharedInfra/syncShadowLights）/ `wasd-camera.ts`（applyWasdCameraMotion）/
 `unified-pick.ts`（makeUnifiedPickHandler）/ `unload-model.ts`（unloadModel）/ `input-and-animation.ts`
-（bindInputHandlers）/ `switch-preview.ts`（switchToSession）。`safeDispose` 已外置 `preview-3d/safe-dispose.ts`。
+（bindInputHandlers）/ `switch-preview.ts`（switchToSession）。`safeDispose` 已外置 `preview-3d/infra/safe-dispose.ts`。
 文件头 L938-944 §5 注释为实证（本卡正文旧行号/旧 mp* 描述以复核节为准）。
 
 **结构性判定：维持「不拆」**（评审再次点名）。与 mmd-adapter（ADR-167 已拆 9 文件）的本质差异：

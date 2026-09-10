@@ -24,6 +24,12 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+  setOverlayStyleTarget,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
   componentsStyleSheet,
@@ -41,13 +47,7 @@ import {
   type BoneSelectInfo,
   loadTdCamSpeed,
   loadTdRotMode,
-} from "@/preview-3d/model3d.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-  setOverlayStyleTarget,
-} from "@/preview-3d/overlay-style-bridge.ts";
-import { safeDispose } from "@/preview-3d/safe-dispose.ts";
+} from "@/preview-3d/mesh/model3d.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";

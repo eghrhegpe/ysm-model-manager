@@ -15,7 +15,7 @@ import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import type { Spec3D } from "@/preview-3d/model3d.ts";
+import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type {
   CameraControlScene,
@@ -62,19 +62,19 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
-vi.mock("@/preview-3d/camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
+vi.mock("@/preview-3d/infra/camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
 vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
   buildBoneHierarchy: h.buildBoneHierarchy,
   registerBoneRaycast: h.registerBoneRaycast,
 }));
 vi.mock("@/preview-3d/bone/bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
-vi.mock("@/preview-3d/cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
-vi.mock("@/preview-3d/debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
-vi.mock("@/preview-3d/frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/infra/cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
+vi.mock("@/preview-3d/infra/debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
+vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   registerModelRoot: h.registerModelRoot,
   unregisterModelRoot: h.unregisterModelRoot,
 }));
-vi.mock("@/preview-3d/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
+vi.mock("@/preview-3d/infra/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
 vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
 vi.mock("@/preview-3d/perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
 vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));

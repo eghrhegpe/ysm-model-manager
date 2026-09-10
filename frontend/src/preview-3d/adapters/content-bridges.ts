@@ -19,7 +19,7 @@ import type {
   MmdMaterialDetail,
   MmdMaterialListItem,
 } from "@/preview-3d/materials/mmd-materials.ts";
-import type { BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
+import type { BoneSelectInfo, Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 
 // ── MMD 内容层桥（原 views/app-preview/mmd-controls.ts）──

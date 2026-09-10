@@ -4,8 +4,8 @@
 // apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
+import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
-import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

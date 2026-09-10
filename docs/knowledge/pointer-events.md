@@ -37,7 +37,7 @@ auto_fields:
     - setActive3DClose
   tests:
     - frontend/src/views/app-preview/model2d/model2d.test.ts
-    - frontend/src/preview-3d/model3d.test.ts
+    - frontend/src/preview-3d/mesh/model3d.test.ts
     - frontend/src/views/app-preview/zoom.test.ts
     - frontend/src/views/app-preview/skeleton.test.ts
     - frontend/src/views/app-content/app-content.methods.test.ts

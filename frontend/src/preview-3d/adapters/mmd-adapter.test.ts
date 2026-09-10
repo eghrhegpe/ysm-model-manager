@@ -85,8 +85,8 @@ vi.mock("./mmd-texture-decoder.ts", async (importOriginal) => {
     applyWorkerDecodedTextures: hoisted.applyTexturesMock,
   };
 });
-vi.mock("@/preview-3d/load-trace.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/preview-3d/load-trace.ts")>();
+vi.mock("@/preview-3d/infra/load-trace.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/preview-3d/infra/load-trace.ts")>();
   return {
     ...actual,
     recordLoadTrace: hoisted.recordTraceMock,

@@ -4,7 +4,7 @@
 // 越界钳制、空 spec 防御、compKey groupId 口径（跨组件同名骨骼精确定位）。
 import { describe, it, expect } from "vitest";
 import { getBoneList } from "./bone-list.ts";
-import type { Spec3D } from "@/preview-3d/model3d.ts";
+import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 
 /** 最小合法 SpecBone3D（getBoneList 只消费 id/name/parentId） */
 function bone(id: string, extra: { name?: string; parentId?: string } = {}) {

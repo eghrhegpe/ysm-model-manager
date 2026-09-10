@@ -13,11 +13,11 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
-import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
-import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
+import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
+import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
+import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import { disposeMaterial } from "@/preview-3d/mesh.ts";
+import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";

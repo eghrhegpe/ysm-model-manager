@@ -184,7 +184,7 @@ status: active
 - `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `this._previewGuard.invalidate()`），按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；shaderpack → `showShaderpack`；MMD EntityPlayer → `PREVIEW_HANDLERS` 查表按 variants 分发；其他已知类型 → `showSimplePreview`）。
 - `loader.ts` — `loadModelData`：统一模型加载（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底）；WASM 能力判定由 `matchTypeByExt(modelPath, RESOURCE_TYPES.YSM)`（注册表驱动，防 `.7z` 漏判）；`.zip`/`.json` 支持 `ysm.json` manifest 按声明序合并多角色 geometry 与纹理。
 - `detail.ts` — `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview`：详情面板渲染（Go 侧 `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang`）；`showVrmMeta` / `showMmdPreview` 已迁出至 `detail-3d.ts`。
-- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/model3d.ts`；截图走 `SaveScreenshotFile`；3D overlay 触发键 `🎨3D` 为右下角悬浮 FAB。
+- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/mesh/model3d.ts`；截图走 `SaveScreenshotFile`；3D overlay 触发键 `🎨3D` 为右下角悬浮 FAB。
 - `*-adapter.ts` / `*-3d.ts` — 各资源类型（YSM/MMD/VRM/Litematic/FBX/maid）的 3D 适配器，均通过 `PreviewAdapter.build` 契约挂内容层，shared 模式复用核心 renderer/rAF/controls。
 - `wasm-decode.ts`（`preview-3d/decoder/`）— `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `decoder/cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
@@ -234,7 +234,7 @@ status: active
 
 - 由 `app-content/index.ts` 顶部副作用静态导入完成注册（见知识卡 `app_content`）
 - `model:select` 派发方为 `app-tree` 节点点击与诊断页去重定位
-- 2D/3D 骨骼计算委托 `model2d.ts` / `preview-3d/model3d.ts`，动画解析走 `utils/animation/animation.ts`
+- 2D/3D 骨骼计算委托 `model2d.ts` / `preview-3d/mesh/model3d.ts`，动画解析走 `utils/animation/animation.ts`
 - Litematic/schematic 解析对应 Go 端 `go/litematic`（见知识卡 `go_litematic`）
 - WASM 解析口径与 Go 端 `go/ysm` 一致；缓存层为 `preview-3d/decoder/cache.ts`
 - 组件实例实现 `PreviewCtx` 最小接口，子模块只依赖该接口，不反向引用组件全貌
@@ -259,7 +259,7 @@ status: active
 
 ## 相关
 
-- `frontend/src/views/app-preview/model2d/model2d.ts` / `preview-3d/model3d.ts` — 2D/3D 骨骼渲染与计算
+- `frontend/src/views/app-preview/model2d/model2d.ts` / `preview-3d/mesh/model3d.ts` — 2D/3D 骨骼渲染与计算
 - `frontend/src/preview-3d/decoder/cache.ts` — 模块级预览缓存
 - `frontend/src/wasm/` — WASM 生成数据（base64 豁免文件）
 - 知识卡：`app_content`、`app_tree`、`go_ysm_parser`、`go_litematic`、`event_bus`、`pointer-events`

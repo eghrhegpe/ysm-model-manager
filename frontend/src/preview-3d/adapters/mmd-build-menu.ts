@@ -5,6 +5,7 @@ import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { mmdBonesToBoneNodes } from "@/preview-3d/bone/mmd-bones.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts";
 import { mmdSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
+import { mmdSemanticMorphMap } from "@/preview-3d/infra/semantic-morphs.ts";
 import {
   getMmdMaterialDetail,
   listMmdMaterials,
@@ -18,7 +19,6 @@ import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { createGazeController } from "@/preview-3d/perception/gaze.ts";
 import { buildLipMorphIndices, createLipSyncController } from "@/preview-3d/perception/lipsync.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
-import { mmdSemanticMorphMap } from "@/preview-3d/semantic-morphs.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { MmdBottomNavCtx } from "./content-bridges.ts";
 import { materialNodes } from "./material-controls.ts";

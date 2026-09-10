@@ -15,7 +15,10 @@ import {
   unregisterSchema,
 } from "@/preview-3d/adapters/schema-registry.ts";
 import { ensureFabStyles } from "@/preview-3d/fab.ts";
-import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
+import {
+  onOverlayStyleTargetReset,
+  overlayStyleRoot,
+} from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";

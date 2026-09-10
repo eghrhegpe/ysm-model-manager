@@ -137,7 +137,7 @@ vi.mock("../../../utils/dom/focus-restore.ts", () => ({
 vi.mock("../../../utils/dom/trap-focus-across-shadow.ts", () => ({
   trapFocusAcrossShadow: vi.fn(() => vi.fn()),
 }));
-vi.mock("@/preview-3d/frustum-cull.ts", () => ({
+vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   isFrustumCullEnabled: vi.fn(() => false),
   restoreModelGroupsVisible: vi.fn(),
   cullModelGroups: vi.fn(),

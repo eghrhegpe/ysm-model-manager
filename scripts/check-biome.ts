@@ -159,10 +159,14 @@ function parseSummary(text: string) {
 }
 
 const { status, out } = runBiome();
-// 0 变更文件时 biome 退出 1 且报 "No files were processed" → 视为「无文件可查=通过」。
-// 仅在 --changed 模式放宽；--files 显式模式下列表路径不存在（拼错/已删）同样输出该文案，
-// 若放宽则「声称检查了 N 个文件、实际一个没查」静默绿灯（code review P2 修复）
-const noFiles = explicitFiles.length === 0 && /No files were processed|Checked 0 files/.test(out);
+// 0 变更文件时 biome 退出 1 且报 "Checked 0 files / No files were processed" → 视为「无文件可查=通过」。
+// 两种安全语义：
+//   ① --changed 模式（无 --files）：0 变更 = 无可查，放行；
+//   ② --files 显式模式：exist 预检（上方 L107）已逐一确认路径存在，此时 biome 报 0 files
+//      只可能是「路径被 biome 配置排除」（如 biome.json `!**/*.test.ts` 排除纯测试文件提交），
+//      属配置范围内的正常空查，放行。
+// 不放行的两类：路径不存在（已被预检拦截）与「文件存在但 biome 检出真实违规」（status!==0 且非 0 files）。
+const noFiles = /No files were processed|Checked 0 files/.test(out);
 const ok = noFiles ? true : status === 0;
 
 if (jsonMode) {

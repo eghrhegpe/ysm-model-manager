@@ -1400,6 +1400,8 @@ export const en: Record<string, string> = {
   "preview.unknownError": "Unknown error",
   "preview.unrecognizedType": "Unrecognized file type",
   "preview.nameLabel": "Name",
+  "preview.modelEmbeddedName": "Embedded name",
+  "preview.modelComment": "License note",
   "preview.authorLabel": "Author",
   "preview.versionLabel": "Version",
   "preview.vrmCommercial": "Commercial",

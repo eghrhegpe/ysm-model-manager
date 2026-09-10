@@ -11,20 +11,12 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ALL_EXTS
-    - buildFolderItems
-    - collectDropFiles
-    - CollectedEntry
-    - collectFiles
     - extBelongsTo
-    - fileToBase64
-    - FolderGroup
     - getExts
-    - groupCollected
     - isImportableFile
     - isSupportedExt
     - isSupportedFile
     - RESOURCE_EXTS
-    - shouldEnterForm
 quick_groups:
   - 拖拽导入与平台适配
 quick_intents:

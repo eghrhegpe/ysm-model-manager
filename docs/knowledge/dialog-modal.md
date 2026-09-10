@@ -11,27 +11,7 @@ source_files:
   - frontend/src/features/dialogs/modal-progress.ts
   - frontend/src/features/dialogs/modal-picker.ts
 auto_fields:
-  symbols_with_lines:
-    - __resetModalStateForTest
-    - closeActiveDialog
-    - closeDlg
-    - createDialog
-    - modalConfirm
-    - ModalConfirmOptions
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
-    - registerDlg
-    - trapFocus
-    - VIEW_TESTIDS
+  symbols_with_lines: []
   tests:
     - frontend/src/features/dialogs/modal.test.ts
 use_when:

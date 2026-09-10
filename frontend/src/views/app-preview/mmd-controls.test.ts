@@ -68,6 +68,16 @@ function makeCtxWithName(name: string): { ctx: MmdBottomNavCtx } {
   };
 }
 
+/** 带 PMX 头部元信息（modelName/comment 等规约字段）的上下文 */
+function makeCtxWithHeader(
+  header: Partial<{ modelName: string; englishModelName: string; comment: string; englishComment: string }>,
+): { ctx: MmdBottomNavCtx } {
+  const { ctx } = makeCtxWithName("子言.pmx");
+  const mmd = ctx.mmd as unknown as { pmx: { header?: unknown } };
+  mmd.pmx.header = header;
+  return { ctx };
+}
+
 beforeEach(() => {
   document.body.innerHTML = "";
   vi.clearAllMocks();
@@ -127,6 +137,50 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
     const nodes = mmdModelInfoNodes(ctx);
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
     expect(nodes.length).toBe(2);
+  });
+
+  it("PMX 头部规约（modelName/comment）：文件名≠内嵌名时补内嵌名行，comment 非空时补规约行", () => {
+    const { ctx } = makeCtxWithHeader({
+      modelName: "子言_Rigged",
+      englishModelName: "ZiYan",
+      comment: "禁止贩卖\n禁止二次配布改模",
+      englishComment: "No resale",
+    });
+    const nodes = mmdModelInfoNodes(ctx);
+    // 基础 2 行 field + 内嵌名 + 规约 = 4 行
+    expect(nodes.length).toBe(4);
+    expect(nodes[2]).toMatchObject({
+      id: "mmd-model-embedded-name",
+      kind: "field",
+      labelKey: "preview.modelEmbeddedName",
+      value: "子言_Rigged",
+    });
+    expect(nodes[3]).toMatchObject({
+      id: "mmd-model-comment",
+      kind: "field",
+      labelKey: "preview.modelComment",
+      value: "禁止贩卖\n禁止二次配布改模",
+    });
+  });
+
+  it("内嵌名与文件名一致 → 不补内嵌名行（避免重复）；comment 空 → 不补规约行", () => {
+    const { ctx } = makeCtxWithHeader({ modelName: "子言.pmx", comment: "" });
+    const nodes = mmdModelInfoNodes(ctx);
+    expect(nodes.length).toBe(2);
+    expect(nodes.some((n) => n.id === "mmd-model-embedded-name")).toBe(false);
+    expect(nodes.some((n) => n.id === "mmd-model-comment")).toBe(false);
+  });
+
+  it("头部缺失（header undefined）→ 不崩，保持基础 2 行 field", () => {
+    const { ctx } = makeCtxWithName("子言.pmx");
+    const nodes = mmdModelInfoNodes(ctx);
+    expect(nodes.length).toBe(2);
+  });
+
+  it("comment 用英文注释兜底（中文 comment 空时取 englishComment）", () => {
+    const { ctx } = makeCtxWithHeader({ modelName: "子言.pmx", comment: "", englishComment: "CC-BY-NC" });
+    const nodes = mmdModelInfoNodes(ctx);
+    expect(nodes[2]).toMatchObject({ id: "mmd-model-comment", value: "CC-BY-NC" });
   });
 });
 

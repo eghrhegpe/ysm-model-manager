@@ -9,12 +9,16 @@ auto_fields:
   symbols_with_lines:
     - __getTriggerForTest
     - __resetInputBlockStackForTest
+    - __resetModalStateForTest
     - attachTooltip
     - btnBaseCSS
     - calcVisibleRange
     - clearTrigger
+    - closeActiveDialog
+    - closeDlg
     - CopyResult
     - copyText
+    - createDialog
     - createFocusRestoreManager
     - createInputBlockStack
     - createTooltipManager
@@ -35,11 +39,25 @@ auto_fields:
     - isFileExistsError
     - isInputBlocked
     - makeLocaleHost
+    - modalConfirm
+    - ModalConfirmOptions
+    - modalPicker
+    - ModalPickerItem
+    - ModalPickerOptions
+    - ModalPickerResult
+    - modalProgress
+    - ModalProgressHandle
+    - ModalProgressOptions
+    - modalPrompt
+    - ModalPromptOptions
+    - modalSelect
+    - ModalSelectOptions
     - popInputBlock
     - promoteTitle
     - promoteTitleIfPresent
     - pushInputBlock
     - refreshAdoptedStyleSheets
+    - registerDlg
     - rememberTrigger
     - returnFocus
     - setRepoSearchFocusPending
@@ -52,7 +70,9 @@ auto_fields:
     - ToastType
     - TooltipManager
     - TooltipOptions
+    - trapFocus
     - trapFocusAcrossShadow
+    - VIEW_TESTIDS
     - WebComponentBase
     - YSW_TOOLTIP_CSS
 quick_groups:

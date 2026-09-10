@@ -22,7 +22,6 @@ auto_fields:
     - pushToDiary
     - registerErrorDiary
     - registerInstanceOps
-    - registerSync
     - requireMcRoot
     - unregisterErrorDiary
   tests:

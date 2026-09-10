@@ -21,7 +21,6 @@ tests:
   - frontend/src/features/dialogs/tag-editor.test.ts
 auto_fields:
   symbols_with_lines:
-    - __resetModalStateForTest
     - AdvFilterResult
     - AdvFilterValue
     - BatchEntry
@@ -30,17 +29,11 @@ auto_fields:
     - BatchRenameTpl
     - bindBatchRenameForm
     - BrRowView
-    - closeActiveDialog
-    - closeDlg
-    - createDialog
     - DgBrShell
     - modalAdvFilter
     - modalTagEditor
-    - registerDlg
     - showBatchRenameDialog
     - showRenameDialog
-    - trapFocus
-    - VIEW_TESTIDS
 use_when:
   - 批量重命名 / 标签编辑 / 高级筛选对话框
   - 找对话框入口符号

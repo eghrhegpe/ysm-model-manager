@@ -332,15 +332,15 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 166 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 49 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 178 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 56 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync.ts` | 75 |
-| runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
@@ -367,8 +367,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 119 |
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 122 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 119 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 122 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -386,7 +386,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync.ts` | 222 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 222 |
 
 ### `sync:toggle:status`
 
@@ -400,7 +400,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync.ts` | 224 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 224 |
 
 ### `toast:show`
 
@@ -431,10 +431,10 @@
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 92 |
 | handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 110 |
 | bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 215 |
-| (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 37 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 44 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 169 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 182 |
+| (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 42 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 51 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 267 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 144 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 153 |
@@ -600,14 +600,14 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 121 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 167 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 50 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 177 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 57 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| handleSyncDownloadMissing | `frontend/src/features/sync.ts` | 106 |
-| handleSyncToggleStatus | `frontend/src/features/sync.ts` | 211 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 

@@ -57,6 +57,39 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       value: `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
     },
   );
+  // [PMX 规约] 头部元信息（modelName/comment 等规约字段，如「禁止贩卖/禁止改模」类说明）。
+  // 条件展示：内嵌名 ≠ 文件名时补内嵌名行（避免重复）；comment 非空时补规约行
+  // （中文 comment 为空时用 englishComment 兜底——PMX 头部两套注释是同一内容的中英文版本）。
+  const header = (
+    pmx as {
+      header?: {
+        modelName?: string;
+        englishModelName?: string;
+        comment?: string;
+        englishComment?: string;
+      };
+    }
+  ).header;
+  const embeddedName = header?.modelName?.trim() || header?.englishModelName?.trim() || "";
+  if (embeddedName && embeddedName !== ctx.modelName) {
+    nodes.push({
+      id: "mmd-model-embedded-name",
+      kind: "field",
+      labelKey: "preview.modelEmbeddedName",
+      fallback: "内嵌名",
+      value: embeddedName,
+    });
+  }
+  const comment = header?.comment?.trim() || header?.englishComment?.trim() || "";
+  if (comment) {
+    nodes.push({
+      id: "mmd-model-comment",
+      kind: "field",
+      labelKey: "preview.modelComment",
+      fallback: "规约说明",
+      value: comment,
+    });
+  }
   return nodes;
 }
 

@@ -11,14 +11,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __resetI18nStateForTest
-    - __resetModalStateForTest
     - __resetWebLogStateForTest
     - BASE_LANG
     - CachePolicy
     - clearAllCache
-    - closeActiveDialog
-    - closeDlg
-    - createDialog
     - detectFromLangs
     - FALLBACK_LANG
     - getBundle
@@ -29,12 +25,9 @@ auto_fields:
     - LangCode
     - loadLocale
     - LocaleHost
-    - registerDlg
     - setLang
     - setLocaleHost
     - SUPPORTED_LANGS
-    - trapFocus
-    - VIEW_TESTIDS
     - warnMissingKey
     - webStoreBindings
     - withCached

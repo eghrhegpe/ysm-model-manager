@@ -26,11 +26,16 @@ import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
+  componentsStyleSheet,
+  installComponentsStyles,
+} from "@/preview-3d/menu/components-styles.ts";
+import {
   mountPreviewRootMenu,
   type PreviewMenuCtx,
   type PreviewMenuHandle,
 } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { slideMenuStyleSheet } from "@/preview-3d/menu/slide-menu-styles.ts";
 import {
   type BoneMaps,
   type BoneSelectInfo,
@@ -43,9 +48,6 @@ import {
   setOverlayStyleTarget,
 } from "@/preview-3d/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
-import { installUiComponentsStyles, uiComponentsStyleSheet } from "@/ui/ui-components-styles.ts";
-import { PREVIEW_OVERLAY_ID } from "@/ui/ui-constants.ts";
-import { slideMenuStyleSheet } from "@/ui/ui-slide-menu-styles.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -77,6 +79,7 @@ import { sceneRegistry } from "./scene-registry.ts";
 import { buildSharedInfra, resetSceneInfra, type SharedInfra } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
+import { PREVIEW_OVERLAY_ID } from "./ui-constants.ts";
 import { makeUnifiedPickHandler } from "./unified-pick.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
@@ -392,7 +395,7 @@ export async function mount3D(
   rememberTrigger();
   // 复用单例外壳（renderer/canvas/overlay/scene 存活），首次 mount3D 创建，后续复用。
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
-  installUiComponentsStyles();
+  installComponentsStyles();
   ensureMpcStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
   const myGen = ++_gen;
   const selfMode = adapter.mode === "self";
@@ -537,7 +540,7 @@ function assembleShell(ctx: MountCtx): AssembledShell {
       // 共享样式模块走 adoptedStyleSheets（与全站 shadow 组件同形态；head 注入由
       // installUiComponentsStyles 兜底路径承担，不冲突）。失败仅影响样式，不阻断挂载。
       try {
-        shadow.adoptedStyleSheets = [uiComponentsStyleSheet, slideMenuStyleSheet].filter(
+        shadow.adoptedStyleSheets = [componentsStyleSheet, slideMenuStyleSheet].filter(
           (s): s is CSSStyleSheet => s != null,
         );
       } catch (err) {

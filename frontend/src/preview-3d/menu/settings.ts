@@ -17,10 +17,10 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
-import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { capControlsToNodes } from "./cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。
  *  key 有意接受 string（labelKey/group 数据字段 + 原文兜底），内部经 LocaleKey 收窄。 */

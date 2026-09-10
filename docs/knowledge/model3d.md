@@ -32,6 +32,7 @@ auto_fields:
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
+    - ARIA_ATTR
     - assembleBoneSelectInfo
     - AssembledShell
     - ATMOSPHERE_PRESETS
@@ -571,6 +572,7 @@ auto_fields:
     - restoreModelGroupsVisible
     - restoreState
     - ringLog
+    - ROLE
     - roleBaseName
     - RolesSchemaDeps
     - runFailedMountCleanup
@@ -635,6 +637,7 @@ auto_fields:
     - SlideMenuHandle
     - slideMenuStyleSheet
     - SlideMenuView
+    - SLIDER_BAR_CLASS
     - solveIK
     - Spec3D
     - SpecBone

@@ -13,7 +13,7 @@ const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 /** 手写源码顶层目录白名单（与 tsconfig.json paths 必须一致；D3 一致性校验兜底）。 */
 const ALIAS_DIRS = [
   "bindings", "preview-3d", "views", "utils", "backend", "core",
-  "ui", "features", "workers", "services", "wasm", "test-utils", "web-spike",
+  "features", "workers", "services", "wasm", "test-utils", "web-spike",
   "locales", "parsers",
 ];
 /** 手写源码根文件级别名（src 根上的文件，目录别名映射不了；与 tsconfig paths 一致）。 */

@@ -20,7 +20,7 @@ source_files:
   - frontend/src/features/dialogs/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
-  - frontend/src/ui/ui-components-styles.ts
+  - frontend/src/preview-3d/menu/components-styles.ts
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-preview/detail-3d.ts
@@ -58,7 +58,6 @@ auto_fields:
     - initMcDetect
     - initRepositoryPage
     - initSettingsPage
-    - installUiComponentsStyles
     - invalidateMaxFpsCache
     - MAX_FPS_DEFAULT
     - MAX_FPS_KEY
@@ -85,8 +84,6 @@ auto_fields:
     - showStagePreview
     - showVrmMeta
     - trapFocus
-    - uiComponentsCss
-    - uiComponentsStyleSheet
     - VIEW_TESTIDS
     - WorkerBridge
     - WorkerErrorStrategy

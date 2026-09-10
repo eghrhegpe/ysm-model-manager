@@ -11,7 +11,7 @@ import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adap
 import { getSchema } from "./schema-registry.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
-import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/slide-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 

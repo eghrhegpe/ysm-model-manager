@@ -17,7 +17,6 @@ import {
 import { ensureFabStyles } from "@/preview-3d/fab.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
-import { createSlideMenu, type SlideMenuHandle, type SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { renderCapControls } from "./cap-controls.ts";
@@ -40,6 +39,7 @@ import {
   buildSettingsSchema,
   buildShadowSchema,
 } from "./settings.ts";
+import { createSlideMenu, type SlideMenuHandle, type SlideMenuView } from "./slide-menu.ts";
 import { makeSwitchState } from "./switch.ts";
 
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings

@@ -12,9 +12,9 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
-import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";
+import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 import { buildSwitchNodes, type SwitchState } from "./switch.ts";
 
 // 迁出兼容：roleBaseName 仍从本文件 re-export（core.ts 原位 import；实现单源 roles-views.ts）

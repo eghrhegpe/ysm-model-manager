@@ -16,8 +16,8 @@
 import type { PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "@/preview-3d/menu/defs.ts";
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "@/preview-3d/menu/node-types.ts";
+import type { SlideMenuHandle } from "@/preview-3d/menu/slide-menu.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import { getSchema, listSchemas } from "./schema-registry.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。

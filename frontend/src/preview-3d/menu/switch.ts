@@ -7,7 +7,6 @@
 //（mount 级一次），builder 每次渲染重跑时读写同一 state——旧闭包 let activeTab 语义平移。
 
 import { t } from "@/core/i18n/t.ts";
-import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import {
@@ -16,6 +15,7 @@ import {
   resolveTypeSafe,
 } from "@/utils/resource/types.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";

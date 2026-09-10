@@ -32,7 +32,6 @@
       "@/utils/*": ["./src/utils/*"],
       "@/backend/*": ["./src/backend/*"],
       "@/core/*": ["./src/core/*"],
-      "@/ui/*": ["./src/ui/*"],
       "@/features/*": ["./src/features/*"],
       "@/workers/*": ["./src/workers/*"],
       "@/services/*": ["./src/services/*"],

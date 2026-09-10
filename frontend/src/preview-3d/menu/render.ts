@@ -15,8 +15,6 @@ import {
   previewSnapshot,
   setStateValue,
 } from "@/preview-3d/state/preview-state.ts";
-import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
-import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import {
   type CapControlView,
   renderCapColor,
@@ -25,6 +23,7 @@ import {
   renderCapSlider,
   renderCapToggle,
 } from "./cap-controls.ts";
+import { createHeaderToggle } from "./header-toggle.ts";
 import {
   MENU_CARD_CSS,
   MENU_DIVIDER_CSS,
@@ -32,6 +31,7 @@ import {
   MENU_SECTION_CSS,
 } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
 // i18n 取值统一走共享 t()（core/i18n/t.ts，内置 current → en → key 多级回退）
 

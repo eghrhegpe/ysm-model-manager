@@ -11,11 +11,11 @@ import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "@/ui/dom-contract.ts";
-import { createHeaderToggle } from "@/ui/ui-header-toggle.ts";
-import { DragSliderController } from "@/ui/ui-slider-controller.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
+import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";
+import { createHeaderToggle } from "./header-toggle.ts";
 import { MENU_SECTION_CSS } from "./menu-styles.ts";
+import { DragSliderController } from "./slider-controller.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
@@ -224,7 +224,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   const numVal = v.getValue() as number;
   const range = max - min;
 
-  // 自绘进度条（.cs-bar + .cs-fill + .cs-thumb；样式随 uiComponentsStyleSheet 已进 overlay）
+  // 自绘进度条（.cs-bar + .cs-fill + .cs-thumb；样式随 componentsStyleSheet 已进 overlay）
   const bar = document.createElement("div");
   bar.className = SLIDER_BAR_CLASS;
   bar.tabIndex = 0;

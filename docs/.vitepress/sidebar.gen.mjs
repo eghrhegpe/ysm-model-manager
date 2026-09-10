@@ -1547,7 +1547,7 @@ export const autoSidebar = [
             "link": "/knowledge/toolbar-search"
           },
           {
-            "text": "UI 组件库 ui-components",
+            "text": "UI 组件簇（原 ui 收容所，已归位）",
             "link": "/knowledge/ui_components"
           },
           {

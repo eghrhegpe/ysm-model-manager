@@ -11,12 +11,12 @@
 import { t } from "@/core/i18n/t.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import { onOverlayStyleTargetReset, overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
-import type { SlideMenuHandle, SlideMenuView } from "@/ui/ui-slide-menu.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
+import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 import { switchNormPath } from "./switch.ts";
 
 /** 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。

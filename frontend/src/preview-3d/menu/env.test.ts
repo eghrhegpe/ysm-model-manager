@@ -7,7 +7,7 @@ import { resetEnvState, envState } from "@/preview-3d/state/env-state.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
-import type { SlideMenuHandle } from "@/ui/ui-slide-menu.ts";
+import type { SlideMenuHandle } from "./slide-menu.ts";
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */

@@ -73,3 +73,41 @@ export const MENU_DIVIDER_CSS = `.menu-divider {
   background: rgba(255,255,255,0.12);
   margin: 4px 10px;
 }`;
+
+/**
+ * 卡牌分组容器（[ADR-195] 终态：`lcard`/卡片分组能力进入菜单）。
+ *
+ * 形态 = 顶行标题 + 分隔线 + 内容区，由 rmAppendCard 装配（kind:"card" 节点消费）。
+ * 与 folder 的分工：folder 是**可折叠**参数组（参数页内部，点击收放）；
+ * card 是**不可折叠**的语义卡壳，用于把一批同级导航行按语义聚拢
+ * （如环境面板「基础：天空/地面/水面」「氛围：环境/雾/反射」）。
+ *
+ * 为何不复用 ui/ui-card.ts 的 `.lcard`：该 class 全仓零 CSS 定义（仅测试引用），
+ * 且菜单样式经 overlay 样式桥注入 ShadowRoot，全局 CSS 不穿透——样式必须落在本地。
+ */
+export const MENU_CARD_CSS = `.cap-card {
+  margin: 6px 8px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.035);
+  overflow: hidden;
+}
+.cap-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+.cap-card-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 10px;
+}
+.cap-card-body {
+  padding: 2px 0 4px;
+}`;

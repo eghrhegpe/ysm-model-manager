@@ -6,6 +6,7 @@ import {
   disposeCustomCleanups,
   nodeControlToView,
 } from "./render.ts";
+import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
@@ -875,6 +876,94 @@ describe("nodeControlToView", () => {
     const view = nodeControlToView(node, snapshot);
     expect(view.getValue()).toBe(null);
     expect(() => view.setValue(true)).not.toThrow();
+  });
+});
+
+// ===== card：卡牌分组容器（ADR-195 终态：卡片分组进入菜单）=====
+describe("renderMenu card：卡牌分组容器", () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it("card: 三段式卡壳（顶行标题 + 分隔线 + 内容区），子节点渲染进内容区", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "card-1",
+        kind: "card",
+        labelKey: "preview.envSectionBasic",
+        fallback: "基础",
+        children: [{ id: "child-card-1", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+
+    const card = container.querySelector(".cap-card") as HTMLElement;
+    expect(card).not.toBeNull();
+    // 顺序固定：header → divider → body
+    expect(card.children.length).toBe(3);
+    expect(card.children[0]!.className).toBe("cap-card-header");
+    expect(card.children[1]!.className).toBe("cap-card-divider");
+    expect(card.children[2]!.className).toBe("cap-card-body");
+    expect(card.children[0]!.textContent).toBe(tOf("preview.envSectionBasic"));
+    const body = card.querySelector(".cap-card-body") as HTMLElement;
+    expect(body.querySelector('[data-testid="preview-child-card-1"]')).not.toBeNull();
+  });
+
+  it("card: 带 children 仍走卡牌而非折叠 section（folder 前置分支不得吞掉 card）", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "card-2",
+        kind: "card",
+        labelKey: "preview.envSectionAtmosphere",
+        fallback: "氛围",
+        children: [{ id: "child-card-2", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    // 无折叠头/箭头 = 未被 folder 分支接管
+    expect(container.querySelector(".cap-section-header")).toBeNull();
+    expect(container.querySelector(".cap-section-arrow")).toBeNull();
+    // 内容区不带内联折叠态（folder body 有 display 内联，card body 无）
+    const body = container.querySelector(".cap-card-body") as HTMLElement;
+    expect(body.style.display).toBe("");
+  });
+
+  it("card: 空 children / 全隐 children 不渲染空卡壳", () => {
+    const empty: PreviewMenuNode[] = [
+      {
+        id: "card-empty",
+        kind: "card",
+        labelKey: "preview.envSectionOther",
+        fallback: "其它",
+        children: [],
+      },
+    ];
+    const c1 = document.createElement("div");
+    renderMenu(c1, empty, makeDeps() as any);
+    expect(c1.querySelector(".cap-card")).toBeNull();
+
+    const hidden: PreviewMenuNode[] = [
+      {
+        id: "card-hidden",
+        kind: "card",
+        labelKey: "preview.envSectionOther",
+        fallback: "其它",
+        children: [
+          {
+            id: "hidden-child",
+            kind: "field",
+            labelKey: "preview.child",
+            value: "v",
+            visibleWhen: () => false,
+          },
+        ],
+      },
+    ];
+    const c2 = document.createElement("div");
+    renderMenu(c2, hidden, makeDeps() as any);
+    expect(c2.querySelector(".cap-card")).toBeNull();
   });
 });
 

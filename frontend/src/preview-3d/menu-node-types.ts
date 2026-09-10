@@ -147,6 +147,7 @@ export type PreviewMenuNodeKind =
   | "row" // 列表行（纹理/材质/bone 等动态列表）
   | "divider"
   | "sectionTitle"
+  | "card" // [ADR-195 终态] 卡牌分组容器：顶行标题+分隔线+内容区，把同级行按语义聚拢（不可折叠；与 folder 分工——folder 管可收放的参数组）
   | "material-row" // [doc:adr-126-p5] 组合控件行（label + eye 显隐 + opacity 滑条）——审计 #3 material 声明式化
   | "controls" // [ADR-195 刀3] 承载 PreviewControlDef[]，渲染委托 renderCapControls
   | "custom";

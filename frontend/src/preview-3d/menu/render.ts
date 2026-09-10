@@ -25,7 +25,12 @@ import {
   renderCapSlider,
   renderCapToggle,
 } from "./cap-controls.ts";
-import { MENU_DIVIDER_CSS, MENU_ROW_DENSITY_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
+import {
+  MENU_CARD_CSS,
+  MENU_DIVIDER_CSS,
+  MENU_ROW_DENSITY_CSS,
+  MENU_SECTION_CSS,
+} from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 
 // i18n 取值统一走共享 t()（core/i18n/t.ts，内置 current → en → key 多级回退）
@@ -53,6 +58,7 @@ function ensureMenuStyles(): void {
 ${MENU_SECTION_CSS}
 ${MENU_ROW_DENSITY_CSS}
 ${MENU_DIVIDER_CSS}
+${MENU_CARD_CSS}
 .slide-item.rm-control-row {
    display: flex;
    align-items: center;
@@ -221,6 +227,37 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   renderMenu(body, children, deps);
   section.append(header, body);
   container.appendChild(section);
+}
+
+/**
+ * [子函数 1b/6] card：卡牌分组容器——顶行标题 + 分隔线 + 内容区（不可折叠）。
+ * 与 folder 分工：folder 管「可收放的参数组」（参数页内部，点击收放）；
+ * card 管「同级行的语义聚拢」（如环境面板「基础：天空/地面/水面」「氛围：环境/雾/反射」），
+ * 纯外壳、无折叠交互，故不复用 .cap-section-header 的 pointer/折叠语义。
+ */
+function rmAppendCard(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
+  const children = node.children ?? [];
+  if (children.length === 0) return;
+  // 与 rmAppendFolder 同口径：渲染卡壳前按 visibleWhen 预筛，全隐组不留空卡壳
+  const snapshot = previewSnapshot();
+  const visible = snapshot
+    ? children.filter((ch) => !ch.visibleWhen || ch.visibleWhen(snapshot))
+    : children;
+  if (visible.length === 0) return;
+  const card = document.createElement("div");
+  card.className = "cap-card";
+  card.dataset.testid = node.id;
+  const header = document.createElement("div");
+  header.className = "cap-card-header";
+  header.textContent = rmLabel(node);
+  const divider = document.createElement("div");
+  divider.className = "cap-card-divider";
+  const body = document.createElement("div");
+  body.className = "cap-card-body";
+  body.dataset.testid = `${node.id}-body`;
+  renderMenu(body, visible, deps);
+  card.append(header, divider, body);
+  container.appendChild(card);
 }
 
 /** [子函数 2/6] field：键值对行（统计/信息展示） */
@@ -580,6 +617,12 @@ export function renderMenu(
     // 形状前置（2026-09 分派穷举化保留）：folder 或「带 children 的节点」都按可折叠 section
     // 渲染——panel 带 children（如 shot 工具面板在 modelDetailView 里的 folder 形态，
     // roles.test.ts 三通道回归锁）走此路。kind 判不了「声明了 children」，故先于 switch。
+    // card 先于 folder 判定：card 同样带 children，否则会被下方
+    // 「带 children 即按可折叠 section 渲染」吞掉，卡牌外壳丢失。
+    if (node.kind === "card") {
+      rmAppendCard(container, node, deps);
+      continue;
+    }
     if (node.kind === "folder" || Array.isArray(node.children)) {
       rmAppendFolder(container, node, deps);
       continue;

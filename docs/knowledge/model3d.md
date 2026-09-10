@@ -386,6 +386,7 @@ auto_fields:
     - mdMmStage6Result
     - mdMmTrackAlloc
     - MdWsYsmMeta
+    - MENU_CARD_CSS
     - MENU_DIVIDER_CSS
     - MENU_ERROR_NOTE_CSS
     - MENU_ROW_DENSITY_CSS

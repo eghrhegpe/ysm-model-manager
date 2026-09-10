@@ -68,9 +68,17 @@ function makeCap(
 
 type CtrlsFn = ReturnType<NonNullable<SceneCapability["getMenuNodes"]>>;
 
-/** 取 env schema 第 idx 个 cap 行（schema[0] 是预设 select） */
+/**
+ * 展开 env schema 中的 cap 行：schema[0] 是预设 select，其后是 card 卡壳，
+ * 真正的行在 card.children 里（基础/氛围分段）。
+ */
+function capRows(schema: PreviewMenuNode[]): PreviewMenuNode[] {
+  return schema.slice(1).flatMap((n) => (n.kind === "card" ? (n.children ?? []) : [n]));
+}
+
+/** 取第 idx 个 cap 行（0 基，跳过预设 select 与卡壳层） */
 function capRow(schema: PreviewMenuNode[], idx: number): PreviewMenuNode {
-  const row = schema[idx]!;
+  const row = capRows(schema)[idx]!;
   expect(row.kind).toBe("row");
   return row;
 }
@@ -146,11 +154,17 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const schema = buildEnvSchema(makeCtx(), menu);
     expect(schema[0]!.id).toBe("env-preset-bar");
     expect(schema[0]!.kind).toBe("select");
-    expect(schema.slice(1).map((n) => n.id)).toEqual(["env-cap-sky", "env-cap-fog"]);
+    // 卡壳层：sky 归「基础」、fog 归「氛围」（ENV_SECTIONS 分段表单一事实源）
+    expect(schema.slice(1).map((n) => n.id)).toEqual(["env-card-basic", "env-card-atmosphere"]);
+    expect(schema.slice(1).every((n) => n.kind === "card")).toBe(true);
+    expect(schema.slice(1).map((n) => n.labelKey)).toEqual([
+      "preview.envSectionBasic",
+      "preview.envSectionAtmosphere",
+    ]);
+    const rows = capRows(schema);
+    expect(rows.map((n) => n.id)).toEqual(["env-cap-sky", "env-cap-fog"]);
     // 每行是 row 节点（icon + label + action 下钻），带 chevron 语义由 action 表达
-    expect(schema.slice(1).every((n) => n.kind === "row" && typeof n.action === "function")).toBe(
-      true,
-    );
+    expect(rows.every((n) => n.kind === "row" && typeof n.action === "function")).toBe(true);
     expect(schema.every((n) => n.renderCustom === undefined)).toBe(true);
   });
 
@@ -177,7 +191,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     };
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
-    const row = capRow(schema, 1);
+    const row = capRow(schema, 0);
     // navigate 触发 + 子视图渲染
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();
@@ -238,7 +252,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([ground]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
-    const row = capRow(schema, 1);
+    const row = capRow(schema, 0);
     const { container } = navigateAndRender(row);
     // 无 group 的 ground-visible 平铺；两个 group → 两个 folder section
     expect(container.querySelector('[data-testid="cap-ground-visible"]')).not.toBeNull();
@@ -324,7 +338,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
-    const row = capRow(schema, 1);
+    const row = capRow(schema, 0);
     // 一级行 headerToggle：读写即 masterCtrl 读写（bind 同步 enabled）
     expect(row.headerToggle).toBeDefined();
     row.headerToggle!.onChange(true);
@@ -354,7 +368,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
-    const row = capRow(schema, 1);
+    const row = capRow(schema, 0);
     expect(row.headerToggle).toBeUndefined();
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();

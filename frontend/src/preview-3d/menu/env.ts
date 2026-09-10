@@ -20,6 +20,35 @@ import { renderMenu } from "./render.ts";
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
 
+/**
+ * 环境面板 cap 分段（卡牌外壳单一事实源）。
+ *
+ * 背景：envCapRow 产出的都是「点击 navigate 下钻参数页」的一级导航行
+ * （天空/地面/水面/环境/雾/反射），本身不收纳参数——原先平铺一长列，语义相邻的
+ * 项之间没有视觉边界。现按语义聚拢成卡：卡壳＝顶行标题 + 分隔线 + 内容区。
+ *
+ * 新增环境 cap 时在此登记归属；未登记的落末尾「其它」卡（不静默丢失）。
+ */
+const ENV_SECTIONS: ReadonlyArray<{
+  id: string;
+  labelKey: string;
+  fallback: string;
+  caps: readonly string[];
+}> = [
+  {
+    id: "env-card-basic",
+    labelKey: "preview.envSectionBasic",
+    fallback: "基础",
+    caps: ["sky", "ground", "water"],
+  },
+  {
+    id: "env-card-atmosphere",
+    labelKey: "preview.envSectionAtmosphere",
+    fallback: "氛围",
+    caps: ["environment", "fog", "reflector"],
+  },
+];
+
 // ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
 let _envCapUnsubs: Array<() => void> = [];
 function rebuildEnvSubs(caps: SceneCapability[], menu: SlideMenuHandle): void {
@@ -164,6 +193,38 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
 }
 
 /**
+ * cap 导航行按 ENV_SECTIONS 聚拢成卡牌节点（kind:"card"）。
+ * 空段不建卡壳（rmAppendCard 亦有一次 visibleWhen 兜底）；未登记 cap 落末尾「其它」。
+ */
+function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
+  const claimed = new Set<string>();
+  const out: PreviewMenuNode[] = [];
+  for (const sec of ENV_SECTIONS) {
+    const rows = caps.filter((c) => sec.caps.includes(c.id));
+    if (rows.length === 0) continue;
+    for (const c of rows) claimed.add(c.id);
+    out.push({
+      id: sec.id,
+      kind: "card",
+      labelKey: sec.labelKey,
+      fallback: sec.fallback,
+      children: rows.map(envCapRow),
+    });
+  }
+  const rest = caps.filter((c) => !claimed.has(c.id));
+  if (rest.length > 0) {
+    out.push({
+      id: "env-card-other",
+      kind: "card",
+      labelKey: "preview.envSectionOther",
+      fallback: "其它",
+      children: rest.map(envCapRow),
+    });
+  }
+  return out;
+}
+
+/**
  * 环境面板声明式 schema。
  * 结构：氛围预设 select（跨 cap 联动）+ 每 cap 一行（一级），点行 navigate 下钻参数页。
  * 空 caps → 空态提示单节点。menu 存在时重建 cap 订阅（cap 参数变更 → menu.refresh →
@@ -209,6 +270,6 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
         },
       },
     },
-    ...caps.map(envCapRow),
+    ...buildEnvCards(caps),
   ];
 }

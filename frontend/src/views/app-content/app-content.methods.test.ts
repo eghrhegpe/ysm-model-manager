@@ -588,21 +588,18 @@ describe("纯函数（直引 util：formatBytes / esc，AppContent 不再持有�
 });
 
 // ===== 覆盖率补强：init-pages 直接导出 / 键盘导航 / 懒初始化失败复位 =====
+// 注：rememberModelPath / getLastModelPath / __resetLastModelPathForTest 用例已随
+// ADR-221 归位 core，迁至 core/model-path-store.test.ts（测试跟随被测单元）。
 import {
   initDiagnosticsPage,
   initInstancesPage,
   initRepositoryPage,
   initSettingsPage,
-  rememberModelPath,
-  getLastModelPath,
-  __resetLastModelPathForTest,
 } from "./init-pages.ts";
 import type { AppContentHost } from "./host.ts";
 import type { Mock } from "vitest";
 
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
-  afterEach(__resetLastModelPathForTest);
-
   it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
     const el = mountContent();
     const diag = await import("@/views/app-content/diagnostics/init.ts");
@@ -654,13 +651,6 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
       err.mockRestore();
     }
     expect(toasts.some((t) => t.type === "error")).toBe(true);
-  });
-
-  it("rememberModelPath / getLastModelPath 存取（304/308）", () => {
-    rememberModelPath("/m/狐.ysm");
-    expect(getLastModelPath()).toBe("/m/狐.ysm");
-    rememberModelPath(null);
-    expect(getLastModelPath()).toBeNull();
   });
 });
 

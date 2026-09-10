@@ -5,6 +5,7 @@ import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { bus, type PageName } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { getLastModelPath } from "@/core/model-path-store.ts";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
@@ -319,7 +320,6 @@ class AppNav extends WebComponentBase {
    * 无选中模型 → 直接开空场景 3D（不弹 toast，降低首次使用门槛）。
    */
   private async _viewerFabClick(): Promise<void> {
-    const { getLastModelPath } = await import("@/views/app-content/init-pages.ts");
     const path = getLastModelPath();
     if (!path) {
       // 无选中模型 → 空场景 3D（renderer/scene/camera 已就位，用户可通过资源库选模型）

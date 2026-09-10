@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-221：跨视图共享状态归位 core 以消除视图域环",
+        "link": "/adr/ADR-221-core"
+      },
+      {
         "text": "ADR-220：解散 ui 收容所——3D 菜单组件归位 preview-3d",
         "link": "/adr/ADR-220-ui-shelter-dissolve"
       },

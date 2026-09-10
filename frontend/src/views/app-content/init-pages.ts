@@ -304,20 +304,5 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
 // initWorkshopPage / initGithubPage 转发壳已删除（P1-2）——
 // page-registry 直接引用 init-workshop.ts / init-github.ts 的实现函数。
 
-// ===== 最近选中模型（供导航栏 3D 一键跳转复用；app-tree 在 model:select 时写入）=====
-let _lastModelPath: string | null = null;
-
-/** 记住最后选中的模型路径（供文件树等外部调用） */
-export function rememberModelPath(path: string | null): void {
-  _lastModelPath = path;
-}
-
-export function getLastModelPath(): string | null {
-  return _lastModelPath;
-}
-
-/** 测试钩子：重置 _lastModelPath（isolate:false 共享模块图下，兄弟用例残留会泄漏到
- *  后续用例的 getLastModelPath 断言；modal-core.__resetModalStateForTest 同款范式） */
-export function __resetLastModelPathForTest(): void {
-  _lastModelPath = null;
-}
+// 最近选中模型路径（rememberModelPath / getLastModelPath / __resetLastModelPathForTest）
+// 已迁出至 core/model-path-store.ts（ADR-221：跨视图共享态归位 core，断开三个视图域的越权边）。

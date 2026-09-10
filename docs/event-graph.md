@@ -202,7 +202,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 89 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 197 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 198 |
 
 ### `menu:show`
 
@@ -233,7 +233,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 92 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 93 |
 
 ### `nav:changed`
 
@@ -243,8 +243,8 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 199 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
-| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 41 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 207 |
+| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 42 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 208 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
@@ -252,7 +252,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 68 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 176 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 177 |
 
 ### `package:selected`
 
@@ -274,7 +274,7 @@
 |------|------|----|
 | stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
 | stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 307 |
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 111 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 112 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -282,7 +282,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 79 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 199 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 259 |
 
@@ -304,7 +304,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 112 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 113 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -492,7 +492,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 170 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
-| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 133 |
+| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 134 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 339 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 423 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |

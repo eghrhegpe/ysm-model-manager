@@ -31,7 +31,6 @@ source_files:
   - frontend/src/utils/icon/workshop-icons.ts
 auto_fields:
   symbols_with_lines:
-    - __resetLastModelPathForTest
     - aboutHTML
     - AppContentHost
     - AppContentState
@@ -57,7 +56,6 @@ auto_fields:
     - forceRefreshCommunityMerge
     - forceRefreshCommunitySites
     - forceRefreshScanAuthors
-    - getLastModelPath
     - getSiteIcon
     - getTagIconFromRole
     - githubHTML
@@ -83,7 +81,6 @@ auto_fields:
     - PAGE_REGISTRY
     - PageDefinition
     - recycleHTML
-    - rememberModelPath
     - renderRecycleListHtml
     - RepoCacheEntry
     - repositoryHTML

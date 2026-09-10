@@ -49,7 +49,6 @@ auto_fields:
     - DedupConfigShape
     - DedupSession
     - getFrameIntervalMs
-    - getLastModelPath
     - getMaxFps
     - getMaxPixelRatio
     - initAdvancedGrid
@@ -67,7 +66,6 @@ auto_fields:
     - PREVIEW_FRAME_INTERVAL_MS
     - previewPixelRatio
     - registerDlg
-    - rememberModelPath
     - ResolveModeBridge
     - ResolveModeResponse
     - roleBaseName

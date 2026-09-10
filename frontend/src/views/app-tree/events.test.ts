@@ -37,8 +37,8 @@ vi.mock("@/backend/capabilities.ts", () => ({ can: canMock }));
 vi.mock("@/backend/platform.ts", () => ({
   isViewerMode: isViewerModeMock,
 }));
-// init-pages.ts 是页面装配大模块（含诊断/回收站等 import 链），events 只用 rememberModelPath
-vi.mock("@/views/app-content/init-pages.ts", () => ({
+// rememberModelPath 已归位 core（ADR-221）；mock 该模块免拉起 pages 装配链
+vi.mock("@/core/model-path-store.ts", () => ({
   rememberModelPath: rememberModelPathMock,
 }));
 vi.mock("@/utils/model-name/display.ts", () => ({

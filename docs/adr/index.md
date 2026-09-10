@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **218** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **219** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 6 |
-| [✅ 已采纳](#已采纳) | 202 |
+| [✅ 已采纳](#已采纳) | 203 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -36,10 +36,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（202）
+### ✅ 已采纳（203）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-221](./ADR-221-core.md) | 跨视图共享状态归位 core 以消除视图域环 | ✅ 已采纳 |
 | [ADR-220](./ADR-220-ui-shelter-dissolve.md) | 解散 ui 收容所——3D 菜单组件归位 preview-3d | ✅ 已采纳 |
 | [ADR-219](./ADR-219-stats-graceful-degradation.md) | stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗 | ✅ 已采纳 |
 | [ADR-217](./ADR-217-backend-parsers-tier.md) | backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛 | ✅ 已采纳 |
@@ -267,6 +268,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-221 | 跨视图共享状态归位 core 以消除视图域环 | ✅ 已采纳 | 2026-09-10 |
 | ADR-220 | 解散 ui 收容所——3D 菜单组件归位 preview-3d | ✅ 已采纳 | 2026-09-10 |
 | ADR-219 | stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗 | ✅ 已采纳 | 2026-09-10 |
 | ADR-218 | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 | 2026-09-10 |

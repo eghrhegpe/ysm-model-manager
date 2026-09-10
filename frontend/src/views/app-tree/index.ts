@@ -54,10 +54,10 @@ export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { bus } from "@/bus";
+import { rememberModelPath } from "@/core/model-path-store.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { rememberModelPath } from "@/views/app-content/init-pages.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { type SelectState, selectSingle } from "./data.ts";
 

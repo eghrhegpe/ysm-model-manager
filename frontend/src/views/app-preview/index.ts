@@ -3,6 +3,7 @@
 // 本类仅保留 Web Component 生命周期 + WASM 代理 + 调试 + 类型缓存懒加载。
 
 import { bus } from "@/bus";
+import { rememberModelPath } from "@/core/model-path-store.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -93,11 +94,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         this._previewGuard.invalidate();
         // 统一同步「最近选中模型」——纯副作用：fire-and-forget + 失败静默
         if (!isDir && path) {
-          void import("@/views/app-content/init-pages.ts")
-            .then(({ rememberModelPath }) => rememberModelPath(path))
-            .catch(() => {
-              /* rememberModelPath 失败不影响预览 */
-            });
+          rememberModelPath(path);
         }
         closeActive3DOverlay(this);
         // P2 修复：任意新选择作废在途渲染——防跨类型污染

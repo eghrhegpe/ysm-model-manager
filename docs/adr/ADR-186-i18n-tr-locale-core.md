@@ -1,10 +1,11 @@
 # ADR-186：i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core
 
-- **状态**：已采纳（Accepted）
+- **状态**：🔄 部分采纳（条目 1 tr 单轨（`core/i18n/tr.ts` 统一收敛）被 [ADR-210](./ADR-210-core-convergence-locale-host.md) D3 根除——tr/trDynamic 双入口生产调用归零，回退语义由 tOf 多级兜底承载；条目 2 影子包卡口、条目 3 语言包数据外移仍有效）
+- **被取代**：[ADR-210] 取代 条目 1（tr 单轨：`core/i18n/tr.ts` 统一收敛已整体根除，tr/trDynamic 由 tOf 多级兜底承接）；条目 2/条目 3 仍有效
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-045（i18n 架构）、ADR-185（core 分层治理）、ADR-161（§2.5 注册器）
+- **相关**：ADR-045（i18n 架构）、ADR-185（core 分层治理）、ADR-161（§2.5 注册器）、[ADR-210](./ADR-210-core-convergence-locale-host.md)（core 收编：tr/_activeBundle 根除 + locale host 注入 + FALLBACK_LANG 单一事实源）
 
 ---
 

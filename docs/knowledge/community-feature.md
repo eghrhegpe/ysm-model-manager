@@ -14,6 +14,8 @@ auto_fields:
     - buildModelRow
     - cancelDownloads
     - classifyDownloadSize
+    - clearAllCommunityCache
+    - CommunityData
     - communityGetApp
     - countMissing
     - createDownloadQueue
@@ -21,6 +23,7 @@ auto_fields:
     - createRepoRenderGuard
     - createVirtualList
     - decrementRemaining
+    - DEFAULT_COMMUNITY_URL
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
@@ -30,8 +33,14 @@ auto_fields:
     - DownloadState
     - DownloadTask
     - enqueueDownloads
+    - fetchCommunityCreators
+    - fetchCommunitySites
     - FetchModelsResult
+    - fillSearch
     - filterModels
+    - forceRefreshCommunityMerge
+    - forceRefreshCommunitySites
+    - forceRefreshScanAuthors
     - getState
     - getStateSnapshot
     - GH_DOCS
@@ -39,7 +48,14 @@ auto_fields:
     - GH_REPO
     - isActiveStatus
     - isModelMissing
+    - loadCommunityData
+    - loadLocalAuthors
+    - LocalAuthorLike
+    - LocalCreator
     - markCurrentFile
+    - mergeCommunityCreators
+    - mergeCommunitySites
+    - mergeLocalAuthorsInto
     - ModelRowCtx
     - parseEventPayload
     - ProgressGuard

@@ -42,7 +42,9 @@ auto_fields:
     - refreshAdoptedStyleSheets
     - rememberTrigger
     - returnFocus
+    - setRepoSearchFocusPending
     - stripPathSegments
+    - takeRepoSearchFocusPending
     - toast
     - TOAST_MS
     - toastEmptyRtype

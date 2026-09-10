@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-223：社区索引数据层北迁 features/community 与导航焦点跨视图传递范式",
+        "link": "/adr/ADR-223-features-community"
+      },
+      {
         "text": "ADR-222：文件行键空间统一：TreeRow.key 取磁盘路径",
         "link": "/adr/ADR-222-treerow-key"
       },

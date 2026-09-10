@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **220** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **221** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -17,7 +17,7 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 6 |
+| [🔄 部分采纳](#部分采纳) | 7 |
 | [✅ 已采纳](#已采纳) | 204 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
@@ -25,7 +25,7 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（6）
+### 🔄 部分采纳（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -33,6 +33,7 @@ permalink: /adr/
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | 🔄 部分采纳 |
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
 | [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | 🔄 部分采纳 |
+| [ADR-186](./ADR-186-i18n-tr-locale-core.md) | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
@@ -40,6 +41,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-223](./ADR-223-features-community.md) | 社区索引数据层北迁 features/community 与导航焦点跨视图传递范式 | ✅ 已采纳 |
 | [ADR-222](./ADR-222-treerow-key.md) | 文件行键空间统一：TreeRow.key 取磁盘路径 | ✅ 已采纳 |
 | [ADR-221](./ADR-221-core.md) | 跨视图共享状态归位 core 以消除视图域环 | ✅ 已采纳 |
 | [ADR-220](./ADR-220-ui-shelter-dissolve.md) | 解散 ui 收容所——3D 菜单组件归位 preview-3d | ✅ 已采纳 |
@@ -71,7 +73,6 @@ permalink: /adr/
 | [ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md) | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 |
 | [ADR-188](./ADR-188-core-handlers-sync-features-require-mcroot-features.md) | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 |
 | [ADR-187](./ADR-187-features-modal-ts.md) | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 |
-| [ADR-186](./ADR-186-i18n-tr-locale-core.md) | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | ✅ 已采纳 |
 | [ADR-185](./ADR-185-core-features-core-features.md) | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 |
 | [ADR-184](./ADR-184-diff-gen-stage-stage.md) | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 |
 | [ADR-180](./ADR-180-preview-materials-shared.md) | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 |
@@ -269,6 +270,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-223 | 社区索引数据层北迁 features/community 与导航焦点跨视图传递范式 | ✅ 已采纳 | 2026-09-10 |
 | ADR-222 | 文件行键空间统一：TreeRow.key 取磁盘路径 | ✅ 已采纳 | 2026-09-10 |
 | ADR-221 | 跨视图共享状态归位 core 以消除视图域环 | ✅ 已采纳 | 2026-09-10 |
 | ADR-220 | 解散 ui 收容所——3D 菜单组件归位 preview-3d | ✅ 已采纳 | 2026-09-10 |
@@ -305,7 +307,7 @@ permalink: /adr/
 | ADR-189 | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 | 2026-09-05 |
 | ADR-188 | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 | 2026-09-05 |
 | ADR-187 | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 | 2026-09-05 |
-| ADR-186 | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | ✅ 已采纳 | 2026-09-05 |
+| ADR-186 | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] | 2026-09-05 |
 | ADR-185 | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 | 2026-09-05 |
 | ADR-184 | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 | 2026-09-05 |
 | ADR-183 | SearchModels 8 参数封装 | 🧊 已废弃 | 2026-09-05 |

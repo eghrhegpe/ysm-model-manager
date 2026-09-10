@@ -7,9 +7,12 @@
 // 注意：本文件自身是 R5 白名单成员（*-deps.ts 结尾），批量迁移脚本须显式排除本文件
 // （2026-09-10 实测教训：全层 sed 会把本文件的 import/调用一并改写为自引用 + 无限递归）。
 
-import { getApp } from "@/backend/app.ts";
+import { type AppBindings, getApp } from "@/backend/app.ts";
 
 /** 各模块统一经此取后端绑定（views 层唯一入口） */
 export function backendGetApp(): ReturnType<typeof getApp> {
   return getApp();
 }
+
+/** 重导出绑定类型：views 层类型引用也走组合根，闭合唯一 seam（避免直 import backend/app.ts 类型） */
+export type { AppBindings };

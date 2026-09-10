@@ -225,8 +225,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 375 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 473 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 374 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 472 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 610 |
@@ -506,8 +506,8 @@
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 339 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 423 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 338 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 422 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |

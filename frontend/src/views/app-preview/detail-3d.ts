@@ -3,7 +3,6 @@
 // （showModelDetail/showResourcePack/showShaderpack）分离；共享代际 detailGen 从
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
-import type { AppBindings } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { readPmxStats } from "@/preview-3d/adapters/mmd-detail-stats.ts";
@@ -14,7 +13,7 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
+import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { createFbx3D } from "./fbx-3d.ts";
 import { createMmd3D } from "./mmd-3d.ts";
 import { createScene3D } from "./scene-3d.ts";

@@ -176,7 +176,6 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
       // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
       v.onChange?.(val);
     },
-    bind: (): boolean => v.getValue() as boolean,
   });
   row.append(labelBox, toggle);
   // [能力移植 · addToggleRow] 整行点击切换：点 label/hint 区域 = 翻转开关。

@@ -201,14 +201,14 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   title.textContent = rmLabel(node);
   header.append(arrow, title);
   // [对齐 MikuMikuAR PopupRow.headerToggle] folder 功能总开关：嵌在 header（label 与箭头间）。
-  // createHeaderToggle 内置 stopPropagation → 开关点击不触发 header 折叠；bind 自更新
-  // 经 control-registry 在 menu.refresh() 重渲染时同步 checked。
+  // createHeaderToggle 内置 stopPropagation → 开关点击不触发 header 折叠。
+  // 菜单打开期间 cap 变化回写 UI：经 menu.refresh() 重建式渲染承担
+  // （每次重渲染重建 toggle、初始 value 即最新态；bind 自更新链路 2026-09 随 control-registry 拔除，见 ADR-085）。
   if (node.headerToggle) {
     const ht = node.headerToggle;
     const tg = createHeaderToggle({
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
-      ...(ht.bind ? { bind: ht.bind } : {}),
     });
     header.appendChild(tg);
   }
@@ -352,7 +352,6 @@ function rmAppendDynamicRow(
     const tg = createHeaderToggle({
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
-      ...(ht.bind ? { bind: ht.bind } : {}),
     });
     if (!node.badge && !node.action) tg.style.marginLeft = "auto";
     row.appendChild(tg);

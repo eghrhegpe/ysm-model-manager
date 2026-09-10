@@ -339,11 +339,10 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog]);
     const schema = buildEnvSchema(makeCtx(), makeMenu());
     const row = capRow(schema, 0);
-    // 一级行 headerToggle：读写即 masterCtrl 读写（bind 同步 enabled）
+    // 一级行 headerToggle：读写即 masterCtrl 读写
     expect(row.headerToggle).toBeDefined();
     row.headerToggle!.onChange(true);
     expect(enabled).toBe(true);
-    expect(row.headerToggle!.bind!()).toBe(true);
     // 子视图剔除 fog-enabled（防「行开关 + 子页开关」双份）
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-fog-enabled"]')).toBeNull();

@@ -1,13 +1,9 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createHeaderToggle,
   type HeaderToggleConfig,
 } from "./ui-header-toggle.ts";
-import { setControlRegistry } from "./control-registry.ts";
-
-// 每次测试前清理全局 control-registry 挂载，防止跨用例污染。
-beforeEach(() => setControlRegistry(null));
 
 function makeConfig(overrides: Partial<HeaderToggleConfig> = {}): HeaderToggleConfig {
   return {
@@ -104,83 +100,6 @@ describe("onChange 回调", () => {
   });
 });
 
-// ===== bind 自更新 =====
-
-describe("bind 自更新", () => {
-  it("bind 函数返回最新值，registerControl 被注册", () => {
-    const bind = vi.fn(() => true);
-    let capturedUpdater: (() => void) | null = null;
-    setControlRegistry((fn) => { capturedUpdater = fn; });
-
-    createHeaderToggle(makeConfig({ value: false, bind }));
-
-    // bind 仅在 update() 内调用，createHeaderToggle 阶段不调用
-    expect(bind).not.toHaveBeenCalled();
-    expect(capturedUpdater).toBeDefined();
-  });
-
-  it("bind 返回值与初始值相同 → 不更新", () => {
-    const bind = vi.fn(() => false);
-    let capturedUpdater: (() => void) | null = null;
-    setControlRegistry((fn) => { capturedUpdater = fn; });
-
-    const toggle = createHeaderToggle(makeConfig({ value: false, bind }));
-    const input = toggle.querySelector("input") as HTMLInputElement;
-
-    capturedUpdater!();
-    expect(bind).toHaveBeenCalledTimes(1);
-    // 值未变化，input.checked 保持初始值
-    expect(input.checked).toBe(false);
-  });
-
-  it("bind 返回值与初始值不同 → input.checked 同步", () => {
-    let external = false;
-    const bind = () => external;
-    let capturedUpdater: (() => void) | null = null;
-    setControlRegistry((fn) => { capturedUpdater = fn; });
-
-    const toggle = createHeaderToggle(makeConfig({ value: false, bind }));
-    const input = toggle.querySelector("input") as HTMLInputElement;
-
-    expect(input.checked).toBe(false);
-
-    // 外部状态变化
-    external = true;
-    capturedUpdater!();
-    expect(input.checked).toBe(true);
-
-    external = false;
-    capturedUpdater!();
-    expect(input.checked).toBe(false);
-  });
-
-  it("bind 返回非 boolean 被 !! 规范化", () => {
-    let val: unknown = 0;
-    const bind = () => val as boolean;
-    let capturedUpdater: (() => void) | null = null;
-    setControlRegistry((fn) => { capturedUpdater = fn; });
-
-    const toggle = createHeaderToggle(makeConfig({ value: false, bind }));
-    const input = toggle.querySelector("input") as HTMLInputElement;
-
-    val = "yes";
-    capturedUpdater!();
-    expect(input.checked).toBe(true);
-
-    val = null;
-    capturedUpdater!();
-    expect(input.checked).toBe(false);
-  });
-
-  it("未设置 bind → registerControl 不被调用", () => {
-    let registryCalled = false;
-    setControlRegistry(() => { registryCalled = true; });
-
-    createHeaderToggle(makeConfig());
-    expect(registryCalled).toBe(false);
-  });
-});
-
 // ===== disabled 状态 =====
 
 describe("disabled 状态", () => {
@@ -256,107 +175,6 @@ describe("样式与类名", () => {
   });
 });
 
-// ===== 多实例注册（bind 唯一 id + 断连清扫）=====
-
-import {
-  clearControls,
-  getControlCount,
-  iterateControls,
-} from "./control-registry.ts";
-
-function countBindEntries(): number {
-  return [...iterateControls()].filter(([id]) =>
-    id.startsWith("header-toggle-bind"),
-  ).length;
-}
-
-describe("多实例 bind 注册", () => {
-  beforeEach(() => clearControls());
-
-  it("两个带 bind 的 toggle 各自独立注册，互不覆盖", () => {
-    let ext1 = false;
-    let ext2 = false;
-    const t1 = createHeaderToggle(
-      makeConfig({ value: false, bind: () => ext1 }),
-    );
-    const t2 = createHeaderToggle(
-      makeConfig({ value: false, bind: () => ext2 }),
-    );
-    const in1 = t1.querySelector("input") as HTMLInputElement;
-    const in2 = t2.querySelector("input") as HTMLInputElement;
-
-    // Map 中存在两条独立条目（旧实现同 id 覆盖 → 只有 1 条）
-    expect(countBindEntries()).toBe(2);
-
-    // 各自 updater 只同步自己的 input
-    const entries = [...iterateControls()].filter(([id]) =>
-      id.startsWith("header-toggle-bind"),
-    );
-    ext1 = true;
-    entries[0][1]();
-    expect(in1.checked).toBe(true);
-    expect(in2.checked).toBe(false);
-
-    ext2 = true;
-    entries[1][1]();
-    expect(in2.checked).toBe(true);
-  });
-
-  it("断连清扫：连续两轮注册扫描后才注销已断连实例（宽限一轮防误杀未挂载实例）", () => {
-    const t1 = createHeaderToggle(
-      makeConfig({ value: false, bind: () => true }),
-    );
-    document.body.appendChild(t1);
-    expect(countBindEntries()).toBe(1);
-
-    t1.remove();
-    // 第 1 次后续注册：扫描标记 t1 待清（宽限），新实例照常注册
-    createHeaderToggle(makeConfig({ value: false, bind: () => true }));
-    expect(countBindEntries()).toBe(2);
-
-    // 第 2 次后续注册：t1 连续两轮断连 → 注销；净数量不变（-1 +1）
-    createHeaderToggle(makeConfig({ value: false, bind: () => true }));
-    expect(countBindEntries()).toBe(2);
-  });
-
-  it("跨任务时序：挂载→移除→下一 tick 创建，清扫能识别曾挂载元素", async () => {
-    // 1. 挂载并注册
-    const t1 = createHeaderToggle(
-      makeConfig({ value: false, bind: () => true }),
-    );
-    document.body.appendChild(t1);
-    expect(countBindEntries()).toBe(1);
-
-    // 2. 移除（断连）
-    t1.remove();
-
-    // 3. 等一个微任务——真实场景中 MO 记录在此间隙投递
-    await Promise.resolve();
-
-    // 4. 后续注册触发清扫：t1 已断连但曾挂载 → 宽限一轮
-    createHeaderToggle(makeConfig({ value: false, bind: () => true }));
-    expect(countBindEntries()).toBe(2);
-
-    // 5. 再等一个 tick + 再注册：t1 连续两轮断连 → 注销
-    await Promise.resolve();
-    createHeaderToggle(makeConfig({ value: false, bind: () => true }));
-    expect(countBindEntries()).toBe(2); // -1 t1 +1 新
-  });
-
-  it("已挂载实例在清扫中始终保留", () => {
-    const keep = createHeaderToggle(
-      makeConfig({ value: false, bind: () => true }),
-    );
-    document.body.appendChild(keep);
-
-    for (let i = 0; i < 3; i++) {
-      createHeaderToggle(makeConfig({ value: false, bind: () => true }));
-    }
-    expect(countBindEntries()).toBe(4);
-    expect(getControlCount()).toBe(4);
-  });
-});
-
 // ===== forceToggle（程序化翻转；整行点击能力自 addToggleRow 下沉后由 cap 栈消费）=====
 
 describe("forceToggle", () => {
@@ -398,16 +216,5 @@ describe("forceToggle", () => {
     expect(onDisabledClick).toHaveBeenCalledTimes(1);
     expect(input.checked).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it("与用户点击语义一致：bind 存在时 forceToggle 不额外触发 bind 求值", () => {
-    const onChange = vi.fn();
-    const bind = vi.fn(() => false);
-    const toggle = createHeaderToggle(makeConfig({ value: false, onChange, bind }));
-    bind.mockClear(); // 清掉注册阶段可能的求值（createHeaderToggle 阶段不调 bind）
-
-    toggle.forceToggle();
-    expect(onChange).toHaveBeenCalledWith(true);
-    expect(bind).not.toHaveBeenCalled();
   });
 });

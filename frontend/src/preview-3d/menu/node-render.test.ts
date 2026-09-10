@@ -204,7 +204,7 @@ describe("renderMenu 新 kind", () => {
     expect(container.querySelector('[data-testid="preview-child-2"]')).not.toBeNull();
   });
 
-  it("folder: headerToggle 渲染在 header（label 与箭头间），点击开关不触发折叠、bind 同步 checked", () => {
+  it("folder: headerToggle 渲染在 header（label 与箭头间），点击开关不触发折叠", () => {
     let on = false;
     const nodes: PreviewMenuNode[] = [
       {
@@ -218,7 +218,6 @@ describe("renderMenu 新 kind", () => {
           onChange: (v: boolean) => {
             on = v;
           },
-          bind: () => on,
         },
         children: [{ id: "child-tg", kind: "field", labelKey: "preview.child", value: "x" }],
       },
@@ -255,7 +254,6 @@ describe("renderMenu 新 kind", () => {
           onChange: (v: boolean) => {
             on = v;
           },
-          bind: () => on,
         },
         action: () => {
           nav++;

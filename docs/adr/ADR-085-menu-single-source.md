@@ -51,7 +51,7 @@
 ### S2 — 状态单向流（cap 是唯一状态源）
 
 - **cap 提供统一只读 getter，菜单初始化一律惰性读**：`SkyCapability` 增加 `getCloudCoverage()`；地面/IBL/云量控件用 `ctx.getXxxCap()?.getXxx()` 初始化，**删除硬编码 `value:true`/`"0%"`**
-- **toggle 全部传 `bind`**（`createHeaderToggle` 已支持 control-registry 自更新）：菜单打开期间 cap 变化能回写 UI
+- **菜单打开期间 cap 变化回写 UI**：经菜单 refresh 重建式渲染承担（每次重渲染重建 toggle、初始 value 即最新态）；初版「toggle 全部传 `bind` + control-registry 自更新」链路已随 2026-09 control-registry 拔除（生产无人触发 update、零接入，属死链路）
 - **消灭启发式派生**：灯光预设 select 改 `lightCap.getPresetName()` 只读 + `setPreset` 写入单一来源；`volToggle` 回调内读 live `getParams()`
 - **相机持久化闭环**：mount3D 初始化读 `loadTdCamSpeed()/loadTdRotMode()`（keymap.ts 已有），预览与设置页共用同一持久层
 

@@ -236,8 +236,6 @@ export interface PreviewMenuNode {
   headerToggle?: {
     value: boolean;
     onChange: (v: boolean) => void;
-    /** 自更新：菜单 refresh 重渲染时经 control-registry 同步 checked */
-    bind?: () => boolean;
   };
   /** folder：子节点（可折叠 section）；panel：面板内容声明式子节点（[doc:adr-126-p4-b-1] renderPreviewPanel children 分支递归 renderMenu） */
   children?: PreviewMenuNode[];

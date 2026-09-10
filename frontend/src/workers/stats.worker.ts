@@ -2,8 +2,10 @@
 // SearchModels 数值条件的统计来源（ADR-071 审计增强 #6 + 用户「多线程注入」要求）：
 //  1. Worker 内 open IndexedDB（同源）读文件字节 —— 免主线程 base64 大字符串传输
 //  2. Worker 内独立加载 YSMParser WASM（ysm-worker-loader.ts，不复用主线程 wasmModule 单例）
-//  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → postMessage 整批结果（按 path 对齐）
-// 主线程编排（批量切分/超时/取消/降级/批级单飞 ADR-218）见 backend/web-stats.ts；协议见 stats-protocol.ts。
+//  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → 逐模型 postMessage 流式回包（partial，
+//     按 path 对齐 + 主线程静默看门狗侦测信号，ADR-219 D1）→ 循环走完发 result 结束标记
+// 主线程编排（批量切分/看门狗/取消/细粒度降级/批级单飞 ADR-218 + ADR-219）见
+// backend/web-stats.ts；协议见 stats-protocol.ts。
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
 import { idbGet } from "@/utils/storage/idb.ts";
 import { parseWebPath } from "@/utils/base/web-path.ts";
@@ -25,7 +27,6 @@ import type {
   StatsWorkerRequest,
   StatsWorkerResponse,
   WebModelStats,
-  WebModelStatsWithPath,
 } from "./stats-protocol.ts";
 
 /** Worker 全局（module worker 下为 DedicatedWorkerGlobalScope；显式声明避免依赖 lib） */
@@ -121,13 +122,14 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       post({ type: "error", requestId, message: "YSMParser WASM 初始化失败" });
       return;
     }
-    const results: Array<WebModelStatsWithPath> = [];
     for (const p of paths) {
-      results.push({ path: p, ...(await statsOne(p)) });
+      // ADR-219 D1：逐模型流式回包（主线程按 path 累积 + 静默看门狗侦测信号；
+      // 挂死模型会中断 partial 流——这正是主线程区分「挂死」与「正常慢」的依据）
+      post({ type: "partial", requestId, result: { path: p, ...(await statsOne(p)) } });
     }
-    // 整批一次回包（结果按 path 对齐，ADR-218 D2；worker 级细粒度进度消息已移除，
-    // UI 进度走主线程 chunk 级 onStatsProgress）
-    post({ type: "result", requestId, results });
+    // 流结束标记（逐模型结果已经 partial 送达；主线程收到后收尾该 chunk，
+    // 缺条目按 EMPTY_ERROR 细粒度补位，不再整批降级，ADR-219 D1/D3）
+    post({ type: "result", requestId });
   } catch (e) {
     post({
       type: "error",

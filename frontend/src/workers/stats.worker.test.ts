@@ -1,8 +1,13 @@
 // @vitest-environment node
-// ===== stats.worker 测试：mt 初始化失败 → 单线程 WASM 回退（P2 审核修复）=====
+// ===== stats.worker 测试：mt 初始化失败 → 单线程 WASM 回退（P2 审核修复）+
+// 逐模型流式回包（partial × N + result 结束标记，ADR-219 D1）=====
 // crossOriginIsolated=true 但 pthread 环境瞬态异常（worker spawn 失败等）时，
 // 不得整批 error → 主线程永久降级；应回退单线程 init 再判 error。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as statsCore from "./stats-core.ts";
+import { idbGet } from "@/utils/storage/idb.ts";
+import { decodeYsmInWorker } from "@/wasm/ysm-worker-loader.ts";
+import type { WebModelStatsWithPath } from "./stats-protocol.ts";
 
 const { mocks } = vi.hoisted(() => ({
   mocks: {
@@ -49,11 +54,12 @@ beforeEach(() => {
   // worker 顶层读 self（node 环境无）：注入桩，onmessage 由被测模块回填
   vi.stubGlobal("self", {
     onmessage: null,
-    postMessage: (m: { type: string; message?: string }) => posts.push(m),
+    postMessage: (m: { type: string; message?: string; result?: WebModelStatsWithPath }) =>
+      posts.push(m),
   });
 });
 
-const posts: Array<{ type: string; message?: string }> = [];
+const posts: Array<{ type: string; message?: string; result?: WebModelStatsWithPath }> = [];
 
 let workerHandler: ((ev: { data: unknown }) => Promise<void>) | null = null;
 
@@ -96,5 +102,64 @@ describe("stats.worker — mt 初始化失败回退", () => {
     await handler({ data: { type: "stats", requestId: "r2", paths: ["/web/ysm/a.ysm"] } });
 
     expect(posts.some((p) => p.type === "error" && p.message?.includes("wasm 二进制损坏"))).toBe(true);
+  });
+});
+
+describe("stats.worker — 逐模型流式回包（ADR-219 D1）", () => {
+  it("每模型统计完成立即回 partial（按 path 对齐）+ 循环走完发 result 结束标记（不再携带 results）", async () => {
+    // 解码/统计桩：2 个模型都成功出真统计
+    vi.mocked(idbGet).mockResolvedValue({ data: new ArrayBuffer(4) });
+    vi.mocked(decodeYsmInWorker).mockResolvedValue([
+      { path: "models/g.json", data: new Uint8Array(8) },
+    ]);
+    vi.mocked(statsCore.statsFromDecodedFiles).mockReturnValue({
+      boneCount: 2,
+      cubeCount: 4,
+      texWidth: 64,
+      texHeight: 32,
+      hasError: false,
+    });
+    mocks.initYsmParserInWorker.mockResolvedValue(true);
+
+    const handler = await loadHandler();
+    const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm"];
+    await handler({ data: { type: "stats", requestId: 42, paths } });
+
+    // 消息序列：partial × 2（逐模型）+ result 结束标记 × 1（无 results 字段）
+    expect(posts.map((p) => p.type)).toEqual(["partial", "partial", "result"]);
+    expect(posts[0]).toEqual({
+      type: "partial",
+      requestId: 42,
+      result: { path: "/web/ysm/a.ysm", boneCount: 2, cubeCount: 4, texWidth: 64, texHeight: 32, hasError: false },
+    });
+    expect(posts[1].result?.path).toBe("/web/ysm/b.ysm");
+    expect(posts[2]).toEqual({ type: "result", requestId: 42 });
+  });
+
+  it("解码失败模型仍逐模型回 partial（EMPTY_ERROR 形状，hasError）+ 流末尾 result", async () => {
+    // 清掉上一用例的实现残留（clearAllMocks 不清 implementation）：idbGet 读空 → readModelBytes null → EMPTY_ERROR
+    vi.mocked(idbGet).mockReset().mockResolvedValue(null);
+    vi.mocked(decodeYsmInWorker).mockReset();
+    mocks.initYsmParserInWorker.mockResolvedValue(true);
+
+    const handler = await loadHandler();
+    await handler({ data: { type: "stats", requestId: 43, paths: ["/web/ysm/x.ysm", "/web/ysm/y.ysm"] } });
+
+    expect(posts.map((p) => p.type)).toEqual(["partial", "partial", "result"]);
+    expect(posts[0].result).toEqual({
+      path: "/web/ysm/x.ysm",
+      boneCount: 0,
+      cubeCount: 0,
+      texWidth: 0,
+      texHeight: 0,
+      hasError: true,
+    });
+    expect(posts[2]).toEqual({ type: "result", requestId: 43 });
+  });
+
+  it("paths 非数组 → error（不进 partial 流）", async () => {
+    const handler = await loadHandler();
+    await handler({ data: { type: "stats", requestId: 44, paths: "not-an-array" } });
+    expect(posts.map((p) => p.type)).toEqual(["error"]);
   });
 });

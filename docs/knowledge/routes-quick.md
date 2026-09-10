@@ -113,7 +113,7 @@
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
-| 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | - |
+| 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | ADR-218, ADR-219 |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
 | 日志查看、性能分析 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | ADR-068, ADR-069 |
@@ -142,11 +142,11 @@
 | oldest 资历排行 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
-| SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
+| SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
 | sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064 |
 | watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
-| Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | - |
+| Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
 | YSM 文件元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
 | zip 多模型、多 entry | [统一容器桥接层 go/container](./go-container.md) | - | ADR-068, ADR-069 |
@@ -834,6 +834,7 @@
 | 用占位日期 | `2026-XX` | 掩盖"已完成 vs 待办"，AI 分不清；完成项填实际日期、计划项标「待办」 |
 | 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
 | Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
+| 对同步 ccall 挂死是半吊子（已知问题榜 | `5s `Promise.race` 软超时` | - |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
 | 「Fatal trap | - | - |

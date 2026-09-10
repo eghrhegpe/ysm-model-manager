@@ -10,10 +10,11 @@ export interface WebModelStats {
   hasError: boolean;
 }
 
-/** 带 path 的统计结果（Worker 返回；主线程合并层按 path 对齐——Map 查表，回包序不承担契约，ADR-218 D2） */
+/** 带 path 的统计结果（Worker 逐模型回包；主线程按 path 累积对齐——Map 查表，回包序不承担契约，ADR-218 D2 / ADR-219 D1） */
 export type WebModelStatsWithPath = WebModelStats & { path: string };
 
-/** 主线程 → Worker：批量统计任务 */
+/** 主线程 → Worker：批量统计任务（paths 可被主线程裁剪为「剩余未回包模型」子集——
+ *  挂死重试时只重发剩余，已回包模型不重放，ADR-219 D2） */
 export interface StatsWorkerRequest {
   type: "stats";
   /** 模型路径列表（/web/<type>/<name>/<rel>），单批上限由主线程负责切分 */
@@ -22,24 +23,34 @@ export interface StatsWorkerRequest {
   requestId: number;
 }
 
-/** Worker → 主线程：批量结果（合并层按 path 对齐，见 WebModelStatsWithPath） */
+/** Worker → 主线程：逐模型流式结果（每模型统计完成后立即回包一条——主线程按 path 累积 +
+ *  单 worker 静默看门狗的侦测信号：挂死 worker 停止产出 partial，ADR-219 D1/D2） */
+export interface StatsWorkerPartial {
+  type: "partial";
+  requestId: number;
+  result: WebModelStatsWithPath;
+}
+
+/** Worker → 主线程：流结束标记（逐模型结果经 partial 送达，本消息只标志「循环走完、无更多
+ *  partial」；主线程收到后该 chunk 收尾，缺条目按 EMPTY_ERROR 细粒度补位，ADR-219 D1） */
 export interface StatsWorkerResult {
   type: "result";
   requestId: number;
-  results: Array<WebModelStatsWithPath>;
 }
 
-/** Worker → 主线程：致命错误（WASM 无法加载 / 任务内部异常），主线程据此整体降级 */
+/** Worker → 主线程：致命错误（WASM 无法加载 / 任务内部异常），主线程据此终止该 worker
+ *  并换 worker 重试剩余（重试耗尽 → 整批降级，ADR-219 D3 故障边界） */
 export interface StatsWorkerError {
   type: "error";
   requestId: number;
   message: string;
 }
 
-export type StatsWorkerResponse = StatsWorkerResult | StatsWorkerError;
+export type StatsWorkerResponse = StatsWorkerPartial | StatsWorkerResult | StatsWorkerError;
 
-// 进度说明（ADR-218 D2）：worker 级细粒度进度消息已移除——UI 进度本就走主线程 chunk 级
-// onStatsProgress（web-stats.ts 逐批推进）；未来需要细粒度进度条时在 protocol 层扩展。
+// 进度说明：worker 级细粒度消息 = partial 流（ADR-219 D1 重开，ADR-218 D2 的部分修订）——
+// 服务正确性（看门狗侦测 + 主线程逐模型累积），UI 进度顺带从 chunk 级升级为模型级
+// （onStatsProgress 逐模型推进，零额外协议成本）。
 
 /** 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） */
 export const STATS_BATCH_LIMIT = 200;

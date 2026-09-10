@@ -92,6 +92,16 @@ function mkResult(path: string, boneCount: number): WebModelStatsWithPath {
   return { path, boneCount, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false };
 }
 
+/** 回放 worker 正常应答流（ADR-219 D1）：每条 partial 逐模型 + result 结束标记。
+ *  msgIdx = FakeWorker.posted 中的请求序号；boneBase = boneCount 编码基准（对齐断言用） */
+function replayPartialStream(w: FakeWorker, msgIdx: number, boneBase = 0): void {
+  const msg = w.posted[msgIdx];
+  msg.paths.forEach((path, i) => {
+    w.onmessage?.({ data: { type: "partial", requestId: msg.requestId, result: mkResult(path, boneBase + i) } });
+  });
+  w.onmessage?.({ data: { type: "result", requestId: msg.requestId } });
+}
+
 /** flush 微任务队列（等 runWorkerQueue 在 settle 后推进到下一次 postMessage） */
 const flushMicrotasks = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -146,20 +156,17 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(w.posted[0].type).toBe("stats");
     expect(w.posted[0].paths).toEqual(paths);
     const reqId = w.posted[0].requestId;
-    w.onmessage?.({
-      data: {
-        type: "result",
-        requestId: reqId,
-        results: paths.map((p, i) => mkResult(p, 10 + i)),
-      },
+    // ADR-219 D1：正常应答流 = 逐模型 partial + result 结束标记
+    paths.forEach((p, i) => {
+      w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(p, 10 + i) } });
     });
+    w.onmessage?.({ data: { type: "result", requestId: reqId } });
     await expect(p1).resolves.toEqual([
       { boneCount: 10, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
       { boneCount: 11, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
       { boneCount: 12, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
     ]);
     expect(consumeWebSearchDegraded()).toBe(false);
-    expect(progress).toEqual([[3, 3], [3, 3]]); // 逐批 (done,total) + 全部完成
     // 第二批：池复用（不新建 Worker），requestId 自增隔离批次
     const p2 = batchStatsWebModels(["/web/ysm/d.ysm"]);
     await flushMicrotasks();
@@ -169,13 +176,25 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(posted2[1].requestId).toBe(reqId + 1);
     FakeWorker.instances[0].onmessage?.({
       data: {
-        type: "result",
+        type: "partial",
         requestId: posted2[1].requestId,
-        results: [{ path: "/web/ysm/d.ysm", boneCount: 1, cubeCount: 2, texWidth: 16, texHeight: 16, hasError: true }],
+        result: { path: "/web/ysm/d.ysm", boneCount: 1, cubeCount: 2, texWidth: 16, texHeight: 16, hasError: true },
       },
+    });
+    FakeWorker.instances[0].onmessage?.({
+      data: { type: "result", requestId: posted2[1].requestId },
     });
     await expect(p2).resolves.toEqual([
       { boneCount: 1, cubeCount: 2, texWidth: 16, texHeight: 16, hasError: true },
+    ]);
+    // ADR-219：进度升级为模型级（逐 partial 推进）+ 批末全部完成
+    expect(progress).toEqual([
+      [1, 3],
+      [2, 3],
+      [3, 3],
+      [3, 3],
+      [1, 1],
+      [1, 1],
     ]);
   });
 
@@ -188,30 +207,12 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     const [w0, w1] = FakeWorker.instances;
     expect(w0.posted[0].paths).toHaveLength(200);
     expect(w1.posted[0].paths).toHaveLength(200);
-    w0.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w0.posted[0].requestId,
-        results: w0.posted[0].paths.map((path, i) => mkResult(path, i)), // 全局索引 = 片内偏移
-      },
-    });
+    replayPartialStream(w0, 0, 0); // chunk0：全局索引 = 片内偏移
     await flushMicrotasks(); // w0 队列推进取第 3 片
     expect(w0.posted).toHaveLength(2);
     expect(w0.posted[1].paths).toHaveLength(1);
-    w1.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w1.posted[0].requestId,
-        results: w1.posted[0].paths.map((path, i) => mkResult(path, 200 + i)), // offset=200
-      },
-    });
-    w0.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w0.posted[1].requestId,
-        results: w0.posted[1].paths.map((path, i) => mkResult(path, 400 + i)), // offset=400
-      },
-    });
+    replayPartialStream(w1, 0, 200); // offset=200
+    replayPartialStream(w0, 1, 400); // offset=400
     const res = await p;
     expect(res).toHaveLength(401);
     expect(res?.[0]?.boneCount).toBe(0);
@@ -232,19 +233,14 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     const reqId = w.posted[0].requestId;
     w.onmessage?.({ data: null }); // !data → 忽略
     w.onmessage?.({
-      data: {
-        type: "result",
-        requestId: reqId + 500, // 异批 requestId → 忽略（若泄漏会以 999 污染结果）
-        results: [mkResult(paths[0], 999), mkResult(paths[1], 999)],
-      },
+      data: { type: "partial", requestId: reqId + 500, result: mkResult(paths[0], 999) }, // 异批 partial → 忽略
     });
     w.onmessage?.({
-      data: {
-        type: "result",
-        requestId: reqId,
-        results: [mkResult(paths[0], 2), mkResult(paths[1], 2)],
-      },
+      data: { type: "result", requestId: reqId + 500 }, // 异批结束标记 → 忽略（若泄漏会以 999 污染结果）
     });
+    w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(paths[0], 2) } });
+    w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(paths[1], 2) } });
+    w.onmessage?.({ data: { type: "result", requestId: reqId } });
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(2);
     expect(res?.[1]?.boneCount).toBe(2);
@@ -265,13 +261,8 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(w0.terminated).toBe(true); // 出错 worker 被终止
     expect(w1).toBeTruthy();
     expect(w1.terminated).toBe(false); // 新 worker 存活
-    w1.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w1.posted[0].requestId,
-        results: [mkResult("/web/ysm/a.ysm", 3), mkResult("/web/ysm/b.ysm", 4)],
-      },
-    });
+    expect(w1.posted[0].paths).toEqual(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]); // error 早于 partial → 剩余 = 全量
+    replayPartialStream(w1, 0, 3);
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(3);
     expect(res?.[1]?.boneCount).toBe(4);
@@ -304,13 +295,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     const w1 = FakeWorker.instances[1];
     expect(w0.terminated).toBe(true);
     expect(w1.terminated).toBe(false);
-    w1.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w1.posted[0].requestId,
-        results: [mkResult("/web/ysm/a.ysm", 7)],
-      },
-    });
+    replayPartialStream(w1, 0, 7);
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(7);
     expect(consumeWebSearchDegraded()).toBe(false);
@@ -351,20 +336,8 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(w2.terminated).toBe(false);
     expect(w2.posted[0].paths).toHaveLength(STATS_BATCH_LIMIT); // chunk0 在专属新 worker 上重试
     // w1 回自己的 chunk1 → 必须正常 settle（若被重试覆盖，此回包会被 requestId 过滤 → 批挂起）
-    w1.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w1.posted[0].requestId,
-        results: w1.posted[0].paths.map((path, i) => mkResult(path, STATS_BATCH_LIMIT + i)), // offset=200
-      },
-    });
-    w2.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w2.posted[0].requestId,
-        results: w2.posted[0].paths.map((path, i) => mkResult(path, i)), // chunk0 offset=0
-      },
-    });
+    replayPartialStream(w1, 0, STATS_BATCH_LIMIT); // offset=200
+    replayPartialStream(w2, 0, 0); // chunk0 offset=0
     const res = await p;
     expect(res).toHaveLength(STATS_BATCH_LIMIT + 1);
     expect(res?.[0]?.boneCount).toBe(0);
@@ -383,30 +356,18 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
     await flushMicrotasks();
     const w1 = FakeWorker.instances[1];
-    w1.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w1.posted[0].requestId,
-        results: w1.posted[0].paths.map((path, i) => mkResult(path, i)), // chunk0 重试成功（offset=0）
-      },
-    });
+    replayPartialStream(w1, 0, 0); // chunk0 重试成功（offset=0）
     await flushMicrotasks(); // w1 队列推进 → 取 chunk1（1 条）
     expect(w1.posted).toHaveLength(2);
     expect(w1.posted[1].paths).toHaveLength(1);
-    // chunk1 再遇瞬态 error → retried 已复位 → 应再享 1 次重试（新建 w2），而非直接降级
+    // chunk1 再遇瞬态 error → 重试预算按 chunk 独立复位 → 应再享 1 次重试（新建 w2），而非直接降级
     w1.onmessage?.({ data: { type: "error", requestId: w1.posted[1].requestId, message: "wasm init again" } });
     await flushMicrotasks();
     const w2 = FakeWorker.instances[2];
     expect(w1.terminated).toBe(true);
     expect(w2).toBeTruthy();
     expect(w2.posted[0].paths).toHaveLength(1);
-    w2.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w2.posted[0].requestId,
-        results: w2.posted[0].paths.map((path, i) => mkResult(path, STATS_BATCH_LIMIT + i)), // chunk1 offset=200
-      },
-    });
+    replayPartialStream(w2, 0, STATS_BATCH_LIMIT); // chunk1 offset=200
     const res = await p;
     expect(res).toHaveLength(STATS_BATCH_LIMIT + 1);
     expect(res?.[0]?.boneCount).toBe(0);
@@ -414,18 +375,20 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(false); // 两片都经重试成功 → 不降级
   });
 
-  it("单批超时（60s 无回包）→ 杀池防僵尸 + 降级", async () => {
-    vi.useFakeTimers();
+  it("回包缺条目（结束标记到达但 partial 流缺条目，纯防御）→ 缺条目 hasError 细粒度补位，不整批降级（ADR-219 D1）", async () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
-    const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
-    await vi.advanceTimersByTimeAsync(0); // fake timers 下 flush 微任务（单飞链延后一拍）
+    const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
+    await flushMicrotasks();
     const w = FakeWorker.instances[0];
-    expect(w.terminated).toBe(false);
-    await vi.advanceTimersByTimeAsync(60_000); // STATS_CHUNK_TIMEOUT_MS（源码常量，未导出）
-    await expect(p).resolves.toBeNull();
-    expect(consumeWebSearchDegraded()).toBe(true);
-    expect(w.terminated).toBe(true); // 超时杀整个池
+    // worker 只回结束标记（partial 全丢——postMessage 信道可靠，纯防御路径）
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId } });
+    const res = await p;
+    expect(res).toEqual([
+      { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true },
+      { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true },
+    ]);
+    expect(consumeWebSearchDegraded()).toBe(false);
   });
 
   it("Worker 构造即抛（被 CSP/环境屏蔽）→ getWorkerPool null → 整批降级", async () => {
@@ -452,23 +415,6 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(() => terminateStatsWorker()).not.toThrow(); // 池已清空，再次幂等
   });
 
-  it("worker 回包缺条目 → 防御性整体降级，不返回半截统计", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
-    const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
-    await flushMicrotasks();
-    const w = FakeWorker.instances[0];
-    w.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w.posted[0].requestId,
-        results: [mkResult("/web/ysm/a.ysm", 1)], // 缺第 2 条
-      },
-    });
-    await expect(p).resolves.toBeNull();
-    expect(consumeWebSearchDegraded()).toBe(true);
-  });
-
   // ===== ADR-218 D1：池并发 = 批级单飞（batchChain 串行链）=====
 
   it("双批并发 → 串行化：后批排队不覆写槽位，前批完成后接续（hc=1）", async () => {
@@ -482,10 +428,9 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     const pB = batchStatsWebModels(["/web/ysm/b.ysm"]);
     await flushMicrotasks();
     expect(w.posted).toHaveLength(1); // B 尚未发包
-    // 回包 A → A 完成
-    w.onmessage?.({
-      data: { type: "result", requestId: reqA, results: [mkResult("/web/ysm/a.ysm", 1)] },
-    });
+    // 回包 A → A 完成（逐模型 partial + result 结束标记）
+    w.onmessage?.({ data: { type: "partial", requestId: reqA, result: mkResult("/web/ysm/a.ysm", 1) } });
+    w.onmessage?.({ data: { type: "result", requestId: reqA } });
     await expect(pA).resolves.toEqual([
       { boneCount: 1, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
     ]);
@@ -493,9 +438,8 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     await flushMicrotasks();
     expect(w.posted).toHaveLength(2);
     expect(w.posted[1].requestId).toBe(reqA + 1);
-    w.onmessage?.({
-      data: { type: "result", requestId: w.posted[1].requestId, results: [mkResult("/web/ysm/b.ysm", 2)] },
-    });
+    w.onmessage?.({ data: { type: "partial", requestId: w.posted[1].requestId, result: mkResult("/web/ysm/b.ysm", 2) } });
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[1].requestId } });
     await expect(pB).resolves.toEqual([
       { boneCount: 2, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
     ]);
@@ -525,18 +469,99 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     const p = batchStatsWebModels(paths);
     await flushMicrotasks();
     const w = FakeWorker.instances[0];
-    // Worker 逆序回包（未来 worker 内并行解码可能乱序）
-    w.onmessage?.({
-      data: {
-        type: "result",
-        requestId: w.posted[0].requestId,
-        results: [mkResult(paths[1], 2), mkResult(paths[0], 1)],
-      },
-    });
+    // Worker 逆序 partial 流（未来 worker 内并行解码可能乱序）
+    w.onmessage?.({ data: { type: "partial", requestId: w.posted[0].requestId, result: mkResult(paths[1], 2) } });
+    w.onmessage?.({ data: { type: "partial", requestId: w.posted[0].requestId, result: mkResult(paths[0], 1) } });
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId } });
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(1); // 按 path 对齐回输入序
     expect(res?.[1]?.boneCount).toBe(2);
     expect(consumeWebSearchDegraded()).toBe(false);
+  });
+});
+
+// ===== ADR-219 细粒度降级（静默看门狗 + 剩余模型重试 + 挂死模型 hasError）=====
+// 静默窗 30s / chunk 墙钟 60s / 静默杀预算 2（源码常量，未导出，测试经 fake timers 推进）。
+describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () => {
+  afterEach(() => {
+    terminateStatsWorker();
+    onStatsProgress(null);
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    FakeWorker.instances = [];
+    FakeWorker.failConstruct = false;
+    FakeWorker.failTerminate = false;
+  });
+
+  it("静默 30s → 只杀挂死 worker（不杀池）+ 专属 replacement 重试剩余 → 其余 worker 结果不受影响、整批不降级", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
+    // 2 片：w0 取 chunk0（模拟挂死），w1 取 chunk1（正常完成）
+    const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
+    const p = batchStatsWebModels(paths);
+    await vi.advanceTimersByTimeAsync(0); // flush 单飞链 + 池创建
+    const [w0, w1] = FakeWorker.instances;
+    // w1 正常：逐模型 partial + result（offset=200）
+    replayPartialStream(w1, 0, STATS_BATCH_LIMIT);
+    // w0 挂死：发前 10 条 partial 后中断（不再回包）
+    const req0 = w0.posted[0].requestId;
+    w0.posted[0].paths.slice(0, 10).forEach((path, i) => {
+      w0.onmessage?.({ data: { type: "partial", requestId: req0, result: mkResult(path, i) } });
+    });
+    // 静默 30s 到点 → 只杀 w0（w1 不受影响），w0 的 chunk 在专属 replacement 上重试剩余
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(w0.terminated).toBe(true); // 挂死 worker 被终止
+    expect(w1.terminated).toBe(false); // 健康 worker 未波及（关键）
+    const w2 = FakeWorker.instances[2]; // 专属 replacement
+    expect(w2).toBeTruthy();
+    // w0 的 chunk0 剩余 = 200 - 10 = 190 条（已回包不重放）
+    expect(w2.posted[0].paths).toHaveLength(STATS_BATCH_LIMIT - 10);
+    // w2 补完剩余 → 该 chunk 收尾（10 条已回包 + 190 条重试回包 = 200 条全量）
+    replayPartialStream(w2, 0, 10);
+    const res = await p;
+    expect(res).toHaveLength(STATS_BATCH_LIMIT + 1);
+    expect(res?.[0]?.boneCount).toBe(0); // chunk0 第 1 条（已回包）
+    expect(res?.[10]?.boneCount).toBe(10); // 重试后首条（m10..m199 经 replacement 回包，全局编码对齐）
+    expect(res?.[STATS_BATCH_LIMIT]?.boneCount).toBe(STATS_BATCH_LIMIT); // chunk1 未受 w0 挂死影响
+    expect(res?.every((s) => !s.hasError)).toBe(true); // 全部真统计，无 hasError
+    expect(consumeWebSearchDegraded()).toBe(false); // 细粒度恢复 → 整批不降级
+  });
+
+  it("静默杀预算 + 墙钟耗尽 → 挂死 chunk 剩余模型 hasError（细粒度耗尽），其余 chunk 正常、整批不降级", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    // 单 worker：chunk0 全程挂死（无任何 partial）
+    const p = batchStatsWebModels(["/web/ysm/hang.ysm"]);
+    await vi.advanceTimersByTimeAsync(0);
+    const w0 = FakeWorker.instances[0];
+    // 静默 30s → 杀 w0，replacement w1 重试（仍挂死）
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(w0.terminated).toBe(true);
+    const w1 = FakeWorker.instances[1];
+    expect(w1).toBeTruthy();
+    // 再静默 → 但撞 60s 墙钟（deadline 先于第 2 次静默杀预算生效）→ 强制耗尽
+    await vi.advanceTimersByTimeAsync(30_000);
+    const res = await p;
+    // 挂死模型 → EMPTY_ERROR（hasError=true）；整批正常返回（不降级 null）
+    expect(res).toEqual([{ boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true }]);
+    expect(consumeWebSearchDegraded()).toBe(false); // 细粒度耗尽 ≠ 整批降级
+  });
+
+  it("瞬态 error 重试耗尽（无 replacement 可用）→ 整批降级（系统级边界，保留既有语义）", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
+    const w0 = FakeWorker.instances[0];
+    // 构造 replacement 失败（池已占满 poolSize=1，w0 被 terminate 后池空 → 但 failConstruct 强制构造抛错）
+    FakeWorker.failConstruct = true;
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    await flushMicrotasks();
+    // error 重试（需 spawn replacement）→ failConstruct 使 spawn 返回 null → chunkBroken → 整批降级
+    await expect(p).resolves.toBeNull();
+    expect(consumeWebSearchDegraded()).toBe(true);
   });
 });
 

@@ -167,7 +167,7 @@ invariant_anchors:
 | `adv-filter.ts:57` label 无 for 关联 | ✅ 属实；`<label style="display:block">` 无 `for` 属性，对应 `input#afv-kw` 无关联 |
 | `batch-rename.ts:185` checkbox 无 aria-label | ✅ 属实；批量条目 checkbox 仅 `class="br-file-cb"` + `data-ci`，无 `aria-label` |
 | `scene-registry.ts:215-223` `pickModelByObject` 线性遍历 | ✅ 属实；已修（刀⑦）：WeakMap 索引 O(depth) 替代双重遍历 |
-| `ysm-worker-loader.ts:198-233` WASM 解码无单模型超时 | ✅ 属实；`decodeYsmInWorker` 直接 ccall，无 watchdog |
+| `ysm-worker-loader.ts:198-233` WASM 解码无单模型超时 | ✅ 属实；`decodeYsmInWorker` 直接 ccall，无 watchdog（✅ 2026-09 由 [ADR-219] 根治：单 worker 静默看门狗 + 逐模型 partial 流 + 挂死模型 hasError 细粒度降级——注意榜单原「5s Promise.race 软超时」一刀切对**同步 ccall 挂死是半吊子**：挂死点不可抢占，race timer 在阻塞线程里根本不触发，只能靠「逐模型流中断」这一唯一可靠侦测信号 |
 | `render-budget.ts:60-63` 缺 GPU 资源计量 | ✅ 属实；仅 pixelRatio 自适应 + MAX_MODELS=8 计数上限，无 draw call/三角面/纹理字节预算 |
 
 ## 共识问题榜（交集 = 高置信，按 ROI 排序）
@@ -212,6 +212,7 @@ invariant_anchors:
 - ✅ **刀⑦ pickModelByObject WeakMap 索引**（2026-09-05）：`preview-3d/adapters/scene-registry.ts` `register` 时在 root 上填 `WeakMap<Object3D, ModelEntry>`，`pickModelByObject` 从 O(entries×roots) 双重遍历改为 O(depth) 沿父链查 Map；`unregister`/`reset`/去重重载路径同步维护索引；删除 `isDescendant` 死函数。13 测试全绿 + vite build + typecheck + biome 全通过。
 - ✅ **刀⑧ web-stats 单 worker 终止 + 重试**（2026-09-05）：`backend/web-stats.ts` 瞬态 error（WASM 初始化失败 / trap 逃逸）从「杀整池」改为「只终止出错 worker + 换 worker 重试 1 次」——每 Worker 独立 WASM 实例，单 worker 故障不应传染。超时路径仍杀整池（WASM 死循环可能传染）。`statsOneChunk` 返回 `StatsChunkResult{ok, retryable}`，`terminateStatsWorker` 导出签名不变（browser-adapter 消费）。135 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **P2-7 撤回（子代理建议不可行）**：`wasm/ysm-worker-loader.ts:215` 的 `ccall("ysm_decode_from_memory")` 是同步 WASM 调用，阻塞 Worker 事件循环——`Promise.race` 软超时的 `setTimeout` 回调在 ccall 期间不会触发，Promise 无法被 race 掉。唯一能中断挂起 ccall 的方法是主线程 `Worker.terminate()`（即现有 `statsOneChunk` 60s 超时路径）。60s 是设计意图的防御线，非「无超时」。
+- ✅ **刀⑨ ADR-219 细粒度降级：单 worker 静默看门狗 + 逐模型 partial 流**（2026-09-10，共识榜 #4 根治）：P2-7 判定的「60s 杀整池」防御线被升级为**故障粒度对齐**——协议重开最小 worker 级信道（`partial` 逐模型结果流 + `result` 瘦身为流结束标记，ADR-218 D2 部分修订），主线程 `statsOneChunk` 双计时器（30s 静默窗随 partial 重置 + 60s chunk 墙钟跨重试共享）：挂死只杀该 worker，专属 replacement 上重试**剩余未回包**模型；静默杀预算 2 次 / 墙钟耗尽 → 剩余模型全 `hasError`（`EMPTY_ERROR`），chunk 正常收尾、**整批不降级**。故障边界拆分（D3）：系统级（WASM init 重试耗尽 / 构造失败 / 取消）保留整批降级 + toast；局部挂死走模型级细粒度。UI 进度顺带从 chunk 级升级为模型级。web-stats 25 + stats.worker 5 + 消费端 157 测试全绿 + vite build + typecheck + biome 全通过。
 
 ## 相关
 

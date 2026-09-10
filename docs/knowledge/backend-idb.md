@@ -36,6 +36,7 @@ auto_fields:
     - getApp
     - getStatsPoolSize
     - importWebFiles
+    - isCrossOriginIsolated
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode

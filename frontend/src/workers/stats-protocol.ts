@@ -1,5 +1,5 @@
 // ===== stats.worker 消息协议（主线程 web-stats.ts ↔ stats.worker.ts 共享）=====
-// 纯类型 + 常量，无运行时依赖：worker 与主线程编排各自 import，避免循环引用。
+// 纯类型 + 常量 + 零依赖纯函数，无运行时依赖：worker 与主线程编排各自 import，避免循环引用。
 
 /** 单模型统计结果（与 SearchResult 数值字段对齐） */
 export interface WebModelStats {
@@ -32,10 +32,14 @@ export interface StatsWorkerPartial {
 }
 
 /** Worker → 主线程：流结束标记（逐模型结果经 partial 送达，本消息只标志「循环走完、无更多
- *  partial」；主线程收到后该 chunk 收尾，缺条目按 EMPTY_ERROR 细粒度补位，ADR-219 D1） */
+ *  partial」；主线程收到后该 chunk 收尾，缺条目按 EMPTY_ERROR 细粒度补位，ADR-219 D1）。
+ *  doneCount = worker 声称本批已处理的模型数（= 应回包 partial 数；当前实现逐模型必回包，
+ *  恒等于 paths.length——未来 worker 内并行/跳过时代表实际处理数）。主线程以
+ *  received(partial) vs doneCount 对账：缺条目（消息流不完整）dbg 留痕，防御补位语义不变。 */
 export interface StatsWorkerResult {
   type: "result";
   requestId: number;
+  doneCount: number;
 }
 
 /** Worker → 主线程：致命错误（WASM 无法加载 / 任务内部异常），主线程据此终止该 worker
@@ -52,5 +56,15 @@ export type StatsWorkerResponse = StatsWorkerPartial | StatsWorkerResult | Stats
 // 服务正确性（看门狗侦测 + 主线程逐模型累积），UI 进度顺带从 chunk 级升级为模型级
 // （onStatsProgress 逐模型推进，零额外协议成本）。
 
-/** 单批模型上限：防 Worker 内存爆（每个模型 WASM 解码 + 纹理驻留 HEAP，200 已含余量） */
+/** 单批模型上限：worker 逐模型处理（for await 循环，峰值内存由单模型解码产物决定，与批大小
+ *  无关）——本限制的真实理由是：① 单批墙钟预算（STATS_CHUNK_TIMEOUT_MS=60s）内可完成；
+ *  ② 进度按模型级推进时粒度可感知（UI 角标）；200 已含余量。 */
 export const STATS_BATCH_LIMIT = 200;
+
+/** 当前是否已跨源隔离（SW 补头 / Go mpr middleware 后 crossOriginIsolated=true；
+ *  供多线程 WASM 分支选型）。零依赖纯函数：读全局布尔，worker 全局与主线程均安全；
+ *  全链路唯一事实源——coi-sw.ts（SW 注册判定）与 stats.worker.ts（mt/base 选型）共用，
+ *  避免两处各自内联探测漂移。 */
+export function isCrossOriginIsolated(): boolean {
+  return typeof crossOriginIsolated === "boolean" && crossOriginIsolated;
+}

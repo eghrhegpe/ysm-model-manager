@@ -10,6 +10,7 @@
 import { idbGet } from "@/utils/storage/idb.ts";
 import { parseWebPath } from "@/utils/base/web-path.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import {
   initYsmParserInWorker,
   initYsmParserInWorkerMt,
@@ -23,10 +24,11 @@ import {
   statsFromJsonBytes,
   type StatsRelReader,
 } from "./stats-core.ts";
-import type {
-  StatsWorkerRequest,
-  StatsWorkerResponse,
-  WebModelStats,
+import {
+  isCrossOriginIsolated,
+  type StatsWorkerRequest,
+  type StatsWorkerResponse,
+  type WebModelStats,
 } from "./stats-protocol.ts";
 
 /** Worker 全局（module worker 下为 DedicatedWorkerGlobalScope；显式声明避免依赖 lib） */
@@ -84,8 +86,10 @@ async function statsOne(path: string): Promise<WebModelStats> {
     }
     if (!files?.length) return EMPTY_ERROR;
     return statsFromDecodedFiles(files);
-  } catch {
-    // 单模型解码异常不拖垮整批：该模型标记 hasError（数值条件过滤时被排除）
+  } catch (e) {
+    // 单模型解码异常不拖垮整批：该模型标记 hasError（数值条件过滤时被排除）。
+    // 留痕便于排障（区别于「模型本身无骨骼」的正常 hasError——此处分级为「解码异常」）
+    dbg("stats-worker", `模型统计解码异常: ${path}`, safeErrorMessage(e));
     return EMPTY_ERROR;
   }
 }
@@ -102,9 +106,9 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
   }
   try {
     // ADR-079 M4：跨源隔离（SharedArrayBuffer 可用）→ pthread 多线程 WASM（WASM 线程池
-    // 并行处理本批多模型）；否则单线程 WASM。crossOriginIsolated 在 worker 全局可读。
-    // 注意：mt 初始化依赖 COI（coi-sw.ts 网页版 SW 补头 / 桌面 mpr middleware）。
-    const mt = typeof crossOriginIsolated === "boolean" && crossOriginIsolated;
+    // 并行处理本批多模型）；否则单线程 WASM。判定收敛至 stats-protocol.ts 单一事实源
+    // （coi-sw.ts 与主线程共用，防两处内联探测漂移）。
+    const mt = isCrossOriginIsolated();
     // 预加载 WASM：失败 → 整批 error（主线程据此整体降级，避免每个模型空转浪费）
     // P2（审核修复）：mt init 失败（pthread worker spawn 失败、SAB 被策略回收等瞬态
     // 问题）不直接整批 error——回退单线程 WASM 重试一次，仍失败才交给主线程整体降级，
@@ -128,8 +132,9 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       post({ type: "partial", requestId, result: { path: p, ...(await statsOne(p)) } });
     }
     // 流结束标记（逐模型结果已经 partial 送达；主线程收到后收尾该 chunk，
-    // 缺条目按 EMPTY_ERROR 细粒度补位，不再整批降级，ADR-219 D1/D3）
-    post({ type: "result", requestId });
+    // 缺条目按 EMPTY_ERROR 细粒度补位，不再整批降级，ADR-219 D1/D3）。
+    // doneCount = 本批已处理模型数（= paths.length，逐模型必回包）——主线程对账信号
+    post({ type: "result", requestId, doneCount: paths.length });
   } catch (e) {
     post({
       type: "error",

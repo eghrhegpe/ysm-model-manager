@@ -7,6 +7,7 @@
 import { isWebPlatform } from "@/backend/platform.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { isCrossOriginIsolated } from "./stats-protocol.ts";
 
 /** 防 reload 循环标记（值 = JSON {t: 上次 reload 时间戳, n: 已尝试次数}）。
  *  旧版值为 "1"（首次注册固定写）——读到 "1" 视为「曾 reload 但未成功」，t=0 立即落入可重试。
@@ -54,10 +55,11 @@ function writeSessionRecord(val: string): void {
   }
 }
 
-/** 当前是否已跨源隔离（SW 补头后 crossOriginIsolated=true；供多线程 WASM 分支） */
-export function isCrossOriginIsolated(): boolean {
-  return typeof crossOriginIsolated === "boolean" && crossOriginIsolated;
-}
+// 跨源隔离判定收敛至 stats-protocol.ts 单一事实源（coi-sw 注册判定 / stats.worker mt 选型 /
+// 未来主线程分支共用），此处 import + 显式导出保持公共 API 兼容（coi-sw.test.ts 消费）。
+// 注：不用 `export { x } from` 直接 re-export——vitest 模块代理对该语法处理异常
+// （实测 register().then 回调不触发），import + export 语义等价且测试稳定。
+export { isCrossOriginIsolated };
 
 /** 注册 COI SW（网页版）：首次注册后 reload 一次让浏览器重新导航经 SW（解锁跨源隔离）。
  *  防循环策略：标记带时间戳+次数上限——窗口内不重试、超窗口可重试、达上限永久放弃；

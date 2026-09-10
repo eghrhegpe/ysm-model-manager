@@ -134,7 +134,7 @@ describe("stats.worker — 逐模型流式回包（ADR-219 D1）", () => {
       result: { path: "/web/ysm/a.ysm", boneCount: 2, cubeCount: 4, texWidth: 64, texHeight: 32, hasError: false },
     });
     expect(posts[1].result?.path).toBe("/web/ysm/b.ysm");
-    expect(posts[2]).toEqual({ type: "result", requestId: 42 });
+    expect(posts[2]).toEqual({ type: "result", requestId: 42, doneCount: 2 });
   });
 
   it("解码失败模型仍逐模型回 partial（EMPTY_ERROR 形状，hasError）+ 流末尾 result", async () => {
@@ -155,7 +155,7 @@ describe("stats.worker — 逐模型流式回包（ADR-219 D1）", () => {
       texHeight: 0,
       hasError: true,
     });
-    expect(posts[2]).toEqual({ type: "result", requestId: 43 });
+    expect(posts[2]).toEqual({ type: "result", requestId: 43, doneCount: 2 });
   });
 
   it("paths 非数组 → error（不进 partial 流）", async () => {

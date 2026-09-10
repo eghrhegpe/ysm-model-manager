@@ -3,7 +3,8 @@
 // 口径对齐 Go decodeYSMViaNodeJS（internal/app/wasm_decoder.go:224）与前端
 // decodeYsmViaWasm（preview-3d/decoder/wasm-decode.ts，ADR-137 归位）：
 //  - boneCount/cubeCount：各 geometry JSON 合并求和（骨骼 = bones 数组长度；
-//    立方体 = 各 bone.cubes 长度之和，递归收集）
+//    立方体 = 各 bone.cubes 长度之和，非递归——与 parseBedrockGeometryFromJSON
+//    （parsers/bedrock-geometry.ts）及 Go 侧同口径，勿误以为嵌套骨骼要递归）
 //  - texWidth/texHeight：max(geometry description texture_width/height, 实际纹理嗅探)
 //    （Go 只取 geometry 描述；前端 wasm.ts 取 max(嗅探, 描述)——本文件取大者，语义超集）
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
@@ -60,6 +61,8 @@ function parseAnyGeometry(
       obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || (obj?.bones ? obj : null);
     if (!root?.bones?.length) return null;
     let cubeCount = 0;
+    // 非递归：与标准分支（parseBedrockGeometryFromJSON）同口径——Bedrock 骨骼不嵌套声明
+    // cubes，仅顶层 bones 数组携带；嵌套关系由 parent 字段表达，不影响计数。
     for (const b of root.bones as Array<{ cubes?: unknown[] }>) {
       cubeCount += (b.cubes || []).length;
     }

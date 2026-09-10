@@ -4,6 +4,9 @@
 // Worker 池路径（分片/合并/超时/onerror/错误降级）经 vi.stubGlobal 注入 FakeWorker
 // 全量覆盖（知识卡 vitest-env-switch 模式 1，无需 happy-dom / 真实 Worker）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+// dbg 留痕断言（缺条目对账路径）：mock 掉避免 console 噪音，缺条目用例显式断言被调用
+vi.mock("@/utils/debug/debug.ts", () => ({ dbg: vi.fn() }));
+import { dbg } from "@/utils/debug/debug.ts";
 import {
   batchStatsWebModels,
   __setStatsRunnerForTest,
@@ -99,7 +102,7 @@ function replayPartialStream(w: FakeWorker, msgIdx: number, boneBase = 0): void 
   msg.paths.forEach((path, i) => {
     w.onmessage?.({ data: { type: "partial", requestId: msg.requestId, result: mkResult(path, boneBase + i) } });
   });
-  w.onmessage?.({ data: { type: "result", requestId: msg.requestId } });
+  w.onmessage?.({ data: { type: "result", requestId: msg.requestId, doneCount: msg.paths.length } });
 }
 
 /** flush 微任务队列（等 runWorkerQueue 在 settle 后推进到下一次 postMessage） */
@@ -160,7 +163,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     paths.forEach((p, i) => {
       w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(p, 10 + i) } });
     });
-    w.onmessage?.({ data: { type: "result", requestId: reqId } });
+    w.onmessage?.({ data: { type: "result", requestId: reqId, doneCount: 3 } }); // happy path：3 条 partial
     await expect(p1).resolves.toEqual([
       { boneCount: 10, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
       { boneCount: 11, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
@@ -182,7 +185,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
       },
     });
     FakeWorker.instances[0].onmessage?.({
-      data: { type: "result", requestId: posted2[1].requestId },
+      data: { type: "result", requestId: posted2[1].requestId, doneCount: 1 }, // 单条模型
     });
     await expect(p2).resolves.toEqual([
       { boneCount: 1, cubeCount: 2, texWidth: 16, texHeight: 16, hasError: true },
@@ -236,11 +239,11 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
       data: { type: "partial", requestId: reqId + 500, result: mkResult(paths[0], 999) }, // 异批 partial → 忽略
     });
     w.onmessage?.({
-      data: { type: "result", requestId: reqId + 500 }, // 异批结束标记 → 忽略（若泄漏会以 999 污染结果）
+      data: { type: "result", requestId: reqId + 500, doneCount: 2 }, // 异批结束标记 → 忽略（若泄漏会以 999 污染结果）
     });
     w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(paths[0], 2) } });
     w.onmessage?.({ data: { type: "partial", requestId: reqId, result: mkResult(paths[1], 2) } });
-    w.onmessage?.({ data: { type: "result", requestId: reqId } });
+    w.onmessage?.({ data: { type: "result", requestId: reqId, doneCount: 2 } });
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(2);
     expect(res?.[1]?.boneCount).toBe(2);
@@ -375,15 +378,18 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(false); // 两片都经重试成功 → 不降级
   });
 
-  it("回包缺条目（结束标记到达但 partial 流缺条目，纯防御）→ 缺条目 hasError 细粒度补位，不整批降级（ADR-219 D1）", async () => {
+  it("回包缺条目（结束标记到达但 partial 流缺条目，纯防御）→ 缺条目 hasError 细粒度补位，不整批降级（ADR-219 D1）+ doneCount 对账留痕", async () => {
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
     const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
     await flushMicrotasks();
     const w = FakeWorker.instances[0];
-    // worker 只回结束标记（partial 全丢——postMessage 信道可靠，纯防御路径）
-    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId } });
+    // worker 只回结束标记（partial 全丢——postMessage 信道可靠，纯防御路径）；
+    // doneCount=2 vs 实收 0 → 对账检出「消息流不完整」并 dbg 留痕，但防御补位语义不变
+    vi.mocked(dbg).mockClear();
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId, doneCount: 2 } });
     const res = await p;
+    expect(dbg).toHaveBeenCalledWith("web-stats", expect.stringContaining("消息流不完整"));
     expect(res).toEqual([
       { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true },
       { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true },
@@ -430,7 +436,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(w.posted).toHaveLength(1); // B 尚未发包
     // 回包 A → A 完成（逐模型 partial + result 结束标记）
     w.onmessage?.({ data: { type: "partial", requestId: reqA, result: mkResult("/web/ysm/a.ysm", 1) } });
-    w.onmessage?.({ data: { type: "result", requestId: reqA } });
+    w.onmessage?.({ data: { type: "result", requestId: reqA, doneCount: 1 } });
     await expect(pA).resolves.toEqual([
       { boneCount: 1, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
     ]);
@@ -439,7 +445,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(w.posted).toHaveLength(2);
     expect(w.posted[1].requestId).toBe(reqA + 1);
     w.onmessage?.({ data: { type: "partial", requestId: w.posted[1].requestId, result: mkResult("/web/ysm/b.ysm", 2) } });
-    w.onmessage?.({ data: { type: "result", requestId: w.posted[1].requestId } });
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[1].requestId, doneCount: 1 } });
     await expect(pB).resolves.toEqual([
       { boneCount: 2, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false },
     ]);
@@ -472,7 +478,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     // Worker 逆序 partial 流（未来 worker 内并行解码可能乱序）
     w.onmessage?.({ data: { type: "partial", requestId: w.posted[0].requestId, result: mkResult(paths[1], 2) } });
     w.onmessage?.({ data: { type: "partial", requestId: w.posted[0].requestId, result: mkResult(paths[0], 1) } });
-    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId } });
+    w.onmessage?.({ data: { type: "result", requestId: w.posted[0].requestId, doneCount: 2 } });
     const res = await p;
     expect(res?.[0]?.boneCount).toBe(1); // 按 path 对齐回输入序
     expect(res?.[1]?.boneCount).toBe(2);

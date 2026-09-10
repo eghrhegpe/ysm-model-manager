@@ -18,6 +18,7 @@ auto_fields:
     - consumeWebSearchDegraded
     - EMPTY_ERROR
     - getStatsPoolSize
+    - isCrossOriginIsolated
     - onStatsProgress
     - prefetchStatsWorker
     - STATS_BATCH_LIMIT

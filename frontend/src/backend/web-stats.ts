@@ -16,6 +16,7 @@
 // 降级路径。挂死类局部故障不经由此处（走上面的模型级 hasError 细粒度路径，D3 边界）。
 // 测试注入：__setStatsRunnerForTest 替换 Worker 路径（browser-adapter.test.ts 用，不走串行链）。
 
+import { dbg } from "@/utils/debug/debug.ts";
 import { EMPTY_ERROR } from "@/workers/stats-core.ts";
 import {
   STATS_BATCH_LIMIT,
@@ -221,6 +222,7 @@ function statsOneChunk(
     let silenceTimer: ReturnType<typeof setTimeout> | null = null;
     let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
     let done = false;
+    let received = 0; // 本请求已收 partial 消息数（对账 doneCount 用）
     const finish = (kind: ChunkOutcome): void => {
       if (done) return;
       done = true;
@@ -257,10 +259,21 @@ function statsOneChunk(
       const data = ev.data as StatsWorkerResponse;
       if (!data || data.requestId !== requestId) return; // 旧批消息忽略
       if (data.type === "partial") {
+        received++;
         hooks.onPartial(data.result);
         armSilence(); // 逐模型结果送达 → 重置静默窗（挂死侦测信号，ADR-219 D2）
       } else if (data.type === "result") {
-        // 流结束标记 → chunk 收尾（逐模型结果已经 partial 累积，缺条目由调用方细粒度补位，D1）
+        // 流结束标记 → chunk 收尾（逐模型结果已经 partial 累积，缺条目由调用方细粒度补位，D1）。
+        // doneCount 对账：worker 声称处理数 vs 实际收到的 partial 消息数——postMessage 同队列
+        // 有序可靠，正常恒等；不等（消息流不完整/重复）→ dbg 留痕，把「消息丢失」与「模型
+        // 真失败（hasError）」在排障上分开；防御补位语义不变（缺条目仍 EMPTY_ERROR，不整批降级）。
+        const missing = data.doneCount - received;
+        if (missing !== 0) {
+          dbg(
+            "web-stats",
+            `chunk 消息流不完整: worker 声称 ${data.doneCount} 条 partial，实收 ${received}（差 ${missing > 0 ? `缺 ${missing}` : `多 ${-missing}`}），requestId=${requestId}`,
+          );
+        }
         finish("complete");
       } else {
         // Worker 内 WASM 初始化失败等瞬态 → 终止出错 worker（可重试），不杀整池；

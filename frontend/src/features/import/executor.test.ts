@@ -34,7 +34,7 @@ vi.mock("@/backend/browser-adapter.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/backend/browser-adapter.ts")>();
   return { ...actual, importWebFiles: importWebFilesMock, MAX_IMPORT_BYTES: 4 };
 });
-vi.mock("./repo-rtype.ts", () => ({ currentRepoType: vi.fn(() => "ysm") }));
+vi.mock("@/features/repo/repo-rtype.ts", () => ({ currentRepoType: vi.fn(() => "ysm") }));
 
 // happy-dom 已原生支持 FileReader（历史 jsdom 缺失，mock 保留以防环境切换）
 // failingReads：测试「组内读失败跳过」用的可控失败名单（readAsDataURL 触发 onerror）

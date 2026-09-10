@@ -84,6 +84,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "go-coverage-hint.ts": ["tests"],
   "test_alias-resolve.ts": ["tests"],
   "test_check_path_hygiene.ts": ["frontend", "tests"],
+  "test_check_mock_paths.ts": ["frontend", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -173,6 +174,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/_lib/scan-files.ts",
     "frontend/tsconfig.json",
     "frontend/vite.config.js",
+  ],
+  "test_check_mock_paths.ts": [
+    "scripts/check-mock-paths.ts",
+    "scripts/_lib/mock-path-resolve.ts",
+    "scripts/_lib/alias-resolve.ts",
+    "scripts/_lib/scan-files.ts",
+    "frontend/tsconfig.json",
+    "frontend/package.json",
+    "docs/.mock-path-exempt.json",
   ],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [

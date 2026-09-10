@@ -1,0 +1,5 @@
+{
+  "_comment": "mock 路径守卫豁免登记（ADR-224 E3）。行内豁免用 `// mock-path-ignore: <理由>`，此文件供虚拟模块(virtual:*)与故意 mock 不存在路径以阻断加载的写法登记。请附理由。",
+  "files": [],
+  "specs": []
+}

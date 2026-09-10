@@ -446,6 +446,14 @@
 | 知识库与代码脱节清单、幽灵事件 | [知识库×前端语义脱节审计](./knowledge_frontend_drift_audit.md) | 知识卡正文写事件名/计数/归属前必须先 grep 生产代码实证，禁止凭记忆或测试名推断（nav:change→nav:changed 教训） | ADR-132 |
 | invariant_anchors 定义归属、status 收编 | [知识库×前端语义脱节审计](./knowledge_frontend_drift_audit.md) | invariant_anchors 的弱断言只验「文本出现」不验「定义归属」——锚应指定义文件，指 import/re-export/注释处会让 AI 摸错文件 | ADR-132 |
 
+## 🎯 门禁与脚本
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
+| mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | - | - |
+| vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
+
 ## 🎯 3D 渲染与预览核心
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -834,6 +842,8 @@
 | 包级私有 helper 被多域/多测试直调时，迁移需连带改造测试，成本随调用面放大 | - | - |
 | 把测试文件的 it() 描述名当权威 | - | 测试名与断言名实不符是系统性问题（nav:change 残留测试层） |
 | 用占位日期 | `2026-XX` | 掩盖"已完成 vs 待办"，AI 分不清；完成项填实际日期、计划项标「待办」 |
+| M2 裸包默认只 WARN 不阻断（node_modules 在本仓不完整，fail-closed 会炸环境噪声）；只有 --strict 才升 FAIL，pre-push 不加 --strict 只拦 M1 | - | - |
+| bare spec 以 deps 主导、node_modules 只是兜底——新增裸包 mock 前先挂进 package.json deps | - | - |
 | 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
 | Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
 | 对同步 ccall 挂死是半吊子（已知问题榜#4 原方案）——挂死点不可抢占，race 的 timer 在阻塞线程里根本不触发；挂死类故障唯一可靠侦测信号 = 逐模型 partial 流中断（ADR-219 静默看门狗） | `5s Promise.race 软超时` | - |

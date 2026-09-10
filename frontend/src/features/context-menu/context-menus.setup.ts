@@ -64,7 +64,7 @@ vi.mock("@/backend/app.ts", () => ({
     RevealInExplorer: mocks.RevealInExplorerMock,
   }),
 }));
-vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
+vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: mocks.GetRepoRootMock,
   MoveModelFile: mocks.MoveModelFileMock,
   CopyModelFile: mocks.CopyModelFileMock,

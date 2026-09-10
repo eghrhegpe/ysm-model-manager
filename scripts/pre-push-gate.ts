@@ -606,6 +606,26 @@ async function main() {
               : `FAIL ${pz.fail}：R4=${pz.r4_cross_boundary?.count}/${pz.r4_cross_boundary?.baseline} 一致性=${pz.consistency?.ok}`,
       });
 
+      // ADR-224：mock 路径守卫（vi.mock 失效静默病灶静态校验）。
+      // M1 内部 spec（@/ #root/ ./ ../）解析失败 → FAIL（唯一 fail-closed，sync 那类病灶）；
+      // M2 裸包 deps∪node_modules 皆无 → 默认 WARN 不阻断（--strict 才升 FAIL，ADR E1 决策：
+      //   deps 主导、node_modules 只兜底，本仓 node_modules 不完整，fail-closed 会制造环境噪声）；
+      // M3 .js 胶水兜底（app.js→app.ts）→ INFO 只统计。故此处不加 --strict，只拦 M1。
+      const tMock = Date.now();
+      const mk = await shAsync("node scripts/check-mock-paths.ts --json");
+      const mkz = tryParseSummary(mk.out);
+      const mkOk = mk.rc === 0;
+      record("node scripts/check-mock-paths.ts --json", mkOk, {
+        time: Date.now() - tMock,
+        raw: mk.out,
+        note:
+          mkz === null
+            ? "输出解析失败（scripts/check-mock-paths.ts 缺失？）"
+            : mkOk
+              ? `mock 路径合规（fail ${mkz.fail} warn ${mkz.warn} info ${mkz.m3_info}）`
+              : `FAIL ${mkz.fail}：M1=${mkz.m1_fail} 处 mock 路径失效`,
+      });
+
       // ADR-085：菜单表健康门禁——"加菜单项只改表"的自动兜底（秒级正则扫描，早失败早停）。
       // 校验：id 唯一 / labelKey 非空 / i18n 三语齐全 / dockGroup 合法 / kind 合法 / render·run 完备。
       const tM = Date.now();

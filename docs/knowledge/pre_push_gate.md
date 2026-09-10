@@ -81,7 +81,7 @@ invariant_anchors:
 
 **Go 域**（plan.go）：updater helper 前置构建（go:embed 依赖）→ `go build ./go/...` → `go test -race ./go/... ./internal/app/ -timeout 60s`（默认吃官方 test cache，源码未变 → (cached) 秒回；`YSM_FRESH_GO_TEST=1` 强制 `-count=1` 新鲜跑，2026-09-04 恢复缓存）→ `go vet` → **`golangci-lint run --new-from-rev=<base> ./...`**（ADR-205：补 Go 静态分析真空面；只跑增量，全量会撞 736 条存量债；未安装/无基线 → 降级 debt 跳过）→ gofmt 只读检出 → `binding-check`
 
-**前端域**（plan.frontend）：`check-layering`（R1/R2 零容忍 + R3/R4 基线）→ `check-path-hygiene`（ADR-146：反桶/深度/上跳/跨边界冻结/双写一致性）→ `check-menu-health`（ADR-085：菜单表 id/labelKey/i18n/dockGroup/kind/render·run 完备）→ `check-ctx-menu-i18n`（扫右键菜单文件里字面量 `tr("key")` 须存在于 zh-CN 基准包；tr() 双入口随 ADR-210 D3 根除后现 0 命中恒绿——休眠闸，防 tr() 回潮才重新咬人）→ npm 三件套并行（`vite build` ∥ `tsc --noEmit`）→ `vitest run --maxWorkers 8` 串行在后
+**前端域**（plan.frontend）：`check-layering`（R1/R2 零容忍 + R3/R4 基线）→ `check-path-hygiene`（ADR-146：反桶/深度/上跳/跨边界冻结/双写一致性）→ `check-menu-health`（ADR-085：菜单表 id/labelKey/i18n/dockGroup/kind/render·run 完备）→ `check-ctx-menu-i18n`（扫右键菜单文件里字面量 `tr("key")` 须存在于 zh-CN 基准包；tr() 双入口随 ADR-210 D3 根除后现 0 命中恒绿——休眠闸，防 tr() 回潮才重新咬人）→ `check-mock-paths`（ADR-224：vi.mock 路径静态校验，M1 内部 spec 失效硬拦、M2 裸包漂移默认 WARN、M3 .js→.ts 兜底 INFO）→ npm 三件套并行（`vite build` ∥ `tsc --noEmit`）→ `vitest run --maxWorkers 8` 串行在后
 
 **数据域**（plan.data）：`type-consistency`（resource_types.json 单一事实来源派生守卫：extensions.ts 必须派生自 JSON，禁手写 RESOURCE_EXTS 副本；ADR-204 收敛，JSON↔JS 字面量比对已不可达废弃）
 
@@ -155,6 +155,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 - ADR-146 — 路径卫生门禁（check-path-hygiene）
 - ADR-085 — 菜单表健康门禁（check-menu-health）
+- ADR-224 — mock 路径守卫（check-mock-paths；[mock_path_guard](./mock_path_guard.md)）
 - ADR-088 — 静态工具并行回退（spawn 开销吃掉收益）
 - ADR-145 — cli 解耦 app（check-go-diff-coverage --staged 实证）
 - ADR-149 / ADR-150 — pre-commit 兜底收窄（对照）

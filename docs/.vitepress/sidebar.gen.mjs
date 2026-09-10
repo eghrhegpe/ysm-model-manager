@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-224：mock 路径守卫：vi.mock 目标存在性静态校验（M1 内部硬报 / M2 裸包 WARN / 豁免通道）",
+        "link": "/adr/ADR-224-mock-vi-mock-m1-m2-warn"
+      },
+      {
         "text": "ADR-223：社区索引数据层北迁 features/community 与导航焦点跨视图传递范式",
         "link": "/adr/ADR-223-features-community"
       },
@@ -1743,6 +1747,10 @@ export const autoSidebar = [
           {
             "text": "YSM 动画分组与配置菜单提取",
             "link": "/knowledge/format-ysm-anim-config"
+          },
+          {
+            "text": "mock 路径守卫 check-mock-paths",
+            "link": "/knowledge/mock_path_guard"
           },
           {
             "text": "推送前门禁 pre-push-gate",

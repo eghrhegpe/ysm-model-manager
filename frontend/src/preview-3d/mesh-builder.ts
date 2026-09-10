@@ -1,10 +1,10 @@
 // ===== 3D 单个网格构建（从 model3d.ts 拆出，ADR-040 P1 第6轮）=====
 // 负责将 SpecMeshGroup3D 数据构建为 THREE.Mesh 并添加到目标组。
 import * as THREE from "three";
+import type { TextureAlphaMode } from "@/preview-3d/texture/texture-alpha.ts";
+import { getTextureAlphaMode } from "@/preview-3d/texture/texture-alpha.ts";
 import type { SpecMeshGroup3D } from "./model3d.ts";
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
-import type { TextureAlphaMode } from "./texture-alpha.ts";
-import { getTextureAlphaMode } from "./texture-alpha.ts";
 
 /** ysmview 风格材质配置（索引 2.16 魔法数值收敛）。
  * side 用 DoubleSide：对齐 architecture.md 材质标准 + YSMViewer/Blockbench 双面渲染。

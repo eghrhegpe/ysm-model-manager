@@ -9,7 +9,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
-import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture-loader.ts";
+import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 

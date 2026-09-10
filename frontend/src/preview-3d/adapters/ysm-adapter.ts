@@ -28,7 +28,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/model3d.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "@/preview-3d/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import {

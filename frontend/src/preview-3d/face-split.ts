@@ -2,10 +2,10 @@
 // ModernYSM TranslucencyScanner 的前端对应物：mesh 级整图判定升级为面级，
 // blend 面隔离进透明批次，opaque/cutout 面继续烘合——根治「杂点/局部混合拖全模型」。
 import type * as THREE from "three";
+import type { TextureAlphaMode } from "@/preview-3d/texture/texture-alpha.ts";
+import { getTextureAlphaInfo } from "@/preview-3d/texture/texture-alpha.ts";
 import { ALPHA_F_HOLE, ALPHA_F_TRANSLUCENT } from "./alpha-index.ts";
 import type { SpecMeshGroup3D } from "./model3d.ts";
-import type { TextureAlphaMode } from "./texture-alpha.ts";
-import { getTextureAlphaInfo } from "./texture-alpha.ts";
 
 /** 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 */
 export interface MeshFragment {

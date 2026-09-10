@@ -130,17 +130,17 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
   });
 
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-vi.mock("./texture-loader.ts", () => ({
+vi.mock("@/preview-3d/texture/texture-loader.ts", () => ({
   loadTextures: loadTexturesMock,
   releaseTextureUrls: releaseTextureUrlsMock,
 }));
 // buildSceneMesh/compKey 已从 model3d.ts 迁至 mesh.ts（model3d 拆分）——mock 目标同步迁移，
 // 否则 mock 失效会跑真实实现（three 被 mock 成 Fake 类，行为不符 → renderMultiAngle 返回 null）
-vi.mock("./mesh.ts", () => ({
+vi.mock("@/preview-3d/mesh.ts", () => ({
   buildSceneMesh: buildSceneMeshMock,
   compKey: (mi: number, boneId: string) => `${mi}:${boneId}`,
 }));
-vi.mock("./ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
+vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
 vi.mock("@/preview-3d/model/spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
 vi.mock("three", () => threeStub);
 

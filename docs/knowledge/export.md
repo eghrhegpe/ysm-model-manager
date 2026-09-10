@@ -17,7 +17,6 @@ source_files:
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
 auto_fields:
   symbols_with_lines:
-    - AngleShot
     - buildBoneExportRow
     - buildStatsCard
     - buildToggleRow
@@ -28,20 +27,10 @@ auto_fields:
     - CacheValue
     - collectBlobUrls
     - componentCountsFromSpec
-    - loadTextures
     - makeYsmAdapter
-    - releaseTextureUrls
-    - renderMultiAngle
-    - RenderMultiAngleOptions
     - saveScreenshot
-    - screenshotFromRenderer
-    - ScreenshotLights
-    - ScreenshotOpts
     - setup2DCanvas
     - shotButtonNodes
-    - textureCache
-    - TextureCacheImpl
-    - toScreenshotLights
     - YsmAdapterOptions
     - ysmMenuItems
     - YsmMenuItemsOpts

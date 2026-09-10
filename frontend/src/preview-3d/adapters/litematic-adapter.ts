@@ -12,7 +12,7 @@ import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { overlayStyleRoot } from "@/preview-3d/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type {
   PreviewAdapter,

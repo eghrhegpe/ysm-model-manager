@@ -9,8 +9,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildPackScene
-    - getTintColorSync
-    - loadMcTints
     - makePackAdapter
     - PackAdapterOpts
     - PackDeps

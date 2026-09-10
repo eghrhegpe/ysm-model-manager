@@ -5,7 +5,7 @@ import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts
 import { unregisterModelRoot } from "@/preview-3d/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts";
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { mdMmStage5Menu } from "./mmd-build-menu.ts";

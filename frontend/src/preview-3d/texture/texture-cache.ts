@@ -8,7 +8,7 @@
 // MMD/VRM 走 blob URL + 内置 Loader，暂不接入（需改造 Loader 管线，ROI 低）。
 
 import type * as THREE from "three";
-import { safeDispose } from "./safe-dispose.ts";
+import { safeDispose } from "@/preview-3d/safe-dispose.ts";
 
 interface CacheEntry {
   tex: THREE.Texture;

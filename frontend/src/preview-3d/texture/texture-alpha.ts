@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { AlphaIndex } from "./alpha-index.ts";
+import { AlphaIndex } from "@/preview-3d/alpha-index.ts";
 
 export type TextureAlphaMode = "opaque" | "cutout" | "blend";
 

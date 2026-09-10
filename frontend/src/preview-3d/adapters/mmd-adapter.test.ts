@@ -127,7 +127,7 @@ vi.mock("@/utils/base/primitives/main-thread-watch.ts", async (importOriginal) =
     },
   };
 });
-vi.mock("@/preview-3d/screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: (...args: unknown[]) => hoisted.screenshotMock(...args),
 }));
 

@@ -9,10 +9,10 @@ const hoisted = vi.hoisted(() => ({
   renderable: vi.fn(() => true),
 }));
 
-vi.mock("@/preview-3d/screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
-vi.mock("@/preview-3d/texture-cache.ts", () => ({
+vi.mock("@/preview-3d/texture/texture-cache.ts", () => ({
   textureCache: {
     acquire: vi.fn((u: string, _f: (u: string) => THREE.Texture) => {
       const img = new Image(); img.src = u;
@@ -25,7 +25,7 @@ vi.mock("@/preview-3d/parse-java-model.ts", () => ({
   parseJavaModel: hoisted.parseMock,
   isRenderableModel: hoisted.renderable,
 }));
-vi.mock("@/preview-3d/mc-tints.ts", () => ({
+vi.mock("@/preview-3d/materials/mc-tints.ts", () => ({
   loadMcTints: vi.fn(() => Promise.resolve()),
   getTintColorSync: vi.fn(() => 0x4a9d2b),
 }));
@@ -163,7 +163,7 @@ describe("tint 渲染", () => {
   });
 
   it("类别按纹理路径启发式（tintindex 值非类别索引）：_leaves→foliage、water→water、无后缀→grass", async () => {
-    const { getTintColorSync } = await import("@/preview-3d/mc-tints.ts");
+    const { getTintColorSync } = await import("@/preview-3d/materials/mc-tints.ts");
     const spy = vi.mocked(getTintColorSync);
     hoisted.parseMock.mockResolvedValue(makeJavaModel({
       faces: [
@@ -243,7 +243,7 @@ describe("makePackAdapter", () => {
 
 describe("纹理缓存", () => {
   it("textureCache.acquire 在 texEntry 时调用", async () => {
-    const { textureCache } = await import("@/preview-3d/texture-cache.ts");
+    const { textureCache } = await import("@/preview-3d/texture/texture-cache.ts");
     const deps = makeDeps();
     const ctx = makeCtx();
     const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");
@@ -252,7 +252,7 @@ describe("纹理缓存", () => {
   });
 
   it("textureCache.release 在 dispose 时调用", async () => {
-    const { textureCache } = await import("@/preview-3d/texture-cache.ts");
+    const { textureCache } = await import("@/preview-3d/texture/texture-cache.ts");
     const deps = makeDeps();
     const ctx = makeCtx();
     const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");

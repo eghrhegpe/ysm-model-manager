@@ -8,11 +8,11 @@ import * as THREE from "three";
 import { getApp } from "@/backend/app.ts";
 import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
-import type { Spec3D } from "./model3d.ts";
+import type { Spec3D } from "@/preview-3d/model3d.ts";
+import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
+import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
 import type { ScreenshotLights } from "./screenshot-lights.ts";
-import { loadTextures, releaseTextureUrls } from "./texture-loader.ts";
-import { buildYsmObject, type YsmObjectHandle } from "./ysm-object.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
 // 标准主灯参数（renderer-setup / screenshot-render 口径一致）

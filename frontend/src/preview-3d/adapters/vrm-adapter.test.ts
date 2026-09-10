@@ -51,7 +51,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/preview-3d/vrm-materials.ts", () => ({
+vi.mock("@/preview-3d/materials/vrm-materials.ts", () => ({
   listVrmMaterials: vi.fn(() => []),
   getVrmMaterialDetail: vi.fn(() => ({})),
   setVrmMaterialVisible: vi.fn(),
@@ -92,7 +92,7 @@ vi.mock("@/preview-3d/bone/mmd-foot-ik.ts", () => ({
     dispose: vi.fn(),
   })),
 }));
-vi.mock("@/preview-3d/screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
 vi.mock("@/preview-3d/frustum-cull.ts", () => ({
@@ -1042,7 +1042,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     hoisted.listPathsMock.mockResolvedValue([]);
     // listVrmMaterials / getVrmMaterialDetail 已在文件头 mock → 重配置返回非空列表
     const { listVrmMaterials, getVrmMaterialDetail, setVrmMaterialVisible, setVrmMaterialOpacity } =
-      await import("@/preview-3d/vrm-materials.ts");
+      await import("@/preview-3d/materials/vrm-materials.ts");
     (listVrmMaterials as ReturnType<typeof vi.fn>).mockReturnValue([
       { index: 0, name: "服" },
       { index: 1, name: "肌" },

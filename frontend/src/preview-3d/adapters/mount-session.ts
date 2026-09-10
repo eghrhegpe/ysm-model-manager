@@ -9,7 +9,7 @@ import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts";
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
-import { textureCache } from "@/preview-3d/texture-cache.ts";
+import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { returnFocus } from "@/utils/dom/focus-restore.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type {

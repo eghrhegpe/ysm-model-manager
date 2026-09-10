@@ -5,19 +5,19 @@ import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { mmdBonesToBoneNodes } from "@/preview-3d/bone/mmd-bones.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts";
 import { mmdSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import {
   getMmdMaterialDetail,
   listMmdMaterials,
   setMmdMaterialOpacity,
   setMmdMaterialVisible,
-} from "@/preview-3d/mmd-materials.ts";
+} from "@/preview-3d/materials/mmd-materials.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { createAutoDanceController } from "@/preview-3d/perception/autodance.ts";
 import { createBlinkController } from "@/preview-3d/perception/blink.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { createGazeController } from "@/preview-3d/perception/gaze.ts";
 import { buildLipMorphIndices, createLipSyncController } from "@/preview-3d/perception/lipsync.ts";
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { mmdSemanticMorphMap } from "@/preview-3d/semantic-morphs.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { MmdBottomNavCtx } from "./content-bridges.ts";

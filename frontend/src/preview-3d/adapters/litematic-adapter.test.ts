@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 
-vi.mock("@/preview-3d/screenshot.ts", () => ({
+vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
   screenshotFromRenderer: vi.fn(() => Promise.resolve("screenshot-url")),
 }));
 // frustum-cull 模块级注册表：测试环境空实现（真模块可跑，但避免跨用例 state 串扰）

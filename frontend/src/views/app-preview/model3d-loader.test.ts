@@ -37,7 +37,7 @@ vi.mock("@/preview-3d/model/spec-builder.ts", () => ({
   buildSpecFromGeometryJSON: tsSpecBuilderMock,
 }));
 
-vi.mock("@/preview-3d/texture-cache.ts", () => ({
+vi.mock("@/preview-3d/texture/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 

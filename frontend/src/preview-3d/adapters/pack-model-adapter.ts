@@ -10,7 +10,7 @@
 
 import * as THREE from "three";
 import { frameCameraSide } from "@/preview-3d/camera-setup.ts";
-import { getTintColorSync, loadMcTints } from "@/preview-3d/mc-tints.ts";
+import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import {
@@ -19,8 +19,8 @@ import {
   parseJavaModel,
 } from "@/preview-3d/parse-java-model.ts";
 import { safeDispose } from "@/preview-3d/safe-dispose.ts";
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
-import { textureCache } from "@/preview-3d/texture-cache.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
+import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import type {
   CameraControlScene,

@@ -18,7 +18,7 @@ import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/frustum-cul
 import { recordLoadTrace } from "@/preview-3d/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh.ts";
-import { screenshotFromRenderer } from "@/preview-3d/screenshot.ts";
+import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";

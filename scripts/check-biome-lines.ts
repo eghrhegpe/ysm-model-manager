@@ -93,9 +93,28 @@ function filterClean(files: string[]): { clean: string[]; skipped: string[] } {
 
 /** 逐文件取 staged 新增行号集合。 */
 function stagedAddedLines(files: string[]): Map<string, Set<number>> {
+  // rename 配对（-M）：纯 rename 的整文件行不是「新增行」。逐文件 pathspec
+  // 只含新路径时 git 无法配对旧路径（pathspec 同时约束两侧），100% rename
+  // 会被当全新文件全量计入新增行 → 大迁移批假阻断，与「存量债不拦」设计相悖。
+  // 故先用 --name-status -M 拿 rename 映射，diff 时把旧路径一并传入 pathspec。
+  const r0 = run(
+    "git",
+    ["diff", "--cached", "--name-status", "-M", "--diff-filter=ACMR", "--", "*.ts", "*.tsx"],
+    { cwd: ROOT, timeout: 15_000 },
+  );
+  const renameFrom = new Map<string, string>();
+  if (r0.ok) {
+    for (const line of r0.out.split(/\r?\n/)) {
+      const m = /^R\d+\t(.+)\t(.+)$/.exec(line.trim());
+      if (m?.[1] && m[2]) renameFrom.set(m[2], m[1]);
+    }
+  }
   const map = new Map<string, Set<number>>();
   for (const f of files) {
-    const r = run("git", ["diff", "--cached", "--unified=0", "--", f], {
+    const from = renameFrom.get(f);
+    const args = ["diff", "--cached", "--unified=0", "-M", "--", f];
+    if (from) args.push(from);
+    const r = run("git", args, {
       cwd: ROOT,
       timeout: 15_000,
     });

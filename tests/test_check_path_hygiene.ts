@@ -57,7 +57,12 @@ check("--json 输出合法且 _summary 含 R5/R6 键，当前基线 r5=0/r6=0", 
   assert.ok(data._summary, "缺 _summary");
   assert.equal(typeof data._summary.r5_same_dir_alias.hits, "number");
   assert.equal(typeof data._summary.r6_test_barrel.hits, "number");
-  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}`);
+  // rc!=0 时把具体违规（fails/warns，含 R3 文件清单）拼进断言，避免门禁只报一个数字、
+  // 还要手动跑 --json 反查文件（commit-with-check 曾把 tail 截断吞掉详情）
+  const list = [...(data.fails ?? []), ...(data.warns ?? [])]
+    .map((v) => (typeof v === "string" ? v : `${v.rule} ${v.file}: ${v.detail ?? ""}`.trim()))
+    .join("\n");
+  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}${list ? `：\n${list}` : ""}`);
   assert.equal(data._summary.fail, 0, "不应有 FAIL");
   // 存量已全别名 + 无桶导入（实证扫描）→ 观察期基线应零命中；命中即把违规样本拼进 message，
   // 避免门禁只报一个数字、还要手动跑 --json 反查文件

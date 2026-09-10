@@ -409,7 +409,9 @@ export async function runContractTestsParallel(files?: string[]) {
   const runOne = async (f: string) => {
     const { stdout, stderr, status } = await runTest(f);
     const outStr = status !== 0 ? stdout || stderr : "";
-    return { name: f, ok: status === 0, out: outStr.trim().split("\n").slice(-4).join("\n") };
+    // 失败输出保留足量尾部（slice(-4) 曾把失败断言的 ✗ 详情切成只剩 4 行壳——配合
+    // commit-with-check 的 tail 渲染时看不到具体违规清单）；成功态 out 为空，不膨胀
+    return { name: f, ok: status === 0, out: outStr.trim().split("\n").slice(-40).join("\n") };
   };
   // 有界并发 worker 池（见 CONCURRENCY 注释：51 全并发 Windows spawn 饱和 flaky，
   // 8 路实测耗时持平——慢测试拖尾决定墙钟，降并发零成本）。

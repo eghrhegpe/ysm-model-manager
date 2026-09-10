@@ -200,7 +200,12 @@ console.log("");
   for (const it of check.results) {
     const mark = it.ok ? "✅" : "❌";
     const t = `${(it.time / 1000).toFixed(1)}s`;
-    console.log(`${mark} ${it.label}  (${t})${it.note ? `  ${it.note}` : ""}`);
+    // 通过项 note 内联；失败项展开完整 tail（受命：tail 曾赋值未渲染，note 仅截首 400 字
+    // 会把关键违规清单吞掉——如 check-path-hygiene 的 R3 详情），逐行缩进打印
+    console.log(`${mark} ${it.label}  (${t})${it.ok && it.note ? `  ${it.note}` : ""}`);
+    if (!it.ok) {
+      for (const line of (it.tail || it.note || "").split("\n")) console.log(`   ${line}`);
+    }
   }
   console.log(`门禁耗时: ${(gateMs / 1000).toFixed(1)}s`);
 

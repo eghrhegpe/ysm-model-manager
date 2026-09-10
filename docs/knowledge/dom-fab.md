@@ -4,18 +4,22 @@ name: 3D 预览悬浮 FAB 控制层
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/preview-3d/fab.ts
+  - frontend/src/preview-3d/menu/fab.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - createIconButton
+    - ensureFabStyles
+    - IconButtonOpts
+    - YSW_FAB_CSS
   tests:
-    - frontend/src/preview-3d/fab.test.ts
+    - frontend/src/preview-3d/menu/fab.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
   - FAB、悬浮按钮、3D 预览
   - overlay、ADR-057、ensureFabStyles
 quick_risk_lines:
-  - FAB 控制层必须走 preview-3d/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签
+  - FAB 控制层必须走 preview-3d/menu/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签
 pitfalls:
   - 各组件各自注入 style 标签 → 多次注入、样式冲突；必须经 ensureFabStyles 一次注入
   - FAB 挂 document.body 但样式在 Shadow DOM → light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签
@@ -27,8 +31,8 @@ use_when:
   - overlay
   - ADR-057
 invariant_anchors:
-  - frontend/src/preview-3d/fab.ts|ensureFabStyles
-  - frontend/src/preview-3d/fab.ts|createIconButton
+  - frontend/src/preview-3d/menu/fab.ts|ensureFabStyles
+  - frontend/src/preview-3d/menu/fab.ts|createIconButton
 status: active
 ---
 

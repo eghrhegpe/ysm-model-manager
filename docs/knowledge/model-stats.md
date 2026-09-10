@@ -77,13 +77,14 @@ status: active
 ## 核心职责
 
 - **`stats-core.ts`** — 纯计算核心（无 IO、无 WASM 运行时依赖；`YsmDecodedFile` 为 type-only import，形状单一事实源 = `wasm/parser-shared.ts`，ADR-218 D3），输入为解码/直读产物文件，输出统计数值
-  - `statsFromDecodedFiles(files)` — 批量统计：骨数 = `bones` 数组长度；立方体数 = 各 `bone.cubes` 长度之和（递归收集）；纹理宽高 = `max(嗅探, geometry description 描述)`
-  - **纹理头魔数**：`PNG_SIG` / `JPG_SIG` / `GIF_SIG` / `BMP_SIG` / `TGA_SIG` — 单一事实源已收敛至 `frontend/src/utils/base/tex-size.ts` 的 `sniffTexSize`（2026-09 去重专项：从 stats-core / wasm.ts 抽出的公共纯函数），与 Go `imagePixelArea` 同口径，勿单独改
+  - `statsFromDecodedFiles(files)` — 批量统计：骨数 = `bones` 数组长度；立方体数 = 各 `bone.cubes` 长度之和（**非递归**——Bedrock 骨骼不嵌套声明 cubes，嵌套关系由 `parent` 字段表达，与 Go 侧同口径）；纹理宽高 = `max(嗅探, geometry description 描述)`
+  - `parseAnyGeometry(jsonStr)` — 宽松 geometry 解析：标准 `minecraft:geometry` 数组之外兼容 `minecraft.geometry[0]` / `geometry.model` / 直接 `{bones}` 根对象，失败返回 null（测试直接对其三条兼容形态做专项边界覆盖）
+  - **纹理头魔数**：`PNG_SIG` / `JPG_SIG` / `GIF_SIG` / `BMP_SIG` / `TGA_SIG` — 单一事实源已收敛至 `frontend/src/utils/base/pure/tex-size.ts` 的 `sniffTexSize`（2026-09 去重专项：从 stats-core / wasm.ts 抽出的公共纯函数），与 Go `imagePixelArea` 同口径，勿单独改
   - 输出 `WebModelStats`（`boneCount` / `cubeCount` / `texWidth` / `texHeight` / `hasError`；单一形状源 = `stats-protocol.ts`，`EMPTY_ERROR` 错误标记自此文件单处导出，ADR-218 D3），口径对齐 Go `decodeYSMViaNodeJS`（`internal/app/wasm_decoder.go` decodeYSMViaNodeJS）与前端 `decodeYsmViaWasm`
 
-- **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse`（`partial` 逐模型流式结果 + `result` 流结束标记 + `error`；ADR-219 D1 对 ADR-218 D2 的部分修订——重开 worker 级细粒度信道服务看门狗侦测，UI 进度顺带升级为模型级）/ `WebModelStats`（唯一统计形状源）/ `WebModelStatsWithPath`（主线程按 path 累积对齐）类型；`STATS_BATCH_LIMIT`（单批上限）
+- **`stats-protocol.ts`** — 协议层：`StatsWorkerRequest` / `StatsWorkerResponse`（`partial` 逐模型流式结果 + `result` 流结束标记 + `error`；ADR-219 D1 对 ADR-218 D2 的部分修订——重开 worker 级细粒度信道服务看门狗侦测，UI 进度顺带升级为模型级）/ `WebModelStats`（唯一统计形状源）/ `WebModelStatsWithPath`（主线程按 path 累积对齐）类型；`STATS_BATCH_LIMIT`（单批上限；内存口径 = 在途模型字节 + 解码产物，与批大小无关）；`isCrossOriginIsolated`（COI 判定单一事实源）；`isValidStatsRequest`（请求结构守卫，类型谓词：requestId 数字 + paths string[]，worker 入口拒收畸形消息防看门狗对账漂移）
 
-- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；**逐模型流式回包**（每模型统计完成立即 `partial`，循环走完发 `result` 结束标记，ADR-219 D1）；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
+- **`stats.worker.ts`** — Worker 入口：独立 `import` WASM + `open` IndexedDB（同源），消息驱动批量处理；**泵式有界并发**（`STATS_CONCURRENCY`=4 泵领号：模型 N+1 的 `idbGet` I/O 与模型 N 的同步 WASM 解码重叠；同步关键区无 await 单线程天然串行，共享 `/output` 目录不交叉污染；禁用裸 `Promise.all(全批)` 防原始字节全驻留）；**逐模型流式回包**（每模型统计完成立即 `partial`，全批走完发 `result` 结束标记，ADR-219 D1 活性信号不变）；COI 满足时优先 pthread 多线程 WASM（ADR-079 M4），mt init 失败回退一次单线程 init 再判 error（P2 审核修复：防 COI 满足但 pthread 环境瞬态异常的设备永久失去数值统计）
 
 - **`web-stats.ts`** — 主线程编排：
   - `batchStatsWebModels(paths)` — **池并发 = 批级单飞**（ADR-218 D1：`batchChain` 串行链，第二起调用排队等前批整体完成；`terminateStatsWorker` 升池代际，排队批弃置）；批内 chunk 分发到池内 worker **并行**统计（`Promise.all(ws.map(runWorkerQueue))`，每 worker 单在途——见不变量）；合并层按 path 对齐（Map 查表，回包序不承担契约，ADR-218 D2）
@@ -95,7 +96,7 @@ status: active
 
 - **仅支持同源 IndexedDB**：Worker 内 `open('ysm')` 同源读取，跨源场景不可用
 - **主线程不直接调 WASM**：统计走 Worker，避免大库解析卡 UI
-- **口径对称**：`sniffTexSize`（`utils/tex-size.ts` 单一事实源）与 Go `imagePixelArea` 必须同口径；`boneCount`/`cubeCount` 口径对齐 Go 侧
+- **口径对称**：`sniffTexSize`（`frontend/src/utils/base/pure/tex-size.ts` 单一事实源）与 Go `imagePixelArea` 必须同口径；`boneCount`/`cubeCount` 口径对齐 Go 侧
 - **全池系统性挂死**（内存压力等致所有 worker 无响应）→ 所有模型 `EMPTY_ERROR` → 数值搜索返回空集且**无** toast（语义：统计全部失败而非条件被忽略，UI 可另立提示位，ADR-219 后果③）
 - **挂死模型在 UI 上仅表现为「被数值搜索排除」**，无独立诊断面板（ADR-219 后果①，error-diary 可后续接 `safeErrorMessage` 落账）
 

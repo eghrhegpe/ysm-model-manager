@@ -174,7 +174,7 @@ status: active
 ## 已知边界 / 待治理
 
 - `download-queue.ts`（UI 控制器）当前已接近 ≤400 行红线；下次在此文件新增功能时，应优先评估是否可继续拆分子职责（如把 `cmDqHandle*` 状态响应族拆为独立模块），而非继续堆叠
-- `events.ts` 的 `bindRepoEvents` 承担编排角色（队列初始化 + 虚拟列表创建 + 7 个事件绑定），职责密度高；后续若新增仓库页交互，考虑先抽出 orchestrator 再扩展，避免该文件继续线性增长
+- `events.ts` 的 `bindRepoEvents` 承担编排角色（队列初始化 + 虚拟列表创建 + 一组事件绑定），职责密度高；后续若新增仓库页交互，考虑先抽出 orchestrator 再扩展，避免该文件继续线性增长
 - `backendGetApp` / `communityGetApp` / `contextMenuGetApp` 三处别名转发同一实现；当前为 vi.mock 测试策略所依赖的形态，待真实 DI 容器落地时合并
 
 ## 相关

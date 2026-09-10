@@ -4,7 +4,7 @@ name: YSM (Bedrock) 动画管线
 category: utils
 tier: architecture
 source_files:
-  - frontend/src/preview-3d/ysm-animation-player.ts
+  - frontend/src/preview-3d/model/ysm-animation-player.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/utils/animation/molang.ts
   - frontend/src/utils/animation/animation.ts
@@ -15,6 +15,7 @@ auto_fields:
     - BoneTransform
     - buildYsmScene
     - createMolangParser
+    - createYsmAnimPlayer
     - Keyframe
     - makeYsmAdapter
     - MolangAxes
@@ -24,11 +25,12 @@ auto_fields:
     - TimelineEvent
     - Vec3
     - YsmAdapterOptions
+    - YsmAnimPlayer
     - ysmMenuItems
     - YsmMenuItemsOpts
     - YsmPreloadedModel
   tests:
-    - frontend/src/preview-3d/ysm-animation-player.test.ts
+    - frontend/src/preview-3d/model/ysm-animation-player.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts
     - frontend/src/utils/animation/animation.test.ts
     - frontend/src/utils/animation/molang.test.ts
@@ -63,7 +65,7 @@ perf:
   - cpu-bound
 status: active
 invariant_anchors:
-  - frontend/src/preview-3d/ysm-animation-player.ts|AnimationClip
+  - frontend/src/preview-3d/model/ysm-animation-player.ts|AnimationClip
   - frontend/src/preview-3d/adapters/ysm-adapter.ts|AnimationClip
   - frontend/src/utils/animation/molang.ts|compileMolang
 ---
@@ -101,7 +103,7 @@ rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 
 | 模块 | 文件路径 | 职责 |
 |------|---------|------|
-| **动画玩家** | `preview-3d/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
+| **动画玩家** | `preview-3d/model/ysm-animation-player.ts` | 完整的状态机：时间推进、Clip 切换、控制器管理。导出符号 `createYsmAnimPlayer`。 |
 | **Molang 作用域桥** | `utils/animation/molang.ts` | 内嵌 molangjs 表达式求值器。clip 自带 MolangParser 实例（ADR-211），`clip.molangParser.setScope(vars)` 注入 `@variable.time` 等变量，由 `mdApAdvanceTimeAndController` 在每帧推 clock 时调用；见 animation-system.md。 |
 | **插值引擎** | `utils/animation/animation.ts` | `parseBedrockAnimationJSON`, `evaluateClip`。使用 Catmull-Rom 样条插值。由 `mdApApplyPose` 内部在每帧调 `evaluateClip(clip, elapsed)` 拿当前时刻的局部变换序列（层级由 Three.js 场景树传播，2026-09 删 boneHierarchy 参数）。 |
 | **适配器桥接** | `preview-3d/ysm-adapter.ts` | 将解码的 YSM 骨骼/动画/clip 数据喂入 `createYsmAnimPlayer`（在 `build()` 内），并注册到会话生命周期。 |

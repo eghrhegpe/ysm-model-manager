@@ -7,7 +7,7 @@ adr:
   - ADR-195
 category: rendering
 source_files:
-  - frontend/src/preview-3d/menu-node-types.ts
+  - frontend/src/preview-3d/menu/menu-node-types.ts
   - frontend/src/preview-3d/menu/core.ts
   - frontend/src/preview-3d/menu/render.ts
   - frontend/src/preview-3d/menu/node-types.ts
@@ -59,10 +59,17 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToView
     - PREVIEW_MENU_GROUPS
+    - PreviewActionMenuCtx
+    - PreviewControlDef
+    - PreviewControlKind
+    - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewMenuCtx
     - PreviewMenuGroupDef
     - PreviewMenuGroupId
     - PreviewMenuHandle
+    - PreviewMenuNode
+    - PreviewMenuNodeKind
     - PreviewMenuRouters
     - renderAdapterPanelContent
     - renderCapColor

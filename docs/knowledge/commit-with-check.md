@@ -8,13 +8,20 @@ source_files:
   - scripts/_lib/commit-temp-index.ts
   - scripts/_lib/gen-cmds.ts
   - scripts/_lib/gen-stage.ts
+  - scripts/_lib/contract-tests.ts
+  - scripts/_lib/commit-check.ts
   - scripts/reproduce-commit-interrupt.ts
 auto_fields:
   symbols_with_lines:
+    - CheckItem
+    - collectContractTests
+    - CommitCheckResult
     - CommitTempIndexOptions
     - CommitTempIndexResult
     - commitWithTempIndex
     - computeStageList
+    - CONTRACT_TEST_DOMAINS
+    - CONTRACT_TEST_TARGETS
     - expandPathspecs
     - GEN_CMDS
     - GitLsRunner
@@ -25,6 +32,9 @@ auto_fields:
     - parsePorcelain
     - PorcelainEntry
     - resolvePorcelain
+    - runCommitChecks
+    - runContractTestsParallel
+    - selectContractTests
     - StageInput
 use_when:
   - commit-with-check
@@ -44,7 +54,7 @@ quick_intents:
   - 白名单路径提交（无需先 git add）
   - 仅验证不提交（--check 模式）
   - 并发隔离提交（多 AI 会话共享 checkout）
-  - 排查门禁失败原因（看 FAIL 块）
+  - 排查门禁失败原因（看 FAIL 块 + 失败项 tail 的具体违规清单）
 status: active
 invariant_anchors:
   - scripts/commit-with-check.ts|commitWithTempIndex
@@ -91,6 +101,7 @@ node scripts/commit-with-check.ts -m "feat: xxx" --keep-index      # 提交后�
 - 临时索引从 HEAD 构建：空树起点会误删全部未白名单文件（`read-tree HEAD` 不可省）
 - 无 HEAD（空仓库首提交）时 `read-tree HEAD` 降级继续（不回归旧裸 commit 建 initial commit 行为）
 - 越界文件必须 exit 1（并发夹带/意外 stage 检出口）；插队仅 notice 不自动回退（共享 checkout 下 reset 会撤他人提交）
+- **失败详情保证可见**（2026-09-10）：门禁失败项必须打印具体违规清单，不被截断吞掉——`_lib/contract-tests.ts` 失败的契约测试保留足量尾部输出（勿回退成只剩几行壳），`commit-with-check` 对失败项逐行缩进展开 `tail`（field 曾赋值未渲染，致「预期 rc=0 实际 1」这种只剩个数字、看不到 R3/R5 文件清单）；红线/drift 类失败项的 `note` 内联、仍可见
 - 临时索引成功/失败两路径均清理（`.git` 无 `index.ymm.*` 残留）
 - `--files` 白名单路径内容取工作区，不依赖主 index 已暂存
 - **中断残留边界**：进程被 `kill -9` / 工具层强杀时 `finally` 无法执行——临时 index 恒残留；若 git 子进程已写 ref 则 HEAD 推进（commit 落地）、未写完则丢弃。复现：`node scripts/reproduce-commit-interrupt.ts`（双变体：A 未完成被中断 / B 已完成清理未跑，即实战场景）。启动时清扫遗留 `index.ymm.*`（按 pid 存活判定）为待落地对策

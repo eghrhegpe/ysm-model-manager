@@ -1376,6 +1376,7 @@ export const zhCN = {
   "preview.nameLabel": "名称",
   "preview.modelEmbeddedName": "内嵌名",
   "preview.modelComment": "规约说明",
+  "preview.modelLicense": "授权",
   "preview.authorLabel": "作者",
   "preview.versionLabel": "版本",
   "preview.vrmCommercial": "商用",

@@ -703,6 +703,8 @@ auto_fields:
     - vrmMenuItems
     - VrmMenuItemsOpts
     - VrmMetaInfo
+    - vrmMetaSummary
+    - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
     - vrmSemanticBoneMap

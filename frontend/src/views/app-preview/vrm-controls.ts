@@ -19,7 +19,7 @@ export interface VrmMaterialControlBridge {
 
 /** VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） */
 export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
-  return [
+  const nodes: PreviewMenuNode[] = [
     {
       id: "vrm-model-name",
       kind: "field",
@@ -35,6 +35,47 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       value: `${ctx.boneCount} 骨骼 ${ctx.materialCount} 材质`,
     },
   ];
+  // [VRM meta] 头部元信息（title/author/license/version，vrm-adapter 归一化的文本摘要）。
+  // 条件展示对齐 MMD PMX 规约：title ≠ 文件名时补内嵌名行（避免重复）；其余字段非空才补行。
+  const meta = ctx.meta;
+  if (!meta) return nodes;
+  if (meta.title && meta.title !== ctx.modelName) {
+    nodes.push({
+      id: "vrm-model-title",
+      kind: "field",
+      labelKey: "preview.modelEmbeddedName",
+      fallback: "内嵌名",
+      value: meta.title,
+    });
+  }
+  if (meta.author) {
+    nodes.push({
+      id: "vrm-model-author",
+      kind: "field",
+      labelKey: "preview.authorLabel",
+      fallback: "作者",
+      value: meta.author,
+    });
+  }
+  if (meta.license) {
+    nodes.push({
+      id: "vrm-model-license",
+      kind: "field",
+      labelKey: "preview.modelLicense",
+      fallback: "授权",
+      value: meta.license,
+    });
+  }
+  if (meta.version) {
+    nodes.push({
+      id: "vrm-model-version",
+      kind: "field",
+      labelKey: "preview.versionLabel",
+      fallback: "版本",
+      value: meta.version,
+    });
+  }
+  return nodes;
 }
 
 /** VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）：

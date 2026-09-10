@@ -156,7 +156,13 @@ vi.mock("three/addons/loaders/GLTFLoader.js", () => ({
   },
 }));
 
-import { buildVrmScene, readVrmMeta, type VrmPanelHooks, vrmMenuItems } from "./vrm-adapter.ts";
+import {
+  buildVrmScene,
+  readVrmMeta,
+  type VrmPanelHooks,
+  vrmMenuItems,
+  vrmMetaSummary,
+} from "./vrm-adapter.ts";
 
 /** 构造注入端口（含诊断日志 mock） */
 function makePort() {
@@ -1185,5 +1191,57 @@ describe("dispose 纹理统计（gpu-release diag）", () => {
       "ok",
       expect.stringContaining("tex=2"),
     );
+  });
+});
+
+describe("vrmMetaSummary（3D 面板 meta 摘要：v0/v1 归一化，纯函数零副作用）", () => {
+  it("VRM0：title/author/licenseName(+otherLicenseUrl)/version → 摘要", () => {
+    expect(
+      vrmMetaSummary({
+        metaVersion: "0",
+        title: "初音",
+        author: "作者A",
+        version: "0.1",
+        licenseName: "CC0",
+        otherLicenseUrl: "https://lic.example",
+      } as never),
+    ).toEqual({
+      title: "初音",
+      author: "作者A",
+      license: "CC0 · https://lic.example",
+      version: "0.1",
+    });
+  });
+
+  it("VRM1：name/authors[]/licenseUrl/version → 摘要（多作者顿号拼接）", () => {
+    expect(
+      vrmMetaSummary({
+        metaVersion: "1",
+        name: "Robot",
+        authors: ["作者A", "作者B"],
+        version: "1.2",
+        licenseUrl: "https://lic.example/v1",
+      } as never),
+    ).toEqual({
+      title: "Robot",
+      author: "作者A、作者B",
+      license: "https://lic.example/v1",
+      version: "1.2",
+    });
+  });
+
+  it("字段缺失 → 对应摘要字段 undefined（不产空串噪音）", () => {
+    expect(vrmMetaSummary({ metaVersion: "0" } as never)).toEqual({
+      title: undefined,
+      author: undefined,
+      license: undefined,
+      version: undefined,
+    });
+    expect(vrmMetaSummary({ metaVersion: "1", name: "", authors: [], licenseUrl: "" } as never)).toEqual({
+      title: undefined,
+      author: undefined,
+      license: undefined,
+      version: undefined,
+    });
   });
 });

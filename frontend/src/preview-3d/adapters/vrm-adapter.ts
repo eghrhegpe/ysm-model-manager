@@ -9,7 +9,7 @@ import {
   type VRMAnimation,
   VRMAnimationLoaderPlugin,
 } from "@pixiv/three-vrm-animation";
-import type { VRM0Meta } from "@pixiv/three-vrm-core";
+import type { VRM0Meta, VRM1Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
@@ -124,6 +124,41 @@ export interface VrmMetaInfo {
   stats?: SceneStats | undefined;
 }
 
+/** VRM meta 文本摘要（3D 模型信息面板展示用；仅文本字段，零 GPU/图片，纯函数归一化） */
+export interface VrmMetaSummary {
+  /** 模型名（VRM0 title / VRM1 name） */
+  title?: string | undefined;
+  /** 作者（VRM0 author / VRM1 authors 顿号拼接） */
+  author?: string | undefined;
+  /** 授权（VRM0 licenseName(+otherLicenseUrl) / VRM1 licenseUrl） */
+  license?: string | undefined;
+  version?: string | undefined;
+}
+
+/**
+ * 归一化 vrm.meta → 文本摘要（纯函数零副作用；readVrmMeta 的重 parse 归一化与此同源不重构）。
+ * 空字段/纯空白 → undefined（面板按「非空才补行」条件渲染，不产空串噪音）。
+ */
+export function vrmMetaSummary(meta: VRM0Meta | VRM1Meta): VrmMetaSummary {
+  if (meta.metaVersion === "0") {
+    const m = meta as VRM0Meta;
+    return {
+      title: m.title?.trim() || undefined,
+      author: m.author?.trim() || undefined,
+      license: m.licenseName
+        ? m.licenseName + (m.otherLicenseUrl ? ` · ${m.otherLicenseUrl}` : "")
+        : undefined,
+      version: m.version?.trim() || undefined,
+    };
+  }
+  return {
+    title: meta.name?.trim() || undefined,
+    author: meta.authors.length > 0 ? meta.authors.join("、") : undefined,
+    license: meta.licenseUrl?.trim() || undefined,
+    version: meta.version?.trim() || undefined,
+  };
+}
+
 /** 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null */
 export async function readVrmMeta(
   path: string,
@@ -205,6 +240,8 @@ export interface VrmModelInfoCtx {
   modelName: string;
   boneCount: number;
   materialCount: number;
+  /** VRM meta 文本摘要（vrm.meta 归一化；缺失/无法解析时可缺省 → 面板不补 meta 行） */
+  meta?: VrmMetaSummary | undefined;
 }
 
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
@@ -450,6 +487,7 @@ function mdVrStage4MenuPanels(
   vrmMaterials: THREE.Material[],
   motion: MdVrMotionState,
   perception: MdVrPerceptionState,
+  meta: VrmMetaSummary | undefined,
 ): PreviewMenuNode[] {
   const { bonePanelRef, boneTree } = boneAssy;
   const { motionClips, motionMixer } = motion;
@@ -464,6 +502,7 @@ function mdVrStage4MenuPanels(
     // 用它面板会错误显示「1 骨骼」——a400b244 review P2）
     boneCount: boneAssy.boneTree.byId.size,
     materialCount: vrmMaterials.length,
+    meta,
   };
   const menuItems = vrmMenuItems({
     panels,
@@ -645,6 +684,9 @@ export async function buildVrmScene(
   const boneAssy = mdVrStage2BonesHumanoid(vrm);
   const vrmMaterials = mdVrStage3Materials(vrm);
   const perception = mdVrBuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
+  // meta 文本摘要随 vrm 存活期归一化（纯数据零 GPU；stage5 dispose 后 vrm.meta 仍可读，
+  // 但趁 vrm 在手边一并收口，语义对齐「面板数据源一次构造」）
+  const meta = vrmMetaSummary(vrm.meta);
   const menuItems = mdVrStage4MenuPanels(
     path,
     panels,
@@ -653,6 +695,7 @@ export async function buildVrmScene(
     vrmMaterials,
     motion,
     perception,
+    meta,
   );
   return mdVrStage5BuildResult(
     ctx,

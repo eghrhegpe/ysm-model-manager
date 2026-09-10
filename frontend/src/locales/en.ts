@@ -1402,6 +1402,7 @@ export const en: Record<string, string> = {
   "preview.nameLabel": "Name",
   "preview.modelEmbeddedName": "Embedded name",
   "preview.modelComment": "License note",
+  "preview.modelLicense": "License",
   "preview.authorLabel": "Author",
   "preview.versionLabel": "Version",
   "preview.vrmCommercial": "Commercial",

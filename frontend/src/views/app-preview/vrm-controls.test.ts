@@ -21,6 +21,42 @@ describe("vrmModelInfoNodes（模型信息声明式节点）", () => {
     expect(nodes[0]).toMatchObject({ labelKey: "preview.nameLabel", value: "test" });
     expect(nodes[1].value).toBe("52 骨骼 3 材质");
   });
+
+  it("meta 缺失 → 保持基础 2 行 field", () => {
+    const nodes = vrmModelInfoNodes({ modelName: "test", boneCount: 52, materialCount: 3 });
+    expect(nodes.length).toBe(2);
+  });
+
+  it("meta 齐全：title≠文件名补内嵌名行 + 作者/授权/版本行", () => {
+    const nodes = vrmModelInfoNodes({
+      modelName: "test",
+      boneCount: 52,
+      materialCount: 3,
+      meta: { title: "内嵌名", author: "作者A", license: "CC0", version: "1.0" },
+    });
+    expect(nodes.map((n) => n.id)).toEqual([
+      "vrm-model-name",
+      "vrm-model-overview",
+      "vrm-model-title",
+      "vrm-model-author",
+      "vrm-model-license",
+      "vrm-model-version",
+    ]);
+    expect(nodes[2]).toMatchObject({ id: "vrm-model-title", labelKey: "preview.modelEmbeddedName", value: "内嵌名" });
+    expect(nodes[3]).toMatchObject({ id: "vrm-model-author", labelKey: "preview.authorLabel", value: "作者A" });
+    expect(nodes[4]).toMatchObject({ id: "vrm-model-license", labelKey: "preview.modelLicense", value: "CC0" });
+    expect(nodes[5]).toMatchObject({ id: "vrm-model-version", labelKey: "preview.versionLabel", value: "1.0" });
+  });
+
+  it("title 与文件名一致 → 不补内嵌名行（避免重复）；meta 字段空 → 对应行不产", () => {
+    const nodes = vrmModelInfoNodes({
+      modelName: "test",
+      boneCount: 52,
+      materialCount: 3,
+      meta: { title: "test", author: "", license: "", version: "" },
+    });
+    expect(nodes.map((n) => n.id)).toEqual(["vrm-model-name", "vrm-model-overview"]);
+  });
 });
 
 describe("vrmShotNodes（current-only 截图按钮）", () => {

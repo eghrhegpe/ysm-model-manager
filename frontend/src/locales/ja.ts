@@ -1415,6 +1415,7 @@ export const ja: Record<string, string> = {
   "preview.nameLabel": "名前",
   "preview.modelEmbeddedName": "内蔵名",
   "preview.modelComment": "規約説明",
+  "preview.modelLicense": "ライセンス",
   "preview.authorLabel": "作者",
   "preview.versionLabel": "バージョン",
   "preview.vrmCommercial": "商用",

@@ -350,6 +350,11 @@ async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
     let currentW = w;
     let errorRetries = 0; // 瞬态 error 重试预算（每次 1 次，ADR-218 既有契约；chunk 内独立）
     let silenceKills = 0; // 静默杀计数（每 chunk 至多 CHUNK_SILENCE_KILLS 次，ADR-219 D4）
+    // currentW 是否已被 terminateWorker 终结（silence/deadline/error 三态均在
+    // statsOneChunk 内终结当前 worker）——终结后 postMessage 静默丢弃，不能把
+    // 死 worker 当 lastWorker 交给下个 chunk（code_review 38e975b0e P2：
+    // 否则每后续 chunk 空转整个 30s 静默窗口 + 浪费一次静默杀预算）
+    let currentWDied = false;
     // 逐模型累积（同 chunk 跨重试共享：重试只发「剩余未回包」模型，已回包不重放，D1）
     const accounted = new Map<string, WebModelStatsWithPath>();
     let remaining = slice;
@@ -373,6 +378,8 @@ async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
         chunkBroken = true; // 主动取消 → 整批降级（保留既有语义）
         break;
       }
+      // 走到这里 outcome ∈ {silence, deadline, error}——当前 worker 已被终结
+      currentWDied = true;
       // 重试派发：remaining = 尚未回包模型
       remaining = slice.filter((p) => !accounted.has(p));
       if (!remaining.length) break; // 防御：全部已回包（仅结束标记缺失）→ 收尾补位
@@ -402,12 +409,23 @@ async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
         break;
       }
       currentW = retryW;
+      currentWDied = false;
     }
 
     if (chunkBroken || failed) {
       failed = true;
       results[ci] = null;
       return { broken: true, lastWorker: currentW };
+    }
+    // 细粒度耗尽/防御收尾 break 时 currentW 已死：先尝试补一个活 worker 接续
+    // 队列（避免下个 chunk 派发到死 worker 空转 30s）；池满拿不到时维持原样，
+    // 由下个 chunk 的静默看门狗兜底（既有语义，不新增失败路径）
+    if (currentWDied) {
+      const live = spawnReplacementWorker();
+      if (live) {
+        currentW = live;
+        currentWDied = false;
+      }
     }
     // 正常收尾/细粒度耗尽：逐模型结果 = 已回包 ∪ 剩余全标 EMPTY_ERROR（hasError——
     // 统计失败在数值搜索中被排除，与 Go BoneCount==0 口径一致，D3）

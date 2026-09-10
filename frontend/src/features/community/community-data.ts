@@ -1,6 +1,5 @@
 // ===== 创意工坊纯数据层 =====
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
@@ -9,6 +8,7 @@ import type {
   WorkshopCreator,
   WorkshopSite,
 } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { communityGetApp } from "./community-deps.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {
@@ -93,7 +93,7 @@ export function clearAllCommunityCache(): void {
  * （与文件内既有 P2/P4 防御风格一致，避免单点 unbridged binding 拖垮整链）。
  */
 export async function loadCommunityData(): Promise<CommunityData> {
-  const App = await getApp();
+  const App = await communityGetApp();
   let sites: WorkshopSite[] = [];
   let creators: WorkshopCreator[] = [];
   let authors: unknown[] = [];
@@ -140,7 +140,7 @@ export async function loadCommunityData(): Promise<CommunityData> {
  * 失败降级空数组（与快路径 .catch 防御风格一致）。
  */
 export async function loadLocalAuthors(): Promise<LocalAuthorLike[]> {
-  const App = await getApp();
+  const App = await communityGetApp();
   // 绑定签名允许 null（无数据）——与快路径 `results[i] || []` 同口径归一
   const authors = await withCached(
     SCAN_AUTHORS_KEY,
@@ -196,7 +196,7 @@ async function tryAutoMergeCommunity(): Promise<void> {
   );
   if (!community.length) return;
   try {
-    const { MergeCommunityCreatorsFromJSON } = await getApp();
+    const { MergeCommunityCreatorsFromJSON } = await communityGetApp();
     // ADR-172：社区增量合并下沉 Go——合并/去重派生（Load 磁盘最新全量 → desc/role
     // 空补 + type 分号段并入 → 备份 → 单次 SaveWorkshopCreators 原子写）全部在 Go 侧，
     // 前端只传社区拉取结果、不重算。替代原 TS 写回链（mergeCommunityCreators +

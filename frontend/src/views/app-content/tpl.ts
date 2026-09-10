@@ -167,13 +167,6 @@ export function diagnosticsHTML(): string {
 <div id="diag-load-trace"></div>
 </div>
 </div>
-<div class="diag-panel" id="diag-oldest" style="display:none">
-<div class="diag-panel-header">
-<span>👴 ${t("repo.tab.oldest")}</span>
-<button class="btn-base" id="diag-oldest-refresh">🔄</button>
-</div>
-<div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.refreshHint")}</div></div>
-</div>
 <div class="diag-panel" id="diag-health" style="display:none">
 <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
 <button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">🩺 ${t("diagnostics.healthRun")}</button>

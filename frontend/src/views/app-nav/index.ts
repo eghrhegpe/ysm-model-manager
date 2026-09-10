@@ -9,6 +9,7 @@ import { getLastModelPath } from "@/core/model-path-store.ts";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { setRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -33,15 +34,21 @@ export const VIEW_TESTIDS: readonly string[] = [
   "nav-viewer-fab",
 ];
 
-function anBindNavItems(shadowRoot: ShadowRoot, focusRepoSearch: () => void): void {
+function anBindNavItems(shadowRoot: ShadowRoot): void {
   const navItems = Array.from(shadowRoot.querySelectorAll<HTMLElement>(".nav-item"));
   navItems.forEach((el) => {
     const activate = (): void => {
       const page = el.dataset.page as PageName;
       safeSet("nav_page", page);
       bus.emit("nav:changed", { page });
+      // ADR-223：repository 激活 → 置 pending flag + 发 repo:focus-search
+      // （app-tree 已挂直达；未挂则挂载时 connectedCallback 消费）；非 repository → 清 flag 防残。
+      // 替原 queueMicrotask(_focusRepoSearch) 的 DOM 穿透 + 25ms 轮询。
       if (page === "repository") {
-        queueMicrotask(() => focusRepoSearch());
+        setRepoSearchFocusPending(true);
+        bus.emit("repo:focus-search");
+      } else {
+        setRepoSearchFocusPending(false);
       }
     };
     el.onclick = activate;
@@ -155,8 +162,6 @@ class AppNav extends WebComponentBase {
   _unsub: (() => void) | undefined;
   _unsubLang: (() => void) | undefined;
   _unsubRtype: (() => void) | undefined;
-  /** _focusRepoSearch 的 setTimeout 句柄，disconnectedCallback 必须 clear */
-  _focusTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -212,8 +217,6 @@ class AppNav extends WebComponentBase {
     this._unsub?.();
     this._unsubLang?.();
     this._unsubRtype?.();
-    clearTimeout(this._focusTimer ?? undefined);
-    this._focusTimer = null;
   }
 
   /** logo 初始文案：当前资源类型短标签 + 「管理器」后缀（如「YSM 管理器」「MMD 管理器」） */
@@ -281,7 +284,7 @@ class AppNav extends WebComponentBase {
     `;
 
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    anBindNavItems(this.shadowRoot!, () => this._focusRepoSearch());
+    anBindNavItems(this.shadowRoot!);
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     anBindDualSelects(this.shadowRoot!);
 
@@ -329,29 +332,6 @@ class AppNav extends WebComponentBase {
     }
     const { openModel3DFullscreen } = await import("@/views/app-preview/preview-library.ts");
     await openModel3DFullscreen(path);
-  }
-
-  /**
-   * 切到仓库页后将焦点传至搜索框。
-   * 因 app-content 用 innerHTML 整体替换，app-tree 挂载是异步的，
-   * 这里用渐进重试（最多 500ms 超时，避免永久轮询）。
-   */
-  private _focusRepoSearch(): void {
-    let tries = 0;
-    const tryFocus = (): void => {
-      const appContent = document.querySelector("app-content");
-      const appTree = appContent?.shadowRoot?.querySelector("app-tree");
-      const srch = appTree?.shadowRoot?.getElementById("srch") as HTMLInputElement | null;
-      if (srch) {
-        srch.focus();
-        srch.select();
-        return;
-      }
-      if (++tries < 20) {
-        this._focusTimer = setTimeout(tryFocus, 25);
-      }
-    };
-    tryFocus();
   }
 
   /**

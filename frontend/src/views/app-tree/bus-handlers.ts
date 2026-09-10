@@ -10,6 +10,7 @@ import { modalPrompt } from "@/features/dialogs/modal-prompt.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppTree } from "./index.ts";
@@ -53,6 +54,13 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   cleanups.push(
     bus.on("tree:reload", () => {
       void atBeHandleTreeReload(vm);
+    }),
+  );
+  // ADR-223：nav 点 repository 项 → 发 repo:focus-search；树已挂（常驻面板）时直达 focus
+  cleanups.push(
+    bus.on("repo:focus-search", () => {
+      takeRepoSearchFocusPending(); // 清 nav 置的 flag（已挂场景，防泄漏到下次挂载）
+      vm.focusSearch();
     }),
   );
 
@@ -262,7 +270,7 @@ async function reload(vm: AppTree): Promise<void> {
   try {
     const App = await getApp();
     if (App.ClearScanCache) await App.ClearScanCache();
-    import("@/views/app-content/community-data.ts")
+    import("@/features/community/community-data.ts")
       .then((m) => m.clearAllCommunityCache())
       .catch((e) => logWarn("app-tree", "clearAllCommunityCache:", e));
   } catch (e) {

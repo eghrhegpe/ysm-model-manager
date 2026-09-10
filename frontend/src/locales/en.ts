@@ -41,6 +41,7 @@ export const en: Record<string, string> = {
   "common.clear": "Clear",
   "common.save": "Save",
   "common.selectAll": "Select All",
+  "common.viewDetail": "Click to view details: {name}",
 
   // ── Dialog Common ──
   "dialog.regexInvalid": "Invalid regex, original name kept",
@@ -359,7 +360,6 @@ export const en: Record<string, string> = {
   "oldest.configTypeDir": "Please configure the directory for this resource type first",
   "oldest.repoEmpty": "This type of repository is empty",
   "oldest.heatmapTip": "{month}: {count} files",
-  "oldest.clickDetail": "Click to view details: {name}",
   "oldest.daysAgo": "{n} days ago",
   "oldest.noPicks": "No recommendations",
   "dedup.sha256Hint": "Group by SHA256 hash; keep one per group and move the rest to Recycle Bin",

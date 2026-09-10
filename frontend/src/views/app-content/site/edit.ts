@@ -2,12 +2,12 @@
 
 import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
+import * as m from "@/features/community/community-data.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
-import * as m from "@/views/app-content/community-data.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 

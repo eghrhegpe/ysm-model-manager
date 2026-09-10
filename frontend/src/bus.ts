@@ -97,6 +97,8 @@ export interface BusEvents {
   "repo:subdir-changed": string; // MMD 子目录选择（ADR-095 后续）：sync 页按 subdir 过滤
   "repo:search-creator": string;
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
+  "repo:focus-search": void; // 仓库搜索框焦点请求（ADR-223：nav→tree 跨视图替 DOM 穿透轮询）
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "sync:toggle:status": void;
   "sync:download:missing": { instanceName?: string; rtype: string; token?: string };
   "sync:download:done": {
@@ -140,6 +142,7 @@ const VOID_EVENTS = [
   "sync:toggle:status",
   "batch:enable-all",
   "batch:disable-all",
+  "repo:focus-search",
 ] as const satisfies readonly VoidEventName[];
 
 const isVoidEvent = (event: BusEventName): boolean =>

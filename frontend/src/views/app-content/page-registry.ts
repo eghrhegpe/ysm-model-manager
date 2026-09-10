@@ -2,6 +2,7 @@
 // 新增页面只需在此处添加一行，无需触碰 _render()。
 // 每项定义：html（模板函数）+ init（页面初始化函数）。
 
+import type { PageName } from "@/bus";
 import type { AppContentHost } from "./host.ts";
 import { initGithubPage } from "./init-github.ts";
 import {
@@ -21,12 +22,13 @@ export interface PageDefinition {
   init: (host: AppContentHost) => void | Promise<void>;
 }
 
-export const PAGE_REGISTRY: Record<string, PageDefinition> = {
+// 键类型收紧为 PageName（ADR-223）：编译期堵「死页键」，运行时兜底仍由
+// index.ts 的 `?? PAGE_REGISTRY.instances` 守非法 page 写入（methods.test 验证）。
+export const PAGE_REGISTRY: Record<PageName, PageDefinition> = {
   repository: { html: repositoryHTML, init: initRepositoryPage },
   instances: { html: instancesHTML, init: initInstancesPage },
   workshop: { html: workshopHTML, init: initWorkshopPage },
   github: { html: githubHTML, init: initGithubPage },
   diagnostics: { html: diagnosticsHTML, init: initDiagnosticsPage },
-  oldest: { html: diagnosticsHTML, init: initDiagnosticsPage }, // 复用诊断页
   settings: { html: settingsHTML, init: initSettingsPage },
 };

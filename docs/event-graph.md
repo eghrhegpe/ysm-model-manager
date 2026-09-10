@@ -3,11 +3,9 @@
 > **自动生成** — 由 `scripts/event-graph.ts` 生成。
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 
-## ⚠️ 异常摘要
+## ✅ 无异常
 
-### 鬼订阅（有 on/once 但从未被 emit）
-
-- `repo:focus-search` — on×1
+所有调用均在 BusEvents 契约内，无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参。
 
 ## 事件总览
 
@@ -30,7 +28,7 @@
 | `model:select` | 8 | 1 | 0 | 0 | ✅ |
 | `nav:changed` | 7 | 2 | 0 | 0 | ✅ |
 | `package:selected` | 2 | 1 | 0 | 0 | ✅ |
-| `repo:focus-search` | 0 | 1 | 0 | 0 | 👻 鬼订阅 |
+| `repo:focus-search` | 1 | 1 | 0 | 0 | ✅ |
 | `repo:rtype-changed` | 3 | 6 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
@@ -205,7 +203,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 89 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 198 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 203 |
 
 ### `menu:show`
 
@@ -246,8 +244,8 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 199 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 196 |
-| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 42 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 208 |
+| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
@@ -255,7 +253,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 68 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 177 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 182 |
 
 ### `package:selected`
 
@@ -272,6 +270,11 @@
 
 ### `repo:focus-search`
 
+**发射方：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 49 |
+
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
@@ -284,7 +287,7 @@
 |------|------|----|
 | stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
 | stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 307 |
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 112 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 119 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -292,7 +295,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 79 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 200 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 205 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 259 |
 
@@ -314,7 +317,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 113 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 120 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -502,7 +505,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 170 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
-| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 134 |
+| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 339 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 423 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |

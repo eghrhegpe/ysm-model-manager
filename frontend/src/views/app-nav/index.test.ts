@@ -8,6 +8,7 @@ import { getByTestId, getAllByTestId } from "@/test-utils/query-by-testid.ts";
 import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
+import { setRepoSearchFocusPending, takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 
 const { canMock } = vi.hoisted(() => ({
   canMock: vi.fn().mockReturnValue(true), // 默认桌面：ListVersionInstances 可用
@@ -51,6 +52,7 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     localStorage.removeItem("nav_page");
     localStorage.removeItem("nav_collapsed");
     canMock.mockReturnValue(true); // 默认桌面：ListVersionInstances 可用
+    setRepoSearchFocusPending(false); // 隔离 focus-pending 单例跨测试副作用（ADR-223）
   });
 
   afterEach(() => {
@@ -373,25 +375,25 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     unmountElement(el);
   });
 
-  it("切到仓库页 → 渐进重试聚焦搜索框（首试 miss，25ms 后命中 #srch）", async () => {
+  it("切到仓库页 → 发 repo:focus-search + 置 pending；非仓库页清 flag（ADR-223）", async () => {
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
-    const srch = { focus: vi.fn(), select: vi.fn() };
-    const fakeAppContent = {
-      shadowRoot: {
-        querySelector: () => ({ shadowRoot: { getElementById: () => srch } }),
-      },
-    };
-    const qSpy = vi
-      .spyOn(document, "querySelector")
-      .mockReturnValueOnce(null)
-      .mockReturnValue(fakeAppContent as unknown as Element);
-    (getAllByTestId(root, "nav-item")[0] as HTMLElement).click(); // repository → queueMicrotask(focusRepoSearch)
-    await sleep(60);
-    expect(qSpy.mock.calls.some((c) => c[0] === "app-content")).toBe(true);
-    expect(srch.focus).toHaveBeenCalledTimes(1);
-    expect(srch.select).toHaveBeenCalledTimes(1);
-    qSpy.mockRestore();
+    const seen = vi.fn();
+    const unsub = bus.on("repo:focus-search", seen);
+    // 残留 flag 清零（隔离前置测试副作用）
+    setRepoSearchFocusPending(false);
+    expect(takeRepoSearchFocusPending()).toBe(false);
+    // repository 项点击 → 发事件 + 置 true
+    (getAllByTestId(root, "nav-item")[0] as HTMLElement).click();
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(takeRepoSearchFocusPending()).toBe(true);
+    // 非 repository 项点击 → 清 flag
+    const settingsItem = getAllByTestId(root, "nav-item").find(
+      (n) => (n as HTMLElement).dataset.page === "settings",
+    ) as HTMLElement;
+    settingsItem.click();
+    expect(takeRepoSearchFocusPending()).toBe(false);
+    unsub();
     unmountElement(el);
   });
 

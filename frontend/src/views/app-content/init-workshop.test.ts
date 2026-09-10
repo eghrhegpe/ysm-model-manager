@@ -46,7 +46,7 @@ vi.mock("@/features/community/show-repo-models.ts", () => ({ showRepoModels }));
 vi.mock("./workshop-avatar.ts", () => ({ extractAvatars }));
 vi.mock("./workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
 vi.mock("./workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
-vi.mock("./community-data.ts", () => ({ fillSearch }));
+vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import type { AppContentHost } from "./host.ts";

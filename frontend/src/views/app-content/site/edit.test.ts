@@ -13,7 +13,7 @@ vi.mock("@/backend/app.ts", () => ({
     LoadResourceTypes: vi.fn().mockResolvedValue("{}"),
   }),
 }));
-vi.mock("@/views/app-content/community-data.ts", () => ({
+vi.mock("@/features/community/community-data.ts", () => ({
   fetchCommunityCreators: vi.fn(),
   fetchCommunitySites: vi.fn(),
   mergeCommunityCreators: vi.fn(),
@@ -27,7 +27,7 @@ import type { LocalCreatorLike } from "./site-view.ts";
 import type { WorkshopSite, WorkshopPresetSearch } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { fireDrag } from "@/test-utils/events.ts";
 import { getApp } from "@/backend/app.ts";
-import * as communityData from "@/views/app-content/community-data.ts";
+import * as communityData from "@/features/community/community-data.ts";
 
 /** mock 后的 getApp（vi.mock 工厂产物），便于逐测试覆盖返回的绑定集 */
 const getAppMock = getApp as unknown as Mock & (() => Promise<Record<string, unknown>>);

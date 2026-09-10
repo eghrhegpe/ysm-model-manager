@@ -30,8 +30,8 @@ import { swallowError } from "@/utils/base/primitives/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
+import { clearAllCommunityCache } from "@/features/community/community-data.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { clearAllCommunityCache } from "./community-data.ts";
 import { initGithubPage } from "./init-github.ts";
 import {
   initDiagnosticsPage,

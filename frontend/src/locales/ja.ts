@@ -42,6 +42,7 @@ export const ja: Record<string, string> = {
   "common.clear": "クリア",
   "common.save": "保存",
   "common.selectAll": "すべて選択",
+  "common.viewDetail": "クリックで詳細を表示: {name}",
 
   // ── Dialog Common ──
   "dialog.regexInvalid": "正規表現が無効です。元の名前を保持しました",
@@ -361,7 +362,6 @@ export const ja: Record<string, string> = {
   "oldest.configTypeDir": "このリソース種別のディレクトリを先に設定してください",
   "oldest.repoEmpty": "この種別のリポジトリは空です",
   "oldest.heatmapTip": "{month}: {count} ファイル",
-  "oldest.clickDetail": "クリックで詳細を表示: {name}",
   "oldest.daysAgo": "{n} 日前",
   "oldest.noPicks": "おすすめはありません",
   "dedup.sha256Hint": "SHA256 ハッシュでグループ化し、各グループから1つを残して残りをごみ箱へ移動",

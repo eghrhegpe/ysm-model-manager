@@ -75,7 +75,7 @@ vi.mock("@/features/community/data.ts", () => ({ tryFetchModels: vi.fn() }));
 vi.mock("./settings/init.ts", () => ({
   initSettings: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("./community-data.ts", () => ({
+vi.mock("@/features/community/community-data.ts", () => ({
   loadCommunityData: vi.fn().mockResolvedValue({ sites: [], creators: [], authors: [] }),
   fillSearch: vi.fn(),
   clearAllCommunityCache: vi.fn(),
@@ -89,7 +89,7 @@ import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
 import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 // 断言跟随实现的真实消费路径（init-pages 直接 import dedup.ts；init.ts 仅兼容壳）
 import { PAGE_REGISTRY } from "./page-registry.ts";
-import { loadCommunityData } from "./community-data.ts";
+import { loadCommunityData } from "@/features/community/community-data.ts";
 import { tryFetchModels } from "@/features/community/data.ts";
 import { renderSiteView } from "@/views/app-content/site/site-view.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")

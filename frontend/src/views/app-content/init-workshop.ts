@@ -8,6 +8,7 @@
 
 import { Events } from "@/backend/runtime.ts";
 import { bus } from "@/bus";
+import { fillSearch } from "@/features/community/community-data.ts";
 import type { WorkshopModel } from "@/features/community/render.ts";
 import { showRepoModels } from "@/features/community/show-repo-models.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
@@ -21,7 +22,6 @@ import {
   saveBrowseMode,
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { fillSearch } from "./community-data.ts";
 import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./workshop-avatar.ts";
 import { bindSiteEvents, openSite } from "./workshop-site-opener.ts";

@@ -31,7 +31,7 @@ export function renderRecycleListHtml(entries: RecycleBinEntry[]): string {
       const size = Number.isFinite(e.Size) ? formatBytes(e.Size as number) : "?";
       return `<div class="recy-item" data-testid="recy-item" style="animation-delay:${stagger(i, 25, 400)}ms;display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
 <div style="display:flex;align-items:center;gap:6px">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("oldest.clickDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("common.viewDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
 <button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">↩️ ${t("recycle.restore")}</button>
 <button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--paid);background:transparent;color:var(--paid);cursor:pointer;font-size:var(--fs-xs)">🗑️ ${t("recycle.delete")}</button>

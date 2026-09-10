@@ -89,7 +89,7 @@ function renderOldestCardsHtml(sorted4: ModelEntry[]): string {
           '<div class="model-card-sm" style="width:calc(50% - 3px);box-sizing:border-box" data-path="' +
           esc(e.Path || e.Name || "") +
           '" title="' +
-          t("oldest.clickDetail", { name: esc(e.Name || "") }) +
+          t("common.viewDetail", { name: esc(e.Name || "") }) +
           '">' +
           '<div class="oldest-card-name" title="' +
           esc(e.Name || "") +
@@ -133,7 +133,7 @@ function renderDailyPicksHtml(entries: ModelEntry[]): string {
       '<div class="pick-card" data-path="' +
         esc(p.Path || p.Name || "") +
         '" title="' +
-        t("oldest.clickDetail", { name: esc(p.Name || "") }) +
+        t("common.viewDetail", { name: esc(p.Name || "") }) +
         '">' +
         '<div class="name" title="' +
         esc(p.Name || "") +

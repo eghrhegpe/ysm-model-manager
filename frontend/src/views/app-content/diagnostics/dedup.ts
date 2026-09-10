@@ -150,7 +150,7 @@ function renderGroupFilesHtml(
     html += `<label class="diag-dedup-file${isDefault ? " diag-dedup-file-default" : ""}">
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} class="diag-dedup-radio">
 <span class="diag-dedup-file-name">
-<span class="diag-dedup-file-name-text" title="${t("oldest.clickDetail", { name: esc(e.path) })}" data-path="${esc(e.path)}"><span class="diag-dedup-file-ic">${fileIcon(e.name)}</span>${renderDisplayName(e.name)}</span>
+<span class="diag-dedup-file-name-text" title="${t("common.viewDetail", { name: esc(e.path) })}" data-path="${esc(e.path)}"><span class="diag-dedup-file-ic">${fileIcon(e.name)}</span>${renderDisplayName(e.name)}</span>
 <span class="diag-dedup-file-dir">📁 ${esc(dir)}</span>
 </span>
 <span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>

@@ -5,6 +5,7 @@ import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { treeCSS } from "./app-tree-styles.ts";
@@ -286,6 +287,8 @@ export class AppTree extends WebComponentBase {
       this._unsubs = [];
       bindToolbarEvents(this._root, this);
       this._unsubs.push(...bindBusEvents(this));
+      // ADR-223：消费 nav 在树未挂时积压的 repo:focus-search 请求
+      if (takeRepoSearchFocusPending()) this.focusSearch();
 
       // 事件委托绑定（只一次，虚拟滚动换 innerHTML 仍有效）
       const treeEl = this._root.getElementById("tree");
@@ -500,14 +503,19 @@ export class AppTree extends WebComponentBase {
     this._onKeyArrowNav(e, target);
   }
 
+  /** 聚焦仓库搜索框（ADR-223：nav repo:focus-search + Ctrl+F 共用入口） */
+  focusSearch(): void {
+    const srch = this._root.getElementById("srch") as HTMLInputElement | null;
+    if (srch) {
+      srch.focus();
+      srch.select();
+    }
+  }
+
   private _onKeyFind(e: KeyboardEvent): boolean {
     if ((e.ctrlKey || e.metaKey) && e.key === "f") {
       e.preventDefault();
-      const srch = this._root.getElementById("srch") as HTMLInputElement | null;
-      if (srch) {
-        srch.focus();
-        srch.select();
-      }
+      this.focusSearch();
       return true;
     }
     return false;

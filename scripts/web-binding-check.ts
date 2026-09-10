@@ -41,7 +41,10 @@ function scanGoBindings(): Set<string> {
   const set = new Set<string>();
   for (const f of listGoFiles()) {
     const s = fs.readFileSync(path.join(GO_DIR, f), "utf-8");
-    for (const m of s.matchAll(/^func \(a \*App\) ([A-Z]\w+)\(/gm)) {
+    // 接收者宽容匹配（对齐 binding-check.ts P2-2 修复）：接收者名与指针/值接收
+    // 在真实 Go 代码中有变体（(a *App) / (app *App) / (a App)），硬编码 a *App
+    // 会把合法变体静默漏出 go 集合 → 误报孤儿键假阻断 CI
+    for (const m of s.matchAll(/^func \(\w+ \*?App\) ([A-Z]\w+)\(/gm)) {
       if (m[1]) set.add(m[1]);
     }
   }
@@ -59,7 +62,24 @@ function scanWebBindings(): Set<string> {
     const s = fs.readFileSync(fp, "utf-8");
     const i = s.indexOf("Bindings = {");
     if (i < 0) continue;
-    const seg = s.slice(i);
+    // 定界到 bindings 字面量的收口花括号（花括号深度扫描）再匹配——
+    // slice-to-EOF 会把文件后部 interface/对象成员（如 runtime.ts 的 On:/
+    // Emit: 接口成员）当顶层键吸入 web 集合 → 幻影孤儿键假阻断 CI
+    let depth = 0;
+    let end = -1;
+    for (let j = i + "Bindings = {".length - 1; j < s.length; j++) {
+      const ch = s[j];
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          end = j;
+          break;
+        }
+      }
+    }
+    if (end < 0) continue;
+    const seg = s.slice(i, end + 1);
     for (const m of seg.matchAll(/^\s{2}([A-Z]\w*):/gm)) {
       if (m[1]) set.add(m[1]);
     }

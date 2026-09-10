@@ -38,11 +38,12 @@
 
 效果：backend→preview-3d 运行期边消除，环 A 即破；`BedrockGeometry` 等类型消费方（~30 文件）不受影响。
 
-### 2.2 环 B（待批，本次未做）
+### 2.2 环 B（后批已落地，见 f94625e4d）
 
-`workers/stats.worker.ts` 需要的 `idbGet` / `parseWebPath` 是 worker 内读文件的必需能力，断环需改造
-worker 文件读取架构（下沉纯函数或改为 main-thread 经 postMessage 提供），风险高，**本轮不擅动**，
-留作后续 ADR 议题。
+原计划暂缓的环 B 随 isWebPlatform 上移中性层一并收口：`workers/stats.worker.ts` 的
+`idbGet` / `parseWebPath` 改从 `utils/storage/idb.ts` / `utils/base/web-path.ts`（中性层）
+取用，backend⇄workers 运行期环已破；`workers/coi-sw.ts` → `backend/platform.ts`
+（isWebPlatform，中性叶子）为唯一保留边，不构成环。
 
 ### 2.3 Tier 判定收敛（已落地，见 P1-3 实施）
 

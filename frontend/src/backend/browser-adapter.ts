@@ -49,12 +49,12 @@ import { webStoreBindings } from "./web-store.ts";
 
 // 注册表驱动装配：由五个职责模块自注册的 binding 片段合并而成。
 // P1-1 加固：键名对齐 Go 单一事实源 AppBindings（typeof Wails 生成绑定模块）。
-// 每个 web 实现的方法名必须命中 AppBindings 的导出函数，否则编译失败——
-// 拦截拼写错 / Go 侧删除 binding 后 web 残留孤儿名 / 实现与 Go 脱节。
-// 值类型放宽到 WebBinding（返回 Promise<unknown>）：Go 侧返回 $CancellablePromise，
-// 在 web 构建无对应 runtime，故不引入以免污染 web 包；参数/返回结构漂移由
-// scripts/web-binding-check.ts 深查。网页专属扩展键（GetFsaAuthState/SelectLocalRepo）
-// 因 satisfies Partial 默认允许额外属性，不报错。
+// 编译期保证（satisfies Partial<GoBindingShape>）：web 实现的值必须是 WebBinding
+// 形态（方法与 AppBindings 键名冲突时类型不兼容会报错）；但 Partial 允许额外
+// 属性——Go 侧删除 binding 后 web 残留孤儿名**不会**在编译期报错，孤儿检测
+// 只由 scripts/web-binding-check.ts 的键名集合比对承担（该脚本只对齐键名
+// 覆盖率/孤儿，不做参数与返回结构漂移检测——结构漂移防线 = Go 侧调用时
+// 运行期暴露，code_review 81ab1132b P3 更正原注释的虚假承诺）。
 type WebBinding = (...args: never[]) => Promise<unknown>;
 type GoBindingShape = {
   [K in keyof AppBindings as AppBindings[K] extends (...a: never[]) => unknown

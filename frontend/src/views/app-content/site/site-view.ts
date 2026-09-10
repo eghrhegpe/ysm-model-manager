@@ -1,54 +1,15 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
 
 import { isViewerMode } from "@/backend/platform.ts";
-import type {
-  WorkshopCreator,
-  WorkshopSite,
-} from "@/bindings/ysm-model-manager/go/types/models.ts";
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { bindDragEvents } from "./drag.ts";
 import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
-import type { CleanupFn, SiteViewState } from "./types.ts";
-import type { BrowseMode, BrowseModeRef } from "./workshop-browse-mode.ts";
+import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
 
-/** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
-export type RepoAuthorLike = string | { Name?: string; Count?: number };
-
-/** 竚点视图渲染上下文（index.ts _initWorkshop 传入） */
-export interface RenderSiteViewCtx {
-  esc: (s: unknown) => string;
-  searchResults: HTMLElement;
-  creatorView: HTMLElement;
-  allSites: WorkshopSite[];
-  allCreators: LocalCreatorLike[];
-  repoAuthors: RepoAuthorLike[];
-  wsEditModeRef: { v: boolean };
-  showRepoModels: (repo: string, models: unknown[], source: string) => Promise<void>;
-  fillSearch: (tpl: string, q: string) => string;
-  repoModelCache: Map<string, { models: unknown[]; source: string }>;
-  openUrl: (url: string) => void;
-  backToSite: () => void;
-  avatarCache: Record<string, string>;
-  /** 创作者频道浏览模式（external/embed/window，ref 单源，localStorage 持久化） */
-  browseMode: BrowseModeRef;
-  /** 更新浏览模式（写 localStorage + 更新共享变量），供事件块即时切换 */
-  setBrowseMode: (mode: BrowseMode) => void;
-  /** 分类标签过滤（localStorage 持久化），""=全部 */
-  activeTag: string;
-  /** 创作者搜索关键词（localStorage 持久化） */
-  searchKw: string;
-  /** 重渲染入口：由调用方（init-workshop）提供，先跑旧 cleanup 再存新 cleanup */
-  reRender: () => void;
-}
-
-/** 本地创作者（绑定 + 运行时附加字段） */
-export interface LocalCreatorLike extends WorkshopCreator {
-  _fromLocal?: boolean;
-  _fromCommunity?: boolean;
-  [key: string]: unknown;
-}
+export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
 /**
  * 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。

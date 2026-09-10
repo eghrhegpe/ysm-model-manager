@@ -4,8 +4,7 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { LocalCreatorLike } from "./site-view.ts";
-import type { CleanupFn, SiteViewState } from "./types.ts";
+import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 
 /**
  * 合并结果归一化：Go/Wails 绑定按 (added, updated) 双值返回时解构元组，

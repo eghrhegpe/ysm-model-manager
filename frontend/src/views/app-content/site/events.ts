@@ -6,8 +6,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { type CrCardCtx, createCrCard } from "./render.ts";
-import type { LocalCreatorLike } from "./site-view.ts";
-import type { CleanupFn, SiteViewState } from "./types.ts";
+import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,

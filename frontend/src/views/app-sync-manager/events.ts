@@ -6,7 +6,7 @@
 // 依赖 DAG：index → events → network（单行按钮触发 push/pull）
 // events ←→ network 无循环：events 通过回调调用 network
 
-import type { SyncManagerSelf } from "./index.ts";
+import type { SyncManagerSelf } from "./self-type.ts";
 
 export type EventSelf = SyncManagerSelf;
 

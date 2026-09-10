@@ -7,7 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { esc } from "@/utils/html/html.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
-import type { SyncManagerSelf } from "./index.ts";
+import type { SyncManagerSelf } from "./self-type.ts";
 import { applyFilter, tabStatus } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
 import { containerHTML, emptyHintHTML, itemHTML, statusTabHTML, syncDirRowHTML } from "./tpl.ts";

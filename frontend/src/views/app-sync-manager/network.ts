@@ -10,7 +10,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
-import type { SyncManagerSelf } from "./index.ts";
+import type { SyncManagerSelf } from "./self-type.ts";
 
 export type NetworkSelf = SyncManagerSelf;
 

@@ -8,8 +8,7 @@ import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { LocalCreatorLike } from "./site-view.ts";
-import type { CleanupFn, SiteViewState } from "./types.ts";
+import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 
 interface DragStateShell {
   srcIdx: number;

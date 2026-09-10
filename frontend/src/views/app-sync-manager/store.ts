@@ -7,7 +7,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { SyncManagerSelf } from "./index.ts";
+import type { SyncManagerSelf } from "./self-type.ts";
 import type { SyncItem } from "./tpl.ts";
 
 export type SyncStoreSelf = SyncManagerSelf;

@@ -113,6 +113,7 @@ auto_fields:
     - InstalledPreviewInfra
     - invalidatePreview
     - isLikelyTga
+    - isPreviewOverlayActive
     - listBonesWithDepth
     - listSchemas
     - LITEMATIC_SLICE_SCHEMA_ID
@@ -207,6 +208,7 @@ auto_fields:
     - PoseScene
     - PostprocessingLike
     - prepareMmdZipInput
+    - PREVIEW_OVERLAY_ID
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle

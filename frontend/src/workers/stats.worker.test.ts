@@ -84,7 +84,8 @@ describe("stats.worker — mt 初始化失败回退", () => {
 
     const handler = await loadHandler();
 
-    await handler({ data: { type: "stats", requestId: "r1", paths: ["/web/ysm/a.ysm"] } });
+    // requestId 与协议类型对齐（StatsWorkerRequest.requestId: number，主线程自增序号）
+    await handler({ data: { type: "stats", requestId: 1, paths: ["/web/ysm/a.ysm"] } });
 
     expect(mocks.initYsmParserInWorkerMt).toHaveBeenCalledTimes(1);
     expect(mocks.initYsmParserInWorker).toHaveBeenCalledTimes(1);
@@ -99,7 +100,7 @@ describe("stats.worker — mt 初始化失败回退", () => {
 
     const handler = await loadHandler();
 
-    await handler({ data: { type: "stats", requestId: "r2", paths: ["/web/ysm/a.ysm"] } });
+    await handler({ data: { type: "stats", requestId: 2, paths: ["/web/ysm/a.ysm"] } });
 
     expect(posts.some((p) => p.type === "error" && p.message?.includes("wasm 二进制损坏"))).toBe(true);
   });

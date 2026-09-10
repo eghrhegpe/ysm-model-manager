@@ -68,7 +68,6 @@ auto_fields:
     - AppSyncManager
     - AppTree
     - appTreeStyle
-    - ARIA_ATTR
     - arrayBufferToBase64
     - asArray
     - asNumber
@@ -602,7 +601,6 @@ auto_fields:
     - InputOptions
     - installScrollSync
     - installSlideMenuStyles
-    - installUiComponentsStyles
     - installYsmModule
     - instanceCardHeaderHTML
     - instancesHTML
@@ -1094,7 +1092,6 @@ auto_fields:
     - resume
     - returnFocus
     - revealMainWindow
-    - ROLE
     - roleBaseName
     - ROW_H_GRID
     - ROW_H_LIST
@@ -1204,7 +1201,6 @@ auto_fields:
     - SlideMenuHandle
     - slideMenuStyleSheet
     - SlideMenuView
-    - SLIDER_BAR_CLASS
     - sniffTexSize
     - solveIK
     - Spec3D
@@ -1303,8 +1299,6 @@ auto_fields:
     - typeFromWebDir
     - typeIconOf
     - u8ToBase64
-    - uiComponentsCss
-    - uiComponentsStyleSheet
     - UnloadCtx
     - unloadModel
     - unmountElement

@@ -8,16 +8,7 @@ source_files:
   - frontend/src/ui/ui-slide-menu-styles.ts
   - frontend/src/ui/ui-components-styles.ts
 auto_fields:
-  symbols_with_lines:
-    - createSlideMenu
-    - installSlideMenuStyles
-    - installUiComponentsStyles
-    - slideMenuCss
-    - SlideMenuHandle
-    - slideMenuStyleSheet
-    - SlideMenuView
-    - uiComponentsCss
-    - uiComponentsStyleSheet
+  symbols_with_lines: []
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

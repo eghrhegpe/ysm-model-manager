@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-220：解散 ui 收容所——3D 菜单组件归位 preview-3d",
+        "link": "/adr/ADR-220-ui-shelter-dissolve"
+      },
+      {
         "text": "ADR-219：stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗",
         "link": "/adr/ADR-219-stats-graceful-degradation"
       },

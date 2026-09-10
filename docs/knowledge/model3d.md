@@ -141,6 +141,8 @@ auto_fields:
     - collectSettingsCapControls
     - collectVisiblePredicates
     - compKey
+    - componentsCss
+    - componentsStyleSheet
     - computeBoneLocalPos
     - concurrentMap
     - ConsoleLogger
@@ -155,10 +157,13 @@ auto_fields:
     - createFbxParser
     - createFootIKController
     - createGazeController
+    - createHeaderToggle
     - createIconButton
+    - createInstallableStyles
     - createLipSyncController
     - createPmxParser
     - createResolveModeBridge
+    - createSlideMenu
     - createTextureDecoder
     - createWorkerBridge
     - CreateWorkerBridgeOpts
@@ -194,6 +199,8 @@ auto_fields:
     - disposeObject3D
     - disposeSceneMeshes
     - disposeTextureDecoder
+    - DragSliderController
+    - DragSliderOptions
     - drawEnvEquirect
     - encodeAndCacheTexture
     - encodeToKTX2Basis
@@ -285,6 +292,8 @@ auto_fields:
     - hasBoneRotation
     - hasSceneStats
     - hasSchema
+    - HeaderToggleConfig
+    - HeaderToggleElement
     - IconButtonOpts
     - IKChain
     - IKConfig
@@ -292,7 +301,10 @@ auto_fields:
     - injectSkySunScalePatch
     - InputHandlers
     - InputOptions
+    - InstallableStyles
+    - installComponentsStyles
     - InstalledPreviewInfra
+    - installSlideMenuStyles
     - invalidateMaxFpsCache
     - invalidatePreview
     - isFrustumCullEnabled
@@ -301,6 +313,7 @@ auto_fields:
     - isPathAvailable
     - isPerceptionPaused
     - isPreviewFolderNode
+    - isPreviewOverlayActive
     - isRenderableModel
     - isSkyEnvironmentOn
     - JavaModelFace
@@ -489,6 +502,7 @@ auto_fields:
     - prepareMmdZipInput
     - PREVIEW_FRAME_INTERVAL_MS
     - PREVIEW_MENU_GROUPS
+    - PREVIEW_OVERLAY_ID
     - PreviewActionMenuCtx
     - PreviewAdapter
     - PreviewBuildCtx
@@ -617,6 +631,10 @@ auto_fields:
     - SkyCapability
     - SkyModelType
     - SkyParams
+    - slideMenuCss
+    - SlideMenuHandle
+    - slideMenuStyleSheet
+    - SlideMenuView
     - solveIK
     - Spec3D
     - SpecBone

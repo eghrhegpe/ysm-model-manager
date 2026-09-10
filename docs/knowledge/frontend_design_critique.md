@@ -169,6 +169,7 @@ invariant_anchors:
 
 1. **可访问性债务集中爆发**（UIUX 2.5/5）：modal overlay 缺 `role="dialog"` / `aria-modal`、adv-filter label 未 for 关联、batch-rename checkbox 无 aria-label。一刀切：modal.ts buildOverlay 加 ROLE_ATTR，业务弹窗统一继承。
 2. **模块级状态泄漏**（架构 3.5/5）：`app-sidebar` `_checkedSets` Map 无 reset、`init-pages.ts:314` `_lastModelPath` 模块级无 reset。一刀切：disconnectedCallback 兜底清理，或改实例级。
+   - ✅ 2026-09-10 部分闭环（[ADR-221]）：`_lastModelPath` 已归位 `core/model-path-store.ts`，保留 `__resetLastModelPathForTest` 钩子（isolate:false 共享模块图下的既有约束，非新增债务）；归位同时断开 app-tree / app-nav / app-preview 三条越权边，消除 `app-content ↔ app-preview` 视图环。`app-sidebar._checkedSets` 仍待处置。
 3. **性能预算仍靠信仰**（3D 2.5/5）：`render-budget.ts` MAX_MODELS=8 是计数非预算、`scene-registry.ts` 拾取每帧线性遍历。一刀切：读 `renderer.info.render` 统计 draw calls，建 WeakMap 缓存拾取。
 4. **WASM 解码无单模型超时**（3D 3.5/5）：`ysm-worker-loader.ts` 畸形文件可阻塞 60s 才降级。一刀切：`stats.worker.ts` 层加 `Promise.race` 软超时（5s），超时返回 `ERROR_STATS` 而非杀池。
 

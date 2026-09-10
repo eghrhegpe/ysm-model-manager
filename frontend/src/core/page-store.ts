@@ -15,6 +15,12 @@ const VALID_PAGES = [
 ] as const satisfies readonly PageName[];
 // 全量覆盖断言：PageName 新增页面而未同步 VALID_PAGES 时编译期报错。
 // 报错形如 "Type 'X' is not assignable to type 'never'" → 修复：在 VALID_PAGES 追加 X
+//
+// 为什么需要它：PageName 定义在 @/bus（导航事件载荷），VALID_PAGES 定义在本模块——
+// 同一集合的双份声明无法自动同步。上一行 `satisfies readonly PageName[]` 只保证
+// VALID_PAGES ⊆ PageName（防多写），本断言补 PageName ⊆ VALID_PAGES（防漏写），
+// 两者合起来 = 集合相等。TS 对「数组字面量 ↔ 联合类型」没有原生等价断言，
+// 条件类型 + never 是表达该不变量的唯一编译期手段。
 type _AssertPageCoverage = PageName extends (typeof VALID_PAGES)[number] ? true : never;
 const _assertPageCoverage: _AssertPageCoverage = true;
 void _assertPageCoverage;

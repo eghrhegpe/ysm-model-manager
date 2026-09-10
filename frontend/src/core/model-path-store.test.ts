@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   __resetLastModelPathForTest,
   getLastModelPath,
@@ -21,6 +21,30 @@ describe("model-path-store — 跨视图最近选中模型路径 (ADR-221)", () 
     rememberModelPath("/m/狐.ysm");
     rememberModelPath(null);
     expect(getLastModelPath()).toBeNull();
+  });
+
+  it("空串拒绝写入：已有值时保持原值 + 告警留痕（清空应传 null）", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      rememberModelPath("/m/a.ysm");
+      rememberModelPath("");
+      // 空串被拒 → 保持原值；且产生告警留痕
+      expect(getLastModelPath()).toBe("/m/a.ysm");
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("空串拒绝写入：初始态（null）写入空串 → 仍为 null", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      rememberModelPath("");
+      expect(getLastModelPath()).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("再次写入覆盖旧值", () => {

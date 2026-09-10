@@ -589,7 +589,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerErrorDiary | `frontend/src/core/error-diary.ts` | 113 |
+| registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
 | connectedCallback | `frontend/src/views/app-toast/index.ts` | 71 |
 
 ### `tree:reload`

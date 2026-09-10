@@ -27,7 +27,7 @@ vi.mock("./locale.ts", async () => {
   };
 });
 
-import { t, tOf } from "./t.ts";
+import { interpolate, t, tOf } from "./t.ts";
 import { SUPPORTED_LANGS } from "./locale.ts";
 import { __resetI18nResidualsForTest } from "./t.ts";
 
@@ -83,6 +83,22 @@ describe("t()", () => {
     try {
       expect(t("import.addedToQueue", { n: 2 })).toBe("已加入队列: 2 个文件");
       expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("残留签名超 RESIDUAL_SIG_MAX → 淘汰最旧，被淘汰签名重发可再告警", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // 动态 key（tOf 任意 string）会让签名空间无限扩张：用 513 个不同 context 灌满并越过上限
+      for (let i = 0; i < 513; i++) {
+        interpolate("已加入 {n} 个文件", undefined, `residual-${i}`);
+      }
+      const callsAfterFill = warn.mock.calls.length;
+      // 最旧签名（residual-0）已被淘汰 → 重发不再被节流，应再告警一次
+      interpolate("已加入 {n} 个文件", undefined, "residual-0");
+      expect(warn.mock.calls.length).toBe(callsAfterFill + 1);
     } finally {
       warn.mockRestore();
     }

@@ -18,7 +18,10 @@ export type LocaleParams = Record<string, string | number>;
 
 // 残留占位符告警（每签名一次）：模板含 {ident} 而参数未传/未覆盖 → 裸占位符上屏是
 // 静默 UI bug 类，守卫兜底（ADR-207 D3）
-// 无上限：残留签名数 ≤ 语言包模板数（有界），无需淘汰
+// 上限：静态 key 下签名数 ≤ 语言包模板数（有界），但 tOf 接受任意 string——
+// 动态 key 会让签名空间无限扩张，Set 单调增长在常驻桌面应用是缓慢泄漏。
+// 故超限淘汰最旧（Set 迭代序 = 插入序，values().next() 即最旧），fail-open 同 error-diary 去重窗口。
+const RESIDUAL_SIG_MAX = 512;
 const warnedResiduals = new Set<string>();
 
 /**
@@ -36,6 +39,11 @@ export function interpolate(text: string, params?: LocaleParams, context?: strin
   if (names.length > 0) {
     const sig = `${names.join("|")}${context ? `@${context}` : ""}`;
     if (!warnedResiduals.has(sig)) {
+      if (warnedResiduals.size >= RESIDUAL_SIG_MAX) {
+        // 超限淘汰最旧签名（插入序首个），被淘汰签名重发可再告警——防动态 key 无限膨胀
+        const oldest = warnedResiduals.values().next().value;
+        if (oldest !== undefined) warnedResiduals.delete(oldest);
+      }
       warnedResiduals.add(sig);
       console.warn(
         `[i18n] 残留插值占位符 ${names.join(" ")}${context ? `（key: ${context}）` : ""}`,

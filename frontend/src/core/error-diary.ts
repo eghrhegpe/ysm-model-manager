@@ -26,6 +26,29 @@ export interface DiaryHandle {
 // 截断上限：title 200 / detail 500（前端冗余防御，Go 侧 maxFieldLen=1024 再截）
 const DIARY_MODEL_MAX = 200;
 const DIARY_ERRMSG_MAX = 500;
+
+/**
+ * toast 类型 → 日记状态（单点收口：core 作为事件消费层，UI 语义与日记语义的
+ * 映射必须显式裁决，禁止在 logUiMsg 内散落判断——新增 toast 类型漏裁决即编译报错）。
+ * 返回 null = 该类型不入日记（success/info）。
+ */
+function toastTypeToStatus(type: ToastPayload["type"]): DiaryStatus | null {
+  switch (type) {
+    case "error":
+      return "failed";
+    case "warn":
+      return "warn";
+    case "success":
+    case "info":
+    case undefined:
+      return null;
+    default: {
+      // 穷举守卫：bus.ts 新增 toast 类型而未在此裁决时，type 收窄为 never 失败编译
+      const exhaustive: never = type;
+      return exhaustive;
+    }
+  }
+}
 // 去重：同键（status + 净化后 title）5s 窗口；窗口表上限 32 键，超限淘汰最旧（fail-open）
 const DIARY_DEDUP_WINDOW = 5000;
 const DEDUP_MAX_KEYS = 32;
@@ -111,8 +134,9 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
   try {
     // 1. error/warn toast → 日记
     unsubToast = bus.on("toast:show", (p: ToastPayload) => {
-      if (p.type !== "error" && p.type !== "warn") return;
-      logUiMsg(p.msg, p.type === "error" ? "failed" : "warn");
+      const status = toastTypeToStatus(p.type);
+      if (status === null) return;
+      logUiMsg(p.msg, status);
     });
 
     // 2. logWarn/logError 透写日记：经 log.ts 的注入式 sink 收敛到本模块落盘，复用去重窗口

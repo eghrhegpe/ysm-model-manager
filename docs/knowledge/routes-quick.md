@@ -316,7 +316,7 @@
 |----------|--------|----------|----------|
 | 3D 性能与内存预算审查 | [前端设计锐评](./frontend_design_critique.md) | 帧循环内禁止 new 对象分配，prealloc 复用是 3D 性能铁律（perception 是唯一站规则外的子系统） | - |
 | 前端代码审计 / 质量评审 / 技术债评估 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
-| 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（存量纯 rgba(124,131,255)/ | - |
+| 前端设计评审 / 锐评 | [前端设计锐评](./frontend_design_critique.md) | 样式必须走主题 token（var(--accent)），禁止硬编码品牌色散落（存量纯 rgba(124,131,255)/#7c83ff 已全收编；现存 | - |
 | 页面生命周期审查（整 DOM 重建） | [前端设计锐评](./frontend_design_critique.md) | - | - |
 | 主题系统审查（token 失守） | [前端设计锐评](./frontend_design_critique.md) | 页面切换必须 tab-panel 常驻 + active 切换，禁止整 DOM innerHTML 重建 | - |
 
@@ -834,10 +834,10 @@
 | 用占位日期 | `2026-XX` | 掩盖"已完成 vs 待办"，AI 分不清；完成项填实际日期、计划项标「待办」 |
 | 主线程同步跑统计 | - | 大库卡死 UI；必须经 Web Worker 后台统计 |
 | Worker 未独立加载 WASM | - | 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码 |
-| 对同步 ccall 挂死是半吊子（已知问题榜 | `5s `Promise.race` 软超时` | - |
+| 对同步 ccall 挂死是半吊子（已知问题榜#4 原方案）——挂死点不可抢占，race 的 timer 在阻塞线程里根本不触发；挂死类故障唯一可靠侦测信号 = 逐模型 partial 流中断（ADR-219 静默看门狗） | `5s Promise.race 软超时` | - |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
-| 「Fatal trap | - | - |
+| 坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端已正确实现，JS 兜底 model3d-spec.ts 的 cubePivot/cubeOrigin 与 Go 口径不一致（已废弃无运行时影响） | `Fatal trap#11` | - |
 | mesh 级视锥剔除必须关闭（mesh.frustumCulled = false），否则骨骼旋转时扁平部件（如脸部）会误判不可见 | - | - |
 | dispose 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/pointer/resize/fullscreenchange 监听、dispose geometry/material/texture，缺一即泄漏 | - | - |
 | 纹理绑定不得静默兜底：槽位越界/缺图应报错+ 灰色占位，严禁「找第一张可用」贴错图 | `纹理槽位缺失` | - |

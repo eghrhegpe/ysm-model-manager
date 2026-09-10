@@ -45,7 +45,7 @@ quick_risk_lines:
 pitfalls:
   - 主线程同步跑统计 → 大库卡死 UI；必须经 Web Worker 后台统计
   - Worker 未独立加载 WASM → 与主线程 WASM 实例冲突；必须在 Worker 内独立 open 解码
-  - 「5s `Promise.race` 软超时」对同步 ccall 挂死是半吊子（已知问题榜 #4 原方案）——挂死点不可抢占，race 的 timer 在阻塞线程里根本不触发；挂死类故障唯一可靠侦测信号 = 逐模型 partial 流中断（ADR-219 静默看门狗）
+  - 「5s `Promise.race` 软超时」对同步 ccall 挂死是半吊子（已知问题榜#4 原方案）——挂死点不可抢占，race 的 timer 在阻塞线程里根本不触发；挂死类故障唯一可靠侦测信号 = 逐模型 partial 流中断（ADR-219 静默看门狗）
 
 use_when:
   - 模型统计

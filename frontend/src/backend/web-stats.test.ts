@@ -528,7 +528,7 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
     expect(consumeWebSearchDegraded()).toBe(false); // 细粒度恢复 → 整批不降级
   });
 
-  it("静默杀预算 + 墙钟耗尽 → 挂死 chunk 剩余模型 hasError（细粒度耗尽），其余 chunk 正常、整批不降级", async () => {
+  it("静默杀 + 60s 墙钟同刻到点（静默 timer 先注册先触发）→ 挂死 chunk 细粒度耗尽，其余 chunk 正常、整批不降级", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("Worker", FakeWorker);
     vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
@@ -541,12 +541,30 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
     expect(w0.terminated).toBe(true);
     const w1 = FakeWorker.instances[1];
     expect(w1).toBeTruthy();
-    // 再静默 → 但撞 60s 墙钟（deadline 先于第 2 次静默杀预算生效）→ 强制耗尽
+    // 再推进 30s 到 t=60s：w1 的静默 timer 与其 deadline timer 同刻到点（静默 timer 先注册先触发），
+    // finish("silence") 清掉 deadline timer → 纯静默杀预算分支（silenceKills>=2 且 Date.now()<deadline）
+    // 设计上不可能先于墙钟触发（2×30s=60s，双保险），断言按结果等价钉住
     await vi.advanceTimersByTimeAsync(30_000);
     const res = await p;
     // 挂死模型 → EMPTY_ERROR（hasError=true）；整批正常返回（不降级 null）
     expect(res).toEqual([{ boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true }]);
     expect(consumeWebSearchDegraded()).toBe(false); // 细粒度耗尽 ≠ 整批降级
+  });
+
+  it("静默杀 → replacement 构造失败（failConstruct）→ 挂死侧细粒度耗尽（防御分支：无 replacement 也不整批降级）", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    const p = batchStatsWebModels(["/web/ysm/hang.ysm"]);
+    await vi.advanceTimersByTimeAsync(0);
+    FakeWorker.failConstruct = true; // w0 已建成；杀后 spawn replacement 构造即抛 → 返回 null
+    await vi.advanceTimersByTimeAsync(30_000); // 静默 → terminateWorker(w0) → spawn null → chunkBroken=(outcome==="error")=false
+    const res = await p;
+    expect(FakeWorker.instances[0].terminated).toBe(true);
+    expect(FakeWorker.instances).toHaveLength(1); // 无 replacement 建成
+    // 挂死类（silence）无 replacement → EMPTY_ERROR 细粒度补位，整批正常返回（对照：瞬态 error 无 replacement 才整批降级）
+    expect(res).toEqual([{ boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, hasError: true }]);
+    expect(consumeWebSearchDegraded()).toBe(false);
   });
 
   it("瞬态 error 重试耗尽（无 replacement 可用）→ 整批降级（系统级边界，保留既有语义）", async () => {

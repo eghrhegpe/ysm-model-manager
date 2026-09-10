@@ -70,7 +70,8 @@ function parsePitfall(raw: string) {
     .replace(/\s+→\s*$/, "")
     .trim();
   if (!trap) trap = pos || "-";
-  return { trap, pos: pos ? `\`${pos}\`` : "-", fix: cell(right) };
+  // pos 可能自身含反引号（卡片 pitfall 用「含 `code` 的短语」）——剥离内层避免嵌套 code span 破列
+  return { trap, pos: pos ? `\`${pos.replace(/`/g, "")}\`` : "-", fix: cell(right) };
 }
 
 function render(

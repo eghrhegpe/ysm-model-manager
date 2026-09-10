@@ -766,7 +766,7 @@ quick_risk_lines:
   - dispose() 必须遍历子对象调用 geometry?.dispose() / material?.dispose() / texture?.dispose()，Object3D.remove() 不释放 WebGL 资源
   - 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM
 pitfalls:
-  - 「Fatal trap #11」坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端已正确实现，JS 兜底 model3d-spec.ts 的 cubePivot/cubeOrigin 与 Go 口径不一致（已废弃无运行时影响）
+  - 「Fatal trap#11」坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端已正确实现，JS 兜底 model3d-spec.ts 的 cubePivot/cubeOrigin 与 Go 口径不一致（已废弃无运行时影响）
   - mesh 级视锥剔除必须关闭（mesh.frustumCulled = false），否则骨骼旋转时扁平部件（如脸部）会误判不可见
   - dispose 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/pointer/resize/fullscreenchange 监听、dispose geometry/material/texture，缺一即泄漏
   - 纹理绑定不得静默兜底：槽位越界/缺图应报错「纹理槽位缺失」+ 灰色占位，严禁「找第一张可用」贴错图

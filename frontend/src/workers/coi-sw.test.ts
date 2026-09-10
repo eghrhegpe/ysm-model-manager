@@ -161,6 +161,25 @@ describe("COI Service Worker（ADR-079 M1）", () => {
     expect(store.get("ysm:coi-reload")).toBe(reloadRec(1700000000000, 2));
   });
 
+  it("sessionStorage 访问抛 SecurityError（存储被策略禁用）→ 守卫静默跳过，读/写两侧不抛、闸门按无记录放行", async () => {
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => {
+        throw new DOMException("Storage access denied", "SecurityError");
+      },
+      setItem: () => {
+        throw new DOMException("Storage access denied", "SecurityError");
+      },
+    });
+    expect(() => {
+      registerCoiServiceWorker();
+      void Promise.resolve();
+    }).not.toThrow();
+    await Promise.resolve();
+    // readSessionRecord / writeSessionRecord 的 try/catch 吃掉抛错 → 视为无兜底记录 → 首次 reload（n=1）
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(storageMock.safeSet).toHaveBeenCalledWith("ysm:coi-reload", reloadRec(1700000000000, 1));
+  });
+
   it("无 serviceWorker 支持 → 静默 no-op（渐进增强）", () => {
     vi.stubGlobal("navigator", {});
     expect(() => registerCoiServiceWorker()).not.toThrow();

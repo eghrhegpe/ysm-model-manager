@@ -54,14 +54,16 @@ export function getList(fm: string | null, key: string): string[] {
     const head = line.match(new RegExp(`^${escapeRe(key)}\\s*:\\s*(.*)$`));
     if (head) {
       inList = true;
-      const inline = head[1]?.replace(/\s*#.*$/, "").trim();
+      const inline = head[1]?.replace(/\s+#.*$/, "").trim();
       if (inline && !inline.startsWith("<")) out.push(inline);
       continue;
     }
     if (!inList) continue;
     const item = line.match(/^\s*-\s*(.+)$/);
     if (item) {
-      const v = item[1]?.replace(/\s*#.*$/, "").trim();
+      // 与 getScalar 同一注释口径（code_review P2）：仅 ` #`（# 前有空白）是行内注释；
+      // 值内无空格的 #（「Fatal trap#11」/ `#4` 锚点）属合法值，不得截断
+      const v = item[1]?.replace(/\s+#.*$/, "").trim();
       if (v && !v.startsWith("<")) out.push(v);
     } else if (/^\S/.test(line)) {
       inList = false;

@@ -9,7 +9,7 @@ import {
   unregisterActiveInputSession,
   resetLoopState,
 } from "./render-loop.ts";
-import type { TdKeyAction } from "@/preview-3d/keymap.ts";
+import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 
 type InputSession = {
   keys: Partial<Record<TdKeyAction, boolean>>;

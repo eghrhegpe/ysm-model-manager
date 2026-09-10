@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
-import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";

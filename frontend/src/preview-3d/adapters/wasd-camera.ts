@@ -3,7 +3,7 @@
 // 每帧调用一次（rAF 循环内），移动向量经 reuse 槽位复用避免每帧 GC 分配。
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { TdKeyAction } from "@/preview-3d/keymap.ts";
+import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 
 /** rAF 相机运动复用的 Vector3 实例（避免每帧 GC 分配）；只读常量 */
 const upVec = new THREE.Vector3(0, 1, 0);

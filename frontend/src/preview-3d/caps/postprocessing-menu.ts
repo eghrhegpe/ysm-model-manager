@@ -6,7 +6,7 @@
 //   pp-enabled 基座 → Color 文件夹 → pp-bloom-enabled 基座 → Bloom 文件夹
 //   → pp-ssao-enabled 基座 → SSAO 文件夹 → Reflection 文件夹 → SSR 文件夹
 
-import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import type {
   PostprocessingCapability,
   PostprocessingParams,

@@ -15,7 +15,7 @@
 // CompressedTexture 的 image 是 mipmap 数组无法 drawImage——toon 不直载
 // （由 resolveHash 返回 undefined 实现，本 loader 不感知 toon）。
 import * as THREE from "three";
-import { b64ToBytes } from "@/preview-3d/base64.ts";
+import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 
 /** 拦截 loader 依赖注入（装配方提供） */
 export interface Ktx2TextureLoaderDeps {
@@ -116,7 +116,7 @@ export class Ktx2TextureLoader extends THREE.Loader {
           fallback();
           return;
         }
-        const ktxBytes = b64ToBytes(b64);
+        const ktxBytes = base64ToBytes(b64) as Uint8Array;
         const blob = new Blob([ktxBytes as unknown as BlobPart], { type: "image/ktx2" });
         const blobUrl = URL.createObjectURL(blob);
         try {

@@ -6,7 +6,7 @@
 // 以及 resolveMmdZipConfig 的模型选择逻辑（多模型取首个 + GBK 解码 + 纹理发现）。
 import { describe, it, expect, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { b64ToBytes, bytesToBase64 } from "@/preview-3d/base64.ts";
+import { base64ToBytes, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import { extractZip } from "@/parsers/extract.ts";
 import {
   resolveMmdZipConfig,
@@ -47,20 +47,20 @@ function makeEmptyZipBytes(): Uint8Array {
 
 /** 将 zip 字节编码为 base64 字符串（模拟 readFileBytes 的实际返回） */
 function zipToB64(zipBytes: Uint8Array): string {
-  return bytesToBase64(zipBytes);
+  return u8ToBase64(zipBytes);
 }
 
 /** 构造注入端口：readFileBytes 返回 base64（模拟 Wails 桥序列化） */
 function makeInnerPort(): MmdDataPort {
   return {
     readFileBytes: vi.fn().mockImplementation(async (p: string) => {
-      if (p === "/external/file.txt") return bytesToBase64(new Uint8Array([1, 2, 3]));
+      if (p === "/external/file.txt") return u8ToBase64(new Uint8Array([1, 2, 3]));
       return null;
     }),
     readFileBytesBatch: vi.fn().mockImplementation(async (paths: string[]) => {
       const result: Record<string, string | null> = {};
       for (const p of paths) {
-        result[p] = bytesToBase64(new Uint8Array([10]));
+        result[p] = u8ToBase64(new Uint8Array([10]));
       }
       return result;
     }),
@@ -195,14 +195,14 @@ describe("ZipOverlayPort 三条路由", () => {
   it("readFileBytes：zip 内路径命中", async () => {
     const bytesB64 = await overlay.readFileBytes(rootPath + "model.pmx");
     expect(bytesB64).not.toBeNull();
-    const bytes = b64ToBytes(bytesB64!);
+    const bytes = base64ToBytes(bytesB64!) as Uint8Array;
     expect(bytes.length).toBeGreaterThan(0);
   });
 
   it("readFileBytes：zip 外路径透传 inner", async () => {
     const bytesB64 = await overlay.readFileBytes("/external/file.txt");
     expect(bytesB64).not.toBeNull();
-    const bytes = b64ToBytes(bytesB64!);
+    const bytes = base64ToBytes(bytesB64!) as Uint8Array;
     expect(bytes[0]).toBe(1);
   });
 

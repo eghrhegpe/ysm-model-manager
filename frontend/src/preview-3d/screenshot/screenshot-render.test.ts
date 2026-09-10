@@ -140,7 +140,7 @@ vi.mock("@/preview-3d/mesh/mesh.ts", () => ({
   buildSceneMesh: buildSceneMeshMock,
   compKey: (mi: number, boneId: string) => `${mi}:${boneId}`,
 }));
-vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
+vi.mock("@/preview-3d/model/ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
 vi.mock("@/preview-3d/model/spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
 vi.mock("three", () => threeStub);
 

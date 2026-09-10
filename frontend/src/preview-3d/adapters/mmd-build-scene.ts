@@ -2,9 +2,9 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { scheduleBackgroundEncoding } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { registerModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
+import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
@@ -123,7 +123,7 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
           replaceTasks.push(
             getCachedTextureByHash(hash).then((ktx2B64) => {
               if (!ktx2B64) return;
-              const ktxBytes = b64ToBytes(ktx2B64);
+              const ktxBytes = base64ToBytes(ktx2B64) as Uint8Array;
               const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
               const ktxUrl = URL.createObjectURL(ktxBlob);
               c.blobUrls.push(ktxUrl);

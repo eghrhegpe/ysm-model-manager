@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { AlphaIndex } from "@/preview-3d/alpha-index.ts";
+import { AlphaIndex } from "@/preview-3d/materials/alpha-index.ts";
 import { getTextureAlphaInfo, getTextureAlphaMode } from "./texture-alpha.ts";
 
 function rgbaTexture(pixels: number[][]): THREE.DataTexture {

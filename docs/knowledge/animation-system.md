@@ -25,7 +25,6 @@ auto_fields:
     - ControllerState
     - ControllerTransition
     - createMolangParser
-    - createYsmAnimPlayer
     - Easings
     - findControllerForAnimation
     - Keyframe
@@ -38,7 +37,6 @@ auto_fields:
     - stagger
     - TimelineEvent
     - Vec3
-    - YsmAnimPlayer
   tests:
     - frontend/src/utils/animation/animate.test.ts
     - frontend/src/utils/animation/animation.test.ts

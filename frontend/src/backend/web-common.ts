@@ -15,14 +15,14 @@ export class WebUnsupportedError extends Error {
 /** 网页版虚拟仓库根（路径语义与桌面一致：/web/<type>/<name>/<rel>） */
 export const WEB_ROOT = "/web";
 
-// ADR-217 环 B：虚拟仓库路径解析下沉 utils/base/web-path.ts（中性纯函数层），
+// ADR-217 环 B：虚拟仓库路径解析下沉 utils/base/pure/web-path.ts（中性纯函数层），
 // 本模块仅 re-export 保持 web-fs 等消费方命名兼容，消除 workers→web-common 反向环。
 export {
   isWebPath,
   parseWebDirPath,
   parseWebPath,
   webDirType,
-} from "@/utils/base/web-path.ts";
+} from "@/utils/base/pure/web-path.ts";
 
 /** 导入大小上限 100MB（对齐 import-dnd.ts MAX_FILE_SIZE，桌面 oversize 过滤同口径） */
 export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;

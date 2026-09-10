@@ -12,6 +12,7 @@ import {
   markCullMatricesDirty,
   restoreModelGroupsVisible,
 } from "@/preview-3d/infra/frustum-cull.ts";
+import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import {
   createAdaptiveRenderBudget,
   getFrameIntervalMs,
@@ -20,7 +21,6 @@ import {
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
 } from "@/preview-3d/infra/render-budget.ts";
-import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { getSceneCaps, type SharedInfra } from "./shared-infra.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";

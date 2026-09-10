@@ -4,7 +4,7 @@
 // dispose() 时还原构造前的 scene.fog，不泄漏到其它预览会话。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "@/preview-3d/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

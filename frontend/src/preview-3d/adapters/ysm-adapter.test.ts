@@ -61,7 +61,7 @@ const h = vi.hoisted(() => ({
   makeBonesPanelItem: vi.fn(),
 }));
 
-vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
+vi.mock("@/preview-3d/model/ysm-object.ts", () => ({ buildYsmObject: h.buildYsmObject }));
 vi.mock("@/preview-3d/infra/camera-setup.ts", () => ({ fitCameraToScene: h.fitCamera }));
 vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
   buildBoneHierarchy: h.buildBoneHierarchy,
@@ -78,7 +78,7 @@ vi.mock("@/preview-3d/infra/load-trace.ts", () => ({ recordLoadTrace: h.recordLo
 vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
 vi.mock("@/preview-3d/perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
 vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));
-vi.mock("@/preview-3d/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
+vi.mock("@/preview-3d/model/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
 vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: h.logWarn }));
 vi.mock("@/utils/dom/editable-target.ts", () => ({ isEditableTarget: h.isEditableTarget }));
 vi.mock("./bones-panel-node.ts", () => ({ makeBonesPanelItem: h.makeBonesPanelItem }));

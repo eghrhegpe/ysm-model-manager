@@ -6,11 +6,7 @@ category: ui
 source_files:
   - frontend/src/preview-3d/fab.ts
 auto_fields:
-  symbols_with_lines:
-    - createIconButton
-    - ensureFabStyles
-    - IconButtonOpts
-    - YSW_FAB_CSS
+  symbols_with_lines: []
   tests:
     - frontend/src/preview-3d/fab.test.ts
 quick_groups:

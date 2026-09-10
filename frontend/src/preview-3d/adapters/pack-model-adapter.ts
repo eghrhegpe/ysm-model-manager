@@ -18,7 +18,7 @@ import {
   isRenderableModel,
   type JavaModelResult,
   parseJavaModel,
-} from "@/preview-3d/parse-java-model.ts";
+} from "@/preview-3d/model/parse-java-model.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";

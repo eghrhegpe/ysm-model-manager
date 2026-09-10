@@ -1,4 +1,4 @@
-import { bytesToBase64 } from "@/preview-3d/base64.ts";
+import { u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====
@@ -225,7 +225,7 @@ export async function encodeAndCacheTexture(
     const ktx2Buffer = await encodeImpl(imageData);
     // 将 KTX2 ArrayBuffer 转为 base64（分块避免栈溢出，O(n) 替代 O(n²) 字符串拼接）
     const ktx2Bytes = new Uint8Array(ktx2Buffer);
-    const ktx2B64 = bytesToBase64(ktx2Bytes);
+    const ktx2B64 = u8ToBase64(ktx2Bytes);
     // 保存到 Go 侧缓存
     if (port.addOpLog) {
       void port.addOpLog(

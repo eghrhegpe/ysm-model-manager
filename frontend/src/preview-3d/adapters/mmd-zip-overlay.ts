@@ -11,7 +11,7 @@
 //   3. listAllFilePaths(dir)      → dir 为虚拟目录 → 返回 zip 所有 entry 路径
 
 import { extractZip } from "@/parsers/extract.ts";
-import { b64ToBytes, bytesToBase64 } from "@/preview-3d/base64.ts";
+import { base64ToBytes, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
 
 /** ZIP 解析产物（传给 overlay 的配置） */
@@ -42,7 +42,7 @@ export async function resolveMmdZipConfig(
 ): Promise<MmdZipConfig> {
   const zipB64 = await port.readFileBytes(zipPath);
   if (!zipB64) throw new Error("ReadFileBytes 返回空（zip 文件）");
-  const zipBytes = b64ToBytes(zipB64);
+  const zipBytes = base64ToBytes(zipB64) as Uint8Array;
   const { entries, metas } = extractZip(zipBytes);
 
   // 构建「真实文件名 → 字节」映射（GBK 解码中文名）
@@ -127,7 +127,7 @@ export function makeZipOverlayPort(
       if (p.startsWith(ROOT)) {
         const rel = p.slice(ROOT.length).toLowerCase();
         const bytes = config.entries.get(rel);
-        return bytes ? bytesToBase64(bytes) : null;
+        return bytes ? u8ToBase64(bytes) : null;
       }
       return inner.readFileBytes(p);
     },
@@ -140,7 +140,7 @@ export function makeZipOverlayPort(
         if (p.startsWith(ROOT)) {
           const rel = p.slice(ROOT.length).toLowerCase();
           const bytes = config.entries.get(rel);
-          result[p] = bytes ? bytesToBase64(bytes) : null;
+          result[p] = bytes ? u8ToBase64(bytes) : null;
         } else {
           realPaths.push(p);
         }
@@ -178,7 +178,7 @@ export function makeZipOverlayPort(
         if (p.startsWith(ROOT)) {
           const rel = p.slice(ROOT.length).toLowerCase();
           const bytes = config.entries.get(rel);
-          result[p] = bytes ? { data: bytesToBase64(bytes), hash: "" } : null;
+          result[p] = bytes ? { data: u8ToBase64(bytes), hash: "" } : null;
         } else {
           realPaths.push(p);
         }

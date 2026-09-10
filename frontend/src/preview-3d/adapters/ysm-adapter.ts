@@ -14,7 +14,6 @@
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
-import { b64ToBytes } from "@/preview-3d/base64.ts";
 import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone/bone-raycast.ts";
 import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { ysmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -26,11 +25,14 @@ import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frust
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/mesh/model3d.ts";
+import {
+  createYsmAnimPlayer,
+  type YsmAnimPlayer,
+} from "@/preview-3d/model/ysm-animation-player.ts";
+import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
-import { createYsmAnimPlayer, type YsmAnimPlayer } from "@/preview-3d/ysm-animation-player.ts";
-import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import {
   type AnimationClip,
   parseBedrockAnimationJSON,
@@ -40,6 +42,7 @@ import {
   type AnimationController,
   parseAnimationControllerJSON,
 } from "@/utils/animation/animation-controller.ts";
+import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -317,7 +320,7 @@ async function mdYsScanAnimFiles(sc: MdYsSceneCtx): Promise<{
     try {
       const b64 = await opts.readTextFile(animFile);
       if (!b64) continue;
-      const text = new TextDecoder("utf-8").decode(b64ToBytes(b64));
+      const text = new TextDecoder("utf-8").decode(base64ToBytes(b64) as Uint8Array);
       const { clips } = parseBedrockAnimationJSON(text);
       if (clips.length > 0) {
         // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
@@ -339,7 +342,7 @@ async function mdYsScanAnimFiles(sc: MdYsSceneCtx): Promise<{
     try {
       const b64 = await opts.readTextFile(ctrlFile);
       if (!b64) continue;
-      const text = new TextDecoder("utf-8").decode(b64ToBytes(b64));
+      const text = new TextDecoder("utf-8").decode(base64ToBytes(b64) as Uint8Array);
       const { controllers } = parseAnimationControllerJSON(text);
       if (controllers.length > 0) allControllers.push(...controllers);
     } catch {

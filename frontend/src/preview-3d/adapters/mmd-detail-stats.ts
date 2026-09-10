@@ -9,7 +9,7 @@
 //
 // Worker 不可用（vitest node）→ 解析失败 → null → 详情卡不渲染统计行（优雅降级）。
 
-import { b64ToBytes } from "@/preview-3d/base64.ts";
+import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";
 
 /** PMX 文件级统计（详情卡展示；独立于 SceneStats 的 traverse 口径） */
@@ -47,7 +47,7 @@ export async function readPmxStats(
     const key = `${path}:${b64.length}`;
     const cached = pmxStatsCache.get(key);
     if (cached) return cached;
-    const bytes = b64ToBytes(b64);
+    const bytes = base64ToBytes(b64) as Uint8Array;
     const buffer = bytes.buffer.slice(
       bytes.byteOffset,
       bytes.byteOffset + bytes.byteLength,

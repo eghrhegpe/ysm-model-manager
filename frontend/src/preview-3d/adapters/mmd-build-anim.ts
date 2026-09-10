@@ -2,7 +2,7 @@
 
 import { buildAnimation, buildCameraAnimation, VmdObject, VPDLoader } from "@moeru/three-mmd";
 import * as THREE from "three";
-import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
+import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
@@ -40,7 +40,9 @@ export async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
     try {
       const vmdB64 = animBatch[v] ?? null;
       if (!vmdB64) continue;
-      const vmd = await VmdObject.ParseFromBuffer(bytesToArrayBuffer(b64ToBytes(vmdB64)));
+      const vmd = await VmdObject.ParseFromBuffer(
+        bytesToArrayBuffer(base64ToBytes(vmdB64) as Uint8Array),
+      );
       c.clips.push({
         label: (v.split(/[/\\]/).pop() || "").replace(/\.vmd$/i, "") || "motion",
         clip: buildAnimation(vmd, c.mesh),
@@ -59,7 +61,7 @@ export async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
     try {
       const vpdB64 = animBatch[v] ?? null;
       if (!vpdB64) continue;
-      const vpdBytes = b64ToBytes(vpdB64);
+      const vpdBytes = base64ToBytes(vpdB64) as Uint8Array;
       const vpdBlobUrl = URL.createObjectURL(new Blob([vpdBytes.buffer as ArrayBuffer]));
       c.blobUrls.push(vpdBlobUrl);
       const vpd = await new VPDLoader().loadAsync(vpdBlobUrl);

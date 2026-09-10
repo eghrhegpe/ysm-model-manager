@@ -14,7 +14,7 @@
 import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
-import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/keymap.ts";
+import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";

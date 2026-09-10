@@ -14,7 +14,6 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "@/preview-3d/adapters/schema-registry.ts";
-import { ensureFabStyles } from "@/preview-3d/fab.ts";
 import {
   onOverlayStyleTargetReset,
   overlayStyleRoot,
@@ -25,6 +24,7 @@ import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
+import { ensureFabStyles } from "./fab.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import {

@@ -77,7 +77,6 @@ auto_fields:
     - attenuateAmbientForSky
     - AuthorInfo
     - AutoDanceOptions
-    - b64ToBytes
     - bakeMeshFragments
     - base64ToBytes
     - BasisEncoderLike
@@ -178,7 +177,6 @@ auto_fields:
     - BusEventName
     - BusEvents
     - bytesToArrayBuffer
-    - bytesToBase64
     - cacheGet
     - CachePolicy
     - cacheSet

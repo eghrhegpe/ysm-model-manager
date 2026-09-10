@@ -21,7 +21,7 @@ vi.mock("@/preview-3d/texture/texture-cache.ts", () => ({
     release: vi.fn(),
   },
 }));
-vi.mock("@/preview-3d/parse-java-model.ts", () => ({
+vi.mock("@/preview-3d/model/parse-java-model.ts", () => ({
   parseJavaModel: hoisted.parseMock,
   isRenderableModel: hoisted.renderable,
 }));

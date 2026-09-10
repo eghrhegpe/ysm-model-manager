@@ -2,8 +2,8 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { b64ToBytes, bytesToArrayBuffer, bytesToBase64 } from "@/preview-3d/base64.ts";
 import { Ktx2TextureLoader } from "@/preview-3d/decoder/mmd-ktx2-texture-loader.ts";
+import { base64ToBytes, bytesToArrayBuffer, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import { formatLongTask, startMainThreadWatch } from "@/utils/base/primitives/main-thread-watch.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -51,7 +51,7 @@ export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
     c.zipModelOverride = {
       bytes: zip.modelBytes,
       base: zip.modelBase,
-      b64: bytesToBase64(zip.modelBytes),
+      b64: u8ToBase64(zip.modelBytes),
     };
     void mmdDiag(
       c.effectivePort,
@@ -70,7 +70,7 @@ export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
     c.modelB64 ? `bytes=${c.modelB64.length}` : "ReadFileBytes 返回空",
   );
   if (!c.modelB64) throw new Error("ReadFileBytes 返回空");
-  c.bytes = c.zipModelOverride?.bytes ?? b64ToBytes(c.modelB64);
+  c.bytes = c.zipModelOverride?.bytes ?? (base64ToBytes(c.modelB64) as Uint8Array);
   c.modelBase =
     c.zipModelOverride?.base ?? (c.effectivePath.split(/[/\\]/).pop() || "").toLowerCase();
   c.usePmxWorker = safeGet("mmd-pmx-worker") === "1";
@@ -173,7 +173,7 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
       const baseName = lower.split("/").pop() || "";
       const texB64 = texBatch[p] ?? null;
       if (!texB64) continue;
-      const texBytes = b64ToBytes(texB64);
+      const texBytes = base64ToBytes(texB64) as Uint8Array;
       if (p.toLowerCase().endsWith(".tga") && !isLikelyTga(texBytes)) continue;
       const blob = new Blob([bytesToArrayBuffer(texBytes)]);
       const url = URL.createObjectURL(blob);

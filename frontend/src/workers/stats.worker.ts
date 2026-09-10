@@ -8,7 +8,7 @@
 // backend/web-stats.ts；协议见 stats-protocol.ts。
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
 import { idbGet } from "@/utils/storage/idb.ts";
-import { parseWebPath } from "@/utils/base/web-path.ts";
+import { parseWebPath } from "@/utils/base/pure/web-path.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import {

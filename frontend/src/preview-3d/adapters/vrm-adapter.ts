@@ -12,7 +12,6 @@ import {
 import type { VRM0Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { b64ToBytes } from "@/preview-3d/base64.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -26,6 +25,7 @@ import { createBreathController } from "@/preview-3d/perception/breath.ts"; // �
 import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
 import { createGazeController } from "@/preview-3d/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "./material-controls.ts";
@@ -133,7 +133,7 @@ export async function readVrmMeta(
     const b64 = await readFn(path);
     if (!b64) return null;
 
-    const bytes = b64ToBytes(b64);
+    const bytes = base64ToBytes(b64) as Uint8Array;
     const buffer = bytes.buffer.slice(
       bytes.byteOffset,
       bytes.byteOffset + bytes.byteLength,
@@ -279,7 +279,7 @@ async function mdVrStage1ReadParse(
     b64 ? `bytes=${b64.length}` : "ReadFileBytes 返回空（路径语义/守卫？）",
   );
   if (!b64) throw new Error("ReadFileBytes 返回空");
-  const bytes = b64ToBytes(b64);
+  const bytes = base64ToBytes(b64) as Uint8Array;
   const buffer = bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
@@ -341,7 +341,7 @@ async function mdVrLoadVrmaAnims(
       try {
         const b64 = await readFn(vp);
         if (!b64) continue;
-        const bytes = b64ToBytes(b64);
+        const bytes = base64ToBytes(b64) as Uint8Array;
         const buf = bytes.buffer.slice(
           bytes.byteOffset,
           bytes.byteOffset + bytes.byteLength,

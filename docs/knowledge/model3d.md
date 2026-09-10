@@ -39,7 +39,6 @@ auto_fields:
     - AtmospherePresetId
     - attenuateAmbientForSky
     - AutoDanceOptions
-    - b64ToBytes
     - bakeMeshFragments
     - BaseScene
     - BasisEncoderLike
@@ -107,8 +106,6 @@ auto_fields:
     - buildWaterNodes
     - buildYsmObject
     - buildYsmScene
-    - bytesToArrayBuffer
-    - bytesToBase64
     - cacheGet
     - cacheSet
     - cacheSetEvictHandler

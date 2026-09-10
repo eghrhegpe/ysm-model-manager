@@ -9,8 +9,8 @@ import { getApp } from "@/backend/app.ts";
 import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
+import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
-import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/ysm-object.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
 import type { ScreenshotLights } from "./screenshot-lights.ts";
 

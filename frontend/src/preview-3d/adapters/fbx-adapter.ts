@@ -10,7 +10,6 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { b64ToBytes, bytesToArrayBuffer } from "@/preview-3d/base64.ts";
 import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
@@ -19,6 +18,7 @@ import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
+import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -158,7 +158,7 @@ async function buildFbxTexUrlMap(
         let b64 = await port.readFileBytes(`${dir}/${name}`);
         if (!b64) b64 = await port.readFileBytes(`${dir}/${name.toLowerCase()}`);
         if (!b64) return;
-        const bytes = bytesToArrayBuffer(b64ToBytes(b64));
+        const bytes = bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array);
         map.set(name, URL.createObjectURL(new Blob([bytes], { type: "image/png" })));
       } catch {
         /* 单个纹理读取失败跳过，不阻断渲染 */
@@ -188,7 +188,7 @@ export async function buildFbxScene(
   if (!b64) {
     throw new Error("FBX 字节读取失败（ReadFileBytes 返回空）");
   }
-  const bytes = bytesToArrayBuffer(b64ToBytes(b64));
+  const bytes = bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array);
   const blobUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
 
   // 2) 加载：fbx-worker=1 走 worker —— 官方 FBXLoader（three/addons，零解析改动），

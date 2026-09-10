@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   registerBoneRaycast: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("@/preview-3d/ysm-object.ts", () => ({ buildYsmObject: mocks.buildYsmObject }));
+vi.mock("@/preview-3d/model/ysm-object.ts", () => ({ buildYsmObject: mocks.buildYsmObject }));
 vi.mock("@/preview-3d/infra/camera-setup.ts", () => ({ fitCameraToScene: mocks.fitCameraToScene }));
 vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
   buildBoneHierarchy: () => ({ nameMap: new Map(), parentMap: new Map(), childrenMap: new Map() }),

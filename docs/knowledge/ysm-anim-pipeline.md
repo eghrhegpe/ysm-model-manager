@@ -15,7 +15,6 @@ auto_fields:
     - BoneTransform
     - buildYsmScene
     - createMolangParser
-    - createYsmAnimPlayer
     - Keyframe
     - makeYsmAdapter
     - MolangAxes
@@ -25,7 +24,6 @@ auto_fields:
     - TimelineEvent
     - Vec3
     - YsmAdapterOptions
-    - YsmAnimPlayer
     - ysmMenuItems
     - YsmMenuItemsOpts
     - YsmPreloadedModel

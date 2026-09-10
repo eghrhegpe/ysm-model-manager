@@ -13,6 +13,7 @@ auto_fields:
     - asRecord
     - base64ToBytes
     - BusyLock
+    - bytesToArrayBuffer
     - clamp
     - clamp01
     - clampPct

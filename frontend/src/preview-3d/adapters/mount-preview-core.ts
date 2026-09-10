@@ -24,13 +24,13 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import {
   onOverlayStyleTargetReset,
   overlayStyleRoot,
   setOverlayStyleTarget,
 } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
-import type { TdKeyAction } from "@/preview-3d/keymap.ts";
 import {
   componentsStyleSheet,
   installComponentsStyles,

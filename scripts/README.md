@@ -42,6 +42,7 @@
 | `release-notes-gen.ts` | `node scripts/release-notes-gen.ts`                                                                              | git diff + commit 归类 → 结构化 JSON                                                                                                                      |
 | `rollback-impact.ts`   | `node scripts/rollback-impact.ts <commit>` / `--json` / `--quiet` / `--scope <dir>`                              | revert 影响面分析（audit-split 逆向镜像）：给定 commit，逆向跑一遍 funcMigration 找被删顶层声明 → 扫描当前 HEAD 引用 → 报潜在断链（⚠️ 或 ✅），情报型不阻断                                           |
 | `api-break.ts`         | `node scripts/api-break.ts <older> <newer>` / `--json` / `--quiet` / `--scope <dir>` / `--redline` / `--compact` | 任意两 ref 间破坏性变更检测（audit-split 通用化）：git diff --name-only 拿变更文件清单 → 对源码文件对比新旧顶层声明 → 报被删导出符号 + 当前 HEAD 潜在断链 + 新增导出入口 + ADR-040 红线；可跨分支/标签比对，用于合分支前或发版前检查 |
+| `contract-tests.ts`    | `node scripts/contract-tests.ts` / `--domain <d[,d]>` / `--json` / `--quiet`                                     | **契约测试统一 CLI 入口**（CI 与本地 pre-push **同源**，根除执行路径双轨）：收集 / `@/` 别名运行时注入（`ts-alias-register`）/ 并发 / 失败复跑全部复用共享层实现；`--domain` 走 `selectContractTests` 域裁剪——传变更文件时 **tests 域不再全量**（按 `CONTRACT_TEST_TARGETS` 精确裁剪，无覆盖改动才回落全量 fail-safe）。CI workflow 直接调用本脚本——此前手写 `Get-ChildItem tests/*.ts` 裸跑 `node $f`，缺 `@/` 别名注入，任何 import 链进入 frontend `@/` 别名的契约测试即 `ERR_MODULE_NOT_FOUND`（本地绿 CI 红，护栏 `test_contract_alias_runtime.ts`） |
 
 ### 实用级
 

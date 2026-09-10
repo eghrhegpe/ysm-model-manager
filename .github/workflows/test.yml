@@ -69,17 +69,14 @@ jobs:
           Add-Content -Path "$env:GITHUB_PATH" -Value $bin
           & "$bin\rg.exe" --version
 
+      # 统一走 scripts/contract-tests.ts（与本地 pre-push-gate 同源：收集 / 域裁剪 /
+      # @/ 别名运行时注入 / 并发 / 失败复跑全复用 _lib/contract-tests.ts）。
+      # ⚠️ 勿退回手写 `Get-ChildItem tests/*.ts | node $f` 裸跑循环——裸跑缺
+      # ts-alias-register 的 @/ 别名注入，任何 import 链进入 frontend @/ 别名的契约测试
+      # 都会 ERR_MODULE_NOT_FOUND（本地绿、CI 红）。护栏：tests/test_contract_alias_runtime.ts。
       - name: 契约测试（tests/，Node .ts，禁止修改测试文件）
         shell: pwsh
-        run: |
-          $files = Get-ChildItem tests/*.ts
-          foreach ($f in $files) {
-            node $f.FullName
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "契约测试失败: $($f.Name)（exit=$LASTEXITCODE）"
-              exit $LASTEXITCODE
-            }
-          }
+        run: node scripts/contract-tests.ts
 
       - name: 绑定契约对账（binding-check — Go 导出 vs -ts 产物）
         shell: pwsh

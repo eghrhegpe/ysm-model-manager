@@ -115,7 +115,6 @@ tests/port-verification/report-*.txt
 
 # 实验性 POC 产物（ADR-080 Java 模型渲染 POC，已复刻进主工程）
 poc/
-docs/.layering-baseline.json
 
 # 一次性工具产物 / WASM 生成胶水（不应入库，避免污染仓库）
 review_diff.txt

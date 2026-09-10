@@ -9,11 +9,13 @@ auto_fields:
   symbols_with_lines:
     - ARIA_ATTR
     - createHeaderToggle
+    - createInstallableStyles
     - createSlideMenu
     - DragSliderController
     - DragSliderOptions
     - HeaderToggleConfig
     - HeaderToggleElement
+    - InstallableStyles
     - installSlideMenuStyles
     - installUiComponentsStyles
     - isPreviewOverlayActive

@@ -1,9 +1,9 @@
-// 自动生成：🥉 slide-menu 外壳样式（MikuMikuAR app.css 迁移，仅外壳层，不含菜单导航引擎）。
+// 🥉 slide-menu 外壳样式（MikuMikuAR app.css 迁移，仅外壳层，不含菜单导航引擎；
+// 本仓手工维护——.menu-wrapper.slide-menu 背景已有意改为玻璃质感，对齐 ysm 3D HUD 的 .ysm-3d-popup，
+// 故允许针对 3D 浮层手工微调；类名契约由 ui-slide-menu-styles.test.ts 兜底）。
 // 消费方式：
 //  - Shadow DOM 组件：root.adoptedStyleSheets = [slideMenuStyleSheet, ...others];
 //  - 全局/light-DOM：installSlideMenuStyles() 会把样式注入 document.head 一次。
-// 注意：本文件由 MikuMikuAR 外壳迁移而来，但 .menu-wrapper.slide-menu 的背景已
-// 有意改为玻璃质感（对齐 ysm 3D HUD 的 .ysm-3d-popup），故此处允许针对 3D 浮层手工微调。
 // 外壳始终承载 🥉 行组件，故 createSlideMenu 会同时安装 ui-components 样式。
 
 export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMikuAR app.css 迁移） ===== */
@@ -140,27 +140,15 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
 }
 `;
 
-// 顶层初始化包 try/catch + 环境守卫：happy-dom/vitest 等无 CSSStyleSheet 的环境
-// import 即崩，会连带所有 import 本库的模块测试失败。
+// 顶层初始化包：happy-dom/vitest 等无 CSSStyleSheet 的环境 import 即崩，会连带所有 import 本库的模块测试失败。
 // 样式注入（installSlideMenuStyles）走 style 标签，不依赖 _sheet，失败仅影响 shadow 组件。
-let _sheet: CSSStyleSheet | null = null;
-try {
-  if (typeof CSSStyleSheet !== "undefined") {
-    _sheet = new CSSStyleSheet();
-    _sheet.replaceSync(slideMenuCss);
-  }
-} catch (e) {
-  console.error("[ui-slide-menu] CSS 解析失败", e);
-}
-export const slideMenuStyleSheet = _sheet;
+// 脚手架由 style-install.ts 统一提供，勿在此手写 try/catch + _sheet + _installed 三件套。
+import { createInstallableStyles } from "./style-install.ts";
 
-let _installed = false;
-/** 将外壳样式注入 document.head（全局/light-DOM 场景）。幂等，仅注入一次。 */
-export function installSlideMenuStyles(doc: Document = document): void {
-  if (_installed) return;
-  const st = doc.createElement("style");
-  st.setAttribute("data-ui-slide-menu", "");
-  st.textContent = slideMenuCss;
-  doc.head.appendChild(st);
-  _installed = true;
-}
+const { sheet: slideMenuStyleSheet, install: installSlideMenuStyles } = createInstallableStyles(
+  slideMenuCss,
+  "data-ui-slide-menu",
+  "ui-slide-menu",
+);
+
+export { installSlideMenuStyles, slideMenuStyleSheet };

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **216** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **217** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -17,7 +17,7 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 5 |
+| [🔄 部分采纳](#部分采纳) | 6 |
 | [✅ 已采纳](#已采纳) | 201 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
@@ -25,10 +25,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（5）
+### 🔄 部分采纳（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-218](./ADR-218-stats-pool-concurrency.md) | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 |
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | 🔄 部分采纳 |
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
 | [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | 🔄 部分采纳 |
@@ -39,7 +40,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-218](./ADR-218-stats-pool-concurrency.md) | stats worker 池并发契约与协议收敛 | ✅ 已采纳 |
+| [ADR-219](./ADR-219-stats-graceful-degradation.md) | stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗 | ✅ 已采纳 |
 | [ADR-217](./ADR-217-backend-parsers-tier.md) | backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛 | ✅ 已采纳 |
 | [ADR-216](./ADR-216-listener-set-primitive.md) | 域状态订阅提级原语层：createListenerSet | ✅ 已采纳 |
 | [ADR-215](./ADR-215-dom-singleton-to-factory-and-hl-full-match.md) | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 |
@@ -265,7 +266,8 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-218 | stats worker 池并发契约与协议收敛 | ✅ 已采纳 | 2026-09-10 |
+| ADR-219 | stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗 | ✅ 已采纳 | 2026-09-10 |
+| ADR-218 | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 | 2026-09-10 |
 | ADR-217 | backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛 | ✅ 已采纳 | 2026-09-09 |
 | ADR-216 | 域状态订阅提级原语层：createListenerSet | ✅ 已采纳 | 2026-09-09 |
 | ADR-215 | dom 单例模式改工厂 + html hl 全匹配高亮 | ✅ 已采纳 | 2026-09-14 |

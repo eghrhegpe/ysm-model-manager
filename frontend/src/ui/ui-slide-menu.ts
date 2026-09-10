@@ -1,8 +1,6 @@
-// ===== 🥉 slide-menu 外壳构建器（ADR 去桶化配套）=====
-// 复刻 MikuMikuAR 的 slide-menu 卡片外壳（menu-wrapper/slide-viewport/slide-panel/slide-list/slide-header），
-// 但不搬其菜单导航引擎（registry/schema/stack 等业务层）——而是在外壳层提供一组【轻量导航栈】能力
-// （home/navigate/back/refresh/isShowing/reset/isAtRoot），供调用方以最小成本组织多级菜单
-// （例如 YSM 的「模型信息 → 表情 / 切换模型」两级）。外壳仍是卡片视觉 + 标题栏 + 关闭/返回按钮，
+// ===== 🥉 slide-menu 外壳构建器（ADR 去桶化配套；MikuMikuAR 外壳迁移，仅外壳不搬导航引擎）=====
+// 卡片外壳（menu-wrapper/slide-viewport/slide-panel/slide-list/slide-header）+ 一组【轻量导航栈】能力
+// （home/navigate/back/refresh/isShowing/reset/isAtRoot），供调用方以最小成本组织多级菜单。
 // 内容由调用方经视图（SlideMenuView.render）注入——生产内容 = preview-3d/menu 的 renderMenu
 // 分派产物（MenuNode schema 声明式：folder 折叠组 / row 行动态行 / cap 栈控件）。
 //
@@ -90,18 +88,67 @@ export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): 
   smBindBackButton(shell.backBtn, handleBack);
   smBindKeyboardNav(shell.list, handleBack);
 
-  return smBuildHandle(shell, stack, renderTop, handleBack, {
-    getOnClose: () => onClose,
-    setOnClose: (fn) => {
+  // handle 直接以闭包捕获本函数状态（onClose/prevFocus/stack）——不再经 SmHandleDeps
+  // 注入舞绕一圈（原实现把私有闭包变量拆成 getter/setter 喂给同文件私有函数，零收益）。
+  return {
+    root: shell.root,
+    list: shell.list,
+    setTitle: (t: string): void => {
+      shell.title.textContent = t;
+    },
+    setOnClose: (fn: () => void): void => {
       onClose = fn;
     },
-    getPrevFocus: () => _prevFocus,
-    setPrevFocus: (el) => {
-      _prevFocus = el;
+    home: (view: SlideMenuView): void => {
+      stack.length = 0;
+      stack.push(view);
+      renderTop();
     },
-    pushBlock: () => pushInputBlock(MENU_BLOCK_ID),
-    popBlock: () => popInputBlock(MENU_BLOCK_ID),
-  });
+    navigate: (view: SlideMenuView): void => {
+      stack.push(view);
+      renderTop();
+    },
+    back: (): void => handleBack(),
+    refresh: (): void => {
+      renderTop();
+    },
+    isShowing: (view: SlideMenuView): boolean => stack[stack.length - 1] === view,
+    reset: (): void => {
+      stack.length = 0;
+    },
+    isAtRoot: (): boolean => stack.length <= 1,
+    dispose: (): void => {
+      shell.root.remove();
+    },
+
+    // ── a11y：焦点管理 + 输入阻断 ──
+    onShow: (): void => {
+      // 记住触发元素（首次显示时；后续 navigate 不覆盖）
+      if (!_prevFocus && document.activeElement instanceof HTMLElement) {
+        _prevFocus = document.activeElement;
+      }
+      pushInputBlock(MENU_BLOCK_ID);
+      // 焦点给首项（rAF 保证 DOM 已渲染完）
+      requestAnimationFrame((): void => {
+        const items = smGetNavItems(shell.list);
+        smFocusItem(items, 0);
+      });
+    },
+    onHide: (hideOpts?): void => {
+      popInputBlock(MENU_BLOCK_ID);
+      if (hideOpts?.restoreFocus !== false) {
+        const el = _prevFocus;
+        _prevFocus = null;
+        if (el?.isConnected) {
+          try {
+            el.focus();
+          } catch {
+            /* 元素不可聚焦时静默 */
+          }
+        }
+      }
+    },
+  };
 }
 
 function smInstallStyles(): void {
@@ -253,83 +300,4 @@ function smSetupNavItems(list: HTMLElement): void {
   items.forEach((el, i) => {
     el.tabIndex = i === 0 ? 0 : -1;
   });
-}
-
-// ── handle 构造 ──────────────────────────────────────────────────
-
-interface SmHandleDeps {
-  getOnClose: () => (() => void) | undefined;
-  setOnClose: (fn: () => void) => void;
-  getPrevFocus: () => HTMLElement | null;
-  setPrevFocus: (fn: HTMLElement | null) => void;
-  pushBlock: () => void;
-  popBlock: () => void;
-}
-
-function smBuildHandle(
-  shell: SmShell,
-  stack: SlideMenuView[],
-  renderTop: () => void,
-  handleBack: () => void,
-  deps: SmHandleDeps,
-): SlideMenuHandle {
-  return {
-    root: shell.root,
-    list: shell.list,
-    setTitle: (t: string): void => {
-      shell.title.textContent = t;
-    },
-    setOnClose: (fn: () => void): void => {
-      deps.setOnClose(fn);
-    },
-    home: (view: SlideMenuView): void => {
-      stack.length = 0;
-      stack.push(view);
-      renderTop();
-    },
-    navigate: (view: SlideMenuView): void => {
-      stack.push(view);
-      renderTop();
-    },
-    back: (): void => handleBack(),
-    refresh: (): void => {
-      renderTop();
-    },
-    isShowing: (view: SlideMenuView): boolean => stack[stack.length - 1] === view,
-    reset: (): void => {
-      stack.length = 0;
-    },
-    isAtRoot: (): boolean => stack.length <= 1,
-    dispose: (): void => {
-      shell.root.remove();
-    },
-
-    // ── a11y：焦点记忆 + 输入阻断 ──
-    onShow: (): void => {
-      // 记住触发元素（首次显示时；后续 navigate 不覆盖）
-      if (!deps.getPrevFocus() && document.activeElement instanceof HTMLElement) {
-        deps.setPrevFocus(document.activeElement);
-      }
-      deps.pushBlock();
-      // 焦点给首项（微任务保证 DOM 已渲染完）
-      requestAnimationFrame((): void => {
-        const items = smGetNavItems(shell.list);
-        smFocusItem(items, 0);
-      });
-    },
-    onHide: (opts?): void => {
-      deps.popBlock();
-      if (opts?.restoreFocus !== false) {
-        const el = deps.getPrevFocus();
-        deps.setPrevFocus(null);
-        if (el?.isConnected) {
-          try {
-            el.focus();
-          } catch {
-            /* 元素不可聚焦时静默 */
-          }
-        }
-      }
-    },
-  };
 }

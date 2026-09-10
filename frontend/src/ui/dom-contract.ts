@@ -1,8 +1,6 @@
 // 🥉 ui-helpers 组件库 — DOM 契约单源（零依赖叶子）。
 // 自 MikuMikuAR dom-contract.ts 迁移，仅保留 🥉 组件实际引用的常量。
 // 渲染函数产出 role/class 时统一引用此处，禁止手写字符串。
-// （COLLAPSIBLE 段随 ui-collapsible / ui-slide-row 拔管删除——生产折叠组由
-// renderMenu 的 rmAppendFolder cap-section 类体系承载，非本契约。）
 
 /** 渲染层 role 常量 */
 export const ROLE = {

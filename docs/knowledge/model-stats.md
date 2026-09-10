@@ -22,6 +22,7 @@ auto_fields:
     - statsFromJsonBytes
     - StatsRelReader
     - StatsWorkerError
+    - StatsWorkerPartial
     - StatsWorkerRequest
     - StatsWorkerResponse
     - StatsWorkerResult

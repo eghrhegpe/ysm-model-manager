@@ -1,13 +1,7 @@
 // [doc:architecture] ui-header-toggle — 标题栏小型开关（toggle.header-toggle）
-// 从 ui-rows 抽出的零依赖叶子：断开 ui-rows ⇄ ui-slide-row 文件级双向环。
+// 零依赖叶子（自 MikuMikuAR 迁移，经 ui-rows 抽出以断开文件级双向环）。
 // 统一双触发去重 + disabled + forceToggle。
-// 自 MikuMikuAR 迁移。
-//
-// 2026-09 精简：bind 自更新 + control-registry 注册链整体拔除（control-registry.ts 随删）。
-// 背景：bind 注册的 update 回调生产无人调用（setControlRegistry 零接入、iterateControls
-// 仅被自研清扫消费），「菜单打开期间 cap 变化回写 UI」（ADR-085 S2）实际由菜单 refresh
-// 重建式渲染承担——每次重渲染重建 toggle、初始 value 即最新态，注册表自更新属死链路。
-// 需要状态回写的场景请走 refresh 重建语义，勿复刻注册表。
+// 注意：状态回写场景走菜单 refresh 重建语义（重建即最新态），勿复刻已删的 control-registry 注册链。
 
 export interface HeaderToggleConfig {
   value: boolean;

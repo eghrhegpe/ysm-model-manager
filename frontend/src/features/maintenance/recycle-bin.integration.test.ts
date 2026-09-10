@@ -39,7 +39,7 @@ Object.assign(mocks, {
 
 
 
-vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
 

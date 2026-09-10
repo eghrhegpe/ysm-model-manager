@@ -4,9 +4,9 @@
 // - DOM 模板经 BatchRenameTpl 注入（views/app-tree/tpl-batch-rename.ts，features 不自渲染）
 // - 表单接线（状态更新/预览渲染/五组事件绑定）→ ./batch-rename-form.ts
 
+import { closeDlg, registerDlg, trapFocus } from "@/utils/dom/modal-core.ts";
 import { type ParsedModelName, parseModelName } from "@/utils/model-name/display.ts";
 import { bindBatchRenameForm } from "./batch-rename-form.ts";
-import { closeDlg, registerDlg, trapFocus } from "./modal-core.ts";
 
 /** 批量条目（ModelEntry 子集） */
 export interface BatchEntry {

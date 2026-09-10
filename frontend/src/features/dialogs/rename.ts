@@ -3,11 +3,11 @@
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
 
 import { t } from "@/core/i18n/t.ts";
+import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
-import { createDialog } from "./modal-core.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
 
 type GetAppFn = typeof dialogsGetApp;

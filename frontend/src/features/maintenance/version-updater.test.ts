@@ -38,10 +38,10 @@ vi.mock("@/backend/app.ts", async () => {
   return setupAppMock();
 });
 
-vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirm,
 }));
-vi.mock("@/features/dialogs/modal-progress.ts", () => ({
+vi.mock("@/utils/dom/modal-progress.ts", () => ({
   modalProgress: mocks.modalProgress,
 }));
 vi.mock("@/utils/format/fmt-mb.ts", () => ({

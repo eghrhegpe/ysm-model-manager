@@ -25,7 +25,7 @@ export { appContentStyle };
 import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
-import { registerSync } from "@/features/sync.ts";
+import { registerSync } from "@/features/sync/sync.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";

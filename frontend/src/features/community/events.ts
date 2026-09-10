@@ -3,8 +3,8 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";

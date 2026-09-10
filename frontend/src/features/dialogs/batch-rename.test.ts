@@ -18,7 +18,7 @@ const { closeDlgMock, registerDlgMock, trapFocusMock, activeCancelRef } = vi.hoi
   };
 });
 
-vi.mock("./modal-core.ts", () => ({
+vi.mock("@/utils/dom/modal-core.ts", () => ({
   registerDlg: registerDlgMock,
   closeDlg: closeDlgMock,
   trapFocus: trapFocusMock,

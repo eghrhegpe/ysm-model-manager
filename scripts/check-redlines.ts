@@ -491,14 +491,15 @@ function runChecks() {
 
   add(
     "W6",
-    "bypass dialogs (dlg-overlay outside dialogs/modal.ts)",
+    "bypass dialogs (dlg-overlay outside modal-core/dialogs/)",
     rgTracked('className\\s*=\\s*"dlg-overlay"', "frontend/src", ["*.ts", "*.js"])
       .filter((l) => !l.includes("dialogs/modal.ts"))
       .filter((l) => {
         const [f] = parseRgLine(l);
-        return !f.includes("dialogs/");
+        // 合法创建点：modal-core.ts 原语 + dialogs/ 业务弹窗（旧规则遗留）
+        return !f.includes("modal-core.ts") && !f.includes("dialogs/");
       }),
-    "统一走 modal.ts (modalConfirm/registerDlg 单例槽位，致命陷阱 #14)；合法旁路须确认 registerDlg 已登记",
+    "统一走 modal-core.ts (registerDlg 单例槽位)；合法旁路须确认 registerDlg 已登记",
   );
 
   // W7 绑定层写操作须配缓存失效（scanner.InvalidateCache/InvalidatePath）：

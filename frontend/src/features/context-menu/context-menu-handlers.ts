@@ -6,12 +6,12 @@
 
 import { bus } from "@/bus";
 import { t, tOf } from "@/core/i18n/t.ts";
-import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { copyText } from "@/utils/dom/clipboard.ts";
 import { downloadTextFile } from "@/utils/dom/download-text.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";

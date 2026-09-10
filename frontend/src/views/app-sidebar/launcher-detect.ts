@@ -8,10 +8,10 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { modalPicker } from "@/features/dialogs/modal-picker.ts";
-import { modalSelect } from "@/features/dialogs/modal-select.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalPicker } from "@/utils/dom/modal-picker.ts";
+import { modalSelect } from "@/utils/dom/modal-select.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";

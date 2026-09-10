@@ -31,7 +31,7 @@ vi.mock("@wailsio/runtime", () => ({
   Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() },
 }));
 
-vi.mock("@/features/dialogs/modal-core.ts", () => ({
+vi.mock("@/utils/dom/modal-core.ts", () => ({
   closeActiveDialog: vi.fn().mockReturnValue(false),
 }));
 
@@ -43,7 +43,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
   };
 });
 
-import { closeActiveDialog } from "@/features/dialogs/modal-core.ts";
+import { closeActiveDialog } from "@/utils/dom/modal-core.ts";
 
 let cleanups: Array<() => void> = [];
 

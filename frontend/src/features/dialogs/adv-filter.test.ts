@@ -12,7 +12,7 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 import { modalAdvFilter } from "./adv-filter.ts";
-import { __resetModalStateForTest, closeActiveDialog } from "./modal-core.ts";
+import { __resetModalStateForTest, closeActiveDialog } from "@/utils/dom/modal-core.ts";
 
 async function open(opts: { value?: Record<string, unknown> } = {}) {
   const pending = modalAdvFilter(opts as unknown as Parameters<typeof modalAdvFilter>[0]);

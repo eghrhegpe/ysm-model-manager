@@ -1,9 +1,16 @@
 // ===== 全局导入执行器（2026-08-05：静默导入改造）=====
-// 拖拽导入不再依赖导入 tab 挂载（initImportQueue 懒加载），由本模块全局执行：
+// 导入 tab 删除后，拖拽/选择文件直接走本模块全局执行，不依赖任何 UI 挂载：
 // - directImport：单文件直导（.ysm/.zip 保留原名，后端自动路由）
 // - importFolder：文件夹整组导入（含 ysm.json 或普通文件夹，组内至少 1 个支持文件）
 // - inFlight 去重 + toast/stats/tree 广播
 // 与 go/importer + go/fileops.WriteModelFolder 后端对齐。
+//
+// 并发策略：executeCollected 对 folders/singles 串行发起请求（for...await），
+// 但 Go 侧 ImportModelFile 各自独立 goroutine 落盘/解压/清缓存，实际天然并行。
+// 前端 base64 编码不是瓶颈（毫秒级），串行发起即可；真正并发缺口由 Go 填充。
+//
+// 归属边界：类型路由/冲突检测/解压/扫描缓存失效全在 Go；前端只做去重/路由/广播。
+// 不接前端预检查（哈希重复检测 Go 已做、缺失纹理归扫描阶段）。
 //
 // P0 整改：_inFlight 移入 createImportSession() 工厂闭包，消除模块级可变全局。
 // 模块级 defaultImportSession 保持既有消费者零改动。
@@ -11,13 +18,13 @@
 import { importWebFiles, MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import type { CollectedEntry } from "@/features/dnd/collector.ts";
-import { buildFolderItems, fileToBase64, groupCollected } from "@/features/dnd/shared.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError, isFileExistsError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import type { CollectedEntry } from "./collector.ts";
 import { importGetApp } from "./import-deps.ts";
+import { buildFolderItems, fileToBase64, groupCollected } from "./shared.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };

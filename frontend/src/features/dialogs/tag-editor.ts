@@ -4,9 +4,9 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
-import { createDialog } from "./modal-core.ts";
 import { addTagToSet } from "./tag-set.ts";
 
 type GetAppFn = typeof dialogsGetApp;

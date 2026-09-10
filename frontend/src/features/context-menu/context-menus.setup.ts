@@ -38,13 +38,13 @@ const mocks = vi.hoisted(() => ({
 /** mock 访问器——唯一对外取 mock 句柄的入口（不可直接 export hoisted 变量） */
 export const getMocks = (): typeof mocks => mocks;
 
-vi.mock("../dialogs/modal-prompt.ts", () => ({
+vi.mock("@/utils/dom/modal-prompt.ts", () => ({
   modalPrompt: mocks.modalPromptMock,
 }));
-vi.mock("../dialogs/modal-confirm.ts", () => ({
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({
   modalConfirm: mocks.modalConfirmMock,
 }));
-vi.mock("../dialogs/modal-select.ts", () => ({
+vi.mock("@/utils/dom/modal-select.ts", () => ({
   modalSelect: mocks.modalSelectMock,
 }));
 vi.mock("../dialogs/rename.ts", () => ({ showRenameDialog: mocks.showRenameDialogMock }));

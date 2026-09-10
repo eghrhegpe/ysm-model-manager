@@ -33,7 +33,7 @@ vi.mock("@/features/require-mcroot.ts", () => ({
   requireMcRoot: vi.fn().mockResolvedValue("/mc"),
 }));
 
-vi.mock("@/features/dialogs/modal-confirm.ts", () => ({
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({
   modalConfirm,
 }));
 

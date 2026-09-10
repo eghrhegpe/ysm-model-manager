@@ -16,7 +16,7 @@ source_files:
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/render.ts
   - frontend/src/views/app-sidebar/sync-flow.ts
-  - frontend/src/features/sync.ts
+  - frontend/src/features/sync/sync.ts
 auto_fields:
   symbols_with_lines:
     - _lastSelectedType
@@ -43,6 +43,7 @@ auto_fields:
     - MmdVariantGroups
     - NetworkSelf
     - performSingleOp
+    - registerSync
     - render
     - renderVersionCards
     - restoreCheckboxes
@@ -96,7 +97,7 @@ invariant_anchors:
   - frontend/src/views/app-sync-manager/network.ts|performSingleOp
   - frontend/src/views/app-sync-manager/store.ts|applyFilter
   - frontend/src/views/app-sync-manager/index.ts|_gen
-  - frontend/src/features/sync.ts|runDownloadMissing
+  - frontend/src/features/sync/sync.ts|runDownloadMissing
 status: active
 ---
 

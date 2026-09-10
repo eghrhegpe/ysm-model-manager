@@ -4,16 +4,36 @@ name: 弹窗基座 modal（6 文件家族）
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/features/dialogs/modal-core.ts
-  - frontend/src/features/dialogs/modal-prompt.ts
-  - frontend/src/features/dialogs/modal-select.ts
-  - frontend/src/features/dialogs/modal-confirm.ts
-  - frontend/src/features/dialogs/modal-progress.ts
-  - frontend/src/features/dialogs/modal-picker.ts
+  - frontend/src/utils/dom/modal-core.ts
+  - frontend/src/utils/dom/modal-prompt.ts
+  - frontend/src/utils/dom/modal-select.ts
+  - frontend/src/utils/dom/modal-confirm.ts
+  - frontend/src/utils/dom/modal-progress.ts
+  - frontend/src/utils/dom/modal-picker.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - __resetModalStateForTest
+    - closeActiveDialog
+    - closeDlg
+    - createDialog
+    - modalConfirm
+    - ModalConfirmOptions
+    - modalPicker
+    - ModalPickerItem
+    - ModalPickerOptions
+    - ModalPickerResult
+    - modalProgress
+    - ModalProgressHandle
+    - ModalProgressOptions
+    - modalPrompt
+    - ModalPromptOptions
+    - modalSelect
+    - ModalSelectOptions
+    - registerDlg
+    - trapFocus
+    - VIEW_TESTIDS
   tests:
-    - frontend/src/features/dialogs/modal.test.ts
+    - frontend/src/utils/dom/modal.test.ts
 use_when:
   - 弹窗
   - 对话框
@@ -24,11 +44,11 @@ use_when:
   - prompt
   - confirm
 invariant_anchors:
-  - frontend/src/features/dialogs/modal-core.ts|trapFocus
-  - frontend/src/features/dialogs/modal-core.ts|closeDlg
-  - frontend/src/features/dialogs/modal-core.ts|registerDlg
-  - frontend/src/features/dialogs/modal-confirm.ts|modalConfirm
-  - frontend/src/features/dialogs/modal-picker.ts|modalPicker
+  - frontend/src/utils/dom/modal-core.ts|trapFocus
+  - frontend/src/utils/dom/modal-core.ts|closeDlg
+  - frontend/src/utils/dom/modal-core.ts|registerDlg
+  - frontend/src/utils/dom/modal-confirm.ts|modalConfirm
+  - frontend/src/utils/dom/modal-picker.ts|modalPicker
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

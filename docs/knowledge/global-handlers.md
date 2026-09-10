@@ -7,7 +7,7 @@ source_files:
   - frontend/src/views/app-content/index.ts
   - frontend/src/features/dnd/import-dnd.ts
   - frontend/src/features/pack-ops/instance-ops.ts
-  - frontend/src/features/sync.ts
+  - frontend/src/features/sync/sync.ts
   - frontend/src/features/require-mcroot.ts
   - frontend/src/core/error-diary.ts
 auto_fields:
@@ -22,6 +22,7 @@ auto_fields:
     - pushToDiary
     - registerErrorDiary
     - registerInstanceOps
+    - registerSync
     - requireMcRoot
     - unregisterErrorDiary
   tests:

@@ -6,8 +6,8 @@ category: feature
 source_files:
   - frontend/src/features/import/executor.ts
   - frontend/src/features/dnd/import-dnd.ts
-  - frontend/src/features/dnd/shared.ts
-  - frontend/src/features/dnd/collector.ts
+  - frontend/src/features/import/shared.ts
+  - frontend/src/features/import/collector.ts
   - frontend/src/features/dnd/pack-dnd.ts
   - frontend/src/utils/resource/importable.ts
   - frontend/src/utils/dom/editable-target.ts
@@ -15,9 +15,16 @@ auto_fields:
   symbols_with_lines:
     - bindPackCardDnD
     - bindTreeDnD
+    - buildFolderItems
+    - collectDropFiles
+    - CollectedEntry
+    - collectFiles
     - createImportSession
     - directImport
     - executeCollected
+    - fileToBase64
+    - FolderGroup
+    - groupCollected
     - handleInstanceDrop
     - handleTreeDrop
     - ImportFile
@@ -29,12 +36,13 @@ auto_fields:
     - isSupportedFile
     - PackDndBusy
     - PackDndInstance
+    - shouldEnterForm
   tests:
     - frontend/src/features/import/executor.test.ts
-    - frontend/src/features/dnd/import-dnd.test.ts
-    - frontend/src/features/dnd/shared.test.ts
-    - frontend/src/features/dnd/collector.test.ts
-    - frontend/src/features/dnd/pack-dnd.test.ts
+    - frontend/src/features/import/import-dnd.test.ts
+    - frontend/src/features/import/shared.test.ts
+    - frontend/src/features/import/collector.test.ts
+    - frontend/src/features/import/pack-dnd.test.ts
 quick_groups:
   - 文件操作与标签
 quick_intents:

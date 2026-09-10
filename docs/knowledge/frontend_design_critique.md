@@ -17,7 +17,7 @@ source_files:
   - frontend/src/preview-3d/infra/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
-  - frontend/src/features/dialogs/modal-core.ts
+  - frontend/src/utils/dom/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
   - frontend/src/preview-3d/menu/components-styles.ts
@@ -94,7 +94,7 @@ tests:
   - frontend/src/preview-3d/infra/render-budget.test.ts
   - frontend/src/preview-3d/infra/safe-dispose.test.ts
   - frontend/src/test-utils/index.test.ts
-  - frontend/src/features/dialogs/modal.test.ts
+  - frontend/src/utils/dom/modal.test.ts
   - frontend/src/services/resource-registry.test.ts
   - frontend/src/views/app-content/settings/theme.test.ts
   - frontend/src/views/app-nav/index.test.ts

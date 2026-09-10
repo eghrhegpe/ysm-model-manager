@@ -9,16 +9,30 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 
 /** 防 reload 循环标记（值 = JSON {t: 上次 reload 时间戳, n: 已尝试次数}）。
- *  旧版值为 "1"（首次注册固定写）——读到 "1" 视为「曾 reload 但未成功」，t=0 立即落入可重试。 */
+ *  旧版值为 "1"（首次注册固定写）——读到 "1" 视为「曾 reload 但未成功」，t=0 立即落入可重试。
+ *  sessionStorage 兜底：localStorage 不可用（隐私模式/存储禁用）时 safeGet 读不到记录，
+ *  会话级持久同样足够防循环（reload 内保留；新标签页重新计次）。 */
 const COI_RELOAD_KEY = "ysm:coi-reload";
 /** 上次 reload 后此窗口内不再重试（防连续 reload 循环） */
 const COI_RELOAD_WINDOW_MS = 30_000;
 /** 重试次数上限：达上限后永久放弃（防 SW 激活失败场景无限 reload） */
 const COI_RELOAD_MAX_ATTEMPTS = 3;
 
-/** 读 reload 标记；无记录/损坏 → null（可 reload）；"1" 旧版 → {t:0,n:0}（可重试，计入本次） */
+/** sessionStorage 兜底读：裸访问 + try/catch（存储被禁时连 sessionStorage 访问也抛）；
+ *  运行环境无 sessionStorage（node 测试环境等）→ null */
+function readSessionRecord(): string | null {
+  try {
+    if (typeof sessionStorage === "undefined") return null;
+    return sessionStorage.getItem(COI_RELOAD_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** 读 reload 标记（localStorage 优先，读不到回退 sessionStorage 同 key）；
+ *  无记录/损坏 → null（可 reload）；"1" 旧版 → {t:0,n:0}（可重试，计入本次） */
 function readReloadRecord(): { t: number; n: number } | null {
-  const raw = safeGet(COI_RELOAD_KEY);
+  const raw = safeGet(COI_RELOAD_KEY) ?? readSessionRecord();
   if (!raw) return null;
   if (raw === "1") return { t: 0, n: 0 }; // 旧版标记：曾 reload 过但未解锁，允许再试
   try {
@@ -30,6 +44,16 @@ function readReloadRecord(): { t: number; n: number } | null {
   return null;
 }
 
+/** sessionStorage 兜底镜像写：同步于 safeSet 路径（try/catch + 环境防护，静默跳过） */
+function writeSessionRecord(val: string): void {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    sessionStorage.setItem(COI_RELOAD_KEY, val);
+  } catch {
+    // sessionStorage 不可用（隐私模式常与 localStorage 同废）→ 跳过兜底
+  }
+}
+
 /** 当前是否已跨源隔离（SW 补头后 crossOriginIsolated=true；供多线程 WASM 分支） */
 export function isCrossOriginIsolated(): boolean {
   return typeof crossOriginIsolated === "boolean" && crossOriginIsolated;
@@ -37,6 +61,7 @@ export function isCrossOriginIsolated(): boolean {
 
 /** 注册 COI SW（网页版）：首次注册后 reload 一次让浏览器重新导航经 SW（解锁跨源隔离）。
  *  防循环策略：标记带时间戳+次数上限——窗口内不重试、超窗口可重试、达上限永久放弃；
+ *  标记经 sessionStorage 镜像兜底（localStorage 不可用时防循环状态不丢失）；
  *  若 reload 后 SW 已控制当前页或已隔离则不再 reload。 */
 export function registerCoiServiceWorker(): void {
   try {
@@ -53,7 +78,9 @@ export function registerCoiServiceWorker(): void {
         const rec = readReloadRecord();
         if (rec && now - rec.t < COI_RELOAD_WINDOW_MS) return; // 窗口内刚 reload 过，跳过
         if (rec && rec.n >= COI_RELOAD_MAX_ATTEMPTS) return; // 达上限，永久放弃
-        safeSet(COI_RELOAD_KEY, JSON.stringify({ t: now, n: (rec?.n ?? 0) + 1 }));
+        const val = JSON.stringify({ t: now, n: (rec?.n ?? 0) + 1 });
+        safeSet(COI_RELOAD_KEY, val);
+        writeSessionRecord(val); // 兜底镜像：localStorage 不可用时 reload 后仍能读到记录，阻断循环
         location.reload();
       })
       .catch((e) => {

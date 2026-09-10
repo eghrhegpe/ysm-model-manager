@@ -1,7 +1,8 @@
 // @vitest-environment node
 // ===== COI Service Worker 注册测试（ADR-079 M1）=====
-// 仅网页版注册；首次注册 reload 一次（localStorage 标记防循环）；
-// 已控制/已隔离不 reload；标记带时间戳+次数上限——窗口内不重试、超窗口可重试、达上限放弃。
+// 仅网页版注册；首次注册 reload 一次（localStorage 标记防循环，sessionStorage 镜像兜底）；
+// 已控制/已隔离不 reload；标记带时间戳+次数上限——窗口内不重试、超窗口可重试、达上限放弃；
+// localStorage 不可用时记录经 sessionStorage 留存，防循环闸门不旁路。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isCrossOriginIsolated, registerCoiServiceWorker } from "./coi-sw.ts";
 
@@ -25,6 +26,18 @@ const reloadMock = vi.fn();
 /** 构造 reload 标记值（真实实现存 JSON {t,n}；旧版存 "1"） */
 function reloadRec(t: number, n: number): string {
   return JSON.stringify({ t, n });
+}
+
+/** 构造 Map 支撑的 sessionStorage 并 stub 全局（返回 Map 供断言/预置记录；用例间由 unstubAllGlobals 清理） */
+function stubSessionStorage(): Map<string, string> {
+  const store = new Map<string, string>();
+  vi.stubGlobal("sessionStorage", {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      store.set(k, String(v));
+    },
+  });
+  return store;
 }
 
 beforeEach(() => {
@@ -118,6 +131,34 @@ describe("COI Service Worker（ADR-079 M1）", () => {
     await Promise.resolve();
     expect(reloadMock).toHaveBeenCalledTimes(1);
     expect(storageMock.safeSet).toHaveBeenCalledWith("ysm:coi-reload", reloadRec(1700000000000, 1));
+  });
+
+  it("localStorage 不可用（safeGet 读空/safeSet 不写）→ 记录经 sessionStorage 留存，窗口内第二次调用不再 reload", async () => {
+    const store = stubSessionStorage(); // 默认 safeGet→null、safeSet no-op 即模拟 localStorage 不可用
+    registerCoiServiceWorker();
+    await Promise.resolve();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(store.get("ysm:coi-reload")).toBe(reloadRec(1700000000000, 1)); // 兜底记录已镜像写入
+    registerCoiServiceWorker(); // 第二次：localStorage 仍不可用 → 回退读 sessionStorage → 窗口内跳过
+    await Promise.resolve();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("localStorage 不可用 + sessionStorage 记录达上限（n>=3）→ 兜底闸门同样永久放弃", async () => {
+    const store = stubSessionStorage();
+    store.set("ysm:coi-reload", reloadRec(1700000000000 - 60_000, 3)); // 60s 前且达上限
+    registerCoiServiceWorker();
+    await Promise.resolve();
+    expect(reloadMock).not.toHaveBeenCalled();
+  });
+
+  it("localStorage 不可用 + sessionStorage 记录超窗口未达上限 → 可重试并递增次数（镜像回写）", async () => {
+    const store = stubSessionStorage();
+    store.set("ysm:coi-reload", reloadRec(1700000000000 - 60_000, 1)); // 60s 前 reload 过
+    registerCoiServiceWorker();
+    await Promise.resolve();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(store.get("ysm:coi-reload")).toBe(reloadRec(1700000000000, 2));
   });
 
   it("无 serviceWorker 支持 → 静默 no-op（渐进增强）", () => {

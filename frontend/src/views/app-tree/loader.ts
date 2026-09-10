@@ -1,12 +1,12 @@
 // ===== Go 数据加载层 =====
 
-import { getApp } from "@/backend/app.ts";
 import { getAndroidBridge } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /** 树条目（loader 转换后的渲染格式） */
 export interface TreeEntry {
@@ -71,7 +71,7 @@ export async function loadEntries(
   subdir?: string,
 ): Promise<{ filesRoot: string; entries: TreeEntry[] }> {
   try {
-    const { GetRepoRoot, ScanModelEntriesFiltered } = await getApp();
+    const { GetRepoRoot, ScanModelEntriesFiltered } = await backendGetApp();
     // 扁平化架构：subdir 作为实际类型 ID 覆盖 rtype
     const targetType = subdir || rtype;
     const filesRoot = await GetRepoRoot(targetType || "");

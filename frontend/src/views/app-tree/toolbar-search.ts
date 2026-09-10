@@ -1,6 +1,5 @@
 // ===== toolbar-search.ts — 工具栏搜索/筛选/导入逻辑（从 toolbar-events.ts 拆出，ADR-040 P1）=====
 
-import { getApp } from "@/backend/app.ts";
 // 网页版数值条件降级标记消费（web-stats.ts 经 browserAdapter 链 re-export——与
 // searchWebModels 同一模块实例；Worker 批量统计不可用时置位，此处 toast 提示）
 import {
@@ -17,6 +16,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppTree } from "./index.ts";
 
 // P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)
@@ -152,7 +152,7 @@ function advFilterEarlyEmpty(vm: AppTree): void {
 
 async function advFilterFetchTagPaths(tag: string): Promise<Set<string> | null> {
   try {
-    const { ListByTag } = await getApp();
+    const { ListByTag } = await backendGetApp();
     const paths = await ListByTag(tag);
     return new Set(paths || []);
   } catch (e) {
@@ -191,7 +191,7 @@ async function advFilterSearchModelPaths(
     });
   }
   try {
-    const { SearchModels } = await getApp();
+    const { SearchModels } = await backendGetApp();
     const results = await SearchModels(
       filesRoot,
       kw,

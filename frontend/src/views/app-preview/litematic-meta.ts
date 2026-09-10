@@ -1,4 +1,3 @@
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
@@ -6,6 +5,7 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import type { PreviewRoot } from "./utils.ts";
@@ -146,7 +146,7 @@ interface LitematicMeta {
 
 /** 解析投影元数据：按扩展名分发 Go 读取 + 校验，无法解析抛错（litematic 解析语义） */
 async function parseLitematicMeta(ext: string, path: string): Promise<LitematicMeta> {
-  const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await getApp();
+  const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await backendGetApp();
   let meta: LitematicMeta;
   if (ext === ".nbt") {
     const raw = await ReadNbtStructure(path);

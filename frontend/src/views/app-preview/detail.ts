@@ -4,7 +4,6 @@
 // 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）。
 // detailGen 已迁至 AppPreview 实例（多实例隔离防串扰，快速切换时各实例在途请求互不影响）。
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -16,6 +15,7 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
@@ -59,7 +59,7 @@ export async function showModelDetail(
   if (ctx.detailGen.stale(gen)) return; // 用户已切换到其他预览
 
   try {
-    const { ExtractYsmSummary, ExtractYSMHeader } = await getApp();
+    const { ExtractYsmSummary, ExtractYSMHeader } = await backendGetApp();
     const results = await Promise.allSettled([ExtractYsmSummary(path), ExtractYSMHeader(path)]);
     if (ctx.detailGen.stale(gen)) return; // 解析期间用户已切换
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
@@ -141,7 +141,7 @@ export async function showModelDetail(
 export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<void> {
   const gen = ctx.detailGen.next();
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const { ReadPackMeta } = App;
     const meta = await ReadPackMeta(path);
     if (ctx.detailGen.stale(gen)) return;
@@ -183,7 +183,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
 async function renderPackModelList(
   ctx: PreviewCtx,
   gen: number,
-  App: Awaited<ReturnType<typeof getApp>>,
+  App: Awaited<ReturnType<typeof backendGetApp>>,
   path: string,
 ): Promise<void> {
   try {
@@ -261,7 +261,7 @@ export async function showShaderpack(
   <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
 </div>`;
   try {
-    const { ReadShaderpackLang } = await getApp();
+    const { ReadShaderpackLang } = await backendGetApp();
     const spMeta = await ReadShaderpackLang(path);
     if (ctx.detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     const displayName = spMeta?.name || basename;

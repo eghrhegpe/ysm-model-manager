@@ -1,7 +1,6 @@
 // ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:changed — 切换页面
 
-import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { bus, type PageName } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
@@ -21,6 +20,7 @@ import {
   type GroupTypeOption,
   RESOURCE_TYPES,
 } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { navCSS } from "./tpl.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -297,7 +297,7 @@ class AppNav extends WebComponentBase {
     anBindViewerFab(this.shadowRoot!, () => this._viewerFabClick());
 
     // 异步加载版本号
-    getApp()
+    backendGetApp()
       .then((App) =>
         App.GetAppVersion().then((v) => {
           // P3-5（子代理审核）：版本加载是异步，disconnect 后不再写已卸载 DOM

@@ -5,7 +5,6 @@
 //   （HMCL/PCL 分离实例目录是自动搜索盲区，此入口免手填路径）
 // 原 settings 版按钮与 MutationObserver 注入逻辑已随搬家移除，功能收敛到实例页空态。
 
-import { getApp } from "@/backend/app.ts";
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -15,6 +14,7 @@ import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 interface LauncherInstance {
   launcher: string;
@@ -47,8 +47,11 @@ const toastError = (error: unknown): void => {
 
 /** 保存 mcRoot（其余配置项沿用当前值原样回写；theme 取全局主题缺省 dark）；
  *  app 可传已取好的绑定引用（调用方顺手 LoadAppConfig 时免二次动态 import） */
-async function saveMcRoot(mcRoot: string, app?: Awaited<ReturnType<typeof getApp>>): Promise<void> {
-  const App = app ?? (await getApp());
+async function saveMcRoot(
+  mcRoot: string,
+  app?: Awaited<ReturnType<typeof backendGetApp>>,
+): Promise<void> {
+  const App = app ?? (await backendGetApp());
   const latest = await App.LoadAppConfig();
   await App.SaveAppConfig(
     latest.filesRoot || "",
@@ -64,7 +67,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
   if (guard.getBusy()) return;
   guard.setBusy(true);
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const paths = await App.GetMinecraftPaths();
     if (!paths?.length) {
       bus.emit("toast:show", {
@@ -134,7 +137,7 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
   try {
     const launcherDir = await pickDirectory();
     if (!launcherDir.ok) return;
-    const App = await getApp();
+    const App = await backendGetApp();
     const instances = await App.DetectLauncherInstances(launcherDir.dir);
     if (!instances?.length) {
       bus.emit("toast:show", {

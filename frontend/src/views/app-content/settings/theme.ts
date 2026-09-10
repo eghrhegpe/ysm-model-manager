@@ -3,10 +3,10 @@
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
-import { getApp } from "@/backend/app.ts";
 import { applyTheme } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { cfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber
@@ -43,7 +43,7 @@ export function initThemeSection(root: ShadowRoot): void {
         // 主题切换会用旧值把已改的 linkMode 覆盖回退
         void (async () => {
           try {
-            const { SaveAppConfig } = await getApp();
+            const { SaveAppConfig } = await backendGetApp();
             await SaveAppConfig(
               cfg.filesRoot || "",
               cfg.resourcepackRoot || "",

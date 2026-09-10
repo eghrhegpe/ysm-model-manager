@@ -1,6 +1,7 @@
 // ===== 作者标签模块 =====
-import { getApp } from "@/backend/app.ts";
+
 import { withCached } from "@/utils/cache/with-cached.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /** 作者统计（Go ListModelAuthors 返回） */
 export interface AuthorInfo {
@@ -18,7 +19,7 @@ const AUTHORS_CACHE_TTL_MS = 30 * 1000; // 30 秒
  */
 export async function loadAuthors(): Promise<AuthorInfo[]> {
   try {
-    const { ListModelAuthors } = await getApp();
+    const { ListModelAuthors } = await backendGetApp();
     return (
       (await withCached(AUTHORS_CACHE_KEY, AUTHORS_CACHE_TTL_MS, () => ListModelAuthors())) || []
     );

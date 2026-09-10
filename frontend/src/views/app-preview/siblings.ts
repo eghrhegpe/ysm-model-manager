@@ -5,13 +5,13 @@
 // 各格式（mmd / fbx / scene / morph / stage）共享同一底座，薄壳已合并回本文件
 // （P1 修复：原 mmd-siblings / fbx-siblings / stage-siblings 三壳合并，消费者统一引 ./siblings.ts）。
 
-import { getApp } from "@/backend/app.ts";
 import {
   extOf,
   previewCandidateExtsOf,
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPES,
 } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /**
  * 解析某资源类型的同目录候选主文件路径列表。
@@ -26,7 +26,7 @@ export async function resolveSiblingsByType(
   filterExts?: readonly string[],
 ): Promise<string[]> {
   try {
-    const app = await getApp();
+    const app = await backendGetApp();
     const root = await app.GetRepoRoot(rtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
@@ -84,7 +84,7 @@ export async function resolveStageSiblings(): Promise<
   }>
 > {
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const stageRoot = await App.GetRepoRoot("StageAnim");
     if (!stageRoot) return [];
     const raw = await App.ScanModelEntriesFiltered(stageRoot, "StageAnim", "", "舞台动画");

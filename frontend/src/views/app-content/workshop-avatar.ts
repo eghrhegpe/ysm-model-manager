@@ -1,6 +1,7 @@
 // ===== 创作者头像管理 =====
-import { getApp } from "@/backend/app.ts";
+
 import { dbg } from "@/utils/debug/debug.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppContentHost } from "./host.ts";
 
 /**
@@ -12,7 +13,7 @@ import type { AppContentHost } from "./host.ts";
  */
 export async function extractAvatars(host: AppContentHost): Promise<void> {
   try {
-    const { BatchExtractCreatorAvatars } = await getApp();
+    const { BatchExtractCreatorAvatars } = await backendGetApp();
     const result = await BatchExtractCreatorAvatars();
     const avatars = (result || {}) as Record<string, string>;
     const keys = Object.keys(avatars);

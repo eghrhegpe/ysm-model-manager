@@ -4,11 +4,11 @@
 // 依赖 DAG：index → network ← events（events 通过回调调用 network）
 // network → store（push/pull 后调 loadData 刷新数据）
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 import type { SyncManagerSelf } from "./index.ts";
 
@@ -39,7 +39,7 @@ export async function performSingleOp(
   const rtype = self._selectedType;
   const targetInstance = self._instance;
   try {
-    const app = await getApp();
+    const app = await backendGetApp();
     if (op === "push") {
       await app.PushSingleResourceToInstance(rtype, targetInstance, path);
     } else {

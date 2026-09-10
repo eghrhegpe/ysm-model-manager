@@ -1,7 +1,6 @@
 // ===== 骨骼渲染逻辑 =====
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -9,6 +8,7 @@ import { toScreenshotLights } from "@/preview-3d/screenshot/screenshot-lights.ts
 import { renderMultiAngle } from "@/preview-3d/screenshot/screenshot-render.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { esc } from "@/utils/html/html.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
@@ -133,7 +133,7 @@ export async function buildStatsCard(
   // 获取3D spec 以对齐3D面板数据源（逐组件 bone/cube + 声明纹理尺寸）
   let spec: Model3DSpec | null = null;
   try {
-    const { GetModel3DSpec } = await getApp();
+    const { GetModel3DSpec } = await backendGetApp();
     spec = await GetModel3DSpec(modelPath);
   } catch {
     // spec 获取失败不阻断——回退到聚合数据
@@ -248,7 +248,7 @@ export async function saveScreenshot(
   setShotState: (icon: string) => void,
   screenshotFn?: () => Promise<string | null>,
 ): Promise<void> {
-  const { SaveScreenshotFile } = await getApp();
+  const { SaveScreenshotFile } = await backendGetApp();
   const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
   const base =
     p

@@ -1,6 +1,5 @@
 // ===== app-tree bus 事件处理 =====
 
-import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -13,6 +12,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppTree } from "./index.ts";
 import { loadEntries } from "./loader.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
@@ -77,7 +77,7 @@ async function runBatchRename(
 ): Promise<void> {
   let ok = 0,
     fail = 0;
-  const { RenameFile } = await getApp();
+  const { RenameFile } = await backendGetApp();
   for (const r of renames) {
     try {
       await RenameFile(r.oldPath || "", r.newName);
@@ -116,7 +116,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
   });
   if (!name) return;
   try {
-    const { RenameDir, GetRepoRoot } = await getApp();
+    const { RenameDir, GetRepoRoot } = await backendGetApp();
     const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
@@ -143,7 +143,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
   });
   if (!name) return;
   try {
-    const { CreateDir, GetRepoRoot } = await getApp();
+    const { CreateDir, GetRepoRoot } = await backendGetApp();
     const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}/${name.trim()}` : `${dir}/${name.trim()}`;
@@ -168,7 +168,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
   });
   if (!confirmed) return;
   try {
-    const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } = await getApp();
+    const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } = await backendGetApp();
     const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
@@ -211,7 +211,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
 
 async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void> {
   try {
-    const { ScanModelEntriesFiltered, GetRepoRoot } = await getApp();
+    const { ScanModelEntriesFiltered, GetRepoRoot } = await backendGetApp();
     const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
@@ -268,7 +268,7 @@ async function atBeHandleTreeReload(vm: AppTree): Promise<void> {
 
 async function reload(vm: AppTree): Promise<void> {
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     if (App.ClearScanCache) await App.ClearScanCache();
     import("@/features/community/community-data.ts")
       .then((m) => m.clearAllCommunityCache())
@@ -326,7 +326,7 @@ async function runBatchToggle(
   }
   vm.batchBusy = true;
   try {
-    const { ToggleEnable } = await getApp();
+    const { ToggleEnable } = await backendGetApp();
     const prefix = opts.prefix?.replace(/\\/g, "/");
     const snapshot = vm.snapshot.entries
       .filter(

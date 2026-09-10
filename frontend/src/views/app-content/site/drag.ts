@@ -1,9 +1,9 @@
 // ===== 站点视图拖拽 JSON 导入（从 site-view.ts 拆出，ADR-034 方向①）=====
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 
@@ -83,7 +83,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
         if (first && typeof first.name === "string") {
           // 创作者 JSON → Go 端 MergeWorkshopCreatorsFromJSON
           dropZone.textContent = t("content.mergingCreators");
-          const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } = await getApp();
+          const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } = await backendGetApp();
           const result = await MergeWorkshopCreatorsFromJSON(text);
           const { added, updated } = normalizeMergeCounts(result as [number, number] | number);
           // 刷新内存中的 allCreators
@@ -99,7 +99,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           // 站点 JSON → Go 端 MergeWorkshopSitesFromJSON（镜像创作者分支，收口双轨）：
           // 合并/去重/写回下沉 Go，前端只传原始 JSON + 用 DefaultWorkshopSites 刷新内存。
           dropZone.textContent = t("content.mergingSites");
-          const { MergeWorkshopSitesFromJSON, DefaultWorkshopSites } = await getApp();
+          const { MergeWorkshopSitesFromJSON, DefaultWorkshopSites } = await backendGetApp();
           const result = await MergeWorkshopSitesFromJSON(text);
           const { added, updated } = normalizeMergeCounts(result as [number, number] | number);
           // 刷新内存中的 allSites（DefaultWorkshopSites 读用户配置优先——Go 已落盘合并结果）

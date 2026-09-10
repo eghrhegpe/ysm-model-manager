@@ -1,15 +1,16 @@
 // ===== MMD 数据端口共享实现（mmd-3d.ts 与 scene-3d.ts 共用）=====
 // 视图层保留 getApp（ADR-072 边界：适配器 0 backend import）；
 // 绑定签名已由 Wails 生成的 app.ts 全量类型化，直接消费，不再用 `as unknown as` 绕类型。
-import { getApp } from "@/backend/app.ts";
+
 import type { MmdDataPort } from "@/preview-3d/adapters/mmd-adapter.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /**
  * 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标
  * （角色预览用 "mmd-preview"，场景预览用 "mmd-scene"）。
  */
 export async function makeMmdDataPort(scope: string): Promise<MmdDataPort> {
-  const App = await getApp();
+  const App = await backendGetApp();
   return {
     readFileBytes: async (p) => await App.ReadFileBytes(p),
     readFileBytesBatch: async (paths) => {

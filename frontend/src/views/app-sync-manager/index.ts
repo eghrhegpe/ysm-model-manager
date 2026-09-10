@@ -5,7 +5,6 @@
 // 依赖 DAG：index → store / renderer / events / network / state（leaf modules 间无循环，
 // events 的 LAST_TYPE_KEY 等共享状态走 state.ts，不再反向依赖 index）
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
@@ -16,6 +15,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
 import { containerHTML, loadingHTML } from "./tpl.ts";
@@ -84,7 +84,7 @@ import { _lastSelectedType, setLastSelectedType } from "./state.ts";
 async function loadRepoRoots(self: SyncManagerSelf, rtype: string): Promise<void> {
   if (self._filesRoots[rtype]) return;
   try {
-    const { GetRepoRoot } = await getApp();
+    const { GetRepoRoot } = await backendGetApp();
     self._filesRoots[rtype] = (await GetRepoRoot(rtype || "")) || "";
   } catch {
     self._filesRoots[rtype] = "";

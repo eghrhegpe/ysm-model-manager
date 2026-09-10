@@ -285,8 +285,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 307 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 286 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 308 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 119 |
 
 **订阅方（on）：**
@@ -342,11 +342,11 @@
 | runDownloadMissing | `frontend/src/features/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 148 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 88 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 161 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 91 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 164 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 188 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 202 |
@@ -463,12 +463,12 @@
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 296 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 127 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 158 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 167 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 195 |
-| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 241 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 128 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 151 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 159 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 168 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 196 |
+| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 242 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 107 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 118 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
@@ -497,12 +497,12 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 249 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 263 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 127 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 137 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 143 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 153 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 164 |
-| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 170 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 131 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 141 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 147 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 157 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 168 |
+| bindSiteEvents | `frontend/src/views/app-content/workshop-site-opener.ts` | 174 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
@@ -516,10 +516,10 @@
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 120 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 41 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 70 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 89 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 140 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 162 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 143 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 112 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 255 |

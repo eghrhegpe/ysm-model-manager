@@ -3,12 +3,12 @@
 // 数据源：Go 端 RepoHealthAuditAll（go/repoaudit 全仓库审计，GUI/CLI 同源消双轨）——
 // 前端不再自算健康分，只做展示。
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML
@@ -30,7 +30,7 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
       t("diagnostics.healthScanning") +
       "</div>";
 
-    const { RepoHealthAudit, GetRepoRoot } = await getApp();
+    const { RepoHealthAudit, GetRepoRoot } = await backendGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
     const report = parseHealthReport(await RepoHealthAudit(filesRoot));
     if (!report) {

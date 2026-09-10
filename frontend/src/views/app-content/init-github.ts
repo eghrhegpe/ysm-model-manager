@@ -1,5 +1,5 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
-import { getApp } from "@/backend/app.ts";
+
 import { t } from "@/core/i18n/t.ts";
 import { tryFetchModels } from "@/features/community/data.ts";
 import { bindRepoEvents } from "@/features/community/events.ts";
@@ -11,6 +11,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppContentHost } from "./host.ts";
 import type { RepoCacheEntry } from "./state.ts";
 
@@ -54,7 +55,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       "</div>";
   }
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const repos = await App.LoadGitHubRepos();
     const ghCreators = repos || [];
     if (sourceInfo) sourceInfo.textContent = t("downloads.repoCountDesc", { n: ghCreators.length });
@@ -134,7 +135,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   }
   let mirror = "";
   try {
-    const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } = await getApp();
+    const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } = await backendGetApp();
     const cfg = await LoadAppConfig();
     mirror = cfg.mirror || "";
     const filesRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
@@ -209,7 +210,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   if (openBtn)
     openBtn.addEventListener("click", () => {
       swallowError(
-        getApp().then(({ OpenInBrowser }) => OpenInBrowser(`https://github.com/${repo}`)),
+        backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(`https://github.com/${repo}`)),
       );
     });
 }

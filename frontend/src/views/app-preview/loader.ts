@@ -1,11 +1,11 @@
 // ===== 模型数据加载（唯一入口）=====
 // 供给 skeleton.ts 使用（ADR-136 第四刀后截图走 preview-3d/screenshot-render.ts）
 
-import { getApp } from "@/backend/app.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { type AnimationClip, parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { extOf } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { PreviewDebugger, YsmDecoder } from "./utils.ts";
 
 /** loadModelData 选项（Bedrock 通用模型加载控制） */
@@ -143,7 +143,7 @@ async function loadModelViaGo(
   wasmAuthors: NonNullable<BedrockGeometry["_authors"]>,
   wasmAvatars: Record<string, string>,
 ): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
-  const app = await getApp();
+  const app = await backendGetApp();
   // current 可能是缓存命中但无骨骼的对象：subPath 未命中时不覆盖它（沿用原有无骨骼对象语义）
   let model = current;
   const cacheKey = opts.subPath ? `${modelPath}#sub:${opts.subPath}` : modelPath;
@@ -231,7 +231,7 @@ export async function fillAuthorsAsync(modelPath: string, model: BedrockGeometry
   // 作者名缺失 → 从 Go 摘要补齐
   if (model._authors.length === 0) {
     try {
-      const { ExtractYsmSummary } = await getApp();
+      const { ExtractYsmSummary } = await backendGetApp();
       const goSummary = await ExtractYsmSummary(modelPath);
       const goAuthors = goSummary?.authors ?? [];
       if (goAuthors.length > 0) {
@@ -252,7 +252,7 @@ export async function fillAuthorsAsync(modelPath: string, model: BedrockGeometry
   // 任一作者缺头像 → 经 Go 后端缓存回填
   if (model._authors.length > 0 && model._authors.some((a) => !a.avatarUrl)) {
     try {
-      const { CacheModelAvatars, CachedCreatorAvatar } = await getApp();
+      const { CacheModelAvatars, CachedCreatorAvatar } = await backendGetApp();
       await CacheModelAvatars(modelPath);
       // 并行请求所有作者头像（原实现串行 N 次 Go 调用 → 现并行 1 次 Promise.all）
       const avatarTasks = model._authors

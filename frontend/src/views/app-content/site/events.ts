@@ -1,10 +1,10 @@
 // ===== 站点视图浏览态事件绑定（从 site-view.ts 拆出，ADR-034 方向①）=====
 
-import { getApp } from "@/backend/app.ts";
 import type { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { type CrCardCtx, createCrCard } from "./render.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
@@ -305,7 +305,7 @@ function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => bool
       const name = (img as HTMLElement).dataset.debugAvatar;
       if (!name) return;
       try {
-        const { DebugExtractCreatorAvatar } = await getApp();
+        const { DebugExtractCreatorAvatar } = await backendGetApp();
         if (getDisposed()) return;
         const info = await DebugExtractCreatorAvatar(name);
         dbg("avatar-debug", name, info);

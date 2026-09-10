@@ -4,15 +4,15 @@
 //     import，ADR-072 边界判据）——4 处逐字重复（fbx/ysm/vrm/maid）收敛于此。
 //   - addOpLog：环形日志面板诊断注入（ADR-112 复用 MMD 同款 AddOpLog；失败静默不阻断）。
 // 消除跨视图 jscpd 重复；视图壳仍在 views/ 层，适配器（preview-3d/adapters）不 import 本模块。
-// 2026-09 类型化改造：Wails 绑定方法直调（getApp() 返回类型化 AppBindings，见
+// 2026-09 类型化改造：Wails 绑定方法直调（backendGetApp() 返回类型化 AppBindings，见
 // backend/types.ts），删除 `as unknown as Record<string,...>` 手写签名断言——
 // Go 绑定签名变更时编译期报错而非运行时穿透。
 
-import { getApp } from "@/backend/app.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /** 数据读取注入（Wails ReadFileBytes；返回 null = 读取失败） */
 export async function readFileBytes(path: string): Promise<string | null> {
-  const App = await getApp();
+  const App = await backendGetApp();
   return await App.ReadFileBytes(path);
 }
 
@@ -25,7 +25,7 @@ export async function addOpLog(
   err?: string,
 ): Promise<void> {
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     await App.AddOpLog(scope, op, msg, "", 0, status, err || "");
   } catch {
     /* 诊断不阻断 */

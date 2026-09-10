@@ -2,12 +2,12 @@
 // 从 index.ts 拆出（P1-3）：勾选状态管理 + push/pull 同步执行链。
 // index.ts 保留 Web Component 生命周期与渲染编排；本文件收敛「勾选 → 菜单 → 同步」全链。
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
@@ -285,7 +285,7 @@ async function runPull(
   let totalPulled = 0;
   let failed = 0;
   try {
-    const { PullResourceFromInstance } = await getApp();
+    const { PullResourceFromInstance } = await backendGetApp();
     for (const insName of selected) {
       const results = await Promise.allSettled(
         types.map((rt) => PullResourceFromInstance(rt, insName)),

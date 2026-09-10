@@ -1,6 +1,5 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
 
-import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
@@ -12,6 +11,7 @@ import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { selectSingle, toggleSelect } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -90,7 +90,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
     const fl = flCk.closest(".fl, .fl-list") as HTMLElement | null;
     flashBtn(fl);
-    getApp()
+    backendGetApp()
       .then(({ ToggleEnable }) => ToggleEnable(fullPath || ""))
       .then(async () => {
         const gen = vm._gen;
@@ -127,7 +127,7 @@ function atTeOpenAuthor(author: string): void {
     window.open(url, "_blank", "noopener");
     return;
   }
-  getApp()
+  backendGetApp()
     .then(({ OpenInBrowser }) => OpenInBrowser(url))
     .catch((err) => {
       logWarn("tree", "OpenInBrowser 失败:", err);
@@ -367,7 +367,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
     }
     // 直接调用 RenameFile，不走 bus（bus 无订阅者，原设计遗留半成品）
     // 对齐 context-menu-file-handlers.ts "file.rename" 范式
-    getApp()
+    backendGetApp()
       .then(({ RenameFile }) => RenameFile(path, newName))
       .then(async () => {
         // P2 修复（审核）：内联重命名成功后清空选中态——对齐 bus-handlers 的
@@ -438,7 +438,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
   }
   vm.batchBusy = true;
   try {
-    const { ToggleEnable } = await getApp();
+    const { ToggleEnable } = await backendGetApp();
     const ck = fhEl.querySelector(".ck");
     if (!ck) return;
     const dirKey = fhEl.dataset.dir;

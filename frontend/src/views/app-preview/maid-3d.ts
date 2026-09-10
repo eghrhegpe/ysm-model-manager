@@ -4,7 +4,6 @@
 // 女仆模型本质是标准 Bedrock Edition geometry，Go AnalyzeBedrockModel
 // 已天然支持 .zip 解析（parseModelFromEntries 通用路径）。
 
-import { getApp } from "@/backend/app.ts";
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import {
@@ -18,6 +17,7 @@ import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { loadModelData } from "./loader.ts";
@@ -313,7 +313,7 @@ export async function showMaidPreview(
   let baseModelInfo: MaidModelInfo = null;
   let componentCounts: ComponentCount[] = [];
   try {
-    const { AnalyzeBedrockModel, GetModel3DSpec } = await getApp();
+    const { AnalyzeBedrockModel, GetModel3DSpec } = await backendGetApp();
     const model = await AnalyzeBedrockModel(path);
     if (model) {
       baseModelInfo = {

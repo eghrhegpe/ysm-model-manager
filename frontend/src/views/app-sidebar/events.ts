@@ -1,6 +1,5 @@
 // ===== sidebar 事件层 =====
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
@@ -9,6 +8,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
 
@@ -256,7 +256,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
     };
     (async () => {
       try {
-        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await getApp();
+        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await backendGetApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           btn.textContent = `🎮 ${cfg.mcRoot}`;

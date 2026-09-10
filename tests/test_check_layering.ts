@@ -68,9 +68,10 @@ check("--json 输出合法 JSON 且 _summary 契约齐全", () => {
   );
 });
 
-// R5（ADR-208 D1）：features 生产文件禁直接 import backend/app.ts（*-deps.ts 白名单）。
-// 迁移后仓库应零 R5 违规；任何 features 新增直引 backend/app.ts 即 rc=1 阻断。
-check("R5 零 R5 违规（features→backend/app.ts 仅经 *-deps.ts seam）", () => {
+// R5（ADR-208 D1）：features/views 生产文件禁直接 import backend/app.ts（*-deps.ts 白名单）。
+// 2026-09-10 自 features 扩展至 views（消除 views 直连后端的法外之地）：
+// 迁移后仓库应零 R5 违规；任何 features|views 新增直引 backend/app.ts 即 rc=1 阻断。
+check("R5 零 R5 违规（features/views→backend/app.ts 仅经 *-deps.ts seam）", () => {
   const { out } = runLayering(["--json"]);
   const data = JSON.parse(out);
   const r5 = (data.zero_tolerance_violations ?? []).filter((v) => v.rule === "R5");

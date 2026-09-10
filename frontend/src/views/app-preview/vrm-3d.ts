@@ -3,7 +3,6 @@
 // 本文件仅作兼容薄包装，保留 createVrm3D / cleanupVrm3D / invalidateVrmPreview
 // 公开符号，index.ts 与既有测试无需改动。
 
-import { getApp } from "@/backend/app.ts";
 import {
   cleanupPreview,
   invalidatePreview,
@@ -12,6 +11,7 @@ import {
   type PreviewAdapter,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeVrmAdapter, type VrmPanelHooks } from "@/preview-3d/adapters/vrm-adapter.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";
@@ -22,7 +22,7 @@ registerReRoute("vrm", (path) => createVrm3D(path));
 
 /** 同目录文件枚举（VRMA 动作扫描用；对齐 MMD 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {
-  const App = await getApp();
+  const App = await backendGetApp();
   return await App.ListAllFilePaths(dir);
 }
 

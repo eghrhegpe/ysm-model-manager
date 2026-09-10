@@ -6,7 +6,6 @@
 // 会绕过编译期契约校验（最小面 mock 编译过、运行时缺成员才崩）；收紧后编译器
 // 重新校验完整契约，AppPreview 同时实现两者、调用方无需任何 cast。
 
-import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -14,6 +13,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { extOf, RESOURCE_TYPES, resolvePreviewKey } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { showSimplePreview } from "./detail.ts";
 import { PREVIEW_HANDLERS } from "./preview-registry.ts";
 import type { PreviewCtx, PreviewRouterCtx } from "./utils.ts";
@@ -44,7 +44,7 @@ export async function routeModelPreview(
   let rtype = rtypeHint || "";
   if (!rtype) {
     try {
-      const { DetectResourceType } = await getApp();
+      const { DetectResourceType } = await backendGetApp();
       rtype = (await DetectResourceType(path)) || "";
     } catch (e) {
       logWarn("preview", "DetectResourceType 失败", e);
@@ -90,7 +90,7 @@ export async function routePackInfo(
   ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
 
   try {
-    const { GetPackInfo } = await getApp();
+    const { GetPackInfo } = await backendGetApp();
     const pack = await GetPackInfo(dirPath);
     // 过期守卫：await 期间用户已点其他文件，丢弃本次渲染
     if (ctx.previewGuard.stale(gen)) return;

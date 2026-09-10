@@ -3,10 +3,10 @@
 // 纯函数，接收组件实例 self，通过 self 读写状态；无 DOM / 无 bus 副作用。
 // 依赖 DAG：index → store ← network（网络操作后调 loadData 刷新）
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SyncManagerSelf } from "./index.ts";
 import type { SyncItem } from "./tpl.ts";
 
@@ -19,7 +19,7 @@ export type SyncStoreSelf = SyncManagerSelf;
 export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
   const gen = self._gen;
   try {
-    const { LoadResourceTypes } = await getApp();
+    const { LoadResourceTypes } = await backendGetApp();
     const reg = await LoadResourceTypes();
     if (gen !== self._gen) return;
     // 只取前端需要的字段子集
@@ -47,7 +47,7 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
 export async function loadData(self: SyncStoreSelf): Promise<void> {
   const gen = self._gen;
   try {
-    const { GetInstanceSyncStatus } = await getApp();
+    const { GetInstanceSyncStatus } = await backendGetApp();
     const items = await GetInstanceSyncStatus(
       self._instance,
       self._subtype || "",
@@ -62,7 +62,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
     if (self._selectedType) {
       // 目录可见性：顺带取实际扫描目录（非阻断，失败仅不显示摘要）
       try {
-        const { GetSyncScanDirs } = await getApp();
+        const { GetSyncScanDirs } = await backendGetApp();
         const dirs = await GetSyncScanDirs(self._selectedType, self._instance);
         if (gen !== self._gen) return;
         if (!self._scanDirs) self._scanDirs = {};

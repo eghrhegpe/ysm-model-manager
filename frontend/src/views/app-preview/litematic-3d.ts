@@ -5,7 +5,6 @@
 // ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
-import { getApp } from "@/backend/app.ts";
 import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { makeLitematicAdapter } from "@/preview-3d/adapters/litematic-adapter.ts";
 import {
@@ -14,6 +13,7 @@ import {
   mount3D,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { extOf, isContainerExt, RESOURCE_TYPES, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { openModel3DFullscreen, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 /** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
@@ -51,7 +51,7 @@ type VoxelApp = {
  *  ADR-143 P1：绑定返回 typed VoxelData | null（原 string JSON）。 */
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | null> {
   return async (path: string): Promise<VoxelData | null> => {
-    const App = (await getApp()) as unknown as VoxelApp;
+    const App = (await backendGetApp()) as unknown as VoxelApp;
     // 按 VOXEL_RPC_BY_EXT 值域收窄到三个具名方法（arrow 包装保留调用形态；未知名不在
     // 表内 → 显式抛错而非静默回退 GetLitematicVoxelData——注册表新增 RPC 名失败响亮）
     const table: Record<string, (p: string) => Promise<VoxelData | null>> = {
@@ -79,7 +79,7 @@ function makeContainerVoxelCall(
   fallbackExt: string,
 ): (entryPath: string) => Promise<VoxelData | null> {
   return async (entryPath: string): Promise<VoxelData | null> => {
-    const App = await getApp();
+    const App = await backendGetApp();
     return (await App.GetVoxelDataInContainer(
       containerPath,
       entryPath,
@@ -91,7 +91,7 @@ function makeContainerVoxelCall(
 /** 枚举 zip 容器内体素条目（ListContainerEntries；失败返回 []，调用方降级单模型裸路径） */
 async function listContainerEntries(containerPath: string): Promise<string[]> {
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const parsed = await App.ListContainerEntries(containerPath, CONTAINER_VOXEL_EXTS);
     return Array.isArray(parsed) ? parsed : [];
   } catch {

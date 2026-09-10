@@ -16,10 +16,13 @@
  *                             log/storage，见 core/page-store.ts、core/error-diary.ts）
  *   R3（防回退）  core/**     不得运行时 import  views/、features/（现有违反走基线）
  *   R4（防回退）  features/** 不得运行时 import  views/（现有违反走基线）
- *   R5（零容忍）  features/** 生产文件不得运行时 import  backend/app.ts（ADR-190 D2 seam
- *                             单出口 + ADR-208 D1）：唯一白名单 = features 下文件名以
- *                             -deps.ts 结尾的组合根（backend-deps / community-deps /
- *                             context-menu-deps）；test 文件由扫描层豁免
+ *   R5（零容忍）  features/** + views/** 生产文件不得运行时 import  backend/app.ts
+ *                             （ADR-190 D2 seam 单出口 + ADR-208 D1；2026-09-10 自
+ *                             features 扩展至 views，消除 views 直连后端的法外之地）：
+ *                             唯一白名单 = features|views 下文件名以 -deps.ts 结尾的
+ *                             组合根（features: backend-deps / community-deps /
+ *                             context-menu-deps；views: backend-deps）；
+ *                             test 文件由扫描层豁免
  *
  *   `import type` 不构成运行时耦合，一律豁免。
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
@@ -158,17 +161,20 @@ function main() {
   for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
     const srcRel = toPosix(relative(SRC_ROOT, abs));
     const fromLayer = layerOf(srcRel);
-    if (!fromLayer || fromLayer === "views") continue; // views 是顶层，向下依赖合法
+    if (!fromLayer) continue;
+    // views 是顶层，向下依赖合法 → 仅 R1-R4 对其豁免；R5（backend/app.ts seam）仍生效
+    // （2026-09-10 整改：此前 `fromLayer === "views"` 整体 continue，views 层 import
+    // 从不被扫描，R5 若扩展至 views 将形同虚设）
+    const viewsOnlyR5 = fromLayer === "views";
 
     const text = readFileSync(abs, "utf8");
     for (const { spec, typeOnly, line } of matchImports(text)) {
       const target = resolveTarget(spec, srcRel);
       if (!target) continue;
-      const toLayer = layerOf(target);
-      // R5（零容忍，ADR-208 D1）：features 生产文件禁直接 import 后端绑定桥
+      // R5（零容忍，ADR-208 D1）：features/views 生产文件禁直接 import 后端绑定桥
       // backend/app.ts——唯一出口是 *-deps.ts seam（白名单按文件名）；type-only 豁免
       if (
-        fromLayer === "features" &&
+        (fromLayer === "features" || fromLayer === "views") &&
         target === "backend/app.ts" &&
         !typeOnly &&
         !srcRel.endsWith("-deps.ts")
@@ -183,6 +189,8 @@ function main() {
         });
         continue;
       }
+      if (viewsOnlyR5) continue; // views 其余依赖一律放行（顶层向下依赖合法）
+      const toLayer = layerOf(target);
       if (!toLayer) continue;
       if (typeOnly) continue; // type-only 豁免
 
@@ -289,12 +297,12 @@ function main() {
 
   if (rZero.length) {
     console.error(
-      `❌ R1/R2/R0/R5 违规（零容忍：utils/services 向上依赖、core→utils/dom、features→backend/app.ts 非 seam）${rZero.length} 条：`,
+      `❌ R1/R2/R0/R5 违规（零容忍：utils/services 向上依赖、core→utils/dom、features/views→backend/app.ts 非 seam）${rZero.length} 条：`,
     );
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
     console.log(
-      "✅ R1/R2/R0/R5 utils/services → 上层、core→utils/dom、features→backend/app 非 seam：0 条",
+      "✅ R1/R2/R0/R5 utils/services → 上层、core→utils/dom、features/views→backend/app 非 seam：0 条",
     );
   }
 

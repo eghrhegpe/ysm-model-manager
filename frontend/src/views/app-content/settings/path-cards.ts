@@ -2,7 +2,6 @@
 // 原 initSettings 巨型闭包中的路径相关逻辑整体迁出：共享状态（cfg/cardRefreshers/
 // busy/toastError）统一走 store.ts 模块级，root/refreshAdvanced 显式参数传递。
 
-import { getApp } from "@/backend/app.ts";
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -14,6 +13,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { cardRefreshers, cfg, isBusy, setBusy, toastError } from "./store.ts";
 
 // 保存 cfg 辅助（保留各字段原值）
@@ -26,7 +26,7 @@ export async function saveCfg(patch: {
   mcRoot?: string;
   linkMode?: string;
 }): Promise<void> {
-  const { LoadAppConfig, SaveAppConfig } = await getApp();
+  const { LoadAppConfig, SaveAppConfig } = await backendGetApp();
   let latest = cfg;
   try {
     latest = await LoadAppConfig();
@@ -246,7 +246,7 @@ export function initAdvancedGrid(
           // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
           const pickResult = await pickDirectory();
           if (!pickResult.ok) return;
-          const { SetResourceRoot } = await getApp();
+          const { SetResourceRoot } = await backendGetApp();
           await SetResourceRoot(rtype, pickResult.dir);
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found?.cfgKey) cfgAny[found.cfgKey] = pickResult.dir;
@@ -271,7 +271,7 @@ export function initAdvancedGrid(
         e.stopPropagation();
         const rtype = (btn as HTMLElement).dataset.rtype || "";
         try {
-          const { ResetResourceRoot } = await getApp();
+          const { ResetResourceRoot } = await backendGetApp();
           await ResetResourceRoot(rtype);
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found?.cfgKey) cfgAny[found.cfgKey] = "";
@@ -303,7 +303,7 @@ export function initMcDetect(root: ShadowRoot): void {
     if (isBusy()) return; // 防连点：检测进行中忽略后续点击
     setBusy(true);
     try {
-      const { GetMinecraftPaths, SaveAppConfig } = await getApp();
+      const { GetMinecraftPaths, SaveAppConfig } = await backendGetApp();
       const paths = await GetMinecraftPaths();
       if (!paths?.length) {
         bus.emit("toast:show", {
@@ -353,7 +353,7 @@ export function initMcDetect(root: ShadowRoot): void {
     if (_scanTooltip) return;
     try {
       if (!_scanPaths) {
-        const { GetMinecraftPaths } = await getApp();
+        const { GetMinecraftPaths } = await backendGetApp();
         _scanPaths = await GetMinecraftPaths();
       }
       // P2 修复（审核，资源泄漏）：原实现先 await 再无条件挂气泡——鼠标快速移出后

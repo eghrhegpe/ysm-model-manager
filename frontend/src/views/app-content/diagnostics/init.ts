@@ -2,13 +2,13 @@
 // ADR-040 按职责切文件：日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）已拆出；
 // 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
 
-import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
@@ -45,7 +45,7 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
       return;
     }
     try {
-      const { ClearImportLogs } = await getApp();
+      const { ClearImportLogs } = await backendGetApp();
       await ClearImportLogs();
       loadDiagnosticsLogs(root, esc);
       bus.emit("toast:show", {

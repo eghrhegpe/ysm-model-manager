@@ -11,7 +11,6 @@
 // opts.siblings（同目录兄弟，mount 时一次性过滤），点击即 switchTo 复用外壳重建，
 // 全程轻量获取文件——不再全量扫描各仓库、不再按扩展名分类贴标签。
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { Mount3DOptions } from "@/preview-3d/adapters/mount-preview-core.ts";
 import {
@@ -32,6 +31,7 @@ import {
   resolvePreviewKeyByExt,
   resolvePreviewKeyToRtype,
 } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
@@ -79,12 +79,12 @@ export async function openModel3DFullscreen(
 ): Promise<void> {
   if (!path) return;
   const siblings = options?.siblings;
-  // P2 修复（审核）：getApp() 若后端不可用会 reject——原实现裸 await 在函数顶部，
+  // P2 修复（审核）：backendGetApp() 若后端不可用会 reject——原实现裸 await 在函数顶部，
   // 依赖所有调用方自行 catch（app-nav FAB / switchExternal 包装有兜底，但 litematic-3d
   // L150 裸调用无兜底 → unhandled rejection）。函数内自洽：失败 toast 后 return。
   let DetectResourceType: ((p: string) => Promise<string>) | null = null;
   try {
-    ({ DetectResourceType } = await getApp());
+    ({ DetectResourceType } = await backendGetApp());
   } catch (e) {
     logWarn("preview-3d", "后端不可用，无法打开 3D", e);
     const { bus } = await import("@/bus");
@@ -168,7 +168,7 @@ export async function openModel3DFullscreen(
   });
   // 环形日志面板留痕（AGENTS.md：排查往环形日志塞日志而非死盯 console）；失败静默不阻断
   try {
-    const { AddOpLog } = await getApp();
+    const { AddOpLog } = await backendGetApp();
     await AddOpLog?.(
       "preview-3d-route",
       path.split(/[/\\]/).pop() || path,
@@ -205,7 +205,7 @@ export async function scanModelsByType(rtype: string, subtype = ""): Promise<str
     // 预览键反解为真实资源类型 ID（"mmd" → "EntityPlayer"），
     // 使 Go 侧 ScanModelEntriesFiltered 命中扩展名白名单过滤
     const realRtype = resolvePreviewKeyToRtype(rtype);
-    const { GetRepoRoot, ScanModelEntriesFiltered } = await getApp();
+    const { GetRepoRoot, ScanModelEntriesFiltered } = await backendGetApp();
     const root = await GetRepoRoot(realRtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[realRtype] || realRtype;

@@ -1,7 +1,6 @@
 // ===== 诊断页：冲突扫描（scanConflicts） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
 
-import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -10,6 +9,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppConfig, VersionInstance } from "@/utils/types-re-export.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
@@ -68,7 +68,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
   instances: VersionInstance[];
   errorHtml: string | null;
 }> {
-  const { LoadAppConfig, ListVersionInstances } = await getApp();
+  const { LoadAppConfig, ListVersionInstances } = await backendGetApp();
   const cfg = await LoadAppConfig();
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {
@@ -97,7 +97,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
 async function dgCfCollectInstanceFiles(
   instances: VersionInstance[],
 ): Promise<Record<string, DgCfInstanceFile[]>> {
-  const { ScanModelEntriesWithLabel } = await getApp();
+  const { ScanModelEntriesWithLabel } = await backendGetApp();
   const instanceFiles: Record<string, DgCfInstanceFile[]> = {};
   for (const ins of instances) {
     if (!ins.Exists) continue;
@@ -201,7 +201,7 @@ async function dgCfLoadSyncContext(): Promise<{
   availableInstances: string[];
   errorHtml: string | null;
 }> {
-  const { ListVersionInstances, LoadAppConfig } = await getApp();
+  const { ListVersionInstances, LoadAppConfig } = await backendGetApp();
   const cfg = await LoadAppConfig();
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {
@@ -225,7 +225,7 @@ async function dgCfRunSyncDetection(
   rtype: string,
   instanceName: string,
 ): Promise<void> {
-  const { DetectConflicts } = await getApp();
+  const { DetectConflicts } = await backendGetApp();
   list.innerHTML =
     '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">' +
     t("diagnostics.scanningConflicts") +
@@ -398,7 +398,7 @@ async function dgCfExecuteResolve(
   const strategyEl = list.querySelector("#resolve-strategy") as HTMLSelectElement;
   const strategy = strategyEl?.value || "force_remote";
   try {
-    const { ResolveConflicts } = await getApp();
+    const { ResolveConflicts } = await backendGetApp();
     const conflictsJSON = JSON.stringify(conflicts);
     const result = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
     if (!result) {

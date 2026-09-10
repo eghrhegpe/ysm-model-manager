@@ -52,13 +52,13 @@ import { type TreeSnapshot, TreeState } from "./tree-state.ts";
 // 'tree-' 前缀白名单，从而同受 must-have 与孤儿双校验守护（裸 'tree' 只受前者）。
 export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 
-import { getApp } from "@/backend/app.ts";
 import { can } from "@/backend/capabilities.ts";
 import { bus } from "@/bus";
 import { rememberModelPath } from "@/core/model-path-store.ts";
 import { modalConfirm } from "@/features/dialogs/modal-confirm.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { type SelectState, selectSingle } from "./data.ts";
 
@@ -342,7 +342,7 @@ export class AppTree extends WebComponentBase {
   private async _reloadAfterMountSwitch(): Promise<void> {
     const gen2 = ++this._gen;
     try {
-      const App = await getApp();
+      const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache(); // root 切换清扫描缓存
       await this._load();
       if (gen2 === this._gen) this._renderTree();
@@ -371,7 +371,7 @@ export class AppTree extends WebComponentBase {
 
   private async _attrChangeReloadAsync(gen: number): Promise<void> {
     try {
-      const App = await getApp();
+      const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache();
       await this._load();
       if (gen !== this._gen) return;
@@ -631,7 +631,7 @@ export class AppTree extends WebComponentBase {
     try {
       let ok = 0,
         fail = 0;
-      const { DeleteResourcePack } = await getApp();
+      const { DeleteResourcePack } = await backendGetApp();
       // P2 修复：原串行 for...of await → 并发批处理（限并发 8）——
       // 大批量删除时串行 IPC 阻塞主线程，并发 8 兼顾吞吐与后端压力。
       // Promise.allSettled 保原语义：每项独立 try/catch，统计 ok/fail 不短路。
@@ -650,7 +650,7 @@ export class AppTree extends WebComponentBase {
       // 30s scanCache（Go 侧 DeleteModelFile 无 InvalidateCache，watcher 清缓存异步），
       // 刚删除的文件会立即"复活"显示。与 bus-handlers.reload() 的 ClearScanCache 链对齐。
       try {
-        const App = await getApp();
+        const App = await backendGetApp();
         if (App.ClearScanCache) await App.ClearScanCache();
       } catch (e) {
         /* 清缓存失败不影响删除结果，_load 仍会执行；留痕防缓存幽灵无人知晓 */

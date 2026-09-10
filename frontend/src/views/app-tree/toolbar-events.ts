@@ -1,6 +1,5 @@
 // ===== 工具栏事件绑定 =====
 
-import { getApp } from "@/backend/app.ts";
 import { resolveAndroidRepoDir } from "@/backend/directory-picker.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -13,6 +12,7 @@ import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AuthorInfo } from "./authors.ts";
 import { updateSelectCount } from "./events.ts";
 import type { AppTree } from "./index.ts";
@@ -216,7 +216,7 @@ async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
     );
     return;
   }
-  const { SelectImportFile, ImportByType } = await getApp();
+  const { SelectImportFile, ImportByType } = await backendGetApp();
   const exts = getExts(rtype);
   const extFilter = exts.length ? exts.map((e) => `*${e}`).join(";") : "*.*";
   await atTlShowConfirm(
@@ -255,7 +255,7 @@ async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
     vm._renderTree();
     return;
   }
-  const { SelectDirectory, ImportByType } = await getApp();
+  const { SelectDirectory, ImportByType } = await backendGetApp();
   await atTlShowConfirm(vm, () => SelectDirectory(), ImportByType, rtype, t("tree.importDirOk"));
 }
 
@@ -276,7 +276,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
           return;
         }
         if (!vm.snapshot.filesRoot) return;
-        const { OpenFolder } = await getApp();
+        const { OpenFolder } = await backendGetApp();
         await OpenFolder(vm.snapshot.filesRoot);
       } else if (action === "import-file") {
         await atTlHandleImportFile(ctx);
@@ -294,7 +294,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
         btn.textContent = "⏳";
         btn.disabled = true;
         try {
-          const { GenerateRepoIndex, GetRepoRoot } = await getApp();
+          const { GenerateRepoIndex, GetRepoRoot } = await backendGetApp();
           const filesRoot = await GetRepoRoot(currentRepoType());
           if (!filesRoot) {
             bus.emit("toast:show", {

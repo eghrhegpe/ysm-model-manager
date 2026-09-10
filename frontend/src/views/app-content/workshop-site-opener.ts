@@ -1,6 +1,5 @@
 // ===== 创意工坊站点打开器 =====
 
-import { getApp } from "@/backend/app.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -8,6 +7,7 @@ import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { BrowseMode } from "@/views/app-content/site/workshop-browse-mode.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { AppContentHost } from "./host.ts";
 
@@ -39,12 +39,14 @@ export function openSite(
     // 窗口模式直连（独立 WebView2 窗口，非 iframe，无需反代绕 X-Frame-Options）
     // 网页版没有预热窗口，回退系统浏览器打开，避免 NavigatePlazaWindow fail-fast 静默无反应
     if (isWebPlatform()) {
-      swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
+      swallowError(backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
     } else {
-      swallowError(getApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(url, true)));
+      swallowError(
+        backendGetApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(url, true)),
+      );
     }
   } else {
-    swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
+    swallowError(backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
   }
 }
 
@@ -101,7 +103,7 @@ export function bindSiteEvents(host: AppContentHost): void {
   const openCurrent = (): void => {
     const cs = host.state.currentSite;
     if (cs) {
-      swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
+      swallowError(backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
     }
   };
   root.getElementById("ws-open")?.addEventListener("click", openCurrent);
@@ -113,9 +115,11 @@ export function bindSiteEvents(host: AppContentHost): void {
     if (cs) {
       // 网页版无 WebView2 预热窗口，回退系统浏览器打开
       if (isWebPlatform()) {
-        swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
+        swallowError(backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
       } else {
-        swallowError(getApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(cs.url, true)));
+        swallowError(
+          backendGetApp().then(({ NavigatePlazaWindow }) => NavigatePlazaWindow(cs.url, true)),
+        );
       }
     }
   });
@@ -132,7 +136,7 @@ export function bindSiteEvents(host: AppContentHost): void {
       return;
     }
     try {
-      const { ExportWorkshopSitesJSONFile } = await getApp();
+      const { ExportWorkshopSitesJSONFile } = await backendGetApp();
       const path = await ExportWorkshopSitesJSONFile();
       bus.emit("toast:show", {
         msg: t("workshop.action.exported", { path }),
@@ -158,7 +162,7 @@ export function bindSiteEvents(host: AppContentHost): void {
       return;
     }
     try {
-      const { ValidateWorkshopSites } = await getApp();
+      const { ValidateWorkshopSites } = await backendGetApp();
       const n = await ValidateWorkshopSites();
       // TODO: 重新加载创作者列表
       bus.emit("toast:show", {

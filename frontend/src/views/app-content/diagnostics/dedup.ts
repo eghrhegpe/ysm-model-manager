@@ -4,13 +4,13 @@
 // 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { fileIcon } from "@/utils/icon/icon.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { EscFn } from "./logs.ts";
 
@@ -512,7 +512,7 @@ export function createDedupSession(): DedupSession {
       }
 
       try {
-        const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await getApp();
+        const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await backendGetApp();
         await executeScan(
           list,
           esc,

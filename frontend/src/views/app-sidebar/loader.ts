@@ -1,12 +1,12 @@
 // ===== sidebar 数据加载层 =====
 
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
 
 /** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
@@ -68,7 +68,7 @@ export function loadInstances(
 async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> {
   try {
     const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } =
-      await getApp();
+      await backendGetApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || "";
 

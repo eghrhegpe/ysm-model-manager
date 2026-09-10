@@ -4,7 +4,6 @@
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
 import type { AppBindings } from "@/backend/app.ts";
-import { getApp } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { readPmxStats } from "@/preview-3d/adapters/mmd-detail-stats.ts";
@@ -15,6 +14,7 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { createFbx3D } from "./fbx-3d.ts";
 import { createMmd3D } from "./mmd-3d.ts";
 import { createScene3D } from "./scene-3d.ts";
@@ -73,7 +73,7 @@ async function showCard(
 </div>`;
 
   try {
-    const App = await getApp();
+    const App = await backendGetApp();
     const meta = await config.fetchMeta(ctx, path, App);
     if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = config.renderCard(ctx, path, meta);
@@ -210,7 +210,7 @@ export async function showMmdPreview(
       if (/\.pmx$/i.test(path)) {
         void (async () => {
           try {
-            const App = await getApp();
+            const App = await backendGetApp();
             const stats = await readPmxStats(path, App.ReadFileBytes);
             if (ctx.detailGen.stale(gen) || !stats) return;
             const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");

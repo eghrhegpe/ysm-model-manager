@@ -1,6 +1,5 @@
 // ===== 站点视图编辑模式事件（从 site-view.ts 拆出，ADR-034 方向①）=====
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import * as m from "@/features/community/community-data.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
@@ -8,6 +7,7 @@ import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 import type { CleanupFn, SiteViewState } from "./types.ts";
 
@@ -114,7 +114,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           return;
         }
         if (allSites && site) {
-          const { SaveWorkshopPresetsBySite } = await getApp();
+          const { SaveWorkshopPresetsBySite } = await backendGetApp();
           const newPresets: WorkshopPresetSearch[] = [];
           searchResults
             .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
@@ -127,7 +127,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         }
         eeSyncAllEditInputs(searchResults, creators, site);
         const siteCreators = creators.filter((cr) => cr.type?.split(";").includes(site.id));
-        const { SaveWorkshopCreatorsBySite } = await getApp();
+        const { SaveWorkshopCreatorsBySite } = await backendGetApp();
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
         busRef.emit("toast:show", {
@@ -158,7 +158,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
       btn.textContent = "⏳";
       btn.disabled = true;
       try {
-        const App = await getApp();
+        const App = await backendGetApp();
         const results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),

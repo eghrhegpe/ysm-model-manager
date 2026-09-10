@@ -21,7 +21,6 @@ const appPreviewStyle: CSSStyleSheet = (() => {
   return sheet;
 })();
 
-import { getApp } from "@/backend/app.ts";
 import { t } from "@/core/i18n/t.ts";
 import {
   cacheGet,
@@ -33,6 +32,7 @@ import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { isYsmWasmPreview } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { GenGuard } from "./gen-guard.ts";
 import { PREVIEW_CLEANUP, PREVIEW_INVALIDATE } from "./preview-registry.ts";
 import { routeModelPreview, routePackInfo } from "./preview-router.ts";
@@ -159,7 +159,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       // WASM 完全失败 → 不缓存空条目，直接走 Go 兜底
     }
     try {
-      const { FindPreviewImage, ExtractPreviewTexture } = await getApp();
+      const { FindPreviewImage, ExtractPreviewTexture } = await backendGetApp();
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
         cacheSet(modelPath, { texture: loose, _decodedBy: "" });
@@ -193,7 +193,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
 
   private async _preloadTypeRegistry(): Promise<void> {
     try {
-      const { LoadResourceTypes } = await getApp();
+      const { LoadResourceTypes } = await backendGetApp();
       const reg = await LoadResourceTypes();
       this.typeCache = reg?.resourceTypes || [];
     } catch (e) {

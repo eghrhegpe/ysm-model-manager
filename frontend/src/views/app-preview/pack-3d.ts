@@ -6,7 +6,6 @@
 // 首个 entry 作为初始 path。适配器 build(ctx, entryPath) 走 switchTo 语义，
 // 由 core switch 面板驱动，不再自建 ◀/▶ 按钮。
 
-import { getApp } from "@/backend/app.ts";
 import {
   cleanupPreview,
   invalidatePreview,
@@ -15,6 +14,7 @@ import {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makePackAdapter } from "@/preview-3d/adapters/pack-model-adapter.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中资源包时派发到此）
@@ -25,7 +25,7 @@ function makePackDeps() {
   return {
     // ADR-143 P2：ReadPackEntry 统一 []byte（Wails 转 base64），失败返回 null
     readEntry: async (path: string, entry: string): Promise<string | null> => {
-      const App = await getApp();
+      const App = await backendGetApp();
       // 类型化直调；仅「绑定缺失」回退空串（审查 P3：原 fn? 守卫只覆盖缺绑定，
       // 真实 Go 读取错误必须继续传播给调用方，不能 catch-all 吞掉）
       if (typeof App.ReadPackEntry !== "function") return "";
@@ -39,9 +39,9 @@ export async function createPack3D(
   path: string,
   opts?: Mount3DOptions & { startEntry?: string },
 ): Promise<void> {
-  let App: Awaited<ReturnType<typeof getApp>> | null = null;
+  let App: Awaited<ReturnType<typeof backendGetApp>> | null = null;
   try {
-    App = await getApp();
+    App = await backendGetApp();
   } catch {
     App = null; // 桥不可用（browser 模式）→ 空清单
   }

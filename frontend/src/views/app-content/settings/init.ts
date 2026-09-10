@@ -3,7 +3,6 @@
 // 主题 → theme.ts，3D 键位 → keymap.ts，UI 偏好 → ui-prefs.ts，共享状态 → store.ts。
 // 本文件保留为编排壳：加载 cfg/registry → 调用各模块初始化 → 组装其余事件绑定骨架。
 
-import { getApp } from "@/backend/app.ts";
 import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -17,6 +16,7 @@ import { GH_RELEASES } from "@/utils/base/pure/gh-links.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
 import { cfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
@@ -44,7 +44,7 @@ function stgBindMirrorSelect(
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
       try {
-        const { SetDownloadMirror } = await getApp();
+        const { SetDownloadMirror } = await backendGetApp();
         await SetDownloadMirror(val);
         bus.emit("toast:show", {
           msg: t("settings.mirror.switched", {
@@ -81,7 +81,7 @@ function stgBindUpdateInterval(
     );
     updateCheckSelect.addEventListener("change", async () => {
       try {
-        const { SaveThresholds } = await getApp();
+        const { SaveThresholds } = await backendGetApp();
         await SaveThresholds(Number(updateCheckSelect.value), cfgLocal.logMaxEntries || 500);
         cfgLocal.updateCheckIntervalMs = Number(updateCheckSelect.value);
         bus.emit("toast:show", {
@@ -120,7 +120,8 @@ function stgBindLinkMode(
     setBusyLocal(true);
     let failed = 0;
     try {
-      const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } = await getApp();
+      const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } =
+        await backendGetApp();
       const cfg2 = await LoadAppConfig();
       const mcRoot = cfg2.mcRoot || "";
       if (!mcRoot) {
@@ -181,7 +182,7 @@ function stgBindLinkMode(
       const val = linkSelect.value;
       updateLinkHint(val);
       try {
-        const { SaveAppConfig, SetLinkMode } = await getApp();
+        const { SaveAppConfig, SetLinkMode } = await backendGetApp();
         const theme = safeGet("theme") || "dark";
         await SaveAppConfig(
           cfgLocal.filesRoot || "",
@@ -212,7 +213,7 @@ function stgBindLinkMode(
 
 async function stgBindShowVersion(root: ShadowRoot): Promise<void> {
   try {
-    const { CurrentVersion } = await getApp();
+    const { CurrentVersion } = await backendGetApp();
     const ver = await CurrentVersion();
     const el = root.getElementById("set-version");
     if (el) el.textContent = ver;
@@ -234,7 +235,7 @@ function stgBindReleasesClick(
       window.open(url, "_blank", "noopener");
       return;
     }
-    getApp()
+    backendGetApp()
       .then(({ OpenInBrowser }) => OpenInBrowser(url))
       .catch((e) => {
         logWarn("settings", "打开发布页失败", e);
@@ -319,7 +320,7 @@ function stgBindWebFsa(root: ShadowRoot, isWebPlatformFn: typeof isWebPlatform):
  * @param root - 组件 shadow root
  */
 export async function initSettings(root: ShadowRoot): Promise<void> {
-  const { LoadAppConfig, SaveAppConfig, SetLinkMode } = await getApp();
+  const { LoadAppConfig, SaveAppConfig, SetLinkMode } = await backendGetApp();
   void SaveAppConfig;
   void SetLinkMode;
   const cfgLoaded = await LoadAppConfig();

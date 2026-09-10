@@ -3,7 +3,6 @@
 // ADR-161 §2.1：spec 契约单一镜像——本地 unknown 袋 ModelSpec 退役，
 // 出口类型锚定 Go 绑定 Model3DSpec（字段含 texArrOrder/componentTextures/_cubeCount，不再静默丢）。
 import type * as THREE from "three";
-import { getApp } from "@/backend/app.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -11,6 +10,7 @@ import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
@@ -57,7 +57,7 @@ async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
   if (!model._modelPath) return { models: [] };
   let jsonStr = getCachedSpec(model._modelPath);
   if (!jsonStr) {
-    const { GetModel3DSpec } = await getApp();
+    const { GetModel3DSpec } = await backendGetApp();
     const spec = await GetModel3DSpec(model._modelPath);
     // typed spec → string 缓存（缓存接口维持 string 类型不变）
     jsonStr = spec ? JSON.stringify(spec) : "{}";
@@ -98,7 +98,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       return spec;
     } else {
       // Android：Go binding 可用（返回 typed Model3DSpec | null）
-      const { Build3DSpecFromGeometryJSON } = await getApp();
+      const { Build3DSpecFromGeometryJSON } = await backendGetApp();
       const spec = await Build3DSpecFromGeometryJSON(decoded.geometryRaw);
       if (!spec) return null;
       const specStr = JSON.stringify(spec);

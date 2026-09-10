@@ -155,6 +155,12 @@ status: active
 - **创意工坊 index 过滤 `.recycle` 回收站条目**（[G5 收口] 单一实现 `utils/recycle-path.ts` `hasRecycleSegment`，命名对齐 Go `sync.hasRecycleSegment` 段语义 EqualFold——注意区别于 `fsutil.IsRecycleDir` 基名版，一次性路径判定须用段判定）：`tryFetchModels`（`data.ts`）加载远端 index 后过滤 path 含 `.recycle` 段的条目，web `generateWebRepoIndex`（`backend/web-community.ts`）生成时同样过滤——回收站下"已删/待清理"文件不应出现在工坊下载列表；若不滤，文件经 Go 下载器 `stripRecycleSegments` 剥段落盘，剥后仅剩文件名者落到仓库根（观感同「下载平铺」）。原 isRecyclePath（feature 层）/ isRecycleRel（backend 层）双实现已删（原「避免跨层回引」为过度设计：helper 落 utils 纯函数域零跨层引用），Go 桌面 scanner 已跳过回收站，此过滤兜底远端作者生成的旧 index
 - **P3 观察（2026-08 复审）**：① `enqueue` 在 isActiveStatus 守卫后有 `await getApp()`/`await GetRepoRoot()` 才进 `enqueueDownloads`——快速连点两个不同文件可双双通过守卫，第二批次被 `enqueueDownloads` 守卫静默丢弃（无 toast）；② 8s `AbortController` 超时在 headers 到达即 clearTimeout，`resp.json()` body 读取无超时保护（body 卡死可无限挂起）；③ progress=100% 后 3s `completeTimer` 回调只查 isActiveStatus 不校验当前文件已 file-done，大文件落盘慢时提前拆除 UI 并二次触发 onAllDone；④ 下载 URL `dlPrefix + m.path` 未 encodeURIComponent，文件名含 `#`/`?` 时 URL 截断。均属低触发面，未证实用户可见影响
 
+## 已知边界 / 待治理
+
+- `download-queue.ts`（UI 控制器）当前已接近 ≤400 行红线；下次在此文件新增功能时，应优先评估是否可继续拆分子职责（如把 `cmDqHandle*` 状态响应族拆为独立模块），而非继续堆叠
+- `events.ts` 的 `bindRepoEvents` 承担编排角色（队列初始化 + 虚拟列表创建 + 7 个事件绑定），职责密度高；后续若新增仓库页交互，考虑先抽出 orchestrator 再扩展，避免该文件继续线性增长
+- `backendGetApp` / `communityGetApp` / `contextMenuGetApp` 三处别名转发同一实现；当前为 vi.mock 测试策略所依赖的形态，待真实 DI 容器落地时合并
+
 ## 相关
 
 - [go_download](./go-download.md) — 后端下载队列与事件发射

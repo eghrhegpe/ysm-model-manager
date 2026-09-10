@@ -6,6 +6,7 @@
 import { esc } from "@/utils/html/html.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { entryKey } from "./entry-key.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行公共计算：path 转义、开关状态、禁用 class、类型图标、缩进 */
@@ -22,7 +23,8 @@ export function fileRowCommon(
   pad: string;
 } {
   const p = esc(e.path);
-  const fp = esc(e.fullPath || e.path);
+  // 键空间同源（ADR-222）：与 flattenVisible 的 TreeRow.key 共用 entryKey
+  const fp = esc(entryKey(e));
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
   const typeIcon =

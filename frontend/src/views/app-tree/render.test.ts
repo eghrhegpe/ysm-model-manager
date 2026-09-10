@@ -159,7 +159,18 @@ describe("flattenVisible", () => {
     );
     const rows = flattenVisible(root, "", "", "name", { "folder": true }, 0, "grid");
     const fileRow = rows.find((r) => r.type === "file");
-    expect(fileRow?.key).toBe("folder/a.ysm");
+    // fullPath（磁盘绝对路径）≠ path（相对资源根）时必须取 fullPath：
+    // 选中态 selectState.keys / DOM data-fullpath 均为磁盘路径，键空间须同源
+    // （原断言误写为相对路径 path，把键空间分裂固化成契约，见 ADR-222）
+    expect(fileRow?.key).toBe("/repo/folder/a.ysm");
+  });
+
+  it("文件行 key 与 DOM data-fullpath 同源（fullPath 缺失时回落 path）", () => {
+    const withFull = buildTree([entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm")], "name", null);
+    expect(flattenVisible(withFull, "", "", "name", {}, 0, "grid")[0].key).toBe("/repo/a.ysm");
+    // fullPath 为空串 → 回落 path（与 row-common 的 fp 表达式一致）
+    const noFull = buildTree([{ ...entry("b.ysm", "b.ysm"), fullPath: "" }], "name", null);
+    expect(flattenVisible(noFull, "", "", "name", {}, 0, "grid")[0].key).toBe("b.ysm");
   });
 });
 
@@ -317,9 +328,12 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     expect(keys).toContain("分类1");
     expect(keys).toContain("分类1/狐狸");
     expect(keys).toContain("分类1/猫咪");
-    // 文件行 key 用路径段拼接（对齐树导航依据）
-    expect(keys).toContain("分类1/狐狸/狐狸.ysm");
-    expect(keys).toContain("分类1/猫咪/猫咪.ysm");
+    // 文件行 key = 磁盘 fullPath（与 DOM data-fullpath / selectState.keys 同源，ADR-222）；
+    // folder 行仍用树内拼接路径（仅服务 dirOpen 展开态，自洽子系统）。
+    // 原注释「路径段拼接，对齐树导航依据」不成立：file 行 key 无任何树导航消费方，
+    // 其全部消费点都是「由 DOM/选中态回查行」（重命名定位 / 范围选择 / 键盘高亮）。
+    expect(keys).toContain("/分类1/狐狸/狐狸.ysm");
+    expect(keys).toContain("/分类1/猫咪/猫咪.ysm");
     const fileRows = rows.filter((r) => r.type === "file");
     expect(fileRows.every((r) => r.depth === 2)).toBe(true);
   });
@@ -341,9 +355,9 @@ describe("R3 子目录展开（web 多段组形态）", () => {
     );
     const fileRows = rows.filter((r) => r.type === "file");
     expect(fileRows).toHaveLength(2);
-    // 文件行 key = 路径段拼接；顺序不敏感（含中文排序），用成员断言
+    // 文件行 key = 磁盘 fullPath（webEntry 的 fullPath 带前导 /，与 path 有别）；顺序不敏感
     expect(fileRows.map((r) => r.key)).toEqual(
-      expect.arrayContaining(["分类1/狐狸/狐狸.ysm", "分类1/狐狸/main.json"]),
+      expect.arrayContaining(["/分类1/狐狸/狐狸.ysm", "/分类1/狐狸/main.json"]),
     );
   });
 });
@@ -434,10 +448,10 @@ describe("flattenVisible — 深链 + 搜索态栈溢出回归绊线（P2 修复
       expect(rows.length).toBeGreaterThan(depth); // 每个目录行 + 叶子文件行
       // 首行应为最深层目录的前序——校验行序保前序：第 1 行是最浅层目录
       expect(rows[0]).toMatchObject({ type: "folder", key: "d0", depth: 0 });
-      // 末行为叶子文件（深度 = 树深）
+      // 末行为叶子文件（深度 = 树深）；key 取磁盘 fullPath 而非树内拼接路径（ADR-222）
       const last = rows[rows.length - 1];
       expect(last.type).toBe("file");
-      expect(last.key).toBe(path);
+      expect(last.key).toBe("/repo/" + path);
     },
     15000,
   );

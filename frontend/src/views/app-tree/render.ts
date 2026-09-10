@@ -5,6 +5,7 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { entryKey } from "./entry-key.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
@@ -21,6 +22,11 @@ export const ROW_H_LIST = 24;
 export interface TreeRow {
   id: number;
   type: "file" | "folder";
+  /**
+   * 行键。file 行 = 磁盘完整路径（`entryKey`，与 DOM `data-fullpath` /
+   * `selectState.keys` 同源，ADR-222）；folder 行 = 树内拼接路径
+   * （文件夹不参与选中，其键仅用于 `dirOpen` 展开态，自洽子系统）。
+   */
   key: string;
   depth: number;
   html: string;
@@ -243,7 +249,9 @@ export function flattenVisible(
         const entry = (node as TreeNode)._e as TreeEntry;
         if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
         const html = fileRowFromEntry(entry, top.depth, mode);
-        rows.push({ id: rows.length, type: "file", key: fullPath, depth: top.depth, html });
+        // key 走 entryKey（磁盘路径），非树内拼接路径——与 DOM data-fullpath /
+        // selectState.keys 同源，否则选中相关的 indexOf 比对全部失配（ADR-222）
+        rows.push({ id: rows.length, type: "file", key: entryKey(entry), depth: top.depth, html });
       } else if (node) {
         const isOpen = dirOpen[fullPath] || false;
         const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };

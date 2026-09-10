@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-222：文件行键空间统一：TreeRow.key 取磁盘路径",
+        "link": "/adr/ADR-222-treerow-key"
+      },
+      {
         "text": "ADR-221：跨视图共享状态归位 core 以消除视图域环",
         "link": "/adr/ADR-221-core"
       },

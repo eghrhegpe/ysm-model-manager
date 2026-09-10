@@ -167,7 +167,7 @@
 | 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fire-and-forget 场景必须经 swallowError 兜底 | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
 | 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；缺失键多级回退 current → FALLBACK_LANG(en) → 裸 key，getBundle 空包内部 rescue 至 BASE_LANG(zh-CN)；initI18n 启动预载三包（current + FALLBACK + BASE）使回退链各层冷启动可达；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207, ADR-210 |
-| 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | - | - |
+| 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | TreeRow.key / data-fullpath / selectState.keys 三处键空间必须同源（统一经 entryKey），file 行取磁盘路径（ADR-222） | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
@@ -653,6 +653,8 @@
 | 同步操作未进队列 | - | 并发 push/pull 冲突；必须经 sync-manager 排队 |
 | bus 订阅未进 _unsubs | - | 组件卸载后监听泄漏；必须经 bindBusEvents 返回的 unsub 数组收集 |
 | DOM 委托事件进 _unsubs | - | disconnect 时重复 off 报错；DOM 委托事件应靠 ShadowRoot detach 自动清理 |
+| 文件行 key 与选中态路径必须同源（entryKey）：TreeRow.key 取树内拼接路径而 selectState.keys 取磁盘路径时，indexOf/has 恒失配且**不抛错**——Shift 范围选择、右键批量、键盘导航、全选、双击重命名定位 6 处一起静默失效（ADR-222） | - | - |
+| 渲染层禁止值依赖 loader.ts：多个组件测试 vi.mock("./loader.ts") 只为替换 loadEntries，值导入会让渲染崩在 mock 下（entryKey 因此独立成 entry-key.ts） | - | - |
 | 网页版直调 window.go | - | 无 wails runtime 时报错；必须经 browserAdapter |
 | 跨域资源共享不处理 COI | - | SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头 |
 | 事务不接线 error/abort | - | Promise 永不 settle，读操作卡死 |

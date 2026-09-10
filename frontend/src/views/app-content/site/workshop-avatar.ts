@@ -1,8 +1,8 @@
 // ===== 创作者头像管理 =====
 
 import { dbg } from "@/utils/debug/debug.ts";
+import type { AppContentHost } from "@/views/app-content/host.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { AppContentHost } from "../host.ts";
 
 /**
  * 提取创作者头像（后台批量）

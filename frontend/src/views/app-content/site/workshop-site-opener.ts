@@ -6,10 +6,10 @@ import { t } from "@/core/i18n/t.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import type { BrowseMode } from "@/views/app-content/site/workshop-browse-mode.ts";
+import type { AppContentHost } from "@/views/app-content/host.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { AppContentHost } from "../host.ts";
+import type { BrowseMode } from "./workshop-browse-mode.ts";
 
 // 扩展 HTMLIFrameElement 以携带加载超时 AbortController（实例级，非模块级）
 declare global {

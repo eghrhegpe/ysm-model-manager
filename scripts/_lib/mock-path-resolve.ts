@@ -100,7 +100,8 @@ function resolveInternal(spec: string, fromFileAbs: string): InternalResult {
 
 /** 裸包 spec → 包名：`@scope/pkg/sub` → `@scope/pkg`；`pkg/sub` → `pkg`。 */
 function packageName(spec: string): string {
-  return spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+  const segs = spec.split("/");
+  return spec.startsWith("@") ? segs.slice(0, 2).join("/") : (segs[0] ?? spec);
 }
 
 let depsCache: Set<string> | null = null;

@@ -122,7 +122,7 @@ for (const { abs } of files) {
   const state = { inBlock: false };
   const lines = raw.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i] ?? "";
     if (line.includes("mock-path-ignore:")) continue; // 行内豁免：跳过该行所有 mock
     const code = codeOnly(line, state);
     if (!code.trim()) continue;

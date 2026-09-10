@@ -284,15 +284,15 @@ async function reload(vm: AppTree): Promise<void> {
       : await loadEntries(rtype);
     if (atBeGenGuard(vm, gen)) return;
     if (r) {
-      vm._filesRoot = r.filesRoot;
-      vm._entries = r.entries;
+      vm.filesRoot = r.filesRoot;
+      vm.entries = r.entries;
     } else {
-      vm._entries = [];
+      vm.entries = [];
     }
   } catch (err) {
     if (atBeGenGuard(vm, gen)) return;
     logWarn("bus", "reload 失败:", err);
-    vm._entries = [];
+    vm.entries = [];
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(err, t("tree.reloadFailed"))}`,
       duration: TOAST_MS.long,

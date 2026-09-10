@@ -149,71 +149,6 @@ export class AppTree extends WebComponentBase {
     this._state.selectState = v;
   }
 
-  // ── Deprecated 兼容访问器（转发到 _state，供旧代码渐进迁移）──
-  /** /deprecated 使用 snapshot.entries */
-  get _entries(): TreeEntry[] {
-    return this._state.entries;
-  }
-  set _entries(v: TreeEntry[]) {
-    this._state.entries = v;
-  }
-  /** /deprecated 使用 snapshot.search */
-  get _search(): string {
-    return this._state.search;
-  }
-  set _search(v: string) {
-    this._state.search = v;
-  }
-  /** /deprecated 使用 snapshot.sort */
-  get _sort(): string {
-    return this._state.sort;
-  }
-  set _sort(v: string) {
-    this._state.sort = v;
-  }
-  /** /deprecated 使用 snapshot.rootAttr */
-  get _rootAttr(): string {
-    return this._state.rootAttr;
-  }
-  set _rootAttr(v: string) {
-    this._state.rootAttr = v;
-  }
-  /** /deprecated 使用 snapshot.subdirAttr */
-  get _subdirAttr(): string {
-    return this._state.subdirAttr;
-  }
-  set _subdirAttr(v: string) {
-    this._state.subdirAttr = v;
-  }
-  /** /deprecated 使用 snapshot.dirOpen */
-  get _dirOpen(): Record<string, boolean> {
-    return this._state.dirOpen;
-  }
-  set _dirOpen(v: Record<string, boolean>) {
-    this._state.dirOpen = v;
-  }
-  /** /deprecated 使用 snapshot.filesRoot */
-  get _filesRoot(): string {
-    return this._state.filesRoot;
-  }
-  set _filesRoot(v: string) {
-    this._state.filesRoot = v;
-  }
-  /** /deprecated 使用 snapshot.filterPaths */
-  get _filterPaths(): Set<string> | null {
-    return this._state.filterPaths;
-  }
-  set _filterPaths(v: Set<string> | null) {
-    this._state.filterPaths = v;
-  }
-  /** /deprecated 使用 snapshot.renderMode */
-  get _renderMode(): RenderMode {
-    return this._state.renderMode;
-  }
-  set _renderMode(v: RenderMode) {
-    this._state.renderMode = v;
-  }
-
   // ── 公共 getter（供集成测试和外部消费者使用）──
   get ready(): boolean {
     return this._ready;
@@ -224,6 +159,10 @@ export class AppTree extends WebComponentBase {
   get entries(): TreeEntry[] {
     return this._state.entries;
   }
+  /** 外部模块（bus-handlers 等）写条目走公共 setter，内部用 _state 直写 */
+  set entries(v: TreeEntry[]) {
+    this._state.entries = v;
+  }
   get rootAttr(): string {
     return this._state.rootAttr;
   }
@@ -232,6 +171,10 @@ export class AppTree extends WebComponentBase {
   }
   get filesRoot(): string {
     return this._state.filesRoot;
+  }
+  /** 外部模块（bus-handlers 等）写仓库根走公共 setter */
+  set filesRoot(v: string) {
+    this._state.filesRoot = v;
   }
   get filterPaths(): Set<string> | null {
     return this._state.filterPaths;

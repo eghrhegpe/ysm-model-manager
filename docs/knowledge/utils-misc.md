@@ -58,7 +58,7 @@ status: active
 
 ## 与其他子系统关系
 
-- `dbg` 消费方众多：`app-tree`（index / toolbar-events / render）、`app-sidebar`（index / loader）、`app-sync-manager/index.ts`、`app-content/index.ts`、`app-content/community-data.ts`、`app-content/site/events.ts`、`features/community/download-queue.ts`、`core/handlers/sync.ts`、`utils/model2d.ts`
+- `dbg` 消费方众多：`app-tree`（index / toolbar-events / render）、`app-sidebar`（index / loader）、`app-sync-manager/index.ts`、`app-content/index.ts`、`features/community/community-data.ts`、`app-content/site/events.ts`、`features/community/download-queue.ts`、`core/handlers/sync.ts`、`utils/model2d.ts`
 - `window.debugGetSpec` 依赖 [wails_bindings](./wails-bindings.md) 的 GetModel3DSpec
 - 下载卡死守护语义对应 AGENTS.md 致命陷阱 #6
 

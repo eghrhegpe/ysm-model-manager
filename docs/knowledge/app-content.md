@@ -24,7 +24,6 @@ source_files:
   - frontend/src/views/app-content/state.ts
   - frontend/src/views/app-content/host.ts
   - frontend/src/views/app-content/subscription-bucket.ts
-  - frontend/src/views/app-content/community-data.ts
   - frontend/src/views/app-content/workshop-avatar.ts
   - frontend/src/views/app-content/workshop-tabs.ts
   - frontend/src/views/app-content/workshop-site-opener.ts
@@ -77,7 +76,6 @@ auto_fields:
     - WorkshopRefs
   tests:
     - frontend/src/utils/resource/types.test.ts
-    - frontend/src/views/app-content/community-data.test.ts
     - frontend/src/views/app-nav/index.test.ts
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-toast/index.test.ts
@@ -132,7 +130,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `css/content-creator.ts` — 创作者 `.cr-*` 全族样式（标签/频道/卡片/详情浮层/编辑）。
 - `css/content-diag.ts` — 诊断页 + GitHub 工坊 `.gh-*` 全族样式。
 - `css/content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。
-- `community-data.ts` — 社区数据层：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
+- 社区数据层（`community-data.ts`，ADR-223 北迁 `features/community/community-data.ts`，经 `community-deps` seam 取绑定）：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
 - `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。
 

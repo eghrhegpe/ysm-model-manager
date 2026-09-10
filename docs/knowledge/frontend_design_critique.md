@@ -157,7 +157,7 @@ invariant_anchors:
 |------|----------|
 | `app-content/index.ts:274-302` 7个死代码转发壳 | ✅ 属实；`_bindTabs`/`_initDiagnostics`/`_initInstances`/`_initRepository`/`_initWorkshop`/`_initGithub`/`_initSettings` 仅转发 `init-pages.ts`，实际调用走 `PAGE_REGISTRY` |
 | `app-sidebar/index.ts:37` `_checkedSets` 模块级泄漏 | ⚠️ 撤回：设计意图非 bug——`sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」明确依赖跨 disconnectedCallback 保留，按 rtype 隔离 |
-| `app-nav/index.ts:328-342` `_focusRepoSearch` 轮询耦合 | ✅ 属实；setTimeout 循环 20 次等待 `app-tree` 挂载，依赖查询链 `appContent?.shadowRoot?.querySelector("app-tree")?.shadowRoot?.getElementById("srch")` |
+| `app-nav/index.ts:328-342` `_focusRepoSearch` 轮询耦合 | ✅ 属实；setTimeout 循环 20 次等待 `app-tree` 挂载，依赖查询链 `appContent?.shadowRoot?.querySelector("app-tree")?.shadowRoot?.getElementById("srch")`。【✅ 已修复 ADR-223：nav 焦点改 `repo:focus-search` bus 事件 + `utils/dom/focus-pending.ts` 一次性 pending flag，删轮询与 shadow 穿透】 |
 | `modal.ts:134-146` overlay 缺 `role="dialog"` | ✅ 属实；`buildOverlay` 仅设 `className`/`tabIndex`，未设 `role`/`aria-modal` |
 | `adv-filter.ts:57` label 无 for 关联 | ✅ 属实；`<label style="display:block">` 无 `for` 属性，对应 `input#afv-kw` 无关联 |
 | `batch-rename.ts:185` checkbox 无 aria-label | ✅ 属实；批量条目 checkbox 仅 `class="br-file-cb"` + `data-ci`，无 `aria-label` |

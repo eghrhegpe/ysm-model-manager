@@ -4,18 +4,27 @@ name: 截图与导出 export
 tier: architecture
 category: utils
 source_files:
-  - frontend/src/preview-3d/screenshot-render.ts
-  - frontend/src/preview-3d/screenshot-lights.ts
-  - frontend/src/preview-3d/texture-loader.ts
+  - frontend/src/preview-3d/screenshot/screenshot-render.ts
+  - frontend/src/preview-3d/screenshot/screenshot-lights.ts
+  - frontend/src/preview-3d/texture/texture-loader.ts
   - frontend/src/preview-3d/decoder/cache.ts
-  - frontend/src/preview-3d/screenshot.ts
+  - frontend/src/preview-3d/screenshot/screenshot.ts
 auto_fields:
   symbols_with_lines:
+    - AngleShot
     - cacheGet
     - cacheSet
     - cacheSetEvictHandler
     - CacheValue
     - collectBlobUrls
+    - loadTextures
+    - releaseTextureUrls
+    - renderMultiAngle
+    - RenderMultiAngleOptions
+    - screenshotFromRenderer
+    - ScreenshotLights
+    - ScreenshotOpts
+    - toScreenshotLights
   tests:
     - frontend/src/preview-3d/decoder/cache.test.ts
     - frontend/src/preview-3d/screenshot-render.test.ts

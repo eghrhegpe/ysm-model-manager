@@ -6,17 +6,18 @@ adr:
   - ADR-127
 category: feature
 source_files:
-  - frontend/src/preview-3d/screenshot.ts
-  - frontend/src/preview-3d/screenshot-render.ts
-  - frontend/src/preview-3d/screenshot-lights.ts
-  - frontend/src/preview-3d/texture-loader.ts
-  - frontend/src/preview-3d/texture-cache.ts
+  - frontend/src/preview-3d/screenshot/screenshot.ts
+  - frontend/src/preview-3d/screenshot/screenshot-render.ts
+  - frontend/src/preview-3d/screenshot/screenshot-lights.ts
+  - frontend/src/preview-3d/texture/texture-loader.ts
+  - frontend/src/preview-3d/texture/texture-cache.ts
   - frontend/src/preview-3d/decoder/cache.ts
   - frontend/src/views/app-preview/skeleton-render.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
 auto_fields:
   symbols_with_lines:
+    - AngleShot
     - buildBoneExportRow
     - buildStatsCard
     - buildToggleRow
@@ -27,10 +28,20 @@ auto_fields:
     - CacheValue
     - collectBlobUrls
     - componentCountsFromSpec
+    - loadTextures
     - makeYsmAdapter
+    - releaseTextureUrls
+    - renderMultiAngle
+    - RenderMultiAngleOptions
     - saveScreenshot
+    - screenshotFromRenderer
+    - ScreenshotLights
+    - ScreenshotOpts
     - setup2DCanvas
     - shotButtonNodes
+    - textureCache
+    - TextureCacheImpl
+    - toScreenshotLights
     - YsmAdapterOptions
     - ysmMenuItems
     - YsmMenuItemsOpts
@@ -62,8 +73,8 @@ use_when:
   - saveScreenshot
   - renderMultiAngle
 invariant_anchors:
-  - frontend/src/preview-3d/screenshot.ts|screenshotFromRenderer
-  - frontend/src/preview-3d/screenshot-render.ts|renderMultiAngle
+  - frontend/src/preview-3d/screenshot/screenshot.ts|screenshotFromRenderer
+  - frontend/src/preview-3d/screenshot/screenshot-render.ts|renderMultiAngle
   - frontend/src/views/app-preview/skeleton-render.ts|saveScreenshot
   - frontend/src/preview-3d/decoder/cache.ts|cacheSet
 status: active

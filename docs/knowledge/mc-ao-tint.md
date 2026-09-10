@@ -5,10 +5,12 @@ tier: leaf
 category: rendering
 source_files:
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts
-  - frontend/src/preview-3d/mc-tints.ts
+  - frontend/src/preview-3d/materials/mc-tints.ts
 auto_fields:
   symbols_with_lines:
     - buildPackScene
+    - getTintColorSync
+    - loadMcTints
     - makePackAdapter
     - PackAdapterOpts
     - PackDeps
@@ -26,7 +28,7 @@ perf:
   - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts|tintCategoryForPath
-  - frontend/src/preview-3d/mc-tints.ts|getTintColorSync
+  - frontend/src/preview-3d/materials/mc-tints.ts|getTintColorSync
 status: active
 ---
 

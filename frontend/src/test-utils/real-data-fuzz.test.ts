@@ -1,10 +1,13 @@
 // @vitest-environment node
-// ===== 真实数据轰击测试（ADR-044 数据驱动补强）=====
+// ===== 真实数据轰击测试（ADR-044 数据驱动补强，随迁移至 test-utils，2026-09）=====
 // 数据源：tests/fixtures/ysm/（git 跟踪的最小真实模型解码样本：顶层 3 个代表目录
 // 01_taisho_maid / 博丽灵梦Hakurei_Reimu / lucia，40 个 JSON）
 // 覆盖：真实世界数据形态——负 size cube、UV 对象形态、Molang 动画值、特殊字符元数据。
 // 纯函数解析入口不崩溃、数值有限；曾用临时脚本轰 tests/ysm-reference/（git 忽略）
 // 发现负 size 误判为缺陷，实为 Bedrock 合法特性（见 geometry.test.ts 回归）。
+//
+// 层归属：横跨 preview-3d/decoder + utils/animation 的集成级 smoke test，不归任何子层；
+// 原放 src 根装配层与会污染启动装配语义，归入 test-utils/（测试相关集散地）。
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { dirname, join } from "path";
@@ -13,13 +16,13 @@ import { parseBedrockGeometryFromJSON } from "@/preview-3d/decoder/geometry.ts";
 import { parseYsmJsonDirect } from "@/preview-3d/decoder/parse-ysm-json.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 
-// 基于本文件位置解析（src/ 上三级 = 仓库根），与 cwd 解耦。
+// 基于 src 根推导仓库根（test-utils 上 2 级 = src，src 再上 2 级 = 仓库根），
+// 与 cwd / 所在子目录深度解耦。
 // 注：不用 `new URL(rel, import.meta.url)`——happy-dom 的 URL polyfill 对相对
 // 解析返回非 file scheme，fileURLToPath 会抛错（实测探针）。
-const FIXTURES = join(
-  dirname(dirname(dirname(fileURLToPath(import.meta.url)))),
-  "tests/fixtures/ysm",
-);
+const SRC = dirname(dirname(fileURLToPath(import.meta.url))); // .../src
+const ROOT = dirname(dirname(SRC)); // .../src → frontend → 仓库根
+const FIXTURES = join(ROOT, "tests/fixtures/ysm");
 
 function collectJson(dir: string, out: string[] = []): string[] {
   if (!existsSync(dir)) return out;

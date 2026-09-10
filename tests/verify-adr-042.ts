@@ -22,7 +22,7 @@ function checkScale() {
   // ADR-212（e61f75b85）起 evaluateClip 拆出 animation-evaluator.ts（解析器/求值器分家），
   // 逐通道求值匹配目标随之搬家
   const evaluatorTs = read("frontend/src/utils/animation/animation-evaluator.ts");
-  const playerTs = read("frontend/src/preview-3d/ysm-animation-player.ts");
+  const playerTs = read("frontend/src/preview-3d/model/ysm-animation-player.ts");
 
   const checks = [
     {
@@ -112,7 +112,7 @@ function checkGlow() {
   const specGo = read("go/threejs/spec.go");
   const specBonesGo = read("go/threejs/spec-bones.go");
   const meshBuilderTs = read("frontend/src/preview-3d/mesh/mesh-builder.ts");
-  const ysmObjectTs = read("frontend/src/preview-3d/ysm-object.ts");
+  const ysmObjectTs = read("frontend/src/preview-3d/model/ysm-object.ts");
   const model3dTs = read("frontend/src/preview-3d/mesh/model3d.ts");
 
   const checks = [

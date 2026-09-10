@@ -60,6 +60,21 @@ if (args.help) {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
+  // 未知域 fail-closed（code_review d9f821d11 P2）：拼错的 --domain（如
+  // fronetnd / Frontend 大小写）会让 selectContractTests 返回空集 → 走下方
+  // 「无命中跳过」exit 0，本地自查绿但实际零测试执行——门禁 fail-open。
+  // 先对 USAGE 枚举的合法域做白名单校验，未知域直接报错退出 1。
+  const KNOWN_DOMAINS = new Set(["go", "frontend", "data", "docs", "tests"]);
+  const unknown = domains.filter((d) => !KNOWN_DOMAINS.has(d));
+  if (unknown.length > 0) {
+    console.error(
+      `[contract-tests] 未知验证域: ${unknown.join(", ")}（合法域: ${[...KNOWN_DOMAINS].join(" / ")}）`,
+    );
+    // 脚本主体在模块顶层（无函数包裹），不能用 return——顶层 return 经
+    // Node type-stripping 直接 ERR_INVALID_TYPESCRIPT_SYNTAX
+    process.exit(1);
+  }
+
   // 域裁剪：selectContractTests 对「无域 / 仅 other」返回空。空数组不能透传给
   // runContractTestsParallel —— 其 `files.length > 0` 判断会把空集退化成全量。
   const all = collectContractTests();

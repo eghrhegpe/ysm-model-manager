@@ -34,12 +34,12 @@ const files = [
   // features — 纯逻辑
   "features/dnd-collector.test.ts",
   // preview-3d — 纯逻辑（骨骼语义/MMD 材质/解析/感知/能力）
-  "preview-3d/semantic-bones.test.ts",
-  "preview-3d/semantic-morphs.test.ts",
-  "preview-3d/mmd-bones.test.ts",
-  "preview-3d/mmd-materials.test.ts",
-  "preview-3d/bone-tools.test.ts",
-  "preview-3d/parse-java-model.test.ts",
+  "preview-3d/bone/semantic-bones.test.ts",
+  "preview-3d/infra/semantic-morphs.test.ts",
+  "preview-3d/bone/mmd-bones.test.ts",
+  "preview-3d/materials/mmd-materials.test.ts",
+  "preview-3d/bone/bone-tools.test.ts",
+  "preview-3d/model/parse-java-model.test.ts",
   "preview-3d/perception/autodance.test.ts",
   "preview-3d/perception/beat-detector.test.ts",
   "preview-3d/perception/blink.test.ts",

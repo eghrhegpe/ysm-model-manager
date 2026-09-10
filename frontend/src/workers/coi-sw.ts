@@ -70,6 +70,8 @@ export function registerCoiServiceWorker(): void {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     if (!isWebPlatform()) return; // 仅网页版（桌面/Android 由原生注入）
     const base = import.meta.env.BASE_URL;
+    // 非 fire-and-forget：.then 内完成 reload 决策，.catch 兜底注册期失败（渐进增强静默降级）；
+    // void 仅显式丢弃终点 promise（catch 回调自身不抛），标记「已处理」意图
     void navigator.serviceWorker
       .register(`${base}sw.js`, { scope: base })
       .then(() => {

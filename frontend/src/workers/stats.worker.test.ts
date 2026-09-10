@@ -59,7 +59,12 @@ beforeEach(() => {
   });
 });
 
-const posts: Array<{ type: string; message?: string; result?: WebModelStatsWithPath }> = [];
+const posts: Array<{
+  type: string;
+  requestId?: number;
+  message?: string;
+  result?: WebModelStatsWithPath;
+}> = [];
 
 let workerHandler: ((ev: { data: unknown }) => Promise<void>) | null = null;
 
@@ -158,9 +163,22 @@ describe("stats.worker — 逐模型流式回包（ADR-219 D1）", () => {
     expect(posts[2]).toEqual({ type: "result", requestId: 43, doneCount: 2 });
   });
 
-  it("paths 非数组 → error（不进 partial 流）", async () => {
+  it("paths 非数组 → error（协议守卫拒收，不进 partial 流）", async () => {
     const handler = await loadHandler();
     await handler({ data: { type: "stats", requestId: 44, paths: "not-an-array" } });
+    expect(posts.map((p) => p.type)).toEqual(["error"]);
+    expect(posts[0].requestId).toBe(-1); // 哨兵：主线程 requestId 对账过滤丢弃，静默窗自愈
+  });
+
+  it("requestId 非数字（字符串）→ error（协议守卫：防类型漂移进入看门狗计数）", async () => {
+    const handler = await loadHandler();
+    await handler({ data: { type: "stats", requestId: "bad", paths: ["/web/ysm/a.ysm"] } });
+    expect(posts.map((p) => p.type)).toEqual(["error"]);
+  });
+
+  it("paths 含非字符串元素 → error（协议守卫：元素级形状校验）", async () => {
+    const handler = await loadHandler();
+    await handler({ data: { type: "stats", requestId: 45, paths: ["/web/ysm/a.ysm", 42] } });
     expect(posts.map((p) => p.type)).toEqual(["error"]);
   });
 });

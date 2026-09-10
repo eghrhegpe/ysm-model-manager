@@ -37,12 +37,14 @@ auto_fields:
     - getStatsPoolSize
     - importWebFiles
     - isCrossOriginIsolated
+    - isValidStatsRequest
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
     - isWebPlatform
     - MAX_IMPORT_BYTES
     - onStatsProgress
+    - parseAnyGeometry
     - PlatformMode
     - prefetchStatsWorker
     - readDeclaredBackend

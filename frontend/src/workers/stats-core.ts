@@ -10,7 +10,9 @@
 //  - sniffTexSize 与 Go imagePixelArea / wasm.ts sniffTexSize 同口径，勿单独改
 // 结构去重（ADR-218 D3）：统计结果单一形状源 = stats-protocol.ts WebModelStats；
 // 解码产物文件形状 = wasm/parser-shared.ts YsmDecodedFile（type-only import，无运行时耦合）
-import { parseBedrockGeometryFromJSON } from "@/preview-3d/decoder/geometry.ts";
+// geometry 解析直指 ADR-217 下沉后的纯 JSON 源点 parsers/（preview-3d/decoder/geometry.ts
+// 仅是 re-export shim，新消费方不走 shim——shim 只减不增）
+import { parseBedrockGeometryFromJSON } from "@/parsers/bedrock-geometry.ts";
 import { sniffTexSize } from "@/utils/base/pure/tex-size.ts";
 import type { YsmDecodedFile } from "@/wasm/parser-shared.ts";
 import type { WebModelStats } from "./stats-protocol.ts";
@@ -42,8 +44,9 @@ type LooseGeometryDoc = {
  * 宽松 geometry 解析：标准 `minecraft:geometry` 数组（parseBedrockGeometryFromJSON）
  * 之外，兼容 `minecraft.geometry[0]` / `geometry.model` / 直接 `{bones}` 根对象
  * （对齐 parseYsmJsonDirect 的 root 提取口径）。失败返回 null。
+ * 导出供 stats-core.test.ts 对三条兼容形态做专项边界覆盖（不经 statsFromJsonBytes 间接触达）。
  */
-function parseAnyGeometry(
+export function parseAnyGeometry(
   jsonStr: string,
 ): { boneCount: number; cubeCount: number; texWidth: number; texHeight: number } | null {
   const viaStandard = parseBedrockGeometryFromJSON(jsonStr);

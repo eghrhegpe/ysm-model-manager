@@ -52,13 +52,30 @@ export interface StatsWorkerError {
 
 export type StatsWorkerResponse = StatsWorkerPartial | StatsWorkerResult | StatsWorkerError;
 
+/**
+ * StatsWorkerRequest 运行时结构守卫（Worker 入口防御）：postMessage 可接收任意结构化
+ * 数据，非协议形状的消息（如 requestId 为字符串）不得进入回包累积 / 看门狗计数——
+ * 类型漂移会让主线程按错误 requestId 对账 partial 流。
+ * 零依赖纯函数：与 isCrossOriginIsolated 同列协议模块，worker 与测试共用。
+ */
+export function isValidStatsRequest(msg: unknown): msg is StatsWorkerRequest {
+  if (!msg || typeof msg !== "object") return false;
+  const m = msg as Partial<StatsWorkerRequest>;
+  return (
+    m.type === "stats" &&
+    typeof m.requestId === "number" &&
+    Array.isArray(m.paths) &&
+    m.paths.every((p) => typeof p === "string")
+  );
+}
+
 // 进度说明：worker 级细粒度消息 = partial 流（ADR-219 D1 重开，ADR-218 D2 的部分修订）——
 // 服务正确性（看门狗侦测 + 主线程逐模型累积），UI 进度顺带从 chunk 级升级为模型级
 // （onStatsProgress 逐模型推进，零额外协议成本）。
 
-/** 单批模型上限：worker 逐模型处理（for await 循环，峰值内存由单模型解码产物决定，与批大小
- *  无关）——本限制的真实理由是：① 单批墙钟预算（STATS_CHUNK_TIMEOUT_MS=60s）内可完成；
- *  ② 进度按模型级推进时粒度可感知（UI 角标）；200 已含余量。 */
+/** 单批模型上限：worker 有界并发逐模型处理（4 泵，峰值内存 = 在途模型字节 + 解码产物，
+ *  与批大小无关）——本限制的真实理由是：① 单批墙钟预算（STATS_CHUNK_TIMEOUT_MS=60s）内
+ *  可完成；② 进度按模型级推进时粒度可感知（UI 角标）；200 已含余量。 */
 export const STATS_BATCH_LIMIT = 200;
 
 /** 当前是否已跨源隔离（SW 补头 / Go mpr middleware 后 crossOriginIsolated=true；

@@ -19,7 +19,9 @@ auto_fields:
     - EMPTY_ERROR
     - getStatsPoolSize
     - isCrossOriginIsolated
+    - isValidStatsRequest
     - onStatsProgress
+    - parseAnyGeometry
     - prefetchStatsWorker
     - STATS_BATCH_LIMIT
     - statsFromDecodedFiles

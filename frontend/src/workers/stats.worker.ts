@@ -2,8 +2,9 @@
 // SearchModels 数值条件的统计来源（ADR-071 审计增强 #6 + 用户「多线程注入」要求）：
 //  1. Worker 内 open IndexedDB（同源）读文件字节 —— 免主线程 base64 大字符串传输
 //  2. Worker 内独立加载 YSMParser WASM（ysm-worker-loader.ts，不复用主线程 wasmModule 单例）
-//  3. 逐个模型解码 → 统计骨骼/立方体/纹理尺寸 → 逐模型 postMessage 流式回包（partial，
-//     按 path 对齐 + 主线程静默看门狗侦测信号，ADR-219 D1）→ 循环走完发 result 结束标记
+//  3. 泵式有界并发（STATS_CONCURRENCY）逐模型解码 → 统计骨骼/立方体/纹理尺寸 →
+//     逐模型 postMessage 流式回包（partial，按 path 对齐 + 主线程静默看门狗侦测信号，
+//     ADR-219 D1；I/O 与同步 WASM 解码重叠，峰值内存与批大小无关）→ 全批走完发 result 结束标记
 // 主线程编排（批量切分/看门狗/取消/细粒度降级/批级单飞 ADR-218 + ADR-219）见
 // backend/web-stats.ts；协议见 stats-protocol.ts。
 // 容量/取消：单批上限由主线程 STATS_BATCH_LIMIT 切分；主线程可 terminate 本 Worker 取消。
@@ -26,6 +27,7 @@ import {
 } from "./stats-core.ts";
 import {
   isCrossOriginIsolated,
+  isValidStatsRequest,
   type StatsWorkerRequest,
   type StatsWorkerResponse,
   type WebModelStats,
@@ -94,16 +96,23 @@ async function statsOne(path: string): Promise<WebModelStats> {
   }
 }
 
+/** 泵式并发数：I/O（idbGet）与同步 WASM 解码重叠——模型 N+1 的字节读取在模型 N 解码期间完成。
+ *  峰值内存 = 在途 ≤ 此数的模型字节 + 解码产物，与批大小无关；更大 N 收益递减
+ *  （同步 WASM 关键区在单 JS 线程天然串行），4 为保守默认。 */
+const STATS_CONCURRENCY = 4;
+
 self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => {
-  const msg = ev.data as StatsWorkerRequest;
-  if (!msg || msg.type !== "stats") return;
-  const { requestId, paths } = msg;
-  // 防御性校验：协议要求 paths 为 string[]，但 postMessage 可接收任意结构化数据
-  // 非数组时 for...of 会抛 TypeError → 被外层 catch 捕获为误导性 "error" 响应
-  if (!Array.isArray(paths)) {
-    post({ type: "error", requestId, message: "paths 不是数组" });
+  // 协议结构守卫（stats-protocol.isValidStatsRequest，类型谓词窄化 ev.data）：
+  // postMessage 可接收任意结构化数据——requestId 非数字 / paths 非 string[] 等畸形消息
+  // 一律 error 拒收，防类型漂移进入 partial 累积 / 看门狗计数（主线程按 requestId 对账）。
+  // requestId=-1 哨兵：主线程 onmessage 的 `data.requestId !== 在途值` 过滤会丢弃本消息，
+  // chunk 经静默窗自愈（web-stats.ts）——生产路径主线程 postMessage 恒良构，此分支仅
+  // 异常通道 / 手工探测可触达，无数据丢失（重试重放本批 paths，统计幂等）。
+  if (!isValidStatsRequest(ev.data)) {
+    post({ type: "error", requestId: -1, message: "非法请求（isValidStatsRequest）" });
     return;
   }
+  const { requestId, paths } = ev.data;
   try {
     // ADR-079 M4：跨源隔离（SharedArrayBuffer 可用）→ pthread 多线程 WASM（WASM 线程池
     // 并行处理本批多模型）；否则单线程 WASM。判定收敛至 stats-protocol.ts 单一事实源
@@ -126,10 +135,32 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       post({ type: "error", requestId, message: "YSMParser WASM 初始化失败" });
       return;
     }
-    for (const p of paths) {
-      // ADR-219 D1：逐模型流式回包（主线程按 path 累积 + 静默看门狗侦测信号；
-      // 挂死模型会中断 partial 流——这正是主线程区分「挂死」与「正常慢」的依据）
-      post({ type: "partial", requestId, result: { path: p, ...(await statsOne(p)) } });
+    // 泵式有界并发（STATS_CONCURRENCY）：多泵按 nextIdx 领号，各自 while 领到批尾。
+    // 重叠收益：模型 N+1 的 idbGet I/O 在模型 N 的同步 WASM 解码期间完成。
+    // 安全论证：decodeYsmInWorker 的同步关键区（wipeDir→ccall→collectOutputFiles，
+    // 全程无 await）在单 JS 线程天然串行，共享 /output 目录不交叉污染；
+    // 峰值内存 = 在途 ≤ STATS_CONCURRENCY 的模型字节 + 解码产物（stats-protocol 批上限
+    // 注释的内存口径）。
+    // 逐模型 .then 回 partial（ADR-219 D1 活性信号）：每完成一模型即回包——挂死模型
+    // 中断 partial 流，主线程静默看门狗侦测语义不变；回包序不承担契约（ADR-218 D2，
+    // 主线程按 path 累积）。
+    // 注意禁用裸 Promise.all(paths)：全批原始字节同时驻留内存，违反「峰值与批大小无关」。
+    let nextIdx = 0;
+    const pump = async (): Promise<void> => {
+      while (nextIdx < paths.length) {
+        const p = paths[nextIdx++];
+        post({ type: "partial", requestId, result: { path: p, ...(await statsOne(p)) } });
+      }
+    };
+    const settled = await Promise.allSettled(
+      Array.from({ length: Math.min(STATS_CONCURRENCY, paths.length) }, pump),
+    );
+    // 致命异常（WASM 硬崩溃 rethrow 等）→ 整批 error：在途 pump 弃置，主线程 terminate
+    // 本 worker 并在专属 replacement 上重放剩余未回包模型（ADR-219 D2，统计幂等无副作用）
+    const failure = settled.find((s): s is PromiseRejectedResult => s.status === "rejected");
+    if (failure) {
+      post({ type: "error", requestId, message: safeErrorMessage(failure.reason) });
+      return;
     }
     // 流结束标记（逐模型结果已经 partial 送达；主线程收到后收尾该 chunk，
     // 缺条目按 EMPTY_ERROR 细粒度补位，不再整批降级，ADR-219 D1/D3）。

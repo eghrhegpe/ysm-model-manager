@@ -1,9 +1,10 @@
 // @vitest-environment node
 // ===== stats-core 纯计算单测（无 IO / 无 WASM；Worker 路径的可测核心）=====
 // 覆盖：纹理嗅探（PNG/JPEG）、WASM 解码产物统计（合并求和/跳过 ysm.json/animations/
-// avatar）、.json 主文件统计（ysm.json spec 关联文件 / 标准 geometry / 畸形输入）。
+// avatar）、.json 主文件统计（ysm.json spec 关联文件 / 标准 geometry / 畸形输入）、
+// parseAnyGeometry 三条兼容形态专项边界（不经 statsFromJsonBytes 间接触达）。
 import { describe, it, expect } from "vitest";
-import { statsFromDecodedFiles, statsFromJsonBytes } from "./stats-core.ts";
+import { parseAnyGeometry, statsFromDecodedFiles, statsFromJsonBytes } from "./stats-core.ts";
 import { pngBytes } from "@/test-utils/tex-bytes.ts";
 import type { YsmDecodedFile } from "@/wasm/parser-shared.ts";
 
@@ -137,5 +138,47 @@ describe("stats-core.statsFromJsonBytes（.json 主文件：解压目录入口 A
       async () => null,
     );
     expect(noGeoField.hasError).toBe(true);
+  });
+});
+
+describe("stats-core.parseAnyGeometry（geometry 兼容形态专项边界）", () => {
+  it("标准 minecraft:geometry 数组（走 parseBedrockGeometryFromJSON 分支）", () => {
+    expect(parseAnyGeometry(geoA)).toEqual({ boneCount: 2, cubeCount: 4, texWidth: 64, texHeight: 32 });
+  });
+
+  it("兼容形态：minecraft.geometry[0] 对象", () => {
+    const json = JSON.stringify({
+      minecraft: {
+        geometry: [
+          { description: { texture_width: 8, texture_height: 8 }, bones: [{ name: "a", cubes: [{}, {}] }] },
+        ],
+      },
+    });
+    expect(parseAnyGeometry(json)).toEqual({ boneCount: 1, cubeCount: 2, texWidth: 8, texHeight: 8 });
+  });
+
+  it("兼容形态：geometry.model 对象", () => {
+    const json = JSON.stringify({
+      geometry: {
+        model: { description: { texture_width: 4, texture_height: 4 }, bones: [{ name: "b", cubes: [{}] }] },
+      },
+    });
+    expect(parseAnyGeometry(json)).toEqual({ boneCount: 1, cubeCount: 1, texWidth: 4, texHeight: 4 });
+  });
+
+  it("兼容形态：直接 {bones} 根对象（无 description → 纹理 0）", () => {
+    const json = JSON.stringify({ bones: [{ name: "c", cubes: [{}, {}] }] });
+    expect(parseAnyGeometry(json)).toEqual({ boneCount: 1, cubeCount: 2, texWidth: 0, texHeight: 0 });
+  });
+
+  it("cube 缺省（cubes 字段不存在）计 0 立方体", () => {
+    const json = JSON.stringify({ minecraft: { geometry: [{ bones: [{ name: "d" }, { name: "e", cubes: [{}] }] }] } });
+    expect(parseAnyGeometry(json)).toEqual({ boneCount: 2, cubeCount: 1, texWidth: 0, texHeight: 0 });
+  });
+
+  it("空 bones 数组 / 无 geometry 结构 / 畸形 JSON → null", () => {
+    expect(parseAnyGeometry(JSON.stringify({ "minecraft:geometry": [{ bones: [] }] }))).toBeNull();
+    expect(parseAnyGeometry(JSON.stringify({ some: "other" }))).toBeNull();
+    expect(parseAnyGeometry("{{{")).toBeNull();
   });
 });

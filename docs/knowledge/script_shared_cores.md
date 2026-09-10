@@ -71,7 +71,7 @@ invariant_anchors:
 
 - 依赖 `_lib/scan-files.ts`（ROOT）+ `_lib/proc.ts`（run）。
 - `check-circular.ts` 的目录遍历（自定义 walk frontend/ ESM 图）不抽核——目录结构特殊，非共享样板（check-circular-go 已废弃 ADR-204，原 `collectGo` 逻辑随文件删除）。
-- `port-align.ts` / `line-counter.ts`（已归档 `scripts/_attic/`）仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
+- `port-align.ts`（已归档 `scripts/_attic/`）与 `line-counter.ts`（活跃，`scripts/line-counter.ts`，是 frontend-batch-sweep 的正式肥膘扫描器）仅共享 proc/scan-files 基建，无重复逻辑，不属本卡范围。
 
 ## 不变量
 

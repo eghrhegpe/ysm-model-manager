@@ -25,9 +25,16 @@ description: "前端TS批量清膘流水线：全目录扫描超长函数→分�
 
 **目标**：拿到 `frontend/src/**/*.ts` 所有 **≥80 行** 的函数/类清单，排除已拆文件和 vendor/test。
 
-**动作**：在仓库根下写临时扫描脚本 `scripts/_scan_frontend.mjs`（用完即删），内容复制自下一节内嵌模板。
+**动作**：用正式肥膘扫描器 `scripts/line-counter.ts --funcs`（`--threshold 80` 对齐本流水线黄档阈值），`--scope` 限定要扫的域。示例如下：
 
-**输出**：按行数降序的候选清单，每条标注 `函数名 | 行数 | 文件路径:L起-L止 | [✓已拆]`；统计「候选总数 / 排除已拆后剩余」。
+```powershell
+node scripts/line-counter.ts --funcs --scope frontend/src --threshold 80
+node scripts/line-counter.ts --funcs --scope frontend/src/preview-3d --threshold 80   # 按域收窄
+```
+
+> 它是括号匹配定边界 + 新顶层声明护栏的正式工具，**不虚高**（对比：手写正则无护栏会吞后续函数/类，行数虚高；`_scan_frontend.mjs` 临时脚本已废弃，勿再造）。结尾 `[护栏截断]` 标记=该函数体后紧跟新顶层声明，行数为保守截断值，拆前以鲁棒为准复核。
+
+**输出**：按 🟥>240 / 🟧>160 / 🟨>80 三档降序的候选清单，每条标注 `函数名 <kind> | 行数 | 文件路径:L起`；统计「命中合计」。再按 git log 前 N 条 `refactor(ui): 拆 ...` 剔除已拆文件。
 
 ### Step 2 — 候选分级（三档制，便于方案组合）
 
@@ -35,9 +42,9 @@ description: "前端TS批量清膘流水线：全目录扫描超长函数→分�
 
 | 档级 | 行数阈值 | 标签 | 典型代表 |
 |------|---------|------|---------|
-| 🟥 真·巨鲸 | >280 行 | 跨视图/跨域主类 | 主视图 WebComponent 类、大段事件绑定聚合函数（≥400 行必进） |
-| 🟧 大鲨鱼 | 200–280 行 | 域级核心 | 3D 渲染管线、同步下载队列、对话框组装函数 |
-| 🟨 剑鱼 | 150–200 行 | 高价值单点 | 模块 init 函数、子视图 render、独立解析器 |
+| 🟥 真·巨鲸 | >240 行（=3×80） | 跨视图/跨域主类 | 主视图 WebComponent 类、大段事件绑定聚合函数（≥400 行必进） |
+| 🟧 大鲨鱼 | >160 行（=2×80） | 域级核心 | 3D 渲染管线、同步下载队列、对话框组装函数 |
+| 🟨 剑鱼 | >80 行（=1×80） | 高价值单点 | 模块 init 函数、子视图 render、独立解析器 |
 
 **过滤规则**：
 - ✂️ 排除 `**/vendor/**`（第三方 loader/parser，不动上游）
@@ -161,108 +168,40 @@ git add frontend/src/views/Y.ts ; git commit -m "..." -- frontend/src/views/Y.ts
 
 ---
 
-## 2. 内嵌扫描脚本模板（Step 1 用，复制即写）
+## 2. 正式扫描器（Step 1 用，不需要写脚本）
 
-把下面代码写进 `scripts/_scan_frontend.mjs`，执行 `node scripts/_scan_frontend.mjs`，用完 `DeleteFile` 清理。
+**直接用 `scripts/line-counter.ts --funcs`，不写任何临时脚本**。它是全仓既有的正式肥膘扫描器（前端 TS/JS + Go 双栈），`--funcs` 模式输出 🟥/🟧/🟨 三档函数级清单，自动豁免生成文件与测试文件。
 
-```javascript
-// scripts/_scan_frontend.mjs —— 扫描 frontend/src/**/*.ts 找 >=80 行函数/类
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+**关键参数**（对齐本流水线口径）：
 
-const ROOT = "frontend/src";
-const THRESHOLD = 80;
-// 已拆文件清单（按 git log --oneline 最近 N 条 refactor(ui): 拆 ... 补齐）
-const ALREADY_SPLIT = new Set([
-  "ui-rows.ts", "preview-menu.ts", "animation.ts", "web-fs.ts",
-  "ground-capability.ts", "fog-capability.ts", "postprocessing-capability.ts",
-  "shadow-capability.ts", "environment-capability.ts", "reflector-capability.ts",
-  "sky-capability.ts", "light-capability.ts", "ui-advanced-rows.ts",
-  "ui-slide-row.ts", "ui-slide-menu.ts", "preview-menu-cap-controls.ts",
-]);
-const EXCLUDE_DIRS = new Set(["vendor", "node_modules"]);
-const EXCLUDE_SUFFIX = [".test.ts", ".spec.ts"];
-
-function walk(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (EXCLUDE_DIRS.has(name)) continue;
-    const full = join(dir, name);
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, out);
-    else if (full.endsWith(".ts") && !EXCLUDE_SUFFIX.some(s => full.endsWith(s))) out.push(full);
-  }
-  return out;
-}
-const files = walk(ROOT);
-
-function topLevelBlocks(src) {
-  const results = [];
-  const len = src.length;
-  let i = 0;
-  while (i < len) {
-    // 匹配: [export ][async ]function NAME / class NAME / const NAME = (
-    const re = /(?:^|\n)([ \t]*)((?:export[ \t]+)?(?:async[ \t]+)?(?:function|class)[ \t]+([A-Za-z_$][\w$]*)|(?:export[ \t]+)?(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]+)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)[ \t]*=>)/g;
-    re.lastIndex = i;
-    const m = re.exec(src);
-    if (!m) break;
-    const start = m.index + (src[m.index] === "\n" ? 1 : 0);
-    const name = m[3] || m[4] || "(anon)";
-    // 只抓顶层：缩进0或函数声明非嵌套（简单策略：缩进==0 或 function/class 起行前没 { ... } 在它之前）
-    const indent = m[1].length;
-    // 找对应 { 或 => 后的 {
-    let braceIdx = src.indexOf("{", m.index + m[0].length);
-    if (braceIdx < 0) { i = m.index + 1; continue; }
-    let depth = 0, j = braceIdx, inStr = null, inTpl = false, inLine = false, inBlock = false;
-    while (j < len) {
-      const c = src[j], n = src[j + 1];
-      if (inLine) { if (c === "\n") inLine = false; j++; continue; }
-      if (inBlock) { if (c === "*" && n === "/") { inBlock = false; j += 2; } else j++; continue; }
-      if (inStr) { if (c === "\\") { j += 2; continue; } if (c === inStr) inStr = null; j++; continue; }
-      if (inTpl) { if (c === "\\") { j += 2; continue; } if (c === "`") inTpl = false; else if (c === "$" && n === "{") { depth++; j += 2; continue; } j++; continue; }
-      if (c === "/" && n === "/") { inLine = true; j += 2; continue; }
-      if (c === "/" && n === "*") { inBlock = true; j += 2; continue; }
-      if (c === "\"" || c === "'") { inStr = c; j++; continue; }
-      if (c === "`") { inTpl = true; j++; continue; }
-      if (c === "{") depth++;
-      else if (c === "}") { depth--; if (depth === 0) break; }
-      j++;
-    }
-    const startLine = src.slice(0, start).split("\n").length;
-    const endLine = src.slice(0, j + 1).split("\n").length;
-    const lines = endLine - startLine + 1;
-    results.push({ name, lines, startLine, endLine, indent });
-    i = j + 1;
-  }
-  return results;
-}
-
-const all = [];
-for (const f of files) {
-  const src = readFileSync(f, "utf8");
-  const blocks = topLevelBlocks(src).filter(b => b.lines >= THRESHOLD && b.indent === 0);
-  for (const b of blocks) all.push({ ...b, file: f });
-}
-all.sort((a, b) => b.lines - a.lines);
-
-// 标记已拆
-const base = p => p.split("\\").pop().split("/").pop();
-console.log("=== 全 frontend/src 超长函数/类 候选 (>=" + THRESHOLD + "行) ===\n（标记 [✓已拆] = 本会话前多刀已完成；其余待处理）\n");
-let total = 0, remain = 0;
-for (const a of all) {
-  total++;
-  const done = ALREADY_SPLIT.has(base(a.file));
-  if (!done) remain++;
-  const tag = done ? "  [✓已拆]" : "";
-  console.log(`${String(a.lines).padStart(4)}行  ${a.name.padEnd(45)} ${relative(process.cwd(), a.file)}:L${a.startLine}-L${a.endLine}${tag}`);
-}
-console.log(`\n候选总数: ${total}\n排除已拆后剩余: ${remain}`);
 ```
+--scope <路径>     限定扫描目录（默认 frontend/src + go）
+--threshold <N>    黄档阈值，橙=2N / 红=3N（本流水线统一 N=80）
+--json             输出 JSON（含 scannedFiles / counts / items，子代理或脚本化消费）
+```
+
+**本流水线标准调用**：
+
+```powershell
+# 全前端候选（🟨>80 🟧>160 🟥>240）
+node scripts/line-counter.ts --funcs --scope frontend/src --threshold 80
+
+# 按域收窄某个语义域
+node scripts/line-counter.ts --funcs --scope frontend/src/preview-3d --threshold 80
+
+# JSON 消费（主模型筛选方案时）
+node scripts/line-counter.ts --funcs --scope frontend/src --threshold 80 --json
+```
+
+**已拆文件剔除**：line-counter 输出全量命中（不含已拆历史）。主模型对照 `git log --oneline -N --grep=refactor(ui)` 手动剔除已拆文件/函数，别依赖内嵌清单（易过期）。
+
+**护栏截断说明**：命中项带组织简写若尾随 `[护栏截断]`，表示该函数体后紧跟同/上级顶层声明，行数为「下一个声明之前」的保守截断值——非精确体长，仅作分级锚点；确定为拆分目标后在 `#L起` 处用编辑器区间复核真实体长，不因护栏值误判「未超线」而放过。
 
 ---
 
 ## 3. 验收清单（一次完整批量清膘的交付物）
 
-- [ ] Step1 扫描脚本已执行，候选清单 ≥ 方案中文件数
+- [ ] Step1 `node scripts/line-counter.ts --funcs --scope ... --threshold 80` 已执行，候选清单 ≥ 方案中文件数
 - [ ] Step2 三档分级表输出，🟥 档都落在方案里（或明确说明为何延后）
 - [ ] Step3 AskUserQuestion 4 套方案，用户有明确选中记录
 - [ ] Step4 每目标文件 1 份结构快照（方法分布+闭包清单+自然分段）

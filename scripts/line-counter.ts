@@ -27,8 +27,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { parseArgs } from "../_lib/parse-args.ts";
-import { getRoot, readText, relPosix, walk } from "../_lib/scan-files.ts";
+import { parseArgs } from "./_lib/parse-args.ts";
+import { getRoot, readText, relPosix, walk } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 
@@ -299,7 +299,7 @@ function findFunctionEnd(lines: string[], startLine: number, isGo: boolean) {
         // 找当前声明行缩进（缓存下来更高效，但调用链改造大，省点：从 lines[startLine] 重取）
         const startM = lines[startLine]?.match(/^(?<sp>[ \t]*)\S/);
         const startIndent = startM ? startM.groups?.sp?.length : 0;
-        if (nextIndent <= startIndent) {
+        if ((nextIndent ?? Infinity) <= (startIndent ?? 0)) {
           return { endLine: li, truncated: true };
         }
       }
@@ -387,7 +387,7 @@ function extractFunctions(file: string) {
         const mm = line.match(TS_CLASS_METHOD_RE);
         if (mm) {
           const indent = mm.groups?.indent?.length;
-          if (indent > classIndentBaseline) {
+          if ((indent ?? -1) > (classIndentBaseline ?? -1)) {
             const name = mm.groups?.name;
             if (!name) continue; // 理论不可达：正则强制 name 命名组
             if (/^(if|for|while|switch|catch)$/.test(name)) continue; // 控制流关键字误匹配

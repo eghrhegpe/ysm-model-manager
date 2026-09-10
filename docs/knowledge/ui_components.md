@@ -8,7 +8,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ARIA_ATTR
-    - cardContainer
     - clearControls
     - ControlUpdater
     - createHeaderToggle
@@ -35,7 +34,6 @@ auto_fields:
     - uiComponentsCss
     - uiComponentsStyleSheet
     - unregisterControl
-    - withLoadingIndicator
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -73,8 +71,8 @@ status: active
 | 行排列 | （已拔管） | `ui-rows.ts`/`ui-advanced-rows.ts`/`ui-slide-row.ts` 已删除（`addSliderRow`/`addModeRow`/`addFieldRow`/`initControl`/`addColorSliderRow`/`addVector3SliderRow`/`addModeSlider`/`slideRow` 等 15 个命令式行 builder 生产零消费）；滑块能力下沉 cap 栈 `preview-3d/menu/cap-controls|renderCapSlider`，toggle 能力下沉 `ui-header-toggle|createHeaderToggle.forceToggle` |
 | 折叠面板 | （已拔管） | `ui-collapsible.ts`（`addCollapsible`/`addSectionTitle`/`addPresetChip`）已删除——生产折叠组归 `preview-3d/menu/render` 的 `rmAppendFolder` cap-section 类体系（inert 移出 Tab 序语义保留在 cap-section 上） |
 | 幻灯片菜单 | `ui-slide-menu.ts` | `createSlideMenu` → `SlideMenuHandle`（轻量导航栈外壳，见 [ui_slide_menu](./ui-slide-menu.md)） |
-| 卡片 | `ui-card.ts` | `cardContainer(container, fn)` — 包一层 `.lcard`，返回内部 dispose（通用工具叶，生产暂作备件） |
-| 加载 | `ui-loading.ts` | `withLoadingIndicator` 自包含加载遮罩（通用工具叶，生产暂作备件） |
+| 卡片 | （已拔管） | `ui-card.ts`（`cardContainer` 包一层 `.lcard`）2026-09-10 删除——生产零消费者，`.lcard` DOM 全仓无产出方；其 orphan 样式（`:root` 的 `--uih-lcard-*` token + `.lcard`/`.lcard > .slide-item:*` 规则，散在 `ui-components-styles.ts` 与 `ui-slide-menu-styles.ts`）同批清空。**3D 菜单的卡片分组走 `kind:"card"` + `MENU_CARD_CSS`（见 [preview_menu](./preview-menu.md)），勿复活 `.lcard`** |
+| 加载 | （已拔管） | `ui-loading.ts`（`withLoadingIndicator` 自包含加载遮罩）2026-09-10 删除——生产零消费者；其 orphan 样式 `.loading-overlay*`（`ui-components-styles.ts`）同批清空 |
 | 顶部切换 | `ui-header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；bind 注册用唯一 id `header-toggle-bind#<seq>`（防多实例 Map 覆盖）+ 两击断连清扫 |
 | 滑块 | `ui-slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls|renderCapSlider` 生产消费） |
 | 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——生产行图标经 textContent 直写 / 字面量 glyph |
@@ -87,12 +85,12 @@ status: active
 
 ## 对外 API / 入口
 
-- **无 barrel**：ADR-146 反桶运动后，`ui-helpers.ts` 已删除；全部消费方**直接从具体叶模块 import**（`cardContainer` 从 `ui-card.ts`、`createSlideMenu` 从 `ui-slide-menu.ts`、`DragSliderController` 从 `ui-slider-controller.ts` 等）
+- **无 barrel**：ADR-146 反桶运动后，`ui-helpers.ts` 已删除；全部消费方**直接从具体叶模块 import**（`createSlideMenu` 从 `ui-slide-menu.ts`、`DragSliderController` 从 `ui-slider-controller.ts` 等）
 - **不注册自定义元素**：本库无 `customElements.define`，消费方自行挂载返回值；不依赖 app-modules 装配（旧卡「经 app-modules.ts 统一注册为 Web Components」描述失真已修正）
 
 ## 与其他子系统关系
 
-- **消费方（3D 预览）**：`mount-preview-core.ts`（`installUiComponentsStyles` + `uiComponentsStyleSheet` + `PREVIEW_OVERLAY_ID` + `slideMenuStyleSheet`）、`preview-3d/menu/core.ts`（`createSlideMenu`）、`preview-3d/menu/cap-controls.ts`（`createHeaderToggle` + `DragSliderController` + `dom-contract`）、`preview-3d/menu/render.ts`（`createHeaderToggle`）；`ui-card`/`ui-loading` 暂无生产消费者（通用工具叶备件，保留）
+- **消费方（3D 预览）**：`mount-preview-core.ts`（`installUiComponentsStyles` + `uiComponentsStyleSheet` + `PREVIEW_OVERLAY_ID` + `slideMenuStyleSheet`）、`preview-3d/menu/core.ts`（`createSlideMenu`）、`preview-3d/menu/cap-controls.ts`（`createHeaderToggle` + `DragSliderController` + `dom-contract`）、`preview-3d/menu/render.ts`（`createHeaderToggle`）；`ui-card`/`ui-loading` 曾长期零生产消费（卡内记「备件保留」），2026-09-10 已连 orphan 样式一并删除——保留无期且会误导后人「有现成卡片壳可用」
 - **shared-styles** — 共享按钮/焦点样式被本库样式引用
 - **views/app-*** — 各视图在 Shadow DOM 内经 `adoptedStyleSheets = [uiComponentsStyleSheet, ...]` 消费样式串（`var()` 不跨 Shadow 边界继承的坑按前端 AGENTS 处理）
 
@@ -105,4 +103,4 @@ status: active
 - 行/面板 role/class 一律取自 `dom-contract.ts`，禁止手写字符串
 - toggle 行能力演进：`addToggleRow`/`toggleRow`/`addInlineToggleRow` 因生产零消费已删除；「整行点击切换（target 落在 `.toggle` 内跳过、防双触发）+ bind 自更新」语义并入 `ui-header-toggle|createHeaderToggle.forceToggle`，由 `preview-3d/menu/cap-controls|renderCapToggle` 消费（点 label 区翻转、点开关本体走原生 label 逻辑）。3D 菜单 toggle 唯一路径 = MenuNode schema → renderCapToggle，勿再引入第二套 toggle builder（红线：双轨必杀）
 - slider 行能力演进：cap 栈滑块已从原生 `input[type=range]` 换为自绘 `.cs-bar`（fill 渐变 + thumb 细线 + 键盘 ←→/Home/End + pointer 触屏），由 `ui-slider-controller|DragSliderController` 驱动——控制器自 ui-rows `addSliderRow` 迁移（接入生产并补 pointer events：pointer 主 + mouse 兜底，`pointerDown` 互斥标志防真实鼠标双触发；`renderCapSlider` 补 click 跳转 onCommit 对齐原生 change 语义）。3D 菜单 slider 唯一路径 = MenuNode schema → renderCapSlider → cs-bar，勿再引入第二套滑块实现（红线：双轨必杀）。`addSliderRow` 本体（ui-rows）已随行 builder 簇拔管，能力叶保留（cs-bar 样式经 uiComponentsStyleSheet、控制器经 cap 栈）
-- 旧世界命令式行 builder 簇全拔：`ui-rows.ts`/`ui-advanced-rows.ts`/`ui-slide-row.ts`/`ui-collapsible.ts`/`icons.ts`/`ui-types.ts`（+`utils/uid.ts`）已删除——15 个命令式行 builder（`addSliderRow`/`addModeRow`/`addColorSliderRow`/`addVector3SliderRow`/`addModeSlider`/`addCollapsible`/`addFieldRow`/`addDangerRow`/`addInfoGrid` 等）生产零消费，职责全部由 MenuNode schema 声明式路线接管（renderMenu 分派 + cap 栈渲染器 + 副作用闭包）。`ui-card`/`ui-loading` 为通用工具叶备件（零路线冲突，保留）。日后任何为 3D 菜单引入第二套命令式行 builder 者，审核必杀（红线）
+- 旧世界命令式行 builder 簇全拔：`ui-rows.ts`/`ui-advanced-rows.ts`/`ui-slide-row.ts`/`ui-collapsible.ts`/`icons.ts`/`ui-types.ts`（+`utils/uid.ts`）已删除——15 个命令式行 builder（`addSliderRow`/`addModeRow`/`addColorSliderRow`/`addVector3SliderRow`/`addModeSlider`/`addCollapsible`/`addFieldRow`/`addDangerRow`/`addInfoGrid` 等）生产零消费，职责全部由 MenuNode schema 声明式路线接管（renderMenu 分派 + cap 栈渲染器 + 副作用闭包）。`ui-card`/`ui-loading` 同为「零生产消费的通用工具叶」，2026-09-10 一并删除（判据：备件若无复活排期即为负债，且 `.lcard` 的存在会让人误以为有现成卡片壳可复用）。日后任何为 3D 菜单引入第二套命令式行 builder 者，审核必杀（红线）

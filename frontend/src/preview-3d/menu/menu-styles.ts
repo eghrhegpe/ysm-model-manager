@@ -82,8 +82,9 @@ export const MENU_DIVIDER_CSS = `.menu-divider {
  * card 是**不可折叠**的语义卡壳，用于把一批同级导航行按语义聚拢
  * （如环境面板「基础：天空/地面/水面」「氛围：环境/雾/反射」）。
  *
- * 为何不复用 ui/ui-card.ts 的 `.lcard`：该 class 全仓零 CSS 定义（仅测试引用），
- * 且菜单样式经 overlay 样式桥注入 ShadowRoot，全局 CSS 不穿透——样式必须落在本地。
+ * 为何不复用 `.lcard`（原 ui/ui-card.ts，2026-09-10 因零生产消费者连 orphan 样式一并删除）：
+ * 一、`.lcard` 只有组件库字符串里有定义，全仓无任何代码产出该 class 的 DOM；
+ * 二、菜单样式经 overlay 样式桥注入 ShadowRoot，组件库/全局 CSS 不穿透——卡壳样式必须落在本地。
  */
 export const MENU_CARD_CSS = `.cap-card {
   margin: 6px 8px;

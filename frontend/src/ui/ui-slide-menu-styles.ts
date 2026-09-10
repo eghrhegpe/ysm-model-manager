@@ -117,18 +117,6 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   font-size: var(--fs-md);
 }
 
-/* .lcard 内首项/末项圆角（与卡片视觉衔接，对齐 MikuMikuAR .lcard > .slide-item:first-child） */
-.lcard > .slide-item:first-child {
-  border-radius: var(--uih-lcard-radius) var(--uih-lcard-radius) 0 0;
-}
-
-.lcard > .slide-item:last-child {
-  border-radius: 0 0 var(--uih-lcard-radius) var(--uih-lcard-radius);
-}
-
-.lcard > .slide-item:only-child {
-  border-radius: var(--uih-lcard-radius);
-}
 
 /* 内部 🥉 行组件在玻璃卡内的文字/交互色：强制白底调，使 3D 浮层与 ysm HUD 一致、不受 app 主题影响 */
 .menu-wrapper.slide-menu .slide-item,

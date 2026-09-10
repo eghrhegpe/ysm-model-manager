@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-218：stats worker 池并发契约与协议收敛",
+        "link": "/adr/ADR-218-stats-pool-concurrency"
+      },
+      {
         "text": "ADR-217：backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛",
         "link": "/adr/ADR-217-backend-parsers-tier"
       },

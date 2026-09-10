@@ -194,7 +194,6 @@ auto_fields:
     - cancelPendingEncodings
     - canWebAction
     - captureTextureName
-    - cardContainer
     - cardRefreshers
     - cfg
     - checkUpdateSilent
@@ -1380,7 +1379,6 @@ auto_fields:
     - Window
     - wipeDir
     - withCached
-    - withLoadingIndicator
     - withPreviewExtras
     - WorkerBridge
     - WorkerErrorStrategy

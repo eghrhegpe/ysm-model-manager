@@ -1,9 +1,9 @@
 // @vitest-environment node
-// ===== i18n 占位符提取测试 =====
+// ===== i18n 占位符提取测试（随占位符迁移至 core，2026-09）=====
 // extractPlaceholders 是占位符检测的单一事实源（core/i18n/t.ts 残留守卫 + locales-consistency.test.ts 一致性校验双消费），
 // 锁定其 JS 标识符约束：字母/_/$ 开头（拒绝数字开头的 {1}），与 interpolate 的 split/join 键空间一致。
 import { describe, it, expect } from "vitest";
-import { extractPlaceholders } from "./i18n-placeholder.ts";
+import { extractPlaceholders } from "./placeholder.ts";
 
 describe("extractPlaceholders", () => {
   it("提取单个占位符", () => {

@@ -7,8 +7,8 @@
 // 缺失键语义一致（多级回退，见 tOf 注释）+ warnMissingKey 单次告警。
 
 import type { zhCN } from "@/locales/zh-CN.ts";
-import { extractPlaceholders } from "@/utils/base/pure/i18n-placeholder.ts";
 import { FALLBACK_LANG, getBundle, getLang, warnMissingKey } from "./locale.ts";
+import { extractPlaceholders } from "./placeholder.ts";
 
 /** 全部合法 i18n key（扁平化命名空间 key，如 "nav.repository"） */
 export type LocaleKey = keyof typeof zhCN;

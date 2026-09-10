@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-10T04:44:43.540Z",
+  "generated": "2026-09-10T08:56:58.710Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -7,6 +7,7 @@
     "src/backend/platform.ts|duplicates|",
     "src/backend/platform.ts|exports|isViewerPlatform",
     "src/backend/platform.ts|exports|isWebEntryMode",
+    "src/core/i18n/placeholder.ts|exports|PLACEHOLDER_RE",
     "src/core/i18n/t.ts|exports|interpolate",
     "src/features/community/download-queue-store.ts|exports|addQueueError",
     "src/features/community/download-queue-store.ts|exports|decrementRemaining",
@@ -93,7 +94,6 @@
     "src/utils/animation/animation-controller.ts|types|ControllerTransition",
     "src/utils/animation/animation.ts|types|BoneChannels",
     "src/utils/animation/animation.ts|types|MolangAxes",
-    "src/utils/base/pure/i18n-placeholder.ts|exports|PLACEHOLDER_RE",
     "src/utils/dom/focus-restore.ts|exports|createFocusRestoreManager",
     "src/utils/dom/focus-restore.ts|types|FocusRestoreManager",
     "src/utils/dom/input-block-stack.ts|exports|createInputBlockStack",

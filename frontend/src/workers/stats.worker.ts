@@ -61,7 +61,10 @@ function readRelFor(mainPath: string): StatsRelReader {
     if (!pm) return null;
     const slash = pm.rest.lastIndexOf("/");
     const dir = slash >= 0 ? pm.rest.slice(0, slash + 1) : "";
-    return readModelBytes(`/web/${pm.type}/${dir}${rel}`);
+    // 相对路径归一化：ysm.json spec 可能声明 Windows 风格路径分隔符（反斜杠），统一转正斜杠
+    // 后再拼接，避免经 parseWebPath 切出的 IDB key 与 stats-core 侧补前缀后的正斜杠声明错位。
+    const relNorm = rel.replace(/\\/g, "/");
+    return readModelBytes(`/web/${pm.type}/${dir}${relNorm}`);
   };
 }
 
@@ -155,8 +158,12 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
     const settled = await Promise.allSettled(
       Array.from({ length: Math.min(STATS_CONCURRENCY, paths.length) }, pump),
     );
-    // 致命异常（WASM 硬崩溃 rethrow 等）→ 整批 error：在途 pump 弃置，主线程 terminate
-    // 本 worker 并在专属 replacement 上重放剩余未回包模型（ADR-219 D2，统计幂等无副作用）
+    // 防御深度（非主路径，当前实际不可达）：statsOne 对单模型异常全路径 try/catch 恒吞为
+    // EMPTY_ERROR（stats.worker.ts 第 72-96 行）→ pump 正常恒 fulfilled，settled 内通常无 rejected。
+    // 此分支仅兜底 postMessage 结构化克隆失败（DataCloneError，未来 WebModelStats 引入不可克隆
+    // 字段时可达）；触发则整批 error，主线程 terminate 本 worker 并在专属 replacement 上重放剩余
+    // 模型（ADR-219 D2，统计幂等无副作用）。原注释「WASM 硬崩溃 rethrow」与实现不符（statsOne
+    // 不 rethrow），已纠正。
     const failure = settled.find((s): s is PromiseRejectedResult => s.status === "rejected");
     if (failure) {
       post({ type: "error", requestId, message: safeErrorMessage(failure.reason) });

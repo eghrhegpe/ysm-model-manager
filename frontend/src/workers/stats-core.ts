@@ -162,18 +162,20 @@ export async function statsFromJsonBytes(
     let texW = 0;
     let texH = 0;
     const processed = new Set<string>();
+    /** 路径归一化：ysm.json spec 可能声明 Windows 风格路径分隔符（反斜杠），
+     *  统一转正斜杠，避免补前缀/读关联文件时与正斜杠 IDB key 错位。 */
+    const normPath = (s: string): string => s.replace(/\\/g, "/");
     const filePathOf = (v: unknown): string =>
       typeof v === "string"
         ? v
         : (v as { path?: string; name?: string })?.path || (v as { name?: string })?.name || "";
 
     for (const mf of modelFiles) {
-      const name = filePathOf(mf);
+      const name = normPath(filePathOf(mf));
       if (!name || processed.has(name)) continue;
       processed.add(name);
       // 路径归一化：补 models/ 前缀，失败回退原始路径（对齐 wasm.ts JSON 分支）
-      const prefixed =
-        name.startsWith("models/") || name.startsWith("models\\") ? name : `models/${name}`;
+      const prefixed = name.startsWith("models/") ? name : `models/${name}`;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(raw));
@@ -185,11 +187,10 @@ export async function statsFromJsonBytes(
     }
     const texProcessed = new Set<string>();
     for (const tf of texFiles) {
-      const name = filePathOf(tf);
+      const name = normPath(filePathOf(tf));
       if (!name || texProcessed.has(name)) continue;
       texProcessed.add(name);
-      const prefixed =
-        name.startsWith("textures/") || name.startsWith("textures\\") ? name : `textures/${name}`;
+      const prefixed = name.startsWith("textures/") ? name : `textures/${name}`;
       const raw = (await readRel(prefixed)) ?? (await readRel(name));
       if (!raw) continue;
       const s = sniffTexSize(raw);

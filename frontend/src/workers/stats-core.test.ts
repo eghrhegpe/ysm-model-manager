@@ -87,6 +87,25 @@ describe("stats-core.statsFromJsonBytes（.json 主文件：解压目录入口 A
     expect(s.hasError).toBe(false);
   });
 
+  it("ysm.json spec 声明 Windows 反斜杠路径：归一化后命中正斜杠关联文件", async () => {
+    // spec 内 model/texture 用反斜杠声明 models\\a.json / textures\\t.png，store 以正斜杠 key
+    // 提供；normPath 归一化应使其正确命中，不重复补前缀也不丢失（P1 路径健壮性）。
+    const spec = JSON.stringify({
+      spec: 1,
+      files: { player: { model: ["models\\a.json"], texture: ["textures\\t.png"] } },
+    });
+    const store = new Map<string, Uint8Array>([
+      ["models/a.json", enc.encode(geoA)],
+      ["textures/t.png", pngBytes(256, 128)],
+    ]);
+    const s = await statsFromJsonBytes(enc.encode(spec), async (rel) => store.get(rel) ?? null);
+    expect(s.boneCount).toBe(2);
+    expect(s.cubeCount).toBe(4);
+    expect(s.texWidth).toBe(256);
+    expect(s.texHeight).toBe(128);
+    expect(s.hasError).toBe(false);
+  });
+
   it("ysk.json spec 带 models/ 前缀的文件：不重复补前缀", async () => {
     // b.json 声明为已带 models/ 前缀 → 直接命中；a.json 缺前缀 → 补 models/
     const spec = JSON.stringify({

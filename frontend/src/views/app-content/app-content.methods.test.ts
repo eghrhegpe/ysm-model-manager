@@ -42,7 +42,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 vi.mock("@/core/page-store.ts", () => ({
   resolveInitialPage: () => "repository",
 }));
-vi.mock("@/features/sync.ts", () => ({
+vi.mock("@/features/sync/sync.ts", () => ({
   registerSync: vi.fn(),
 }));
 vi.mock("@/features/context-menu/context-menus.ts", () => ({

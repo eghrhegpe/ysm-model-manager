@@ -23,6 +23,7 @@ pitfalls:
   - 「能力定义文件自指误报」→ 每条规则必须豁免自身模块文件（to-posix.ts 的实现本体就是一条 replace）
   - 「smell 形态不全漏检」→ 同一能力常有等价写法（split 反斜杠 join 斜杠 逃过 replace 形态），补 smell 而非只认一种
   - 「孤儿判定口径过窄」→ 只数 scripts/ 侧 import 会把在役模块误报「建议归档」；_lib 互引、.githooks CLI 调用、tests 消费都是真实引用
+  - 「零引用 ≠ 该归档」→ 必须先查 git 历史与 ADR：gate-ctx.ts 零引用是 ADR-206 阶段 1a 的「先建后接」预备件（战役未完成），不是废弃设计。归档前须排除「未落地战役半成品」
   - 「薄包装误报」→ `return walk(dir, {...})` 体内无 readdirSync，须靠自研特征而非函数名判定
   - 「名字过泛误报」→ collectSymbols 这类通用名可能是聚合上层逻辑，列入 smell 会持续误报
 quick_groups:
@@ -91,5 +92,5 @@ node scripts/check-lib-adoption.ts --strict  # 有违规 → 退出码 1
 - `scripts/doctor.ts`（消费方：`--json` 取 `violations=N`）
 - `.githooks/{pre-commit,pre-push}`（CLI 消费方，引用方池成员）
 - `tests/test_gen_stage.ts` / `tests/test_machine_diff.ts`（契约测试消费方，引用方池成员）
-- `scripts/_lib/gate-ctx.ts`（当前唯一零引用模块——ADR-206 为 pre-push-gate 抽的执行上下文，全仓核查已无消费方，属归档候选）
+- `scripts/_lib/gate-ctx.ts`（当前唯一零引用模块。**非废弃、勿归档**：ADR-206「pre-push-gate 收敛分拆」阶段 1a 的预备件——含不可变接口方案未定、阶段 1b 未实施，`pre-push-gate.ts` 仍 1070 行未接线。零引用是战役中断的正常中间态，归档=毁掉已完成的工作）
 - `docs/knowledge/scripts_jscpd_go.md`（`_lib/jscpd-pairs.ts` 消费方；本轮收敛触及）

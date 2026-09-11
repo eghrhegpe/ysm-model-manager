@@ -2,9 +2,17 @@
 // ===== context-menus 测试共享基建（ADR-187 D5 修订：isolate:true 后拆分可行）=====
 // vitest isolate:true（vitest.config.ts L26，2026-08-22 迁移）下每文件独立 worker + 模块图，
 // 拆分无跨文件时序耦合。本模块是 mock 矩阵 + DOM stub + 收集数组的唯一事实源：
-//   - vi.hoisted 变量不可跨文件 export（vitest 编译期拦截），故只 export getMocks() 访问器；
+//   - mocks 用普通模块级 const（⚠️ 禁用 vi.hoisted，见下方红线），只 export getMocks() 访问器；
 //     消费方 import 本模块（副作用：vi.mock 注册）后解构访问器使用。
 //   - bus 订阅 / registerContextMenus 生命周期留在各消费测试文件（钩子不能在此模块注册）。
+//
+// ⚠️ 红线（2026-09-11）：本模块禁用 `vi.hoisted()`。
+//   病灶：`vi.hoisted()` 的 hoisting 变换与 `--coverage` 的插桩在**被 import 的 setup 模块**
+//   （非测试文件本身）中冲突，产出畸形代码致 RollupError「Parse failure」——
+//   `vitest run`（无覆盖）绿、`vitest run --coverage`（CI 命令）红，两个消费文件 0 test 静默加载失败。
+//   为何可以不用：vi.mock 工厂是**惰性**的（被测模块首次求值时才调用），mocks 只需在工厂
+//   调用时已就绪——模块级 const 声明于 vi.mock 之前即天然满足求值顺序，无需 hoisting 提升。
+//   回归护栏：tests/test_vitest_coverage_setup.ts 静态断言本文件不出现 vi.hoisted。
 import { expect, vi } from "vitest";
 import type { CtxShowPayload, MenuItem } from "@/bus";
 import { bus } from "@/bus";
@@ -12,7 +20,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { getMenuDef } from "./menu-defs.ts";
 
 // getApp 是动态 import（backend/app.ts），测试用 mock 替代
-const mocks = vi.hoisted(() => ({
+const mocks = {
   openFolderMock: vi.fn(),
   // 异步 handler 依赖：dialogs + bindings 均为动态 import，用 mock 拦截
   modalPromptMock: vi.fn(),
@@ -33,7 +41,7 @@ const mocks = vi.hoisted(() => ({
   isViewerModeMock: vi.fn(() => false),
   // can() 能力探测（viewer-mode 守卫依赖）：默认 false
   canMock: vi.fn((_action: string) => false),
-}));
+};
 
 /** mock 访问器——唯一对外取 mock 句柄的入口（不可直接 export hoisted 变量） */
 export const getMocks = (): typeof mocks => mocks;

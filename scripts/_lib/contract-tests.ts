@@ -73,6 +73,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_mock_contract.ts": ["frontend", "go"],
   "test_private_access_contract.ts": ["frontend"],
   "test_testid_contract.ts": ["frontend"],
+  // 验证前端 setup 模块的 vi.hoisted 约束（--coverage 插桩兼容性）
+  "test_vitest_coverage_setup.ts": ["frontend", "tests"],
   // —— mixed（跨端契约，任一端变更都触发）——
   "test_android_bridge_contract.ts": ["frontend", "go"],
   "test_apperror_strip.ts": ["go", "frontend"],
@@ -157,6 +159,12 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/adr-check.ts",
   ],
   "test_codemod_guards.ts": ["scripts/codemod.ts"],
+  // 扫描 frontend/src 下全部 *.setup.ts（防 vi.hoisted 与 --coverage 插桩冲突）；
+  // 锚点断言 context-menus.setup.ts 的 mocks 形态——两者任一改动都须触发本测试。
+  "test_vitest_coverage_setup.ts": [
+    "frontend/src/features/context-menu/context-menus.setup.ts",
+    "tests/test_vitest_coverage_setup.ts",
+  ],
   // 跨端契约（ADR-207 D2）：Go AppError 文案 × 前端净化正则，共享 fixture 双端钉
   "test_apperror_strip.ts": [
     "go/types/types.go",

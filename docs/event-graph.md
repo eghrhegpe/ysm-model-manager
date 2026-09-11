@@ -108,7 +108,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 131 |
-| showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 144 |
+| showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 127 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 279 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 303 |

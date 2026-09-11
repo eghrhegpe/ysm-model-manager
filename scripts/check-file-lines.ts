@@ -25,9 +25,9 @@ const ROOT = getRoot();
 const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
   {
     file: "frontend/src/preview-3d/adapters/mount-preview-core.ts",
-    maxLines: 1050,
+    maxLines: 1045,
     adr: "ADR-171 §2.2 / ADR-227",
-    why: "983→1047 膨胀后经 preview-shell 抽取降至 1012（ADR-227 P1）；红线随之下调锁死膨胀，超限须沿真缝拆分或发新 ADR 放宽",
+    why: "983→1047 膨胀后经 preview-shell / session-ledger 抽取降至 1007（ADR-227 P1）；红线随之下调锁死膨胀，超限须沿真缝拆分或发新 ADR 放宽",
   },
 ];
 

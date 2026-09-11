@@ -139,6 +139,7 @@ auto_fields:
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
     - LitematicBuildOpts
+    - LiveSessionEntry
     - LoadingProgressMode
     - makeBonePanelRenderer
     - makeBonesPanelItem
@@ -249,6 +250,8 @@ auto_fields:
     - SchemaBuilder
     - ScreenshotScene
     - SemanticScene
+    - sessionLedger
+    - SessionLedgerHost
     - setActiveInputSession
     - setBoneNodeVisible
     - SharedInfra

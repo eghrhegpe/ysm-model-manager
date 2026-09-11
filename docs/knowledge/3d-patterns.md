@@ -438,18 +438,18 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 快速切换模型时，旧加载任务可能在新任务完成后仍触发状态更新，导致 UI 错乱或资源泄漏。
 
 ### 解决方案
-**代际守卫 + aborted 标记**：
-1. 模块级 `_gen` 计数器，每次 `mount3D` 调用自增。
-2. 调用时捕获 `myGen = ++_gen`，后续异步回调检查 `myGen !== _gen` 则丢弃结果。
+**代际守卫 + aborted 标记**（代际计数器自 ADR-227 收敛至 `session-ledger.ts` 的 `sessionLedger` 实例字段，原 `mount-preview-core.ts` 的 `let _gen`）：
+1. 会话台账持代际计数器，每次 `mount3D` 经 `beginSession()` 分配新代际。
+2. 调用时捕获 `myGen`（`beginSession()` 返回的 `gen`），后续异步回调检查 `myGen !== getGen()` 则丢弃结果。
 3. `aborted` 标记处理 ESC/手动关闭场景。
 4. `isDisposed` 对象处理 dispose 后的防护。
 
 ### 示例
-- `mount-preview-core.ts`：`let _gen = 0;`（模块级代际计数器）
-- `mount-preview-core.ts`：`const myGen = ++_gen;`（调用时捕获当前代际）
-- `mount-preview-core.ts`：`let aborted = false;`（ESC/手动关闭标记）
-- `mount-preview-core.ts`：`if (aborted || myGen !== _gen) { fullCleanup(); return; }`（过期任务丢弃）
-- `mount-preview-core.ts`：`if (aborted || isDisposed.v || myGen !== _gen) return;`（dispose 后防护）
+- `session-ledger.ts`：`sessionLedger.beginSession()`（分配新代际 + per-mount 会话 id，取代 `++_gen` / `++_mountSessionSeq`）
+- `session-ledger.ts`：`sessionLedger.invalidate()`（新预览派发时作废在途加载，取代 `_gen++`）
+- `mount-preview-core.ts`：`const { gen: myGen, sessionId } = sessionLedger.beginSession();`（调用时捕获当前代际）
+- `mount-preview-core.ts`：`getGen: () => sessionLedger.gen()`（ctx 暴露给 mount-session / switch-preview 读取代际）
+- `switch-preview.ts`：`if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) return;`（过期任务丢弃 / dispose 后防护）
 
 ### 适用场景
 - 异步加载 + 状态更新

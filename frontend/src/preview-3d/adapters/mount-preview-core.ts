@@ -72,6 +72,7 @@ import {
   startGlobalRenderLoop,
 } from "./render-loop.ts";
 import { sceneRegistry } from "./scene-registry.ts";
+import { sessionLedger } from "./session-ledger.ts";
 // §5 拆分：场景单例/基础设施装配 → shared-infra.ts；
 // 统一拾取器 → unified-pick.ts
 import { buildSharedInfra, resetSceneInfra, type SharedInfra } from "./shared-infra.ts";
@@ -107,7 +108,7 @@ export interface PreviewBuildCtx {
 /**
  * 适配器返回的内容场景契约（对齐 Model3DHandleX）。
  * 字段分层（P1#3 审计定论）：
- * - 硬契约：仅 dispose——cleanupPreview 无条件遍历调用（_handles → handle.cleanup →
+ * - 硬契约：仅 dispose——cleanupPreview 无条件遍历调用（sessionLedger.snapshot() → handle.cleanup →
  *   fullCleanup → content.dispose），缺失会 GPU 泄漏；6 格式适配器全实现。
  * - 能力可选：其余全部可选（接口注释"便于纯静态渲染"是有意设计）——update 供动态
  *   内容（动画/SpringBone/感知），静态体素（litematic/pack）不实现；resetCamera /
@@ -233,13 +234,10 @@ export interface PreviewHandle {
 
 const TIP_AUTO_DISMISS_MS = 6000;
 
-let _gen = 0;
-/** [Bug A] mount 会话序号（per-mount 唯一 id 来源；switchTo 复用外壳不递增） */
-let _mountSessionSeq = 0;
-
-/** 外壳单例（overlay/body/viewContainer）已收敛至 preview-shell.ts 的 previewShell 实例（ADR-227） */
-/** 所有已挂载的 PreviewHandle（cooperate 模式下多模型各自独立） */
-const _handles: Array<{ handle: PreviewHandle; gen: number }> = [];
+// 会话协调态（_gen 代际 / _mountSessionSeq 会话序号 / _handles 存活句柄表）已收敛至
+// session-ledger.ts 的 sessionLedger 实例（ADR-227）——代际作废、会话 id 分配、
+// coop 多会话簿记均为台账方法（invalidate / beginSession / activeHandle / hasActive）。
+// 外壳单例（overlay/body/viewContainer）已收敛至 preview-shell.ts 的 previewShell 实例。
 // rAF 循环状态（_globalAnimId/_globalPerFrames/perFrame 告警）已拆至 render-loop.ts
 // （registerPerFrame/removePerFrame/stopIfIdle/resetLoopState 访问）。
 // 场景级单例（_singletonScene/_singletonCamera/_singletonRenderer/_singletonControls/_sceneCaps）
@@ -247,15 +245,15 @@ const _handles: Array<{ handle: PreviewHandle; gen: number }> = [];
 
 /** 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） */
 export function invalidatePreview(): void {
-  _gen++;
+  sessionLedger.invalidate();
 }
 
 /** 清理所有 3D 预览（dispose content + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） */
 export function cleanupPreview(): void {
-  _gen++;
-  // 快照遍历：handle.cleanup() → fullCleanup → finishSession 会从 _handles 摘除自身，
+  sessionLedger.invalidate();
+  // 快照遍历：handle.cleanup() → fullCleanup → finishSession 会从台账摘除自身，
   // 边遍历边删会跳元素（cooperate 多会话场景只清掉一半），故先复制一份
-  for (const h of [..._handles]) {
+  for (const h of sessionLedger.snapshot()) {
     try {
       h.handle.cleanup();
     } catch (e) {
@@ -263,7 +261,7 @@ export function cleanupPreview(): void {
       logWarn("preview 3D", "handle.cleanup 失败", e);
     }
   }
-  _handles.length = 0;
+  sessionLedger.clear();
   // P0 修复：cleanupPreview 是「全部关闭」语义，可安全 reset 注册表
   sceneRegistry.reset();
   // renderer/canvas 保留（下次 mount3D 直接复用，不重建 DOM），但外壳引用必须清零：
@@ -282,9 +280,9 @@ export function _resetSingletons(): void {
   setOverlayStyleTarget(null); // ADR-175 M1：同 cleanupPreview——旗标复位防跨用例串目标
   resetSceneInfra();
   resetLoopState();
-  // [审核修复] mount 会话序号同属模块级单例态：重置后 sessionId 生成确定性可测
+  // [审核修复] mount 会话序号同属台账实例态：重置后 sessionId 生成确定性可测
   // （否则跨用例单调递增，断言 per-scene key 形状的测试会顺序依赖）
-  _mountSessionSeq = 0;
+  sessionLedger.resetSeq();
 }
 
 /** 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op */
@@ -292,13 +290,12 @@ export async function switchPreview(
   path: string,
   options?: { keepInScene?: boolean },
 ): Promise<void> {
-  const active = _handles[_handles.length - 1];
-  await active?.handle.switchTo?.(path, options);
+  await sessionLedger.activeHandle()?.switchTo?.(path, options);
 }
 
 /** 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） */
 export function hasActivePreview(): boolean {
-  return _handles.length > 0;
+  return sessionLedger.hasActive();
 }
 
 /** mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） */
@@ -365,12 +362,11 @@ export async function mount3D(
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
   installComponentsStyles();
   previewShell.ensureStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
-  const myGen = ++_gen;
+  // 会话代际 + per-mount 会话稳定 id 由台账分配：[Bug A] 每次 mount3D 自增（switchTo 走
+  // switch-preview 复用外壳、不重新 mount，故不递增）。适配器 build 经 ctx.sessionId 读取，
+  // 供 per-scene schema key（ysm-model-{sid}）注册/注销对齐。
+  const { gen: myGen, sessionId } = sessionLedger.beginSession();
   const selfMode = adapter.mode === "self";
-  // [Bug A] per-mount 会话稳定 id：每次 mount3D 自增（含 switchTo 重建？否——switchTo 走
-  // switch-preview 复用外壳，不重新 mount；此处仅新鲜 mount 生成）。适配器 build 经
-  // ctx.sessionId 读取，供 per-scene schema key（ysm-model-{sid}）注册/注销对齐。
-  const sessionId = `s${++_mountSessionSeq}`;
 
   // ---- 收敛：session 级可变状态（原 14 个裸 let，统一经此对象读写）----
   const session: MpSessionState = {
@@ -424,8 +420,8 @@ export async function mount3D(
     sessionId,
     session,
     getInfra: () => infra,
-    getGen: () => _gen,
-    handles: _handles,
+    getGen: () => sessionLedger.gen(),
+    handles: sessionLedger.handles,
     getSwitchCtx: () => switchCtx,
     clearSingletons: () => {
       previewShell.resetRefs();
@@ -700,7 +696,6 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
   let infra: SharedInfra | null = null;
   const myGen = ctx.myGen;
   const sessionId = ctx.sessionId;
-  const _handles = ctx.handles;
 
   // ===== §4 基础设施创建（scene/camera/renderer/OrbitControls/灯光/resize）=====
   // session.aborted 已在 mount3D 头部 session 对象初始化时声明。
@@ -815,13 +810,13 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
       // （初次 mount 与切换统一经 setPerFrame 注册）
       if (f) registerPerFrame(f);
     },
-    getHandle: () => _handles[_handles.length - 1]?.handle ?? null,
-    handles: _handles,
+    getHandle: () => sessionLedger.activeHandle(),
+    handles: sessionLedger.handles,
     aborted: session.aborted,
     inFlight: false,
     isDisposed: session.isDisposed,
     myGen,
-    getGen: () => _gen,
+    getGen: () => sessionLedger.gen(),
   };
 
   return { infra, switchCtx };

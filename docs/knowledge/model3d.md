@@ -344,6 +344,7 @@ auto_fields:
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
     - LitematicBuildOpts
+    - LiveSessionEntry
     - LoadingProgressMode
     - loadMcTints
     - loadTdCamSpeed
@@ -601,6 +602,8 @@ auto_fields:
     - SemanticMorphId
     - SemanticMorphMap
     - SemanticScene
+    - sessionLedger
+    - SessionLedgerHost
     - setActiveInputSession
     - setBoneNodeVisible
     - setBoneVisible

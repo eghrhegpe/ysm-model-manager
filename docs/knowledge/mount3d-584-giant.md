@@ -62,7 +62,7 @@ last_verified: 2026-09-03
 
 「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（`mount-preview-core.ts|escH` 相关段——session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview_core` §不变量）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
 
-**`_gen` 代际守卫**（并发安全核心）：`mount-preview-core.ts|_gen` 模块级声明 / `mount3D` 入口 `myGen = ++_gen` 捕获代数 / 三处 `myGen !== _gen` 守卫弃旧（与卡片 `mount-preview-module-singleton-race` 一致）。
+**代际守卫**（并发安全核心）：代际计数器自 ADR-227 起由 `session-ledger.ts|sessionLedger`（`SessionLedgerHost` 实例）持有 / `mount3D` 入口 `sessionLedger.beginSession()` 分配代数 / 三处 `ctx.myGen !== ctx.getGen()` 守卫弃旧（与卡片 `mount-preview-module-singleton-race` 一致）。
 
 ---
 
@@ -96,7 +96,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 
 ## 核心职责
 
-3D 预览统一挂载入口：单例外壳复用（renderer/canvas/overlay/scene/camera/controls）+ 声明式根菜单装配（mountPreviewRootMenu）+ shared/self 模式分支基础设施创建（`buildSharedInfra`，共享 infra 见 `shared-infra.ts`）+ 输入绑定（`bindInputHandlers`，`input-and-animation.ts`）+ rAF 渲染管线（全局唯一 loop，`render-loop.ts`，自适应像素比）+ 会话生命周期管理（_gen 代际守卫 + myGen 校验，生命周期函数在 `mount-session.ts`）+ 资源释放（`runFullCleanup(ctx)` 统一出口）。
+3D 预览统一挂载入口：单例外壳复用（renderer/canvas/overlay/scene/camera/controls）+ 声明式根菜单装配（mountPreviewRootMenu）+ shared/self 模式分支基础设施创建（`buildSharedInfra`，共享 infra 见 `shared-infra.ts`）+ 输入绑定（`bindInputHandlers`，`input-and-animation.ts`）+ rAF 渲染管线（全局唯一 loop，`render-loop.ts`，自适应像素比）+ 会话生命周期管理（代际守卫 + `myGen` 校验，代际/句柄表在 `session-ledger.ts`，生命周期函数在 `mount-session.ts`）+ 资源释放（`runFullCleanup(ctx)` 统一出口）。
 
 ## 对外 API / 入口
 
@@ -113,10 +113,10 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 ## 不变量
 
 - `mount3D` 签名不动（回归红线）
-- 外壳/场景单例已随 ADR-227 收敛为 host 实例字段（`previewShell`/`sceneInfraHost`/`rendererHost`，原 7 个模块级 `let`）；`cleanupPreview` 经 `previewShell.resetRefs()` + `resetSceneInfra()` 清零
-- `_gen` 代际守卫驱动多会话（`_gen++` 弃旧，`myGen` 校验防并发重叠）
+- 外壳/场景单例已随 ADR-227 收敛为 host 实例字段（`previewShell`/`sceneInfraHost`/`rendererHost`/`sessionLedger`，原模块级 `let`）；`cleanupPreview` 经 `previewShell.resetRefs()` + `resetSceneInfra()` + `sessionLedger.clear()` 清零
+- 代际守卫驱动多会话（`sessionLedger.invalidate()` 弃旧，`ctx.myGen !== ctx.getGen()` 校验防并发重叠）
 - `MpSessionState.finished` 标记保证 `finishSession` 幂等（closeOverlay 早期路径与 fullCleanup post-build 路径共用）
-- `_handles` 数组按 `gen` 字段索引查找，避免多会话误删
+- `sessionLedger.handles` 数组按 `gen` 字段索引查找，避免多会话误删（数组身份由台账保证：只原地增删、不换表）
 
 ## 当前残留问题（2026-09-05 复核后实况）
 
@@ -129,9 +129,9 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 
 - **Step 1 查证**（8-27 快照行号，已失效，仅存阶段划分脉络）：`mount3D` 6 阶段自然边界（shell L268-385 / 菜单 L388-430 / loading L432-435 / infra+输入绑定 L481-520 / rAF L524-592 / switchCtx L610-657 / try/cleanup L679-832 / handle L843-855）
 - **Step 3 分拆**：主函数 ≤70 行纯分派，子函数 ≤80 行；已用 `mp*` 前缀，继续按此规范
-- **并发守卫**：✅ 已闭环（`_gen` 代际守卫 + 三处 `myGen !== _gen` 守卫）
-- **`animate` 外拆**：下一步候选——拆为 `mpStartRafLoop`（在 mount3D 内调一次，返回 stopFn）
-- **`fullCleanup` 外拆**：下一步候选——拆为 `mpFullCleanup(ctx)` 纯函数，接受所有外部引用
+- **并发守卫**：✅ 已闭环（代际守卫 + 三处 `ctx.myGen !== ctx.getGen()` 守卫）
+- ~~**`animate` 外拆**~~：已落地——`render-host.ts` 的 `RendererHost`（`render-loop.ts` 现为薄门面，ADR-227）
+- **`fullCleanup` 外拆**：✅ 已落地为 `mount-session.ts` 的 `runFullCleanup(ctx)`（见「当前残留问题」4）
 
 ## 相关
 

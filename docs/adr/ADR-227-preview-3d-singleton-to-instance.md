@@ -25,26 +25,26 @@ P1 判定这是最严重结构病：① 不可能存在两个独立 3D 预览实
 
 采用 **「模块级单例 → 实例 / 必选参数」增量收敛范式**，与兄弟 A1 同一步伐、同一步调：
 
-1. **约束边界先判定**——WebGLRenderer 受浏览器 WebGL context 数量硬约束（通常 ≤16）必须唯一，单一 rAF loop 天然合理。故**渲染宿主允许为单例实例**，但内部 `perFrame` / 活跃输入会话等状态须收为实例字段（已落地：`render-host.ts` 的 `RendererHost`，原 render-loop 7 个 `let` 全局已收为实例字段）。
+1. **约束边界先判定**——WebGLRenderer 受浏览器 WebGL context 数量硬约束（通常 ≤16）必须唯一，单一 rAF loop 天然合理。故**渲染宿主允许为单例实例**，但内部 `perFrame` / 活跃输入会话等状态须收为实例字段。
 2. **最终目标**：把 `mount-preview-core` / `shared-infra` / `mount-session` 的运行态进一步收敛为 `PreviewSession` 类实例（方案 A）——renderer 保持模块级唯一，scene/camera/controls/overlay/handles/perFrame 全部实例字段。
-3. **护栏**：新增任何「模块级单例状态」前，须先论证为何不可改为实例字段或必选参数；能实例化的不留在模块级。
+3. **护栏**：新增任何「模块级单例状态」前，须先论证为何不可改为实例字段或必选参数；能实例化的不留在模块级。**例外须在代码注释或知识卡中写明硬约束依据**（如 renderer 唯一、`_sceneCaps` 每 build 重指派）——无依据的模块级 `let` 视为违规。
 
 ## 3. 后果（Consequences）
 
 **正面**
 - 运行态不再靠模块级全局变量撑着，多会话共存的手写簿记可由实例生命周期替代。
-- 外部 API 兼容：`render-loop.ts` 8 个导出函数签名零变更，`mount-preview-core` / `mount-session` / `unload-model` 零改动；`render-loop.test.ts` 不需改。
-- 测试隔离改善：`RendererHost` 实例天然隔离，`_resetSingletons()` 仅降为兼容壳。
+- 外部 API 兼容：收敛以「具名门面函数 / host 实例 + 签名零变更」方式进行，外部消费方（`views/app-preview/` 5 个入口函数 + `sceneRegistry`）不需感知内部搬移。
+- 测试隔离改善：host 实例天然隔离，`_resetSingletons()` 仅降为兼容壳。测试缝（如会话序号重置）以显式方法暴露，语义不变。
 - 未来多窗口 / 嵌入式 3D 预览可行（各自持 host / session 引用）。
 
 **负面 / 已知遗留**
-- `RendererHost` 仍为单例（renderer 唯一为硬约束，合理取舍，非缺陷）。
-- 渲染循环与感知 pause 已落地；但 `mount-preview-core` / `shared-infra` 的 DOM 单例（`_singletonOverlay` 等）与 scene/camera/controls 单例复用（性能取舍）尚未实例化为 `PreviewSession`，属后续增量。
-- `_sceneCaps` 为「每 build 重建并实时重指派」的共享全局，抽成实例反而破坏 rebuild 可见性，暂留模块级（非干净抽取目标）。
+- 受硬约束的状态**保留单例**：renderer（WebGL context 数量上限）、单一 rAF loop、单一全屏 overlay；此类单例须在注释写明依据。
+- `_sceneCaps` 为「每 build 重建并实时重指派」的共享全局，抽成实例反而破坏 rebuild 可见性，故例外保留。
+- 阵列/代际类状态（如存活句柄表、代际计数器）的「实例化」收益弱于真·资源类状态——其收益主要在命名、文档化与未来子系统整体实例化，而非当前多实例能力。
 
 ## 4. 数据溯源
 
 - 架构锐评 P1 → 识别 4 文件 ~15 处模块级单例，判定为最严重结构病。
 - 兄弟会话 A1 (`625958fb8`) → `createPerceptionPauseRef` 工厂 + 必选参数范式先例（感知子系统）。
-- 本 ADR + `render-host.ts` → render-loop 的 7 个 `let` 全局已收为 `RendererHost` 实例字段；`typecheck` + `biome` + `render-loop.test.ts`(4) + 感知测试(52) 共 56 测试通过。
 - 约束边界依据：Three.js 官方「单 renderer 多 scene」推荐模式；浏览器 WebGL context 数量上限。
+- 实施进度与逐项落点见知识卡：`docs/knowledge/mount-preview-module-singleton-race.md`、`docs/knowledge/3d-patterns.md`（§10 并发防护模式）、`docs/knowledge/mount3d-584-giant.md`。

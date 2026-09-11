@@ -1887,6 +1887,10 @@ export const autoSidebar = [
             "link": "/knowledge/scripts_jscpd_go"
           },
           {
+            "text": "_lib 共享层采用率闸门",
+            "link": "/knowledge/scripts_lib_adoption"
+          },
+          {
             "text": "README 登记处对账 check-readme-index.ts",
             "link": "/knowledge/scripts_readme_index"
           },

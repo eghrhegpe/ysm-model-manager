@@ -241,6 +241,8 @@ auto_fields:
     - runFullCleanup
     - scanAllWebModels
     - scanWebModels
+    - sceneInfraHost
+    - SceneInfraHost
     - sceneRegistry
     - SchemaBuilder
     - ScreenshotScene

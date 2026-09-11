@@ -580,6 +580,8 @@ auto_fields:
     - SceneCapabilityLookup
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
+    - sceneInfraHost
+    - SceneInfraHost
     - sceneRegistry
     - SceneStats
     - scheduleBackgroundEncoding

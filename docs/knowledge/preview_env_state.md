@@ -40,6 +40,8 @@ auto_fields:
     - registerEnvCallback
     - resetEnvState
     - resetSceneInfra
+    - sceneInfraHost
+    - SceneInfraHost
     - setEnvState
     - setStateValue
     - SharedInfra

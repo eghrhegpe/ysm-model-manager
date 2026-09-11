@@ -121,7 +121,7 @@ multiModelSelectNode(opts: {
 - `preview-menu/node-types.ts`：返回 `PreviewMenuNode`（kind: "select"，`control.options/get/set` 装配好）
 - `mount-preview-core.ts`：`PreviewScene.menuItems` 出口（pack 首次接入）；`PreviewBuildCtx.switchTo` 是切换副作用宿主
 - `preview-state.ts`：**不扩展** `PreviewStatePath` 模板串域（`bindings: Record<typeof KNOWN_PATHS[number]>` 要求字面量全覆盖，模板串破坏 Record）；会话态走闭包
-- `scene-registry.ts` / `switch-preview.ts`：switchTo 重建链路（切模型复用外壳）；**buildSwitchContent 注入的 `ctx.switchTo` 是延迟闭包**（指向当前会话 `handle.switchTo`，与 mount3D 初次 build 同款，2026-08-29 审核修复）——重建后的 menuItems select 节点 onSelect 仍能触发后续切换（此前传 `undefined`，pack select 会话内只能生效一次，第二次点击静默 no-op）
+- `scene-registry.ts` / `switch-preview.ts`：switchTo 重建链路（切模型复用外壳）；**buildSwitchContent 注入的 `ctx.switchTo` 是延迟闭包**（指向当前会话 `handle.switchTo`，与 mount3D 初次 build 同款，2026-08-29 审核修复）——重建后的 menuItems select 节点 onSelect 仍能触发后续切换（此前传 `undefined`，pack select 会话内只能生效一次，第二次点击静默 no-op）。**2026 锐评 P0：闭包改经 `ownHandle(ctx)` 按本会话 gen 定位句柄**（不再取 `handles` 数组末尾）——cooperate 多会话同框时旧会话闭包误触发他人切换的竞态消除（ece0d4a4 #10 回归锚，`mount-preview-core.gen-scope.test.ts` 覆盖）
 - `mmd-zip-overlay.ts`：zip 多模型候选的解析源（`resolveMmdZipConfig` / `modelCandidates`）
 
 ## 不变量

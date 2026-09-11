@@ -59,13 +59,15 @@ status: active
 
 - **`KNOWN_PATHS`** — 已落地路径集合（render.frustumCull / render.maxFps / render.maxPixelRatio / render.bloom / render.wireframe / env.pmrem / env.waterMode / env.groundMatSource / ui.activeComponent / ui.mode / env.skyGroundCap）。类型契约即运行时实现：`PreviewStatePath = (typeof KNOWN_PATHS)[number]`。
 - **`PreviewStatePath`** — 状态路径类型：已落地路径的联合。写未落地键编译报错——把「谓词读黑洞键静默假死」挡在编译期。
-- **`PreviewSnapshot`** — 状态层快照类型：`Record<PreviewStatePath, unknown>`，`visibleWhen` 谓词吃的快照形状。键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
+- **`PreviewSnapshot`** — 状态层快照类型：`{ [K in PreviewStatePath]: PathValue[K] }`（2026 锐评 P1：按路径精确值类型经 `PathValue` 映射声明，`unknown` 类型擦除已消灭），`visibleWhen` 谓词吃的快照形状。键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
 
 ## 对外 API / 入口
 
-- `KNOWN_PATHS: readonly [...]` — 已落地路径常量（11 项）
+- `KNOWN_PATHS: readonly [...]` — 已落地路径常量（10 项）
 - `PreviewStatePath` — 状态路径类型（`(typeof KNOWN_PATHS)[number]`）
-- `PreviewSnapshot` — 状态层快照类型（`Record<PreviewStatePath, unknown>`）
+- `PathValue` — 路径 → 值类型映射（读侧精确输出域）：`getStateValue` / `PreviewSnapshot` 按此逐键精确
+- `PathInput<K>` — 写侧输入域：`PathValue[K] | number | string | boolean`（泛型控件层可交付任意基元，binding 内部归一，仍比 unknown 严）
+- `PreviewSnapshot` — 状态层快照类型（`{ [K in PreviewStatePath]: PathValue[K] }`，旧 `Record<PreviewStatePath, unknown>` 的结构超集——`Partial<PreviewSnapshot>` 消费方零改动）
 
 ## 与其他子系统关系
 

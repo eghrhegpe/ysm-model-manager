@@ -346,7 +346,7 @@ pitfalls:
   - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 由调用方先移除）
   - `closeOverlay(ctx)`：**早期关闭**（build 尚未成功，cleanupFn 未赋值的 ESC 出口）——aborted/disposed 置位 + 拆 escH + 拆菜单 + 拆 overlay + `finishSession`
 - **构建后注册统一管线**（`register-built-scene.ts`）：mount 初载与 switchTo 共用「差量捕获 roots → collectSceneStats 统计合并统计面板 → sceneRegistry.register」单一实现（2026-09 锐评 P1-2 收敛）；switch 无快照兜底分支（极简注册不带菜单/骨骼元数据）不在此列
-- **多模型管理**：`sceneRegistry` 存每模型 `roots/visible/content/boneMaps/menuItems`；`fitCameraToRoots(visibleRoots())` 相机框可见模型；统一拾取器（`count >= 2` 激活）沿父链反查归属
+- **多模型管理**：`sceneRegistry` 存每模型 `roots/visible/content/boneMaps/menuItems`；`fitCameraToRoots(visibleRoots())` 相机框可见模型；统一拾取器（`count >= 2` 激活）沿父链反查归属。**visible 持久化**（2026 锐评 P1）：`setVisible` 经 `safeSet("ysm:model-visible:<path>", "1"/"0")` 落盘（隐私模式静默降级），register/去重重载经 `safeGet` 恢复隐藏态——隐藏模型同时被 `arrangeModelsInGrid` 排布与 `fitCameraToRoots` 取景排除
 
 ## 对外 API / 入口
 

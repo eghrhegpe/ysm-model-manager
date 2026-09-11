@@ -55,7 +55,7 @@ last_verified: 2026-09-03
 `mount-preview-core.ts`（`mount3D` 所在文件）是**大文件**，`mount3D`（`mount-preview-core.ts|mount3D`）本体仍是文件主体、超 100 行红线数倍（2026-09-05 实测规模约 500 行级——精确行数属会漂移的度量，此处只留定性判断）。文件尾 §5 注释块记录会话状态。旧快照引用的「旧 §5 区块行号」「旧文件行数」早已随拆分漂移，**勿再沿旧行号查询**（按符号定位）。
 
 **生命周期闭包已提为模块级函数并外置**（2026 锐评整改，比 9-03 复核更进一步）：
-- `mount-session.ts` — `MpSessionState` + `MountCtx` + `finishSession`/`closeOverlay`/`runFullCleanup`/`unloadSessionModel`
+- `mount-session.ts` — `MpSessionState` + `MountCtx` + `finishSession`/`closeOverlay`/`runFullCleanup`/`unloadSessionModel` + `ownHandle`/`removeOwnHandle`（2026 锐评 P1：gen-scoped 句柄查找/摘除收敛于此，5 处手写 `handles.find(h => h.gen === myGen)` 退役——含 buildCtx.switchTo 闭包与 menuCtx 的 P0「多会话误触发他人切换」修复点）
 - `shared-infra.ts`— `buildSharedInfra`/`syncShadowLights`（场景单例）
 - `render-loop.ts` — rAF 全局循环 + perFrame 注册表
 - `wasd-camera.ts`/`unified-pick.ts`/`unload-model.ts`/`input-and-animation.ts`/`switch-preview.ts` — 分别承载 WASD/拾取/卸载/输入/会话切换

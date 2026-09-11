@@ -37,6 +37,7 @@ interface GazeSnap {
 
 export function createGazeController() {
   let snaps: Map<string, GazeSnap> | null = null;
+  let disposed = false; // dispose 后 apply 永久早退（对齐 blink/autodance/lipsync 契约）
 
   // 帧内 scratch 对象（闭包级预分配，对齐 R1-P1-1：每帧零分配）。
   // 闭包级而非模块级：多模型同框时各 controller 实例互不污染。
@@ -65,6 +66,7 @@ export function createGazeController() {
    * @param camPos  相机世界坐标（用于计算相对方向）
    */
   function apply(_dt: number, map: SemanticBoneMap, camPos: THREE.Vector3): void {
+    if (disposed) return; // dispose 后不再驱动（对齐同批 blink/autodance/lipsync 契约）
     warmup(map);
     if (!snaps?.size) return;
 
@@ -101,7 +103,8 @@ export function createGazeController() {
       // eye 朝向：水平方向镜像（左眼向左看 = negative local X，右眼向右看 = positive local X）
       const sign = eyeId === "leftEye" ? -1 : 1;
       // _eyeTarget 先存目标、再原地 premultiply 兼作 eyeOffset（slerp 目标参数只读，复用安全）
-      _eyeTarget.setFromEuler(_euler.set(0, sign * pitch * 0.3, sign * yaw * 0.5, "YXZ"));
+      // 轴约定与 head 分支一致：pitch 绕 X、yaw 绕 Y（原写反 pitch→Y/yaw→Z，水平移动会让眼珠翻滚）
+      _eyeTarget.setFromEuler(_euler.set(sign * pitch * 0.3, sign * yaw * 0.5, 0, "YXZ"));
       _eyeTarget.premultiply(snap.restRot);
       entry.object.quaternion.slerp(_eyeTarget, GAZE_SMOOTH);
     }
@@ -113,6 +116,7 @@ export function createGazeController() {
 
   /** 销毁：释放 Three.js 对象引用（quaternion/position 快照），防止模型移除后内存泄漏 */
   function dispose(): void {
+    disposed = true; // dispose 后 apply 永久静默（与 blink/autodance/lipsync 同一契约，防 rAF 残留帧复活）
     snaps?.clear();
     snaps = null;
   }

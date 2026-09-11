@@ -32,15 +32,15 @@ describe("env-dispatcher", () => {
   });
 
   it("返回的取消订阅函数可移除该回调", () => {
-    const cb: EnvCallback = () => {};
+    const cb = vi.fn();
     const unsub = registerEnvCallback("capA", cb);
     expect(getEnvCallbackCount()).toBe(1);
     unsub();
     expect(getEnvCallbackCount()).toBe(0);
 
-    const spy = vi.fn();
+    // 取消订阅后派发不得再触达已移除的回调（原断言用了从未注册的 spy，恒真不验证任何行为）
     dispatchEnvChange(new Set(["x"]), fakeState);
-    expect(spy).not.toHaveBeenCalled();
+    expect(cb).not.toHaveBeenCalled();
   });
 
   it("多次注册按 cap 键覆盖（同键只保留一个）", () => {

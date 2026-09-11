@@ -18,8 +18,9 @@
 //
 // 消费方接入示例（无音频，手动驱动）：
 //   const detector = createBeatDetector({ initialBpm: 120 });
-//   // 每帧按固定振幅产生虚拟能量，由 minInterval 节流出固定节奏
-//   detector.update(0.5); // 固定振幅 0.5
+//   // 注意：恒定振幅时 normalized === avg，恒不触发节拍——需交替注入高/低能量
+//   // 产生周期峰值（由 minInterval 节流出固定节奏）
+//   detector.update(frame % 2 === 0 ? 0.9 : 0.1);
 
 import { clamp01 } from "@/utils/base/pure/clamp.ts";
 

@@ -6,15 +6,8 @@ import { createBlinkController, type BlinkCallback } from "./blink.ts";
 const pauseRef = { paused: false };
 
 describe("createBlinkController", () => {
-  function collect(cb: BlinkCallback): number[] {
-    const traces: number[] = [];
-    const wrap: BlinkCallback = (w) => traces.push(w);
-    cb === null ? null : wrap; // 只是类型断言，实际用 wrap
-    return traces;
-  }
-
   it("初始不触发（等待随机间隔）", () => {
-    const traces = collect(() => {});
+    const traces: number[] = [];
     const ctrl = createBlinkController({ pauseRef, minInterval: 1, maxInterval: 1, blinkDuration: 0.1 });
     ctrl.apply(0.016, (w) => traces.push(w));
     expect(traces).toHaveLength(0);

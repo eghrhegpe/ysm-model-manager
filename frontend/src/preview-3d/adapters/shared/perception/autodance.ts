@@ -82,7 +82,6 @@ const DANCE_BONES: Array<{
 ];
 
 /** 左右臂骨骼集合（帧循环半拍错位判定用，避免每帧重复字符串比较） */
-const LEFT_ARM_IDS = new Set<SemanticBoneId>(["leftUpperArm", "leftLowerArm", "leftShoulder"]);
 const RIGHT_ARM_IDS = new Set<SemanticBoneId>(["rightUpperArm", "rightLowerArm", "rightShoulder"]);
 
 export function createAutoDanceController(opts: AutoDanceOptions) {
@@ -154,8 +153,8 @@ export function createAutoDanceController(opts: AutoDanceOptions) {
       const snap = state.rests.get(id);
       if (!entry?.object || !snap) continue;
 
-      // 左右臂半拍错位（打破对称）
-      const armOffset = LEFT_ARM_IDS.has(id) ? 0 : RIGHT_ARM_IDS.has(id) ? 0.5 : 0;
+      // 左右臂半拍错位（打破对称）——左臂相位 0，右臂 0.5，其余同左臂
+      const armOffset = RIGHT_ARM_IDS.has(id) ? 0.5 : 0;
 
       // 主律动：正弦摇摆
       const main = Math.sin(beatPhase * Math.PI * 2 + armOffset * Math.PI);

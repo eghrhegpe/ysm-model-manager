@@ -51,19 +51,18 @@ interface BreathState {
   resting: Map<string, { pos: THREE.Vector3; rot: THREE.Euler }>;
   /** 当前 cycle 时间（秒），由 update 驱动累加 */
   t: number;
-  /** 上一次 update 的 timestamp（用于 dt 归一化） */
-  lastTime: number;
 }
 
 /** 构建呼吸 controller：每次 build 调用一次，持有闭包 state */
 export function createBreathController(opts: { pauseRef: PerceptionPauseRef }) {
   let state: BreathState | null = null;
+  let disposed = false; // dispose 后 apply 永久早退（对齐 blink/autodance/lipsync 契约）
   const _pauseRef = opts.pauseRef;
 
   /** 初始化 resting 快照（仅对有效语义骨骼） */
   function warmup(map: SemanticBoneMap): void {
     if (state) return; // 已初始化
-    const s: BreathState = { resting: new Map(), t: 0, lastTime: performance.now() };
+    const s: BreathState = { resting: new Map(), t: 0 };
     for (const id of BREATH_BONES) {
       const e = getSemanticBone(map, id);
       if (!e?.object) continue;
@@ -81,6 +80,7 @@ export function createBreathController(opts: { pauseRef: PerceptionPauseRef }) {
    * @param map   当前预览会话的语义骨骼映射（previewScene.semanticBones）
    */
   function apply(dt: number, map: SemanticBoneMap): void {
+    if (disposed) return; // dispose 后不再驱动（对齐同批 blink/autodance/lipsync 契约）
     if (_pauseRef.paused) return; // 动画激活时感知静默
     warmup(map);
     if (!state) return;
@@ -116,6 +116,7 @@ export function createBreathController(opts: { pauseRef: PerceptionPauseRef }) {
 
   /** 销毁：释放 Three.js 对象引用（position/quaternion 快照），防止模型移除后内存泄漏 */
   function dispose(): void {
+    disposed = true; // dispose 后 apply 永久静默（与 blink/autodance/lipsync 同一契约，防 rAF 残留帧复活）
     state?.resting.clear();
     state = null;
   }

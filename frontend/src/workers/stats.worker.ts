@@ -138,16 +138,22 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       post({ type: "error", requestId, message: "YSMParser WASM 初始化失败" });
       return;
     }
-    // 泵式有界并发（STATS_CONCURRENCY）：多泵按 nextIdx 领号，各自 while 领到批尾。
-    // 重叠收益：模型 N+1 的 idbGet I/O 在模型 N 的同步 WASM 解码期间完成。
+    // 泵式有界并发：多泵按 nextIdx 领号，各自 while 领到批尾。
+    //   base 单线程 WASM — STATS_CONCURRENCY 泵：模型 N+1 的 idbGet I/O 在模型 N
+    //     的同步 WASM 解码期间完成（I/O 与 CPU 重叠，核心收益场景）。
+    //   mt pthread WASM — 强制 1 泵：ccall 同步阻塞主线程（Emscripten 文档：无 async
+    //     选项的 ccall 在 pthread 模式仍同步阻塞），多泵退化为串行无收益；真正的 C
+    //     层并行来自 web-stats.ts 的 Worker 池（≤8 worker × 每 worker 独立 pthread
+    //     池），不在单 worker 内。降 1 泵让代码意图诚实，避免读者误以为 mt 下泵并发有效。
     // 安全论证：decodeYsmInWorker 的同步关键区（wipeDir→ccall→collectOutputFiles，
     // 全程无 await）在单 JS 线程天然串行，共享 /output 目录不交叉污染；
-    // 峰值内存 = 在途 ≤ STATS_CONCURRENCY 的模型字节 + 解码产物（stats-protocol 批上限
+    // 峰值内存 = 在途 ≤ concurrency 的模型字节 + 解码产物（stats-protocol 批上限
     // 注释的内存口径）。
     // 逐模型 .then 回 partial（ADR-219 D1 活性信号）：每完成一模型即回包——挂死模型
     // 中断 partial 流，主线程静默看门狗侦测语义不变；回包序不承担契约（ADR-218 D2，
     // 主线程按 path 累积）。
     // 注意禁用裸 Promise.all(paths)：全批原始字节同时驻留内存，违反「峰值与批大小无关」。
+    const concurrency = mt ? 1 : STATS_CONCURRENCY;
     let nextIdx = 0;
     const pump = async (): Promise<void> => {
       while (nextIdx < paths.length) {
@@ -156,7 +162,7 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
       }
     };
     const settled = await Promise.allSettled(
-      Array.from({ length: Math.min(STATS_CONCURRENCY, paths.length) }, pump),
+      Array.from({ length: Math.min(concurrency, paths.length) }, pump),
     );
     // 防御深度（非主路径，当前实际不可达）：statsOne 对单模型异常全路径 try/catch 恒吞为
     // EMPTY_ERROR（stats.worker.ts 第 72-96 行）→ pump 正常恒 fulfilled，settled 内通常无 rejected。

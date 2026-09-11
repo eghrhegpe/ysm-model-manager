@@ -178,7 +178,38 @@ describe("stats.worker — 逐模型流式回包（ADR-219 D1）", () => {
 
   it("paths 含非字符串元素 → error（协议守卫：元素级形状校验）", async () => {
     const handler = await loadHandler();
-    await handler({ data: { type: "stats", requestId: 45, paths: ["/web/ysm/a.ysm", 42] } });
+    await handler({ data: { type: "stats", requestId: 45, paths: ["/web/ym/a.ysm", 42] } });
     expect(posts.map((p) => p.type)).toEqual(["error"]);
+  });
+});
+
+describe("stats.worker — mt 路径泵并发（1 泵串行）", () => {
+  it("COI=true + mt init 成功 → 多模型仍全量 partial + result（1 泵串行处理，行为正确）", async () => {
+    // mt 路径：crossOriginIsolated=true + initYsmParserInWorkerMt 成功 → concurrency 强制 1 泵
+    vi.stubGlobal("crossOriginIsolated", true);
+    vi.mocked(idbGet).mockReset().mockResolvedValue({ data: new ArrayBuffer(4) });
+    vi.mocked(decodeYsmInWorker).mockReset().mockResolvedValue([
+      { path: "models/g.json", data: new Uint8Array(8) },
+    ]);
+    vi.mocked(statsCore.statsFromDecodedFiles).mockReset().mockReturnValue({
+      boneCount: 2,
+      cubeCount: 4,
+      texWidth: 64,
+      texHeight: 32,
+      hasError: false,
+    });
+    mocks.initYsmParserInWorkerMt.mockResolvedValue(true);
+
+    const handler = await loadHandler();
+    const paths = ["/web/ysm/mt-a.ysm", "/web/ysm/mt-b.ysm", "/web/ysm/mt-c.ysm"];
+    await handler({ data: { type: "stats", requestId: 60, paths } });
+
+    // mt 模式 1 泵串行：3 模型全部处理完 + result；C 层并行由 web-stats.ts Worker 池负责
+    expect(posts.map((p) => p.type)).toEqual(["partial", "partial", "partial", "result"]);
+    expect(posts.filter((p) => p.type === "partial").map((p) => p.result?.path)).toEqual(paths);
+    expect(posts.at(-1)).toEqual({ type: "result", requestId: 60, doneCount: 3 });
+    // mt 路径只调 mt init，不调 base init
+    expect(mocks.initYsmParserInWorkerMt).toHaveBeenCalledTimes(1);
+    expect(mocks.initYsmParserInWorker).not.toHaveBeenCalled();
   });
 });

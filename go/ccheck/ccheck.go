@@ -82,105 +82,213 @@ func nest(kindName string, seq *[]Event, guard int) bool {
 
 // emitFromNode 把 AST 节点翻译成事件流（镜像 TS emitFromNode 的前序语义）。
 // 逐节点类型分派；未显式处理的容器节点递归子语句，表达式里的 &&/|| 由 BinaryExpr 捕获。
+//
+// 分派按事件语义切三族，各由独立路由函数承担（见下），本函数只做守卫 + 三路分流。
+// 如此既保住「发射顺序即契约」的可读性，又把认知复杂度摊平到各路由内：
+//   - 嵌套型（进 nest / 出 nestClose）：emitNested；
+//   - 即时型（flat，不增层）：emitFlat；
+//   - 容器型（纯透传，不产事件）：emitContainer。
+//
+// ⚠️ 事件发射顺序即跨语言契约（与 TS 侧逐字对齐），重构时不得改变调用次序。
 func emitFromNode(n ast.Node, seq *[]Event, guard int) {
 	if n == nil || guard <= 0 {
 		return
 	}
+	if emitNested(n, seq, guard) {
+		return
+	}
+	if emitFlat(n, seq, guard) {
+		return
+	}
+	emitContainer(n, seq, guard)
+}
+
+// emitNested 嵌套型路由：命中则发射 nest/nestClose 并返回 true。
+//
+// 6 个分支再按「进 nest 后下钻的字段形态」分两路，纯为摊平指标——
+// 各分支彼此同构（nest → 下钻若干字段 → nestClose），拆开不损可读性。
+func emitNested(n ast.Node, seq *[]Event, guard int) bool {
 	switch t := n.(type) {
-	// ── 嵌套型 ──
 	case *ast.IfStmt:
-		if !nest("if", seq, guard) {
-			return
-		}
-		emitFromNode(t.Init, seq, guard-1)
-		emitFromNode(t.Cond, seq, guard-1)
-		emitFromNode(t.Body, seq, guard-1)
-		if t.Else != nil { // else 是 body 层的即时型 flat（不增层），语义对齐 TS ElseClause
-			*seq = append(*seq, Event{K: "flat", KindName: "else"})
-			emitFromNode(t.Else, seq, guard-1)
-		}
-		*seq = append(*seq, Event{K: "nestClose"})
+		emitIf(t, seq, guard)
 	case *ast.ForStmt:
-		if !nest("loop", seq, guard) {
-			return
-		}
-		emitFromNode(t.Init, seq, guard-1)
-		emitFromNode(t.Cond, seq, guard-1)
-		emitFromNode(t.Post, seq, guard-1)
-		emitFromNode(t.Body, seq, guard-1)
-		*seq = append(*seq, Event{K: "nestClose"})
+		emitFor(t, seq, guard)
 	case *ast.RangeStmt:
-		if !nest("loop", seq, guard) {
-			return
-		}
-		emitFromNode(t.Key, seq, guard-1)
-		emitFromNode(t.Value, seq, guard-1)
-		emitFromNode(t.X, seq, guard-1)
-		emitFromNode(t.Body, seq, guard-1)
-		*seq = append(*seq, Event{K: "nestClose"})
+		emitRange(t, seq, guard)
+	default:
+		return emitSwitchLike(n, seq, guard)
+	}
+	return true
+}
+
+// emitSwitchLike switch 系嵌套型路由（switch / type-switch / select 三兄弟）。
+func emitSwitchLike(n ast.Node, seq *[]Event, guard int) bool {
+	switch t := n.(type) {
 	case *ast.SwitchStmt:
-		if !nest("switch", seq, guard) {
-			return
-		}
-		emitFromNode(t.Tag, seq, guard-1)
-		emitFromNode(t.Body, seq, guard-1)
-		*seq = append(*seq, Event{K: "nestClose"})
+		emitSwitch(t, seq, guard)
 	case *ast.TypeSwitchStmt:
-		if !nest("switch", seq, guard) {
-			return
-		}
-		emitFromNode(t.Init, seq, guard-1)
-		emitFromNode(t.Assign, seq, guard-1)
-		emitFromNode(t.Body, seq, guard-1)
-		*seq = append(*seq, Event{K: "nestClose"})
+		emitTypeSwitch(t, seq, guard)
 	case *ast.SelectStmt:
-		if !nest("switch", seq, guard) {
-			return
-		}
-		emitFromNode(t.Body, seq, guard-1)
-		*seq = append(*seq, Event{K: "nestClose"})
-	// ── 即时型 ──
+		emitSelect(t, seq, guard)
+	default:
+		return false
+	}
+	return true
+}
+
+// emitFlat 即时型路由：命中则发射 flat 事件（或等价语义）并返回 true。
+func emitFlat(n ast.Node, seq *[]Event, guard int) bool {
+	switch t := n.(type) {
 	case *ast.CaseClause:
-		*seq = append(*seq, Event{K: "flat", KindName: "case"})
-		for _, s := range t.Body {
-			emitFromNode(s, seq, guard-1)
-		}
+		emitClause(t.Body, seq, guard)
 	case *ast.CommClause:
-		*seq = append(*seq, Event{K: "flat", KindName: "case"})
-		for _, s := range t.Body {
-			emitFromNode(s, seq, guard-1)
-		}
+		emitClause(t.Body, seq, guard)
 	case *ast.BinaryExpr:
-		if t.Op == token.LAND || t.Op == token.LOR {
-			*seq = append(*seq, Event{K: "flat", KindName: "logic"})
-		}
-		emitFromNode(t.X, seq, guard-1)
-		emitFromNode(t.Y, seq, guard-1)
-	// ── 表达式容器（暴露内嵌 &&/||）──
+		emitBinary(t, seq, guard)
+	default:
+		return false
+	}
+	return true
+}
+
+// emitContainer 容器型透传：自身不产事件，仅为暴露内嵌 &&/|| 而下钻子节点。
+//
+// 按「子节点形态」再分两路——单字段型与序列型语义同构但取子方式不同，
+// 拆开可让每函数认知复杂度远离 🟨 阈值（原 8 路 switch 一函数计 c17）：
+//   - 单字段：ExprStmt / IncDecStmt / GoStmt / DeferStmt / LabeledStmt；
+//   - 序列：ReturnStmt / AssignStmt / BlockStmt。
+//
+// 两路皆无命中即静默忽略（与 switch 无 default 同义）。
+func emitContainer(n ast.Node, seq *[]Event, guard int) {
+	if emitSingleField(n, seq, guard) {
+		return
+	}
+	emitSequence(n, seq, guard)
+}
+
+// emitSingleField 单字段透传：命中则下钻该字段并返回 true。
+func emitSingleField(n ast.Node, seq *[]Event, guard int) bool {
+	switch t := n.(type) {
 	case *ast.ExprStmt:
 		emitFromNode(t.X, seq, guard-1)
-	case *ast.ReturnStmt:
-		for _, r := range t.Results {
-			emitFromNode(r, seq, guard-1)
-		}
-	case *ast.AssignStmt:
-		for _, r := range t.Rhs {
-			emitFromNode(r, seq, guard-1)
-		}
 	case *ast.IncDecStmt:
 		emitFromNode(t.X, seq, guard-1)
 	case *ast.GoStmt:
 		emitFromNode(t.Call, seq, guard-1)
 	case *ast.DeferStmt:
 		emitFromNode(t.Call, seq, guard-1)
-	// ── 语句容器 ──
-	case *ast.BlockStmt:
-		for _, s := range t.List {
-			emitFromNode(s, seq, guard-1)
-		}
 	case *ast.LabeledStmt:
 		emitFromNode(t.Stmt, seq, guard-1)
+	default:
+		return false
 	}
+	return true
+}
+
+// emitSequence 序列透传：命中则逐个下钻子节点（顺序即事件顺序）。
+func emitSequence(n ast.Node, seq *[]Event, guard int) {
+	switch t := n.(type) {
+	case *ast.ReturnStmt:
+		emitAll(t.Results, seq, guard)
+	case *ast.AssignStmt:
+		emitAll(t.Rhs, seq, guard)
+	case *ast.BlockStmt:
+		emitAll(t.List, seq, guard)
+	}
+}
+
+// emitAll 逐个子节点按 guard-1 下钻（顺序即事件顺序，须与 TS 保持一致）。
+// 泛型以接纳 []ast.Expr / []ast.Stmt——Go 切片不变型，二者不可直接当 []ast.Node 传。
+func emitAll[T ast.Node](nodes []T, seq *[]Event, guard int) {
+	for _, s := range nodes {
+		emitFromNode(s, seq, guard-1)
+	}
+}
+
+// emitIf if 语句：Init/Cond/Body 下钻，else 为即时型 flat（不增层，对齐 TS ElseClause）。
+func emitIf(t *ast.IfStmt, seq *[]Event, guard int) {
+	if !nest("if", seq, guard) {
+		return
+	}
+	emitFromNode(t.Init, seq, guard-1)
+	emitFromNode(t.Cond, seq, guard-1)
+	emitFromNode(t.Body, seq, guard-1)
+	if t.Else != nil {
+		*seq = append(*seq, Event{K: "flat", KindName: "else"})
+		emitFromNode(t.Else, seq, guard-1)
+	}
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitFor for 语句（嵌套型 loop）。
+func emitFor(t *ast.ForStmt, seq *[]Event, guard int) {
+	if !nest("loop", seq, guard) {
+		return
+	}
+	emitFromNode(t.Init, seq, guard-1)
+	emitFromNode(t.Cond, seq, guard-1)
+	emitFromNode(t.Post, seq, guard-1)
+	emitFromNode(t.Body, seq, guard-1)
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitRange range 语句（嵌套型 loop）。
+func emitRange(t *ast.RangeStmt, seq *[]Event, guard int) {
+	if !nest("loop", seq, guard) {
+		return
+	}
+	emitFromNode(t.Key, seq, guard-1)
+	emitFromNode(t.Value, seq, guard-1)
+	emitFromNode(t.X, seq, guard-1)
+	emitFromNode(t.Body, seq, guard-1)
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitSwitch switch 语句（嵌套型 switch）。
+func emitSwitch(t *ast.SwitchStmt, seq *[]Event, guard int) {
+	if !nest("switch", seq, guard) {
+		return
+	}
+	emitFromNode(t.Tag, seq, guard-1)
+	emitFromNode(t.Body, seq, guard-1)
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitTypeSwitch 类型 switch（嵌套型 switch，对齐 TS 归并口径）。
+func emitTypeSwitch(t *ast.TypeSwitchStmt, seq *[]Event, guard int) {
+	if !nest("switch", seq, guard) {
+		return
+	}
+	emitFromNode(t.Init, seq, guard-1)
+	emitFromNode(t.Assign, seq, guard-1)
+	emitFromNode(t.Body, seq, guard-1)
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitSelect select 语句（归入 switch 型嵌套）。
+func emitSelect(t *ast.SelectStmt, seq *[]Event, guard int) {
+	if !nest("switch", seq, guard) {
+		return
+	}
+	emitFromNode(t.Body, seq, guard-1)
+	*seq = append(*seq, Event{K: "nestClose"})
+}
+
+// emitClause case / comm 分支体：先发即时型 case 标记，再逐个下钻分支语句。
+func emitClause(body []ast.Stmt, seq *[]Event, guard int) {
+	*seq = append(*seq, Event{K: "flat", KindName: "case"})
+	for _, s := range body {
+		emitFromNode(s, seq, guard-1)
+	}
+}
+
+// emitBinary 二元表达式：&&/|| 计即时型 logic，随后下钻两侧以暴露更内层逻辑。
+func emitBinary(t *ast.BinaryExpr, seq *[]Event, guard int) {
+	if t.Op == token.LAND || t.Op == token.LOR {
+		*seq = append(*seq, Event{K: "flat", KindName: "logic"})
+	}
+	emitFromNode(t.X, seq, guard-1)
+	emitFromNode(t.Y, seq, guard-1)
 }
 
 // FuncResult 单个函数的结果。

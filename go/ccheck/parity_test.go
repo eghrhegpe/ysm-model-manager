@@ -61,7 +61,9 @@ func TestComplexityParityWithTS(t *testing.T) {
 	for _, c := range fx.Reduce {
 		seq := make([]Event, 0, len(c.Seq))
 		for _, e := range c.Seq {
-			seq = append(seq, Event{K: e.K, KindName: e.KindName})
+			// fixtureEvent 与 Event 字段同序同型（K/KindName），直接转换。
+			// 两者布局须保持一致：若 Event 增删字段，此处会编译失败而非静默漂移。
+			seq = append(seq, Event(e))
 		}
 		gotC, gotN := CognitiveFromSeq(seq)
 		if gotC != c.Cognitive || gotN != c.Nesting {

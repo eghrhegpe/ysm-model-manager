@@ -749,29 +749,29 @@ auto_fields:
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
     - MAX_TAG_LENGTH
-    - MdMmAllocEntry
-    - MdMmBuildCtx
-    - mdMmDetectFormat
-    - MdMmDetectFormatCtx
-    - MdMmParsePmdCtx
-    - mdMmParsePmdStage
-    - MdMmParsePmxCtx
-    - mdMmParsePmxStage
-    - MdMmStage1bCtx
-    - MdMmStage1Ctx
-    - mdMmStage1Input
-    - MdMmStage2Ctx
-    - mdMmStage2LoadingManager
-    - MdMmStage3Ctx
-    - mdMmStage3SceneMesh
-    - mdMmStage4Anim
-    - MdMmStage4Ctx
-    - MdMmStage5Ctx
-    - mdMmStage5Menu
-    - MdMmStage6bCtx
-    - MdMmStage6Ctx
-    - mdMmStage6Result
-    - mdMmTrackAlloc
+    - AllocEntry
+    - BuildCtx
+    - DetectFormat
+    - DetectFormatCtx
+    - ParsePmdCtx
+    - ParsePmdStage
+    - ParsePmxCtx
+    - ParsePmxStage
+    - Stage1bCtx
+    - Stage1Ctx
+    - Stage1Input
+    - Stage2Ctx
+    - Stage2LoadingManager
+    - Stage3Ctx
+    - Stage3SceneMesh
+    - Stage4Anim
+    - Stage4Ctx
+    - Stage5Ctx
+    - Stage5Menu
+    - Stage6bCtx
+    - Stage6Ctx
+    - Stage6Result
+    - TrackAlloc
     - MENU_DEFS
     - MenuAction
     - MenuCtx
@@ -1468,7 +1468,7 @@ invariant_anchors:
 
 | 目录                                                | 分    | 规模    | 一句话结论                                                                                                                                                                                                                                                              |
 | ------------------------------------------------- | ---- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| preview-3d/adapters                               | 4.2  | 11.0k | PreviewAdapter 统一接口+端口注入；MdMmBuildCtx 已域拆 6 接口+逐 stage Pick 收窄（tier1/2 落地），tier3 Builder 化待办                                                                                                                                                                       |
+| preview-3d/adapters                               | 4.2  | 11.0k | PreviewAdapter 统一接口+端口注入；BuildCtx 已域拆 6 接口+逐 stage Pick 收窄（tier1/2 落地），tier3 Builder 化待办                                                                                                                                                                       |
 | preview-3d 其余                                     | 4.2  | 12.8k | caps 注册表+感知层解耦优秀；model2d 已拆目录（main 203 + draw 390 + hit-zones 113）                                                                                                                                                                                                 |
 | backend                                           | 4.5  | 10.1k | ZIP bomb 三重防护、idb FIFO 双上限；web-fs 三函数可抽 idbRekeyGroup                                                                                                                                                                                                              |
 | core                                              | 4.0  | 4.0k  | menu-defs 声明式唯一事实源；DOM 渗透 core 层是主要问题                                                                                                                                                                                                                              |
@@ -1491,7 +1491,7 @@ invariant_anchors:
 
 ## 架构债 TOP5
 
-1. 🔄 mmd-adapter.ts `MdMmBuildCtx` 域拆分(tier1)+stage Pick 收窄(tier2)已完成（L184-269，字段 60→55，`!` 非空断言清零）；tier3 **Builder 化仍待办**——构造点 `const c = {} as MdMmBuildCtx`（L1141）仍为单体可变上下文全闭包共享，运行时未结构化
+1. 🔄 mmd-adapter.ts `BuildCtx` 域拆分(tier1)+stage Pick 收窄(tier2)已完成（L184-269，字段 60→55，`!` 非空断言清零）；tier3 **Builder 化仍待办**——构造点 `const c = {} as BuildCtx`（L1141）仍为单体可变上下文全闭包共享，运行时未结构化
 2. app-content/perf-cli.ts 535L God Object（趋势图+single-bench+诊断面板三合一）
 3. ~~app-content/dedup.ts 模块级全局竞态~~ ✅ **已消**（2026-09-03 `ed0e76b3`）：`_dedupBusy`/`diagExecBusy`（无 `_dedupStrategy`，卡原文笔误）与 `dedupConfig` 收敛进 `createDedupSession()` 会话工厂，各宿主独立隔离；dedup.ts 612L；补 exec 重入/面板绑定/keep 策略分支测试
 4. ~~model2d.ts 650L（拆 core/render/hit 三件）~~ ✅ **已拆**（2026-09 复核）：model2d 现为目录——main 203 + draw 390 + hit-zones 113；ui-rows.ts 803L（按 row 类型拆，仍在排队）

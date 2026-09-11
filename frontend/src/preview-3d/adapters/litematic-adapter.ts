@@ -44,7 +44,7 @@ const FALLBACK_MAX_BLOCKS = 200000; // data.maxBlocks 缺席时的展示上限
 
 // ===== 类型提级（闭包共享状态 → 包级接口，避免自由变量）=====
 
-interface MdLiSizeInfo {
+interface SizeInfo {
   sizeX: number;
   sizeY: number;
   sizeZ: number;
@@ -67,7 +67,7 @@ interface LitematicMeshSet {
   grid: THREE.GridHelper;
 }
 
-interface MdLiLayerShell {
+interface LayerShell {
   layerAxis: number;
   layerMax: number;
   layerVal: number;
@@ -79,17 +79,17 @@ interface MdLiLayerShell {
 
 // ===== 阶段①：入口守卫 + 路径读取 + 数据解析 =====
 
-function mdLiShowLoading(ctx: PreviewBuildCtx): void {
+function ShowLoading(ctx: PreviewBuildCtx): void {
   renderLoadingState(ctx.loadingEl, "🧊", "preview.loadingVoxels");
 }
 
-type MdLiLoadResult = { ok: true; data: VoxelData } | { ok: false; earlyResult: PreviewScene };
+type LoadResult = { ok: true; data: VoxelData } | { ok: false; earlyResult: PreviewScene };
 
-async function mdLiLoadAndParseData(
+async function LoadAndParseData(
   ctx: PreviewBuildCtx,
   path: string,
   voxelCall: (path: string) => Promise<VoxelData | null>,
-): Promise<MdLiLoadResult> {
+): Promise<LoadResult> {
   const data = await voxelCall(path);
   if (!data?.groups?.length) {
     ctx.loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.voxelEmpty")}</div>`;
@@ -100,7 +100,7 @@ async function mdLiLoadAndParseData(
 
 // ===== 阶段②：相机 + GridHelper 设置 =====
 
-function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSizeInfo {
+function SetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
   const sizeX = data.size[0] || 10;
   const sizeY = data.size[1] || 10;
   const sizeZ = data.size[2] || 10;
@@ -138,7 +138,7 @@ function mdLiSetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): MdLiSize
 // ===== 阶段③：voxel 构建 + 材质纹理映射 =====
 
 /** 常值哨兵陷阱（#17）：[0,0,0] 是合法坐标，不可 `|| 0` 兜底。非法条目整条丢弃。 */
-function mdLiIsValidPos(p: number[]): boolean {
+function IsValidPos(p: number[]): boolean {
   return (
     Array.isArray(p) &&
     p.length >= 3 &&
@@ -149,7 +149,7 @@ function mdLiIsValidPos(p: number[]): boolean {
 }
 
 /** blockState→texture atlas 映射（当前：group.color 兜底；命名预留后续 atlas 扩展） */
-function mdLiResolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertMaterial {
+function ResolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertMaterial {
   let color = groupColor || DEFAULT_VOXEL_COLOR;
   try {
     new THREE.Color(color);
@@ -161,10 +161,10 @@ function mdLiResolveBlockTexture(groupColor: string | undefined): THREE.MeshLamb
 }
 
 /** 三维 voxel 核心：按 group→chunk 分块，每 chunk 独立 InstancedMesh（GPU 友好） */
-function mdLiBuildBlockMesh(
+function BuildBlockMesh(
   ctx: PreviewBuildCtx,
   data: VoxelData,
-  sizeInfo: MdLiSizeInfo,
+  sizeInfo: SizeInfo,
 ): LitematicMeshSet {
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const modelGroup = new THREE.Group();
@@ -180,7 +180,7 @@ function mdLiBuildBlockMesh(
     const chunkMap = new Map<number, number[][]>();
     for (let i = 0; i < group.positions.length; i++) {
       const p = group.positions[i];
-      if (!mdLiIsValidPos(p)) continue;
+      if (!IsValidPos(p)) continue;
       const cx = Math.floor(p[0] / CHUNK_SIZE);
       const cy = Math.floor(p[1] / CHUNK_SIZE);
       const cz = Math.floor(p[2] / CHUNK_SIZE);
@@ -192,7 +192,7 @@ function mdLiBuildBlockMesh(
       }
       arr.push(p);
     }
-    const mat = mdLiResolveBlockTexture(group.color);
+    const mat = ResolveBlockTexture(group.color);
     materials.push(mat);
     const dummy = new THREE.Object3D();
     for (const [ck, chunkPositions] of chunkMap) {
@@ -214,16 +214,16 @@ function mdLiBuildBlockMesh(
 
 // ===== 阶段④：分层切片（schema builder 注册 + applyLayer 体素过滤）=====
 
-function mdLiChunkKey(p: number[], sizeInfo: MdLiSizeInfo): number {
+function ChunkKey(p: number[], sizeInfo: SizeInfo): number {
   const cx = Math.floor(p[0] / CHUNK_SIZE);
   const cy = Math.floor(p[1] / CHUNK_SIZE);
   const cz = Math.floor(p[2] / CHUNK_SIZE);
   return cx + cy * sizeInfo.xChunks + cz * sizeInfo.xChunks * sizeInfo.yChunks;
 }
 
-function mdLiApplyLayer(
-  shell: MdLiLayerShell,
-  sizeInfo: MdLiSizeInfo,
+function ApplyLayer(
+  shell: LayerShell,
+  sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
   mode: string,
@@ -240,8 +240,8 @@ function mdLiApplyLayer(
       let count = 0;
       for (let i = 0; i < positions.length; i++) {
         const p = positions[i];
-        if (!mdLiIsValidPos(p)) continue;
-        if (mdLiChunkKey(p, sizeInfo) !== ck) continue;
+        if (!IsValidPos(p)) continue;
+        if (ChunkKey(p, sizeInfo) !== ck) continue;
         if (mode === "single" && p[shell.layerAxis] !== target) continue;
         if (
           mode !== "all" &&
@@ -265,7 +265,7 @@ function mdLiApplyLayer(
 /** litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖，
  *  5329a347 review P2：固定 key 会被第二场景静默覆盖、任一 dispose 误注销另一场景） */
 export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
-let mdLiSliceInstance = 0; // 模块级递增计数（per-scene 唯一 key）
+let SliceInstance = 0; // 模块级递增计数（per-scene 唯一 key）
 
 /** 轴下标 → 轴名（下标即 voxel 数据维度）；显示顺序保持旧 UI（Y 默认在前） */
 const SLICE_AXES = ["X", "Y", "Z"];
@@ -278,28 +278,27 @@ const SLICE_AXIS_OPTIONS = [
 /** 合法切片模式白名单（select set 闭包防御非法值） */
 const SLICE_MODES = ["all", "single", "range"];
 
-/** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 mdLiClampLayerInput 语义） */
-function mdLiClampLayer(n: number, layerMax: number): number {
+/** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 ClampLayerInput 语义） */
+function ClampLayer(n: number, layerMax: number): number {
   return Number.isFinite(n) ? Math.max(1, Math.min(layerMax, n)) : layerMax;
 }
 
 /** 分层切片面板 builder 工厂：闭包持 shell（轴/层值/模式会话态，全 per-scene），每次面板
  *  渲染重新执行——slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发）。
  *  快照参数不消费：动态数据全在闭包 shell（含模式），不入全局状态层。 */
-function mdLiBuildSliceSchema(
-  sizeInfo: MdLiSizeInfo,
+function BuildSliceSchema(
+  sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
 ): SchemaBuilder {
-  const shell: MdLiLayerShell = {
+  const shell: LayerShell = {
     layerAxis: 1,
     layerMax: sizeInfo.sizeY,
     layerVal: sizeInfo.sizeY,
     layerVal2: sizeInfo.sizeY,
     mode: "all",
   };
-  const applyLayer = (): void =>
-    mdLiApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
+  const applyLayer = (): void => ApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
   const resetToMax = (): void => {
     shell.layerMax = [sizeInfo.sizeX, sizeInfo.sizeY, sizeInfo.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
@@ -323,7 +322,7 @@ function mdLiBuildSliceSchema(
       numeric: true,
       get: () => shell[pick],
       set: (v) => {
-        shell[pick] = mdLiClampLayer(Number(v), shell.layerMax);
+        shell[pick] = ClampLayer(Number(v), shell.layerMax);
       },
       onChange: () => applyLayer(),
     },
@@ -395,13 +394,13 @@ function mdLiBuildSliceSchema(
 }
 
 /** 注册切片面板 builder + 产出 panel 入口节点（schemaId 是唯一渲染通道，契约禁双通道） */
-function mdLiRegisterSliceSchema(
-  sizeInfo: MdLiSizeInfo,
+function RegisterSliceSchema(
+  sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
   sliceKey: string, // per-scene 唯一 key（多模型并存防互相覆盖——5329a347 review P2）
 ): PreviewMenuNode {
-  registerSchema(sliceKey, mdLiBuildSliceSchema(sizeInfo, rawGroups, groupMeshes));
+  registerSchema(sliceKey, BuildSliceSchema(sizeInfo, rawGroups, groupMeshes));
   return {
     id: "slice",
     icon: "🧊",
@@ -415,7 +414,7 @@ function mdLiRegisterSliceSchema(
 
 // ===== 辅助：perf trace + truncated 警告 =====
 
-function mdLiRecordPerfTrace(path: string, tStart: number, data: VoxelData): void {
+function RecordPerfTrace(path: string, tStart: number, data: VoxelData): void {
   try {
     recordLoadTrace({
       ts: Date.now(),
@@ -430,7 +429,7 @@ function mdLiRecordPerfTrace(path: string, tStart: number, data: VoxelData): voi
   }
 }
 
-function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
+function ShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
   if (!data.truncated) return;
   ensureMdliStyles(); // P1 批次11:cssText 抽类注入(幂等)
   const w = document.createElement("div");
@@ -445,7 +444,7 @@ function mdLiShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
 // litematic 是纯静态渲染 + 截图能力，无 update/applyPose/camera 控制；结构类型下
 // ScreenshotScene 返回值可赋给 PreviewScene（其余字段可选），消费方零改动。
 
-function mdLiBuildResult(
+function BuildResult(
   ctx: PreviewBuildCtx,
   meshSet: LitematicMeshSet,
   menuItems: PreviewMenuNode[],
@@ -495,23 +494,21 @@ export async function buildLitematicScene(
   opts?: LitematicBuildOpts,
 ): Promise<PreviewScene> {
   const tStart = performance.now();
-  mdLiShowLoading(ctx);
+  ShowLoading(ctx);
 
-  const loadRes = await mdLiLoadAndParseData(ctx, path, voxelCall);
+  const loadRes = await LoadAndParseData(ctx, path, voxelCall);
   if (!loadRes.ok) return loadRes.earlyResult;
   const { data } = loadRes;
 
-  const sizeInfo = mdLiSetupCameraAndGrid(ctx, data);
-  const meshSet = mdLiBuildBlockMesh(ctx, data, sizeInfo);
+  const sizeInfo = SetupCameraAndGrid(ctx, data);
+  const meshSet = BuildBlockMesh(ctx, data, sizeInfo);
 
   ctx.loadingEl.remove();
-  mdLiRecordPerfTrace(path, tStart, data);
+  RecordPerfTrace(path, tStart, data);
 
-  const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++mdLiSliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
-  const sliceItems = [
-    mdLiRegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey),
-  ];
-  mdLiShowTruncatedWarning(ctx, data);
+  const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++SliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
+  const sliceItems = [RegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
+  ShowTruncatedWarning(ctx, data);
 
   // [doc:adr-132] 多模型选择菜单项（容器内全部 entry；切 entry 走 core switchTo 重建）
   const menuItems: PreviewMenuNode[] = sliceItems;
@@ -531,7 +528,7 @@ export async function buildLitematicScene(
     if (select) menuItems.push(select);
   }
 
-  return mdLiBuildResult(ctx, meshSet, menuItems, sliceKey);
+  return BuildResult(ctx, meshSet, menuItems, sliceKey);
 }
 
 /** Litematic 适配器工厂 deps（视图壳注入 voxel 数据读取——ADR-072：适配器 0 backend import） */

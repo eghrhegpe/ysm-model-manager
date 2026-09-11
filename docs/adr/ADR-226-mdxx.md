@@ -10,9 +10,11 @@
 
 ## 1. 背景（Context）
 
-`mdMm` / `mdWs` / `mdLi` / `mdMg` 人工命名空间前缀散落 **15 文件共 156 处**，是 ADR-167 按行数切片的疤痕（`md`=model，`Mm`=mmd，`Ws`=workspace，`Li`=litematic，`Mg`=modelGroup）。
+`mdMm` / `mdWs` / `mdLi` / `mdMg` 人工命名空间前缀散落 **14 个真实文件（函数命中 156 处）**，是 ADR-167 按行数切片的疤痕（`md`=model，`Mm`=mmd，`Ws`=workspace，`Li`=litematic，`Mg`=modelGroup）。
 
-实证（2026-09-11 grep）：`mdMm:56`、`mdWs:53`、`mdLi:32`、`mdMg:15`（共 156），跨 `litematic-adapter` / `mmd-adapter`(+test) / `mmd-build-*`(7) / `mmd-shared` / `mmd-types` / `decoder/wasm-decode` / `decoder/ysm-meta-parser` / `model/model-group-builder`。
+实证（2026-09-11 grep 复查）：函数命中 `mdMm:56`、`mdWs:53`、`mdLi:32`、`mdMg:15`（preview-3d 内共 156）；**类型别名另计约 28 个** MdXx 前缀 interface/type（mdMm 19 在 `mmd-types.ts`、mdWs 5 在 `wasm-decode.ts`+`ysm-meta-parser.ts`、mdLi 3 在 `litematic-adapter.ts`、mdMg 1 在 `model/model-group-builder.ts`），须一并清理。
+
+文件范围：**14 个真实文件**（初稿 15 含 `backend/web-fs-bedrock.ts:65` 注释提及 `mdWsHandleYsmJsonSpec`，系文档参照非真符号，已排除），跨 `litematic-adapter` / `mmd-adapter`(+test) / `mmd-build-*`(6) / `mmd-shared` / `mmd-types` / `decoder/wasm-decode` / `decoder/ysm-meta-parser` / `model/model-group-builder`。
 
 人工命名空间在无模块系统时代必要；今 TS 模块作用域已天然隔离，前缀纯属噪音，且**阻碍搜索/重命名/审查**（grep `buildFoo` 命中被 `mdMmBuildFoo` 前缀吞没）。
 

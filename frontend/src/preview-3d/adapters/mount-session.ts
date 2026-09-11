@@ -3,7 +3,6 @@
 // 提为接收 MountCtx 上下文的模块级函数（switch-preview.ts 的 SwitchContext 同款模式）。
 // 本文件仅承载「会话终结/清理/卸载」生命周期；菜单/rAF/外壳装配仍归 mount-preview-core。
 
-import { setPerceptionPaused } from "@/preview-3d/adapters/shared/perception/core.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { clearModelRoots } from "@/preview-3d/infra/frustum-cull.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
@@ -292,10 +291,6 @@ export function runFullCleanup(ctx: MountCtx): void {
   // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
   textureCache.disposeAll();
   clearModelRoots();
-  // 感知暂停标志复位：该标志由各 adapter 的 update() 每帧覆盖写入（模块级单例，
-  // 无属主）——adapter 崩溃/提前退出/切到无感知模型时残留旧值会静默冻结感知。
-  // 会话完整关闭即归零，下次 mount 从干净状态开始（code review P2）。
-  setPerceptionPaused(false);
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
   // P0 修复：本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）

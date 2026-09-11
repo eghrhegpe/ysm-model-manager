@@ -18,6 +18,7 @@ auto_fields:
     - _clearPmxStatsCache
     - _resetSingletons
     - ALL_PERCEPTION_CAPS
+    - AllocEntry
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
     - applyModelDefaults
@@ -41,6 +42,7 @@ auto_fields:
     - BonesPanelItemOpts
     - BoneTree
     - buildBoneTree
+    - BuildCtx
     - buildFbxScene
     - buildFbxSceneFromData
     - buildLipMorphIndices
@@ -86,6 +88,8 @@ auto_fields:
     - CreateWorkerBridgeOpts
     - createWorkerParser
     - DecodedTexture
+    - DetectFormat
+    - DetectFormatCtx
     - DISPOSE_TEX_KEYS
     - disposeMmdMesh
     - disposeTextureDecoder
@@ -126,7 +130,6 @@ auto_fields:
     - InstalledPreviewInfra
     - invalidatePreview
     - isLikelyTga
-    - isPerceptionPaused
     - isPreviewOverlayActive
     - LipSyncCallback
     - LipSyncOptions
@@ -154,29 +157,6 @@ auto_fields:
     - matTexSlots
     - MatTexSlots
     - MAX_MODELS
-    - AllocEntry
-    - BuildCtx
-    - DetectFormat
-    - DetectFormatCtx
-    - ParsePmdCtx
-    - ParsePmdStage
-    - ParsePmxCtx
-    - ParsePmxStage
-    - Stage1bCtx
-    - Stage1Ctx
-    - Stage1Input
-    - Stage2Ctx
-    - Stage2LoadingManager
-    - Stage3Ctx
-    - Stage3SceneMesh
-    - Stage4Anim
-    - Stage4Ctx
-    - Stage5Ctx
-    - Stage5Menu
-    - Stage6bCtx
-    - Stage6Ctx
-    - Stage6Result
-    - TrackAlloc
     - MenuGraph
     - MenuGraphNode
     - MmdAdapterDeps
@@ -203,6 +183,10 @@ auto_fields:
     - PackAdapterOpts
     - PackDeps
     - packTextureLabel
+    - ParsePmdCtx
+    - ParsePmdStage
+    - ParsePmxCtx
+    - ParsePmxStage
     - PerceptionCapability
     - perceptionNodes
     - PerceptionPauseRef
@@ -260,10 +244,23 @@ auto_fields:
     - SemanticScene
     - setActiveInputSession
     - setBoneNodeVisible
-    - setPerceptionPaused
     - SharedInfra
     - showLoadFailure
     - SkyCapability
+    - Stage1bCtx
+    - Stage1Ctx
+    - Stage1Input
+    - Stage2Ctx
+    - Stage2LoadingManager
+    - Stage3Ctx
+    - Stage3SceneMesh
+    - Stage4Anim
+    - Stage4Ctx
+    - Stage5Ctx
+    - Stage5Menu
+    - Stage6bCtx
+    - Stage6Ctx
+    - Stage6Result
     - startGlobalRenderLoop
     - stopIfIdle
     - SwitchContext
@@ -277,6 +274,7 @@ auto_fields:
     - TEXTURE_EXTS
     - TextureDecoder
     - toggleBoneVisible
+    - TrackAlloc
     - typeFromWebDir
     - UnloadCtx
     - unloadModel

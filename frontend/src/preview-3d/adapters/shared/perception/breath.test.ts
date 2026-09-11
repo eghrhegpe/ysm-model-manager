@@ -14,6 +14,8 @@ function fakeSemanticMap(entries: Record<string, THREE.Object3D>): SemanticBoneM
   return map;
 }
 
+const pauseRef = { paused: false };
+
 describe("createBreathController", () => {
   it("warmup 后 resting 快照覆盖所有命中的语义骨骼", () => {
     const chest = new THREE.Object3D();
@@ -21,7 +23,7 @@ describe("createBreathController", () => {
     const spine = new THREE.Object3D();
     spine.position.set(0, 0.5, 0);
     const map = fakeSemanticMap({ chest, spine });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     ctrl.apply(0, map); // 触发 warmup
     // 第一次 apply 后位置仍应等于 resting（t=0 时 breathe=0）
     expect(chest.position.y).toBeCloseTo(1, 6);
@@ -32,7 +34,7 @@ describe("createBreathController", () => {
     const chest = new THREE.Object3D();
     chest.position.set(0, 1, 0);
     const map = fakeSemanticMap({ chest });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     ctrl.apply(0.016, map); // t 推进 0.016/2.5 ≈ 0.0064 cycle
     // breathe = sin(t*2π) 的绝对值，t≈0.0064 时 sin>0，绝对值仍 >0
     expect(chest.position.y).toBeGreaterThan(1);
@@ -42,7 +44,7 @@ describe("createBreathController", () => {
     const chest = new THREE.Object3D();
     chest.position.set(0, 1, 0);
     const map = fakeSemanticMap({ chest });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     // 推满 1 cycle（BREATH_CYCLE_S 秒，假设 60fps）
     const frames = Math.round(60 * 2.5); // 150 frames
     for (let i = 0; i < frames; i++) {
@@ -54,7 +56,7 @@ describe("createBreathController", () => {
 
   it("语义骨骼缺失时静默降级（不抛错）", () => {
     const map: SemanticBoneMap = {}; // 空 map
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     expect(() => ctrl.apply(0.016, map)).not.toThrow();
   });
 
@@ -62,7 +64,7 @@ describe("createBreathController", () => {
     const chest = new THREE.Object3D();
     chest.position.set(0, 1, 0);
     const map = fakeSemanticMap({ chest });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     ctrl.apply(0, map);
     ctrl.reset();
     // reset 后再次 apply 应重新 warmup（位置不变）
@@ -74,7 +76,7 @@ describe("createBreathController", () => {
     const chest = new THREE.Object3D();
     chest.position.set(0, 1, 0);
     const map = fakeSemanticMap({ chest });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     ctrl.apply(0.625, map); // 推至峰值
     expect(chest.position.y).toBeGreaterThan(1);
     ctrl.dispose();
@@ -90,7 +92,7 @@ describe("createBreathController", () => {
     const lShoulder = new THREE.Object3D();
     lShoulder.position.set(-0.5, 1.1, 0);
     const map = fakeSemanticMap({ chest, leftShoulder: lShoulder });
-    const ctrl = createBreathController();
+    const ctrl = createBreathController({ pauseRef });
     // 推到 breathe 峰值附近（t ≈ 0.25 cycle）
     ctrl.apply(0.625, map); // 0.625/2.5 = 0.25 cycle → sin(π/2)=1, breathe=1
     const chestY = chest.position.y;

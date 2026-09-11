@@ -17,6 +17,7 @@ auto_fields:
     - addMeshToBoneGroup
     - ALL_PERCEPTION_CAPS
     - ALL_TEXTURE_KEYS
+    - AllocEntry
     - ALPHA_F_HOLE
     - ALPHA_F_TRANSLUCENT
     - ALPHA_F_VISIBLE
@@ -66,6 +67,7 @@ auto_fields:
     - buildBoneTree
     - buildCameraSchema
     - buildCrossCuttingControls
+    - BuildCtx
     - buildCubeMeshData
     - buildEnvironmentNodes
     - buildEnvSchema
@@ -187,6 +189,8 @@ auto_fields:
     - DEFAULT_TD_KEYMAP
     - DEFAULT_WATER_PARAMS
     - deriveDefaultEnvState
+    - DetectFormat
+    - DetectFormatCtx
     - devLog
     - DirectionalLightParams
     - dispatchEnvChange
@@ -315,7 +319,6 @@ auto_fields:
     - isIdentityQuat
     - isLikelyTga
     - isPathAvailable
-    - isPerceptionPaused
     - isPreviewFolderNode
     - isPreviewOverlayActive
     - isRenderableModel
@@ -379,30 +382,6 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
-    - AllocEntry
-    - BuildCtx
-    - DetectFormat
-    - DetectFormatCtx
-    - ParsePmdCtx
-    - ParsePmdStage
-    - ParsePmxCtx
-    - ParsePmxStage
-    - Stage1bCtx
-    - Stage1Ctx
-    - Stage1Input
-    - Stage2Ctx
-    - Stage2LoadingManager
-    - Stage3Ctx
-    - Stage3SceneMesh
-    - Stage4Anim
-    - Stage4Ctx
-    - Stage5Ctx
-    - Stage5Menu
-    - Stage6bCtx
-    - Stage6Ctx
-    - Stage6Result
-    - TrackAlloc
-    - YsmMeta
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS
     - MENU_ERROR_NOTE_CSS
@@ -464,6 +443,10 @@ auto_fields:
     - PackEntryReader
     - packTextureLabel
     - parseJavaModel
+    - ParsePmdCtx
+    - ParsePmdStage
+    - ParsePmxCtx
+    - ParsePmxStage
     - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
@@ -621,7 +604,6 @@ auto_fields:
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
     - setOverlayStyleTarget
-    - setPerceptionPaused
     - setPerfPreset
     - setPreviewUiMode
     - setSceneCapabilityLookup
@@ -658,6 +640,20 @@ auto_fields:
     - SpecModelInput
     - splitMeshByFaceAlpha
     - SpotlightParams
+    - Stage1bCtx
+    - Stage1Ctx
+    - Stage1Input
+    - Stage2Ctx
+    - Stage2LoadingManager
+    - Stage3Ctx
+    - Stage3SceneMesh
+    - Stage4Anim
+    - Stage4Ctx
+    - Stage5Ctx
+    - Stage5Menu
+    - Stage6bCtx
+    - Stage6Ctx
+    - Stage6Result
     - startGlobalRenderLoop
     - STATS_PANEL_ID
     - stopIfIdle
@@ -696,6 +692,7 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath
+    - TrackAlloc
     - UnloadCtx
     - unloadModel
     - unloadSessionModel
@@ -737,6 +734,7 @@ auto_fields:
     - YsmControlsContext
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmMeta
     - YsmModel
     - YsmObjectHandle
     - YsmPreloadedModel

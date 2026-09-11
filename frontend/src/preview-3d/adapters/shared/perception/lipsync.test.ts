@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest";
 import { createLipSyncController, buildLipMorphIndices } from "./lipsync.ts";
 import { type SemanticMorphMap } from "@/preview-3d/infra/semantic-morphs.ts";
 
+const pauseRef = { paused: false };
+
 describe("createLipSyncController", () => {
   it("静音（amplitude=0）→ weight=0", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController({ sensitivity: 0.15, intensity: 0.8 });
+    const ctrl = createLipSyncController({ pauseRef, sensitivity: 0.15, intensity: 0.8 });
     ctrl.apply(0.016, 0, (w) => traces.push(w));
     expect(traces[0]).toBe(0);
     ctrl.dispose();
@@ -15,7 +17,7 @@ describe("createLipSyncController", () => {
 
   it("低振幅（< sensitivity）→ weight=0", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController({ sensitivity: 0.2, intensity: 0.8 });
+    const ctrl = createLipSyncController({ pauseRef, sensitivity: 0.2, intensity: 0.8 });
     ctrl.apply(0.016, 0.1, (w) => traces.push(w));
     expect(traces[0]).toBe(0);
     ctrl.dispose();
@@ -23,7 +25,7 @@ describe("createLipSyncController", () => {
 
   it("高振幅（> sensitivity）→ 输出正权重", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController({ sensitivity: 0.2, intensity: 0.8 });
+    const ctrl = createLipSyncController({ pauseRef, sensitivity: 0.2, intensity: 0.8 });
     ctrl.apply(0.016, 0.8, (w) => traces.push(w));
     expect(traces[0]).toBeGreaterThan(0);
     expect(traces[0]).toBeLessThanOrEqual(0.8);
@@ -31,14 +33,14 @@ describe("createLipSyncController", () => {
   });
 
   it("无 callback → 静默降级", () => {
-    const ctrl = createLipSyncController();
+    const ctrl = createLipSyncController({ pauseRef });
     expect(() => ctrl.apply(0.016, 0.5, null as unknown as () => void)).not.toThrow();
     ctrl.dispose();
   });
 
   it("dispose 后不再触发", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController();
+    const ctrl = createLipSyncController({ pauseRef });
     ctrl.dispose();
     ctrl.apply(0.016, 0.8, (w) => traces.push(w));
     expect(traces).toHaveLength(0);
@@ -46,7 +48,7 @@ describe("createLipSyncController", () => {
 
   it("平滑：连续高振幅后降低 → weight 渐进回落", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController({ sensitivity: 0.1, intensity: 1.0, smoothing: 0.8 });
+    const ctrl = createLipSyncController({ pauseRef, sensitivity: 0.1, intensity: 1.0, smoothing: 0.8 });
     // 高振幅
     ctrl.apply(0.016, 0.9, (w) => traces.push(w));
     const high = traces[traces.length - 1];
@@ -61,7 +63,7 @@ describe("createLipSyncController", () => {
 
   it("amplitude > 1 被 clamp 到 1", () => {
     const traces: number[] = [];
-    const ctrl = createLipSyncController({ sensitivity: 0.1, intensity: 0.5 });
+    const ctrl = createLipSyncController({ pauseRef, sensitivity: 0.1, intensity: 0.5 });
     ctrl.apply(0.016, 2.0, (w) => traces.push(w));
     expect(traces[0]).toBeLessThanOrEqual(0.5);
     ctrl.dispose();
@@ -70,7 +72,7 @@ describe("createLipSyncController", () => {
   describe("multiMorph", () => {
     it("多 morph 模式：各音素独立驱动", () => {
       const outputs = new Map<string, number[]>();
-      const ctrl = createLipSyncController({ multiMorph: true, sensitivity: 0.1, intensity: 1.0 });
+      const ctrl = createLipSyncController({ pauseRef, multiMorph: true, sensitivity: 0.1, intensity: 1.0 });
       ctrl.applyMulti(0.016, { lipOpen: 0.8, lipClose: 0.2 }, (id, w) => {
         if (!outputs.has(id)) outputs.set(id, []);
         outputs.get(id)!.push(w);
@@ -84,7 +86,7 @@ describe("createLipSyncController", () => {
 
     it("多 morph 模式：未提供的音素不触发", () => {
       const outputs = new Map<string, number[]>();
-      const ctrl = createLipSyncController({ multiMorph: true });
+      const ctrl = createLipSyncController({ pauseRef, multiMorph: true });
       ctrl.applyMulti(0.016, { lipOpen: 0.8 }, (id, w) => {
         if (!outputs.has(id)) outputs.set(id, []);
         outputs.get(id)!.push(w);

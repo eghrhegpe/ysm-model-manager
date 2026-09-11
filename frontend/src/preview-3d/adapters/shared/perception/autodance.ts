@@ -17,7 +17,7 @@ import {
   type SemanticBoneId,
   type SemanticBoneMap,
 } from "@/preview-3d/bone/semantic-bones.ts";
-import { isPerceptionPaused, type PerceptionPauseRef } from "./core.ts";
+import type { PerceptionPauseRef } from "./core.ts";
 
 /** 节拍 detector 接口（抽象，解耦具体实现） */
 export interface BeatDetectorLike {
@@ -38,7 +38,7 @@ export interface AutoDanceOptions {
   /** 外部节拍 detector（可选，提供后使用其相位代替内部计时） */
   beatDetector?: BeatDetectorLike;
   /** 实例级暂停引用（注入后取代全局标志，多模型同框互不干扰） */
-  pauseRef?: PerceptionPauseRef;
+  pauseRef: PerceptionPauseRef;
 }
 
 /** 默认参数 */
@@ -85,12 +85,12 @@ const DANCE_BONES: Array<{
 const LEFT_ARM_IDS = new Set<SemanticBoneId>(["leftUpperArm", "leftLowerArm", "leftShoulder"]);
 const RIGHT_ARM_IDS = new Set<SemanticBoneId>(["rightUpperArm", "rightLowerArm", "rightShoulder"]);
 
-export function createAutoDanceController(opts: AutoDanceOptions = {}) {
+export function createAutoDanceController(opts: AutoDanceOptions) {
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const intensity = opts.intensity ?? DEFAULT_INTENSITY;
   const enabled = opts.enabled ?? true;
   const beatDetector = opts.beatDetector;
-  const _pauseRef = opts.pauseRef ?? null;
+  const _pauseRef = opts.pauseRef;
 
   const beatPeriod = 60 / bpm; // 每拍秒数
   const breathPeriod = beatPeriod * 4; // 4 拍呼吸周期
@@ -126,7 +126,7 @@ export function createAutoDanceController(opts: AutoDanceOptions = {}) {
    * @param map 语义骨骼映射
    */
   function apply(dt: number, map: SemanticBoneMap): void {
-    if (disposed || !enabled || (_pauseRef ? _pauseRef.paused : isPerceptionPaused())) return; // #9 全局暂停标志
+    if (disposed || !enabled || _pauseRef.paused) return; // 动画激活时感知静默
     warmup(map);
     if (!state) return;
 

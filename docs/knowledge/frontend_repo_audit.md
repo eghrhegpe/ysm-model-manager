@@ -627,7 +627,6 @@ auto_fields:
     - isModelMissing
     - isObj
     - isPathAvailable
-    - isPerceptionPaused
     - isPreviewFolderNode
     - isRenderableModel
     - isSkyEnvironmentOn
@@ -1149,7 +1148,6 @@ auto_fields:
     - setLastSelectedType
     - setMmdMaterialOpacity
     - setMmdMaterialVisible
-    - setPerceptionPaused
     - setPerfPreset
     - setRenderMode
     - setSceneCapabilityLookup

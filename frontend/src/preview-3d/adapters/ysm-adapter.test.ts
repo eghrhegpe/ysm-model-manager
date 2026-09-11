@@ -78,7 +78,6 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
 vi.mock("@/preview-3d/infra/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
 vi.mock("@/preview-3d/adapters/shared/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
 vi.mock("@/preview-3d/adapters/shared/perception/core.ts", () => ({
-  setPerceptionPaused: h.setPerceptionPaused,
   createPerceptionPauseRef: () => h.perceptionPauseRef,
 }));
 beforeEach(() => {
@@ -739,7 +738,7 @@ describe("场景句柄能力面", () => {
     sceneHandle.dispose();
   });
 
-  it("update：动画激活 → setPerceptionPaused(true) + 呼吸驱动；失活 → false 且呼吸不受感知暂停影响仍驱动", async () => {
+  it("update：动画激活 → perceptionPauseRef.paused(true) + 呼吸驱动；失活 → false 且呼吸不受感知暂停影响仍驱动", async () => {
     const spec = specWith([["b1", "root"], ["b2", "上半身"]]);
     const { player, st } = makeFakePlayer();
     h.createYsmAnimPlayer.mockImplementation((_boneByName, clips, labels) => {

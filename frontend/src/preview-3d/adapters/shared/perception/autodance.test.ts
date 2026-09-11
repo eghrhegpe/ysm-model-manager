@@ -13,9 +13,11 @@ function fakeMap(entries: Record<string, THREE.Object3D>): SemanticBoneMap {
   return map;
 }
 
+const pauseRef = { paused: false };
+
 describe("createAutoDanceController", () => {
   it("初始不抛错（warmup 延迟到首次 apply）", () => {
-    const ctrl = createAutoDanceController({ bpm: 120, intensity: 0.5 });
+    const ctrl = createAutoDanceController({ pauseRef, bpm: 120, intensity: 0.5 });
     expect(() => ctrl.apply(0.016, {})).not.toThrow();
     ctrl.dispose();
   });
@@ -24,14 +26,14 @@ describe("createAutoDanceController", () => {
     const hips = new THREE.Object3D();
     hips.rotation.set(0, 0, 0);
     const map = fakeMap({ hips });
-    const ctrl = createAutoDanceController({ bpm: 120, intensity: 0.8 });
+    const ctrl = createAutoDanceController({ pauseRef, bpm: 120, intensity: 0.8 });
     ctrl.apply(0.016, map);
     // 第一轮后 rotation 应有变化
     expect(Math.abs(hips.rotation.y)).toBeGreaterThan(0.001);
   });
 
   it("空 map 不抛错", () => {
-    const ctrl = createAutoDanceController();
+    const ctrl = createAutoDanceController({ pauseRef });
     expect(() => ctrl.apply(0.016, {})).not.toThrow();
     ctrl.dispose();
   });
@@ -39,7 +41,7 @@ describe("createAutoDanceController", () => {
   it("disabled 时不驱动", () => {
     const hips = new THREE.Object3D();
     const map = fakeMap({ hips });
-    const ctrl = createAutoDanceController({ enabled: false });
+    const ctrl = createAutoDanceController({ pauseRef, enabled: false });
     ctrl.apply(0.016, map);
     expect(hips.rotation.y).toBeCloseTo(0, 6);
     ctrl.dispose();
@@ -48,7 +50,7 @@ describe("createAutoDanceController", () => {
   it("dispose 后不再驱动", () => {
     const hips = new THREE.Object3D();
     const map = fakeMap({ hips });
-    const ctrl = createAutoDanceController();
+    const ctrl = createAutoDanceController({ pauseRef });
     ctrl.apply(0.016, map);
     const before = hips.rotation.y;
     ctrl.dispose();
@@ -60,7 +62,7 @@ describe("createAutoDanceController", () => {
   it("intensity=0 时不驱动", () => {
     const hips = new THREE.Object3D();
     const map = fakeMap({ hips });
-    const ctrl = createAutoDanceController({ intensity: 0 });
+    const ctrl = createAutoDanceController({ pauseRef, intensity: 0 });
     ctrl.apply(0.016, map);
     expect(hips.rotation.y).toBeCloseTo(0, 6);
     ctrl.dispose();
@@ -74,7 +76,7 @@ describe("createAutoDanceController", () => {
     hips.quaternion.setFromEuler(new THREE.Euler(0.785, 0, 0, "XYZ")); // Rx(45°)
     const restLocalY = new THREE.Vector3(0, 1, 0).clone().applyQuaternion(hips.quaternion.clone());
     const map = fakeMap({ hips });
-    const ctrl = createAutoDanceController({ bpm: 120, intensity: 0.8 });
+    const ctrl = createAutoDanceController({ pauseRef, bpm: 120, intensity: 0.8 });
 
     ctrl.apply(0.05, map); // 驱动一轮
     const drivenLocalY = new THREE.Vector3(0, 1, 0).clone().applyQuaternion(hips.quaternion.clone());

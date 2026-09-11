@@ -120,6 +120,10 @@ function extractImports(file: string, text: string, moduleSet: Set<string>) {
     if (!target || target === file) continue;
     pushNamed(target, m[1]!);
   }
+  // 通配转发 `export * from "./y"`（ADR-217 兼容壳标准形态）不在本函数处理——目标模块的
+  // 实际导出集此处不可见（extractImports 只读当前文件文本），故由主流程经
+  // collectStarForwards 逐符号展开计数。原实现两者皆漏，导致转发链上的符号被误报孤儿
+  // （backend/idb.ts 的 6 个符号，2026-09-11 全仓实证）。
   // 动态导入：const { a, b } = await import("spec")
   for (const m of text.matchAll(DYN_DESTRUCT_RE)) {
     const target = resolveDynImport(file, m[2]!, moduleSet);
@@ -131,6 +135,49 @@ function extractImports(file: string, text: string, moduleSet: Set<string>) {
     const target = resolveDynImport(file, m[1]!, moduleSet);
     if (!target || target === file) continue;
     pushNamed(target, m[2]!);
+  }
+  // 包装函数盲区（2026-09-11 实证 tooltip.test.ts）：测试常把模块重载封装为
+  //   async function freshMod(): Promise<typeof M> { vi.resetModules(); return await import("./x.ts"); }
+  // 调用处再解构 `const { foo } = await freshMod()`——检测器只认字面 `await import(...)`，
+  // 包装层之后的解构即断链，模块导出被误判孤儿（disposeTooltipCore 即此情形）。
+  // 修复：① 扫「返回类型标注 Promise<typeof X> 且函数体含 await import(...)」的包装函数，
+  //       记 wrapperName → target；② 扫调用处 `const { a, b } = await wrapper()`，计入消费。
+  const wrapperTargets = new Map(); // wrapperName → target
+  for (const m of text.matchAll(
+    /(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*:\s*Promise<\s*typeof\s+([A-Za-z_$][\w$]*)\s*>([\s\S]{0,400}?)\n\}/g,
+  )) {
+    const wrapper = m[1];
+    const typeName = m[2];
+    const body = m[3]!;
+    const imp = [...body.matchAll(/await\s+import\(\s*['"]([^'"]+)['"]\s*\)/g)].at(-1);
+    if (!imp) continue;
+    const target = resolveDynImport(file, imp[1]!, moduleSet);
+    if (target) wrapperTargets.set(wrapper, target);
+  }
+  // 类型别名间接形式：import type * as M from "./x.ts" + 函数标 Promise<typeof M>
+  if (wrapperTargets.size === 0) {
+    const aliasToTarget = new Map(); // 类型别名 → target
+    for (const m of text.matchAll(
+      /\bimport\s+type\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+['"]([^'"]+)['"]/g,
+    )) {
+      const target = resolveDynImport(file, m[2]!, moduleSet);
+      if (target) aliasToTarget.set(m[1], target);
+    }
+    if (aliasToTarget.size) {
+      for (const m of text.matchAll(
+        /(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*:\s*Promise<\s*typeof\s+([A-Za-z_$][\w$]*)\s*>/g,
+      )) {
+        const target = aliasToTarget.get(m[2]!);
+        if (target) wrapperTargets.set(m[1], target);
+      }
+    }
+  }
+  for (const [wrapper, target] of wrapperTargets) {
+    const callRe = new RegExp(
+      `(?:const|let|var)\\s*\\{([^}]*)\\}\\s*=\\s*await\\s+${wrapper}\\s*\\(`,
+      "g",
+    );
+    for (const m of text.matchAll(callRe)) pushNamed(target, m[1]!);
   }
   // 动态导入：先存命名空间别名、后取属性（如 download-queue.test.ts 第 78-83 行）
   //   const mod = await import("./x.ts");  mod.foo;  mod.bar();
@@ -236,11 +283,10 @@ export const ORPHAN_EXEMPT_RULES = [
     pattern: "getEnvCallbackCount",
     reason: "ADR-196 env-state 统一数据源 refactor 中间态",
   },
-  {
-    type: "symbol",
-    pattern: "deepMergeLightParams",
-    reason: "ADR-196 light-capability 统一数据源 refactor 中间态",
-  },
+  // 原 deepMergeLightParams「ADR-196 refactor 中间态」豁免已于 2026-09-11 删除：
+  // 该符号经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费，
+  // 属检测器 export * 漏检期的遮蔽规则；漏检修复后它不再是孤儿，豁免为僵尸规则
+  // （契约测试「定期清理过期规则」要求：规则超期 → 要么重构完成删规则，要么确认永久产物）。
 ];
 
 /** 简化 glob 匹配：** = 任意（含 /）跨目录，* = 不含 /；其余正则特殊字符转义。 */
@@ -304,6 +350,20 @@ function main() {
     for (const [target, sym] of extractImports(f as string, text, moduleSet)) {
       const key = `${sym}@${target}`;
       consumed.set(key, (consumed.get(key) || 0) + 1);
+    }
+  }
+
+  // 通配转发消费展开（ADR-217 兼容壳）：`export * from "./y"` 使 y 的每个导出都被转发方
+  // 「消费」一次——否则仅经转发壳被下游使用的符号会被误判孤儿。此处按目标模块实际导出
+  // 集逐符号 +1（extractImports 阶段无法枚举目标文件导出）。
+  const starForwards = collectStarForwards(files as string[], moduleSet);
+  for (const [, targets] of starForwards) {
+    for (const target of targets) {
+      const targetText = fs.readFileSync(target, "utf-8");
+      for (const exp of extractExports(target, targetText)) {
+        const key = `${exp.name}@${target}`;
+        consumed.set(key, (consumed.get(key) || 0) + 1);
+      }
     }
   }
 
@@ -433,6 +493,25 @@ function main() {
   console.log(
     flagged.length ? `\n（审计模式不阻断，--strict 可升级为 ERROR）` : "\n✅ 无孤儿导出。",
   );
+}
+
+/** 收集全部 `export * from` 转发目标（file → [target...]），供主流程做转发消费展开。
+ *  通配转发的「消费」无法在 extractImports 内结算（那里只见当前文件文本，看不到目标模块
+ *  的导出集），故单独收集后由主流程逐符号 +1——对齐具名重导出 `export {a} from` 的
+ *  「转发即消费」语义（ADR-217 兼容壳：backend/idb.ts 转发 utils/storage/idb.ts）。 */
+function collectStarForwards(files: string[], moduleSet: Set<string>): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const f of files) {
+    const text = fs.readFileSync(f as string, "utf-8");
+    const targets: string[] = [];
+    for (const m of text.matchAll(/export\s*\*\s*from\s*['"]([^'"]+)['"]/g)) {
+      const target = resolveImport(f as string, m[1]!, moduleSet);
+      if (!target || target === f) continue;
+      targets.push(target);
+    }
+    if (targets.length) map.set(f as string, targets);
+  }
+  return map;
 }
 
 // code_review cbd138f38 #2/#6/#8（P2）：main() 加直跑守卫——契约测试 import 本模块

@@ -159,19 +159,21 @@ assert.equal(
   `wasm glue 应豁免 4 个（got ${wasmCount}）—— 3 × _getWasmBinary* + 1 × _getGlueCodeMt`,
 );
 
-// ADR-196 env-state 暂存应该豁免 5 个（getStateValue / setStateValue / getPresetKeys / getEnvCallbackCount / deepMergeLightParams）
+// ADR-196 env-state 暂存应该豁免 4 个（getStateValue / setStateValue / getPresetKeys / getEnvCallbackCount）
+// 2026-09-11：原第 5 个 deepMergeLightParams 退出——检测器修复 export * 通配转发漏检后，
+// 该符号被证明是活的（经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费），
+// 其 ADR-196 豁免规则随之删除（僵尸规则清理，契约测试自身要求的「定期过期」）。
 const adr196Count = exempted.filter(
   (e) =>
     globMatch("get*Value", e.symbol) ||
     globMatch("set*Value", e.symbol) ||
     e.symbol === "getPresetKeys" ||
-    e.symbol === "getEnvCallbackCount" ||
-    e.symbol === "deepMergeLightParams",
+    e.symbol === "getEnvCallbackCount",
 ).length;
-assert.equal(adr196Count, 5, `ADR-196 暂存应豁免 5 个（got ${adr196Count}）`);
+assert.equal(adr196Count, 4, `ADR-196 暂存应豁免 4 个（got ${adr196Count}）`);
 
 console.log(
-  "  ✓ 具体规则验证：VIEW_TESTIDS(13) + caps defaults(5) + wasm glue(4) + ADR-196(5) 全部豁免",
+  "  ✓ 具体规则验证：VIEW_TESTIDS(13) + caps defaults(5) + wasm glue(4) + ADR-196(4) 全部豁免",
 );
 
 // ── 3. 路径模式 glob 测试 ────────────────────────────

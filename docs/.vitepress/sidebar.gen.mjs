@@ -1875,6 +1875,10 @@ export const autoSidebar = [
             "link": "/knowledge/optimization_log"
           },
           {
+            "text": "孤儿导出检测器（扫描盲区）",
+            "link": "/knowledge/orphan_export_scanner"
+          },
+          {
             "text": "资源注册表 registry",
             "link": "/knowledge/resource-registry"
           },

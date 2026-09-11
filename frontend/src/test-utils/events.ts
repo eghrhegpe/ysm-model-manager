@@ -59,16 +59,6 @@ export function fireDrop(el: EventTarget, dataTransfer?: Record<string, unknown>
   el.dispatchEvent(ev);
   return ev;
 }
-
-/** 模拟任意类型拖拽事件（dragstart/dragover/dragleave…），与 fireDrop 同款 dataTransfer 注入 */
-export function fireDrag(
-  el: EventTarget,
-  type: string,
-  dataTransfer?: Record<string, unknown>,
-): DragEvent {
-  const dt = (dataTransfer ?? {}) as unknown as DataTransfer;
-  const ev = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt });
-  Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
-  el.dispatchEvent(ev);
-  return ev;
-}
+// fireDrag（任意拖拽事件类型）已于 2026-09-11 删除：check-orphan-exports 修复 export *
+// 与包装函数两处漏检后，全仓零消费者的真孤儿浮现（同文件 fireDrop 14 处消费者对照）。
+// 需要 dragstart/dragover 事件时直接 new DragEvent(type, {...}) 或复用 fireDrop 模式。

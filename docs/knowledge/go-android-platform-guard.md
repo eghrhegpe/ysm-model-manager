@@ -151,7 +151,7 @@ ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的�
 | 层 | 事实源 | 强度 |
 |----|--------|------|
 | T0 | `frontend/bindings/.../app.ts` 为 git 入库文件，缺失 = 异常 | 硬失败（`--allow-missing` 逃生） |
-| T1 | `GOOS=android go list -f '{{.GoFiles}}' ./internal/app/` 与默认 GOOS 的文件差集 → 差集内 `*App` 方法 | 硬失败 |
+| T1 | `GOOS=android go list -f '&#123;&#123;.GoFiles&#125;&#125;' ./internal/app/` 与默认 GOOS 的文件差集 → 差集内 `*App` 方法 | 硬失败 |
 | T2 | desktop 构建集内 `*App` 方法体出现 `runtime.GOOS == "android"` / `case "android":`（ADR-047 守卫） | 硬失败 |
 | T3 | 真实 binding 全集 × 桌面语义正则（Plaza / Select* / Minecraft / Explorer / Restart / Window* …） | 提示 |
 | T4 | Stale（黑名单项已从 bindings 消失）+ `platform-web.test.ts` 硬编码副本漂移 + 基线回退 | 提示 |

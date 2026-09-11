@@ -30,7 +30,6 @@ quick_intents:
   - 查找资源包详情与启禁的当前入口（app-preview + ToggleEnable）
   - 排查旧代码中的残留引用
 status: archived
-affected: false
 last_verified: 2026-08-27
 ---
 

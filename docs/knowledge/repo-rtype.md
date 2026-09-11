@@ -34,8 +34,8 @@ quick_intents:
   - repo_rtype localStorage 权威源
 pitfalls:
   - 权威源 = localStorage `repo_rtype`（由 app-nav 切换器写入），禁止各模块自行落盘
-  - 运行期类型变更唯一入口 = `repo:rtype-changed` 事件；直接读 localStorage 会错过运行期切换
-  - `useCurrentResourceType` 的 onChange 仅在类型真正变化时触发（同值去重），组件销毁必须调 cleanup()
+  - 运行期类型变更唯一入口 = 事件 `repo:rtype-changed`；直接读 localStorage 会错过运行期切换（原以反引号起句致 YAML 解析失败，2026-09-11 调整语序）
+  - 钩子 `useCurrentResourceType` 的 onChange 仅在类型真正变化时触发（同值去重），组件销毁必须调 cleanup()
 use_when:
   - 当前资源类型
   - 类型切换订阅

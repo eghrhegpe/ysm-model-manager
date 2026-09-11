@@ -12,7 +12,7 @@
 
 `frontend/src/views/app-content/index.ts:147` 的 `_render()` 每次 `nav:changed` / `lang:changed` / `repo:search-creator` 都把 `this.state.root.innerHTML` 整段重建（`<div class="page">${page.html()}</div>`）。后果（2026-09-03 三路并发锐评实证，见 `frontend_design_critique.md`）：
 
-1. **状态丢失**：切页后 <app-tree> 等 Web Component 全部走 connected→disconnected→connected 完整生命周期，展开节点、滚动位置、焦点全丢——用户「刚展开的子目录，切页回来又缩回去了」。
+1. **状态丢失**：切页后 `<app-tree>` 等 Web Component 全部走 connected→disconnected→connected 完整生命周期，展开节点、滚动位置、焦点全丢——用户「刚展开的子目录，切页回来又缩回去了」。（注意：裸写 `<app-tree>` 会被 VitePress 的 Vue 模板编译器当作未闭合元素，致整站构建失败——2026-09-11 修复；行内标签一律用反引号包裹。）
 2. **模块级全局锁悬空**：`diagnostics/dedup.ts:15,19` 的 `_dedupBusy`/`diagExecBusy` 挂在模块级，页面销毁不复位（`resetDedupConfig` 只清 config 不清 busy），再进 dedup tab 永久卡死（审计快照 2026-08-26 点名 4 个月未修）。
 3. **bus 被异化为微任务队列**：`index.ts:108-109` 先 emit `nav:changed` 再 emit `tree:set-search`，依赖「同步切页后 app-tree 已挂载」的时序假设，属跨 tick 脆弱编排。
 4. **重复渲染浪费**：`lang:changed` 全页重建只为换文案；`repo:search-creator` 同 tick 双 emit。

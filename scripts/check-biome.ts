@@ -49,6 +49,7 @@ import path from "node:path";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { run } from "./_lib/proc.ts";
 import { getRoot } from "./_lib/scan-files.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 // 统一参数解析：--files 为多值布尔标记（文件路径经位置参数 _ 收集），--write/--json 为布尔。
 const args = parseArgs(process.argv.slice(2), { bools: ["write", "json", "files"] });
@@ -64,7 +65,7 @@ const cwd = process.cwd();
 const explicitFiles: string[] = args._.map((p) => {
   const abs = path.resolve(cwd, p);
   const rel = path.relative(FRONTEND_DIR, abs);
-  return rel.replace(/\\/g, "/"); // Windows 反斜杠 → 正斜杠（biome cwd=frontend 用正斜杠）
+  return toPosix(rel); // biome cwd=frontend 用正斜杠
 });
 
 const isWin = process.platform === "win32";

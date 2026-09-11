@@ -23,6 +23,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./_lib/parse-args.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = resolve(__dirname, "..", "frontend", "src", "locales");
@@ -264,7 +265,7 @@ for (const file of walkSources(SRC_ROOT)) {
   for (const m of text.matchAll(trCallRe)) {
     if (!base.keys.has(m[1]!)) {
       shadowPack.push({
-        file: file.replace(/\\/g, "/").replace(`${SRC_ROOT.replace(/\\/g, "/")}/`, ""),
+        file: toPosix(file).replace(`${toPosix(SRC_ROOT)}/`, ""),
         key: m[1]!,
       });
     }

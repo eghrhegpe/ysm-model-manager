@@ -36,6 +36,7 @@ import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { relPosix, resolveImport, SRC_DIR, walk } from "./_lib/scan-files.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 const args = parseArgs(process.argv.slice(2), {
   bools: ["json", "strict"],
@@ -254,7 +255,7 @@ function orphanGlob(pattern: string, target: string): boolean {
 
 /** 判定孤儿是否应豁免（设计/生成/重构中间态）。返回 null = 不豁免。 */
 export function isOrphanExempt(symbol: string, relFile: string): string | null {
-  const posix = relFile.replace(/\\/g, "/");
+  const posix = toPosix(relFile);
   const baseFile = posix.split("/").pop() || posix;
   for (const rule of ORPHAN_EXEMPT_RULES) {
     switch (rule.type) {

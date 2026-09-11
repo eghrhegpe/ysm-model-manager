@@ -37,11 +37,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { getRoot } from "./_lib/scan-files.ts";
+import { getRoot, walk } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend", "src");
-const LOCALE_DIR = path.join(SRC, "core", "i18n", "locales");
 
 const args = new Set(process.argv.slice(2));
 const JSON_OUT = args.has("--json");
@@ -148,20 +147,16 @@ function scanFile(file: string) {
   return hits;
 }
 
-function walk(dir: string, out: string[]) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (path.resolve(p) === LOCALE_DIR) continue; // 跳过语言包源
-      walk(p, out);
-    } else if (e.name.endsWith(".ts") && !e.name.endsWith(".test.ts")) {
-      out.push(p);
-    }
-  }
-}
-
-const files: string[] = [];
-walk(SRC, files);
+// 复用共享层 walk（原为自研递归）。语义严格等价：exts=.ts、skipFile 排除 *.test.ts。
+// ⚠ 原自研实现内含 `path.resolve(p) === LOCALE_DIR` 的「跳过语言包源」判断，但 LOCALE_DIR
+// （src/core/i18n/locales）已不存在——语言包实际在 src/locales/*.ts，i18n 目录迁移后该判断
+// 恒不生效（死分支）。此处按「保持现行为」处理（skipDir 恒 false），不引入行为变化。
+// 若确需排除语言包源，应改路径为 path.join(SRC, "locales") 并另行评估告警影响。
+const files = walk(SRC, {
+  exts: [".ts"],
+  skipDir: () => false,
+  skipFile: /\.test\.ts$/,
+}) as string[];
 const report: { file: string; hits: { line: number; snippet: string }[] }[] = [];
 let total = 0;
 for (const f of files) {

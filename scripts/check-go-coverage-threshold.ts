@@ -22,6 +22,7 @@ import { execSync } from "node:child_process";
 import { exit } from "node:process";
 
 import { parseArgs } from "./_lib/parse-args.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 interface ThresholdRule {
   pattern: string;
@@ -72,7 +73,7 @@ function parseCoverProfile(file: string): Map<string, number> {
     const filePath = match[1]!;
     const pct = parseFloat(match[3]!);
     if (Number.isNaN(pct)) continue;
-    const key = filePath.replace(/\\/g, "/");
+    const key = toPosix(filePath);
     const existing = coverage.get(key);
     if (existing === undefined || pct < existing) {
       coverage.set(key, pct);

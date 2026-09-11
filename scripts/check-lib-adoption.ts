@@ -33,7 +33,12 @@ const STRICT = process.argv.includes("--strict");
 
 /**
  * 规则表：_lib 模块 → 手搓特征 / 采用特征 / 迁移建议。
- * 判定：命中任一 smell 且未命中 adopted → 违规（有能力却手搓）。
+ * 判定（行级粒度）：逐行扫 smell（注释行遮蔽），命中即违规，分两类——
+ *   missing = 文件未 import 该模块（有能力却手搓）；
+ *   remnant = 文件已 import，但仍有手搓残留（接入了，没用尽）。
+ * 早期实现为文件级豁免（import 过即整文件放过），会让「接入三成」的文件长期
+ * 逃检（实证 gen-vitepress-sidebar.ts 已 import toPosix 却仍有 7 处手搓），
+ * 2026-09 下沉为行级；smell 允许有界跨行正则，以便把薄包装排除在违规外。
  * proc.mjs 不在此表：由 check-proc-adoption.ts 专管，避免重复告警。
  */
 const RULES = [
@@ -41,7 +46,10 @@ const RULES = [
     lib: "scan-files.ts",
     capability: "文件遍历 / 仓库根定位",
     smells: [
-      /^function (?:walk|walkDir|collectFiles|scanDir|collectScripts)\s*\(/m,
+      // 自研遍历判据 = 函数体内直接 readdirSync。薄包装（`return walk(dir, {...})`）
+      // 体内无 readdirSync，自然豁免——实测 css-layer-check.ts 的 walkDir 即此形态，
+      // 若只认函数名会持续误报。上界 800 字符 + 不越过顶格 `}`：防跨函数误匹配。
+      /^function\s+(?:walk|walkDir|collectFiles|scanDir|collectScripts)\s*\([^)]*\)[^{]*\{(?:(?!\n\})[\s\S]){0,800}?readdirSync/m,
       /^const (?:walk|walkDir)\s*=/m,
     ],
     advice: "import { walk, ROOT } from './_lib/scan-files.ts'",
@@ -64,8 +72,11 @@ const RULES = [
   {
     lib: "source-graph.ts",
     capability: "源码符号 / 顶层声明提取",
+    // 刻意不含 `collectSymbols`：该名语义过泛（单文件符号提取与多文件聚合都叫这名）。
+    // 实证 gen-knowledge-symbols.ts 的同名函数是「遍历 source_files、
+    // 逐个调 getExportedSymbolsAny 再聚合」的上层逻辑，非重复实现——列入即持续误报。
     smells: [
-      /^function (?:getExportedSymbols|getGoExportedSymbols|getJsExportedSymbols|goTopFuncs|tsTopDecls|collectSymbols)\s*\(/m,
+      /^function (?:getExportedSymbols|getGoExportedSymbols|getJsExportedSymbols|goTopFuncs|tsTopDecls)\s*\(/m,
     ],
     advice: "import { getExportedSymbolsAny, topDeclsAny } from './_lib/source-graph.ts'",
   },
@@ -83,9 +94,70 @@ const RULES = [
   },
 ];
 
-/** 采用特征：脚本 import 了该模块即视为已接入（自动豁免同规则的 smell）。 */
+/**
+ * 采用特征：脚本 import 了该模块即视为已接入。
+ *
+ * 锚定「真实 import 语句」（行首 import + 引号路径），而非文本中出现模块名——
+ * 否则本文件 RULES 里的 advice 字符串、to-posix.ts 头部注释提及模块名时
+ * 都会被误判为「已接入」。路径不做 `_lib/` 前缀限定，故 `_lib` 内部文件的
+ * 相对导入（`./to-posix.ts`）同样识别。
+ */
 function adoptedRe(lib: string) {
-  return new RegExp(`_lib[\\\\/]${lib.replace(".", "\\.")}`);
+  const esc = lib.replace(/\./g, "\\.");
+  return new RegExp(`^\\s*import\\b[^;]*?["'][^"'\\n]*${esc}["']`, "m");
+}
+
+/**
+ * 注释行遮蔽（保留行号）：`//` 行注释、`/*` 起始块注释及其 `*` 续行整行清空。
+ *
+ * 遮蔽而非跳过的理由：块注释跨多行，跳行会打乱行号；且 smell 支持跨行匹配
+ * （见 scanSmellLines 的 walk 自研特征），必须在同一坐标系里比对。
+ * 只遮蔽「整行注释」，不处理行尾注释——`code(); // 说明` 这类行仍是代码行，
+ * 其手搓应按违规计（实证 check-biome.ts:67 即「代码 + 行尾注释」形态）。
+ */
+function maskCommentLines(text: string): string {
+  let inBlock = false;
+  return text
+    .split("\n")
+    .map((line) => {
+      const t = line.trim();
+      if (inBlock) {
+        if (t.includes("*/")) inBlock = false;
+        return "";
+      }
+      if (t.startsWith("/*")) {
+        if (!t.includes("*/")) inBlock = true;
+        return "";
+      }
+      if (t.startsWith("//") || t.startsWith("*")) return "";
+      return line;
+    })
+    .join("\n");
+}
+
+/**
+ * 扫 smell，返回命中起始行号（1-based，去重升序）。
+ *
+ * 检测粒度必须下沉到「行」：文件级豁免（import 过就整文件放过）会让
+ * 「已接入却只用了三成」的文件长期逃检——实证 gen-vitepress-sidebar.ts
+ * 第 28 行已 import toPosix，同文件内仍有 7 处手搓残留。
+ *
+ * 在遮蔽后的全文上做全局匹配（而非逐行 test），以便 smell 用有界跨行正则
+ * 表达「自研实现」特征（如函数体内出现 readdirSync），把薄包装排除在违规外。
+ */
+function scanSmellLines(text: string, smells: RegExp[]): number[] {
+  const masked = maskCommentLines(text);
+  const hits = new Set<number>();
+  for (const re of smells) {
+    const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
+    let m: RegExpExecArray | null = g.exec(masked);
+    while (m) {
+      hits.add(masked.slice(0, m.index).split("\n").length);
+      if (g.lastIndex === m.index) g.lastIndex++; // 零宽匹配防死循环
+      m = g.exec(masked);
+    }
+  }
+  return [...hits].sort((a, b) => a - b);
 }
 
 /** 收集 _lib 共享模块（排除测试）。 */
@@ -116,22 +188,25 @@ function main() {
   const texts = new Map(files.map((f) => [f, fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8")]));
   const libs = collectLibs();
 
-  // 违规：手搓了某模块能覆盖的能力，却未 import 该模块
+  // 违规：手搓了某模块能覆盖的能力。两类——
+  //   missing：完全未 import 该模块（有能力却手搓）
+  //   remnant：已 import 但文件内仍有手搓残留（接入了，没用尽）
   const violations: any[] = [];
   for (const rule of RULES) {
     const adopted = adoptedRe(rule.lib);
     for (const f of files) {
       const text = texts.get(f) as string;
-      if (adopted.test(text)) continue; // 已接入共享层 → 豁免
-      const hit = rule.smells.find((re) => re.test(text));
-      if (hit) {
-        violations.push({
-          script: f,
-          lib: rule.lib,
-          capability: rule.capability,
-          advice: rule.advice,
-        });
-      }
+      const lines = scanSmellLines(text, rule.smells);
+      if (!lines.length) continue; // 无手搓特征 → 无关文件
+      const kind = adopted.test(text) ? "remnant" : "missing";
+      violations.push({
+        script: f,
+        lib: rule.lib,
+        capability: rule.capability,
+        advice: rule.advice,
+        kind,
+        lines,
+      });
     }
   }
 
@@ -168,12 +243,23 @@ function main() {
     `扫描 ${files.length} 个脚本 × ${libs.length} 个 _lib 模块，违规 ${violations.length} 条`,
   );
   console.log("──────────────────────────────────────");
-  if (violations.length) {
+  const missing = violations.filter((v) => v.kind === "missing");
+  const remnant = violations.filter((v) => v.kind === "remnant");
+  if (missing.length) {
     console.log("【有能力未用】手搓了 _lib 已提供的能力，却未 import：");
-    for (const v of violations) {
-      console.log(`⚠ ${v.script}：手搓「${v.capability}」→ ${v.advice}`);
+    for (const v of missing) {
+      console.log(`⚠ ${v.script}：手搓「${v.capability}」(L${v.lines.join(",")}) → ${v.advice}`);
     }
-  } else {
+  }
+  if (remnant.length) {
+    console.log("【已接入未用尽】import 了 _lib 模块，文件内仍有手搓残留：");
+    for (const v of remnant) {
+      console.log(
+        `⚠ ${v.script}：${v.lines.length} 处手搓「${v.capability}」(L${v.lines.join(",")}) → 改用 ${v.advice}`,
+      );
+    }
+  }
+  if (!violations.length) {
     console.log("✅ 未发现「有能力未用」的脚本。");
   }
 

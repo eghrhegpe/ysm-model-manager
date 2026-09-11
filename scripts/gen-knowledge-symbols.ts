@@ -27,7 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseFrontmatter, parseSourceFiles } from "./_lib/frontmatter.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
-import { ROOT } from "./_lib/scan-files.ts";
+import { ROOT, walk } from "./_lib/scan-files.ts";
 import { EXCLUDE_DIRS, getExportedSymbolsAny } from "./_lib/source-graph.ts";
 
 const KNOWLEDGE_DIR = path.join(ROOT, "docs", "knowledge");
@@ -91,7 +91,15 @@ function collectSymbols(sourceFiles: string[]) {
     if (!fs.existsSync(abs)) continue;
     let targets = [abs];
     if (fs.statSync(abs).isDirectory()) {
-      targets = walkDir(abs);
+      // 复用共享层 walk：exts 覆盖 Go 与 TS 双栈；skipDir 显式并入 EXCLUDE_DIRS
+      // （__tests__/__mocks__/node_modules/wailsjs/bindings/dist）——自研递归此前不排除
+      // 生成物目录，source_files 指向整包目录时会深入 bindings/dist（code_review P2-2）。
+      // 注意 skipDir 传参即覆盖共享层默认值，故需自行并入「跳过隐藏项」。
+      targets = walk(abs, {
+        exts: [".ts", ".tsx", ".js", ".jsx", ".go"],
+        skipDir: (n) => n.startsWith(".") || EXCLUDE_DIRS.has(n),
+        skipFile: /(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/,
+      }) as string[];
     }
     for (const t of targets) {
       let syms: any[] = [];
@@ -106,28 +114,6 @@ function collectSymbols(sourceFiles: string[]) {
     }
   }
   return [...set].sort();
-}
-
-/** 递归收集目录下源文件（.ts/.tsx/.js/.jsx/.go，跳过隐藏/测试/生成物）。 */
-function walkDir(dir: string, out: string[] = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name.startsWith(".")) continue;
-    // 复用共享层 EXCLUDE_DIRS（__tests__/__mocks__/node_modules/wailsjs/bindings/dist）：
-    // 自研递归此前不排除生成物目录，source_files 指向整包目录时会深入 bindings/dist（code_review P2-2）
-    if (e.isDirectory() && EXCLUDE_DIRS.has(e.name)) continue;
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      walkDir(p, out);
-    } else if (
-      e.isFile() &&
-      /\.(ts|tsx|js|jsx|go)$/.test(e.name) &&
-      !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)
-    ) {
-      out.push(p);
-    }
-  }
-  return out;
 }
 
 // 集合相等（顺序无关）

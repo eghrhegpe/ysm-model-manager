@@ -37,6 +37,7 @@ import { addedLinesFromDiff } from "./_lib/git-hunks.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { run } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 const isWin = process.platform === "win32";
 const FRONTEND_DIR = path.join(ROOT, "frontend");
@@ -153,7 +154,7 @@ function parseBiomeDiags(jsonText: string): BiomeDiag[] {
     const line = d.location?.start?.line;
     if (!line || !d.location?.path) continue; // 无行号定位的诊断(如项目级错误)不参与行级判定
     out.push({
-      file: d.location.path.replace(/\\/g, "/"),
+      file: toPosix(d.location.path),
       line,
       category: d.category ?? "unknown",
       severity: d.severity ?? "unknown",

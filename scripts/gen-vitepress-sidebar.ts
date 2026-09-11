@@ -82,7 +82,7 @@ function scanItems(relDir: string, exclude: string[] = []) {
   return mdNames(relDir)
     .filter((f) => !exclude.includes(f))
     .map((f) => {
-      const rel = join(relDir, f).replace(/\\/g, "/");
+      const rel = toPosix(join(relDir, f));
       const text = readTitle(rel) || f.replace(/\.md$/, "");
       return { text, link: linkify(rel) };
     });
@@ -104,7 +104,7 @@ function guideItemsBuilder() {
       .filter((f) => mdFiles.has(f))
       .map((f) => {
         assigned.add(f);
-        const rel = join("guide", f).replace(/\\/g, "/");
+        const rel = toPosix(join("guide", f));
         return { text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) };
       });
     if (children.length) items.push({ text: g.key, collapsed: true, items: children });
@@ -120,7 +120,7 @@ function guideItemsBuilder() {
       text: "其他",
       collapsed: true,
       items: rest.map((f) => {
-        const rel = join("guide", f).replace(/\\/g, "/");
+        const rel = toPosix(join("guide", f));
         return { text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) };
       }),
     });
@@ -161,7 +161,7 @@ const adrItems = mdNames("adr")
   .map((f) => ({ f, num: Number((f.match(/^ADR-(\d+)/) || [])[1] || 0) }))
   .sort((a, b) => b.num - a.num)
   .map(({ f }) => {
-    const rel = join("adr", f).replace(/\\/g, "/");
+    const rel = toPosix(join("adr", f));
     return { text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) };
   });
 
@@ -173,7 +173,7 @@ function knowledgeItemsBuilder() {
   const groups = new Map();
   const cards = mdNames("knowledge").filter((f) => !NON_CARDS.has(f));
   for (const f of cards) {
-    const rel = join("knowledge", f).replace(/\\/g, "/");
+    const rel = toPosix(join("knowledge", f));
     let cat = "其他";
     try {
       const fm = parseFrontmatter(readFileSync(join(DOCS, rel), "utf8"));
@@ -208,7 +208,7 @@ function novelItemsBuilder() {
     .sort((a, b) => a.localeCompare(b, "zh-CN"));
   const groups: any[] = [];
   for (const d of dirs) {
-    const relDir = join("novel", d).replace(/\\/g, "/");
+    const relDir = toPosix(join("novel", d));
     const items = scanItems(relDir, ["README.md"]);
     if (items.length) {
       groups.push({ text: d, collapsed: true, items });
@@ -240,7 +240,7 @@ const auditItems = (() => {
     .filter((f) => f.endsWith(".md") && !["README.md", "index.md"].includes(f))
     .sort((a, b) => a.localeCompare(b, "zh-CN"));
   return files.map((f) => {
-    const rel = join("audit", f).replace(/\\/g, "/");
+    const rel = toPosix(join("audit", f));
     return { text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) };
   });
 })();

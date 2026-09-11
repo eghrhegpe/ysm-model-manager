@@ -21,10 +21,12 @@ auto_fields:
     - createBreathController
     - createGazeController
     - createLipSyncController
+    - createPerceptionPauseRef
     - isPerceptionPaused
     - LipSyncCallback
     - LipSyncOptions
     - MultiLipSyncCallback
+    - PerceptionPauseRef
     - setPerceptionPaused
 quick_groups:
   - 3D 预览与模型追加

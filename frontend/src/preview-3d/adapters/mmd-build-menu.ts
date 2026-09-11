@@ -16,6 +16,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { createAutoDanceController } from "@/preview-3d/perception/autodance.ts";
 import { createBlinkController } from "@/preview-3d/perception/blink.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
+import { createPerceptionPauseRef, type PerceptionPauseRef } from "@/preview-3d/perception/core.ts";
 import { createGazeController } from "@/preview-3d/perception/gaze.ts";
 import { buildLipMorphIndices, createLipSyncController } from "@/preview-3d/perception/lipsync.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
@@ -30,6 +31,7 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
   semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;
   semanticMorphs: ReturnType<typeof mmdSemanticMorphMap>;
   breath: ReturnType<typeof createBreathController>;
+  perceptionPauseRef: PerceptionPauseRef;
   gaze: ReturnType<typeof createGazeController>;
   blink: ReturnType<typeof createBlinkController>;
   lipSync: ReturnType<typeof createLipSyncController>;
@@ -140,16 +142,21 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
       : null,
     perception: { state: c.perceptionState, caps: perceptionCaps },
   });
-  const breath = createBreathController();
+  const perceptionPauseRef = createPerceptionPauseRef();
+  const breath = createBreathController({ pauseRef: perceptionPauseRef });
   const gaze = createGazeController();
-  const blink = createBlinkController();
-  const lipSync = createLipSyncController({ multiMorph: true });
+  const blink = createBlinkController({ pauseRef: perceptionPauseRef });
+  const lipSync = createLipSyncController({ multiMorph: true, pauseRef: perceptionPauseRef });
   const lipSyncTime = 0;
   const lipIndices =
     c.mesh.morphTargetDictionary && semanticMorphs
       ? buildLipMorphIndices(semanticMorphs, c.mesh.morphTargetDictionary)
       : undefined;
-  const autoDance = createAutoDanceController({ bpm: 120, intensity: 0.3 });
+  const autoDance = createAutoDanceController({
+    bpm: 120,
+    intensity: 0.3,
+    pauseRef: perceptionPauseRef,
+  });
   const footIK = createFootIKController(c.boneTree, semanticBones);
   return {
     semanticBones,
@@ -163,6 +170,7 @@ export function mdMmStage5Menu(c: MdMmStage5Ctx): {
     autoDance,
     footIK,
     items,
+    perceptionPauseRef,
   };
 }
 

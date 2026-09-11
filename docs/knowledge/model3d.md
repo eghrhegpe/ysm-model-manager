@@ -159,6 +159,7 @@ auto_fields:
     - createIconButton
     - createInstallableStyles
     - createLipSyncController
+    - createPerceptionPauseRef
     - createPmxParser
     - createResolveModeBridge
     - createSlideMenu
@@ -470,6 +471,7 @@ auto_fields:
     - PathValue
     - PerceptionCapability
     - perceptionNodes
+    - PerceptionPauseRef
     - PerceptionState
     - PERF_PRESET_DEFAULT
     - PERF_PRESET_KEY

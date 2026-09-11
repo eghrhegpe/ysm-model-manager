@@ -15,6 +15,36 @@ export function cubeVec(v: number[] | undefined): [number, number, number] {
 /** 默认 accent 回退（主题变量缺失/非 hex 时；与 --accent 同源色相） */
 const FALLBACK_ACCENT_RGB: [number, number, number] = [124, 131, 255];
 
+/** 单个 cube 投影到屏幕的结果（mdDv 投影函数统一返回）。 */
+interface CubeProjection {
+  ok: boolean;
+  screenX: number;
+  screenY: number;
+  drawW: number;
+  drawH: number;
+  rzRad: number;
+}
+
+/** 2D 视图投影上下文：视角 + 屏幕原点到像素。同帧内所有 cube 共享一份，避免逐次传参污染。 */
+interface View2D {
+  cosA: number;
+  sinA: number;
+  ox: number;
+  oy: number;
+  scale: number;
+}
+
+/** cube 空间几何 + 旋转轴（投影输入，把原先散开的 x/y/z/sx/sy/sz/pivot 聚成一组）。 */
+interface Cube2D {
+  x: number;
+  y: number;
+  z: number;
+  sx: number;
+  sy: number;
+  sz: number;
+  pivot: number[];
+}
+
 /**
  * 解析当前主题 --accent 为 rgba 字符串（canvas 2D fillStyle/strokeStyle 不解析 CSS 变量）。
  * 每次调用实时读取（不缓存）：绘制为低频操作（重绘时调用，非每帧），且避免主题切换后脏值。
@@ -80,20 +110,12 @@ function mdDvDrawRect(
 }
 
 function mdDvApplyBoneAnim(
-  x: number,
-  y: number,
-  z: number,
-  sx: number,
-  sy: number,
-  sz: number,
-  pivot: number[],
+  cube: Cube2D,
   btx: BoneTransform | undefined,
-  cosA: number,
-  sinA: number,
-  ox: number,
-  oy: number,
-  scale: number,
-): { ok: boolean; screenX: number; screenY: number; drawW: number; drawH: number; rzRad: number } {
+  v: View2D,
+): CubeProjection {
+  const { x, y, z, sx, sy, sz, pivot } = cube;
+  const { cosA, sinA, ox, oy, scale } = v;
   let cx = x + sx / 2;
   let cy = y + sy / 2;
   let cz = z + sz / 2;
@@ -134,21 +156,9 @@ function mdDvApplyBoneAnim(
   return { ok, screenX, screenY, drawW, drawH, rzRad };
 }
 
-function mdDvApplyCubeRot(
-  x: number,
-  y: number,
-  z: number,
-  sx: number,
-  sy: number,
-  sz: number,
-  pivot: number[],
-  cubeRot: number[],
-  cosA: number,
-  sinA: number,
-  ox: number,
-  oy: number,
-  scale: number,
-): { ok: boolean; screenX: number; screenY: number; drawW: number; drawH: number; rzRad: number } {
+function mdDvApplyCubeRot(cube: Cube2D, cubeRot: number[], v: View2D): CubeProjection {
+  const { x, y, z, sx, sy, sz, pivot } = cube;
+  const { cosA, sinA, ox, oy, scale } = v;
   const rxRad = (cubeRot[0] * Math.PI) / 180;
   const rzRad = (cubeRot[2] * Math.PI) / 180;
   const cosRx = Math.cos(rxRad);
@@ -291,6 +301,7 @@ function drawView(
   boneTransforms: Map<string, BoneTransform> | null,
 ): void {
   const isFront = true;
+  const view: View2D = { cosA, sinA, ox, oy, scale };
 
   for (const bone of model.bones || []) {
     const isHighlight = bone.name === highlightBone;
@@ -303,7 +314,7 @@ function drawView(
       const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
 
       if (hasAnim) {
-        const r = mdDvApplyBoneAnim(x, y, z, sx, sy, sz, pivot, btx, cosA, sinA, ox, oy, scale);
+        const r = mdDvApplyBoneAnim({ x, y, z, sx, sy, sz, pivot }, btx, view);
         if (!r.ok) continue;
         mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
           mode: "centered",
@@ -315,22 +326,7 @@ function drawView(
         const cubeRot = c.rotation || [0, 0, 0];
         const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
         if (hasRotation) {
-          const pivot2 = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-          const r = mdDvApplyCubeRot(
-            x,
-            y,
-            z,
-            sx,
-            sy,
-            sz,
-            pivot2,
-            cubeRot,
-            cosA,
-            sinA,
-            ox,
-            oy,
-            scale,
-          );
+          const r = mdDvApplyCubeRot({ x, y, z, sx, sy, sz, pivot }, cubeRot, view);
           if (!r.ok) continue;
           mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
             mode: "centered",

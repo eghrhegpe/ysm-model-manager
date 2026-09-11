@@ -19,7 +19,7 @@ import {
   type SemanticBoneId,
   type SemanticBoneMap,
 } from "@/preview-3d/bone/semantic-bones.ts";
-import { isPerceptionPaused } from "./core.ts";
+import { isPerceptionPaused, type PerceptionPauseRef } from "./core.ts";
 
 /** 呼吸驱动的语义骨骼列表（躯干段）：顺序即优先级，先 chest 再 fallback spine/shoulders */
 const BREATH_BONES: SemanticBoneId[] = [
@@ -56,8 +56,9 @@ interface BreathState {
 }
 
 /** 构建呼吸 controller：每次 build 调用一次，持有闭包 state */
-export function createBreathController() {
+export function createBreathController(opts?: { pauseRef?: PerceptionPauseRef }) {
   let state: BreathState | null = null;
+  const _pauseRef = opts?.pauseRef ?? null;
 
   /** 初始化 resting 快照（仅对有效语义骨骼） */
   function warmup(map: SemanticBoneMap): void {
@@ -80,7 +81,7 @@ export function createBreathController() {
    * @param map   当前预览会话的语义骨骼映射（previewScene.semanticBones）
    */
   function apply(dt: number, map: SemanticBoneMap): void {
-    if (isPerceptionPaused()) return; // 动画激活时感知静默（#9 全局暂停标志）
+    if (_pauseRef ? _pauseRef.paused : isPerceptionPaused()) return; // 动画激活时感知静默（#9 全局暂停标志）
     warmup(map);
     if (!state) return;
     // 推进 cycle 时间；% 1（非单步减）防大 dt（后台标签页恢复）一次跳过整周期后回绕失效

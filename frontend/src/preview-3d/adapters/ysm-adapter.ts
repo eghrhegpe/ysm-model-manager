@@ -31,7 +31,7 @@ import {
 } from "@/preview-3d/model/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
-import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
+import { createPerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import {
   type AnimationClip,
@@ -372,6 +372,7 @@ async function mdYsBuildBonePanelAndAnim(
   ctx.loadingEl.remove();
 
   const isGenericMode = opts.mode === "generic";
+  const perceptionPauseRef = createPerceptionPauseRef();
   let animPlayer: YsmAnimPlayer | null = null;
   let animBridge: MmdPlayBridge | null = null;
   let semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null = null;
@@ -418,7 +419,15 @@ async function mdYsBuildBonePanelAndAnim(
       /* 动画扫描失败 → 静默降级，不影响模型渲染 */
     }
   }
-  return { bonePanelRef, boneTree, animPlayer, animBridge, semanticBones, breath };
+  return {
+    bonePanelRef,
+    boneTree,
+    animPlayer,
+    animBridge,
+    semanticBones,
+    breath,
+    perceptionPauseRef,
+  };
 }
 
 /** 阶段④：声明式根菜单 + F 键调试模式 + perf trace 记录 */
@@ -545,7 +554,7 @@ function mdYsMakeSceneHandle(
   const { ctx } = sc;
   const { obj } = core;
   const { initCamPos, initCamTarget, rayCleanup, boneMaps } = cam;
-  const { bonePanelRef, animPlayer, semanticBones, breath } = anim;
+  const { bonePanelRef, animPlayer, semanticBones, breath, perceptionPauseRef } = anim;
   const { menuItems, debugState, onFKeyDown, perceptionState } = menu;
 
   return {
@@ -601,7 +610,7 @@ function mdYsMakeSceneHandle(
       animPlayer?.apply(dt);
       // #9 全局暂停标志：动画激活时感知 controller 自查静默（breath 已挂标志），
       // 取代原先散布的 `!animPlayer?.isAnimActive()` 守卫。
-      setPerceptionPaused(!!animPlayer?.isAnimActive());
+      perceptionPauseRef.paused = !!animPlayer?.isAnimActive();
       if (semanticBones && perceptionState.breath) {
         breath?.apply(dt, semanticBones);
       }

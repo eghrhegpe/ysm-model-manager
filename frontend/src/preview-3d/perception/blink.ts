@@ -20,7 +20,7 @@
 //     vrm.expressionManager.setValue("blink", weight);
 //   });
 
-import { isPerceptionPaused } from "./core.ts";
+import { isPerceptionPaused, type PerceptionPauseRef } from "./core.ts";
 
 /** 眨眼 callback：被 controller 在眨眼周期内周期性调用，传入当前权重（0→1→0） */
 export type BlinkCallback = (weight: number) => void;
@@ -46,6 +46,8 @@ export interface BlinkOptions {
   maxInterval?: number;
   /** 单次眨眼持续时间（秒） */
   blinkDuration?: number;
+  /** 实例级暂停引用（注入后取代全局标志，多模型同框互不干扰） */
+  pauseRef?: PerceptionPauseRef;
 }
 
 /**
@@ -56,6 +58,7 @@ export function createBlinkController(opts: BlinkOptions = {}) {
   const minInterval = opts.minInterval ?? DEFAULT_MIN_INTERVAL_S;
   const maxInterval = opts.maxInterval ?? DEFAULT_MAX_INTERVAL_S;
   const blinkDuration = opts.blinkDuration ?? DEFAULT_BLINK_DURATION_S;
+  const _pauseRef = opts.pauseRef ?? null;
 
   let state: BlinkState | null = null;
   let disposed = false;
@@ -76,7 +79,7 @@ export function createBlinkController(opts: BlinkOptions = {}) {
    * @param onBlink 写入 morph weight 的 callback（格式特化）
    */
   function apply(dt: number, onBlink: BlinkCallback): void {
-    if (disposed || !onBlink || isPerceptionPaused()) return; // #9 全局暂停标志：动画激活时感知静默
+    if (disposed || !onBlink || (_pauseRef ? _pauseRef.paused : isPerceptionPaused())) return; // #9 全局暂停标志：动画激活时感知静默
     if (!state) {
       scheduleNext();
       return;

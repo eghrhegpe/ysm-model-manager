@@ -54,6 +54,7 @@ const h = vi.hoisted(() => ({
   recordLoadTrace: vi.fn(),
   createBreath: vi.fn(),
   setPerceptionPaused: vi.fn(),
+  perceptionPauseRef: { paused: false },
   screenshot: vi.fn(),
   createYsmAnimPlayer: vi.fn(),
   logWarn: vi.fn(),
@@ -76,7 +77,13 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
 }));
 vi.mock("@/preview-3d/infra/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
 vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
-vi.mock("@/preview-3d/perception/core.ts", () => ({ setPerceptionPaused: h.setPerceptionPaused }));
+vi.mock("@/preview-3d/perception/core.ts", () => ({
+  setPerceptionPaused: h.setPerceptionPaused,
+  createPerceptionPauseRef: () => h.perceptionPauseRef,
+}));
+beforeEach(() => {
+  h.perceptionPauseRef.paused = false;
+});
 vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({ screenshotFromRenderer: h.screenshot }));
 vi.mock("@/preview-3d/model/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
 vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: h.logWarn }));
@@ -753,12 +760,12 @@ describe("场景句柄能力面", () => {
 
     st.active = true;
     (handle as UpdateableScene).update(0.016);
-    expect(h.setPerceptionPaused).toHaveBeenLastCalledWith(true);
+    expect(h.perceptionPauseRef.paused).toBe(true);
     expect(breathApply).toHaveBeenCalledTimes(1);
 
     st.active = false;
     (handle as UpdateableScene).update(0.016);
-    expect(h.setPerceptionPaused).toHaveBeenLastCalledWith(false);
+    expect(h.perceptionPauseRef.paused).toBe(false);
     expect(breathApply).toHaveBeenCalledTimes(2); // 呼吸仍驱动（感知层开关 breath=true）
 
     handle.dispose();

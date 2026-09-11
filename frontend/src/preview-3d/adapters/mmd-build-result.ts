@@ -4,7 +4,6 @@ import { applyVPD } from "@moeru/three-mmd";
 import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
-import { setPerceptionPaused } from "@/preview-3d/perception/core.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -42,7 +41,7 @@ export function mdMmStage6Result(
     update: (dt: number): void => {
       // #9 全局暂停标志：动画激活（action 存在且未暂停）时感知 controller 全部静默，
       // 取代原先散布在各 if 上的 `!c.action || c.action.paused` 守卫。
-      setPerceptionPaused(!!c.action && !c.action.paused);
+      s5.perceptionPauseRef.paused = !!c.action && !c.action.paused;
       if (c.cameraMixer && c.cameraAction && !c.cameraAction.paused) {
         c.cameraMixer.update(dt);
         const cam = c.ctx.camera;

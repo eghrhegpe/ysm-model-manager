@@ -10,6 +10,19 @@
 //   gaze——注视属「摄像机追踪」而非动画优先级，动画播放中仍应跟随相机
 //   （见 mmd-build-result.ts update 内注释；VRM 走原生 lookAt 同理不受暂停管辖）。
 // ⚠️ 此变量仅限主线程访问。若未来感知层扩展出 Worker 驱动路径，需重新设计同步机制。
+// 实例级暂停引用（取代全局单例 #9 的根因）：属主 adapter 每 build 创建一份，
+// 注入其下所有感知 controller；controller apply 自查 ref.paused —— 多模型同框时
+// 各实例互不影响。未注入 ref 的旧调用方回退读下方全局标志（向后兼容）。
+export interface PerceptionPauseRef {
+  /** true=动画激活，感知 controller 静默 */
+  paused: boolean;
+}
+export function createPerceptionPauseRef(): PerceptionPauseRef {
+  return { paused: false };
+}
+
+// 遗留全局标志：未注入 ref 的 controller 回退读此；mount-session 仍保留 setPerceptionPaused(false)
+// 作防御性清除（无害）。新代码一律走 createPerceptionPauseRef 注入。
 let _globalPause = false;
 
 /** 置全局暂停标志（true=动画激活，感知 controller 全部静默） */

@@ -22,7 +22,7 @@ import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-sta
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { createBlinkController } from "@/preview-3d/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
-import { setPerceptionPaused } from "@/preview-3d/perception/core.ts"; // #9 全局暂停标志
+import { createPerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { createGazeController } from "@/preview-3d/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
@@ -449,7 +449,8 @@ function mdVrBuildPerception(
   };
   // 能力声明：caps 从真实构造派生（非硬编码清单）——原生 lookAt 接管注视、
   // 眨眼表情缺失、语义骨骼为空时不显示对应开关（否则菜单谎报：开关在、驱动不在）
-  const breath = createBreathController();
+  const perceptionPauseRef = createPerceptionPauseRef();
+  const breath = createBreathController({ pauseRef: perceptionPauseRef });
   const useNativeLookAt = !!vrm.lookAt;
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt
     ? null
@@ -462,7 +463,7 @@ function mdVrBuildPerception(
         (n) => exprMgr.getExpression(n) !== null,
       )
     : ([] as Array<"blink" | "blinkLeft" | "blinkRight">);
-  const blink = createBlinkController();
+  const blink = createBlinkController({ pauseRef: perceptionPauseRef });
   const perceptionCaps = pickPerceptionCaps([
     ...(semanticBones && Object.keys(semanticBones).length > 0 ? (["breath"] as const) : []),
     ...(!useNativeLookAt ? (["gaze"] as const) : []),
@@ -479,6 +480,7 @@ function mdVrBuildPerception(
     useNativeLookAt,
     blinkExpressionNames,
     exprMgr,
+    perceptionPauseRef,
   };
 }
 function mdVrStage4MenuPanels(
@@ -576,6 +578,7 @@ function mdVrStage5BuildResult(
     useNativeLookAt,
     blinkExpressionNames,
     exprMgr,
+    perceptionPauseRef,
   } = perception;
   recordLoadTrace({
     ts: Date.now(),
@@ -601,7 +604,7 @@ function mdVrStage5BuildResult(
       // 全局暂停标志先于 visible 早退写：不可见帧也要刷新标志，否则早退期间
       // 标志停在上一帧的值，恢复可见后感知层被陈旧状态冻结
       const animActive = !!motion.motionAction && !motion.motionAction.paused;
-      setPerceptionPaused(animActive);
+      perceptionPauseRef.paused = animActive;
       if (!vrm.scene.visible) return;
       if (motionMixer) motionMixer.update(dt);
       vrm.update(dt);

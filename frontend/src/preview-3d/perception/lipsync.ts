@@ -25,7 +25,7 @@ import {
   type SemanticMorphMap,
 } from "@/preview-3d/infra/semantic-morphs.ts";
 import { clamp01 } from "@/utils/base/pure/clamp.ts";
-import { isPerceptionPaused } from "./core.ts";
+import { isPerceptionPaused, type PerceptionPauseRef } from "./core.ts";
 
 /** 单 morph 回调：消费方写入具体格式的 morph weight */
 export type LipSyncCallback = (weight: number) => void;
@@ -47,6 +47,8 @@ export interface LipSyncOptions {
   smoothing?: number;
   /** 是否启用多 morph 模式（默认 false） */
   multiMorph?: boolean;
+  /** 实例级暂停引用（注入后取代全局标志，多模型同框互不干扰） */
+  pauseRef?: PerceptionPauseRef;
 }
 
 /**
@@ -58,6 +60,7 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
   const intensity = opts.intensity ?? 0.8;
   const smoothing = opts.smoothing ?? 0.5;
   const multiMorph = opts.multiMorph ?? false;
+  const _pauseRef = opts.pauseRef ?? null;
 
   let disposed = false;
 
@@ -73,7 +76,13 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
    * @param onLipSync 写入 morph weight 的 callback
    */
   function apply(_dt: number, amplitude: number, onLipSync: LipSyncCallback): void {
-    if (disposed || !onLipSync || multiMorph || isPerceptionPaused()) return; // #9 全局暂停标志
+    if (
+      disposed ||
+      !onLipSync ||
+      multiMorph ||
+      (_pauseRef ? _pauseRef.paused : isPerceptionPaused())
+    )
+      return; // #9 全局暂停标志
 
     const raw = clamp01(amplitude);
     // 灵敏度阈值：低于 threshold 视为静音
@@ -96,7 +105,13 @@ export function createLipSyncController(opts: LipSyncOptions = {}) {
     amplitudes: Partial<Record<SemanticMorphId, number>>,
     onMultiLipSync: MultiLipSyncCallback,
   ): void {
-    if (disposed || !onMultiLipSync || !multiMorph || isPerceptionPaused()) return; // #9 全局暂停标志
+    if (
+      disposed ||
+      !onMultiLipSync ||
+      !multiMorph ||
+      (_pauseRef ? _pauseRef.paused : isPerceptionPaused())
+    )
+      return; // #9 全局暂停标志
 
     for (const id of ["lipOpen", "lipClose", "lipPucker", "lipSmile"] as SemanticMorphId[]) {
       const amp = amplitudes[id];

@@ -944,6 +944,7 @@
 | → collectScripts 排除 _ 前缀目录，_lib 自身成法外之地；闸门须自省 | `扫描面漏掉定义者` | - |
 | → 每条规则必须豁免自身模块文件（to-posix.ts 的实现本体就是一条 replace） | `能力定义文件自指误报` | - |
 | → 同一能力常有等价写法（split 反斜杠 join 斜杠 逃过 replace 形态），补 smell 而非只认一种 | `smell 形态不全漏检` | - |
+| → 只数 scripts/ 侧 import 会把在役模块误报「建议归档」；_lib 互引、.githooks CLI 调用、tests 消费都是真实引用 | `孤儿判定口径过窄` | - |
 | →  体内无 readdirSync，须靠自研特征而非函数名判定 | `薄包装误报` | - |
 | → collectSymbols 这类通用名可能是聚合上层逻辑，列入 smell 会持续误报 | `名字过泛误报` | - |
 | 新增脚本后忘记在 README.md 登记 | - | check-readme-index 阻断推送（exit 1） |

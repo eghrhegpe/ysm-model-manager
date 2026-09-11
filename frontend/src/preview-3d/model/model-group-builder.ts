@@ -20,7 +20,7 @@ interface BoneFirst {
 }
 
 /** buildModelGroup 骨骼构建上下文（类型提级） */
-interface MdMgBonesCtx {
+interface BonesCtx {
   bones: BoneData[];
   boneIdx: Map<string, number>;
   boneCubes: Map<string, Cube2D[]>;
@@ -35,7 +35,7 @@ interface MdMgBonesCtx {
  * 已有骨骼无父 → 新有父则覆盖；均有父且已有无旋 → 新有旋则覆盖。
  * 收敛 first 预收集与 bones 合并两处逐字同构的公式。
  */
-const mdMgShouldOverwrite = (
+const ShouldOverwrite = (
   existingHasParent: boolean,
   existingHasRot: boolean,
   newHasParent: boolean,
@@ -48,7 +48,7 @@ const mdMgShouldOverwrite = (
  * 修复断裂的父子链：沿父链向上找第一个有 pivot 且在 bones 列表中的祖先，
  * 若链断则挂到 root。
  */
-function mdMgFixOrphanBoneChain(
+function FixOrphanBoneChain(
   bones: BoneData[],
   modelBones: BedrockModel["bones"],
   pivots: Map<string, Vec3>,
@@ -98,13 +98,13 @@ function mdMgFixOrphanBoneChain(
 /**
  * 阶段①：初始化空壳 + tex 尺寸 + first/pivots 预收集 map
  */
-function mdMgInitShellAndMaps(model: BedrockModel): {
-  ctx: MdMgBonesCtx;
+function InitShellAndMaps(model: BedrockModel): {
+  ctx: BonesCtx;
   emptyReturn: ModelGroup | null;
 } {
   if (!model.bones || model.bones.length === 0) {
     return {
-      ctx: null as unknown as MdMgBonesCtx,
+      ctx: null as unknown as BonesCtx,
       emptyReturn: {
         id: "",
         name: "",
@@ -138,13 +138,13 @@ function mdMgInitShellAndMaps(model: BedrockModel): {
     }
     const newHasParent = b.parent !== "";
     const newHasRot = hasBoneRotation(b.rotation);
-    if (mdMgShouldOverwrite(fi.hasParent, fi.hasRot, newHasParent, newHasRot)) {
+    if (ShouldOverwrite(fi.hasParent, fi.hasRot, newHasParent, newHasRot)) {
       pivots.set(b.name, np);
       first.set(b.name, { pivot: np, hasParent: newHasParent, hasRot: newHasRot });
     }
   }
 
-  const ctx: MdMgBonesCtx = {
+  const ctx: BonesCtx = {
     bones: [],
     boneIdx: new Map<string, number>(),
     boneCubes: new Map<string, Cube2D[]>(),
@@ -159,7 +159,7 @@ function mdMgInitShellAndMaps(model: BedrockModel): {
 /**
  * 阶段②：遍历 model.bones 构建 bones 数组 + boneIdx + boneCubes（按 parent 挂树）
  */
-function mdMgBuildBonesTree(model: BedrockModel, ctx: MdMgBonesCtx): void {
+function BuildBonesTree(model: BedrockModel, ctx: BonesCtx): void {
   for (const b of model.bones) {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const bp = ctx.pivots.get(b.name)!;
@@ -179,7 +179,7 @@ function mdMgBuildBonesTree(model: BedrockModel, ctx: MdMgBonesCtx): void {
       const existingHasRot = !isIdentityQuat(ctx.bones[idx].localRotation);
       const newHasRot = !isIdentityQuat(localRot);
 
-      if (mdMgShouldOverwrite(existingHasParent, existingHasRot, newHasParent, newHasRot)) {
+      if (ShouldOverwrite(existingHasParent, existingHasRot, newHasParent, newHasRot)) {
         ctx.bones[idx].parentId = parentID;
         ctx.bones[idx].localPosition = localPos;
         ctx.bones[idx].localRotation = localRot;
@@ -205,7 +205,7 @@ function mdMgBuildBonesTree(model: BedrockModel, ctx: MdMgBonesCtx): void {
 /**
  * 阶段③-1：逐 bone 的 cubes 构建 mesh 数据
  */
-function mdMgBuildMeshesFromCubes(model: BedrockModel, ctx: MdMgBonesCtx): MeshData[] {
+function BuildMeshesFromCubes(model: BedrockModel, ctx: BonesCtx): MeshData[] {
   const meshes: MeshData[] = [];
   const boneDone = new Set<string>();
   for (const b of model.bones) {
@@ -233,7 +233,7 @@ function mdMgBuildMeshesFromCubes(model: BedrockModel, ctx: MdMgBonesCtx): MeshD
 /**
  * 阶段③-2：补全无 cube 的中间骨骼到 bones 列表
  */
-function mdMgEnsureAllBonesPresent(model: BedrockModel, ctx: MdMgBonesCtx): void {
+function EnsureAllBonesPresent(model: BedrockModel, ctx: BonesCtx): void {
   const allBoneNames = new Set<string>();
   for (const b of model.bones) {
     allBoneNames.add(b.name);
@@ -282,12 +282,12 @@ function mdMgEnsureAllBonesPresent(model: BedrockModel, ctx: MdMgBonesCtx): void
 /**
  * 阶段④：后处理（断链修复 + Arm 挂接）+ 纹理 ID 计算
  */
-function mdMgPostProcessAndTextures(
+function PostProcessAndTextures(
   model: BedrockModel,
-  ctx: MdMgBonesCtx,
+  ctx: BonesCtx,
   texIdxBase: number,
 ): string | null {
-  mdMgFixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
+  FixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
 
   for (let i = 0; i < ctx.bones.length; i++) {
     if (ctx.bones[i].name === "RightArm" && ctx.bones[i].parentId === null) {
@@ -335,17 +335,17 @@ export function buildModelGroup(
   compID: string,
   texIdxBase: number,
 ): ModelGroup {
-  const { ctx, emptyReturn } = mdMgInitShellAndMaps(model);
+  const { ctx, emptyReturn } = InitShellAndMaps(model);
   if (emptyReturn !== null) {
     emptyReturn.id = compID;
     emptyReturn.name = compID;
     return emptyReturn;
   }
 
-  mdMgBuildBonesTree(model, ctx);
-  const meshes = mdMgBuildMeshesFromCubes(model, ctx);
-  mdMgEnsureAllBonesPresent(model, ctx);
-  const texID = mdMgPostProcessAndTextures(model, ctx, texIdxBase);
+  BuildBonesTree(model, ctx);
+  const meshes = BuildMeshesFromCubes(model, ctx);
+  EnsureAllBonesPresent(model, ctx);
+  const texID = PostProcessAndTextures(model, ctx, texIdxBase);
 
   const compName = model.sourceName || compID;
   return {

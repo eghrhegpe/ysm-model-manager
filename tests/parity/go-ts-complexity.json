@@ -1,0 +1,36 @@
+{
+  "_comment": "认知复杂度规约器跨语言契约向量（TS cognitiveFromSeq ↔ Go CognitiveFromSeq 互锁）。每条的 seq 送入双端规约器，断言 (cognitive, nesting) 一致。kind 仅供可读性，规约器只按 k(nest/nestClose/flat) 计分。TS 端 tests/test_complexity_parity.ts；Go 端 go/ccheck/parity_test.go。",
+  "reduce": [
+    { "name": "干净的扁平 if", "seq": [{ "k": "nest", "kind": "if" }, { "k": "nestClose" }], "cognitive": 1, "nesting": 1 },
+    { "name": "双 if 嵌套", "seq": [{ "k": "nest", "kind": "if" }, { "k": "nest", "kind": "if" }, { "k": "nestClose" }, { "k": "nestClose" }], "cognitive": 3, "nesting": 2 },
+    { "name": "三层 loop/if/loop 迷宫", "seq": [{ "k": "nest", "kind": "loop" }, { "k": "nest", "kind": "if" }, { "k": "nest", "kind": "loop" }, { "k": "nestClose" }, { "k": "nestClose" }, { "k": "nestClose" }], "cognitive": 6, "nesting": 3 },
+    {
+      "name": "switch 内 case 双发（flat 不增层）",
+      "seq": [
+        { "k": "nest", "kind": "if" },
+        { "k": "nest", "kind": "switch" },
+        { "k": "flat", "kind": "case" },
+        { "k": "flat", "kind": "case" },
+        { "k": "nestClose" },
+        { "k": "nestClose" }
+      ],
+      "cognitive": 9,
+      "nesting": 2
+    },
+    {
+      "name": "if 条件内双 &&（flat logic 在 d1 计分）",
+      "seq": [{ "k": "nest", "kind": "if" }, { "k": "flat", "kind": "logic" }, { "k": "flat", "kind": "logic" }, { "k": "nestClose" }],
+      "cognitive": 5,
+      "nesting": 1
+    },
+    { "name": "switch 单 case", "seq": [{ "k": "nest", "kind": "switch" }, { "k": "flat", "kind": "case" }, { "k": "nestClose" }], "cognitive": 3, "nesting": 1 },
+    { "name": "Try 在 Go 无对应，但规约器通用（catch 亦计）", "seq": [{ "k": "nest", "kind": "catch" }, { "k": "nestClose" }], "cognitive": 1, "nesting": 1 },
+    { "name": "空序列", "seq": [], "cognitive": 0, "nesting": 0 },
+    {
+      "name": "if-else 与深层: else 在 body 层计 flat",
+      "seq": [{ "k": "nest", "kind": "if" }, { "k": "flat", "kind": "else" }, { "k": "nestClose" }],
+      "cognitive": 3,
+      "nesting": 1
+    }
+  ]
+}

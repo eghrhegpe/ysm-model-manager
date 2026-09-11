@@ -94,6 +94,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_go_diff_coverage.ts": ["tests"],
   "test_check_complexity.ts": ["tests"],
   "test_check_type_safety.ts": ["tests"],
+  "test_complexity_parity.ts": ["tests", "go"],
   "test_codemod_guards.ts": ["tests"],
   "test_collect_scripts_lib.ts": ["tests"],
   "test_commit_check_gate.ts": ["tests"],
@@ -205,6 +206,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_go_diff_coverage_skip.ts": ["scripts/check-go-diff-coverage.ts"],
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
+  "test_complexity_parity.ts": ["scripts/check-complexity.ts"],
   "test_collect_scripts_lib.ts": ["scripts/_lib/collect-scripts.ts"],
   "test_commit_check_gate.ts": ["scripts/_lib/commit-check.ts", "scripts/commit-with-check.ts"],
   "test_commit_temp_index.ts": [

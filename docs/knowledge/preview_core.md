@@ -328,7 +328,7 @@ perf:
   - gpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|mount3D
-  - frontend/src/preview-3d/adapters/shared-infra.ts|_singletonScene.background
+  - frontend/src/preview-3d/adapters/shared-infra.ts|sceneInfraHost.scene.background
   - frontend/src/preview-3d/caps/sky-capability.ts|SkyCapability
   - frontend/src/preview-3d/adapters/mount-preview-core.ts|PreviewAdapter
 quick_groups:

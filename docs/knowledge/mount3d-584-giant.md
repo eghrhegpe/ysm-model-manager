@@ -113,7 +113,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 ## 不变量
 
 - `mount3D` 签名不动（回归红线）
-- 模块级单例 `_singletonOverlay/_singletonBody/_singletonViewContainer/_singletonScene/_singletonCamera/_singletonRenderer/_singletonControls` 七个可变全局，`cleanupPreview` 手动清零
+- 外壳/场景单例已随 ADR-227 收敛为 host 实例字段（`previewShell`/`sceneInfraHost`/`rendererHost`，原 7 个模块级 `let`）；`cleanupPreview` 经 `previewShell.resetRefs()` + `resetSceneInfra()` 清零
 - `_gen` 代际守卫驱动多会话（`_gen++` 弃旧，`myGen` 校验防并发重叠）
 - `MpSessionState.finished` 标记保证 `finishSession` 幂等（closeOverlay 早期路径与 fullCleanup post-build 路径共用）
 - `_handles` 数组按 `gen` 字段索引查找，避免多会话误删
@@ -122,7 +122,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 
 1. **mount3D 本体 527 行**（L351-877）：闭包接线编排器，超 100 行红线 5 倍——但最重生命周期已外置（mount-session.ts），非 584 行未动状态
 2. **内嵌闭包仅剩 `escH`**：`escH` 可变引用（L611/L831，与 `switchTo` 旧 handler 替换语义耦合）仍内嵌；`animate`/perFrame 调度由 `render-loop.ts` 持有
-3. **`animate` 调度已外置**：rAF loop + 自适应像素比 + perFrame 迭代 + 视锥裁剪 + 后处理由 `render-loop.ts` 承载（不再是 mount3D 内嵌闭包）
+3. **`animate` 调度已外置**：rAF loop + 自适应像素比 + perFrame 迭代 + 视锥裁剪 + 后处理由 `render-host.ts` 的 `RendererHost` 承载（`render-loop.ts` 现为薄门面，ADR-227）
 4. ~~**`fullCleanup` ~60 行内嵌**~~：已外置为 `mount-session.ts` 的 `runFullCleanup(ctx)`（MountCtx 上下文模式，10 步清理链语义保留）
 
 ## 建议动作

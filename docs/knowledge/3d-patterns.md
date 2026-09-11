@@ -166,14 +166,14 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 1. **局部 Vector3 复用**：渲染循环函数内声明 `const _camDir/_forward/_right/_move = new THREE.Vector3()`，每帧通过 `set()` 更新，避免 `new` 产生 GC 压力。
 2. **参数对象传递**：`applyWasdCameraMotion(keys, cam, ctr, ..., { camDir, forward, right, move })` 接收复用向量对象。
 3. **模块级常量**：不随帧变化的向量（如 `UpVec`）提为模块级常量，避免重复创建。
-4. **perFrame 快照迭代**（`_globalPerFrames`）：遍历渲染回调注册表时用 `[..._globalPerFrames]` 快照副本，回调内 `registerPerFrame` / `removePerFrame` 增删注册表不影响本次帧迭代（增删下一帧生效），防回调内删除导致 for-of 跳元素或漏执行。
+4. **perFrame 快照迭代**（`RendererHost` 实例私有字段 `_perFrames`）：遍历渲染回调注册表时用快照副本，回调内 `registerPerFrame` / `removePerFrame` 增删注册表不影响本次帧迭代（增删下一帧生效），防回调内删除导致 for-of 跳元素或漏执行。
 
 ### 示例
-- `adapters/render-loop.ts`：`const _camDir = new THREE.Vector3(); const _forward = new THREE.Vector3(); ...`
-- 渲染循环内：`camera.getWorldDirection(_camDir)` 替代 `new Vector3()`
-- `applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, ..., { camDir: _camDir, forward: _forward, ... })`
+- `adapters/render-host.ts`（`RendererHost` 实例字段）：`private readonly _camDir = new THREE.Vector3(); private readonly _forward = ...`
+- 渲染循环内：`camera.getWorldDirection(this._camDir)` 替代 `new Vector3()`
+- `applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, ..., { camDir: this._camDir, forward: this._forward, ... })`
 - 模块级缓存：`const UpVec = new THREE.Vector3(0, 1, 0)`
-- 快照迭代：`for (const fn of [..._globalPerFrames])`（`render-loop.ts` `startGlobalRenderLoop`）
+- 快照迭代：`for (const fn of this.perFrameIterable())`（`render-host.ts` `RendererHost`；`render-loop.ts` 现为薄门面）
 
 ### 适用场景
 - 60fps 渲染循环
@@ -538,7 +538,7 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ## 相关文件
 
-- `frontend/src/preview-3d/adapters/render-loop.ts` — 渲染循环优化（Vector3 复用局部变量）
+- `frontend/src/preview-3d/adapters/render-host.ts` — 渲染循环优化（`RendererHost`：Vector3 复用实例字段）；`render-loop.ts` 为薄门面（ADR-227）
 - `frontend/src/preview-3d/infra/safe-dispose.ts` — 安全释放原语
 - `frontend/src/preview-3d/infra/debug-render.ts` — 纹理缓存
 - `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（FixOrphanBoneChain）

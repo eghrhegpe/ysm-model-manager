@@ -6,9 +6,26 @@ adr:
   - ADR-138
 category: rendering
 source_files:
-  - frontend/src/preview-3d/perception/
+  - frontend/src/preview-3d/adapters/shared/perception/
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - AutoDanceOptions
+    - BeatDetectorLike
+    - BeatDetectorOptions
+    - BlinkCallback
+    - BlinkOptions
+    - buildLipMorphIndices
+    - createAutoDanceController
+    - createBeatDetector
+    - createBlinkController
+    - createBreathController
+    - createGazeController
+    - createLipSyncController
+    - createPerceptionPauseRef
+    - LipSyncCallback
+    - LipSyncOptions
+    - MultiLipSyncCallback
+    - PerceptionPauseRef
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -29,9 +46,9 @@ use_when:
 perf:
   - cpu-bound
 invariant_anchors:
-  - frontend/src/preview-3d/perception/autodance.ts|createAutoDanceController
-  - frontend/src/preview-3d/perception/beat-detector.ts|createBeatDetector
-  - frontend/src/preview-3d/perception/blink.ts|createBlinkController
+  - frontend/src/preview-3d/adapters/shared/perception/autodance.ts|createAutoDanceController
+  - frontend/src/preview-3d/adapters/shared/perception/beat-detector.ts|createBeatDetector
+  - frontend/src/preview-3d/adapters/shared/perception/blink.ts|createBlinkController
 status: active
 ---
 

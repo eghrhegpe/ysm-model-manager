@@ -12,8 +12,8 @@ source_files:
   - frontend/src/views/app-content/state.ts
   - frontend/src/views/app-sidebar/index.ts
   - frontend/src/views/app-nav/index.ts
-  - frontend/src/preview-3d/perception/gaze.ts
-  - frontend/src/preview-3d/perception/autodance.ts
+  - frontend/src/preview-3d/adapters/shared/perception/gaze.ts
+  - frontend/src/preview-3d/adapters/shared/perception/autodance.ts
   - frontend/src/preview-3d/infra/safe-dispose.ts
   - frontend/src/preview-3d/adapters/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
@@ -89,8 +89,8 @@ tests:
   - frontend/src/preview-3d/adapters/scene-registry.test.ts
   - frontend/src/preview-3d/adapters/worker-bridge.test.ts
   - frontend/src/preview-3d/menu/roles.test.ts
-  - frontend/src/preview-3d/perception/autodance.test.ts
-  - frontend/src/preview-3d/perception/gaze.test.ts
+  - frontend/src/preview-3d/adapters/shared/perception/autodance.test.ts
+  - frontend/src/preview-3d/adapters/shared/perception/gaze.test.ts
   - frontend/src/preview-3d/infra/render-budget.test.ts
   - frontend/src/preview-3d/infra/safe-dispose.test.ts
   - frontend/src/test-utils/index.test.ts

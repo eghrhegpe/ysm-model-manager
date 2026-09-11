@@ -22,12 +22,12 @@ quick_groups:
   - 3D 预览与模型追加
 quick_intents:
   - mount3D 并发竞态、模块级单例守卫
-  - _singletonOverlay / _singletonScene / _singletonRenderer
+  - previewShell / sceneInfraHost / rendererHost（ADR-227 收敛后）
 quick_risk_lines:
   - ✅ _gen 代际守卫已落地（L164 声明 / L271 自增 / L681·L706·L862 三处守卫），历史竞态已消除
 pitfalls:
   - ❌ 已闭环：_gen 代际守卫 + finishSession 幂等 = 多并发安全
-  - ⚠️ 残留：7 个单例全局仍手动清零，若未来引入 async 创建需重新评估
+  - ✅ 已收敛：7 个单例全局经 ADR-227 收为 host 实例字段（PreviewShellHost / SceneInfraHost / RendererHost），不再散落模块级 let
 use_when:
   - mount3D 并发竞态（已闭环）
   - 评审模块级单例守卫（历史）
@@ -35,7 +35,7 @@ perf:
   - concurrent
 status: archived
 affected: false
-last_verified: 2026-08-27
+last_verified: 2026-09-11
 ---
 
 # mount3D 并发竞态（已闭环 — _gen 代际守卫）
@@ -58,11 +58,17 @@ last_verified: 2026-08-27
 
 ## 单例外壳复用（非问题，设计特征）
 
-七个模块级单例（`_singletonOverlay` / `_singletonBody` / `_singletonViewContainer` / `_singletonScene` / `_singletonCamera` / `_singletonRenderer` / `_singletonControls`）首次创建、后续复用。**在 JS 单线程模型下，单例创建本身无竞态**——`_gen` 守卫处理的是异步挂载重叠场景。
+七处外壳/场景状态首次创建、后续复用。**在 JS 单线程模型下，单例创建本身无竞态**——`_gen` 守卫处理的是异步挂载重叠场景。
+
+> **ADR-227（2026-09-11）**：原 7 个模块级 `let` 单例已收敛为三类 host 实例字段——
+> `PreviewShellHost`（`previewShell`：overlay/body/viewContainer + mpc 样式，`preview-shell.ts`）、
+> `SceneInfraHost`（`sceneInfraHost`：scene/camera/renderer/controls/caps，`shared-infra.ts`）、
+> `RendererHost`（`rendererHost`：rAF loop/perFrame/活跃输入会话，`render-host.ts`）。
+> 「复用单例」语义不变（单 WebGL context 硬约束），但状态不再散落模块级全局，`_resetSingletons` 降为 host 的 reset 门面。
 
 ## 与其他子系统关系
 
-- `buildSharedInfra`（已外置 `shared-infra.ts`，旧行号 L987-1090）复用四个单例（scene/camera/renderer/controls）
+- `buildSharedInfra`（已外置 `shared-infra.ts`）复用四个单例（scene/camera/renderer/controls），现经 `sceneInfraHost` 实例字段持有（ADR-227）
 - `runFullCleanup`（已外置 `mount-session.ts`，旧行号 mount3D 内 L771-832）统一释放内容层 + 句柄 + 菜单 + rAF，原 cleanup-3d.ts 僵尸实现已删除
 - `switch-preview.ts`（`switchToSession`）复用外壳切换模型，不重新 mount
 

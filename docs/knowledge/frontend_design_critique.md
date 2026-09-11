@@ -170,7 +170,7 @@ invariant_anchors:
 1. **可访问性债务集中爆发**（UIUX 2.5/5）：modal overlay 缺 `role="dialog"` / `aria-modal`、adv-filter label 未 for 关联、batch-rename checkbox 无 aria-label。一刀切：modal.ts buildOverlay 加 ROLE_ATTR，业务弹窗统一继承。
 2. **模块级状态泄漏**（架构 3.5/5）：`app-sidebar` `_checkedSets` Map 无 reset、`init-pages.ts:314` `_lastModelPath` 模块级无 reset。一刀切：disconnectedCallback 兜底清理，或改实例级。
    - ✅ 2026-09-10 部分闭环（[ADR-221]）：`_lastModelPath` 已归位 `core/model-path-store.ts`，保留 `__resetLastModelPathForTest` 钩子（isolate:false 共享模块图下的既有约束，非新增债务）；归位同时断开 app-tree / app-nav / app-preview 三条越权边，消除 `app-content ↔ app-preview` 视图环。`app-sidebar._checkedSets` 仍待处置。
-3. **性能预算仍靠信仰**（3D 2.5/5）：`render-budget.ts` MAX_MODELS=8 是计数非预算、`scene-registry.ts` 拾取每帧线性遍历。一刀切：读 `renderer.info.render` 统计 draw calls，建 WeakMap 缓存拾取。
+3. **性能预算仍靠信仰**（3D 2.5/5）：`render-budget.ts` MAX_MODELS=8 是计数非预算、`scene-registry.ts` 拾取每帧线性遍历。一刀切：读 `renderer.info.render` 统计 draw calls，建 WeakMap 缓存拾取。（✅ 已闭环：拾取部分由刀⑦ WeakMap 索引根治；draw calls 部分由刀⑩ `gpu-load.ts` 实测信号预算根治——MAX_MODELS=8 保留为兜底硬顶）
 4. **WASM 解码无单模型超时**（3D 3.5/5）：`ysm-worker-loader.ts` 畸形文件可阻塞 60s 才降级。一刀切：`stats.worker.ts` 层加 `Promise.race` 软超时（5s），超时返回 `ERROR_STATS` 而非杀池。
 
 ## 仲裁修正（主模型对子代理报告的裁定）
@@ -209,6 +209,7 @@ invariant_anchors:
 - ✅ **刀⑧ web-stats 单 worker 终止 + 重试**（2026-09-05）：`backend/web-stats.ts` 瞬态 error（WASM 初始化失败 / trap 逃逸）从「杀整池」改为「只终止出错 worker + 换 worker 重试 1 次」——每 Worker 独立 WASM 实例，单 worker 故障不应传染。超时路径仍杀整池（WASM 死循环可能传染）。`statsOneChunk` 返回 `StatsChunkResult{ok, retryable}`，`terminateStatsWorker` 导出签名不变（browser-adapter 消费）。135 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **P2-7 撤回（子代理建议不可行）**：`wasm/ysm-worker-loader.ts:215` 的 `ccall("ysm_decode_from_memory")` 是同步 WASM 调用，阻塞 Worker 事件循环——`Promise.race` 软超时的 `setTimeout` 回调在 ccall 期间不会触发，Promise 无法被 race 掉。唯一能中断挂起 ccall 的方法是主线程 `Worker.terminate()`（即现有 `statsOneChunk` 60s 超时路径）。60s 是设计意图的防御线，非「无超时」。
 - ✅ **刀⑨ ADR-219 细粒度降级：单 worker 静默看门狗 + 逐模型 partial 流**（2026-09-10，共识榜 #4 根治）：P2-7 判定的「60s 杀整池」防御线被升级为**故障粒度对齐**——协议重开最小 worker 级信道（`partial` 逐模型结果流 + `result` 瘦身为流结束标记，ADR-218 D2 部分修订），主线程 `statsOneChunk` 双计时器（30s 静默窗随 partial 重置 + 60s chunk 墙钟跨重试共享）：挂死只杀该 worker，专属 replacement 上重试**剩余未回包**模型；静默杀预算 2 次 / 墙钟耗尽 → 剩余模型全 `hasError`（`EMPTY_ERROR`），chunk 正常收尾、**整批不降级**。故障边界拆分（D3）：系统级（WASM init 重试耗尽 / 构造失败 / 取消）保留整批降级 + toast；局部挂死走模型级细粒度。UI 进度顺带从 chunk 级升级为模型级。web-stats 25 + stats.worker 5 + 消费端 157 测试全绿 + vite build + typecheck + biome 全通过。
+- ✅ **刀⑩ GPU 负载实测预算（`gpu-load.ts`，2026 锐评整改，共识榜 #3 残余根治）**：新增 `preview-3d/infra/gpu-load.ts`——`sampleGpuLoad(renderer)` 薄封装读 `renderer.info`（`render.calls` 上帧 draw calls + `memory.textures` GPU 纹理数，读值无副作用），`evaluateGpuLoad(sample, limits?)` **纯函数**判定（`DEFAULT_GPU_LOAD_LIMITS` = {drawCalls: 1600, textures: 1024}，保守初值待真机标定，命中 toast 附实测数值供调参）。接线点 = `switch-preview.ts|beginSwitch` keep 追加路径（与 MAX_MODELS 计数顶同约定：inFlight 置位前判、命中即 return 附 toast 不卡死）。**方案选型**：弃「UNMASKED_RENDERER GPU 型号指纹表」（ANGLE 字符串解析脆弱 / Android WebView 无此扩展 / happy-dom 不可测），按本卡原处方走 `renderer.info` 实测信号。`MAX_MODELS=8` 保留为计数兜底硬顶（budget 命中先于它触发 = 病态堆叠早拦）。7 新测（gpu-load 纯判定）+ 2 新测（beginSwitch gate 拦/放）+ 全量 5515 测试绿。⚠️ 已知盲区：`mount3D cooperate=true` 直挂路径不经 `beginSwitch`（无 MAX_MODELS 检查，既有行为），budget 暂只守 switch keep 通道——若真机出现 cooperate 追加 OOM 再扩面。
 
 ## 相关
 

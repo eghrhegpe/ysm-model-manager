@@ -345,6 +345,40 @@ describe("switchToSession 守卫分支", () => {
   });
 });
 
+// ===== GPU 负载预算门禁（2026 锐评刀⑩：审计卡共识榜 #3「MAX_MODELS 是计数非预算」）=====
+describe("switchToSession GPU 负载预算", () => {
+  const fakeRenderer = (calls: number, textures: number): THREE.WebGLRenderer =>
+    ({
+      info: { render: { calls }, memory: { textures }, programs: [] },
+    }) as unknown as THREE.WebGLRenderer;
+
+  it("keep + 上帧 draw calls/纹理数超预算 → 拦截，toast 附实测值，不触发 build（inFlight 不卡死）", async () => {
+    const { ctx, mockAdapter } = makeMockCtx();
+    ctx.renderer = fakeRenderer(2000, 999);
+    const toasts: unknown[] = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    try {
+      await switchToSession(ctx, "extra.glb", { keepInScene: true });
+      expect(toasts).toHaveLength(1);
+      const msg = String((toasts[0] as { msg: string }).msg);
+      expect(msg).toContain("GPU 负载");
+      expect(msg).toContain("2000 > 1600");
+      expect(mockAdapter.build).not.toHaveBeenCalled();
+      // 与 MAX_MODELS 同约定：门禁在 inFlight 置位前判 → 复位不卡死
+      expect(ctx.inFlight).toBe(false);
+    } finally {
+      off();
+    }
+  });
+
+  it("keep + 负载在预算内 → 放行（既有行为不变）", async () => {
+    const { ctx, mockAdapter } = makeMockCtx();
+    ctx.renderer = fakeRenderer(120, 80);
+    await switchToSession(ctx, "extra.glb", { keepInScene: true });
+    expect(mockAdapter.build).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("switchToSession build 失败恢复（recoverSwitchFailure）", () => {
   it("build 抛错 → 恢复链：旧 perFrame 置空 + allContent 清空 + loadingEl 归位 + inFlight 复位", async () => {
     const { ctx, state, mockAdapter } = makeMockCtx();

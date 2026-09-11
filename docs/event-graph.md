@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 178 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -445,7 +445,8 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
 | assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 661 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 161 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 175 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |

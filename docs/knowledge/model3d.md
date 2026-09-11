@@ -177,6 +177,7 @@ auto_fields:
     - decodeYsmViaWasm
     - deepMergeLightParams
     - DeepPartial
+    - DEFAULT_GPU_LOAD_LIMITS
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
@@ -216,6 +217,7 @@ auto_fields:
     - EnvStateSchema
     - estimateTexGpuBytes
     - eulerToQuaternion
+    - evaluateGpuLoad
     - extractIKChainFromTree
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
@@ -277,6 +279,9 @@ auto_fields:
     - getTintColorSync
     - getVrmMaterialDetail
     - godRaysIntensity
+    - GpuLoadLimits
+    - GpuLoadSample
+    - GpuLoadVerdict
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
@@ -581,6 +586,7 @@ auto_fields:
     - SafeDisposable
     - safeDispose
     - sampleAdaptivePixelRatio
+    - sampleGpuLoad
     - SceneCapability
     - SceneCapabilityFactory
     - SceneCapabilityLookup

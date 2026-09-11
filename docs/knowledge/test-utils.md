@@ -116,6 +116,8 @@ invariant_anchors:
 - `waitFor(fn, timeout?)` — 轮询等待条件成立（默认 5s 超时抛错，替代固定 sleep；**超时/异常 reject 携带原始错误**——P2 修复：原 catch 静默吞错，真实根因被通用消息掩盖；知识卡旧文「timeout?, interval?」的 interval 参数不存在，已修正签名）
 - `sleep(ms)` / `mountCustomElement(tag)` / `unmountElement(el)` — 组件编排测试公共辅助
 - `events.ts` / `query-by-testid.ts` / `render.ts` — 事件派发 / testid 查询 / 组件渲染辅助（拆分自 index.ts）
+- `getIdbMock()`（`idb-mock.ts`）— setup 层注入的共享 IDB mock 类型化访问（`globalThis.__YSM_TEST_IDB__`）；10 个 backend/parsers 测试共用。收敛前各文件重复内联类声明，且字段清单已漂移（契约族只列 6 字段、实际注入 8 字段）——统一后单一事实源
+- `makeCanvasFakeRenderer()`（`fake-webgl-renderer.ts`）— canvas 形态 Fake WebGLRenderer（800×600 + `getBoundingClientRect` + `vi.fn` 方法）。装配方式：`vi.mock("three", async (importOriginal) => { ... const { makeCanvasFakeRenderer } = await import("@/test-utils/fake-webgl-renderer.ts"); ... })`（factory 被 hoist，故须 dynamic import）。**不**并入 setup 层全局 Fake——后者用 div 且方法为空实现，满足不了尺寸/断言需求
 
 ## 与其他子系统关系
 
@@ -149,6 +151,7 @@ grep 生产代码确认，勿凭 sleep 时长猜。
 - 查询只认 `data-testid`，不绑定 CSS 类 / 文案 / DOM 结构（抗脆弱核心）
 - 等待按「异步等待三分法」选型（正等结果→waitFor / init 落定→排空轮次 / 负向定时器窗口→保留 sleep 并注释）——不是无脑全换 waitFor
 - testid 值禁止含空格或大小写混排（Design.md §19.1；本层未做入口校验，P3 观察）
+- 共享 mock 存储（`__YSM_TEST_IDB__` / `__YSM_TEST_APP__`）挂 `globalThis`，隔离性**依赖 vitest `isolate: true`**（`vitest.config.ts` 有红线注释）——改回 `isolate: false` 会使 worker 内共享模块图让 per-file 绑定捕获错位（`web-fs.ts` 首求值固化先运行文件的 mock 引用 → 读写错位）。`test:audit`（isolate:false + shuffle）仅用于主动暴露该风险，消费方须每例显式清理（范式见 `mock-app.ts` 的 `resetAppMock`）
 
 ## 相关
 

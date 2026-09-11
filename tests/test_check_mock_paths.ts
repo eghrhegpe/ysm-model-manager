@@ -17,6 +17,7 @@
  */
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyMock, SRC_ROOT } from "../scripts/_lib/mock-path-resolve.ts";
@@ -36,6 +37,7 @@ function check(name, fn) {
 // 真实测试文件绝对路径（承载 vi.mock，fromFile 语境）
 const BACKEND_TEST = path.join(SRC_ROOT, "backend", "app.test.ts"); // frontend/src/backend/app.test.ts
 const IMPOR_TEST = path.join(SRC_ROOT, "features", "import", "executor.test.ts");
+const WORKER_TEST = path.join(SRC_ROOT, "workers", "stats.worker.test.ts");
 
 function runGuard(args) {
   try {
@@ -97,6 +99,35 @@ check(".js 胶水兜底解析到 .ts（bindings app.js→app.ts）→ M3，resol
   assert.ok(c.resolvedAbs, "已解析到 .ts");
   assert.ok(String(c.resolvedAbs).endsWith(".ts"), `应指向 .ts：${c.resolvedAbs}`);
   assert.ok(c.m3, "M3 应带 m3 细节");
+});
+
+// CI 环境回归：ysm-wasm-data*.js 是 gitignore 构建产物（.gitignore:123），
+// checkout 后不存在；配套 .d.ts 声明入库。若只兜底 .ts，CI 必判 M1 误报。
+//
+// ⚠️ 本地存在构建产物 .js 时该 spec 直接判 ok，走不到兜底分支——故此处显式
+// 临时移走 .js 以复现 CI 语境，否则本测试「本地恒红 / CI 恒绿」，与病灶恰好对称。
+check(".js spec 在无构建产物时兜底到 .d.ts（复现 CI 环境）→ M3", () => {
+  const jsAbs = path.join(SRC_ROOT, "wasm", "ysm-wasm-data.js");
+  const bakAbs = `${jsAbs}.test-bak`;
+  const hadJs = fs.existsSync(jsAbs);
+  if (hadJs) fs.renameSync(jsAbs, bakAbs);
+  try {
+    const c = classifyMock("@/wasm/ysm-wasm-data.js", WORKER_TEST);
+    assert.equal(c.level, "M3", `应兜底 .d.ts 判 M3，实得 ${c.level}：${c.detail}`);
+    assert.ok(c.resolvedAbs, "已解析到 .d.ts");
+    assert.ok(
+      String(c.resolvedAbs).endsWith(".d.ts"),
+      `应指向 .d.ts：${c.resolvedAbs}`,
+    );
+  } finally {
+    if (hadJs && fs.existsSync(bakAbs)) fs.renameSync(bakAbs, jsAbs);
+  }
+});
+
+// 反向护栏：.ts 与 .d.ts 皆无时仍须 M1（不得因新增兜底而放行真缺失）。
+check(".js spec 且 .ts / .d.ts 皆无 → 仍为 M1（防兜底放宽过头）", () => {
+  const c = classifyMock("@/wasm/not-exist-at-all-xyz.js", WORKER_TEST);
+  assert.equal(c.level, "M1");
 });
 
 // ── 裸包 ──

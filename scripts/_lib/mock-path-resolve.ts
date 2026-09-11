@@ -84,8 +84,14 @@ function resolveInternal(spec: string, fromFileAbs: string): InternalResult {
   if (ext) {
     if (exists(abs)) return { status: "ok", abs };
     if (ext === ".js") {
-      const ts = abs.replace(/\.js$/, ".ts");
-      if (exists(ts)) return { status: "m3", abs: abs, tsTarget: ts };
+      // .js spec 兜底链：.ts → .d.ts。
+      //   · .ts：bindings 单类（app.js→app.ts），14 处。
+      //   · .d.ts：gitignore 构建产物的配套声明（ysm-wasm-data*.js 不入库、.d.ts 入库），
+      //     本地有 .js 判 ok、CI 无 .js 须能落到 .d.ts，否则 CI 恒红（ADR-224 回归）。
+      const base = abs.slice(0, -3);
+      for (const cand of [`${base}.ts`, `${base}.d.ts`]) {
+        if (exists(cand)) return { status: "m3", abs, tsTarget: cand };
+      }
     }
     return { status: "missing", abs };
   }
@@ -172,7 +178,7 @@ export function classifyMock(spec: string, fromFileAbs: string): MockClassify {
         spec,
         resolvedAbs: r.tsTarget as string,
         m3: { jsSpec: spec, tsTarget: r.tsTarget as string },
-        detail: `spec 以 .js 结尾但实际解析到 .ts：${toPosix(path.relative(REPO_ROOT, r.tsTarget as string))}`,
+        detail: `spec 以 .js 结尾但实际解析到 ${toPosix(path.relative(REPO_ROOT, r.tsTarget as string))}`,
       };
     }
     if (r.status === "alias-unregistered") {

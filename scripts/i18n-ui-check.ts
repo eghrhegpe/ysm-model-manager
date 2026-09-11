@@ -26,7 +26,6 @@
  * 本脚本补全这道防线，从源头堵住硬编码中文。
  *
  * 依赖：node:fs / node:path / scripts/_lib/scan-files.ts
- *
  * 用法：
  *   node scripts/i18n-ui-check.ts            # 文本报告（warning，不阻断）
  *   node scripts/i18n-ui-check.ts --json     # JSON（doctor/CI 消费）
@@ -147,14 +146,18 @@ function scanFile(file: string) {
   return hits;
 }
 
-// 复用共享层 walk（原为自研递归）。语义严格等价：exts=.ts、skipFile 排除 *.test.ts。
-// ⚠ 原自研实现内含 `path.resolve(p) === LOCALE_DIR` 的「跳过语言包源」判断，但 LOCALE_DIR
-// （src/core/i18n/locales）已不存在——语言包实际在 src/locales/*.ts，i18n 目录迁移后该判断
-// 恒不生效（死分支）。此处按「保持现行为」处理（skipDir 恒 false），不引入行为变化。
-// 若确需排除语言包源，应改路径为 path.join(SRC, "locales") 并另行评估告警影响。
+// 复用共享层 walk（原为自研递归）。
+// 「跳过语言包源」从死分支修正为生效（2026-09）：原自研实现比对 `path.resolve(p) === LOCALE_DIR`
+// 且 LOCALE_DIR 写作 src/core/i18n/locales，但该目录在 i18n 迁移后已不存在——语言包实际在
+// src/locales/{en,ja,zh-CN}.ts，判断恒 false（死分支），语言包源长期被误扫。
+// 后果实证：修复前 13 处告警（ja 6 + zh-CN 7）全部来自语言包自身译文——语言包里的
+// `"content.errNoIndex": "❌ 无 index.json<br>"` 这类含 HTML 标签的富文本译文，
+// 天然命中「HTML 信号 + 中文 + 未包 t()」，但它本身就是译文、不是硬编码 UI。
+// 按原设计意图排除（语言包是译文的源头，不该被当违规源）。
+const LOCALE_DIR = path.join(SRC, "locales");
 const files = walk(SRC, {
   exts: [".ts"],
-  skipDir: () => false,
+  skipDir: (name) => path.join(SRC, name) === LOCALE_DIR,
   skipFile: /\.test\.ts$/,
 }) as string[];
 const report: { file: string; hits: { line: number; snippet: string }[] }[] = [];

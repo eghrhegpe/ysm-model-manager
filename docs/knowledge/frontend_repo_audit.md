@@ -437,7 +437,6 @@ auto_fields:
     - findZipEntry
     - fireBlur
     - fireClick
-    - fireDrag
     - fireDrop
     - fireEvent
     - fireFocus

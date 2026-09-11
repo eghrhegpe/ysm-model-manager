@@ -393,7 +393,10 @@ retry:
 	}()
 
 	// owner 身份已定（waiter 已并入航班）——Rust 结果同样记录到航班供 waiter 取。
-	if entries, ok := tryRustScan(dir, gen, keyVersion, startTime, fl); ok {
+	// ctx 传入：Rust 快路径同样须遵守 ADR-197 取消语义（原先只 walk 路径检查 ctx，
+	// Windows 生产路径 handled=true 直接返回，预取消 ctx 仍产出结果——
+	// rust_backend 标签下才编译，本地默认构建测不到，CI 长期红）。
+	if entries, ok := tryRustScan(ctx, dir, gen, keyVersion, startTime, fl); ok {
 		return entries, false
 	}
 
@@ -488,7 +491,19 @@ func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
 // tryRustScan 尝试 Rust scanner 快路径，成功时把可缓存结果写入 scanCache
 // （版本守卫通过时）并把结果写入航班 fl.entries 供 waiter 取。
 // 返回 (entries, true) 表示 Rust 已处理，调用方可直接返回；(nil, false) 走 Go 路径。
-func tryRustScan(dir string, gen, keyVersion uint64, startTime time.Time, fl *scanFlight) ([]types.ModelEntry, bool) {
+func tryRustScan(
+	ctx context.Context,
+	dir string,
+	gen, keyVersion uint64,
+	startTime time.Time,
+	fl *scanFlight,
+) ([]types.ModelEntry, bool) {
+	// ADR-197：预取消 / 已取消时不得产出结果，也不得写入缓存。
+	// 置于后端分发之前——无论 Rust 还是 hook，取消态一律短路，与 walk 路径
+	// 的 fs.SkipAll 同语义（取消产生的空结果同样不可缓存）。
+	if ctx.Err() != nil {
+		return nil, false
+	}
 	// 测试注入优先：rustScanHook 非空时替代真实后端（普通单测走 stub 恒 handled=false，
 	// 无法触达 Rust handled 分支，故用钩子制造该路径）。
 	var rustEntries []types.ModelEntry

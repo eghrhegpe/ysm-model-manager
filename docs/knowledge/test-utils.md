@@ -16,7 +16,6 @@ auto_fields:
     - FakeImage
     - fireBlur
     - fireClick
-    - fireDrag
     - fireDrop
     - fireEvent
     - fireFocus

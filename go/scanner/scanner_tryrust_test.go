@@ -10,6 +10,7 @@ package scanner
 // 并验证 fl.entries 始终填充（供 waiter 取）。
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -21,6 +22,42 @@ func resetRustScanHook() {
 	setRustScanHook(nil)
 }
 
+// TestTryRustScan_CancelledCtxShortCircuits：ADR-197 取消语义须覆盖 Rust 快路径。
+//
+// 病灶（CI 实测）：原先只有 walk 路径检查 ctx.Err()，Windows 生产路径（-tags
+// rust_backend）handled=true 直接返回，预取消 ctx 仍产出 1 条结果 →
+// TestScanEntriesWithHitCtx_CancelledNotCached 红。该路径仅 rust_backend 标签下
+// 编译，本地默认构建测不到，故 CI 长期红。
+//
+// 断言三件事：不产出结果 / 短接为 handled=false（交回 walk 路径 SkipAll）/
+// 不污染缓存。
+func TestTryRustScan_CancelledCtxShortCircuits(t *testing.T) {
+	InvalidateCache()
+	defer resetRustScanHook()
+	dir := t.TempDir()
+	hookCalled := false
+	setRustScanHook(func(string) ([]types.ModelEntry, bool, bool) {
+		hookCalled = true
+		return []types.ModelEntry{{Name: "a.ysm", Path: dir + "/a.ysm", Ext: ".ysm"}}, true, true
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	fl := &scanFlight{}
+	entries, ok := tryRustScan(ctx, dir, cacheGen.Load(), 0, time.Now(), fl)
+	if ok || entries != nil {
+		t.Fatalf("预取消 ctx 应短路返回 (nil,false), got ok=%v entries=%v", ok, entries)
+	}
+	if hookCalled {
+		t.Fatal("预取消 ctx 不应触及后端（钩子/scanEntriesWithRust）")
+	}
+	if fl.entries != nil {
+		t.Fatalf("预取消不应填充 fl.entries: %v", fl.entries)
+	}
+	if _, exists := scanCache.Load(dir); exists {
+		t.Fatal("预取消结果不得写入缓存（空结果缓存会污染 TTL 窗口）")
+	}
+}
+
 func TestTryRustScan_NotHandled(t *testing.T) {
 	InvalidateCache()
 	defer resetRustScanHook()
@@ -29,7 +66,7 @@ func TestTryRustScan_NotHandled(t *testing.T) {
 	})
 	dir := t.TempDir()
 	fl := &scanFlight{}
-	entries, ok := tryRustScan(dir, cacheGen.Load(), 0, time.Now(), fl)
+	entries, ok := tryRustScan(context.Background(), dir, cacheGen.Load(), 0, time.Now(), fl)
 	if ok || entries != nil {
 		t.Fatalf("handled=false 应返回 (nil,false), got ok=%v entries=%v", ok, entries)
 	}
@@ -48,7 +85,7 @@ func TestTryRustScan_HandledStoresCache(t *testing.T) {
 	})
 	// 版本守卫通过：使用当前 cacheGen + 当前 keyVersion(0)
 	fl := &scanFlight{}
-	entries, ok := tryRustScan(dir, cacheGen.Load(), 0, time.Now(), fl)
+	entries, ok := tryRustScan(context.Background(), dir, cacheGen.Load(), 0, time.Now(), fl)
 	if !ok || len(entries) != 1 {
 		t.Fatalf("handled=true 应返回 entries+true, got ok=%v entries=%v", ok, entries)
 	}
@@ -78,7 +115,7 @@ func TestTryRustScan_HandledVersionChangedSkipsCache(t *testing.T) {
 	staleGen := cacheGen.Load()
 	InvalidateCache()
 	fl := &scanFlight{}
-	entries, ok := tryRustScan(dir, staleGen, 0, time.Now(), fl)
+	entries, ok := tryRustScan(context.Background(), dir, staleGen, 0, time.Now(), fl)
 	if !ok || len(entries) != 1 {
 		t.Fatalf("版本已变仍应返回结果, got ok=%v entries=%v", ok, entries)
 	}
@@ -101,7 +138,7 @@ func TestTryRustScan_NotCacheableSkipsStore(t *testing.T) {
 		return want, false, true // cacheable=false
 	})
 	fl := &scanFlight{}
-	entries, ok := tryRustScan(dir, cacheGen.Load(), 0, time.Now(), fl)
+	entries, ok := tryRustScan(context.Background(), dir, cacheGen.Load(), 0, time.Now(), fl)
 	if !ok || len(entries) != 1 {
 		t.Fatalf("handled=true 应返回结果, got ok=%v entries=%v", ok, entries)
 	}

@@ -76,8 +76,8 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   unregisterModelRoot: h.unregisterModelRoot,
 }));
 vi.mock("@/preview-3d/infra/load-trace.ts", () => ({ recordLoadTrace: h.recordLoadTrace }));
-vi.mock("@/preview-3d/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
-vi.mock("@/preview-3d/perception/core.ts", () => ({
+vi.mock("@/preview-3d/adapters/shared/perception/breath.ts", () => ({ createBreathController: h.createBreath }));
+vi.mock("@/preview-3d/adapters/shared/perception/core.ts", () => ({
   setPerceptionPaused: h.setPerceptionPaused,
   createPerceptionPauseRef: () => h.perceptionPauseRef,
 }));

@@ -12,6 +12,13 @@ import {
 import type { VRM0Meta, VRM1Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
+import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
+import {
+  createPerceptionPauseRef,
+  type PerceptionPauseRef,
+} from "@/preview-3d/adapters/shared/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
+import { createGazeController } from "@/preview-3d/adapters/shared/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -20,10 +27,6 @@ import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frust
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import { createBlinkController } from "@/preview-3d/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
-import { createBreathController } from "@/preview-3d/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
-import { createPerceptionPauseRef, type PerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
-import { createGazeController } from "@/preview-3d/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import type { BonePanelCleanupRef } from "./bones-panel-node.ts";

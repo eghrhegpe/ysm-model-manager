@@ -26,8 +26,13 @@ auto_fields:
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
     - AssembledShell
+    - AutoDanceOptions
     - BaseScene
+    - BeatDetectorLike
+    - BeatDetectorOptions
     - bindInputHandlers
+    - BlinkCallback
+    - BlinkOptions
     - BoneDetail
     - BoneListItem
     - BoneNode
@@ -38,6 +43,7 @@ auto_fields:
     - buildBoneTree
     - buildFbxScene
     - buildFbxSceneFromData
+    - buildLipMorphIndices
     - buildLitematicScene
     - buildMmdScene
     - BuildNbtVoxelData
@@ -65,7 +71,14 @@ auto_fields:
     - CollectMenuGraphOpts
     - collectNodePredicates
     - concurrentMap
+    - createAutoDanceController
+    - createBeatDetector
+    - createBlinkController
+    - createBreathController
     - createFbxParser
+    - createGazeController
+    - createLipSyncController
+    - createPerceptionPauseRef
     - createPmxParser
     - createResolveModeBridge
     - createTextureDecoder
@@ -113,7 +126,10 @@ auto_fields:
     - InstalledPreviewInfra
     - invalidatePreview
     - isLikelyTga
+    - isPerceptionPaused
     - isPreviewOverlayActive
+    - LipSyncCallback
+    - LipSyncOptions
     - listBonesWithDepth
     - listSchemas
     - LITEMATIC_SLICE_SCHEMA_ID
@@ -180,6 +196,7 @@ auto_fields:
     - Mount3DOptions
     - MountCtx
     - MpSessionState
+    - MultiLipSyncCallback
     - normalizeFbxScale
     - OpenGzRootFromBytes
     - ownHandle
@@ -188,6 +205,7 @@ auto_fields:
     - packTextureLabel
     - PerceptionCapability
     - perceptionNodes
+    - PerceptionPauseRef
     - PerceptionState
     - pickBone
     - pickPerceptionCaps
@@ -242,6 +260,7 @@ auto_fields:
     - SemanticScene
     - setActiveInputSession
     - setBoneNodeVisible
+    - setPerceptionPaused
     - SharedInfra
     - showLoadFailure
     - SkyCapability

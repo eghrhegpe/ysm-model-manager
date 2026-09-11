@@ -66,21 +66,21 @@ vi.mock("./vrm-bone-ui.ts", () => ({
 vi.mock("@/preview-3d/bone/semantic-bones.ts", () => ({
   vrmSemanticBoneMap: vi.fn(() => ({})),
 }));
-vi.mock("@/preview-3d/perception/breath.ts", () => ({
+vi.mock("@/preview-3d/adapters/shared/perception/breath.ts", () => ({
   createBreathController: vi.fn(() => ({
     apply: vi.fn(),
     reset: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("@/preview-3d/perception/gaze.ts", () => ({
+vi.mock("@/preview-3d/adapters/shared/perception/gaze.ts", () => ({
   createGazeController: vi.fn(() => ({
     apply: vi.fn(),
     reset: vi.fn(),
     dispose: vi.fn(),
   })),
 }));
-vi.mock("@/preview-3d/perception/blink.ts", () => ({
+vi.mock("@/preview-3d/adapters/shared/perception/blink.ts", () => ({
   createBlinkController: vi.fn(() => ({
     apply: vi.fn(),
     dispose: vi.fn(),
@@ -1083,7 +1083,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     const { ctx, camera } = makeCtx();
     const content = await buildVrmScene(ctx, "/vrm/gaze.vrm", makePort(), hoisted.readBytesMock);
     content.update!(0.016);
-    const { createGazeController } = await import("@/preview-3d/perception/gaze.ts");
+    const { createGazeController } = await import("@/preview-3d/adapters/shared/perception/gaze.ts");
     const gaze = (createGazeController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
     expect(gaze.apply).toHaveBeenCalledWith(0.016, expect.anything(), camera.position);
     content.dispose();
@@ -1099,7 +1099,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     const { ctx } = makeCtx();
     const content = await buildVrmScene(ctx, "/vrm/blink.vrm", makePort(), hoisted.readBytesMock);
     content.update!(0.016);
-    const { createBlinkController } = await import("@/preview-3d/perception/blink.ts");
+    const { createBlinkController } = await import("@/preview-3d/adapters/shared/perception/blink.ts");
     const blink = (createBlinkController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
     expect(blink.apply).toHaveBeenCalledTimes(1);
     // 回调写入 expressionManager.setValue

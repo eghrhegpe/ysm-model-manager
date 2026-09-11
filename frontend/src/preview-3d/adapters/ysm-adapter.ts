@@ -14,6 +14,11 @@
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
+import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
+import {
+  createPerceptionPauseRef,
+  type PerceptionPauseRef,
+} from "@/preview-3d/adapters/shared/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone/bone-raycast.ts";
 import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { ysmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -30,8 +35,6 @@ import {
   type YsmAnimPlayer,
 } from "@/preview-3d/model/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
-import { createBreathController } from "@/preview-3d/perception/breath.ts";
-import { createPerceptionPauseRef, type PerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import {
   type AnimationClip,

@@ -8,26 +8,7 @@ category: rendering
 source_files:
   - frontend/src/preview-3d/perception/
 auto_fields:
-  symbols_with_lines:
-    - AutoDanceOptions
-    - BeatDetectorLike
-    - BeatDetectorOptions
-    - BlinkCallback
-    - BlinkOptions
-    - buildLipMorphIndices
-    - createAutoDanceController
-    - createBeatDetector
-    - createBlinkController
-    - createBreathController
-    - createGazeController
-    - createLipSyncController
-    - createPerceptionPauseRef
-    - isPerceptionPaused
-    - LipSyncCallback
-    - LipSyncOptions
-    - MultiLipSyncCallback
-    - PerceptionPauseRef
-    - setPerceptionPaused
+  symbols_with_lines: []
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

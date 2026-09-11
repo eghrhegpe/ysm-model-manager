@@ -22,7 +22,7 @@ import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-sta
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { createBlinkController } from "@/preview-3d/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
-import { createPerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
+import { createPerceptionPauseRef, type PerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { createGazeController } from "@/preview-3d/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
@@ -286,6 +286,7 @@ interface MdVrPerceptionState {
   useNativeLookAt: boolean;
   blinkExpressionNames: Array<"blink" | "blinkLeft" | "blinkRight">;
   exprMgr: VRM["expressionManager"];
+  perceptionPauseRef: PerceptionPauseRef;
 }
 interface MdVrBoneAssembly {
   bonePanelRef: BonePanelCleanupRef;

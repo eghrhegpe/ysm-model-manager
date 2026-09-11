@@ -31,7 +31,7 @@ import {
 } from "@/preview-3d/model/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { createBreathController } from "@/preview-3d/perception/breath.ts";
-import { createPerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
+import { createPerceptionPauseRef, type PerceptionPauseRef } from "@/preview-3d/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import {
   type AnimationClip,
@@ -197,6 +197,7 @@ interface MdYsPanelAnim {
   animBridge: MmdPlayBridge | null;
   semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null;
   breath: ReturnType<typeof createBreathController> | null;
+  perceptionPauseRef: PerceptionPauseRef;
 }
 
 /** 阶段④产物：菜单 + 调试模式 */
@@ -382,7 +383,7 @@ async function mdYsBuildBonePanelAndAnim(
     try {
       // boneNodes（上方已携带 object）直接喂语义映射——object 必填不变量见 semantic-bones.ts
       semanticBones = ysmSemanticBoneMap(boneNodes);
-      breath = createBreathController();
+      breath = createBreathController({ pauseRef: perceptionPauseRef });
 
       const allClips: Array<{ label: string; clip: AnimationClip }> = [];
       const allControllers: AnimationController[] = [];

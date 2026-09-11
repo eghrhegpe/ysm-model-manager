@@ -77,9 +77,15 @@ func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
 		q.running = true
 		q.epoch++
 	}
+	// spawnEpoch 必须在锁内捕获并随 spawn 交给 worker：worker 若在 spawn 与
+	// 首次取锁之间被 Cancel+Enqueue 取代，processForEpoch 的 target 守卫才能拦下它。
+	// 若像旧版那样传 0（跳过守卫）或让 worker 取锁时才读 q.epoch，被取代的旧 worker
+	// 会采纳「当前」代际，与新 worker 并发消费同一批任务——重复发 done、提前复位 running
+	// （违反本结构体 epoch 字段注释声明的「记录启动时 epoch」契约）。
+	spawnEpoch := q.epoch
 	q.mu.Unlock()
 	if start {
-		go q.process()
+		go q.processForEpoch(spawnEpoch)
 	}
 	log.Printf("[queue] emit queue:status enqueued total=%d", total)
 	q.emitFn("queue:status", "enqueued", total, "")
@@ -120,14 +126,17 @@ func (q *DownloadQueue) Status() types.QueueStatusInfo {
 	return types.QueueStatusInfo{Remaining: len(q.tasks), Running: q.running}
 }
 
+// process 手动/测试驱动路径：以 target=0 同步消费当前队列，跳过代际校验。
+// 生产路径不走这里——Enqueue 启动的是 processForEpoch(spawnEpoch) 并携带代际守卫。
 func (q *DownloadQueue) process() {
-	q.processForEpoch(0) // 0 = 启动时取当前 epoch（EnqueueDownloads 路径）
+	q.processForEpoch(0) // 0 = 跳过代际校验（无 spawn，调用方即队列当前所有者）
 }
 
 // processForEpoch 按指定代际运行队列消费循环。
-// target > 0 时（重启路径），worker 启动即校验代际：若已被 Cancel/重入队取代
-// （q.epoch 已越过 target）则拒绝运行——防 restart-spawned goroutine 在 spawn 与首次
-// 取锁之间被新 Enqueue 启动的 worker 重复。
+// target > 0（Enqueue spawn / 重启路径）时，worker 启动即校验代际：若已被
+// Cancel/重入队取代（q.epoch 已越过 target）则拒绝运行——防被取代的 stale
+// goroutine 在 spawn 与首次取锁之间，与新 Enqueue 启动的 worker 重复消费队列。
+// target == 0 仅供手动/测试驱动（process），跳过校验。
 func (q *DownloadQueue) processForEpoch(target queueEpoch) {
 	q.mu.Lock()
 	if target > 0 && q.epoch != target {

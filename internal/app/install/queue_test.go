@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -202,5 +203,105 @@ func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
 		if e == "queue:status" {
 			t.Error("panic 后不应广播 queue:status done（队列 fail-stop，非正常完成）")
 		}
+	}
+}
+
+// TestProcessForEpoch_StaleEpochRejected 锁定 spawnEpoch 代际守卫（P1 竞态回归）。
+// 场景：Enqueue spawn 出 worker 后、worker 首次取锁前，队列被 Cancel+Enqueue 取代
+// （epoch 已越过 spawn 时的值）。旧 worker 必须以过期代际被拒绝运行，否则它会与
+// 新 worker 并发消费同一批任务——重复发 done、提前复位 running。
+//
+// 同步测试：直接以过期代际调用消费循环，无需 goroutine 与时序，天然确定性。
+// 旧实现 Enqueue 走 processForEpoch(0)（跳过守卫）故无法被本用例锁定；
+// 修复后 spawn 路径携带 spawnEpoch，守卫生效。
+func TestProcessForEpoch_StaleEpochRejected(t *testing.T) {
+	var downloaded []string
+	q := NewDownloadQueue(context.Background(),
+		func(ctx context.Context, url, saveDir string) (string, error) {
+			downloaded = append(downloaded, url)
+			return "", nil
+		},
+		func(name string, args ...interface{}) {},
+		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
+	)
+	q.mu.Lock()
+	q.tasks = []types.DownloadTask{
+		{URL: "https://new.example/x.ysm", SaveDir: t.TempDir(), Name: "new.ysm"},
+	}
+	q.epoch = 7 // 队列当前代际（已被随后一次 Enqueue 推进）
+	q.mu.Unlock()
+
+	q.processForEpoch(3) // 过期代际 worker（spawn 时的代际已作废）
+
+	if len(downloaded) != 0 {
+		t.Errorf("过期代际 worker 不得消费任务, got %v", downloaded)
+	}
+	if len(q.tasks) != 1 {
+		t.Errorf("过期代际 worker 不得弹出任务, 剩余应 1, got %d", len(q.tasks))
+	}
+	if q.running {
+		t.Error("过期代际 worker 不得置 running（应立即返回，不触碰队列状态）")
+	}
+}
+
+// TestEnqueue_CancelReenqueue_NoDuplicateDone 反复「Cancel → 再 Enqueue」的竞态回归。
+// 每轮结束应恰有一次 queue:status done。旧实现 Enqueue 以 processForEpoch(0) 启动
+// worker（跳过代际守卫），被取代的旧 worker 会采纳「取锁时」的当前代际，与新 worker
+// 并发消费同一批任务 → 重复发 done（并提前复位 running）。新实现 spawn 携带
+// spawnEpoch，旧 worker 启动即被拒。多轮循环把偶发竞态放大为可观测失败。
+//
+// 关键设计：首轮 a 批任务的 downloadFn 停在 ctx.Done()（慢任务），使其不可能在
+// Cancel 前跑完——否则 a 批合法发出一次 done 会污染计数（假阳性）。故每轮唯一
+// 合法的 done 只来自 b 批。
+func TestEnqueue_CancelReenqueue_NoDuplicateDone(t *testing.T) {
+	const rounds = 50
+	var mu sync.Mutex
+	doneCount := 0
+	q := NewDownloadQueue(context.Background(),
+		func(ctx context.Context, url, saveDir string) (string, error) {
+			if strings.Contains(url, "slow") {
+				<-ctx.Done() // 慢任务：取消前不会结束，故不产生 done
+				return "", ctx.Err()
+			}
+			return "", nil
+		},
+		func(name string, args ...interface{}) {
+			if name != "queue:status" || len(args) == 0 {
+				return
+			}
+			if s, ok := args[0].(string); ok && s == "done" {
+				mu.Lock()
+				doneCount++
+				mu.Unlock()
+			}
+		},
+		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
+	)
+	for i := 0; i < rounds; i++ {
+		if err := q.Enqueue([]types.DownloadTask{{Name: "a", URL: "https://slow.example/a", SaveDir: "/"}}); err != nil {
+			t.Fatalf("round %d 入队失败: %v", i, err)
+		}
+		q.Cancel()
+		if err := q.Enqueue([]types.DownloadTask{{Name: "b", URL: "https://b", SaveDir: "/"}}); err != nil {
+			t.Fatalf("round %d 取消后入队失败: %v", i, err)
+		}
+		// 等本轮静止，避免轮次交叠
+		deadline := time.Now().Add(2 * time.Second)
+		for {
+			st := q.Status()
+			if !st.Running && st.Remaining == 0 {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("round %d 队列未静止: %+v", i, st)
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
+	mu.Lock()
+	got := doneCount
+	mu.Unlock()
+	if got != rounds {
+		t.Errorf("每轮应恰发一次 done，%d 轮应 %d 次，got %d（被取代的旧 worker 与新 worker 并发消费）", rounds, rounds, got)
 	}
 }

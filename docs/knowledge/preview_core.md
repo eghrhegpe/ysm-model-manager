@@ -217,6 +217,8 @@ auto_fields:
     - PreviewBuildCtx
     - PreviewHandle
     - PreviewScene
+    - previewShell
+    - PreviewShellHost
     - readPmxStats
     - readVrmMeta
     - readWebFile

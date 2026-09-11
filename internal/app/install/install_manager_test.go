@@ -340,9 +340,19 @@ func TestCancel_Idempotent(t *testing.T) {
 	}
 }
 
-// TestCancel_ThenEnqueue 测试取消后重新入队
+// TestCancel_ThenEnqueue 取消后重新入队：新任务不得被取消吞掉，队列最终静止。
+// 旧版断言 Status().Remaining==1 本身即竞态——worker 异步，立即返回的 mock 可在
+// Status() 前 drain 掉任务（实测 5 跑 3 红）。改等「b 确实被消费」这一可观测量，
+// 再等队列静止，不读瞬时状态。
 func TestCancel_ThenEnqueue(t *testing.T) {
+	bDownloaded := make(chan struct{}, 1)
 	mockDownloadFn := func(ctx context.Context, url, saveDir string) (string, error) {
+		if url == "https://b" {
+			select {
+			case bDownloaded <- struct{}{}:
+			default:
+			}
+		}
 		return "", nil
 	}
 	mockEmitFn := func(name string, args ...interface{}) {}
@@ -355,12 +365,22 @@ func TestCancel_ThenEnqueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("取消后入队失败: %v", err)
 	}
-	status := q.Status()
-	if status.Remaining != 1 {
-		t.Errorf("取消后入队应有 1 个任务: got %d", status.Remaining)
+	select {
+	case <-bDownloaded:
+	case <-time.After(5 * time.Second):
+		t.Fatal("取消后入队的任务未被消费（队列静默停滞）")
 	}
-	if !status.Running {
-		t.Error("取消后入队应重新 running")
+	// 队列最终静止：无残留任务且 running 复位
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		st := q.Status()
+		if !st.Running && st.Remaining == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("队列未静止: %+v", st)
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 

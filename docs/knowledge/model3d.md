@@ -512,6 +512,8 @@ auto_fields:
     - PreviewMenuRouters
     - previewPixelRatio
     - PreviewScene
+    - previewShell
+    - PreviewShellHost
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath

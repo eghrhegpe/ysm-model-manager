@@ -1,6 +1,6 @@
 module ysm-model-manager
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/Tnze/go-mc v1.20.2

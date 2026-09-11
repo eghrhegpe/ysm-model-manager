@@ -23,11 +23,12 @@ async function openModal(
     async ({ kind: k, opts: o }) => {
       const w = window as DlgWindow;
       if (k === "confirm") {
-        // ADR-187 D2：modal.ts 拆分后 confirm/prompt 各成文件（原 modal.ts 单文件）
-        const mod = await import("../src/features/dialogs/modal-confirm.ts");
+        // ADR-187 D2：modal.ts 拆分后 confirm/prompt 各成文件（原 modal.ts 单文件）。
+        // 路径随 dcb0e2e40 重构更新：modal 原语由 features/dialogs/ 迁至 utils/dom/。
+        const mod = await import("../src/utils/dom/modal-confirm.ts");
         w._dlgPromise = mod.modalConfirm(o);
       } else {
-        const mod = await import("../src/features/dialogs/modal-prompt.ts");
+        const mod = await import("../src/utils/dom/modal-prompt.ts");
         w._dlgPromise = mod.modalPrompt(o);
       }
       return true;

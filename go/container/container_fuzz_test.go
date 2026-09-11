@@ -42,7 +42,9 @@ func fuzzMakeZip(t testing.TB, entries map[string]string) []byte {
 
 func FuzzOpenZipBytes(f *testing.F) {
 	f.Add(fuzzMakeZip(f, map[string]string{"a.txt": "hello", "dir/b.bin": "\x00\x01"}))
-	f.Add(fuzzMakeZip(f, map[string]string{"中文.png": "x"}))
+	// GBK「中文」原始字节——合法 UTF-8 名（如 "中文.png"）会被 zip.Writer 设 UTF-8 标志、
+	// 走 cleanControlChars 正常路径，命中不了 NonUTF8 救援路径，故种子须用原始字节
+	f.Add(fuzzMakeZip(f, map[string]string{"\xd6\xd0\xce\xc4.png": "x"}))
 	f.Add(fuzzMakeZip(f, nil))            // 空 zip
 	f.Add([]byte("PK\x03\x04"))           // local header 前缀（截断）
 	f.Add([]byte{0x37, 0x7A, 0xBC, 0xAF}) // 7z 签名（非 zip）

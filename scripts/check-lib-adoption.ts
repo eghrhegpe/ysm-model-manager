@@ -198,8 +198,11 @@ function collectLibs() {
  */
 function usedBy(text: string, lib: string): boolean {
   if (adoptedRe(lib).test(text)) return true;
+  // 类 2 信号须锚定 `_lib/` 路径段——裸文件名会命中散文/注释/advice 字符串里的提及
+  // （如本文件 RULES 的 advice "import { toPosix } from './_lib/to-posix.ts'" 之外，
+  // 错误消息、fixture 里的裸名提及都不构成「采用」）。
   const esc = lib.replace(/\./g, "\\.");
-  return new RegExp(`["'\`][^"'\`\\n]*${esc}["'\`]`).test(text);
+  return new RegExp(`["'\`][^"'\`\\n]*_lib/${esc}["'\`]`).test(text);
 }
 
 /**
@@ -236,10 +239,18 @@ function adoptionTable(
   refTexts: Map<string, string>,
 ) {
   const refCount = files.length + refTexts.size;
+  // 守卫自身排除出引用池：RULES 的 advice 字符串（"import { toPosix } from './_lib/to-posix.ts'"
+  // 等）是定义性文本而非真实采用——不排除会让每个有 RULES 条目的模块虚增 1 个「用户」，
+  // 掩盖真死模块的归档建议（adoptedRe 锚定 import 语句防了他人，防不了自己的 advice 正文）。
+  const GUARD_SELF = "check-lib-adoption.ts";
   return libs.map((lib) => {
     const selfFile = `_lib/${lib}`;
-    const users = files.filter((f) => f !== selfFile && usedBy(texts.get(f) as string, lib));
-    const externals = [...refTexts.entries()].filter(([, t]) => usedBy(t, lib)).map(([f]) => f);
+    const users = files.filter(
+      (f) => f !== selfFile && f !== GUARD_SELF && usedBy(texts.get(f) as string, lib),
+    );
+    const externals = [...refTexts.entries()]
+      .filter(([f, t]) => !f.endsWith(GUARD_SELF) && usedBy(t, lib))
+      .map(([f]) => f);
     return {
       lib,
       users: users.length + externals.length,

@@ -98,7 +98,9 @@ function collectSymbols(sourceFiles: string[]) {
       targets = walk(abs, {
         exts: [".ts", ".tsx", ".js", ".jsx", ".go"],
         skipDir: (n) => n.startsWith(".") || EXCLUDE_DIRS.has(n),
-        skipFile: /(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/,
+        // skipFile 也须排除点前缀文件——原自研 walkDir 对目录与文件都跳隐藏项，
+        // 共享层 walk 的 skipDir 只管目录（code_review P3）
+        skipFile: (n) => n.startsWith(".") || /(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(n),
       }) as string[];
     }
     for (const t of targets) {

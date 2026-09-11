@@ -4,23 +4,15 @@
 // （ReadLitematicMeta/ReadNbtStructure/ReadSchematic）经 browserAdapter 的端到端 JSON 输出。
 // NBT 字节构造 helper 结构对齐 go/litematic/parser_test.go 的 makeLitematicGz/
 // makeSchematicGz/makeNbtStructureGz（nbtTag/nbtString/nbtInt/nbtCompound/nbtList/...）。
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { gzipSync } from "fflate";
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 import { parseNbtRoot } from "./nbt-parse.ts";
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，
 // 与 browser-adapter 系一致——per-file vi.mock 在共享模块图下会捕获错位绑定）
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbDel: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+const idbMock = getIdbMock();
 
 beforeEach(() => {
   vi.clearAllMocks();

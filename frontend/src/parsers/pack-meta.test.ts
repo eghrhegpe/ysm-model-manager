@@ -2,22 +2,14 @@
 // ===== 资源包/光影包详情 web 实现测试（ReadPackMeta / ReadShaderpackLang）=====
 // TS 平移 go/packs/mcmeta.go：用 fflate zipSync 构造 zip → importWebFiles 落 IDB →
 // browserAdapter.ReadPackMeta / ReadShaderpackLang 验证字段（成功路径 + 失败路径 "{}"）。
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { zipSync, strToU8 } from "fflate";
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，
 // 与 browser-adapter 系一致——per-file vi.mock 在共享模块图下会捕获错位绑定）
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbDel: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+const idbMock = getIdbMock();
 
 const enc = new TextEncoder();
 

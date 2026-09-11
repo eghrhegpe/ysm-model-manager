@@ -155,6 +155,10 @@ if (!("localStorage" in globalThis)) {
 // 4. molangjs mock（molangjs package.json 含 "type":"module"，其 dist/molang.cjs.js 又
 //    用 CJS module.exports——Node 层把 .cjs 当 ESM 解析会报 `module is not defined`，属
 //    上游打包 bug。用 vi.mock 模拟一个精简实现，满足 L4 求值口径即可，不做生产级解析器）
+//    TODO(upstream): 移除条件——molangjs 修正 package.json exports（.cjs 正确标 CJS）或
+//    换用 ESM 产物后，本 mock 可删除并改测真实实现。删前先 `npx vitest run
+//    src/utils/animation src/preview-3d` 确认无人依赖本 mock 的宽松语义（受限白名单 eval、
+//    角度制三角函数等），否则会让测试假绿。
 vi.mock("molangjs", () => {
   class Molang {
     cache_enabled = true;

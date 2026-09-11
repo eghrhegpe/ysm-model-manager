@@ -3,7 +3,8 @@
 // 范式对齐 nbt-parse.test.ts / browser-adapter.test.ts：纯函数直测 + IDB mock 装配测。
 // 头部用例镜像 go/ysm/header_test.go（scanHeader/AnalyzeYSMHeaderFromBytes 口径），
 // 摘要用例镜像 go/ysm/summary_extract_test.go（zip 内 ysm.json / 降级扫描 / YSGP）。
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { zipSync, strToU8 } from "fflate";
 import {
   parseYsmHeaderFromBytes,
@@ -14,16 +15,7 @@ import {
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，
 // 与 browser-adapter 系一致——per-file vi.mock 在共享模块图下会捕获错位绑定）
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbDel: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+const idbMock = getIdbMock();
 
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
 

@@ -4,17 +4,9 @@
 // 不改动任何源码，仅新增本文件。harness 复刻 browser-adapter.test.ts
 // （vi.hoisted 的 idbMock + vi.mock("./idb.ts")）。
 // 共享 idb mock：setup 层 globalThis.__YSM_TEST_IDB__ 注入（isolate:false 穿透修复，2026-08-17）
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbDel: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
+const idbMock = getIdbMock();
 import { browserAdapter, importWebFiles } from "./browser-adapter.ts";
 
 // idb 层内存实现（与既有测试同形）

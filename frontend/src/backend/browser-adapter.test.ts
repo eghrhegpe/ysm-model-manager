@@ -1,19 +1,9 @@
 // @vitest-environment node
 // ===== 浏览器后端适配器测试（ADR-049 Phase 1 骨架 + Phase 2 IndexedDB 模型库）=====
 // 共享 idb mock：setup 层 globalThis.__YSM_TEST_IDB__ 注入（isolate:false 穿透修复，2026-08-17）
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbGetAllMetadata: Mock;
-    idbDel: Mock;
-    idbTx: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
+const idbMock = getIdbMock();
 import { zipSync, strToU8 } from "fflate";
 import {
   browserAdapter,

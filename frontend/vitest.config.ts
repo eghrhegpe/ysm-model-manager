@@ -16,6 +16,12 @@ const isCoverage = process.argv.includes("--coverage");
 // 源模块顶层 window 副作用须惰性化（typeof window !== "undefined" 守卫），
 // 如 bus.ts / app-modules.ts / debug.ts——否则 import 链在 node 下报 window is not defined。
 // isolate:true（2026-08-22）：解决 isolate:false 混合环境 worker 复用导致的 document 偶发串扰。
+// ⚠️ 红线（勿改回 isolate:false）：setup 层 __YSM_TEST_IDB__（test-setup.ts §0）挂 globalThis
+// 跨文件存活，isolate:false 下 worker 内共享模块图会让 per-file 绑定捕获错位——
+// web-fs.ts 首求值固化先运行文件的 mock 引用 → 读写错位。setup 级注入正为此而设，
+// 关掉隔离即拆掉这条防线。配套的 test:audit（isolate:false + shuffle）仅用于主动暴露
+// 该风险，不是日常配置；真要在 audit 下跑，消费 __YSM_TEST_IDB__ 的文件须每例显式清理
+// （先例见 test-utils/mock-app.ts 的 resetAppMock 范式）。
 // test-setup.ts 的 idb/three/i18n mock 已兼容双模式，setupFiles 在 isolate:true 下每 worker 重执行。
 export default defineConfig({
   plugins: [wasmDataStubs()],

@@ -7,7 +7,6 @@
 // mock 面与 mount-preview-core.test.ts 一致（真链 + 外墙桩：three/OrbitControls/caps/菜单/输入）。
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import * as THREE from "three";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import {
   cleanupPreview,
@@ -28,30 +27,13 @@ const h = vi.hoisted(() => ({
 }));
 
 // ---- three：仅替换 WebGLRenderer（happy-dom 无 WebGL）----
+// mock 本体抽到 test-utils/fake-webgl-renderer.ts（与主变体共享，防两处漂移）
 vi.mock("three", async (importOriginal) => {
   const actual = await importOriginal<typeof import("three")>();
-  class FakeWebGLRenderer {
-    domElement: HTMLCanvasElement & { getBoundingClientRect?: () => unknown };
-    setSize = vi.fn();
-    setPixelRatio = vi.fn();
-    render = vi.fn();
-    dispose = vi.fn();
-    getSize = (v: THREE.Vector2) => v.set(800, 600);
-    constructor() {
-      const el = document.createElement("canvas") as HTMLCanvasElement & {
-        getBoundingClientRect?: () => unknown;
-      };
-      el.width = 800;
-      el.height = 600;
-      el.getBoundingClientRect = (() => ({
-        left: 0, top: 0, width: 800, height: 600, x: 0, y: 0, right: 800, bottom: 600, toJSON: () => ({}),
-      })) as unknown as HTMLCanvasElement["getBoundingClientRect"];
-      this.domElement = el;
-    }
-  }
+  const { makeCanvasFakeRenderer } = await import("@/test-utils/fake-webgl-renderer.ts");
   return {
     ...actual,
-    WebGLRenderer: FakeWebGLRenderer as unknown as typeof THREE.WebGLRenderer,
+    WebGLRenderer: makeCanvasFakeRenderer() as unknown as typeof actual.WebGLRenderer,
   };
 });
 

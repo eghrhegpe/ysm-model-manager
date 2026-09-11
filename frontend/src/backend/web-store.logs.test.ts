@@ -3,17 +3,9 @@
 // AddOpLog/AddImportLog → IDB 落库（web:runtime-logs/web:import-logs）；
 // GetRuntimeLogs hydrate 恢复上会话日志；clear 删 IDB；push 先 hydrate 不覆盖旧。
 // 共享 idb mock：setup 层 globalThis.__YSM_TEST_IDB__ 注入（isolate:false 穿透修复，2026-08-17）
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-const idbMock = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbDel: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
+const idbMock = getIdbMock();
 import { browserAdapter } from "./browser-adapter.ts";
 import { __resetWebLogStateForTest } from "./web-store.ts";
 

@@ -4,7 +4,8 @@
 // webFsBindings 全部装配项与 scanWebModels/rekey 主链路（node 环境，无 DOM 依赖）。
 // nbt-parse / voxel-parse 的 NBT 视图 mock 掉（纯解析层各有专属测试），锁 web-fs 的
 // 装配与失败契约（"{}" / "[]" / {"error"}）；zip 类路径走真实 extractZip/pack-meta。
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { zipSync, strToU8 } from "fflate";
 import {
   webFsBindings,
@@ -40,18 +41,7 @@ vi.mock("@/parsers/litematic-voxel.ts", () => ({ litematicVoxelView: vox.litemat
 vi.mock("@/parsers/schematic-voxel.ts", () => ({ schematicVoxelView: vox.schematicVoxelView }));
 
 // ── IDB 内存 store（test-setup 全局共享）──
-const idb = (globalThis as unknown as {
-  __YSM_TEST_IDB__: {
-    idbGet: Mock;
-    idbSet: Mock;
-    idbKeys: Mock;
-    idbGetAll: Mock;
-    idbGetAllMetadata: Mock;
-    idbDel: Mock;
-    idbTx: Mock;
-    _store: Map<string, unknown>;
-  };
-}).__YSM_TEST_IDB__;
+const idb = getIdbMock();
 
 const enc = new TextEncoder();
 const PNG = enc.encode("PNGDATA");

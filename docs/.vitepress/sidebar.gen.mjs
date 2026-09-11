@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-227：preview-3d 模块级单例收敛为实例（P1 战役）",
+        "link": "/adr/ADR-227-preview-3d-singleton-to-instance"
+      },
+      {
         "text": "ADR-226：清理 mdXx 人工命名空间前缀",
         "link": "/adr/ADR-226-mdxx"
       },

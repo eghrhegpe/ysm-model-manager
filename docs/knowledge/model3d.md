@@ -13,6 +13,7 @@ auto_fields:
     - __setEncodeImplForTest
     - _clearPmxStatsCache
     - _resetSingletons
+    - ActiveInputSession
     - AdaptiveRenderBudget
     - addMeshToBoneGroup
     - ALL_PERCEPTION_CAPS
@@ -540,6 +541,8 @@ auto_fields:
     - renderCapSelect
     - renderCapSlider
     - renderCapToggle
+    - rendererHost
+    - RendererHost
     - renderLoadingState
     - renderMenu
     - RenderModeCapability

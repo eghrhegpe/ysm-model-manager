@@ -25,6 +25,8 @@ auto_fields:
     - flushPromises
     - getAllByTestId
     - getByTestId
+    - getIdbMock
+    - IdbMock
     - jpgBytes
     - MenuDefLike
     - mockAppMethods

@@ -17,6 +17,7 @@ auto_fields:
   symbols_with_lines:
     - _clearPmxStatsCache
     - _resetSingletons
+    - ActiveInputSession
     - ALL_PERCEPTION_CAPS
     - AllocEntry
     - App.GetVoxelDataInContainer
@@ -225,6 +226,8 @@ auto_fields:
     - registerSchema
     - removeOwnHandle
     - removePerFrame
+    - rendererHost
+    - RendererHost
     - renderLoadingState
     - RenderVrmBonePanel
     - RepresentativeSnapshot

@@ -144,8 +144,8 @@ function emitFromNode(node: any, seq: CxEvent[], guard: number): void {
 }
 
 // ─── 顶层声明提取（函数 / 箭头 / 类方法）──────────────────
-/** 返回包含节点行号的命名函数/方法/箭头函数集合。 */
-function collectNamedFunctions(
+/** 返回包含节点行号的命名函数/方法/箭头函数集合。check-params 等复用同一收集口径。 */
+export function collectNamedFunctions(
   sf: any,
 ): Array<{ node: any; name: string; kind: string; line: number }> {
   const out: Array<{ node: any; name: string; kind: string; line: number }> = [];

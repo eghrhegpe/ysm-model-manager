@@ -30,6 +30,7 @@ auto_fields:
     - isPathAvailable
     - KNOWN_PATHS
     - oneOf
+    - PathValue
     - persistState
     - pickPersistFields
     - previewSnapshot

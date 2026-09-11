@@ -452,6 +452,7 @@ auto_fields:
     - OrderedTexInput
     - overlayStyleRoot
     - OverlayStyleTarget
+    - ownHandle
     - PackAdapterOpts
     - PackDeps
     - PackEntryReader
@@ -460,6 +461,7 @@ auto_fields:
     - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
+    - PathValue
     - PerceptionCapability
     - perceptionNodes
     - PerceptionState
@@ -538,6 +540,7 @@ auto_fields:
     - registerPerFrame
     - registerSchema
     - releaseTextureUrls
+    - removeOwnHandle
     - removePerFrame
     - renderAdapterPanelContent
     - renderCapColor

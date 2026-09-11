@@ -443,9 +443,9 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 660 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 661 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 160 |
+| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 161 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |

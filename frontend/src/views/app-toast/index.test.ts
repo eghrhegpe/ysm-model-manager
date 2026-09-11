@@ -97,7 +97,9 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
 
   it("关闭按钮 → 移除 toast", async () => {
     const el = mountToast();
-    bus.emit("toast:show", { msg: "可关闭" });
+    // 钉 duration：不钉则默认 4000ms 自动到期会落在 5000ms waitFor 窗口内——关闭按钮失效时
+    // 自动到期定时器兜底移除 → 假绿；钉长 duration 使关闭按钮成为唯一移除路径
+    bus.emit("toast:show", { msg: "可关闭", duration: 99999 });
     const root = el.shadowRoot!;
     await waitFor(() => getByTestId(root, "toast") !== null);
     const closeBtn = root.querySelector(".close-btn") as HTMLElement;
@@ -118,9 +120,13 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     expect(undoBtn).toBeTruthy();
     undoBtn.click();
     expect(undoFn).toHaveBeenCalled();
-    // 撤销后显示「已撤销」
-    await waitFor(() => getAllByTestId(root, "toast").length >= 1);
-    expect(getAllByTestId(root, "toast").length).toBeGreaterThanOrEqual(1);
+    // 撤销后显示「已撤销」确认（对齐 L140 钉法：断言确认文案出现；
+    // 原 `length >= 1` vacuous——点击前已有 1 条 toast，waitFor 立即返回、确认文案从未被核对）
+    await waitFor(() =>
+      getAllByTestId(root, "toast").some((t) =>
+        t.innerHTML.includes("已撤销"),
+      ),
+    );
     unmount(el);
   });
 

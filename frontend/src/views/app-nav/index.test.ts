@@ -441,6 +441,8 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     await flushAsyncTurns(); // 排空：等启动恢复微任务广播 + handler 处理完（init 落定，非墙钟 sleep）
+    // ⚠️ 负向断言（L444 期望 nav_page 保持 workshop 不被改写）：当前恢复链（connectedCallback→queueMicrotask→同步 handler）
+    // 零定时器，排空即走满窗口；若日后恢复链引入 setTimeout，本用例会静默假绿——须改回负向 sleep 或补排空后复断
     expect(localStorage.getItem("nav_page")).toBe("workshop"); // 缺陷态：被写成 "settings"
     unmountElement(el);
   });

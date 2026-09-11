@@ -117,7 +117,9 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
     resolveFirst(JSON.stringify([])); // 旧代际完成 → gen 守卫丢弃
     // 正等结果：落定后共恰 1 次渲染（gen=2 正常；gen=1 被 gen 守卫丢弃）
     await waitFor(() => renderMock.mock.calls.length >= 1, 5000);
-    // gen=1 的收尾不得渲染；gen=2 正常渲染一次
+    // gen=1 的收尾不得渲染；gen=2 正常渲染一次（锁「不多」= toBeCalledTimes(1)；
+    // ⚠️ waitFor(>=1) 返回后即断言，尾部窗口≈0——当前 store/renderer 链零定时器故安全，
+    // 若日后 loadRepoRoots/render 引入定时器，须补 flushAsyncTurns + 复断防第二次渲染漏网）
     expect(renderMock).toHaveBeenCalledTimes(1);
     unmountElement(el);
   });

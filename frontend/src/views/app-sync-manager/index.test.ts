@@ -140,7 +140,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     bus.emit("stats:refresh");
     // 正等结果：重新加载（GetInstanceSyncStatus 调用 +1）
     await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= callsBefore + 1, 5000);
-    // 订阅有效 → 重新加载（GetInstanceSyncStatus 调用次数 +1）
+    // 订阅有效 → 重新加载（GetInstanceSyncStatus 调用次数 +1；锁「不多」= toBe(callsBefore+1)。
+    // 每次 emit 仅一个同步调用源（handler 发起 loadData），尾部窗口≈0 当前安全；引入定时器须补排空复断）
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore + 1);
     unmountElement(el);
   });
@@ -170,7 +171,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 发射全局焦点 → 订阅应重载数据（GetInstanceSyncStatus +1）
     const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
     bus.emit("repo:rtype-changed", "shaderpack");
-    // 正等结果：跟随重载（GetInstanceSyncStatus 调用 +1）
+    // 正等结果：跟随重载（GetInstanceSyncStatus 调用 +1；锁「不多」= toBe(callsBefore+1)，单一同步调用源）
     await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= callsBefore + 1, 5000);
     expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore + 1);
     // 当前类型指示更新
@@ -315,7 +316,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     pushBtn.click();
     pushBtn.click();
     pushBtn.click();
-    // 正等结果：重入守卫仅 1 次真正调到底层 API（delta=1；调用在点击时同步发生，>=1 轮询不可跳过）
+    // 正等结果：重入守卫仅 1 次真正调到底层 API（delta=1；守卫 _singleBusy.add 在点击时同步置位拦重入，
+    // API 调用本身在 await getApp() 后一拍微任务发生——>=1 轮询不可跳过，锁「不多」靠 L322 toBe(1)）
     await waitFor(() => mocks.PushSingleResourceToInstance.mock.calls.length - callsBefore >= 1);
     // 重入守卫：3 次点击仅 1 次真正调到底层 API（delta=1）
     const delta = mocks.PushSingleResourceToInstance.mock.calls.length - callsBefore;

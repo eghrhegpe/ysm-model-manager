@@ -182,6 +182,7 @@ auto_fields:
     - MpSessionState
     - normalizeFbxScale
     - OpenGzRootFromBytes
+    - ownHandle
     - PackAdapterOpts
     - PackDeps
     - packTextureLabel
@@ -220,6 +221,7 @@ auto_fields:
     - RegisterBuiltSceneInput
     - registerPerFrame
     - registerSchema
+    - removeOwnHandle
     - removePerFrame
     - renderLoadingState
     - RenderVrmBonePanel

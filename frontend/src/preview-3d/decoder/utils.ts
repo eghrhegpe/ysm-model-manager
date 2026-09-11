@@ -2,10 +2,14 @@
 // 原 views/app-preview/utils.ts 的纯领域部分拆分至此（devLog / stripYsgpTextHeader / DecodedYsm）。
 // 视图接口（PreviewRoot/YsmDecoder/PreviewCtx 等）与状态（getPrefer3D/setPrefer3D）仍留在
 // views/app-preview/utils.ts——本文件不反向 import views。
+
+import { dbg } from "@/utils/debug/debug.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 
-/** DEV 模式下输出调试日志 */
-export const devLog: (...args: unknown[]) => void = import.meta.env.DEV ? console.log : () => {};
+/** DEV 模式下输出调试日志（走环形日志，tag = ysm-decode） */
+export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
+  ? (...args) => dbg("ysm-decode", args.length === 1 ? args[0] : args)
+  : () => {};
 
 /** WASM 解码结果（decodeYsmViaWasm 返回） */
 export interface DecodedYsm {

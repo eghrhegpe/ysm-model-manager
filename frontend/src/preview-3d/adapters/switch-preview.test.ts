@@ -598,12 +598,13 @@ describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps
     expect(syncMeshIntensity).toHaveBeenCalledWith([newMesh]);
   });
 
-  it("keep=true 多模型同框 → arrangeModelsInRow 排开 + fitCameraToRoots 重取景", async () => {
+  it("keep=true 多模型同框 → arrangeModelsInGrid 网格排开 + fitCameraToRoots 重取景", async () => {
     const { ctx, mockScene, mockAdapter } = makeMockCtx();
-    // 预注册两个可见模型（roots 有几何 → 包围盒宽度可算）
+    // 预注册两个可见模型（roots 有几何 → 包围盒尺寸可算）；rootB 带 Y 偏移验证排开不改高度
     sceneRegistry.reset();
     const rootA = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     const rootB = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    rootB.position.y = 3;
     mockScene.add(rootA, rootB);
     sceneRegistry.register({ path: "a.glb", rtype: "vrm", roots: [rootA], content: { dispose: vi.fn() } as unknown as PreviewScene });
     sceneRegistry.register({ path: "b.glb", rtype: "vrm", roots: [rootB], content: { dispose: vi.fn() } as unknown as PreviewScene });
@@ -614,10 +615,12 @@ describe("switchToSession 场景注册与视图同步（scene=null 退化 + caps
 
     await switchToSession(ctx, "c.glb", { keepInScene: true });
 
-    // 两个已注册模型被 X 轴排开（位置不再重叠于原点）
+    // 两个已注册模型被网格排开（X 位置不再重叠于原点）
     expect(rootA.position.x).not.toBe(0);
     expect(rootB.position.x).not.toBe(0);
     expect(rootA.position.x).not.toBe(rootB.position.x);
+    // Y 轴保持原值（地面接触/飞行高度不被排开抹平）
+    expect(rootB.position.y).toBe(3);
   });
 });
 
@@ -636,7 +639,7 @@ describe("switchToSession 清理与排开边界", () => {
     expect(mockScene.children).not.toContain(staleMesh);
   });
 
-  it("keep=true 但注册表仅 0/1 个模型 → arrangeModelsInRow 早退不排开", async () => {
+  it("keep=true 但注册表仅 0/1 个模型 → arrangeModelsInGrid 早退不排开", async () => {
     const { ctx, mockAdapter } = makeMockCtx();
     sceneRegistry.reset(); // 0 个注册模型
     mockAdapter.build.mockResolvedValue({ dispose: vi.fn() } as unknown as PreviewScene);

@@ -44,6 +44,7 @@ auto_fields:
     - MAX_PIXEL_RATIO_KEY
     - Model2DOptions
     - openFullPreview
+    - PathInput
     - PathValue
     - Prefer3DState
     - PREVIEW_FRAME_INTERVAL_MS

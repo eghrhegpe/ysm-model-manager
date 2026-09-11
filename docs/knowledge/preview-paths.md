@@ -11,6 +11,7 @@ auto_fields:
     - getStateValue
     - isPathAvailable
     - KNOWN_PATHS
+    - PathInput
     - PathValue
     - previewSnapshot
     - PreviewSnapshot

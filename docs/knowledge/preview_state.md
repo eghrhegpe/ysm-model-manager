@@ -23,6 +23,7 @@ auto_fields:
     - isPathAvailable
     - isPreviewFolderNode
     - KNOWN_PATHS
+    - PathInput
     - PathValue
     - PreviewMenuCtx
     - previewSnapshot

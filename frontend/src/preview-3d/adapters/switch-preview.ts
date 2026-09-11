@@ -20,6 +20,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
+import { ownHandle } from "./mount-session.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { registerBuiltScene } from "./register-built-scene.ts";
 import { MAX_MODELS, sceneRegistry } from "./scene-registry.ts";
@@ -206,9 +207,8 @@ async function buildSwitchContent(
   beforeBuild: Set<THREE.Object3D> | null,
 ): Promise<PreviewScene | null> {
   try {
-    // P0 修复：捕获当前 session 的稳定 gen——switchTo 闭包按 gen 查找自身 handle，
+    // P0 修复：switchTo 闭包经 ownHandle 按 gen 查找自身 handle（gen 随 ctx 读取），
     // 不取 handles 数组末尾，避免多 session 下同框 session 互踩。
-    const myGen = ctx.myGen;
     const buildCtx: PreviewBuildCtx = {
       viewContainer: ctx.viewContainer,
       loadingEl: ctx.loadingEl,
@@ -219,7 +219,8 @@ async function buildSwitchContent(
       // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
       // 无活跃会话时 no-op（与 switchPreview 同口径）。
       switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
-        ctx.handles.find((h) => h.gen === myGen)?.handle.switchTo?.(p, options) ??
+        // 2026 锐评 P1：gen-scoped 查找收敛到 ownHandle（与 mount3D 各调用点同语义）
+        ownHandle(ctx)?.switchTo?.(p, options) ??
         ctx.getHandle()?.switchTo?.(p, options) ??
         Promise.resolve(),
     };
@@ -396,8 +397,8 @@ function syncSwitchView(
   }
   // ADR-093 T3：同台追加后按可见注册模型根节点重算并集取景（多模型同框正确框全场景）
   if (keep && ctx.scene && ctx.camera && ctx.controls) {
-    // 多模型同框 X 轴自动排开（避免重叠）
-    arrangeModelsInRow();
+    // 多模型同框网格排列（避免重叠，Y 保持原值）
+    arrangeModelsInGrid();
     const roots = sceneRegistry.visibleRoots();
     if (roots.length) fitCameraToRoots(roots, ctx.camera, ctx.controls);
   }
@@ -421,39 +422,43 @@ function updateSwitchBaseline(ctx: SwitchContext, beforeBuild: Set<THREE.Object3
 // ---------------------------------------------------------------------------
 
 /**
- * 按可见模型的包围盒宽度自动计算 X 轴偏移，避免同框重叠。
+ * 可见模型网格排列——避免同框重叠，Y 轴保持原值（地面接触/飞行高度）。
  * 只在 keepInScene（同台追加）模式下由 switchToSession 调用。
- * 适配器无感知——偏移由 core 统一计算并设置 roots 的 position.x。
+ * 适配器无感知——偏移由 core 统一计算并设置 roots 的 position.x/.z。
+ *
+ * 布局策略：cols = ceil(sqrt(N))，格子尺寸 = 最大宽/深 + 间距。
  */
-function arrangeModelsInRow(): void {
-  const entries = sceneRegistry.getAll();
+function arrangeModelsInGrid(): void {
+  const entries = sceneRegistry.getVisible();
   if (entries.length <= 1) return;
 
-  // 1) 计算每个模型包围盒宽度 + 模型间间距
-  const widths: number[] = [];
-  const gaps: number[] = [];
+  // 1) 计算每个模型的包围盒尺寸
+  const sizes: THREE.Vector3[] = [];
   for (const e of entries) {
     const box = new THREE.Box3();
     for (const r of e.roots) box.expandByObject(r);
-    const size = box.getSize(new THREE.Vector3());
-    const w = size.x || 1;
-    widths.push(w);
-    gaps.push(Math.max(w * 0.2, 0.5)); // 间距 = 20% 宽度，最小 0.5
+    sizes.push(box.getSize(new THREE.Vector3()));
   }
 
-  // 2) 计算总宽度 + 居中偏移（从左侧开始排列）
-  const totalGaps = gaps.reduce((s, g) => s + g, 0) - gaps[gaps.length - 1];
-  const totalWidth = widths.reduce((s, w) => s + w, 0) + totalGaps;
-  let x = -totalWidth / 2;
+  // 2) 动态网格：cols = ceil(sqrt(N))，行数自适应
+  const cols = Math.ceil(Math.sqrt(entries.length));
+  const gap = 0.5;
+  const maxW = Math.max(...sizes.map((s) => s.x || 1));
+  const maxD = Math.max(...sizes.map((s) => s.z || 1));
+  const cellW = maxW + gap;
+  const cellD = maxD + gap;
 
-  // 3) 逐个设置 X 位置（每个模型居中在其段内）
-  for (let i = 0; i < entries.length; i++) {
-    const halfW = widths[i] / 2;
-    for (const r of entries[i].roots) {
-      r.position.x = x + halfW;
+  // 3) 放置：Y 保持原值，X/Z 网格排列（居中）
+  entries.forEach((e, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = (col - (cols - 1) / 2) * cellW;
+    const z = (row - (Math.ceil(entries.length / cols) - 1) / 2) * cellD;
+    for (const r of e.roots) {
+      r.position.x = x;
+      r.position.z = z;
     }
-    x += widths[i] + gaps[i];
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------

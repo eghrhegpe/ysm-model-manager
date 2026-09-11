@@ -461,6 +461,7 @@ auto_fields:
     - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
+    - PathInput
     - PathValue
     - PerceptionCapability
     - perceptionNodes

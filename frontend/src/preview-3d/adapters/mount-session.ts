@@ -115,6 +115,29 @@ export interface MountCtx {
 }
 
 /**
+ * Gen-scoped 会话句柄解析（2026 锐评 P1：收敛 5+ 处手写 `handles.find(h => h.gen === myGen)`）。
+ * code_review ece0d4a4 #10 的模式单点化：coop 多会话下按 gen 精确定位本会话句柄，
+ * 绝不取「最后 commit 的 session」——camBridge.reset / menuCtx.switchTo / runBuild /
+ * buildSwitchContent / finishSession 统一经此解析，避免各调用点 find 语义漂移。
+ * 结构参数（MountCtx 与 SwitchContext 均满足形状），两侧零环引入。
+ */
+export function ownHandle(ctx: {
+  handles: Array<{ handle: PreviewHandle; gen: number }>;
+  myGen: number;
+}): PreviewHandle | undefined {
+  return ctx.handles.find((h) => h.gen === ctx.myGen)?.handle;
+}
+
+/** 从句柄列表摘除本会话条目（finishSession 专用；与 ownHandle 同构参数） */
+export function removeOwnHandle(ctx: {
+  handles: Array<{ handle: PreviewHandle; gen: number }>;
+  myGen: number;
+}): void {
+  const idx = ctx.handles.findIndex((h) => h.gen === ctx.myGen);
+  if (idx >= 0) ctx.handles.splice(idx, 1);
+}
+
+/**
  * 会话收尾（幂等，closeOverlay 早期路径与 runFullCleanup post-build 路径共用）：
  * 摘句柄 → 通知调用方 → 无障碍焦点归还。
  * 必须单一出口：ESC 早期中断会先走 closeOverlay，build 随后 resolve 时中止守卫
@@ -125,8 +148,7 @@ function finishSession(ctx: MountCtx): void {
   if (session.finished) return;
   session.finished = true;
   // 从模块级 handles 列表移除当前 session（hasActivePreview 以该列表为依据）
-  const idx = ctx.handles.findIndex((h) => h.gen === ctx.myGen);
-  if (idx >= 0) ctx.handles.splice(idx, 1);
+  removeOwnHandle(ctx);
   // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
   // mount3D 入口已记下 activeElement；元素已离文档时 returnFocus 静默跳过）
   ctx.focusTrap.cleanup?.();

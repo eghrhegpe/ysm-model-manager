@@ -10,11 +10,22 @@
 import type * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import type { BoneMaps } from "@/preview-3d/mesh/model3d.ts";
+import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import type { PreviewScene } from "./mount-preview-core.ts";
 
 /** 菜单句柄最小接口（解耦 preview-menu/core.ts 运行时依赖） */
 interface MenuItemsSink {
   setAdapterItems(items: PreviewMenuNode[]): void;
+}
+
+/** visible 持久化键（按模型 path；隐私模式下 safe* 静默降级，不影响会话内行为） */
+function visKey(path: string): string {
+  return `ysm:model-visible:${path}`;
+}
+
+/** 恢复某 path 的持久化可见性（缺省 true = 显示） */
+function persistedVisible(path: string): boolean {
+  return safeGet(visKey(path)) !== "0";
 }
 
 /** 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） */
@@ -67,7 +78,8 @@ function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
     rtype: input.rtype,
     roots: input.roots,
     content: input.content,
-    visible: true,
+    // 恢复持久化可见性（缺省显示；privacy 模式下 safeGet 返回 null → 默认 true）
+    visible: persistedVisible(input.path),
     boneMaps: input.boneMaps ?? null,
     menuItems: input.menuItems ?? null,
     onBonePick: input.onBonePick ?? null,
@@ -125,7 +137,12 @@ class SceneRegistry {
         old.onBonePick = input.onBonePick ?? null;
         if (input.displayName !== undefined) old.displayName = input.displayName;
         if (input.components !== undefined) old.components = input.components;
-        for (const r of input.roots) this.objToEntry.set(r, old);
+        // 恢复持久化可见性（同 path 重载沿用上次显隐）
+        old.visible = persistedVisible(input.path);
+        for (const r of input.roots) {
+          r.visible = old.visible;
+          this.objToEntry.set(r, old);
+        }
       }
       this.activeId = existing;
       return existing;
@@ -133,7 +150,10 @@ class SceneRegistry {
     const id = `m${++this.seq}`;
     const entry = mdSrBuildEntryFromInput(id, input);
     mdSrIndexIntoMaps(this.entries, this.byPath, entry);
-    for (const r of input.roots) this.objToEntry.set(r, entry);
+    for (const r of input.roots) {
+      r.visible = entry.visible;
+      this.objToEntry.set(r, entry);
+    }
     this.activeId = id;
     return id;
   }
@@ -165,12 +185,13 @@ class SceneRegistry {
     return this.entries.size;
   }
 
-  /** 设置/取消可见性（同时切换其 roots 的 Object3D.visible） */
+  /** 设置/取消可见性（同时切换其 roots 的 Object3D.visible + 持久化供下次会话恢复） */
   setVisible(id: string, v: boolean): void {
     const e = this.entries.get(id);
     if (!e) return;
     e.visible = v;
     for (const r of e.roots) r.visible = v;
+    safeSet(visKey(e.path), v ? "1" : "0");
   }
 
   /** 可见模型的全部根节点（相机累加取景用） */

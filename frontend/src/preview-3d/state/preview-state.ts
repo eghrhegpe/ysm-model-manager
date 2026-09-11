@@ -41,7 +41,7 @@ import {
   MAX_PIXEL_RATIO_KEY,
 } from "@/preview-3d/infra/render-budget.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
-import type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
+import type { PathInput, PathValue, PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子
 // preview-paths.ts（断 caps/scene-capability ⇄ preview-state 纯 type 环）：
 // 本文件 import KNOWN_PATHS 供 bindings 注册 / previewSnapshot() 遍历，并 re-export
@@ -49,7 +49,7 @@ import type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // （re-export 拆值/类型两行：gen-knowledge-autogen 的 reRe 正则不识别花括号内 `type X`。）
 import { KNOWN_PATHS } from "./preview-paths.ts";
 
-export type { PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
+export type { PathInput, PathValue, PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 export { KNOWN_PATHS } from "./preview-paths.ts";
 
 /**
@@ -62,15 +62,21 @@ export function toStatePath(path: PreviewStatePath): PreviewStatePath {
   return path;
 }
 
-/** 单个路径的读写绑定（模块内使用，不外导） */
-interface PreviewStatePathBinding {
+/**
+ * 单路径读写绑定（值类型 V 精确参数化——binding 表内 get/set 类型对齐编译期校验）。
+ * I = 写入输入域（控件基元联合，binding 内归一）；默认 I = V（精确路径自给自足）。
+ */
+interface PathBinding<V, I = V> {
   /** 读取当前值（cap 派生项在 cap 缺席时返回安全缺省） */
-  get: () => unknown;
+  get: () => V;
   /** 写入新值（cap 缺席时静默丢弃） */
-  set: (v: unknown) => void;
+  set: (v: I) => void;
   /** 该路径当前是否有真实来源；cap 派生项在 cap 缺席时 false，供 visible 守卫 */
   available: () => boolean;
 }
+
+/** 全路径绑定表：get 值类型由 PathValue 推导、set 输入域由 PathInput 推导——漏填/错填编译期报错 */
+type PathBindingMap = { [K in PreviewStatePath]: PathBinding<PathValue[K], PathInput<K>> };
 
 // ── cap 惰性解析（禁止在 schema 构建期捕获 cap 实例）──
 
@@ -192,7 +198,10 @@ function wireframeModeCap(): WireframeModeCap | undefined {
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
-const bindings: Record<(typeof KNOWN_PATHS)[number], PreviewStatePathBinding> = {
+// 2026 锐评 P1：值类型精确化——每键 get/set 参数经 PathValue[K] 编译期对齐
+//（maxFps/maxPixelRatio 的 set 接受 number|string 归一，get 返回 number 子集；
+// ui.mode 的 set 归一守卫接受 string，get 返回 "shared"|"self" 子集）
+const bindings: PathBindingMap = {
   // ── 横切项：无 cap 归属，本层直管持久化 ──
   "render.frustumCull": {
     get: () => isFrustumCullEnabled(),
@@ -319,19 +328,21 @@ function notify(changed: (typeof KNOWN_PATHS)[number]): void {
 
 // ── 对外 API ──
 
-/** 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） */
-export function getStateValue(path: (typeof KNOWN_PATHS)[number]): unknown {
+/** 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一；返回类型按 PathValue 精确映射） */
+export function getStateValue<P extends PreviewStatePath>(path: P): PathValue[P] {
   return bindings[path].get();
 }
 
 /**
- * 写入路径值。
+ * 写入路径值（输入域 PathInput[P] = 精确类型 ∪ 控件基元——泛型控件层
+ * setValue(v: number | string | boolean) 可交付任意基元，binding 归一；
+ * 比 unknown 严：object/undefined 编译报错）。
  * @param opts.notify 是否广播变更；默认 true。滑块 `oninput` 高频写入传 false，
  *   避免每像素触发面板重算（沿用 SceneCapability.subscribe 的「仅离散操作通知」约定）。
  */
-export function setStateValue(
-  path: (typeof KNOWN_PATHS)[number],
-  value: unknown,
+export function setStateValue<P extends PreviewStatePath>(
+  path: P,
+  value: PathInput<P>,
   opts?: { notify?: boolean },
 ): void {
   // cap set 可能抛错（cap 缺失、内部状态异常）；
@@ -353,13 +364,15 @@ export function isPathAvailable(path: (typeof KNOWN_PATHS)[number]): boolean {
 
 /**
  * 全量快照：供 `visibleWhen: (s) => boolean` 等纯函数谓词消费。
- * 返回 PreviewSnapshot（Record<PreviewStatePath, unknown>）——七域键位都可能在
- * （未落地项为 undefined），谓词写 `s["ui.mode"] === "self"` 安全（取到 undefined 自然为 falsy）。
+ * 返回 PreviewSnapshot（每键值类型经 PathValue 精确映射）——谓词写
+ * `s["env.waterMode"] === "film"` 走 string 比较，类型守卫天然正确。
  */
 export function previewSnapshot(): PreviewSnapshot {
+  // 逐键写入经宽松中间形态（循环变量 p 为联合类型，无法逐键精确赋值），
+  // 出口 cast 到 PreviewSnapshot——bindings 已按 PathBindingMap 校验，每键 get 类型对齐
   const out = {} as Record<PreviewStatePath, unknown>;
   for (const p of KNOWN_PATHS) out[p] = bindings[p].get();
-  return out;
+  return out as PreviewSnapshot;
 }
 
 /** 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） */

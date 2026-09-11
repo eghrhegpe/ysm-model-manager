@@ -30,6 +30,7 @@ auto_fields:
     - isPathAvailable
     - KNOWN_PATHS
     - oneOf
+    - PathInput
     - PathValue
     - persistState
     - pickPersistFields

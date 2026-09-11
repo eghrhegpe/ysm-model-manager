@@ -49,9 +49,36 @@ export const KNOWN_PATHS = [
 export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
 
 /**
+ * 路径 → 值类型映射（2026 锐评 P1：消灭 getStateValue/setStateValue 的 unknown 擦除）。
+ *
+ * 读取侧（getStateValue / PreviewSnapshot）按**精确输出域**声明；
+ * 写入侧（setStateValue）经 {@link PathInput} 放宽——泛型控件层
+ * （PreviewControlDef.setValue: number | string | boolean，menu-node-types）对任意
+ * 路径可交付任意基元，binding 内部负责归一（Number()/Boolean()/String()/枚举守卫），
+ * 故写入域 = 本路径精确类型 ∪ 控件基元联合（仍比 unknown 严：拒绝 object/undefined）。
+ * 新增路径两步走不变：扩 KNOWN_PATHS + 在 PathValue 补值类型 + 填 binding。
+ */
+export type PathValue = {
+  "render.frustumCull": boolean;
+  "render.maxFps": number;
+  "render.maxPixelRatio": number;
+  "render.bloom": boolean;
+  "render.wireframe": boolean;
+  "env.pmrem": boolean;
+  "env.waterMode": string;
+  "env.groundMatSource": string;
+  "ui.mode": "shared" | "self";
+  "env.skyGroundCap": boolean;
+};
+
+/** 写入侧输入域：精确类型 ∪ 控件基元（binding 归一后落精确类型） */
+export type PathInput<K extends PreviewStatePath> = PathValue[K] | number | string | boolean;
+
+/**
  * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
- * 由 state/preview-state.ts `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
+ * 由 state/preview-state.ts `previewSnapshot()` 产出（每键值类型经 PathValue 精确映射）。
  * 键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
  * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
+ * 旧 Record<PreviewStatePath, unknown> 的结构超集——Partial<PreviewSnapshot> 消费方零改动。
  */
-export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
+export type PreviewSnapshot = { [K in PreviewStatePath]: PathValue[K] };

@@ -56,6 +56,12 @@ interface MdWsTexAccum {
   avatars: Record<string, string>;
 }
 
+/** 释放 MdWsTexAccum 中所有未被缓存引用的 blob URL（防提前返回路径泄漏） */
+function mdWsRevokeTexAccumBlobs(acc: MdWsTexAccum): void {
+  for (const u of Object.values(acc.textures)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
+  for (const u of Object.values(acc.avatars)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
+}
+
 /** processModelFile 升格后所需的只读上下文（原闭包内 8 个外部捕获 → 全参数量化） */
 interface MdWsProcessModelCtx {
   orderedTexKeys: string[];
@@ -151,6 +157,8 @@ async function mdWsHandleYsmJsonSpec(
   };
   if (!meta.modelFiles?.length) return result;
   if (!result.geometry) return result;
+  // 未入 result.geometry 的 blob URL 跟踪集（成功路径 clear；函数出口统一 revoke 残留）
+  const pendingBlobUrls = new Set<string>();
   try {
     const allBones: BedrockGeometry["bones"] = [];
     let boneCount = 0,
@@ -209,7 +217,9 @@ async function mdWsHandleYsmJsonSpec(
           .split(/[/\\]/)
           .pop()
           ?.replace(/\.\w+$/, "") || "";
-      textures[key] = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      textures[key] = url;
+      pendingBlobUrls.add(url);
       texKeys.push(key);
 
       const sniffed = sniffTexSize(texBytes);
@@ -221,6 +231,8 @@ async function mdWsHandleYsmJsonSpec(
     }
 
     if (allBones.length > 0 && result.geometry) {
+      // 成功路径：URL 已赋给 result.geometry.textures，清空 pending 防误释放
+      pendingBlobUrls.clear();
       const geo = result.geometry;
       const { uvMaxW, uvMaxH } = mdWsComputeBoneTexRangeFromBones(allBones);
       const boneTexW = Math.max(maxTexW, geo.texWidth, uvMaxW) || 64;
@@ -248,6 +260,8 @@ async function mdWsHandleYsmJsonSpec(
   } catch (e) {
     devLog(`[YSM] JSON 合并几何失败: ${safeErrorMessage(e)}`);
   }
+  // 失败路径：释放未赋给 result.geometry 的 blob URL
+  for (const u of pendingBlobUrls) URL.revokeObjectURL(u);
   return result;
 }
 
@@ -289,7 +303,40 @@ async function mdWsTryJsonDispatch(
   return finalResult;
 }
 
-// ===== 阶段③ WASM 初始化 + 三重解码尝试 =====
+// ===== 阶段③ WASM 初始化 + 策略表驱动解码（2026 锐评 P1：四重 fallback 收敛为策略模式）=====
+// 每个策略：原始字节 / MEMFS 文件路径 / 剥离文本头部 V2(自动) / V3；成功（输出非空）即停。
+// 成功策略经 devLog 落环形日志（tag=ysm-decode），供排查「哪种文件落在哪条路径」。
+
+/** 单条解码策略（空数组 = 未命中，继续下一条） */
+interface MdWsDecodeStrategy {
+  name: string;
+  attempt: (bytes: Uint8Array) => Promise<DecodedFile[]>;
+}
+
+const mdWsDecodeStrategies: MdWsDecodeStrategy[] = [
+  {
+    name: "raw-mem",
+    attempt: async (b) => (await decodeYsmFileFromMemory(b)) || [],
+  },
+  {
+    name: "memfs",
+    attempt: async (b) => (await decodeYsmFile(b)) || [],
+  },
+  {
+    name: "strip-v2",
+    attempt: async (b) => {
+      const rebuilt = stripYsgpTextHeader(b, undefined);
+      return rebuilt && rebuilt !== b ? (await decodeYsmFileFromMemory(rebuilt)) || [] : [];
+    },
+  },
+  {
+    name: "strip-v3",
+    attempt: async (b) => {
+      const rebuilt = stripYsgpTextHeader(b, 3);
+      return rebuilt && rebuilt !== b ? (await decodeYsmFileFromMemory(rebuilt)) || [] : [];
+    },
+  },
+];
 
 async function mdWsInitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<DecodedFile[]> {
   devLog("[YSM] 加载 WASM 模块...");
@@ -301,51 +348,23 @@ async function mdWsInitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Prom
   }
 
   let files: DecodedFile[] = [];
-  try {
-    files = (await decodeYsmFileFromMemory(bytes)) || [];
-    if (files?.length) {
-      devLog(`[YSM] ✅ 原始字节解码成功: ${files.length} 文件`);
-    }
-  } catch (e) {
-    devLog(`[YSM] 原始字节解码异常: ${safeErrorMessage(e)}`);
-  }
-
-  if (!files?.length) {
-    devLog("[YSM] 原始字节解码失败，尝试 MEMFS 文件路径解码...");
+  let successStrategy = "";
+  for (const s of mdWsDecodeStrategies) {
+    if (files.length) break;
     try {
-      files = (await decodeYsmFile(bytes)) || [];
-      if (files?.length) {
-        devLog(`[YSM] ✅ MEMFS 解码成功: ${files.length} 文件`);
-      }
-    } catch (e2) {
-      devLog(`[YSM] MEMFS 解码异常: ${safeErrorMessage(e2)}`);
+      files = await s.attempt(bytes);
+      if (files.length) successStrategy = s.name;
+      else devLog(`[YSM] 策略 ${s.name} 未命中`);
+    } catch (e) {
+      devLog(`[YSM] 策略 ${s.name} 异常: ${safeErrorMessage(e)}`);
     }
   }
 
-  if (!files?.length) {
-    for (const tryVer of [null, 3]) {
-      const rebuilt = stripYsgpTextHeader(bytes, tryVer ?? undefined);
-      if (rebuilt === bytes || !rebuilt) continue;
-      const verLabel = tryVer ? `V${tryVer}` : "V2(自动)";
-      devLog(`[YSM] 原始解码失败，尝试剥离文本头部(${verLabel})...`);
-      try {
-        files = (await decodeYsmFileFromMemory(rebuilt)) || [];
-        if (files?.length) break;
-      } catch (e3) {
-        devLog(`[YSM] 剥离${verLabel}解码异常: ${safeErrorMessage(e3)}`);
-      }
-    }
-  }
-
-  if (!files?.length) {
-    devLog("[YSM] 内存解析返回空（跳过 callMain 直接回退 Go CLI）");
-  }
-  devLog(`[YSM] 输出 ${files?.length || 0} 文件`);
-  if (files?.length) {
+  if (files.length) {
+    devLog(`[YSM] ✅ 解码成功（策略 ${successStrategy}）: ${files.length} 文件`);
     devLog(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
-  }
-  if (!files?.length) {
-    devLog("[YSM] ❌ WASM 解码失败，无输出文件");
+  } else {
+    devLog("[YSM] ❌ WASM 解码失败，无输出文件（跳过 callMain 直接回退 Go CLI）");
     cacheSet(modelPath, { _wasmFailed: true });
     return [];
   }
@@ -655,11 +674,13 @@ async function mdWsHandleWasmDecode(
   const geometry = processCtx.geometryRef.current;
   if (!geometry && !hasYsmMeta) {
     devLog("[YSM] 无 ysm.json 引导，移交 Go 确保纹理正确映射");
+    mdWsRevokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
   if (!geometry && files?.length > 0) {
     devLog(`[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI`);
+    mdWsRevokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }

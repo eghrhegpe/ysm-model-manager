@@ -60,6 +60,7 @@ import {
   closeOverlay,
   type MountCtx,
   type MpSessionState,
+  ownHandle,
   runFailedMountCleanup,
   runFullCleanup,
   unloadSessionModel,
@@ -595,8 +596,9 @@ function assembleShell(ctx: MountCtx): AssembledShell {
     // content 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用。
     // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄——原 `_handles[length-1]` 在 coop
     // 多 session 下指向「最后 commit 的 session」而非本菜单/camera 桥属主，相机复位会误切他人
+    // （2026 锐评 P1：find 语义统一收敛到 ownHandle）
     reset: () => {
-      ctx.handles.find((h) => h.gen === ctx.myGen)?.handle.resetCamera?.();
+      ownHandle(ctx)?.resetCamera?.();
     },
   };
   ctx.camBridge = camBridge;
@@ -643,9 +645,8 @@ function assembleShell(ctx: MountCtx): AssembledShell {
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> | void => {
       // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄（对齐 runBuild.switchTo 同款
       // 查找）——原 `_handles[length-1]` 在 coop 多 session 下指向最后 commit 的 session，
-      // 菜单模型切换会误触发其它 session 的 switchTo
-      const active = ctx.handles.find((h) => h.gen === ctx.myGen);
-      const r = active?.handle.switchTo?.(p, options);
+      // 菜单模型切换会误触发其它 session 的 switchTo（2026 锐评 P1：收敛到 ownHandle）
+      const r = ownHandle(ctx)?.switchTo?.(p, options);
       // 透传 Promise：调用方（fillSwitch 替换/追加）在完成后局部刷新面板（renderRows 重读新当前路径）
       if (r) {
         void r.catch((err: unknown) =>
@@ -891,8 +892,8 @@ async function runBuild(
     // P0 修复：捕获当前 session 的稳定 gen，闭包按 gen 查找自身 handle——
     // 不取 handles 数组末尾，避免多 session 下同框 session 误触发彼此的切换。
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
-      const mine = ctx.handles.find((h) => h.gen === ctx.myGen);
-      return mine?.handle.switchTo?.(p, options) ?? Promise.resolve();
+      // 2026 锐评 P1：gen-scoped 查找收敛到 ownHandle（不再各处手写 find）
+      return ownHandle(ctx)?.switchTo?.(p, options) ?? Promise.resolve();
     },
   };
   // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——

@@ -29,6 +29,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { collectScripts, SCRIPTS_DIR } from "./_lib/collect-scripts.ts";
+import { ROOT } from "./_lib/scan-files.ts";
 
 const LIB_DIR = path.join(SCRIPTS_DIR, "_lib");
 
@@ -183,18 +184,77 @@ function collectLibs() {
     .sort();
 }
 
-/** 统计每个 _lib 模块被多少脚本引用（采用率全景）。 */
-function adoptionTable(files: string[], texts: Map<string, string>, libs: string[]) {
+/**
+ * 采用信号（两类），仅用于「采用率 / 孤儿判定」，不参与违规判定：
+ *   1. 真实 import 语句（adoptedRe，锚定 import 形式）；
+ *   2. 路径字符串引用——CLI `--import scripts/_lib/x.ts`、`register("./x.ts")` 等
+ *      非 import 形态。语义上仍是「在用」，只是引用方式不同。
+ *
+ * 补第 2 类的理由（2026-09 实证）：仅认 import 会让一批在役模块被报成「零引用，
+ * 建议归档」——ts-alias-register.ts 经 contract-tests.ts 的 execArgv `--import`
+ * 路径字符串接线；ts-alias-resolver.ts 经 ts-alias-register 的 register() 调用接线；
+ * machine-diff.ts / gen-config.ts 只被 _lib/gen-stage.ts import（旧口径只数
+ * scripts/ 侧，共享层内部互引整片漏计）。
+ */
+function usedBy(text: string, lib: string): boolean {
+  if (adoptedRe(lib).test(text)) return true;
+  const esc = lib.replace(/\./g, "\\.");
+  return new RegExp(`["'\`][^"'\`\\n]*${esc}["'\`]`).test(text);
+}
+
+/**
+ * 引用方池（比违规扫描面更宽）：scripts/（含 _lib 自身）∪ .githooks ∪ tests。
+ * 后两者不在 collectScripts 口径内却是真实消费方——`.githooks/pre-commit` 以 CLI
+ * 方式 `node scripts/_lib/gen-stage.ts` 调用，`tests/*.ts` 是契约测试消费方。
+ * 返回绝对路径 → 文本的映射（.githooks 下为无扩展名 shell 脚本，全量纳入）。
+ */
+function collectRefTexts(): Map<string, string> {
+  const out = new Map<string, string>();
+  const dirs = [path.join(ROOT, ".githooks"), path.join(ROOT, "tests")];
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!e.isFile()) continue;
+      // tests/ 只取顶层契约测试；.githooks/ 全取（pre-commit 等无扩展名）
+      if (dir.endsWith("tests") && !/\.(ts|mts)$/.test(e.name)) continue;
+      const abs = path.join(dir, e.name);
+      out.set(abs, fs.readFileSync(abs, "utf8"));
+    }
+  }
+  return out;
+}
+
+/**
+ * 统计每个 _lib 模块的采用率（被多少「引用方池」文件引用）。
+ * @param texts    相对 SCRIPTS_DIR 的路径 → 文本（违规扫描面，含 _lib 自身）
+ * @param refTexts 绝对路径 → 文本（.githooks / tests 追加引用方池）
+ */
+function adoptionTable(
+  files: string[],
+  texts: Map<string, string>,
+  libs: string[],
+  refTexts: Map<string, string>,
+) {
+  const refCount = files.length + refTexts.size;
   return libs.map((lib) => {
-    const re = adoptedRe(lib);
-    const users = files.filter((f) => re.test(texts.get(f) as string));
-    return { lib, users: users.length, scripts: users };
+    const selfFile = `_lib/${lib}`;
+    const users = files.filter((f) => f !== selfFile && usedBy(texts.get(f) as string, lib));
+    const externals = [...refTexts.entries()].filter(([, t]) => usedBy(t, lib)).map(([f]) => f);
+    return {
+      lib,
+      users: users.length + externals.length,
+      scripts: users,
+      externals,
+      refCount,
+    };
   });
 }
 
 function main() {
   const files = collectScripts();
   const libs = collectLibs();
+  // 引用方池（.githooks / tests）——比违规扫描面更宽，只服务采用率/孤儿判定
+  const refTexts = collectRefTexts();
   // 扫描面 = scripts/ 脚本 ∪ _lib 共享层自身。
   // collectScripts 有意排除 `_` 前缀目录（其余守卫不该扫共享层），但采用率闸门必须
   // 自省：共享层内部同样会手搓，且那是「能力定义处」，是收敛的源头而非法外之地。
@@ -231,7 +291,7 @@ function main() {
     }
   }
 
-  const table = adoptionTable(files, texts, libs);
+  const table = adoptionTable(scanFiles, texts, libs, refTexts);
   const unused = table.filter((r) => r.users === 0);
 
   if (JSON_OUT) {
@@ -263,6 +323,9 @@ function main() {
   console.log(
     `扫描 ${files.length} 个脚本 + ${libs.length} 个 _lib 模块自身，违规 ${violations.length} 条`,
   );
+  console.log(
+    `引用方池 ${scanFiles.length + refTexts.size} 个文件（scripts/ + _lib 内部互引 + .githooks + tests）`,
+  );
   console.log("──────────────────────────────────────");
   const missing = violations.filter((v) => v.kind === "missing");
   const remnant = violations.filter((v) => v.kind === "remnant");
@@ -284,12 +347,12 @@ function main() {
     console.log("✅ 未发现「有能力未用」的脚本。");
   }
 
-  console.log("\n【采用率全景】被引用脚本数 / 脚本总数（口径：scripts/ 侧，不含 _lib 内部互引）");
-  for (const { lib, users } of table) {
+  console.log("\n【采用率全景】被引用文件数 / 引用方池（scripts/ + _lib + .githooks + tests）");
+  for (const { lib, users, refCount } of table) {
     const bar =
       users === 0
         ? "—"
-        : "█".repeat(Math.min(20, Math.max(1, Math.round((users / files.length) * 20))));
+        : "█".repeat(Math.min(20, Math.max(1, Math.round((users / refCount) * 20))));
     console.log(`  ${lib.padEnd(30)} ${String(users).padStart(3)}  ${bar}`);
   }
   if (unused.length) {

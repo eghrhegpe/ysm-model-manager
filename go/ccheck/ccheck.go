@@ -192,9 +192,10 @@ type FuncResult struct {
 	MaxNesting int    `json:"maxNesting"`
 }
 
-// ScanFile 解析单个 Go 文件并返回每个命名函数的复杂度（跳过 _test.go 与生成文件）。
-func ScanFile(abs, rel string) ([]FuncResult, error) {
-	if strings.HasSuffix(abs, "_test.go") || isGenerated(abs) {
+// ScanFile 解析单个 Go 文件并返回每个命名函数的复杂度（跳过生成文件；_test.go
+// 由 skipTests 控制——cmd/ccheck 的 --tests 旗标经 ScanDir 传入，须穿透到此处才生效）。
+func ScanFile(abs, rel string, skipTests bool) ([]FuncResult, error) {
+	if (skipTests && strings.HasSuffix(abs, "_test.go")) || isGenerated(abs) {
 		return nil, nil
 	}
 	fset := token.NewFileSet()
@@ -243,7 +244,7 @@ func ScanDir(absDir, relBase string, skipTests bool) ([]FuncResult, error) {
 		if skipTests && strings.HasSuffix(d.Name(), "_test.go") {
 			return nil
 		}
-		funcs, serr := ScanFile(p, rel)
+		funcs, serr := ScanFile(p, rel, skipTests)
 		if serr != nil {
 			return nil // 解析失败的单个文件跳过
 		}

@@ -153,7 +153,9 @@ export function vrmMetaSummary(meta: VRM0Meta | VRM1Meta): VrmMetaSummary {
   }
   return {
     title: meta.name?.trim() || undefined,
-    author: meta.authors.length > 0 ? meta.authors.join("、") : undefined,
+    // VRM1 authors 运行时不保证存在（readVrmMeta 同款防御：meta.authors || []），缺字段防 TypeError
+    author:
+      Array.isArray(meta.authors) && meta.authors.length > 0 ? meta.authors.join("、") : undefined,
     license: meta.licenseUrl?.trim() || undefined,
     version: meta.version?.trim() || undefined,
   };

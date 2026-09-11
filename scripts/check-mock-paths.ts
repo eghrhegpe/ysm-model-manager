@@ -123,8 +123,8 @@ for (const { abs } of files) {
   const lines = raw.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
+    const code = codeOnly(line, state); // 先无条件推进块注释状态机（豁免行若先 continue 会让 inBlock 卡死、整文件 mock 漏检）
     if (line.includes("mock-path-ignore:")) continue; // 行内豁免：跳过该行所有 mock
-    const code = codeOnly(line, state);
     if (!code.trim()) continue;
     for (const m of code.matchAll(MOCK_CALL_RE)) {
       const spec = m[2];

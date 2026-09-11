@@ -14,10 +14,20 @@ import { communityGetApp } from "./community-deps.ts";
 import {
   DEFAULT_COMMUNITY_URL,
   fetchCommunityCreators,
-  fetchCommunitySites,
+  fetchCommunitySites as fetchCommunitySitesRaw,
 } from "./community-fetch.ts";
 
-export { DEFAULT_COMMUNITY_URL, fetchCommunityCreators, fetchCommunitySites };
+export { DEFAULT_COMMUNITY_URL, fetchCommunityCreators };
+
+/** 站点索引拉取（数据层缓存壳）：30 分钟 TTL，拉取层本身零缓存（ADR-040 分层） */
+export function fetchCommunitySites(mirror?: string): Promise<WorkshopSite[]> {
+  return withCached(SITES_FETCH_KEY, SITES_FETCH_TTL_MS, () => _fetchCommunitySitesRaw(mirror));
+}
+
+/** 原始拉取（供 withCached 包裹；拉取层抛错 → 失败不缓存契约生效） */
+function _fetchCommunitySitesRaw(mirror?: string): Promise<WorkshopSite[]> {
+  return fetchCommunitySitesRaw(mirror);
+}
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
 export interface LocalCreator extends WorkshopCreator {
@@ -58,7 +68,10 @@ const SCAN_AUTHORS_KEY = "scan-authors";
 const SCAN_LITE_AUTHORS_TTL_MS = 30 * 1000; // 30 秒
 const SCAN_LITE_AUTHORS_KEY = "ListModelAuthors";
 
-// 站点索引缓存 key（TTL 已随拉取层迁往 community-fetch.ts，此处仅保留失效 key）
+// 站点索引缓存：30 分钟 TTL（原 community-data 内置，544ae4b50 拆层时丢失——
+// 拆层后 edit.ts 每次加载直连三路网络回退，且 forceRefreshCommunitySites /
+// clearAllCommunityCache 的 invalidate 变死键。缓存壳留在数据层，拉取层保持零缓存）
+const SITES_FETCH_TTL_MS = 30 * 60 * 1000; // 30 分钟
 const SITES_FETCH_KEY = "community-sites";
 
 /** 供测试强制刷新缓存 */

@@ -109,10 +109,18 @@ function nestKindOf(kindName: string): "if" | "loop" | "switch" | "catch" | null
   return null;
 }
 
-function flatKindOf(kindName: string): CxEvent | null {
+function flatKindOf(node: any, kindName: string): CxEvent | null {
   if (kindName === "ElseClause") return { k: "flat", kind: "else" };
   if (kindName === "CaseClause") return { k: "flat", kind: "case" };
-  if (kindName === "LogicalExpression") return { k: "flat", kind: "logic" };
+  if (kindName === "BinaryExpression") {
+    // 逻辑运算符 &&/||/??：ts-morph 的 SyntaxKind 是 BinaryExpression（按 operatorToken
+    // 区分），ESTree 的 "LogicalExpression" 名在 ts-morph 永不出现——原判定永不命中，
+    // 逻辑运算符计分失效（Go 端 BinaryExpr 对应此分支，见 go/ccheck/ccheck.go:153）。
+    const tok = typeof node?.getOperatorToken === "function" ? node.getOperatorToken() : undefined;
+    const op = typeof tok?.getText === "function" ? tok.getText() : "";
+    if (op === "&&" || op === "||" || op === "??") return { k: "flat", kind: "logic" };
+    return null;
+  }
   if (kindName === "ConditionalExpression") return { k: "flat", kind: "ternary" };
   return null;
 }
@@ -138,7 +146,7 @@ function emitFromNode(node: any, seq: CxEvent[], guard: number): void {
     seq.push({ k: "nestClose" });
     return;
   }
-  const flat = flatKindOf(kindName);
+  const flat = flatKindOf(node, kindName);
   if (flat) seq.push(flat);
   for (const child of node.getChildren?.() ?? []) emitFromNode(child, seq, guard - 1);
 }

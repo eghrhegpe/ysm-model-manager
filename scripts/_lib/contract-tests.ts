@@ -208,7 +208,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],
-  "test_complexity_parity.ts": ["scripts/check-complexity.ts"],
+  "test_complexity_parity.ts": ["scripts/check-complexity.ts", "go/ccheck/", "tests/parity/"],
   "test_collect_scripts_lib.ts": ["scripts/_lib/collect-scripts.ts"],
   "test_commit_check_gate.ts": ["scripts/_lib/commit-check.ts", "scripts/commit-with-check.ts"],
   "test_commit_temp_index.ts": [

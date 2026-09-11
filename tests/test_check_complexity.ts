@@ -20,6 +20,14 @@ function node(kindName: string, ...children: any[]): any {
     getChildren: () => children,
   };
 }
+/** 逻辑运算符 BinaryExpression mock：真实形态按 operatorToken 区分 &&/||/??（无 "LogicalExpression" kind）。 */
+function logicNode(op: string): any {
+  return {
+    getKindName: () => "BinaryExpression",
+    getOperatorToken: () => ({ getText: () => op }),
+    getChildren: () => [],
+  };
+}
 function fn(body: any): any {
   return { getBody: () => body };
 }
@@ -99,7 +107,7 @@ function fn(body: any): any {
 // ─── 8) 事件翻译：三元 + 逻辑运算符 + else 三段 ────────
 {
   const trueExpr = node("Block", node("ConditionalExpression"));
-  const elseClause = node("ElseClause", node("LogicalExpression"));
+  const elseClause = node("ElseClause", logicNode("&&"));
   const ifStmt = node("IfStatement", node("ParenthesizedExpression"), trueExpr, elseClause);
   const seq = fnBodyToEvents(fn(ifStmt));
   // 翻译层应产出：nest(if) / flat(ternary) / flat(logic) / flat(else) 的顺序平铺 + nestClose

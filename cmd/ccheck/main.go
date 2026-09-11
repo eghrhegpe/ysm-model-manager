@@ -59,6 +59,10 @@ func main() {
 			Top       []ccheck.FuncResult `json:"top"`
 		}{Dir: *dir, Threshold: *threshold, Funcs: len(funcs), Active: len(active)}
 		n := *top
+		// 双侧夹取：负 --top 直接 panic slice bounds（JSON 消费路径 fail-open），夹到 [0, len]
+		if n < 0 {
+			n = 0
+		}
 		if len(active) < n {
 			n = len(active)
 		}

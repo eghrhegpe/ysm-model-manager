@@ -126,12 +126,20 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
     // 问题）不直接整批 error——回退单线程 WASM 重试一次，仍失败才交给主线程整体降级，
     // 避免 COI 满足但 pthread 环境异常的设备永久失去数值统计
     let ok: boolean;
+    // 实际生效的 WASM 形态：mt init 失败回退 base 单线程后，泵数应按 base 口径
+    // （STATS_CONCURRENCY）而非原始 COI 判定——否则降级路径被误锁 1 泵，批次全串行
+    let usingMt = mt;
     try {
       ok = mt
         ? await initYsmParserInWorkerMt()
         : await initYsmParserInWorker();
+      if (!ok && mt) {
+        usingMt = false;
+        ok = await initYsmParserInWorker();
+      }
     } catch (mtErr) {
       if (!mt) throw mtErr;
+      usingMt = false;
       ok = await initYsmParserInWorker();
     }
     if (!ok) {
@@ -153,7 +161,7 @@ self.onmessage = async (ev: MessageEvent<StatsWorkerRequest>): Promise<void> => 
     // 中断 partial 流，主线程静默看门狗侦测语义不变；回包序不承担契约（ADR-218 D2，
     // 主线程按 path 累积）。
     // 注意禁用裸 Promise.all(paths)：全批原始字节同时驻留内存，违反「峰值与批大小无关」。
-    const concurrency = mt ? 1 : STATS_CONCURRENCY;
+    const concurrency = usingMt ? 1 : STATS_CONCURRENCY;
     let nextIdx = 0;
     const pump = async (): Promise<void> => {
       while (nextIdx < paths.length) {

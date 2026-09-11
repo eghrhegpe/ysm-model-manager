@@ -131,6 +131,16 @@ jobs:
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
+      # ⚠️ 顺序约束：main.go 有 `//go:embed all:frontend/dist`，任何 `go build ./...` /
+      # `go vet ./...` / `go test ./...` 都要求 frontend/dist 已存在，否则报
+      # 「pattern all:frontend/dist: no matching files found」直接失败。
+      # 故前端构建必须早于「Go 检查」，且早于下方所有 ./... 步骤（Rust 桥测试、覆盖率报告）。
+      # 前端依赖已于上方「安装前端依赖」装好，此处构建零额外前置。
+      - name: 前端构建（embed 前置：main.go //go:embed all:frontend/dist 依赖此产物）
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm exec vite build
+
       - name: Go 检查（build + vet + test）
         shell: pwsh
         run: |
@@ -237,11 +247,6 @@ jobs:
         run: |
           pnpm exec vitest run --coverage | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: 前端构建
-        working-directory: frontend
-        shell: pwsh
-        run: pnpm exec vite build
 
   # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
   # 参数：全局 7 分钟总限 / 每用例 15s / 累计 5 次失败阻断（maxFailures=5）——ADR-037 接入参数。

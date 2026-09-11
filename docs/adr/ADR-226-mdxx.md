@@ -1,6 +1,6 @@
 # ADR-226：清理 mdXx 人工命名空间前缀
 
-- **状态**：🔄 部分采纳（提案，待 Jieling 拍板后实施）
+- **状态**：🔄 部分采纳（执行中，mdLi/mdMg/mdMm 已落地，mdWs 批次待收口）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -24,14 +24,15 @@
    - 模块内私有函数：直接去前缀（作用域已隔离，无冲突）。
    - 跨文件导出函数：去前缀 + **同步全部 import 站点**（配 `grep -rn "mdXx..."` 全量核对）。
 2. **分批执行**，每前缀（mdMm/mdWs/mdLi/mdMg）独立提交/PR，配 `vitest run` 回归。
-3. 命名归位约定（示例）：`mdMmBuildFoo` → `buildMmdFoo`（保留格式语义）；纯内部助手去前缀后用文件作用域唯一名。
+3. 命名归位约定：**模块作用域已天然隔离，完全去前缀**（如 `mdMmBuildFoo` → `BuildFoo`、`MdLiLayerShell` → `LayerShell`）；特例——若去前缀后与文件内既有/import 的通用符号同名（如 `MdMmPerceptionState` 与 import 的 `PerceptionState` 冲突），保留格式标识改 `MmdPerceptionState`。
 4. 改名后跑 `check-binding-usage` + `check-path-hygiene`（R5/R6）确认无漏引用、无裸目录入口。
 
 ## 3. 后果（Consequences）
 
 - **正面**：可读性↑；grep/重命名成本↓；消除切片疤痕；审查聚焦真实逻辑。
 - **负面**：大型重命名（156 处/15 文件），review 负担大；导出符号改名易漏引用点致编译失败。
-- **已知遗留**：`decoder/wasm-decode`、`decoder/ysm-meta-parser`、`model/model-group-builder` 属跨层符号，须逐一对账红线，不可机械批量替换。
+- **已知遗留（mdWs 批次）**：`decoder/wasm-decode`、`decoder/ysm-meta-parser` 中 `MdWsYsmMeta` 跨文件导出（`ysm-meta-parser.ts` export → `wasm-decode.ts` import），须两文件联动对账红线，不可机械批量替换。
+- **已落地特例（mdMm 批次）**：`MdMmPerceptionState`（`mmd-types.ts:135`）完全去前缀会与同文件 import 的通用 `PerceptionState`（来自 `perception-controls.ts:13`）撞名，特例改为 `MmdPerceptionState`（保留 Mmd 格式区分）；其余 34 个 mdMm 符号经碰撞预检零冲突，完全去前缀。
 - **风险/门禁**：每批后全量 `npm run typecheck` 复验；建议在 `git mv`/改名前先 `git status --short` 确认仅本批文件。
 
 ## 4. 数据溯源

@@ -28,6 +28,7 @@ auto_fields:
     - getIdbMock
     - IdbMock
     - jpgBytes
+    - makeCanvasFakeRenderer
     - MenuDefLike
     - mockAppMethods
     - mountCustomElement

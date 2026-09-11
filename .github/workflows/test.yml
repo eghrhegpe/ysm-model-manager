@@ -74,6 +74,8 @@ jobs:
       # ⚠️ 勿退回手写 `Get-ChildItem tests/*.ts | node $f` 裸跑循环——裸跑缺
       # ts-alias-register 的 @/ 别名注入，任何 import 链进入 frontend @/ 别名的契约测试
       # 都会 ERR_MODULE_NOT_FOUND（本地绿、CI 红）。护栏：tests/test_contract_alias_runtime.ts。
+      # 静态扫 workflow 防此类裸跑回退：tests/test_workflow_contract_runner.ts（pages-deploy
+      # 曾长期踩此坑——它只挂 Pages 不挂 CI，故无人察觉）。
       - name: 契约测试（tests/，Node .ts，禁止修改测试文件）
         shell: pwsh
         run: node scripts/contract-tests.ts

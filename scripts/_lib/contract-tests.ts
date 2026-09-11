@@ -105,6 +105,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_contract_domain_select.ts": ["tests"],
   // 契约 runner 的 @/ 别名运行时解析基建（ts-alias-register/resolver + alias-resolve 表 + runner 接线）
   "test_contract_alias_runtime.ts": ["tests"],
+  // CI 工作流必须走 contract-tests 统一入口（禁裸跑 tests/*.ts——裸跑缺别名注入）
+  "test_workflow_contract_runner.ts": ["tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
   "test_deadcode_attrib.ts": ["tests"],
   "test_domain_classify.ts": ["tests"],
@@ -230,6 +232,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/_lib/ts-alias-register.ts",
     "scripts/_lib/ts-alias-resolver.ts",
     "scripts/_lib/alias-resolve.ts",
+  ],
+  // 扫描 .github/workflows/*.yml（防 CI 手写裸跑循环绕过统一入口缺别名注入）；
+  // 锚点 = 统一入口自身 + 本测试——三者任一改动都须触发本测试。
+  "test_workflow_contract_runner.ts": [
+    ".github/workflows/",
+    "scripts/contract-tests.ts",
+    "tests/test_workflow_contract_runner.ts",
   ],
   "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],

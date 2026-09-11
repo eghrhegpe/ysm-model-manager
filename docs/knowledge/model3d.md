@@ -402,7 +402,7 @@ auto_fields:
     - Stage6Ctx
     - Stage6Result
     - TrackAlloc
-    - MdWsYsmMeta
+    - YsmMeta
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS
     - MENU_ERROR_NOTE_CSS

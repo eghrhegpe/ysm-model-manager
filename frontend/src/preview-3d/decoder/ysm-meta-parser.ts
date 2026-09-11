@@ -7,10 +7,10 @@
 // 动画分组/配置菜单、authors），不触达解码器任何私有状态。行为与原实现逐字等价
 // （契约：wasm-decode.test.ts 的 ysm.json 相关分支用例）。
 // 内容：
-//   - DecodedFile / MdWsYsmMeta：WASM 解码输出文件 + ysm.json 元数据类型
+//   - DecodedFile / YsmMeta：WASM 解码输出文件 + ysm.json 元数据类型
 //     （原 wasm-decode.ts 内部接口，提级至本文件共享；本文件不反向 import
 //     wasm-decode，避免循环依赖）
-//   - parseYsmMetaFromFiles：原 mdWsParseYsmMetaFromFiles（去 mdWs 前缀，同 P1
+//   - parseYsmMetaFromFiles：原 ParseYsmMetaFromFiles（去前缀，同 P1
 //     godRaysIntensity 风格），纯函数，正文与注释逐字保留
 
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -25,7 +25,7 @@ export interface DecodedFile {
 }
 
 /** ysm.json 元数据解析结果（WASM 输出路径使用，JSON spec 路径 ysmMeta 内联） */
-export interface MdWsYsmMeta {
+export interface YsmMeta {
   ysmTexOrder: unknown[] | null;
   ysmModelOrder: unknown[] | null;
   ysmDefaultTex: string | null;
@@ -36,10 +36,10 @@ export interface MdWsYsmMeta {
 }
 
 export function parseYsmMetaFromFiles(files: DecodedFile[]): {
-  meta: MdWsYsmMeta;
+  meta: YsmMeta;
   hasYsmMeta: boolean;
 } {
-  const emptyMeta: MdWsYsmMeta = {
+  const emptyMeta: YsmMeta = {
     ysmTexOrder: null,
     ysmModelOrder: null,
     ysmDefaultTex: null,

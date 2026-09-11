@@ -12,7 +12,7 @@ import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.t
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
 import { type DecodedYsm, devLog, stripYsgpTextHeader } from "./utils.ts";
-import { type DecodedFile, type MdWsYsmMeta, parseYsmMetaFromFiles } from "./ysm-meta-parser.ts";
+import { type DecodedFile, parseYsmMetaFromFiles, type YsmMeta } from "./ysm-meta-parser.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
  *  无此守卫时 preloadModel 并行发起的两次 decodeYsmViaWasm 会各自完整解码
@@ -39,14 +39,14 @@ interface TexDim {
 // ===== 类型提级：解码阶段共享上下文 =====
 
 /** 解码过程中共享的后端能力 + 路径上下文（原 doDecode 内多处 ReadFileBytes/baseDir 重复提取） */
-interface MdWsInflightCtx {
+interface InflightCtx {
   modelPath: string;
   baseDir: string;
   ReadFileBytes: (path: string) => Promise<string | null>;
 }
 
 /** WASM 输出的纹理累加器（collectTexturesAndAvatars 产出，供后续 model/anim 阶段读） */
-interface MdWsTexAccum {
+interface TexAccum {
   textures: Record<string, string>;
   texNameMap: Record<string, string>;
   texLowerMap: Record<string, string>;
@@ -56,14 +56,14 @@ interface MdWsTexAccum {
   avatars: Record<string, string>;
 }
 
-/** 释放 MdWsTexAccum 中所有未被缓存引用的 blob URL（防提前返回路径泄漏） */
-function mdWsRevokeTexAccumBlobs(acc: MdWsTexAccum): void {
+/** 释放 TexAccum 中所有未被缓存引用的 blob URL（防提前返回路径泄漏） */
+function RevokeTexAccumBlobs(acc: TexAccum): void {
   for (const u of Object.values(acc.textures)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
   for (const u of Object.values(acc.avatars)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
 }
 
 /** processModelFile 升格后所需的只读上下文（原闭包内 8 个外部捕获 → 全参数量化） */
-interface MdWsProcessModelCtx {
+interface ProcessModelCtx {
   orderedTexKeys: string[];
   textures: Record<string, string>;
   texDimensions: Record<string, TexDim>;
@@ -76,7 +76,7 @@ interface MdWsProcessModelCtx {
 
 // ===== 基础工具：base64 → Uint8Array（消除 4 处 atob+for 循环重复） =====
 
-function mdWsBase64ToBytes(b64: string): Uint8Array {
+function Base64ToBytes(b64: string): Uint8Array {
   const rawStr = atob(b64);
   const len = rawStr.length;
   const arr = new Uint8Array(len);
@@ -84,27 +84,27 @@ function mdWsBase64ToBytes(b64: string): Uint8Array {
   return arr;
 }
 
-function mdWsGetBaseDir(modelPath: string): string {
+function GetBaseDir(modelPath: string): string {
   const dir = modelPath.replace(/\\/g, "/");
   return dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : ".";
 }
 
-async function mdWsReadBytesFromPath(
+async function ReadBytesFromPath(
   ReadFileBytes: (p: string) => Promise<string | null>,
   relPath: string,
 ): Promise<Uint8Array | null> {
   const raw = await ReadFileBytes(relPath);
-  return raw ? mdWsBase64ToBytes(raw) : null;
+  return raw ? Base64ToBytes(raw) : null;
 }
 
 // ===== 阶段① 同步分派辅助：缺文件 / 直接 JSON / YSM spec JSON =====
 
-function mdWsHandleEmptyBytes(modelPath: string): null {
+function HandleEmptyBytes(modelPath: string): null {
   cacheSet(modelPath, { _wasmFailed: true });
   return null;
 }
 
-async function mdWsLoadAvatarsForJson(ctx: MdWsInflightCtx, result: DecodedYsm): Promise<void> {
+async function LoadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise<void> {
   if (!result.authors?.length) return;
   for (const au of result.authors) {
     if (!au.avatarPath) continue;
@@ -113,10 +113,7 @@ async function mdWsLoadAvatarsForJson(ctx: MdWsInflightCtx, result: DecodedYsm):
         au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\")
           ? au.avatarPath
           : `avatar/${au.avatarPath}`;
-      const avatarBytes = await mdWsReadBytesFromPath(
-        ctx.ReadFileBytes,
-        `${ctx.baseDir}/${avatarRel}`,
-      );
+      const avatarBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${avatarRel}`);
       if (avatarBytes?.length) {
         const blob = new Blob([avatarBytes.buffer as ArrayBuffer]);
         au.avatarUrl = URL.createObjectURL(blob);
@@ -127,7 +124,7 @@ async function mdWsLoadAvatarsForJson(ctx: MdWsInflightCtx, result: DecodedYsm):
   }
 }
 
-function mdWsComputeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
+function ComputeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
   uvMaxW: number;
   uvMaxH: number;
 } {
@@ -145,8 +142,8 @@ function mdWsComputeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
   return { uvMaxW, uvMaxH };
 }
 
-async function mdWsHandleYsmJsonSpec(
-  ctx: MdWsInflightCtx,
+async function HandleYsmJsonSpec(
+  ctx: InflightCtx,
   result: DecodedYsm,
   ysmMeta: NonNullable<unknown>,
 ): Promise<DecodedYsm | null> {
@@ -175,9 +172,9 @@ async function mdWsHandleYsmJsonSpec(
       if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
         modelRel = `models/${mfStr}`;
       }
-      let modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${modelRel}`);
+      let modelBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${modelRel}`);
       if (!modelBytes) {
-        modelBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${mfStr}`);
+        modelBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${mfStr}`);
         if (!modelBytes) continue;
       }
       const jsonStr = new TextDecoder().decode(modelBytes);
@@ -203,7 +200,7 @@ async function mdWsHandleYsmJsonSpec(
         tfStr.startsWith("textures/") || tfStr.startsWith("textures\\")
           ? tfStr
           : `textures/${tfStr}`;
-      const texBytes = await mdWsReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${texRel}`);
+      const texBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${texRel}`);
       if (!texBytes) continue;
 
       const blob = new Blob([texBytes.buffer as ArrayBuffer], {
@@ -234,7 +231,7 @@ async function mdWsHandleYsmJsonSpec(
       // 成功路径：URL 已赋给 result.geometry.textures，清空 pending 防误释放
       pendingBlobUrls.clear();
       const geo = result.geometry;
-      const { uvMaxW, uvMaxH } = mdWsComputeBoneTexRangeFromBones(allBones);
+      const { uvMaxW, uvMaxH } = ComputeBoneTexRangeFromBones(allBones);
       const boneTexW = Math.max(maxTexW, geo.texWidth, uvMaxW) || 64;
       const boneTexH = Math.max(maxTexH, geo.texHeight, uvMaxH) || 64;
       for (const b of allBones) {
@@ -265,10 +262,7 @@ async function mdWsHandleYsmJsonSpec(
   return result;
 }
 
-async function mdWsTryJsonDispatch(
-  ctx: MdWsInflightCtx,
-  bytes: Uint8Array,
-): Promise<DecodedYsm | null> {
+async function TryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<DecodedYsm | null> {
   const text = new TextDecoder("utf-8").decode(bytes);
   let json: unknown;
   try {
@@ -292,11 +286,11 @@ async function mdWsTryJsonDispatch(
   )?._ysmMeta;
 
   const finalResult = ysmMeta?.modelFiles?.length
-    ? await mdWsHandleYsmJsonSpec(ctx, result, ysmMeta)
+    ? await HandleYsmJsonSpec(ctx, result, ysmMeta)
     : result;
   if (!finalResult) return null;
 
-  await mdWsLoadAvatarsForJson(ctx, finalResult);
+  await LoadAvatarsForJson(ctx, finalResult);
 
   cacheSet(ctx.modelPath, { ...finalResult, _decodedBy: "🧠 JSON 直接解析" });
   swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(ctx.modelPath)));
@@ -308,12 +302,12 @@ async function mdWsTryJsonDispatch(
 // 成功策略经 devLog 落环形日志（tag=ysm-decode），供排查「哪种文件落在哪条路径」。
 
 /** 单条解码策略（空数组 = 未命中，继续下一条） */
-interface MdWsDecodeStrategy {
+interface DecodeStrategy {
   name: string;
   attempt: (bytes: Uint8Array) => Promise<DecodedFile[]>;
 }
 
-const mdWsDecodeStrategies: MdWsDecodeStrategy[] = [
+const DecodeStrategies: DecodeStrategy[] = [
   {
     name: "raw-mem",
     attempt: async (b) => (await decodeYsmFileFromMemory(b)) || [],
@@ -338,7 +332,7 @@ const mdWsDecodeStrategies: MdWsDecodeStrategy[] = [
   },
 ];
 
-async function mdWsInitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<DecodedFile[]> {
+async function InitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<DecodedFile[]> {
   devLog("[YSM] 加载 WASM 模块...");
   const ok = await initYSMParser();
   devLog(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
@@ -349,7 +343,7 @@ async function mdWsInitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Prom
 
   let files: DecodedFile[] = [];
   let successStrategy = "";
-  for (const s of mdWsDecodeStrategies) {
+  for (const s of DecodeStrategies) {
     if (files.length) break;
     try {
       files = await s.attempt(bytes);
@@ -373,7 +367,7 @@ async function mdWsInitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Prom
 
 // ===== 阶段④ 元数据/纹理/模型/动画 流水线 =====
 
-function mdWsMatchTexKey(
+function MatchTexKey(
   tn: string,
   textures: Record<string, string>,
   texLowerMap: Record<string, string>,
@@ -384,7 +378,7 @@ function mdWsMatchTexKey(
   return texLowerMap[lower] || null;
 }
 
-function mdWsCollectTexturesAndAvatars(files: DecodedFile[]): MdWsTexAccum {
+function CollectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   const textures: Record<string, string> = {};
   const texNameMap: Record<string, string> = {};
   const texLowerMap: Record<string, string> = {};
@@ -433,7 +427,7 @@ function mdWsCollectTexturesAndAvatars(files: DecodedFile[]): MdWsTexAccum {
   return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
 }
 
-function mdWsComputeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH: number } {
+function ComputeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH: number } {
   let uvMaxW = 2,
     uvMaxH = 2;
   for (const b of parsed.bones) {
@@ -467,11 +461,7 @@ function mdWsComputeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvM
   return { uvMaxW, uvMaxH };
 }
 
-function mdWsProcessModelFile(
-  f: DecodedFile,
-  ctx: MdWsProcessModelCtx,
-  forcedTexIdx?: number,
-): void {
+function ProcessModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {
   if (!f || ctx.processedModels.has(f.path)) return;
   ctx.processedModels.add(f.path);
   devLog(`[YSM] 解析 ${f.path}...`);
@@ -489,7 +479,7 @@ function mdWsProcessModelFile(
         : ctx.orderedTexKeys[0] || null;
     const texUrl = texKey ? ctx.textures[texKey] : null;
 
-    const { uvMaxW, uvMaxH } = mdWsComputeBoneTexRange(parsed);
+    const { uvMaxW, uvMaxH } = ComputeBoneTexRange(parsed);
 
     const texDim = texKey ? ctx.texDimensions[texKey] : null;
     const actualTexW = texDim ? texDim.w : 0;
@@ -530,7 +520,7 @@ function mdWsProcessModelFile(
   }
 }
 
-function mdWsGetModelName(mp: unknown): string {
+function GetModelName(mp: unknown): string {
   return (
     (typeof mp === "string"
       ? mp
@@ -541,11 +531,11 @@ function mdWsGetModelName(mp: unknown): string {
   );
 }
 
-function mdWsMatchModelFilesByOrder(
+function MatchModelFilesByOrder(
   files: DecodedFile[],
-  meta: MdWsYsmMeta,
+  meta: YsmMeta,
   orderedTexKeys: string[],
-  ctx: MdWsProcessModelCtx,
+  ctx: ProcessModelCtx,
 ): void {
   if (!meta.ysmModelOrder) return;
   const texKeyToIdx: Record<string, number> = {};
@@ -553,7 +543,7 @@ function mdWsMatchModelFilesByOrder(
     texKeyToIdx[k] = i;
   });
   for (const mp of meta.ysmModelOrder) {
-    const mn = mdWsGetModelName(mp);
+    const mn = GetModelName(mp);
     if (!mn) continue;
     const lowerBase = mn.replace(/\.json$/i, "").toLowerCase();
     let matchedKey: string | null = null;
@@ -567,27 +557,27 @@ function mdWsMatchModelFilesByOrder(
     const f = files.find(
       (ff) => ff.path.endsWith(`/${mn}`) || ff.path.endsWith(`\\${mn}`) || ff.path === mn,
     );
-    if (f) mdWsProcessModelFile(f, ctx, texIdx);
+    if (f) ProcessModelFile(f, ctx, texIdx);
   }
 }
 
-function mdWsProcessRemainingModelFiles(
+function ProcessRemainingModelFiles(
   files: DecodedFile[],
-  meta: MdWsYsmMeta,
-  ctx: MdWsProcessModelCtx,
+  meta: YsmMeta,
+  ctx: ProcessModelCtx,
 ): void {
   for (const f of files) {
     if (!f.path.startsWith("models/")) continue;
     const modelName = f.path.split("/").pop();
     const matched = meta.ysmModelOrder?.some((mp) => {
-      const mn = mdWsGetModelName(mp).split("/").pop();
+      const mn = GetModelName(mp).split("/").pop();
       return mn === modelName;
     });
-    if (!matched) mdWsProcessModelFile(f, ctx, 0);
+    if (!matched) ProcessModelFile(f, ctx, 0);
   }
 }
 
-function mdWsParseAnimations(files: DecodedFile[]): unknown[] {
+function ParseAnimations(files: DecodedFile[]): unknown[] {
   const animations: unknown[] = [];
   for (const f of files) {
     if (!f.path.startsWith("animations/") || !f.path.endsWith(".json")) continue;
@@ -603,8 +593,8 @@ function mdWsParseAnimations(files: DecodedFile[]): unknown[] {
   return animations;
 }
 
-function mdWsAssembleFinalGeometry(
-  ctx: MdWsProcessModelCtx,
+function AssembleFinalGeometry(
+  ctx: ProcessModelCtx,
   orderedTexKeys: string[],
   textures: Record<string, string>,
   maxTexW: number,
@@ -623,10 +613,10 @@ function mdWsAssembleFinalGeometry(
   return geo;
 }
 
-function mdWsFinalizeAuthorsWithAvatars(
-  meta: MdWsYsmMeta,
+function FinalizeAuthorsWithAvatars(
+  meta: YsmMeta,
   avatars: Record<string, string>,
-): MdWsYsmMeta["authors"] {
+): YsmMeta["authors"] {
   return meta.authors.map((au) => {
     const avatarKey =
       au.avatarPath
@@ -637,15 +627,12 @@ function mdWsFinalizeAuthorsWithAvatars(
   });
 }
 
-async function mdWsHandleWasmDecode(
-  modelPath: string,
-  bytes: Uint8Array,
-): Promise<DecodedYsm | null> {
-  const files = await mdWsInitAndDecodeWasm(modelPath, bytes);
+async function HandleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<DecodedYsm | null> {
+  const files = await InitAndDecodeWasm(modelPath, bytes);
   if (!files?.length) return null;
 
   const { meta, hasYsmMeta } = parseYsmMetaFromFiles(files);
-  const texAccum = mdWsCollectTexturesAndAvatars(files);
+  const texAccum = CollectTexturesAndAvatars(files);
   meta.avatars = texAccum.avatars;
 
   const orderedTexKeys = buildOrderedTexKeys({
@@ -654,10 +641,10 @@ async function mdWsHandleWasmDecode(
       texAccum.texDimensions[k] ? texAccum.texDimensions[k].w * texAccum.texDimensions[k].h : 0,
     ysmTexOrder: meta.ysmTexOrder,
     ysmDefaultTex: meta.ysmDefaultTex,
-    matchTexKey: (tn) => mdWsMatchTexKey(tn, texAccum.textures, texAccum.texLowerMap),
+    matchTexKey: (tn) => MatchTexKey(tn, texAccum.textures, texAccum.texLowerMap),
   });
 
-  const processCtx: MdWsProcessModelCtx = {
+  const processCtx: ProcessModelCtx = {
     orderedTexKeys,
     textures: texAccum.textures,
     texDimensions: texAccum.texDimensions,
@@ -668,32 +655,32 @@ async function mdWsHandleWasmDecode(
     firstGeometryRawRef: { current: null },
   };
 
-  mdWsMatchModelFilesByOrder(files, meta, orderedTexKeys, processCtx);
-  mdWsProcessRemainingModelFiles(files, meta, processCtx);
+  MatchModelFilesByOrder(files, meta, orderedTexKeys, processCtx);
+  ProcessRemainingModelFiles(files, meta, processCtx);
 
   const geometry = processCtx.geometryRef.current;
   if (!geometry && !hasYsmMeta) {
     devLog("[YSM] 无 ysm.json 引导，移交 Go 确保纹理正确映射");
-    mdWsRevokeTexAccumBlobs(texAccum);
+    RevokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
   if (!geometry && files?.length > 0) {
     devLog(`[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI`);
-    mdWsRevokeTexAccumBlobs(texAccum);
+    RevokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
 
-  const finalGeo = mdWsAssembleFinalGeometry(
+  const finalGeo = AssembleFinalGeometry(
     processCtx,
     orderedTexKeys,
     texAccum.textures,
     texAccum.maxTexW,
     texAccum.maxTexH,
   );
-  const animations = mdWsParseAnimations(files);
-  const finalAuthors = mdWsFinalizeAuthorsWithAvatars(meta, texAccum.avatars);
+  const animations = ParseAnimations(files);
+  const finalAuthors = FinalizeAuthorsWithAvatars(meta, texAccum.avatars);
 
   const texUrl =
     (finalGeo as BedrockGeometry | null)?.texture ||
@@ -737,20 +724,20 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
     return null;
   }
-  const bytes = raw ? mdWsBase64ToBytes(raw) : new Uint8Array(0);
+  const bytes = raw ? Base64ToBytes(raw) : new Uint8Array(0);
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
-  if (!bytes?.length) return mdWsHandleEmptyBytes(modelPath);
+  if (!bytes?.length) return HandleEmptyBytes(modelPath);
 
-  const ctx: MdWsInflightCtx = {
+  const ctx: InflightCtx = {
     modelPath,
-    baseDir: mdWsGetBaseDir(modelPath),
+    baseDir: GetBaseDir(modelPath),
     ReadFileBytes,
   };
 
   try {
     if (/\.json$/i.test(modelPath)) {
-      return await mdWsTryJsonDispatch(ctx, bytes);
+      return await TryJsonDispatch(ctx, bytes);
     }
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
@@ -759,7 +746,7 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   }
 
   try {
-    return await mdWsHandleWasmDecode(modelPath, bytes);
+    return await HandleWasmDecode(modelPath, bytes);
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
     return null;

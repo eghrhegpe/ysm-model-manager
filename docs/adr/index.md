@@ -17,19 +17,18 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 8 |
-| [✅ 已采纳](#已采纳) | 206 |
+| [🔄 部分采纳](#部分采纳) | 7 |
+| [✅ 已采纳](#已采纳) | 207 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（8）
+### 🔄 部分采纳（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-226](./ADR-226-mdxx.md) | 清理 mdXx 人工命名空间前缀 | 🔄 部分采纳 |
 | [ADR-218](./ADR-218-stats-pool-concurrency.md) | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 |
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | 🔄 部分采纳 |
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
@@ -38,10 +37,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（206）
+### ✅ 已采纳（207）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-226](./ADR-226-mdxx.md) | 清理 mdXx 人工命名空间前缀 | ✅ 已采纳 |
 | [ADR-225](./ADR-225-perception-adapters-shared.md) | perception 模块下沉至 adapters/shared | ✅ 已采纳 |
 | [ADR-224](./ADR-224-mock-vi-mock-m1-m2-warn.md) | mock 路径守卫：vi.mock 目标存在性静态校验（M1 内部硬报 / M2 裸包 WARN / 豁免通道） | ✅ 已采纳 |
 | [ADR-223](./ADR-223-features-community.md) | 社区索引数据层北迁 features/community 与导航焦点跨视图传递范式 | ✅ 已采纳 |
@@ -273,7 +273,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-226 | 清理 mdXx 人工命名空间前缀 | 🔄 部分采纳 | 2026-09-11 |
+| ADR-226 | 清理 mdXx 人工命名空间前缀 | ✅ 已采纳 | 2026-09-11 |
 | ADR-225 | perception 模块下沉至 adapters/shared | ✅ 已采纳 | 2026-09-11 |
 | ADR-224 | mock 路径守卫：vi.mock 目标存在性静态校验（M1 内部硬报 / M2 裸包 WARN / 豁免通道） | ✅ 已采纳 | 2026-09-10 |
 | ADR-223 | 社区索引数据层北迁 features/community 与导航焦点跨视图传递范式 | ✅ 已采纳 | 2026-09-10 |

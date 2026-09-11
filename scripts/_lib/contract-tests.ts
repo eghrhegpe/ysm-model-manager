@@ -106,6 +106,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 契约 runner 的 @/ 别名运行时解析基建（ts-alias-register/resolver + alias-resolve 表 + runner 接线）
   "test_contract_alias_runtime.ts": ["tests"],
   // CI 工作流必须走 contract-tests 统一入口（禁裸跑 tests/*.ts——裸跑缺别名注入）
+  // 注：workflow-only 改动归 other 域，byDomain 不含本测试——精确裁剪下 .github/workflows/
+  // 哨兵为死键；兜底 = workflow 变更触发 pages workflow 全量跑契约测试（含本守卫）。
+  // 勿挂 other：selectContractTests(["other"]) 零触发是既有契约（test_contract_domain_select）。
   "test_workflow_contract_runner.ts": ["tests"],
   // 构建/工具配置（vite.*.config.* / knip.json）声明的入口文件必须存在
   "test_build_entry_refs.ts": ["frontend", "tests"],

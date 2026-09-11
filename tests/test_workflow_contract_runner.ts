@@ -66,10 +66,16 @@ const wfFiles = fs
 
 // ─── 规则 ①：禁止裸跑 tests/*.ts 循环 ────────────────────────────────
 // 这些签名对应「不走统一入口、直接逐个 node <测试文件>」的写法。
-const BARE_RUN_PATTERNS: { re: RegExp; why: string }[] = [
+const BARE_RUN_PATTERNS: { re: RegExp; why: string; except?: (code: string) => boolean }[] = [
   { re: /for\s+\w+\s+in\s+tests\//, why: "bash `for f in tests/*.ts` 裸跑循环" },
   { re: /tests\/\*\.ts/, why: "glob 直指 tests/*.ts（应交给 contract-tests.ts 收集）" },
   { re: /Get-ChildItem[^\n]*tests/i, why: "PowerShell Get-ChildItem tests 裸跑循环" },
+  // 单文件直跑同样绕过统一入口（如 node tests/test_xxx.ts）——排除 runner 自身路径
+  {
+    re: /node\s+(?:\S*[/\\])?tests[/\\][^\s"']+\.ts(?!\S)/,
+    why: "node 单文件直跑 tests/*.ts（应经 scripts/contract-tests.ts）",
+    except: (code) => code.includes(RUNNER),
+  },
 ];
 
 const bareHits: string[] = [];
@@ -81,8 +87,8 @@ for (const f of wfFiles) {
   for (let i = 0; i < lines.length; i++) {
     const code = stripComment(lines[i] ?? "");
     if (!code) continue;
-    for (const { re, why } of BARE_RUN_PATTERNS) {
-      if (re.test(code)) {
+    for (const { re, why, except } of BARE_RUN_PATTERNS) {
+      if (re.test(code) && !except?.(code)) {
         bareHits.push(`${f}:${i + 1}  ${why}  →  ${code.trim()}`);
       }
     }

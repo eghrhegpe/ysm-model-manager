@@ -41,6 +41,9 @@ export const MOUNT_FILES = [
   ".githooks/post-commit",
   ".githooks/prepare-commit-msg",
   "scripts/pre-push-gate.ts",
+  // 2026-09-11 补：gate-config 是静态工具清单的单一配置层（pre-push-gate 自动执行其
+  // 挂载的工具），含它才能识别「仅经配置层挂载」的脚本（此前被误判孤儿）。
+  "scripts/_lib/gate-config.ts",
   "Taskfile.yml",
   "frontend/package.json",
 ];

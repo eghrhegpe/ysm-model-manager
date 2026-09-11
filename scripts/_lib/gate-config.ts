@@ -122,6 +122,7 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
+  { tool: "check-file-lines.ts", blockPolicy: "hard" },
 ];
 
 /**

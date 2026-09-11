@@ -25,11 +25,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-  setOverlayStyleTarget,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { setOverlayStyleTarget } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import {
   componentsStyleSheet,
@@ -66,6 +62,7 @@ import {
   unloadSessionModel,
 } from "./mount-session.ts";
 import { showLoadFailure } from "./preview-loading.ts";
+import { previewShell } from "./preview-shell.ts";
 import { registerBuiltScene } from "./register-built-scene.ts";
 import {
   registerPerFrame,
@@ -232,28 +229,7 @@ export interface PreviewHandle {
 // 相机控制常量（buildCameraControls 已拆至 camera-controls.ts，本文件保留自身仍使用的部分：
 // DRAG_ROTATE_SENSITIVITY 拖拽旋转 / TIP_AUTO_DISMISS_MS 提示自动消失）
 // camSpeed 默认值已由 keymap.ts loadTdCamSpeed()（默认 20）提供，会话初始化时读取偏好。
-// §1.5 P1 批次9:overlay 链静态 cssText 抽类集中注入(mount3D 内 ensureMpcStyles 幂等调用)
-// ADR-175 M1:overlay shadow host 化——内容迁入 shadowRoot 后 head 注入穿不透边界,
-// 首条规则改 `:host` 承载宿主自身布局(降级 light DOM 路径由 .mpc-overlay 选择器兜底);
-// 注入目标经 overlay-style-bridge 迁移(shadow root / 无 overlay 时 head 兜底)。
-const mpcCss = `
-:host, .mpc-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:#11111b; display:flex; flex-direction:column; }
-.mpc-body { flex:1; display:flex; position:relative; overflow:hidden; }
-.preview-view-container.mpc-view { flex:1; position:relative; overflow:hidden; }
-.mpc-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:14px; gap:12px; z-index:10; }
-.mpc-tip { padding:5px 12px; background:#1b1c24; border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:11px; text-align:center; flex-shrink:0; }
-`;
-let _mpcStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _mpcStylesInjected = false;
-});
-function ensureMpcStyles(): void {
-  if (_mpcStylesInjected) return;
-  _mpcStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = mpcCss;
-  overlayStyleRoot().appendChild(el);
-}
+// mpc 静态样式注入（mpcCss + ensureStyles 幂等旗标）已随外壳单例收敛至 preview-shell.ts。
 
 const TIP_AUTO_DISMISS_MS = 6000;
 
@@ -261,11 +237,7 @@ let _gen = 0;
 /** [Bug A] mount 会话序号（per-mount 唯一 id 来源；switchTo 复用外壳不递增） */
 let _mountSessionSeq = 0;
 
-/** 模块级全局 overlay（仅 cleanupPreview 时才移除，多次 mount3D 复用同一 DOM） */
-let _singletonOverlay: HTMLElement | null = null;
-let _singletonBody: HTMLElement | null = null;
-/** 共享视窗容器（.preview-view-container：canvas 所在格子）：随外壳首次创建、后续复用 */
-let _singletonViewContainer: HTMLElement | null = null;
+/** 外壳单例（overlay/body/viewContainer）已收敛至 preview-shell.ts 的 previewShell 实例（ADR-227） */
 /** 所有已挂载的 PreviewHandle（cooperate 模式下多模型各自独立） */
 const _handles: Array<{ handle: PreviewHandle; gen: number }> = [];
 // rAF 循环状态（_globalAnimId/_globalPerFrames/perFrame 告警）已拆至 render-loop.ts
@@ -294,13 +266,10 @@ export function cleanupPreview(): void {
   _handles.length = 0;
   // P0 修复：cleanupPreview 是「全部关闭」语义，可安全 reset 注册表
   sceneRegistry.reset();
-  // renderer/canvas/overlay 保留（下次 mount3D 直接复用，不重建 DOM）
-  // 但 _singletonOverlay/_singletonBody/_singletonViewContainer 必须清零：handle.cleanup→
-  // fullCleanup 已从 DOM 移除它们，保留旧引用会导致下次 mount3D 复用已脱离文档的
-  // detached element（测试 afterEach 尤其敏感）。
-  _singletonOverlay = null;
-  _singletonBody = null;
-  _singletonViewContainer = null;
+  // renderer/canvas 保留（下次 mount3D 直接复用，不重建 DOM），但外壳引用必须清零：
+  // handle.cleanup→fullCleanup 已从 DOM 移除 overlay/body/viewContainer，保留旧引用会导致
+  // 下次 mount3D 复用已脱离文档的 detached element（测试 afterEach 尤其敏感）。
+  previewShell.resetRefs();
   // ADR-175 M1：overlay 单例已拆除——注入目标还原 head 兜底并复位全部 ensure* 旗标
   //（下次 mount3D 建新 shadow root 时会重注入）
   setOverlayStyleTarget(null);
@@ -309,9 +278,7 @@ export function cleanupPreview(): void {
 
 /** 测试用：重置所有模块级单例状态（不影响生产代码路径） */
 export function _resetSingletons(): void {
-  _singletonOverlay = null;
-  _singletonBody = null;
-  _singletonViewContainer = null;
+  previewShell.resetRefs();
   setOverlayStyleTarget(null); // ADR-175 M1：同 cleanupPreview——旗标复位防跨用例串目标
   resetSceneInfra();
   resetLoopState();
@@ -397,7 +364,7 @@ export async function mount3D(
   // 复用单例外壳（renderer/canvas/overlay/scene 存活），首次 mount3D 创建，后续复用。
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
   installComponentsStyles();
-  ensureMpcStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
+  previewShell.ensureStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
   const myGen = ++_gen;
   const selfMode = adapter.mode === "self";
   // [Bug A] per-mount 会话稳定 id：每次 mount3D 自增（含 switchTo 重建？否——switchTo 走
@@ -461,9 +428,7 @@ export async function mount3D(
     handles: _handles,
     getSwitchCtx: () => switchCtx,
     clearSingletons: () => {
-      _singletonOverlay = null;
-      _singletonBody = null;
-      _singletonViewContainer = null;
+      previewShell.resetRefs();
     },
     overlay: null,
     viewContainer: null as unknown as HTMLElement,
@@ -515,8 +480,8 @@ function assembleShell(ctx: MountCtx): AssembledShell {
   const lastMouse = { x: 0, y: 0 };
 
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
-  let overlay = _singletonOverlay;
-  let body = _singletonBody;
+  let overlay = previewShell.overlay;
+  let body = previewShell.body;
   // ADR-175 M1：overlay = shadow host（挂 document.body 保留 id/class/aria，app-tree
   // getElementById 守卫零改动）；全部内容（tip/body/viewContainer/菜单链）迁入 shadowRoot。
   // attachShadow 缺失（无 shadow DOM 的宿主/测试环境）降级 light DOM——root 即 overlay 本体，
@@ -550,12 +515,12 @@ function assembleShell(ctx: MountCtx): AssembledShell {
     }
     // 注入目标切到本 shadow root（或降级的 overlay 本体）——全部 ensure* 旗标复位重注入
     setOverlayStyleTarget(root);
-    ensureMpcStyles(); // 首建即注入 mpc 规则（:host 布局在 root 内生效）
+    previewShell.ensureStyles(); // 首建即注入 mpc 规则（:host 布局在 root 内生效）
     body = document.createElement("div");
     body.className = "mpc-body";
     root.appendChild(body);
-    _singletonOverlay = overlay;
-    _singletonBody = body;
+    previewShell.overlay = overlay;
+    previewShell.body = body;
   } else {
     // 复用路径：从 host 取回既有 shadowRoot（降级环境无 shadowRoot → host 本体）
     root = overlay.shadowRoot ?? overlay;
@@ -607,23 +572,23 @@ function assembleShell(ctx: MountCtx): AssembledShell {
   // 视窗（多模型同台共用同一 canvas，而非每次 mount3D 新建空容器；回归：曾反复 new
   // 容器导致同台后多出空白分屏）
   // 防御性兜底（code_review ce648d64 #1/#2）：overlay/body 单例成对创建（overlay 在则
-  // body 必在），TS 不认该不变量——复用路径 body 来自可能为 null 的 _singletonBody。
+  // body 必在），TS 不认该不变量——复用路径 body 来自可能为 null 的 previewShell.body。
   // 兜底必须在此处（viewContainer 创建前）执行才能真正守卫下方 body! 消费——
   // 原实现把它放函数尾（body! 消费之后），真破坏时先崩在 body!、兜底永不达。
   if (!body) {
     body = document.createElement("div");
     body.className = "mpc-body";
     root.appendChild(body);
-    _singletonBody = body;
+    previewShell.body = body;
   }
-  if (!_singletonViewContainer) {
+  if (!previewShell.viewContainer) {
     const c = document.createElement("div");
     c.className = "preview-view-container mpc-view"; // 语义锚点类保留,布局样式入 .mpc-view(双类防将来锚点规则覆盖)
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     body!.appendChild(c);
-    _singletonViewContainer = c;
+    previewShell.viewContainer = c;
   }
-  const viewContainer = _singletonViewContainer;
+  const viewContainer = previewShell.viewContainer;
   ctx.viewContainer = viewContainer;
 
   // 声明式根菜单（⚙️）：core 在 overlay 内自建（预览全屏盖住 app 外壳，主程序 nav.settings 够不着），

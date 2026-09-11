@@ -137,7 +137,7 @@ invariant_anchors:
 - `preview-state.ts`：B2 后 `ui.activeComponent` binding 保留（不删——兼容旧消费者），但 YSM 面板
   不再读写它；`resetActiveComponent` 保留导出，无生产调用点（仅测试用）。
 - `mount-preview-core.ts` / `switch-preview.ts`：sessionId 的生成与透传链。
-- `litematic-adapter.ts`：per-scene key 范式的起源（`mdLiRegisterSliceSchema(sliceKey)`）。
+- `litematic-adapter.ts`：per-scene key 范式的起源（`RegisterSliceSchema(sliceKey)`，原 `mdLiRegisterSliceSchema` 已去前缀）。
 
 ## 不变量
 

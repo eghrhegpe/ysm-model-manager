@@ -62,7 +62,7 @@ function parseYsmManifestMeta(bytes: Uint8Array): YsmManifestMeta | null {
 }
 
 /**
- * 按 ysm.json manifest 声明序合并多 geometry（对齐 wasm.ts mdWsHandleYsmJsonSpec 的合并规则）。
+ * 按 ysm.json manifest 声明序合并多 geometry（对齐 wasm.ts HandleYsmJsonSpec 的合并规则）。
  * @param meta parseYsmJsonDirect 输出的 _ysmMeta（texFiles 已按 default_texture 置首）
  * @param readFile 相对路径读取器；zip 用 entries 查表，解压目录用 IDB 读文件
  */

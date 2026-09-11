@@ -107,6 +107,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_contract_alias_runtime.ts": ["tests"],
   // CI 工作流必须走 contract-tests 统一入口（禁裸跑 tests/*.ts——裸跑缺别名注入）
   "test_workflow_contract_runner.ts": ["tests"],
+  // 构建/工具配置（vite.*.config.* / knip.json）声明的入口文件必须存在
+  "test_build_entry_refs.ts": ["frontend", "tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
   "test_deadcode_attrib.ts": ["tests"],
   "test_domain_classify.ts": ["tests"],
@@ -239,6 +241,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     ".github/workflows/",
     "scripts/contract-tests.ts",
     "tests/test_workflow_contract_runner.ts",
+  ],
+  // 扫描 frontend/ 下构建/工具配置的入口声明（vite.*.config.* 的 rollupOptions.input +
+  // knip.json 的 entry）；改任一配置或本测试都须触发。
+  "test_build_entry_refs.ts": [
+    "frontend/vite.config.js",
+    "frontend/vite.web.config.ts",
+    "frontend/vite.e2e.config.ts",
+    "frontend/knip.json",
+    "tests/test_build_entry_refs.ts",
   ],
   "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],

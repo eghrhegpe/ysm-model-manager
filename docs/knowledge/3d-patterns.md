@@ -256,8 +256,8 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 4. 同步修复缩进不一致（间接暴露的代码质量信号）。
 
 ### 示例
-- `model-group-builder.ts`：提取 `mdMgFixOrphanBoneChain(bones, modelBones, pivots): void`
-- 调用点：`mdMgFixOrphanBoneChain(bones, model.bones, pivots);`
+- `model-group-builder.ts`：提取 `FixOrphanBoneChain(bones, modelBones, pivots): void`
+- 调用点：`FixOrphanBoneChain(bones, model.bones, pivots);`
 - 原内联段迁移后，`buildModelGroup` 函数圈复杂度显著降低
 
 ### 适用场景
@@ -266,7 +266,7 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 - 多处重复的同构逻辑
 
 ### 最佳实践
-- 函数名应准确描述行为（动词 + 名词，如 `mdMgFixOrphanBoneChain`）
+- 函数名应准确描述行为（动词 + 名词，如 `FixOrphanBoneChain`）
 - 参数列表不超过 4 个，超出考虑封装为对象
 - 注释说明"为什么"而非"做什么"
 
@@ -541,7 +541,7 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 - `frontend/src/preview-3d/adapters/render-loop.ts` — 渲染循环优化（Vector3 复用局部变量）
 - `frontend/src/preview-3d/infra/safe-dispose.ts` — 安全释放原语
 - `frontend/src/preview-3d/infra/debug-render.ts` — 纹理缓存
-- `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（mdMgFixOrphanBoneChain）
+- `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（FixOrphanBoneChain）
 - `frontend/src/preview-3d/adapters/mount-preview-core.ts` — 类型收敛、并发防护、资源生命周期
 - `frontend/src/preview-3d/adapters/mount-session.ts` — 失败路径清理 runFailedMountCleanup
 - `frontend/src/views/app-preview/preview-library.ts` — 循环依赖破壁

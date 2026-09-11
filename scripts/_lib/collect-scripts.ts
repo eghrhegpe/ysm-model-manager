@@ -17,6 +17,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "./scan-files.ts";
+import { toPosix } from "./to-posix.ts";
 
 export const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
@@ -55,7 +56,7 @@ export function collectScripts(
         ((entry.name.endsWith(".ts") && !/\.test\.ts$/.test(entry.name)) ||
           (includeNonTs && (entry.name.endsWith(".sh") || entry.name.endsWith(".ps1"))))
       ) {
-        out.push(path.relative(dir, abs).replace(/\\/g, "/"));
+        out.push(toPosix(path.relative(dir, abs)));
       }
     }
   };

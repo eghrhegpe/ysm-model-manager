@@ -14,6 +14,8 @@
  * 用法：
  *   node scripts/_lib/gen-cmds.ts        # 逐行输出命令清单（sh 侧管道消费）
  */
+import { toPosix } from "./to-posix.ts";
+
 export const GEN_CMDS: string[] = [
   "gen-docs-index.ts",
   "event-graph.ts",
@@ -33,6 +35,6 @@ export const GEN_CMDS: string[] = [
 ];
 
 // 直接运行时逐行输出（sh 侧 node scripts/_lib/gen-cmds.ts | while read）
-if (process.argv[1]?.replace(/\\/g, "/").endsWith("_lib/gen-cmds.ts")) {
+if (toPosix(process.argv[1]).endsWith("_lib/gen-cmds.ts")) {
   for (const c of GEN_CMDS) console.log(c);
 }

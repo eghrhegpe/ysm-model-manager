@@ -7,6 +7,10 @@
  * 零闸门、纯靠自觉（parse-args 仅 37/95 采用，多脚本仍各自内联 walk/符号提取）。
  * 本脚本把「proc 的成功经验」推广为规则驱动的通用闸门：
  *   规则表（模块 → 手搓特征 / 采用特征）驱动，新增模块只需加一行 RULES。
+ * 扫描面含共享层自身：scripts/ 脚本 ∪ _lib 非测试模块——后者被 collectScripts 有意
+ * 排除（其余守卫不适用共享层），但采用率闸门必须自省，否则「能力的定义处」反成
+ * 唯一无人看守之地。对应地每条规则豁免自身模块文件（to-posix.ts 的实现本体就是
+ * 一条 replace，报它手搓 toPosix 属自指）。
  * 与相邻脚本的分工（避免重复告警）：
  *   - check-proc-adoption.ts：专管子进程（proc.mjs），本脚本显式跳过该模块；
  *   - check-script-hygiene.ts：管文件头 / 退出码 / --json 契约 / argv 契约，
@@ -83,7 +87,12 @@ const RULES = [
   {
     lib: "to-posix.ts",
     capability: "Windows 反斜杠 → 正斜杠归一",
-    smells: [/\.replace\(\/\\\\\/g,\s*['"]\/['"]\)/],
+    smells: [
+      /\.replace\(\/\\\\\/g,\s*['"]\/['"]\)/,
+      // 等价手搓形态 split("\\").join("/")：语义同 toPosix，2026-09 实测
+      // jscpd-pairs.ts 曾用此写法逃过 replace 形态的检测，此处补守护。
+      /\.split\(\s*['"]\\\\['"]\s*\)\.join\(\s*['"]\/['"]\s*\)/,
+    ],
     advice: "import { toPosix } from './_lib/to-posix.ts'",
   },
   {
@@ -185,8 +194,16 @@ function adoptionTable(files: string[], texts: Map<string, string>, libs: string
 
 function main() {
   const files = collectScripts();
-  const texts = new Map(files.map((f) => [f, fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8")]));
   const libs = collectLibs();
+  // 扫描面 = scripts/ 脚本 ∪ _lib 共享层自身。
+  // collectScripts 有意排除 `_` 前缀目录（其余守卫不该扫共享层），但采用率闸门必须
+  // 自省：共享层内部同样会手搓，且那是「能力定义处」，是收敛的源头而非法外之地。
+  // 实证 2026-09：_lib 内藏 10 处斜杠归一（collect-scripts / gen-stage / gen-cmds /
+  // machine-diff / jscpd-pairs），因扫描面缺口长期无告警。
+  const scanFiles = [...files, ...libs.map((l) => `_lib/${l}`)];
+  const texts = new Map(
+    scanFiles.map((f) => [f, fs.readFileSync(path.join(SCRIPTS_DIR, f), "utf8")]),
+  );
 
   // 违规：手搓了某模块能覆盖的能力。两类——
   //   missing：完全未 import 该模块（有能力却手搓）
@@ -194,7 +211,11 @@ function main() {
   const violations: any[] = [];
   for (const rule of RULES) {
     const adopted = adoptedRe(rule.lib);
-    for (const f of files) {
+    // 能力定义文件自身豁免：to-posix.ts 内那条 replace 正是 toPosix 的实现本体，
+    // 报它「手搓 toPosix」属自指悖论。精确豁免到 rule.lib 对应文件，非目录级放行。
+    const selfFile = `_lib/${rule.lib}`;
+    for (const f of scanFiles) {
+      if (f === selfFile) continue;
       const text = texts.get(f) as string;
       const lines = scanSmellLines(text, rule.smells);
       if (!lines.length) continue; // 无手搓特征 → 无关文件
@@ -240,7 +261,7 @@ function main() {
   console.log(" _lib 共享层采用率检查 (check-lib-adoption)");
   console.log("══════════════════════════════════════");
   console.log(
-    `扫描 ${files.length} 个脚本 × ${libs.length} 个 _lib 模块，违规 ${violations.length} 条`,
+    `扫描 ${files.length} 个脚本 + ${libs.length} 个 _lib 模块自身，违规 ${violations.length} 条`,
   );
   console.log("──────────────────────────────────────");
   const missing = violations.filter((v) => v.kind === "missing");
@@ -263,7 +284,7 @@ function main() {
     console.log("✅ 未发现「有能力未用」的脚本。");
   }
 
-  console.log("\n【采用率全景】被引用脚本数 / 脚本总数");
+  console.log("\n【采用率全景】被引用脚本数 / 脚本总数（口径：scripts/ 侧，不含 _lib 内部互引）");
   for (const { lib, users } of table) {
     const bar =
       users === 0

@@ -26,6 +26,7 @@ import { execFileSync } from "node:child_process";
  */
 import fs from "node:fs";
 import path from "node:path";
+import { toPosix } from "./to-posix.ts";
 
 /** git status --porcelain 单条目。 */
 export interface PorcelainEntry {
@@ -39,7 +40,7 @@ export interface PorcelainEntry {
 
 /** 归一化路径：反斜杠 → 正斜杠，去前导 ./。 */
 export function normPath(p: string): string {
-  return p.replace(/\\/g, "/").replace(/^\.\//, "");
+  return toPosix(p).replace(/^\.\//, "");
 }
 
 /**
@@ -209,7 +210,7 @@ export function resolvePorcelain(porcelainFile: string): string | null {
 }
 
 // 直接运行时走 CLI（sh 侧）
-const isCli = process.argv[1]?.replace(/\\/g, "/").endsWith("_lib/gen-stage.ts");
+const isCli = toPosix(process.argv[1]).endsWith("_lib/gen-stage.ts");
 if (isCli) {
   const snapBeforeFile = process.argv[2] ?? "";
   // 第三参 = gen 前 porcelain 文件（pre-commit 与 snap 同刻采集；无则 fallback 现采）

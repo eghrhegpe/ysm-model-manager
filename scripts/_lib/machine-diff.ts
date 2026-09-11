@@ -25,6 +25,7 @@
  * 逃生阀：YSM_SKIP_GEN_STAGE=1（gen-stage.ts CLI 读取，恢复旧行为全排除）。
  */
 import { execFileSync } from "node:child_process";
+import { toPosix } from "./to-posix.ts";
 
 /** 无人工复用区的生成物整文件（GEN_CMDS 直接产出全量态）。 */
 export const GEN_WHOLE_OUTPUTS: readonly string[] = [
@@ -58,7 +59,7 @@ const MACHINE_ITEM_RE = /^\s{2,}-\s+[A-Za-z_][A-Za-z0-9_.]*\s*$/;
 
 /** 路径是否命中生成物整文件清单（正斜杠归一）。 */
 export function isGenWholeOutput(p: string): boolean {
-  const n = p.replace(/\\/g, "/");
+  const n = toPosix(p);
   if (GEN_WHOLE_OUTPUTS.includes(n)) return true;
   return GEN_WHOLE_PREFIXES.some((pre) => n.startsWith(pre));
 }
@@ -148,7 +149,7 @@ export function classifyStranded(p: string, diffText: string): StrandedKind {
 
 /** 该路径是否属于快照扫描域（docs / locales / completions）。 */
 export function inSnapScope(p: string): boolean {
-  const n = p.replace(/\\/g, "/");
+  const n = toPosix(p);
   return (
     n.startsWith("docs/") ||
     n.startsWith("frontend/public/locales/") ||
@@ -169,7 +170,7 @@ export function strandedStageList(dirtyPaths: string[]): string[] {
   const candidates: string[] = [];
   for (const p of dirtyPaths) {
     if (!inSnapScope(p)) continue;
-    const n = p.replace(/\\/g, "/");
+    const n = toPosix(p);
     if (isGenWholeOutput(p) || /^docs\/(knowledge|adr)\//.test(n)) candidates.push(p);
   }
   if (candidates.length === 0) return [];
@@ -185,7 +186,7 @@ export function strandedStageList(dirtyPaths: string[]): string[] {
     }) as string;
     if (!all.trim()) return out;
     // 候选归一化路径（正斜杠）；预期 diff 头 = `diff --git a/<p> b/<p>`
-    const normCands = candidates.map((p) => p.replace(/\\/g, "/"));
+    const normCands = candidates.map(toPosix);
     const chunks = all.split(/\r?\n(?=diff --git )/);
     for (const chunk of chunks) {
       const header = (chunk.split(/\r?\n/, 1)[0] ?? "").trimEnd();

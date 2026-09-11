@@ -22,6 +22,7 @@ import path from "node:path";
 import { filterTestDupes, matchDrift, normPair, pairsFrom } from "./_lib/jscpd-pairs.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 import { checkStale } from "./_lib/stale-baseline.ts";
+import { toPosix } from "./_lib/to-posix.ts";
 
 // 仓库根由共享层 scan-files.ts 提供(消除内联 ROOT 样板,对齐 scripts_argv 卫生规范)
 // monorepo 化后 jscpd 被 hoist 到根 node_modules（workspaces 依赖提升），
@@ -257,8 +258,8 @@ function main() {
         // 重复块行号 + 片段头（jscpd 报告含 firstFile/secondFile start/end + fragment）
         const dupIndex = new Map<string, any[]>();
         for (const d of report.duplicates || []) {
-          const a = (d.firstFile?.name || "").split("\\").join("/");
-          const b = (d.secondFile?.name || "").split("\\").join("/");
+          const a = toPosix(d.firstFile?.name);
+          const b = toPosix(d.secondFile?.name);
           if (!a || !b) continue;
           const key = [a, b].sort().join("#");
           if (!dupIndex.has(key)) dupIndex.set(key, []);

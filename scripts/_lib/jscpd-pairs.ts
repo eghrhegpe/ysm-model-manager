@@ -17,6 +17,8 @@
  * 行为锁定：tests/test_jscpd_pairs.ts（含 ADR-144 真实案例回归）。
  */
 
+import { toPosix } from "./to-posix.ts";
+
 /** 把 `a#b` 对归一化为排序稳定形式（`b#a` 与 `a#b` 同一对）。 */
 export function normPair(p: string): string {
   const [a, b] = p.split("#");
@@ -49,8 +51,8 @@ export function pairsFrom(report: {
 }): string[] {
   const set = new Set<string>();
   for (const d of report.duplicates || []) {
-    const a = (d.firstFile?.name || "").split("\\").join("/");
-    const b = (d.secondFile?.name || "").split("\\").join("/");
+    const a = toPosix(d.firstFile?.name);
+    const b = toPosix(d.secondFile?.name);
     if (!a || !b) continue; // schema 异常条目跳过（调用方有结构校验兜底）
     set.add([a, b].sort().join("#"));
   }

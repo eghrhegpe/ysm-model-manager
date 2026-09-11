@@ -7,13 +7,13 @@
 
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { mdMmStage4Anim } from "./mmd-build-anim.ts";
-import { mdMmDetectFormat, mdMmStage1Input, mdMmStage2LoadingManager } from "./mmd-build-load.ts";
-import { mdMmStage5Menu } from "./mmd-build-menu.ts";
-import { mdMmParsePmdStage, mdMmParsePmxStage } from "./mmd-build-parse.ts";
-import { mdMmStage6Result } from "./mmd-build-result.ts";
-import { mdMmStage3SceneMesh } from "./mmd-build-scene.ts";
-import type { MdMmBuildCtx, MmdAdapterDeps, MmdDataPort, MmdPanelHooks } from "./mmd-types.ts";
+import { Stage4Anim } from "./mmd-build-anim.ts";
+import { DetectFormat, Stage1Input, Stage2LoadingManager } from "./mmd-build-load.ts";
+import { Stage5Menu } from "./mmd-build-menu.ts";
+import { ParsePmdStage, ParsePmxStage } from "./mmd-build-parse.ts";
+import { Stage6Result } from "./mmd-build-result.ts";
+import { Stage3SceneMesh } from "./mmd-build-scene.ts";
+import type { BuildCtx, MmdAdapterDeps, MmdDataPort, MmdPanelHooks } from "./mmd-types.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 
 export { mmdMenuItems } from "./mmd-build-menu.ts";
@@ -25,27 +25,27 @@ export async function buildMmdScene(
   port: MmdDataPort,
   panels?: MmdPanelHooks,
 ): Promise<PreviewScene> {
-  const c = {} as MdMmBuildCtx;
+  const c = {} as BuildCtx;
   c.ctx = ctx;
   c.path = path;
   c.port = port;
   c.panels = panels;
   c.stopLongTaskWatch = () => {};
   c.blobUrls = [];
-  c.alloc = []; // 失败释放注册表（stage 分配点 mdMmTrackAlloc 登记；finally 统一遍历）
+  c.alloc = []; // 失败释放注册表（stage 分配点 TrackAlloc 登记；finally 统一遍历）
   c.buildSucceeded = false;
   // tStart 下沉：读取阶段计时起点（原 c.tStart 字段），经 stage6Result 传至 stage6bTrace
   const tStart = performance.now();
   try {
-    await mdMmStage1Input(c);
-    await mdMmStage2LoadingManager(c);
-    const fmt = mdMmDetectFormat(c);
-    if (fmt === "pmx") await mdMmParsePmxStage(c);
-    await mdMmParsePmdStage(c);
-    await mdMmStage3SceneMesh(c);
-    await mdMmStage4Anim(c);
-    const s5 = mdMmStage5Menu(c);
-    const result = mdMmStage6Result(c, s5, tStart);
+    await Stage1Input(c);
+    await Stage2LoadingManager(c);
+    const fmt = DetectFormat(c);
+    if (fmt === "pmx") await ParsePmxStage(c);
+    await ParsePmdStage(c);
+    await Stage3SceneMesh(c);
+    await Stage4Anim(c);
+    const s5 = Stage5Menu(c);
+    const result = Stage6Result(c, s5, tStart);
     return result;
   } finally {
     if (!c.buildSucceeded) {

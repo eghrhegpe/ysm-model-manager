@@ -7,9 +7,9 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
 import { mmdDiag } from "./mmd-shared.ts";
-import type { MdMmStage4Ctx } from "./mmd-types.ts";
+import type { Stage4Ctx } from "./mmd-types.ts";
 
-export async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
+export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
   c.mixer = new THREE.AnimationMixer(c.mesh);
   c.clips = [];
   c.customAnimPath = await getCustomAnimPath();

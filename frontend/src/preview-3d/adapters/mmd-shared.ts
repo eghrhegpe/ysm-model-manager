@@ -2,7 +2,7 @@
 
 import * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
-import type { MdMmAllocEntry, MmdDataPort } from "./mmd-types.ts";
+import type { AllocEntry, MmdDataPort } from "./mmd-types.ts";
 import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, matTexSlots } from "./mmd-utils.ts";
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
@@ -54,10 +54,10 @@ export async function disposeMmdMesh(
 
 /** 资源分配后登记到失败释放注册表（2026-09-03 注册表化：取代 buildMmdScene finally 的手工
  *  枚举——每个 stage 在分配点即登记，新资源字段不会再漏写释放。登记幂等由调用方保证）。 */
-export function mdMmTrackAlloc(
-  c: { alloc: MdMmAllocEntry[] },
+export function TrackAlloc(
+  c: { alloc: AllocEntry[] },
   name: string,
-  free: MdMmAllocEntry["free"],
+  free: AllocEntry["free"],
 ): void {
   c.alloc.push({ name, free });
 }

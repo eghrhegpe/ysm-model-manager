@@ -7,15 +7,15 @@ import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import type { mdMmStage5Menu } from "./mmd-build-menu.ts";
+import type { Stage5Menu } from "./mmd-build-menu.ts";
 import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
-import type { MdMmStage6bCtx, MdMmStage6Ctx } from "./mmd-types.ts";
+import type { Stage6bCtx, Stage6Ctx } from "./mmd-types.ts";
 import { applyVPDToMesh } from "./mmd-vpd-mesh.ts";
 import type { ScreenshotScene, SemanticScene, UpdateableScene } from "./mount-preview-core.ts";
 
-export function mdMmStage6Result(
-  c: MdMmStage6Ctx,
-  s5: ReturnType<typeof mdMmStage5Menu>,
+export function Stage6Result(
+  c: Stage6Ctx,
+  s5: ReturnType<typeof Stage5Menu>,
   tStart: number,
 ): UpdateableScene & ScreenshotScene & SemanticScene {
   const {
@@ -105,7 +105,7 @@ export function mdMmStage6Result(
         autoDance.apply(dt, semanticBones ?? {});
       }
     },
-    dispose: (): void => mdMmStage6Dispose(c, s5),
+    dispose: (): void => Stage6Dispose(c, s5),
     screenshot: () =>
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       Promise.resolve(screenshotFromRenderer(c.ctx.renderer!, c.ctx.scene, c.ctx.camera)),
@@ -130,12 +130,12 @@ export function mdMmStage6Result(
           }
         : undefined,
   };
-  mdMmStage6bTrace(c, tStart);
+  Stage6bTrace(c, tStart);
   return result;
 }
 
 // 6b-dispose：scene graph 拆解 → mixers → 感知释放 → 资源 dispose（自包含，仅消费 c + s5）
-function mdMmStage6Dispose(c: MdMmStage6Ctx, s5: ReturnType<typeof mdMmStage5Menu>): void {
+function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
   const { breath, gaze, blink, lipSync, autoDance, footIK } = s5;
   const renderer = c.ctx.renderer;
   if (renderer) {
@@ -192,7 +192,7 @@ function mdMmStage6Dispose(c: MdMmStage6Ctx, s5: ReturnType<typeof mdMmStage5Men
   }
 }
 
-function mdMmStage6bTrace(c: MdMmStage6bCtx, tStart: number): void {
+function Stage6bTrace(c: Stage6bCtx, tStart: number): void {
   c.tBuildEnd = performance.now();
   c.buildSucceeded = true;
   const _stages: import("@/preview-3d/infra/load-trace.ts").LoadTraceStage[] = [];

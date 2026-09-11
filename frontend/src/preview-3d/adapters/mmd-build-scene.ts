@@ -7,23 +7,23 @@ import { registerModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
-import type { MdMmStage3Ctx } from "./mmd-types.ts";
+import { mmdDiag, TrackAlloc } from "./mmd-shared.ts";
+import type { Stage3Ctx } from "./mmd-types.ts";
 import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
 
-export async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
+export async function Stage3SceneMesh(c: Stage3Ctx): Promise<void> {
   c.buildSucceeded = false;
   // 拆分前：scene 缺失 / bb 失败的守卫 return 会短路整个 stage3（KTX2 缓存读 3.2
   // 与后台编码写 3.3 一并跳过）——守卫拆到 3.1 后须在此恢复短路语义，防未挂载模型
   // 仍触发缓存 hydrate/dispose 与 saveCachedTexture 持久化（376d07ac 回归点）。
-  if (!(await mdMmStage3MountAndDebug(c))) return;
-  await mdMmStage3Ktx2Hydrate(c);
-  await mdMmStage3Ktx2Schedule(c);
+  if (!(await Stage3MountAndDebug(c))) return;
+  await Stage3Ktx2Hydrate(c);
+  await Stage3Ktx2Schedule(c);
 }
 
 // 3.1 挂载 + 网格调试诊断（scene 守卫 → add → registerModelRoot → boundingBox diag）
 // 返回是否完成挂载（false = 守卫命中跳过挂载，调用方须短路 3.2/3.3）
-async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<boolean> {
+async function Stage3MountAndDebug(c: Stage3Ctx): Promise<boolean> {
   // 结构化守卫替代 !：scene 可选（self 模式适配器自驱 renderer 时为 undefined）
   const scene = c.ctx.scene;
   if (!scene) {
@@ -78,7 +78,7 @@ async function mdMmStage3MountAndDebug(c: MdMmStage3Ctx): Promise<boolean> {
 }
 
 // 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）
-async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
+async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
   if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
     // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现）；
     // port 缺方法（可选）→ 跳过缓存优化（保留原 typeof-function 守卫语义）
@@ -93,7 +93,7 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
           .setTranscoderPath("/basis/")
           .detectSupport(c.ctx.renderer);
         // KTX2 缓存 loader 分配即登记失败释放（2026-09-03 注册表化）
-        mdMmTrackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
+        TrackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
         const allMats: THREE.Material[] = Array.isArray(c.mesh.material)
           ? c.mesh.material
           : c.mesh.material
@@ -174,7 +174,7 @@ async function mdMmStage3Ktx2Hydrate(c: MdMmStage3Ctx): Promise<void> {
 }
 
 // 3.3 后台编码调度（写路径持久化通道，gate = saveCachedTexture）
-async function mdMmStage3Ktx2Schedule(c: MdMmStage3Ctx): Promise<void> {
+async function Stage3Ktx2Schedule(c: Stage3Ctx): Promise<void> {
   // P2-3（审核）：后台编码 gate 从「已废弃 getCachedTexture」改为 saveCachedTexture——
   // 读路径已用 hasCachedTextures/getCachedTextureByHash，写路径真正需要的是持久化通道；
   // 原 gate 挂在废弃方法上，一旦按「已废弃」清理会静默停掉后台编码（缓存永不写入）。

@@ -29,11 +29,11 @@ import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { MmdBottomNavCtx } from "./content-bridges.ts";
 import { materialNodes } from "./material-controls.ts";
-import type { MdMmStage5Ctx, MmdMenuItemsOpts } from "./mmd-types.ts";
+import type { MmdMenuItemsOpts, Stage5Ctx } from "./mmd-types.ts";
 import { morphNodes } from "./morph-controls.ts";
 import { perceptionNodes, pickPerceptionCaps } from "./perception-controls.ts";
 
-export function mdMmStage5Menu(c: MdMmStage5Ctx): {
+export function Stage5Menu(c: Stage5Ctx): {
   semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;
   semanticMorphs: ReturnType<typeof mmdSemanticMorphMap>;
   breath: ReturnType<typeof createBreathController>;

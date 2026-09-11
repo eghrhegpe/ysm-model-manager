@@ -5,10 +5,10 @@ import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo";
 import type * as THREE from "three";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { buildPmxScene } from "./mmd-pmx-parser.ts";
-import { disposeMmdMesh, mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
+import { disposeMmdMesh, mmdDiag, TrackAlloc } from "./mmd-shared.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { applyWorkerDecodedTextures, closeUnusedDecodedBitmaps } from "./mmd-texture-decoder.ts";
-import type { MdMmParsePmdCtx, MdMmParsePmxCtx } from "./mmd-types.ts";
+import type { ParsePmdCtx, ParsePmxCtx } from "./mmd-types.ts";
 
 /**
  * worker 路径伪造 mmd 的 updateWithMixer（P0 review 修复）：
@@ -23,7 +23,7 @@ export function workerMmdUpdateWithMixer(
   mixer.update(delta);
 }
 
-export async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
+export async function ParsePmxStage(c: ParsePmxCtx): Promise<void> {
   c.workerResult = null;
   c.pmxParsedData = null;
   if (c.usePmxWorker && c.pmxParsePromise) {
@@ -73,13 +73,13 @@ export async function mdMmParsePmxStage(c: MdMmParsePmxCtx): Promise<void> {
   }
 }
 
-export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
+export async function ParsePmdStage(c: ParsePmdCtx): Promise<void> {
   if (c.workerResult) {
     c.mesh = c.workerResult.mesh;
     // 失败释放注册表：worker mesh 分配即登记（值捕获，防后续覆盖漏释放；2026-09-03）
     const workerMesh = c.mesh;
     if (workerMesh) {
-      mdMmTrackAlloc(c, "mesh", () =>
+      TrackAlloc(c, "mesh", () =>
         disposeMmdMesh(workerMesh, mmdDiag, c.effectivePort, "dispose-fail"),
       );
     }
@@ -98,7 +98,7 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
       dispose: () => {},
     } as unknown as Awaited<ReturnType<MMDLoader["loadAsync"]>>;
     // worker 假 mmd（dispose no-op）：分配即登记，与主线程 loader 路径对称
-    mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());
+    TrackAlloc(c, "mmd", () => c.mmd?.dispose());
     if (c.pmxParsedData?.bones?.some((b) => b.hasIK)) {
       await mmdDiag(
         c.effectivePort,
@@ -145,13 +145,13 @@ export async function mdMmParsePmdStage(c: MdMmParsePmdCtx): Promise<void> {
     // 分配即登记失败释放（2026-09-03 注册表化；值捕获防后续覆盖漏释放）
     // mesh 先于 mmd 注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
     // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
-    mdMmTrackAlloc(c, "mesh", () =>
+    TrackAlloc(c, "mesh", () =>
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       disposeMmdMesh(c.mmd!.mesh, mmdDiag, c.effectivePort, "dispose-fail"),
     );
     // mmd 在 mesh 之后注册——dispose 按 push 顺序执行，mesh→mmd 与旧 finally 块一致，
     // 也与 worker 路径（L57 mesh → L75 mmd）对齐（code review P2 修复）
-    mdMmTrackAlloc(c, "mmd", () => c.mmd?.dispose());
+    TrackAlloc(c, "mmd", () => c.mmd?.dispose());
     c.pmxParser?.dispose();
   }
   if (c.decodedTexturesPromise) {

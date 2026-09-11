@@ -1601,7 +1601,7 @@ describe("挂载边界（scene 缺失 / 多材质纹理释放统计）", () => {
 // ===== 覆盖率攻坚二：pmd 分支 / 动作库扫描 / worker 纹理解码 / applyPose 变体 =====
 
 describe("格式与纹理边界", () => {
-  it(".pmd 扩展名 → mdMmDetectFormat 走 pmd 分支（跳过 PMX worker stage）", async () => {
+  it(".pmd 扩展名 → DetectFormat 走 pmd 分支（跳过 PMX worker stage）", async () => {
     stubBlobUrls();
     hoisted.readBytesMock.mockResolvedValue(btoa("PMD"));
     hoisted.listPathsMock.mockResolvedValue(["/mmd/miku/miku.pmd"]);

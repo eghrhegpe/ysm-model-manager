@@ -379,29 +379,29 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
-    - MdMmAllocEntry
-    - MdMmBuildCtx
-    - mdMmDetectFormat
-    - MdMmDetectFormatCtx
-    - MdMmParsePmdCtx
-    - mdMmParsePmdStage
-    - MdMmParsePmxCtx
-    - mdMmParsePmxStage
-    - MdMmStage1bCtx
-    - MdMmStage1Ctx
-    - mdMmStage1Input
-    - MdMmStage2Ctx
-    - mdMmStage2LoadingManager
-    - MdMmStage3Ctx
-    - mdMmStage3SceneMesh
-    - mdMmStage4Anim
-    - MdMmStage4Ctx
-    - MdMmStage5Ctx
-    - mdMmStage5Menu
-    - MdMmStage6bCtx
-    - MdMmStage6Ctx
-    - mdMmStage6Result
-    - mdMmTrackAlloc
+    - AllocEntry
+    - BuildCtx
+    - DetectFormat
+    - DetectFormatCtx
+    - ParsePmdCtx
+    - ParsePmdStage
+    - ParsePmxCtx
+    - ParsePmxStage
+    - Stage1bCtx
+    - Stage1Ctx
+    - Stage1Input
+    - Stage2Ctx
+    - Stage2LoadingManager
+    - Stage3Ctx
+    - Stage3SceneMesh
+    - Stage4Anim
+    - Stage4Ctx
+    - Stage5Ctx
+    - Stage5Menu
+    - Stage6bCtx
+    - Stage6Ctx
+    - Stage6Result
+    - TrackAlloc
     - MdWsYsmMeta
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS

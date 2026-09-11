@@ -8,25 +8,20 @@ import { formatLongTask, startMainThreadWatch } from "@/utils/base/primitives/ma
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { createPmxParser } from "./mmd-pmx-parser.ts";
-import { mdMmTrackAlloc, mmdDiag } from "./mmd-shared.ts";
+import { mmdDiag, TrackAlloc } from "./mmd-shared.ts";
 import { getTextureDecoder } from "./mmd-texture-decoder.ts";
-import type {
-  MdMmDetectFormatCtx,
-  MdMmStage1bCtx,
-  MdMmStage1Ctx,
-  MdMmStage2Ctx,
-} from "./mmd-types.ts";
+import type { DetectFormatCtx, Stage1bCtx, Stage1Ctx, Stage2Ctx } from "./mmd-types.ts";
 import { concurrentMap, isLikelyTga, TEXTURE_EXTS } from "./mmd-utils.ts";
 import { prepareMmdZipInput } from "./mmd-zip-overlay.ts";
 import { renderLoadingState } from "./preview-loading.ts";
 
-export function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
+export function DetectFormat(c: DetectFormatCtx): "pmx" | "pmd" {
   const ext = c.modelBase.split(".").pop()?.toLowerCase();
   if (ext === "pmd") return "pmd";
   return "pmx";
 }
 
-export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
+export async function Stage1Input(c: Stage1Ctx): Promise<void> {
   renderLoadingState(
     c.ctx.loadingEl,
     "🎭",
@@ -79,7 +74,7 @@ export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
   if (c.usePmxWorker) {
     c.pmxParser = createPmxParser();
     // 分配即登记失败释放（2026-09-03 注册表化；成功路径 parse 内已内联 dispose，此处兜底失败路径）
-    mdMmTrackAlloc(c, "pmxParser", () => c.pmxParser?.dispose?.());
+    TrackAlloc(c, "pmxParser", () => c.pmxParser?.dispose?.());
     // worker parse 走 postMessage transfer——同步 detach 传入的 ArrayBuffer。必须给独立
     // 拷贝（slice），否则 c.bytes 的 buffer 被 detach 后，下方 573 行 Blob 构造拿到的
     // 是同源已 detach buffer（byteLength 0 → 异常或空模型 blob），zip 模式的 entries
@@ -116,10 +111,10 @@ export async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
   c.texMap.set(c.modelBase, c.modelBlobUrl);
   c.blobUrlToRel = new Map();
   c.blobUrlToHash = new Map();
-  await mdMmStage1bFileScan(c);
+  await Stage1bFileScan(c);
 }
 
-async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
+async function Stage1bFileScan(c: Stage1bCtx): Promise<void> {
   try {
     const files = (await c.effectivePort.listAllFilePaths(c.dirPath)) || [];
     c._traceFiles = files.length;
@@ -228,7 +223,7 @@ async function mdMmStage1bFileScan(c: MdMmStage1bCtx): Promise<void> {
   }
 }
 
-export async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> {
+export async function Stage2LoadingManager(c: Stage2Ctx): Promise<void> {
   c.manager = new THREE.LoadingManager();
   c.textureLoadedAt = 0;
   c.tParseStart = 0;
@@ -319,7 +314,7 @@ export async function mdMmStage2LoadingManager(c: MdMmStage2Ctx): Promise<void> 
       fallbackLoader: new THREE.TextureLoader(c.manager),
     });
     // KTX2 直读 loader 是 GPU 资源——分配即登记失败释放（2026-09-03 注册表化）
-    mdMmTrackAlloc(c, "ktx2Loader", () => c.ktx2Loader?.dispose());
+    TrackAlloc(c, "ktx2Loader", () => c.ktx2Loader?.dispose());
     c.manager.addHandler(/\.(png|jpe?g|bmp|gif|webp)$/i, ktx2DirectLoader);
   }
 }

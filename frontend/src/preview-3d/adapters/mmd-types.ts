@@ -52,14 +52,14 @@ export interface MmdPanelHooks {
   playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
 }
 
-// ===== MdMmBuildCtx 按域分组的接口组合（声明层收敛，访问路径 c.xxx 不变）=====
+// ===== BuildCtx 按域分组的接口组合（声明层收敛，访问路径 c.xxx 不变）=====
 // 原 60 字段扁平巨型接口按生命周期域拆分——每个域接口语义自洽，
-// 组合后行为与 `interface MdMmBuildCtx { ...60 字段... }` 完全等价。
+// 组合后行为与 `interface BuildCtx { ...60 字段... }` 完全等价。
 
-/** 失败路径统一释放注册表条目：stage 分配 GPU 资源后经 mdMmTrackAlloc 登记，
+/** 失败路径统一释放注册表条目：stage 分配 GPU 资源后经 TrackAlloc 登记，
  *  buildMmdScene finally 顺序遍历 free（每项独立 try/catch）。2026-09-03 起取代手工枚举，
  *  杜绝新增资源字段忘 dispose 的静默泄漏。 */
-export interface MdMmAllocEntry {
+export interface AllocEntry {
   /** 资源名（dbg 日志标识，如 mesh / mmd / pmxParser / ktx2Loader） */
   name: string;
   /** 释放动作（分配点登记时闭包捕获已分配对象，防字段被覆盖后漏释放） */
@@ -67,7 +67,7 @@ export interface MdMmAllocEntry {
 }
 
 /** 输入/路径域：构建入口参数与解析出的模型字节/路径 */
-interface MdMmIoState {
+interface IoState {
   ctx: PreviewBuildCtx;
   path: string;
   port: MmdDataPort;
@@ -83,14 +83,14 @@ interface MdMmIoState {
   modelBase: string;
   dirPath: string;
   /** 失败释放注册表（2026-09-03；mmd-adapter buildMmdScene finally 统一遍历） */
-  alloc: MdMmAllocEntry[];
+  alloc: AllocEntry[];
   blobUrls: string[];
   vmdPaths: string[];
   vpdPaths: string[];
 }
 
 /** 解析域：PMX/PMD 解析器实例与解析产物 */
-interface MdMmParseState {
+interface ParseState {
   usePmxWorker: boolean;
   pmxParser: PmxParser | null;
   pmxParsePromise: Promise<import("./mmd-pmx-parser.worker.ts").PmxParseResponse> | null;
@@ -101,7 +101,7 @@ interface MdMmParseState {
 }
 
 /** 纹理/解码域：纹理映射、blob URL 生命周期与缓存哈希 */
-interface MdMmTextureState {
+interface TextureState {
   texMap: Map<string, string>;
   texHashMap: Map<string, string>;
   decodeTasks: Array<{ relPath: string; bytes: ArrayBuffer; mimeType: string }>;
@@ -115,7 +115,7 @@ interface MdMmTextureState {
 }
 
 /** 动画/相机域：播放状态 + 相机轨道 */
-interface MdMmAnimState {
+interface AnimState {
   mixer: THREE.AnimationMixer;
   clips: Array<{ label: string; clip: THREE.AnimationClip }>;
   customAnimPath: string | null;
@@ -132,14 +132,14 @@ interface MdMmAnimState {
 }
 
 /** 骨骼/感知域：骨骼面板依赖与感知层状态 */
-interface MdMmPerceptionState {
+interface MmdPerceptionState {
   bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree | null;
   perceptionState: PerceptionState;
 }
 
 /** 生命周期/计时域：构建流程计时与跟踪 */
-interface MdMmTraceState {
+interface TraceState {
   manager: THREE.LoadingManager;
   textureLoadedAt: number;
   tParseStart: number;
@@ -152,23 +152,23 @@ interface MdMmTraceState {
 }
 
 /** 构建上下文：6 个域接口组合（55 字段，5 个低频字段已下沉） */
-export interface MdMmBuildCtx
-  extends MdMmIoState,
-    MdMmParseState,
-    MdMmTextureState,
-    MdMmAnimState,
-    MdMmPerceptionState,
-    MdMmTraceState {}
+export interface BuildCtx
+  extends IoState,
+    ParseState,
+    TextureState,
+    AnimState,
+    MmdPerceptionState,
+    TraceState {}
 
 // ===== 第 2 档：逐 stage 签名收窄（Pick）=====
 // 传入仍是完整 c（结构类型兼容），但函数签名只暴露自己用到的字段——
 // 此后某 stage 新增越界访问（摸别人域的字段），编译器直接报错。
 // 域纪律从自觉变强制，可逐 stage 渐进收紧（频率数据是路线图）。
 
-export type MdMmDetectFormatCtx = Pick<MdMmBuildCtx, "modelBase">;
+export type DetectFormatCtx = Pick<BuildCtx, "modelBase">;
 
-export type MdMmStage1Ctx = Pick<
-  MdMmBuildCtx,
+export type Stage1Ctx = Pick<
+  BuildCtx,
   | "_traceFiles"
   | "_traceGpuMb"
   | "alloc"
@@ -200,8 +200,8 @@ export type MdMmStage1Ctx = Pick<
   | "zipModelCandidates"
 >;
 
-export type MdMmStage1bCtx = Pick<
-  MdMmBuildCtx,
+export type Stage1bCtx = Pick<
+  BuildCtx,
   | "_traceFiles"
   | "blobUrlToHash"
   | "blobUrlToRel"
@@ -216,8 +216,8 @@ export type MdMmStage1bCtx = Pick<
   | "vpdPaths"
 >;
 
-export type MdMmStage2Ctx = Pick<
-  MdMmBuildCtx,
+export type Stage2Ctx = Pick<
+  BuildCtx,
   | "_traceGpuMb"
   | "alloc"
   | "ctx"
@@ -234,8 +234,8 @@ export type MdMmStage2Ctx = Pick<
   | "textureLoadedAt"
 >;
 
-export type MdMmParsePmxCtx = Pick<
-  MdMmBuildCtx,
+export type ParsePmxCtx = Pick<
+  BuildCtx,
   | "effectivePath"
   | "effectivePort"
   | "pmxParsePromise"
@@ -245,8 +245,8 @@ export type MdMmParsePmxCtx = Pick<
   | "workerResult"
 >;
 
-export type MdMmParsePmdCtx = Pick<
-  MdMmBuildCtx,
+export type ParsePmdCtx = Pick<
+  BuildCtx,
   | "alloc"
   | "blobUrlToRel"
   | "decodedTexturesPromise"
@@ -262,8 +262,8 @@ export type MdMmParsePmdCtx = Pick<
   | "workerResult"
 >;
 
-export type MdMmStage3Ctx = Pick<
-  MdMmBuildCtx,
+export type Stage3Ctx = Pick<
+  BuildCtx,
   | "alloc"
   | "blobUrlToHash"
   | "blobUrls"
@@ -278,8 +278,8 @@ export type MdMmStage3Ctx = Pick<
   | "port"
 >;
 
-export type MdMmStage4Ctx = Pick<
-  MdMmBuildCtx,
+export type Stage4Ctx = Pick<
+  BuildCtx,
   | "action"
   | "blobUrls"
   | "cameraAction"
@@ -301,8 +301,8 @@ export type MdMmStage4Ctx = Pick<
   | "vpdPoses"
 >;
 
-export type MdMmStage5Ctx = Pick<
-  MdMmBuildCtx,
+export type Stage5Ctx = Pick<
+  BuildCtx,
   | "action"
   | "bonePanelRef"
   | "boneTree"
@@ -324,9 +324,9 @@ export type MdMmStage5Ctx = Pick<
 >;
 
 // 收尾聚合器：内部调用 stage6bTrace，故其 Pick 需同时覆盖 stage6b 用到的
-// trace 字段（结构类型兼容：传给 stage6bTrace 的 c 必须满足 MdMmStage6bCtx）
-export type MdMmStage6Ctx = Pick<
-  MdMmBuildCtx,
+// trace 字段（结构类型兼容：传给 stage6bTrace 的 c 必须满足 Stage6bCtx）
+export type Stage6Ctx = Pick<
+  BuildCtx,
   | "action"
   | "blobUrls"
   | "bonePanelRef"
@@ -359,8 +359,8 @@ export type MdMmStage6Ctx = Pick<
   | "usePmxWorker"
 >;
 
-export type MdMmStage6bCtx = Pick<
-  MdMmBuildCtx,
+export type Stage6bCtx = Pick<
+  BuildCtx,
   | "_traceFiles"
   | "_traceGpuMb"
   | "blobUrlToHash"

@@ -234,6 +234,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-226：清理 mdXx 人工命名空间前缀",
+        "link": "/adr/ADR-226-mdxx"
+      },
+      {
+        "text": "ADR-225：perception 模块下沉至 adapters/shared",
+        "link": "/adr/ADR-225-perception-adapters-shared"
+      },
+      {
         "text": "ADR-224：mock 路径守卫：vi.mock 目标存在性静态校验（M1 内部硬报 / M2 裸包 WARN / 豁免通道）",
         "link": "/adr/ADR-224-mock-vi-mock-m1-m2-warn"
       },

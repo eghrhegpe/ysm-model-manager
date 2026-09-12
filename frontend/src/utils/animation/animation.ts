@@ -65,8 +65,9 @@ export interface BoneTransform {
   scale?: Vec3 | undefined;
 }
 
-/** 骨骼动画三通道名单点（收敛 4 处字面量重复，防通道名拼写漂移） */
-const BONE_CHANNELS = ["rotation", "position", "scale"] as const;
+/** 骨骼动画三通道名单点（收敛 4 处字面量重复，防通道名拼写漂移）。
+ *  导出供 animation-evaluator.ts 复用（ADR-212 拆分后单一事实源，防跨文件重复漂移） */
+export const BONE_CHANNELS = ["rotation", "position", "scale"] as const;
 
 /** 原始关键帧对象（JSON 形态） */
 interface RawKeyframeObject {

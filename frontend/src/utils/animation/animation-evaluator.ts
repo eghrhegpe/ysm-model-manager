@@ -9,9 +9,7 @@
  */
 
 import type { AnimationClip, BoneTransform, Keyframe, TimelineEvent, Vec3 } from "./animation.ts";
-
-/** 骨骼动画三通道名单点（收敛 4 处字面量重复，防通道名拼写漂移） */
-const BONE_CHANNELS = ["rotation", "position", "scale"] as const;
+import { BONE_CHANNELS } from "./animation.ts";
 
 /**
  * L4：解析帧的 Molang 动态轴（anim_time = 求值时间 t）；无动态轴原样返回数字基底。

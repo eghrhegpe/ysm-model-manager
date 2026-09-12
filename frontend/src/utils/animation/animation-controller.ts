@@ -81,94 +81,17 @@ export function parseAnimationControllerJSON(jsonStr: string): {
     if (!statesRaw || typeof statesRaw !== "object") continue;
 
     const states = new Map<string, ControllerState>();
-
     // 每个控制器持有独立 Molang 解析器实例（工厂模式，根除多播放器 activeScope 互盖）
     const localParser = createMolangParser();
 
     for (const [stateName, stateRaw] of Object.entries(statesRaw)) {
-      if (!stateRaw || typeof stateRaw !== "object") continue;
-      const stateObj = stateRaw as {
-        animations?: string[];
-        on_exit?: string[];
-        transitions?: Array<Record<string, string>>;
-        blend_transition?: number;
-      };
-
-      // 解析动画名
-      const animations = Array.isArray(stateObj.animations) ? stateObj.animations : [];
-
-      // 解析 on_exit 动作（容错：单字符串与数组形态均支持，与 transitions 一致）
-      const onExit: MolangFn[] = [];
-      const rawExit = stateObj.on_exit;
-      const exitExprs = Array.isArray(rawExit)
-        ? rawExit
-        : typeof rawExit === "string"
-          ? [rawExit]
-          : [];
-      for (const expr of exitExprs) {
-        if (typeof expr === "string") {
-          // 使用控制器自有 parser 实例编译（工厂模式，隔离多播放器作用域）
-          const fn = localParser.compileMolang(expr);
-          if (fn) onExit.push(fn);
-        }
-      }
-
-      // 解析转换条件
-      const transitions: ControllerTransition[] = [];
-      if (Array.isArray(stateObj.transitions)) {
-        for (const transRaw of stateObj.transitions) {
-          if (!transRaw || typeof transRaw !== "object") continue;
-          // 转换格式: { "targetState": "conditionExpression" }
-          for (const [target, condExpr] of Object.entries(transRaw)) {
-            if (typeof condExpr !== "string") continue;
-            // 空表达式 = 显式无条件转换（总是触发）；非空但编译失败 = 条件非法，
-            // 运行期跳过不触发（不 fail-open），并上报错误便于排查。
-            const unconditional = condExpr.trim() === "";
-            const condition = localParser.compileMolang(condExpr);
-            if (!unconditional && !condition) {
-              errors.push(
-                `[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`,
-              );
-            }
-            transitions.push({ target, condition, raw: condExpr, unconditional });
-          }
-        }
-      }
-
-      const blendTransition =
-        typeof stateObj.blend_transition === "number" ? stateObj.blend_transition : 0.2; // 默认 0.2s
-
-      states.set(stateName, {
-        name: stateName,
-        animations,
-        onExit,
-        transitions,
-        blendTransition,
-      });
+      const state = parseControllerState(stateRaw, localParser, controllerName, stateName, errors);
+      if (state) states.set(stateName, state);
     }
 
-    // 校验转换目标 ∈ states（防静默跳过）：不在 states 的 target 写入 errors
-    for (const [stateName, state] of states) {
-      for (const trans of state.transitions) {
-        if (!states.has(trans.target)) {
-          errors.push(`[${controllerName}.${stateName}] 转换目标不存在: ${trans.target}`);
-        }
-      }
-    }
+    validateTransitionTargets(states, controllerName, errors);
 
-    // 初始状态优先级：显式 initial_state > "default" > 首个声明状态
-    let initialState: string | null = null;
-    if (
-      typeof controllerObj.initial_state === "string" &&
-      states.has(controllerObj.initial_state)
-    ) {
-      initialState = controllerObj.initial_state;
-    } else if (states.has("default")) {
-      initialState = "default";
-    } else {
-      initialState = states.keys().next().value ?? null;
-    }
-
+    const initialState = resolveInitialState(controllerObj, states);
     if (states.size > 0 && initialState) {
       controllers.push({
         name: controllerName,
@@ -182,6 +105,88 @@ export function parseAnimationControllerJSON(jsonStr: string): {
   return { controllers, errors };
 }
 
+/** 解析单个控制器状态：动画名 + on_exit 动作 + 转换条件 + 混合过渡时间。
+ *  容错：on_exit 支持单字符串与数组形态（与 transitions 一致）；
+ *  条件编译失败上报错误但运行期跳过（不 fail-open）。 */
+function parseControllerState(
+  stateRaw: unknown,
+  localParser: MolangParser,
+  controllerName: string,
+  stateName: string,
+  errors: string[],
+): ControllerState | null {
+  if (!stateRaw || typeof stateRaw !== "object") return null;
+  const stateObj = stateRaw as {
+    animations?: string[];
+    on_exit?: string[];
+    transitions?: Array<Record<string, string>>;
+    blend_transition?: number;
+  };
+
+  const animations = Array.isArray(stateObj.animations) ? stateObj.animations : [];
+
+  // on_exit 动作（容错：单字符串与数组形态均支持）
+  const onExit: MolangFn[] = [];
+  const rawExit = stateObj.on_exit;
+  const exitExprs = Array.isArray(rawExit) ? rawExit : typeof rawExit === "string" ? [rawExit] : [];
+  for (const expr of exitExprs) {
+    if (typeof expr === "string") {
+      const fn = localParser.compileMolang(expr);
+      if (fn) onExit.push(fn);
+    }
+  }
+
+  // 转换条件：空表达式 = 无条件触发；非空但编译失败 = 上报错误且运行期跳过（不 fail-open）
+  const transitions: ControllerTransition[] = [];
+  if (Array.isArray(stateObj.transitions)) {
+    for (const transRaw of stateObj.transitions) {
+      if (!transRaw || typeof transRaw !== "object") continue;
+      // 转换格式: { "targetState": "conditionExpression" }
+      for (const [target, condExpr] of Object.entries(transRaw)) {
+        if (typeof condExpr !== "string") continue;
+        const unconditional = condExpr.trim() === "";
+        const condition = localParser.compileMolang(condExpr);
+        if (!unconditional && !condition) {
+          errors.push(`[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`);
+        }
+        transitions.push({ target, condition, raw: condExpr, unconditional });
+      }
+    }
+  }
+
+  const blendTransition =
+    typeof stateObj.blend_transition === "number" ? stateObj.blend_transition : 0.2; // 默认 0.2s
+
+  return { name: stateName, animations, onExit, transitions, blendTransition };
+}
+
+/** 校验转换目标 ∈ states（防静默跳过）：不在 states 的 target 写入 errors */
+function validateTransitionTargets(
+  states: Map<string, ControllerState>,
+  controllerName: string,
+  errors: string[],
+): void {
+  for (const [stateName, state] of states) {
+    for (const trans of state.transitions) {
+      if (!states.has(trans.target)) {
+        errors.push(`[${controllerName}.${stateName}] 转换目标不存在: ${trans.target}`);
+      }
+    }
+  }
+}
+
+/** 初始状态优先级：显式 initial_state > "default" > 首个声明状态 */
+function resolveInitialState(
+  controllerObj: { initial_state?: string },
+  states: Map<string, ControllerState>,
+): string | null {
+  if (typeof controllerObj.initial_state === "string" && states.has(controllerObj.initial_state)) {
+    return controllerObj.initial_state;
+  }
+  if (states.has("default")) return "default";
+  return states.keys().next().value ?? null;
+}
+
 // ── 状态机运行时 ────────────────────────────────────────
 
 /**
@@ -191,7 +196,6 @@ export function parseAnimationControllerJSON(jsonStr: string): {
 export class AnimationControllerRuntime {
   private controller: AnimationController;
   private currentState: ControllerState;
-  private currentAnimIndex = 0;
   private timeInState = 0;
   /** 状态切换回调 */
   private onStateChange?: ((animationName: string, blendTime: number) => void) | undefined;
@@ -214,7 +218,7 @@ export class AnimationControllerRuntime {
   /** 获取当前播放的动画名 */
   get currentAnimation(): string {
     const anims = this.currentState.animations;
-    return anims.length > 0 ? anims[this.currentAnimIndex % anims.length] : "";
+    return anims.length > 0 ? anims[0] : "";
   }
 
   /** 获取当前状态的混合过渡时间 */
@@ -274,7 +278,6 @@ export class AnimationControllerRuntime {
         const targetState = this.controller.states.get(trans.target);
         if (targetState) {
           this.currentState = targetState;
-          this.currentAnimIndex = 0;
           this.timeInState = 0;
 
           // 通知播放器切换动画
@@ -294,7 +297,6 @@ export class AnimationControllerRuntime {
   reset(): void {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.currentState = this.controller.states.get(this.controller.initialState)!;
-    this.currentAnimIndex = 0;
     this.timeInState = 0;
   }
 }

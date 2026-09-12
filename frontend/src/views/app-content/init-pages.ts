@@ -46,7 +46,7 @@ export function initInstancesPage(host: AppContentHost): void {
         '<app-sync-manager instance="' +
         esc(insName) +
         '" default-type="' +
-        defaultType +
+        esc(defaultType) +
         '" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';
     }),
   );
@@ -68,9 +68,9 @@ export function initRepositoryPage(host: AppContentHost): void {
     if (!treeBody) return;
     treeBody.innerHTML =
       '<app-tree root="' +
-      rtype +
+      esc(rtype) +
       '"' +
-      (subdir ? ` subdir="${subdir}"` : "") +
+      (subdir ? ` subdir="${esc(subdir)}"` : "") +
       ' style="flex:1;min-width:0"></app-tree>';
   };
 

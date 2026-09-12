@@ -259,6 +259,6 @@ export async function loadModel2D(
       });
     }
   } catch (e) {
-    container.innerHTML = `<div class="pv-error-title" style="color:#ff6b6b">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
+    container.innerHTML = `<div class="pv-error-title" style="color:var(--status-error)">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
   }
 }

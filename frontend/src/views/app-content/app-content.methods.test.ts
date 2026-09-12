@@ -1,6 +1,7 @@
 // ===== app-content 方法级补测 =====
-// 覆盖：_render 各页面分支、_bindTabs 懒初始化（import/recycle/dedup/oldest）、
-// _initRepository subtab 切换、_initPreviewResize 拖拽宽度、_initInstances、
+// 覆盖：_render 各页面分支、仓库 tab 懒初始化（init-pages.ts|bindTabs：import/recycle/dedup/oldest）、
+// 仓库页 subtab 切换（经 _render → PAGE_REGISTRY）、_initPreviewResize 拖拽宽度、
+// instances 页 package:selected 订阅、
 // 事件订阅（repo:search-creator / lang:changed / package:selected）、
 // _fmtSize / _esc 纯函数。
 // heavy feature 模块全 mock（副作用 import 断开），页面 HTML 用真实 tpl。
@@ -111,20 +112,13 @@ type ContentEl = {
   subs: { globalUnsubs: Array<() => void>; pageUnsubs: Array<() => void> };
   _render(): void;
   _initPreviewResize(): void;
-  _initRepository(): void;
-  _initInstances(): void;
   [key: string]: unknown;
 } & Element;
 
 function mountContent(): ContentEl {
-  const el = mountCustomElement("app-content") as unknown as ContentEl;
-  // 页面级 init 方法替换为 spy（各自模块已有独立测试；此处只测 _render 分支/交互层）
-  (el as unknown as { _initDiagnostics: () => void })._initDiagnostics = vi.fn();
-  (el as unknown as { _initWorkshop: () => void })._initWorkshop = vi.fn();
-  (el as unknown as { _initGithub: () => void })._initGithub = vi.fn();
-  (el as unknown as { _initSettings: () => Promise<void> })._initSettings = vi.fn().mockResolvedValue(undefined);
-  // _initInstances 保留真实实现（package:selected 订阅测试需要）
-  return el;
+  // 页面 init 一律经 _render() → PAGE_REGISTRY[page].init 执行；组件上已无 _initXxx
+  // 转发方法（那批方法从未被生产调用，已删除），故此处无需再替换为 spy。
+  return mountCustomElement("app-content") as unknown as ContentEl;
 }
 
 beforeEach(() => {
@@ -208,7 +202,8 @@ describe("_render — 页面分支", () => {
   });
 });
 
-describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle tab → initRecycleBin 注册", async () => {
+describe("仓库 tab 懒初始化（init-pages.ts|bindTabs）", () => {
+  it("点击 recycle tab → initRecycleBin 注册", async () => {
     const el = mountContent();
     await flushAsyncTurns();
     el.state.current = "repository";
@@ -255,7 +250,7 @@ describe("_bindTabs — 仓库 tab 懒初始化", () => {  it("点击 recycle ta
   });
 });
 
-describe("_initRepository — 订阅全局资源类型（ADR-092/094 收敛）", () => {
+describe("仓库页 init（PAGE_REGISTRY）— 订阅全局资源类型（ADR-092/094 收敛）", () => {
   it("repo:rtype-changed → 重建文件树 root=EntityPlayer（subdir 从 localStorage 读）", async () => {
     const el = mountContent();
     await flushAsyncTurns();
@@ -393,7 +388,7 @@ describe("事件订阅", () => {
     const el = mountContent();
     await flushAsyncTurns();
     el.state.current = "instances";
-    el._render(); // 真实 _initInstances 注册 package:selected 订阅
+    el._render(); // initInstancesPage 经 PAGE_REGISTRY 注册 package:selected 订阅
     bus.emit("package:selected", { name: "MyPack", rtype: "ysm" });
     // 原 sleep(10)：等订阅回调同步渲染完成——改条件轮询
     await waitFor(() => {
@@ -654,7 +649,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   });
 });
 
-describe("_bindTabs — WAI-ARIA 键盘导航（188-212）", () => {
+describe("仓库 tab WAI-ARIA 键盘导航（init-pages.ts|bindTabs）", () => {
   async function renderRepo() {
     const el = mountContent();
     el.state.current = "repository";

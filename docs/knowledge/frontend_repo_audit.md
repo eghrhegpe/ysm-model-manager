@@ -1468,7 +1468,7 @@ invariant_anchors:
 | preview-3d 其余                                     | 4.2  | 12.8k | caps 注册表+感知层解耦优秀；model2d 已拆目录（main 203 + draw 390 + hit-zones 113）                                                                                                                                                                                                 |
 | backend                                           | 4.5  | 10.1k | ZIP bomb 三重防护、idb FIFO 双上限；web-fs 三函数可抽 idbRekeyGroup                                                                                                                                                                                                              |
 | core                                              | 4.0  | 4.0k  | menu-defs 声明式唯一事实源；DOM 渗透 core 层是主要问题                                                                                                                                                                                                                              |
-| views/app-content                                 | 3.4  | 9.3k  | 全仓最低分：perf-cli.ts God Object；dedup 竞态已消（2026-09-03 会话工厂化）                                                                                                                                                                                                          |
+| views/app-content                                 | 3.4  | 9.3k  | 已非最低分（2026-09 复核回升 ≈4.0）：perf-cli.ts God Object ✅ 已拆为 7 件（≤135L）；dedup 竞态 ✅ 已消（2026-09-03 会话工厂化）；6 个死代码转发壳 ✅ 已删（见 frontend_design_critique 刀⑮）                                                                                                                                                                                                          |
 | views/app-tree                                    | 4.0  | 3.1k  | data/loader/render 分层干净                                                                                                                                                                                                                                            |
 | views/app-preview                                 | 4.0  | 6.1k  | 三套代际守卫严谨；makeScenePort 与 mmd-3d 重复应抽公共 port                                                                                                                                                                                                                        |
 | views 其余(nav/sidebar/sync-mgr/toast/context-menu) | 4\~5 | 3.0k  | app-toast 满分；共性=innerHTML 静态值 esc 口径不一                                                                                                                                                                                                                             |
@@ -1488,16 +1488,16 @@ invariant_anchors:
 ## 架构债 TOP5
 
 1. 🔄 mmd-adapter.ts `BuildCtx` 域拆分(tier1)+stage Pick 收窄(tier2)已完成（L184-269，字段 60→55，`!` 非空断言清零）；tier3 **Builder 化仍待办**——构造点 `const c = {} as BuildCtx`（L1141）仍为单体可变上下文全闭包共享，运行时未结构化
-2. app-content/perf-cli.ts 535L God Object（趋势图+single-bench+诊断面板三合一）
+2. ~~app-content/perf-cli.ts 535L God Object（趋势图+single-bench+诊断面板三合一）~~ ✅ **已拆**（2026-09 复核）：`perf-cli.ts` 文件已不存在，拆为 `perf.ts`(28L facade) + `perf-common.ts` + `perf-single-bench.ts` + `perf-gui-flow.ts` + `perf-log.ts` + `perf-trace.ts` + `perf-trend.ts`，无一 >140L；`perf.ts` 头部注释逐条记录拆分去向
 3. ~~app-content/dedup.ts 模块级全局竞态~~ ✅ **已消**（2026-09-03 `ed0e76b3`）：`_dedupBusy`/`diagExecBusy`（无 `_dedupStrategy`，卡原文笔误）与 `dedupConfig` 收敛进 `createDedupSession()` 会话工厂，各宿主独立隔离；dedup.ts 612L；补 exec 重入/面板绑定/keep 策略分支测试
 4. ~~model2d.ts 650L（拆 core/render/hit 三件）~~ ✅ **已拆**（2026-09 复核）：model2d 现为目录——main 203 + draw 390 + hit-zones 113；ui-rows.ts 803L（按 row 类型拆，仍在排队）
-5. detail-3d.ts 多个 300-350L show 函数
+5. ~~detail-3d.ts 多个 300-350L show 函数~~ ✅ **已闭环**（2026-09 复核）：现 483L，抽出 `CardShowConfig` + `showCard` 统一卡片渲染器，6 个 show 函数共享同一模板（invalidate → 骨架 → fetch → stale 检查 → 内容 → wire FAB），各 34-91L、无一处 ≥100L
 
 ## 共性抽象机会（横向收敛）
 
 - Worker 桥收敛 → **Step 1+2 已完成**：pmx/fbx 逐字同码（永远 resolve ok:false 编码）已抽 `createResolveModeBridge`(`preview-3d/adapters/worker-bridge.ts`，`createWorkerBridge` 薄封装) 收编，各自 −53 行、59 测试全绿；**ktx2 已收编**进通用 `createWorkerBridge`（reject-mode+池 round-robin+崩溃终止整池，外层信号量/降级/`__setEncodeImplForTest` 业务层保留），22 测试全绿；三桥统一、消除重复内核，净省有限（通用工厂为新增）但架构收敛；texture-decoder 为 1:N 批量聚合，基数不匹配 1:1 签名，**明确排除**防假统一
 
-- generation 守卫 → 审计「三套实现各异」**被高估**：共享 `LoadGuard`(`utils/async/load-guard.ts` 的 `createLoadGuard`) 已存在，recycle-bin+oldest-models 共用；app-preview/app-sidebar/app-sync-manager 实为同一 `++counter` idiom（非各异）；仅 perf-cli(`DgPcGenGuard`)/app-tree(`atBeGenGuard`) 是真异实现，迁移到 LoadGuard 待办（非从零抽 `GenerationGuard`）
+- generation 守卫 → 审计「三套实现各异」**被高估**：共享 `LoadGuard`(`utils/async/load-guard.ts` 的 `createLoadGuard`) 已存在，recycle-bin+oldest-models 共用；app-preview/app-sidebar/app-sync-manager 实为同一 `++counter` idiom（非各异）；真异实现为 `perf-common.ts|makeGenGuard`（原 `DgPcGenGuard`，perf-cli 拆分后改名）与 `app-tree/bus-handlers.ts|atBeGenGuard`，迁移到 LoadGuard 待办（非从零抽 `GenerationGuard`）。⚠️ 2026-09 复核修正：实数**4 套**，除上述两者外 `app-preview/gen-guard.ts`（class）与 `utils/async/load-guard.ts`（factory）本身也语义重复；app-tree 侧散落 4 文件共 **19 处** raw `_gen` 比较（非仅 bus-handlers 3 处）。详见 frontend_design_critique 刀⑮
 
 - 公共 port → **已落地**：`mmd-data-port.ts` 的 `makeMmdDataPort(scope)` 已是 mmd-3d(:7/:23) 与 scene-3d(:11/:28) 共用公共 port；绑定由 Wails 生成 app.ts 全量类型化，`as unknown as Record` 绕类型已根除
 

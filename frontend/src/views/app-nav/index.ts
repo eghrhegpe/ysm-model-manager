@@ -254,7 +254,7 @@ class AppNav extends WebComponentBase {
       <style>${navCSS}</style>
       <div class="logo">
         <span class="logo-icon">💎</span>
-        <span class="logo-text">${this._logoText()}</span>
+        <span class="logo-text">${esc(this._logoText())}</span>
       </div>
       <div class="menu">
         <div class="menu-head" data-menu-head title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">

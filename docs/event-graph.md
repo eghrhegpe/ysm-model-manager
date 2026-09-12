@@ -100,7 +100,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 98 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 91 |
 
 ### `ctx:show`
 
@@ -202,7 +202,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 89 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 82 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 203 |
 
 ### `menu:show`
@@ -225,8 +225,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 374 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 472 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 376 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 474 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 553 |
@@ -241,8 +241,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 199 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 195 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
@@ -252,7 +252,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 68 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 61 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 182 |
 
 ### `package:selected`
@@ -310,7 +310,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 79 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
 
 ### `repo:subdir-changed`
 
@@ -460,7 +460,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 111 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 73 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 32 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 190 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 183 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 163 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 296 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
@@ -508,8 +508,8 @@
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 95 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 144 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 338 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 422 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 424 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
@@ -623,7 +623,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 83 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 76 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

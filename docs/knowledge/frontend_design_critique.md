@@ -147,7 +147,7 @@ invariant_anchors:
 
 | 视角 | 分 | 主炮 |
 |------|----|------|
-| 架构 | 4.0 | `app-content/index.ts` 7个死代码转发壳（L274-302）、`app-sidebar` `_checkedSets` 模块级泄漏（L37）、`app-nav` `_focusRepoSearch` 轮询耦合（L328-342）。⚠️ 前两项已在 §仲裁修正/实证锚点中撤回或降级：死代码转发壳系测试桩保留（L231 仲裁）、`_checkedSets` 系设计意图（L230/L184 撤回）；`_focusRepoSearch` 轮询耦合属实 |
+| 架构 | 4.0 | `app-content/index.ts` 死代码转发壳、`app-sidebar` `_checkedSets` 模块级泄漏（L37）、`app-nav` `_focusRepoSearch` 轮询耦合（L328-342）。✅ **三项均已于 2026-09 闭环**：转发壳实为 6 个（原记 7 个含从不存在的 `_bindTabs`）已删除、「测试桩保留」仲裁被推翻（见 刀⑮）；`_checkedSets` 已改私有实例属性；`_focusRepoSearch` 轮询已改 `repo:focus-search` bus + `utils/dom/focus-pending.ts`（ADR-223） |
 | UI/UX | 3.7 | 所有弹窗缺 `role="dialog"`（modal.ts:134）、adv-filter label 未 for 关联（L57）、batch-rename checkbox 无 aria-label（L185）、`--uih-accent-dim` 硬编码遗漏（ui-components-styles.ts:14） |
 | 3D/性能 | 3.4 | WASM 解码无单模型超时（ysm-worker-loader.ts:198）、`pickModelByObject` 每帧 O(roots) 遍历（scene-registry.ts:215）、Blob URL 成功路径永不 revoke（ysm-worker-loader.ts:118）、render-budget 缺 GPU 计量（render-budget.ts:60） |
 
@@ -155,8 +155,8 @@ invariant_anchors:
 
 | 指控 | 验证结果 |
 |------|----------|
-| `app-content/index.ts:274-302` 7个死代码转发壳 | ✅ 属实；`_bindTabs`/`_initDiagnostics`/`_initInstances`/`_initRepository`/`_initWorkshop`/`_initGithub`/`_initSettings` 仅转发 `init-pages.ts`，实际调用走 `PAGE_REGISTRY` |
-| `app-sidebar/index.ts:37` `_checkedSets` 模块级泄漏 | ⚠️ 撤回：设计意图非 bug——`sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」明确依赖跨 disconnectedCallback 保留，按 rtype 隔离 |
+| `app-content/index.ts:274-302` 死代码转发壳 | ✅ **属实且最终确认**；实际为 **6 个**（原记 7 个，多算的 `_bindTabs` 在生产代码中从不存在——真实 `bindTabs` 是 `init-pages.ts` 的局部函数）。6 个仅转发 `init-pages.ts`/`init-github.ts`/`init-workshop.ts`，实际调用走 `PAGE_REGISTRY`。**已删除**（见 刀⑮）；`_initPreviewResize` 不在其列（有真实调用） |
+| `app-sidebar/index.ts:37` `_checkedSets` 模块级泄漏 | ⚠️ 撤回：设计意图非 bug——`sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」明确依赖跨 disconnectedCallback 保留，按 rtype 隔离。**且已进一步闭环**：现为 `private _checkedSets` 私有实例属性（随组件 GC），连「模块级」这层描述也已过期 |
 | `app-nav/index.ts:328-342` `_focusRepoSearch` 轮询耦合 | ✅ 属实；setTimeout 循环 20 次等待 `app-tree` 挂载，依赖查询链 `appContent?.shadowRoot?.querySelector("app-tree")?.shadowRoot?.getElementById("srch")`。【✅ 已修复 ADR-223：nav 焦点改 `repo:focus-search` bus 事件 + `utils/dom/focus-pending.ts` 一次性 pending flag，删轮询与 shadow 穿透】 |
 | `modal.ts:134-146` overlay 缺 `role="dialog"` | ✅ 属实；`buildOverlay` 仅设 `className`/`tabIndex`，未设 `role`/`aria-modal` |
 | `adv-filter.ts:57` label 无 for 关联 | ✅ 属实；`<label style="display:block">` 无 `for` 属性，对应 `input#afv-kw` 无关联 |
@@ -169,13 +169,13 @@ invariant_anchors:
 
 1. **可访问性债务集中爆发**（UIUX 2.5/5）：modal overlay 缺 `role="dialog"` / `aria-modal`、adv-filter label 未 for 关联、batch-rename checkbox 无 aria-label。一刀切：modal.ts buildOverlay 加 ROLE_ATTR，业务弹窗统一继承。
 2. **模块级状态泄漏**（架构 3.5/5）：`app-sidebar` `_checkedSets` Map 无 reset、`init-pages.ts:314` `_lastModelPath` 模块级无 reset。一刀切：disconnectedCallback 兜底清理，或改实例级。
-   - ✅ 2026-09-10 部分闭环（[ADR-221]）：`_lastModelPath` 已归位 `core/model-path-store.ts`，保留 `__resetLastModelPathForTest` 钩子（isolate:false 共享模块图下的既有约束，非新增债务）；归位同时断开 app-tree / app-nav / app-preview 三条越权边，消除 `app-content ↔ app-preview` 视图环。`app-sidebar._checkedSets` 仍待处置。
+   - ✅ 2026-09-10 部分闭环（[ADR-221]）：`_lastModelPath` 已归位 `core/model-path-store.ts`，保留 `__resetLastModelPathForTest` 钩子（isolate:false 共享模块图下的既有约束，非新增债务）；归位同时断开 app-tree / app-nav / app-preview 三条越权边，消除 `app-content ↔ app-preview` 视图环。`app-sidebar._checkedSets` ✅ 已升级为私有实例属性（`app-sidebar/index.ts|_checkedSets`，随组件 GC 自然回收）——本条共识项彻底闭环。
 3. **性能预算仍靠信仰**（3D 2.5/5）：`render-budget.ts` MAX_MODELS=8 是计数非预算、`scene-registry.ts` 拾取每帧线性遍历。一刀切：读 `renderer.info.render` 统计 draw calls，建 WeakMap 缓存拾取。（✅ 已闭环：拾取部分由刀⑦ WeakMap 索引根治；draw calls 部分由刀⑩ `gpu-load.ts` 实测信号预算根治——MAX_MODELS=8 保留为兜底硬顶）
 4. **WASM 解码无单模型超时**（3D 3.5/5）：`ysm-worker-loader.ts` 畸形文件可阻塞 60s 才降级。一刀切：`stats.worker.ts` 层加 `Promise.race` 软超时（5s），超时返回 `ERROR_STATS` 而非杀池。
 
 ## 仲裁修正（主模型对子代理报告的裁定）
 
-1. 架构子代理「死代码转发壳」指控属实，但删除需同步清理 `AppContentHost` 接口声明，避免接口漂移。
+1. 架构子代理「死代码转发壳」指控属实，但删除需同步清理 `AppContentHost` 接口声明，避免接口漂移。（❌ 后续曾据此仲裁为「测试桩保留，不可删」，2026-09 复核证实该撤回理由不成立、6 个方法已实际删除——见 §动刀进度 刀⑮）
 2. UIUX 子代理「modalPicker 无显式键盘处理器」指控降级：浏览器原生 Enter→click 行为在 button 上可靠，与 prompt/confirm 的 input 场景不同，不构成行为分裂。
 3. 3D 子代理「Blob URL 成功路径永不 revoke」属实，但 pthread worker 单例常驻页面生命周期，泄漏速率极低（每页面生命周期 1 次），优先级降为 P2。
 
@@ -204,7 +204,7 @@ invariant_anchors:
   - `features/dialogs/adv-filter.ts` 5 个 label 加 `for` 关联主 input，3 个 max input 加 `aria-label`（双 input 无法 for 一对一）；
   - 90 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **仲裁撤回：`_checkedSets` 非"泄漏"**：子代理报 `app-sidebar/index.ts:37` `_checkedSets` 模块级 Map 无 reset 路径。主模型抽查 `app-sidebar.sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」测试明确依赖跨 disconnectedCallback 保留——**设计意图**（按 rtype 隔离 + 跨重新渲染保持勾选），非 bug。模块级状态保持不动。
-- ⚠️ **仲裁撤回：死代码转发壳非"死代码"**：子代理报 `app-content/index.ts:274-302` 7 个转发方法无消费方。主模型抽查 `app-content.methods.test.ts` 大量引用（L102-104 接口声明、L111-114 mock 赋值、L200/247/403/652 多个 describe 块直接测试）——**测试消费方明确**，方法作为测试桩保留，不可删。
+- ❌ **仲裁撤回被推翻（2026-09 复核实证）：死代码转发壳确是真死代码**。原撤回理由是「`methods.test.ts` 大量引用 → 测试消费方明确」，实测该理由不成立：`app-content.methods.test.ts` 的 `ContentEl` 是**测试本地类型**（且带 `[key: string]: unknown` 兜底，该声明本身非必需），`mountContent()` 把 `_initDiagnostics`/`_initWorkshop`/`_initGithub`/`_initSettings` 赋成 `vi.fn()`——**从不执行**；`describe("_initRepository …")` 与 `package:selected` 用例走的都是 `el._render()` → `PAGE_REGISTRY[page].init`（`app-content/page-registry.ts|PAGE_REGISTRY` 直引各 init 函数），方法体从未被触碰，原注释「真实 _initInstances 注册订阅」属误述。生产侧 grep `\._init(Diagnostics|Instances|Repository|Workshop|Github|Settings)\(` 零命中。**已删除 6 个转发方法**（`_initPreviewResize` 有真实调用故保留），同步清理失效 import 与测试桩/类型/注释；删后 app-content 24 文件 368 用例全绿。详见 §动刀进度 刀⑮。
 - ✅ **刀⑦ pickModelByObject WeakMap 索引**（2026-09-05）：`preview-3d/adapters/scene-registry.ts` `register` 时在 root 上填 `WeakMap<Object3D, ModelEntry>`，`pickModelByObject` 从 O(entries×roots) 双重遍历改为 O(depth) 沿父链查 Map；`unregister`/`reset`/去重重载路径同步维护索引；删除 `isDescendant` 死函数。13 测试全绿 + vite build + typecheck + biome 全通过。
 - ✅ **刀⑧ web-stats 单 worker 终止 + 重试**（2026-09-05）：`backend/web-stats.ts` 瞬态 error（WASM 初始化失败 / trap 逃逸）从「杀整池」改为「只终止出错 worker + 换 worker 重试 1 次」——每 Worker 独立 WASM 实例，单 worker 故障不应传染。超时路径仍杀整池（WASM 死循环可能传染）。`statsOneChunk` 返回 `StatsChunkResult{ok, retryable}`，`terminateStatsWorker` 导出签名不变（browser-adapter 消费）。135 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **P2-7 撤回（子代理建议不可行）**：`wasm/ysm-worker-loader.ts:215` 的 `ccall("ysm_decode_from_memory")` 是同步 WASM 调用，阻塞 Worker 事件循环——`Promise.race` 软超时的 `setTimeout` 回调在 ccall 期间不会触发，Promise 无法被 race 掉。唯一能中断挂起 ccall 的方法是主线程 `Worker.terminate()`（即现有 `statsOneChunk` 60s 超时路径）。60s 是设计意图的防御线，非「无超时」。
@@ -251,6 +251,18 @@ invariant_anchors:
     - **替代路线（「桌面改 Go 优先让 4.33N 归零」）经复核前提不成立**：`.ysm` 的 `runYSMParserOnFile` → `decodeYSMViaNodeJS` **只解析 geometry + 纹理，完全不产出动画**（`grep Animations` 全 `internal/app` 仅一处、且在 zip 分支）；且 `loader.ts` 的 Go 路径要接收 **WASM 算出的 `authors`/`avatars`** 才完整。改排序会让内嵌动画 + 作者 + 头像**一起丢**，除非先在 Go 侧补这三样能力——那比 A-2 大得多。
     - **结论**：A-2 **不立项**。替代路线同样不成立。若日后桌面大文件加载实测确痛（性能面板 `recordLoadTrace` 的「读取/解析」段 > 0.5s），再按「自由函数 + server 模式 build tag 门控」重启。
   - **顺带修正 4 处既有认知偏差**（本次调研实证）：① 「资产服务器自带 host/origin 校验」**被高估**——`webview_window_windows.go` 那段是**分发过滤器**（`HasPrefix` 宽松，`wails.localhost.evil.com` 也过），且 `ExpectedWebViewHost` 在 alpha2.105 是**死代码**（全模块无赋值处）；资产服务器也不设任何 CORS 头；② 「桌面不暴露本机 HTTP」**已不成立**——`internal/app/proxy.go` 早有 `net.Listen("tcp","127.0.0.1:0")` 的**无鉴权反代**（带 cookie jar），评估桌面威胁面必须以它为基线；③ 桌面「4.33N」成立但**不是唯一/必然主链路**——3D 与详情主路径走 Go `GetModel3DSpec`/`AnalyzeBedrockModel`，只有缩略图/几何/加密详情三处吃这条链；④ 「六层拷贝」里的 MEMFS 在 JS 侧、`atob` 是 1 字节/字符（已在 `model3d` 卡更正）。
+
+- ✅ **刀⑮ views 区写法收口：死代码 + esc 口径 + 主题 token + 重复测试 + 纯函数补测**（2026-09 三子代理只读审核 → 主模型逐条实测复核后实施；范围限 `frontend/src/views`）：
+  - **死代码（P1）**：删 `app-content/index.ts` 6 个 `_initXxx` 转发方法（0 生产调用方；原「测试桩保留」仲裁被推翻，见 §仲裁修正 1）。`_initPreviewResize` 有真实调用故保留。同步清 import（`init-github.ts` 整体、`init-pages.ts` 四符号、`init-workshop.ts` 收窄为 `resetAvatarConfigLoaded`）+ 测试侧本地类型声明、4 处 `vi.fn()` 桩、2 处过期注释（含「真实 _initInstances 注册订阅」误述）。
+  - **陈旧测试名（顺带修正）**：`app-content.methods.test.ts` 两处 `describe("_bindTabs …")` 指向**生产代码中从不存在的方法**（真实 `bindTabs` 是 `init-pages.ts` 局部函数），改为按实际测点命名；`describe("_initRepository …")` 同理（测的是 `_render()` → `PAGE_REGISTRY`）。
+  - **esc 口径（P3）**：`app-content/init-pages.ts` 三处属性注入补 `esc()`——`defaultType`/`rtype`/`subdir`（同函数 `esc(insName)` 早已转义而 `defaultType` 漏网，即「口径不一」的直接实证；`rtype`/`subdir` 源含 localStorage `repo_subdir`，是本轮唯一带实际攻击面的一处）；`app-nav/index.ts|_logoText` 经 innerHTML 未 esc 补齐（同函数 textContent 分支安全，属同值两口径）。
+  - **主题 token（P3）**：`app-preview/skeleton.ts` 错误红裸 hex `#ff6b6b` → `var(--status-error)`（对齐 `css/variables.css` 6 套主题变量；原写法切主题不跟随）。
+  - **注册表事实源（P3，否决了子代理方案）**：`app-preview/detail-3d.ts` 三处徽章字面量 `SceneModel`/`CustomMorph`/`StageAnim` → 改取 `RESOURCE_TYPES.SCENE`/`CUSTOM_MORPH`/`STAGE`。**子代理原建议「加 3 个 i18n key」被否决**：这三个值是 `resource_types.json` 的 type `id`（技术标识），翻进语言包会 fork 出第二事实源、违反 ADR-116「前端只读不判」。输出值不变，零行为变更。
+  - **删重复测试（P3）**：`app-content/diagnostics/perf-cli.test.ts` 名不副实（文件指向已不存在的 `perf-cli.ts`，实际 import `perf-common.ts`），且 4 条 `sectionHeader` 用例与 `perf-common.test.ts` **逐字重复**——仓库自己的 `check-deadcode-baseline` 早已把它登记为 jscpd 重复对。删除后基线自清理（`ERROR 0`）。
+  - **补零 mock 单测（P3）**：新增 `app-content/diagnostics/dedup-policy.test.ts`（17 用例）覆盖 `getDefaultKeepIdx` 三分支 + 边界（空数组/单元素/并列保序/modTime 缺失或非法/path 大小写不敏感/优先路径未命中回退/未知策略走默认/大小写敏感）。
+  - ⚠️ **顺带钉出一处待裁决语义缺陷（未擅自改）**：`dedup-policy.ts|toTimestamp` 对缺失/非法 modTime 返回 `MAX_SAFE_INTEGER`，注释自述「视为最老」——对 `oldest` 巧合正确（MAX 不是最小），但 `newest` 取最大值 → **无时间信息的文件反被判为「最新」**，与声明意图相反。真实场景 Go 扫描恒带回 modTime 故未暴露。已在测试中以「【记录现状·待裁决】」用例钉住；改动方向需先定（缺失在 newest 侧视作 `-Infinity`，或直接排除出候选）。
+  - **未动（判定 by-design 或面大需先立 ADR）**：`GenGuard` 4 套并存（`app-preview/gen-guard.ts` class ／ `utils/async/load-guard.ts` factory ／ `perf-common.ts|makeGenGuard` ／ `app-tree/bus-handlers.ts|atBeGenGuard`）——app-tree 侧实为 4 文件 19 处 raw `_gen` 比较（原记「仅 3 处」低估），收敛面大宜先立 ADR；`conflicts.ts`/`health.ts` 模块级 busy 锁（有 try/finally 故不卡死，仅范式不齐）、`workshop-tabs.ts|_showSiteView` 注入点无 reset、app-tree 三处 5s 节流器与 `_tsBadgeStylesInjected`（时间衰减/幂等，豁免合理）。
+  - 守卫：views 全量 **81 文件 1117 用例全绿**（较审核前 +15 = 新增 17 − 删重复 4）+ `vite build` + `typecheck` + `check-biome --files` 显式点名全通过；`check-deadcode-baseline` ERROR 0。
 
 ## 相关
 

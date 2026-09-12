@@ -30,6 +30,8 @@ import { createVrm3D } from "./vrm-3d.ts";
 // ===== 统一卡片渲染器 =====
 // 六个 show 函数共享同一模板：invalidate → innerHTML 骨架 → getApp → fetch → stale 检查
 // → innerHTML 内容 → querySelector → wire FAB。差异封装在 CardShowConfig 中。
+// 卡片上的类型徽章一律取 RESOURCE_TYPES.*（= resource_types.json 的 type id，单一事实源），
+// 不走 i18n：type id 是技术标识，翻进语言包会 fork 出第二事实源（违反 ADR-116 前端只读不判）。
 
 interface CardShowConfig {
   icon: string;
@@ -283,7 +285,7 @@ export async function showScenePreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center">
-      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:4px;font-weight:500">SceneModel</span>
+      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
       <span>${t("preview.sceneModelLabel")}</span>
     </div>
     <button class="preview-fab" id="btn-scene-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">🏗️</span></button>
@@ -320,7 +322,7 @@ export async function showMorphPreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px;font-weight:500">CustomMorph</span>
+      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
       <span>${t("preview.vpdPose")}</span>
       <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px">${t("preview.singleFrameMorph")}</span>
     </div>
@@ -405,7 +407,7 @@ export async function showStagePreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:4px;font-weight:500">StageAnim</span>
+      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>

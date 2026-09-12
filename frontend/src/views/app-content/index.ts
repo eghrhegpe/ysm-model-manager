@@ -32,15 +32,8 @@ import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { clearAllCommunityCache } from "@/features/community/community-data.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { initGithubPage } from "./init-github.ts";
-import {
-  initDiagnosticsPage,
-  initInstancesPage,
-  initRepositoryPage,
-  initSettingsPage,
-} from "./init-pages.ts";
 import { initPreviewResize } from "./init-preview.ts";
-import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
+import { resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { AppContentState } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
@@ -202,30 +195,6 @@ class AppContent extends WebComponentBase {
 
   _initPreviewResize(): void {
     initPreviewResize(this);
-  }
-
-  _initDiagnostics(): void {
-    initDiagnosticsPage(this);
-  }
-
-  _initInstances(): void {
-    initInstancesPage(this);
-  }
-
-  _initRepository(): void {
-    initRepositoryPage(this);
-  }
-
-  _initWorkshop(): void {
-    initWorkshopPage(this);
-  }
-
-  _initGithub(): void {
-    initGithubPage(this);
-  }
-
-  async _initSettings(): Promise<void> {
-    void initSettingsPage(this).catch((e) => this._pageInitFailed(e));
   }
 }
 

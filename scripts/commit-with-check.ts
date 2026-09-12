@@ -282,7 +282,12 @@ console.log("");
         mode: docsMode ? "docs" : "files",
         checkOnly: !!checkOnly,
         committed: !checkOnly,
+        // files = 白名单输入数（pathspec）。committedFiles / hookArtifacts 是实际落库文件与
+        // pre-commit 连带 stage 的生成物/测试——仅报 paths.length 会掩盖随行文件
+        //（实测：输入 5 → 实际提交 7），使「路径限定提交」的审计看起来比事实更窄。
         files: paths.length,
+        committedFiles: commitResult.committedFiles,
+        hookArtifacts: commitResult.hookArtifacts,
         sha: !checkOnly ? git(["rev-parse", "--short", "HEAD"]) : null,
         outOfScope: commitResult.outOfScope,
         interleaved: commitResult.interleaved,

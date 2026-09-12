@@ -147,6 +147,16 @@ check("用例3: 钩子生成的 docs/index.md 随提交（gen 产物白名单）
   assert.ok(committed.includes("docs/knowledge/x.md"), "应含 x.md");
   assert.ok(committed.includes("docs/index.md"), `gen 产物 docs/index.md 应随提交: ${committed}`);
   assert.ok(r.outOfScope.length === 0, `不应有越界文件: ${r.outOfScope}`);
+  // 随行透明化：钩子产物须与「白名单输入」分列暴露——commit-with-check 的 _summary
+  // 曾只报 paths.length（输入数），实际提交更多文件却不显示，审计失真。
+  assert.ok(
+    r.hookArtifacts.includes("docs/index.md"),
+    `gen 产物应归入 hookArtifacts: ${r.hookArtifacts}`,
+  );
+  assert.ok(
+    !r.hookArtifacts.includes("docs/knowledge/x.md"),
+    `白名单内文件不应算随行: ${r.hookArtifacts}`,
+  );
 });
 
 // ── 用例 4：--files 提供 paths（主 index 无 staged）仍成功 ──

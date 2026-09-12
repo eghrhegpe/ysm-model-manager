@@ -54,6 +54,9 @@ export interface CommitTempIndexResult {
   sha?: string;
   /** 本次提交涉及的文件（git show --name-only HEAD）。 */
   committedFiles: string[];
+  /** 随行的钩子产物：不在 paths 内但属生成物/测试白名单（pre-commit 合法 stage）。
+   *  与 outOfScope 互补——committedFiles = paths 内 ∪ hookArtifacts ∪ outOfScope。 */
+  hookArtifacts: string[];
   /** 越界文件：不在 paths ∪ 生成物/测试白名单内（调用方据此 exit 1）。 */
   outOfScope: string[];
   /** 并发插队标记：HEAD^ != HEAD_BEFORE（调用方据此 notice，不失败）。 */
@@ -145,6 +148,7 @@ export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempInd
   const fail = (error: string): CommitTempIndexResult => ({
     ok: false,
     committedFiles: [],
+    hookArtifacts: [],
     outOfScope: [],
     interleaved: false,
     error,
@@ -197,7 +201,11 @@ export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempInd
     const show = git(["show", "--name-only", "--format=", "HEAD"], { cwd });
     const committedFiles = show.ok ? show.out.split("\n").filter(Boolean) : [];
     const pathSet = new Set(paths);
-    const outOfScope = committedFiles.filter((f) => !pathSet.has(f) && !isHookArtifact(f));
+    // 非白名单文件按「钩子合法产物 / 越界」二分（互补）：hookArtifacts ∪ outOfScope ∪ paths 内
+    // = committedFiles。前者随行入库属正常（生成物/测试），后者触发调用方回退。
+    const nonWhitelist = committedFiles.filter((f) => !pathSet.has(f));
+    const hookArtifacts = nonWhitelist.filter((f) => isHookArtifact(f));
+    const outOfScope = nonWhitelist.filter((f) => !isHookArtifact(f));
 
     // ④b 插队检测：HEAD^ != HEAD_BEFORE（root commit 无父时 HEAD^ 失败 → 不算插队）
     const parentR = git(["rev-parse", "HEAD^"], { cwd });
@@ -215,7 +223,13 @@ export function commitWithTempIndex(opts: CommitTempIndexOptions): CommitTempInd
     }
 
     // exactOptionalPropertyTypes：sha 可空时显式省略字段（不塞 undefined）
-    const result: CommitTempIndexResult = { ok: true, committedFiles, outOfScope, interleaved };
+    const result: CommitTempIndexResult = {
+      ok: true,
+      committedFiles,
+      hookArtifacts,
+      outOfScope,
+      interleaved,
+    };
     if (sha !== undefined) result.sha = sha;
     return result;
   } finally {

@@ -19,7 +19,7 @@
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。
 - 大改动（多文件/架构级）写adr，再动手，连环询问用户以确认需求。
 - 先写测试（TS/mjs/Go），再写实现；不为可逆、影响小的改动强制写测试；涉及核心逻辑、边界或无把握时仍应补充测试。
-- 改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`，失败就修到绿；前端改动再补 `node scripts/check-biome.ts --files <改动文件...>`复查格式化。
+- 改完立刻 `go build ./...` 或 `cd frontend && npx vite build && npm run typecheck`，失败就修到绿；前端改动再补 `node scripts/check-biome.ts --files <改动文件...>`对非测试文件复查格式化。
 - ⚠️ PowerShell 截断失败时，补跑 `Select-Object -First 30` 看全。
 - 排查卡顿/日志往**环形日志面板**塞，不盯 console。
 

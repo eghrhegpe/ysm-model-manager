@@ -38,6 +38,7 @@ import {
 } from "./light-presets.ts";
 import {
   persistState,
+  restoreFields,
   restoreState,
   type SceneCapability,
   type SceneCapabilityLookup,
@@ -621,43 +622,45 @@ export class LightCapability implements SceneCapability {
     this.restoreDir("fill", state.fill);
     this.restoreDir("rim", state.rim);
     if (state.ambient && typeof state.ambient === "object") {
-      const amb = state.ambient as Record<string, unknown>;
-      const assignments: Record<string, unknown> = {};
-      if (typeof amb.intensity === "number") assignments.lightAmbientIntensity = amb.intensity;
-      if (typeof amb.color === "number") assignments.lightAmbientColor = amb.color;
-      if (Object.keys(assignments).length > 0) {
-        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      const ambAcc: Partial<EnvState> = {};
+      if (
+        restoreFields(state.ambient as Record<string, unknown>, {
+          intensity: { number: (v) => (ambAcc.lightAmbientIntensity = v) },
+          color: { number: (v) => (ambAcc.lightAmbientColor = v) },
+        })
+      ) {
+        setEnvState(ambAcc, { source: "manual" });
       }
     }
     if (state.spotlight && typeof state.spotlight === "object") {
-      const sp = state.spotlight as Record<string, unknown>;
-      const assignments: Record<string, unknown> = {};
-      if (typeof sp.enabled === "boolean") assignments.lightSpotEnabled = sp.enabled;
-      if (typeof sp.color === "number") assignments.lightSpotColor = sp.color;
-      if (typeof sp.intensity === "number") assignments.lightSpotIntensity = sp.intensity;
-      if (typeof sp.angle === "number") assignments.lightSpotAngle = sp.angle;
-      if (typeof sp.penumbra === "number") assignments.lightSpotPenumbra = sp.penumbra;
-      if (typeof sp.distance === "number") assignments.lightSpotDistance = sp.distance;
-      if (typeof sp.decay === "number") assignments.lightSpotDecay = sp.decay;
-      if (Object.keys(assignments).length > 0) {
-        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      const spAcc: Partial<EnvState> = {};
+      if (
+        restoreFields(state.spotlight as Record<string, unknown>, {
+          enabled: { boolean: (v) => (spAcc.lightSpotEnabled = v) },
+          color: { number: (v) => (spAcc.lightSpotColor = v) },
+          intensity: { number: (v) => (spAcc.lightSpotIntensity = v) },
+          angle: { number: (v) => (spAcc.lightSpotAngle = v) },
+          penumbra: { number: (v) => (spAcc.lightSpotPenumbra = v) },
+          distance: { number: (v) => (spAcc.lightSpotDistance = v) },
+          decay: { number: (v) => (spAcc.lightSpotDecay = v) },
+        })
+      ) {
+        setEnvState(spAcc, { source: "manual" });
       }
     }
     if (state.volumetric && typeof state.volumetric === "object") {
-      const vm = state.volumetric as Record<string, unknown>;
-      const assignments: Record<string, unknown> = {};
-      if (typeof vm.enabled === "boolean") assignments.lightVolumetricEnabled = vm.enabled;
-      if (typeof vm.opacity === "number") assignments.lightVolumetricOpacity = vm.opacity;
-      if (typeof vm.fogPower === "number") assignments.lightVolumetricFogPower = vm.fogPower;
-      if (typeof vm.edgeFade === "number") assignments.lightVolumetricEdgeFade = vm.edgeFade;
-      if (typeof vm.baseStrength === "number") {
-        assignments.lightVolumetricBaseStrength = vm.baseStrength;
-      }
-      if (typeof vm.tipStrength === "number") {
-        assignments.lightVolumetricTipStrength = vm.tipStrength;
-      }
-      if (Object.keys(assignments).length > 0) {
-        setEnvState(assignments as Partial<EnvState>, { source: "manual" });
+      const volAcc: Partial<EnvState> = {};
+      if (
+        restoreFields(state.volumetric as Record<string, unknown>, {
+          enabled: { boolean: (v) => (volAcc.lightVolumetricEnabled = v) },
+          opacity: { number: (v) => (volAcc.lightVolumetricOpacity = v) },
+          fogPower: { number: (v) => (volAcc.lightVolumetricFogPower = v) },
+          edgeFade: { number: (v) => (volAcc.lightVolumetricEdgeFade = v) },
+          baseStrength: { number: (v) => (volAcc.lightVolumetricBaseStrength = v) },
+          tipStrength: { number: (v) => (volAcc.lightVolumetricTipStrength = v) },
+        })
+      ) {
+        setEnvState(volAcc, { source: "manual" });
       }
     }
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步

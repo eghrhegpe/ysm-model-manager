@@ -63,7 +63,11 @@ function toMb(bytes: number): string {
 }
 
 /** 纯判定：sample vs limits（字段缺省回落默认预算；严格 > 才超限）。
- *  textureBytes 维度仅在 sample 提供该字段时判定（调用方未聚合则不误报）。 */
+ *
+ *  `textureBytes` 维度**仅在 sample 提供该字段时**判定——两个调用点口径不同，勿误读为「统一可选」：
+ *  - `gpu-budget|guardGpuBudget`（拦截判定）**总是**聚合传递（含首挂 0 值）；
+ *  - `render-host` 的 GPU 饱和采样**故意不传**（饱和只关心 draw calls / triangles，
+ *    字节维度对「该不该降分辨率」无指导意义）。 */
 export function evaluateGpuLoad(
   sample: GpuLoadSample,
   limits: GpuLoadLimits = DEFAULT_GPU_LOAD_LIMITS,

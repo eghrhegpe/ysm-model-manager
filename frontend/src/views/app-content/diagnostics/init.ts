@@ -1,4 +1,4 @@
-// ===== 诊断页初始化（为 _initDiagnostics 减负） =====
+// ===== 诊断页初始化（initDiagnosticsPage 的编排壳，经 _render → PAGE_REGISTRY 调用） =====
 // ADR-040 按职责切文件：日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（conflicts.ts）已拆出；
 // 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
 

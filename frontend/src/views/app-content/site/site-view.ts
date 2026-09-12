@@ -1,4 +1,4 @@
-// ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
+// ===== 创意工坊站点视图（initWorkshopPage 的下游渲染层） =====
 
 import { isViewerMode } from "@/backend/platform.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";

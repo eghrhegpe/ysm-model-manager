@@ -39,7 +39,7 @@ describe("getDefaultKeepIdx — oldest 策略", () => {
     expect(getDefaultKeepIdx(files, "oldest", "")).toBe(1);
   });
 
-  it("modTime 缺失者视为最老但取最小 → 不抢真正最老的席位", () => {
+  it("modTime 缺失者（MAX_SAFE_INTEGER）不抢真正最老的席位", () => {
     // 有真实时间戳的文件才是「最早修改」，缺失者（MAX_SAFE_INTEGER）不该被选中
     const files = [f("no-time.ysm", 10), f("real-old.ysm", 10, "2018-01-01T00:00:00Z")];
     expect(getDefaultKeepIdx(files, "oldest", "")).toBe(1);
@@ -126,17 +126,12 @@ describe("getDefaultKeepIdx — 默认分支", () => {
   });
 
   it("大小写敏感：\"OLDEST\" 不命中 oldest 分支（case 精确匹配）", () => {
+    // 构造「可判别」样例：时间最老者 size 最小 → 两条分支各自给出不同索引
     const files = [
-      f("new.ysm", 10, "2023-06-01T00:00:00Z"),
-      f("old-big.ysm", 999, "2019-01-01T00:00:00Z"),
-    ];
-    // 走默认分支 → 按 size 选最大（索引 1），而非按时间选最早（也是 1）——用 size 反差构造区分
-    const files2 = [
       f("old-small.ysm", 10, "2019-01-01T00:00:00Z"),
       f("new-big.ysm", 999, "2023-06-01T00:00:00Z"),
     ];
-    expect(getDefaultKeepIdx(files2, "oldest", "")).toBe(0); // 真命中 oldest
-    expect(getDefaultKeepIdx(files2, "OLDEST", "")).toBe(1); // 未命中 → 默认按 size
-    expect(getDefaultKeepIdx(files, "oldest", "")).toBe(1);
+    expect(getDefaultKeepIdx(files, "oldest", "")).toBe(0); // 真命中 oldest → 按时间取最早
+    expect(getDefaultKeepIdx(files, "OLDEST", "")).toBe(1); // 未命中 → 默认分支按 size 取最大
   });
 });

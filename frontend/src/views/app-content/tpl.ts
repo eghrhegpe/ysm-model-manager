@@ -224,7 +224,7 @@ export function githubHTML(): string {
 }
 
 export function workshopHTML(): string {
-  // 站点 Tab 由 _initWorkshop 动态生成，此处只放容器
+  // 站点 Tab 由 initWorkshopPage 动态生成，此处只放容器
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs" data-testid="ws-tabs">' +

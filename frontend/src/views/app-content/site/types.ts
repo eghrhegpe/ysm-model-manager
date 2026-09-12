@@ -10,7 +10,7 @@ import type { BrowseMode, BrowseModeRef } from "./workshop-browse-mode.ts";
 /** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
 export type RepoAuthorLike = string | { Name?: string; Count?: number };
 
-/** 竚点视图渲染上下文（index.ts _initWorkshop 传入） */
+/** 站点视图渲染上下文（init-workshop.ts 传入） */
 export interface RenderSiteViewCtx {
   esc: (s: unknown) => string;
   searchResults: HTMLElement;

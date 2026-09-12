@@ -1,4 +1,4 @@
-// ===== 设置页初始化（为 _initSettings 减负）=====
+// ===== 设置页初始化（initSettingsPage 的编排壳，经 _render → PAGE_REGISTRY 调用）=====
 // ADR-040 按职责切文件：1063 行巨型 initSettings 拆分——路径卡片/高级面板/检测 → path-cards.ts，
 // 主题 → theme.ts，3D 键位 → keymap.ts，UI 偏好 → ui-prefs.ts，共享状态 → store.ts。
 // 本文件保留为编排壳：加载 cfg/registry → 调用各模块初始化 → 组装其余事件绑定骨架。

@@ -406,12 +406,12 @@ describe("事件订阅", () => {
   });
 });
 
-describe("_initGithub / _initWorkshop 真实路径", () => {
+describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）", () => {
   it("github 无仓库 → 「暂无 GitHub 仓库」占位", async () => {
     const el = mountCustomElement("app-content") as unknown as ContentEl;
     await flushAsyncTurns();
     el.state.current = "github";
-    el._render(); // 真实 _initGithub → loadRepos → LoadGitHubRepos(mock [])
+    el._render(); // initGithubPage 经 PAGE_REGISTRY → loadRepos → LoadGitHubRepos(mock [])
     // 原 sleep(20)：等异步 loadRepos 完成刷新占位文案——改条件轮询
     await waitFor(() => {
       const grid = el.shadowRoot.getElementById("gh-grid");
@@ -463,7 +463,7 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
     });
     el.state.current = "workshop";
     el._render();
-    // _initWorkshop 用 setTimeout(100) 延迟加载站点——原 sleep(200) 换条件轮询
+    // initWorkshopPage 用 setTimeout(100) 延迟加载站点——原 sleep(200) 换条件轮询
     await waitFor(() => {
       const tabs = el.shadowRoot.getElementById("ws-tabs");
       return tabs !== null && tabs.querySelectorAll("button").length === 2;

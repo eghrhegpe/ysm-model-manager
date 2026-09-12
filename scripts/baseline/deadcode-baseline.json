@@ -195,7 +195,6 @@
     "src/utils/resource/types.test.ts#src/utils/resource/types.ts",
     "src/utils/storage/idb.ts#src/utils/storage/idb.ts",
     "src/views/app-content/app-content.component.test.ts#src/views/app-nav/index.test.ts",
-    "src/views/app-content/diagnostics/perf-cli.test.ts#src/views/app-content/diagnostics/perf-common.test.ts",
     "src/views/app-content/diagnostics/perf.test.ts#src/views/app-content/diagnostics/perf.test.ts",
     "src/views/app-content/init-github.test.ts#src/views/app-content/init-github.test.ts",
     "src/views/app-content/settings/init.ts#src/views/app-tree/index.ts",

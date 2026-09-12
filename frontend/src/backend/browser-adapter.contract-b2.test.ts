@@ -20,7 +20,8 @@ const idbMock = getIdbMock();
 import { browserAdapter } from "./browser-adapter.ts";
 import type { WorkshopSite } from "../../bindings/ysm-model-manager/go/types/models.ts";
 
-// 复刻 harness：idb 层内存实现 + vi.mock；localStorage 由 happy-dom 提供。
+// 复刻 harness：idb 层内存实现 + vi.mock；localStorage 由 test-setup §3 的 node 兜底注入
+// （本文件标 @vitest-environment node，不依赖 happy-dom；happy-dom 环境自带故 setup 层跳过）。
 
 // 各覆盖层 key（与 browser-adapter.ts 中保持一致，供测试直接探查）。
 const WEB_CREATORS_KEY = "web:workshop-creators";

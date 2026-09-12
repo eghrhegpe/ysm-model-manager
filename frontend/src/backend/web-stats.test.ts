@@ -90,6 +90,14 @@ class FakeWorker {
   }
 }
 
+/** 注入 FakeWorker + 指定池大小（hardwareConcurrency）的 navigator。
+ *  池路径用例的统一入口：afterEach 的 vi.unstubAllGlobals 负责回收。
+ *  hc 缺省 1（单 worker 顺序队列），多 worker 并发用例显式传 2。 */
+function setupPool(hardwareConcurrency = 1): void {
+  vi.stubGlobal("Worker", FakeWorker);
+  vi.stubGlobal("navigator", { hardwareConcurrency });
+}
+
 /** 构造一条带 path 的 Worker 统计结果（boneCount 由调用方编码全局索引用于对齐断言） */
 function mkResult(path: string, boneCount: number): WebModelStatsWithPath {
   return { path, boneCount, cubeCount: 1, texWidth: 64, texHeight: 64, hasError: false };
@@ -147,8 +155,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("happy path：结果按 paths 对齐合并（path 字段剥离）+ 进度回调 + 不降级 + 池复用", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const progress: Array<[number, number]> = [];
     onStatsProgress((done, total) => progress.push([done, total]));
     const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm", "/web/pmx/c.pmx"];
@@ -202,8 +209,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("多分片 + offset 对齐：401 条路径切 200+200+1，双 Worker 轮询取片后按原索引合并", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
+    setupPool(2);
     const paths = Array.from({ length: STATS_BATCH_LIMIT * 2 + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
     await flushMicrotasks();
@@ -227,8 +233,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("requestId 隔离：空消息 / 异批 result 被忽略，正确回包才 settle", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm"];
     const p = batchStatsWebModels(paths);
     await flushMicrotasks();
@@ -251,8 +256,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("Worker error 响应（瞬态）→ 只终止出错 worker，换 worker 重试成功 → 不降级", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
     await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
@@ -273,8 +277,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("Worker error 响应 → 重试仍失败 → 整批降级", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
@@ -288,8 +291,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("Worker onerror（瞬态）→ 换 worker 重试成功 → 不降级", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
@@ -305,8 +307,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("Worker onerror → 重试仍失败 → 整批降级", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
     const w0 = FakeWorker.instances[0];
@@ -319,8 +320,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("多 worker 瞬态 error → 重试新建专属 worker，不占用他队 worker 在途请求（hc≥2 回归）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
+    setupPool(2);
     // 201 条 → 2 片（200+1）：w0 取 chunk0、w1 取 chunk1，两 worker 并发在途
     const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
@@ -349,8 +349,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("重试预算按次复位：前片重试成功后，后片再遇瞬态 error 仍享 1 次重试（hc=1 顺序队列）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
     await flushMicrotasks();
@@ -379,8 +378,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("回包缺条目（结束标记到达但 partial 流缺条目，纯防御）→ 缺条目 hasError 细粒度补位，不整批降级（ADR-219 D1）+ doneCount 对账留痕", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm", "/web/ysm/b.ysm"]);
     await flushMicrotasks();
     const w = FakeWorker.instances[0];
@@ -408,8 +406,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("terminateStatsWorker 主动取消：在途请求降级 settle，terminate 抛错被吞（幂等）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     FakeWorker.failTerminate = true;
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
@@ -424,8 +421,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   // ===== ADR-218 D1：池并发 = 批级单飞（batchChain 串行链）=====
 
   it("双批并发 → 串行化：后批排队不覆写槽位，前批完成后接续（hc=1）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const pA = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
     const w = FakeWorker.instances[0];
@@ -454,8 +450,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("terminateStatsWorker 弃置排队批（池代际 +1）：在途批降级、未启动批直接 null", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const pA = batchStatsWebModels(["/web/ysm/a.ysm"]);
     const pB = batchStatsWebModels(["/web/ysm/b.ysm"]);
     await flushMicrotasks();
@@ -469,8 +464,7 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
   });
 
   it("回包乱序 → 合并层按 path 对齐（Map 查表），结果序不再承担契约（ADR-218 D2）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const paths = ["/web/ysm/a.ysm", "/web/ysm/b.ysm"];
     const p = batchStatsWebModels(paths);
     await flushMicrotasks();
@@ -501,8 +495,7 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
 
   it("静默 30s → 只杀挂死 worker（不杀池）+ 专属 replacement 重试剩余 → 其余 worker 结果不受影响、整批不降级", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 2 });
+    setupPool(2);
     // 2 片：w0 取 chunk0（模拟挂死），w1 取 chunk1（正常完成）
     const paths = Array.from({ length: STATS_BATCH_LIMIT + 1 }, (_, i) => `/web/ysm/m${i}.ysm`);
     const p = batchStatsWebModels(paths);
@@ -536,8 +529,7 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
 
   it("静默杀 + 60s 墙钟同刻到点（静默 timer 先注册先触发）→ 挂死 chunk 细粒度耗尽，其余 chunk 正常、整批不降级", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     // 单 worker：chunk0 全程挂死（无任何 partial）
     const p = batchStatsWebModels(["/web/ysm/hang.ysm"]);
     await vi.advanceTimersByTimeAsync(0);
@@ -559,8 +551,7 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
 
   it("静默杀 → replacement 构造失败（failConstruct）→ 挂死侧细粒度耗尽（防御分支：无 replacement 也不整批降级）", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/hang.ysm"]);
     await vi.advanceTimersByTimeAsync(0);
     FakeWorker.failConstruct = true; // w0 已建成；杀后 spawn replacement 构造即抛 → 返回 null
@@ -574,8 +565,7 @@ describe("web-stats ADR-219 细粒度降级（FakeWorker + fake timers）", () =
   });
 
   it("瞬态 error 重试耗尽（无 replacement 可用）→ 整批降级（系统级边界，保留既有语义）", async () => {
-    vi.stubGlobal("Worker", FakeWorker);
-    vi.stubGlobal("navigator", { hardwareConcurrency: 1 });
+    setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);
     await flushMicrotasks();
     const w0 = FakeWorker.instances[0];

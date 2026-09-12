@@ -30,6 +30,17 @@
  *                             features/views 测试合法 import backend），故 R6 单独扫
  *                             core/** 下的测试文件——不经 skipFile 豁免。
  *
+ *   skipFile 豁免测试文件的设计意图（2026-09 R6 摸排）：features/views 测试 import
+ *   views 模板（如 batch-rename.test.ts → views/app-tree/tpl-batch-rename.ts）是
+ *   ADR-208 D2「HTML 模板外移 views」的设计内合法测试依赖传递（测试对象在 views，
+ *   测试文件在 features；若 R4 拦测试则被迫造桩，违反 ADR-208 反桩漂移原则）——
+ *   此类命中是合法传递依赖，非层污染盲区，无需升格 R7/R8。check-redlines 对测试
+ *   文件 100% 豁免（W2/R8 等 rg 规则全 filter .test.）经摸排同样无现存盲区：
+ *   测试里 window.go / innerHTML / 品牌色命中全为合法桩/夹具/断值，收窄会膨胀基线。
+ *   R6 的特殊性在于 core 是「引擎无关内核」，backend 是绑定产物，测试 import 绑定
+ *   = 内核被 Wails 污染，该语义不可平移到其他层（utils/services/features 测试
+ *   import 上层无此语义）。
+ *
  *   `import type` 不构成运行时耦合，一律豁免（R6 例外：测试越层 type 感知亦违规）。
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
  *

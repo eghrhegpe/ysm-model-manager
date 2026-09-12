@@ -49,6 +49,7 @@ pitfalls:
   - 越界文件校验是硬拦截（exit 1）：提交包含不在白名单 ∪ 生成物/测试清单内的文件时，需 git reset --soft HEAD~1 后重新用 --files
   - 临时索引进程被强杀时 finally 无法执行，index.ymm 临时索引文件恒残留（pid 后缀）
   - 非 ASCII 文件名八进制转义问题需保留 -c core.quotepath=false
+  - 审计口径：`_summary.files` 只是白名单输入数，不代表实际提交范围——pre-commit 会随行 stage gen 产物/测试（计入 `hookArtifacts`），核对提交内容须看 `committedFiles` 或 `git show --name-only HEAD`
 quick_intents:
   - 一键验证 + 提交（门禁全绿才 commit）
   - 白名单路径提交（无需先 git add）
@@ -73,7 +74,7 @@ invariant_anchors:
 - **白名单路径**：`--files <paths>` 直取（无需先 `git add`）；不传则读主 index staged 清单（向后兼容）
 - **门禁委托**：`pre-push-gate --files <paths> --dry-run --no-banner`（按域裁剪；`--docs` 仅文档域）
 - **临时索引提交**（`commit-temp-index.ts`）：`GIT_INDEX_FILE=index.ymm.<pid>` → `read-tree HEAD` → `add -- paths` → `commit -m` → finally 删临时索引。pre-commit 钩子继承临时索引，其 `git add`（gen 产物/gofmt 修复/智能 stage 测试）全部落进本次提交；主 index 零接触
-- **提交后双条件校验**：越界文件（不在 `paths ∪ 生成物/测试白名单`）→ exit 1 打清单；并发插队（`HEAD^ != HEAD_BEFORE`）→ 仅 notice 不失败
+- **提交后双条件校验**：越界文件（不在 `paths ∪ 生成物/测试白名单`）→ exit 1 打清单；并发插队（`HEAD^ != HEAD_BEFORE`）→ 仅 notice 不失败。非白名单文件按「随行钩子产物 / 越界」二分（`hookArtifacts` / `outOfScope`，互补），与 `paths` 内文件合起来 = 全部提交文件
 - **收尾清主 index**：`git reset -q HEAD -- <committed>`（仅当主 index 含这些路径）；`--keep-index` 关闭
 - **gen 清单单一事实源**：预刷新用 `_lib/gen-cmds.ts`（15 个全集，与原 pre-commit GEN_CMDS 对齐）
 
@@ -87,7 +88,7 @@ node scripts/commit-with-check.ts --check                          # 仅验证�
 node scripts/commit-with-check.ts -m "feat: xxx" --keep-index      # 提交后不清主 index
 ```
 
-退出码：0 全绿已提交 / 1 门禁失败或越界 / 2 用法错误。`--json` 输出 `_summary` 结构化摘要。
+退出码：0 全绿已提交 / 1 门禁失败或越界 / 2 用法错误。`--json` 输出 `_summary` 结构化摘要，文件相关三键分列以免审计失真：`files`（白名单输入 pathspec 数）、`committedFiles`（实际落库全量，取自 `git show --name-only HEAD`）、`hookArtifacts`（随行的 pre-commit 合法产物：gen 产物 / 智能 stage 的测试）；另有 `sha` / `outOfScope` / `interleaved` / `committed`。**仅报 `files` 会掩盖随行文件**（实测输入 5 → 实际提交 7），核对提交范围务必看 `committedFiles`。
 
 ## 与其他子系统关系
 

@@ -120,7 +120,7 @@ invariant_anchors:
 - 硬编码仅作降级 fallback（网页版不支持 Wails 时使用）
 - 配合缓存避免重复请求
 
-**实施状态（2026-09 同步）**：已落地。前端静态兜底收敛为 `frontend/src/backend/cli-allowlist.ts` 的 `CLI_ALLOWLIST` 单一源；`services/cli-bridge.ts` 曾以 `ALLOWED_CLI_COMMANDS` 兼容别名二次导出（测试倒逼生产保留旧名），已删除，消费方与测试统一引 `CLI_ALLOWLIST`。同时 `parseCLIResponse` 补形状守卫：`JSON.parse` 成功 ≠ 拿到响应对象，`"null"` / `[]` / `"str"` / `status` 非字符串一律落 `parse_error`，收口规律六吞错病灶在前端的穿透面（旧实现 `as CLIResponse` 是纯编译期断言，畸形响应原样穿透，消费方 `result.status` 得 undefined）。**口径注记**：现 Go 链路（`ExecuteCLI` → `JsonResponse.ToJson`）恒产出「顶层对象 + 字符串 status」，无可达的畸形生产者，故守卫定位为**协议边界防御**（防桥层异常输出与未来回归），非修复当前可达 bug；规律六所述 `"null"` 产出属历史（2026-08 已全仓修复）。
+**实施状态（2026-09 同步）**：已落地。前端静态兜底收敛为 `frontend/src/backend/cli-allowlist.ts` 的 `CLI_ALLOWLIST` 单一源；`services/cli-bridge.ts` 曾以 `ALLOWED_CLI_COMMANDS` 兼容别名二次导出（测试倒逼生产保留旧名），已删除，消费方与测试统一引 `CLI_ALLOWLIST`。同时 `parseCLIResponse` 补形状守卫：`JSON.parse` 成功 ≠ 拿到响应对象，`"null"` / `[]` / `"str"` / `status` 非字符串一律落 `parse_error`，收口规律六吞错病灶在前端的穿透面（旧实现 `as CLIResponse` 是纯编译期断言，畸形响应原样穿透，消费方 `result.status` 得 undefined）。**口径注记**：现 Go 链路（`ExecuteCLI` → `JsonResponse.ToJson`）恒产出「顶层对象 + 字符串 status」，无可达的畸形生产者，故守卫定位为**协议边界防御**（防桥层异常输出与未来回归），非修复当前可达 bug；规律六所述 `"null"` 产出属历史（2026-08 已全仓修复）。同一轮补齐：`parseCLIResponse` 接受可选 `command` 参数（`executeCLI` 透传真实命令名，解析失败不再恒 `unknown`），失败响应补 `meta.platform` 与 `call_failed` / `not_supported` 分支同形——消费方可统一读 `meta`。同类「类型断言/谓词撒谎」反模式在 `views/app-content/diagnostics/perf-common.ts|respHasOutput` 一并收口（原只查 truthy 却断言 `output: string`，`output: 123` 亦判 true）。
 
 ### 规律三：goroutine + channel 防御性编程
 

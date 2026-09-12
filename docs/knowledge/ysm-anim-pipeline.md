@@ -11,6 +11,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AnimationClip
+    - BONE_CHANNELS
     - BoneChannels
     - BoneTransform
     - buildYsmScene

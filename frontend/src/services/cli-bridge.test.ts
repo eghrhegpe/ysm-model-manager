@@ -122,6 +122,9 @@ describe("CLI Bridge - 命令执行", () => {
     expect(result.status).toBe("error");
     expect(result.error?.code).toBe("parse_error");
     expect(result.error?.message).toContain("不是对象");
+    // 解析失败仍携带真实 command（非 "unknown"），且形状与其它错误分支一致
+    expect(result.command).toBe("search");
+    expect(result.meta?.platform).toBe("native");
   });
 });
 
@@ -434,6 +437,33 @@ describe("CLI Bridge - 响应解析", () => {
     const result = parseCLIResponse(JSON.stringify({ status: "" }));
 
     expect(result.status).toBe("");
+  });
+
+  it("parse_error 保留调用方传入的 command（不再恒 unknown）", () => {
+    const result = parseCLIResponse("null", "repo-audit");
+
+    expect(result.error?.code).toBe("parse_error");
+    expect(result.command).toBe("repo-audit");
+  });
+
+  it("省略 command 参数时回退 \"unknown\"（向后兼容既有调用形态）", () => {
+    const result = parseCLIResponse("null");
+
+    expect(result.command).toBe("unknown");
+  });
+
+  it("parse_error 带 meta.platform（与 call_failed / not_supported 同形，消费方可统一读）", () => {
+    const result = parseCLIResponse("null");
+
+    expect(result.meta?.platform).toBe("native");
+  });
+
+  it("web 平台下 parse_error 的 meta.platform 为 web", () => {
+    vi.mocked(isWebPlatform).mockReturnValue(true);
+
+    const result = parseCLIResponse("null");
+
+    expect(result.meta?.platform).toBe("web");
   });
 });
 

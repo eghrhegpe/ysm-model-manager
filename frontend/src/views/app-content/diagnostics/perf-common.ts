@@ -118,10 +118,18 @@ function errorHTML(msg: string, esc: EscFn): string {
   return `<div class="diag-stat diag-stat-error">❌ ${esc(msg)}</div>`;
 }
 
+/** 类型谓词：仅当 output 是**非空字符串**时才为 true。
+ *  不能只查 truthy——`output: 123` / `{}` 同样 truthy，却与谓词断言的 `string` 不符，
+ *  消费方随后按 string 调 `.split()` 等即 TypeError（与 cli-bridge 的 `as` 断言同源病：
+ *  类型谓词必须保证断言出来的类型真的成立）。 */
 function respHasOutput(
   resp: CLIResp,
 ): resp is CLIResp & { status: "success"; data: { output: string } } {
-  return resp.status === "success" && !!resp.data?.output;
+  return (
+    resp.status === "success" &&
+    typeof resp.data?.output === "string" &&
+    resp.data.output.length > 0
+  );
 }
 
 // ===== 导出命令模块用的辅助 =====

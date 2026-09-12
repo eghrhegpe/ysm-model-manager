@@ -19,6 +19,7 @@ auto_fields:
     - AnimationClip
     - AnimationController
     - AnimationControllerRuntime
+    - BONE_CHANNELS
     - BoneChannels
     - BoneTransform
     - buildControllerAnimationIndex

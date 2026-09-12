@@ -94,6 +94,16 @@ describe("respHasOutput", () => {
   it("error → false", () => {
     expect(respHasOutput({ status: "error" } as any)).toBe(false);
   });
+  // 类型谓词必须保证断言出来的类型真的成立：output 非字符串时返回 true 会让消费方
+  // 按 string 调 .split() 等即 TypeError（与 cli-bridge 的 `as` 断言同源病）
+  it("success + output 非字符串 → false（类型谓词诚实性）", () => {
+    expect(respHasOutput({ status: "success", data: { output: 123 } } as any)).toBe(false);
+    expect(respHasOutput({ status: "success", data: { output: null } } as any)).toBe(false);
+    expect(respHasOutput({ status: "success", data: { output: {} } } as any)).toBe(false);
+  });
+  it("success + output 空串 → false（空输出与无输出同义）", () => {
+    expect(respHasOutput({ status: "success", data: { output: "" } } as any)).toBe(false);
+  });
 });
 
 describe("bindPerfCopyHandlers", () => {

@@ -137,7 +137,7 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
 
     // 调用 Wails 绑定（返回 JSON 字符串）
     const rawResp = await app.ExecuteCLI(command, argsMap);
-    return parseCLIResponse(rawResp);
+    return parseCLIResponse(rawResp, command);
   } catch (err) {
     // 捕获 browserAdapter 抛出的 WebUnsupportedError
     if (err instanceof WebUnsupportedError) {
@@ -216,12 +216,16 @@ export function buildArgsMap(args: CLIArgs): Record<string, string | number | bo
   return result;
 }
 
-/** 构造 parse_error 响应（语法错与形状错共用；message 区分细节便于定位） */
-function parseErrorResponse(message: string): CLIResponse {
+/** 构造 parse_error 响应（语法错与形状错共用；message 区分细节便于定位）
+ *  - `command` 由调用方透传，省略时回退 `"unknown"`（兼容直接调用的既有测试形态）
+ *  - `meta` 与 `call_failed` / `not_supported` 分支同形，消费方可统一读 `meta.platform`
+ *    （判定谓词为同步 Tier 派生，不引入异步依赖） */
+function parseErrorResponse(message: string, command = "unknown"): CLIResponse {
   return {
     status: "error",
-    command: "unknown",
+    command,
     error: { code: "parse_error", message },
+    meta: { platform: isWebPlatform() ? "web" : "native" },
   };
 }
 
@@ -242,19 +246,22 @@ function parseErrorResponse(message: string): CLIResponse {
  *   ①必须是普通对象（排除 null / 数组 / 字符串 / 数字 / 布尔）
  *   ②`status` 必须是字符串——它是所有消费方的分派依据；只查类型不枚举取值，
  *     故 Go 侧新增状态值不会被误判为 parse_error
+ *
+ * `command` 参数仅供**失败响应**回填（成功时以 Go 响应体内的 command 为准），省略回退
+ * `"unknown"` 兼容既有调用形态；`executeCLI` 传真实命令名，解析失败时能直接看出是哪个命令。
  */
-export function parseCLIResponse(raw: string): CLIResponse {
+export function parseCLIResponse(raw: string, command = "unknown"): CLIResponse {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return parseErrorResponse(`无法解析 CLI 响应: ${raw.slice(0, 200)}`);
+    return parseErrorResponse(`无法解析 CLI 响应: ${raw.slice(0, 200)}`, command);
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    return parseErrorResponse(`CLI 响应不是对象: ${raw.slice(0, 200)}`);
+    return parseErrorResponse(`CLI 响应不是对象: ${raw.slice(0, 200)}`, command);
   }
   if (typeof (parsed as { status?: unknown }).status !== "string") {
-    return parseErrorResponse(`CLI 响应 status 非字符串: ${raw.slice(0, 200)}`);
+    return parseErrorResponse(`CLI 响应 status 非字符串: ${raw.slice(0, 200)}`, command);
   }
   return parsed as CLIResponse;
 }

@@ -218,8 +218,15 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
       ["number", "number", "string"],
       [ptr, len, "/output"],
     );
-    if (!success) return null;
-    return collectOutputFiles(FS, "/output");
+    if (!success) {
+      wipeDir(FS, "/output");
+      return null;
+    }
+    const files = collectOutputFiles(FS, "/output");
+    // 读取后立即清理 MEMFS（与 callMain 路径同口径；原实现只在下次调用开始才清，
+    // 跨模型累积驻留）。审查 C-1 实测缺口——worker 侧与主线程侧同病同修。
+    wipeDir(FS, "/output");
+    return files;
   } catch (err) {
     // 硬崩溃恢复：_malloc/FS 操作同样可能触发 trap → 重置单例，否则 wasmModule 恒非空 → 永久失败
     const cls = classifyWasmError(err);

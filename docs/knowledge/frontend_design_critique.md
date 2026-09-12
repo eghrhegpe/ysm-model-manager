@@ -237,6 +237,12 @@ invariant_anchors:
   - **快照为什么必需**：`guardGpuBudget` 在 mount/switch 时同步判定，不可能当场 traverse 全场景（每次 mount 扫一遍太重）——由 `register-built-scene` 在构建后写快照（取**全场景**而非本次差量：追加语义下预算判的是「GPU 上现在压着多少」，必须累计全部已注册模型）。
   - **双口径取大者**：`guardGpuBudget` 用 `max(场景快照, 池累计)`——两者覆盖不同集合（场景=全格式；池=已 acquire 未挂场景 / 已移除未归零的 YSM/pack），缺一即漏计。取大不会低估，代价是理论上可能高估（同一批两边都算）；预算是「病态堆叠早拦」护栏，**保守优于漏拦**。首挂（快照为 0）自然退化为池口径。
   - 守卫：`texture-bytes` 17 新测（单张口径/mip/未就绪/集合去重/九槽收集/场景遍历/null 安全/快照非法值）+ `scene-stats` 2 新测（字节与计数同口径、共享纹理不重复累加）+ `gpu-budget` 4 新测（**快照参与判定**：池为空但场景 512MB 仍拦 / 取大者 / 都内放行 / 双空不误报）；全量 5629 测试 + typecheck + vite build + biome 全绿。
+- ✅ **刀⑭ 解码拷贝链：低成本释放清理落地 + 可行性调研定界**（2026-09，只读调研子代理实测背书）：
+  - **C-1 三处零风险清理已落地**（~5 行，行为不变、5629 测试全绿）：① `decoder/wasm-decode.ts|doDecodeYsmViaWasm` 在 `Base64ToBytes` 后 `raw = null` 显式释放 base64 中间串（原为函数作用域 `let`，要等**跑完整条 WASM 解码**才可回收，而那时正是峰值阶段）——−1.33N；② 同文件纹理循环删掉 `new Uint8Array(f.data)` 冗余整拷贝（`sniffTexSize` 是只读纯函数，`f.data` 已是 `FS.readFile` 产出的独立数组）——−N_tex（**每张纹理一份**）；③ `ysm-parser.ts|decodeYsmFileFromMemory` 与 worker 侧 `ysm-worker-loader.ts` 补 MEMFS **收集后立即 wipe**（原先只在下次调用开始才清 → 产物跨模型累积驻留；callMain 路径早已如此，两路同病同修，含 `!success` 早退分支）。③ 关闭了 `ysm-wasm` 卡挂了很久的 P3 观察项。
+  - **顺带钉住一处隐性契约**：`wasm-decode.ts` 用 `f.data.buffer` 整体构造纹理 Blob，**只在 `FS.readFile` 返回「恰好占满底层 ArrayBuffer」的数组时正确**——若将来有人把 `collectOutputFiles` 改成返回 subarray 做「零拷贝」，`.buffer` 会指向整个更大的底层缓冲、静默把多余字节塞进 Blob（花屏）。已在代码处写明「改那条路径时必须连这里一起处理」。
+  - **调研推翻了三条既有前提**（实测数据见 `model3d` 卡不变量）：① MEMFS 的 `node.contents` 是 **JS 侧数组**、不在 WASM 线性内存；② `atob` 产出 **Latin-1 one-byte string（1 字节/字符）**，不是 UTF-16 的 2 字节；③ 「3-4×」只是 **N_in 口径下界**——实测 L1+L2+L3 = 3.33N，加 `HEAPU8.set` 的 1.0N = **4.33N**，尚未计 C++ 内部 3×N_in 与输出侧 N_out。**新增认知：WASM 线性内存只增不减**（上限 2GB），HEAP 高位常驻整个应用生命周期——比瞬时峰值更危险。
+  - **明确排除的路线**（勿重复论证）：Go binding 直接返回 ArrayBuffer（Wails 传输只有 JSON，`runtime.js` 实证）、分块/流式喂解析器（`YSMParserFactory::Create` 要求完整缓冲）、Web Worker 降峰值（dedicated worker 与页面**同渲染进程**，transferable 只避免主线程持有、不去重）。
+  - **待拍板的高 ROI 路线（尚未实施）**：★ **网页版消除 base64 往返**——`web-fs-read.ts` 把 IDB 的 `ArrayBuffer` 转 base64 交给解码链再 `atob` 回字节，而这里**根本没有 IPC/序列化边界**（纯前端本地函数调用），粗算最多烧 4.3N；方案是加**可选** seam（仅 browserAdapter 实现 ArrayBuffer 直出，桌面/Android 不变、`generate:bindings` 不受影响，探测范式见 `backend-idb` 卡），且正对**唯一真有 OOM 风险的平台**。次选 **A-2 桌面资产服务器二进制路由**（`main.go` 已有 middleware 先例，可砍 L1-L3，需路径守卫同口径的安全审查）——两者互补，桌面/网页各治一端。**B 路线（改上游 C++ 提前释放 `m_decrypted`/`m_decompressed`）收益真实但被 emsdk 缺失挡住且须改未入库 vendor 源码 → 现在不做**，列为上游 PR / 专用 WASM 构建排期项。
 
 ## 相关
 

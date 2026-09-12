@@ -405,6 +405,12 @@ function CollectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
       avatars[name] = URL.createObjectURL(blob);
       continue;
     }
+    // ⚠️ 隐性契约：这里用 `f.data.buffer` 整体构造 Blob，**只在 `FS.readFile`
+    // 返回「恰好占满底层 ArrayBuffer」的数组时正确**（byteOffset=0 且
+    // byteLength === buffer.byteLength）。若将来有人把 `collectOutputFiles` 改成
+    // 返回 subarray 视图做「零拷贝」，`.buffer` 会指向整个更大的底层缓冲 →
+    // 静默把多余字节塞进 Blob（纹理损坏/花屏）。改那条路径时**必须**连这里一起处理
+    // （改用 `f.data.slice()` 或 `new Blob([f.data])`）。审查 C-1 附注。
     const blob = new Blob([f.data.buffer as ArrayBuffer]);
     const key =
       f.path
@@ -414,7 +420,9 @@ function CollectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
     textures[key] = URL.createObjectURL(blob);
     texNameMap[key] = f.path;
     texLowerMap[key.toLowerCase()] = key;
-    const arr = new Uint8Array(f.data);
+    const arr = f.data;
+    // 直接复用 f.data（`FS.readFile` 产出的独立 Uint8Array），不再 `new Uint8Array(f.data)`
+    // ——后者是每张纹理一份整拷贝，而 `sniffTexSize` 是只读纯函数（审查 C-1：N_tex 级收益）。
     const sniffed = sniffTexSize(arr);
     if (sniffed) {
       texDimensions[key] = sniffed;
@@ -726,6 +734,10 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
     return null;
   }
   const bytes = raw ? Base64ToBytes(raw) : new Uint8Array(0);
+  // 显式释放 base64 中间串（≈1.33× 文件大小）：后续全程只用 bytes，但 `raw` 是
+  // 函数作用域的 let → 不置 null 就要等函数返回才可回收，而函数内还要跑完
+  // 整条 WASM 解码（峰值最大的阶段）。审查 C-1：1 行换 1.33N 峰值。
+  raw = null;
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
   if (!bytes?.length) return HandleEmptyBytes(modelPath);

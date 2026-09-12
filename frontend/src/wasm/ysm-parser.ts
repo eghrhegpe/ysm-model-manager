@@ -136,8 +136,18 @@ export async function decodeYsmFileFromMemory(bytes: Uint8Array): Promise<YsmDec
       [ptr, len, "/output"],
     );
 
-    if (!success) return null;
-    return collectOutputFiles(FS, "/output");
+    if (!success) {
+      wipeDir(FS, "/output");
+      return null;
+    }
+    const files = collectOutputFiles(FS, "/output");
+    // 读取后立即清理 MEMFS（与 decodeYsmFile 的 callMain 路径同口径）：
+    // 原实现只在**下次调用开始**才清（见函数首 wipeDir）→ 本次输出（MEMFS 的
+    // JS 侧数组）跨模型累积驻留，长会话内存单调增长。审查 C-1 实测缺口。
+    // 安全性：`FS.readFile` 产出的 data 持有自己的 ArrayBuffer，unlink 只摘目录项，
+    // 数据仍有效（callMain 路径既已采用同一模式）。
+    wipeDir(FS, "/output");
+    return files;
   } catch (err) {
     // P2 硬崩溃恢复：_malloc/FS 操作同样可能触发 trap，
     // 一并纳入 catch 确保重置单例（否则 wasmModule 恒非空 → 永久失败）

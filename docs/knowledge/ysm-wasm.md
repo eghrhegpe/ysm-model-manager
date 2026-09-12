@@ -137,7 +137,7 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 - `_malloc` 的指针必须在 finally 中 `_free`；HEAPU8 每次从 `window.Module` 取最新值（内存扩容后旧视图失效）
   - **WASM 内存陷阱（历史，2026-08-20 第六轮审核已修复）**：`_malloc` 触发 growMemory 后旧 `HEAPU8` 视图指向已 detached 的 ArrayBuffer——向旧视图写入**不报错但数据丢失**，症状延迟到渲染阶段（解码全乱/模型变形），极难定位。防御：**永远不要在任何可能触发 grow 的调用（如 `_malloc`）之前缓存 HEAPU8**；每次写入都经 `_getHeap()` 取最新视图。相关：ADR-109 代码审查 Checklist（WASM 内存安全部分）。
 - WASM 加载状态是模块级单例（wasmModule/loading/waiters），不得挂额外 window 全局
-- **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理（`wipeDir`，已落地）；`decodeYsmFileFromMemory` 内存直解路径的 /output 在下一次调用前清理（P3 观察：成功后未立即 wipe，产物常驻至下次解码）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
+- **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理（`wipeDir`，已落地）；`decodeYsmFileFromMemory` 内存直解路径的 /output **原先**只在下一次调用前清理（P3 观察：成功后未立即 wipe，产物常驻至下次解码）。✅ **2026-09 已修复**：两条路径统一为「**读取后立即 wipe**」——`ysm-parser.ts|decodeYsmFileFromMemory` 与 worker 侧 `ysm-worker-loader.ts` 同病同修（含 `!success` 早退分支）。安全性依据：`FS.readFile` 产出的 `data` 持有自己的 `ArrayBuffer`，`unlink` 只摘目录项、数据仍有效（callMain 路径既已采用同一模式）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。⚠️ 注意 **WASM 线性内存只增不减**（`_emscripten_resize_heap` + `wasmMemory.grow`，上限 2GB）：HEAP 高位常驻**整个应用生命周期**，对 4GB 设备比瞬时峰值更危险。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
 
 ## 相关
 

@@ -183,6 +183,62 @@ check("checkFile 不误报：已定义/已导入/全局/属性访问", () => {
   );
 });
 
+check("checkFile 不误报：接口/类型字面量属性名（首个属性 / 逗号分隔 / 可选标记）", () => {
+  const tmp = path.join(ROOT, "tmp-auto-import-props.ts");
+  // 形态与真实假阳性一致：属性名撞上别处导出的同名符号（gpu-load.ts 的 `render?:`
+  // 撞 renderer.ts 导出的 `render`）。首个属性前一非空白是 `{`、逗号分隔的是 `,`，
+  // 两者都曾被两道成员位守卫漏掉。
+  fs.writeFileSync(
+    tmp,
+    [
+      "interface InfoLike {",
+      "  render?: { calls?: number; triangles?: number };",
+      "  memory?: { textures?: number };",
+      "}",
+      "type Pair = { keep: number, notify?: number };",
+      "const obj = { render: 1, notify: 2 };",
+      "obj.render = 3;",
+      "",
+    ].join("\n"),
+  );
+  // 每个形态用**不同**的撞名符号：seen 按名字去重，同名会让后续形态被掩盖而失去判别力
+  const map = mkSymbolMap([
+    ["render", { file: path.join(ROOT, "frontend/src/renderer.ts") }], // `{` 首个属性 + 对象 key
+    ["notify", { file: path.join(ROOT, "frontend/src/notify.ts") }], // `,` 逗号分隔 + 对象 key
+    ["keep", { file: path.join(ROOT, "frontend/src/keep.ts") }], // 非可选 key（守卫 1 覆盖）
+  ]);
+  const found = checkFile(tmp, map);
+  fs.unlinkSync(tmp);
+  assert.deepEqual(found, [], `不应误报属性名，实际 ${JSON.stringify(found)}`);
+});
+
+check("checkFile 仍检出成员位附近的真实缺失 import（防上条修复过度放行）", () => {
+  const tmp = path.join(ROOT, "tmp-auto-import-members.ts");
+  // 简写属性 `{ MISSING_SHORTHAND }` 是值引用（前瞻是 `}` 非 `:`/`=`/`?`）；
+  // 类型注解值位 `MISSING_ANNOT` 前是 `:` 非成员位锚点 —— 两者都必须照旧检出。
+  fs.writeFileSync(
+    tmp,
+    [
+      "const o = { MISSING_SHORTHAND };",
+      "const v: MISSING_ANNOT = 1;",
+      "export { o, v };",
+      "",
+    ].join("\n"),
+  );
+  const map = mkSymbolMap([
+    ["MISSING_SHORTHAND", { file: path.join(ROOT, "frontend/src/a.ts") }],
+    ["MISSING_ANNOT", { file: path.join(ROOT, "frontend/src/b.ts") }],
+  ]);
+  const found = checkFile(tmp, map);
+  fs.unlinkSync(tmp);
+  const names = found.map((f) => f.symbol).sort();
+  assert.deepEqual(
+    names,
+    ["MISSING_ANNOT", "MISSING_SHORTHAND"],
+    `两条真实缺失都应检出（修复不得过度放行），实际 ${JSON.stringify(names)}`,
+  );
+});
+
 // ── run 全量 parity ──────────────────────────────────
 
 check("run 全量扫描当前仓库 0 缺失（与拆分前基线一致）", () => {

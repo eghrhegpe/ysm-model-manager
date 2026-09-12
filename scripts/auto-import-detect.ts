@@ -91,10 +91,21 @@ export function checkFile(
       if (text[k] === ":") continue;
     }
     // 类字段 / 接口可选属性定义（mock 对象 `render = vi.fn()`、接口 `render?: Type`）：
-    // 前一个非空白是换行/`;`/`}`，后一个非空白是 `=`（字段赋值）或 `?`（可选属性标记）
+    // 前一个非空白处于**成员位**、后一个非空白是 `=`（字段赋值）或 `?`（可选属性标记）
     // → 定义而非引用。METHOD_START_RE 只收可选方法 `name?(`，收不到 `name?: ` 字段形态
     // （2026-08-17 修复：3d 适配器/测试的 mock render 字段被误报为缺失 import）。
-    if (j >= 0 && (stripped[j] === "\n" || stripped[j] === ";" || stripped[j] === "}")) {
+    // ⚠️ 锚点集必须与上面「对象字面量 key」守卫**同一组**，且原写法的 `\n` 是死分支——
+    // 回扫用 /\s/ 会把 `\n` 一并吃掉，j 永不为 `\n`。成员位在重排版下可能是 `{`
+    // （接口/类型字面量的**首个**属性，前一非空白是 `{`）或 `,`（逗号分隔的属性）；
+    // 两者缺失会让「首个可选属性」同时漏过两道守卫（2026-09 修复：gpu-load.ts 的
+    // `render?:` 撞 renderer.ts 导出的 `render`，被误报为缺失 import 并拦下提交）。
+    if (
+      j >= 0 &&
+      (stripped[j] === "{" ||
+        stripped[j] === "," ||
+        stripped[j] === ";" ||
+        stripped[j] === "}")
+    ) {
       let k = start + name.length;
       while (k < text.length && /\s/.test(text[k]!)) k++;
       if (text[k] === "=" || text[k] === "?") continue;

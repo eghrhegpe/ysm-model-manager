@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type Bus } from "@/bus";
 import { type DownloadState, type DownloadTask } from "./download-queue.ts";
+import { stubFetch } from "@/test-utils/fetch.ts";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
 const { onMock, eventHandlers } = vi.hoisted(() => {
@@ -90,8 +91,8 @@ beforeEach(async () => {
   isWebPlatformMock.mockReturnValue(false); // 默认桌面
   importWebFilesMock.mockReset().mockResolvedValue({ imported: 0, failed: 0 });
   fetchMock.mockReset().mockResolvedValue(new Response(new Blob(["x"])));
-  // web 分支可能触发真实 fetch——全局兜底防测试触网（桌面用例不受影响）
-  vi.stubGlobal("fetch", fetchMock);
+  // web 分支可能触发真实 fetch——全局兜底防测试触网（夹具沉淀：stubFetch 工厂）
+  stubFetch(fetchMock);
   const mod = await import("./download-queue.ts");
   getState = mod.getState;
   getStateSnapshot = mod.getStateSnapshot;

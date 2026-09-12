@@ -1,3 +1,4 @@
+// @vitest-environment node
 // ===== repo-rtype 单元测试（P3 审计补盲：当前仓库资源类型订阅）=====
 // 覆盖 currentRepoType（localStorage 兜底）/ useCurrentResourceType（订阅 + 同值去重 + cleanup）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";

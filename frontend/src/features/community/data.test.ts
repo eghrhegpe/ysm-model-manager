@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { TextDecoder as NodeTextDecoder } from "node:util";
+import { stubFetch } from "@/test-utils/fetch.ts";
 import { showProgress, tryFetchModels } from "./data.ts";
 
 // TextDecoder 保留带守卫的 globalThis 永久形态：用例内 afterEach 的
@@ -10,7 +11,7 @@ if (typeof globalThis.TextDecoder === "undefined")
 
 // atob 走 vi.stubGlobal（模式 1）：happy-dom 原生 atob 兜底，撤销后行为等价；
 // api 用例内另有显式 stub 双保险（防环境切换）。
-vi.stubGlobal("atob", (b64) => Buffer.from(b64, "base64").toString("binary"));
+vi.stubGlobal("atob", (b64: string) => Buffer.from(b64, "base64").toString("binary"));
 
 describe("showProgress", () => {
   it("renders progress box with label", () => {
@@ -76,9 +77,8 @@ const okJson = (data: unknown): FetchResp => ({ ok: true, status: 200, json: asy
 const errResp = (status: number): FetchResp => ({ ok: false, status, json: async () => ({}) });
 
 function mockFetch(impl: FetchImpl) {
-  const fn = vi.fn(impl);
-  vi.stubGlobal("fetch", fn);
-  return fn;
+  // 夹具沉淀（刀三）：stub 全局 fetch 统一走 test-utils/fetch.ts 工厂
+  return stubFetch(impl).fetchMock;
 }
 
 describe("tryFetchModels 成功路径（并发竞速取最快）", () => {

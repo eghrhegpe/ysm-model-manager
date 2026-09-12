@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { type Bus, type ToastPayload } from "@/bus";
 import { type QueueController, type QueueControllerOptions } from "./download-queue.ts";
+import { stubFetch } from "@/test-utils/fetch.ts";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
 const { onMock, eventHandlers } = vi.hoisted(() => {
@@ -81,7 +82,8 @@ beforeEach(async () => {
   isWebPlatformMock.mockReturnValue(false); // 默认桌面
   importWebFilesMock.mockReset().mockResolvedValue({ imported: 0, failed: 0 });
   fetchMock.mockReset().mockResolvedValue(new Response(new Blob(["x"])));
-  vi.stubGlobal("fetch", fetchMock);
+  // web 分支可能触发真实 fetch——全局兜底防测试触网（夹具沉淀：stubFetch 工厂）
+  stubFetch(fetchMock);
   const mod = await import("./download-queue.ts");
   createDownloadQueue = mod.createDownloadQueue;
   // 与重新 import 的 download-queue 共用同一 bus 实例

@@ -67,7 +67,9 @@ beforeEach(() => {
 
 afterEach(() => {
   container.remove();
-  // P2：__YSM_BACKEND__ 统一进 vi.stubGlobal 体系，unstub 统一还原防跨用例污染
+  // __YSM_BACKEND__ 已统一 vi.stubGlobal + unstubAllGlobals 还原（原 P2 已落地）；
+  // beforeEach 的 delete 保留为「起点归零」双保险（全仓 6 文件共识形态，
+  // 防未走 afterEach 的异常路径残留）。
   vi.unstubAllGlobals();
 });
 

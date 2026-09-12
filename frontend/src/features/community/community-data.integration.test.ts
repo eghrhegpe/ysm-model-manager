@@ -44,12 +44,14 @@ import {
   type LocalCreator,
 } from "./community-data.ts";
 
+import { stubFetch } from "@/test-utils/fetch.ts";
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.isWebPlatform.mockReturnValue(false);
   forceRefreshCommunityMerge();
   forceRefreshScanAuthors();
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+  stubFetch(); // 默认 ok 空 json（夹具沉淀：stubFetch 工厂）
   mocks.DefaultWorkshopSites.mockResolvedValue([{ id: "bilibili" }]);
   mocks.LoadWorkshopCreators.mockResolvedValue([]);
   mocks.ListModelAuthors.mockResolvedValue([]);
@@ -111,10 +113,9 @@ describe("loadCommunityData", () => {
   });
 
   it("自动合并：社区索引 JSON 直传 Go binding，前端不再整存", async () => {
-    const fetchMock = vi.fn(() =>
+    stubFetch(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者", desc: "c", type: "bilibili" }] }),
     );
-    vi.stubGlobal("fetch", fetchMock);
     await loadCommunityData();
     await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalled());
     // ADR-172：前端只传拉取结果（JSON 字符串），合并/去重派生在 Go
@@ -125,10 +126,9 @@ describe("loadCommunityData", () => {
   });
 
   it("6h 内重复调用 -> 第二次跳过社区索引拉取，仅幂等转发 Go", async () => {
-    const fetchMock = vi.fn(() =>
+    const fetchMock = stubFetch(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者", type: "bilibili" }] }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    ).fetchMock;
     await loadCommunityData();
     await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
     // 重置 fetchMock 与 binding 计数，追踪第二次调用
@@ -143,10 +143,9 @@ describe("loadCommunityData", () => {
   });
 
   it("6h 窗口过期后再次调用 -> 重新触发社区索引拉取", async () => {
-    const fetchMock = vi.fn(() =>
+    const fetchMock = stubFetch(() =>
       Promise.resolve({ ok: true, json: async () => [{ name: "社区新作者B", type: "bilibili" }] }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    ).fetchMock;
     await loadCommunityData();
     await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
     // 模拟过期：清缓存后再次加载应重拉社区索引并转发

@@ -17,6 +17,26 @@
 import * as THREE from "three";
 
 // ---------------------------------------------------------------------------
+// 热路径预分配（零分配纪律）
+// ---------------------------------------------------------------------------
+// solveIK / applyPoleConstraint 在 MMD 足部 IK 空闲态每帧被调用（每腿一次）。
+// 为避免每帧重复分配临时对象，复用模块级 scratch。主线程单线程、函数同步且无重入
+// （solveIK 调用 applyPoleConstraint，后者不回调用前者），故共享缓冲安全。
+// 语义与局部 `new` 完全等价：每个缓冲在每次使用前均被覆盖写入，不存在跨调用残留。
+const _ikWorldPos = new THREE.Vector3();
+const _ikWorldJoint = new THREE.Vector3();
+const _ikToEnd = new THREE.Vector3();
+const _ikToTarget = new THREE.Vector3();
+const _ikAxis = new THREE.Vector3();
+const _ikQuat = new THREE.Quaternion();
+const _poleJointWorld = new THREE.Vector3();
+const _poleNextWorld = new THREE.Vector3();
+const _poleChainDir = new THREE.Vector3();
+const _poleToPole = new THREE.Vector3();
+const _poleAxis = new THREE.Vector3();
+const _poleQuat = new THREE.Quaternion();
+
+// ---------------------------------------------------------------------------
 // 类型
 // ---------------------------------------------------------------------------
 
@@ -89,12 +109,13 @@ export function solveIK(chain: IKChain, target: THREE.Vector3, config: IKConfig 
   }
 
   const endEffector = chain[chain.length - 1];
-  const worldPos = new THREE.Vector3();
-  const worldJoint = new THREE.Vector3();
-  const toEnd = new THREE.Vector3();
-  const toTarget = new THREE.Vector3();
-  const axis = new THREE.Vector3();
-  const quat = new THREE.Quaternion();
+  // 复用模块级 scratch（见文件头预分配块），避免每帧（MMD 足部 IK 空闲态）重复分配
+  const worldPos = _ikWorldPos;
+  const worldJoint = _ikWorldJoint;
+  const toEnd = _ikToEnd;
+  const toTarget = _ikToTarget;
+  const axis = _ikAxis;
+  const quat = _ikQuat;
 
   for (let i = 0; i < iters; i++) {
     // 从末端向根遍历（跳过 endEffector 本身和根骨骼——根是链锚点，防整链/父链联动漂移）
@@ -163,24 +184,24 @@ function applyPoleConstraint(
   poleTarget: THREE.Vector3,
   weight: number,
 ): void {
-  const jointWorld = new THREE.Vector3();
-  const nextWorld = new THREE.Vector3();
+  const jointWorld = _poleJointWorld;
+  const nextWorld = _poleNextWorld;
   joint.getWorldPosition(jointWorld);
   nextJoint.getWorldPosition(nextWorld);
 
-  const chainDir = new THREE.Vector3().subVectors(nextWorld, jointWorld).normalize();
-  const toPole = new THREE.Vector3().subVectors(poleTarget, jointWorld).normalize();
+  const chainDir = _poleChainDir.subVectors(nextWorld, jointWorld).normalize();
+  const toPole = _poleToPole.subVectors(poleTarget, jointWorld).normalize();
 
   // 计算当前链方向与目标极向量之间的旋转
   const dot = Math.max(-1, Math.min(1, chainDir.dot(toPole)));
   const angle = Math.acos(dot);
   if (angle < 1e-6) return;
 
-  const axis = new THREE.Vector3().crossVectors(chainDir, toPole);
+  const axis = _poleAxis.crossVectors(chainDir, toPole);
   if (axis.lengthSq() < 1e-10) return;
   axis.normalize();
 
-  const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle * weight);
+  const quat = _poleQuat.setFromAxisAngle(axis, angle * weight);
   joint.quaternion.premultiply(quat);
 }
 

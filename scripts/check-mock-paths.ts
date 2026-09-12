@@ -115,6 +115,7 @@ const exemptFiles = new Set(exempt.files.map(toPosix));
 
 const files = walk(SRC_ROOT, { rel: true }) as Array<{ abs: string; rel: string }>;
 
+let totalMockCalls = 0; // 正则原始命中总数（豁免前）——全仓 0 命中 = 正则与源码形态脱钩，守卫静默空转
 for (const { abs } of files) {
   const rel = toPosix(relPosix(abs)); // frontend/src/... 相对仓库根
   if (exemptFiles.has(rel)) continue; // 文件级豁免
@@ -127,6 +128,7 @@ for (const { abs } of files) {
     if (line.includes("mock-path-ignore:")) continue; // 行内豁免：跳过该行所有 mock
     if (!code.trim()) continue;
     for (const m of code.matchAll(MOCK_CALL_RE)) {
+      totalMockCalls++; // 原始计数放在任何豁免/分类 continue 之前——豁免不影响自检信号
       const spec = m[2];
       if (!spec) continue;
       if (exemptSpecs.has(spec)) continue; // spec 级豁免（virtual:* 等）
@@ -147,6 +149,16 @@ for (const { abs } of files) {
 }
 
 const m2AsFail = STRICT_FLAG;
+// 解析面自检（code_review 摸排 A）：全仓 0 命中 = MOCK_CALL_RE 与源码形态脱钩
+// （vi.mock 调用在 frontend/src 不可能为零）——守卫在静默空转，大声失败。
+// 计数在豁免之前累加，豁免文件/spec 不影响本信号。
+if (totalMockCalls === 0) {
+  process.stderr.write(
+    "[check-mock-paths] FAIL: MOCK_CALL_RE 全仓 0 命中——正则与源码形态脱钩，" +
+      "mock 路径守卫已静默空转。修复 MOCK_CALL_RE，勿跳过本失败。\n",
+  );
+  process.exit(1);
+}
 const effectiveFails = fails.length + (m2AsFail ? warns.length : 0);
 const ok = effectiveFails === 0;
 

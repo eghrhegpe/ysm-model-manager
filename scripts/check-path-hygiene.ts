@@ -39,7 +39,7 @@ import { execFileSync } from "node:child_process";
  * 依赖：node:fs / node:path / node:url / 本地模块 _lib/scan-files.ts
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyBarrelHygiene, classifyImport } from "./_lib/alias-resolve.ts";
 import { toPosix, walk } from "./_lib/scan-files.ts";
@@ -203,8 +203,9 @@ function loadTsconfigPathsKeys(): Set<string> {
   for (const k of Object.keys(paths)) keys.add(k.replace(/\/\*$/, "")); // `@/x/*` → `@/x`
   return keys;
 }
-function loadViteAliasFinds(): Set<string> {
+function loadViteAliasFinds(): { keys: Set<string>; dirsParsed: number } {
   const keys = new Set<string>();
+  let dirsParsed = 0; // ALIAS_DIRS 数组段解析出的目录数（自检用：共享模块存在却为 0 = 正则脱钩）
   const sources = [ALIAS_SHARED, VITE_CONFIG];
   for (const src of sources) {
     if (!existsSync(src)) continue;
@@ -215,7 +216,10 @@ function loadViteAliasFinds(): Set<string> {
       if (arrText) {
         for (const dm of arrText.matchAll(/["']([^"']+)["']/g)) {
           const dir = dm[1];
-          if (dir) keys.add(`@/${dir}`);
+          if (dir) {
+            keys.add(`@/${dir}`);
+            dirsParsed++;
+          }
         }
       }
     }
@@ -235,10 +239,21 @@ function loadViteAliasFinds(): Set<string> {
       }
     }
   }
-  return keys;
+  return { keys, dirsParsed };
 }
 const tsKeys = loadTsconfigPathsKeys();
-const viteKeys = loadViteAliasFinds();
+const { keys: viteKeys, dirsParsed } = loadViteAliasFinds();
+// 解析面自检（code_review 摸排 A）：共享别名模块存在却解析出 0 个 ALIAS_DIRS 目录 =
+// 正则与新文件形态脱钩（find 字面量仍会贡献键，空集守卫抓不到这种半脱钩）——
+// 大声失败，不静默放行。正面样板：check-deadcode-baseline ParseFailed + entry-refs 零匹配自检。
+if (dirsParsed === 0) {
+  console.error(
+    "[check-path-hygiene] FAIL: vite 别名解析面得到 0 个 ALIAS_DIRS 目录——正则与 " +
+      `${relative(REPO_ROOT, ALIAS_SHARED)}（或 ${relative(REPO_ROOT, VITE_CONFIG)}）当前形态脱钩，` +
+      "双写一致性校验已哑火。修复解析正则，勿跳过本失败。",
+  );
+  process.exit(1);
+}
 const missingInVite = [...tsKeys].filter((k) => !viteKeys.has(k));
 const missingInTs = [...viteKeys].filter((k) => !tsKeys.has(k));
 const consistencyOk = missingInVite.length === 0 && missingInTs.length === 0;

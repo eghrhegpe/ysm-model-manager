@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/`（前端增强待办）/ `docs/Design.md` / 原 `docs/frontend/pending-cleanup.md`（已删除，2026-08-03）
+- **相关**：`frontend/src/`（前端增强待办）/ `docs/UI-Design.md` / 原 `docs/frontend/pending-cleanup.md`（已删除，2026-08-03）
 
 ---
 

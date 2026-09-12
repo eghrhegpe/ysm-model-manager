@@ -838,7 +838,7 @@ app-content/community/core.ts:35-36
 | 2026-08-03 | 前端文档归位（本文扩充） | 渲染片段从 copilot-instructions 迁移；前端路线图/计划类文档收归架构与设计规范体系 |
 | 2026-07 | 文档宪法 + 路径大统一 + 主题增强（v1.9.0） | `c381329` |
 | 2026-06-16 | v1.7.8 头像增量刷新 | `download-queue.ts` 解析 `queue:file-done` + `bus.emit("avatar:refresh")`；`app-content` 定点更新卡片 |
-| 2026-06-16 | v1.7.6/7 动画系统 | 统一 3 keyframe / stagger / 设计令牌（前端标准见 `docs/Design.md` §7 动画系统） |
+| 2026-06-16 | v1.7.6/7 动画系统 | 统一 3 keyframe / stagger / 设计令牌（前端标准见 `docs/UI-Design.md` §7 动画系统） |
 | 2026-06-16 | v1.7.5 暗色自动切换 + 右键打开位置 | `matchMedia('change')` + `RevealInExplorer` binding |
 | 2026-06-15 | v1.7.4 社区站点视图迁移至 Go 后端 | 前端硬编码数据移除，改 Go binding 读 JSON |
 | 2026-06-11 | 👴 仓库元老降级为仓库页 Tab | 新建 `features/oldest-models.ts` |
@@ -851,10 +851,10 @@ app-content/community/core.ts:35-36
 - 事件总线：`frontend/src/bus.ts`（类型化，`window.bus` 兼容）
 - Vite 构建：`frontend/vite.config.js` / `frontend/vite.web.config.ts`（Web 版）
 - 发版脚本：`scripts/build-release.ps1` / `scripts/build-release.sh` / `scripts/build-darwin.sh` / `scripts/build-linux.sh` / `scripts/build-android.ps1`
-- Android 开发手册：`docs/android-dev.md`
-- 治理自检：`scripts/doctor.mjs`、`scripts/link-checker.mjs`
+- Android 开发手册：`docs/knowledge/android-dev.md`
+- 治理自检：`scripts/doctor.ts`、`scripts/link-checker.ts`
 - 组件规范（冻结快照）：`docs/archive/architecture.md`
-- 设计规范（前端交互/动画标准权威）：`docs/Design.md`（§1 设计原则、§7 动画系统）
+- 设计规范（前端交互/动画标准权威）：`docs/UI-Design.md`（§1 设计原则、§7 动画系统）
 - 样式借鉴（不同项目）：`MikuMikuAR/docs/architecture.md`
 - ADR-046（全平台化可行性）、ADR-047（Android 可用性规划）、ADR-049（网页版桥接）
 - 架构演进摘要：`docs/architecture-evolution-summary.md`

@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03（初定，规则时间线 v1.5.1 → 持续维护）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/` 全量 / `docs/governance-rules.md`（规则条文唯一事实来源） / `Design.md` / `AGENTS.md` §三
+- **相关**：`frontend/src/` 全量 / `docs/governance-rules.md`（规则条文唯一事实来源） / `UI-Design.md` / `AGENTS.md` §三
 
 ---
 
@@ -85,7 +85,7 @@
 | `docs/governance-rules.md` | 2026-08-04 规则条文提取归位的独立手册（唯一事实来源） |
 | `copilot-instructions.md` | 致命陷阱 #11（回调 Promise 化）、XSS 加固 |
 | `ADR-015`（统一动画系统） | display 切换 → opacity/transform 替代方案 |
-| `Design.md` | CSS 变量主题系统，4 套主题定义 |
+| `UI-Design.md` | CSS 变量主题系统，4 套主题定义 |
 
 ---
 

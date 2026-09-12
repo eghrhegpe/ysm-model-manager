@@ -49,7 +49,7 @@
 - 机制锚核对需为知识卡逐条补充锚点，初期维护成本上升。
 
 **已知遗留**：
-- 12 类模式中的样式/UI 一致性（no-animations 跨 shadow 边界、focusVisible、trapFocus）未纳入本 ADR 收敛范围，由 Design.md 规范承载。
+- 12 类模式中的样式/UI 一致性（no-animations 跨 shadow 边界、focusVisible、trapFocus）未纳入本 ADR 收敛范围，由 UI-Design.md 规范承载。
 - 关键路径测试护栏（getApp/RuntimeBuffer/防护分支零测试）已部分补测（wails/app.test.ts、go/logs/runtime_test.go），「修复含守卫分支须带测试」建议纳入 pre-push-gate 提示，属 ADR-043 范畴的后续项。
 
 ## 4. 数据溯源

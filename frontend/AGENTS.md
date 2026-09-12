@@ -1,6 +1,6 @@
 # 前端（frontend/）— AI 行为手册
 
-> AI 处理 `frontend/` 代码时自动加载的前端专属约束。全项目规则见仓库根 `AGENTS.md`；3D 渲染标准见 `docs/architecture.md`；前端治理规则见 `docs/governance-rules.md`；组件 API 见 `docs/Design.md` §15。
+> AI 处理 `frontend/` 代码时自动加载的前端专属约束。全项目规则见仓库根 `AGENTS.md`；3D 渲染标准见 `docs/architecture.md`；前端治理规则见 `skills/governance-rules.md`；组件 API 见 `docs/UI-Design.md` §15。
 
 ## 构建 / 验证
 

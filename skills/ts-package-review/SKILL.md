@@ -34,7 +34,7 @@ $ for d in frontend/src/*/; do files=$(find "$d" -name "*.ts" ! -name "*.test.ts
 | 测试 | *.test.ts 有无、真断言（非 smoke）、故障路径（reject/异常分支） |
 
 ## 本仓专项（历史踩坑，逐条对照）
-- 治理规则 R1-R9 对照（唯一事实源 = `docs/governance-rules.md`）：重点人工复核 Warn 级——回调式 API（R3）、display 切动画（R4）、硬编码颜色绕过主题变量（R5）、资源类型字面量散落（R7，应走 RESOURCE_TYPES 常量）
+- 治理规则 R1-R9 对照（唯一事实源 = `skills/governance-rules.md`）：重点人工复核 Warn 级——回调式 API（R3）、display 切动画（R4）、硬编码颜色绕过主题变量（R5）、资源类型字面量散落（R7，应走 RESOURCE_TYPES 常量）
 - ADR-116 职责红线：类型判定 / tab / preview / 3d / resourcepack 归类一律由 Go 扫描结果派生，前端本地 filter 重算归类即违规；筛选去重聚合归 Go
 - 跨类型切换走 `ctx.switchExternal`，同源替换走 `switchTo`，两者混用是回归高发点
 - Wails 桥：只 import `frontend/bindings/` 生成物，禁 `window.go.main.App` 直调（W1/W2 扫描项）；web 模式经 browserAdapter Proxy，不得绕过 platform.ts Tier 分层直判环境

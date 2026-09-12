@@ -77,7 +77,7 @@ git checkout -- <file>              # 精确恢复单文件（进入提交阶段
 git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（你真的需要用的这个指令吗，几乎不可能需要吧，禁止对无害改动使用）
 ```
 
-- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `cli.go`，`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts --files <改动文件...>`（biome 增量闸门，须显式点名）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
+- 验证按域裁剪：Go → `go build ./...`（`./...` 覆盖 `go/` + 根 `internal/app` 绑定入口 + 根 `main.go`（CLI 模式入口，命令实现在 `go/cli/`），`./go/...` 会漏主体）；前端 → `cd frontend && npx vite build` + `npm run typecheck` + `node scripts/check-biome.ts --files <改动文件...>`（biome 增量闸门，须显式点名）；文档 → `node scripts/doctor.ts --docs`（秒级）；发版前 → `node scripts/doctor.ts`（全量）。
 - 不碰 `git stash/push/pop`（`list`/`show` 只读可用）。
 
 ## 钩子自动化（自动执行，你只需手动三件事）
@@ -100,8 +100,8 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 缓存问题 | `texture_cache` 包 + `cache-status`/`cache-verify`；清理走 `cache-clear` |
 | 性能诊断 | `file-bench` / `analyze-mmd` / `scan-dir` |
 | 搜索模型/数值范围 | 关键词 + 标签 + 数值三路交集；见 `go-cli-search.md` / `toolbar-search.md` / `dialog-adv-filter.md` |
-| 发布 / 维护 | `docs/releases/` + `docs/maintenance.md` |
-| Android | `docs/android-dev.md` |
+| 发布 / 维护 | `docs/releases/` + `docs/VitePress-maintenance.md`（项目维护手册） |
+| Android | `docs/knowledge/android-dev.md`（操作手册类知识卡） |
 | 特殊创作 | `docs/novel/AGENTS.md` |
 | `upstream/` 目录 | 第三方 vendor（Parser / Viewer / TouhouLittleMaid）；其内 `AGENTS.md` 只在该子目录内有效、与本仓规则无关，改它即改上游 |
 
@@ -121,7 +121,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 - 新 ADR 走 `node scripts/new-adr.ts "标题" [...]`（不手写编号）；状态：`✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
 - **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期（已采纳/部分采纳/已废弃/已取代），不记"§2.3 仍排期"这类待办状态——这类状态和实际严重脱节（ADR-042 案例：记录"四项未建模"，实际三项已落地、一项无需实现）。
-- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → `docs/audit-framework.md`（含 ADR-109 三份 Checklist：代码审查 / 跨平台 / 前端 3D）。
+- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 已拆分至三处：治理红线 = `skills/governance-rules.md`（9 条前端规则手册）、致命陷阱 = `skills/pitfalls.md`（事故教训手册）、审核流水线 + 三份 Checklist（代码审查 / 跨平台 / 前端 3D）= `docs/adr/ADR-109-code-review-checklist.md`。原 `docs/audit-framework.md` 已于 2026-09 文档调整中删除（内容拆分归位）。
 - **铁律**：改完代码同步知识卡（`check-knowledge-drift` 由钩子自动兜底）。
 - 收敛闭环默认：子代理审核修复 → CodeReview 独立审查 → pre-commit 自动检测。
 
@@ -152,7 +152,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 ```bash
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
 node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
-go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 cli.go）
+go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 main.go CLI 入口）
 for f in tests/*.ts; do node "$f"; done     # 契约测试
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量
@@ -176,5 +176,5 @@ node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装
 
 ## CLI 模式
 
-脱离 GUI 的命令行操作，源码 `cli.go`；基本格式 `go run . --cli --files-root <仓库根> <命令> [选项...]`。
+脱离 GUI 的命令行操作，入口在根 `main.go`（`--cli` 分支）+ `go/cli/` 包（命令注册与执行）；基本格式 `go run . --cli --files-root <仓库根> <命令> [选项...]`。
 **完整命令 / 分类 / 选项见 [`docs/cli-commands.md`](docs/cli-commands.md)**——`gen-cli-doc.ts` 自动生成，pre-commit 同步 + `--check` 接 doctor 防漂移。新增命令只改源码注册，不在此维护。

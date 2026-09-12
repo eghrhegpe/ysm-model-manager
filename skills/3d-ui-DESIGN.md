@@ -1,10 +1,10 @@
-# MikuMikuAR — DESIGN.md（视觉 / 品牌规范）
+# MikuMikuAR — UI-Design.md（视觉 / 品牌规范）
 
-> **定位（2026-08-31 审计补充）**：本文为 **3D 预览子域**视觉/品牌规范（MikuMikuAR 时期移植）。主题 Design Tokens 与组件/交互规范以上位 `docs/Design.md` 为准；本文色值/字号以 `frontend/src/app.css` 的 `:root` Design Tokens 为单一真相源。
+> **定位（2026-08-31 审计补充）**：本文为 **3D 预览子域**视觉/品牌规范（MikuMikuAR 时期移植）。主题 Design Tokens 与组件/交互规范以上位 `docs/UI-Design.md` 为准；本文色值/字号以 `frontend/src/app.css` 的 `:root` Design Tokens 为单一真相源。
 
-> **单一真相源**：本文所有色值、字号、间距均以 `frontend/src/app.css` 的 `:root` Design Tokens 为准，**不引用 `docs/design.md` 中的 CSS 示例**（后者部分示例已过时，见文末「已知漂移」）。
+> **单一真相源**：本文所有色值、字号、间距均以 `frontend/src/app.css` 的 `:root` Design Tokens 为准，**不引用 `docs/UI-Design.md` 中的 CSS 示例**（后者部分示例已过时，见文末「已知漂移」）。
 >
-> **与 `docs/design.md` 的分工**：`docs/design.md` = UI **组件/架构规范**（MenuNode Schema、builder API、键盘导航）；本文 = UI **视觉/品牌规范**（颜色、排版、圆角、间距、动效）。二者互补，搬运样式读本文，搬运结构读 `docs/design.md`。
+> **与 `docs/UI-Design.md` 的分工**：`docs/UI-Design.md` = UI **组件/架构规范**（MenuNode Schema、builder API、键盘导航）；本文 = UI **视觉/品牌规范**（颜色、排版、圆角、间距、动效）。二者互补，搬运样式读本文，搬运结构读 `docs/UI-Design.md`。
 
 ---
 
@@ -178,7 +178,7 @@ MikuMikuAR 是一个 AR 桌面应用（WebView2 + Babylon.js），UI 叠在 3D �
 | 设置 settings | 340px |
 | AI 助手 assistant | min(560px, 92vw) |
 
-### 5.3 面板三层分层（沿用 `docs/design.md`）
+### 5.3 面板三层分层（沿用 `docs/UI-Design.md`）
 | 层 | 内容 | 可见性 |
 |----|------|--------|
 | 核心层 | 预设按钮、核心滑块、模式切换 | 默认展开 |
@@ -259,13 +259,13 @@ MikuMikuAR 是一个 AR 桌面应用（WebView2 + Babylon.js），UI 叠在 3D �
 
 ## 附录：已知漂移（真相源 = app.css）
 
-搬运时以 `app.css` 为准，以下 `docs/design.md` 示例已过时：
+搬运时以 `app.css` 为准，以下 `docs/UI-Design.md` 示例已过时：
 
-| 项目 | `docs/design.md` 示例 | `app.css` 真相源 |
+| 项目 | `docs/UI-Design.md` 示例 | `app.css` 真相源 |
 |------|----------------------|-----------------|
 | `.lcard` 圆角 | `12px` | `--lcard-radius: 8px` |
 | `.lcard` 背景 | `rgba(255,255,255,0.06)` | `--card-bg: rgba(0,0,0,0.5)` |
 | `.lcard` 边框 | `var(--white-08)` | 同（此项一致） |
 | section-title 字号 | `11px` | 同（`--section-title-font-size`） |
 
-> 结论：`docs/design.md` 的 `.lcard` CSS 示例已与真实 token 不一致，**视觉值一律以本文（引自 app.css）为准**。
+> 结论：`docs/UI-Design.md` 的 `.lcard` CSS 示例已与真实 token 不一致，**视觉值一律以本文（引自 app.css）为准**。

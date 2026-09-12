@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`internal/app/`（Wails Binding 入口）、`go/types/config.go`（`AppConfig`）、`app.go`（`SaveAppConfig`/`LoadAppConfig`/`shutdown`/`WindowGetSize`）、`go/sync/sync.go`、`go/ysm/header.go`、`docs/Design.md`（前端字段命名）
+- **相关**：`internal/app/`（Wails Binding 入口）、`go/types/config.go`（`AppConfig`）、`app.go`（`SaveAppConfig`/`LoadAppConfig`/`shutdown`/`WindowGetSize`）、`go/sync/sync.go`、`go/ysm/header.go`、`docs/UI-Design.md`（前端字段命名）
 - **被收口来源**：`docs/archive/postmortem/postmortem-20250605.md`、`settings-persistence-postmortem.md`、`postmortem-20250611.md`（Go 陷阱段）
 
 ---

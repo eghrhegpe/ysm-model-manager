@@ -74,4 +74,4 @@ status: active
 
 - `frontend/src/bus.ts` — 事件总线（见知识卡 `event_bus`）
 - `frontend/src/app-modules.ts` — 组件装配入口（见知识卡 `app_modules`）
-- `docs/governance-rules.md` — 「所有异常路径必须有 toast 反馈」规则条文
+- `skills/governance-rules.md` — 「所有异常路径必须有 toast 反馈」规则条文

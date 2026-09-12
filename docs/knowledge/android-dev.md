@@ -55,14 +55,14 @@ Android 端模型仓库 = **公共目录固定路径**（`internal/app/pathmgr_a
 
 ## 构建（一键脚本 + Windows 宿主实测链路）
 
-> ✅ **一键**：`node scripts/android-build.mjs`（前端 vite build → NDK 交叉编译 libwails.so
+> ✅ **一键**：`node scripts/android-build.ts`（前端 vite build → NDK 交叉编译 libwails.so
 > → gradle assembleDebug 全链路；`--arch all` fat APK / `--arch amd64` 模拟器 / `--production`
 > 生产版 / `--skip-frontend` 只重编 Go+gradle）。Windows/macOS/Linux 宿主通用，NDK 自动探测。
-> 装到设备：`node scripts/android-install.mjs`（adb installDebug + 拉起；⚠️ 它不重编 Go，
+> 装到设备：`node scripts/android-install.ts`（adb installDebug + 拉起；⚠️ 它不重编 Go，
 > 装前先跑 android-build）。
 >
 > ⚠️ `build/android/Taskfile.yml` 的 `compile:go:shared` 只支持 Darwin/Linux 宿主
-> （Windows 报 `Unsupported host OS`），Windows 手动链路（android-build.mjs 内部等价）如下
+> （Windows 报 `Unsupported host OS`），Windows 手动链路（android-build.ts 内部等价）如下
 > （2026-08 实测通过）：
 
 ```bash

@@ -60,7 +60,7 @@ invariant_anchors:
 - **调用方**（三处）：`app-content/settings/path-cards.ts`（设置页路径卡片）、`app-tree/toolbar-events.ts`（树「打开/导入文件夹」）、`app-sidebar/launcher-detect.ts`（启动器目录检测）
 - **平台依赖**：`backend/app.ts`（`getApp` → `SelectDirectory`/`GetDefaultRepoRoot`）、`backend/platform.ts`（`getAndroidBridge`/`isViewerMode`）、`backend/platform-web.ts`（`isWebPlatform`）
 - **UI 依赖**：`bus`（toast 反馈）、`core/i18n/t.ts`（文案）、`utils/dom/toast-ms.ts`（时长档）
-- `docs/android-dev.md` 明示：目录/路径类按钮的 Android 分支统一复用 `resolveAndroidRepoDir()`
+- `docs/knowledge/android-dev.md` 明示：目录/路径类按钮的 Android 分支统一复用 `resolveAndroidRepoDir()`
 
 ## 不变量
 

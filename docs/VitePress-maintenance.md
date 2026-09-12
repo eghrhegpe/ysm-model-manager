@@ -45,40 +45,40 @@ npm run dev    # 本地预览开发
 
 | 分区 | 维护方式 | 生成器 |
 |------|---------|--------|
-| `docs/adr/` | 新决策走 `node scripts/new-adr.mjs "标题"`（叫号 + 登记表占号 + 自动 adr-check）| `gen-docs-index.mjs` |
-| `docs/knowledge/` | 知识卡（ADR-019 体系）| `new-knowledge-card.mjs` |
-| `docs/guide/` | 用户指南 26 篇（ADR-018 体系）| `gen-docs-index.mjs --guide` |
-| `docs/releases/` | 发版说明（流程见 `docs/releases/` SOP）| `release-notes-gen.mjs` |
+| `docs/adr/` | 新决策走 `node scripts/new-adr.ts "标题"`（叫号 + 登记表占号 + 自动 adr-check）| `gen-docs-index.ts` |
+| `docs/knowledge/` | 知识卡（ADR-019 体系）| `new-knowledge-card.ts` |
+| `docs/guide/` | 用户指南 26 篇（ADR-018 体系）| `gen-docs-index.ts --guide` |
+| `docs/releases/` | 发版说明（流程见 `docs/releases/` SOP）| `release-notes-gen.ts` |
 | `docs/review-report.md` | 审计单元追加（AGENTS.md 五步法）| 手写 |
-| `docs/maintenance.md` | **本手册**（网站内容之一，VitePress 自动发布）| 手写 |
+| `docs/VitePress-maintenance.md` | **本手册**（网站内容之一，VitePress 自动发布）| 手写 |
 
 ### 改文档后的检查（AGENTS.md「改完即验」映射）
 
 | 改动类型 | 必跑检查 |
 |----------|---------|
-| 改 ADR | `adr-check.mjs` + `check-adr-health.mjs` + `gen-docs-index.mjs` |
-| 改普通文档 | `link-checker.mjs`（断链）|
-| 改知识卡 | `check-knowledge-drift.mjs` |
-| 全量自检 | `node scripts/doctor.mjs`（改代码/发版前）；文档改动用 `node scripts/doctor.mjs --docs`（轻量秒级） |
+| 改 ADR | `adr-check.ts` + `check-adr-health.ts` + `gen-docs-index.ts` |
+| 改普通文档 | `link-checker.ts`（断链）|
+| 改知识卡 | `check-knowledge-drift.ts` |
+| 全量自检 | `node scripts/doctor.ts`（改代码/发版前）；文档改动用 `node scripts/doctor.ts --docs`（轻量秒级） |
 
 ---
 
 ## 三、日常治理检查（提交前）
 
 ```bash
-node scripts/doctor.mjs --docs     # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
-node scripts/doctor.mjs            # 全量自检（编译 + 构建 + 文件 + 红线 + Git）
-node scripts/check-redlines.mjs            # 红线扫描（R1-R10 + W1/W2/W5-W7；W3/W4 在 comment-checker.mjs）
-node scripts/check-adr-health.mjs  # ADR 状态机与登记表一致性
-node scripts/link-checker.mjs      # 文档断链
-node scripts/check-deadcode-baseline.mjs  # 死代码/重复代码门禁
+node scripts/doctor.ts --docs     # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
+node scripts/doctor.ts            # 全量自检（编译 + 构建 + 文件 + 红线 + Git）
+node scripts/check-redlines.ts            # 红线扫描（R1-R10 + W1/W2/W5-W7；W3/W4 在 comment-checker.ts）
+node scripts/check-adr-health.ts  # ADR 状态机与登记表一致性
+node scripts/link-checker.ts      # 文档断链
+node scripts/check-deadcode-baseline.ts  # 死代码/重复代码门禁
 ```
 
 ---
 
 ## 四、本手册维护
 
-- 本手册（`docs/maintenance.md`）是网站内容之一（VitePress 自动发布），也是 AI 的维护入口。
+- 本手册（`docs/VitePress-maintenance.md`，原 `docs/maintenance.md`）是网站内容之一（VitePress 自动发布），也是 AI 的维护入口。
 - 新增维护流程 / 网站配置变更时：更新本手册，并同步 AGENTS.md 文档地图（如有入口）。
 
 ---

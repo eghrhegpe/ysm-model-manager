@@ -3,13 +3,13 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/Design.md` §14–§20（契约唯一事实来源） / [ADR-008](./ADR-008-event-registration-pattern.md)（订阅侧规范，本 ADR 为其发射侧补充） / [ADR-005](./ADR-005-frontend-governance-rules.md) / [ADR-014](./ADR-014-typescript-migration.md) / `frontend/src/bus.ts` / `frontend/src/views/`
+- **相关**：`docs/UI-Design.md` §14–§20（契约唯一事实来源） / [ADR-008](./ADR-008-event-registration-pattern.md)（订阅侧规范，本 ADR 为其发射侧补充） / [ADR-005](./ADR-005-frontend-governance-rules.md) / [ADR-014](./ADR-014-typescript-migration.md) / `frontend/src/bus.ts` / `frontend/src/views/`
 
 ---
 
 ## 1. 背景（Context）
 
-`docs/Design.md` 长期只覆盖**设计令牌层**（颜色 / 间距 / 圆角 / 动画 / 主题），470 行内容里没有一行描述组件的**公开契约**。后果是：组件的对外接口（属性、方法、事件）只存在于源码中，没有规范约束，也没有验收标准。
+`docs/UI-Design.md` 长期只覆盖**设计令牌层**（颜色 / 间距 / 圆角 / 动画 / 主题），470 行内容里没有一行描述组件的**公开契约**。后果是：组件的对外接口（属性、方法、事件）只存在于源码中，没有规范约束，也没有验收标准。
 
 2026-08-04 对 9 个自定义元素做全量源码审计（`customElements.define` 全库扫描），暴露出三类问题：
 
@@ -55,13 +55,13 @@ async connectedCallback() {
 
 ### 1.3 文档与源码漂移无登记机制
 
-审计中还发现 `Design.md` §3 主题表列了 4 套主题（含代码库中不存在的 `.theme-default-dark`），而 `app-modules.ts:47` 实装为 6 套 + `system` 别名。文档漂移长期无人发现，也无处登记。
+审计中还发现 `UI-Design.md` §3 主题表列了 4 套主题（含代码库中不存在的 `.theme-default-dark`），而 `app-modules.ts:47` 实装为 6 套 + `system` 别名。文档漂移长期无人发现，也无处登记。
 
 ---
 
 ## 2. 决策（Decision）
 
-**核心决策**：Web Component 的对外契约必须是**显式、类型化、声明式**的，并以 `docs/Design.md` 为唯一事实来源。
+**核心决策**：Web Component 的对外契约必须是**显式、类型化、声明式**的，并以 `docs/UI-Design.md` 为唯一事实来源。
 
 ### 2.1 通信通道：跨组件一律走类型化总线
 
@@ -80,7 +80,7 @@ async connectedCallback() {
 | 属性语义 | 实现方式 |
 |----------|----------|
 | 运行时可变（组件需响应） | `static observedAttributes` + `attributeChangedCallback` |
-| 挂载期只读（一次性配置） | `connectedCallback` 中 `getAttribute`，**且必须在 Design.md 中显式标注"挂载期只读"** |
+| 挂载期只读（一次性配置） | `connectedCallback` 中 `getAttribute`，**且必须在 UI-Design.md 中显式标注"挂载期只读"** |
 
 **不允许第三态**：属性存在于 DOM、但既不响应变更、也未标注只读。
 
@@ -102,9 +102,9 @@ attributeChangedCallback(name, oldVal, newVal) {
 }
 ```
 
-### 2.3 Design.md 升级为双层规范 + 漂移登记
+### 2.3 UI-Design.md 升级为双层规范 + 漂移登记
 
-`docs/Design.md` 从「设计令牌」单层升级为**「令牌 + 契约」双层**，470 行 → 886 行：
+`docs/UI-Design.md` 从「设计令牌」单层升级为**「令牌 + 契约」双层**，470 行 → 886 行：
 
 | 层 | 章节 | 内容 |
 |----|------|------|
@@ -113,7 +113,7 @@ attributeChangedCallback(name, oldVal, newVal) {
 
 配套建立 **§14.6 漂移登记表**（编号 D1、D2…）：文档与源码不一致时，不静默修改文档，而是登记漂移项、注明处置方式，闭环后改为「已闭环」并保留历史。理由是：漂移本身是有价值的信号（说明某处代码演进未同步文档），静默抹平会丢失这个信号。
 
-**契约变更流程**：改组件的属性 / 方法 / 事件 → 同步更新 Design.md §15/§16 → 走 §19 验收 Checklist。
+**契约变更流程**：改组件的属性 / 方法 / 事件 → 同步更新 UI-Design.md §15/§16 → 走 §19 验收 Checklist。
 
 ---
 
@@ -129,7 +129,7 @@ attributeChangedCallback(name, oldVal, newVal) {
 
 ### 负面
 
-- **Design.md 维护成本上升**：886 行文档，组件契约变更必须同步，否则产生新漂移。缓解措施是 §19 验收 Checklist 已将"契约同步"列为勾选项，但**无自动化检测**——依赖 review 时人工核对。
+- **UI-Design.md 维护成本上升**：886 行文档，组件契约变更必须同步，否则产生新漂移。缓解措施是 §19 验收 Checklist 已将"契约同步"列为勾选项，但**无自动化检测**——依赖 review 时人工核对。
 - **`_ready` 闸门是样板代码**：每个有响应式属性的组件都要重复一遍。当前 3 个组件规模下可接受；若未来响应式组件增多，应抽取基类或 mixin 收敛（登记为待办，不在本次范围）。
 - **DOM 事件禁令有例外空间**：§2.1 允许组件内部使用 DOM 事件，边界靠"是否 `composed: true` 逃逸"判定，属于经验判据而非机械规则，新人可能误判。
 
@@ -138,8 +138,8 @@ attributeChangedCallback(name, oldVal, newVal) {
 | 项 | 位置 | 说明 |
 |----|------|------|
 | ADR-008 已知违规仍在 | `app-resource-manager/index.ts:46` | 模块顶层 `bus.on("config:resource-types-changed", ...)` 仍无 `_registered` 守卫。属 ADR-008 遗留（订阅侧），本次只处置发射侧，未扩大范围 |
-| 键盘导航框架缺失 | Design.md §17 标注 🟡 | 列表 / 树的集中式键盘导航（roving tabindex + `aria-activedescendant`）尚未建立，是新建能力而非修复 |
-| 契约同步无自动化 | — | 无脚本能验证「Design.md §15 的契约描述 = 源码实际契约」，考虑后续扩展 `check-knowledge-drift.mjs` 覆盖 |
+| 键盘导航框架缺失 | UI-Design.md §17 标注 🟡 | 列表 / 树的集中式键盘导航（roving tabindex + `aria-activedescendant`）尚未建立，是新建能力而非修复 |
+| 契约同步无自动化 | — | 无脚本能验证「UI-Design.md §15 的契约描述 = 源码实际契约」，考虑后续扩展 `check-knowledge-drift.mjs` 覆盖 |
 
 ---
 
@@ -147,15 +147,15 @@ attributeChangedCallback(name, oldVal, newVal) {
 
 | 来源 | 结果 |
 |------|------|
-| `C:\Users\zhujieling11\MikuMikuAR\docs\design.md` | 结构范本：「令牌 + 组件契约」双层规范的参考实现 |
+| `C:\Users\zhujieling11\MikuMikuAR\docs\UI-Design.md` | 结构范本：「令牌 + 组件契约」双层规范的参考实现 |
 | 全库 `customElements.define` 扫描 | 9 个自定义元素：`app-content` / `app-sidebar` / `app-nav` / `app-tree` / `app-preview` / `app-resource-manager` / `app-sync-manager` / `app-toast` / `context-menu` |
 | `frontend/src/bus.ts` | 类型化 `BusEvents` 接口确认；`on()` 返回取消函数、不防重（与 ADR-008 一致） |
-| `frontend/src/app-modules.ts:47` | 实装 6 套主题（`cyber`/`warm`/`pro`/`sakura`/`ocean`/`mint`）+ `system` 别名 → 修正 Design.md §3（漂移 D1） |
+| `frontend/src/app-modules.ts:47` | 实装 6 套主题（`cyber`/`warm`/`pro`/`sakura`/`ocean`/`mint`）+ `system` 别名 → 修正 UI-Design.md §3（漂移 D1） |
 | `frontend/src/views/app-content/tpl.ts` | 漂移 D2（`mode="model"` 残留）复核后**不成立**：全库 grep 零匹配，原登记基于过期快照，已核销 |
 | `frontend/src/views/app-resource-manager/index.ts:432-438` | 漂移 D3 处置结果：`_toast()` 现直接 `bus.emit("toast:show", {msg,type,duration})` |
 | `frontend/src/features/resource-packs.ts` | D3 配套：桥接 handler 与监听配对已删除，`initResourcePacks()` 返回空清理函数，**上层调用契约不变** |
 | `frontend/src/views/app-tree/index.ts:63-68, 148, 152-165` | 漂移 D4 处置结果：`_ready` 闸门 + `observedAttributes:["root"]` + `attributeChangedCallback` |
-| `docs/Design.md` | 470 行 → 886 行，§14–§20 为本 ADR 的规范正文 |
+| `docs/UI-Design.md` | 470 行 → 886 行，§14–§20 为本 ADR 的规范正文 |
 
 ### 验证记录（2026-08-04）
 

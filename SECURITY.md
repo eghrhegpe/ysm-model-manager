@@ -78,8 +78,8 @@
 
 - **ADR-109 Checklist**：代码审查 / 跨平台 / 前端 3D 三份 Checklist
 - **防御范式**：输入校验 / 边界守护 / 错误传播 / 资源释放
-- **致命陷阱手册**（`docs/pitfalls.md`）：11 条事故教训，新人必读
-- **治理红线**（`docs/governance-rules.md`）：9 条规则 × 严重度 × 检测工具
+- **致命陷阱手册**（`skills/pitfalls.md`）：11 条事故教训，新人必读
+- **治理红线**（`skills/governance-rules.md`）：9 条规则 × 严重度 × 检测工具
 
 ### 依赖管理
 

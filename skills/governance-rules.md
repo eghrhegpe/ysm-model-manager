@@ -62,7 +62,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 ### R5 禁止硬编码颜色值（Warn）
 
 - **规则**：CSS 中不得硬编码颜色值（`#RGB`、`rgba()`、`hsl()`）。
-- **替代**：`var(--txt)`、`var(--bg)` 等 CSS 变量（见 Design.md 主题系统）。
+- **替代**：`var(--txt)`、`var(--bg)` 等 CSS 变量（见 UI-Design.md 主题系统）。
 - **背景**：项目多套主题通过 CSS 变量切换，硬编码颜色绕过主题系统，深色/浅色下显示异常。
 
 ### R6 禁止 `public/` 下放 JS（Error）

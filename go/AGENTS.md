@@ -1,16 +1,16 @@
 # Go 后端（go/）— AI 行为手册
 
-> AI 处理 `go/` 代码时自动加载的后端专属约束。全项目规则见仓库根 `AGENTS.md`；边界悖论与硬事实见 `docs/architecture.md` §Go→JS；治理红线见 `docs/governance-rules.md`。
+> AI 处理 `go/` 代码时自动加载的后端专属约束。全项目规则见仓库根 `AGENTS.md`；边界悖论与硬事实见 `docs/architecture.md` §Go→JS；治理红线见 `skills/governance-rules.md`。
 
 ## 构建 / 验证
 
 ```bash
-go build ./...              # 整仓 Go（go/ + 根 internal/app + 根 cli.go；gate 主体）必跑
+go build ./...              # 整仓 Go（go/ + 根 internal/app + 根 main.go CLI 入口；gate 主体）必跑
 node scripts/doctor.ts --docs  # 只改文档时用（秒级）
 node scripts/doctor.ts         # 发版前全量闸门
 ```
 
-- 改 Go 代码 → **必须** `go build ./...` 通过（`./...` 才能编译到仓库根 `internal/app` 绑定入口与根 `cli.go`；`go build ./go/...` 只覆盖 `go/` 子树，会漏主体）
+- 改 Go 代码 → **必须** `go build ./...` 通过（`./...` 才能编译到仓库根 `internal/app` 绑定入口与根 `main.go`（CLI 模式入口，命令实现在 `go/cli/`）；`go build ./go/...` 只覆盖 `go/` 子树，会漏主体）
 - 测试在包内以 `*_test.go` 命名，`go test ./go/...` 可选；新增关键逻辑要有单测
 - 改完即提交（`git add go/` + commit），别攒批
 

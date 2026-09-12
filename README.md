@@ -369,9 +369,9 @@ wails3 build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 cd frontend && npx vite build --config vite.web.config.ts
 # GitHub Pages 部署时设置子路径 base：WEB_BASE=/ysm-model-manager/app/（Linux shell）
 
-# 一键打包/安装安卓版（ADR-046，详见 docs/android-dev.md）
-node scripts/android-build.mjs
-node scripts/android-install.mjs
+# 一键打包/安装安卓版（ADR-046，详见 docs/knowledge/android-dev.md）
+node scripts/android-build.ts
+node scripts/android-install.ts
 ```
 
 **注意**：

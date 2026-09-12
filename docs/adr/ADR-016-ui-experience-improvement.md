@@ -4,9 +4,9 @@
 - **实施状态**：查知识卡 [app-preview](../knowledge/app-preview.md)（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-03（初定，决策时间线 2026-06-16）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/`（app-preview / app-tree / utils）/ `docs/Design.md`
+- **相关**：`frontend/src/`（app-preview / app-tree / utils）/ `docs/UI-Design.md`
 
-> **6 条体验原则已并入 `docs/Design.md` §13 UI 体验原则**，改 UI 先查 Design.md；本 ADR 仅保留决策依据与实施台账。
+> **6 条体验原则已并入 `docs/UI-Design.md` §13 UI 体验原则**，改 UI 先查 UI-Design.md；本 ADR 仅保留决策依据与实施台账。
 
 ---
 
@@ -92,7 +92,7 @@ v1.7.6 前后，前端界面存在若干可量化的体验短板，散落在多�
 
 | 文档 | 关系 |
 |------|------|
-| `docs/Design.md` | 设计令牌与 4 套主题定义，本 ADR §2 原则 4 直接约束令牌在全部主题下的可用性 |
+| `docs/UI-Design.md` | 设计令牌与 4 套主题定义，本 ADR §2 原则 4 直接约束令牌在全部主题下的可用性 |
 | ADR-005 | 本 ADR 的 UI 改动须遵守治理红线（禁止 `window.*`、未转义 `innerHTML` 等） |
 
 ## 6. 数据溯源
@@ -100,7 +100,7 @@ v1.7.6 前后，前端界面存在若干可量化的体验短板，散落在多�
 | 来源 | 结果 |
 |------|------|
 | `docs/frontend/ui-improvement-plan.md`（前身，已删除） | 原改进计划全部内容已迁入本 ADR，原文件于 2026-08-03 删除 |
-| `docs/Design.md` | 设计令牌、主题系统、UI 文案规范 |
+| `docs/UI-Design.md` | 设计令牌、主题系统、UI 文案规范 |
 | `frontend/src/app-preview/*` / `app-tree/*` / `utils/*` | 各优化项的具体源文件落点 |
 
 ---

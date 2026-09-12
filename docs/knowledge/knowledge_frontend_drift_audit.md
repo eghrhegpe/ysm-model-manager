@@ -75,7 +75,7 @@ invariant_anchors:
 |---|---|---|
 | `nav:change`（app-nav.md / app-content.md） | `git log -S` 溯源 `4e4e3494`（2026-08-17）从 bus.ts **删除 nav:change 契约**统一为单事件 `nav:changed`；生产代码仅 `nav:changed`（app-nav/index.ts:40,198 emit / app-content/index.ts:144 on / page-store.ts:68 on） | ✅ `e33e1f49` 五卡叙事统一 + 测试名回填 |
 | `nav:change` 残留测试层 | app-nav/index.test.ts:121 `it("点击 nav-item → 发射 nav:change")` 实际断言 `bus.on("nav:changed")`——测试名与注释系统性名实不符 | ✅ `e33e1f49` it 名回填 |
-| `filter:results`（dialog-adv-filter.md:69,76） | 前端全项目 grep 零命中；真实流程 = `toolbar-search.ts` 调 `SearchModels` → 写 `AppTree._filterPaths`；Design.md D6 已登记"已清理移出契约" | ✅ `e33e1f49` 改指真实流程 |
+| `filter:results`（dialog-adv-filter.md:69,76） | 前端全项目 grep 零命中；真实流程 = `toolbar-search.ts` 调 `SearchModels` → 写 `AppTree._filterPaths`；UI-Design.md D6 已登记"已清理移出契约" | ✅ `e33e1f49` 改指真实流程 |
 
 ### P1 — 描述失真 / 归属错位
 

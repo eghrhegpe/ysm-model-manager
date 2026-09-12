@@ -4,9 +4,9 @@
 - **实施状态**：查知识卡 [animation-system](../knowledge/animation-system.md)（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-03（初定，决策时间线 v1.7.6）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统
+- **相关**：`frontend/src/`（动画相关 Web Components）/ `docs/UI-Design.md` §3 主题系统
 
-> **规范条文已并入 `docs/Design.md` §7.2**（统一 keyframe / stagger / 设计令牌 / 技术约束），写动画先查 Design.md；本 ADR 仅保留决策依据与实施历史。
+> **规范条文已并入 `docs/UI-Design.md` §7.2**（统一 keyframe / stagger / 设计令牌 / 技术约束），写动画先查 UI-Design.md；本 ADR 仅保留决策依据与实施历史。
 
 ---
 
@@ -19,7 +19,7 @@ v1.7.6 之前，前端交互动画由各组件各自实现，缺乏统一设计�
 - 虚拟滚动组件（模型树）上叠加 `animation-fill-mode: both` + `innerHTML` 替换，触发滚动闪烁（见 `docs/archive/bug-chronicle.md`）；
 - 无障碍诉求：需要一个统一的 `.no-animations` 开关，供偏好减少动态效果的用户关闭全部动画。
 
-本项目已有 4 套主题通过 CSS 变量切换（`Design.md` §3），动画系统必须复用同一套设计令牌，避免硬编码颜色/圆角/过渡导致主题失效。
+本项目已有 4 套主题通过 CSS 变量切换（`UI-Design.md` §3），动画系统必须复用同一套设计令牌，避免硬编码颜色/圆角/过渡导致主题失效。
 
 本文档将原有的「动画路线图」（`docs/frontend/animation-roadmap.md`，已于 2026-08-03 删除）升级为正式决策记录：路线图记录的是**已落地的实现清单**，其背后真正应被长期遵守的**约束与令牌定义**才是决策真相，故以 ADR 形式固化，原文件内容已全部并入本 ADR 以避免真相源分裂。
 
@@ -106,7 +106,7 @@ el.style.animationDelay = `${stagger(i)}ms`;
 | 来源 | 结果 |
 |------|------|
 | `docs/frontend/animation-roadmap.md`（前身，已删除） | 原路线图全部内容已迁入本 ADR，原文件于 2026-08-03 删除 |
-| `docs/Design.md` | §3 主题系统，4 套主题 CSS 变量定义 |
+| `docs/UI-Design.md` | §3 主题系统，4 套主题 CSS 变量定义 |
 | `docs/archive/bug-chronicle.md` | 虚拟滚动 + 动画闪烁事故记录，支撑约束 3 |
 | ADR-005 | display 切换 / 硬编码颜色治理红线 |
 

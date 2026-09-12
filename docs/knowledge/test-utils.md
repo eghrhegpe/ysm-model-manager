@@ -75,7 +75,7 @@ pitfalls:
   - 异步等待必须按「三分法」选型：正等结果→waitFor，init 落定→排空调度轮次，负向窗口→保留真实 sleep
   - 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎
   - 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报
-  - testid 值禁止含空格或大小写混排（Design.md §19.1），本层未做入口校验（P3）
+  - testid 值禁止含空格或大小写混排（UI-Design.md §19.1），本层未做入口校验（P3）
 quick_groups:
   - testid 查询与元素选择
   - 异步等待策略与 flaky 治理
@@ -111,7 +111,7 @@ invariant_anchors:
 
 ## 概览
 
-`frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sleep）。UI 结构变化只改本层一处，测试不直接写选择器/定时器。
+`frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 sleep）。UI 结构变化只改本层一处，测试不直接写选择器/定时器。
 
 ## 对外 API / 入口
 
@@ -128,7 +128,7 @@ invariant_anchors:
 
 - `tests/test_testid_contract.ts`：关键 testid 契约守护（被删即契约红）
 - 各组件 `*.test.ts`：统一走本层 helper（app-nav/resource-manager/sync-manager/toast/tree/context-menu）
-- Design.md §19.1：testid 命名规范（`<域>-<角色>` kebab-case 前缀命名空间）
+- UI-Design.md §19.1：testid 命名规范（`<域>-<角色>` kebab-case 前缀命名空间）
 - E2E（ADR-037）：`frontend/e2e/` 14 spec / 51 用例共享本层 testid 钩子与 mock 契约（覆盖现状见 ADR-037 §2.5）
 
 ## 异步等待三分法（审计替换 sleep 的决策树，b2a0d079）
@@ -155,9 +155,9 @@ grep 生产代码确认，勿凭 sleep 时长猜。
 
 - 查询只认 `data-testid`，不绑定 CSS 类 / 文案 / DOM 结构（抗脆弱核心）
 - 等待按「异步等待三分法」选型（正等结果→waitFor / init 落定→排空轮次 / 负向定时器窗口→保留 sleep 并注释）——不是无脑全换 waitFor
-- testid 值禁止含空格或大小写混排（Design.md §19.1；本层未做入口校验，P3 观察）
+- testid 值禁止含空格或大小写混排（UI-Design.md §19.1；本层未做入口校验，P3 观察）
 - 共享 mock 存储（`__YSM_TEST_IDB__` / `__YSM_TEST_APP__`）挂 `globalThis`，隔离性**依赖 vitest `isolate: true`**（`vitest.config.ts` 有红线注释）——改回 `isolate: false` 会使 worker 内共享模块图让 per-file 绑定捕获错位（`web-fs.ts` 首求值固化先运行文件的 mock 引用 → 读写错位）。`test:audit`（isolate:false + shuffle）仅用于主动暴露该风险，消费方须每例显式清理（范式见 `mock-app.ts` 的 `resetAppMock`）
 
 ## 相关
 
-- ADR-035（G-1 抗脆弱测试基础设施）、Design.md §19.1（testid 规范）、ADR-037（E2E 引入，共享 testid 钩子）
+- ADR-035（G-1 抗脆弱测试基础设施）、UI-Design.md §19.1（testid 规范）、ADR-037（E2E 引入，共享 testid 钩子）

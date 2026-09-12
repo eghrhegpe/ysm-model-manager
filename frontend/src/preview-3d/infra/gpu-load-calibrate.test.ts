@@ -252,7 +252,9 @@ describe("installGpuCalibrationHook", () => {
     installGpuCalibrationHook(spy); // 二次调用幂等（不覆盖）
     expect(w.ysmCalibrateGpuBudget).toBe(first);
     expect(typeof w.ysmResetGpuBudget).toBe("function");
-    expect(w.ysmCalibrateGpuBudget?.(0)).toBeInstanceOf(Promise);
+    // await 标定 Promise：内部走真实 setTimeout，不 await 会在测试结束后才写
+    // localStorage（isolate:false 跨文件污染 gpu-budget.test 的限额读取）
+    await w.ysmCalibrateGpuBudget?.(0);
     w.ysmResetGpuBudget?.();
     // 清理：避免污染其他测试文件的 window
     Reflect.deleteProperty(w, "ysmCalibrateGpuBudget");

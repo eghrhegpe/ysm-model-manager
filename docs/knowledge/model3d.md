@@ -576,6 +576,7 @@ auto_fields:
     - resetEnvState
     - resetLoopState
     - resetSceneInfra
+    - resetSceneTextureBytes
     - resetSchemas
     - resetSettingsListeners
     - resolveGpuLoadLimits

@@ -7,6 +7,7 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import { clearModelRoots } from "@/preview-3d/infra/frustum-cull.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { resetSceneTextureBytes } from "@/preview-3d/infra/texture-bytes.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { returnFocus } from "@/utils/dom/focus-restore.ts";
@@ -290,6 +291,8 @@ export function runFullCleanup(ctx: MountCtx): void {
   clearSceneCaps();
   // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
   textureCache.disposeAll();
+  // 场景字节快照随场景消亡——残留会在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截）
+  resetSceneTextureBytes();
   clearModelRoots();
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();

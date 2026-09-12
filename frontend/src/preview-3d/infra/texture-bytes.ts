@@ -94,3 +94,9 @@ export function getLastSceneTextureBytes(): number {
 export function __resetSceneTextureBytesForTest(): void {
   lastSceneTextureBytes = 0;
 }
+
+/** 生产重置：会话全清时调用——快照须随场景一同消亡，否则旧重模型的快照会
+ *  在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截，code_review P2）。 */
+export function resetSceneTextureBytes(): void {
+  lastSceneTextureBytes = 0;
+}

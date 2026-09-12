@@ -86,10 +86,10 @@ describe("readModelBytes — 桌面 / Android 路径（base64 契约）", () => 
     expect(await readModelBytes("/repo/bad.ysm")).toBeNull();
   });
 
-  it("空串 base64 → 空字节数组（非 null；与 falsy 判定一致）", async () => {
+  it("空串 base64 → null（\"\" 是 falsy，空文件与缺失文件同路径）", async () => {
     h.readFileBytes.mockResolvedValue("");
     const r = await readModelBytes("/repo/empty.ysm");
-    expect(r).toBeNull(); // "" 是 falsy → 走 null 分支（与 readWebFile 同语义）
+    expect(r).toBeNull(); // b64 ? ... : null 的 falsy 判定——勿改实现返回空数组，会绕过 !bytes?.length 守卫
   });
 
   it("桥抛错 → 原样上抛（由调用方 catch 决定降级）", async () => {

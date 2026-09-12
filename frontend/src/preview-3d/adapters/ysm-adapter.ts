@@ -36,15 +36,12 @@ import {
 } from "@/preview-3d/model/ysm-animation-player.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
-import {
-  type AnimationClip,
-  parseBedrockAnimationJSON,
-  ysmAnimClipLabels,
-} from "@/utils/animation/animation.ts";
+import { type AnimationClip, parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import {
   type AnimationController,
   parseAnimationControllerJSON,
 } from "@/utils/animation/animation-controller.ts";
+import { ysmAnimClipLabels } from "@/utils/animation/animation-evaluator.ts";
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）

@@ -5,6 +5,7 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/animation/animation.ts
+  - frontend/src/utils/animation/animation-evaluator.ts
   - frontend/src/utils/animation/animate.ts
   - frontend/src/utils/animation/stagger.ts
   - frontend/src/utils/animation/molang.ts
@@ -28,6 +29,9 @@ auto_fields:
     - createMolangParser
     - createYsmAnimPlayer
     - Easings
+    - evaluateClip
+    - evaluateKeyframes
+    - executeTimeline
     - findControllerForAnimation
     - Keyframe
     - Molang
@@ -39,6 +43,7 @@ auto_fields:
     - stagger
     - TimelineEvent
     - Vec3
+    - ysmAnimClipLabels
     - YsmAnimPlayer
   tests:
     - frontend/src/utils/animation/animate.test.ts
@@ -90,11 +95,17 @@ status: active
 
 ## 对外 API / 入口
 
-`animation.ts`（解析 + 插值）：
+`animation.ts`（解析器 + 类型定义；ADR-212 已把求值器外移，此处**不再 re-export**）：
 - 类型：`Vec3`、`Keyframe`（time/post/pre/lerp）、`BoneChannels`（rotation/position/scale）、`AnimationClip`（name/loop/length/bones/hasMolang）、`BoneTransform`
+- `BONE_CHANNELS` — 三通道名单一事实源，解析侧与求值侧共用（求值器经值导入消费，是全卡唯一的 evaluator→animation 运行时边）
 - `parseBedrockAnimationJSON(jsonStr): { clips, errors }` — 解析 .animation.json；JSON 错误/缺 animations 字段进 errors；任一关键帧含 Molang 字符串则 clip.hasMolang = true
+
+`animation-evaluator.ts`（求值器，ADR-212 自 `animation.ts` 拆出）：
 - `evaluateKeyframes(keyframes, t): Vec3 | null` — 二分查找 + 线性插值；step 模式直接取当前帧 post；catmullrom 模式取前后各一邻帧做 uniform Catmull-Rom（Hermite 等价，C1 连续）三次样条（`sampleCatmullRom`；官方 wine_fox 大量用 `lerp_mode: catmullrom`，此前被一律降级为 linear 是"动作僵硬/轨迹怪"根因，已支持）
 - `evaluateClip(clip, time): Map<string, BoneTransform>` — 整 clip 求值局部变换；循环动画时间取模；层级传播由 Three.js Object3D 场景树自行完成（2026-09 删非 localOnly 分支与 BoneHierarchyNode）
+- `executeTimeline(timeline, prevTime, currentTime): string[][] | null` — Timeline 事件派发（含循环回绕两段扫描），返回本次触发事件的原始表达式列表
+- `ysmAnimClipLabels(fileBase, clips): string[]` — 播放列表标签策略：单 clip 用文件名，多 clip 用「文件名 · clip 名」（ADR-100 L3）
+- 符号唯一定义处；生产消费者 `preview-3d/model/ysm-animation-player.ts` 与 `preview-3d/adapters/ysm-adapter.ts` 直接从此文件导入，**禁止再从 `animation.ts` 取**（2026-09 曾存在的兼容 re-export 已删——它造成 animation.ts ⇄ animation-evaluator.ts 运行时循环依赖，`check-circular` 拦下）
 
 `animate.ts`：
 - `animateNumber(el, to, duration=700): () => void` — 里程表式滚动进位（个位先转 → 十位 → 百位），替换元素文本中的首个数字串，返回取消函数（组件卸载时调用）
@@ -124,7 +135,7 @@ status: active
 - 全局开关：`app-modules.ts` 按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧对卡片/弹窗/主题动效统一 `animation: none !important`
 - **Molang 消费方**：
   - 解析阶段（`animation.ts`）：`parseAxisItem` / `parseKeyValue` / `extractKeyframe` 调用 `molang.ts` 的 `compileMolang`
-  - 求值阶段（`animation.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`
+  - 求值阶段（`animation-evaluator.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`
 
 ## 上游留档：YSMParser 动画模型 ID 映射（v0.3.6）
 
@@ -207,3 +218,9 @@ molangjs 内嵌策略：npm 包因 `"type":"module"` + CJS dist 混用在 Node �
 - [model3d](./model3d.md) / [model2d](./model2d.md) — 模型动画的呈现端
 - [app_preview](./app-preview.md) — 动画解析消费方
 - `frontend/src/utils/animation/animation.test.ts`、`frontend/src/utils/animation/stagger.test.ts` — 单元测试（验证入口）
+
+## ADR-212 实施进度（2026-09 核对）
+
+- ✅ 求值器已拆至 `animation-evaluator.ts`；生产消费方 `ysm-animation-player.ts` / `ysm-adapter.ts` 已直连求值器
+- ✅ 兼容 re-export 已删（`animation.ts` 只留解析器 + 类型定义）——该 shim 是 animation.ts ⇄ animation-evaluator.ts 运行时循环的**唯一成因**，删除后 `check-circular` 归零
+- ⏳ 步骤 4（测试拆分）未做：求值器用例仍与解析用例共处 `animation.test.ts`，尚未落 `animation-evaluator.test.ts`

@@ -550,11 +550,3 @@ export function parseBedrockAnimationJSON(
 
   return { clips, errors };
 }
-
-// ── 求值器（ADR-212 拆至 animation-evaluator.ts，此处 re-export 兼容）──
-export {
-  evaluateClip,
-  evaluateKeyframes,
-  executeTimeline,
-  ysmAnimClipLabels,
-} from "./animation-evaluator.ts";

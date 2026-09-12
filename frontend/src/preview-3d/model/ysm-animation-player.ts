@@ -15,11 +15,12 @@
 //     实现「停播骨骼渐回零位」（YSMViewer Aura3DRenderer 同款收尾）。
 
 import * as THREE from "three";
-import { type AnimationClip, evaluateClip, executeTimeline } from "@/utils/animation/animation.ts";
+import type { AnimationClip } from "@/utils/animation/animation.ts";
 import {
   type AnimationController,
   AnimationControllerRuntime,
 } from "@/utils/animation/animation-controller.ts";
+import { evaluateClip, executeTimeline } from "@/utils/animation/animation-evaluator.ts";
 
 export interface YsmAnimPlayer {
   apply(dt: number): void;

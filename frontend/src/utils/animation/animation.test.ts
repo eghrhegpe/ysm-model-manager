@@ -4,11 +4,11 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   evaluateKeyframes,
-  parseBedrockAnimationJSON,
   evaluateClip,
   ysmAnimClipLabels,
   executeTimeline,
-} from "./animation.ts";
+} from "./animation-evaluator.ts";
+import { parseBedrockAnimationJSON } from "./animation.ts";
 import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
 import * as log from "@/utils/base/primitives/log.ts";
 

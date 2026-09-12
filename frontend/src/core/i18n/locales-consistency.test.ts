@@ -18,7 +18,6 @@ const bundles: Array<[string, Record<string, string>]> = [
 describe("语言包 key 对齐（基准 zh-CN）", () => {
   // zh-CN 无 index signature（keyof 类型化后），key 数组断言为 keyof 联合以便索引
   const zhKeys = Object.keys(zhCN) as Array<keyof typeof zhCN>;
-  const zhSet = new Set<string>(zhKeys);
 
   it("三个语言包 key 总数一致", () => {
     expect(zhKeys.length).toBeGreaterThan(0);
@@ -27,14 +26,12 @@ describe("语言包 key 对齐（基准 zh-CN）", () => {
     }
   });
 
-  it("en/ja 无缺失 key、无多余 key", () => {
+  it("en/ja key 集合与 zh-CN 完全一致（无缺失、无多余）", () => {
+    // 整体集合 toEqual（排序后逐位比对）：双向对齐一次判定；失败时 vitest diff 列出
+    // 全部缺失/多余 key，不逐个 expect 挤牙膏（首个缺口即终止旧写法）。
+    const zhSorted = [...zhKeys].sort();
     for (const [name, b] of bundles) {
-      for (const k of Object.keys(b)) {
-        expect(zhSet.has(k), `${name} 多余 key: ${k}`).toBe(true);
-      }
-      for (const k of zhKeys) {
-        expect(k in b, `${name} 缺失 key: ${k}`).toBe(true);
-      }
+      expect([...Object.keys(b)].sort(), `${name} key 集合 != zh-CN`).toEqual(zhSorted);
     }
   });
 
@@ -53,12 +50,15 @@ describe("语言包 key 对齐（基准 zh-CN）", () => {
   });
 
   it("占位符参数集合与 zh-CN 一致（不丢参数）", () => {
+    // 收集成对象后整体 toEqual：一处不一致即一次 diff 列出全部 key 的占位符差异。
     for (const [name, b] of bundles) {
+      const zhPH: Record<string, string[]> = {};
+      const refPH: Record<string, string[]> = {};
       for (const k of zhKeys) {
-        const zh = extractPlaceholders(zhCN[k]);
-        const t = extractPlaceholders(b[k] ?? "");
-        expect(t, `${name}.${k} 占位符不一致`).toEqual(zh);
+        zhPH[k] = extractPlaceholders(zhCN[k]);
+        refPH[k] = extractPlaceholders(b[k] ?? "");
       }
+      expect(refPH, `${name} 占位符集合 != zh-CN`).toEqual(zhPH);
     }
   });
 });

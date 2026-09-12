@@ -108,7 +108,15 @@ export function checkFile(
     ) {
       let k = start + name.length;
       while (k < text.length && /\s/.test(text[k]!)) k++;
-      if (text[k] === "=" || text[k] === "?") continue;
+      if (text[k] === "=") continue;
+      // `?` 是定义标记仅当紧跟 `:`/`(`（可选属性/可选方法）；`?` 后跟空白的是
+      // 三元条件（`, cond ? a : b`），仍是引用，须照旧查缺——若该符号撞上全局
+      // 导出名，旧写法在此静默跳过会把缺失 import 吞掉（假阴性）。
+      if (text[k] === "?") {
+        let m = k + 1;
+        while (m < text.length && /\s/.test(text[m]!)) m++;
+        if (text[m] === ":" || text[m] === "(") continue;
+      }
     }
     if (seen.has(name)) continue;
 

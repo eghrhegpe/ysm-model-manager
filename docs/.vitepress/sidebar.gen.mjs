@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-230：GenGuard 统一收敛：内建状态源为唯一出口，外部状态源模式退役",
+        "link": "/adr/ADR-230-genguard"
+      },
+      {
         "text": "ADR-229：check-layering R6 —— core 测试文件 import backend 兜底，收窄测试豁免盲区",
         "link": "/adr/ADR-229-core-import-check-layering-r6-adr-189-d4"
       },

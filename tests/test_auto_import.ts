@@ -239,6 +239,34 @@ check("checkFile 仍检出成员位附近的真实缺失 import（防上条修�
   );
 });
 
+check("checkFile 仍检出逗号成员位后的三元条件真实缺失（question 守卫收口防过度放行）", () => {
+  const tmp = path.join(ROOT, "tmp-auto-import-ternary.ts");
+  // 「,」成员位 + 三元条件的碰撞形态：数组元素位置上的 `cond ? a : b`——
+  // 条件项的前一非空白是 `,`（成员位锚点），后一非空白是 `?`。
+  // 旧守卫只要 `?` 出现就跳过 → 该符号若撞全局导出名会被静默吞掉（假阴性）。
+  // 真对象 key（`{ MISSING_KEY : 1 }`）仍被守卫 1 正确跳过，不受影响。
+  fs.writeFileSync(
+    tmp,
+    [
+      "const o = { MISSING_KEY : 1 };", // 真对象 key：守卫 1 命中（`: `），保持不误报
+      "const a = [ x, MISSING_TERN ? 1 : 2 ];", // 数组元素三元条件：`, ` + `?`，必须检出
+      "export { o, a };",
+      "",
+    ].join("\n"),
+  );
+  const map = mkSymbolMap([
+    ["MISSING_KEY", { file: path.join(ROOT, "frontend/src/key.ts") }],
+    ["MISSING_TERN", { file: path.join(ROOT, "frontend/src/tern.ts") }],
+  ]);
+  const found = checkFile(tmp, map);
+  fs.unlinkSync(tmp);
+  assert.deepEqual(
+    found.map((f) => f.symbol),
+    ["MISSING_TERN"],
+    `三元条件应检出、真对象 key 不应误报，实际 ${JSON.stringify(found)}`,
+  );
+});
+
 // ── run 全量 parity ──────────────────────────────────
 
 check("run 全量扫描当前仓库 0 缺失（与拆分前基线一致）", () => {

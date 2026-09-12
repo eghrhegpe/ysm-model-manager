@@ -4,7 +4,7 @@
 // metadata 段、spec 失败回落聚合口径、封面替换、FAB 进整包 3D。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
-import { GenGuard } from "./gen-guard.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 
 const { analyzeMock, specMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock, preloadMock, androidBackMock } = vi.hoisted(() => ({
   analyzeMock: vi.fn(),
@@ -70,7 +70,7 @@ function makeCtx(over: Partial<PreviewCtx> = {}): PreviewCtx {
     active3DClose: null,
     getPrefer3D: vi.fn().mockReturnValue(false),
     setPrefer3D: vi.fn(),
-    detailGen: new GenGuard(),
+    detailGen: createLoadGuard(),
     ...over,
   };
 }

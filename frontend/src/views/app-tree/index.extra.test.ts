@@ -26,6 +26,7 @@ vi.mock("./loader.ts", () => ({ loadEntries: vi.fn() }));
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import { getApp } from "@/backend/app.ts";
 import type { AppBindings } from "@/backend/app.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
@@ -306,7 +307,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(bindings.DeleteResourcePack).toHaveBeenCalledTimes(2);
   });
 
-  it("删除期间 _gen 变化 → 丢弃过期渲染且不发成功 toast", async () => {
+  it("删除期间 _guard 推进代际 → 丢弃过期渲染且不发成功 toast", async () => {
     const el = await mountEl();
     const renderSpy = vi.spyOn(el, "_renderTree");
     el.selectState.keys.add("/repo/a.ysm");
@@ -314,7 +315,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     loaderImpl = () => d.promise; // 挂起删除后的重载
     dispatchKey("Delete");
     await sleep0(); // 删除循环 + ClearScanCache 已完成，_load 挂起中
-    (el as unknown as { _gen: number })._gen += 1; // 模拟删除期间 root 切换
+    (el as unknown as { _guard: LoadGuard })._guard.invalidate(); // 模拟删除期间 root 切换
     d.resolve({ filesRoot: "/repo", entries: [] });
     await sleep0();
     expect(renderSpy).not.toHaveBeenCalled();
@@ -409,7 +410,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   it("未连接 setAttribute → 单次加载最新 root（快照差量，不再冗余双加载）", async () => {
     const el = document.createElement("app-tree") as unknown as AppTree;
     // ADR-111：VRM 已合并进 EntityPlayer 的 variants，用 "resourcepack" 测 root 预置
-    el.setAttribute("root", "resourcepack"); // 未连接：attributeChanged 同步 _rootAttr + ++_gen
+    el.setAttribute("root", "resourcepack"); // 未连接：attributeChanged 同步 _rootAttr + 推进代际
     document.body.appendChild(el);
     await waitFor(() => el.ready === true);
     // 单次加载（旧实现：预连接 setAttribute 置 _pendingRoot → connected 末尾补载 = 双加载）
@@ -430,7 +431,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     document.body.appendChild(el);
     await sleep0(); // connected 已发起 MMD 加载并 await（挂起中）
     // ADR-111：用 PACK 作第二类型测在途切换
-    el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换：attributeChanged ++_gen 作废首代
+    el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换：attributeChanged 推进代际作废首代
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] }); // 首代恢复 → gen 不匹配
     await waitFor(() => el.ready === true);
     expect(loader.mock.calls.map((c) => c[0])).toEqual([RESOURCE_TYPES.MMD, RESOURCE_TYPES.PACK]);

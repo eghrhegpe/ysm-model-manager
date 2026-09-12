@@ -4,13 +4,13 @@
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { fillAuthorsAsync, loadModelData } from "./loader.ts";
 import {
   buildBoneExportRow,
@@ -176,7 +176,7 @@ export async function loadModel2D(
     let _is3D = false,
       _prefer3D = ctx.getPrefer3D(),
       _loading3D = false;
-    const model3dGuard = new GenGuard();
+    const model3dGuard = createLoadGuard();
     const _toggle3D = async (): Promise<void> => {
       if (_loading3D) return;
       _is3D = !_is3D;

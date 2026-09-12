@@ -11,6 +11,8 @@ export interface LoadGuard {
   stale(gen: number): boolean;
   /** 使全部在途代数失效（cleanup 场景） */
   invalidate(): void;
+  /** 最新代数（不推进；纯捕获当前代，供「删除/读取期间捕获」式检查点使用） */
+  readonly current: number;
 }
 
 export function createLoadGuard(): LoadGuard {
@@ -20,6 +22,9 @@ export function createLoadGuard(): LoadGuard {
     stale: (g) => g !== gen,
     invalidate: () => {
       gen++;
+    },
+    get current() {
+      return gen;
     },
   };
 }

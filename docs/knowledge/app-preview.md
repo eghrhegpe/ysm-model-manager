@@ -45,7 +45,6 @@ auto_fields:
     - drawMiniView
     - drawView
     - fillAuthorsAsync
-    - GenGuard
     - getRegisteredRoutes
     - HitZone
     - invalidateEmptyPreview
@@ -167,7 +166,7 @@ use_when:
 invariant_anchors:
   - frontend/src/views/app-preview/index.ts|_previewGuard
   - frontend/src/views/app-preview/detail.ts|detailGen
-  - frontend/src/views/app-preview/gen-guard.ts|GenGuard
+  - frontend/src/utils/async/load-guard.ts|createLoadGuard
   - frontend/src/views/app-preview/skeleton.ts|closeActive3DOverlay
   - frontend/src/views/app-preview/loader.ts|loadModelData
 status: active
@@ -241,7 +240,7 @@ status: active
 
 ## 不变量
 
-- `model:select` 回调进入即 `_previewGuard.invalidate()`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (this._previewGuard.stale(gen)) return`（含 catch 分支），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览。代际守卫统一为 `gen-guard.ts` 的 `GenGuard` 类。
+- `model:select` 回调进入即 `_previewGuard.invalidate()`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (this._previewGuard.stale(gen)) return`（含 catch 分支），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览。代际守卫统一为 `utils/async/load-guard.ts` 的 `createLoadGuard`（ADR-230 收口，原 `gen-guard.ts` 的 `GenGuard` 类已删除，测试并入 `load-guard.test.ts`）。
 - `showLitematic` 有独立模块级代际 `litematicGen`
 - `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `_unsubs` 挂销毁清理
 - 2D 拖拽的 window 监听先移除上一轮再绑定——用 `AbortController`（**`ctx.dragAbortCtrl` 挂组件实例**，原模块级 `_prevAbort` 已迁移至实例——多实例互不串扰，P3 修复）：`ctx.dragAbortCtrl?.abort()` → `new AbortController()` → 监听带 `signal`，`ctx.unsubs` 注册 abort 清理，替代旧的手动 `_prevWindowMove`/`_prevWindowUp` 产消模式，无竞态

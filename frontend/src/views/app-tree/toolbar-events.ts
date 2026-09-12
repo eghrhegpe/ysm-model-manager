@@ -52,9 +52,9 @@ async function atTlShowConfirm(
     });
     return;
   }
-  const gen = vm._gen;
+  const gen = vm._guard.current;
   await vm._load();
-  if (gen !== vm._gen) return;
+  if (vm._guard.stale(gen)) return;
   vm._renderTree();
   bus.emit("toast:show", {
     msg: `✅ ${successMsg}`,
@@ -236,12 +236,12 @@ async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
   const { vm } = ctx;
   const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
   if (isWebPlatform()) {
-    const gen = vm._gen;
+    const gen = vm._guard.current;
     await pickWebFilesAndImport(
       rtype,
       () => vm._load(),
       () => {
-        if (vm._gen === gen) vm._renderTree();
+        if (!vm._guard.stale(gen)) vm._renderTree();
       },
     );
     return;
@@ -249,9 +249,9 @@ async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
   if (isViewerMode()) {
     const dir = await resolveAndroidRepoDir();
     if (!dir) return;
-    const gen = vm._gen;
+    const gen = vm._guard.current;
     await vm._load();
-    if (gen !== vm._gen) return;
+    if (vm._guard.stale(gen)) return;
     vm._renderTree();
     return;
   }
@@ -285,9 +285,9 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
       } else if (action === "refresh") {
         const tree = $("tree");
         if (tree) tree.innerHTML = spinnerHTML();
-        const gen = vm._gen;
+        const gen = vm._guard.current;
         await vm._load();
-        if (gen !== vm._gen) return;
+        if (vm._guard.stale(gen)) return;
         vm._renderTree();
       } else if (action === "genindex") {
         const btn = item as HTMLButtonElement;

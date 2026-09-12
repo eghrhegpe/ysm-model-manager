@@ -23,6 +23,10 @@
 
 外加 **app-tree 侧 22 处 raw `_gen` 散落**（4 文件：`index.ts` / `events.ts` / `toolbar-events.ts` / `bus-handlers.ts`，11 处比较 + 4 处自增 + 7 处捕获，`index.ts:100` 声明），是 `atBeGenGuard` 的宿主。
 
+**实施时扩大的两处（核实后追加，与「全仓唯一出口」决策直接相关）**：
+- **第 5 套**：`diagnostics/logs.ts|diagLoadSeq`（模块级裸 `++`/比较，日志加载代际守卫，与 perf 三兄弟同款但从未并入）→ 一并收编
+- **第 6 套**：`views/app-sync-manager|_gen`（index.ts 声明 + store/network 各 7 处读比，`self-type.ts` 契约字段）→ 一并收编
+
 **问题**：
 1. `GenGuard`（class）与 `createLoadGuard`（factory）语义等价，仅形态差异——`current` getter 只被 1 处测试消费，非生产依赖；重复维护两套无必要。
 2. `makeGenGuard` / `atBeGenGuard` 是「**外部状态源**」模式：自身不持有代数，读调用方传入的外部计数器。与内建模式**架构不兼容**——强行套进 `createLoadGuard` 签名（`next()` 自增）会破坏"外部自增"语义；要收敛须先把消费方改造为自持 guard，这是宿主 class/模块重构。
@@ -56,11 +60,11 @@
 
 ### D3. 迁移顺序（一次动作，防二次重构）
 
-①②③ **同一次提交/会话内完成**，不拆三次 PR——拆开会反复重构 `AppTree` class 与 perf 三兄弟：
+①②③④ **同一次提交/会话内完成**，不拆多次 PR——拆开会反复重构 `AppTree` / `AppSyncManager` class 与 perf 三兄弟：
 1. `load-guard.ts` 补 `current` getter（接口 + 实现 + 测试）
-2. `GenGuard` → `createLoadGuard`（app-preview 域 6 文件 + 测试合并）
-3. `makeGenGuard` 退役（perf-common 删除 + 3 调用方改自持）
-4. `AppTree` 加 `_guard` + 22 处替换 + `atBeGenGuard` 删除 + 测试适配
+2. `GenGuard` → `createLoadGuard`（app-preview 域 6 文件 + 测试合并，`gen-guard.ts`/`gen-guard.test.ts` 删除）
+3. `makeGenGuard` 退役（perf-common 删除 + 3 调用方改模块级自持 guard；perf 三兄弟各自的模块级 seq 变量被 guard 吸收）
+4. `AppTree` 加 `readonly _guard = createLoadGuard()`（public readonly——外部 4 文件经 `vm._guard` 读；private 会阻断 bus-handlers/toolbar-events 的跨文件访问）+ 22 处替换 + `atBeGenGuard` 语义并入 `vm._guard.stale(gen)`；`AppSyncManager` 同款（第 6 套）+ `diagnostics/logs.ts` 第 5 套
 5. 跑 views 全量测试（81 文件 ~1100+ 用例）+ typecheck + vite build + check-layering 全绿
 
 **明确排除（不做的）**：

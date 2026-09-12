@@ -72,7 +72,7 @@ vi.mock("./siblings.ts", () => ({
 import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack } from "./detail.ts";
 import { sleep } from "@/test-utils/index.ts";
 import { showVrmMeta, showMmdPreview } from "./detail-3d.ts";
-import { GenGuard } from "./gen-guard.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 
 function makeCtx(): PreviewCtx {
   const host = document.createElement("div");
@@ -85,7 +85,7 @@ function makeCtx(): PreviewCtx {
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,
-    detailGen: new GenGuard(),
+    detailGen: createLoadGuard(),
     getPrefer3D: vi.fn(() => false),
     setPrefer3D: vi.fn(),
   };

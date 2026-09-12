@@ -4,6 +4,8 @@
 //       文件夹重命名/新建/回收 / 批量重命名（空目录/成功/部分失败）/ tree:reload
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import type { TreeEntry } from "./loader.ts";
 
 const {
@@ -100,6 +102,7 @@ interface VM {
   batchBusy: boolean;
   _toggleBusy: boolean;
   entries: TreeEntry[];
+  _guard: LoadGuard;
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
   selectState: { keys: Set<string>; lastKey: string | null };
@@ -130,6 +133,7 @@ function makeVM(entries: TreeEntry[] = []): VM {
     batchBusy: false,
     _toggleBusy: false,
     entries: entries,
+    _guard: createLoadGuard(),
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),
     selectState: { keys: new Set(), lastKey: null },

@@ -93,9 +93,9 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     backendGetApp()
       .then(({ ToggleEnable }) => ToggleEnable(fullPath || ""))
       .then(async () => {
-        const gen = vm._gen;
+        const gen = vm._guard.current;
         await vm._load();
-        if (gen !== vm._gen) return;
+        if (vm._guard.stale(gen)) return;
         vm._renderTree();
         if (atTeGetRtype(vm) === RESOURCE_TYPES.YSM) {
           bus.emit("sync:toggle:status");

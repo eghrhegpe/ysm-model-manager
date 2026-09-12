@@ -5,11 +5,11 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
-  makeGenGuard,
   sectionHeader,
   setBusy,
   setErrorCatch,
@@ -17,8 +17,8 @@ import {
   setErrorResp,
 } from "./perf-common.ts";
 
-// 代际守卫
-let perfGuiSeq = 0;
+// 代际守卫（ADR-230）
+const perfGuiGuard = createLoadGuard();
 
 interface GuiFlowStage {
   status: string;
@@ -85,21 +85,14 @@ function guiFlowRenderStages(
 }
 
 export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({
-    get current() {
-      return perfGuiSeq;
-    },
-    set current(v) {
-      perfGuiSeq = v;
-    },
-  });
+  const gen = perfGuiGuard.next();
   const out = getOutBox(root, "diag-perf-gui-out");
   if (!out) return;
   if (guiFlowWebModeCheck()) return;
   setBusy(out);
   try {
     const resp = await executeCLI("gui-flow", { verbose: true });
-    if (stale()) return;
+    if (perfGuiGuard.stale(gen)) return;
     // 结构化消费（ADR-200 D2/D3）：直接读 data.stages，禁止对人类文案做正则反解析。
     // 失败阶段（status=error，如「③ 模型分析」失败）也照常渲染阶段明细——
     // Go 侧 SetResult 先于汇总报错，错误分支同样带回结构化载荷（规律六）。
@@ -124,7 +117,7 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
       esc,
     );
   } catch (e) {
-    if (stale()) return;
+    if (perfGuiGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);
   }
 }

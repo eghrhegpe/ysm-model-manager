@@ -2,7 +2,7 @@
 // 覆盖：litematic/nbt/schematic 三种路径、解析失败、材料列表、3D tab、Tab 切换、代际守卫
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
-import { GenGuard } from "./gen-guard.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 
 /** vi.fn 返回类型（hoisted 占位标注用） */
 type MockFn = ReturnType<typeof vi.fn>;
@@ -61,7 +61,7 @@ beforeEach(() => {
     active3DClose: null,
     getPrefer3D: vi.fn().mockReturnValue(false),
     setPrefer3D: vi.fn(),
-    detailGen: new GenGuard(),
+    detailGen: createLoadGuard(),
   };
   mocks.ReadLitematicMeta.mockResolvedValue({
     name: "建筑",

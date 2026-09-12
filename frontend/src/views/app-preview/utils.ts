@@ -3,7 +3,7 @@
 // ADR-137 第五刀拆分：纯领域部分（DecodedYsm / stripYsgpTextHeader / devLog）
 // 已归位 preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
 
-import type { GenGuard } from "./gen-guard.ts";
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 /** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） */
@@ -49,7 +49,7 @@ export interface Prefer3DState {
 
 /** 详情代际守卫（实例级，多实例隔离防串扰） */
 export interface DetailGenGuard {
-  detailGen: GenGuard;
+  detailGen: LoadGuard;
 }
 
 /** 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。
@@ -73,7 +73,7 @@ export interface PreviewCtx
 export interface PreviewRouterCtx {
   root: ShadowRoot;
   /** 预览代际守卫：快速点 A→B 时丢弃过期加载的渲染，防并发覆盖 */
-  previewGuard: GenGuard;
+  previewGuard: LoadGuard;
   /** 类型元数据缓存（LoadResourceTypes 结果） */
   typeCache: Array<{ id: string; name?: string; icon?: string }>;
 }

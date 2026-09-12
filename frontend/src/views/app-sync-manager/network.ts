@@ -48,9 +48,9 @@ export async function performSingleOp(
     if (!self.isConnected) return;
     const msg = op === "push" ? t("syncManager.pushed") : t("syncManager.pulled");
     bus.emit("toast:show", { msg, duration: TOAST_MS.success });
-    const gen = self._gen;
+    const gen = self._guard.current;
     await cb.doLoadData();
-    if (gen !== self._gen || !self.isConnected) return;
+    if (self._guard.stale(gen) || !self.isConnected) return;
     cb.doRender();
     cb.doEmitStats();
   } catch (e) {

@@ -4,10 +4,10 @@
 import { t } from "@/core/i18n/t.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
-  makeGenGuard,
   respHasOutput,
   sectionHeader,
   setBusy,
@@ -16,8 +16,8 @@ import {
   setErrorResp,
 } from "./perf-common.ts";
 
-// 代际守卫
-let perfHistSeq = 0;
+// 代际守卫（ADR-230）
+const perfHistGuard = createLoadGuard();
 
 interface PerfLogEntry {
   date: string;
@@ -68,20 +68,13 @@ function perfLogRenderCards(entries: PerfLogEntry[], rawOutput: string, esc: Esc
 }
 
 export async function runPerfLog(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({
-    get current() {
-      return perfHistSeq;
-    },
-    set current(v) {
-      perfHistSeq = v;
-    },
-  });
+  const gen = perfHistGuard.next();
   const out = getOutBox(root, "diag-perf-hist");
   if (!out) return;
   setBusy(out);
   try {
     const resp = await executeCLI("perf-log", {});
-    if (stale()) return;
+    if (perfHistGuard.stale(gen)) return;
     if (!respHasOutput(resp)) {
       setErrorResp(out, resp, esc);
       return;
@@ -93,7 +86,7 @@ export async function runPerfLog(root: ShadowRoot, esc: EscFn): Promise<void> {
     }
     out.innerHTML = perfLogRenderCards(parsed, resp.data.output, esc);
   } catch (e) {
-    if (stale()) return;
+    if (perfHistGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);
   }
 }

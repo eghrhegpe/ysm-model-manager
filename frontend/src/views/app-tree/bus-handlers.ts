@@ -17,8 +17,8 @@ import type { AppTree } from "./index.ts";
 import { loadEntries } from "./loader.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
-function atBeGenGuard(vm: AppTree, gen: number): boolean {
-  return gen !== vm._gen;
+function atBeStale(vm: AppTree, gen: number): boolean {
+  return vm._guard.stale(gen);
 }
 
 export function bindBusEvents(vm: AppTree): Array<() => void> {
@@ -276,13 +276,13 @@ async function reload(vm: AppTree): Promise<void> {
   } catch (e) {
     logWarn("app-tree", "ClearScanCache:", e);
   }
-  const gen = vm._gen;
+  const gen = vm._guard.current;
   try {
     const rtype = vm.snapshot.rootAttr || "";
     const r = vm.snapshot.subdirAttr
       ? await loadEntries(rtype, vm.snapshot.subdirAttr)
       : await loadEntries(rtype);
-    if (atBeGenGuard(vm, gen)) return;
+    if (atBeStale(vm, gen)) return;
     if (r) {
       vm.filesRoot = r.filesRoot;
       vm.entries = r.entries;
@@ -290,7 +290,7 @@ async function reload(vm: AppTree): Promise<void> {
       vm.entries = [];
     }
   } catch (err) {
-    if (atBeGenGuard(vm, gen)) return;
+    if (atBeStale(vm, gen)) return;
     logWarn("bus", "reload 失败:", err);
     vm.entries = [];
     bus.emit("toast:show", {
@@ -299,7 +299,7 @@ async function reload(vm: AppTree): Promise<void> {
       type: "error",
     });
   }
-  if (atBeGenGuard(vm, gen)) return;
+  if (atBeStale(vm, gen)) return;
   vm._renderTree();
 }
 

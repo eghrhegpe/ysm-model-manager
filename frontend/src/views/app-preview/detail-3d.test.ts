@@ -6,7 +6,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
 import type { PreviewCtx } from "./utils.ts";
-import { GenGuard } from "./gen-guard.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 
 const {
   getAppMock,
@@ -57,7 +58,7 @@ import {
   showStagePreview,
 } from "./detail-3d.ts";
 
-function makeCtx(detailGen?: GenGuard): PreviewCtx {
+function makeCtx(detailGen?: LoadGuard): PreviewCtx {
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   return {
@@ -72,7 +73,7 @@ function makeCtx(detailGen?: GenGuard): PreviewCtx {
     setPrefer3D: vi.fn(),
     // 跨入口卡互相作废的场景须传同一 guard（生产 = 同一 AppPreview 实例同一 ctx，
     // commit 058b6c82f 起 detailGen 为实例属性注入，不再有模块级隐式共享）
-    detailGen: detailGen ?? new GenGuard(),
+    detailGen: detailGen ?? createLoadGuard(),
   };
 }
 
@@ -188,7 +189,7 @@ describe("showVrmMeta 分支补全", () => {
           release = res;
         }),
     );
-    const sharedGen = new GenGuard();
+    const sharedGen = createLoadGuard();
     const ctx1 = makeCtx(sharedGen);
     const p1 = showVrmMeta(ctx1, "/repo/slow.vrm");
     // 并发的 MMD 入口卡共用同一 detailGen（生产 = 同一 AppPreview 实例）
@@ -209,7 +210,7 @@ describe("showVrmMeta 分支补全", () => {
           reject = rej;
         }),
     );
-    const sharedGen = new GenGuard();
+    const sharedGen = createLoadGuard();
     const ctx1 = makeCtx(sharedGen);
     const p1 = showVrmMeta(ctx1, "/repo/slow2.vrm");
     const ctx2 = makeCtx(sharedGen);

@@ -4,11 +4,13 @@
 // → 构成 index ↔ leaf 的 type-only 循环。现将契约下沉至此，index 与四叶模块统一从本文件导入，
 // 依赖方向收敛为：leaf → self-type（纯类型），index → leaf（运行值）。index re-export 保持旧出口兼容。
 
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import type { SyncItem } from "./tpl.ts";
 
 /** 自定义字段（子模块通过 SyncManagerSelf 读写） */
 export interface SyncManagerFields {
-  _gen: number;
+  /** 代际守卫（ADR-230）：全仓唯一出口 createLoadGuard，_gen 裸计数退役 */
+  _guard: LoadGuard;
   _instance: string;
   _selectedType: string;
   _subtype: string;

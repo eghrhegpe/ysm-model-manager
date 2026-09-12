@@ -229,7 +229,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 474 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 553 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 554 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -297,7 +297,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 261 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 205 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 212 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 214 |
 
 ### `repo:search-creator`
 
@@ -322,7 +322,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 235 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 237 |
 
 ### `stats:refresh`
 
@@ -348,8 +348,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 91 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 164 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 141 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 143 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 157 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 92 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -360,7 +360,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 192 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 194 |
 
 ### `sync:download:done`
 
@@ -531,7 +531,7 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 185 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 187 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
@@ -564,12 +564,12 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 432 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 489 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 499 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 77 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 324 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 485 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 605 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 612 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 78 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 325 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 478 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 486 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 606 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 613 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 48 |
@@ -628,4 +628,4 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 251 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 252 |

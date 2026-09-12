@@ -3,6 +3,7 @@
 //       作者菜单填充、批量按钮、更多菜单（打开文件夹/导入/刷新/生成索引）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
+import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import type { AppTree } from "./index.ts";
 
 const {
@@ -123,6 +124,7 @@ interface VM {
   _root: ShadowRoot;
   _rootAttr: string;
   _authors: Array<{ Name?: string; Count?: number } | string>;
+  _guard: LoadGuard;
   selectState: { keys: Set<string>; lastKey: string | null };
   _renderTree: ReturnType<typeof vi.fn>;
   _load: ReturnType<typeof vi.fn>;
@@ -159,6 +161,7 @@ function makeVM(root: ShadowRoot): VM {
     _root: root,
     _rootAttr: "ysm",
     _authors: [],
+    _guard: createLoadGuard(),
     selectState: { keys: new Set(), lastKey: null },
     _renderTree: vi.fn(),
     _load: vi.fn().mockResolvedValue(undefined),

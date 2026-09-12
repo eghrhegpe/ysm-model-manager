@@ -31,9 +31,9 @@ import {
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { isYsmWasmPreview } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { PREVIEW_CLEANUP, PREVIEW_INVALIDATE } from "./preview-registry.ts";
 import { routeModelPreview, routePackInfo } from "./preview-router.ts";
 import { closeActive3DOverlay } from "./skeleton.ts";
@@ -59,13 +59,13 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   /** 类型元数据缓存（LoadResourceTypes 结果），路由层消费 */
   typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
-  private _previewGuard = new GenGuard();
+  private _previewGuard = createLoadGuard();
   /** 路由层访问预览守卫（PreviewRouterCtx.previewGuard） */
-  get previewGuard(): GenGuard {
+  get previewGuard(): LoadGuard {
     return this._previewGuard;
   }
   /** 详情代际守卫（实例级，多实例隔离防串扰） */
-  detailGen = new GenGuard();
+  detailGen = createLoadGuard();
   /** 3D 偏好状态（实例级，跨模型切换保留） */
   private _prefer3D = false;
 

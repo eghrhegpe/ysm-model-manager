@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
+import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
 const { mocks, renderMock } = vi.hoisted(() => ({
@@ -43,7 +44,7 @@ type SelfView = {
   _selectedType: string;
   _subtype: string;
   _filesRoots: Record<string, string>;
-  _gen: number;
+  _guard: LoadGuard;
 };
 
 function mount(instance = "test"): { el: HTMLElement; self: SelfView } {
@@ -94,7 +95,7 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
       () => mocks.GetInstanceSyncStatus.mock.calls.length === calls0 + 1,
       5000,
     );
-    expect(self._gen).toBe(2); // 每次进入 _init 代际 +1
+    expect(self._guard.current).toBe(2); // 每次进入 _init 代际 +1
 
     el.setAttribute("default-type", "vrm");
     // 正等结果：_defaultType 字段更新为 vrm

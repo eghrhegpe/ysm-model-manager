@@ -13,13 +13,13 @@ import {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
@@ -97,7 +97,7 @@ export function invalidateMaidPreview(): void {
 /** 详情预览共享局域状态（3D 打开并发防护） */
 interface MaidPreviewState {
   loading3D: boolean;
-  model3dGuard: GenGuard;
+  model3dGuard: LoadGuard;
 }
 
 /** 逐组件统计（GetModel3DSpec spec.models 投影，与 3D「组件」下拉同一视图）。
@@ -351,7 +351,7 @@ export async function showMaidPreview(
   // 共享局域 state：3D 打开并发防护 + 封面预览图 URI
   const state: MaidPreviewState & { previewUri?: string | null } = {
     loading3D: false,
-    model3dGuard: new GenGuard(),
+    model3dGuard: createLoadGuard(),
     previewUri: null,
   };
   const render = (): void => {

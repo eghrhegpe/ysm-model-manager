@@ -63,7 +63,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - frontend/src/views/app-sync-manager/index.ts|_gen
+  - frontend/src/views/app-sync-manager/index.ts|_guard
 status: active
 ---
 
@@ -76,7 +76,7 @@ status: active
 ## 核心职责
 
 - `index.ts` — `<app-sync-manager>` 组件（拆分模式）：`observedAttributes: ["instance", "default-type"]`；`store.ts` 的 `loadTypeConfig` 调 `LoadResourceTypes` 拉类型配置（失败 toast + 空数组降级；过期代际静默丢弃）、`_loadData` 调 `GetInstanceSyncStatus` 拉全量条目，`renderer.ts` 的 `render` 渲染「当前类型只读指示（`shortLabelOf`，类型选择已全局化到 app-nav 下拉）+ 状态筛选标签」（全部/已同步/待推送/已禁用/可拉取/旧仓库遗留）+ **`.sm-summary` 摘要栏（`GetSyncScanDirs` 返回仓库基准/实例实际扫描目录，兜底路径可见）** + 条目列表；`network.ts` 的 `performSingleOp` 单文件 push/pull（原 `_pushSingleFile`/`_pullSingleFile` 80% 重复已合并），由 `_singleBusy`（`Set<string>` 按 path 粒度）防重入——不同行可并发，同一行串行；busy 视觉由 `_singleBusy.size > 0` 派生
-- `_init` 代际计数 `_gen`：每次进入自增，`await` 类型配置与数据后若 `gen !== this._gen` 直接返回，丢弃 instance 快速切换产生的过期渲染与订阅
+- `_init` 代际守卫 `_guard`（`createLoadGuard`，ADR-230 收口，原裸 `_gen` 计数退役）：每次进入 `_guard.next()`，`await` 类型配置与数据后若 `_guard.stale(gen)` 直接返回，丢弃 instance 快速切换产生的过期渲染与订阅
 - `tpl.ts` — 模板：`containerHTML` / `itemHTML` / `statusTabHTML` / `emptyHTML` / `loadingHTML` + `SyncItem` 类型
 
 ## 对外 API / 入口

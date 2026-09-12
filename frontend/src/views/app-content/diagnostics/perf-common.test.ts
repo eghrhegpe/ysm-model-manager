@@ -8,7 +8,7 @@ vi.mock("@/bus", () => ({
   bus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
-import { sectionHeader, bindPerfCopyHandlers, makeGenGuard, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput } from "./perf-common.ts";
+import { sectionHeader, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput } from "./perf-common.ts";
 
 describe("sectionHeader", () => {
   it("icon + label → 带 icon 和 label 的 HTML", () => {
@@ -30,19 +30,6 @@ describe("sectionHeader", () => {
 
   it("空字符串参数 → 不抛错", () => {
     expect(() => sectionHeader("", "")).not.toThrow();
-  });
-});
-
-describe("makeGenGuard", () => {
-  it("递增代际 + stale 判定", () => {
-    const ref = { current: 0 };
-    const g1 = makeGenGuard(ref);
-    expect(g1.gen).toBe(1);
-    expect(g1.stale()).toBe(false);
-    const g2 = makeGenGuard(ref);
-    expect(g2.gen).toBe(2);
-    expect(g1.stale()).toBe(true);
-    expect(g2.stale()).toBe(false);
   });
 });
 

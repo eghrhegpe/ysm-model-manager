@@ -1,6 +1,7 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 
 import { t } from "@/core/i18n/t.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
@@ -96,8 +97,8 @@ export class AppTree extends WebComponentBase {
   private _deleting = false;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
   private _ready = false;
-  /** root 属性切换代际计数：快速切换时丢弃过期加载的渲染 */
-  _gen = 0;
+  /** root 属性切换代际守卫（ADR-230）：快速切换时丢弃过期加载的渲染 */
+  _guard = createLoadGuard();
 
   /** 渲染上下文（实例级，含 WeakMap 缓存） */
   treeRenderCtx: TreeRenderCtx = createTreeRenderCtx();
@@ -213,9 +214,9 @@ export class AppTree extends WebComponentBase {
     // 同步段内不可能有 attributeChanged（JS 单线程），此值即「挂载开始时的事实」。
     const initRoot = this._state.rootAttr;
     const initSubdir = this._state.subdirAttr;
-    // 挂载代际捕获：二次挂载时若 root 在途被切换（attributeChangedCallback 已 ++_gen），
+    // 挂载代际捕获：二次挂载时若 root 在途被切换（attributeChangedCallback 已推进代际），
     // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
-    const gen = ++this._gen;
+    const gen = this._guard.next();
 
     Object.assign(this._state.dirOpen, safeGetJSON<Record<string, boolean>>("dirOpenState", {}));
 
@@ -261,11 +262,11 @@ export class AppTree extends WebComponentBase {
       this._loadAuthorsAsync();
 
       await this._load();
-      // 挂载期间 root 在途切换（attributeChangedCallback 已 ++_gen）→ 丢弃本代渲染
+      // 挂载期间 root 在途切换（attributeChangedCallback 已推进代际）→ 丢弃本代渲染
       //（不 return：事件绑定/订阅与渲染解耦，容器不变，后续逻辑照常执行）
-      if (gen === this._gen) this._renderTree();
+      if (!this._guard.stale(gen)) this._renderTree();
       // 时序收敛（审计 c）：root/subdir 在挂载期间切换 → 快照差量触发补载最新值，
-      // 取代原 _pendingRoot 事后纠错（原实现 attributeChanged 未 ready 分支不 ++_gen，
+      // 取代原 _pendingRoot 事后纠错（原实现 attributeChanged 未 ready 分支不推进代际，
       // 首代渲染不被丢弃 → 需 pendingRoot 补载纠错 + 未连接 setAttribute 冗余双加载）。
       // 首代 _load 已用最新 _rootAttr 完成 → 渲染无错配；仅快照差时补载一次。
       if (this._state.rootAttr !== initRoot || this._state.subdirAttr !== initSubdir) {
@@ -283,16 +284,16 @@ export class AppTree extends WebComponentBase {
 
   /** 挂载期间 root/subdir 切换后的补载：清扫描缓存 → 重载最新值 → 守卫渲染；失败节流 toast + 兜底渲染 */
   private async _reloadAfterMountSwitch(): Promise<void> {
-    const gen2 = ++this._gen;
+    const gen2 = this._guard.next();
     try {
       const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache(); // root 切换清扫描缓存
       await this._load();
-      if (gen2 === this._gen) this._renderTree();
+      if (!this._guard.stale(gen2)) this._renderTree();
     } catch (e) {
       logError("app-tree", "pendingRoot Error", e);
       // 补载失败：entries 保留首代数据 → 兜底渲染避免空白树（gen 未被再次作废时）
-      if (gen2 === this._gen && this._state.entries.length) this._renderTree();
+      if (!this._guard.stale(gen2) && this._state.entries.length) this._renderTree();
       toastThrottled(e, t("tree.treeLoadFailed"));
     }
   }
@@ -303,12 +304,12 @@ export class AppTree extends WebComponentBase {
     if (name === "root") this._state.rootAttr = newVal || "";
     if (name === "subdir") this._state.subdirAttr = newVal || "";
     if (!this._ready || !this.isConnected) {
-      // 挂载未完成：递增代际作废在途首代 _load 的迟到渲染（否则首代渲染「新 rootAttr +
+      // 挂载未完成：作废在途首代 _load 的迟到渲染（否则首代渲染「新 rootAttr +
       // 旧 entries」错配帧上屏）；connected 末尾用入口快照差量补载，无冗余双加载。
-      ++this._gen;
+      this._guard.invalidate();
       return;
     }
-    const gen = ++this._gen;
+    const gen = this._guard.next();
     void this._attrChangeReloadAsync(gen);
   }
 
@@ -317,7 +318,7 @@ export class AppTree extends WebComponentBase {
       const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache();
       await this._load();
-      if (gen !== this._gen) return;
+      if (this._guard.stale(gen)) return;
       this._renderTree();
     } catch (e) {
       logError("app-tree", "root change Error", e);
@@ -570,7 +571,7 @@ export class AppTree extends WebComponentBase {
   async _deleteSelected(paths: string[], rtype: string): Promise<void> {
     if (this._deleting) return; // 并发守卫：连点 Delete 只执行第一次
     this._deleting = true;
-    const gen = this._gen; // P2-1 代际捕获：删除期间 root 切换/新加载 → 丢弃过期渲染
+    const gen = this._guard.current; // P2-1 代际捕获：删除期间 root 切换/新加载 → 丢弃过期渲染
     try {
       let ok = 0,
         fail = 0;
@@ -600,7 +601,7 @@ export class AppTree extends WebComponentBase {
         logWarn("app-tree", "ClearScanCache 失败:", e);
       }
       await this._load();
-      if (gen !== this._gen) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
+      if (this._guard.stale(gen)) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
       this._renderTree();
       bus.emit("toast:show", {
         msg: `✅ ${t("tree.deleted", { ok, fail: fail || 0 })}`,

@@ -1,4 +1,5 @@
 import { t } from "@/core/i18n/t.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -6,7 +7,6 @@ import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { GenGuard } from "./gen-guard.ts";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
 import type { PreviewRoot } from "./utils.ts";
 
@@ -19,7 +19,7 @@ function fmtTime(ms: number): string {
 
 // P2 修复：模块级代际守卫——showLitematic 独立于 app-preview 的 _previewGen，
 // await Go 解析期间用户切到别的模型时，慢结果不得写进新模型的 #preview-detail
-const litematicGuard = new GenGuard();
+const litematicGuard = createLoadGuard();
 
 /**
  * P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在

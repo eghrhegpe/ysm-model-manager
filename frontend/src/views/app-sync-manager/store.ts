@@ -17,11 +17,11 @@ export type SyncStoreSelf = SyncManagerSelf;
  * 过期代际/已卸载静默丢弃；加载失败 toast 提醒 + 空数组降级。
  */
 export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
-  const gen = self._gen;
+  const gen = self._guard.current;
   try {
     const { LoadResourceTypes } = await backendGetApp();
     const reg = await LoadResourceTypes();
-    if (gen !== self._gen) return;
+    if (self._guard.stale(gen)) return;
     // 只取前端需要的字段子集
     self._typeConfig = (reg?.resourceTypes || []).map((r) => ({
       id: r.id,
@@ -30,7 +30,7 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
       dirLevelSync: r.dirLevelSync,
     }));
   } catch {
-    if (gen !== self._gen || !self.isConnected) return;
+    if (self._guard.stale(gen) || !self.isConnected) return;
     self._typeConfig = [];
     bus.emit("toast:show", {
       msg: t("syncManager.loadTypeConfigFailed"),
@@ -45,7 +45,7 @@ export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
  * 过期代际丢弃；加载失败 toast 提醒 + 空数组。
  */
 export async function loadData(self: SyncStoreSelf): Promise<void> {
-  const gen = self._gen;
+  const gen = self._guard.current;
   try {
     const { GetInstanceSyncStatus } = await backendGetApp();
     const items = await GetInstanceSyncStatus(
@@ -53,7 +53,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
       self._subtype || "",
       self._selectedType || "",
     );
-    if (gen !== self._gen) return;
+    if (self._guard.stale(gen)) return;
     // Go 生成类型 children 可 null → 前端 SyncItem 用 undefined（结构同源，仅空值形态差异）
     self._allItems = (items || []).map((it) => ({
       ...it,
@@ -64,7 +64,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
       try {
         const { GetSyncScanDirs } = await backendGetApp();
         const dirs = await GetSyncScanDirs(self._selectedType, self._instance);
-        if (gen !== self._gen) return;
+        if (self._guard.stale(gen)) return;
         if (!self._scanDirs) self._scanDirs = {};
         self._scanDirs[self._selectedType] = {
           global: dirs?.global ?? "",
@@ -86,7 +86,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
       }
     }
   } catch {
-    if (gen !== self._gen) return;
+    if (self._guard.stale(gen)) return;
     self._allItems = [];
     bus.emit("toast:show", {
       msg: t("syncManager.loadSyncStatusFailed"),

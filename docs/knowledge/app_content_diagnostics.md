@@ -27,12 +27,14 @@ auto_fields:
     - EscFn
     - formatSize
     - getDefaultKeepIdx
+    - getOutBox
     - initDiagnostics
     - initPerfPanel
     - loadDiagnosticsLogs
     - loadRuntimeLogs
     - renderHealthReport
     - renderLoadTraceSection
+    - respHasOutput
     - runGuiFlow
     - runHealthAudit
     - runPerfLog
@@ -40,6 +42,10 @@ auto_fields:
     - scanConflicts
     - scanSyncConflicts
     - sectionHeader
+    - setBusy
+    - setErrorCatch
+    - setErrorMsg
+    - setErrorResp
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

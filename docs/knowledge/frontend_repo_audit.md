@@ -471,7 +471,6 @@ auto_fields:
     - FsaAuthState
     - FSLike
     - generateSurfacePixels
-    - GenGuard
     - getAllByTestId
     - getAllowedCLICommands
     - getAndroidBridge

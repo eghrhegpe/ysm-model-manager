@@ -3,6 +3,7 @@
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -10,10 +11,11 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 /** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
 export type EscFn = (s: unknown) => string;
 
-// P3 修复（子代理审计，代际守卫）：日志加载模块级序号——刷新/筛选/tab 切换可并发
-// 触发 loadDiagnosticsLogs/loadRuntimeLogs，后端慢时旧响应后到会覆盖新响应（用户已
-// 切筛选/搜索，列表却显示旧条件结果）；入口捕获 gen，await 后写 DOM 前比对丢弃陈旧
-let diagLoadSeq = 0;
+// P3 修复（子代理审计，代际守卫；ADR-230 收口为全仓唯一守卫出口）：日志加载模块级守卫——
+// 刷新/筛选/tab 切换可并发触发 loadDiagnosticsLogs/loadRuntimeLogs，后端慢时旧响应后到会
+// 覆盖新响应（用户已切筛选/搜索，列表却显示旧条件结果）；入口捕获 gen，await 后写 DOM
+// 前比对丢弃陈旧
+const diagLoadGuard = createLoadGuard();
 
 /** 绑定 ImportLog（仅用到的字段） */
 interface ImportLogLike {
@@ -50,13 +52,13 @@ function dgLsGetListAndGen(
 ): { list: HTMLElement; gen: number; copyLogTitle: string } | null {
   const list = root.getElementById(listId);
   if (!list) return null;
-  const gen = ++diagLoadSeq;
+  const gen = diagLoadGuard.next();
   const copyLogTitle = t("diagnostics.copyLog");
   return { list, gen, copyLogTitle };
 }
 
 function dgLsCheckStale(gen: number): boolean {
-  return gen !== diagLoadSeq;
+  return diagLoadGuard.stale(gen);
 }
 
 function dgLsSetEmpty(list: HTMLElement, key: LocaleKey, type: "muted" | "error" = "muted"): void {

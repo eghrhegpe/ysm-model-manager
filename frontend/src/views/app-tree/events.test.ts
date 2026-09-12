@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -104,7 +105,7 @@ function makeHarness(): Harness {
   const vm = {
     get rootAttr() { return rootAttrVal; },
     set rootAttr(v: string | null) { rootAttrVal = v; },
-    _gen: 0,
+    _guard: createLoadGuard(),
     _load: vi.fn().mockResolvedValue(undefined),
     _renderTree: vi.fn(),
     _root: root,

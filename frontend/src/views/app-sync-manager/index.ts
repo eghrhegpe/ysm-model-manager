@@ -7,6 +7,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -58,7 +59,8 @@ export class AppSyncManager extends WebComponentBase {
   _filteredItems: SyncItem[] = [];
   _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
   _loading = false;
-  _gen = 0;
+  /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard */
+  readonly _guard = createLoadGuard();
   private _initGen = 0;
   _eventsBound = false;
   _clickHandler: ((e: Event) => void) | null = null;
@@ -116,7 +118,7 @@ export class AppSyncManager extends WebComponentBase {
   async _init(): Promise<void> {
     const self = this as SyncManagerSelf;
     const initGen = ++this._initGen;
-    const gen = ++this._gen;
+    const gen = this._guard.next();
     this._loading = true;
     this.innerHTML = containerHTML();
     const listEl = this.querySelector(".sm-list");
@@ -169,7 +171,7 @@ export class AppSyncManager extends WebComponentBase {
     await loadData(self);
     await loadRepoRoots(self, this._selectedType);
 
-    if (gen !== this._gen || !this.isConnected) return;
+    if (this._guard.stale(gen) || !this.isConnected) return;
 
     this._loading = false;
     try {
@@ -191,11 +193,11 @@ export class AppSyncManager extends WebComponentBase {
 
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
-      const gen = this._gen;
+      const gen = this._guard.current;
       dbg("sync-manager", "stats:refresh 收到");
       loadData(self)
         .then(async () => {
-          if (gen !== this._gen) return;
+          if (this._guard.stale(gen)) return;
           await loadRepoRoots(self, this._selectedType);
           dbg("sync-manager", "_loadData 完成, items:", this._allItems ? this._allItems.length : 0);
           this._doRender();
@@ -216,10 +218,10 @@ export class AppSyncManager extends WebComponentBase {
       setLastSelectedType(rt);
       this._statusFilter = "all";
       this._subtype = ""; // 切类型重置子类型选择
-      const gen = this._gen;
+      const gen = this._guard.current;
       loadData(self)
         .then(async () => {
-          if (gen !== this._gen) return;
+          if (this._guard.stale(gen)) return;
           // 类型切换时重新加载类型配置，确保 _typeConfig 反映最新注册表（dirLevelSync 等字段生效）
           await loadTypeConfig(self);
           await loadRepoRoots(self, rt);
@@ -237,10 +239,10 @@ export class AppSyncManager extends WebComponentBase {
       const want = subdir || "";
       if (want === this._subtype) return;
       this._subtype = want;
-      const gen = this._gen;
+      const gen = this._guard.current;
       loadData(self)
         .then(() => {
-          if (gen !== this._gen || !this.isConnected) return;
+          if (this._guard.stale(gen) || !this.isConnected) return;
           this._doRender();
         })
         .catch((err) => {

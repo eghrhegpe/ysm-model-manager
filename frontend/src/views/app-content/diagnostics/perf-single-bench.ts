@@ -4,10 +4,10 @@
 import { t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
-  makeGenGuard,
   respHasOutput,
   sectionHeader,
   setBusy,
@@ -17,8 +17,8 @@ import {
 } from "./perf-common.ts";
 import { renderPerfTrendSection, savePerfRecord } from "./perf-trend.ts";
 
-// 代际守卫：single-bench 命令可并发/快速连点，旧响应后到会覆盖新响应
-let perfSingleSeq = 0;
+// 代际守卫（ADR-230）：single-bench 命令可并发/快速连点，旧响应后到会覆盖新响应
+const perfSingleGuard = createLoadGuard();
 
 interface SingleBenchStage {
   name: string;
@@ -114,14 +114,7 @@ function singleBenchRenderBars(
 }
 
 export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void> {
-  const { stale } = makeGenGuard({
-    get current() {
-      return perfSingleSeq;
-    },
-    set current(v) {
-      perfSingleSeq = v;
-    },
-  });
+  const gen = perfSingleGuard.next();
   const out = getOutBox(root, "diag-perf-single");
   if (!out) return;
   const params = singleBenchValidateAndRender(root, out, esc);
@@ -129,7 +122,7 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
   setBusy(out);
   try {
     const resp = await executeCLI("single-bench", params);
-    if (stale()) return;
+    if (perfSingleGuard.stale(gen)) return;
     if (!respHasOutput(resp)) {
       setErrorResp(out, resp, esc);
       return;
@@ -141,7 +134,7 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
     }
     out.innerHTML = singleBenchRenderBars(parsed.stages, parsed.total, resp.data.output, esc);
   } catch (e) {
-    if (stale()) return;
+    if (perfSingleGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);
   }
 }

@@ -83,16 +83,6 @@ export function bindPerfCopyHandlers(root: ShadowRoot): void {
 
 type CLIResp = Awaited<ReturnType<typeof executeCLI>>;
 
-interface GenGuard {
-  gen: number;
-  stale: () => boolean;
-}
-
-function makeGenGuard(seqRef: { current: number }): GenGuard {
-  const gen = ++seqRef.current;
-  return { gen, stale: () => gen !== seqRef.current };
-}
-
 function getOutBox(root: ShadowRoot, id: string): HTMLElement | null {
   return root.getElementById(id);
 }
@@ -135,12 +125,4 @@ function respHasOutput(
 // ===== 导出命令模块用的辅助 =====
 
 export type { CLIResp };
-export {
-  getOutBox,
-  makeGenGuard,
-  respHasOutput,
-  setBusy,
-  setErrorCatch,
-  setErrorMsg,
-  setErrorResp,
-};
+export { getOutBox, respHasOutput, setBusy, setErrorCatch, setErrorMsg, setErrorResp };

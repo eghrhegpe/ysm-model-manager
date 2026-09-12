@@ -19,16 +19,28 @@ import {
 import { dirKey } from "./web-fs-shared.ts";
 
 // ===== §5 文件读取 =====
-/** 读文件（/web/<type>/<rest> → IDB → base64；wasm.ts 解码链零改动复用）
- *  模型组 name 与组内 rel 在 file key 中无缝拼接（file:<type>/<name>/<rel>），
- *  多段 name（目录树，如 /web/ysm/分类1/狐狸/狐狸.ysm）无需拆分边界：
- *  直接以 <type> 后全部路径段作 key（对齐 MikuMikuAR dir key 匹配模式）。 */
-export async function readWebFile(path: string): Promise<string | null> {
+/** 读文件原始字节：`/web/<type>/<rest>` → IDB → `ArrayBuffer`（**零 base64 往返**）。
+ *
+ *  ADR-228：这是 file key 构造的**单一事实源**——`readWebFile`（base64 形态）也复用本函数。
+ *  网页版解码链应优先走本路径：`readWebFile` 的 base64 编码纯属浪费（本地函数调用，
+ *  无 IPC/序列化边界），往返一次烧掉 1.33N(b64) + slice + rope + atob ≈ 4.3N。 */
+export async function readWebFileArrayBuffer(path: string): Promise<ArrayBuffer | null> {
   const pm = parseWebPath(path);
   if (!pm) return null;
   const f = await idbGet<{ data: ArrayBuffer }>("files", `file:${pm.type}/${pm.rest}`);
   if (!f) return null;
-  return arrayBufferToBase64(f.data);
+  return f.data;
+}
+
+/** 读文件（/web/<type>/<rest> → IDB → base64；wasm.ts 解码链零改动复用）
+ *  模型组 name 与组内 rel 在 file key 中无缝拼接（file:<type>/<name>/<rel>），
+ *  多段 name（目录树，如 /web/ysm/分类1/狐狸/狐狸.ysm）无需拆分边界：
+ *  直接以 <type> 后全部路径段作 key（对齐 MikuMikuAR dir key 匹配模式）。
+ *  ⚠️ 仅用于**确实需要 base64** 的消费方（如经 Wails 桩或 base64 契约的 binding）；
+ *  解码链请用 `readWebFileArrayBuffer`（ADR-228）。 */
+export async function readWebFile(path: string): Promise<string | null> {
+  const ab = await readWebFileArrayBuffer(path);
+  return ab ? arrayBufferToBase64(ab) : null;
 }
 
 /** 体素渲染上限对齐 internal/app/resource_bindings.go voxelMaxBlocks 默认 200000 */

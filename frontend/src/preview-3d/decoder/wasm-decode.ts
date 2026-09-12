@@ -2,6 +2,7 @@
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 
 import { getApp } from "@/backend/app.ts";
+import { readModelBytes } from "@/backend/read-model-bytes.ts";
 import { warnLargeModelIfNeeded } from "@/preview-3d/infra/large-model.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
@@ -43,7 +44,11 @@ interface TexDim {
 interface InflightCtx {
   modelPath: string;
   baseDir: string;
-  ReadFileBytes: (path: string) => Promise<string | null>;
+  /** 字节直读（ADR-228）：契约从「base64 字符串」升格为「字节」——网页版由
+   *  `backend/read-model-bytes.ts|readModelBytes` 走 IDB `ArrayBuffer` 直出
+   *  （零 base64 往返，省 ≈4.3N），桌面/Android 仍在 seam 内部包掉 base64 往返。
+   *  本解码层不再感知编码格式。 */
+  ReadBytes: (path: string) => Promise<Uint8Array | null>;
 }
 
 /** WASM 输出的纹理累加器（collectTexturesAndAvatars 产出，供后续 model/anim 阶段读） */
@@ -75,27 +80,9 @@ interface ProcessModelCtx {
   firstGeometryRawRef: { current: string | null };
 }
 
-// ===== 基础工具：base64 → Uint8Array（消除 4 处 atob+for 循环重复） =====
-
-function Base64ToBytes(b64: string): Uint8Array {
-  const rawStr = atob(b64);
-  const len = rawStr.length;
-  const arr = new Uint8Array(len);
-  for (let i = 0; i < len; i++) arr[i] = rawStr.charCodeAt(i);
-  return arr;
-}
-
 function GetBaseDir(modelPath: string): string {
   const dir = modelPath.replace(/\\/g, "/");
   return dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : ".";
-}
-
-async function ReadBytesFromPath(
-  ReadFileBytes: (p: string) => Promise<string | null>,
-  relPath: string,
-): Promise<Uint8Array | null> {
-  const raw = await ReadFileBytes(relPath);
-  return raw ? Base64ToBytes(raw) : null;
 }
 
 // ===== 阶段① 同步分派辅助：缺文件 / 直接 JSON / YSM spec JSON =====
@@ -114,7 +101,7 @@ async function LoadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise
         au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\")
           ? au.avatarPath
           : `avatar/${au.avatarPath}`;
-      const avatarBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${avatarRel}`);
+      const avatarBytes = await ctx.ReadBytes(`${ctx.baseDir}/${avatarRel}`);
       if (avatarBytes?.length) {
         const blob = new Blob([avatarBytes.buffer as ArrayBuffer]);
         au.avatarUrl = URL.createObjectURL(blob);
@@ -173,9 +160,9 @@ async function HandleYsmJsonSpec(
       if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
         modelRel = `models/${mfStr}`;
       }
-      let modelBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${modelRel}`);
+      let modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${modelRel}`);
       if (!modelBytes) {
-        modelBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${mfStr}`);
+        modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${mfStr}`);
         if (!modelBytes) continue;
       }
       const jsonStr = new TextDecoder().decode(modelBytes);
@@ -201,7 +188,7 @@ async function HandleYsmJsonSpec(
         tfStr.startsWith("textures/") || tfStr.startsWith("textures\\")
           ? tfStr
           : `textures/${tfStr}`;
-      const texBytes = await ReadBytesFromPath(ctx.ReadFileBytes, `${ctx.baseDir}/${texRel}`);
+      const texBytes = await ctx.ReadBytes(`${ctx.baseDir}/${texRel}`);
       if (!texBytes) continue;
 
       const blob = new Blob([texBytes.buffer as ArrayBuffer], {
@@ -722,34 +709,30 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   if (cachedGeo?.bones?.length) return cached as DecodedYsm;
   if (cached?._wasmFailed) return null;
 
-  let ReadFileBytes: (path: string) => Promise<string | null>;
-  let raw: string | null;
+  let bytes: Uint8Array | null;
   try {
-    ({ ReadFileBytes } = await getApp());
-    raw = await ReadFileBytes(modelPath);
+    // ADR-228：字节直读 seam——网页版走 IndexedDB ArrayBuffer 直出（零 base64 往返，
+    // 省 ≈4.3N 峰值）；桌面/Android 仍在 seam 内部包掉 Wails 的 base64 往返。
+    // 本层不再接触 base64 中间串（原 `Base64ToBytes` 链已下沉到 seam）。
+    bytes = await readModelBytes(modelPath);
   } catch (e) {
     // 读文件/后端瞬时失败：不缓存 _wasmFailed（那是解码失败标记），仅记日志返回 null，
     // 下次调用可重试读文件——避免后端短暂不可用导致本会话永久跳过该模型。
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
     return null;
   }
-  const bytes = raw ? Base64ToBytes(raw) : new Uint8Array(0);
-  // 显式释放 base64 中间串（≈1.33× 文件大小）：后续全程只用 bytes，但 `raw` 是
-  // 函数作用域的 let → 不置 null 就要等函数返回才可回收，而函数内还要跑完
-  // 整条 WASM 解码（峰值最大的阶段）。审查 C-1：1 行换 1.33N 峰值。
-  raw = null;
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
   if (!bytes?.length) return HandleEmptyBytes(modelPath);
 
-  // 受限平台大文件内存风险前置告知：峰值 ≈3-4× 文件大小（六层拷贝并存），
+  // 受限平台大文件内存风险前置告知：峰值 ≈4.33× 文件大小（拷贝链实测，ADR-228），
   // 网页版/Android 的 100MB 阈值是唯一防线，超阈给用户预期而非静默 OOM。
   warnLargeModelIfNeeded(bytes.length, modelPath);
 
   const ctx: InflightCtx = {
     modelPath,
     baseDir: GetBaseDir(modelPath),
-    ReadFileBytes,
+    ReadBytes: readModelBytes,
   };
 
   try {

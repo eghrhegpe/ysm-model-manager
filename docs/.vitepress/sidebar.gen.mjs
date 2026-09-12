@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-228：网页版模型字节直读：消除 base64 往返",
+        "link": "/adr/ADR-228-web-bytes-direct-read"
+      },
+      {
         "text": "ADR-227：preview-3d 模块级单例收敛为实例（P1 战役）",
         "link": "/adr/ADR-227-preview-3d-singleton-to-instance"
       },

@@ -13,10 +13,12 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
-// 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回
+// 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回。
+// 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
+// 纯并发守卫故保留模块级 busy；try/finally 兜底复位（见 :276）。改造会话工厂 ROI 低，不立项。
 let diagScanning = false;
 
-// 同步冲突扫描并发标志
+// 同步冲突扫描并发标志（同 diagScanning 豁免理由；try/finally 兜底复位 :277）
 let diagSyncBusy = false;
 
 interface DgCfInstanceFile {

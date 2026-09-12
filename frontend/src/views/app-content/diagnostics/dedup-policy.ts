@@ -8,29 +8,37 @@ export interface DedupFileLike {
   modTime?: string | number;
 }
 
-// modTime 缺失/非法 → 返回 MAX_SAFE_INTEGER。**该哨兵只对 oldest 策略成立**（MAX 不可能是最小值，
-// 故 oldest 下不会被选中，无时间信息时兜底首项）；但 newest 取最大值，哨兵会让这类文件被判为
-// 「最新」——与「视为最老」的意图相反。真实场景 Go 扫描恒带回 ModTime（go/dedup），仅 mtime 恰为
-// epoch 0 才触发，当前实际不可达。方向待裁决（newest 侧视作 -Infinity 或排除出候选）；现状由
-// dedup-policy.test.ts 的「记录现状·待裁决」用例钉住。
-function toTimestamp(modTime?: string | number): number {
-  if (modTime === undefined || modTime === null || modTime === "") return Number.MAX_SAFE_INTEGER;
+// modTime 缺失/非法 → null（「无时间信息」，不参与时间裁决）。各策略在 reduce 内自行兜底：
+// 全缺失时取首项（严格比较保序）。Go 扫描恒带回 ModTime（go/dedup），仅 mtime 恰为 epoch 0
+// 才触发，生产不可达。
+function toTimestamp(modTime?: string | number): number | null {
+  if (modTime === undefined || modTime === null || modTime === "") return null;
   const ts = typeof modTime === "number" ? modTime : Date.parse(modTime);
-  return Number.isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
+  return Number.isNaN(ts) ? null : ts;
+}
+
+/** 按时间戳 pick：null 候选跳过（不参与裁决）；全 null 时回退首项（严格比较保序）。 */
+function pickByTime(files: DedupFileLike[], cmp: (a: number, b: number) => boolean): number {
+  let best = -1;
+  for (let i = 0; i < files.length; i++) {
+    const t = toTimestamp(files[i].modTime);
+    if (t === null) continue;
+    if (best === -1) {
+      best = i;
+      continue;
+    }
+    const bt = toTimestamp(files[best].modTime);
+    if (bt !== null && cmp(t, bt)) best = i;
+  }
+  return best === -1 ? 0 : best;
 }
 
 function reduceOldestIdx(files: DedupFileLike[]): number {
-  return files.reduce(
-    (best, e, i, arr) => (toTimestamp(e.modTime) < toTimestamp(arr[best].modTime) ? i : best),
-    0,
-  );
+  return pickByTime(files, (a, b) => a < b);
 }
 
 function reduceNewestIdx(files: DedupFileLike[]): number {
-  return files.reduce(
-    (best, e, i, arr) => (toTimestamp(e.modTime) > toTimestamp(arr[best].modTime) ? i : best),
-    0,
-  );
+  return pickByTime(files, (a, b) => a > b);
 }
 
 function reducePathIdx(files: DedupFileLike[], priorityPath: string): number {

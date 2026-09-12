@@ -152,6 +152,8 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
 }
 
 // 实际函数由 init-workshop.ts 注入
+// 【保留不 reset】initWorkshopPage 每次调用都覆盖 _showSiteView（init-workshop.ts:139），
+// 旧闭包残留但无实际泄漏风险（组件未重挂载时旧 host 也未销毁，闭包仍有效）。
 let _showSiteView: (site: WorkshopSite | null) => void = () => {};
 
 export function setShowSiteView(fn: (site: WorkshopSite | null) => void): void {

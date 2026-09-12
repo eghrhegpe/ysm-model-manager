@@ -11,7 +11,9 @@ import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 
-// 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML
+// 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML。
+// 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
+// 纯并发守卫故保留模块级 busy；try/finally 兜底复位（见 :51）。改造会话工厂 ROI 低，不立项。
 let _healthBusy = false;
 
 /**

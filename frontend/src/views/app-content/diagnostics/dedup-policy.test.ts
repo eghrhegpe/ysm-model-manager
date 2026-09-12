@@ -39,13 +39,13 @@ describe("getDefaultKeepIdx — oldest 策略", () => {
     expect(getDefaultKeepIdx(files, "oldest", "")).toBe(1);
   });
 
-  it("modTime 缺失者（MAX_SAFE_INTEGER）不抢真正最老的席位", () => {
-    // 有真实时间戳的文件才是「最早修改」，缺失者（MAX_SAFE_INTEGER）不该被选中
+  it("modTime 缺失者（null）不抢真正最老的席位", () => {
+    // 有真实时间戳的文件才是「最早修改」，缺失者（null）不参与时间裁决
     const files = [f("no-time.ysm", 10), f("real-old.ysm", 10, "2018-01-01T00:00:00Z")];
     expect(getDefaultKeepIdx(files, "oldest", "")).toBe(1);
   });
 
-  it("modTime 全缺失 → 首项（并列 MAX_SAFE_INTEGER，严格 < 保序）", () => {
+  it("modTime 全缺失 → 首项（全 null 时严格 < 保序兜底）", () => {
     const files = [f("a.ysm", 10), f("b.ysm", 20)];
     expect(getDefaultKeepIdx(files, "oldest", "")).toBe(0);
   });
@@ -73,14 +73,18 @@ describe("getDefaultKeepIdx — newest 策略", () => {
     expect(getDefaultKeepIdx(num, "newest", "")).toBe(1);
   });
 
-  // ⚠️ 记录「当前实现」行为，非「期望」行为——投给审核的待裁决项：
-  // toTimestamp 缺失/非法返回 MAX_SAFE_INTEGER，注释自述「视为最老」（dedup-policy.ts:11），
-  // 但 newest 取最大值 → 无时间信息的文件反而被判为最新。oldest 侧巧合正确（MAX 不是最小），
-  // newest 侧与声明意图相反：真实场景 Go 扫描恒带回 modTime，故未暴露。
-  // 改法（会改行为，需先拍板）：缺失时间戳在 newest 侧视作 -Infinity，或直接排除出候选。
-  it("【记录现状·待裁决】modTime 缺失者在 newest 下被选中（与「视为最老」注释相悖）", () => {
+  it("modTime 缺失者（null）不抢真正最新的席位（P0 修复：2026-09 语义收口）", () => {
+    // toTimestamp 缺失/非法返回 null（「无时间信息」），不参与时间裁决；
+    // 有真实时间戳的文件才是「最新修改」，缺失者不该被选中。
+    // 2026-09 修复前行为：toTimestamp 缺失返回 MAX_SAFE_INTEGER，newest 取最大值 → 无时间信息
+    // 反被判为「最新」，与「视为最老」意图相悖（Go 扫描恒带回 modTime，故生产不可达）。
     const files = [f("real-new.ysm", 10, "2023-06-01T00:00:00Z"), f("no-time.ysm", 10)];
-    expect(getDefaultKeepIdx(files, "newest", "")).toBe(1);
+    expect(getDefaultKeepIdx(files, "newest", "")).toBe(0);
+  });
+
+  it("modTime 全缺失 → 首项（全 null 时严格 > 保序兜底）", () => {
+    const files = [f("a.ysm", 10), f("b.ysm", 20)];
+    expect(getDefaultKeepIdx(files, "newest", "")).toBe(0);
   });
 });
 

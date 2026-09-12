@@ -139,6 +139,8 @@ import {
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { GPU_BUDGET_CALIBRATION_KEY } from "@/preview-3d/infra/gpu-load-calibrate.ts";
+import { resetFakeRendererStats, setFakeRendererStats } from "@/test-utils/fake-webgl-renderer.ts";
 import { bus } from "@/bus";
 
 /** 最小 panel 菜单项 */
@@ -899,5 +901,81 @@ describe("ESC 关闭后再次 mount（canvas 重新挂载回归）", () => {
     expect(reParent).not.toBeNull();
     expect(reParent!.className).toContain("preview-view-container");
     cleanupPreview();
+  });
+});
+
+// ===== 直挂路径 GPU 预算门（刀⑪ 立门 + 刀⑫ hasActivePreview 语义修正）=====
+// 审查 P1-1 根因：本门原先**零覆盖**——FakeWebGLRenderer 无 info 字段 → 采样走
+// fail-open 读 0 → guardGpuBudget 恒放行，判反了测试也全绿。补 info 注入后可真驱动。
+describe("mount3D 直挂路径 GPU 预算门", () => {
+  beforeEach(() => {
+    localStorage.removeItem(GPU_BUDGET_CALIBRATION_KEY); // 防跨用例标定值干扰默认阈值断言
+  });
+  afterEach(() => {
+    resetFakeRendererStats();
+  });
+
+  it("无残留会话（首挂）→ 不进门（reader 是空 renderer，无可拦负载）", async () => {
+    // 即便统计被注入超限值，首挂也不拦——门的前置条件要求「确有未释放负载」
+    setFakeRendererStats({ calls: 9999, triangles: 9_000_000 });
+    const adapter = makeAdapter();
+    await mount3D(adapter, "solo.vrm");
+    expect(adapter.build).toHaveBeenCalledTimes(1);
+  });
+
+  it("有残留会话 + 统计超限 → 拦截：build 未调用 + toast 附实测值 + 外壳已回收", async () => {
+    const first = makeAdapter();
+    await mount3D(first, "a.vrm");
+    expect(hasActivePreview()).toBe(true); // 前置条件成立
+    setFakeRendererStats({ calls: 2000, triangles: 2_000_000 });
+
+    const second = makeAdapter();
+    const toasts: unknown[] = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    try {
+      await mount3D(second, "b.vrm");
+      expect(second.build).not.toHaveBeenCalled();
+      const hit = toasts.find((t) =>
+        String((t as { msg: string }).msg).includes("GPU 负载已超预算"),
+      ) as { msg: string; type: string } | undefined;
+      expect(hit).toBeDefined();
+      expect(hit!.type).toBe("warn");
+      expect(hit!.msg).toContain("draw calls 2000 > 1600");
+      expect(hit!.msg).toContain("triangles 2000000 > 1000000");
+      // runFullCleanup 生效（非裸 return）：会话清空 + overlay 摘除
+      expect(hasActivePreview()).toBe(false);
+      expect(document.getElementById("ysm-overlay-3d")).toBeNull();
+    } finally {
+      off();
+    }
+  });
+
+  it("拦截后统计归零 → 可正常再 mount（不自锁）", async () => {
+    await mount3D(makeAdapter(), "a.vrm");
+    setFakeRendererStats({ calls: 2000 });
+    const blocked = makeAdapter();
+    await mount3D(blocked, "b.vrm");
+    expect(blocked.build).not.toHaveBeenCalled();
+
+    resetFakeRendererStats();
+    const third = makeAdapter();
+    await mount3D(third, "c.vrm");
+    expect(third.build).toHaveBeenCalledTimes(1);
+  });
+
+  it("统计在预算内 + 有残留会话 → 放行（既有行为不变）", async () => {
+    await mount3D(makeAdapter(), "a.vrm");
+    setFakeRendererStats({ calls: 100, triangles: 1000, textures: 8 });
+    const second = makeAdapter();
+    await mount3D(second, "b.vrm");
+    expect(second.build).toHaveBeenCalledTimes(1);
+  });
+
+  it("纹理数超限也拦（多维判定在 mount 路径同样生效）", async () => {
+    await mount3D(makeAdapter(), "a.vrm");
+    setFakeRendererStats({ calls: 10, textures: 4000 });
+    const second = makeAdapter();
+    await mount3D(second, "b.vrm");
+    expect(second.build).not.toHaveBeenCalled();
   });
 });

@@ -84,4 +84,20 @@ describe("warnLargeModelIfNeeded", () => {
     warnLargeModelIfNeeded(Number.POSITIVE_INFINITY, "/inf.ysm");
     expect(spy).not.toHaveBeenCalled();
   });
+
+  // 审查 P3-3：去重 Set 原为无界，长会话浏览海量模型会单调常驻增长。
+  it("去重记录有界：超过上限淘汰最旧，长会话不无界增长（照抄 i18n warnedResiduals 范式）", () => {
+    const spy = vi.spyOn(bus, "emit");
+    // 灌 250 个（上限 200）：全部首次 → 各提示一次
+    for (let i = 0; i < 250; i++) {
+      warnLargeModelIfNeeded(100 * 1024 * 1024, `/m${i}.ysm`);
+    }
+    expect(spy).toHaveBeenCalledTimes(250);
+    // 最旧的已被淘汰 → 再加载会重新提示一次（可接受的退化，远优于无界增长）
+    warnLargeModelIfNeeded(100 * 1024 * 1024, "/m0.ysm");
+    expect(spy).toHaveBeenCalledTimes(251);
+    // 最近的仍在记录里 → 不重复提示
+    warnLargeModelIfNeeded(100 * 1024 * 1024, "/m249.ysm");
+    expect(spy).toHaveBeenCalledTimes(251);
+  });
 });

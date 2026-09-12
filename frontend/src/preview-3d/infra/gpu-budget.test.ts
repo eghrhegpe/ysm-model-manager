@@ -23,7 +23,10 @@ const renderer = (o: {
     },
   }) as unknown as THREE.WebGLRenderer;
 
-/** 往全局 textureCache 塞一张 w×h 的假纹理（字节维度测试用） */
+const MIP_FACTOR = 4 / 3;
+
+/** 往全局 textureCache 塞一张 w×h 的假纹理（字节维度测试用）。
+ *  `generateMipmaps` 未设 → 按 three 默认 true → 计 mip 链系数。 */
 const seedTexture = (url: string, w: number, h: number): void => {
   textureCache.acquire(url, () => ({ image: { width: w, height: h } }) as unknown as THREE.Texture);
 };
@@ -70,10 +73,31 @@ describe("guardGpuBudget", () => {
   });
 
   it("纹理字节超限（经 textureCache 聚合）→ 拦截", () => {
-    // 8 张 8K ≈ 2GB > 256MB 默认上限
+    // 8 张 8K（含 mip 链）≈ 2.7GB > 256MB 默认上限
+    // 口径：逐张 Math.round 后累加（实现如此，非整体 round）
     for (let i = 0; i < 8; i++) seedTexture(`/tex${i}.png`, 8192, 8192);
-    expect(textureCache.getTotalBytes()).toBe(8 * 8192 * 8192 * 4);
+    expect(textureCache.getTotalBytes()).toBe(
+      8 * Math.round(8192 * 8192 * 4 * MIP_FACTOR),
+    );
     expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(false);
+  });
+
+  it("4 张 4K 含 mip 链 → 确定超 256MB 默认上限（补 mip 前的踩线态已消除）", () => {
+    for (let i = 0; i < 4; i++) seedTexture(`/k${i}.png`, 4096, 4096);
+    expect(textureCache.getTotalBytes()).toBeGreaterThan(256 * 1024 * 1024);
+    expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(false);
+  });
+
+  it("generateMipmaps=false 的纹理不计 mip 系数", () => {
+    textureCache.acquire(
+      "/nomip.png",
+      () =>
+        ({
+          image: { width: 1024, height: 1024 },
+          generateMipmaps: false,
+        }) as unknown as THREE.Texture,
+    );
+    expect(textureCache.getTotalBytes()).toBe(1024 * 1024 * 4);
   });
 
   it("纹理数量少但字节小 → 放行（字节维度不误报）", () => {

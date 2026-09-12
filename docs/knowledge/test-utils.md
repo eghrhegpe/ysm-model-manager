@@ -14,6 +14,7 @@ auto_fields:
     - expectNotContains
     - extractIds
     - FakeImage
+    - FakeRendererStats
     - fireBlur
     - fireClick
     - fireDrop
@@ -39,6 +40,8 @@ auto_fields:
     - RenderOptions
     - RenderResult
     - resetAppMock
+    - resetFakeRendererStats
+    - setFakeRendererStats
     - setupAppMock
     - sleep
     - stubBlobUrls

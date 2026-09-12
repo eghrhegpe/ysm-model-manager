@@ -1,11 +1,16 @@
 // ===== 大文件解码内存风险警示（受限平台 OOM 的前置防线）=====
 // 背景：前端 WASM 解码 .ysm 的峰值内存 ≈ 3-4× 文件大小——base64 → Uint8Array →
 // WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（见 docs/knowledge/model3d.md
-// 不变量）。100MB 阈值是网页版唯一防线，4GB RAM 设备的峰值可能触顶 OOM。
+// 不变量）。网页版另有 100MB 导入/内存**硬阈值**作为最后防线，4GB RAM 设备峰值可能触顶 OOM。
 //
 // 本模块**不改内存模型**（零拷贝流式解码是长期项），只做**事前告知**：受限平台
 // 加载超大模型时给一条带实测字节数的 toast，让用户对卡顿/崩溃有预期，
 // 而不是静默 OOM 后一脸茫然。
+//
+// ⚠️ 两档阈值别混淆（审查 P4 指出原注释把二者写成同一个）：
+//   - **100MB** = 别处的导入/内存硬阈值（网页版唯一防线，触到即拒/降级）；
+//   - **50MB**（本模块 `LARGE_MODEL_WARN_BYTES`）= **事前警示线**，刻意低于硬阈值：
+//     在用户还有机会反悔时先告知风险，而不是等撞上硬阈值才静默失败。
 //
 // 归属说明：判定 + 文案提示放 infra 横向层（decoder 是纯解析层，不引 i18n/bus）。
 
@@ -14,11 +19,18 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
-/** 警示阈值：50MB。峰值按 3× 估算即 150MB，4GB 受限设备已接近危险区。 */
+/** 事前警示阈值：50MB（刻意低于 100MB 硬阈值）。峰值按 3× 估算即 150MB，
+ *  4GB 受限设备已接近危险区。 */
 export const LARGE_MODEL_WARN_BYTES = 50 * 1024 * 1024;
 
 /** 峰值内存倍数——实测范围 3-4×，取下界做乐观估计（避免吓人，且已足够警示）。 */
 const PEAK_MEMORY_FACTOR = 3;
+
+/** 去重记录上限（审查 P3-3）：受限平台长会话浏览海量模型时，无界 Set 会单调
+ *  常驻增长。超限淘汰最旧（Set 迭代序 = 插入序），照抄 `core/i18n/t.ts|warnedResiduals`
+ *  的既有有界范式（AGENTS.md：复用既有范式，勿另造）。被淘汰的路径若再次加载
+ *  会重新提示一次——可接受的退化（远优于无界增长）。 */
+const WARNED_PATHS_MAX = 200;
 
 /** 单次会话内已警示的路径：同一模型反复切换预览只提醒一次（防 toast 轰炸）。 */
 const warnedPaths = new Set<string>();
@@ -42,6 +54,11 @@ export function warnLargeModelIfNeeded(bytes: number, path: string): void {
   if (!isViewerMode()) return;
   if (!Number.isFinite(bytes) || bytes <= LARGE_MODEL_WARN_BYTES) return;
   if (warnedPaths.has(path)) return;
+  // 有界去重：超限淘汰最旧（插入序首个），防长会话无界增长
+  if (warnedPaths.size >= WARNED_PATHS_MAX) {
+    const oldest = warnedPaths.values().next().value;
+    if (oldest !== undefined) warnedPaths.delete(oldest);
+  }
   warnedPaths.add(path);
   const sizeMb = Math.round(bytes / (1024 * 1024));
   const peakMb = Math.round((bytes * PEAK_MEMORY_FACTOR) / (1024 * 1024));

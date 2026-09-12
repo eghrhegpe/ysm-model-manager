@@ -12,6 +12,33 @@
 //   });
 import { vi } from "vitest";
 
+/** 可注入的渲染统计（供基于 `renderer.info` 的 GPU 预算门 / 采样器测试驱动）。
+ *
+ *  背景：本 Fake 原本**没有 `info` 字段** → `sampleGpuLoad` 走 fail-open 读 0 →
+ *  `guardGpuBudget` 恒放行 → mount 路径的预算门在测试里**一次都没被触发过**
+ *  （刀⑪ 审查 P1-1：新门零覆盖，判反了测试也全绿）。补上 `info` 让门可被驱动。 */
+export interface FakeRendererStats {
+  /** 上一帧 draw calls */
+  calls?: number;
+  /** 上一帧三角面数 */
+  triangles?: number;
+  /** GPU 纹理数 */
+  textures?: number;
+}
+
+let stats: FakeRendererStats = {};
+
+/** 设置后续 FakeWebGLRenderer 实例的 `info` 统计（用例内 mount 前调）。
+ *  默认全 0 —— 既有 mount 测试行为不变（fail-open 全放行）。 */
+export function setFakeRendererStats(next: FakeRendererStats): void {
+  stats = next;
+}
+
+/** 复位为全 0（`afterEach` 调，防跨用例串扰）。 */
+export function resetFakeRendererStats(): void {
+  stats = {};
+}
+
 /** 返回 canvas 形态的 FakeWebGLRenderer 类（每次调用新建，避免跨文件类态泄漏）。 */
 export function makeCanvasFakeRenderer() {
   return class FakeWebGLRenderer {
@@ -21,6 +48,17 @@ export function makeCanvasFakeRenderer() {
     render = vi.fn();
     dispose = vi.fn();
     getSize = (v: { set: (x: number, y: number) => unknown }): unknown => v.set(800, 600);
+    /** 结构对齐 `three.WebGLRenderer.info`（`GpuLoadSample` 读 render.calls/triangles
+     *  + memory.textures）。getter 形式：每次读都反映当前注入值。 */
+    get info() {
+      return {
+        render: { calls: stats.calls ?? 0, triangles: stats.triangles ?? 0, frame: 0, points: 0 },
+        memory: { geometries: 0, textures: stats.textures ?? 0 },
+        programs: [] as unknown[],
+        autoReset: true,
+        reset: () => {},
+      };
+    }
     constructor() {
       const el = document.createElement("canvas") as HTMLCanvasElement & {
         getBoundingClientRect?: () => unknown;

@@ -92,16 +92,21 @@ describe("resolveGpuLoadLimits", () => {
     expect(resolveGpuLoadLimits()).toEqual(DEFAULT_GPU_LOAD_LIMITS);
   });
 
-  it("有标定记录 → 标定值生效", () => {
+  it("有标定记录 → 标定值生效（区间内的值原样采用）", () => {
     localStorage.setItem(
       GPU_BUDGET_CALIBRATION_KEY,
-      JSON.stringify({ drawCalls: 500, triangles: 600, textures: 700, textureBytes: 800 }),
+      JSON.stringify({
+        drawCalls: 500,
+        triangles: 200_000,
+        textures: 700,
+        textureBytes: 64 * 1024 * 1024,
+      }),
     );
     expect(resolveGpuLoadLimits()).toEqual({
       drawCalls: 500,
-      triangles: 600,
+      triangles: 200_000,
       textures: 700,
-      textureBytes: 800,
+      textureBytes: 64 * 1024 * 1024,
     });
   });
 
@@ -110,16 +115,36 @@ describe("resolveGpuLoadLimits", () => {
     expect(resolveGpuLoadLimits()).toEqual(DEFAULT_GPU_LOAD_LIMITS);
   });
 
-  it("非法字段（负数/非数值/字符串）→ 逐字段回落默认", () => {
+  it("非对象 JSON（数组/字符串/数字）→ 回落默认", () => {
+    for (const bad of ["[1,2]", '"str"', "42", "null"]) {
+      localStorage.setItem(GPU_BUDGET_CALIBRATION_KEY, bad);
+      expect(resolveGpuLoadLimits()).toEqual(DEFAULT_GPU_LOAD_LIMITS);
+    }
+  });
+
+  // ===== clamp 区间（审查 P2-2 自锁防线）=====
+  it("非法字段（负数/非数值/0）→ 逐字段回落默认", () => {
     localStorage.setItem(
       GPU_BUDGET_CALIBRATION_KEY,
-      JSON.stringify({ drawCalls: -5, triangles: "abc", textures: 0, textureBytes: 3000 }),
+      JSON.stringify({ drawCalls: -5, triangles: "abc", textures: 0 }),
     );
     const r = resolveGpuLoadLimits();
     expect(r.drawCalls).toBe(DEFAULT_GPU_LOAD_LIMITS.drawCalls);
     expect(r.triangles).toBe(DEFAULT_GPU_LOAD_LIMITS.triangles);
-    expect(r.textures).toBe(DEFAULT_GPU_LOAD_LIMITS.textures); // 0 非法 → 默认
-    expect(r.textureBytes).toBe(3000); // 合法 → 保留
+    expect(r.textures).toBe(DEFAULT_GPU_LOAD_LIMITS.textures);
+  });
+
+  it("**自锁防线**：极小值被 clamp 到默认 × 0.1（一行脏存储不能拦死全部 3D）", () => {
+    localStorage.setItem(GPU_BUDGET_CALIBRATION_KEY, JSON.stringify({ drawCalls: 1 }));
+    const r = resolveGpuLoadLimits();
+    // 不 clamp 的话 drawCalls=1 → 渲染器恒 > 1 → 每次加载都被拦，且生产无 UI 逃生口
+    expect(r.drawCalls).toBe(DEFAULT_GPU_LOAD_LIMITS.drawCalls * 0.1);
+    expect(r.drawCalls).toBeGreaterThan(1);
+  });
+
+  it("上限：超大值被 clamp 到默认 × 10（防预算形同不存在）", () => {
+    localStorage.setItem(GPU_BUDGET_CALIBRATION_KEY, JSON.stringify({ drawCalls: 9e15 }));
+    expect(resolveGpuLoadLimits().drawCalls).toBe(DEFAULT_GPU_LOAD_LIMITS.drawCalls * 10);
   });
 
   it("clearGpuBudgetCalibration 清除后回落默认", () => {
@@ -130,16 +155,16 @@ describe("resolveGpuLoadLimits", () => {
 });
 
 describe("runGpuBudgetCalibration（注入假时钟）", () => {
-  it("按 durationMs 采样、返回峰值 + 建议值，并落盘", async () => {
+  it("按 durationMs 采样、返回峰值 + 建议值，并落盘生效", async () => {
     let clock = 0;
     let i = 0;
     const sample = (): GpuLoadSample => {
       i++;
       return snap({
-        drawCalls: i * 10,
-        triangles: i,
+        drawCalls: i * 100,
+        triangles: i * 1000,
         textures: i,
-        textureBytes: i * 100,
+        textureBytes: i * 1024,
       });
     };
     const result = await runGpuBudgetCalibration(sample, 250, {
@@ -150,10 +175,25 @@ describe("runGpuBudgetCalibration（注入假时钟）", () => {
     });
     // 假时钟推进 100/次：t=0 采 → 100 → 200 → 300 退出 = 3 个样本
     expect(result.samples).toBe(3);
-    expect(result.peak.drawCalls).toBe(30);
+    expect(result.peak.drawCalls).toBe(300);
+    expect(result.suggested.drawCalls).toBe(450);
+    // 落盘 = 真的生效（resolveGpuLoadLimits 读同一 key；450 在合法区间内原样采用）
+    expect(resolveGpuLoadLimits().drawCalls).toBe(450);
+  });
+
+  it("极小峰值 → 建议值被 clamp 抬到下限（标定不产生自锁值）", async () => {
+    let clock = 0;
+    const result = await runGpuBudgetCalibration(() => snap({ drawCalls: 30 }), 0, {
+      now: () => clock,
+      wait: async (ms: number) => {
+        clock += ms;
+      },
+    });
+    // 峰值 30 × 1.5 = 45 → 低于默认 × 0.1（160）→ 抬到 160
     expect(result.suggested.drawCalls).toBe(45);
-    // 落盘 = 真的生效（resolveGpuLoadLimits 读同一 key）
-    expect(resolveGpuLoadLimits().drawCalls).toBe(45);
+    expect(result.peak.drawCalls).toBe(30);
+    expect(resolveGpuLoadLimits().drawCalls).toBe(DEFAULT_GPU_LOAD_LIMITS.drawCalls * 0.1);
+    expect(resolveGpuLoadLimits().drawCalls).toBeGreaterThan(30);
   });
 
   it("durationMs=0 → 仍采一次（不返回全 0 峰值）", async () => {

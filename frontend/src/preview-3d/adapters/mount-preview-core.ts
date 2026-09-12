@@ -76,7 +76,12 @@ import { sceneRegistry } from "./scene-registry.ts";
 import { sessionLedger } from "./session-ledger.ts";
 // §5 拆分：场景单例/基础设施装配 → shared-infra.ts；
 // 统一拾取器 → unified-pick.ts
-import { buildSharedInfra, resetSceneInfra, type SharedInfra } from "./shared-infra.ts";
+import {
+  buildSharedInfra,
+  resetSceneInfra,
+  type SharedInfra,
+  sceneInfraHost,
+} from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import { PREVIEW_OVERLAY_ID } from "./ui-constants.ts";
@@ -363,6 +368,31 @@ export async function mount3D(
   // cooperate=true 时多个模型叠加在同一 scene；cooperate=false 时先清除旧模型再加载新模型。
   installComponentsStyles();
   previewShell.ensureStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
+
+  // ===== 直挂路径 GPU 预算门（刀⑪ 立门、刀⑫ 语义修正 + 前置化）=====
+  //
+  // **为什么需要**：无活跃会话时 preview-library 的 cooperate 退化为 false → 走本路径
+  // 而**不经** switch-preview|beginSwitch 的 keep 通道，曾是无预算门的不对称缺口。
+  //
+  // **为什么必须 gate 在 hasActivePreview()**（审查 P2-1）：本门读 `renderer.info` 的
+  // **上一帧**统计，而本次要加载的内容**尚未构建**——无残留会话时读到的是「刚新建的
+  // 空 renderer」（全 0，白判）或「上一会话的陈旧指标」（拿旧负载拦新会话，归因完全
+  // 错误）。只有**确有未释放负载**时拦，语义才成立：GPU 上真有东西占着，再加一个确实危险。
+  //
+  // **为什么必须在装配之前判**（审查实测暴露）：本门若放在 buildInfra 之后，拦截时
+  // 半装配的外壳（overlay/菜单/输入/rAF）必须回收 → `runFullCleanup(ctx)` 只结算**本次**
+  // 会话，而被 clearSingletons 摘掉 overlay 的残留会话 handle 仍留在台账里成**僵尸**
+  // （`hasActivePreview()` 仍 true 但外壳已拆）。前置到装配前，本次无状态可回收，
+  // 直接 `cleanupPreview()`（「全部关闭」语义：清全部 handle + 注册表 + 单例复位）
+  // 一步收干净。renderer 经 `sceneInfraHost` 读（有活跃会话则必存在）。
+  if (hasActivePreview()) {
+    const liveRenderer = sceneInfraHost.renderer;
+    if (liveRenderer && !guardGpuBudget(liveRenderer, "preview.gpuBudgetLoad")) {
+      cleanupPreview();
+      return;
+    }
+  }
+
   // 会话代际 + per-mount 会话稳定 id 由台账分配：[Bug A] 每次 mount3D 自增（switchTo 走
   // switch-preview 复用外壳、不重新 mount，故不递增）。适配器 build 经 ctx.sessionId 读取，
   // 供 per-scene schema key（ysm-model-{sid}）注册/注销对齐。
@@ -442,17 +472,6 @@ export async function mount3D(
   const installed = buildInfra(ctx, shell);
   infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）
   switchCtx = installed.switchCtx; // 回填 ctx.getSwitchCtx() 槽位
-
-  // P0 补门（2026 锐评）：直挂路径的 GPU 预算门。无活跃会话时 preview-library 的
-  // cooperate 退化为 false → 走本路径而**不经** switch-preview|beginSwitch 的 keep 通道，
-  // 曾是无预算门的不对称缺口。此处与追加通道共用 guardGpuBudget（判定 + 文案同源）。
-  // 外壳（overlay/菜单/输入/rAF）此时已装配 → 超限须走 runFullCleanup 完整回收，
-  // 不能像 switch 那样裸 return（否则 overlay 与监听器泄漏）。
-  // self 模式（infra=null）无共享 renderer，跳过——该模式由适配器自驱。
-  if (infra?.renderer && !guardGpuBudget(infra.renderer, "preview.gpuBudgetLoad")) {
-    runFullCleanup(ctx);
-    return;
-  }
 
   try {
     const build = await runBuild(ctx, shell, installed);

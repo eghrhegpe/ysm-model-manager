@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
+import { GPU_BUDGET_CALIBRATION_KEY } from "./gpu-load-calibrate.ts";
 import {
   PREVIEW_FRAME_INTERVAL_MS,
   previewPixelRatio,
@@ -91,6 +92,11 @@ describe("3D preview render budget", () => {
 describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
   const HEALTHY_FRAME_MS = 16.7; // 健康帧时（远低于 SLOW_FRAME_MS=22）
 
+  beforeEach(() => {
+    // 软线现经 resolveGpuLoadLimits 读 localStorage，清 key 保阈值断言确定性
+    localStorage.removeItem(GPU_BUDGET_CALIBRATION_KEY);
+  });
+
   /** 驱动 N 帧（每 30 帧一次采样窗口），返回本轮所有降级结果 */
   const drive = (
     budget: ReturnType<typeof createAdaptiveRenderBudget>,
@@ -150,5 +156,16 @@ describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
       changed = sampleAdaptivePixelRatio(budget, frame * 33, 33, { drawCalls: 900, triangles: 0 });
     }
     expect(changed).toBe(1.25);
+  });
+
+  it("软线跟随真机标定：硬顶放宽后同一负载不再判饱和（消除软/硬线双源）", () => {
+    // 默认硬顶 1600 → 软线 800：900 判饱和
+    const before = createAdaptiveRenderBudget(1.5, 0);
+    expect(drive(before, 30, { drawCalls: 900, triangles: 0 })).toEqual([1.25]);
+    // 标定放宽硬顶到 5000 → 软线 2500：900 不再饱和（若软线写死默认常量，此处会误降级）
+    localStorage.setItem(GPU_BUDGET_CALIBRATION_KEY, JSON.stringify({ drawCalls: 5000 }));
+    const after = createAdaptiveRenderBudget(1.5, 0);
+    expect(drive(after, 30, { drawCalls: 900, triangles: 0 })).toEqual([]);
+    expect(after.pixelRatio).toBe(1.5);
   });
 });

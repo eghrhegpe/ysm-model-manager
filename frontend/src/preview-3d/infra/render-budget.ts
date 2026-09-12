@@ -1,5 +1,6 @@
 import { safeGet } from "@/utils/base/primitives/storage.ts";
-import { DEFAULT_GPU_LOAD_LIMITS, type GpuLoadSample } from "./gpu-load.ts";
+import type { GpuLoadSample } from "./gpu-load.ts";
+import { resolveGpuLoadLimits } from "./gpu-load-calibrate.ts";
 
 const PREVIEW_MAX_PIXEL_RATIO_DEFAULT = 1.5;
 // 存储键单一事实来源（code review P3：preview-menu 设置面板写同一键——不再双份硬编码）
@@ -78,11 +79,17 @@ const GPU_SATURATION_RATIO = 0.5;
  *  ⚠️ 语义边界（勿误读）：降像素比只减**填充率**压力，**不减少** draw calls 与
  *  三角面本身。故这里是**预防性**降质——GPU 已在高位时提前减轻片元阶段负担，
  *  避免队列进一步堆积成可感卡顿；它**不是**对已发生卡顿的根治，也不该被当成
- *  「降分辨率能治 draw call 过多」的证据。真治 draw call 靠 gpu-budget 拦追加。 */
+ *  「降分辨率能治 draw call 过多」的证据。真治 draw call 靠 gpu-budget 拦追加。
+ *
+ *  软线取 `resolveGpuLoadLimits()`（跟随真机标定）而非写死默认常量——否则低端机
+ *  标定放宽硬顶到 5000 后，软线仍停在 800：4000 draw calls 的场景会被**持续反压到
+ *  0.75 地板**而硬顶一路放行，形成隐性双源（审查 P3-4）。读取频率 = 每
+ *  ADAPTIVE_SAMPLE_FRAMES 帧一次（非每帧），localStorage 读开销可接受。 */
 function isGpuSaturated(gpu: Pick<GpuLoadSample, "drawCalls" | "triangles">): boolean {
+  const limits = resolveGpuLoadLimits();
   return (
-    gpu.drawCalls > DEFAULT_GPU_LOAD_LIMITS.drawCalls * GPU_SATURATION_RATIO ||
-    gpu.triangles > DEFAULT_GPU_LOAD_LIMITS.triangles * GPU_SATURATION_RATIO
+    gpu.drawCalls > limits.drawCalls * GPU_SATURATION_RATIO ||
+    gpu.triangles > limits.triangles * GPU_SATURATION_RATIO
   );
 }
 

@@ -15,7 +15,7 @@
 // （与 debugGetSpec 同规矩：叶子不绑 window，生命周期由 app-modules 管理）。
 
 import type * as THREE from "three";
-import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
+import { safeGetJSON, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import {
   DEFAULT_GPU_LOAD_LIMITS,
   type GpuLoadLimits,
@@ -88,26 +88,35 @@ export function suggestGpuLimits(
   };
 }
 
+/** 生效值合法区间 = [默认 × 0.1, 默认 × 10]（审查 P2-2 自锁防线）。
+ *
+ *  **下限为什么必须有**：`resolveGpuLoadLimits` 读的是 localStorage，而
+ *  `{"drawCalls":1}` 这类脏值（手改 / 调试代码写坏 / 未来某模块写错 key）会让
+ *  **每一次** 3D 加载与追加都判超限——而重置钩子 `window.ysmResetGpuBudget`
+ *  只在 dev 挂载，生产用户**没有任何 UI 逃生口**，等于全部 3D 预览被拦死，
+ *  且提示归因错误（「GPU 超预算」实为一行脏存储）。审计实测：仅凭一行
+ *  localStorage 即可复现。上限则防标定被推成天文数字让预算形同不存在。 */
+const LIMIT_MIN_RATIO = 0.1;
+const LIMIT_MAX_RATIO = 10;
+
+/** 单个字段的合法化：非数值 / 非有限 / ≤0 → 回落默认；否则 clamp 到 [0.1×, 10×] 默认值。 */
+function clampLimit(v: unknown, def: number): number {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return def;
+  return Math.min(Math.max(v, def * LIMIT_MIN_RATIO), def * LIMIT_MAX_RATIO);
+}
+
 /**
- * 读取**生效**预算：标定值优先，缺省 / 损坏 / 非法字段回落默认。
+ * 读取**生效**预算：标定值优先（经 clamp 合法化），缺省 / 损坏 / 非法回落默认。
  * fail-open 与 sampleGpuLoad 同语义——预算是护栏，读坏了宁可用默认也别拦死加载。
  */
 export function resolveGpuLoadLimits(): Required<GpuLoadLimits> {
-  const raw = safeGet(GPU_BUDGET_CALIBRATION_KEY);
-  if (!raw) return DEFAULT_GPU_LOAD_LIMITS;
-  let parsed: Partial<GpuLoadLimits>;
-  try {
-    parsed = JSON.parse(raw) as Partial<GpuLoadLimits>;
-  } catch {
-    return DEFAULT_GPU_LOAD_LIMITS;
-  }
-  const pick = (v: unknown, fallback: number): number =>
-    typeof v === "number" && Number.isFinite(v) && v > 0 ? v : fallback;
+  const raw = safeGetJSON<Partial<GpuLoadLimits> | null>(GPU_BUDGET_CALIBRATION_KEY, null);
+  if (!raw || typeof raw !== "object") return DEFAULT_GPU_LOAD_LIMITS;
   return {
-    drawCalls: pick(parsed.drawCalls, DEFAULT_GPU_LOAD_LIMITS.drawCalls),
-    triangles: pick(parsed.triangles, DEFAULT_GPU_LOAD_LIMITS.triangles),
-    textures: pick(parsed.textures, DEFAULT_GPU_LOAD_LIMITS.textures),
-    textureBytes: pick(parsed.textureBytes, DEFAULT_GPU_LOAD_LIMITS.textureBytes),
+    drawCalls: clampLimit(raw.drawCalls, DEFAULT_GPU_LOAD_LIMITS.drawCalls),
+    triangles: clampLimit(raw.triangles, DEFAULT_GPU_LOAD_LIMITS.triangles),
+    textures: clampLimit(raw.textures, DEFAULT_GPU_LOAD_LIMITS.textures),
+    textureBytes: clampLimit(raw.textureBytes, DEFAULT_GPU_LOAD_LIMITS.textureBytes),
   };
 }
 

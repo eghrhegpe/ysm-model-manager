@@ -213,12 +213,24 @@ invariant_anchors:
 
 - ✅ **刀⑪ GPU 预算「计数 → 计量」全链补强**（2026-09 锐评二次整改：共识榜 #3 的维度残余 + 刀⑩ 遗留盲区 + 三项新增防线一并收）：
   - **维度补全（P1）**：`gpu-load.ts` 原只判 draw calls + 纹理**数量**——「50 万面 MMD」与「5 千面方块」draw calls 都是 1 判不出；「1024 张 16×16」与「1024 张 4K」纹理数一样判不出。补 `triangles`（`info.render.triangles`）与 `textureBytes`（`textureCache|getTotalBytes` 按 RGBA 上限估算聚合）两维，预算从计数变计量。默认 `{drawCalls: 1600, triangles: 100 万, textures: 1024, textureBytes: 256MB}`。⚠️ 实测边界：4 张 4K 纹理（4×4096²×4）**恰好等于** 256MB 上限，严格 `>` 不触发——该预算对 4K 纹理堆叠是紧的。
-  - **两入口共用一道门（P0）**：抽出 `infra/gpu-budget.ts|guardGpuBudget(renderer, exceededKey)`（判定 + i18n 文案同源），`switch-preview|beginSwitch`（追加通道）与 `mount-preview-core|mount3D`（直挂通道）共用——**消除刀⑩ 记录的 cooperate 直挂盲区**（直挂侧超限走 `runFullCleanup` 完整回收，非裸 return，否则 overlay/监听器泄漏）。
+  - **两入口共用一道门（P0）**：抽出 `infra/gpu-budget.ts|guardGpuBudget(renderer, exceededKey)`（判定 + i18n 文案同源），`switch-preview|beginSwitch`（追加通道）与 `mount-preview-core|mount3D`（直挂通道）共用——消除刀⑩ 记录的 cooperate 直挂盲区。⚠️ 直挂侧的落地位置与语义经刀⑫ 修正（见下），本行原写「走 `runFullCleanup` 完整回收」已被取代。
   - **GPU 饱和反压像素比（P2）**：`render-budget|sampleAdaptivePixelRatio` 加可选 GPU 参数，`render-host` rAF 回调注入 `sampleGpuLoad`——原实现只看 CPU 帧时（「提交速度」代理），主线程 16ms 完成提交而 GPU 已排队时漏判。GPU 超硬顶 50% 软线时，即使帧时正常也预防性降档。⚠️ **语义边界**：降像素比只减**填充率**压力，不减 draw calls / 三角面本身——真治 draw call 靠 `guardGpuBudget` 拦追加，勿把此项误当根治。
   - **真机标定闭环（P4）**：新增 `infra/gpu-load-calibrate.ts`——`createCalibrationTracker`（纯状态机）+ `suggestGpuLimits`（峰值 × 1.5 安全系数）+ `runGpuBudgetCalibration`（注入假时钟可测）。**标定结果不是打印建议**：写 localStorage 后由 `resolveGpuLoadLimits` 消费、`guardGpuBudget` 读取 → 真的改变拦截线（标定放宽/收紧双向生效，有测试背书）。DEV 下钩子由**装配层** `app-modules.ts` 挂载（ADR-214 同款 `_devMode` + `isDebugEnabled` 守卫）：`window.ysmCalibrateGpuBudget(ms)` / `ysmResetGpuBudget()`——命名**不带双下划线**（对齐 `window.debugGetSpec` 先例，且避开红线段 R1「禁止把调试状态挂成双下划线全局」）；采样源经 getter 惰性读 `sceneInfraHost.renderer`（renderer 只在 3D 会话存活，装配期尚无实例）。钩子生命周期归装配层，**不进 `mount3D` 热路径**——`debugGetSpec` 同规矩（ADR-214：叶子工具不绑桥）。
   - **大文件事前告知（P5）**：新增 `infra/large-model.ts|warnLargeModelIfNeeded(bytes, path)`——受限平台（`isViewerMode`：网页版 / Android）超 50MB 给一条带实测字节数 + 3× 峰值估算的 toast（会话内同路径只提示一次，防轰炸）。**不改内存模型**（六层拷贝并存是长期债），只把「静默 OOM」变成「有预期的卡顿」。文案走 i18n（`preview.largeModelWarn` 三语）。
   - **fail-open 语义（防误拦）**：`sampleGpuLoad` 改**结构化可选读取**（`info?.render?.calls ?? 0`）——WebGPU 后端 / 老版本 three / 测试 mock 的 info 结构未必齐全，缺字段读 0 而非崩。预算是「病态堆叠早拦」护栏，不是加载的必要前提：误拦一切远比漏拦更糟（原生 bug 由测试环境的 three mock 缺字段暴露）。
   - 守卫：`gpu-load` 19 + `gpu-budget` 9 + `gpu-load-calibrate` 16 + `render-budget` 13 + `large-model` 8 新测；全量 5593 测试 + typecheck + vite build + biome 全绿。
+- ✅ **刀⑫ 刀⑪ 的独立审查闭环（提交 e3886d250 后 CodeReview 子代理复核 → 逐条修）**：审查核心结论「站得住，但有一个必须补的窟窿和两个必须收的口子」，全部采纳：
+  - **P1 阻断「新门零覆盖」→ 已补**：`test-utils/fake-webgl-renderer.ts` 原本**没有 `info` 字段** → `sampleGpuLoad` 走 fail-open 读 0 → `guardGpuBudget` 恒放行 → **直挂门在测试里一次都没被触发过**（判反了测试也全绿）。补可注入 `info`（`setFakeRendererStats` / `resetFakeRendererStats`，默认 0 不破坏既有 37 用例）+ `mount-preview-core.test.ts` 5 条真驱动用例（首挂不进门 / 残留会话超限拦 + toast 实测值 + 外壳回收 / 拦截后可再 mount 不自锁 / 预算内放行 / 纹理数维度同拦）。**「测试基建的意外副作用」升级为「被断言的行为」**。
+  - **P2「直挂门语义错位」→ 已修（位置也改了）**：审查实测指出原实现读的是**上一帧/上一会话**的统计，却用来拦一个**尚未构建**的新会话——无残留会话时读到空 renderer（白判）或陈旧指标（拿旧负载拦新会话，归因错误）。修正为：**门前置到外壳装配之前** + `hasActivePreview()` 前置条件 + 有活跃会话时 `sceneInfraHost.renderer` 必存在。补充收益：装配前判意味着**本次无状态可回收**，直接 `cleanupPreview()`（「全部关闭」语义）一步收干净——取代了刀⑪ 原方案的 `runFullCleanup(ctx)`（审查实测暴露它只结算**本次**会话，被 `clearSingletons` 摘掉 overlay 的残留会话 handle 变**僵尸**：`hasActivePreview()` 仍 true 而外壳已拆）。
+  - **P2「一行脏存储自锁全部 3D」→ 已修**：`resolveGpuLoadLimits` 原无下限 clamp，`{"drawCalls":1}` 即让**每次** 3D 加载都判超限，而归因显示「GPU 超预算」（误导），且重置钩子只在 dev 挂载 → 生产用户**无 UI 逃生口**。加 clamp 到 `[默认 × 0.1, 默认 × 10]`（`LIMIT_MIN_RATIO`/`LIMIT_MAX_RATIO`），并补「自锁防线」专项测试。
+  - **P3「`textureBytes` 对 MMD/VRM 恒 0」→ 已标注**：`textureCache` 自述「MMD/VRM 走 blob URL + 内置 Loader，暂不接入」——即刀⑪ 那句「字节维度补上这一刀」在**最吃显存的 MMD/VRM 上是空的**，只有 YSM/pack 生效。已在 `texture-cache|getTotalBytes` 与 `gpu-budget|guardGpuBudget` 写明**覆盖盲区**，防下一个人误以为这一刀已落全。
+  - **P3「`getTotalBytes` 漏 mipmap」→ 已修**：three 默认 `generateMipmaps=true` 额外 ~1/3 存储，原口径未计 → 而 `w×h×4` 恰好让「4 张 4K = 256MB」踩在默认上限线上（严格 `>` 不触发）。补 `MIPMAP_CHAIN_FACTOR`（`generateMipmaps === false` 才不乘），「4 张 4K」从**踩线**变**确定超线**，口径更诚实。
+  - **P3「`warnedPaths` 无界」→ 已修**：照抄 `core/i18n/t.ts|warnedResiduals` 的既有有界范式（`WARNED_PATHS_MAX`=200 + 淘汰最旧），替代原「模块级 Set 零生产复位 + 专门导出测试钩子」。
+  - **P3「软/硬线双源」→ 已修**：`render-budget|isGpuSaturated` 原写死 `DEFAULT_GPU_LOAD_LIMITS × 0.5`，标定放宽硬顶后软线不动 → 4000 draw calls 场景被**持续反压到 0.75 地板**而硬顶一路放行。改为软线也走 `resolveGpuLoadLimits()`（读取频率 = 每 30 帧一次，非每帧）。
+  - **P4「注释 100MB 与常量 50MB 混为一谈」→ 已修**：写清两者是**两档**——100MB 是别处的导入/内存**硬阈值**，50MB 是**事前警示线**（刻意更低，让用户还有机会反悔）。
+  - **P4「可复用既有函数」→ 已修**：`resolveGpuLoadLimits` 手写 `JSON.parse` + try/catch → 换 `utils/base/primitives/storage.ts|safeGetJSON`。
+  - 审查明确**核实后不成立**的项（未改）：i18n 三语 key/占位符一致；`getTotalBytes` 重复计数（key=URL，同 URL 单 entry，不同 URL 即两份真实 GPU 副本，计得忠）；标定 getter 悬垂 renderer（`reset()` 置 null，`info` 是构造期普通对象，读到陈旧也不崩）；标定 do-while 卡死（后台节流会变慢不挂起）；`runFullCleanup` 对 ctx 的清理完备性。
+  - 守卫：新增/改写 13 测（mount 直挂门 5 + clamp 4 + mipmap 2 + 软线跟随标定 1 + 有界去重 1）；全量 5606 测试 + typecheck + vite build + biome 全绿。
 
 ## 相关
 

@@ -110,7 +110,7 @@ status: active
 - 未知变量 → 0：mod 扩展的游戏态查询（`ysm.*`/按键/药效等）在预览器无宿主语境，优雅降级而非抛错
 
 `animation-controller.ts`（动画控制器状态机，wine_fox 等模型支持）：
-- `parseAnimationControllerJSON(jsonStr): { controllers, errors }` — 解析 `.animation_controllers.json`；缺 `animation_controllers` 字段进 errors；每个状态含 animations 列表 / on_exit 动作 / transitions（target→Molang 条件表达式）/ blend_transition（缺省 0.2s）；**空条件表达式 = 显式无条件转换（unconditional=true，总是触发）**；首个遇到的 state 作为初始状态
+- `parseAnimationControllerJSON(jsonStr): { controllers, errors }` — 解析 `.animation_controllers.json`；缺 `animation_controllers` 字段进 errors；每个状态含 animations 列表 / on_exit 动作 / transitions（target→Molang 条件表达式）/ blend_transition（缺省 0.2s）；**空条件表达式 = 显式无条件转换（unconditional=true，总是触发）**；初始状态优先级：显式 `initial_state`（且该状态名存在于 states 中）> `"default"`（若存在）> 首个声明状态（Map 迭代序）
 - `AnimationControllerRuntime` — 运行时状态机：`update(dt)` 每帧评估当前状态转换条件（首个满足的触发，condition 用 `animTime=timeInState` 求值），触发时先执行当前状态 on_exit 再切状态并回调 `onStateChange(animationName, blendTime)`；条件编译失败（condition=null 且非 unconditional）→ 跳过不触发（不 fail-open）
 - `findControllerForAnimation(controllers, animationName): AnimationController | null` — 按动画名反查控制器
 - 与 Timeline 配合（Bedrock 官方设计）：Timeline 经 clip 自有 MolangParser 实例写 `v.*` 变量（ADR-211：每播放器持久作用域跨帧可见），Controller 条件读 `v.*` 决定状态切换；v.* 跨帧持久化依赖 molangjs 核心，弹簧物理等场景需改 molangjs 核心（已知限制）

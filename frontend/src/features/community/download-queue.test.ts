@@ -58,7 +58,7 @@ vi.mock("@/backend/browser-adapter.ts", async (importOriginal) => ({
   importWebFiles: importWebFilesMock,
 }));
 vi.mock("@wailsio/runtime", () => ({ Events: { On: onMock }, Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() } }));
-vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
+vi.mock("../../../bindings/ysm-model-manager/internal/app/app.ts", () => ({
   EnqueueDownloads: enqueueMock,
   QueueStatus: statusMock,
   CancelQueue: cancelMock,

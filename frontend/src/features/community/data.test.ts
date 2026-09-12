@@ -2,10 +2,15 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { TextDecoder as NodeTextDecoder } from "node:util";
 import { showProgress, tryFetchModels } from "./data.ts";
 
+// TextDecoder 保留带守卫的 globalThis 永久形态：用例内 afterEach 的
+// unstubAllGlobals() 会撤销 vi.stubGlobal 设置，而 api 分支（data.ts L164）
+// 依赖其全程可用（vitest-env-switch 模式 1 针对 getter-only 全局，此处可赋值）。
 if (typeof globalThis.TextDecoder === "undefined")
   globalThis.TextDecoder = NodeTextDecoder as typeof TextDecoder;
 
-globalThis.atob = (b64) => Buffer.from(b64, "base64").toString("binary");
+// atob 走 vi.stubGlobal（模式 1）：happy-dom 原生 atob 兜底，撤销后行为等价；
+// api 用例内另有显式 stub 双保险（防环境切换）。
+vi.stubGlobal("atob", (b64) => Buffer.from(b64, "base64").toString("binary"));
 
 describe("showProgress", () => {
   it("renders progress box with label", () => {

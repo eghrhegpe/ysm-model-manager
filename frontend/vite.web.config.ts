@@ -11,6 +11,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import { ALIAS_DIRS, FILE_ALIASES } from "./vite-alias-shared.ts";
 import { checkLocalesSync } from "./vite-locale-check.ts";
 import { wailsBindingsResolve } from "./vite-wails-bindings-resolve.ts";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
@@ -18,32 +19,9 @@ import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const SRC_DIR = fileURLToPath(new URL("./src", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
-// ⚠️ 以下别名必须与 vite.config.js 的同名声明保持逐字一致（ADR-146 单一事实源 =
-//   frontend/tsconfig.json paths；check-path-hygiene 的双写一致性校验只看
-//   vite.config.js，**不扫本文件**，故此处漂移不会被门禁发现——手工同步义务在此明示）。
-//   本文件长期缺 resolve.alias，致 build:web 报 `Rollup failed to resolve import
-//   "@/backend/browser-adapter.ts"`（ADR-146 把相对路径收敛为别名后，本配置未跟进）。
-const ALIAS_DIRS = [
-  "bindings",
-  "preview-3d",
-  "views",
-  "utils",
-  "backend",
-  "core",
-  "features",
-  "workers",
-  "services",
-  "wasm",
-  "test-utils",
-  "web-spike",
-  "locales",
-  "parsers",
-];
-const FILE_ALIASES = {
-  bus: "bus.ts",
-  "theme-core": "theme-core.ts",
-  "app-modules": "app-modules.ts",
-};
+// 别名表单一事实源 = vite-alias-shared.ts（与 vite.config.js 同源消费）。本文件曾因
+// 手抄副本漏同步致 build:web 报 Rollup failed to resolve import（ADR-146 别名收敛后
+// 本配置未跟进，2026-09-11 补齐）——勿再手抄。
 
 export default defineConfig({
   // root 用绝对路径（消除 cwd 依赖——从任意目录跑构建都正确）

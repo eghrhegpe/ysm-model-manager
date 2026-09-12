@@ -4,20 +4,15 @@ import { resolve } from "path";
 import { wailsBindingsResolve } from "./vite-wails-bindings-resolve.ts";
 import { wasmDataStubs } from "./vite-wasm-data-stubs.ts";
 import { checkLocalesSync } from "./vite-locale-check.ts";
+import { ALIAS_DIRS, FILE_ALIASES } from "./vite-alias-shared.ts";
 
 // ADR-146：目录级路径别名（永久禁止 catch-all `@/*`）。
 // `#root` 为过渡措施——把越界读仓库根 JSON 的引用收口为 `#root/x.json`，
 // 仅减不增（R4 冻结基线），终态由 Wails 侧 bridge 注入，本文件不锁时间点。
+// ALIAS_DIRS/FILE_ALIASES 单一事实源在 ./vite-alias-shared.ts（web 构建同源消费，
+// 防双写漂移——vite.web.config.ts 曾因手抄副本漏同步致 build:web 长期红）。
 const SRC_DIR = fileURLToPath(new URL("./src", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
-/** 手写源码顶层目录白名单（与 tsconfig.json paths 必须一致；D3 一致性校验兜底）。 */
-const ALIAS_DIRS = [
-  "bindings", "preview-3d", "views", "utils", "backend", "core",
-  "features", "workers", "services", "wasm", "test-utils", "web-spike",
-  "locales", "parsers",
-];
-/** 手写源码根文件级别名（src 根上的文件，目录别名映射不了；与 tsconfig paths 一致）。 */
-const FILE_ALIASES = { "bus": "bus.ts", "theme-core": "theme-core.ts", "app-modules": "app-modules.ts" };
 
 export default defineConfig({
   root: ".",

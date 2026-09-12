@@ -23,8 +23,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT } from "../scripts/_lib/scan-files.ts";
+import { fileURLToPath } from "node:url";
 
+// ROOT 本地推导（对齐同侪测试模式：test_alias-resolve / test_check_mock_paths /
+// test_check_path_hygiene 均本地定义，不依赖 scan-files 的 ROOT 语义与模块副作用）
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FE = path.join(ROOT, "frontend");
 
 let failed = 0;
@@ -43,25 +46,54 @@ const expectExists = (relFromFe: string, declaredIn: string): void => {
 };
 
 /**
- * vite.*.config.* 的 resolve(root, "<name>") 形态入口。
- * 只匹配 resolve(..., "...") 里带扩展名的字面量（html/ts/tsx/js），
- * 避免把目录或变量误判为入口。
+ * vite.*.config.* 的入口提取：只锚定 rollupOptions.input 块（vite 语义上入口只能声明在
+ * input: {} 里），块内取 resolve(..., "<file.ext>") 字面量。原全文本匹配会把别名映射、
+ * outDir 等 resolve 调用误判为入口（假阳性），且 input 块里的多段 resolve(root, "src", "x")
+ * 形态会漏判（假阴性）——先切出 input: { ... } 块（括号配平），再在块内匹配。
  */
 const VITE_CONFIGS = ["vite.config.js", "vite.web.config.ts", "vite.e2e.config.ts"];
-const ENTRY_LITERAL_RE = /resolve\(\s*[\w.]+\s*,\s*"([^"]+\.[a-z]{2,4})"\s*\)/g;
+const ENTRY_LITERAL_RE = /resolve\(\s*[\w.]+\s*(?:,\s*[\w.]+\s*)*,\s*"([^"]+\.[a-z]{2,4})"\s*\)/g;
+
+/** 切出 input: { ... } 的块文本（自 `input:` 后 `{` 起括号配平；找不到块返回 null）。 */
+function extractInputBlock(txt: string): string | null {
+  const m = /(?<![\w$])input\s*:\s*\{/.exec(txt);
+  if (!m) return null;
+  const start = txt.indexOf("{", m.index);
+  let depth = 0;
+  for (let i = start; i < txt.length; i++) {
+    if (txt[i] === "{") depth++;
+    else if (txt[i] === "}") {
+      depth--;
+      if (depth === 0) return txt.slice(start, i + 1);
+    }
+  }
+  return null; // 括号不配平（配置本身残缺）→ 视为无块，靠零匹配自检兜底
+}
 
 let viteEntryCount = 0;
 for (const cfg of VITE_CONFIGS) {
   const abs = path.join(FE, cfg);
   if (!fs.existsSync(abs)) continue;
   const txt = fs.readFileSync(abs, "utf8");
-  for (const m of txt.matchAll(ENTRY_LITERAL_RE)) {
-    const rel = m[1];
-    if (!rel) continue;
-    // 排除 `../` 越出 frontend/ 的引用（如 ../resource_types.json，非入口）
-    if (rel.startsWith("..")) continue;
-    viteEntryCount++;
-    expectExists(rel, cfg);
+  const block = extractInputBlock(txt);
+  let matched = 0;
+  if (block) {
+    for (const m of block.matchAll(ENTRY_LITERAL_RE)) {
+      const rel = m[1];
+      if (!rel) continue;
+      // 排除 `../` 越出 frontend/ 的引用（如 ../resource_types.json，非入口）
+      if (rel.startsWith("..")) continue;
+      matched++;
+      expectExists(rel, cfg);
+    }
+  }
+  viteEntryCount += matched;
+  // 零匹配自检：正则退化（vite 改语法/提取逻辑漂移）时大声失败，不静默验证个寂寞。
+  // 仅约束「声明了 input: 块」的配置——无块配置（vite 默认单入口 index.html）不在此列
+  if (block && matched === 0) {
+    fail(
+      `${cfg} 的 rollupOptions.input 块提取到 0 个入口——正则或块提取退化，检查 ENTRY_LITERAL_RE`,
+    );
   }
 }
 

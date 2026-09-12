@@ -49,6 +49,7 @@ const REPO_ROOT = resolve(__dirname, "..");
 const SRC_ROOT = resolve(REPO_ROOT, "frontend", "src");
 const TSCONFIG = resolve(REPO_ROOT, "frontend", "tsconfig.json");
 const VITE_CONFIG = resolve(REPO_ROOT, "frontend", "vite.config.js");
+const ALIAS_SHARED = resolve(REPO_ROOT, "frontend", "vite-alias-shared.ts");
 const BASELINE_FILE = resolve(REPO_ROOT, "docs", ".path-hygiene-baseline.json");
 
 const JSON_FLAG = process.argv.includes("--json");
@@ -191,7 +192,10 @@ for (const { abs, rel } of files) {
 
 // ---- 双写一致性：tsconfig.paths 键集 vs vite alias find 键集 ----
 // vite 的 find 由 ALIAS_DIRS 动态拼出（模板字面量），无法靠 `find:` 正则还原，
-// 故直接在 vite 源码解析 ALIAS_DIRS 数组重建 find 集合，与 tsconfig 键集比对。
+// 故直接解析 ALIAS_DIRS 数组重建 find 集合，与 tsconfig 键集比对。
+// 2026-09-11 起数组单一事实源 = frontend/vite-alias-shared.ts（vite.config.js 与
+// vite.web.config.ts 双端 import，防 web 侧手抄漂移）——解析面随共享模块优先，
+// vite.config.js 保留兜底（老结构内联声明的形态仍可解析）。
 function loadTsconfigPathsKeys(): Set<string> {
   const j = JSON.parse(readFileSync(TSCONFIG, "utf-8"));
   const paths = j.compilerOptions?.paths || {};
@@ -200,30 +204,35 @@ function loadTsconfigPathsKeys(): Set<string> {
   return keys;
 }
 function loadViteAliasFinds(): Set<string> {
-  const txt = readFileSync(VITE_CONFIG, "utf-8");
   const keys = new Set<string>();
-  const m = txt.match(/ALIAS_DIRS\s*=\s*\[([\s\S]*?)\]/);
-  if (m) {
-    const arrText = m[1];
-    if (arrText) {
-      for (const dm of arrText.matchAll(/["']([^"']+)["']/g)) {
-        const dir = dm[1];
-        if (dir) keys.add(`@/${dir}`);
+  const sources = [ALIAS_SHARED, VITE_CONFIG];
+  for (const src of sources) {
+    if (!existsSync(src)) continue;
+    const txt = readFileSync(src, "utf-8");
+    const m = txt.match(/ALIAS_DIRS\s*=\s*\[([\s\S]*?)\]/);
+    if (m) {
+      const arrText = m[1];
+      if (arrText) {
+        for (const dm of arrText.matchAll(/["']([^"']+)["']/g)) {
+          const dir = dm[1];
+          if (dir) keys.add(`@/${dir}`);
+        }
       }
     }
-  }
-  if (/find:\s*["']#root["']/.test(txt)) keys.add("#root");
-  // 字面量 find 条目：文件级别名（@/bus、@/theme-core 等，单独声明，不在 ALIAS_DIRS 模板内）
-  for (const fm of txt.matchAll(/find:\s*["']([^"']+)["']/g)) {
-    const find = fm[1];
-    if (find && find !== "#root") keys.add(find);
-  }
-  // FILE_ALIASES 对象键（模板字面量拼 find，等价于字面量；供双写一致性核对）
-  const fam = txt.match(/FILE_ALIASES\s*=\s*\{([\s\S]*?)\}/);
-  if (fam?.[1]) {
-    for (const km of fam[1].matchAll(/["']([^"':]+)["']\s*:/g)) {
-      const name = km[1];
-      if (name) keys.add(`@/${name}`);
+    if (/find:\s*["']#root["']/.test(txt)) keys.add("#root");
+    // 字面量 find 条目：文件级别名（@/bus、@/theme-core 等，单独声明，不在 ALIAS_DIRS 模板内）
+    for (const fm of txt.matchAll(/find:\s*["']([^"']+)["']/g)) {
+      const find = fm[1];
+      if (find && find !== "#root") keys.add(find);
+    }
+    // FILE_ALIASES 对象键（模板字面量拼 find，等价于字面量；供双写一致性核对）。
+    // 键兼容带引号/不带引号（biome format 按 asNeeded 会剥无必要引号，形态随格式化漂移）
+    const fam = txt.match(/FILE_ALIASES\s*=\s*\{([\s\S]*?)\}/);
+    if (fam?.[1]) {
+      for (const km of fam[1].matchAll(/["']?([\w$-]+)["']?\s*:/g)) {
+        const name = km[1];
+        if (name) keys.add(`@/${name}`);
+      }
     }
   }
   return keys;

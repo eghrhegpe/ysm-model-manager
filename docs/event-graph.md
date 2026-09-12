@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 195 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 210 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
@@ -305,7 +305,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 166 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 295 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 310 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -498,7 +498,7 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 232 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 248 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 143 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 262 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 277 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |
@@ -579,14 +579,14 @@
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 318 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 324 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 335 |
-| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 159 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 178 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 208 |
-| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 224 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 253 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 259 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 322 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 331 |
+| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 162 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 181 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 211 |
+| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 227 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 256 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 262 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 325 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 334 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

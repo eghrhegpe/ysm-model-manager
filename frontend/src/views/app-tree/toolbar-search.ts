@@ -37,6 +37,9 @@ type $Id = (id: string) => HTMLElement | null;
 // --- 多线程统计角标（网页版证明 off-main-thread：主线程 + stats Worker 并行）---
 // 右下角 fixed 小角标：数值条件搜索时显示 "🧵×2 ⚙️ x/y"（Worker 批进度），
 // 统计完成隐藏；Worker 降级时短暂显示 ⚠️ 提示。仅 web 模式（isWebPlatform）创建。
+// 模块级单例 by-design：全局 light DOM 角标，跨组件挂载复用同一节点（hide 走 display:none
+// 而非 remove，避免重复创建/样式重注入）；非越权全局状态，无 reset 路径属故意豁免
+// （对照红线要求：模块级可变 let 须有 reset 或注释豁免——此处为注释豁免）。
 let statsBadge: HTMLElement | null = null;
 
 function showStatsBadge(html: string): void {

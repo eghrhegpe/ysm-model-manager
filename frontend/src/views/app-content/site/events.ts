@@ -176,8 +176,23 @@ function cmCrCreateDetailOverlay(
 ): HTMLDivElement {
   const overlay = document.createElement("div");
   overlay.className = "cr-detail-overlay";
+  // a11y：自建模态须与 features/dialogs/modal.ts 基座一致——role + aria-modal + Esc 关闭 + 焦点归还
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.tabIndex = -1;
+  const opener = document.activeElement as HTMLElement | null;
+  const close = () => {
+    overlay.remove();
+    opener?.focus?.();
+  };
+  overlay.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      ev.stopPropagation();
+      close();
+    }
+  });
   overlay.onclick = (ev) => {
-    if (ev.target === overlay) overlay.remove();
+    if (ev.target === overlay) close();
   };
   const { html } = cmCrBuildDetailHtml(cr, esc, avatarCache, authorCountMap);
   overlay.innerHTML = html;
@@ -340,6 +355,7 @@ function cmBbBindCardClicks(
       if (!cr) return;
       const overlay = cmCrCreateDetailOverlay(cr, esc, avatarCache, authorCountMap);
       (searchResults.getRootNode() as Node).appendChild(overlay);
+      overlay.focus();
       cmCrBindOverlayEvents(overlay, cr, searchResults, site, openUrl, fillSearch, busRef);
     });
   });

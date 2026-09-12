@@ -23,12 +23,18 @@
  *                             组合根（features: backend-deps / community-deps /
  *                             context-menu-deps；views: backend-deps）；
  *                             test 文件由扫描层豁免
+ *   R6（零容忍）  core/** 测试文件（.test.ts/.spec.ts）不得 import backend/*（运行时或
+ *                             type-only；ADR-189 D4 引擎无关内核：测试越层 = 内核被绑定
+ *                             污染，「无 Wails 也能单测」对 type 感知同样不成立）。
+ *                             主循环 SCAN_OPTS.skipFile 豁免所有测试文件（防 R5 误伤
+ *                             features/views 测试合法 import backend），故 R6 单独扫
+ *                             core/** 下的测试文件——不经 skipFile 豁免。
  *
- *   `import type` 不构成运行时耦合，一律豁免。
+ *   `import type` 不构成运行时耦合，一律豁免（R6 例外：测试越层 type 感知亦违规）。
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2/R0/R5 违规或 R3/R4 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6 违规或 R3/R4 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
  *   node scripts/check-layering.ts --update   # 更新 R3/R4 基线（含当前全部反向边）
  *
@@ -217,10 +223,39 @@ function main() {
     }
   }
 
+  /* ---------- R6 专用扫描：core/** 测试文件 import backend/*（零容忍，ADR-189 D4）----------
+   * 主循环 SCAN_OPTS.skipFile 豁免所有测试文件（防 R5 误伤 features/views 测试合法
+   * import backend），故 R6 单独 walk 一次 core/** 下的 .test.ts/.spec.ts，不经
+   * skipFile 豁免。type-only 亦违规（「无 Wails 也能单测」对 type 感知不成立）。 */
+  for (const abs of walk(SRC_ROOT, {
+    exts: [".ts", ".tsx"],
+    skipDir: (n) =>
+      n.startsWith(".") || n === "node_modules" || n === "__tests__" || n === "test-utils",
+    // 仅豁免 .d. 声明文件；.test./.spec. 不豁免（R6 目标对象）
+    skipFile: /\.d\.[tj]sx?$/,
+  }) as string[]) {
+    const srcRel = toPosix(relative(SRC_ROOT, abs));
+    if (!srcRel.startsWith("core/")) continue;
+    if (!/\.(test|spec)\.[tj]sx?$/.test(srcRel)) continue;
+    const text = readFileSync(abs, "utf8");
+    for (const { spec, line } of matchImports(text)) {
+      const target = resolveTarget(spec, srcRel);
+      if (!target || !target.startsWith("backend/")) continue;
+      violations.push({
+        rule: "R6",
+        from: srcRel,
+        line,
+        to: target,
+        fromLayer: "core",
+        toLayer: "backend",
+      });
+    }
+  }
+
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
   const rZero = violations.filter(
-    (v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0" || v.rule === "R5",
+    (v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0" || v.rule === "R5" || v.rule === "R6",
   );
   const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
 
@@ -297,12 +332,12 @@ function main() {
 
   if (rZero.length) {
     console.error(
-      `❌ R1/R2/R0/R5 违规（零容忍：utils/services 向上依赖、core→utils/dom、features/views→backend/app.ts 非 seam）${rZero.length} 条：`,
+      `❌ R1/R2/R0/R5/R6 违规（零容忍：utils/services 向上依赖、core→utils/dom、features/views→backend/app.ts 非 seam、core 测试→backend）${rZero.length} 条：`,
     );
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
     console.log(
-      "✅ R1/R2/R0/R5 utils/services → 上层、core→utils/dom、features/views→backend/app 非 seam：0 条",
+      "✅ R1/R2/R0/R5/R6 utils/services → 上层、core→utils/dom、features/views→backend/app 非 seam、core 测试→backend：0 条",
     );
   }
 

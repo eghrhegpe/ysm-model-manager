@@ -82,6 +82,21 @@ check("R5 零 R5 违规（features/views→backend/app.ts 仅经 *-deps.ts seam�
   );
 });
 
+// R6（ADR-189 D4 引擎无关内核）：core/** 测试文件禁止 import backend/*（运行时或 type-only）。
+// 主循环 SCAN_OPTS.skipFile 豁免所有测试文件（防 R5 误伤 features/views 测试），
+// 故 R6 单独扫 core/** 下的 .test.ts/.spec.ts。当前仓库应零 R6 违规；
+// 任何 core 测试新增直引 backend/*（含 import type）即 rc=1 阻断。
+check("R6 零 R6 违规（core 测试文件→backend/*，引擎无关对 type 感知不成立）", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r6 = (data.zero_tolerance_violations ?? []).filter((v) => v.rule === "R6");
+  assert.equal(
+    r6.length,
+    0,
+    `R6 违规 ${r6.length} 条：${r6.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
+});
+
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {
   const basePath = path.join(ROOT, "docs", ".layering-baseline.json");
   assert.ok(fs.existsSync(basePath), "缺基线文件");

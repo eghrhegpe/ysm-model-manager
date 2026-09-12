@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **226** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **227** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 8 |
-| [✅ 已采纳](#已采纳) | 208 |
+| [✅ 已采纳](#已采纳) | 209 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -38,10 +38,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（208）
+### ✅ 已采纳（209）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-229](./ADR-229-core-import-check-layering-r6-adr-189-d4.md) | check-layering R6 —— core 测试文件 import backend 兜底，收窄测试豁免盲区 | ✅ 已采纳 |
 | [ADR-228](./ADR-228-web-bytes-direct-read.md) | 网页版模型字节直读：消除 base64 往返 | ✅ 已采纳 |
 | [ADR-226](./ADR-226-mdxx.md) | 清理 mdXx 人工命名空间前缀 | ✅ 已采纳 |
 | [ADR-225](./ADR-225-perception-adapters-shared.md) | perception 模块下沉至 adapters/shared | ✅ 已采纳 |
@@ -275,6 +276,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-229 | check-layering R6 —— core 测试文件 import backend 兜底，收窄测试豁免盲区 | ✅ 已采纳 | 2026-09-12 |
 | ADR-228 | 网页版模型字节直读：消除 base64 往返 | ✅ 已采纳 | 2026-09-12 |
 | ADR-227 | preview-3d 模块级单例收敛为实例（P1 战役） | 🔄 部分采纳 | 2026-09-11 |
 | ADR-226 | 清理 mdXx 人工命名空间前缀 | ✅ 已采纳 | 2026-09-11 |

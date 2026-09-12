@@ -40,8 +40,8 @@
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
 
 ### `src/core` 准入准则（ADR-189 D4）
-- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层与 DOM 原语层（features/views/backend/utils/dom 一律禁止；`utils/base/` 允许——其中 `pure/` 是真纯函数层（array, clamp, gh-links, guards, recycle-path, safe-error-msg, tex-size, apperror-text），零副作用；`primitives/` 是副作用原语层（async, base64, debounce, disposable, lock, log, main-thread-watch, storage），仍零上层依赖；core 现状依赖 primitives/ 的 log/storage、@/bus 及 @/locales/*（类型源），依赖方向只许别人引它，check-layering R0 机制兜底）；③无 Wails 也能单测。
-- 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，pre-commit 有 `check-redlines` 兜底）。
+- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary + model-path-store），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层与 DOM 原语层（features/views/backend/utils/dom 一律禁止；`utils/base/` 允许——其中 `pure/` 是真纯函数层（array, clamp, gh-links, guards, recycle-path, safe-error-msg, tex-size, apperror-text），零副作用；`primitives/` 是副作用原语层（async, base64, debounce, disposable, lock, log, main-thread-watch, storage），仍零上层依赖；core 现状依赖 primitives/ 的 log/storage、@/bus 及 @/locales/*（类型源），依赖方向只许别人引它——utils/dom 越层走 check-layering R0、backend 越层走 check-layering R6（含 core 测试文件，ADR-189 D4 引擎无关对 type 感知不成立）机制兜底）；③无 Wails 也能单测。
+- 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，check-layering R6 兜底；测试文件越层 2026-09 补齐后无盲区）。
 - DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/pure/`（真纯函数，零副作用）；副作用原语在 `utils/base/primitives/`（仍零上层依赖）；原 `utils/core/` 已迁入此结构，勿再新建同名目录。
 
 ### features→backend seam（ADR-190 D2 / ADR-208 D1，回归红线）

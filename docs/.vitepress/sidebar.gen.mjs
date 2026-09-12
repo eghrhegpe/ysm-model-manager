@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-229：check-layering R6 —— core 测试文件 import backend 兜底，收窄测试豁免盲区",
+        "link": "/adr/ADR-229-core-import-check-layering-r6-adr-189-d4"
+      },
+      {
         "text": "ADR-228：网页版模型字节直读：消除 base64 往返",
         "link": "/adr/ADR-228-web-bytes-direct-read"
       },

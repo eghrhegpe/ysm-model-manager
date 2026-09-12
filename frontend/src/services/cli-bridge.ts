@@ -21,8 +21,11 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 /** CLI 命令参数（统一格式：key-value map） */
 export type CLIArgs = Record<string, string | number | boolean | undefined>;
 
-/** CLI 响应状态 */
-type CLIStatus = "success" | "error" | "not_supported";
+/** CLI 响应状态的已知取值。**非穷尽**：`parseCLIResponse` 刻意放行未知状态字符串
+ *  （防 Go 侧新增状态值被前端误判为 parse_error），故消费方按 status 分派时必须带
+ *  default 分支兜底。`(string & {})` 保留字面量补全提示而不锁死取值，避免类型与
+ *  「任意字符串放行」的运行时契约自相矛盾。 */
+type CLIStatus = "success" | "error" | "not_supported" | (string & {});
 
 /** CLI 错误详情 */
 interface CLIError {
@@ -225,13 +228,20 @@ function parseErrorResponse(message: string): CLIResponse {
 /**
  * 解析 CLI JSON 响应（形状守卫：非响应对象一律报错，禁止 `as` 断言穿透）
  *
- * JSON.parse 成功 ≠ 拿到响应对象。Go 的 `json.Marshal` 吞错历史病
- * （cli_quality_audit 规律六）会吐 `"null"`——`JSON.parse("null")` 正常返回 `null`，
- * 旧实现 `as CLIResponse` 是纯编译期谎言，消费方读 `result.status` 即 TypeError。
- * 同源穿透面还包括 `[]` / `"str"` / `123`，故按协议形状守卫两道：
+ * `JSON.parse` 成功 ≠ 拿到响应对象：`"null"` / `"[]"` / `"123"` / `"true"` 都是**合法 JSON**
+ * 却非响应对象，旧实现 `return JSON.parse(raw) as CLIResponse` 是纯编译期断言，会把它们原样
+ * 交给消费方（`result.status` 为 undefined）。本守卫属**协议边界防御**——Wails 桥另一侧返回
+ * 的是不可信字符串，前端不该假设其形状。
+ *
+ * 现 Go 链路（`ExecuteCLI` → `go/cli` 的 `JsonResponse.ToJson`）恒产出「顶层对象 + 字符串
+ * status」，无可达的畸形生产者；守卫防的是桥层异常输出与未来回归。该层历史上确曾出现
+ * `json.Marshal` 吞错致前端收到 `"null"`（cli_quality_audit 规律六，2026-08 已全仓修复），
+ * 那是本次补守卫的动机，但**非当前可达路径**。
+ *
+ * 两道守卫：
  *   ①必须是普通对象（排除 null / 数组 / 字符串 / 数字 / 布尔）
- *   ②`status` 必须是字符串——它是所有消费方的分派依据
- * `status` 刻意不做枚举白名单：Go 侧新增状态值时不得被前端误判为 parse_error。
+ *   ②`status` 必须是字符串——它是所有消费方的分派依据；只查类型不枚举取值，
+ *     故 Go 侧新增状态值不会被误判为 parse_error
  */
 export function parseCLIResponse(raw: string): CLIResponse {
   let parsed: unknown;
@@ -244,7 +254,7 @@ export function parseCLIResponse(raw: string): CLIResponse {
     return parseErrorResponse(`CLI 响应不是对象: ${raw.slice(0, 200)}`);
   }
   if (typeof (parsed as { status?: unknown }).status !== "string") {
-    return parseErrorResponse(`CLI 响应缺 status 字段: ${raw.slice(0, 200)}`);
+    return parseErrorResponse(`CLI 响应 status 非字符串: ${raw.slice(0, 200)}`);
   }
   return parsed as CLIResponse;
 }

@@ -109,6 +109,20 @@ describe("CLI Bridge - 命令执行", () => {
     // call_failed 与 not_supported 分支形状一致：消费方可统一读 meta.platform
     expect(result.meta?.platform).toBe("native");
   });
+
+  it("后端吐 \"null\" → 整链不穿透，executeCLI 落 parse_error", async () => {
+    const mockApp = {
+      ExecuteCLI: vi.fn().mockResolvedValue("null"),
+    } as unknown as AppBindings;
+
+    vi.mocked(getApp).mockResolvedValue(mockApp);
+
+    const result = await executeCLI("search");
+
+    expect(result.status).toBe("error");
+    expect(result.error?.code).toBe("parse_error");
+    expect(result.error?.message).toContain("不是对象");
+  });
 });
 
 describe("CLI Bridge - 网页版降级", () => {
@@ -376,40 +390,50 @@ describe("CLI Bridge - 响应解析", () => {
     expect(result.error?.code).toBe("parse_error");
   });
 
-  // 形状守卫：JSON.parse 成功 ≠ 是响应对象。Go 的 json.Marshal 吞错历史病
-  // （cli_quality_audit 规律六）会吐 "null"，若直接 as CLIResponse 穿透，
-  // 消费方读 result.status 即 TypeError（null.x）。此处锁定不得穿透。
-  it("Go 返回 \"null\"（吞错历史病灶）→ parse_error，不透传 null", () => {
-    const result = parseCLIResponse("null");
-
-    expect(result.status).toBe("error");
-    expect(result.error?.code).toBe("parse_error");
-    expect(result).not.toBeNull();
-  });
-
-  it("非对象 JSON（数组/字符串/数字/布尔）→ parse_error", () => {
-    for (const raw of ["[]", '"boom"', "123", "true"]) {
+  // 形状守卫：JSON.parse 成功 ≠ 拿到响应对象。以下锁定畸形输入不得穿透成 CLIResponse。
+  // 用 it.each 拆分：单个 it 内 for 循环会在首个失败处中断，掩盖后续取值。
+  it.each(["null", "[]", '"boom"', "123", "true"])(
+    "非响应对象 JSON（%s）→ parse_error 且不透传",
+    (raw) => {
       const result = parseCLIResponse(raw);
 
       expect(result.status).toBe("error");
       expect(result.error?.code).toBe("parse_error");
+      expect(result.error?.message).toContain("不是对象");
     }
-  });
+  );
 
   it("缺 status 字段的对象 → parse_error（status 是消费方分派依据）", () => {
     const result = parseCLIResponse("{}");
 
     expect(result.status).toBe("error");
     expect(result.error?.code).toBe("parse_error");
+    expect(result.error?.message).toContain("status 非字符串");
   });
 
-  it("未知 status 取值仍放行（不做枚举白名单，防未来新状态被误判）", () => {
+  it.each([JSON.stringify({ status: 123 }), JSON.stringify({ status: null })])(
+    "status 非字符串（%s）→ parse_error",
+    (raw) => {
+      const result = parseCLIResponse(raw);
+
+      expect(result.status).toBe("error");
+      expect(result.error?.code).toBe("parse_error");
+    }
+  );
+
+  it("未知 status 取值仍放行（不做枚举白名单，防 Go 侧新状态被误判）", () => {
     const result = parseCLIResponse(
       JSON.stringify({ status: "partial", command: "x" })
     );
 
     expect(result.status).toBe("partial");
     expect(result.command).toBe("x");
+  });
+
+  it("status 空字符串仍放行（只查类型不查取值，非空白名单）", () => {
+    const result = parseCLIResponse(JSON.stringify({ status: "" }));
+
+    expect(result.status).toBe("");
   });
 });
 

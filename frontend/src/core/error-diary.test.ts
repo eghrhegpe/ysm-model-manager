@@ -1,6 +1,9 @@
 // ===== error-diary 单元测试：error/warn toast → DiarySink =====
 // ADR-189 D1：core 不感知 backend——落盘断言改走注入的 sink spy；
-// AddOpLog 适配（含 reject 截断防死循环）的用例见 backend/diary-sink.test.ts
+// AddOpLog 适配（含 reject 截断防死循环）的用例见 backend/diary-sink.test.ts。
+// ADR-189 D4：core 自身零 window 调用——window error/unhandledrejection 的转发断言
+// 归 backend/global-error-listeners.test.ts（该装配层才碰 window），此处只测 core 收口
+// （pushToDiary 入口 + 净化/去重策略），禁止 import backend/*（越层即回退）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
 import {
@@ -9,18 +12,14 @@ import {
   unregisterErrorDiary,
   type DiaryEntry,
 } from "./error-diary.ts";
-import { installGlobalErrorListeners } from "@/backend/global-error-listeners.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
 const sinkSpy = vi.fn<(e: DiaryEntry) => void>();
-// 全局 window 监听由 utils/dom 层单独安装，测试须显式装/卸以防跨用例泄漏
-let disposeGlobal: (() => void) | undefined;
 
 beforeEach(() => {
   sinkSpy.mockClear();
   unregisterErrorDiary();
-  disposeGlobal?.();
-  disposeGlobal = undefined;
 });
 
 describe("registerErrorDiary", () => {
@@ -79,48 +78,6 @@ describe("registerErrorDiary", () => {
     const entry = sinkSpy.mock.calls[0][0];
     expect(entry.title).toBe("权限不足，无法访问文件");
     expect(entry.status).toBe("failed");
-  });
-
-  it("window.onerror → sink called", async () => {
-    registerErrorDiary(sinkSpy);
-    disposeGlobal = installGlobalErrorListeners();
-    const errorEvent = new ErrorEvent("error", {
-      message: "脚本执行出错",
-      error: new Error("脚本执行出错"),
-    });
-    window.dispatchEvent(errorEvent);
-    await flushPromises();
-    expect(sinkSpy).toHaveBeenCalledTimes(1);
-    expect(sinkSpy).toHaveBeenCalledWith({
-      title: "脚本执行出错",
-      detail: "脚本执行出错",
-      status: "failed",
-    });
-  });
-
-  it("unhandledrejection → sink called", async () => {
-    registerErrorDiary(sinkSpy);
-    disposeGlobal = installGlobalErrorListeners();
-    const reason = new Error("API 请求失败");
-    // happy-dom 未实现全局 PromiseRejectionEvent 构造器（jsdom 有），
-    // 用局部构造器兜底：真实浏览器均支持该事件，生产代码依赖的只是 reason 字段
-    const RejectionCtor = (
-      globalThis as unknown as { PromiseRejectionEvent?: typeof PromiseRejectionEvent }
-    ).PromiseRejectionEvent;
-    const rejectionEvent = RejectionCtor
-      ? new RejectionCtor("unhandledrejection", {
-          reason,
-          promise: Promise.reject(reason).catch(() => {}),
-        })
-      : Object.assign(new Event("unhandledrejection"), { reason });
-    window.dispatchEvent(rejectionEvent);
-    await flushPromises();
-    expect(sinkSpy).toHaveBeenCalledTimes(1);
-    expect(sinkSpy).toHaveBeenCalledWith({
-      title: "API 请求失败",
-      detail: "API 请求失败",
-      status: "failed",
-    });
   });
 
   it("registerErrorDiary is idempotent（首次 taken，后续未接管）", async () => {
@@ -289,7 +246,6 @@ describe("registerErrorDiary", () => {
 // ===== logWarn/logError 透写日记（热路径告警进环形日志，经注入 sink 落盘）=====
 describe("log sink 透写", () => {
   it("logError → status=failed，带 tag 前缀与 err detail", async () => {
-    const { logError } = await import("@/utils/base/primitives/log.ts");
     registerErrorDiary(sinkSpy);
     logError("preview 3D", "加载失败", new Error("boom"));
     await flushPromises();
@@ -302,7 +258,6 @@ describe("log sink 透写", () => {
   });
 
   it("logWarn → status=warn；无 err 不追加 detail", async () => {
-    const { logWarn } = await import("@/utils/base/primitives/log.ts");
     registerErrorDiary(sinkSpy);
     logWarn("preview 3D", "handle.cleanup 失败");
     await flushPromises();
@@ -311,7 +266,6 @@ describe("log sink 透写", () => {
   });
 
   it("unregisterErrorDiary 拆除 sink：reset 后 logWarn 不再落日记", async () => {
-    const { logWarn } = await import("@/utils/base/primitives/log.ts");
     registerErrorDiary(sinkSpy);
     unregisterErrorDiary();
     logWarn("tag", "reset 后的消息");

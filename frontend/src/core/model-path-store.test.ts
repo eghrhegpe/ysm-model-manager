@@ -52,10 +52,4 @@ describe("model-path-store — 跨视图最近选中模型路径 (ADR-221)", () 
     rememberModelPath("/m/b.vrm");
     expect(getLastModelPath()).toBe("/m/b.vrm");
   });
-
-  it("__resetLastModelPathForTest 复位（用例隔离兜底）", () => {
-    rememberModelPath("/m/a.pmx");
-    __resetLastModelPathForTest();
-    expect(getLastModelPath()).toBeNull();
-  });
 });

@@ -46,6 +46,12 @@ describe("语言包 key 对齐（基准 zh-CN）", () => {
     }
   });
 
+  it("基准包 zh-CN 翻译值非空（基准误改空串会让用户裸奔）", () => {
+    for (const [k, v] of Object.entries(zhCN)) {
+      expect(v.trim().length, `zh-CN.${k} 为空`).toBeGreaterThan(0);
+    }
+  });
+
   it("占位符参数集合与 zh-CN 一致（不丢参数）", () => {
     for (const [name, b] of bundles) {
       for (const k of zhKeys) {

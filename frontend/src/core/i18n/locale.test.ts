@@ -3,7 +3,8 @@
 // 覆盖 loadLocale（host 通道：成功缓存 / 失败重试 / 在途去重 / 无 host 跳过）/ getBundle 回落链 /
 // setLang 代际竞争与早退 / detectFromLangs 纯策略分支 / initI18n 初始化链。
 // 模块级状态跨用例污染 → beforeEach 调 __resetI18nStateForTest 重置（替代 vi.resetModules + 动态 import 杂技）。
-// ADR-210 D1：浏览器全局（fetch/navigator/document）全经 fake host 注入，node 环境即可，免 happy-dom。
+// ADR-210 D1：浏览器副作用（fetch/navigator/document）经 fake host 注入；localStorage 读写走
+// safeGet/safeSet，依赖 test-setup.ts §3 注入的内存实现（node 环境注入，happy-dom 自带）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { LangCode, LocaleHost } from "./locale.ts";
 import * as locale from "./locale.ts";
@@ -130,6 +131,25 @@ describe("loadLocale（host 通道，ADR-210 D1）", () => {
     expect(locale.getBundle("ja")["retry"]).toBe("成功");
   });
 
+  it("宿主 loadBundle 直接 throw（违反返回 null 契约）→ 不缓存可重试 + warn 留痕", async () => {
+    fake.setLoadBundle(async () => {
+      throw new Error("host boom");
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await locale.loadLocale("zh-CN");
+      // 违约兜底同「不缓存、可重试」语义 → 不缓存空对象，getBundle 回落（未加载 → {}）
+      expect(Object.keys(locale.getBundle("zh-CN"))).toHaveLength(0);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+    // 宿主恢复正常 → 重试自愈
+    fake.setLoadBundle(async () => ({ ok: "好" }));
+    await locale.loadLocale("zh-CN");
+    expect(locale.getBundle("zh-CN")["ok"]).toBe("好");
+  });
+
   it("未注入 host → 告警一次并跳过（fail-open），host 就绪后重试自愈", async () => {
     locale.setLocaleHost(null);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -222,6 +242,22 @@ describe("setLang", () => {
     resolveSlow({});
     await p1;
     expect(locale.getLang()).toBe("ja"); // 仍为 ja，en 被丢弃
+  });
+
+  it("隐私模式 localStorage 写抛错 → setLang 仍完成切换（safeSet 静默降级）", async () => {
+    const setSpy = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    const onChanged = vi.fn();
+    bus.on("lang:changed", onChanged);
+    try {
+      await locale.setLang("en");
+      // safeSet 内部 try/catch 吞掉写失败，切换链路不中断
+      expect(locale.getLang()).toBe("en");
+      expect(onChanged).toHaveBeenCalledWith({ lang: "en" });
+    } finally {
+      setSpy.mockRestore();
+    }
   });
 });
 

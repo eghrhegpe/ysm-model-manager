@@ -15,6 +15,7 @@ auto_fields:
     - extractIds
     - FakeImage
     - FakeRendererStats
+    - FetchImpl
     - fireBlur
     - fireClick
     - fireDrop
@@ -45,6 +46,7 @@ auto_fields:
     - setupAppMock
     - sleep
     - stubBlobUrls
+    - stubFetch
     - unmountElement
     - waitFor
     - waitForElementToBeRemoved

@@ -120,6 +120,7 @@ invariant_anchors:
 - `events.ts` / `query-by-testid.ts` / `render.ts` — 事件派发 / testid 查询 / 组件渲染辅助（拆分自 index.ts）
 - `getIdbMock()`（`idb-mock.ts`）— setup 层注入的共享 IDB mock 类型化访问（`globalThis.__YSM_TEST_IDB__`）；10 个 backend/parsers 测试共用。收敛前各文件重复内联类声明，且字段清单已漂移（契约族只列 6 字段、实际注入 8 字段）——统一后单一事实源
 - `makeCanvasFakeRenderer()`（`fake-webgl-renderer.ts`）— canvas 形态 Fake WebGLRenderer（800×600 + `getBoundingClientRect` + `vi.fn` 方法）。装配方式：`vi.mock("three", async (importOriginal) => { ... const { makeCanvasFakeRenderer } = await import("@/test-utils/fake-webgl-renderer.ts"); ... })`（factory 被 hoist，故须 dynamic import）。**不**并入 setup 层全局 Fake——后者用 div 且方法为空实现，满足不了尺寸/断言需求
+  - **`info` 可注入（2026-09 补，刀⑫ 审查 P1 根因）**：本 Fake 原先**没有 `info` 字段** → `sampleGpuLoad` 走 fail-open 读 0 → `guardGpuBudget` 恒放行 → **`mount3D` 直挂路径的 GPU 预算门在测试里一次都没被触发过**（判定写反也全绿）。现经 `setFakeRendererStats({calls, triangles, textures})` / `resetFakeRendererStats()` 注入（模块级 Getter 形态，默认全 0 → 既有 37 个 mount 用例行为不变）。**教训**：凡是「读外部对象统计字段」的生产逻辑，测试基建缺该字段时会被 fail-open 静默吞掉——补基建是让门可测的前提，不是可选项
 
 ## 与其他子系统关系
 

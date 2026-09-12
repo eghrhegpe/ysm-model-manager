@@ -11,6 +11,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
+    - __resetSceneTextureBytesForTest
     - __setEncodeImplForTest
     - _clearPmxStatsCache
     - _resetSingletons
@@ -137,6 +138,7 @@ auto_fields:
     - closeOverlay
     - closeUnusedDecodedBitmaps
     - collectBlobUrls
+    - collectMaterialTextures
     - collectMenuGraph
     - CollectMenuGraphOpts
     - collectNodePredicates
@@ -226,7 +228,10 @@ auto_fields:
     - envState
     - EnvState
     - EnvStateSchema
+    - estimateSceneTextureBytes
     - estimateTexGpuBytes
+    - estimateTextureBytes
+    - estimateTextureSetBytes
     - eulerToQuaternion
     - evaluateGpuLoad
     - extractIKChainFromTree
@@ -270,6 +275,7 @@ auto_fields:
     - getCustomAnimPath
     - getEnvCallbackCount
     - getFrameIntervalMs
+    - getLastSceneTextureBytes
     - getLoadTraces
     - getMaterialDetailBase
     - getMaxFps
@@ -406,6 +412,7 @@ auto_fields:
     - mergeStatsMenuItems
     - MeshData
     - MeshFragment
+    - MIPMAP_CHAIN_FACTOR
     - MMD_SEMANTIC_CANDIDATES
     - MMD_SEMANTIC_MORPH_CANDIDATES
     - MmdAdapterDeps
@@ -622,6 +629,7 @@ auto_fields:
     - setBoneVisible
     - setEnvState
     - setFrustumCullEnabled
+    - setLastSceneTextureBytes
     - setMaterialOpacity
     - setMaterialVisible
     - setMmdMaterialOpacity
@@ -827,7 +835,8 @@ perf:
 - **模型加载与解码**（`model3d-loader.ts`）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
 - **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 23 个语义骨骼 id（VRM/MMD/YSM 三格式统一，宽容缺省）
 - **材质与纹理**（`texture-loader.ts`/`texture-cache.ts`/`texture-alpha.ts`/`mc-tints.ts`）：`loadTextures` 并行 acquire + 50ms 轮询 complete（P2 修复加 15s 超时兜底，悬挂 URL 不再永久 pending）；KTX2 压缩管线（WASM BasisEncoder → base64 → Go `SaveCachedTexture` 缓存）
-- **渲染循环与性能**（`render-budget.ts`/`frustum-cull.ts`/`scene-stats.ts`/`screenshot.ts`/`screenshot-render.ts`）：perFrame 回调驱动 `update(dt)`（动画/感知/物理）；自适应像素比 / 帧率上限；视锥裁剪（mesh 级 `frustumCulled=false`，骨骼旋转时扁平部件误判已修）；离屏多角度截图（front/45/side/back45）
+- **渲染循环与性能**（`render-budget.ts`/`frustum-cull.ts`/`scene-stats.ts`/`screenshot.ts`/`screenshot-render.ts`）：perFrame 回调驱动 `update(dt)`（动画/感知/物理）；自适应像素比 / 帧率上限（GPU 饱和时预防性降档）；视锥裁剪（mesh 级 `frustumCulled=false`，骨骼旋转时扁平部件误判已修）；离屏多角度截图（front/45/side/back45）
+- **GPU 预算与纹理字节计量**（`gpu-load.ts`/`gpu-budget.ts`/`gpu-load-calibrate.ts`/`texture-bytes.ts`）：4 维预算（draw calls / triangles / 纹理数 / textureBytes）统一经 `gpu-budget|guardGpuBudget` 判定，两条入口共用（追加通道 + 直挂通道）。**字节维度双口径取大者**：场景图（`texture-bytes|estimateSceneTextureBytes`，覆盖 MMD/VRM/FBX 等**不进 `textureCache`** 的格式）+ 池累计（`textureCache|getTotalBytes`）——单用池会对 MMD/VRM 恒 0（最吃显存的格式反而不被计量）。预算上限走 `gpu-load-calibrate|resolveGpuLoadLimits()`（真机标定生效、clamp 到默认 ×0.1~×10 防自锁）
 - **2D 预览**（`views/app-preview/model2d/model2d.ts`）：平铺/网格 2D 缩略图（Canvas 2D 正交投影）
 
 ## 对外 API / 入口

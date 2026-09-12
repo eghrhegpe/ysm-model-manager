@@ -8,6 +8,10 @@ import { bus } from "@/bus";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { DEFAULT_GPU_LOAD_LIMITS } from "./gpu-load.ts";
 import { GPU_BUDGET_CALIBRATION_KEY } from "./gpu-load-calibrate.ts";
+import {
+  __resetSceneTextureBytesForTest,
+  setLastSceneTextureBytes,
+} from "./texture-bytes.ts";
 import { guardGpuBudget } from "./gpu-budget.ts";
 
 const renderer = (o: {
@@ -37,6 +41,7 @@ beforeEach(() => {
 
 afterEach(() => {
   textureCache.disposeAll(); // 模块级单例，防跨用例串扰
+  __resetSceneTextureBytesForTest();
   vi.restoreAllMocks();
 });
 
@@ -140,5 +145,28 @@ describe("guardGpuBudget", () => {
 
   it("info 结构缺失 → fail-open 放行（不误拦加载）", () => {
     expect(guardGpuBudget({} as THREE.WebGLRenderer, "preview.gpuBudgetAppend")).toBe(true);
+  });
+
+  // ===== 刀⑬：场景图字节口径（补齐 MMD/VRM —— 它们不进 textureCache）=====
+  it("**场景快照参与判定**：池为空但场景已占 512MB（MMD/VRM 走自带 loader 不进池）→ 拦", () => {
+    setLastSceneTextureBytes(512 * 1024 * 1024);
+    expect(textureCache.getTotalBytes()).toBe(0); // 池口径对 MMD/VRM 恒 0（修复前的漏洞）
+    expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(false);
+  });
+
+  it("快照与池取大者：池更大时用池的值判定", () => {
+    setLastSceneTextureBytes(1024); // 快照很小
+    for (let i = 0; i < 4; i++) seedTexture(`/big${i}.png`, 4096, 4096); // 池：4 张 4K 含 mip
+    expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(false);
+  });
+
+  it("两者都在预算内 → 放行", () => {
+    setLastSceneTextureBytes(16 * 1024 * 1024);
+    seedTexture("/small.png", 256, 256);
+    expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(true);
+  });
+
+  it("无快照且池为空 → 字节维度为 0，不误报", () => {
+    expect(guardGpuBudget(renderer({ calls: 10 }), "preview.gpuBudgetLoad")).toBe(true);
   });
 });

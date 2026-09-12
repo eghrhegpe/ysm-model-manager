@@ -905,6 +905,7 @@ describe("readVrmMeta 场景统计（ADR-131 P2）", () => {
       triangleCount: 0,
       materialCount: 0,
       textureCount: 0,
+      textureBytes: 0,
       morphCount: 0,
     });
   });

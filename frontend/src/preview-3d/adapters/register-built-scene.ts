@@ -6,6 +6,10 @@
 // 不携带菜单/骨骼元数据）语义不同，不在此收编范围。
 import type * as THREE from "three";
 import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
+import {
+  estimateSceneTextureBytes,
+  setLastSceneTextureBytes,
+} from "@/preview-3d/infra/texture-bytes.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/stats.ts";
 import type { PreviewScene } from "./mount-preview-core.ts";
@@ -33,6 +37,10 @@ export function registerBuiltScene(input: RegisterBuiltSceneInput): PreviewMenuN
   const { scene, diffSet } = input;
   const added = scene && diffSet ? scene.children.filter((c) => !diffSet.has(c)) : [];
   const stats = collectSceneStats(added);
+  // GPU 预算门的纹理字节快照：取**全场景**（而非本次差量）——预算门判的是
+  // 「GPU 上现在压着多少」，追加语义下必须累计全部已注册模型。
+  // 全场景口径同时覆盖 MMD/VRM（它们不进 textureCache，池口径对它们恒 0）。
+  setLastSceneTextureBytes(estimateSceneTextureBytes(scene));
   const menuItems = mergeStatsMenuItems(input.content.menuItems, stats);
   sceneRegistry.register({
     path: input.path,

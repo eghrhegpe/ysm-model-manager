@@ -23,7 +23,15 @@ function makeIndexedGeo(triangles: number): THREE.BufferGeometry {
 }
 
 function emptyStats(): SceneStats {
-  return { boneCount: 0, meshCount: 0, triangleCount: 0, materialCount: 0, textureCount: 0, morphCount: 0 };
+  return {
+    boneCount: 0,
+    meshCount: 0,
+    triangleCount: 0,
+    materialCount: 0,
+    textureCount: 0,
+    textureBytes: 0,
+    morphCount: 0,
+  };
 }
 
 describe("collectSceneStats", () => {
@@ -115,6 +123,43 @@ describe("collectSceneStats", () => {
     const root = new THREE.Group();
     root.add(new THREE.Mesh(makeIndexedGeo(2), mat));
     expect(collectSceneStats(root).textureCount).toBe(1);
+  });
+
+  // 刀⑬：textureBytes 与 textureCount 同 Set 算出，供 GPU 预算门的全格式口径用
+  it("textureBytes：与 textureCount 同口径累加（含 mip 链；未就绪纹理计 0）", () => {
+    const ready = new THREE.Texture();
+    (ready as unknown as { image: { width: number; height: number } }).image = {
+      width: 1024,
+      height: 1024,
+    };
+    const notReady = new THREE.Texture(); // image 未就绪 → 0
+    const mat = new THREE.MeshStandardMaterial();
+    mat.map = ready;
+    mat.normalMap = notReady;
+    const root = new THREE.Group();
+    root.add(new THREE.Mesh(makeIndexedGeo(2), mat));
+    const s = collectSceneStats(root);
+    expect(s.textureCount).toBe(2); // 两张都计数
+    expect(s.textureBytes).toBe(Math.round(1024 * 1024 * 4 * (4 / 3))); // 只有 ready 计字节
+  });
+
+  it("textureBytes：共享纹理不重复累加（去重与 textureCount 一致）", () => {
+    const shared = new THREE.Texture();
+    (shared as unknown as { image: { width: number; height: number } }).image = {
+      width: 512,
+      height: 512,
+    };
+    const mat = new THREE.MeshStandardMaterial();
+    mat.map = shared;
+    mat.emissiveMap = shared;
+    const root = new THREE.Group();
+    root.add(
+      new THREE.Mesh(makeIndexedGeo(2), mat),
+      new THREE.Mesh(makeIndexedGeo(2), mat),
+    );
+    const s = collectSceneStats(root);
+    expect(s.textureCount).toBe(1);
+    expect(s.textureBytes).toBe(Math.round(512 * 512 * 4 * (4 / 3)));
   });
 
   it("SkinnedMesh：计入网格；skeleton.bones 计入骨骼数", () => {

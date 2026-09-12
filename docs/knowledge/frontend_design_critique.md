@@ -231,6 +231,12 @@ invariant_anchors:
   - **P4「可复用既有函数」→ 已修**：`resolveGpuLoadLimits` 手写 `JSON.parse` + try/catch → 换 `utils/base/primitives/storage.ts|safeGetJSON`。
   - 审查明确**核实后不成立**的项（未改）：i18n 三语 key/占位符一致；`getTotalBytes` 重复计数（key=URL，同 URL 单 entry，不同 URL 即两份真实 GPU 副本，计得忠）；标定 getter 悬垂 renderer（`reset()` 置 null，`info` 是构造期普通对象，读到陈旧也不崩）；标定 do-while 卡死（后台节流会变慢不挂起）；`runFullCleanup` 对 ctx 的清理完备性。
   - 守卫：新增/改写 13 测（mount 直挂门 5 + clamp 4 + mipmap 2 + 软线跟随标定 1 + 有界去重 1）；全量 5606 测试 + typecheck + vite build + biome 全绿。
+- ✅ **刀⑬ 字节维度补全：让 `textureBytes` 真正覆盖全格式（刀⑫ P3-1 的根治）**：刀⑪ 那句「字节这一刀补上纹理数与 4K 的差别」在 **MMD/VRM 上是空的**——它们走 blob URL + 内置 Loader，**不进 `textureCache`**，池口径对它们恒 0，即**最吃显存的格式恰好不被计量**（YSM/pack 另有 pack 适配器进池）。
+  - **方案选型**：不把 MMD/VRM 纹理「接进引用计数池」（那要重写各自 loader 的 dispose 所有权链，风险高、收益仅是计量）——改为**场景图口径**：`collectSceneStats` 本来就在 traverse 场景、按九贴图槽（`ALL_TEXTURE_KEYS`）按实例去重收纹理实例，加一条字节累加即可，**天然覆盖全部格式**且反映「GPU 上真实压着多少」（比池更准，池可能含未悬挂的残留）。
+  - **抽单一事实源 `infra/texture-bytes.ts`**：`estimateTextureBytes`（单张，含 mip 链）/ `estimateTextureSetBytes`（**内部保证按实例去重**——命名承诺与实现一致）/ `collectMaterialTextures`（九槽收集，供 `scene-stats` 复用，消除重复遍历逻辑）/ `estimateSceneTextureBytes`（场景整图）+ 场景字节**快照**（`set/getLastSceneTextureBytes`）。
+  - **快照为什么必需**：`guardGpuBudget` 在 mount/switch 时同步判定，不可能当场 traverse 全场景（每次 mount 扫一遍太重）——由 `register-built-scene` 在构建后写快照（取**全场景**而非本次差量：追加语义下预算判的是「GPU 上现在压着多少」，必须累计全部已注册模型）。
+  - **双口径取大者**：`guardGpuBudget` 用 `max(场景快照, 池累计)`——两者覆盖不同集合（场景=全格式；池=已 acquire 未挂场景 / 已移除未归零的 YSM/pack），缺一即漏计。取大不会低估，代价是理论上可能高估（同一批两边都算）；预算是「病态堆叠早拦」护栏，**保守优于漏拦**。首挂（快照为 0）自然退化为池口径。
+  - 守卫：`texture-bytes` 17 新测（单张口径/mip/未就绪/集合去重/九槽收集/场景遍历/null 安全/快照非法值）+ `scene-stats` 2 新测（字节与计数同口径、共享纹理不重复累加）+ `gpu-budget` 4 新测（**快照参与判定**：池为空但场景 512MB 仍拦 / 取大者 / 都内放行 / 双空不误报）；全量 5629 测试 + typecheck + vite build + biome 全绿。
 
 ## 相关
 

@@ -14,7 +14,7 @@
 // 数量，尺寸由调用方在纹理 onLoad 后补采。
 
 import type * as THREE from "three";
-import { ALL_TEXTURE_KEYS } from "@/preview-3d/mesh/mesh.ts";
+import { collectMaterialTextures, estimateTextureSetBytes } from "./texture-bytes.ts";
 
 /** 场景统计（ADR-131 P0 产出，调用方映射进 StatsCardModel） */
 export interface SceneStats {
@@ -30,6 +30,9 @@ export interface SceneStats {
    *  normalMap/roughnessMap/metalnessMap/aoMap/lightMap/alphaMap/envMap，
    *  与 mesh.disposeMaterial 一致，非旧「仅 map」口径） */
   textureCount: number;
+  /** 纹理显存字节估算（与 textureCount 同 Set 算出；口径见 infra/texture-bytes）。
+   *  首次采集时 `image` 可能未就绪（异步加载中）→ 按 0 计，待 onLoad 后重采才准。 */
+  textureBytes: number;
   /** 表情数（morphTargetInfluences 最长网格的通道数） */
   morphCount: number;
 }
@@ -42,6 +45,7 @@ export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): Sce
     triangleCount: 0,
     materialCount: 0,
     textureCount: 0,
+    textureBytes: 0,
     morphCount: 0,
   };
   const materials = new Set<THREE.Material>();
@@ -86,13 +90,8 @@ export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): Sce
         // 纹理口径与 mesh.disposeMaterial 的 ALL_TEXTURE_KEYS 一致（map/emissiveMap/
         // normalMap/roughnessMap/metalnessMap/aoMap/lightMap/alphaMap/envMap）——
         // 旧实现只计 mm.map，emissive/normal/roughness 等多贴图材质统计偏低（审核 P2）。
-        const anyMat = m as unknown as Record<string, unknown | THREE.Texture | null>;
-        for (const key of ALL_TEXTURE_KEYS) {
-          const tex = anyMat[key];
-          if (tex && typeof (tex as THREE.Texture).isTexture === "boolean") {
-            textures.add(tex as THREE.Texture);
-          }
-        }
+        // 收集器已抽到 texture-bytes|collectMaterialTextures（与字节估算同源，防漂移）。
+        for (const tex of collectMaterialTextures(m)) textures.add(tex);
       }
 
       // 表情数：morphTargetInfluences 通道数取最长（VRM 表情通常挂单 mesh）
@@ -105,6 +104,7 @@ export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): Sce
   stats.boneCount = bones.size;
   stats.materialCount = materials.size;
   stats.textureCount = textures.size;
+  stats.textureBytes = estimateTextureSetBytes(textures);
   stats.morphCount = maxMorph;
   return stats;
 }

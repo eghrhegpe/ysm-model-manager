@@ -446,7 +446,7 @@
 | assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 653 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
-| guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 39 |
+| guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |

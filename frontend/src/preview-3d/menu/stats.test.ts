@@ -16,6 +16,7 @@ function stats(overrides: Partial<SceneStats> = {}): SceneStats {
     triangleCount: 120,
     materialCount: 4,
     textureCount: 1,
+    textureBytes: 0,
     morphCount: 0,
     ...overrides,
   };

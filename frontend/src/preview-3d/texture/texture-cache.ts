@@ -9,9 +9,7 @@
 
 import type * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
-
-/** mip 链系数：three 默认 `generateMipmaps=true` → GPU 额外分配约 1/3 存储。 */
-const MIPMAP_CHAIN_FACTOR = 4 / 3;
+import { estimateTextureBytes } from "@/preview-3d/infra/texture-bytes.ts";
 
 interface CacheEntry {
   tex: THREE.Texture;
@@ -95,31 +93,20 @@ export class TextureCacheImpl {
   /**
    * 当前缓存纹理的显存字节**估算**（供 GPU 预算判定用）。
    *
-   * 口径：`width × height × 4 × mip 系数` 累加（RGBA 未压缩 + mip 链）。
-   * 误差方向**双向**，故只作相对比较与预算拦截，非精确计量：
-   * - 高估：压缩格式（KTX2 / 半浮点）实际远低于 RGBA 未压缩；
-   * - 低估：已由本函数补上 mipmap 系数（three 默认 `generateMipmaps=true`
-   *   会额外分配约 1/3 存储）；未补前 `w×h×4` 恰好让「4 张 4K」踩在 256MB
-   *   默认上限线上（严格 `>` 不触发），补后「4 张 4K」确定超线。
+   * 口径与 `infra/texture-bytes.ts|estimateTextureBytes` 同源（RGBA 未压缩 + mip 链），
+   * 误差方向双向，故只作相对比较与预算拦截，非精确计量。
    *
-   * ⚠️ **覆盖盲区（勿误读这一刀已落全）**：本池只收 `texture-loader|loadTextures`
-   * （YSM）与 pack 适配器的纹理；**MMD / VRM 走 blob URL + 内置 Loader，不进本池**
-   * ——它们的该维度恒为 0，即 `textureBytes` 对 MMD/VRM **无效**。对这两类格式，
-   * 只有 `textures`（数量）维度在起作用。真覆盖需把 MMD/VRM loader 接进同一
-   * 引用计数池（另立项），或依赖 `renderer.info.memory.textures` 交叉提示。
+   * ⚠️ **覆盖盲区（勿误读）**：本池只收 `texture-loader|loadTextures`（YSM）与
+   * pack 适配器的纹理；**MMD / VRM 走 blob URL + 内置 Loader，不进本池**——本方法
+   * 对它们恒为 0。全格式口径请用 `infra/texture-bytes|estimateSceneTextureBytes`
+   * （遍历场景图，MMD/VRM 亦覆盖）——`gpu-budget|guardGpuBudget` 取两者较大值。
    *
    * 图片未就绪（`image` 缺失 / 尺寸为 0，如占位纹理）按 0 计，不误报。
    */
   getTotalBytes(): number {
     let total = 0;
     for (const [, entry] of this.cache) {
-      const tex = entry.tex;
-      const img = tex.image as { width?: number; height?: number } | undefined;
-      const w = img?.width ?? 0;
-      const h = img?.height ?? 0;
-      if (w <= 0 || h <= 0) continue;
-      const mip = tex.generateMipmaps === false ? 1 : MIPMAP_CHAIN_FACTOR;
-      total += Math.round(w * h * 4 * mip);
+      total += estimateTextureBytes(entry.tex);
     }
     return total;
   }

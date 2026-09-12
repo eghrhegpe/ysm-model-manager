@@ -1,3 +1,4 @@
+// @vitest-environment node
 // ===== ADR-174 D5：ExtractYsmSummary 双端 fixture 对账（TS 消费侧）=====
 // 黄金语料：tests/fixtures/parity/ysm-summary.golden.json（黄金值由 Go 主源产出，
 // regen：YSM_PARITY_REGEN=1 go test ./go/ysm -run TestYsmSummaryParity）。

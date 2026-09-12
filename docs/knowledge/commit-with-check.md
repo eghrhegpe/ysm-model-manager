@@ -58,8 +58,9 @@ quick_intents:
   - 排查门禁失败原因（看 FAIL 块 + 失败项 tail 的具体违规清单）
 status: active
 invariant_anchors:
-  - scripts/commit-with-check.ts|commitWithTempIndex
+  - scripts/_lib/commit-temp-index.ts|commitWithTempIndex
   - scripts/_lib/commit-temp-index.ts|CommitTempIndexOptions
+  - scripts/_lib/commit-temp-index.ts|isHookArtifact
   - scripts/_lib/gen-cmds.ts|GEN_CMDS
 ---
 

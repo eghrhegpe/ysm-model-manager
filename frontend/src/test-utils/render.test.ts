@@ -1,13 +1,12 @@
 // ===== 渲染辅助测试（renderComponent）=====
-// 覆盖：默认挂载 body、自定义容器、connected 事件 + shadowRoot 就绪、unmount 清理
+// 覆盖：默认挂载 body、自定义容器、shadowRoot 就绪、unmount 清理
 import { describe, it, expect } from "vitest";
 import { renderComponent } from "./render.ts";
 
-// 注册一个真实自定义元素：connectedCallback 里建 shadowRoot 并发 connected 事件
+// 注册一个真实自定义元素：connectedCallback 里建 shadowRoot（renderComponent 轮询 shadowRoot 就绪）
 class TestEl extends HTMLElement {
   connectedCallback(): void {
     this.attachShadow({ mode: "open" });
-    this.dispatchEvent(new CustomEvent("connected", { bubbles: true }));
   }
 }
 customElements.define("test-el", TestEl);

@@ -155,9 +155,9 @@ invariant_anchors:
 | 7.9 `bus.ts` `VOID_EVENTS` vs `emit` 内手抄 | **存活** | 未见改调 `isVoidEvent(event)`。 |
 | 7.10 `bus.ts` 无通配符监听/emit 钩子 | **存活** | 未见 `bus.on("*")`。 |
 | 7.11 `BusEvents` 闭联合表 | **存活**（索引原文也标为特性非缺陷） | |
-| 7.12 `test-utils/index.ts` `waitFor`/`waitForElementToBeRemoved` 重复 | **存活** | 未见抽 `pollLoop`。 |
+| 7.12 `test-utils/wait.ts` `waitFor`/`waitForElementToBeRemoved` 重复 | **已治理** | 抽私有 `pollUntil` 内核，两函数共用骨架；统一报错策略（firstErr 根因 + lastErr 上下文）与消息文案（原抛错超时分支报末次异常，与 P2 首异常根因意图相悖，已收敛）。 |
 | 7.13 `test-utils/render.ts` 轮询间隔 + 就绪条件 | **存活** | 未见 `RenderOptions.ready` 钩子。 |
-| 7.14 `test-utils/events.ts` `fireDrop`/`fireDrag` 注入重复 | **存活** | 未见 `injectDataTransfer`。 |
+| 7.14 `test-utils/events.ts` `fireDrop`/`fireDrag` 注入重复 | **已闭环** | `fireDrag` 2026-09-11 删（check-orphan-exports 孤儿清理），注入重复的另一端消失；单 `fireDrop` 抽 `injectDataTransfer` 反成过度抽象，不动。 |
 | 7.15 `web-spike/main.ts` | **N/A**（spike 定位） | |
 
 ---
@@ -171,5 +171,5 @@ invariant_anchors:
 - **四、core+features+services+utils**：12 条中 2 部分（4.6 BONE_CHANNELS、4.7 display）、10 存活。
 - **五、avatar+geometry+litematic+ysm**：2 部分（头像/geometry ADR-068 已落地容器桥接）、2 存活。
 - **六、Go 其他**：6.1/6.3/6.5 部分、6.2/6.4 已闭环（同 Top 3/5）、其余 8+ 存活。
-- **七、wasm+根+test-utils**：2 已闭环（7.4/7.5）、3 部分（7.6/7.8 半）、1 条 N/A、10 存活。
-- **对账结论**：Top 10 中 60% 已由近两天 ADR 闭环；硬编码清理集中在 sync/registry/importer/browser-adapter 主线；3D 渲染管线、test-utils、wasm 胶水层、低价值 Go 常量（`MaxImportSize`/`CHECK_INTERVAL`/`logs` 阈值）是**本轮未触及的剩余拓展点**，可留待下一批对账。
+- **七、wasm+根+test-utils**：4 已闭环/治理（7.4/7.5/7.12 本轮 poller/7.14 fireDrag 删后闭环）、2 部分（7.6/7.8 半）、1 条 N/A、8 存活。
+- **对账结论**：Top 10 中 60% 已由近两天 ADR 闭环；硬编码清理集中在 sync/registry/importer/browser-adapter 主线；3D 渲染管线、wasm 胶水层、低价值 Go 常量（`MaxImportSize`/`CHECK_INTERVAL`/`logs` 阈值）是**剩余拓展点**；test-utils 本轮收口 7.12（poller 抽取）/7.14（fireDrag 删后闭环），仅余 7.13（render `ready`/`interval` 钩子，低优先投机），可留待下一批对账。

@@ -2,6 +2,51 @@
 // 简单睡眠、微任务队列刷新、条件轮询等待。
 // 所有函数依赖 vitest 的 DOM 环境，仅测试上下文使用。
 
+/** 把任意异常归一为消息字符串：优先 Error.message，否则整体 String。 */
+function errMessage(e: unknown): string {
+  return String((e as Error)?.message ?? e);
+}
+
+/**
+ * 条件轮询内核——waitFor / waitForElementToBeRemoved 共用骨架。
+ *
+ * check 返回真即 resolve；check 抛错则记录首个异常并继续轮询；超时 reject
+ * 时统一带上首个异常（根因），若末次异常与之不同则附 last error 作上下文。
+ *
+ * 设计意图（对齐 P2 修复）：超时消息始终暴露根因，不被通用文案掩盖；
+ * catch 不静默吞错。原先两函数各写一套 tick/firstErr/超时 reject，且
+ * 抛错超时分支报末次异常（与首异常根因意图相悖）、分隔符与文案不一致——
+ * 抽本内核后策略与口径单点收敛。
+ */
+function pollUntil(check: () => boolean, timeout: number, label: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    let firstErr: unknown = null;
+    let lastErr: unknown = null;
+    const tick = () => {
+      let done = false;
+      try {
+        done = check();
+      } catch (e) {
+        if (firstErr === null) firstErr = e;
+        lastErr = e;
+      }
+      if (done) return resolve();
+      if (Date.now() - start < timeout) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      const parts = [`${label} timed out after ${timeout}ms`];
+      if (firstErr !== null) {
+        parts.push(`first error: ${errMessage(firstErr)}`);
+        if (lastErr !== firstErr) parts.push(`last error: ${errMessage(lastErr)}`);
+      }
+      reject(new Error(parts.join("; ")));
+    };
+    tick();
+  });
+}
+
 /**
  * 简单睡眠（测试中等待异步渲染）。
  */
@@ -29,34 +74,7 @@ export function flushPromises(): Promise<void> {
  * @param timeout 超时毫秒
  */
 export async function waitFor(fn: () => unknown, timeout = 5000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    // P2 修复：记录首个异常，超时 reject 时带上原始错误——原实现 catch 静默吞错，
-    // 真实根因被通用消息掩盖，调试成本高
-    let firstErr: unknown = null;
-    const tick = () => {
-      try {
-        if (fn()) resolve();
-        else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else
-          reject(
-            new Error(
-              `waitFor timed out after ${timeout}ms${firstErr ? `; first error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`,
-            ),
-          );
-      } catch (e) {
-        if (firstErr === null) firstErr = e;
-        if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else
-          reject(
-            new Error(
-              `waitFor condition threw after ${timeout}ms: ${String((e as Error)?.message ?? e)}`,
-            ),
-          );
-      }
-    };
-    tick();
-  });
+  return pollUntil(() => Boolean(fn()), timeout, "waitFor");
 }
 
 /**
@@ -68,34 +86,5 @@ export async function waitForElementToBeRemoved(
   fn: () => Element | null,
   timeout = 5000,
 ): Promise<void> {
-  // P4 修复：对齐 waitFor 的 firstErr 设计——原 catch 静默吞错，超时只报通用消息，
-  // 真实根因被掩盖（fn 抛出的断言/查询错误无法定位）
-  let firstErr: unknown = null;
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const tick = () => {
-      try {
-        const el = fn();
-        if (!el?.isConnected) resolve();
-        else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else
-          reject(
-            new Error(
-              `waitForElementToBeRemoved timed out after ${timeout}ms` +
-                (firstErr !== null ? ` (first error: ${String(firstErr)})` : ""),
-            ),
-          );
-      } catch (e) {
-        if (firstErr === null) firstErr = e;
-        if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else
-          reject(
-            new Error(
-              `waitForElementToBeRemoved timed out after ${timeout}ms (first error: ${String(e)})`,
-            ),
-          );
-      }
-    };
-    tick();
-  });
+  return pollUntil(() => !fn()?.isConnected, timeout, "waitForElementToBeRemoved");
 }

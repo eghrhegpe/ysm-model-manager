@@ -36,6 +36,19 @@ import {
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
+// 控件原语（select/slider/toggle/color）渲染器映射表（ADR-195 刀 2.5 投影反转：
+// 节点控件经 nodeControlToView 适配为 CapControlView 后，由各自 renderCap* 渲染器输出）。
+// 表驱动取代 switch 内四段三元链——遗漏某种 kind 在编译期即报错，且消除嵌套三元。
+const CAP_CONTROL_RENDERERS: Record<
+  "select" | "slider" | "toggle" | "color",
+  (container: HTMLElement, view: CapControlView) => void
+> = {
+  select: renderCapSelect,
+  slider: renderCapSlider,
+  toggle: renderCapToggle,
+  color: renderCapColor,
+};
+
 // i18n 取值统一走共享 t()（core/i18n/t.ts，内置 current → en → key 多级回退）
 
 /**
@@ -647,15 +660,7 @@ export function renderMenu(
         // CapControlView 直供 cap 栈渲染器（renderCapToggle/Slider/Select/Color）——
         // 不再构造控件中间对象（rmAppendSelect/Slider/Toggle 已退役）。
         const view = nodeControlToView(node, snapshot, deps.menu);
-        const renderer =
-          node.kind === "toggle"
-            ? renderCapToggle
-            : node.kind === "slider"
-              ? renderCapSlider
-              : node.kind === "select"
-                ? renderCapSelect
-                : renderCapColor;
-        renderer(container, view);
+        CAP_CONTROL_RENDERERS[node.kind](container, view);
         break;
       }
       case "material-row":

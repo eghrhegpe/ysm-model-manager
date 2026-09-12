@@ -424,14 +424,12 @@ function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]):
  */
 function renderPreviewDock(
   dock: HTMLElement,
-  _ctx: PreviewMenuCtx, // dock 过滤已谓词化走状态层快照，ctx 仅保签名兼容（visibleWhen 谓词读 previewSnapshot）
   menu: SlideMenuHandle,
   showMenu: (view: SlideMenuView) => void,
   makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
   makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView,
   makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView,
   actionCtx: PreviewActionMenuCtx,
-  _hideMenu: () => void,
   adapterItemsRef: { v: PreviewMenuNode[] },
 ): void {
   dock.innerHTML = "";
@@ -603,14 +601,12 @@ export function mountPreviewRootMenu(
   const refreshDock = (): void =>
     renderPreviewDock(
       dock,
-      ctx,
       menu,
       showMenu,
       makeRowFn,
       makePanelViewFn,
       makeGroupViewFn,
       actionCtx,
-      hideMenu,
       adapterItemsRef,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）

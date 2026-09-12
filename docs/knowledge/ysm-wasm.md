@@ -84,7 +84,7 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 
 ## Go 端 Node.js + WASM 解码（生产主路径）
 
-发版不打包 exe 时，`.ysm` 解码的唯一路径（`app_model.go` `runYSMParserOnFile`：`FindCLI()` 找不到 exe → `decodeYSMViaNodeJS`）：
+`.ysm` 解码的唯一路径——`app_model.go` 的 `runYSMParserOnFile` → `decodeYSMViaNodeJS`。（⚠️ 原描述「`FindCLI()` 找不到 exe → …」已过时：exe sidecar 于 2026-08-08 停发，`go/ysm/cli.go` 的 `FindCLI` **已删除**，解码器改经 `go/ysm|SetDecoder` 注入。）
 
 1. `findNodeJS()` 在 PATH 找 `node`/`node.exe`（`wasm_decoder.go` 内 `nodeJSPath` 包级变量），无 node 则此路径不可用；
 2. 内嵌 glue + wasm 写临时目录，拼 `decode.cjs`：`require(glue)` → `await YSMParser({ wasmBinary, noInitialRun: true })` → `FS.writeFile('/input/model.ysm')` → **`mod.callMain(['-i','/input','-o','/output'])`** → 递归收集 `/output`，打 `FILES_JSON:` 标记；

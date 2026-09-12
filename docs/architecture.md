@@ -289,9 +289,8 @@ type CliCommand struct {
 |------|------|-------------------|--------|
 | 统一 web 产物（编译自 `upstream/YesSteveModel-Parser`，产物暂存 `build-unified/`） | 前端 base64：`frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js`；Go embed：`frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | `_main`（callMain）/ `ysm_decode_from_memory` / `_malloc` / `ccall` / `cwrap` / `FS` | 桌面 WebView2 / Android WebView / 纯浏览器网页版 内存直解 + Go 端 Node.js 子进程 callMain |
 
-- **重建脚本**：`node scripts/build-ysm-wasm.mjs`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验），上游更新后只需重跑一次，两端同步生效，不再有「两份资产不同步」问题。
-- exe sidecar 仅作开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
-- 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails3 build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
+- **重建脚本已归档**：原 `node scripts/build-ysm-wasm.mjs`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验）现位于 **`scripts/_attic/build-ysm-wasm.ts`**（`_attic` = 孤儿审计归档区，保留代码供溯源、不参与门禁）。⚠️ 上游 YSMParser 更新时**需先复活该脚本并具备 emsdk 工具链**（本机当前无 emsdk，故「改上游 C++」类方案暂不可执行）。
+- **exe sidecar 已停发**（2026-08-08 架构决策）：`go/ysm/cli.go` 的 `FindCLI()` 已删除，Go 侧解码入口改为 **`go/ysm|SetDecoder` 注入**（`internal/app` init 阶段以 Node.js + WASM 实现注入）。`runYSMParserOnFile` 即 `decodeYSMViaNodeJS`（无 Node 环境返回 nil）。
 
 ### 4.2 解码运行时：两条路径，同一份 C++ 能力
 
@@ -321,22 +320,31 @@ type CliCommand struct {
 
 | 输入 | 第一优先级 | 第二优先级 | 最终 |
 |------|-----------|-----------|------|
-| `.ysm`（加密 V2/V3 / 开放） | `runYSMParserOnFile` → `FindCLI()`（exe，仅开发态存在） | `decodeYSMViaNodeJS`（Node.js + WASM `callMain`） | 空 `BedrockModel{}` |
+| `.ysm`（加密 V2/V3 / 开放） | `runYSMParserOnFile` → `decodeYSMViaNodeJS`（Node.js 子进程 + 内嵌 WASM） | —（`FindCLI`/exe sidecar 已于 2026-08-08 删除） | 空 `BedrockModel{}` |
 | `.zip` / `.7z`（开放 OYSM） | Go 原生 `geometry.ParseFromZip/7z` | `runYSMParserOnFile`（同 `.ysm`） | 空 |
 | `.json`（已解压目录） | `ysm.FindGeometryInExtractedYSM` | — | 空 |
-| 前端/Android/Web 预览 `.ysm` | WebView/浏览器 WASM（内存直解 → `callMain`） | Go `AnalyzeBedrockModel`（→ Node.js + WASM / exe） | 空 |
+| 前端/Android/Web 预览 `.ysm` | WebView/浏览器 WASM（内存直解 → `callMain`） | Go `AnalyzeBedrockModel`（→ Node.js + WASM） | 空 |
 
-- **发版场景（不打包 exe）**：`.ysm` 实际解码主路径就是 **Node.js + WASM `callMain`**——Go 自己零解密代码，能力全部继承自原版 C++ 解析器（认识 YSGP V2 / YSGP V3 / OYSM 全变体），这就是「支持所有版本」的来源。
-- **无 node 场景**：路径 B 不可用，加密 `.ysm` 无法解码（仅开放 zip/7z 走 Go 原生），这是 ADR-029 保留 exe 回退的初衷。
+- **`.ysm` 解码全靠 Node.js + WASM**：Go 自己零解密代码，能力全部继承自原版 C++ 解析器（认识 YSGP V2 / YSGP V3 / OYSM 全变体），这就是「支持所有版本」的来源。解码器经 `go/ysm|SetDecoder` 注入（`go/ysm/decode_inject.go`），不再是 exe 查找。
+- **无 node 场景**：加密 `.ysm` 无法解码（仅开放 zip/7z 走 Go 原生）。
 
-消费方 `preview-3d/decoder/wasm-decode.ts:25-160` 完整链（前端，ADR-137 归位）：
+消费方 `preview-3d/decoder/wasm-decode.ts` 完整链（前端，ADR-137 归位；**字节读取链见 ADR-228**）：
+
 ```
-ReadFileBytes(Go, base64) → atob → Uint8Array
+readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平台分叉只在此处）
+  ├ 网页版：readWebFileArrayBuffer（IDB ArrayBuffer 零拷贝视图直出，无 base64 往返）
+  └ 桌面/Android：getApp().ReadFileBytes（Wails 传输只有 JSON，必然 base64）→ base64ToBytes
   → (.json 走 parseYsmJsonDirect 直解)
   → initYSMParser → 内存解码 → MEMFS
   → stripYsgpTextHeader 剥文本头重试 (V2/V3)
-  → 全失败回退 Go AnalyzeBedrockModel（app_model.go，其内部再走 Node.js + WASM / exe）
+  → 全失败回退 Go AnalyzeBedrockModel（app_model.go，其内部再走 Node.js + WASM）
 ```
+
+> **ADR-228 变更说明**：原链路为 `ReadFileBytes(Go, base64) → atob → Uint8Array`，即**两个平台都**付 base64 往返
+> （实测峰值 ≈4.33× 文件大小：L1 base64 串 1.33N + L2 `atob` 串 1.0N + L3 `charCodeAt` 拷贝 1.0N + `HEAPU8.set` 1.0N）。
+> 网页版的文件本就在同进程的 IndexedDB 里（无 IPC/序列化边界），往返纯属浪费 → 已改为 `ArrayBuffer` 直出；
+> 桌面受 Wails JSON 传输限制**无法照做**（「资产服务器二进制路由」方案经核实 ROI 不足，见 `frontend_design_critique` 刀⑭）。
+> `wasm-decode.ts` 的读取契约相应从「base64 字符串」升格为「字节」（`InflightCtx.ReadBytes`），本地 `Base64ToBytes` 链已下沉到 seam。
 
 `views/app-preview/model3d-loader.ts` — `fetchSpec` 优先调 Go `GetModel3DSpec`，失败回退 `buildSpecFromModel`（JS 几何），LRU 20 条 spec 缓存。
 

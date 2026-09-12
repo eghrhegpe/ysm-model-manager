@@ -9,7 +9,6 @@ source_files:
   - frontend/src/services/cli-bridge.ts
 auto_fields:
   symbols_with_lines:
-    - ALLOWED_CLI_COMMANDS
     - App.ExecuteCLI
     - App.GetAllowedCLICommands
     - App.SetAllowedCommands
@@ -76,7 +75,7 @@ use_when:
   - 绑定层
 pitfalls:
   - "绑定层工具函数重复 → Go CLI 和前端 TS 各一份"
-  - "白名单漂移：ALLOWED_CLI_COMMANDS 在三处维护"
+  - "白名单漂移：前端静态兜底曾以 ALLOWED_CLI_COMMANDS 为名分散维护，与 Go 注册表脱节"
   - "goroutine/channel 防御缺失：outputBuffer.done 未初始化导致 panic"
   - "百分比计算三类陷阱：除零、超 100%、基数语义错误"
   - "json.Marshal 吞错：_, err := json.Marshal(...) 前端收到 null 无法定位"
@@ -90,7 +89,7 @@ status: archived
 affected: false
 invariant_anchors:
   - internal/app/cli_bridge.go|ExecuteCLI
-  - frontend/src/services/cli-bridge.ts|ALLOWED_CLI_COMMANDS
+  - frontend/src/services/cli-bridge.ts|parseCLIResponse
 ---
 # CLI 质量摸排 Checklist
 
@@ -112,7 +111,7 @@ invariant_anchors:
 
 ### 规律二：白名单有漂移风险
 
-**现象**：`ALLOWED_CLI_COMMANDS` 在三处维护（CLI 注册表 + 绑定层 + 前端），新增命令需同步三处。
+**现象**：前端静态白名单曾以 `ALLOWED_CLI_COMMANDS` 为名在三处维护（CLI 注册表 + 绑定层 + 前端），新增命令需同步三处。
 
 **根因**：前端硬编码副本与后端注册表脱节。
 
@@ -120,6 +119,8 @@ invariant_anchors:
 - 前端改为动态拉取：`GetAllowedCLICommands()` 从后端获取
 - 硬编码仅作降级 fallback（网页版不支持 Wails 时使用）
 - 配合缓存避免重复请求
+
+**实施状态（2026-09 同步）**：已落地。前端静态兜底收敛为 `frontend/src/backend/cli-allowlist.ts` 的 `CLI_ALLOWLIST` 单一源；`services/cli-bridge.ts` 曾以 `ALLOWED_CLI_COMMANDS` 兼容别名二次导出（测试倒逼生产保留旧名），已删除，消费方与测试统一引 `CLI_ALLOWLIST`。同时 `parseCLIResponse` 补形状守卫：`JSON.parse` 成功 ≠ 拿到响应对象，`"null"` / `[]` / `"str"` / 缺 `status` 一律落 `parse_error`，堵死规律六吞错病灶在前端的穿透面（旧实现 `as CLIResponse` 是纯编译期断言，消费方读 `result.status` 即 TypeError）。
 
 ### 规律三：goroutine + channel 防御性编程
 

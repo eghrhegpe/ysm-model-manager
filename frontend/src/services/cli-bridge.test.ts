@@ -10,11 +10,11 @@ import {
   cliList,
   cliAnalyze,
   cliCacheStatus,
-  ALLOWED_CLI_COMMANDS,
   parseCLIResponse,
   buildArgsMap,
   resetDynamicCommandsCache,
 } from "./cli-bridge.ts";
+import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "@/backend/cli-allowlist.ts";
 
 // Mock getApp 和 isWebPlatform
 vi.mock("@/backend/app.ts", () => ({
@@ -176,7 +176,7 @@ describe("CLI Bridge - 命令列表", () => {
 
     const result = await getAllowedCLICommands();
 
-    expect(result).toEqual(ALLOWED_CLI_COMMANDS);
+    expect(result).toEqual(CLI_ALLOWLIST);
   });
 
   it("getApp 异常时降级到本地列表", async () => {
@@ -184,7 +184,7 @@ describe("CLI Bridge - 命令列表", () => {
 
     const result = await getAllowedCLICommands();
 
-    expect(result).toEqual(ALLOWED_CLI_COMMANDS);
+    expect(result).toEqual(CLI_ALLOWLIST);
   });
 });
 
@@ -375,6 +375,42 @@ describe("CLI Bridge - 响应解析", () => {
     expect(result.status).toBe("error");
     expect(result.error?.code).toBe("parse_error");
   });
+
+  // 形状守卫：JSON.parse 成功 ≠ 是响应对象。Go 的 json.Marshal 吞错历史病
+  // （cli_quality_audit 规律六）会吐 "null"，若直接 as CLIResponse 穿透，
+  // 消费方读 result.status 即 TypeError（null.x）。此处锁定不得穿透。
+  it("Go 返回 \"null\"（吞错历史病灶）→ parse_error，不透传 null", () => {
+    const result = parseCLIResponse("null");
+
+    expect(result.status).toBe("error");
+    expect(result.error?.code).toBe("parse_error");
+    expect(result).not.toBeNull();
+  });
+
+  it("非对象 JSON（数组/字符串/数字/布尔）→ parse_error", () => {
+    for (const raw of ["[]", '"boom"', "123", "true"]) {
+      const result = parseCLIResponse(raw);
+
+      expect(result.status).toBe("error");
+      expect(result.error?.code).toBe("parse_error");
+    }
+  });
+
+  it("缺 status 字段的对象 → parse_error（status 是消费方分派依据）", () => {
+    const result = parseCLIResponse("{}");
+
+    expect(result.status).toBe("error");
+    expect(result.error?.code).toBe("parse_error");
+  });
+
+  it("未知 status 取值仍放行（不做枚举白名单，防未来新状态被误判）", () => {
+    const result = parseCLIResponse(
+      JSON.stringify({ status: "partial", command: "x" })
+    );
+
+    expect(result.status).toBe("partial");
+    expect(result.command).toBe("x");
+  });
 });
 
 describe("CLI Bridge - 参数构建", () => {
@@ -423,17 +459,17 @@ describe("CLI Bridge - 白名单常量", () => {
     ];
 
     for (const cmd of expected) {
-      expect(ALLOWED_CLI_COMMANDS).toContain(cmd);
+      expect(CLI_ALLOWLIST).toContain(cmd);
     }
   });
 
   it("数量正确", () => {
-    expect(ALLOWED_CLI_COMMANDS).toHaveLength(20);
+    expect(CLI_ALLOWLIST).toHaveLength(20);
   });
 
   it("类型安全：只能传入白名单中的命令", () => {
-    // 验证 AllowedCLICommand 类型
-    const validCmd: (typeof ALLOWED_CLI_COMMANDS)[number] = "search";
-    expect(ALLOWED_CLI_COMMANDS).toContain(validCmd);
+    // 验证 CLIAllowlistCommand 联合类型（真实类型名，非兼容别名）
+    const validCmd: CLIAllowlistCommand = "search";
+    expect(CLI_ALLOWLIST).toContain(validCmd);
   });
 });

@@ -16,9 +16,6 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { WebUnsupportedError } from "@/backend/web-common.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 
-// 兼容旧导出名（tests 仍 import ALLOWED_CLI_COMMANDS）
-export const ALLOWED_CLI_COMMANDS = CLI_ALLOWLIST;
-
 // ===== 类型定义 =====
 
 /** CLI 命令参数（统一格式：key-value map） */
@@ -78,7 +75,7 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
         // 不缓存空集——否则 isCommandAllowed 对所有命令恒 false，整会话 CLI 锁死
         //（not_supported）。与 catch 分支同语义：回退硬编码列表，下次调用重新拉取。
         dynamicFetchPromise = null;
-        return new Set(ALLOWED_CLI_COMMANDS);
+        return new Set(CLI_ALLOWLIST);
       }
       cachedDynamicCommands = new Set(list);
       return cachedDynamicCommands;
@@ -86,7 +83,7 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
       // 拉取失败：本次调用用硬编码列表兜底，但不持久化缓存——
       // 下次调用会重新拉取后端，避免一次性故障导致整会话拒绝新命令
       dynamicFetchPromise = null;
-      return new Set(ALLOWED_CLI_COMMANDS);
+      return new Set(CLI_ALLOWLIST);
     }
   })();
 
@@ -96,7 +93,7 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
 /** 检查命令是否在白名单中（优先使用动态列表） */
 async function isCommandAllowed(command: string): Promise<boolean> {
   if (isWebPlatform()) {
-    return ALLOWED_CLI_COMMANDS.includes(command as CLIAllowlistCommand);
+    return CLI_ALLOWLIST.includes(command as CLIAllowlistCommand);
   }
   const allowed = await fetchDynamicCommands();
   return allowed.has(command);
@@ -169,13 +166,13 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
  */
 export async function getAllowedCLICommands(): Promise<string[]> {
   if (isWebPlatform()) {
-    return [...ALLOWED_CLI_COMMANDS];
+    return [...CLI_ALLOWLIST];
   }
   try {
     const allowed = await fetchDynamicCommands();
     return [...allowed];
   } catch {
-    return [...ALLOWED_CLI_COMMANDS];
+    return [...CLI_ALLOWLIST];
   }
 }
 
@@ -216,18 +213,38 @@ export function buildArgsMap(args: CLIArgs): Record<string, string | number | bo
   return result;
 }
 
-/** 解析 CLI JSON 响应 */
+/** 构造 parse_error 响应（语法错与形状错共用；message 区分细节便于定位） */
+function parseErrorResponse(message: string): CLIResponse {
+  return {
+    status: "error",
+    command: "unknown",
+    error: { code: "parse_error", message },
+  };
+}
+
+/**
+ * 解析 CLI JSON 响应（形状守卫：非响应对象一律报错，禁止 `as` 断言穿透）
+ *
+ * JSON.parse 成功 ≠ 拿到响应对象。Go 的 `json.Marshal` 吞错历史病
+ * （cli_quality_audit 规律六）会吐 `"null"`——`JSON.parse("null")` 正常返回 `null`，
+ * 旧实现 `as CLIResponse` 是纯编译期谎言，消费方读 `result.status` 即 TypeError。
+ * 同源穿透面还包括 `[]` / `"str"` / `123`，故按协议形状守卫两道：
+ *   ①必须是普通对象（排除 null / 数组 / 字符串 / 数字 / 布尔）
+ *   ②`status` 必须是字符串——它是所有消费方的分派依据
+ * `status` 刻意不做枚举白名单：Go 侧新增状态值时不得被前端误判为 parse_error。
+ */
 export function parseCLIResponse(raw: string): CLIResponse {
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as CLIResponse;
+    parsed = JSON.parse(raw);
   } catch {
-    return {
-      status: "error",
-      command: "unknown",
-      error: {
-        code: "parse_error",
-        message: `无法解析 CLI 响应: ${raw.slice(0, 200)}`,
-      },
-    };
+    return parseErrorResponse(`无法解析 CLI 响应: ${raw.slice(0, 200)}`);
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return parseErrorResponse(`CLI 响应不是对象: ${raw.slice(0, 200)}`);
+  }
+  if (typeof (parsed as { status?: unknown }).status !== "string") {
+    return parseErrorResponse(`CLI 响应缺 status 字段: ${raw.slice(0, 200)}`);
+  }
+  return parsed as CLIResponse;
 }

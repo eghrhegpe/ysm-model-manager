@@ -34,7 +34,6 @@ auto_fields:
     - AdvFilterValue
     - ALL_EXTS
     - ALL_RESOURCE_TYPES
-    - ALLOWED_CLI_COMMANDS
     - allResourceTypes
     - ALPHA_F_HOLE
     - ALPHA_F_TRANSLUCENT

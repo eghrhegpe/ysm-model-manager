@@ -240,8 +240,9 @@ function main() {
    * skipFile 豁免。type-only 亦违规（「无 Wails 也能单测」对 type 感知不成立）。 */
   for (const abs of walk(SRC_ROOT, {
     exts: [".ts", ".tsx"],
-    skipDir: (n) =>
-      n.startsWith(".") || n === "node_modules" || n === "__tests__" || n === "test-utils",
+    // 只剪隐藏目录与 node_modules——__tests__/test-utils 不剪（R6 宣称覆盖 core/** 全部
+    // 测试文件，目录级剪枝会让 core/__tests__/x.test.ts 静默逃逸，盲区违背 ADR-229 无盲区口径）
+    skipDir: (n) => n.startsWith(".") || n === "node_modules",
     // 仅豁免 .d. 声明文件；.test./.spec. 不豁免（R6 目标对象）
     skipFile: /\.d\.[tj]sx?$/,
   }) as string[]) {

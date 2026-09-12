@@ -13,7 +13,7 @@
 
 | 担忧 | 事实 |
 |------|------|
-| YSMParser 依赖 Node.js | **否**。ADR-029 已定 base64 内嵌 + `Module.wasmBinary` 注入（`ysm-parser.ts:2` 头注释：规避 WebView2 fetch 限制），运行时全 Emscripten 浏览器标准 API，Node.js 仅出现在构建链（`scripts/build-ysm-wasm.mjs` 生成 base64 数据文件）。桌面端跑在 WebView2（Chromium） |
+| YSMParser 依赖 Node.js | **否**。ADR-029 已定 base64 内嵌 + `Module.wasmBinary` 注入（`ysm-parser.ts:2` 头注释：规避 WebView2 fetch 限制），运行时全 Emscripten 浏览器标准 API，Node.js 仅出现在构建链（重建脚本已归档至 `scripts/_attic/build-ysm-wasm.ts`，复活需 emsdk，见 architecture.md §4.1）。桌面端跑在 WebView2（Chromium） |
 | 安卓端 WASM 会挂 | **否**。Android WebView 同为 Chromium，跑同一套 base64 注入；`ReadFileBytes` binding 在 Android 已可用（授权后 `os.*` 直读） |
 | 网页版可行性 | **依赖面 = 80 个 Wails binding**（`getApp()`，26 个文件 import），而非 WASM/3D/bus——后者全纯浏览器 |
 

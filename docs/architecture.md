@@ -314,7 +314,7 @@ type CliCommand struct {
 3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（:127-180）；
 4. **纯 Node 即可解码，不依赖浏览器/WebView2**（已实测：`upstream/` 下 10 个 .ysm 全部可用此路径解码出骨骼/动画/纹理/头像）。`go/avatar/avatar.go` 的 `DecodeYSMFiles` 是同一套机制的复用（头像提取），两处脚本逻辑近似。
 
-> ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游，重跑 `node scripts/build-ysm-wasm.mjs` 即可同步重出两处（前端 base64 data + Go embed），不再需要两套编译参数。
+> ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游：重建脚本已归档至 `scripts/_attic/build-ysm-wasm.ts`（见 §4.1），需先复活脚本并具备 emsdk 工具链（本机当前无 emsdk），方可同步重出两处（前端 base64 data + Go embed）——旧指引「重跑 `node scripts/build-ysm-wasm.mjs`」已失效，勿按旧路径执行。
 
 **解码优先级链（现状总表）**：
 

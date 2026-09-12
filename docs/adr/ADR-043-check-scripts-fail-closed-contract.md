@@ -54,7 +54,7 @@
 
 ## 4. 数据溯源
 
-- 18 轮审核实证（2026-07-26 至 2026-08-09）：`check-knowledge-drift` / `check-doc-drift` / `check-deadcode-baseline` / `check-adr-health` / `check-dynamic-import` / `comment-checker` / `check-circular(-go)` / `check-layering` / `check-script-hygiene` / `check-tpl-refs` / `check-boolean-naming` / `type-consistency` / `link-checker` / `adr-check` / `check-orphan-exports` / `check-diff-coverage` / `check-adr-health` / `gen-*` 系列 / `codemod` / `binding-check` / `release-notes-gen` / `ai-mistake-tracker` / `test-coverage-report` / `texture-golden` / `build-ysm-wasm` 等逐一审核记录（docs/adr/ 各轮提交 + git log）；
+- 18 轮审核实证（2026-07-26 至 2026-08-09）：`check-knowledge-drift` / `check-doc-drift` / `check-deadcode-baseline` / `check-adr-health` / `check-dynamic-import` / `comment-checker` / `check-circular(-go)` / `check-layering` / `check-script-hygiene` / `check-tpl-refs` / `check-boolean-naming` / `type-consistency` / `link-checker` / `adr-check` / `check-orphan-exports` / `check-diff-coverage` / `check-adr-health` / `gen-*` 系列 / `codemod` / `binding-check` / `release-notes-gen` / `ai-mistake-tracker` / `test-coverage-report` / `texture-golden` / `build-ysm-wasm`（已归档 `scripts/_attic/`）等逐一审核记录（docs/adr/ 各轮提交 + git log）；
 - 假绿实例文件级定位见各轮 code_review 复核记录（`rgSafe` 三态 / ExitStatus 吞错 / failures 计数 / cmd.exe 重定向 / NaN 阈值）；
 - 范式实现：`gen-knowledge-h1.mjs` 的 `failures` 数组 + `check-circular(-go).mjs` 的 `maxCycles` 上限 + `parse-args.ts` 的 `unknown` 数组拦截（均为本轮已落地代码）。
 

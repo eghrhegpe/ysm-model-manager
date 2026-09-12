@@ -297,15 +297,15 @@ interface MdVrBoneAssembly {
   semanticBones: ReturnType<typeof vrmSemanticBoneMap>;
 }
 
-function mdVrParseGlbVrm0(vrm: VRM, gltf: GLTF): void {
+function ParseGlbVrm0(vrm: VRM, gltf: GLTF): void {
   VRMUtils.rotateVRM0(vrm);
   void gltf;
 }
-function mdVrParseGlbVrm1(vrm: VRM, gltf: GLTF): void {
+function ParseGlbVrm1(vrm: VRM, gltf: GLTF): void {
   void vrm;
   void gltf;
 }
-async function mdVrStage1ReadParse(
+async function Stage1ReadParse(
   ctx: PreviewBuildCtx,
   path: string,
   port: VrmDataPort | undefined,
@@ -337,8 +337,8 @@ async function mdVrStage1ReadParse(
   const vrm = (gltf.userData as { vrm?: VRM }).vrm;
   if (!vrm) throw new Error("VRM 实例解析失败（非标准 .vrm？）");
   const metaVersion = vrm.meta.metaVersion;
-  if (metaVersion === "0") mdVrParseGlbVrm0(vrm, gltf);
-  else mdVrParseGlbVrm1(vrm, gltf);
+  if (metaVersion === "0") ParseGlbVrm0(vrm, gltf);
+  else ParseGlbVrm1(vrm, gltf);
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   ctx.scene!.add(vrm.scene);
   registerModelRoot(vrm.scene);
@@ -360,7 +360,7 @@ async function mdVrStage1ReadParse(
   );
   return { vrm, gltf, tStart, tParseStart, tParseEnd };
 }
-async function mdVrLoadVrmaAnims(
+async function LoadVrmaAnims(
   vrm: VRM,
   path: string,
   readFn: (p: string) => Promise<string | null>,
@@ -412,11 +412,19 @@ async function mdVrLoadVrmaAnims(
   }
   return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
 }
-function mdVrSetupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
+function SetupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
   // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
   frameCameraSide(ctx, vrm.scene);
 }
-function mdVrStage3Materials(vrm: VRM): THREE.Material[] {
+function Stage2BonesHumanoid(vrm: VRM): MdVrBoneAssembly {
+  // BonePanelCleanupRef 统一类型（code_review d6de20d2 #10：原裸内联
+  // { current: (() => void) | null } 与 mmd/ysm/fbx 已收编的共享接口分叉）
+  const bonePanelRef: BonePanelCleanupRef = { current: null };
+  const boneTree = buildVrmBoneTree(vrm);
+  const semanticBones = vrmSemanticBoneMap(vrm.humanoid.humanBones);
+  return { bonePanelRef, boneTree, semanticBones };
+}
+function Stage3Materials(vrm: VRM): THREE.Material[] {
   const vrmMaterials: THREE.Material[] = [];
   vrm.scene.traverse((child: THREE.Object3D) => {
     if (!(child as THREE.Mesh).isMesh) return;
@@ -430,15 +438,7 @@ function mdVrStage3Materials(vrm: VRM): THREE.Material[] {
   });
   return vrmMaterials;
 }
-function mdVrStage2BonesHumanoid(vrm: VRM): MdVrBoneAssembly {
-  // BonePanelCleanupRef 统一类型（code_review d6de20d2 #10：原裸内联
-  // { current: (() => void) | null } 与 mmd/ysm/fbx 已收编的共享接口分叉）
-  const bonePanelRef: BonePanelCleanupRef = { current: null };
-  const boneTree = buildVrmBoneTree(vrm);
-  const semanticBones = vrmSemanticBoneMap(vrm.humanoid.humanBones);
-  return { bonePanelRef, boneTree, semanticBones };
-}
-function mdVrBuildPerception(
+function BuildPerception(
   vrm: VRM,
   ctx: PreviewBuildCtx,
   boneTree: BoneTree,
@@ -487,7 +487,7 @@ function mdVrBuildPerception(
     perceptionPauseRef,
   };
 }
-function mdVrStage4MenuPanels(
+function Stage4MenuPanels(
   path: string,
   panels: VrmPanelHooks | undefined,
   ctx: PreviewBuildCtx,
@@ -559,7 +559,7 @@ function mdVrStage4MenuPanels(
   });
   return menuItems;
 }
-function mdVrStage5BuildResult(
+function Stage5BuildResult(
   ctx: PreviewBuildCtx,
   path: string,
   port: VrmDataPort | undefined,
@@ -686,17 +686,17 @@ export async function buildVrmScene(
   panels?: VrmPanelHooks,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
 ): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
-  const parseRes = await mdVrStage1ReadParse(ctx, path, port, readFn);
+  const parseRes = await Stage1ReadParse(ctx, path, port, readFn);
   const { vrm } = parseRes;
-  const motion = await mdVrLoadVrmaAnims(vrm, path, readFn, listAllFilePaths);
-  mdVrSetupCameraBounds(ctx, vrm);
-  const boneAssy = mdVrStage2BonesHumanoid(vrm);
-  const vrmMaterials = mdVrStage3Materials(vrm);
-  const perception = mdVrBuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
+  const motion = await LoadVrmaAnims(vrm, path, readFn, listAllFilePaths);
+  SetupCameraBounds(ctx, vrm);
+  const boneAssy = Stage2BonesHumanoid(vrm);
+  const vrmMaterials = Stage3Materials(vrm);
+  const perception = BuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
   // meta 文本摘要随 vrm 存活期归一化（纯数据零 GPU；stage5 dispose 后 vrm.meta 仍可读，
   // 但趁 vrm 在手边一并收口，语义对齐「面板数据源一次构造」）
   const meta = vrmMetaSummary(vrm.meta);
-  const menuItems = mdVrStage4MenuPanels(
+  const menuItems = Stage4MenuPanels(
     path,
     panels,
     ctx,
@@ -706,7 +706,7 @@ export async function buildVrmScene(
     perception,
     meta,
   );
-  return mdVrStage5BuildResult(
+  return Stage5BuildResult(
     ctx,
     path,
     port,

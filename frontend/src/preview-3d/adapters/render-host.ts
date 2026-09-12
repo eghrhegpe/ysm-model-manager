@@ -18,6 +18,7 @@ import {
   markCullMatricesDirty,
   restoreModelGroupsVisible,
 } from "@/preview-3d/infra/frustum-cull.ts";
+import { sampleGpuLoad } from "@/preview-3d/infra/gpu-load.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import {
   createAdaptiveRenderBudget,
@@ -240,7 +241,14 @@ export class RendererHost {
     const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
     const rendered = postProcCap ? postProcCap.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);
-    const nextPixelRatio = sampleAdaptivePixelRatio(this._adaptiveBudget, now, interval);
+    const nextPixelRatio = sampleAdaptivePixelRatio(
+      this._adaptiveBudget,
+      now,
+      interval,
+      // GPU 高位输入（2026 锐评 P2）：单看 CPU 帧时会漏掉「主线程提交快、GPU 已排队」
+      // 的饱和态；传入后 GPU 高位即使帧时正常也预防性降一档（读 info 无副作用）。
+      sampleGpuLoad(infra.renderer),
+    );
     if (nextPixelRatio !== null) {
       infra.renderer.setPixelRatio(nextPixelRatio);
       // 容器已脱离文档（cleanup 拆单例 → stopIfIdle 停环前的窗口帧）或尺寸为 0 时跳过

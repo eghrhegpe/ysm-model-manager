@@ -1101,6 +1101,10 @@ export const en: Record<string, string> = {
   "preview.cannotParse": "Cannot parse this file",
   "preview.parseFailed": "Parse failed",
   "preview.loadFailed": "3D load failed",
+  "preview.largeModelWarn":
+    "Large file ({size}MB): decoding may peak at {peak}MB; low-end devices may stutter or crash",
+  "preview.gpuBudgetAppend": "GPU load over budget ({reasons}); cannot add more models",
+  "preview.gpuBudgetLoad": "GPU load over budget ({reasons}); cannot continue loading",
   "preview.detailTab": "Details",
   "preview.tab.skeleton": "Skeleton",
   "preview.skeletonStructure": "Model Structure",

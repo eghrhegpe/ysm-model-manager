@@ -24,6 +24,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { setOverlayStyleTarget } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
@@ -441,6 +442,17 @@ export async function mount3D(
   const installed = buildInfra(ctx, shell);
   infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）
   switchCtx = installed.switchCtx; // 回填 ctx.getSwitchCtx() 槽位
+
+  // P0 补门（2026 锐评）：直挂路径的 GPU 预算门。无活跃会话时 preview-library 的
+  // cooperate 退化为 false → 走本路径而**不经** switch-preview|beginSwitch 的 keep 通道，
+  // 曾是无预算门的不对称缺口。此处与追加通道共用 guardGpuBudget（判定 + 文案同源）。
+  // 外壳（overlay/菜单/输入/rAF）此时已装配 → 超限须走 runFullCleanup 完整回收，
+  // 不能像 switch 那样裸 return（否则 overlay 与监听器泄漏）。
+  // self 模式（infra=null）无共享 renderer，跳过——该模式由适配器自驱。
+  if (infra?.renderer && !guardGpuBudget(infra.renderer, "preview.gpuBudgetLoad")) {
+    runFullCleanup(ctx);
+    return;
+  }
 
   try {
     const build = await runBuild(ctx, shell, installed);

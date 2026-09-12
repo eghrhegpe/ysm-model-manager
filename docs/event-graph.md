@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 180 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -443,10 +443,11 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 622 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 634 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 175 |
+| guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 39 |
+| warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 48 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 37 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 189 |

@@ -10,6 +10,7 @@ source_files:
   - frontend/src/views/app-preview/model3d-loader.ts
 auto_fields:
   symbols_with_lines:
+    - __resetLargeModelWarnForTest
     - __setEncodeImplForTest
     - _clearPmxStatsCache
     - _resetSingletons
@@ -113,6 +114,8 @@ auto_fields:
     - cacheSet
     - cacheSetEvictHandler
     - CacheValue
+    - CALIBRATION_SAFETY_FACTOR
+    - CalibrationResult
     - CameraControlBridge
     - CameraControlScene
     - cancelPendingEncodings
@@ -127,6 +130,7 @@ auto_fields:
     - cleanupPreview
     - clearEnvCallbacks
     - clearFolderCollapsedState
+    - clearGpuBudgetCalibration
     - clearLoadTraces
     - clearModelRoots
     - clearSceneCaps
@@ -155,6 +159,7 @@ auto_fields:
     - createBeatDetector
     - createBlinkController
     - createBreathController
+    - createCalibrationTracker
     - createFbxParser
     - createFootIKController
     - createGazeController
@@ -285,9 +290,11 @@ auto_fields:
     - getTintColorSync
     - getVrmMaterialDetail
     - godRaysIntensity
+    - GPU_BUDGET_CALIBRATION_KEY
     - GpuLoadLimits
     - GpuLoadSample
     - GpuLoadVerdict
+    - GpuPeak
     - GROUND_LAYER_OFFSETS
     - GroundCapability
     - GroundMaterialParams
@@ -297,6 +304,7 @@ auto_fields:
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
     - GroupedScene
+    - guardGpuBudget
     - hasActivePreview
     - hasBoneRotation
     - hasSceneStats
@@ -313,6 +321,7 @@ auto_fields:
     - InstallableStyles
     - installComponentsStyles
     - InstalledPreviewInfra
+    - installGpuCalibrationHook
     - installSlideMenuStyles
     - invalidateMaxFpsCache
     - invalidatePreview
@@ -331,6 +340,7 @@ auto_fields:
     - Ktx2EncodeResponse
     - Ktx2TextureLoader
     - Ktx2TextureLoaderDeps
+    - LARGE_MODEL_WARN_BYTES
     - LightCapability
     - lightDirToPosition
     - LightParams
@@ -359,6 +369,7 @@ auto_fields:
     - makeBonePanelRenderer
     - makeBonesPanelItem
     - makeFbxAdapter
+    - makeGpuSampler
     - makeLitematicAdapter
     - makeMenuCtx
     - makeMmdAdapter
@@ -560,6 +571,7 @@ auto_fields:
     - resetSceneInfra
     - resetSchemas
     - resetSettingsListeners
+    - resolveGpuLoadLimits
     - resolveMmdZipConfig
     - ResolveModeBridge
     - ResolveModeResponse
@@ -574,6 +586,7 @@ auto_fields:
     - RolesSchemaDeps
     - runFailedMountCleanup
     - runFullCleanup
+    - runGpuBudgetCalibration
     - SafeDisposable
     - safeDispose
     - sampleAdaptivePixelRatio
@@ -670,6 +683,7 @@ auto_fields:
     - stripYsgpTextHeader
     - SubModel
     - subscribeSettings
+    - suggestGpuLimits
     - SunBeams
     - surfaceSpecKey
     - SwitchContext
@@ -727,6 +741,7 @@ auto_fields:
     - VrmModelInfoCtx
     - VrmPanelHooks
     - vrmSemanticBoneMap
+    - warnLargeModelIfNeeded
     - WasdReuse
     - WATER_MODES
     - WaterCapability
@@ -839,7 +854,7 @@ perf:
 - **dispose 必须完整遍历子对象**：`geometry?.dispose()` / `material?.dispose()` / `texture?.dispose()`；`Object3D.remove()` 不释放 WebGL 资源
 - **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见
 - **perComponent 纹理索引分类与绑定索引同一空间**：组件分支恒用局部槽 0，非组件回退全局 `texIdx`/`resolvedTexIdx`
-- **大文件解码 peak ~3-4× 文件大小**：base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（100MB 阈值是网页版唯一防线）
+- **大文件解码 peak ~3-4× 文件大小**：base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（100MB 阈值是网页版唯一防线）。2026-09 补**事前告知**：`infra/large-model.ts|warnLargeModelIfNeeded(bytes, path)` 在受限平台（`isViewerMode`：网页版 / Android）超 50MB 时给一条带实测字节数 + 3× 峰值估算的 toast（文案 `preview.largeModelWarn` 三语，会话内同路径只提示一次）；调用点 `decoder/wasm-decode.ts|doDecodeYsmViaWasm` 拿到字节后——复用已有字节数，**不做额外 IO 探测**。⚠️ 这**不改内存模型**：六层拷贝并存仍是长期债，警示只把「静默 OOM」变成「有预期的卡顿」
 - **纹理键集合单一事实源 = `mesh.ts` `ALL_TEXTURE_KEYS`**：`scene-stats.ts` 统计与 `mesh.ts` `disposeMaterial` 释放共用同一常量（`map` / `emissiveMap` / `normalMap` / `roughnessMap` / `metalnessMap` / `aoMap` / `lightMap` / `alphaMap` / `envMap`），禁止双源漂移——新增纹理槽位须同时更新 `ALL_TEXTURE_KEYS` 与所有消费者
 
 ## 相关

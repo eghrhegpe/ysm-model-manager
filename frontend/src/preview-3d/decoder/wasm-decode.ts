@@ -2,6 +2,7 @@
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 
 import { getApp } from "@/backend/app.ts";
+import { warnLargeModelIfNeeded } from "@/preview-3d/infra/large-model.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -728,6 +729,10 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
   if (!bytes?.length) return HandleEmptyBytes(modelPath);
+
+  // 受限平台大文件内存风险前置告知：峰值 ≈3-4× 文件大小（六层拷贝并存），
+  // 网页版/Android 的 100MB 阈值是唯一防线，超阈给用户预期而非静默 OOM。
+  warnLargeModelIfNeeded(bytes.length, modelPath);
 
   const ctx: InflightCtx = {
     modelPath,

@@ -367,7 +367,8 @@ pitfalls:
 ## 核心职责
 
 - **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 10 个能力（天空/地面/水面/环境/雾/阴影/反射/后处理/灯光/渲染模式）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
-- **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，计数上限 8 + **GPU 负载实测预算**（`infra/gpu-load.ts` 刀⑩：上帧 draw calls/纹理数超默认预算即拦追加并附实测值 toast，`MAX_MODELS` 保留为兜底硬顶））；跨类型 / 关旧开新走 `openModel3DFullscreen`
+- **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，计数上限 8 + **GPU 负载实测预算**（刀⑩ 立、刀⑪ 补强：`infra/gpu-budget.ts|guardGpuBudget` 统一判定 **4 维**——draw calls / `triangles` / 纹理数 / `textureBytes`（经 `textureCache|getTotalBytes` 聚合），超限 toast 附实测值；`MAX_MODELS` 保留为兜底硬顶。预算上限取 `gpu-load-calibrate|resolveGpuLoadLimits()`：真机标定值优先、缺省回落 `DEFAULT_GPU_LOAD_LIMITS`））；跨类型 / 关旧开新走 `openModel3DFullscreen`
+  - **两条入口共用一道门**：`switch-preview|beginSwitch`（keep 追加通道，inFlight 置位前判不卡死）与 `mount-preview-core|mount3D`（**直挂通道**——无活跃会话时 preview-library 的 cooperate 退化为直挂，超限走 `runFullCleanup` 完整回收）。缺一条即「某路径裸奔」，勿只加一侧。
 - **生命周期清理**：
   - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + **`setPerceptionPaused(false)` 复位感知暂停标志**（防 adapter 崩溃/切模型残留冻结下次 mount，属模块级单例无属主，须由会话完整关闭路径复位；见 `perception.md`） + `finishSession`。ESC / abort / 正常退出走这里
   - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 由调用方先移除）

@@ -13,7 +13,7 @@ import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capabi
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import { fitCameraToRoots } from "@/preview-3d/infra/camera-setup.ts";
-import { evaluateGpuLoad, sampleGpuLoad } from "@/preview-3d/infra/gpu-load.ts";
+import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
@@ -167,18 +167,11 @@ function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolea
     return false;
   }
   // 2026 锐评刀⑩：GPU 负载预算（审计卡共识榜 #3「MAX_MODELS 是计数非预算」的实测信号版）——
-  // 计数未超但上一帧 draw calls/纹理数已超预算 → 追加只会让卡死更卡，拦截并附实测值。
+  // 计数未超但上一帧 draw calls/三角面/纹理数/纹理字节已超预算 → 追加只会让卡死更卡。
   // 与 MAX_MODELS 同约定：必须在 inFlight 置位前判（命中即 return，不卡死 inFlight）。
-  if (keep && ctx.renderer) {
-    const verdict = evaluateGpuLoad(sampleGpuLoad(ctx.renderer));
-    if (!verdict.ok) {
-      bus.emit("toast:show", {
-        msg: `GPU 负载已超预算（${verdict.reasons.join("，")}），无法继续追加`,
-        duration: TOAST_MS.verbose,
-        type: "warn",
-      });
-      return false;
-    }
+  // 判定 + 文案收在 gpu-budget|guardGpuBudget（与 mount3D 直挂路径共用同一道门）。
+  if (keep && ctx.renderer && !guardGpuBudget(ctx.renderer, "preview.gpuBudgetAppend")) {
+    return false;
   }
   ctx.inFlight = true;
   return true;

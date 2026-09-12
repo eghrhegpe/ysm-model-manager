@@ -1,4 +1,5 @@
 import { safeGet } from "@/utils/base/primitives/storage.ts";
+import { DEFAULT_GPU_LOAD_LIMITS, type GpuLoadSample } from "./gpu-load.ts";
 
 const PREVIEW_MAX_PIXEL_RATIO_DEFAULT = 1.5;
 // 存储键单一事实来源（code review P3：preview-menu 设置面板写同一键——不再双份硬编码）
@@ -66,14 +67,38 @@ export function createAdaptiveRenderBudget(pixelRatio: number, now: number): Ada
   return { pixelRatio, sampleStart: now, sampleFrames: 0 };
 }
 
+/** GPU 饱和软线 = 拦截硬顶的 50%。两者用途不同：
+ *  - 硬顶（gpu-load|DEFAULT_GPU_LOAD_LIMITS）= 「再加就要炸了」→ 拦追加/拦加载；
+ *  - 软线（本处）= 「GPU 已在高位，该降质了」→ 预防性降像素比。
+ *  复用同一常量派生而非另拍数值，避免两套阈值各自漂移。 */
+const GPU_SATURATION_RATIO = 0.5;
+
+/** GPU 是否处于高位（draw calls / 三角面 超软线）。
+ *
+ *  ⚠️ 语义边界（勿误读）：降像素比只减**填充率**压力，**不减少** draw calls 与
+ *  三角面本身。故这里是**预防性**降质——GPU 已在高位时提前减轻片元阶段负担，
+ *  避免队列进一步堆积成可感卡顿；它**不是**对已发生卡顿的根治，也不该被当成
+ *  「降分辨率能治 draw call 过多」的证据。真治 draw call 靠 gpu-budget 拦追加。 */
+function isGpuSaturated(gpu: Pick<GpuLoadSample, "drawCalls" | "triangles">): boolean {
+  return (
+    gpu.drawCalls > DEFAULT_GPU_LOAD_LIMITS.drawCalls * GPU_SATURATION_RATIO ||
+    gpu.triangles > DEFAULT_GPU_LOAD_LIMITS.triangles * GPU_SATURATION_RATIO
+  );
+}
+
 /** Returns a new pixel ratio only when sustained frame delivery is too slow.
  *  capIntervalMs = 用户帧率上限的帧间隔（FPS cap——code review P2：30fps 时
  *  帧间隔 ~33ms > SLOW_FRAME_MS(22ms)，采样器会把用户强制节流误判为慢机器而
- *  降级到 0.75 地板——阈值为 max(SLOW_FRAME_MS, capInterval) 不降级）。 */
+ *  降级到 0.75 地板——阈值为 max(SLOW_FRAME_MS, capInterval) 不降级）。
+ *
+ *  gpu = GPU 负载采样（可选，2026 锐评 P2）：CPU 帧时是「提交速度」代理指标，
+ *  GPU 已排队时主线程仍可能 16ms 完成提交——单看帧时会漏掉 GPU 饱和。
+ *  传入后 GPU 高位即使帧时正常也降一档（预防性，见 isGpuSaturated 语义边界）。 */
 export function sampleAdaptivePixelRatio(
   budget: AdaptiveRenderBudget,
   now: number,
   capIntervalMs = 0,
+  gpu?: Pick<GpuLoadSample, "drawCalls" | "triangles">,
 ): number | null {
   budget.sampleFrames++;
   if (budget.sampleFrames < ADAPTIVE_SAMPLE_FRAMES) return null;
@@ -81,7 +106,9 @@ export function sampleAdaptivePixelRatio(
   budget.sampleStart = now;
   budget.sampleFrames = 0;
   const threshold = Math.max(SLOW_FRAME_MS, capIntervalMs || 0);
-  if (averageFrameMs <= threshold || budget.pixelRatio <= MIN_PIXEL_RATIO) return null;
+  const slowFrame = averageFrameMs > threshold;
+  const gpuHigh = gpu !== undefined && isGpuSaturated(gpu);
+  if ((!slowFrame && !gpuHigh) || budget.pixelRatio <= MIN_PIXEL_RATIO) return null;
   budget.pixelRatio = Math.max(MIN_PIXEL_RATIO, budget.pixelRatio - 0.25);
   return budget.pixelRatio;
 }

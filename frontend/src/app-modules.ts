@@ -228,3 +228,30 @@ if (_devMode && typeof window !== "undefined") {
     })
     .catch((e) => console.warn("[app-modules] debugGetSpec 挂载失败:", e));
 }
+
+// ===== 控制台 3D GPU 预算标定钩子（ADR-214 同款装配层模式）=====
+// 开发/调试环境挂载 window.ysmCalibrateGpuBudget(ms) / ysmResetGpuBudget()——
+// 采样真机 GPU 峰值反推预算并落 localStorage；`resolveGpuLoadLimits` 消费它，
+// 故标定**真的改变拦截线**（不是打印一个建议数字就完事）。
+// 职责纯度：标定纯逻辑是 infra 叶子（不绑 window），钩子生命周期归装配层——
+// 与 debugGetSpec 同规矩，且不污染 mount3D 热路径。
+// 采样源经 getter 惰性读取：renderer 只在 3D 会话存活，装配期尚无实例。
+if (_devMode && typeof window !== "undefined") {
+  import("@/utils/debug/debug.ts")
+    .then(async ({ isDebugEnabled }) => {
+      if (!isDebugEnabled()) return;
+      const [{ installGpuCalibrationHook, makeGpuSampler }, { sceneInfraHost }, { textureCache }] =
+        await Promise.all([
+          import("@/preview-3d/infra/gpu-load-calibrate.ts"),
+          import("@/preview-3d/adapters/shared-infra.ts"),
+          import("@/preview-3d/texture/texture-cache.ts"),
+        ]);
+      installGpuCalibrationHook(
+        makeGpuSampler(
+          () => sceneInfraHost.renderer,
+          () => textureCache.getTotalBytes(),
+        ),
+      );
+    })
+    .catch((e) => console.warn("[app-modules] ysmCalibrateGpuBudget 挂载失败:", e));
+}

@@ -88,6 +88,26 @@ export class TextureCacheImpl {
   get size(): number {
     return this.cache.size;
   }
+
+  /**
+   * 当前缓存纹理的显存字节**估算**（供 GPU 预算判定用）。
+   *
+   * 口径：RGBA 未压缩上限 `width × height × 4` 累加——GPU 实际占用可能因
+   * 格式（KTX2 压缩 / 半浮点）与 mipmap 而更低，故为**上限估算**，用于
+   * 相对比较与预算拦截，非精确计量。
+   *
+   * 图片未就绪（`image` 缺失 / 尺寸为 0，如占位纹理）按 0 计，不误报。
+   */
+  getTotalBytes(): number {
+    let total = 0;
+    for (const [, entry] of this.cache) {
+      const img = entry.tex.image as { width?: number; height?: number } | undefined;
+      const w = img?.width ?? 0;
+      const h = img?.height ?? 0;
+      if (w > 0 && h > 0) total += w * h * 4;
+    }
+    return total;
+  }
 }
 
 /** 全局单例（随 3D 会话生命周期；disposeAll 由 mount-preview-core fullCleanup 调用） */

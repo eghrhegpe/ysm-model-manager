@@ -207,6 +207,14 @@ export const autoSidebar = [
         "link": "/architecture"
       },
       {
+        "text": "YSM 模型管理器 — Design.md",
+        "link": "/UI-Design"
+      },
+      {
+        "text": "项目维护手册",
+        "link": "/VitePress-maintenance"
+      },
+      {
         "text": "项目结构地图",
         "link": "/audit-src-map"
       },
@@ -217,14 +225,6 @@ export const autoSidebar = [
       {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
-      },
-      {
-        "text": "YSM 模型管理器 — Design.md",
-        "link": "/UI-Design"
-      },
-      {
-        "text": "项目维护手册",
-        "link": "/VitePress-maintenance"
       }
     ]
   },

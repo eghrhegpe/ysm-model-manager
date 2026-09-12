@@ -50,7 +50,7 @@ ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 
 
 正则/字符串里的 `utils\/3d`（反斜杠转义）躲过 `utils/3d`（正斜杠）的批量替换。git grep 正斜杠搜不到转义形式。
 
-**解法**：额外 grep `utils\\/3d` 转义形式补刀。本次命中两处：`tests/test_check_diff_coverage.mjs` 的断言正则，与 `scripts/check-dynamic-import.ts` 的死排除（utils/3d 已不存在，直接删）。
+**解法**：额外 grep `utils\\/3d` 转义形式补刀。本次命中两处：`tests/test_check_diff_coverage.ts` 的断言正则，与 `scripts/check-dynamic-import.ts` 的死排除（utils/3d 已不存在，直接删）。
 
 ### 3. cmd.exe 8K 命令行墙（pre-push-gate 存量 bug）
 

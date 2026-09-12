@@ -4,7 +4,7 @@ status: ✅ 已采纳
 title: "ADR-088：检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行"
 date: 2026-08-17
 authors: [deepseek, jieling]
-related: [ADR-086, ADR-087, scripts/pre-push-gate.mjs, scripts/_lib/contract-tests.ts]
+related: [ADR-086, ADR-087, scripts/pre-push-gate.ts, scripts/_lib/contract-tests.ts]
 ---
 
 # ADR-088：检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行
@@ -14,7 +14,7 @@ related: [ADR-086, ADR-087, scripts/pre-push-gate.mjs, scripts/_lib/contract-tes
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-086`、`ADR-087`、`scripts/pre-push-gate.mjs`、`scripts/_lib/contract-tests.ts`
+- **相关**：`ADR-086`、`ADR-087`、`scripts/pre-push-gate.ts`、`scripts/_lib/contract-tests.ts`
 
 ---
 
@@ -29,7 +29,7 @@ ADR-086 完成了**检查体系减负**（星级评定 + 职责去重 + AI 调�
 | Go 域（updater→build→test→vet→gofmt→binding） | ~18s | ⚠️ 域内部分可并行 |
 | 前端域（layering→menu-health→vite→vitest→tsc） | ~40s | ⚠️ 域内部分可并行 |
 | 静态工具（14 个 check-*.mjs 串行） | ~8s | ✅ 可分组并行 |
-| 契约测试（tests/*.mjs） | ~31s | ✅ 已并行 |
+| 契约测试（tests/*.ts） | ~31s | ✅ 已并行 |
 | 其他（link/redline/adr/gen/check） | ~12s | ✅ 部分可并行 |
 
 **域间完全独立**：Go build 与 vite build 无共享状态、无文件写冲突、无依赖关系。24 核 CPU 上两者可完全并行，时间从 18+40=58s 降到 max(18,40)=40s。
@@ -60,8 +60,8 @@ await Promise.all([
   // ── 前端域 ──
   (async () => {
     if (!plan.frontend) return;
-    const ll = await shAsync('node scripts/check-layering.mjs --json');
-    const mh = await shAsync('node scripts/check-menu-health.mjs --json');
+    const ll = await shAsync('node scripts/check-layering.ts --json');
+    const mh = await shAsync('node scripts/check-menu-health.ts --json');
     const [fb, tscResult] = await Promise.all([
       shAsync('npx vite build', { cwd: 'frontend' }),
       shAsync(`"${tscBin}" --noEmit`, { cwd: 'frontend' }),
@@ -155,7 +155,7 @@ check-layering → check-menu-health → vite build → vitest → tsc
 | 契约测试 | 串行 43s → 并行 31s（`runContractTestsParallel`） | 不变（已并行） |
 | 静态工具 | 去重 P1/P2/P3 重叠对 | ~~分组并行~~ ❌ 回退 |
 | 域间并行 | 未涉及 | Go ∥ 前端 `Promise.all` ✅ 已落地 |
-| 实现 | `scripts/check-*.mjs` 内容精简 | `scripts/pre-push-gate.mjs`（复用既有 `shAsync`） |
+| 实现 | `scripts/check-*.mjs` 内容精简 | `scripts/pre-push-gate.ts`（复用既有 `shAsync`） |
 
 ---
 

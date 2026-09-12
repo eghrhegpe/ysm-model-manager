@@ -77,7 +77,7 @@ export const zhCN: Record<string, string> = {
 
 ### 2.6 构建管线
 
-`scripts/generate-locale-json.mjs`：用 esbuild 编译 `locales/*.ts` → CJS → 提取导出对象 → 写入 `public/locales/*.json`。在 `vite build` 和 `vite dev` 启动前自动调用。
+`scripts/generate-locale-json.ts`：用 esbuild 编译 `locales/*.ts` → CJS → 提取导出对象 → 写入 `public/locales/*.json`。在 `vite build` 和 `vite dev` 启动前自动调用。
 
 ## 3. 后果（Consequences）
 

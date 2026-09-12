@@ -65,4 +65,4 @@ status: active
 存量债务（与本次重构无关）：`check-circular.mjs`（context-menu-handlers 循环依赖）与 `check-deadcode-baseline.mjs`（baseline 过期，25b31fed 改源码未更新基线）在 --all 全量模式下仍 FAIL，需单独处理。
 **2026-08-14 二次治本（已解决）**：并行工作区 `f259643c` 拆出 context-menu-shared.ts 破除循环依赖（check-circular 归零）；本会话清理死代码（提交 `feb00e05`）——删除 4 处死 re-export、8 处去 export、debug-render↔cleanup-helper dispose 去重、dnd-collector.mergeDropFiles 删除，`check-deadcode` errors 归零，全量 doctor 36/36。
 
-**2026-08-26 变更域过滤（已实施）**：check-redlines 接受 `--files <换行分隔文件列表>`（pre-push-gate 在文件驱动/push 模式透传本次变更文件），仅把「变更文件内」的违规计入新增阻断——避免只改 Go/文档时被仓库内其他文件（如未提交 frontend）存量新增红线卡住。`--all`/`--docs` 不传 `--files`，保持全库基线比对。键过滤逻辑抽为可测纯函数 `redlineFilterKeysByChangedFiles`，契约测试 `tests/test_redlines_changed_files.mjs` 锁定。
+**2026-08-26 变更域过滤（已实施）**：check-redlines 接受 `--files <换行分隔文件列表>`（pre-push-gate 在文件驱动/push 模式透传本次变更文件），仅把「变更文件内」的违规计入新增阻断——避免只改 Go/文档时被仓库内其他文件（如未提交 frontend）存量新增红线卡住。`--all`/`--docs` 不传 `--files`，保持全库基线比对。键过滤逻辑抽为可测纯函数 `redlineFilterKeysByChangedFiles`，契约测试 `tests/test_redlines_changed_files.ts` 锁定。

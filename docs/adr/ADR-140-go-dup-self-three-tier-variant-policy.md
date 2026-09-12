@@ -4,13 +4,13 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/jscpd-go.mjs`（Go 端 jscpd 门禁 + 独立 baseline）、`tmp/jscpd-self-exact.mjs`（字节级自重复核验）、`go/fileops/fileops.go`（`opPrologue`）、`go/tags/tags.go`（`prepareWrite`）、`docs/adr/ADR-139-platform-shim-dedup.md`（平台 shim 收敛）
+- **相关**：`scripts/jscpd-go.ts`（Go 端 jscpd 门禁 + 独立 baseline）、`tmp/jscpd-self-exact.mjs`（字节级自重复核验）、`go/fileops/fileops.go`（`opPrologue`）、`go/tags/tags.go`（`prepareWrite`）、`docs/adr/ADR-139-platform-shim-dedup.md`（平台 shim 收敛）
 
 ---
 
 ## 1. 背景（Context）
 
-`scripts/jscpd-go.mjs` 门禁当前基线 167 个唯一文件对（重复率 4.5%，313 个 `.go` 文件）。
+`scripts/jscpd-go.ts` 门禁当前基线 167 个唯一文件对（重复率 4.5%，313 个 `.go` 文件）。
 用户提出两选一：「开 Batch C 直接抽领域脚手架」or「先起 ADR 把平台 shim 收敛范围钉死」。
 
 前几轮已落地：平台 shim 合并（`rust_backend_*` 四文件 → `go/scanner/rust_backend.go`，根因修复 android/linux 构建标签撞车）、`importer.sanitizeImportPaths`、`fsutil.walkFilesStream`、`cli.cliPrologue` 抽取 → 基线 173 → 167。
@@ -62,7 +62,7 @@
 
 ## 4. 数据溯源
 
-- 来源：`node scripts/jscpd-go.mjs`（313 文件 / 166 对）→ `tmp/jscpd-self-exact.mjs`（327 自重复对：19 EXACT / 308 NEAR）→ 逐文件 `git stash` 回退验证 `importer` flakes 与改动无关。
+- 来源：`node scripts/jscpd-go.ts`（313 文件 / 166 对）→ `tmp/jscpd-self-exact.mjs`（327 自重复对：19 EXACT / 308 NEAR）→ 逐文件 `git stash` 回退验证 `importer` flakes 与改动无关。
 - 结果：采纳「变体层不强制合并 + 四准则安全抽取」策略；基线冻结 166；本 ADR 与 `go-dup-governance` skill 同步沉淀方法论。
 
 <!-- 文件名: go-dup-self-three-tier-variant-policy.md → 实际文件 ADR-140-go-dup-self-three-tier-variant-policy.md -->

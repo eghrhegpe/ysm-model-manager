@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/guide/`（26 篇）/ `scripts/gen-docs-index.mjs`（guide 分区）/ 联邦 MikuMikuAR `docs/guide/`（28 篇对标）
+- **相关**：`docs/guide/`（26 篇）/ `scripts/gen-docs-index.ts`（guide 分区）/ 联邦 MikuMikuAR `docs/guide/`（28 篇对标）
 
 ---
 
@@ -36,7 +36,7 @@
 ### 2.3 索引机制
 
 - `gen-docs-index.mjs` 新增 `--guide` 分区（`GEN: guide-index` 标记区），从各篇 frontmatter 的 `title` / `description` 自动生成表格；
-- 新增篇目只需写文件 + 跑 `node scripts/gen-docs-index.mjs --guide`，零手工维护索引；
+- 新增篇目只需写文件 + 跑 `node scripts/gen-docs-index.ts --guide`，零手工维护索引；
 - 断链由 `link-checker` 兜底。
 
 ## 3. 后果（Consequences）
@@ -65,7 +65,7 @@
 | `docs/guide/用户指南.md`（旧总览 236 行） | 拆分素材，保留为总览 |
 | `frontend/src/` 各功能模块（TS 化源码） | 26 篇内容的事实来源，逐篇核实 |
 | 联邦 MikuMikuAR `docs/guide/`（28 篇） | 篇目风格 / index 表格 / frontmatter 结构对标 |
-| `scripts/gen-docs-index.mjs`（commit 19c1b18） | guide 分区生成器（GEN: guide-index） |
+| `scripts/gen-docs-index.ts`（commit 19c1b18） | guide 分区生成器（GEN: guide-index） |
 | AGENTS.md 文档地图 `docs/guide/` 条目 | 「网站化储备」定位依据 |
 
 <!-- 文件名: user-guide.md → 实际文件 ADR-018-user-guide.md -->

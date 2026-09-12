@@ -46,4 +46,4 @@ $ for d in go/*/; do files=$(ls "$d"*.go 2>/dev/null | wc -l); loc=$(cat "$d"*.g
 包间共性问题
 
 ## 评审后动作
-低分包/立卡项结论写回知识卡（`node scripts/new-knowledge-card.mjs`），让 bug-search 与下次评审直接命中。
+低分包/立卡项结论写回知识卡（`node scripts/new-knowledge-card.ts`），让 bug-search 与下次评审直接命中。

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.ts` / `scripts/README.md` / `tests/*.mjs` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
+- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.ts` / `scripts/README.md` / `tests/*.ts` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
 
 ---
 
@@ -27,7 +27,7 @@
 ### 2.1 统一运行时（消灭双运行时）
 
 - 所有治理/生成/检查脚本迁移为 `.mjs`（2026-08-03 全量迁移，Python 脚本随迁移清理）；
-- 契约测试同步为 `tests/*.mjs`（Node 零依赖）；
+- 契约测试同步为 `tests/*.ts`（Node 零依赖）；
 - 单一入口：`node scripts/<tool>.mjs`。
 
 ### 2.2 共享层（`scripts/_lib/`）
@@ -76,7 +76,7 @@
 | `scripts/` 目录扫描 | 约 40 个 .mjs，覆盖检查/生成/脚手架三类 |
 | `scripts/_lib/scan-files.ts` | 共享层：walk / resolveImport / toPosix / readText / SRC_DIR |
 | `scripts/README.md` | 分档索引 + 「已删除（2026-08-03 Python 迁移）」清单 |
-| `tests/*.mjs` | 契约测试 Node 化（test_config / test_schema / test_scripts_lib 等） |
+| `tests/*.ts` | 契约测试 Node 化（test_config / test_schema / test_scripts_lib 等） |
 | ADR-013 | 治理收敛 Phase 1：文档宪法对账 + 联邦基线对齐 |
 | ADR-014 | P5 预告「工具链质变（独立 ADR）」——本 ADR 承接执行层 |
 | 提交 54d3063 / 47d44aa | scripts/ 入库 / auto-import 接入 doctor |

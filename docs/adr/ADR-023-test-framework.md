@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03（初定），2026-08-04（L3 落地 + 覆盖率基线 + 进门禁/CI + 阈值红线 + 补测报告脚本）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`tests/*.mjs`（契约测试）/ `go/` 各包单测 / `frontend/package.json`（vitest 依赖已装）/ `frontend/vite.config.js`（vitest + v8 coverage 配置 + thresholds）/ `scripts/test-coverage-report.mjs`（补测发现）/ ADR-014 P5 / ADR-020 / 联邦 MikuMikuAR（Vitest 4328 测试实证）
+- **相关**：`tests/*.ts`（契约测试）/ `go/` 各包单测 / `frontend/package.json`（vitest 依赖已装）/ `frontend/vite.config.js`（vitest + v8 coverage 配置 + thresholds）/ `scripts/test-coverage-report.ts`（补测发现）/ ADR-014 P5 / ADR-020 / 联邦 MikuMikuAR（Vitest 4328 测试实证）
 
 ---
 
@@ -12,7 +12,7 @@
 项目测试覆盖存在层级缺口：
 
 - **后端有单测**：`go/` 各包（installer/recycle/watcher/ysm 等）有 Go 单测；
-- **契约测试现行**：`tests/*.mjs`（Node 零依赖）校验 JSON/配置/HTML 引用完整性，已接入 CI；
+- **契约测试现行**：`tests/*.ts`（Node 零依赖）校验 JSON/配置/HTML 引用完整性，已接入 CI；
 - **前端无单测框架**：120 个 JS（现 TS 化中）无自动化测试，B 类审查盲区 #1「原生 JS 无类型系统」虽由 ADR-014 类型化缓解，但行为测试仍靠 review 人工盘问；
 - **联邦实证**：MikuMikuAR 为 TypeScript + Vitest 4328 测试，收益已验证；
 - **ADR-014 P5 预告**：「评估 Vitest」列为工具链质变的独立 ADR——本 ADR 承接。
@@ -26,7 +26,7 @@
 | 层 | 技术 | 覆盖 | 状态 |
 |----|------|------|------|
 | L1 后端单测 | Go `go test ./go/...` | installer/recycle/watcher/ysm 等纯逻辑 | ✅ 现行 |
-| L2 契约测试 | Node `tests/*.mjs` | JSON schema / 配置值域 / HTML 引用完整性 | ✅ 现行（CI 已接） |
+| L2 契约测试 | Node `tests/*.ts` | JSON schema / 配置值域 / HTML 引用完整性 | ✅ 现行（CI 已接） |
 | L3 前端单测 | Vitest（jsdom） | 纯函数（utils/）+ 功能/交互层（features/core/components） | ✅ 现行（20 文件 / 302 用例） |
 
 ### 2.2 引入节奏（渐进，不做全量重写）
@@ -34,12 +34,12 @@
 - **P0** ✅：`frontend/package.json` 已含 vitest 依赖 + jsdom 环境（`test: vitest run`）——地基已铺；
 - **P1** ✅：**纯函数层**（`utils/`）全覆盖——display/fmt/dom/icon/summarize/extensions/resource-types/stagger/mc-format/animation/model2d/errors；
 - **P2** ✅：功能/交互层落地——`features/community/data.ts`（tryFetchModels 并发竞速）、`core/context-menus.ts`（异步 handler）、`download-queue.ts`（STATE + 事件流）、`app-tree` utils/data、`components/context-menu`；
-- **P3** ✅：`vitest run` 已接入质量门禁——`scripts/pre-push-gate.mjs`（前端域变更时跑）+ `scripts/doctor.mjs`（全量自检）+ `.github/workflows/ci.yml`（CI 独立 job）。与契约测试并轨（不取代 review，补齐自动化盲区）。
+- **P3** ✅：`vitest run` 已接入质量门禁——`scripts/pre-push-gate.ts`（前端域变更时跑）+ `scripts/doctor.ts`（全量自检）+ `.github/workflows/ci.yml`（CI 独立 job）。与契约测试并轨（不取代 review，补齐自动化盲区）。
 
 ### 2.3 边界
 
 - **不引入重型框架**：保持 Web Components + Shadow DOM，Vitest 只做行为验证；
-- **契约测试是宪法**：`tests/*.mjs` 禁止修改，L3 与其互补不重叠；
+- **契约测试是宪法**：`tests/*.ts` 禁止修改，L3 与其互补不重叠；
 - **测试覆盖维度**：仍以「核心 Go 逻辑有单测 + 契约测试全过」为底线（AGENTS.md 审核维度），L3 是增量红利。
 
 ### 2.4 覆盖率基线（v8）
@@ -48,7 +48,7 @@
 - **脚本**：`npm run test:coverage`（`vitest run --coverage`）；依赖 `@vitest/coverage-v8@4.1.10`（与 vitest ^4.1.10 同版本，防 peer 冲突）；
 - **阈值（防回退）**：`coverage.thresholds` 设全局门槛——statements 40 / branches 31 / functions 40 / lines 40（2026-08-09 校准：src/ 迁移后实际 stmts 42.68 / branches 36.19 / funcs 43.75 / lines 43.8，照旧例降至实际-5pt 作防回退基准，防正常迭代被卡；跌破即 `test:coverage` 失败，红灯提示回补）。不设 perFile 门槛，避免拖死未触达的 UI 重灾区（组件级文件按决策不硬补单测）。
 - **基线**：整体语句覆盖率 90.29%；薄弱区回填后——errors.ts 100% / community/data.ts 99% / context-menus.ts 86% / model2d.ts 94% / display.ts 100% / download-queue.ts 77%；
-- **补测发现闭环**：`scripts/test-coverage-report.mjs` 读 `coverage/coverage-final.json`（v8 json reporter 产物），按语句覆盖率升序输出「未覆盖行 + 未覆盖函数」清单，AI/人工据此决定下一批补测对象（接入方式见 §2.5）；
+- **补测发现闭环**：`scripts/test-coverage-report.ts` 读 `coverage/coverage-final.json`（v8 json reporter 产物），按语句覆盖率升序输出「未覆盖行 + 未覆盖函数」清单，AI/人工据此决定下一批补测对象（接入方式见 §2.5）；
 - **产物不入库**：根 `.gitignore` 加 `frontend/coverage/`。
 
 ### 2.5 质量门禁接入（P3 落地）
@@ -57,8 +57,8 @@ L3 测试「写了要跑、坏了要红」——接入三处守护，防止测�
 
 | 入口 | 触发时机 | 行为 |
 |------|---------|------|
-| `scripts/pre-push-gate.mjs` | 前端域（`frontend/**`）变更时本地 push | `cd frontend && npx vitest run`，失败阻断推送 |
-| `scripts/doctor.mjs` | 手动 `node scripts/doctor.mjs` 全量自检 | `checkFrontendTest()` 并入，失败置退出码非 0 |
+| `scripts/pre-push-gate.ts` | 前端域（`frontend/**`）变更时本地 push | `cd frontend && npx vitest run`，失败阻断推送 |
+| `scripts/doctor.ts` | 手动 `node scripts/doctor.ts` 全量自检 | `checkFrontendTest()` 并入，失败置退出码非 0 |
 | `.github/workflows/release.yml`（主 CI） | push main / PR（windows-latest） | `npm ci` + tsc 后 `npx vitest run`，失败阻断合并 |
 
 设计取舍：
@@ -95,11 +95,11 @@ L3 测试「写了要跑、坏了要红」——接入三处守护，防止测�
 | `frontend/package.json` | vitest ^4.1.10 + jsdom 已装，`test: vitest run` 脚本就绪；新增 `test:coverage` + `@vitest/coverage-v8@4.1.10` |
 | `frontend/vitest.config.ts` | test.coverage（v8 provider，include src/**，exclude *.test.js + wasm/**）；新增 thresholds（stmts 40 / branches 31 / functions 40 / lines 40）+ json reporter |
 | `npm run test:coverage` | 20 文件 / 302 用例全过；整体语句覆盖率 90.29%（errors 100% / data 99% / context-menus 86% / model2d 94% / display 100% / download-queue 77%） |
-| `scripts/test-coverage-report.mjs` | 读 coverage-final.json → 未覆盖行/函数清单（升序 + --json） |
-| `scripts/pre-push-gate.mjs` | 前端域变更时 `npx vitest run`（P3 落地，见 §2.5） |
-| `scripts/doctor.mjs` | `checkFrontendTest()` 并入全量自检（P3 落地） |
+| `scripts/test-coverage-report.ts` | 读 coverage-final.json → 未覆盖行/函数清单（升序 + --json） |
+| `scripts/pre-push-gate.ts` | 前端域变更时 `npx vitest run`（P3 落地，见 §2.5） |
+| `scripts/doctor.ts` | `checkFrontendTest()` 并入全量自检（P3 落地） |
 | `.github/workflows/release.yml` | 主 CI（windows-latest）`npm ci` + tsc 后 `npx vitest run`（P3 落地；不塞入 pages-deploy） |
-| `tests/*.mjs` | 契约测试现行清单（test_config / test_schema / test_scripts_lib 等） |
+| `tests/*.ts` | 契约测试现行清单（test_config / test_schema / test_scripts_lib 等） |
 | `go/` 各包 | Go 单测覆盖（installer/recycle/watcher/ysm 等） |
 | ADR-014 P5 | 「评估 Vitest」工具链质变预告 |
 | 联邦 MikuMikuAR | TS + Vitest 4328 测试实证（ADR-014 数据溯源） |

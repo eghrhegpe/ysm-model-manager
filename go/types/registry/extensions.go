@@ -9,13 +9,14 @@ import (
 	"sync/atomic"
 )
 
-// ===== 已移除壳-叶架构（ADR-XXX 大统一）=====
+// ===== 已移除壳-叶架构（大统一，无独立 ADR）=====
 // SubtypesFor/SubtypeNames/SubtypeByDir/IsSubDirName/MMDSubDirs/IsMMDSubDir/IsSubDirGrouping
 // 全部移除。每个资源类型独立管自己的路径和扩展名，不再共享根目录或父子关系。
 
-// IsNestedModelDir 判断 rtype 是否有嵌套模型目录结构（ADR-095）：
+// IsNestedModelDir 判断 rtype 是否有嵌套模型目录结构：
 // 模型入口文件在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）。
 // 消费注册表 nestedModelDir 字段，不硬编码 rtype。
+// 注意：嵌套特性原注释误引 ADR-095（实为「OpenInstanceFolder 打开资源存储目录」），此处纠正。
 func IsNestedModelDir(rtype string) bool {
 	if rt := RegistryType(rtype); rt != nil {
 		return rt.NestedModelDir || len(rt.NestedPatterns) > 0
@@ -23,7 +24,7 @@ func IsNestedModelDir(rtype string) bool {
 	return false
 }
 
-// NestedPatternsFor 返回指定资源类型的嵌套模式配置列表（ADR-XXX）。
+// NestedPatternsFor 返回指定资源类型的嵌套模式配置列表。
 // 若类型未配置 NestedPatterns 但有 NestedModelDir 标记，返回默认的 assets/入口文件模式。
 func NestedPatternsFor(rtype string) []NestedPattern {
 	rt := RegistryType(rtype)

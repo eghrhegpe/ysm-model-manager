@@ -9,7 +9,7 @@
   - 翻译文件：`frontend/src/core/i18n/locales/{zh-CN,en,ja}.ts`
   - 翻译函数：`frontend/src/core/i18n/t.ts`
   - 一致性测试：`frontend/src/core/i18n/locales-consistency.test.ts`
-  - 命名检查脚本：`scripts/i18n-key-naming.mjs`（本 ADR 新增）
+  - 命名检查脚本：`scripts/i18n-key-naming.ts`（本 ADR 新增）
   - 取代 [ADR-045]（i18n 框架）
 
 ---
@@ -102,7 +102,7 @@ preview.zoom           preview.zoomIn          preview.zoomOut
 
 | 阶段 | 范围 | 工具 |
 |------|------|------|
-| **CI 卡口** | 任何**新增**的键，CI 强制三段式 | `scripts/i18n-key-naming.mjs`（本 ADR 新增） |
+| **CI 卡口** | 任何**新增**的键，CI 强制三段式 | `scripts/i18n-key-naming.ts`（本 ADR 新增） |
 | **旧键扫描** | 一次性扫出所有"实体直挂 root"违规键，列清单 | 同上脚本 `--list-violations` |
 | **局部重构** | 仅"高频歧义实体"（bone / texture / pack / model 等）逐个 PR 迁移 | 手动；每个 PR 不超过 50 键 |
 | **旧键废弃** | 实际落地：**改名时同步改全部调用点 + 语言包删旧键**（不留兼容表）；详见 §2.3 实施调整 | 见 §2.3 |
@@ -148,14 +148,14 @@ function t(key, params) {
 - 旧键直接删除而非保留，**杜绝了「翻译改旧键以为生效实则无效」的失效陷阱**（i18n_accuracy.md 曾记录 10 处键名迁移后值未同步的问题，正是旧键残留的后果）
 - 维护成本：无需维护 `legacy-key-map.ts` 长期表
 
-### 2.4 命名检查脚本：`scripts/i18n-key-naming.mjs`
+### 2.4 命名检查脚本：`scripts/i18n-key-naming.ts`
 
 零依赖 Node 脚本，扫三语文件：
 
 ```
-node scripts/i18n-key-naming.mjs                       # CI 模式：只检查新增键
-node scripts/i18n-key-naming.mjs --list-violations     # 列出所有违规旧键
-node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
+node scripts/i18n-key-naming.ts                       # CI 模式：只检查新增键
+node scripts/i18n-key-naming.ts --list-violations     # 列出所有违规旧键
+node scripts/i18n-key-naming.ts --check newKey1 newKey2  # 检查指定键
 ```
 
 **CI 模式行为**：
@@ -221,7 +221,7 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 - **不强制重构所有旧键**：`preview.*` 下另外 ~275 个旧键靠脚本标记违规清单，不强求一次性迁移。
 - **`menu.*` / `error.*` 等"自身就是角色"的命名空间不强制三段式**（保留现状）；如未来要重构，需另开 ADR 评估。
 - **Wails 绑定名、Go 字段名等"非 i18n 键"不受本 ADR 约束**。
-- **三段式校验放宽为默认合法**：`validateKey` 对三段及以上键，第二段在 `KNOWN_ROLES` 即角色，否则默认当子命名空间（合法），不再因"字面像角色但不在白名单"报违规。原因：单凭字面无法区分"子命名空间"（`audio`/`cache`/`proxy`/`layer`/`panel`）与"自创角色"，强报会误判阻断提交。"实体直挂 root"违规只在两段式判定（ADR 主战场）。误判回归由 `tests/test_i18n_key_naming.mjs`（pre-push 自动跑）守护；门禁接入为 pre-commit 非阻断（违规走 stderr 提示，不卡提交）。
+- **三段式校验放宽为默认合法**：`validateKey` 对三段及以上键，第二段在 `KNOWN_ROLES` 即角色，否则默认当子命名空间（合法），不再因"字面像角色但不在白名单"报违规。原因：单凭字面无法区分"子命名空间"（`audio`/`cache`/`proxy`/`layer`/`panel`）与"自创角色"，强报会误判阻断提交。"实体直挂 root"违规只在两段式判定（ADR 主战场）。误判回归由 `tests/test_i18n_key_naming.ts`（pre-push 自动跑）守护；门禁接入为 pre-commit 非阻断（违规走 stderr 提示，不卡提交）。
 
 ---
 
@@ -232,7 +232,7 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 | 1195 键语言包扫描（2026-08-28） | `preview.*` 287 键中 286 键只有两段 | 痛点 B 量化 |
 | 18 个"骨骼"相关键（zh-CN.ts grep） | 命名空间分散在 7 处 | 痛点 A 量化 |
 | 大模型/翻译人员误改测试 | "骨骼"改 1 处引发 4 处错改 | 痛点 A 案例 |
-| `scripts/i18n-key-naming.mjs`（新增） | CI 模式 | §2.4 实现 |
+| `scripts/i18n-key-naming.ts`（新增） | CI 模式 | §2.4 实现 |
 | 2026-08-31 实施核实 | 全仓库无 `legacy-key-map.ts`；`t.ts` 无旧键→新键回退；`workshop.saved→action.saved` 调用点全部同步改、旧键零残留 | §2.3 决策变更为「同步改调用点」，兼容表降级为备选 |
 
 <!-- 文件名: i18n-key-naming-three-segment.md → 实际文件 ADR-124-i18n-key-naming-three-segment.md -->

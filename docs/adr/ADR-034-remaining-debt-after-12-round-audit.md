@@ -73,7 +73,7 @@
 HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端调 Go 函数的参数/返回类型
 无静态守护，Binding 签名变更只能靠人肉测。
 
-**处置**：新增 `tests/test_binding_contract.mjs`，扫描 `bindings/` 生成 TS 类型导出清单，
+**处置**：新增 `tests/test_binding_contract.ts`，扫描 `bindings/` 生成 TS 类型导出清单，
 断言关键 Binding（Download/Install/Scan/Sync 等）的参数个数与返回类型与前端调用点一致。
 对齐 ADR-023 L1 契约层，守护跨层接口。
 
@@ -179,7 +179,7 @@ P2 功能缺失级（app_config 启动器路径跨平台、构建脚本 bash 等
 | Go 包测试扫描 | 24 包 / 21 有测试 / 3 零测试（litematic 4,889 / logs 121 / version 6） | 方向二盲区量化 |
 | `grep '\\\\'` 前端 | ADR-011 反斜杠自拼违规 0 处 | 011 治理已生效 |
 | `grep getApp()` vs `from bindings` | 119 处合规 vs 7 处违规 | 012 仅 7 处待改 |
-| `ls tests/*.mjs` | 8 件契约测试，Go Binding 契约零覆盖 | 方向四跨层守护空白 |
+| `ls tests/*.ts` | 8 件契约测试，Go Binding 契约零覆盖 | 方向四跨层守护空白 |
 | `grep runtime.GOOS` | 6 处平台分支（installer/recycle/updater/cli/config/logs） | 方向五 Go 侧已部分跨平台 |
 | `grep -rn "%APPDATA%\|LOCALAPPDATA\|ProgramFiles"` | app_config 硬编码 Windows 环境变量 + 盘符 | 方向五 P2 启动器扫描跨平台 |
 | `internal/app/wasm_decoder.go:28-29` | 硬编码开发者本机 node.exe 路径 | 方向五 P1 应删除 |

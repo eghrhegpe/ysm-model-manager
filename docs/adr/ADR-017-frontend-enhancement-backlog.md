@@ -104,4 +104,4 @@
 
 - 来源文件：`docs/frontend/pending-cleanup.md`（已删除，2026-08-03）；增强待办（E-1 / E-2、F-1~F-6）已由本 ADR 承接，调试代码清理台账（items 1–14）随文件移除
 - 治理依据：`AGENTS.md` 硬约束「写新 ADR 前先占号」；`docs/adr/README.md` 登记表
-- 校验：`scripts/gen-docs-index.mjs --adr` + `scripts/adr-check.mjs`
+- 校验：`scripts/gen-docs-index.ts --adr` + `scripts/adr-check.ts`

@@ -103,7 +103,7 @@ git commit -am "..."
 
 ```bash
 # 验证 + 提交一体（按 staged 文件裁剪门禁）
-node scripts/commit-with-check.mjs -m "<type>: <描述>"
+node scripts/commit-with-check.ts -m "<type>: <描述>"
 
 # 选项
 #   --fast     跳过 vitest（快速提交）
@@ -119,8 +119,8 @@ node scripts/commit-with-check.mjs -m "<type>: <描述>"
 |----------|----------|------|
 | Go | `go build ./go/...` | 编译检查 |
 | 前端 | `cd frontend && npx vite build && npm run typecheck` | 构建 + 类型检查 |
-| 文档 | `node scripts/doctor.mjs --docs` | 文档漂移检测（秒级） |
-| 发版前 | `node scripts/doctor.mjs` | 全量门禁 |
+| 文档 | `node scripts/doctor.ts --docs` | 文档漂移检测（秒级） |
+| 发版前 | `node scripts/doctor.ts` | 全量门禁 |
 
 ### 测试类型
 
@@ -132,7 +132,7 @@ cd frontend && npx vitest run
 go test ./go/... -timeout 60s
 
 # Node 契约测试（前后端 API 契约）
-for f in tests/*.mjs; do node "$f"; done
+for f in tests/*.ts; do node "$f"; done
 ```
 
 ### CI 自动跑的测试
@@ -147,7 +147,7 @@ for f in tests/*.mjs; do node "$f"; done
 本项目用 Git 钩子做自动化，**你只需手动做三件事**：
 
 1. `git add` 自己的源码
-2. 发版前 `node scripts/doctor.mjs` 全量验证
+2. 发版前 `node scripts/doctor.ts` 全量验证
 3. `git push`（pre-push 自然触发门禁）
 
 ### 钩子清单
@@ -190,7 +190,7 @@ npm run generate:bindings -ts
 
 - **铁律**：改完代码同步知识卡
 - `check-knowledge-drift` 由钩子自动兜底
-- 新知识卡：`node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]`
+- 新知识卡：`node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]`
 
 ## 文档规范
 
@@ -199,7 +199,7 @@ npm run generate:bindings -ts
 新增 ADR 走脚本，不手写编号：
 
 ```bash
-node scripts/new-adr.mjs "标题" [...]
+node scripts/new-adr.ts "标题" [...]
 ```
 
 **ADR 状态**：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`

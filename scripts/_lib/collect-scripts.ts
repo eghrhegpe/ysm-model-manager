@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * collect-scripts.ts — scripts/ 目录 .mjs 收集共享层。
+ * collect-scripts.ts — scripts/ 目录 .ts 收集共享层。
  *
  * 设计意图：check-proc-adoption / check-readme-index / check-script-hygiene 三处
- * 各自内联了一份「递归收集 scripts/ 下 .mjs（排除 _ 前缀共享层与测试）」的样板，
+ * 各自内联了一份「递归收集 scripts/ 下 .ts（排除 _ 前缀共享层与测试）」的样板，
  * 差异仅在 hooks/ 子目录的取舍（proc/readme 含 hooks 登记与直调检查，hygiene 因
  * git 钩子协议参数语义排除 hooks）。2026-09 孤儿审计 ② 判定「同模板复制的铁证」，
  * 按 check-lib-adoption 既有 walk 姿势收敛为带 skipHooks 选项的单点实现。
@@ -22,7 +22,7 @@ import { toPosix } from "./to-posix.ts";
 export const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
 /**
- * 递归收集 dir 下所有 .mjs（默认 scripts/）。
+ * 递归收集 dir 下所有 .ts（默认 scripts/）。
  * @param {object} [opts]
  *   - skipHooks {boolean}  排除 hooks/ 子目录（hygiene 口径：git 钩子协议参数不适用
  *                          parse-args positional 等检查）；默认 false（含 hooks，proc/readme 口径）

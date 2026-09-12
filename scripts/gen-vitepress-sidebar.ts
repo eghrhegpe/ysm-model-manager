@@ -135,13 +135,9 @@ const releasesItems = scanItems("releases", ["index.md"]);
 // 核心规范置顶，参考资料沉底；表外文件按字母序兜底（新增根 md 仍自动入列）。
 const ARCH_ORDER = [
   "architecture.md",
-  "Design.md",
-  "governance-rules.md",
-  "funcmap.md",
+  "UI-Design.md",
+  "VitePress-maintenance.md",
   "audit-src-map.md",
-  "maintenance.md",
-  "pitfalls.md",
-  "review-report.md",
 ];
 const archWeight = (name: string) => {
   const i = ARCH_ORDER.indexOf(name);

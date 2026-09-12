@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/pre-push-gate.mjs, scripts/doctor.mjs, .githooks/*, scripts/check-*.mjs, ADR-014, ADR-040, ADR-085`
+- **相关**：`scripts/pre-push-gate.ts, scripts/doctor.ts, .githooks/*, scripts/check-*.mjs, ADR-014, ADR-040, ADR-085`
 
 ---
 
@@ -15,7 +15,7 @@
 
 | 段 | 耗时 | 占比 |
 |----|------|------|
-| 契约测试（tests/*.mjs 串行） | 28.9s | 39% |
+| 契约测试（tests/*.ts 串行） | 28.9s | 39% |
 | vitest run | 28.9s | 39% |
 | 静态工具 + 编译 + 红线 | ~17s | 22% |
 | **合计** | **~75s** | **100%** |
@@ -122,7 +122,7 @@
 
 ### commit-with-check.mjs——把 AI 确认性循环压缩为单条命令
 
-**已落地**：`scripts/commit-with-check.mjs`（232 行）
+**已落地**：`scripts/commit-with-check.ts`（232 行）
 
 **核心洞察**：不是「加更多钩子」，而是**把 AI 的「确认性循环」变成单次命令**。
 
@@ -139,7 +139,7 @@ AI: git log 确认    ← 确认性循环
 应该是（~20 条指令/功能）：
 ```
 AI: 改代码
-AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 tsc+build+test，全绿后自动 commit + 显示 SHA
+AI: node scripts/commit-with-check.ts -m "..."  ← 单条命令：按域跑 tsc+build+test，全绿后自动 commit + 显示 SHA
 ```
 
 **commit-with-check.mjs 检查项（2026-08-17 重构为 thin wrapper）**：
@@ -150,9 +150,9 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 - 耗时：--all 约 45-75s（含 vitest + 契约测试）；--docs 约 2s
 
 **用法**：
-- `node scripts/commit-with-check.mjs -m "feat: xxx"` — 全量门禁 + 提交
-- `node scripts/commit-with-check.mjs -m "feat: xxx" --docs` — 仅文档域门禁 + 提交
-- `node scripts/commit-with-check.mjs --check` — 仅验证不提交
+- `node scripts/commit-with-check.ts -m "feat: xxx"` — 全量门禁 + 提交
+- `node scripts/commit-with-check.ts -m "feat: xxx" --docs` — 仅文档域门禁 + 提交
+- `node scripts/commit-with-check.ts --check` — 仅验证不提交
 - `--fast` 已移除（thin wrapper 统一全量门禁，不再支持跳过 vitest）
 
 ### 量化指令节省（基于今天真实指令清单）
@@ -177,7 +177,7 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 - 替代后：~35 条/功能（文件读写 30+ + ADR 2 + 后台编译 2 + commit-with-check 1）
 - **目标**：从 ~60 条/功能降到 ~20 条/功能——需进一步压缩文件读写（子代理并行读）
 
-**翻转条件**：若 commit-with-check.mjs 的按域判断漏跑某项检查导致回归 → **手动跑 `node scripts/pre-push-gate.mjs --all --dry-run`（或 `node scripts/doctor.mjs`）全量兜底**；commit-with-check 当前不实现 `--full`（避免重复维护第二条全量检查线，全量唯一源头是 pre-push-gate）
+**翻转条件**：若 commit-with-check.mjs 的按域判断漏跑某项检查导致回归 → **手动跑 `node scripts/pre-push-gate.ts --all --dry-run`（或 `node scripts/doctor.ts`）全量兜底**；commit-with-check 当前不实现 `--full`（避免重复维护第二条全量检查线，全量唯一源头是 pre-push-gate）
 
 ## 4. 检查脚本星级 Top 表（附录 A）
 
@@ -217,7 +217,7 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 
 ### 4.3 AI 调用公约（防「一轮打三次」）
 
-> 实证：本轮会话里 `node scripts/pre-push-gate.mjs --docs` 被跑 2 次、`npx vitest run` 被跑 3 次（单测 / 3d 目录 / 全量）。AI 在对话过程反复 bash 调检查脚本，不进 commit message，难以从 git log 追踪。
+> 实证：本轮会话里 `node scripts/pre-push-gate.ts --docs` 被跑 2 次、`npx vitest run` 被跑 3 次（单测 / 3d 目录 / 全量）。AI 在对话过程反复 bash 调检查脚本，不进 commit message，难以从 git log 追踪。
 
 **公约**：
 
@@ -229,7 +229,7 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 ## 5. 附录 B：check 耗时 × 功能周期账（15min 功能 / 15s 思考）
 
 > 用户节奏锚：15min（900s）落地一个功能，15s 完成一轮思考。ADR-086 §1.1 算的是门禁总耗时，本附录从"占功能周期比例"角度衡量"加一个新 check 值不值"。
-> 实测数据：`node scripts/doctor.mjs --json`（2026-08-17 全量）。**测量规模：菜单表 17 项、全量 ~75s**；测量误差 ±0.05s（不同机器 / 不同运行），故表格用数量级而非精确值。
+> 实测数据：`node scripts/doctor.ts --json`（2026-08-17 全量）。**测量规模：菜单表 17 项、全量 ~75s**；测量误差 ±0.05s（不同机器 / 不同运行），故表格用数量级而非精确值。
 
 | check | 耗时 | 占一轮思考（15s） | 占一个功能（900s） | 评价 |
 |-------|------|------------------|-------------------|------|
@@ -285,8 +285,8 @@ AI: node scripts/commit-with-check.mjs -m "..."  ← 单条命令：按域跑 ts
 | N1 | `git log --oneline -5 -- <file>`（提交前显示本次文件最近提交） | 🟡 半适合 · prepare-commit-msg 输出最近 3 条 | prepare-commit-msg | +0.05s | 输出噪音 > 50% → 移除 |
 | N2 | `git diff --stat HEAD`（提交前变更概览） | 🟡 半适合 · T3 已覆盖 status，diff stat 冗余 | 不落地 | — | — |
 | N3 | `npx vitest run <changed-dir>`（窄范围单测） | 🟢 适合 · commit-with-check 已按域跑全量；窄范围留给 AI 定向排查 | 不落地（保留人工） | — | — |
-| N4 | `node scripts/doctor.mjs --docs`（文档域轻量门禁） | 🟢 适合 · pre-push 已按域自动跑；commit 时不必重复 | 不落地（pre-push 已兜底） | — | — |
-| N5 | `node scripts/check-knowledge-drift.mjs --affected` 已自动 | ✅ 已落地（T2） | pre-commit | +0.3s | — |
+| N4 | `node scripts/doctor.ts --docs`（文档域轻量门禁） | 🟢 适合 · pre-push 已按域自动跑；commit 时不必重复 | 不落地（pre-push 已兜底） | — | — |
+| N5 | `node scripts/check-knowledge-drift.ts --affected` 已自动 | ✅ 已落地（T2） | pre-commit | +0.3s | — |
 | N6 | commit 后自动 `git log --oneline -1` 确认 SHA | 🟡 可做 · 但 commit-with-check 已回显 SHA，冗余 | 不落地 | — | — |
 | N7 | 自动 stage 同目录测试文件 | ✅ 已落地（T1） | pre-commit | +0.1s | 误 stage > 10% |
 | N8 | 提交前 status 摘要 | ✅ 已落地（T3） | pre-commit | +0.05s | — |

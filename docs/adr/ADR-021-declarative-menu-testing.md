@@ -4,7 +4,7 @@
 - **被取代**：[ADR-037] 取代（C 层 E2E 条款被推翻，A/B 层保留）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/core/context-menus.ts` / `frontend/src/views/context-menu.ts` / `frontend/src/bus.ts`（MenuItem）/ `frontend/package.json`（vitest + jsdom）/ `tests/*.mjs`（契约测试）/ ADR-007 / ADR-014
+- **相关**：`frontend/src/core/context-menus.ts` / `frontend/src/views/context-menu.ts` / `frontend/src/bus.ts`（MenuItem）/ `frontend/package.json`（vitest + jsdom）/ `tests/*.ts`（契约测试）/ ADR-007 / ADR-014
 
 ---
 
@@ -14,7 +14,7 @@
 
 | 测试层 | 现状 | 覆盖 |
 |--------|------|------|
-| `tests/*.mjs` 契约测试（8 个） | ✅ 全过 | JSON schema / 配置 / HTML 引用完整性，纯静态校验，**宪法基石禁止修改** |
+| `tests/*.ts` 契约测试（8 个） | ✅ 全过 | JSON schema / 配置 / HTML 引用完整性，纯静态校验，**宪法基石禁止修改** |
 | vitest 前端单测（7 文件 / 79 用例） | ✅ 全过 | `utils/*` 纯函数 + `features/community/data.js`，**零组件、零交互、零菜单测试** |
 | E2E / UI 自动化 | ❌ 无 | Playwright 等均未引入 |
 
@@ -43,7 +43,7 @@ ctx:show ──► context-menus.ts（纯事件映射，产出 MenuItem[] 声明
 
 ## 2. 决策（Decision）
 
-**决策**：按「声明式菜单」分层建设前端自动化测试，A/B 层复用现有 vitest + jsdom（零新依赖），C 层（E2E）不引入、列为远期。契约测试 `tests/*.mjs` 一律不动。
+**决策**：按「声明式菜单」分层建设前端自动化测试，A/B 层复用现有 vitest + jsdom（零新依赖），C 层（E2E）不引入、列为远期。契约测试 `tests/*.ts` 一律不动。
 
 ### 2.1 A 层：映射 + 组件单测（零新依赖，优先）
 
@@ -88,7 +88,7 @@ ctx:show ──► context-menus.ts（纯事件映射，产出 MenuItem[] 声明
 - `getApp()` / modal 等外部依赖需逐项 mock，mock 面随菜单项增长
 
 ### 已知限制（不修复）
-- **契约测试 `tests/*.mjs` 不纳入本方案**：宪法基石，改动一律禁止
+- **契约测试 `tests/*.ts` 不纳入本方案**：宪法基石，改动一律禁止
 - **C 层 E2E 不做**：WebView2 直测成本高，本期范围外
 
 ---

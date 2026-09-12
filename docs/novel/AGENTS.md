@@ -253,6 +253,6 @@ AI 写作时必须以此为基准，确保以下维度达标：
 1. 先读本文件上篇·故事圣经（世界观/角色/冲突），再读对应区域已有章节，最后动笔
 2. 走「第九节决策链路」确定本章归属区域
 3. 查 `docs/archive/bug-chronicle.md` 与 `docs/adr/` 确认真实事件依据
-4. 写完重跑 `node scripts/build-novel-index.mjs`（唯一索引维护动作；产出 `index.md`，禁止手改）
+4. 写完重跑 `node scripts/build-novel-index.ts`（唯一索引维护动作；产出 `index.md`，禁止手改）
 5. 不重跑生成器的续写 = 没写。下一个 AI 在索引里找不到，等于不存在
-6. 校验：`node scripts/build-novel-index.mjs --check` 应退 0；`node scripts/link-checker.mjs` 断链应为 0
+6. 校验：`node scripts/build-novel-index.ts --check` 应退 0；`node scripts/link-checker.ts` 断链应为 0

@@ -34,7 +34,7 @@ YSM 模型管理器是一个跨平台桌面 + 移动 + 网页应用，用于管�
 | Web 后端 | **backend adapter** | `backend/browser-adapter.ts` Proxy 同形状绑定；`backend/platform.ts` Tier 分层判定 |
 | 数据 | `resource_types.json` 单一事实来源 + `creators.json` / `workshop_sites.json` / `workshop-github.json` | 资源类型/创作者/工坊站点/镜像仓库 |
 | 脚本 | Node（`.mjs` 零依赖治理工具链） | `scripts/` 下 40+ 个校验/生成脚本 |
-| 测试 | Go 单测 + Node 契约测试（`tests/*.mjs`）+ Vitest | 三层防护 |
+| 测试 | Go 单测 + Node 契约测试（`tests/*.ts`）+ Vitest | 三层防护 |
 
 ### 分层职责
 
@@ -275,7 +275,7 @@ type CliCommand struct {
 | 看到 `print*Usage()` 里的 flag 描述 → 以为改这里就够 | 还要同步改 `parse*Flags()` | CLI 加了 flag 但解析不到，静默失败 |
 | 看到 CLI 和 GUI 共享业务包 → 以为"一个修好另一个就好" | 入口参数校验/错误处理/输出格式各自独立 | 漏修入口层，GUI 仍挂 |
 
-**注册表 ↔ 文档的自动同步**：`scripts/gen-cli-doc.mjs` 消费 `RegisterCommandC` 调用 + `print*Usage` 正则，生成 `docs/cli-commands.md`；`tests/test_cli_doc_parity.mjs` 锁双向一致；pre-commit 阶段 `--check` 守护。新增 CLI 命令只需改 `go/cli/*.go` 源码 + 重跑 `node scripts/gen-cli-doc.mjs`，文档自动跟上。
+**注册表 ↔ 文档的自动同步**：`scripts/gen-cli-doc.ts` 消费 `RegisterCommandC` 调用 + `print*Usage` 正则，生成 `docs/cli-commands.md`；`tests/test_cli_doc_parity.ts` 锁双向一致；pre-commit 阶段 `--check` 守护。新增 CLI 命令只需改 `go/cli/*.go` 源码 + 重跑 `node scripts/gen-cli-doc.ts`，文档自动跟上。
 
 ---
 
@@ -289,7 +289,7 @@ type CliCommand struct {
 |------|------|-------------------|--------|
 | 统一 web 产物（编译自 `upstream/YesSteveModel-Parser`，产物暂存 `build-unified/`） | 前端 base64：`frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js`；Go embed：`frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | `_main`（callMain）/ `ysm_decode_from_memory` / `_malloc` / `ccall` / `cwrap` / `FS` | 桌面 WebView2 / Android WebView / 纯浏览器网页版 内存直解 + Go 端 Node.js 子进程 callMain |
 
-- **重建脚本已归档**：原 `node scripts/build-ysm-wasm.mjs`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验）现位于 **`scripts/_attic/build-ysm-wasm.ts`**（`_attic` = 孤儿审计归档区，保留代码供溯源、不参与门禁）。⚠️ 上游 YSMParser 更新时**需先复活该脚本并具备 emsdk 工具链**（本机当前无 emsdk，故「改上游 C++」类方案暂不可执行）。
+- **重建脚本已归档**：原 `node scripts/build-ysm-wasm.ts`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验）现位于 **`scripts/_attic/build-ysm-wasm.ts`**（`_attic` = 孤儿审计归档区，保留代码供溯源、不参与门禁）。⚠️ 上游 YSMParser 更新时**需先复活该脚本并具备 emsdk 工具链**（本机当前无 emsdk，故「改上游 C++」类方案暂不可执行）。
 - **exe sidecar 已停发**（2026-08-08 架构决策）：`go/ysm/cli.go` 的 `FindCLI()` 已删除，Go 侧解码入口改为 **`go/ysm|SetDecoder` 注入**（`internal/app` init 阶段以 Node.js + WASM 实现注入）。`runYSMParserOnFile` 即 `decodeYSMViaNodeJS`（无 Node 环境返回 nil）。
 
 ### 4.2 解码运行时：两条路径，同一份 C++ 能力
@@ -314,7 +314,7 @@ type CliCommand struct {
 3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（:127-180）；
 4. **纯 Node 即可解码，不依赖浏览器/WebView2**（已实测：`upstream/` 下 10 个 .ysm 全部可用此路径解码出骨骼/动画/纹理/头像）。`go/avatar/avatar.go` 的 `DecodeYSMFiles` 是同一套机制的复用（头像提取），两处脚本逻辑近似。
 
-> ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游：重建脚本已归档至 `scripts/_attic/build-ysm-wasm.ts`（见 §4.1），需先复活脚本并具备 emsdk 工具链（本机当前无 emsdk），方可同步重出两处（前端 base64 data + Go embed）——旧指引「重跑 `node scripts/build-ysm-wasm.mjs`」已失效，勿按旧路径执行。
+> ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游：重建脚本已归档至 `scripts/_attic/build-ysm-wasm.ts`（见 §4.1），需先复活脚本并具备 emsdk 工具链（本机当前无 emsdk），方可同步重出两处（前端 base64 data + Go embed）——旧指引「重跑 `node scripts/build-ysm-wasm.ts`」已失效，勿按旧路径执行。
 
 **解码优先级链（现状总表）**：
 
@@ -411,7 +411,7 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 3. **绑定** — `internal/app/resource_bindings.go:21` `LoadResourceTypes()` 返回原始 JSON 串。
 4. **前端静态镜像** — `js/utils/extensions.ts` `RESOURCE_EXTS`（:8-16，头部注释显式声明同步流程）；`js/utils/resource-types.ts` `RESOURCE_TYPES`/`RESOURCE_TYPE_LABELS`；`js/utils/resource-registry.ts`。
 
-> 一致性由 `tests/test_resource_schema.mjs` + `go/types/registry_test.go`（TestAllExts/IsSupportedExt/ExtBelongsTo/StorageSubDir/SubDirMap）双向守护；新增资源类型必须同步上述四处。
+> 一致性由 `tests/test_resource_schema.ts` + `go/types/registry_test.go`（TestAllExts/IsSupportedExt/ExtBelongsTo/StorageSubDir/SubDirMap）双向守护；新增资源类型必须同步上述四处。
 
 ### 配套数据 JSON
 
@@ -643,16 +643,16 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 **桌面（macOS/Linux）**：`scripts/build-release.sh` → `scripts/build-darwin.sh` / `scripts/build-linux.sh`（NSIS/fpm 打包）。
 
-**Android**：`node scripts/android-build.mjs`（一键）或 `Taskfile.yml` `android` include：
+**Android**：`node scripts/android-build.ts`（一键）或 `Taskfile.yml` `android` include：
 1. `wails3 android overlay:gen` → 2. `npm run build` → 3. `go build -buildmode=c-shared -tags android -overlay overlay.json` → 4. Gradle `assembleRelease` → APK（keystore 经 GitHub Secrets 注入）。
 
 ### 10.3 CI（`.github/workflows/release.yml`）
 
-四平台打包矩阵 + test job：`tests/*.mjs` → 构建 updater helper → `go vet ./go/...` → `go test ./go/...` → `npm ci` → `tsc --noEmit` → `vitest run` → `vite build` → `task` 安装。另有 `pages-deploy.yml`（网页版 GitHub Pages）。
+四平台打包矩阵 + test job：`tests/*.ts` → 构建 updater helper → `go vet ./go/...` → `go test ./go/...` → `npm ci` → `tsc --noEmit` → `vitest run` → `vite build` → `task` 安装。另有 `pages-deploy.yml`（网页版 GitHub Pages）。
 
 ### 10.4 治理脚本（`scripts/`，40+ `.mjs`）
 
-`binding-check` / `adr-check` / `event-audit` / `check-circular` / `check-doc-drift` / `check-knowledge-drift` / `doctor` / `link-checker` / `new-adr` / `android-build` / `android-install` 等。改完文档跑 `node scripts/doctor.mjs` 一键全量自检。
+`binding-check` / `adr-check` / `event-audit` / `check-circular` / `check-doc-drift` / `check-knowledge-drift` / `doctor` / `link-checker` / `new-adr` / `android-build` / `android-install` 等。改完文档跑 `node scripts/doctor.ts` 一键全量自检。
 
 ---
 
@@ -801,11 +801,11 @@ app-content/community/core.ts:35-36
 
 | 层 | 载体 | 守护内容 |
 |----|------|----------|
-| 契约测试 | `tests/*.mjs`（8 个，CI 禁改） | `test_resource_schema.mjs`（resource_types.json 必填字段 / kebab-case id / 唯一性 / extensions 以 `.` 开头 / installDir 尾斜杠 / 枚举 preview·detector·actions / configField 须 PascalCase+Root）、`test_creators_schema.mjs`、`test_workshop_schema.mjs`、`test_config_defaults/syntax.mjs`、`test_html_integrity.mjs`、`test_scripts_json/lib.mjs` |
+| 契约测试 | `tests/*.ts`（8 个，CI 禁改） | `test_resource_schema.mjs`（resource_types.json 必填字段 / kebab-case id / 唯一性 / extensions 以 `.` 开头 / installDir 尾斜杠 / 枚举 preview·detector·actions / configField 须 PascalCase+Root）、`test_creators_schema.mjs`、`test_workshop_schema.mjs`、`test_config_defaults/syntax.mjs`、`test_html_integrity.mjs`、`test_scripts_json/lib.mjs` |
 | Go 单测 | `go/*_test.go`（12 个） | `go/types/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` |
 | 前端 Vitest | `*.test.js`（19 个） | `core/context-menus.test.js`(18.9KB)、`features/community/download-queue.test.js`(13.8KB)、`utils/model2d`、`utils/animation`、`utils/summarize`、`utils/extensions` 等 |
 
-> 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`for f in tests/*.mjs; do node "$f"; done` + `go test ./go/... -count=1` + `npm run typecheck`。
+> 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`for f in tests/*.ts; do node "$f"; done` + `go test ./go/... -count=1` + `npm run typecheck`。
 
 ---
 

@@ -37,7 +37,7 @@
 |----------|------|------|
 | 推 tag | `git push origin vX.Y.Z` | `release.yml` 先跑 test job（契约测试/Go/前端）→ release job 打包 zip + SHA256SUMS → 建 GitHub Release |
 | 本地自检 | `.\cmd\build-release.ps1 vX.Y.Z` | 本地构建产物到 `build\release\`（`-SkipUpload` 只构建不上传） |
-| 写发版说明 | `node scripts/release-notes-gen.mjs` | 收集 git 提交数据，供写 `docs/releases/vX.Y.Z.md` 参考 |
+| 写发版说明 | `node scripts/release-notes-gen.ts` | 收集 git 提交数据，供写 `docs/releases/vX.Y.Z.md` 参考 |
 
 产物：`build/release/YSM-Model-Manager_windows_amd64.exe`（裸 exe，v1.13.0 起不再打包 zip）+ `SHA256SUMS`。数据（resource_types/creators/workshop 系列）编译期内嵌，下载单个 exe 即具备全部数据能力；用户可编辑数据与配置在 `%APPDATA%/YSM-Model-Manager`（自动生成/迁移）。
 
@@ -49,7 +49,7 @@
 ## 2. 标准发版步骤（9 步）
 
 1. **定版本号**：semver `X.Y.Z`（参考 `git tag --list "v*" --sort=-version:refname` 最新值）。
-2. **写发布说明**：`node scripts/release-notes-gen.mjs` 收集 git 数据 → 手写 `docs/releases/vX.Y.Z.md`（格式参考既有 `v1.9.3.md`；**路径小写 `releases`**，CI 按此路径查找）。
+2. **写发布说明**：`node scripts/release-notes-gen.ts` 收集 git 数据 → 手写 `docs/releases/vX.Y.Z.md`（格式参考既有 `v1.9.3.md`；**路径小写 `releases`**，CI 按此路径查找）。
 3. **提交发布说明**：`git add docs/releases/vX.Y.Z.md && git commit -m "docs: add vX.Y.Z release notes" && git push origin main`。
 4. **打 tag 触发**：`git tag vX.Y.Z && git push origin vX.Y.Z`。
 5. **等 CI 完成**：`gh run list --workflow release.yml --limit 3` 监控；test job 与 release job 全绿。
@@ -109,7 +109,7 @@
 VER="X.Y.Z"  # ← 改成实际版本号
 
 # 写 notes（可选：先用生成器收集 git 数据）
-node scripts/release-notes-gen.mjs
+node scripts/release-notes-gen.ts
 # 手写 docs/releases/v$VER.md
 
 # 提交 + 推 main

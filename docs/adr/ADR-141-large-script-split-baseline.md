@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-040 架构规模治理 / scripts/auto-import.mjs`
+- **相关**：`ADR-040 架构规模治理 / scripts/auto-import.ts`
 
 ---
 
@@ -70,9 +70,9 @@ ADR-141 落地实证（726 文件）：`source-graph.getExportedSymbols` 与 `ex
 | 来源 | → 结果 |
 |------|--------|
 | 2026-08-31 探查审计（行数排行 Top12） | → 确认 5 个 >500 行胖子，auto-import 802 最大 |
-| `node scripts/auto-import.mjs --json`（拆分前基线） | → scanned=726, missing=0 |
+| `node scripts/auto-import.ts --json`（拆分前基线） | → scanned=726, missing=0 |
 | 拆分后 `--json` / 有缺失 fixture / `--fix` 三重对比 | → 逐字节一致（parity 通过） |
 | 726 文件 source-graph vs extractExports 对比 | → 15 文件差异均为 re-export 形态，**结论不复用** |
-| `tests/test_auto_import.mjs` | → 13 项契约测试全过 |
+| `tests/test_auto_import.ts` | → 13 项契约测试全过 |
 
 <!-- 文件名: large-script-split-baseline.md → 实际文件 ADR-141-large-script-split-baseline.md -->

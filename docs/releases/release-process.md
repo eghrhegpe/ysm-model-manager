@@ -25,7 +25,7 @@
 
 | 事项 | 原因 | 谁来补 |
 |------|------|--------|
-| 写 `docs/releases/vX.Y.Z.md` | 创意性写文档，无法模板化 | AI 跑 `node scripts/release-notes-gen.mjs` 收集数据后按既有 `v1.9.3.md` 格式写 |
+| 写 `docs/releases/vX.Y.Z.md` | 创意性写文档，无法模板化 | AI 跑 `node scripts/release-notes-gen.ts` 收集数据后按既有 `v1.9.3.md` 格式写 |
 | 应用内版本核对 | 需启动应用读「关于」页 | 人类或 E2E |
 | 本地构建自检 | 可选步骤，`build-release.ps1` 已独立存在 | AI 跑 `.\cmd\build-release.ps1 vX.Y.Z -SkipUpload` |
 
@@ -47,7 +47,7 @@
 |----------|------|------|
 | 推 tag | `git push origin vX.Y.Z` | `release.yml` 先跑 test 门禁（可复用 `test.yml`：契约测试/Go vet+test/前端 typecheck+vitest+vite build，`needs: [prepare, test]` 不过不打包）→ Prepare 校验 tag≡config.yml → 四平台打包 → 建 GitHub Release |
 | 本地自检 | `.\cmd\build-release.ps1 vX.Y.Z [-SkipUpload]` | 本地 8 步构建产物到 `build\release\`；`-SkipUpload` 只构建不上传 |
-| 写发版说明 | `node scripts/release-notes-gen.mjs` | 收集 git 提交数据，供写 `docs/releases/vX.Y.Z.md` 参考 |
+| 写发版说明 | `node scripts/release-notes-gen.ts` | 收集 git 提交数据，供写 `docs/releases/vX.Y.Z.md` 参考 |
 
 产物：`build/release/YSM-Model-Manager_windows_amd64.exe`（裸 exe，v1.13.0 起不再打包 zip）+ `SHA256SUMS`。数据（resource_types/creators/workshop 系列）编译期内嵌，下载单个 exe 即具备全部数据能力；用户可编辑数据与配置在 `%APPDATA%/YSM-Model-Manager`（自动生成/迁移）。
 
@@ -83,7 +83,7 @@
 1. **定版本号**：按 semver 决定 `X.Y.Z`（参考 `git tag --list "v*" --sort=-version:refname` 最新值）。
 
 2. **写发布说明**：
-   - （可选）`node scripts/release-notes-gen.mjs` 收集 git 提交数据，供参考。
+   - （可选）`node scripts/release-notes-gen.ts` 收集 git 提交数据，供参考。
    - 手写 `docs/releases/vX.Y.Z.md`（格式参考既有 `v1.9.3.md`）。
    - ⚠️ **路径大小写敏感**：`docs/releases/`（小写 `releases`）。`build-release.ps1:143` 读 `docs\releases\$VerTag.md`，写错大小写在 Windows 上可能命中但 CI（Linux runner 如果未来引入）不会命中。
 
@@ -100,7 +100,7 @@
    ```
 
 5. **等 CI 完成**：`gh run list --workflow release.yml --limit 3` 监控进度。job 全部绿：
-   - **test**（可复用 `test.yml`，workflow_call）：契约测试（`tests/*.mjs`）→ 构建 `ysm-updater-helper.exe`（embed 前置）→ `go vet` → `go test` → 前端 `npm ci` → `tsc --noEmit` → `vitest run` → `vite build`（三层缓存：Go 模块 / wails3 二进制 / npm）。
+   - **test**（可复用 `test.yml`，workflow_call）：契约测试（`tests/*.ts`）→ 构建 `ysm-updater-helper.exe`（embed 前置）→ `go vet` → `go test` → 前端 `npm ci` → `tsc --noEmit` → `vitest run` → `vite build`（三层缓存：Go 模块 / wails3 二进制 / npm）。
    - **prepare**（仅 tag 触发）：校验 tag 与 `build/config.yml` version 一致，不一致即失败（v1.11.0 实测卡点）。
    - **build-windows / build-linux / build-darwin / build-android**（`needs: [prepare, test]`）：`go install wails3 CLI`（缓存命中则跳过）→ `npm ci` → 各平台打包脚本 → 上传产物。
    - **release**（`needs: [prepare, build-*]`）：`softprops/action-gh-release` 建 Release 并上传资产。job 需 `permissions: contents: write`（默认只读 token 会 403 "Resource not accessible by integration"）。
@@ -178,7 +178,7 @@
 | 依赖更新后 CI 失败 | test job 挂 | Go/Node 依赖与 lockfile 不同步 | 先本地 `go build ./go/...` + 前端 `npx tsc --noEmit` 再发版 |
 | `ysm-updater-helper.exe` 缺失 | `go vet`/`go build` 报 embed 找不到文件 | 该文件由 `cmd/updater/main.go` 编译生成，被 `.gitignore(*.exe)` 忽略，CI checkout 不含 | CI 已在 test job 前构建（`release.yml:37-38`）；本地跑 `go build -o "go/updater/ysm-updater-helper.exe" "./cmd/updater"` |
 | ldflags 注入失败 | 应用内显示 `dev` | `-ldflags "-X ysm-model-manager/go/version.Version=$VerTag"` 路径写错 | 确认包路径 `ysm-model-manager/go/version.Version` 与 `go.mod` module 名一致 |
-| 契约测试修改测试文件 | CI 挂 | `tests/*.mjs` 禁止修改（`release.yml:26-30`） | 只改实现，不改测试 |
+| 契约测试修改测试文件 | CI 挂 | `tests/*.ts` 禁止修改（`release.yml:26-30`） | 只改实现，不改测试 |
 
 ---
 
@@ -194,7 +194,7 @@
 $VER = "1.9.4"   # ← 改成实际版本号
 
 # 步骤 2：写 notes（可选：先用生成器收集 git 数据）
-node scripts/release-notes-gen.mjs
+node scripts/release-notes-gen.ts
 # 手写 docs/releases/v$VER.md（格式参考 v1.9.3.md）
 
 # 步骤 3：提交 + 推 main

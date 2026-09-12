@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`go/rustbridge/bridge_{windows,linux,darwin,android}.go; go/scanner/rust_backend_{windows,linux,darwin,android}.go; scripts/jscpd-go.mjs; build/{darwin,linux,windows}/Taskfile.yml; scripts/android-build.mjs; ADR-120`
+- **相关**：`go/rustbridge/bridge_{windows,linux,darwin,android}.go; go/scanner/rust_backend_{windows,linux,darwin,android}.go; scripts/jscpd-go.ts; build/{darwin,linux,windows}/Taskfile.yml; scripts/android-build.ts; ADR-120`
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### 1.1 jscpd 实测：生产重复只占 12.8%，且主体是平台 shim
 
-`scripts/jscpd-go.mjs` 全量重跑（scope `./go/**/*.go`，默认阈值，2026-08-31 工作树）：
+`scripts/jscpd-go.ts` 全量重跑（scope `./go/**/*.go`，默认阈值，2026-08-31 工作树）：
 
 | 维度 | 治理前 | 本轮一(Batch C) | 本轮二(scanner 合并) |
 |---|---|---|---|
@@ -45,7 +45,7 @@
 | **scanner 四文件合并后实证** | 四个文件**去掉注释与空行后逐字相同**（`diff <(grep -vE '^\s*//' A \| grep -vE '^\s*$') …` 零差异）→ 可塌缩成**单个不带 OS 约束**的文件 |
 | **rustbridge 三 cgo 文件实证** | `bridge_{darwin,linux,android}.go` 去注释与空行后亦**逐字相同**，**含 `/* */` C 前导块在内** |
 
-`rust_backend` 在生产构建里**真实启用**：`build/darwin/Taskfile.yml:15`、`build/linux/Taskfile.yml:37` 恒定带 `-tags production,rust_backend`；`build/windows/Taskfile.yml:153` 在 amd64 生产版带上；`scripts/android-build.mjs:186` 在 `production` 或 `--rust-backend` 时带上。**不是死代码。**
+`rust_backend` 在生产构建里**真实启用**：`build/darwin/Taskfile.yml:15`、`build/linux/Taskfile.yml:37` 恒定带 `-tags production,rust_backend`；`build/windows/Taskfile.yml:153` 在 amd64 生产版带上；`scripts/android-build.ts:186` 在 `production` 或 `--rust-backend` 时带上。**不是死代码。**
 
 ### 1.4 关键发现：android 隐含 linux 构建标签 → 安卓生产构建断裂（已止血）
 
@@ -59,7 +59,7 @@ GOOS=android CGO_ENABLED=0 go build -tags rust_backend ./go/scanner/
 
 `GOOS=android CGO_ENABLED=1 go list` 显示 `go/rustbridge` 的 CgoFiles 同时含 `bridge_android.go` 与 `bridge_linux.go`（`nativeBuffer` / `Scan` 均重复）。
 
-而 `scripts/android-build.mjs:154` 的 `rustBackend = argv.includes('--rust-backend') || production || env.GO_RUST_BACKEND === '1'` 意味着**安卓生产构建必然带上 `rust_backend`** → 必然踩中该断裂。
+而 `scripts/android-build.ts:154` 的 `rustBackend = argv.includes('--rust-backend') || production || env.GO_RUST_BACKEND === '1'` 意味着**安卓生产构建必然带上 `rust_backend`** → 必然踩中该断裂。
 
 全库 `go list` 扫描（33 个包）确认撞车范围**恰好只有这 2 个包**：`go/rustbridge`、`go/scanner`。
 
@@ -130,12 +130,12 @@ done
 GOOS=android CGO_ENABLED=0 go build -tags rust_backend ./go/scanner/
 
 # 门禁
-node scripts/jscpd-go.mjs
+node scripts/jscpd-go.ts
 ```
 
 `CGO_ENABLED=0` 下出现的 `undefined: rustbridge.Scan` 是 cgo 文件被排除的预期产物，**不是缺陷**；生产安卓构建走 `CGO_ENABLED=1` + NDK clang。
 
-**L2 的验收门**必须包含真机构建：`build/linux/Taskfile.yml` 与 `build/darwin/Taskfile.yml` 各跑一次生产构建，以及 `scripts/android-build.mjs --production`（需 NDK）。
+**L2 的验收门**必须包含真机构建：`build/linux/Taskfile.yml` 与 `build/darwin/Taskfile.yml` 各跑一次生产构建，以及 `scripts/android-build.ts --production`（需 NDK）。
 
 ---
 
@@ -143,7 +143,7 @@ node scripts/jscpd-go.mjs
 
 | 结论 | 来源 |
 |---|---|
-| 454 块 / 173 对；生产 116 块 vs 测试 792 块 | `scripts/jscpd-go.mjs` + jscpd v5 `--reporters json`（`frontend/node_modules/jscpd`），全量重跑 |
+| 454 块 / 173 对；生产 116 块 vs 测试 792 块 | `scripts/jscpd-go.ts` + jscpd v5 `--reporters json`（`frontend/node_modules/jscpd`），全量重跑 |
 | 38 个生产-生产对中 26 个单块链接 | 对 `duplicates[]` 按归一化文件对分组统计块数（脚本：`tmp/jscpd-pair-shape.mjs`） |
 | bridge_darwin ↔ bridge_linux 仅 2 行不同 | `diff go/rustbridge/bridge_darwin.go go/rustbridge/bridge_linux.go` |
 | rust_backend_{linux,darwin,android} 除标签外逐字相同 | `diff` + `grep -l 'import "C"'`（三文件均无 cgo） |
@@ -152,4 +152,4 @@ node scripts/jscpd-go.mjs
 | scanner 四文件去注释逐字相同 | `diff <(grep -vE '^\s*//' A ¦ grep -vE '^\s*$') <(grep -vE '^\s*//' B ¦ grep -vE '^\s*$')` 零差异 |
 | rustbridge 三 cgo 文件去注释逐字相同（含 C 前导块） | 同上 `diff`，零差异 |
 | scanner 合并本地可验证 | `go test -tags rust_backend ./go/scanner/...` 本机 Windows 跑通（CI 同款 test.yml:166） |
-| 173 → 170 → 167 | `node scripts/jscpd-go.mjs --update` 两次对比；scanner 合并消 3 对 |
+| 173 → 170 → 167 | `node scripts/jscpd-go.ts --update` 两次对比；scanner 合并消 3 对 |

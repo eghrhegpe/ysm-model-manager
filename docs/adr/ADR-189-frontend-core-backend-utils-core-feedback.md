@@ -5,7 +5,7 @@
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku，鲸鱼架构师）
 - **相关**：
-  - 关联代码：`frontend/src/core/`（6 源 + 6 测试，686 源码行）、`frontend/src/utils/core/`（917 行）、`frontend/src/utils/dom/feedback.ts`、`frontend/src/backend/`
+  - 关联代码：`frontend/src/core/`（6 源 + 6 测试，686 源码行）、`frontend/src/utils/core/`（917 行，ADR-191 去桶化产物）、`frontend/src/utils/dom/feedback.ts`、`frontend/src/backend/`
   - 前置规则：AGENTS.md「查证优先」「大改动先写 ADR 再动手」
   - 反向引用：
     - [ADR-185](./ADR-185-core-features-core-features.md)（core⇄features 包级环治理——本 ADR 为同序列第二环：core⇄backend）

@@ -15,7 +15,7 @@
 
 ### 2.1 npm 三件套 A∥C 并行
 
-将 `vite build` 与 `tsc --noEmit` 用 `Promise.all` 并行执行（二者无依赖），`vitest run` 保持串行在后独占资源。改动在 `scripts/pre-push-gate.mjs` 的前端域。
+将 `vite build` 与 `tsc --noEmit` 用 `Promise.all` 并行执行（二者无依赖），`vitest run` 保持串行在后独占资源。改动在 `scripts/pre-push-gate.ts` 的前端域。
 
 ```
 改动前:  vite build → vitest run → tsc --noEmit   串行，~4.1s

@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）——Phase A 已实施（2026-08-23）；Phase B 已实施（2026-08-24，AlphaIndex 面级路由落地，见 §6）
 - **日期**：2026-08-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/translucency-probe.mjs`; `frontend/src/utils/3d/texture-alpha.ts`; `frontend/src/utils/3d/ysm-object.ts`; upstream/ModernYSM-1.20.1-forge `YSMClientMapper.TranslucencyScanner`
+- **相关**：`scripts/translucency-probe.ts`; `frontend/src/utils/3d/texture-alpha.ts`; `frontend/src/utils/3d/ysm-object.ts`; upstream/ModernYSM-1.20.1-forge `YSMClientMapper.TranslucencyScanner`
 
 ---
 
@@ -39,7 +39,7 @@ ModernYSM（upstream vendor）用 **TranslucencyScanner**：加载时逐像素�
 
 配套决策：
 
-- **探针脚本转正**：`scripts/translucency-probe.mjs`（零依赖 PNG 解码 + AlphaIndex 复刻 + 面级统计）保留为度量工具，作为后续任何透明改动的基线出处。
+- **探针脚本转正**：`scripts/translucency-probe.ts`（零依赖 PNG 解码 + AlphaIndex 复刻 + 面级统计）保留为度量工具，作为后续任何透明改动的基线出处。
 - **危害方向共识**：`blend`（`depthWrite:false`）不得作为整模型默认值——它是数据上最差的全局选择（§4）。
 - **实施纪律**：两阶段均 TDD；Phase B 动烘焙前先出 draw call / 性能基准。
 
@@ -59,7 +59,7 @@ ModernYSM（upstream vendor）用 **TranslucencyScanner**：加载时逐像素�
 
 ## 4. 数据溯源
 
-探针：`node scripts/translucency-probe.mjs "upstream/[YSM模型]官方开源wine_fox_json"`（2026-08-23 实测）
+探针：`node scripts/translucency-probe.ts "upstream/[YSM模型]官方开源wine_fox_json"`（2026-08-23 实测）
 
 | 指标 | 数值 |
 |------|------|

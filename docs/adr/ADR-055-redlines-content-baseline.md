@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-12
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/governance-rules.md`；`scripts/check-redlines.mjs`；`scripts/pre-push-gate.mjs`；`scripts/baseline/redlines-baseline.json`
+- **相关**：`docs/governance-rules.md`；`scripts/check-redlines.ts`；`scripts/pre-push-gate.ts`；`scripts/baseline/redlines-baseline.json`
 
 ---
 

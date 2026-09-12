@@ -136,10 +136,10 @@ Go 端有 17 个 `_test.go`，但核心业务包（`avatar` / `download` / `sync
 
 | 来源 | 命令 | 结果 |
 |------|------|------|
-| 代码量 | `node scripts/line-counter.mjs` | Go 15,153 / JS 22,736 / CSS 1,419（评估时点，随版本漂移） |
+| 代码量 | `node scripts/line-counter.ts` | Go 15,153 / JS 22,736 / CSS 1,419（评估时点，随版本漂移） |
 | 大文件 | `line-counter.mjs` 内建阈值 | 2 RED + 4 YELLOW（评估时点） |
 | 编译 | `go build ./go/...` | 干净，exit 0 |
 | 前端构建 | `cd frontend; npx vite build` | 干净，零 error |
-| 契约测试 | `for f in tests/*.mjs; do node "$f"; done` | 6/6 全绿（评估时点，当前已迁移为 `.mjs` 契约测试） |
+| 契约测试 | `for f in tests/*.ts; do node "$f"; done` | 6/6 全绿（评估时点，当前已迁移为 `.mjs` 契约测试） |
 | 架构 | `docs/architecture/architecture.md` + `logic-sinking.md` | ADR 文档 + 源码验证 |
 | 脚本 | `scripts/README.md` + 目录扫描 | 38 个，分类如 §2 表 |

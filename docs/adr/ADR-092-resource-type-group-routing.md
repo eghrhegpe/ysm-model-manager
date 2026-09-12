@@ -82,7 +82,7 @@
 - 来源：`resource_types.json`（根）全量读取 → 结果：7 类、每类仅 `storageSubDir`、无 `group` 字段，证实「缺分组」假设。
 - 来源：`frontend/src/utils/resource/types.ts:9-17` `RESOURCE_TYPES` + `docs/knowledge/utils-resource-types.md` → 结果：group 维度此前不存在，需新增派生层。
 - 来源：`go/types/extensions.go:277` `StorageSubDir(rtype)`、`go/types/resource.go:24` 结构体字段 → 结果：`GroupOf` / `GroupStorageRoot` 按同构模式落地。
-- 来源：`internal/app/app.go:152-155` MkdirAll、`frontend/src/views/app-content/settings/path-cards.ts:225`、`tests/test_resource_schema.mjs:23` REQUIRED_FIELDS → 结果：改动清单已锁定，schema 校验需把 `group` 纳入（可选 + 回退）。
+- 来源：`internal/app/app.go:152-155` MkdirAll、`frontend/src/views/app-content/settings/path-cards.ts:225`、`tests/test_resource_schema.ts:23` REQUIRED_FIELDS → 结果：改动清单已锁定，schema 校验需把 `group` 纳入（可选 + 回退）。
 - 来源：用户口述分组意图（Minecraft 总目录 / Minecraft-Mod 总目录 / MMD 5 子目录 / VRM 独立）→ 结果：归并映射见 §2.3。**⚠️ 其中「MMD 5 子目录含 mp3」为口述假设，未经上游源码验证，已与下两条冲突。**
 - 来源：`docs/archive/reference/mmdskin-analysis.md`（联邦自写逆向分析，2026-06-12）→ 结果：真实 MmdSkin（by shiroha, MIT）安装结构为 `3d-skin/EntityPlayer/<ModelName>/` **单文件夹**，内含 `model.pmx/.pmd` + 纹理 `.png` + 动作 `.vmd` + 表情 `.vpd`；**无 mp3、非 5 独立子目录**；该文档结论为「方案 C 暂不实现」。**→ 本 ADR 初稿的 MMD `subFolders` / mp3 假设全部与之冲突。**
 - 来源：`upstream/` 目录现状 + `git submodule status` + `git remote -v` → 结果：仅含 `ModernYSM-1.20.1-forge`（YSM 上游），**无 mmd-skin 上游**；submodule 列表为空；remote 仅 4 个 ysm-model-manager 自身 fork，无指向 `shiroha-233/MC-MMD-rust`。**→ 证实 mmd-skin 上游源码与文档确实未拉入本仓库，ADR-092 MMD 段的事实来源缺失，须补拉 upstream 核实后定稿。**

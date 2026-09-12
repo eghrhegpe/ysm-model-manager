@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-086`、`.githooks/pre-commit`、`scripts/check-knowledge-drift.mjs`
+- **相关**：`ADR-086`、`.githooks/pre-commit`、`scripts/check-knowledge-drift.ts`
 
 ---
 
@@ -206,7 +206,7 @@ if [ -n "$CHANGED_FILES" ]; then
   FILTERED=$(printf '%s\n' "$CHANGED_FILES" | grep -v '^docs/knowledge/index.md$' | grep -v '^docs/funcmap.md$' | grep -v '^docs/audit-src-map.md$' | grep -v '^frontend/public/locales/' || true)
   if [ -n "$FILTERED" ]; then
     # 批量调用：一次 node 进程 + 一次索引构建（~0.3s）
-    node scripts/check-knowledge-drift.mjs --affected $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
+    node scripts/check-knowledge-drift.ts --affected $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
   fi
 fi
 ```
@@ -294,7 +294,7 @@ git status --short 2>/dev/null | tail -15 || true
 **原实现（有 2 个 bug）**：
 ```sh
 printf '%s\n' "$FILTERED" | while IFS= read -r f; do
-  node scripts/check-knowledge-drift.mjs --affected "$f" 2>&1 | head -20
+  node scripts/check-knowledge-drift.ts --affected "$f" 2>&1 | head -20
 done
 ```
 
@@ -303,7 +303,7 @@ done
 
 **修复后**：
 ```sh
-node scripts/check-knowledge-drift.mjs --affected $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
+node scripts/check-knowledge-drift.ts --affected $FILTERED 2>&1 || echo "⚠️  drift 检查失败（不阻断）"
 ```
 
 - 单次 Node.js 进程 + 单次索引构建（0.3s）

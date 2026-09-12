@@ -6,7 +6,7 @@ description: 项目历史事故浓缩的 18 条避坑教训 — 现象 × 根因
 # 致命陷阱手册（Pitfalls）
 
 > 项目历史事故浓缩的避坑清单，AI 与人类协作必读。**摘要表**常驻 `AGENTS.md` §二，本手册是全量版（含事故背景与处置细节）。
-> 事故原始记录见 `docs/archive/bug-chronicle.md`（冻结区，先 grep 再读，禁止全量）；AI 高频犯错区统计用 `node scripts/ai-mistake-tracker.mjs`（反哺本清单）。
+> 事故原始记录见 `docs/archive/bug-chronicle.md`（冻结区，先 grep 再读，禁止全量）；AI 高频犯错区统计用 `node scripts/ai-mistake-tracker.ts`（反哺本清单）。
 > 原 `.github/copilot-instructions.md`「致命陷阱」章节（8 条，引用旧结构已过期）于 2026-08-04 提取归位至本手册并更新至现状。
 
 ---
@@ -34,7 +34,7 @@ description: 项目历史事故浓缩的 18 条避坑教训 — 现象 × 根因
 ## 5. Go Binding 函数名写错
 
 - **现象**：前端调用返回 undefined。
-- **规则**：跨语言调用函数名易错，写前端调用前先 grep `internal/app/` 确认函数名（或跑 `node scripts/binding-check.mjs` 对账）。
+- **规则**：跨语言调用函数名易错，写前端调用前先 grep `internal/app/` 确认函数名（或跑 `node scripts/binding-check.ts` 对账）。
 
 ## 6. 下载进度 99% 卡死
 
@@ -110,7 +110,7 @@ description: 项目历史事故浓缩的 18 条避坑教训 — 现象 × 根因
   1. **cube origin X 镜像**（`parseCube` L662 `from[0] = -(from[0]+size[0])`）— 之前 `fx = ox` 直接用，未镜像
   2. **cube pivot X 翻号**（`parseCube` L659 `origin[0] *= -1`）— 之前 `cp[0]` 不翻号
   3. **mesh localPos[0] 符号**（Blockbench `mesh.position = cube.origin - parent.origin`）— 之前 `bonePivot.x - cp[0]`，改为 `bonePivot.x + cp[0]`（因 `cp[0]` 已翻号 = `-Pivot[0]`）
-- **规则**：cube 变换链必须逐层对齐 Blockbench 活规范（`parseCube` + `updateGeometry` + `updateTransform`），缺任一层都会导致朝向错误。改完用 `npm run verify:port`（`scripts/port-align.mjs`：Blockbench 权威 oracle × 多样性 corpus 全顶点对拍，无需 fixture）验证全绿。详见 `docs/knowledge/go-threejs.md` 不变量段、ADR-042 §2.1 裁决。
+- **规则**：cube 变换链必须逐层对齐 Blockbench 活规范（`parseCube` + `updateGeometry` + `updateTransform`），缺任一层都会导致朝向错误。改完用 `npm run verify:port`（`scripts/port-align.ts`：Blockbench 权威 oracle × 多样性 corpus 全顶点对拍，无需 fixture）验证全绿。详见 `docs/knowledge/go-threejs.md` 不变量段、ADR-042 §2.1 裁决。
 
 ---
 

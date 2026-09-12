@@ -5,7 +5,7 @@
 > - **设计系统（§1–§13）**：令牌与基础规范（色彩 / 字体 / 间距 / 圆角 / 动画 / 按钮 / Shadow DOM）。
 > - **组件架构与契约（§14–§20）**：Web Components 技术基座、9 个组件的公开 API、类型化事件总线、键盘无障碍、命名与验收清单。
 >
-> 新增 UI / 组件前，先对照 §19 验收清单。改动文档后跑 `node scripts/link-checker.mjs` 验证引用。
+> 新增 UI / 组件前，先对照 §19 验收清单。改动文档后跑 `node scripts/link-checker.ts` 验证引用。
 
 ---
 
@@ -444,7 +444,7 @@ views/app-xxx/
 
 ## 12. 文档命名与归属规范
 
-> 新建文档的命名与归属在此统一约定（`AGENTS.md` 硬约束的入口）。改完文档跑 `node scripts/link-checker.mjs` 验证引用。
+> 新建文档的命名与归属在此统一约定（`AGENTS.md` 硬约束的入口）。改完文档跑 `node scripts/link-checker.ts` 验证引用。
 
 ### 命名规范（按目录）
 
@@ -458,7 +458,7 @@ views/app-xxx/
 | `docs/archive/` | 原名冻结，不改名 | `bug-chronicle.md` |
 | `docs/` 根 | kebab-case | `governance-rules.md` / `pitfalls.md` |
 
-- 编号只允许给 ADR 与 novel 章节（ADR 一律走叫号脚本 `node scripts/new-adr.mjs "标题"`，禁止手写编号）。
+- 编号只允许给 ADR 与 novel 章节（ADR 一律走叫号脚本 `node scripts/new-adr.ts "标题"`，禁止手写编号）。
 - 历史例外（存量不改名，新文件勿效仿）：`Design.md`（PascalCase）、`guide/项目意义.md` / `guide/用户指南.md`（中文命名）。
 
 ### Frontmatter（VitePress 站点页）
@@ -706,7 +706,7 @@ disconnectedCallback() {
 ## 16. 事件总线契约
 
 > 权威来源：`frontend/src/bus.ts` 的 `BusEvents` 接口（:53-107）。新增事件必须先在此登记类型，再使用。
-> 事件名→payload **全量登记以自动生成物 `docs/event-graph.md`（`scripts/event-graph.mjs`）为准**，下表为常用事件速查；改事件后运行 `node scripts/event-graph.mjs` 同步（pre-commit 自动）并核对下表。
+> 事件名→payload **全量登记以自动生成物 `docs/event-graph.md`（`scripts/event-graph.ts`）为准**，下表为常用事件速查；改事件后运行 `node scripts/event-graph.ts` 同步（pre-commit 自动）并核对下表。
 
 ### 16.1 事件名 → payload 登记表
 
@@ -872,7 +872,7 @@ disconnectedCallback() {
 
 **命名与文档**
 - [ ] 标签 kebab-case + `app-` 前缀；方法 camelCase；bus 事件带域名前缀（§18）。
-- [ ] 改动文档后跑 `node scripts/link-checker.mjs` 验证引用。
+- [ ] 改动文档后跑 `node scripts/link-checker.ts` 验证引用。
 - [ ] 偏离 §14.6 漂移登记的新代码，先修漂移再落地。
 
 ### 19.1 测试钩子（data-testid）规范
@@ -882,7 +882,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 - **命名**：`<域>-<角色>` kebab-case 前缀命名空间（`tree-file`/`tree-toggle`/`sync-push`）；同域多实例用前缀匹配 `[data-testid^="tree-file"]`。
 - **必须加**：测试要操作的可交互元素（按钮/开关/列表行/输入）；纯展示元素不必（减少噪音）。
 - **禁止**：把 testid 当 CSS 选择器（样式走 class）；testid 值含空格或大小写混排。
-- **契约守护**：关键 testid 由 `tests/*.mjs` 契约断言存在（删除 → 契约红，防钩子静默失效）。
+- **契约守护**：关键 testid 由 `tests/*.ts` 契约断言存在（删除 → 契约红，防钩子静默失效）。
 - **状态断言**：交互后状态经组件暴露的可查询值（DEV 钩子/事件流）断言，不解析 DOM 结构（ADR-035 G-1 隔壁实证）。
 
 ### 19.2 测试文件命名与组织规范
@@ -898,7 +898,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 | `<mod>.<面>.test.ts` | 按被测面细分（sync/state/render/events…） | `app-sidebar.sync.test.ts` / `app-tree.state.test.ts` |
 
 - **禁止**：入口函数缩写后缀（`.init.test.ts` / `.load.test.ts`）——统一用 `.integration.test.ts` 表达集成语义；`.spec.ts` 仅限 `frontend/e2e/`（Playwright），不混入 src。
-- **归属**：共享 helper 入 `frontend/src/test-utils/`，其自身测试放同目录；契约/脚本测试（`tests/*.mjs`）留在仓库根，不属 vitest 范畴。
+- **归属**：共享 helper 入 `frontend/src/test-utils/`，其自身测试放同目录；契约/脚本测试（`tests/*.ts`）留在仓库根，不属 vitest 范畴。
 - **例外（已备案）**：`real-data-fuzz.test.ts`（独立数据轰击，不镜像模块）、`core/i18n/locales-consistency.test.ts`（locales/ 禁放 .test.ts，放上级 i18n/）、`preview-3d/model/model3d-spec.test.ts`（模块名含 `-spec` 属源码命名，非 Playwright spec）。
 - **新增测试**：先看同目录既有命名，遵循上表；组件级测试按 §19.1 testid 规范写。
 

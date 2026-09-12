@@ -52,13 +52,13 @@ invariant_anchors:
 
 ## 概览
 
-2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.mjs` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（15 spec+3 支撑件 1668L）+ `e2e-web`（2 spec ~720L）。总分：契约层 **4/5**、e2e 整体 **4.3/5**。与 `frontend_repo_audit`（源码层）配套。
+2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（15 spec+3 支撑件 1668L）+ `e2e-web`（2 spec ~720L）。总分：契约层 **4/5**、e2e 整体 **4.3/5**。与 `frontend_repo_audit`（源码层）配套。
 
 ## 分层评分
 
 | 层 | 分 | 一句话 |
 |----|----|--------|
-| tests/*.mjs 资源 Schema 簇 | 4 | test_resource_schema 6 道 P0 守卫与 Go validateRegistrySchema 严格对齐 |
+| tests/*.ts 资源 Schema 簇 | 4 | test_resource_schema 6 道 P0 守卫与 Go validateRegistrySchema 严格对齐 |
 | tests 绑定契约簇 | 4.5 | mock_contract 双向扫描、bus_contract spawnSync+fixture 场景、android_bridge 锁 4 层隐式契约 |
 | tests CLI/脚本门禁簇 | 4 | cli_doc_parity 三锁联防、api_break 真实 git ref 端到端 |
 | tests 变更域/分层簇 | 4 | check_layering 纯函数+集成合体 |
@@ -97,7 +97,7 @@ sync-manager 仅覆盖页面切换未覆盖实际 push/pull 执行链路；recyc
 
 ## 不变量
 
-- tests/*.mjs 保持 Node 零依赖（仅 node:* + ../scripts/），失败必须 exit(1)——凡进 tests/ 的脚本要么是真门禁要么移走
+- tests/*.ts 保持 Node 零依赖（仅 node:* + ../scripts/），失败必须 exit(1)——凡进 tests/ 的脚本要么是真门禁要么移走
 - e2e 定位器默认走 data-testid（helpers 统一入口）；新增等待一律轮询/expect.poll，禁新增 waitForTimeout
 - mock 数据只出自 e2e/mock-data.ts 单源（编译期双向校验兜底），禁止 spec 私造
 - 双边锁定测试是防漂移核心资产：改动 binding/mock/bus 协议须同步对应契约测试

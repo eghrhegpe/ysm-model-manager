@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/`（17 个文件）/ `scripts/gen-knowledge-index.mjs` / `scripts/check-knowledge-drift.mjs` / `scripts/new-knowledge-card.mjs` / ADR-013 / 联邦 MikuMikuAR `docs/knowledge/`（适配来源）
+- **相关**：`docs/knowledge/`（17 个文件）/ `scripts/gen-knowledge-index.ts` / `scripts/check-knowledge-drift.ts` / `scripts/new-knowledge-card.ts` / ADR-013 / 联邦 MikuMikuAR `docs/knowledge/`（适配来源）
 
 ---
 
@@ -40,8 +40,8 @@
 
 | 脚本 | 职责 | 触发 |
 |------|------|------|
-| `gen-knowledge-index.mjs` | 按 category 分组生成 `index.md`（GEN 区） | `node scripts/gen-knowledge-index.mjs` / `--check` |
-| `check-knowledge-drift.mjs` | 漂移检查：source_files 存在性、必填字段、值域、kind 命名、H1 一致性、索引链接 | `node scripts/check-knowledge-drift.mjs`（ERROR 阻断） |
+| `gen-knowledge-index.mjs` | 按 category 分组生成 `index.md`（GEN 区） | `node scripts/gen-knowledge-index.ts` / `--check` |
+| `check-knowledge-drift.mjs` | 漂移检查：source_files 存在性、必填字段、值域、kind 命名、H1 一致性、索引链接 | `node scripts/check-knowledge-drift.ts`（ERROR 阻断） |
 
 辅助：`new-knowledge-card.mjs` 脚手架（`<kind> <name> <category> <source_file> [--leaf]`）生成卡模板。
 
@@ -80,8 +80,8 @@ ADR-013 Phase 3 遗留的「knowledge 与 architecture.md 职能重叠」边界�
 | 来源 | 结果 |
 |------|------|
 | 联邦 MikuMikuAR `docs/knowledge/` | frontmatter schema / 索引生成器 / 漂移检查适配来源（check-knowledge-drift 头注释自述） |
-| `scripts/gen-knowledge-index.mjs` | CATEGORY_LABELS 六分类（core/go/ui/feature/utils/config） |
-| `scripts/check-knowledge-drift.mjs` | 检查项枚举（必填字段 / 值域 / kind 命名 / source_files / 索引链接） |
+| `scripts/gen-knowledge-index.ts` | CATEGORY_LABELS 六分类（core/go/ui/feature/utils/config） |
+| `scripts/check-knowledge-drift.ts` | 检查项枚举（必填字段 / 值域 / kind 命名 / source_files / 索引链接） |
 | `docs/knowledge/` | 17 个文件（含 index.md / README.md / AGENTS.md） |
 | ADR-013 | Phase 3 遗留「knowledge vs architecture.md 职能重叠」待决 |
 

@@ -53,8 +53,8 @@ type ResourceType struct {
 	FallbackDir    string          `json:"fallbackDir,omitempty"`    // 兜底扫描只认此目录名（空=不限定，ScanInstance=true 时生效）
 	InstallExts    []string        `json:"installExts"`              // 安装白名单扩展名（空=全部放行，仅可执行文件黑名单除外）
 	ZipEntries     []ZipEntryMatch `json:"zipEntries"`               // ZIP 内容特征条目（importer.DetectContainerType 注册表驱动）
-	NestedModelDir bool            `json:"nestedModelDir"`           // 嵌套模型目录（ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
-	NestedPatterns []NestedPattern `json:"nestedPatterns,omitempty"` // 嵌套模式配置（ADR-XXX）：支持任意深度的嵌套路径检测
+	NestedModelDir bool            `json:"nestedModelDir"`           // 嵌套模型目录（无独立 ADR，特性登记见 extensions.go 注释 + 知识卡 go-types-registry；原注释误引 ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
+	NestedPatterns []NestedPattern `json:"nestedPatterns,omitempty"` // 嵌套模式配置（无独立 ADR）：支持任意深度的嵌套路径检测
 	Priority       int             `json:"priority,omitempty"`       // 检测优先级（同指纹计数打平时高者胜：专用指纹类型 > 通用指纹类型，如 maid-model > resourcepack）
 	Mod            *ModRequirement `json:"mod,omitempty"`            // mod 依赖声明（ADR-110：mod 下沉注册表）
 	Variants       []Variant       `json:"variants,omitempty"`       // 格式变体（ADR-111：variants 解耦，按扩展名分发预览器）
@@ -79,7 +79,7 @@ type Variant struct {
 	Preview string `json:"preview"` // 预览器 id（如 "mmd"、"vrm"）
 }
 
-// NestedPattern 嵌套模型模式配置（ADR-XXX）：
+// NestedPattern 嵌套模型模式配置：
 // 支持任意深度的嵌套路径检测，用于识别多层嵌套的模型结构。
 // 例如 maid-model 的 assets/<namespace>/maid_model.json 结构，
 // 或其他更深层的嵌套目录结构。

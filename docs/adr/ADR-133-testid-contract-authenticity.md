@@ -4,13 +4,13 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`tests/test_testid_contract.mjs（TESTID_REGISTRY / 存在性校验 line103-116）；ADR-035（G-1 抗脆弱测试基础设施）；事件链 5bfc6ff5→5cbbc43a→029ef285→46f45c19→9a43766d`
+- **相关**：`tests/test_testid_contract.ts（TESTID_REGISTRY / 存在性校验 line103-116）；ADR-035（G-1 抗脆弱测试基础设施）；事件链 5bfc6ff5→5cbbc43a→029ef285→46f45c19→9a43766d`
 
 ---
 
 ## 1. 背景（Context）
 
-`tests/test_testid_contract.mjs` 是当前唯一守护「关键 `data-testid` 不被静默删除」的门禁（G-1 抗脆弱测试基础设施，ADR-035）。其实现（`TESTID_REGISTRY` + line 103–116）只做**存在性校验**：注册表条目 `<testid> → <源文件>` 要求源文件中出现 `data-testid="<testid>"` 或 `dataset.testid = "<testid>"` 字面量。它不校验该 testid 是否被 handler 绑定、是否被测试引用。
+`tests/test_testid_contract.ts` 是当前唯一守护「关键 `data-testid` 不被静默删除」的门禁（G-1 抗脆弱测试基础设施，ADR-035）。其实现（`TESTID_REGISTRY` + line 103–116）只做**存在性校验**：注册表条目 `<testid> → <源文件>` 要求源文件中出现 `data-testid="<testid>"` 或 `dataset.testid = "<testid>"` 字面量。它不校验该 testid 是否被 handler 绑定、是否被测试引用。
 
 一次真实事故暴露了这是**结构性病**而非单点失误（事件链，5 个 commit 均经 `git cat-file` 核实存在）：
 
@@ -47,7 +47,7 @@
 
 1. **testid 事实源移入视图（同处声明，务实版）**：各视图以 `export const VIEW_TESTIDS: readonly string[]` 声明其稳定 testid（G-1 钩子单一事实源），与视图代码同文件、同生命周期。删除/新增 `data-testid` 时在同一视图可见声明 → 引导同步。集中手工 `TESTID_REGISTRY` 已删除（病根 1 结构性消除）。
    - **务实边界（关键）**：本仓 handler 以 `#id` / `.class` / 事件委托消费，testid 是 G-1 **刻意解耦**的稳定钩子（见 §1 实证：12 个动态委托 testid 全仓零字面量引用；`nav-*` 仅以 `#id` 消费）。故「`{testid, handler}` 严格同处」不可强制执行（会破坏 G-1 解耦、且动态拼接 testid 无法进静态数组）。阶段 B 取「**视图级声明**」而非「**绑定级 `{testid,handler}`**」——既兑现「同处声明」消除手工清单，又不破坏既有架构。
-2. **注册表运行期聚合（自动生成，无生成文件 / 无 pre-commit 改动）**：契约测试 `tests/test_testid_contract.mjs` 运行期静态扫描 `frontend/src` 各文件 `VIEW_TESTIDS` 字面量数组，聚合为注册表。无需 `GEN_CMDS` / JSON 产物，规避 pre-commit stage 快照范围限制（其仅覆盖 docs/locales/completions）。
+2. **注册表运行期聚合（自动生成，无生成文件 / 无 pre-commit 改动）**：契约测试 `tests/test_testid_contract.ts` 运行期静态扫描 `frontend/src` 各文件 `VIEW_TESTIDS` 字面量数组，聚合为注册表。无需 `GEN_CMDS` / JSON 产物，规避 pre-commit stage 快照范围限制（其仅覆盖 docs/locales/completions）。
 3. **双校验替代单点存在性**：
    - **must-have**：声明于 `VIEW_TESTIDS` 的 testid 必须在源码有对应 `data-testid`/`dataset.testid` 钩子。删钩子忘删声明 → 红（**保留 G-1「删能红」**——此底线决定了不能采用「纯扫源码生成注册表」，因那会让删钩子后注册表同步消失而失守；故采用显式声明而非纯扫描）。
    - **孤儿扫描**：源码中命中关键命名约定的 testid 必须被某 `VIEW_TESTIDS` 声明。加关键元素忘登记 → 红（消除病根 1「漏登」）。
@@ -73,7 +73,7 @@
 
 ## 4. 数据溯源
 
-- **契约测试实现（阶段 B 落地后）** → `tests/test_testid_contract.mjs`：运行期聚合 `VIEW_TESTIDS`（静态扫描 `frontend/src` 各文件 `export const VIEW_TESTIDS` 字面量数组）→ 注册表；双校验 `must-have`（声明须有钩子）+ 孤儿扫描（源码关键前缀 testid 须声明）。手工 `TESTID_REGISTRY` 已删除。
+- **契约测试实现（阶段 B 落地后）** → `tests/test_testid_contract.ts`：运行期聚合 `VIEW_TESTIDS`（静态扫描 `frontend/src` 各文件 `export const VIEW_TESTIDS` 字面量数组）→ 注册表；双校验 `must-have`（声明须有钩子）+ 孤儿扫描（源码关键前缀 testid 须声明）。手工 `TESTID_REGISTRY` 已删除。
 - **VIEW_TESTIDS 声明分布** → 11 个视图文件（app-content/tpl.ts、app-nav/index.ts、app-sidebar/tpl.ts、app-sync-manager/tpl.ts、app-toast/index.ts、app-tree/{tpl,row-tpl}.ts、context-menu/index.ts、dialogs/modal.ts、community/render.ts、recycle-bin.ts），共 63 个稳定 testid。
 - **事件链核实** → `git cat-file -t` 确认 `5bfc6ff5` / `5cbbc43a` / `029ef285` / `46f45c19` / `9a43766d` 均存在；`git log --oneline` 见 `9a43766d` 为「移除 export-repo 死按钮 + 删 tree-repo-export 死条目」。
 - **消费性实证** → `tmp/analyze-testid-consumers.mjs`（遍历 `frontend/src` 全部 `.ts/.tsx`，负向边界正则 `(?<![a-z0-9-])<id>(?![a-z0-9-])` 防前缀误匹配）：57 个 testid 全部有消费；44 个有 `.test.ts` `getByTestId` 引用；12 个仅声明文件出现（动态委托）。

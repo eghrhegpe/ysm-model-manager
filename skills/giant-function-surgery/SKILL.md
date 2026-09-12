@@ -93,7 +93,7 @@ description: "按五步流水线重构超长函数：查证→基线→分拆→
 | 编译 `undefined: xxxType` | 闭包升格时误发明了新类型名（把 `playerTex` 写成 `ysmTexEntry`） | `Grep` 原包内实际定义，以源码为准 |
 | 测试 `跨平台路径不匹配` | Unix 写死绝对路径，Windows `filepath.IsAbs` 返回 false | 测试内动态 `filepath.Abs + filepath.ToSlash` 构造期望 |
 | 双包编译 `import cycle` | geometry 新增 `import .../ysm` 或反过来 | 本包内镜像实现 helper，参数按最小必要集裁剪 |
-| pre-push `doc drift` | 知识卡未跟新动改动同步 | `node scripts/check-knowledge-drift.mjs --affected` 列出受影响卡，读卡正文同步 |
+| pre-push `doc drift` | 知识卡未跟新动改动同步 | `node scripts/check-knowledge-drift.ts --affected` 列出受影响卡，读卡正文同步 |
 
 ---
 
@@ -101,7 +101,7 @@ description: "按五步流水线重构超长函数：查证→基线→分拆→
 
 - Go 包改动 → 验证：`go build ./go/<pkg>/` + `go test ./go/<pkg> ./go/ysm/ -timeout 120s`（ysm 是全量消费侧哨兵包）。
 - 前端改动 → 验证：`cd frontend && npm run typecheck && npx vite build`。
-- 文档改动 → 轻量验证：`node scripts/doctor.mjs --docs`（秒级）。
+- 文档改动 → 轻量验证：`node scripts/doctor.ts --docs`（秒级）。
 - 临时回退：`git commit -m "tmp: ..."` + `git reset --soft HEAD~1`，**不用 git stash**。
 - 逃生阀：`git commit --no-verify` 跳 commit 钩子；`YSM_SKIP_GATE=1 git push` 连 pre-push 一起跳（仅限紧急合并，事后补 doctor）。
 

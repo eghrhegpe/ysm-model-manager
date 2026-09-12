@@ -11,9 +11,9 @@ description: "前端TS包代码评审：分层结构/惯用TS/命名/坏味道/�
 ## 流程
 1. 先跑治理工具，人工评审聚焦工具覆盖不到的语义问题：
 ```bash
-node scripts/check-redlines.mjs        # R1-R9 + W 系列附加扫描（Error 级已兜底，人工复核 Warn 级与变体逃逸）
+node scripts/check-redlines.ts        # R1-R9 + W 系列附加扫描（Error 级已兜底，人工复核 Warn 级与变体逃逸）
 node scripts/type-consistency.ts       # 资源类型单一事实来源派生守卫（extensions.ts 必须派生，禁手写副本）
-node scripts/binding-check.mjs         # 绑定契约
+node scripts/binding-check.ts         # 绑定契约
 cd frontend && npm run typecheck       # tsc --noEmit（遗留基线错误用 Select-String 过滤目标文件判定归属）
 ```
 2. LS frontend/src 确认真实目录；统计必须**递归**（views/ 等目录 .ts 全在二级子目录，顶层通配会漏）：
@@ -55,4 +55,4 @@ $ for d in frontend/src/*/; do files=$(find "$d" -name "*.ts" ! -name "*.test.ts
 包间共性问题
 
 ## 评审后动作
-低分包/立卡项结论写回知识卡（`node scripts/new-knowledge-card.mjs`），让 bug-search 与下次评审直接命中。
+低分包/立卡项结论写回知识卡（`node scripts/new-knowledge-card.ts`），让 bug-search 与下次评审直接命中。

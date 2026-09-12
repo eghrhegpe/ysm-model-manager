@@ -43,7 +43,7 @@ ADR-129（utils/3d → features/preview-3d 升格）只把领域根从 `utils/3d
 | **② 批量重写相对引用** | 外部 97 条（45 文件）+ 内部跳出 123 条（`../../../` → `../../` 深度减一） | 中：需脚本精确匹配 import 语句 |
 | **③ 同步配置锚点** | vitest.config.ts 7 处、scripts/tests 37 处（check-adr-drift / check-menu-health / perf/vitest-env-switch / port-align / verify-adr-042 等）、deadcode-baseline.json 62 条 | 中：漏一处门禁红 |
 | **④ 更新知识卡** | 38 张卡 `source_files` 批量 `features/preview-3d` → `preview-3d` | 低：机械替换 |
-| **⑤ 全量验证** | `npx vite build` + `npm run typecheck` + `node scripts/doctor.mjs` 清零 | 验收门 |
+| **⑤ 全量验证** | `npx vite build` + `npm run typecheck` + `node scripts/doctor.ts` 清零 | 验收门 |
 
 ### 2.2 关键约束
 
@@ -74,7 +74,7 @@ ADR-129（utils/3d → features/preview-3d 升格）只把领域根从 `utils/3d
 
 | 来源 | 结果 |
 |------|------|
-| `scripts/analyze-knowledge-refs.mjs --json` | 深度 ≥5 引用 72 个；preview-3d 占 40 个 |
+| `scripts/analyze-knowledge-refs.ts --json` | 深度 ≥5 引用 72 个；preview-3d 占 40 个 |
 | `tmp/audit-preview3d-refs.mjs`（引用审计） | 外部 import 97 条 / 45 文件；内部跳出 123 条（utils 70/ui 17/core 16/...） |
 | vitest.config.ts / scripts / tests grep | 锚点 7 + 37 处；deadcode-baseline 62 条 |
 | 知识卡 grep | 38 张 `source_files` 含 `features/preview-3d` |

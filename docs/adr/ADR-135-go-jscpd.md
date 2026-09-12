@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/jscpd-go.mjs;scripts/pre-push-gate.mjs;scripts/baseline/jscpd-go-baseline.json`
+- **相关**：`scripts/jscpd-go.ts;scripts/pre-push-gate.ts;scripts/baseline/jscpd-go-baseline.json`
 
 ---
 

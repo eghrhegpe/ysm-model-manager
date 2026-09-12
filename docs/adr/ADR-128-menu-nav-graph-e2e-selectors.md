@@ -76,7 +76,7 @@ ADR-126（P4）把菜单体系收敛为「状态层泛化 → 面板 schema 化 
 
 ### 2.4 不在本 ADR 范围
 
-- 图生成器具体实现 / CLI 入口（`scripts/gen-menu-graph.mjs`）——另案子任务，本 ADR 只定方向。
+- 图生成器具体实现 / CLI 入口（`scripts/gen-menu-graph.ts`）——另案子任务，本 ADR 只定方向。
 - 视觉回归基建（ADR-126 §2.4 P4-B 子任务）——本 ADR e2e 选择器派生与之互补。
 - 管理器侧 `app-nav` / `app-content` 导航图——独立 tab 体系，需另立生成器。
 - **子任务：6 个闭包 builder 迁进 `schema-registry`**（ADR-126 P5-A「受控入口」前置）——本 ADR 依赖此收口才能用单一入口，否则须长期维护双通道枚举。

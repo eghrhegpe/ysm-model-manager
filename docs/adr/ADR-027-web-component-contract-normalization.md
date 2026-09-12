@@ -163,5 +163,5 @@ attributeChangedCallback(name, oldVal, newVal) {
 |------|------|------|
 | 类型检查 | `npm run typecheck`（`tsc --noEmit`） | ✅ 0 error |
 | 前端构建 | `npx vite build` | ✅ 通过 |
-| 文档断链 | `node scripts/link-checker.mjs` | ✅ 467 链接 / 0 断链 |
-| 契约测试 | `for f in tests/*.mjs; do node "$f"; done` | ✅ 8 项全过 |
+| 文档断链 | `node scripts/link-checker.ts` | ✅ 467 链接 / 0 断链 |
+| 契约测试 | `for f in tests/*.ts; do node "$f"; done` | ✅ 8 项全过 |

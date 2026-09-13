@@ -236,7 +236,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 ## 相关
 
-- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1-5 已落地，6-7 未做）
+- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1-7 全部落地，2026-09-13）
 - ADR-146 — 路径卫生门禁（check-path-hygiene）
 - ADR-085 — 菜单表健康门禁（check-menu-health）
 - ADR-224 — mock 路径守卫（check-mock-paths；[mock_path_guard](./mock_path_guard.md)）

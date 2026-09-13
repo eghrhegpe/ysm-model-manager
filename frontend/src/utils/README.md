@@ -35,6 +35,10 @@
 - **持久观测**：tag 化的模块行为日志，如 `cache/with-cached.ts` 的 `dbg("cache", ...)`（hit/miss/stale/in-flight/invalidate/clearAll 共 13 处）——**保留不删**，但它不属「用完即删」范畴。删代码前如遇 `dbg("<模块tag>", ...)`，先确认是否为持久观测。
 - **不进 ring**：ring 缓冲仅 warn 级复盘（上限 200 条），高频 hit 类观测只走 console，勿向 ring 写入。
 
+## 预留原语（防误删/防误接线）
+
+- `base/primitives/debounce.ts`：**当前无生产消费方**（2026-09 核查）。app-sidebar 的三处防抖（300/100/50ms）是**共享单槽互顶**语义（一个 timer 字段，新调度顶掉旧调度），与 debounce 的**独立实例**语义不等价——直接接线会改变行为，故未迁移。未来出现独立实例防抖需求时启用；**勿删**（实现+测试完好，成本极低）。
+
 ## vendored 警示
 
 - `animation/molang-lib/`（easing.js/math.js/molang.js/molang.d.ts）为第三方 MIT 代码（Author: JannisX11），**勿改**；升级靠人工回归（无直接测试，间接经 `molang.ts` 封装测试）。

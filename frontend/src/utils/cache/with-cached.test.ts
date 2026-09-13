@@ -32,48 +32,63 @@ describe("withCached", () => {
   });
 
   it("STALE 后台刷新用 ttl=0 写回 → 刷新后仍永不过期（refreshInBackground 路径）", async () => {
-    const fn = vi.fn(async () => "v1");
-    // 先以短 ttl 种入缓存并等待过期——否则 ttl=0 条目 expiryMs=MAX_SAFE_INTEGER
-    // 永不「过期」，STALE 调用只会走缓存命中分支，refreshInBackground 永不触发
-    //（空断言陷阱：原测试在同一 ttl=0 key 上调 STALE，断言恒真但路径不可达）
-    await withCached("stale-refresh-zero-key", 10, fn);
-    await new Promise((r) => setTimeout(r, 20)); // 等待过期
-    // STALE：命中已过期条目 → 立即返回旧值并后台刷新（写回用 ttl=0 → 永不过期）
-    const stale = await withCached("stale-refresh-zero-key", 0, fn, "STALE");
-    expect(stale).toBe("v1"); // 返回旧值，不阻塞
-    // 后台刷新是异步 fire-and-forget：等一拍后 fn 应被二次调用且缓存已用 ttl=0 写回
-    await new Promise((r) => setTimeout(r, 20));
-    expect(fn).toHaveBeenCalledTimes(2); // seed 1 次 + 后台刷新 1 次
-    // 刷新写回后仍永不过期：再过 ttl 时长仍命中（若 refresh 误用 ttl=0=不缓存则 fn 三调）
-    await new Promise((r) => setTimeout(r, 30));
-    const again = await withCached("stale-refresh-zero-key", 0, fn);
-    expect(again).toBe("v1");
-    expect(fn).toHaveBeenCalledTimes(2); // 命中，不再调 fn
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn(async () => "v1");
+      // 先以短 ttl 种入缓存并等待过期——否则 ttl=0 条目 expiryMs=MAX_SAFE_INTEGER
+      // 永不「过期」，STALE 调用只会走缓存命中分支，refreshInBackground 永不触发
+      //（空断言陷阱：原测试在同一 ttl=0 key 上调 STALE，断言恒真但路径不可达）
+      await withCached("stale-refresh-zero-key", 10, fn);
+      await vi.advanceTimersByTimeAsync(20); // 等待过期
+      // STALE：命中已过期条目 → 立即返回旧值并后台刷新（写回用 ttl=0 → 永不过期）
+      const stale = await withCached("stale-refresh-zero-key", 0, fn, "STALE");
+      expect(stale).toBe("v1"); // 返回旧值，不阻塞
+      // 后台刷新是异步 fire-and-forget：等一拍后 fn 应被二次调用且缓存已用 ttl=0 写回
+      await vi.advanceTimersByTimeAsync(20);
+      expect(fn).toHaveBeenCalledTimes(2); // seed 1 次 + 后台刷新 1 次
+      // 刷新写回后仍永不过期：再过 ttl 时长仍命中（若 refresh 误用 ttl=0=不缓存则 fn 三调）
+      await vi.advanceTimersByTimeAsync(30);
+      const again = await withCached("stale-refresh-zero-key", 0, fn);
+      expect(again).toBe("v1");
+      expect(fn).toHaveBeenCalledTimes(2); // 命中，不再调 fn
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ttl 过期后重新调用 fn", async () => {
-    const fn = vi.fn(async (x: number) => x * 2);
-    await withCached("ttl-key", 10, () => fn(1), "NORMAL");
-    // 等待过期
-    await new Promise((r) => setTimeout(r, 20));
-    await withCached("ttl-key", 10, () => fn(100), "NORMAL");
-    expect(fn).toHaveBeenCalledTimes(2);
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn(async (x: number) => x * 2);
+      await withCached("ttl-key", 10, () => fn(1), "NORMAL");
+      // 等待过期
+      await vi.advanceTimersByTimeAsync(20);
+      await withCached("ttl-key", 10, () => fn(100), "NORMAL");
+      expect(fn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("STALE 策略：过期时返回旧值并后台刷新", async () => {
-    let callCount = 0;
-    const fn = vi.fn(async () => {
-      callCount++;
-      return callCount * 10;
-    });
-    await withCached("stale-key", 10, fn, "NORMAL");
-    await new Promise((r) => setTimeout(r, 20));
-    // STALE 调用：应返回旧值 10，fn 不应被同步阻塞
-    const result = await withCached("stale-key", 10, fn, "STALE");
-    expect(result).toBe(10);
-    // fn 已在后台触发（异步），等待一下确认
-    await new Promise((r) => setTimeout(r, 10));
-    expect(fn).toHaveBeenCalledTimes(2);
+    vi.useFakeTimers();
+    try {
+      let callCount = 0;
+      const fn = vi.fn(async () => {
+        callCount++;
+        return callCount * 10;
+      });
+      await withCached("stale-key", 10, fn, "NORMAL");
+      await vi.advanceTimersByTimeAsync(20);
+      // STALE 调用：应返回旧值 10，fn 不应被同步阻塞
+      const result = await withCached("stale-key", 10, fn, "STALE");
+      expect(result).toBe(10);
+      // fn 已在后台触发（异步），等待一下确认
+      await vi.advanceTimersByTimeAsync(10);
+      expect(fn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("FORCE 策略：忽略缓存强制重新计算", async () => {
@@ -104,18 +119,25 @@ describe("withCached", () => {
 
 
   it("并发 miss 只执行一次 fn（stampede guard）", async () => {
-    const fn = vi.fn(async () => {
-      await new Promise(r => setTimeout(r, 10));
-      return "computed";
-    });
-    // 两个并发调用同一个 key
-    const [r1, r2] = await Promise.all([
-      withCached("stampede-key", 60000, fn),
-      withCached("stampede-key", 60000, fn),
-    ]);
-    expect(r1).toBe("computed");
-    expect(r2).toBe("computed");
-    expect(fn).toHaveBeenCalledTimes(1); // 只执行一次
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn(async () => {
+        await new Promise((r) => setTimeout(r, 10)); // 模拟 fn 耗时
+        return "computed";
+      });
+      // 两个并发调用同一个 key；先发起再推进计时器，避免真实 sleep
+      const pending = Promise.all([
+        withCached("stampede-key", 60000, fn),
+        withCached("stampede-key", 60000, fn),
+      ]);
+      await vi.advanceTimersByTimeAsync(10);
+      const [r1, r2] = await pending;
+      expect(r1).toBe("computed");
+      expect(r2).toBe("computed");
+      expect(fn).toHaveBeenCalledTimes(1); // 只执行一次
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("慢 fn + 短 ttl：写入用 Date.now() 算过期，第二次调用命中缓存（fn 只调 1 次）", async () => {

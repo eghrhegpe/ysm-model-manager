@@ -14,6 +14,7 @@ import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { modalSelect } from "@/utils/dom/modal-select.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
 interface LauncherInstance {
@@ -155,7 +156,7 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
     await saveMcRoot(selection.instance.gameRoot, App);
     if (selection.useAsYsmRoot) {
       try {
-        await App.SetResourceRoot("ysm", selection.instance.customDir);
+        await App.SetResourceRoot(RESOURCE_TYPES.YSM, selection.instance.customDir);
       } catch (error) {
         await saveMcRoot(previousMcRoot, App); // 失败回滚 mcRoot，不留半套配置
         throw error;

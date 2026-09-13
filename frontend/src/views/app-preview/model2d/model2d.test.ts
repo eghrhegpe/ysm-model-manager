@@ -3,7 +3,7 @@
 // calcBoneHitZones：2D 正交投影热区计算（scale/偏移/骨骼位移/绕 pivot 旋转/前后视图）。
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
-import { collectBoneBounds } from "./model2d-hit-zones.ts";
+import { collectBoneBounds } from "./model2d-geom.ts";
 import type { BedrockModel, BedrockCube } from "./model2d.ts";
 import type { BoneTransform, Vec3 } from "@/utils/animation/animation.ts";
 

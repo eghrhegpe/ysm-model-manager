@@ -1,10 +1,12 @@
 // ===== 基岩版模型 2D 线条图渲染（类型化版 — ADR-014 P2 大件收尾）=====
-// model2d.ts 拆分三件之三：主入口 + 结构类型。
-// 绘制层 → model2d-draw.ts（cubeVec + mdDv* + drawView + drawMiniView）
+// model2d.ts 拆分四件之四：主入口 + 结构类型。
+// 纯几何 → model2d-geom.ts（cubeVec + collectBoneBounds + BoneBounds/BoundsOpts）
+// 绘制层 → model2d-draw.ts（mdDv* + drawView + drawMiniView）
 // 热区计算 → model2d-hit-zones.ts（calcBoneHitZones + HitZone）
 
 import type { BoneTransform } from "@/utils/animation/animation.ts";
-import { cubeVec, drawMiniView, drawView } from "./model2d-draw.ts";
+import { drawMiniView, drawView } from "./model2d-draw.ts";
+import { cubeVec } from "./model2d-geom.ts";
 import { calcBoneHitZones } from "./model2d-hit-zones.ts";
 
 // re-export：测试与既有消费方从 ./model2d.ts 取 calcBoneHitZones，保持 import 面不变

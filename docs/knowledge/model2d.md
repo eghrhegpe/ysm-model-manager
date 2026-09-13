@@ -5,6 +5,7 @@ tier: architecture
 category: rendering
 source_files:
   - frontend/src/views/app-preview/model2d/model2d.ts
+  - frontend/src/views/app-preview/model2d/model2d-geom.ts
   - frontend/src/views/app-preview/model2d/model2d-hit-zones.ts
   - frontend/src/views/app-preview/model2d/model2d-draw.ts
 auto_fields:
@@ -66,6 +67,7 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 
 - 类型：`BedrockCube`（origin/size/pivot?/rotation?/uv?/faceUV?）、`BedrockBone`（name/cubes）、`BedrockModel`（bones，对应 Go `AnalyzeBedrockModel` 返回）、`Model2DOptions`（showLabels/zoom/rotation/boneTransforms）
 - `renderModel2D(canvas, model, textureImg, opts): void`（`model2d.ts`）— 主渲染入口：骨骼/cube 无数据时直接返回；支持动画变换 `boneTransforms: Map<string, BoneTransform>`（来自 animation.ts）；canvas 上挂 `_hoverCleanup` 清理函数防重复绑定悬停监听
+- `cubeVec(v): [number, number, number]` / `collectBoneBounds(model, opts: BoundsOpts): Map<string, BoneBounds>`（`model2d-geom.ts`）— **纯几何叶**：cube 向量归一化（畸形数组回退 `[0,0,0]`）+ 逐顶点正交投影 + 逐骨骼 8 顶点包围盒；标签层与热区层的唯一事实来源
 - `calcBoneHitZones(model, scale, ox, oy, isFront, cosA, sinA, boneTransforms): HitZone[]`（`model2d-hit-zones.ts`，`model2d.ts` re-export）— 每骨骼 8 顶点投影包围盒 → 屏幕矩形热区（含动画 position/rotation 变换后的坐标）
 - `drawView` / `drawMiniView`（`model2d-draw.ts`）— 主视图绘制 / 小地图缩略视图（`model2d.ts` re-export）
 
@@ -77,6 +79,7 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 
 ## 不变量
 
+- **分层（P1 修复 2026-09-13，`check-circular` 兜底）**：`model2d-geom.ts`（纯几何叶，仅 type-only 引 `model2d.ts`）← `model2d-draw.ts`（绘制）/ `model2d-hit-zones.ts`（热区）← `model2d.ts`（主入口）。绘制层与热区层**禁止互相 import**——共用几何一律上提至 geom 叶。历史教训：`cubeVec` 留在 draw、`collectBoneBounds` 落在 hit-zones 曾构成双向环（同日引入即修；因 `check-circular` 的 `blockPolicy: debt` 不阻断推送而静默入库，改 model2d 拆分结构后请手动跑一次该闸）
 - **致命陷阱 #11 同样适用**：2D 投影的坐标口径必须与 YSMViewer 一致（cube 旋转绕 pivot、屏幕 Y 轴翻转取反）；注意 **2D 管线与 3D 不同**——`pivot X 取反` 发生在 go/threejs spec 生成期（3D 专用），model2d 走原始坐标，两者差异已在知识卡明确，勿把取反误读到 2D
 - cube 无显式 pivot 时兜底取几何中心 `[x+sx/2, y+sy/2, z+sz/2]`
 - 悬停监听通过 `canvas._hoverCleanup()` 清理，重绘前必须先调用旧清理函数，禁止累积监听（实现为「先绑定新监听、后清理旧监听」——早退路径不清理，防累积语义成立）

@@ -1,17 +1,12 @@
-// ===== 基岩版模型 2D 线条图渲染 —— 绘制层（model2d.ts 拆分三件之一）=====
-// 含 cubeVec 工具 + 全部 Canvas 绘制函数（mdDv* 辅助 + drawView + drawMiniView）。
+// ===== 基岩版模型 2D 线条图渲染 —— 绘制层（model2d.ts 拆分四件之二）=====
+// 含全部 Canvas 绘制函数（mdDv* 辅助 + drawView + drawMiniView）。
+// 几何计算（cubeVec / 顶点投影 / 包围盒）下沉至 model2d-geom.ts（纯几何叶）——
+// 本层与热区层各自引用叶模块，互不引用，结构上无环。
 // 类型经 type-only import 引用主文件（编译期擦除，无运行时循环依赖）。
 
 import type { BoneTransform } from "@/utils/animation/animation.ts";
 import type { BedrockModel } from "./model2d.ts";
-import { collectBoneBounds } from "./model2d-hit-zones.ts";
-
-// P1 修复（审核）：cube 向量归一化——畸形模型缺 origin/size 或数组长度 <3 时
-// 解构 undefined 抛 TypeError，整张 2D 图静默空白（skeleton.ts 兜底）。统一入口
-// 回退 [0,0,0]，5 处解构点收敛复用。
-export function cubeVec(v: number[] | undefined): [number, number, number] {
-  return v && v.length >= 3 ? [v[0], v[1], v[2]] : [0, 0, 0];
-}
+import { collectBoneBounds, cubeVec } from "./model2d-geom.ts";
 
 /** 默认 accent 回退（主题变量缺失/非 hex 时；与 --accent 同源色相） */
 const FALLBACK_ACCENT_RGB: [number, number, number] = [124, 131, 255];

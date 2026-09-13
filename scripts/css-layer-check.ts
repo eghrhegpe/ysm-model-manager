@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * css-layer-check.ts — Shadow DOM 样式越界检查器（零依赖）。
+ * css-layer-check.ts — Shadow DOM 样式越界检查器（零外部依赖；复用 _lib/scan-files、_lib/alias-resolve）。
  *
  * 问题背景：
  *   本项目大量组件使用 Shadow DOM（attachShadow + adoptedStyleSheets）。
@@ -32,6 +32,9 @@
  *
  * 退出码：默认 0；--strict 且存在 ERROR → 1。
  *
+ * 依赖：node:fs / node:path / node:url；_lib/scan-files.ts（walk）、
+ *       _lib/alias-resolve.ts（@/ 别名解析，供 TS 插值常量的来源定位）。
+ *
  * 设计意图：Shadow DOM 样式越界的自动化防线——类/keyframe 定义在 components.css
  * 并不等于在 shadow 内生效（@keyframes 不可穿透），纯 grep 看不出的 bug 由本闸抓出。
  */
@@ -39,6 +42,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { tryResolveAlias } from "./_lib/alias-resolve.ts";
 import { walk } from "./_lib/scan-files.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -238,6 +242,62 @@ function extractKeyframeTranslate(cssText: string, name: string) {
   return null;
 }
 
+// ── TS 模板插值展开（2026-09-14 锐评修复：根治 keyframes 假阳性）──
+// 病灶：shadow CSS 以 TS 模板串承载，跨 shadow 共享的 keyframes 收敛为常量后经
+// `${FADE_SLIDE_LEFT}` 注入（sidebar-css.ts 末尾、content-layout.ts:39）。本脚本按
+// **源文件文本**正则扫 @keyframes，看不见插值内容 → 把「运行时确实生效」的定义判成缺失
+// （实测 4 条 ERROR 全为假阳性）。后果不止误报：本闸在 gate-config 是 hard 项，恒红即
+// 无法接进 CI，是「远端零防线」的一条隐藏根因。
+// 修法：聚合 CSS 前，把 import 进来、且内容含 @keyframes 的常量就地展开，再走原正则。
+// 只对含 @keyframes 的常量展开——避免把无关样式常量（如 btnBaseCSS）的类名一并引入，
+// 扰动检查 3 的 WARN 判定基线（最小侵入，不动既有判定面）。
+function resolveImportAbs(spec: string, fromAbs: string): string | null {
+  if (spec.startsWith("@/") || spec.startsWith("#root")) return tryResolveAlias(spec);
+  if (spec.startsWith(".")) return path.resolve(path.dirname(fromAbs), spec);
+  return null; // 裸包导入（不参与 shadow CSS 组装）
+}
+
+/** 取被导入模块里 `export const NAME = "字面量"` 的内容（跨行亦可）。 */
+function readConstLiteral(src: string, name: string): string | null {
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`export\\s+const\\s+${esc}\\s*=\\s*(["'\`])([\\s\\S]*?)\\1`);
+  return src.match(re)?.[2] ?? null;
+}
+
+function expandKeyframeInterpolations(cssText: string, fileAbs: string): string {
+  if (!cssText.includes("${")) return cssText;
+  const importRe = /import\s*(?:type\s+)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
+  let out = cssText;
+  for (const im of cssText.matchAll(importRe)) {
+    const names = (im[1] ?? "")
+      .split(",")
+      .map(
+        (s) =>
+          s
+            .trim()
+            .split(/\s+as\s+/)[0]
+            ?.trim() ?? "",
+      )
+      .filter(Boolean);
+    const abs = resolveImportAbs(im[2] ?? "", fileAbs);
+    if (!abs) continue;
+    let src: string | null = null;
+    try {
+      src = fs.readFileSync(abs, "utf8");
+    } catch {
+      continue; // 解析不出的 import 保持原样（不因 tooling 缺失制造新假阳性）
+    }
+    for (const n of names) {
+      const token = "${" + n + "}";
+      if (!out.includes(token)) continue;
+      const lit = readConstLiteral(src, n);
+      if (!lit || !/@keyframes/.test(lit)) continue;
+      out = out.split(token).join(lit);
+    }
+  }
+  return out;
+}
+
 let errorCount = 0;
 let warnCount = 0;
 const problems: string[] = [];
@@ -247,7 +307,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${t}`;
+    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const kf = extractKeyframes(cssAgg);
   const refs = extractAnimationRefs(cssAgg);
@@ -276,7 +336,8 @@ const shadowKfSources = [
 let shadowKfAgg = "";
 for (const f of shadowKfSources) {
   const t = readSafe(f);
-  if (t) shadowKfAgg += `\n${t}`;
+  // 同检查 1：必须展开插值，否则 fadeSlideLeft 两侧都取不到 → 参数契约静默跳过（假绿）
+  if (t) shadowKfAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
 }
 for (const name of KF_PARAM_NAMES) {
   const globalVal = extractKeyframeTranslate(compCssText, name);
@@ -306,7 +367,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${t}`;
+    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const kf = extractKeyframes(cssAgg);
   for (const f of dom.html) {
@@ -346,7 +407,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${t}`;
+    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const cssClasses = extractClasses(cssAgg);
   const prefixes = (DOMAIN_PREFIXES as Record<string, string[]>)[dom.name] || [];

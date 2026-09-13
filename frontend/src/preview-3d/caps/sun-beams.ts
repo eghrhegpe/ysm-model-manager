@@ -11,9 +11,6 @@ import * as THREE from "three";
 import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
-/** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad */
-const degToRad = (deg: number): number => (deg * Math.PI) / 180;
-
 /**
  * god rays / sunset tint 共用强度曲线（0~1；太阳高度角 >20° 时无光束）。
  * 纯函数：elevation 低于 20° 越接近地平线强度越高，(20-e)/30 clamp 到 [0,1]。
@@ -88,8 +85,8 @@ const TINT_FRAG = `
 
 /** sunPos 与 writeUniforms 同公式重建：phi=90-elevation、theta=azimuth 的球面单位向量 */
 function sunDirFromAngles(elevation: number, azimuth: number): THREE.Vector3 {
-  const phi = degToRad(90 - elevation);
-  const theta = degToRad(azimuth);
+  const phi = THREE.MathUtils.degToRad(90 - elevation);
+  const theta = THREE.MathUtils.degToRad(azimuth);
   return new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
 }
 
@@ -150,10 +147,10 @@ export class SunBeams {
       }
       return;
     }
-    const elRad = degToRad(elevation);
+    const elRad = THREE.MathUtils.degToRad(elevation);
     // 旋转 group：先绕 X 轴调整仰角，再绕 Y 轴调整方位
     this.group.rotation.x = -elRad; // 负：仰角越高，beam 越往下压
-    this.group.rotation.y = degToRad(azimuth - 90); // 0°=东, 90°=南
+    this.group.rotation.y = THREE.MathUtils.degToRad(azimuth - 90); // 0°=东, 90°=南
 
     const intensity = godRaysIntensity(elevation);
     // 更新光束 intensity uniform

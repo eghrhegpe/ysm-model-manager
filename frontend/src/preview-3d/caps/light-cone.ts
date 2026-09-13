@@ -9,9 +9,6 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";
 
-/** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad */
-const degToRad = (deg: number): number => (deg * Math.PI) / 180;
-
 /* ============ 体积光锥 shader（两交叉 PlaneGeometry + Cone 遮罩） ============ */
 
 const VOLUMETRIC_CONE_VERT = `
@@ -147,7 +144,7 @@ export class VolumetricCone {
     if (!sp.enabled || !vm.enabled) return;
 
     this.height = height;
-    const halfAngle = degToRad(sp.angle);
+    const halfAngle = THREE.MathUtils.degToRad(sp.angle);
     const baseRadius = height * Math.tan(halfAngle) * (1.0 + sp.penumbra * 0.5);
 
     const mat = this.createMaterial(height, baseRadius, sp, vm);

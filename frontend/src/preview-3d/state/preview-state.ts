@@ -108,6 +108,20 @@ function hasMethod<T>(obj: unknown, name: keyof T): boolean {
   return typeof bag?.[name as string] === "function";
 }
 
+/**
+ * 惰性 cap 解析工厂（2026-09-14 收敛：toggleCap/envToggleCap/waterCap/groundMatCap/
+ * wireframeModeCap 五个同构函数抽此一处）——cap 缺席或任一方法不齐 → undefined；
+ * 返回类型由 T 参数化，消费方零 cast。
+ */
+function lazyCap<T extends object>(id: string, ...methods: Array<keyof T>): T | undefined {
+  const cap: SceneCapability | undefined = capById(id);
+  if (!cap) return undefined;
+  for (const m of methods) {
+    if (!hasMethod<T>(cap, m)) return undefined;
+  }
+  return cap as unknown as T;
+}
+
 /** 带 isEnabled/setEnabled 的开关型 cap */
 interface ToggleCap {
   isEnabled(): boolean;
@@ -115,12 +129,7 @@ interface ToggleCap {
 }
 
 function toggleCap(id: string): ToggleCap | undefined {
-  const cap: SceneCapability | undefined = capById(id);
-  if (!cap) return undefined;
-  if (!hasMethod<ToggleCap>(cap, "isEnabled") || !hasMethod<ToggleCap>(cap, "setEnabled")) {
-    return undefined;
-  }
-  return cap as unknown as ToggleCap;
+  return lazyCap<ToggleCap>(id, "isEnabled", "setEnabled");
 }
 
 /** 环境贴图开关型 cap（SkyCapability 的 PMREM 语义） */
@@ -130,15 +139,7 @@ interface EnvToggleCap {
 }
 
 function envToggleCap(id: string): EnvToggleCap | undefined {
-  const cap: SceneCapability | undefined = capById(id);
-  if (!cap) return undefined;
-  if (
-    !hasMethod<EnvToggleCap>(cap, "isEnvironmentEnabled") ||
-    !hasMethod<EnvToggleCap>(cap, "setEnvironmentEnabled")
-  ) {
-    return undefined;
-  }
-  return cap as unknown as EnvToggleCap;
+  return lazyCap<EnvToggleCap>(id, "isEnvironmentEnabled", "setEnvironmentEnabled");
 }
 
 /** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定 */
@@ -147,15 +148,7 @@ interface WaterModeCap {
   setWaterMode(v: string): void;
 }
 function waterCap(): WaterModeCap | undefined {
-  const cap: SceneCapability | undefined = capById("water");
-  if (!cap) return undefined;
-  if (
-    !hasMethod<WaterModeCap>(cap, "getWaterMode") ||
-    !hasMethod<WaterModeCap>(cap, "setWaterMode")
-  ) {
-    return undefined;
-  }
-  return cap as unknown as WaterModeCap;
+  return lazyCap<WaterModeCap>("water", "getWaterMode", "setWaterMode");
 }
 
 /** [doc:adr-126-p5-c] 地面能力（读/写 matSource）——供 env.groundMatSource 惰性绑定 */
@@ -164,15 +157,7 @@ interface GroundMatCap {
   setMatSource(v: string): void;
 }
 function groundMatCap(): GroundMatCap | undefined {
-  const cap: SceneCapability | undefined = capById("ground");
-  if (!cap) return undefined;
-  if (
-    !hasMethod<GroundMatCap>(cap, "getMatSource") ||
-    !hasMethod<GroundMatCap>(cap, "setMatSource")
-  ) {
-    return undefined;
-  }
-  return cap as unknown as GroundMatCap;
+  return lazyCap<GroundMatCap>("ground", "getMatSource", "setMatSource");
 }
 
 /** 渲染模式线框能力（RenderModeCapability 的 wireframe 单项语义）——
@@ -184,15 +169,7 @@ interface WireframeModeCap {
   setWireframe(v: boolean | null): void;
 }
 function wireframeModeCap(): WireframeModeCap | undefined {
-  const cap: SceneCapability | undefined = capById("renderMode");
-  if (!cap) return undefined;
-  if (
-    !hasMethod<WireframeModeCap>(cap, "getWireframe") ||
-    !hasMethod<WireframeModeCap>(cap, "setWireframe")
-  ) {
-    return undefined;
-  }
-  return cap as unknown as WireframeModeCap;
+  return lazyCap<WireframeModeCap>("renderMode", "getWireframe", "setWireframe");
 }
 
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）

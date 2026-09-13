@@ -24,6 +24,7 @@ func writePNG(c color.RGBA) []byte {
 // TestExtractAvatarURI_From7zFallback verifies .7z avatar/ directory fallback.
 // Uses go/geometry/testdata/7z_full.7z which contains avatar\face.png.
 func TestExtractAvatarURI_From7zFallback(t *testing.T) {
+	withTempCache(t) // 降级路径会 SaveAvatarData 落盘，须重定向缓存目录防污染真实用户缓存
 	src := filepath.Join("..", "geometry", "testdata", "7z_full.7z")
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("testdata 7z_full.7z not available: %v", err)
@@ -68,6 +69,7 @@ func TestCacheAvatarsFromModel_7z(t *testing.T) {
 	}
 }
 func TestExtractAvatarURI_FromZipFallback(t *testing.T) {
+	withTempCache(t) // 降级路径会 SaveAvatarData 落盘，须重定向缓存目录防污染真实用户缓存
 	pngData := writePNG(color.RGBA{R: 0, G: 0, B: 255, A: 255})
 	ysmJSON := `{"metadata":{"authors":[]}}`
 

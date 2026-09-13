@@ -9,6 +9,7 @@ package avatar
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -39,6 +40,22 @@ type authorEntry struct {
 	Name   string `json:"name"`
 	Role   string `json:"role,omitempty"`
 	Avatar string `json:"avatar,omitempty"`
+}
+
+// parseMetadataAuthors 解析 ysm.json 的 metadata.authors 列表——全包唯一元数据声明
+// （authorEntry 见上）。解析失败返回 error，由各调用点按既有口径处理：批量缓存路径
+// （CacheAvatarsFromJSON/containerAuthorNames）log 后返回，单作者提取路径静默
+// （与重构前匿名 struct 分支行为一致）；无 authors 字段时返回 nil。
+func parseMetadataAuthors(data []byte) ([]authorEntry, error) {
+	var root struct {
+		Meta struct {
+			Authors []authorEntry `json:"authors"`
+		} `json:"metadata"`
+	}
+	if err := json.Unmarshal(data, &root); err != nil {
+		return nil, err
+	}
+	return root.Meta.Authors, nil
 }
 
 // SafeName 将非法文件名字符替换为下划线。

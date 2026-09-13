@@ -7,7 +7,6 @@
 package avatar
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -56,18 +55,12 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 // parseYSMJSONAuthors 从 YSM 文件列表中找 ysm.json 并解析 authors。
 // 消费 DecodeYSMData 的 []byte 直通形态（旧 []int 中间
 // 形态每字节膨胀 8× 且需 toBytes 转回，纯为历史签名买单）。
+// 解析失败静默返回 nil（与旧实现 break 行为一致），元数据声明收敛于 parseMetadataAuthors。
 func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 	for _, f := range files {
 		if isYSMJSONPath(f.Path) {
-			var root struct {
-				Meta struct {
-					Authors []authorEntry `json:"authors"`
-				} `json:"metadata"`
-			}
-			if json.Unmarshal(f.Data, &root) == nil {
-				return root.Meta.Authors
-			}
-			break
+			authors, _ := parseMetadataAuthors(f.Data)
+			return authors
 		}
 	}
 	return nil
@@ -159,17 +152,10 @@ func extractAvatarFromJSON(modelPath, safeName string) string {
 		}
 		return ""
 	}
-	var root struct {
-		Meta struct {
-			Authors []authorEntry `json:"authors"`
-		} `json:"metadata"`
-	}
-	if json.Unmarshal(data, &root) != nil {
-		return ""
-	}
+	authors, _ := parseMetadataAuthors(data)
 
 	dir := filepath.Dir(modelPath)
-	for _, au := range root.Meta.Authors {
+	for _, au := range authors {
 		if SafeName(au.Name) != safeName || au.Avatar == "" {
 			continue
 		}
@@ -226,15 +212,8 @@ func CacheAvatarsFromJSON(modelPath string) {
 		}
 		return
 	}
-	var root struct {
-		Meta struct {
-			Authors []struct {
-				Name   string `json:"name"`
-				Avatar string `json:"avatar"`
-			} `json:"authors"`
-		} `json:"metadata"`
-	}
-	if json.Unmarshal(data, &root) != nil {
+	authors, err := parseMetadataAuthors(data)
+	if err != nil {
 		log.Printf("[avatar] CacheAvatarsFromJSON 解析 ysm.json 失败 %s", modelPath)
 		return
 	}
@@ -249,7 +228,7 @@ func CacheAvatarsFromJSON(modelPath string) {
 		log.Printf("[avatar] 创建缓存目录失败: %v", err)
 		return
 	}
-	for _, au := range root.Meta.Authors {
+	for _, au := range authors {
 		if au.Name == "" || au.Avatar == "" {
 			continue
 		}
@@ -398,19 +377,13 @@ func containerAuthorNames(r container.Reader) []string {
 	if ysmData == nil {
 		return nil
 	}
-	var root struct {
-		Meta struct {
-			Authors []struct {
-				Name string `json:"name"`
-			} `json:"authors"`
-		} `json:"metadata"`
-	}
-	if json.Unmarshal(ysmData, &root) != nil {
+	authors, err := parseMetadataAuthors(ysmData)
+	if err != nil {
 		log.Printf("[avatar] 容器 ysm.json 作者解析失败")
 		return nil
 	}
-	names := make([]string, 0, len(root.Meta.Authors))
-	for _, a := range root.Meta.Authors {
+	names := make([]string, 0, len(authors))
+	for _, a := range authors {
 		if a.Name != "" {
 			names = append(names, a.Name)
 		}
@@ -436,18 +409,10 @@ func readLimitedModel(path string) ([]byte, error) {
 // extractAvatarFromContainer 处理压缩包（zip/7z）头像提取的通用逻辑
 // 包括：解析作者列表、按作者名匹配、以及 avatar/ 目录降级逻辑
 func extractAvatarFromContainer(r container.Reader, safeName string) string {
-	// 1. 解析作者列表
+	// 1. 解析作者列表（解析失败静默，authors 保持 nil 走降级）
 	var authors []authorEntry
-	ysmData := ReadFileFromContainer(r, "ysm.json")
-	if ysmData != nil {
-		var root struct {
-			Meta struct {
-				Authors []authorEntry `json:"authors"`
-			} `json:"metadata"`
-		}
-		if json.Unmarshal(ysmData, &root) == nil {
-			authors = root.Meta.Authors
-		}
+	if ysmData := ReadFileFromContainer(r, "ysm.json"); ysmData != nil {
+		authors, _ = parseMetadataAuthors(ysmData)
 	}
 
 	// 2. 按作者名匹配头像

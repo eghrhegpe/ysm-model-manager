@@ -78,6 +78,41 @@ func TestParseYSMJSONAuthors(t *testing.T) {
 	}
 }
 
+// TestParseMetadataAuthors 验证全包唯一元数据解析 helper：成功解析返回 authorEntry
+// 列表；无 authors 字段/坏 JSON 行为明确（坏 JSON 返回 error，前者返回 nil）。
+func TestParseMetadataAuthors(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      string
+		want    int
+		wantErr bool
+	}{
+		{"正常 authors", `{"metadata":{"authors":[{"name":"Alice","role":"r","avatar":"a.png"},{"name":"Bob"}]}}`, 2, false},
+		{"无 authors 字段", `{"metadata":{"mtime":123}}`, 0, false},
+		{"空 JSON", `{}`, 0, false},
+		{"坏 JSON", `not-json`, 0, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			authors, err := parseMetadataAuthors([]byte(c.in))
+			if (err != nil) != c.wantErr {
+				t.Fatalf("parseMetadataAuthors err=%v, wantErr=%v", err, c.wantErr)
+			}
+			if len(authors) != c.want {
+				t.Errorf("作者数=%d, 期望 %d (authors=%+v)", len(authors), c.want, authors)
+			}
+		})
+	}
+	// 字段透传：authorEntry 的 Name/Role/Avatar 一一对应
+	authors, err := parseMetadataAuthors([]byte(`{"metadata":{"authors":[{"name":"Alice","role":"md","avatar":"avatar/a.png"}]}}`))
+	if err != nil || len(authors) != 1 {
+		t.Fatalf("正常解析失败: err=%v authors=%+v", err, authors)
+	}
+	if authors[0] != (authorEntry{Name: "Alice", Role: "md", Avatar: "avatar/a.png"}) {
+		t.Errorf("authorEntry 字段透传错误: %+v", authors[0])
+	}
+}
+
 // TestMatchAvatarByAuthor 验证按作者名匹配 avatar 字段（纯函数，零 IO）。
 func TestMatchAvatarByAuthor(t *testing.T) {
 	withTempCache(t)

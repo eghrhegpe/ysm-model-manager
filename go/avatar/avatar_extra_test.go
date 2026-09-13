@@ -437,6 +437,7 @@ func TestExtractAvatarURI_FromZip_PathTraversal(t *testing.T) {
 }
 
 func TestExtractAvatarURI_FromZip_MissingAvatar(t *testing.T) {
+	withTempCache(t) // 降级命中 avatar/face.png 会 SaveAvatarData 落盘，须重定向防污染真实用户缓存
 	// 作者匹配但 zip 内无对应头像文件 → 降级扫描 avatar/ 目录找到 face.png → 非空
 	ysmJSON := `{"metadata":{"authors":[{"name":"测试用户","avatar":"avatar/missing.png"}]}}`
 	data := makeZip(t, map[string]string{
@@ -454,6 +455,7 @@ func TestExtractAvatarURI_FromZip_MissingAvatar(t *testing.T) {
 }
 
 func TestExtractAvatarURI_FromZip_NoYSMJSON(t *testing.T) {
+	withTempCache(t) // 降级命中 avatar/face.png 会 SaveAvatarData 落盘，须重定向防污染真实用户缓存
 	// zip 内无 ysm.json → authors 为空 → 降级扫描 avatar/ 目录找到 face.png → 非空
 	data := makeZip(t, map[string]string{"avatar/face.png": "face-data"})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")

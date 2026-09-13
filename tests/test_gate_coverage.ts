@@ -21,12 +21,14 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  BYPASS_CHECKS,
   coverageTailLine,
   gateCoverage,
   listAllCheckScripts,
   listCoveredCheckScripts,
 } from "../scripts/_lib/gate-coverage.ts";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
+import { check } from "./_lib.mts";
 
 // 1. 全集 = 动态枚举（独立用 fs 重算，验证被测函数没有写死/过滤错）
 const expected = fs
@@ -57,7 +59,10 @@ for (const domain of ["check-layering.ts", "check-redlines.ts", "check-path-hygi
 const line = coverageTailLine();
 assert.match(line, new RegExp(`${c.covered}/${c.total}`));
 assert.ok(line.includes("全绿"), "尾行必须含「全绿 ≠ 仓库无风险」警示语");
-assert.ok(line.includes("未接入") || c.uncovered.length === 0, "有未接入项时尾行必须点名");
+assert.ok(
+  line.includes("未接入") || line.includes("刻意旁路") || c.uncovered.length === 0,
+  "有未接入项时尾行必须点名（未接入或刻意旁路）",
+);
 
 // 5. DOMAIN_BLOCK_CHECKS 双向同步（2026-09-13 锐评勘误 #9）：手工常量数组纳入测试网——
 //    gate-blocks 新增直连 ctx.record("check-…") 漏登记、或数组登记了已下线的检查，都 FAIL。
@@ -96,5 +101,40 @@ import { DOMAIN_BLOCK_CHECKS } from "../scripts/_lib/gate-coverage.ts";
     );
   }
 }
+
+check("覆盖尾行旁路分组（四锐评 #5）：BYPASS_CHECKS 与 uncovered 交集正确、无幻影条目", () => {
+  const line = coverageTailLine();
+  const cov = gateCoverage();
+  const bypassed = cov.uncovered.filter((f) => (BYPASS_CHECKS as readonly string[]).includes(f));
+  // 旁路项若存在，尾行必须以「刻意旁路」点名（区别于「未接入」）；否则全集接入
+  if (bypassed.length) {
+    assert.ok(
+      line.includes("刻意旁路") && line.includes(bypassed[0]!),
+      `尾行应含「刻意旁路(pre-commit/CI)」点名，实际: ${line}`,
+    );
+  } else {
+    assert.ok(!line.includes("刻意旁路"), `无旁路项时尾行不应出现「刻意旁路」: ${line}`);
+  }
+  // 幻影防线：BYPASS_CHECKS 登记的文件必须真实存在且确属 uncovered（否则清单腐化）
+  for (const b of BYPASS_CHECKS) {
+    assert.ok(
+      fs.existsSync(path.join(ROOT, "scripts", b)),
+      `BYPASS_CHECKS 登记了不存在的脚本 ${b}——请从清单删除`,
+    );
+  }
+});
+
+check("--json 契约真实现（四锐评 #1）：声明必须与消费共存", () => {
+  const src = fs.readFileSync(path.join(ROOT, "scripts", "pre-push-gate.ts"), "utf-8");
+  assert.ok(/bools:\s*\[[^\]]*"json"/.test(src), "pre-push-gate bools 应声明 json");
+  assert.ok(
+    /const jsonMode = args\.json as boolean;/.test(src) && /finishJson\(\)/.test(src),
+    "pre-push-gate 应消费 args.json 并在终态出口调用 finishJson()——禁止声明不实现",
+  );
+  assert.ok(
+    /setLogPushMuted\(true\)/.test(src),
+    "--json 模式应静默人读文本流（logPush muted），防 stdout JSON 被污染",
+  );
+});
 
 console.log("[OK] test_gate_coverage.ts 全部断言通过");

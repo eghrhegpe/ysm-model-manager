@@ -61,6 +61,10 @@ export function runStaticToolsDispatch(
   opts: { allMode: boolean; docsMode: boolean },
 ): void {
   if (opts.allMode) {
+    // 刻意不跑 FRONTEND_STATIC_TOOLS（四锐评 #3 显式化）：三档扫描器是「全库阈值 + 增量
+    // 裁剪」模式（scopedFiles），--all 无 --files 上下文，全量跑 = 301 条 debt 刷屏 +
+    // check-params 59.4s 墙钟（见 gate-config.ts 三档位注释）——「防淹没 + 控成本」两动机
+    // 在全量模式同样成立。baseline 比对落地后三档才有资格进 --all；覆盖尾行已如实点名。
     runTools(ctx, ALL_STATIC_TOOLS);
     runTools(ctx, DOC_EXTRA_SCRIPTS);
   }

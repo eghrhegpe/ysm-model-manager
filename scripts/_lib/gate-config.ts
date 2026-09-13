@@ -7,7 +7,7 @@
  * 本模块把清单数据与 gate 调度逻辑解耦：gate 读配置，清单单一维护点。
  *
  * 结构（每项）：
- *   string  → 简单调用：node scripts/<name>.mjs --json
+ *   string  → 简单调用：node scripts/<name>.ts --json
  *   { tool, args?, autoFix? } → 带参数调用；autoFix=true 时 FAIL 自动跑写盘版刷新后重验
  *
  * 用法：

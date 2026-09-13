@@ -21,13 +21,21 @@ import { ROOT } from "./scan-files.ts";
 
 const LOG_FILE = path.join(ROOT, ".git", "push-log");
 
+/** --json 模式静默开关（2026-09-13 四锐评 #1）：true 时 logPush 只写 push-log 文件、
+ * 不打 stderr——人读文本流让位给结构化 JSON 流，两者在 stdout/stderr 不再互相污染。
+ * pre-push-gate 在 JSON 输出完毕后必须复位（长进程复用防护）。 */
+let muted = false;
+export function setLogPushMuted(v: boolean) {
+  muted = v;
+}
+
 /**
  * 双写日志：stdout（stderr）+ 追加到 .git/push-log。
  * @param {string} line 日志行（已含 [OK]/[FAIL] 等标记）
  */
 export function logPush(line: string) {
-  // 1. stderr 写终端（stdout 可能被 git pre-push 钩子吞掉）
-  process.stderr.write(`${line}\n`);
+  // 1. stderr 写终端（stdout 可能被 git pre-push 钩子吞掉）；--json 模式静默
+  if (!muted) process.stderr.write(`${line}\n`);
   // 2. 追加到 .git/push-log（持久化，不被 git 跟踪）
   try {
     const timestamp = new Date().toISOString();

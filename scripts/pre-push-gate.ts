@@ -63,7 +63,7 @@ import { coverageTailLine } from "./_lib/gate-coverage.ts";
 import { createGateCtx } from "./_lib/gate-ctx.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveChanges } from "./_lib/gate-resolve.ts";
-import { logPush } from "./_lib/log-push.ts";
+import { logPush, setLogPushMuted } from "./_lib/log-push.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
@@ -123,12 +123,20 @@ async function main() {
   if (args.unknown.length) console.warn(`[pre-push-gate] 忽略未知参数: ${args.unknown.join(", ")}`);
   const dryRun = args["dry-run"] as boolean;
   const noBanner = args["no-banner"] as boolean;
+  // --json 真实现（2026-09-13 四锐评 #1）：此前 bools 声明但零消费——doctor --json 透传
+  // 静默 no-op、hygiene 契约靠注释假绿。现语义：人读文本流静默（logPush 只写 push-log），
+  // 判定终态以结构化 JSON 输出到 stdout（_summary + results，形状与 writeGateReport 同源）。
+  // 边界：ctx 创建前的硬失败（stdin 解析失败/用法错误）仍为文本——无判定即无 JSON 契约对象。
+  const jsonMode = args.json as boolean;
+  if (jsonMode) setLogPushMuted(true);
+  // 人读文本流的 stdout 出口（横幅/模式行）：--json 时静默，防污染 stdout 的 JSON 终态
+  const say = jsonMode ? () => {} : console.log;
   const allMode = args.all as boolean;
   const docsMode = args.docs as boolean;
   const filesRaw = (args.files as string) ?? "";
   const filesMode = filesRaw.length > 0;
 
-  console.log("========== YSM 本地质量门禁 ==========");
+  say("========== YSM 本地质量门禁 ==========");
 
   // 结果收集 / 阻断标记 / exec 助手统一由 GateCtx 承载（ADR-206 阶段 1 接线，2026-09-13）。
   // record 的 blockPolicy 阻断矩阵与归属落库、blocked 活值 getter、sh/shAsync/git/gofmtCheck
@@ -166,8 +174,8 @@ async function main() {
       redlines: true,
     };
     domainSummary = "all";
-    console.log("模式: 全量检查（--all）");
-    console.log("");
+    say("模式: 全量检查（--all）");
+    say("");
   } else if (docsMode) {
     // —— 文档模式：轻量（等价 doctor --docs）——
     plan = {
@@ -180,38 +188,38 @@ async function main() {
       redlines: false,
     };
     domainSummary = "docs";
-    console.log("模式: 文档检查（--docs）");
-    console.log("");
+    say("模式: 文档检查（--docs）");
+    say("");
   } else if (filesMode) {
     // —— 文件驱动模式（commit-with-check 调用）：按 staged files 真按域裁剪 ——
     files = filesRaw ? filesRaw.split("\n").filter(Boolean) : [];
     if (!files.length) {
-      console.log('用法: node scripts/pre-push-gate.ts --files "<file1>\\n<file2>..." [--dry-run]');
+      say('用法: node scripts/pre-push-gate.ts --files "<file1>\\n<file2>..." [--dry-run]');
       return 2;
     }
     plan = planFromFiles(files);
     byDomain = groupByDomain(files);
     domainSummary = domainSummaryText(byDomain);
-    console.log(`模式: 文件驱动（--files，${files.length} 个文件）`);
-    console.log(`变更域: ${domainSummary}`);
-    console.log("");
+    say(`模式: 文件驱动（--files，${files.length} 个文件）`);
+    say(`变更域: ${domainSummary}`);
+    say("");
   } else {
     // —— 推送门禁模式（默认）：stdin 驱动 ——
     const remoteName = args._[0] as string | undefined;
     const remoteUrl = args._[1] as string | undefined;
 
     if (!remoteName) {
-      console.log("用法: node scripts/pre-push-gate.ts [--dry-run] <remote-name> <remote-url>");
-      console.log("      node scripts/pre-push-gate.ts --all [--dry-run]");
-      console.log("      node scripts/pre-push-gate.ts --docs [--dry-run]");
-      console.log("      stdin: <local ref> <local oid> <remote ref> <remote oid>");
+      say("用法: node scripts/pre-push-gate.ts [--dry-run] <remote-name> <remote-url>");
+      say("      node scripts/pre-push-gate.ts --all [--dry-run]");
+      say("      node scripts/pre-push-gate.ts --docs [--dry-run]");
+      say("      stdin: <local ref> <local oid> <remote ref> <remote oid>");
       return 2;
     }
 
     const lines = parseStdin().split("\n").filter(Boolean);
     if (!lines.length) {
-      console.log(`${B.SKIP} 无可推送 ref（空 stdin），跳过`);
-      console.log(`${B.SKIP} ${pullHint(remoteName)}`);
+      say(`${B.SKIP} 无可推送 ref（空 stdin），跳过`);
+      say(`${B.SKIP} ${pullHint(remoteName)}`);
       return 0;
     }
 
@@ -229,17 +237,17 @@ async function main() {
       if (!localOid || /^0+$/.test(localOid)) continue; // delete ref，跳过
       const refFiles = resolveChanges(localRef, localOid, remoteOid);
       if (refFiles === null) {
-        console.log(
+        say(
           `${B.FAIL} 变更集解析失败（git diff/show 均不可用），拒绝空跑放行 — 请检查本地 git 状态后重推`,
         );
-        console.log(pullHint(remoteName));
+        say(pullHint(remoteName));
         return 1;
       }
       for (const f of refFiles) fileSet.add(f);
       pushed.push({ localRef, localOid, remoteOid });
     }
     if (!pushed.length) {
-      console.log(`${B.SKIP} 无有效推送 ref（均为删除/空 oid），跳过`);
+      say(`${B.SKIP} 无有效推送 ref（均为删除/空 oid），跳过`);
       return 0;
     }
     files = [...fileSet];
@@ -255,12 +263,12 @@ async function main() {
     pushedCount = pushed.length;
     pushedRefs = pushed.map((p) => ({ localOid: p.localOid, localRef: p.localRef }));
     const multiRef = pushed.length > 1;
-    console.log(
+    say(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,
     );
     domainSummary = domainSummaryText(byDomain);
-    console.log(`变更域: ${domainSummary}`);
-    console.log("");
+    say(`变更域: ${domainSummary}`);
+    say("");
   }
 
   /* --- GateCtx 创建（模式分流后，注入确定态的共享态）--- */
@@ -304,6 +312,29 @@ async function main() {
   // stderr 只给相对路径指针；写入失败不阻断门禁。
   const okResults = ctx.results.filter((r) => r.ok);
   const failResults = ctx.results.filter((r) => !r.ok);
+  // --json 终态输出（四锐评 #1）：在三个 post-ctx 出口（无变更/PASS/FAIL）前统一发射，
+  // 退出码语义与文本模式完全一致——JSON 模式只改输出形态，不改判定。
+  const finishJson = () => {
+    if (!jsonMode) return;
+    setLogPushMuted(false);
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          _summary: {
+            ok: !ctx.blocked,
+            blocked: ctx.blocked,
+            dryRun,
+            counts: `${okResults.length}/${ctx.results.length}`,
+            domainSummary,
+            ...(reportPath ? { report: path.relative(ROOT, reportPath) } : {}),
+          },
+          results: ctx.results,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  };
   const reportPath = writeGateReport(ctx.results, {
     mode: allMode ? "all" : docsMode ? "docs" : filesMode ? "files" : "push",
     blocked: ctx.blocked,
@@ -341,6 +372,7 @@ async function main() {
     }
   }
   if (!ctx.results.length) {
+    finishJson();
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
     return 0;
   }
@@ -361,6 +393,7 @@ async function main() {
       logPush("  （无需再手动跑 doctor --docs / tsc / build 确认）");
       logPush("════════════════════════════════════════");
     }
+    finishJson();
     return 0;
   }
   logPush(
@@ -389,6 +422,7 @@ async function main() {
     `修复指引: 按上方 [FAIL] 项处理；${gofmtHint}${hygieneHint}紧急绕过: git push --no-verify`,
   );
   logPush(pullHint(pushRemoteName));
+  finishJson();
   return 1;
 }
 

@@ -83,9 +83,29 @@ export function gateCoverage(): GateCoverage {
   };
 }
 
+/**
+ * 刻意旁路清单（四锐评 #5）：有自动化入口但**设计上不走 gate** 的 check-*——
+ * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）、diff-coverage 与
+ * go-coverage-threshold 走 CI/pre-commit。与「漏接」分开点名，防 AI 读尾行把
+ * 设计旁路当漏接去补接。新增旁路项时在此登记（无自动对账——分母动态枚举兜底漂移）。
+ */
+export const BYPASS_CHECKS = [
+  "check-biome-lines.ts",
+  "check-diff-coverage.ts",
+  "check-go-coverage-threshold.ts",
+] as const;
+
 /** 固定尾行文本（PASS/FAIL 两路共用，保证每次输出形态一致） */
 export function coverageTailLine(): string {
   const c = gateCoverage();
-  const list = c.uncovered.length ? `未接入: ${c.uncovered.join(", ")}` : "无未接入项";
-  return `覆盖口径: ${c.covered}/${c.total} 项 check-* 已接入门禁（${list}）—— 全绿 ≠ 仓库无风险，未接入项走 pre-commit/CI/doctor 旁路`;
+  const bypassed = c.uncovered.filter((f) => (BYPASS_CHECKS as readonly string[]).includes(f));
+  const trulyUncovered = c.uncovered.filter(
+    (f) => !(BYPASS_CHECKS as readonly string[]).includes(f),
+  );
+  const parts = [
+    bypassed.length ? `刻意旁路(pre-commit/CI): ${bypassed.join(", ")}` : "",
+    trulyUncovered.length ? `未接入: ${trulyUncovered.join(", ")}` : "",
+  ].filter(Boolean);
+  const detail = parts.length ? parts.join("；") : "全集全接入";
+  return `覆盖口径: ${c.covered}/${c.total} 项 check-* 已接入门禁（${detail}）—— 全绿 ≠ 仓库无风险`;
 }

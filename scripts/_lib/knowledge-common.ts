@@ -26,7 +26,7 @@ export function stripBom(text: string): string {
 
 /**
  * 是否以 frontmatter 分隔符 `---` 开头（容 BOM 前缀）。
- * 与 hooks/knowledge-affected-hint.mjs 的 `^\uFEFF?---` 容错同一口径。
+ * 与 hooks/knowledge-affected-hint.ts 的 `^\uFEFF?---` 容错同一口径。
  */
 export function hasFrontmatterDelimiter(text: string): boolean {
   return /^\uFEFF?---\r?\n/.test(text);

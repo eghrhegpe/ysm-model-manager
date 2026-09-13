@@ -73,18 +73,29 @@ for (const ref of refOutput.out
 // ── 2. 审计日志已覆盖 oid 集（PUSH + SKIPPED 都算留痕） ──
 const auditFile = auditFilePath();
 const audited = new Set<string>();
+const skippedAt: number[] = [];
 if (fs.existsSync(auditFile)) {
   for (const line of fs.readFileSync(auditFile, "utf-8").split("\n").filter(Boolean)) {
     // 格式: <UTC ISO> <PUSH|SKIPPED> <oid12|none> <verdict> <counts> <remote>
     // 三锐评 #四1：oid 位（parts[2]）可能为 "none"（formatEntry 对空 localOid 兜底），
     // "none" 不是真实提交，不得计入已审计集
     const parts = line.trim().split(/\s+/);
-    if (parts.length >= 3 && parts[2] && parts[2] !== "none") audited.add(parts[2]);
+    if (parts.length < 3 || !parts[2] || parts[2] === "none") continue;
+    audited.add(parts[2]);
+    if (parts[1] === "SKIPPED") skippedAt.push(Date.parse(parts[0] ?? "") || 0);
   }
 }
 
 // ── 3. 缺口 = 有推送事件、无审计记录 ──
-const missing = pushEvents.filter((e) => !audited.has(e.oid));
+// 四锐评 #2（SKIPPED oid 假阳性容差）：SKIPPED 行记的是钩子触发时刻的 HEAD 快照 oid，
+// SKIP 逃生后用户仍可 commit 再推——最终推送的 oid 与 SKIPPED 行不一致是**正常时序**，
+// 不应报缺口。容差：SKIPPED 行时间戳与推送事件相差 <10 分钟即视为同一次推送会话的留痕。
+const SKIP_WINDOW_MS = 10 * 60_000;
+const missing = pushEvents.filter((e) => {
+  if (audited.has(e.oid)) return false;
+  const evAt = Date.parse(e.at);
+  return !skippedAt.some((t) => Math.abs(evAt - t) < SKIP_WINDOW_MS);
+});
 
 if (jsonMode) {
   console.log(

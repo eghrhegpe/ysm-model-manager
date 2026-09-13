@@ -12,7 +12,10 @@ auto_fields:
     - BedrockBone
     - BedrockCube
     - BedrockModel
+    - BoneBounds
+    - BoundsOpts
     - calcBoneHitZones
+    - collectBoneBounds
     - cubeVec
     - drawMiniView
     - drawView

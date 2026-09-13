@@ -3,6 +3,7 @@
 // calcBoneHitZones：2D 正交投影热区计算（scale/偏移/骨骼位移/绕 pivot 旋转/前后视图）。
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
+import { collectBoneBounds } from "./model2d-hit-zones.ts";
 import type { BedrockModel, BedrockCube } from "./model2d.ts";
 import type { BoneTransform, Vec3 } from "@/utils/animation/animation.ts";
 
@@ -312,3 +313,45 @@ describe("renderModel2D 冒烟（canvas 2D mock）", () => {
     expect(canvas._ctx.clearRect.mock.calls.length).toBeGreaterThan(before);
   });
 });
+
+describe("collectBoneBounds 包围盒计算", () => {
+  const opts = (applyCubeRot: boolean) => ({
+    cosA: 1,
+    sinA: 0,
+    isFront: true,
+    boneTransforms: null,
+    applyCubeRot,
+  });
+
+  it("无旋转时包围盒等于 aabb（px=x, py=y）", () => {
+    const model = cubeModel("bone", SIMPLE_CUBE);
+    expect(collectBoneBounds(model, opts(true)).get("bone")).toEqual({
+      mnX: 0,
+      mxX: 2,
+      mnY: 0,
+      mxY: 4,
+    });
+  });
+
+  it("cube 级旋转使包围盒跟随（applyCubeRot=true ≠ false）", () => {
+    const rotCube = { origin: [0, 0, 0], size: [2, 4, 6], rotation: [0, 0, 90] } as BedrockCube;
+    const model = cubeModel("bone", rotCube);
+    const withRot = collectBoneBounds(model, opts(true)).get("bone")!;
+    const noRot = collectBoneBounds(model, opts(false)).get("bone")!;
+    expect(withRot).not.toEqual(noRot);
+    expect(withRot.mxX - withRot.mnX).toBeCloseTo(4, 5); // 旋转 90° 后宽度=原高度
+    expect(withRot.mxY - withRot.mnY).toBeCloseTo(2, 5); // 高度=原宽度
+  });
+
+  it("applyCubeRot=false 时回退为未旋转包围盒", () => {
+    const rotCube = { origin: [0, 0, 0], size: [2, 4, 6], rotation: [0, 0, 90] } as BedrockCube;
+    const model = cubeModel("bone", rotCube);
+    expect(collectBoneBounds(model, opts(false)).get("bone")).toEqual({
+      mnX: 0,
+      mxX: 2,
+      mnY: 0,
+      mxY: 4,
+    });
+  });
+});
+

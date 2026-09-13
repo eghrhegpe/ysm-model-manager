@@ -4,6 +4,7 @@
 
 import type { BoneTransform } from "@/utils/animation/animation.ts";
 import type { BedrockModel } from "./model2d.ts";
+import { collectBoneBounds } from "./model2d-hit-zones.ts";
 
 // P1 修复（审核）：cube 向量归一化——畸形模型缺 origin/size 或数组长度 <3 时
 // 解构 undefined 抛 TypeError，整张 2D 图静默空白（skeleton.ts 兜底）。统一入口
@@ -192,45 +193,6 @@ function mdDvApplyCubeRot(cube: Cube2D, cubeRot: number[], v: View2D): CubeProje
   return { ok, screenX, screenY, drawW, drawH, rzRad };
 }
 
-function mdDvProjectCorner(
-  cx: number,
-  cy: number,
-  cz: number,
-  pivot: number[],
-  btx: BoneTransform | undefined,
-  cosA: number,
-  sinA: number,
-  isFront: boolean,
-): { px2: number; py2: number } {
-  let _cx = cx;
-  let _cy = cy;
-  let _cz = cz;
-  if (btx) {
-    if (btx.position) {
-      _cx += btx.position[0] || 0;
-      _cy += btx.position[1] || 0;
-      _cz += btx.position[2] || 0;
-    }
-    const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
-    if (rz !== 0) {
-      const cRz = Math.cos(rz);
-      const sRz = Math.sin(rz);
-      const dxx = _cx - pivot[0];
-      const dyy = _cy - pivot[1];
-      _cx = pivot[0] + dxx * cRz - dyy * sRz;
-      _cy = pivot[1] + dxx * sRz + dyy * cRz;
-    }
-    const rx = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
-    if (rx !== 0) {
-      const dyy = _cy - pivot[1];
-      _cy = pivot[1] + dyy * Math.cos(rx);
-    }
-  }
-  const rxx = _cx * cosA - _cz * sinA;
-  const rzz = _cx * sinA + _cz * cosA;
-  return { px2: rxx, py2: isFront ? _cy : rzz };
-}
-
 function mdDvDrawLabels(
   ctx: CanvasRenderingContext2D,
   model: BedrockModel,
@@ -243,39 +205,24 @@ function mdDvDrawLabels(
   boneTransforms: Map<string, BoneTransform> | null,
   isFront: boolean,
 ): void {
+  // P1 收敛（审核）：包围盒计算统一走 collectBoneBounds（原内联 mdDvProjectCorner），
+  // applyCubeRot=true 使标签位置跟随 cube 级旋转，与绘制形状口径一致。
+  const bounds = collectBoneBounds(model, {
+    cosA,
+    sinA,
+    isFront,
+    boneTransforms,
+    applyCubeRot: true,
+  });
   ctx.save();
   ctx.font = "8px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const bone of model.bones || []) {
-    const cs = bone.cubes || [];
-    if (!cs.length) continue;
-    const btx = boneTransforms?.get(bone.name);
-    let mnX = Infinity;
-    let mxX = -Infinity;
-    let mnY = Infinity;
-    let mxY = -Infinity;
-    for (const c of cs) {
-      const [x, y, z] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
-      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-      for (let dx = 0; dx <= 1; dx++) {
-        for (let dy = 0; dy <= 1; dy++) {
-          for (let dz = 0; dz <= 1; dz++) {
-            const cx = x + dx * sx;
-            const cy = y + dy * sy;
-            const cz = z + dz * sz;
-            const { px2, py2 } = mdDvProjectCorner(cx, cy, cz, pivot, btx, cosA, sinA, isFront);
-            if (px2 < mnX) mnX = px2;
-            if (px2 > mxX) mxX = px2;
-            if (py2 < mnY) mnY = py2;
-            if (py2 > mxY) mxY = py2;
-          }
-        }
-      }
-    }
-    const cx2 = ox + ((mnX + mxX) / 2) * scale;
-    const cy2 = oy - ((mnY + mxY) / 2) * scale;
+    const b = bounds.get(bone.name);
+    if (!b) continue;
+    const cx2 = ox + ((b.mnX + b.mxX) / 2) * scale;
+    const cy2 = oy - ((b.mnY + b.mxY) / 2) * scale;
     const txt = bone.name;
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     const tw = ctx.measureText(txt).width;
@@ -335,16 +282,13 @@ function drawView(
             rzRad: r.rzRad,
           });
         } else {
-          const rx = x * cosA - z * sinA;
-          const rz = x * sinA + z * cosA;
-          const px = rx;
-          const py = isFront ? y : rz;
+          const px = x * cosA - z * sinA;
           const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-          const ph = isFront ? sy : sz;
           const drawX = ox + px * scale;
-          const drawY = oy - (py + ph) * scale;
+          // drawView 仅前视图（isFront=true），py=y、ph=sy 为定值；删原 isFront 三元死分支
+          const drawY = oy - (y + sy) * scale;
           const drawW = pw * scale;
-          const drawH = ph * scale;
+          const drawH = sy * scale;
           if (drawW < 0.5 || drawH < 0.5) continue;
           mdDvDrawRect(ctx, isHighlight, drawW, drawH, {
             mode: "plain",

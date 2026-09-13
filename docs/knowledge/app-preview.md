@@ -15,7 +15,9 @@ auto_fields:
     - BedrockBone
     - BedrockCube
     - BedrockModel
+    - BoneBounds
     - BoneEntry
+    - BoundsOpts
     - buildBoneExportRow
     - buildBoneNamesText
     - buildStatsCard
@@ -32,6 +34,7 @@ auto_fields:
     - cleanupVrm3D
     - cleanupYsm3D
     - closeActive3DOverlay
+    - collectBoneBounds
     - componentCountsFromSpec
     - createFbx3D
     - createLitematic3D

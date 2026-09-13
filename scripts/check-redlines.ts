@@ -116,6 +116,41 @@ function rgTracked(pattern: string, paths: string | string[], globs: string[]): 
   }
 }
 
+/** R5 硬编码色字面量（与 rgTracked 的扫描正则同源，供「剥离 var 后复检」复用）。 */
+const R5_COLOR_RE = /#[0-9a-f]{3}(?:[0-9a-f]{3})?\b|rgba?\(|hsla?\(/i;
+
+/**
+ * 剥离行内全部 `var(...)` 调用（含嵌套括号）后返回残量。
+ * 用途：R5 的「var 回退色豁免」原本是「整行含 `var(--` 即免检」，会连同行真正的硬编码调色板
+ * 一起放过（`background: var(--a, #fff), #6B9FFF` 这类混排是 R5 最该抓的形态）。
+ * 改为只看 var() 之外的残量后：`var(--muted, #888)` 仍豁免（fallback 落在 var 内被剥掉），
+ * 而同行混排的裸色不再逃逸。
+ */
+function stripVarCalls(line: string): string {
+  let out = "";
+  let i = 0;
+  while (i < line.length) {
+    const at = line.indexOf("var(", i);
+    if (at < 0) return out + line.slice(i);
+    out += line.slice(i, at);
+    // 从 `var(` 起按括号配对找到调用结束（畸形未闭合则吃到行尾）
+    let depth = 0;
+    let j = at + 3;
+    for (; j < line.length; j++) {
+      if (line[j] === "(") depth++;
+      else if (line[j] === ")") {
+        depth--;
+        if (depth === 0) {
+          j++;
+          break;
+        }
+      }
+    }
+    i = j;
+  }
+  return out;
+}
+
 /**
  * 基线比对模式：当前 1073 条违规是历史累积债务，强阻断会立刻卡死推送。
  * 与 check-deadcode-baseline 同构——建基线记录当前违规集，只阻断「新增」违规。
@@ -264,9 +299,10 @@ function runChecks() {
   );
 
   // R5 硬编码颜色：CSS 文件全豁免（颜色是 CSS 的定义载体）；
-  // 测试文件豁免；CSS-in-JS 模板/工具文件豁免（tpl.ts/css.ts/fab.ts 等）；
+  // 测试文件豁免；CSS-in-JS 载体豁免（tpl.ts/css.ts/fab.ts + app-content/css/ 目录）；
   // 3D 渲染工具文件豁免（颜色是渲染算法的固有部分）；
-  // var() 回退色豁免（已使用 CSS 变量，硬编码仅为 fallback）；
+  // var() 回退色豁免（剥离 var() 整体后仅扫残量，见 stripVarCalls——原「整行含 var 即免检」
+  //   会放过「主题变量 + 硬编码色混排」这一最该抓的形态）；
   // 颜色数据/格式化工具文件豁免；
   // 内联 style 字符串 / style.cssText / style.xxx 赋值 / CSS 规则块豁免；
   // CSS 属性行豁免（box-shadow/background 等带颜色的 CSS 属性）
@@ -293,7 +329,12 @@ function runChecks() {
           !/\/tpl\.ts$/.test(f) &&
           !/\/css\.ts$/.test(f) &&
           !f.endsWith("/fab.ts") &&
-          !f.includes("content-css") &&
+          // CSS-in-JS 载体豁免：app-content 的 CSS 分片目录整体豁免（content-css.ts 聚合层
+          // + creator/repo/diag/layout/stg/util 分片），与原「CSS 文件全豁免（颜色是 CSS 的
+          // 定义载体）」同源。历史缺口：原仅豁免聚合层 `content-css`，6 个分片文件只能靠逐行
+          // 「CSS 属性行豁免」兜底——兜不住 text-shadow 等未列入的属性，R5 收紧 var 规则后
+          // 即浮出 content-repo.ts 的装饰阴影行（同文件相邻的 box-shadow 行却早已豁免）。
+          !f.includes("/views/app-content/css/") &&
           !f.includes("app-tree-styles")
         );
       })
@@ -301,7 +342,13 @@ function runChecks() {
         const [f] = parseRgLine(l);
         return !f.includes("/3d/");
       })
-      .filter((l) => !/var\(--/.test(l))
+      .filter((l) => {
+        // var 回退色豁免（精确版）：剥离 `var(...)` 整体后，仅当残量仍有颜色字面量才命中。
+        // 语义注意：本链中「filter 保留 = 违规」，故此处**不带 `!`**——原实现为 `!/var\(--/.test(l)`，
+        // 即「不含 var 才保留」，改写时若照抄取反会整个反转 R5 语义（实测会从 23 条塌成 3 条）。
+        const [, , text] = parseRgLine(l);
+        return R5_COLOR_RE.test(stripVarCalls(text));
+      })
       // 颜色数据/算法模块豁免（R5 针对硬编码 UI 调色板，非数据/算法色）：
       // - voxel-colors-data.ts：生成式「方块名→十六进制」配色表（DO NOT EDIT），颜色即数据；
       // - voxel-parse.ts：调色板解析默认值 #000000（数据兜底）；

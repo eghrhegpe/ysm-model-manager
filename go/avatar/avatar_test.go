@@ -198,10 +198,10 @@ func TestExtractAvatarURI_FromZipNoMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 请求不存在的用户 → 无作者匹配，降级扫描 avatar/ 目录（找到 face.png）→ 非空
+	// 请求不存在的用户 → authors 非空且用户不在列表 → 不降级（对齐 .ysm 分支）→ 空
 	result := ExtractAvatarURI(zipPath, "不存在用户")
-	if result == "" {
-		t.Fatal("降级路径应返回降级头像, 得到空")
+	if result != "" {
+		t.Fatalf("authors 非空请求不存在用户应返回空（对齐 .ysm 不降级）, 得到 %q", result)
 	}
 }
 

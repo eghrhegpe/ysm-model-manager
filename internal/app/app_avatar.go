@@ -148,3 +148,8 @@ func (a *App) CacheModelAvatars(modelPath string) {
 	}
 	avatar.CacheAvatarsFromModel(modelPath)
 }
+
+// PurgeCreatorAvatarCache 清空创作者头像缓存，返回删除的文件数。
+func (a *App) PurgeCreatorAvatarCache() (int, error) {
+	return avatar.PurgeAvatarCache()
+}

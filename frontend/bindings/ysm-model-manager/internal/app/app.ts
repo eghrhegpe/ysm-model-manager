@@ -895,6 +895,13 @@ export function PullSingleResourceFromInstance(rtype: string, srcPath: string, i
 }
 
 /**
+ * PurgeCreatorAvatarCache 清空创作者头像缓存，返回删除的文件数。
+ */
+export function PurgeCreatorAvatarCache(): $CancellablePromise<number> {
+    return $Call.ByID(577927747);
+}
+
+/**
  * PushResourceToInstance 将全局中缺失的资源推送到整合包
  * PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync）
  */

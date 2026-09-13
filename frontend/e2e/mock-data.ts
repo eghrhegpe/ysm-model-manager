@@ -326,6 +326,7 @@ export const MOCK_DATA = {
   PlazaZoomReset: undefined,
   PullResourceFromInstance: undefined,
   PushResourceToInstance: undefined,
+  PurgeCreatorAvatarCache: undefined,
   QueueStatus: undefined,
   ReadFileBytes: undefined,
   ReadFileBytesBatch: undefined,

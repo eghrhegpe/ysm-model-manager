@@ -159,6 +159,39 @@ func TestReadCachedAvatar_IOError(t *testing.T) {
 	}
 }
 
+// ===== PurgeAvatarCache 补测（P1-2 缓存失效手动收口） =====
+
+func TestPurgeAvatarCache(t *testing.T) {
+	old := CacheDir
+	dir := t.TempDir()
+	CacheDir = func() string { return dir }
+	defer func() { CacheDir = old }()
+
+	// 无缓存目录：nothing to purge
+	if n, err := PurgeAvatarCache(); err != nil || n != 0 {
+		t.Fatalf("空目录 purge 应为 (0, nil), 得到 (%d, %v)", n, err)
+	}
+	// 落盘 2 个头像后 purge 返回 2，目录清空
+	SaveAvatarData("userA", []byte("a"), "image/png")
+	SaveAvatarData("userB", []byte("b"), "image/png")
+	if n, err := PurgeAvatarCache(); err != nil || n != 2 {
+		t.Fatalf("purge 应删 2 个文件, 得到 (%d, %v)", n, err)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("purge 后缓存目录应为空, 仍有 %d 项", len(entries))
+	}
+}
+
+func TestPurgeAvatarCache_NoCacheDir(t *testing.T) {
+	// 平台数据根缺失（CacheDir 返回空）→ no-op (0, nil)
+	old := CacheDir
+	CacheDir = func() string { return "" }
+	defer func() { CacheDir = old }()
+	if n, err := PurgeAvatarCache(); err != nil || n != 0 {
+		t.Fatalf("数据根缺失 purge 应为 (0, nil), 得到 (%d, %v)", n, err)
+	}
+}
+
 func TestSaveAvatarData_CacheDirUnwritable(t *testing.T) {
 	// 缓存目录创建失败/原子写失败：仅 log，仍返回 data URI（有意降级，不 panic）
 	old := CacheDir
@@ -444,8 +477,8 @@ func TestExtractAvatarURI_FromZip_PathTraversal(t *testing.T) {
 }
 
 func TestExtractAvatarURI_FromZip_MissingAvatar(t *testing.T) {
-	withTempCache(t) // 降级命中 avatar/face.png 会 SaveAvatarData 落盘，须重定向防污染真实用户缓存
-	// 作者匹配但 zip 内无对应头像文件 → 降级扫描 avatar/ 目录找到 face.png → 非空
+	withTempCache(t)
+	// 作者匹配但 zip 内无对应头像文件 → authors 非空不降级（2026-09-14 对齐 .ysm 分支）→ 空
 	ysmJSON := `{"metadata":{"authors":[{"name":"测试用户","avatar":"avatar/missing.png"}]}}`
 	data := makeZip(t, map[string]string{
 		"ysm.json":        ysmJSON,
@@ -456,8 +489,8 @@ func TestExtractAvatarURI_FromZip_MissingAvatar(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := ExtractAvatarURI(zipPath, "测试用户")
-	if result == "" {
-		t.Fatal("降级路径应返回降级头像, 得到空")
+	if result != "" {
+		t.Fatalf("authors 非空匹配失败应返回空（对齐 .ysm 不降级）, 得到 %q", result)
 	}
 }
 

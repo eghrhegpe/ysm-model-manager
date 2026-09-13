@@ -14,6 +14,7 @@ auto_fields:
     - DecodeYSMData
     - ExtractAvatarURI
     - FS
+    - PurgeAvatarCache
     - ReadCachedAvatar
     - ReadFileFromContainer
     - SafeName
@@ -31,7 +32,7 @@ quick_risk_lines:
 pitfalls:
   - 手写头像路径拼接 → 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验
   - zip/7z 容器打开统一走 openModelContainer（avatar_extract_container.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错）
-  - 头像缓存不失效 → 换头像后仍显示旧图；必须经缓存失效策略
+  - 头像缓存不失效 → 换头像后仍显示旧图；手动 `avatar purge` CLI 清空重建（P1-2 落地 2026-09-14），自动失效（ModTime 键）留待后续
 
 use_when:
   - 头像
@@ -72,7 +73,8 @@ status: active
 - `SaveAvatarData(safeName string, data []byte, mime string) string` — 写缓存并返回 data URI
 - `ExtractAvatarURI(modelPath, safeName string) string` — 从 .ysm/.zip/.7z/.json 提取指定作者的头像 data URI；无 authors 声明时降级取 avatar/ 目录第一张图（.ysm/.zip/.7z 三态一致；.json 分支不降级）
 - `CacheAvatarsFromJSON(modelPath string)` — 从解压目录的 ysm.json 批量缓存所有作者头像（已有缓存则跳过）
-- `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（.ysm/.zip/.7z/.json 按扩展名分派，无 authors 声明时降级取 avatar/ 目录第一张图）
+- `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（.ysm/.zip/.7z/.json 按扩展名分派；authors 非空时仅缓存「声明 avatar 且可解析」的作者，不降级落盘）
+- `PurgeAvatarCache() (int, error)` — 清空头像缓存目录下所有文件，返回删除数（P1-2，2026-09-14；CLI `avatar purge` 调用）
 - `ReadFileFromContainer(r container.Reader, target string) []byte` — 按 `container.FindEntry`（`MatchEntryName` 契约，反斜杠/大小写归一化）从统一容器受限读取文件；原 zip 专用 `ReadFileFromZip` 已随 ADR-068 收敛**删除**（2026-09-14，生产零引用，测试 6 处迁至本函数）
 - `SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte)` — 注入 Node.js 路径与 WASM 胶水代码/二进制加载器（由 wasm_decoder.go 在启动时调用）
 - `DecodeYSMData(ysmData []byte) []ysmDecodedFile` — 全仓唯一 Node+WASM 解码桥（ADR-164），起隐藏子进程执行 YSMParser WASM，把 .ysm 二进制解码为文件列表（path + 原始字节）。200MB 输入/输出护栏 + 60s 超时。`internal/app/wasm_decoder.go` 调本函数（薄封装，禁止复刻）
@@ -91,7 +93,7 @@ status: active
 - 缓存文件名一律经 `SafeName` 清洗（非法字符 + Windows 保留设备名 CON/PRN/AUX/NUL/COM1-9/LPT1-9 + 尾部点/空格），防路径穿越与写缓存失败
 - **读回缓存按文件头嗅探 mime**（P3 修复：JPEG 头像以 `.png` 落盘、读回恒硬编码 `data:image/png` → MIME 错误；现 `FFD8FF` 头识别为 `image/jpeg`）
 - **P3 已对齐**：降级取 avatar/ 第一张图已由 .ysm/.zip/.7z 三态实现（.json 分支不降级）；`CacheAvatarsFromModel`（.ysm 走 `cacheYSMavatars` 单遍、容器走 `containerAuthorNames`）批量路径已同步补 .7z 分支（R20 审核 P3-4，原仅 `ExtractAvatarURI` 路径支持 .7z）；`ExtractAvatarURI` 由旧 `DecodeOneAvatar(modelPath, cacheDir, safeName)` 重构为 `(modelPath, safeName)`，`cacheDir` 形参已废弃（落盘走全局 `CacheDir()`）
-- ⚠️ **容器降级分叉（2026-09-14 记档，留待统一）**：`extractAvatarFromContainer` 在 **authors 非空且该作者匹配失败时同样降级**首图并按 safeName 落盘（测试 `TestExtractAvatarURI_FromZip_MissingAvatar`/`TestExtractAvatarURI_From7zFallback` 钉死），与 .ysm 分支（authors 非空不降级，见 `extractAvatarFromYSM`）语义不一致——**已知设计决策**。叠加「缓存无失效」（见 pitfalls）时降级图会持久化，是 P1 隐患；统一方向未定（对齐 .ysm / 降级不落盘）
+- ⚠️ ~~容器降级分叉~~ **已统一（2026-09-14 对齐 .ysm）**：`extractAvatarFromContainerWithAuthors` 原在 **authors 非空且该作者匹配失败时降级**首图并按 safeName 落盘，与 .ysm 分支（authors 非空不降级）语义分叉——已对齐：容器分支现**仅 authors 为空时降级**取 avatar/ 目录首图（测试 `TestExtractAvatarURI_FromZip_MissingAvatar`/`TestExtractAvatarURI_FromZipNoMatch` 已改为断言空钉死新语义）
 - **R32 修复链（2026-08-31）**：
   - P2-1 `ReadFileFromZip` defer-in-loop：`defer rc.Close()` 位于 for 循环体内，多条目命中时累积未关闭句柄。修复：循环内显式 `rc.Close()`，不依赖 defer。
   - P2-2 `ReadFileFromZip` 死代码：生产路径已全面切换到 `container.Reader`，全包仅测试引用。**已删除**（2026-09-14）：函数移除，测试 6 处迁至 `ReadFileFromContainer`（`FindEntry`/`MatchEntryName` 同一契约，行为等价）。

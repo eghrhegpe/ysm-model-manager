@@ -72,6 +72,7 @@ type AppService interface {
 	CachedCreatorAvatar(authorName string) (string, error)
 	BatchExtractCreatorAvatars() (map[string]string, error)
 	CacheModelAvatars(modelPath string)
+	PurgeCreatorAvatarCache() (int, error)
 	DefaultWorkshopSites() []types.WorkshopSite
 	LoadWorkshopCreators() []types.WorkshopCreator
 	ValidateWorkshopSites() (int, error)

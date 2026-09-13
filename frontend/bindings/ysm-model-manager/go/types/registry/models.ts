@@ -117,7 +117,7 @@ export interface ModRequirement {
 }
 
 /**
- * NestedPattern 嵌套模型模式配置（ADR-XXX）：
+ * NestedPattern 嵌套模型模式配置：
  * 支持任意深度的嵌套路径检测，用于识别多层嵌套的模型结构。
  * 例如 maid-model 的 assets/<namespace>/maid_model.json 结构，
  * 或其他更深层的嵌套目录结构。
@@ -238,12 +238,12 @@ export interface ResourceType {
     "zipEntries": ZipEntryMatch[] | null;
 
     /**
-     * 嵌套模型目录（ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
+     * 嵌套模型目录（无独立 ADR，特性登记见 extensions.go 注释 + 知识卡 go-types-registry；原注释误引 ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
      */
     "nestedModelDir": boolean;
 
     /**
-     * 嵌套模式配置（ADR-XXX）：支持任意深度的嵌套路径检测
+     * 嵌套模式配置（无独立 ADR）：支持任意深度的嵌套路径检测
      */
     "nestedPatterns"?: NestedPattern[] | null;
 

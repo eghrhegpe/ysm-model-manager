@@ -69,9 +69,9 @@ func readContainerAuthors(r container.Reader) []authorEntry {
 // cacheContainerAvatars .zip/.7z 单遍缓存：一次受限整读 + 一次开容器 + 一次 ysm.json
 // 解析，逐作者复用已打开的容器与已解析作者列表（P2-8：原实现每作者
 // extractAvatarFromContainer 重读 ysm.json，7z 固实压缩下 N+1 次解压成本）。
-// 语义与旧实现等价：作者声明 avatar 可解析则缓存之；否则降级取容器内 avatar/
-// 目录第一张图（extractAvatarFromContainerWithAuthors 同口径——容器分支的降级在
-// authors 非空且该作者匹配失败时同样生效，与 .ysm 分支行为不同，这里保持一致）。
+// 语义与 .ysm 分支（cacheYSMavatars）对齐：仅缓存「声明 avatar 且容器内可解析到文件」
+// 的作者头像；authors 非空且该作者匹配失败时不降级落盘（2026-09-14 分叉已统一），
+// authors 为空时 for 循环不执行、无缓存动作。
 func cacheContainerAvatars(modelPath, ext string) {
 	cacheDir, ok := avatarCacheDir()
 	if !ok {
@@ -95,8 +95,8 @@ func cacheContainerAvatars(modelPath, ext string) {
 		if avatarCached(cacheDir, safe) {
 			continue // 已缓存，跳过
 		}
-		// 单作者容器提取（作者匹配 → 降级首图，内部 SaveAvatarData 落盘）；
-		// 返回 "" 表示该作者无可提取头像（未声明 avatar 且容器无降级图），补日志便于排查
+		// 单作者容器提取（作者匹配成功即 SaveAvatarData 落盘；authors 非空匹配失败
+		// 不降级，与 .ysm 分支对齐）；返回 "" 表示该作者无可提取头像，补日志便于排查
 		if uri := extractAvatarFromContainerWithAuthors(r, authors, safe); uri == "" {
 			log.Printf("[avatar] %s 作者 %s 未提取到头像（无 avatar 声明或容器内无候选图）", modelPath, safe)
 		}
@@ -104,15 +104,16 @@ func cacheContainerAvatars(modelPath, ext string) {
 }
 
 // extractAvatarFromContainer 处理压缩包（zip/7z）头像提取的通用逻辑：
-// 解析作者列表 → 按作者名匹配 → avatar/ 目录降级（authors 非空且匹配失败时同样
-// 降级首图并按 safeName 落盘，与 .ysm 分支语义分叉——2026-09-14 知识卡记档留待统一）。
+// 解析作者列表 → 按作者名匹配 → 仅 authors 为空时降级取 avatar/ 目录首图
+// （2026-09-14 与 .ysm 分支语义分叉已统一，见 extractAvatarFromContainerWithAuthors）。
 func extractAvatarFromContainer(r container.Reader, safeName string) string {
 	return extractAvatarFromContainerWithAuthors(r, readContainerAuthors(r), safeName)
 }
 
 // extractAvatarFromContainerWithAuthors 复用已解析作者列表的单作者容器提取。
 // 批量路径（cacheContainerAvatars）传已解析列表，避免每作者重复读 ysm.json
-// （P2-8）。匹配失败时降级取容器内 avatar/ 目录第一张图。
+// （P2-8）。语义对齐 .ysm 分支（extractAvatarFromYSM）：仅 authors 为空时
+// 降级取容器内 avatar/ 目录第一张图；authors 非空且匹配失败返回 ""（不降级）。
 func extractAvatarFromContainerWithAuthors(r container.Reader, authors []authorEntry, safeName string) string {
 	// 按作者名匹配头像
 	for _, au := range authors {
@@ -129,7 +130,13 @@ func extractAvatarFromContainerWithAuthors(r container.Reader, authors []authorE
 		}
 	}
 
-	// 降级：avatar/ 目录第一张 .png/.jpg/.jpeg
+	// authors 非空且匹配失败 → 不降级（对齐 .ysm 分支：声明了作者列表时
+	// 取首图会张冠李戴；仅 authors 为空时才降级取 avatar/ 目录首图）
+	if len(authors) > 0 {
+		return ""
+	}
+
+	// 降级：avatar/ 目录第一张 .png/.jpg/.jpeg（仅 authors 为空可达）
 	for _, e := range r.Entries() {
 		if e.IsDir() {
 			continue

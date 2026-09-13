@@ -213,3 +213,33 @@ func readLimitedAvatar(path string) ([]byte, error) {
 	}
 	return data, nil
 }
+
+// PurgeAvatarCache 清空头像缓存目录下所有文件，返回删除的文件数。
+// 目录不存在或平台数据根缺失视为无缓存可清（返回 0, nil）；单个删除失败 log 后
+// 继续（与 texture_cache.ClearCache 同风格），不阻断其余文件清理。
+func PurgeAvatarCache() (int, error) {
+	dir := CacheDir()
+	if dir == "" {
+		return 0, nil // 平台数据根缺失：no-op
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return 0, nil // 无缓存目录：nothing to purge
+		}
+		return 0, err
+	}
+	n := 0
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		p := filepath.Join(dir, e.Name())
+		if err := os.Remove(p); err != nil {
+			log.Printf("[avatar] 清理缓存文件失败 %s: %v", p, err)
+			continue
+		}
+		n++
+	}
+	return n, nil
+}

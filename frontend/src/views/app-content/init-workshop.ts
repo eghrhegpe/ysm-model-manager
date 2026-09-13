@@ -103,11 +103,11 @@ export function initWorkshopPage(host: AppContentHost): void {
         await showRepoModels(
           (s) => esc(String(s || "")),
           host.state.repoEventsCleanup,
-          (fn) => {
+          (fn: (() => Promise<void>) | null) => {
             host.state.repoEventsCleanup = fn;
           },
           host.state.currentSite,
-          (site) => {
+          (site: WorkshopSite | null) => {
             host.state.currentSite = site;
           },
           repo,

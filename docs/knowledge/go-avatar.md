@@ -8,7 +8,6 @@ source_files:
   - go/avatar/
 auto_fields:
   symbols_with_lines:
-    - CacheAvatarsFromJSON
     - CacheAvatarsFromModel
     - CacheDir
     - DecodeYSMData

@@ -43,8 +43,9 @@ func modelBaseName(name string) string {
 }
 
 // baseName 去路径分隔符（/ 与 \ 兼容）取文件基名。全文 basename 剥离的公共原子：
-// modelBaseName / texBasenameNoExt / compBaseName / extractFirstPNG 等均复用，
-// 原 collectPngEntries / collectMergedFiles 各抄一份逐字相同的剥离块已收敛。
+// modelBaseName / texBasenameNoExt / compBaseName / collectMergedFiles / collectPngEntries 等
+// 均复用，原 collectPngEntries / collectMergedFiles 各抄一份逐字相同的剥离块已收敛。
+// 注：extractFirstPNG 不调本函数（它用 strings.ContainsAny 检测根目录，非 basename 剥离）。
 func baseName(name string) string {
 	if idx := strings.LastIndexAny(name, "/\\"); idx >= 0 {
 		return name[idx+1:]

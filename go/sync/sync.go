@@ -512,11 +512,12 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 
 	// 冲突检测（如果配置了冲突策略）
 	if config != nil && config.ConflictPolicy != "" {
-		// 锁契约断言（仅测试构建）：config.ConflictPolicy 非空时，
-		// 调用方必须已持有 installer.InstallLock，否则 ResolveConflictsLocked 会
-		// self-deadlock（sync.Mutex 不可重入）。
-		// 生产路径经 PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行，
-		// 此断言用于捕获直接调用 SyncResourcesWithConfig 但未持锁的违规场景。
+		// 锁契约断言（生产构建同样编译——fail-fast 守卫，非测试专属）：
+		// config.ConflictPolicy 非空时，调用方必须已持有 installer.InstallLock，
+		// 否则 ResolveConflictsLocked 会 self-deadlock（sync.Mutex 不可重入）。
+		// 当前生产调用链（PushResources/PullResources → SyncResources）恒传 nil config，
+		// 非空 config 仅测试注入；断言捕获「未来新增直接调用且未持锁」的违规场景，
+		// 违规即 panic（安全侧失败，优于静默死锁）。
 		assertInstallLockHeld()
 		report, err := DetectConflicts(instanceDir, globalDir, rtypeID)
 		if err != nil {

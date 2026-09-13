@@ -235,6 +235,34 @@ func TestHealthReportFor_ErrOnMissingDir(t *testing.T) {
 	}
 }
 
+// TestIsModelFileValid_SizeLimit 钉住完整性校验的读取上限（R34 P3-4 修复）：
+// 超过 modelFileReadLimit 的 .json/.ysm 必须判无效——防数 GB 恶意/损坏文件
+// 全量载入内存（与 go/ysm readFileLimited、fsutil.ReadLimitedEntry 同族口径）。
+// 经包级 var 注入小 limit，避免测试真写 50MB 文件。
+func TestIsModelFileValid_SizeLimit(t *testing.T) {
+	dir := t.TempDir()
+	// 合法 JSON，但体积超过下方注入的临时上限
+	big := []byte(`{"format_version":"1.16.0","pad":"` + strings.Repeat("a", 4096) + `"}`)
+	bigPath := filepath.Join(dir, "big.json")
+	if err := os.WriteFile(bigPath, big, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig := modelFileReadLimit
+	modelFileReadLimit = 8 // 字节级上限：合法 JSON 也超限
+	defer func() { modelFileReadLimit = orig }()
+
+	if isModelFileValid(bigPath, ".json") {
+		t.Error("超限文件即使 JSON 合法也应判无效（防无界载入内存）")
+	}
+
+	// 对照组：恢复默认上限后同一文件应判有效
+	modelFileReadLimit = orig
+	if !isModelFileValid(bigPath, ".json") {
+		t.Error("默认上限内合法 JSON 应判有效")
+	}
+}
+
 // TestClassifyWith_RebuildOnRegistrySwap 钉住 Classify/ClassifyWith 缓存随
 // 注册表实例失效重建（code_review 963d4d36 #7 补测试）：
 // 与 go/types/extensions_map_test.go 同款范式——SetRegistryPath 切换后，

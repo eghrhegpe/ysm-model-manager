@@ -363,28 +363,38 @@ func generateAuditWarnings(result *DirAuditResult) {
 	}
 }
 
+// modelFileReadLimit 完整性校验单文件读取上限（R34 P3-4 修复）：
+// 与 go/ysm readFileLimited、fsutil.ReadLimitedEntry 同族口径——超限文件直接判
+// 无效，防数 GB 恶意/损坏 .json/.ysm 全量载入内存（OOM）。包级 var 供测试注入小值。
+var modelFileReadLimit int64 = registry.MaxReadLimit
+
 // isModelFileValid 验证模型文件完整性
 // .json: 必须合法 JSON 且含 format_version 字段（Bedrock 模型/容器清单均带此字段，
 //
 //	空对象 {} 或任意数组不再放行——防结构损坏文件被标记「有效」造成完整性假绿）
 //
 // .ysm: 同 .json 规则（ysm 容器为 format_version + minecraft:geometry 结构）
+// 读取经 fsutil.ReadLimitedEntry 限幅（limit+1 探测截断，超限返回 nil → 判无效），
+// 数据由本函数关闭。
 func isModelFileValid(path, ext string) bool {
 	f, err := os.Open(path)
 	if err != nil {
 		return false
 	}
-	defer f.Close()
 
 	st, err := f.Stat()
 	if err != nil || st.Size() == 0 {
+		f.Close()
 		return false
 	}
 
 	if ext == ".json" || ext == ".ysm" {
+		data := fsutil.ReadLimitedEntry(f, modelFileReadLimit)
+		if data == nil {
+			return false
+		}
 		var v map[string]interface{}
-		dec := json.NewDecoder(f)
-		if err := dec.Decode(&v); err != nil {
+		if err := json.Unmarshal(data, &v); err != nil {
 			return false
 		}
 		// 最小结构校验：必须含 format_version（或 minecraft:geometry），
@@ -396,6 +406,7 @@ func isModelFileValid(path, ext string) bool {
 		_, hasBones := v["bones"]
 		return hasGeo || hasBones
 	}
+	f.Close()
 	return true
 }
 

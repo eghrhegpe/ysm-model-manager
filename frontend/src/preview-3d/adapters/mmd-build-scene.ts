@@ -77,6 +77,48 @@ async function Stage3MountAndDebug(c: Stage3Ctx): Promise<boolean> {
   return true;
 }
 
+/** 材质纹理槽位引用（matTexSlots(mat)[key] 可读写槽） */
+type MatTexSlotRef = { mat: THREE.Material; key: (typeof DISPOSE_TEX_KEYS)[number] };
+
+/** 单 hash 的 KTX2 替换任务：loadAsync 一次 → 同一份压缩纹理赋给所有共享槽（保持纹理共享语义）。
+ *  链恒 resolve（无缓存字节 / 解码失败 → 保留原纹理），供外层 Promise.all await 与 replaced= 计数
+ *  ——不可改 fire-and-forget。 */
+function replaceHashSlots(
+  c: Stage3Ctx,
+  hash: string,
+  slots: MatTexSlotRef[],
+  getCachedTextureByHash: (hash: string) => Promise<string | null>,
+): Promise<void> {
+  return getCachedTextureByHash(hash).then((ktx2B64) => {
+    if (!ktx2B64) return;
+    const ktxBytes = base64ToBytes(ktx2B64) as Uint8Array;
+    const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
+    const ktxUrl = URL.createObjectURL(ktxBlob);
+    c.blobUrls.push(ktxUrl);
+    return (
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+      c
+        .ktx2CacheLoader!.loadAsync(ktxUrl)
+        .then((compressedTex) => {
+          for (const { mat, key } of slots) {
+            const prev = matTexSlots(mat)[key];
+            matTexSlots(mat)[key] = compressedTex;
+            if (prev instanceof THREE.Texture) prev.dispose();
+            mat.needsUpdate = true;
+          }
+        })
+        // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve）
+        .catch((err) =>
+          dbg("ktx2-replace-fail", {
+            hash,
+            slots: slots.length,
+            err: safeErrorMessage(err),
+          }),
+        )
+    );
+  });
+}
+
 // 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）
 async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
   if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
@@ -103,7 +145,7 @@ async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
         // 会让共享同一纹理的 N 个材质槽各解码一次 KTX2（three-mmd 用 ctx.textures[fullPath]
         // 缓存共享身份），浪费 GPU 内存且破坏纹理共享。聚合后同一 hash 的所有槽
         // 赋同一份 CompressedTexture 实例，保持与原纹理一致的共享语义。
-        const slotsByHash = new Map<string, Array<{ mat: THREE.Material; key: string }>>();
+        const slotsByHash = new Map<string, MatTexSlotRef[]>();
         for (const mat of allMats) {
           for (const key of DISPOSE_TEX_KEYS) {
             const tex = matTexSlots(mat)[key];
@@ -120,37 +162,7 @@ async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
         // 逐 hash 单次替换：loadAsync 一次 → 同一份压缩纹理赋给所有共享槽
         const replaceTasks: Array<Promise<void>> = [];
         for (const [hash, slots] of slotsByHash) {
-          replaceTasks.push(
-            getCachedTextureByHash(hash).then((ktx2B64) => {
-              if (!ktx2B64) return;
-              const ktxBytes = base64ToBytes(ktx2B64) as Uint8Array;
-              const ktxBlob = new Blob([bytesToArrayBuffer(ktxBytes)]);
-              const ktxUrl = URL.createObjectURL(ktxBlob);
-              c.blobUrls.push(ktxUrl);
-              return (
-                // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-                c
-                  .ktx2CacheLoader!.loadAsync(ktxUrl)
-                  .then((compressedTex) => {
-                    for (const { mat, key } of slots) {
-                      const prev = matTexSlots(mat)[key];
-                      matTexSlots(mat)[key] = compressedTex;
-                      if (prev instanceof THREE.Texture) prev.dispose();
-                      mat.needsUpdate = true;
-                    }
-                  })
-                  // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
-                  // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
-                  .catch((err) =>
-                    dbg("ktx2-replace-fail", {
-                      hash,
-                      slots: slots.length,
-                      err: safeErrorMessage(err),
-                    }),
-                  )
-              );
-            }),
-          );
+          replaceTasks.push(replaceHashSlots(c, hash, slots, getCachedTextureByHash));
         }
         await Promise.all(replaceTasks);
         await mmdDiag(

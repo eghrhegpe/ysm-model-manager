@@ -195,6 +195,7 @@ auto_fields:
     - PerceptionState
     - pickBone
     - pickPerceptionCaps
+    - PMX_MAT_FLAG_DOUBLE_SIDE
     - PmxBoneData
     - PmxBuilderConfig
     - PmxBuildResult

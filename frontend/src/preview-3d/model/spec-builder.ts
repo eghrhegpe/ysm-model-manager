@@ -17,6 +17,9 @@ import { buildModelGroup } from "./model-group-builder.ts";
 /** parseBedrockGeometry 接受的最大输入大小 — maxParseSize */
 const MAX_PARSE_SIZE = 100 << 20; // 100MB
 
+/** texture_width/height 合法上限 — 对齐 Go geometry/parse.go clampTexSize（越界归 0 哨兵） */
+const MAX_TEX_DIM = 65536;
+
 // ===== 内部数据结构（对齐 Go types/bedrock.go + threejs/spec.go）=====
 
 /** vec3 — Go threejs/spec.go L55 */
@@ -162,11 +165,11 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   }
   const g = raw["minecraft:geometry"][0];
   const desc = g.description;
-  // P2 修复：texture_width/height 钳到 [0, 65536]（越界置 0）
+  // P2 修复：texture_width/height 钳到 [0, MAX_TEX_DIM]（越界置 0）
   let texW = clampToInt(desc.texture_width);
   let texH = clampToInt(desc.texture_height);
-  if (texW < 0 || texW > 65536) texW = 0;
-  if (texH < 0 || texH > 65536) texH = 0;
+  if (texW < 0 || texW > MAX_TEX_DIM) texW = 0;
+  if (texH < 0 || texH > MAX_TEX_DIM) texH = 0;
 
   const model: BedrockModel = {
     boneCount: 0,

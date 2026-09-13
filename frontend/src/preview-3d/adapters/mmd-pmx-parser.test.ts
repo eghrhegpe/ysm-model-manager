@@ -8,7 +8,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
 import * as THREE from "three";
-import { buildPmxScene, createPmxParser } from "./mmd-pmx-parser.ts";
+import { buildPmxScene, createPmxParser, PMX_MAT_FLAG_DOUBLE_SIDE } from "./mmd-pmx-parser.ts";
 import type { PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 
 /** 合成 PMX 解析结果：2 个根骨骼（parent=-1）+ 1 个子骨骼 + 最小顶点/面 */
@@ -201,7 +201,7 @@ function pmxWithMaterials(): PmxParseResponse {
   base.textures = ["tex/face.png"];
   // 半透明 + 双面 + 纹理引用 / 不透明单面 + 无纹理（仅 builder 消费的字段）
   base.materials = [
-    { name: "服", diffuse: [0.5, 0.2, 0.1, 0.5], flags: 0x01, textureIndex: 0 },
+    { name: "服", diffuse: [0.5, 0.2, 0.1, 0.5], flags: PMX_MAT_FLAG_DOUBLE_SIDE, textureIndex: 0 },
     { name: "肌", diffuse: [1, 1, 1, 1], flags: 0, textureIndex: -1 },
   ] as unknown as NonNullable<PmxParseResponse["materials"]>;
   return base;
@@ -266,7 +266,7 @@ describe("buildPmxScene — 材质/纹理构建", () => {
     const [matA, matB] = result!.materials;
     expect(matA.name).toBe("服");
     expect(matA.transparent).toBe(true); // diffuse.a = 0.5 < 1
-    expect(matA.side).toBe(THREE.DoubleSide); // flags & 0x01
+    expect(matA.side).toBe(THREE.DoubleSide); // flags & PMX_MAT_FLAG_DOUBLE_SIDE
     // 纹理统一延迟挂 pendingTexture（worker 解码完成后同步应用，避免 TextureLoader 竞态）
     expect(matA.userData.pendingTexture).toEqual({
       relPath: "tex/face.png",

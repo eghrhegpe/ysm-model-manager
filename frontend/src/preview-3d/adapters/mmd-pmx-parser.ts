@@ -7,6 +7,10 @@ import * as THREE from "three";
 import type { PmxBoneData, PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 import { createWorkerParser } from "./worker-bridge.ts";
 
+// ===== PMX 格式常量 =====
+/** PMX 材质 DrawFlag bit0：双面绘制（no cull）—— PMX 2.0 规范 */
+export const PMX_MAT_FLAG_DOUBLE_SIDE = 0x01;
+
 // ===== rAF 切片工具 =====
 // 每帧处理预算（毫秒），留给浏览器 60fps 渲染的时间
 const FRAME_BUDGET_MS = 12;
@@ -120,7 +124,11 @@ export async function buildPmxScene(
         : new THREE.Color(1, 1, 1),
       transparent: pmxMat ? pmxMat.diffuse[3] < 1 : false,
       opacity: pmxMat ? pmxMat.diffuse[3] : 1,
-      side: pmxMat ? (pmxMat.flags & 0x01 ? THREE.DoubleSide : THREE.FrontSide) : THREE.FrontSide,
+      side: pmxMat
+        ? (pmxMat.flags & PMX_MAT_FLAG_DOUBLE_SIDE) !== 0
+          ? THREE.DoubleSide
+          : THREE.FrontSide
+        : THREE.FrontSide,
       metalness: 0,
       roughness: 1,
     });

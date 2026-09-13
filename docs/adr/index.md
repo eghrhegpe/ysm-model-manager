@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **232** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **233** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -17,15 +17,15 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 8 |
-| [✅ 已采纳](#已采纳) | 214 |
+| [🔄 部分采纳](#部分采纳) | 7 |
+| [✅ 已采纳](#已采纳) | 215 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
-| [❓ 未归类](#未归类) | 0 |
+| [❓ 未归类](#未归类) | 1 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（8）
+### 🔄 部分采纳（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -33,12 +33,11 @@ permalink: /adr/
 | [ADR-218](./ADR-218-stats-pool-concurrency.md) | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 |
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | 🔄 部分采纳 |
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
-| [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | 🔄 部分采纳 |
 | [ADR-186](./ADR-186-i18n-tr-locale-core.md) | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（214）
+### ✅ 已采纳（215）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -81,6 +80,7 @@ permalink: /adr/
 | [ADR-193](./ADR-193-preview-menu-declarative-endgame.md) | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 |
 | [ADR-192](./ADR-192-go-types-registry-split.md) | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 |
 | [ADR-191](./ADR-191-testutil-go-internal.md) | testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂 | ✅ 已采纳 |
+| [ADR-190](./ADR-190-features-deps-convergence.md) | features 层职责收束与依赖注入真化 | ✅ 已采纳 |
 | [ADR-189](./ADR-189-frontend-core-backend-utils-core-feedback.md) | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 |
 | [ADR-188](./ADR-188-core-handlers-sync-features-require-mcroot-features.md) | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 |
 | [ADR-187](./ADR-187-features-modal-ts.md) | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 |
@@ -277,10 +277,17 @@ permalink: /adr/
 | [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 |
 | [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 |
 
+### ❓ 未归类（1）
+
+| ADR | 标题 | 状态 |
+|-----|------|------|
+| [ADR-235](./ADR-235-preview-3d-dir-semantics-realignment.md) | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ❓ 未知 |
+
 ## 登记表（新→旧）
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-235 | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ❓ 未知 | 2026-09-14 |
 | ADR-234 | scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警 | ✅ 已采纳 | 2026-09-13 |
 | ADR-233 | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 | 2026-09-13 |
 | ADR-232 | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 | 2026-09-13 |
@@ -325,7 +332,7 @@ permalink: /adr/
 | ADR-193 | 3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道 | ✅ 已采纳 | 2026-09-06 |
 | ADR-192 | go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移 | ✅ 已采纳 | 2026-09-05 |
 | ADR-191 | testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂 | ✅ 已采纳 | 2026-09-05 |
-| ADR-190 | features 层职责收束与依赖注入真化 | 🔄 部分采纳 | 2026-09-05 |
+| ADR-190 | features 层职责收束与依赖注入真化 | ✅ 已采纳 | 2026-09-05 |
 | ADR-189 | frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名 | ✅ 已采纳 | 2026-09-05 |
 | ADR-188 | core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语 | ✅ 已采纳 | 2026-09-05 |
 | ADR-187 | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 | 2026-09-05 |

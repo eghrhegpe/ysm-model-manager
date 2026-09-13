@@ -1,10 +1,10 @@
 # ADR-190：features 层职责收束与依赖注入真化
 
-- **状态**：已采纳（Accepted）— 决策方向 D1–D6 由 2026-09-05 架构审计确立；**分步实施尚待 Jieling 批准开工**，进度见 `docs/review/features-convergence-plan.md`。若 D6（不动 community 双渲染）等条目被否决，本状态调整为 🔄 部分采纳。
+- **状态**：✅ 已采纳 — D1–D6 已全部实质落地或按原意不落地（2026-09-14 调研核实，见下文「实施收口」）；实施进度记录见知识卡 `features_dialogs.md` / `oldest-models.md`（ADR 只记决策，不记进度）。
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/features/**`；`docs/review/features-convergence-plan.md`（分步方案与行号）
+- **相关**：`frontend/src/features/**`；实施进度：知识卡 `features_dialogs.md` / `oldest-models.md`（原指向 `docs/review/features-convergence-plan.md` 从未建立，2026-09-14 更正为知识卡）
 
 ---
 
@@ -109,5 +109,31 @@
 | `grep -rn "renderModelList\|renderCardsHTML"`（排除测试） | 仅定义与注释命中 → 死代码（已复核） |
 
 > 上述行号均于 2026-09-05 以 `sed`/`grep` 逐条复核；审计原始结论中「`_getApp` 在 `:210`」实为 `:209`、「cleanup 在 `:298`」实为 `:297`，已在本文修正。
+
+---
+
+## 实施收口（2026-09-14 调研核实）
+
+D1–D6 已全部实质落地或按原意不落地，状态机自「🔄 部分采纳」转「✅ 已采纳」：
+
+| 条目 | 收口依据 |
+|---|---|
+| D1/D1a/D1b | `buildHeatmapHtml`/`renderOldestCardsHtml`/`renderRecycleListHtml` 已回迁 `views/app-content/tpl-{oldest,recycle}.ts`；sync/require-mcroot 按 D1b 维持 features（对 toast/bus 的编排归 features） |
+| D2 | 9 个 `*-deps.ts` seam 组合根全建；features 全仓**零真直连** `backend/app.ts`（grep 命中均为 seam 本身或注释字符串）；`_getApp=` 伪注入别名零残留 |
+| D3 | createDialog 统一标题渲染（buildTitleRow）已启用，rename/tag-editor/adv-filter 已迁移；**batch-rename.ts 弹窗壳记账保留**（见下） |
+| D4 | 按原意「本次不做全量替换」单独立项 |
+| D5 | createLoadGuard 已在 maintenance + diagnostics 域落地（ADR-230 收口，零残留） |
+| D6 | stripBanSuffix 生产残留零，community 双渲染现状未动 |
+
+### D3 记账保留：batch-rename.ts 弹窗壳
+
+`features/dialogs/batch-rename.ts:105-165` 仍手写 overlay 六步（createElement→tabIndex→className→role→aria-modal→onclick），**评估后刻意不迁移**，与 D6 同哲学（收益不足以支撑回归风险）：
+
+1. `tpl.formHTML`（`views/app-tree/tpl-batch-rename.ts`）自带 `.dlg-header` **三栏信息面板**（标题 + 目录路径 + 文件数/变更数实时更新）——createDialog 的 `buildTitleRow`（icon + title）无法承载，强行迁移要么双标题要么砍信息栏；
+2. Enter 触发 `#br-apply` 是业务语义，createDialog 通用层只处理 Esc；
+3. `batch-rename.test.ts` 已厚覆盖壳层行为，现状被锁；
+4. ADR-190 §1.4 对 createDialog 的批评（死参数）已随 ADR-187 D2 拆分 + buildTitleRow 启用修复——基础设施已进化，但本壳需求仍超出通用模型。
+
+**约束**：新建业务弹窗必须走 createDialog（D3 后半句）仍然有效；仅本存量壳豁免。
 
 <!-- 文件名: features-deps-convergence.md → 实际文件 ADR-190-features-deps-convergence.md -->

@@ -90,7 +90,8 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- 桥依赖：adv-filter/rename/tag-editor 经 `*-deps.ts` seam 调 backend（ADR-190 D2 注入真化 + ADR-208 D1：features 生产文件禁止直连 `backend/app.ts`，check-layering R5 门禁兜底）；本目录零 backend 直连。
+- 桥依赖：adv-filter/rename/tag-editor 经 `*-deps.ts` seam 调 backend（ADR-190 D2 注入真化 + ADR-208 D1：features 生产文件禁止直连 `backend/app.ts`，check-layering R5 门禁兜底）；本目录零 backend 直连（2026-09-14 复核：9 个 seam 组合根全建，全仓零真直连）。
+- **ADR-190 实施收口（2026-09-14）**：D1–D6 全部实质落地或按原意不落地，ADR 状态转 ✅ 已采纳。唯一记账保留：`batch-rename.ts` 弹窗壳手写 overlay 六步——`tpl.formHTML` 自带 `.dlg-header` 三栏信息面板 + Enter 触发 apply 业务语义超出 createDialog 通用模型，迁移收益 < 回归风险，与 D6 同哲学；新建业务弹窗仍必须走 createDialog。详见 ADR-190「实施收口」节。
 - i18n：核心文案走 `core/i18n/t.ts`。
 - modal-*.ts（core+builder）是共享底座，被 core/features/views 测试 vi.mock 拦截（mock 路径须指向符号实际所在文件：modalConfirm→modal-confirm.ts 等）
 

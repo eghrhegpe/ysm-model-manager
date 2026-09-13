@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-235：preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格",
+        "link": "/adr/ADR-235-preview-3d-dir-semantics-realignment"
+      },
+      {
         "text": "ADR-234：scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警",
         "link": "/adr/ADR-234-scripts-gen"
       },

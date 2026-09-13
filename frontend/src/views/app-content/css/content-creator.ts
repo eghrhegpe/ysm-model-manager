@@ -109,15 +109,15 @@ export const contentCreatorCSS: string = `
 .cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--sm-optional); }
 .cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--muted); }
 .cr-creator-card--grid[data-tier="gold"] .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),var(--sm-optional),transparent 60%,var(--sm-optional));
+  background:conic-gradient(from 0deg,var(--sm-optional),transparent 60%,var(--sm-optional));
   box-shadow:0 0 6px color-mix(in srgb,var(--sm-optional) 40%,transparent);
 }
 .cr-creator-card--grid[data-tier="silver"] .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),var(--muted),transparent 60%,var(--muted));
+  background:conic-gradient(from 0deg,var(--muted),transparent 60%,var(--muted));
   box-shadow:0 0 6px color-mix(in srgb,var(--muted) 25%,transparent);
 }
 .cr-creator-card--grid:not([data-tier]) .cr-avatar-ring {
-  background:conic-gradient(from var(--grad-rot,0deg),var(--accent),transparent 60%,var(--accent));
+  background:conic-gradient(from 0deg,var(--accent),transparent 60%,var(--accent));
   box-shadow:none;
 }
 
@@ -139,14 +139,6 @@ export const contentCreatorCSS: string = `
   flex-shrink:0;
   margin:0;
 }
-.cr-card-header .cr-avatar-ring {
-  position:absolute;inset:-2px;
-  border-radius:50%;
-  pointer-events:none;
-  transition:transform .4s ease;
-  background:conic-gradient(from var(--grad-rot,0deg),#6B9FFF,transparent 60%,#6B9FFF);
-}
-.cr-card-header .cr-avatar-ring[data-spin]:hover { animation:ring-spin .8s linear infinite; }
 
 /* 名称行 */
 .cr-card-name-row {

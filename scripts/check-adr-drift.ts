@@ -195,10 +195,10 @@ function codeAsserts() {
 
   // 6. r10/r11 纹理+MMD 生命周期防倒退：mmd 释放路径必含 uncacheRoot + 全纹理槽释放
   //    mmd 走自有释放路径（TEX_SLOTS 含 emissiveMap + tex.dispose() 遍历），不调通用 disposeMaterial
-  const mmdAdapterPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-adapter.ts");
-  const mmdUtilsPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-utils.ts");
-  const mmdResultPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-build-result.ts");
-  const mmdSharedPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd-shared.ts");
+  const mmdAdapterPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts");
+  const mmdUtilsPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd/mmd-utils.ts");
+  const mmdResultPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd/mmd-build-result.ts");
+  const mmdSharedPath = path.join(ROOT, "frontend/src/preview-3d/adapters/mmd/mmd-shared.ts");
   try {
     const textA = fs.existsSync(mmdAdapterPath) ? fs.readFileSync(mmdAdapterPath, "utf-8") : "";
     const textU = fs.existsSync(mmdUtilsPath) ? fs.readFileSync(mmdUtilsPath, "utf-8") : "";

@@ -148,7 +148,7 @@ status: active
 - **`SyncResourcesDirLevel` 容器 vs 叶子模型夹判定**（`collectEntries`，sync_dirlevel.go）：目录被 `isDirTypeModelFolder` 判真（直接含 .ysm/.ysm.json）后，若还直接含子模型文件夹（`containsModelSubfolder` 为真），则是「容器」而非「叶子模型夹」——**不下钻整体收编 SkipDir**，而继续下钻保留各子夹层级，由 `go/instance` 的 `nestDirLevelTree` 重建容器树。收发场景：`嵌套1/` 内含直接平铺 `动力臂.ysm` + `01_taisho_maid/` + `嵌套2/` 深层子夹，若被整体收编会把子夹层级吞掉，前端退化成摊平的 `01_taisho_maid/ysm.json` 文件行（违背仓库层级镜像）；只有「叶子模型夹」（含模型文件但无子模型夹）才 SkipDir 收编为单同步单元
 - **两阶段遍历-执行模式**（`SyncToggleStatus`，sync.go）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`，遍历完成后再批量执行。在 WalkDir 过程中修改目录结构会导致后续条目被跳过或重复处理。
 - `SyncToggleStatus` 与 `go/installer` 共用包级 `installer.InstallLock`（`sync.Mutex`），防止与安装操作并发写同一文件
-- `RelinkDir` 整段持 `InstallLock`，内部对 `installer.Install/InstallDir/CopyFile` 改用 `*Locked` 变体，避免同 goroutine 重入非重入 mutex 死锁
+- `RelinkDir` / `PushSingleResource` 整段持 `InstallLock`，内部对 `installer.Install/InstallDir/CopyFile` 改用 `*Locked` 变体，避免同 goroutine 重入非重入 mutex 死锁；`SyncToggleStatus` 采分段持锁（阶段 1 收集与阶段 3+4 执行各为独立持锁段，中间锁外算哈希）——锁生命周期由段内 defer 保证，锁外 panic 不会触发对已释放锁的二次 Unlock
 - 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞
 - `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚；根层平铺的 ysm.json/.pmx 退化为 `installer.Install` 单文件路径
 - 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`

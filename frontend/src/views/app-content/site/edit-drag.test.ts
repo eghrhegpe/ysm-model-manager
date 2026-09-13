@@ -142,6 +142,20 @@ describe("bindDragSort", () => {
     expect(c1.classList.contains("cr-drag-before")).toBe(false);
   });
 
+  it("srcKey 隔离：creators 组（srcKey=srcIdx）写 ds 不碰 presetSrcIdx", () => {
+    card(0);
+    const c1 = card(1);
+    // 预设组先拖拽在途，presetSrcIdx 留在 1；creators 组完整走一遍拖拽，
+    // 断言它只读写 srcIdx、不污染 presetSrcIdx——这是注入 srcKey 的核心契约
+    //（若未来 bindDragSort 误写固定字段 ds.srcIdx，本测试抓住反向越界）
+    bind();
+    ds.presetSrcIdx = 1;
+    ds.srcIdx = 0;
+    fire(c1, "drop");
+    expect(ds.srcIdx).toBe(-1); // drop 后复位（commit 返回 true）
+    expect(ds.presetSrcIdx).toBe(1); // 未被 creators 组的 drop 触碰
+  });
+
   it("AbortSignal 中止后事件全部失效", () => {
     const c0 = card(0);
     bind();

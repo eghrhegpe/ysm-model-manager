@@ -197,6 +197,7 @@ auto_fields:
     - DEFAULT_SKY_PARAMS
     - DEFAULT_TD_KEYMAP
     - DEFAULT_WATER_PARAMS
+    - deferred
     - deriveDefaultEnvState
     - detectFormat
     - detectFormatCtx

@@ -40,7 +40,7 @@ quick_risk_lines:
   - 内容适配器 build 返回值统一命名 content（禁 built），新适配器照此写
   - 跨文件同函数禁双份定义（getCompound 在 nbt-parse.ts 与 voxel-parse.ts 各一份）
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/litematic-adapter.ts|SetupCameraAndGrid
+  - frontend/src/preview-3d/adapters/litematic-adapter.ts|setupCameraAndGrid
 ---
 
 # 前端命名章程（黑话治理）
@@ -107,7 +107,7 @@ invariant_anchors:
 
 **决策注记**：`mdLi*`/`MdLi*` 前缀**保留**——它是有领域语义的格式标识（Minecraft Litematic），且 preview_core 词表以 `make<Format>Adapter` 为格式入口锚。章程禁的是「不可读前缀」（`dgPcSb`/`gc*`/`dgAf*` 已清），不是「格式标识」。
 
-> ⚠️ **本条保留条款已被 ADR-226（2026-09-11）推翻**：mdLi/mdMg/mdMm/mdWs 全 4 批已完全去前缀（preview-3d 目录残留 0），锚点同步改名（如 `mdLiSetupCameraAndGrid`→`SetupCameraAndGrid`）。推翻理由：mdXx 是 ADR-167 按行数切片的统一疤痕，Litematic 格式语义可由模块路径 `litematic-adapter.ts` 提供，格式标识豁免使 mdXx 清理不彻底。唯一保留特例：`MmdPerceptionState`（mmd-types.ts，因与 import 的通用 `PerceptionState` 撞名，`Mmd` 作格式消歧而非前缀）。
+> ⚠️ **本条保留条款已被 ADR-226（2026-09-11）推翻**：mdLi/mdMg/mdMm/mdWs 全 4 批已完全去前缀（preview-3d 目录残留 0），锚点同步改名（如 `mdLisetupCameraAndGrid`→`SetupCameraAndGrid`）。推翻理由：mdXx 是 ADR-167 按行数切片的统一疤痕，Litematic 格式语义可由模块路径 `litematic-adapter.ts` 提供，格式标识豁免使 mdXx 清理不彻底。唯一保留特例：`MmdPerceptionState`（mmd-types.ts，因与 import 的通用 `PerceptionState` 撞名，`Mmd` 作格式消歧而非前缀）。
 
 ## 与其他子系统关系
 

@@ -6,6 +6,18 @@
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import type { EnvironmentCapability } from "./environment-capability.ts";
+import type { FogCapability } from "./fog-capability.ts";
+import type { GroundCapability } from "./ground-capability.ts";
+import type { LightCapability } from "./light-capability.ts";
+import type { PostprocessingCapability } from "./postprocessing-capability.ts";
+import type { ReflectorCapability } from "./reflector-capability.ts";
+import type { RenderModeCapability } from "./render-mode-capability.ts";
+import type { ShadowCapability } from "./shadow-capability.ts";
+// 能力类型统一顶层 type import（动态 import 仅在类型位置引用无运行时意义；
+// 且 render-mode 静态回引本文件 → 动态引用成环，check-circular 卡 CI。type-only 编译期擦除破环）
+import type { SkyCapability } from "./sky-capability.ts";
+import type { WaterCapability } from "./water-capability.ts";
 
 // [ADR-195 刀2] 控件类型下沉 preview-3d/menu-node-types.ts
 // （共享类型叶，menu/ 与 caps/ 双域引用，破 caps→menu 纯类型环）——本文件 re-export
@@ -38,16 +50,16 @@ export interface SceneCapabilityLookup {
  * cap 类型，放共享叶避免 cap→registry 运行时环）
  */
 export interface CapabilityMap {
-  sky: import("./sky-capability.ts").SkyCapability;
-  ground: import("./ground-capability.ts").GroundCapability;
-  water: import("./water-capability.ts").WaterCapability;
-  environment: import("./environment-capability.ts").EnvironmentCapability;
-  fog: import("./fog-capability.ts").FogCapability;
-  shadow: import("./shadow-capability.ts").ShadowCapability;
-  reflector: import("./reflector-capability.ts").ReflectorCapability;
-  postprocessing: import("./postprocessing-capability.ts").PostprocessingCapability;
-  light: import("./light-capability.ts").LightCapability;
-  renderMode: import("./render-mode-capability.ts").RenderModeCapability;
+  sky: SkyCapability;
+  ground: GroundCapability;
+  water: WaterCapability;
+  environment: EnvironmentCapability;
+  fog: FogCapability;
+  shadow: ShadowCapability;
+  reflector: ReflectorCapability;
+  postprocessing: PostprocessingCapability;
+  light: LightCapability;
+  renderMode: RenderModeCapability;
 }
 
 /** 能力 id 字面量联合（CapabilityMap 的键） */

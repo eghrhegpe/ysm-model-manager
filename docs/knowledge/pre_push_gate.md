@@ -48,6 +48,7 @@ quick_risk_lines:
 pitfalls:
   - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
+  - 「门禁全绿」只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
 status: active
 invariant_anchors:
   - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
@@ -109,6 +110,20 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 - **FAIL 明细三行块**（贴结论放，保证落在尾部阅读窗口；OK 明细在前供人扫读——旧「FAIL 前置」被取代）：`[FAIL][归属] 命令  pass/total 通过 耗s note` / `→ 首错（≤120 字符）` / `复现: 命令`
 - **归属标签语义**：`debt→存量债`、`failClosed→失守`、`hard→(push/files 模式)本次引入｜(全扫 --all/--docs)待归因`——全扫无法归因，不冒充「本次引入」（实证：docs 模式曾把并行会话留下的存量债标成本次引入，误导归因）
 - **报告落盘**：`.git/gate-report-<ts>.json`（mode/blocked/results 含 raw），stderr 只给相对路径指针——深挖读报告（无行数限制），验证抄复现命令
+
+### 门禁覆盖边界：清单外的 check 脚本（2026-09-13 核实）
+
+`scripts/check-*.ts` 共 **32** 个，`ALL_STATIC_TOOLS` 只列 **26** 项，差额不是笔误——部分脚本走 pre-commit / commit-with-check / CI 等旁路，另有 3 个**无任何自动化入口**，只能手动跑：
+
+| 脚本 | 自动化入口 | 内容 |
+|------|-----------|------|
+| `check-complexity` | ❌ 无 | 认知复杂度档位（🟥红 / 🟧橙 / 🟨黄）+ 嵌套深度；存量规模大，未纳入阻断 |
+| `check-params` | ❌ 无 | 长参数列表 / 布尔陷阱打分 |
+| `check-type-safety` | ❌ 无 | `any` / `@ts-ignore` / `!` 非空断言计数 |
+
+核实口径：`_lib/gate-config.ts` 五个清单 + `.githooks/pre-commit` + `.github/workflows/*` + `Taskfile.yml` 均无调用点（仅 `tests/test_check_*.ts` 导入其纯函数做契约测试）。
+
+**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。
 
 ### 其他
 

@@ -25,6 +25,7 @@ import assert from "node:assert";
 import {
   buildScanVerdict,
   parseToolOutput,
+  requireSummaryOk,
   tryParseJson,
   tryParseSummary,
   WARNS_TOP_N,
@@ -121,7 +122,9 @@ check("fail-closed 语义：issues 提取在解析失败时应为 null（≠0，
 
 check("degraded=true → note 追加 degraded 标记（扫描跳过不得与通过同形）", () => {
   const r = parseToolOutput(
-    JSON.stringify({ _summary: { ok: true, errors: 0, degraded: true, skippedDueToNoTsMorph: true } }),
+    JSON.stringify({
+      _summary: { ok: true, errors: 0, degraded: true, skippedDueToNoTsMorph: true },
+    }),
     0,
   );
   assert.equal(r.ok, true, "degraded 不置红灯（仓库约定），由调用方决定是否接受");
@@ -155,6 +158,30 @@ check("buildScanVerdict FAIL：warns_list 按 WARNS_TOP_N 截断（门禁 tail �
   assert.equal(v.errors, WARNS_TOP_N + 5, "errors 保留总数，不受截断影响");
   assert.equal(v.warns_list?.length, WARNS_TOP_N, `warns_list 应截断到 ${WARNS_TOP_N}`);
   assert.equal(v.warns_list?.[0], "明细0", "截断应保留前 N 条（最严重者，由调用方排序）");
+});
+
+check("requireSummaryOk：严格判定 rc===0 && _summary.ok===true（fail-closed 收编）", () => {
+  // PASS 路径：rc=0 + _summary.ok=true
+  const pass = requireSummaryOk(JSON.stringify({ _summary: { ok: true, total: 5 } }), 0);
+  assert.equal(pass.ok, true, "rc=0 且 _summary.ok=true 应判 PASS");
+  assert.equal(pass.summary?.total, 5, "summary 应透出供调用方拼 note");
+  // FAIL 路径 1：_summary.ok=false
+  assert.equal(requireSummaryOk(JSON.stringify({ _summary: { ok: false } }), 0).ok, false);
+  // FAIL 路径 2：rc≠0（即使 _summary.ok=true 也不放行——与三处手写判定原语义一致）
+  assert.equal(
+    requireSummaryOk(JSON.stringify({ _summary: { ok: true } }), 1).ok,
+    false,
+    "rc≠0 时不得凭 _summary.ok=true 放行",
+  );
+  // FAIL 路径 3：_summary 缺失 / ok 字段缺失（strictness：必须显式声明 ok）
+  assert.equal(
+    requireSummaryOk(JSON.stringify({ total: 5 }), 0).ok,
+    false,
+    "_summary.ok 缺失必须 FAIL（fail-closed）",
+  );
+  // FAIL 路径 4：非 JSON 输出
+  assert.equal(requireSummaryOk("not json", 0).ok, false, "解析失败必须 FAIL");
+  assert.equal(requireSummaryOk("not json", 0).summary, null);
 });
 
 finish("契约测试全过");

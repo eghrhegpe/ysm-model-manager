@@ -27,13 +27,19 @@ import {
 } from "./gate-config.ts";
 import { ROOT } from "./scan-files.ts";
 
-/** 域检查直连（gate-blocks 内 ctx.record 调用、不走 gate-config 清单）的 check-* 脚本 */
-const DOMAIN_BLOCK_CHECKS = [
+/**
+ * 域检查直连（gate-blocks 内 ctx.record 调用、不走 gate-config 清单）的 check-* 脚本。
+ * 手工常量（2026-09-13 锐评勘误 #9）：gate-blocks 新增直连 ctx.record("check-…") 时本数组
+ * 不会自动更新 → 由 tests/test_gate_coverage.ts 双向扫描锁死（新增直连漏登记、或数组
+ * 登记了已下线的检查，都会 FAIL），把「手工同步」升级为「测试网同步」。
+ */
+export const DOMAIN_BLOCK_CHECKS = [
   "check-layering.ts",
   "check-path-hygiene.ts",
   "check-mock-paths.ts",
   "check-menu-health.ts",
   "check-ctx-menu-i18n.ts",
+  "check-binding-usage.ts",
   "check-redlines.ts",
 ] as const;
 

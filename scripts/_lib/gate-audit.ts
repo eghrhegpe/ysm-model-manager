@@ -43,11 +43,13 @@ function formatEntry(e: GateAuditEntry): string {
   return `${ts} ${e.kind} ${e.localOid || "none"} ${e.verdict} ${e.counts} ${e.remote}`;
 }
 
-/** 追加一行审计记录；写入失败静默（审计是增强，不是门禁判定的一部分，不因日志权限问题阻断推送） */
+/** 追加一行审计记录；写入失败打一行 stderr 但不阻断（审计是增强，不是门禁判定的一部分，
+ * 不因日志权限问题阻断推送——但「零感知丢失的审计日志 ≈ 没有审计日志」，失败必须可见，
+ * 2026-09-13 锐评 P3 #7） */
 export function appendGateAudit(file: string, e: GateAuditEntry): void {
   try {
-    fs.appendFileSync(file, formatEntry(e) + "\n", "utf-8");
-  } catch {
-    // 审计写入失败不阻断推送（fail-open 仅限日志层；判定层始终 fail-closed）
+    fs.appendFileSync(file, `${formatEntry(e)}\n`, "utf-8");
+  } catch (err) {
+    console.error(`[gate-audit] 审计写入失败（不阻断推送）: ${(err as Error).message}`);
   }
 }

@@ -49,11 +49,7 @@ const union = new Set([...expected.filter((f) => coveredSet.has(f)), ...c.uncove
 assert.strictEqual(union.size, expected.length);
 
 // 3. 域直连项必须计为已覆盖（它们是「门禁真的会跑」的检查，漏算会虚减覆盖数）
-for (const domain of [
-  "check-layering.ts",
-  "check-redlines.ts",
-  "check-path-hygiene.ts",
-]) {
+for (const domain of ["check-layering.ts", "check-redlines.ts", "check-path-hygiene.ts"]) {
   assert.ok(coveredSet.has(domain), `域直连项 ${domain} 必须计为已覆盖`);
 }
 
@@ -62,5 +58,43 @@ const line = coverageTailLine();
 assert.match(line, new RegExp(`${c.covered}/${c.total}`));
 assert.ok(line.includes("全绿"), "尾行必须含「全绿 ≠ 仓库无风险」警示语");
 assert.ok(line.includes("未接入") || c.uncovered.length === 0, "有未接入项时尾行必须点名");
+
+// 5. DOMAIN_BLOCK_CHECKS 双向同步（2026-09-13 锐评勘误 #9）：手工常量数组纳入测试网——
+//    gate-blocks 新增直连 ctx.record("check-…") 漏登记、或数组登记了已下线的检查，都 FAIL。
+//    扫描口径：gate-blocks/*.ts + pre-push-gate.ts 里 ctx.record 首参标签中出现的 check-*.ts。
+import { DOMAIN_BLOCK_CHECKS } from "../scripts/_lib/gate-coverage.ts";
+
+{
+  const scanDir = path.join(ROOT, "scripts", "_lib", "gate-blocks");
+  const sources = [
+    fs.readFileSync(path.join(ROOT, "scripts", "pre-push-gate.ts"), "utf-8"),
+    ...fs
+      .readdirSync(scanDir)
+      .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+      .map((f) => fs.readFileSync(path.join(scanDir, f), "utf-8")),
+  ];
+  // 提取 ctx.record( 首参（至第一个逗号/行尾的近似切分）里的 check-*.ts 引用
+  const seen = new Set<string>();
+  for (const src of sources) {
+    const re = /ctx\.record\(\s*(`[^`]*`|"[^"]*")/g;
+    let m: RegExpExecArray | null = re.exec(src);
+    while (m) {
+      for (const hit of m[1].match(/check-[\w-]+\.ts/g) ?? []) seen.add(hit);
+      m = re.exec(src);
+    }
+  }
+  for (const c of DOMAIN_BLOCK_CHECKS) {
+    assert.ok(
+      seen.has(c),
+      `DOMAIN_BLOCK_CHECKS 登记了 ${c}，但 gate-blocks/pre-push-gate 中已无直连 ctx.record 标签引用——请从数组删除`,
+    );
+  }
+  for (const s of seen) {
+    assert.ok(
+      (DOMAIN_BLOCK_CHECKS as readonly string[]).includes(s),
+      `gate-blocks 直连 ctx.record 标签引用了 ${s}，但未登记进 DOMAIN_BLOCK_CHECKS——覆盖尾行会把它误标「未接入」`,
+    );
+  }
+}
 
 console.log("[OK] test_gate_coverage.ts 全部断言通过");

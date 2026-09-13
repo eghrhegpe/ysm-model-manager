@@ -11,6 +11,7 @@ source_files:
   - scripts/_lib/gate-ctx.ts
   - scripts/_lib/gate-parse.ts
   - scripts/_lib/gate-report.ts
+  - scripts/gate-audit-reconcile.ts
 auto_fields:
   symbols_with_lines:
     - ALL_STATIC_TOOLS
@@ -70,6 +71,12 @@ pitfalls:
   - 「--changed 的边界」它走 git diff 故不含未跟踪新文件 → 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files
   - 「scopedFiles 声明与实现」清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts → 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单
   - 「逃生阀审计不对称」`YSM_SKIP_GATE=1` 与 `git push --no-verify` 并列作紧急绕过，但后者零痕迹（钩子不执行）。2026-09-13（锐评 P1）改为**留痕逃生**：钩子 SKIP 路径把待推 ref 写入 `.git/gate-audit.log`（SKIPPED 行），gate 每次 push 运行也追加 PUSH 行（oid+判定+N/M）——审计日志连续性使「无 gate 记录的推送」事后可回溯。`--no-verify` 客户端仍无法检测（git 语义边界），系统性兜底 = CI 同跑 gate 互证（待立项）
+  - 「审计对账有工具了」2026-09-13（锐评 P1 #6 落地第一刀）：`node scripts/gate-audit-reconcile.ts [--days 30] [--json]` 以远端跟踪分支 reflog 的 `update by push` 条目为推送事件锚点，对照审计日志 PUSH/SKIPPED 行——缺口即 `--no-verify`/写入失败候选，退出码 1 供 doctor/CI 消费。边界：审计日志与 reflog 均随 .git 生命周期/过期策略衰减，换机历史不可对账；CI 侧互证 job 仍待立项
+  - 「sh/shAsync 执行语义已对齐」2026-09-13（锐评 P2 #5）：同步 `sh` 此前缺 `timedOut` 透传与 1MB 输出 cap（procRun 超时 rc=-2 未映射），同一 ExecResult 契约两条路径形状漂移。现 sh 超时 → `timedOut:true` + 原因追加进 out，输出统一 1MB 尾部 cap（OUT_CAP 同源）；行为断言 test_gate_ctx.ts 第 10 组
+  - 「sh/shAsync 调用点安全不变式已落成契约」2026-09-13（锐评 P1 #4）：`tests/test_gate_sh_invariants.ts` 扫描全部 gate 源码的 ctx.sh/shAsync 实参——①禁入 push-stdin 派生标识符（localRef/localOid/…，出现即 FAIL）；②动态命令冻结清单（新增动态实参必须登记插值来源与安全依据）。注释不变式升级为可执行检查；含外部输入的执行仍必须数组化 procRun
+  - 「严格判定单一实现」2026-09-13（锐评 P1 #1 收编）：menu-health / ctx-menu-i18n / binding-usage 三处手写 `rc===0 && _summary.ok===true` 游离在 parseToolOutput 优先级链外，收敛为 `gate-parse.requireSummaryOk(out, rc)`（fail-closed：ok 缺失/非 true/解析失败一律 FAIL），契约 test_gate_parse_output.ts 锁死。新增「必须显式 ok」的域检查一律走它，勿再手写
+  - 「多 ref 推送的 fail-closed 耦合」：`git push origin a b` 时任一 ref 的 resolveChanges 返回 null（解析失败）→ **整体阻断**（exit 1），不做 per-ref 放行——这是刻意的 fail-closed 选择而非缺陷；改契约测试前勿假设可 per-ref 豁免。多 ref 的文件集按并集去重算变更域，ctx 持有首个 ref 的 oid（golangci-lint 基线用）
+  - 「PULL_HINT 带 remote-name」2026-09-13（锐评 #10）：push 模式的 pull 指引为 `git pull <远端名>`（多 remote 裸 pull 默认远端可能不对），非 push 模式退回裸 `git pull` 文案
   - 「覆盖尾行」2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查
   - 「check-deadcode-baseline 的瞬态 FAIL」~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁
 status: active

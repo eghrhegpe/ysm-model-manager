@@ -9,7 +9,7 @@
  */
 import path from "node:path";
 import type { GateCtx } from "../gate-ctx.ts";
-import { tryParseSummary } from "../gate-parse.ts";
+import { requireSummaryOk, tryParseSummary } from "../gate-parse.ts";
 import { ROOT } from "../scan-files.ts";
 
 export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
@@ -113,8 +113,7 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   const bu = await ctx.shAsync("node scripts/check-binding-usage.ts --json", {
     cwd: path.join(ROOT, "frontend"),
   });
-  const buz = tryParseSummary(bu.out);
-  const buOk = bu.rc === 0 && buz && buz.ok === true;
+  const { ok: buOk, summary: buz } = requireSummaryOk(bu.out, bu.rc);
   // code_review fd349a91a #5：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
   // 仓库根 scripts/ 下无此脚本）——原标签照抄从根执行 ENOENT；与同域 vite/tsc
   // vitest 标签的 "cd frontend &&" 约定对齐

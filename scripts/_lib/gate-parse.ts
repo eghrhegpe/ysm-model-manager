@@ -92,6 +92,24 @@ export function tryParseSummary(out: string): any | null {
 }
 
 /**
+ * 严格判定（2026-09-13 锐评 P2 #1 收编）：`rc===0 && _summary.ok===true` 的单一实现。
+ *
+ * 此前 menu-health / ctx-menu-i18n / binding-usage 三处手写该判定，游离在
+ * parseToolOutput 优先级链（_summary.ok → errors===0 → rc）之外——同一文件里
+ * 两套判定口径，成为「判定漂移」的三个口子。本函数把「必须显式声明 ok」的语义
+ * 收进共享层：_summary.ok 缺失/非 true、或解析失败（null）一律 FAIL（fail-closed），
+ * 不许静默假绿。契约测试 tests/test_gate_parse_output.ts 锁死。
+ *
+ * @param out 工具 --json 输出
+ * @param rc  工具退出码
+ * @returns ok=严格判定结果；summary=解析出的 _summary（供调用方拼 note，null=解析失败）
+ */
+export function requireSummaryOk(out: string, rc: number): { ok: boolean; summary: any | null } {
+  const summary = tryParseSummary(out);
+  return { ok: rc === 0 && summary !== null && summary.ok === true, summary };
+}
+
+/**
  * 解析整对象 JSON（纯函数）。特殊块专用：需要顶层非 _summary 字段的调用方
  * （如 check-redlines 的 results 数组）直接取整对象。解析失败 → null。
  */

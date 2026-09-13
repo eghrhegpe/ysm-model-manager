@@ -44,6 +44,7 @@ import {
   type Plan,
   planFromFiles,
 } from "./_lib/domain-classify.ts";
+import { appendGateAudit, auditFilePath } from "./_lib/gate-audit.ts";
 import {
   runAdrDomain,
   runDataDomain,
@@ -58,9 +59,8 @@ import {
   runScriptsTypecheck,
   runStaticToolsDispatch,
 } from "./_lib/gate-blocks/schedule.ts";
-import { createGateCtx } from "./_lib/gate-ctx.ts";
-import { appendGateAudit, auditFilePath } from "./_lib/gate-audit.ts";
 import { coverageTailLine } from "./_lib/gate-coverage.ts";
+import { createGateCtx } from "./_lib/gate-ctx.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
@@ -70,8 +70,12 @@ import { ROOT } from "./_lib/scan-files.ts";
 const B = { OK: "[OK]", FAIL: "[FAIL]", FIX: "[FIX]", SKIP: "[SKIP]" };
 // 子进程统一超时 = gate-ctx.GATE_TIMEOUT_MS（阶段 2 收敛的单一来源）；本文件已不再
 // 直接持数组式 procRun 的 timeout（redlines 段随阶段 4 迁入 gate-blocks/redlines.ts）。
-/** 远端领先提示（SKIP 与 FAIL 共用，避免重复长文案） */
-const PULL_HINT = "提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。";
+/** 远端领先提示（SKIP 与 FAIL 共用；2026-09-13 锐评 #10：push 模式带 remote-name——
+ * 多 remote 场景裸 `git pull` 默认远端可能不对，指引必须可抄） */
+const pullHint = (remote?: string) =>
+  remote
+    ? `提示: git 报 rejected/non-fast-forward 时先 git pull ${remote} 整合远端再重推（多 remote 勿裸 pull）。`
+    : "提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。";
 
 /* ---------------- 工具 ---------------- */
 // sh / shAsync / git / gofmtCheck 已收敛至 _lib/gate-ctx.ts 的 createGateCtx()
@@ -141,6 +145,8 @@ async function main() {
   let pushLocalRef = "";
   let pushLocalOid = "";
   let pushRemoteOid = "";
+  // push 模式的远端名（PULL_HINT 指引用）；非 push 模式保持 undefined → 裸 pull 文案
+  let pushRemoteName: string | undefined;
   // push 模式的有效 ref 数（>0 表示真实推送运行，供审计留痕判别）
   let pushedCount = 0;
 
@@ -201,7 +207,7 @@ async function main() {
     const lines = parseStdin().split("\n").filter(Boolean);
     if (!lines.length) {
       console.log(`${B.SKIP} 无可推送 ref（空 stdin），跳过`);
-      console.log(`${B.SKIP} ${PULL_HINT}`);
+      console.log(`${B.SKIP} ${pullHint(remoteName)}`);
       return 0;
     }
 
@@ -222,7 +228,7 @@ async function main() {
         console.log(
           `${B.FAIL} 变更集解析失败（git diff/show 均不可用），拒绝空跑放行 — 请检查本地 git 状态后重推`,
         );
-        console.log(PULL_HINT);
+        console.log(pullHint(remoteName));
         return 1;
       }
       for (const f of refFiles) fileSet.add(f);
@@ -241,6 +247,7 @@ async function main() {
     pushLocalRef = localRef;
     pushLocalOid = localOid;
     pushRemoteOid = pushed[0]!.remoteOid;
+    pushRemoteName = remoteName;
     pushedCount = pushed.length;
     const multiRef = pushed.length > 1;
     console.log(
@@ -372,7 +379,7 @@ async function main() {
   logPush(
     `修复指引: 按上方 [FAIL] 项处理；${gofmtHint}${hygieneHint}紧急绕过: git push --no-verify`,
   );
-  logPush(PULL_HINT);
+  logPush(pullHint(pushRemoteName));
   return 1;
 }
 

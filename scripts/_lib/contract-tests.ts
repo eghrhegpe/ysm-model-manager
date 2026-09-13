@@ -132,6 +132,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_schedule.ts": ["tests"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
+  "test_gate_sh_invariants.ts": ["tests"],
   "test_jscpd_go_smart.ts": ["tests", "go"],
   "test_jscpd_pairs.ts": ["tests"],
   "test_knowledge_common.ts": ["tests"],
@@ -322,6 +323,19 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/pre-push-gate.ts",
   ],
   "test_gate_report.ts": ["scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
+  // sh/shAsync 调用点安全不变式（2026-09-13 锐评 P1 #4）：把 gate-ctx 注释里的「禁入
+  // 用户可控输入」落成可执行契约——扫描全部 gate 源码的 ctx.sh/shAsync 实参（禁入清单
+  // + 动态命令冻结清单）。受保护面 = 全部 gate-blocks + 调度器。
+  "test_gate_sh_invariants.ts": [
+    "scripts/_lib/gate-ctx.ts",
+    "scripts/pre-push-gate.ts",
+    "scripts/_lib/gate-blocks/go-domain.ts",
+    "scripts/_lib/gate-blocks/frontend-domain.ts",
+    "scripts/_lib/gate-blocks/schedule.ts",
+    "scripts/_lib/gate-blocks/static-tools.ts",
+    "scripts/_lib/gate-blocks/data-docs-domain.ts",
+    "scripts/_lib/gate-blocks/redlines.ts",
+  ],
   // ADR-206 阶段 3-4：数据/文档/ADR/索引守护 + 红线执行器迁入 gate-blocks/*。
   // 该测试锁调度调用顺序（runDataDomain → runDocsDomain → runRedlines → …）
   // 与 redlines 的 --files 数组式传参（防 shell 拼接注入回归）。

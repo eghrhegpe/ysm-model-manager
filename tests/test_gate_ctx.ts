@@ -209,6 +209,26 @@ function mkCtx() {
   );
 }
 
+// ── 10. sh 同步版与 shAsync 语义对齐（2026-09-13 锐评 P2 #5）：timedOut 透传 + 1MB cap ──
+{
+  const ctx = mkCtx();
+  // 超时：sh 走 procRun，超时分类 rc=-2 → 必须透传 timedOut=true + 原因写进 out
+  const longCmd = `"${process.execPath}" -e "setTimeout(()=>{}, 4000)"`;
+  const r = ctx.sh(longCmd, { timeout: 300 });
+  assert.equal(r.timedOut, true, "sh 超时须标记 timedOut=true（与编译 FAIL 不可区分即误报）");
+  assert.notEqual(r.rc, 0, "被超时终止的同步命令退出码不应为 0");
+  assert.ok(
+    r.out.includes("超时"),
+    "超时原因须写入 out（tail 呈现），实际: " + JSON.stringify(r.out),
+  );
+
+  // 输出 cap：>1MB 保尾部并以 … 前缀标注（同 shAsync 纪律，防 gate 进程内存无界膨胀）
+  const bigCmd = `"${process.execPath}" -e "console.log('x'.repeat(2 * 1024 * 1024))"`;
+  const rb = ctx.sh(bigCmd, { timeout: 30_000 });
+  assert.ok(rb.out.startsWith("…"), "sh 输出超 1MB 应保尾部并以 … 前缀标注");
+  assert.ok(rb.out.length < 2_200_000, `cap 后长度应约为 1MB 量级，实际: ${rb.out.length}`);
+}
+
 console.log(
-  "OK: gate-ctx record/blocked/blockPolicy 落库 + 归属标签链路 + exec 助手契约（9 组断言）",
+  "OK: gate-ctx record/blocked/blockPolicy 落库 + 归属标签链路 + exec 助手契约（10 组断言）",
 );

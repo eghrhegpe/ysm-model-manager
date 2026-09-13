@@ -24,6 +24,8 @@ import { ROOT } from "./scan-files.ts";
  */
 export const GATE_TIMEOUT_MS = 300_000;
 const TIMEOUT = GATE_TIMEOUT_MS;
+/** sh/shAsync 共用的输出尾部上限（2026-09-13 对齐，锐评 P2 #5）：错误诊断集中在末尾，保尾部。 */
+const OUT_CAP = 1 << 20; // 1MB
 
 /** 纯命令执行结果。 */
 export interface ExecResult {
@@ -109,8 +111,17 @@ export function createGateCtx(init: {
     // 那类输入必须走数组式 procRun（见 git() 注释）。本函数只接受 gate 源码内的
     // 开发者常量命令（go test && ...、npx vite build 等需 shell 链接/.cmd 解析的场景）。
     // 违反此界线的先例是旧版 gofmtCheck（已数组化）；新增「含外部输入」的执行一律数组化。
+    // 调用点合规由 tests/test_gate_sh_invariants.ts 锁死（禁插值 push-stdin 派生标识符
+    // + 动态命令冻结清单），把本注释不变式从「人自觉」升级为「可执行契约」（锐评 P1 #4）。
     const r = procRun(cmd, [], { cwd, timeout, shell: true });
-    return { rc: r.rc, out: r.out || r.err || "" };
+    // 与 shAsync 语义对齐（2026-09-13 锐评 P2 #5）：同一 ExecResult 契约，同步/异步两条
+    // exec 路径不得漂移——① procRun 超时分类 rc=-2 透传为 timedOut=true + 原因追加进 out
+    // （超时被杀不得与「编译 FAIL」同形）；② 输出 1MB 尾部 cap 同 shAsync 纪律。
+    const timedOut = r.rc === -2;
+    let out = r.out || r.err || "";
+    if (out.length > OUT_CAP) out = `…${out.slice(-OUT_CAP)}`;
+    if (timedOut) out += `\n[gate] 命令超时被终止（timeout=${timeout}ms）`;
+    return { rc: r.rc, out, timedOut };
   };
 
   const shAsync = (cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}): Promise<ExecResult> =>
@@ -122,9 +133,8 @@ export function createGateCtx(init: {
         // 而超时标记是本函数的契约（见 ExecResult.timedOut）。自管计时器行为完全确定。
         stdio: ["ignore", "pipe", "pipe"],
       });
-      // 输出上限：滚动尾部保留——超限从头裁剪，只留最后 1MB，与 record() 的 64KB raw cap
-      // 同纪律；编译/测试的关键报错集中在输出末尾，保头部会吞掉真正诊断信息。
-      const OUT_CAP = 1 << 20; // 1MB
+      // 输出上限：滚动尾部保留——超限从头裁剪，只留最后 1MB（OUT_CAP 见模块头，与 sh 同源）；
+      // 编译/测试的关键报错集中在输出末尾，保头部会吞掉真正诊断信息。
       let buf = "";
       const append = (d: Buffer) => {
         buf += d.toString();

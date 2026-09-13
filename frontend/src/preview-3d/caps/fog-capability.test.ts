@@ -143,6 +143,23 @@ describe("FogCapability — 持久化", () => {
     expect(cap.getMode()).toBe("linear");
   });
 
+  it("loadState 读回 ADR-196 前 legacy 无前缀键（code_review df84baefb #13 迁移契约，防再次被删）", () => {
+    // 升级用户：localStorage 仍是旧版 saveState 写的 {enabled, mode, color, near, far, density}
+    // 无前缀形态。判据 = fogMode（saveState 恒写的前缀代表键）缺失 + 任一旧键存在 → 纯旧形态。
+    // 此用例锁死「旧数据不静默回默认」——c1f4e4adb 曾误删迁移块，本用例防回归。
+    localStorage.setItem(
+      "ysm-scene-cap-fog",
+      JSON.stringify({ enabled: true, mode: "exp2", color: 0x123456, near: 20, far: 300, density: 0.02 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.isEnabled()).toBe(true);
+    expect(cap.getMode()).toBe("exp2");
+    expect(cap.getParams().density).toBe(0.02);
+    expect(cap.getParams().near).toBe(20);
+    expect(cap.getParams().far).toBe(300);
+  });
+
   it("loadState 读回合法数据", () => {
     localStorage.setItem("ysm-scene-cap-fog", JSON.stringify({ enabled: true, fogMode: "exp2", fogDensity: 0.02, fogColor: 0x123456, fogNear: 20, fogFar: 300 }));
     const cap = newCap();

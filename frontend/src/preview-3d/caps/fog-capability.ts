@@ -197,8 +197,26 @@ export class FogCapability implements SceneCapability {
   }
 
   loadState(): void {
-    const state = restoreState(this.id);
+    let state = restoreState(this.id);
     if (!state) return;
+    // code_review df84baefb #13（P2）：legacy 旧键迁移——ADR-196 前 fog 持久化为
+    // {enabled, mode, color, near, far, density}（无前缀），迁移后只读前缀键且
+    // migrateEnvState 为空透传 → 升级用户的自定义雾设置静默回默认。判据用
+    // fogMode（saveState 恒写的前缀代表键）缺失 + 任一旧键存在 → 纯旧形态；
+    // 只映射实际存在的旧键（防 undefined 覆盖混合形态的新前缀键）。
+    // c1f4e4adb 误删本块，本次随锐评收口恢复。
+    const legacyKeys = ["mode", "enabled", "color", "near", "far", "density"] as const;
+    const s = state as Record<string, unknown>;
+    if (!("fogMode" in s) && legacyKeys.some((k) => k in s)) {
+      state = {
+        ...("enabled" in s ? ({ fogEnabled: s.enabled as boolean } as object) : {}),
+        ...("mode" in s ? ({ fogMode: s.mode } as object) : {}),
+        ...("color" in s ? ({ fogColor: s.color } as object) : {}),
+        ...("near" in s ? ({ fogNear: s.near } as object) : {}),
+        ...("far" in s ? ({ fogFar: s.far } as object) : {}),
+        ...("density" in s ? ({ fogDensity: s.density } as object) : {}),
+      };
+    }
     restoreFields(state, {
       enabled: {
         boolean: (v) => {

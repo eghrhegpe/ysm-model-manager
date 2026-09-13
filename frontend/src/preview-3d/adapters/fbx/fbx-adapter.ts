@@ -334,17 +334,24 @@ export async function buildFbxScene(
         const scene = ctx.scene;
         safeCall(() => scene.remove(group), "fbx dispose scene.remove");
       }
-      // 几何/材质/贴图释放走 disposeObject3D：uuid 去重（共享 geometry/material 只释放一次）
-      disposeObject3D(group, { disposeMaterial });
+      // 几何/材质/贴图释放走 disposeObject3D：uuid 去重（共享 geometry/material 只释放一次）。
+      // 逐段容错（对齐旧版独立 try/catch）：disposeObject3D 抛错不得跳过 skeleton/blob 清理
+      //（GPU boneTexture + blob URL 泄漏，c1f4e4adb 把旧版 geometry/material 段的 try/catch 拆成
+      //  disposeObject3D + 裸 skeleton traverse 时丢失了这段隔离，本次随锐评收口补回）
+      safeCall(() => disposeObject3D(group, { disposeMaterial }), "fbx dispose disposeObject3D");
       // SkinnedMesh.skeleton 持有 boneTexture（GPU 资源），disposeObject3D 不覆盖，单独释放
-      group.traverse((o) => {
-        const skinned = o as THREE.SkinnedMesh;
-        if (skinned.isSkinnedMesh && skinned.skeleton) {
-          skinned.skeleton.dispose();
-        }
-      });
+      safeCall(() => {
+        group.traverse((o) => {
+          const skinned = o as THREE.SkinnedMesh;
+          if (skinned.isSkinnedMesh && skinned.skeleton) {
+            skinned.skeleton.dispose();
+          }
+        });
+      }, "fbx dispose skeleton");
       // 纹理 blob URL 释放（预览关闭后不再需要；未完成的 TextureLoader.load 会静默失败）
-      for (const u of texBlobUrls) URL.revokeObjectURL(u);
+      safeCall(() => {
+        for (const u of texBlobUrls) URL.revokeObjectURL(u);
+      }, "fbx dispose revokeObjectURL");
     },
     screenshot: () =>
       Promise.resolve(

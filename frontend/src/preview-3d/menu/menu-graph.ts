@@ -13,12 +13,12 @@
 // 可达性 = 对代表性快照集求 node.visibleWhen(snap)；节点级谓词（吃 PreviewSnapshot）
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
-import type { PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
-import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "@/preview-3d/menu/defs.ts";
-import type { PreviewMenuNode, PreviewMenuNodeKind } from "@/preview-3d/menu/node-types.ts";
-import type { SlideMenuHandle } from "@/preview-3d/menu/slide-menu.ts";
+import { getSchema, listSchemas } from "@/preview-3d/infra/schema-registry.ts";
+import type { PreviewMenuRouters } from "./core.ts";
+import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
+import type { PreviewMenuNode, PreviewMenuNodeKind } from "./node-types.ts";
+import type { SlideMenuHandle } from "./slide-menu.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import { getSchema, listSchemas } from "./schema-registry.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。
  *  2026-09 收紧：Partial<PreviewSnapshot>——键位必须是已落地路径（写 ui.mode 等未落地键编译报错），

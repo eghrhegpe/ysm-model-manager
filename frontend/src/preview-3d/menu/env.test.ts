@@ -6,7 +6,7 @@ import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { resetEnvState, envState } from "@/preview-3d/state/env-state.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
-import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 

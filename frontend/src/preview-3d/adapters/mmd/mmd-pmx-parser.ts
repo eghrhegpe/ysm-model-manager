@@ -4,7 +4,7 @@
 // P2 切片：重负载同步构建拆成 rAF 帧片段，避免长帧卡顿。
 
 import * as THREE from "three";
-import { createWorkerParser } from "@/preview-3d/adapters/worker-bridge.ts";
+import { createWorkerParser } from "@/preview-3d/infra/worker-bridge.ts";
 import type { PmxBoneData, PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
 
 // ===== PMX 格式常量 =====

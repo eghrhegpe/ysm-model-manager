@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { registerBuiltScene } from "./register-built-scene.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { STATS_PANEL_ID } from "@/preview-3d/menu/stats.ts";
-import type { PreviewScene } from "./mount-preview-core.ts";
+import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
 
 beforeEach(() => {
   sceneRegistry.reset();

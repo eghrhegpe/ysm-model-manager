@@ -7,8 +7,8 @@
 //
 // 本审计门 = 源码静态扫描：非测试源码中出现新 `renderCustom:` 构造点 → 测试红。
 // 当前白名单（1 个：ADR-193 第三刀后 env 已退役出名单，唯余 bones——§2.2 最终决策点）：
-//   1. preview-3d/adapters/bones-panel-node.ts  — id="bones"  骨骼面板（动态树 + 跨域拾取联动，
-//      豁免理由见该文件头注释 13-18 行；ADR-193 §2.2 唯一决策点）
+//   1. preview-3d/menu/bones-panel-node.ts  — id="bones"  骨骼面板（动态树 + 跨域拾取联动，
+//      豁免理由见该文件头注释 13-18 行；ADR-193 §2.2 唯一决策点；路径随 ADR-235 批次 A 归位 menu/）
 //
 // 豁免流程：真·无法数据化才可新增构造点 —— 白名单追加路径 + 构造点处注明豁免理由，
 // 且先经 code review（防「图省事走逃生舱」回归）。测试/类型声明/渲染器读字段不在此列
@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 const SRC_ROOT = join(fileURLToPath(new URL("../../..", import.meta.url)), "src");
 
 /** 允许出现 `renderCustom:` 构造点的生产源码文件（相对 src 的正斜杠路径） */
-const RENDER_CUSTOM_ALLOWLIST = ["preview-3d/adapters/bones-panel-node.ts"];
+const RENDER_CUSTOM_ALLOWLIST = ["preview-3d/menu/bones-panel-node.ts"];
 
 function collectTsFiles(dir: string, acc: string[]): string[] {
   for (const name of readdirSync(dir)) {

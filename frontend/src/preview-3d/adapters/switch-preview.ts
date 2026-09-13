@@ -13,19 +13,19 @@ import { t } from "@/core/i18n/t.ts";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { fitCameraToRoots } from "@/preview-3d/infra/camera-setup.ts";
 import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
+import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
+import { registerBuiltScene } from "@/preview-3d/infra/register-built-scene.ts";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { MAX_MODELS, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import { guardSessionAlive, ownHandle } from "./mount-session.ts";
-import { showLoadFailure } from "./preview-loading.ts";
-import { registerBuiltScene } from "./register-built-scene.ts";
-import { MAX_MODELS, sceneRegistry } from "./scene-registry.ts";
 
 // ---------------------------------------------------------------------------
 // 类型

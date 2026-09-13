@@ -11,15 +11,16 @@
 // 不再依赖模块级全局。外部经 render-loop.ts 的薄门面函数访问，签名零变更。
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { getSceneCaps, type SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import {
   cullModelGroups,
   isFrustumCullEnabled,
   markCullMatricesDirty,
   restoreModelGroupsVisible,
-} from "@/preview-3d/infra/frustum-cull.ts";
-import { sampleGpuLoad } from "@/preview-3d/infra/gpu-load.ts";
-import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
+} from "./frustum-cull.ts";
+import { sampleGpuLoad } from "./gpu-load.ts";
+import type { TdKeyAction } from "./keymap.ts";
 import {
   createAdaptiveRenderBudget,
   getFrameIntervalMs,
@@ -27,9 +28,8 @@ import {
   previewPixelRatio,
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
-} from "@/preview-3d/infra/render-budget.ts";
+} from "./render-budget.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { getSceneCaps, type SharedInfra } from "./shared-infra.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** render-loop 活跃输入会话形状（mount-preview-core 经 set/unregister 注入；rAF 每帧读） */

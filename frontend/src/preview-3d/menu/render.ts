@@ -7,8 +7,8 @@
 // 新增/迁移菜单项时写 PreviewMenuNode 数据即可，渲染逻辑不随菜单项膨胀（对齐 MikuMikuAR renderMenu 范式）。
 
 import { t, tOf } from "@/core/i18n/t.ts";
-import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import {
   isPathAvailable,
   type KNOWN_PATHS,

@@ -2,8 +2,8 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { renderLoadingState } from "@/preview-3d/adapters/preview-loading.ts";
 import { Ktx2TextureLoader } from "@/preview-3d/decoder/mmd-ktx2-texture-loader.ts";
+import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { base64ToBytes, bytesToArrayBuffer, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import { formatLongTask, startMainThreadWatch } from "@/utils/base/primitives/main-thread-watch.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";

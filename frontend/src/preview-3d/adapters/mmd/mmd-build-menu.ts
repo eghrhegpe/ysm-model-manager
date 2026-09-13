@@ -1,11 +1,6 @@
 // ===== mmd-build-menu.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import type * as THREE from "three";
-import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts";
-import type { MmdBottomNavCtx } from "@/preview-3d/adapters/content-bridges.ts";
-import { materialNodes } from "@/preview-3d/adapters/material-controls.ts";
-import { morphNodes } from "@/preview-3d/adapters/morph-controls.ts";
-import { perceptionNodes, pickPerceptionCaps } from "@/preview-3d/adapters/perception-controls.ts";
 import { createAutoDanceController } from "@/preview-3d/adapters/shared/perception/autodance.ts";
 import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts";
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
@@ -22,6 +17,7 @@ import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { mmdBonesToBoneNodes } from "@/preview-3d/bone/mmd-bones.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts";
 import { mmdSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
+import type { MmdBottomNavCtx } from "@/preview-3d/infra/content-bridges.ts";
 import { mmdSemanticMorphMap } from "@/preview-3d/infra/semantic-morphs.ts";
 import {
   getMmdMaterialDetail,
@@ -29,7 +25,11 @@ import {
   setMmdMaterialOpacity,
   setMmdMaterialVisible,
 } from "@/preview-3d/materials/mmd-materials.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts";
+import { materialNodes } from "@/preview-3d/menu/material-controls.ts";
+import { morphNodes } from "@/preview-3d/menu/morph-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { perceptionNodes, pickPerceptionCaps } from "@/preview-3d/menu/perception-controls.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import type { MmdMenuItemsOpts, Stage5Ctx } from "./mmd-types.ts";
 

@@ -22,9 +22,9 @@ export type {
   PreviewMenuNodeKind,
 } from "./menu-node-types.ts";
 
-// 保留项依赖（PreviewMenuCtx 用）：SceneCapability（caps）+ CameraControlBridge（adapters）
-import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+// 保留项依赖（PreviewMenuCtx 用）：SceneCapability（caps）+ CameraControlBridge（adapters）
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 // 值函数（isPreviewFolderNode 等）需本地绑定 PreviewMenuNode——re-export 不提供模块内
 // 可用名，故另 type-import（与 scene-capability.ts 工厂引用控件类型同款）。
 import type { PreviewMenuNode } from "./menu-node-types.ts";

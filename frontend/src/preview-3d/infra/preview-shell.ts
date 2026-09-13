@@ -7,7 +7,7 @@
 // 设计边界：3D 预览为「同一时刻单一全屏 overlay」的模态体验（overlay 清理后 refs 归零，
 // 下次 mount3D 重建），故外壳宿主为单例实例（previewShell）；状态均为实例字段，不再散落
 // 模块级 let。mpc 静态样式经 host.ensureStyles 委托 installOnceStyles 幂等注入（reset 钩子清零后自动重注）。
-import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "./overlay-style-bridge.ts";
 
 // §1.5 P1 批次9:overlay 链静态 cssText 抽类集中注入(mount3D 内 ensureStyles 幂等调用)
 // ADR-175 M1:overlay shadow host 化——内容迁入 shadowRoot 后 head 注入穿不透边界,

@@ -3,7 +3,7 @@
 // 新实现：select/slider/button 三声明式节点，control 闭包走 CameraControlBridge。
 // 渲染链路级交互测试见 litematic-3d.test.ts「camera 面板」组（真实 SlideMenu 弹层）。
 import { describe, expect, it, vi } from "vitest";
-import type { CameraControlBridge } from "@/preview-3d/adapters/camera-controls.ts";
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import type { PreviewMenuCtx } from "./node-types.ts";
 import { buildCameraSchema } from "./settings.ts";
 

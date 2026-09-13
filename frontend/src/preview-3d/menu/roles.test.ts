@@ -7,10 +7,10 @@ import * as THREE from "three";
 import { CORE_MENU_ITEMS } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import { mountPreviewRootMenu, roleBaseName } from "./core.ts";
-import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
-import { registerSchema, unregisterSchema } from "@/preview-3d/adapters/schema-registry.ts";
-import { makeMenuCtx as makeCtx } from "@/preview-3d/adapters/menu-test-fixtures.ts";
+import { registerSchema, unregisterSchema } from "@/preview-3d/infra/schema-registry.ts";
+import { makeMenuCtx as makeCtx } from "./menu-test-fixtures.ts";
 
 /** 注册一个测试角色（真实 SceneRegistry 单例，测试间 reset） */
 function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): string {

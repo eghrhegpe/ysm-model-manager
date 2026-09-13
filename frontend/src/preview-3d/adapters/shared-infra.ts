@@ -21,6 +21,7 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import type { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
+import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { type ModelType, toModelType } from "@/preview-3d/state/model-defaults.ts";
@@ -28,7 +29,6 @@ import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.
 // [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewAdapter } from "./mount-preview-core.ts";
-import type { PostprocessingLike } from "./postprocessing.ts";
 
 /**
  * 装配链——按模型类别套用预设（ADR-196）。

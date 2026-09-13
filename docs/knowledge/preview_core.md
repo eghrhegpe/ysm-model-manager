@@ -123,7 +123,6 @@ auto_fields:
     - makeBonePanelRenderer
     - makeFbxAdapter
     - makeLitematicAdapter
-    - makeMenuCtx
     - makeMmdAdapter
     - makePackAdapter
     - makeVrmAdapter
@@ -139,7 +138,6 @@ auto_fields:
     - MmdMenuItemsOpts
     - MmdPanelHooks
     - MmdZipConfig
-    - mockMenuHandle
     - mount3D
     - Mount3DOptions
     - MountCtx

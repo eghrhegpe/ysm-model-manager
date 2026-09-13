@@ -7,9 +7,10 @@
 //
 // 历史：原 §4b 自 mount-preview-core 拆出（2026 锐评整改），持有 7 个模块级 let 单例；
 // 现收敛为 RendererHost 实例字段（preview-3d P1 战役，与兄弟会话 A1 同一步伐）。
+
+import type { SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
 import type { ActiveInputSession } from "./render-host.ts";
 import { rendererHost } from "./render-host.ts";
-import type { SharedInfra } from "./shared-infra.ts";
 
 /** 注册活跃输入会话（build 成功后调用；重复注册同一引用为 no-op） */
 export function setActiveInputSession(s: ActiveInputSession): void {

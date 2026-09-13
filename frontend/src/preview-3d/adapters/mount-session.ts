@@ -4,26 +4,30 @@
 // 本文件仅承载「会话终结/清理/卸载」生命周期；菜单/rAF/外壳装配仍归 mount-preview-core。
 
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { clearModelRoots } from "@/preview-3d/infra/frustum-cull.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
+import {
+  removePerFrame,
+  stopIfIdle,
+  unregisterActiveInputSession,
+} from "@/preview-3d/infra/render-loop.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { resetSceneTextureBytes } from "@/preview-3d/infra/texture-bytes.ts";
+import { unloadModel } from "@/preview-3d/infra/unload-model.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { returnFocus } from "@/utils/dom/focus-restore.ts";
-import type { CameraControlBridge } from "./camera-controls.ts";
 import type {
   Mount3DOptions,
   PreviewAdapter,
   PreviewHandle,
   PreviewScene,
 } from "./mount-preview-core.ts";
-import { removePerFrame, stopIfIdle, unregisterActiveInputSession } from "./render-loop.ts";
-import { sceneRegistry } from "./scene-registry.ts";
 import type { SharedInfra } from "./shared-infra.ts";
 import { clearSceneCaps } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
-import { unloadModel } from "./unload-model.ts";
 
 /**
  * 会话生命周期状态（ADR-233：取代散装布尔的单一可读来源）。

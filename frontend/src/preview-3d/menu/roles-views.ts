@@ -9,8 +9,8 @@
 // 共用；roles.ts 单向 import，方向不反向）。
 
 import { t } from "@/core/i18n/t.ts";
-import { type ModelEntry, sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { type ModelEntry, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";

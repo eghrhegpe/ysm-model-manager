@@ -12,9 +12,6 @@ import {
 import type { VRM0Meta, VRM1Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import type { BonePanelCleanupRef } from "@/preview-3d/adapters/bones-panel-node.ts";
-import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import { materialNodes } from "@/preview-3d/adapters/material-controls.ts";
 import type {
   PreviewAdapter,
   PreviewBuildCtx,
@@ -22,13 +19,6 @@ import type {
   SemanticScene,
   UpdateableScene,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
-import {
-  type PerceptionCapability,
-  type PerceptionState,
-  perceptionNodes,
-  pickPerceptionCaps,
-} from "@/preview-3d/adapters/perception-controls.ts";
-import { renderLoadingState } from "@/preview-3d/adapters/preview-loading.ts";
 import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import {
@@ -42,8 +32,18 @@ import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-stats.ts";
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { materialNodes } from "@/preview-3d/menu/material-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+  pickPerceptionCaps,
+} from "@/preview-3d/menu/perception-controls.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
@@ -69,7 +69,7 @@ async function vrmDiag(
   }
 }
 
-import type { MmdPlayBridge } from "@/preview-3d/adapters/content-bridges.ts";
+import type { MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts";
 import {
   getVrmMaterialDetail,
   listVrmMaterials,

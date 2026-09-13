@@ -7,14 +7,14 @@
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
 import { t, tOf } from "@/core/i18n/t.ts";
-import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {
   getSchema,
   registerSchema,
   type SchemaBuilder,
   unregisterSchema,
-} from "@/preview-3d/adapters/schema-registry.ts";
-import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+} from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";

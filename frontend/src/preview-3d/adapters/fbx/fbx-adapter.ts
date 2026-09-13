@@ -10,8 +10,6 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import type { BonePanelCleanupRef } from "@/preview-3d/adapters/bones-panel-node.ts";
-import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { concurrentMap } from "@/preview-3d/adapters/mmd/mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
 import type {
   PreviewAdapter,
@@ -25,6 +23,8 @@ import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";

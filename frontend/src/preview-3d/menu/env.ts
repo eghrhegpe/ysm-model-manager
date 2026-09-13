@@ -17,8 +17,8 @@ import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./no
 import { renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
-const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
+const ENV_IDS = new Set<string>(ORDERED_IDS);
 
 /**
  * 环境面板 cap 分段（卡牌外壳单一事实源）。

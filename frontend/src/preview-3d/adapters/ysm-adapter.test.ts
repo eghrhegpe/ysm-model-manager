@@ -24,15 +24,15 @@ import type {
   ScreenshotScene,
   UpdateableScene,
 } from "./mount-preview-core.ts";
-import type { YsmControlsContext } from "./content-bridges.ts";
+import type { YsmControlsContext } from "@/preview-3d/infra/content-bridges.ts";
 import {
   YSM_MODEL_SCHEMA_ID,
   hasSchema,
   makeYsmModelSchemaId,
   registerSchema,
   resetSchemas,
-} from "./schema-registry.ts";
-import { sceneRegistry } from "./scene-registry.ts";
+} from "@/preview-3d/infra/schema-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {
   buildYsmScene,
   makeYsmAdapter,
@@ -87,7 +87,7 @@ vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({ screenshotFromRenderer
 vi.mock("@/preview-3d/model/ysm-animation-player.ts", () => ({ createYsmAnimPlayer: h.createYsmAnimPlayer }));
 vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: h.logWarn }));
 vi.mock("@/utils/dom/editable-target.ts", () => ({ isEditableTarget: h.isEditableTarget }));
-vi.mock("./bones-panel-node.ts", () => ({ makeBonesPanelItem: h.makeBonesPanelItem }));
+vi.mock("@/preview-3d/menu/bones-panel-node.ts", () => ({ makeBonesPanelItem: h.makeBonesPanelItem }));
 
 // ── 假依赖工厂 ─────────────────────────────────────────────
 

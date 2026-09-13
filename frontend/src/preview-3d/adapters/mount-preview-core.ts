@@ -19,10 +19,26 @@ import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { deferred } from "@/preview-3d/deferred.ts";
+import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
+import type { InputOptions } from "@/preview-3d/infra/input-and-animation.ts";
+import { bindInputHandlers } from "@/preview-3d/infra/input-and-animation.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { setOverlayStyleTarget } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
+import { previewShell } from "@/preview-3d/infra/preview-shell.ts";
+import { registerBuiltScene } from "@/preview-3d/infra/register-built-scene.ts";
+import {
+  registerPerFrame,
+  removePerFrame,
+  resetLoopState,
+  setActiveInputSession,
+  startGlobalRenderLoop,
+} from "@/preview-3d/infra/render-loop.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import { PREVIEW_OVERLAY_ID } from "@/preview-3d/infra/ui-constants.ts";
+import { makeUnifiedPickHandler } from "@/preview-3d/infra/unified-pick.ts";
 import {
   componentsStyleSheet,
   installComponentsStyles,
@@ -44,9 +60,6 @@ import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
-import type { CameraControlBridge } from "./camera-controls.ts";
-import type { InputOptions } from "./input-and-animation.ts";
-import { bindInputHandlers } from "./input-and-animation.ts";
 // mount3D 生命周期闭包 → mount-session.ts；rAF 循环 → render-loop.ts
 import {
   closeOverlay,
@@ -57,17 +70,6 @@ import {
   runFullCleanup,
   unloadSessionModel,
 } from "./mount-session.ts";
-import { showLoadFailure } from "./preview-loading.ts";
-import { previewShell } from "./preview-shell.ts";
-import { registerBuiltScene } from "./register-built-scene.ts";
-import {
-  registerPerFrame,
-  removePerFrame,
-  resetLoopState,
-  setActiveInputSession,
-  startGlobalRenderLoop,
-} from "./render-loop.ts";
-import { sceneRegistry } from "./scene-registry.ts";
 import { sessionLedger } from "./session-ledger.ts";
 // §5 拆分：场景单例/基础设施装配 → shared-infra.ts；
 // 统一拾取器 → unified-pick.ts
@@ -79,8 +81,6 @@ import {
 } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
-import { PREVIEW_OVERLAY_ID } from "./ui-constants.ts";
-import { makeUnifiedPickHandler } from "./unified-pick.ts";
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
 export interface PreviewBuildCtx {

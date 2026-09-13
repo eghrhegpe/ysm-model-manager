@@ -5,10 +5,10 @@
 // 本文件不持有任何模块级单例状态。
 import type * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { fitCameraToRoots } from "@/preview-3d/infra/camera-setup.ts";
-import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
+import { fitCameraToRoots } from "./camera-setup.ts";
+import { safeDispose } from "./safe-dispose.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
-import type { PreviewScene } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
 /** unloadModel 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */

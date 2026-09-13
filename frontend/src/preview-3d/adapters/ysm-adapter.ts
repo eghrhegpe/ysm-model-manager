@@ -25,10 +25,29 @@ import { ysmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { fitCameraToScene } from "@/preview-3d/infra/camera-setup.ts";
 import { disposeDebugGroup } from "@/preview-3d/infra/cleanup-helper.ts";
+import type {
+  MmdPlayBridge,
+  YsmContentHandle,
+  YsmControlsContext,
+} from "@/preview-3d/infra/content-bridges.ts";
 import { rebuildDebug } from "@/preview-3d/infra/debug-render.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import {
+  makeYsmModelSchemaId,
+  unregisterSchema,
+  YSM_MODEL_SCHEMA_ID,
+} from "@/preview-3d/infra/schema-registry.ts";
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+  pickPerceptionCaps,
+} from "@/preview-3d/menu/perception-controls.ts";
 import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import {
   createYsmAnimPlayer,
@@ -46,9 +65,6 @@ import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts"; // 输入守卫复用（焦点在输入框不吞键）
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import type { MmdPlayBridge, YsmContentHandle, YsmControlsContext } from "./content-bridges.ts";
 import type {
   CameraControlScene,
   GroupedScene,
@@ -58,14 +74,6 @@ import type {
   ScreenshotScene,
   UpdateableScene,
 } from "./mount-preview-core.ts";
-import {
-  type PerceptionCapability,
-  type PerceptionState,
-  perceptionNodes,
-  pickPerceptionCaps,
-} from "./perception-controls.ts";
-import { sceneRegistry } from "./scene-registry.ts";
-import { makeYsmModelSchemaId, unregisterSchema, YSM_MODEL_SCHEMA_ID } from "./schema-registry.ts";
 
 /**
  * preloadModel 产物契约（视图壳层数据转换：model → 纹理 + spec，含 WASM/Go 兜底）。

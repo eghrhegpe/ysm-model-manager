@@ -11,7 +11,7 @@ import type { PreviewMenuNode } from "./node-types.ts";
 import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
-import { mockMenuHandle } from "@/preview-3d/adapters/menu-test-fixtures.ts";
+import { mockMenuHandle } from "./menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;

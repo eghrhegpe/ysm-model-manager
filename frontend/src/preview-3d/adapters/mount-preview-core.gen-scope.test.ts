@@ -103,7 +103,7 @@ vi.mock("@/preview-3d/menu/core.ts", () => ({
     return h.menuHandle;
   }),
 }));
-vi.mock("./input-and-animation.ts", () => ({
+vi.mock("@/preview-3d/infra/input-and-animation.ts", () => ({
   bindInputHandlers: (opts: unknown) => h.bindInput(opts),
 }));
 vi.mock("@/utils/dom/focus-restore.ts", () => ({
@@ -122,7 +122,7 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   clearModelRoots: vi.fn(),
 }));
 
-import { sceneRegistry } from "./scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 
 /** 最小可用 content */
 function makeContent(): PreviewScene {

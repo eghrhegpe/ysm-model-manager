@@ -11,7 +11,7 @@
 // DOM 半身）——分开存放防后来者把 DOM 装配误当 buildRolesSchema 的写法复制。
 
 import { t } from "@/core/i18n/t.ts";
-import { sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";

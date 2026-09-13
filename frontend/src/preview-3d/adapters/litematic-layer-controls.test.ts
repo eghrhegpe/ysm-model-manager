@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { zhCN } from "@/locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
-import { getSchema } from "./schema-registry.ts";
+import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/slide-menu.ts";

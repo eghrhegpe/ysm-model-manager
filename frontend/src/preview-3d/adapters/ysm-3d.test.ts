@@ -7,7 +7,7 @@ import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
-import type { YsmModel, YsmContentHandle } from "./content-bridges.ts";
+import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-bridges.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -28,7 +28,7 @@ vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
 vi.mock("@/preview-3d/bone/bone-tools.ts", () => ({
   buildBoneTree: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
 }));
-vi.mock("./bones-panel-node.ts", () => ({
+vi.mock("@/preview-3d/menu/bones-panel-node.ts", () => ({
   // stub 工厂：记录调用参数，便于断言「ysm 正确把 o.bonePanel 字段传给工厂」
   // bones 面板的真实渲染行为（含 cleanupRef 重入、空守卫）在 bones-panel-node.test.ts 覆盖
   makeBonesPanelItem: vi.fn(() => ({
@@ -498,7 +498,7 @@ describe("ysmMenuItems 独立菜单表测试", () => {
   // ysm-adapter 这一层只剩「正确把 o.bonePanel 字段传给工厂」的接线契约：
 
   it("ysm 正确把 bonePanel 字段（tree/cleanupRef/viewContainer/camera/scene）传给 bones 工厂", async () => {
-    const { makeBonesPanelItem } = await import("./bones-panel-node.ts");
+    const { makeBonesPanelItem } = await import("@/preview-3d/menu/bones-panel-node.ts");
     const cleanupRef = { current: null };
     const viewContainer = document.createElement("div");
     const tree = { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() } as unknown as BoneTree;
@@ -531,7 +531,7 @@ describe("ysmMenuItems 独立菜单表测试", () => {
 
 // ===== 覆盖率攻坚：守卫 / 多模型模式 / 拾取回调 / 播放桥 / F 键调试 / 生命周期方法 =====
 
-import { sceneRegistry } from "./scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 
 describe("buildYsmScene 守卫与多模型模式", () => {
   beforeEach(() => {

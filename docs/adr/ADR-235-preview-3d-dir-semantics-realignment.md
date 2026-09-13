@@ -27,7 +27,7 @@
 
 ### 1.2 核心病症：`adapters/` 名不副实
 
-`adapters/` 是 `preview-3d` 内被引用最多的目录（`@/preview-3d/adapters/` 118 处 import：外部 68 + 内部 50），但 31 个生产文件中**仅 3 个是真 adapter（占比 10%）**：
+`adapters/` 是 `preview-3d` 内被引用最多的目录（`@/preview-3d/adapters/` 118 处 import：外部 68 + 内部 50），但 30 个顶层生产文件中**仅 3 个是真 adapter（占比 10%）**：
 
 - 真 adapter：`ysm-adapter.ts`、`litematic-adapter.ts`、`pack-model-adapter.ts`（及 `mmd/`、`vrm/`、`fbx/`、`shared/` 格式家族）
 - 寄居者：28 个，含核心装配器 `mount-preview-core.ts`（1041 行）、代际守卫 `session-ledger.ts`、`switch-preview.ts`（501 行）
@@ -42,7 +42,7 @@
 |----|------|------|----------|
 | A | 菜单节点构造器 | 5 | `material-controls` / `morph-controls` / `perception-controls` / `bones-panel-node` / `menu-graph` 均返回 `PreviewMenuNode`，import `@/preview-3d/menu/node-types.ts` |
 | B | 装配与会话生命周期 | 5 | `mount-preview-core` / `mount-session` / `switch-preview` / `session-ledger` / `shared-infra` |
-| C | 共享基础设施 | 18 | 渲染宿主、相机、拾取、外壳、注册表、worker 桥等 |
+| C | 共享基础设施 | 17 | 渲染宿主、相机、拾取、外壳、注册表、worker 桥等 |
 
 ### 1.4 次级病症：`menu/` 用命名前缀模拟模块
 
@@ -79,7 +79,7 @@ commit `7061818c4`「根级散文件归位 mesh/ 与 infra/」已确立「散装
 preview-3d/
 ├── adapters/          仅格式适配器家族（3 顶层 + mmd/ vrm/ fbx/ shared/）
 ├── mount/             【新建】装配与会话生命周期（B 组 5 文件）
-├── infra/             【已有·扩充】共享基础设施（C 组 18 文件）
+├── infra/             【已有·扩充】共享基础设施（C 组 17 文件）
 ├── menu/
 │   ├── render/        【阶段三】rm* 前缀升格目录
 │   └── cap-controls/  【阶段三】renderCap* 前缀升格目录
@@ -110,7 +110,7 @@ preview-3d/
 | `adapters/mount-session.ts` (364) | `mount/mount-session.ts` |
 | `adapters/session-ledger.ts` | `mount/session-ledger.ts` |
 
-**批次 C — 共享基建 → `infra/`（18 文件，无战役冲突）**
+**批次 C — 共享基建 → `infra/`（17 文件，无战役冲突）**
 
 | 源文件 | 目标 |
 |--------|------|
@@ -172,7 +172,7 @@ preview-3d/
 |------|-------------|
 | `adapters/` 纯度 10% | `ls adapters/*.ts` 分类 → 31 生产文件中 3 个含 `adapter` |
 | 118 处 import 影响面 | `grep -rn "@/preview-3d/adapters/" frontend/src` → 外部 68 + 内部 50 |
-| A/B/C 三组无余数拆分 | 逐个 `grep "export function"` 核实导出符号 → 5（`PreviewMenuNode` 构造器）+ 5（装配会话）+ 18（基建）= 28 |
+| A/B/C 三组无余数拆分 | 逐个 `grep "export function"` 核实导出符号 → 5（`PreviewMenuNode` 构造器）+ 5（装配会话）+ 17（基建）= 27 |
 | 硬指标全绿 | `grep "any"` → 2；`@ts-ignore` → 0；非空断言 → 43；`node scripts/check-layering.ts` → exit 0 无 preview-3d 违规 |
 | B 组撞车风险 | ADR-227 §2 决策 2「收敛为 `PreviewSession` 类实例（方案 A）」+ 状态 🔄 部分采纳；ADR-233 实施态落点同为 `mount-session.ts` / `switch-preview.ts` / `mount-preview-core.ts` |
 | 不新增 `core/` | ADR-189 D4：`frontend/src/core` 为引擎无关内核，同名会语义撞车 |

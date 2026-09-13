@@ -4,14 +4,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { collectMenuGraph, collectNodePredicates } from "./menu-graph.ts";
 import type { MenuGraph, MenuGraphNode, RepresentativeSnapshot } from "./menu-graph.ts";
-import type { PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
-import { buildPreviewMenuRouters } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuRouters } from "./core.ts";
+import { buildPreviewMenuRouters } from "./core.ts";
 import { makeMenuCtx, mockMenuHandle } from "./menu-test-fixtures.ts";
-import { registerSchema, resetSchemas, listSchemas, getSchema } from "./schema-registry.ts";
-import { unregisterCorePanelSchemas } from "@/preview-3d/menu/core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import { registerSchema, resetSchemas, listSchemas, getSchema } from "@/preview-3d/infra/schema-registry.ts";
+import { unregisterCorePanelSchemas } from "./core.ts";
+import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import type { SlideMenuHandle } from "@/preview-3d/menu/slide-menu.ts";
+import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** 默认代表性快照：空记录（无状态守卫激活）→ 非守卫节点可达，守卫节点隐藏 */
 const DEFAULT_SNAP: Partial<PreviewSnapshot> = {};

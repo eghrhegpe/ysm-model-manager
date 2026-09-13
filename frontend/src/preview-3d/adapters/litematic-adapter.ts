@@ -9,7 +9,10 @@ import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import type { SchemaBuilder } from "@/preview-3d/infra/schema-registry.ts";
+import { registerSchema, unregisterSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
@@ -20,9 +23,6 @@ import type {
   PreviewScene,
   ScreenshotScene,
 } from "./mount-preview-core.ts";
-import { renderLoadingState } from "./preview-loading.ts";
-import type { SchemaBuilder } from "./schema-registry.ts";
-import { registerSchema, unregisterSchema } from "./schema-registry.ts";
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 /** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——ADR-175 M1 后为 overlay shadow root,ensureMdliStyles 经桥注入同域) */

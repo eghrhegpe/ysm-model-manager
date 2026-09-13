@@ -5,14 +5,14 @@
 // 注：switch 的无快照兜底分支（register({ path, rtype: "", roots: [], content })，
 // 不携带菜单/骨骼元数据）语义不同，不在此收编范围。
 import type * as THREE from "three";
-import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
+import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
+import { collectSceneStats } from "./scene-stats.ts";
 import {
   estimateSceneTextureBytes,
   setLastSceneTextureBytes,
-} from "@/preview-3d/infra/texture-bytes.ts";
+} from "./texture-bytes.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/stats.ts";
-import type { PreviewScene } from "./mount-preview-core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
 export interface RegisterBuiltSceneInput {

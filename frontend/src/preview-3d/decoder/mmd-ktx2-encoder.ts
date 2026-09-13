@@ -122,7 +122,7 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
 // 核心实现已抽取到 mmd-ktx2-basis.ts（主线程与 Worker 共用，无 DOM 依赖）。
 // 本文件保留编码调度/并发/缓存逻辑，并在此处导出兼容符号。
 
-import { createWorkerBridge, type WorkerBridge } from "@/preview-3d/adapters/worker-bridge.ts";
+import { createWorkerBridge, type WorkerBridge } from "@/preview-3d/infra/worker-bridge.ts";
 import { encodeToKTX2Basis, MAX_KTX2_PIXELS, TextureTooLargeError } from "./mmd-ktx2-basis.ts";
 // type-only import：不产生运行时 import（worker 文件含 self.onmessage，主线程不能执行它）
 import type { Ktx2EncodeResponse } from "./mmd-ktx2-worker.ts";

@@ -108,7 +108,7 @@ vi.mock("@/preview-3d/menu/core.ts", () => ({
     return h.menuHandle;
   }),
 }));
-vi.mock("./input-and-animation.ts", () => ({
+vi.mock("@/preview-3d/infra/input-and-animation.ts", () => ({
   bindInputHandlers: (opts: unknown) => h.bindInput(opts),
 }));
 vi.mock("@/utils/dom/focus-restore.ts", () => ({
@@ -137,7 +137,7 @@ import {
   cleanupPreview,
   _resetSingletons,
 } from "./mount-preview-core.ts";
-import { sceneRegistry } from "./scene-registry.ts";
+import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { GPU_BUDGET_CALIBRATION_KEY } from "@/preview-3d/infra/gpu-load-calibrate.ts";
 import { resetFakeRendererStats, setFakeRendererStats } from "@/test-utils/fake-webgl-renderer.ts";

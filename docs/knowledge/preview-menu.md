@@ -175,8 +175,8 @@ status: active
 - **`ui/ui-slide-menu.ts` `createSlideMenu`** — SlideMenu 多层导航外壳（底部根菜单容器）。
 - **`preview-3d/state/preview-state.ts` `previewSnapshot()`** — `visibleWhen` 谓词吃的状态层快照；dock 组过滤（`dockGroupItemsFor`）与内容级渲染共用同一求值器。
 - **`preview-3d/caps/scene-capability.ts`** — cap 生态：`controls` 节点直持 `PreviewControlDef[]`，渲染委托 `renderCapControls`（唯一控件渲染器）。
-- **`preview-3d/adapters/schema-registry.ts`** — adapter 面板 schema 注册；`renderAdapterPanelContent` 第一通道查 `getSchema(node.schemaId)`。
-- **`preview-3d/adapters/scene-registry.ts`** — 活跃角色详情（motion 组动态直达特例）。
+- **`preview-3d/infra/schema-registry.ts`** — adapter 面板 schema 注册；`renderAdapterPanelContent` 第一通道查 `getSchema(node.schemaId)`。
+- **`preview-3d/infra/scene-registry.ts`** — 活跃角色详情（motion 组动态直达特例）。
 - **`core/i18n/t.ts`** — 菜单文案 i18n（`tOf(node.labelKey)` 多级兜底；原 `core/i18n/tr.ts` 双入口随 ADR-210 D3 根除）。
 - **`utils/dom/fab.ts` / `utils/dom/focus-restore.ts`** — FAB 样式 + 输入阻断栈。
 - **`preview-3d/infra/overlay-style-bridge.ts`** — overlay 样式注入根（ADR-175 M1 目标切换重注入）。

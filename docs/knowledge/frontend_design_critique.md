@@ -15,7 +15,7 @@ source_files:
   - frontend/src/preview-3d/adapters/shared/perception/gaze.ts
   - frontend/src/preview-3d/adapters/shared/perception/autodance.ts
   - frontend/src/preview-3d/infra/safe-dispose.ts
-  - frontend/src/preview-3d/adapters/scene-registry.ts
+  - frontend/src/preview-3d/infra/scene-registry.ts
   - frontend/src/preview-3d/menu/roles.ts
   - frontend/src/utils/dom/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
@@ -24,7 +24,7 @@ source_files:
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-preview/detail-3d.ts
-  - frontend/src/preview-3d/adapters/worker-bridge.ts
+  - frontend/src/preview-3d/infra/worker-bridge.ts
   - frontend/src/preview-3d/infra/render-budget.ts
   - frontend/src/wasm/ysm-worker-loader.ts
   - frontend/src/backend/web-stats.ts
@@ -86,8 +86,8 @@ auto_fields:
     - WorkerBridge
     - WorkerErrorStrategy
 tests:
-  - frontend/src/preview-3d/adapters/scene-registry.test.ts
-  - frontend/src/preview-3d/adapters/worker-bridge.test.ts
+  - frontend/src/preview-3d/infra/scene-registry.test.ts
+  - frontend/src/preview-3d/infra/worker-bridge.test.ts
   - frontend/src/preview-3d/menu/roles.test.ts
   - frontend/src/preview-3d/adapters/shared/perception/autodance.test.ts
   - frontend/src/preview-3d/adapters/shared/perception/gaze.test.ts
@@ -205,7 +205,7 @@ invariant_anchors:
   - 90 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **仲裁撤回：`_checkedSets` 非"泄漏"**：子代理报 `app-sidebar/index.ts:37` `_checkedSets` 模块级 Map 无 reset 路径。主模型抽查 `app-sidebar.sync.test.ts:131-140`「重新挂载 → 恢复已勾选状态」测试明确依赖跨 disconnectedCallback 保留——**设计意图**（按 rtype 隔离 + 跨重新渲染保持勾选），非 bug。模块级状态保持不动。
 - ❌ **仲裁撤回被推翻（2026-09 复核实证）：死代码转发壳确是真死代码**。原撤回理由是「`methods.test.ts` 大量引用 → 测试消费方明确」，实测该理由不成立：`app-content.methods.test.ts` 的 `ContentEl` 是**测试本地类型**（且带 `[key: string]: unknown` 兜底，该声明本身非必需），`mountContent()` 把 `_initDiagnostics`/`_initWorkshop`/`_initGithub`/`_initSettings` 赋成 `vi.fn()`——**从不执行**；`describe("_initRepository …")` 与 `package:selected` 用例走的都是 `el._render()` → `PAGE_REGISTRY[page].init`（`app-content/page-registry.ts|PAGE_REGISTRY` 直引各 init 函数），方法体从未被触碰，原注释「真实 _initInstances 注册订阅」属误述。生产侧 grep `\._init(Diagnostics|Instances|Repository|Workshop|Github|Settings)\(` 零命中。**已删除 6 个转发方法**（`_initPreviewResize` 有真实调用故保留），同步清理失效 import 与测试桩/类型/注释；改后 app-content 24 文件 381 用例全绿。详见 §动刀进度 刀⑮。
-- ✅ **刀⑦ pickModelByObject WeakMap 索引**（2026-09-05）：`preview-3d/adapters/scene-registry.ts` `register` 时在 root 上填 `WeakMap<Object3D, ModelEntry>`，`pickModelByObject` 从 O(entries×roots) 双重遍历改为 O(depth) 沿父链查 Map；`unregister`/`reset`/去重重载路径同步维护索引；删除 `isDescendant` 死函数。13 测试全绿 + vite build + typecheck + biome 全通过。
+- ✅ **刀⑦ pickModelByObject WeakMap 索引**（2026-09-05）：`preview-3d/infra/scene-registry.ts` `register` 时在 root 上填 `WeakMap<Object3D, ModelEntry>`，`pickModelByObject` 从 O(entries×roots) 双重遍历改为 O(depth) 沿父链查 Map；`unregister`/`reset`/去重重载路径同步维护索引；删除 `isDescendant` 死函数。13 测试全绿 + vite build + typecheck + biome 全通过。
 - ✅ **刀⑧ web-stats 单 worker 终止 + 重试**（2026-09-05）：`backend/web-stats.ts` 瞬态 error（WASM 初始化失败 / trap 逃逸）从「杀整池」改为「只终止出错 worker + 换 worker 重试 1 次」——每 Worker 独立 WASM 实例，单 worker 故障不应传染。超时路径仍杀整池（WASM 死循环可能传染）。`statsOneChunk` 返回 `StatsChunkResult{ok, retryable}`，`terminateStatsWorker` 导出签名不变（browser-adapter 消费）。135 测试全绿 + vite build + typecheck + biome 全通过。
 - ⚠️ **P2-7 撤回（子代理建议不可行）**：`wasm/ysm-worker-loader.ts:215` 的 `ccall("ysm_decode_from_memory")` 是同步 WASM 调用，阻塞 Worker 事件循环——`Promise.race` 软超时的 `setTimeout` 回调在 ccall 期间不会触发，Promise 无法被 race 掉。唯一能中断挂起 ccall 的方法是主线程 `Worker.terminate()`（即现有 `statsOneChunk` 60s 超时路径）。60s 是设计意图的防御线，非「无超时」。
 - ✅ **刀⑨ ADR-219 细粒度降级：单 worker 静默看门狗 + 逐模型 partial 流**（2026-09-10，共识榜 #4 根治）：P2-7 判定的「60s 杀整池」防御线被升级为**故障粒度对齐**——协议重开最小 worker 级信道（`partial` 逐模型结果流 + `result` 瘦身为流结束标记，ADR-218 D2 部分修订），主线程 `statsOneChunk` 双计时器（30s 静默窗随 partial 重置 + 60s chunk 墙钟跨重试共享）：挂死只杀该 worker，专属 replacement 上重试**剩余未回包**模型；静默杀预算 2 次 / 墙钟耗尽 → 剩余模型全 `hasError`（`EMPTY_ERROR`），chunk 正常收尾、**整批不降级**。故障边界拆分（D3）：系统级（WASM init 重试耗尽 / 构造失败 / 取消）保留整批降级 + toast；局部挂死走模型级细粒度。UI 进度顺带从 chunk 级升级为模型级。web-stats 25 + stats.worker 5 + 消费端 157 测试全绿 + vite build + typecheck + biome 全通过。

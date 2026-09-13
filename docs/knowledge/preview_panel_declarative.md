@@ -9,7 +9,7 @@ source_files:
   - frontend/src/preview-3d/menu/node-types.ts
   - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
-  - frontend/src/preview-3d/adapters/morph-controls.ts
+  - frontend/src/preview-3d/menu/morph-controls.ts
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
@@ -36,6 +36,8 @@ auto_fields:
     - MmdPanelHooks
     - MmdPlayBridge
     - mmdShotNodes
+    - MorphMeshLike
+    - morphNodes
     - mountPreviewRootMenu
     - nodeControlToView
     - playNodes
@@ -58,7 +60,7 @@ auto_fields:
     - ysmShotNodes
   tests:
     - frontend/src/preview-3d/menu/items.test.ts
-    - frontend/src/preview-3d/adapters/morph-controls.test.ts
+    - frontend/src/preview-3d/menu/morph-controls.test.ts
     - frontend/src/views/app-preview/mmd-controls.test.ts
     - frontend/src/views/app-preview/ysm-controls.test.ts
 quick_groups:

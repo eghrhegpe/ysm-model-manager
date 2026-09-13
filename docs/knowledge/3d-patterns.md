@@ -9,7 +9,7 @@ source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/infra/cleanup-helper.ts
   - frontend/src/preview-3d/infra/safe-dispose.ts
-  - frontend/src/preview-3d/adapters/render-loop.ts
+  - frontend/src/preview-3d/infra/render-loop.ts
   - frontend/src/views/app-preview/preview-library.ts
   - frontend/src/views/app-preview/skeleton.ts
 auto_fields:
@@ -24,6 +24,7 @@ auto_fields:
     - disposeDebugGroup
     - disposeObject3D
     - disposeSceneMeshes
+    - getActiveInputSession
     - getRegisteredRoutes
     - GroupedScene
     - hasActivePreview
@@ -40,14 +41,21 @@ auto_fields:
     - PreviewHandle
     - PreviewScene
     - rebuildDebug
+    - registerPerFrame
     - registerReRoute
+    - removePerFrame
+    - resetLoopState
     - SafeDisposable
     - safeDispose
     - scanModelsByType
     - ScreenshotScene
     - SemanticScene
     - setActive3DClose
+    - setActiveInputSession
+    - startGlobalRenderLoop
+    - stopIfIdle
     - switchPreview
+    - unregisterActiveInputSession
     - UpdateableScene
     - withPreviewExtras
   tests:
@@ -547,7 +555,7 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ## 相关文件
 
-- `frontend/src/preview-3d/adapters/render-host.ts` — 渲染循环优化（`RendererHost`：Vector3 复用实例字段）；`render-loop.ts` 为薄门面（ADR-227）
+- `frontend/src/preview-3d/infra/render-host.ts` — 渲染循环优化（`RendererHost`：Vector3 复用实例字段）；`render-loop.ts` 为薄门面（ADR-227）
 - `frontend/src/preview-3d/infra/safe-dispose.ts` — 安全释放原语
 - `frontend/src/preview-3d/infra/debug-render.ts` — 纹理缓存
 - `frontend/src/preview-3d/model/model-group-builder.ts` — 函数抽取（FixOrphanBoneChain）

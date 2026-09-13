@@ -7,7 +7,7 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/caps/
-  - frontend/src/preview-3d/adapters/scene-registry.ts
+  - frontend/src/preview-3d/infra/scene-registry.ts
 auto_fields:
   symbols_with_lines:
     - AmbientLightParams
@@ -68,6 +68,8 @@ auto_fields:
     - lightDirToPosition
     - LightParams
     - luminanceHistogram
+    - MAX_MODELS
+    - ModelEntry
     - oneOf
     - persistState
     - pickPersistFields
@@ -90,6 +92,7 @@ auto_fields:
     - SceneCapabilityLookup
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
+    - sceneRegistry
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams

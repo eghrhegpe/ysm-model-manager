@@ -11,10 +11,10 @@ source_files:
   - frontend/src/preview-3d/menu/slide-menu-styles.ts
   - frontend/src/preview-3d/menu/style-install.ts
   - frontend/src/preview-3d/menu/dom-contract.ts
-  - frontend/src/preview-3d/adapters/ui-constants.ts
-  - frontend/src/preview-3d/adapters/overlay-active.ts
+  - frontend/src/preview-3d/infra/ui-constants.ts
+  - frontend/src/preview-3d/infra/overlay-active.ts
 tests:
-  - frontend/src/preview-3d/adapters/overlay-active.test.ts
+  - frontend/src/preview-3d/infra/overlay-active.test.ts
   - frontend/src/preview-3d/menu/components-styles.test.ts
   - frontend/src/preview-3d/menu/header-toggle.test.ts
   - frontend/src/preview-3d/menu/slide-menu-styles.test.ts
@@ -35,6 +35,8 @@ auto_fields:
     - InstallableStyles
     - installComponentsStyles
     - installSlideMenuStyles
+    - isPreviewOverlayActive
+    - PREVIEW_OVERLAY_ID
     - ROLE
     - slideMenuCss
     - SlideMenuHandle
@@ -89,8 +91,8 @@ status: active
 | 样式 | `preview-3d/menu/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
 | 外壳样式 | `preview-3d/menu/slide-menu-styles.ts` | `slideMenuCss` → `slideMenuStyleSheet` + `installSlideMenuStyles()` |
 | 样式脚手架 | `preview-3d/menu/style-install.ts` | `createInstallableStyles`——上面两样式文件共用的「CSSStyleSheet + 幂等 light-DOM 注入」脚手架 |
-| 常量 | `preview-3d/adapters/ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID）——**仅 `mount-preview-core` 建、`preview-3d/adapters/overlay-active\|isPreviewOverlayActive` 查**两个出口，其它模块不得直接引用该常量裸查 DOM；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |
-| 契约查询 | `preview-3d/adapters/overlay-active.ts` | `isPreviewOverlayActive()` —— 3D 全屏模态会话是否激活（查 overlay host 是否在 document，零状态漂移）。ADR-220 归位挂载核心旁（与唯一生产者同目录），app-tree 键盘门禁经 `@/preview-3d/adapters/overlay-active.ts` 查询；原「勿因单消费者下沉」辩护随归位失效 |
+| 常量 | `preview-3d/infra/ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID）——**仅 `mount-preview-core` 建、`preview-3d/infra/overlay-active\|isPreviewOverlayActive` 查**两个出口，其它模块不得直接引用该常量裸查 DOM；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |
+| 契约查询 | `preview-3d/infra/overlay-active.ts` | `isPreviewOverlayActive()` —— 3D 全屏模态会话是否激活（查 overlay host 是否在 document，零状态漂移）。ADR-220 归位挂载核心旁（与唯一生产者同目录），app-tree 键盘门禁经 `@/preview-3d/infra/overlay-active.ts` 查询；原「勿因单消费者下沉」辩护随归位失效 |
 | 类型 | （已拔管） | `ui-types.ts`（`ControlOptions`）已删除——消费方为已拔管行 builder 簇 |
 | 工具 | （已删） | barrel re-export 已在 ADR-146 反桶运动中移除；全部消费方改为从具体叶模块直引 |
 | 契约 | `preview-3d/menu/dom-contract.ts` | role/class 契约单源（禁手写字符串）；`SLIDER_BAR_CLASS = "cs-bar"` |

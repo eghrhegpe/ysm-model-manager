@@ -1487,7 +1487,7 @@ invariant_anchors:
 
 ## 共性抽象机会（横向收敛）
 
-- Worker 桥收敛 → **Step 1+2 已完成**：pmx/fbx 逐字同码（永远 resolve ok:false 编码）已抽 `createResolveModeBridge`(`preview-3d/adapters/worker-bridge.ts`，`createWorkerBridge` 薄封装) 收编，各自 −53 行、59 测试全绿；**ktx2 已收编**进通用 `createWorkerBridge`（reject-mode+池 round-robin+崩溃终止整池，外层信号量/降级/`__setEncodeImplForTest` 业务层保留），22 测试全绿；三桥统一、消除重复内核，净省有限（通用工厂为新增）但架构收敛；texture-decoder 为 1:N 批量聚合，基数不匹配 1:1 签名，**明确排除**防假统一
+- Worker 桥收敛 → **Step 1+2 已完成**：pmx/fbx 逐字同码（永远 resolve ok:false 编码）已抽 `createResolveModeBridge`(`preview-3d/infra/worker-bridge.ts`，`createWorkerBridge` 薄封装) 收编，各自 −53 行、59 测试全绿；**ktx2 已收编**进通用 `createWorkerBridge`（reject-mode+池 round-robin+崩溃终止整池，外层信号量/降级/`__setEncodeImplForTest` 业务层保留），22 测试全绿；三桥统一、消除重复内核，净省有限（通用工厂为新增）但架构收敛；texture-decoder 为 1:N 批量聚合，基数不匹配 1:1 签名，**明确排除**防假统一
 
 - generation 守卫 → 审计「三套实现各异」**被高估**：共享 `LoadGuard`(`utils/async/load-guard.ts` 的 `createLoadGuard`) 已存在，recycle-bin+oldest-models 共用；app-preview/app-sidebar/app-sync-manager 实为同一 `++counter` idiom（非各异）；真异实现为 `perf-common.ts|makeGenGuard`（原 `DgPcGenGuard`，perf-cli 拆分后改名）与 `app-tree/bus-handlers.ts|atBeGenGuard`，迁移到 LoadGuard 待办（非从零抽 `GenerationGuard`）。⚠️ 2026-09 复核修正：实数**4 套**，除上述两者外 `app-preview/gen-guard.ts`（class）与 `utils/async/load-guard.ts`（factory）本身也语义重复；app-tree 侧散落 4 文件共 **11 处** raw `_gen` 代际比较（另有 4 处自增、7 处捕获；非仅 bus-handlers 3 处）。详见 frontend_design_critique 刀⑮
 

@@ -6,7 +6,7 @@ adr:
   - ADR-132
 category: ui
 source_files:
-  - frontend/src/preview-3d/adapters/schema-registry.ts
+  - frontend/src/preview-3d/infra/schema-registry.ts
   - frontend/src/views/app-preview/ysm-controls.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
@@ -21,11 +21,15 @@ auto_fields:
     - buildYsmScene
     - CameraControlScene
     - cleanupPreview
+    - getSchema
     - GroupedScene
     - hasActivePreview
+    - hasSchema
     - InstalledPreviewInfra
     - invalidatePreview
+    - listSchemas
     - makeYsmAdapter
+    - makeYsmModelSchemaId
     - mount3D
     - Mount3DOptions
     - PoseScene
@@ -33,14 +37,19 @@ auto_fields:
     - PreviewBuildCtx
     - PreviewHandle
     - PreviewScene
+    - registerSchema
     - registerYsmModelSchema
+    - resetSchemas
+    - SchemaBuilder
     - ScreenshotScene
     - SemanticScene
     - SwitchContext
     - switchPreview
     - switchToSession
     - syncLightTargetFromContent
+    - unregisterSchema
     - UpdateableScene
+    - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmControlsContext
     - ysmMenuItems
@@ -52,7 +61,7 @@ auto_fields:
     - ysmShotNodes
   tests:
     - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
-    - frontend/src/preview-3d/adapters/schema-registry.test.ts
+    - frontend/src/preview-3d/infra/schema-registry.test.ts
     - frontend/src/preview-3d/adapters/switch-preview.test.ts
     - frontend/src/views/app-preview/skeleton-fill-panel.test.ts
     - frontend/src/views/app-preview/ysm-controls.test.ts
@@ -78,7 +87,7 @@ use_when:
   - sessionId
 status: active
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/schema-registry.ts|getSchema
+  - frontend/src/preview-3d/infra/schema-registry.ts|getSchema
   - frontend/src/views/app-preview/skeleton-fill-panel.ts|buildYsmModelSchema
 ---
 

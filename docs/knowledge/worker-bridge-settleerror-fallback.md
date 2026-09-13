@@ -4,7 +4,7 @@ name: worker-bridge-settleError-fallback
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/preview-3d/adapters/worker-bridge.ts
+  - frontend/src/preview-3d/infra/worker-bridge.ts
 auto_fields:
   symbols_with_lines:
     - createResolveModeBridge

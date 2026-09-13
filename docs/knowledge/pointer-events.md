@@ -4,7 +4,7 @@ name: Pointer Events 统一交互（触屏 + 桌面）
 tier: architecture
 category: core
 source_files:
-  - frontend/src/preview-3d/adapters/input-and-animation.ts
+  - frontend/src/preview-3d/infra/input-and-animation.ts
   - frontend/src/views/app-preview/model2d/model2d.ts
   - frontend/src/views/app-preview/zoom.ts
   - frontend/src/views/app-preview/skeleton.ts
@@ -21,12 +21,15 @@ auto_fields:
     - BedrockCube
     - BedrockModel
     - bindEditEvents
+    - bindInputHandlers
     - bindToolbarEvents
     - calcBoneHitZones
     - cleanupVoxel3D
     - closeActive3DOverlay
     - createLitematic3D
     - initSettings
+    - InputHandlers
+    - InputOptions
     - loadModel2D
     - Model2DOptions
     - openFullPreview
@@ -59,7 +62,7 @@ use_when:
   - 拖拽
   - 旋转
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/input-and-animation.ts|bindInputHandlers
+  - frontend/src/preview-3d/infra/input-and-animation.ts|bindInputHandlers
 status: active
 ---
 

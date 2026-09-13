@@ -13,33 +13,43 @@ source_files:
   - frontend/src/views/app-preview/detail-3d.ts
   - frontend/src/views/app-preview/view-shell.ts
   - frontend/src/views/app-preview/siblings.ts
-  - frontend/src/preview-3d/adapters/camera-controls.ts
-  - frontend/src/preview-3d/adapters/schema-registry.ts
+  - frontend/src/preview-3d/infra/camera-controls.ts
+  - frontend/src/preview-3d/infra/schema-registry.ts
 auto_fields:
   symbols_with_lines:
     - addOpLog
+    - CameraControlBridge
+    - getSchema
+    - hasSchema
+    - listSchemas
+    - makeYsmModelSchemaId
     - MmdBottomNavCtx
     - mmdModelInfoNodes
     - MmdPlayBridge
     - mmdShotNodes
     - playNodes
     - readFileBytes
+    - registerSchema
     - registerYsmModelSchema
+    - resetSchemas
     - resolveFbxSiblings
     - resolveMmdSiblings
     - resolveMorphSiblings
     - resolveSceneSiblings
     - resolveSiblingsByType
     - resolveStageSiblings
+    - SchemaBuilder
     - showFbxPreview
     - showMmdPreview
     - showMorphPreview
     - showScenePreview
     - showStagePreview
     - showVrmMeta
+    - unregisterSchema
     - VrmMaterialControlBridge
     - vrmModelInfoNodes
     - vrmShotNodes
+    - YSM_MODEL_SCHEMA_ID
     - YsmControlsContext
     - ysmShotNodes
   tests:
@@ -67,7 +77,7 @@ use_when:
 invariant_anchors:
   - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema
   - frontend/src/views/app-preview/mmd-controls.ts|playNodes
-  - frontend/src/preview-3d/adapters/camera-controls.ts|CameraControlBridge
+  - frontend/src/preview-3d/infra/camera-controls.ts|CameraControlBridge
   - frontend/src/preview-3d/menu/core.ts|setAdapterItems
 status: active
 ---

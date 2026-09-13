@@ -61,7 +61,7 @@ export async function loadModel2D(
       appendDebug: (_c, msg) => ctx.appendDebug(container, msg),
     });
     const model = loaded.model;
-    const _decodedBy = loaded.decodedBy;
+    const decodedBy = loaded.decodedBy;
     if (!container.isConnected) return;
     if (!model?.bones?.length) {
       container.innerHTML = `<div class="pv-error-title">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.noGeometry")}</div>`;
@@ -160,9 +160,9 @@ export async function loadModel2D(
     // 统计卡（彩色分区 + 头像作者）渲染目标：详情卡传入 statsContainer 时挂详情卡
     // （方案 A：详情卡吸收设计），否则保持原状挂骨架区（兼容既有调用/测试）
     if (statsContainer) {
-      await buildStatsCard(statsContainer, model, modelPath, _decodedBy, ctx);
+      await buildStatsCard(statsContainer, model, modelPath, decodedBy, ctx);
     } else {
-      await buildStatsCard(container, model, modelPath, _decodedBy, ctx);
+      await buildStatsCard(container, model, modelPath, decodedBy, ctx);
     }
     buildBoneExportRow(
       container,

@@ -161,6 +161,7 @@ export function bindCardEvents(
 
   // 如果监听的 list 元素没变，用旧的 handler 引用避免重复绑定
   if (st.list === list && st.click && st.ctx) {
+    /* unreachable — renderCards 先行清理旧 cleanup，此分支仅防御未来重绑顺序变化 */
     restoreSelectedCard(root, instances, host);
     return () => {};
   }

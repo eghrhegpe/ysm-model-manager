@@ -46,15 +46,15 @@ export const PREVIEW_HANDLERS: Record<string, PreviewShowFn> = {
   [`${RESOURCE_TYPES.MMD}:vrm`]: (ctx, path, meta) => showVrmMeta(ctx, path, meta),
   [RESOURCE_TYPES.MMD]: (ctx, path, meta) => showMmdPreview(ctx, path, meta),
   // MMD 独立顶级类型（后端 DetectResourceType 路径消歧命中时直接路由）
-  SceneModel: (ctx, path) => showScenePreview(ctx, path),
-  CustomMorph: (ctx, path) => showMorphPreview(ctx, path),
-  StageAnim: (ctx, path) => showStagePreview(ctx, path),
-  CustomAnim: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
-  DefaultAnim: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
-  DefaultMorph: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
-  "mmd-shader": (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  [RESOURCE_TYPES.SCENE]: (ctx, path) => showScenePreview(ctx, path),
+  [RESOURCE_TYPES.CUSTOM_MORPH]: (ctx, path) => showMorphPreview(ctx, path),
+  [RESOURCE_TYPES.STAGE]: (ctx, path) => showStagePreview(ctx, path),
+  [RESOURCE_TYPES.CUSTOM_ANIM]: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  [RESOURCE_TYPES.DEFAULT_ANIM]: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  [RESOURCE_TYPES.DEFAULT_MORPH]: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
+  [RESOURCE_TYPES.MMD_SHADER]: (ctx, path, meta) => showSimplePreview(ctx, path, meta),
   // FBX 独立预览（ADR-112：模型 + 内嵌动画，物理落 CustomAnim 目录）
-  fbx: (ctx, path, meta) => showFbxPreview(ctx, path, meta),
+  [RESOURCE_TYPES.FBX]: (ctx, path, meta) => showFbxPreview(ctx, path, meta),
 };
 
 /**

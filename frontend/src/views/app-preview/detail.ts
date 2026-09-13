@@ -211,7 +211,6 @@ async function renderPackModelList(
     })
     .join("")}
   ${overflow}
-  <style>.pack-model-item:hover{background:rgba(255,255,255,0.05)}</style>
 </div>`;
     // 点击单模型直达 3D（pack-model-adapter 吃 entry path，startEntry 指定初始）
     host.querySelectorAll<HTMLElement>(".pack-model-item").forEach((el) => {

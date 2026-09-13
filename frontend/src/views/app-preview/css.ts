@@ -82,4 +82,10 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 /* === P1 批次10:loadModel2D 加载占位盒 / detail 统计容器(shadow 内元素,规则须在 adopted 样式表) === */
 .sk-loading-box { margin-bottom:8px; opacity:0.6; }
 .dp-stats { margin-top:10px; }
+
+/* === 兄弟列表 hover 规则（detail-3d.ts morph-item / detail.ts pack-model-item）=== */
+.morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
+.morph-item:hover{background:rgba(255,255,255,0.05)}
+.morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
+.pack-model-item:hover{background:rgba(255,255,255,0.05)}
 `;

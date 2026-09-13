@@ -234,7 +234,7 @@ export class AppTree extends WebComponentBase {
 
       // 事件委托绑定（只一次，虚拟滚动换 innerHTML 仍有效）
       const treeEl = this._root.getElementById("tree");
-      if (treeEl) bindTreeEvents(treeEl, this);
+      if (treeEl) this._unsubs.push(bindTreeEvents(treeEl, this));
 
       // 键盘快捷键（只用 document + this._root，提前注册——异步 _load 期间 disconnect
       // 也能经 disconnectedCallback 正常移除，避免 keydown 监听泄漏）

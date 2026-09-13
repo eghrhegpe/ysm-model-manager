@@ -48,6 +48,9 @@ export type RenderMode = "grid" | "list";
 interface BuildCacheEntry {
   key: string;
   root: TreeNode;
+  entries?: TreeEntry[];
+  sort?: string;
+  filterRef?: Set<string> | null;
 }
 
 /** 绑定到 TreeRenderCtx 实例的缓存（WeakMap —— ctx GC 自动回收） */
@@ -71,19 +74,29 @@ function getBuildTreeCached(
   // 改为内容派生：全路径 + banned 位拼串（O(n) 远廉于其守卫的 buildTree）+
   // filterPaths 排序全量序列化；dirOpen 项删除——buildTree 不消费它，留着只会
   // 造成折叠/展开时的无谓 miss + 误导性地宣称依赖
+  // O(1) 快速路径：entries 引用 + sort + filterPaths 引用均未变 → 复用上次指纹，
+  // 跳过 O(n) 拼接（搜索键入/筛选不替换 entries 时命中）
+  const cached = buildCache.get(ctx);
+  if (
+    cached &&
+    cached.entries === entries &&
+    cached.sort === sort &&
+    cached.filterRef === filterPaths
+  ) {
+    return cached.root;
+  }
   const cacheKey = [
     entries.map((e) => (e.banned ? `*${e.path}` : e.path)).join("\n"),
     sort,
     filterPaths ? [...filterPaths].sort().join("\n") : "null",
   ].join("|");
 
-  const cached = buildCache.get(ctx);
   if (cached && cached.key === cacheKey) {
-    return cached.root; // ← 命中缓存，跳过 buildTree
+    return cached.root;
   }
 
   const root = buildTree(entries, sort, filterPaths);
-  buildCache.set(ctx, { key: cacheKey, root });
+  buildCache.set(ctx, { key: cacheKey, root, entries, sort, filterRef: filterPaths });
   return root;
 }
 

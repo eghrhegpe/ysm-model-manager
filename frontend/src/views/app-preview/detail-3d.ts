@@ -364,11 +364,7 @@ export async function showMorphPreview(
                 </div>`;
               })
               .join("");
-            container.innerHTML = `<style>
-  .morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
-  .morph-item:hover{background:rgba(255,255,255,0.05)}
-  .morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
-</style><div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
+            container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
             // 点击兄弟列表项切换
             container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
               el.onclick = () => {

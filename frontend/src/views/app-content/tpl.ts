@@ -256,7 +256,7 @@ export function workshopHTML(): string {
     "</div>" +
     "</div>" +
     "</div>" +
-    '<div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">' +
+    '<div id="ws-creator-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">' +
     '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
     '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' +
     t("workshop.activeCreators") +

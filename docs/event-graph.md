@@ -225,8 +225,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 104 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 376 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 474 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 372 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 470 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 553 |
@@ -246,7 +246,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 219 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 256 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
 **订阅方（on）：**
@@ -261,7 +261,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 81 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 241 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 242 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -395,7 +395,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 362 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 491 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 497 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -509,7 +509,7 @@
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 143 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 424 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 420 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 91 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 130 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 164 |
@@ -560,10 +560,10 @@
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 185 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 192 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 429 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 437 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 494 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 504 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 435 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 443 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 76 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 323 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |

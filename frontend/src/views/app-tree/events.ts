@@ -254,9 +254,9 @@ function atTeBindRowClick(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement): boo
 }
 
 // ===== 事件段 4：双击 =====
-function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
+function atTeBindRowDoubleClick(ctx: AtTeCtx): () => void {
   const { container } = ctx;
-  container.addEventListener("dblclick", (e: MouseEvent) => {
+  const onDblClick = (e: MouseEvent): void => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const fl = target.closest<HTMLElement>(".fl, .fl-list");
@@ -265,13 +265,15 @@ function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
     if (!fullPath) return;
     e.stopPropagation();
     atTeStartRename(ctx, fullPath);
-  });
+  };
+  container.addEventListener("dblclick", onDblClick);
+  return () => container.removeEventListener("dblclick", onDblClick);
 }
 
 // ===== 事件段 5：右键菜单（显示+定位） =====
-function atTeBindContextMenu(ctx: AtTeCtx): void {
+function atTeBindContextMenu(ctx: AtTeCtx): () => void {
   const { container, vm } = ctx;
-  container.addEventListener("contextmenu", (e: MouseEvent) => {
+  const onContextMenu = (e: MouseEvent): void => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const fh = target.closest<HTMLElement>(".fh, .fh-list");
@@ -323,13 +325,15 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
         rtype: atTeGetRtype(vm),
       });
     }
-  });
+  };
+  container.addEventListener("contextmenu", onContextMenu);
+  return () => container.removeEventListener("contextmenu", onContextMenu);
 }
 
 // ===== 事件段 6：输入框 rename（keydown Enter/blur 保存） =====
-function atTeBindRenameInput(ctx: AtTeCtx): void {
+function atTeBindRenameInput(ctx: AtTeCtx): () => void {
   const { container, vm } = ctx;
-  container.addEventListener("keydown", (e: Event) => {
+  const onKeyDown = (e: Event): void => {
     if (!(e instanceof KeyboardEvent)) return;
     const target = e.target;
     if (!(target instanceof HTMLInputElement) || !target.classList.contains("rename-inp")) return;
@@ -345,8 +349,8 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
       target.value = ""; // 双保险：即使标记丢失，空值也走下方"放弃重命名"分支
       vm._renderTree();
     }
-  });
-  container.addEventListener("focusout", (e: FocusEvent) => {
+  };
+  const onFocusOut = (e: FocusEvent): void => {
     const target = e.target;
     if (!(target instanceof HTMLInputElement) || !target.classList.contains("rename-inp")) return;
     // P1 修复（审核）：Esc 取消标记——跳过保存链（见上方 Escape 分支注释）
@@ -388,7 +392,13 @@ function atTeBindRenameInput(ctx: AtTeCtx): void {
           type: "error",
         });
       });
-  });
+  };
+  container.addEventListener("keydown", onKeyDown);
+  container.addEventListener("focusout", onFocusOut);
+  return () => {
+    container.removeEventListener("keydown", onKeyDown);
+    container.removeEventListener("focusout", onFocusOut);
+  };
 }
 
 // ===== 导出：更新底部选中统计 =====
@@ -508,17 +518,26 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
 }
 
 // ===== 主函数：纯分派，原签名不变 =====
-export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
+export function bindTreeEvents(container: HTMLElement, vm: AppTree): () => void {
   const ctx: AtTeCtx = { container, vm, treeRenderCtx: vm.treeRenderCtx };
 
-  atTeBindRowDoubleClick(ctx);
-  atTeBindContextMenu(ctx);
-  atTeBindRenameInput(ctx);
+  const unsubs: (() => void)[] = [
+    atTeBindRowDoubleClick(ctx),
+    atTeBindContextMenu(ctx),
+    atTeBindRenameInput(ctx),
+  ];
 
-  container.addEventListener("click", (e: MouseEvent) => {
+  const onClick = (e: MouseEvent): void => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     if (atTeBindSelCheckboxes(ctx, e, target)) return;
     if (atTeBindRowClick(ctx, e, target)) return;
-  });
+  };
+  container.addEventListener("click", onClick);
+
+  // 返回清理函数（供 disconnectedCallback 显式移除）
+  return (): void => {
+    container.removeEventListener("click", onClick);
+    for (const fn of unsubs) fn();
+  };
 }

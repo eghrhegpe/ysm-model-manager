@@ -8,8 +8,15 @@ import type { BoneTransform } from "@/utils/animation/animation.ts";
 import type { BedrockModel } from "./model2d.ts";
 import { collectBoneBounds, cubeVec } from "./model2d-geom.ts";
 
-/** 默认 accent 回退（主题变量缺失/非 hex 时；与 --accent 同源色相） */
-const FALLBACK_ACCENT_RGB: [number, number, number] = [124, 131, 255];
+/**
+ * 主题色回退表（CSS 变量缺失/非 hex 时；取默认主题同源色相）。
+ * key 必须与 css/variables.css 的变量名逐字一致。
+ */
+const FALLBACK_THEME_RGB: Record<string, [number, number, number]> = {
+  "--accent": [124, 131, 255], // 强调色（回退取紫，与 cyber 同源色相）
+  "--txt": [224, 213, 245], // 正文前景色（回退取 cyber 值，对 --bg 高对比）
+  "--bg": [17, 17, 27], // 主题底色（标签/缩略图衬底）
+};
 
 /** 单个 cube 投影到屏幕的结果（mdDv 投影函数统一返回）。 */
 interface CubeProjection {
@@ -42,14 +49,19 @@ interface Cube2D {
 }
 
 /**
- * 解析当前主题 --accent 为 rgba 字符串（canvas 2D fillStyle/strokeStyle 不解析 CSS 变量）。
+ * 解析当前主题 CSS 变量为 rgba 字符串（canvas 2D fillStyle/strokeStyle 不解析 CSS 变量）。
  * 每次调用实时读取（不缓存）：绘制为低频操作（重绘时调用，非每帧），且避免主题切换后脏值。
- * 兼容 #rgb / #rrggbb；解析失败回退默认 accent。
+ * 兼容 #rgb / #rrggbb；未知变量或解析失败回退 FALLBACK_THEME_RGB。
+ *
+ * 取色口径（2026-09-13 修复）：骨架线一律走主题变量，禁止硬编码浅色——
+ * 画布底为「主题 --bg + 12% 黑罩」，六主题中 warm/sakura/mint 为亮色，
+ * 原硬编码 rgba(205,214,244,·) 在其上对比度 ≈1.06:1（几乎不可见，只剩色块没有线）。
+ * --txt（暗色主题浅、亮色主题深）与 --accent（规范保证对 --bg ≥4.5:1）是唯二安全取色源。
  */
-function accentRgba(alpha: number): string {
-  let rgb: [number, number, number] = FALLBACK_ACCENT_RGB;
+function themeRgba(varName: string, alpha: number): string {
+  let rgb: [number, number, number] = FALLBACK_THEME_RGB[varName] ?? [255, 255, 255];
   try {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
     if (m) {
       let hex = m[1];
@@ -79,8 +91,10 @@ function mdDvDrawRect(
     | { mode: "centered"; screenX: number; screenY: number; rzRad: number }
     | { mode: "plain"; drawX: number; drawY: number; doubleStroke?: boolean },
 ): void {
-  const fill = isHighlight ? "rgba(255,180,50,0.25)" : accentRgba(0.45);
-  const stroke = isHighlight ? "rgba(255,220,100,1)" : "rgba(205,214,244,0.85)";
+  // 高亮 = 浓 accent 块 + accent 实线粗边；普通 = 半透明 accent 块 + 前景色细线。
+  // 不用"金黄高亮"：曾在亮色主题（如 warm --bg #f5f0e1）对比度 ≈1.15:1 而不可见。
+  const fill = isHighlight ? themeRgba("--accent", 0.7) : themeRgba("--accent", 0.45);
+  const stroke = isHighlight ? themeRgba("--accent", 1) : themeRgba("--txt", 0.8);
   const lw = isHighlight ? 1.5 : 1;
 
   if (pos.mode === "centered") {
@@ -219,10 +233,13 @@ function mdDvDrawLabels(
     const cx2 = ox + ((b.mnX + b.mxX) / 2) * scale;
     const cy2 = oy - ((b.mnY + b.mxY) / 2) * scale;
     const txt = bone.name;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    // 标签底衬与字色必须同源于主题（--bg 半透明衬 + --txt 字）：
+    // 亮色主题下衬底为浅、字为深，暗色主题反转，两侧都可读；固定黑衬 + 固定浅字则亮色主题下突兀且高亮字不可见。
+    ctx.fillStyle = themeRgba("--bg", 0.85);
     const tw = ctx.measureText(txt).width;
     ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
-    ctx.fillStyle = bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
+    ctx.fillStyle =
+      bone.name === highlightBone ? themeRgba("--accent", 1) : themeRgba("--txt", 0.92);
     ctx.fillText(txt, cx2, cy2);
   }
   ctx.restore();
@@ -319,7 +336,7 @@ function drawMiniView(
   const mx = ctx.canvas.width - size - margin;
   const my = ctx.canvas.height - size - margin;
 
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillStyle = themeRgba("--bg", 0.35);
   ctx.fillRect(mx - 2, my - 2, size + 4, size + 4);
 
   let minX = Infinity;
@@ -351,9 +368,9 @@ function drawMiniView(
       const rz = x * sinA + z * cosA;
       const drawX = ox2 + rx * s;
       const drawY = oy2 - (rz + sz) * s;
-      ctx.fillStyle = accentRgba(0.45);
+      ctx.fillStyle = themeRgba("--accent", 0.45);
       ctx.fillRect(drawX, drawY, sx * s, sz * s);
-      ctx.strokeStyle = "rgba(205,214,244,0.7)";
+      ctx.strokeStyle = themeRgba("--txt", 0.7);
       ctx.lineWidth = 0.5;
       ctx.strokeRect(drawX, drawY, sx * s, sz * s);
     }

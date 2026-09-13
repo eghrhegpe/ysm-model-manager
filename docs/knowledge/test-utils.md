@@ -46,7 +46,10 @@ auto_fields:
     - setupAppMock
     - sleep
     - stubBlobUrls
+    - stubConsoleError
+    - stubConsoleWarn
     - stubFetch
+    - stubLogWarn
     - unmountElement
     - waitFor
     - waitForElementToBeRemoved

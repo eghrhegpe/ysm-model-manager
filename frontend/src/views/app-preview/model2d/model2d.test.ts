@@ -160,10 +160,18 @@ interface MockCtx {
   clearRect: Mock;
   fillRect: Mock;
   fillText: Mock;
+  /** strokeStyle 赋值历史（取色口径断言用；restore() 是 no-op，故终值 ≈ 最后一次赋值） */
+  _strokes: string[];
+  /** fillStyle 赋值历史 */
+  _fills: string[];
 }
 
 function makeMockCtx(w = 180, h = 180): MockCtx {
-  const target: Record<string, unknown> = { canvas: { width: w, height: h } };
+  const target: Record<string, unknown> = {
+    canvas: { width: w, height: h },
+    _strokes: [] as string[],
+    _fills: [] as string[],
+  };
   return new Proxy(target, {
     get(t, prop) {
       if (prop === "measureText") return () => ({ width: 20 });
@@ -174,6 +182,8 @@ function makeMockCtx(w = 180, h = 180): MockCtx {
     },
     set(t, prop, value) {
       if (typeof prop !== "string") return true;
+      if (prop === "strokeStyle") (t._strokes as string[]).push(String(value));
+      if (prop === "fillStyle") (t._fills as string[]).push(String(value));
       t[prop] = value;
       return true;
     },
@@ -352,6 +362,86 @@ describe("collectBoneBounds 包围盒计算", () => {
       mnY: 0,
       mxY: 4,
     });
+  });
+});
+
+// ── 骨架线取色口径（canvas 2D 不消费 CSS 变量，故经 getComputedStyle 实时读取主题值）──
+// 回归背景：曾硬编码 rgba(205,214,244,·) 作描边、金黄 #ffd460 作高亮，画布底为
+// 「主题 --bg + 12% 黑罩」——亮色主题（warm/sakura/mint）下两者对比度 ≈1.06:1 / ≈1.15:1，
+// 骨骼线几乎不可见（只剩色块没有线）。现口径：描边走 --txt（暗色主题浅、亮色主题深），
+// 填充/高亮走 --accent（variables.css 规范保证对 --bg ≥4.5:1）。
+describe("骨架线取色走主题变量（跨六主题可见性）", () => {
+  const MODEL = { bones: [{ name: "body", cubes: [{ origin: [0, 0, 0], size: [4, 8, 4] }] }] };
+
+  /** 注入主题变量表：node 环境无 document/getComputedStyle，themeRgba 的实时读取依赖二者 */
+  function withTheme(vars: Record<string, string>, fn: () => void): void {
+    const g = globalThis as unknown as Record<string, unknown>;
+    const hadDoc = "document" in g;
+    const prevDoc = g.document;
+    const hadGcs = "getComputedStyle" in g;
+    const prevGcs = g.getComputedStyle;
+    g.document = { documentElement: {} };
+    g.getComputedStyle = () => ({ getPropertyValue: (n: string) => vars[n] ?? "" });
+    try {
+      fn();
+    } finally {
+      if (hadDoc) g.document = prevDoc;
+      else delete g.document;
+      if (hadGcs) g.getComputedStyle = prevGcs;
+      else delete g.getComputedStyle;
+    }
+  }
+
+  /** 渲染一份并返回取色历史（showLabels=false 避免标签色混入断言集合） */
+  function renderWith(vars: Record<string, string>): MockCtx {
+    const canvas = makeMockCanvas();
+    withTheme(vars, () => {
+      renderModel2D(canvas as unknown as HTMLCanvasElement, MODEL, null, { showLabels: false });
+    });
+    return canvas._ctx;
+  }
+
+  const DARK = { "--accent": "#9575cd", "--txt": "#e0d5f5", "--bg": "#11111b" };
+  const LIGHT = { "--accent": "#8b4513", "--txt": "#3e2723", "--bg": "#f5f0e1" };
+
+  it("主视图描边取自 --txt（暗色主题浅线 / 亮色主题深线）", () => {
+    expect(renderWith(DARK)._strokes).toContain("rgba(224,213,245,0.8)");
+    expect(renderWith(LIGHT)._strokes).toContain("rgba(62,39,35,0.8)");
+  });
+
+  it("cube 填充取自 --accent", () => {
+    expect(renderWith(DARK)._fills).toContain("rgba(149,117,205,0.45)");
+    expect(renderWith(LIGHT)._fills).toContain("rgba(139,69,19,0.45)");
+  });
+
+  it("取色随主题切换变化（硬编码时代两主题取色集合相同）", () => {
+    expect(renderWith(DARK)._strokes).not.toEqual(renderWith(LIGHT)._strokes);
+  });
+
+  it("不再出现硬编码浅色描边（205,214,244）", () => {
+    for (const vars of [DARK, LIGHT]) {
+      const ctx = renderWith(vars);
+      expect(ctx._strokes.join("|")).not.toContain("205,214,244");
+      expect(ctx._fills.join("|")).not.toContain("205,214,244");
+    }
+  });
+
+  it("非 hex 主题值（color-mix/空）→ 回退默认色，不抛错", () => {
+    const ctx = renderWith({
+      "--accent": "color-mix(in srgb, #fff 10%, transparent)",
+      "--txt": "",
+      "--bg": "",
+    });
+    expect(ctx._strokes).toContain("rgba(224,213,245,0.8)"); // --txt 回退默认
+    expect(ctx._fills).toContain("rgba(124,131,255,0.45)"); // --accent 回退默认
+  });
+
+  it("无 DOM（themeRgba 实时读取抛错）→ 静默回退，不中断渲染", () => {
+    const canvas = makeMockCanvas();
+    expect(() =>
+      renderModel2D(canvas as unknown as HTMLCanvasElement, MODEL, null, { showLabels: false }),
+    ).not.toThrow();
+    expect(canvas._ctx._strokes).toContain("rgba(224,213,245,0.8)");
   });
 });
 

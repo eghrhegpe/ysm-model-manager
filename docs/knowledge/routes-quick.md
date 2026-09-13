@@ -873,6 +873,7 @@
 | 对同步 ccall 挂死是半吊子（已知问题榜#4 原方案）——挂死点不可抢占，race 的 timer 在阻塞线程里根本不触发；挂死类故障唯一可靠侦测信号 = 逐模型 partial 流中断（ADR-219 静默看门狗） | `5s Promise.race 软超时` | - |
 | 手写骨骼画布 | - | 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts |
 | Canvas 不销毁 | - | 内存泄漏；必须复用 renderer 并dispose |
+| canvas 内硬编码调色板 | - | canvas 不吃 CSS 变量，亮色主题（warm/sakura/mint）骨骼线对比度 ≈1.06:1 直接消失；须经 themeRgba 实时读 --txt/--accent |
 | 坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端已正确实现，JS 兜底 model3d-spec.ts 的 cubePivot/cubeOrigin 与 Go 口径不一致（已废弃无运行时影响） | `Fatal trap#11` | - |
 | mesh 级视锥剔除必须关闭（mesh.frustumCulled = false），否则骨骼旋转时扁平部件（如脸部）会误判不可见 | - | - |
 | dispose 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/pointer/resize/fullscreenchange 监听、dispose geometry/material/texture，缺一即泄漏 | - | - |

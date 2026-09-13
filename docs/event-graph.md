@@ -345,8 +345,8 @@
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 91 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 164 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 143 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 157 |
@@ -517,11 +517,11 @@
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 59 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 120 |
-| (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 41 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 143 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
+| (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 74 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 144 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 112 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 255 |

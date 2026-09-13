@@ -35,6 +35,7 @@ quick_risk_lines:
 pitfalls:
   - 手写骨骼画布 → 与 model2d 输出不一致、缺鼠标拾取；必须复用 model2d.ts
   - Canvas 不销毁 → 内存泄漏；必须复用 renderer 并dispose
+  - canvas 内硬编码调色板 → canvas 不吃 CSS 变量，亮色主题（warm/sakura/mint）骨骼线对比度 ≈1.06:1 直接消失；须经 themeRgba 实时读 --txt/--accent
 
 use_when:
   - 2D 预览
@@ -84,6 +85,7 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 - cube 无显式 pivot 时兜底取几何中心 `[x+sx/2, y+sy/2, z+sz/2]`
 - 悬停监听通过 `canvas._hoverCleanup()` 清理，重绘前必须先调用旧清理函数，禁止累积监听（实现为「先绑定新监听、后清理旧监听」——早退路径不清理，防累积语义成立）
 - 骨骼热区（`calcBoneHitZones`）必须应用 cube 级 `c.rotation`（与 drawView 静态分支同口径），否则静态旋转 cube 的拾取命中域 ≠ 绘制形状（P2 修复；btx 仅含 scale/空对象时口径破裂，P3 观察）
+- **canvas 取色口径（2026-09-13 修复）**：canvas 2D **不消费 CSS 变量**（`ctx.fillStyle = "var(--x)"` 静默归初始值），故绘制层经 `themeRgba(varName, alpha)`（`model2d-draw.ts`）实时读 `getComputedStyle(document.documentElement)`——每次调用重读、不缓存，避免主题切换后脏值；非 hex（`color-mix(...)`）或缺失值回退 `FALLBACK_THEME_RGB`。取色源只允许 `--txt`（暗色主题浅 / 亮色主题深，作描边与标签字）与 `--accent`（variables.css 规范保证对 `--bg` ≥4.5:1，作填充与高亮）；标签底衬必须与字色同源配对（`--bg` 半透明衬 + `--txt` 字），固定黑衬 + 固定浅字在亮色主题下会与浅底撞成不可读。历史教训：曾硬编码描边 `rgba(205,214,244,·)` 与金黄高亮 `#ffd460`——画布底为「主题 `--bg` + 12% 黑罩」（`.pv-canvas`），warm/sakura/mint 三个亮色主题下对比度分别 ≈1.06:1 / ≈1.15:1，骨骼线几乎不可见（只剩色块没有线）；R5 因「同行含 `var(--` 则整行豁免」的规则扫不出这类混排（扫描器盲区，未修）。绊线见 `model2d.test.ts` 的「骨架线取色走主题变量」组
 - CSS 颜色（骨骼线/标签）在调用方样式中走 CSS 变量
 - **`drawMiniView` 的 cosA/sinA 兜底仅对 undefined/NaN 生效**（P2 修复：原 `!cosA` 吞掉合法 0——90° 视图角 cos=0 被替换为 1，小地图失真）
 - 消费方：`frontend/src/views/app-preview/skeleton.ts` 与 `zoom.ts`（知识卡旧称仅 skeleton.ts 已过时）；测试文件为 `model2d.test.ts`

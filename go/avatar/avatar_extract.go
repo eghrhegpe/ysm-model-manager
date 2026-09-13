@@ -218,15 +218,9 @@ func CacheAvatarsFromJSON(modelPath string) {
 		return
 	}
 	dir := filepath.Dir(modelPath)
-	cacheDir := CacheDir()
-	if cacheDir == "" {
-		return // 平台数据根缺失：no-op
-	}
-	// MkdirAll 错误不再忽略——与 SaveAvatarData 的
-	// log 口径一致（原失败静默，后续 WriteFile 报错被 .corrupt 备份掩盖）
-	if err := os.MkdirAll(cacheDir, fsutil.DirPerms); err != nil {
-		log.Printf("[avatar] 创建缓存目录失败: %v", err)
-		return
+	cacheDir, ok := avatarCacheDir()
+	if !ok {
+		return // 平台数据根缺失/创建失败：no-op（已留日志）
 	}
 	for _, au := range authors {
 		if au.Name == "" || au.Avatar == "" {

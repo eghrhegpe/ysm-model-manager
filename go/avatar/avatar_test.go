@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/container"
 )
 
 func TestSafeName(t *testing.T) {
@@ -64,17 +66,21 @@ func TestSaveAndReadCachedAvatar(t *testing.T) {
 	}
 }
 
-func TestReadFileFromZip(t *testing.T) {
+func TestReadFileFromContainer(t *testing.T) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	f, _ := w.Create("avatar/test.png")
 	f.Write([]byte("png-data"))
 	w.Close()
 
-	zr, _ := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-	data := ReadFileFromZip(zr, "test.png")
+	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	data := ReadFileFromContainer(r, "test.png")
 	if data == nil {
-		t.Fatal("ReadFileFromZip returned nil")
+		t.Fatal("ReadFileFromContainer returned nil")
 	}
 	if string(data) != "png-data" {
 		t.Fatalf("got %q, want %q", string(data), "png-data")

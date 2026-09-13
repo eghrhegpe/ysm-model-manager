@@ -16,7 +16,7 @@ import (
 	"ysm-model-manager/go/container"
 )
 
-func TestReadFileFromZip_NoMatch(t *testing.T) {
+func TestReadFileFromContainer_NoMatch(t *testing.T) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	f, _ := w.Create("other.txt")
@@ -24,11 +24,12 @@ func TestReadFileFromZip_NoMatch(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
-	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "target.png"); got != nil {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "target.png"); got != nil {
 		t.Fatalf("目标不存在应 nil: %q", got)
 	}
 	// 反斜杠路径归一化匹配（Windows 风格 zip 条目）
@@ -37,11 +38,12 @@ func TestReadFileFromZip_NoMatch(t *testing.T) {
 	f2, _ := w2.Create(`avatars\a.png`)
 	_, _ = f2.Write([]byte("PNG"))
 	_ = w2.Close()
-	zr2, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	r2, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr2, "avatars/a.png"); string(got) != "PNG" {
+	defer r2.Close()
+	if got := ReadFileFromContainer(r2, "avatars/a.png"); string(got) != "PNG" {
 		t.Fatalf("反斜杠路径应归一化匹配: %q", string(got))
 	}
 }
@@ -173,38 +175,40 @@ func TestSaveAvatarData_CacheDirUnwritable(t *testing.T) {
 	}
 }
 
-// ===== ReadFileFromZip / matchAvatarZipEntry 边界补测 =====
+// ===== ReadFileFromContainer 边界补测（原 ReadFileFromZip 测试，ADR-068 迁移）=====
 
 // nopWriteCloser 供 zip.RegisterCompressor 注册假压缩器（构造不支持算法的条目）。
 type nopWriteCloser struct{ io.Writer }
 
 func (nopWriteCloser) Close() error { return nil }
 
-func TestReadFileFromZip_DirPrefix(t *testing.T) {
+func TestReadFileFromContainer_DirPrefix(t *testing.T) {
 	// 目标以 / 结尾（目录级）→ 根下该目录前缀匹配
 	data := makeZip(t, map[string]string{"avatar/face.png": "face-data"})
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	r, err := container.OpenZipBytes(data, int64(len(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "avatar/"); string(got) != "face-data" {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "avatar/"); string(got) != "face-data" {
 		t.Fatalf("目录级目标应命中 avatar/face.png, 得到 %q", string(got))
 	}
 }
 
-func TestReadFileFromZip_ExactPathOnly(t *testing.T) {
+func TestReadFileFromContainer_ExactPathOnly(t *testing.T) {
 	// 带路径目标仅精确匹配：sub/avatar/face.png 不得命中 avatar/face.png（P3-3 收紧点）
 	data := makeZip(t, map[string]string{"sub/avatar/face.png": "x"})
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	r, err := container.OpenZipBytes(data, int64(len(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "avatar/face.png"); got != nil {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "avatar/face.png"); got != nil {
 		t.Fatalf("sub/ 下同名条目不应命中精确路径目标, 得到 %q", string(got))
 	}
 }
 
-func TestReadFileFromZip_EntryOpenFail(t *testing.T) {
+func TestReadFileFromContainer_EntryOpenFail(t *testing.T) {
 	// 不支持的压缩算法（method 99）：f.Open 失败 → 记录日志并返回 nil（不 panic）
 	zip.RegisterCompressor(99, func(w io.Writer) (io.WriteCloser, error) {
 		return nopWriteCloser{w}, nil
@@ -222,16 +226,17 @@ func TestReadFileFromZip_EntryOpenFail(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
-	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "avatar/x.png"); got != nil {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "avatar/x.png"); got != nil {
 		t.Fatalf("算法不支持条目应返回 nil, 得到 %q", string(got))
 	}
 }
 
-func TestReadFileFromZip_ChecksumCorrupt(t *testing.T) {
+func TestReadFileFromContainer_ChecksumCorrupt(t *testing.T) {
 	// 存储条目内容被篡改（CRC 不匹配）：读取报错 → nil（zip-bomb/损坏防线）
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
@@ -252,23 +257,25 @@ func TestReadFileFromZip_ChecksumCorrupt(t *testing.T) {
 		t.Fatal("构造失败：未找到存储条目内容")
 	}
 	raw[idx+2] = 'X' // 篡改内容保持长度不变，CRC 校验必然失败
-	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
+	r, err := container.OpenZipBytes(raw, int64(len(raw)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "avatar/c.png"); got != nil {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "avatar/c.png"); got != nil {
 		t.Fatalf("CRC 损坏条目应返回 nil, 得到 %q", string(got))
 	}
 }
 
-func TestReadFileFromZip_Oversize(t *testing.T) {
+func TestReadFileFromContainer_Oversize(t *testing.T) {
 	// 条目解压后超 50MB：超限跳过（防 zip-bomb 解压膨胀 OOM）
 	data := makeZip(t, map[string]string{"avatar/big.png": string(make([]byte, (50<<20)+1))})
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	r, err := container.OpenZipBytes(data, int64(len(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ReadFileFromZip(zr, "avatar/big.png"); got != nil {
+	defer r.Close()
+	if got := ReadFileFromContainer(r, "avatar/big.png"); got != nil {
 		t.Fatalf("超限条目应返回 nil, 得到 %d 字节", len(got))
 	}
 }

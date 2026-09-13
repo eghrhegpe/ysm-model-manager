@@ -1,12 +1,11 @@
 // Package avatar 创作者头像提取与缓存，不依赖 Wails runtime。
 //
-// 本文件（avatar_zip.go）：ZIP 内文件读取（ReadFileFromZip / ReadFileFromContainer）
-// 与路径匹配（matchAvatarZipEntry/isYSMJSONPath），供提取编排复用。拆分自原 avatar.go
+// 本文件（avatar_zip.go）：容器内文件受限读取（ReadFileFromContainer）与
+// 路径判定（isYSMJSONPath），供提取编排复用。拆分自原 avatar.go
 // （ADR-040 文件行数治理）。
 package avatar
 
 import (
-	"archive/zip"
 	"io"
 	"log"
 	"path/filepath"
@@ -15,37 +14,6 @@ import (
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/types/registry"
 )
-
-// ReadFileFromZip 从 ZIP 读取指定路径的文件。
-func ReadFileFromZip(zr *zip.Reader, target string) []byte {
-	for _, f := range zr.File {
-		// 裸 HasSuffix 会让 sub/avatar/alice.png 命中 avatar/alice.png、
-		// x/ysm.json 先于根 ysm.json 被取到——匹配统一走 container.MatchEntryName
-		// （精确路径或根下 target/ 前缀语义）。
-		if !container.MatchEntryName(f.Name, target) {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			log.Printf("[avatar] zip 条目打开失败 %s: %v", f.Name, err)
-			return nil
-		}
-		// 循环内显式 Close，不依赖 defer（defer 要等函数返回才释放，
-		// 多条目命中时累积未关闭句柄）。
-		data, err := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
-		rc.Close()
-		if err != nil {
-			log.Printf("[avatar] zip 条目读取失败 %s: %v", f.Name, err)
-			return nil
-		}
-		if int64(len(data)) > registry.MaxReadLimit {
-			log.Printf("[avatar] zip 条目超限跳过 %s（解压超限）", f.Name)
-			return nil
-		}
-		return data
-	}
-	return nil
-}
 
 // readContainerName 按名读取容器中首个命中条目（扫名走 container.FindEntry，大小受限）。
 func readContainerName(r container.Reader, target string) []byte {

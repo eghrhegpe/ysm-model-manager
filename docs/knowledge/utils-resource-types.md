@@ -20,8 +20,10 @@ auto_fields:
     - asNumber
     - asString
     - currentRepoType
+    - DedupGroup
     - extBelongsTo
     - extOf
+    - FileConflict
     - getCompound
     - getExts
     - getPreviewableTypeTabs
@@ -31,6 +33,7 @@ auto_fields:
     - groupLabelOf
     - groupStorageRootOf
     - GroupTypeOption
+    - HealthReport
     - isContainerExt
     - isImportableFile
     - isObj

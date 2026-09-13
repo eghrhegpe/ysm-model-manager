@@ -449,8 +449,8 @@
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
-| dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
-| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 191 |
+| dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 38 |
+| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 190 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |

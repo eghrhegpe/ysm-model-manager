@@ -145,6 +145,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_contract_tests.ts": ["tests"],
   "test_ripgrep_contract.ts": ["tests"],
   "test_gate_fallback.ts": ["tests"],
+  // 双表一致性守卫（缺陷#2，2026-09-13）：锁 CONTRACT_TEST_DOMAINS / CONTRACT_TEST_TARGETS
+  // 两表的键集合关系——TARGETS 键必须 ∈ DOMAINS；含 tests 域的测试必须登记 TARGETS。
+  "test_contract_tables_consistency.ts": ["tests"],
 };
 
 /**
@@ -363,6 +366,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_contract_tests.ts": ["scripts/_lib/contract-tests.ts"],
   "test_ripgrep_contract.ts": ["scripts/_lib/ripgrep.ts"],
   "test_gate_fallback.ts": ["scripts/_lib/gate-resolve.ts"],
+  // 双表一致性守卫本身：锁两张表的键集合关系——改任一表结构即触发（防「加测试漏登记另一张表」）。
+  "test_contract_tables_consistency.ts": ["scripts/_lib/contract-tests.ts"],
 };
 
 /**
@@ -476,12 +481,19 @@ function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
         stdio: ["ignore", "pipe", "pipe"],
       },
     );
-    const chunks: Buffer[] = [];
-    proc.stdout?.on("data", (c: Buffer) => chunks.push(c));
-    proc.stderr?.on("data", (c: Buffer) => chunks.push(c));
+    // 分离 stdout / stderr 两个流（缺陷#1，2026-09-13）：此前两路 chunk 汇入同一
+    // chunks 数组、close 时合并为单一 stdout 且 stderr 清空——测试把失败断言细节写进
+    // stderr（多个契约测试经 process.stderr / console.error 输出诊断）时，runOne 失败态
+    // 取 `stdout || stderr`，若 stdout 非空（哪怕只有一行 [OK]）就会把 stderr 的诊断吞掉。
+    // 现在分桶累积，close 时原样各自返回，由 runOne 在失败态拼接消费。
+    const outChunks: Buffer[] = [];
+    const errChunks: Buffer[] = [];
+    proc.stdout?.on("data", (c: Buffer) => outChunks.push(c));
+    proc.stderr?.on("data", (c: Buffer) => errChunks.push(c));
     proc.on("close", (code) => {
-      const out = Buffer.concat(chunks).toString("utf8");
-      resolve({ stdout: out, stderr: "", status: code ?? 1 });
+      const stdout = Buffer.concat(outChunks).toString("utf8");
+      const stderr = Buffer.concat(errChunks).toString("utf8");
+      resolve({ stdout, stderr, status: code ?? 1 });
     });
     proc.on("error", (e) => resolve({ stdout: "", stderr: e.message, status: 1, spawnError: e }));
   });
@@ -519,10 +531,15 @@ export async function runContractTestsParallel(files?: string[]) {
   const results: { name: string; ok: boolean; out: string }[] = new Array(testFiles.length);
   const runOne = async (f: string) => {
     const { stdout, stderr, status } = await runTest(f);
-    const outStr = status !== 0 ? stdout || stderr : "";
-    // 失败输出保留足量尾部（slice(-4) 曾把失败断言的 ✗ 详情切成只剩 4 行壳——配合
-    // commit-with-check 的 tail 渲染时看不到具体违规清单）；成功态 out 为空，不膨胀
-    return { name: f, ok: status === 0, out: outStr.trim().split("\n").slice(-40).join("\n") };
+    // 失败态拼接 stdout + stderr（缺陷#1，2026-09-13）：断言细节多经 stderr（process.stderr /
+    // console.error）输出；旧版 `stdout || stderr` 在 stdout 非空时整段丢 stderr。拼接保留两路，
+    // 行尾再按 slice(-40) 截断——「保留尾部」纪律不变（成功态仍为空，不膨胀）。
+    const combined = [stdout, stderr]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join("\n");
+    const outStr = status !== 0 ? combined : "";
+    return { name: f, ok: status === 0, out: outStr.split("\n").slice(-40).join("\n") };
   };
   // 有界并发 worker 池（见 CONCURRENCY 注释：51 全并发 Windows spawn 饱和 flaky，
   // 8 路实测耗时持平——慢测试拖尾决定墙钟，降并发零成本）。

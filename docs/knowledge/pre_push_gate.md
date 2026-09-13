@@ -212,6 +212,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - `scripts/commit-with-check.ts`：走 `--files --dry-run` 模式按 staged 文件裁剪门禁；commit 成功后自己打印横幅（`--no-banner` 抑制）
 - `scripts/_lib/gate-config.ts`：工具清单单一配置层
 - `scripts/_lib/gate-blocks/static-tools.ts`：静态工具执行器 `runTools(ctx, tools)` / `runScopedDocDrift(ctx)`——判定链（label/note/tail/blockPolicy→blocked/autoFix）的执行侧唯一实现。`ctx.sh` 为可替换属性，故该链可零子进程单测（`tests/test_gate_static_tools.ts`）。ADR-206 阶段 2（2026-09-13）
+- `scripts/_lib/gate-blocks/data-docs-domain.ts` / `redlines.ts`：数据/文档/ADR/索引守护与红线执行器（自守卫，调度侧无条件按序调用）；红线保留 failClosed 特例与 --files 数组式传参。ADR-206 阶段 3-4（2026-09-13）
 - `scripts/_lib/gate-ctx.ts`：执行上下文 `createGateCtx()`——`record` / `sh` / `shAsync` / `git` / `gofmtCheck` 的唯一实现，兼 `blocked` 活值 getter 与 `setBlocked`（failClosed 特例用），并导出 `GATE_TIMEOUT_MS` 作子进程超时单一来源。ADR-206 阶段 1 接线完成（2026-09-13）
 - `scripts/_lib/gate-report.ts`：FAIL 明细渲染与报告落盘（`GateResultItem` 为 `gate-ctx.GateResult` 的类型别名，形状单一事实源在 gate-ctx）
 - `scripts/_lib/gate-parse.ts`：工具输出统一解析（`parseToolOutput` / `tryParseSummary` / `tryParseJson`）——2026-09 收敛前 gate 内联 11 处 `JSON.parse`，runTools / runScopedDocDrift / 5 个域检查块 / issues / broken / 红线块各自手写一套 try/parse，判定口径漂移即门禁结论不可复现；收敛后全部走共享层，契约测试锁死优先级链
@@ -235,7 +236,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 ## 相关
 
-- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1 已落地，2-7 未做）
+- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1-4 已落地，5-7 未做）
 - ADR-146 — 路径卫生门禁（check-path-hygiene）
 - ADR-085 — 菜单表健康门禁（check-menu-health）
 - ADR-224 — mock 路径守卫（check-mock-paths；[mock_path_guard](./mock_path_guard.md)）

@@ -44,6 +44,13 @@ import {
   type Plan,
   planFromFiles,
 } from "./_lib/domain-classify.ts";
+import {
+  runAdrDomain,
+  runDataDomain,
+  runDocsDomain,
+  runDocsIndexGuard,
+} from "./_lib/gate-blocks/data-docs-domain.ts";
+import { runRedlines } from "./_lib/gate-blocks/redlines.ts";
 import { runScopedDocDrift, runTools } from "./_lib/gate-blocks/static-tools.ts";
 import {
   ALL_STATIC_TOOLS,
@@ -52,8 +59,8 @@ import {
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
 } from "./_lib/gate-config.ts";
-import { createGateCtx, GATE_TIMEOUT_MS } from "./_lib/gate-ctx.ts";
-import { tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
+import { createGateCtx } from "./_lib/gate-ctx.ts";
+import { tryParseSummary } from "./_lib/gate-parse.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveBaseRev, resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
@@ -62,8 +69,8 @@ import { run as procRun } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 const B = { OK: "[OK]", FAIL: "[FAIL]", FIX: "[FIX]", SKIP: "[SKIP]" };
-// 子进程统一超时已收敛至 gate-ctx（GATE_TIMEOUT_MS，阶段 2）：本文件余下数组式
-// procRun 调用（check-redlines）与 gate-blocks/* 共用同一值，不再各存副本。
+// 子进程统一超时 = gate-ctx.GATE_TIMEOUT_MS（阶段 2 收敛的单一来源）；本文件已不再
+// 直接持数组式 procRun 的 timeout（redlines 段随阶段 4 迁入 gate-blocks/redlines.ts）。
 /** 远端领先提示（SKIP 与 FAIL 共用，避免重复长文案） */
 const PULL_HINT = "提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。";
 
@@ -604,135 +611,16 @@ async function main() {
     })(),
   ]);
 
-  /* --- 数据域 --- */
-  if (plan.data) {
-    const t0 = Date.now();
-    const tc = ctx.sh("node scripts/type-consistency.ts --json");
-    // 特殊块：只取 _summary.issues 数值；解析失败 → null（fail-closed 阻断，不静默放行）
-    const issues = tryParseSummary(tc.out)?.issues ?? null;
-    const ok = issues === 0;
-    ctx.record("node scripts/type-consistency.ts --json", ok, {
-      time: Date.now() - t0,
-      raw: tc.out,
-      note:
-        issues === null
-          ? "输出解析失败（scripts/type-consistency.ts 缺失？）"
-          : ok
-            ? "extensions.ts 派生链路完好（单一事实来源守护通过）"
-            : `${issues} 个不一致`,
-    });
-  }
-
-  /* --- 文档域 --- */
-  if (plan.docs) {
-    const t0 = Date.now();
-    const lc = ctx.sh("node scripts/link-checker.ts --json");
-    const broken = tryParseSummary(lc.out)?.links_broken ?? null;
-    const ok = broken === 0;
-    ctx.record("node scripts/link-checker.ts --json", ok, {
-      time: Date.now() - t0,
-      raw: lc.out,
-      note:
-        broken === null
-          ? "输出解析失败（scripts/link-checker.ts 缺失？）"
-          : ok
-            ? "全部链接有效"
-            : `${broken} 条断链`,
-    });
-
-    // 发版说明漂移守护：git tag 单一事实源——每个正式 tag 必须有 docs/releases/<tag>.md
-    // （失败输出 AI 友好：--check 自带每条缺失的 git 区间补写命令）
-    const t1 = Date.now();
-    const rn = ctx.sh("node scripts/release-notes-gen.ts --check");
-    ctx.record("node scripts/release-notes-gen.ts --check", rn.rc === 0, {
-      time: Date.now() - t1,
-      tail: rn.rc ? rn.out.trim().split("\n").slice(-14).join("\n") : "",
-    });
-  }
-  if (plan.redlines) {
-    const t0 = Date.now();
-    // 变更域过滤（--files，2026-08-26）：文件驱动/push 模式把本次变更文件传给
-    // check-redlines——仅「变更文件内」的违规计入新增阻断，仓库内其他文件既有债务
-    // 不干扰当前提交（否则只改 Go/文档会被未提交 frontend 存量新增红线卡住）。
-    // --all / --docs 模式 files 为空、不传 --files → 全库基线比对，向后兼容。
-    // 数组参数直走 procRun（无 shell）：--files 大列表（整目录搬家可达 300+ 文件）经
-    // shell:true 会超 cmd.exe 8191 限制，check-redlines 进程起不来 → fail-closed 报
-    // 「输出解析失败」误阻断推送（2026-08-31 ADR-129 第三刀 utils/3d → preview-3d 实证）。
-    // 数组直传走 Windows CreateProcess 32767 上限，避开 cmd 8K 墙。all/docs 模式 files 为空 → 全库比对。
-    const rlArgs = ["scripts/check-redlines.ts", "--json", "--baseline"];
-    if (files.length) rlArgs.push("--files", files.join("\n"));
-    const rlRaw = procRun("node", rlArgs, { cwd: ROOT, timeout: GATE_TIMEOUT_MS });
-    const rl = { rc: rlRaw.rc, out: rlRaw.out || rlRaw.err || "" };
-    let newV = null,
-      ok = false,
-      scanHealthy = false,
-      baseCount = 0,
-      rlTail = "";
-    // 特殊块：需要整对象（顶层 results 供 tail 展示 + _summary 判定），解析失败 → fail-closed 阻断
-    const rlParsed = tryParseJson(rl.out) as { _summary?: any; results?: any[] } | null;
-    if (rlParsed) {
-      const s = rlParsed._summary;
-      newV = s.newViolations ?? null;
-      baseCount = s.baselineViolations ?? 0;
-      ok = s.ok === true;
-      // 扫描健康门（fail-closed）：rg 缺失/执行失败时 check-redlines 输出
-      // scanHealthy:false——必须阻断推送，否则红线门禁静默放行（P1 修复）
-      scanHealthy = s.scanHealthy === true;
-      // 违规详情（供 tail 展示方向，不阻断推送）
-      if (!ok && Array.isArray(rlParsed.results)) {
-        rlTail = rlParsed.results
-          .filter((r: any) => r.count > 0)
-          .map(
-            (r: any) =>
-              `[${r.rule_id} ${r.name}] ` +
-              r.violations.map((v: any) => `${v.file}:${v.line}`).join(", "),
-          )
-          .join("\n");
-      }
-    } else {
-      /* parse fail */ ok = false;
-      scanHealthy = false;
-    }
-    // 基线债务（红线新增）不阻断推送：推送后修；发布前全量 doctor 仍会报告（2026-08-13 决策）
-    // failClosed：扫描本身不可用（rg 缺失/fail-closed）才阻断——由下方 !scanHealthy 兜底
-    ctx.record("node scripts/check-redlines.ts --json --baseline", ok, {
-      time: Date.now() - t0,
-      raw: rl.out,
-      blockPolicy: "failClosed",
-      // note 顺序：newV===null 唯一标识 JSON parse 失败（rg 不可用时 newViolations
-      // 非 null——runBaseline fail-closed 返回 allKeys），必须先于 scanHealthy 判定
-      note:
-        newV === null
-          ? "输出解析失败——fail-closed 阻断，红线门禁未执行"
-          : !scanHealthy
-            ? "扫描不可用（rg 缺失/执行失败）——fail-closed 阻断，红线门禁未执行"
-            : ok
-              ? `红线零新增（基线 ${baseCount} 条）`
-              : `${newV} 条新增红线违规（基线 ${baseCount} 条）——债务项，推送后处理`,
-      tail: rlTail,
-    });
-    if (!scanHealthy) ctx.setBlocked(true);
-  }
-  if (plan.adr) {
-    const t0 = Date.now();
-    const ac = ctx.sh("node scripts/adr-check.ts");
-    ctx.record("node scripts/adr-check.ts", ac.rc === 0, {
-      time: Date.now() - t0,
-      raw: ac.out,
-      tail: ac.rc ? ac.out.trim().split("\n").slice(-4).join("\n") : "",
-    });
-  }
-
-  /* --- 生成器守护：索引产物是否过期（docs 或 adr 变更时） --- */
-  if (plan.docs || plan.adr) {
-    const t0 = Date.now();
-    const gd = ctx.sh("node scripts/gen-docs-index.ts --check");
-    ctx.record("node scripts/gen-docs-index.ts --check", gd.rc === 0, {
-      time: Date.now() - t0,
-      raw: gd.out,
-      tail: gd.rc ? gd.out.trim().split("\n").slice(-4).join("\n") : "",
-    });
-  }
+  /* --- 数据 / 文档 / ADR / 红线域（执行器已迁出）--- */
+  // runDataDomain / runDocsDomain / runAdrDomain / runDocsIndexGuard / runRedlines
+  // 分别位于 _lib/gate-blocks/data-docs-domain.ts 与 redlines.ts（ADR-206 阶段 3-4）。
+  // 各执行器在模块内自守卫（读 ctx.plan.*），故此处为无条件按序调用——顺序即输出顺序，
+  // 与搬移前一致（数据 → 文档 → 红线 → ADR → 索引守护）。
+  runDataDomain(ctx);
+  runDocsDomain(ctx);
+  runRedlines(ctx);
+  runAdrDomain(ctx);
+  runDocsIndexGuard(ctx);
 
   /* --- 契约测试（按域裁剪 #2：变更域 → 只跑相关契约测试） --- */
   // 规则（与 doctor 共用 _lib/contract-tests.ts 的 selectContractTests）：

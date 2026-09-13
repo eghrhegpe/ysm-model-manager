@@ -126,6 +126,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_iife_correctness.ts": ["tests"],
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_static_tools.ts": ["tests"],
+  "test_gate_domains.ts": ["tests"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_jscpd_go_smart.ts": ["tests", "go"],
@@ -312,6 +313,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/pre-push-gate.ts",
   ],
   "test_gate_report.ts": ["scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
+  // ADR-206 阶段 3-4：数据/文档/ADR/索引守护 + 红线执行器迁入 gate-blocks/*。
+  // 该测试锁调度调用顺序（runDataDomain → runDocsDomain → runRedlines → …）
+  // 与 redlines 的 --files 数组式传参（防 shell 拼接注入回归）。
+  "test_gate_domains.ts": [
+    "scripts/_lib/gate-blocks/data-docs-domain.ts",
+    "scripts/_lib/gate-blocks/redlines.ts",
+    "scripts/pre-push-gate.ts",
+  ],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],

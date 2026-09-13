@@ -22,7 +22,7 @@ vi.mock("@/theme-core", () => ({
 }));
 
 vi.mock("./store.ts", () => ({
-  cfg: { filesRoot: "/test", resourcepackRoot: "", mcRoot: "", linkMode: "copy" },
+  getCfg: () => ({ filesRoot: "/test", resourcepackRoot: "", mcRoot: "", linkMode: "copy" }),
 }));
 
 function makeRoot(savedTheme = "cyber", savedAuto = "off") {

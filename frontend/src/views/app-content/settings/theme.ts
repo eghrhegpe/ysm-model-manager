@@ -7,7 +7,7 @@ import { applyTheme } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { cfg } from "./store.ts";
+import { getCfg } from "./store.ts";
 
 // 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber
 const DAY_START_HOUR = 6;
@@ -45,10 +45,10 @@ export function initThemeSection(root: ShadowRoot): void {
           try {
             const { SaveAppConfig } = await backendGetApp();
             await SaveAppConfig(
-              cfg.filesRoot || "",
-              cfg.resourcepackRoot || "",
-              cfg.mcRoot || "",
-              cfg.linkMode || "copy",
+              getCfg().filesRoot || "",
+              getCfg().resourcepackRoot || "",
+              getCfg().mcRoot || "",
+              getCfg().linkMode || "copy",
               themeName,
             );
           } catch (e) {

@@ -13,11 +13,17 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 export const LAST_TYPE_KEY = "ysm_syncLastType";
 // 全局类型焦点主键（app-nav 双下拉同源）
 const GLOBAL_RTYPE_KEY = "repo_rtype";
-// 优先读全局主键，兼容旧键，兜底 YSM
-export let _lastSelectedType =
-  safeGet(GLOBAL_RTYPE_KEY) || safeGet(LAST_TYPE_KEY) || RESOURCE_TYPES.YSM;
+// 优先读全局主键，兼容旧键，兜底 YSM。不导出裸 let——读写统一走
+// getLastSelectedType/setLastSelectedType（HMR 重载不再依赖模块绑定活性）
+let lastSelectedType = safeGet(GLOBAL_RTYPE_KEY) || safeGet(LAST_TYPE_KEY) || RESOURCE_TYPES.YSM;
+
+/** 上次选中类型读取器 */
+export function getLastSelectedType(): string {
+  return lastSelectedType;
+}
+
 export function setLastSelectedType(type: string): void {
-  _lastSelectedType = type;
+  lastSelectedType = type;
   safeSet(GLOBAL_RTYPE_KEY, type); // 统一写全局（nav 下拉下次初始化读到一致值）
   safeSet(LAST_TYPE_KEY, type); // 旧键同步（防历史读取者）
 }

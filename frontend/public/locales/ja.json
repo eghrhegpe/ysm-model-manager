@@ -932,6 +932,8 @@
   "tree.bilibiliSearch": "Bilibiliで作者を検索",
   "tree.copyFilename": "ファイル名をコピー",
   "preview.title3d": "3Dプレビュー",
+  "preview.controlsHint": "WASD 移動 · スペース/Shift 上下 · ドラッグ回転 · スクロール拡縮 · ESC で閉じる",
+  "preview.sceneModelLimit": "同一シーンのモデル上限に達しました（{max}）・これ以上追加できません",
   "preview.noEnvironment": "3D に入ってから環境パネルを開いてください",
   "preview.roleNoMotion": "（このモデルに再生可能なモーションがありません）",
   "preview.unloadModel": "モデルをアンロード",

@@ -26,9 +26,9 @@ export type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 import { bindDelegatedEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
 import { render } from "./renderer.ts";
-import { _lastSelectedType, setLastSelectedType } from "./state.ts";
+import { getLastSelectedType, setLastSelectedType } from "./state.ts";
 
-// P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / _lastSelectedType / setLastSelectedType）
+// P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / lastSelectedType / setLastSelectedType）
 // 已下沉至 state.ts，打破 index ↔ events 循环依赖
 // 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
 // 状态主键统一 repo_rtype（state.ts），LAST_TYPE_KEY 仅历史兼容。
@@ -91,7 +91,7 @@ export class AppSyncManager extends WebComponentBase {
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";
     this._defaultType = this.getAttribute("default-type") || RESOURCE_TYPES.YSM;
-    this._selectedType = _lastSelectedType || this._defaultType;
+    this._selectedType = getLastSelectedType() || this._defaultType;
     if (!this._instance) {
       this.innerHTML = `<div style="padding:12px;color:var(--err)">⚠️ ${t("sync.noInstance")}</div>`;
       return;

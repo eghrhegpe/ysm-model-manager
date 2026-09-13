@@ -19,7 +19,8 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
-import { cfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
+import type { SettingsCfg } from "./store.ts";
+import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
@@ -29,7 +30,7 @@ const ADV_COLLAPSE_MS = 200;
 
 function stgBindMirrorSelect(
   root: ShadowRoot,
-  cfgLocal: typeof cfg,
+  cfgLocal: SettingsCfg,
   toastErrorLocal: typeof toastError,
 ): void {
   const savedMirror = cfgLocal.mirror || "";
@@ -71,7 +72,7 @@ function stgBindMirrorSelect(
 
 function stgBindUpdateInterval(
   root: ShadowRoot,
-  cfgLocal: typeof cfg,
+  cfgLocal: SettingsCfg,
   toastErrorLocal: typeof toastError,
 ): void {
   const updateCheckSelect = root.getElementById("set-update-check") as HTMLSelectElement | null;
@@ -98,7 +99,7 @@ function stgBindUpdateInterval(
 
 function stgBindLinkMode(
   root: ShadowRoot,
-  cfgLocal: typeof cfg,
+  cfgLocal: SettingsCfg,
   isBusyLocal: typeof isBusy,
   setBusyLocal: typeof setBusy,
   toastErrorLocal: typeof toastError,
@@ -332,7 +333,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   bindPathClick(
     root,
     "set-mc-path",
-    () => cfg.mcRoot || "",
+    () => getCfg().mcRoot || "",
     async (dir) => {
       await saveCfg({ mcRoot: dir });
     },
@@ -342,7 +343,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   bindPathClick(
     root,
     "set-files-root",
-    () => cfg.filesRoot || "",
+    () => getCfg().filesRoot || "",
     async (dir) => {
       await saveCfg({ filesRoot: dir });
     },
@@ -378,9 +379,9 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   initMcDetect(root);
   initThemeSection(root);
 
-  stgBindMirrorSelect(root, cfg, toastError);
-  stgBindUpdateInterval(root, cfg, toastError);
-  stgBindLinkMode(root, cfg, isBusy, setBusy, toastError, ADV_COLLAPSE_MS);
+  stgBindMirrorSelect(root, getCfg(), toastError);
+  stgBindUpdateInterval(root, getCfg(), toastError);
+  stgBindLinkMode(root, getCfg(), isBusy, setBusy, toastError, ADV_COLLAPSE_MS);
 
   void stgBindShowVersion(root);
   initVersionUpdater(root);

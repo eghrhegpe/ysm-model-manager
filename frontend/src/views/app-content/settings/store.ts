@@ -11,8 +11,16 @@ export { toastError } from "@/utils/dom/toast.ts";
 /** 设置页当前配置类型（LoadAppConfig 返回值，经 Wails $CancellablePromise 解包） */
 export type SettingsCfg = Awaited<ReturnType<AppBindings["LoadAppConfig"]>>;
 
-/** 当前配置：initSettings 加载后注入，各模块就地更新字段（saveCfg/检测/主题/链接模式） */
-export let cfg: SettingsCfg;
+/** 当前配置：initSettings 经 resetSettingsStore 注入；各模块经 getCfg() 就地更新字段
+ *  （saveCfg/检测/主题/链接模式）。不导出裸 let——HMR 重载/多实例不再依赖模块绑定的活性 */
+let cfg: SettingsCfg | undefined;
+
+/** 当前配置读取器（initSettings 注入前调用会抛错——调用时机错位的显式信号） */
+export function getCfg(): SettingsCfg {
+  if (!cfg)
+    throw new Error("[settings/store] cfg 未初始化：initSettings 未运行或 reset 后被提前读取");
+  return cfg;
+}
 
 /** 所有路径卡片的刷新函数列表（绑定后收集，重排/重置时统一调用） */
 export const cardRefreshers: Array<() => void> = [];

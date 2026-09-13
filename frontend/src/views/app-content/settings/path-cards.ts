@@ -14,7 +14,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { cardRefreshers, cfg, isBusy, setBusy, toastError } from "./store.ts";
+import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
 
 // 保存 cfg 辅助（保留各字段原值）
 // P1 修复（审核，配置回退）：保存前重读 Go 端最新配置作为未 patch 字段默认——
@@ -27,7 +27,7 @@ export async function saveCfg(patch: {
   linkMode?: string;
 }): Promise<void> {
   const { LoadAppConfig, SaveAppConfig } = await backendGetApp();
-  let latest = cfg;
+  let latest = getCfg();
   try {
     latest = await LoadAppConfig();
   } catch {
@@ -41,10 +41,10 @@ export async function saveCfg(patch: {
     patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || "copy",
     theme,
   );
-  if (patch.filesRoot !== undefined) cfg.filesRoot = patch.filesRoot;
-  if (patch.rpRoot !== undefined) cfg.resourcepackRoot = patch.rpRoot;
-  if (patch.mcRoot !== undefined) cfg.mcRoot = patch.mcRoot;
-  if (patch.linkMode !== undefined) cfg.linkMode = patch.linkMode;
+  if (patch.filesRoot !== undefined) getCfg().filesRoot = patch.filesRoot;
+  if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = patch.rpRoot;
+  if (patch.mcRoot !== undefined) getCfg().mcRoot = patch.mcRoot;
+  if (patch.linkMode !== undefined) getCfg().linkMode = patch.linkMode;
 }
 
 // 工具：绑定路径卡片点击
@@ -189,7 +189,7 @@ export function initAdvancedGrid(
   }));
 
   // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
-  const cfgAny = cfg as unknown as Record<string, unknown>;
+  const cfgAny = getCfg() as unknown as Record<string, unknown>;
   const cfgStr = (key: string): string =>
     typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "";
 
@@ -200,8 +200,8 @@ export function initAdvancedGrid(
     for (const at of advancedTypes) {
       const canOverride = !!at.cfgKey;
       const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
-      const defaultPath = cfg.filesRoot
-        ? `${cfg.filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
+      const defaultPath = getCfg().filesRoot
+        ? `${getCfg().filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
         : t("settings.path.notSetStorage");
       const currentPath = overridePath || defaultPath;
       const isOverridden = !!overridePath;
@@ -321,13 +321,13 @@ export function initMcDetect(root: ShadowRoot): void {
       }
       const theme = safeGet("theme") || "dark";
       await SaveAppConfig(
-        cfg.filesRoot || "",
-        cfg.resourcepackRoot || "",
+        getCfg().filesRoot || "",
+        getCfg().resourcepackRoot || "",
         selected,
-        cfg.linkMode || "copy",
+        getCfg().linkMode || "copy",
         theme,
       );
-      cfg.mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
+      getCfg().mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
       cardRefreshers.forEach((fn) => {
         fn();
       });

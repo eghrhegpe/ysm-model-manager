@@ -110,9 +110,9 @@
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 131 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 127 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 279 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 303 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 315 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 281 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 305 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 317 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -227,8 +227,8 @@
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 376 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 474 |
-| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 151 |
-| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 237 |
+| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
+| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 552 |
 
 **订阅方（on）：**
@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 211 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 212 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
@@ -304,8 +304,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 311 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 168 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 312 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -353,8 +353,8 @@
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 92 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 381 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 105 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 382 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -394,8 +394,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 362 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 101 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 486 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 487 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -443,7 +443,7 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 657 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 655 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -497,8 +497,8 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 278 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 279 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |
@@ -552,18 +552,18 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 320 |
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 365 |
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 371 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 74 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 82 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 107 |
-| atTeOpenAuthor | `frontend/src/views/app-tree/events.ts` | 134 |
-| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 167 |
-| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 183 |
-| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 190 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 384 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 424 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 432 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 489 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 499 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 76 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 84 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 109 |
+| atTeOpenAuthor | `frontend/src/views/app-tree/events.ts` | 136 |
+| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 169 |
+| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 185 |
+| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 192 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 385 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 425 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 433 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 490 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 76 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 323 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 476 |

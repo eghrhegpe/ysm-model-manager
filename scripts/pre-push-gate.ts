@@ -321,6 +321,9 @@ async function main() {
       `${JSON.stringify(
         {
           _summary: {
+            // ok 语义（五锐评 #3）：= !blocked 即「检查是否通过」——dryRun 模式下这是
+            // **预测值**（若此刻真实推送能否过），不是「已放行」；消费方（CI/子代理）
+            // 判断「是否真放行」须结合 dryRun 字段：ok && !dryRun 才是已放行推送
             ok: !ctx.blocked,
             blocked: ctx.blocked,
             dryRun,
@@ -447,7 +450,10 @@ main()
         child.on("error", (e) =>
           console.error(`[MAP] 后台刷新启动失败（不影响推送）: ${e.message}`),
         );
-        console.log(
+        // 五锐评 #2：此处必须 console.error——本行在 main().then 段（say 作用域外），
+        // 且 finishJson() 已把结构化 JSON 写完 stdout；console.log 会跟在 JSON 后使
+        // JSON.parse(stdout) 必炸。stderr 提示可见但不污染 --json 契约
+        console.error(
           "[MAP] 已触发后台刷新 docs/.doc-next-steps.md（AI 待补地图，非阻断，不阻塞推送）",
         );
       } catch (e: any) {

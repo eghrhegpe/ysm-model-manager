@@ -20,6 +20,7 @@ auto_fields:
     - buildGroundNodes
     - buildGroundSurfaceSpec
     - buildLightNodes
+    - buildLightPersistPayload
     - buildPostprocessingNodes
     - buildReflectorNodes
     - buildRenderModeNodes
@@ -83,6 +84,7 @@ auto_fields:
     - ReflectorCapability
     - RenderModeCapability
     - restoreFields
+    - restoreLightParams
     - restoreState
     - ringLog
     - SceneCapability

@@ -81,6 +81,7 @@ auto_fields:
     - buildGroundSurfaceSpec
     - buildLightingSchema
     - buildLightNodes
+    - buildLightPersistPayload
     - buildLipMorphIndices
     - buildLitematicScene
     - buildMmdScene
@@ -591,6 +592,7 @@ auto_fields:
     - resolveSemanticBones
     - resolveSemanticMorphs
     - restoreFields
+    - restoreLightParams
     - restoreModelGroupsVisible
     - restoreState
     - ringLog

@@ -257,8 +257,9 @@ function applyLayerFilter(
 
 // ===== 分层切片面板（schema builder 声明式，ADR-126 P5 收口：renderCustom 逃生舱退役）=====
 
-/** litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖，
- *  5329a347 review P2：固定 key 会被第二场景静默覆盖、任一 dispose 误注销另一场景） */
+/** litematic 分层切片面板 schema 键前缀（生产路径 per-scene 拼接 sessionId——多模型并存防互相覆盖，
+ *  5329a347 review P2：固定 key 会被第二场景静默覆盖、任一 dispose 误注销另一场景；
+ *  无 sessionId 的测试/旧调用退化用递增实例号，见下方 SliceInstance） */
 export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
 // 无 sessionId（测试/旧调用直挂 buildLitematicScene）时的退化计数；
 // 生产路径（mount3D）恒带 sessionId → per-scene 稳定 key（对齐 ysm-model-{sid} 范式）

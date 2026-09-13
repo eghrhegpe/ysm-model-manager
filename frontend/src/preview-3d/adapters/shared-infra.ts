@@ -63,9 +63,11 @@ export function applyModelDefaults(
 
 /**
  * 装配链——post-apply 后处理模型预设（ADR-196）。
- * 须跑在 `for(cap)cap.apply()` + `syncShadowLights` 之后、`setReflectorCap` 之前
- * （composer / SSR↔reflector 联动时序）。postproc per-type enabled 不入 schema，
- * 读自家 POSTPROC_PRESETS，由 cap 内 applyPostProcDefaults 完成翻转 + composer 侧效。
+ * 须跑在 `for(cap)cap.apply()` + `syncShadowLights` 之后（composer 时序）。
+ * SSR↔Reflector 联动已由 PostprocessingCapability 内部经构造注入的 caps 查询器
+ * （applyReflectorSync → getTypedCap）驱动，装配链不再手动 setReflectorCap，
+ * 故本函数无「跑在 setReflectorCap 之前」的时序约束。postproc per-type enabled
+ * 不入 schema，读自家 POSTPROC_PRESETS，由 cap 内 applyPostProcDefaults 完成翻转 + composer 侧效。
  */
 export function applyPostProcDefaults(
   postProcCap: PostprocessingCapability | null,

@@ -35,13 +35,13 @@ function atTeFindRow(ctx: AtTeCtx, path: string): HTMLElement | null {
   const idx = rows.findIndex((r) => r.key === path);
   if (idx === -1) return null;
   const selector = `[data-fullpath="${CSS.escape(path)}"], [data-path="${CSS.escape(path)}"]`;
-  return ctx.container.querySelector(selector);
+  return ctx.container.querySelector<HTMLElement>(selector);
 }
 
 function atTeStartRename(ctx: AtTeCtx, path: string): void {
   const row = atTeFindRow(ctx, path);
   if (!row) return;
-  const nmEl = row.querySelector(".nm") as HTMLElement | null;
+  const nmEl = row.querySelector<HTMLElement>(".nm");
   if (!nmEl) return;
   const inp = document.createElement("input");
   inp.type = "text";
@@ -64,10 +64,12 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
   const fhCk = target.closest(".fh .ck, .fh-list .ck");
   if (fhCk) {
     e.stopPropagation();
-    toggleFolderBatch(fhCk.closest(".fh, .fh-list") as HTMLElement, vm);
+    const fhEl = fhCk.closest<HTMLElement>(".fh, .fh-list");
+    if (!fhEl) return true;
+    toggleFolderBatch(fhEl, vm);
     return true;
   }
-  const flCk = target.closest(".fl .ck, .fl-list .ck") as HTMLElement | null;
+  const flCk = target.closest<HTMLElement>(".fl .ck, .fl-list .ck");
   if (flCk) {
     e.stopPropagation();
     if (!can("ToggleEnable")) {
@@ -88,7 +90,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     }
     vm.toggleBusy = true;
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
-    const fl = flCk.closest(".fl, .fl-list") as HTMLElement | null;
+    const fl = flCk.closest<HTMLElement>(".fl, .fl-list");
     flashBtn(fl);
     backendGetApp()
       .then(({ ToggleEnable }) => ToggleEnable(fullPath || ""))
@@ -240,13 +242,13 @@ function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean
 }
 
 function atTeBindRowClick(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement): boolean {
-  const fh = target.closest(".fh, .fh-list") as HTMLElement | null;
+  const fh = target.closest<HTMLElement>(".fh, .fh-list");
   if (fh) return atTeClickRowFolder(ctx, e, fh);
-  const haPreview = target.closest(".ha-preview") as HTMLElement | null;
+  const haPreview = target.closest<HTMLElement>(".ha-preview");
   if (haPreview) return atTeClickRowPreview(ctx, e, haPreview);
-  const haCopy = target.closest(".ha-copy") as HTMLElement | null;
+  const haCopy = target.closest<HTMLElement>(".ha-copy");
   if (haCopy) return atTeClickRowCopy(ctx, e, haCopy);
-  const fl = target.closest(".fl, .fl-list") as HTMLElement | null;
+  const fl = target.closest<HTMLElement>(".fl, .fl-list");
   if (fl && e.button === 0) return atTeClickRowFile(ctx, e, fl);
   return false;
 }
@@ -255,9 +257,9 @@ function atTeBindRowClick(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement): boo
 function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
   const { container } = ctx;
   container.addEventListener("dblclick", (e: MouseEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const fl = target.closest(".fl, .fl-list") as HTMLElement | null;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const fl = target.closest<HTMLElement>(".fl, .fl-list");
     if (!fl) return;
     const fullPath = fl.dataset.fullpath || fl.dataset.path;
     if (!fullPath) return;
@@ -270,9 +272,9 @@ function atTeBindRowDoubleClick(ctx: AtTeCtx): void {
 function atTeBindContextMenu(ctx: AtTeCtx): void {
   const { container, vm } = ctx;
   container.addEventListener("contextmenu", (e: MouseEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const fh = target.closest(".fh, .fh-list") as HTMLElement | null;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const fh = target.closest<HTMLElement>(".fh, .fh-list");
     if (fh) {
       e.preventDefault();
       e.stopPropagation();
@@ -285,7 +287,7 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
       });
       return;
     }
-    const fl = target.closest(".fl, .fl-list") as HTMLElement | null;
+    const fl = target.closest<HTMLElement>(".fl, .fl-list");
     if (fl) {
       e.preventDefault();
       e.stopPropagation();
@@ -328,38 +330,37 @@ function atTeBindContextMenu(ctx: AtTeCtx): void {
 function atTeBindRenameInput(ctx: AtTeCtx): void {
   const { container, vm } = ctx;
   container.addEventListener("keydown", (e: Event) => {
-    const ke = e as KeyboardEvent;
-    const target = ke.target as HTMLElement | null;
-    if (!target?.classList.contains("rename-inp")) return;
-    if (ke.key === "Enter") {
-      ke.preventDefault();
-      (target as HTMLInputElement).blur();
-    } else if (ke.key === "Escape") {
+    if (!(e instanceof KeyboardEvent)) return;
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement) || !target.classList.contains("rename-inp")) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      target.blur();
+    } else if (e.key === "Escape") {
       // P1 修复（审核）：Esc 取消重命名不能直接 _renderTree()——聚焦的 .rename-inp 被
       // DOM 移除时 Chromium 会同步派发 focusout（冒泡到 container）→ 走下方保存链，
       // 用户按 Esc 想放弃修改实际却把改动写盘。先置取消标记：DOM 移除同步触发 focusout
       // 时 input.dataset 仍可读（节点只是从文档断开，对象还在内存），focusout 分支据此跳过保存。
-      const inp = target as HTMLInputElement;
-      inp.dataset.cancelRename = "1";
-      inp.value = ""; // 双保险：即使标记丢失，空值也走下方"放弃重命名"分支
+      target.dataset.cancelRename = "1";
+      target.value = ""; // 双保险：即使标记丢失，空值也走下方"放弃重命名"分支
       vm._renderTree();
     }
   });
   container.addEventListener("focusout", (e: FocusEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target?.classList.contains("rename-inp")) return;
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement) || !target.classList.contains("rename-inp")) return;
     // P1 修复（审核）：Esc 取消标记——跳过保存链（见上方 Escape 分支注释）
-    if ((target as HTMLInputElement).dataset.cancelRename === "1") {
-      delete (target as HTMLInputElement).dataset.cancelRename;
+    if (target.dataset.cancelRename === "1") {
+      delete target.dataset.cancelRename;
       return;
     }
-    const inp = target as HTMLInputElement;
+    const inp = target;
     const newName = inp.value.trim();
     if (!newName) {
       vm._renderTree();
       return;
     }
-    const row = inp.closest(".fl, .fl-list") as HTMLElement | null;
+    const row = inp.closest<HTMLElement>(".fl, .fl-list");
     const path = row?.dataset.fullpath || row?.dataset.path || "";
     if (!path) {
       vm._renderTree();
@@ -515,8 +516,8 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
   atTeBindRenameInput(ctx);
 
   container.addEventListener("click", (e: MouseEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
     if (atTeBindSelCheckboxes(ctx, e, target)) return;
     if (atTeBindRowClick(ctx, e, target)) return;
   });

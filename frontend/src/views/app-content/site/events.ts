@@ -3,6 +3,7 @@
 import type { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -136,7 +137,7 @@ function cmCrBindOverlayEvents(
   overlay.querySelector("[data-star]")?.addEventListener("click", (ev) => {
     ev.stopPropagation();
     const now = toggleFav(cr.name);
-    (ev.target as HTMLElement).textContent = now ? "⭐" : "☆";
+    if (ev.target instanceof HTMLElement) ev.target.textContent = now ? "⭐" : "☆";
     const cardStar = searchResults.querySelector(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
@@ -150,7 +151,7 @@ function cmCrBindOverlayEvents(
 
   overlay.querySelector("[data-close]")?.addEventListener("click", () => overlay.remove());
 
-  const searchBtn = overlay.querySelector("[data-search]") as HTMLElement | null;
+  const searchBtn = qs<HTMLElement>(overlay, "[data-search]");
   if (searchBtn) {
     searchBtn.addEventListener("click", () => {
       overlay.remove();
@@ -181,7 +182,7 @@ function cmCrCreateDetailOverlay(
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.tabIndex = -1;
-  const opener = document.activeElement as HTMLElement | null;
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const close = () => {
     overlay.remove();
     opener?.focus?.();
@@ -234,9 +235,9 @@ function cmBbBindPresetSearchBtns(
   openUrl: ((url: string) => void) | undefined,
   fillSearch: (tpl: string, q: string) => string,
 ): void {
-  searchResults.querySelectorAll(".cr-preset-btn").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const q = (btn as HTMLElement).dataset.q || "";
+      const q = btn.dataset.q || "";
       if (site.searchUrl && openUrl) {
         openUrl(fillSearch(site.searchUrl, q));
       } else if (openUrl) {
@@ -251,19 +252,19 @@ function cmBbBindModeToggle(
   ctx: { setBrowseMode: (mode: BrowseMode) => void },
   refreshView: () => void,
 ): void {
-  searchResults.querySelectorAll(".cr-mode-opt[data-mode]").forEach((el) => {
+  qsa<HTMLElement>(searchResults, ".cr-mode-opt[data-mode]").forEach((el) => {
     el.addEventListener("click", () => {
-      ctx.setBrowseMode((el as HTMLElement).dataset.mode as BrowseMode);
+      ctx.setBrowseMode(el.dataset.mode as BrowseMode);
       refreshView();
     });
   });
 }
 
 function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void {
-  searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const name = (btn as HTMLElement).dataset.star || "";
+      const name = btn.dataset.star || "";
       const now = toggleFav(name);
       btn.textContent = now ? "⭐" : "☆";
       const card = btn.closest(".gh-card");
@@ -290,10 +291,10 @@ function cmBbBindSearchBtns(
   openUrl: ((url: string) => void) | undefined,
   fillSearch: (tpl: string, q: string) => string,
 ): void {
-  searchResults.querySelectorAll(".cr-card-search").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-card-search").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const name = (btn as HTMLElement).dataset.searchCreator || "";
+      const name = btn.dataset.searchCreator || "";
       if (site.searchUrl && openUrl) {
         openUrl(fillSearch(site.searchUrl, name));
       } else if (openUrl) {
@@ -304,20 +305,20 @@ function cmBbBindSearchBtns(
 }
 
 function cmBbBindLocalBadges(searchResults: HTMLElement, busRef: typeof bus): void {
-  searchResults.querySelectorAll(".cr-card-local-jump").forEach((el) => {
+  qsa<HTMLElement>(searchResults, ".cr-card-local-jump").forEach((el) => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      const name = (el as HTMLElement).dataset.localCreator || "";
+      const name = el.dataset.localCreator || "";
       busRef.emit("repo:search-creator", name);
     });
   });
 }
 
 function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => boolean): void {
-  searchResults.querySelectorAll("[data-debug-avatar]").forEach((img) => {
+  qsa<HTMLElement>(searchResults, "[data-debug-avatar]").forEach((img) => {
     img.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const name = (img as HTMLElement).dataset.debugAvatar;
+      const name = img.dataset.debugAvatar;
       if (!name) return;
       try {
         const { DebugExtractCreatorAvatar } = await backendGetApp();
@@ -342,16 +343,17 @@ function cmBbBindCardClicks(
   fillSearch: (tpl: string, q: string) => string,
   busRef: typeof bus,
 ): void {
-  searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
+  qsa<HTMLElement>(searchResults, ".gh-card[data-name]").forEach((card) => {
     card.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
       if (
         target.closest(".cr-star-btn") ||
         target.closest(".cr-card-search") ||
         target.closest(".cr-card-local-jump")
       )
         return;
-      const name = (card as HTMLElement).dataset.name;
+      const name = card.dataset.name;
       const cr = creators.find((c) => c.name === name);
       if (!cr) return;
       const overlay = cmCrCreateDetailOverlay(cr, esc, avatarCache, authorCountMap);
@@ -366,17 +368,17 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
   const crGrid = searchResults.querySelector(".cr-creator-grid");
   if (crGrid) {
     crGrid.addEventListener("keydown", ((e: KeyboardEvent) => {
-      const cards = [...crGrid.querySelectorAll(".gh-card[tabindex]")];
-      const cur = document.activeElement as HTMLElement | null;
-      const idx = cards.indexOf(cur as Element);
+      const cards = qsa<HTMLElement>(crGrid, ".gh-card[tabindex]");
+      const cur = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const idx = cur ? cards.indexOf(cur) : -1;
       if (idx < 0) return;
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
         e.preventDefault();
-        const next = (cards[idx + 1] || cards[0]) as HTMLElement;
+        const next = cards[idx + 1] || cards[0];
         next.focus();
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
         e.preventDefault();
-        const prev = (cards[idx - 1] || cards[cards.length - 1]) as HTMLElement;
+        const prev = cards[idx - 1] || cards[cards.length - 1];
         prev.focus();
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -392,8 +394,8 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
 
 function cmSeSyncFavButtons(searchResults: HTMLElement): void {
   const favs = loadFavs();
-  searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
-    btn.textContent = favs.includes((btn as HTMLElement).dataset.star || "") ? "⭐" : "☆";
+  qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
+    btn.textContent = favs.includes(btn.dataset.star || "") ? "⭐" : "☆";
   });
 }
 

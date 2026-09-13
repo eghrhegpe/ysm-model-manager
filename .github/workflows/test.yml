@@ -129,7 +129,7 @@ jobs:
           node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # P0（2026-09-14 锐评实测）：本地 pre-push-gate 的 28 项静态工具（19 项 hard）
+      # P0（2026-09-14 锐评实测）：本地 pre-push-gate 的 ALL_STATIC_TOOLS 27 项（19 hard）
       # 此前在 CI 覆盖为 0 —— 本地门禁是客户端钩子，`git push --no-verify` 零痕迹即可把
       # i18n 缺键 / css 跨 shadow 越界 / 文件头缺失等违规直推 main。
       # 用 --static 而非 --all：后者会重跑 vite build / vitest / go build+test，而这三件

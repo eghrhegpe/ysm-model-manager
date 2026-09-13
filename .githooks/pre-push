@@ -6,7 +6,7 @@
 #   YSM_SKIP_GATE=1 git push   —— 留痕逃生：钩子把待推 ref 写入 .git/gate-audit.log（SKIPPED 行）
 #   git push --no-verify       —— 不留痕（钩子不执行是 git 语义边界，客户端无法检测）。
 #    ⚠️ 现状澄清（2026-09-14 锐评核实）：CI **尚未**同跑 gate —— test.yml 只调用 7 个脚本，
-#      gate-config 的 28 项静态工具（19 项 hard）在远端覆盖为 0（见 pre_push_gate.md:74
+#      gate-config 的 ALL_STATIC_TOOLS 27 项（19 hard，另 DOC_EXTRA 2 项）在远端覆盖为 0（见 pre_push_gate.md:74
 #      「CI 同跑 gate 互证（待立项）」）。故目前唯一兜底只有本地 gate-audit.log 的
 #      连续性事后回溯（doctor --audit-check），--no-verify 的违规一旦推送即无远端拦截。
 #      在 CI 接上 gate 之前，本钩子的阻断力 = 全场唯一防线，勿轻易 --no-verify。

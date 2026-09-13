@@ -11,7 +11,10 @@ auto_fields:
     - DeepHash
     - DeepHash.ComputeHash
     - DeepHash.Name
+    - ErrEmptyRoot
+    - ErrNULByteInRoot
     - ErrRelativePath
+    - ErrScanRoot
     - ErrSymlinkRoot
     - FileEntry
     - FindDuplicateFiles

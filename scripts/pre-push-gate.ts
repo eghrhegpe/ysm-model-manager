@@ -212,7 +212,7 @@ async function main() {
     say("");
   } else if (staticMode) {
     // —— 静态工具模式（--static，CI 接线专用）：只跑静态治理工具，跳过全部域检查 ——
-    // 动机（2026-09-14 锐评 P0 实测）：test.yml 只调用 7 个脚本，而 gate-config 的 28 项
+    // 动机（2026-09-14 锐评 P0 实测）：test.yml 只调用 7 个脚本，而 gate-config 的 27 项
     // 静态工具（19 项 hard）在远端覆盖为 0 —— `git push --no-verify` 零痕迹即可把 i18n
     // 缺键 / css 越界 / 文件头缺失等违规直推 main；本地门禁是唯一防线且客户端可绕过。
     // 为何不直接用 --all：--all 会重跑 vite build / vitest / go build+test，而这些 CI

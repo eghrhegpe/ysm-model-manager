@@ -326,6 +326,35 @@ invariant_anchors:
 | `scanHeader` L133-151 死代码 | ❌ 驳回 | `[Authors]` 段内的 `<name>/<role>/<contact>` 字段走此分支；L92 switch 无 `authors` case 不会覆盖 |
 | `copyDirRecursive` 跨包重复应合并 | ❌ 驳回 | recycle(RejectSymlink:false+Rollback:false) vs importer(Overwrite:true+AtomicRename:true) 参数不同，thin wrapper 是必要设计 |
 
+## 动刀进度（实施记录，2026-09-14 六轮锐评刀口 — 三路子代理 + 主模型仲裁）
+
+### 覆盖率版图实测（本轮核心发现）
+
+- `go/` 33 包实测覆盖率中位数 **89.5%**，26 包 ≥80%（types/executil/config 100%）；唯二洼地 = `go/cli` **57.2%**（占全仓 27% 生产代码）与 `ccheck` 62.5%。全仓行加权约 80%。结论：测试不是过剩而是**贫富悬殊**。
+- `t.Parallel()` 历史「全仓零」已部分修复：149 处但仅 17/288 测试文件（5.9%）——子代理报「已修复」系过度乐观，主模型修正。
+
+### 仲裁修正（本轮驳回 4 处子代理指控 + 主模型自查 1 处）
+
+| 指控 | 裁定 | 理由 |
+|------|------|------|
+| scanner.go:480 waiter 永久阻塞 | ❌ 驳回 | owner `defer`（:390）在 panic 时仍执行 `wg.Done()` |
+| scanner.go:668 hash worker 缺 recover 致泄漏 | ❌ 驳回 | worker 首句即 `defer wg.Done()`，panic 时照样放行 |
+| repoaudit.go:409 二次 Close | ❌ 驳回 | .json/.ysm 分支全部提前 return 走不到 :409；`ReadLimitedEntry` 内部确有 `defer rc.Close()` |
+| go/cli 11 处裸 JSON 绕过协议、Data 丢失 | ❌ 驳回（刀③撤销） | 实地核查：这些是 `-format json` 人读分支 + `single-bench`/`perf-log` 的 ADR-200 文本 sidecar 数据源（前端 `singleBenchParseStages(resp.data.output)` 直接消费），收编=砸桥；正确迁移方向=ADR-200 完成态协同改前端 |
+| scanner.go:994 json.Marshal 吞错 | ❌ 驳回（主模型自查） | heredoc 字符串内示例代码，非生产代码 |
+
+### 本轮刀口（3 个 commit）
+
+- ✅ **刀① `syncItemsCache` 组件化**（`d1bc6c53`）：`go/instance/instance.go:30` 裸 `sync.Map` → `syncCache` 类型化组件（`sync_items_cache.go` 新增，mutex+map，get 惰性过期删除/putAt/peek/clear）。与 ADR-134 范式差异已在注释声明：instance 包全为无接收者包级函数，组件化止步单例封装不强行引入实例参数。消 `v.(*syncItemsCacheEntry)` 断言散落。`go build` + `go test -race ./go/instance ./internal/app` 全绿。
+- ✅ **刀② `DisableSuffixes` 私有化**（`7ec9e1b9`）：`go/types/registry/extensions.go` 导出可变 slice → 私有 `disableSuffixes` + `DisabledSuffix()` 访问器；唯一跨包消费 `sync.go:387`（`[0]` 索引）改语义化调用。
+- ✅ **刀④ go/cli 补测**（`a2f4258c7`）：`perf_test.go`（解析层 parseOptimizationEntries/extractSection/wrap + resolveTargetModel/getModelSize/buildPerfDiagnostics/buildPerfRecommendations/generateSnapshotSummary/scanFirstModel）+ `bench_concurrent_test.go`（detectModelFormat/stagesToJSON 瓶颈识别/generateHints/validateModelData/prepareGeometry|TextureData + runSingleModelBench 七阶段 + runPerfSnapshot/runConcurrentBench/runSingleBenchJSON 端到端含 CI 退化门禁 save→compare 往返）。**覆盖率 57.2% → 65.4%**，`go test -race ./go/cli` 全绿。附赠发现：`runSingleModelBench` 对 0 耗时 fake 的 `Duration>0` 防御分支已被测试锁定。
+
+### 历史债存活率（10 项核查）
+
+- 🟢 已修：Deprecated 绑定（24→0）、`t.Parallel` 部分（5.9%）、queueEpoch 类型化
+- 🔴 仍存活：`InstallLock` 持锁 I/O（`sync_push.go:39-54`）、`DecodeYSMData` 硬编码 `context.Background()`（`avatar_decode.go:155`）、`extracted.go` 907 行
+- 🟡 仍存活：watcher 9 处 `time.Sleep`、Toggle 三轨、`fileLocks` 不清理、`processForEpoch` 枚举化暂缓（ADR-181）
+
 ## 相关
 
 - [frontend_design_critique](frontend_design_critique.md)：前端侧同方法论锐评（三子代理并发 + 主模型抽查）

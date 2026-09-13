@@ -294,6 +294,7 @@ auto_fields:
     - getTextureAlphaMode
     - getTextureDecoder
     - getTintColorSync
+    - getTypedCap
     - getVrmMaterialDetail
     - godRaysIntensity
     - GPU_BUDGET_CALIBRATION_KEY

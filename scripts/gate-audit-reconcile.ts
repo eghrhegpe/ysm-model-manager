@@ -23,7 +23,7 @@
  * 依赖：node:fs / node:path / node:child_process / _lib/proc / _lib/scan-files
  */
 import fs from "node:fs";
-import path from "node:path";
+import { auditFilePath } from "./_lib/gate-audit.ts";
 import { run as procRun } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
@@ -71,13 +71,15 @@ for (const ref of refOutput.out
 }
 
 // ── 2. 审计日志已覆盖 oid 集（PUSH + SKIPPED 都算留痕） ──
-const auditFile = path.join(ROOT, ".git", "gate-audit.log");
+const auditFile = auditFilePath();
 const audited = new Set<string>();
 if (fs.existsSync(auditFile)) {
   for (const line of fs.readFileSync(auditFile, "utf-8").split("\n").filter(Boolean)) {
-    // 格式: <UTC ISO> <PUSH|SKIPPED> <oid12> <verdict> <counts> <remote>
+    // 格式: <UTC ISO> <PUSH|SKIPPED> <oid12|none> <verdict> <counts> <remote>
+    // 三锐评 #四1：oid 位（parts[2]）可能为 "none"（formatEntry 对空 localOid 兜底），
+    // "none" 不是真实提交，不得计入已审计集
     const parts = line.trim().split(/\s+/);
-    if (parts.length >= 3 && parts[1] !== "none" && parts[2]) audited.add(parts[2]);
+    if (parts.length >= 3 && parts[2] && parts[2] !== "none") audited.add(parts[2]);
   }
 }
 

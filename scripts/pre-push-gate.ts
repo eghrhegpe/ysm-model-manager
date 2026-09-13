@@ -149,6 +149,10 @@ async function main() {
   let pushRemoteName: string | undefined;
   // push 模式的有效 ref 数（>0 表示真实推送运行，供审计留痕判别）
   let pushedCount = 0;
+  // push 模式的全部有效 ref（逐 ref 审计留痕用——三锐评 #四2：多 ref 推送时
+  // reflog 每个 ref 一条 push 事件，审计只记 pushed[0] 会让其余 ref 被
+  // gate-audit-reconcile 误判为「无审计记录」缺口）
+  let pushedRefs: { localOid: string; localRef: string }[] = [];
 
   if (allMode) {
     // —— 全量模式：所有域 + 静态工具（等价 doctor 默认全量）——
@@ -249,6 +253,7 @@ async function main() {
     pushRemoteOid = pushed[0]!.remoteOid;
     pushRemoteName = remoteName;
     pushedCount = pushed.length;
+    pushedRefs = pushed.map((p) => ({ localOid: p.localOid, localRef: p.localRef }));
     const multiRef = pushed.length > 1;
     console.log(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,
@@ -323,13 +328,17 @@ async function main() {
   // 与钩子侧 YSM_SKIP_GATE 的 SKIPPED 行共同构成连续审计流——「这次推送没有 gate 记录」
   // 事后可回溯（--no-verify 本身仍无法客户端检测，边界见 gate-audit.ts 头注释）。
   if (!filesMode && !allMode && !docsMode && pushedCount > 0) {
-    appendGateAudit(auditFilePath(), {
-      kind: "PUSH",
-      localOid: pushLocalOid.slice(0, 12),
-      verdict: ctx.blocked ? "FAIL" : "PASS",
-      counts: `${ctx.results.filter((r) => r.ok).length}/${ctx.results.length}`,
-      remote: args._[0] as string,
-    });
+    // 逐 ref 留痕（三锐评 #四2）：多 ref 推送的 reflog 是每 ref 一条 update by push，
+    // 审计流必须同构——每 ref 一行，否则 reconcile 会把 N-1 个 oid 误判为缺口
+    for (const p of pushedRefs) {
+      appendGateAudit(auditFilePath(), {
+        kind: "PUSH",
+        localOid: p.localOid.slice(0, 12),
+        verdict: ctx.blocked ? "FAIL" : "PASS",
+        counts: `${ctx.results.filter((r) => r.ok).length}/${ctx.results.length}`,
+        remote: args._[0] as string,
+      });
+    }
   }
   if (!ctx.results.length) {
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);

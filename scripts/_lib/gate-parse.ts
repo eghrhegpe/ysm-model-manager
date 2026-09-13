@@ -102,7 +102,8 @@ export function tryParseSummary(out: string): any | null {
  *     **域检查块专用**（gate-blocks 内 ctx.record 直连项）：这些脚本是本仓自研、
  *     必须输出 _summary.ok，解析失败/缺字段一律 fail-closed，不许静默假绿
  *   - C（type-consistency 只认 issues===0、link-checker 只认 links_broken===0）是
- *     真特例：判定语义是「认特定计数字段」而非「认 ok」，保留手写但必须 fail-closed
+ *     真特例：判定语义是「认特定计数字段」而非「认 ok」，走 `requireSummaryField`
+ *     单一实现（fail-closed），不再手写 `tryParseSummary(out)?.field ?? null` 散落
  *   新增域块判定一律走 B，禁止再手写 `rc === 0 && s.ok === true` 同形判定
  *   （test_gate_parse_output.ts 尾部的源码扫描断言锁死此条）。
  *
@@ -119,6 +120,23 @@ export function tryParseSummary(out: string): any | null {
 export function requireSummaryOk(out: string, rc: number): { ok: boolean; summary: any | null } {
   const summary = tryParseSummary(out);
   return { ok: rc === 0 && summary !== null && summary.ok === true, summary };
+}
+
+/**
+ * C 口径单一实现（2026-09-13 三锐评 #二）：「只认 _summary.<field> 计数字段 === 0」
+ * 的严格判定，供 type-consistency（issues）/ link-checker（links_broken）等
+ * 「判定语义是计数字段而非 ok 布尔」的真特例共用——B 口径收编的姊妹篇：
+ * 特例保留 ≠ 手写散落，取字段 + null-fail-closed 的语义锁进函数而非注释。
+ *
+ * @param out   工具 --json 输出
+ * @param field 要认的 _summary 计数字段名
+ * @returns 字段值；_summary 缺失 / 字段缺失 / 非 number 一律 null（调用方按 fail-closed 阻断）
+ */
+export function requireSummaryField(out: string, field: string): number | null {
+  const summary = tryParseSummary(out);
+  if (summary === null) return null;
+  const v = summary[field];
+  return typeof v === "number" ? v : null;
 }
 
 /**

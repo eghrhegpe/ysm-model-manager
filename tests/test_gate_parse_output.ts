@@ -27,6 +27,7 @@ import path from "node:path";
 import {
   buildScanVerdict,
   parseToolOutput,
+  requireSummaryField,
   requireSummaryOk,
   tryParseJson,
   tryParseSummary,
@@ -203,6 +204,39 @@ check("收编锁死（2026-09-13 重锐评 #一）：域块禁止手写同形严
   assert.ok(
     count >= 3,
     `frontend-domain 应有 ≥3 处 requireSummaryOk 调用（menu/ctx-menu/binding），实际 ${count}`,
+  );
+});
+
+check("requireSummaryField：C 口径「只认计数字段===0」单一实现（fail-closed）", () => {
+  // PASS 路径：字段存在且为 0
+  assert.equal(requireSummaryField(JSON.stringify({ _summary: { issues: 0 } }), "issues"), 0);
+  // 计数非 0 → 透出数值供调用方拼 note（判定由调用方 === 0 完成）
+  assert.equal(requireSummaryField(JSON.stringify({ _summary: { issues: 3 } }), "issues"), 3);
+  // FAIL 路径 1：_summary 缺失
+  assert.equal(requireSummaryField(JSON.stringify({ total: 1 }), "issues"), null);
+  // FAIL 路径 2：字段缺失
+  assert.equal(requireSummaryField(JSON.stringify({ _summary: { other: 0 } }), "issues"), null);
+  // FAIL 路径 3：字段非 number（类型漂移防线）
+  assert.equal(requireSummaryField(JSON.stringify({ _summary: { issues: "0" } }), "issues"), null);
+  // FAIL 路径 4：非 JSON 输出
+  assert.equal(requireSummaryField("not json", "issues"), null);
+});
+
+check("收编锁死（2026-09-13 三锐评 #二）：C 口径禁止再手写取字段散落", () => {
+  // data-docs-domain 的 type-consistency / link-checker 两处历史上手写
+  // `tryParseSummary(out)?.field ?? null`，收编进 requireSummaryField 后必须绝迹。
+  const src = fs.readFileSync(
+    path.join(ROOT, "scripts", "_lib", "gate-blocks", "data-docs-domain.ts"),
+    "utf-8",
+  );
+  assert.ok(
+    !/tryParseSummary\([^)]*\)\?\.\w+ \?\? null/.test(src),
+    "data-docs-domain 出现手写 tryParseSummary(...)?.field ?? null——请改用 requireSummaryField（C 口径收编契约）",
+  );
+  const count = src.match(/requireSummaryField\(/g)?.length ?? 0;
+  assert.ok(
+    count >= 2,
+    `data-docs-domain 应有 ≥2 处 requireSummaryField 调用（type-consistency/link-checker），实际 ${count}`,
   );
 });
 

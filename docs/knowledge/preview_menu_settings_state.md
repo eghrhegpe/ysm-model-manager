@@ -18,6 +18,8 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
+    - CapabilityId
+    - CapabilityMap
     - capControlToView
     - CapControlView
     - collectSettingsCapControls
@@ -26,6 +28,7 @@ auto_fields:
     - FieldRestorer
     - formatCapSliderValue
     - getStateValue
+    - getTypedCap
     - GROUND_LAYER_OFFSETS
     - isPathAvailable
     - KNOWN_PATHS

@@ -22,7 +22,7 @@
  * record 行为像素级不变（label / note / tail / raw / time 原样），由三模式 dry-run
  * baseline diff 守护（ADR-206 §3）。
  *
- * 依赖：_lib/gate-ctx（GateCtx）/ _lib/gate-parse（tryParseSummary）
+ * 依赖：_lib/gate-ctx（GateCtx）/ _lib/gate-parse（requireSummaryField）
  *
  * 用法：
  *   import { runDataDomain, runDocsDomain } from "./gate-blocks/data-docs-domain.ts";
@@ -31,15 +31,16 @@
  * 退出码：本模块无独立 CLI（被 pre-push-gate.ts import）。
  */
 import type { GateCtx } from "../gate-ctx.ts";
-import { tryParseSummary } from "../gate-parse.ts";
+import { requireSummaryField } from "../gate-parse.ts";
 
 /** 数据域：resource_types.json ↔ extensions.ts 派生链路（ADR-204）。 */
 export function runDataDomain(ctx: GateCtx): void {
   if (!ctx.plan.data) return;
   const t0 = Date.now();
   const tc = ctx.sh("node scripts/type-consistency.ts --json");
-  // 特殊块：只取 _summary.issues 数值；解析失败 → null（fail-closed 阻断，不静默放行）
-  const issues = tryParseSummary(tc.out)?.issues ?? null;
+  // 特殊块（C 口径，requireSummaryField 单一实现）：只认 _summary.issues===0；
+  // 缺失/非 number → null（fail-closed 阻断，不静默放行）
+  const issues = requireSummaryField(tc.out, "issues");
   const ok = issues === 0;
   ctx.record("node scripts/type-consistency.ts --json", ok, {
     time: Date.now() - t0,
@@ -58,9 +59,9 @@ export function runDocsDomain(ctx: GateCtx): void {
   if (!ctx.plan.docs) return;
   const t0 = Date.now();
   const lc = ctx.sh("node scripts/link-checker.ts --json");
-  // 特殊块：link-checker 正常路径退出码恒 0（见文件头「已知坑」），故只认 links_broken；
-  // 解析失败 → null → fail-closed 阻断，不静默放行
-  const broken = tryParseSummary(lc.out)?.links_broken ?? null;
+  // 特殊块（C 口径）：link-checker 正常路径退出码恒 0（见文件头「已知坑」），故只认
+  // links_broken===0；缺失/非 number → null → fail-closed 阻断，不静默放行
+  const broken = requireSummaryField(lc.out, "links_broken");
   const ok = broken === 0;
   ctx.record("node scripts/link-checker.ts --json", ok, {
     time: Date.now() - t0,

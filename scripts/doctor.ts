@@ -12,6 +12,9 @@
  *   node scripts/doctor.ts --check  # 兼容旧参数，忽略（gate 无对应语义）
  *   node scripts/doctor.ts --strict # 严格模式：等价 --all（静态工具挂载已自带 --strict，2026-08-17）
  *   node scripts/doctor.ts --json   # 透传 pre-push-gate 原始输出（契约见 check-script-hygiene）
+ *   node scripts/doctor.ts --audit-check [--days 30]  # 审计对账（委托 gate-audit-reconcile，
+ *                                     缺口非零即退出 1——逃生审计链的「读侧」例行消费位。
+ *                                     注：不接 CI——fresh clone 无 push reflog，对账恒空转）
  * 退出码：任何非零检查([FAIL])均透传退出码阻断；仅 WARN/skip 不阻断
  */
 import { spawnSync } from "node:child_process";
@@ -21,7 +24,7 @@ import { ROOT } from "./_lib/scan-files.ts";
 
 // 统一参数解析：--check/--strict 为兼容旧参数声明为 bool（保持被静默忽略的既有行为，不落入 unknown）
 const args = parseArgs(process.argv.slice(2), {
-  bools: ["json", "docs", "gate", "check", "strict"],
+  bools: ["json", "docs", "gate", "check", "strict", "audit-check"],
 });
 if (args.unknown.length) console.warn(`[doctor] 忽略未知参数: ${args.unknown.join(", ")}`);
 const JSON_MODE = args.json as boolean;
@@ -48,6 +51,20 @@ function delegate(gateArgs: string[], { stdin }: { stdin?: string } = {}) {
   if (gateResult.stdout) process.stdout.write(gateResult.stdout);
   if (gateResult.stderr) process.stderr.write(gateResult.stderr);
   process.exit(gateResult.status ?? 1);
+}
+
+if (args["audit-check"]) {
+  // 审计对账模式（2026-09-13 三锐评 #一）：委托 gate-audit-reconcile，缺口非零即红。
+  // 放本地 doctor 而非 CI：对账的两侧数据源（远端跟踪 reflog + .git/gate-audit.log）
+  // 都只存在于开发机——fresh clone 的 CI 上 pushEvents 恒 0，对账恒空转。
+  // 「跨机可查」的系统性兜底 = CI 同跑 gate 本体互证（ci.yml 既有门禁 job），非 reconcile。
+  const daysIdx = args._.indexOf("--days");
+  const days = daysIdx >= 0 ? String(args._[daysIdx + 1]) : "30";
+  const r = spawnSync("node", [path.join("scripts", "gate-audit-reconcile.ts"), "--days", days], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+  process.exit(r.status ?? 1);
 }
 
 if (GATE_MODE) {

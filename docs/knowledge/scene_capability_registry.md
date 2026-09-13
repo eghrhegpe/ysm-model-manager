@@ -51,6 +51,7 @@ auto_fields:
     - FogCapability
     - FogMode
     - generateSurfacePixels
+    - getTypedCap
     - godRaysIntensity
     - GROUND_LAYER_OFFSETS
     - GroundCapability

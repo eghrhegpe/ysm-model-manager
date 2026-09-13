@@ -9,6 +9,7 @@
 // （数据来源见 mc-tints.ts / ADR-080 §5.4；tintindex 仅作"需染色"布尔，值非类别索引）。
 
 import * as THREE from "three";
+import { t } from "@/core/i18n/t.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
@@ -377,7 +378,7 @@ async function buildPackScene(
         kind: "row",
         labelKey: label,
         fallback: label,
-        value: `${faceCount} 面 · ${entry}`,
+        value: t("preview.pack.textureFaces", { count: faceCount, entry }),
         dockGroup: "stats",
       });
     }

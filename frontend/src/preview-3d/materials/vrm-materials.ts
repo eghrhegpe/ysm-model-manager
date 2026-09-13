@@ -15,6 +15,7 @@
 // 消费方 import 路径与导出名不变。
 
 import type * as THREE from "three";
+import { t } from "@/core/i18n/t.ts";
 import {
   getMaterialDetailBase,
   listMaterials,
@@ -40,7 +41,8 @@ export interface VrmMaterialDetail {
 }
 
 /** VRM 材质显示名：有 name 用之，无则回退「材质 #N」（共享 list 的 nameFn 参数） */
-const vrmName = (m: THREE.Material, i: number): string => m.name || `材质 #${i + 1}`;
+const vrmName = (m: THREE.Material, i: number): string =>
+  m.name || t("preview.materialUnnamed", { n: i + 1 });
 
 /** 推断材质类型：MToon 是自定义 ShaderMaterial，名称常含 MToon */
 function inferVrmType(mat: THREE.Material): VrmMaterialDetail["type"] {

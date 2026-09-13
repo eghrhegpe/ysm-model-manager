@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-234：scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警",
+        "link": "/adr/ADR-234-scripts-gen"
+      },
+      {
         "text": "ADR-233：preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口）",
         "link": "/adr/ADR-233-preview3d-session-state-machine"
       },

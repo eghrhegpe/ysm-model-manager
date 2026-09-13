@@ -494,7 +494,6 @@ function makeFakeIDBFull(opts: {
 } {
   const store = new Map<string, unknown>();
   let txError: Error | null = null;
-  let writeFailed = false;
 
   const reqOf = (result: unknown, error?: Error) => {
     const req = {

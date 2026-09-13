@@ -156,9 +156,9 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 **2026-09-13 契约修复**：三个脚本已补 `_summary.ok/errors/warns_list` + `--strict`（JSON 模式不再往 stderr 写文本——gate 用 `shAsync` 合并 stdout+stderr，混入文本会让 `JSON.parse` 失败、退化为 rc 判定），门禁判定链现能读到真实结论。实测：`check-type-safety` 生产域 `ok=true / errors=0`（唯一现在就能硬挂的）；`check-complexity` `errors=301`、`check-params` `errors=54` 仍是存量规模，FAIL 时 tail 直出 Top-20 明细。
 
-**2026-09-13 增量裁剪**：三者已补 `--files <换行分隔列表>`（与 `check-redlines` / `check-doc-drift` 同约定，即门禁侧传参形态）与 `--changed`（本地自动取「相对默认分支合并基线」的变更文件），实现收敛在 `scripts/_lib/changed-scope.ts`（契约测试 `tests/test_changed_scope.ts`）。语义：`--files` 优先 → `--changed` 自解析 → 全库（两 flag 皆缺，向后兼容既有调用）；命中先收敛到变更文件再计数，`_summary.scopeFilter{mode,requested,matched,total}` 留痕——**「0 命中」必须能区分「全库干净」与「变更文件压根不在扫描范围」**。实测（本仓 `--changed` 解析出 213 个变更文件 → 前端域 55 个进入扫描）：`check-complexity` 命中 301→65、`check-params` 54→18；耗时同步降一个量级（全库 2.4s / 59.4s / 0.3s → 裁剪后 0.45s / 0.39s / 0.17s）。
+**2026-09-13 增量裁剪**：三者已补 `--files <换行分隔列表>`（与 `check-redlines` / `check-doc-drift` 同约定，即门禁侧传参形态）与 `--changed`（本地自动取「相对默认分支合并基线」的变更文件），实现收敛在 `scripts/_lib/changed-scope.ts`（契约测试 `tests/test_changed_scope.ts`）。语义：`--files` 优先 → `--changed` 自解析 → 全库（两 flag 皆缺，向后兼容既有调用）；命中先收敛到变更文件再计数，`_summary.scopeFilter{mode,requested,matched,total}` 留痕——**「0 命中」必须能区分「全库干净」与「变更文件压根不在扫描范围」**。实测（本仓 `--changed` 解析出 213 个变更文件 → 前端域 55 个进入扫描）：`check-complexity` 命中 301→65、`check-params` 54→18；耗时同口径下降 **2.4s→0.9s / 59.4s→7.9s / 0.3s→0.3s**。注意 `check-params` 的成本随进入扫描的文件数近似线性（55 文件 7.9s、单文件 0.4s）——**它全库 59.4s 的墙钟是接线成本的关键项**，接线必须依赖增量路径（口径提醒：报耗时务必注明是否增量，单文件数字与 55 文件数字差一个量级）。
 
-**仍未接线**（本次只加能力，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**；接线须在 `runTools` 加「按 `--files` 裁剪」通道（数组式 procRun，避开 cmd 8K 墙——同 `check-redlines` / `runScopedDocDrift` 先例），再以 `blockPolicy: debt` 试挂。**`check-params` 是接线成本的关键项**：全库 59.4s 的墙钟几乎不可接受，只有增量路径（0.39s）能让它可挂。
+**仍未接线**（本次只加能力，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**；接线须在 `runTools` 加「按 `--files` 裁剪」通道（数组式 procRun，避开 cmd 8K 墙——同 `check-redlines` / `runScopedDocDrift` 先例），再以 `blockPolicy: debt` 试挂。
 
 **推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。
 

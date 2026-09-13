@@ -832,7 +832,7 @@ describe("感知能力派生（build 路径）", () => {
   });
 });
 
-// ── ⑨ 动画文件扫描数据流（mdYsScanAnimFiles）──────────────
+// ── ⑨ 动画文件扫描数据流（scanAnimFiles）──────────────
 
 describe("动画文件扫描（.animation.json / controllers）", () => {
   it("目录推导 + 只读 .animation.json + 标签策略（单 clip 文件名 / 多 clip「文件名 · clip 名」）", async () => {

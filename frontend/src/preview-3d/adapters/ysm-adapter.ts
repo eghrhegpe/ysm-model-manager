@@ -12,7 +12,7 @@
 // 调试模式（F 键 normal/pivot/bone 可视化）：渲染侧已接入 shared——rebuildDebug 复用旧
 // renderModel3D 的相同逻辑（pivot 线 + 骨骼连接 + Sprite 标签）。键盘接线 2026-09-03 修复：
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
-// 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 MdYsMenuDebug.onFKeyDown 运输）。
+// 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 YsmMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
 import {
@@ -149,7 +149,7 @@ function makeRayState(): {
 }
 
 /** 类型提级：buildYsmScene 多阶段共享基础上下文（包级非导出） */
-interface MdYsSceneCtx {
+interface YsmSceneCtx {
   ctx: PreviewBuildCtx;
   path: string;
   opts: YsmAdapterOptions;
@@ -165,7 +165,7 @@ interface MdYsSceneCtx {
 }
 
 /** 阶段①产物：数据加载 + 场景图构建核心 */
-interface MdYsBuildCore {
+interface YsmBuildCore {
   model: BedrockGeometry;
   texIdx: number;
   texArr: (THREE.Texture | null)[];
@@ -177,7 +177,7 @@ interface MdYsBuildCore {
 }
 
 /** 阶段②产物：相机 + 骨骼拾取系统 */
-interface MdYsCameraBones {
+interface YsmCameraBones {
   initCamPos: THREE.Vector3;
   initCamTarget: THREE.Vector3;
   rayState: ReturnType<typeof makeRayState>;
@@ -190,7 +190,7 @@ interface MdYsCameraBones {
 }
 
 /** 阶段③产物：骨骼面板 + 动画/感知系统 */
-interface MdYsPanelAnim {
+interface YsmPanelAnim {
   bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree;
   animPlayer: YsmAnimPlayer | null;
@@ -201,7 +201,7 @@ interface MdYsPanelAnim {
 }
 
 /** 阶段④产物：菜单 + 调试模式 */
-interface MdYsMenuDebug {
+interface YsmMenuDebug {
   controlsCtx: YsmControlsContext;
   perceptionState: PerceptionState;
   menuItems: PreviewMenuNode[];
@@ -212,7 +212,7 @@ interface MdYsMenuDebug {
 }
 
 /** 阶段①：头部数据加载 + buildYsmObject 挂场景 */
-async function loadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
+async function loadAndBuild(sc: YsmSceneCtx): Promise<YsmBuildCore> {
   const model = await sc.opts.loader(sc.path);
   sc.tLoadEnd = performance.now();
   if (!model) throw new Error(`模型数据加载失败: ${sc.path}`);
@@ -242,7 +242,7 @@ async function loadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
 }
 
 /** 阶段②：相机取景 + 骨骼拾取系统 + content 句柄 */
-function setupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraBones {
+function setupCameraAndBones(sc: YsmSceneCtx, core: YsmBuildCore): YsmCameraBones {
   const { ctx } = sc;
   const { obj, spec } = core;
 
@@ -300,7 +300,7 @@ function setupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraB
 }
 
 /** 子辅助：磁盘扫描 .animation.json / .animation_controllers.json（阶段③内提纯） */
-async function scanAnimFiles(sc: MdYsSceneCtx): Promise<{
+async function scanAnimFiles(sc: YsmSceneCtx): Promise<{
   clips: Array<{ label: string; clip: AnimationClip }>;
   controllers: AnimationController[];
 }> {
@@ -357,10 +357,7 @@ async function scanAnimFiles(sc: MdYsSceneCtx): Promise<{
 }
 
 /** 阶段③：骨骼面板树 + 动画/感知系统（ADR-100 L1+L2+L3） */
-async function buildBonePanelAndAnim(
-  sc: MdYsSceneCtx,
-  core: MdYsBuildCore,
-): Promise<MdYsPanelAnim> {
+async function buildBonePanelAndAnim(sc: YsmSceneCtx, core: YsmBuildCore): Promise<YsmPanelAnim> {
   const { ctx, opts } = sc;
   const { obj, spec, model } = core;
 
@@ -439,11 +436,11 @@ async function buildBonePanelAndAnim(
 
 /** 阶段④：声明式根菜单 + F 键调试模式 + perf trace 记录 */
 function buildMenuAndDebug(
-  sc: MdYsSceneCtx,
-  core: MdYsBuildCore,
-  cam: MdYsCameraBones,
-  anim: MdYsPanelAnim,
-): MdYsMenuDebug {
+  sc: YsmSceneCtx,
+  core: YsmBuildCore,
+  cam: YsmCameraBones,
+  anim: YsmPanelAnim,
+): YsmMenuDebug {
   const { ctx, opts } = sc;
   const { model, texArr, spec, obj } = core;
   const { content } = cam;
@@ -552,11 +549,11 @@ function buildMenuAndDebug(
 
 /** 阶段⑤：组装 PreviewScene 返回句柄（dispose/reset/update 等） */
 function makeSceneHandle(
-  sc: MdYsSceneCtx,
-  core: MdYsBuildCore,
-  cam: MdYsCameraBones,
-  anim: MdYsPanelAnim,
-  menu: MdYsMenuDebug,
+  sc: YsmSceneCtx,
+  core: YsmBuildCore,
+  cam: YsmCameraBones,
+  anim: YsmPanelAnim,
+  menu: YsmMenuDebug,
 ): UpdateableScene & CameraControlScene & GroupedScene & ScreenshotScene {
   const { ctx } = sc;
   const { obj } = core;
@@ -639,7 +636,7 @@ export async function buildYsmScene(
   }
 
   const now = () => performance.now();
-  const sc: MdYsSceneCtx = {
+  const sc: YsmSceneCtx = {
     ctx,
     path,
     opts,

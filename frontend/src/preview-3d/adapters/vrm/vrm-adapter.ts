@@ -265,21 +265,21 @@ export interface VrmPanelHooks {
   playNodes?: (bridge: MmdPlayBridge) => PreviewMenuNode[];
 }
 
-interface MdVrParseResult {
+interface VrmParseResult {
   vrm: VRM;
   gltf: GLTF;
   tStart: number;
   tParseStart: number;
   tParseEnd: number;
 }
-interface MdVrMotionState {
+interface VrmMotionState {
   motionClips: Array<{ label: string; clip: THREE.AnimationClip }>;
   motionMixer: THREE.AnimationMixer | null;
   motionAction: THREE.AnimationAction | null;
   motionPlaying: boolean;
   motionIdx: number;
 }
-interface MdVrPerceptionState {
+interface VrmPerceptionState {
   perceptionState: PerceptionState;
   perceptionCaps: PerceptionCapability[];
   breath: ReturnType<typeof createBreathController>;
@@ -291,7 +291,7 @@ interface MdVrPerceptionState {
   exprMgr: VRM["expressionManager"];
   perceptionPauseRef: PerceptionPauseRef;
 }
-interface MdVrBoneAssembly {
+interface VrmBoneAssembly {
   bonePanelRef: BonePanelCleanupRef;
   boneTree: BoneTree;
   semanticBones: ReturnType<typeof vrmSemanticBoneMap>;
@@ -310,7 +310,7 @@ async function Stage1ReadParse(
   path: string,
   port: VrmDataPort | undefined,
   readFn: (p: string) => Promise<string | null>,
-): Promise<MdVrParseResult> {
+): Promise<VrmParseResult> {
   renderLoadingState(ctx.loadingEl, "🥽", "preview.loadingModel");
   const tStart = performance.now();
   const b64 = await readFn(path);
@@ -365,7 +365,7 @@ async function loadVrmaAnims(
   path: string,
   readFn: (p: string) => Promise<string | null>,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
-): Promise<MdVrMotionState> {
+): Promise<VrmMotionState> {
   const motionClips: Array<{ label: string; clip: THREE.AnimationClip }> = [];
   let motionMixer: THREE.AnimationMixer | null = null;
   let motionAction: THREE.AnimationAction | null = null;
@@ -416,7 +416,7 @@ function setupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
   // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
   frameCameraSide(ctx, vrm.scene);
 }
-function Stage2BonesHumanoid(vrm: VRM): MdVrBoneAssembly {
+function Stage2BonesHumanoid(vrm: VRM): VrmBoneAssembly {
   // BonePanelCleanupRef 统一类型（code_review d6de20d2 #10：原裸内联
   // { current: (() => void) | null } 与 mmd/ysm/fbx 已收编的共享接口分叉）
   const bonePanelRef: BonePanelCleanupRef = { current: null };
@@ -443,7 +443,7 @@ function buildPerception(
   ctx: PreviewBuildCtx,
   boneTree: BoneTree,
   semanticBones: ReturnType<typeof vrmSemanticBoneMap>,
-): MdVrPerceptionState {
+): VrmPerceptionState {
   const perceptionState: PerceptionState = {
     breath: true,
     gaze: true,
@@ -491,10 +491,10 @@ function Stage4MenuPanels(
   path: string,
   panels: VrmPanelHooks | undefined,
   ctx: PreviewBuildCtx,
-  boneAssy: MdVrBoneAssembly,
+  boneAssy: VrmBoneAssembly,
   vrmMaterials: THREE.Material[],
-  motion: MdVrMotionState,
-  perception: MdVrPerceptionState,
+  motion: VrmMotionState,
+  perception: VrmPerceptionState,
   meta: VrmMetaSummary | undefined,
 ): PreviewMenuNode[] {
   const { bonePanelRef, boneTree } = boneAssy;
@@ -563,11 +563,11 @@ function Stage5BuildResult(
   ctx: PreviewBuildCtx,
   path: string,
   port: VrmDataPort | undefined,
-  parseRes: MdVrParseResult,
-  boneAssy: MdVrBoneAssembly,
+  parseRes: VrmParseResult,
+  boneAssy: VrmBoneAssembly,
   vrmMaterials: THREE.Material[],
-  motion: MdVrMotionState,
-  perception: MdVrPerceptionState,
+  motion: VrmMotionState,
+  perception: VrmPerceptionState,
   menuItems: PreviewMenuNode[],
 ): UpdateableScene & ScreenshotScene & SemanticScene {
   const { vrm } = parseRes;

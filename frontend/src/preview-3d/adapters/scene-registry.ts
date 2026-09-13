@@ -67,11 +67,14 @@ type RegisterInput = {
 /** dedup 查重：按 `${rtype}::${path}` 复合键找既有 entry。
  *  code_review ece0d4a4 #7：原 byAuthor/byName 双 map 键完全一致（byte-for-byte 重复，
  *  双维护易漂移）——收敛单 map byPath。 */
-function mdSrDedupByExplicitKey(byPath: Map<string, string>, input: RegisterInput): string | null {
+function dedupModelEntryByExplicitKey(
+  byPath: Map<string, string>,
+  input: RegisterInput,
+): string | null {
   return byPath.get(`${input.rtype}::${input.path}`) ?? null;
 }
 
-function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
+function buildModelEntryFromInput(id: string, input: RegisterInput): ModelEntry {
   return {
     id,
     path: input.path,
@@ -88,7 +91,7 @@ function mdSrBuildEntryFromInput(id: string, input: RegisterInput): ModelEntry {
   };
 }
 
-function mdSrIndexIntoMaps(
+function indexModelEntryIntoMaps(
   entries: Map<string, ModelEntry>,
   byPath: Map<string, string>,
   entry: ModelEntry,
@@ -122,7 +125,7 @@ class SceneRegistry {
    * roots 由调用方经 scene.children 差量捕获传入；boneMaps/menuItems 可选。
    */
   register(input: RegisterInput): string {
-    const existing = mdSrDedupByExplicitKey(this.byPath, input);
+    const existing = dedupModelEntryByExplicitKey(this.byPath, input);
     if (existing) {
       // 去重命中：同 path 重载时旧 entry 持有已 dispose 的 content/roots，
       // 须用新 input 刷新可变字段，否则取景幽灵 + 计数虚高（P2 审核修复）
@@ -148,8 +151,8 @@ class SceneRegistry {
       return existing;
     }
     const id = `m${++this.seq}`;
-    const entry = mdSrBuildEntryFromInput(id, input);
-    mdSrIndexIntoMaps(this.entries, this.byPath, entry);
+    const entry = buildModelEntryFromInput(id, input);
+    indexModelEntryIntoMaps(this.entries, this.byPath, entry);
     for (const r of input.roots) {
       r.visible = entry.visible;
       this.objToEntry.set(r, entry);

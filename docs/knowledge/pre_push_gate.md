@@ -71,8 +71,8 @@ pitfalls:
   - 「check-deadcode-baseline 的瞬态 FAIL」该工具自行调用 `jscpd` 把 JSON 报告写进**固定路径** `frontend/report/jscpd-report.json`，读完立刻 `fs.rmSync` 清理——路径无 pid/无锁，同一工作区**并行会话同时跑门禁**时会互相删读，表现为 `[解析失败] jscpd 报告读取异常`（声明 debt，不阻断但污染输出：同一提交第一次跑红、第二次跑绿）。排查时应先看 FAIL tail 是否为此条，勿据此改动归因（2026-09-13 实证：同日 4 次门禁中 1 次瞬态红）
 status: active
 invariant_anchors:
-  - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
   - scripts/_lib/gate-config.ts|ALL_STATIC_TOOLS
+  - scripts/_lib/gate-blocks/schedule.ts|ALL_STATIC_TOOLS
 ---
 
 # 推送前门禁 pre-push-gate
@@ -125,7 +125,7 @@ invariant_anchors:
 
 搬移期唯一实质改动：autoFix 重验的 `parseToolOutput(re.out, re.rc)` 补回第三入参 `tool`（此前漏传，解析失败时 note 丢失工具名）。
 
-**剩余阶段**（ADR-206 阶段 3-7 未做）：`data-docs-domain.ts`（数据/文档/ADR/gen-docs-index）→ `redlines.ts`（failClosed 特例隔离）→ `schedule.ts`（契约测试 + 静态调度 + scripts typecheck）→ `go-domain.ts` / `frontend-domain.ts`（最大块最后做）、`parseToolOutput` 的 `okMustBeTrue` 加法扩展。`pre-push-gate.ts` 现 **931 行**（阶段 1 后 1010，目标态 ~400 行）。注意 `tests/test_gate_iife_correctness.ts` 目前用**硬编码缩进 + 字面量**匹配 Go/前端域 IIFE（`"(async () => {\n      if (!plan.go) return;"`）且写死 `EXPECTED_IIFE_COUNT = 3`——搬 go/frontend 域块前必须先把这些断言改成结构性判定（导出函数存在 + 无孤儿 IIFE），否则合法重构必被误判红灯。
+**剩余阶段**（ADR-206 阶段 6-7 未做）：`go-domain.ts` / `frontend-domain.ts`（最大块最后做）、`parseToolOutput` 的 `okMustBeTrue` 加法扩展。`pre-push-gate.ts` 现 **740 行**（阶段 5 后，目标态 ~400 行）。`tests/test_gate_iife_correctness.ts` 已于阶段 5 **硬化为结构性判定**（不锁缩进/换行/数量，锁「每个 async IIFE 必有 `)()` 调用」的事故语义 + 内联域 IIFE 须包 `Promise.all`）——搬 go/frontend 域块时的前置已解除。
 
 ### 域级检查（Go ∥ 前端，Promise.all 并行）
 
@@ -236,7 +236,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 ## 相关
 
-- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1-4 已落地，5-7 未做）
+- ADR-206 — pre-push-gate 收敛分拆为 gate-blocks（阶段 1-5 已落地，6-7 未做）
 - ADR-146 — 路径卫生门禁（check-path-hygiene）
 - ADR-085 — 菜单表健康门禁（check-menu-health）
 - ADR-224 — mock 路径守卫（check-mock-paths；[mock_path_guard](./mock_path_guard.md)）

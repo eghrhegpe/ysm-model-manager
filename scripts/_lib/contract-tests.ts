@@ -127,6 +127,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
+  "test_gate_schedule.ts": ["tests"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_jscpd_go_smart.ts": ["tests", "go"],
@@ -321,6 +322,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/_lib/gate-blocks/redlines.ts",
     "scripts/pre-push-gate.ts",
   ],
+  // ADR-206 阶段 5：契约测试 / 静态工具补挂 / scripts typecheck 调度迁入 schedule.ts。
+  // 该测试锁 tsc 三态 rc（0/1/2-TS18003）与自守卫语义。
+  "test_gate_schedule.ts": ["scripts/_lib/gate-blocks/schedule.ts", "scripts/pre-push-gate.ts"],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],

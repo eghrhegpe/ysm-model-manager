@@ -81,7 +81,7 @@ class AppContent extends WebComponentBase {
     this.subs.addGlobal(
       bus.on("lang:changed", () => {
         this.subs.cleanupPage();
-        this.state.setInsListenerReg(false);
+        this.state.insListenerReg = false;
         this.state.clearPanels();
         this._render();
       }),
@@ -115,7 +115,7 @@ class AppContent extends WebComponentBase {
     // 清理 repo 视图事件
     if (this.state.repoEventsCleanup) {
       swallowError(this.state.repoEventsCleanup());
-      this.state.setRepoEventsCleanup(null);
+      this.state.repoEventsCleanup = null;
     }
   }
 
@@ -132,7 +132,7 @@ class AppContent extends WebComponentBase {
     // 清理 workshop 延迟加载定时器（切页/语言热切换时防空跑网络请求）
     if (this.state.workshopTimer) {
       clearTimeout(this.state.workshopTimer);
-      this.state.setWorkshopTimer(null);
+      this.state.workshopTimer = null;
     }
     try {
       const page = PAGE_REGISTRY[this.state.current] ?? PAGE_REGISTRY.instances;

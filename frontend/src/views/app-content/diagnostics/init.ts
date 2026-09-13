@@ -67,7 +67,7 @@ function dgInBindCopyPanel(root: ShadowRoot): void {
   root.getElementById("diag-copy")?.addEventListener("click", async () => {
     const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
     const name = active?.dataset.diag ?? "log";
-    const list = root.getElementById(`diag-${name}`) as HTMLElement | null;
+    const list = root.getElementById(`diag-${name}`);
     const clone = list?.cloneNode(true) as HTMLElement | null;
     // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     clone?.querySelectorAll(".log-copy").forEach((b) => b.remove());
@@ -132,11 +132,11 @@ function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
     .getElementById("diag-scan-conflict")
     ?.addEventListener("click", () => scanConflicts(root, esc));
   root.getElementById("diag-scan-sync-conflict")?.addEventListener("click", () => {
-    const list = root.getElementById("diag-sync-conflict-list") as HTMLElement | null;
+    const list = root.getElementById("diag-sync-conflict-list");
     if (list) scanSyncConflicts(list, esc);
   });
   root.getElementById("diag-scan-health")?.addEventListener("click", async () => {
-    const list = root.getElementById("diag-health-list") as HTMLElement | null;
+    const list = root.getElementById("diag-health-list");
     if (!list) return;
     await runHealthAudit(list, esc);
   });
@@ -150,12 +150,12 @@ function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
         .querySelectorAll(".diag-btn[data-diag]")
         // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
         .forEach((b) => b.classList.toggle("active", b === btn));
-      const logPanel = root.getElementById("diag-log") as HTMLElement | null;
-      const runtimePanel = root.getElementById("diag-runtime") as HTMLElement | null;
-      const conflictPanel = root.getElementById("diag-conflict") as HTMLElement | null;
-      const perfPanel = root.getElementById("diag-perf") as HTMLElement | null;
-      const healthPanel = root.getElementById("diag-health") as HTMLElement | null;
-      const syncConflictPanel = root.getElementById("diag-sync-conflict") as HTMLElement | null;
+      const logPanel = root.getElementById("diag-log");
+      const runtimePanel = root.getElementById("diag-runtime");
+      const conflictPanel = root.getElementById("diag-conflict");
+      const perfPanel = root.getElementById("diag-perf");
+      const healthPanel = root.getElementById("diag-health");
+      const syncConflictPanel = root.getElementById("diag-sync-conflict");
       if (logPanel) logPanel.style.display = name === "log" ? "" : "none";
       if (runtimePanel) runtimePanel.style.display = name === "runtime" ? "" : "none";
       if (conflictPanel) conflictPanel.style.display = name === "conflict" ? "" : "none";

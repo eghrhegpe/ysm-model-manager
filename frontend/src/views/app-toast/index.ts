@@ -82,7 +82,7 @@ class AppToast extends WebComponentBase {
     // 陈旧 toast 复活且无 timer 永不自动消失，占用 show() 的 MAX_TOASTS 槽位挤掉新 toast；
     // clearTimeout 后必须 t.remove()（slide-out 移除 timer 存于 _remove 闭包无法
     // 追踪，直接同步移除最稳妥）
-    const c = this.shadowRoot?.getElementById("c") as HTMLElement | null;
+    const c = this.shadowRoot?.getElementById("c");
     if (c) {
       c.querySelectorAll(".toast").forEach((el) => {
         const t = el as ToastEl;

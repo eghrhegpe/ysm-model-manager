@@ -57,10 +57,10 @@ export function openSite(
  */
 function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): void {
   const root = host.state.root;
-  const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
+  const browserEl = root.getElementById("ws-browser");
   const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
-  const urlEl = root.getElementById("ws-url") as HTMLElement | null;
-  const blockedEl = root.getElementById("ws-blocked") as HTMLElement | null;
+  const urlEl = root.getElementById("ws-url");
+  const blockedEl = root.getElementById("ws-blocked");
 
   // abort 上一轮 timer（如有）：防止快速连续打开时旧 timer 残留触发 blocked 弹层
   if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
@@ -95,7 +95,7 @@ export function bindSiteEvents(host: AppContentHost): void {
     const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
     if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
     if (iframe) iframe.src = "";
-    const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
+    const browserEl = root.getElementById("ws-browser");
     if (browserEl) browserEl.style.display = "none";
   });
 

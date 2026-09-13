@@ -205,7 +205,7 @@ function stgBindLinkMode(
     });
   }
 
-  const relinkBtn = root.getElementById("set-relink") as HTMLElement | null;
+  const relinkBtn = root.getElementById("set-relink");
   if (relinkBtn) {
     relinkBtn.addEventListener("click", doRelink);
   }
@@ -350,9 +350,9 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   );
 
   root.getElementById("set-advanced-toggle")?.addEventListener("click", async () => {
-    const panel = root.getElementById("set-advanced-panel") as HTMLElement | null;
-    const btn = root.getElementById("set-advanced-toggle") as HTMLElement | null;
-    const card = root.getElementById("stg-files-card") as HTMLElement | null;
+    const panel = root.getElementById("set-advanced-panel");
+    const btn = root.getElementById("set-advanced-toggle");
+    const card = root.getElementById("stg-files-card");
     if (!panel || !btn || !card) return;
     const isOpen = panel.classList.contains("adv-open");
     if (isOpen) {

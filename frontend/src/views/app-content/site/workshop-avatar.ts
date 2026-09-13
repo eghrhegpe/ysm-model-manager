@@ -19,7 +19,7 @@ export async function extractAvatars(host: AppContentHost): Promise<void> {
     const keys = Object.keys(avatars);
     if (keys.length > 0) {
       dbg("avatar", `提取了 ${keys.length} 个头像: ${keys.join(", ")}`);
-      host.state.setAvatarCache(avatars);
+      host.state.avatarCache = avatars;
       // 头像更新后触发站点视图刷新（由调用方处理）
     } else {
       dbg("avatar", "无头像可提取（无 .ysm 文件或无 avatar/ 目录）");

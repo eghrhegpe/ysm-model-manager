@@ -160,7 +160,7 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
   if (diagScanning) return;
   diagScanning = true;
 
-  const scanBtn = root.getElementById("diag-scan-conflict") as HTMLElement | null;
+  const scanBtn = root.getElementById("diag-scan-conflict");
   dgCfSetScanBtnState(scanBtn, true);
   dgCfRenderRadarPlaceholder(list as HTMLElement);
 

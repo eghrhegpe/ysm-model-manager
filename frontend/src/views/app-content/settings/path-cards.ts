@@ -298,7 +298,7 @@ export function initAdvancedGrid(
 
 // 游戏路径 - 自动搜索 + hover 扫描提示
 export function initMcDetect(root: ShadowRoot): void {
-  const detectBtn = root.getElementById("set-mc-detect") as HTMLElement | null;
+  const detectBtn = root.getElementById("set-mc-detect");
   detectBtn?.addEventListener("click", async () => {
     if (isBusy()) return; // 防连点：检测进行中忽略后续点击
     setBusy(true);

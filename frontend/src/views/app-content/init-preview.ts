@@ -14,11 +14,11 @@ export function initPreviewResize(host: AppContentHost): void {
   if (host.state.resizeUp) document.removeEventListener("pointerup", host.state.resizeUp);
 
   const handle = host.state.root.getElementById("preview-resize-handle");
-  const preview = host.state.root.getElementById("app-preview") as HTMLElement | null;
+  const preview = host.state.root.getElementById("app-preview");
   if (!handle || !preview) {
     // 同步清空存储的处理器，避免陈旧闭包被后续 render 重复移除/误用
-    host.state.setResizeMove(null);
-    host.state.setResizeUp(null);
+    host.state.resizeMove = null;
+    host.state.resizeUp = null;
     return;
   }
 
@@ -57,8 +57,8 @@ export function initPreviewResize(host: AppContentHost): void {
     // 保存宽度到 localStorage
     safeSet("preview-width", preview.style.width);
   };
-  host.state.setResizeMove(onMove);
-  host.state.setResizeUp(onUp);
+  host.state.resizeMove = onMove;
+  host.state.resizeUp = onUp;
   document.addEventListener("pointermove", onMove);
   document.addEventListener("pointerup", onUp);
 }

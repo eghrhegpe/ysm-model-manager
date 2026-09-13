@@ -76,44 +76,6 @@ export class AppContentState {
     this.pagePanels.clear();
   }
 
-  // ===== 标志位操作 =====
-  setInsListenerReg(v: boolean): void {
-    this.insListenerReg = v;
-  }
-  setAvatarRefreshRegistered(v: boolean): void {
-    this.avatarRefreshRegistered = v;
-  }
-
-  // ===== 拖拽回调操作 =====
-  setResizeMove(fn: ((e: PointerEvent) => void) | null): void {
-    this.resizeMove = fn;
-  }
-  setResizeUp(fn: ((e: PointerEvent) => void) | null): void {
-    this.resizeUp = fn;
-  }
-
-  // ===== workshop/github 借宿状态操作 =====
-  setCurrentSite(site: WorkshopSite | null): void {
-    this.currentSite = site;
-  }
-  setAvatarCache(cache: Record<string, string>): void {
-    this.avatarCache = cache;
-  }
-  setWorkshopCache(cache: Map<string, RepoCacheEntry> | null): void {
-    this.workshopCache = cache;
-  }
-  setGithubCache(cache: Map<string, RepoCacheEntry> | null): void {
-    this.githubCache = cache;
-  }
-  setWorkshopTimer(timer: ReturnType<typeof setTimeout> | null): void {
-    this.workshopTimer = timer;
-  }
-
-  // ===== 异步清理操作 =====
-  setRepoEventsCleanup(fn: (() => Promise<void>) | null): void {
-    this.repoEventsCleanup = fn;
-  }
-
   /** 清理缓存与定时器（disconnectedCallback 调用） */
   cleanupTransient(): void {
     if (this.resizeMove) document.removeEventListener("pointermove", this.resizeMove);

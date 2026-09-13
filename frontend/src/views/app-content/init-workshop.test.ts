@@ -281,9 +281,14 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     const args = callArgs(showRepoModels, 0);
     expect(args[0]).toBeTypeOf("function"); // esc
     expect(args[1]).toBe(raw.state.repoEventsCleanup);
-    expect(args[2]).toBe(raw.state.setRepoEventsCleanup);
+    // setter 以内联 lambda 透传（直写 state 字段），钉行为而非引用
+    expect(args[2]).toBeTypeOf("function");
+    (args[2] as (fn: unknown) => void)("cleanup-token");
+    expect(raw.state.repoEventsCleanup).toBe("cleanup-token");
     expect(args[3]).toBe(raw.state.currentSite);
-    expect(args[4]).toBe(raw.state.setCurrentSite);
+    expect(args[4]).toBeTypeOf("function");
+    (args[4] as (site: unknown) => void)("site-token");
+    expect(raw.state.currentSite).toBe("site-token");
     expect(args[5]).toBe("o/r");
     expect(args[6]).toEqual(models);
     expect(args[7]).toBe("raw");

@@ -339,9 +339,9 @@ export function bindSyncSelected(
   setSyncInProgress: (v: boolean) => void,
 ): void {
   const pushBtn = root.querySelector(".sidebar-push-selected") as HTMLButtonElement | null;
-  const pushMenu = root.getElementById("sidebar-push-menu") as HTMLElement | null;
+  const pushMenu = root.getElementById("sidebar-push-menu");
   const pullBtn = root.querySelector(".sidebar-pull-selected") as HTMLButtonElement | null;
-  const pullMenu = root.getElementById("sidebar-pull-menu") as HTMLElement | null;
+  const pullMenu = root.getElementById("sidebar-pull-menu");
   if (!pushBtn || !pushMenu || !pullBtn || !pullMenu) return;
 
   const closeAll = () => closeAllMenus(pushMenu, pullMenu);

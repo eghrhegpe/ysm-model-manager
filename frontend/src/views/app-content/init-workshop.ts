@@ -39,14 +39,14 @@ import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./site/wo
  */
 export function initWorkshopPage(host: AppContentHost): void {
   const root = host.state.root;
-  const searchResults = root.getElementById("ws-search-results") as HTMLElement | null;
-  const creatorView = root.getElementById("ws-creator-view") as HTMLElement | null;
+  const searchResults = root.getElementById("ws-search-results");
+  const creatorView = root.getElementById("ws-creator-view");
 
-  host.state.setCurrentSite(null);
+  host.state.currentSite = null;
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
-  if (!host.state.workshopCache) host.state.setWorkshopCache(new Map());
+  if (!host.state.workshopCache) host.state.workshopCache = new Map();
   const repoModelCache = host.state.workshopCache;
 
   // 浏览模式：单源 ref（{ v }）＋ setter——setBrowseMode 改 .v 即让
@@ -58,7 +58,7 @@ export function initWorkshopPage(host: AppContentHost): void {
   };
 
   // 后台批量提取创作者头像
-  host.state.setAvatarCache({});
+  host.state.avatarCache = {};
   extractAvatars(host);
 
   // 配置加载完成后重新提取
@@ -103,9 +103,13 @@ export function initWorkshopPage(host: AppContentHost): void {
         await showRepoModels(
           (s) => esc(String(s || "")),
           host.state.repoEventsCleanup,
-          host.state.setRepoEventsCleanup,
+          (fn) => {
+            host.state.repoEventsCleanup = fn;
+          },
           host.state.currentSite,
-          host.state.setCurrentSite,
+          (site) => {
+            host.state.currentSite = site;
+          },
           repo,
           models as WorkshopModel[],
           source,
@@ -146,7 +150,7 @@ export function initWorkshopPage(host: AppContentHost): void {
 
   // 下载完成后增量刷新创作者头像
   if (!host.state.avatarRefreshRegistered) {
-    host.state.setAvatarRefreshRegistered(true);
+    host.state.avatarRefreshRegistered = true;
     host.subs.addGlobal(
       bus.on("avatar:refresh", ({ author, dataUri }) => {
         if (host.state.avatarCache[author] === dataUri) return;

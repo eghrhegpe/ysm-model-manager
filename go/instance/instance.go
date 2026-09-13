@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/cespare/xxhash/v2"
 
@@ -22,17 +21,13 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// ===== 同步结果缓存（TTL 跟随 scanner.EffectiveCacheTTL，默认 30s）=====
+// ========== 同步结果缓存（TTL 跟随 scanner.EffectiveCacheTTL，默认 30s）=====
 // 背景：仓库树复用 scanner 30s 缓存后已经“正常 30 秒后刷新”；但整合包 BuildSyncItems
 // 仍有 file-level SyncResources、maid-model 嵌套回退 Walk、实例侧 DiffFolderContents
 // 等多条路径每次 stats:refresh 都会重新走盘。这里在最终结果上再叠一层短 TTL 缓存，
 // 让整合包页也在同一刷新周期内走缓存；真实数据变更由 scanner 失效钩子 + 显式失效清理。
-var syncItemsCache sync.Map // string → *syncItemsCacheEntry
-
-type syncItemsCacheEntry struct {
-	items     []types.ResourceSyncItem
-	expiresAt time.Time
-}
+// 2026-09-14 锐评刀①：裸 sync.Map 收编为类型化组件（sync_items_cache.go）。
+var syncItemsCache = newSyncCache() // *syncCache 单例
 
 var registerHookOnce sync.Once
 
@@ -48,10 +43,7 @@ func RegisterInvalidationHook() {
 // InvalidateSyncItemsCache 清空全部整合包同步结果缓存。
 // 由 scanner 失效钩子自动调用；单文件 push/pull 等不走 scanner 失效的入口需显式调用。
 func InvalidateSyncItemsCache() {
-	syncItemsCache.Range(func(key, _ interface{}) bool {
-		syncItemsCache.Delete(key)
-		return true
-	})
+	syncItemsCache.clear()
 }
 
 // buildSyncItemsKey 仅供当前 BuildSyncItems 函数体实际依赖的输入做缓存键：
@@ -316,12 +308,8 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, 
 	}
 	// 阶段 ①：30s TTL 短缓存命中（scanner 失效钩子 InvalidateSyncItemsCache 自动清空）
 	key := buildSyncItemsKey(ins, rtypes, filesRoots, subtype)
-	if v, ok := syncItemsCache.Load(key); ok {
-		entry := v.(*syncItemsCacheEntry)
-		if time.Now().Before(entry.expiresAt) {
-			return cloneSyncItems(entry.items)
-		}
-		syncItemsCache.Delete(key)
+	if items, ok := syncItemsCache.get(key); ok {
+		return items
 	}
 
 	// 阶段 ②：逐类型处理（processOneResourceType 升格，外循环只负责 append）
@@ -334,11 +322,7 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, 
 	}
 
 	// 阶段 ③：写缓存（clone 一次防调用方改返回值污染缓存；读端也 clone 一次）
-	// TTL 写入时刻取当前生效值（scanner 单一事实源，随 AppConfig.ScanCacheTTLMs 变化）
-	syncItemsCache.Store(key, &syncItemsCacheEntry{
-		items:     cloneSyncItems(items),
-		expiresAt: time.Now().Add(scanner.EffectiveCacheTTL()),
-	})
+	syncItemsCache.put(key, cloneSyncItems(items))
 	return items
 }
 

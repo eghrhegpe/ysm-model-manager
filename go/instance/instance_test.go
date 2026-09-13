@@ -802,13 +802,10 @@ func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing
 	rtypes := []registry.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
-	syncItemsCache.Store(key, &syncItemsCacheEntry{
-		items: []types.ResourceSyncItem{{
-			Path: "/sentinel", Name: "sentinel",
-			Status: types.SyncStatusSynced, Type: "ysm",
-		}},
-		expiresAt: time.Now().Add(time.Hour),
-	})
+	syncItemsCache.putAt(key, []types.ResourceSyncItem{{
+		Path: "/sentinel", Name: "sentinel",
+		Status: types.SyncStatusSynced, Type: "ysm",
+	}}, time.Now().Add(time.Hour))
 
 	got := BuildSyncItems(ins, rtypes, roots, "")
 	if len(got) != 1 || got[0].Name != "sentinel" {
@@ -820,7 +817,7 @@ func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing
 	}
 
 	InvalidateSyncItemsCache()
-	if _, ok := syncItemsCache.Load(key); ok {
+	if syncItemsCache.peek(key) {
 		t.Fatal("InvalidateSyncItemsCache 后缓存应被清空")
 	}
 	after := BuildSyncItems(ins, rtypes, roots, "")
@@ -838,16 +835,13 @@ func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
 	rtypes := []registry.ResourceType{{ID: "ysm", Icon: "📦"}}
 	roots := map[string]string{"ysm": t.TempDir()}
 	key := buildSyncItemsKey(ins, rtypes, roots, "")
-	syncItemsCache.Store(key, &syncItemsCacheEntry{
-		items: []types.ResourceSyncItem{{
-			Path: "/sentinel", Name: "sentinel",
-			Status: types.SyncStatusSynced, Type: "ysm",
-		}},
-		expiresAt: time.Now().Add(time.Hour),
-	})
+	syncItemsCache.putAt(key, []types.ResourceSyncItem{{
+		Path: "/sentinel", Name: "sentinel",
+		Status: types.SyncStatusSynced, Type: "ysm",
+	}}, time.Now().Add(time.Hour))
 
 	scanner.InvalidateCache()
-	if _, ok := syncItemsCache.Load(key); ok {
+	if syncItemsCache.peek(key) {
 		t.Fatal("scanner.InvalidateCache 应触发 instance 失效钩子清空同步结果缓存")
 	}
 }

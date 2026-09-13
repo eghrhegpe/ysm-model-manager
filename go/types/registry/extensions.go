@@ -148,15 +148,20 @@ func IsYsmEntryJSON(baseName string) bool {
 	return strings.EqualFold(strings.TrimSpace(baseName), "ysm.json")
 }
 
-// DisableSuffixes 禁用后缀列表（新标准 .disabled 在前，历史 .ban 兼容在后）。
-var DisableSuffixes = []string{".disabled", ".ban"}
+// disableSuffixes 禁用后缀列表（新标准 .disabled 在前，历史 .ban 兼容在后）。
+// 2026-09-14 锐评刀②：由导出可变 slice 私有化——防任意包改写全局后缀表；
+// 跨包取「新标准后缀」走 DisabledSuffix()，剥离/判断走 StripDisableSuffix/IsDisableSuffix。
+var disableSuffixes = []string{".disabled", ".ban"}
+
+// DisabledSuffix 返回新标准禁用后缀（列表首位，如 ".disabled"）。
+func DisabledSuffix() string { return disableSuffixes[0] }
 
 // StripDisableSuffix 剥离禁用后缀（大小写不敏感，依次尝试 .disabled/.ban）。
 // 单一事实来源——sync/scanner/ysm/installer/fileops 的禁用后缀剥离均委托本函数，
 // 防多处内联 `name[:len(name)-N]` 口径漂移。
 func StripDisableSuffix(name string) string {
 	lower := strings.ToLower(name)
-	for _, sfx := range DisableSuffixes {
+	for _, sfx := range disableSuffixes {
 		if strings.HasSuffix(lower, sfx) {
 			return name[:len(name)-len(sfx)]
 		}
@@ -172,7 +177,7 @@ func StripBanSuffix(name string) string {
 // IsDisableSuffix 判断文件名是否带禁用后缀（.disabled/.ban，大小写不敏感）。
 func IsDisableSuffix(name string) bool {
 	lower := strings.ToLower(name)
-	for _, sfx := range DisableSuffixes {
+	for _, sfx := range disableSuffixes {
 		if strings.HasSuffix(lower, sfx) {
 			return true
 		}

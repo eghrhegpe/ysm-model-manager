@@ -383,8 +383,8 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		}
 
 		if shouldBeBanned && !fi.isCurrentlyBanned {
-			// 禁用统一收敛到 DisableSuffixes[0]（.disabled，新标准）。
-			newPath := p + registry.DisableSuffixes[0]
+			// 禁用统一收敛到新标准后缀（.disabled）。
+			newPath := p + registry.DisabledSuffix()
 			if _, err := os.Stat(newPath); err == nil {
 				continue // 目标已存在，跳过
 			}

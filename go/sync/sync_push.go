@@ -273,7 +273,12 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 }
 
 // SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重）
+// 整段持 installer.InstallLock（ADR-056）：收编会读 customDir（scanFn）并写 repoDir，
+// 不持锁则 scanFn 读取窗口与并发 RelinkDir/SyncToggleStatus 对实例目录的 rename 无互斥，
+// 可能读到半改名文件；内部落地用 *Locked 变体防重入死锁（sync.Mutex 不可重入）。
 func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 收编会改全局仓库目录，清同步扫盘缓存防陈旧
 	customDir = strings.TrimSpace(customDir)
 	repoDir = strings.TrimSpace(repoDir)
@@ -339,7 +344,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 			}
 			continue
 		}
-		if _, err := installer.CopyFile(e.Path, dstDir); err != nil {
+		if _, err := installer.CopyFileLocked(e.Path, dstDir); err != nil {
 			if logger != nil {
 				logger(e.Name, e.Path, repoDir, 0, "failed", "复制失败: "+err.Error())
 			}

@@ -4,8 +4,10 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
@@ -153,6 +155,58 @@ func TestSyncCustomToRepo_Empty(t *testing.T) {
 	t.Parallel()
 	if _, err := SyncCustomToRepo("", "repo", nil, nil); err == nil {
 		t.Fatal("空参数应报错")
+	}
+}
+
+// TestSyncCustomToRepo_HoldsInstallLock 钉住 SyncCustomToRepo 的锁口径：
+// 与 Push/Pull/Relink 五兄弟一致，须整段持 InstallLock（ADR-056）。
+// 探测法：注入 scanFn 在持锁段内执行，回调里 TryLock——锁被本 goroutine 持有
+// 时 TryLock 返回 false（通过）；未持锁则 TryLock 成功（违规，须标记失败）。
+// 该探测与 sync.go assertInstallLockHeld 的 TryLock 语义同构、时序确定。
+// 注意：本测试不使用 t.Parallel()，避免其他并行测试恰巧持有锁导致误判。
+func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
+	base := t.TempDir()
+	customDir := filepath.Join(base, "custom")
+	repoDir := filepath.Join(base, "repo")
+	for _, d := range []string{customDir, repoDir} {
+		if err := os.MkdirAll(d, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), perm); err != nil {
+		t.Fatal(err)
+	}
+
+	lockViolated := false
+	scanFn := func(dir string) []types.ModelEntry {
+		// 探测锁是否被持有：TryLock 成功说明锁未被 SyncCustomToRepo 持有（违规）
+		if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
+			if mu.TryLock() {
+				mu.Unlock()
+				lockViolated = true
+			}
+		}
+		files, _ := os.ReadDir(dir)
+		var entries []types.ModelEntry
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			entries = append(entries, types.ModelEntry{
+				Name: f.Name(),
+				Path: filepath.Join(dir, f.Name()),
+				Hash: "h-" + f.Name(),
+			})
+		}
+		return entries
+	}
+
+	count, err := SyncCustomToRepo(customDir, repoDir, scanFn, nil)
+	testutil.NoError(t, err, "SyncCustomToRepo 失败")
+	testutil.Equal(t, count, 1, "应复制 1 个（new.ysm）")
+	testutil.FileExists(t, filepath.Join(repoDir, "new.ysm"))
+	if lockViolated {
+		t.Fatal("SyncCustomToRepo 未整段持 InstallLock（scanFn 执行期间 TryLock 成功）")
 	}
 }
 

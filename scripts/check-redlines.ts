@@ -326,13 +326,14 @@ function runChecks() {
         );
       })
       // 诊断数据可视化色豁免（颜色即数据/算法色，非设计期 UI 调色板）：
-      // - diagnostics/perf.ts：STAGE_COLORS 性能图阶段分类调色板 + 甘特图耗时阈值分级色，
-      //   诊断图表内嵌配色；且甘特色注入 SVG presentation attribute（var() 在该位置不保证解析），
-      //   与六主题语义无关，强塞主题块属过度工程；
+      // - diagnostics/perf(-trend|-trace)?.ts：STAGE_COLORS 性能图阶段分类调色板 + 甘特图耗时阈值
+      //   分级色，诊断图表内嵌配色；且甘特色注入 SVG presentation attribute（var() 在该位置不保证解析），
+      //   与六主题语义无关，强塞主题块属过度工程；——perf.ts 拆分后（perf-common/perf-trend/perf-trace）
+      //   同名同义色随之下沉，豁免须按实际持有者列出，否则退化成"豁免指向空文件 + 真持有者报违规"。
       // - app-preview/detail-3d.ts：舞台文件类型（vmd/audio/config）点缀色，资源类别识别的数据语义色。
       .filter((l) => {
         const [f] = parseRgLine(l);
-        return !/diagnostics\/perf\.ts$/.test(f) && !/app-preview\/detail-3d\.ts$/.test(f);
+        return !/diagnostics\/perf(-trend|-trace)?\.ts$/.test(f) && !/app-preview\/detail-3d\.ts$/.test(f);
       })
       .filter((l) => !/style\.cssText/.test(l))
       .filter((l) => !/style\.\w+\s*=\s*["'`]/.test(l))

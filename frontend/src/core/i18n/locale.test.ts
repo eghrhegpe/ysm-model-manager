@@ -6,6 +6,7 @@
 // ADR-210 D1：浏览器副作用（fetch/navigator/document）经 fake host 注入；localStorage 读写走
 // safeGet/safeSet，依赖 test-setup.ts §3 注入的内存实现（node 环境注入，happy-dom 自带）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import type { LangCode, LocaleHost } from "./locale.ts";
 import * as locale from "./locale.ts";
 import { bus } from "@/bus";
@@ -56,7 +57,7 @@ beforeEach(() => {
 
 describe("warnMissingKey（缺失 key 告警节流，ADR-207 D3 收编）", () => {
   it("每 key 只告警一次", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       locale.warnMissingKey("a.b");
       locale.warnMissingKey("a.b");
@@ -135,7 +136,7 @@ describe("loadLocale（host 通道，ADR-210 D1）", () => {
     fake.setLoadBundle(async () => {
       throw new Error("host boom");
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       await locale.loadLocale("zh-CN");
       // 违约兜底同「不缓存、可重试」语义 → 不缓存空对象，getBundle 回落（未加载 → {}）
@@ -152,7 +153,7 @@ describe("loadLocale（host 通道，ADR-210 D1）", () => {
 
   it("未注入 host → 告警一次并跳过（fail-open），host 就绪后重试自愈", async () => {
     locale.setLocaleHost(null);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       await locale.loadLocale("zh-CN");
       await locale.loadLocale("zh-CN");
@@ -325,7 +326,7 @@ describe("initI18n", () => {
     locale.setLocaleHost(null);
     const onChanged = vi.fn();
     bus.on("lang:changed", onChanged);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       await locale.initI18n();
       expect(locale.getLang()).toBe("zh-CN");

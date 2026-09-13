@@ -10,6 +10,7 @@
 //   - 本文件：四类菜单声明 + 点击行为 + visibleWhen + divider 折叠（同步域）
 //   - context-menus-async.test.ts：异步 handler + 失败路径（动态 import 域）
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 // ⚠️ setup 必须最先 import：其顶层 vi.mock 需在 context-menus.ts 树（静态加载
 // backend/app.ts）之前注册，否则 mock 晚于真实解析而失效（vitest 不 hoist 非测试文件）。
 import "./context-menus.setup.ts";
@@ -93,7 +94,7 @@ describe("registerContextMenus 四类菜单声明", () => {
     const missing = [...declared].filter((a) => !registered.has(a));
     expect(missing, `menu-defs.ts 声明但未挂 handler 的 action: ${missing.join(", ")}`).toEqual([]);
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     try {
       MENU_DEFS.forEach((def) => {
         menuShows.length = 0; // showMenu 断言每次触发恰好 1 条 menu:show
@@ -370,7 +371,7 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
   });
 
   it("visibleWhen 抛异常 → 被吞、按不可见处理、不炸整条菜单（护栏）", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     try {
       // 故意访问 undefined.bar 抛 TypeError
       pushProbe((ctx) => (ctx as unknown as { bar: { baz: boolean } }).bar.baz);

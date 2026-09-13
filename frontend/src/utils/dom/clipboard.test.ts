@@ -3,8 +3,8 @@
 //       navigator.clipboard 不存在（非安全上下文）走降级 / execCommand 抛错清理。
 // 默认 happy-dom 环境，可操作 document.body。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import { copyText } from "./clipboard.ts";
-import * as log from "@/utils/base/primitives/log.ts";
 
 function stubClipboard(value: unknown): void {
   Object.defineProperty(navigator, "clipboard", {
@@ -99,7 +99,7 @@ describe("copyText", () => {
       value: vi.fn(() => true),
       configurable: true,
     });
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     await copyText("hi");
     expect(spy).toHaveBeenCalledWith("clipboard", expect.stringContaining("Clipboard API 不可用"), expect.anything());
     spy.mockRestore();
@@ -111,7 +111,7 @@ describe("copyText", () => {
       value: vi.fn(() => { throw new Error("no user gesture"); }),
       configurable: true,
     });
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     await copyText("hi");
     // 第一个 logWarn 是 Clipboard API 不可用，第二个是 execCommand 失败
     expect(spy).toHaveBeenCalledWith("clipboard", expect.stringContaining("execCommand"), expect.anything());

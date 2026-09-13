@@ -2,6 +2,7 @@
 // ===== dnd-collector 单测 =====
 // 覆盖 collectFiles 的三种路径：文件条目、目录递归、getAsFile 兜底
 import { describe, it, expect, vi } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { collectFiles } from "./collector.ts";
 
 // 假条目构造器
@@ -171,7 +172,7 @@ describe("collectFiles — 错误处理", () => {
       name: "bad.ysm",
       file: (_cb: (f: File) => void, ecb: (e: unknown) => void) => ecb(new Error("denied")),
     } as unknown as FileSystemFileEntry;
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     const result = await collectFiles([dndItem(ok), dndItem(bad)], false);
     expect(result).toHaveLength(1);
     expect(result[0].relPath).toBe("ok.ysm");
@@ -179,7 +180,7 @@ describe("collectFiles — 错误处理", () => {
   });
 
   it("readEntries error 回调 → 整目录跳过", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     const badDir = {
       isFile: false,
       isDirectory: true,
@@ -213,7 +214,7 @@ describe("collectFiles — 错误处理", () => {
 
   it("entry.file 永不回调 → 5s 超时兜底，该文件跳过", async () => {
     vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     try {
       const silent = {
         isFile: true,

@@ -4,6 +4,7 @@
 // 残留占位符守卫（模板有 {n} 而漏传参 → 裸占位符上屏 + 单次告警）。
 // test-setup.ts 全局 mock 了 t.ts（查 zhCN），此处以 vi.mock + importActual 取回真实实现（替代 vi.resetModules 动态 import 杂技）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const { getBundle, getLang, warnMissingKey } = vi.hoisted(() => ({
   getBundle: vi.fn(),
@@ -66,7 +67,7 @@ describe("t()", () => {
   });
 
   it("残留占位符守卫：模板含 {n} 而漏传参 → 裸文本上屏 + 按签名告警一次", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       expect(t("import.addedToQueue")).toBe("已加入队列: {n} 个文件");
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("残留插值占位符"));
@@ -79,7 +80,7 @@ describe("t()", () => {
   });
 
   it("残留占位符守卫：参数覆盖占位符 → 无告警", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       expect(t("import.addedToQueue", { n: 2 })).toBe("已加入队列: 2 个文件");
       expect(warn).not.toHaveBeenCalled();
@@ -89,7 +90,7 @@ describe("t()", () => {
   });
 
   it("残留签名超 RESIDUAL_SIG_MAX → 淘汰最旧，被淘汰签名重发可再告警", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       // 动态 key（tOf 任意 string）会让签名空间无限扩张：用 513 个不同 context 灌满并越过上限
       for (let i = 0; i < 513; i++) {

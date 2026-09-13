@@ -3,10 +3,10 @@
 // 覆盖：算术/anim_time 绑定/q. 别名/未知查询降级/角度制/三元/非法表达式/工厂隔离。
 // 内嵌 molangjs 源码，无外部依赖，同步可用。
 // ADR-213：模块级 compileMolang / getMolangParser 已移除，全量走 createMolangParser() 工厂。
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import { createMolangParser } from "./molang.ts";
 import Molang from "./molang-lib/molang.js";
-import * as log from "@/utils/base/primitives/log.ts";
 
 describe("createMolangParser 工厂实例", () => {
   it("纯算术表达式", () => {
@@ -78,7 +78,7 @@ describe("createMolangParser 工厂实例", () => {
   });
 
   it("表达式编译失败时写日志（logWarn）", () => {
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     const parser = createMolangParser();
     // molangjs 对 `1 +` 会抛错 → 触发编译失败 catch 块
     const result = parser.compileMolang("1 +");

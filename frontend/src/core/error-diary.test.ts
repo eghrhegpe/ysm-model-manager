@@ -5,6 +5,7 @@
 // 归 backend/global-error-listeners.test.ts（该装配层才碰 window），此处只测 core 收口
 // （pushToDiary 入口 + 净化/去重策略），禁止 import backend/*（越层即回退）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { bus } from "@/bus";
 import {
   pushToDiary,
@@ -179,7 +180,7 @@ describe("registerErrorDiary", () => {
   });
 
   it("P4 兜底：sink 同步抛错 → console.warn 留痕，不外溢中断 toast 链路", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     try {
       registerErrorDiary(() => {
         throw new Error("sink boom");
@@ -199,7 +200,7 @@ describe("registerErrorDiary", () => {
     const onSpy = vi.spyOn(bus, "on").mockImplementation(() => {
       throw new Error("bus boom");
     });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = stubConsoleWarn();
     const failedHandle = registerErrorDiary(sinkSpy);
     expect(failedHandle.taken).toBe(false); // 失败 = 未接管（不再静默 no-op）
     failedHandle.dispose(); // 调用方按句柄契约清理（失败时本就 no-op）
@@ -277,7 +278,7 @@ describe("log sink 透写", () => {
 // ===== pushToDiary 未注册态（ADR-210 D5：失活留痕，不再静默 no-op）=====
 describe("pushToDiary 未注册态", () => {
   it("两次调用仅首次告警（节流防风暴），内容指向漏注册", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       pushToDiary("全局未捕获 X", "failed");
       pushToDiary("全局未捕获 Y", "failed");
@@ -289,7 +290,7 @@ describe("pushToDiary 未注册态", () => {
   });
 
   it("注册成功后标志复位：再次失活（unregister 后）可重新告警", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       registerErrorDiary(sinkSpy);
       unregisterErrorDiary();
@@ -302,7 +303,7 @@ describe("pushToDiary 未注册态", () => {
   });
 
   it("已注册态转发到 sink（不告警）", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       registerErrorDiary(sinkSpy);
       pushToDiary("全局未捕获 E", "failed");

@@ -5,6 +5,7 @@
 // nbt-parse / voxel-parse 的 NBT 视图 mock 掉（纯解析层各有专属测试），锁 web-fs 的
 // 装配与失败契约（"{}" / "[]" / {"error"}）；zip 类路径走真实 extractZip/pack-meta。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { zipSync, strToU8 } from "fflate";
 import {
@@ -380,7 +381,7 @@ describe("AnalyzeBedrockModel", () => {
   });
 
   it(".zip：manifest 解析失败 → 降级单 geometry 路径", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     await seedGroup("fbx", "Bad模", {
       "b.zip": ab2u8(zipSync({
         "ysm.json": strToU8("{bad"),

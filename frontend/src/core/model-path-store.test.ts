@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import {
   __resetLastModelPathForTest,
   getLastModelPath,
@@ -24,7 +25,7 @@ describe("model-path-store — 跨视图最近选中模型路径 (ADR-221)", () 
   });
 
   it("空串拒绝写入：已有值时保持原值 + 告警留痕（清空应传 null）", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       rememberModelPath("/m/a.ysm");
       rememberModelPath("");
@@ -37,7 +38,7 @@ describe("model-path-store — 跨视图最近选中模型路径 (ADR-221)", () 
   });
 
   it("空串拒绝写入：初始态（null）写入空串 → 仍为 null", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     try {
       rememberModelPath("");
       expect(getLastModelPath()).toBeNull();

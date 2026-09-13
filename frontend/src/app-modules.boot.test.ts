@@ -6,6 +6,7 @@
 // 依赖全部 mock（真链会拖入 Web Component / Wails 桥），断言走 hoisted spy；
 // bus / registry / module-loader / storage 保持真实（它们是装配行为的观察点）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { stubConsoleWarn, stubConsoleError } from "@/test-utils/mock-log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // [治本] 文件级真实 timer 登记：boot 期间注册的所有 setTimeout 句柄（含 app-modules
@@ -295,7 +296,7 @@ describe("app-modules 启动装配", () => {
     m.registerErrorDiary.mockImplementation(() => {
       throw new Error("diary down");
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[error-diary] 错误日志注册失败:", expect.any(Error));
     expect(currentReveals()).toHaveLength(1);
@@ -304,7 +305,7 @@ describe("app-modules 启动装配", () => {
 
   it("initI18n 失败 → error toast（⚠️ 前缀 + long 时长）且启动继续", async () => {
     m.initI18n.mockRejectedValue(new Error("i18n down"));
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[i18n] 初始化失败，界面将缺翻译:", expect.any(Error));
     expect(toasts).toHaveLength(1);
@@ -317,7 +318,7 @@ describe("app-modules 启动装配", () => {
 
   it("app-nav 动态加载失败 → error toast 且不阻塞其余装配", async () => {
     m.failNav.value = true;
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    stubConsoleWarn();
     const { toasts } = await boot();
     expect(loaded.views).not.toContain("app-nav");
     expect(toasts).toHaveLength(1);
@@ -331,7 +332,7 @@ describe("app-modules 启动装配", () => {
 
   it("initTheme 失败 → error toast 主题初始化失败", async () => {
     m.initTheme.mockRejectedValue(new Error("theme down"));
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[theme] 主题初始化失败:", expect.any(Error));
     expect(toasts).toHaveLength(1);
@@ -343,7 +344,7 @@ describe("app-modules 启动装配", () => {
     m.applyUIPrefs.mockImplementation(() => {
       throw new Error("prefs down");
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     const { toasts } = await boot();
     expect(warn).toHaveBeenCalledWith("[ui-prefs] 界面偏好应用失败:", expect.any(Error));
     expect(toasts).toHaveLength(0);
@@ -352,7 +353,7 @@ describe("app-modules 启动装配", () => {
 
   it("checkUpdateSilent 拒绝 → console.warn [updater] 静默", async () => {
     m.checkUpdateSilent.mockRejectedValue(new Error("net down"));
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = stubConsoleWarn();
     await boot();
     expect(warn).toHaveBeenCalledWith("[updater] 静默检查失败:", expect.any(Error));
   });
@@ -478,7 +479,7 @@ describe("app-modules debugGetSpec 控制台钩子（ADR-214）", () => {
   });
 
   it("GetModel3DSpec 拒绝 → console.error + 返回 null", async () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = stubConsoleError();
     getAppMock.mockResolvedValue({
       GetModel3DSpec: vi.fn().mockRejectedValue(new Error("spec down")),
     });

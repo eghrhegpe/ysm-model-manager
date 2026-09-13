@@ -1,6 +1,7 @@
 // ===== 仓库页 DnD（组件级 — ADR-060）测试 =====
 // 覆盖：bindTreeDnD 事件绑定 / handleTreeDrop 处理链路（网页版分支、桌面版收集、oversize、busy 互斥、错误兜底）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { stubConsoleError } from "@/test-utils/mock-log.ts";
 import { bus, type ToastPayload } from "@/bus";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
 import { fireDrop } from "@/test-utils/events.ts";
@@ -217,7 +218,7 @@ describe("handleTreeDrop — 网页版（ADR-049）", () => {
   it("网页版 importWebFiles reject → onDrop 兜底：console.error + error toast，busy 复位", async () => {
     vi.stubGlobal("__YSM_BACKEND__", "browser");
     importWebFilesMock.mockRejectedValueOnce(new Error("boom"));
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errSpy = stubConsoleError();
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     const file = new File(["ysm"], "m.ysm");
@@ -258,7 +259,7 @@ describe("handleTreeDrop — busy 互斥守卫", () => {
 
 describe("handleTreeDrop — 错误兜底", () => {
   it("drop 处理异常 → console.error + error toast", async () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errSpy = stubConsoleError();
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     // items 含 null 触发 collectFiles 的 null 守卫（不再崩溃）

@@ -1,7 +1,8 @@
 // @vitest-environment node
 // ===== Animation Controller 状态机测试（animation-controller.ts）=====
 // 解析 .animation_controllers.json + 运行时状态转换评估。
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import {
   parseAnimationControllerJSON,
   AnimationControllerRuntime,
@@ -10,7 +11,6 @@ import {
   type AnimationController,
 } from "./animation-controller.ts";
 import { createMolangParser } from "./molang.ts";
-import * as log from "@/utils/base/primitives/log.ts";
 
 // ── 解析 ────────────────────────────────────────
 
@@ -206,7 +206,7 @@ describe("AnimationControllerRuntime 状态机", () => {
       ]),
     };
     const rt = new AnimationControllerRuntime(ctrl);
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     rt.update(1);
     expect(spy).toHaveBeenCalledWith("anim-ctrl", "条件表达式执行失败", expect.anything());
     spy.mockRestore();
@@ -225,7 +225,7 @@ describe("AnimationControllerRuntime 状态机", () => {
       ]),
     };
     const rt = new AnimationControllerRuntime(ctrl);
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     rt.update(0);
     expect(spy).toHaveBeenCalledWith("anim-ctrl", "on_exit 执行失败", expect.anything());
     spy.mockRestore();

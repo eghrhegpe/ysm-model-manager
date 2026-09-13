@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 // ===== focus-restore.ts 焦点记忆 / 恢复 / 跨 Shadow 焦点陷阱 测试 =====
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
+import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import {
   rememberTrigger,
   returnFocus,
@@ -18,7 +19,6 @@ import {
   findTabbableAcrossShadow,
   trapFocusAcrossShadow,
 } from "./trap-focus-across-shadow.ts";
-import * as log from "@/utils/base/primitives/log.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -130,7 +130,7 @@ describe("rememberTrigger / returnFocus 配对", () => {
     // 模拟 focus() 抛错
     const origFocus = btn.focus;
     btn.focus = () => { throw new Error("focus fail"); };
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     const result = returnFocus();
     expect(result).toBe(false);
     expect(spy).toHaveBeenCalledWith("focus-restore", "焦点恢复失败", expect.anything());
@@ -139,7 +139,7 @@ describe("rememberTrigger / returnFocus 配对", () => {
   });
 
   it("触发栈超上限时忽略 push（防漏 close 累积）", () => {
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     // 压满 10 层（MAX_TRIGGER_STACK）
     const buttons: HTMLButtonElement[] = [];
     for (let i = 0; i < 10; i++) {
@@ -494,7 +494,7 @@ describe("输入阻断栈（pushInputBlock / popInputBlock）", () => {
   });
 
   it("超限 push 写日志并忽略（MAX_STACK_SIZE=10）", () => {
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     for (let i = 0; i < 10; i++) {
       pushInputBlock(`id-${i}`);
     }

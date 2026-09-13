@@ -2,6 +2,7 @@
 // ===== 骨骼动画计算测试（ADR-021 扩展，坐标高危区）=====
 // evaluateKeyframes（插值）/ parseBedrockAnimationJSON（解析）/ evaluateClip（局部变换）。
 import { describe, it, expect, vi } from "vitest";
+import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import {
   evaluateKeyframes,
   evaluateClip,
@@ -10,7 +11,6 @@ import {
 } from "./animation-evaluator.ts";
 import { parseBedrockAnimationJSON } from "./animation.ts";
 import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
-import * as log from "@/utils/base/primitives/log.ts";
 
 // 可控 compileMolang mock：默认透传真实实现，测试中可置失败标记
 // ADR-213：模块级 compileMolang 已移除，mock 仅覆盖 createMolangParser 工厂
@@ -90,7 +90,7 @@ describe("parseBedrockAnimationJSON 解析", () => {
   });
 
   it("非法 JSON 解析失败时写日志（logWarn）", () => {
-    const spy = vi.spyOn(log, "logWarn");
+    const spy = stubLogWarn();
     parseBedrockAnimationJSON("{not json");
     expect(spy).toHaveBeenCalledWith("anim", "动画 JSON 解析失败", expect.anything());
     spy.mockRestore();

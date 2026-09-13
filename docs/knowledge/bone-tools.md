@@ -26,6 +26,7 @@ auto_fields:
     - getBonePosition
     - listBonesWithDepth
     - makeBonePanelRenderer
+    - MAX_CHAIN_DEPTH
     - MmdBonePickResult
     - mmdBonesToBoneNodes
     - pickBone

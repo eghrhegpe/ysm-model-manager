@@ -8,6 +8,10 @@
 // 用 `slice(0, n)` 复制出真实长度的压缩数据。
 //
 // 本模块只用 fetch + new Function（无 DOM 依赖），Worker 内同样可用。
+// ⚠️ CSP 约束（技术债，2026-09 记录）：下方 new Function 执行 UMD 文本需
+// `script-src 'unsafe-eval'`。当前 Vite/Wails 打包默认不下发 CSP 头故可用；
+// 一旦部署引入严格 CSP 白名单，此路径会被浏览器拦截 → KTX2 编码全败。
+// 迁移方向：`import(/* @vite-ignore */ blobUrl)` 或预打包 ESM 形态。
 
 /** BasisEncoder 实例的最小接口（embind 运行时提供） */
 export interface BasisEncoderLike {
@@ -52,6 +56,7 @@ async function loadBasisModule(): Promise<BasisModuleLike> {
     ]);
     // Emscripten UMD 产物：`var BASIS = (function(){...})()` 定义模块工厂。
     // 用 Function 执行并在末尾返回工厂（避开浏览器 script 全局注入，测试环境同样可用）。
+    // ⚠️ 需 'unsafe-eval'——上严格 CSP 前须换 import()/ESM 形态（见模块头 CSP 注）。
     const factory = new Function(
       `${jsText}\nreturn typeof BASIS !== "undefined" ? BASIS : undefined;`,
     ) as () => unknown;

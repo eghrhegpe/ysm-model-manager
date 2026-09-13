@@ -3,7 +3,7 @@
 // 覆盖：buildBoneTree 层级构建 / listBonesWithDepth 深度缩进 / getBonePath /
 // getBonePosition / getBoneDetail / setBoneNodeVisible + toggleBoneVisible。
 // （拾取不在此层：ysm 走 bone-raycast、mmd 走 pickMmdBone，见 bone-tools.ts 审核注记）
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
 import {
   buildBoneTree,
@@ -13,6 +13,8 @@ import {
   getBoneDetail,
   setBoneNodeVisible,
   toggleBoneVisible,
+  findAncestorBoneId,
+  MAX_CHAIN_DEPTH,
   type BoneNode,
 } from "./bone-tools.ts";
 
@@ -79,6 +81,57 @@ describe("getBonePath", () => {
   it("未知 id → null", () => {
     const tree = buildBoneTree(FLAT_BONES);
     expect(getBonePath("nope", tree)).toBeNull();
+  });
+});
+
+describe("父链遍历上限（防环保险丝）", () => {
+  /** 构造 depth+1 级的线性父链（b0 为根），超过 MAX_CHAIN_DEPTH 触发保险丝 */
+  function deepChain(depth: number) {
+    return Array.from({ length: depth + 1 }, (_, i) => ({
+      id: `b${i}`,
+      name: `b${i}`,
+      parentId: i === 0 ? null : `b${i - 1}`,
+    }));
+  }
+
+  it("getBonePath：超限截断至上限层数并告警（不挂死、不抛）", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const over = MAX_CHAIN_DEPTH + 5;
+    const tree = buildBoneTree(deepChain(over));
+    let path: string | null = null;
+    expect(() => {
+      path = getBonePath(`b${over}`, tree);
+    }).not.toThrow();
+    expect(spy).toHaveBeenCalled();
+    // 截断到上限：路径段数 === MAX_CHAIN_DEPTH（不是 full walk）
+    expect(path!.split(" / ").length).toBe(MAX_CHAIN_DEPTH);
+    spy.mockRestore();
+  });
+
+  it("getBonePath：链长恰为上限时不告警（边界不误报）", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const exact = MAX_CHAIN_DEPTH - 1; // b_exact 到根共 MAX_CHAIN_DEPTH 段
+    const tree = buildBoneTree(deepChain(exact));
+    expect(getBonePath(`b${exact}`, tree)!.split(" / ").length).toBe(MAX_CHAIN_DEPTH);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("findAncestorBoneId：父链超限 → null 且告警", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const over = MAX_CHAIN_DEPTH + 5;
+    const tree = buildBoneTree(deepChain(over));
+    // 末端 object 挂一条超长 Object3D 父链，链上无任何骨骼归属
+    let leaf: THREE.Object3D = new THREE.Group();
+    const tail = leaf;
+    for (let i = 0; i < over; i++) {
+      const g = new THREE.Group();
+      g.add(leaf);
+      leaf = g;
+    }
+    expect(findAncestorBoneId(tail, tree)).toBeNull();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 

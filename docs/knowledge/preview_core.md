@@ -158,6 +158,7 @@ auto_fields:
     - materialNodes
     - matTexSlots
     - MatTexSlots
+    - MAX_CHAIN_DEPTH
     - MAX_MODELS
     - MenuGraph
     - MenuGraphNode

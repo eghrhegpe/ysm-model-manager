@@ -397,6 +397,7 @@ auto_fields:
     - MaterialOpacityChangedFn
     - matTexSlots
     - MatTexSlots
+    - MAX_CHAIN_DEPTH
     - MAX_FPS_DEFAULT
     - MAX_FPS_KEY
     - MAX_KTX2_PIXELS

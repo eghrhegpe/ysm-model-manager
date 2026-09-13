@@ -6,6 +6,7 @@
 // 本层是独立通用工具；是否桥接见任务 #5 检查结论。
 
 import * as THREE from "three";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** 统一骨骼节点：来源无关（YSM spec bones / VRM humanoid bones 均适配） */
 export interface BoneNode {
@@ -81,13 +82,24 @@ export function listBonesWithDepth(tree: BoneTree): BoneListItem[] {
   return out;
 }
 
+/**
+ * 父链遍历上限（防环保险丝）。正常骨骼树深度 <100（YSM 扁平 / VRM humanoid 均如此），
+ * 触顶即数据异常（父链成环）。超限时截断并告警而非抛——调用方是 UI 展示路径，
+ * 抛异常会连带整个骨骼面板渲染失败，代价远大于一条半截路径。
+ */
+export const MAX_CHAIN_DEPTH = 1000;
+
 /** 骨骼 id → 全路径（如 "root / spine / head"；找不到该 id 返回 null） */
 export function getBonePath(id: string, tree: BoneTree): string | null {
   if (!tree.byId.has(id)) return null;
   const parts: string[] = [];
   let cur: string | undefined = id;
   let guard = 0;
-  while (cur && guard++ < 1000) {
+  while (cur) {
+    if (guard++ >= MAX_CHAIN_DEPTH) {
+      logWarn("bone-tools", `getBonePath 父链超 ${MAX_CHAIN_DEPTH} 层，疑似成环`, { id });
+      break;
+    }
     const node = tree.byId.get(cur);
     if (!node) break;
     parts.unshift(node.name);
@@ -160,7 +172,13 @@ export function toggleBoneVisible(node: BoneNode | undefined): void {
 export function findAncestorBoneId(obj: THREE.Object3D, tree: BoneTree): string | null {
   let cur: THREE.Object3D | null = obj;
   let guard = 0;
-  while (cur && guard++ < 1000) {
+  while (cur) {
+    if (guard++ >= MAX_CHAIN_DEPTH) {
+      logWarn("bone-tools", `findAncestorBoneId 父链超 ${MAX_CHAIN_DEPTH} 层，疑似成环`, {
+        name: cur.name,
+      });
+      break;
+    }
     const id = tree.objectToId.get(cur);
     if (id) return id;
     cur = cur.parent;

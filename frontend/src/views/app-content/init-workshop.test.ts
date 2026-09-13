@@ -73,11 +73,6 @@ interface MockHost {
     workshopTimer: unknown;
     repoEventsCleanup: unknown;
     avatarRefreshRegistered: boolean;
-    setCurrentSite: (s: unknown) => void;
-    setWorkshopCache: (c: Map<string, unknown>) => void;
-    setAvatarCache: (c: Record<string, string>) => void;
-    setRepoEventsCleanup: (fn: unknown) => void;
-    setAvatarRefreshRegistered: (v: boolean) => void;
   };
   subs: {
     pageUnsubs: Array<() => void>;
@@ -108,11 +103,6 @@ function makeHost(cardsHTML = "") {
       workshopTimer: null,
       repoEventsCleanup: null,
       avatarRefreshRegistered: false,
-      setCurrentSite: (s: unknown) => { raw.state.currentSite = s; },
-      setWorkshopCache: (c: Map<string, unknown>) => { raw.state.workshopCache = c; },
-      setAvatarCache: (c: Record<string, string>) => { raw.state.avatarCache = c; },
-      setRepoEventsCleanup: (fn: unknown) => { raw.state.repoEventsCleanup = fn; },
-      setAvatarRefreshRegistered: (v: boolean) => { raw.state.avatarRefreshRegistered = v; },
     },
     subs: {
       pageUnsubs: [],
@@ -241,7 +231,7 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     ctx.backToSite(); // _currentSite 仍为 null
     expect(renderSiteView).toHaveBeenCalledTimes(1);
 
-    (raw.state.setCurrentSite as (s: unknown) => void)(site2);
+    raw.state.currentSite = site2;
     ctx.backToSite();
     expect(renderSiteView).toHaveBeenCalledTimes(2);
     expect(callArgs(renderSiteView, 1)[0]).toBe(site2);
@@ -334,7 +324,7 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
   it("未命中卡片但有 _currentSite → showSiteView 重渲染当前站点", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
-    (raw.state.setCurrentSite as (s: unknown) => void)(site);
+    raw.state.currentSite = site;
     getShowSiteView()(site); // 先渲染一次，占位
     renderSiteView.mockClear();
 

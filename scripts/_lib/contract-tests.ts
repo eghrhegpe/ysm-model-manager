@@ -134,6 +134,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
   "test_gate_schedule.ts": ["tests"],
+  // 2026-09-14 锐评修复回归锁：css-layer-check 的 TS 插值展开（keyframes 假阳性根治）
+  "test_css_layer_check.ts": ["tests", "frontend"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_gate_sh_invariants.ts": ["tests"],
@@ -365,6 +367,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // ADR-206 阶段 5：契约测试 / 静态工具补挂 / scripts typecheck 调度迁入 schedule.ts。
   // 该测试锁 tsc 三态 rc（0/1/2-TS18003）与自守卫语义。
   "test_gate_schedule.ts": ["scripts/_lib/gate-blocks/schedule.ts", "scripts/pre-push-gate.ts"],
+  "test_css_layer_check.ts": ["scripts/css-layer-check.ts"],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],

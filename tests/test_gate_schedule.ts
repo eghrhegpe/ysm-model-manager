@@ -93,4 +93,48 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
   console.log("  ✓ runStaticToolsDispatch：plan 全 false no-op（自守卫）");
 }
 
-console.log("\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc / 契约测试空域 no-op）");
+// ── 7. runStaticToolsDispatch：--static 模式清单（2026-09-14 锐评 P0 CI 接线）──
+// 断言合并语义：ALL + DOC_EXTRA + FRONTEND 非 scoped 全量送达 ctx.sh；三档 scoped
+// 扫描器（complexity/params/type-safety）必须排除（需 --files 上下文，全库跑 = 301 条
+// debt 刷屏 + check-params 59.4s）；FRONTEND 档位优先（event-graph → --strict）。
+{
+  const ctx = makeCtx({});
+  const calls: string[] = [];
+  ctx.sh = (cmd: string) => {
+    calls.push(cmd);
+    return { rc: 0, out: '{"_summary":{"ok":true,"errors":0}}' };
+  };
+  runStaticToolsDispatch(ctx, { allMode: false, docsMode: false, staticMode: true });
+  const all = calls.join("\n");
+  for (const must of [
+    "check-file-lines.ts",
+    "check-biome.ts",
+    "css-layer-check.ts",
+    "i18n-check.ts",
+    "check-script-hygiene.ts",
+    "check-adr-health.ts",
+    "check-knowledge-drift.ts",
+    "check-doc-drift.ts",
+    "check-android-unavailable.ts",
+  ]) {
+    assert.ok(all.includes(must), `--static 应包含 ${must}（远端兜底关键项）`);
+  }
+  for (const forbid of ["check-complexity.ts", "check-params.ts", "check-type-safety.ts"]) {
+    assert.ok(!all.includes(forbid), `--static 应排除 ${forbid}（scopedFiles 三档）`);
+  }
+  assert.ok(
+    /event-graph\.ts --json +--strict/.test(all),
+    "FRONTEND 档位应优先（event-graph --strict 覆盖 ALL 的 --check；stagedArg 空留双空格，用正则匹配）",
+  );
+  assert.ok(
+    ctx.results.length >= 20,
+    `--static 应产生完整清单（≥20 项，实测 ${ctx.results.length}）`,
+  );
+  console.log(
+    `  ✓ runStaticToolsDispatch：--static 清单 ${ctx.results.length} 项，关键 hard 在列、三档排除`,
+  );
+}
+
+console.log(
+  "\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc / 契约测试空域 no-op / --static 清单）",
+);

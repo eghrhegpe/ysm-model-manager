@@ -251,20 +251,20 @@ function extractKeyframeTranslate(cssText: string, name: string) {
 // 修法：聚合 CSS 前，把 import 进来、且内容含 @keyframes 的常量就地展开，再走原正则。
 // 只对含 @keyframes 的常量展开——避免把无关样式常量（如 btnBaseCSS）的类名一并引入，
 // 扰动检查 3 的 WARN 判定基线（最小侵入，不动既有判定面）。
-function resolveImportAbs(spec: string, fromAbs: string): string | null {
+export function resolveImportAbs(spec: string, fromAbs: string): string | null {
   if (spec.startsWith("@/") || spec.startsWith("#root")) return tryResolveAlias(spec);
   if (spec.startsWith(".")) return path.resolve(path.dirname(fromAbs), spec);
   return null; // 裸包导入（不参与 shadow CSS 组装）
 }
 
 /** 取被导入模块里 `export const NAME = "字面量"` 的内容（跨行亦可）。 */
-function readConstLiteral(src: string, name: string): string | null {
+export function readConstLiteral(src: string, name: string): string | null {
   const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`export\\s+const\\s+${esc}\\s*=\\s*(["'\`])([\\s\\S]*?)\\1`);
   return src.match(re)?.[2] ?? null;
 }
 
-function expandKeyframeInterpolations(cssText: string, fileAbs: string): string {
+export function expandKeyframeInterpolations(cssText: string, fileAbs: string): string {
   if (!cssText.includes("${")) return cssText;
   const importRe = /import\s*(?:type\s+)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
   let out = cssText;

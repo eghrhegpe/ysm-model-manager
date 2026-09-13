@@ -9,7 +9,7 @@ import {
 import type { SceneCapability } from "./scene-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
-import { resetEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 
 // ---- 假渲染器 ----
 function makeFakeRenderer() {
@@ -259,6 +259,18 @@ describe("LightCapability — applyModelPreset", () => {
     cap.applyModelPreset("ysm"); // 模拟切模型自动套 adapter.id（mount-preview-core）
     expect(cap.getCurrentPreset()).toBe("vrm"); // 手动选择压制自动覆盖
     expect(cap.getParams().key.intensity).toBe(1.0); // 仍是 vrm 预设参数
+  });
+
+  it("自动 applyModelPreset 写 auto-model 源：后续 auto-atmosphere 可覆盖（锐评 §二 回归）", () => {
+    const cap = newCap();
+    cap.applyModelPreset("ysm"); // 自动套模型预设 → source "auto-model"
+    // 昼夜循环 atmosphere 预设（auto-atmosphere > auto-model）应能覆盖 light 参数
+    setEnvState({ lightKeyIntensity: 9.5 }, { source: "auto-atmosphere" });
+    expect(envState.lightKeyIntensity).toBe(9.5);
+    // 手动选择（opts.manual）写 manual 源 → 压制后续 auto-atmosphere
+    cap.applyModelPreset("mmd", { manual: true });
+    setEnvState({ lightKeyIntensity: 0.1 }, { source: "auto-atmosphere" });
+    expect(envState.lightKeyIntensity).not.toBe(0.1);
   });
 
   it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调，caps 查询器经构造注入）", () => {
@@ -586,10 +598,17 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    cap.applyModelPreset("ysm"); // ysm 预设 volumetric.enabled=false → 锥组卸载
+    // 自动套模型预设（auto-model）不压制用户手动开启的锥组（manual > auto-model，
+    // 锐评 §二 收口后与其他 cap 同契约——用户手动选择优先）
+    cap.applyModelPreset("ysm");
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    // 手动切预设（light-preset select 入口）→ volumetric/spotlight 双关 → 锥组卸载
+    cap.applyModelPreset("ysm", { manual: true });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
-    cap.applyModelPreset("mmd-scene"); // volumetric 仍 false → 保持卸载
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    // 用户重新双开（锥组挂载需 volumetric+spotlight 双开）→ 回挂
+    cap.setSpotlight({ enabled: true });
+    cap.setVolumetric({ enabled: true });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
   });
 
   it("setSpotlight 时锥组已在场景则原位重建跟随", () => {

@@ -447,7 +447,13 @@ export class LightCapability implements SceneCapability {
       "lightVolumetricBaseStrength",
       "lightVolumetricTipStrength",
     ]);
-    if (Object.keys(picked).length > 0) setEnvState(picked, { source: "manual" });
+    if (Object.keys(picked).length > 0) {
+      // source 双轨：自动套模型预设走 "auto-model"（与 sky/fog/shadow 同语义，
+      // 后续 auto-atmosphere 可再覆盖——写 "manual" 会让预设永久压制昼夜循环，
+      // env-state.shouldOverwrite manual 优先级最高，锐评 §二 行为 bug）；
+      // opts.manual（light-preset select 用户显式选择 / loadState 恢复）才写 "manual"。
+      setEnvState(picked, { source: opts?.manual ? "manual" : "auto-model" });
+    }
   }
 
   /**

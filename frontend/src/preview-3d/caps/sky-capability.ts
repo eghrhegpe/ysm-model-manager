@@ -24,6 +24,7 @@ import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import {
+  getTypedCap,
   persistState,
   restoreFields,
   restoreState,
@@ -448,9 +449,7 @@ export class SkyCapability implements SceneCapability {
     // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）——
     // 经构造注入的查询器（组合根 createAll 传入），不 import registry（防模块环）。
     // 跨 cap 通知非 envState 派发范畴（light 的 ambient 衰减读 sky 开关做派生），setter 保留。
-    (
-      this.caps?.getById("light") as { refreshAmbientFromSky?: () => void } | null | undefined
-    )?.refreshAmbientFromSky?.();
+    getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
   }
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */

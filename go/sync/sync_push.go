@@ -236,6 +236,8 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 // PushSingleResource 推送单个资源到整合包：
 // 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install。
 // 子类内部模型（EntityPlayer/角色A）落位到 customDir/<子类>，保留层级。
+// 整段持 installer.InstallLock（ADR-056）：与 PushResources/PullResources 口径一致，
+// 避免两次文件操作之间被并发同步插队；内部改用 *Locked 变体防重入死锁。
 //
 // 扩展名判断说明：.json 用于 YSM（ysm.json 是文件夹级入口），.pmx/.pmd 用于 MMD。
 // 不依赖 IsDirLevelSync(rtype) 是因为本函数是通用入口（前端传任意 rtype），
@@ -245,23 +247,25 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 // ⚠️ 毒舌审核：原硬编码 ext == ".json" 会误判普通 readme.json 为 YSM 文件夹级安装。
 // 改为 IsYsmEntryJSON 精确匹配 ysm.json，避免非 YSM 场景的 .json 误触发。
 func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error {
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
 	fi, stErr := os.Stat(filePath)
 	if stErr == nil && fi.IsDir() {
-		return installer.InstallDir(filePath, customDir, globalDir, linkMode, rtype)
+		return installer.InstallDirLocked(filePath, customDir, globalDir, linkMode, rtype)
 	}
 	ext := strings.ToLower(filepath.Ext(filePath))
 	// .pmx/.pmd 一律视为 MMD 文件夹级安装（整个父目录）
 	if ext == ".pmx" || ext == ".pmd" {
 		dir := filepath.Dir(filePath)
-		return installer.InstallDir(dir, customDir, globalDir, linkMode, rtype)
+		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
 	}
 	// .json 仅 ysm.json 视为 YSM 文件夹级入口（防 readme.json 等误判）
 	if ext == ".json" && registry.IsYsmEntryJSON(filePath) {
 		dir := filepath.Dir(filePath)
-		return installer.InstallDir(dir, customDir, globalDir, linkMode, rtype)
+		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
 	}
-	return installer.Install(filePath, customDir, globalDir, linkMode)
+	return installer.InstallLocked(filePath, customDir, globalDir, linkMode)
 }
 
 // SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重）

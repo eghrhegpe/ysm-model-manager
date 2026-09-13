@@ -71,16 +71,17 @@ func buildRepoIndex(scanFn ScanFunc, repoDir string) *repoIndex {
 }
 
 // compareHashMode 哈希对比路径：计算 Missing/Extra/Disabled/Synced。
+// 先构建 custom 哈希集合（一次遍历），缺失检测从 O(H×C) 降为 O(H+C)。
 func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing, extra, disabled []string, synced int) {
-	for hash, entries := range idx.ByHash {
-		found := false
-		for _, c := range customEntries {
-			if c.Hash == hash {
-				found = true
-				break
-			}
+	customHash := make(map[string]bool, len(customEntries))
+	for _, c := range customEntries {
+		if c.Hash != "" {
+			customHash[c.Hash] = true
 		}
-		if !found {
+	}
+
+	for hash, entries := range idx.ByHash {
+		if !customHash[hash] {
 			for _, e := range entries {
 				missing = append(missing, e.Path)
 			}
@@ -225,82 +226,94 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 	return results
 }
 
+// toggleFileInfo 实例目录待判文件清单条目（SyncToggleStatus 阶段 1 收集）
+type toggleFileInfo struct {
+	path              string
+	isCurrentlyBanned bool
+	actualPath        string
+}
+
 // SyncToggleStatus 同步启用/禁用状态
+// 持锁分段设计：阶段 1 与阶段 3+4 各为独立持锁段（段内 defer 释放），
+// 中间锁外算哈希。若锁外阶段 panic，不会出现「头部 defer Unlock 对已手动
+// 释放的锁二次 Unlock」而掩盖原错误的场景——每段锁的生命周期由段内 defer 保证。
 func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int, int, error) {
-	installer.InstallLocker.Lock()
-	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
 	if scanFn == nil {
 		return 0, 0, fmt.Errorf("scanFn 为空")
 	}
-	repoEntries := scanFn(filesRoot)
-	repoHash := make(map[string]bool) // hash → banned
-	repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件
-	filesRootClean := strings.ToLower(filepath.Clean(filesRoot)) + string(filepath.Separator)
-	for _, e := range repoEntries {
-		banned := registry.IsDisableSuffix(e.Name)
-		// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
-		ePath := strings.ToLower(e.Path)
-		if strings.HasPrefix(ePath, filesRootClean) {
-			rel := strings.TrimPrefix(ePath, filesRootClean)
-			rel = registry.StripDisableSuffix(rel)
-			repoName[rel] = banned
-		} else {
-			// fallback：纯文件名（顶层文件）
-			baseName := strings.ToLower(e.Name)
-			baseName = registry.StripDisableSuffix(baseName)
-			repoName[baseName] = banned
-		}
-		if e.Hash != "" {
-			repoHash[e.Hash] = banned
-		}
-	}
-	if len(repoHash) == 0 && len(repoName) == 0 {
-		return 0, 0, fmt.Errorf("仓库中未找到模型文件")
-	}
 
-	// 阶段 1：收集实例目录中的文件路径（不计算哈希）
-	type fileInfo struct {
-		path              string
-		isCurrentlyBanned bool
-		actualPath        string
-	}
-	var fileInfos []fileInfo
-	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
-	filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
+	// 阶段 1（持锁）：构建仓库禁启用索引 + 收集实例目录文件清单。
+	repoHash, repoName, fileInfos, err := func() (map[string]bool, map[string]bool, []toggleFileInfo, error) {
+		installer.InstallLocker.Lock()
+		defer installer.InstallLocker.Unlock()
+
+		repoEntries := scanFn(filesRoot)
+		repoHash := make(map[string]bool) // hash → banned
+		repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件
+		filesRootClean := strings.ToLower(filepath.Clean(filesRoot)) + string(filepath.Separator)
+		for _, e := range repoEntries {
+			banned := registry.IsDisableSuffix(e.Name)
+			// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
+			ePath := strings.ToLower(e.Path)
+			if strings.HasPrefix(ePath, filesRootClean) {
+				rel := strings.TrimPrefix(ePath, filesRootClean)
+				rel = registry.StripDisableSuffix(rel)
+				repoName[rel] = banned
+			} else {
+				// fallback：纯文件名（顶层文件）
+				baseName := strings.ToLower(e.Name)
+				baseName = registry.StripDisableSuffix(baseName)
+				repoName[baseName] = banned
+			}
+			if e.Hash != "" {
+				repoHash[e.Hash] = banned
+			}
+		}
+		if len(repoHash) == 0 && len(repoName) == 0 {
+			return nil, nil, nil, fmt.Errorf("仓库中未找到模型文件")
+		}
+
+		// 收集实例目录中的文件路径（不计算哈希）
+		var fileInfos []toggleFileInfo
+		filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
+			if hasRecycleSegment(p) {
+				return nil
+			}
+			actualPath := p
+			isCurrentlyBanned := registry.IsDisableSuffix(p)
+			if isCurrentlyBanned {
+				actualPath = registry.StripDisableSuffix(p)
+			}
+			ext := strings.ToLower(filepath.Ext(actualPath))
+			if !registry.IsSupportedExt(ext) {
+				return nil
+			}
+			fileInfos = append(fileInfos, toggleFileInfo{
+				path:              p,
+				isCurrentlyBanned: isCurrentlyBanned,
+				actualPath:        actualPath,
+			})
 			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
-		if hasRecycleSegment(p) {
-			return nil
-		}
-		actualPath := p
-		isCurrentlyBanned := registry.IsDisableSuffix(p)
-		if isCurrentlyBanned {
-			actualPath = registry.StripDisableSuffix(p)
-		}
-		ext := strings.ToLower(filepath.Ext(actualPath))
-		if !registry.IsSupportedExt(ext) {
-			return nil
-		}
-		fileInfos = append(fileInfos, fileInfo{
-			path:              p,
-			isCurrentlyBanned: isCurrentlyBanned,
-			actualPath:        actualPath,
 		})
-		return nil
-	})
+		return repoHash, repoName, fileInfos, nil
+	}()
+	if err != nil {
+		return 0, 0, err
+	}
 
-	// 阶段 2：释放锁，预计算 relKey miss 文件的哈希
+	// 阶段 2（锁外）：预计算 relKey miss 文件的哈希
 	// 锁外哈希评估 TOCTOU 风险：文件在锁外被外部进程修改/替换的概率极低（用户主动操作除外），
 	// 且哈希仅作 relKey miss 时的改名/移动文件的内容关联兜底，改名场景下文件名已变、
 	// 内容匹配是近似判定。若文件被修改导致哈希变化，纯文件名 fallback 仍会兜底匹配。
-	installer.InstallLocker.Unlock()
+	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 
 	// 收集 relKey miss 的文件路径
 	relKeyMissPaths := make([]string, 0, len(fileInfos))
@@ -325,6 +338,8 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 
 	// 重新持锁，执行匹配 + rename
 	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
+	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
 
 	// 阶段 3：匹配并收集待 Rename 的文件
 	type renameOp struct {

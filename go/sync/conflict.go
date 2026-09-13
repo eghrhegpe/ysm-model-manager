@@ -218,6 +218,9 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // 锁契约是文档约束，不做运行时断言：
 // sync.Mutex 不暴露「是否已持锁」的查询，TryLock 在其他 goroutine 持锁时返回 false
 // → 不可靠；且生产环境 panic 不可接受。调用方须自行确保持锁。
+// 唯一受控例外：sync.go 的 assertInstallLockHeld 是 fail-fast 守卫——仅在
+// config.ConflictPolicy 非空时触发（当前生产调用链恒传 nil config，仅测试注入），
+// 其 TryLock 语义「TryLock 成功 = 无人持锁 = 调用方违规」在该场景下可靠。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {

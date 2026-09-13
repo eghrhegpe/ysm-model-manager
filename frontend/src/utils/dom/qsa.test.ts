@@ -10,7 +10,7 @@ describe("qsa/qs — 类型安全 DOM 查询助手", () => {
       <select data-idx="2"></select>
       <span class="plain"></span>
     `;
-    document.body.appendChild(root);
+    // 不挂到 document.body：qsa/qs 只查传入的 root，挂全局会跨用例污染 body。
     return root;
   };
 

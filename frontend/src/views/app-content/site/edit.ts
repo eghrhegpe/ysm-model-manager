@@ -17,8 +17,9 @@ interface FilterStateShell {
   activeTag: string;
 }
 
-/** 单个输入控件 → creators[idx][fld] 回写（SELECT 多选拼 ";"，其余 trim 后直写）。
- *  2026-09 锐评 P0：原 SELECT/INPUT 分支在 eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。 */
+/** 单个输入控件 → creators[idx][fld] 回写（SELECT 多选拼 ";"，其余带 value 的控件 trim 后直写）。
+ *  2026-09 锐评 P0：原 SELECT/INPUT 分支在 eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。
+ *  非 select 统一走 value 兜底（HTMLInputElement / HTMLTextAreaElement 等），兑现注释「其余 trim 后直写」。 */
 function syncFieldToCreator(
   inp: HTMLElement,
   creators: LocalCreatorLike[],
@@ -31,7 +32,7 @@ function syncFieldToCreator(
       .map((o) => o.value)
       .filter(Boolean)
       .join(";");
-  } else if (inp instanceof HTMLInputElement) {
+  } else if ("value" in inp && typeof inp.value === "string") {
     creators[idx][fld] = inp.value.trim();
   }
 }

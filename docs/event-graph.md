@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 151 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 155 |
 
 ### `batch:disable-all`
 
@@ -443,7 +443,7 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 653 |
+| assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 663 |
 | showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -506,7 +506,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 168 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 174 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 95 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 144 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 143 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 424 |

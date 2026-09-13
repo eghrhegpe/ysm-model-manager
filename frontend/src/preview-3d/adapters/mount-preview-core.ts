@@ -423,7 +423,13 @@ export async function mount3D(
 
   // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 buildSharedInfra
   // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
-  let infra: SharedInfra | null = null;
+  // 锐评 §四：infra/switchCtx 双 let + 两处手动回填收敛为单 slots 持有器——
+  // getter 仍需延迟绑定（camBridge 在 buildInfra 内经 ctx.getInfra() 读装配产物，循环依赖），
+  // 但 definite-assignment 风险（let switchCtx 用前未赋值）由 slots 的 null 态显式表达。
+  const slots: { infra: SharedInfra | null; switchCtx: SwitchContext | null } = {
+    infra: null,
+    switchCtx: null,
+  };
 
   // 事件 handler 集合（bindInputHandlers 后填充；runFullCleanup 按当前引用解绑）
   const handlers: MountCtx["handlers"] = {
@@ -439,8 +445,7 @@ export async function mount3D(
   // 焦点陷阱 cleanup（每次 mount3D 新建，closeOverlay / runFullCleanup 释放）
   const focusTrap: MountCtx["focusTrap"] = { cleanup: null };
 
-  // switchCtx 在下方 §4 基础设施段构造；ctx.getSwitchCtx 延迟读取
-  let switchCtx: SwitchContext;
+  // 事件 handler 集合（bindInputHandlers 后填充；runFullCleanup 按当前引用解绑）
   // 会话生命周期上下文（mount-session.ts 的模块级函数经此读写装配产物；
   // menuHandle/overlay/viewContainer/loadingEl/camBridge 在装配各段就位）
   const ctx: MountCtx = {
@@ -450,10 +455,15 @@ export async function mount3D(
     selfMode,
     sessionId,
     session,
-    getInfra: () => infra,
+    getInfra: () => slots.infra,
     getGen: () => sessionLedger.gen(),
     handles: sessionLedger.handles,
-    getSwitchCtx: () => switchCtx,
+    getSwitchCtx: () => {
+      // buildInfra 完成前不存在合法 switchCtx；提前调用属装配时序 bug，显式炸出而非静默 undefined
+      if (!slots.switchCtx)
+        throw new Error("[mount-preview-core] getSwitchCtx 在 buildInfra 之前被调用");
+      return slots.switchCtx;
+    },
     clearSingletons: () => {
       previewShell.resetRefs();
     },
@@ -470,8 +480,8 @@ export async function mount3D(
   const shell = assembleShell(ctx);
   // ===== stage 2: 基础设施装配（escH/shared infra/输入/rAF/tip/switchCtx）=====
   const installed = buildInfra(ctx, shell);
-  infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）
-  switchCtx = installed.switchCtx; // 回填 ctx.getSwitchCtx() 槽位
+  slots.infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）
+  slots.switchCtx = installed.switchCtx; // 回填 ctx.getSwitchCtx() 槽位
 
   try {
     const build = await runBuild(ctx, shell, installed);

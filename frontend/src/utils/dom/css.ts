@@ -1,4 +1,4 @@
-export const btnBaseCSS: string = `
+export const btnBaseCSS = `
 .btn-base {
   padding: var(--btn-padding-md);
   border-radius: var(--btn-radius, 6px);
@@ -29,6 +29,6 @@ export const btnBaseCSS: string = `
 `;
 
 /* Shadow DOM 通用 focus-visible 规则（所有 button/input/select/textarea） */
-export const focusVisibleCSS: string = `
+export const focusVisibleCSS = `
 :focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline: none; }
 `;

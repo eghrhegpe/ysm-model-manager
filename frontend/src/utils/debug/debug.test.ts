@@ -44,6 +44,31 @@ describe("safeStr", () => {
     expect(safeStr(new Set([1, 2, 3, 4, 5]))).toBe("Set(5)[1, 2, 3…]");
   });
 
+  it("Map 空集", () => {
+    expect(safeStr(new Map())).toBe("Map(0)[]");
+  });
+
+  it("Map ≤3 条目列出 key = value", () => {
+    expect(
+      safeStr(
+        new Map([
+          ["a", 1],
+          ["b", 2],
+        ]),
+      ),
+    ).toBe("Map(2)[a = 1, b = 2]");
+  });
+
+  it("Map 超 3 条目截断加省略号（括号内）", () => {
+    const m = new Map([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+      ["d", 4],
+    ]);
+    expect(safeStr(m)).toBe("Map(4)[a = 1, b = 2, c = 3…]");
+  });
+
   it("Array 只报长度", () => {
     expect(safeStr([1, 2, 3])).toBe("Array(3)");
   });

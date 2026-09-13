@@ -92,7 +92,8 @@ export async function withCached<T>(
   }
 
   if (entry && policy === "STALE") {
-    // 过期但返回旧值，后台刷新（并发去重）
+    // 过期但返回旧值，后台刷新（并发去重）。
+    // delete+set 为 LRU 触摸（map 尾部=最新，保 recency 序），非删除旧值——旧条目仍在
     _cache.delete(fullKey);
     _cache.set(fullKey, entry);
     dbg("cache", `[stale] ${fullKey} 已过期，返回旧值并后台刷新`);

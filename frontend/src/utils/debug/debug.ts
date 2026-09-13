@@ -91,6 +91,18 @@ export function safeStr(v: unknown): string {
         (v.size > 3 ? "…" : "") +
         "]"
       );
+    if (v instanceof Map)
+      return (
+        "Map(" +
+        v.size +
+        ")[" +
+        Array.from(v.entries())
+          .slice(0, 3)
+          .map(([k, val]) => `${k} = ${String(val)}`)
+          .join(", ") +
+        (v.size > 3 ? "…" : "") +
+        "]"
+      );
     if (Array.isArray(v)) return `Array(${v.length})`;
     // JSON.stringify 对函数/symbol 返回 undefined——原直接 `s.length` 在
     // strict 下为 TS2532（运行时靠 catch 兜底不崩，类型层不过关）；先判空走 String 兜底

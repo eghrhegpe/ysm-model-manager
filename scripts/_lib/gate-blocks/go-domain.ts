@@ -84,9 +84,9 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
     .trim()
     .split(/\s+/)
     .filter((p) => p && !racePkgRe.test(p));
-  // code_review fd349a91a #6：命令提为变量供 label 复用——原标签含 `...`/中文伪
+  // ADR-234：命令提为变量供 label 复用——原标签含 `...`/中文伪
   // 命令不可执行且省略真实 flags（-count=1/-timeout 60s/go list grep）
-  // 2026-09-13 重锐评 #二②：otherPkgs 来自 `go list` 输出（运行期数据），拼进
+  // ADR-234：otherPkgs 来自 `go list` 输出（运行期数据），拼进
   // shell 命令违反 gate-ctx「禁入运行期数据」不变式（与旧 gofmt 拼串同模式）。
   // 改数组式 procRun 顺序执行两段（-race 段 + 普通段），与 golangci baseRev 同哲学；
   // goTestCmd 字符串仅供 label 展示（fail 时可抄）。
@@ -148,12 +148,12 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
       blockPolicy: "debt",
     });
   } else {
-    // code_review 9403a4dff #4（P2）：版本地板校验——.golangci.yml 为 v2 schema
+    // ADR-234：版本地板校验——.golangci.yml 为 v2 schema
     // （version: "2"），v1 线或 <v1.64 的二进制解析不了（go directive/config keys
     // 静默丢）→ run 必失败且硬阻断，违背「宁可漏检不可误堵」；按地板降级 debt
     const glVerLine = glVer.out.split("\n")[0] ?? "";
     const vM = glVerLine.match(/v?(\d+)\.(\d+)\.(\d+)/);
-    // code_review 9403a4dff #4 修复补（TS2345）：vM[1]/vM[2] 是 match 数组索引
+    // ADR-234：vM[1]/vM[2] 是 match 数组索引
     // （string | undefined）——parseInt 收 string 报 TS 错误；`?? "0"` 安抚类型
     // 且防极端空组 NaN（match 成功时组必在，兜底不改变正常语义）
     const glMaj = vM ? parseInt(vM[1] ?? "0", 10) : 0;
@@ -166,7 +166,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
         blockPolicy: "debt",
       });
     } else {
-      // code_review 9403a4dff #1/#9（P2）：非 push 模式（--all/--files）localOid 为
+      // ADR-234：非 push 模式（--all/--files）localOid 为
       // 空串 → merge-base 空 rev 必失败 → fallback 链恒返回 ""，doctor 每次记录误导性
       // 「跳过：孤儿分支」（真实原因是空 oid）；以 HEAD 为本地侧走 fallback 链
       const baseRev = resolveBaseRev(
@@ -174,7 +174,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
         ctx.pushRemoteOid,
         ctx.pushLocalRef,
       );
-      // code_review 9403a4dff #5（P2）：baseRev 可能来自 pre-push stdin 派生的
+      // ADR-234：baseRev 可能来自 pre-push stdin 派生的
       // remoteOid（未验证 hex）——插入 shell 字符串执行构成命令注入（violate
       // git() helper 明示的「stdin 元字符禁入 shell」不变式）——先验 hex 再执行
       const hexOk = /^[0-9a-f]{40,64}$/i.test(baseRev);
@@ -185,7 +185,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
           blockPolicy: "debt",
         });
       } else if (
-        // code_review 9403a4dff #2/#3/#6（P2）：快照守卫——golangci-lint 分析当前
+        // ADR-234：快照守卫——golangci-lint 分析当前
         // 检出工作树，基线却取被推 ref：推非当前分支/脏工作树时 lint 错快照
         // （漏检被推代码 / 误堵无关 WIP）；HEAD==localOid 才跑，否则降级
         ctx.pushLocalOid &&
@@ -215,7 +215,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
   // gofmt：只读校验（修复已下沉 pre-commit；此处检出即阻断，防止绕过提交）
   const t2 = Date.now();
   const unformatted = ctx.gofmtCheck(goFiles);
-  // code_review fd349a91a #1/#2/#4/#7：标签须与实际执行一致——门禁只跑只读
+  // ADR-234：标签须与实际执行一致——门禁只跑只读
   // `gofmt -l <变更文件>`，原标签 "gofmt -w ." 冒充全仓库写盘命令（门禁从不执行
   // 写盘，dry-run 契约 + FAIL 时照抄会全库格式化变更集外的并行文件）
   ctx.record("gofmt -l（只读校验，未格式化文件见 tail）", unformatted.length === 0, {

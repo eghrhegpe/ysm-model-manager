@@ -224,7 +224,7 @@ export function isBareFatalAssertLine(line: string): boolean {
   if (t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") || t.startsWith("#"))
     return false;
   // 先剥字符串字面量（双引号 + 反引号），避免字面量内容被误判为调用 token
-  // code_review 5cdfa23d0 #2/#3（P2）：再剥尾随 // 注释与内联 /* */ 注释——原实现只放行
+  // ADR-234：再剥尾随 // 注释与内联 /* */ 注释——原实现只放行
   // 整行注释，`errCh <- err // 勿用 t.Fatalf(这里)`（collect-errors 惯用法注释）与多行
   // 反引号 raw-string 内的 t.Fatalf( 文本会被误判为裸断言 → 硬阻断合规提交（强制逃生）
   const code = t
@@ -476,7 +476,7 @@ function main() {
   // ── 测试断言增量红线（ADR-202 刀5）：新增/变更测试行裸 t.Fatal/t.Fatalf → 拦 ──
   // 只查测试文件的「新增行」，存量行不罚；go/internal/testutil/ 自身豁免
   // （它内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
-  // code_review 5cdfa23d0 #1/#4（P2）：红线块必须位于「无改动源码提前退出」之前——
+  // ADR-234：红线块必须位于「无改动源码提前退出」之前——
   // 原位置在 changed.length===0 exit(0) 之后，而 changed 排除 *_test.go → 纯测试文件
   // 变更（红线最典型目标场景）直接提前退出，红线形同虚设
   const bareAssertOff = (args["bare-assert"] as string | null) === "off";
@@ -493,7 +493,7 @@ function main() {
   for (const f of testChanged) {
     const renameOld = renameMap.get(f)?.from;
     // 与 rewriteDiff 同源的 diff 文本获取：staged → --cached；rename → 两点 blob diff
-    // code_review 5cdfa23d0 #5/#6/#7（P3）：uncommitted（非 staged）→ 工作区 diff
+    // ADR-234：uncommitted（非 staged）→ 工作区 diff
     // （base...HEAD 只含已提交行，本地预检模式漏检工作区新增裸断言，与覆盖率侧
     // getChangedLines 的 uncommitted 感知口径分裂）
     const d = staged

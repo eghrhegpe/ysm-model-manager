@@ -112,7 +112,7 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
     cwd: path.join(ROOT, "frontend"),
   });
   const { ok: buOk, summary: buz } = requireSummaryOk(bu.out, bu.rc);
-  // code_review fd349a91a #5：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
+  // ADR-234：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
   // 仓库根 scripts/ 下无此脚本）——原标签照抄从根执行 ENOENT；与同域 vite/tsc
   // vitest 标签的 "cd frontend &&" 约定对齐
   ctx.record("cd frontend && node scripts/check-binding-usage.ts --json", buOk, {

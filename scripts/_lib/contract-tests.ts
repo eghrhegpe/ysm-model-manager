@@ -149,7 +149,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_contract_tests.ts": ["tests"],
   "test_ripgrep_contract.ts": ["tests"],
   "test_gate_fallback.ts": ["tests"],
-  // 双表一致性守卫（缺陷#2，2026-09-13）：锁 CONTRACT_TEST_DOMAINS / CONTRACT_TEST_TARGETS
+  // 双表一致性守卫（缺陷#2，ADR-234）：锁 CONTRACT_TEST_DOMAINS / CONTRACT_TEST_TARGETS
   // 两表的键集合关系——TARGETS 键必须 ∈ DOMAINS；含 tests 域的测试必须登记 TARGETS。
   "test_contract_tables_consistency.ts": ["tests"],
 };
@@ -496,7 +496,7 @@ function spawnTestOnce(file: string): Promise<SpawnOnceResult> {
         stdio: ["ignore", "pipe", "pipe"],
       },
     );
-    // 分离 stdout / stderr 两个流（缺陷#1，2026-09-13）：此前两路 chunk 汇入同一
+    // 分离 stdout / stderr 两个流（缺陷#1，ADR-234）：此前两路 chunk 汇入同一
     // chunks 数组、close 时合并为单一 stdout 且 stderr 清空——测试把失败断言细节写进
     // stderr（多个契约测试经 process.stderr / console.error 输出诊断）时，runOne 失败态
     // 取 `stdout || stderr`，若 stdout 非空（哪怕只有一行 [OK]）就会把 stderr 的诊断吞掉。
@@ -546,7 +546,7 @@ export async function runContractTestsParallel(files?: string[]) {
   const results: { name: string; ok: boolean; out: string }[] = new Array(testFiles.length);
   const runOne = async (f: string) => {
     const { stdout, stderr, status } = await runTest(f);
-    // 失败态拼接 stdout + stderr（缺陷#1，2026-09-13）：断言细节多经 stderr（process.stderr /
+    // 失败态拼接 stdout + stderr（缺陷#1，ADR-234）：断言细节多经 stderr（process.stderr /
     // console.error）输出；旧版 `stdout || stderr` 在 stdout 非空时整段丢 stderr。拼接保留两路，
     // 行尾再按 slice(-40) 截断——「保留尾部」纪律不变（成功态仍为空，不膨胀）。
     const combined = [stdout, stderr]

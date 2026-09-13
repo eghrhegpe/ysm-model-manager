@@ -94,7 +94,7 @@ export function tryParseSummary(out: string): any | null {
 /**
  * 严格判定（2026-09-13 锐评 P2 #1 收编）：`rc===0 && _summary.ok===true` 的单一实现。
  *
- * ⚠️ 判定口径选用契约（2026-09-13 重锐评 #一：体系内 A/B/C 三套口径并存的收口规则）：
+ * ⚠️ 判定口径选用契约（ADR-234：体系内 A/B/C 三套口径并存的收口规则）：
  *   - A = `parseToolOutput`（宽容链：_summary.ok → errors===0 → 退回 rc）——**仅限
  *     gate-config 清单驱动的静态工具段**（runTools/runScopedDocDrift）：清单里混有
  *     情报型工具（rc 恒 0、无 _summary 契约），必须容忍「非 JSON + rc=0 → PASS」
@@ -123,7 +123,7 @@ export function requireSummaryOk(out: string, rc: number): { ok: boolean; summar
 }
 
 /**
- * C 口径单一实现（2026-09-13 三锐评 #二）：「只认 _summary.<field> 计数字段 === 0」
+ * C 口径单一实现（ADR-234）：「只认 _summary.<field> 计数字段 === 0」
  * 的严格判定，供 type-consistency（issues）/ link-checker（links_broken）等
  * 「判定语义是计数字段而非 ok 布尔」的真特例共用——B 口径收编的姊妹篇：
  * 特例保留 ≠ 手写散落，取字段 + null-fail-closed 的语义锁进函数而非注释。

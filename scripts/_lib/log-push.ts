@@ -21,7 +21,7 @@ import { ROOT } from "./scan-files.ts";
 
 const LOG_FILE = path.join(ROOT, ".git", "push-log");
 
-/** --json 模式静默开关（2026-09-13 四锐评 #1）：true 时 logPush 只写 push-log 文件、
+/** --json 模式静默开关（ADR-234）：true 时 logPush 只写 push-log 文件、
  * 不打 stderr——人读文本流让位给结构化 JSON 流，两者在 stdout/stderr 不再互相污染。
  * pre-push-gate 在 JSON 输出完毕后必须复位（长进程复用防护）。 */
 let muted = false;

@@ -97,7 +97,7 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
     // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
     // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
     // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
-    // ⚠️ autoFix 写盘语义契约（2026-09-13 重锐评 #三）：此处是 pre-push-gate 里
+    // ⚠️ autoFix 写盘语义契约（ADR-234）：此处是 pre-push-gate 里
     // **唯一会写仓库文件**的执行点——gen 脚本 FAIL 时写盘刷新产物后重验。
     //   1. 刻意不受 --dry-run 限制：commit-with-check 走 --files --dry-run，
     //      gen 产物过期若不刷新会阻断提交流（pre-commit 的 GEN_CMDS 兜底在提交阶段，

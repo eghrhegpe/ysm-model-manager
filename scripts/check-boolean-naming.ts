@@ -241,7 +241,7 @@ function main() {
   );
 }
 
-// code_review cbd138f38 #3/#5/#7（P2）：main() 加直跑守卫——契约测试 import 本模块
+// ADR-234：main() 加直跑守卫——契约测试 import 本模块
 // 取 VALID_PREFIXES 时不得触发全量扫描副作用（顶层 main 会扫全仓 + stdout 污染 +
 // frontend/src 缺失时 process.exit(1) 杀死测试进程）；对齐仓内先例
 // （check-ctx-menu-i18n / check-layering 的 pathToFileURL 守卫模式）

@@ -8,7 +8,7 @@
 #   - 「大部分」段只做「快速更新 + stage」，不做阻断检查（阻断留给 pre-push）
 #   - 但存在两处 **硬阻断（exit 1）**，非提示：
 #       ① Android 平台黑名单守卫（lite 档：T3 命名/T4 反向未登记 → exit 1；
-#          T1/T2 的 go list 已降级，由 pre-push 全量兜底——2026-09-13 缺陷#3，
+#          T1/T2 的 go list 已降级，由 pre-push 全量兜底——ADR-234，
 #          避免 GOOS=android go list 冷缓存数秒违背「秒级」承诺）
 #       ② biome 行级增量闸（本次提交新增 biome 违规行 → exit 1，防 --no-verify 绕过）
 #     —— 见文件内两段 exit 1；若误撞，按提示加白名单/改写违规后重新 git add 再提交。
@@ -65,7 +65,7 @@ GEN_PORCELAIN="/tmp/ysm_gen_porcelain_$$.txt"
 snap_docs() {
   # 跨平台优先 node（Windows Git Bash 下 find -printf 偶发不可靠，会令 GEN_SNAP 缺失
   # 进而跌入兜底 git add -u docs/ 吞他人半成品）；find 仅作 GNU 快路径。
-  # 缺陷#4（2026-09-13）：node 一行快照 / GNU find 失败不再静默——把根因打到 stderr，
+  # ADR-234：node 一行快照 / GNU find 失败不再静默——把根因打到 stderr，
   # 让「GEN_SNAP 缺失」兜底可观测（旧版 `2>/dev/null` 吞了根因，AI 无从得知为何跳过 stage）。
   if command -v node >/dev/null 2>&1; then
     node -e '
@@ -337,7 +337,7 @@ fi
 echo ""
 git diff --cached --stat 2>/dev/null | tail -10 || true
 
-# ── Android 平台黑名单完整性检查（lite 档硬阻断，2026-09-13 缺陷#3 降级）──
+# ── Android 平台黑名单完整性检查（lite 档硬阻断，ADR-234 降级）──
 # 秒级档只跑 T3（命名可疑）/ T4（反向漏检）纯文本扫描——T1/T2 的 `GOOS=android go list`
 # 冷缓存可达数秒，违背 pre-commit 秒级承诺；T1/T2 的编译期/运行期判定由 pre-push 全量兜底。
 # lite 档命中未登记项（T3/T4）仍 exit 1 阻断（不放松治理），但 T1/T2 缺失的判定留到 push。

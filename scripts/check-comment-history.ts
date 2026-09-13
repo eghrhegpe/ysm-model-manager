@@ -24,9 +24,14 @@ import { getRoot } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 
-// 裸评审引用正则：锐评/重锐评/code_review/缺陷 + #（允许「重锐评」前缀）。
-// 「代码审查 #N」等英文 review 不误伤（只匹配 code_review 字面）。
-const REF_RE = /(锐评|重锐评|code_review|缺陷)\s*#([0-9一二三四五六七八九十①-⑳]+)/;
+// 裸评审引用正则（ADR-234 D1 治愈扩展，精确匹配避免整行吞并）：
+// ① code_review <oid> #N：/code_review\s+[0-9a-f]{7,}\s*#[0-9一二三四五六七八九十①-⑳]+/
+// ② 锐评/缺陷 + #N（不含 code_review）：/(锐评|缺陷)\s*#([0-9一二三四五六七八九十①-⑳]+)/
+// 含「重锐评」（重 前缀被 锐评 捕获）。code_review 无 oid 形态（纯 code_review #N）也走 ② 不命中——
+// 实务里 code_review 总是带 oid（评审会话的 commit 锚点），无 oid 的 code_review #N 若存在会漏判，
+// 但 grep 实证全仓 46 处均带 oid，无此形态，暂不覆盖。
+// 同行含 ADR 锚点 → 视为可追溯，不计考古引用。
+const REF_RE = /code_review\s+[0-9a-f]{7,}\s*#[0-9一二三四五六七八九十①-⑳]+|(?:锐评|缺陷)\s*#[0-9一二三四五六七八九十①-⑳]+/;
 // 同行含 ADR 锚点 → 视为可追溯，不计考古引用
 const ADR_ANCHOR_RE = /ADR-\d+/;
 
@@ -44,14 +49,14 @@ function scanFile(rel: string): Hit[] {
   }
   const hits: Hit[] = [];
   const lines = text.split("\n");
+  const isSelf = rel.endsWith("check-comment-history.ts"); // 门禁器自身文档注释不计
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
     if (ln === undefined) continue; // noUncheckedIndexedAccess
     const m = ln.match(REF_RE);
     if (!m) continue;
     if (ADR_ANCHOR_RE.test(ln)) continue; // 有 ADR 锚点 → 可追溯，豁免
-    // 本脚本自身的文档注释（举例说明病灶）不计入——门禁器不审自己
-    if (rel.endsWith("check-comment-history.ts")) continue;
+    if (isSelf) continue; // 自身文档注释（举例病灶形态）不计——门禁器不审自己
     hits.push({ file: rel, line: i + 1, match: m[0] });
   }
   return hits;

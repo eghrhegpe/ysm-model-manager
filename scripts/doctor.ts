@@ -58,7 +58,7 @@ function delegate(gateArgs: string[], { stdin }: { stdin?: string } = {}) {
 }
 
 if (args["audit-check"]) {
-  // 审计对账模式（2026-09-13 三锐评 #一）：委托 gate-audit-reconcile，缺口非零即红。
+  // 审计对账模式（ADR-234）：委托 gate-audit-reconcile，缺口非零即红。
   // 放本地 doctor 而非 CI：对账的两侧数据源（远端跟踪 reflog + .git/gate-audit.log）
   // 都只存在于开发机——fresh clone 的 CI 上 pushEvents 恒 0，对账恒空转。
   // 「跨机可查」的系统性兜底 = CI 同跑 gate 本体互证（ci.yml 既有门禁 job），非 reconcile。

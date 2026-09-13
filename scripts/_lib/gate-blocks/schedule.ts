@@ -34,7 +34,7 @@ export async function runContractTestsBlock(
   const t0 = Date.now();
   const tests = await runContractTestsParallel(contractFiles);
   const ok = tests.length === 0 || tests.every((t) => t.ok);
-  // code_review fd349a91a #3：标签如实描述执行面——原 `for f in tests/*.ts` glob 声称
+  // ADR-234：标签如实描述执行面——原 `for f in tests/*.ts` glob 声称
   // 全量（实际 selectContractTests 按域裁剪子集 + _ 前缀排除 + spawn 有界并发，
   // push/files 模式只跑相关子集——假保证 + glob 语法 Windows 不可执行）
   ctx.record(`contract tests (${tests.length}${opts.allMode ? "，全量" : "，按域裁剪"})`, ok, {
@@ -61,7 +61,7 @@ export function runStaticToolsDispatch(
   opts: { allMode: boolean; docsMode: boolean },
 ): void {
   if (opts.allMode) {
-    // 刻意不跑 FRONTEND_STATIC_TOOLS（四锐评 #3 显式化）：三档扫描器是「全库阈值 + 增量
+    // 刻意不跑 FRONTEND_STATIC_TOOLS（ADR-234）：三档扫描器是「全库阈值 + 增量
     // 裁剪」模式（scopedFiles），--all 无 --files 上下文，全量跑 = 301 条 debt 刷屏 +
     // check-params 59.4s 墙钟（见 gate-config.ts 三档位注释）——「防淹没 + 控成本」两动机
     // 在全量模式同样成立。baseline 比对落地后三档才有资格进 --all；覆盖尾行已如实点名。

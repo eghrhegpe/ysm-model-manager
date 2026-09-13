@@ -70,7 +70,7 @@ import { ROOT } from "./_lib/scan-files.ts";
 const B = { OK: "[OK]", FAIL: "[FAIL]", FIX: "[FIX]", SKIP: "[SKIP]" };
 // 子进程统一超时 = gate-ctx.GATE_TIMEOUT_MS（阶段 2 收敛的单一来源）；本文件已不再
 // 直接持数组式 procRun 的 timeout（redlines 段随阶段 4 迁入 gate-blocks/redlines.ts）。
-/** 远端领先提示（SKIP 与 FAIL 共用；2026-09-13 锐评 #10：push 模式带 remote-name——
+/** 远端领先提示（SKIP 与 FAIL 共用；ADR-234：push 模式带 remote-name——
  * 多 remote 场景裸 `git pull` 默认远端可能不对，指引必须可抄） */
 const pullHint = (remote?: string) =>
   remote
@@ -123,7 +123,7 @@ async function main() {
   if (args.unknown.length) console.warn(`[pre-push-gate] 忽略未知参数: ${args.unknown.join(", ")}`);
   const dryRun = args["dry-run"] as boolean;
   const noBanner = args["no-banner"] as boolean;
-  // --json 真实现（2026-09-13 四锐评 #1）：此前 bools 声明但零消费——doctor --json 透传
+  // --json 真实现（ADR-234）：此前 bools 声明但零消费——doctor --json 透传
   // 静默 no-op、hygiene 契约靠注释假绿。现语义：人读文本流静默（logPush 只写 push-log），
   // 判定终态以结构化 JSON 输出到 stdout（_summary + results，形状与 writeGateReport 同源）。
   // 边界：ctx 创建前的硬失败（stdin 解析失败/用法错误）仍为文本——无判定即无 JSON 契约对象。
@@ -157,7 +157,7 @@ async function main() {
   let pushRemoteName: string | undefined;
   // push 模式的有效 ref 数（>0 表示真实推送运行，供审计留痕判别）
   let pushedCount = 0;
-  // push 模式的全部有效 ref（逐 ref 审计留痕用——三锐评 #四2：多 ref 推送时
+  // push 模式的全部有效 ref（逐 ref 审计留痕用，ADR-234：多 ref 推送时
   // reflog 每个 ref 一条 push 事件，审计只记 pushed[0] 会让其余 ref 被
   // gate-audit-reconcile 误判为「无审计记录」缺口）
   let pushedRefs: { localOid: string; localRef: string }[] = [];
@@ -312,7 +312,7 @@ async function main() {
   // stderr 只给相对路径指针；写入失败不阻断门禁。
   const okResults = ctx.results.filter((r) => r.ok);
   const failResults = ctx.results.filter((r) => !r.ok);
-  // --json 终态输出（四锐评 #1）：在三个 post-ctx 出口（无变更/PASS/FAIL）前统一发射，
+  // --json 终态输出（ADR-234）：在三个 post-ctx 出口（无变更/PASS/FAIL）前统一发射，
   // 退出码语义与文本模式完全一致——JSON 模式只改输出形态，不改判定。
   const finishJson = () => {
     if (!jsonMode) return;
@@ -321,7 +321,7 @@ async function main() {
       `${JSON.stringify(
         {
           _summary: {
-            // ok 语义（五锐评 #3）：= !blocked 即「检查是否通过」——dryRun 模式下这是
+            // ok 语义（ADR-234）：= !blocked 即「检查是否通过」——dryRun 模式下这是
             // **预测值**（若此刻真实推送能否过），不是「已放行」；消费方（CI/子代理）
             // 判断「是否真放行」须结合 dryRun 字段：ok && !dryRun 才是已放行推送
             ok: !ctx.blocked,
@@ -362,7 +362,7 @@ async function main() {
   // 与钩子侧 YSM_SKIP_GATE 的 SKIPPED 行共同构成连续审计流——「这次推送没有 gate 记录」
   // 事后可回溯（--no-verify 本身仍无法客户端检测，边界见 gate-audit.ts 头注释）。
   if (!filesMode && !allMode && !docsMode && pushedCount > 0) {
-    // 逐 ref 留痕（三锐评 #四2）：多 ref 推送的 reflog 是每 ref 一条 update by push，
+    // 逐 ref 留痕（ADR-234）：多 ref 推送的 reflog 是每 ref 一条 update by push，
     // 审计流必须同构——每 ref 一行，否则 reconcile 会把 N-1 个 oid 误判为缺口
     for (const p of pushedRefs) {
       appendGateAudit(auditFilePath(), {
@@ -377,7 +377,7 @@ async function main() {
   if (!ctx.results.length) {
     // 先留痕再 finishJson——finishJson 内 setLogPushMuted(false) 会重开 stderr，
     // logPush 若在 finishJson 之后发会把 [SKIP] 行泄漏到 stderr，破坏 --json 契约
-    //（五锐评 #2 同口径：post-main 段只许 console.error，不得有 console.log / logPush）
+    //（ADR-234：post-main 段只许 console.error，不得有 console.log / logPush）
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
     finishJson();
     return 0;
@@ -410,7 +410,7 @@ async function main() {
   logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
   logPush("明细见上方 FAIL 块（归属/首错/复现；完整报告见明细区头路径）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
-  // code_review fd349a91a #1/#2/#4/#7：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
+  // ADR-234：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
   // 原虚构标签 "gofmt -w ." 而来，标签如实化后子串匹配会静默失效；gofmt 标签唯一）
   const gofmt = ctx.results.find((r) => r.label.includes("gofmt"));
   let gofmtHint = "";
@@ -453,7 +453,7 @@ main()
         child.on("error", (e) =>
           console.error(`[MAP] 后台刷新启动失败（不影响推送）: ${e.message}`),
         );
-        // 五锐评 #2：此处必须 console.error——本行在 main().then 段（say 作用域外），
+        // ADR-234：此处必须 console.error——本行在 main().then 段（say 作用域外），
         // 且 finishJson() 已把结构化 JSON 写完 stdout；console.log 会跟在 JSON 后使
         // JSON.parse(stdout) 必炸。stderr 提示可见但不污染 --json 契约
         console.error(

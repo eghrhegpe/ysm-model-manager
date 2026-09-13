@@ -24,7 +24,7 @@
  * 用法：
  *   node scripts/check-android-unavailable.ts         # 全量（T0–T4），文本报告，退出码判定
  *   node scripts/check-android-unavailable.ts --json  # 子代理/CI 机器消费（_summary JSON）
- *   node scripts/check-android-unavailable.ts --lite  # 秒级档（缺陷#3）：跳过 T1/T2 的 go list，
+ *   node scripts/check-android-unavailable.ts --lite  # 秒级档（ADR-234）：跳过 T1/T2 的 go list，
  *                                                  仅跑 T3/T4 纯文本扫描；pre-commit 专用，
  *                                                  T1/T2 由 pre-push 全量兜底
  *   node scripts/check-android-unavailable.ts --allow-missing  # bindings 缺失时不判失败（CI 冷启动）
@@ -239,7 +239,7 @@ async function collect(report: Report, lite = false): Promise<void> {
   report.blacklistSize = blacklist.size;
 
   if (lite) {
-    // ── --lite（pre-commit 秒级档，2026-09-13 缺陷#3）──
+    // ── --lite（pre-commit 秒级档，ADR-234）──
     // 跳过 T1/T2 的 `go list`（GOOS=android go list 冷缓存可达数秒，违背 pre-commit 秒级承诺）。
     // missingAtCompile / guardedAtRuntime 留空（无 go 信号可派生）；T1/T2 由 pre-push 全量兜底。
     // degraded=true 标记本档为「无 go 信号」，pre-push 的 --json 消费方可据 lite 区分
@@ -356,7 +356,7 @@ async function main(): Promise<number> {
   if (args.unknown.length) console.warn(`[android-guard] 忽略未知参数: ${args.unknown.join(", ")}`);
   const wantJson = Boolean(args.json);
   const allowMissing = Boolean(args["allow-missing"] ?? args.allowMissing);
-  // --lite（缺陷#3，2026-09-13）：pre-commit 秒级档——跳过 T1/T2 的 go list，仅跑 T3/T4 纯文本扫描。
+  // --lite（ADR-234）：pre-commit 秒级档——跳过 T1/T2 的 go list，仅跑 T3/T4 纯文本扫描。
   // T1/T2 的编译/运行期判定改由 pre-push 全量兜底（--strict 时 go build 先行）。
   const lite = Boolean(args.lite);
 

@@ -514,7 +514,7 @@ function collectStarForwards(files: string[], moduleSet: Set<string>): Map<strin
   return map;
 }
 
-// code_review cbd138f38 #2/#6/#8（P2）：main() 加直跑守卫——契约测试 import 本模块
+// ADR-234：main() 加直跑守卫——契约测试 import 本模块
 // 取 isOrphanExempt 时不得触发全量扫描副作用（顶层 main 会三遍全仓扫描 + stdout
 // 污染 + frontend/src 缺失时 process.exit(1) 杀死测试进程）；对齐仓内先例
 // （check-ctx-menu-i18n / check-layering 的 pathToFileURL 守卫模式）

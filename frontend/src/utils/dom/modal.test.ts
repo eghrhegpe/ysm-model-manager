@@ -602,3 +602,112 @@ describe("内联样式外提回归（ADR-149）", () => {
     closeActiveDlg();
   });
 });
+
+describe("modalPicker — 交互 / footer 收集 / safeHintColor", () => {
+  it("点击行 → resolve 选中下标 + footer 表单值聚合（checkbox/radio/input/select/textarea）", async () => {
+    const promise = modalPicker({
+      title: "选择",
+      items: [{ label: "A" }, { label: "B" }, { label: "C" }],
+      footerHTML: `
+        <input name="nick" value="x" />
+        <input type="checkbox" name="agree" checked />
+        <input type="radio" name="opt" value="1" />
+        <select name="sel"><option value="v" selected>v</option></select>
+        <textarea name="note">hi</textarea>
+      `,
+    });
+    const rows = document.querySelectorAll<HTMLElement>('[data-testid="pick-item"]');
+    expect(rows.length).toBe(3);
+    rows[1].click();
+    const r = await promise;
+    expect(r?.index).toBe(1);
+    // checkbox 选中 true；radio 未选中 false（均进 checked，不进 values）
+    expect(r?.footerChecked).toEqual({ agree: true, opt: false });
+    expect(r?.footerValues).toEqual({ nick: "x", sel: "v", note: "hi" });
+  });
+
+  it("点击行无 footer → footerChecked/footerValues 为空对象", async () => {
+    const promise = modalPicker({ title: "选择", items: [{ label: "A" }, { label: "B" }] });
+    document.querySelectorAll<HTMLElement>('[data-testid="pick-item"]')[0].click();
+    const r = await promise;
+    expect(r?.index).toBe(0);
+    expect(r?.footerChecked).toEqual({});
+    expect(r?.footerValues).toEqual({});
+  });
+
+  it("点击取消 → resolve null", async () => {
+    const promise = modalPicker({ title: "选择", items: [{ label: "A" }] });
+    const cancel = document.querySelector('[data-testid="dlg-cancel"]') as HTMLElement;
+    cancel.click();
+    await expect(promise).resolves.toBeNull();
+  });
+
+  it("行项仅 label（无 meta/sub/hint）→ 不渲染对应节点，且无副标题", () => {
+    modalPicker({ title: "选择", items: [{ label: "纯标签" }] });
+    const row = document.querySelector('[data-testid="pick-item"]') as HTMLElement;
+    expect(row.querySelector(".dlg-pick-meta")).toBeNull();
+    expect(row.querySelector(".dlg-pick-sub")).toBeNull();
+    expect(row.querySelector(".dlg-pick-hint")).toBeNull();
+    expect(document.querySelector(".dlg-pick-subtitle")).toBeNull();
+    closeActiveDlg();
+  });
+
+  it("自定义 cancelText 经 esc 渲染（覆盖 cancelText 默认值分支）", () => {
+    modalPicker({ title: "选择", items: [{ label: "A" }], cancelText: "放弃" });
+    const cancel = document.querySelector('[data-testid="dlg-cancel"]') as HTMLElement;
+    expect(cancel.textContent).toContain("放弃");
+    closeActiveDlg();
+  });
+
+  it("safeHintColor：#hex 白名单值原样保留", () => {
+    modalPicker({ title: "选择", items: [{ label: "A", hint: "H", hintColor: "#00ff00" }] });
+    const hint = document.querySelector(".dlg-pick-hint") as HTMLElement;
+    expect(hint.getAttribute("style")).toContain("#00ff00");
+    closeActiveDlg();
+  });
+
+  it("safeHintColor：var(--token) 白名单值原样保留", () => {
+    modalPicker({ title: "选择", items: [{ label: "A", hint: "H", hintColor: "var(--accent)" }] });
+    const hint = document.querySelector(".dlg-pick-hint") as HTMLElement;
+    expect(hint.getAttribute("style")).toContain("var(--accent)");
+    closeActiveDlg();
+  });
+
+  it("safeHintColor：命名色原样保留", () => {
+    modalPicker({ title: "选择", items: [{ label: "A", hint: "H", hintColor: "crimson" }] });
+    const hint = document.querySelector(".dlg-pick-hint") as HTMLElement;
+    expect(hint.getAttribute("style")).toContain("crimson");
+    closeActiveDlg();
+  });
+
+  it("safeHintColor：hint 无 hintColor → 回退默认 muted", () => {
+    modalPicker({ title: "选择", items: [{ label: "A", hint: "H" }] });
+    const hint = document.querySelector(".dlg-pick-hint") as HTMLElement;
+    expect(hint.getAttribute("style")).toContain("var(--muted");
+    closeActiveDlg();
+  });
+
+  it("safeHintColor：注入尝试（含 ; 与 url()）被拦截，回退默认且不留注入面", () => {
+    modalPicker({
+      title: "选择",
+      items: [{ label: "A", hint: "H", hintColor: "red; background:url(evil)" }],
+    });
+    const hint = document.querySelector(".dlg-pick-hint") as HTMLElement;
+    const style = hint.getAttribute("style") ?? "";
+    expect(style).toContain("var(--muted");
+    expect(style).not.toContain("background");
+    expect(style).not.toContain("url(");
+    closeActiveDlg();
+  });
+
+  it("collectFooter：name 为空的控件被跳过（不进 checked/values）", async () => {
+    const promise = modalPicker({
+      title: "选择",
+      items: [{ label: "A" }],
+      footerHTML: `<input name="" value="x" /><input name="real" value="y" />`,
+    });
+    document.querySelector<HTMLElement>('[data-testid="pick-item"]')!.click();
+    const r = await promise;
+    expect(r?.footerValues).toEqual({ real: "y" }); // name="" 的被跳过
+  });
+});

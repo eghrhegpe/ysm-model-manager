@@ -68,8 +68,6 @@ auto_fields:
     - lightDirToPosition
     - LightParams
     - luminanceHistogram
-    - MAX_MODELS
-    - ModelEntry
     - oneOf
     - persistState
     - pickPersistFields
@@ -92,7 +90,6 @@ auto_fields:
     - SceneCapabilityLookup
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
-    - sceneRegistry
     - SHADOW_TYPES
     - ShadowCapability
     - ShadowParams

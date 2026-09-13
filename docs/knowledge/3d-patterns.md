@@ -24,7 +24,6 @@ auto_fields:
     - disposeDebugGroup
     - disposeObject3D
     - disposeSceneMeshes
-    - getActiveInputSession
     - getRegisteredRoutes
     - GroupedScene
     - hasActivePreview
@@ -41,21 +40,14 @@ auto_fields:
     - PreviewHandle
     - PreviewScene
     - rebuildDebug
-    - registerPerFrame
     - registerReRoute
-    - removePerFrame
-    - resetLoopState
     - SafeDisposable
     - safeDispose
     - scanModelsByType
     - ScreenshotScene
     - SemanticScene
     - setActive3DClose
-    - setActiveInputSession
-    - startGlobalRenderLoop
-    - stopIfIdle
     - switchPreview
-    - unregisterActiveInputSession
     - UpdateableScene
     - withPreviewExtras
   tests:

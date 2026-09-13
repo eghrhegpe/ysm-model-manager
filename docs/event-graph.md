@@ -297,7 +297,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 264 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 206 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 226 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 232 |
 
 ### `repo:search-creator`
 
@@ -322,7 +322,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 249 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 255 |
 
 ### `stats:refresh`
 
@@ -348,8 +348,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 155 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 169 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 157 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 171 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 92 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -360,7 +360,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 206 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 212 |
 
 ### `sync:download:done`
 
@@ -444,10 +444,10 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
 | assembleShell | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 657 |
-| showLoadFailure | `frontend/src/preview-3d/adapters/preview-loading.ts` | 43 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 162 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
+| showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 43 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 38 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 190 |
@@ -531,7 +531,7 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 199 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 205 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |

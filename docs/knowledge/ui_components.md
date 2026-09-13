@@ -35,8 +35,6 @@ auto_fields:
     - InstallableStyles
     - installComponentsStyles
     - installSlideMenuStyles
-    - isPreviewOverlayActive
-    - PREVIEW_OVERLAY_ID
     - ROLE
     - slideMenuCss
     - SlideMenuHandle

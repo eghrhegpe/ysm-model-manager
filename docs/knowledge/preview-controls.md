@@ -18,38 +18,28 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - addOpLog
-    - CameraControlBridge
-    - getSchema
-    - hasSchema
-    - listSchemas
-    - makeYsmModelSchemaId
     - MmdBottomNavCtx
     - mmdModelInfoNodes
     - MmdPlayBridge
     - mmdShotNodes
     - playNodes
     - readFileBytes
-    - registerSchema
     - registerYsmModelSchema
-    - resetSchemas
     - resolveFbxSiblings
     - resolveMmdSiblings
     - resolveMorphSiblings
     - resolveSceneSiblings
     - resolveSiblingsByType
     - resolveStageSiblings
-    - SchemaBuilder
     - showFbxPreview
     - showMmdPreview
     - showMorphPreview
     - showScenePreview
     - showStagePreview
     - showVrmMeta
-    - unregisterSchema
     - VrmMaterialControlBridge
     - vrmModelInfoNodes
     - vrmShotNodes
-    - YSM_MODEL_SCHEMA_ID
     - YsmControlsContext
     - ysmShotNodes
   tests:

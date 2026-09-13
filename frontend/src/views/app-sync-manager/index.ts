@@ -58,7 +58,9 @@ export class AppSyncManager extends WebComponentBase {
   _filteredItems: SyncItem[] = [];
   /** 筛选后强制展开的目录 path 集合（status 筛选下「有命中后代的目录」，见 store.applyFilter） */
   _forceOpenPaths?: Set<string>;
-  _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
+  /** 与 self-type.ts 契约同形（dirLevelSync 为可选字段，store.loadTypeConfig 经 SyncManagerSelf 写入、
+   *  renderer 消费；类侧声明须全量对齐，缺字段会让编译守卫「同形契约」宣称与实现脱节） */
+  _typeConfig: Array<{ id: string; name?: string; icon?: string; dirLevelSync?: boolean }> = [];
   _loading = false;
   /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard */
   readonly _guard = createLoadGuard();
@@ -191,11 +193,15 @@ export class AppSyncManager extends WebComponentBase {
     } catch (e) {
       logError("sync-manager", "_render 出错:", e);
       // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（textContent 天然防注入，无需 esc）
+      // 挂到 .sm-list（与 spinner/列表同容器），不挂组件根——脱离 .sm-container 会让错误 div
+      // 落在布局/CSS 作用域外，排版异常（containerHTML 在 134 行已注入，.sm-list 此时必存在）
       const errDiv = document.createElement("div");
       errDiv.style.padding = "12px";
       errDiv.style.color = "var(--err)";
       errDiv.textContent = `${t("sync.renderFailed")}: ${safeErrorMessage(e)}`;
-      this.appendChild(errDiv);
+      const listEl = this.querySelector(".sm-list");
+      if (listEl) listEl.appendChild(errDiv);
+      else this.appendChild(errDiv);
       bus.emit("toast:show", {
         msg: `❌ ${friendlyError(e, t("sync.renderFailed"))}`,
         duration: TOAST_MS.long,
@@ -273,9 +279,11 @@ export class AppSyncManager extends WebComponentBase {
   }
 }
 
-// 编译期对齐守卫（零运行时成本）：self-type.ts 新增必选字段而本类漏实现时，此处 TS 报错。
+// 编译期对齐守卫（零运行时成本）：self-type.ts 新增【必选】字段而本类漏实现时，此处 TS 报错。
 // 取代「口头记得写 implements SyncManagerSelf」——原生 querySelector 返回类型收窄冲突使 implements 子句不可用，
 // 故用结构化断言：类实例剥掉 HTMLElement 原生成员后，必须满足 SyncManagerFields 全量契约。
+// 局限：extends 语义对 SyncManagerFields 新增【可选】字段（如 _forceOpenPaths?/dirLevelSync?）的漂移不敏感
+//（可选字段缺失不构成 extends 失败），仅防「新增必选且类未声明该键」——可选字段契约变更需人审。
 type _SyncSelfAlign =
   Omit<AppSyncManager, keyof HTMLElement> extends Omit<SyncManagerFields, "querySelector">
     ? true

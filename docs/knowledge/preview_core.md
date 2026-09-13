@@ -122,6 +122,7 @@ auto_fields:
     - getTextureDecoder
     - GroundCapability
     - GroupedScene
+    - guardSessionAlive
     - hasActivePreview
     - hasSchema
     - importWebFiles
@@ -254,6 +255,8 @@ auto_fields:
     - SemanticScene
     - sessionLedger
     - SessionLedgerHost
+    - SessionLifecycle
+    - SessionStatus
     - setActiveInputSession
     - setBoneNodeVisible
     - SharedInfra
@@ -279,6 +282,8 @@ auto_fields:
     - switchPreview
     - switchToSession
     - syncLightTargetFromContent
+    - teardown
+    - TeardownLevel
     - teardownSharedInfra
     - TexDecodeConfig
     - TexDecodeRequest

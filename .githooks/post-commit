@@ -1,14 +1,15 @@
 #!/bin/sh
-# post-commit — 清路径限定提交遗留的暂存残留（2026-08-31 实战修复）
+# post-commit — 清路径限定提交遗留的暂存残留（2026-08-31 实战修复；ADR-232 D1 并发配对升级）
 # 现象：pre-commit 钩子 gen+stage 生成物（docs/funcmap.md 等）+ gofmt/智能 stage，
 # 而 `git commit -- <paths>`（路径限定提交）按 --only 语义提交后，钩子 stage 的
 # 文件残留在索引 → `git status` 显示 MM 噪音（实测：git diff HEAD 为空但 MM 常驻），
 # 高推理 AI 误判工作区脏、空转多轮排查。
-# 逻辑：遍历「有暂存差异的文件」，仅当「工作树 == HEAD（无真实未提交改动）」时
-# `git restore --staged` 清索引残留——此时索引里的版本必是残留（真实改动会留下
-# 工作树 != HEAD，保持诚实显示不动）。
+# 逻辑（ADR-232 D1 升级）：按本次 commit 父 oid（HEAD~1）定位本会话生成物清单
+# `.git/ysm_gen_staged_<HEAD~1>`（pre-commit 写入；并发会话父 oid 不同互不覆盖），
+# 对清单内文件比 `HEAD~1..HEAD`（commit 不可变对象，根治 P2-4「HEAD 此刻」误判），
+# 工作树 == 该区间则 `git restore --staged` 清残留；清完删除本清单 + 回收 48h 孤儿。
 # 安全性：只清「工作树无真实改动」的纯索引残留；手写文件/并行会话的半成品
-# （工作树 != HEAD）一律不动。零丢失（不动工作树，索引可随时 re-add）。
+# （工作树 != HEAD~1..HEAD）一律不动。零丢失（不动工作树，索引可随时 re-add）。
 # 逃生阀：YSM_SKIP_POSTCLEAN=1
 exec 1>&2
 set -u
@@ -17,26 +18,30 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || exit 0)"
 [ -z "${ROOT:-}" ] && exit 0
 cd "$ROOT" || exit 0
 
-CLEANED=""
-# code_review #2（P2）：只清 pre-commit 记录过的生成物清单（.git/ysm_gen_staged）——
-# 原「git diff --cached --name-only + wd==HEAD」会误清用户仅存索引的暂存
-# （git add + git restore --worktree 场景：改动只存在于索引，被静默丢弃即数据丢失）。
-# 清单由 pre-commit 每次提交时写入（last-writer-wins，路径来自 find 原始 UTF-8，
-# 无 quotepath 转义问题）；无清单（--no-verify / YSM_SKIP_GEN）→ 无生成物残留 → 退出。
-LIST_FILE="$(git rev-parse --git-dir 2>/dev/null)/ysm_gen_staged"
+# 本次 commit 的父 oid（HEAD 已前进，HEAD~1 = 提交时的 HEAD = pre-commit 写入时用的 oid）
+PARENT_OID="$(git rev-parse HEAD~1 2>/dev/null || true)"
+[ -z "${PARENT_OID:-}" ] && exit 0
+
+# ADR-232 D1：按父 oid 配对读清单（替代旧版 last-writer-wins 单文件 ysm_gen_staged）
+LIST_FILE="$(git rev-parse --git-dir 2>/dev/null)/ysm_gen_staged_$(echo "$PARENT_OID" | cut -c1-12)"
 [ -f "$LIST_FILE" ] || exit 0
+
+CLEANED=""
 while IFS= read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || continue
-  # 仅清「工作树 == HEAD」的纯残留（无真实未提交改动）
-  if git diff --quiet HEAD -- "$p" 2>/dev/null; then
+  # ADR-232 D1：判定锚点换 commit 对象——比 HEAD~1..HEAD（不可变对象永在），
+  # 替代旧「HEAD 此刻」（P2-4：并行会话刚 commit 同文件 → HEAD 已变 → 误判跳过）。
+  if git diff --quiet HEAD~1..HEAD -- "$p" 2>/dev/null; then
     if git restore --staged -- "$p" 2>/dev/null; then
       CLEANED="$CLEANED $p"
     else
-      # 失败可见（原 2>/dev/null 吞掉，AI 无从得知）
       echo "[post-commit] ⚠️ 清暂存残留失败: $p"
     fi
   fi
 done < "$LIST_FILE"
-[ -n "$CLEANED" ] && echo "[post-commit] 已清生成物暂存残留(工作树==HEAD):$CLEANED"
+# 清完即删本会话清单（不留孤儿）+ 回收 48h 前孤儿（并发中途崩溃遗留）
+node scripts/_lib/gen-staged-pair.ts delete "$PARENT_OID" 2>/dev/null || true
+node scripts/_lib/gen-staged-pair.ts sweep 2>/dev/null || true
+[ -n "$CLEANED" ] && echo "[post-commit] 已清生成物暂存残留(工作树==HEAD~1..HEAD):$CLEANED"
 exit 0

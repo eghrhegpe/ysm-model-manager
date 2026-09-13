@@ -35,6 +35,7 @@ auto_fields:
     - createDialog
     - DgBrShell
     - modalAdvFilter
+    - ModalLabels
     - modalTagEditor
     - registerDlg
     - showBatchRenameDialog

@@ -313,6 +313,7 @@ auto_fields:
     - GroundSurfaceStructuralSpec
     - GroupedScene
     - guardGpuBudget
+    - guardSessionAlive
     - hasActivePreview
     - hasBoneRotation
     - hasSceneStats
@@ -632,6 +633,8 @@ auto_fields:
     - SemanticScene
     - sessionLedger
     - SessionLedgerHost
+    - SessionLifecycle
+    - SessionStatus
     - setActiveInputSession
     - setBoneNodeVisible
     - setBoneVisible
@@ -712,6 +715,8 @@ auto_fields:
     - TD_CAMSPEED_KEY
     - TD_ROTMODE_KEY
     - TdKeyAction
+    - teardown
+    - TeardownLevel
     - teardownSharedInfra
     - TexDecodeConfig
     - TexDecodeRequest

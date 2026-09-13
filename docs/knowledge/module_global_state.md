@@ -29,6 +29,7 @@ auto_fields:
     - LangCode
     - loadLocale
     - LocaleHost
+    - ModalLabels
     - registerDlg
     - setLang
     - setLocaleHost

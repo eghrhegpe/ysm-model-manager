@@ -24,6 +24,7 @@
  */
 import fs from "node:fs";
 import { auditFilePath } from "./_lib/gate-audit.ts";
+import { isReconcileDegraded, type DegradedVerdict } from "./_lib/audit-degraded.ts";
 import { run as procRun } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
@@ -70,32 +71,45 @@ for (const ref of refOutput.out
   }
 }
 
-// ── 2. 审计日志已覆盖 oid 集（PUSH + SKIPPED 都算留痕） ──
+// ── 2. 审计日志已覆盖 oid 集（PUSH + SKIPPED + SKIPPED_PRECOMMIT 都算留痕） ──
 const auditFile = auditFilePath();
+const auditLogExists = fs.existsSync(auditFile);
 const audited = new Set<string>();
 const skippedAt: number[] = [];
-if (fs.existsSync(auditFile)) {
+let windowedAuditLines = 0;
+if (auditLogExists) {
   for (const line of fs.readFileSync(auditFile, "utf-8").split("\n").filter(Boolean)) {
-    // 格式: <UTC ISO> <PUSH|SKIPPED> <oid12|none> <verdict> <counts> <remote>
+    // 格式: <UTC ISO> <PUSH|SKIPPED|SKIPPED_PRECOMMIT> <oid12|none> <verdict|skipKey> <counts> <remote>
     // 三锐评 #四1：oid 位（parts[2]）可能为 "none"（formatEntry 对空 localOid 兜底），
     // "none" 不是真实提交，不得计入已审计集
     const parts = line.trim().split(/\s+/);
     if (parts.length < 3 || !parts[2] || parts[2] === "none") continue;
     audited.add(parts[2]);
     if (parts[1] === "SKIPPED") skippedAt.push(Date.parse(parts[0] ?? "") || 0);
+    windowedAuditLines++;
   }
 }
 
-// ── 3. 缺口 = 有推送事件、无审计记录 ──
+// ── 2b. 退化判定（ADR-232 D3：数据源退化不误报）──
+// 退化条件（audit-degraded 模块）：日志缺失 / 窗口内零行 / reflog 无 push 条目（GC 过期或新 clone）。
+// 退化时：不报缺口（避免把正常 GC/clone 误判为 --no-verify 绕过），exit 0，打 [DEGRADED]。
+const degraded: DegradedVerdict = isReconcileDegraded({
+  pushEvents,
+  facts: { auditLogExists, windowedAuditLines },
+});
+
+// ── 3. 缺口 = 有推送事件、无审计记录（仅非退化时判定） ──
 // 四锐评 #2（SKIPPED oid 假阳性容差）：SKIPPED 行记的是钩子触发时刻的 HEAD 快照 oid，
 // SKIP 逃生后用户仍可 commit 再推——最终推送的 oid 与 SKIPPED 行不一致是**正常时序**，
 // 不应报缺口。容差：SKIPPED 行时间戳与推送事件相差 <10 分钟即视为同一次推送会话的留痕。
 const SKIP_WINDOW_MS = 10 * 60_000;
-const missing = pushEvents.filter((e) => {
-  if (audited.has(e.oid)) return false;
-  const evAt = Date.parse(e.at);
-  return !skippedAt.some((t) => Math.abs(evAt - t) < SKIP_WINDOW_MS);
-});
+const missing = degraded.degraded
+  ? [] // 退化态不报缺口
+  : pushEvents.filter((e) => {
+      if (audited.has(e.oid)) return false;
+      const evAt = Date.parse(e.at);
+      return !skippedAt.some((t) => Math.abs(evAt - t) < SKIP_WINDOW_MS);
+    });
 
 if (jsonMode) {
   console.log(
@@ -104,22 +118,32 @@ if (jsonMode) {
         days,
         pushEvents: pushEvents.length,
         auditedOids: audited.size,
+        degraded: degraded.degraded,
+        degradedReason: degraded.degraded ? degraded.reason : undefined,
         missing: missing.map((m) => ({ oid: m.oid, ref: m.ref, at: m.at })),
       },
       null,
       2,
     ),
   );
+} else if (degraded.degraded) {
+  // ADR-232 D3：退化降级——数据源不可用时不报缺口，明确标注退化原因
+  console.log(
+    `[DEGRADED] 审计数据源退化（${degraded.reason}）——窗口 ${days} 天内 reflog/审计日志不完整，` +
+      `无法可靠判定缺口，降级为无缺口（数据源随 .git 生命周期衰减属正常现象，非 --no-verify 痕迹）。` +
+      `推送事件 ${pushEvents.length} 次，审计 oid ${audited.size} 个。`,
+  );
 } else {
   console.log(
     `审计对账（窗口 ${days} 天）：推送事件 ${pushEvents.length} 次，审计 oid ${audited.size} 个`,
   );
   if (missing.length === 0) {
-    console.log("[OK] 无缺口——窗口内全部本地推送均有审计记录（PUSH 或 SKIPPED）");
+    console.log("[OK] 无缺口——窗口内全部本地推送均有审计记录（PUSH / SKIPPED / SKIPPED_PRECOMMIT）");
   } else {
     console.log(`[FAIL] ${missing.length} 次推送无审计记录（--no-verify 或审计写入失败候选）:`);
     for (const m of missing) console.log(`  ${m.at} ${m.oid} → ${m.ref}`);
     console.log("处置: 核实是否本人 --no-verify 推送；无法解释时检查 CI gate 互证记录");
   }
 }
-process.exit(missing.length > 0 ? 1 : 0);
+// 退化态 exit 0（观测工具非门禁判定，数据退化不构成阻断理由）；非退化时缺口即 FAIL exit 1
+process.exit(!degraded.degraded && missing.length > 0 ? 1 : 0);

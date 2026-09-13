@@ -41,6 +41,7 @@ auto_fields:
     - makeLocaleHost
     - modalConfirm
     - ModalConfirmOptions
+    - ModalLabels
     - modalPicker
     - ModalPickerItem
     - ModalPickerOptions

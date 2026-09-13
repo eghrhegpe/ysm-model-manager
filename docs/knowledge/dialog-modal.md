@@ -18,6 +18,7 @@ auto_fields:
     - createDialog
     - modalConfirm
     - ModalConfirmOptions
+    - ModalLabels
     - modalPicker
     - ModalPickerItem
     - ModalPickerOptions

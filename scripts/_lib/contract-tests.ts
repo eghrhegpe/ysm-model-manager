@@ -127,6 +127,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_coverage.ts": ["tests"],
   "test_gate_audit.ts": ["tests"],
+  // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
+  "test_hooks_concurrency.ts": ["tests"],
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
   "test_gate_schedule.ts": ["tests"],
@@ -273,6 +275,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],
   "test_gen_stage.ts": ["scripts/_lib/gen-stage.ts"],
+  // ADR-232 三方向可注入纯逻辑（gen-staged-pair / hook-audit / audit-degraded）
+  "test_hooks_concurrency.ts": [
+    "scripts/_lib/gen-staged-pair.ts",
+    "scripts/_lib/hook-audit.ts",
+    "scripts/_lib/audit-degraded.ts",
+    "scripts/gate-audit-reconcile.ts",
+    ".githooks/pre-commit",
+    ".githooks/post-commit",
+  ],
   "test_machine_diff.ts": ["scripts/_lib/machine-diff.ts", "scripts/_lib/gen-stage.ts"],
   "test_jscpd_pairs.ts": ["scripts/_lib/jscpd-pairs.ts"],
   "test_knowledge_common.ts": [

@@ -294,16 +294,16 @@ export function buildSharedInfra(
   });
   // 全部挂入场景
   for (const cap of caps) cap.apply();
-  // ShadowCapability 同步：光 castShadow（光已由 LightCapability 创建）
-  if (shadowCap && lightCap) syncShadowLights(scene, shadowCap, lightCap);
+  // ShadowCapability 同步：光 castShadow（light 联动走构造注入的查询器；此处收外部自定义灯兜底）
+  if (shadowCap) syncShadowLights(scene, shadowCap);
   // 后处理体积光管线（ADR-081 L2）：PostprocessingCapability（registry 驱动）
   const postProcCap = sceneCapabilityRegistry.getById("postprocessing") ?? null;
   // 兼容老接口：postProc 变量也指向同一 capability（对外 render/setSize/dispose 方法签名一致）
   const postProc = postProcCap;
-  // 按模型类别套用预设（post-apply，须在 apply/syncShadowLights 之后、setReflectorCap 之前）
+  // 按模型类别套用预设（post-apply，须在 apply/syncShadowLights 之后）
   applyPostProcDefaults(postProcCap, adapter.id);
-  // SSR↔Reflector 联动（postprocessing-capability.setReflectorCap）：SSR 开启时自动禁用单平面镜面，防 z-fighting
-  postProcCap?.setReflectorCap(reflectorCap);
+  // SSR↔Reflector 联动已前端化（postprocessing-capability 构造注入 caps 查询器，
+  // applyReflectorSync 经 getTypedCap 现场取 reflector——不再需要此处手工接线）
   // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项
   // （fps / 分辨率 / Bloom）；cap 缺席的派生路径 setStateValue 静默跳过，无副作用
   applyPerfPreset(getPerfPreset());
@@ -344,14 +344,9 @@ export function buildSharedInfra(
   };
 }
 
-/** syncShadowLights：ShadowCapability 同步光 castShadow（优先 setLightCap 精准注入 3 方向灯+聚光灯；
- *  再 scene.traverse 收集外部自定义灯走 syncLights 兜底），防误吞外部灯 */
-function syncShadowLights(
-  scene: THREE.Scene,
-  shadowCap: ShadowCapability,
-  lightCap: LightCapability,
-): void {
-  shadowCap.setLightCap(lightCap);
+/** syncShadowLights：ShadowCapability 同步光 castShadow（light 联动已走构造注入的 caps
+ *  查询器——createAll 时查询即就绪；此处仅 scene.traverse 收集外部自定义灯走 syncLights 兜底）*/
+function syncShadowLights(scene: THREE.Scene, shadowCap: ShadowCapability): void {
   const lights: Array<THREE.DirectionalLight | THREE.SpotLight> = [];
   scene.traverse((obj) => {
     if (

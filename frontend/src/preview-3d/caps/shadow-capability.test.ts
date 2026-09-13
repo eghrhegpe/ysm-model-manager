@@ -6,6 +6,7 @@ import { ShadowCapability } from "./shadow-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
+import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
 
 function makeFakeRenderer() {
   return {
@@ -33,6 +34,13 @@ function stubLightCap(dirs: THREE.DirectionalLight[], spot: THREE.SpotLight | nu
     getDirectionalLights: () => dirs,
     getSpotLight: () => spot,
   } as unknown as LightCapability;
+}
+
+/** caps 查询器 stub：只应答 light id（2026-09-14 查询器机制，替代原 setLightCap 注入器） */
+function capsWithLight(lightCap: unknown): SceneCapabilityLookup {
+  return {
+    getById: (id) => (id === "light" ? (lightCap as SceneCapability) : undefined),
+  };
 }
 
 interface Ctx {
@@ -91,8 +99,13 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const lightCap = new LightCapability({ scene, renderer });
-    const cap = new ShadowCapability({ scene, renderer, enabled: true });
-    cap.setLightCap(lightCap);
+    const cap = new ShadowCapability({
+      scene,
+      renderer,
+      enabled: true,
+      caps: capsWithLight(lightCap),
+    });
+    cap.apply();
     for (const dl of lightCap.getDirectionalLights()) {
       expect(dl.castShadow).toBe(true);
     }
@@ -305,9 +318,12 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     const renderer = makeFakeRenderer();
     const external = new THREE.DirectionalLight(0xffffff, 1);
     const spot = new THREE.SpotLight(0xffffff, 1);
-    const cap = new ShadowCapability({ scene, renderer });
-    cap.setLightCap(stubLightCap([external], spot));
-    cap.setEnabled(true);
+    const cap = new ShadowCapability({
+      scene,
+      renderer,
+      caps: capsWithLight(stubLightCap([external], spot)),
+    });
+    cap.apply();
     expect(external.castShadow).toBe(true);
     expect(spot.castShadow).toBe(true);
   });
@@ -318,8 +334,11 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     const dir = new THREE.DirectionalLight(0xffffff, 1);
     const spot = new THREE.SpotLight(0xffffff, 1);
     scene.add(dir, spot);
-    const cap = new ShadowCapability({ scene, renderer });
-    cap.setLightCap(stubLightCap([dir], spot));
+    const cap = new ShadowCapability({
+      scene,
+      renderer,
+      caps: capsWithLight(stubLightCap([dir], spot)),
+    });
     cap.syncLights([dir, spot]);
     cap.setEnabled(true);
     expect(dir.castShadow).toBe(true);
@@ -334,8 +353,11 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     const renderer = makeFakeRenderer();
     const legacySpot = new THREE.SpotLight(0xffffff, 1);
     scene.add(legacySpot);
-    const cap = new ShadowCapability({ scene, renderer });
-    cap.setLightCap(stubLightCap([], null));
+    const cap = new ShadowCapability({
+      scene,
+      renderer,
+      caps: capsWithLight(stubLightCap([], null)),
+    });
     cap.syncLights([legacySpot]);
     cap.setEnabled(true);
     expect(legacySpot.castShadow).toBe(true);
@@ -355,14 +377,13 @@ describe("ShadowCapability — collectLights 来源与去重", () => {
     cap.setEnabled(false);
   });
 
-  it("setLightCap(null) 后 enabled 走 legacy 缓存", () => {
+  it("无 lightCap（查询器缺席）时 enabled 走 legacy 缓存", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const dir = new THREE.DirectionalLight(0xffffff, 1);
     scene.add(dir);
-    const cap = new ShadowCapability({ scene, renderer });
+    const cap = new ShadowCapability({ scene, renderer }); // 不传 caps → light 查询缺席 → legacy
     cap.syncLights([dir]);
-    cap.setLightCap(null);
     cap.setEnabled(true);
     expect(dir.castShadow).toBe(true);
     cap.setEnabled(false);
@@ -402,16 +423,21 @@ describe("ShadowCapability — applyModelPreset", () => {
   });
 });
 
-describe("ShadowCapability — 跨能力注入", () => {
+describe("ShadowCapability — 跨能力注入（查询器机制）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("enabled 时 setLightCap 立即 apply", () => {
+  it("enabled 时查询器提供的 light 立即生效（构造即可查询，apply 一次到位）", () => {
     const scene = new THREE.Scene();
     const dir = new THREE.DirectionalLight(0xffffff, 1);
     scene.add(dir);
-    const cap = new ShadowCapability({ scene, renderer: makeFakeRenderer(), enabled: true });
+    const cap = new ShadowCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      enabled: true,
+      caps: capsWithLight(stubLightCap([dir], null)),
+    });
     expect(dir.castShadow).toBe(false);
-    cap.setLightCap(stubLightCap([dir], null));
+    cap.apply();
     expect(dir.castShadow).toBe(true);
   });
 

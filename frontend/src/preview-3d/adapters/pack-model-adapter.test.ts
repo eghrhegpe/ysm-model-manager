@@ -75,7 +75,8 @@ function makeCtx() {
 }
 
 function makeDeps(overrides: Partial<PackDeps> = {}): PackDeps {
-  return { readEntry: vi.fn(() => Promise.resolve(btoa("DIRT_TEX"))), ...overrides };
+  // zipPath 默认 "/packs.zip"（PackDeps 必需字段；显式 buildPackScene 调用仍以第三参为准）
+  return { readEntry: vi.fn(() => Promise.resolve(btoa("DIRT_TEX"))), zipPath: "/packs.zip", ...overrides };
 }
 
 beforeEach(() => {
@@ -231,8 +232,7 @@ describe("GPU 释放", () => {
 
 describe("makePackAdapter", () => {
   it("build 用传入的 buildPath", async () => {
-    const deps = makeDeps();
-    const adapter = makePackAdapter(deps, "/packs/dirt.zip");
+    const adapter = makePackAdapter({ ...makeDeps(), zipPath: "/packs/dirt.zip" });
     expect(adapter.id).toBe("resourcepack");
     await adapter.build(makeCtx(), "assets/minecraft/models/block/dirt.json");
     expect(hoisted.parseMock).toHaveBeenCalledWith("assets/minecraft/models/block/dirt.json", expect.any(Function));

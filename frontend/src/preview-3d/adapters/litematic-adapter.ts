@@ -260,7 +260,9 @@ function applyLayerFilter(
 /** litematic 分层切片面板 schema 键前缀（per-scene 拼接实例号——多模型并存防互相覆盖，
  *  5329a347 review P2：固定 key 会被第二场景静默覆盖、任一 dispose 误注销另一场景） */
 export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
-let SliceInstance = 0; // 模块级递增计数（per-scene 唯一 key）
+// 无 sessionId（测试/旧调用直挂 buildLitematicScene）时的退化计数；
+// 生产路径（mount3D）恒带 sessionId → per-scene 稳定 key（对齐 ysm-model-{sid} 范式）
+let SliceInstance = 0;
 
 /** 轴下标 → 轴名（下标即 voxel 数据维度）；显示顺序保持旧 UI（Y 默认在前） */
 const SLICE_AXES = ["X", "Y", "Z"];
@@ -502,7 +504,12 @@ export async function buildLitematicScene(
   ctx.loadingEl.remove();
   recordPerfTrace(path, tStart, data);
 
-  const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++SliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
+  // [Bug A 收敛] per-scene key 以 sessionLedger 的 sessionId 为准（mount 层生成，per-mount
+  // 稳定；switchTo 复用外壳不重新 mount，key 不变）——替代原模块级 SliceInstance 递增，
+  // 对齐 ysm-adapter makeYsmModelSchemaId(sc.sessionId) 范式，key 空间统一。
+  const sliceKey = ctx.sessionId
+    ? `${LITEMATIC_SLICE_SCHEMA_ID}-${ctx.sessionId}`
+    : `${LITEMATIC_SLICE_SCHEMA_ID}-${++SliceInstance}`; // 无 sessionId 退化（测试/旧调用）
   const sliceItems = [registerSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
   showTruncatedWarning(ctx, data);
 

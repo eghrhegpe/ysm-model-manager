@@ -4,6 +4,15 @@
 // 详情（路径/坐标/父/子）。纯逻辑零 DOM——UI 渲染不在本层（ADR-072 工具层纯净）。
 // YSM 侧既有 bone-list.ts / bone-raycast.ts / bone-visibility.ts 不推倒，
 // 本层是独立通用工具；是否桥接见任务 #5 检查结论。
+// 2026-09-14 架构复核（维持双轨，勿再提统一）：
+// - bone-raycast.ts 的 name 匹配（nameMap）对 YSM 成立（ysm 约定 Group.name === boneId）；
+//   对 VRM 失效的论断属实，但无触发路径——VRM 不提供 boneMaps（BaseScene.boneMaps 可选，
+//   VRM 未接入），永远不会进 getMeshBoneId/assembleBoneSelectInfo 的 name 路径。
+// - bone-visibility.ts（boneGroupMap 扁平 id→Group）与 setBoneNodeVisible（BoneNode.object）
+//   是同一 traverse 语义的两种数据形态入口，各自唯一消费方：YSM（ysm-object.ts）/ VRM
+//   （vrm-bone-ui.ts）。强行统一需 YSM 侧额外构建 BoneTree + 双份映射 glue，收益 < 风险。
+// - 触发条件（届时再统一）：某格式需同时提供 boneMaps 与 object 引用树，或「骨骼面板」
+//   要对 YSM/VRM 共用同一渲染器。当前两格式面板渲染路径独立，无此需求。
 
 import * as THREE from "three";
 import { logWarn } from "@/utils/base/primitives/log.ts";

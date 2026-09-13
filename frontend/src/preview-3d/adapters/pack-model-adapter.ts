@@ -35,9 +35,14 @@ export interface PackDeps {
   // ADR-143 P2：ReadPackEntry 失败返回 null（base64 或 null），消费点（loadTexture /
   // parseJavaModel 的 PackEntryReader）均已处理 null——接口如实声明而非收紧
   readEntry(path: string, entry: string): Promise<string | null>;
+  /** 容器路径（.zip 文件路径）——readEntry 第一参；工厂单参 deps 契约（对齐 litematic container） */
+  zipPath: string;
+  /** zip 内全部可渲染 model entry（如 assets/minecraft/models/block/xxx.json）；缺省 = 单模型无 select */
+  modelEntries?: string[];
 }
 
-/** 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入） */
+/** 工厂入参（ADR-132：多模型候选由视图层经 ListPackModels 枚举后注入）；
+ *  仅 buildPackScene 深层函数使用——工厂从 deps 解包，外部统一 makePackAdapter(deps) 单参 */
 export interface PackAdapterOpts {
   /** zip 内全部可渲染 model entry（如 assets/minecraft/models/block/xxx.json）；缺省 = 单模型无 select */
   modelEntries?: string[];
@@ -69,15 +74,17 @@ interface PackState {
   usedTextures: Set<string>;
 }
 
-/** 工厂：适配器持 zipPath（容器路径）+ 可选多模型候选（ADR-132），buildPath 即 entry path（虚拟文件夹下的文件路径） */
-export function makePackAdapter(
-  deps: PackDeps,
-  zipPath: string,
-  opts?: PackAdapterOpts,
-): PreviewAdapter {
+/** 工厂（对齐 ADR-161 §2.5 make<Format>Adapter 单参 deps 契约：mmd/vrm/ysm/fbx/litematic 均单参）。
+ *  zipPath + 多模型候选收进 deps（zip 容器语义对齐 litematic deps.container），
+ *  buildPath 即 entry path（虚拟文件夹下的文件路径）。 */
+export function makePackAdapter(deps: PackDeps): PreviewAdapter {
   return {
     id: "resourcepack",
-    build: (ctx, buildPath) => buildPackScene(ctx, buildPath, deps, zipPath, opts),
+    build: (ctx, buildPath) =>
+      buildPackScene(ctx, buildPath, deps, deps.zipPath, {
+        // 条件展开（exactOptionalPropertyTypes）：undefined 不写入 opts.modelEntries
+        ...(deps.modelEntries ? { modelEntries: deps.modelEntries } : {}),
+      }),
   };
 }
 

@@ -76,7 +76,7 @@ export async function createPack3D(
     ...mountOpts,
   });
   await mount3D(
-    makePackAdapter(makePackDeps(), path, { modelEntries: entries }),
+    makePackAdapter({ ...makePackDeps(), zipPath: path, modelEntries: entries }),
     initialEntry,
     extras,
   );

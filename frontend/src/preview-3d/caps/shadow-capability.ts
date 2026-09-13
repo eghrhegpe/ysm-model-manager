@@ -1,6 +1,8 @@
 // ===== ShadowCapability — 3D 预览阴影系统（ADR-196 迁移至 envState）=====
 // 跨能力协作：不重新创建光源，只改造 LightCapability 已挂场景的 3 盏 DirectionalLight + SpotLight。
-// 跨能力连接：preview-core 构造能力后 `shadowCap.setLightCap(lightCap)` 注入引用。
+// 跨能力连接（2026-09-14 统一为查询器机制）：组合根 createAll 注入 caps 查询器，
+// collectLights 经 getTypedCap(this.caps, "light") 现场取灯——替代原 setLightCap 注入器
+// （装配顺序敏感：须 createAll 后手工接线 + 注入后补 apply；查询器构造即就绪，apply 一次到位）。
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
@@ -9,13 +11,14 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
-import type { LightCapability } from "./light-capability.ts";
 import {
+  getTypedCap,
   oneOf,
   persistState,
   restoreFields,
   restoreState,
   type SceneCapability,
+  type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 import { buildShadowNodes } from "./shadow-menu.ts";
 
@@ -31,12 +34,11 @@ export class ShadowCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
+  /** cap 间协调查询器（组合根 createAll 注入）：collectLights 经 getTypedCap 取 LightCapability 实例 */
+  private readonly caps?: SceneCapabilityLookup;
   private enabled: boolean;
   /** loadState 是否成功载入过；applyModelPreset 有它时不覆盖用户会话（避免每次新会话回到预设） */
   private isStateLoaded = false;
-
-  /** 跨能力：外部注入 LightCapability 实例，取灯 */
-  private lightCap: LightCapability | null = null;
 
   /** 兼容 mount-preview-core 旧接口：未注入 LightCapability 时直接 syncLights() 传入原始灯对象缓存 */
   private legacyLights: Array<THREE.DirectionalLight | THREE.SpotLight> = [];
@@ -58,9 +60,13 @@ export class ShadowCapability implements SceneCapability {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
     enabled?: boolean;
+    /** cap 间协调查询器（组合根 createAll 注入）——light 联动经查询器，不手工接线 */
+    caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
+    // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
+    if (opts.caps !== undefined) this.caps = opts.caps;
     this.enabled = opts.enabled ?? true;
     this.prevShadowMapEnabled = this.renderer.shadowMap.enabled;
     this.prevShadowMapType = this.renderer.shadowMap.type;
@@ -132,10 +138,9 @@ export class ShadowCapability implements SceneCapability {
 
   /* -------- 跨能力注入 / mount-preview-core 兼容接口 -------- */
 
-  setLightCap(cap: LightCapability | null): void {
-    this.lightCap = cap;
-    if (this.enabled) this.apply();
-  }
+  /** [2026-09-14] setLightCap 注入器已退役——light 联动统一走构造注入的 caps 查询器
+   *  （getTypedCap(this.caps, "light")）；装配顺序不再敏感（原「注入后补 apply」由
+   *  createAll 时查询器即就绪替代）。兼容期测试/旧调用用 syncLights 直传灯对象兜底。 */
 
   /** mount-preview-core L386 旧接口：早期直接传入场景中遍历到的所有方向灯/聚光灯缓存（不要求 LightCapability 注入） */
   syncLights(lights: Array<THREE.DirectionalLight | THREE.SpotLight>): void {
@@ -224,9 +229,12 @@ export class ShadowCapability implements SceneCapability {
   } {
     const dirs: THREE.DirectionalLight[] = [];
     const spots: THREE.SpotLight[] = [];
-    if (this.lightCap) {
-      dirs.push(...this.lightCap.getDirectionalLights());
-      const sp = this.lightCap.getSpotLight();
+    // 查询器机制：构造注入的 caps 现场查 LightCapability（createAll 时 light 已创建，
+    // 查询即就绪——不再需要 createAll 后手工 setLightCap 接线 + 注入后补 apply）
+    const lightCap = getTypedCap(this.caps, "light");
+    if (lightCap) {
+      dirs.push(...lightCap.getDirectionalLights());
+      const sp = lightCap.getSpotLight();
       if (sp) spots.push(sp);
     }
     const seenDirs = new Set<THREE.DirectionalLight>(dirs);
@@ -309,7 +317,7 @@ export class ShadowCapability implements SceneCapability {
       return;
     }
     const sp: THREE.SpotLight | null =
-      this._spotRef ?? (this.lightCap ? this.lightCap.getSpotLight() : null);
+      this._spotRef ?? getTypedCap(this.caps, "light")?.getSpotLight() ?? null;
     if (sp && this.spotSnap) {
       sp.castShadow = this.spotSnap.castShadow;
       sp.shadow.mapSize.set(this.spotSnap.mapSize.x, this.spotSnap.mapSize.y);

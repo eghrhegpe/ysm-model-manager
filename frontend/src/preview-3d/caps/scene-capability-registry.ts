@@ -174,15 +174,7 @@ sceneCapabilityRegistry.add("environment", (ctx) => new EnvironmentCapability(ct
 sceneCapabilityRegistry.add("fog", (ctx) => new FogCapability(ctx));
 sceneCapabilityRegistry.add("shadow", (ctx) => new ShadowCapability(ctx));
 sceneCapabilityRegistry.add("reflector", (ctx) => new ReflectorCapability(ctx));
-sceneCapabilityRegistry.add(
-  "postprocessing",
-  (ctx) =>
-    new PostprocessingCapability({
-      scene: ctx.scene,
-      renderer: ctx.renderer,
-      camera: ctx.camera,
-    }),
-);
+sceneCapabilityRegistry.add("postprocessing", (ctx) => new PostprocessingCapability(ctx));
 sceneCapabilityRegistry.add("light", (ctx) => new LightCapability(ctx));
 sceneCapabilityRegistry.add("renderMode", (ctx) => new RenderModeCapability({ scene: ctx.scene }));
 

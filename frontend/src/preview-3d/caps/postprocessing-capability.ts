@@ -46,11 +46,13 @@ import {
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
+  getTypedCap,
   oneOf,
   persistState,
   restoreFields,
   restoreState,
   type SceneCapability,
+  type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 
 export type { PostprocessingParams, ReflectionMode };
@@ -96,8 +98,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private ssrPass: SSRPass | null = null;
   private outputPass: OutputPass | null = null;
 
-  // 联动 ReflectorCapability（SSR 开启时可自动禁用）
-  private reflectorCap: ReflectorCapability | null = null;
+  // 联动 ReflectorCapability（SSR 开启时可自动禁用）——2026-09-14 起经构造注入的
+  // caps 查询器现场取（getTypedCap(this.caps, "reflector")），替代原 setReflectorCap 注入器
+  private readonly caps?: SceneCapabilityLookup;
   // 记录上次 SSR on 时 Reflector 原本 enabled，SSR 关闭时精确恢复
   private reflectorPrevEnabled: boolean | undefined;
 
@@ -114,10 +117,14 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
     enabled?: boolean;
+    /** cap 间协调查询器（组合根 createAll 注入）——reflector 联动经查询器，不手工接线 */
+    caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
     this.camera = opts.camera;
+    // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
+    if (opts.caps !== undefined) this.caps = opts.caps;
     // ADR-196：enabled 默认 false（与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
     this.enabled = opts.enabled ?? false;
 
@@ -309,37 +316,32 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- Reflector 联动：SSR on 时可自动禁用 ReflectorCapability 单平面镜面 -------- */
 
+  /** 当前 reflector 能力实例（查询器现场取；createAll 时 reflector 先于本 cap 创建，查询即就绪） */
+  private reflectorCap(): ReflectorCapability | undefined {
+    return getTypedCap(this.caps, "reflector");
+  }
+
   private ssrIsActive(): boolean {
     return envState.ppReflectionMode !== "envmap-only";
   }
 
   private applyReflectorSync(): void {
-    if (!this.reflectorCap) return;
+    const reflectorCap = this.reflectorCap();
+    if (!reflectorCap) return;
     // SSR 活动 + 用户设置了 reflectorDisableWhenSSR
     const shouldDisableReflector = this.ssrIsActive() && envState.ppReflectorDisableWhenSSR;
     if (shouldDisableReflector) {
       if (this.reflectorPrevEnabled === undefined) {
-        this.reflectorPrevEnabled = this.reflectorCap.isEnabled();
+        this.reflectorPrevEnabled = reflectorCap.isEnabled();
       }
-      if (this.reflectorCap.isEnabled()) this.reflectorCap.setEnabled(false);
+      if (reflectorCap.isEnabled()) reflectorCap.setEnabled(false);
     } else {
       // 还原：当 SSR 不活动或用户取消了 reflectorDisableWhenSSR
       if (this.reflectorPrevEnabled !== undefined) {
-        this.reflectorCap.setEnabled(this.reflectorPrevEnabled);
+        reflectorCap.setEnabled(this.reflectorPrevEnabled);
         this.reflectorPrevEnabled = undefined;
       }
     }
-  }
-
-  /** 由 mount-preview-core wiring：registry createAll 之后注入 ReflectorCapability 引用 */
-  setReflectorCap(cap: ReflectorCapability | null): void {
-    // 切新引用前先还原旧引用（若之前禁用了 reflector）
-    if (this.reflectorCap && this.reflectorCap !== cap && this.reflectorPrevEnabled !== undefined) {
-      this.reflectorCap.setEnabled(this.reflectorPrevEnabled);
-      this.reflectorPrevEnabled = undefined;
-    }
-    this.reflectorCap = cap;
-    this.applyReflectorSync();
   }
 
   /* -------- 参数应用 -------- */
@@ -671,8 +673,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   dispose(): void {
     // SSR 禁用时若 reflector 被禁用，要恢复
-    if (this.reflectorCap && this.reflectorPrevEnabled !== undefined) {
-      this.reflectorCap.setEnabled(this.reflectorPrevEnabled);
+    const reflectorCap = this.reflectorCap();
+    if (reflectorCap && this.reflectorPrevEnabled !== undefined) {
+      reflectorCap.setEnabled(this.reflectorPrevEnabled);
       this.reflectorPrevEnabled = undefined;
     }
     this.unsubscribeEnv();

@@ -644,8 +644,11 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
       renderer,
       camera,
       ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
+      // 查询器注入（替代原 setReflectorCap）：?? undefined 吞掉精确 optional 的 null
+      ...(opts.reflectorCap !== undefined
+        ? { caps: { getById: (id) => (id === "reflector" ? (opts.reflectorCap ?? undefined) : undefined) } }
+        : {}),
     });
-    if (opts.reflectorCap !== undefined) cap.setReflectorCap(opts.reflectorCap);
     return { cap, scene, renderer, camera };
   }
 
@@ -865,15 +868,20 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
       ppReflectionMode: opts.mode ?? "envmap+ssr",
       ppReflectorDisableWhenSSR: opts.disableWhenSSR ?? true,
     }, { source: "manual" });
-    const cap = new PostprocessingCapability({ scene, renderer, camera });
+    // 2026-09-14 查询器机制：构造注入 caps（替代原 setReflectorCap 注入器）
+    const cap = new PostprocessingCapability({
+      scene,
+      renderer,
+      camera,
+      caps: { getById: (id) => (id === "reflector" ? reflector : undefined) },
+    });
     return { cap, reflector, renderer };
   }
 
-  it("SSR 活动 + reflectorDisableWhenSSR：注入即禁用 reflector，SSR 关闭恢复", () => {
+  it("SSR 活动 + reflectorDisableWhenSSR：enable 即同步禁用 reflector，SSR 关闭恢复", () => {
     const { cap, reflector } = makePair();
     expect(reflector.isEnabled()).toBe(true);
-    cap.setEnabled(true); // 构建 composer（applyReflectorSync 依赖 composer 存在才重建触发）
-    cap.setReflectorCap(reflector);
+    cap.setEnabled(true); // 触发 buildComposer → applyReflectorSync
     expect(reflector.isEnabled()).toBe(false); // SSR 活动自动禁用
     cap.setReflectionMode("envmap-only"); // SSR 关闭 → 重建 composer → 同步恢复
     expect(reflector.isEnabled()).toBe(true); // 恢复
@@ -881,32 +889,34 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
 
   it("reflectorDisableWhenSSR=false 时不禁用 reflector", () => {
     const { cap, reflector } = makePair({ disableWhenSSR: false });
-    cap.setReflectorCap(reflector);
+    cap.setEnabled(true);
     expect(reflector.isEnabled()).toBe(true);
   });
 
   it("setReflectorDisableWhenSSR(true) 动态禁用；切回 false 恢复", () => {
     const { cap, reflector } = makePair({ disableWhenSSR: false });
-    cap.setReflectorCap(reflector);
+    cap.setEnabled(true); // 首同步（query 就绪为 false 分支）
+    expect(reflector.isEnabled()).toBe(true);
     cap.setReflectorDisableWhenSSR(true);
     expect(reflector.isEnabled()).toBe(false);
     cap.setReflectorDisableWhenSSR(false);
     expect(reflector.isEnabled()).toBe(true);
   });
 
-  it("setReflectorCap 换引用时先还原旧引用状态", () => {
-    const { cap, reflector, renderer } = makePair();
-    const reflector2 = new ReflectorCapability({ scene: new THREE.Scene(), renderer, enabled: true });
-    cap.setReflectorCap(reflector);
-    expect(reflector.isEnabled()).toBe(false); // 被禁用
-    cap.setReflectorCap(reflector2);
-    expect(reflector.isEnabled()).toBe(true); // 旧引用还原
-    expect(reflector2.isEnabled()).toBe(false); // 新引用被禁用
+  it("查询器缺席时 applyReflectorSync no-op（旧『换引用还原』语义已随注入器退役）", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    setEnvState({ ppReflectionMode: "envmap+ssr", ppReflectorDisableWhenSSR: true }, { source: "manual" });
+    // 不传 caps → 查询缺席 → 联动 no-op，不崩
+    const cap = new PostprocessingCapability({ scene, renderer, camera });
+    cap.setEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
   });
 
   it("dispose 恢复被禁用的 reflector", () => {
     const { cap, reflector } = makePair();
-    cap.setReflectorCap(reflector);
+    cap.setEnabled(true);
     expect(reflector.isEnabled()).toBe(false);
     cap.dispose();
     expect(reflector.isEnabled()).toBe(true);
@@ -915,7 +925,6 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
   it("masterEnabled off 后 reflector 保持禁用（SSR 配置仍在），dispose 才恢复", () => {
     const { cap, reflector } = makePair();
     cap.setEnabled(true);
-    cap.setReflectorCap(reflector);
     expect(reflector.isEnabled()).toBe(false);
     // 总闸 off 只拆 composer；params.reflectionMode 仍是 SSR → applyReflectorSync 维持禁用语义
     cap.setMasterEnabled(false);

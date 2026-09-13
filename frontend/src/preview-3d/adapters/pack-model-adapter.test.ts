@@ -30,7 +30,13 @@ vi.mock("@/preview-3d/materials/mc-tints.ts", () => ({
   getTintColorSync: vi.fn(() => 0x4a9d2b),
 }));
 
-import { buildPackScene, makePackAdapter, packTextureLabel, type PackDeps } from "./pack-model-adapter.ts";
+import {
+  buildPackScene,
+  makePackAdapter,
+  packMenuItems,
+  packTextureLabel,
+  type PackDeps,
+} from "./pack-model-adapter.ts";
 
 /** 构造假 Java 模型 */
 function makeJavaModel(overrides: Partial<{
@@ -535,5 +541,68 @@ describe("pack-model 多模型 select（ADR-132）", () => {
     sel.control!.set!("assets/minecraft/models/block/stone.json");
     expect(switchTo).toHaveBeenCalledWith("assets/minecraft/models/block/stone.json");
     preview.dispose!();
+  });
+});
+
+// ===== packMenuItems 直调（2026-09-14 自 build 内联抽出：DI 面显式化，脱离 build/WebGL 直测）=====
+describe("packMenuItems 纯函数契约", () => {
+  const entryPath = "assets/minecraft/models/block/dirt.json";
+
+  it("多候选 + 有立方体 + 有纹理 → select + cubes + 纹理段齐全", () => {
+    const opts = {
+      onSelect: vi.fn(),
+      entryPath,
+      elementCount: 6,
+      texCounts: new Map([
+        ["assets/minecraft/textures/block/dirt.png", 2],
+        ["assets/minecraft/textures/block/stone.png", 1],
+      ]),
+    } as unknown as Parameters<typeof packMenuItems>[0];
+    const items = packMenuItems({
+      ...opts,
+      entries: [
+        "assets/minecraft/models/block/dirt.json",
+        "assets/minecraft/models/block/stone.json",
+      ],
+    });
+    const sel = items.find((n) => n.id === "pack-model-select");
+    expect(sel).toBeDefined();
+    expect(sel!.kind).toBe("select");
+    expect(sel!.control?.get?.(undefined)).toBe(entryPath); // activeId = entryPath
+    const cubes = items.find((n) => n.id === "pack-cubes-field");
+    expect(cubes?.value).toBe(6);
+    expect(cubes?.dockGroup).toBe("stats");
+    expect(items.filter((n) => n.id.startsWith("pack-tex-"))).toHaveLength(2);
+    // 首现序 + 引用面数文案（与 build 级断言同口径）
+    expect(items.find((n) => n.id === "pack-tex-0")?.value).toBe(
+      "2 面 · assets/minecraft/textures/block/dirt.png",
+    );
+  });
+
+  it("单候选 + 纯色模型（elementCount=0/空 texCounts）→ 仅 select 或无节点", () => {
+    const single = packMenuItems({
+      entries: [entryPath],
+      entryPath,
+      onSelect: vi.fn(),
+      elementCount: 0,
+      texCounts: new Map(),
+    });
+    expect(single.some((n) => n.id === "pack-model-select")).toBe(false); // 单候选无 select
+    expect(single.some((n) => n.id === "pack-cubes-field")).toBe(false); // elementCount=0 无 cubes
+    expect(single.some((n) => n.id.startsWith("pack-tex-"))).toBe(false); // 空纹理无纹理段
+  });
+
+  it("onSelect 回调透传：非空 id 才触发", () => {
+    const onSelect = vi.fn();
+    const items = packMenuItems({
+      entries: [entryPath, "assets/minecraft/models/block/stone.json"],
+      entryPath,
+      onSelect,
+      elementCount: 1,
+      texCounts: new Map([["assets/minecraft/textures/block/dirt.png", 1]]),
+    });
+    const sel = items.find((n) => n.id === "pack-model-select")!;
+    sel.control?.set?.("assets/minecraft/models/block/stone.json");
+    expect(onSelect).toHaveBeenCalledWith("assets/minecraft/models/block/stone.json");
   });
 });

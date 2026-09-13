@@ -14,6 +14,8 @@ auto_fields:
     - makePackAdapter
     - PackAdapterOpts
     - PackDeps
+    - packMenuItems
+    - PackMenuItemsOpts
     - packTextureLabel
   reference_files:
     - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器

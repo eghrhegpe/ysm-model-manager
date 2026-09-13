@@ -467,6 +467,8 @@ auto_fields:
     - PackAdapterOpts
     - PackDeps
     - PackEntryReader
+    - packMenuItems
+    - PackMenuItemsOpts
     - packTextureLabel
     - parseJavaModel
     - ParsePmdCtx

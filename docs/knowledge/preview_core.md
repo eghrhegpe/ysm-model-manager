@@ -148,6 +148,8 @@ auto_fields:
     - ownHandle
     - PackAdapterOpts
     - PackDeps
+    - packMenuItems
+    - PackMenuItemsOpts
     - packTextureLabel
     - ParsePmdCtx
     - parsePmdStage

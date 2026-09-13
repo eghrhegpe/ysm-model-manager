@@ -45,6 +45,8 @@ auto_fields:
     - OpenGzRootFromBytes
     - PackAdapterOpts
     - PackDeps
+    - packMenuItems
+    - PackMenuItemsOpts
     - packTextureLabel
     - playNodes
   tests:

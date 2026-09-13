@@ -329,67 +329,25 @@ async function buildPackScene(
   frameCamera(ctx, group);
   ctx.loadingEl.remove();
 
-  // [doc:adr-132] 多模型选择菜单项（zip 内全部 model entry；切 entry 走 core switchTo 重建）
-  const menuItems: PreviewMenuNode[] = [];
-  const select = multiModelSelectNode({
-    entries: (opts?.modelEntries ?? []).map((e) => ({
-      id: e,
-      label: e.split(/[/\\]/).pop() || e,
-    })),
-    nodeId: "pack-model-select",
-    activeId: (): string => entryPath,
-    onSelect: (id: string): void => {
-      if (ctx.switchTo && id) void ctx.switchTo(id);
-    },
-  });
-  if (select) menuItems.push(select);
-
-  // [ADR-159] 统计附加行：立方体（Cubes）数——vanilla 资源包无「声明/加载纹理尺寸」概念，
-  // 组件详情以 elementCount + 渲染实测统计为准。dockGroup:"stats" 由 mergeStatsMenuItems
-  // 并入统一统计面板 children（所有格式共享面板，附加行通道通用）。
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  if (model!.elementCount > 0) {
-    menuItems.push({
-      id: "pack-cubes-field",
-      kind: "field",
-      labelKey: "preview.stats.cubes",
-      fallback: "立方体(Cubes)",
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      value: model!.elementCount,
-      dockGroup: "stats",
-    });
-  }
-
-  // [ADR-159 续] 专属纹理段：faces 实际引用的纹理条目（去重、保首现序、带引用面数）。
-  // 统一面板「纹理 N」是渲染实测口径（材质贴图对象数）；此处回答「这个模型实际贴哪些图」——
-  // 每行 = 展示短名（<ns>:<path>）+ 小字（引用面数 · zip 内完整 png 路径），镜像 YSM 纹理行范式。
-  // 纯色模型（faces 全 texColor/无 texEntry）无纹理可示 → 整段不渲染（有 Cubes 已足够）。
+  // [doc:adr-132] 多模型选择 + [ADR-159] 统计附加行/专属纹理段——已抽 packMenuItems()
+  // （独立导出函数范式，对齐 ysm/vrm）；此处折好快照参数（texture 统计是 faces 去重快照，
+  // 供纯数据菜单函数消费，不依赖 JavaModelResult 子结构）
   const texCounts = new Map<string, number>();
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   for (const f of model!.faces) {
     if (f.texEntry) texCounts.set(f.texEntry, (texCounts.get(f.texEntry) ?? 0) + 1);
   }
-  if (texCounts.size > 0) {
-    menuItems.push({
-      id: "pack-textures-title",
-      kind: "sectionTitle",
-      labelKey: "preview.pack.textures",
-      fallback: "专属纹理",
-      dockGroup: "stats",
-    });
-    let texIdx = 0;
-    for (const [entry, faceCount] of texCounts) {
-      const label = packTextureLabel(entry);
-      menuItems.push({
-        id: `pack-tex-${texIdx++}`,
-        kind: "row",
-        labelKey: label,
-        fallback: label,
-        value: t("preview.pack.textureFaces", { count: faceCount, entry }),
-        dockGroup: "stats",
-      });
-    }
-  }
+  const menuItems = packMenuItems({
+    // 条件展开（exactOptionalPropertyTypes）：undefined 不写入 entries
+    ...(opts?.modelEntries ? { entries: opts.modelEntries } : {}),
+    entryPath,
+    onSelect: (id: string): void => {
+      if (ctx.switchTo && id) void ctx.switchTo(id);
+    },
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    elementCount: model!.elementCount,
+    texCounts,
+  });
 
   return {
     menuItems,
@@ -407,3 +365,81 @@ async function buildPackScene(
 }
 
 export { buildPackScene };
+
+/** packMenuItems 构造参数（2026-09-14 自 build 内联抽出：DI 面显式化，可脱离 build 直调单测——
+ *  对齐 ysmMenuItems/VrmMenuItems 的 xxxMenuItems(opts) 范式；收「统计快照」而非裸
+ *  JavaModelResult，规避暴露解析产物子结构） */
+export interface PackMenuItemsOpts {
+  /** zip 内全部可渲染 model entry（缺省 = 单模型无 select） */
+  entries?: string[];
+  /** 当前展示 entry 路径（select activeId） */
+  entryPath: string;
+  /** 切换 entry（core switchTo 透传） */
+  onSelect: (id: string) => void;
+  /** 模型立方体数（elementCount；>0 时渲染 stats 附加行） */
+  elementCount: number;
+  /** 纹理条目 → 引用面数（faces 去重统计快照；空 Map 不渲染专属纹理段） */
+  texCounts: Map<string, number>;
+}
+
+/**
+ * 构造资源包菜单项（ADR-132 多模型 select + ADR-159 stats 附加行/专属纹理段）。
+ * 纯数据产出（零 build 闭包自由变量）：调用方把闭包依赖折成快照/回调传入。
+ */
+export function packMenuItems(o: PackMenuItemsOpts): PreviewMenuNode[] {
+  // [doc:adr-132] 多模型选择菜单项（zip 内全部 model entry；切 entry 走 core switchTo 重建）
+  const menuItems: PreviewMenuNode[] = [];
+  const select = multiModelSelectNode({
+    entries: (o.entries ?? []).map((e) => ({
+      id: e,
+      label: e.split(/[/\\]/).pop() || e,
+    })),
+    nodeId: "pack-model-select",
+    activeId: (): string => o.entryPath,
+    onSelect: (id: string): void => {
+      if (id) o.onSelect(id);
+    },
+  });
+  if (select) menuItems.push(select);
+
+  // [ADR-159] 统计附加行：立方体（Cubes）数——vanilla 资源包无「声明/加载纹理尺寸」概念，
+  // 组件详情以 elementCount + 渲染实测统计为准。dockGroup:"stats" 由 mergeStatsMenuItems
+  // 并入统一统计面板 children（所有格式共享面板，附加行通道通用）。
+  if (o.elementCount > 0) {
+    menuItems.push({
+      id: "pack-cubes-field",
+      kind: "field",
+      labelKey: "preview.stats.cubes",
+      fallback: "立方体(Cubes)",
+      value: o.elementCount,
+      dockGroup: "stats",
+    });
+  }
+
+  // [ADR-159 续] 专属纹理段：faces 实际引用的纹理条目（去重、保首现序、带引用面数）。
+  // 统一面板「纹理 N」是渲染实测口径（材质贴图对象数）；此处回答「这个模型实际贴哪些图」——
+  // 每行 = 展示短名（<ns>:<path>）+ 小字（引用面数 · zip 内完整 png 路径），镜像 YSM 纹理行范式。
+  // 纯色模型（faces 全 texColor/无 texEntry）无纹理可示 → 整段不渲染（有 Cubes 已足够）。
+  if (o.texCounts.size > 0) {
+    menuItems.push({
+      id: "pack-textures-title",
+      kind: "sectionTitle",
+      labelKey: "preview.pack.textures",
+      fallback: "专属纹理",
+      dockGroup: "stats",
+    });
+    let texIdx = 0;
+    for (const [entry, faceCount] of o.texCounts) {
+      const label = packTextureLabel(entry);
+      menuItems.push({
+        id: `pack-tex-${texIdx++}`,
+        kind: "row",
+        labelKey: label,
+        fallback: label,
+        value: t("preview.pack.textureFaces", { count: faceCount, entry }),
+        dockGroup: "stats",
+      });
+    }
+  }
+  return menuItems;
+}

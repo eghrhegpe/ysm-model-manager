@@ -3,8 +3,8 @@
 // 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
 // 泛型保留字面量类型（"deep_hash"）导致 select.value(string) 赋值失败。
 
-import type { Group as DedupGroup } from "@/bindings/ysm-model-manager/go/dedup/models.ts";
 import type { loadResourceRegistry } from "@/services/resource-registry.ts";
+import type { DedupGroup } from "@/utils/types-re-export.ts";
 
 export interface DedupConfigShape {
   strategy: string;

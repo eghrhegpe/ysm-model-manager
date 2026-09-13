@@ -5,7 +5,7 @@
 // 类型源：binding 生成（frontend/bindings/ysm-model-manager/go/repoaudit/models.ts），
 // 此处仅保留运行时结构校验，不再重复定义 interface（消灭手写镜像与绑定双源）。
 
-import type { HealthReport } from "@/bindings/ysm-model-manager/go/repoaudit/models.ts";
+import type { HealthReport } from "./types-re-export.ts";
 
 export type { HealthReport };
 

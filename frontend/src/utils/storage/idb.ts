@@ -9,6 +9,12 @@
 // 会令 dbPromise 持有 rejected promise 而令所有后续 await 永久失败——此处捕获后置
 // forcedMemory，后续调用改走内存分支，避免「一次失败永久毒化」。
 // 零依赖：不使用 fake-indexeddb，测试经 vi.mock 注入内存实现。
+//
+// ⚠️ 测试锚点（2026-09 锐评 P1）：本文件无就近测试文件，测试实体位于
+// `frontend/src/backend/idb.test.ts` —— 经 `backend/idb.ts` 的 `export *` 转发后被测
+// （`openDB/idbGet/idbSet/__resetDBForTest` 等全量覆盖，含 onblocked/versionchange 降级分支），
+// 另有 `workers/stats.worker.test.ts` 兜底。重构 backend/idb.ts 时若改动转发方式，
+// 须确认本文件仍被覆盖；新增 utils/storage 原语请就近建 `*.test.ts`，勿沿用跨层转发。
 
 import { swallowError } from "@/utils/base/primitives/async.ts";
 

@@ -1,8 +1,8 @@
 // ===== 创意工坊站点视图（initWorkshopPage 的下游渲染层） =====
 
 import { isViewerMode } from "@/backend/platform.ts";
-import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
+import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import { bindDragEvents } from "./drag.ts";
 import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";

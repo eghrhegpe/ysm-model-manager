@@ -16,6 +16,20 @@ import type { AppContentHost } from "./host.ts";
 import type { RepoCacheEntry } from "./state.ts";
 
 /**
+ * GitHub 页占位消息（加载/空/错误）统一构造器。
+ * 2026-09 锐评 P0-2：原 7 处内联 `style="padding:24px;text-align:center;color:var(--muted);font-size:11px"`
+ * 与 content-diag.ts 已定义的 `.gh-loading-placeholder` 类逐值相同——CSS 类与内联并存，
+ * 统一收编到类；非 11px 变体（10px）保留字号覆盖。
+ */
+function ghPlaceholder(msg: string, fontSize?: string): string {
+  return (
+    `<div class="gh-loading-placeholder"${fontSize ? ` style="font-size:${fontSize}"` : ""}>` +
+    msg +
+    "</div>"
+  );
+}
+
+/**
  * GitHub 社群页编排上下文——把 initGithubPage 各闭包捕获的共享状态显式注入，
  * 供 githubLoadRepos / githubShowRepo / githubRenderModels 三个包级函数复用。
  * 交叉引用字段（showRepo/loadRepos/renderModels）在创建后接线，保证同一代际。
@@ -49,10 +63,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
   const grid = ctx.grid;
   const sourceInfo = ctx.sourceInfo;
   if (grid) {
-    grid.innerHTML =
-      '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
-      t("downloads.loading") +
-      "</div>";
+    grid.innerHTML = ghPlaceholder(t("downloads.loading"));
   }
   try {
     const App = await backendGetApp();
@@ -61,10 +72,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
     if (sourceInfo) sourceInfo.textContent = t("downloads.repoCountDesc", { n: ghCreators.length });
     if (!ghCreators.length) {
       if (grid) {
-        grid.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">' +
-          t("downloads.noRepos") +
-          "</div>";
+        grid.innerHTML = ghPlaceholder(t("downloads.noRepos"), "10px");
       }
       return;
     }
@@ -100,10 +108,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
     }
   } catch {
     if (grid) {
-      grid.innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">' +
-        t("common.loadFailed") +
-        "</div>";
+      grid.innerHTML = ghPlaceholder(t("common.loadFailed"), "10px");
     }
   }
 }
@@ -118,10 +123,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const repoModelCache = ctx._githubCache()!;
   if (resultsBody) {
-    resultsBody.innerHTML =
-      '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
-      t("downloads.loadingModels") +
-      "</div>";
+    resultsBody.innerHTML = ghPlaceholder(t("downloads.loadingModels"));
   }
   // 使用缓存
   if (repoModelCache.has(repo)) {
@@ -156,10 +158,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       (_pct, label) => {
         if (fetchDone || ctx.getCurrentRepo() !== repo) return;
         if (resultsBody) {
-          resultsBody.innerHTML =
-            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
-            (label || t("common.loading")) +
-            "</div>";
+          resultsBody.innerHTML = ghPlaceholder(label || t("common.loading"));
         }
       },
     );
@@ -176,9 +175,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       if (ctx.getCurrentRepo() !== repo) return;
       if (resultsBody) {
         resultsBody.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
-          t("downloads.noModelList") +
-          "</div>" +
+          ghPlaceholder("❌ " + t("downloads.noModelList")) +
           '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">↗ ' +
           t("downloads.openInGithub") +
           "</button></div>";
@@ -197,9 +194,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
             : t("workshop.githubLoadFailed");
     if (resultsBody) {
       resultsBody.innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
-        escUtil(msg) +
-        "</div>" +
+        ghPlaceholder("❌ " + escUtil(msg)) +
         '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ ' +
         t("downloads.openInGithub") +
         "</button></div>";

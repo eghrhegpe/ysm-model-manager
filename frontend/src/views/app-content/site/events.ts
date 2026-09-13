@@ -3,6 +3,7 @@
 import type { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { type CrCardCtx, createCrCard } from "./render.ts";
@@ -142,7 +143,7 @@ function cmCrBindOverlayEvents(
     if (cardStar) cardStar.textContent = now ? "⭐" : "☆";
     busRef.emit("toast:show", {
       msg: now ? t("content.favAdded") : t("content.favRemoved"),
-      duration: 1500,
+      duration: TOAST_MS.quick,
       type: "success",
     });
   });
@@ -276,7 +277,7 @@ function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void 
       }
       busRef.emit("toast:show", {
         msg: now ? t("content.favAddedName", { name }) : t("content.favRemovedName", { name }),
-        duration: 1500,
+        duration: TOAST_MS.quick,
         type: "success",
       });
     });

@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
@@ -57,7 +58,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
       if (!file?.name.endsWith(".json")) {
         busRef.emit("toast:show", {
           msg: t("content.dragJsonOnly"),
-          duration: 3000,
+          duration: TOAST_MS.normal,
           type: "error",
         });
         return;
@@ -91,7 +92,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           allCreators.push(...(fresh as LocalCreatorLike[]));
           busRef.emit("toast:show", {
             msg: t("content.creatorMergeResult", { added, updated }),
-            duration: 3000,
+            duration: TOAST_MS.normal,
             type: "success",
           });
         } else if (first && typeof first.id === "string" && typeof first.label === "string") {
@@ -113,7 +114,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
           allSites.push(...(fresh as WorkshopSite[]));
           busRef.emit("toast:show", {
             msg: t("content.siteMergeResult", { added, updated }),
-            duration: 3000,
+            duration: TOAST_MS.normal,
             type: "success",
           });
         } else {
@@ -122,7 +123,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
       } catch (e) {
         busRef.emit("toast:show", {
           msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
-          duration: 4000,
+          duration: TOAST_MS.verbose,
           type: "error",
         });
       } finally {

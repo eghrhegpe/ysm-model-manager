@@ -3,6 +3,11 @@
 // 以 mode="generic" 跳过 YSM 专属特性（动画扫描/语义骨骼/呼吸控制）。
 // 女仆模型本质是标准 Bedrock Edition geometry，Go AnalyzeBedrockModel
 // 已天然支持 .zip 解析（parseModelFromEntries 通用路径）。
+// 【2026-09 锐评 P1 裁决·保留不拆】本文件除 3D 包装外还含详情面板辅助
+// （dpRenderDetail/dpRenderPanel/toStatsCardModel）——它们是 showMaidPreview
+// 预览流（注册于 preview-registry）的**私有**渲染步骤，唯一消费者是本文件；
+// 迁出到 maid-detail.ts 只会把私有耦合升级为跨文件，零解耦收益，故保留。
+// 名字里的 "-3d" 应读作「女仆预览入口」而非「纯 3D 薄包装」（后者是 ysm-3d.ts 的形态）。
 
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";

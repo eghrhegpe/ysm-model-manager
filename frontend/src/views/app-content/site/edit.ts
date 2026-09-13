@@ -6,6 +6,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
@@ -97,7 +98,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         if (!site?.id) {
           busRef.emit("toast:show", {
             msg: t("workshop.siteInfoLost"),
-            duration: 3000,
+            duration: TOAST_MS.normal,
             type: "error",
           });
           return;
@@ -121,14 +122,14 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         wsEditModeRef.v = false;
         busRef.emit("toast:show", {
           msg: t("workshop.action.saved"),
-          duration: 2000,
+          duration: TOAST_MS.success,
           type: "success",
         });
         refreshView();
       } catch (e) {
         busRef.emit("toast:show", {
           msg: `❌ ${friendlyError(e, t("workshop.saveFailed"))}`,
-          duration: 4000,
+          duration: TOAST_MS.verbose,
           type: "error",
         });
       }
@@ -214,14 +215,14 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
         if (changed) {
           busRef.emit("toast:show", {
             msg: `🌐 ${logs.join(" · ")}`,
-            duration: 4000,
+            duration: TOAST_MS.verbose,
             type: "success",
           });
           refreshView();
         } else {
           busRef.emit("toast:show", {
             msg: t("workshop.upToDate"),
-            duration: 3000,
+            duration: TOAST_MS.normal,
             type: "success",
           });
         }
@@ -237,7 +238,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
                 : `🌐 ${friendlyError(e, t("workshop.fetchFailed"))}`;
         busRef.emit("toast:show", {
           msg: errMsg,
-          duration: 5000,
+          duration: TOAST_MS.long,
           type: "error",
         });
       } finally {

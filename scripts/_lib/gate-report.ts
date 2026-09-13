@@ -25,6 +25,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import type { GateResult } from "./gate-ctx.ts";
 import { ROOT } from "./scan-files.ts";
 
 /**
@@ -81,16 +82,14 @@ export function firstErrors(out: string, n: number): string[] {
   return out.trim().split("\n").filter(Boolean).slice(-n);
 }
 
-export interface GateResultItem {
-  label: string;
-  ok: boolean;
-  time: number;
-  note: string;
-  tail: string;
-  /** 工具原始输出（record 时保留，cap 64KB 尾部）——首错提取的事实源。 */
-  raw?: string;
-  blockPolicy?: "hard" | "debt" | "failClosed";
-}
+/**
+ * 单条检查结果。**形状单一事实源 = gate-ctx.ts 的 `GateResult`**（record() 推入 results 的形状）。
+ * 2026-09-13 收敛：此前本模块复制了一份同形接口 `GateResultItem`，与 gate-ctx.GateResult
+ * 各自演进（exactOptionalPropertyTypes 下一次 `| undefined` 的放宽就导致两侧不兼容，
+ * writeGateReport(ctx.results) 直接 TS2345）。报告层是消费方，不应持有第二份形状定义。
+ * type-only import 不影响本模块「零运行时依赖」纪律（编译期擦除）。
+ */
+export type GateResultItem = GateResult;
 
 /**
  * 归属标签（内部）。blockPolicy 只反映「是否阻断」，不反映「归属」：
@@ -168,7 +167,9 @@ export function formatFailSummary(
   const d = errorDetailLines(item, 4);
   const body = d.lines.map((l) => `\n      → ${truncate(l)}`).join("");
   const more =
-    d.total > d.lines.length ? `\n      … 还有 ${d.total - d.lines.length} 条（完整报告见本区头部路径）` : "";
+    d.total > d.lines.length
+      ? `\n      … 还有 ${d.total - d.lines.length} 条（完整报告见本区头部路径）`
+      : "";
   const tail = `\n      复现: ${item.label}`;
   return `${head}${body}${more}${tail}`;
 }

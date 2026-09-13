@@ -118,6 +118,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gen_stage.ts": ["tests"],
   "test_machine_diff.ts": ["tests"],
   "test_gate_config.ts": ["tests"],
+  "test_gate_ctx.ts": ["tests"],
   "test_gate_iife_correctness.ts": ["tests"],
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_policy_baseline.ts": ["tests"],
@@ -288,12 +289,24 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   "test_gate_iife_correctness.ts": ["scripts/pre-push-gate.ts"],
   "test_gate_config.ts": ["scripts/_lib/gate-config.ts"],
+  // gate-ctx 是 record()/blocked/exec 助手的唯一实现；其归属标签断言同时消费
+  // gate-report.formatFailSummary（record → results → 标签的端到端链路），故两者都列。
+  "test_gate_ctx.ts": [
+    "scripts/_lib/gate-ctx.ts",
+    "scripts/_lib/gate-report.ts",
+    "scripts/pre-push-gate.ts",
+  ],
   "test_gate_parse_output.ts": ["scripts/_lib/gate-parse.ts", "scripts/pre-push-gate.ts"],
   "test_gate_report.ts": ["scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],
-  "test_gate_policy_baseline.ts": ["scripts/_lib/gate-config.ts", "scripts/pre-push-gate.ts"],
+  // §6 断言锚点已随 ADR-206 阶段 1 迁到 gate-ctx.ts（record 真身），故列入目标。
+  "test_gate_policy_baseline.ts": [
+    "scripts/_lib/gate-config.ts",
+    "scripts/_lib/gate-ctx.ts",
+    "scripts/pre-push-gate.ts",
+  ],
   "test_jscpd_go_smart.ts": ["scripts/_lib/jscpd-pairs.ts", "scripts/jscpd-go.ts"],
   "test_orphan_exports_smart.ts": ["scripts/check-orphan-exports.ts"],
   "test_scan_files_shared.ts": ["scripts/_lib/scan-files.ts"],

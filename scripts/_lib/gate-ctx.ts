@@ -23,6 +23,12 @@ const TIMEOUT = 300_000;
 export interface ExecResult {
   rc: number;
   out: string;
+  /**
+   * 是否因超时被终止（2026-09-13）。spawn 的 timeout 触发后进程被 SIGTERM 杀死，
+   * close 事件的 code 为 null——与「命令真跑了但返回非零」不可区分，调用方会把它
+   * 误报成编译/测试失败。置 true 时 out 已追加超时原因（tail 可见）。
+   */
+  timedOut?: boolean;
 }
 
 /** record() 推入 results 的单条结果（与 writeGateReport 消费形状对齐）。 */
@@ -35,6 +41,16 @@ export interface GateResult {
   // 显式 | undefined：exactOptionalPropertyTypes 下 record() 的 rawCapped（string|undefined）
   // 直接赋给 raw? 会报 TS2379
   raw?: string | undefined;
+  /**
+   * 阻断策略，**必须落库**——gate-report.policyTag() 靠它区分 FAIL 明细的归属标签
+   * （debt→存量债 / failClosed→失守 / hard→本次引入｜待归因）。2026-09-13 修复：
+   * 此前只用于判定 blocked 而不存入 results，导致 policyTag 读到 undefined，
+   * 所有 FAIL（含 debt 存量债）在明细里一律显示「本次引入」，误导 AI 归因。
+   *
+   * 显式 `| undefined`：record() 的 opts.blockPolicy 本身就可能是 undefined
+   * （调用方未声明策略），exactOptionalPropertyTypes 下不能赋给裸 `?` 字段。
+   */
+  blockPolicy?: "hard" | "debt" | "failClosed" | undefined;
 }
 
 /** record() 的可选参数。 */
@@ -90,7 +106,8 @@ export function createGateCtx(init: {
       const child = spawn(cmd, [], {
         cwd,
         shell: true,
-        timeout,
+        // 不用 spawn 自带的 timeout 选项：它是否 emit 'timeout' 事件跨 Node 版本不一致，
+        // 而超时标记是本函数的契约（见 ExecResult.timedOut）。自管计时器行为完全确定。
         stdio: ["ignore", "pipe", "pipe"],
       });
       // 输出上限：超限停止追加（尾部保留），与 record() 的 64KB raw cap 同纪律，
@@ -98,18 +115,36 @@ export function createGateCtx(init: {
       const OUT_CAP = 1 << 20; // 1MB
       let buf = "";
       let capped = false;
-      child.stdout.on("data", (d) => {
+      // 超时态（2026-09-13）：超时被杀的子进程 close code 为 null——与「命令跑了但 FAIL」
+      // 退化为同一形状（rc=-1/非零）。记 timedOut 并把原因追加进 out，使 FAIL 明细的
+      // tail 能明示「超时」而非冒充编译错误。
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        child.kill();
+      }, timeout);
+      const append = (d: Buffer) => {
         if (buf.length < OUT_CAP) buf += d.toString();
         else capped = true;
+      };
+      child.stdout.on("data", append);
+      child.stderr.on("data", append);
+      child.on("close", (code) => {
+        clearTimeout(timer);
+        const tailNote = capped ? "\n…(输出超 1MB 截断)" : "";
+        const toNote = timedOut ? `\n[gate] 命令超时被终止（timeout=${timeout}ms）` : "";
+        resolve({ rc: code ?? -1, out: buf + tailNote + toNote, timedOut });
       });
-      child.stderr.on("data", (d) => {
-        if (buf.length < OUT_CAP) buf += d.toString();
-        else capped = true;
+      child.on("error", (err) => {
+        clearTimeout(timer);
+        resolve({
+          rc: -1,
+          out: err.message,
+          // spawn 本身失败（ENOENT 等）不算超时，但同样是「命令没跑成」——
+          // 保留 timedOut=false，由调用方从 rc/out 诊断。
+          timedOut: false,
+        });
       });
-      child.on("close", (code) =>
-        resolve({ rc: code ?? -1, out: capped ? `${buf}\n…(输出超 1MB 截断)` : buf }),
-      );
-      child.on("error", (err) => resolve({ rc: -1, out: err.message }));
     });
 
   const git = (args: string[], { cwd = ROOT } = {}) => {
@@ -125,7 +160,10 @@ export function createGateCtx(init: {
     // raw cap 64KB 尾部：防超大输出（go test/vite）撑爆报告；JSON 检查输出远小于此不 overwrite。
     const rawCapped =
       raw === undefined ? undefined : raw.length > 65536 ? `\u2026${raw.slice(-65536)}` : raw;
-    results.push({ label, ok, time, note, tail, raw: rawCapped });
+    // blockPolicy 必须一并落库（2026-09-13 修复）：它不只是「是否阻断」的输入，
+    // 更是 FAIL 明细归属标签的事实源（gate-report.policyTag 读 item.blockPolicy）。
+    // 漏存 → debt 存量债在明细里被标成「本次引入」，误导 AI 把存量债当自己引入的回归。
+    results.push({ label, ok, time, note, tail, raw: rawCapped, blockPolicy });
     if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true;
   };
 

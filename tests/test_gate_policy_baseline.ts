@@ -184,30 +184,43 @@ console.log("");
 console.log("  第二步（完整分层）：声明全部 23 项有明确期望的 blockPolicy");
 console.log(`    hard=${expectedHard}, debt=${expectedDebt}, failClosed=${expectedFc}`);
 
-// ── 6. pre-push-gate.ts 的 record() 会自动尊重 blockPolicy ──
+// ── 6. record() 会自动尊重 blockPolicy（实现已迁 _lib/gate-ctx.ts） ──
 
-// 从 pre-push-gate.ts 读到的关键逻辑：
-//   const record = (ok, { blockPolicy }) => {
-//     results.push({ label, ok, time, note, tail });
+// ADR-206 阶段 1（2026-09-13）：record() 从 pre-push-gate.ts 内联迁入 _lib/gate-ctx.ts，
+// 本节断言随之换锚点。关键逻辑（与迁移前一致）：
+//   const record = (label, ok, { blockPolicy }) => {
+//     results.push({ label, ok, time, note, tail, raw, blockPolicy });  // ← blockPolicy 须落库
 //     if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true;
 //   };
-// 所以只要 gate-config 里显式声明了 blockPolicy: 'debt'，FAIL 就不会置 blocked=true
-
-// code_review cbd138f38 #4/#9（P2）：恒真常量 assert.ok(true) 对 gate 核心逻辑
-// 零验证（record() 退化也不会红）——改为对 pre-push-gate.ts 源码的 grep 式断言，
-// 锁定 blockPolicy 判定真实存在于 record() 实现
+// 所以只要 gate-config 里显式声明了 blockPolicy: 'debt'，FAIL 就不会置 blocked=true。
+//
+// 分工：本节的 grep 断言是**弱保险**（证明判定字符串在实现里）；
+// record 的完整行为（阻断矩阵 / blocked 活值 / blockPolicy 落库 / raw cap）由
+// tests/test_gate_ctx.ts 做行为级断言——源码 grep 只能证明「字符串存在」，不能证明「行为对」。
 const gateSrc = fs.readFileSync(
-  path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "scripts", "pre-push-gate.ts"),
+  path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "scripts",
+    "_lib",
+    "gate-ctx.ts",
+  ),
   "utf8",
 );
 assert.ok(
   /blockPolicy\s*!==\s*["']debt["']\s*&&\s*.*blockPolicy\s*!==\s*["']failClosed["']/s.test(
     gateSrc,
   ) || /blockPolicy[^;\n]*!==\s*["']debt["']/.test(gateSrc),
-  'pre-push-gate.ts record() 应含 blockPolicy !== "debt"/"failClosed" 判定（否则 debt 降级失效，FAIL 恒阻断）',
+  'gate-ctx.ts record() 应含 blockPolicy !== "debt"/"failClosed" 判定（否则 debt 降级失效，FAIL 恒阻断）',
+);
+// 归属落库（2026-09-13 修复）：blockPolicy 不落进 results 条目，gate-report.policyTag
+// 读到 undefined → 所有 FAIL（含 debt 存量债）被标「本次引入」，误导归因。
+assert.ok(
+  /results\.push\(\{[^}]*blockPolicy[^}]*\}\)/s.test(gateSrc),
+  "gate-ctx.ts record() 必须把 blockPolicy 一并 push 进 results（FAIL 明细归属标签的事实源）",
 );
 
-console.log("\n  ✓ pre-push-gate.ts record() 已正确实现 blockPolicy 判定——");
+console.log("\n  ✓ gate-ctx.ts record() 已正确实现 blockPolicy 判定 + 归属落库——");
 console.log("     只需要 gate-config 里声明就能生效，无需改 gate 核心逻辑");
 console.log("");
 console.log("🟢 改造成本极低：gate-config.ts 加 blockPolicy 字段即可");

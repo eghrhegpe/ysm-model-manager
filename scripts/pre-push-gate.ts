@@ -51,12 +51,13 @@ import {
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
 } from "./_lib/gate-config.ts";
+import { createGateCtx } from "./_lib/gate-ctx.ts";
 import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveBaseRev, resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
-import { run as procRun, shq } from "./_lib/proc.ts";
+import { run as procRun } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 const B = { OK: "[OK]", FAIL: "[FAIL]", FIX: "[FIX]", SKIP: "[SKIP]" };
@@ -65,42 +66,13 @@ const TIMEOUT = 300_000;
 const PULL_HINT = "提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。";
 
 /* ---------------- 工具 ---------------- */
-
-function sh(cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}) {
-  /** shell 执行命令（win32 兼容 .cmd），返回 { rc, out }。
-   * 统一委托 _lib/proc.ts（超时/错误分类契约；shell:true 时 win32 走 cmd.exe、
-   * POSIX 走 /bin/sh，承载管道/重定向命令）。
-   * out 回退 err：ENOENT/超时诊断在 r.err，空 out 时保留原因（P3 复核）。 */
-  const r = procRun(cmd, [], { cwd, timeout, shell: true });
-  return { rc: r.rc, out: r.out || r.err || "" };
-}
-
-/**
- * 异步版 sh——用 spawn 包装 Promise，供 Promise.all 并行执行。
- * 仅用于 npm 三件套并行（vite build / tsc --noEmit），不替代同步 sh。
- */
-function shAsync(cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}) {
-  return new Promise<{ rc: number | null; out: string }>((resolve) => {
-    const child = spawn(cmd, [], { cwd, shell: true, timeout, stdio: ["ignore", "pipe", "pipe"] });
-    let buf = "";
-    child.stdout.on("data", (d) => {
-      buf += d.toString();
-    });
-    child.stderr.on("data", (d) => {
-      buf += d.toString();
-    });
-    child.on("close", (code) => resolve({ rc: code, out: buf }));
-    child.on("error", (err) => resolve({ rc: -1, out: err.message }));
-  });
-}
-
-function git(args: string[], { cwd = ROOT } = {}) {
-  // core.quotepath=false：非 ASCII 文件名输出原始 UTF-8，避免引号/八进制转义破坏域匹配。
-  // 数组参数直走 procRun（无 shell 拼接）：git ref 允许 $/`/;/| 等元字符，
-  // 拼字符串后交给 sh() 经 shell 执行会构成命令注入（pre-push stdin 的 localRef 可被攻击者控制）。
-  const r = procRun("git", ["-c", "core.quotepath=false", ...args], { cwd });
-  return { rc: r.ok ? 0 : r.rc, out: r.out || "" };
-}
+// sh / shAsync / git / gofmtCheck 已收敛至 _lib/gate-ctx.ts 的 createGateCtx()
+// （ADR-206 阶段 1 接线，2026-09-13）：终结「main 内联一份、_lib 里再一份」的双副本。
+// 迁移收益（_lib 版修掉了内联版的三个缺陷，接线即生效）：
+//   1. gofmtCheck 空列表早退——裸 `gofmt -l` 无参读 stdin 会把门禁挂到超时；
+//   2. shAsync 输出 cap 1MB——go test/vite 级刷屏输出在 gate 进程内无界膨胀；
+//   3. shAsync 标记 timedOut——超时被杀进程的 code 为 null，与「编译 FAIL」同形，
+//      旧版会把它误报成编译错误（现 out 追加超时原因，tail 可见）。
 
 /* ---------------- 变更域分析 ---------------- */
 // resolveChanges 已收敛至 _lib/gate-resolve.ts（ADR-206 阶段 1 迁址，2026-09-08）：
@@ -115,17 +87,7 @@ function git(args: string[], { cwd = ROOT } = {}) {
  */
 
 /* ---------------- 检查执行 ---------------- */
-
-/* ---------------- gofmt 只读校验 ---------------- */
-
-function gofmtCheck(goFiles: string[]) {
-  /** gofmt -l 只读检出未格式化文件（不修改）。修复由 pre-commit 提交时自动完成；
-   * 此处若仍检出，说明提交绕过了 pre-commit（--no-verify 等），阻断并提示手动修复。 */
-  return sh(`gofmt -l ${goFiles.map(shq).join(" ")}`)
-    .out.trim()
-    .split("\n")
-    .filter((f) => f.endsWith(".go"));
-}
+// gofmt 只读校验已收敛至 gate-ctx.gofmtCheck（含空列表早退，防裸 gofmt 读 stdin 挂死）。
 
 /* ---------------- 静态分析工具清单（--all / --docs 模式，doctor 全量迁入） ---------------- */
 // 工具清单单一事实来源 = _lib/gate-config.ts；gate 本身只负责调度，不改清单逻辑。
@@ -156,40 +118,10 @@ async function main() {
 
   console.log("========== YSM 本地质量门禁 ==========");
 
-  // 统一结果收集与阻断标记
-  const results: any[] = [];
-  let blocked = false;
-  /**
-   * 记录检查结果。ok=false 时按 blockPolicy 决定是否阻断：
-   *   hard（默认）     → blocked=true
-   *   debt             → 只记录，不阻断
-   *   failClosed       → 只记录，不阻断（调用方须在 record() 外自行判断 fail-closed 场景）
-   * raw：工具原始输出（2026-09 锐评「输出运行过程而非返回信息」）——FAIL 摘要的
-   * 结构化前 ≤4 条错误提取（gate-report errorDetailLines）与落盘报告的事实源；cap 64KB 尾部
-   * 防超大输出（go test/vite）撑爆报告，JSON 检查输出远小于此不受影响。
-   */
-  const record = (
-    label: string,
-    ok: boolean,
-    {
-      time = 0,
-      note = "",
-      tail = "",
-      raw,
-      blockPolicy,
-    }: {
-      time?: number;
-      note?: string;
-      tail?: string;
-      raw?: string;
-      blockPolicy?: "hard" | "debt" | "failClosed";
-    },
-  ) => {
-    const rawCapped =
-      raw === undefined ? undefined : raw.length > 65536 ? `…${raw.slice(-65536)}` : raw;
-    results.push({ label, ok, time, note, tail, raw: rawCapped });
-    if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true;
-  };
+  // 结果收集 / 阻断标记 / exec 助手统一由 GateCtx 承载（ADR-206 阶段 1 接线，2026-09-13）。
+  // record 的 blockPolicy 阻断矩阵与归属落库、blocked 活值 getter、sh/shAsync/git/gofmtCheck
+  // 的单一实现均在 _lib/gate-ctx.ts；本文件不再持有副本。
+  // ctx 在下方模式分流之后创建——plan / files / byDomain / push refs 由分流确定，须作构造参数注入。
 
   let plan: Plan;
   let domainSummary = "";
@@ -308,6 +240,11 @@ async function main() {
     console.log("");
   }
 
+  /* --- GateCtx 创建（模式分流后，注入确定态的共享态）--- */
+  // plan / byDomain / files / push refs 至此均已定型；域块与调度段一律经 ctx 消费，
+  // 不再直连 main 局部（ADR-206 目标态）。域块搬移（gate-blocks/*）时读取路径自然延续。
+  const ctx = createGateCtx({ plan, byDomain, files, pushLocalRef, pushLocalOid, pushRemoteOid });
+
   /* --- 静态工具统一执行器 --- */
   // 回退 ADR-088 静态工具并行（实测 2m15s vs 基线 75s，runSpawn spawn 开销吃掉并行收益）
   // 恢复串行 runTools——域间并行（Go ∥ 前端）留作后续 Take巧，静态工具段不并行
@@ -325,7 +262,7 @@ async function main() {
       // 不加 --staged，保持全库比对（推送时本就该查全部待推改动）。
       const stagedArg = files.length > 0 && tool === "check-go-diff-coverage.ts" ? "--staged" : "";
       const t0 = Date.now();
-      const r = sh(`node scripts/${tool} --json ${stagedArg} ${extraArgs.join(" ")}`);
+      const r = ctx.sh(`node scripts/${tool} --json ${stagedArg} ${extraArgs.join(" ")}`);
       // P1 修复（2026-08-17）：审计类工具退出码不可靠（i18n/孤儿/命名/卫生默认恒 0），
       // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
       // 判定语义收敛到 _lib/gate-parse.ts（parseToolOutput，契约测试锁死）：
@@ -338,9 +275,9 @@ async function main() {
       // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
       // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
       if (!ok && effectiveAutoFix) {
-        const fixR = sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
+        const fixR = ctx.sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
         if (fixR.rc === 0) {
-          const re = sh(`node scripts/${tool} --json ${extraArgs.join(" ")}`);
+          const re = ctx.sh(`node scripts/${tool} --json ${extraArgs.join(" ")}`);
           const reOk = parseToolOutput(re.out, re.rc).ok;
           if (reOk) {
             ok = true;
@@ -354,7 +291,7 @@ async function main() {
       }
       // label = 完整检查命令（AI 失败时可直接抄，无需翻文档找脚本名）
       const cmdLabel = `node scripts/${tool} --json${stagedArg ? ` ${stagedArg}` : ""}${extraArgs.length ? ` ${extraArgs.join(" ")}` : ""}`;
-      record(cmdLabel, ok, {
+      ctx.record(cmdLabel, ok, {
         time: Date.now() - t0,
         note,
         raw: r.out,
@@ -384,7 +321,7 @@ async function main() {
       // doc-drift/knowledge-drift 无 warns_list 契约，统一回退原始输出尾部
       const tail = !ok ? out.trim().split("\n").slice(-12).join("\n") : "";
       // label = 完整命令（--files 为内部裁剪机制，AI 手动复查时直接全扫即可）
-      record(`node scripts/${tool} --json`, ok, {
+      ctx.record(`node scripts/${tool} --json`, ok, {
         time: Date.now() - t0,
         note,
         raw: out,
@@ -406,8 +343,8 @@ async function main() {
       // 内嵌 ysm-updater-helper.exe（.gitignore 不入库），干净 checkout 缺此文件会导致
       // go build/vet/test 失败（2026-08-14 补入 gate，对齐 doctor）。
       const tH = Date.now();
-      const uh = await shAsync("go build -o go/updater/ysm-updater-helper.exe ./cmd/updater");
-      record("go build -o go/updater/ysm-updater-helper.exe ./cmd/updater", uh.rc === 0, {
+      const uh = await ctx.shAsync("go build -o go/updater/ysm-updater-helper.exe ./cmd/updater");
+      ctx.record("go build -o go/updater/ysm-updater-helper.exe ./cmd/updater", uh.rc === 0, {
         time: Date.now() - tH,
         tail: uh.rc ? uh.out.trim().split("\n").slice(-4).join("\n") : "",
       });
@@ -415,8 +352,8 @@ async function main() {
       const goFiles = (byDomain.go || []).filter((f) => f.endsWith(".go"));
 
       const t0 = Date.now();
-      const goBuild = await shAsync("go build ./go/...");
-      record("go build ./go/...", goBuild.rc === 0, {
+      const goBuild = await ctx.shAsync("go build ./go/...");
+      ctx.record("go build ./go/...", goBuild.rc === 0, {
         time: Date.now() - t0,
         tail: goBuild.rc ? goBuild.out.trim().split("\n").slice(-4).join("\n") : "",
       });
@@ -440,9 +377,11 @@ async function main() {
       const racePkgs =
         "./go/sync/... ./go/conc/... ./go/download/... ./go/instance/... ./go/installer/... ./go/watcher/... ./go/scanner/...";
       const racePkgRe = /(^|\/)go\/(sync|conc|download|instance|installer|watcher|scanner)(\/|$)/;
-      const goList = await shAsync("go list ./go/... ./internal/app/");
+      const goList = await ctx.shAsync("go list ./go/... ./internal/app/");
       if (goList.rc !== 0) {
-        record("go list ./go/... ./internal/app/", false, { tail: goList.out.trim().split("\n").slice(-4).join("\n") });
+        ctx.record("go list ./go/... ./internal/app/", false, {
+          tail: goList.out.trim().split("\n").slice(-4).join("\n"),
+        });
         return;
       }
       const otherPkgs = goList.out
@@ -454,9 +393,9 @@ async function main() {
       const goTestCmd =
         `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
         `&& go test ${otherPkgs.join(" ")} ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
-      const goTest = await shAsync(goTestCmd);
+      const goTest = await ctx.shAsync(goTestCmd);
       // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
-      record(goTestCmd, goTest.rc === 0, {
+      ctx.record(goTestCmd, goTest.rc === 0, {
         time: Date.now() - t1,
         tail: goTest.rc ? goTest.out.trim().split("\n").slice(-4).join("\n") : "",
         note: freshGoTest
@@ -465,8 +404,8 @@ async function main() {
       });
 
       const tV = Date.now();
-      const goVet = await shAsync("go vet ./go/... ./internal/app/...");
-      record("go vet ./go/... ./internal/app/...", goVet.rc === 0, {
+      const goVet = await ctx.shAsync("go vet ./go/... ./internal/app/...");
+      ctx.record("go vet ./go/... ./internal/app/...", goVet.rc === 0, {
         time: Date.now() - tV,
         tail: goVet.rc ? goVet.out.trim().split("\n").slice(-4).join("\n") : "",
       });
@@ -480,7 +419,7 @@ async function main() {
       const tGL = Date.now();
       const glVer = procRun("golangci-lint", ["--version"], { cwd: ROOT });
       if (!glVer.ok) {
-        record("golangci-lint（跳过：未安装）", true, {
+        ctx.record("golangci-lint（跳过：未安装）", true, {
           time: Date.now() - tGL,
           note: "未检测到 golangci-lint，跳过 Go 静态分析。安装：go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest",
           blockPolicy: "debt",
@@ -498,7 +437,7 @@ async function main() {
         const glMin = vM ? parseInt(vM[2] ?? "0", 10) : 0;
         const belowFloor = glMaj !== 0 && (glMaj < 1 || (glMaj === 1 && glMin < 64) || glMaj > 2);
         if (belowFloor) {
-          record("golangci-lint（跳过：版本低于地板 v1.64+/v2 线）", true, {
+          ctx.record("golangci-lint（跳过：版本低于地板 v1.64+/v2 线）", true, {
             time: Date.now() - tGL,
             note: `${glVerLine} 低于 ADR-205 §2.4 版本地板（.golangci.yml 为 v2 schema）；安装 v2 线：go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`,
             blockPolicy: "debt",
@@ -513,7 +452,7 @@ async function main() {
           // git() helper 明示的「stdin 元字符禁入 shell」不变式）——先验 hex 再执行
           const hexOk = /^[0-9a-f]{40,64}$/i.test(baseRev);
           if (!baseRev || !hexOk) {
-            record("golangci-lint（跳过：无基线 rev）", true, {
+            ctx.record("golangci-lint（跳过：无基线 rev）", true, {
               time: Date.now() - tGL,
               note: `${glVerLine} 已安装，但无法解析 --new-from-rev 基线（孤儿分支/无远端/基线非 hex）；全量跑会撞 736 条存量债，故跳过而非阻断`,
               blockPolicy: "debt",
@@ -526,7 +465,7 @@ async function main() {
             !pushLocalOid.startsWith("0") &&
             procRun("git", ["rev-parse", "HEAD"], { cwd: ROOT }).out.trim() !== pushLocalOid
           ) {
-            record("golangci-lint（跳过：推非当前分支）", true, {
+            ctx.record("golangci-lint（跳过：推非当前分支）", true, {
               time: Date.now() - tGL,
               note: `${glVerLine} 已安装，但推送 ref 与当前检出 HEAD 不一致——增量 lint 分析错快照（漏检被推代码/误堵 HEAD）；降级跳过（ADR-205 口径：宁可漏检不可误堵）`,
               blockPolicy: "debt",
@@ -537,7 +476,7 @@ async function main() {
             const gl = procRun("golangci-lint", ["run", `--new-from-rev=${baseRev}`, "./..."], {
               cwd: ROOT,
             });
-            record(glLabel, gl.rc === 0, {
+            ctx.record(glLabel, gl.rc === 0, {
               time: Date.now() - tGL,
               note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量 736 条另案清零）`,
               tail: gl.rc ? gl.out.trim().split("\n").slice(-8).join("\n") : "",
@@ -548,11 +487,11 @@ async function main() {
 
       // gofmt：只读校验（修复已下沉 pre-commit；此处检出即阻断，防止绕过提交）
       const t2 = Date.now();
-      const unformatted = gofmtCheck(goFiles);
+      const unformatted = ctx.gofmtCheck(goFiles);
       // code_review fd349a91a #1/#2/#4/#7：标签须与实际执行一致——门禁只跑只读
       // `gofmt -l <变更文件>`，原标签 "gofmt -w ." 冒充全仓库写盘命令（门禁从不执行
       // 写盘，dry-run 契约 + FAIL 时照抄会全库格式化变更集外的并行文件）
-      record("gofmt -l（只读校验，未格式化文件见 tail）", unformatted.length === 0, {
+      ctx.record("gofmt -l（只读校验，未格式化文件见 tail）", unformatted.length === 0, {
         time: Date.now() - t2,
         note: unformatted.length
           ? `检出 ${unformatted.length} 个未格式化文件（pre-commit 应已自动修复；疑似 --no-verify 绕过）`
@@ -563,8 +502,8 @@ async function main() {
       // 此处检出即说明绕过了 pre-commit——防 --no-verify 绕过，与 .githooks/pre-commit 口径一致）
 
       const t3 = Date.now();
-      const bc = await shAsync("node scripts/binding-check.ts --json");
-      record("node scripts/binding-check.ts --json", bc.rc === 0, {
+      const bc = await ctx.shAsync("node scripts/binding-check.ts --json");
+      ctx.record("node scripts/binding-check.ts --json", bc.rc === 0, {
         time: Date.now() - t3,
         raw: bc.out,
         tail: bc.rc ? bc.out.trim().split("\n").slice(-4).join("\n") : "",
@@ -574,10 +513,10 @@ async function main() {
       if (!plan.frontend) return;
       // 分层守护：前端目录间反向依赖（R1/R2 零容忍 + R3/R4 基线，现基线 0 条）
       const tL = Date.now();
-      const ll = await shAsync("node scripts/check-layering.ts --json");
+      const ll = await ctx.shAsync("node scripts/check-layering.ts --json");
       const lz = tryParseSummary(ll.out);
       const lOk = ll.rc === 0;
-      record("node scripts/check-layering.ts --json", lOk, {
+      ctx.record("node scripts/check-layering.ts --json", lOk, {
         time: Date.now() - tL,
         raw: ll.out,
         note:
@@ -592,10 +531,10 @@ async function main() {
       // R0 别名闸已于闸二（2026-09-01）整条删除——check-layering/check-circular/check-path-hygiene 自身均已别名感知，
       // 写别名通过门禁（WARN 不阻断，仅 R4/一致性 FAIL 才会 rc≠0）。
       const tP = Date.now();
-      const ph = await shAsync("node scripts/check-path-hygiene.ts --json");
+      const ph = await ctx.shAsync("node scripts/check-path-hygiene.ts --json");
       const pz = tryParseSummary(ph.out);
       const pOk = ph.rc === 0;
-      record("node scripts/check-path-hygiene.ts --json", pOk, {
+      ctx.record("node scripts/check-path-hygiene.ts --json", pOk, {
         time: Date.now() - tP,
         raw: ph.out,
         note:
@@ -612,10 +551,10 @@ async function main() {
       //   deps 主导、node_modules 只兜底，本仓 node_modules 不完整，fail-closed 会制造环境噪声）；
       // M3 .js 胶水兜底（app.js→app.ts）→ INFO 只统计。故此处不加 --strict，只拦 M1。
       const tMock = Date.now();
-      const mk = await shAsync("node scripts/check-mock-paths.ts --json");
+      const mk = await ctx.shAsync("node scripts/check-mock-paths.ts --json");
       const mkz = tryParseSummary(mk.out);
       const mkOk = mk.rc === 0;
-      record("node scripts/check-mock-paths.ts --json", mkOk, {
+      ctx.record("node scripts/check-mock-paths.ts --json", mkOk, {
         time: Date.now() - tMock,
         raw: mk.out,
         note:
@@ -629,10 +568,10 @@ async function main() {
       // ADR-085：菜单表健康门禁——"加菜单项只改表"的自动兜底（秒级正则扫描，早失败早停）。
       // 校验：id 唯一 / labelKey 非空 / i18n 三语齐全 / dockGroup 合法 / kind 合法 / render·run 完备。
       const tM = Date.now();
-      const mh = await shAsync("node scripts/check-menu-health.ts --json");
+      const mh = await ctx.shAsync("node scripts/check-menu-health.ts --json");
       const mz = tryParseSummary(mh.out);
       const mOk = mh.rc === 0 && mz && mz.ok === true;
-      record("node scripts/check-menu-health.ts --json", mOk, {
+      ctx.record("node scripts/check-menu-health.ts --json", mOk, {
         time: Date.now() - tM,
         raw: mh.out,
         note:
@@ -643,16 +582,16 @@ async function main() {
               : `${mz.violations} 条菜单表违规（id/labelKey/i18n/dockGroup/kind/render-run）`,
         tail: mOk ? "" : mh.out.trim().split("\n").slice(-4).join("\n"),
       });
-      // 菜单表违规 = hard（默认）：record() 已自动置 blocked，无需重复手动设
+      // 菜单表违规 = hard（默认）：ctx.record() 已自动置 blocked，无需重复手动设
 
       // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
       // 里所有字面量 tr("key") 必须存在于 zh-CN 基准包，否则运行时静默回退英文。
       // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。
       const tC = Date.now();
-      const ci = await shAsync("node scripts/check-ctx-menu-i18n.ts --json");
+      const ci = await ctx.shAsync("node scripts/check-ctx-menu-i18n.ts --json");
       const cz = tryParseSummary(ci.out);
       const cOk = ci.rc === 0 && cz && cz.ok === true;
-      record("node scripts/check-ctx-menu-i18n.ts --json", cOk, {
+      ctx.record("node scripts/check-ctx-menu-i18n.ts --json", cOk, {
         time: Date.now() - tC,
         raw: ci.out,
         note:
@@ -663,12 +602,12 @@ async function main() {
               : `${cz.violations} 个 key 缺失（运行时静默回退英文）`,
         tail: cOk ? "" : ci.out.trim().split("\n").slice(-8).join("\n"),
       });
-      // 右键菜单 i18n 缺失 = hard（默认）：record() 已自动置 blocked，无需重复手动设
+      // 右键菜单 i18n 缺失 = hard（默认）：ctx.record() 已自动置 blocked，无需重复手动设
 
       // 问题 3-A 解法：禁止绕过 bindings 直接调 window.go.main.App.xxx
       // 前端调 Go 函数必须走 bindings/ 强类型接口，避免参数错位编译期不报错
       const tB = Date.now();
-      const bu = await shAsync("node scripts/check-binding-usage.ts --json", {
+      const bu = await ctx.shAsync("node scripts/check-binding-usage.ts --json", {
         cwd: path.join(ROOT, "frontend"),
       });
       const buz = tryParseSummary(bu.out);
@@ -676,7 +615,7 @@ async function main() {
       // code_review fd349a91a #5：标签带 cwd=frontend 上下文（实际执行带 cwd: frontend，
       // 仓库根 scripts/ 下无此脚本）——原标签照抄从根执行 ENOENT；与同域 vite/tsc
       // vitest 标签的 "cd frontend &&" 约定对齐
-      record("cd frontend && node scripts/check-binding-usage.ts --json", buOk, {
+      ctx.record("cd frontend && node scripts/check-binding-usage.ts --json", buOk, {
         time: Date.now() - tB,
         raw: bu.out,
         note:
@@ -693,31 +632,32 @@ async function main() {
       // tsc 路径解析：优先 npx 探测（workspace hoisting 兼容），回退硬编码路径
       const t0 = Date.now();
       const [fb, tscResult] = await Promise.all([
-        shAsync("npx vite build", { cwd: path.join(ROOT, "frontend") }),
+        ctx.shAsync("npx vite build", { cwd: path.join(ROOT, "frontend") }),
         // npx tsc --version 探测（最简且最鲁棒的 monorepo 兼容方案）
-        shAsync("npx tsc --version")
+        ctx
+          .shAsync("npx tsc --version")
           .then((r) => {
             if (r.rc !== 0) return { rc: -1, out: "" };
             // tsc 可用，再跑 --noEmit 检查
-            return shAsync("npx tsc --noEmit", { cwd: path.join(ROOT, "frontend") });
+            return ctx.shAsync("npx tsc --noEmit", { cwd: path.join(ROOT, "frontend") });
           })
           .catch(() => ({ rc: -1, out: "" })),
       ]);
       const wallA = Date.now() - t0;
       const tscRc = tscResult.rc ?? -1;
-      record("cd frontend && npx vite build", fb.rc === 0, {
+      ctx.record("cd frontend && npx vite build", fb.rc === 0, {
         time: wallA,
         tail: fb.rc ? fb.out.trim().split("\n").slice(-4).join("\n") : "",
       });
       if (tscRc >= 0) {
         const lines = tscResult.out.trim().split("\n").filter(Boolean);
-        record("cd frontend && npx tsc --noEmit", tscRc === 0, {
+        ctx.record("cd frontend && npx tsc --noEmit", tscRc === 0, {
           time: wallA,
           note: tscRc === 0 ? "" : `${lines.length} errors`,
           tail: tscRc === 0 ? "" : lines.slice(-5).join("\n"),
         });
       } else {
-        record("cd frontend && npx tsc --noEmit", false, {
+        ctx.record("cd frontend && npx tsc --noEmit", false, {
           time: 0,
           note: "tsc 未安装（npx tsc --version 失败）——请 npm ci 后重推",
         });
@@ -726,7 +666,7 @@ async function main() {
       // ADR-023 P3：L3 Vitest 随前端域变更回归（串行在后，独占资源）
       const t1 = Date.now();
       // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）
-      const ft = await shAsync("npx vitest run --maxWorkers 8", {
+      const ft = await ctx.shAsync("npx vitest run --maxWorkers 8", {
         cwd: path.join(ROOT, "frontend"),
       });
       // 失败时抓失败测试名：vitest 输出里 ❯/×/FAIL 行含测试文件名+用例名，
@@ -736,7 +676,7 @@ async function main() {
             .slice(0, 8)
             .join("\n")
         : "";
-      record("cd frontend && npx vitest run --maxWorkers 8", ft.rc === 0, {
+      ctx.record("cd frontend && npx vitest run --maxWorkers 8", ft.rc === 0, {
         time: Date.now() - t1,
         tail: vitestTail,
       });
@@ -746,11 +686,11 @@ async function main() {
   /* --- 数据域 --- */
   if (plan.data) {
     const t0 = Date.now();
-    const tc = sh("node scripts/type-consistency.ts --json");
+    const tc = ctx.sh("node scripts/type-consistency.ts --json");
     // 特殊块：只取 _summary.issues 数值；解析失败 → null（fail-closed 阻断，不静默放行）
     const issues = tryParseSummary(tc.out)?.issues ?? null;
     const ok = issues === 0;
-    record("node scripts/type-consistency.ts --json", ok, {
+    ctx.record("node scripts/type-consistency.ts --json", ok, {
       time: Date.now() - t0,
       raw: tc.out,
       note:
@@ -765,10 +705,10 @@ async function main() {
   /* --- 文档域 --- */
   if (plan.docs) {
     const t0 = Date.now();
-    const lc = sh("node scripts/link-checker.ts --json");
+    const lc = ctx.sh("node scripts/link-checker.ts --json");
     const broken = tryParseSummary(lc.out)?.links_broken ?? null;
     const ok = broken === 0;
-    record("node scripts/link-checker.ts --json", ok, {
+    ctx.record("node scripts/link-checker.ts --json", ok, {
       time: Date.now() - t0,
       raw: lc.out,
       note:
@@ -782,8 +722,8 @@ async function main() {
     // 发版说明漂移守护：git tag 单一事实源——每个正式 tag 必须有 docs/releases/<tag>.md
     // （失败输出 AI 友好：--check 自带每条缺失的 git 区间补写命令）
     const t1 = Date.now();
-    const rn = sh("node scripts/release-notes-gen.ts --check");
-    record("node scripts/release-notes-gen.ts --check", rn.rc === 0, {
+    const rn = ctx.sh("node scripts/release-notes-gen.ts --check");
+    ctx.record("node scripts/release-notes-gen.ts --check", rn.rc === 0, {
       time: Date.now() - t1,
       tail: rn.rc ? rn.out.trim().split("\n").slice(-14).join("\n") : "",
     });
@@ -834,7 +774,7 @@ async function main() {
     }
     // 基线债务（红线新增）不阻断推送：推送后修；发布前全量 doctor 仍会报告（2026-08-13 决策）
     // failClosed：扫描本身不可用（rg 缺失/fail-closed）才阻断——由下方 !scanHealthy 兜底
-    record("node scripts/check-redlines.ts --json --baseline", ok, {
+    ctx.record("node scripts/check-redlines.ts --json --baseline", ok, {
       time: Date.now() - t0,
       raw: rl.out,
       blockPolicy: "failClosed",
@@ -850,12 +790,12 @@ async function main() {
               : `${newV} 条新增红线违规（基线 ${baseCount} 条）——债务项，推送后处理`,
       tail: rlTail,
     });
-    if (!scanHealthy) blocked = true;
+    if (!scanHealthy) ctx.setBlocked(true);
   }
   if (plan.adr) {
     const t0 = Date.now();
-    const ac = sh("node scripts/adr-check.ts");
-    record("node scripts/adr-check.ts", ac.rc === 0, {
+    const ac = ctx.sh("node scripts/adr-check.ts");
+    ctx.record("node scripts/adr-check.ts", ac.rc === 0, {
       time: Date.now() - t0,
       raw: ac.out,
       tail: ac.rc ? ac.out.trim().split("\n").slice(-4).join("\n") : "",
@@ -865,8 +805,8 @@ async function main() {
   /* --- 生成器守护：索引产物是否过期（docs 或 adr 变更时） --- */
   if (plan.docs || plan.adr) {
     const t0 = Date.now();
-    const gd = sh("node scripts/gen-docs-index.ts --check");
-    record("node scripts/gen-docs-index.ts --check", gd.rc === 0, {
+    const gd = ctx.sh("node scripts/gen-docs-index.ts --check");
+    ctx.record("node scripts/gen-docs-index.ts --check", gd.rc === 0, {
       time: Date.now() - t0,
       raw: gd.out,
       tail: gd.rc ? gd.out.trim().split("\n").slice(-4).join("\n") : "",
@@ -889,7 +829,7 @@ async function main() {
     // code_review fd349a91a #3：标签如实描述执行面——原 `for f in tests/*.ts` glob 声称
     // 全量（实际 selectContractTests 按域裁剪子集 + _ 前缀排除 + spawn 有界并发，
     // push/files 模式只跑相关子集——假保证 + glob 语法 Windows 不可执行）
-    record(`contract tests (${tests.length}${allMode ? "，全量" : "，按域裁剪"})`, ok, {
+    ctx.record(`contract tests (${tests.length}${allMode ? "，全量" : "，按域裁剪"})`, ok, {
       time: Date.now() - t0,
       note:
         tests.length === 0
@@ -941,9 +881,9 @@ async function main() {
       ".bin",
       process.platform === "win32" ? "tsc.cmd" : "tsc",
     );
-    const tscResult = await shAsync(`"${tSC}" --noEmit -p scripts/tsconfig.json`);
+    const tscResult = await ctx.shAsync(`"${tSC}" --noEmit -p scripts/tsconfig.json`);
     const tscOk = tscResult.rc === 0 || tscResult.rc === 2; // rc=2 = TS18003 无输入，容忍
-    record("npx tsc --noEmit -p scripts/tsconfig.json", tscOk, {
+    ctx.record("npx tsc --noEmit -p scripts/tsconfig.json", tscOk, {
       time: Date.now() - tSC0,
       raw: tscResult.out,
       note:
@@ -963,11 +903,11 @@ async function main() {
   // 旧「FAIL 前置」(2026-08-29) 服务整页自上而下阅读，现由落盘报告 + 明细块取代。
   // 完整报告落盘（运行过程而非一次性返回信息）：结构化 JSON 存 .git/，
   // stderr 只给相对路径指针；写入失败不阻断门禁。
-  const okResults = results.filter((r) => r.ok);
-  const failResults = results.filter((r) => !r.ok);
-  const reportPath = writeGateReport(results, {
+  const okResults = ctx.results.filter((r) => r.ok);
+  const failResults = ctx.results.filter((r) => !r.ok);
+  const reportPath = writeGateReport(ctx.results, {
     mode: allMode ? "all" : docsMode ? "docs" : filesMode ? "files" : "push",
-    blocked,
+    blocked: ctx.blocked,
     domainSummary,
   });
   for (const r of okResults) {
@@ -978,18 +918,18 @@ async function main() {
     logPush(`------ FAIL 明细（归属 → 前 ≤4 条错误 → 复现）｜ 完整报告: ${display} ------`);
     for (const r of failResults) {
       // hard 失败的归属：push/files 模式（files 非空）可归因本次变更；全扫（--all/--docs）待归因
-      logPush(formatFailSummary(r, okResults.length, results.length, files.length > 0));
+      logPush(formatFailSummary(r, okResults.length, ctx.results.length, files.length > 0));
     }
   }
   logPush("");
-  if (!results.length) {
+  if (!ctx.results.length) {
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
     return 0;
   }
-  if (!blocked) {
-    const passCount = results.filter((r) => r.ok).length;
+  if (!ctx.blocked) {
+    const passCount = ctx.results.filter((r) => r.ok).length;
     logPush(
-      `结论: PASS ✅ ${dryRun ? "（DRY-RUN）" : "放行推送"} ${passCount}/${results.length} 项通过`,
+      `结论: PASS ✅ ${dryRun ? "（DRY-RUN）" : "放行推送"} ${passCount}/${ctx.results.length} 项通过`,
     );
     if (reportPath) logPush(`完整报告: ${path.relative(ROOT, reportPath)}`);
     // P0 修复（子代理锐评）：横幅移到 dry-run 分支——AI 验证完（dry-run）时看到「可直接 push」，
@@ -1006,22 +946,22 @@ async function main() {
     return 0;
   }
   logPush(
-    `结论: FAIL ❌ ${results.filter((r) => r.ok).length}/${results.length} 项通过，推送已${dryRun ? "将被" : ""}阻断`,
+    `结论: FAIL ❌ ${ctx.results.filter((r) => r.ok).length}/${ctx.results.length} 项通过，推送已${dryRun ? "将被" : ""}阻断`,
   );
   // 失败项清单（2026-08-29 可观测性）：一行点名全部失败指令，无需在结果表里逐行找
-  const fails = results.filter((r) => !r.ok);
+  const fails = ctx.results.filter((r) => !r.ok);
   logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
   logPush("明细见上方 FAIL 块（归属/首错/复现；完整报告见明细区头路径）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
   // code_review fd349a91a #1/#2/#4/#7：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
   // 原虚构标签 "gofmt -w ." 而来，标签如实化后子串匹配会静默失效；gofmt 标签唯一）
-  const gofmt = results.find((r) => r.label.includes("gofmt"));
+  const gofmt = ctx.results.find((r) => r.label.includes("gofmt"));
   let gofmtHint = "";
   if (gofmt && !gofmt.ok) {
     gofmtHint = "gofmt 检出未格式化——gofmt -w 修复后 git add + git commit 重推。";
   }
   // 修复指引：script-hygiene FAIL（新脚本文件头不合规）→ 补 JSDoc 头字段（见 check-script-hygiene.ts 注释）
-  const hygiene = results.find((r) => r.label.includes("check-script-hygiene"));
+  const hygiene = ctx.results.find((r) => r.label.includes("check-script-hygiene"));
   let hygieneHint = "";
   if (hygiene && !hygiene.ok && hygiene.tail?.includes("文件头")) {
     hygieneHint =

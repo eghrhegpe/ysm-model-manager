@@ -22,6 +22,8 @@
  * 运行：node tests/test_gate_parse_output.ts
  */
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
 import {
   buildScanVerdict,
   parseToolOutput,
@@ -30,6 +32,7 @@ import {
   tryParseSummary,
   WARNS_TOP_N,
 } from "../scripts/_lib/gate-parse.ts";
+import { ROOT } from "../scripts/_lib/scan-files.ts";
 import { check, finish } from "./_lib.mts";
 
 check("_summary.ok=true → ok=true，note 含计数键", () => {
@@ -182,6 +185,25 @@ check("requireSummaryOk：严格判定 rc===0 && _summary.ok===true（fail-close
   // FAIL 路径 4：非 JSON 输出
   assert.equal(requireSummaryOk("not json", 0).ok, false, "解析失败必须 FAIL");
   assert.equal(requireSummaryOk("not json", 0).summary, null);
+});
+
+check("收编锁死（2026-09-13 重锐评 #一）：域块禁止手写同形严格判定", () => {
+  // frontend-domain 的 menu-health / ctx-menu-i18n / binding-usage 三处历史上手写
+  // `rc === 0 && s.ok === true`，收编进 requireSummaryOk 后此模式必须绝迹——
+  // 源码扫描断言：gate-blocks 里不得再出现同形手写（新域块一律走 B 口径）。
+  const src = fs.readFileSync(
+    path.join(ROOT, "scripts", "_lib", "gate-blocks", "frontend-domain.ts"),
+    "utf-8",
+  );
+  assert.ok(
+    !/rc === 0 && \w+ && \w+\.ok === true/.test(src),
+    "frontend-domain 出现手写 rc===0 && s.ok===true——请改用 requireSummaryOk（B 口径收编契约）",
+  );
+  const count = src.match(/requireSummaryOk\(/g)?.length ?? 0;
+  assert.ok(
+    count >= 3,
+    `frontend-domain 应有 ≥3 处 requireSummaryOk 调用（menu/ctx-menu/binding），实际 ${count}`,
+  );
 });
 
 finish("契约测试全过");

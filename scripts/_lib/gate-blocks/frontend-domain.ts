@@ -72,8 +72,7 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // 校验：id 唯一 / labelKey 非空 / i18n 三语齐全 / dockGroup 合法 / kind 合法 / render·run 完备。
   const tM = Date.now();
   const mh = await ctx.shAsync("node scripts/check-menu-health.ts --json");
-  const mz = tryParseSummary(mh.out);
-  const mOk = mh.rc === 0 && mz && mz.ok === true;
+  const { ok: mOk, summary: mz } = requireSummaryOk(mh.out, mh.rc);
   ctx.record("node scripts/check-menu-health.ts --json", mOk, {
     time: Date.now() - tM,
     raw: mh.out,
@@ -92,8 +91,7 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。
   const tC = Date.now();
   const ci = await ctx.shAsync("node scripts/check-ctx-menu-i18n.ts --json");
-  const cz = tryParseSummary(ci.out);
-  const cOk = ci.rc === 0 && cz && cz.ok === true;
+  const { ok: cOk, summary: cz } = requireSummaryOk(ci.out, ci.rc);
   ctx.record("node scripts/check-ctx-menu-i18n.ts --json", cOk, {
     time: Date.now() - tC,
     raw: ci.out,

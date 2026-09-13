@@ -8,6 +8,7 @@
  */
 
 import type { GateCtx } from "../gate-ctx.ts";
+import { GATE_TIMEOUT_MS } from "../gate-ctx.ts";
 import { resolveBaseRev } from "../gate-resolve.ts";
 import { run as procRun } from "../proc.ts";
 import { ROOT } from "../scan-files.ts";
@@ -65,10 +66,37 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
     .filter((p) => p && !racePkgRe.test(p));
   // code_review fd349a91a #6：命令提为变量供 label 复用——原标签含 `...`/中文伪
   // 命令不可执行且省略真实 flags（-count=1/-timeout 60s/go list grep）
+  // 2026-09-13 重锐评 #二②：otherPkgs 来自 `go list` 输出（运行期数据），拼进
+  // shell 命令违反 gate-ctx「禁入运行期数据」不变式（与旧 gofmt 拼串同模式）。
+  // 改数组式 procRun 顺序执行两段（-race 段 + 普通段），与 golangci baseRev 同哲学；
+  // goTestCmd 字符串仅供 label 展示（fail 时可抄）。
   const goTestCmd =
     `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
     `&& go test ${otherPkgs.join(" ")} ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
-  const goTest = await ctx.shAsync(goTestCmd);
+  const goTestRace = procRun(
+    "go",
+    [
+      "test",
+      "-race",
+      ...racePkgs.split(" "),
+      ...(freshGoTest ? ["-count=1"] : []),
+      "-timeout",
+      "60s",
+    ],
+    { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
+  );
+  const goTestRest = goTestRace.rc
+    ? { rc: goTestRace.rc, out: "" }
+    : procRun(
+        "go",
+        ["test", ...otherPkgs, ...(freshGoTest ? ["-count=1"] : []), "-timeout", "60s"],
+        { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
+      );
+  // 合并两段结果：任一非零即 FAIL；out 合并两段输出（tail 取尾部可读）
+  const goTest = {
+    rc: goTestRace.rc || goTestRest.rc,
+    out: `${goTestRace.out}\n${goTestRest.out}`.trim(),
+  };
   // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
   ctx.record(goTestCmd, goTest.rc === 0, {
     time: Date.now() - t1,

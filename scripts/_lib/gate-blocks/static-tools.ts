@@ -97,6 +97,16 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
     // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
     // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
     // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
+    // ⚠️ autoFix 写盘语义契约（2026-09-13 重锐评 #三）：此处是 pre-push-gate 里
+    // **唯一会写仓库文件**的执行点——gen 脚本 FAIL 时写盘刷新产物后重验。
+    //   1. 刻意不受 --dry-run 限制：commit-with-check 走 --files --dry-run，
+    //      gen 产物过期若不刷新会阻断提交流（pre-commit 的 GEN_CMDS 兜底在提交阶段，
+    //      来不及救本次 gate 判定）；「dry-run 只检查不修改」的契约仅指 gofmt/仓库源码，
+    //      不含 gen 产物刷新
+    //   2. 写盘发生在 pre-push 钩子内，被推送的 oid 是钩子调用前的快照——刷新产物
+    //      **不进入本次推送**，属预期行为（随下次 commit/push 进入变更集）；
+    //      钩子内严禁 amend / git add（见 pre-push-gate.ts 头部已知坑：amend 致 oid 分叉）
+    //   3. push 后工作树 gen 产物呈脏态 = autoFix 已工作的正常痕迹，勿当作回归修复
     if (!ok && effectiveAutoFix) {
       const fixR = ctx.sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
       if (fixR.rc === 0) {

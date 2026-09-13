@@ -94,6 +94,18 @@ export function tryParseSummary(out: string): any | null {
 /**
  * 严格判定（2026-09-13 锐评 P2 #1 收编）：`rc===0 && _summary.ok===true` 的单一实现。
  *
+ * ⚠️ 判定口径选用契约（2026-09-13 重锐评 #一：体系内 A/B/C 三套口径并存的收口规则）：
+ *   - A = `parseToolOutput`（宽容链：_summary.ok → errors===0 → 退回 rc）——**仅限
+ *     gate-config 清单驱动的静态工具段**（runTools/runScopedDocDrift）：清单里混有
+ *     情报型工具（rc 恒 0、无 _summary 契约），必须容忍「非 JSON + rc=0 → PASS」
+ *   - B = `requireSummaryOk`（严格链：rc===0 且 _summary.ok===true，缺一律 FAIL）——
+ *     **域检查块专用**（gate-blocks 内 ctx.record 直连项）：这些脚本是本仓自研、
+ *     必须输出 _summary.ok，解析失败/缺字段一律 fail-closed，不许静默假绿
+ *   - C（type-consistency 只认 issues===0、link-checker 只认 links_broken===0）是
+ *     真特例：判定语义是「认特定计数字段」而非「认 ok」，保留手写但必须 fail-closed
+ *   新增域块判定一律走 B，禁止再手写 `rc === 0 && s.ok === true` 同形判定
+ *   （test_gate_parse_output.ts 尾部的源码扫描断言锁死此条）。
+ *
  * 此前 menu-health / ctx-menu-i18n / binding-usage 三处手写该判定，游离在
  * parseToolOutput 优先级链（_summary.ok → errors===0 → rc）之外——同一文件里
  * 两套判定口径，成为「判定漂移」的三个口子。本函数把「必须显式声明 ok」的语义

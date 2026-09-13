@@ -41,9 +41,6 @@ const DENYLIST =
  * 新增动态调用点必须在此登记「插值内容全部为开发者常量」的理由并通过 review。
  */
 const DYNAMIC_ALLOWLIST: Record<string, string> = {
-  // go-domain：goTestCmd 插值 racePkgs/otherPkgs——来源 `go list ./go/...` 输出的包名
-  // （go 工具链产物，非用户输入），-count/-timeout 为源码常量
-  "go-domain.ts|goTestCmd": "包名来自 go list 输出（工具链产物），flags 为源码常量",
   // schedule.ts：tSC 来自 npx tsc --version 探测的本机 tsc 路径（npx 解析产物，非用户输入）
   'schedule.ts|`"${tSC}" --noEmit -p scripts/tsconfig.json`':
     "tSC 为 npx 探测的本机 tsc 路径（工具链产物）",

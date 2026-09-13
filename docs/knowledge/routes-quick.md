@@ -905,6 +905,9 @@
 | 2026-09-13（锐评 P1 | `严格判定单一实现` | - |
 | ：`git push origin a b` 时任一 ref 的 resolveChanges 返回 null（解析失败）→ **整体阻断**（exit 1），不做 per-ref 放行——这是刻意的 fail-closed 选择而非缺陷；改契约测试前勿假设可 per-ref 豁免。多 ref 的文件集按并集去重算变更域，ctx 持有首个 ref 的 oid（golangci-lint 基线用） | `多 ref 推送的 fail-closed 耦合` | - |
 | 2026-09-13（锐评 | `PULL_HINT 带 remote-name` | - |
+| 2026-09-13（重锐评 | `判定口径 A/B/C 收口` | - |
+| 2026-09-13（重锐评 | `goTestCmd 数组化` | - |
+| 2026-09-13（重锐评 | `autoFix 写盘语义` | - |
 | 2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查 | `覆盖尾行` | - |
 | ~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁 | `check-deadcode-baseline 的瞬态 FAIL` | - |
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |

@@ -47,6 +47,7 @@ auto_fields:
     - setStateValue
     - SharedInfra
     - teardownSharedInfra
+    - toModelType
 perf: gpu-bound
 use_when:
   - 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写

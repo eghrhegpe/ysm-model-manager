@@ -726,6 +726,7 @@ auto_fields:
     - toggleBoneVisible
     - toggleMaterialVisible
     - toggleMmdMaterialVisible
+    - toModelType
     - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath

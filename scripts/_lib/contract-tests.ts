@@ -129,6 +129,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_audit.ts": ["tests"],
   // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
   "test_hooks_concurrency.ts": ["tests"],
+  // ADR-234 D2：15 gen 输出文件两两不相交（并行写盘安全不变量）
+  "test_gen_parallel.ts": ["tests"],
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
   "test_gate_schedule.ts": ["tests"],
@@ -284,6 +286,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     ".githooks/pre-commit",
     ".githooks/post-commit",
   ],
+  // ADR-234 D2：守护 15 gen 输出互斥 + 并行写盘契约（改 pre-commit gen 段须本测试同步）
+  "test_gen_parallel.ts": [".githooks/pre-commit", "scripts/_lib/gen-cmds.ts"],
   "test_machine_diff.ts": ["scripts/_lib/machine-diff.ts", "scripts/_lib/gen-stage.ts"],
   "test_jscpd_pairs.ts": ["scripts/_lib/jscpd-pairs.ts"],
   "test_knowledge_common.ts": [

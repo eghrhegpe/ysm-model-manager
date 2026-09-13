@@ -94,11 +94,11 @@ git -c core.quotepath=false status --porcelain > "$GEN_PORCELAIN" 2>/dev/null ||
 echo "[pre-commit] 文档自动同步..."
 # ADR-151 项 6：gen 清单收敛到 scripts/_lib/gen-cmds.ts 单一事实源（TS 侧 import / sh 侧逐行消费），
 # 取代内联 15 个清单——避免与 commit-with-check 内联清单漂移（原漂移 4 个命令）。
-node scripts/_lib/gen-cmds.ts | while IFS= read -r line; do
-  [ -z "$line" ] && continue
-  # shellcheck disable=SC2086（有意分词以携带 --file 等参数）
-  node scripts/$line >/dev/null 2>&1 || echo "⚠️  scripts/$line 执行失败（不阻断）"
-done
+# ADR-234 D2：串行 while（全量 ~2-4s/次 commit）→ xargs -P3 并行（~1s；防 15 node 冷启吃满 CPU）。
+# 安全前提：15 gen 写盘目标两两不相交（test_gen_parallel.ts 守护互斥不变量），stage 判定
+# 读 gen 前后快照而非 gen 顺序 → 并行不破坏 stage 语义。失败仍不阻断，统一打一行提示。
+node scripts/_lib/gen-cmds.ts | xargs -P3 -I{} node scripts/{} >/dev/null 2>&1 \
+  || echo "⚠️  部分 gen 执行失败（不阻断；重跑可定位：node scripts/_lib/gen-cmds.ts | xargs -I{} node scripts/{} --json）"
 
 # ── stage 生成的文档（只 stage 本次 gen 实际 touch 的文件，无 diff 则无副作用） ──
 # 2026-08-17 P2-2 修复：不再无条件 `git add docs/`——并发共享 checkout 下会把他人

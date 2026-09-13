@@ -506,7 +506,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 168 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 174 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 96 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 144 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 143 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 141 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 340 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 424 |

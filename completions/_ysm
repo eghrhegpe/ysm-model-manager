@@ -11,7 +11,7 @@ _ysm() {
   fi
   local cmd=${words[2]}
   case $cmd in
-    avatar) _values 'avatar 子命令' batch cached cache ;;
+    avatar) _values 'avatar 子命令' batch cached cache purge ;;
     config) _values 'config 子命令' show path mc-paths mirror link-mode ;;
     creator) _values 'creator 子命令' scan list export backup ;;
     dedup) _values 'dedup 子命令' scan count clean ;;

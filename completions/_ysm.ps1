@@ -3,7 +3,7 @@
 # 启用：Add-Content $PROFILE ". $(Resolve-Path ./completions/_ysm.ps1)"
 $ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'resource-types', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
 $ysmSubs = @{
-  'avatar' = @('batch', 'cached', 'cache')
+  'avatar' = @('batch', 'cached', 'cache', 'purge')
   'config' = @('show', 'path', 'mc-paths', 'mirror', 'link-mode')
   'creator' = @('scan', 'list', 'export', 'backup')
   'dedup' = @('scan', 'count', 'clean')

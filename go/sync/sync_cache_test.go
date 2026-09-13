@@ -73,3 +73,27 @@ func TestSyncResources_UsesSyncResourcesCacheAndInvalidate(t *testing.T) {
 		}
 	}
 }
+
+// TestCollectEntriesWalkCached_FailedWalkNotCached 钉住「Walk 失败不入缓存」契约：
+// partialFail 时残缺 entries 不得被缓存 30s 当权威（原 os.Stat 守卫与子树完整性无关，
+// 属假守卫）。用「目录不存在」作为 Walk 必错的最短路径（首回调即 err，partialFail 必置位）；
+// Windows（CI 为 windows-latest）无法可靠构造「stat 成功但子树读失败」——chmod 000
+// 对目录不生效，故以 root 不存在钉住同一判定分支。
+func TestCollectEntriesWalkCached_FailedWalkNotCached(t *testing.T) {
+	nonexistent := filepath.Join(t.TempDir(), "no-such-dir")
+	_ = collectEntriesWalkCached(nonexistent, "ysm")
+	key := syncDirectoryScanKey{kind: "dirlevel", root: nonexistent, rtype: "ysm"}
+	if _, ok := syncDirLevelScanCache.Load(key); ok {
+		t.Fatal("Walk 失败的目录不应入缓存（残缺结果被当权威）")
+	}
+}
+
+// TestCollectFolderFiles_FailedWalkNotCached 同款契约测试（collectFolderFiles 侧）。
+func TestCollectFolderFiles_FailedWalkNotCached(t *testing.T) {
+	nonexistent := filepath.Join(t.TempDir(), "no-such-folder")
+	_ = collectFolderFiles(nonexistent, "ysm")
+	key := syncDirectoryScanKey{kind: "folder", root: nonexistent, rtype: "ysm"}
+	if _, ok := syncFolderScanCache.Load(key); ok {
+		t.Fatal("Walk 失败的目录不应入缓存（残缺结果被当权威）")
+	}
+}

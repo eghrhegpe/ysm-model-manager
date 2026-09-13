@@ -91,6 +91,7 @@ auto_fields:
     - App.OpenFolder
     - App.OpenInBrowser
     - App.OpenInstanceFolder
+    - App.PurgeCreatorAvatarCache
     - App.QueueStatus
     - App.ReadFileBytes
     - App.ReadFileBytesBatch

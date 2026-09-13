@@ -14,6 +14,7 @@ auto_fields:
     - DecodeYSMData
     - ExtractAvatarURI
     - FS
+    - PurgeAvatarCache
     - ReadCachedAvatar
     - ReadFileFromContainer
     - SafeName

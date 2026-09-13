@@ -358,15 +358,19 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 }
 
 // collectEntriesWalk 原 filepath.Walk 实现（scanFn 未命中时回退，语义权威基准）。
+// 返回 (entries, partialFail)：partialFail 表示 Walk 中途遇错（子树读失败/目录消失），
+// 调用方据此决定残缺结果不入缓存——与 sync.go 的 rootFailed/partialFail 双守卫同口径。
 // 以下所有分支逻辑（isDirTypeModelFolder / containsModelSubfolder / 容器下钻注册自身键）
 // 均继承自原 SyncResourcesDirLevel 的 Walk 实现，保持与旧行为完全一致——
 // collectEntriesFromScan 的反推结果须与之等价（见 sync_dirlevel_scan_test.go）。
-func collectEntriesWalk(rootDir string, rtype string) map[string]string {
+func collectEntriesWalk(rootDir string, rtype string) (map[string]string, bool) {
 	entries := make(map[string]string)
+	partialFail := false
 	memo := make(nestedDirMemo)
 	filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] Walk 错误 %s: %v", path, err)
+			partialFail = true
 			return nil
 		}
 		if !info.IsDir() {
@@ -409,7 +413,7 @@ func collectEntriesWalk(rootDir string, rtype string) map[string]string {
 		// 非模型子目录：继续递归（可能包含深层嵌套的模型文件夹/文件）
 		return nil
 	})
-	return entries
+	return entries, partialFail
 }
 
 // collectEntriesWalkCached 与 collectEntriesWalk 语义一致，但结果叠 30s
@@ -420,8 +424,11 @@ func collectEntriesWalkCached(rootDir, rtype string) map[string]string {
 	if cached, ok := loadSyncScanCache[map[string]string](&syncDirLevelScanCache, cacheKey); ok {
 		return cached
 	}
-	entries := collectEntriesWalk(rootDir, rtype)
-	if _, err := os.Stat(rootDir); err == nil {
+	entries, partialFail := collectEntriesWalk(rootDir, rtype)
+	// 完整 Walk 才入缓存（对齐 sync.go 的 rootFailed/partialFail 双守卫）：
+	// 根目录存在 ≠ 子树扫完整——原 os.Stat 守卫与完整性无关，子目录读失败时
+	// 残缺 entries 仍会被缓存 30s 当权威。partialFail 已覆盖 root 不存在（首回调即 err）。
+	if !partialFail {
 		storeSyncScanCache(&syncDirLevelScanCache, cacheKey, entries)
 	}
 	return entries
@@ -651,6 +658,7 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 	if folder == "" {
 		return entries
 	}
+	partialFail := false
 	cacheKey := syncDirectoryScanKey{kind: "folder", root: folder, rtype: rtype}
 	if cached, ok := loadSyncScanCache[map[string]string](&syncFolderScanCache, cacheKey); ok {
 		return cached
@@ -658,6 +666,7 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 	filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] collectFolderFiles Walk 错误 %s: %v", path, err)
+			partialFail = true
 			return nil
 		}
 		// 跳过目录
@@ -679,7 +688,9 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 		}
 		return nil
 	})
-	if _, err := os.Stat(folder); err == nil {
+	// 完整 Walk 才入缓存（对齐 sync.go 双守卫）：子树读失败时残缺结果不入缓存当权威。
+	// partialFail 已覆盖 folder 不存在（首回调即 err），原 os.Stat 守卫与完整性无关。
+	if !partialFail {
 		storeSyncScanCache(&syncFolderScanCache, cacheKey, entries)
 	}
 	return entries

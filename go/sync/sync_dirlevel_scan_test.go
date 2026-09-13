@@ -32,7 +32,7 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
-	walkMap := collectEntriesWalk(root, rtype)
+	walkMap, _ := collectEntriesWalk(root, rtype)
 	if len(walkMap) == 0 {
 		t.Fatalf("walkMap 为空：测试树未产生任何模型条目，请检查 rtype=%s 的扩展名配置", rtype)
 	}

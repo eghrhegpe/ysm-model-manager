@@ -16,7 +16,7 @@ _ysm_complete() {
   cmd="${COMP_WORDS[1]}"
   # 父命令第二参数：子命令
   case "$cmd" in
-    avatar) COMPREPLY=( $(compgen -W "batch cached cache" -- "$cur") ); return ;;
+    avatar) COMPREPLY=( $(compgen -W "batch cached cache purge" -- "$cur") ); return ;;
     config) COMPREPLY=( $(compgen -W "show path mc-paths mirror link-mode" -- "$cur") ); return ;;
     creator) COMPREPLY=( $(compgen -W "scan list export backup" -- "$cur") ); return ;;
     dedup) COMPREPLY=( $(compgen -W "scan count clean" -- "$cur") ); return ;;

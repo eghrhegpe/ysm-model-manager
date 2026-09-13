@@ -1,33 +1,27 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 
+import { can } from "@/backend/capabilities.ts";
+import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { rememberModelPath } from "@/core/model-path-store.ts";
+import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
+import { isPreviewOverlayActive } from "@/preview-3d/adapters/overlay-active.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
-import { treeCSS } from "./app-tree-styles.ts";
-
-// 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
-// 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
-// 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
-const appTreeStyle: CSSStyleSheet = (() => {
-  if (typeof CSSStyleSheet === "undefined") {
-    return { replaceSync: () => {} } as unknown as CSSStyleSheet;
-  }
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(treeCSS);
-  return sheet;
-})();
-
-export { appTreeStyle };
-
-import { isPreviewOverlayActive } from "@/preview-3d/adapters/overlay-active.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
+import { treeCSS } from "./app-tree-styles.ts";
+import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
+import { type SelectState, selectSingle } from "./data.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
@@ -48,20 +42,24 @@ import { bindToolbarEvents } from "./toolbar-events.ts";
 import { footerHTML, headerHTML, spinnerHTML } from "./tpl.ts";
 import { type TreeSnapshot, TreeState } from "./tree-state.ts";
 
+// 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
+// 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
+// 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
+const appTreeStyle: CSSStyleSheet = (() => {
+  if (typeof CSSStyleSheet === "undefined") {
+    return { replaceSync: () => {} } as unknown as CSSStyleSheet;
+  }
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(treeCSS);
+  return sheet;
+})();
+
+export { appTreeStyle };
+
 // ADR-133 阶段 B/C+：本文件内钩子的稳定 testid 声明（G-1 单一事实源，与钩子同处）。
 // 树容器 id="tree" 供 handler/CSS 锚定，testid 取 'tree-root'——落入契约孤儿扫描的
 // 'tree-' 前缀白名单，从而同受 must-have 与孤儿双校验守护（裸 'tree' 只受前者）。
 export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
-
-import { can } from "@/backend/capabilities.ts";
-import { bus } from "@/bus";
-import { rememberModelPath } from "@/core/model-path-store.ts";
-import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
-import { dbg } from "@/utils/debug/debug.ts";
-import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
-import { type AuthorInfo, loadAuthors } from "./authors.ts";
-import { type SelectState, selectSingle } from "./data.ts";
 
 // —— 全局扩展（已随 WeakMap 改造移除）——
 // 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至

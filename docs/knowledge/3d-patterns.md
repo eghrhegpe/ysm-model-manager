@@ -357,6 +357,23 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
   自动 3D 无 isConnected 守卫（组件销毁后仍弹全屏）、texture-loader 轮询无超时
   （图片 URL 悬挂 → Promise.all 永久 pending，加 15s 超时兜底）。
 
+### 2026-09-14 第三次审核（preview-3d 全目录扫描）误报规律——三类模式必须核实
+
+主代理派 4 个子代理扫描 `preview-3d/` 全目录（~63,700 行、150+ 文件），输出 ~100 项 P1–P4。
+主代理按优先级亲自核实 P1/P2 关键项，发现**子代理报告 1/5 P1 误报、2/5 P1 高估**，
+复现 7.3 首轮教训并扩展出三类高频误报模式：
+
+| 误报模式 | 实例（本次） | 核实方法 |
+|---------|-------------|---------|
+| **① 模块级 `let` 望文生义为单例缺陷** | P1-1 判 `litematic-adapter.ts:263` `let SliceInstance` 为"模块级单例→schema key 碰撞"。实为注释明写「per-scene 唯一 key／多模型并存防互相覆盖」（5329a347 review P2 产物），正是 **ADR-132 红线的正确实现**。子代理见 `let` 即触发模式匹配，未读 263 行注释 | 见模块级 `let`/`const` 计数器，先 grep 其**全部使用点 + 紧邻注释**，确认是否已做 per-scene 唯一化 |
+| **② 把 ADR 已落地的改进当遗留债务重报** | P2 判"ADR-233 过渡期 isDisposed 三重复制未收敛"。实测 `mount-preview-core.ts:850-852` 已传 `session.isDisposed`/`session.aborted` **引用共享**（非各自 new），`guardSessionAlive` 已收敛 3 处逐字咒语（switch-preview L153/263/307）——**ADR-233 完全落地**，子代理报的是 ADR 前旧稿 | 报"某 ADR 遗留未做"时，先 grep 该 ADR 的落地点符号（如 `guardSessionAlive`/`SessionStatus`）确认是否已实施，再下结论 |
+| **③ 热路径/构建期路径混淆，性能项高估** | P2 判"mesh.ts 环检测 O(n²) 大模型卡顿"、"env-dispatcher 每帧 new Set GC 压力"。实测环检测是**构建期一次性**（非 rAF 热路径，树深 <20 实际 O(n·d)）；`new Set` 每帧仅几个键，GC 可忽略。子代理未区分「构建期」与「渲染热路径」 | 报性能项时，先确认调用频率：rAF 内＝热路径须核实；构建/切换期＝一次性，O(n²) 非缺陷 |
+
+**总教训**：子代理擅长扫描覆盖（广度），但对「注释已声明的权衡」「ADR 已落地」「调用频率」
+辨识力不足，见到 `let`/`as unknown as`/长函数/`new` 即触发模式匹配报缺陷。主代理必须
+**按优先级核实关键项**，不直接采信——尤其 P1 级，误报代价最高（引导用户做无谓改动）。
+本次真正值得动手的仅 1 项（P1-3 env.ts 双源 id 漂移，一行 `new Set(ORDERED_IDS)` 修复）。
+
 ---
 
 ## 8. 循环依赖破壁模式（注册表反向注入）

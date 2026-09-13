@@ -15,6 +15,10 @@
  *   - 审计日志随 .git 生命周期（clone 不带、rm -rf 全没）——换机/重 clone 的历史不可对账
  *   - reflog 随 git 过期策略（默认 90 天）衰减，--days 窗口超过 reflog 覆盖时结果不完整
  *
+ * 设计意图：让「留痕」产生实际威慑——审计日志只写不查等于零收益，本工具即逃生审计链的
+ * 读侧例行消费位（doctor --audit-check）。刻意不接 CI（fresh clone 无远端 reflog，
+ * pushEvents 恒 0 → 对账恒空转）；跨机可查的兜底须另走「CI 同跑 gate 本体互证」。
+ *
  * 用法：
  *   node scripts/gate-audit-reconcile.ts [--days 30] [--json]
  *

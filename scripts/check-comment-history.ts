@@ -14,6 +14,10 @@
  *   node scripts/check-comment-history.ts --json     # _summary 契约（gate/CI 消费）
  *   node scripts/check-comment-history.ts --strict   # 阻断模式：有考古引用 exit 1（升级路径）
  *
+ * 设计意图：把「评审过程」挡在代码之外——注释应锚定 ADR（结论），而非裸引用当次评审编号
+ * （过程）。本脚本是该约定的唯一自动执行者，故先以 WARN 观察期落地、不清零不阻断；
+ * 待存量考古引用清零后转 --strict 硬门禁，届时新增裸引用即不可推送。
+ *
  * 退出码：默认 0（仅 WARN）；--strict 时 1 = 存在考古引用。
  * 依赖：node:fs / node:path / _lib/parse-args.ts / _lib/scan-files.ts（零外部依赖）。
  */

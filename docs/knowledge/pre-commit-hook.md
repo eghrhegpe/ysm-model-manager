@@ -5,17 +5,33 @@ tier: architecture
 category: utils
 source_files:
   - .githooks/pre-commit
+  - .githooks/post-commit
+  - scripts/_lib/gen-staged-pair.ts
+  - scripts/_lib/hook-audit.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - appendHookAudit
+    - deletePairList
+    - GEN_STAGED_PREFIX
+    - HookAuditEntry
+    - hookAuditFilePath
+    - ORPHAN_TTL_MS
+    - pairListPath
+    - readPairList
+    - sweepOrphanPairs
+    - writePairList
 use_when:
   - pre-commit
   - 钩子
   - 文档同步
   - 自动 stage
   - 并发隔离
+  - 逃生留痕
 invariant_anchors:
   - .githooks/pre-commit|snap_docs
   - .githooks/pre-commit|GEN_SKIPPED
+  - .githooks/pre-commit|PARENT_OID
+  - .githooks/post-commit|HEAD~1..HEAD
 quick_groups:
   - 提交与钩子
 quick_intents:
@@ -49,22 +65,28 @@ status: active
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）
 - gofmt 自动修复 staged go 文件（失败仅提示）
 - biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐
+- 并发配对生成物清单（ADR-232 D1，2026-09-13）：`PARENT_OID=$(git rev-parse HEAD)` 早于 stage 段定义（L48；`set -u` 下必须 `:-` 守卫引用）；gen 产物清单写 `.git/ysm_gen_staged_<PARENT_OID12>`（`_lib/gen-staged-pair.ts` 配对，替代旧版 last-writer-wins 单文件 `ysm_gen_staged`，并发会话父 oid 不同天然互不覆盖）；`/tmp/ysm_gen_to_stage_$$.txt` 加 `$$` 进程后缀防互踩
+- 逃生留痕（ADR-232 D2，2026-09-13）：`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中时调用 `_lib/hook-audit.ts` 写 `.git/gate-audit.log` 的 `SKIPPED_PRECOMMIT` 行（钩子仍执行→可留痕，区别于 `--no-verify` 整钩不跑的零痕迹绕过）；文案纠正：旧「绕过不留审计」误导已改为「命中即留痕可审计」
 
 ## 不变量
 
 - **禁止 `git add -u docs/` 兜底**：会吞他人未提交 docs 半成品，违反 P2-2。快照缺失宁可跳过也不吞（ADR-150）
 - gen 产物同步幂等：已同步时无 diff，`git add` 无副作用
 - 任何 gen 失败仅提示，不阻断 commit（阻断留给 pre-push）
-- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复
+- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复；`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中即留痕 SKIPPED_PRECOMMIT（ADR-232 D2）
+- **PARENT_OID 必须先于 stage 段定义 + `set -u` 下引用须 `:-` 守卫**（L48 定义；L124 用 `"${PARENT_OID:-}"`）——2026-09-13 实证：定义在 L302（stage 段后）+ 无守卫 → `git commit` 触发 `PARENT_OID: unbound variable` 中止
 
 ## 与其他子系统关系
 
+- 与 `post-commit` 互补：post-commit 按 `HEAD~1`（父 oid）读 `.git/ysm_gen_staged_<oid>` 清单清生成物残留，判定锚点 `HEAD~1..HEAD`（commit 不可变对象，根治「HEAD 此刻」误判，ADR-232 D1）；清完 `gen-staged-pair.ts delete` 删本清单 + `sweep` 回收 48h 孤儿
 - 与 `pre-push` 互补：pre-commit 只快同步+stage，pre-push 全量门禁阻断
 - 与 `prepare-commit-msg` 互补：只读 `frontend/coverage/` 不触发慢检查
 - 知识卡漂移由 `check-knowledge-drift` 守护，gen 产物由本钩子 stage
 
 ## 相关
 
+- ADR-232 — scripts/hooks 并发竞态/审计留痕/退化降级三修复（D1 配对 / D2 留痕 / D3 reconcile 退化降级）
 - ADR-150 — pre-commit 兜底收窄（禁用 git add -u docs/ 吞并发漂移）
 - ADR-087 — drift --affected 秒级接入
+- [pre_push_gate](./pre_push_gate.md) — 逃生留痕对账（gate-audit-reconcile）
 - [scripts_readme_index](./scripts_readme_index.md) — 钩子/脚本总览

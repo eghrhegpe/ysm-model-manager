@@ -7,9 +7,9 @@
 // - workshop/github 借宿状态：currentSite / avatarCache / workshopCache / githubCache / workshopTimer
 // - 异步清理：repoEventsCleanup
 
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import type { PageName } from "@/bus";
 import type { WorkshopModel } from "@/features/community/render.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 export interface RepoCacheEntry {
   models: WorkshopModel[];

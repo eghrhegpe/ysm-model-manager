@@ -7,6 +7,7 @@
 // - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
 import { Events } from "@/backend/runtime.ts";
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { fillSearch } from "@/features/community/community-data.ts";
 import type { WorkshopModel } from "@/features/community/render.ts";
@@ -21,7 +22,6 @@ import {
   loadBrowseMode,
   saveBrowseMode,
 } from "@/views/app-content/site/workshop-browse-mode.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";

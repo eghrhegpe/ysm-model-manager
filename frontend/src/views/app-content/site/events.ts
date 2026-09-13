@@ -32,7 +32,7 @@ function cmCrBuildDetailHtml(
   esc: (s: unknown) => string,
   avatarCache: Record<string, string> | undefined,
   authorCountMap: Record<string, number>,
-): { html: string; isFav: boolean } {
+): { html: string; fallbackChar: string; isFav: boolean } {
   const identity = getCreatorIdentity(cr as CreatorIdentityInput);
   const descTags = parseDescTags(cr.desc);
   const isFav = isFaved(cr.name);
@@ -48,9 +48,7 @@ function cmCrBuildDetailHtml(
         esc(avatarCache[cr.name]) +
         '" data-debug-avatar="' +
         esc(cr.name) +
-        '" onerror="this.outerHTML=\'' +
-        detailFallbackDiv.replace(/"/g, "&quot;") +
-        "'\">"
+        '">'
       : detailFallbackDiv) +
     "</div>" +
     '<div class="cr-detail-fill">' +
@@ -122,7 +120,7 @@ function cmCrBuildDetailHtml(
     "</button>" +
     "</div>" +
     "</div>";
-  return { html, isFav };
+  return { html, fallbackChar: detailFallbackChar, isFav };
 }
 
 function cmCrBindOverlayEvents(
@@ -196,8 +194,17 @@ function cmCrCreateDetailOverlay(
   overlay.onclick = (ev) => {
     if (ev.target === overlay) close();
   };
-  const { html } = cmCrBuildDetailHtml(cr, esc, avatarCache, authorCountMap);
+  const { html, fallbackChar } = cmCrBuildDetailHtml(cr, esc, avatarCache, authorCountMap);
   overlay.innerHTML = html;
+  const detailImg = overlay.querySelector<HTMLImageElement>("img.cr-detail-avatar-img");
+  if (detailImg) {
+    detailImg.addEventListener("error", () => {
+      const fb = document.createElement("div");
+      fb.className = "cr-avatar cr-detail-avatar-text";
+      fb.textContent = fallbackChar;
+      detailImg.replaceWith(fb);
+    });
+  }
   return overlay;
 }
 

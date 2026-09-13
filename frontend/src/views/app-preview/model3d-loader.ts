@@ -5,13 +5,13 @@
 import type * as THREE from "three";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
+import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {

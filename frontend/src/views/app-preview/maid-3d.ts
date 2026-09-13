@@ -10,6 +10,7 @@
 // 名字里的 "-3d" 应读作「女仆预览入口」而非「纯 3D 薄包装」（后者是 ysm-3d.ts 的形态）。
 
 import { registerAndroidBackHandler } from "@/backend/platform.ts";
+import type { YsmMetadata } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import {
   cleanupPreview,
@@ -24,7 +25,6 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

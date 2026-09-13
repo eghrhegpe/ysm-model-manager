@@ -57,6 +57,7 @@ auto_fields:
     - invalidatePackPreview
     - invalidateScenePreview
     - invalidateVrmPreview
+    - invalidateYsmPreview
     - loadModel2D
     - loadModelData
     - LoadModelOpts

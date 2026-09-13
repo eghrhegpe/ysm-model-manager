@@ -1,6 +1,7 @@
 // ===== 骨骼渲染逻辑 =====
 // 纯 DOM 创建/HTML 生成函数，不含事件绑定
 
+import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -9,7 +10,6 @@ import { renderMultiAngle } from "@/preview-3d/screenshot/screenshot-render.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { esc } from "@/utils/html/html.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { Model3DSpec } from "../../../bindings/ysm-model-manager/go/threejs/models.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { safeUrl } from "./tpl-summary.ts";

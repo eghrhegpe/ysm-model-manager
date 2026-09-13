@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 212 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 219 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 43 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 255 |
@@ -304,8 +304,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 168 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 312 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 166 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 319 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -497,8 +497,8 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 279 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 143 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 286 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |

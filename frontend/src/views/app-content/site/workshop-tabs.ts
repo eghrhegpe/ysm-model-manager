@@ -1,5 +1,6 @@
 // ===== 创意工坊 Tab 管理 =====
 
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import {
@@ -14,7 +15,6 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import type { AppContentHost } from "@/views/app-content/host.ts";
-import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
 
 /** 创意工坊 Tab 延迟加载毫秒数（等首帧渲染后再异步拉数据） */

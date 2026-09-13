@@ -6,7 +6,11 @@
 // 加载 model），与 vrm/litematic 同构——core 的 switchTo(path) 对 ysm 生效，
 // 3D 内模型切换无需重建整个会话。
 
-import { cleanupPreview, mount3D } from "@/preview-3d/adapters/mount-preview-core.ts";
+import {
+  cleanupPreview,
+  invalidatePreview,
+  mount3D,
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
@@ -82,4 +86,9 @@ export async function createYsm3D(path: string, texIdx = 0, opts: YsmOpenOptions
 /** 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） */
 export function cleanupYsm3D(): void {
   cleanupPreview();
+}
+
+/** 任意新预览派发时调用，作废在途 YSM 加载 */
+export function invalidateYsmPreview(): void {
+  invalidatePreview();
 }

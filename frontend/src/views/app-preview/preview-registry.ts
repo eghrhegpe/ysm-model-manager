@@ -20,6 +20,7 @@ import { cleanupPack3D, invalidatePackPreview } from "./pack-3d.ts";
 import { cleanupScene3D, invalidateScenePreview } from "./scene-3d.ts";
 import type { PreviewCtx } from "./utils.ts";
 import { cleanupVrm3D, invalidateVrmPreview } from "./vrm-3d.ts";
+import { cleanupYsm3D, invalidateYsmPreview } from "./ysm-3d.ts";
 
 /** 预览 show 函数签名：ctx + path + 类型元信息（icon/label） */
 export type PreviewShowFn = (
@@ -69,6 +70,7 @@ export const PREVIEW_CLEANUP: Array<() => void> = [
   cleanupPack3D,
   cleanupEmpty3D,
   cleanupMaid3D,
+  cleanupYsm3D,
 ];
 
 /**
@@ -83,4 +85,5 @@ export const PREVIEW_INVALIDATE: Array<() => void> = [
   invalidatePackPreview,
   invalidateEmptyPreview,
   invalidateMaidPreview,
+  invalidateYsmPreview,
 ];

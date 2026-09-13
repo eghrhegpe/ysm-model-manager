@@ -67,9 +67,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
       esc(avatarCache[cr.name]) +
       '" data-debug-avatar="' +
       esc(cr.name) +
-      '" onerror="this.outerHTML=\'' +
-      fallbackDiv.replace(/"/g, "&quot;") +
-      "'\">"
+      '">'
     : fallbackDiv;
 
   const localBadge =
@@ -140,6 +138,22 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
     "</span>" +
     "</span>" +
     "</div>";
+
+  // 头像加载失败 → 替换为字母 fallback（避免内联 onerror 字符串拼接）
+  const imgEl = card.querySelector<HTMLImageElement>("img.cr-avatar");
+  if (imgEl) {
+    imgEl.addEventListener("error", () => {
+      imgEl.replaceWith(
+        (() => {
+          const d = document.createElement("div");
+          d.className = "cr-avatar cr-avatar-fallback";
+          d.textContent = fallbackChar;
+          return d;
+        })(),
+      );
+    });
+  }
+
   return card;
 }
 

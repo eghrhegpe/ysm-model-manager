@@ -247,10 +247,14 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 // ⚠️ 毒舌审核：原硬编码 ext == ".json" 会误判普通 readme.json 为 YSM 文件夹级安装。
 // 改为 IsYsmEntryJSON 精确匹配 ysm.json，避免非 YSM 场景的 .json 误触发。
 func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error {
+	// stat 移到锁外：os.Stat 是磁盘 I/O（慢盘/杀毒扫描下可达数百 ms），纳入全局
+	// InstallLock 临界区会放大锁争用（并发 Push/Pull/Relink 串行等待被拉长）。
+	// filePath 是调用方传入的稳定路径，stat 在锁内不会 TOCTOU——*Locked 变体对
+	// 目标写操作会自行校验源存在性（ADR-056 安装器契约），锁内不再重复 stat。
+	fi, stErr := os.Stat(filePath)
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
-	fi, stErr := os.Stat(filePath)
 	if stErr == nil && fi.IsDir() {
 		return installer.InstallDirLocked(filePath, customDir, globalDir, linkMode, rtype)
 	}

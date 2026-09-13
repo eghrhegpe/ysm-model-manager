@@ -227,8 +227,11 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // sync.Mutex 不暴露「是否已持锁」的查询，TryLock 在其他 goroutine 持锁时返回 false
 // → 不可靠；且生产环境 panic 不可接受。调用方须自行确保持锁。
 // 唯一受控例外：sync.go 的 assertInstallLockHeld 是 fail-fast 守卫——仅在
-// config.ConflictPolicy 非空时触发（当前生产调用链恒传 nil config，仅测试注入），
-// 其 TryLock 语义「TryLock 成功 = 无人持锁 = 调用方违规」在该场景下可靠。
+// config.ConflictPolicy 非空时触发（当前生产调用链恒传 nil config，仅测试注入）。
+// 局限：TryLock 无法区分「本 goroutine 持有」与「他人持有」。未持锁违规调用 +
+// 他人 goroutine 正持 InstallLock 时，TryLock 返回 false 被误判为「已持锁」而
+// 放行——此时 ResolveConflictsLocked 将在无锁状态下执行（并发写目录竞态）。
+// 新增非 nil config 调用路径时，必须确保调用方已持有 InstallLock，不可依赖本断言。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {

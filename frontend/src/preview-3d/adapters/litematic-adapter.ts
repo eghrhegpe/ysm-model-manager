@@ -74,13 +74,13 @@ interface LayerShell {
 
 // ===== 阶段①：入口守卫 + 路径读取 + 数据解析 =====
 
-function ShowLoading(ctx: PreviewBuildCtx): void {
+function showLoading(ctx: PreviewBuildCtx): void {
   renderLoadingState(ctx.loadingEl, "🧊", "preview.loadingVoxels");
 }
 
 type LoadResult = { ok: true; data: VoxelData } | { ok: false; earlyResult: PreviewScene };
 
-async function LoadAndParseData(
+async function loadAndParseData(
   ctx: PreviewBuildCtx,
   path: string,
   voxelCall: (path: string) => Promise<VoxelData | null>,
@@ -95,7 +95,7 @@ async function LoadAndParseData(
 
 // ===== 阶段②：相机 + GridHelper 设置 =====
 
-function SetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
+function setupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
   const sizeX = data.size[0] || 10;
   const sizeY = data.size[1] || 10;
   const sizeZ = data.size[2] || 10;
@@ -133,7 +133,7 @@ function SetupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
 // ===== 阶段③：voxel 构建 + 材质纹理映射 =====
 
 /** 常值哨兵陷阱（#17）：[0,0,0] 是合法坐标，不可 `|| 0` 兜底。非法条目整条丢弃。 */
-function IsValidPos(p: number[]): boolean {
+function isValidPos(p: number[]): boolean {
   return (
     Array.isArray(p) &&
     p.length >= 3 &&
@@ -144,7 +144,7 @@ function IsValidPos(p: number[]): boolean {
 }
 
 /** blockState→texture atlas 映射（当前：group.color 兜底；命名预留后续 atlas 扩展） */
-function ResolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertMaterial {
+function resolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertMaterial {
   let color = groupColor || DEFAULT_VOXEL_COLOR;
   try {
     new THREE.Color(color);
@@ -156,7 +156,7 @@ function ResolveBlockTexture(groupColor: string | undefined): THREE.MeshLambertM
 }
 
 /** 三维 voxel 核心：按 group→chunk 分块，每 chunk 独立 InstancedMesh（GPU 友好） */
-function BuildBlockMesh(
+function buildBlockMesh(
   ctx: PreviewBuildCtx,
   data: VoxelData,
   sizeInfo: SizeInfo,
@@ -175,7 +175,7 @@ function BuildBlockMesh(
     const chunkMap = new Map<number, number[][]>();
     for (let i = 0; i < group.positions.length; i++) {
       const p = group.positions[i];
-      if (!IsValidPos(p)) continue;
+      if (!isValidPos(p)) continue;
       const cx = Math.floor(p[0] / CHUNK_SIZE);
       const cy = Math.floor(p[1] / CHUNK_SIZE);
       const cz = Math.floor(p[2] / CHUNK_SIZE);
@@ -187,7 +187,7 @@ function BuildBlockMesh(
       }
       arr.push(p);
     }
-    const mat = ResolveBlockTexture(group.color);
+    const mat = resolveBlockTexture(group.color);
     materials.push(mat);
     const dummy = new THREE.Object3D();
     for (const [ck, chunkPositions] of chunkMap) {
@@ -209,14 +209,14 @@ function BuildBlockMesh(
 
 // ===== 阶段④：分层切片（schema builder 注册 + applyLayer 体素过滤）=====
 
-function ChunkKey(p: number[], sizeInfo: SizeInfo): number {
+function chunkKey(p: number[], sizeInfo: SizeInfo): number {
   const cx = Math.floor(p[0] / CHUNK_SIZE);
   const cy = Math.floor(p[1] / CHUNK_SIZE);
   const cz = Math.floor(p[2] / CHUNK_SIZE);
   return cx + cy * sizeInfo.xChunks + cz * sizeInfo.xChunks * sizeInfo.yChunks;
 }
 
-function ApplyLayer(
+function applyLayerFilter(
   shell: LayerShell,
   sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
@@ -235,8 +235,8 @@ function ApplyLayer(
       let count = 0;
       for (let i = 0; i < positions.length; i++) {
         const p = positions[i];
-        if (!IsValidPos(p)) continue;
-        if (ChunkKey(p, sizeInfo) !== ck) continue;
+        if (!isValidPos(p)) continue;
+        if (chunkKey(p, sizeInfo) !== ck) continue;
         if (mode === "single" && p[shell.layerAxis] !== target) continue;
         if (
           mode !== "all" &&
@@ -273,15 +273,15 @@ const SLICE_AXIS_OPTIONS = [
 /** 合法切片模式白名单（select set 闭包防御非法值） */
 const SLICE_MODES = ["all", "single", "range"];
 
-/** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 ClampLayerInput 语义） */
-function ClampLayer(n: number, layerMax: number): number {
+/** 层号收敛 [1, layerMax]（非法输入回落 max——沿用旧 clampLayerInput 语义） */
+function clampLayer(n: number, layerMax: number): number {
   return Number.isFinite(n) ? Math.max(1, Math.min(layerMax, n)) : layerMax;
 }
 
 /** 分层切片面板 builder 工厂：闭包持 shell（轴/层值/模式会话态，全 per-scene），每次面板
  *  渲染重新执行——slider max 随轴切换保持新鲜（axis/mode select 均 refreshOnChange 触发）。
  *  快照参数不消费：动态数据全在闭包 shell（含模式），不入全局状态层。 */
-function BuildSliceSchema(
+function buildSliceSchema(
   sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
@@ -293,7 +293,8 @@ function BuildSliceSchema(
     layerVal2: sizeInfo.sizeY,
     mode: "all",
   };
-  const applyLayer = (): void => ApplyLayer(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
+  const applyLayer = (): void =>
+    applyLayerFilter(shell, sizeInfo, rawGroups, groupMeshes, shell.mode);
   const resetToMax = (): void => {
     shell.layerMax = [sizeInfo.sizeX, sizeInfo.sizeY, sizeInfo.sizeZ][shell.layerAxis];
     shell.layerVal = shell.layerMax;
@@ -317,7 +318,7 @@ function BuildSliceSchema(
       numeric: true,
       get: () => shell[pick],
       set: (v) => {
-        shell[pick] = ClampLayer(Number(v), shell.layerMax);
+        shell[pick] = clampLayer(Number(v), shell.layerMax);
       },
       onChange: () => applyLayer(),
     },
@@ -389,13 +390,13 @@ function BuildSliceSchema(
 }
 
 /** 注册切片面板 builder + 产出 panel 入口节点（schemaId 是唯一渲染通道，契约禁双通道） */
-function RegisterSliceSchema(
+function registerSliceSchema(
   sizeInfo: SizeInfo,
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
   sliceKey: string, // per-scene 唯一 key（多模型并存防互相覆盖——5329a347 review P2）
 ): PreviewMenuNode {
-  registerSchema(sliceKey, BuildSliceSchema(sizeInfo, rawGroups, groupMeshes));
+  registerSchema(sliceKey, buildSliceSchema(sizeInfo, rawGroups, groupMeshes));
   return {
     id: "slice",
     icon: "🧊",
@@ -409,7 +410,7 @@ function RegisterSliceSchema(
 
 // ===== 辅助：perf trace + truncated 警告 =====
 
-function RecordPerfTrace(path: string, tStart: number, data: VoxelData): void {
+function recordPerfTrace(path: string, tStart: number, data: VoxelData): void {
   try {
     recordLoadTrace({
       ts: Date.now(),
@@ -424,7 +425,7 @@ function RecordPerfTrace(path: string, tStart: number, data: VoxelData): void {
   }
 }
 
-function ShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
+function showTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
   if (!data.truncated) return;
   ensureMdliStyles(); // P1 批次11:cssText 抽类注入(幂等)
   const w = document.createElement("div");
@@ -439,7 +440,7 @@ function ShowTruncatedWarning(ctx: PreviewBuildCtx, data: VoxelData): void {
 // litematic 是纯静态渲染 + 截图能力，无 update/applyPose/camera 控制；结构类型下
 // ScreenshotScene 返回值可赋给 PreviewScene（其余字段可选），消费方零改动。
 
-function BuildResult(
+function buildResult(
   ctx: PreviewBuildCtx,
   meshSet: LitematicMeshSet,
   menuItems: PreviewMenuNode[],
@@ -489,21 +490,21 @@ export async function buildLitematicScene(
   opts?: LitematicBuildOpts,
 ): Promise<PreviewScene> {
   const tStart = performance.now();
-  ShowLoading(ctx);
+  showLoading(ctx);
 
-  const loadRes = await LoadAndParseData(ctx, path, voxelCall);
+  const loadRes = await loadAndParseData(ctx, path, voxelCall);
   if (!loadRes.ok) return loadRes.earlyResult;
   const { data } = loadRes;
 
-  const sizeInfo = SetupCameraAndGrid(ctx, data);
-  const meshSet = BuildBlockMesh(ctx, data, sizeInfo);
+  const sizeInfo = setupCameraAndGrid(ctx, data);
+  const meshSet = buildBlockMesh(ctx, data, sizeInfo);
 
   ctx.loadingEl.remove();
-  RecordPerfTrace(path, tStart, data);
+  recordPerfTrace(path, tStart, data);
 
   const sliceKey = `${LITEMATIC_SLICE_SCHEMA_ID}-${++SliceInstance}`; // per-scene 唯一（多模型并存防覆盖）
-  const sliceItems = [RegisterSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
-  ShowTruncatedWarning(ctx, data);
+  const sliceItems = [registerSliceSchema(sizeInfo, data.groups, meshSet.groupMeshes, sliceKey)];
+  showTruncatedWarning(ctx, data);
 
   // [doc:adr-132] 多模型选择菜单项（容器内全部 entry；切 entry 走 core switchTo 重建）
   const menuItems: PreviewMenuNode[] = sliceItems;
@@ -523,7 +524,7 @@ export async function buildLitematicScene(
     if (select) menuItems.push(select);
   }
 
-  return BuildResult(ctx, meshSet, menuItems, sliceKey);
+  return buildResult(ctx, meshSet, menuItems, sliceKey);
 }
 
 /** Litematic 适配器工厂 deps（视图壳注入 voxel 数据读取——ADR-072：适配器 0 backend import） */

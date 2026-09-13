@@ -212,7 +212,7 @@ interface MdYsMenuDebug {
 }
 
 /** 阶段①：头部数据加载 + buildYsmObject 挂场景 */
-async function LoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
+async function loadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
   const model = await sc.opts.loader(sc.path);
   sc.tLoadEnd = performance.now();
   if (!model) throw new Error(`模型数据加载失败: ${sc.path}`);
@@ -242,7 +242,7 @@ async function LoadAndBuild(sc: MdYsSceneCtx): Promise<MdYsBuildCore> {
 }
 
 /** 阶段②：相机取景 + 骨骼拾取系统 + content 句柄 */
-function SetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraBones {
+function setupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraBones {
   const { ctx } = sc;
   const { obj, spec } = core;
 
@@ -300,7 +300,7 @@ function SetupCameraAndBones(sc: MdYsSceneCtx, core: MdYsBuildCore): MdYsCameraB
 }
 
 /** 子辅助：磁盘扫描 .animation.json / .animation_controllers.json（阶段③内提纯） */
-async function ScanAnimFiles(sc: MdYsSceneCtx): Promise<{
+async function scanAnimFiles(sc: MdYsSceneCtx): Promise<{
   clips: Array<{ label: string; clip: AnimationClip }>;
   controllers: AnimationController[];
 }> {
@@ -334,8 +334,11 @@ async function ScanAnimFiles(sc: MdYsSceneCtx): Promise<{
           allClips.push({ label: fileLabels[ci], clip: clips[ci] });
         }
       }
-    } catch {
-      /* 单个文件解析失败跳过 */
+    } catch (e) {
+      logWarn(
+        "preview-3d",
+        `动画文件解析失败跳过（模型将缺该组动画）: ${e instanceof Error ? e.message : e}`,
+      );
     }
   }
 
@@ -346,15 +349,15 @@ async function ScanAnimFiles(sc: MdYsSceneCtx): Promise<{
       const text = new TextDecoder("utf-8").decode(base64ToBytes(b64) as Uint8Array);
       const { controllers } = parseAnimationControllerJSON(text);
       if (controllers.length > 0) allControllers.push(...controllers);
-    } catch {
-      /* 单个控制器文件解析失败跳过 */
+    } catch (e) {
+      logWarn("preview-3d", `控制器文件解析失败跳过: ${e instanceof Error ? e.message : e}`);
     }
   }
   return { clips: allClips, controllers: allControllers };
 }
 
 /** 阶段③：骨骼面板树 + 动画/感知系统（ADR-100 L1+L2+L3） */
-async function BuildBonePanelAndAnim(
+async function buildBonePanelAndAnim(
   sc: MdYsSceneCtx,
   core: MdYsBuildCore,
 ): Promise<MdYsPanelAnim> {
@@ -393,7 +396,7 @@ async function BuildBonePanelAndAnim(
           allClips.push({ label: clip.name || `Clip ${i + 1}`, clip });
         });
       } else {
-        const scanned = await ScanAnimFiles(sc);
+        const scanned = await scanAnimFiles(sc);
         allClips.push(...scanned.clips);
         allControllers.push(...scanned.controllers);
       }
@@ -416,8 +419,11 @@ async function BuildBonePanelAndAnim(
           animDir: null,
         };
       }
-    } catch {
-      /* 动画扫描失败 → 静默降级，不影响模型渲染 */
+    } catch (e) {
+      logWarn(
+        "preview-3d",
+        `动画扫描失败，静默降级（模型可渲染但无动画）: ${e instanceof Error ? e.message : e}`,
+      );
     }
   }
   return {
@@ -432,7 +438,7 @@ async function BuildBonePanelAndAnim(
 }
 
 /** 阶段④：声明式根菜单 + F 键调试模式 + perf trace 记录 */
-function BuildMenuAndDebug(
+function buildMenuAndDebug(
   sc: MdYsSceneCtx,
   core: MdYsBuildCore,
   cam: MdYsCameraBones,
@@ -545,7 +551,7 @@ function BuildMenuAndDebug(
 }
 
 /** 阶段⑤：组装 PreviewScene 返回句柄（dispose/reset/update 等） */
-function MakeSceneHandle(
+function makeSceneHandle(
   sc: MdYsSceneCtx,
   core: MdYsBuildCore,
   cam: MdYsCameraBones,
@@ -648,11 +654,11 @@ export async function buildYsmScene(
   };
   sc.tLoadStart = sc.tStart;
 
-  const core = await LoadAndBuild(sc);
-  const cam = SetupCameraAndBones(sc, core);
-  const anim = await BuildBonePanelAndAnim(sc, core);
-  const menu = BuildMenuAndDebug(sc, core, cam, anim);
-  return MakeSceneHandle(sc, core, cam, anim, menu);
+  const core = await loadAndBuild(sc);
+  const cam = setupCameraAndBones(sc, core);
+  const anim = await buildBonePanelAndAnim(sc, core);
+  const menu = buildMenuAndDebug(sc, core, cam, anim);
+  return makeSceneHandle(sc, core, cam, anim, menu);
 }
 
 /** 工厂：构造统一 PreviewAdapter（shared 模式）。path 一律由 build 在 build/switchTo 时传入 */

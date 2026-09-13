@@ -13,9 +13,9 @@ import type {
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { Stage4Anim } from "./mmd-build-anim.ts";
-import { DetectFormat, Stage1Input, Stage2LoadingManager } from "./mmd-build-load.ts";
+import { detectFormat, Stage1Input, Stage2LoadingManager } from "./mmd-build-load.ts";
 import { Stage5Menu } from "./mmd-build-menu.ts";
-import { ParsePmdStage, ParsePmxStage } from "./mmd-build-parse.ts";
+import { parsePmdStage, parsePmxStage } from "./mmd-build-parse.ts";
 import { Stage6Result } from "./mmd-build-result.ts";
 import { Stage3SceneMesh } from "./mmd-build-scene.ts";
 import type { BuildCtx, MmdAdapterDeps, MmdDataPort, MmdPanelHooks } from "./mmd-types.ts";
@@ -36,16 +36,16 @@ export async function buildMmdScene(
   c.panels = panels;
   c.stopLongTaskWatch = () => {};
   c.blobUrls = [];
-  c.alloc = []; // 失败释放注册表（stage 分配点 TrackAlloc 登记；finally 统一遍历）
+  c.alloc = []; // 失败释放注册表（stage 分配点 trackAlloc 登记；finally 统一遍历）
   c.buildSucceeded = false;
   // tStart 下沉：读取阶段计时起点（原 c.tStart 字段），经 stage6Result 传至 stage6bTrace
   const tStart = performance.now();
   try {
     await Stage1Input(c);
     await Stage2LoadingManager(c);
-    const fmt = DetectFormat(c);
-    if (fmt === "pmx") await ParsePmxStage(c);
-    await ParsePmdStage(c);
+    const fmt = detectFormat(c);
+    if (fmt === "pmx") await parsePmxStage(c);
+    await parsePmdStage(c);
     await Stage3SceneMesh(c);
     await Stage4Anim(c);
     const s5 = Stage5Menu(c);

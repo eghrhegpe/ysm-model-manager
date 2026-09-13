@@ -29,6 +29,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -170,8 +171,11 @@ async function buildFbxTexUrlMap(
         if (!b64) return;
         const bytes = bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array);
         map.set(name, URL.createObjectURL(new Blob([bytes], { type: "image/png" })));
-      } catch {
-        /* 单个纹理读取失败跳过，不阻断渲染 */
+      } catch (e) {
+        logWarn(
+          "preview-3d",
+          `FBX 纹理 ${name} 读取失败跳过（模型将缺该贴图）: ${e instanceof Error ? e.message : e}`,
+        );
       }
     },
     CHUNK_SIZE,

@@ -360,7 +360,7 @@ async function Stage1ReadParse(
   );
   return { vrm, gltf, tStart, tParseStart, tParseEnd };
 }
-async function LoadVrmaAnims(
+async function loadVrmaAnims(
   vrm: VRM,
   path: string,
   readFn: (p: string) => Promise<string | null>,
@@ -412,7 +412,7 @@ async function LoadVrmaAnims(
   }
   return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
 }
-function SetupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
+function setupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
   // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
   frameCameraSide(ctx, vrm.scene);
 }
@@ -438,7 +438,7 @@ function Stage3Materials(vrm: VRM): THREE.Material[] {
   });
   return vrmMaterials;
 }
-function BuildPerception(
+function buildPerception(
   vrm: VRM,
   ctx: PreviewBuildCtx,
   boneTree: BoneTree,
@@ -688,11 +688,11 @@ export async function buildVrmScene(
 ): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
   const parseRes = await Stage1ReadParse(ctx, path, port, readFn);
   const { vrm } = parseRes;
-  const motion = await LoadVrmaAnims(vrm, path, readFn, listAllFilePaths);
-  SetupCameraBounds(ctx, vrm);
+  const motion = await loadVrmaAnims(vrm, path, readFn, listAllFilePaths);
+  setupCameraBounds(ctx, vrm);
   const boneAssy = Stage2BonesHumanoid(vrm);
   const vrmMaterials = Stage3Materials(vrm);
-  const perception = BuildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
+  const perception = buildPerception(vrm, ctx, boneAssy.boneTree, boneAssy.semanticBones);
   // meta 文本摘要随 vrm 存活期归一化（纯数据零 GPU；stage5 dispose 后 vrm.meta 仍可读，
   // 但趁 vrm 在手边一并收口，语义对齐「面板数据源一次构造」）
   const meta = vrmMetaSummary(vrm.meta);

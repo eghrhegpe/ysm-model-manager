@@ -7,7 +7,7 @@ import { registerModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { mmdDiag, TrackAlloc } from "./mmd-shared.ts";
+import { mmdDiag, trackAlloc } from "./mmd-shared.ts";
 import type { Stage3Ctx } from "./mmd-types.ts";
 import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
 
@@ -135,7 +135,7 @@ async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
           .setTranscoderPath("/basis/")
           .detectSupport(c.ctx.renderer);
         // KTX2 缓存 loader 分配即登记失败释放（2026-09-03 注册表化）
-        TrackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
+        trackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
         const allMats: THREE.Material[] = Array.isArray(c.mesh.material)
           ? c.mesh.material
           : c.mesh.material

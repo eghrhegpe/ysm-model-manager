@@ -48,7 +48,7 @@ const ShouldOverwrite = (
  * 修复断裂的父子链：沿父链向上找第一个有 pivot 且在 bones 列表中的祖先，
  * 若链断则挂到 root。
  */
-function FixOrphanBoneChain(
+function fixOrphanBoneChain(
   bones: BoneData[],
   modelBones: BedrockModel["bones"],
   pivots: Map<string, Vec3>,
@@ -98,7 +98,7 @@ function FixOrphanBoneChain(
 /**
  * 阶段①：初始化空壳 + tex 尺寸 + first/pivots 预收集 map
  */
-function InitShellAndMaps(model: BedrockModel): {
+function initShellAndMaps(model: BedrockModel): {
   ctx: BonesCtx;
   emptyReturn: ModelGroup | null;
 } {
@@ -159,7 +159,7 @@ function InitShellAndMaps(model: BedrockModel): {
 /**
  * 阶段②：遍历 model.bones 构建 bones 数组 + boneIdx + boneCubes（按 parent 挂树）
  */
-function BuildBonesTree(model: BedrockModel, ctx: BonesCtx): void {
+function buildBonesTree(model: BedrockModel, ctx: BonesCtx): void {
   for (const b of model.bones) {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const bp = ctx.pivots.get(b.name)!;
@@ -205,7 +205,7 @@ function BuildBonesTree(model: BedrockModel, ctx: BonesCtx): void {
 /**
  * 阶段③-1：逐 bone 的 cubes 构建 mesh 数据
  */
-function BuildMeshesFromCubes(model: BedrockModel, ctx: BonesCtx): MeshData[] {
+function buildMeshesFromCubes(model: BedrockModel, ctx: BonesCtx): MeshData[] {
   const meshes: MeshData[] = [];
   const boneDone = new Set<string>();
   for (const b of model.bones) {
@@ -233,7 +233,7 @@ function BuildMeshesFromCubes(model: BedrockModel, ctx: BonesCtx): MeshData[] {
 /**
  * 阶段③-2：补全无 cube 的中间骨骼到 bones 列表
  */
-function EnsureAllBonesPresent(model: BedrockModel, ctx: BonesCtx): void {
+function ensureAllBonesPresent(model: BedrockModel, ctx: BonesCtx): void {
   const allBoneNames = new Set<string>();
   for (const b of model.bones) {
     allBoneNames.add(b.name);
@@ -282,12 +282,12 @@ function EnsureAllBonesPresent(model: BedrockModel, ctx: BonesCtx): void {
 /**
  * 阶段④：后处理（断链修复 + Arm 挂接）+ 纹理 ID 计算
  */
-function PostProcessAndTextures(
+function postProcessAndTextures(
   model: BedrockModel,
   ctx: BonesCtx,
   texIdxBase: number,
 ): string | null {
-  FixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
+  fixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
 
   for (let i = 0; i < ctx.bones.length; i++) {
     if (ctx.bones[i].name === "RightArm" && ctx.bones[i].parentId === null) {
@@ -335,17 +335,17 @@ export function buildModelGroup(
   compID: string,
   texIdxBase: number,
 ): ModelGroup {
-  const { ctx, emptyReturn } = InitShellAndMaps(model);
+  const { ctx, emptyReturn } = initShellAndMaps(model);
   if (emptyReturn !== null) {
     emptyReturn.id = compID;
     emptyReturn.name = compID;
     return emptyReturn;
   }
 
-  BuildBonesTree(model, ctx);
-  const meshes = BuildMeshesFromCubes(model, ctx);
-  EnsureAllBonesPresent(model, ctx);
-  const texID = PostProcessAndTextures(model, ctx, texIdxBase);
+  buildBonesTree(model, ctx);
+  const meshes = buildMeshesFromCubes(model, ctx);
+  ensureAllBonesPresent(model, ctx);
+  const texID = postProcessAndTextures(model, ctx, texIdxBase);
 
   const compName = model.sourceName || compID;
   return {

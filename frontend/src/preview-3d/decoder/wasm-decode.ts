@@ -63,7 +63,7 @@ interface TexAccum {
 }
 
 /** 释放 TexAccum 中所有未被缓存引用的 blob URL（防提前返回路径泄漏） */
-function RevokeTexAccumBlobs(acc: TexAccum): void {
+function revokeTexAccumBlobs(acc: TexAccum): void {
   for (const u of Object.values(acc.textures)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
   for (const u of Object.values(acc.avatars)) if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
 }
@@ -80,19 +80,19 @@ interface ProcessModelCtx {
   firstGeometryRawRef: { current: string | null };
 }
 
-function GetBaseDir(modelPath: string): string {
+function getBaseDir(modelPath: string): string {
   const dir = modelPath.replace(/\\/g, "/");
   return dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : ".";
 }
 
 // ===== 阶段① 同步分派辅助：缺文件 / 直接 JSON / YSM spec JSON =====
 
-function HandleEmptyBytes(modelPath: string): null {
+function handleEmptyBytes(modelPath: string): null {
   cacheSet(modelPath, { _wasmFailed: true });
   return null;
 }
 
-async function LoadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise<void> {
+async function loadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise<void> {
   if (!result.authors?.length) return;
   for (const au of result.authors) {
     if (!au.avatarPath) continue;
@@ -112,7 +112,7 @@ async function LoadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise
   }
 }
 
-function ComputeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
+function computeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
   uvMaxW: number;
   uvMaxH: number;
 } {
@@ -130,7 +130,7 @@ function ComputeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
   return { uvMaxW, uvMaxH };
 }
 
-async function HandleYsmJsonSpec(
+async function handleYsmJsonSpec(
   ctx: InflightCtx,
   result: DecodedYsm,
   ysmMeta: NonNullable<unknown>,
@@ -219,7 +219,7 @@ async function HandleYsmJsonSpec(
       // 成功路径：URL 已赋给 result.geometry.textures，清空 pending 防误释放
       pendingBlobUrls.clear();
       const geo = result.geometry;
-      const { uvMaxW, uvMaxH } = ComputeBoneTexRangeFromBones(allBones);
+      const { uvMaxW, uvMaxH } = computeBoneTexRangeFromBones(allBones);
       const boneTexW = Math.max(maxTexW, geo.texWidth, uvMaxW) || 64;
       const boneTexH = Math.max(maxTexH, geo.texHeight, uvMaxH) || 64;
       for (const b of allBones) {
@@ -250,7 +250,7 @@ async function HandleYsmJsonSpec(
   return result;
 }
 
-async function TryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<DecodedYsm | null> {
+async function tryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<DecodedYsm | null> {
   const text = new TextDecoder("utf-8").decode(bytes);
   let json: unknown;
   try {
@@ -274,11 +274,11 @@ async function TryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<Dec
   )?._ysmMeta;
 
   const finalResult = ysmMeta?.modelFiles?.length
-    ? await HandleYsmJsonSpec(ctx, result, ysmMeta)
+    ? await handleYsmJsonSpec(ctx, result, ysmMeta)
     : result;
   if (!finalResult) return null;
 
-  await LoadAvatarsForJson(ctx, finalResult);
+  await loadAvatarsForJson(ctx, finalResult);
 
   cacheSet(ctx.modelPath, { ...finalResult, _decodedBy: "🧠 JSON 直接解析" });
   swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(ctx.modelPath)));
@@ -320,7 +320,7 @@ const DecodeStrategies: DecodeStrategy[] = [
   },
 ];
 
-async function InitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<DecodedFile[]> {
+async function initAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<DecodedFile[]> {
   devLog("[YSM] 加载 WASM 模块...");
   const ok = await initYSMParser();
   devLog(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
@@ -355,7 +355,7 @@ async function InitAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<
 
 // ===== 阶段④ 元数据/纹理/模型/动画 流水线 =====
 
-function MatchTexKey(
+function matchTexKey(
   tn: string,
   textures: Record<string, string>,
   texLowerMap: Record<string, string>,
@@ -366,7 +366,7 @@ function MatchTexKey(
   return texLowerMap[lower] || null;
 }
 
-function CollectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
+function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   const textures: Record<string, string> = {};
   const texNameMap: Record<string, string> = {};
   const texLowerMap: Record<string, string> = {};
@@ -423,7 +423,7 @@ function CollectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
 }
 
-function ComputeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH: number } {
+function computeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH: number } {
   let uvMaxW = 2,
     uvMaxH = 2;
   for (const b of parsed.bones) {
@@ -457,7 +457,7 @@ function ComputeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH:
   return { uvMaxW, uvMaxH };
 }
 
-function ProcessModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {
+function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {
   if (!f || ctx.processedModels.has(f.path)) return;
   ctx.processedModels.add(f.path);
   devLog(`[YSM] 解析 ${f.path}...`);
@@ -475,7 +475,7 @@ function ProcessModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: n
         : ctx.orderedTexKeys[0] || null;
     const texUrl = texKey ? ctx.textures[texKey] : null;
 
-    const { uvMaxW, uvMaxH } = ComputeBoneTexRange(parsed);
+    const { uvMaxW, uvMaxH } = computeBoneTexRange(parsed);
 
     const texDim = texKey ? ctx.texDimensions[texKey] : null;
     const actualTexW = texDim ? texDim.w : 0;
@@ -516,7 +516,7 @@ function ProcessModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: n
   }
 }
 
-function GetModelName(mp: unknown): string {
+function getModelName(mp: unknown): string {
   return (
     (typeof mp === "string"
       ? mp
@@ -527,7 +527,7 @@ function GetModelName(mp: unknown): string {
   );
 }
 
-function MatchModelFilesByOrder(
+function matchModelFilesByOrder(
   files: DecodedFile[],
   meta: YsmMeta,
   orderedTexKeys: string[],
@@ -539,7 +539,7 @@ function MatchModelFilesByOrder(
     texKeyToIdx[k] = i;
   });
   for (const mp of meta.ysmModelOrder) {
-    const mn = GetModelName(mp);
+    const mn = getModelName(mp);
     if (!mn) continue;
     const lowerBase = mn.replace(/\.json$/i, "").toLowerCase();
     let matchedKey: string | null = null;
@@ -553,11 +553,11 @@ function MatchModelFilesByOrder(
     const f = files.find(
       (ff) => ff.path.endsWith(`/${mn}`) || ff.path.endsWith(`\\${mn}`) || ff.path === mn,
     );
-    if (f) ProcessModelFile(f, ctx, texIdx);
+    if (f) processModelFile(f, ctx, texIdx);
   }
 }
 
-function ProcessRemainingModelFiles(
+function processRemainingModelFiles(
   files: DecodedFile[],
   meta: YsmMeta,
   ctx: ProcessModelCtx,
@@ -566,14 +566,14 @@ function ProcessRemainingModelFiles(
     if (!f.path.startsWith("models/")) continue;
     const modelName = f.path.split("/").pop();
     const matched = meta.ysmModelOrder?.some((mp) => {
-      const mn = GetModelName(mp).split("/").pop();
+      const mn = getModelName(mp).split("/").pop();
       return mn === modelName;
     });
-    if (!matched) ProcessModelFile(f, ctx, 0);
+    if (!matched) processModelFile(f, ctx, 0);
   }
 }
 
-function ParseAnimations(files: DecodedFile[]): unknown[] {
+function parseAnimations(files: DecodedFile[]): unknown[] {
   const animations: unknown[] = [];
   for (const f of files) {
     if (!f.path.startsWith("animations/") || !f.path.endsWith(".json")) continue;
@@ -589,7 +589,7 @@ function ParseAnimations(files: DecodedFile[]): unknown[] {
   return animations;
 }
 
-function AssembleFinalGeometry(
+function assembleFinalGeometry(
   ctx: ProcessModelCtx,
   orderedTexKeys: string[],
   textures: Record<string, string>,
@@ -609,7 +609,7 @@ function AssembleFinalGeometry(
   return geo;
 }
 
-function FinalizeAuthorsWithAvatars(
+function finalizeAuthorsWithAvatars(
   meta: YsmMeta,
   avatars: Record<string, string>,
 ): YsmMeta["authors"] {
@@ -623,12 +623,12 @@ function FinalizeAuthorsWithAvatars(
   });
 }
 
-async function HandleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<DecodedYsm | null> {
-  const files = await InitAndDecodeWasm(modelPath, bytes);
+async function handleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<DecodedYsm | null> {
+  const files = await initAndDecodeWasm(modelPath, bytes);
   if (!files?.length) return null;
 
   const { meta, hasYsmMeta } = parseYsmMetaFromFiles(files);
-  const texAccum = CollectTexturesAndAvatars(files);
+  const texAccum = collectTexturesAndAvatars(files);
   meta.avatars = texAccum.avatars;
 
   const orderedTexKeys = buildOrderedTexKeys({
@@ -637,7 +637,7 @@ async function HandleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<D
       texAccum.texDimensions[k] ? texAccum.texDimensions[k].w * texAccum.texDimensions[k].h : 0,
     ysmTexOrder: meta.ysmTexOrder,
     ysmDefaultTex: meta.ysmDefaultTex,
-    matchTexKey: (tn) => MatchTexKey(tn, texAccum.textures, texAccum.texLowerMap),
+    matchTexKey: (tn) => matchTexKey(tn, texAccum.textures, texAccum.texLowerMap),
   });
 
   const processCtx: ProcessModelCtx = {
@@ -651,32 +651,32 @@ async function HandleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<D
     firstGeometryRawRef: { current: null },
   };
 
-  MatchModelFilesByOrder(files, meta, orderedTexKeys, processCtx);
-  ProcessRemainingModelFiles(files, meta, processCtx);
+  matchModelFilesByOrder(files, meta, orderedTexKeys, processCtx);
+  processRemainingModelFiles(files, meta, processCtx);
 
   const geometry = processCtx.geometryRef.current;
   if (!geometry && !hasYsmMeta) {
     devLog("[YSM] 无 ysm.json 引导，移交 Go 确保纹理正确映射");
-    RevokeTexAccumBlobs(texAccum);
+    revokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
   if (!geometry && files?.length > 0) {
     devLog(`[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI`);
-    RevokeTexAccumBlobs(texAccum);
+    revokeTexAccumBlobs(texAccum);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
 
-  const finalGeo = AssembleFinalGeometry(
+  const finalGeo = assembleFinalGeometry(
     processCtx,
     orderedTexKeys,
     texAccum.textures,
     texAccum.maxTexW,
     texAccum.maxTexH,
   );
-  const animations = ParseAnimations(files);
-  const finalAuthors = FinalizeAuthorsWithAvatars(meta, texAccum.avatars);
+  const animations = parseAnimations(files);
+  const finalAuthors = finalizeAuthorsWithAvatars(meta, texAccum.avatars);
 
   const texUrl =
     (finalGeo as BedrockGeometry | null)?.texture ||
@@ -723,7 +723,7 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   }
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
-  if (!bytes?.length) return HandleEmptyBytes(modelPath);
+  if (!bytes?.length) return handleEmptyBytes(modelPath);
 
   // 受限平台大文件内存风险前置告知：峰值 ≈4.33× 文件大小（拷贝链实测，ADR-228），
   // 网页版/Android 的 100MB 阈值是唯一防线，超阈给用户预期而非静默 OOM。
@@ -731,13 +731,13 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
 
   const ctx: InflightCtx = {
     modelPath,
-    baseDir: GetBaseDir(modelPath),
+    baseDir: getBaseDir(modelPath),
     ReadBytes: readModelBytes,
   };
 
   try {
     if (/\.json$/i.test(modelPath)) {
-      return await TryJsonDispatch(ctx, bytes);
+      return await tryJsonDispatch(ctx, bytes);
     }
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
@@ -746,7 +746,7 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   }
 
   try {
-    return await HandleWasmDecode(modelPath, bytes);
+    return await handleWasmDecode(modelPath, bytes);
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
     return null;

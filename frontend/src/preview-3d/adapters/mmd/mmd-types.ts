@@ -63,7 +63,7 @@ export interface MmdPanelHooks {
 // 原 60 字段扁平巨型接口按生命周期域拆分——每个域接口语义自洽，
 // 组合后行为与 `interface BuildCtx { ...60 字段... }` 完全等价。
 
-/** 失败路径统一释放注册表条目：stage 分配 GPU 资源后经 TrackAlloc 登记，
+/** 失败路径统一释放注册表条目：stage 分配 GPU 资源后经 trackAlloc 登记，
  *  buildMmdScene finally 顺序遍历 free（每项独立 try/catch）。2026-09-03 起取代手工枚举，
  *  杜绝新增资源字段忘 dispose 的静默泄漏。 */
 export interface AllocEntry {
@@ -172,7 +172,7 @@ export interface BuildCtx
 // 此后某 stage 新增越界访问（摸别人域的字段），编译器直接报错。
 // 域纪律从自觉变强制，可逐 stage 渐进收紧（频率数据是路线图）。
 
-export type DetectFormatCtx = Pick<BuildCtx, "modelBase">;
+export type detectFormatCtx = Pick<BuildCtx, "modelBase">;
 
 export type Stage1Ctx = Pick<
   BuildCtx,

@@ -1,6 +1,9 @@
-// ===== 诊断页：去重扫描（createDedupSession 会话工厂） =====
-// ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（本文件）/ 冲突扫描（conflicts.ts）
-// keep 保留策略纯函数已抽至 dedup-policy.ts（2026-09-03）：策略决策零 DOM/会话依赖，独立成层。
+// ===== 诊断页：去重扫描会话工厂（createDedupSession） =====
+// ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（本文件+三叶）/ 冲突扫描（conflicts.ts）
+// 2026-09 锐评 P1 再拆（539 行 → 会话壳 + dedup-types/dedup-scan/dedup-render 三叶，各回 400 行红线内）：
+// - dedup-types.ts   类型与默认值
+// - dedup-scan.ts    targets 收集 + 逐目录扫描（依赖注入，无会话状态）
+// - dedup-render.ts  结果渲染 + 配置面板 + 事件绑定
 // 去全局化：原模块级可变全局 _dedupBusy / diagExecBusy / dedupConfig 收敛为会话闭包状态，
 // 每会话独立（可 reset、可隔离单测），消除跨调用共享状态的竞态面。
 
@@ -8,229 +11,26 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { fileIcon } from "@/utils/icon/icon.ts";
-import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { getDefaultKeepIdx } from "./dedup-policy.ts";
+import {
+  bindCancelButton,
+  bindPreviewClicks,
+  buildConfigPanel,
+  renderResultsHtml,
+} from "./dedup-render.ts";
+import { collectTargets, scanEachDirectory } from "./dedup-scan.ts";
+import type {
+  DedupConfigShape,
+  DedupRegType,
+  FindDuplicateFilesFn,
+  GetRepoRootFn,
+  MoveToRecycleFn,
+  ScanGroupResult,
+} from "./dedup-types.ts";
+import { DEDUP_DEFAULTS } from "./dedup-types.ts";
 import type { EscFn } from "./logs.ts";
 
-// 默认值冻结为唯一权威源；会话 config 为可编辑副本；reset 从默认值展开。
-// 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
-// 泛型保留字面量类型（"deep_hash"）导致 select.value(string) 赋值失败。
-export interface DedupConfigShape {
-  strategy: string;
-  keepPolicy: string;
-  priorityPath: string;
-}
-
-const DEDUP_DEFAULTS: Readonly<DedupConfigShape> = Object.freeze({
-  strategy: "deep_hash",
-  keepPolicy: "oldest",
-  priorityPath: "",
-});
-
-// ===== 类型提级 =====
-interface ScanTarget {
-  id: string;
-  icon: string;
-  label: string;
-  dir: string;
-}
-
-interface ScanFile {
-  path: string;
-  name: string;
-  size: number;
-  modTime?: string;
-}
-
-interface ScanGroup {
-  files: ScanFile[];
-}
-
-interface ScanGroupResult {
-  icon: string;
-  label: string;
-  groups: ScanGroup[];
-}
-
-import type { Group as DedupGroup } from "@/bindings/ysm-model-manager/go/dedup/models.ts";
-
-type GetRepoRootFn = (rtype: string) => Promise<string>;
-type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
-type MoveToRecycleFn = (path: string) => Promise<void>;
-type DedupRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
-
-// ② targets收集(rtype单目录/全类型遍历)（依赖注入，无会话状态）
-async function collectTargets(
-  rtype: string | undefined,
-  reg: DedupRegType,
-  typeIcon: string,
-  typeLabel: string,
-  GetRepoRoot: GetRepoRootFn,
-): Promise<ScanTarget[]> {
-  const targets: ScanTarget[] = [];
-  if (rtype && rtype !== "all") {
-    const dir = await GetRepoRoot(rtype);
-    if (dir) targets.push({ id: rtype, icon: typeIcon, label: typeLabel, dir });
-  } else {
-    for (const rt of Object.values(reg)) {
-      const dir = await GetRepoRoot(rt.id);
-      if (dir) {
-        const rtName = typeof rt.name === "string" ? rt.name : rt.id;
-        const rtIcon = typeof rt.icon === "string" ? rt.icon : "📦";
-        targets.push({ id: rt.id, icon: rtIcon, label: rtName, dir });
-      }
-    }
-  }
-  return targets;
-}
-
-// ③ 逐目录 FindDuplicateFiles 扫描（progress占位 + err判别{error}假绿）
-async function scanEachDirectory(
-  targets: ScanTarget[],
-  list: HTMLElement,
-  esc: EscFn,
-  FindDuplicateFiles: FindDuplicateFilesFn,
-  getConfig: () => Readonly<DedupConfigShape>,
-): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean }> {
-  const allResults: ScanGroupResult[] = [];
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-muted">' +
-      t("diagnostics.scanningProgress", {
-        cur: i + 1,
-        total: targets.length,
-        icon: esc(target.icon),
-        label: esc(target.label),
-      }) +
-      "</div>";
-    await new Promise((r) => setTimeout(r, 10));
-    const configStr = JSON.stringify(getConfig());
-    const groups = await FindDuplicateFiles(target.dir, configStr);
-    if (!groups) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">❌ ' +
-        t("diagnostics.scanFailed", { reason: "扫描返回空" }) +
-        "</div>";
-      return { allResults, earlyExit: true };
-    }
-    if (groups.length)
-      allResults.push({
-        icon: target.icon,
-        label: target.label,
-        groups: groups.map((g) => ({
-          files: (g.files || []).map((f) => ({
-            path: f.path,
-            name: f.name,
-            size: f.size,
-            ...(f.modTime ? { modTime: new Date(f.modTime).toISOString() } : {}),
-          })),
-        })),
-      });
-  }
-  return { allResults, earlyExit: false };
-}
-
-// ④-1 单个 group 文件列表 HTML 片段
-function renderGroupFilesHtml(
-  files: ScanFile[],
-  defaultIdx: number,
-  gi: number,
-  esc: EscFn,
-): string {
-  let html = "";
-  files.forEach((e, fi) => {
-    const checked = fi === defaultIdx ? " checked" : "";
-    const isDefault = fi === defaultIdx;
-    const dateStr = e.modTime ? new Date(e.modTime).toLocaleDateString() : "";
-    const lastSep = Math.max(e.path.lastIndexOf("/"), e.path.lastIndexOf("\\"));
-    const dir = lastSep >= 0 ? e.path.substring(0, lastSep) : "";
-    html += `<label class="diag-dedup-file${isDefault ? " diag-dedup-file-default" : ""}">
-<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} class="diag-dedup-radio">
-<span class="diag-dedup-file-name">
-<span class="diag-dedup-file-name-text" title="${t("common.viewDetail", { name: esc(e.path) })}" data-path="${esc(e.path)}"><span class="diag-dedup-file-ic">${fileIcon(e.name)}</span>${renderDisplayName(e.name)}</span>
-<span class="diag-dedup-file-dir">📁 ${esc(dir)}</span>
-</span>
-<span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>
-${dateStr ? `<span class="diag-dedup-file-date">${dateStr}</span>` : ""}
-${isDefault ? `<span class="diag-dedup-recommend">${t("diagnostics.recommended")}</span>` : ""}
-</label>`;
-  });
-  return html;
-}
-
-// ④ 分组结果 allResults 汇总渲染（group HTML + 默认保留索引）——config 注入取代模块全局
-function renderResultsHtml(
-  allResults: ScanGroupResult[],
-  esc: EscFn,
-  config: Readonly<DedupConfigShape>,
-): string {
-  const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
-  const totalDups = allResults.reduce(
-    (s, r) => s + r.groups.reduce((s2, g) => s2 + g.files.length - 1, 0),
-    0,
-  );
-
-  let html = `<div class="diag-dedup-summary">
-${t("diagnostics.dupSummary", { groups: totalGroups, dups: totalDups })}
-<span class="diag-dedup-summary-hint">${t("diagnostics.dupSummaryHint")}</span>
-</div>`;
-
-  let groupIndex = 0;
-  for (const rtResult of allResults) {
-    html += `<div class="diag-dedup-rt">
-${rtResult.icon} ${rtResult.label}
-<span class="diag-dedup-rt-sep"></span>
-<span class="diag-dedup-rt-count">${t("diagnostics.fileCount", { n: rtResult.groups.reduce((s, g) => s + g.files.length, 0) })}</span>
-</div>`;
-
-    for (const group of rtResult.groups) {
-      const files = group.files || [];
-      const defaultIdx = getDefaultKeepIdx(files, config.keepPolicy, config.priorityPath);
-      const totalSize = files.reduce((s, e) => s + e.size, 0);
-      const gi = groupIndex++;
-
-      html += `<div class="diag-dedup-group">
-<div class="diag-dedup-group-head">
-<span>📎 ${t("diagnostics.group", { n: gi + 1 })}</span>
-<span class="diag-dedup-group-fill"></span>
-<span class="diag-dedup-group-info">${t("diagnostics.groupInfo", { n: files.length, size: totalSize })}</span>
-</div>`;
-      html += renderGroupFilesHtml(files, defaultIdx, gi, esc);
-      html += `<label class="diag-dedup-keep-all">
-<input type="radio" name="dedup-keep-${gi}" value="-1" class="diag-dedup-radio">
-<span class="diag-dedup-keep-all-label">🔀 ${t("diagnostics.keepAll")}</span>
-</label>`;
-      html += `</div>`;
-    }
-  }
-
-  html += `<div class="diag-dedup-actions">
-<button id="diag-dedup-exec" class="diag-dedup-exec">🗑️ ${t("diagnostics.deleteUnselected")}</button>
-<button id="diag-dedup-cancel" class="diag-dedup-cancel">${t("common.cancel")}</button>
-</div>`;
-  return html;
-}
-
-// ④ 文件名预览点击绑定
-function bindPreviewClicks(list: HTMLElement): void {
-  list.querySelectorAll("[data-path]").forEach((el) => {
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const path = (el as HTMLElement).dataset.path;
-      if (path) bus.emit("model:select", { path });
-    });
-  });
-}
-
-// ④ cancel 按钮绑定
-function bindCancelButton(list: HTMLElement): void {
-  list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-muted">${t("diagnostics.dedupCancelled")}</div>`;
-  });
-}
+export type { DedupConfigShape } from "./dedup-types.ts";
 
 export interface DedupSession {
   initConfig(list: HTMLElement): void;
@@ -263,65 +63,8 @@ export function createDedupSession(): DedupSession {
     Object.assign(state.config, DEDUP_DEFAULTS);
   }
 
-  // ===== 配置面板（可编辑副本 state.config） =====
-  function renderConfigHtml(list: HTMLElement): void {
-    list.innerHTML = `
-    <div class="diag-dedup-config">
-      <div class="diag-config-item">
-        <label for="dedup-strategy">🔍 ${t("diagnostics.dedupStrategy")}:</label>
-        <select id="dedup-strategy" class="diag-config-select">
-          <option value="deep_hash"${state.config.strategy === "deep_hash" ? " selected" : ""}>${t("diagnostics.strategyDeepHash")} (SHA256)</option>
-          <option value="quick_hash"${state.config.strategy === "quick_hash" ? " selected" : ""}>${t("diagnostics.strategyQuickHash")} (MD5)</option>
-          <option value="name_size"${state.config.strategy === "name_size" ? " selected" : ""}>${t("diagnostics.strategyNameSize")} (${t("diagnostics.fastest")})</option>
-        </select>
-      </div>
-      <div class="diag-config-item">
-        <label for="keep-policy">💾 ${t("diagnostics.keepPolicy")}:</label>
-        <select id="keep-policy" class="diag-config-select">
-          <option value="oldest"${state.config.keepPolicy === "oldest" ? " selected" : ""}>${t("diagnostics.keepOldest")}</option>
-          <option value="newest"${state.config.keepPolicy === "newest" ? " selected" : ""}>${t("diagnostics.keepNewest")}</option>
-          <option value="path"${state.config.keepPolicy === "path" ? " selected" : ""}>${t("diagnostics.keepByPath")}</option>
-        </select>
-      </div>
-      <div class="diag-config-item" id="priority-path-item" style="${state.config.keepPolicy === "path" ? "" : "display:none"}">
-        <label for="priority-path">📁 ${t("diagnostics.priorityPath")}:</label>
-        <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="">
-      </div>
-    </div>
-  `;
-  }
-
-  function bindStrategyChange(list: HTMLElement): void {
-    list.querySelector("#dedup-strategy")?.addEventListener("change", (e) => {
-      state.config.strategy = (e.target as HTMLSelectElement).value;
-    });
-  }
-
-  function bindKeepPolicyChange(list: HTMLElement): void {
-    list.querySelector("#keep-policy")?.addEventListener("change", (e) => {
-      state.config.keepPolicy = (e.target as HTMLSelectElement).value;
-      const pathItem = list.querySelector("#priority-path-item") as HTMLElement;
-      if (pathItem) {
-        pathItem.style.display = state.config.keepPolicy === "path" ? "" : "none";
-      }
-    });
-  }
-
-  function bindPriorityPathInput(list: HTMLElement): void {
-    list.querySelector("#priority-path")?.addEventListener("input", (e) => {
-      state.config.priorityPath = (e.target as HTMLInputElement).value;
-    });
-  }
-
-  function buildConfigPanel(list: HTMLElement): void {
-    renderConfigHtml(list);
-    bindStrategyChange(list);
-    bindKeepPolicyChange(list);
-    bindPriorityPathInput(list);
-  }
-
   function initConfig(list: HTMLElement): void {
-    buildConfigPanel(list);
+    buildConfigPanel(list, state.config);
   }
 
   // ⑤ exec 按钮：逐组 MoveToRecycle + success/fail 统计 + treeReload

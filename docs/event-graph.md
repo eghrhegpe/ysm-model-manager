@@ -224,7 +224,7 @@
 |------|------|----|
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
-| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup.ts` | 223 |
+| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 104 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 376 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 474 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
@@ -341,7 +341,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 366 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 109 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 76 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
@@ -610,7 +610,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 367 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 110 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 
 **订阅方（on）：**

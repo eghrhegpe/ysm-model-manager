@@ -26,7 +26,7 @@ import {
   hasSchema,
   getSchema,
   resetSchemas,
-} from "@/preview-3d/adapters/schema-registry.ts";
+} from "@/preview-3d/infra/schema-registry.ts";
 import {
   resetSettingsListeners,
   type PreviewSnapshot,

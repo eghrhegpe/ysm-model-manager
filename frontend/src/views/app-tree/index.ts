@@ -5,7 +5,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { rememberModelPath } from "@/core/model-path-store.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
-import { isPreviewOverlayActive } from "@/preview-3d/adapters/overlay-active.ts";
+import { isPreviewOverlayActive } from "@/preview-3d/infra/overlay-active.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";

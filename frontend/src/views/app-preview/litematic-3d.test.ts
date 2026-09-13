@@ -308,7 +308,7 @@ import { getApp, type AppBindings } from "@/backend/app.ts";
 import { bus } from "@/bus";
 import * as THREE from "three";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
-import { getSchema, listSchemas } from "@/preview-3d/adapters/schema-registry.ts";
+import { getSchema, listSchemas } from "@/preview-3d/infra/schema-registry.ts";
 import { switchPreview } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";

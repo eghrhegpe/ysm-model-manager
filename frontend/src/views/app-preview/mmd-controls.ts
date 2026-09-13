@@ -8,7 +8,7 @@
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
 // import 供本文件函数签名本地绑定；导出面收敛（knip）：CameraControlBridge /
 // MaterialControlBridge 消费方直连 adapters 单源，此处不再原位转发
-import type { MmdBottomNavCtx, MmdPlayBridge } from "@/preview-3d/adapters/content-bridges.ts";
+import type { MmdBottomNavCtx, MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";

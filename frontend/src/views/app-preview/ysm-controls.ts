@@ -8,7 +8,7 @@
 import type * as THREE from "three";
 // 导出面收敛（knip）：CameraControlBridge/YsmModel/YsmContentHandle 消费方直连
 // adapters 单源（content-bridges/camera-controls），此处不再原位转发
-import type { YsmControlsContext } from "@/preview-3d/adapters/content-bridges.ts";
+import type { YsmControlsContext } from "@/preview-3d/infra/content-bridges.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 
@@ -19,7 +19,7 @@ import {
   registerSchema,
   unregisterSchema,
   YSM_MODEL_SCHEMA_ID,
-} from "@/preview-3d/adapters/schema-registry.ts";
+} from "@/preview-3d/infra/schema-registry.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 
 /**

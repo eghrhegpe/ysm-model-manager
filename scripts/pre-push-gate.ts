@@ -375,8 +375,11 @@ async function main() {
     }
   }
   if (!ctx.results.length) {
-    finishJson();
+    // 先留痕再 finishJson——finishJson 内 setLogPushMuted(false) 会重开 stderr，
+    // logPush 若在 finishJson 之后发会把 [SKIP] 行泄漏到 stderr，破坏 --json 契约
+    //（五锐评 #2 同口径：post-main 段只许 console.error，不得有 console.log / logPush）
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
+    finishJson();
     return 0;
   }
   if (!ctx.blocked) {

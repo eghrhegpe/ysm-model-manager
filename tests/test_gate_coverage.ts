@@ -15,7 +15,7 @@
  *
  * 依赖：node:assert / node:fs / 被测模块。
  * 用法：node tests/test_gate_coverage.ts（或经 _lib/contract-tests.ts 统一入口）。
- * 退出码：0 全绿；非 0 断言失败（node:assert 抛错）。
+ * 退出码：0 全绿；非 0 断言失败（node:assert 抛错 / check+ok 收集的 failures 经 finish 裁决）。
  */
 import assert from "node:assert";
 import fs from "node:fs";
@@ -28,7 +28,7 @@ import {
   listCoveredCheckScripts,
 } from "../scripts/_lib/gate-coverage.ts";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
-import { check } from "./_lib.mts";
+import { check, finish } from "./_lib.mts";
 
 // 1. 全集 = 动态枚举（独立用 fs 重算，验证被测函数没有写死/过滤错）
 const expected = fs
@@ -115,11 +115,19 @@ check("覆盖尾行旁路分组（四锐评 #5）：BYPASS_CHECKS 与 uncovered 
   } else {
     assert.ok(!line.includes("刻意旁路"), `无旁路项时尾行不应出现「刻意旁路」: ${line}`);
   }
-  // 幻影防线：BYPASS_CHECKS 登记的文件必须真实存在且确属 uncovered（否则清单腐化）
+  // 幻影防线：BYPASS_CHECKS 登记的文件必须真实存在（否则清单腐化）
   for (const b of BYPASS_CHECKS) {
     assert.ok(
       fs.existsSync(path.join(ROOT, "scripts", b)),
       `BYPASS_CHECKS 登记了不存在的脚本 ${b}——请从清单删除`,
+    );
+  }
+  // 「确属 uncovered」半边：b 若在 coveredSet（已被 gate 接入）则旁路清单失实——
+  // 尾行会把它从「刻意旁路」组静默吞掉，须在此双向锁定（注释承诺的完整契约）
+  for (const b of BYPASS_CHECKS) {
+    assert.ok(
+      !listCoveredCheckScripts().has(b),
+      `BYPASS_CHECKS 登记了 ${b} 但实际已接入 gate（coveredSet 命中）——请从旁路清单删除`,
     );
   }
 });
@@ -137,4 +145,5 @@ check("--json 契约真实现（四锐评 #1）：声明必须与消费共存", 
   );
 });
 
-console.log("[OK] test_gate_coverage.ts 全部断言通过");
+// 尾部裁决：failures 非空 exit 1，否则 finish 统一打 OK（ok/check 收集的失败在此处汇总裁决）
+finish("test_gate_coverage.ts 全部断言通过");

@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-234：hooks/scripts 逃生留痕与生成物配对收口（ADR-232 实施）",
+        "link": "/adr/ADR-234-hooks-scripts-adr-232"
+      },
+      {
         "text": "ADR-233：preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口）",
         "link": "/adr/ADR-233-preview3d-session-state-machine"
       },

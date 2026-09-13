@@ -35,8 +35,12 @@ import type { PostprocessingLike } from "./postprocessing.ts";
  * MODEL_DEFAULTS 驱动的单个入口：把 6 个预 apply cap 的模型预设套用统一编排，
  * 逐字复刻原 7 个散落 `cap.setPreset(adapter.id)` 的调用顺序（sky→light→fog→shadow→
  * reflector→environment）与各 cap 内部守卫（shadow/reflector 的 isStateLoaded、
- * light 的 manual 双入口原样保留在 cap 内，此处不越权）。未知 modelType 由各 cap
- * 内部 `?? MODEL_DEFAULTS.default` 回落，语义与现状一致。
+ * light 的 manual 双入口原样保留在 cap 内，此处不越权）。
+ *
+ * 脏数据防御：runtime 入口（light/reflector/sky 的 loadState + light-preset select）
+ * 统一经 toModelType 校验（Object.hasOwn 自身属性判定，防原型链误判）；
+ * 本函数调用点（buildSharedInfra）传 adapter.id 来自 RESOURCE_TYPES 已知集合，
+ * 不经 toModelType——保持装配期与 runtime 恢复的入口分工。
  */
 export function applyModelDefaults(
   modelType: ModelType,

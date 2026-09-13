@@ -252,6 +252,16 @@ describe("LightCapability — applyModelPreset", () => {
     expect(cap.getParams().spotlight.enabled).toBe(false);
   });
 
+  it("原型链成员经 toModelType 收窄回退 default（Object.hasOwn 自身属性判定，防裸索引走原型链）", () => {
+    const cap = newCap();
+    // "constructor"/"toString" 等 Object.prototype 成员若被裸索引误判为合法模型类别，
+    // pickModelDefaultFields 会读到 undefined 字段 → 预设静默 no-op（P2 行为 bug）。
+    cap.applyModelPreset(toModelType("constructor"));
+    expect(cap.getCurrentPreset()).toBe("default");
+    cap.applyModelPreset(toModelType("toString"));
+    expect(cap.getCurrentPreset()).toBe("default");
+  });
+
   it("手动 preset 后自动 applyModelPreset 不再覆盖（手动优先——双入口时序修复）", () => {
     const cap = newCap();
     cap.applyModelPreset("vrm", { manual: true });

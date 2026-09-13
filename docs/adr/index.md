@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **231** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **232** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 8 |
-| [✅ 已采纳](#已采纳) | 213 |
+| [✅ 已采纳](#已采纳) | 214 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -38,10 +38,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（213）
+### ✅ 已采纳（214）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-234](./ADR-234-hooks-scripts-adr-232.md) | hooks/scripts 逃生留痕与生成物配对收口（ADR-232 实施） | ✅ 已采纳 |
 | [ADR-233](./ADR-233-preview3d-session-state-machine.md) | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 |
 | [ADR-232](./ADR-232-scripts-hooks.md) | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 |
 | [ADR-231](./ADR-231-preview-3d-adapters-layer.md) | preview-3d adapters 按私有子系统分层 | ✅ 已采纳 |
@@ -280,6 +281,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-234 | hooks/scripts 逃生留痕与生成物配对收口（ADR-232 实施） | ✅ 已采纳 | 2026-09-13 |
 | ADR-233 | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 | 2026-09-13 |
 | ADR-232 | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 | 2026-09-13 |
 | ADR-231 | preview-3d adapters 按私有子系统分层 | ✅ 已采纳 | 2026-09-13 |

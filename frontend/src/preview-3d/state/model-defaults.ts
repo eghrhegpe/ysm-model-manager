@@ -58,9 +58,10 @@ export function pickModelDefaultFields<K extends keyof EnvState>(
  * 字符串入口的唯一合法通道）；未知值回退 "default"，脏数据不致静默丢预设。
  */
 export function toModelType(v: string): ModelType {
-  return (MODEL_DEFAULTS as Record<string, unknown>)[v] !== undefined
-    ? (v as ModelType)
-    : "default";
+  // Object.hasOwn 走自身属性判定——裸索引 MODEL_DEFAULTS[v] 会走原型链，
+  // "constructor"/"toString" 等 Object.prototype 成员非 undefined 会被误判为合法模型类别，
+  // 后续 pickModelDefaultFields 读到 undefined 字段 → 预设静默 no-op（锐评 P2 行为 bug）。
+  return Object.hasOwn(MODEL_DEFAULTS, v) ? (v as ModelType) : "default";
 }
 
 const DEFAULT_MODEL_STATE: Partial<EnvState> = {

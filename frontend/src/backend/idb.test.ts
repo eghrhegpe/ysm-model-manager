@@ -476,4 +476,216 @@ describe("idb 内存降级补充", () => {
   });
 });
 
+// ===== P1 收口：未覆盖的异常/边界路径（基于 coverage-final.json 精确缺口定位）=====
+// 不改动上方 21 个用例，自包含 fake（支持 onupgradeneeded 建库 / 只读事务 error+abort）。
+// 目标缺口：openDB 非浏览器 reject、onupgradeneeded 建 store、只读事务 tx.onerror/onabort
+// reject（idbGet/idbKeys/idbGetAll/idbGetAllMetadata/idbDel）、内存覆盖写 LRU 重排、
+// estimateBytes 的 TypedArray / 序列化失败回落。
+function makeFakeIDBFull(opts: {
+  failOpen?: boolean;
+  blocked?: boolean;
+  fireUpgrade?: boolean;
+  readError?: Error;
+} = {}): {
+  store: Map<string, unknown>;
+  createObjectStore: ReturnType<typeof vi.fn>;
+  openCount: number;
+  triggerVersionChange: () => void;
+} {
+  const store = new Map<string, unknown>();
+  let txError: Error | null = null;
+  let writeFailed = false;
+
+  const reqOf = (result: unknown, error?: Error) => {
+    const req = {
+      result,
+      error,
+      onsuccess: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+    };
+    if (error) setTimeout(() => req.onerror?.(), 0);
+    else setTimeout(() => req.onsuccess?.(), 0);
+    return req;
+  };
+
+  const createObjectStore = vi.fn();
+  const fakeDB = {
+    close: vi.fn(),
+    // contains 对 "files" 返回 true（跳过建库）、其余返回 false（建库）→ 覆盖 if 双分支
+    objectStoreNames: { contains: (s: string) => s === "files" },
+    createObjectStore,
+    transaction: vi.fn((_storeName: string, _mode: string) => {
+      const os = {
+        get: (key: string) =>
+          opts.readError
+            ? ((txError = opts.readError), reqOf(undefined, opts.readError))
+            : reqOf(store.has(key) ? store.get(key) : undefined),
+        put: (value: unknown, key: string) => {
+          store.set(key, value);
+          return reqOf(undefined);
+        },
+        delete: (key: string) => {
+          if (opts.readError) {
+            txError = opts.readError;
+            return reqOf(undefined, opts.readError);
+          }
+          store.delete(key);
+          return reqOf(undefined);
+        },
+        openCursor: () => {
+          if (opts.readError) {
+            txError = opts.readError;
+            return reqOf(undefined, opts.readError);
+          }
+          const keys = [...store.keys()].sort();
+          let i = 0;
+          const req = {
+            result: null as unknown,
+            onsuccess: null as (() => void) | null,
+            onerror: null as (() => void) | null,
+          };
+          const next = () => {
+            if (i < keys.length) {
+              req.result = {
+                key: keys[i],
+                value: store.get(keys[i]),
+                continue: () => setTimeout(next, 0),
+              };
+              i++;
+            } else {
+              req.result = null;
+            }
+            req.onsuccess?.();
+          };
+          setTimeout(next, 0);
+          return req;
+        },
+      };
+      const tx = {
+        oncomplete: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+        onabort: null as (() => void) | null,
+        error: null as Error | null,
+        objectStore: () => os,
+      };
+      setTimeout(() => {
+        if (txError) {
+          tx.error = txError;
+          tx.onerror?.();
+          tx.onabort?.();
+        } else {
+          tx.oncomplete?.();
+        }
+      }, 0);
+      return tx;
+    }),
+  };
+
+  let openCount = 0;
+  let vcHandler: (() => void) | null = null;
+  Object.defineProperty(fakeDB, "onversionchange", {
+    configurable: true,
+    get: () => vcHandler,
+    set: (fn: (() => void) | null) => {
+      vcHandler = fn;
+    },
+  });
+  const open = vi.fn(() => {
+    openCount++;
+    const req = {
+      result: fakeDB,
+      error: new Error("indexedDB open failed"),
+      onsuccess: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+      onblocked: null as (() => void) | null,
+      onupgradeneeded: null as (() => void) | null,
+    };
+    if (opts.failOpen) setTimeout(() => req.onerror?.(), 0);
+    else if (opts.blocked) setTimeout(() => req.onblocked?.(), 0);
+    else {
+      if (opts.fireUpgrade) setTimeout(() => req.onupgradeneeded?.(), 0);
+      setTimeout(() => req.onsuccess?.(), 0);
+    }
+    return req;
+  });
+  vi.stubGlobal("indexedDB", { open });
+
+  return {
+    store,
+    createObjectStore,
+    get openCount() {
+      return openCount;
+    },
+    triggerVersionChange: () => vcHandler?.(),
+  };
+}
+
+describe("idb 异常/边界路径收口（P1）", () => {
+  beforeEach(() => {
+    __resetDBForTest();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    __resetDBForTest();
+  });
+
+  it("openDB：非浏览器环境（indexedDB 未定义）直接 reject，不永久挂起", async () => {
+    // 显式置空全局，确保命中 `typeof indexedDB === 'undefined'` 守卫（与 test-setup 无关）
+    vi.stubGlobal("indexedDB", undefined);
+    await expect(openDB()).rejects.toThrow(/IndexedDB 不可用/);
+  });
+
+  it("openDB onupgradeneeded：为新 store 建 objectStore（已存在则跳过）", async () => {
+    const fake = makeFakeIDBFull({ fireUpgrade: true });
+    const db = await openDB();
+    expect(db).toBeTruthy();
+    // STORES=['files','config']：files 的 contains=true 跳过，config 的 contains=false 建库
+    expect(fake.createObjectStore).toHaveBeenCalledTimes(1);
+  });
+
+  it("idbGet：只读事务 tx.onerror → reject（不静默吞错）", async () => {
+    makeFakeIDBFull({ readError: new Error("read tx error") });
+    await expect(idbGet("files", "x")).rejects.toThrow("read tx error");
+  });
+
+  it("idbKeys：cursor 事务 abort → reject", async () => {
+    makeFakeIDBFull({ readError: new Error("cursor abort") });
+    await expect(idbKeys("files", "x")).rejects.toThrow("cursor abort");
+  });
+
+  it("idbGetAll：只读事务 error → reject", async () => {
+    makeFakeIDBFull({ readError: new Error("getAll error") });
+    await expect(idbGetAll("files", "x")).rejects.toThrow("getAll error");
+  });
+
+  it("idbGetAllMetadata：只读事务 error → reject", async () => {
+    makeFakeIDBFull({ readError: new Error("meta error") });
+    await expect(idbGetAllMetadata("files", "x")).rejects.toThrow("meta error");
+  });
+
+  it("idbDel：事务 error → reject", async () => {
+    makeFakeIDBFull({ readError: new Error("del error") });
+    await expect(idbDel("files", "x")).rejects.toThrow("del error");
+  });
+
+  it("内存模式：同 key 覆盖写视为一次访问（m.has 真分支 + 删除重插 LRU 重排）", async () => {
+    // 无 indexedDB → 纯内存模式
+    for (let i = 0; i < 5; i++) await idbSet("config", `c${i}`, { n: i });
+    await idbSet("config", "c4", { n: 999 });
+    expect((await idbGet<{ n: number }>("config", "c4"))?.n).toBe(999);
+  });
+
+  it("estimateBytes：data 为 TypedArray（ArrayBuffer.isView）按字节估算", async () => {
+    await idbSet("files", "t", { data: new Uint8Array(16), size: 16, mime: "x" });
+    expect((await idbGet("files", "t"))).toBeTruthy();
+  });
+
+  it("estimateBytes：值无法 JSON 序列化时回落 64（不抛错）", async () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    await idbSet("config", "circ", circular);
+    expect(await idbGet("config", "circ")).toBe(circular);
+  });
+});
+
 

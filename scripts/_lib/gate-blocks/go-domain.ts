@@ -10,8 +10,28 @@
 import type { GateCtx } from "../gate-ctx.ts";
 import { GATE_TIMEOUT_MS } from "../gate-ctx.ts";
 import { resolveBaseRev } from "../gate-resolve.ts";
-import { run as procRun } from "../proc.ts";
+import { run as procRun, type ProcResult } from "../proc.ts";
 import { ROOT } from "../scan-files.ts";
+
+/**
+ * 同步 procRun 前让出一次 event loop（setImmediate 空转），使 Promise.all 并行的
+ * 前端域（shAsync spawn）能在 go test 段间推进。
+ *
+ * 背景（code_review P2）：bf6a79b12 把 go test 两段从 ctx.shAsync（异步 spawn）改回
+ * 同步 procRun（execFileSync 阻塞 event loop up to GATE_TIMEOUT_MS 每段）——原意图是
+ * 「otherPkgs 是运行期数据，不拼 shell」（gate-ctx 不变式），副作用是两域并行时 go
+ * test 段完全饿死 frontend。本助手保留 procRun 的「无 shell 拼接」安全哲学，
+ * 段间 yield 恢复并行契约。段内仍是同步阻塞（execFileSync 固有，5min 超时内
+ * 不可拆分），但段间让出已足够让 frontend 域的 shAsync 启动与收尾。
+ */
+async function yieldThenRun(
+  bin: string,
+  args: string[],
+  opts: Parameters<typeof procRun>[2],
+): Promise<ProcResult> {
+  await new Promise((r) => setImmediate(r));
+  return procRun(bin, args, opts);
+}
 
 export async function runGoDomain(ctx: GateCtx): Promise<void> {
   if (!ctx.plan.go) return;
@@ -73,7 +93,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
   const goTestCmd =
     `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
     `&& go test ${otherPkgs.join(" ")} ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
-  const goTestRace = procRun(
+  const goTestRace = await yieldThenRun(
     "go",
     [
       "test",
@@ -87,7 +107,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
   );
   const goTestRest = goTestRace.rc
     ? { rc: goTestRace.rc, out: "" }
-    : procRun(
+    : await yieldThenRun(
         "go",
         ["test", ...otherPkgs, ...(freshGoTest ? ["-count=1"] : []), "-timeout", "60s"],
         { cwd: ROOT, timeout: GATE_TIMEOUT_MS },

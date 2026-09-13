@@ -110,9 +110,9 @@
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 131 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 126 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 281 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 305 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 317 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 307 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 319 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -354,7 +354,7 @@
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 105 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 382 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 386 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -395,7 +395,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 362 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 487 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 491 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -559,11 +559,11 @@
 | atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 169 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 185 |
 | atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 192 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 385 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 425 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 433 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 490 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 429 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 437 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 494 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 504 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 76 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 323 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |

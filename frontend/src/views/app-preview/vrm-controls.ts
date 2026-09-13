@@ -1,7 +1,7 @@
 // ===== VRM 3D 菜单面板填充（ADR-076 v2 Phase 2：对齐 ysm-controls.ts 模式）=====
 // VRM 专属面板（材质）集中于此，由 vrm-adapter 经 ctx.menu.setAdapterItems 注入 ⚙️ 根菜单。
 
-import type { VrmModelInfoCtx } from "@/preview-3d/adapters/vrm-adapter.ts";
+import type { VrmModelInfoCtx } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import type {
   VrmMaterialDetail,
   VrmMaterialListItem,

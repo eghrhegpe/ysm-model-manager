@@ -10,7 +10,7 @@ import { makeBonesPanelItem } from "./bones-panel-node.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 
 // mock vrm-bone-ui：观察工厂调 makeBonePanelRenderer 的参数与顺序，不真实挂载面板
-vi.mock("./vrm-bone-ui.ts", () => ({
+vi.mock("@/preview-3d/adapters/vrm/vrm-bone-ui.ts", () => ({
   makeBonePanelRenderer: vi.fn(() => {
     // 工厂返回「renderer」：调用时写一个回收集合便于断言
     return (panel: HTMLElement, ctx: { viewContainer: HTMLElement; camera: THREE.Camera; scene: THREE.Object3D }): (() => void) => {
@@ -20,7 +20,7 @@ vi.mock("./vrm-bone-ui.ts", () => ({
   }),
 }));
 
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
+import { makeBonePanelRenderer } from "@/preview-3d/adapters/vrm/vrm-bone-ui.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";

@@ -4,7 +4,7 @@
 // 清理/作废不设独立派发：mount-preview-core 的共享 cleanupPreview/invalidatePreview
 // 由 index.ts 经 vrm/mmd 等 cleanup 派发全量覆盖 _handles，FBX 复用同一单例即可。
 
-import { type FbxDataPort, makeFbxAdapter } from "@/preview-3d/adapters/fbx-adapter.ts";
+import { type FbxDataPort, makeFbxAdapter } from "@/preview-3d/adapters/fbx/fbx-adapter.ts";
 import { type Mount3DOptions, mount3D } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

@@ -18,7 +18,7 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 // 用 `slice(0, n)` 复制出真实长度的压缩数据。
 
 // 使用动态 import 加载 KTX2BasisWriter（含 BasisEncoder WASM）
-import type { MmdDataPort } from "@/preview-3d/adapters/mmd-types.ts";
+import type { MmdDataPort } from "@/preview-3d/adapters/mmd/mmd-types.ts";
 
 /** 最大并发编码数（WASM BasisEncoder 单实例，并发过高会争抢资源） */
 const MAX_CONCURRENT = 3;

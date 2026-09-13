@@ -4,8 +4,8 @@
 // P2 切片：重负载同步构建拆成 rAF 帧片段，避免长帧卡顿。
 
 import * as THREE from "three";
+import { createWorkerParser } from "@/preview-3d/adapters/worker-bridge.ts";
 import type { PmxBoneData, PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
-import { createWorkerParser } from "./worker-bridge.ts";
 
 // ===== PMX 格式常量 =====
 /** PMX 材质 DrawFlag bit0：双面绘制（no cull）—— PMX 2.0 规范 */

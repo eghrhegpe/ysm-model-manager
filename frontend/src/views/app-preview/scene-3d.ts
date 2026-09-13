@@ -6,7 +6,7 @@
 //
 // 内容层复用 buildMmdScene（mmd-adapter.ts），确保 PMX 解析/纹理绑定逻辑一致。
 
-import { type MmdPanelHooks, makeMmdAdapter } from "@/preview-3d/adapters/mmd-adapter.ts";
+import { type MmdPanelHooks, makeMmdAdapter } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
 import {
   cleanupPreview,
   invalidatePreview,

@@ -5,6 +5,11 @@
 // 浏览器读不了本地磁盘路径）→ 挂入核心场景 + 灯光 + 包围盒定相机。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
 
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  PreviewScene,
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { Stage4Anim } from "./mmd-build-anim.ts";
@@ -14,7 +19,6 @@ import { ParsePmdStage, ParsePmxStage } from "./mmd-build-parse.ts";
 import { Stage6Result } from "./mmd-build-result.ts";
 import { Stage3SceneMesh } from "./mmd-build-scene.ts";
 import type { BuildCtx, MmdAdapterDeps, MmdDataPort, MmdPanelHooks } from "./mmd-types.ts";
-import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 
 export { mmdMenuItems } from "./mmd-build-menu.ts";
 // —— 公共面 re-export（ADR-167：消费者零改动：mmd-3d/scene-3d/test 均经此壳）——

@@ -1,6 +1,11 @@
 // ===== mmd-build-menu.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import type * as THREE from "three";
+import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts";
+import type { MmdBottomNavCtx } from "@/preview-3d/adapters/content-bridges.ts";
+import { materialNodes } from "@/preview-3d/adapters/material-controls.ts";
+import { morphNodes } from "@/preview-3d/adapters/morph-controls.ts";
+import { perceptionNodes, pickPerceptionCaps } from "@/preview-3d/adapters/perception-controls.ts";
 import { createAutoDanceController } from "@/preview-3d/adapters/shared/perception/autodance.ts";
 import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts";
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
@@ -26,12 +31,7 @@ import {
 } from "@/preview-3d/materials/mmd-materials.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts";
-import type { MmdBottomNavCtx } from "./content-bridges.ts";
-import { materialNodes } from "./material-controls.ts";
 import type { MmdMenuItemsOpts, Stage5Ctx } from "./mmd-types.ts";
-import { morphNodes } from "./morph-controls.ts";
-import { perceptionNodes, pickPerceptionCaps } from "./perception-controls.ts";
 
 export function Stage5Menu(c: Stage5Ctx): {
   semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;

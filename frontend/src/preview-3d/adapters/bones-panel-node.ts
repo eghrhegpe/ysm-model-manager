@@ -22,9 +22,9 @@
 //   这些「是否注入」的策略由各 adapter 在外层控制，本工厂只负责「注入什么形状」。
 
 import type * as THREE from "three";
+import { makeBonePanelRenderer } from "@/preview-3d/adapters/vrm/vrm-bone-ui.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import { makeBonePanelRenderer } from "./vrm-bone-ui.ts";
 
 /**
  * 骨骼面板清理引用（4 adapter 共用统一接口，ADR-074 S2）。

@@ -10,6 +10,15 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import type { BonePanelCleanupRef } from "@/preview-3d/adapters/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { concurrentMap } from "@/preview-3d/adapters/mmd/mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+  UpdateableScene,
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
@@ -22,17 +31,8 @@ import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base6
 import { safeGet } from "@/utils/base/primitives/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
-import { concurrentMap } from "./mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
-import type {
-  PreviewAdapter,
-  PreviewBuildCtx,
-  ScreenshotScene,
-  UpdateableScene,
-} from "./mount-preview-core.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {

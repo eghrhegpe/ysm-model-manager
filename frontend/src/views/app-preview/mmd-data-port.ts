@@ -2,7 +2,7 @@
 // 视图层保留 getApp（ADR-072 边界：适配器 0 backend import）；
 // 绑定签名已由 Wails 生成的 app.ts 全量类型化，直接消费，不再用 `as unknown as` 绕类型。
 
-import type { MmdDataPort } from "@/preview-3d/adapters/mmd-adapter.ts";
+import type { MmdDataPort } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
 /**

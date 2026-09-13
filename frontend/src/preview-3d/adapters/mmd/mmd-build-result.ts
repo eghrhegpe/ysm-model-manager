@@ -1,6 +1,11 @@
 // ===== mmd-build-result.ts：mmd-adapter.ts stage 管线拆分产物（ADR-167，字节级搬移）=====
 
 import { applyVPD } from "@moeru/three-mmd";
+import type {
+  ScreenshotScene,
+  SemanticScene,
+  UpdateableScene,
+} from "@/preview-3d/adapters/mount-preview-core.ts";
 import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
@@ -11,7 +16,6 @@ import type { Stage5Menu } from "./mmd-build-menu.ts";
 import { disposeMmdMesh, mmdDiag } from "./mmd-shared.ts";
 import type { Stage6bCtx, Stage6Ctx } from "./mmd-types.ts";
 import { applyVPDToMesh } from "./mmd-vpd-mesh.ts";
-import type { ScreenshotScene, SemanticScene, UpdateableScene } from "./mount-preview-core.ts";
 
 export function Stage6Result(
   c: Stage6Ctx,

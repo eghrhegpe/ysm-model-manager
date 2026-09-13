@@ -12,8 +12,8 @@ import {
 } from "./defs.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import { ysmMenuItems, type YsmMenuItemsOpts } from "@/preview-3d/adapters/ysm-adapter.ts";
-import { mmdMenuItems, type MmdMenuItemsOpts } from "@/preview-3d/adapters/mmd-adapter.ts";
-import { vrmMenuItems, type VrmMenuItemsOpts } from "@/preview-3d/adapters/vrm-adapter.ts";
+import { mmdMenuItems, type MmdMenuItemsOpts } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
+import { vrmMenuItems, type VrmMenuItemsOpts } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import type { YsmModel, YsmContentHandle } from "@/preview-3d/adapters/content-bridges.ts";

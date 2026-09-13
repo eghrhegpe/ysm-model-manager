@@ -3,14 +3,21 @@
 import type { MMDLoader, VpdObject } from "@moeru/three-mmd";
 import type * as THREE from "three";
 import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import type { BonePanelCleanupRef } from "@/preview-3d/adapters/bones-panel-node.ts";
+import type {
+  MaterialControlBridge,
+  MmdBottomNavCtx,
+  MmdPlayBridge,
+} from "@/preview-3d/adapters/content-bridges.ts";
+import type { PreviewBuildCtx } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type {
+  PerceptionCapability,
+  PerceptionState,
+} from "@/preview-3d/adapters/perception-controls.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
-import type { MaterialControlBridge, MmdBottomNavCtx, MmdPlayBridge } from "./content-bridges.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
-import type { PreviewBuildCtx } from "./mount-preview-core.ts";
-import type { PerceptionCapability, PerceptionState } from "./perception-controls.ts";
 
 /** MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface MmdDataPort {

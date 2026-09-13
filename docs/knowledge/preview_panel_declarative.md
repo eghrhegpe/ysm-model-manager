@@ -15,7 +15,6 @@ source_files:
   - frontend/src/views/app-preview/shot-panel-shared.ts
 auto_fields:
   symbols_with_lines:
-    - buildMmdScene
     - buildPreviewMenuRouters
     - buildYsmScene
     - clearFolderCollapsedState
@@ -25,15 +24,9 @@ auto_fields:
     - CorePanelId
     - disposeCustomCleanups
     - isPreviewFolderNode
-    - makeMmdAdapter
     - makeYsmAdapter
-    - MmdAdapterDeps
     - MmdBottomNavCtx
-    - MmdDataPort
-    - mmdMenuItems
-    - MmdMenuItemsOpts
     - mmdModelInfoNodes
-    - MmdPanelHooks
     - MmdPlayBridge
     - mmdShotNodes
     - MorphMeshLike

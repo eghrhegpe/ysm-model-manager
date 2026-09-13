@@ -10,7 +10,7 @@ import {
   mount3D,
   type PreviewAdapter,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
-import { makeVrmAdapter, type VrmPanelHooks } from "@/preview-3d/adapters/vrm-adapter.ts";
+import { makeVrmAdapter, type VrmPanelHooks } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";

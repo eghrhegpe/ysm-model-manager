@@ -4,7 +4,7 @@
 // three 用真实实现；FBXLoader 全 mock（避免在 vitest 内跑真实 FBX 解析）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
-import type { PreviewBuildCtx } from "./mount-preview-core.ts";
+import type { PreviewBuildCtx } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adapter.ts";
 import { getModelRootCount } from "@/preview-3d/infra/frustum-cull.ts";
 import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
@@ -74,8 +74,8 @@ vi.mock("three/addons/loaders/FBXLoader.js", () => ({
   },
 }));
 
-vi.mock("./bones-panel-node.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./bones-panel-node.ts")>();
+vi.mock("@/preview-3d/adapters/bones-panel-node.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/preview-3d/adapters/bones-panel-node.ts")>();
   return {
     ...actual,
     makeBonesPanelItem: (

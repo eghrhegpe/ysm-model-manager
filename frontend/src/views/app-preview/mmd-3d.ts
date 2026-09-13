@@ -2,7 +2,7 @@
 // 内容层在 mmd-adapter.ts；本文件仅作兼容薄包装，保留 createMmd3D / cleanupMmd3D /
 // invalidateMmdPreview 公开符号，index.ts 分发对齐 vrm-3d.ts 模式。
 
-import { type MmdPanelHooks, makeMmdAdapter } from "@/preview-3d/adapters/mmd-adapter.ts";
+import { type MmdPanelHooks, makeMmdAdapter } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
 import {
   cleanupPreview,
   invalidatePreview,

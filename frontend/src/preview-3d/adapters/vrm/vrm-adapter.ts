@@ -12,6 +12,23 @@ import {
 import type { VRM0Meta, VRM1Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import type { BonePanelCleanupRef } from "@/preview-3d/adapters/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/adapters/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { materialNodes } from "@/preview-3d/adapters/material-controls.ts";
+import type {
+  PreviewAdapter,
+  PreviewBuildCtx,
+  ScreenshotScene,
+  SemanticScene,
+  UpdateableScene,
+} from "@/preview-3d/adapters/mount-preview-core.ts";
+import {
+  type PerceptionCapability,
+  type PerceptionState,
+  perceptionNodes,
+  pickPerceptionCaps,
+} from "@/preview-3d/adapters/perception-controls.ts";
+import { renderLoadingState } from "@/preview-3d/adapters/preview-loading.ts";
 import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import {
@@ -29,23 +46,6 @@ import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-sta
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
-import type { BonePanelCleanupRef } from "./bones-panel-node.ts";
-import { makeBonesPanelItem } from "./bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import { materialNodes } from "./material-controls.ts";
-import type {
-  PreviewAdapter,
-  PreviewBuildCtx,
-  ScreenshotScene,
-  SemanticScene,
-  UpdateableScene,
-} from "./mount-preview-core.ts";
-import {
-  type PerceptionCapability,
-  type PerceptionState,
-  perceptionNodes,
-  pickPerceptionCaps,
-} from "./perception-controls.ts";
-import { renderLoadingState } from "./preview-loading.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 
 /** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
@@ -69,13 +69,13 @@ async function vrmDiag(
   }
 }
 
+import type { MmdPlayBridge } from "@/preview-3d/adapters/content-bridges.ts";
 import {
   getVrmMaterialDetail,
   listVrmMaterials,
   setVrmMaterialOpacity,
   setVrmMaterialVisible,
 } from "@/preview-3d/materials/vrm-materials.ts";
-import type { MmdPlayBridge } from "./content-bridges.ts";
 
 /** 把 THREE.Texture / HTMLImageElement 转 dataURL（meta 卡缩略图） */
 function imageToDataURL(img: unknown): string {

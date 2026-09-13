@@ -110,18 +110,27 @@ const dirFlags = new WeakMap<TreeNode, { hasEnabled: boolean; hasDisabled: boole
 function annotateDirNodes(root: TreeNode): void {
   interface Frame {
     node: TreeNode;
+    childKeys: string[];
     childIdx: number;
   }
-  const stack: Frame[] = [{ node: root, childIdx: 0 }];
+  // P2 优化（审核）：子键列表仅在入栈时算一次，避免 while 每轮重建 Object.keys 过滤数组
+  // （节点被访问 degree+1 次时原实现每次都全量分配，O(n·d) 临时数组；与 flattenVisible 的 Frame 模式统一）。
+  const stack: Frame[] = [
+    { node: root, childKeys: Object.keys(root).filter((k) => k !== "_e"), childIdx: 0 },
+  ];
   const order: TreeNode[] = [];
   while (stack.length) {
     const top = stack[stack.length - 1];
-    const keys = Object.keys(top.node).filter((k) => k !== "_e");
-    if (top.childIdx < keys.length) {
-      const child = top.node[keys[top.childIdx]] as TreeNode | undefined;
+    if (top.childIdx < top.childKeys.length) {
+      const childKey = top.childKeys[top.childIdx];
       top.childIdx++;
+      const child = top.node[childKey] as TreeNode | undefined;
       if (child && typeof child === "object" && !child._e) {
-        stack.push({ node: child, childIdx: 0 });
+        stack.push({
+          node: child,
+          childKeys: Object.keys(child).filter((k) => k !== "_e"),
+          childIdx: 0,
+        });
       }
     } else {
       order.push(top.node);

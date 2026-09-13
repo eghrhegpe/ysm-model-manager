@@ -114,6 +114,14 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     }
   });
 
+  // P3 收敛（审核）：tab 懒初始化分发由查表替代 if/else-if 链，与 app-preview 的 PREVIEW_HANDLERS 同构模式对齐
+  type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<unknown>;
+  const TAB_INIT: Record<string, TabInitFn> = {
+    recycle: initRecycleTab,
+    dedup: initDedupTab,
+    oldest: initOldestTab,
+  };
+
   const inited: Record<string, boolean> = {};
 
   /** 切 tab 核心逻辑（click/keyboard 共用） */
@@ -148,15 +156,10 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
       // catch 中复位以允许重试并 toast 提示（ADR-044 ①：async handler 最外层必有 catch）。
       inited[tab] = true;
       try {
-        if (tab === "recycle") {
-          const recycleCleanup = await initRecycleTab(host, container);
-          if (recycleCleanup) host.subs.addPage(recycleCleanup);
-        } else if (tab === "dedup") {
-          const unsub = await initDedupTab(host, container);
-          if (unsub) host.subs.addPage(unsub);
-        } else if (tab === "oldest") {
-          const oldestCleanup = await initOldestTab(host, container);
-          if (oldestCleanup) host.subs.addPage(oldestCleanup);
+        const initFn = TAB_INIT[tab];
+        if (initFn) {
+          const cleanup = await initFn(host, container);
+          if (typeof cleanup === "function") host.subs.addPage(cleanup as () => void);
         }
       } catch (e) {
         inited[tab] = false;

@@ -103,6 +103,8 @@ status: active
 - **确定性/口径统一修复**：① `resolveComponentTexName` 前缀兜底多命中改候选收集后 `sort.Strings` 取字典序最小——map 迭代随机曾致同输入不同运行绑不同纹理；② `detectMaidNs` 复用 `collectMaidManifest`（"最长清单即主包"）——多命名空间包组件视图与合并预览选 ns 不再分叉；③ 组件路径排序键归一化：`buildOrderAndPngIndex`/`sortGeoFilesMainFirst` 双侧加 ToLower
 - **R29 安全修复**：① `classifyFileInventory` OOM 封顶：加 `maxClassifyEntries=10000` matched 条目数封顶，超限 `inv.Truncated=true` + log 标记 + break；② `selectBestMaidCandidate` 空切片 panic 修复：函数开头加 `if len(candidates) == 0 { return maidNsCandidate{} }`；③ 仅计 `appended`（matched）条目，dir 在计数前 `continue` 跳过
 - **确定性收敛（`421ae7b5` 四轮锐评三刀落地之一）**：`parseModelOrder` 从 `break`→`continue` 修复——原实现遇到首个不匹配元素即中断整个 order 派生，导致 main/arm/多组件排序错位（未匹配项被丢弃）；现逐元素判定，未命中项保留原位置继续遍历。同批还有 `internal/app` 的 DoUpdate 错误通道修正（`421ae7b5`）与 `go/recycle` 废弃字段清理（`421ae7b5`）
+- **`parseNewFormat` 多 geometry 条目选取（2026-09-14 锐评修复）**：单条目保持既有契约（无 bones 也返回非 nil 空模型，`TestParseBedrockGeometry_NoBones` 锁定）；**多条目跳过 bones 为空的空壳条目取第一个非空者**（对齐旧版 `parseOldFormat` 跳过空骨骼口径），首个有骨骼时仍取首个（`TestParseBedrockGeometry_MultipleGeometryFirstOnly` 锁定不变），全部为空 → nil——首条仅 description 的占位不再吞掉后续有效模型
+- **`encodeTextureBase64` MIME 按魔数嗅探（2026-09-14 锐评修复）**：`sniffTexMime` 嗅探 PNG（`\x89PNG`）/JPEG（`FFD8FF`）魔数选 `image/png`/`image/jpeg`，未知魔数回退 `image/png`（旧行为）——`collectPngEntries` 收集时已去扩展名、`pngNameMap` 键不含后缀，不能靠名字选 MIME，只能嗅探字节头（浏览器渲染 data URL 同按字节嗅探）；jpg 纹理不再统一错标 `image/png`
 
 ## 相关
 

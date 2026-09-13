@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-236：命名 stutter（go/sync alias）与注释篇幅：维持现状决策",
+        "link": "/adr/ADR-236-go-sync-alias-and-comment-policy-status-quo"
+      },
+      {
         "text": "ADR-235：preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格",
         "link": "/adr/ADR-235-preview-3d-dir-semantics-realignment"
       },

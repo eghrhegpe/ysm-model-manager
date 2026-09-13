@@ -162,11 +162,30 @@ func parseNewFormat(data []byte) *types.BedrockModel {
 	if len(raw.Geometry) == 0 {
 		return nil
 	}
-	g := raw.Geometry[0]
-	return buildModel(raw.FormatVersion,
-		clampTexSize(g.Description.TextureWidth),
-		clampTexSize(g.Description.TextureHeight),
-		g.Bones)
+	// 单条目：保持既有契约——无 bones 也返回空模型（非 nil），
+	// parse_test.go TestParseBedrockGeometry_NoBones 锁定，勿改。
+	if len(raw.Geometry) == 1 {
+		g := raw.Geometry[0]
+		return buildModel(raw.FormatVersion,
+			clampTexSize(g.Description.TextureWidth),
+			clampTexSize(g.Description.TextureHeight),
+			g.Bones)
+	}
+	// 多 geometry 条目：跳过 bones 为空的空壳条目，取第一个非空者——与旧版格式
+	// parseOldFormat 的「跳过空骨骼条目继续」口径对齐（Blockbench 导出偶发首条
+	// 仅 description 的占位）。首个条目有骨骼时仍取首个（与既有「仅首个生效」
+	// 契约一致，TestParseBedrockGeometry_MultipleGeometryFirstOnly 锁定）；
+	// 全部为空 → nil，空壳条目不再吞掉后续有效模型。
+	for _, g := range raw.Geometry {
+		if len(g.Bones) == 0 {
+			continue
+		}
+		return buildModel(raw.FormatVersion,
+			clampTexSize(g.Description.TextureWidth),
+			clampTexSize(g.Description.TextureHeight),
+			g.Bones)
+	}
+	return nil
 }
 
 // parseOldFormat 解析旧版 geometry.* 格式（format_version ≤ 1.10.0）

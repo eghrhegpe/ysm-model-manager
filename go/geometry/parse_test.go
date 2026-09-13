@@ -78,6 +78,43 @@ func TestParseBedrockGeometry_ReturnsNil(t *testing.T) {
 	}
 }
 
+// TestParseBedrockGeometry_MultiGeometry_SkipEmptyBones 多 geometry 条目：跳过
+// bones 为空的空壳条目，取第一个非空者——修复前静默取 Geometry[0]，首条空壳
+// 会吞掉后续有效模型；对齐旧版格式 parseOldFormat 的"跳过空骨骼继续"口径。
+func TestParseBedrockGeometry_MultiGeometry_SkipEmptyBones(t *testing.T) {
+	data := []byte(`{
+	  "format_version": "1.16.0",
+	  "minecraft:geometry": [
+	    { "description": { "identifier": "empty", "texture_width": 1, "texture_height": 1 } },
+	    {
+	      "description": { "identifier": "real", "texture_width": 32, "texture_height": 64 },
+	      "bones": [ { "name": "head", "cubes": [ { "origin": [0,0,0], "size": [4,4,4], "uv": [0,0] } ] } ]
+	    }
+	  ]
+	}`)
+	m := ParseBedrockGeometry(data)
+	testutil.NotNil(t, m, "跳过空壳后应取到第一个非空条目")
+	testutil.Equal(t, m.TexWidth, 32)
+	testutil.Equal(t, m.TexHeight, 64)
+	testutil.Equal(t, m.BoneCount, 1)
+	if m.Bones[0].Name != "head" {
+		t.Errorf("Bones[0].Name = %q, 期望 head", m.Bones[0].Name)
+	}
+}
+
+// TestParseBedrockGeometry_AllEmptyBones_ReturnsNil 全部条目无 bones → nil
+// （对齐旧版 parseOldFormat 全部空骨骼返回 nil 口径，不再吐空壳模型）。
+func TestParseBedrockGeometry_AllEmptyBones_ReturnsNil(t *testing.T) {
+	data := []byte(`{
+	  "format_version": "1.16.0",
+	  "minecraft:geometry": [
+	    { "description": { "identifier": "a" } },
+	    { "description": { "identifier": "b" } }
+	  ]
+	}`)
+	testutil.Nil(t, ParseBedrockGeometry(data), "全部条目无 bones 应返回 nil")
+}
+
 // ====== ParseBedrockGeometry 边界 / 畸形输入补测 ======
 
 func TestParseBedrockGeometry_TexSizeClamp(t *testing.T) {

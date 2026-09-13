@@ -1,6 +1,7 @@
 package geometry
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -104,5 +105,37 @@ func TestComponentTextures_Undeclared_NoSameNameFile(t *testing.T) {
 	// 无 arm.png → 兜底不触发 → 无条目（既有行为不变）
 	if len(armComp.ComponentTextures["arm"]) != 0 {
 		t.Errorf("无同名纹理文件不应兜底, 实际 %v", armComp.ComponentTextures)
+	}
+}
+
+// ===== encodeTextureBase64 MIME 按魔数选型（jpg 纹理不再错标 image/png）=====
+
+// TestEncodeTextureBase64_MimeByMagic 白盒：PNG/JPEG 双魔数选 MIME；
+// 未知魔数回退 image/png（保持旧行为，测试假数据/非标准格式不受影响）。
+func TestEncodeTextureBase64_MimeByMagic(t *testing.T) {
+	pngNameMap := map[string]int{"tex": 0, "jpg": 1, "unknown": 2}
+	pngs := [][]byte{
+		[]byte("\x89PNG\r\n\x1a\n" + "pngdata"), // PNG 魔数
+		{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10},    // JPEG 魔数（FFD8FF 起始）
+		[]byte("plaintext-no-magic"),            // 未知 → 回退 image/png
+	}
+	// PNG 魔数 → image/png
+	want := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngs[0])
+	if got := encodeTextureBase64("tex", pngNameMap, pngs); got != want {
+		t.Errorf("PNG 魔数应编码为 image/png data URI, 实际 %.60q", got)
+	}
+	// JPEG 魔数 → image/jpeg（修复点：此前统一错标 image/png）
+	want = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(pngs[1])
+	if got := encodeTextureBase64("jpg", pngNameMap, pngs); got != want {
+		t.Errorf("JPEG 魔数应编码为 image/jpeg data URI, 实际 %.60q", got)
+	}
+	// 未知魔数 → 回退 image/png（旧行为不变）
+	want = "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngs[2])
+	if got := encodeTextureBase64("unknown", pngNameMap, pngs); got != want {
+		t.Errorf("未知魔数应回退 image/png data URI, 实际 %.60q", got)
+	}
+	// 未命中 → 空串
+	if got := encodeTextureBase64("nope", pngNameMap, pngs); got != "" {
+		t.Errorf("未命中应返回空串, 实际 %.60q", got)
 	}
 }

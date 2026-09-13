@@ -469,7 +469,7 @@ func l0ResolveModel(item maidManifestItem, maidNs, nsBase, logPrefix string,
 // 优先级：形式 A 显式路径 → model_id 候选字典 → basename 模糊回扫。
 // 原闭包 resolveL0Texture 升格：与 l0ResolveModel 三段回退链严格对称。
 func l0ResolveTexture(item maidManifestItem, maidNs, nsBase, logPrefix string,
-	entryByPath map[string]container.Entry, bIdx *l0BasenameIndex, _modelAbs string) string {
+	entryByPath map[string]container.Entry, bIdx *l0BasenameIndex) string {
 	textureRel := l0StripNsPrefix(item.Texture, nsBase)
 	if textureRel != "" {
 		texAbs := strings.ToLower(maidNs + strings.TrimPrefix(filepath.ToSlash(textureRel), "/"))
@@ -570,7 +570,7 @@ func resolveL0(entries []container.Entry, maidNs string, manifest []maidManifest
 
 	for i, item := range manifest {
 		modelAbs := l0ResolveModel(item, maidNs, nsBase, logPrefix, entryByPath, bIdx)
-		texAbs := l0ResolveTexture(item, maidNs, nsBase, logPrefix, entryByPath, bIdx, modelAbs)
+		texAbs := l0ResolveTexture(item, maidNs, nsBase, logPrefix, entryByPath, bIdx)
 		applyL0ManifestItem(&res, i, maidNs, logPrefix, entryByPath, modelAbs, texAbs)
 	}
 

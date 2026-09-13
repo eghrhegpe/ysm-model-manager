@@ -1167,7 +1167,22 @@ func resolveComponentTexName(compName, entryName string, modelTexName map[string
 	return ""
 }
 
+// sniffTexMime 嗅探纹理字节魔数选 MIME（PNG/JPEG 双后缀支持）。
+// collectPngEntries 收集时已去扩展名，pngNameMap 键不含后缀——不能靠名字选 MIME，
+// 只能嗅探字节头（浏览器渲染 data URL 同样按字节嗅探，行为一致）。
+// 未知魔数回退 image/png：保持旧行为（测试假数据/非标准格式仍走 png 前缀）。
+func sniffTexMime(data []byte) string {
+	if len(data) >= 8 && string(data[:8]) == "\x89PNG\r\n\x1a\n" {
+		return "image/png"
+	}
+	if len(data) >= 3 && data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff {
+		return "image/jpeg"
+	}
+	return "image/png"
+}
+
 // encodeTextureBase64 按声明的纹理名查 pngNameMap，找到即编码为 data URL。
+// MIME 按字节魔数嗅探选型（sniffTexMime）：jpg 纹理不再统一错标 image/png。
 // 未命中或 declaredTexName 为空时返回空串。
 func encodeTextureBase64(declaredTexName string, pngNameMap map[string]int, pngs [][]byte) string {
 	if declaredTexName == "" {
@@ -1177,7 +1192,7 @@ func encodeTextureBase64(declaredTexName string, pngNameMap map[string]int, pngs
 	if !ok || idx >= len(pngs) {
 		return ""
 	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngs[idx])
+	return "data:" + sniffTexMime(pngs[idx]) + ";base64," + base64.StdEncoding.EncodeToString(pngs[idx])
 }
 
 // applyPerComponentTexSlot 把模型内所有 cube 的 TexSlot 置 0（ADR-114 perComponent：

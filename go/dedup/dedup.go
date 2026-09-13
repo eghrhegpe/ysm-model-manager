@@ -173,6 +173,15 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 // GUI 绑定层 isPathInRootOrSelf）一律先 Abs 化再传入，dedup 层是最后一道防线。
 var ErrRelativePath = errors.New("dedup: 拒绝相对路径，请传入绝对路径")
 
+// ErrEmptyRoot 扫描目录经 TrimSpace 后为空，调用方应以 errors.Is 判定。
+var ErrEmptyRoot = errors.New("dedup: 扫描目录为空")
+
+// ErrNULByteInRoot 扫描目录含 NUL 字节（路径混淆防护，见 resolveScanRoot）。
+var ErrNULByteInRoot = errors.New("dedup: 扫描目录含 NUL 字节")
+
+// ErrScanRoot filepath.Abs 无法解析扫描目录。
+var ErrScanRoot = errors.New("dedup: 无法解析扫描目录")
+
 // resolveScanRoot 入口校验公共段（FindDuplicateFiles/CountDuplicates 共用）：
 // TrimSpace → 空判 → 拒 NUL 字节 → 拒相对路径（防穿越）→ Abs 化。
 // NUL 字节（Windows 下 filepath.Abs 报错 / Linux 下放行）必须在入口统一显式拒绝——
@@ -181,11 +190,11 @@ var ErrRelativePath = errors.New("dedup: 拒绝相对路径，请传入绝对路
 func resolveScanRoot(dir string) (string, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
-		return "", fmt.Errorf("目录为空")
+		return "", fmt.Errorf("%w", ErrEmptyRoot)
 	}
 	// NUL 字节路径：Windows 下 filepath.Abs 会报错，但 Linux 放行——统一在此显式拒绝
 	if strings.ContainsRune(dir, '\x00') {
-		return "", fmt.Errorf("dedup: 扫描目录含 NUL 字节: %q", dir)
+		return "", fmt.Errorf("%w: %q", ErrNULByteInRoot, dir)
 	}
 	// 拒相对路径（含 ".." 穿越 / "." / 未展开的 "~"）：绝对路径才是合法入参形态
 	if !filepath.IsAbs(dir) {
@@ -193,7 +202,7 @@ func resolveScanRoot(dir string) (string, error) {
 	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		return "", fmt.Errorf("dedup: 无法解析扫描目录 %q: %w", dir, err)
+		return "", fmt.Errorf("%w: 无法解析扫描目录 %q: %v", ErrScanRoot, dir, err)
 	}
 	return abs, nil
 }

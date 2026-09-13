@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"ysm-model-manager/go/dedup"
@@ -193,15 +192,12 @@ func runDedupClean(ctx *CmdContext) error {
 		return newRuntimeErrf("扫描重复文件失败: %v", err)
 	}
 
-	// 每组按路径排序后保留第一个（确定性，与 recycle.DeduplicateEntries 口径一致）
+	// dedup.Group.Files 已按 Path 排序（FindDuplicateFiles 保证），保留第一个、其余为 victims
 	var victims []string
 	for _, g := range groups {
-		files := make([]string, 0, len(g.Files))
-		for _, f := range g.Files {
-			files = append(files, f.Path)
+		for _, f := range g.Files[1:] {
+			victims = append(victims, f.Path)
 		}
-		sort.Strings(files)
-		victims = append(victims, files[1:]...)
 	}
 
 	if len(victims) == 0 {

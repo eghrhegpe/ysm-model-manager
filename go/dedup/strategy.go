@@ -95,9 +95,7 @@ func NewHashAlgorithm(config *types.DedupConfig) HashAlgorithm {
 		return &QuickHash{}
 	case "name_size":
 		return &NameSizeHash{}
-	case "deep_hash", "hash", "":
-		fallthrough
-	default:
+	default: // "deep_hash" / "hash" / "" / 未知策略统一回退 DeepHash
 		return &DeepHash{}
 	}
 }

@@ -227,15 +227,20 @@ function main() {
   // 以 [执行失败] 暴露，而非被掩盖成 [解析失败]/消费陈旧报告（code_review P3）
   // jscpd v5 Rust 内核：显式 --format typescript,javascript 确保 .ts/.tsx 不被静默跳过
   //（无 --format 时依赖扩展名自动检测，不同 jscpd 版本行为偶有漂移；显式声明更稳定）。
-  // pattern 用绝对 posix 路径：jscpd cwd 已迁至私有临时目录（竞态修复，见 jscpdWork 注释），
-  // 相对 pattern 会在 tmpdir 里扫空。globby 对正斜杠绝对路径跨平台可用。
+  //
+  // 扫描根 = 位置参数（绝对路径）+ --pattern 限扩展名：竞态修复（4172b8dad）把 cwd 迁到
+  // 私有 tmpdir 防两进程写同一 frontend/report/，副作用是「绝对 --pattern + tmpdir cwd」
+  // 形态下 jscpd 扫 0 文件（globby 相对 cwd 解析，跨目录绝对 glob 不生效）→ jscpd 静默
+  // no-op、重复代码检查恒零发现。修正：用位置参数传绝对扫描根（jscpd 官方入口，支持
+  // 绝对路径），--pattern 只管扩展名过滤；报告落 tmpdir/report/，仍与并发进程隔离。
   try {
     jscpdWork = fs.mkdtempSync(path.join(os.tmpdir(), "jscpd-gate-"));
     jscpdOut = run(
       "jscpd",
       [
+        toPosix(path.join(FRONTEND, "src")),
         "--pattern",
-        `${toPosix(FRONTEND)}/src/**/*.{js,ts}`,
+        "**/*.{js,ts}",
         "--min-lines",
         "10",
         "--min-tokens",

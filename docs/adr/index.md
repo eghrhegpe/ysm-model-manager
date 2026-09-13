@@ -18,10 +18,10 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 7 |
-| [✅ 已采纳](#已采纳) | 215 |
+| [✅ 已采纳](#已采纳) | 216 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
-| [❓ 未归类](#未归类) | 1 |
+| [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
@@ -37,10 +37,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（215）
+### ✅ 已采纳（216）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-235](./ADR-235-preview-3d-dir-semantics-realignment.md) | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ✅ 已采纳 |
 | [ADR-234](./ADR-234-scripts-gen.md) | scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警 | ✅ 已采纳 |
 | [ADR-233](./ADR-233-preview3d-session-state-machine.md) | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 |
 | [ADR-232](./ADR-232-scripts-hooks.md) | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 |
@@ -277,17 +278,11 @@ permalink: /adr/
 | [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 |
 | [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 |
 
-### ❓ 未归类（1）
-
-| ADR | 标题 | 状态 |
-|-----|------|------|
-| [ADR-235](./ADR-235-preview-3d-dir-semantics-realignment.md) | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ❓ 未知 |
-
 ## 登记表（新→旧）
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-235 | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ❓ 未知 | 2026-09-14 |
+| ADR-235 | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ✅ 已采纳 | 2026-09-14 |
 | ADR-234 | scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警 | ✅ 已采纳 | 2026-09-13 |
 | ADR-233 | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 | 2026-09-13 |
 | ADR-232 | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 | 2026-09-13 |

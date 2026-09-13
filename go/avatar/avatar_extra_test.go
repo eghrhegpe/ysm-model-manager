@@ -645,15 +645,16 @@ func TestCacheAvatarsFromModel_ZipAlreadyCached(t *testing.T) {
 	}
 }
 
-// ===== containerAuthorNames 补测 =====
+// ===== readContainerAuthors 补测 =====
 // 2026-09 外部锐评 #1 重构：modelAuthorNames 退役（其 .json 分支在生产路径本就
 // 死代码——CacheAvatarsFromModel 对 .json 直接路由 CacheAvatarsFromJSON，作者名
-// 过滤由后者覆盖）；容器作者名解析收敛至 containerAuthorNames(Reader)。
-// 坏 zip / 缺失文件 / 未知扩展名等打开期失败由 cacheContainerAvatars 提前拦截
-// 返回（CacheAvatarsFromModel 路由测试已覆盖 missing.* 确定性 no-op）。
+// 过滤由后者覆盖）；容器作者名解析收敛至 readContainerAuthors（P2-8 单次解析，
+// 空名过滤下沉到批量缓存循环）。坏 zip / 缺失文件 / 未知扩展名等打开期失败由
+// cacheContainerAvatars 提前拦截返回（CacheAvatarsFromModel 路由测试已覆盖
+// missing.* 确定性 no-op）。
 
-func TestContainerAuthorNames(t *testing.T) {
-	// 正常 + 空名过滤
+func TestReadContainerAuthors(t *testing.T) {
+	// 正常解析（空名保留，过滤由批量缓存循环负责）
 	data := makeZip(t, map[string]string{
 		"ysm.json": `{"metadata":{"authors":[{"name":"用户A"},{"name":"用户B"},{"name":""}]}}`,
 	})
@@ -662,8 +663,9 @@ func TestContainerAuthorNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if got := containerAuthorNames(r); !cmp.Equal(got, []string{"用户A", "用户B"}) {
-		t.Errorf("容器作者名应过滤空名, 得到 %v", got)
+	authors := readContainerAuthors(r)
+	if len(authors) != 3 || authors[0].Name != "用户A" || authors[1].Name != "用户B" || authors[2].Name != "" {
+		t.Errorf("容器作者解析错误: %+v", authors)
 	}
 
 	// 无 ysm.json → nil
@@ -673,7 +675,7 @@ func TestContainerAuthorNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r2.Close()
-	if got := containerAuthorNames(r2); got != nil {
+	if got := readContainerAuthors(r2); got != nil {
 		t.Errorf("无 ysm.json 应返回 nil, 得到 %v", got)
 	}
 
@@ -684,7 +686,7 @@ func TestContainerAuthorNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r3.Close()
-	if got := containerAuthorNames(r3); got != nil {
+	if got := readContainerAuthors(r3); got != nil {
 		t.Errorf("坏 JSON 应返回 nil, 得到 %v", got)
 	}
 }

@@ -8,6 +8,7 @@ source_files:
   - go/avatar/
 auto_fields:
   symbols_with_lines:
+    - CacheAvatarsFromJSON
     - CacheAvatarsFromModel
     - CacheDir
     - DecodeYSMData
@@ -29,7 +30,7 @@ quick_risk_lines:
   - 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接
 pitfalls:
   - 手写头像路径拼接 → 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验
-  - zip/7z 容器打开统一走 openModelContainer（avatar_extract.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错）
+  - zip/7z 容器打开统一走 openModelContainer（avatar_extract_container.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错）
   - 头像缓存不失效 → 换头像后仍显示旧图；必须经缓存失效策略
 
 use_when:
@@ -55,7 +56,13 @@ status: active
 
 ## 核心职责
 
-- `avatar.go` — 缓存读写（data URI）、按作者名从模型包提取头像、批量缓存、.ysm 二进制经 Node.js + YSMParser WASM 子进程解码
+- `avatar.go` — 缓存读写（data URI）、安全校验（SafeName/isSafeAvatarPath/avatarCandidates）、元数据解析（parseMetadataAuthors）
+- `avatar_extract.go` — 提取编排入口（ExtractAvatarURI/CacheAvatarsFromModel）与共享工具（readLimitedModel/avatarCacheDir/textureMimeOrDefault）
+- `avatar_extract_ysm.go` — .ysm 分支：单作者提取（extractAvatarFromYSM）与批量缓存（cacheYSMavatars），一次 WASM 解码复用文件列表
+- `avatar_extract_container.go` — .zip/.7z 分支：openModelContainer/extractAvatarFromArchive/cacheContainerAvatars/extractAvatarFromContainer*
+- `avatar_extract_json.go` — 解压目录 .json 分支：extractAvatarFromJSON/CacheAvatarsFromJSON/resolveAvatarRef
+- `avatar_decode.go` — .ysm 二进制经 Node.js + YSMParser WASM 子进程解码（DecodeYSMData）
+- `avatar_zip.go` — 容器内受限读取（ReadFileFromContainer）与 ysm.json 路径判定
 
 ## 对外 API / 入口
 
@@ -88,7 +95,7 @@ status: active
 - **R32 修复链（2026-08-31）**：
   - P2-1 `ReadFileFromZip` defer-in-loop：`defer rc.Close()` 位于 for 循环体内，多条目命中时累积未关闭句柄。修复：循环内显式 `rc.Close()`，不依赖 defer。
   - P2-2 `ReadFileFromZip` 死代码：生产路径已全面切换到 `container.Reader`，全包仅测试引用。**已删除**（2026-09-14）：函数移除，测试 6 处迁至 `ReadFileFromContainer`（`FindEntry`/`MatchEntryName` 同一契约，行为等价）。
-  - P3-1 `DecodeYSMData` 重复解码：批量 `CacheAvatarsFromModel` 时每个作者重复触发一次 `extractAvatarFromYSM`→`DecodeYSMData`，同一 .ysm 被解码 N 次。**已实现**：`cacheYSMavatars`（avatar_extract.go）单遍解码 + 内存内逐作者匹配落盘（一次受限整读 + 一次 WASM 解码）。
+  - P3-1 `DecodeYSMData` 重复解码：批量 `CacheAvatarsFromModel` 时每个作者重复触发一次 `extractAvatarFromYSM`→`DecodeYSMData`，同一 .ysm 被解码 N 次。**已实现**：`cacheYSMavatars`（avatar_extract_ysm.go）单遍解码 + 内存内逐作者匹配落盘（一次受限整读 + 一次 WASM 解码）。
 
 ## 相关
 

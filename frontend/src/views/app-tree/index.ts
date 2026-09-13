@@ -428,10 +428,10 @@ export class AppTree extends WebComponentBase {
 
   // ========== 键盘快捷键 ==========
   private _initKeyboardShortcuts(): void {
-    this._keydownHandler = ((e: Event) => {
+    this._keydownHandler = (e: Event) => {
       void this._onKeydown(e as KeyboardEvent);
-    }) as unknown as EventListener;
-    document.addEventListener("keydown", this._keydownHandler as unknown as EventListener);
+    };
+    document.addEventListener("keydown", this._keydownHandler);
   }
 
   private async _onKeydown(e: KeyboardEvent): Promise<void> {

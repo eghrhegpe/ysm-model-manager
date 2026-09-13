@@ -14,10 +14,9 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
-import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { SyncManagerSelf } from "./self-type.ts";
+import type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
 import { containerHTML, loadingHTML } from "./tpl.ts";
@@ -57,6 +56,8 @@ export class AppSyncManager extends WebComponentBase {
   _subtype = "";
   _allItems: SyncItem[] = [];
   _filteredItems: SyncItem[] = [];
+  /** 筛选后强制展开的目录 path 集合（status 筛选下「有命中后代的目录」，见 store.applyFilter） */
+  _forceOpenPaths?: Set<string>;
   _typeConfig: Array<{ id: string; name?: string; icon?: string }> = [];
   _loading = false;
   /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard */
@@ -68,7 +69,16 @@ export class AppSyncManager extends WebComponentBase {
   _singleBusy = new Set<string>();
   _dirOpen: Record<string, boolean> = {};
   _filesRoots: Record<string, string> = {};
-  _scanDirs: Record<string, { global: string; instance: string; warning?: string }> = {};
+  /** 与 self-type.ts 契约同形（原 {warning?} 为过期形态——renderer/store 经 SyncManagerSelf 读写 warningCode/warningParams，TS 查不到此层） */
+  _scanDirs: Record<
+    string,
+    {
+      global: string;
+      instance: string;
+      warningCode?: string;
+      warningParams?: { label: string; dir: string; subDir: string };
+    }
+  > = {};
   _cbRef:
     | {
         cb: {
@@ -178,12 +188,12 @@ export class AppSyncManager extends WebComponentBase {
       this._doRender();
     } catch (e) {
       logError("sync-manager", "_render 出错:", e);
-      this.innerHTML +=
-        '<div style="padding:12px;color:var(--err)">' +
-        t("sync.renderFailed") +
-        ": " +
-        esc(safeErrorMessage(e)) +
-        "</div>";
+      // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（textContent 天然防注入，无需 esc）
+      const errDiv = document.createElement("div");
+      errDiv.style.padding = "12px";
+      errDiv.style.color = "var(--err)";
+      errDiv.textContent = `${t("sync.renderFailed")}: ${safeErrorMessage(e)}`;
+      this.appendChild(errDiv);
       bus.emit("toast:show", {
         msg: `❌ ${friendlyError(e, t("sync.renderFailed"))}`,
         duration: TOAST_MS.long,
@@ -260,6 +270,16 @@ export class AppSyncManager extends WebComponentBase {
     render(self).catch((e) => logError("sync-manager", "render 失败:", e));
   }
 }
+
+// 编译期对齐守卫（零运行时成本）：self-type.ts 新增必选字段而本类漏实现时，此处 TS 报错。
+// 取代「口头记得写 implements SyncManagerSelf」——原生 querySelector 返回类型收窄冲突使 implements 子句不可用，
+// 故用结构化断言：类实例剥掉 HTMLElement 原生成员后，必须满足 SyncManagerFields 全量契约。
+type _SyncSelfAlign =
+  Omit<AppSyncManager, keyof HTMLElement> extends Omit<SyncManagerFields, "querySelector">
+    ? true
+    : never;
+const _SYNC_SELF_ALIGN_GUARD: _SyncSelfAlign = true;
+void _SYNC_SELF_ALIGN_GUARD;
 
 if (typeof customElements !== "undefined" && !customElements.get("app-sync-manager")) {
   customElements.define("app-sync-manager", AppSyncManager);

@@ -192,7 +192,7 @@ export async function buildStatsCard(
       </div>`,
         )
         .join("");
-    card.innerHTML += authorHtml;
+    card.insertAdjacentHTML("beforeend", authorHtml); // 增量插入，避免 innerHTML += 全量重解析
     // 顶部 ysm-author-avatars 小头像行已移除（2026-08-28）：作者头像/角色在统计卡作者
     // 列表内统一承载，不再向详情页顶部重复填充小头像（原 skeleton-render.ts 填充逻辑）
   }

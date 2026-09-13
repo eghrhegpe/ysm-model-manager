@@ -412,10 +412,19 @@ async function dgCfExecuteResolve(
       resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
     if (result.manual > 0)
       resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
-    list.innerHTML += `<div class="stat-row diag-msg diag-msg-success" style="margin-top:12px">${resultMsg}</div>`;
+    // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（每次全量重解析 + 未来引入用户可写串时的注入面）
+    const okDiv = document.createElement("div");
+    okDiv.className = "stat-row diag-msg diag-msg-success";
+    okDiv.style.marginTop = "12px";
+    okDiv.textContent = resultMsg;
+    list.appendChild(okDiv);
     setTimeout(() => scanSyncConflicts(list, esc, rtype, instanceName), 1500);
   } catch (err) {
-    list.innerHTML += `<div class="stat-row diag-msg diag-msg-error" style="margin-top:12px">❌ ${esc(String(err))}</div>`;
+    const errDiv = document.createElement("div");
+    errDiv.className = "stat-row diag-msg diag-msg-error";
+    errDiv.style.marginTop = "12px";
+    errDiv.textContent = `❌ ${String(err)}`; // textContent 天然防注入，无需 esc()
+    list.appendChild(errDiv);
   }
 }
 

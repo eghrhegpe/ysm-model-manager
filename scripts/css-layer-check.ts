@@ -42,9 +42,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { tryResolveAlias } from "./_lib/alias-resolve.ts";
+import {
+  expandKeyframeInterpolations,
+  readConstLiteral,
+  resolveImportAbs,
+} from "./_lib/css-layer-utils.ts";
 import { walk } from "./_lib/scan-files.ts";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const STRICT = process.argv.includes("--strict");
@@ -251,52 +254,9 @@ function extractKeyframeTranslate(cssText: string, name: string) {
 // 修法：聚合 CSS 前，把 import 进来、且内容含 @keyframes 的常量就地展开，再走原正则。
 // 只对含 @keyframes 的常量展开——避免把无关样式常量（如 btnBaseCSS）的类名一并引入，
 // 扰动检查 3 的 WARN 判定基线（最小侵入，不动既有判定面）。
-export function resolveImportAbs(spec: string, fromAbs: string): string | null {
-  if (spec.startsWith("@/") || spec.startsWith("#root")) return tryResolveAlias(spec);
-  if (spec.startsWith(".")) return path.resolve(path.dirname(fromAbs), spec);
-  return null; // 裸包导入（不参与 shadow CSS 组装）
-}
-
-/** 取被导入模块里 `export const NAME = "字面量"` 的内容（跨行亦可）。 */
-export function readConstLiteral(src: string, name: string): string | null {
-  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`export\\s+const\\s+${esc}\\s*=\\s*(["'\`])([\\s\\S]*?)\\1`);
-  return src.match(re)?.[2] ?? null;
-}
-
-export function expandKeyframeInterpolations(cssText: string, fileAbs: string): string {
-  if (!cssText.includes("${")) return cssText;
-  const importRe = /import\s*(?:type\s+)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
-  let out = cssText;
-  for (const im of cssText.matchAll(importRe)) {
-    const names = (im[1] ?? "")
-      .split(",")
-      .map(
-        (s) =>
-          s
-            .trim()
-            .split(/\s+as\s+/)[0]
-            ?.trim() ?? "",
-      )
-      .filter(Boolean);
-    const abs = resolveImportAbs(im[2] ?? "", fileAbs);
-    if (!abs) continue;
-    let src: string | null = null;
-    try {
-      src = fs.readFileSync(abs, "utf8");
-    } catch {
-      continue; // 解析不出的 import 保持原样（不因 tooling 缺失制造新假阳性）
-    }
-    for (const n of names) {
-      const token = "${" + n + "}";
-      if (!out.includes(token)) continue;
-      const lit = readConstLiteral(src, n);
-      if (!lit || !/@keyframes/.test(lit)) continue;
-      out = out.split(token).join(lit);
-    }
-  }
-  return out;
-}
+// 实现：resolveImportAbs / readConstLiteral / expandKeyframeInterpolations 三纯函数
+// 抽至 _lib/css-layer-utils.ts（脚本主体有顶层 process.exit，测试直接 import 会被杀掉，
+// 故纯算法下沉零副作用模块供测试消费，2026-09-14 契约测试缺口收口）。
 
 let errorCount = 0;
 let warnCount = 0;

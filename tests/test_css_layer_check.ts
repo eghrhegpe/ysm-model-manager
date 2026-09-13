@@ -15,8 +15,8 @@
  *   4. resolveImportAbs：相对路径解析 / 裸包导入排除（裸包不参与 shadow CSS 组装）
  *   5. readConstLiteral 可读跨行字符串字面量
  *
- * 依赖：node:assert / node:fs / node:path / node:url / ../scripts/css-layer-check.ts。
- * 注意：import 该脚本会连带执行其主体检查（约 0.2s 全仓扫描），属已知副作用，无碍判定。
+ * 依赖：node:assert / node:fs / node:path / node:url / scripts/_lib/css-layer-utils.ts
+ *（纯函数抽出模块，零顶层副作用——css-layer-check.ts 主体有 process.exit，直接 import 会被杀掉）。
  * 用法：node tests/test_css_layer_check.ts（或经 _lib/contract-tests.ts 统一入口）。
  * 退出码：0 全绿；非 0 断言失败（node:assert 抛错）。
  */
@@ -27,7 +27,7 @@ import {
   expandKeyframeInterpolations,
   readConstLiteral,
   resolveImportAbs,
-} from "../scripts/css-layer-check.ts";
+} from "../scripts/_lib/css-layer-utils.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIAG_ABS = path.join(ROOT, "frontend/src/views/app-content/css/content-diag.ts");

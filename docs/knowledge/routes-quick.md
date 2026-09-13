@@ -778,7 +778,7 @@
 | 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | zip/7z 容器打开统一走 openModelContainer（avatar_extract_container.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错） | - | - |
-| 头像缓存不失效 | - | 换头像后仍显示旧图；必须经缓存失效策略 |
+| 头像缓存不失效 | - | 换头像后仍显示旧图；手动 `avatar purge` CLI 清空重建（P1-2 落地 2026-09-14），自动失效（ModTime 键）留待后续 |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |
 | runSearch 未传范围参数 | - | 数值筛选失效；必须完整传 6 个范围参数 |
 | 手写 zip 内枚举 | - | 与 go/container 判定不一致、多 entry 漏检；必须经 go/container |

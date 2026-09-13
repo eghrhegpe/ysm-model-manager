@@ -6,6 +6,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -19,19 +20,19 @@ interface FilterStateShell {
 /** 单个输入控件 → creators[idx][fld] 回写（SELECT 多选拼 ";"，其余 trim 后直写）。
  *  2026-09 锐评 P0：原 SELECT/INPUT 分支在 eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。 */
 function syncFieldToCreator(
-  inp: Element,
+  inp: HTMLElement,
   creators: LocalCreatorLike[],
   idx: number,
   fld: string,
 ): void {
   if (!creators[idx]) return;
-  if (inp.tagName === "SELECT") {
-    creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
+  if (inp instanceof HTMLSelectElement) {
+    creators[idx][fld] = Array.from(inp.selectedOptions)
       .map((o) => o.value)
       .filter(Boolean)
       .join(";");
-  } else {
-    creators[idx][fld] = (inp as HTMLInputElement).value.trim();
+  } else if (inp instanceof HTMLInputElement) {
+    creators[idx][fld] = inp.value.trim();
   }
 }
 
@@ -40,21 +41,23 @@ function eeSyncAllEditInputs(
   creators: LocalCreatorLike[],
   site: SiteViewState["site"],
 ): void {
-  searchResults
-    .querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]")
-    .forEach((inp) => {
-      const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
-      const fld = (inp as HTMLElement).dataset.fld || "";
-      syncFieldToCreator(inp, creators, idx, fld);
-    });
-  searchResults
-    .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
-    .forEach((inp) => {
-      const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
-      if (site.presetSearches?.[idx]) {
-        site.presetSearches[idx].label = (inp as HTMLInputElement).value.trim();
-      }
-    });
+  qsa<HTMLElement>(
+    searchResults,
+    ".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]",
+  ).forEach((inp) => {
+    const idx = parseInt(inp.dataset.idx || "-1", 10);
+    const fld = inp.dataset.fld || "";
+    syncFieldToCreator(inp, creators, idx, fld);
+  });
+  qsa<HTMLInputElement>(
+    searchResults,
+    ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
+  ).forEach((inp) => {
+    const idx = parseInt(inp.dataset.idx || "-1", 10);
+    if (site.presetSearches?.[idx]) {
+      site.presetSearches[idx].label = inp.value.trim();
+    }
+  });
 }
 
 // 清理拖拽视觉态 + 复位双 src 键的逻辑已随双胞胎块收编进 edit-drag.ts|bindDragSort（dragend 内联）
@@ -65,12 +68,12 @@ function eeApplyFilters(
   fs: FilterStateShell,
 ): void {
   const kw = (searchInput?.value || "").trim().toLowerCase();
-  const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+  const cards = qsa<HTMLElement>(searchResults, ".gh-card[data-name]");
   let visible = 0;
   cards.forEach((card) => {
-    const name = ((card as HTMLElement).dataset.name || "").toLowerCase();
+    const name = (card.dataset.name || "").toLowerCase();
     const desc = (card.querySelector(".cr-card-desc")?.textContent || "").toLowerCase();
-    const cardTag = ((card as HTMLElement).dataset.tag || "").toLowerCase();
+    const cardTag = (card.dataset.tag || "").toLowerCase();
     const matchName = !kw || name.includes(kw) || desc.includes(kw);
     const matchTag = !fs.activeTag || fs.activeTag === cardTag;
     card.classList.toggle("cr-card-hidden", !(matchName && matchTag));
@@ -116,12 +119,13 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         if (allSites && site) {
           const { SaveWorkshopPresetsBySite } = await backendGetApp();
           const newPresets: WorkshopPresetSearch[] = [];
-          searchResults
-            .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
-            .forEach((inp) => {
-              const val = (inp as HTMLInputElement).value.trim();
-              if (val) newPresets.push({ label: val } as WorkshopPresetSearch);
-            });
+          qsa<HTMLInputElement>(
+            searchResults,
+            ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
+          ).forEach((inp) => {
+            const val = inp.value.trim();
+            if (val) newPresets.push({ label: val } as WorkshopPresetSearch);
+          });
           await SaveWorkshopPresetsBySite(site.id, newPresets);
           site.presetSearches = newPresets;
         }
@@ -263,26 +267,27 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
 function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, creators, allCreators, site } = state;
 
-  searchResults
-    .querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]")
-    .forEach((inp) => {
-      inp.addEventListener(
-        "input",
-        () => {
-          const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
-          const fld = (inp as HTMLElement).dataset.fld || "";
-          syncFieldToCreator(inp, creators, idx, fld);
-        },
-        { signal: sig },
-      );
-    });
+  qsa<HTMLElement>(
+    searchResults,
+    ".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]",
+  ).forEach((inp) => {
+    inp.addEventListener(
+      "input",
+      () => {
+        const idx = parseInt(inp.dataset.idx || "-1", 10);
+        const fld = inp.dataset.fld || "";
+        syncFieldToCreator(inp, creators, idx, fld);
+      },
+      { signal: sig },
+    );
+  });
 
-  searchResults.querySelectorAll(".cr-del").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-del").forEach((btn) => {
     btn.addEventListener(
       "click",
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
-        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        const idx = parseInt(btn.dataset.idx || "-1", 10);
         if (creators[idx]) {
           const realIdx = allCreators.indexOf(creators[idx]);
           if (realIdx >= 0) allCreators.splice(realIdx, 1);
@@ -341,12 +346,12 @@ function eeBindCreatorsDrag(
 function eeBindPresetsEdit(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
   const { searchResults, site, creators } = state;
 
-  searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-del-preset").forEach((btn) => {
     btn.addEventListener(
       "click",
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
-        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        const idx = parseInt(btn.dataset.idx || "-1", 10);
         if (site.presetSearches?.[idx]) {
           site.presetSearches.splice(idx, 1);
           refreshView();
@@ -356,12 +361,12 @@ function eeBindPresetsEdit(state: SiteViewState, refreshView: () => void, sig: A
     );
   });
 
-  searchResults.querySelectorAll(".cr-order-up").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-order-up").forEach((btn) => {
     btn.addEventListener(
       "click",
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
-        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        const idx = parseInt(btn.dataset.idx || "-1", 10);
         if (site.presetSearches && idx > 0) {
           const arr = site.presetSearches;
           [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
@@ -371,12 +376,12 @@ function eeBindPresetsEdit(state: SiteViewState, refreshView: () => void, sig: A
       { signal: sig },
     );
   });
-  searchResults.querySelectorAll(".cr-order-down").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-order-down").forEach((btn) => {
     btn.addEventListener(
       "click",
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
-        const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
+        const idx = parseInt(btn.dataset.idx || "-1", 10);
         if (site.presetSearches && idx < site.presetSearches.length - 1) {
           const arr = site.presetSearches;
           [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
@@ -438,11 +443,11 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
     );
   }
 
-  searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((btn) => {
+  qsa<HTMLElement>(searchResults, ".cr-tag-filter-btn").forEach((btn) => {
     btn.addEventListener(
       "click",
       () => {
-        fs.activeTag = (btn as HTMLElement).dataset.tag || "";
+        fs.activeTag = btn.dataset.tag || "";
         safeSet("ysm-ws-active-tag", fs.activeTag);
         searchResults
           .querySelectorAll(".cr-tag-filter-btn")

@@ -56,6 +56,8 @@ auto_fields:
     - promoteTitle
     - promoteTitleIfPresent
     - pushInputBlock
+    - qs
+    - qsa
     - refreshAdoptedStyleSheets
     - registerDlg
     - rememberTrigger

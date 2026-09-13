@@ -32,7 +32,7 @@ auto_fields:
     - Cube2D
     - CustomFileInfo
     - DedupConfig
-    - DisableSuffixes
+    - DisabledSuffix
     - DownloadTask
     - ErrAlreadyExists
     - ErrDecodeFailed

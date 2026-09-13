@@ -46,8 +46,8 @@ if (ARGS.unknown.length) {
 const MENU_FILES = [
   "frontend/src/preview-3d/menu/defs.ts",
   "frontend/src/preview-3d/adapters/ysm-adapter.ts",
-  "frontend/src/preview-3d/adapters/mmd-adapter.ts",
-  "frontend/src/preview-3d/adapters/vrm-adapter.ts",
+  "frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts",
+  "frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts",
 ];
 const LOCALE_FILE = "frontend/src/locales/zh-CN.ts";
 const LEGAL_KINDS = new Set(["panel", "action", "divider"]);

@@ -125,7 +125,7 @@ invariant_anchors:
 
 搬移期唯一实质改动：autoFix 重验的 `parseToolOutput(re.out, re.rc)` 补回第三入参 `tool`（此前漏传，解析失败时 note 丢失工具名）。
 
-**剩余阶段**（ADR-206 阶段 6-7 未做）：`go-domain.ts` / `frontend-domain.ts`（最大块最后做）、`parseToolOutput` 的 `okMustBeTrue` 加法扩展。`pre-push-gate.ts` 现 **740 行**（阶段 5 后，目标态 ~400 行）。`tests/test_gate_iife_correctness.ts` 已于阶段 5 **硬化为结构性判定**（不锁缩进/换行/数量，锁「每个 async IIFE 必有 `)()` 调用」的事故语义 + 内联域 IIFE 须包 `Promise.all`）——搬 go/frontend 域块时的前置已解除。
+**剩余阶段**（ADR-206 阶段 7 收尾未做）：全量契约测试 + 三模式 dry-run 像素级验收（阶段 6 的 `go-domain.ts` / `frontend-domain.ts` 已于 2026-09-13 落地：二执行器自守卫，调度侧 `Promise.all([runGoDomain(ctx), runFrontendDomain(ctx)])`；`pre-push-gate.ts` **392 行**，达成 ~400 行目标态）。`tests/test_gate_iife_correctness.ts` 已于阶段 5 **硬化为结构性判定**（不锁缩进/换行/数量，锁「每个 async IIFE 必有 `)()` 调用」的事故语义 + 内联域 IIFE 须包 `Promise.all`）。剩余可选项：`parseToolOutput` 的 `okMustBeTrue` 加法扩展。
 
 ### 域级检查（Go ∥ 前端，Promise.all 并行）
 

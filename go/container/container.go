@@ -265,6 +265,40 @@ func OpenDir(root string) (Reader, error) {
 	return openDir(root)
 }
 
+// MatchEntryName 报告条目路径 p 是否命中目标 target（小写不敏感，路径归一为 '/'）。
+// 容器扫名的单一事实源（收敛 avatar 原 matchAvatarZipEntry 的 basename/前缀契约）：
+//   - target 含 '/'（如 "avatar/alice.png"）→ 精确同名同路径，杜绝 sub/avatar/alice.png 误命中；
+//   - target 以 '/' 结尾（目录级）→ 根下该目录前缀；
+//   - 裸名（无 '/'，如 "test.png"）→ 任意目录下同名 basename（avatar/test.png 命中 test.png）。
+func MatchEntryName(p, target string) bool {
+	low := strings.ToLower(filepath.ToSlash(p))
+	target = strings.ToLower(filepath.ToSlash(target))
+	if low == target {
+		return true
+	}
+	if strings.HasSuffix(target, "/") {
+		return strings.HasPrefix(low, target)
+	}
+	if !strings.Contains(target, "/") {
+		return strings.HasSuffix(low, "/"+target)
+	}
+	return false
+}
+
+// FindEntry 在容器中按名查找首个命中的非目录条目（扫名收口，语义同 MatchEntryName）。
+// 无命中返回 (nil, false)；目录型条目一律跳过，不作为文件返回。
+func FindEntry(r Reader, target string) (Entry, bool) {
+	for _, e := range r.Entries() {
+		if e.IsDir() {
+			continue
+		}
+		if MatchEntryName(e.Name(), target) {
+			return e, true
+		}
+	}
+	return nil, false
+}
+
 // ZipMatchesEntries 打开 zip 容器并枚举条目名，任一命中 match 即返回 true。
 // 打开失败（含损坏 zip / 非 zip 路径）一律返回 false——调用方据此把坏包/
 // 不含目标指纹的 zip 安全排除，绝不误判为某类型资源（同步推送/拉取链路

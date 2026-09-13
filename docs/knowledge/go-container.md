@@ -14,8 +14,10 @@ auto_fields:
     - Close
     - Entries
     - Entry
+    - FindEntry
     - Incomplete
     - IsDir
+    - MatchEntryName
     - Name
     - Open
     - Open7zBytes
@@ -68,12 +70,15 @@ status: active
 - `Open7zPath(path)` / `Open7zBytes(data, size)` — 7z 容器双入口（`bodgit/sevenzip` 只读库，无 Writer）
 - `OpenDir(root)` — 目录容器（`filepath.WalkDir` 收集相对路径条目、正斜杠名），供已解压资源包/光影包分支迁移；根路径不存在直接报错（打开前预检）
 - `ZipMatchesEntries(path, match func(string) bool) bool` — 打开 zip 枚举条目名、任一命中 `match` 即 true；非 zip 路径 / 打开失败（含**损坏 zip**）一律返回 false。消费方：`packs.IsTypeModelFile`（ADR-144 下沉）对 `zipentry` 检测器类型做 `.zip` 内含指纹校验（581c3ec8），使同步推送/拉取不再把纯打包物/坏包当模型搬运
+- `MatchEntryName(p, target) bool` — 容器扫名的**单一事实源**（收敛 avatar 原 `matchAvatarZipEntry` 契约，2026-09 下沉）：target 含 `/` → 精确同名同路径（杜绝 `sub/avatar/alice.png` 误命中）；target 以 `/` 结尾 → 根下该目录前缀；裸名（无 `/`）→ 任意目录下同名 basename。小写不敏感、路径归一正斜杠
+- `FindEntry(r Reader, target) (Entry, bool)` — 按 `MatchEntryName` 语义在容器中查找首个命中的非目录条目；扫名收口，消费方无需手写「遍历 + ToLower + 匹配」循环
 - `Entry` 接口方法：`Name()`（正斜杠名）、`IsDir()`、`UncompressedSize64()`（zip/7z 原值；目录版取 FileInfo.Size **绝对值**，防负 Size 直转变天文数字）、`Open() (io.ReadCloser, error)`
 - `Reader.Incomplete() bool` — 目录容器遍历遇错（子树权限不足等）时 true，zip/7z 恒 false：打开成功 ≠ 条目全量，遍历中途错误记入首个 `walkErr` 不中断枚举，调用方可选查询提示
 
 ## 与其他子系统关系
 
 - **ADR-068 迁移范围**：`geometry/archive.go`（4 个顶层函数共用 `NewContainerReader*` + `collectArchiveFiles`，删除 ParseFrom7z/ParseFromZip 对称外壳 ~294 行）、`avatar/avatar_extract.go` 两处 → `OpenZipBytes` + `ReadFileFromContainer`、`ysm/summary.go`/`parse.go`/`texsize.go`/`ysm.go` 四处 `zip.OpenReader`/`sevenzip` → container 打开
+- **扫名收口（2026-09）**：avatar 原 `matchAvatarZipEntry` 的 basename/前缀匹配语义下沉为 `container.MatchEntryName`（单一事实源），`ReadFileFromContainer` 改走 `container.FindEntry`、`ReadFileFromZip` 匹配改走 `MatchEntryName`，删除 avatar 侧重复实现；geometry/packs 的匹配是注册表驱动（`registry.MatchZipEntry`），语义不同未并入
 - **保留前置阶段**（不并入）：YSM 加密二进制 → wasm 解密（解密产物 zip 再进 container）；litematic gzip-NBT 是单文件流（非多条目容器），`openGzRoot` 不迁移
 - **边界**：本包只做「打开 + 条目枚举 + 条目读取」，不做大小限制（读取时由调用方用 `fsutil.ReadLimitedEntry` / `types.MaxReadLimit` 施加，与现状一致）
 - `packs` 检测层走 `zipEntryMatch` 轻量 helper（ADR-067 S5），未重复打开——但 `ReadPackMeta`/`ReadShaderpackLang` 的内容读取可后续迁移（低优先遗留）

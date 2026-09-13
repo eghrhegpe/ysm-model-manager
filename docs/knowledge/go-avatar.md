@@ -68,7 +68,7 @@ status: active
 - `ExtractAvatarURI(modelPath, safeName string) string` — 从 .ysm/.zip/.7z/.json 提取指定作者的头像 data URI；无 authors 声明时降级取 avatar/ 目录第一张图（仅 .ysm 分支实现）
 - `CacheAvatarsFromJSON(modelPath string)` — 从解压目录的 ysm.json 批量缓存所有作者头像（已有缓存则跳过）
 - `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（.ysm/.zip/.7z/.json 按扩展名分派，无 authors 声明时降级取 avatar/ 目录第一张图）
-- `ReadFileFromZip(zr *zip.Reader, target string) []byte` — 按路径后缀从 ZIP 取文件；**ADR-068 迁移**：调用点改 `container.OpenZipBytes` + `ReadFileFromContainer(r container.Reader, target)`（`avatar_zip.go`），zip 专用路径收敛进统一容器桥
+- `ReadFileFromZip(zr *zip.Reader, target string) []byte` — 按路径后缀从 ZIP 取文件；**ADR-068 迁移**：调用点改 `container.OpenZipBytes` + `ReadFileFromContainer(r container.Reader, target)`（`avatar_zip.go`），zip 专用路径收敛进统一容器桥；匹配统一走 `container.MatchEntryName`（2026-09 扫名收口）
 - `SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte)` — 注入 Node.js 路径与 WASM 胶水代码/二进制加载器（由 wasm_decoder.go 在启动时调用）
 - `DecodeYSMData(ysmData []byte) []ysmDecodedFile` — 全仓唯一 Node+WASM 解码桥（ADR-164），起隐藏子进程执行 YSMParser WASM，把 .ysm 二进制解码为文件列表（path + 原始字节）。200MB 输入/输出护栏 + 60s 超时。`internal/app/wasm_decoder.go` 调本函数（薄封装，禁止复刻）
 

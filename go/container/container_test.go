@@ -308,3 +308,76 @@ func TestZipMatchesEntries(t *testing.T) {
 		}
 	}
 }
+
+// ===== MatchEntryName / FindEntry：容器扫名收口（avatar matchAvatarZipEntry 契约下沉）=====
+
+func TestMatchEntryName(t *testing.T) {
+	cases := []struct {
+		name   string
+		p      string
+		target string
+		want   bool
+	}{
+		{"精确路径命中", "A/B.png", "A/b.png", true},
+		{"精确路径大小写", "avatar/alice.png", "Avatar/Alice.PNG", true},
+		{"反斜杠归一", `A\b.png`, "a/b.png", true},
+		{"sub/ 前缀不误命中精确目标", "sub/avatar/alice.png", "avatar/alice.png", false},
+		{"目录级前缀命中", "avatar/a.png", "avatar/", true},
+		{"目录级前缀非根子目录", "sub/avatar/a.png", "avatar/", false},
+		{"裸名命中任意目录", "x/test.png", "test.png", true},
+		{"裸名根级命中", "test.png", "test.png", true},
+		{"裸名不含路径分隔", "test.png", "te.png", false},
+		{"无命中外体", "avatar/b.png", "avatar/c.png", false},
+	}
+	for _, tc := range cases {
+		got := MatchEntryName(tc.p, tc.target)
+		if got != tc.want {
+			t.Errorf("MatchEntryName(%q, %q) = %v, 期望 %v", tc.p, tc.target, got, tc.want)
+		}
+	}
+}
+
+func TestFindEntry(t *testing.T) {
+	data := makeTestZip(t, map[string]string{
+		"Avatar/a.png":         "A",
+		"sub/avatar/alice.png": "S", // 隐蔽重复名：精确目标不得误命中
+		"models/x.json":        "J",
+	})
+	r, err := OpenZipBytes(data, int64(len(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+
+	if e, ok := FindEntry(r, "avatar/a.png"); !ok {
+		t.Error("精确路径应命中 avatar/a.png")
+	} else if e.Name() != "Avatar/a.png" {
+		t.Errorf("命中条目名 = %q, 期望 Avatar/a.png", e.Name())
+	}
+	if _, ok := FindEntry(r, "a.png"); !ok {
+		t.Error("裸名应命中任意目录 a.png")
+	}
+	if _, ok := FindEntry(r, "avatar/"); !ok {
+		t.Error("目录前缀 avatar/ 应命中")
+	}
+	if _, ok := FindEntry(r, "avatar/alice.png"); ok {
+		t.Error("sub/avatar/alice.png 不得被精确目标 avatar/alice.png 命中")
+	}
+	if _, ok := FindEntry(r, "ghost.json"); ok {
+		t.Error("不存在目标应无命中")
+	}
+}
+
+// FindEntry 跳过目录条目：zip 中显式的目录型条目不作为文件返回。
+func TestFindEntry_SkipsDirEntry(t *testing.T) {
+	data := makeTestZip(t, map[string]string{"dir/inner.txt": "I"})
+	r, err := OpenZipBytes(data, int64(len(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	e, ok := FindEntry(r, "inner.txt")
+	if !ok || e.IsDir() {
+		t.Fatalf("FindEntry 应返回非目录条目, ok=%v dir=%v", ok, e != nil && e.IsDir())
+	}
+}

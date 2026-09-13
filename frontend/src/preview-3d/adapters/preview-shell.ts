@@ -6,11 +6,8 @@
 //
 // 设计边界：3D 预览为「同一时刻单一全屏 overlay」的模态体验（overlay 清理后 refs 归零，
 // 下次 mount3D 重建），故外壳宿主为单例实例（previewShell）；状态均为实例字段，不再散落
-// 模块级 let。mpc 静态样式随 host 管理（overlay 样式目标复位时旗标清零重注入）。
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+// 模块级 let。mpc 静态样式经 host.ensureStyles 委托 installOnceStyles 幂等注入（reset 钩子清零后自动重注）。
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 
 // §1.5 P1 批次9:overlay 链静态 cssText 抽类集中注入(mount3D 内 ensureStyles 幂等调用)
 // ADR-175 M1:overlay shadow host 化——内容迁入 shadowRoot 后 head 注入穿不透边界,
@@ -25,7 +22,7 @@ const mpcCss = `
 `;
 
 /**
- * 预览外壳宿主：持有 overlay/body/viewContainer 复用引用 + mpc 样式注入旗标。
+ * 预览外壳宿主：持有 overlay/body/viewContainer 复用引用；mpc 样式经 installOnceStyles 幂等注入。
  * 外壳为「同一时刻单一全屏 overlay」设计——resetRefs() 归零后下次 mount3D 重建。
  */
 export class PreviewShellHost {
@@ -34,8 +31,6 @@ export class PreviewShellHost {
   body: HTMLElement | null = null;
   /** 共享视窗容器（.preview-view-container：canvas 所在格子）：随外壳首次创建、后续复用 */
   viewContainer: HTMLElement | null = null;
-  /** mpc 样式是否已注入（overlay 样式目标复位时清零重注入） */
-  stylesInjected = false;
 
   /** 清零外壳引用（cleanupPreview / _resetSingletons / fullCleanup 共用；已从 DOM 移除的
    *  detached 引用保留会导致下次 mount3D 复用脱离文档的元素，测试 afterEach 尤其敏感） */
@@ -45,20 +40,11 @@ export class PreviewShellHost {
     this.viewContainer = null;
   }
 
-  /** 幂等注入 overlay 链静态样式（首建/样式目标复位后调用；失败仅影响样式不阻断挂载） */
+  /** 幂等注入 overlay 链静态样式（委托 installOnceStyles，样式目标复位后自动重注） */
   ensureStyles(): void {
-    if (this.stylesInjected) return;
-    this.stylesInjected = true;
-    const el = document.createElement("style");
-    el.textContent = mpcCss;
-    overlayStyleRoot().appendChild(el);
+    installOnceStyles("mpc", mpcCss);
   }
 }
 
 /** 全局唯一预览外壳宿主（外壳为单一全屏 overlay 设计，单 host 合理） */
 export const previewShell = new PreviewShellHost();
-
-// ADR-175 M1：overlay 样式目标复位（拆除/重建 shadow root）时清零注入旗标，下次 ensureStyles 重注入
-onOverlayStyleTargetReset(() => {
-  previewShell.stylesInjected = false;
-});

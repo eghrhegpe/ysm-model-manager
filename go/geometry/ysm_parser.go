@@ -43,21 +43,32 @@ type playerTex struct {
 	isUV bool
 }
 
-// texBasenameNoExt 去目录 + 小写 + 去 .png/.jpg 扩展名（projectiles 纹理的共享口径）。
-// 顺序必须先 ToLower 再 TrimSuffix，否则大写扩展名（如 TEX.PNG）去不掉。
-func texBasenameNoExt(path string) string {
-	tn := path
+// playerTexBasename 取 player.texture 条目 basename：无条件去最后一个 "/"，
+// 仅 isUV=true（{uv} 对象）额外剥反斜杠、裸字符串分支不剥——历史不对称
+// （archive.go 原内联即如此，见文件头注释）。buildTexOrderFromPlayerTexs /
+// deriveModelTexOrder / parseYsmArchive 三处共用，勿与 baseName 合并（后者
+// 无条件剥 "\"，对 isUV=false 含反斜杠的裸字符串结果不同）。
+func playerTexBasename(t playerTex) string {
+	tn := t.path
 	if idx := strings.LastIndex(tn, "/"); idx >= 0 {
 		tn = tn[idx+1:]
 	}
-	if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
-		tn = tn[idx+1:]
+	if t.isUV {
+		if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
+			tn = tn[idx+1:]
+		}
 	}
+	return tn
+}
+
+// texBasenameNoExt 去目录 + 小写 + 去 .png/.jpg 扩展名（projectiles 纹理的共享口径）。
+// 顺序必须先 ToLower 再 TrimSuffix，否则大写扩展名（如 TEX.PNG）去不掉。
+// 去目录复用 baseName（LastIndexAny 等价原 LastIndex("/")+LastIndex("\\") 两连）。
+func texBasenameNoExt(path string) string {
 	// 顺序必须先 ToLower 再 TrimSuffix——
 	// 旧内联代码（archive.go 旧 L342/791）即此序；反序时大写扩展名（TEX.PNG）
 	// 去不掉，texOrder 去重与 texIdxMap 查找失配，texSlot 静默错绑
-	tn = trimTexExt(strings.ToLower(tn))
-	return tn
+	return trimTexExt(strings.ToLower(baseName(path)))
 }
 
 // extractTexNameRaw 从纹理 RawMessage 提取原文路径（{uv} 对象或裸字符串），不做任何加工。
@@ -320,15 +331,7 @@ func parseYsmArchive(entries []container.Entry, logPrefix string) *ysmArchiveDat
 				// 只填入尚未命中的项（projModel 已绑定的保持不动）
 				key := filepath.ToSlash(mn)
 				if _, has := result.ModelTexName[key]; !has {
-					tn := result.PlayerTexs[texIdx].path
-					if idx := strings.LastIndex(tn, "/"); idx >= 0 {
-						tn = tn[idx+1:]
-					}
-					if result.PlayerTexs[texIdx].isUV {
-						if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
-							tn = tn[idx+1:]
-						}
-					}
+					tn := playerTexBasename(result.PlayerTexs[texIdx])
 					tn = trimTexExt(strings.ToLower(tn))
 					result.ModelTexName[key] = tn
 				}

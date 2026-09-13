@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -38,21 +39,15 @@ const maxExtractSize = registry.MaxReadLimit
 // modelBaseName 取模型文件基名（小写、去路径分隔符、去 .json），供 IsArmModelName /
 // IsMainModelName 统一复用——原两函数体逐字重复且各自抄同一段注释，跨点修改必漂移。
 func modelBaseName(name string) string {
-	base := strings.ToLower(name)
-	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
-		base = base[idx+1:]
-	}
-	return strings.TrimSuffix(base, ".json")
+	return strings.TrimSuffix(baseName(strings.ToLower(name)), ".json")
 }
 
-// baseName 去路径分隔符（/ 与 \ 兼容）取文件基名，供纹理名归一化复用（collectPngEntries /
-// collectMergedFiles 原各抄一份逐字相同的剥离块）。
+// baseName 去路径分隔符（/ 与 \ 兼容）取文件基名。全文 basename 剥离的公共原子：
+// modelBaseName / texBasenameNoExt / compBaseName / extractFirstPNG 等均复用，
+// 原 collectPngEntries / collectMergedFiles 各抄一份逐字相同的剥离块已收敛。
 func baseName(name string) string {
-	if idx := strings.LastIndex(name, "/"); idx >= 0 {
-		name = name[idx+1:]
-	}
-	if idx := strings.LastIndex(name, "\\"); idx >= 0 {
-		name = name[idx+1:]
+	if idx := strings.LastIndexAny(name, "/\\"); idx >= 0 {
+		return name[idx+1:]
 	}
 	return name
 }
@@ -100,7 +95,7 @@ func extractFirstPNG(r container.Reader) []byte {
 			continue
 		}
 		name := strings.ToLower(e.Name())
-		if !strings.ContainsAny(name, "/\\") && contains(coverCandidateNames, name) {
+		if !strings.ContainsAny(name, "/\\") && slices.Contains(coverCandidateNames, name) {
 			if buf := readPNGEntry(e); len(buf) > 0 {
 				return buf
 			}
@@ -128,16 +123,6 @@ func readPNGEntry(e container.Entry) []byte {
 	}
 	defer rc.Close()
 	return fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
-}
-
-// contains 字符串切片成员判定。
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览）
@@ -365,15 +350,7 @@ func collectArchiveFiles(entries []container.Entry) collectedArchive {
 func buildTexOrderFromPlayerTexs(playerTexs []playerTex) []string {
 	texOrder := make([]string, 0, len(playerTexs))
 	for _, t := range playerTexs {
-		tn := t.path
-		if idx := strings.LastIndex(tn, "/"); idx >= 0 {
-			tn = tn[idx+1:]
-		}
-		if t.isUV {
-			if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
-				tn = tn[idx+1:]
-			}
-		}
+		tn := playerTexBasename(t)
 		tn = trimTexExt(strings.ToLower(tn))
 		texOrder = append(texOrder, tn)
 	}
@@ -615,15 +592,7 @@ func deriveModelTexOrder(md ysmArchiveData) (modelOrder, texOrder, texCategories
 	projModels = make([]projEntry, 0, len(md.ProjModels))
 	// texOrder：player.texture 先、projectiles/vehicles/arrow 后（模型版口径：保留扩展名）。
 	for _, t := range md.PlayerTexs {
-		tn := t.path
-		if idx := strings.LastIndex(tn, "/"); idx >= 0 {
-			tn = tn[idx+1:]
-		}
-		if t.isUV {
-			if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
-				tn = tn[idx+1:]
-			}
-		}
+		tn := playerTexBasename(t)
 		texOrder = append(texOrder, strings.ToLower(tn))
 		texCategories = append(texCategories, "player")
 	}
@@ -676,14 +645,7 @@ func mergeGeoFiles(geoFiles []geoEntry, modelOrder, texOrder []string, projModel
 	// 截断——避免 plane.json（共用 texture.png）被截断到 arrow.png 槽位。
 	modelTexName := make(map[string]string, len(projModels))
 	for _, pm := range projModels {
-		mp := pm.model
-		if idx := strings.LastIndex(mp, "/"); idx >= 0 {
-			mp = mp[idx+1:]
-		}
-		if idx := strings.LastIndex(mp, "\\"); idx >= 0 {
-			mp = mp[idx+1:]
-		}
-		mp = strings.TrimSuffix(strings.TrimSuffix(mp, ".geo.json"), ".json")
+		mp := compBaseName(pm.model)
 		// texName: 小写 basename 去扩展名（收敛自内联，口径与 texBasenameNoExt 同）
 		// key 统一小写：查询端 bn 来自 modelOrder（L0 路径已小写），projModel 声明
 		// 可能含大写——大小写敏感会让声明纹理名查表 miss → texSlot 绑定失效。
@@ -1120,14 +1082,20 @@ func trimTexExt(s string) string {
 	return strings.TrimSuffix(strings.TrimSuffix(s, ".png"), ".jpg")
 }
 
+// compBaseName 组件基名：去路径分隔符（/ 与 \ 兼容）+ 去 .geo.json/.json 后缀，保留大小写。
+// 与 modelBaseName 差异：后者小写化且只去 .json（保留 .geo 供 IsArmModelName/IsMainModelName
+// 判定），勿合并——extractCompName 与 mergeGeoFiles 的 modelTexName 构建共用（2026-09 锐评收口）。
+// 注意：TrimSuffix 顺序必须 .geo.json 先、.json 后（"x.geo.json"→"x"）；mergeGeoFiles 的
+// modelOrder 分支（.json 先、.geo.json 后）与此不同，勿顺手复用。
+func compBaseName(path string) string {
+	name := baseName(path)
+	return strings.TrimSuffix(strings.TrimSuffix(name, ".geo.json"), ".json")
+}
+
 // extractCompName 从 geoEntry 路径提取组件名（去目录、去 .geo.json/.json 扩展名）。
 // 例：models/entity/foxcar.geo.json → foxcar；arm.json → arm
 func extractCompName(entryName string) string {
-	geoName := filepath.ToSlash(entryName)
-	if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
-		geoName = geoName[idx+1:]
-	}
-	return strings.TrimSuffix(strings.TrimSuffix(geoName, ".geo.json"), ".json")
+	return compBaseName(filepath.ToSlash(entryName))
 }
 
 // resolveComponentTexName 解析组件声明的纹理名，返回可直接查 pngNameMap 的 key。

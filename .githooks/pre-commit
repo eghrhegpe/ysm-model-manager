@@ -7,9 +7,13 @@
 # 设计原则：
 #   - 「大部分」段只做「快速更新 + stage」，不做阻断检查（阻断留给 pre-push）
 #   - 但存在两处 **硬阻断（exit 1）**，非提示：
-#       ① Android 平台黑名单守卫（T1 编译期差集 / T2 ADR-047 守卫未登记 → exit 1）
+#       ① Android 平台黑名单守卫（lite 档：T3 命名/T4 反向未登记 → exit 1；
+#          T1/T2 的 go list 已降级，由 pre-push 全量兜底——2026-09-13 缺陷#3，
+#          避免 GOOS=android go list 冷缓存数秒违背「秒级」承诺）
 #       ② biome 行级增量闸（本次提交新增 biome 违规行 → exit 1，防 --no-verify 绕过）
 #     —— 见文件内两段 exit 1；若误撞，按提示加白名单/改写违规后重新 git add 再提交。
+#     两段各有独立逃生键（解耦，避免 --no-verify 连带绕过）：
+#       ① YSM_SKIP_ANDROID=1（Android lite 档）；② YSM_SKIP_BIOME_LINES=1（biome 行级闸）。
 #   - 其余 gen/格式/i18n/路径卫生段 失败仅提示，不阻断 commit
 #   - 幂等：文档已同步时无 diff，git add docs/ 无副作用
 #   - 输出全走 stderr（exec 1>&2）：Windows git hook 下 stdout 管道易断，且 stderr 是 AI 必看的终端通道
@@ -54,7 +58,9 @@ GEN_SNAP_AFTER="/tmp/ysm_gen_snap_after_$$.txt"
 GEN_PORCELAIN="/tmp/ysm_gen_porcelain_$$.txt"
 snap_docs() {
   # 跨平台优先 node（Windows Git Bash 下 find -printf 偶发不可靠，会令 GEN_SNAP 缺失
-  # 进而跌入兜底 git add -u docs/ 吞他人半成品）；find 仅作 GNU 快路径
+  # 进而跌入兜底 git add -u docs/ 吞他人半成品）；find 仅作 GNU 快路径。
+  # 缺陷#4（2026-09-13）：node 一行快照 / GNU find 失败不再静默——把根因打到 stderr，
+  # 让「GEN_SNAP 缺失」兜底可观测（旧版 `2>/dev/null` 吞了根因，AI 无从得知为何跳过 stage）。
   if command -v node >/dev/null 2>&1; then
     node -e '
       const fs=require("fs"),path=require("path");
@@ -65,10 +71,15 @@ snap_docs() {
         walk(base);
       }
       fs.writeFileSync(process.argv[1], out.sort().join("\n"));
-    ' "$1" 2>/dev/null && [ -s "$1" ] && return 0
+    ' "$1" || { echo "[pre-commit] ⚠️  文档快照 node 一行失败（根因见下），降级 GNU find"; }
+    [ -s "$1" ] && return 0
   fi
-  # GNU 平台 find 快路径（失败静默，交由下方兜底分支处理）
-  find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > "$1" || true
+  # GNU 平台 find 快路径（失败打 stderr，不再静默）
+  if find docs/ frontend/public/locales/ completions/ -type f -printf '%T@ %s %p\n' 2>/dev/null | sort > "$1"; then
+    [ -s "$1" ] || echo "[pre-commit] ⚠️  文档快照 find 输出为空（目录缺失或 find -printf 不可用），GEN_SNAP 缺失 → 本次不自动 stage"
+  else
+    echo "[pre-commit] ⚠️  文档快照 GNU find 失败（find 不可用 / -printf 不支持），GEN_SNAP 缺失 → 本次不自动 stage（见上方 node 根因）"
+  fi
 }
 trap 'rm -f "$GEN_SNAP" "$GEN_SNAP_AFTER" "$GEN_PORCELAIN"' EXIT
 snap_docs "$GEN_SNAP"
@@ -319,19 +330,19 @@ fi
 echo ""
 git diff --cached --stat 2>/dev/null | tail -10 || true
 
-# ── Android 平台黑名单完整性检查（T1/T2 硬阻断，2026-09-08 升级）──
-# 初版只比对硬编码名单 → 「新增未登记桌面 binding」恒不可达；现换轨为 Go 源码派生事实源：
-#   T1 GOOS=android go list 文件差集（编译期缺失）、T2 *App 方法体 ADR-047 平台守卫（运行期降级）
-#   → 命中且未登记 ANDROID_UNAVAILABLE 即 exit 1 阻断；T3 命名可疑 / T4 反向漏检仅提示。
-# go 工具链不可用时脚本自动降级为 T3/T4（degraded 标记），不会因此误伤提交。
-# ── 硬阻断①（exit 1，非提示）：Android 黑名单完整守卫 ──
-if command -v node >/dev/null 2>&1; then
+# ── Android 平台黑名单完整性检查（lite 档硬阻断，2026-09-13 缺陷#3 降级）──
+# 秒级档只跑 T3（命名可疑）/ T4（反向漏检）纯文本扫描——T1/T2 的 `GOOS=android go list`
+# 冷缓存可达数秒，违背 pre-commit 秒级承诺；T1/T2 的编译期/运行期判定由 pre-push 全量兜底。
+# lite 档命中未登记项（T3/T4）仍 exit 1 阻断（不放松治理），但 T1/T2 缺失的判定留到 push。
+# 逃生阀：YSM_SKIP_ANDROID=1（与 biome 段 YSM_SKIP_BIOME_LINES=1 解耦，绕过 A 不连带绕过 B）。
+# ── 硬阻断①（exit 1，非提示）：Android 黑名单 lite 守卫 ──
+if [ "${YSM_SKIP_ANDROID:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
   echo ""
-  echo "[pre-commit] Android 平台黑名单检查..."
-  if ! node scripts/check-android-unavailable.ts 2>&1; then
-    echo "❌ Android 黑名单不完整：存在 Android 上不可用但未登记的 binding"
+  echo "[pre-commit] Android 平台黑名单检查（lite：T3/T4；T1/T2 由 pre-push 兜底）..."
+  if ! node scripts/check-android-unavailable.ts --lite 2>&1; then
+    echo "❌ Android 黑名单不完整（lite 档 T3/T4 命中未登记项）"
     echo "   修复：在 frontend/src/backend/platform-web.ts 的 ANDROID_UNAVAILABLE 中补充（并同步 platform-web.test.ts 名单）"
-    echo "   紧急绕过：git commit --no-verify"
+    echo "   紧急绕过：YSM_SKIP_ANDROID=1 git commit（T1/T2 仍由 pre-push 全量兜底）"
     exit 1
   fi
 fi

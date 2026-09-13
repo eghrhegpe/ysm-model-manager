@@ -22,11 +22,15 @@
  * 依赖：node:fs/promises + node:child_process；共享层 scripts/_lib/{scan-files,parse-args}.ts
  *
  * 用法：
- *   node scripts/check-android-unavailable.ts         # 文本报告，退出码判定
+ *   node scripts/check-android-unavailable.ts         # 全量（T0–T4），文本报告，退出码判定
  *   node scripts/check-android-unavailable.ts --json  # 子代理/CI 机器消费（_summary JSON）
+ *   node scripts/check-android-unavailable.ts --lite  # 秒级档（缺陷#3）：跳过 T1/T2 的 go list，
+ *                                                  仅跑 T3/T4 纯文本扫描；pre-commit 专用，
+ *                                                  T1/T2 由 pre-push 全量兜底
  *   node scripts/check-android-unavailable.ts --allow-missing  # bindings 缺失时不判失败（CI 冷启动）
  *
- * 退出码：0 = 无硬失败（可能含提示）；1 = T0/T1/T2 存在未登记项或脚本异常
+ * 退出码：0 = 无硬失败（可能含提示）；1 = T0/T1/T2 存在未登记项或脚本异常。
+ *         --lite 档 T1/T2 留空，退出码仅反映 T0（bindings 缺失）；T3/T4 为提示不阻断。
  *
  * 设计意图：Android 侧缺桌面专属能力时降级隐藏对应 UI（platform-web.ts 黑名单）。本守卫把
  * 「黑名单是否完整」的判定从事后人工名单搬移到 Go 源码的编译期/运行期信号，使新增桌面
@@ -118,6 +122,8 @@ interface Report {
   /** T4-c 基线项被移出黑名单 */
   baselineRemoved: string[];
   degraded: boolean;
+  /** --lite 档标记（pre-commit 秒级档主动跳过 T1/T2，区别于「go 工具链缺失」的真降级） */
+  lite: boolean;
   degradeReason?: string;
 }
 
@@ -225,47 +231,58 @@ export function extractGuardedAppMethods(content: string): string[] {
   return out;
 }
 
-async function collect(report: Report): Promise<void> {
+async function collect(report: Report, lite = false): Promise<void> {
   const bindings = await extractBindings();
   const blacklist = await readBlacklist();
   const bindingSet = new Set(bindings);
   report.scanned = bindings.length;
   report.blacklistSize = blacklist.size;
 
-  // ── T1/T2：Go 源码信号（失败则降级到 T3/T4）──
-  const desktop = listGoFiles();
-  if ("error" in desktop) {
+  if (lite) {
+    // ── --lite（pre-commit 秒级档，2026-09-13 缺陷#3）──
+    // 跳过 T1/T2 的 `go list`（GOOS=android go list 冷缓存可达数秒，违背 pre-commit 秒级承诺）。
+    // missingAtCompile / guardedAtRuntime 留空（无 go 信号可派生）；T1/T2 由 pre-push 全量兜底。
+    // degraded=true 标记本档为「无 go 信号」，pre-push 的 --json 消费方可据 lite 区分
+    // 「真降级（go 工具链缺失）」与「lite 主动跳过」——两者都只跑 T3/T4 但成因不同。
+    report.lite = true;
     report.degraded = true;
-    report.degradeReason = desktop.error;
+    report.degradeReason = "--lite：跳过 T1/T2 go list（pre-commit 秒级档），由 pre-push 全量兜底";
   } else {
-    const android = listGoFiles("android");
-    if ("error" in android) {
+    // ── T1/T2：Go 源码信号（失败则降级到 T3/T4）──
+    const desktop = listGoFiles();
+    if ("error" in desktop) {
       report.degraded = true;
-      report.degradeReason = android.error;
+      report.degradeReason = desktop.error;
     } else {
       // T1：编译期差集文件的导出方法 ∩ 真实 bindings − 已登记
-      const androidSet = new Set(android.files);
-      const missing = new Set<string>();
-      for (const file of desktop.files.filter((f) => !androidSet.has(f))) {
-        const content = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(
-          () => "",
-        );
-        for (const name of extractAppMethods(content)) {
-          if (bindingSet.has(name) && !blacklist.has(name)) missing.add(name);
+      const android = listGoFiles("android");
+      if ("error" in android) {
+        report.degraded = true;
+        report.degradeReason = android.error;
+      } else {
+        const androidSet = new Set(android.files);
+        const missing = new Set<string>();
+        for (const file of desktop.files.filter((f) => !androidSet.has(f))) {
+          const content = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(
+            () => "",
+          );
+          for (const name of extractAppMethods(content)) {
+            if (bindingSet.has(name) && !blacklist.has(name)) missing.add(name);
+          }
         }
-      }
-      report.missingAtCompile = dedupeSorted(missing);
-    }
+        report.missingAtCompile = dedupeSorted(missing);
 
-    // T2：desktop 构建集内的 ADR-047 运行期守卫 − 已登记
-    const guarded = new Set<string>();
-    for (const file of desktop.files) {
-      const content = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(() => "");
-      for (const name of extractGuardedAppMethods(content)) {
-        if (bindingSet.has(name) && !blacklist.has(name)) guarded.add(name);
+        // T2：desktop 构建集内的 ADR-047 运行期守卫 − 已登记
+        const guarded = new Set<string>();
+        for (const file of desktop.files) {
+          const c = await readFile(join(ROOT, "internal", "app", file), "utf-8").catch(() => "");
+          for (const name of extractGuardedAppMethods(c)) {
+            if (bindingSet.has(name) && !blacklist.has(name)) guarded.add(name);
+          }
+        }
+        report.guardedAtRuntime = dedupeSorted(guarded);
       }
     }
-    report.guardedAtRuntime = dedupeSorted(guarded);
   }
 
   // ── T3：命名语义可疑（对新增命名生效）──
@@ -291,8 +308,8 @@ async function collect(report: Report): Promise<void> {
 }
 
 function printText(r: Report): void {
-  if (r.degraded) {
-    console.warn(`[android-guard] ⚠️ 降级模式（Go 信号不可用）：${r.degradeReason ?? ""}`);
+  if (r.degraded && !r.lite) {
+    console.warn(`[android-guard] ⚠️ 降级模式（Go 工具链不可用）：${r.degradeReason ?? ""}`);
     console.warn("  仅执行 T3 命名扫描 + T4 反向校验，T1/T2 未覆盖。");
   }
   if (r.missingAtCompile.length > 0 || r.guardedAtRuntime.length > 0) {
@@ -323,17 +340,25 @@ function printText(r: Report): void {
     );
   }
   if (r.missingAtCompile.length === 0 && r.guardedAtRuntime.length === 0) {
+    const modeNote = r.lite
+      ? "（lite 档：T1/T2 由 pre-push 兜底）"
+      : r.degraded
+        ? "（降级模式）"
+        : "";
     console.log(
-      `[android-guard] ✅ ${r.scanned} bindings / ${r.blacklistSize} 黑名单，无硬失败${r.degraded ? "（降级模式）" : ""}`,
+      `[android-guard] ✅ ${r.scanned} bindings / ${r.blacklistSize} 黑名单，无硬失败${modeNote}`,
     );
   }
 }
 
 async function main(): Promise<number> {
-  const args = parseArgs(process.argv.slice(2), { bools: ["json", "allow-missing"] });
+  const args = parseArgs(process.argv.slice(2), { bools: ["json", "allow-missing", "lite"] });
   if (args.unknown.length) console.warn(`[android-guard] 忽略未知参数: ${args.unknown.join(", ")}`);
   const wantJson = Boolean(args.json);
   const allowMissing = Boolean(args["allow-missing"] ?? args.allowMissing);
+  // --lite（缺陷#3，2026-09-13）：pre-commit 秒级档——跳过 T1/T2 的 go list，仅跑 T3/T4 纯文本扫描。
+  // T1/T2 的编译/运行期判定改由 pre-push 全量兜底（--strict 时 go build 先行）。
+  const lite = Boolean(args.lite);
 
   const report: Report = {
     scanned: 0,
@@ -345,10 +370,11 @@ async function main(): Promise<number> {
     testDrift: [],
     baselineRemoved: [],
     degraded: false,
+    lite: false,
   };
 
   try {
-    await collect(report);
+    await collect(report, lite);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
@@ -378,6 +404,7 @@ async function main(): Promise<number> {
         _summary: {
           ok,
           degraded: report.degraded,
+          lite: report.lite,
           scanned: report.scanned,
           blacklist: report.blacklistSize,
           uncovered: hardMissing.length,

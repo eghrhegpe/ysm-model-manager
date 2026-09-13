@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"ysm-model-manager/go/fsutil"
@@ -142,6 +143,13 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 			conflicts = append(conflicts, conflict)
 		}
 	}
+
+	// 冲突列表按 Path 字典序排序——localFiles 为 map，迭代序由 Go 运行时随机化，
+	// 不排序则同一目录每次调用输出顺序不同（前端冲突列表刷新跳动）。
+	// 与包内其余 diff 出口（ResourceDiff / syncResourcesDirLevel）的确定性纪律对齐。
+	sort.Slice(conflicts, func(i, j int) bool {
+		return conflicts[i].Path < conflicts[j].Path
+	})
 
 	report := &ConflictReport{
 		Conflicts:      conflicts,

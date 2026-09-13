@@ -124,6 +124,47 @@ func TestDetectConflicts_MultipleConflicts(t *testing.T) {
 	}
 }
 
+// TestDetectConflicts_SortedByPath 钉住冲突列表输出确定性：
+// DetectConflicts 按 map 迭代序 append，Go map 迭代随机化会导致同一目录
+// 每次调用顺序不同（前端冲突列表刷新跳动）。修复后必须按 Path 字典序稳定输出。
+// 用 3 个冲突（a.txt/m.txt/z.txt）覆盖随机序——未排序时命中字典序概率仅 1/6，
+// 配合 -count 多次运行可稳定暴露回归。
+func TestDetectConflicts_SortedByPath(t *testing.T) {
+	t.Parallel()
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	// 创建顺序故意与字典序无关（z 先于 a），验证输出与创建序/扫描序无关
+	for _, name := range []string{"z.txt", "m.txt", "a.txt"} {
+		writeFile(t, localDir, name, "local "+name, time.Now())
+		writeFile(t, remoteDir, name, "remote "+name, time.Now())
+	}
+
+	report, err := DetectConflicts(localDir, remoteDir, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.TotalConflicts != 3 {
+		t.Fatalf("期望 3 个冲突，实际 %d", report.TotalConflicts)
+	}
+	want := []string{"a.txt", "m.txt", "z.txt"}
+	for i, w := range want {
+		if report.Conflicts[i].Path != w {
+			t.Fatalf("冲突列表未按 Path 排序：第 %d 个期望 %s，实际 %s（全量 %v）",
+				i, w, report.Conflicts[i].Path, conflictPaths(report.Conflicts))
+		}
+	}
+}
+
+// conflictPaths 提取冲突路径切片供断言输出诊断。
+func conflictPaths(conflicts []FileConflict) []string {
+	paths := make([]string, len(conflicts))
+	for i, c := range conflicts {
+		paths[i] = c.Path
+	}
+	return paths
+}
+
 func TestDetectConflicts_EmptyDirs(t *testing.T) {
 	t.Parallel()
 	localDir, remoteDir, cleanup := setupTestDirs(t)

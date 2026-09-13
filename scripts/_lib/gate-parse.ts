@@ -13,11 +13,19 @@
  *   3. 否则退回 rc===0（非 JSON 输出 / 无结构化契约）
  *   4. 解析失败时 note 必须明示「非 JSON 回退」，不许静默假绿
  *   5. 仅 FAIL 时提取 warns_list 为 tail 摘要（PASS 不需要详情）
+ *   6. _summary.degraded===true 时 note 追加 degraded 标记——「扫描跳过」不得与
+ *      「扫描通过」在门禁摘要里同形
+ *
+ * 生产端配套：第 1/2/5 条的字段由扫描器写入 _summary。三个「档位扫描器」
+ * （check-complexity / check-params / check-type-safety）此前把 ok 放顶层、_summary
+ * 内无 ok/errors，被第 1 条的 `_summary || parsed` 短路后读不到 → 判定恒退回 rc，
+ * 而它们 rc 恒 0（情报型）→ 静默假绿。统一改用 buildScanVerdict() 生产判定字段。
  *
  * 依赖：零依赖（纯函数，node:assert 级别可测）。
  *
  * 用法：
- *   const { ok, note, tail } = parseToolOutput(out, rc, tool?);
+ *   const { ok, note, tail } = parseToolOutput(out, rc, tool?);      // 消费端（门禁）
+ *   const s = buildScanVerdict(errors, warnLines);                   // 生产端（扫描器）
  *
  * 退出码：本模块无独立 CLI（被 pre-push-gate.ts import）。
  */
@@ -51,6 +59,10 @@ export function parseToolOutput(out: string, rc: number, tool?: string): ParsedT
       .map(([k, v]) => `${k}=${v}`)
       .join(" ");
     if (cnt) note = cnt;
+    // 降级运行（ts-morph / go 工具链缺失等）：ok 仍可为 true（仓库约定 degraded≠红灯，
+    // 见 gate-config 的 check-android-unavailable 注释），但必须在 note 里留痕——
+    // 否则「扫描跳过」与「扫描通过」在门禁摘要里同形（静默假绿）。
+    if (s.degraded === true) note = note ? `${note} degraded` : "degraded(降级运行)";
     // 仅 FAIL 时提取 warns_list 摘要——缩进 JSON 的数组内容在 tail 截断下不可见
     if (!ok && Array.isArray(s.warns_list) && s.warns_list.length) {
       tail = `warns_list:\n${s.warns_list.map((w: string) => `  - ${w}`).join("\n")}`;
@@ -90,3 +102,27 @@ export function tryParseJson(out: string): unknown | null {
     return null;
   }
 }
+
+/**
+ * 扫描器 `_summary` 判定字段的生产端构造器（与 parseToolOutput 配对，见文件头第 1/2/5 条）。
+ *
+ * 把「违规数 → ok/errors/warns_list」的写入口径收敛到单点，供三个档位扫描器复用；
+ * 契约由 tests/test_gate_parse_output.ts 以「生产 → 消费」往返断言锁死。
+ *
+ * @param errors 违规计数（>0 即 FAIL；口径由各扫描器定义，见其文件头）
+ * @param lines  违规明细单行文本（FAIL 时按 WARNS_TOP_N 截断；PASS 时不写字段，保持载荷精简）
+ */
+export function buildScanVerdict(
+  errors: number,
+  lines: readonly string[],
+): { ok: boolean; errors: number; warns_list?: string[] } {
+  return errors > 0
+    ? { ok: false, errors, warns_list: lines.slice(0, WARNS_TOP_N) }
+    : { ok: true, errors: 0 };
+}
+
+/**
+ * FAIL 明细进门禁 tail 的条数上限。门禁 tail 阅读窗口约 12~25 行（record 的 tail 回退
+ * 取原始输出尾 12 行），20 条 + 首行 `warns_list:` 恰好落在窗口内，再多会被截掉。
+ */
+export const WARNS_TOP_N = 20;

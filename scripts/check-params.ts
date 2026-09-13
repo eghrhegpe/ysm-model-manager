@@ -24,21 +24,29 @@
  *   node scripts/check-params.ts                                  # 全前端，默认 threshold 6
  *   node scripts/check-params.ts --scope frontend/src/preview-3d  # 按域收窄
  *   node scripts/check-params.ts --threshold 5 --json             # 调档 / JSON
+ *   node scripts/check-params.ts --strict                         # 有命中时 exit 1
  *
- * 退出码：0（情报型）；ts-morph 缺失 0 WARN；初始化失败 1。
+ * `_summary` 契约（门禁消费，gate-parse.parseToolOutput 判定）：
+ *   ok     = 无命中（items 为空）
+ *   errors = 命中数（长参数 / 布尔陷阱）
+ *   warns_list = FAIL 时前 20 条单行明细（顶层 ok 仅为人类可读，门禁读 _summary）
+ *
+ * 退出码：0（情报型，判定见 _summary.ok）；ts-morph 缺失 0 WARN（degraded）；--strict
+ * 且有命中 1；初始化失败（scope 不存在 / 无文件）1。
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getRoot, relPosix } from "./_lib/scan-files.ts";
+import { buildScanVerdict } from "./_lib/gate-parse.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
+import { getRoot, relPosix } from "./_lib/scan-files.ts";
 import { collectNamedFunctions } from "./check-complexity.ts";
 
 const ROOT = getRoot();
 
 // ─── 参数解析 ─────────────────────────────────────────────
 const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json"],
+  bools: ["json", "strict"],
   strings: ["scope", "threshold"],
   defaults: { threshold: 6 }, // 🟨≥6，🟧=2x，🟥=3x
 });
@@ -57,6 +65,7 @@ if (raw.threshold !== null) {
 }
 const args = {
   json: raw.json as boolean,
+  strict: raw.strict as boolean,
   scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
   threshold: raw.threshold as number,
 };
@@ -131,7 +140,19 @@ async function main() {
     ({ Project } = require_("ts-morph"));
   } catch {
     if (args.json) {
-      console.log(JSON.stringify({ ok: true, degraded: true, mode: "params", _summary: { skippedDueToNoTsMorph: true }, items: [] }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            degraded: true,
+            mode: "params",
+            _summary: { ok: true, errors: 0, degraded: true, skippedDueToNoTsMorph: true },
+            items: [],
+          },
+          null,
+          2,
+        ),
+      );
     } else {
       console.warn("[check-params] 未找到 ts-morph（frontend/node_modules 缺失），跳过扫描。");
       console.warn("   (cd frontend && npm install) 后重试。");
@@ -140,19 +161,26 @@ async function main() {
   }
 
   const rootAbs = path.isAbsolute(args.scope) ? args.scope : path.join(ROOT, args.scope);
+  // 初始化失败 = 用法错误：显式 exit 1（此前 return 以 0 退出，与文件头契约不符且 fail-open）。
   if (!fs.existsSync(rootAbs)) {
     const msg = `--scope 目录不存在：${args.scope}`;
-    if (args.json) console.log(JSON.stringify({ ok: false, mode: "params", error: msg }, null, 2));
+    if (args.json)
+      console.log(
+        JSON.stringify({ ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
+      );
     else console.error(msg);
-    return;
+    process.exit(1);
   }
 
   const files = walkSource(rootAbs).map((f) => path.resolve(f));
   if (files.length === 0) {
     const msg = `--scope 下无 .ts/.js 文件：${args.scope}`;
-    if (args.json) console.log(JSON.stringify({ ok: false, mode: "params", error: msg }, null, 2));
+    if (args.json)
+      console.log(
+        JSON.stringify({ ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
+      );
     else console.error(msg);
-    return;
+    process.exit(1);
   }
 
   const project = new Project({ useInMemoryFileSystem: false, skipFileDependencyResolution: true });
@@ -206,8 +234,33 @@ async function main() {
       b.line - a.line,
   );
 
+  // 违规口径 = 命中清单（长参数或布尔陷阱）；明细单行格式与文本模式一致，供门禁 tail 直读。
+  const verdict = buildScanVerdict(
+    items.length,
+    items.map(
+      (it) => `${it.file}:${it.line} ${it.name} p${it.params}/b${it.boolParams} [${it.reasons.join("; ")}]`,
+    ),
+  );
+
   if (args.json) {
-    console.log(JSON.stringify({ ok: true, mode: "params", scope: relPosix(rootAbs), threshold, totalFuncs, items, parseFailures }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: verdict.ok,
+          mode: "params",
+          scope: relPosix(rootAbs),
+          threshold,
+          totalFuncs,
+          _summary: verdict,
+          items,
+          parseFailures,
+        },
+        null,
+        2,
+      ),
+    );
+    // JSON 模式阻断不留 stderr（gate 合并 stdout+stderr，混入文本会让 JSON.parse 失败）
+    if (args.strict && !verdict.ok) process.exit(1);
     return;
   }
 
@@ -219,6 +272,10 @@ async function main() {
   for (const it of items) {
     const mark = it.tier === "red" ? "🟥" : it.tier === "orange" ? "🟧" : "🟨";
     console.log(`${mark} p${it.params}/b${it.boolParams} [${it.reasons.join("; ")}]  ${it.file}:${it.line}  ${it.name}`);
+  }
+  if (args.strict && !verdict.ok) {
+    console.error(`[check-params] --strict: ${items.length} 处命中（长参数/布尔陷阱）→ 阻断`);
+    process.exit(1);
   }
 }
 

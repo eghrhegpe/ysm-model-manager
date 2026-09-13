@@ -13,6 +13,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - ALL_STATIC_TOOLS
+    - buildScanVerdict
     - createGateCtx
     - DOC_EXTRA_SCRIPTS
     - DOC_STATIC_TOOLS
@@ -32,6 +33,7 @@ auto_fields:
     - SCRIPTS_TYPECHECK
     - tryParseJson
     - tryParseSummary
+    - WARNS_TOP_N
     - writeGateReport
 use_when:
   - 推送门禁
@@ -52,9 +54,11 @@ quick_risk_lines:
   - 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查
   - 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过
   - FAIL 归属标签靠 blockPolicy 落库，record 漏存即全部误标「本次引入」
+  - 判定字段必须写进 _summary（用 buildScanVerdict），写顶层 ok 会被解析器短路
 pitfalls:
   - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
+  - 判定字段写错位置 → 门禁静默假绿：`parseToolOutput` 的 `parsed._summary || parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`）
   - 「门禁全绿」只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
   - record() 只把 blockPolicy 用于判定 blocked、不写进 results → gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组）
 status: active
@@ -122,6 +126,7 @@ invariant_anchors:
 
 - 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 26 项 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS`）；gate 只调度不改清单
 - 审计类工具退出码不可靠（恒 0），必须解析 `--json` 的 `_summary` 判定——**判定语义收敛到 `_lib/gate-parse.ts`**（2026-09 锐评三刀 #3）：`parseToolOutput(out, rc, tool?)` 统一实现「`_summary.ok` → `errors===0` → 退回 rc」优先级链，`tryParseSummary` / `tryParseJson` 供域检查块/特殊块取字段；契约测试 `tests/test_gate_parse_output.ts` 锁死判定与 fail-closed 回退（非 JSON 输出 note 必须明示「回退 rc 判定」，不许静默假绿）
+- 生产端配对（2026-09-13）：扫描器用同模块的 `buildScanVerdict(errors, warnLines)` 把 `ok`/`errors`/`warns_list` 写进 `_summary`。**判定字段必须落在 `_summary` 内**——`parseToolOutput` 首行 `parsed._summary || parsed` 会在 `_summary` 存在时短路，写顶层 `ok` 一律读不到（实证：三脚本顶层 `ok` + rc 恒 0 → 门禁恒判通过）。`_summary.degraded===true` 时 note 追加 `degraded`，「扫描跳过」不得与「扫描通过」同形
 - autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验（重验判定同样走 `parseToolOutput`）
 - `check-go-diff-coverage` 在文件驱动模式加 `--staged`（只查本次暂存区，否则把 origin/main 之后所有未推送改动误算进覆盖门禁）
 - 静态工具段不并行（回退 ADR-088：spawn 开销吃掉 sub-second 工具收益）
@@ -146,6 +151,10 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 | `check-type-safety` | ❌ 无 | `any` / `@ts-ignore` / `!` 非空断言计数 |
 
 核实口径：`_lib/gate-config.ts` 五个清单 + `.githooks/pre-commit` + `.github/workflows/*` + `Taskfile.yml` 均无调用点（仅 `tests/test_check_*.ts` 导入其纯函数做契约测试）。
+
+**2026-09-13 契约修复**：三个脚本已补 `_summary.ok/errors/warns_list` + `--strict`（JSON 模式不再往 stderr 写文本——gate 用 `shAsync` 合并 stdout+stderr，混入文本会让 `JSON.parse` 失败、退化为 rc 判定），门禁判定链现能读到真实结论。实测：`check-type-safety` 生产域 `ok=true / errors=0`（唯一现在就能硬挂的）；`check-complexity` `errors=301`、`check-params` `errors=54` 仍是存量规模，FAIL 时 tail 直出 Top-20 明细。
+
+**仍未接线**（本次只修判定语义，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**，而三者只有 `--scope`（按目录）无增量裁剪——全库挂上去即全红。接线前须先补 `--files`/`--changed` 增量，再以 `blockPolicy: debt` 试挂（或只断 `red` 档）。
 
 **推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。
 

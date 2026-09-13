@@ -28,13 +28,21 @@
  *   node scripts/check-type-safety.ts --strict                            # 任一文件 🟨+ 时 exit 1（可挂门禁）
  *   node scripts/check-type-safety.ts --json                              # JSON（子代理 / CI / doctor 消费）
  *
- * 退出码：默认 0（情报型）；初始化失败 1；--strict 且存在 🟨+ 文件时 1。
+ * `_summary` 契约（门禁消费，gate-parse.parseToolOutput 判定）：
+ *   ok     = 生产域无活跃侵蚀（activeFiles=0）
+ *   errors = 活跃侵蚀文件数（🟨+）
+ *   warns_list = FAIL 时前 20 条单行明细（文件 + 侵蚀分 + 信号简写）
+ * 注：--strict 的阻断理由写在 _summary，JSON 模式不再另发 stderr（gate 合并双流，
+ * 混入文本会让 JSON.parse 失败、退化为 rc 判定）。
+ *
+ * 退出码：默认 0（情报型，判定见 _summary.ok）；初始化失败 1；--strict 且存在 🟨+ 文件时 1。
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getRoot, readText, relPosix, SRC_DIR, toPosix, walk } from "./_lib/scan-files.ts";
+import { buildScanVerdict } from "./_lib/gate-parse.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
+import { getRoot, readText, relPosix, SRC_DIR, toPosix, walk } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 
@@ -129,6 +137,24 @@ export function tierOf(score: number, threshold: number): ErosionTier {
   return "clean";
 }
 
+/** 信号展示名（文本清单与门禁 tail 明细共用，单一定义点）。 */
+const SIG_NAME: Record<TypeErosionSignal, string> = {
+  tsIgnore: "@ts-ignore",
+  tsExpectError: "@ts-expect-error",
+  asAny: "as any",
+  colonAny: ":any",
+  anyGeneric: "<any>",
+  nonNull: "!非空",
+};
+
+/** 计数 >0 的信号简写（供门禁 tail 单行明细）：`as any×3 !非空×5`。 */
+function signalBrief(counts: Record<TypeErosionSignal, number>): string {
+  return (Object.keys(SIG_NAME) as TypeErosionSignal[])
+    .filter((k) => (counts[k] ?? 0) > 0)
+    .map((k) => `${SIG_NAME[k]}×${counts[k]}`)
+    .join(" ");
+}
+
 /**
  * 生产源文件判定：排除测试、vendor、声明文件。纯谓词，供 walk 过滤 + 契约测试复用。
  * rel = 相对 frontend/src 的正斜杠路径（如 preview-3d/menu/env.ts）。
@@ -196,7 +222,10 @@ function scanSingle(abs: string, rel: string, threshold: number): FileErosion | 
 function main(): void {
   const base = path.resolve(ROOT, args.scope);
   if (!fs.existsSync(base)) {
-    console.error(`[check-type-safety] --scope 路径不存在: ${args.scope}`);
+    const msg = `--scope 路径不存在: ${args.scope}`;
+    if (args.json)
+      console.log(JSON.stringify({ ok: false, _summary: { ok: false, errors: 0, error: msg } }, null, 2));
+    else console.error(`[check-type-safety] ${msg}`);
     process.exit(1);
   }
   const filesOnly = args.scope === "frontend/src";
@@ -223,20 +252,36 @@ function main(): void {
   const totals: Record<TypeErosionSignal, number> = EMPTY_COUNTS();
   for (const r of results) for (const k of Object.keys(totals) as TypeErosionSignal[]) totals[k] += r.counts[k];
 
+  const filesByTier = {
+    red: results.filter((r) => r.tier === "red").length,
+    orange: results.filter((r) => r.tier === "orange").length,
+    yellow: results.filter((r) => r.tier === "yellow").length,
+  };
+  // 违规口径 = 活跃侵蚀文件（tier !== clean）；明细单行 = 文件 + 侵蚀分 + 信号简写。
+  const verdict = buildScanVerdict(
+    active.length,
+    active.map(
+      (r) => `${r.file} 侵蚀${(Math.round(r.score * 10) / 10).toFixed(1)} (${signalBrief(r.counts)})`,
+    ),
+  );
+
   if (args.json) {
     console.log(
       JSON.stringify(
         {
+          ok: verdict.ok,
           scope: relPosix(target),
           threshold: args.threshold,
           files: results.length,
           activeFiles: active.length,
-          totals,
-          filesByTier: {
-            red: results.filter((r) => r.tier === "red").length,
-            orange: results.filter((r) => r.tier === "orange").length,
-            yellow: results.filter((r) => r.tier === "yellow").length,
+          _summary: {
+            ...verdict,
+            threshold: args.threshold,
+            files: results.length,
+            activeFiles: active.length,
+            filesByTier,
           },
+          totals,
           active: active.map((r) => ({ file: r.file, score: Math.round(r.score * 10) / 10, tier: r.tier, counts: r.counts })),
           heavyActive: heavyActive.map((r) => ({ file: r.file, score: Math.round(r.score * 10) / 10, counts: r.counts })),
         },
@@ -245,18 +290,10 @@ function main(): void {
       ),
     );
   } else {
-    console.log(`=== 类型安全侵蚀扫描（冷却 ${relPosix(target)}，threshold=${args.threshold}）===`);
+    console.log(`=== 类型安全侵蚀扫描（范围 ${relPosix(target)}，threshold=${args.threshold}）===`);
     console.log(`生产文件 ${results.length}，侵蚀活跃 ${active.length}`);
-    const sigName: Record<TypeErosionSignal, string> = {
-      tsIgnore: "@ts-ignore",
-      tsExpectError: "@ts-expect-error",
-      asAny: "as any",
-      colonAny: ":any",
-      anyGeneric: "<any>",
-      nonNull: "!非空",
-    };
-    const sigLine = (Object.keys(sigName) as TypeErosionSignal[])
-      .map((k) => `${sigName[k]}=${totals[k]}`)
+    const sigLine = (Object.keys(SIG_NAME) as TypeErosionSignal[])
+      .map((k) => `${SIG_NAME[k]}=${totals[k]}`)
       .join("  ");
     console.log(`聚合: ${sigLine}`);
     console.log("");
@@ -272,7 +309,9 @@ function main(): void {
   }
 
   if (args.strict && active.length > 0) {
-    console.error(`[check-type-safety] --strict: ${active.length} 文件落入 🟨+，阻断`);
+    // JSON 模式不再另发 stderr：gate 合并 stdout+stderr，混入文本会让 JSON.parse 失败
+    // 退化为 rc 判定（阻断理由已在 _summary.ok/errors/warns_list）。
+    if (!args.json) console.error(`[check-type-safety] --strict: ${active.length} 文件落入 🟨+，阻断`);
     process.exit(1);
   }
 }

@@ -89,8 +89,8 @@ auto_fields:
     - CreateWorkerBridgeOpts
     - createWorkerParser
     - DecodedTexture
-    - DetectFormat
-    - DetectFormatCtx
+    - detectFormat
+    - detectFormatCtx
     - DISPOSE_TEX_KEYS
     - disposeMmdMesh
     - disposeTextureDecoder
@@ -187,9 +187,9 @@ auto_fields:
     - PackDeps
     - packTextureLabel
     - ParsePmdCtx
-    - ParsePmdStage
+    - parsePmdStage
     - ParsePmxCtx
-    - ParsePmxStage
+    - parsePmxStage
     - PerceptionCapability
     - perceptionNodes
     - PerceptionPauseRef
@@ -286,7 +286,7 @@ auto_fields:
     - TEXTURE_EXTS
     - TextureDecoder
     - toggleBoneVisible
-    - TrackAlloc
+    - trackAlloc
     - typeFromWebDir
     - UnloadCtx
     - unloadModel

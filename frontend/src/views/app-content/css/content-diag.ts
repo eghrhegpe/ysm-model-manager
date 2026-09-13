@@ -145,7 +145,6 @@ export const contentDiagCSS: string = `
 .gh-model-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: var(--fs-xs); font-weight: 600; }
 .gh-model-badge-total { background: var(--surf); color: var(--txt); }
 .gh-model-badge-missing { background: color-mix(in srgb, var(--status-error) 12%, transparent); color: var(--status-error); }
-.gh-empty { padding:24px;text-align:center;color:var(--muted);font-size:var(--fs-base); }
 /* toggle-missing 激活态 */
 .gh-toggle-missing.active { border-color:var(--accent);color:var(--accent); }
 /* .gh-btn-sm 已合并到 .btn-sm */

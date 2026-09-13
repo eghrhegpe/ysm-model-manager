@@ -198,8 +198,8 @@ auto_fields:
     - DEFAULT_TD_KEYMAP
     - DEFAULT_WATER_PARAMS
     - deriveDefaultEnvState
-    - DetectFormat
-    - DetectFormatCtx
+    - detectFormat
+    - detectFormatCtx
     - devLog
     - DirectionalLightParams
     - dispatchEnvChange
@@ -468,9 +468,9 @@ auto_fields:
     - packTextureLabel
     - parseJavaModel
     - ParsePmdCtx
-    - ParsePmdStage
+    - parsePmdStage
     - ParsePmxCtx
-    - ParsePmxStage
+    - parsePmxStage
     - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
@@ -733,7 +733,7 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath
-    - TrackAlloc
+    - trackAlloc
     - UnloadCtx
     - unloadModel
     - unloadSessionModel

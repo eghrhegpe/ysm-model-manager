@@ -13,6 +13,7 @@ import {
   DOC_EXTRA_SCRIPTS,
   DOC_STATIC_TOOLS,
   FRONTEND_STATIC_TOOLS,
+  type GateTool,
   GO_STATIC_TOOLS,
 } from "../gate-config.ts";
 import type { GateCtx } from "../gate-ctx.ts";
@@ -58,7 +59,7 @@ export async function runContractTestsBlock(
  * go 变更跑 Go 静态工具、docs/adr 变更跑文档静态工具——保持按域裁剪的轻量。 */
 export function runStaticToolsDispatch(
   ctx: GateCtx,
-  opts: { allMode: boolean; docsMode: boolean },
+  opts: { allMode: boolean; docsMode: boolean; staticMode?: boolean },
 ): void {
   if (opts.allMode) {
     // 刻意不跑 FRONTEND_STATIC_TOOLS（ADR-234）：三档扫描器是「全库阈值 + 增量
@@ -72,7 +73,18 @@ export function runStaticToolsDispatch(
     runTools(ctx, DOC_STATIC_TOOLS);
     runTools(ctx, DOC_EXTRA_SCRIPTS);
   }
-  if (!opts.allMode && !opts.docsMode) {
+  if (opts.staticMode) {
+    // CI 静态模式（--static，2026-09-14 锐评 P0）：补 CI 缺的那一层——静态治理工具。
+    // 合并 ALL + DOC_EXTRA + FRONTEND 非 scoped 项，按 tool 名去重、FRONTEND 档位优先
+    // （其 args 更严：event-graph --strict 覆盖 --check、check-biome --strict 等）。
+    // 三档扫描器（complexity / params / type-safety）与 --all 同口径排除：它们需
+    // --files 上下文，全库跑 = 301 条 debt 刷屏 + check-params 59.4s 墙钟。
+    const merged = new Map<string, GateTool>();
+    for (const t of [...ALL_STATIC_TOOLS, ...DOC_EXTRA_SCRIPTS]) merged.set(t.tool, t);
+    for (const t of FRONTEND_STATIC_TOOLS) if (!t.scopedFiles) merged.set(t.tool, t);
+    runTools(ctx, [...merged.values()]);
+  }
+  if (!opts.allMode && !opts.docsMode && !opts.staticMode) {
     if (ctx.plan.frontend) runTools(ctx, FRONTEND_STATIC_TOOLS);
     if (ctx.plan.go) runTools(ctx, GO_STATIC_TOOLS);
     if (ctx.plan.docs || ctx.plan.adr) {

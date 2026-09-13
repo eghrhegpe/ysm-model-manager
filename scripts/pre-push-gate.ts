@@ -19,6 +19,10 @@
  *     全量模式（等价 doctor 默认全量，无 stdin）：Go/前端/数据/文档/红线/契约 + 静态工具
  *   node scripts/pre-push-gate.ts --docs [--dry-run]
  *     文档模式（等价 doctor --docs）：仅文档/ADR/索引/静态文档工具
+ *   node scripts/pre-push-gate.ts --static [--dry-run] [--json]
+ *     静态工具模式（CI 专用，2026-09-14 锐评 P0）：只跑 gate-config 的静态治理工具层，
+ *     跳过 Go/前端/数据/文档域检查——vite build / vitest / go build+test 由 CI 各步骤
+ *     独立承担，此处不重复。用途：堵住 `git push --no-verify` 时远端零防线的缺口。
  *
  * 已知坑（2026-08-03 确认，2026-08-07 更新，2026-08-12 增补）：
  *   - link-checker.ts / type-consistency.ts 正常路径退出码恒 0，
@@ -117,7 +121,7 @@ function parseStdin() {
 async function main() {
   // 统一参数解析（位置参数收集在 _：git 钩子 <remote-name> <remote-url>、--gate 的 ref）
   const args = parseArgs(process.argv.slice(2), {
-    bools: ["dry-run", "no-banner", "all", "docs", "json"],
+    bools: ["dry-run", "no-banner", "all", "docs", "json", "static"],
     strings: ["files"],
   });
   if (args.unknown.length) console.warn(`[pre-push-gate] 忽略未知参数: ${args.unknown.join(", ")}`);
@@ -133,6 +137,9 @@ async function main() {
   const say = jsonMode ? () => {} : console.log;
   const allMode = args.all as boolean;
   const docsMode = args.docs as boolean;
+  // --static（2026-09-14 锐评 P0）：CI 专用模式——只跑静态治理工具层，跳过域检查
+  // （build/test/vitest/go test 由 CI 各步骤独立承担，此处不重复）。见下方模式分支注释。
+  const staticMode = args.static as boolean;
   const filesRaw = (args.files as string) ?? "";
   const filesMode = filesRaw.length > 0;
 
@@ -202,6 +209,26 @@ async function main() {
     domainSummary = domainSummaryText(byDomain);
     say(`模式: 文件驱动（--files，${files.length} 个文件）`);
     say(`变更域: ${domainSummary}`);
+    say("");
+  } else if (staticMode) {
+    // —— 静态工具模式（--static，CI 接线专用）：只跑静态治理工具，跳过全部域检查 ——
+    // 动机（2026-09-14 锐评 P0 实测）：test.yml 只调用 7 个脚本，而 gate-config 的 28 项
+    // 静态工具（19 项 hard）在远端覆盖为 0 —— `git push --no-verify` 零痕迹即可把 i18n
+    // 缺键 / css 越界 / 文件头缺失等违规直推 main；本地门禁是唯一防线且客户端可绕过。
+    // 为何不直接用 --all：--all 会重跑 vite build / vitest / go build+test，而这些 CI
+    // 已各自独立承担（前端构建 / 前端测试 / Go 检查），接入即让 CI 时长翻倍。
+    // 本模式只补 CI 缺的那一层，与 CI 既有步骤互补而非重复。
+    plan = {
+      go: false,
+      frontend: false,
+      data: false,
+      docs: false,
+      adr: false,
+      contractTests: false,
+      redlines: false,
+    };
+    domainSummary = "static";
+    say("模式: 静态工具（--static，CI 专用：跳过 build/test，只跑治理工具）");
     say("");
   } else {
     // —— 推送门禁模式（默认）：stdin 驱动 ——
@@ -300,8 +327,10 @@ async function main() {
   // runContractTestsBlock / runStaticToolsDispatch / runScriptsTypecheck 位于
   // _lib/gate-blocks/schedule.ts（ADR-206 阶段 5）。各函数自守卫，无条件按序调用。
   await runContractTestsBlock(ctx, { allMode, domains: Object.keys(byDomain) });
-  runStaticToolsDispatch(ctx, { allMode, docsMode });
-  await runScriptsTypecheck(ctx, { allMode, docsMode });
+  runStaticToolsDispatch(ctx, { allMode, docsMode, staticMode });
+  // scripts typecheck 在 --static 下同样执行（CI 需要保证 scripts/ 自身类型正确，
+  // 且成本仅秒级）；契约测试由 CI 独立跑 scripts/contract-tests.ts，此处不重复。
+  await runScriptsTypecheck(ctx, { allMode: allMode || staticMode, docsMode });
 
   /* --- 聚合摘要 --- */
   logPush("------------------- 结果 -------------------");
@@ -339,7 +368,15 @@ async function main() {
     );
   };
   const reportPath = writeGateReport(ctx.results, {
-    mode: allMode ? "all" : docsMode ? "docs" : filesMode ? "files" : "push",
+    mode: allMode
+      ? "all"
+      : docsMode
+        ? "docs"
+        : staticMode
+          ? "static"
+          : filesMode
+            ? "files"
+            : "push",
     blocked: ctx.blocked,
     domainSummary,
   });

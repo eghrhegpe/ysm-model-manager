@@ -129,6 +129,18 @@ jobs:
           node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # P0（2026-09-14 锐评实测）：本地 pre-push-gate 的 28 项静态工具（19 项 hard）
+      # 此前在 CI 覆盖为 0 —— 本地门禁是客户端钩子，`git push --no-verify` 零痕迹即可把
+      # i18n 缺键 / css 跨 shadow 越界 / 文件头缺失等违规直推 main。
+      # 用 --static 而非 --all：后者会重跑 vite build / vitest / go build+test，而这三件
+      # CI 已各自独立承担（见下方「前端构建」「前端测试」「Go 检查」），接入即时长翻倍。
+      # --static 只跑静态治理工具层（实测 32 项 / 全绿约 18s），与既有步骤互补不重叠。
+      - name: 静态治理门禁（pre-push-gate --static：本地 hard 项的远端兜底）
+        shell: pwsh
+        run: |
+          node scripts/pre-push-gate.ts --static --json | Out-String -Width 200
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: 构建更新助手 helper（embed 前置，修复 CI 缺 ysm-updater-helper.exe）
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater

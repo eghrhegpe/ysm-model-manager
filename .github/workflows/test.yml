@@ -167,6 +167,18 @@ jobs:
           go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Go 增量覆盖率门禁（ADR-145/ADR-202）：本地 GO_STATIC_TOOLS hard 项的远端兜底。
+      # 只查本次变更 Go 文件的变更行覆盖率，内部跑 go test -coverprofile（须置于 Go 检查后）。
+      # 基线语义：PR 场景 merge-base(origin/main, HEAD) 有真实 diff；main push 场景
+      # origin/main==HEAD → 变更集为空自动 PASS（无害）。git fetch origin main 幂等，
+      # 保证 PR 场景基线 ref 存在（checkout 默认只检出当前分支）。
+      - name: Go 增量覆盖率门禁（check-go-diff-coverage）
+        shell: pwsh
+        run: |
+          git fetch origin main --depth=1 2>$null
+          node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配缓存则每次冷跑，缓存命中 10-30s。
       - name: 缓存 golangci-lint 分析结果（命中免重分析）
         uses: actions/cache@v5.1.0

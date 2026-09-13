@@ -8,12 +8,8 @@ import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
-
-interface DragStateShell {
-  srcIdx: number;
-  presetSrcIdx: number;
-}
 
 interface FilterStateShell {
   activeTag: string;
@@ -50,13 +46,7 @@ function eeSyncAllEditInputs(
     });
 }
 
-function eeClearDragState(searchResults: HTMLElement, ds: DragStateShell): void {
-  ds.srcIdx = -1;
-  ds.presetSrcIdx = -1;
-  searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
-    c.classList.remove("cr-dragging", "cr-drag-target", "cr-drag-before", "cr-drag-after");
-  });
-}
+// 清理拖拽视觉态 + 复位双 src 键的逻辑已随双胞胎块收编进 edit-drag.ts|bindDragSort（dragend 内联）
 
 function eeApplyFilters(
   searchResults: HTMLElement,
@@ -324,93 +314,25 @@ function eeBindCreatorsDrag(
   ds: DragStateShell,
   sig: AbortSignal,
 ): void {
-  const { searchResults, creators, allCreators, site } = state;
-
-  searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset'])").forEach((card) => {
-    const handle = card.querySelector(".cr-drag-handle");
-    if (!handle) return;
-    handle.addEventListener(
-      "pointerdown",
-      () => {
-        (card as HTMLElement).draggable = true;
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragstart",
-      (e: Event) => {
-        const de = e as DragEvent;
-        (card as HTMLElement).draggable = false;
-        ds.srcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-        card.classList.add("cr-dragging");
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        de.dataTransfer!.effectAllowed = "move";
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        de.dataTransfer!.setData("text/plain", "");
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragend",
-      () => {
-        (card as HTMLElement).draggable = false;
-        eeClearDragState(searchResults, ds);
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragover",
-      (e: Event) => {
-        e.preventDefault();
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        (e as DragEvent).dataTransfer!.dropEffect = "move";
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragenter",
-      (e) => {
-        e.preventDefault();
-        card.classList.add("cr-drag-target");
-        if (ds.srcIdx >= 0) {
-          const tgt = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-          if (ds.srcIdx < tgt) {
-            card.classList.add("cr-drag-before");
-          } else if (ds.srcIdx > tgt) {
-            card.classList.add("cr-drag-after");
-          }
-        }
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragleave",
-      () => {
-        card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "drop",
-      (e) => {
-        e.preventDefault();
-        card.classList.remove("cr-drag-target");
-        const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-        if (ds.srcIdx < 0 || ds.srcIdx === targetIdx) return;
-        eeSyncAllEditInputs(searchResults, creators, site);
-        const src = creators[ds.srcIdx];
-        const realSrc = allCreators.indexOf(src);
-        const realTgt = allCreators.indexOf(creators[targetIdx]);
-        if (realSrc < 0 || realTgt < 0) {
-          ds.srcIdx = -1;
-          return;
-        }
-        moveItemMut(allCreators, realSrc, realTgt);
-        ds.srcIdx = -1;
-        refreshView();
-      },
-      { signal: sig },
-    );
+  const { searchResults, creators, allCreators } = state;
+  // 拖拽排序事件统一走 bindDragSort（原 ~90 行双胞胎块去重，2026-09）；
+  // creators 组经 allCreators 真实索引换算后移动（编辑过滤视图 → 全量列表的索引映射）
+  bindDragSort({
+    root: searchResults,
+    selector: ".cr-edit-card:not([data-edit='preset'])",
+    ds,
+    srcKey: "srcIdx",
+    sig,
+    syncInputs: () => eeSyncAllEditInputs(searchResults, creators, state.site),
+    commit: (srcIdx, targetIdx) => {
+      const src = creators[srcIdx];
+      const realSrc = allCreators.indexOf(src);
+      const realTgt = allCreators.indexOf(creators[targetIdx]);
+      if (realSrc < 0 || realTgt < 0) return false;
+      moveItemMut(allCreators, realSrc, realTgt);
+      return true;
+    },
+    refreshView,
   });
 }
 
@@ -482,85 +404,20 @@ function eeBindPresetsDrag(
   sig: AbortSignal,
 ): void {
   const { searchResults, site, creators } = state;
-
-  searchResults.querySelectorAll(".cr-edit-card[data-edit='preset']").forEach((card) => {
-    const handle = card.querySelector(".cr-drag-handle");
-    if (!handle) return;
-    handle.addEventListener(
-      "pointerdown",
-      () => {
-        (card as HTMLElement).draggable = true;
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragstart",
-      (e: Event) => {
-        const de = e as DragEvent;
-        (card as HTMLElement).draggable = false;
-        ds.presetSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-        card.classList.add("cr-dragging");
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        de.dataTransfer!.effectAllowed = "move";
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        de.dataTransfer!.setData("text/plain", "");
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragend",
-      () => {
-        (card as HTMLElement).draggable = false;
-        eeClearDragState(searchResults, ds);
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragover",
-      (e: Event) => {
-        e.preventDefault();
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        (e as DragEvent).dataTransfer!.dropEffect = "move";
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragenter",
-      (e) => {
-        e.preventDefault();
-        card.classList.add("cr-drag-target");
-        if (ds.presetSrcIdx >= 0) {
-          const tgt = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-          if (ds.presetSrcIdx < tgt) {
-            card.classList.add("cr-drag-before");
-          } else if (ds.presetSrcIdx > tgt) {
-            card.classList.add("cr-drag-after");
-          }
-        }
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "dragleave",
-      () => {
-        card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
-      },
-      { signal: sig },
-    );
-    card.addEventListener(
-      "drop",
-      (e) => {
-        e.preventDefault();
-        card.classList.remove("cr-drag-target");
-        const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
-        if (ds.presetSrcIdx < 0 || ds.presetSrcIdx === targetIdx || !site.presetSearches) return;
-        eeSyncAllEditInputs(searchResults, creators, site);
-        moveItemMut(site.presetSearches, ds.presetSrcIdx, targetIdx);
-        ds.presetSrcIdx = -1;
-        refreshView();
-      },
-      { signal: sig },
-    );
+  // presets 组：presetSearches 就地按编辑视图索引移动（无 allCreators 间接层）
+  bindDragSort({
+    root: searchResults,
+    selector: ".cr-edit-card[data-edit='preset']",
+    ds,
+    srcKey: "presetSrcIdx",
+    sig,
+    syncInputs: () => eeSyncAllEditInputs(searchResults, creators, site),
+    commit: (srcIdx, targetIdx) => {
+      if (!site.presetSearches) return false;
+      moveItemMut(site.presetSearches, srcIdx, targetIdx);
+      return true;
+    },
+    refreshView,
   });
 }
 

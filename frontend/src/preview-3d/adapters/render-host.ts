@@ -198,7 +198,7 @@ export class RendererHost {
     this._lastTime = now;
     // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
     for (const c of getSceneCaps()) c.update?.(dt);
-    // P0 修复：每帧从动态活跃输入会话读取 keys/camSpeed/orbitMode，不再闭包捕获首个 session
+    // 每帧从动态活跃输入会话读取 keys/camSpeed/orbitMode，不再闭包捕获首个 session
     const activeInput = this._activeInputSession;
     if (activeInput) {
       applyWasdCameraMotion(
@@ -245,7 +245,7 @@ export class RendererHost {
       this._adaptiveBudget,
       now,
       interval,
-      // GPU 高位输入（2026 锐评 P2）：单看 CPU 帧时会漏掉「主线程提交快、GPU 已排队」
+      // 单看 CPU 帧时会漏掉「主线程提交快、GPU 已排队」
       // 的饱和态；传入后 GPU 高位即使帧时正常也预防性降一档（读 info 无副作用）。
       sampleGpuLoad(infra.renderer),
     );

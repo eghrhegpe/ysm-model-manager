@@ -46,7 +46,7 @@ export function loadTdKeymap(): Record<TdKeyAction, string> {
 
 /** 相机移动速度（2–200），默认 20 */
 export function loadTdCamSpeed(): number {
-  // P3 修复（审核）：裸调改 safeGet——隐私模式降级 null → Number(null)=0 → 回退 20
+  // 裸调改 safeGet——隐私模式降级 null → Number(null)=0 → 回退 20
   const v = Number(safeGet(TD_CAMSPEED_KEY));
   return Number.isFinite(v) && v >= 2 && v <= 200 ? v : 20;
 }

@@ -399,7 +399,7 @@ export class GroundCapability implements SceneCapability {
   loadState(): void {
     let state = restoreState(this.id);
     if (!state) return;
-    // code_review df84baefb #13（P2）：legacy 旧键迁移——ADR-196 前 ground 持久化为
+    // legacy 旧键迁移——ADR-196 前 ground 持久化为
     // {visible, size, divisions, colorCenter, colorGrid, matSource, matColor...}
     // （无 ground 前缀），迁移后只读前缀键且 migrateEnvState 空透传 → 升级用户的
     // 网格尺寸/线色/材质源设置静默回默认。判据用 groundSize（saveState 恒写前缀
@@ -455,7 +455,7 @@ export class GroundCapability implements SceneCapability {
         },
       },
       groundVisible: {
-        // code_review df84baefb #4/#12（P2）：改走 setVisible——原绑定只写 envState，
+        // 改走 setVisible——原绑定只写 envState，
         // env 回调 changed 键集不含 groundVisible → grid.visible 停在构造默认 true，
         // 「隐藏地面」存档重启后网格重现（半隐形地面：surface 隐藏 grid 仍显示）
         boolean: (v) => this.setVisible(v),

@@ -127,7 +127,7 @@ export function capControlsToNodes(controls: PreviewControlDef[]): PreviewMenuNo
           // 复杂控件：controls 通道（节点树内嵌 PreviewControlDef 数组）
           id: `cap-${c.id}`,
           kind: "controls" as const,
-          // code_review ADR-195 #1（P2）：剥掉 group——同 group 复杂控件已被外部
+          // 剥掉 group——同 group 复杂控件已被外部
           // folder 承载折叠语义，若原样保留 c.group，renderCapControls 的
           // ensureCapSection 会在 folder body 内再建同名 .cap-section 节头
           // （folder 头 + 内嵌 N 个重复节头 + 双折叠壳的可见回归，env 的

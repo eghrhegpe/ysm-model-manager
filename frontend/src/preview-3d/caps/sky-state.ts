@@ -1,5 +1,5 @@
 // ===== 天空能力状态/序列化层（拆轴自 sky-capability.ts）=====
-// 锐评收口：sky-capability.ts 原 942 行「薄封装」实际混装了状态定义与 Three 节点装配。
+// sky-capability.ts 原 942 行「薄封装」实际混装了状态定义与 Three 节点装配。
 // 本文件收敛「纯数据 + 纯类型」轴（SkyParams / 默认值 / 模型预设），零 THREE 依赖、
 // 无顶层副作用，可被测试独立 import；sky-capability.ts 保留 Sky 节点装配 / shader
 // patch / God Rays / tone mapping 等渲染轴，仅 import 本文件的状态符号。

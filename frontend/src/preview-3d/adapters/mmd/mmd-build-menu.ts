@@ -71,7 +71,7 @@ export function Stage5Menu(c: Stage5Ctx): {
   const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
   // 能力声明：caps 从真实构造派生（非硬编码清单）——骨骼驱动模块（呼吸/注视/律动）
   // 需语义骨骼、morph 驱动模块（眨眼/口型）需语义 morph，缺失时不显示死开关（菜单不谎报）。
-  // code_review ADR-195 #8：按语义族分别门控——语义 morph 表按族分键，聚合布尔
+  // 按语义族分别门控——语义 morph 表按族分键，聚合布尔
   // `Object.keys().length > 0` 会在「仅 lip 系」模型上显示无驱动的死 blink 开关
   // （反之仅 blink 显示死 lipSync）；与 mmd-build-result.ts 应用分支口径一致
   // （blink 应用要求 semanticMorphs.blink、lipSync 应用要求 lipIndices 非空）

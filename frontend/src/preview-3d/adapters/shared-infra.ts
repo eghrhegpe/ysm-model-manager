@@ -151,7 +151,6 @@ export class SceneInfraHost {
     if (this.renderer) {
       const r = this.renderer;
       r.dispose();
-      // dispose 后强制释放上下文，避免延迟到 GC（对齐 screenshot-render.ts P3 修复）
       r.forceContextLoss?.();
       r.domElement.remove();
       this.renderer = null;

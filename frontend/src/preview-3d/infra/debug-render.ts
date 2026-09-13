@@ -75,7 +75,7 @@ export function rebuildDebug(
   state.debugGroup = new THREE.Group();
   scene.add(state.debugGroup);
 
-  // P1 修复（拆分回归）：获取世界坐标前必须先 updateMatrixWorld——
+  // 获取世界坐标前必须先 updateMatrixWorld——
   // 拆分时丢失该调用，骨骼 Group 的 world matrix 是上次渲染的陈旧值，
   // pivot/bone 模式下标签与坐标线全部错位（原 renderModel3D 内联版有此调用）
   rootGroup.updateMatrixWorld(true);

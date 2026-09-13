@@ -1027,6 +1027,8 @@ export const zhCN = {
 
   // ── 预览 ──
   "preview.title3d": "3D 预览",
+  "preview.controlsHint": "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭",
+  "preview.sceneModelLimit": "同场景模型已达上限（{max}），无法继续追加",
   "preview.noEnvironment": "进入 3D 后再打开环境面板",
   "preview.roleNoMotion": "（该角色无可播放动作）",
   "preview.unloadModel": "卸载模型",

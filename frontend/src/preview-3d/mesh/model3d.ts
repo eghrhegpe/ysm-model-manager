@@ -71,7 +71,7 @@ export interface BoneMaps {
   childrenMap: Map<string, string[]>;
 }
 
-// P1 修复（ADR-040）：键位/相机偏好 re-export 兼容
+// 键位/相机偏好 re-export 兼容
 export type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 export {
   DEFAULT_TD_KEYMAP,

@@ -127,14 +127,14 @@ export function createIconButton(opts: IconButtonOpts): HTMLButtonElement {
   if (opts.icon) {
     const ic = document.createElement("span");
     ic.className = "preview-ic";
-    // code_review 4014c3d57 #4（P3）：CSS 类形态须在白名单内——原只验标识符正则，
+    // CSS 类形态须在白名单内——原只验标识符正则，
     // typo（"camera"）或未来加了代码没加 CSS 的图标类会静默渲染空白按钮（防误渲染
     // 保证被 class 路径绕过）；非白名单降级 textContent（与「非纯类名字符串 icon →
     // 降级」防线一致）。白名单 = YSW_FAB_CSS 的 .preview-ic--* glyph 规则集
     const KNOWN_ICON_CLASSES = new Set(["cam", "rot", "close", "panel-hide", "panel-show"]);
     if (/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(opts.icon) && KNOWN_ICON_CLASSES.has(opts.icon)) {
       // CSS class name form: match preview-ic-{name} rule in YSW_FAB_CSS
-      // code_review 4014c3d57 #1（P3）：preview-ic 已由上方 className 设置——重复 add 是 no-op
+      // preview-ic 已由上方 className 设置——重复 add 是 no-op
       ic.classList.add(`preview-ic--${opts.icon}`);
     } else {
       // Unicode emoji form（或未知类名——降级为可见字符防空白按钮）

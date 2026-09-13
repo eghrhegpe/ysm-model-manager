@@ -49,7 +49,7 @@ function buildStdYsgpFromTextVariant(bytes: Uint8Array, forceVer?: number): Uint
   // （与 Go 端 header.go scanHeader 同口径）：
   //   - `===` 行终止当前节（header.go:73-74）
   //   - 连续 `---`（无 `[`，≥10 字符）分隔行后即二进制数据（header.go:76-85）
-  // P2 修复（审核反推）：原 regex 用 `(?:<\/ysm>|...|>)\s*$` 在解码文本上找闭合标签，
+  // 原 regex 用 `(?:<\/ysm>|...|>)\s*$` 在解码文本上找闭合标签，
   // 要求标签后至 EOF 仅剩空白——但变体是文本头后紧跟二进制数据，`\s*$` 永不命中，
   // dataStart 落回 3（BOM 后），V2 重建时把整个文本头拼进加密载荷（payload 污染，
   // 解密产物错位）。用 Latin1 视图做字节级正则（1 字节=1 码位），索引直接映射回字节偏移。
@@ -75,7 +75,7 @@ function buildStdYsgpFromTextVariant(bytes: Uint8Array, forceVer?: number): Uint
     if (dataStart === 3) return null;
   }
 
-  // P2 修复：guard 放宽——原 `bytes.length - 20` 会把「V2 16B hash 区 + 少量加密数据」
+  // guard 放宽——原 `bytes.length - 20` 会把「V2 16B hash 区 + 少量加密数据」
   // 的短变体误判为无载荷而原样返回（dataStart == length-20 恰好等于阈值）。
   // 改为要求闭合标记后至少剩 16B（V2 hash 区）+ 1B 加密数据。
   if (dataStart < 0 || dataStart >= bytes.length - 16) return null;

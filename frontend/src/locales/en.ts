@@ -1044,6 +1044,8 @@ export const en: Record<string, string> = {
 
   // ── Preview ──
   "preview.title3d": "3D Preview",
+  "preview.controlsHint": "WASD move · Space/Shift up-down · drag rotate · scroll zoom · ESC close",
+  "preview.sceneModelLimit": "Scene model limit reached ({max}); cannot append more",
   "preview.noEnvironment": "Open the environment panel after entering 3D",
   "preview.roleNoMotion": "(No motions available for this model)",
   "preview.unloadModel": "Unload Model",

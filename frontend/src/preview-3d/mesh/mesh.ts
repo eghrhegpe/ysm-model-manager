@@ -88,7 +88,7 @@ export function buildSceneMesh(spec: Spec3D): {
     for (const bd of mg.bones || []) {
       const g = boneGroupMap.get(compKey(mi, bd.id));
       if (!g) continue;
-      // P1 修复（审核，父链环崩溃）：self 父/环边在 Three.js 中构成场景图环——
+      // self 父/环边在 Three.js 中构成场景图环——
       // updateMatrixWorld 首次遍历即无限递归 RangeError（Three.js 只拦截 object===this
       // 的 self 环，不拦截 A↔B 互指）。Go spec.go 的 ParentID 直透不校验环，此处兜底：
       // self 边拒绝；A↔B 互指通过「已挂父的节点不再重复挂」的 visited 语义跳过环边。

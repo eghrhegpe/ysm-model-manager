@@ -734,7 +734,6 @@ export interface VrmMenuItemsOpts {
     /** 兼容真实 ctx 可选字段（undefined）与测试假依赖（null） */
     camera: THREE.PerspectiveCamera | null | undefined;
     scene: THREE.Object3D | null | undefined;
-    // BonePanelCleanupRef 统一类型（code_review d6de20d2 #10，与 mmd/ysm/fbx 一致）
     cleanupRef: BonePanelCleanupRef;
   };
   /** VRM 材质桥：vrm.scene 遍历的 Mesh.material 列表（与 MMD MaterialControlBridge 对齐）*/

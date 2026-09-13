@@ -62,7 +62,7 @@ function rebuildEnvSubs(caps: SceneCapability[], menu: SlideMenuHandle): void {
 export function disposeEnvSubscriptions(): void {
   for (const u of _envCapUnsubs) u();
   _envCapUnsubs = [];
-  // code_review bc639ae0 #6/#7/#8：重置预设 select 模块缓存——cap 真值源在
+  // 重置预设 select 模块缓存——cap 真值源在
   // environment cap 的 params.preset，本变量仅作无 cap 时的回退，跨会话残留
   // 会让新会话 select 显示上一会话的选中态
   _lastEnvPreset = "studio";
@@ -176,7 +176,7 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
     ...(master?.control?.get
       ? {
           headerToggle: {
-            // code_review 3d17dd0e3 #2/#4：PreviewControlSpec 无 control.value 字段
+            // PreviewControlSpec 无 control.value 字段
             // （静态值在节点级 PreviewMenuNode.value）——原 (control as any).value
             // 分支不可达 + 违反禁 any 规则；master 节点恒带 control.get（toggle 契约），
             // 门控 get 即取真值源
@@ -253,7 +253,7 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
           value: p.id,
           label: `${p.icon} ${tOf(p.labelKey)}`,
         })),
-        // code_review bc639ae0 #6/#7/#8：显示值读 environment cap 实际 preset
+        // 显示值读 environment cap 实际 preset
         // （applyPreset/预设 thumb/loadState 都经 envCap.setPresetId 写 params.preset，
         // 是单一真值源）——旧实现只读 _lastEnvPreset 模块级 last-write 缓存，
         // 其它路径改 preset 后 select 显示 stale 值误导；custom（自定义 HDR）

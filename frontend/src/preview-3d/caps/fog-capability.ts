@@ -82,7 +82,7 @@ export class FogCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    // code_review df84baefb #2/#10（P1）：master toggle（fog-menu.ts set: cap.setEnabled）
+    // master toggle（fog-menu.ts set: cap.setEnabled）
     // 必须打通 envState.fogEnabled gate——createFog 的 `!envState.fogEnabled` 使旧实现
     // toggle ON 后 scene.fog 仍 null（fogEnabled 唯一写者 setEnabledFog 无生产调用方）。
     // setEnvState 同步 dispatch → env 回调（changed.has("fogEnabled")）applyFog 一次。

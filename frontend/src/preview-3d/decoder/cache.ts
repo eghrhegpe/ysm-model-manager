@@ -52,7 +52,7 @@ export function collectBlobUrls(v: CacheValue | undefined): Set<string> {
   if (geo?.texture?.startsWith("blob:")) s.add(geo.texture);
   if (v.texture?.startsWith("blob:")) s.add(v.texture);
   for (const au of v.authors || []) {
-    // P3 修复：`typeof au === "object"` 对 null 同为 true → authors 含 null 时
+    // `typeof au === "object"` 对 null 同为 true → authors 含 null 时
     // `au.avatarUrl` 抛 TypeError；补 `&& au !== null` 显式排除
     const url = typeof au === "object" && au !== null ? au.avatarUrl : undefined;
     if (url?.startsWith("blob:")) s.add(url);

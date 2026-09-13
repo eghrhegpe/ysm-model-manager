@@ -348,7 +348,7 @@ function parseUV(
     if (parseFaceUV(c.faceUV, faces, texW, texH)) {
       return true;
     }
-    // P3 修复：parseFaceUV 失败，若 c.UV 存在则回退 expandBoxUV
+    // parseFaceUV 失败，若 c.UV 存在则回退 expandBoxUV
     if (c.uv.length >= 2) {
       return expandBoxUV(c.uv, sx, sy, sz, texW, texH, faces);
     }
@@ -392,7 +392,7 @@ function expandBoxUV(
   texH: number,
   faces: [number, number, number, number, number, number, number, number][],
 ): boolean {
-  // P3 修复：texW/texH ≤ 0 守卫
+  // texW/texH ≤ 0 守卫
   if (texW <= 0 || texH <= 0) return false;
   const u = uv[0];
   const v = uv[1];
@@ -445,7 +445,7 @@ function parseFaceUV(
       fw = fd.uv_size[0];
       fh = fd.uv_size[1];
     }
-    // P3 修复：与 expandBoxUV 的守卫对齐——texW/texH ≤ 0 时除零
+    // 与 expandBoxUV 的守卫对齐——texW/texH ≤ 0 时除零
     if (texW <= 0 || texH <= 0) return false;
 
     const u0 = fu / texW;

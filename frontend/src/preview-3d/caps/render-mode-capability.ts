@@ -239,7 +239,7 @@ export class RenderModeCapability implements SceneCapability {
   loadState(): void {
     const s = restoreState(this.id);
     if (!s) return;
-    // code_review 9fe958249 #9（P3 conf 0.40）：5 次条件 setEnvState 合并为单次
+    // 5 次条件 setEnvState 合并为单次
     // dispatch——逐字段各调一次会跑 5 遍全场景材质遍历（回调 sync）+ 5 次派发到
     // 所有已注册 cap 回调；合并 partial 后回调单次 sync 即覆盖全部字段，行为不变
     const partial: Record<string, number | boolean | null> = {};

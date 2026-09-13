@@ -414,7 +414,6 @@ export class LightCapability implements SceneCapability {
     }
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
     // ADR-196：统一数据源 MODEL_DEFAULTS，表驱动挑选 light 相关键写入 envState
-    //（与其余 5 cap 同款 pickModelDefaultFields——锐评 §一「两套写法并存」断层收口）。
     // ambient 排除（测试契约「ambient 不在合并范围，保留」）：键表刻意不含
     // lightAmbientColor/Intensity，切模型不静默重置用户 ambient 微调。
     const picked = pickModelDefaultFields(modelType, [

@@ -74,7 +74,7 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   skySunDiscScale: 0.5,
   skyForceEnv: true,
   // --- fog (来自 FOG_PRESETS.default = 空 → 不写任何 fog 键，不打扰用户已开雾) ---
-  // code_review f0b1449f7 #2：default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
+  // default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
   // --- environment ---
   envPreset: "sky",
   envIntensity: 1.0,

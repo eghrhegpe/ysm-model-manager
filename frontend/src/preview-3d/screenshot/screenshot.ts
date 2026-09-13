@@ -6,7 +6,7 @@
 // 关键约束：
 //   - render(scene, camera) 后须在同一同步任务内 toDataURL——canvas 缓冲在
 //     下一帧/await 后被清空，preserveDrawingBuffer 在 r185 已不可运行时切换
-//     （P0 修复：getPreserveDrawingBuffer/setPreserveDrawingBuffer 是幽灵 API）
+// getPreserveDrawingBuffer/setPreserveDrawingBuffer 是幽灵 API）
 //   - 调用前后 renderer 尺寸可能变化 → 用 render(target, camera) 后再 toDataURL
 //   - 空场景（未渲染过、canvas 未就绪）→ 返回 null，不抛
 import * as THREE from "three";

@@ -165,7 +165,7 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   }
   const g = raw["minecraft:geometry"][0];
   const desc = g.description;
-  // P2 修复：texture_width/height 钳到 [0, MAX_TEX_DIM]（越界置 0）
+  // texture_width/height 钳到 [0, MAX_TEX_DIM]（越界置 0）
   let texW = clampToInt(desc.texture_width);
   let texH = clampToInt(desc.texture_height);
   if (texW < 0 || texW > MAX_TEX_DIM) texW = 0;

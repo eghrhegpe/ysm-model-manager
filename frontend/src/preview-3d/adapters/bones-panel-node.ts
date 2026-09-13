@@ -68,7 +68,7 @@ export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
     renderCustom: (list): (() => void) | void => {
       // 空守卫：核心未填充时不渲染（mmd 写法统一——4 个 adapter 共用同一守卫语义）
       if (!opts.viewContainer || !opts.camera || !opts.scene) return;
-      // code_review 4ac2b4f72 #1/#3：写新 cleanup 前先摘旧——面板 close→reopen 每次导航
+      // 写新 cleanup 前先摘旧——面板 close→reopen 每次导航
       // 建新 list 容器，runCustomMount 的按容器键控（customCleanups.get(container)）永远
       // miss 旧容器，旧 viewContainer raycaster listener 永不摘除、N 次开合累计 N 个。
       // cleanupRef 是模型级单槽（元素无关），每次挂载先调旧再置新 → 同模型最多 1 listener；

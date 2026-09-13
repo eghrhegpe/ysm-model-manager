@@ -77,7 +77,6 @@ export function buildRolesSchema(
         onClick: () => {
           sceneRegistry.setActive(e.id);
           // setActive 仅在 menuItems truthy 时经 menuSink 换菜单；无专属项的角色
-          // 需显式清空 dock 适配器项，避免残留上一角色的菜单（code_review P2）
           if (!e.menuItems) deps.setAdapterItems([]);
           deps.menu.refresh(); // 重跑 builder：active 态/列表即时跟随
         },

@@ -112,7 +112,7 @@ export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecod
         pending.delete(id);
         entry.resolve({ id, ok: false, error: "Worker 崩溃", relPath: "", width: 0, height: 0 });
       }
-      // code_review ece0d4a4 #4/#5：崩溃 worker 名下已超时的任务（terminate 后消息
+      // 崩溃 worker 名下已超时的任务（terminate 后消息
       // 队列丢弃，迟到 response 永不抵达）——立即清除，防共享单例 Set 无限膨胀
       for (const [id, owner] of [...timedOutIds]) {
         if (owner === w) timedOutIds.delete(id);
@@ -165,7 +165,6 @@ export function createTextureDecoder(config: TexDecodeConfig = {}): TextureDecod
         const timer = setTimeout(() => {
           // 超时：静默跳过（主线程 fallback 会覆盖）；登记待清理 id + 归属 worker，
           // 防 worker 迟到 response 携带的 ImageBitmap 无人 close 泄漏 GPU 显存；
-          // 崩溃 worker 名下条目由 onerror 一并清除（code_review ece0d4a4 #4/#5）
           pending.delete(id);
           timedOutIds.set(id, w);
           completed++;
@@ -309,9 +308,9 @@ export function applyWorkerDecodedTextures(
       if (decodedTex) {
         const newTex = new THREE.Texture(decodedTex.bitmap);
         newTex.colorSpace = THREE.SRGBColorSpace;
-        // P2 修复（审计 Unit 3）：ImageBitmap 已按正确方向解码，flipY=true 会上下翻转
+        // ImageBitmap 已按正确方向解码，flipY=true 会上下翻转
         newTex.flipY = false;
-        // P1/P2 修复（审计 Unit 3）：three Texture.dispose() 不关闭 ImageBitmap → GPU 位图泄漏。
+        // three Texture.dispose() 不关闭 ImageBitmap → GPU 位图泄漏。
         // 同一 relPath 可能被多纹理共享（map/emissiveMap 等），引用计数归零才 close——
         // 否则一个纹理释放会误伤仍在用的共享位图。
         decodedTex.refCount++;
@@ -365,7 +364,7 @@ export function applyWorkerDecodedTextures(
       newTex.offset = tex.offset;
       newTex.center = tex.center;
       newTex.rotation = tex.rotation;
-      // P2 修复（审计 Unit 3）：不再复制旧 flipY（ImageElement 默认 true）——
+      // 不再复制旧 flipY（ImageElement 默认 true）——
       // ImageBitmap 已按正确方向解码，flipY=true 会上下翻转
       newTex.flipY = false;
       newTex.generateMipmaps = tex.generateMipmaps;
@@ -375,7 +374,7 @@ export function applyWorkerDecodedTextures(
       newTex.format = tex.format;
       newTex.type = tex.type;
       newTex.colorSpace = tex.colorSpace;
-      // P1/P2 修复（审计 Unit 3）：纹理释放时 close ImageBitmap，防 GPU 位图泄漏；
+      // 纹理释放时 close ImageBitmap，防 GPU 位图泄漏；
       // 引用计数归零才 close（共享位图防误伤）
       decodedTex.refCount++;
       newTex.addEventListener("dispose", () => {

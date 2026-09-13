@@ -261,7 +261,7 @@ export function runFullCleanup(ctx: MountCtx): void {
     const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
     for (const c of stale) infra.scene.remove(c);
   }
-  // P0 修复：dispose 前先按 content 匹配定位本会话注册的 entry——
+  // dispose 前先按 content 匹配定位本会话注册的 entry——
   // 不能在 allContent 清空后再找（数组已空，filter 全 miss）。
   const myIds = sceneRegistry
     .getAll()
@@ -271,15 +271,14 @@ export function runFullCleanup(ctx: MountCtx): void {
     safeDispose(b);
   }
   session.allContent.length = 0;
-  // P0 修复：本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
+  // 本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
   for (const id of myIds) sceneRegistry.unregister(id);
-  // code_review ece0d4a4 #1/#11 ghost 清扫：选择性注销只覆盖「仍在 allContent 的 entry」——
+  // 选择性注销只覆盖「仍在 allContent 的 entry」——
   // mid-session 被 dispose（keep→非 keep 切换 pushSwitchHistory dispose 旧内容并移出
   // allContent、但从不 unregister，switch-preview 注释自认「残留由下次 mount 的 reset
   // 兜底」）的 ghost entry 不在 myIds，会在会话关闭后滞留——count() 虚高误触 MAX_MODELS
   // 上限 / 陈旧 roots 参与取景 / objToEntry 映射已释放对象。本会话是最后一个存活会话时
   // 整体 reset 兜底（还原旧 close-time sweep 语义）；coop 尚有其它会话则保留选择性注销
-  //（不误伤他人——原 reset 正是在此多会话场景被本 P0 修复替换掉的原因）
   if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
     sceneRegistry.reset();
   }
@@ -296,7 +295,7 @@ export function runFullCleanup(ctx: MountCtx): void {
   clearModelRoots();
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
-  // P0 修复：本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）
+  // 本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）
   unregisterActiveInputSession(session);
   // 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
   finishSession(ctx);

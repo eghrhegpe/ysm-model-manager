@@ -9,6 +9,7 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
@@ -103,7 +104,6 @@ export async function switchToSession(
   options?: { keepInScene?: boolean },
 ): Promise<void> {
   const keep = options?.keepInScene === true;
-  // 入口守卫 + inFlight 置位（r12 P1 并发抑制 / P3-2 空路径 / ADR-093 T6 超量拦截）
   if (!beginSwitch(ctx, newPath, keep)) return;
 
   // 清理旧内容层 + 重建新内容层（build 失败进 recoverSwitchFailure 恢复并 return null）
@@ -151,7 +151,7 @@ export async function switchToSession(
  */
 function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolean {
   if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) return false;
-  // r12 P1：并发切换抑制——已在切换中直接丢弃后续请求，避免重复 build 浪费 GPU + sceneRegistry 短暂不一致
+  // 并发切换抑制——已在切换中直接丢弃后续请求，避免重复 build 浪费 GPU + sceneRegistry 短暂不一致
   if (ctx.inFlight) return false;
   // P3-2：空路径守卫——空路径会触发 adapter.build(ctx, "") 加载未定义内容
   if (!newPath?.trim()) return false;
@@ -160,13 +160,13 @@ function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolea
   //（code review P1：其他 early-return 路径都重置了，此守卫曾漏——r12 竞态抑制后成死锁）
   if (keep && sceneRegistry.count() >= MAX_MODELS) {
     bus.emit("toast:show", {
-      msg: `同场景模型已达上限（${MAX_MODELS}），无法继续追加`,
+      msg: t("preview.sceneModelLimit", { max: MAX_MODELS.toLocaleString() }),
       duration: TOAST_MS.verbose,
       type: "warn",
     });
     return false;
   }
-  // 2026 锐评刀⑩：GPU 负载预算（审计卡共识榜 #3「MAX_MODELS 是计数非预算」的实测信号版）——
+  // GPU 负载预算（审计卡共识榜 #3「MAX_MODELS 是计数非预算」的实测信号版）——
   // 计数未超但上一帧 draw calls/三角面/纹理数/纹理字节已超预算 → 追加只会让卡死更卡。
   // 与 MAX_MODELS 同约定：必须在 inFlight 置位前判（命中即 return，不卡死 inFlight）。
   // 判定 + 文案收在 gpu-budget|guardGpuBudget（与 mount3D 直挂路径共用同一道门）。
@@ -215,7 +215,7 @@ async function buildSwitchContent(
   beforeBuild: Set<THREE.Object3D> | null,
 ): Promise<PreviewScene | null> {
   try {
-    // P0 修复：switchTo 闭包经 ownHandle 按 gen 查找自身 handle（gen 随 ctx 读取），
+    // switchTo 闭包经 ownHandle 按 gen 查找自身 handle（gen 随 ctx 读取），
     // 不取 handles 数组末尾，避免多 session 下同框 session 互踩。
     const buildCtx: PreviewBuildCtx = {
       viewContainer: ctx.viewContainer,
@@ -227,7 +227,7 @@ async function buildSwitchContent(
       // 导致每次会话内 pack select 只能生效一次，重建后第二次点击静默 no-op；
       // 无活跃会话时 no-op（与 switchPreview 同口径）。
       switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> =>
-        // 2026 锐评 P1：gen-scoped 查找收敛到 ownHandle（与 mount3D 各调用点同语义）
+        // gen-scoped 查找收敛到 ownHandle（与 mount3D 各调用点同语义）
         ownHandle(ctx)?.switchTo?.(p, options) ??
         ctx.getHandle()?.switchTo?.(p, options) ??
         Promise.resolve(),
@@ -265,7 +265,7 @@ function recoverSwitchFailure(
     return;
   }
   logError("preview 3D", "切换失败", e);
-  // P1 修复（审核 ADR-109 Checklist）：build 失败后旧内容层已 dispose（上方清除段）
+  // build 失败后旧内容层已 dispose（上方清除段）
   // 但 perFrame 回调仍指向已 dispose 的 update → rAF 每帧驱动已释放对象；
   // sceneRegistry 残留旧 entry → count 虚高（误触 MAX_MODELS）+ visibleRoots 含
   // detached root（取景幽灵）；allContent 残留已释放引用（GPU 资源孤儿泄漏）
@@ -358,7 +358,6 @@ function registerSwitchScene(
 ): PreviewMenuNode[] {
   if (beforeBuild) {
     // 差量捕获→统计合并→注册：与 mount 初载共用 register-built-scene.ts 单一实现
-    // （锐评 P1-2 收敛；ADR-131 P1 统计面板 / ADR-093 T2 注册即置活跃）
     return registerBuiltScene({
       path: newPath,
       rtype: ctx.getCurrentRtype?.() ?? "",

@@ -73,7 +73,7 @@ export class WaterCapability implements SceneCapability {
           ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
             mode === "pool");
         if (needsRebuild) {
-          // code_review 9fe958249 #4（P3 conf 0.90）：rebuildWaterContainer 内部已
+          // rebuildWaterContainer 内部已
           // syncWaterVisibility（L323 由已更新的 envState 重算 visible）——此处重复
           // 调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
           this.rebuildWaterContainer(false);
@@ -632,7 +632,7 @@ export class WaterCapability implements SceneCapability {
   /** 从 localStorage 恢复状态 */
   loadState(): void {
     let state = restoreState(this.id) as Record<string, unknown> | null;
-    // code_review 9fe958249 #2/#3：legacy.water 解包后 state.water 不存在 → 下方
+    // legacy.water 解包后 state.water 不存在 → 下方
     // nested 判定误判 flat → 子域开关 enabled 不写 setWaterEnabled（envState.
     // waterEnabled 保持默认 true）——「用户关水」偏好升级后丢失，重开能力水面重现
     let fromNestedLegacy = false;

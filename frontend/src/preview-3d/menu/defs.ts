@@ -9,9 +9,9 @@
 
 import type { PreviewMenuGroupId, PreviewMenuNode } from "./node-types.ts";
 
-// [2026-09 锐评收口] PreviewMenuGroupId 已归位 node-types.ts（类型叶，单一事实源）；
 // 原位 re-export 保公共面——既有 import defs.ts 的消费方零改动。
 export type { PreviewMenuGroupId } from "./node-types.ts";
+// PreviewMenuGroupId 归位 node-types.ts（类型叶，单一事实源）；re-export 仅保旧消费方兼容。
 //
 // 能力驱动显示（用户 2026-08-16 决策 + 2026-08-19 环境拆组）：
 // - 有骨骼/模型工具（适配器注入 model 组项）→ 显示「🧍 模型」

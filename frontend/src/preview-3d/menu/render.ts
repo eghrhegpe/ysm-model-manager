@@ -193,7 +193,7 @@ export function clearFolderCollapsedState(): void {
 function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
   if (children.length === 0) return;
-  // code_review ADR-195 #4/#5：渲染 header 前预筛 visibleWhen（与 renderMenu 顶层
+  // 渲染 header 前预筛 visibleWhen（与 renderMenu 顶层
   // 循环同口径）——全隐组不再渲染空 folder 头。回归场景：water 水池组四控件全门控
   // `env.waterMode === "pool"`，film 模式下旧 renderCapControls 全隐组不建节头，
   // 桥接后 folder 无条件建 → 空「水池」folder 行误导用户。
@@ -558,7 +558,7 @@ function runCustomMount(
   render: (el: HTMLElement, close?: () => void) => (() => void) | void,
   closePopup?: () => void,
 ): void {
-  // code_review 4ac2b4f72 #1/#3：先清「容器已脱离文档」的陈旧条目——面板 close→reopen
+  // 先清「容器已脱离文档」的陈旧条目——面板 close→reopen
   // 每次导航建新 list 容器，旧容器已 disconnect，原 get(container) 键控永远 miss，
   // 旧 cleanup（骨骼面板 viewContainer raycaster listener）永不摘除、模块表残项
   // （废弃元素 + 闭包）驻留到会话 dispose。此扫清同时天然会话隔离：并行挂载会话

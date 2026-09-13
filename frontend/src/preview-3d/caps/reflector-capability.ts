@@ -160,7 +160,7 @@ export class ReflectorCapability implements SceneCapability {
 
   setEnabled(v: boolean): void {
     this.enabled = v;
-    // code_review df84baefb #3/#11（P1）：master toggle（reflector-menu.ts set:
+    // master toggle（reflector-menu.ts set:
     // cap.setEnabled）须打通 envState.reflectorEnabled gate——buildReflector 的
     // `!envState.reflectorEnabled` 使 toggle ON 后 mesh 永空（唯一写者
     // setEnabledReflector 无生产调用方）；legacy {enabled:true} 存档无该键同样

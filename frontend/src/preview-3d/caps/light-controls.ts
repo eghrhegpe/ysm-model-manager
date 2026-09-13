@@ -8,7 +8,7 @@ import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { LightCapability } from "./light-capability.ts";
 
-// code_review ADR-195 #5：共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
+// 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 const LIGHT_ENGINE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "cone", label: "锥形" },
   { value: "postprocess", label: "后处理" },

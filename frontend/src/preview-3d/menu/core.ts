@@ -248,7 +248,7 @@ export function buildPreviewMenuRouters(
   // ADR-193 §2.5 双注册合并：core 六面板统一注册进 schema-registry——
   // dualChannelDebt（schemaBuilders key ∉ fullRegistry）清零，coverage:full 的隐藏前置步。
   // 快照参数 core builder 不消费（内容走 ctx 闭包），透传 menu 兼容 settings/environment 两级菜单分支。
-  // code_review 8988145d #4/#5：注册记 owner wrapper（按挂载实例），注销前身份校验——
+  // 注册记 owner wrapper（按挂载实例），注销前身份校验——
   // 无条件删固定 key 会在重叠挂载时误删新会话条目（Bug-A 纪律，对齐 ysm-model-{sessionId} 范式）
   const coreSchemaOwners = new Map<CorePanelId, SchemaBuilder>();
   for (const id of CORE_PANEL_IDS) {
@@ -627,7 +627,7 @@ export function mountPreviewRootMenu(
       dock.remove();
       popup.remove();
       // renderCustom 逃生舱 cleanup（如骨骼面板的 viewContainer raycaster listener）——
-      // 菜单销毁即摘，防跨会话泄漏。code_review 4ac2b4f72 #2/#4/#5：须在 dock/popup
+      // 须在 dock/popup
       // remove 之后调用——disposeCustomCleanups 现只清「容器已脱离文档」的条目，
       // remove 后本会话面板容器均已离文档命中全清；并行挂载会话仍存活的面板
       // （isConnected=true）不被本会话误清（render.ts 注释的防御场景）

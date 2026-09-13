@@ -142,7 +142,6 @@ export class SunBeams {
   sync(elevation: number, azimuth: number): void {
     // disabled 分支：摘锥组 + 卸 tint（对齐旧 updateSunsetTint 的
     // `intensity===0 || !godRaysEnabled` 卸载分支——旧成对语义里 disabled 时
-    // tint 仍会被收口；原注释「等下一次 sync 收口」到不了判定即回归，code_review P2）
     if (!this.enabled || !this.group) {
       this.unmountCones();
       if (this.tintMesh?.parent) {

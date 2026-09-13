@@ -31,7 +31,7 @@ export function onOverlayStyleTargetReset(fn: () => void): void {
   _resets.push(fn);
 }
 
-// === 幂等样式注入收敛（P2 锐评：消除 7 处手写 _xxxStylesInjected + 注册样板）===
+// 消除 7 处手写 _xxxStylesInjected + 注册样板）===
 // 旧范式每处重复：模块级布尔旗标 + onOverlayStyleTargetReset 复位 + ensure 函数体。
 // 统一由本桥持有注入集合，目标切换时一次性清空重注入；调用方只传 (key, css)。
 const _injectedOnce = new Set<string>();

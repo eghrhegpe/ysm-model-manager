@@ -565,7 +565,6 @@ export class SkyCapability implements SceneCapability {
     this.beams.tick(dt);
     if (!this.autoRotateOn) return;
     // 昼夜循环每帧驱动 timeOfDay，PMREM 按太阳高度角阈值重建（callback 的 skyTimeOfDay
-    // 分支统一门控——锐评 P1 GPU 熔炉修复 + code_review #1/#14 force 语义）。
     // force 跳过 shouldOverwrite：autoRotate 推进是动画自身行为，用户拖过一次时间滑杆
     // （manual 写入）后 auto-model 写被永久拒绝 → 昼夜循环冻结；force 恢复推进语义。
     setEnvState(
@@ -763,7 +762,7 @@ export class SkyCapability implements SceneCapability {
     }
     // tone mapping 已由 detach()→releaseTone() 回滚，此处不再重复处理。
     // dispose 还原 scene.environment 到构造前状态（detach 仅 clearEnvironment 不还原 prev）。
-    // 守卫（锐评 P1 跨 cap 踩踏）：仅当当前 environment 仍归本能力所有（自建贴图或已被
+    // 仅当当前 environment 仍归本能力所有（自建贴图或已被
     // clearEnvironment 置 null）才还原——environment-capability（HDR）若在本能力之后写过
     // scene.environment，无条件还原会把别人的贴图冲掉。
     if (this.scene.environment === null || this.scene.environment === ownedEnv) {

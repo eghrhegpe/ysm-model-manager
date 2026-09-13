@@ -33,7 +33,7 @@ export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | nu
     });
   });
   // 等待所有图片加载完成（确保 needsUpdate 已触发）
-  // P2 修复（审核）：原等待循环每 50ms setTimeout 无超时上限——图片 URL 悬挂（服务器
+  // 原等待循环每 50ms setTimeout 无超时上限——图片 URL 悬挂（服务器
   // 不响应）时 complete 恒 false，onload/onerror 永不触发 → Promise.all 永久 pending，
   // 3D 预览卡在加载态。加超时：到点视为加载失败（置 loadError 触发 invalidate + null），
   // 并清理定时器链防会话关闭后空转。

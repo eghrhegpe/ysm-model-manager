@@ -46,7 +46,7 @@ import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { InputOptions } from "./input-and-animation.ts";
 import { bindInputHandlers } from "./input-and-animation.ts";
-// 2026 锐评整改：mount3D 生命周期闭包 → mount-session.ts；rAF 循环 → render-loop.ts
+// mount3D 生命周期闭包 → mount-session.ts；rAF 循环 → render-loop.ts
 import {
   closeOverlay,
   type MountCtx,
@@ -262,7 +262,7 @@ export function cleanupPreview(): void {
     }
   }
   sessionLedger.clear();
-  // P0 修复：cleanupPreview 是「全部关闭」语义，可安全 reset 注册表
+  // cleanupPreview 是「全部关闭」语义，可安全 reset 注册表
   sceneRegistry.reset();
   // renderer/canvas 保留（下次 mount3D 直接复用，不重建 DOM），但外壳引用必须清零：
   // handle.cleanup→fullCleanup 已从 DOM 移除 overlay/body/viewContainer，保留旧引用会导致
@@ -417,7 +417,7 @@ export async function mount3D(
 
   // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 buildSharedInfra
   // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
-  // 锐评 §四：infra/switchCtx 双 let + 两处手动回填收敛为单 slots 持有器——
+  // infra/switchCtx 双 let + 两处手动回填收敛为单 slots 持有器——
   // getter 仍需延迟绑定（camBridge 在 buildInfra 内经 ctx.getInfra() 读装配产物，循环依赖），
   // 但 definite-assignment 风险（let switchCtx 用前未赋值）由 slots 的 null 态显式表达。
   const slots: { infra: SharedInfra | null; switchCtx: SwitchContext | null } = {
@@ -590,9 +590,8 @@ function assembleShell(ctx: MountCtx): AssembledShell {
       session.camSpeed = n;
     },
     // content 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用。
-    // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄——原 `_handles[length-1]` 在 coop
+    // gen-scoped 解析本会话句柄——原 `_handles[length-1]` 在 coop
     // 多 session 下指向「最后 commit 的 session」而非本菜单/camera 桥属主，相机复位会误切他人
-    // （2026 锐评 P1：find 语义统一收敛到 ownHandle）
     reset: () => {
       ownHandle(ctx)?.resetCamera?.();
     },
@@ -602,7 +601,7 @@ function assembleShell(ctx: MountCtx): AssembledShell {
   // viewContainer：与 scene/canvas 同属共享外壳——首次 mount3D 创建，后续复用同一
   // 视窗（多模型同台共用同一 canvas，而非每次 mount3D 新建空容器；回归：曾反复 new
   // 容器导致同台后多出空白分屏）
-  // 防御性兜底（code_review ce648d64 #1/#2）：overlay/body 单例成对创建（overlay 在则
+  // overlay/body 单例成对创建（overlay 在则
   // body 必在），TS 不认该不变量——复用路径 body 来自可能为 null 的 previewShell.body。
   // 兜底必须在此处（viewContainer 创建前）执行才能真正守卫下方 body! 消费——
   // 原实现把它放函数尾（body! 消费之后），真破坏时先崩在 body!、兜底永不达。
@@ -639,9 +638,8 @@ function assembleShell(ctx: MountCtx): AssembledShell {
       else closeOverlay(ctx);
     },
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> | void => {
-      // code_review ece0d4a4 #10：gen-scoped 解析本会话句柄（对齐 runBuild.switchTo 同款
+      // gen-scoped 解析本会话句柄（对齐 runBuild.switchTo 同款
       // 查找）——原 `_handles[length-1]` 在 coop 多 session 下指向最后 commit 的 session，
-      // 菜单模型切换会误触发其它 session 的 switchTo（2026 锐评 P1：收敛到 ownHandle）
       const r = ownHandle(ctx)?.switchTo?.(p, options);
       // 透传 Promise：调用方（fillSwitch 替换/追加）在完成后局部刷新面板（renderRows 重读新当前路径）
       if (r) {
@@ -788,7 +786,7 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
   // 操作提示条（自动消失，两种模式通用）
   const tip = document.createElement("div");
   tip.className = "mpc-tip";
-  tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
+  tip.textContent = t("preview.controlsHint");
   root.insertBefore(tip, body);
   // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）
   session.tipTimeoutId = setTimeout(() => {
@@ -884,10 +882,10 @@ async function runBuild(
     menu: shell.menuHandle,
     // 延迟闭包：build 时 _handle 尚未赋值，菜单点击（build 之后）时已就绪；
     // 无活跃会话时 no-op（与 switchPreview 同口径）。
-    // P0 修复：捕获当前 session 的稳定 gen，闭包按 gen 查找自身 handle——
+    // 捕获当前 session 的稳定 gen，闭包按 gen 查找自身 handle——
     // 不取 handles 数组末尾，避免多 session 下同框 session 误触发彼此的切换。
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> => {
-      // 2026 锐评 P1：gen-scoped 查找收敛到 ownHandle（不再各处手写 find）
+      // gen-scoped 查找收敛到 ownHandle（不再各处手写 find）
       return ownHandle(ctx)?.switchTo?.(p, options) ?? Promise.resolve();
     },
   };
@@ -943,7 +941,6 @@ async function runBuild(
   // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
   if (session.content) session.allContent.push(session.content);
   // ADR-093 T2：首模型注册进场景注册表（差量捕获→统计合并→注册，与 switchTo 共用
-  // register-built-scene.ts 单一实现，锐评 P1-2 收敛）
   if (session.content) {
     const menuItems = registerBuiltScene({
       path: session.currentPath,
@@ -989,7 +986,6 @@ function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown):
   for (const b of session.allContent) safeDispose(b);
   session.allContent.length = 0;
   // 不单独调 session.content?.dispose()——content 已在 allContent 中，
-  // safeDispose 循环已 dispose 它；再调一次是 double-dispose（code review #2 修复）
   // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
   // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
   // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
@@ -1010,8 +1006,8 @@ function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: Preview
   document.removeEventListener("keydown", oldEscH);
   document.addEventListener("keydown", session.escH);
   session.cleanupFn = () => runFullCleanup(ctx);
-  // P0 修复：build 成功 → 本会话成为活跃输入会话（render-loop 动态读取 keys/camSpeed/orbitMode）。
-  // code_review ece0d4a4 #2/#3/#9：self-mode session 不绑 WASD（buildInfra `if (!selfMode)` 守卫
+  // build 成功 → 本会话成为活跃输入会话（render-loop 动态读取 keys/camSpeed/orbitMode）。
+  // self-mode session 不绑 WASD（buildInfra `if (!selfMode)` 守卫
   // 跳过输入绑定，keys 恒空）——不得抢占活跃输入 slot，否则共享/动画 session 的 WASD 立即失效
   if (!ctx.selfMode) setActiveInputSession(session);
   const sessionHandle: PreviewHandle = {
@@ -1034,7 +1030,6 @@ function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: Preview
 // → shared-infra.ts（场景单例 + buildSharedInfra + syncShadowLights）
 // → render-loop.ts（rAF 全局循环 + perFrame 注册表）
 // → mount-session.ts（MpSessionState + MountCtx + finishSession/closeOverlay/
-//    runFullCleanup/unloadSessionModel——2026 锐评整改：mount3D 闭包全部提为模块级函数）
 // → wasd-camera.ts（applyWasdCameraMotion + WasdReuse）
 // → unified-pick.ts（makeUnifiedPickHandler）
 // → unload-model.ts（unloadModel + UnloadCtx）

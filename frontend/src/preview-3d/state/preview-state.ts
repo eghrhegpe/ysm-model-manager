@@ -198,7 +198,7 @@ function wireframeModeCap(): WireframeModeCap | undefined {
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
-// 2026 锐评 P1：值类型精确化——每键 get/set 参数经 PathValue[K] 编译期对齐
+// 值类型精确化——每键 get/set 参数经 PathValue[K] 编译期对齐
 //（maxFps/maxPixelRatio 的 set 接受 number|string 归一，get 返回 number 子集；
 // ui.mode 的 set 归一守卫接受 string，get 返回 "shared"|"self" 子集）
 const bindings: PathBindingMap = {

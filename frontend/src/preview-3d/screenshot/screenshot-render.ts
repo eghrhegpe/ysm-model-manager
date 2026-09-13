@@ -132,7 +132,7 @@ export async function renderMultiAngle(
     const box = new THREE.Box3().setFromObject(rootGroup);
     const center = box.getCenter(new THREE.Vector3());
     const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray());
-    // P3 修复（审核反推）：meshGroups 空/骨骼组不匹配时 Box3 为空 → getSize 为
+    // meshGroups 空/骨骼组不匹配时 Box3 为空 → getSize 为
     // NaN/0，maxDim 非有限或 ≤0，相机 position 落入 NaN → 截图脏数据甚至渲染异常。
     // 防御性提前返回（调用方按 null 处理，不写脏 PNG）。
     if (!Number.isFinite(maxDim) || maxDim <= 0) return null;
@@ -158,19 +158,19 @@ export async function renderMultiAngle(
       // ADR-052 P3：复用截图纯函数（preserveDrawingBuffer 已开启，toDataURL 安全）
       const b64 =
         screenshotFromRenderer(renderer, scene, camera, { width: size, height: size }) || "";
-      // P3 修复：空 base64（GPU 异常）不入结果集，避免空内容写成 PNG 文件
+      // 空 base64（GPU 异常）不入结果集，避免空内容写成 PNG 文件
       if (b64) {
         results.push({ name, base64: b64 });
       }
     }
     return results;
   } catch (e) {
-    // P2 修复：场景构建段（buildYsmObject/Box3）抛错也要返回 null 而非 reject
+    // 场景构建段（buildYsmObject/Box3）抛错也要返回 null 而非 reject
     console.warn("[screenshot] 渲染失败:", e);
     return null;
   } finally {
     // 统一清理：无论成功/失败/异常都必须释放 WebGL 资源，防上下文累积（陷阱 #8）
-    // P1 修复（审核）：loadTextures 内部对每个 url 调 textureCache.acquire（refs+1），
+    // loadTextures 内部对每个 url 调 textureCache.acquire（refs+1），
     // 但 finally 从不 release → 引用计数永久泄漏，截图纹理永不淘汰。每次多角度截图
     // 累积泄漏所有 texUrls + componentTextures 的纹理引用。
     // 收编：归引用一律走 releaseTextureUrls（与 model3d-loader 同一释放器，语义见其注释）。
@@ -183,7 +183,7 @@ export async function renderMultiAngle(
     if (renderer) {
       if (scene && ysmObject) ysmObject.removeFromScene(scene);
       renderer.dispose();
-      // P3 修复：dispose 后强制释放上下文，避免延迟到 GC
+      // dispose 后强制释放上下文，避免延迟到 GC
       renderer.forceContextLoss?.();
     }
   }

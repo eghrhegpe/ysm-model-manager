@@ -1301,6 +1301,10 @@ export const autoSidebar = [
             "link": "/knowledge/fbx-cli-pipeline"
           },
           {
+            "text": "Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）",
+            "link": "/knowledge/go_ccheck"
+          },
+          {
             "text": "Go 后端设计锐评",
             "link": "/knowledge/go_design_critique"
           },

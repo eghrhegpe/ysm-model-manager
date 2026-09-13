@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 179 张知识卡
+> 总计: 180 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -128,7 +128,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（47 张）
+## go（48 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -174,6 +174,7 @@
 | 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | io-bound | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
+| 🍃 go_ccheck | Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像） | leaf | — | ccheck, 认知复杂度, cognitive, 复杂度扫描, check-complexity 对拍, go 复杂度 |
 | 🏗 go_design_critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
 | 🏗 go_ts_golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
 | 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
@@ -223,6 +224,7 @@
 - **go-version**（版本号 go/version）：`go/version/` 只有一件事：持有应用版本号。默认 `"dev"`，发版构建时通过 `-ldflags -X` 注入正式版本，供界面展示与自动更新的版本比较。
 - **go-watcher**（文件监听 go/watcher）：`go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
+- **go_ccheck**（Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像））：`go/ccheck` 提供 Go 源码的**团队复杂度**（认知复杂度 + 嵌套深度）扫描，是前端
 - **go_design_critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
 - **go_ts_golden**（Go-TS 解析层 golden 对拍（ADR-154 双端互锁））：网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit…
 - **golangci-lint**（golangci-lint（Go 静态分析真空面））：Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入

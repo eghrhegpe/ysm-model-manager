@@ -88,6 +88,9 @@ export function gateCoverage(): GateCoverage {
  * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）、diff-coverage 与
  * go-coverage-threshold 走 CI/pre-commit。与「漏接」分开点名，防 AI 读尾行把
  * 设计旁路当漏接去补接。新增旁路项时在此登记（无自动对账——分母动态枚举兜底漂移）。
+ * 注意（六锐评 P3 撤销留痕）：check-complexity/params/type-safety 三档扫描器**不属于**
+ * 旁路——它们经 FRONTEND_STATIC_TOOLS 计入 covered（覆盖口径 = 「是否接入门禁」，
+ * 与 --all 是否全量跑无关，push 模式 --files 裁剪运行已是合法接线形态）。
  */
 export const BYPASS_CHECKS = [
   "check-biome-lines.ts",

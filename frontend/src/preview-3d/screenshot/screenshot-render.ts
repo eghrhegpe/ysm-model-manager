@@ -184,7 +184,7 @@ export async function renderMultiAngle(
       if (scene && ysmObject) ysmObject.removeFromScene(scene);
       renderer.dispose();
       // P3 修复：dispose 后强制释放上下文，避免延迟到 GC
-      (renderer as unknown as { forceContextLoss?: () => void }).forceContextLoss?.();
+      renderer.forceContextLoss?.();
     }
   }
 }

@@ -143,9 +143,7 @@ function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
   const { breath, gaze, blink, lipSync, autoDance, footIK } = s5;
   const renderer = c.ctx.renderer;
   if (renderer) {
-    const memBefore = (
-      renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
-    ).info?.memory;
+    const memBefore = renderer.info?.memory;
     if (memBefore) {
       dbg(
         "gpu-leak",
@@ -184,9 +182,7 @@ function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
     dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
   }
   if (renderer) {
-    const memAfter = (
-      renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }
-    ).info?.memory;
+    const memAfter = renderer.info?.memory;
     if (memAfter) {
       dbg(
         "gpu-leak",

@@ -86,15 +86,6 @@ export function evaluateGpuLoad(
   return { ok: reasons.length === 0, reasons };
 }
 
-/** renderer.info 的结构化视图——**全部可选**。
- *  理由：不同渲染后端（WebGL / WebGPU）与 three 版本的 info 字段未必齐全，
- *  测试环境的 three mock 也只提供部分字段。缺字段读 0（fail-open：宁放行勿误拦）。 */
-interface RendererInfoLike {
-  render?: { calls?: number; triangles?: number };
-  memory?: { textures?: number };
-  programs?: unknown[] | null;
-}
-
 /** 从 renderer 读一次快照（读 info 无副作用；calls/triangles 为上一帧值）。
  *
  *  **fail-open 语义**：info 或其子字段缺失时读 0 —— 预算门是「病态堆叠早拦」的
@@ -102,7 +93,7 @@ interface RendererInfoLike {
  *
  *  @param textureBytes 可选纹理显存字节（由 textureCache.getTotalBytes() 聚合后传入） */
 export function sampleGpuLoad(renderer: THREE.WebGLRenderer, textureBytes?: number): GpuLoadSample {
-  const info = (renderer as unknown as { info?: RendererInfoLike } | undefined)?.info;
+  const info = renderer.info;
   return {
     drawCalls: info?.render?.calls ?? 0,
     triangles: info?.render?.triangles ?? 0,

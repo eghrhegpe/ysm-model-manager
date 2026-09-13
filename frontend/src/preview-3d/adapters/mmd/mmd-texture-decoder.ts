@@ -7,6 +7,7 @@
 
 import * as THREE from "three";
 import type { TexDecodeRequest, TexDecodeResponse } from "./mmd-texture-decode.worker.ts";
+import { matTexSlots } from "./mmd-utils";
 
 /** Worker 池大小：4 个并行解码线程 */
 const TEX_DECODE_WORKER_COUNT = 4;
@@ -319,7 +320,7 @@ export function applyWorkerDecodedTextures(
           if (decodedTex.refCount <= 0) decodedTex.bitmap.close();
         });
         newTex.needsUpdate = true;
-        (mat as unknown as Record<string, unknown>).map = newTex;
+        matTexSlots(mat).map = newTex;
         mat.needsUpdate = true;
         replaced++;
       } else {
@@ -331,7 +332,7 @@ export function applyWorkerDecodedTextures(
         const loader = new THREE.TextureLoader();
         const fallbackTex = loader.load(pending.blobUrl);
         fallbackTex.colorSpace = THREE.SRGBColorSpace;
-        (mat as unknown as Record<string, unknown>).map = fallbackTex;
+        matTexSlots(mat).map = fallbackTex;
         mat.needsUpdate = true;
         fallback++;
       }
@@ -340,7 +341,7 @@ export function applyWorkerDecodedTextures(
 
     // Fallback 路径：替换已有的 blob URL 纹理
     for (const key of texKeys) {
-      const texVal = (mat as unknown as Record<string, unknown>)[key];
+      const texVal = matTexSlots(mat)[key];
       if (!(texVal instanceof THREE.Texture)) continue;
       const tex: THREE.Texture = texVal;
       total++;
@@ -382,7 +383,7 @@ export function applyWorkerDecodedTextures(
         if (decodedTex.refCount <= 0) decodedTex.bitmap.close();
       });
 
-      (mat as unknown as Record<string, unknown>)[key] = newTex;
+      matTexSlots(mat)[key] = newTex;
       tex.dispose();
       replaced++;
     }

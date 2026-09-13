@@ -8,15 +8,9 @@
 // 旧实现里 vrm-3d.ts 与 litematic-3d.ts 各自内联 ~250 行同构脚手架（"复制那套"），
 // 本文件将其收敛为单一事实来源。适配器契约对齐 YSM 既有的 Model3DHandleX，
 // 使三套渲染器最终可经注册表统一派发（P3-E）。
-//
-// ┌─ 快速跳转 ───────────────────────────────────────────────────────────────────┐// │  §1  常量 + 状态变量      → L176   TIP_AUTO_DISMISS_MS                            │
-// │  §2  公开 API             → L206   invalidatePreview / cleanupPreview / switch  │
-// │  §3  switchPreview        → L245   会话内切换模型（复用外壳）                   │
-// │  §4  mount3D 入口         → L285   主挂载编排器（生命周期闭包已拆出：           │
-// │    └─ render-loop.ts      → rAF 全局循环 + perFrame 注册表                       │
-// │    └─ mount-session.ts    → finishSession/closeOverlay/runFullCleanup/          │
-// │                              unloadSessionModel（MountCtx 上下文模式）           │
-// └──────────────────────────────────────────────────────────────────────────────┘
+// 结构：常量/状态变量 → 公开 API（invalidatePreview / cleanupPreview / switch）→
+// switchPreview（会话内复用外壳切换）→ mount3D 主挂载编排器（生命周期闭包已拆出
+// 到 render-loop.ts 与 mount-session.ts）。
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";

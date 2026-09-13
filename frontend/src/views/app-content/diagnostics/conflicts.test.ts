@@ -369,6 +369,7 @@ describe("同步冲突解决（do-resolve-btn）", () => {
     const resolveFn = vi.fn(() => ({ resolved: 2, failed: 1, manual: 1 }));
     mockApp({ DetectConflicts: detectFn, ResolveConflicts: resolveFn });
     const list = document.createElement("div");
+    document.body.appendChild(list); // 复扫守卫要求 list 在文档中（isConnected）
     await scanSyncConflicts(list, esc, "ysm", "insA");
     await waitFor(() => expect(list.querySelector("#do-resolve-btn")).toBeTruthy());
     (list.querySelector("#resolve-strategy") as HTMLSelectElement).value = "force_local";
@@ -390,6 +391,30 @@ describe("同步冲突解决（do-resolve-btn）", () => {
       // 成功后 1.5s 自动复扫（复扫会重渲染冲突列表，结果消息被替换）
       await vi.advanceTimersByTimeAsync(1500);
       expect(detectFn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+    document.body.removeChild(list);
+  });
+
+  it("resolve 成功后 list 已分离（离开诊断页）→ 1.5s 复扫被守卫作废", async () => {
+    const detectFn = vi.fn(() => ({
+      conflicts: [makeConflict()],
+      totalConflicts: 1,
+    }));
+    const resolveFn = vi.fn(() => ({ resolved: 1, failed: 0, manual: 0 }));
+    mockApp({ DetectConflicts: detectFn, ResolveConflicts: resolveFn });
+    const list = document.createElement("div");
+    await scanSyncConflicts(list, esc, "ysm", "insA");
+    await waitFor(() => expect(list.querySelector("#do-resolve-btn")).toBeTruthy());
+    (list.querySelector("#do-resolve-btn") as HTMLElement).click();
+    await waitFor(() => expect(list.textContent).toContain("已解决 1"));
+    list.remove(); // 模拟用户离开诊断页，面板 DOM 分离
+
+    vi.useFakeTimers();
+    try {
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(detectFn).toHaveBeenCalledTimes(1); // 迟到复扫未发生
     } finally {
       vi.useRealTimers();
     }

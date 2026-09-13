@@ -418,7 +418,12 @@ async function dgCfExecuteResolve(
     okDiv.style.marginTop = "12px";
     okDiv.textContent = resultMsg;
     list.appendChild(okDiv);
-    setTimeout(() => scanSyncConflicts(list, esc, rtype, instanceName), 1500);
+    // 1.5s 后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
+    // 则作废这次迟到的复扫——省一次后端 RPC，也避免向分离 DOM 写 innerHTML。
+    setTimeout(() => {
+      if (!list.isConnected) return;
+      void scanSyncConflicts(list, esc, rtype, instanceName);
+    }, 1500);
   } catch (err) {
     const errDiv = document.createElement("div");
     errDiv.className = "stat-row diag-msg diag-msg-error";

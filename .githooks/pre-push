@@ -2,14 +2,24 @@
 # YSM 本地质量门禁（pre-push hook 薄壳）
 # 职责：定位仓库根与 node → 透传 git 参数与 stdin → 调用 scripts/pre-push-gate.ts → 透传退出码。
 # 安装：git config core.hooksPath .githooks
-# 逃生阀：YSM_SKIP_GATE=1 git push   或   git push --no-verify
+# 逃生阀（审计差异，2026-09-13 锐评 P1）：
+#   YSM_SKIP_GATE=1 git push   —— 留痕逃生：钩子把待推 ref 写入 .git/gate-audit.log（SKIPPED 行）
+#   git push --no-verify       —— 不留痕（钩子不执行是 git 语义边界，客户端无法检测）；
+#                                 靠 gate-audit.log 的连续性事后回溯 + CI 同跑 gate 互证兜底
 # 调试：  YSM_GATE_DEBUG=1 git push
 set -u
 
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null || exit 1)
 
 if [ "${YSM_SKIP_GATE:-0}" = "1" ]; then
-  echo "[pre-push] YSM_SKIP_GATE=1, gate skipped"
+  echo "[pre-push] YSM_SKIP_GATE=1, gate skipped (audit trail written)"
+  # 留痕逃生（锐评 P1）：消费 stdin（pre-push 每行 <localRef> <localOid> <remoteRef> <remoteOid>），
+  # 逐行落审计；写失败静默——逃生不该因日志权限问题被二次阻断
+  while read -r lref loid rref roid; do
+    [ -n "$loid" ] || continue
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) SKIPPED $(echo "$loid" | cut -c1-12) SKIP SKIP/SKIP $1" \
+      >> "$ROOT/.git/gate-audit.log" 2>/dev/null
+  done
   exit 0
 fi
 

@@ -7,28 +7,34 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/bone/bone-tools.ts
-  - frontend/src/preview-3d/adapters/vrm-bone.ts
-  - frontend/src/preview-3d/adapters/vrm-bone-ui.ts
+  - frontend/src/preview-3d/adapters/vrm/vrm-bone.ts
+  - frontend/src/preview-3d/adapters/vrm/vrm-bone-ui.ts
   - frontend/src/preview-3d/bone/mmd-bones.ts
 auto_fields:
   symbols_with_lines:
     - BoneDetail
     - BoneListItem
     - BoneNode
+    - boneRowActiveBg
     - BoneTree
     - buildBoneTree
+    - buildVrmBoneNodes
+    - buildVrmBoneTree
     - findAncestorBoneId
     - getBoneDetail
     - getBonePath
     - getBonePosition
     - listBonesWithDepth
+    - makeBonePanelRenderer
     - MAX_CHAIN_DEPTH
     - MmdBonePickResult
     - mmdBonesToBoneNodes
     - pickBone
     - pickMmdBone
+    - RenderVrmBonePanel
     - setBoneNodeVisible
     - toggleBoneVisible
+    - VrmBonePanelCtx
   tests:
     - frontend/src/preview-3d/bone/bone-tools.test.ts
     - frontend/src/preview-3d/adapters/vrm-bone.test.ts
@@ -57,7 +63,7 @@ perf:
   - cpu-bound
 invariant_anchors:
   - frontend/src/preview-3d/bone/bone-tools.ts|buildBoneTree
-  - frontend/src/preview-3d/adapters/vrm-bone-ui.ts|makeBonePanelRenderer
+  - frontend/src/preview-3d/adapters/vrm/vrm-bone-ui.ts|makeBonePanelRenderer
 status: active
 ---
 

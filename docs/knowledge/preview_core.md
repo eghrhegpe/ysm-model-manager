@@ -319,7 +319,7 @@ auto_fields:
     - YsmPreloadedModel
     - zipFindEntry
 tests:
-  - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.test.ts
   - frontend/src/preview-3d/adapters/ysm-3d.test.ts
   - frontend/src/views/app-preview/litematic-3d.test.ts
 use_when:

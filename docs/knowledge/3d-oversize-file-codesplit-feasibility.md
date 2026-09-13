@@ -13,7 +13,7 @@ use_when:
   - mmd-adapter
   - 拆分可行性
 source_files:
-  - frontend/src/preview-3d/adapters/mmd-adapter.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
 auto_fields:

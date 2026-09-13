@@ -5,8 +5,8 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/preview-3d/adapters/mount-preview-core.ts
-  - frontend/src/preview-3d/adapters/mmd-adapter.ts
-  - frontend/src/preview-3d/adapters/fbx-adapter.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
+  - frontend/src/preview-3d/adapters/fbx/fbx-adapter.ts
   - frontend/src/test-utils/blob-urls.ts
 auto_fields:
   symbols_with_lines:
@@ -14,14 +14,28 @@ auto_fields:
     - AssembledShell
     - BaseScene
     - BlobUrlStubs
+    - buildFbxScene
+    - buildMmdScene
     - CameraControlScene
     - cleanupPreview
+    - FBX_TARGET_MAX_DIM
+    - FbxAdapterDeps
+    - FbxDataPort
+    - FbxScaleInfo
     - GroupedScene
     - hasActivePreview
     - InstalledPreviewInfra
     - invalidatePreview
+    - makeFbxAdapter
+    - makeMmdAdapter
+    - MmdAdapterDeps
+    - MmdDataPort
+    - mmdMenuItems
+    - MmdMenuItemsOpts
+    - MmdPanelHooks
     - mount3D
     - Mount3DOptions
+    - normalizeFbxScale
     - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
@@ -33,8 +47,8 @@ auto_fields:
     - switchPreview
     - UpdateableScene
 tests:
-  - frontend/src/preview-3d/adapters/fbx-adapter.test.ts
-  - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+  - frontend/src/preview-3d/adapters/fbx/fbx-adapter.test.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.test.ts
   - frontend/src/preview-3d/adapters/mount-preview-core.test.ts
 use_when:
   - 测试税

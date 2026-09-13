@@ -23,6 +23,7 @@ import { spawnSync } from "node:child_process";
  * 设计意图：死代码基线检查（与 baseline 文件比对）
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { canWriteBaseline, splitNewFindings } from "./_lib/deadcode-attrib.ts";
 import { ROOT, toPosix } from "./_lib/scan-files.ts";
@@ -62,14 +63,18 @@ function bin(name: string) {
   return candidates.find((c) => fs.existsSync(c)) || null;
 }
 
-function run(name: string, args: string[], opts: { allowExit1?: boolean } = {}) {
+function run(
+  name: string,
+  args: string[],
+  opts: { allowExit1?: boolean; cwd?: string } = {},
+) {
   const exe = bin(name);
   if (!exe) {
     errors.push(`[工具缺失] ${name} 未安装：cd frontend && npm i -D ${name}`);
     return null;
   }
   const r = spawnSync(exe, args, {
-    cwd: FRONTEND,
+    cwd: opts.cwd ?? FRONTEND,
     encoding: "utf-8",
     shell: process.platform === "win32",
   });
@@ -142,11 +147,21 @@ function parseKnip(stdout: string) {
 // jscpd 将 JSON 报告写入 cwd 下 report/jscpd-report.json（--output 对 json
 // reporter 不生效），克隆数据在 duplicates 数组。
 
-const JSCPD_REPORT = path.join(FRONTEND, "report", "jscpd-report.json");
+// 竞态修复（2026-09-13，门禁锐评 P0）：jscpd 报告固定写「cwd 下 report/」，此前
+// cwd=frontend → 并行会话同跑门禁时两进程读/删同一个 frontend/report/jscpd-report.json，
+// 表现为「同提交第一次红、第二次绿」的瞬态 FAIL——与「判定可复现」直接冲突。
+// 现改为每进程独立临时工作目录（mkdtemp，路径含随机后缀天然互斥）：报告落在
+// 私有目录内，读完后整目录清理；扫描 pattern 用绝对路径指回 frontend/src，语义不变。
+let jscpdWork: string | null = null;
+
+function jscpdReportPath() {
+  if (!jscpdWork) throw new Error("jscpd 工作目录未初始化");
+  return path.join(jscpdWork, "report", "jscpd-report.json");
+}
 
 function parseJscpd() {
   try {
-    const data = JSON.parse(fs.readFileSync(JSCPD_REPORT, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(jscpdReportPath(), "utf-8"));
     const clones = data.duplicates || [];
     return clones.map((c: any) => {
       // jscpd 在 Windows 输出反斜杠路径（如 views\a.ts），基线为正斜杠——
@@ -158,7 +173,7 @@ function parseJscpd() {
     });
   } catch {
     jscpdParseFailed = true;
-    errors.push("[解析失败] jscpd 报告读取异常（期望 frontend/report/jscpd-report.json）");
+    errors.push("[解析失败] jscpd 报告读取异常（私有临时目录 report/jscpd-report.json）");
     return [];
   }
 }
@@ -203,29 +218,43 @@ function main() {
   const knipOut = run("knip", ["--reporter", "json"], { allowExit1: true });
   if (knipOut !== null) knipFindings = parseKnip(knipOut);
 
+  // jscpd 执行结果（null = 执行失败）：写盘守卫 canWriteBaseline 需要区分
+  // 「执行成功零发现」与「执行失败」，声明提升到 try 块外供后续守卫消费
+  let jscpdOut: string | null = null;
+
   // jscpd 5.x 发现重复代码时默认 exit 0（未传 --threshold/--exitCode），
   // exit 1 仅代表真实失败（glob 错误/IO/崩溃）——不传 allowExit1，让真实失败
   // 以 [执行失败] 暴露，而非被掩盖成 [解析失败]/消费陈旧报告（code_review P3）
   // jscpd v5 Rust 内核：显式 --format typescript,javascript 确保 .ts/.tsx 不被静默跳过
   //（无 --format 时依赖扩展名自动检测，不同 jscpd 版本行为偶有漂移；显式声明更稳定）。
-  const jscpdOut = run("jscpd", [
-    "--pattern",
-    "src/**/*.{js,ts}",
-    "--min-lines",
-    "10",
-    "--min-tokens",
-    "50",
-    "--format",
-    "typescript,javascript",
-    "--reporters",
-    "json",
-    "--silent",
-  ]);
-  if (jscpdOut !== null) {
-    jscpdFindings = parseJscpd();
-    // 清理 jscpd 产物文件（report/jscpd-report.json 是分析副产物，不留仓库；
-    // 只删报告文件本身，不 rmSync 整个 report/ 目录——避免误删其他产物）
-    fs.rmSync(JSCPD_REPORT, { force: true });
+  // pattern 用绝对 posix 路径：jscpd cwd 已迁至私有临时目录（竞态修复，见 jscpdWork 注释），
+  // 相对 pattern 会在 tmpdir 里扫空。globby 对正斜杠绝对路径跨平台可用。
+  try {
+    jscpdWork = fs.mkdtempSync(path.join(os.tmpdir(), "jscpd-gate-"));
+    jscpdOut = run(
+      "jscpd",
+      [
+        "--pattern",
+        `${toPosix(FRONTEND)}/src/**/*.{js,ts}`,
+        "--min-lines",
+        "10",
+        "--min-tokens",
+        "50",
+        "--format",
+        "typescript,javascript",
+        "--reporters",
+        "json",
+        "--silent",
+      ],
+      { cwd: jscpdWork },
+    );
+    if (jscpdOut !== null) {
+      jscpdFindings = parseJscpd();
+    }
+  } finally {
+    // 清理整个私有工作目录（报告是分析副产物，目录含随机后缀，整删无误伤风险；
+    // finally 保证解析失败/异常路径也不残留垃圾目录）
+    if (jscpdWork) fs.rmSync(jscpdWork, { recursive: true, force: true });
   }
 
   const current = {

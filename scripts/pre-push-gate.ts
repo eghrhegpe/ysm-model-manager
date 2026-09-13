@@ -59,6 +59,8 @@ import {
   runStaticToolsDispatch,
 } from "./_lib/gate-blocks/schedule.ts";
 import { createGateCtx } from "./_lib/gate-ctx.ts";
+import { appendGateAudit, auditFilePath } from "./_lib/gate-audit.ts";
+import { coverageTailLine } from "./_lib/gate-coverage.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
@@ -139,6 +141,8 @@ async function main() {
   let pushLocalRef = "";
   let pushLocalOid = "";
   let pushRemoteOid = "";
+  // push 模式的有效 ref 数（>0 表示真实推送运行，供审计留痕判别）
+  let pushedCount = 0;
 
   if (allMode) {
     // —— 全量模式：所有域 + 静态工具（等价 doctor 默认全量）——
@@ -237,6 +241,7 @@ async function main() {
     pushLocalRef = localRef;
     pushLocalOid = localOid;
     pushRemoteOid = pushed[0]!.remoteOid;
+    pushedCount = pushed.length;
     const multiRef = pushed.length > 1;
     console.log(
       `推送: ${multiRef ? `${pushed.length} 个 ref` : localRef} ${multiRef ? "" : `${localOid.slice(0, 7)} `}→ ${remoteName} (${remoteUrl || "?"})`,
@@ -304,6 +309,21 @@ async function main() {
     }
   }
   logPush("");
+  // 覆盖固定尾行（2026-09-13 锐评 P2）：「全绿 ≠ 仓库无风险」从知识卡被动警示
+  // 升格为每次输出的主动提醒——PASS/FAIL 两路都打，数据源 _lib/gate-coverage.ts。
+  logPush(coverageTailLine());
+  // 审计留痕（2026-09-13 锐评 P1）：真实 push 模式的每次运行都留一行审计（oid+判定+N/M），
+  // 与钩子侧 YSM_SKIP_GATE 的 SKIPPED 行共同构成连续审计流——「这次推送没有 gate 记录」
+  // 事后可回溯（--no-verify 本身仍无法客户端检测，边界见 gate-audit.ts 头注释）。
+  if (!filesMode && !allMode && !docsMode && pushedCount > 0) {
+    appendGateAudit(auditFilePath(), {
+      kind: "PUSH",
+      localOid: pushLocalOid.slice(0, 12),
+      verdict: ctx.blocked ? "FAIL" : "PASS",
+      counts: `${ctx.results.filter((r) => r.ok).length}/${ctx.results.length}`,
+      remote: args._[0] as string,
+    });
+  }
   if (!ctx.results.length) {
     logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
     return 0;

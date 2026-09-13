@@ -125,6 +125,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_ctx.ts": ["tests"],
   "test_gate_iife_correctness.ts": ["tests"],
   "test_gate_parse_output.ts": ["tests"],
+  "test_gate_coverage.ts": ["tests"],
+  "test_gate_audit.ts": ["tests"],
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
   "test_gate_schedule.ts": ["tests"],
@@ -306,6 +308,12 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/pre-push-gate.ts",
   ],
   "test_gate_parse_output.ts": ["scripts/_lib/gate-parse.ts", "scripts/pre-push-gate.ts"],
+  // 覆盖口径（锐评 P2 固定尾行数据源）：锁 gate-coverage 的动态枚举/覆盖互斥性/尾行形状。
+  // 目标文件含 pre-push-gate.ts（尾行接线点）——清单改名导致覆盖失真时此测试先红。
+  "test_gate_coverage.ts": ["scripts/_lib/gate-coverage.ts", "scripts/pre-push-gate.ts"],
+  // 审计留痕（锐评 P1）：锁 gate-audit 追加语义/行格式/fail-open；含 pre-push-gate.ts
+  // （审计接线点）——绕过审计若静默失效，此测试先红。
+  "test_gate_audit.ts": ["scripts/_lib/gate-audit.ts", "scripts/pre-push-gate.ts"],
   // ADR-206 阶段 2：静态工具执行器搬入 gate-blocks/static-tools.ts。该测试同时锁
   // pre-push-gate 的调度调用点（runTools(ctx, ...) 形参顺序）与 gate-ctx 的 record 语义。
   "test_gate_static_tools.ts": [

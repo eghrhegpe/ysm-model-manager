@@ -6,14 +6,14 @@ adr:
   - ADR-127
 category: config
 source_files:
-  - frontend/src/preview-3d/adapters/mmd-adapter.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.ts
   - frontend/src/preview-3d/decoder/mmd-ktx2-basis.ts
   - frontend/src/preview-3d/decoder/mmd-ktx2-worker.ts
   - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.ts
-  - frontend/src/preview-3d/adapters/mmd-pmx-parser.ts
-  - frontend/src/preview-3d/adapters/mmd-pmx-parser.worker.ts
-  - frontend/src/preview-3d/adapters/mmd-texture-decoder.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-pmx-parser.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-pmx-parser.worker.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-texture-decoder.ts
   - frontend/src/utils/base/primitives/main-thread-watch.ts
   - internal/app/app_model.go
   - internal/app/app_texture_cache.go
@@ -100,7 +100,7 @@ auto_fields:
     - TextureTooLargeError
     - WriteCached
   tests:
-    - frontend/src/preview-3d/adapters/mmd-adapter.test.ts
+    - frontend/src/preview-3d/adapters/mmd/mmd-adapter.test.ts
     - frontend/src/preview-3d/decoder/mmd-ktx2-encoder.test.ts
     - frontend/src/preview-3d/decoder/mmd-ktx2-texture-loader.test.ts
     - frontend/src/utils/base/primitives/main-thread-watch.test.ts
@@ -116,7 +116,7 @@ perf:
   - concurrent
   - memory-heavy
 invariant_anchors:
-  - frontend/src/preview-3d/adapters/mmd-build-menu.ts|mmdMenuItems
+  - frontend/src/preview-3d/adapters/mmd/mmd-build-menu.ts|mmdMenuItems
   - frontend/src/utils/base/primitives/main-thread-watch.ts|startMainThreadWatch
 pitfalls:
   - "KTX2 编码前未检查缓存 hash → 重复 WASM 编码"

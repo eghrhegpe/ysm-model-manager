@@ -7,7 +7,7 @@ source_files:
   - frontend/src/preview-3d/menu/core.ts
   - frontend/src/preview-3d/menu/render.ts
   - frontend/src/preview-3d/menu/node-types.ts
-  - frontend/src/preview-3d/adapters/mmd-adapter.ts
+  - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/preview-3d/adapters/morph-controls.ts
   - frontend/src/views/app-preview/mmd-controls.ts
@@ -15,6 +15,7 @@ source_files:
   - frontend/src/views/app-preview/shot-panel-shared.ts
 auto_fields:
   symbols_with_lines:
+    - buildMmdScene
     - buildPreviewMenuRouters
     - buildYsmScene
     - clearFolderCollapsedState
@@ -24,9 +25,15 @@ auto_fields:
     - CorePanelId
     - disposeCustomCleanups
     - isPreviewFolderNode
+    - makeMmdAdapter
     - makeYsmAdapter
+    - MmdAdapterDeps
     - MmdBottomNavCtx
+    - MmdDataPort
+    - mmdMenuItems
+    - MmdMenuItemsOpts
     - mmdModelInfoNodes
+    - MmdPanelHooks
     - MmdPlayBridge
     - mmdShotNodes
     - MorphMeshLike

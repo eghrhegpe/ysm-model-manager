@@ -48,7 +48,7 @@ export function openDB(): Promise<IDBDatabase> {
       resolve(db);
     };
     req.onerror = () => reject(req.error);
-    // P3 修复：其他标签页持有旧版本连接时会触发 onblocked（Promise 永不 settle，
+    // P3 修复（审核）：其他标签页持有旧版本连接时会触发 onblocked（Promise 永不 settle，
     // 不 reject 不 resolve → 后续所有 idb 操作永久挂起且不触发内存降级）。
     // 明确 reject，让 getIdb 捕获后置 forcedMemory 走内存分支。
     req.onblocked = () => {

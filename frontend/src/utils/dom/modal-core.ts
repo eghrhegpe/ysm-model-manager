@@ -21,6 +21,9 @@ export const VIEW_TESTIDS: readonly string[] = [
 /** 关闭动画中标记（closeDlg 防重复触发）；WeakSet 随元素 GC 回收，不污染 HTMLElement 全局类型 */
 const _closingOverlays = new WeakSet<HTMLElement>();
 
+/** 退场动画待结算定时器（WeakMap 随元素 GC 回收；测试重置钩子取消，防幽灵 resolve 泄入后续用例） */
+const _closingTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
 /** 可聚焦元素选择器（裸 `tabindex` 无 = 匹配的是元素名 tabindex，全仓无此元素 → 死选择器，已移除；带值属性走 [tabindex] 分支） */
 const FOCUSABLE_SEL =
   'button,input,select,textarea,[tabindex]:not([tabindex="-1"]),a[href],summary';
@@ -67,15 +70,17 @@ export function closeDlg<T>(
   if (!overlay || _closingOverlays.has(overlay)) return;
   _closingOverlays.add(overlay);
   overlay.classList.add("dlg-closing");
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     overlay.remove();
     if (_slot.overlay === overlay) {
       _slot.overlay = null;
       _slot.closeActive = null;
       _slot.closable = true;
     }
+    _closingTimers.delete(overlay);
     resolve(value);
   }, delay);
+  _closingTimers.set(overlay, timer);
 }
 
 /**
@@ -98,8 +103,15 @@ function createModalSlot(): ModalSlotState {
 const _slot: ModalSlotState = createModalSlot();
 
 /** 测试钩子：重置活动弹窗单例槽位（isolate:false 共享模块图下，兄弟文件残留的
- *  _slot.overlay 会让「无活动弹窗」断言失真；web-store.__resetWebLogStateForTest 同款） */
+ *  _slot.overlay 会让「无活动弹窗」断言失真；web-store.__resetWebLogStateForTest 同款）。
+ *  同时取消当前弹窗退场动画的待结算定时器——防其 120ms 后仍 resolve 泄入后续用例
+ *  （resolve 幂等、槽位守卫不变量不受影响，取消纯粹是让测试重置确定性收口）。 */
 export function __resetModalStateForTest(): void {
+  if (_slot.overlay) {
+    const timer = _closingTimers.get(_slot.overlay);
+    if (timer !== undefined) clearTimeout(timer);
+    _closingTimers.delete(_slot.overlay);
+  }
   _slot.overlay = null;
   _slot.closeActive = null;
   _slot.closable = true;

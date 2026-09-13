@@ -74,6 +74,38 @@ describe("evaluateKeyframes 插值", () => {
     ];
     expect(evaluateKeyframes(dup, 0)).toEqual([3, 3, 3]);
   });
+
+  it("null 输入返回 null（可选链守卫）", () => {
+    expect(evaluateKeyframes(null as unknown as Keyframe[], 0)).toBeNull();
+  });
+
+  it("NaN 时间返回首帧 post（NaN 无法喂 Molang，取数字基底）", () => {
+    expect(evaluateKeyframes(KFS, Number.NaN)).toEqual([0, 0, 0]);
+    expect(evaluateKeyframes(KFS, Number.POSITIVE_INFINITY)).toEqual([0, 0, 0]);
+  });
+
+  it("部分 Molang 数组：null 轴回退数字基底", () => {
+    const partial: Keyframe[] = [
+      {
+        time: 0,
+        post: [1, 2, 3],
+        pre: [1, 2, 3],
+        lerp: "linear",
+        postMolang: [null, null, (t) => t * 10],
+      },
+      {
+        time: 1,
+        post: [4, 5, 6],
+        pre: [4, 5, 6],
+        lerp: "linear",
+        postMolang: [null, (t) => t * 100, null],
+      },
+    ];
+    // t=0 单帧路径：null 轴回退 post 基底，Molang 轴按 anim_time 求值
+    expect(evaluateKeyframes(partial, 0)).toEqual([1, 2, 0]);
+    // t=0.5 线性插值：两端先求值再 lerp（帧0=[1,2,5]、帧1=[4,50,6]）
+    expect(evaluateKeyframes(partial, 0.5)).toEqual([2.5, 26, 5.5]);
+  });
 });
 
 describe("parseBedrockAnimationJSON 解析", () => {
@@ -208,6 +240,24 @@ describe("evaluateClip 局部变换", () => {
     };
     const r = evaluateClip(clip, 100);
     expect(r.get("b")!.position).toEqual([20, 20, 30]);
+  });
+
+  it("clip 缺 bones 字段返回空 Map（运行时守卫）", () => {
+    const r = evaluateClip(
+      { name: "x", loop: false, length: 1 } as unknown as AnimationClip,
+      0,
+    );
+    expect(r.size).toBe(0);
+  });
+
+  it("骨骼三通道全空时不入结果 Map", () => {
+    const clip: AnimationClip = {
+      name: "x",
+      loop: false,
+      length: 1,
+      bones: { b: { rotation: [] } },
+    };
+    expect(evaluateClip(clip, 0).size).toBe(0);
   });
 });
 
@@ -514,6 +564,18 @@ describe("executeTimeline 循环回绕", () => {
     const fired = executeTimeline(timeline, 0.2, 0.7);
     expect(fired).not.toBeNull();
     expect(fired!.map((f) => f[0])).toEqual(["e2"]);
+  });
+
+  it("timeline 未定义返回 null（可选链守卫）", () => {
+    expect(executeTimeline(undefined, 0, 1)).toBeNull();
+  });
+
+  it("窗口内无事件返回 null（fired 为空）", () => {
+    const timeline: TimelineEvent[] = [
+      { time: 5, actions: [], raw: ["e1"] },
+      { time: 6, actions: [], raw: ["e2"] },
+    ];
+    expect(executeTimeline(timeline, 0, 1)).toBeNull();
   });
 });
 

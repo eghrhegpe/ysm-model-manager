@@ -711,3 +711,35 @@ describe("modalPicker — 交互 / footer 收集 / safeHintColor", () => {
     expect(r?.footerValues).toEqual({ real: "y" }); // name="" 的被跳过
   });
 });
+
+describe("closeDlg 退场定时器（测试重置确定性）", () => {
+  it("未重置时 advance 后正常结算 resolve", () => {
+    vi.useFakeTimers();
+    try {
+      const overlay = document.createElement("div");
+      let resolved = false;
+      registerDlg(overlay, () => {}, true);
+      closeDlg(overlay, () => { resolved = true; }, "v");
+      expect(resolved).toBe(false);
+      vi.advanceTimersByTime(200);
+      expect(resolved).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("__resetModalStateForTest 取消待结算定时器（防幽灵 resolve 泄入后续用例）", () => {
+    vi.useFakeTimers();
+    try {
+      const overlay = document.createElement("div");
+      let resolved = false;
+      registerDlg(overlay, () => {}, true);
+      closeDlg(overlay, () => { resolved = true; }, "v");
+      __resetModalStateForTest();
+      vi.advanceTimersByTime(500);
+      expect(resolved).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

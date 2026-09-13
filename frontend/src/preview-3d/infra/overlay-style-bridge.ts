@@ -30,3 +30,25 @@ export function overlayStyleRoot(): HTMLElement | ShadowRoot {
 export function onOverlayStyleTargetReset(fn: () => void): void {
   _resets.push(fn);
 }
+
+// === 幂等样式注入收敛（P2 锐评：消除 7 处手写 _xxxStylesInjected + 注册样板）===
+// 旧范式每处重复：模块级布尔旗标 + onOverlayStyleTargetReset 复位 + ensure 函数体。
+// 统一由本桥持有注入集合，目标切换时一次性清空重注入；调用方只传 (key, css)。
+const _injectedOnce = new Set<string>();
+onOverlayStyleTargetReset(() => {
+  _injectedOnce.clear();
+});
+
+/**
+ * 幂等注入共享 CSS：按 key 防重复，overlay 样式根切换时随桥复位重注入。
+ * 取代各模块手写的 `_xxxStylesInjected` 旗标 + onOverlayStyleTargetReset 注册样板。
+ * @param key 域内唯一标识（如 "menu" / "cap" / "core" / "fab" / "roles" / "vbu" / "mdli"）
+ * @param css 样式文本（可含 menu-styles.ts 等共享常量插值）
+ */
+export function installOnceStyles(key: string, css: string): void {
+  if (_injectedOnce.has(key)) return;
+  _injectedOnce.add(key);
+  const el = document.createElement("style");
+  el.textContent = css;
+  overlayStyleRoot().appendChild(el);
+}

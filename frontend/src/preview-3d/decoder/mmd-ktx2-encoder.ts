@@ -23,8 +23,19 @@ import type { MmdDataPort } from "@/preview-3d/adapters/mmd-types.ts";
 /** 最大并发编码数（WASM BasisEncoder 单实例，并发过高会争抢资源） */
 const MAX_CONCURRENT = 3;
 
-/** 并发信号量：等待队列中等待执行的任务 */
-type WaitingTask = () => void;
+/** acquire 在取消时抛出的哨兵错误：调用方据此静默退出，不记编码失败、不毒化去重集合 */
+class EncodeCancelledError extends Error {
+  constructor() {
+    super("encode cancelled");
+    this.name = "EncodeCancelledError";
+  }
+}
+
+/** 并发信号量：等待队列中等待执行的任务（run 触发执行，reject 由取消路径调用） */
+type WaitingTask = {
+  run: () => void;
+  reject: (e: Error) => void;
+};
 let activeCount = 0;
 const waitingQueue: WaitingTask[] = [];
 let cancelled = false;
@@ -35,34 +46,37 @@ const completedHashes = new Set<string>();
 /** 正在进行中的编码 hash 集合（防止重复调度） */
 const inProgressHashes = new Set<string>();
 
-/** 信号量：获取执行槽位，返回释放函数 */
+/** 信号量：获取执行槽位，返回释放函数。取消时有排队任务则 reject（不静默挂起） */
 function acquire(): Promise<() => void> {
-  return new Promise((resolve) => {
-    const task: WaitingTask = () => {
-      activeCount++;
-      let released = false;
-      resolve(() => {
-        if (released) return;
-        released = true;
-        activeCount--;
-        // 从等待队列取下一个任务
-        const next = waitingQueue.shift();
-        if (next) next();
-      });
+  return new Promise((resolve, reject) => {
+    const task: WaitingTask = {
+      reject,
+      run: () => {
+        activeCount++;
+        let released = false;
+        resolve(() => {
+          if (released) return;
+          released = true;
+          activeCount--;
+          // 从等待队列取下一个任务
+          const next = waitingQueue.shift();
+          if (next) next.run();
+        });
+      },
     };
     if (activeCount < MAX_CONCURRENT && !cancelled) {
       // 立即执行
-      task();
+      task.run();
     } else {
       waitingQueue.push(task);
     }
   });
 }
 
-/** 取消所有待执行的编码（已在执行的不受影响） */
+/** 取消所有待执行的编码（已在执行的不受影响）：reject 队列中任务，避免 acquire 永久挂起 */
 export function cancelPendingEncodings(): void {
   cancelled = true;
-  // 清空等待队列
+  for (const task of waitingQueue) task.reject(new EncodeCancelledError());
   waitingQueue.length = 0;
 }
 
@@ -216,9 +230,10 @@ export async function encodeAndCacheTexture(
   pngBlobUrl: string,
   port: MmdDataPort,
 ): Promise<boolean> {
-  // 获取并发槽位
-  const release = await acquire();
+  // 获取并发槽位（取消时抛 EncodeCancelledError，需在 try 内捕获以正确清理）
+  let release: (() => void) | null = null;
   try {
+    release = await acquire();
     // 解码 PNG → ImageData
     const imageData = await blobUrlToImageData(pngBlobUrl);
     // 本地 WASM 编码为 KTX2（绕开 loaders.gl 4.4.4 subarray().buffer 假成功 bug，见文件头注释）
@@ -244,6 +259,8 @@ export async function encodeAndCacheTexture(
     completedHashes.add(hash);
     return true;
   } catch (e) {
+    // 取消：静默退出，不记失败、不毒化 inProgressHashes（调用方 .then 仍正常 delete）
+    if (e instanceof EncodeCancelledError) return false;
     // 编码失败静默降级，不影响已有纹理
     if (port.addOpLog) {
       const msg = safeErrorMessage(e);
@@ -257,7 +274,7 @@ export async function encodeAndCacheTexture(
     }
     return false;
   } finally {
-    release();
+    release?.();
   }
 }
 

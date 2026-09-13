@@ -10,10 +10,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/adapters/scene-registry.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
@@ -37,14 +34,10 @@ export function roleBaseName(e: ModelEntry): string {
 
 // P1 批次3：角色面板内联 cssText → 集中类（fr- 前缀本文件私有，ensureRolesStyles
 // 幂等注入——modelDetailView/motionDetailView/frBuildToolsView 三个入口各调一次，覆盖全部渲染路径）
-let _rolesStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _rolesStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
 function ensureRolesStyles(): void {
-  if (_rolesStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
+  installOnceStyles(
+    "roles",
+    `
 /* 角色面板集中样式（P1 批次3：cssText→类）。高亮单一源 .fr-row-active：角色 active 与
    组件当前行共用，派生 --accent（刀② 收编后禁回硬编码 rgba）。 */
 .fr-role-row, .fr-comp-row {
@@ -81,9 +74,8 @@ ${MENU_ERROR_NOTE_CSS}
 }
 .fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size: 11px; }
 .fr-comp-mark { width: 14px; flex-shrink: 0; text-align: center; }
-`;
-  overlayStyleRoot().appendChild(style);
-  _rolesStylesInjected = true;
+`,
+  );
 }
 
 // ── 模型详情（🧍 模型 dock 入口）──

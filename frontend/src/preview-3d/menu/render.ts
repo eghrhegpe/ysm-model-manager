@@ -8,10 +8,7 @@
 
 import { t, tOf } from "@/core/i18n/t.ts";
 import { getSchema } from "@/preview-3d/adapters/schema-registry.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import {
   isPathAvailable,
   type KNOWN_PATHS,
@@ -55,14 +52,15 @@ const CAP_CONTROL_RENDERERS: Record<
  * 幂等注入 renderMenu 用的 CSS 类规则（仅注入一次，重复调用 no-op）。
  * 把内联 style.cssText 抽成类，避免 renderMenu 分支里重复硬编码样式串。
  */
-let _menuStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _menuStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
+/**
+ * 幂等注入 renderMenu 用的 CSS 类规则（仅注入一次；目标切换经 installOnceStyles 内置
+ * onOverlayStyleTargetReset 钩子自动清零重注，ADR-175 M1 行为不变）。
+ * 把内联 style.cssText 抽成类，避免 renderMenu 分支里重复硬编码样式串。
+ */
 function ensureMenuStyles(): void {
-  if (_menuStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
+  installOnceStyles(
+    "menu",
+    `
 /* ===== P1 抽类迁移（render.ts 控件行，2026-09）：原内联 style.cssText 逐字搬迁 =====
  * 双类锚定（.slide-item / .slide-label 在前）压过 ui 模块单类规则，避免注入顺序依赖；
  * 控件无基类的用 rm- 单类（前缀唯一，无撞名）。
@@ -122,9 +120,8 @@ ${MENU_CARD_CSS}
 /* row 槽位样式（ADR-193 第四刀）：radio 活跃行高亮 + 行内按钮尺寸微调 */
 .rm-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .row-radio-active { color: var(--accent, #7c83ff); }
-.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size: 12px; line-height: 1.2; }`;
-  overlayStyleRoot().appendChild(style);
-  _menuStylesInjected = true;
+.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size: 12px; line-height: 1.2; }`,
+  );
 }
 
 // ===================================================================

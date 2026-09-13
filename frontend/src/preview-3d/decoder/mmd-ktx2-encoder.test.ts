@@ -380,6 +380,53 @@ describe("并发控制与取消", () => {
     expect(encodeStarted).toBeLessThanOrEqual(8);
   });
 
+  it("取消排队任务后 inProgressHashes 释放，同 hash 可重编码（P1 挂起/毒化回归）", async () => {
+    // 卡住前 MAX_CONCURRENT(=3) 个编码，第 4 个进入等待队列。
+    // 修复前：cancelPendingEncodings 清空 waitingQueue 但排队 acquire 承诺永不应答，
+    // encodeAndCacheTexture 卡在 await acquire → .catch 永不触发 → inProgressHashes 永久毒化，
+    // 同 hash 后续调度被静默跳过、永不重编码。修复后：acquire 在取消时 reject(EncodeCancelledError)
+    // → 排队任务进入 .catch → inProgressHashes.delete 正常清理。
+    let releaseHold: () => void = () => {};
+    const hold = new Promise<void>((r) => { releaseHold = r; });
+    let started = 0;
+    hoisted.ktx2EncodeMock.mockImplementation(() => {
+      started++;
+      if (started <= 3) return hold.then(() => new Uint8Array([0x01]).buffer);
+      return Promise.resolve(new Uint8Array([0x01]).buffer);
+    });
+
+    const port = makePort();
+    const tasks: Array<() => void> = [];
+    vi.stubGlobal("queueMicrotask", (cb: () => void) => tasks.push(cb));
+
+    const hashMap = new Map<string, string>();
+    for (let i = 0; i < 4; i++) hashMap.set(`blob:tx${i}`, `hash_tx${i}`);
+
+    // 第一轮调度：3 运行 + 1 排队（排队者尚未进入 encodeImpl）
+    scheduleBackgroundEncoding(hashMap, port);
+    for (const t of tasks) t();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(started).toBe(3);
+
+    // 取消：排队中的第 4 个 acquire 被 reject，不再永久挂起
+    cancelPendingEncodings();
+    await vi.advanceTimersByTimeAsync(5);
+
+    // 释放 hold，让前 3 个完成
+    releaseHold();
+    await vi.advanceTimersByTimeAsync(10);
+
+    // 关键回归断言：重调度被取消的 hash_tx3 → 应成功再编码（证明未被 inProgressHashes 毒化）
+    tasks.length = 0;
+    scheduleBackgroundEncoding(new Map([["blob:tx3", "hash_tx3"]]), port);
+    for (const t of tasks) t();
+    await vi.advanceTimersByTimeAsync(10);
+
+    // 总编码次数 = 3（首次）+ 1（重编码）= 4；重编码成功落盘
+    expect(hoisted.ktx2EncodeMock).toHaveBeenCalledTimes(4);
+    expect(hoisted.saveTextureMock).toHaveBeenCalledWith("hash_tx3", expect.any(String));
+  });
+
   it("重复调度不导致重复编码（幂等）", async () => {
     const port = makePort();
     // 使用本测试专属的唯一 hash（避免 completedHashes 干扰）

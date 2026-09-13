@@ -9,10 +9,7 @@
 
 import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";
@@ -54,19 +51,15 @@ export function capControlToView(c: PreviewControlDef): CapControlView {
 
 /** i18n 安全取值走 tOf（ADR-207 D3）：PreviewControlDef.labelKey/group/hintKey 为
  *  数据字段（string）+ 原文兜底，无编译期收窄；字面量 key 站点请用 tr（拼错报红）。 */
-let _capStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _capStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
 /** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
  *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
  *  .cap-section-header/.cap-section-arrow 自 menu-styles.ts 共享常量引入（单一事实源，
  *  render.ts rmAppendFolder 消费同一常量——不再双源漂移）；cc-* 为本模块控件独有类
  *  (双类锚定压过 .slide-label/.setting-select)。 */
 function ensureCapStyles(): void {
-  if (_capStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
+  installOnceStyles(
+    "cap",
+    `
 .cap-section {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
@@ -99,9 +92,8 @@ ${MENU_SECTION_CSS}
 .cc-btn { padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer; }
 .cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
 .cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }
-`;
-  overlayStyleRoot().appendChild(style);
-  _capStylesInjected = true;
+`,
+  );
 }
 
 /** 分组折叠的 section 壳：header 点击切换展开/收起 */

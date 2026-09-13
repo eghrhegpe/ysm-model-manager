@@ -8,7 +8,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
-import { overlayStyleRoot } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
@@ -29,13 +29,8 @@ import { registerSchema, unregisterSchema } from "./schema-registry.ts";
 const mdliCss = `
 .mdli-trunc-warn { padding:6px 12px; background:rgba(207,83,0,0.3); color:#ffa64d; font-size:12px; text-align:center; flex-shrink:0; }
 `;
-let _mdliStylesInjected = false;
 function ensureMdliStyles(): void {
-  if (_mdliStylesInjected) return;
-  _mdliStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = mdliCss;
-  overlayStyleRoot().appendChild(el);
+  installOnceStyles("mdli", mdliCss);
 }
 
 const CHUNK_SIZE = 32; // 空间分块维：每 chunk 持一个 InstancedMesh，32³ ≈ 32k 方块上限

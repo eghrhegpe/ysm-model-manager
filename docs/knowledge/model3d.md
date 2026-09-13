@@ -328,6 +328,7 @@ auto_fields:
     - installComponentsStyles
     - InstalledPreviewInfra
     - installGpuCalibrationHook
+    - installOnceStyles
     - installSlideMenuStyles
     - invalidateMaxFpsCache
     - invalidatePreview

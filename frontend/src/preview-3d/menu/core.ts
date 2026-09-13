@@ -14,10 +14,7 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "@/preview-3d/adapters/schema-registry.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";
@@ -73,14 +70,10 @@ export interface PreviewMenuHandle {
 // [菜单共享样式] .cm-error-note 与 roles .fr-error-note 同值，已收敛至 menu-styles.ts
 // MENU_ERROR_NOTE_CSS 单一事实源（旧注释称镜像 switch .sw-row，ADR-193 第四刀
 // switch DOM 层退役后该镜像已不存在——同步修正）。
-let _coreStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _coreStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
 function ensureCoreStyles(): void {
-  if (_coreStylesInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
+  installOnceStyles(
+    "core",
+    `
 /* core 装配层集中样式（P1 批次6：cssText→类）。cm-row 为 core 行专属（switch .sw-row
    镜像已随 ADR-193 第四刀退役）。 */
 .ysm-preview-menu.cm-popup { position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;z-index:25; }
@@ -88,9 +81,8 @@ function ensureCoreStyles(): void {
 .cm-row-icon { font-size:15px;width:18px;text-align:center; }
 .cm-row-chev { margin-left:auto;font-size:13px;font-weight:700;opacity:0.4;user-select:none; }
 ${MENU_ERROR_NOTE_CSS}
-`;
-  overlayStyleRoot().appendChild(style);
-  _coreStylesInjected = true;
+`,
+  );
 }
 
 /** mount 状态壳：handle 在 dock 按钮 onclick 之后才赋值，fillRoles 回调经此壳读取，避免闭包前向捕获 */

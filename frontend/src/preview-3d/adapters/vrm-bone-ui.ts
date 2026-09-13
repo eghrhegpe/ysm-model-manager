@@ -14,10 +14,7 @@ import {
   pickBone,
   toggleBoneVisible,
 } from "@/preview-3d/bone/bone-tools.ts";
-import {
-  onOverlayStyleTargetReset,
-  overlayStyleRoot,
-} from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 
 /** 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） */
 export interface VrmBonePanelCtx {
@@ -56,16 +53,8 @@ const vbuCss = `
 .vbu-detail { padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:4px; margin:2px 4px 4px; font-size:10px; color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
 .vbu-field { margin-bottom:3px; }
 `;
-let _vbuStylesInjected = false;
-onOverlayStyleTargetReset(() => {
-  _vbuStylesInjected = false;
-}); // ADR-175 M1:目标切换重注入
 function ensureVbuStyles(): void {
-  if (_vbuStylesInjected) return;
-  _vbuStylesInjected = true;
-  const el = document.createElement("style");
-  el.textContent = vbuCss;
-  overlayStyleRoot().appendChild(el);
+  installOnceStyles("vbu", vbuCss);
 }
 
 export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel {

@@ -16,3 +16,9 @@ export function backendGetApp(): ReturnType<typeof getApp> {
 
 /** 重导出绑定类型：views 层类型引用也走组合根，闭合唯一 seam（避免直 import backend/app.ts 类型） */
 export type { AppBindings };
+
+// 【口径钉死 2026-09-13】本 seam 管辖的是 backend/app.ts 的**运行时函数调用**；
+// `@/bindings/...`（generate:bindings 生成物）的 **import type 纯类型引用**不在此列，
+// 全仓 views/features 直连约 20 处属**有意保留**：纯编译期、零运行时耦合、
+// check-layering 与 check-binding-usage 均不约束。若日后要统一「类型也走组合根」，
+// 须先立 ADR（新增 views/backend-types.ts re-export 层 + 全量迁移），勿当作违规随手改。

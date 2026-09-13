@@ -604,9 +604,6 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
  * 拖拽排序属编辑模式强相关，一并迁此。
  */
 export function bindEditEvents(state: SiteViewState, refreshView: () => void): CleanupFn {
-  const { esc: _esc } = state;
-  void _esc;
-
   const ds: DragStateShell = { srcIdx: -1, presetSrcIdx: -1 };
   const fs: FilterStateShell = { activeTag: state.activeTag };
 

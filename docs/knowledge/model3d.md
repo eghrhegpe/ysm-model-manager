@@ -485,6 +485,7 @@ auto_fields:
     - persistState
     - pickBone
     - pickMmdBone
+    - pickModelDefaultFields
     - pickPerceptionCaps
     - pickPersistFields
     - PMX_MAT_FLAG_DOUBLE_SIDE

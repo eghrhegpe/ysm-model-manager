@@ -37,6 +37,7 @@ auto_fields:
     - getStateValue
     - MODEL_DEFAULTS
     - ModelType
+    - pickModelDefaultFields
     - registerEnvCallback
     - resetEnvState
     - resetSceneInfra

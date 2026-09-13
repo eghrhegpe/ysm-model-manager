@@ -32,6 +32,7 @@ auto_fields:
     - parseToolOutput
     - RecordOpts
     - reportPathFor
+    - requireSummaryOk
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK

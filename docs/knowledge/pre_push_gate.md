@@ -109,6 +109,7 @@ invariant_anchors:
 | `gofmtCheck([])` 不早退 | 裸 `gofmt -l` 无参读 stdin → 门禁挂死到 300s 超时 | 空列表早退 |
 | `shAsync` 无输出上限 | go test/vite 刷屏输出在 gate 进程内无界膨胀 | 1MB cap（保尾部） |
 | `shAsync` 超时不可辨 | 超时被杀进程 `code=null` → 与「编译 FAIL」同形，被误报成编译错误 | `ExecResult.timedOut` + out 追加超时原因（tail 可见） |
+| `gofmtCheck` 字符串拼 shell | 与 `git()` 的「数组防注入」哲学同文件分裂（锐评 P1：给后续 sh 调用方递梯子） | 2026-09-13 数组化 `procRun("gofmt", ["-l", ...files])`；`sh`/`shAsync` 升格显式不变式——**禁入运行期用户可控输入**（stdin ref/CLI 参数），只收开发者常量命令，含外部输入的执行一律数组化 |
 
 **blockPolicy 必须落库**（2026-09-13 修复 P1 归因 bug）：`record()` 原先只用 `blockPolicy` 判定是否阻断，**不写进 `results` 条目**——而 `gate-report.policyTag()` 恰恰读 `item.blockPolicy` 生成 FAIL 明细的归属标签。漏存导致所有 FAIL（含 debt 存量债）一律显示 `[本次引入]`，AI 据此把存量债当成自己引入的回归去修。实证：`check-deadcode-baseline`（声明 debt）在 baseline 输出里被标成 `[本次引入]`。现 `GateResult` 与 `gate-report.GateResultItem` 收敛为同一形状（后者退化为 `type GateResultItem = GateResult` 别名，报告层不再持有第二份定义）。归属标签的端到端链路（record → results → `formatFailSummary`）由 `tests/test_gate_ctx.ts` 第 5/9 组行为断言锁死（源码 grep 式断言只能证明「字符串在」，不能证明「行为对」）。
 

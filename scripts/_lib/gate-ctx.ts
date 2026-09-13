@@ -14,7 +14,7 @@
  */
 import { spawn } from "node:child_process";
 import type { Plan } from "./domain-classify.ts";
-import { run as procRun, shq } from "./proc.ts";
+import { run as procRun } from "./proc.ts";
 import { ROOT } from "./scan-files.ts";
 
 /**
@@ -103,6 +103,12 @@ export function createGateCtx(init: {
   const sh = (cmd: string, { cwd = ROOT, timeout = TIMEOUT } = {}): ExecResult => {
     // shell 执行命令（win32 兼容 .cmd）；统一委托 _lib/proc.ts（超时/错误分类契约）。
     // out 回退 err：ENOENT/超时诊断在 r.err，空 out 时保留原因（P3 复核）。
+    //
+    // ⚠️ 不变式（2026-09-13，锐评 P1）：shell:true 使本函数每条命令都过 cmd.exe 解析。
+    // **禁止把任何运行期用户可控字符串（stdin ref、文件路径、CLI 参数）传入本函数**——
+    // 那类输入必须走数组式 procRun（见 git() 注释）。本函数只接受 gate 源码内的
+    // 开发者常量命令（go test && ...、npx vite build 等需 shell 链接/.cmd 解析的场景）。
+    // 违反此界线的先例是旧版 gofmtCheck（已数组化）；新增「含外部输入」的执行一律数组化。
     const r = procRun(cmd, [], { cwd, timeout, shell: true });
     return { rc: r.rc, out: r.out || r.err || "" };
   };
@@ -177,8 +183,14 @@ export function createGateCtx(init: {
     if (goFiles.length === 0) return [];
     // gofmt -l 只读检出未格式化文件（不修改）。修复由 pre-commit 提交时自动完成；
     // 此处仍检出说明提交绕过了 pre-commit（--no-verify 等），阻断并提示手动修复。
-    return sh(`gofmt -l ${goFiles.map(shq).join(" ")}`)
-      .out.trim()
+    // 数组式 procRun（2026-09-13，锐评 P1）：与 git() 同一安全哲学——文件路径不经
+    // shell 拼接（旧版 sh(`gofmt -l ${shq(...)}`) 与「数组防注入」不变式在同一文件里分裂，
+    // 是给后续 sh 调用方递梯子）。gofmt 是 Go 工具链二进制，无 .cmd 解析需求。
+    const r = procRun("gofmt", ["-l", ...goFiles], { cwd: ROOT, timeout: TIMEOUT });
+    // out 回退 err：与 sh() 同口径（ENOENT 等诊断在 err）——err 行不含 .go 后缀，
+    // 过滤后仍为 []，与旧版 sh 路径行为等价（gofmt 缺失的假绿由 Go 域 go build 先行兜底）。
+    return (r.out || r.err || "")
+      .trim()
       .split("\n")
       .filter((f) => f.endsWith(".go"));
   };

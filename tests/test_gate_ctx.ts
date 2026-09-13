@@ -22,6 +22,8 @@
  * 零依赖（node:assert，脚本式契约测试，由 _lib/contract-tests.ts spawn 执行）。
  */
 import assert from "node:assert";
+import fs from "node:fs";
+import os from "node:os";
 import { createGateCtx } from "../scripts/_lib/gate-ctx.ts";
 // 归属标签渲染链路（record → results → formatFailSummary）是本次修复的核心价值，
 // 故本测试同时消费 gate-report 的纯函数——两端一起锁（映射见 contract-tests.ts）。
@@ -131,6 +133,20 @@ function mkCtx() {
   const t0 = Date.now();
   assert.deepEqual(ctx.gofmtCheck([]), [], "空文件列表应返回空数组");
   assert.ok(Date.now() - t0 < 1000, "gofmtCheck([]) 必须早退而非 spawn gofmt");
+}
+
+// ── 7b. gofmtCheck 数组路径真实检出（2026-09-13 数组化回归锁） ──
+// 旧版走 sh(`gofmt -l ${shq(...)}`) 字符串拼 shell，与 git() 的「数组防注入」哲学分裂；
+// 数组化后用真实 gofmt 二进制验证：格式化良好 → []，未格式化 → 检出该文件。
+{
+  const ctx = mkCtx();
+  const tmp = fs.mkdtempSync(os.tmpdir() + "/gofmt-probe-");
+  const bad = `${tmp}/bad.go`;
+  fs.writeFileSync(bad, "package p\nfunc  F( ) {\nx:=1\n_ = x\n}\n");
+  const detected = ctx.gofmtCheck([bad]);
+  assert.equal(detected.length, 1, "未格式化 .go 应被检出（数组式 procRun 路径）");
+  assert.ok(detected[0].endsWith("bad.go"));
+  fs.rmSync(tmp, { recursive: true, force: true });
 }
 
 // ── 8. shAsync 超时语义：标记 timedOut + 原因写入 out ──

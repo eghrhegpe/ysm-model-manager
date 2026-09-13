@@ -1,5 +1,6 @@
 // ===== sidebar Shadow CSS =====
 import { btnBaseCSS } from "@/utils/dom/css.ts";
+import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const sidebarCSS: string = `
 :host {
   display: flex; flex-direction: column;
@@ -64,7 +65,7 @@ ${btnBaseCSS}
 }
 /* 本地化 fadeSlideLeft：.instance-card (L30) 引用，document 层 components.css 定义的同名 keyframes
    不穿透 Shadow DOM 边界，须在 sidebar shadow 内重定义。 */
-/* 本地化 keyframe：与 content-layout.ts / components.css 副本逐字节一致（translateX(-8px)），
-   违则 sidebar 与 app-content 同名动画幅度分裂（评审 2026-08-24 第 1 条）。 */
-@keyframes fadeSlideLeft { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+/* 单一事实源 = @/views/css/keyframes.ts|FADE_SLIDE_LEFT（与 content-layout.ts 共享），
+   与 components.css 全局副本的一致性见该文件头说明。 */
+${FADE_SLIDE_LEFT}
 `;

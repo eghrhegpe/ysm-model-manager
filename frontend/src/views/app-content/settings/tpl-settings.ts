@@ -73,7 +73,6 @@ function renderStgBasicPaths(isViewer: boolean): string {
     ${gameRootCard}
     ${linkCard}
     ${mirrorCard}
-    ${isViewer ? "" : ""}
   </div>`;
 }
 

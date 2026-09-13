@@ -481,11 +481,11 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 287 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 335 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 123 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 134 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 114 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 125 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 136 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 148 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 158 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 59 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 93 |

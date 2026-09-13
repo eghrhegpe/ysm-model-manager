@@ -89,30 +89,21 @@ export function initUiPrefs(root: ShadowRoot): void {
     if (szBtn) szBtn.textContent = btnH;
   };
 
-  // 初始化 UI 控件值
-  root.getElementById("set-font-size") &&
-    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
-    ((root.getElementById("set-font-size") as HTMLSelectElement).value =
-      safeGet("ui-font-size") || "normal");
-  root.getElementById("set-display-font") &&
-    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
-    ((root.getElementById("set-display-font") as HTMLSelectElement).value =
-      safeGet("ui-display-font") || "kaiti");
-  root.getElementById("set-card-density") &&
-    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
-    ((root.getElementById("set-card-density") as HTMLSelectElement).value =
-      safeGet("ui-card-density") || "compact");
-  root.getElementById("set-animations") &&
-    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
-    ((root.getElementById("set-animations") as HTMLInputElement).checked =
-      safeGet("ui-animations") !== "off");
+  // 初始化 UI 控件值（2026-09 锐评 P3：`&&` 空值短路 + 重复 getElementById + 双断言 → 守卫赋值，
+  // 与本文件其余 `if (el)` 惯例对齐）
+  const fontSizeSel = root.querySelector<HTMLSelectElement>("#set-font-size");
+  if (fontSizeSel) fontSizeSel.value = safeGet("ui-font-size") || "normal";
+  const displayFontSel = root.querySelector<HTMLSelectElement>("#set-display-font");
+  if (displayFontSel) displayFontSel.value = safeGet("ui-display-font") || "kaiti";
+  const cardDensitySel = root.querySelector<HTMLSelectElement>("#set-card-density");
+  if (cardDensitySel) cardDensitySel.value = safeGet("ui-card-density") || "compact";
+  const animationsInput = root.querySelector<HTMLInputElement>("#set-animations");
+  if (animationsInput) animationsInput.checked = safeGet("ui-animations") !== "off";
   // 启动默认页面：显示「实际生效」的值——有显式配置用配置，否则回退
   // resolveInitialPage 的默认结果（仓库页）。旧写法 || "instances" 会显示
   // 一个从未生效的死默认值，与真实启动页不符（死设置遗留 bug）。
-  root.getElementById("set-default-page") &&
-    // biome-ignore lint/suspicious/noAssignInExpressions: && 空值短路守卫
-    ((root.getElementById("set-default-page") as HTMLSelectElement).value =
-      safeGet("ui-default-page") || "repository");
+  const defaultPageSel = root.querySelector<HTMLSelectElement>("#set-default-page");
+  if (defaultPageSel) defaultPageSel.value = safeGet("ui-default-page") || "repository";
 
   applyUIPref();
 

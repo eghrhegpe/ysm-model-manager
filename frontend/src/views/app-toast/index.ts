@@ -117,7 +117,7 @@ class AppToast extends WebComponentBase {
     if (type) t.dataset.toastType = type;
     if (clickCallback) t.style.cursor = "pointer";
     // G-1 稳定钩子：undo/close 按钮同时挂 data-testid，e2e 不再依赖 .undo-btn/.close-btn class
-    t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">✕</button>`;
+    t.innerHTML = `<span class="msg">${esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">✕</button>`;
     c.appendChild(t);
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
@@ -183,10 +183,6 @@ class AppToast extends WebComponentBase {
     if (!t.parentNode) return;
     t.style.animation = "slideOut .2s ease forwards";
     setTimeout(() => t.remove(), SLIDE_OUT_MS);
-  }
-
-  _esc(s: string): string {
-    return esc(s);
   }
 }
 // 注册组件（防 HMR/重复 import 时重复 define）

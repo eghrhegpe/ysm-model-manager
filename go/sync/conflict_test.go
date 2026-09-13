@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -460,6 +461,102 @@ func TestSHA256File(t *testing.T) {
 	}
 	if hash1 == hash3 {
 		t.Error("不同内容应产生不同哈希")
+	}
+}
+
+// injectHashFailure 注入哈希失败 seam（包级 hashFileForEntries），返回恢复函数。
+// 仅对路径含 "broken" 的文件注入失败，其余走真实 fsutil.SHA256File——
+// 供测试构造"单文件哈希失败但其余正常"的混合场景。
+// 注意：包级 seam 非并发安全，调用方测试不得 t.Parallel()。
+func injectHashFailure(t *testing.T) func() {
+	t.Helper()
+	original := hashFileForEntries
+	hashFileForEntries = func(path string) (string, error) {
+		if strings.HasSuffix(path, "broken.bin") {
+			return "", errors.New("injected: hash failure")
+		}
+		return fsutil.SHA256File(path)
+	}
+	return func() { hashFileForEntries = original }
+}
+
+// TestCollectFileEntries_HashFailureIsEntryLevel 验证 collectFileEntries 错误通道分离：
+// 单文件哈希失败属条目级错误——条目保留 Hash=="" 照常返回，不得混入整体 error
+// 导致调用方整体失败。旧实现把 hashErr 写入 walkErr，DetectConflicts 消费后
+// 任意一个哈希失败文件就让整个冲突检测失败（HashFailed 分支永远走不到）。
+// 构造说明：Windows/CI 无法可靠构造"文件存在但读失败"的真实文件系统状态
+// （chmod 000 对目录不生效、symlink 需开发者模式），故用包级 seam 注入。
+func TestCollectFileEntries_HashFailureIsEntryLevel(t *testing.T) {
+	dir, err := os.MkdirTemp("", "collect-hashfail-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	writeFile(t, dir, "ok.txt", "ok", time.Now())
+	writeFile(t, dir, "broken.bin", "x", time.Now())
+
+	restore := injectHashFailure(t)
+	defer restore()
+
+	entries, err := collectFileEntries(dir)
+	if err != nil {
+		t.Fatalf("哈希失败的条目不应导致 collectFileEntries 整体失败: %v", err)
+	}
+	if e, ok := entries["broken.bin"]; !ok || e.Hash != "" {
+		t.Fatalf("哈希失败的条目应保留且 Hash 为空，实际 ok=%v entry=%+v", ok, e)
+	}
+	if e, ok := entries["ok.txt"]; !ok || e.Hash == "" {
+		t.Fatalf("正常文件哈希不应为空，实际 ok=%v entry=%+v", ok, e)
+	}
+}
+
+// TestDetectConflicts_HashFailedReportedNotAborted 验证 HashFailed 分支可达且不整体报错：
+// 一端哈希失败的条目应被标记 HashFailed+ResolveManual 计入人工审查；正常冲突文件
+// 照常报告。旧实现单文件哈希失败 → DetectConflicts 整体返回错误，正常冲突一并丢失
+// （注释声明的设计意图被实现架空）。
+func TestDetectConflicts_HashFailedReportedNotAborted(t *testing.T) {
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	// 同内容 → 不冲突
+	writeFile(t, localDir, "same.txt", "identical", time.Now())
+	writeFile(t, remoteDir, "same.txt", "identical", time.Now())
+	// 真冲突（正常哈希）
+	writeFile(t, localDir, "conflict.txt", "local", time.Now())
+	writeFile(t, remoteDir, "conflict.txt", "remote", time.Now())
+	// 本地 broken.bin 哈希失败（注入）；远端正常。两端 size 相等 → 走 HashFailed 分支
+	writeFile(t, localDir, "broken.bin", "A", time.Now())
+	writeFile(t, remoteDir, "broken.bin", "A", time.Now())
+
+	restore := injectHashFailure(t)
+	defer restore()
+
+	report, err := DetectConflicts(localDir, remoteDir, "test")
+	if err != nil {
+		t.Fatalf("单文件哈希失败不应导致 DetectConflicts 整体失败: %v", err)
+	}
+
+	var contentConflict, hashFailed *FileConflict
+	for i := range report.Conflicts {
+		switch report.Conflicts[i].Path {
+		case "conflict.txt":
+			contentConflict = &report.Conflicts[i]
+		case "broken.bin":
+			hashFailed = &report.Conflicts[i]
+		}
+	}
+	if contentConflict == nil {
+		t.Fatalf("正常冲突文件应照常报告，实际 %+v", report.Conflicts)
+	}
+	if contentConflict.Type != ConflictContentModified {
+		t.Fatalf("conflict.txt 应为内容冲突，实际 %s", contentConflict.Type)
+	}
+	if hashFailed == nil {
+		t.Fatalf("哈希失败条目应被报告为 HashFailed，实际 %+v", report.Conflicts)
+	}
+	if !hashFailed.HashFailed || hashFailed.SuggestedStrategy != ResolveManual {
+		t.Fatalf("broken.bin 应标记 HashFailed+ResolveManual，实际 %+v", hashFailed)
 	}
 }
 

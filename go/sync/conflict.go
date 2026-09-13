@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -270,7 +271,22 @@ type fileEntryInfo struct {
 	Hash    string
 }
 
-// collectFileEntries 收集目录下的所有文件信息
+// hashFileForEntries 供 collectFileEntries 计算单文件哈希。
+// 包级变量作为测试 seam：默认直连 fsutil.SHA256File，测试可注入失败场景——
+// Windows/CI 无法可靠构造"文件存在但读失败"的真实文件系统状态
+// （chmod 000 对目录不生效、symlink 需开发者模式）。
+// 注意：非并发安全，测试注入时不得 t.Parallel()。
+var hashFileForEntries = fsutil.SHA256File
+
+// collectFileEntries 收集目录下的所有文件信息。
+// 错误通道分离（2026-09-14）：
+//   - 返回的 error 仅表示「结构性失败」（root 不存在 / Walk 顶层错误），此时结果不可用。
+//   - 单文件哈希失败属条目级错误：仅记录日志，条目保留 Hash=="" 继续返回，
+//     DetectConflicts 靠 per-entry Hash=="" 识别并标记 HashFailed=true（人工审查路径）。
+//
+// 旧实现把 hashErr 混入 walkErr，导致任意一个被占用/超限的文件就让整个冲突检测
+// 整体失败，HashFailed 分支永远走不到——注释声明"DetectConflicts 不消费它"但实现
+// 消费了，注释与实现背离（2026-09-14 修复）。
 func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 	entries := make(map[string]fileEntryInfo)
 	var walkErr error
@@ -281,7 +297,7 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			// 收集访问错误但继续遍历其他文件（部分文件权限问题不影响整体扫描）
+			// 子树访问失败：跳过该路径继续遍历（尽力而为的冲突检测）
 			return nil
 		}
 		if info.IsDir() {
@@ -295,13 +311,11 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 		}
 		relPath = filepath.ToSlash(relPath)
 
-		hash, hashErr := fsutil.SHA256File(path)
+		hash, hashErr := hashFileForEntries(path)
 		if hashErr != nil {
-			// 哈希失败但仍记录条目（Hash 字段为空），不中断流程。
-			// DetectConflicts 靠 per-entry Hash=="" 识别哈希失败的条目
-			// 并标记 HashFailed=true。
-			// walkErr 仅保留最后一个错误供调用方诊断，DetectConflicts 不消费它。
-			walkErr = hashErr
+			// 条目级错误：不中断流程、不影响整体错误。条目保留 Hash==""，
+			// DetectConflicts 据此标记 HashFailed=true 走人工审查（L125-144 分支）。
+			log.Printf("[sync] 冲突检测哈希失败 %s: %v", path, hashErr)
 		}
 
 		entries[relPath] = fileEntryInfo{
@@ -321,8 +335,9 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 }
 
 // computeFileHash 曾为 fsutil.SHA256File 的无价值薄封装（同名近义双轨），
-// 已删除、调用点直连 fsutil.SHA256File——错误上抛语义不变（DetectConflicts
-// 依赖 per-entry Hash=="" 标记 HashFailed），无大文件上限（冲突检测走全量哈希）。
+// 已删除、调用点直连 hashFileForEntries（默认 fsutil.SHA256File）——无大文件上限
+// （冲突检测走全量哈希）。哈希失败语义见 collectFileEntries 注释：条目级错误，
+// per-entry Hash=="" 触发 DetectConflicts 的 HashFailed 分支，不再上抛整体错误。
 
 // suggestStrategy 根据修改时间建议解决策略
 func suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy {

@@ -25,6 +25,10 @@ import { ROOT } from "./_lib/scan-files.ts";
 // 统一参数解析：--check/--strict 为兼容旧参数声明为 bool（保持被静默忽略的既有行为，不落入 unknown）
 const args = parseArgs(process.argv.slice(2), {
   bools: ["json", "docs", "gate", "check", "strict", "audit-check"],
+  // --days 是 --audit-check 子命令的值参数（gate-audit-reconcile 对账窗口）——
+  // 不声明为 string 会被 parseArgs 当未知 flag 吃进 unknown、值落 _，args._.indexOf("--days")
+  // 恒 -1，--days 7 静默失效永远默认 30（code_review P2 行为 bug）
+  strings: ["days"],
 });
 if (args.unknown.length) console.warn(`[doctor] 忽略未知参数: ${args.unknown.join(", ")}`);
 const JSON_MODE = args.json as boolean;
@@ -58,8 +62,11 @@ if (args["audit-check"]) {
   // 放本地 doctor 而非 CI：对账的两侧数据源（远端跟踪 reflog + .git/gate-audit.log）
   // 都只存在于开发机——fresh clone 的 CI 上 pushEvents 恒 0，对账恒空转。
   // 「跨机可查」的系统性兜底 = CI 同跑 gate 本体互证（ci.yml 既有门禁 job），非 reconcile。
-  const daysIdx = args._.indexOf("--days");
-  const days = daysIdx >= 0 ? String(args._[daysIdx + 1]) : "30";
+  // --days 经 parseArgs strings 收进 args.days（code_review P2 修复：原从 args._ 取，
+  // parseArgs 未声明 days → --days 7 被吃进 unknown、值落 _，args._.indexOf 恒 -1 永远默认 30）
+  // 显式传了且是正整数才用，否则回落 30 天（Number(null)=0 的陷阱：不判 null 会把默认路径缩成 0）
+  const daysRaw = args.days as string | null;
+  const days = daysRaw && /^\d+$/.test(daysRaw) ? String(daysRaw) : "30";
   const r = spawnSync("node", [path.join("scripts", "gate-audit-reconcile.ts"), "--days", days], {
     cwd: ROOT,
     stdio: "inherit",

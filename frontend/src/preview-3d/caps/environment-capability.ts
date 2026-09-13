@@ -19,7 +19,8 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
+import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // P2 抽取：纯像素工具（drawEnvEquirect / 缩略图 / 直方图）已下沉 env-pixels.ts，
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
 import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
@@ -132,20 +133,24 @@ export class EnvironmentCapability implements SceneCapability {
     this.prevEnvironment = this.scene.environment;
     this.prevBackground = (this.scene.background as THREE.Texture | THREE.Color | null) ?? null;
 
-    // ADR-196：订阅 envState 变更，渲染由回调落地
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (this.isBuilding) return;
-      const structural =
-        changed.has("envPreset") ||
-        changed.has("envResolution") ||
-        changed.has("envUseAsBackground");
-      if (structural && this.enabled) {
-        this.buildEnvironment();
-      }
-      if (changed.has("envIntensity")) {
-        applyEnvIntensity([this.scene], envState.envIntensity);
-      }
-    });
+    // ADR-196：订阅 envState 变更，渲染由回调落地（只接收 environment 组的键）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, _state) => {
+        if (this.isBuilding) return;
+        const structural =
+          changed.has("envPreset") ||
+          changed.has("envResolution") ||
+          changed.has("envUseAsBackground");
+        if (structural && this.enabled) {
+          this.buildEnvironment();
+        }
+        if (changed.has("envIntensity")) {
+          applyEnvIntensity([this.scene], envState.envIntensity);
+        }
+      },
+      "environment",
+    );
   }
 
   /* -------- 内部：自定义 HDR 管线 -------- */
@@ -404,18 +409,14 @@ export class EnvironmentCapability implements SceneCapability {
     return this.enabled;
   }
 
-  applyModelPreset(modelType: string): void {
-    const preset =
-      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    // ADR-196：统一数据源 MODEL_DEFAULTS；callback → buildEnvironment。
-    const partial: Partial<EnvState> = {};
-    const src = preset as Record<string, unknown>;
-    if (src.envPreset !== undefined) partial.envPreset = src.envPreset as EnvPresetId;
-    if (src.envIntensity !== undefined) partial.envIntensity = src.envIntensity as number;
-    if (src.envResolution !== undefined) partial.envResolution = src.envResolution as number;
-    if (src.envUseAsBackground !== undefined)
-      partial.envUseAsBackground = src.envUseAsBackground as boolean;
-    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
+  applyModelPreset(modelType: ModelType): void {
+    const picked = pickModelDefaultFields(modelType, [
+      "envPreset",
+      "envIntensity",
+      "envResolution",
+      "envUseAsBackground",
+    ]);
+    if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
 
   setPresetId(id: EnvPresetId): void {

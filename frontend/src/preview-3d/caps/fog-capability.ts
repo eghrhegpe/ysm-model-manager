@@ -9,7 +9,8 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
+import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
   oneOf,
@@ -45,19 +46,15 @@ export class FogCapability implements SceneCapability {
     this.enabled = opts.enabled ?? true;
     this.prevFog = (this.scene.fog as THREE.Fog | THREE.FogExp2 | null) ?? null;
 
-    // ADR-196：订阅 envState 变更
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (
-        changed.has("fogEnabled") ||
-        changed.has("fogMode") ||
-        changed.has("fogColor") ||
-        changed.has("fogNear") ||
-        changed.has("fogFar") ||
-        changed.has("fogDensity")
-      ) {
+    // ADR-196：订阅 envState 变更（只接收 fog 组的键，dispatcher 前置过滤）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      () => {
+        // 任何 fog 组字段变更都触发 applyFog（dispatcher 已过滤，无需再判断 changed）
         this.applyFog();
-      }
-    });
+      },
+      "fog",
+    );
   }
 
   /* -------- 内部：按当前 envState 创建雾对象（或 null）并写回 scene.fog -------- */
@@ -98,22 +95,16 @@ export class FogCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设；持久化状态优先（applyModelPreset 仅做合理默认） */
-  applyModelPreset(modelType: string): void {
-    const preset =
-      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    const partial: Partial<EnvState> = {};
-    for (const key of [
+  applyModelPreset(modelType: ModelType): void {
+    const picked = pickModelDefaultFields(modelType, [
       "fogEnabled",
       "fogMode",
       "fogColor",
       "fogNear",
       "fogFar",
       "fogDensity",
-    ] as const) {
-      if ((preset as Record<string, unknown>)[key] !== undefined)
-        (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
-    }
-    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
+    ]);
+    if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
 
   /* -------- 参数变更 API -------- */
@@ -206,25 +197,8 @@ export class FogCapability implements SceneCapability {
   }
 
   loadState(): void {
-    let state = restoreState(this.id);
+    const state = restoreState(this.id);
     if (!state) return;
-    // code_review df84baefb #13（P2）：legacy 旧键迁移——ADR-196 前 fog 持久化为
-    // {enabled, mode, color, near, far, density}（无前缀），迁移后只读前缀键且
-    // migrateEnvState 为空透传 → 升级用户的自定义雾设置静默回默认。判据用
-    // fogMode（saveState 恒写的前缀代表键）缺失 + 任一旧键存在 → 纯旧形态；
-    // 只映射实际存在的旧键（防 undefined 覆盖混合形态的新前缀键）。
-    const legacyKeys = ["mode", "enabled", "color", "near", "far", "density"] as const;
-    const s = state as Record<string, unknown>; // 非空副本（下方重新赋值会丢失 if 收窄）
-    if (!("fogMode" in s) && legacyKeys.some((k) => k in s)) {
-      state = {
-        ...("enabled" in s ? ({ fogEnabled: s.enabled as boolean } as object) : {}),
-        ...("mode" in s ? ({ fogMode: s.mode } as object) : {}),
-        ...("color" in s ? ({ fogColor: s.color } as object) : {}),
-        ...("near" in s ? ({ fogNear: s.near } as object) : {}),
-        ...("far" in s ? ({ fogFar: s.far } as object) : {}),
-        ...("density" in s ? ({ fogDensity: s.density } as object) : {}),
-      };
-    }
     restoreFields(state, {
       enabled: {
         boolean: (v) => {

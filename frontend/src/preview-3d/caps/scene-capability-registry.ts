@@ -205,9 +205,5 @@ sceneCapabilityRegistry.add("renderMode", (ctx) => new RenderModeCapability({ sc
 /** sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像
  *  （skeleton-render）共用——原 light-capability 模块函数，上移断 registry↔light 环） */
 export function isSkyEnvironmentOn(): boolean {
-  return (
-    (
-      sceneCapabilityRegistry.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null
-    )?.isEnvironmentEnabled?.() ?? false
-  );
+  return sceneCapabilityRegistry.getById("sky")?.isEnvironmentEnabled() ?? false;
 }

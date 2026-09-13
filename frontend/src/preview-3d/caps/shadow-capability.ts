@@ -7,7 +7,8 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
+import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
 import {
   oneOf,
@@ -67,61 +68,66 @@ export class ShadowCapability implements SceneCapability {
     // ADR-196：订阅 envState 变更——按字段细粒度分派（code_review P3 #19 单主化）：
     // 结构性字段（type/mapSize）→ apply() 全量重建；参数字段（bias/normalBias/
     // cameraSize）→ 只遍历灯就地改对应属性（避免全量快照重建的重活）。
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (!this.enabled) return;
-      if (changed.has("shadowType") || changed.has("shadowMapSize")) {
-        this.apply();
-        return;
-      }
-      // code_review c979305a9 #2/#3/#5（P3）：param 键守卫——collectLights 分配数组
-      // 并遍历灯（dirs/spots 两数组 + 两 Set），对无关 envState 派发（雾/天空/地面
-      // 每次 slider 都触发本回调）无条件执行是热路径纯浪费（旧实现字段短路零工作）
-      if (
-        !changed.has("shadowBias") &&
-        !changed.has("shadowNormalBias") &&
-        !changed.has("shadowCameraSize")
-      ) {
-        return;
-      }
-      const { dirs, spots } = this.collectLights();
-      if (changed.has("shadowBias")) {
-        const v = envState.shadowBias;
-        for (const l of dirs) {
-          l.shadow.bias = v;
-          // code_review c979305a9 #1（P2）：in-place 改 bias 后须置脏——预渲染的
-          // shadow map 不标记 needsUpdate 则拖 bias 滑杆可见阴影不更新（cameraSize
-          // 分支与 applyDirLightShadow/applySpotShadow 均置，唯独此循环漏）
-          l.shadow.needsUpdate = true;
+    // 只接收 shadow 组的键（dispatcher 前置过滤）。
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, _state) => {
+        if (!this.enabled) return;
+        if (changed.has("shadowType") || changed.has("shadowMapSize")) {
+          this.apply();
+          return;
         }
-        for (const sp of spots) {
-          sp.shadow.bias = v;
-          sp.shadow.needsUpdate = true;
+        // code_review c979305a9 #2/#3/#5（P3）：param 键守卫——collectLights 分配数组
+        // 并遍历灯（dirs/spots 两数组 + 两 Set），对无关 envState 派发（雾/天空/地面
+        // 每次 slider 都触发本回调）无条件执行是热路径纯浪费（旧实现字段短路零工作）
+        if (
+          !changed.has("shadowBias") &&
+          !changed.has("shadowNormalBias") &&
+          !changed.has("shadowCameraSize")
+        ) {
+          return;
         }
-      }
-      if (changed.has("shadowNormalBias")) {
-        const v = envState.shadowNormalBias;
-        for (const l of dirs) {
-          l.shadow.normalBias = v;
-          l.shadow.needsUpdate = true;
+        const { dirs, spots } = this.collectLights();
+        if (changed.has("shadowBias")) {
+          const v = envState.shadowBias;
+          for (const l of dirs) {
+            l.shadow.bias = v;
+            // code_review c979305a9 #1（P2）：in-place 改 bias 后须置脏——预渲染的
+            // shadow map 不标记 needsUpdate 则拖 bias 滑杆可见阴影不更新（cameraSize
+            // 分支与 applyDirLightShadow/applySpotShadow 均置，唯独此循环漏）
+            l.shadow.needsUpdate = true;
+          }
+          for (const sp of spots) {
+            sp.shadow.bias = v;
+            sp.shadow.needsUpdate = true;
+          }
         }
-        for (const sp of spots) {
-          sp.shadow.normalBias = v;
-          sp.shadow.needsUpdate = true;
+        if (changed.has("shadowNormalBias")) {
+          const v = envState.shadowNormalBias;
+          for (const l of dirs) {
+            l.shadow.normalBias = v;
+            l.shadow.needsUpdate = true;
+          }
+          for (const sp of spots) {
+            sp.shadow.normalBias = v;
+            sp.shadow.needsUpdate = true;
+          }
         }
-      }
-      if (changed.has("shadowCameraSize")) {
-        const s = envState.shadowCameraSize;
-        for (const l of dirs) {
-          const cam = l.shadow.camera as THREE.OrthographicCamera;
-          cam.left = -s;
-          cam.right = s;
-          cam.top = s;
-          cam.bottom = -s;
-          cam.updateProjectionMatrix();
-          l.shadow.needsUpdate = true;
+        if (changed.has("shadowCameraSize")) {
+          const s = envState.shadowCameraSize;
+          for (const l of dirs) {
+            const cam = l.shadow.camera as THREE.OrthographicCamera;
+            cam.left = -s;
+            cam.right = s;
+            cam.top = s;
+            cam.bottom = -s;
+            cam.updateProjectionMatrix();
+            l.shadow.needsUpdate = true;
+          }
         }
-      }
-    });
+      },
+      "shadow",
+    );
   }
 
   /* -------- 跨能力注入 / mount-preview-core 兼容接口 -------- */
@@ -143,12 +149,11 @@ export class ShadowCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
-  applyModelPreset(adapterId: string): void {
+  applyModelPreset(modelType: ModelType): void {
     if (this.isStateLoaded) return;
-    const preset =
-      MODEL_DEFAULTS[adapterId as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    if (preset.shadowType !== undefined)
-      setEnvState({ shadowType: preset.shadowType }, { source: "auto-model" });
+    const picked = pickModelDefaultFields(modelType, ["shadowType"]);
+    if (picked.shadowType !== undefined)
+      setEnvState({ shadowType: picked.shadowType }, { source: "auto-model" });
   }
 
   /* -------- 内部：apply 管线 -------- */

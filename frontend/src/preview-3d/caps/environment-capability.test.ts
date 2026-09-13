@@ -218,7 +218,8 @@ describe("EnvironmentCapability — 预设切换", () => {
 
   it("applyModelPreset 未知模型类型回退 default（sky）", () => {
     const cap = newCap();
-    cap.applyModelPreset("unknown_type");
+    // 绕过编译期 ModelType 收窄：模拟运行时 adapter.id 传入非预期值
+    (cap as unknown as { applyModelPreset: (t: string) => void }).applyModelPreset("unknown_type");
     // unknown → MODEL_DEFAULTS.default → envPreset: "sky"
     expect(cap.getPresetId()).toBe(MODEL_DEFAULTS.default.envPreset);
   });

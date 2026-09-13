@@ -24,6 +24,7 @@ import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
@@ -33,6 +34,15 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
+
+/** 安全调用：抛错只 console.warn 不阻塞后续释放（对齐 safeDispose 语义） */
+function safeCall(fn: () => void, label: string): void {
+  try {
+    fn();
+  } catch (e) {
+    console.warn(`[${label}]`, e);
+  }
+}
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {
@@ -312,53 +322,25 @@ export async function buildFbxScene(
       // 「动画激活 → 感知静默」由各感知属主 adapter（mmd/vrm/ysm）用自己的动画判据自写。
     },
     dispose: () => {
-      // 逐段容错（对齐 mmd-adapter alloc 释放语义：单条 free 抛错不跳过其余）——
-      // 此前单 try 包全部，bonePanelRef 抛错会跳过 geometry/material dispose 与 blob revoke
-      try {
-        bonePanelRef.current?.();
-      } catch (e) {
-        console.warn("[fbx dispose] bonePanel", e);
-      }
-      try {
-        mixer?.stopAllAction();
-      } catch (e) {
-        console.warn("[fbx dispose] mixer", e);
-      }
+      // 逐段容错（对齐 mmd-adapter alloc 释放语义：单条 free 抛错不跳过其余）
+      safeCall(() => bonePanelRef.current?.(), "fbx dispose bonePanel");
+      safeCall(() => mixer?.stopAllAction(), "fbx dispose mixer");
       if (ctx.scene) {
-        try {
-          unregisterModelRoot(group);
-        } catch (e) {
-          console.warn("[fbx dispose] unregisterModelRoot", e);
-        }
-        try {
-          ctx.scene.remove(group);
-        } catch (e) {
-          console.warn("[fbx dispose] scene.remove", e);
-        }
+        safeCall(() => unregisterModelRoot(group), "fbx dispose unregisterModelRoot");
+        const scene = ctx.scene;
+        safeCall(() => scene.remove(group), "fbx dispose scene.remove");
       }
-      try {
-        group.traverse((o) => {
-          const mesh = o as THREE.Mesh;
-          if (mesh.geometry) mesh.geometry.dispose();
-          // SkinnedMesh.skeleton 持有 boneTexture（GPU 资源），不 dispose 会泄漏
-          const skinned = o as THREE.SkinnedMesh;
-          if (skinned.isSkinnedMesh && skinned.skeleton) {
-            skinned.skeleton.dispose();
-          }
-          const mat = mesh.material;
-          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-          if (Array.isArray(mat)) mat.forEach((m) => disposeMaterial(m));
-          else if (mat) disposeMaterial(mat as THREE.Material);
-        });
-      } catch (e) {
-        console.warn("[fbx dispose] geometry/material", e);
-      }
+      // 几何/材质/贴图释放走 disposeObject3D：uuid 去重（共享 geometry/material 只释放一次）
+      disposeObject3D(group, { disposeMaterial });
+      // SkinnedMesh.skeleton 持有 boneTexture（GPU 资源），disposeObject3D 不覆盖，单独释放
+      group.traverse((o) => {
+        const skinned = o as THREE.SkinnedMesh;
+        if (skinned.isSkinnedMesh && skinned.skeleton) {
+          skinned.skeleton.dispose();
+        }
+      });
       // 纹理 blob URL 释放（预览关闭后不再需要；未完成的 TextureLoader.load 会静默失败）
-      try {
-        for (const u of texBlobUrls) URL.revokeObjectURL(u);
-      } catch (e) {
-        console.warn("[fbx dispose] revokeObjectURL", e);
-      }
+      for (const u of texBlobUrls) URL.revokeObjectURL(u);
     },
     screenshot: () =>
       Promise.resolve(

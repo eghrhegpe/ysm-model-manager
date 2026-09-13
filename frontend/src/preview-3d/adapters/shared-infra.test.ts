@@ -105,7 +105,8 @@ describe("applyModelDefaults / applyPostProcDefaults（ADR-196 装配链收敛�
   it("未知 modelType 透传到各 cap（内部回落 default 的文案保留在 cap 侧，装配层不吞）", async () => {
     const { applyModelDefaults } = await import("./shared-infra.ts");
     const { deps, spies } = makeDeps();
-    applyModelDefaults("unknown_type", deps as never);
+    // 绕过编译期 ModelType 收窄：模拟运行时 adapter.id 传入非预期值
+    (applyModelDefaults as unknown as (t: string, d: unknown) => void)("unknown_type", deps as never);
     for (const spy of spies) expect(spy).toHaveBeenCalledWith("unknown_type");
   });
 

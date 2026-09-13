@@ -899,6 +899,12 @@
 | 它走 git diff 故不含未跟踪新文件 | `--changed 的边界` | 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files |
 | 清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts | `scopedFiles 声明与实现` | 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单 |
 | `YSM_SKIP_GATE=1` 与 `git push --no-verify` 并列作紧急绕过，但后者零痕迹（钩子不执行）。2026-09-13（锐评 P1）改为**留痕逃生**：钩子 SKIP 路径把待推 ref 写入 `.git/gate-audit.log`（SKIPPED 行），gate 每次 push 运行也追加 PUSH 行（oid+判定+N/M）——审计日志连续性使「无 gate 记录的推送」事后可回溯。`--no-verify` 客户端仍无法检测（git 语义边界），系统性兜底 = CI 同跑 gate 互证（待立项） | `逃生阀审计不对称` | - |
+| 2026-09-13（锐评 P1 | `审计对账有工具了` | - |
+| 2026-09-13（锐评 P2 | `sh/shAsync 执行语义已对齐` | - |
+| 2026-09-13（锐评 P1 | `sh/shAsync 调用点安全不变式已落成契约` | - |
+| 2026-09-13（锐评 P1 | `严格判定单一实现` | - |
+| ：`git push origin a b` 时任一 ref 的 resolveChanges 返回 null（解析失败）→ **整体阻断**（exit 1），不做 per-ref 放行——这是刻意的 fail-closed 选择而非缺陷；改契约测试前勿假设可 per-ref 豁免。多 ref 的文件集按并集去重算变更域，ctx 持有首个 ref 的 oid（golangci-lint 基线用） | `多 ref 推送的 fail-closed 耦合` | - |
+| 2026-09-13（锐评 | `PULL_HINT 带 remote-name` | - |
 | 2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查 | `覆盖尾行` | - |
 | ~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁 | `check-deadcode-baseline 的瞬态 FAIL` | - |
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |

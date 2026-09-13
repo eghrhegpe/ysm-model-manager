@@ -3,18 +3,29 @@
 // 仿 MikuMikuAR dispatchEnvChange 模式。
 
 import type { EnvState } from "./env-state-schema.ts";
+import { getPresetKeys } from "./env-state-schema.ts";
 
 export type EnvCallback = (changed: Set<string>, state: EnvState) => void;
 
+interface Registration {
+  cb: EnvCallback;
+  /** 非空时只派发 group 匹配的键（前置过滤，cap 回调不再需要自行过滤） */
+  group?: string;
+}
+
 // 回调注册表（cap 在构造时注册，析构时取消）
-const _callbacks = new Map<unknown, EnvCallback>();
+const _callbacks = new Map<unknown, Registration>();
 
 /**
  * 注册状态变更回调（cap 用）。
+ * @param cap  注册主体（能力实例，用于取消订阅）
+ * @param cb   回调函数
+ * @param group 可选：只接收该 group 的键变更（如 "sky"/"fog"/"ground" 等）；
+ *              省略则接收全量（兼容未分组场景）。
  * 返回取消订阅函数。
  */
-export function registerEnvCallback(cap: unknown, cb: EnvCallback): () => void {
-  _callbacks.set(cap, cb);
+export function registerEnvCallback(cap: unknown, cb: EnvCallback, group?: string): () => void {
+  _callbacks.set(cap, group ? { cb, group } : { cb });
   return () => {
     _callbacks.delete(cap);
   };
@@ -23,11 +34,21 @@ export function registerEnvCallback(cap: unknown, cb: EnvCallback): () => void {
 /**
  * 派发状态变更到所有已注册 cap。
  * 由 setEnvState 调用。
+ * 带 group 注册的 cap 只收到 group 匹配的键（前置过滤）。
  */
 export function dispatchEnvChange(changed: Set<string>, state: EnvState): void {
-  for (const cb of _callbacks.values()) {
+  for (const { cb, group } of _callbacks.values()) {
     try {
-      cb(changed, state);
+      if (group) {
+        const groupKeys = new Set(getPresetKeys(group));
+        const filtered = new Set<string>();
+        for (const k of changed) {
+          if (groupKeys.has(k)) filtered.add(k);
+        }
+        if (filtered.size > 0) cb(filtered, state);
+      } else {
+        cb(changed, state);
+      }
     } catch (e) {
       // ringLog 兜底
       console.warn("[env-dispatcher] 回调异常:", e);

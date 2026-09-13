@@ -53,18 +53,15 @@ export class RenderModeCapability implements SceneCapability {
   constructor(opts: { scene: THREE.Scene }) {
     this.scene = opts.scene;
 
-    // ADR-196：订阅 envState 变更
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (
-        changed.has("renderModeWireframe") ||
-        changed.has("renderModeBlending") ||
-        changed.has("renderModeDepthTest") ||
-        changed.has("renderModeSide") ||
-        changed.has("renderModeDepthWrite")
-      ) {
+    // ADR-196：订阅 envState 变更（只接收 renderMode 组的键，dispatcher 前置过滤）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      () => {
+        // 任何 renderMode 组字段变更都触发 sync（dispatcher 已过滤）
         this.sync();
-      }
-    });
+      },
+      "renderMode",
+    );
   }
 
   /* -------- 快照 / 应用 / 还原 -------- */

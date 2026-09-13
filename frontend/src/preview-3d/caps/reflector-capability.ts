@@ -55,25 +55,30 @@ export class ReflectorCapability implements SceneCapability {
     // ADR-196：订阅 envState 变更——细粒度分派（code_review P3 #5/#15/#20 单主化）：
     // 结构性字段（enabled/size/resolution/clipBias）→ buildReflector 全量重建；
     // 参数字段（opacity/color）→ 就地改 reflector material uniform（避免重建重活）。
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (
-        changed.has("reflectorEnabled") ||
-        changed.has("reflectorSize") ||
-        changed.has("reflectorResolution") ||
-        changed.has("reflectorClipBias")
-      ) {
-        this.buildReflector();
-        return;
-      }
-      if (changed.has("reflectorOpacity")) {
-        const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-        if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
-      }
-      if (changed.has("reflectorColor")) {
-        const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
-        if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(envState.reflectorColor);
-      }
-    });
+    // 只接收 reflector 组的键（dispatcher 前置过滤）。
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, _state) => {
+        if (
+          changed.has("reflectorEnabled") ||
+          changed.has("reflectorSize") ||
+          changed.has("reflectorResolution") ||
+          changed.has("reflectorClipBias")
+        ) {
+          this.buildReflector();
+          return;
+        }
+        if (changed.has("reflectorOpacity")) {
+          const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
+          if (mat?.uniforms?.uOpacity) mat.uniforms.uOpacity.value = envState.reflectorOpacity;
+        }
+        if (changed.has("reflectorColor")) {
+          const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
+          if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(envState.reflectorColor);
+        }
+      },
+      "reflector",
+    );
   }
 
   /* -------- 内部：构造/销毁 Reflector -------- */

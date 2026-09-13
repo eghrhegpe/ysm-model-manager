@@ -384,7 +384,8 @@ describe("ShadowCapability — applyModelPreset", () => {
 
   it("未知 adapterId 落回 default 预设", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    cap.applyModelPreset("unknown-type");
+    // 绕过编译期 ModelType 收窄：模拟运行时 adapter.id 传入非预期值
+    (cap as unknown as { applyModelPreset: (t: string) => void }).applyModelPreset("unknown-type");
     expect(cap.isSoft()).toBe(false);
     expect(cap.isEnabled()).toBe(true);
   });

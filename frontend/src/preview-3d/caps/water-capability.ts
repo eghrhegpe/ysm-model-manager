@@ -61,30 +61,35 @@ export class WaterCapability implements SceneCapability {
     // ADR-196：订阅 envState 变更——渲染应用统一收敛到此回调：
     // 结构字段（mode/size/池体几何）→ 重建容器；参数字段 → 就地改材质/uniform；
     // 子域开关 → 只切可见性。setter 只负责写 envState（不再各自就地改材质，避免双写）。
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      const mode = envState.waterMode;
-      // mode/size 恒重建；池体几何字段仅在 pool 生效时重建（film 下只存参，切 pool 时一并读取）
-      const needsRebuild =
-        changed.has("waterMode") ||
-        changed.has("waterSize") ||
-        ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
-          mode === "pool");
-      if (needsRebuild) {
-        // code_review 9fe958249 #4（P3 conf 0.90）：rebuildWaterContainer 内部已
-        // syncWaterVisibility（L323 由已更新的 envState 重算 visible）——此处重复
-        // 调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
-        this.rebuildWaterContainer(false);
-        if (changed.has("waterMode")) this.notify();
-        return;
-      }
-      if (changed.has("waterEnabled")) {
-        this.syncWaterVisibility();
-        return;
-      }
-      // 参数字段：就地应用（不重建容器，材质句柄保持稳定）
-      this.applyChangedParams(changed);
-      if (changed.has("waterWetness")) this.syncWaterVisibility();
-    });
+    // 只接收 water 组的键（dispatcher 前置过滤）。
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, _state) => {
+        const mode = envState.waterMode;
+        // mode/size 恒重建；池体几何字段仅在 pool 生效时重建（film 下只存参，切 pool 时一并读取）
+        const needsRebuild =
+          changed.has("waterMode") ||
+          changed.has("waterSize") ||
+          ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
+            mode === "pool");
+        if (needsRebuild) {
+          // code_review 9fe958249 #4（P3 conf 0.90）：rebuildWaterContainer 内部已
+          // syncWaterVisibility（L323 由已更新的 envState 重算 visible）——此处重复
+          // 调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
+          this.rebuildWaterContainer(false);
+          if (changed.has("waterMode")) this.notify();
+          return;
+        }
+        if (changed.has("waterEnabled")) {
+          this.syncWaterVisibility();
+          return;
+        }
+        // 参数字段：就地应用（不重建容器，材质句柄保持稳定）
+        this.applyChangedParams(changed);
+        if (changed.has("waterWetness")) this.syncWaterVisibility();
+      },
+      "water",
+    );
   }
 
   // ── 水材质（波浪 shader + 法线贴图）：film 顶 / pool 顶 共用，避免技术分叉 ──

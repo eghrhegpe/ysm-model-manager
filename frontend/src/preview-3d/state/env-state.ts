@@ -26,11 +26,6 @@ function shouldOverwrite(key: string, source: WriteSource): boolean {
   return false;
 }
 
-// 迁移（预留，当前无迁移逻辑）
-function migrateEnvState(partial: Partial<EnvState>): Partial<EnvState> {
-  return partial;
-}
-
 // 防抖持久化：ADR-196 刀0 原规划 env-state-persist，现持久化仍由各 cap saveState/loadState
 // 承担（旧键轨向后兼容），envState 层不做第二层持久化（避免双写双恢复冲突），此处不设空壳。
 
@@ -48,12 +43,11 @@ export function setEnvState(
 ): void {
   const source = opts?.source ?? "auto-model";
   const force = opts?.force ?? false;
-  const migrated = migrateEnvState(partial);
 
   const changedKeys = new Set<string>();
-  for (const key of Object.keys(migrated) as Array<keyof EnvState>) {
+  for (const key of Object.keys(partial) as Array<keyof EnvState>) {
     if (force || shouldOverwrite(key as string, source)) {
-      (envState as unknown as Record<string, unknown>)[key as string] = migrated[key];
+      (envState as unknown as Record<string, unknown>)[key as string] = partial[key];
       _writeSource[key as string] = source;
       changedKeys.add(key as string);
     }

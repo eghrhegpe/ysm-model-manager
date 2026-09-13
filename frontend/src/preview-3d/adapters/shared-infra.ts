@@ -23,6 +23,7 @@ import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import type { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 // [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
@@ -38,7 +39,7 @@ import type { PostprocessingLike } from "./postprocessing.ts";
  * 内部 `?? MODEL_DEFAULTS.default` 回落，语义与现状一致。
  */
 export function applyModelDefaults(
-  modelType: string,
+  modelType: ModelType,
   deps: {
     sky?: SkyCapability | null;
     light?: LightCapability | null;
@@ -278,7 +279,8 @@ export function buildSharedInfra(
   sceneCapabilityRegistry.loadAll();
   // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）——ADR-196 装配链收敛：
   // 单个 applyModelDefaults 入口编排 6 个预 apply cap，逐字复刻原 setPreset 顺序与守卫
-  applyModelDefaults(adapter.id, {
+  // adapter.id 是运行时字符串（来自 RESOURCE_TYPES 联合），此处收窄为 ModelType
+  applyModelDefaults(adapter.id as ModelType, {
     sky: skyCap,
     light: lightCap,
     fog: fogCap,

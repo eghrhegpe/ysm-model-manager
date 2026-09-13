@@ -128,8 +128,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // 曝光归权：enabled=false 时绝不触碰 renderer（保留 SkyCapability 的低曝光值）
     if (this.enabled) this.applyToneMapping();
 
-    // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer
-    this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged);
+    // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer（只接收 postprocessing 组的键）
+    this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged, "postprocessing");
   }
 
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */

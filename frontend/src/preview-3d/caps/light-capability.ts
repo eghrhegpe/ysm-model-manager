@@ -251,10 +251,14 @@ export class LightCapability implements SceneCapability {
     this.cone = new VolumetricCone(this.scene);
     this.cone.rebuild(this.targetHeight, sp, readVolParams(), this.spotlight.position);
 
-    // ADR-196：订阅 envState 变更 → 分派到 Three 应用
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, state) => {
-      this.onEnvChanged(changed, state);
-    });
+    // ADR-196：订阅 envState 变更 → 分派到 Three 应用（只接收 light 组的键）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, state) => {
+        this.onEnvChanged(changed, state);
+      },
+      "light",
+    );
   }
 
   /* ----- envState 变更回调：分派到 Three 应用 ----- */

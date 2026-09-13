@@ -21,7 +21,8 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
+import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import {
   persistState,
   restoreFields,
@@ -222,120 +223,111 @@ export class SkyCapability implements SceneCapability {
     this.elevation = envState.skyElevation;
     this.azimuth = envState.skyAzimuth;
 
-    // ADR-196：订阅 envState 变更
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, state) => {
-      if (changed.has("skyTimeOfDay")) {
-        this.syncSunFromTime();
-        if (this.enabled) {
+    // ADR-196：订阅 envState 变更（只接收 sky 组的键，dispatcher 前置过滤）
+    // 字段分派表：每个字段 → 应用函数（双写顺序由表顺序保证，消除 if 链顺序隐患）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      (changed, state) => {
+        if (!this.enabled) return;
+
+        // ① 时间/位置类：先同步实例字段，再写 uniform
+        if (changed.has("skyTimeOfDay")) {
+          this.syncSunFromTime();
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
-          // PMREM 重建门控收敛于此（原散落在 setTime/update/setSun 双写）：
-          //  - skyForceEnv=true（手动 setTime/setSun）→ 无条件重建（滑块/时间轴体验不降级）
-          //  - skyForceEnv=false（昼夜循环 update）→ 太阳高度角变化 ≥ 阈值才重建（GPU 熔炉治理）
-          if (state.skyEnvironment) {
-            if (state.skyForceEnv) {
-              this.regenerateEnvironment();
-            } else {
-              const el = this.elevation;
-              const dirty =
-                Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
-              if (dirty) this.regenerateEnvironment();
-            }
-          }
+          this.maybeRegenerateEnvironment(state);
+          this.beams.sync(this.elevation, this.azimuth);
         }
-        this.beams.sync(this.elevation, this.azimuth);
-      }
-      if (changed.has("skyElevation")) {
-        this.elevation = state.skyElevation;
-      }
-      if (changed.has("skyAzimuth")) {
-        this.azimuth = state.skyAzimuth;
-      }
-      // code_review 57aeefdb4 #1/#2/#4/#7（P2）：字段同步必须在 writeUniforms/烘焙
-      // 之前——writeUniforms 与 regenerateEnvironment 读 this.elevation/azimuth 实例
-      // 字段，原顺序（先写后同步）使 setSun 派发的 uniform/IBL 全用旧太阳位置
-      // （松手停在倒数第二值，测试断言 length≈1 无法捕获方向错）
-      if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
-        if (this.enabled) {
+        if (changed.has("skyElevation")) {
+          this.elevation = state.skyElevation;
+        }
+        if (changed.has("skyAzimuth")) {
+          this.azimuth = state.skyAzimuth;
+        }
+        if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
           if (state.skyEnvironment && state.skyForceEnv) {
             this.regenerateEnvironment();
           }
         }
-      }
-      if (changed.has("skyCloudCoverage")) {
-        if (this.enabled) {
-          this.sky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
-          this.envSky.material.uniforms.cloudCoverage.value = state.skyCloudCoverage;
-          // regenerate=true（setCloudCoverage 第二参）→ 云量影响环境烘焙，重刷 IBL。
-          // code_review 57aeefdb4 #5/#6/#8/#10（P2）：用本次派发的 changed 集判定
-          // 而非读粘滞的 state.skyForceEnv——skyForceEnv 默认 true 且手动
-          // setTime/setSun/applyModelPreset 均置 true 从不复位（autoRotate 关时），读粘滞值
-          // 会让默认 regenerate=false 的云量滑块每 tick 全量 PMREM 烘焙（GPU 熔炉）
-          if (changed.has("skyForceEnv") && state.skyEnvironment) {
-            this.regenerateEnvironment();
-          }
+
+        // ② 散射/大气类：双写 uniform（sky + envSky）
+        this.applyUniform(changed, "skyCloudCoverage", "cloudCoverage", state.skyCloudCoverage);
+        if (changed.has("skyCloudCoverage") && changed.has("skyForceEnv") && state.skyEnvironment) {
+          // 云量 + forceEnv 同变 → 重建 IBL（setCloudCoverage(regenerate=true) 语义）
+          this.regenerateEnvironment();
         }
-      }
-      if (changed.has("skyTurbidity")) {
-        if (this.enabled) {
-          this.sky.material.uniforms.turbidity.value = state.skyTurbidity;
-          this.envSky.material.uniforms.turbidity.value = state.skyTurbidity;
+        this.applyUniform(changed, "skyTurbidity", "turbidity", state.skyTurbidity);
+        this.applyUniform(changed, "skyRayleigh", "rayleigh", state.skyRayleigh);
+        this.applyUniform(changed, "skyMieCoefficient", "mieCoefficient", state.skyMieCoefficient);
+        this.applyUniform(
+          changed,
+          "skyMieDirectionalG",
+          "mieDirectionalG",
+          state.skyMieDirectionalG,
+        );
+
+        // ③ 太阳尺度类：双写 uniform（带 undefined 守卫——patch 幂等注入）
+        this.applyScaledUniform(
+          changed,
+          "skySunIntensityScale",
+          "sunIntensityScale",
+          state.skySunIntensityScale,
+        );
+        this.applyScaledUniform(changed, "skySunDiscScale", "sunDiscScale", state.skySunDiscScale);
+
+        // ④ 渲染状态类
+        if (changed.has("skyExposure")) {
+          this.renderer.toneMappingExposure = state.skyExposure;
         }
-      }
-      if (changed.has("skyRayleigh")) {
-        if (this.enabled) {
-          this.sky.material.uniforms.rayleigh.value = state.skyRayleigh;
-          this.envSky.material.uniforms.rayleigh.value = state.skyRayleigh;
-        }
-      }
-      if (changed.has("skyMieCoefficient")) {
-        if (this.enabled) {
-          this.sky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
-          this.envSky.material.uniforms.mieCoefficient.value = state.skyMieCoefficient;
-        }
-      }
-      if (changed.has("skyMieDirectionalG")) {
-        if (this.enabled) {
-          this.sky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
-          this.envSky.material.uniforms.mieDirectionalG.value = state.skyMieDirectionalG;
-        }
-      }
-      if (changed.has("skySunIntensityScale")) {
-        if (this.enabled) {
-          const u = this.sky.material.uniforms;
-          if (u.sunIntensityScale !== undefined)
-            u.sunIntensityScale.value = state.skySunIntensityScale;
-          const eu = this.envSky.material.uniforms;
-          if (eu.sunIntensityScale !== undefined)
-            eu.sunIntensityScale.value = state.skySunIntensityScale;
-        }
-      }
-      if (changed.has("skySunDiscScale")) {
-        if (this.enabled) {
-          const u = this.sky.material.uniforms;
-          if (u.sunDiscScale !== undefined) u.sunDiscScale.value = state.skySunDiscScale;
-          const eu = this.envSky.material.uniforms;
-          if (eu.sunDiscScale !== undefined) eu.sunDiscScale.value = state.skySunDiscScale;
-        }
-      }
-      if (changed.has("skyExposure")) {
-        if (this.enabled) this.renderer.toneMappingExposure = state.skyExposure;
-      }
-      if (changed.has("skyEnvironment")) {
-        if (this.enabled) {
+        if (changed.has("skyEnvironment")) {
           if (state.skyEnvironment) this.regenerateEnvironment();
           else this.clearEnvironment();
         }
-      }
-      if (changed.has("skyGodRaysEnabled")) {
-        if (this.enabled) this.beams.sync(this.elevation, this.azimuth);
-      }
-      if (changed.has("skyAutoRotate")) {
-        // autoRotate 仅影响 update(dt) 行为，无需立即响应
-      }
-    });
+        if (changed.has("skyGodRaysEnabled")) {
+          this.beams.sync(this.elevation, this.azimuth);
+        }
+        // skyAutoRotate 仅影响 update(dt) 行为，无需立即响应
+      },
+      "sky",
+    );
+  }
+
+  /** 双写 uniform（sky + envSky），仅当 changed 含该字段时 */
+  private applyUniform(changed: Set<string>, field: string, uniform: string, value: number): void {
+    if (!changed.has(field)) return;
+    (this.sky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
+    (this.envSky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
+  }
+
+  /** 双写 uniform（带 undefined 守卫——patch 幂等注入后 uniform 必存在，但防御性保留） */
+  private applyScaledUniform(
+    changed: Set<string>,
+    field: string,
+    uniform: string,
+    value: number,
+  ): void {
+    if (!changed.has(field)) return;
+    const u = this.sky.material.uniforms as Record<string, { value: number } | undefined>;
+    const eu = this.envSky.material.uniforms as Record<string, { value: number } | undefined>;
+    const su = u[uniform];
+    const esu = eu[uniform];
+    if (su !== undefined) su.value = value;
+    if (esu !== undefined) esu.value = value;
+  }
+
+  /** PMREM 重建门控：forceEnv=true 无条件重建；forceEnv=false 按太阳高度角阈值 */
+  private maybeRegenerateEnvironment(state: EnvState): void {
+    if (!state.skyEnvironment) return;
+    if (state.skyForceEnv) {
+      this.regenerateEnvironment();
+    } else {
+      const el = this.elevation;
+      const dirty =
+        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
+      if (dirty) this.regenerateEnvironment();
+    }
   }
 
   /** 确保 PMREMGenerator 已创建（延迟到首次需要时） */
@@ -462,30 +454,21 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
-  applyModelPreset(modelType: string): void {
-    const preset =
-      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    // ADR-196 收口：统一数据源 MODEL_DEFAULTS；callback 各散射分支落地。
-    const mapped: Partial<EnvState> = {};
-    const src = preset as Record<string, unknown>;
-    if (src.skyTurbidity !== undefined) mapped.skyTurbidity = src.skyTurbidity as number;
-    if (src.skyRayleigh !== undefined) mapped.skyRayleigh = src.skyRayleigh as number;
-    if (src.skyMieCoefficient !== undefined)
-      mapped.skyMieCoefficient = src.skyMieCoefficient as number;
-    if (src.skyMieDirectionalG !== undefined)
-      mapped.skyMieDirectionalG = src.skyMieDirectionalG as number;
-    if (src.skyExposure !== undefined) mapped.skyExposure = src.skyExposure as number;
-    if (src.skySunIntensityScale !== undefined)
-      mapped.skySunIntensityScale = src.skySunIntensityScale as number;
-    if (src.skySunDiscScale !== undefined) mapped.skySunDiscScale = src.skySunDiscScale as number;
-    mapped.skyForceEnv = true;
-    setEnvState(mapped, { source: "auto-model" });
-    // code_review da123e2a1 #1/#2/#3（P2）：恢复预设切换的 IBL 重建——散射-only 的
-    // changed 集（skyTurbidity/.../skyForceEnv）不命中任何 callback 重建分支（唯一判
-    // skyForceEnv 的 cloudCoverage 分支还要求 skyCloudCoverage 同变，预设不含），
-    // 注释「skyForceEnv=true 触发 PMREM 重建」与代码不符——不恢复则切模型后
-    // scene.environment 残留上一预设散射烘焙（code_review 57aeefdb4 #3 修复被回退
-    // 重引入）；envSky uniforms 已由 callback 散射分支同步，此处只需重建一次
+  applyModelPreset(modelType: ModelType): void {
+    // 表驱动：只挑本 cap 关注的键，undefined 自动跳过；编译期拼错 modelType 直接报错
+    const picked = pickModelDefaultFields(modelType, [
+      "skyTurbidity",
+      "skyRayleigh",
+      "skyMieCoefficient",
+      "skyMieDirectionalG",
+      "skyExposure",
+      "skySunIntensityScale",
+      "skySunDiscScale",
+    ]);
+    setEnvState({ ...picked, skyForceEnv: true }, { source: "auto-model" });
+    // 恢复预设切换的 IBL 重建：changed 集不命中 callback 的任一重建分支
+    // （唯一判 skyForceEnv 的 cloudCoverage 分支要求 skyCloudCoverage 同变，预设不含），
+    // envSky uniforms 已由 callback 散射分支同步，此处只需重建一次
     if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
   }
 

@@ -76,30 +76,15 @@ export class GroundCapability implements SceneCapability {
     this.grid = this.createGridHelper();
     this.surface = this.createSurfaceMesh();
 
-    // ADR-196：订阅 envState 变更
-    this.unsubscribeEnv = registerEnvCallback(this, (changed, _state) => {
-      if (
-        changed.has("groundType") ||
-        changed.has("groundColor") ||
-        changed.has("groundLineColor") ||
-        changed.has("groundMatSource") ||
-        changed.has("groundSize") ||
-        changed.has("groundDivisions") ||
-        changed.has("groundMatColor") ||
-        changed.has("groundMatLineColor") ||
-        changed.has("groundMatColor2") ||
-        changed.has("groundMatGridSize") ||
-        changed.has("groundMatOpacity") ||
-        changed.has("groundMatScale") ||
-        changed.has("groundMatRotationDeg") ||
-        changed.has("groundMatDensity") ||
-        changed.has("groundMatAngleDeg") ||
-        changed.has("groundMatRoughness") ||
-        changed.has("groundMatMetalness")
-      ) {
+    // ADR-196：订阅 envState 变更（只接收 ground 组的键，dispatcher 前置过滤）
+    this.unsubscribeEnv = registerEnvCallback(
+      this,
+      () => {
+        // 任何 ground 组字段变更都触发 refreshSurface（dispatcher 已过滤，无需再判断 changed）
         this.refreshSurface();
-      }
-    });
+      },
+      "ground",
+    );
   }
 
   private createGridHelper(): THREE.GridHelper {

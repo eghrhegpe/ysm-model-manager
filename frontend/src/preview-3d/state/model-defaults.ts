@@ -21,6 +21,39 @@ export type ModelType =
   | "litematic"
   | "resourcepack";
 
+/**
+ * 从 MODEL_DEFAULTS[modelType] 中挑选指定键，构建 Partial<EnvState>。
+ * 替代各 cap 内逐字段 `if (src.x !== undefined) mapped.x = src.x as T` 样板。
+ *
+ * @param modelType 模型类别（编译期收窄，拼错直接报错）
+ * @param keys      本 cap 关注的键集（只挑存在的键，undefined 跳过）
+ *
+ * @example
+ * // sky-capability:
+ * const preset = pickModelDefaultFields(modelType, [
+ *   "skyTurbidity", "skyRayleigh", "skyMieCoefficient",
+ *   "skyMieDirectionalG", "skyExposure", "skySunIntensityScale", "skySunDiscScale",
+ * ]);
+ * if (Object.keys(preset).length > 0) {
+ *   setEnvState({ ...preset, skyForceEnv: true }, { source: "auto-model" });
+ * }
+ */
+export function pickModelDefaultFields<K extends keyof EnvState>(
+  modelType: ModelType,
+  keys: readonly K[],
+): Pick<EnvState, K> {
+  // 运行时兜底：adapter.id 理论上恒为 ModelType，但历史测试/外部注入可能传未知值 → 回退 default
+  const preset = MODEL_DEFAULTS[modelType] ?? MODEL_DEFAULTS.default;
+  const out = {} as Pick<EnvState, K>;
+  const src = preset as Record<string, unknown>;
+  for (const key of keys) {
+    if (src[key as string] !== undefined) {
+      (out as Record<string, unknown>)[key as string] = src[key as string];
+    }
+  }
+  return out;
+}
+
 export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
   default: {
     // --- sky (来自 MODEL_SKY_PRESETS.default) ---

@@ -194,5 +194,5 @@ function mkCtx() {
 }
 
 console.log(
-  "OK: gate-ctx record/blocked/blockPolicy 落库 + 归属标签链路 + exec 助手契约（10 组断言）",
+  "OK: gate-ctx record/blocked/blockPolicy 落库 + 归属标签链路 + exec 助手契约（9 组断言）",
 );

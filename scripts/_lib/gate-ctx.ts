@@ -17,7 +17,13 @@ import type { Plan } from "./domain-classify.ts";
 import { run as procRun, shq } from "./proc.ts";
 import { ROOT } from "./scan-files.ts";
 
-const TIMEOUT = 300_000;
+/**
+ * 门禁子进程统一超时（5 分钟）。**单一事实源**（ADR-206 阶段 2）：本模块的 sh/shAsync
+ * 默认值与 gate-blocks/* 里数组式 procRun 的调用共用，避免 `300_000` 在
+ * pre-push-gate / gate-ctx / 各域块各存一份、改一处漏三处。
+ */
+export const GATE_TIMEOUT_MS = 300_000;
+const TIMEOUT = GATE_TIMEOUT_MS;
 
 /** 纯命令执行结果。 */
 export interface ExecResult {
@@ -110,11 +116,14 @@ export function createGateCtx(init: {
         // 而超时标记是本函数的契约（见 ExecResult.timedOut）。自管计时器行为完全确定。
         stdio: ["ignore", "pipe", "pipe"],
       });
-      // 输出上限：超限停止追加（尾部保留），与 record() 的 64KB raw cap 同纪律，
-      // 防 go test/vite 级刷屏输出在 gate 进程内无界膨胀。
+      // 输出上限：滚动尾部保留——超限从头裁剪，只留最后 1MB，与 record() 的 64KB raw cap
+      // 同纪律；编译/测试的关键报错集中在输出末尾，保头部会吞掉真正诊断信息。
       const OUT_CAP = 1 << 20; // 1MB
       let buf = "";
-      let capped = false;
+      const append = (d: Buffer) => {
+        buf += d.toString();
+        if (buf.length > OUT_CAP) buf = "…" + buf.slice(-OUT_CAP);
+      };
       // 超时态（2026-09-13）：超时被杀的子进程 close code 为 null——与「命令跑了但 FAIL」
       // 退化为同一形状（rc=-1/非零）。记 timedOut 并把原因追加进 out，使 FAIL 明细的
       // tail 能明示「超时」而非冒充编译错误。
@@ -123,15 +132,11 @@ export function createGateCtx(init: {
         timedOut = true;
         child.kill();
       }, timeout);
-      const append = (d: Buffer) => {
-        if (buf.length < OUT_CAP) buf += d.toString();
-        else capped = true;
-      };
       child.stdout.on("data", append);
       child.stderr.on("data", append);
       child.on("close", (code) => {
         clearTimeout(timer);
-        const tailNote = capped ? "\n…(输出超 1MB 截断)" : "";
+        const tailNote = buf.startsWith("…") ? "\n(输出超 1MB，已保留尾部)" : "";
         const toNote = timedOut ? `\n[gate] 命令超时被终止（timeout=${timeout}ms）` : "";
         resolve({ rc: code ?? -1, out: buf + tailNote + toNote, timedOut });
       });

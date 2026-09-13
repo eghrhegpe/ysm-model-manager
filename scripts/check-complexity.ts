@@ -25,6 +25,8 @@
  *   node scripts/check-complexity.ts                                    # 全前端默认黄>15
  *   node scripts/check-complexity.ts --scope frontend/src/preview-3d    # 按域收窄
  *   node scripts/check-complexity.ts --threshold 20                     # 自定义黄档（橙=2x红=3x）
+ *   node scripts/check-complexity.ts --files "$(git diff --name-only)"  # 只扫本次变更文件（增量）
+ *   node scripts/check-complexity.ts --changed                          # 同上，自动相对默认分支基线
  *   node scripts/check-complexity.ts --strict                           # 有命中（🟨+）时 exit 1
  *   node scripts/check-complexity.ts --json                             # JSON（子代理/CI 消费）
  *
@@ -32,13 +34,16 @@
  *   ok     = 无命中（items 为空）
  *   errors = 命中数（🟨+ 合计）
  *   warns_list = FAIL 时前 20 条单行明细（顶层 ok 仅为人类可读，门禁读 _summary）
+ *   scopeFilter = 变更域过滤留痕（mode/requested/matched）——「0 命中」须能区分
+ *                 「全库干净」与「本次变更文件压根不在扫描范围」（见 _lib/changed-scope.ts）
  *
  * 退出码：0（情报型，判定见 _summary.ok）；ts-morph 缺失 0 WARN（degraded）；--strict
- * 且有命中 1；初始化失败（scope 不存在 / 无文件）1。
+ * 且有命中 1；初始化/变更域解析失败（scope 不存在 / 无文件 / --files 空 / --changed 不可解析）1。
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { inChangedScope, resolveChangedScope } from "./_lib/changed-scope.ts";
 import { buildScanVerdict } from "./_lib/gate-parse.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { getRoot, relPosix } from "./_lib/scan-files.ts";
@@ -47,8 +52,8 @@ const ROOT = getRoot();
 
 // ─── 参数解析 ─────────────────────────────────────────────
 const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json", "strict"],
-  strings: ["scope", "threshold"],
+  bools: ["json", "strict", "changed"],
+  strings: ["scope", "threshold", "files"],
   defaults: { threshold: 15 }, // 🟨>15，🟧=2x，🟥=3x
 });
 if (raw.unknown?.length) {
@@ -67,9 +72,28 @@ if (raw.threshold !== null) {
 const args = {
   json: raw.json as boolean,
   strict: raw.strict as boolean,
+  changed: raw.changed as boolean,
   scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
   threshold: raw.threshold as number,
 };
+
+/** 初始化/用法类失败的唯一出口：fail-closed，JSON 模式只写 _summary（gate 合并双流）。 */
+function failClosed(msg: string): never {
+  if (args.json)
+    console.log(
+      JSON.stringify(
+        { ok: false, mode: "complexity", _summary: { ok: false, errors: 0, error: msg } },
+        null,
+        2,
+      ),
+    );
+  else console.error(`[check-complexity] ${msg}`);
+  process.exit(1);
+}
+
+// 变更域过滤（--files / --changed，与 check-redlines 同约定；见 _lib/changed-scope.ts）
+// 在 main() 内解析而非模块顶层：本模块被 check-params import（collectNamedFunctions），
+// 顶层解析会让「被导入」也跑一次 git / 误判 `--files ""` 并以本脚本名义 exit 1。
 
 // ─── 核心规约器（纯函数，零依赖，契约测试直接消费）────────────
 // 事件类型：
@@ -227,6 +251,13 @@ function walkSource(dir: string): string[] {
 async function main() {
   const yellow = args.threshold;
 
+  // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，避免因 --files 为空 /
+  // --changed 不可解析时白跑一次 ts-morph 装载。
+  const changedRes = resolveChangedScope(raw.files, args.changed);
+  if (changedRes.error) failClosed(changedRes.error);
+  const changedScope = changedRes.scope;
+  const scopeMode = typeof raw.files === "string" ? "files" : args.changed ? "changed" : "all";
+
   // 惰性加载 ts-morph（情报型：缺依赖不硬失败）。经 createRequire 从 frontend 解析——
   // scripts/ 是 ESM，无法直接 require；且 ts-morph 挂在 frontend/node_modules 依赖树上。
   const { createRequire } = await import("node:module");
@@ -259,26 +290,20 @@ async function main() {
   const rootAbs = path.isAbsolute(args.scope) ? args.scope : path.join(ROOT, args.scope);
   // 初始化失败 = 用法错误：显式 exit 1（此前 return 会以 0 退出，与文件头「初始化失败 1」
   // 契约不符，且 scope 拼错时门禁 fail-open）。
-  if (!fs.existsSync(rootAbs)) {
-    const msg = `--scope 目录不存在：${args.scope}`;
-    if (args.json)
-      console.log(
-        JSON.stringify({ ok: false, mode: "complexity", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
-      );
-    else console.error(msg);
-    process.exit(1);
-  }
+  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`);
 
   const files = walkSource(rootAbs).map((f) => path.resolve(f));
-  if (files.length === 0) {
-    const msg = `--scope 下无 .ts/.js 文件：${args.scope}`;
-    if (args.json)
-      console.log(
-        JSON.stringify({ ok: false, mode: "complexity", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
-      );
-    else console.error(msg);
-    process.exit(1);
-  }
+  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`);
+
+  // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
+  // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。
+  const scanned = changedScope ? files.filter((f) => inChangedScope(relPosix(f), changedScope)) : files;
+  const scopeFilter = {
+    mode: scopeMode,
+    requested: changedScope ? changedScope.size : null,
+    matched: scanned.length,
+    total: files.length,
+  };
 
   // 逐文件解析（不经 tsconfig include，只加目标文件，别名不影响复杂度统计）
   const project = new Project({ useInMemoryFileSystem: false, skipFileDependencyResolution: true });
@@ -295,7 +320,7 @@ async function main() {
   let skippedNoControlFlow = 0;
   const parseFailures: string[] = [];
 
-  for (const f of files) {
+  for (const f of scanned) {
     let sf: any;
     try {
       sf = project.addSourceFileAtPath(f);
@@ -361,6 +386,7 @@ async function main() {
             parseFailures: parseFailures.length,
             thresholds: { yellow, orange: yellow * 2, red: yellow * 3 },
             counts,
+            scopeFilter,
           },
           items,
           parseFailures: parseFailures.slice(0, 10),
@@ -376,6 +402,10 @@ async function main() {
   }
 
   console.log(`=== 函数复杂度扫描（黄>${yellow} / 橙>${yellow * 2} / 红>${yellow * 3}）===`);
+  if (scopeMode !== "all")
+    console.log(
+      `变更域过滤 --${scopeMode}：${scopeFilter.matched}/${scopeFilter.total} 个文件进入扫描`,
+    );
   console.log(
     `函数 ${totalFuncs} 个；无控制流跳过 ${skippedNoControlFlow} 个；解析失败 ${parseFailures.length} 个`,
   );
@@ -383,7 +413,11 @@ async function main() {
     `命中：🟥 ${counts.red} · 🟧 ${counts.orange} · 🟨 ${counts.yellow} · 合计 ${items.length}`,
   );
   if (items.length === 0) {
-    console.log("（干净，无命中）");
+    console.log(
+      scopeMode !== "all" && scopeFilter.matched === 0
+        ? "（本次变更文件均不在扫描范围内，视为通过）"
+        : "（干净，无命中）",
+    );
     return;
   }
   let curTier: string | null = null;

@@ -895,6 +895,8 @@
 | 判定字段写错位置 | - | 门禁静默假绿：`parseToolOutput` 的 `parsed._summary \|\| parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`） |
 | 只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」 | `门禁全绿` | - |
 | record() 只把 blockPolicy 用于判定 blocked、不写进 results | - | gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组） |
+| 把「过滤后为空」当错误、把空 --files 静默当全库 | `增量裁剪边界` | 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」 |
+| 它走 git diff 故不含未跟踪新文件 | `--changed 的边界` | 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files |
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
 | 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
 | gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |

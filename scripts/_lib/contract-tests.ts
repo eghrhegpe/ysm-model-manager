@@ -85,6 +85,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "coverage-suggest-hint.ts": ["tests"],
   "go-coverage-hint.ts": ["tests"],
   "test_alias-resolve.ts": ["tests"],
+  // 变更域过滤共享层（--files / --changed）——三个档位扫描器接门禁的增量裁剪唯一实现点
+  "test_changed_scope.ts": ["tests"],
   "test_check_path_hygiene.ts": ["frontend", "tests"],
   "test_check_mock_paths.ts": ["frontend", "tests"],
   "test_api_break.ts": ["tests"],
@@ -188,6 +190,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
+  "test_changed_scope.ts": ["scripts/_lib/changed-scope.ts"],
   "test_check_path_hygiene.ts": [
     "scripts/check-path-hygiene.ts",
     "scripts/_lib/alias-resolve.ts",

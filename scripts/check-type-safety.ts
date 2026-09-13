@@ -25,6 +25,8 @@
  *   node scripts/check-type-safety.ts                                     # 全前端生产文件，默认 threshold 8
  *   node scripts/check-type-safety.ts --scope frontend/src/preview-3d     # 按域收窄
  *   node scripts/check-type-safety.ts --threshold 12                      # 调高黄档（橙=2× 红=3×）
+ *   node scripts/check-type-safety.ts --files "$(git diff --name-only)"   # 只扫本次变更文件（增量）
+ *   node scripts/check-type-safety.ts --changed                           # 同上，自动相对默认分支基线
  *   node scripts/check-type-safety.ts --strict                            # 任一文件 🟨+ 时 exit 1（可挂门禁）
  *   node scripts/check-type-safety.ts --json                              # JSON（子代理 / CI / doctor 消费）
  *
@@ -32,14 +34,16 @@
  *   ok     = 生产域无活跃侵蚀（activeFiles=0）
  *   errors = 活跃侵蚀文件数（🟨+）
  *   warns_list = FAIL 时前 20 条单行明细（文件 + 侵蚀分 + 信号简写）
+ *   scopeFilter = 变更域过滤留痕（mode/requested/matched），见 _lib/changed-scope.ts
  * 注：--strict 的阻断理由写在 _summary，JSON 模式不再另发 stderr（gate 合并双流，
  * 混入文本会让 JSON.parse 失败、退化为 rc 判定）。
  *
- * 退出码：默认 0（情报型，判定见 _summary.ok）；初始化失败 1；--strict 且存在 🟨+ 文件时 1。
+ * 退出码：默认 0（情报型，判定见 _summary.ok）；初始化/变更域解析失败 1；--strict 且存在 🟨+ 文件时 1。
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { inChangedScope, resolveChangedScope } from "./_lib/changed-scope.ts";
 import { buildScanVerdict } from "./_lib/gate-parse.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { getRoot, readText, relPosix, SRC_DIR, toPosix, walk } from "./_lib/scan-files.ts";
@@ -48,8 +52,8 @@ const ROOT = getRoot();
 
 // ─── 参数解析 ─────────────────────────────────────────────
 const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json", "strict"],
-  strings: ["scope", "threshold"],
+  bools: ["json", "strict", "changed"],
+  strings: ["scope", "threshold", "files"],
   defaults: { threshold: 8 }, // 🟨≥8，🟧=2×，🟥=3×
 });
 if (raw.unknown?.length) {
@@ -68,9 +72,23 @@ if (raw.threshold !== null) {
 const args = {
   json: raw.json as boolean,
   strict: raw.strict as boolean,
+  changed: raw.changed as boolean,
   scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
   threshold: raw.threshold as number,
 };
+
+/** 初始化/用法类失败的唯一出口：fail-closed，JSON 模式只写 _summary（gate 合并双流）。 */
+function failClosed(msg: string): never {
+  if (args.json)
+    console.log(
+      JSON.stringify({ ok: false, _summary: { ok: false, errors: 0, error: msg } }, null, 2),
+    );
+  else console.error(`[check-type-safety] ${msg}`);
+  process.exit(1);
+}
+
+// 变更域过滤（--files / --changed，与 check-redlines 同约定；见 _lib/changed-scope.ts）
+// 在 main() 内解析而非模块顶层（与 check-complexity 同形，便于契约测试安全 import）。
 
 // ─── 信号定义与权重（唯一定义点，契约测试断言不改权）─────────
 // normalized = 归一到小写，供契约测试无关大小写比对信号名。
@@ -220,20 +238,32 @@ function scanSingle(abs: string, rel: string, threshold: number): FileErosion | 
 }
 
 function main(): void {
+  // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，fail-closed 早退。
+  const changedRes = resolveChangedScope(raw.files, args.changed);
+  if (changedRes.error) failClosed(changedRes.error);
+  const changedScope = changedRes.scope;
+  const scopeMode = typeof raw.files === "string" ? "files" : args.changed ? "changed" : "all";
+
   const base = path.resolve(ROOT, args.scope);
-  if (!fs.existsSync(base)) {
-    const msg = `--scope 路径不存在: ${args.scope}`;
-    if (args.json)
-      console.log(JSON.stringify({ ok: false, _summary: { ok: false, errors: 0, error: msg } }, null, 2));
-    else console.error(`[check-type-safety] ${msg}`);
-    process.exit(1);
-  }
+  if (!fs.existsSync(base)) failClosed(`--scope 路径不存在: ${args.scope}`);
   const filesOnly = args.scope === "frontend/src";
   const target = filesOnly ? SRC_DIR : base;
 
   const results: FileErosion[] = [];
   const relBase = path.relative(ROOT, target);
-  const files = walk(target, { skipDir: (n) => n.startsWith(".") || n === "node_modules" || n === "css" });
+  const walked = walk(target, { skipDir: (n) => n.startsWith(".") || n === "node_modules" || n === "css" });
+  // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
+  // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。
+  const files = changedScope
+    ? walked.filter((fp) => inChangedScope(relPosix(typeof fp === "string" ? fp : fp.abs), changedScope))
+    : walked;
+  const scopeFilter = {
+    mode: scopeMode,
+    requested: changedScope ? changedScope.size : null,
+    matched: files.length,
+    total: walked.length,
+  };
+
   for (const fp of files) {
     const abs = typeof fp === "string" ? fp : fp.abs;
     const rel = path.join(relBase, path.relative(target, abs));
@@ -280,6 +310,7 @@ function main(): void {
             files: results.length,
             activeFiles: active.length,
             filesByTier,
+            scopeFilter,
           },
           totals,
           active: active.map((r) => ({ file: r.file, score: Math.round(r.score * 10) / 10, tier: r.tier, counts: r.counts })),
@@ -291,6 +322,10 @@ function main(): void {
     );
   } else {
     console.log(`=== 类型安全侵蚀扫描（范围 ${relPosix(target)}，threshold=${args.threshold}）===`);
+    if (scopeMode !== "all")
+      console.log(
+        `变更域过滤 --${scopeMode}：${scopeFilter.matched}/${scopeFilter.total} 个文件进入扫描`,
+      );
     console.log(`生产文件 ${results.length}，侵蚀活跃 ${active.length}`);
     const sigLine = (Object.keys(SIG_NAME) as TypeErosionSignal[])
       .map((k) => `${SIG_NAME[k]}=${totals[k]}`)

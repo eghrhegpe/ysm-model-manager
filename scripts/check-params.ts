@@ -24,19 +24,23 @@
  *   node scripts/check-params.ts                                  # 全前端，默认 threshold 6
  *   node scripts/check-params.ts --scope frontend/src/preview-3d  # 按域收窄
  *   node scripts/check-params.ts --threshold 5 --json             # 调档 / JSON
+ *   node scripts/check-params.ts --files "$(git diff --name-only)" # 只扫本次变更文件（增量）
+ *   node scripts/check-params.ts --changed                        # 同上，自动相对默认分支基线
  *   node scripts/check-params.ts --strict                         # 有命中时 exit 1
  *
  * `_summary` 契约（门禁消费，gate-parse.parseToolOutput 判定）：
  *   ok     = 无命中（items 为空）
  *   errors = 命中数（长参数 / 布尔陷阱）
  *   warns_list = FAIL 时前 20 条单行明细（顶层 ok 仅为人类可读，门禁读 _summary）
+ *   scopeFilter = 变更域过滤留痕（mode/requested/matched），见 _lib/changed-scope.ts
  *
  * 退出码：0（情报型，判定见 _summary.ok）；ts-morph 缺失 0 WARN（degraded）；--strict
- * 且有命中 1；初始化失败（scope 不存在 / 无文件）1。
+ * 且有命中 1；初始化/变更域解析失败（scope 不存在 / 无文件 / --files 空 / --changed 不可解析）1。
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { inChangedScope, resolveChangedScope } from "./_lib/changed-scope.ts";
 import { buildScanVerdict } from "./_lib/gate-parse.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { getRoot, relPosix } from "./_lib/scan-files.ts";
@@ -46,8 +50,8 @@ const ROOT = getRoot();
 
 // ─── 参数解析 ─────────────────────────────────────────────
 const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json", "strict"],
-  strings: ["scope", "threshold"],
+  bools: ["json", "strict", "changed"],
+  strings: ["scope", "threshold", "files"],
   defaults: { threshold: 6 }, // 🟨≥6，🟧=2x，🟥=3x
 });
 if (raw.unknown?.length) {
@@ -66,9 +70,27 @@ if (raw.threshold !== null) {
 const args = {
   json: raw.json as boolean,
   strict: raw.strict as boolean,
+  changed: raw.changed as boolean,
   scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
   threshold: raw.threshold as number,
 };
+
+/** 初始化/用法类失败的唯一出口：fail-closed，JSON 模式只写 _summary（gate 合并双流）。 */
+function failClosed(msg: string): never {
+  if (args.json)
+    console.log(
+      JSON.stringify(
+        { ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } },
+        null,
+        2,
+      ),
+    );
+  else console.error(`[check-params] ${msg}`);
+  process.exit(1);
+}
+
+// 变更域过滤（--files / --changed，与 check-redlines 同约定；见 _lib/changed-scope.ts）
+// 在 main() 内解析而非模块顶层——与 check-complexity 同形（后者被本模块 import）。
 
 // ─── 纯函数（契约测试直接消费）────────────────────────────
 /** 陷阱分：params + boolParams（bool 另 +1 加重 → 权重 2）。 */
@@ -133,6 +155,13 @@ function walkSource(dir: string): string[] {
 async function main() {
   const threshold = args.threshold;
 
+  // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，避免因 --files 为空 /
+  // --changed 不可解析时白跑一次 ts-morph 装载。
+  const changedRes = resolveChangedScope(raw.files, args.changed);
+  if (changedRes.error) failClosed(changedRes.error);
+  const changedScope = changedRes.scope;
+  const scopeMode = typeof raw.files === "string" ? "files" : args.changed ? "changed" : "all";
+
   const { createRequire } = await import("node:module");
   const require_ = createRequire(path.join(ROOT, "frontend", "package.json"));
   let Project: any = null;
@@ -162,26 +191,20 @@ async function main() {
 
   const rootAbs = path.isAbsolute(args.scope) ? args.scope : path.join(ROOT, args.scope);
   // 初始化失败 = 用法错误：显式 exit 1（此前 return 以 0 退出，与文件头契约不符且 fail-open）。
-  if (!fs.existsSync(rootAbs)) {
-    const msg = `--scope 目录不存在：${args.scope}`;
-    if (args.json)
-      console.log(
-        JSON.stringify({ ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
-      );
-    else console.error(msg);
-    process.exit(1);
-  }
+  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`);
 
   const files = walkSource(rootAbs).map((f) => path.resolve(f));
-  if (files.length === 0) {
-    const msg = `--scope 下无 .ts/.js 文件：${args.scope}`;
-    if (args.json)
-      console.log(
-        JSON.stringify({ ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } }, null, 2),
-      );
-    else console.error(msg);
-    process.exit(1);
-  }
+  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`);
+
+  // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
+  // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。
+  const scanned = changedScope ? files.filter((f) => inChangedScope(relPosix(f), changedScope)) : files;
+  const scopeFilter = {
+    mode: scopeMode,
+    requested: changedScope ? changedScope.size : null,
+    matched: scanned.length,
+    total: files.length,
+  };
 
   const project = new Project({ useInMemoryFileSystem: false, skipFileDependencyResolution: true });
   const items: Array<{
@@ -198,7 +221,7 @@ async function main() {
   let totalFuncs = 0;
   const parseFailures: string[] = [];
 
-  for (const f of files) {
+  for (const f of scanned) {
     let sf: any;
     try {
       sf = project.addSourceFileAtPath(f);
@@ -251,7 +274,7 @@ async function main() {
           scope: relPosix(rootAbs),
           threshold,
           totalFuncs,
-          _summary: verdict,
+          _summary: { ...verdict, scopeFilter },
           items,
           parseFailures,
         },
@@ -265,8 +288,16 @@ async function main() {
   }
 
   console.log(`=== 参数陷阱扫描（${relPosix(rootAbs)}，长约≥${threshold}，布尔≥2，共 ${totalFuncs} 个函数）===`);
+  if (scopeMode !== "all")
+    console.log(
+      `变更域过滤 --${scopeMode}：${scopeFilter.matched}/${scopeFilter.total} 个文件进入扫描`,
+    );
   if (items.length === 0) {
-    console.log("✅ 无长参数/布尔陷阱，函数边界在上限侧是干净的。");
+    console.log(
+      scopeMode !== "all" && scopeFilter.matched === 0
+        ? "（本次变更文件均不在扫描范围内，视为通过）"
+        : "✅ 无长参数/布尔陷阱，函数边界在上限侧是干净的。",
+    );
     return;
   }
   for (const it of items) {

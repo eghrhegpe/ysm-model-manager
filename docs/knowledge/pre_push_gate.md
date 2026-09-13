@@ -61,6 +61,8 @@ pitfalls:
   - 判定字段写错位置 → 门禁静默假绿：`parseToolOutput` 的 `parsed._summary || parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`）
   - 「门禁全绿」只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
   - record() 只把 blockPolicy 用于判定 blocked、不写进 results → gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组）
+  - 「增量裁剪边界」把「过滤后为空」当错误、把空 --files 静默当全库 → 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」
+  - 「--changed 的边界」它走 git diff 故不含未跟踪新文件 → 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files
 status: active
 invariant_anchors:
   - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
@@ -154,7 +156,9 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 **2026-09-13 契约修复**：三个脚本已补 `_summary.ok/errors/warns_list` + `--strict`（JSON 模式不再往 stderr 写文本——gate 用 `shAsync` 合并 stdout+stderr，混入文本会让 `JSON.parse` 失败、退化为 rc 判定），门禁判定链现能读到真实结论。实测：`check-type-safety` 生产域 `ok=true / errors=0`（唯一现在就能硬挂的）；`check-complexity` `errors=301`、`check-params` `errors=54` 仍是存量规模，FAIL 时 tail 直出 Top-20 明细。
 
-**仍未接线**（本次只修判定语义，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**，而三者只有 `--scope`（按目录）无增量裁剪——全库挂上去即全红。接线前须先补 `--files`/`--changed` 增量，再以 `blockPolicy: debt` 试挂（或只断 `red` 档）。
+**2026-09-13 增量裁剪**：三者已补 `--files <换行分隔列表>`（与 `check-redlines` / `check-doc-drift` 同约定，即门禁侧传参形态）与 `--changed`（本地自动取「相对默认分支合并基线」的变更文件），实现收敛在 `scripts/_lib/changed-scope.ts`（契约测试 `tests/test_changed_scope.ts`）。语义：`--files` 优先 → `--changed` 自解析 → 全库（两 flag 皆缺，向后兼容既有调用）；命中先收敛到变更文件再计数，`_summary.scopeFilter{mode,requested,matched,total}` 留痕——**「0 命中」必须能区分「全库干净」与「变更文件压根不在扫描范围」**。实测（本仓 `--changed` 解析出 213 个变更文件 → 前端域 55 个进入扫描）：`check-complexity` 命中 301→65、`check-params` 54→18；耗时同步降一个量级（全库 2.4s / 59.4s / 0.3s → 裁剪后 0.45s / 0.39s / 0.17s）。
+
+**仍未接线**（本次只加能力，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**；接线须在 `runTools` 加「按 `--files` 裁剪」通道（数组式 procRun，避开 cmd 8K 墙——同 `check-redlines` / `runScopedDocDrift` 先例），再以 `blockPolicy: debt` 试挂。**`check-params` 是接线成本的关键项**：全库 59.4s 的墙钟几乎不可接受，只有增量路径（0.39s）能让它可挂。
 
 **推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。
 

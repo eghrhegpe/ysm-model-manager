@@ -1,5 +1,6 @@
 // ===== openFullPreview 测试：全屏放大预览 =====
-// 覆盖：overlay 挂载/渲染、滚轮缩放、拖拽旋转、ESC/点空白关闭、关闭幂等
+// 覆盖：overlay 挂载/渲染、滚轮缩放、拖拽旋转、ESC/点空白关闭、关闭幂等、
+//       对话框语义（role/aria-modal/焦点移入）与关闭后焦点归还
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 
@@ -47,6 +48,30 @@ describe("openFullPreview", () => {
     expect(big?.width).toBe(600);
     expect(renderModel2D).toHaveBeenCalledTimes(1);
     expect(renderModel2D.mock.calls[0][3]).toMatchObject({ showLabels: true, zoom: 1, rotation: 0 });
+  });
+
+  it("overlay 具备对话框语义：role=dialog + aria-modal + 可访问名，且焦点移入（WCAG A 级）", async () => {
+    const src = document.createElement("canvas");
+    await openFullPreview(src, model, null, false);
+
+    const overlay = findOverlay()!;
+    expect(overlay.getAttribute("role")).toBe("dialog");
+    expect(overlay.getAttribute("aria-modal")).toBe("true");
+    expect(overlay.getAttribute("aria-label")).toBeTruthy();
+    expect(overlay.getAttribute("tabindex")).toBe("-1");
+    expect(document.activeElement).toBe(overlay);
+  });
+
+  it("关闭后焦点归还触发元素（WCAG 2.4.3）", async () => {
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    const src = document.createElement("canvas");
+    await openFullPreview(src, model, null, false);
+    expect(document.activeElement).not.toBe(opener);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(document.activeElement).toBe(opener);
   });
 
   it("滚轮缩放：deltaY>0 缩小、deltaY<0 放大，并重新渲染", async () => {

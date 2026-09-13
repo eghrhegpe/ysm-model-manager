@@ -258,6 +258,7 @@ status: active
 - **YSM 骨骼动画（ADR-100）**：动画数据优先取 `model._animClips`（loader 统一挂载），无内嵌时兜底扫同目录 `*.animation.json` → `createYsmAnimPlayer` 驱动骨骼
 - **`openModel3DFullscreen` 自洽兜底（P2 修复 2026-09）**：入口 `getApp()` 若后端不可用会 reject——函数内 try-catch + toast（`preview.backendUnavailable`）后 return，不依赖所有调用方各自 catch（app-nav FAB 有兜底，但 litematic-3d 裸调用无）
 - **DOM 注入转义约定（XSS 防御）**：详情/骨骼/骨架面板凡向 DOM 注入外部或模型派生数据，禁止 `innerHTML` 裸拼 `${var}`；一律走 `utils/dom/html.ts` 的 `esc()` 或 `createElement` + `textContent`
+- **自建全屏 overlay 的对话框语义（P2 补齐 2026-09-13）**：`zoom.ts` 的 `.zoom-overlay` 本质是模态，必须与 `features/dialogs/modal.ts` 基座同口径——`role="dialog"` + `aria-modal="true"` + `aria-label` + `tabIndex=-1`，打开时 `overlay.focus()` 移入焦点、关闭时归还触发元素（WCAG 2.4.3）。**只挂 Esc 关闭不算收口**（同轮整改曾漏 `app-content/site/events.ts` 之外的这一处）
 
 ## 相关
 

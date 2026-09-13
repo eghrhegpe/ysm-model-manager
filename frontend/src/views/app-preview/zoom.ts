@@ -29,6 +29,13 @@ export async function openFullPreview(
   ensureZoomStyles(); // P1 批次10:cssText 抽类注入(幂等)
   const overlay = document.createElement("div");
   overlay.className = "zoom-overlay";
+  // a11y：自建模态须与 features/dialogs/modal.ts 基座一致——role + aria-modal + Esc 关闭 + 焦点归还
+  // （同轮整改漏网，P2 补齐；全屏放大本质是模态对话框，读屏须能播报并困在内部）
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", t("preview.zoom"));
+  overlay.tabIndex = -1;
+  const opener = document.activeElement as HTMLElement | null;
   const bigCanvas = document.createElement("canvas");
   bigCanvas.width = 600;
   bigCanvas.height = 600;
@@ -110,6 +117,8 @@ export async function openFullPreview(
     window.removeEventListener("popstate", onPopState);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     if (overlay.parentNode) document.body.removeChild(overlay);
+    // a11y：焦点归还触发元素（模态关闭后不得把焦点留在已移除节点上，WCAG 2.4.3）
+    opener?.focus?.();
     // code_review 47e68917b #2（P2）：样式保持会话级——_zoomStyleEl 是模块级单例
     // （ensureZoomStyles 守卫重入），本会话可能同时存在多个 zoom overlay（异步
     // openFullPreview 可重入）；此处 remove 会把第二个仍在显示的 overlay 的样式
@@ -122,4 +131,6 @@ export async function openFullPreview(
   window.addEventListener("popstate", onPopState);
   document.addEventListener("visibilitychange", onVisibilityChange);
   document.body.appendChild(overlay);
+  // a11y：焦点移入对话框，读屏与键盘由此进入模态上下文（Esc 已挂在 document 级）
+  overlay.focus();
 }

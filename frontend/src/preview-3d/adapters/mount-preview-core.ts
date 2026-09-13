@@ -18,6 +18,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { deferred } from "@/preview-3d/deferred.ts";
 import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { setOverlayStyleTarget } from "@/preview-3d/infra/overlay-style-bridge.ts";
@@ -463,10 +464,10 @@ export async function mount3D(
       previewShell.resetRefs();
     },
     overlay: null,
-    viewContainer: null as unknown as HTMLElement,
-    loadingEl: null as unknown as HTMLElement,
-    menuHandle: null as unknown as PreviewMenuHandle,
-    camBridge: null as unknown as CameraControlBridge,
+    viewContainer: deferred<HTMLElement>(),
+    loadingEl: deferred<HTMLElement>(),
+    menuHandle: deferred<PreviewMenuHandle>(),
+    camBridge: deferred<CameraControlBridge>(),
     focusTrap,
     handlers,
   };

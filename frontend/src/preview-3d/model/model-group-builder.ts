@@ -2,6 +2,7 @@
 // 单组件 spec 构建核心（Build 与 BuildMulti 共用）。
 // 对齐 Go threejs/spec.go buildModelGroup（L103-390）。
 
+import { deferred } from "@/preview-3d/deferred.ts";
 import {
   buildCubeMeshData,
   computeBoneLocalPos,
@@ -104,7 +105,7 @@ function initShellAndMaps(model: BedrockModel): {
 } {
   if (!model.bones || model.bones.length === 0) {
     return {
-      ctx: null as unknown as BonesCtx,
+      ctx: deferred<BonesCtx>(),
       emptyReturn: {
         id: "",
         name: "",

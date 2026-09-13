@@ -20,6 +20,7 @@
 //   - ADR-196 刀2：参数真值源从 this.params 迁到 envState 单例
 
 import * as THREE from "three";
+import { deferred } from "@/preview-3d/deferred.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
@@ -621,6 +622,6 @@ export class LightCapability implements SceneCapability {
     this.spotlight.dispose();
     // R1-P2-6：spotlightTarget 是隐形 Object3D（无几何/材质），detach 已从场景移除；
     // 显式置空引用，防止后续误用
-    this.spotlightTarget = null as unknown as THREE.Object3D;
+    this.spotlightTarget = deferred<THREE.Object3D>();
   }
 }

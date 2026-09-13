@@ -9,8 +9,8 @@
 |--------|------|------|
 | `base/pure/` | 真纯函数（array/clamp/guards/recycle-path/tex-size/web-path/gh-links/safe-error-msg/apperror-text），**零副作用** | 无 DOM 无 IO，相同输入恒同输出 |
 | `base/primitives/` | 副作用原语（async/base64/debounce/disposable/lock/log/storage/main-thread-watch/listener-set），仍零上层依赖 | 副作用要被封装成原语 API，不裸奔 |
-| `dom/` | 浏览器 DOM 原语（modal 六件套/toast/tooltip/焦点恢复/虚拟滚动/clipboard） | 仅当与具体业务无关、可跨页复用 |
-| `animation/` | 基岩版动画 JSON 解析 + Molang 编译器 + 求值器 | `molang-lib/` 为 **vendored 第三方**（见下） |
+| `dom/` | 浏览器 DOM 原语（modal 六件套/toast/tooltip/焦点恢复/虚拟滚动/clipboard）。**modal/toast 家族默认文案依赖 `@/core/i18n`**（check-layering 方向合规的唯一上层触点）；各 modal builder 支持 `labels` 注入覆盖（优先级：专参 okText/cancelText > labels > i18n 默认），跨产品复用或测试解耦文案断言时用注入 | 仅当与具体业务无关、可跨页复用 |
+| `animation/` | 基岩版动画 JSON 解析 `animation.ts` + **求值器 `animation-evaluator.ts`（ADR-212 拆出：Clip+time→BoneTransform，catmullrom/timeline 回绕均有测试）** + Molang 编译器 `molang.ts` | `molang-lib/` 为 **vendored 第三方**（见下） |
 | `resource/` | 资源类型判定（`types.ts` 单一事实源，全部派生自 `resource_types.json`） | 禁止手写镜像类型/常量 |
 | `format/` | 字节/时间/包格式/ysm 动画配置格式化 | 纯函数为主 |
 | `cache/` | `with-cached` 通用异步缓存（stampede guard + LRU） | — |

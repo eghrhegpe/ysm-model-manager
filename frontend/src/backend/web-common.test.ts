@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== web-common.ts 测试（补盲区：路径解析；base64 原语随实现下沉
-// utils/base/base64.ts，测试迁 utils/base/base64.test.ts，ADR-170 二段收口 2026-09）=====
+// utils/base/primitives/base64.ts，测试迁 utils/base/primitives/base64.test.ts，ADR-170 二段收口 2026-09）=====
 // 纯函数无 IO；isWebPath / parseWebPath / parseWebDirPath / webDirType 是
 // web-fs 全链路的路径语义单点（web-common.ts:18-49），锁定防回归。
 import { describe, it, expect } from "vitest";

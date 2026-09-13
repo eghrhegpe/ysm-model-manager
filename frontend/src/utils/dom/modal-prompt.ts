@@ -4,7 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
-import { createDialog } from "./modal-core.ts";
+import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 /** modalPrompt 选项 */
 export interface ModalPromptOptions {
@@ -13,21 +13,26 @@ export interface ModalPromptOptions {
   value?: string;
   placeholder?: string;
   okText?: string;
+  /** 文案覆盖（优先级：okText > labels > i18n 默认） */
+  labels?: ModalLabels;
 }
 
 function promptBoxBuilder(
   value: string | undefined,
   placeholder: string | undefined,
   okText: string | undefined,
+  labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
+  const ok = okText || labels?.ok || t("dialog.ok");
+  const cancel = labels?.cancel || t("dialog.cancelEsc");
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3）
     box.innerHTML = `
       <input id="mp-input" data-testid="dlg-input" class="dlg-field" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}">
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer dlg-footer-flush">
-        <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(okText || t("dialog.ok"))} (Enter)</button>
+        <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
+        <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(ok)} (Enter)</button>
       </div>
     `;
   };
@@ -40,25 +45,26 @@ function promptBoxBuilder(
  */
 export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, icon, value, placeholder, okText } = opts;
+    const { title, icon, value, placeholder, okText, labels } = opts;
     const { box, close } = createDialog<string | null>({
       title,
       icon,
       tabIndex: 0,
       cancelValue: null,
       resolve,
-      buildBox: promptBoxBuilder(value, placeholder, okText),
+      buildBox: promptBoxBuilder(value, placeholder, okText, labels),
     });
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();
     input.select();
     const errEl = box.querySelector("#mp-err") as HTMLElement | null;
+    const fieldRequired = labels?.fieldRequired || t("dialog.fieldRequired");
     // 空值校验（OK 点击与 Enter 共用）；有值返回并 close，空值标错返回 null
     const requireValue = (refocus: boolean): string | null => {
       const v = input.value.trim();
       if (!v) {
         if (refocus) input.focus();
-        if (errEl) errEl.textContent = `⚠️ ${t("dialog.fieldRequired")}`;
+        if (errEl) errEl.textContent = `⚠️ ${fieldRequired}`;
         return null;
       }
       return v;

@@ -266,12 +266,12 @@ describe("modalPrompt — 输入框键盘交互", () => {
     await expect(promise).resolves.toBe("新名字");
   });
 
-  it("Enter 空输入 → 错误提示且不关闭", async () => {
-    modalPrompt({ title: "命名" });
+  it("Enter 空输入 → 错误提示且不关闭（labels 注入文案生效）", async () => {
+    modalPrompt({ title: "命名", labels: { fieldRequired: "测试必填文案" } });
     const input = document.querySelector("#mp-input") as HTMLInputElement;
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
     const errEl = document.querySelector("#mp-err") as HTMLElement;
-    expect(errEl?.textContent).toContain("不能为空");
+    expect(errEl?.textContent).toContain("测试必填文案");
     closeActiveDlg();
   });
 
@@ -375,9 +375,9 @@ describe("modalProgress — 进度弹窗", () => {
     vi.useFakeTimers();
     const h = modalProgress({ title: "下载" });
     h.update(25 * 1024 * 1024, 100 * 1024 * 1024);
-    const fill = document.querySelector(".dlg-box > div:nth-child(2) > div") as HTMLElement;
+    const fill = document.querySelector(".dlg-prog-fill") as HTMLElement;
     expect(fill.style.width).toBe("25%");
-    const pctEl = document.querySelector(".dlg-box > div:nth-child(3)") as HTMLElement;
+    const pctEl = document.querySelector(".dlg-prog-pct") as HTMLElement;
     expect(pctEl.textContent).toContain("25%");
     expect(pctEl.textContent).toContain("25.0 MB / 100.0 MB");
     // 超 100 钳制
@@ -389,9 +389,9 @@ describe("modalProgress — 进度弹窗", () => {
     vi.useFakeTimers();
     const h = modalProgress({ title: "下载" });
     h.update(7 * 1024 * 1024, 0);
-    const fill = document.querySelector(".dlg-box > div:nth-child(2) > div") as HTMLElement;
+    const fill = document.querySelector(".dlg-prog-fill") as HTMLElement;
     expect(fill.style.width).toBe("60%");
-    const pctEl = document.querySelector(".dlg-box > div:nth-child(3)") as HTMLElement;
+    const pctEl = document.querySelector(".dlg-prog-pct") as HTMLElement;
     expect(pctEl.textContent).toContain("7.0 MB");
   });
 
@@ -399,7 +399,7 @@ describe("modalProgress — 进度弹窗", () => {
     vi.useFakeTimers();
     const h = modalProgress({ title: "下载" });
     h.update(50, 100);
-    const fill = document.querySelector(".dlg-box > div:nth-child(2) > div") as HTMLElement;
+    const fill = document.querySelector(".dlg-prog-fill") as HTMLElement;
     fill.style.width = "50%";
     h.update(NaN, 100);
     h.update(50, NaN);
@@ -467,25 +467,25 @@ describe("modalPrompt — 输入框", () => {
     await expect(promise).resolves.toBeNull();
   });
 
-  it("空输入时确定按钮不关闭弹窗（显示错误提示）", async () => {
-    modalPrompt({ title: "命名" });
+  it("空输入时确定按钮不关闭弹窗（显示错误提示，labels 注入文案）", async () => {
+    modalPrompt({ title: "命名", labels: { fieldRequired: "测试必填文案" } });
     const okBtn = document.querySelector("#mp-ok") as HTMLElement;
     okBtn.click();
     // promise 不应被 resolve（空输入拦截）
     const errEl = document.querySelector("#mp-err") as HTMLElement;
-    expect(errEl?.textContent).toContain("不能为空");
+    expect(errEl?.textContent).toContain("测试必填文案");
     // 显式关闭清空单例（closeDlg 会清 _activeOverlay）
     closeActiveDlg();
   });
 
   it("input 后清空错误提示", () => {
-    modalPrompt({ title: "命名" });
+    modalPrompt({ title: "命名", labels: { fieldRequired: "测试必填文案" } });
     const errEl = document.querySelector("#mp-err") as HTMLElement;
     const input = document.querySelector("#mp-input") as HTMLInputElement;
     // 先触发空输入错误
     const okBtn = document.querySelector("#mp-ok") as HTMLElement;
     okBtn.click();
-    expect(errEl?.textContent).toContain("不能为空");
+    expect(errEl?.textContent).toContain("测试必填文案");
     // 输入内容后清除
     input.value = "test";
     input.dispatchEvent(new Event("input"));

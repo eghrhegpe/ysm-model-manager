@@ -82,7 +82,7 @@ quick_intents:
   - 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射
 quick_risk_lines:
   - parsers/ 是纯解析层,勿塞业务;web-fs 装配层在 backend/
-  - base64 原语已下沉 utils/base/base64.ts（ADR-170 二段收口 2026-09,parsers 不再 import backend）
+  - base64 原语已下沉 utils/base/primitives/base64.ts（ADR-170 二段收口 2026-09,parsers 不再 import backend）
   - ysm-header.ts MAX_HEADER_LINES=200 与 Go header.go 对齐,改上限须双端同步
   - voxel-bits.ts 位解码口径(Litematica 小端 LSB 起始)与 Go nbt.go extractBits 逐行一致,改前必读注释
   - pack-meta.ts / voxel-colors.ts 下游消费方固定,改导出签名须 grep 全仓消费者
@@ -94,7 +94,7 @@ pitfalls:
   - pack-meta.ts findZipEntry 对 entries 全量线性扫描(大小写不敏感),超大 zip 可能慢,web-fs 侧有 maxMaterializeBytes 512MB 封顶防护
   - extract.ts detectContainerType 走中央目录口径(parseZipCentralDir),勿回退 LFLH 游走(data descriptor/zip64 漏条目,Go 侧明令禁用)
   - voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码
-  - ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动
+  - ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/primitives/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动
 invariant_anchors:
   - frontend/src/parsers/voxel-io.ts|decodeVoxelNbt
 ---
@@ -124,7 +124,7 @@ invariant_anchors:
 ## 与其他子系统关系
 
 - **上层**：backend/web-fs*（web 模式文件系统）把解析器装进浏览链路；preview-3d/views 直接消费。
-- **跨簇例外已消除（2026-09）**：原 voxel-io/pack-meta 依赖 `backend/web-common` 的 base64 原语 2 处，已下沉 `utils/base/base64.ts`（backend 侧经 web-common re-export 保持既有 import 不变）——parsers/ 回归真叶子层。
+- **跨簇例外已消除（2026-09）**：原 voxel-io/pack-meta 依赖 `backend/web-common` 的 base64 原语 2 处，已下沉 `utils/base/primitives/base64.ts`（backend 侧经 web-common re-export 保持既有 import 不变）——parsers/ 回归真叶子层。
 - 测试随迁：各解析器 + voxel-colors.parity / ysm-summary-parity / container-fingerprint-parity 契约测试在 parsers/ 下。`backend/zipentry.parity.test.ts` 独立留原处（只依赖 utils/resource/types）。
 
 ## 不变量

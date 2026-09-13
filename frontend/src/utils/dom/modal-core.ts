@@ -8,6 +8,22 @@
 
 import { esc } from "@/utils/html/html.ts";
 
+/**
+ * modal 家族文案覆盖（可选注入；未提供时由各 builder 回退 @/core/i18n 默认文案）。
+ * 用途：①跨产品复用（换 i18n 源）；②测试解耦——i18n 文案调整不令文案敏感断言无罪挂红。
+ * 优先级：显式专参（okText/cancelText）> labels 键 > t() 默认文案。
+ */
+export interface ModalLabels {
+  /** 确认按钮文案（modalConfirm/modalSelect/modalPrompt 的 ok 按钮） */
+  ok?: string;
+  /** 取消按钮文案（含 Esc 提示，如 "取消 (Esc)"） */
+  cancel?: string;
+  /** modalPrompt 空输入错误提示 */
+  fieldRequired?: string;
+  /** modalProgress 总大小未知态前缀（如 "已下载"） */
+  downloaded?: string;
+}
+
 /** ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
  * 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。 */
 export const VIEW_TESTIDS: readonly string[] = [

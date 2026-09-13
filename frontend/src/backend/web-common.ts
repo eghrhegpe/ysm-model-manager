@@ -27,7 +27,7 @@ export {
 /** 导入大小上限 100MB（对齐 import-dnd.ts MAX_FILE_SIZE，桌面 oversize 过滤同口径） */
 export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 
-// ===== base64 原语（ADR-170 二段收口 2026-09：实现下沉 utils/base/base64.ts）=====
+// ===== base64 原语（ADR-170 二段收口 2026-09：实现下沉 utils/base/primitives/base64.ts）=====
 // parsers/（叶子层）消费 base64ToBytes/u8ToBase64 不再反向依赖本文件；
 // backend 系既有 import 经此 re-export 保持导出名/签名不变（来源数=1，非聚合桶）。
 export { arrayBufferToBase64, base64ToBytes, u8ToBase64 } from "@/utils/base/primitives/base64.ts";

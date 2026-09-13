@@ -5,7 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
-import { createDialog } from "./modal-core.ts";
+import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 export interface ModalProgressOptions {
   title: string;
@@ -13,6 +13,8 @@ export interface ModalProgressOptions {
   width?: string;
   /** 是否允许 Esc/点遮罩关闭（默认 true；下载等不可中断任务传 false 防误关丢进度） */
   closable?: boolean;
+  /** 文案覆盖（总大小未知态前缀等；未提供时走 i18n 默认） */
+  labels?: ModalLabels;
 }
 
 export interface ModalProgressHandle {
@@ -69,15 +71,21 @@ function updateProgressFinite(
   pctEl.textContent = `${pct}%（${fmtMB(done)} / ${fmtMB(total)}）`;
 }
 
-function updateProgressUnknown(done: number, fill: HTMLDivElement, pctEl: HTMLDivElement): void {
+function updateProgressUnknown(
+  done: number,
+  fill: HTMLDivElement,
+  pctEl: HTMLDivElement,
+  labels: ModalLabels | undefined,
+): void {
   fill.style.width = "60%";
-  pctEl.textContent = `${t("dialog.downloaded")} ${fmtMB(done)}`;
+  pctEl.textContent = `${labels?.downloaded || t("dialog.downloaded")} ${fmtMB(done)}`;
 }
 
 function updateProgressHandler(
   closed: { value: boolean },
   fill: HTMLDivElement,
   pctEl: HTMLDivElement,
+  labels: ModalLabels | undefined,
 ): (done: number, total: number) => void {
   return (done, total): void => {
     if (closed.value) return;
@@ -85,7 +93,7 @@ function updateProgressHandler(
     if (total > 0) {
       updateProgressFinite(done, total, fill, pctEl);
     } else {
-      updateProgressUnknown(done, fill, pctEl);
+      updateProgressUnknown(done, fill, pctEl, labels);
     }
   };
 }
@@ -96,7 +104,7 @@ function updateProgressHandler(
  * 用于版本更新等长任务的前端进度反馈（配合 update:progress 事件）。
  */
 export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
-  const { title, icon, width, closable = true } = opts;
+  const { title, icon, width, closable = true, labels } = opts;
   const { pctEl, track, fill } = buildProgressDoms();
   const { close: settleClose } = createDialog<undefined>({
     title,
@@ -111,7 +119,7 @@ export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
   const closed = { value: false };
   const close = guardProgressClose(closed, settleClose);
   return {
-    update: updateProgressHandler(closed, fill, pctEl),
+    update: updateProgressHandler(closed, fill, pctEl, labels),
     close,
   };
 }

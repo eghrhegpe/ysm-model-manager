@@ -4,7 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
-import { createDialog } from "./modal-core.ts";
+import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 /** modalConfirm 选项 */
 export interface ModalConfirmOptions {
@@ -14,6 +14,8 @@ export interface ModalConfirmOptions {
   okText?: string;
   danger?: boolean;
   width?: string;
+  /** 文案覆盖（优先级：okText > labels > i18n 默认） */
+  labels?: ModalLabels;
   /**
    * 自定义 HTML 内容区（传入后替代 message 文本区，用于复杂布局弹窗）。
    * ⚠️ XSS 契约：本通道**不再转义**，调用方必须传入已完成 esc() 的内容——
@@ -28,14 +30,17 @@ function confirmBoxBuilder(
   okText: string | undefined,
   danger: boolean | undefined,
   bodyHTML: string | undefined,
+  labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
+  const ok = okText || labels?.ok || t("dialog.ok");
+  const cancel = labels?.cancel || t("dialog.cancelEsc");
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3），本 builder 只管内容区与 footer
     box.innerHTML = `
       ${bodyHTML ?? `<div class="dlg-msg">${esc(message)}</div>`}
       <div class="dlg-footer dlg-footer-flush">
-        <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(okText || t("dialog.ok"))} (Enter)</button>
+        <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
+        <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(ok)} (Enter)</button>
       </div>
     `;
   };
@@ -48,7 +53,7 @@ function confirmBoxBuilder(
  */
 export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    const { title, icon, message, okText, danger, width, bodyHTML } = opts;
+    const { title, icon, message, okText, danger, width, bodyHTML, labels } = opts;
     const { box, close } = createDialog<boolean>({
       title,
       icon,
@@ -56,7 +61,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
       tabIndex: 0,
       cancelValue: false,
       resolve,
-      buildBox: confirmBoxBuilder(message, okText, danger, bodyHTML),
+      buildBox: confirmBoxBuilder(message, okText, danger, bodyHTML, labels),
     });
     (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
     (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void => close(true);

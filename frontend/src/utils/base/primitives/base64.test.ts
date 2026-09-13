@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== utils/base/base64.ts 测试 =====
+// ===== utils/base/primitives/base64.ts 测试 =====
 import { describe, it, expect } from "vitest";
 import {
   arrayBufferToBase64,

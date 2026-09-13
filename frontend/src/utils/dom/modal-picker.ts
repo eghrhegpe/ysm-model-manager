@@ -4,7 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
-import { createDialog } from "./modal-core.ts";
+import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 /** modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） */
 export interface ModalPickerItem {
@@ -30,6 +30,8 @@ export interface ModalPickerOptions {
    */
   footerHTML?: string;
   cancelText?: string;
+  /** 文案覆盖（优先级：cancelText > labels > i18n 默认） */
+  labels?: ModalLabels;
 }
 
 /** modalPicker 结果 */
@@ -83,7 +85,9 @@ function pickerBoxBuilder(
   items: ModalPickerItem[],
   footerHTML: string | undefined,
   cancelText: string | undefined,
+  labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
+  const cancel = cancelText || labels?.cancel || t("dialog.cancelEsc");
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3）
     const rows = items
@@ -100,7 +104,7 @@ function pickerBoxBuilder(
       (subtitle ? `<div class="dlg-pick-subtitle">${esc(subtitle)}</div>` : "") +
       `<div data-testid="pick-list" class="dlg-pick-list">${rows}</div>` +
       (footerHTML || "") +
-      `<div class="dlg-pick-cancel-wrap"><button id="pk-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancelText || t("dialog.cancelEsc"))}</button></div>`;
+      `<div class="dlg-pick-cancel-wrap"><button id="pk-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button></div>`;
   };
 }
 
@@ -113,7 +117,7 @@ function pickerBoxBuilder(
  */
 export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult | null> {
   return new Promise((resolve) => {
-    const { title, icon, width, subtitle, items, footerHTML, cancelText } = opts;
+    const { title, icon, width, subtitle, items, footerHTML, cancelText, labels } = opts;
     const { box, close } = createDialog<ModalPickerResult | null>({
       title,
       icon,
@@ -121,7 +125,7 @@ export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult
       tabIndex: 0,
       cancelValue: null,
       resolve,
-      buildBox: pickerBoxBuilder(subtitle, items, footerHTML, cancelText),
+      buildBox: pickerBoxBuilder(subtitle, items, footerHTML, cancelText, labels),
     });
     box.querySelectorAll<HTMLButtonElement>("[data-testid='pick-item']").forEach((row) => {
       row.addEventListener("click", () => {

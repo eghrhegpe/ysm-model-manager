@@ -23,11 +23,7 @@ export function toast(
  *  @param fallback  friendlyError 未匹配时的回退文案（仅错误无中文时生效）
  *  @param prefix    操作名前缀（如 "统计失败"），拼在 friendlyError 前：`❌ ${prefix}: ${msg}` */
 export function toastError(err: unknown, fallback?: string, prefix?: string): void {
-  toast(
-    prefix ? `❌ ${prefix}: ${friendlyError(err, fallback)}` : `❌ ${friendlyError(err, fallback)}`,
-    TOAST_MS.long,
-    "error",
-  );
+  toast(`❌ ${prefix ? `${prefix}: ` : ""}${friendlyError(err, fallback)}`, TOAST_MS.long, "error");
 }
 
 /** rtype 契约缺失守卫 toast（context-menu / pack-ops / app-sidebar 等多处重复，收口于此） */

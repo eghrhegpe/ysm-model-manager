@@ -70,6 +70,9 @@ const memoryTotalBytes = new Map<string, number>();
 let forcedMemory = false;
 const backendIsIdb = (): boolean => !forcedMemory && typeof indexedDB !== "undefined";
 
+/** 降级警告只发一次（避免每次操作刷屏） */
+let _warnedNoIdb = false;
+
 // 内存降级模式无上限——网页版隐私模式下文件内容（模型可达数十 MB~GB）全部驻留
 // 内存会 OOM；加条目数与字节估算双上限，超限按 FIFO 驱逐（近似 LRU：先入先出）。
 const MEMORY_MAX_KEYS = 200;
@@ -152,9 +155,6 @@ async function getIdb(): Promise<IDBDatabase | null> {
     return null;
   }
 }
-
-// P3 修复：降级警告只发一次（避免每次操作刷屏）
-let _warnedNoIdb = false;
 
 /** 仅测试用：重置单例连接 + 降级标志（避免用例间共享状态） */
 export function __resetDBForTest(): void {

@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-231：preview-3d adapters 按私有子系统分层",
+        "link": "/adr/ADR-231-preview-3d-adapters-layer"
+      },
+      {
         "text": "ADR-230：GenGuard 统一收敛：内建状态源为唯一出口，外部状态源模式退役",
         "link": "/adr/ADR-230-genguard"
       },

@@ -1,3 +1,11 @@
+// Package sync 整合包同步：仓库 ↔ 实例（custom 目录）的资源同步、diff、推送与重链接。
+//
+// ⚠️ 包名与标准库 `sync` 同名，外部引用一律显式 alias：
+//
+//	import ysmsync "ysm-model-manager/go/sync"
+//
+// 本包内部同时 import 标准库 "sync"（锁原语，见下方 import 块），故 alias 是编译期必需，
+// **不是命名 stutter** —— 勿发起「消除 stutter」的重命名，决策与实证数据见 ADR-236。
 package sync
 
 import (

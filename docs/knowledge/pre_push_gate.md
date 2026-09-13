@@ -59,10 +59,11 @@ pitfalls:
   - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
   - 判定字段写错位置 → 门禁静默假绿：`parseToolOutput` 的 `parsed._summary || parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`）
-  - 「门禁全绿」只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
+  - 「门禁全绿」只证明清单内检查通过——32 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
   - record() 只把 blockPolicy 用于判定 blocked、不写进 results → gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组）
   - 「增量裁剪边界」把「过滤后为空」当错误、把空 --files 静默当全库 → 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」
   - 「--changed 的边界」它走 git diff 故不含未跟踪新文件 → 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files
+  - 「scopedFiles 声明与实现」清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts → 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单
 status: active
 invariant_anchors:
   - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
@@ -148,19 +149,25 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 | 脚本 | 自动化入口 | 内容 |
 |------|-----------|------|
-| `check-complexity` | ❌ 无 | 认知复杂度档位（🟥红 / 🟧橙 / 🟨黄）+ 嵌套深度；存量规模大，未纳入阻断 |
-| `check-params` | ❌ 无 | 长参数列表 / 布尔陷阱打分 |
-| `check-type-safety` | ❌ 无 | `any` / `@ts-ignore` / `!` 非空断言计数 |
+| `check-complexity` | ✅ 2026-09-13 接 `FRONTEND_STATIC_TOOLS`（debt + `--files`） | 认知复杂度档位（🟥红 / 🟧橙 / 🟨黄）+ 嵌套深度 |
+| `check-params` | ✅ 同上 | 长参数列表 / 布尔陷阱打分 |
+| `check-type-safety` | ✅ 同上 | `any` / `@ts-ignore` / `!` 非空断言计数 |
 
-核实口径：`_lib/gate-config.ts` 五个清单 + `.githooks/pre-commit` + `.github/workflows/*` + `Taskfile.yml` 均无调用点（仅 `tests/test_check_*.ts` 导入其纯函数做契约测试）。
+核实口径（2026-09-13 首查）：`_lib/gate-config.ts` 五个清单 + `.githooks/pre-commit` + `.github/workflows/*` + `Taskfile.yml` 均无调用点（仅 `tests/test_check_*.ts` 导入其纯函数做契约测试）——三者当时确为「无守护债务」。**现已接门禁**（见下节），但**只挂 `FRONTEND_STATIC_TOOLS`**：`--all` / `--docs` 模式 `files` 为空 → 走全库分支，等价于未接线，全量守护理应留待 baseline 化后补齐。
 
 **2026-09-13 契约修复**：三个脚本已补 `_summary.ok/errors/warns_list` + `--strict`（JSON 模式不再往 stderr 写文本——gate 用 `shAsync` 合并 stdout+stderr，混入文本会让 `JSON.parse` 失败、退化为 rc 判定），门禁判定链现能读到真实结论。实测：`check-type-safety` 生产域 `ok=true / errors=0`（唯一现在就能硬挂的）；`check-complexity` `errors=301`、`check-params` `errors=54` 仍是存量规模，FAIL 时 tail 直出 Top-20 明细。
 
 **2026-09-13 增量裁剪**：三者已补 `--files <换行分隔列表>`（与 `check-redlines` / `check-doc-drift` 同约定，即门禁侧传参形态）与 `--changed`（本地自动取「相对默认分支合并基线」的变更文件），实现收敛在 `scripts/_lib/changed-scope.ts`（契约测试 `tests/test_changed_scope.ts`）。语义：`--files` 优先 → `--changed` 自解析 → 全库（两 flag 皆缺，向后兼容既有调用）；命中先收敛到变更文件再计数，`_summary.scopeFilter{mode,requested,matched,total}` 留痕——**「0 命中」必须能区分「全库干净」与「变更文件压根不在扫描范围」**。实测（本仓 `--changed` 解析出 213 个变更文件 → 前端域 55 个进入扫描）：`check-complexity` 命中 301→65、`check-params` 54→18；耗时同口径下降 **2.4s→0.9s / 59.4s→7.9s / 0.3s→0.3s**。注意 `check-params` 的成本随进入扫描的文件数近似线性（55 文件 7.9s、单文件 0.4s）——**它全库 59.4s 的墙钟是接线成本的关键项**，接线必须依赖增量路径（口径提醒：报耗时务必注明是否增量，单文件数字与 55 文件数字差一个量级）。
 
-**仍未接线**（本次只加能力，不改调度）：门禁 `runTools` 恒追加 `--json` 但**不传 `--files`**；接线须在 `runTools` 加「按 `--files` 裁剪」通道（数组式 procRun，避开 cmd 8K 墙——同 `check-redlines` / `runScopedDocDrift` 先例），再以 `blockPolicy: debt` 试挂。
+**2026-09-13 接线**：三者已挂 `FRONTEND_STATIC_TOOLS`，`blockPolicy: "debt"` + 新增清单字段 `scopedFiles: true`——`runTools` 对声明该字段的工具改走**数组式 `procRun` 传 `--files <本次变更文件集>`**（shell:false 避开 cmd 8K 墙，同 `check-redlines` / `runScopedDocDrift` 先例；`--all` / `--docs` / push 模式 `files` 为空时退回全库）。脚本侧按自身 `--scope` 过滤非本域文件，故 gate 侧传全量变更集即可（改纯 Go/文档 → `matched=0` → 合法 PASS）。
 
-**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。
+**为何 debt 而非 hard（本轮实测自证）**：它们是**全库阈值 + 增量裁剪**——`--files` 只收敛扫描范围，**被触碰的文件若本就超阈值仍计入命中**。门禁 dry-run `--files frontend/src/views/app-tree/index.ts` 时 `check-complexity` 即报 `[FAIL][存量债] errors=1`（`app-tree/index.ts:507 _onKeyArrowNav 认知35`，仅因该文件在变更集内）。若为 hard 则「轻触碰存量红档」即误阻断。对比 `check-file-lines` 可 hard：它是显式规则表（1 个受控文件），无存量债冒充问题。**升 hard 的前置是 baseline「仅新增违规」口径**（同 `check-redlines --baseline`）；`check-type-safety` 生产域 `errors=0`，观察一轮后可单独升 hard。
+
+**双重不变量守护**（`tests/test_gate_config.ts`）：① 声明 `scopedFiles: true` 的脚本必须在源码里调用 `_lib/changed-scope.ts` 的 `resolveChangedScope`——否则 `--files` 发过去要么报未知参数（exit 1 误阻断）、要么被静默忽略继续全扫（接线失效且无声）；② 三扫描器在 baseline 落地前必须为 `debt`（防误升 hard）。
+
+实测（门禁 dry-run `--files frontend/src/views/app-tree/index.ts`，共 27 项）：`check-complexity` 0.4s / `check-params` 0.7s / `check-type-safety` 0.1s，三者 note 均带「--files 裁剪：本次变更 1 文件」；complexity FAIL 的标签为 `[存量债]`、结论仍 **PASS**（debt 不阻断），FAIL 明细 tail 直出「文件:行 函数 认知分」。对照全库口径：complexity 2.4s（301 命中）/ params **59.4s**（54 命中）——增量不只是防误红，也是 params 可挂门禁的前提。
+
+**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。三档位扫描器接门禁后已在前端域被拦（debt 告警、不阻断），但 `--all` 全量路径仍不跑——覆盖率口径照旧须报告。
 
 ### 其他
 

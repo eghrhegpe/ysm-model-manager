@@ -845,12 +845,12 @@
 | watcher 未读 errs/done 通道 | - | goroutine 泄漏；必须 drain 通道 |
 | 前端手写 YSM 解析 | - | 与 Go 解析结果不一致；必须交 Go 解析 |
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
-| → 门禁只能跑 ，全量必红（errcheck 623 占 85%），存量清零另案 | `全量跑会撞 736 条存量债` | - |
-| → pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 | `未安装不是失败` | - |
-| → 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门 | `无基线 rev 不是失败` | - |
-| → 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter | `别开 enable-all` | - |
-| → govet 与既有  重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） | `别启用 govet/gofmt/dupl` | - |
-| → 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 | `版本 < v1.64 解析 go1.26 directive 直接失败` | - |
+| 全量跑会撞 736 条存量债 | `全量跑会撞 736 条存量债` | 门禁只能跑 `--new-from-rev`，全量必红（errcheck 623 占 85%），存量清零另案 |
+| 未安装不是失败 | `未安装不是失败` | pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` |
+| 无基线 rev 不是失败 | `无基线 rev 不是失败` | 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门 |
+| 别开 enable-all | `别开 enable-all` | 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter |
+| 别启用 govet/gofmt/dupl | `别启用 govet/gofmt/dupl` | govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） |
+| 版本 < v1.64 解析 go1.26 directive 直接失败 | `版本 < v1.64 解析 go1.26 directive 直接失败` | 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |
@@ -893,10 +893,11 @@
 | 改 Promise.all 并行结构漏写 () | - | 域级检查静默不跑（8/17 起 13 项失效实证） |
 | push 被拒直接 --no-verify | - | 绕过不留审计；应修 FAIL 项或 git pull 整合 |
 | 判定字段写错位置 | - | 门禁静默假绿：`parseToolOutput` 的 `parsed._summary \|\| parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`） |
-| 只证明清单内检查通过——仓库 32 个 check-*.ts 中有 3 个无任何自动化入口（check-complexity / check-params / check-type-safety），须手动跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」 | `门禁全绿` | - |
+| 只证明清单内检查通过——32 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」 | `门禁全绿` | - |
 | record() 只把 blockPolicy 用于判定 blocked、不写进 results | - | gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组） |
 | 把「过滤后为空」当错误、把空 --files 静默当全库 | `增量裁剪边界` | 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」 |
 | 它走 git diff 故不含未跟踪新文件 | `--changed 的边界` | 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files |
+| 清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts | `scopedFiles 声明与实现` | 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单 |
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
 | 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
 | gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
@@ -932,7 +933,7 @@
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
 | loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |
 | ⚠️ 历史：原  服务注册表的 `get` 用 `Map.has()` 判定 falsy 值——该文件已删，本 pitfall 仅存史 | `services/registry.ts` | - |
-| MMD 子类型 instanceDir 必须精确为 （含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |
+| MMD 子类型 instanceDir 必须精确为 `3d-skin/<子名>`（含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |
 | 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
 | CGO 未静态链接 | - | Android 缺少依赖库；必须经 compile-rust-static 静态编译 |
 | 直接 dlopen 加载 rust.dll | - | 平台差异处理不全、符号名不匹配；必须经 bridge_*.go 封装 |
@@ -941,19 +942,19 @@
 | safeErrorMessage 不做字符串化 | - | null/undefined 错误丢信息；必须经 safeStr 兜底 |
 | adapter 直接创建场景对象 | - | 能力列表 / 菜单 / 状态同步不一致；必须经 sceneCapabilityRegistry 注册 |
 | 能力未实现 getMenuControls | - | 菜单缺控件；必须在 SceneCapability 接口中实现 getMenuControls |
-| → 看 drift 提示而非直接 --update；exact = 纯搬，partial = 拆/并文件 | `文件搬迁/拆分导致误报` | - |
-| → 有遗留债务时误用会把债写进 baseline，需先治理再冻结 | `--update 会冻结当前状态` | - |
-| → 仅表示 baseline 不存在，需首次跑一次并 --update 创建账本 | `exit 2 不是失败` | - |
-| → 绝不要往 deadcode-baseline.json 的 jscpd 段写回，两账本独立演进 | `与前端 deadcode baseline 零耦合` | - |
-| → normPair 处理 ，但原始 key 仍可能含反斜杠 | `迁移 Windows 路径时归一化 POSIX` | - |
-| → import 过 ≠ 用到底；豁免必须下沉到行级，否则「接入三成」的文件长期逃检 | `文件级豁免吞残留` | - |
-| → collectScripts 排除 _ 前缀目录，_lib 自身成法外之地；闸门须自省 | `扫描面漏掉定义者` | - |
-| → 每条规则必须豁免自身模块文件（to-posix.ts 的实现本体就是一条 replace） | `能力定义文件自指误报` | - |
-| → 同一能力常有等价写法（split 反斜杠 join 斜杠 逃过 replace 形态），补 smell 而非只认一种 | `smell 形态不全漏检` | - |
-| → 只数 scripts/ 侧 import 会把在役模块误报「建议归档」；_lib 互引、.githooks CLI 调用、tests 消费都是真实引用 | `孤儿判定口径过窄` | - |
-| → 必须先查 git 历史与 ADR：gate-ctx.ts 零引用是 ADR-206 阶段 1a 的「先建后接」预备件（战役未完成），不是废弃设计。归档前须排除「未落地战役半成品」 | `零引用 ≠ 该归档` | - |
-| →  体内无 readdirSync，须靠自研特征而非函数名判定 | `薄包装误报` | - |
-| → collectSymbols 这类通用名可能是聚合上层逻辑，列入 smell 会持续误报 | `名字过泛误报` | - |
+| 文件搬迁/拆分导致误报 | `文件搬迁/拆分导致误报` | 看 drift 提示而非直接 --update；exact = 纯搬，partial = 拆/并文件 |
+| --update 会冻结当前状态 | `--update 会冻结当前状态` | 有遗留债务时误用会把债写进 baseline，需先治理再冻结 |
+| exit 2 不是失败 | `exit 2 不是失败` | 仅表示 baseline 不存在，需首次跑一次并 --update 创建账本 |
+| 与前端 deadcode baseline 零耦合 | `与前端 deadcode baseline 零耦合` | 绝不要往 deadcode-baseline.json 的 jscpd 段写回，两账本独立演进 |
+| 迁移 Windows 路径时归一化 POSIX | `迁移 Windows 路径时归一化 POSIX` | normPair 处理 `\`，但原始 key 仍可能含反斜杠 |
+| 文件级豁免吞残留 | `文件级豁免吞残留` | import 过 ≠ 用到底；豁免必须下沉到行级，否则「接入三成」的文件长期逃检 |
+| 扫描面漏掉定义者 | `扫描面漏掉定义者` | collectScripts 排除 _ 前缀目录，_lib 自身成法外之地；闸门须自省 |
+| 能力定义文件自指误报 | `能力定义文件自指误报` | 每条规则必须豁免自身模块文件（to-posix.ts 的实现本体就是一条 replace） |
+| smell 形态不全漏检 | `smell 形态不全漏检` | 同一能力常有等价写法（split 反斜杠 join 斜杠 逃过 replace 形态），补 smell 而非只认一种 |
+| 孤儿判定口径过窄 | `孤儿判定口径过窄` | 只数 scripts/ 侧 import 会把在役模块误报「建议归档」；_lib 互引、.githooks CLI 调用、tests 消费都是真实引用 |
+| 零引用 ≠ 该归档 | `零引用 ≠ 该归档` | 必须先查 git 历史与 ADR：gate-ctx.ts 零引用是 ADR-206 阶段 1a 的「先建后接」预备件（战役未完成），不是废弃设计。归档前须排除「未落地战役半成品」 |
+| 薄包装误报 | `薄包装误报` | `return walk(dir, {...})` 体内无 readdirSync，须靠自研特征而非函数名判定 |
+| 名字过泛误报 | `名字过泛误报` | collectSymbols 这类通用名可能是聚合上层逻辑，列入 smell 会持续误报 |
 | 新增脚本后忘记在 README.md 登记 | - | check-readme-index 阻断推送（exit 1） |
 | README 只写脚本名前缀（如  而非 `doctor.ts`）→ 前缀匹配不够，必须精确匹配 basename | `doctor` | - |
 | 脚本改名后未同步更新 README | - | 旧名不匹配，新名未登记，产生漂移 |

@@ -38,6 +38,18 @@ export interface GateTool {
   autoFix?: boolean;
   allowRc2?: boolean;
   blockPolicy: BlockPolicy;
+  /**
+   * 声明本工具支持 `--files <换行分隔文件列表>` 增量裁剪（2026-09-13）。
+   *
+   * true 时 pre-push-gate 的 runTools 改用数组式 procRun 传 `--files`（本次变更文件集），
+   * 而非 shell 拼串的全库调用；`--all` / `--docs` 模式 files 为空 → 退回全库扫描。
+   *
+   * **仅当脚本自身接入了 `_lib/changed-scope.ts` 的 resolveChangedScope 才可置 true**：
+   * 否则 runTools 会把 --files 发给不识别的脚本（parseArgs 报未知参数 → exit 1 →
+   * 误阻断），或脚本忽略该参数静默全扫（存量债淹没）。该不变量由
+   * tests/test_gate_config.ts 的 scopedFiles 契约断言锁死。
+   */
+  scopedFiles?: boolean;
 }
 
 /**
@@ -123,6 +135,24 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
+  // ── 三档位阈值扫描器（2026-09-13 接线）──
+  // 此前是「无守护债务」：仓库 32 个 check-*.ts 中这 3 个无任何自动化入口，只能手动跑
+  // （实证：views 域 10 个 🟥 复杂度档长期无人拦，见 pre_push_gate.md 门禁覆盖边界）。
+  //
+  // blockPolicy: debt —— 这三者是**全库阈值 + 增量裁剪**模式：--files 只把扫描范围收敛到
+  // 「本次变更文件」，但**被触碰的文件若本就超阈值仍会计入命中**（改一行注释也会红）。
+  // 对比 check-file-lines 可 hard：它是显式规则表（1 个受控文件），不存在存量债冒充。
+  // 故须待 baseline 比对落地（同 check-redlines --baseline 的「新增违规」口径）后才有资格升 hard。
+  // 其中 check-type-safety 生产域当前 errors=0（--strict 实测 exit 0），观察一轮后可单独升 hard。
+  //
+  // scopedFiles: true → runTools 传 --files。动机有两条，缺一不可：
+  //   1. 防淹没：全库跑 check-complexity 命中 301 条（27 个 🟥）、check-params 54 条，
+  //      未触碰文件的存量债会把每次推送刷成全红。
+  //   2. 控成本：check-params 全库墙钟 59.4s（getType() 逐参数触发类型检查），
+  //      --files 裁剪到本次变更后降至 7.9s 量级，是它可挂门禁的前提。
+  { tool: "check-complexity.ts", blockPolicy: "debt", scopedFiles: true },
+  { tool: "check-params.ts", blockPolicy: "debt", scopedFiles: true },
+  { tool: "check-type-safety.ts", blockPolicy: "debt", scopedFiles: true },
 ];
 
 /**

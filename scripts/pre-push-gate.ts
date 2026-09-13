@@ -51,7 +51,7 @@ import {
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
 } from "./_lib/gate-config.ts";
-import { createGateCtx } from "./_lib/gate-ctx.ts";
+import { createGateCtx, type ExecResult } from "./_lib/gate-ctx.ts";
 import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveBaseRev, resolveChanges } from "./_lib/gate-resolve.ts";
@@ -261,8 +261,36 @@ async function main() {
       // 纯签名重构会被误报 0% 阻断（ADR-145 实践实证）。push 模式 files 为空，
       // 不加 --staged，保持全库比对（推送时本就该查全部待推改动）。
       const stagedArg = files.length > 0 && tool === "check-go-diff-coverage.ts" ? "--staged" : "";
+      // 增量裁剪通道（2026-09-13）：清单里声明 scopedFiles:true 的工具改用数组式 procRun
+      // 传 `--files <本次变更文件集>`。两个理由，缺一不可：
+      //   1. 防存量债淹没：check-complexity / check-params / check-type-safety 是全库阈值型，
+      //      未触碰文件的既有命中（complexity 301 条 / params 54 条）会把每次推送刷成全红。
+      //   2. 数组式（shell:false）：--files 换行大列表经 shell:true 会撞 cmd.exe 8191 上限
+      //      （check-redlines 同款注释，ADR-129 实证），procRun 数组直传走 Windows
+      //      CreateProcess 32767 上限。脚本侧按自身 --scope 过滤非本域文件（传全量变更集
+      //      即可，无需在 gate 侧做域判定——改纯 Go/文档时 matched=0 → 合法 PASS）。
+      // --all / --docs 模式 files 为空 → scoped=false，退回全库（向后兼容）。
+      const scoped = entry.scopedFiles === true && files.length > 0;
+      const invoke = (extra: string[]): ExecResult => {
+        if (scoped) {
+          const rr = procRun(
+            "node",
+            [
+              `scripts/${tool}`,
+              "--json",
+              ...(stagedArg ? [stagedArg] : []),
+              ...extra,
+              "--files",
+              files.join("\n"),
+            ],
+            { cwd: ROOT, timeout: TIMEOUT },
+          );
+          return { rc: rr.rc, out: rr.out || rr.err || "" };
+        }
+        return ctx.sh(`node scripts/${tool} --json ${stagedArg} ${extra.join(" ")}`);
+      };
       const t0 = Date.now();
-      const r = ctx.sh(`node scripts/${tool} --json ${stagedArg} ${extraArgs.join(" ")}`);
+      const r = invoke(extraArgs);
       // P1 修复（2026-08-17）：审计类工具退出码不可靠（i18n/孤儿/命名/卫生默认恒 0），
       // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
       // 判定语义收敛到 _lib/gate-parse.ts（parseToolOutput，契约测试锁死）：
@@ -277,7 +305,7 @@ async function main() {
       if (!ok && effectiveAutoFix) {
         const fixR = ctx.sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
         if (fixR.rc === 0) {
-          const re = ctx.sh(`node scripts/${tool} --json ${extraArgs.join(" ")}`);
+          const re = invoke(extraArgs);
           const reOk = parseToolOutput(re.out, re.rc).ok;
           if (reOk) {
             ok = true;
@@ -289,7 +317,15 @@ async function main() {
           }
         }
       }
-      // label = 完整检查命令（AI 失败时可直接抄，无需翻文档找脚本名）
+      if (scoped) {
+        // note 追加裁剪范围：_summary 的 errors 是「本次变更文件内」的命中数，
+        // 不带范围会与全库数字（301/54）混淆，AI 无法判断归因范围。
+        const scopeNote = `--files 裁剪：本次变更 ${files.length} 文件`;
+        note = note ? `${note}（${scopeNote}）` : scopeNote;
+      }
+      // label = 完整检查命令（AI 失败时可直接抄，无需翻文档找脚本名）。
+      // scoped 时 label 沿用全扫命令（--files 是门禁内部裁剪机制，AI 手动复查直接全扫
+      // 即可看到完整命中方向——同 runScopedDocDrift 口径）；范围信息落在上方 note。
       const cmdLabel = `node scripts/${tool} --json${stagedArg ? ` ${stagedArg}` : ""}${extraArgs.length ? ` ${extraArgs.join(" ")}` : ""}`;
       ctx.record(cmdLabel, ok, {
         time: Date.now() - t0,

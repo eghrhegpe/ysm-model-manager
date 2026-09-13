@@ -30,6 +30,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getList, getScalar, parseFrontmatter } from "./_lib/frontmatter.ts";
 import { KNOW_DIR, KNOWLEDGE_NON_CARDS } from "./_lib/knowledge-cards.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
@@ -57,16 +58,46 @@ function adrLabel(text: string) {
   return adrs.length ? adrs.join(", ") : "-";
 }
 
-/** 解析单条 pitfalls 记录: "「位置」描述 → 正确做法" → { trap, pos, fix }。 */
-function parsePitfall(raw: string) {
+/**
+ * 解析单条 pitfalls 记录: "「位置」描述 → 正确做法" → { trap, pos, fix }。
+ *
+ * export：契约测试 tests/test_gen_routes_quick_pitfall.ts 锁定列切分不变量
+ * （该项目此前零测试覆盖，导致两条静默截断缺陷长期存活——见下方注释）。
+ */
+export function parsePitfall(raw: string) {
   const s = String(raw).trim();
-  const arrow = s.indexOf(" → ");
-  const left = arrow === -1 ? s : s.slice(0, arrow);
-  const right = arrow === -1 ? "-" : s.slice(arrow + 3).trim();
-  const pos = (left.match(/「(.+?)」/) || [])[1] || (left.match(/`(.+?)`/) || [])[1];
+  // 箭头切分（2026-09-13 修复）：优先空格包围的 " → "（常规写法），再兼容「位置」紧跟
+  // 箭头的 "」→"（无空格）。旧实现只认前者，`「位置」→ 修复` 这 6 条写法整体落入陷阱列、
+  // 「正确做法」列退化为 "-"。切分点只认「」之后或空格包围的箭头，不切入「」内部——
+  // `「标签→控件」` 这类位置短语自身含箭头，须整段保留。
+  const SPACED = " → ";
+  const spaced = s.indexOf(SPACED);
+  let leftEnd: number;
+  let rightStart: number;
+  if (spaced !== -1) {
+    leftEnd = spaced;
+    rightStart = spaced + SPACED.length; // 跳过整个 " → "
+  } else {
+    const tight = s.match(/」\s*→\s*/); // 「位置」→ 修复（无空格）
+    if (tight) {
+      const ti = tight.index ?? 0;
+      leftEnd = ti + 1; // 切到 」 之后（left 仍含 」）
+      rightStart = ti + tight[0].length;
+    } else {
+      leftEnd = s.length;
+      rightStart = -1;
+    }
+  }
+  const left = s.slice(0, leftEnd).trim();
+  const right = rightStart === -1 ? "-" : s.slice(rightStart).trim();
+  const bracketPos = left.match(/「(.+?)」/);
+  const pos = bracketPos?.[1] ?? left.match(/`(.+?)`/)?.[1];
+  // 陷阱列 = left 剥掉「位置」标记后的剩余文本。
+  // 仅在 pos 取自 code span 时才剥离首个 inline code——旧实现无条件剥离，当 pos 来自「」时
+  // 会把正文首个 code 一并吃掉（全库 9 条 pitfall 实证：陷阱列静默丢内容，如
+  // `--new-from-rev` / `Promise.race` / `<span class="label">`）。
   let trap = left
-    .replace(/「[^」]+」/, "")
-    .replace(/`[^`]+`/, "")
+    .replace(bracketPos ? /「[^」]+」/ : /`[^`]+`/, "")
     .replace(/\s+→\s*$/, "")
     .trim();
   if (!trap) trap = pos || "-";
@@ -262,4 +293,11 @@ function main() {
   }
 }
 
-main();
+// CLI 守卫（2026-09-13）：对齐 check-complexity 惯例。本模块此前裸调用 main()，
+// 导致任何 import（如契约测试引入 parsePitfall）都会触发写盘生成。
+const isCli = (() => {
+  const arg0 = process.argv[1];
+  if (!arg0) return false;
+  return path.resolve(fileURLToPath(import.meta.url)) === path.resolve(arg0);
+})();
+if (isCli) main();

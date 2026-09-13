@@ -6,6 +6,7 @@ category: utils
 source_files:
   - scripts/pre-push-gate.ts
   - .githooks/pre-push
+  - scripts/_lib/gate-blocks/static-tools.ts
   - scripts/_lib/gate-config.ts
   - scripts/_lib/gate-ctx.ts
   - scripts/_lib/gate-parse.ts
@@ -21,6 +22,7 @@ auto_fields:
     - firstErrors
     - formatFailSummary
     - FRONTEND_STATIC_TOOLS
+    - GATE_TIMEOUT_MS
     - GateCtx
     - GateResult
     - GateResultItem
@@ -30,6 +32,8 @@ auto_fields:
     - parseToolOutput
     - RecordOpts
     - reportPathFor
+    - runScopedDocDrift
+    - runTools
     - SCRIPTS_TYPECHECK
     - tryParseJson
     - tryParseSummary
@@ -64,6 +68,7 @@ pitfalls:
   - 「增量裁剪边界」把「过滤后为空」当错误、把空 --files 静默当全库 → 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」
   - 「--changed 的边界」它走 git diff 故不含未跟踪新文件 → 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files
   - 「scopedFiles 声明与实现」清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts → 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单
+  - 「check-deadcode-baseline 的瞬态 FAIL」该工具自行调用 `jscpd` 把 JSON 报告写进**固定路径** `frontend/report/jscpd-report.json`，读完立刻 `fs.rmSync` 清理——路径无 pid/无锁，同一工作区**并行会话同时跑门禁**时会互相删读，表现为 `[解析失败] jscpd 报告读取异常`（声明 debt，不阻断但污染输出：同一提交第一次跑红、第二次跑绿）。排查时应先看 FAIL tail 是否为此条，勿据此改动归因（2026-09-13 实证：同日 4 次门禁中 1 次瞬态红）
 status: active
 invariant_anchors:
   - scripts/pre-push-gate.ts|ALL_STATIC_TOOLS
@@ -107,7 +112,20 @@ invariant_anchors:
 
 **blockPolicy 必须落库**（2026-09-13 修复 P1 归因 bug）：`record()` 原先只用 `blockPolicy` 判定是否阻断，**不写进 `results` 条目**——而 `gate-report.policyTag()` 恰恰读 `item.blockPolicy` 生成 FAIL 明细的归属标签。漏存导致所有 FAIL（含 debt 存量债）一律显示 `[本次引入]`，AI 据此把存量债当成自己引入的回归去修。实证：`check-deadcode-baseline`（声明 debt）在 baseline 输出里被标成 `[本次引入]`。现 `GateResult` 与 `gate-report.GateResultItem` 收敛为同一形状（后者退化为 `type GateResultItem = GateResult` 别名，报告层不再持有第二份定义）。归属标签的端到端链路（record → results → `formatFailSummary`）由 `tests/test_gate_ctx.ts` 第 5/9 组行为断言锁死（源码 grep 式断言只能证明「字符串在」，不能证明「行为对」）。
 
-**剩余阶段**（ADR-206 阶段 2-7 未做）：域块搬 `gate-blocks/*`（static-tools → data-docs → redlines → schedule → go/frontend 域）、`parseToolOutput` 的 `okMustBeTrue` 加法扩展。`pre-push-gate.ts` 现 **1010 行**（目标态 ~400 行）。注意 `tests/test_gate_iife_correctness.ts` 目前用**硬编码缩进 + 字面量**匹配 Go/前端域 IIFE（`"(async () => {\n      if (!plan.go) return;"`），搬域块前须先把它改成宽松正则，否则会误伤合法重构。
+### 静态工具执行器（gate-blocks/static-tools.ts，ADR-206 阶段 2 已落地）
+
+`runTools` / `runScopedDocDrift` 两段（原 ~120 行）已从 main 闭包搬入 `scripts/_lib/gate-blocks/static-tools.ts`，签名统一 `runXxx(ctx, ...)`：`runTools(ctx, tools)`、`runScopedDocDrift(ctx)`。搬出后本文件只剩「何时跑哪张清单」，模块管「怎么跑」。
+
+| 要点 | 说明 |
+|------|------|
+| 清单类型 | `runTools` 的入参由 `any[]` 收紧为 `readonly GateTool[]`（gate-config 的必填 blockPolicy 契约现在真正约束到执行侧） |
+| 超时单一来源 | `GATE_TIMEOUT_MS` 由 gate-ctx 导出，gate-blocks/* 与 pre-push-gate 的数组式 `procRun` 共用——`300_000` 不再散成多份 |
+| 可测的缝 | `ctx.sh` 是可替换属性，于是判定链（label/note/tail/blockPolicy→blocked/autoFix 三态）可在**零子进程**下验证，见 `tests/test_gate_static_tools.ts`（8 组） |
+| scoped 送达判别 | 该测试用「传不存在文件 → matched=0 → 合法 PASS」作判别式：`check-complexity` 全库此刻 301 条 errors，若 `--files` 丢失必红——**具备证伪力，非恒真式** |
+
+搬移期唯一实质改动：autoFix 重验的 `parseToolOutput(re.out, re.rc)` 补回第三入参 `tool`（此前漏传，解析失败时 note 丢失工具名）。
+
+**剩余阶段**（ADR-206 阶段 3-7 未做）：`data-docs-domain.ts`（数据/文档/ADR/gen-docs-index）→ `redlines.ts`（failClosed 特例隔离）→ `schedule.ts`（契约测试 + 静态调度 + scripts typecheck）→ `go-domain.ts` / `frontend-domain.ts`（最大块最后做）、`parseToolOutput` 的 `okMustBeTrue` 加法扩展。`pre-push-gate.ts` 现 **931 行**（阶段 1 后 1010，目标态 ~400 行）。注意 `tests/test_gate_iife_correctness.ts` 目前用**硬编码缩进 + 字面量**匹配 Go/前端域 IIFE（`"(async () => {\n      if (!plan.go) return;"`）且写死 `EXPECTED_IIFE_COUNT = 3`——搬 go/frontend 域块前必须先把这些断言改成结构性判定（导出函数存在 + 无孤儿 IIFE），否则合法重构必被误判红灯。
 
 ### 域级检查（Go ∥ 前端，Promise.all 并行）
 
@@ -193,7 +211,8 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - `scripts/doctor.ts`：`--gate/--all/--docs` 的单一实现源头（2026-08-14 合并）
 - `scripts/commit-with-check.ts`：走 `--files --dry-run` 模式按 staged 文件裁剪门禁；commit 成功后自己打印横幅（`--no-banner` 抑制）
 - `scripts/_lib/gate-config.ts`：工具清单单一配置层
-- `scripts/_lib/gate-ctx.ts`：执行上下文 `createGateCtx()`——`record` / `sh` / `shAsync` / `git` / `gofmtCheck` 的唯一实现，兼 `blocked` 活值 getter 与 `setBlocked`（failClosed 特例用）。ADR-206 阶段 1 接线完成（2026-09-13）
+- `scripts/_lib/gate-blocks/static-tools.ts`：静态工具执行器 `runTools(ctx, tools)` / `runScopedDocDrift(ctx)`——判定链（label/note/tail/blockPolicy→blocked/autoFix）的执行侧唯一实现。`ctx.sh` 为可替换属性，故该链可零子进程单测（`tests/test_gate_static_tools.ts`）。ADR-206 阶段 2（2026-09-13）
+- `scripts/_lib/gate-ctx.ts`：执行上下文 `createGateCtx()`——`record` / `sh` / `shAsync` / `git` / `gofmtCheck` 的唯一实现，兼 `blocked` 活值 getter 与 `setBlocked`（failClosed 特例用），并导出 `GATE_TIMEOUT_MS` 作子进程超时单一来源。ADR-206 阶段 1 接线完成（2026-09-13）
 - `scripts/_lib/gate-report.ts`：FAIL 明细渲染与报告落盘（`GateResultItem` 为 `gate-ctx.GateResult` 的类型别名，形状单一事实源在 gate-ctx）
 - `scripts/_lib/gate-parse.ts`：工具输出统一解析（`parseToolOutput` / `tryParseSummary` / `tryParseJson`）——2026-09 收敛前 gate 内联 11 处 `JSON.parse`，runTools / runScopedDocDrift / 5 个域检查块 / issues / broken / 红线块各自手写一套 try/parse，判定口径漂移即门禁结论不可复现；收敛后全部走共享层，契约测试锁死优先级链
 - `scripts/_lib/domain-classify.ts`：`planFromFiles` / `groupByDomain` / `domainSummaryText`

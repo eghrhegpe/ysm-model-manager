@@ -44,6 +44,7 @@ import {
   type Plan,
   planFromFiles,
 } from "./_lib/domain-classify.ts";
+import { runScopedDocDrift, runTools } from "./_lib/gate-blocks/static-tools.ts";
 import {
   ALL_STATIC_TOOLS,
   DOC_EXTRA_SCRIPTS,
@@ -51,8 +52,8 @@ import {
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
 } from "./_lib/gate-config.ts";
-import { createGateCtx, type ExecResult } from "./_lib/gate-ctx.ts";
-import { parseToolOutput, tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
+import { createGateCtx, GATE_TIMEOUT_MS } from "./_lib/gate-ctx.ts";
+import { tryParseJson, tryParseSummary } from "./_lib/gate-parse.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveBaseRev, resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush } from "./_lib/log-push.ts";
@@ -61,7 +62,8 @@ import { run as procRun } from "./_lib/proc.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 const B = { OK: "[OK]", FAIL: "[FAIL]", FIX: "[FIX]", SKIP: "[SKIP]" };
-const TIMEOUT = 300_000;
+// 子进程统一超时已收敛至 gate-ctx（GATE_TIMEOUT_MS，阶段 2）：本文件余下数组式
+// procRun 调用（check-redlines）与 gate-blocks/* 共用同一值，不再各存副本。
 /** 远端领先提示（SKIP 与 FAIL 共用，避免重复长文案） */
 const PULL_HINT = "提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。";
 
@@ -245,126 +247,9 @@ async function main() {
   // 不再直连 main 局部（ADR-206 目标态）。域块搬移（gate-blocks/*）时读取路径自然延续。
   const ctx = createGateCtx({ plan, byDomain, files, pushLocalRef, pushLocalOid, pushRemoteOid });
 
-  /* --- 静态工具统一执行器 --- */
-  // 回退 ADR-088 静态工具并行（实测 2m15s vs 基线 75s，runSpawn spawn 开销吃掉并行收益）
-  // 恢复串行 runTools——域间并行（Go ∥ 前端）留作后续 Take巧，静态工具段不并行
-  const runTools = (tools: any[]) => {
-    for (const entry of tools) {
-      const tool = entry.tool;
-      const extraArgs = entry.args || [];
-      // 解法 C：gen-*.ts 自动继承 autoFix=true（命名约定驱动）
-      // 显式声明 autoFix 优先；否则按 tool.startsWith('gen-') 判定
-      const effectiveAutoFix = entry.autoFix ?? tool.startsWith("gen-");
-      // 文件驱动模式（commit-with-check 等）下，check-go-diff-coverage 必须按
-      // --staged 只查本次暂存区——否则回退 base=origin/main 全库 diff，把
-      // origin/main 之后所有未推送改动（含并行会话提交）误算进本次覆盖门禁，
-      // 纯签名重构会被误报 0% 阻断（ADR-145 实践实证）。push 模式 files 为空，
-      // 不加 --staged，保持全库比对（推送时本就该查全部待推改动）。
-      const stagedArg = files.length > 0 && tool === "check-go-diff-coverage.ts" ? "--staged" : "";
-      // 增量裁剪通道（2026-09-13）：清单里声明 scopedFiles:true 的工具改用数组式 procRun
-      // 传 `--files <本次变更文件集>`。两个理由，缺一不可：
-      //   1. 防存量债淹没：check-complexity / check-params / check-type-safety 是全库阈值型，
-      //      未触碰文件的既有命中（complexity 301 条 / params 54 条）会把每次推送刷成全红。
-      //   2. 数组式（shell:false）：--files 换行大列表经 shell:true 会撞 cmd.exe 8191 上限
-      //      （check-redlines 同款注释，ADR-129 实证），procRun 数组直传走 Windows
-      //      CreateProcess 32767 上限。脚本侧按自身 --scope 过滤非本域文件（传全量变更集
-      //      即可，无需在 gate 侧做域判定——改纯 Go/文档时 matched=0 → 合法 PASS）。
-      // --all / --docs 模式 files 为空 → scoped=false，退回全库（向后兼容）。
-      const scoped = entry.scopedFiles === true && files.length > 0;
-      const invoke = (extra: string[]): ExecResult => {
-        if (scoped) {
-          const rr = procRun(
-            "node",
-            [
-              `scripts/${tool}`,
-              "--json",
-              ...(stagedArg ? [stagedArg] : []),
-              ...extra,
-              "--files",
-              files.join("\n"),
-            ],
-            { cwd: ROOT, timeout: TIMEOUT },
-          );
-          return { rc: rr.rc, out: rr.out || rr.err || "" };
-        }
-        return ctx.sh(`node scripts/${tool} --json ${stagedArg} ${extra.join(" ")}`);
-      };
-      const t0 = Date.now();
-      const r = invoke(extraArgs);
-      // P1 修复（2026-08-17）：审计类工具退出码不可靠（i18n/孤儿/命名/卫生默认恒 0），
-      // 必须解析 --json 的 _summary 判定——与文件头「不得依赖退出码」契约对齐。
-      // 判定语义收敛到 _lib/gate-parse.ts（parseToolOutput，契约测试锁死）：
-      //   _summary.ok → errors===0 → 退回 rc；解析失败 note 明示非 JSON 回退。
-      const parsed = parseToolOutput(r.out, r.rc, tool);
-      let ok = parsed.ok;
-      let note = parsed.note;
-      const tail = parsed.tail;
-      // autoFix（2026-08-23 用户诉求"gen 产物老要 AI 手打刷新"）：--check FAIL 的
-      // gen 产物工具自动跑写盘版刷新后重验——修"提交间隙 gen 产物过期 → doctor FAIL"
-      // 的鸡生蛋（pre-commit 只在提交时跑 gen；间隙跑 doctor 需手打对应 gen 脚本）
-      if (!ok && effectiveAutoFix) {
-        const fixR = ctx.sh(`node scripts/${tool} --json`); // 写盘刷新（无 --check）
-        if (fixR.rc === 0) {
-          const re = invoke(extraArgs);
-          const reOk = parseToolOutput(re.out, re.rc).ok;
-          if (reOk) {
-            ok = true;
-            note = `autoFix: node scripts/${tool} 已自动刷新`;
-          } else {
-            note = note
-              ? `${note}（autoFix 已尝试但仍 FAIL）`
-              : `node scripts/${tool} autoFix 已尝试但仍 FAIL`;
-          }
-        }
-      }
-      if (scoped) {
-        // note 追加裁剪范围：_summary 的 errors 是「本次变更文件内」的命中数，
-        // 不带范围会与全库数字（301/54）混淆，AI 无法判断归因范围。
-        const scopeNote = `--files 裁剪：本次变更 ${files.length} 文件`;
-        note = note ? `${note}（${scopeNote}）` : scopeNote;
-      }
-      // label = 完整检查命令（AI 失败时可直接抄，无需翻文档找脚本名）。
-      // scoped 时 label 沿用全扫命令（--files 是门禁内部裁剪机制，AI 手动复查直接全扫
-      // 即可看到完整命中方向——同 runScopedDocDrift 口径）；范围信息落在上方 note。
-      const cmdLabel = `node scripts/${tool} --json${stagedArg ? ` ${stagedArg}` : ""}${extraArgs.length ? ` ${extraArgs.join(" ")}` : ""}`;
-      ctx.record(cmdLabel, ok, {
-        time: Date.now() - t0,
-        note,
-        raw: r.out,
-        // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
-        tail: !ok ? tail || r.out.trim().split("\n").slice(-12).join("\n") : "",
-        blockPolicy: entry.blockPolicy,
-      });
-    }
-  };
-
-  /* --- 文档漂移按 --files 裁剪执行器（与 check-redlines 同款数组式 procRun）---
-   * commit/push 文件驱动模式：仅校验本次变更知识卡，避免并行会话未跟踪草稿卡阻断本次提交。
-   * doc-drift / knowledge-drift 默认全扫 docs/knowledge/，此处强制 --files 裁剪。
-   * 数组式传参（shell:false）承载换行分隔的 --files 大列表（避开 cmd 8K 墙，见 check-redlines 注释）。 */
-  const runScopedDocDrift = (changedFiles: string[]) => {
-    if (changedFiles.length === 0) return;
-    for (const tool of ["check-doc-drift.ts", "check-knowledge-drift.ts"]) {
-      const t0 = Date.now();
-      const r = procRun("node", [`scripts/${tool}`, "--json", "--files", changedFiles.join("\n")], {
-        cwd: ROOT,
-        timeout: TIMEOUT,
-      });
-      const out = r.out || r.err || "";
-      const parsed = parseToolOutput(out, r.rc, tool);
-      const ok = parsed.ok;
-      const note = parsed.note;
-      // doc-drift/knowledge-drift 无 warns_list 契约，统一回退原始输出尾部
-      const tail = !ok ? out.trim().split("\n").slice(-12).join("\n") : "";
-      // label = 完整命令（--files 为内部裁剪机制，AI 手动复查时直接全扫即可）
-      ctx.record(`node scripts/${tool} --json`, ok, {
-        time: Date.now() - t0,
-        note,
-        raw: out,
-        tail: !ok ? tail : "",
-      });
-    }
-  };
+  /* --- 静态工具执行器已迁出 --- */
+  // runTools / runScopedDocDrift 搬入 _lib/gate-blocks/static-tools.ts（ADR-206 阶段 2）。
+  // 本模块只保留调度：何时跑哪张清单（--all / --docs / 按域补挂，见文件尾部调度段）。
 
   /* --- 域间并行：Go ∥ 前端（ADR-088 Take巧 #1）--- */
   // Go 和前端域完全独立（无共享状态、无文件写冲突），用 Promise.all 并行。
@@ -776,7 +661,7 @@ async function main() {
     // 数组直传走 Windows CreateProcess 32767 上限，避开 cmd 8K 墙。all/docs 模式 files 为空 → 全库比对。
     const rlArgs = ["scripts/check-redlines.ts", "--json", "--baseline"];
     if (files.length) rlArgs.push("--files", files.join("\n"));
-    const rlRaw = procRun("node", rlArgs, { cwd: ROOT, timeout: TIMEOUT });
+    const rlRaw = procRun("node", rlArgs, { cwd: ROOT, timeout: GATE_TIMEOUT_MS });
     const rl = { rc: rlRaw.rc, out: rlRaw.out || rlRaw.err || "" };
     let newV = null,
       ok = false,
@@ -882,26 +767,32 @@ async function main() {
   /* --- 静态工具（--all / --docs / push 按变更域补挂） --- */
   // 回退 ADR-088：runTools 恢复串行，调用点去掉 await
   if (allMode) {
-    runTools(ALL_STATIC_TOOLS);
-    runTools(DOC_EXTRA_SCRIPTS);
+    runTools(ctx, ALL_STATIC_TOOLS);
+    runTools(ctx, DOC_EXTRA_SCRIPTS);
   }
   if (docsMode) {
-    runTools(DOC_STATIC_TOOLS);
-    runTools(DOC_EXTRA_SCRIPTS);
+    runTools(ctx, DOC_STATIC_TOOLS);
+    runTools(ctx, DOC_EXTRA_SCRIPTS);
   }
   // 2026-08-17 P1-1 修复：push 模式此前从不执行静态治理工具（ALL_STATIC_TOOLS 只在
   // --all/--docs 跑）→ gate 名存实亡。现按变更域补挂子集：frontend 变更跑前端静态工具、
   // go 变更跑 Go 静态工具、docs/adr 变更跑文档静态工具——保持按域裁剪的轻量。
   if (!allMode && !docsMode) {
-    if (plan.frontend) runTools(FRONTEND_STATIC_TOOLS);
-    if (plan.go) runTools(GO_STATIC_TOOLS);
+    if (plan.frontend) runTools(ctx, FRONTEND_STATIC_TOOLS);
+    if (plan.go) runTools(ctx, GO_STATIC_TOOLS);
     if (plan.docs || plan.adr) {
       // 文件驱动模式：doc-drift / knowledge-drift 按 --files 裁剪（与 check-redlines 同款），
       // 避免并行会话留在 docs/knowledge/ 的未跟踪草稿卡（如 commit-with-check.md）阻断本次 commit。
       // 二者从通用 runTools 摘除（否则无 --files 全扫），改由 runScopedDocDrift 数组式传 --files。
-      runTools(DOC_STATIC_TOOLS.filter((t) => t.tool !== "check-doc-drift.ts"));
-      runTools(DOC_EXTRA_SCRIPTS.filter((t) => t.tool !== "check-knowledge-drift.ts"));
-      runScopedDocDrift(files);
+      runTools(
+        ctx,
+        DOC_STATIC_TOOLS.filter((t) => t.tool !== "check-doc-drift.ts"),
+      );
+      runTools(
+        ctx,
+        DOC_EXTRA_SCRIPTS.filter((t) => t.tool !== "check-knowledge-drift.ts"),
+      );
+      runScopedDocDrift(ctx);
     }
   }
 

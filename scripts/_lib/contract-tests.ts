@@ -125,6 +125,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_ctx.ts": ["tests"],
   "test_gate_iife_correctness.ts": ["tests"],
   "test_gate_parse_output.ts": ["tests"],
+  "test_gate_static_tools.ts": ["tests"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_jscpd_go_smart.ts": ["tests", "go"],
@@ -303,6 +304,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/pre-push-gate.ts",
   ],
   "test_gate_parse_output.ts": ["scripts/_lib/gate-parse.ts", "scripts/pre-push-gate.ts"],
+  // ADR-206 阶段 2：静态工具执行器搬入 gate-blocks/static-tools.ts。该测试同时锁
+  // pre-push-gate 的调度调用点（runTools(ctx, ...) 形参顺序）与 gate-ctx 的 record 语义。
+  "test_gate_static_tools.ts": [
+    "scripts/_lib/gate-blocks/static-tools.ts",
+    "scripts/_lib/gate-ctx.ts",
+    "scripts/pre-push-gate.ts",
+  ],
   "test_gate_report.ts": ["scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],

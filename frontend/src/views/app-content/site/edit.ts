@@ -16,6 +16,25 @@ interface FilterStateShell {
   activeTag: string;
 }
 
+/** 单个输入控件 → creators[idx][fld] 回写（SELECT 多选拼 ";"，其余 trim 后直写）。
+ *  2026-09 锐评 P0：原 SELECT/INPUT 分支在 eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。 */
+function syncFieldToCreator(
+  inp: Element,
+  creators: LocalCreatorLike[],
+  idx: number,
+  fld: string,
+): void {
+  if (!creators[idx]) return;
+  if (inp.tagName === "SELECT") {
+    creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
+      .map((o) => o.value)
+      .filter(Boolean)
+      .join(";");
+  } else {
+    creators[idx][fld] = (inp as HTMLInputElement).value.trim();
+  }
+}
+
 function eeSyncAllEditInputs(
   searchResults: HTMLElement,
   creators: LocalCreatorLike[],
@@ -26,16 +45,7 @@ function eeSyncAllEditInputs(
     .forEach((inp) => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
       const fld = (inp as HTMLElement).dataset.fld || "";
-      if (creators[idx]) {
-        if (inp.tagName === "SELECT") {
-          creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
-            .map((o) => o.value)
-            .filter(Boolean)
-            .join(";");
-        } else {
-          creators[idx][fld] = (inp as HTMLInputElement).value.trim();
-        }
-      }
+      syncFieldToCreator(inp, creators, idx, fld);
     });
   searchResults
     .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
@@ -261,16 +271,7 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
         () => {
           const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
           const fld = (inp as HTMLElement).dataset.fld || "";
-          if (creators[idx]) {
-            if (inp.tagName === "SELECT") {
-              creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
-                .map((o) => o.value)
-                .filter(Boolean)
-                .join(";");
-            } else {
-              creators[idx][fld] = (inp as HTMLInputElement).value.trim();
-            }
-          }
+          syncFieldToCreator(inp, creators, idx, fld);
         },
         { signal: sig },
       );

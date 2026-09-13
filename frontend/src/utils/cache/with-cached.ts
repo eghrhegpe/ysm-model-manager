@@ -1,6 +1,9 @@
 // ===== 通用异步缓存工具 =====
 // 基于 key+namespace+ttl 的内存缓存，支持 STALE / NORMAL / FORCE 策略
 // 特性：并发去重（stampede guard）、失败不缓存、命名空间隔离
+// dbg 持久观测：本文件 13 处 dbg("cache", ...) 为运行时行为观测（hit/miss/stale/
+// in-flight/invalidate/clearAll），豁免「用完即删」（见 utils/debug/debug.ts 头注释）；
+// 仅 console 输出不进 ring；nodebug=1 整体关闭（排障时手动开启）。
 
 import { dbg } from "@/utils/debug/debug.ts";
 

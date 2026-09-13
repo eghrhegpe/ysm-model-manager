@@ -5,6 +5,9 @@
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）
 //   - 可通过 window._DBG_RING 取最近 200 条（用于复盘）
 //   - 写完调试后请删除调用（调试日志用完即删，见 frontend/AGENTS.md）
+//   - 持久观测豁免：tag 化模块行为日志（如 with-cached.ts 的 dbg("cache", ...)）
+//     属运行时观测而非临时调试，保留不删；nodebug=1 仍整体关闭（排障时手动开启）。
+//     观测日志不进 ring（ring 仅 warn 级复盘，防高频 hit 刷爆 200 条上限）。
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 
 interface RingEntry {

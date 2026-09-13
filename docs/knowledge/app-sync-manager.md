@@ -7,7 +7,6 @@ source_files:
   - frontend/src/views/app-sync-manager/
 auto_fields:
   symbols_with_lines:
-    - _lastSelectedType
     - actionBtnHTML
     - applyFilter
     - AppSyncManager
@@ -15,6 +14,7 @@ auto_fields:
     - containerHTML
     - emptyHintHTML
     - EventSelf
+    - getLastSelectedType
     - itemHTML
     - LAST_TYPE_KEY
     - loadData

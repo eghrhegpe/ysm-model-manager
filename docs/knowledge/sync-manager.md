@@ -19,7 +19,6 @@ source_files:
   - frontend/src/features/sync/sync.ts
 auto_fields:
   symbols_with_lines:
-    - _lastSelectedType
     - actionBtnHTML
     - applyFilter
     - appSidebarStyle
@@ -33,6 +32,7 @@ auto_fields:
     - EmitDedupe
     - emptyHintHTML
     - EventSelf
+    - getLastSelectedType
     - groupMmdVariants
     - itemHTML
     - LAST_TYPE_KEY

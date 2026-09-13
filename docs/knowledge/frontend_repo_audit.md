@@ -21,7 +21,6 @@ auto_fields:
     - _getGlueCodeMt
     - _getWasmBinary
     - _getWasmBinaryMt
-    - _lastSelectedType
     - _resetSingletons
     - aboutHTML
     - actionBtnHTML
@@ -191,7 +190,6 @@ auto_fields:
     - canWebAction
     - captureTextureName
     - cardRefreshers
-    - cfg
     - checkUpdateSilent
     - clamp
     - clamp01

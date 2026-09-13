@@ -16,8 +16,8 @@ auto_fields:
     - applyUIPrefs
     - bindPathClick
     - cardRefreshers
-    - cfg
     - cleanupKeymap
+    - getCfg
     - initAdvancedGrid
     - initKeymap
     - initMcDetect

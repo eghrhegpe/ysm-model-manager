@@ -150,15 +150,17 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
     { icon: "🌐", label: "语言", files: inv?.langFiles },
     { icon: "🧩", label: "旧格式", files: inv?.legacyModels },
     { icon: "🖼️", label: "头像", files: inv?.avatars },
-  ]
-    .filter((c) => (c.files?.length || 0) > 0)
-    .map((c) => ({
-      icon: c.icon,
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      label: `${c.label} ${c.files!.length}`,
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      title: c.files!.join("\n"),
-    }));
+  ].flatMap((c) =>
+    c.files?.length
+      ? [
+          {
+            icon: c.icon,
+            label: `${c.label} ${c.files.length}`,
+            title: c.files.join("\n"),
+          },
+        ]
+      : [],
+  );
   const invHtml =
     invChips.length > 0
       ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0;flex-wrap:wrap;gap:2px 8px">📦 ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`

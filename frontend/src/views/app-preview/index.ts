@@ -98,8 +98,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         }
         closeActive3DOverlay(this);
         // P2 修复：任意新选择作废在途渲染——防跨类型污染
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-        PREVIEW_INVALIDATE.forEach((fn) => fn());
+        PREVIEW_INVALIDATE.forEach((fn) => {
+          fn();
+        });
         try {
           if (isDir) {
             await routePackInfo(this, path);
@@ -126,11 +127,13 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     // 快照遍历：先换新数组再遍历快照
     const unsubs = this.unsubs;
     this.unsubs = [];
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    unsubs.forEach((fn) => fn());
+    unsubs.forEach((fn) => {
+      fn();
+    });
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    PREVIEW_CLEANUP.forEach((fn) => fn());
+    PREVIEW_CLEANUP.forEach((fn) => {
+      fn();
+    });
   }
 
   private _render(): void {

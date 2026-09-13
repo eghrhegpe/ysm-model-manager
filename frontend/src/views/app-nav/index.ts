@@ -156,6 +156,8 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
 }
 
 class AppNav extends WebComponentBase {
+  /** 构造期挂载的 open shadow 根（组件生命周期内恒非空，免 shadowRoot! 断言） */
+  _shadow: ShadowRoot;
   _current: PageName;
   /** 导航折叠态：折叠后收成常驻窄条（仅图标），展开按钮/页面小图标始终可见 */
   _collapsed: boolean;
@@ -165,7 +167,7 @@ class AppNav extends WebComponentBase {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._shadow = this.attachShadow({ mode: "open" });
     // 与 app-content 同源（同走 resolveInitialPage；原硬编码 "dashboard" 是幽灵值——PageName 中
     // 不存在此页，启动时导航高亮缺失，靠 nav:changed 收敛后才恢复）
     this._current = resolveInitialPage();
@@ -191,8 +193,7 @@ class AppNav extends WebComponentBase {
       const isTransition = page !== this._current;
       this._current = page;
       if (isTransition) safeSet("nav_page", this._current);
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
+      this._shadow.querySelectorAll(".nav-item").forEach((el) => {
         const isActive = (el as HTMLElement).dataset.page === this._current;
         el.classList.toggle("active", isActive);
         if (isActive) el.setAttribute("aria-current", "page");
@@ -249,8 +250,7 @@ class AppNav extends WebComponentBase {
       { id: "settings", icon: "⚙️", key: "nav.settings" },
     ];
 
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    this.shadowRoot!.innerHTML = `
+    this._shadow.innerHTML = `
       <style>${navCSS}</style>
       <div class="logo">
         <span class="logo-icon">💎</span>
@@ -283,18 +283,14 @@ class AppNav extends WebComponentBase {
       <div class="version" id="nav-version">${t("common.loading")}</div>
     `;
 
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    anBindNavItems(this.shadowRoot!);
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    anBindDualSelects(this.shadowRoot!);
+    anBindNavItems(this._shadow);
+    anBindDualSelects(this._shadow);
 
     // 折叠/展开：整个「🧭 导航栏」行可点击（label + 箭头统一触发，扩大点击范围）
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const head = this.shadowRoot!.querySelector(".menu-head");
+    const head = this._shadow.querySelector(".menu-head");
     head?.addEventListener("click", () => this.setCollapsed(!this._collapsed));
 
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    anBindViewerFab(this.shadowRoot!, () => this._viewerFabClick());
+    anBindViewerFab(this._shadow, () => this._viewerFabClick());
 
     // 异步加载版本号
     backendGetApp()
@@ -302,15 +298,13 @@ class AppNav extends WebComponentBase {
         App.GetAppVersion().then((v) => {
           // P3-5（子代理审核）：版本加载是异步，disconnect 后不再写已卸载 DOM
           if (!this.isConnected) return;
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          const el = this.shadowRoot!.getElementById("nav-version");
+          const el = this._shadow.getElementById("nav-version");
           if (el) el.textContent = `${v || "dev"} \u2022 ${t("nav.preview")}`;
         }),
       )
       .catch(() => {
         if (!this.isConnected) return;
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        const el = this.shadowRoot!.getElementById("nav-version");
+        const el = this._shadow.getElementById("nav-version");
         // P2 修复（审核）：兜底不再硬编码 "v1.0.0"（网页版 browserAdapter 已实现
         // GetAppVersion 返回 "web"，此处仅剩真失败兜底；硬编码版本与实际发版脱节会误导）
         if (el) el.textContent = t("nav.preview");

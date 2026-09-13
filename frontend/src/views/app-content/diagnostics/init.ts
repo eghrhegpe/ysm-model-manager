@@ -69,8 +69,9 @@ function dgInBindCopyPanel(root: ShadowRoot): void {
     const name = active?.dataset.diag ?? "log";
     const list = root.getElementById(`diag-${name}`);
     const clone = list?.cloneNode(true) as HTMLElement | null;
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    clone?.querySelectorAll(".log-copy").forEach((b) => b.remove());
+    clone?.querySelectorAll(".log-copy").forEach((b) => {
+      b.remove();
+    });
     const text = (clone?.textContent ?? "").trim();
     if (!text) {
       bus.emit("toast:show", {
@@ -146,10 +147,9 @@ function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
   root.querySelectorAll(".diag-btn[data-diag]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const name = (btn as HTMLElement).dataset.diag;
-      root
-        .querySelectorAll(".diag-btn[data-diag]")
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-        .forEach((b) => b.classList.toggle("active", b === btn));
+      root.querySelectorAll(".diag-btn[data-diag]").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
       const logPanel = root.getElementById("diag-log");
       const runtimePanel = root.getElementById("diag-runtime");
       const conflictPanel = root.getElementById("diag-conflict");
@@ -190,8 +190,9 @@ function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
   root.querySelectorAll(".diag-log-fbtn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-      root.querySelectorAll(".diag-log-fbtn").forEach((b) => b.classList.remove("active"));
+      root.querySelectorAll(".diag-log-fbtn").forEach((b) => {
+        b.classList.remove("active");
+      });
       btn.classList.add("active");
       loadDiagnosticsLogs(root, esc);
     });

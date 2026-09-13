@@ -41,13 +41,16 @@ export function initWorkshopPage(host: AppContentHost): void {
   const root = host.state.root;
   const searchResults = root.getElementById("ws-search-results");
   const creatorView = root.getElementById("ws-creator-view");
-
+  if (!searchResults || !creatorView) return; // 骨架缺失即页面残废，早退（原下游 !/as 断言）
   host.state.currentSite = null;
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
-  if (!host.state.workshopCache) host.state.workshopCache = new Map();
-  const repoModelCache = host.state.workshopCache;
+  let repoModelCache = host.state.workshopCache;
+  if (!repoModelCache) {
+    repoModelCache = new Map();
+    host.state.workshopCache = repoModelCache;
+  }
 
   // 浏览模式：单源 ref（{ v }）＋ setter——setBrowseMode 改 .v 即让
   // re-render 高亮与 openUrl 打开同时读到新值，无需退出页面、无值拷贝 stale。
@@ -93,8 +96,8 @@ export function initWorkshopPage(host: AppContentHost): void {
     };
     const ctx: RenderSiteViewCtx = {
       esc: (s) => esc(String(s || "")),
-      searchResults: searchResults as HTMLElement,
-      creatorView: creatorView as HTMLElement,
+      searchResults,
+      creatorView,
       allSites: refs.allSitesRef.v,
       allCreators: refs.allCreatorsRef.v,
       repoAuthors: refs.repoAuthorsRef.v,
@@ -113,13 +116,11 @@ export function initWorkshopPage(host: AppContentHost): void {
           repo,
           models as WorkshopModel[],
           source,
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          searchResults!,
+          searchResults,
         );
       },
       fillSearch,
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      repoModelCache: repoModelCache!,
+      repoModelCache,
       openUrl,
       avatarCache: host.state.avatarCache,
       browseMode: browseModeRef,

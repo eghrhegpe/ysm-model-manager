@@ -276,8 +276,9 @@ export function initAdvancedGrid(
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found?.cfgKey) cfgAny[found.cfgKey] = "";
           refreshAdvanced();
-          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-          cardRefreshers.forEach((fn) => fn());
+          cardRefreshers.forEach((fn) => {
+            fn();
+          });
           bus.emit("toast:show", {
             msg: t("settings.resetDefault"),
             duration: TOAST_MS.success,

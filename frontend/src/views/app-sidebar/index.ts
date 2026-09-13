@@ -238,8 +238,9 @@ class AppSidebar extends WebComponentBase {
   }
 
   disconnectedCallback(): void {
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-    this._unsubs.forEach((fn) => fn());
+    this._unsubs.forEach((fn) => {
+      fn();
+    });
     // P3 修复（子代理审计）：卸载时复位在途同步标志——推送/拉取 IIFE 的 finally
     // 只在本组件存活期间执行，卸载后 _syncInProgress/_loading 若保持 true，重挂载时
     // 新按钮点击被 L188/L269/L322 静默 return（按钮"死了"最多 30s 直到 timer 超时）。

@@ -234,6 +234,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-233：preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口）",
+        "link": "/adr/ADR-233-preview3d-session-state-machine"
+      },
+      {
+        "text": "ADR-232：scripts 与 hooks 并发竞态/审计留痕/退化降级修复",
+        "link": "/adr/ADR-232-scripts-hooks"
+      },
+      {
         "text": "ADR-231：preview-3d adapters 按私有子系统分层",
         "link": "/adr/ADR-231-preview-3d-adapters-layer"
       },

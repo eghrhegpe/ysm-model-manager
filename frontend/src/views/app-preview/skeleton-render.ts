@@ -33,17 +33,15 @@ export async function setup2DCanvas(
 
   let textureImg: HTMLImageElement | null = null;
   if (model.texture) {
-    textureImg = new Image();
+    const img = new Image();
+    textureImg = img;
     await new Promise((r) => {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      textureImg!.onload = r;
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      textureImg!.onerror = () => {
+      img.onload = r;
+      img.onerror = () => {
         textureImg = null;
         r(null);
       };
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      textureImg!.src = model.texture as string;
+      img.src = model.texture as string;
     });
   }
   return { canvas, textureImg };

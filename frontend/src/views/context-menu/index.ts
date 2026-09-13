@@ -10,6 +10,8 @@ import { esc } from "@/utils/html/html.ts";
 export const VIEW_TESTIDS: readonly string[] = ["ctx-item"];
 
 class ContextMenu extends WebComponentBase {
+  /** 构造期挂载的 open shadow 根（组件生命周期内恒非空，免 shadowRoot! 断言） */
+  _shadow: ShadowRoot;
   _unsub: (() => void) | undefined;
   _docClick: () => void;
   _docCtx: () => void;
@@ -18,7 +20,7 @@ class ContextMenu extends WebComponentBase {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._shadow = this.attachShadow({ mode: "open" });
     this._docClick = (): void => this.hide();
     this._docCtx = (): void => this.hide();
     this._docKeydown = (e: KeyboardEvent): void => {
@@ -80,8 +82,7 @@ class ContextMenu extends WebComponentBase {
   }
 
   render(): void {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    this.shadowRoot!.innerHTML = `
+    this._shadow.innerHTML = `
       <style>
         :host {
           position: fixed;
@@ -130,8 +131,7 @@ class ContextMenu extends WebComponentBase {
   }
 
   show(x: number, y: number, items: MenuItem[]): void {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const menu = this.shadowRoot!.getElementById("menu") as HTMLElement;
+    const menu = this._shadow.getElementById("menu") as HTMLElement;
     // 记录打开前焦点（hide 归还；host 自身/body 不入账——防归还闭环与整页焦点丢失）
     const docActive = document.activeElement;
     if (docActive && docActive !== this && docActive !== document.body) {

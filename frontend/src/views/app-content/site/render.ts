@@ -146,14 +146,14 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
 /** 搜索词分区：模式切换按钮 + 预设搜索按钮。无 preset 时返回空串（由主函数按条件跳过）。 */
 function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   const { esc, site, browseMode } = ctx;
+  const presets = site.presetSearches ?? [];
   return (
     '<div class="cr-section">' +
     '<span class="cr-section-title-lg">' +
     t("content.webSearchTerms") +
     "</span>" +
     '<span class="cr-section-sub">(' +
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    site.presetSearches!.length +
+    presets.length +
     ")</span>" +
     '<span class="cr-section-fill"></span>' +
     '<button id="cr-mode-toggle" class="cr-mode-switch">' +
@@ -181,9 +181,8 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     "</button>" +
     "</div>" +
     '<div class="cr-preset-area">' +
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    site
-      .presetSearches!.map(
+    presets
+      .map(
         (ps, i) =>
           '<button class="cr-preset-btn" style="animation-delay:' +
           stagger(i, 25, 300) +

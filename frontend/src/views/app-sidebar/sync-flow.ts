@@ -353,9 +353,9 @@ export function bindSyncSelected(
   if (prevHandler) {
     document.removeEventListener("click", prevHandler);
   }
-  setDocClickHandler(() => closeAll());
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  document.addEventListener("click", getDocClickHandler()!);
+  const docClickHandler = (): void => closeAll();
+  setDocClickHandler(docClickHandler);
+  document.addEventListener("click", docClickHandler);
 
   pushMenu.addEventListener("click", (e) =>
     handleSyncMenuClick("push", e, pushBtn, pushMenu, pullMenu, root, getInstances, {

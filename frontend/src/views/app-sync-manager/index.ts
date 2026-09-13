@@ -111,8 +111,9 @@ export class AppSyncManager extends WebComponentBase {
 
   disconnectedCallback(): void {
     if (this._unsubs) {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-      this._unsubs.forEach((fn) => fn());
+      this._unsubs.forEach((fn) => {
+        fn();
+      });
       this._unsubs = [];
     }
     // 显式移除 click handler 并复位绑定标记（防御 bindDelegatedEvents 未返回 unsub 的边界）
@@ -135,8 +136,9 @@ export class AppSyncManager extends WebComponentBase {
     if (listEl) listEl.innerHTML = loadingHTML();
 
     if (this._unsubs) {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-      this._unsubs.forEach((fn) => fn());
+      this._unsubs.forEach((fn) => {
+        fn();
+      });
       this._unsubs = [];
     }
 

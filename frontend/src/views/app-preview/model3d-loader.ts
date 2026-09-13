@@ -83,9 +83,10 @@ async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
  *  网页版路径（isWebPlatform）调纯 TS buildSpecFromGeometryJSON——
  *  Go binding 在网页版恒 "{}" 桩（ADR-049 P2-2 闭环）。 */
 async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec | null> {
+  const modelPath = model._modelPath;
+  if (!modelPath) return null; // 无路径模型无从解码（原 ! 断言此处即 crash）
   try {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const decoded = await decodeYsmViaWasm(model._modelPath!);
+    const decoded = await decodeYsmViaWasm(modelPath);
     if (!decoded?.geometryRaw) return null;
     if (isWebPlatform()) {
       // 网页版：Go binding 不可用（恒 null 桩），调纯 TS 移植
@@ -93,8 +94,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       if (!specStr || specStr === "{}") return null;
       const spec = JSON.parse(specStr) as Model3DSpec;
       if (!spec.models?.length) return null;
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      cacheSpec(model._modelPath!, specStr);
+      cacheSpec(modelPath, specStr);
       return spec;
     } else {
       // Android：Go binding 可用（返回 typed Model3DSpec | null）
@@ -103,8 +103,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       if (!spec) return null;
       const specStr = JSON.stringify(spec);
       // 兜底结果写 spec 缓存：否则每次预览都重新 WASM 解码（时间翻倍）
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      cacheSpec(model._modelPath!, specStr);
+      cacheSpec(modelPath, specStr);
       logWarn(
         "model3d",
         "GetModel3DSpec 无数据，已用前端 WASM 解码兜底构建 spec（Android 无 Node 通道）",

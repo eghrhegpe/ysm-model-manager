@@ -77,9 +77,9 @@ function singleBenchParseStages(
     if (ms > maxMs) maxMs = ms;
   }
   const totalRes = lines.find((l) => totalRe.test(l));
-  const total = totalRes
-    ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      parseFloat(totalRes.match(totalRe)![1])
+  const totalMatch = totalRes?.match(totalRe);
+  const total = totalMatch
+    ? parseFloat(totalMatch[1] ?? "0")
     : stages.reduce((s, x) => s + x.ms, 0);
 
   return stages.length ? { stages, total } : null;

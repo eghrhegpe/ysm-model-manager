@@ -32,13 +32,14 @@ const OK_TOAST_MS = TOAST_MS.success; // 成功反馈 toast 展示时长 ms
 const ERR_TOAST_MS = TOAST_MS.normal; // 失败反馈 toast 展示时长 ms
 
 class AppToast extends WebComponentBase {
+  /** 构造期挂载的 open shadow 根（组件生命周期内恒非空，免 shadowRoot! 断言） */
+  _shadow: ShadowRoot;
   _unsub: (() => void) | undefined;
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    this.shadowRoot!.innerHTML = `
+    this._shadow = this.attachShadow({ mode: "open" });
+    this._shadow.innerHTML = `
       <style>
         :host {
           position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -99,8 +100,7 @@ class AppToast extends WebComponentBase {
     type = "",
     clickCallback?: () => void,
   ): void {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const c = this.shadowRoot!.getElementById("c") as HTMLElement;
+    const c = this._shadow.getElementById("c") as HTMLElement;
     // 限制最多 MAX_TOASTS 个同时显示，超出直接同步移除最早的（_remove 含动画异步，会死循环）
     while (c.children.length >= MAX_TOASTS) {
       const oldest = c.children[0] as ToastEl;

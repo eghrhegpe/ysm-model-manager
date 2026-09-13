@@ -98,8 +98,9 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
       // 点击仓库
       grid.querySelectorAll(".gh-repo-card").forEach((card) => {
         card.addEventListener("click", () => {
-          // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
-          grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
+          grid.querySelectorAll(".gh-card").forEach((c) => {
+            c.classList.remove("active");
+          });
           card.classList.add("active");
           const repo = (card as HTMLElement).dataset.repo || "";
           ctx.showRepo(repo);
@@ -120,8 +121,8 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
 async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   ctx.setCurrentRepo(repo);
   const resultsBody = ctx.resultsBody;
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  const repoModelCache = ctx._githubCache()!;
+  const repoModelCache = ctx._githubCache();
+  if (!repoModelCache) return; // 断连清理后迟到调用：静默退出（原 ! 断言此处即 crash）
   if (resultsBody) {
     resultsBody.innerHTML = ghPlaceholder(t("downloads.loadingModels"));
   }

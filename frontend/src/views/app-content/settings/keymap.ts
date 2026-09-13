@@ -150,10 +150,8 @@ export function initKeymap(root: ShadowRoot): void {
     csEl.value = safeGet("td-cam-speed") || DEFAULT_CAM_SPEED;
     if (csVal) csVal.textContent = csEl.value;
     csEl.addEventListener("input", () => {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      if (csVal) csVal.textContent = csEl!.value;
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      safeSet("td-cam-speed", csEl!.value);
+      if (csVal) csVal.textContent = csEl.value;
+      safeSet("td-cam-speed", csEl.value);
     });
   }
   // 默认旋转模式

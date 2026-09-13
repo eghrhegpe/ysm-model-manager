@@ -399,6 +399,7 @@ export async function mount3D(
     isDisposed: { v: false },
     finished: false,
     aborted: { v: false },
+    status: "idle", // ADR-233：会话生命周期状态单一事实源
     cleanupFn: null,
     // 相机偏好从 localStorage 读取（keymap.ts 同源：速度默认 20，环绕模式默认 orbit）
     camSpeed: loadTdCamSpeed(),
@@ -897,6 +898,7 @@ async function runBuild(
   if (i?.renderer !== undefined) buildCtx.renderer = i.renderer;
   if (!ctx.selfMode && shell.camBridge) buildCtx.cameraControls = shell.camBridge;
   if (ctx.sessionId !== undefined) buildCtx.sessionId = ctx.sessionId;
+  session.status = "mounting"; // ADR-233：build 进行中
   session.content = await ctx.adapter.build(buildCtx, session.currentPath);
   if (session.aborted.v || ctx.myGen !== ctx.getGen()) {
     // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
@@ -997,6 +999,7 @@ function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown):
 // ===== mount3D 收尾（escH 替换 + sessionHandle 构造 + 句柄入列，纯搬家原 L830–L850）=====
 function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: PreviewScene): void {
   const session = ctx.session;
+  session.status = "mounted"; // ADR-233：build 成功、活跃
   // 复用 escH 可变引用，switchTo 后旧 handler 被替换，新 handler 在 cleanup 时通过 getter 正确卸载
   // R1-P1-2：先保存旧引用再替换，否则 removeEventListener 移除的是新函数（从未注册过），旧函数仍残留
   const oldEscH = session.escH;

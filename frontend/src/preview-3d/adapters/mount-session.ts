@@ -26,6 +26,36 @@ import type { SwitchContext } from "./switch-preview.ts";
 import { unloadModel } from "./unload-model.ts";
 
 /**
+ * 会话生命周期状态（ADR-233：取代散装布尔的单一可读来源）。
+ * 过渡期与 isDisposed/finished/aborted 并存：teardown 起始置 disposing/aborting，
+ * finishSession 置 finished；mount-preview-core 在 idle→mounting→mounted 迁移。
+ */
+export type SessionStatus =
+  | "idle" // mount3D 入口，尚未 build
+  | "mounting" // build 进行中
+  | "mounted" // build 成功、活跃
+  | "switching" // 会话内切换中（原 inFlight）
+  | "aborting" // ESC / invalidate 打断（原 aborted.v）
+  | "disposing" // teardown 进行中
+  | "finished"; // finishSession 已收尾（幂等出口）
+
+/** guardSessionAlive 所需生命周期字段形态（SwitchContext / MountCtx 均满足） */
+export interface SessionLifecycle {
+  aborted: { v: boolean };
+  isDisposed: { v: boolean };
+  myGen: number;
+  getGen: () => number;
+}
+
+/**
+ * 会话存活守卫（ADR-233：取代 switch-preview 三处逐字咒语
+ * `aborted.v || isDisposed.v || myGen !== getGen()`）。返回 true=存活。
+ */
+export function guardSessionAlive(lc: SessionLifecycle): boolean {
+  return !(lc.aborted.v || lc.isDisposed.v || lc.myGen !== lc.getGen());
+}
+
+/**
  * mount3D 会话级可变状态收敛体（原 30+ 裸 let，收敛后仅剩 keys/mouseDown/lastMouse 等少量 input let）。
  * infra 字段（scene/camera/renderer/controls/orbitTarget + 全部 cap）复用 {@link SharedInfra}，
  * 本接口仅收敛 session 级可变状态——闭包读写统一经此对象，降低认知负担。
@@ -40,6 +70,8 @@ export interface MpSessionState {
   finished: boolean;
   /** 中止标记（可变引用，ESC/invalidate 打断） */
   aborted: { v: boolean };
+  /** 会话生命周期状态（ADR-233 单一事实源；过渡期与 isDisposed/finished/aborted 并存） */
+  status: SessionStatus;
   /** cleanup 函数引用（build 成功后赋值） */
   cleanupFn: (() => void) | null;
   /** 相机移动速度（camBridge.setSpeed 变更） */
@@ -147,6 +179,7 @@ function finishSession(ctx: MountCtx): void {
   const session = ctx.session;
   if (session.finished) return;
   session.finished = true;
+  session.status = "finished"; // ADR-233：收尾即终态（幂等出口）
   // 从模块级 handles 列表移除当前 session（hasActivePreview 以该列表为依据）
   removeOwnHandle(ctx);
   // 无障碍：释放焦点陷阱 + 把焦点还给触发 3D 的 FAB 按钮（rememberTrigger 在
@@ -158,18 +191,96 @@ function finishSession(ctx: MountCtx): void {
   ctx.adapter.onClose?.();
 }
 
-/** 早期关闭（build 尚未成功，cleanupFn 未赋值时的 ESC 出口） */
-export function closeOverlay(ctx: MountCtx): void {
-  ctx.session.aborted.v = true;
-  // 终止标志置位（code review #7：原恒 false 死标志，switch-preview 三处守卫
-  // 只靠 aborted/gen 撑着——本字段既已存在就让它真实生效）
-  ctx.session.isDisposed.v = true;
-  document.removeEventListener("keydown", ctx.session.escH);
-  // 早期路径（cleanupFn 尚未赋值）：清理 tip 定时器 + 菜单，再拆 overlay
-  clearTipTimer(ctx.session);
-  ctx.menuHandle.dispose();
+/**
+ * 会话清理单出口（ADR-233：原 closeOverlay / runFailedMountCleanup / runFullCleanup
+ * 三函数共用段 ②③④⑦ 收敛于此，按 level 差异展开）。行为与原三函数逐段等价：
+ * - early：原 closeOverlay（早期 ESC，cleanupFn 未赋值；不含 ⑦ 输入解绑；保留 ⑤ overlay + finishSession）
+ * - failed：原 runFailedMountCleanup（build 失败；保留 overlay 与场景能力/纹理缓存；不调 finishSession）
+ * - full：原 runFullCleanup（完整关闭；④⑤⑥⑧⑨ + finishSession）
+ */
+export type TeardownLevel = "early" | "failed" | "full";
+
+export function teardown(ctx: MountCtx, level: TeardownLevel): void {
+  const session = ctx.session;
+  // ① 终止标志置位（三路共用，与旧三函数首行一致）
+  session.isDisposed.v = true;
+  session.status = level === "failed" ? "aborting" : "disposing";
+
+  if (level === "early") {
+    // 早期 ESC：会话中止且完整收尾（finishSession 幂等）
+    session.aborted.v = true;
+    document.removeEventListener("keydown", session.escH);
+    clearTipTimer(session); // ②
+    ctx.menuHandle.dispose(); // ③
+    if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay); // ⑤
+    finishSession(ctx);
+    return;
+  }
+
+  // failed + full 共用段
+  if (level === "full") {
+    document.removeEventListener("keydown", session.escH); // ① escH（full 路径亦摘除）
+  }
+  clearTipTimer(session); // ②
+  ctx.menuHandle.dispose(); // ③
+  unbindInputsAndStopLoop(ctx); // ⑦
+
+  if (level === "failed") {
+    // 保留 overlay（错误提示可见），不清场景能力/纹理缓存（可能被其他活跃会话共享）
+    return;
+  }
+
+  // full：原 runFullCleanup ④⑤⑥⑧⑨ + finishSession
+  // ④ viewContainer（含 loadingEl；首次挂载时可能含 renderer.domElement）
+  if (ctx.viewContainer.parentNode) ctx.viewContainer.parentNode.removeChild(ctx.viewContainer);
+  // ⑤ overlay 本体移除 + 清模块级单例：runFullCleanup 是「完整关闭」语义。
+  // switchTo 的复用外壳走 switch-preview.ts（不经过此处），故移除 overlay 不影响模型内切换。
   if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
+  ctx.clearSingletons();
+  // ⑥ 只清理内容层（dispose content + 移除 scene children），保留 renderer/canvas 存活
+  //    避免销毁 WebGL context 导致黑屏窗口期
+  const infra = ctx.getInfra();
+  if (infra && session.sceneBaseline) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
+    for (const c of stale) infra.scene.remove(c);
+  }
+  // dispose 前先按 content 匹配定位本会话注册的 entry——不能在 allContent 清空后再找
+  const myIds = sceneRegistry
+    .getAll()
+    .filter((e) => session.allContent.includes(e.content) || e.content === session.content)
+    .map((e) => e.id);
+  for (const b of session.allContent) {
+    safeDispose(b);
+  }
+  session.allContent.length = 0;
+  // 本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
+  for (const id of myIds) sceneRegistry.unregister(id);
+  // 选择性注销只覆盖「仍在 allContent 的 entry」——mid-session 被 dispose 的 ghost entry
+  // 不在 myIds，会在会话关闭后滞留；本会话是最后一个存活会话时整体 reset 兜底
+  if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
+    sceneRegistry.reset();
+  }
+  // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
+  sceneCapabilityRegistry.saveAll();
+  sceneCapabilityRegistry.dispose();
+  clearSceneCaps();
+  // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
+  textureCache.disposeAll();
+  // 场景字节快照随场景消亡——残留会在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截）
+  resetSceneTextureBytes();
+  clearModelRoots();
+  // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
+  if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
+  // 本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）
+  unregisterActiveInputSession(session);
+  // 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
   finishSession(ctx);
+}
+
+/** 早期关闭（build 尚未成功，cleanupFn 未赋值时的 ESC 出口）—— ADR-233 退化为 teardown("early") */
+export function closeOverlay(ctx: MountCtx): void {
+  teardown(ctx, "early");
 }
 
 /** ② 提示条定时器清除（closeOverlay / runFailedMountCleanup / runFullCleanup 三路共用）。 */
@@ -218,87 +329,17 @@ function unbindInputsAndStopLoop(ctx: MountCtx): void {
  * （catch 段）自行处理（顺序：先解绑监听再拆资源）。
  * 注意：不调 finishSession——失败后会话仍存活（用户看错误提示后 ESC 走 closeOverlay）。
  */
+/** build 失败路径轻量清理（mount-preview-core.ts catch 段调用）—— ADR-233 退化为 teardown("failed") */
 export function runFailedMountCleanup(ctx: MountCtx): void {
-  const session = ctx.session;
-  // 终止标志置位（同 runFullCleanup/closeOverlay）
-  session.isDisposed.v = true;
-  // ② 提示条定时器（成功路径由 timeout 自移除；失败时取消避免迟到移除）
-  clearTipTimer(session);
-  // ③ 声明式根菜单（移除 dock/popup + 解绑 view click 监听）
-  ctx.menuHandle.dispose();
-  // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFullCleanup 同段共用）
-  unbindInputsAndStopLoop(ctx);
+  teardown(ctx, "failed");
 }
 
 /**
- * 完整清理（原 mount3D 内嵌 fullCleanup，P0 修复：中止/退出路径完整拆除 DOM + 解绑监听，防泄漏）。
- * ① ESC 监听器（escH 可能已被 switchTo 替换，移除当前引用）→ ② 提示条定时器 →
- * ③ 声式根菜单 → ④ viewContainer → ⑤ overlay + 单例清零 → ⑥ 内容层 dispose + scene 差量
- * 清理 → ⑦ 输入监听解绑 + perFrame/rAF 收尾（与 runFailedMountCleanup 共用段）→
- * ⑧ 场景能力 save/dispose → ⑨ 纹理缓存 → loadingEl 兜底 → finishSession。
+ * 完整清理（原 mount3D 内嵌 fullCleanup）—— ADR-233 退化为 teardown("full")；
+ * 实现见 teardown 的 full 分支（④⑤⑥⑧⑨ + finishSession，行为逐段等价）。
  */
 export function runFullCleanup(ctx: MountCtx): void {
-  const session = ctx.session;
-  // 终止标志置位（code review #7，同 closeOverlay）
-  session.isDisposed.v = true;
-  // ① ESC 监听器（escH 经 switchTo 可能已被替换，移除当前引用）
-  document.removeEventListener("keydown", session.escH);
-  // ② 提示条定时器
-  clearTipTimer(session);
-  // ③ 声式根菜单（移除 dock/popup + 解绑 view click 监听）
-  ctx.menuHandle.dispose();
-  // ④ viewContainer（含 loadingEl；首次挂载时可能含 renderer.domElement）
-  if (ctx.viewContainer.parentNode) ctx.viewContainer.parentNode.removeChild(ctx.viewContainer);
-  // ⑤ overlay 本体移除 + 清模块级单例：runFullCleanup 是「完整关闭」语义。
-  // switchTo 的复用外壳走 switch-preview.ts（不经过此处），故移除 overlay 不影响模型内切换。
-  if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
-  ctx.clearSingletons();
-  // ⑥ 只清理内容层（dispose content + 移除 scene children），保留 renderer/canvas 存活
-  //    避免销毁 WebGL context 导致黑屏窗口期
-  const infra = ctx.getInfra();
-  if (infra && session.sceneBaseline) {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
-    for (const c of stale) infra.scene.remove(c);
-  }
-  // dispose 前先按 content 匹配定位本会话注册的 entry——
-  // 不能在 allContent 清空后再找（数组已空，filter 全 miss）。
-  const myIds = sceneRegistry
-    .getAll()
-    .filter((e) => session.allContent.includes(e.content) || e.content === session.content)
-    .map((e) => e.id);
-  for (const b of session.allContent) {
-    safeDispose(b);
-  }
-  session.allContent.length = 0;
-  // 本会话关闭 → 仅注销本会话注册的模型（避免 reset 清空全部 session 的注册记录）
-  for (const id of myIds) sceneRegistry.unregister(id);
-  // 选择性注销只覆盖「仍在 allContent 的 entry」——
-  // mid-session 被 dispose（keep→非 keep 切换 pushSwitchHistory dispose 旧内容并移出
-  // allContent、但从不 unregister，switch-preview 注释自认「残留由下次 mount 的 reset
-  // 兜底」）的 ghost entry 不在 myIds，会在会话关闭后滞留——count() 虚高误触 MAX_MODELS
-  // 上限 / 陈旧 roots 参与取景 / objToEntry 映射已释放对象。本会话是最后一个存活会话时
-  // 整体 reset 兜底（还原旧 close-time sweep 语义）；coop 尚有其它会话则保留选择性注销
-  if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
-    sceneRegistry.reset();
-  }
-  // ⑦ 输入监听解绑 + perFrame/rAF 收尾（runFailedMountCleanup 同段共用）
-  unbindInputsAndStopLoop(ctx);
-  // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
-  sceneCapabilityRegistry.saveAll();
-  sceneCapabilityRegistry.dispose();
-  clearSceneCaps();
-  // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
-  textureCache.disposeAll();
-  // 场景字节快照随场景消亡——残留会在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截）
-  resetSceneTextureBytes();
-  clearModelRoots();
-  // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
-  if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
-  // 本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）
-  unregisterActiveInputSession(session);
-  // 收尾：摘句柄 + 通知调用方 + 焦点归还（幂等，与 closeOverlay 共用同一出口）
-  finishSession(ctx);
+  teardown(ctx, "full");
 }
 
 /**

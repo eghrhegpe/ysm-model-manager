@@ -22,7 +22,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
-import { ownHandle } from "./mount-session.ts";
+import { guardSessionAlive, ownHandle } from "./mount-session.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { registerBuiltScene } from "./register-built-scene.ts";
 import { MAX_MODELS, sceneRegistry } from "./scene-registry.ts";
@@ -150,7 +150,7 @@ export async function switchToSession(
  * 命中任一守卫返回 false（调用方直接 return）；放行则置位 inFlight 后返回 true。
  */
 function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolean {
-  if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) return false;
+  if (!guardSessionAlive(ctx)) return false;
   // 并发切换抑制——已在切换中直接丢弃后续请求，避免重复 build 浪费 GPU + sceneRegistry 短暂不一致
   if (ctx.inFlight) return false;
   // P3-2：空路径守卫——空路径会触发 adapter.build(ctx, "") 加载未定义内容
@@ -260,7 +260,7 @@ function recoverSwitchFailure(
 ): void {
   // P2 守卫（对齐 mount3D 主流程 gen 守卫）：build 失败迟到且用户已关闭/切换
   // 预览时不弹错误 toast，避免关闭后 1~2s 突然冒出「加载失败」掩盖用户意图
-  if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) {
+  if (!guardSessionAlive(ctx)) {
     ctx.inFlight = false;
     return;
   }
@@ -304,7 +304,7 @@ function recoverSwitchFailure(
  * build 成功后的代际守卫：用户已关闭/切换预览则丢弃新内容层，返回 true 请求中止。
  */
 function guardSwitchAborted(ctx: SwitchContext, next: PreviewScene): boolean {
-  if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) {
+  if (!guardSessionAlive(ctx)) {
     safeDispose(next);
     ctx.inFlight = false;
     return true;

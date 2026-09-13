@@ -26,6 +26,7 @@
  *   node scripts/check-params.ts --threshold 5 --json             # 调档 / JSON
  *   node scripts/check-params.ts --files "$(git diff --name-only)" # 只扫本次变更文件（增量）
  *   node scripts/check-params.ts --changed                        # 同上，自动相对默认分支基线
+ *   node scripts/check-params.ts --max-files 100                  # 变更域文件数上限（超限降级跳过）
  *   node scripts/check-params.ts --strict                         # 有命中时 exit 1
  *
  * `_summary` 契约（门禁消费，gate-parse.parseToolOutput 判定）：
@@ -33,9 +34,13 @@
  *   errors = 命中数（长参数 / 布尔陷阱）
  *   warns_list = FAIL 时前 20 条单行明细（顶层 ok 仅为人类可读，门禁读 _summary）
  *   scopeFilter = 变更域过滤留痕（mode/requested/matched），见 _lib/changed-scope.ts
+ *   degraded + skippedReason = 变更域文件数超过 --max-files 上限时的跳过留痕：ok 仍
+ *     true（没扫到违规 ≠ 断言无违规），但门禁 note 显式带 degraded——「本次跳过」与
+ *     「扫描通过」不得同形（gate-parse 第 6 条）。代价是本次无参数陷阱守卫。
  *
- * 退出码：0（情报型，判定见 _summary.ok）；ts-morph 缺失 0 WARN（degraded）；--strict
- * 且有命中 1；初始化/变更域解析失败（scope 不存在 / 无文件 / --files 空 / --changed 不可解析）1。
+ * 退出码：0（情报型，判定见 _summary.ok）；ts-morph 缺失 0 WARN（degraded）；
+ * --max-files 超限 0 WARN（degraded，见上）；--strict 且有命中 1；初始化/变更域解析
+ * 失败（scope 不存在 / 无文件 / --files 空 / --changed 不可解析）1。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -48,36 +53,17 @@ import { collectNamedFunctions } from "./check-complexity.ts";
 
 const ROOT = getRoot();
 
-// ─── 参数解析 ─────────────────────────────────────────────
-const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json", "strict", "changed"],
-  strings: ["scope", "threshold", "files"],
-  defaults: { threshold: 6 }, // 🟨≥6，🟧=2x，🟥=3x
-});
-if (raw.unknown?.length) {
-  console.error(`❌ 未知参数: ${raw.unknown.join(", ")}（--help 查看用法）`);
-  process.exit(1);
-}
-if (raw.threshold !== null) {
-  const n = parseInt(raw.threshold as string, 10);
-  if (!Number.isFinite(n) || n < 1) {
-    console.error(`[check-params] --threshold 需正整数，收到 ${raw.threshold}，用默认 6`);
-    raw.threshold = 6;
-  } else {
-    raw.threshold = n;
-  }
-}
-const args = {
-  json: raw.json as boolean,
-  strict: raw.strict as boolean,
-  changed: raw.changed as boolean,
-  scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
-  threshold: raw.threshold as number,
-};
+// ─── 参数解析（必须在 main() 内，见下方红线注释）──────────
+// ⚠️ 参数解析与 unknown 拦截**严禁放模块顶层**：本模块被 tests/ 契约测试 import，
+// 且自身 import check-complexity——CLI 型脚本互相 import 时，顶层的 parseArgs 会吃掉
+// 宿主的 argv，宿主独有的 flag 报「未知参数」并 exit(1)（2026-09-13 实证，已同
+// check-complexity 一并修复）。顶层只允许纯定义与纯函数。
+
+const MAX_FILES_DEFAULT = 200;
 
 /** 初始化/用法类失败的唯一出口：fail-closed，JSON 模式只写 _summary（gate 合并双流）。 */
-function failClosed(msg: string): never {
-  if (args.json)
+function failClosed(msg: string, json: boolean): never {
+  if (json)
     console.log(
       JSON.stringify(
         { ok: false, mode: "params", _summary: { ok: false, errors: 0, error: msg } },
@@ -89,8 +75,45 @@ function failClosed(msg: string): never {
   process.exit(1);
 }
 
-// 变更域过滤（--files / --changed，与 check-redlines 同约定；见 _lib/changed-scope.ts）
-// 在 main() 内解析而非模块顶层——与 check-complexity 同形（后者被本模块 import）。
+/** 参数解析与校验（仅 CLI main 调用；被 import 时绝不触碰 process.argv）。 */
+function resolveArgs() {
+  const raw = parseArgs(process.argv.slice(2), {
+    bools: ["json", "strict", "changed"],
+    strings: ["scope", "threshold", "files", "max-files"],
+    defaults: { threshold: 6 }, // 🟨≥6，🟧=2x，🟥=3x
+  });
+  if (raw.unknown?.length) {
+    console.error(`❌ 未知参数: ${raw.unknown.join(", ")}（--help 查看用法）`);
+    process.exit(1);
+  }
+  if (raw.threshold !== null) {
+    const n = parseInt(raw.threshold as string, 10);
+    if (!Number.isFinite(n) || n < 1) {
+      console.error(`[check-params] --threshold 需正整数，收到 ${raw.threshold}，用默认 6`);
+      raw.threshold = 6;
+    } else {
+      raw.threshold = n;
+    }
+  }
+  if (raw["max-files"] !== null) {
+    const n = parseInt(raw["max-files"] as string, 10);
+    if (!Number.isFinite(n) || n < 1) {
+      console.error(`[check-params] --max-files 需正整数，收到 ${raw["max-files"]}，用默认 ${MAX_FILES_DEFAULT}`);
+      raw["max-files"] = MAX_FILES_DEFAULT;
+    } else {
+      raw["max-files"] = n;
+    }
+  }
+  return {
+    json: raw.json as boolean,
+    strict: raw.strict as boolean,
+    changed: raw.changed as boolean,
+    scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
+    threshold: raw.threshold as number,
+    maxFiles: (raw["max-files"] as number) ?? MAX_FILES_DEFAULT,
+    files: raw.files,
+  };
+}
 
 // ─── 纯函数（契约测试直接消费）────────────────────────────
 /** 陷阱分：params + boolParams（bool 另 +1 加重 → 权重 2）。 */
@@ -112,6 +135,28 @@ export function trapReasons(params: number, boolParams: number, threshold: numbe
   if (params >= threshold) reasons.push(`参数过长(${params}≥${threshold})`);
   if (boolParams >= 2) reasons.push(`布尔陷阱(bool×${boolParams})`);
   return reasons;
+}
+
+/**
+ * 超大变更集降级决策（纯函数，契约测试锁定）：变更域文件数 > 上限 → 跳过扫描。
+ *
+ * 背景：check-params 是三个档位扫描器中唯一「重」的——`getType()` 逐参数触发类型检查，
+ * 全库 59.4s；增量耗时近似线性于进入扫描的文件数（55 文件 7.9s、单文件 0.4s，实测）。
+ * 整目录搬家那种 300+ 文件的推送可到分钟级，与其让门禁干等，不如跳过并留 degraded 痕——
+ * 代价只是本次无参数陷阱守卫（debt 挂载本就允许）。
+ *
+ * 边界语义：**恰好等于上限不降级**（> 而非 >=）；上限 <1 属调用方 bug，由参数校验拦截。
+ */
+export function scanCapDecision(
+  scannedCount: number,
+  maxFiles: number,
+): { skip: true; reason: string } | { skip: false } {
+  if (scannedCount > maxFiles)
+    return {
+      skip: true,
+      reason: `变更域 ${scannedCount} 个文件超过上限 ${maxFiles}，跳过扫描（降级运行，本次无参数陷阱守卫）`,
+    };
+  return { skip: false };
 }
 
 // ─── 参数提取（ts-morph 参数节点 → {个数, 布尔个数}）─────────
@@ -153,14 +198,15 @@ function walkSource(dir: string): string[] {
 
 // ─── 主流程 ─────────────────────────────────────────────
 async function main() {
+  const args = resolveArgs();
   const threshold = args.threshold;
 
   // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，避免因 --files 为空 /
   // --changed 不可解析时白跑一次 ts-morph 装载。
-  const changedRes = resolveChangedScope(raw.files, args.changed);
-  if (changedRes.error) failClosed(changedRes.error);
+  const changedRes = resolveChangedScope(args.files, args.changed);
+  if (changedRes.error) failClosed(changedRes.error, args.json);
   const changedScope = changedRes.scope;
-  const scopeMode = typeof raw.files === "string" ? "files" : args.changed ? "changed" : "all";
+  const scopeMode = typeof args.files === "string" ? "files" : args.changed ? "changed" : "all";
 
   const { createRequire } = await import("node:module");
   const require_ = createRequire(path.join(ROOT, "frontend", "package.json"));
@@ -191,10 +237,10 @@ async function main() {
 
   const rootAbs = path.isAbsolute(args.scope) ? args.scope : path.join(ROOT, args.scope);
   // 初始化失败 = 用法错误：显式 exit 1（此前 return 以 0 退出，与文件头契约不符且 fail-open）。
-  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`);
+  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`, args.json);
 
   const files = walkSource(rootAbs).map((f) => path.resolve(f));
-  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`);
+  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`, args.json);
 
   // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
   // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。
@@ -205,6 +251,40 @@ async function main() {
     matched: scanned.length,
     total: files.length,
   };
+
+  // 超大变更集降级（见 scanCapDecision）：scanned 超过 --max-files 上限 → 跳过扫描。
+  // ok 保持 true（没扫到违规 ≠ 断言无违规），但 _summary.degraded + skippedReason 让
+  // 门禁 note 显式带 degraded 标记——「本次跳过」与「扫描通过」不得同形（gate-parse 第 6 条）。
+  const cap = scanCapDecision(scanned.length, args.maxFiles);
+  if (cap.skip) {
+    if (args.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            degraded: true,
+            mode: "params",
+            scope: relPosix(rootAbs),
+            threshold,
+            _summary: {
+              ok: true,
+              errors: 0,
+              degraded: true,
+              skippedReason: cap.reason,
+              scopeFilter: { ...scopeFilter, cappedAt: args.maxFiles },
+            },
+            items: [],
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      console.warn(`[check-params] ${cap.reason}`);
+      console.warn("   可调大 --max-files、用 --files 收窄到关键文件，或 --scope 直接扫单目录。");
+    }
+    return;
+  }
 
   const project = new Project({ useInMemoryFileSystem: false, skipFileDependencyResolution: true });
   const items: Array<{

@@ -105,6 +105,19 @@ export function parsePitfall(raw: string) {
   return { trap, pos: pos ? `\`${pos.replace(/`/g, "")}\`` : "-", fix: cell(right) };
 }
 
+/**
+ * 风险行超配检测（纯函数，契约测试锁定）：quick_risk_lines 按索引与 quick_intents 配对，
+ * 超出意图条数的行在渲染时被静默丢弃——把「被丢弃的行」显性返回，调用方据此打 WARN。
+ *
+ * 背景：2026-08-31 审计把「意图/分组配对不均」从静默丢弃改为恒 WARN，但风险行超配仍是
+ * 静默的（实证：某卡写 5 条红线、只 4 条意图，第 5 条永远不出现在速查表）。本函数补上
+ * 同一纪律的最后一格——内容丢失不得无声。缺红线方向（risks < intents）由渲染兜底填
+ * 「-」，不丢内容，不算超配。
+ */
+export function excessRiskLines(risks: string[], intents: string[]): string[] {
+  return risks.slice(intents.length);
+}
+
 function render(
   cards: Array<{
     file: string;
@@ -138,6 +151,13 @@ function render(
         `⚠️  ${c.file}: ${gLen} 个分组 > ${iLen} 条意图，多余分组不输出（悬空分组）: ${extra.join("、")}`,
       );
     }
+    // 风险行超配（2026-09-13）：quick_risk_lines 按索引与意图配对，超出行渲染时静默
+    // 丢弃——显性 WARN（同 2026-08-31 配对不均纪律），内容丢失不得无声。
+    const excess = excessRiskLines(c.risks, c.intents);
+    if (excess.length)
+      console.warn(
+        `⚠️  ${c.file}: ${c.risks.length} 条红线 > ${iLen} 条意图，多余 ${excess.length} 条不输出（风险行按索引与意图配对）: ${excess.join("、")}`,
+      );
     for (let i = 0; i < iLen; i++) {
       rows.push({
         group: c.groups[Math.min(i, gLen - 1)]!,

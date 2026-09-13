@@ -50,36 +50,15 @@ import { getRoot, relPosix } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 
-// ─── 参数解析 ─────────────────────────────────────────────
-const raw = parseArgs(process.argv.slice(2), {
-  bools: ["json", "strict", "changed"],
-  strings: ["scope", "threshold", "files"],
-  defaults: { threshold: 15 }, // 🟨>15，🟧=2x，🟥=3x
-});
-if (raw.unknown?.length) {
-  console.error(`❌ 未知参数: ${raw.unknown.join(", ")}（--help 查看用法）`);
-  process.exit(1);
-}
-if (raw.threshold !== null) {
-  const n = parseInt(raw.threshold as string, 10);
-  if (!Number.isFinite(n) || n < 1) {
-    console.error(`[check-complexity] --threshold 需正整数，收到 ${raw.threshold}，用默认 15`);
-    raw.threshold = 15;
-  } else {
-    raw.threshold = n;
-  }
-}
-const args = {
-  json: raw.json as boolean,
-  strict: raw.strict as boolean,
-  changed: raw.changed as boolean,
-  scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
-  threshold: raw.threshold as number,
-};
+// ─── 参数解析（必须在 main() 内，见下方红线注释）──────────
+// ⚠️ 本模块被 check-params.ts import（collectNamedFunctions）。参数解析与 unknown 拦截
+// **严禁放模块顶层**：ESM import 先于宿主顶层语句执行，顶层的 parseArgs 会吃掉宿主的
+// argv——宿主认识的新 flag（如 check-params 的 --max-files）在这里报「未知参数」并以
+// 本脚本名义 exit(1)，宿主 CLI 直接瘫痪（2026-09-13 实证）。顶层只允许纯定义与纯函数。
 
 /** 初始化/用法类失败的唯一出口：fail-closed，JSON 模式只写 _summary（gate 合并双流）。 */
-function failClosed(msg: string): never {
-  if (args.json)
+function failClosed(msg: string, json: boolean): never {
+  if (json)
     console.log(
       JSON.stringify(
         { ok: false, mode: "complexity", _summary: { ok: false, errors: 0, error: msg } },
@@ -91,9 +70,35 @@ function failClosed(msg: string): never {
   process.exit(1);
 }
 
-// 变更域过滤（--files / --changed，与 check-redlines 同约定；见 _lib/changed-scope.ts）
-// 在 main() 内解析而非模块顶层：本模块被 check-params import（collectNamedFunctions），
-// 顶层解析会让「被导入」也跑一次 git / 误判 `--files ""` 并以本脚本名义 exit 1。
+/** 参数解析与校验（仅 CLI main 调用；被 import 时绝不触碰 process.argv）。 */
+function resolveArgs() {
+  const raw = parseArgs(process.argv.slice(2), {
+    bools: ["json", "strict", "changed"],
+    strings: ["scope", "threshold", "files"],
+    defaults: { threshold: 15 }, // 🟨>15，🟧=2x，🟥=3x
+  });
+  if (raw.unknown?.length) {
+    console.error(`❌ 未知参数: ${raw.unknown.join(", ")}（--help 查看用法）`);
+    process.exit(1);
+  }
+  if (raw.threshold !== null) {
+    const n = parseInt(raw.threshold as string, 10);
+    if (!Number.isFinite(n) || n < 1) {
+      console.error(`[check-complexity] --threshold 需正整数，收到 ${raw.threshold}，用默认 15`);
+      raw.threshold = 15;
+    } else {
+      raw.threshold = n;
+    }
+  }
+  return {
+    json: raw.json as boolean,
+    strict: raw.strict as boolean,
+    changed: raw.changed as boolean,
+    scope: (typeof raw.scope === "string" ? raw.scope : null) ?? "frontend/src",
+    threshold: raw.threshold as number,
+    files: raw.files,
+  };
+}
 
 // ─── 核心规约器（纯函数，零依赖，契约测试直接消费）────────────
 // 事件类型：
@@ -249,14 +254,15 @@ function walkSource(dir: string): string[] {
 
 // ─── 主流程 ─────────────────────────────────────────────
 async function main() {
+  const args = resolveArgs();
   const yellow = args.threshold;
 
   // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，避免因 --files 为空 /
   // --changed 不可解析时白跑一次 ts-morph 装载。
-  const changedRes = resolveChangedScope(raw.files, args.changed);
-  if (changedRes.error) failClosed(changedRes.error);
+  const changedRes = resolveChangedScope(args.files, args.changed);
+  if (changedRes.error) failClosed(changedRes.error, args.json);
   const changedScope = changedRes.scope;
-  const scopeMode = typeof raw.files === "string" ? "files" : args.changed ? "changed" : "all";
+  const scopeMode = typeof args.files === "string" ? "files" : args.changed ? "changed" : "all";
 
   // 惰性加载 ts-morph（情报型：缺依赖不硬失败）。经 createRequire 从 frontend 解析——
   // scripts/ 是 ESM，无法直接 require；且 ts-morph 挂在 frontend/node_modules 依赖树上。
@@ -290,10 +296,10 @@ async function main() {
   const rootAbs = path.isAbsolute(args.scope) ? args.scope : path.join(ROOT, args.scope);
   // 初始化失败 = 用法错误：显式 exit 1（此前 return 会以 0 退出，与文件头「初始化失败 1」
   // 契约不符，且 scope 拼错时门禁 fail-open）。
-  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`);
+  if (!fs.existsSync(rootAbs)) failClosed(`--scope 目录不存在：${args.scope}`, args.json);
 
   const files = walkSource(rootAbs).map((f) => path.resolve(f));
-  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`);
+  if (files.length === 0) failClosed(`--scope 下无 .ts/.js 文件：${args.scope}`, args.json);
 
   // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
   // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。

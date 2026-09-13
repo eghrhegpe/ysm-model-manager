@@ -10,10 +10,13 @@
  *   ② 箭头只认 " → "（两侧空格）→ `「位置」→ 修复`（无空格）写法整体落入陷阱列、
  *      「正确做法」列退化为 "-"（golangci-lint 卡 6 条实证）。
  *
+ * 另锁 excessRiskLines：quick_risk_lines 超出 quick_intents 条数时被渲染静默丢弃，
+ * 该函数把「被丢弃的行」显性返回供 WARN——内容丢失不得无声（同 2026-08-31 配对不均纪律）。
+ *
  * 运行：node tests/test_gen_routes_quick_pitfall.ts（失败 exit 1；契约 runner 收集）。
  */
 import assert from "node:assert/strict";
-import { parsePitfall } from "../scripts/gen-routes-quick.ts";
+import { excessRiskLines, parsePitfall } from "../scripts/gen-routes-quick.ts";
 
 // ─── 1) 常规写法：「位置」描述 → 正确做法 ────────────────────
 {
@@ -71,4 +74,17 @@ import { parsePitfall } from "../scripts/gen-routes-quick.ts";
   assert.equal(p.fix, "-", "无箭头 → 正确做法列填 -");
 }
 
-console.log("✅ test_gen_routes_quick_pitfall.ts 全部通过（6 组列切分契约断言）");
+// ─── 7) excessRiskLines：风险行超配显性化（不得静默丢弃） ────
+{
+  assert.deepEqual(
+    excessRiskLines(["红线1", "红线2", "红线3"], ["意图1", "意图2"]),
+    ["红线3"],
+    "风险行超出意图条数 → 显性返回被丢弃行（供 WARN）",
+  );
+  assert.deepEqual(excessRiskLines(["红线1", "红线2"], ["意图1", "意图2"]), [], "风险行数与意图相等 → 无丢弃");
+  assert.deepEqual(excessRiskLines(["红线1"], ["意图1", "意图2", "意图3"]), [], "风险行少于意图 → 无丢弃（缺红线由渲染兜底填 -）");
+  assert.deepEqual(excessRiskLines([], ["意图1"]), [], "无风险行 → 无丢弃");
+  assert.deepEqual(excessRiskLines([], []), [], "双双为空 → 无丢弃");
+}
+
+console.log("✅ test_gen_routes_quick_pitfall.ts 全部通过（7 组契约断言）");

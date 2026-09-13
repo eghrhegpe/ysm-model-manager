@@ -898,7 +898,7 @@
 | 把「过滤后为空」当错误、把空 --files 静默当全库 | `增量裁剪边界` | 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」 |
 | 它走 git diff 故不含未跟踪新文件 | `--changed 的边界` | 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files |
 | 清单声明 scopedFiles:true 但脚本未接 _lib/changed-scope.ts | `scopedFiles 声明与实现` | 双向失真：未识别 --files 报未知参数（exit 1 误阻断），或静默忽略继续全扫（存量债淹没本次变更、接线无声失效）；一致性由 test_gate_config.ts 断言，勿只改清单 |
-| 该工具自行调用 `jscpd` 把 JSON 报告写进**固定路径** `frontend/report/jscpd-report.json`，读完立刻 `fs.rmSync` 清理——路径无 pid/无锁，同一工作区**并行会话同时跑门禁**时会互相删读，表现为 `[解析失败] jscpd 报告读取异常`（声明 debt，不阻断但污染输出：同一提交第一次跑红、第二次跑绿）。排查时应先看 FAIL tail 是否为此条，勿据此改动归因（2026-09-13 实证：同日 4 次门禁中 1 次瞬态红） | `check-deadcode-baseline 的瞬态 FAIL` | - |
+| ~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁 | `check-deadcode-baseline 的瞬态 FAIL` | - |
 | 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
 | 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
 | gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |

@@ -6,11 +6,12 @@
  *   - trapScore：陷阱分 = params + boolParams（bool 另 +1 加重 → 权重 2）。
  *   - trapTier：分级边界。
  *   - trapReasons：长参数 / 布尔陷阱触发理由与门槛。
+ *   - scanCapDecision：超大变更集降级边界（--max-files）。
  *
  * 运行：node tests/test_check_params.ts（失败 exit 1；契约 runner 收集）。
  */
 import assert from "node:assert/strict";
-import { trapScore, trapTier, trapReasons } from "../scripts/check-params.ts";
+import { scanCapDecision, trapScore, trapTier, trapReasons } from "../scripts/check-params.ts";
 
 // ─── 1) trapScore：bool 加权重 ──────────────────────────
 {
@@ -42,4 +43,17 @@ import { trapScore, trapTier, trapReasons } from "../scripts/check-params.ts";
   );
 }
 
-console.log("✅ test_check_params.ts 全部通过（4 组断言）");
+// ─── 4) scanCapDecision：超大变更集降级边界（--max-files） ──
+{
+  const over = scanCapDecision(201, 200);
+  assert.equal(over.skip, true, "201 > 200 降级跳过");
+  if (over.skip) {
+    assert.ok(over.reason.includes("201"), "原因须含实际文件数");
+    assert.ok(over.reason.includes("200"), "原因须含上限值");
+  }
+  assert.equal(scanCapDecision(200, 200).skip, false, "恰好等于上限不降级（> 而非 >=）");
+  assert.equal(scanCapDecision(55, 200).skip, false, "常规变更集不降级");
+  assert.equal(scanCapDecision(0, 200).skip, false, "空变更域（合法 PASS）不降级");
+}
+
+console.log("✅ test_check_params.ts 全部通过（5 组断言）");

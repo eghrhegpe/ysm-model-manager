@@ -1,8 +1,7 @@
 // ===== 体检报告解析（纯函数，跨层共享） =====
 // 数据源：Go 端 RepoHealthAudit（go/repoaudit，GUI/CLI 同源，前端不自算）。
 // 解析器放 utils 层供 views（诊断页）与 features（oldest 页）共用——分层规则
-// R4：features 不得 import views；原实现放 views 导致 oldest-models.ts 跨层
-// 导入回归，check-layering 拦截后归位。本模块零依赖更高层。
+// R4：features 不得 import views，本模块同时供两域消费，故必须驻留 utils；零依赖更高层。
 // 类型源：binding 生成（frontend/bindings/ysm-model-manager/go/repoaudit/models.ts），
 // 此处仅保留运行时结构校验，不再重复定义 interface（消灭手写镜像与绑定双源）。
 

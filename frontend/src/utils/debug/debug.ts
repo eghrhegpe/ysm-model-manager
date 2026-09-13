@@ -79,8 +79,7 @@ export function safeStr(v: unknown): string {
   try {
     if (v == null) return String(v);
     if (typeof v === "string") return v.length > 200 ? `${v.slice(0, 200)}…` : v;
-    // Error 分支也走 200 字符截断——原实现直接返回 v.message，
-    // 超长 message 会让环形缓冲条目突破上限约束
+    // Error 分支也走 200 字符截断——超长 message 会让环形缓冲条目突破上限约束
     if (v instanceof Error)
       return v.message.length > 200 ? `${v.message.slice(0, 200)}…` : v.message;
     if (v instanceof Set)

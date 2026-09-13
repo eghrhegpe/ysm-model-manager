@@ -35,8 +35,8 @@ export function sizeColor(b: number): string {
 
 /** 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D */
 export function fmtDate(ts: number): string {
-  // 负时间戳与 NaN/0 同属非法输入——原实现把 -1000 渲染成
-  // "1970/1/1"（静默错值），与「非法输入一律返回空串」不变量（formatBytes 同款）不符
+  // 负时间戳与 NaN/0 同属非法输入——一律返回空串
+  //（遵循「非法输入一律返回空串」不变量，formatBytes 同款）
   if (!Number.isFinite(ts) || ts <= 0) return "";
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return "";

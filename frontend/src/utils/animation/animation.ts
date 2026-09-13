@@ -271,16 +271,14 @@ function convertRotationKeyframes(kfs: Keyframe[]): Keyframe[] {
 /** 解析单个 channel（rotation/position/scale）的数据 */
 function parseChannel(channelData: unknown, parser: MolangParser): Keyframe[] {
   if (!channelData || typeof channelData !== "object") return [];
-  // 原实现 `Object.keys().map(Number)` 后拿数字下标回查
-  // `channelData[t]`——JS 数字下标会转回规范字符串，非规范时间键（"0.0"/"1.50"）
-  // 查不到对应 key 而整帧静默丢失；改为 entries 配对，时间值直接携带原始 raw。
-  // 重复数值时间（"0" 与 "0.0"）去重保留排序后首个，与原「仅规范键生效」契约一致。
+  // 非规范时间键（"0.0"/"1.50"）经数字下标查回会转规范串而整帧静默丢失——
+  // 走 entries 配对，时间值直接携带原始 raw；重复数值时间去重保留排序后首个。
   const seen = new Set<number>();
   return (
     Object.entries(channelData as Record<string, unknown>)
       .map(([k, raw]) => [Number(k), raw] as const)
-      // NaN/Infinity 守卫：原仅 !isNaN——Infinity 时间键通过后
-      // 排序/插值区间异常（dt=Infinity → frac=0 恒等）；统一 Number.isFinite
+      // NaN/Infinity 守卫：Infinity 时间键会使排序/插值区间异常
+      //（dt=Infinity → frac=0 恒等）；统一 Number.isFinite
       .filter(([t]) => Number.isFinite(t))
       .sort(([a], [b]) => a - b)
       .filter(([t]) => {

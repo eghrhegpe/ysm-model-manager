@@ -40,10 +40,9 @@ export function openDB(): Promise<IDBDatabase> {
       // （onblocked），此处先关后留新连接接管，防多标签页互锁
       db.onversionchange = () => {
         db.close();
-        // P2 修复（子代理审计）：关闭后必须置空单例——否则 dbPromise 仍持有已关闭
-        // 连接，后续 openDB() 返回同一 cached promise，所有 transaction 抛
-        // InvalidStateError 且不触发内存降级（db 对象仍 truthy），模型库永久失效
-        // 直到刷新。置空后下一个 getIdb 重新 openDB() 拿到新连接
+        // 关闭后必须置空单例——否则 dbPromise 仍持有已关闭连接，后续 openDB() 返回
+        // 同一 cached promise，所有 transaction 抛 InvalidStateError 且不触发内存降级
+        //（db 对象仍 truthy），模型库永久失效直到刷新。置空后下一个 getIdb 重新 openDB()
         if (dbPromise) dbPromise = null;
       };
       resolve(db);
@@ -71,8 +70,8 @@ const memoryTotalBytes = new Map<string, number>();
 let forcedMemory = false;
 const backendIsIdb = (): boolean => !forcedMemory && typeof indexedDB !== "undefined";
 
-// P2 修复（审核）：内存降级模式无上限——网页版隐私模式下文件内容（模型可达数十 MB~GB）
-// 全部驻留内存会 OOM。加条目数与字节估算双上限，超限按 FIFO 驱逐（近似 LRU：先入先出）。
+// 内存降级模式无上限——网页版隐私模式下文件内容（模型可达数十 MB~GB）全部驻留
+// 内存会 OOM；加条目数与字节估算双上限，超限按 FIFO 驱逐（近似 LRU：先入先出）。
 const MEMORY_MAX_KEYS = 200;
 const MEMORY_MAX_BYTES = 64 << 20; // 64MB 粗粒度字节估算上限
 
@@ -144,8 +143,7 @@ async function getIdb(): Promise<IDBDatabase | null> {
   try {
     return await openDB();
   } catch (e) {
-    // P3 修复（子代理审计）：降级内存模式全程零日志——用户不知道「导入的模型不持久」；
-    // 只 warn 一次避免刷屏
+    // 降级内存模式全程零日志——用户不知道「导入的模型不持久」；只 warn 一次避免刷屏
     if (!_warnedNoIdb) {
       _warnedNoIdb = true;
       console.warn("[idb] IndexedDB open 失败，降级内存模式（不持久）:", e);
@@ -160,8 +158,8 @@ let _warnedNoIdb = false;
 
 /** 仅测试用：重置单例连接 + 降级标志（避免用例间共享状态） */
 export function __resetDBForTest(): void {
-  // P3 修复（子代理审计）：原仅重置 dbPromise/forcedMemory——已打开的 IDB 连接未
-  // close（测试环境泄漏）、memoryStore 不清理（真实后端测试间状态串扰）
+  // 仅重置 dbPromise/forcedMemory 不够——已打开的 IDB 连接未 close（测试环境泄漏）、
+  // memoryStore 不清理（真实后端测试间状态串扰）
   if (dbPromise) {
     swallowError(
       dbPromise.then((db) => {
@@ -196,7 +194,7 @@ export async function idbGet<T>(store: Store, key: string): Promise<T | undefine
 export async function idbSet(store: Store, key: string, value: unknown): Promise<void> {
   const db = await getIdb();
   if (!db) {
-    // P2 修复（审核）：走带上限驱逐的 memorySet（原 m.set 无界增长，隐私模式 OOM）
+    // 走带上限驱逐的 memorySet（无界增长会致隐私模式 OOM）
     memorySet(store, key, value);
     return;
   }

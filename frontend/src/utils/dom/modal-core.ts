@@ -84,10 +84,9 @@ export function closeDlg<T>(
 }
 
 /**
- * 活动弹窗单例槽位（收敛体，2026-09-04 全局 Map 试点重构）：
- * 原 3 个模块级 let（_activeOverlay/_closeActive/_activeClosable）+ 散落各函数的
- * 读写收敛为本对象——状态与操作同域，reset 供测试清理，未来演进（弹窗栈）有落点。
- * 导出函数签名不变，外部（modalXxx/android back/测试）零改动。
+ * 活动弹窗单例槽位（收敛体）：
+ * 状态与操作同域（overlay/closeActive/closable 与读写操作共址），reset 供测试清理，
+ * 未来演进（弹窗栈）有落点；导出函数签名不变，外部（modalXxx/android back/测试）零改动。
  */
 interface ModalSlotState {
   overlay: HTMLElement | null;

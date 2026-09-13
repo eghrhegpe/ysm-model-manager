@@ -20,7 +20,7 @@ import {
   type EnvPreset,
   type EnvPresetId,
 } from "./environment-capability.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
 import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -216,11 +216,11 @@ describe("EnvironmentCapability — 预设切换", () => {
     expect(cap.getPresetId()).toBe("forest");
   });
 
-  it("applyModelPreset 未知模型类型回退 default（sky）", () => {
+  it("applyModelPreset 未知模型类型经 toModelType 收窄回退 default（sky）", () => {
     const cap = newCap();
-    // 绕过编译期 ModelType 收窄：模拟运行时 adapter.id 传入非预期值
-    (cap as unknown as { applyModelPreset: (t: string) => void }).applyModelPreset("unknown_type");
-    // unknown → MODEL_DEFAULTS.default → envPreset: "sky"
+    // 运行时脏 adapter.id 的合法入口是 toModelType（shared-infra 已改用），
+    // 未知值收窄为 "default" → envPreset: "sky"
+    cap.applyModelPreset(toModelType("unknown_type"));
     expect(cap.getPresetId()).toBe(MODEL_DEFAULTS.default.envPreset);
   });
 

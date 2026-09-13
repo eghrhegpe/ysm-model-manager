@@ -42,8 +42,7 @@ export function pickModelDefaultFields<K extends keyof EnvState>(
   modelType: ModelType,
   keys: readonly K[],
 ): Pick<EnvState, K> {
-  // 运行时兜底：adapter.id 理论上恒为 ModelType，但历史测试/外部注入可能传未知值 → 回退 default
-  const preset = MODEL_DEFAULTS[modelType] ?? MODEL_DEFAULTS.default;
+  const preset = MODEL_DEFAULTS[modelType];
   const out = {} as Pick<EnvState, K>;
   const src = preset as Record<string, unknown>;
   for (const key of keys) {
@@ -54,30 +53,42 @@ export function pickModelDefaultFields<K extends keyof EnvState>(
   return out;
 }
 
+/**
+ * 运行时校验/收窄任意字符串到 ModelType（localStorage 恢复、adapter.id 等运行时
+ * 字符串入口的唯一合法通道）；未知值回退 "default"，脏数据不致静默丢预设。
+ */
+export function toModelType(v: string): ModelType {
+  return (MODEL_DEFAULTS as Record<string, unknown>)[v] !== undefined
+    ? (v as ModelType)
+    : "default";
+}
+
+const DEFAULT_MODEL_STATE: Partial<EnvState> = {
+  // --- sky (来自 MODEL_SKY_PRESETS.default) ---
+  skyTurbidity: 7.5,
+  skyRayleigh: 2.5,
+  skyMieCoefficient: 0.005,
+  skyMieDirectionalG: 0.8,
+  skyExposure: 0.5,
+  skySunIntensityScale: 0.75,
+  skySunDiscScale: 0.5,
+  skyForceEnv: true,
+  // --- fog (来自 FOG_PRESETS.default = 空 → 不写任何 fog 键，不打扰用户已开雾) ---
+  // code_review f0b1449f7 #2：default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
+  // --- environment ---
+  envPreset: "sky",
+  envIntensity: 1.0,
+  // --- light (来自 LIGHT_PRESETS.default) ---
+  lightSpotEnabled: false,
+  lightVolumetricEnabled: false,
+  // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
+  shadowType: "hard",
+  // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
+  // --- postprocessing (来自 POSTPROC_PRESETS.default = 空，总闸外) ---
+};
+
 export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
-  default: {
-    // --- sky (来自 MODEL_SKY_PRESETS.default) ---
-    skyTurbidity: 7.5,
-    skyRayleigh: 2.5,
-    skyMieCoefficient: 0.005,
-    skyMieDirectionalG: 0.8,
-    skyExposure: 0.5,
-    skySunIntensityScale: 0.75,
-    skySunDiscScale: 0.5,
-    skyForceEnv: true,
-    // --- fog (来自 FOG_PRESETS.default = 空 → 不写任何 fog 键，不打扰用户已开雾) ---
-    // code_review f0b1449f7 #2：default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
-    // --- environment ---
-    envPreset: "sky",
-    envIntensity: 1.0,
-    // --- light (来自 LIGHT_PRESETS.default) ---
-    lightSpotEnabled: false,
-    lightVolumetricEnabled: false,
-    // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
-    shadowType: "hard",
-    // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
-    // --- postprocessing (来自 POSTPROC_PRESETS.default = 空，总闸外) ---
-  },
+  default: DEFAULT_MODEL_STATE,
   ysm: {
     // sky (MODEL_SKY_PRESETS.ysm)
     skyTurbidity: 8.5,
@@ -270,41 +281,25 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // postprocessing (POSTPROC_PRESETS.litematic = {enabled: false})
   },
   resourcepack: {
-    // sky (MODEL_SKY_PRESETS 无 resourcepack → 同 default)
-    skyTurbidity: 7.5,
-    skyRayleigh: 2.5,
-    skyMieCoefficient: 0.005,
-    skyMieDirectionalG: 0.8,
-    skyExposure: 0.5,
-    skySunIntensityScale: 0.75,
-    skySunDiscScale: 0.5,
-    skyForceEnv: true,
-    // fog (FOG_PRESETS.resourcepack：与 ysm 同调 20~600)
+    // sky/shadow/reflector/environment 与 default 逐字段相同 → 直接 spread，
+    // 仅覆盖差异：fog（FOG_PRESETS.resourcepack：与 ysm 同调 20~600）
+    // 与 light（LIGHT_PRESETS.resourcepack 有主/补/轮廓三灯强度）
+    ...DEFAULT_MODEL_STATE,
     fogEnabled: false,
     fogMode: "linear",
     fogColor: 0xb8d0ec,
     fogNear: 20,
     fogFar: 600,
     fogDensity: 0.006,
-    // environment (ENV_PRESET_BY_MODEL.resourcepack = sky)
-    envPreset: "sky",
-    envIntensity: 1.0,
-    // light (LIGHT_PRESETS.resourcepack)
     lightKeyIntensity: 1.3,
     lightFillIntensity: 0.4,
     lightRimIntensity: 0.35,
-    lightSpotEnabled: false,
     lightSpotIntensity: 1.8,
     lightSpotAngle: 30,
-    lightVolumetricEnabled: false,
     lightVolumetricOpacity: 0.4,
-    // shadow (SHADOW_PRESET_BY_MODEL.resourcepack = "default" → hard)
-    shadowType: "hard",
-    // reflector (REFLECTOR_PRESETS.resourcepack = 同 ysm)
     reflectorOpacity: 0.25,
     reflectorSize: 200,
     reflectorResolution: 512,
     reflectorColor: 0xf0f4fa,
-    // postprocessing (POSTPROC_PRESETS.resourcepack = {enabled: false})
   },
 };

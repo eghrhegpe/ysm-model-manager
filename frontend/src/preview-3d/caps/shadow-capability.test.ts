@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { ShadowCapability } from "./shadow-capability.ts";
+import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
 
@@ -382,10 +383,11 @@ describe("ShadowCapability — applyModelPreset", () => {
     expect(cap.isEnabled()).toBe(true);
   });
 
-  it("未知 adapterId 落回 default 预设", () => {
+  it("未知 adapterId 经 toModelType 收窄落回 default 预设", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    // 绕过编译期 ModelType 收窄：模拟运行时 adapter.id 传入非预期值
-    (cap as unknown as { applyModelPreset: (t: string) => void }).applyModelPreset("unknown-type");
+    // 运行时脏 adapter.id 的合法入口是 toModelType（shared-infra 已改用），
+    // 未知值收窄为 "default" → hard shadow
+    cap.applyModelPreset(toModelType("unknown-type"));
     expect(cap.isSoft()).toBe(false);
     expect(cap.isEnabled()).toBe(true);
   });

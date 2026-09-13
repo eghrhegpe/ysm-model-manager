@@ -25,7 +25,11 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import {
+  type ModelType,
+  pickModelDefaultFields,
+  toModelType,
+} from "@/preview-3d/state/model-defaults.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes } from "./light-controls.ts";
 import {
@@ -37,6 +41,7 @@ import {
   type VolumetricParams,
 } from "./light-presets.ts";
 import {
+  getTypedCap,
   persistState,
   restoreFields,
   restoreState,
@@ -200,9 +205,9 @@ export class LightCapability implements SceneCapability {
   private volumetricEngine: "cone" | "postprocess" = "cone";
 
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
-  private currentPreset: string = "default";
+  private currentPreset: ModelType = "default";
   /** 手动 preset 记忆（light-preset select 显式选择；非空时自动套模型预设不覆盖——[doc:adr-126-p5] 手动优先） */
-  private manualPreset: string | null = null;
+  private manualPreset: ModelType | null = null;
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
@@ -401,19 +406,18 @@ export class LightCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
-  applyModelPreset(modelType: string, opts?: { manual?: boolean }): void {
+  applyModelPreset(modelType: ModelType, opts?: { manual?: boolean }): void {
     if (opts?.manual) {
       this.manualPreset = modelType;
     } else if (this.manualPreset) {
       return; // [doc:adr-126-p5] 自动套模型预设被手动选择压制
     }
-    const preset =
-      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
     this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
-    // ADR-196：统一数据源 MODEL_DEFAULTS；读所有 light 相关键写入 envState。
-    const partial: Partial<EnvState> = {};
-    const src = preset as Record<string, unknown>;
-    for (const key of [
+    // ADR-196：统一数据源 MODEL_DEFAULTS，表驱动挑选 light 相关键写入 envState
+    //（与其余 5 cap 同款 pickModelDefaultFields——锐评 §一「两套写法并存」断层收口）。
+    // ambient 排除（测试契约「ambient 不在合并范围，保留」）：键表刻意不含
+    // lightAmbientColor/Intensity，切模型不静默重置用户 ambient 微调。
+    const picked = pickModelDefaultFields(modelType, [
       "lightKeyEnabled",
       "lightKeyColor",
       "lightKeyIntensity",
@@ -429,9 +433,6 @@ export class LightCapability implements SceneCapability {
       "lightRimIntensity",
       "lightRimAzimuth",
       "lightRimElevation",
-      // code_review 80e6379dd #3（P2）：ambient 排除——旧 LIGHT_PRESETS 合并范围
-      // 刻意不含 ambient（测试契约「ambient 不在合并范围，保留」，用户可调滑杆），
-      // 新 30 键表曾含 lightAmbientColor/Intensity → 切模型静默重置用户 ambient 微调
       "lightSpotEnabled",
       "lightSpotColor",
       "lightSpotIntensity",
@@ -445,10 +446,8 @@ export class LightCapability implements SceneCapability {
       "lightVolumetricEdgeFade",
       "lightVolumetricBaseStrength",
       "lightVolumetricTipStrength",
-    ] as const) {
-      if (src[key] !== undefined) (partial as Record<string, unknown>)[key] = src[key];
-    }
-    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "manual" });
+    ]);
+    if (Object.keys(picked).length > 0) setEnvState(picked, { source: "manual" });
   }
 
   /**
@@ -600,10 +599,12 @@ export class LightCapability implements SceneCapability {
     // ① 预设先套用（内含 rebuildCone / 锥组挂载判定）。必须在灯开关恢复之前：
     //    预设以 envState 为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
-      this.manualPreset = state.manualPreset; // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）
-      this.applyModelPreset(state.manualPreset, { manual: true });
+      // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）；存储串经 toModelType
+      // 校验（脏数据回退 default），不裸 cast
+      this.manualPreset = toModelType(state.manualPreset);
+      this.applyModelPreset(this.manualPreset, { manual: true });
     } else if (typeof state.currentPreset === "string") {
-      this.applyModelPreset(state.currentPreset);
+      this.applyModelPreset(toModelType(state.currentPreset));
     }
     // ② 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）。
     if (typeof state.keyEnabled === "boolean") {
@@ -693,10 +694,7 @@ export class LightCapability implements SceneCapability {
    *  sky 环境开关经构造注入的查询器读取（全局版 isSkyEnvironmentOn 在组合根 registry）；
    *  让位系数/公式走 attenuateAmbientForSky 单源 */
   refreshAmbientFromSky(state: EnvState = envState): void {
-    const skyEnvOn =
-      (
-        this.caps?.getById("sky") as { isEnvironmentEnabled?: () => boolean } | null | undefined
-      )?.isEnvironmentEnabled?.() ?? false;
+    const skyEnvOn = getTypedCap(this.caps, "sky")?.isEnvironmentEnabled() ?? false;
     this.ambientLight.color.setHex(state.lightAmbientColor);
     this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, skyEnvOn);
   }

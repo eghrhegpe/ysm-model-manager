@@ -8,8 +8,7 @@ import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import { type ModelType, pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   GROUND_LAYER_OFFSETS,
@@ -174,23 +173,17 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
-  applyModelPreset(modelType: string): void {
+  applyModelPreset(modelType: ModelType): void {
     if (this.isStateLoaded) return;
-    const preset =
-      MODEL_DEFAULTS[modelType as keyof typeof MODEL_DEFAULTS] ?? MODEL_DEFAULTS.default;
-    const partial: Partial<EnvState> = {};
-    for (const key of [
+    const picked = pickModelDefaultFields(modelType, [
       "reflectorEnabled",
       "reflectorOpacity",
       "reflectorSize",
       "reflectorResolution",
       "reflectorColor",
       "reflectorClipBias",
-    ] as const) {
-      if ((preset as Record<string, unknown>)[key] !== undefined)
-        (partial as Record<string, unknown>)[key] = (preset as Record<string, unknown>)[key];
-    }
-    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
+    ]);
+    if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
 
   setEnabledReflector(v: boolean): void {

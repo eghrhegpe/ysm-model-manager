@@ -11,6 +11,9 @@ interface Registration {
   cb: EnvCallback;
   /** 非空时只派发 group 匹配的键（前置过滤，cap 回调不再需要自行过滤） */
   group?: string;
+  /** group 键集，注册时算一次缓存（getPresetKeys 是静态查表；昼夜循环每帧派发，
+   *  若每次 dispatch 重建 Set 会在热路径重复分配——锐评 §四） */
+  groupKeys?: Set<string>;
 }
 
 // 回调注册表（cap 在构造时注册，析构时取消）
@@ -25,7 +28,7 @@ const _callbacks = new Map<unknown, Registration>();
  * 返回取消订阅函数。
  */
 export function registerEnvCallback(cap: unknown, cb: EnvCallback, group?: string): () => void {
-  _callbacks.set(cap, group ? { cb, group } : { cb });
+  _callbacks.set(cap, group ? { cb, group, groupKeys: new Set(getPresetKeys(group)) } : { cb });
   return () => {
     _callbacks.delete(cap);
   };
@@ -37,10 +40,9 @@ export function registerEnvCallback(cap: unknown, cb: EnvCallback, group?: strin
  * 带 group 注册的 cap 只收到 group 匹配的键（前置过滤）。
  */
 export function dispatchEnvChange(changed: Set<string>, state: EnvState): void {
-  for (const { cb, group } of _callbacks.values()) {
+  for (const { cb, groupKeys } of _callbacks.values()) {
     try {
-      if (group) {
-        const groupKeys = new Set(getPresetKeys(group));
+      if (groupKeys) {
         const filtered = new Set<string>();
         for (const k of changed) {
           if (groupKeys.has(k)) filtered.add(k);

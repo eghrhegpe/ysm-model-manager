@@ -7,6 +7,7 @@ import {
   DEFAULT_LIGHT_PARAMS,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
+import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { resetEnvState } from "@/preview-3d/state/env-state.ts";
 
@@ -245,9 +246,9 @@ describe("LightCapability — applyModelPreset", () => {
     expect(cap.getParams().key.intensity).toBe(0.85);
   });
 
-  it("未知类型回退 default 预设", () => {
+  it("未知类型经 toModelType 收窄回退 default 预设（存储脏数据兜底）", () => {
     const cap = newCap();
-    cap.applyModelPreset("unknown-type");
+    cap.applyModelPreset(toModelType("unknown-type"));
     expect(cap.getParams().spotlight.enabled).toBe(false);
   });
 

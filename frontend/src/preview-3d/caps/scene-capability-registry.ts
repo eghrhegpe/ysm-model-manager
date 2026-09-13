@@ -18,27 +18,11 @@ import { ShadowCapability } from "./shadow-capability.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { WaterCapability } from "./water-capability.ts";
 
-/**
- * id ↔ 能力类型绑定表（2026-09 锐评 P2-2）：id 字符串与具体能力类型在此声明一次，
- * getById 调用点 `getById("sky")` 自动收窄为 SkyCapability，16 处手写泛型配对全部退役；
- * add(id, factory) 在注册处绑定 K ↔ CapabilityMap[K]，拼错 id / 漏挂 / 返回错类型编译期报错，
- * 运行时再由 add 的 id 校验兜底（反射/动态构造等静态盲区的最后防线）。
- */
-export interface CapabilityMap {
-  sky: import("./sky-capability.ts").SkyCapability;
-  ground: import("./ground-capability.ts").GroundCapability;
-  water: import("./water-capability.ts").WaterCapability;
-  environment: import("./environment-capability.ts").EnvironmentCapability;
-  fog: import("./fog-capability.ts").FogCapability;
-  shadow: import("./shadow-capability.ts").ShadowCapability;
-  reflector: import("./reflector-capability.ts").ReflectorCapability;
-  postprocessing: import("./postprocessing-capability.ts").PostprocessingCapability;
-  light: import("./light-capability.ts").LightCapability;
-  renderMode: import("./render-mode-capability.ts").RenderModeCapability;
-}
+// id ↔ 能力类型绑定表 CapabilityMap/CapabilityId 本体在 scene-capability.ts
+//（cap 间查询 getTypedCap 也需它；registry re-export 保既有公共面）
+export type { CapabilityId, CapabilityMap } from "./scene-capability.ts";
 
-/** 能力 id 字面量联合（CapabilityMap 的键） */
-export type CapabilityId = keyof CapabilityMap;
+import type { CapabilityId, CapabilityMap } from "./scene-capability.ts";
 
 /** 能力工厂：接收 scene/renderer/camera，返回能力实例。
  *  ctx.caps 是 cap 间协调查询器（getById 本批实例）——cap 间联动经注入，不 import

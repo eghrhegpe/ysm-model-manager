@@ -29,6 +29,43 @@ export interface SceneCapabilityLookup {
   getById(id: string): SceneCapability | undefined;
 }
 
+/**
+ * id ↔ 能力类型绑定表（2026-09 锐评 P2-2）：id 字符串与具体能力类型在此声明一次，
+ * registry.getById("sky") 调用点自动收窄；add(id, factory) 在注册处绑定 K ↔
+ * CapabilityMap[K]，拼错 id / 漏挂 / 返回错类型编译期报错，运行时再由 add 的 id
+ * 校验兜底（反射/动态构造等静态盲区的最后防线）。
+ * （本体在此而非 registry：getTypedCap 与 registry 共用，且 type-only 依赖具体
+ * cap 类型，放共享叶避免 cap→registry 运行时环）
+ */
+export interface CapabilityMap {
+  sky: import("./sky-capability.ts").SkyCapability;
+  ground: import("./ground-capability.ts").GroundCapability;
+  water: import("./water-capability.ts").WaterCapability;
+  environment: import("./environment-capability.ts").EnvironmentCapability;
+  fog: import("./fog-capability.ts").FogCapability;
+  shadow: import("./shadow-capability.ts").ShadowCapability;
+  reflector: import("./reflector-capability.ts").ReflectorCapability;
+  postprocessing: import("./postprocessing-capability.ts").PostprocessingCapability;
+  light: import("./light-capability.ts").LightCapability;
+  renderMode: import("./render-mode-capability.ts").RenderModeCapability;
+}
+
+/** 能力 id 字面量联合（CapabilityMap 的键） */
+export type CapabilityId = keyof CapabilityMap;
+
+/**
+ * 宽查询器（SceneCapabilityLookup.getById 返回宽 SceneCapability）按 id 收窄为
+ * 具体能力类型的唯一收口（锐评 §二：替代各 cap 散落的结构化 cast
+ * `as { isEnvironmentEnabled?: () => boolean }`）。运行时正确性由 registry.add
+ * 的 id 校验兜底；cast 集中在此一处并注释依据。
+ */
+export function getTypedCap<K extends CapabilityId>(
+  lookup: SceneCapabilityLookup | undefined,
+  id: K,
+): CapabilityMap[K] | undefined {
+  return lookup?.getById(id) as CapabilityMap[K] | undefined;
+}
+
 export interface SceneCapability {
   /** 唯一标识（如 "sky" / "ground" / "light" / "fog"） */
   readonly id: string;

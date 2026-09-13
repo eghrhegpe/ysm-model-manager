@@ -4,6 +4,7 @@
 // 仅保留 buildLightNodes 直产 PreviewMenuNode[]（cap.getMenuNodes 用）。
 
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { LightCapability } from "./light-capability.ts";
 
@@ -115,7 +116,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       control: {
         options: LIGHT_PRESET_OPTIONS,
         get: () => cap.getCurrentPreset(),
-        set: (v) => cap.applyModelPreset(v as string, { manual: true }),
+        set: (v) => cap.applyModelPreset(toModelType(v as string), { manual: true }),
       },
     },
   ];

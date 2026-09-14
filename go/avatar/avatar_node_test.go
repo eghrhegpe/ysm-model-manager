@@ -441,6 +441,72 @@ func TestCacheAvatarsFromModel_YSM(t *testing.T) {
 	}
 }
 
+// TestCacheAvatarsFromModel_YSM_SkipDecodeWhenMarked 回归：全缓存 .ysm 模型
+// 二次调用不得重复 WASM 解码（探针2：已全缓存时第二次调用仍触发 1 次 Node+WASM
+// 解码）。修复：模型级 size+mtime 标记短路——单遍处理完落 .done 标记，下次签名命中
+// 返回，解码子进程计数不再增长。
+func TestCacheAvatarsFromModel_YSM_SkipDecodeWhenMarked(t *testing.T) {
+	requireNode(t)
+
+	// 注意：不能用 withTempCache（每次 CacheDir() 新建目录，短路跨调用目录不一致），
+	// 这里固定一个缓存目录，两次调用共用才能验证短路。
+	old := CacheDir
+	cacheDir := t.TempDir()
+	CacheDir = func() string { return cacheDir }
+	defer func() { CacheDir = old }()
+
+	calls := 0
+	glue := fakeGlueModule([][2]string{
+		{"/output/ysm.json", `{"metadata":{"authors":[{"name":"Alice","avatar":"avatar/a.png"}]}}`},
+		{"/output/avatar/a.png", "PNGDATA"},
+	}, "function(){}")
+	oldNode, oldGlue, oldWasm := getEnv()
+	SetNodeJS("node", func() string { calls++; return glue }, func() []byte { return []byte{1} })
+	defer func() { SetNodeJS(oldNode, oldGlue, oldWasm) }()
+
+	p := writeYSM(t, "fake")
+	CacheAvatarsFromModel(p)
+	first := calls
+	CacheAvatarsFromModel(p)
+	second := calls - first
+	t.Logf("首次解码=%d 次，二次调用解码=%d 次", first, second)
+	if second != 0 {
+		t.Errorf("已全缓存时仍触发 %d 次解码（应可短路）", second)
+	}
+}
+
+// TestCacheAvatarsFromModel_YSM_InvalidateWhenModelChanges 回归：模型文件变更
+// （size/mtime 变）后不得短路——标记签名只对该文件版本有效，换文件须重解码重缓存。
+func TestCacheAvatarsFromModel_YSM_InvalidateWhenModelChanges(t *testing.T) {
+	requireNode(t)
+
+	old := CacheDir
+	cacheDir := t.TempDir()
+	CacheDir = func() string { return cacheDir }
+	defer func() { CacheDir = old }()
+
+	calls := 0
+	glue := fakeGlueModule([][2]string{
+		{"/output/ysm.json", `{"metadata":{"authors":[{"name":"Alice","avatar":"avatar/a.png"}]}}`},
+		{"/output/avatar/a.png", "PNGDATA"},
+	}, "function(){}")
+	oldNode, oldGlue, oldWasm := getEnv()
+	SetNodeJS("node", func() string { calls++; return glue }, func() []byte { return []byte{1} })
+	defer func() { SetNodeJS(oldNode, oldGlue, oldWasm) }()
+
+	p := writeYSM(t, "fake")
+	CacheAvatarsFromModel(p) // 一次处理，落标记 + Alice.png
+	// 覆盖模型文件（size 变化 → 签名变）后再次调用：须重新解码
+	if err := os.WriteFile(p, []byte("different-fake-content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	first := calls
+	CacheAvatarsFromModel(p)
+	if calls-first == 0 {
+		t.Error("模型文件变更后仍短路，未重新解码（标记失效逻辑缺失）")
+	}
+}
+
 // TestExtractAvatarURI_FromYSM_FallbackJPEG 回归：降级路径 .jpeg 扩展名兼容
 // （原漏 .jpeg 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过；
 // avatarCandidates 含 .jpeg，但降级扫描的 HasSuffix 只认 .png/.jpg——口径对齐）。

@@ -72,6 +72,49 @@ func avatarCached(cacheDir, safe string) bool {
 	return err == nil
 }
 
+// modelDoneMarker 记录某模型已整批处理过头像的签名，避免全缓存后重复解码/解压。
+// .ysm 是加密容器，作者名单只能经 WASM 解码拿到——无法在解码前判断「是否已全缓存」，
+// 故用「模型级 + 文件签名」做已完成标记：二次调用签名命中即短路，不再 spawn 解码子进程
+// （探针暴露：全缓存 .ysm 仍每次调用触发 1 次 Node+WASM 解码）。
+// 签名 = size+mtime（轻量，不读内容哈希，覆盖文件被替换/改名的常见失效率），
+// 模型未变即命中 → 短路；模型变 → 重解重写标记。标记与作者 png 同目录、后缀 .done，
+// PurgeAvatarCache 一并清空（缓存失效时同步作废，不残留陈旧标记）。
+func modelDoneMarker(cacheDir, modelPath string) string {
+	return filepath.Join(cacheDir, SafeName(filepath.Base(modelPath))+".done")
+}
+
+// modelProcessedYet 返回该模型是否已按当前签名处理过头像（短路判据）。
+func modelProcessedYet(cacheDir, modelPath string) (bool, string) {
+	sig := modelSignature(modelPath)
+	if sig == "" {
+		return false, "" // Stat 失败（文件不可读/缺失）不短路，走失败降级
+	}
+	b, err := os.ReadFile(modelDoneMarker(cacheDir, modelPath))
+	if err != nil {
+		return false, sig // 标记缺失：首次处理
+	}
+	return strings.TrimSpace(string(b)) == sig, sig
+}
+
+// markModelDone 记录模型本次处理签名（写入失败仅 log，不阻断——下次会重解，行为等价旧版）。
+func markModelDone(cacheDir, modelPath, sig string) {
+	if sig == "" {
+		return
+	}
+	if err := fsutil.WriteFileAtomic(modelDoneMarker(cacheDir, modelPath), []byte(sig)); err != nil {
+		log.Printf("[avatar] 写入模型头像处理标记失败 %s: %v", modelPath, err)
+	}
+}
+
+// modelSignature 计算模型 size+mtime 轻量签名；Stat 失败返回空串。
+func modelSignature(modelPath string) string {
+	fi, err := os.Stat(modelPath)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%d:%d", fi.Size(), fi.ModTime().UnixNano())
+}
+
 // readLimitedModel 受限读取模型文件（.ysm/.zip/.json 可达数百 MB——头像/作者
 // 提取只需扫描内容，全量整读内存膨胀；50MB 上限对齐 geometry maxExtractSize 口径，
 // 超限返回 error 由调用方按读取失败处理）。

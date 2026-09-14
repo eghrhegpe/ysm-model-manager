@@ -44,6 +44,7 @@ status: active
 ## 核心职责
 
 - `DecodeYSMData(ysmData []byte) []ysmDecodedFile`：三件套 `nodeJSPath / getGlueCode / getWasmBinary` **任一为空即返回 nil**（测试环境三件套为空 → 静默降级空列表，不 panic）；齐备时写 patched glue JS（`YSMParser_patched.js`，补 `updateMemoryViews` 后 `HEAPU8` 透传）+ base64 传参 + Node 脚本 `require("YSMParser")`（`wasmBinary + noInitialRun`）子进程解码 .ysm。返回 `ysmDecodedFile{Path string; Data []byte}`（Path 已剥 `/output/` 前缀，Data 为原始字节——2026-09 base64 直通重构后零中间膨胀）。200MB 输入护栏 + 60s 超时 + 200MB 输出护栏。
+- **全缓存短路（2026-09）**：`.ysm` 是加密容器，作者名单只能经 WASM 解码拿到——无法在解码前判断「是否已全缓存」，`cacheYSMavatars` 用**模型级 size+mtime 签名标记**（`<cacheDir>/<SafeName(base)>.done`）短路：单遍处理完落标记，二次调用签名命中直接返回、不再 spawn 解码子进程；模型文件变更签名变 → 重解重写。标记与作者 png 同目录、`.done` 后缀，`PurgeAvatarCache` 一并清空。注意 `withTempCache` 每次 `CacheDir()` 新建 tempdir、跨调用目录不一致，测短路须固定缓存目录。
 - `ExtractAvatarURI(modelPath, safeName)`：按扩展名分发——`.ysm`→`extractAvatarFromYSM`、`.zip|.7z`→`extractAvatarFromArchive`、`.json`→`extractAvatarFromJSON`、未知扩展名返回 `""`。
 
 ## 对外 API / 入口

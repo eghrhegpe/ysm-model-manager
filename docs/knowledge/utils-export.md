@@ -12,11 +12,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AngleShot
-    - cacheGet
-    - cacheSet
-    - cacheSetEvictHandler
-    - CacheValue
-    - collectBlobUrls
     - loadTextures
     - releaseTextureUrls
     - renderMultiAngle

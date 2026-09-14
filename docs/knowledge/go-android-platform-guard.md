@@ -140,6 +140,8 @@ ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的�
 - **build-tag 优先**：平台差异大的逻辑用 build-tag 双文件（编译期保证只含正确实现）；单点方法用 `runtime.GOOS` 分支即可
 - **SAF 不复活**：Android 文件访问走 MANAGE_EXTERNAL_STORAGE + `os.*` 直读，禁止引入 content:// URI
 - **守卫信号即事实源**：新增桌面专属拒绝项时，Go 侧写的 `runtime.GOOS == "android"` / `case "android":` 就是机器可读的登记信号——写守卫即被 `check-android-unavailable.ts` 的 T2 自动捕获，无需另找人同步前端名单
+- **路径守卫根清单唯一来源 = `App.allAllowedRoots()`（2026-09 收敛）**：读写/扫描/移动/启禁四类守卫共用它，禁止各自枚举根。原实现两套手工清单互不覆盖——读写侧 `allScanRoots(cfg)` 只看配置字段，启禁侧 `toggleAllowedRoots` 额外含 `GetRepoRoot("ysm")`。桌面平台二者恰好等价（6 个废弃专属根经 `migrateLegacyConfigFields` 恒空、`FilesRoot` 覆盖 ysm 子目录），但 **Android 未配 `FilesRoot`**（查看器模式的初始状态，靠 `defaultRepoRoot()` 的 `/storage/emulated/0/YSM-Model-Manager` 当仓库）时，该派生根只出现在启禁清单 → **同一路径启禁放行（可改名/破坏性写）而读写拒绝**。`allAllowedRoots` 保证「不含空串条目」并补齐 `GetRepoRoot("ysm")` 派生根（含类型专属覆写 → FilesRoot 子目录 → 平台默认根三级回退）；`allScanRoots` 保留为配置层纯函数（供单测），**勿再直接用作守卫根清单**。回归护栏：`app_allowed_roots_test.go` 的 `TestAllowedRoots_SingleSource`（注入 `fakePathMgr{repo:...}` + 空 FilesRoot 复刻 Android 场景，断言两清单集合等价且两守卫判定一致）。
+  - 复刻该场景的必要条件：`FilesRoot` 必须为空——`GetRepoRoot` 的 `FilesRoot` 分支优先于平台默认根分支，配了 FilesRoot 就永远走不到默认根，漂移不可复现。
 
 ## 黑名单同步守卫（scripts/check-android-unavailable.ts）
 

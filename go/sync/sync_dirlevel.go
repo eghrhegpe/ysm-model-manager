@@ -21,8 +21,9 @@
 //  4. 非模型子目录中不包含任何模型文件/文件夹时，SkipDir 优化遍历
 //
 // 已知限制（非本次回归，待治理）：
-//   - 同级目录 `模型包/` 与文件 `模型包.zip` 的 key 都归一为 `<parent>/模型包` → 静默丢失一个
-//     （relKeyDirLevel 去扩展名 vs 目录 basename 冲突）
+//   - 同级「不同扩展名同名文件」的 key 归一为同一相对路径（relKeyDirLevel 一律剥扩展名）：
+//     如 `模型包.zip` 与 `模型包.ysm` 同键 `<parent>/模型包` → map last-write-wins 静默丢一个。
+//     （目录与文件同名碰撞已由尾随 "/" 修复——见 relKeyDirLevel；本项为纯文件/文件碰撞，仍待治）
 //   - patternFind 重复子树扫描已治理（2026-08-24）：collectEntriesWalk 内建
 //     nestedDirMemo，一次 Walk 内同一目录+pattern 只递归一次，O(N²) 降为 O(N)。
 //

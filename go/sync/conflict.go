@@ -192,10 +192,10 @@ func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDi
 			if rerr := fsutil.CopyFile(backupPath, localPath); rerr != nil {
 				return fmt.Errorf("拷贝远端文件失败: %w; 恢复备份也失败（备份保留在 %s）: %v", err, backupPath, rerr)
 			}
-			_ = os.Remove(backupPath)
+			removeBackup(backupPath)
 			return fmt.Errorf("拷贝远端文件失败（已恢复备份）: %w", err)
 		}
-		_ = os.Remove(backupPath)
+		removeBackup(backupPath)
 		return nil
 
 	case ResolveForceLocal:
@@ -338,6 +338,15 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 // 已删除、调用点直连 hashFileForEntries（默认 fsutil.SHA256File）——无大文件上限
 // （冲突检测走全量哈希）。哈希失败语义见 collectFileEntries 注释：条目级错误，
 // per-entry Hash=="" 触发 DetectConflicts 的 HashFailed 分支，不再上抛整体错误。
+
+// removeBackup 删除冲突解决的备份文件，失败仅记日志不吞净——
+// 残留 .bak-<ts> 提示用户确有未清理的恢复点，静默 `_ =` 会让备份在
+// 用户模型目录堆积且无人知晓（P2 修复）。
+func removeBackup(backupPath string) {
+	if err := os.Remove(backupPath); err != nil {
+		log.Printf("[sync] 删除备份文件失败 %s: %v", backupPath, err)
+	}
+}
 
 // suggestStrategy 根据修改时间建议解决策略
 func suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy {

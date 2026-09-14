@@ -100,9 +100,14 @@ func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing,
 		if c.Hash == "" {
 			continue
 		}
+		// 活跃副本优先判定：同 hash 存在于 ByHash（活跃模型）即不算 disabled/extra——
+		// 即便仓库另有 .ban 同内容副本，实例命中活跃副本应计 Synced，不被 Disabled 优先吞掉。
+		if _, found := idx.ByHash[c.Hash]; found {
+			continue
+		}
 		if idx.BannedHash[c.Hash] {
 			disabled = append(disabled, registry.StripDisableSuffix(c.Name))
-		} else if _, found := idx.ByHash[c.Hash]; !found {
+		} else {
 			extra = append(extra, registry.StripDisableSuffix(c.Name))
 		}
 	}

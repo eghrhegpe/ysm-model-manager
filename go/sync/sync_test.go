@@ -140,6 +140,43 @@ func TestGetInstanceStatus_BannedModelsSkipped(t *testing.T) {
 	}
 }
 
+// TestGetInstanceStatus_SharedHashActiveAndBanned 钉住 compareHashMode 的 disabled 优先级：
+// 同 hash 同时存在于「活跃副本」（ByHash）与「.ban 副本」（BannedHash）时，实例副本应判定
+// 为 Synced（仓库存在该内容的活跃模型），而非被 Disabled 优先吞掉。
+// 旧实现 if/else-if 让 BannedHash 分支先命中——同 hash 有活跃副本时实例仍被标 Disabled，
+// 用户看到"已禁用"却实际可正常同步，属状态误判（2026-09-14 修复）。
+func TestGetInstanceStatus_SharedHashActiveAndBanned(t *testing.T) {
+	shared := "hash_shared"
+	sharedRepo := []types.ModelEntry{
+		// 活跃副本 + .ban 副本同内容（hash 相同）
+		{Name: "model_active.ysm", Path: "/repo/model_active.ysm", Hash: shared},
+		{Name: "model_same.ysm.ban", Path: "/repo/model_same.ysm.ban", Hash: shared},
+	}
+	customEntries := []types.ModelEntry{
+		{Name: "model_instance.ysm", Path: "/c/ins1/model_instance.ysm", Hash: shared},
+	}
+	scanFn := mockScanDir("/repo", sharedRepo, customEntries)
+	results := GetInstanceStatusWith("/mc", "/repo", "", scanFn, mockListVersions)
+	if len(results) != 1 {
+		t.Fatalf("expected 1 instance, got %d", len(results))
+	}
+	ins1 := results[0]
+
+	if len(ins1.Disabled) != 0 {
+		t.Errorf("存在活跃同 hash 副本时不应标 Disabled，实际 %v", ins1.Disabled)
+	}
+	// 同上：命中活跃副本的 hash 计入 Synced（即便仓库另有 .ban 同内容）
+	if ins1.Synced != 1 {
+		t.Errorf("expected Synced=1（命中活跃副本）, got %d", ins1.Synced)
+	}
+	if len(ins1.Missing) != 0 {
+		t.Errorf("expected 0 missing, got %v", ins1.Missing)
+	}
+	if len(ins1.Extra) != 0 {
+		t.Errorf("expected 0 extra, got %v", ins1.Extra)
+	}
+}
+
 func TestGetInstanceStatus_EmptyPaths(t *testing.T) {
 	results := GetInstanceStatusWith("", "/repo", "", mockScanDir("/repo", repoEntries, nil), mockListVersions)
 	if len(results) != 0 {

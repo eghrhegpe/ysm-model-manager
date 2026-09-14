@@ -19,15 +19,6 @@ import (
 
 // RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚）
 func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
-	// 整段持 installer.InstallLock：RelinkDir 自身对 custom 目录做 os.Rename/os.RemoveAll
-	//（目录级分支的备份/回滚/清理）——ADR-056 要求同步与安装并发操作同一 custom 目录文件时
-	// 互斥，这些目录级写操作不能只靠 installer 内部文件级锁覆盖。内部对
-	// installer.Install/InstallDir/CopyFile 的调用改用对应 *Locked 变体，避免同一
-	// goroutine 重入非重入 mutex 死锁（第六轮整段持锁 + 调用公开函数的死锁回归）。
-	installer.InstallLocker.Lock()
-	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
-
 	customDir = strings.TrimSpace(customDir)
 	filesRoot = strings.TrimSpace(filesRoot)
 	if customDir == "" || filesRoot == "" {
@@ -36,6 +27,12 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	if scanFn == nil {
 		return 0, fmt.Errorf("scanFn 为空")
 	}
+
+	// 锁外扫描（镜像 SyncToggleStatus 的「锁外哈希」自我修正：relink 的 repo/custom
+	// 全量扫描含 SHA256 哈希，持锁执行会阻塞所有其他同步/安装操作）。
+	// TOCTOU 容忍：哈希仅作为 content 关联兜底，锁外快照后文件被外部修改的概率极低
+	// （SyncToggleStatus 同款理由）；操作循环对过期路径的 rename/install 失败会走
+	// logger('failed') + continue 优雅降级，不会静默破坏。
 	repoEntries := scanFn(filesRoot)
 	repoByHash := make(map[string][]types.ModelEntry)
 	for _, e := range repoEntries {
@@ -49,6 +46,17 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
 	}
 	customEntries := scanFn(customDir)
+
+	// 整段持 installer.InstallLock（仅覆盖操作段，不含锁外扫描）：RelinkDir 自身对 custom
+	// 目录做 os.Rename/os.RemoveAll（目录级分支的备份/回滚/清理）——ADR-056 要求同步与
+	// 安装并发操作同一 custom 目录文件时互斥，这些目录级写操作不能只靠 installer 内部
+	// 文件级锁覆盖。内部对 installer.Install/InstallDir/CopyFile 的调用改用对应 *Locked
+	// 变体，避免同一 goroutine 重入非重入 mutex 死锁（第六轮整段持锁 + 调用公开函数的
+	// 死锁回归）。
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
+	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
+
 	count := 0
 	for _, ce := range customEntries {
 		if ce.Hash == "" {
@@ -124,8 +132,11 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				continue
 			}
 			if err := installer.InstallDirLocked(srcDir, dstBase, filesRoot, linkMode, rtype); err != nil {
-				// 回滚：删除半成品，恢复原目录
-				_ = os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir)))
+				// 回滚：删除半成品，恢复原目录。删除失败仅记日志不吞净——
+				// 残留半成品目录提示用户确实需要清理（P2 修复，替代静默 `_ =`）。
+				if rmErr := os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir))); rmErr != nil && logger != nil {
+					logger(ce.Name, ce.Path, dstParent, 0, "failed", "回滚删除半成品失败: "+rmErr.Error())
+				}
 				// 回滚 rename 失败不再静默吞——原 `_ =` 吞错，
 				// 原目录滞留 .relink-bak、实例目录缺失且函数继续执行（静默数据不可达）；
 				// 记 logger 供用户排查（不 return——目录已损坏，继续无意义）
@@ -140,7 +151,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				}
 				continue
 			}
-			_ = os.RemoveAll(backup)
+			removeRelinkBackup(backup, ce, dstParent, logger)
 			count++
 			continue
 		}
@@ -155,4 +166,13 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		count++
 	}
 	return count, nil
+}
+
+// removeRelinkBackup 删除 relink 成功后的备份目录，失败仅记 logger 不吞净——
+// 残留 .relink-bak-<ts> 提示用户确有恢复点未清理，静默 `_ =` 会让备份目录
+// 在用户模型目录堆积且无人知晓（P2 修复，替代旧 `_ = os.RemoveAll(backup)`）。
+func removeRelinkBackup(backup string, ce types.ModelEntry, dstParent string, logger Logger) {
+	if err := os.RemoveAll(backup); err != nil && logger != nil {
+		logger(ce.Name, ce.Path, dstParent, 0, "failed", "清理 relink 备份目录失败: "+err.Error())
+	}
 }

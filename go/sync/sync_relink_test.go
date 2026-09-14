@@ -4,8 +4,10 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/types"
 )
 
@@ -46,6 +48,45 @@ func TestRelinkDir_EmptyParams(t *testing.T) {
 	}
 	if _, err := RelinkDir("custom", "", "resourcepack", "copy", nil, nil); err == nil {
 		t.Fatal("空 repoRoot 应报错")
+	}
+}
+
+// TestRelinkDir_ScanNotHeldLock 钉住 RelinkDir 的锁范围：repo/custom 全量扫描（含 SHA256 哈希）
+// 必须在 InstallLock 外执行——持锁扫描会阻塞所有其他同步/安装操作（P2-2 重构的核心，
+// 镜像 SyncToggleStatus 的「锁外哈希」自我修正）。
+// 探测法：注入 scanFn 在扫描段内 TryLock——锁空闲则 TryLock 成功（正确，扫描在锁外）；
+// TryLock 失败说明扫描段被持锁（回归）。与前辈用例同构、时序确定，故不使用 t.Parallel()。
+func TestRelinkDir_ScanNotHeldLock(t *testing.T) {
+	base := t.TempDir()
+	repoRoot := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "inst")
+	if err := os.MkdirAll(repoRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(customDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644)
+	_ = os.WriteFile(filepath.Join(customDir, "m.ysm"), []byte("same"), 0644)
+
+	scanLocked := false
+	scanFn := func(dir string) []types.ModelEntry {
+		if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
+			if mu.TryLock() {
+				mu.Unlock() // 锁空闲 → 扫描在锁外 ✓
+			} else {
+				scanLocked = true // 锁被持有 → 扫描在锁内 ✗（回归）
+			}
+		}
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
+		}
+		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
+	}
+	_, _ = RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+		func(name, src, dst string, size int64, status, msg string) {})
+	if scanLocked {
+		t.Fatal("RelinkDir 全量扫描不应在 InstallLock 内执行（阻塞并发同步/安装）")
 	}
 }
 

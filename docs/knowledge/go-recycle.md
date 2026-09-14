@@ -60,7 +60,7 @@ status: active
 - 删除资源时转移到 `.recycle` 目录（优先 `rename` 瞬时移动，仅跨设备回退复制）
 - 创建 `.trashinfo` 元数据（`.recycle/info/` 下，记录 `Path` 原绝对路径 + `DeletionDate` RFC 3339 本地时间，`Restore` 从中读取原路径恢复，`List` 从中读取删除时间显示）
 - 恢复已删除资源
-- 永久清空回收站
+- 永久清空回收站（`recycle.go|TrashManager.Empty`：清空前用 `TrashManager.countEntries` 轻量计数——与 `TrashManager.List` 同过滤口径（含 `ysm.json` 的文件夹模型整组算 1、经 `registry.IsDisableSuffix`/`IsSupportedExt` 过滤后的文件条目 =1）但只计数，不构造 `[]types.ModelEntry`、不递归调 `dirSize`；原实现 `len(tm.List())` 为拿一个计数而全量物化整站）
 
 ## 删除策略
 

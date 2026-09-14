@@ -1,4 +1,6 @@
 // ===== app-nav 样式与模板 =====
+import { wsIconCSS } from "@/utils/dom/css.ts";
+
 export const navCSS: string = `
 :host {
   display: flex;
@@ -119,4 +121,7 @@ export const navCSS: string = `
   font-size: var(--fs-sm);
   color: var(--muted);
 }
+
+/* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
+${wsIconCSS}
 `;

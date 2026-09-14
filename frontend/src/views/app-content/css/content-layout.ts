@@ -5,7 +5,7 @@
 // 故这些 keyframes 必须在本 shadow 层本地重定义（见下方 contentLayoutCSS 内的 @keyframes 块），
 // 引用它们的 .stg-card / .setting-row / .gh-card / .repo-tab / .recy-item 等规则才能产生动画。
 // components.css 的全局副本仅服务 document 层光 DOM（dialog 等）。
-import { btnBaseCSS, focusVisibleCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 
 export const contentLayoutCSS: string = `
@@ -167,9 +167,9 @@ ${focusVisibleCSS}
 .btn-sm[disabled] { opacity:.4;cursor:default; }
 .btn-sm[disabled]:hover { background:transparent; }
 
-/* SVG icons（跨域复用） */
-.ws-icon { width:1em;height:1em;vertical-align:-.15em;fill:none;stroke:currentColor;flex-shrink:0; }
-.ws-icon[fill] { fill:currentColor;stroke:none; }
+/* SVG icons（跨域复用）——规则本体已上收到 @/utils/dom/css.ts 的 wsIconCSS
+   （ADR-238： icons sweeper 之外的每个 shadow 根都要 adopt 它，见下方插值） */
+${wsIconCSS}
 
 /* ===== 工坊（workshop）通用工具按钮类（归位自 content-creator.ts，跨 creator/gh 复用） ===== */
 .ws-btn-muted { color:var(--muted); }

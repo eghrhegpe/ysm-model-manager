@@ -126,7 +126,76 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
   console.log(`  ✓ SVG 约定：${entries} 个图标全部经 svg() 包装（ws-icon + 24×24）`);
 }
 
-// ── 5. 映射表自身卫生：无空名、无重复指向 ───────────────
+// ── 5. 图标尺寸规则覆盖面（防「图标裸奔」回归）──────────────
+// 事故复盘（2026-09）：ADR-238 把 emoji 换成 SVG 后，**渲染 UI_ICONS 的 13 个 shadow 根
+// 里只有 1 个**（app-content，恰巧是 .ws-icon 规则的定义处）带上了该规则。其余 12 个因为
+// CSS 不穿透 shadow 边界，SVG 拿不到 `width:1em` ⇒ 退回 viewBox 默认 24×24 ⇒ 在 12px
+// 按钮里显成巨块（.pv-tab 一族首发）。光 DOM 组件（app-sync-manager 等）则因全局
+// components.css 当时也没这条规则，同样中招。
+//
+// 本组断言把这个「覆盖面」钉死：
+//   a) 每个渲染 UI_ICONS 的 Shadow DOM 组件，其 CSS 必须含 .ws-icon 规则（经 wsIconCSS
+//      插值引入或就地定义）；
+//   b) 全局 components.css 必须有一份副本（覆盖光 DOM 组件）。
+// 只靠 review 记不住「新增视图要带上它」，必须机器兜底。
+{
+  const srcRoot = path.join(ROOT, "frontend/src");
+
+  function walkDir(d: string): string[] {
+    if (!fs.existsSync(d)) return [];
+    return fs
+      .readdirSync(d, { withFileTypes: true })
+      .flatMap((e) => (e.isDirectory() ? walkDir(path.join(d, e.name)) : [path.join(d, e.name)]));
+  }
+
+  /** 某组件目录的 CSS 是否**真的**把 .ws-icon 规则带进串里。
+   *  ⚠️ 不能只查「文件里出现 wsIconCSS 字样」——import 语句里也有该字样，
+   *  删掉插值 `${wsIconCSS}` 后仍会假绿（实测踩过）。必须要求：
+   *   (a) 串内直接写了 .ws-icon 规则，或 (b) 串内有 ${wsIconCSS} 插值。 */
+  function cssHasWsIcon(dir: string): boolean {
+    const abs = path.join(srcRoot, dir);
+    const files = walkDir(abs).filter((f) => f.endsWith(".ts"));
+    return files.some((f) => {
+      let txt = "";
+      try {
+        txt = fs.readFileSync(f, "utf-8");
+      } catch {
+        return false;
+      }
+      if (!/export const \w+CSS(?:\s*:\s*string)?\s*=/.test(txt)) return false;
+      // 取 CSS 串本体（从 `export const xCSS =` 起到文件尾；够用且稳）
+      const body = txt.slice(txt.indexOf("= `"));
+      return /\.ws-icon\s*\{/.test(body) || /\$\{wsIconCSS\}/.test(body);
+    });
+  }
+
+  const shadowDirs = [
+    "views/app-preview",
+    "views/app-sidebar",
+    "views/app-tree",
+    "views/app-nav",
+    "views/app-content",
+  ];
+  const missing = shadowDirs.filter((d) => !cssHasWsIcon(d));
+  assert.deepEqual(
+    missing,
+    [],
+    `以下 Shadow DOM 组件渲染 UI_ICONS 却没有 .ws-icon 尺寸规则 → 图标会退回 24×24 巨块；` +
+      `请在其组件 CSS 串里插值 \${wsIconCSS}（from "@/utils/dom/css.ts"）：\n    ${missing.join("\n    ")}`,
+  );
+  console.log(`  ✓ 尺寸规则覆盖：${shadowDirs.length} 个 shadow 组件均带 .ws-icon 规则`);
+
+  // 全局副本（覆盖光 DOM 组件）
+  const globalCss = fs.readFileSync(path.join(ROOT, "frontend/css/components.css"), "utf-8");
+  assert.ok(
+    /\.ws-icon\s*\{[^}]*width:\s*1em/.test(globalCss),
+    "全局 css/components.css 必须有 .ws-icon{width:1em...} 副本——光 DOM 组件" +
+      "（app-sync-manager / dialog 等）走 document 样式，拿不到 shadow 内的 wsIconCSS",
+  );
+  console.log("  ✓ 全局副本：css/components.css 含 .ws-icon 规则（覆盖光 DOM 组件）");
+}
+
+// ── 6. 映射表自身卫生：无空名、无重复指向 ───────────────
 {
   for (const [glyph, name] of Object.entries(EMOJI_TO_ICON)) {
     assert.ok(glyph.length > 0, "映射表不应有空字形键");

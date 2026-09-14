@@ -326,7 +326,15 @@ invariant_anchors:
   - **测试断言更新的原则**：只改**形态**不改**意图**。`expect(html).toContain("⬇️ 2")` → `expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*2/)`——断言「该徽章内是 SVG 且紧跟数字 2」，比「包含任意 svg」严（后者会放过「徽章换错图标」的真回归），又比写死某条 path 稳（图标库改路径不该弄红测试）。共更新 ~18 处断言，全部保留原有的 testid/文案/转义断言。
   - **⚠️ 测试定位陷阱（第二轮新增）**：`loadModel2D` 内部以同名局部 `container` 承载内容（line 55 `const container = document.createElement("div")` 遮蔽了传入的 `skelContainer`），测试传入的 `container` 是其**外层**；故断言按钮须经 `.sk-loading-box` **嵌套定位**（直接 `container.querySelectorAll("button")` 命中不到，返回 0）——这不是迁移 bug，是既有测试定位失误，迁移只是让「靠 emoji 全文匹配」的脆弱断言暴露。
   - **方法论收获**：**「测试全绿」在结构性重构中几乎不是有效信号**——本轮 3 类真 bug（字面占位符、textContent 乱码、多行 import 劈裂）在单测层面全绿，全部靠**实渲染产物**（`vite-node` 打印 `<svg class="ws-icon">` 计数）与 **`tsc`** 才抓到。故验收标准定为：实渲染产物 + typecheck + 全量测试三条同时成立。
-  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5816 用例全绿** / pre-commit 基线闸 129/129。
+  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5820 用例全绿** / pre-commit 基线闸 129/129。
+
+- ✅ **刀㉒ 图标「裸奔」修复：`.ws-icon` 尺寸规则跨 Shadow 覆盖面**（2026-09，承接刀㉑）：
+  - **症状**：换完 SVG 后 `.pv-tab` 等按钮图标变得巨大——不是图标错，是**尺寸规则没生效**。
+  - **根因**：`CSS 规则不穿透 Shadow DOM 边界`（只有 `var()` 自定义属性能）。`.ws-icon{width:1em}` 当时只定义在 `app-content` 的 CSS 里，**而这恰好是 13 个渲染 UI_ICONS 的 shadow 根中唯一带该规则的一个**——其余 12 个（app-preview / app-sidebar / app-tree / app-nav…）拿不到规则 ⇒ SVG 退回 viewBox 默认 24×24 ⇒ 在 12px 按钮里显成巨块。光 DOM 组件（app-sync-manager / dialog）则因全局 `components.css` 也没这条规则，同样中招。
+  - **修法**：`.ws-icon` 规则上收到 `@/utils/dom/css.ts|wsIconCSS` 作为**单一出处**，各 shadow 根在其组件 CSS 串里插值引入；同时**全局 `css/components.css` 保留一份副本**覆盖光 DOM 组件（两份刻意双写，注释互指，非漂移）。
+  - **⚠️ 最值得记的一条：我第一版守卫测试是「假绿」**——它只查「文件里出现 `wsIconCSS` 字样」，而 `import` 语句里也有该字样，**删掉插值 `${wsIconCSS}` 后测试照样通过**。改成要求「CSS 串本体内含 `.ws-icon{` 或 `${wsIconCSS}` 插值」才真正拦得住。**写完守卫必须故意破坏一次验证它会红**，否则等于没写。
+  - **顺带修**：`app-toast` 3 处 `msg:` 文本槽误用 UI_ICONS（toast 走 `esc()` 转义，会显示字面 `<svg>`）→ 还原 emoji；其 close 按钮图标在 inline `<style>` 的 shadow 里，同样需插值 `wsIconCSS`。
+  - 守卫：`tests/test_ui_icons.ts` 新增第 5 组「尺寸规则覆盖面」——断言 5 个 shadow 组件 + 全局副本均带 `.ws-icon{width:1em}`，且已实测「故意移除即红」。
 
 
 ## 相关

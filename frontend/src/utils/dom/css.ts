@@ -32,3 +32,22 @@ export const btnBaseCSS = `
 export const focusVisibleCSS = `
 :focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline: none; }
 `;
+
+/**
+ * `.ws-icon` SVG 图标规则（ADR-238 的**唯一**尺寸/着色出处）。
+ *
+ * ⚠️ 为什么必须每个 Shadow 根各自 adopt：CSS 规则不穿透 Shadow DOM 边界，
+ * 只有自定义属性（var()）能。图标若在「没 adopt 本规则」的 shadow 根里渲染，
+ * 就没有 `width:1em` 约束 → SVG 退回 viewBox 默认尺寸（24×24），在 12px 按钮里
+ * 显得巨大（实测 app-preview 的 .pv-tab 一族即此症状）。
+ *
+ * 故凡渲染 `UI_ICONS` / workshop-icons 的 Web Component，其 adoptedStyleSheets
+ * 必须含本串（`wsIconCSS`）。新增视图若用图标而忘了带它，图标会「裸奔」成大块。
+ *
+ * 尺寸取 `1em` + `currentColor` ⇒ 自动跟随字号与主题；实心图标由
+ * `.ws-icon[fill]` 切换（fill 属性触发）。
+ */
+export const wsIconCSS = `
+.ws-icon { width:1em; height:1em; vertical-align:-.15em; fill:none; stroke:currentColor; flex-shrink:0; }
+.ws-icon[fill] { fill:currentColor; stroke:none; }
+`;

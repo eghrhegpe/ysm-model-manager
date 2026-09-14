@@ -1,5 +1,5 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
-import { btnBaseCSS, focusVisibleCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS, wsIconCSS } from "@/utils/dom/css.ts";
 export const treeCSS: string = `
 :host {
   display: flex;
@@ -154,4 +154,7 @@ ${focusVisibleCSS}
    跨界上溯命中（app-modules.ts 只 toggle 在 <html>），必须用 :host-context 才能命中 */
 :host-context(.no-animations) .fl,
 :host-context(.no-animations) .fh { animation: none !important; }
+
+/* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
+${wsIconCSS}
 `;

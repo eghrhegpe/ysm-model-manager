@@ -5,6 +5,7 @@ import { bus } from "@/bus";
 // 命名避开 core 的 tr（缺失键兜底安全取值）语义撞名（ADR-207 D3）
 import { t as translate } from "@/core/i18n/t.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
+import { wsIconCSS } from "@/utils/dom/css.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -64,6 +65,7 @@ class AppToast extends WebComponentBase {
         .toast .close-btn:hover { color: var(--txt); }
         @keyframes toastIn { 0% { transform: translateY(20px) scale(.95); opacity: 0; } 60% { transform: translateY(-4px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
+        ${wsIconCSS}
       </style>
       <div id="c" class="toast-container" role="status" aria-live="polite"></div>
     `;
@@ -135,7 +137,7 @@ class AppToast extends WebComponentBase {
           // 对齐 undo：记录并反馈，不静默
           logError("toast", "点击回调失败:", e);
           bus.emit("toast:show", {
-            msg: `${UI_ICONS.error} ${translate("error.fallback")}`,
+            msg: `❌ ${translate("error.fallback")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });
@@ -154,7 +156,7 @@ class AppToast extends WebComponentBase {
           // P3 修复（审核发现）：内部反馈统一走 bus——原 this.show 绕过 bus，
           // error-diary 的 toast:show 监听收不到（用户可见错误漏出日记链）
           bus.emit("toast:show", {
-            msg: `${UI_ICONS.success} ${translate("toast.undone")}`,
+            msg: `✅ ${translate("toast.undone")}`,
             duration: OK_TOAST_MS,
             type: "success",
           });
@@ -163,7 +165,7 @@ class AppToast extends WebComponentBase {
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
           logError("toast", "撤销回调失败:", e);
           bus.emit("toast:show", {
-            msg: `${UI_ICONS.error} ${translate("toast.undoFailed")}`,
+            msg: `❌ ${translate("toast.undoFailed")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });

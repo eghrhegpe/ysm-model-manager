@@ -1,4 +1,14 @@
 /* ===== 全局动画系统（统一 keyframe + stagger） ===== */
+
+/* ===== SVG 图标（ADR-238）：光 DOM 组件（app-sync-manager / dialog / features 等）=====
+   为什么这里也要一份：`.ws-icon` 尺寸/着色规则的本体在 utils/dom/css.ts|wsIconCSS，
+   但它靠 adoptedStyleSheets 注入，**只作用于 Shadow DOM**。用了 UI_ICONS 却跑在光 DOM
+   的组件（无 shadow 边界、走 document 全局样式）拿不到那条规则 ⇒ SVG 退回 viewBox 默认
+   24×24，在 12px 按钮里显巨块。本全局副本补的就是这部分覆盖面。
+   ⚠️ 改动须与 utils/dom/css.ts|wsIconCSS 保持一致（两份刻意双写，非漂移）。 */
+.ws-icon { width:1em; height:1em; vertical-align:-.15em; fill:none; stroke:currentColor; flex-shrink:0; }
+.ws-icon[fill] { fill:currentColor; stroke:none; }
+
 @keyframes fadeSlideUp {
   from { opacity:0; transform:translateY(6px) }
   to   { opacity:1; transform:translateY(0) }

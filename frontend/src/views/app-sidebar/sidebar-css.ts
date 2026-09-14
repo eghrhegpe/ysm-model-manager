@@ -1,5 +1,5 @@
 // ===== sidebar Shadow CSS =====
-import { btnBaseCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const sidebarCSS: string = `
 :host {
@@ -68,4 +68,7 @@ ${btnBaseCSS}
 /* 单一事实源 = @/views/css/keyframes.ts|FADE_SLIDE_LEFT（与 content-layout.ts 共享），
    与 components.css 全局副本的一致性见该文件头说明。 */
 ${FADE_SLIDE_LEFT}
+
+/* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
+${wsIconCSS}
 `;

@@ -95,7 +95,7 @@ func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 // 遍历所有已配置根（FilesRoot + McRoot + 各类型专属根 + CustomRoots），
 // 返回第一个同时包含两者的根；全部不匹配返回空串（调用方 fail-closed 拒绝）。
 func (a *App) findMoveRoot(src, dstDir string) string {
-	roots := allScanRoots(a.LoadAppConfig())
+	roots := a.allAllowedRoots()
 	absSrc, err := filepath.Abs(src)
 	if err != nil {
 		return ""
@@ -366,23 +366,12 @@ func (a *App) ToggleEnable(path string) (bool, error) {
 	return enabled, err
 }
 
-// toggleAllowedRoots 收集启禁允许的根集合（FilesRoot + McRoot + CustomRoots 值），
-// 并追加 ysmRoot（GetRepoRoot("ysm")），
-// 使「对 ysm 仓库子根本身启禁」也落入根守卫（path==root 拒绝）。
+// toggleAllowedRoots 收集启禁允许的根集合。
+// 直接复用 allAllowedRoots（唯一根清单来源）——原实现手工枚举 FilesRoot + McRoot +
+// GetRepoRoot("ysm") + CustomRoots，与读写侧 allScanRoots 形成两套清单漂移
+// （Android 未配 FilesRoot 时启禁放行、读写拒绝），收敛后两侧口径合一。
 func (a *App) toggleAllowedRoots() []string {
-	cfg := a.LoadAppConfig()
-	roots := []string{cfg.FilesRoot, cfg.McRoot}
-	if ysm, _ := a.GetRepoRoot("ysm"); ysm != "" {
-		roots = append(roots, ysm)
-	}
-	if cfg.CustomRoots != nil {
-		for _, s := range cfg.CustomRoots {
-			if s != "" {
-				roots = append(roots, s)
-			}
-		}
-	}
-	return roots
+	return a.allAllowedRoots()
 }
 
 // toggleRootFor 返回 path 所在的启禁合法根：取「最具体（最深）匹配根」——

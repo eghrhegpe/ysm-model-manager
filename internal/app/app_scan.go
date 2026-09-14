@@ -424,8 +424,9 @@ func (a *App) CheckFileExists(path string) bool {
 // EvalSymlinks 是主要重复开销；saveConfig 后由组件 Clear 失效。
 // 详见 app_resolved_root_cache.go 顶部注释（缓存语义与 TOCTOU 取舍）。
 
-// allScanRoots 返回所有扫描/移动校验使用的根列表（FilesRoot + McRoot + 6 专属根 + CustomRoots）。
-// isPathInRootOrSelf 与 findMoveRoot 共用此入口，避免根列表构造逻辑散落。
+// allScanRoots 返回配置中声明的根列表（FilesRoot + McRoot + 6 专属根 + CustomRoots）。
+// ⚠️ 这是**配置层**根清单，不含运行期派生根（如平台默认仓库根）——守卫请用
+// a.allAllowedRoots()，它在此之上补齐派生根，是唯一事实源。
 func allScanRoots(cfg types.AppConfig) []string {
 	roots := []string{
 		cfg.FilesRoot,
@@ -447,11 +448,39 @@ func allScanRoots(cfg types.AppConfig) []string {
 	return roots
 }
 
+// allAllowedRoots 是**所有路径守卫的唯一根清单来源**（读写/扫描/移动/启禁共用）。
+//
+// 为何需要它：原实现两套手工清单互不覆盖——读写侧用 allScanRoots（只看配置字段），
+// 启禁侧用 toggleAllowedRoots（额外含 GetRepoRoot("ysm")）。二者在桌面平台恰好等价
+// （6 个废弃字段经 migrateLegacyConfigFields 恒空、FilesRoot 覆盖 ysm 子目录），
+// 但 **Android 平台**未配 FilesRoot 时 GetRepoRoot 回退 defaultRepoRoot()（外部存储
+// 固定路径），该派生根只在 toggleAllowedRoots 中出现 → **同一路径启禁放行、读写拒绝**
+// （能改文件名却读不了内容）。收敛到本方法后两套口径合一。
+//
+// 派生根经 GetRepoRoot("ysm") 取（含类型专属覆写 → FilesRoot 子目录 → 平台默认根三级
+// 回退），CustomRoots 覆写场景与 allScanRoots 同源故天然一致，空串由调用方跳过。
+func (a *App) allAllowedRoots() []string {
+	raw := allScanRoots(a.LoadAppConfig())
+	roots := make([]string, 0, len(raw)+1)
+	for _, r := range raw {
+		// 未配置字段（FilesRoot/McRoot/各废弃专属根）为空串：过滤掉，
+		// 使「清单不含空串」成为本函数保证的不变量，调用方无需各自防御
+		//（空串在 filepath.Rel 下会与 CWD 相关，语义危险）。
+		if r != "" {
+			roots = append(roots, r)
+		}
+	}
+	if ysm, _ := a.GetRepoRoot("ysm"); ysm != "" {
+		roots = append(roots, ysm)
+	}
+	return roots
+}
+
 func (a *App) isPathInRootOrSelf(path string) bool {
 	if path == "" {
 		return false
 	}
-	roots := allScanRoots(a.LoadAppConfig())
+	roots := a.allAllowedRoots()
 	clean := filepath.Clean(path)
 	for _, root := range roots {
 		if root == "" {

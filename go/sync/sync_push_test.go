@@ -4,7 +4,6 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"ysm-model-manager/go/installer"
@@ -160,9 +159,9 @@ func TestSyncCustomToRepo_Empty(t *testing.T) {
 
 // TestSyncCustomToRepo_HoldsInstallLock 钉住 SyncCustomToRepo 的锁口径：
 // 与 Push/Pull/Relink 五兄弟一致，须整段持 InstallLock（ADR-056）。
-// 探测法：注入 scanFn 在持锁段内执行，回调里 TryLock——锁被本 goroutine 持有
-// 时 TryLock 返回 false（通过）；未持锁则 TryLock 成功（违规，须标记失败）。
-// 该探测与 sync.go assertInstallLockHeld 的 TryLock 语义同构、时序确定。
+// 探测法：注入 scanFn 在持锁段内执行，回调里 IsLocked()——锁被任何 goroutine 持有
+// 时 IsLocked() 返回 true（通过）；未持锁则 IsLocked() 返回 false（违规，须标记失败）。
+// IsLocked() 精确探测「锁是否被持有」，不依赖 TryLock 的空闲探测语义。
 // 注意：本测试不使用 t.Parallel()，避免其他并行测试恰巧持有锁导致误判。
 func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
 	base := t.TempDir()
@@ -179,11 +178,12 @@ func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
 
 	lockViolated := false
 	scanFn := func(dir string) []types.ModelEntry {
-		// 探测锁是否被持有：TryLock 成功说明锁未被 SyncCustomToRepo 持有（违规）
-		if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
-			if mu.TryLock() {
-				mu.Unlock()
-				lockViolated = true
+		// 探测锁是否被持有：IsLocked() 返回 true 说明锁被任何 goroutine 持有（正确）
+		if lt, ok := installer.InstallLocker.(*installer.LockTracker); ok {
+			if lt.IsLocked() {
+				// 锁被持有 → 持锁段正确 ✓
+			} else {
+				lockViolated = true // 锁未被持有 → 违规 ✗
 			}
 		}
 		files, _ := os.ReadDir(dir)
@@ -206,7 +206,7 @@ func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
 	testutil.Equal(t, count, 1, "应复制 1 个（new.ysm）")
 	testutil.FileExists(t, filepath.Join(repoDir, "new.ysm"))
 	if lockViolated {
-		t.Fatal("SyncCustomToRepo 未整段持 InstallLock（scanFn 执行期间 TryLock 成功）")
+		t.Fatal("SyncCustomToRepo 未整段持 InstallLock（scanFn 执行期间 IsLocked() 返回 false）")
 	}
 }
 

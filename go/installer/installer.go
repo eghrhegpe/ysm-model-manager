@@ -18,8 +18,10 @@ import (
 
 // InstallLock 防止安装操作与后台同步并发（sync 包复用同一把锁，见 sync.go——
 // 原两包各自定义 installLock/syncLock 互不感知，watcher 同步与用户安装可并发
-// Rename 同一 custom 目录文件 → 竞态/丢更新；ADR-056 统一为共享单锁）
-var InstallLock sync.Mutex
+// Rename 同一 custom 目录文件 → 竞态/丢更新；ADR-056 统一为共享单锁）。
+// 使用 LockTracker（非裸 sync.Mutex）——owner 追踪使 HasLock() 能精确区分
+// 「本 goroutine 持有」与「他人持有」，消除 *Locked 断言的 TryLock 误判窗口。
+var InstallLock LockTracker
 
 // InstallLocker 是 InstallLock 的可换入口（ADR-202 刀3）：
 // 生产默认实现恒为全局 InstallLock（语义零变化，所有消费点经它加锁）；

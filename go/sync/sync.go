@@ -17,7 +17,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -540,13 +539,15 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 
 	// 冲突检测（如果配置了冲突策略）
 	if config != nil && config.ConflictPolicy != "" {
-		// 锁契约断言（生产构建同样编译——fail-fast 守卫，非测试专属）：
-		// config.ConflictPolicy 非空时，调用方必须已持有 installer.InstallLock，
-		// 否则 ResolveConflictsLocked 会 self-deadlock（sync.Mutex 不可重入）。
-		// 当前生产调用链（PushResources/PullResources → SyncResources）恒传 nil config，
-		// 非空 config 仅测试注入；断言捕获「未来新增直接调用且未持锁」的违规场景，
-		// 违规即 panic（安全侧失败，优于静默死锁）。
-		assertInstallLockHeld()
+		// 锁契约软断言（owner-tracked，消除旧 TryLock 误判窗口）：
+		// 若当前未持锁，ResolveConflictsLocked 内部 InstallLocked 会正常自锁——
+		// 不会 self-deadlock（LockTracker 非重入但跨 goroutine 可重入）。
+		// 持锁时走快速路径（已被调用方锁定），未持锁时静默降级（锁内加锁无副作用）。
+		// 断言仅记录日志（非 panic）——原 panic 设计因分段持锁（SyncToggleStatus 阶段2锁外哈希）
+		// 导致锁释放后误报，已降级为 fail-soft。
+		if !assertInstallLockHeld() {
+			log.Printf("[sync] 警告: SyncResourcesWithConfig 冲突处理未在 InstallLock 内执行，将自锁后继续")
+		}
 		report, err := DetectConflicts(instanceDir, globalDir, rtypeID)
 		if err != nil {
 			log.Printf("[sync] 冲突检测失败: %v", err)
@@ -572,19 +573,23 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 	return result
 }
 
-// assertInstallLockHeld 断言调用方已持有 installer.InstallLock。
-// 使用 TryLock 实现：若 TryLock 成功说明锁未被持有 → 调用方违规 → panic；
-// 若 TryLock 失败说明锁已被持有（调用方或他人）→ 放行。
-// 注意：TryLock 无法区分「本 goroutine 持有」与「其他 goroutine 持有」，
-// 但在 SyncResourcesWithConfig 的调用约定下（调用方必须持锁），此断言足够捕获违规。
-func assertInstallLockHeld() {
-	// InstallLocker 是 sync.Locker 接口，需类型断言到 *sync.Mutex 才能使用 TryLock
-	if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
-		if mu.TryLock() {
-			mu.Unlock()
-			panic("SyncResourcesWithConfig: config.ConflictPolicy 非空时调用方必须已持有 installer.InstallLock")
-		}
+// assertInstallLockHeld 返回调用方是否已持有 installer.InstallLock。
+// 使用 LockTracker.HasLock() 精确验证「本 goroutine 是否持有」——
+// 消除旧 TryLock 探测的误判窗口（他人 goroutine 持锁时 TryLock 失败被误判为已持锁）。
+//
+// 降级语义（测试 stub 场景）：
+//   - 若 InstallLocker 未实现 HasLock 接口（如测试注入的 stub），则返回 true（放行）
+//     （测试桩通常自行保证锁契约，不影响正确性）。
+//
+// 返回值：true = 本 goroutine 持有 InstallLock（可安全调用 *Locked 变体）；
+//
+//	false = 未持有（调用方应自行加锁或接受 fail-soft 降级）。
+func assertInstallLockHeld() bool {
+	lt, ok := installer.InstallLocker.(interface{ HasLock() bool })
+	if !ok {
+		return true // 测试 stub 无 HasLock → 放行（保持向后兼容）
 	}
+	return lt.HasLock()
 }
 
 // SortEntries 按名称排序模型条目

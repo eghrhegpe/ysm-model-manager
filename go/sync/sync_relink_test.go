@@ -4,7 +4,6 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"ysm-model-manager/go/installer"
@@ -54,8 +53,10 @@ func TestRelinkDir_EmptyParams(t *testing.T) {
 // TestRelinkDir_ScanNotHeldLock 钉住 RelinkDir 的锁范围：repo/custom 全量扫描（含 SHA256 哈希）
 // 必须在 InstallLock 外执行——持锁扫描会阻塞所有其他同步/安装操作（P2-2 重构的核心，
 // 镜像 SyncToggleStatus 的「锁外哈希」自我修正）。
-// 探测法：注入 scanFn 在扫描段内 TryLock——锁空闲则 TryLock 成功（正确，扫描在锁外）；
-// TryLock 失败说明扫描段被持锁（回归）。与前辈用例同构、时序确定，故不使用 t.Parallel()。
+// 探测法：注入 scanFn 在扫描段内 IsLocked()——锁未被任何 goroutine 持有则 IsLocked() 返回
+// false（正确，扫描在锁外）；IsLocked() 返回 true 说明扫描段被持锁（回归）。
+// IsLocked() 精确探测「锁是否被持有」，不依赖 TryLock 的空闲探测语义。
+// 与前辈用例同构、时序确定，故不使用 t.Parallel()。
 func TestRelinkDir_ScanNotHeldLock(t *testing.T) {
 	base := t.TempDir()
 	repoRoot := filepath.Join(base, "repo")
@@ -71,12 +72,18 @@ func TestRelinkDir_ScanNotHeldLock(t *testing.T) {
 
 	scanLocked := false
 	scanFn := func(dir string) []types.ModelEntry {
-		if mu, ok := installer.InstallLocker.(*sync.Mutex); ok {
-			if mu.TryLock() {
-				mu.Unlock() // 锁空闲 → 扫描在锁外 ✓
-			} else {
+		// 探测锁是否被持有：IsLocked() 返回 true 说明锁被任何 goroutine 持有（回归）
+		if lt, ok := installer.InstallLocker.(*installer.LockTracker); ok {
+			if lt.IsLocked() {
 				scanLocked = true // 锁被持有 → 扫描在锁内 ✗（回归）
 			}
+			// 锁未被持有 → 扫描在锁外 ✓
+		} else {
+			// 探针依赖 InstallLocker 具体类型为 *installer.LockTracker（IsLocked() 可用）；
+			// 若将来换成其他锁实现，类型断言失败会让本测试静默空转、锁范围回归无人发现。
+			// fail-fast 显式失败，杜绝「探针退化为恒真 pass」的假绿（code_review P3）。
+			t.Fatalf("InstallLocker 具体类型非 *installer.LockTracker（实际 %T），锁范围探针失效——请更新本测试的断言策略",
+				installer.InstallLocker)
 		}
 		if dir == repoRoot {
 			return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}

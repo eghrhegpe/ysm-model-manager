@@ -31,8 +31,11 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	// 锁外扫描（镜像 SyncToggleStatus 的「锁外哈希」自我修正：relink 的 repo/custom
 	// 全量扫描含 SHA256 哈希，持锁执行会阻塞所有其他同步/安装操作）。
 	// TOCTOU 容忍：哈希仅作为 content 关联兜底，锁外快照后文件被外部修改的概率极低
-	// （SyncToggleStatus 同款理由）；操作循环对过期路径的 rename/install 失败会走
-	// logger('failed') + continue 优雅降级，不会静默破坏。
+	// （SyncToggleStatus 同款理由，单进程桌面应用无并发 relink 同 customDir 路径）。
+	// 局限：目录级分支（下方 isDirType）基于锁外快照的 dstParent 做 rename/回滚——
+	// 若快照到锁内执行之间 dstParent 被并发操作改动，备份/回滚的原子性前提被破坏，
+	// 可能滞留 .relink-bak 或丢失原目录（logger 'failed' 可见但非静默；属该低频路径的
+	// 已知残余风险，未做锁内重 stat 校验以守住锁范围语义，见 TestRelinkDir_ScanNotHeldLock）。
 	repoEntries := scanFn(filesRoot)
 	repoByHash := make(map[string][]types.ModelEntry)
 	for _, e := range repoEntries {

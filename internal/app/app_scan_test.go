@@ -931,6 +931,81 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 	}
 }
 
+// TestSearchModels_GeoCacheHit: 二次搜索复用几何缓存（不重算）+ 结果一致。
+// 证明 geoCache 接入 AnalyzeBedrockModel 后对搜索正确性零影响、且第二次命中缓存。
+func TestSearchModels_GeoCacheHit(t *testing.T) {
+	base := t.TempDir()
+	ysmRoot := filepath.Join(base, "ysm", "models")
+	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeYsmModelFixture(t, ysmRoot, "warrior", 5)
+	writeYsmModelFixture(t, ysmRoot, "mage", 3)
+	writeYsmModelFixture(t, ysmRoot, "rogue", 4)
+
+	a := scanApp(t, types.AppConfig{FilesRoot: base})
+
+	first := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	if len(first) != 3 {
+		t.Fatalf("期望 3 个结果，got %d", len(first))
+	}
+	// 首次搜索后：每个被分析的模型路径应已写入几何缓存
+	for _, r := range first {
+		if _, ok := a.geoCache.Load(r.Path); !ok {
+			t.Errorf("首次搜索后几何缓存应命中 %s", r.Path)
+		}
+	}
+
+	// 二次搜索（仅换关键词，几何不变）：结果一致性 + 仍命中缓存
+	second := a.SearchModels(base, "war", 0, 0, 0, 0, 0, 0)
+	if len(second) != 1 || second[0].Name != "warrior" {
+		t.Fatalf("二次关键词搜索应只命中 warrior，got %+v", second)
+	}
+	if second[0].BoneCount != 5 {
+		t.Errorf("命中缓存的几何结果 BoneCount 应=5，got %d", second[0].BoneCount)
+	}
+	for _, r := range first {
+		if _, ok := a.geoCache.Load(r.Path); !ok {
+			t.Errorf("二次搜索后几何缓存应仍命中 %s", r.Path)
+		}
+	}
+}
+
+// TestClearScanCache_InvalidatesGeoCache: ClearScanCache 同时失效几何缓存
+func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
+	base := t.TempDir()
+	ysmRoot := filepath.Join(base, "ysm", "models")
+	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeYsmModelFixture(t, ysmRoot, "warrior", 5)
+
+	a := scanApp(t, types.AppConfig{FilesRoot: base})
+	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	if len(results) != 1 {
+		t.Fatalf("搜索应产出 1 结果，got %d", len(results))
+	}
+	// 结果 Path 即 geoCache 键（AnalyzeBedrockModel 入参 stripped path）
+	key := results[0].Path
+	if _, ok := a.geoCache.Load(key); !ok {
+		t.Fatal("搜索后几何缓存应命中")
+	}
+
+	a.ClearScanCache()
+	if _, ok := a.geoCache.Load(key); ok {
+		t.Errorf("ClearScanCache 应失效几何缓存键 %s", key)
+	}
+
+	// 失效后二次搜索应重新 compute 且结果一致
+	after := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	if len(after) != 1 || after[0].BoneCount != 5 {
+		t.Errorf("失效后重新搜索应仍得 warrior(BoneCount=5)，got %+v", after)
+	}
+	if _, ok := a.geoCache.Load(key); !ok {
+		t.Errorf("二次搜索后应重新写入几何缓存键 %s", key)
+	}
+}
+
 // ===== ScanModelEntriesFiltered 容器指纹校验（档 A 回归守卫）=====
 // 容器扩展名（.zip/.7z）的类型归属不可靠扩展名判定：扫描某类型 tab 时，
 // 目录内任何 .zip 都会被该类型的 extensions 白名单命中（如 EntityPlayer 的 [.pmx,.pmd,.vrm,.zip]），

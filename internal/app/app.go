@@ -53,6 +53,8 @@ type App struct {
 	containerCacheOnce    sync.Once
 	resolvedRootCache     *resolvedRootCache // ADR-134 同构：root 解析缓存组件（原包级全局抽离）
 	resolvedRootCacheOnce sync.Once
+	geoCache              *geoCache // 几何分析结果缓存组件（SearchModels 免重跑 AnalyzeBedrockModel）
+	geoCacheOnce          sync.Once
 	tagsStore             *tags.Store
 	tagsStoreMu           sync.Mutex
 	configCache           types.AppConfig
@@ -128,6 +130,9 @@ func NewApp() *App {
 	// ADR-134：容器类型指纹缓存组件（原 app_scan.go 包级全局抽离），
 	// 默认探测指向 packs.DetectResourceType，组装点显式注入（依赖可见）
 	a.containerCache = newContainerTypeCache(defaultDetectFn)
+	// 几何分析结果缓存组件：组装点显式注入（依赖可见），download/import 后随
+	// ClearScanCache 失效（见 app_geo_cache.go）
+	a.geoCache = newGeoCache()
 	return a
 }
 

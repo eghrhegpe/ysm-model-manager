@@ -215,6 +215,17 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	if !a.isPathInRootOrSelf(modelPath) {
 		return types.BedrockModel{}
 	}
+	// 几何分析结果缓存：SearchModels 每次重跑 AnalyzeBedrockModel（.ysm 还要拉
+	// Node+WASM 子进程解码），是全仓最贵单步。以「stripped path + 文件指纹」为键
+	// 复用——文件不变则跳过整条解析。不可 stat 不缓存（见 geoCache.Get）。
+	return a.ensureGeoCache().Get(modelPath, func() types.BedrockModel {
+		return a.analyzeBedrockModelUncached(modelPath)
+	})
+}
+
+// analyzeBedrockModelUncached 真实几何解析（无缓存，供 geoCache.compute 调用）。
+// 抽离自原 AnalyzeBedrockModel 主体，缓存键已剥禁用后缀 + 路径守卫已通过。
+func (a *App) analyzeBedrockModelUncached(modelPath string) types.BedrockModel {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	if ext == ".ysm" {
 		return a.runYSMParserOnFile(modelPath)

@@ -326,7 +326,8 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 func (a *App) ClearScanCache() {
 	a.ensureContainerCache() // 兜底：容器指纹缓存组件随扫描缓存一起失效
 	scanner.InvalidateCache()
-	a.containerCache.Clear() // 容器指纹随扫描缓存一起失效（下载/导入后）
+	a.containerCache.Clear()   // 容器指纹随扫描缓存一起失效（下载/导入后）
+	a.ensureGeoCache().Clear() // 几何分析结果随扫描缓存一起失效（下载/导入后模型几何可能变化）
 }
 
 // ListModelAuthors 统计 [作者] 前缀（轻量遍历：只看文件名，不读元数据不算哈希，

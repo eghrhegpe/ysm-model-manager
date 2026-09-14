@@ -39,6 +39,8 @@ function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
     // 注：ENV_GROUP_* 常量仍被 folder 的 labelKey 消费，保留定义。
     thumb: {
       size: 64,
+      // [预设冗余标签] 外层 folder 折叠头已叫「预设」，隐藏控件内部多余的「预设预览」label 行
+      hideLabel: true,
       options: (() => {
         const keys = Object.keys(ENV_PRESETS) as Array<Exclude<EnvPresetId, "custom">>;
         return keys.map((id) => ({

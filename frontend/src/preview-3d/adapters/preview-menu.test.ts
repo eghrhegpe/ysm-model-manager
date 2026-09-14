@@ -511,4 +511,28 @@ describe("renderCapControls", () => {
     btns[1].click();
     expect(lastSelected).toBe("sunset");
   });
+
+  it("preset-thumb：hideLabel=true 时不渲染控件顶部 label 行（外层折叠头已承载标题）", () => {
+    const list = mkList();
+    renderCapControls(list, [
+      mk("preset-thumb", {
+        labelKey: "preview.envPresetThumbnail",
+        fallback: "预设预览",
+        thumb: {
+          size: 64,
+          hideLabel: true,
+          options: [
+            { value: "sky", label: "天空", getThumb: () => "data:x" },
+          ],
+          activeValue: () => "sky",
+          onSelect: () => {},
+        },
+      }),
+    ]);
+    const row = list.querySelector(".slide-item");
+    expect(row).not.toBeNull();
+    // 无 .cc-label-dim（label 行被裁剪）；缩略图按钮仍渲染
+    expect(row!.querySelector(".cc-label-dim")).toBeNull();
+    expect(row!.querySelectorAll("button").length).toBe(1);
+  });
 });

@@ -562,16 +562,22 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row-col";
   row.dataset.testid = `cap-${c.id}`;
-  const label = document.createElement("span");
-  label.className = "slide-label cc-label-dim";
-  label.textContent = tOf(c.labelKey);
-  row.appendChild(label);
+  // [预设冗余标签] hideLabel = 外层已有折叠头承载标题，不再渲染内部重复 label 行
+  if (!thumb.hideLabel) {
+    const label = document.createElement("span");
+    label.className = "slide-label cc-label-dim";
+    label.textContent = tOf(c.labelKey);
+    row.appendChild(label);
+  }
   const grid = document.createElement("div");
   grid.className = "cc-grid";
   const activeVal = thumb.activeValue();
   for (const opt of thumb.options) {
     const btn = document.createElement("button");
     btn.className = "cc-thumb-btn";
+    // [点击层叠防护] 显式置于所属行之上，避免容器层的 hover/active 视觉层抢事件焦点
+    btn.style.position = "relative";
+    btn.style.zIndex = "1";
     const isActive = opt.value === activeVal;
     if (isActive) btn.classList.add("cc-thumb-btn-active");
     const img = document.createElement("img");

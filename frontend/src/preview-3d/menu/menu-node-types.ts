@@ -114,6 +114,8 @@ export interface PreviewControlDef {
     options: Array<{ value: string; label: string; getThumb: () => string | null }>;
     activeValue: () => string;
     onSelect: (value: string) => void;
+    /** [预设冗余标签] true = 不渲染控件顶部 label（外层已用 folder 折叠头承载标题，省去内部重复标题行）。 */
+    hideLabel?: boolean;
   };
   /** 读取当前值（框架调用，渲染初始状态；button/image 忽略，image 可返回 null 跳过渲染） */
   getValue: () => number | string | boolean | null | number[];

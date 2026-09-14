@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-14T10:16:14.359Z",
+  "generated": "2026-09-14T15:53:13.545Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -96,6 +96,7 @@
     "src/utils/dom/modal-core.ts|exports|VIEW_TESTIDS",
     "src/utils/dom/modal-picker.ts|types|ModalPickerItem",
     "src/utils/format/pack-format.ts|exports|LATEST_VERSION_SENTINEL",
+    "src/utils/icon/ui-icons.ts|exports|uiIconNames",
     "src/utils/resource/schema.ts|types|ResourceTypeVariant",
     "src/utils/resource/schema.ts|types|ZipEntryMatch",
     "src/utils/resource/types.ts|exports|matchTypeByExt",

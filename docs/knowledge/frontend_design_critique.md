@@ -315,18 +315,18 @@ invariant_anchors:
   - **未清项**：emoji 310 处（长尾字形与属性内字号待人工）；`app-content/tpl.ts` 剩 3 处是 placeholder 内的、需人工决策。
   - 守卫：`test_ui_icons.ts` 5 组断言绿 / `test_design_tokens.ts` 10 组绿 / `tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5812 用例全绿** / pre-commit 基线闸绿（411/411）。
 
-- ✅ **刀㉑ 图标迁移全仓铺开：emoji 331 → 127（-62%）**（2026-09，承接刀⑳）：
-  - 迁移 49 文件 / **694 处**替换；基线 **428 → 228**。剩余 127 处 + 37 处无令牌字号圆角。
+- ✅ **刀㉑ 图标迁移全仓铺开：emoji 331 → 127 → 25 可映射（-92%）**（2026-09，承接刀⑳）：
+  - **第二轮收尾**：首轮漏迁的 `tpl-settings.ts` 等（因早期 `git checkout -- frontend/` 回退后迁移器被误删、清单未重生）补迁 27 文件 / 116 处；基线 **228 → 129**。剩余 42 文件 / 134 处，其中**仅 25 处仍有精确 SVG 令牌对应**（19%），其余是属性值内 emoji（placeholder/title）、纯装饰字形、或 `📁`+数字这类拼接形态（不属图标位）。
   - **⚠️ 本轮暴露的核心教训：机器迁移的难点不在「替换」，在「判断哪些位置不该替换」——而后者靠黑名单永远做不对。**
-    1. **纯文本槽位不能放 SVG 标记**：`el.textContent = \`${UI_ICONS.warning} ...\`` 会把 SVG 当字符串赋给 textContent，用户看到字面 `<svg class="ws-icon"...>` 乱码；toast 同理（`app-toast` 用 `${esc(msg)}` 转义注入）。
-    2. **黑名单三轮才收敛**（实证）：第 1 轮认 textContent/SetTitle/placeholder → 漏 `msg:` 字段；第 2 轮补 msg:/logError/ringLog → 又漏 `onShowToast(...)` 实参、`ghPlaceholder(...)` helper；**第 3 轮改用正向判据**（「该行确实在拼 HTML」才保留 SVG：行内有 `<tag`/`</tag`/innerHTML 赋值）才收敛。
-       **结论：文本 vs HTML 的判定必须正向白名单**——枚举无穷多的文本槽位不可能穷尽，而「是不是在拼 HTML」有可靠特征。
-    3. **i18n 语言包整体不能迁移**：`locales/{zh-CN,en,ja}.ts` 三个文件被误改 310 行/个——**翻译值是文案正文不是图标位**，且 UI_ICONS 在那里根本 import 不到（tsc TS2304）。已整文件回退。
-    4. **多行 import 语句的插入位置**：按「最后一行以 import 开头」插入会把新 import **劈进多行 import 语句中间**（`import {\n A,\n B,\n} from "..."` 的续行不以 import 开头）→ 4 文件语法错误 TS1003/TS1109。正解：定位 import **块整体结束**处（吃到该语句闭合）。
+    1. **纯文本槽位不能放 SVG 标记**：`el.textContent = \`${UI_ICONS.warning} ...\`` 会把 SVG 当字符串赋给 textContent，用户看到字面 `<svg class="ws-icon"...>` 乱码；toast 同理（`app-toast` 用 `${esc(msg)}` 转义注入）。**黑名单枚举文本槽位三轮都收敛不了**——`textContent`/`SetTitle` → 漏 `msg:` → 补 `onShowToast()` 实参又漏；**正解 = 正向判据**：只有「该行确实在拼 HTML」（行内有 `<tag`/`</tag`/innerHTML 赋值）才保留 SVG。枚举无穷多文本槽位不可能穷尽，而「在拼 HTML」有可靠特征。
+    2. **i18n 语言包整体不能迁移**：`locales/{zh-CN,en,ja}.ts` 三个文件被误改 310 行/个——**翻译值是文案正文不是图标位**，且 UI_ICONS 在那里根本 import 不到（tsc TS2304）。已整文件回退。
+    3. **多行 import 语句的插入位置**：按「最后一行以 import 开头」插入会把新 import **劈进多行 import 语句中间**（`import {\n A,\n B,\n} from "..."` 的续行不以 import 开头）→ 4 文件语法错误 TS1003/TS1109。正解：定位 import **块整体结束**处（吃到该语句闭合）。
+    4. **闭合标签前的 emoji 形态**（`>⚠️</div>`，无尾随空格）首轮判据要求「后接空白」会整类漏掉——补「后接 `</` 闭合标签」分支。
     5. **`not.toContain("<svg")` 类断言被图标化污染**：perf 趋势折线测试用「无 `<svg>`」表达「无折线」，图标全变 SVG 后该断言恒假。改为针对**折线特征**（`<polyline`）判定——**断言要锁语义特征而非「某种标签的存在」**。
-  - **测试断言更新的原则**：只改**形态**不改**意图**。`expect(html).toContain("⬇️ 2")` → `expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*2/)`——断言「该徽章内是 SVG 且紧跟数字 2」，比「包含任意 svg」严（后者会放过「徽章换错图标」的真回归），又比写死某条 path 稳（图标库改路径不该弄红测试）。共更新 12 处断言，全部保留原有的 testid/文案/转义断言。
+  - **测试断言更新的原则**：只改**形态**不改**意图**。`expect(html).toContain("⬇️ 2")` → `expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*2/)`——断言「该徽章内是 SVG 且紧跟数字 2」，比「包含任意 svg」严（后者会放过「徽章换错图标」的真回归），又比写死某条 path 稳（图标库改路径不该弄红测试）。共更新 ~18 处断言，全部保留原有的 testid/文案/转义断言。
+  - **⚠️ 测试定位陷阱（第二轮新增）**：`loadModel2D` 内部以同名局部 `container` 承载内容（line 55 `const container = document.createElement("div")` 遮蔽了传入的 `skelContainer`），测试传入的 `container` 是其**外层**；故断言按钮须经 `.sk-loading-box` **嵌套定位**（直接 `container.querySelectorAll("button")` 命中不到，返回 0）——这不是迁移 bug，是既有测试定位失误，迁移只是让「靠 emoji 全文匹配」的脆弱断言暴露。
   - **方法论收获**：**「测试全绿」在结构性重构中几乎不是有效信号**——本轮 3 类真 bug（字面占位符、textContent 乱码、多行 import 劈裂）在单测层面全绿，全部靠**实渲染产物**（`vite-node` 打印 `<svg class="ws-icon">` 计数）与 **`tsc`** 才抓到。故验收标准定为：实渲染产物 + typecheck + 全量测试三条同时成立。
-  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5812 用例全绿** / pre-commit 基线闸 228/228。
+  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5816 用例全绿** / pre-commit 基线闸 129/129。
 
 
 ## 相关

@@ -206,6 +206,30 @@ if (noFiles) {
 } else {
   process.stdout.write(`${out}\n`);
   const ioErr = /internalError|cannot find|系统找不到/i.test(out);
+  if (!ioErr) {
+    // 在 stdout 末尾追加摘要（错误数 + 受影响文件），确保管道截断（如 Select-Object -Last）
+    // 时仍能看到关键信息，不再需要手动重跑 npx biome。
+    const s = parseSummary(out);
+    const files = [
+      ...new Set(
+        out
+          .split("\n")
+          .map((l) => {
+            // biome 诊断行：缩进 + path:line:col（非贪婪防止 Windows 路径 C:\... 被吞掉冒号）
+            const m = l.match(/^\s{2}(.+?):\d+:\d+/);
+            return m ? m[1] : "";
+          })
+          .filter((f) => f && !f.startsWith("check")),
+      ),
+    ];
+    const fileNote =
+      files.length > 0
+        ? ` · ${files.slice(0, 5).join(", ")}${files.length > 5 ? "…" : ""}`
+        : "";
+    process.stdout.write(
+      `\n[check-biome] 违规摘要: ${s.errors} 错误 / ${s.warnings} 警告${fileNote}\n`,
+    );
+  }
   if (ioErr) {
     console.error("[check-biome] biome 报路径/环境错误（internalError/io）——非代码违规；先核对 --files 路径与调用目录（诊断见上方输出）");
   } else if (writeMode) {

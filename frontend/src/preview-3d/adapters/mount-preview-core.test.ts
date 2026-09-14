@@ -1068,3 +1068,72 @@ describe("mount3D 直挂路径 GPU 预算门", () => {
     expect(second.build).not.toHaveBeenCalled();
   });
 });
+
+// ===== 会话存活守卫：两条件手写版 vs 三条件 guardSessionAlive（2026-09 核实结论）=====
+//
+// 【疑点】`mount-session.ts|guardSessionAlive`（ADR-233 唯一出口）检查三条件
+// `aborted.v || isDisposed.v || myGen !== getGen()`；`mount-preview-core.ts` 有两处
+// 手写两条件版（runBuild 中止分支 / recoverMountFailure 报错守卫），**未含 isDisposed.v**。
+//
+// 【核实结论：两处省略均为正确，不是遗漏】——静态看像漏判，实测证明「补上反而制造 bug」。
+//
+// ① `recoverMountFailure`（L990）——**绝不能加 isDisposed.v**
+//    该处位于 catch 段，其上 L977 `runFailedMountCleanup(ctx)` 已执行 `teardown(failed)`
+//    → **isDisposed.v 必然为 true**。若改用 guardSessionAlive，守卫恒 false ⇒
+//    `showLoadFailure` 永不执行 ⇒ 用户永远看不到加载失败提示。
+//    （实测：副作用版改动使「build 失败 → 错误提示」两条用例立即失败）
+//    该处语义是「本会话是否被**外部**中断」（ESC/切模型），而非「是否已 dispose」。
+//
+// ② `runBuild` 中止分支（L901）——isDisposed 在该点不可独立为 true
+//    teardown(full) 的入口只有 handle.cleanup()（需 commitSession 已跑）与 escH
+//    （commitSession 内才替换为 full 版）；teardown(failed) 只在 catch 段发生。
+//    而本分支位于 build await 之后、commitSession 之前 ⇒ build 挂起期无任何 teardown 入口
+//    ⇒ isDisposed 恒 false ⇒ 加与不加行为等价（现写法不构成缺陷）。
+//
+// 【教学价值】`guardSessionAlive` 是三条件的**特定语义**（「会话是否存活」），
+// 不可无差别套用到所有「是否继续」守卫——调用点语义不同（如「是否被外部中断」）时，
+// 条件集必须相应裁减。ADR-233 的「统一出口」针对的是 switch-preview 三处同语义咒语，
+// 非要求全仓所有守卫都调它。
+describe("会话存活守卫：两条件版语义核实（防未来误『修复』）", () => {
+  it("build 挂起期 cleanupPreview 不产生 teardown → isDisposed 不可独立为 true", async () => {
+    // build 未完成时 commitSession 尚未运行 → ledger 无 handle → cleanupPreview
+    // 的 handle.cleanup() 循环为空，仅 invalidate（代际失效）生效。
+    let resolveBuild!: (v: PreviewScene) => void;
+    const adapter: PreviewAdapter = {
+      id: "vrm",
+      build: vi.fn(() => new Promise<PreviewScene>((res) => { resolveBuild = res; })),
+    };
+    const p = mount3D(adapter, "/m/pending.vrm");
+    cleanupPreview();
+    resolveBuild(makeContent());
+    await p;
+    expect(hasActivePreview()).toBe(false);
+    cleanupPreview();
+  });
+
+  it("build 失败必须弹出错误提示（recoverMountFailure 守卫不得含 isDisposed）", async () => {
+    // 契约守卫：若有人把 L990 改成 guardSessionAlive（含 isDisposed.v），
+    // teardown(failed) 刚置位 isDisposed=true → 守卫恒 return → 提示消失。
+    // 断言语义：showLoadFailure 的**可观测副作用** = toast:show 事件（error 型）。
+    const seen: { msg?: string; type?: string }[] = [];
+    const onToast = (p: { msg?: string; type?: string }): void => {
+      seen.push(p);
+    };
+    bus.on("toast:show", onToast);
+    try {
+      const adapter: PreviewAdapter = {
+        id: "vrm",
+        build: vi.fn(async () => {
+          throw new Error("boom");
+        }),
+      };
+      await mount3D(adapter, "/m/fail.vrm");
+      expect(hasActivePreview()).toBe(false);
+      // 失败提示必须可见（错误 toast 至少一条）——守卫误加 isDisposed 时此处归零
+      expect(seen.some((p) => p.type === "error")).toBe(true);
+    } finally {
+      bus.off("toast:show", onToast);
+      cleanupPreview();
+    }
+  });
+});

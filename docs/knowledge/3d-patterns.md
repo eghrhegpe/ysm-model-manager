@@ -645,6 +645,43 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ---
 
+## 15. 守卫条件不可无差别套用（"补上缺失条件"反而是 bug，2026-09）
+
+### 问题（疑似缺陷）
+`mount-session.ts|guardSessionAlive` 是 ADR-233 的会话存活唯一出口，检查**三条件**：
+`aborted.v || isDisposed.v || myGen !== getGen()`。
+但 `mount-preview-core.ts` 有两处手写**两条件**版（缺 `isDisposed.v`）：
+- `runBuild` 中止分支（build await 之后）
+- `recoverMountFailure` 报错守卫（catch 段）
+
+静态看像"ADR-233 未收敛干净的遗漏"——**但这个判断是错的**。
+
+### 核实结论：两处省略均正确，补上会制造真 bug
+
+**① `recoverMountFailure` 绝不能加 `isDisposed.v`（决定性）**
+该处位于 catch 段，其上 `runFailedMountCleanup(ctx)` 刚执行 `teardown(failed)`
+→ **`isDisposed.v` 必然为 true**。若改用 `guardSessionAlive`，守卫**恒 false** ⇒
+`showLoadFailure` 永不执行 ⇒ **用户永远看不到加载失败提示**。
+（实测：注入该改动后「build 失败 → 错误提示」相关用例立即失败）
+
+该处真实语义是「本会话是否被**外部**中断」（ESC / 切模型），**不是**「会话是否已 dispose」。
+
+**② `runBuild` 中止分支：`isDisposed` 在该点不可独立为 true**
+`teardown(full)` 入口只有 `handle.cleanup()`（需 `commitSession` 已跑）与 `escH`
+（`commitSession` 内才替换为 full 版）；`teardown(failed)` 只在 catch 段发生。
+本分支位于 build await 之后、`commitSession` 之前 ⇒ 挂起期无任何 teardown 入口
+⇒ `isDisposed` 恒 false ⇒ 加与不加行为等价（现写法不构成缺陷）。
+
+### 教训（元级，与 §7.3 同源互补）
+1. **"统一出口"不等于"所有守卫都必须调它"**：ADR-233 收敛的是 `switch-preview`
+   三处**同语义**咒语，非要求全仓所有「是否继续」判断都复用它。**条件集须随调用点语义裁减**。
+2. **发现"某处少了某个条件"时，先问"这个条件在该点可能为真吗"**：若恒为真（或恒为假），
+   补上会改变语义；`recoverMountFailure` 正是"恒为真"的反例。
+3. **验证方式 = 注入式反证**：把"修复"实际注入代码跑测试，看它是变绿还是变红。
+   本次注入后 2 条既有用例立即失败 → 证明"修复"有害。这比读代码推演可靠得多。
+
+---
+
 ## 模式速查表
 
 | # | 模式名称 | 核心思想 | 适用场景 | 红线/禁忌 |

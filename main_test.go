@@ -112,13 +112,10 @@ func TestMarshalBindingError(t *testing.T) {
 		if err := json.Unmarshal(out, &got); err != nil {
 			t.Fatalf("产出非法 JSON: %v (%s)", err, out)
 		}
-		if got.Code != base.Code || got.Reason != base.Reason {
-			t.Fatalf("包装形态结构化字段丢失: got %+v", got)
-		}
-		// 对照：默认机制对包装形态产出 {}（证明本接线确有必要）
-		def, _ := json.Marshal(&wrapped)
-		if string(def) != "{}" {
-			t.Logf("注意：默认 marshalError 产出 %s（预期 {}，Wails 行为可能已变）", def)
+		if got.Code != base.Code || got.Operation != base.Operation ||
+			got.SourcePath != base.SourcePath || got.Reason != base.Reason ||
+			got.Suggestion != base.Suggestion {
+			t.Fatalf("包装形态结构化字段丢失: got %+v, want %+v", got, base)
 		}
 	})
 

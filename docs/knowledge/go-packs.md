@@ -81,6 +81,7 @@ status: active
 - **冲突优先级 = 注册表顺序**（ADR-067 S3）：一个 `.zip` 同时满足多个 zipEntries 时，`DetectResourceType` 按注册表顺序首命中胜出（ysm 的 `ysm.json`/`models/` 根标记天然排前，比 `.pmx` 更具体）
 - `supported_formats` 兼容三种 JSON 形态（int / [min,max] 数组 / {min_inclusive,max_inclusive} 对象），由 `types.FormatRange` 承接
 - **`.json` 扩展名的 YSM 恒不被 DetectResourceType 识别**（P3 观察：注册表 ysm 声明 `.json` 扩展名，但 `isYsmFile` 对非 `.ysm/.zip/.7z` 恒返回 false——前端以 `""` 兜底走 model detail，功能可用但类型标签错误；二选一修复方向：isYsmFile 加 `.json` 内容判定或从注册表移除 `.json`）
+- **有效扩展名集预计算（2026-09 落地）**：`classifyByLocationStrict` / `classifyByFingerprint` 原在「祖先×类型」双层循环内调用 `rt.EffectiveExtensions()`——该函数每次 `make` 新切片 + 逐元素 `strings.ToLower`，扫描 N 文件时放量为 O(N×祖先×类型) 次分配。现两函数入口各预计算一次 `extsByType [][]string` 后复用（注册表为不可变配置，不存在失同步问题——与「sort 比较器预计算 key」陷阱的区别：后者排序中切片元素会位移，此处配置不变）。`hasExtIn` 仍保留内部 `ToLower`（防御语义，调用方可能传未小写集合）
 
 ## 相关
 

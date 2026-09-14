@@ -83,6 +83,7 @@ status: active
   - **R34 P2-3 根 symlink 守卫 filepath.Clean 修复**（repoaudit.go:159）：原 `path == dirPath` 字符串比较，含尾斜杠/`..`/未 clean 路径时比较失败，根符号链接被静默跳过，产出空报告。修复：`path == filepath.Clean(dirPath)`。
 - 健康分数有下限 `scoreFloor = 30`，避免多问题叠加直接归零失去区分度
 - `Classify` 未命中任何注册表类型 → `"other"`（不报错）
+- **`Resources.ByType` 只在 walk 结束后一次性赋值（2026-09 落地）**：`DirAuditResult` 字面量初始化时不再预 `make` `ByType` map——原实现先 make 一个随即被下方 `result.Resources.ByType = resources`（局部 map 累积结果）整体覆盖，属无谓分配。后续改动须保持「局部 map 累积 → walk 后赋值」形态，勿在字面量里提前构造。
 
 ## 已知问题 / 待治理（R34 审计记录）
 

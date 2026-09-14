@@ -486,16 +486,16 @@ export async function mount3D(
 // ===== mount3D stage 1: 外壳装配（原 mount3D L400-407 + L456-619 纯搬家）=====
 /**
  * 会话骨架(session/handlers/focusTrap/ctx/infra 槽)由调度层 mount3D 先建；
- * 本函数负责外壳 DOM(overlay/body/root) + camBridge + viewContainer + 声明式根菜单 + loadingEl
- * 及 input 状态容器(keys/mouseDown/lastMouse)。camBridge.setOrbit 经 ctx.getInfra() 延迟读 infra
- * (原闭包捕获 let infra 的语义等价——buildInfra 赋值后调度层回填 ctx 槽位)。
+ * 本函数按「单例 DOM → 相机桥 → 视窗 → 根菜单」四段顺序装配外壳，每段下沉为
+ * 具名子函数（见下），主函数只保留编排与返回值组装。camBridge.setOrbit 经
+ * ctx.getInfra() 延迟读 infra（原闭包捕获 let infra 的语义等价——buildInfra
+ * 赋值后调度层回填 ctx 槽位）。
  */
 function assembleShell(ctx: MountCtx): AssembledShell {
   const session = ctx.session;
   const selfMode = ctx.selfMode;
   const adapter = ctx.adapter;
   const opts = ctx.opts;
-  const focusTrap = ctx.focusTrap;
 
   // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
   // keys 直接使用 session.keys（render-loop 动态读取驱动相机运动）
@@ -507,14 +507,62 @@ function assembleShell(ctx: MountCtx): AssembledShell {
   const mouseDown = { v: false };
   const lastMouse = { x: 0, y: 0 };
 
-  // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
+  const shell = ensureOverlayShell(ctx);
+  const { overlay, root } = shell;
+  ctx.overlay = overlay;
+
+  const camBridge = makeCamBridge(ctx, session, mouseDown);
+  ctx.camBridge = camBridge;
+
+  // ensureViewContainer 可能补建 body（单例半残场景）——返回权威引用，勿用 ensureOverlayShell 的初值
+  const { viewContainer, body } = ensureViewContainer(shell.body, root);
+  ctx.viewContainer = viewContainer;
+
+  const menuHandle = mountRootMenu(ctx, {
+    root,
+    viewContainer,
+    camBridge,
+    selfMode,
+    adapter,
+    opts,
+  });
+  ctx.menuHandle = menuHandle;
+
+  const loadingEl = document.createElement("div");
+  loadingEl.className = "mpc-loading";
+  viewContainer.appendChild(loadingEl);
+  ctx.loadingEl = loadingEl;
+
+  return {
+    overlay,
+    body,
+    root,
+    camBridge,
+    viewContainer,
+    menuHandle,
+    loadingEl,
+    keys,
+    mouseDown,
+    lastMouse,
+  };
+}
+
+/**
+ * 单例外壳 DOM 装配：overlay(shadow host) + body + 焦点陷阱。
+ * 首次 mount3D 创建，后续复用同一 DOM（避免重建导致黑屏）。
+ *
+ * ADR-175 M1：overlay = shadow host（挂 document.body 保留 id/class/aria，app-tree
+ * getElementById 守卫零改动）；全部内容（tip/body/viewContainer/菜单链）迁入 shadowRoot。
+ * attachShadow 缺失（无 shadow DOM 的宿主/测试环境）降级 light DOM——root 即 overlay 本体，
+ * 样式注入走 head 兜底，与迁移前行为一致。复用路径（单例存活）从 host 取回既有 shadowRoot。
+ */
+function ensureOverlayShell(ctx: MountCtx): {
+  overlay: HTMLElement;
+  body: HTMLElement;
+  root: HTMLElement | ShadowRoot;
+} {
   let overlay = previewShell.overlay;
   let body = previewShell.body;
-  // ADR-175 M1：overlay = shadow host（挂 document.body 保留 id/class/aria，app-tree
-  // getElementById 守卫零改动）；全部内容（tip/body/viewContainer/菜单链）迁入 shadowRoot。
-  // attachShadow 缺失（无 shadow DOM 的宿主/测试环境）降级 light DOM——root 即 overlay 本体，
-  // 样式注入走 head 兜底，与迁移前行为一致。
-  // 复用路径（单例存活）从 host 取回既有 shadowRoot，不走重建分支。
   let root: HTMLElement | ShadowRoot;
   if (!overlay) {
     overlay = document.createElement("div");
@@ -555,20 +603,25 @@ function assembleShell(ctx: MountCtx): AssembledShell {
   }
   // 焦点陷阱：ADR-175 M1 后 overlay 内容实体在 host.shadowRoot 内，
   // trapFocusAcrossShadow 的跨 shadow 下钻从防御性兜底转正为实际路径（D3）
-  if (!focusTrap.cleanup) {
-    focusTrap.cleanup = trapFocusAcrossShadow(overlay);
+  if (!ctx.focusTrap.cleanup) {
+    ctx.focusTrap.cleanup = trapFocusAcrossShadow(overlay);
   }
-  ctx.overlay = overlay;
-  // viewContainer 复用模块级单例（与 scene/canvas 同寿命；创建逻辑见下方 §3 UI 装配）
+  return { overlay, body: body as HTMLElement, root };
+}
 
-  // 顶栏已移除（ADR-076 v2，用户 2026-08-16 决策）：预览控件全部收进
-  // 声明式根菜单（⚙️ 按钮 → mountPreviewRootMenu），彻底告别顶栏滑块垃圾。
-  // litematic 分层切片面板也经 schemaId 注册（registerSchema builder）注入根菜单模型组。
-
-  // 相机控制桥（shared 模式）：core 的相机控件与 PreviewBuildCtx.cameraControls
-  // 共用同一 bridge（操作核心内部 orbitMode/camSpeed/controls），适配器（如 ysm 底部
-  // 导航）经 cameraControls 复用同一套相机状态。相机控件本身已收进声明式根菜单的 camera 项。
-  const camBridge: CameraControlBridge = {
+/**
+ * 相机控制桥（shared 模式）：core 的相机控件与 PreviewBuildCtx.cameraControls
+ * 共用同一 bridge（操作核心内部 orbitMode/camSpeed/controls），适配器（如 ysm 底部
+ * 导航）经 cameraControls 复用同一套相机状态。相机控件本身已收进声明式根菜单的 camera 项。
+ *
+ * @param mouseDown 与 bindInputHandlers 共享的引用容器——setOrbit 需清零它防拖拽残留
+ */
+function makeCamBridge(
+  ctx: MountCtx,
+  session: MpSessionState,
+  mouseDown: { v: boolean },
+): CameraControlBridge {
+  return {
     getOrbit: () => session.orbitMode,
     setOrbit: (v: boolean) => {
       const i = ctx.getInfra(); // camBridge 仅经 cameraControls 在 build 后使用；self 模式不调用（ctx.getInfra 延迟读）
@@ -593,34 +646,63 @@ function assembleShell(ctx: MountCtx): AssembledShell {
       ownHandle(ctx)?.resetCamera?.();
     },
   };
-  ctx.camBridge = camBridge;
+}
 
-  // viewContainer：与 scene/canvas 同属共享外壳——首次 mount3D 创建，后续复用同一
-  // 视窗（多模型同台共用同一 canvas，而非每次 mount3D 新建空容器；回归：曾反复 new
-  // 容器导致同台后多出空白分屏）
-  // overlay/body 单例成对创建（overlay 在则
-  // body 必在），TS 不认该不变量——复用路径 body 来自可能为 null 的 previewShell.body。
-  // 兜底必须在此处（viewContainer 创建前）执行才能真正守卫下方 body! 消费——
-  // 原实现把它放函数尾（body! 消费之后），真破坏时先崩在 body!、兜底永不达。
-  if (!body) {
-    body = document.createElement("div");
-    body.className = "mpc-body";
-    root.appendChild(body);
-    previewShell.body = body;
+/**
+ * viewContainer 单例：与 scene/canvas 同属共享外壳——首次 mount3D 创建，后续复用同一
+ * 视窗（多模型同台共用同一 canvas，而非每次 mount3D 新建空容器；回归：曾反复 new
+ * 容器导致同台后多出空白分屏）。
+ *
+ * overlay/body 单例成对创建（overlay 在则 body 必在），TS 不认该不变量——复用路径
+ * body 来自可能为 null 的 previewShell.body。兜底必须在此处（viewContainer 创建前）
+ * 执行才能真正守卫 body 消费——原实现把它放函数尾（body! 消费之后），真破坏时
+ * 先崩在 body!、兜底永不达。
+ *
+ * @returns viewContainer + **权威 body 引用**（兜底分支可能补建，调用方须用返回值而非入参）
+ */
+function ensureViewContainer(
+  body: HTMLElement | null,
+  root: HTMLElement | ShadowRoot,
+): { viewContainer: HTMLElement; body: HTMLElement } {
+  let b = body;
+  if (!b) {
+    b = document.createElement("div");
+    b.className = "mpc-body";
+    root.appendChild(b);
+    previewShell.body = b;
   }
   if (!previewShell.viewContainer) {
     const c = document.createElement("div");
     c.className = "preview-view-container mpc-view"; // 语义锚点类保留,布局样式入 .mpc-view(双类防将来锚点规则覆盖)
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    body!.appendChild(c);
+    b.appendChild(c);
     previewShell.viewContainer = c;
   }
-  const viewContainer = previewShell.viewContainer;
-  ctx.viewContainer = viewContainer;
+  return { viewContainer: previewShell.viewContainer, body: b };
+}
 
-  // 声明式根菜单（⚙️）：core 在 overlay 内自建（预览全屏盖住 app 外壳，主程序 nav.settings 够不着），
-  // 全部控件以 CORE_MENU_ITEMS + 适配器注入项表驱动渲染（preview-menu/defs.ts），
-  // 测试遍历真实菜单数组断言（preview-menu/items.test.ts），选择器稳定可遍历（ADR-076 v2）。
+/** 根菜单装配依赖（自 assembleShell 局部量打包，避免参数列表过长） */
+interface RootMenuDeps {
+  root: HTMLElement | ShadowRoot;
+  viewContainer: HTMLElement;
+  camBridge: CameraControlBridge;
+  selfMode: boolean;
+  adapter: PreviewAdapter;
+  opts: Mount3DOptions;
+}
+
+/**
+ * 声明式根菜单（⚙️）：core 在 overlay 内自建（预览全屏盖住 app 外壳，主程序 nav.settings 够不着），
+ * 全部控件以 CORE_MENU_ITEMS + 适配器注入项表驱动渲染（preview-menu/defs.ts），
+ * 测试遍历真实菜单数组断言（preview-menu/items.test.ts），选择器稳定可遍历（ADR-076 v2）。
+ *
+ * 顶栏已移除（ADR-076 v2，用户 2026-08-16 决策）：预览控件全部收进声明式根菜单
+ * （⚙️ 按钮 → mountPreviewRootMenu），彻底告别顶栏滑块垃圾。litematic 分层切片面板也经
+ * schemaId 注册（registerSchema builder）注入根菜单模型组。
+ */
+function mountRootMenu(ctx: MountCtx, deps: RootMenuDeps): PreviewMenuHandle {
+  const { root, viewContainer, camBridge, selfMode, adapter, opts } = deps;
+  const session = ctx.session;
+
   const menuCtx: PreviewMenuCtx = {
     selfMode,
     getCap: (id: string) => sceneCapabilityRegistry.getById(id) ?? null,
@@ -676,27 +758,9 @@ function assembleShell(ctx: MountCtx): AssembledShell {
       }
     };
   const menuHandle = mountPreviewRootMenu(root, menuCtx);
-  ctx.menuHandle = menuHandle;
   // ADR-093 T5：注册表菜单 sink（selectModel 时按活跃模型换菜单项）
   sceneRegistry.setMenuSink({ setAdapterItems: (items) => menuHandle.setAdapterItems(items) });
-
-  const loadingEl = document.createElement("div");
-  loadingEl.className = "mpc-loading";
-  viewContainer.appendChild(loadingEl);
-  ctx.loadingEl = loadingEl;
-
-  return {
-    overlay,
-    body,
-    root,
-    camBridge,
-    viewContainer,
-    menuHandle,
-    loadingEl,
-    keys,
-    mouseDown,
-    lastMouse,
-  };
+  return menuHandle;
 }
 
 // ===== mount3D stage 2: 基础设施装配（原 mount3D L621-738 纯搬家）=====
@@ -715,7 +779,6 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
     viewContainer,
     loadingEl,
     root,
-    body,
     overlay,
     menuHandle,
     camBridge,
@@ -781,10 +844,15 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
   }
 
   // 操作提示条（自动消失，两种模式通用）
+  // body 经 root 现取而非复用 shell.body：shell.body 是装配段快照，若 body 曾被补建
+  // （ensureViewContainer 兜底分支）则快照为陈旧引用，insertBefore 会抛
+  // 「node is not a child of this node」。以 root 实查为准，杜绝跨段引用漂移。
   const tip = document.createElement("div");
   tip.className = "mpc-tip";
   tip.textContent = t("preview.controlsHint");
-  root.insertBefore(tip, body);
+  const tipAnchor = root.querySelector(".mpc-body");
+  if (tipAnchor) root.insertBefore(tip, tipAnchor);
+  else root.appendChild(tip);
   // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）
   session.tipTimeoutId = setTimeout(() => {
     if (tip.parentNode) tip.remove();

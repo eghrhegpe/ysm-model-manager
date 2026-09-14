@@ -495,6 +495,31 @@ describe("外壳单例复用", () => {
     expect(viewContainerCount()).toBe(1);
     cleanupPreview();
   });
+
+  // 回归（assembleShell 拆分 2026-09）：view-container 必须挂进**文档树内**的 body。
+  // 拆函数时 body 引用经 ensureOverlayShell → ensureViewContainer 两次传递，若中途
+  // 丢失「补建后的权威引用」，view-container 会挂进孤儿 body（不入文档树 → 画布不可见）。
+  // 断言链条：body ∈ root ∈ overlay ∈ document，逐层 isConnected。
+  it("view-container 挂进文档树内 body（body→root→overlay→document 逐层可达）", async () => {
+    await mount3D({ id: "vrm", build: vi.fn(async () => makeContent()) }, "/a.ysm");
+
+    const overlay = document.getElementById("ysm-overlay-3d") as HTMLElement;
+    expect(overlay).not.toBeNull();
+    const root = (overlay.shadowRoot as unknown as HTMLElement) ?? overlay;
+
+    const body = root.querySelector(".mpc-body") as HTMLElement;
+    const vc = root.querySelector(".preview-view-container") as HTMLElement;
+    expect(body).not.toBeNull();
+    expect(vc).not.toBeNull();
+
+    // 挂载链完整（任一层脱落即画布不可见）
+    expect(vc.parentElement).toBe(body);
+    expect(body.isConnected).toBe(true);
+    const host = root === overlay ? overlay : (root as unknown as ShadowRoot).host;
+    expect(host.isConnected).toBe(true);
+    expect(viewContainerCount()).toBe(1);
+    cleanupPreview();
+  });
 });
 
 // 生命周期事件顺序：cleanupPreview 幂等 / 重复卸载

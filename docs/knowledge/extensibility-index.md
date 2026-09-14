@@ -184,9 +184,10 @@ invariant_anchors:
 
 ### 2.18 `model-group-builder.ts` 悬挂规则 — ③缺扩展点
 - 硬编码 `"RightArm"/"LeftArm"→"Arm"` 悬挂规则 → 通用「未挂父节点重挂最近可挂祖先」策略或可注册关系表（中，非玩家模型不适用）。
+  - 🔄 **刀⑳ (2026-09) 部分收敛**：左右臂两段**逐字重复**的 26 行挂接块已合并为 `for (const armName of ["RightArm","LeftArm"])` 循环（行为等价，152 测试全绿）。**「缺扩展点」的实质未变**——骨名仍硬编码，仍需「最近可挂祖先」通用策略或关系表。
 
-### 2.19 `model-group-builder.ts` `hasTextures` — 死代码
-- `hasTextures=false` 使 `textureId` 恒 null，`texIdxBase` 仅服务此死分支 → 删除或接入真实纹理（低）。
+### 2.19 ~~`model-group-builder.ts` `hasTextures` — 死代码~~
+- ✅ **刀⑳ (2026-09) 已删除**：`const hasTextures = false; if (hasTextures) {...}` 恒假分支已摘除，`postProcessAndTextures` 统一返回 `null`；`texIdxBase` 参数保留以维持 `buildModelGroup` 既有签名（对齐 Go `spec.go` 同名契约），待 Go 侧真正下发纹理 ID 时再接线（源码内已注释说明）。
 
 ### 2.20 `model2d.ts` 头发调试启发式 — ①硬编码启发式
 - 头发调试启发式写死 → 见子代理汇报（低-中）。

@@ -142,7 +142,9 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 
 ## 已知遗留（2026-08-29 a11y 审查登记）
 
-- **输入阻断栈无嵌套计数守卫**：`pushInputBlock`/`popInputBlock` 按 id 配对（`pop` 用 `lastIndexOf` 删单条），同一 id 重复 push 后 pop 一次即清，无栈深度计数。3D 菜单 + 叠加浮层场景靠调用方自行配对；`ui-slide-menu.test.ts` 清栈的 `while (isInputBlocked()) popInputBlock("slide-menu")` 写死 id，未来若塞入其他 id 会死循环——后续可考虑暴露 `__resetInputBlockForTest` 钩子或改计数语义。
+- **输入阻断栈：计数语义已就位，原登记描述有误**（2026-09 刀⑳ 核实更正）：实现是 `Map<id, count>`——`push` 对同 id **递增计数**、`pop` 递减、归零才 `delete`（`input-block-stack.ts|createInputBlockStack`），**并非**「重复 push 后 pop 一次即清」；`isBlocked()` 取 `stack.size > 0`，另有 `maxSize=10`（默认）深度上限防膨胀。原登记称「无嵌套计数守卫」「pop 用 lastIndexOf」均与实现不符。
+  - **真缺陷在调用方而非本栈**（2026-09 刀⑳ 已修）：`preview-3d/menu/core.ts|dispose` 只拆壳、**不解阻断**，而 pop 只在 `slide-menu|onHide` 内；三档 teardown（`mount-session` early/failed/full 均为直接 `menuHandle.dispose()`、前置无 hide）与 `closeAllOverlays` 都走这条路 ⇒ 菜单开启态下销毁会话，`"slide-menu"` 计数永久残留、`isInputBlocked()` 恒 true、相机 WASD/方向键在该会话后彻底失灵。修法：`dispose` 首段补 `hideMenu({ restoreFocus:false })`。回归守卫见 `menu/core.test.ts` 的「输入阻断栈：dispose 必须解除」describe（**刻意不**在 beforeEach 里 `__resetInputBlockStackForTest()`——上方 describe 的 reset 恰好掩盖过该泄漏）。
+  - **教训**：`__resetInputBlockStackForTest()` 这类全局复位钩子会让「不配对」的缺陷在测试里永不显形；跨用例隔离与「契约断言」需要分开的 describe。
 - **测试规模盲区**（`focus-restore.test.ts` / `input-and-animation.test.ts`）：Numpad 只测 keydown 未测 keyup 释放；输入阻断栈 × 双轨键组合时序（按住 W → push 阻断 → 松 W）未锁；`first/last` 按文档序而定、浏览器自然 Tab 按 tabindex 序，overlay 内出现 `tabindex>0` 时边界可能错位（与 modal.ts 同源局限）。随真实屏幕阅读器验证需求再补。
 
 ## 相关

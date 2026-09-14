@@ -296,6 +296,13 @@ export const UI_ICONS: Record<string, string> = {
   recycle: svg(
     '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
   ),
+  // ── 视图/模式 ──
+  window: svg(
+    '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="7" y1="12" x2="7" y2="12"/><line x1="11" y1="12" x2="11" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/>',
+  ),
+  edit: svg(
+    '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  ),
 };
 
 /** 全部可用图标名（供测试与文档消费）。 */

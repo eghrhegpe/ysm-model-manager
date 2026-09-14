@@ -166,9 +166,12 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
 function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   const { esc, site, browseMode } = ctx;
   const presets = site.presetSearches ?? [];
+  // 图标（UI_ICONS）在模板层拼装，i18n 值只留纯文本（ADR-238：结构在代码，内容在 i18n）。
   return (
     '<div class="cr-section">' +
     '<span class="cr-section-title-lg">' +
+    UI_ICONS.search +
+    " " +
     t("content.webSearchTerms") +
     "</span>" +
     '<span class="cr-section-sub">(' +
@@ -181,6 +184,8 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     '" data-mode="external" title="' +
     t("content.modeExternal") +
     '">' +
+    UI_ICONS.external +
+    " " +
     t("content.modeExternal") +
     "</span>" +
     '<span class="cr-mode-opt cr-mode-emb' +
@@ -188,6 +193,8 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     '" data-mode="embed" title="' +
     t("content.modeEmbed") +
     '">' +
+    UI_ICONS.search +
+    " " +
     t("content.modeEmbed") +
     "</span>" +
     '<span class="cr-mode-opt cr-mode-win' +
@@ -195,6 +202,8 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
     '" data-mode="window" title="' +
     t("content.modeWindow") +
     '">' +
+    UI_ICONS.window +
+    " " +
     t("content.modeWindow") +
     "</span>" +
     "</button>" +
@@ -286,6 +295,8 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   parts.push(
     '<div class="cr-section cr-section-wrap">' +
       '<span class="cr-section-title-lg">' +
+      UI_ICONS.appearance +
+      " " +
       t("content.activeCreators") +
       "</span>" +
       '<span class="cr-section-sub" id="ws-cr-count">(' +
@@ -300,9 +311,13 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
       '<button class="cr-fetch-btn" title="' +
       t("content.fetchConfigTitle") +
       '">' +
+      UI_ICONS.download +
+      " " +
       t("content.fetchConfig") +
       "</button>" +
-      (ctx.viewerMode ? "" : `<button class="cr-edit-btn">${t("content.edit")}</button>`) +
+      (ctx.viewerMode
+        ? ""
+        : `<button class="cr-edit-btn">${UI_ICONS.edit} ${t("content.edit")}</button>`) +
       "</div>",
   );
   if (creators.length) {
@@ -383,6 +398,8 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
   let html =
     '<div class="cr-section">' +
     '<span class="cr-section-title-lg">' +
+    UI_ICONS.edit +
+    " " +
     t("content.editCreators") +
     "</span>" +
     '<span class="cr-section-fill"></span>' +

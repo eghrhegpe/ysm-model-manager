@@ -31,7 +31,7 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "✅": "success",
   "🚫": "blocked",
   "🛑": "stop",
-  "ℹ️": "info",
+  ℹ️: "info",
   "💡": "hint",
   "🔞": "restricted",
 
@@ -41,7 +41,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🗑️": "delete",
   "💾": "save",
   "⬇️": "download",
+  "⬇": "download",
   "⬆️": "upload",
+  "⬆": "upload",
+  "📤": "upload",
   "📥": "import",
   "↩️": "undo",
   "↩": "undo",
@@ -135,6 +138,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "😊": "avatar",
   "😀": "avatar",
   "♻️": "recycle",
+  "🖥️": "window",
+  "💻": "window",
+  "✏️": "edit",
+  "🖊️": "edit",
 } as const;
 
 /**

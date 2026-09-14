@@ -251,7 +251,9 @@ export function workshopHTML(): string {
     '<div style="display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
     '<button class="btn-base sm" id="ws-export-btn" title="' +
     t("workshop.exportSiteTitle") +
-    '">📤 ' +
+    '">' +
+    UI_ICONS.upload +
+    " " +
     t("workshop.exportSite") +
     "</button>" +
     '<button class="btn-base sm" id="ws-import-btn" title="' +
@@ -294,7 +296,9 @@ export function workshopHTML(): string {
     '<span class="ws-url" id="ws-url"></span>' +
     '<button class="btn-base sm ws-btn-txt" id="ws-win-open" title="' +
     t("workshop.openWindow") +
-    '">🖥️</button>' +
+    '">' +
+    UI_ICONS.window +
+    "</button>" +
     '<button class="btn-base sm ws-open-btn" id="ws-open">' +
     UI_ICONS.external +
     " " +

@@ -13,6 +13,7 @@ import {
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import type { AppContentHost } from "@/views/app-content/host.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
@@ -133,7 +134,9 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
         tabsEl.innerHTML =
           '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
           emptyText +
-          " 📤 " +
+          " " +
+          UI_ICONS.upload +
+          " " +
           t("workshop.exportSite") +
           "</span>";
       }

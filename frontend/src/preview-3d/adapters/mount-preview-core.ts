@@ -365,21 +365,16 @@ export async function mount3D(
   previewShell.ensureStyles(); // P1 批次9:overlay 链 cssText 抽类注入(幂等)
 
   // ===== 直挂路径 GPU 预算门（刀⑪ 立门、刀⑫ 语义修正 + 前置化）=====
+  // 无活跃会话时 preview-library 的 cooperate 退化为 false → 走本路径而不经
+  // switch-preview|beginSwitch 的 keep 通道，曾是无预算门的不对称缺口。
   //
-  // **为什么需要**：无活跃会话时 preview-library 的 cooperate 退化为 false → 走本路径
-  // 而**不经** switch-preview|beginSwitch 的 keep 通道，曾是无预算门的不对称缺口。
-  //
-  // **为什么必须 gate 在 hasActivePreview()**（审查 P2-1）：本门读 `renderer.info` 的
-  // **上一帧**统计，而本次要加载的内容**尚未构建**——无残留会话时读到的是「刚新建的
-  // 空 renderer」（全 0，白判）或「上一会话的陈旧指标」（拿旧负载拦新会话，归因完全
-  // 错误）。只有**确有未释放负载**时拦，语义才成立：GPU 上真有东西占着，再加一个确实危险。
-  //
-  // **为什么必须在装配之前判**（审查实测暴露）：本门若放在 buildInfra 之后，拦截时
-  // 半装配的外壳（overlay/菜单/输入/rAF）必须回收 → `runFullCleanup(ctx)` 只结算**本次**
-  // 会话，而被 clearSingletons 摘掉 overlay 的残留会话 handle 仍留在台账里成**僵尸**
-  // （`hasActivePreview()` 仍 true 但外壳已拆）。前置到装配前，本次无状态可回收，
-  // 直接 `cleanupPreview()`（「全部关闭」语义：清全部 handle + 注册表 + 单例复位）
-  // 一步收干净。renderer 经 `sceneInfraHost` 读（有活跃会话则必存在）。
+  // 两条约束，改动前必读（推理链详见知识卡 preview_core.md §不变量）：
+  // ① gate 在 hasActivePreview()：本门读 renderer.info 的**上一帧**统计，而本次内容
+  //    尚未构建——无残留会话时读到「空 renderer（全 0，白判）」或「上一会话陈旧指标
+  //    （归因错误）」。只有确有未释放负载时拦，语义才成立。
+  // ② 必须在装配之前判：否则拦截时需回收**半装配**外壳 → runFullCleanup 只结算本次
+  //    会话，被 clearSingletons 摘掉 overlay 的残留 handle 仍留台账成僵尸。前置后本次
+  //    无状态可回收，直接 cleanupPreview()（「全部关闭」）一步收干净。
   if (hasActivePreview()) {
     const liveRenderer = sceneInfraHost.renderer;
     if (liveRenderer && !guardGpuBudget(liveRenderer, "preview.gpuBudgetLoad")) {

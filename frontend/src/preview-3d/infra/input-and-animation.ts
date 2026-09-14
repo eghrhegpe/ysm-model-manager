@@ -1,8 +1,10 @@
 // ===== 3D 预览输入绑定（从 mount-preview-core.ts 抽出）=====
 // 职责：WASD 键盘 / 拖拽自转 / resize 事件的绑定与 handler 创建。
 // 拆分原则：输入绑定逻辑与外壳生命周期（overlay/ESC/adapter.build）无关，
-// 抽出后 mount3D 主流程更清晰。animate 循环因与 camSpeed/perFrame 等共享
-// 状态耦合深，暂不提取（见 TODO）。
+// 抽出后 mount3D 主流程更清晰。
+// 注：原「animate 循环因与 camSpeed/perFrame 耦合深暂不提取」已不成立——
+// 该循环现由 `infra/render-host.ts|RendererHost.start` 持有（rAF 逻辑 +
+// 局部态提升为实例字段），`infra/render-loop.ts` 仅存薄门面。
 //
 // 键位体系（钥匙→动作表）：
 // - 设置页存 `KeyboardEvent.code` 物理键（如 KeyW/Space/ShiftLeft），
@@ -16,9 +18,9 @@
 //   不 preventDefault——3D 面板内文本框打字不再被吞（修复：w/a/s/d 无法输入）。
 
 import type * as THREE from "three";
-import { loadTdKeymap, type TdKeyAction } from "./keymap.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { isInputBlocked } from "@/utils/dom/input-block-stack.ts";
+import { loadTdKeymap, type TdKeyAction } from "./keymap.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 
 // ---------------------------------------------------------------------------

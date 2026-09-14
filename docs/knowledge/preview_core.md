@@ -335,6 +335,10 @@ pitfalls:
 - **escH 解绑三档统一**（刀⑰）：`teardown` 的 `early`/`failed`/`full` 三档在共用区首段统一解绑 escH，**调用方不再各自补**——escH 闭包捕获整个 `ctx`，任一档漏解绑即跨会话泄漏 + 会话已拆但 ESC 仍触发陈旧 handler；曾由 `recoverMountFailure` 手动补（责任错配），新增 failed 调用点易忘。回归守卫见 `mount-preview-core.test.ts`（直数 document 监听器存活数）
 - **能力注册表 `saveAll/dispose` 只在 `runFullCleanup`**——build 失败路径不清（可能共享）；`evictZeroRefIfNeeded` 只淘汰 `refs===0` 条目，已 dispose 纹理禁止再次 dispose（LRU 失效）
 - **会话清理分工**：abort/gen 打断走 `runFullCleanup`（已登记 allContent → 需补登记 content 防 GPU 泄漏）；build 抛错走 `runFailedMountCleanup` + 调用方清 scene 差量（escH 已由 `teardown` 统一解绑，调用方不再负责）
+- **GPU 预算门的两条时序约束**（`mount-preview-core.ts|mount3D` 直挂路径，刀⑪ 立门 / 刀⑫ 语义修正 + 前置化）：
+  ① **必须 gate 在 `hasActivePreview()`**——本门读 `renderer.info` 的**上一帧**统计，而本次要加载的内容**尚未构建**；无残留会话时读到的是「刚新建的空 renderer」（全 0，白判）或「上一会话的陈旧指标」（拿旧负载拦新会话，归因错误）。只有确有未释放负载时拦，语义才成立。
+  ② **必须在装配（`buildInfra`）之前判**——否则拦截时需回收**半装配**外壳（overlay/菜单/输入/rAF），而 `runFullCleanup(ctx)` 只结算**本次**会话，被 `clearSingletons` 摘掉 overlay 的残留会话 handle 仍留在台账里成**僵尸**（`hasActivePreview()` 仍 true 但外壳已拆）。前置到装配前，本次无状态可回收，直接 `cleanupPreview()`（「全部关闭」语义）一步收干净。
+  ③ 背景：无活跃会话时 preview-library 的 cooperate 退化为 false → 走直挂路径而**不经** `switch-preview|beginSwitch` 的 keep 通道，曾是无预算门的不对称缺口——**两条入口共用一道门，缺一条即某路径裸奔**。
 - **focus trap**：`finishSession` 释放焦点陷阱 + `returnFocus()` 归还触发元素焦点，幂等（二次进入 return）
 
 ## 相关

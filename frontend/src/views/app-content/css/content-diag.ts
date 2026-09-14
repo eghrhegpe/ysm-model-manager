@@ -6,7 +6,7 @@ export const contentDiagCSS: string = `
 /* ===== 诊断页面：左栏按钮 + 右栏信息 ===== */
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:var(--fs-base); align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:var(--fs-sm); width:20px; text-align:center; }
-.log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:4px; background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
+.log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 
@@ -64,8 +64,8 @@ export const contentDiagCSS: string = `
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }
 .perf-bar-row { display:flex; align-items:center; gap:8px; margin:2px 0; font-size:var(--fs-xs); }
 .perf-bar-name { flex:0 0 118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
-.perf-bar-track { flex:1; height:12px; background:var(--surf); border:1px solid var(--bd); border-radius:6px; overflow:hidden; }
-.perf-bar-fill { display:block; height:100%; background:var(--accent); border-radius:6px; }
+.perf-bar-track { flex:1; height:12px; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-md); overflow:hidden; }
+.perf-bar-fill { display:block; height:100%; background:var(--accent); border-radius:var(--radius-md); }
 .perf-bar-fill.perf-bar-warn { background: var(--warning, #e6b800); }
 .perf-bar-fill.perf-bar-danger { background: var(--status-error); }
 .perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -81,7 +81,7 @@ export const contentDiagCSS: string = `
 .perf-gui-stage.perf-gui-fail .perf-gui-ms { color: var(--status-error); }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:6px 10px; margin:4px 0; animation: conflictRowIn .3s ease both; }
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
-.perf-hist-head code { background:var(--bg); padding:0 4px; border-radius:3px; font-size:var(--fs-xs); }
+.perf-hist-head code { background:var(--bg); padding:0 4px; border-radius:var(--radius-xs); font-size:var(--fs-xs); }
 .perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
 :host-context(.no-animations) .perf-hist-card { animation:none !important; }
 
@@ -96,7 +96,7 @@ export const contentDiagCSS: string = `
 .perf-tex-row { display:flex;align-items:center;gap:6px;padding:1px 0; }
 .perf-tex-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt); }
 .perf-tex-size { color:var(--muted);font-size:var(--fs-xs);flex-shrink:0; }
-.perf-ktx2-badge { font-size:8px;padding:0 3px;border-radius:3px;background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);flex-shrink:0; }
+.perf-ktx2-badge { font-size:8px;padding:0 3px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);flex-shrink:0; }
 .perf-tex-more { color:var(--muted);font-size:var(--fs-xs);padding:2px 0; }
 .perf-no-data { color:var(--muted);font-size:var(--fs-sm);padding:12px 2px;text-align:center; }
 .perf-no-hint { color:var(--muted);font-size:var(--fs-xs);padding:2px 2px 8px;text-align:center;opacity:.7; }
@@ -105,34 +105,34 @@ export const contentDiagCSS: string = `
 :host-context(.no-animations) #set-advanced-panel { animation: none !important; }
 
 /* ===== 诊断页去重 UI (diag-dedup) ===== */
-.diag-msg { padding:12px;font-size:11px; }
+.diag-msg { padding:12px;font-size:var(--fs-sm); }
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
 .diag-msg-muted { color:var(--muted); }
-.diag-dedup-summary { padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd); }
+.diag-dedup-summary { padding:10px 12px;font-size:var(--fs-sm);color:var(--txt);border-bottom:1px solid var(--bd); }
 .diag-dedup-summary-hint { display:block;font-size:9px;color:var(--muted);margin-top:2px; }
-.diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:10px;font-weight:600;color:var(--txt); }
+.diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:var(--fs-xs);font-weight:600;color:var(--txt); }
 .diag-dedup-rt-sep { flex:1;border-bottom:1px solid var(--bd);margin-left:6px; }
 .diag-dedup-rt-count { font-size:9px;color:var(--muted);font-weight:400; }
 .diag-dedup-group { margin:4px 12px;border:1px solid var(--bd);border-radius:var(--radius-lg);overflow:hidden; }
-.diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
+.diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:var(--fs-xs);font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
 .diag-dedup-group-fill { flex:1; }
 .diag-dedup-group-info { font-size:9px;color:var(--muted);font-weight:400; }
-.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background var(--tr-fast); }
+.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast); }
 .diag-dedup-file-default { background:var(--hover); }
 .diag-dedup-file-name { flex:1;overflow:hidden;min-width:0; }
-.diag-dedup-file-name-text { color:var(--txt);font-size:10px;cursor:pointer; }
+.diag-dedup-file-name-text { color:var(--txt);font-size:var(--fs-xs);cursor:pointer; }
 .diag-dedup-file-ic { margin-right:3px; }
 .diag-dedup-file-dir { display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .diag-dedup-file-size { font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px; }
 .diag-dedup-file-date { font-size:8px;color:var(--muted);flex-shrink:0; }
 .diag-dedup-recommend { font-size:8px;padding:0 4px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
-.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
+.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }
 .diag-dedup-actions { display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd); }
-.diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:11px;font-family:inherit; }
-.diag-dedup-cancel { padding:7px 16px;border-radius:var(--radius-md);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit; }
+.diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
+.diag-dedup-cancel { padding:7px 16px;border-radius:var(--radius-md);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 
 /* ===== 诊断页配置面板（conflicts.ts / dedup.ts / health.ts 渲染） =====
    这些类此前在 shadow 内无 CSS 规则，裸奔靠 UA 默认样式（WebView2 暗色不协调）；
@@ -141,7 +141,7 @@ export const contentDiagCSS: string = `
 .diag-config-select, .diag-config-input { padding:var(--btn-padding-sm); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--bg); color:var(--txt); font-size:var(--fs-sm); font-family:inherit; min-width:160px; }
 .diag-config-select:focus, .diag-config-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 .diag-sync-config { padding:8px 12px; border:1px solid var(--bd); border-radius:var(--radius-md); margin:4px 0; background:var(--surf); }
-.diag-sync-resolve { margin-top:16px; padding:12px; background:var(--diag-stat-bg, var(--surf)); border-radius:8px; }
+.diag-sync-resolve { margin-top:16px; padding:12px; background:var(--diag-stat-bg, var(--surf)); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:8px 12px; }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
 

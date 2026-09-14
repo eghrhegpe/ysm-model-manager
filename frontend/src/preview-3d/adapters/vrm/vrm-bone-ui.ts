@@ -46,11 +46,11 @@ export function boneRowActiveBg(): string {
 
 /** 骨骼面板样式(P1 批次8:cssText 抽类集中注入;panel 容器由框架传入非本模块私有,增量声明走属性级赋值豁免) */
 const vbuCss = `
-.slide-sublabel.vbu-empty { padding:8px 10px; color:rgba(128,128,128,0.85); font-size:12px; }
-.slide-item.vbu-bone-row { display:flex; align-items:center; gap:6px; cursor:pointer; min-height:28px; border-radius:4px; }
+.slide-sublabel.vbu-empty { padding:8px 10px; color:rgba(128,128,128,0.85); font-size:var(--fs-base); }
+.slide-item.vbu-bone-row { display:flex; align-items:center; gap:6px; cursor:pointer; min-height:28px; border-radius:var(--radius-sm); }
 .vbu-cb { flex-shrink:0; cursor:pointer; accent-color:var(--accent,#7c83ff); }
 .slide-label.vbu-bone-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.vbu-detail { padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:4px; margin:2px 4px 4px; font-size:10px; color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
+.vbu-detail { padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); margin:2px 4px 4px; font-size:var(--fs-xs); color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
 .vbu-field { margin-bottom:3px; }
 `;
 function ensureVbuStyles(): void {

@@ -14,6 +14,8 @@
 #     —— 见文件内两段 exit 1；若误撞，按提示加白名单/改写违规后重新 git add 再提交。
 #     两段各有独立逃生键（解耦，避免 --no-verify 连带绕过）：
 #       ① YSM_SKIP_ANDROID=1（Android lite 档）；② YSM_SKIP_BIOME_LINES=1（biome 行级闸）。
+#     2026-09 新增硬阻断③：设计令牌「只减不增」闸（新增设计债 → exit 1），
+#       逃生键 YSM_SKIP_DESIGN_TOKENS=1（独立解耦）。
 #   - 其余 gen/格式/i18n/路径卫生段 失败仅提示，不阻断 commit
 #   - 幂等：文档已同步时无 diff，git add docs/ 无副作用
 #   - 输出全走 stderr（exec 1>&2）：Windows git hook 下 stdout 管道易断，且 stderr 是 AI 必看的终端通道
@@ -382,6 +384,26 @@ if [ "${YSM_SKIP_BIOME_LINES:-0}" != "1" ] && command -v node >/dev/null 2>&1; t
     echo "[pre-commit] ❌ 本次提交新增 biome 违规，已阻断（见上）。存量债（非本次新增行）不受影响；"
     echo "            修复后重新 git add 再提交，或 YSM_SKIP_BIOME_LINES=1 逃生（命中即留痕 SKIPPED_PRECOMMIT，"
     echo "            可审计；真正零痕迹的只有 git commit --no-verify——reconcile 靠 HEAD 连续性推断）"
+    exit 1
+  fi
+fi
+
+# ── 硬阻断③（exit 1，非提示）：设计令牌「只减不增」闸 ──
+# 依据：docs/UI-Design.md 明文禁止硬编码 font-size / border-radius / 颜色；
+#   emoji 图标应走 utils/icon 的 SVG 体系（跨平台渲染与主题一致性）。
+# 策略：--baseline 只拦「本次新增」违规（存量 428 条记在 scripts/baseline/
+#   design-tokens-baseline.json，不阻塞提交）——新代码不得再欠设计债。
+# 防 --no-verify 绕过：与 biome 行级闸同构，挂在钩子里而非仅 pre-push。
+# 清债后收缩基线：node scripts/check-design-tokens.ts --update-baseline
+# 逃生阀：YSM_SKIP_DESIGN_TOKENS=1（与另两段解耦，命中即留痕）
+if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" = "1" ] && command -v node >/dev/null 2>&1; then
+  node scripts/_lib/hook-audit.ts write "${PARENT_OID:-}" YSM_SKIP_DESIGN_TOKENS 2>/dev/null || true
+fi
+if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
+  if ! node scripts/check-design-tokens.ts --baseline 2>&1; then
+    echo "[pre-commit] ❌ 本次提交新增设计令牌违规，已阻断（见上）。存量债（基线内）不受影响；"
+    echo "            自动令牌化：node scripts/check-design-tokens.ts --fix（值等价，仅动有精确令牌对应的）"
+    echo "            或 YSM_SKIP_DESIGN_TOKENS=1 逃生（命中即留痕 SKIPPED_PRECOMMIT，可审计）"
     exit 1
   fi
 fi

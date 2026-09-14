@@ -44,35 +44,35 @@ function ensureRolesStyles(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  border-radius: 6px;
+  border-radius:var(--radius-md);
   cursor: pointer;
 }
-.fr-role-row { padding: 6px 8px; font-size: 13px; }
-.fr-comp-row { padding: 6px 10px; font-size: 12px; }
+.fr-role-row { padding: 6px 8px; font-size:var(--fs-md); }
+.fr-comp-row { padding: 6px 10px; font-size:var(--fs-base); }
 .fr-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-.fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size: 12px; }
+.fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size:var(--fs-base); }
 ${MENU_ERROR_NOTE_CSS}
 .fr-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 6px 10px; }
 .fr-scroll-box { max-height: 220px; overflow-y: auto; }
 .fr-name-ellipsis { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fr-focus-btn {
   width: 18px; height: 18px; flex-shrink: 0; background: transparent; border: none;
-  cursor: pointer; font-size: 14px; line-height: 1; color: rgba(255,255,255,0.5);
+  cursor: pointer; font-size:var(--fs-lg); line-height: 1; color: rgba(255,255,255,0.5);
 }
 .fr-row-active .fr-focus-btn { color: var(--accent); }
 .fr-tools-btn {
   width: 22px; height: 22px; flex-shrink: 0; background: rgba(255,255,255,0.08);
-  border: none; border-radius: 4px; cursor: pointer; font-size: 13px; line-height: 1;
+  border: none; border-radius:var(--radius-sm); cursor: pointer; font-size:var(--fs-md); line-height: 1;
 }
 .fr-comp-add-btn {
   width: 20px; height: 20px; flex-shrink: 0; background: rgba(255,255,255,0.08);
-  border: none; border-radius: 4px; cursor: pointer; font-size: 11px; line-height: 1;
+  border: none; border-radius:var(--radius-sm); cursor: pointer; font-size:var(--fs-sm); line-height: 1;
 }
 .fr-unload-row {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
-  cursor: pointer; font-size: 13px; color: #ff7b7b;
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius:var(--radius-lg);
+  cursor: pointer; font-size:var(--fs-md); color: #ff7b7b;
 }
-.fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size: 11px; }
+.fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size:var(--fs-sm); }
 .fr-comp-mark { width: 14px; flex-shrink: 0; text-align: center; }
 `,
   );

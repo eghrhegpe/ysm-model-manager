@@ -176,7 +176,7 @@ export async function buildStatsCard(
             ? `<img src="${esc(au.avatarUrl)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">`
             : '<span style="width:20px;height:20px;border-radius:50%;background:var(--hover);display:inline-block"></span>'
         }
-        <span style="font-size:11px;color:var(--txt)">${esc(au.name || "")}</span>
+        <span style="font-size:var(--fs-sm);color:var(--txt)">${esc(au.name || "")}</span>
         ${
           au.role
             ? `<span style="font-size:var(--fs-xs);color:var(--muted)">(${esc(au.role)})</span>`
@@ -184,7 +184,7 @@ export async function buildStatsCard(
         }
         ${
           au.bilibili
-            ? `<a href="${esc(safeUrl(au.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none;font-size:11px" title="${esc(au.bilibili)}">📺</a>`
+            ? `<a href="${esc(safeUrl(au.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none;font-size:var(--fs-sm)" title="${esc(au.bilibili)}">📺</a>`
             : ""
         }
       </div>`,

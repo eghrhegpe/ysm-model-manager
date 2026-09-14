@@ -47,7 +47,7 @@ class AppToast extends WebComponentBase {
         }
         .toast {
           display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-          border-radius: 8px; background: var(--card); color: var(--txt); font-size: var(--fs-base);
+          border-radius:var(--radius-lg); background: var(--card); color: var(--txt); font-size: var(--fs-base);
           box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: toastIn .3s cubic-bezier(.34,1.56,.64,1);
           border: 1px solid var(--bd); pointer-events: auto;
           font-family: var(--font-ui);

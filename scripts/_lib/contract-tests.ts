@@ -138,6 +138,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_schedule.ts": ["tests"],
   // 2026-09-14 锐评修复回归锁：css-layer-check 的 TS 插值展开（keyframes 假阳性根治）
   "test_css_layer_check.ts": ["tests", "frontend"],
+  // 设计令牌守规判定层（design-tokens.ts）：违规识别语义 + TOKEN_PX_BASELINE 与
+  // variables.css 对账 + UI-Design.md 数值漂移。前端 UI 规范与前端源码变更都应触发。
+  "test_design_tokens.ts": ["tests", "frontend"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_gate_sh_invariants.ts": ["tests"],
@@ -371,6 +374,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // 该测试锁 tsc 三态 rc（0/1/2-TS18003）与自守卫语义。
   "test_gate_schedule.ts": ["scripts/_lib/gate-blocks/schedule.ts", "scripts/pre-push-gate.ts"],
   "test_css_layer_check.ts": ["scripts/css-layer-check.ts"],
+  // 判定层是纯函数模块，契约测试直接 import 它；令牌基准表与 variables.css 对账，
+  // 故两者都列为敏感源（任一改动都应触发本测试）。
+  "test_design_tokens.ts": [
+    "scripts/_lib/design-tokens.ts",
+    "scripts/check-design-tokens.ts",
+    "frontend/css/variables.css",
+    "docs/UI-Design.md",
+  ],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],

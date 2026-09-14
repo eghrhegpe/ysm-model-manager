@@ -97,15 +97,15 @@ export async function routePackInfo(
 
     if (!pack || (!pack.name && !pack.description)) {
       const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
-      ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
+      ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:var(--fs-md);font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
       return;
     }
 
     ctx.root.innerHTML = `<div class="content" id="preview-content">
 <h3>📦 ${t("preview.pack")}</h3>
 ${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
-<div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name || "")}</div>
-${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
+<div class="model-detail-title" style="font-size:var(--fs-lg);font-weight:700">${esc(pack.name || "")}</div>
+${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
 </div>`;
   } catch {
     // P2 修复：catch 分支同样比对代际

@@ -129,7 +129,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
     "<div style='font-weight:600;margin-bottom:4px'>" +
     t("content.scanScope") +
     "</div>" +
-    "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
+    "<div style='font-size:var(--fs-xs);color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
     t("content.scanScopeLine1") +
     t("content.scanScopeLine2") +
     "</div>" +
@@ -141,7 +141,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
       "<div style='color:var(--muted,#888);padding:4px 0'>" +
       t("content.noMcDirFound") +
       "</div>" +
-      "<div style='font-size:10px;color:var(--muted,#888);padding-top:2px'>" +
+      "<div style='font-size:var(--fs-xs);color:var(--muted,#888);padding-top:2px'>" +
       t("content.noMcDirHint") +
       "</div>";
   } else {
@@ -151,7 +151,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
       "</div>";
     for (let i = 0; i < paths.length; i++) {
       html +=
-        "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:10px'>" +
+        "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:var(--fs-xs)'>" +
         "<span style='color:var(--accent);flex-shrink:0'>📁</span>" +
         esc(String(paths[i])) +
         "</div>";

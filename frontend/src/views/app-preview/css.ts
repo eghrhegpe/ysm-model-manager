@@ -24,7 +24,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-placeholder .dp-hint { font-size: var(--fs-base); margin-bottom: 12px; }
 .dp-placeholder .dp-hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .dp-placeholder .dp-hints span { font-size: var(--fs-xs); padding: 2px 8px; border-radius: var(--radius-sm); background: var(--surf); border: 1px solid var(--bd); color: var(--muted); }
-.md-row { font-size: 12px; color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
+.md-row { font-size:var(--fs-base); color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
 .md-label { color: var(--muted); }
 .md-value { color: var(--txt); font-weight: 500; }
 .md-divider { border: none; border-top: 1px solid var(--bd); margin: 8px 0; }
@@ -75,7 +75,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .preview-fab:hover{filter:brightness(1.1)}
 .preview-fab:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}
 .preview-fab .preview-ic{line-height:1}
-@media (max-width:480px){ .preview-fab{width:52px;height:52px;right:10px;bottom:10px;font-size:24px} }
+@media (max-width:480px){ .preview-fab{width:52px;height:52px;right:10px;bottom:10px;font-size:var(--fs-xl)} }
 /* 触控热区 44px（Apple HIG） */
 @media (pointer:coarse){ .preview-fab{min-width:44px;min-height:44px} }
 
@@ -84,7 +84,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-stats { margin-top:10px; }
 
 /* === 兄弟列表 hover 规则（detail-3d.ts morph-item / detail.ts pack-model-item）=== */
-.morph-item{padding:4px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px}
+.morph-item{padding:4px 6px;cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px}
 .morph-item:hover{background:rgba(255,255,255,0.05)}
 .morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
 .pack-model-item:hover{background:rgba(255,255,255,0.05)}

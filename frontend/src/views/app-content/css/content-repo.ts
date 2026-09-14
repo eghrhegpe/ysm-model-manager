@@ -48,7 +48,7 @@ export const contentRepoCSS: string = `
 
 /* ===== 资历最深页专用样式 ===== */
 .oldest-page { display:flex; flex-direction:column; gap:16px; padding:16px; overflow-y:auto; height:100%; }
-.oldest-stats-bar { display:inline-flex; align-items:center; gap:12px; background:var(--surf); border:1px solid var(--bd); border-radius:8px; padding:8px 14px; flex-wrap:wrap; align-self:flex-start; }
+.oldest-stats-bar { display:inline-flex; align-items:center; gap:12px; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); padding:8px 14px; flex-wrap:wrap; align-self:flex-start; }
 .oldest-health-box { display:flex; align-items:center; gap:8px; }
 .oldest-health-label { font-size:var(--fs-sm); color:var(--muted); white-space:nowrap; }
 .oldest-health-ring { width:28px; height:28px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
@@ -57,7 +57,7 @@ export const contentRepoCSS: string = `
 .oldest-stats-divider { width:1px; height:20px; background:var(--bd); flex-shrink:0; }
 .oldest-stats-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .oldest-stat-pill { padding:3px 10px; border:1px solid var(--bd); border-radius:12px; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); white-space:nowrap; }
-.oldest-section { background:var(--surf); border:1px solid var(--bd); border-radius:10px; padding:12px 14px; }
+.oldest-section { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:12px 14px; }
 .oldest-section-title { font-size:var(--fs-md); font-weight:600; color:var(--txt); margin-bottom:8px; letter-spacing:.3px; }
 .oldest-section-title-sm { font-size:var(--fs-sm); font-weight:600; color:var(--txt); margin-bottom:4px; letter-spacing:.3px; }
 .oldest-cards-row { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
@@ -70,7 +70,7 @@ export const contentRepoCSS: string = `
 
 /* ===== 热力图 ===== */
 .hm-wrap { padding:4px 0; }
-.hm-month { font-size:7px; color:var(--muted); padding:0 0 2px 0; display:flex; gap:2px; }
+.hm-month { font-size:var(--fs-tiny); color:var(--muted); padding:0 0 2px 0; display:flex; gap:2px; }
 .hm-month span { flex:1; text-align:center; }
 .hm-grid { display:flex; gap:2px; }
 .hm-col { display:flex; flex-direction:column; gap:2px; }
@@ -79,7 +79,7 @@ export const contentRepoCSS: string = `
 .hm-cell.l2 { background:var(--hm-2); }
 .hm-cell.l3 { background:var(--hm-3); }
 .hm-cell.l4 { background:var(--hm-4); }
-.hm-label { font-size:7px; color:var(--muted); padding-top:2px; display:flex; gap:2px; }
+.hm-label { font-size:var(--fs-tiny); color:var(--muted); padding-top:2px; display:flex; gap:2px; }
 .hm-label span { flex:1; text-align:center; }
-.hm-legend { display:flex; align-items:center; gap:2px; font-size:7px; color:var(--muted); justify-content:flex-end; }
+.hm-legend { display:flex; align-items:center; gap:2px; font-size:var(--fs-tiny); color:var(--muted); justify-content:flex-end; }
 `;

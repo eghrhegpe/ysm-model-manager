@@ -137,7 +137,7 @@ export function containerHTML(): string {
     ".sm-dir:hover{background:var(--hover)}" +
     ".sm-file{cursor:default}" +
     ".sm-file:hover{background:transparent}" +
-    ".sm-shimmer{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}" +
+    ".sm-shimmer{height:12px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}" +
     ".sm-shimmer-w80{width:80%}" +
     ".sm-shimmer-w60{width:60%}" +
     ".sm-shimmer-w70{width:70%}" +
@@ -171,7 +171,7 @@ export function statusTabHTML(id: string, label: string, count: number, active: 
     cls +
     '" data-status="' +
     id +
-    '" style="padding:var(--pad-filter) 12px;border-radius:4px;border:1px solid ' +
+    '" style="padding:var(--pad-filter) 12px;border-radius:var(--radius-sm);border:1px solid ' +
     (active ? "var(--accent)" : "transparent") +
     ";background:" +
     (active ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "transparent") +

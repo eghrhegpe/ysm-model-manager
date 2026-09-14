@@ -164,7 +164,7 @@ function dpRenderDetail(modelInfo: MaidModelInfo): string {
       rows.push(`<div class="dp-hint">📜 ${t("preview.license")}: ${esc(md.license.type)}</div>`);
     if (md.tips)
       rows.push(
-        `<div class="dp-hint" style="white-space:pre-line;font-size:11px">💬 ${esc(md.tips ?? "")}</div>`,
+        `<div class="dp-hint" style="white-space:pre-line;font-size:var(--fs-sm)">💬 ${esc(md.tips ?? "")}</div>`,
       );
     if (md.authors && md.authors.length > 0) {
       rows.push(
@@ -184,7 +184,7 @@ function dpRenderDetail(modelInfo: MaidModelInfo): string {
                 .join(" · ")
             : "";
         rows.push(
-          `<div class="dp-hint" style="font-size:11px;color:var(--muted)">${esc(a.name ?? "")}${a.role ? `（${esc(a.role ?? "")}）` : ""}${contact ? ` — ${contact}` : ""}</div>`,
+          `<div class="dp-hint" style="font-size:var(--fs-sm);color:var(--muted)">${esc(a.name ?? "")}${a.role ? `（${esc(a.role ?? "")}）` : ""}${contact ? ` — ${contact}` : ""}</div>`,
         );
       }
     }
@@ -211,7 +211,7 @@ function dpRenderPanel(
   // 封面缩略图（loadPreviewImage 产物）：有图时替换 🧸 大图标，无图回退 🧸 装饰。
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
-    ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+    ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
     : `<div class="big-icon">🧸</div>`;
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🧸 ${t("preview.modelInfo")}</h3>
@@ -221,7 +221,7 @@ function dpRenderPanel(
     <div class="dp-hint">Bedrock Edition Model</div>
   </div>
   ${statsHTML}
-  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⚠️ 无法读取模型数据</div>` : ""}
+  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⚠️ 无法读取模型数据</div>` : ""}
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
@@ -306,7 +306,7 @@ export async function showMaidPreview(
     <div class="big-icon">🧸</div>
     <div class="dp-hint">${esc(basename)}</div>
     <div class="dp-hint">${t("preview.bedrockModel")}</div>
-    <div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>
+    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>
   </div>
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;

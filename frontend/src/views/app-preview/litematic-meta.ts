@@ -177,7 +177,7 @@ function renderLitematicDetail(
   const sizeStr = sizeArr ? `${sizeArr[0] || 0} × ${sizeArr[1] || 0} × ${sizeArr[2] || 0}` : "未知";
 
   const previewImgHTML = meta.previewImage
-    ? `<img src="${esc(meta.previewImage)}" alt="preview" style="width:140px;height:140px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+    ? `<img src="${esc(meta.previewImage)}" alt="preview" style="width:140px;height:140px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
     : "";
 
   function field(label: string, value: unknown): string {

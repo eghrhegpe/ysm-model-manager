@@ -75,8 +75,8 @@ export function instancesHTML(): string {
     '<div class="repo-layout">' +
     '<app-sidebar class="ins-sidebar"></app-sidebar>' +
     '<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
-    '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
-    '<div style="font-size:24px">👈</div>' +
+    '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:var(--fs-base);gap:8px">' +
+    '<div style="font-size:var(--fs-xl)">👈</div>' +
     "<div>" +
     t("instances.emptyHint") +
     "</div>" +
@@ -139,7 +139,7 @@ export function diagnosticsHTML(): string {
 <button class="diag-log-fbtn" data-status="success">✅ ${t("diagnostics.success")}</button>
 <button class="diag-log-fbtn" data-status="failed">❌ ${t("diagnostics.failed")}</button>
 <button class="diag-log-fbtn" data-status="skipped">⏭️ ${t("diagnostics.skipped")}</button>
-<input id="diag-log-search" placeholder="🔍 ${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
+<input id="diag-log-search" placeholder="🔍 ${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
 <div id="diag-log-list" data-testid="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
 </div>
@@ -154,9 +154,9 @@ export function diagnosticsHTML(): string {
 <div class="perf-wrap" style="overflow-y:auto;flex:1;padding:10px 12px">
 <div class="perf-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0 10px;border-bottom:1px solid var(--bd)">
 <button class="btn-base accent" id="diag-perf-run">⚡ ${t("diagnostics.perfRunSingle")}</button>
-<input id="diag-perf-model" type="text" placeholder="📁 ${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
+<input id="diag-perf-model" type="text" placeholder="📁 ${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
 <label for="diag-perf-iter" style="font-size:var(--fs-sm);color:var(--muted)">${t("diagnostics.perfIterations")}</label>
-<input id="diag-perf-iter" type="number" min="1" step="1" value="3" style="width:56px;font-size:var(--fs-sm);padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
+<input id="diag-perf-iter" type="number" min="1" step="1" value="3" style="width:56px;font-size:var(--fs-sm);padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
 <button class="btn-base" id="diag-perf-gui">🩺 ${t("diagnostics.perfRunGui")}</button>
 <button class="btn-base" id="diag-perf-log">🗒️ ${t("diagnostics.perfPerfLog")}</button>
 <button class="btn-base" id="diag-perf-refresh-trace">🔍 ${t("diagnostics.loadTraceRefresh")}</button>
@@ -251,14 +251,14 @@ export function workshopHTML(): string {
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" data-testid="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
-    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">' +
+    '<div style="color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center">' +
     t("common.loading") +
     "</div>" +
     "</div>" +
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">' +
     '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' +
+    '<span style="font-size:var(--fs-base);font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' +
     t("workshop.activeCreators") +
     "</span>" +
     '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
@@ -284,7 +284,7 @@ export function workshopHTML(): string {
     // 登录站 SPA（如模之屋 aplaybox）的 fetch/XHR 会被浏览器 CORS 拦截白屏；
     // 父窗口(wails://)与 iframe(外部真实域)本就不同源，补此标记不会让 iframe 反向访问父窗口。
     '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
-    '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
+    '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:var(--fs-base)">' +
     '<div style="font-size:32px">🚫</div>' +
     "<div>" +
     t("workshop.noEmbed") +

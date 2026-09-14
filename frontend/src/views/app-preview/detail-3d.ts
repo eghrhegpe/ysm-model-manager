@@ -119,13 +119,13 @@ export async function showVrmMeta(
       }
       const authors = (m.authors as string[] | undefined)?.filter(Boolean).join("、") ?? "";
       const thumb = (m.thumbnail as string | undefined)
-        ? `<img src="${esc(m.thumbnail as string)}" alt="thumbnail" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+        ? `<img src="${esc(m.thumbnail as string)}" alt="thumbnail" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
         : "";
       // VRM0 授权约束徽章
       const r = m.restrictions as Record<string, unknown> | undefined;
       const badge = (label: string, ok: boolean | undefined, icon: string): string => {
         const v = ok === undefined ? "—" : ok ? "✅" : "❌";
-        return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.06);font-size:11px;margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
+        return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);font-size:var(--fs-sm);margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
       };
       const refBadge = r?.reference
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference as string)}</div>`
@@ -135,7 +135,7 @@ export async function showVrmMeta(
       const s = m.stats as Record<string, number> | undefined;
       const statsRow =
         s && (s.meshCount > 0 || s.boneCount > 0)
-          ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+          ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
             <span style="color:var(--accent)">📊 ${t("preview.stats.panel")}</span>
             <span>🦴 ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
             <span>🧩 ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
@@ -217,7 +217,7 @@ export async function showMmdPreview(
             const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
             if (!host) return;
             // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
-            host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+            host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
               <span style="color:var(--accent)">📊 ${t("preview.stats.file")}</span>
               <span>🔺 ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
               <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
@@ -284,8 +284,8 @@ export async function showScenePreview(
   <h3>🏗️ ${t("preview.sceneModel")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center">
-      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
+    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center">
+      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
       <span>${t("preview.sceneModelLabel")}</span>
     </div>
     <button class="preview-fab" id="btn-scene-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">🏗️</span></button>
@@ -321,12 +321,12 @@ export async function showMorphPreview(
   <h3>😊 ${t("preview.customMorph")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
+    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
       <span>${t("preview.vpdPose")}</span>
-      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:4px">${t("preview.singleFrameMorph")}</span>
+      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
     </div>
-    <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
+    <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
     <button class="preview-fab" id="btn-morph-apply" data-fab title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,var(--status-success) 0%,color-mix(in srgb,var(--status-success) 65%,#000) 100%)"><span class="preview-ic">😊</span></button>
   </div>
 </div>`;
@@ -359,12 +359,12 @@ export async function showMorphPreview(
                 // 旧写法「;font-weight:600}hover:background:...」缺分号 + hover: 前缀非法，
                 // 连 font-weight 一起被并成一条声明整体丢弃）
                 return `<div class="morph-item${active ? " active" : ""}" data-path="${esc(p)}">
-                  <span style="font-size:10px;color:var(--muted)">◉</span>
+                  <span style="font-size:var(--fs-xs);color:var(--muted)">◉</span>
                   <span>${esc(name)}</span>
                 </div>`;
               })
               .join("");
-            container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
+            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
             // 点击兄弟列表项切换
             container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
               el.onclick = () => {
@@ -377,7 +377,7 @@ export async function showMorphPreview(
               };
             });
           } else if (container) {
-            container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">${t("preview.noOtherMorph")}</div>`;
+            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:4px">${t("preview.noOtherMorph")}</div>`;
           }
         } catch {
           /* 兄弟列表加载失败不阻断 */
@@ -402,11 +402,11 @@ export async function showStagePreview(
   <h3>🎤 ${t("preview.stageAnim")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:4px;font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
+    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
-    <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
+    <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
     <button class="preview-fab" id="btn-stage-load" data-fab title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,var(--warning,#ffa050) 0%,color-mix(in srgb,var(--warning,#ffa050) 65%,#000) 100%)"><span class="preview-ic">🎤</span></button>
   </div>
 </div>`;
@@ -432,13 +432,13 @@ export async function showStagePreview(
           const container = ctx.root.querySelector<HTMLElement>("#stage-contents");
           if (container) {
             if (contents.length === 0) {
-              container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">${t("preview.stageEmpty")}</div>`;
+              container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:4px">${t("preview.stageEmpty")}</div>`;
             } else {
               const vmdCount = contents.filter((c) => c.kind === "vmd").length;
               const audioCount = contents.filter((c) => c.kind === "audio").length;
               const configCount = contents.filter((c) => c.kind === "config").length;
               container.innerHTML =
-                `<div style="color:var(--muted);font-size:11px;margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
+                `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
                 contents
                   .map((c) => {
                     const name = c.path.split(/[/\\]/).pop() || c.path;
@@ -456,10 +456,10 @@ export async function showStagePreview(
                         : c.kind === "audio"
                           ? "var(--accent)"
                           : "var(--muted)";
-                    return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
+                    return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
                       <span>${icon}</span>
                       <span>${esc(name)}</span>
-                      <span style="color:var(--muted);font-size:10px;margin-left:auto">${c.kind}</span>
+                      <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:auto">${c.kind}</span>
                     </div>`;
                   })
                   .join("");

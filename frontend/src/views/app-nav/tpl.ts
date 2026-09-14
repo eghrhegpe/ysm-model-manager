@@ -34,7 +34,7 @@ export const navCSS: string = `
   background: var(--surf);
   color: var(--txt);
   border: 1px solid var(--bd);
-  border-radius: 4px;
+  border-radius:var(--radius-sm);
   font-size: var(--fs-tab);
   font-family: var(--font-ui);
   padding: 2px 4px;
@@ -67,9 +67,9 @@ export const navCSS: string = `
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size:var(--fs-lg);
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius:var(--radius-sm);
   transition: var(--tr-fast);
   flex-shrink: 0;
 }

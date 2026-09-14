@@ -8,8 +8,8 @@ import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
 /** 全屏放大预览样式(P1 批次10:cssText 抽类;overlay 挂 document.body light DOM,head 注入适用) */
 const zoomCss = `
 .zoom-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; flex-direction:column; }
-.zoom-canvas { max-width:90vw; max-height:80vh; border-radius:8px; background:rgba(0,0,0,.2); touch-action:none; }
-.zoom-hint { font-size:11px; color:var(--muted); margin-top:6px; }
+.zoom-canvas { max-width:90vw; max-height:80vh; border-radius:var(--radius-lg); background:rgba(0,0,0,.2); touch-action:none; }
+.zoom-hint { font-size:var(--fs-sm); color:var(--muted); margin-top:6px; }
 `;
 let _zoomStyleEl: HTMLStyleElement | null = null;
 function ensureZoomStyles(): void {

@@ -12,8 +12,8 @@ export const contentGhCSS: string = `
 .gh-search-wrap { padding:2px 0 6px; }
 .gh-search { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
 .gh-search:focus { border-color:var(--accent); }
-.gh-loading-placeholder { padding:24px;text-align:center;color:var(--muted);font-size:11px; }
-.gh-initial-hint { color:var(--muted);font-size:10px;padding:12px 0;text-align:center; }
+.gh-loading-placeholder { padding:24px;text-align:center;color:var(--muted);font-size:var(--fs-sm); }
+.gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }
 .gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
 .gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; }
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
@@ -28,7 +28,7 @@ export const contentGhCSS: string = `
 .gh-card.active .gh-card-label { color:var(--bg); }
 .gh-card-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:0; }
 .gh-card.active .gh-card-desc { color:var(--bg); }
-.gh-card-external { width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);cursor:pointer;border-left:1px solid var(--bd);transition:var(--tr-fast); }
+.gh-card-external { width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);color:var(--muted);cursor:pointer;border-left:1px solid var(--bd);transition:var(--tr-fast); }
 .gh-card-external:hover { color:var(--accent);background:var(--hover); }
 .gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
 .gh-section-title { font-size:var(--fs-md);font-weight:600;color:var(--txt);padding:8px 12px 4px; }
@@ -41,7 +41,7 @@ export const contentGhCSS: string = `
 .gh-back-repo:hover { background:var(--hover); }
 .gh-btn-txt { border-color:transparent; }
 .gh-repo-name { font-size:var(--fs-md);font-weight:600;color:var(--txt);flex:1; }
-.gh-model-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: var(--fs-xs); font-weight: 600; }
+.gh-model-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius:var(--radius-pill); font-size: var(--fs-xs); font-weight: 600; }
 .gh-model-badge-total { background: var(--surf); color: var(--txt); }
 .gh-model-badge-missing { background: color-mix(in srgb, var(--status-error) 12%, transparent); color: var(--status-error); }
 /* toggle-missing 激活态 */
@@ -63,7 +63,7 @@ export const contentGhCSS: string = `
 
 /* 创作者列表（GitHub 侧栏） */
 .gh-left-head { padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
-.gh-left-head-label { font-size:11px;font-weight:600;color:var(--muted); }
+.gh-left-head-label { font-size:var(--fs-sm);font-weight:600;color:var(--muted); }
 .gh-left-head-spacer { flex:1; }
 .gh-left-foot { padding:4px 12px 8px;font-size:8px;color:var(--muted); }
 .gh-creators-list { flex:1; overflow-y:auto; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }

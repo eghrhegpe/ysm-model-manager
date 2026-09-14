@@ -14,7 +14,7 @@ export const sidebarCSS: string = `
 .list { flex: 1; overflow-y: auto; padding: 4px 6px; }
 .instance-card {
   background: var(--bg); border: 1px solid var(--bd);
-  border-radius: 6px; margin-bottom: 4px; overflow: hidden;
+  border-radius:var(--radius-md); margin-bottom: 4px; overflow: hidden;
 }
 /* 拖拽导入悬停态：虚线框提示「拖到此卡片可直接推送到该整合包」 */
 .instance-card.dnd-over { border: 1px dashed var(--accent, #89b4fa); box-shadow: 0 0 0 1px var(--accent, #89b4fa) inset; }
@@ -34,7 +34,7 @@ export const sidebarCSS: string = `
 .card-name-row { display: flex; align-items: center; }
 .card-status-row { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 .instance-card-header .name { flex: 1; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--txt); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.tag { font-size: var(--fs-xs); padding: 1px 4px; border-radius: 3px; min-width:16px;text-align:center; }
+.tag { font-size: var(--fs-xs); padding: 1px 4px; border-radius:var(--radius-xs); min-width:16px;text-align:center; }
 .instance-card-header .tag.green { background: color-mix(in srgb, var(--status-success) 13%, transparent); color: var(--status-success); }
 .instance-card-header .tag.red { background: color-mix(in srgb, var(--status-error) 13%, transparent); color: var(--status-error); }
 .instance-card-header .tag.orange { background: color-mix(in srgb, var(--sm-optional) 13%, transparent); color: var(--sm-optional); }
@@ -48,15 +48,15 @@ export const sidebarCSS: string = `
 ${btnBaseCSS}
 
 .footer-btn {
-  width: 100%; padding: 5px 8px; border-radius: 6px;
+  width: 100%; padding: 5px 8px; border-radius:var(--radius-md);
   border: 1px solid var(--bd); background: transparent;
   color: var(--txt); cursor: pointer; font-size: calc(var(--fs-base) - 2px); font-family: var(--font-ui);
   text-align: center; transition: background var(--tr-fast);
 }
 .footer-btn:hover { background: var(--hover); }
 /* 骨架屏 */
-.sk-item { padding: 10px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--bd); background: var(--surf); }
-.sk-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bd) 25%, var(--hover) 50%, var(--bd) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s infinite; margin-bottom: 6px; }
+.sk-item { padding: 10px; margin-bottom: 6px; border-radius:var(--radius-lg); border: 1px solid var(--bd); background: var(--surf); }
+.sk-line { height: 12px; border-radius:var(--radius-md); background: linear-gradient(90deg, var(--bd) 25%, var(--hover) 50%, var(--bd) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s infinite; margin-bottom: 6px; }
 .sk-w80 { width: 80%; }
 .sk-w40 { width: 40%; }
 @keyframes sk-shimmer {

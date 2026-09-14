@@ -72,7 +72,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   gap: 2px;
   padding: var(--uih-slide-list-pad);
   background: rgba(15, 15, 22, 0.92);
-  border-radius: 10px;
+  border-radius:var(--radius-xl);
 }
 
 .slide-header {

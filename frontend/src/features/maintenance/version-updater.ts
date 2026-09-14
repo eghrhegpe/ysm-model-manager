@@ -120,13 +120,13 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
         if (!raw) return "";
         const d = document.createElement("div");
         d.textContent = raw;
-        return `<div style="border:1px solid var(--bd);border-radius:6px;background:var(--bg);padding:10px;font-size:11px;line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px">${d.innerHTML}</div>`;
+        return `<div style="border:1px solid var(--bd);border-radius:var(--radius-md);background:var(--bg);padding:10px;font-size:var(--fs-sm);line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px">${d.innerHTML}</div>`;
       })()
     : "";
   const bodyHTML =
-    `<div style="font-size:12px;color:var(--txt);line-height:1.5">${t("update.newVersionPrompt", { latest: esc(info.latest), current: esc(info.current) })}</div>` +
+    `<div style="font-size:var(--fs-base);color:var(--txt);line-height:1.5">${t("update.newVersionPrompt", { latest: esc(info.latest), current: esc(info.current) })}</div>` +
     (notesHTML
-      ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">━━━ ${t("update.changelog")} ━━━</div>${notesHTML}`
+      ? `<div style="font-size:var(--fs-sm);color:var(--muted);margin-top:6px">━━━ ${t("update.changelog")} ━━━</div>${notesHTML}`
       : "");
   const ok = await modalConfirm({
     title: t("update.newVersionTitle"),

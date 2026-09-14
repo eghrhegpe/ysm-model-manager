@@ -78,27 +78,27 @@ ${MENU_SECTION_CSS}
 .cc-row-plain { padding:6px 10px; }
 .cc-divider { height:1px;background:rgba(255,255,255,0.12);margin:4px 10px; }
 .cc-labelbox { flex:1;display:flex;align-items:center;gap:8px;min-width:0; }
-.slide-label.cc-label-xs { font-size:12px; }
-.slide-label.cc-label-grow { flex:1;font-size:13px; }
-.slide-label.cc-label-body { font-size:13px;color:rgba(255,255,255,0.85); }
-.slide-label.cc-label-dim { font-size:13px;color:rgba(255,255,255,0.7); }
-.cc-head { display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.7); }
-.cc-head-strong { display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.85); }
-.cc-hint { font-size:12px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.slide-label.cc-label-xs { font-size:var(--fs-base); }
+.slide-label.cc-label-grow { flex:1;font-size:var(--fs-md); }
+.slide-label.cc-label-body { font-size:var(--fs-md);color:rgba(255,255,255,0.85); }
+.slide-label.cc-label-dim { font-size:var(--fs-md);color:rgba(255,255,255,0.7); }
+.cc-head { display:flex;justify-content:space-between;font-size:var(--fs-md);color:rgba(255,255,255,0.7); }
+.cc-head-strong { display:flex;justify-content:space-between;font-size:var(--fs-md);color:rgba(255,255,255,0.85); }
+.cc-hint { font-size:var(--fs-base);color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .cc-hint-45 { max-width:45%; }
-.setting-select.cc-select { font-size:11px;padding:2px 4px; }
-.cc-img-block { width:100%;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block; }
+.setting-select.cc-select { font-size:var(--fs-sm);padding:2px 4px; }
+.cc-img-block { width:100%;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.12);display:block; }
 .cc-canvas-fill { width:100%;height:100%;display:block; }
-.cc-canvas-auto { width:100%;height:auto;border-radius:6px;border:1px solid rgba(255,255,255,0.12);display:block; }
-.cc-picker { width:28px;height:20px;padding:0;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;background:transparent; }
-.cc-band { position:relative;width:100%;border-radius:6px;overflow:hidden;cursor:pointer;touch-action:none; }
+.cc-canvas-auto { width:100%;height:auto;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.12);display:block; }
+.cc-picker { width:28px;height:20px;padding:0;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);cursor:pointer;background:transparent; }
+.cc-band { position:relative;width:100%;border-radius:var(--radius-md);overflow:hidden;cursor:pointer;touch-action:none; }
 .cc-marker { position:absolute;width:10px;height:10px;border-radius:50%;background:#fff4c2;border:1px solid rgba(0,0,0,0.3);box-shadow:0 0 6px rgba(255,244,194,0.8);transform:translate(-50%,-50%);pointer-events:none;transition:left 0.1s,top 0.1s; }
 .cc-grid { display:flex;gap:6px;flex-wrap:wrap; }
-.cc-thumb-btn { display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:6px;cursor:pointer;padding:2px; }
+.cc-thumb-btn { display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:var(--radius-md);cursor:pointer;padding:2px; }
 .cc-thumb-btn-active { border-color:var(--accent,#7c83ff);background:color-mix(in srgb,var(--accent) 15%,transparent); }
-.cc-thumb-img { object-fit:cover;display:block;border-radius:4px; }
+.cc-thumb-img { object-fit:cover;display:block;border-radius:var(--radius-sm); }
 .cc-span-cap { font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px; }
-.cc-btn { padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer; }
+.cc-btn { padding:4px 10px;font-size:var(--fs-sm);border-radius:var(--radius-md);cursor:pointer; }
 .cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
 .cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }
 `,

@@ -26,22 +26,22 @@ export const VIEW_TESTIDS: readonly string[] = [
 export function headerHTML(): string {
   return (
     '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:var(--muted);flex:1">' +
+    '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:var(--fs-xs);color:var(--muted);flex:1">' +
     '<input type="checkbox" id="sb-select-all" data-testid="sidebar-select-all" style="cursor:pointer"> ' +
     t("common.selectAll") +
     "</label>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬆️ ' +
+    '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬆️ ' +
     t("sidebar.pushSelected") +
     " ▾</button>" +
-    '<div class="dd-menu" id="sidebar-push-menu" data-testid="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
+    '<div class="dd-menu" id="sidebar-push-menu" data-testid="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
     typeMenuItemsHTML() +
     "</div></div>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:4px;border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">⬇️ ' +
+    '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">⬇️ ' +
     t("sidebar.pullSelected") +
     " ▾</button>" +
-    '<div class="dd-menu" id="sidebar-pull-menu" data-testid="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
+    '<div class="dd-menu" id="sidebar-pull-menu" data-testid="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
     typeMenuItemsHTML() +
     "</div></div>" +
     "</div>"
@@ -85,7 +85,7 @@ function typeMenuItemsHTML(): string {
   const render = (id: string, text: string): string =>
     '<div class="dd-item" data-testid="sidebar-sync-type" data-sync-type="' +
     esc(id) +
-    '" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">' +
+    '" style="padding:4px 8px;cursor:pointer;border-radius:var(--radius-sm);color:var(--txt)">' +
     esc(text) +
     "</div>";
   let html = render("all", `📦 ${t("sidebar.allTypes")}`);

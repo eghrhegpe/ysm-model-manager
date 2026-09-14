@@ -80,7 +80,7 @@ ${MENU_CARD_CSS}
    padding: 4px 10px;
 }
 .slide-label.rm-label-sm {
-   font-size: 12px;
+   font-size:var(--fs-base);
 }
 .slide-label.rm-label-ellipsis {
    flex: 1 1 auto;
@@ -88,15 +88,15 @@ ${MENU_CARD_CSS}
    text-overflow: ellipsis;
    white-space: nowrap;
    min-width: 0;
-   font-size: 12px;
+   font-size:var(--fs-base);
    color: rgba(255,255,255,0.85);
 }
 .rm-range-num {
    flex: 0 0 auto;
    width: 52px;
-   font-size: 11px;
+   font-size:var(--fs-sm);
    padding: 1px 3px;
-   border-radius: 4px;
+   border-radius:var(--radius-sm);
    border: 1px solid rgba(255,255,255,0.2);
    background: rgba(0,0,0,0.3);
    color: rgba(255,255,255,0.8);
@@ -107,7 +107,7 @@ ${MENU_CARD_CSS}
    background: none;
    border: none;
    cursor: pointer;
-   font-size: 14px;
+   font-size:var(--fs-lg);
    padding: 0;
    line-height: 1;
 }
@@ -120,7 +120,7 @@ ${MENU_CARD_CSS}
 /* row 槽位样式（ADR-193 第四刀）：radio 活跃行高亮 + 行内按钮尺寸微调 */
 .rm-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .row-radio-active { color: var(--accent, #7c83ff); }
-.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size: 12px; line-height: 1.2; }`,
+.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size:var(--fs-base); line-height: 1.2; }`,
   );
 }
 

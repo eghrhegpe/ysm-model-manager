@@ -86,7 +86,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
             escUtil(cr.name) +
             '">' +
             '<div class="gh-card-body">' +
-            '<div class="ws-name" style="font-size:11px">🐙 ' +
+            '<div class="ws-name" style="font-size:var(--fs-sm)">🐙 ' +
             escUtil(cr.name) +
             "</div>" +
             '<div class="ws-desc" style="font-size:9px">' +

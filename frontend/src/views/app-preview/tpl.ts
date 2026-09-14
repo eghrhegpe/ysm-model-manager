@@ -117,7 +117,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
       ? subs
           .map((s) => {
             const texName = (model.textureNames || [])[s.texSlot ?? 0] || "—";
-            return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px">
+            return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:var(--fs-sm)">
         <span style="font-weight:600;color:var(--txt)">🎭 ${esc(s.name)}</span>
         <span style="color:var(--muted)">${esc(texName)}</span>
         ${model.texWidth && model.texHeight ? `<span style="color:var(--muted)">${model.texWidth}×${model.texHeight}px</span>` : ""}

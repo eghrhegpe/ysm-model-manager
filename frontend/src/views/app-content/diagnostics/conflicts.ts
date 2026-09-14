@@ -147,7 +147,7 @@ function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): st
     });
   });
   if (conflicts.length > 50) {
-    html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:10px">...${t("diagnostics.moreCount", { n: conflicts.length - 50 })}</div>`;
+    html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:var(--fs-xs)">...${t("diagnostics.moreCount", { n: conflicts.length - 50 })}</div>`;
   }
   return html;
 }
@@ -376,7 +376,7 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
 }
 
 function dgCfBuildResolveSectionHtml(): string {
-  return `<div class="diag-sync-resolve" style="margin-top:16px;padding:12px;background:var(--diag-stat-bg);border-radius:8px">
+  return `<div class="diag-sync-resolve" style="margin-top:16px;padding:12px;background:var(--diag-stat-bg);border-radius:var(--radius-lg)">
 <div class="diag-config-item">
   <label for="resolve-strategy">🎯 ${t("diagnostics.resolveConflicts")}:</label>
   <select id="resolve-strategy" class="diag-config-select">

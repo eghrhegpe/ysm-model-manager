@@ -34,7 +34,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
     ? ""
     : `<div class="stg-card" style="animation-delay:60ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-        <label for="set-link-mode" class="label" style="font-size:13px;font-weight:600">🔗 ${t("settings.links.title")}</label>
+        <label for="set-link-mode" class="label" style="font-size:var(--fs-md);font-weight:600">🔗 ${t("settings.links.title")}</label>
         <button id="set-relink" class="btn-base sm">🔄 ${t("settings.links.reapply")}</button>
       </div>
       <div class="stg-card-body">
@@ -53,7 +53,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
     : `
     <div class="stg-card" style="animation-delay:120ms">
       <div class="stg-card-hdr">
-        <label for="set-mirror" class="label" style="font-size:13px;font-weight:600">🌐 ${t("settings.mirror.title")}</label>
+        <label for="set-mirror" class="label" style="font-size:var(--fs-md);font-weight:600">🌐 ${t("settings.mirror.title")}</label>
       </div>
       <div class="stg-card-body">
         <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
@@ -83,8 +83,8 @@ function renderStgStorageCard(isWebViewer: boolean): string {
     <div class="stg-card-hdr">📁 ${t("settings.webRepo.title")}</div>
     <div class="stg-card-body">
       <div class="stg-card-desc">${t("settings.webRepo.desc")}</div>
-      <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:11px;padding:4px 12px">📂 ${t("settings.webRepo.authorize")}</button>
-      <div id="web-repo-auth-status" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5"></div>
+      <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">📂 ${t("settings.webRepo.authorize")}</button>
+      <div id="web-repo-auth-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>
     </div>
   </div>
   `
@@ -95,7 +95,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
       <div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
       <div class="stg-card-desc">${t("settings.storage.desc")}</div>
       <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
         <div class="stg-grid" id="set-advanced-grid"></div>
       </div>
     </div>
@@ -112,7 +112,7 @@ function renderStgLangSelect(): string {
       <option value="en">English</option>
       <option value="ja">日本語</option>
     </select>
-    <span style="font-size:10px;color:var(--muted)">${t("settings.languageDesc")}</span>
+    <span style="font-size:var(--fs-xs);color:var(--muted)">${t("settings.languageDesc")}</span>
   </div>
 </div>`;
 }
@@ -129,7 +129,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#d4a574"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#5d4037">☀️ ${t("settings.theme.warm")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">☀️ ${t("settings.theme.warm")}</span>
       </div>
       <div class="theme-card" data-theme="sakura">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -137,7 +137,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#f5b8cc"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#fce4ec"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#5d4037">🌸 ${t("settings.theme.sakura")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">🌸 ${t("settings.theme.sakura")}</span>
       </div>
       <div class="theme-card" data-theme="mint">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -145,7 +145,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#A2D9CE"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#76D7C4"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#2c3e3a">🍃 ${t("settings.theme.mint")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#2c3e3a">🍃 ${t("settings.theme.mint")}</span>
       </div>
       <div class="theme-card" data-theme="pro">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -153,7 +153,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#b0bec5"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#757575"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#e0e0e0">⚪ ${t("settings.theme.pro")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0e0e0">⚪ ${t("settings.theme.pro")}</span>
       </div>
       <div class="theme-card" data-theme="cyber">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -161,7 +161,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#e0d5f5">🌙 ${t("settings.theme.cyber")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0d5f5">🌙 ${t("settings.theme.cyber")}</span>
       </div>
       <div class="theme-card" data-theme="ocean">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -169,7 +169,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#7986cb"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#9fa8da"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#c5d8e8">🌊 ${t("settings.theme.ocean")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#c5d8e8">🌊 ${t("settings.theme.ocean")}</span>
       </div>
     </div>
   </div>
@@ -194,9 +194,9 @@ function renderStgFontFamily(): string {
   return `<div class="section-title stg-title stg-sub-title">📐 ${t("settings.font.title")}</div>
 
 <div style="display:flex;gap:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-font-size" class="label" style="font-size:13px;font-weight:600">📏 ${t("settings.fontSize")}</label>
+      <label for="set-font-size" class="label" style="font-size:var(--fs-md);font-weight:600">📏 ${t("settings.fontSize")}</label>
     </div>
     <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
       <option value="small">🔹 ${t("settings.fontSize.small")}</option>
@@ -211,9 +211,9 @@ function renderStgFontFamily(): string {
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontSizeHint")}</div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-display-font" class="label" style="font-size:13px;font-weight:600">🃏 ${t("settings.font.creatorFont")}</label>
+      <label for="set-display-font" class="label" style="font-size:var(--fs-md);font-weight:600">🃏 ${t("settings.font.creatorFont")}</label>
     </div>
     <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="kaiti" selected>🖌️ ${t("settings.font.kaiti")}</option>
@@ -222,9 +222,9 @@ function renderStgFontFamily(): string {
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontHint")}</div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-card-density" class="label" style="font-size:13px;font-weight:600">💳 ${t("settings.density")}</label>
+      <label for="set-card-density" class="label" style="font-size:var(--fs-md);font-weight:600">💳 ${t("settings.density")}</label>
     </div>
     <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>📦 ${t("settings.density.compact")}</option>

@@ -18,14 +18,14 @@ export const contentStgCSS: string = `
   margin-bottom: 12px;
 }
 .stg-val {
-  font-size: 10px;
+  font-size:var(--fs-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 240px;
 }
 .stg-btn {
-  font-size: 10px;
+  font-size:var(--fs-xs);
 }
 .stg-hint {
   font-size: 9px;
@@ -44,7 +44,7 @@ export const contentStgCSS: string = `
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size:var(--fs-sm);
   cursor: pointer;
 }
 .stg-hint-hidden {
@@ -90,7 +90,7 @@ export const contentStgCSS: string = `
 .stg-adv-reset { margin-left:auto; }
 .stg-card-overridden { border-color:var(--accent); }
 .stg-custom-badge { font-size:9px;color:var(--accent); }
-.stg-path-picker { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:10px; color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
+.stg-path-picker { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-xs); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
 .stg-path-picker:hover { border-color:var(--accent); background:var(--hover); }
 @keyframes advPanelIn { from { opacity:0; max-height:0; } to { opacity:1; max-height:600px; } }
 @keyframes advPanelOut { from { opacity:1; max-height:600px; } to { opacity:0; max-height:0; } }

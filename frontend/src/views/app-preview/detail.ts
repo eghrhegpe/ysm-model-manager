@@ -155,7 +155,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
+    ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? `（${rv.version}）` : ""}</div>
@@ -198,15 +198,15 @@ async function renderPackModelList(
       total > models.length
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
         : "";
-    host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px">
-  <div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
+    host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px">
+  <div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
   ${models
     .map((m) => {
       const name = m.path.split("/").pop() || m.path;
-      return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid color-mix(in srgb,var(--accent) 50%,transparent)">
+      return `<div class="pack-model-item" data-entry="${esc(m.path)}" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:var(--radius-sm);font-size:var(--fs-base);cursor:pointer;border-left:3px solid color-mix(in srgb,var(--accent) 50%,transparent)">
       <span>🧊</span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
-      <span style="color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0">${t("preview.modelCubes", { cubes: m.cubes })}</span>
+      <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:auto;flex-shrink:0">${t("preview.modelCubes", { cubes: m.cubes })}</span>
     </div>`;
     })
     .join("")}

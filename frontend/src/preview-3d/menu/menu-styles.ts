@@ -10,7 +10,7 @@
 // （后定义覆盖先定义，值相同），单一事实源在常量本身。
 
 /** 错误提示行（红色文案）：core.ts 装配层与 roles.ts 角色面板同值 */
-export const MENU_ERROR_NOTE_CSS = `.cm-error-note, .fr-error-note { padding: 8px 10px; color: #ff7b7b; font-size: 12px; }`;
+export const MENU_ERROR_NOTE_CSS = `.cm-error-note, .fr-error-note { padding: 8px 10px; color: #ff7b7b; font-size:var(--fs-base); }`;
 
 /** 可折叠 section 头（folder / cap 分组共用）：cap-controls 渲染与 render.ts rmAppendFolder 同源 */
 export const MENU_SECTION_CSS = `.cap-section-header {
@@ -21,13 +21,13 @@ export const MENU_SECTION_CSS = `.cap-section-header {
   min-height: 32px;
   cursor: pointer;
   user-select: none;
-  font-size: 11px;
+  font-size:var(--fs-sm);
   color: rgba(255,255,255,0.6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 .cap-section-arrow {
-  font-size: 10px;
+  font-size:var(--fs-xs);
   display: inline-block;
 }`;
 
@@ -55,12 +55,12 @@ export const MENU_ROW_DENSITY_CSS = `
   margin-bottom: 1px;
 }
 .menu-wrapper.slide-menu .slide-item.rm-row-compact .slide-label {
-  font-size: 13px;
+  font-size:var(--fs-md);
 }
 .menu-wrapper.slide-menu .slide-item.rm-row-compact .slide-icon {
   width: 18px;
   height: 18px;
-  font-size: 14px;
+  font-size:var(--fs-lg);
 }`;
 
 /**
@@ -89,7 +89,7 @@ export const MENU_DIVIDER_CSS = `.menu-divider {
 export const MENU_CARD_CSS = `.cap-card {
   margin: 6px 8px;
   border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 8px;
+  border-radius:var(--radius-lg);
   background: rgba(255,255,255,0.035);
   overflow: hidden;
 }
@@ -98,7 +98,7 @@ export const MENU_CARD_CSS = `.cap-card {
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
-  font-size: 11px;
+  font-size:var(--fs-sm);
   color: rgba(255,255,255,0.6);
   text-transform: uppercase;
   letter-spacing: 0.5px;

@@ -122,9 +122,14 @@ func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing,
 // compareRelKeyMode relKey 回退路径（MMD/VRC 等无哈希类型）。
 func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir string) (missing, extra []string, synced int) {
 	customByRelKey := make(map[string]bool)
+	// 第一遍：计算 relKey 并缓存（避免第三遍检测 extra 时对每个 c.Path 重复计算
+	// relKey——热路径上的 filepath.Rel+ToSlash+Lower+StripDisableSuffix 重复分配）。
+	type cr struct{ name, rel string }
+	rels := make([]cr, 0, len(customEntries))
 	for _, c := range customEntries {
 		if rel := relKey(scanDir, c.Path); rel != "" {
 			customByRelKey[rel] = true
+			rels = append(rels, cr{name: c.Name, rel: rel})
 			if _, found := idx.ByRelKey[rel]; found {
 				synced++
 			}
@@ -140,12 +145,10 @@ func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir
 		}
 	}
 
-	// Extra: 实例有但仓库没有的 relKey
-	for _, c := range customEntries {
-		if rel := relKey(scanDir, c.Path); rel != "" {
-			if _, found := idx.ByRelKey[rel]; !found {
-				extra = append(extra, c.Name)
-			}
+	// Extra: 实例有但仓库没有的 relKey（复用第一遍已算好的 rel）
+	for _, r := range rels {
+		if _, found := idx.ByRelKey[r.rel]; !found {
+			extra = append(extra, r.name)
 		}
 	}
 	return

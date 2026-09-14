@@ -1,6 +1,8 @@
 package avatar
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -110,6 +112,35 @@ func TestParseMetadataAuthors(t *testing.T) {
 	}
 	if authors[0] != (authorEntry{Name: "Alice", Role: "md", Avatar: "avatar/a.png"}) {
 		t.Errorf("authorEntry 字段透传错误: %+v", authors[0])
+	}
+}
+
+// TestCacheAvatarsFromJSON_MultiAuthor 回归：多作者 .json 模型须全部缓存，
+// 不得被外层 author 循环的 break 截断——原实现缓存第一个命中作者后 break，
+// 后续作者头像全漏（探针 2026-09 暴露）。
+func TestCacheAvatarsFromJSON_MultiAuthor(t *testing.T) {
+	old := CacheDir
+	cacheDir := t.TempDir()
+	CacheDir = func() string { return cacheDir }
+	defer func() { CacheDir = old }()
+
+	dir := t.TempDir()
+	jsonPath := filepath.Join(dir, "model.json")
+	jsonData := `{"metadata":{"authors":[{"name":"alice","avatar":"avatar/a.png"},{"name":"bob","avatar":"avatar/b.png"}]}}`
+	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "avatar"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(dir, "avatar", "a.png"), []byte("A"), 0644)
+	os.WriteFile(filepath.Join(dir, "avatar", "b.png"), []byte("B"), 0644)
+
+	CacheAvatarsFromJSON(jsonPath)
+	for _, n := range []string{"alice", "bob"} {
+		if _, err := os.Stat(filepath.Join(cacheDir, n+".png")); err != nil {
+			t.Errorf("未缓存 %s: %v", n, err)
+		}
 	}
 }
 

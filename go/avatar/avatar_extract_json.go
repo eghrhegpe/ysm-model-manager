@@ -110,7 +110,7 @@ func CacheAvatarsFromJSON(modelPath string) {
 			if err := fsutil.WriteFileAtomic(cachedPath, avatarData); err != nil {
 				log.Printf("[avatar] 缓存写入失败 %s: %v", cachedPath, err)
 			}
-			break // 一个作者只落一张头像
+			// 每个作者独立落盘（safe 键唯一），不得 break 截断后续作者
 		}
 	}
 }

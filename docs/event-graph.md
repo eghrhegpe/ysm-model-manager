@@ -234,7 +234,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 93 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 94 |
 
 ### `nav:changed`
 
@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 219 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 220 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 44 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 256 |
@@ -304,8 +304,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 166 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 319 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 320 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -447,7 +447,7 @@
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 166 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
-| showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 43 |
+| showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 44 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 193 |
@@ -487,18 +487,18 @@
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 147 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 59 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 93 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 115 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 124 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 94 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 116 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 125 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 113 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 138 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 145 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 143 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 286 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 287 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |
@@ -536,9 +536,9 @@
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
-| show | `frontend/src/views/app-toast/index.ts` | 136 |
-| show | `frontend/src/views/app-toast/index.ts` | 155 |
-| show | `frontend/src/views/app-toast/index.ts` | 164 |
+| show | `frontend/src/views/app-toast/index.ts` | 137 |
+| show | `frontend/src/views/app-toast/index.ts` | 156 |
+| show | `frontend/src/views/app-toast/index.ts` | 165 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 129 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 153 |
@@ -592,7 +592,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 72 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 73 |
 
 ### `tree:reload`
 

@@ -25,7 +25,8 @@ export function parseHealthReport(raw: HealthReport | null): HealthReport | null
     typeof raw.completeness.valid === "number" &&
     typeof raw.completeness.invalid === "number" &&
     // cache 结构校验：防 cache_dir/cache_files 漂移时渲染层访问 undefined
-    // （原校验 hit_rate —— 该字段因语义错误已从 CacheStatus 删除，改校验 cache_files）
+    // （校验对象需在 CacheStatus 里稳定存在：hit_rate 曾因口径错误被删后恢复，
+    // 改用语义稳定的 cache_files——命中率为 0 时该字段仍恒在，校验不会误拒）
     raw.cache &&
     typeof raw.cache.cache_files === "number" &&
     // resources 结构校验：防 by_type/total_files 漂移时渲染层访问 undefined

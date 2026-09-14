@@ -910,6 +910,8 @@ export const en: Record<string, string> = {
   "diagnostics.healthValid": "Valid",
   "diagnostics.healthInvalid": "Invalid",
   "diagnostics.healthCacheSize": "Cache size",
+  "diagnostics.healthHitRate": "Hit rate",
+  "diagnostics.healthCacheScanErrors": "probe failed",
   "diagnostics.healthReclaim": "Reclaimable",
   "diagnostics.healthSource": "Source: Go repoaudit (GUI/CLI shared)",
 

@@ -113,8 +113,8 @@ func printHealthReport(r healthReportJSON) {
 	fmt.Printf("\n📋 完整性: 检查 %d · 有效 %d · 无效 %d · 有效率 %.1f%%\n",
 		r.Completeness.Checked, r.Completeness.Valid, r.Completeness.Invalid, r.Completeness.Percentage)
 
-	fmt.Printf("💾 缓存: %d 个文件 · %s\n",
-		r.Cache.CacheFiles, fsutil.FormatSize(r.Cache.CacheSize))
+	fmt.Printf("💾 缓存: %d 个文件 · %s%s\n",
+		r.Cache.CacheFiles, fsutil.FormatSize(r.Cache.CacheSize), cacheHitSuffix(r.Cache))
 
 	fmt.Printf("📦 资源: %d 个文件 · %s · 类型分布 ", r.Resources.TotalFiles, fsutil.FormatSize(r.Resources.TotalSize))
 	for t, c := range r.Resources.ByType {
@@ -136,6 +136,30 @@ func printHealthReport(r healthReportJSON) {
 	} else {
 		fmt.Printf("\n✅ 无警告\n")
 	}
+}
+
+// cacheHitSuffix 缓存命中率后缀（真命中率：本仓库纹理内容哈希查缓存的结果）。
+//
+// 旧实现此处打印的是「估算命中率」——源自已废弃的错误口径（全局缓存文件数/
+// 本仓库纹理数，必然 >100% 被截断成假绿 100%）。现字段语义已由 repoaudit 重写
+// 为逐纹理哈希统计（与 cache-verify 同口径），故本函数如实展示：
+//   - 采样时加「≈」（纹理数超采样上限，非全量统计）；
+//   - 探测失败数可见（故障 ≠ 未缓存，静默吞掉会让磁盘故障显示成「没缓存」）；
+//   - 无纹理（分母为 0）时整段省略——0/0 无意义。
+func cacheHitSuffix(c repoaudit.CacheStatus) string {
+	total := c.Hits + c.Misses
+	if total == 0 {
+		return ""
+	}
+	approx := ""
+	if c.CacheSampled {
+		approx = "≈"
+	}
+	s := fmt.Sprintf(" · 命中率 %s%.0f%%（%d/%d）", approx, c.HitRate, c.Hits, total)
+	if c.CacheScanErrors > 0 {
+		s += fmt.Sprintf(" · 探测失败 %d 个", c.CacheScanErrors)
+	}
+	return s
 }
 
 // bottleneckStage 返回最慢阶段名（供 --bench 摘要）

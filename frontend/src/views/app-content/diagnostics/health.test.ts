@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
-import { parseHealthReport } from "@/utils/health-report.ts";
+import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
@@ -13,7 +13,7 @@ const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
 /** 构造一份合法体检报告（PowerShell 少引号转义，用对象拼接） */
-function buildReport() {
+function buildReport(): HealthReport {
   return {
     timestamp: "2026-08-21T00:00:00Z",
     directory: "/repo",
@@ -28,6 +28,61 @@ function buildReport() {
 
 beforeEach(() => {
   getApp.mockReset();
+});
+
+describe("renderHealthReport — 缓存命中率（Go 真口径）", () => {
+  // 命中率展示曾因「全局缓存文件数/本仓库纹理数」的错误口径被整体删除；
+  // Go 侧重写为逐纹理内容哈希统计后恢复。以下用例锁定展示的三个诚实性细节。
+  it("有命中数据 → 显示「命中率 N%（命中/总数）」", () => {
+    const r = buildReport();
+    r.cache = {
+      cache_dir: "/cache",
+      cache_files: 5,
+      cache_size: 1024,
+      hit_rate: 66.7,
+      hits: 2,
+      misses: 1,
+    };
+    const html = renderHealthReport(r, esc);
+    expect(html).toContain("命中率 67%（2/3）");
+  });
+
+  it("采样统计 → 加「≈」前缀（避免把估计值当全量结论）", () => {
+    const r = buildReport();
+    r.cache = {
+      cache_dir: "/cache",
+      cache_files: 5,
+      cache_size: 1024,
+      hit_rate: 40,
+      hits: 400,
+      misses: 600,
+      cache_sampled: true,
+    };
+    const html = renderHealthReport(r, esc);
+    expect(html).toContain("命中率 ≈40%（400/1000）");
+  });
+
+  it("无纹理（hits+misses=0）→ 整段省略（0/0 无意义）", () => {
+    const r = buildReport();
+    r.cache = { cache_dir: "/cache", cache_files: 5, cache_size: 1024 };
+    const html = renderHealthReport(r, esc);
+    expect(html).not.toContain("命中率");
+  });
+
+  it("探测失败可见（故障 ≠ 未缓存，不让磁盘故障伪装成「没缓存」）", () => {
+    const r = buildReport();
+    r.cache = {
+      cache_dir: "/cache",
+      cache_files: 5,
+      cache_size: 1024,
+      hit_rate: 0,
+      hits: 0,
+      misses: 3,
+      cache_scan_errors: 2,
+    };
+    const html = renderHealthReport(r, esc);
+    expect(html).toContain("探测失败 2");
+  });
 });
 
 describe("parseHealthReport", () => {
@@ -142,7 +197,9 @@ describe("runHealthAudit", () => {
     // 等 RepoHealthAudit mock 首次调用（resolveFn 赋值）后再解析——runHealthAudit
     // 现多一步 GetRepoRoot await，直接 resolveFn 会在 mock 调用前执行（初始空函数）
     await vi.waitFor(() => expect(healthAuditMock).toHaveBeenCalled());
-    resolveFn(buildReport());
+    // buildReport 现返回 HealthReport（供命中率用例按类型赋值 cache 字段），
+    // 此处 mock 的 resolve 形参是 Record<string, unknown>——显式展开一次。
+    resolveFn({ ...buildReport() });
     await p1;
     await waitFor(() => expect(list.innerHTML).toContain("85"));
   });

@@ -150,30 +150,8 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 	}
 }
 
-// TestAudit_NoCacheHitRate 钉住「缓存命中率字段已删除」这一决策（勿复活）。
-//
-// 原 TestAudit_CacheHitRate_TextureFiles 断言「命中率分母为纹理文件数」——它锁定的
-// 恰是错误语义：分子是全局缓存目录文件数（跨仓库共享的内容哈希键），分母是本仓库
-// 纹理数，两者不同源无因果关系，比例随缓存增长必然 >100%（原实现用 >100 截断掩盖，
-// 体检页长期显示「命中率 100%」假绿）。真命中率需在 HasCached/ReadCached 埋点计数。
-func TestAudit_NoCacheHitRate(t *testing.T) {
-	dir := t.TempDir()
-	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex1.png"), []byte("png1"))
-	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
-
-	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
-	// CacheStatus 现只有三个真实量：CacheFiles / CacheSize / ShouldWarn。
-	// 三者必须与 texture_cache.GetCacheStats() 同源（此处只验证结构可用、不引入新字段）。
-	if result.Cache.CacheFiles < 0 {
-		t.Errorf("CacheFiles 不应为负, got %d", result.Cache.CacheFiles)
-	}
-	if result.Resources.TotalFiles != 2 {
-		t.Errorf("总文件数应为 2, got %d", result.Resources.TotalFiles)
-	}
-}
+// 命中率相关测试已移至 repoaudit_cache_hitrate_test.go（2026-09 真命中率实现后，
+// 原「字段已删除勿复活」的 TestAudit_NoCacheHitRate 随之退役）。
 
 // （.disabled/.ban，大小写不敏感）——此前前端 oldest 页自建正则数禁用，
 // 口径双轨，现统一由 Go 审计产出（resources.banned）。

@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -71,6 +72,17 @@ const (
 	scoreFloor = 30
 )
 
+// 命中率统计参数（包级 var 供测试注入小值）。
+// 为何要上限：每个纹理都要 SHA256 全文件内容——与 `cache-verify` 命令同量级开销，
+// 但体检是 GUI 交互路径（用户点击即触发），超大仓库（数万纹理）不能无界阻塞。
+// 超限时按 walk 序取前 N 个纹理采样，CacheSampled 置真供前端标注「≈」。
+var (
+	// cacheHitSampleLimit 命中率统计的纹理采样上限（超出即采样，结果标注估计）
+	cacheHitSampleLimit = 1000
+	// cacheHitWorkers 命中率统计的并发 worker 数（IO 密集：读文件算 SHA256）
+	cacheHitWorkers = 4
+)
+
 // DirAuditResult 单目录审计结果（Audit() 返回；结构对齐原 go/cli repoAuditResult）
 type DirAuditResult struct {
 	Timestamp    string          `json:"timestamp"`
@@ -92,19 +104,30 @@ type Completeness struct {
 
 // CacheStatus 缓存状态
 //
-// 关于「命中率」：曾在此声明 HitRate/Hits/Misses 三字段，但它们是**语义错误的**——
-// 分子 stats.FileCount 是全局缓存目录的文件总数（内容哈希键，跨仓库、跨资源类型共享，
-// 所有导入过的模型都把 KTX2 堆在同一个目录），分母是**当前审计仓库**的纹理数，
-// 两者不同源、无因果关系；Hits=FileCount 更把「缓存里有 N 个文件」等同于「本仓库命中 N 次」。
-// 该比例随缓存增长必然 >100%，原实现用 `if hitRate > 100 { hitRate = 100 }` 掩盖失真，
-// 结果体检页长期显示「命中率 100%」假绿。真命中率需在 HasCached/ReadCached 处埋点计数
-// （属新功能，见 CacheFiles/CacheSize/ShouldWarn 三个真实量）。故删除而非修补。
+// 关于「命中率」的口径（2026-09 重写，勿退回到旧实现）：
+//   - 旧实现：HitRate = 全局缓存目录文件数 / 本仓库纹理数——**语义错误**。分子
+//     （CacheStats.FileCount，内容哈希键、跨仓库跨类型共享）与分母（本仓库纹理数）
+//     不同源、无因果关系，比例随缓存增长必然 >100%，被 `>100 截断` 掩盖成「命中率
+//     100%」假绿。已于 2026-09-14 删除。
+//   - 现实现：逐纹理 TextureHash(内容) → 查缓存集 → 真实命中计数。分子分母同源
+//     （都是本仓库纹理），与 `cache-verify` 命令同口径。字段复用旧名但语义已变。
 type CacheStatus struct {
 	CacheDir   string `json:"cache_dir"`
 	CacheFiles int    `json:"cache_files"`
 	CacheSize  int64  `json:"cache_size"`
 	// ShouldWarn 容量接近上限（texture_cache 阈值），体检页提示清理
 	ShouldWarn bool `json:"should_warn,omitempty"`
+	// HitRate 本仓库纹理的缓存命中率（0~100）。CacheSampled 为真时是基于采样
+	// 的估计值（纹理数超 cacheHitSampleLimit），前端应标注「≈」。
+	HitRate float64 `json:"hit_rate,omitempty"`
+	// Hits / Misses 本仓库纹理中命中/未命中缓存的**文件数**（非全局缓存条目数）。
+	Hits   int `json:"hits,omitempty"`
+	Misses int `json:"misses,omitempty"`
+	// CacheSampled 命中率是否来自采样（纹理数超上限）。
+	CacheSampled bool `json:"cache_sampled,omitempty"`
+	// CacheScanErrors 命中率统计过程中的哈希/探测失败数（非文件本身损坏）。
+	// 失败纹理不计入分子分母，失败数可见以免「故障」被误读为「全部未缓存」。
+	CacheScanErrors int `json:"cache_scan_errors,omitempty"`
 }
 
 // ResourceSummary 资源统计
@@ -162,6 +185,8 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	var totalSize int64
 	var largestFile string
 	var largestSize int64
+	// texturePaths 命中率统计的纹理样本（上限 cacheHitSampleLimit，见 measureCacheHitRate）
+	var texturePaths []string
 	resources := map[string]int{}
 	// 注册表加载提升到 walk 外——per-file TypeByLocation 不再
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
@@ -199,6 +224,13 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		size := info.Size()
 		result.Resources.TotalFiles++
 		totalSize += size
+
+		// 收集纹理路径供命中率统计（延后到 walk 外并发执行，见 measureCacheHitRate）。
+		// 此处只 append 不计算哈希——walk 回调内做 SHA256 会串行拖垮大仓库。
+		// 扩展名口径委托 registry.IsTextureExt（单一事实源）。
+		if registry.IsTextureExt(ext) && len(texturePaths) < cacheHitSampleLimit {
+			texturePaths = append(texturePaths, path)
+		}
 
 		// 禁用文件统计：单一口径 registry.IsDisableSuffix（.disabled/.ban，大小写不敏感）
 		if registry.IsDisableSuffix(d.Name()) {
@@ -253,18 +285,120 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		result.Completeness.Percentage = 100.0
 	}
 
-	// 缓存状态 + 命中率估算（以可缓存纹理文件数为基准）
+	// 缓存状态 + 命中率（真命中率见 measureCacheHitRate：逐纹理哈希查缓存）
 	stats := texture_cache.GetCacheStats()
 	result.Cache.CacheDir = stats.Dir
 	result.Cache.CacheFiles = stats.FileCount
 	result.Cache.CacheSize = stats.TotalSize
 	result.Cache.ShouldWarn = stats.ShouldWarn
 
+	hits, misses, scanErrs := measureCacheHitRate(texturePaths)
+	textureTotal := hits + misses
+	if textureTotal > 0 {
+		result.Cache.Hits = hits
+		result.Cache.Misses = misses
+		result.Cache.HitRate = float64(hits) / float64(textureTotal) * 100
+	}
+	result.Cache.CacheScanErrors = scanErrs
+	// 采样标记：walk 收集到上限即代表仓库纹理数超限（采样值，非全量）
+	result.Cache.CacheSampled = len(texturePaths) >= cacheHitSampleLimit
+
 	// 健康分数 + 警告
 	result.Score = calculateAuditScore(result)
 	generateAuditWarnings(&result)
 
 	return result, nil
+}
+
+// measureCacheHitRate 统计给定纹理列表的缓存命中数/未命中数/探测失败数。
+//
+// 口径（与 `cache-verify` 命令一致，勿退回旧的错误算法）：
+//   - 命中 = 纹理**内容哈希**（TextureHash）对应的 KTX2 缓存文件存在；
+//   - 分子分母同源：都是入参纹理本身，故命中率天然 ∈ [0,100]，无需截断。
+//
+// 旧实现的错误在于用「全局缓存目录文件数」当分子——那是跨仓库共享的内容哈希池，
+// 与本仓库纹理无因果关系，比例必然失真（见 CacheStatus 注释）。
+//
+// 性能设计：
+//   - 缓存集一次建好（ListCacheFiles）后只读查询，替代逐纹理 os.Stat（HasCached）——
+//     纹理数 N 时省 N 次 syscall；
+//   - 哈希计算（读全文件 + SHA256，IO/CPU 混合）并发执行，worker 数由
+//     cacheHitWorkers 控制（包级 var 供测试注入）；
+//   - 入参已由调用方按 cacheHitSampleLimit 截断，本函数不重复限流。
+//
+// 失败语义：哈希失败/缓存探测失败 **不计入** 分子也不计入分母（计入失败数）——
+// 「探测故障」≠「未缓存」，否则磁盘/权限故障会被误读成「该纹理没缓存」。
+func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
+	if len(texturePaths) == 0 {
+		return 0, 0, 0
+	}
+
+	// 缓存哈希集：一次扫描替代逐次 Stat（HasCached 内部即 os.Stat(CachePath)）
+	cachedHashes := make(map[string]struct{})
+	if entries, err := texture_cache.ListCacheFiles(); err == nil {
+		for _, e := range entries {
+			if e.Hash != "" {
+				cachedHashes[e.Hash] = struct{}{}
+			}
+		}
+	} else {
+		// 缓存目录不可列：无法判定命中，全部计入失败（不静默当成 0% 命中）
+		return 0, 0, len(texturePaths)
+	}
+
+	type tally struct{ hit, miss, bad int }
+
+	// 分块并发：按 cacheHitWorkers 切块，每块一个 goroutine 串行处理块内纹理。
+	// 为何不用 conc.ParallelCtx：其内部固定 worker=NumCPU（不可外部传），
+	// 无法落实本包 cacheHitWorkers 的限流意图（体检是 GUI 交互路径，
+	// 不能与用户的前台操作争抢全部 CPU）。切块后并发度显式可控。
+	workers := cacheHitWorkers
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > len(texturePaths) {
+		workers = len(texturePaths)
+	}
+	chunk := (len(texturePaths) + workers - 1) / workers
+
+	tallies := make([]tally, workers)
+	var wg sync.WaitGroup
+	for w := range workers {
+		start := w * chunk
+		end := start + chunk
+		if start >= len(texturePaths) {
+			break
+		}
+		if end > len(texturePaths) {
+			end = len(texturePaths)
+		}
+		wg.Add(1)
+		go func(w, start, end int) {
+			defer wg.Done()
+			var t tally
+			for _, path := range texturePaths[start:end] {
+				hash, err := texture_cache.TextureHash(path)
+				if err != nil {
+					t.bad++
+					continue
+				}
+				if _, ok := cachedHashes[hash]; ok {
+					t.hit++
+				} else {
+					t.miss++
+				}
+			}
+			tallies[w] = t
+		}(w, start, end)
+	}
+	wg.Wait()
+
+	for _, t := range tallies {
+		hits += t.hit
+		misses += t.miss
+		scanErrs += t.bad
+	}
+	return hits, misses, scanErrs
 }
 
 // HealthReportFor 完整体检（审计 + 去重），GUI 绑定与 CLI health-report 同一载荷

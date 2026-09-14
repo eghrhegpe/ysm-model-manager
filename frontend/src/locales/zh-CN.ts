@@ -898,6 +898,8 @@ export const zhCN = {
   "diagnostics.healthValid": "有效",
   "diagnostics.healthInvalid": "无效",
   "diagnostics.healthCacheSize": "缓存大小",
+  "diagnostics.healthHitRate": "命中率",
+  "diagnostics.healthCacheScanErrors": "探测失败",
   "diagnostics.healthReclaim": "可回收",
   "diagnostics.healthSource": "数据源：Go repoaudit（GUI/CLI 同源）",
 

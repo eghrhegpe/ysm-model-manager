@@ -138,6 +138,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     t("diagnostics.healthCacheSize") +
     ": " +
     esc(formatSize(r.cache.cache_size)) +
+    cacheHitRateSuffix(r.cache, esc) +
     "</div>" +
     "<div>" +
     UI_ICONS.delete +
@@ -156,6 +157,32 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     t("diagnostics.healthSource") +
     "</div>"
   );
+}
+
+/**
+ * 缓存命中率后缀（Go 端真命中率：本仓库纹理内容哈希逐张查缓存的结果）。
+ *
+ * 历史：此处曾展示过一次又删除——旧口径是「全局缓存文件数 / 本仓库纹理数」，
+ * 分子分母不同源，比例必然 >100% 被 Go 侧截断成假绿 100%。现 Go 已重写为
+ * 逐纹理哈希统计（与 `cache-verify` 命令同口径），分子分母同为「本仓库纹理」，
+ * 故恢复展示。三个诚实性细节：
+ *  - 采样时加「≈」：仓库纹理超上限时 Go 侧只统计前 N 张，不是全量结论；
+ *  - 显示「命中/总数」：光看百分比无法判断样本多小；
+ *  - 探测失败可见：哈希/缓存探测故障 ≠ 未缓存，静默吞掉会让磁盘故障显示成
+ *    「贴图没缓存」，用户据此白重编码一遍。
+ */
+function cacheHitRateSuffix(cache: HealthReport["cache"], esc_: EscFn): string {
+  const hits = cache.hits ?? 0;
+  const misses = cache.misses ?? 0;
+  const total = hits + misses;
+  if (total === 0) return ""; // 无纹理（分母 0）→ 0/0 无意义，整段省略
+
+  const approx = cache.cache_sampled ? "≈" : "";
+  let s = ` · ${t("diagnostics.healthHitRate")} ${approx}${Math.round(cache.hit_rate ?? 0)}%（${hits}/${total}）`;
+  if ((cache.cache_scan_errors ?? 0) > 0) {
+    s += ` · ${t("diagnostics.healthCacheScanErrors")} ${cache.cache_scan_errors}`;
+  }
+  return esc_(s);
 }
 
 /** 百分比展示（带小数收敛） */

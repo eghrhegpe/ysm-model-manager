@@ -272,17 +272,22 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 		t.Fatalf("自对比不应触发退化门禁: %v", err)
 	}
 
-	// 伪造更严阈值的历史基准（各阶段 0.001ms）→ 必然退化报错
-	decline := []map[string]interface{}{}
-	for _, name := range []string{"① 文件读取", "② JSON 解析", "③ 数据验证", "④ 几何数据准备", "⑤ 纹理数据准备", "⑥ 序列化模拟", "⑦ 缓存检查"} {
-		decline = append(decline, map[string]interface{}{"name": name, "ms": 0.001})
+	// 极短历史基准（各阶段 0.001ms）+ 确定性明显更慢的 now → 必然触发退化门禁。
+	// 不依赖 runSingleBenchJSON 的真实计时：近零耗时下相对百分比抖动会让该断言 flaky
+	// （见 compareSingleBenchBaseline 引入绝对噪声下限的注释）；直接用确定 stages 复现「真实退化」。
+	stageNames := []string{"① 文件读取", "② JSON 解析", "③ 数据验证", "④ 几何数据准备", "⑤ 纹理数据准备", "⑥ 序列化模拟", "⑦ 缓存检查"}
+	decline := make([]benchStageMs, len(stageNames))
+	declineStages := make([]singleBenchStage, len(stageNames))
+	for i, name := range stageNames {
+		decline[i] = benchStageMs{Name: name, Ms: 0.001}
+		declineStages[i] = singleBenchStage{Name: name, Duration: 50 * time.Millisecond}
 	}
 	declineJSON, _ := json.Marshal(decline)
 	declinePath := filepath.Join(root, "decline.json")
 	if err := os.WriteFile(declinePath, declineJSON, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, declinePath, "", 1); err == nil {
+	if err := compareSingleBenchBaseline(declinePath, declineStages, 1); err == nil {
 		t.Error("对照 0.001ms 历史基准必须触发退化门禁")
 	}
 }

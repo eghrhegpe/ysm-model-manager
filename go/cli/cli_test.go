@@ -1550,6 +1550,34 @@ func TestCompareSingleBenchBaseline(t *testing.T) {
 	}
 }
 
+// TestCompareSingleBenchBaseline_NoiseFloor 回归：近零耗时阶段不应因计时噪声误报退化。
+// 修复前 compareSingleBenchBaseline 用纯相对百分比 (now-base)/base 判退化，
+// 当 base≈0 时 now 的微小抖动就 >阈值% 误报；引入绝对噪声下限后，子毫秒阶段在
+// 噪声区间内一律判「无退化」。本测试固定该下限语义，杜绝 flaky。
+func TestCompareSingleBenchBaseline_NoiseFloor(t *testing.T) {
+	dir := t.TempDir()
+	// 历史基准 0.001ms（近零）→ 真实场景中第二次计时抖动即会 >50%
+	base := []benchStageMs{{Name: "① 文件读取", Ms: 0.001}}
+	data, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseFile := filepath.Join(dir, "baseline.json")
+	if err := os.WriteFile(baseFile, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// now 比 base 慢 10 倍（0.001ms → 0.01ms）仍属子毫秒噪声区间 → 不应报退化
+	quiet := []singleBenchStage{{Name: "① 文件读取", Duration: time.Microsecond * 10}}
+	if err := compareSingleBenchBaseline(baseFile, quiet, 50); err != nil {
+		t.Errorf("近零阶段抖动不应误报退化: %v", err)
+	}
+	// 真实退化：now 远超噪声下限（0.001ms → 50ms）→ 必须报退化
+	degraded := []singleBenchStage{{Name: "① 文件读取", Duration: 50 * time.Millisecond}}
+	if err := compareSingleBenchBaseline(baseFile, degraded, 50); err == nil {
+		t.Error("真实退化（远超噪声下限）必须报退化")
+	}
+}
+
 func TestSaveBenchBaseline_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "b.json")

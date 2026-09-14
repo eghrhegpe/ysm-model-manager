@@ -670,6 +670,13 @@ func speedEmoji(speedup float64) string {
 	}
 }
 
+// benchNoiseFloorMs 退化判定的绝对噪声下限。
+// 当基准耗时近零（如内存操作的 fake 模型、子毫秒阶段）时，纯相对百分比
+// (now-base)/base 会因计时抖动而 >阈值% 误报退化（或 now 偶尔比假基准更小而漏报）。
+// 引入绝对下限后：base 与 now 双双落在噪声区间内一律判「无退化」，只有 now 远超
+// 下限（真实退化）才报。下限取 1ms——低于此值的人眼不可察抖动不计入性能回归。
+const benchNoiseFloorMs = 1.0
+
 // compareSingleBenchBaseline 与基准 JSON 对比：任一阶段退化超 thresholdPct % 返回错误（供 CI 判定）
 func compareSingleBenchBaseline(baselinePath string, stages []singleBenchStage, thresholdPct float64) error {
 	data, err := os.ReadFile(baselinePath)
@@ -686,7 +693,7 @@ func compareSingleBenchBaseline(baselinePath string, stages []singleBenchStage, 
 		baseMap[b.Name] = b.Ms
 	}
 
-	fmt.Println("\n📉 与基准对比（threshold " + fmt.Sprintf("%.0f%%", thresholdPct) + "）:")
+	fmt.Println("\n📉 与基准对比（threshold " + fmt.Sprintf("%.0f%%", thresholdPct) + "，噪声下限 " + fmt.Sprintf("%.1fms", benchNoiseFloorMs) + "）:")
 	fmt.Println("   " + strings.Repeat("-", 62))
 
 	var degraded int
@@ -697,9 +704,17 @@ func compareSingleBenchBaseline(baselinePath string, stages []singleBenchStage, 
 			fmt.Printf("   🆕 %-16s %8.2fms（无基准，跳过）\n", s.Name, now)
 			continue
 		}
+		// 双向落入噪声区间（base 与 now 都近零）→ 计时抖动，判无退化不计入。
+		if baseMs <= benchNoiseFloorMs && now <= benchNoiseFloorMs {
+			fmt.Printf("   🟢 %-16s %8.2f → %8.2fms (噪声区间，跳过)\n", s.Name, baseMs, now)
+			continue
+		}
 		ratio := 0.0
 		if baseMs > 0 {
 			ratio = (now - baseMs) / baseMs * 100
+		} else {
+			// base 恰为 0 但 now 已超出噪声下限 → 视为全量退化（如 0 → 50ms）。
+			ratio = 100
 		}
 		mark := "✅"
 		switch {

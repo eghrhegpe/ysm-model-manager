@@ -350,6 +350,13 @@
 |----------|--------|----------|----------|
 | 测试覆盖缺口定位 | [前端 TS 整包审计](./frontend_repo_audit.md) | - | - |
 
+## 🎯 Go 覆盖率
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| "为什么某包报 0% 覆盖率" | [覆盖率门禁语句加权口径](./go_coverage_gate.md) | - | - |
+| "Go 覆盖率门禁怎么算包覆盖率" | [覆盖率门禁语句加权口径](./go_coverage_gate.md) | scripts/check-go-coverage-threshold.ts\|aggregateByPackage | - |
+
 ## 🎯 Go 后端评审与重构
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -760,6 +767,11 @@
 | 资源归类一律由 Go 扫描 + resource_types.json 派生，前端只读不重算 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
+| "包覆盖率必须按语句数加权（covered 语句/总语句）；曾用 | `文件内函数百分比最小值` | 一个 0% 函数把整包报成 0%" |
+| "判据是 profile 原文的语句数； 输出只有百分比、没有语句数，做不了加权" | `go tool cover -func` | - |
+| "阈值 pattern 匹配的是包路径（以包名结尾、无尾斜杠）， 这种尾斜杠写法永远匹配不到该包自身" | `internal/app/install/` | - |
+| "本脚本用具名导出供契约测试 import，退出必须用 process.exitCode + 自然返回；用 process.exit(N) 会在 Windows 句柄清理阶段触发 libuv 断言（0xC0000409）" | - | - |
+| "入口包（根 main / cmd/updater / 代码生成器）的 main() 测试内不可达，必然 0%，应进 SKIP_PACKAGES 而非当失败" | - | - |
 | 隐式协议（epoch 代际 / *Locked 变体 / \x00 缓存键 / 三态 bool 返回）靠注释续命，编译器零保护——新增字段/分支时静默爆炸 | - | - |
 | 同一 Node+WASM 解码桥在 go/avatar 与 internal/app 各有一份逐字复刻，跨包是伪理由——internal/app 本就 import go/avatar | `无法共享` | - |
 | 注册表循环内 compSize 推进只看 local header，大压缩条目后的条目不在扫描范围（DetectZipType 设计取舍，勿误以为遍历完整） | - | - |

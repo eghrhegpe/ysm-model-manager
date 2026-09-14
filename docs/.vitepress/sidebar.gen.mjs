@@ -1805,6 +1805,10 @@ export const autoSidebar = [
             "link": "/knowledge/format-ysm-anim-config"
           },
           {
+            "text": "覆盖率门禁语句加权口径",
+            "link": "/knowledge/go_coverage_gate"
+          },
+          {
             "text": "mock 路径守卫 check-mock-paths",
             "link": "/knowledge/mock_path_guard"
           },

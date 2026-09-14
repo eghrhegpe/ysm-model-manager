@@ -98,6 +98,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_diff_coverage.ts": ["tests"],
   "test_check_go_diff_coverage_skip.ts": ["tests"],
   "test_check_go_diff_coverage.ts": ["tests"],
+  // Go 覆盖率门禁聚合口径（语句加权）——锁「单函数 0% 不拖垮整包」不回归
+  "test_check_go_coverage_threshold.ts": ["tests"],
   "test_check_complexity.ts": ["tests"],
   "test_check_type_safety.ts": ["tests"],
   "test_check_params.ts": ["tests"],
@@ -241,6 +243,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_check_diff_coverage.ts": ["scripts/check-diff-coverage.ts"],
   "test_check_go_diff_coverage.ts": ["scripts/check-go-diff-coverage.ts"],
+  "test_check_go_coverage_threshold.ts": ["scripts/check-go-coverage-threshold.ts"],
   "test_check_go_diff_coverage_skip.ts": ["scripts/check-go-diff-coverage.ts"],
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],

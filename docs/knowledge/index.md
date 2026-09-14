@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 181 张知识卡
+> 总计: 182 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -349,7 +349,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-m…
 - **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 
-## utils（30 张）
+## utils（31 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -363,6 +363,7 @@
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
+| 🏗 go_coverage_gate | 覆盖率门禁语句加权口径 | architecture | — | 覆盖率门禁, go 覆盖率, 包覆盖率 0%, 单函数拖垮整包, coverprofile 解析 |
 | 🏗 mock_path_guard | mock 路径守卫 check-mock-paths | architecture | — | vi.mock 失效, mock 路径守卫, mock-path-ignore, ADR-224, 测试隔离静默丢失 |
 | 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离, 逃生留痕 |
 | 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
@@ -396,6 +397,7 @@
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
+- **go_coverage_gate**（覆盖率门禁语句加权口径）：`scripts/check-go-coverage-threshold.ts` 消费 `go test -coverprofile` 产物，按包比对覆盖率阈值。
 - **mock_path_guard**（mock 路径守卫 check-mock-paths）：ADR-224 落地：vitest 的 `vi.mock("<path>")` 对**不存在的模块路径静默不命中也不报错**（host 视为 auto-mock）。模块因重构/rename 被移动后，测试里指向旧路径的 mock 失效——m…
 - **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-0…
 - **pre_push_gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/…

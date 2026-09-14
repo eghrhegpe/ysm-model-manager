@@ -75,28 +75,66 @@ func TestDownloadQueue_ErrorDoesNotStopQueue(t *testing.T) {
 }
 
 func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
-	var emitted []string
+	var mu sync.Mutex
+	var statuses []string // 收集 queue:status 的首参（enqueued/cancelled/done）
+	started := make(chan struct{})
 	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
+			close(started)
 			// 等待 ctx 取消（模拟下载中）
 			<-ctx.Done()
 			return "", ctx.Err()
 		},
-		func(name string, args ...interface{}) { emitted = append(emitted, name) },
+		func(name string, args ...interface{}) {
+			if name != "queue:status" || len(args) == 0 {
+				return
+			}
+			if s, ok := args[0].(string); ok {
+				mu.Lock()
+				statuses = append(statuses, s)
+				mu.Unlock()
+			}
+		},
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
-	q.tasks = []types.DownloadTask{
+	// 走真实路径：入队（常驻 worker 开始消费）→ 任务在途时取消。
+	if err := q.Enqueue([]types.DownloadTask{
 		{URL: "https://slow.example/x.ysm", SaveDir: t.TempDir(), Name: "slow.ysm"},
+	}); err != nil {
+		t.Fatalf("Enqueue = %v", err)
 	}
-	q.cancelled = true
-	q.cancelFn() // 触发 ctx 取消
+	<-started // 确保任务已在途（downloadFn 已进入并阻塞在 ctx.Done）
+	q.Cancel()
 
-	q.process()
-
-	for _, e := range emitted {
-		if e == "queue:status" {
-			t.Error("取消后不应发 done 事件")
+	// 等队列静止（Cancel 后 running=false、tasks 清空）
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		st := q.Status()
+		if !st.Running && st.Remaining == 0 {
+			break
 		}
+		if time.Now().After(deadline) {
+			t.Fatalf("取消后队列未静止: %+v", st)
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	for _, s := range statuses {
+		if s == "done" {
+			t.Errorf("取消后不应发 done 事件, 实收 queue:status 序列: %v", statuses)
+		}
+	}
+	// 确认 cancelled 确实发出（证明取消路径被走到，非「什么都没发生」的假通过）
+	foundCancelled := false
+	for _, s := range statuses {
+		if s == "cancelled" {
+			foundCancelled = true
+		}
+	}
+	if !foundCancelled {
+		t.Errorf("应发出 cancelled 事件, 实收: %v", statuses)
 	}
 }
 
@@ -214,33 +252,44 @@ func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
 // 同步测试：直接以过期代际调用消费循环，无需 goroutine 与时序，天然确定性。
 // 旧实现 Enqueue 走 processForEpoch(0)（跳过守卫）故无法被本用例锁定；
 // 修复后 spawn 路径携带 spawnEpoch，守卫生效。
-func TestProcessForEpoch_StaleEpochRejected(t *testing.T) {
+// TestConsume_StaleWorkerDoesNotDrainNewBatch 取消后「陈旧消费」不得消费新一批任务。
+//
+// 该保护原由 epoch 代际号实现（旧 worker 启动即比对代际被拒，见已删除的
+// TestProcessForEpoch_StaleEpochRejected）。ADR-237 改为常驻 worker + channel 后，
+// 「旧 worker vs 新 worker」在结构上不可表达——本用例转而钉住**同一保护目标的行为面**：
+// Cancel 后队列已清空，此时即便有陈旧的消费驱动，也不得把随后入队的新批次当作自己的任务。
+func TestConsume_StaleWorkerDoesNotDrainNewBatch(t *testing.T) {
+	var mu sync.Mutex
 	var downloaded []string
 	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {
+			mu.Lock()
 			downloaded = append(downloaded, url)
+			mu.Unlock()
 			return "", nil
 		},
 		func(name string, args ...interface{}) {},
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
-	q.mu.Lock()
-	q.tasks = []types.DownloadTask{
-		{URL: "https://new.example/x.ysm", SaveDir: t.TempDir(), Name: "new.ysm"},
-	}
-	q.epoch = 7 // 队列当前代际（已被随后一次 Enqueue 推进）
-	q.mu.Unlock()
 
-	q.processForEpoch(3) // 过期代际 worker（spawn 时的代际已作废）
+	// 取消：清空队列并复位 running（此时无任何待处理任务）
+	q.Cancel()
 
-	if len(downloaded) != 0 {
-		t.Errorf("过期代际 worker 不得消费任务, got %v", downloaded)
+	// 模拟「陈旧消费驱动」在取消后运行：队列为空 → 应立刻返回，不置 running、不发 done
+	q.process()
+
+	mu.Lock()
+	got := len(downloaded)
+	mu.Unlock()
+	if got != 0 {
+		t.Errorf("取消后的陈旧消费不得下载任何任务, got %d", got)
 	}
-	if len(q.tasks) != 1 {
-		t.Errorf("过期代际 worker 不得弹出任务, 剩余应 1, got %d", len(q.tasks))
+	st := q.Status()
+	if st.Running {
+		t.Error("取消后的陈旧消费不得置 running")
 	}
-	if q.running {
-		t.Error("过期代际 worker 不得置 running（应立即返回，不触碰队列状态）")
+	if st.Remaining != 0 {
+		t.Errorf("取消后队列应清空, got remaining=%d", st.Remaining)
 	}
 }
 

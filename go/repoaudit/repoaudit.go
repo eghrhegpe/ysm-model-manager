@@ -147,10 +147,10 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		Directory:    dirPath,
 		Completeness: Completeness{},
 		Cache:        CacheStatus{},
-		Resources: ResourceSummary{
-			ByType: make(map[string]int),
-		},
-		Warnings: make([]string, 0),
+		// Resources.ByType 留待下方 walk 结束后由局部 resources map 整体赋值
+		//（原此处先 make 一个 map 再被 L246 覆盖，纯属一次无谓分配）。
+		Resources: ResourceSummary{},
+		Warnings:  make([]string, 0),
 	}
 
 	// 1. 资源扫描 + 完整性检查（一次遍历）

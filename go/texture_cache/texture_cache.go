@@ -80,14 +80,19 @@ func ReadCached(hash string) (data []byte, ok bool, err error) {
 // WriteCached 写入 KTX2 数据到缓存。
 // 自动创建缓存目录（如果不存在）。
 func WriteCached(hash string, data []byte) error {
-	dir := CacheDir()
-	if dir == "" {
+	// 路径统一经 CachePath 派生（hash→路径的单一出口）——原实现自行拼接
+	// filepath.Join(dir, hash+".ktx2")，与 CachePath 重复了 ".ktx2" 命名规则；
+	// 一旦命名规则变更（如分片 hash[:2]/hash.ktx2），写路径与读路径会静默分叉
+	// （写在一处、读在另一处 → 100% 未命中且无报错）。CacheDir()=="" 守卫亦由
+	// CachePath 一并覆盖（path=="" 即目录不可用）。
+	path := CachePath(hash)
+	if path == "" {
 		return fmt.Errorf("texture_cache: 缓存目录不可用")
 	}
+	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, fsutil.DirPerms); err != nil {
 		return fmt.Errorf("texture_cache: 创建缓存目录 %s: %w", dir, err)
 	}
-	path := filepath.Join(dir, hash+".ktx2")
 	if err := fsutil.WriteFileAtomic(path, data); err != nil {
 		return fmt.Errorf("texture_cache: 写入缓存 %s: %w", path, err)
 	}

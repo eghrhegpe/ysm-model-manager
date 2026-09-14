@@ -185,6 +185,13 @@ func classifyByLocationStrict(path string, ext string, isContainer bool, reg *re
 		}
 		return shared
 	}
+	// 预计算各类型的有效扩展名集一次：原实现把 rt.EffectiveExtensions() 放在
+	// 祖先×类型双层循环内调用，每次 make 新切片 + 逐元素 ToLower（扫描 N 文件时
+	// 放量为 O(N×祖先×类型) 次分配）。此处为不可变注册表配置，循环外算一次即恒定。
+	extsByType := make([][]string, len(reg.ResourceTypes))
+	for i := range reg.ResourceTypes {
+		extsByType[i] = reg.ResourceTypes[i].EffectiveExtensions()
+	}
 	// 深度优先：外层祖先深→浅，内层遍历类型
 	for _, anc := range ancestors {
 		ancNorm := filepath.ToSlash(strings.ToLower(anc))
@@ -205,7 +212,7 @@ func classifyByLocationStrict(path string, ext string, isContainer bool, reg *re
 				continue
 			}
 			// 仅当扩展名也匹配才返回——路径消歧不跨扩展名组误判
-			if !hasExtIn(ext, rt.EffectiveExtensions()) {
+			if !hasExtIn(ext, extsByType[i]) {
 				continue
 			}
 			if detectorPassesEntries(path, ext, isContainer, rt, entriesFor) {
@@ -224,9 +231,15 @@ func classifyByFingerprint(path string, ext string, isContainer bool, reg *regis
 	opened := false
 	bestID := ""
 	var bestRt *registry.ResourceType
+	// 预计算有效扩展名集一次（同 classifyByLocationStrict：每文件每类型一次的
+	// make+ToLower 是可避免的重复分配，注册表为不可变配置）。
+	extsByType := make([][]string, len(reg.ResourceTypes))
+	for i := range reg.ResourceTypes {
+		extsByType[i] = reg.ResourceTypes[i].EffectiveExtensions()
+	}
 	for i := range reg.ResourceTypes {
 		rt := &reg.ResourceTypes[i]
-		if !hasExtIn(ext, rt.EffectiveExtensions()) {
+		if !hasExtIn(ext, extsByType[i]) {
 			continue
 		}
 		pass := false

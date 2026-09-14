@@ -114,88 +114,128 @@ export async function Stage1Input(c: Stage1Ctx): Promise<void> {
   await Stage1bFileScan(c);
 }
 
+/**
+ * 纹理字节读取：三级降级链（命名向行为诚实——本函数实际是「带降级的批量读取器」，
+ * 而非单纯的批次读取）。
+ *
+ * ① `readFileBytesBatchWithMeta`（可选能力，带 hash——供纹理去重/缓存命中）
+ * ② `readFileBytesBatch`（无 hash 的批量；仅补 ① 未覆盖的条目——① 返回部分结果时不浪费重读）
+ * ③ `concurrentMap` + 单文件 `readFileBytes`（前两级**抛错**时的兜底；单条失败不阻塞其余）
+ *
+ * 降级触发语义不同，勿合并：①→② 是「① 成功但覆盖不全」的**补齐**（不抛错），
+ * ②→③ 是「批量通道整体不可用」的**兜底**（抛错才走）。故 ①/② 同处一个 try。
+ *
+ * @returns texBatch（路径→base64|null）+ texHashBatch（路径→hash，仅 ① 提供）
+ */
+async function readTextureBytesWithFallback(
+  c: Stage1bCtx,
+  texFiles: string[],
+): Promise<{ texBatch: Record<string, string | null>; texHashBatch: Record<string, string> }> {
+  const texBatch: Record<string, string | null> = {};
+  const texHashBatch: Record<string, string> = {};
+  if (texFiles.length === 0) return { texBatch, texHashBatch };
+
+  const port = c.effectivePort;
+  try {
+    // ① 带 meta（hash）的批量读取——可选能力，未实现则跳过
+    if (port.readFileBytesBatchWithMeta) {
+      const metaBatch = await port.readFileBytesBatchWithMeta(texFiles);
+      if (metaBatch) {
+        for (const p of texFiles) {
+          const entry = metaBatch[p];
+          if (!entry) continue;
+          texBatch[p] = entry.data;
+          if (entry.hash) texHashBatch[p] = entry.hash;
+        }
+      }
+    }
+    // ② 无 hash 的批量补齐（仅对 ① 未覆盖的条目）
+    if (Object.keys(texBatch).length < texFiles.length) {
+      const rest = await port.readFileBytesBatch(texFiles);
+      for (const p of texFiles) {
+        if (!(p in texBatch) && rest[p] !== undefined) texBatch[p] = rest[p];
+      }
+    }
+    return { texBatch, texHashBatch };
+  } catch {
+    // ③ 批量通道整体不可用（RPC 失败等）→ 并发分片逐个读，单条失败不阻塞
+    void mmdDiag(port, "batch-read", c.dirPath, "warn", "批量读取失败，降级并发分片读取");
+    const fallbackResults = await concurrentMap(texFiles, async (p) => {
+      try {
+        return [p, await port.readFileBytes(p)] as const;
+      } catch {
+        return [p, null] as const;
+      }
+    });
+    for (const [p, v] of fallbackResults) texBatch[p] = v;
+    return { texBatch, texHashBatch };
+  }
+}
+
+/** 纹理扩展名 → MIME（解码 worker 需要；模块级常量——原为循环内每张纹理重建一次） */
+const TEX_MIME_BY_EXT: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  bmp: "image/bmp",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+
+/** 单张纹理的登记产物：blob URL + 相对路径（供调用方写 texMap / blobUrlToRel） */
+interface RegisteredTexture {
+  url: string;
+  rel: string;
+}
+
+/**
+ * 登记单张纹理：建 blob URL → 推入待解码任务 → 累计归属映射。
+ * TGA 特殊：非真 TGA 直接跳过（返回 null）；真 TGA 不解码（走 MMDLoader 原生路径）。
+ * @returns 登记结果；null 表示该纹理被跳过（无字节 / 伪 TGA）
+ */
+function registerTexture(c: Stage1bCtx, p: string, texB64: string): RegisteredTexture | null {
+  const lower = p.toLowerCase().replace(/\\/g, "/");
+  const dirNorm = c.dirPath.toLowerCase().replace(/\\/g, "/");
+  const rel = lower.startsWith(`${dirNorm}/`) ? lower.slice(dirNorm.length + 1) : lower;
+  const baseName = lower.split("/").pop() || "";
+  const isTga = p.toLowerCase().endsWith(".tga");
+
+  const texBytes = base64ToBytes(texB64) as Uint8Array;
+  if (isTga && !isLikelyTga(texBytes)) return null;
+
+  const url = URL.createObjectURL(new Blob([bytesToArrayBuffer(texBytes)]));
+  c.blobUrls.push(url);
+  if (!isTga) {
+    const mime = TEX_MIME_BY_EXT[p.split(".").pop()?.toLowerCase() || ""] || "image/png";
+    c.decodeTasks.push({
+      relPath: rel || baseName,
+      bytes: bytesToArrayBuffer(texBytes),
+      mimeType: mime,
+    });
+  }
+  c.texMap.set(rel, url);
+  c.texMap.set(baseName, url);
+  c.blobUrlToRel.set(url, rel);
+  return { url, rel };
+}
+
 async function Stage1bFileScan(c: Stage1bCtx): Promise<void> {
   try {
     const files = (await c.effectivePort.listAllFilePaths(c.dirPath)) || [];
     c._traceFiles = files.length;
     const texFiles = files.filter((p) => TEXTURE_EXTS.some((ext) => p.toLowerCase().endsWith(ext)));
-    const texBatch: Record<string, string | null> = {};
-    const texHashBatch: Record<string, string> = {};
-    if (texFiles.length > 0) {
-      try {
-        if (c.effectivePort.readFileBytesBatchWithMeta) {
-          const metaBatch = await c.effectivePort.readFileBytesBatchWithMeta(texFiles);
-          if (metaBatch) {
-            for (const p of texFiles) {
-              const entry = metaBatch[p];
-              if (entry) {
-                texBatch[p] = entry.data;
-                if (entry.hash) texHashBatch[p] = entry.hash;
-              }
-            }
-          }
-        }
-        if (Object.keys(texBatch).length < texFiles.length) {
-          const fallback = await c.effectivePort.readFileBytesBatch(texFiles);
-          for (const p of texFiles) {
-            if (!(p in texBatch) && fallback[p] !== undefined) {
-              texBatch[p] = fallback[p];
-            }
-          }
-        }
-      } catch {
-        void mmdDiag(
-          c.effectivePort,
-          "batch-read",
-          c.dirPath,
-          "warn",
-          "批量读取失败，降级并发分片读取",
-        );
-        const fallbackResults = await concurrentMap(texFiles, async (p) => {
-          try {
-            return [p, await c.effectivePort.readFileBytes(p)] as const;
-          } catch {
-            return [p, null] as const;
-          }
-        });
-        for (const [p, v] of fallbackResults) texBatch[p] = v;
-      }
-    }
+    const { texBatch, texHashBatch } = await readTextureBytesWithFallback(c, texFiles);
     for (const p of texFiles) {
-      const lower = p.toLowerCase().replace(/\\/g, "/");
-      const dirNorm = c.dirPath.toLowerCase().replace(/\\/g, "/");
-      const rel = lower.startsWith(`${dirNorm}/`) ? lower.slice(dirNorm.length + 1) : lower;
-      const baseName = lower.split("/").pop() || "";
       const texB64 = texBatch[p] ?? null;
       if (!texB64) continue;
-      const texBytes = base64ToBytes(texB64) as Uint8Array;
-      if (p.toLowerCase().endsWith(".tga") && !isLikelyTga(texBytes)) continue;
-      const blob = new Blob([bytesToArrayBuffer(texBytes)]);
-      const url = URL.createObjectURL(blob);
-      c.blobUrls.push(url);
-      if (!p.toLowerCase().endsWith(".tga")) {
-        const ext = p.split(".").pop()?.toLowerCase() || "";
-        const mimeMap: Record<string, string> = {
-          png: "image/png",
-          jpg: "image/jpeg",
-          jpeg: "image/jpeg",
-          bmp: "image/bmp",
-          gif: "image/gif",
-          webp: "image/webp",
-        };
-        const mime = mimeMap[ext] || "image/png";
-        c.decodeTasks.push({
-          relPath: rel || baseName,
-          bytes: bytesToArrayBuffer(texBytes),
-          mimeType: mime,
-        });
-      }
-      c.texMap.set(rel, url);
-      c.texMap.set(baseName, url);
-      c.blobUrlToRel.set(url, rel);
-      if (texHashBatch[p] && !p.toLowerCase().endsWith(".tga")) {
-        c.texHashMap.set(rel, texHashBatch[p]);
-        c.blobUrlToHash.set(url, texHashBatch[p]);
+      const registered = registerTexture(c, p, texB64);
+      if (!registered) continue;
+      const { url, rel } = registered;
+      // hash 仅对非 TGA 有意义（TGA 不走解码通道，hash 无处消费）
+      const hash = texHashBatch[p];
+      if (hash && !p.toLowerCase().endsWith(".tga")) {
+        c.texHashMap.set(rel, hash);
+        c.blobUrlToHash.set(url, hash);
       }
     }
     if (c.decodeTasks.length > 0) {

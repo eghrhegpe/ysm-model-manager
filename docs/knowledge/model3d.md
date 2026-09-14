@@ -39,6 +39,7 @@ auto_fields:
     - ARIA_ATTR
     - assembleBoneSelectInfo
     - AssembledShell
+    - assertRevisionRange
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
     - attenuateAmbientForSky
@@ -129,6 +130,7 @@ auto_fields:
     - capControlToView
     - CapControlView
     - captureTextureName
+    - checkRevision
     - cleanupPreview
     - clearEnvCallbacks
     - clearFolderCollapsedState
@@ -581,6 +583,7 @@ auto_fields:
     - RenderMultiAngleOptions
     - renderPreviewPanel
     - RenderVrmBonePanel
+    - reportPatchIssue
     - RepresentativeSnapshot
     - resetEncoderState
     - resetEnvState

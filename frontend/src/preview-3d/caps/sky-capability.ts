@@ -17,6 +17,7 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -59,6 +60,8 @@ export function injectSkySunScalePatch(
     sunDiscScale: envState.skySunDiscScale,
   },
 ): void {
+  // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（锚点失配静默降级 → 显式化）
+  assertRevisionRange({ module: "sky-patch", allowed: ["185"] });
   // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
   // 缺失时误判已注入 → 永不补全，静默半残）。现按字段各自校验：字段视为已注入
   // 仅当「uniform 存在 且 shader 已含对应乘法」。半残状态（uniform 在、乘法缺）下次
@@ -104,7 +107,7 @@ export function injectSkySunScalePatch(
           mat.fragmentShader.slice(fallbackIdx);
         patched = true;
       } else {
-        ringLog(
+        reportPatchIssue(
           "sky",
           "injectSkySunScalePatch 无法注入声明，跳过 shader patch。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
           "error",
@@ -125,8 +128,8 @@ export function injectSkySunScalePatch(
     if (mat.fragmentShader !== before) patched = true;
     else {
       // 本层需补但锚点失配（无论 uniform 已注册与否——半残修复同样可能被外部破坏
-      // 挡住）→ ringLog 留痕，消除「静默半残」失效缝隙
-      ringLog(
+      // 挡住）→ 留痕 + console 兜底，消除「静默半残」失效缝隙
+      reportPatchIssue(
         "sky",
         "injectSkySunScalePatch 解耦点①（vSunE 缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
         "error",
@@ -143,7 +146,7 @@ export function injectSkySunScalePatch(
     );
     if (mat.fragmentShader !== before) patched = true;
     else {
-      ringLog(
+      reportPatchIssue(
         "sky",
         "injectSkySunScalePatch 解耦点②（太阳盘缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
         "error",

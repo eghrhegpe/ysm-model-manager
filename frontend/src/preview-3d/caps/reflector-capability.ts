@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type ModelType, pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
@@ -83,17 +84,22 @@ export class ReflectorCapability implements SceneCapability {
   /* -------- 内部：构造/销毁 Reflector -------- */
 
   private injectOpacityIntoShader(options: { shader: ReflectorShaderDef }): boolean {
+    // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（ReflectorShader 锚点失配静默降级 → 显式化）
+    assertRevisionRange({ module: "reflector-patch", allowed: ["185"] });
     const officialFrag = options.shader.fragmentShader;
     const declAnchor = "uniform vec3 color;";
     const alphaAnchor = "gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );";
     const injectedFrag = officialFrag
       .replace(declAnchor, `${declAnchor}\n\t\t\tuniform float uOpacity;`)
       .replace(alphaAnchor, "gl_FragColor = vec4( blendOverlay( base.rgb, color ), uOpacity );");
-    const injectedOk = injectedFrag !== officialFrag && injectedFrag.includes("uOpacity");
-    if (!injectedOk) {
-      ringLog(
+    // 单锚点分检（2026-09-14 加固：原整体判断在「decl 命中 alpha 失配」时只报模糊 warn，
+    // opacity 静默失效——现精确到失败锚点）；任一失配仍回退官方 shader（保守语义不变）
+    const declOk = injectedFrag.includes("uniform float uOpacity;");
+    const alphaOk = injectedFrag.includes("), uOpacity );");
+    if (!declOk || !alphaOk) {
+      reportPatchIssue(
         "reflector",
-        "three ReflectorShader 锚点未匹配（three 升级？），opacity 注入失败，回退官方 shader",
+        `three ReflectorShader 锚点未匹配（decl=${declOk ? "ok" : "miss"} alpha=${alphaOk ? "ok" : "miss"}，three 升级？），opacity 注入失败，回退官方 shader`,
         "warn",
       );
       return false;

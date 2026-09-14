@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -24,6 +25,9 @@ import type { WaterMode } from "./water-state.ts";
 import { WATER_MODES } from "./water-state.ts";
 
 export type { WaterMode };
+
+/** [shader-patch 守卫] water REVISION 断言 once guard（onBeforeCompile 每帧触发，断言只跑首次） */
+let waterRevisionChecked = false;
 
 /** 水面渲染体判别联合：film 单 mesh（root 即顶水面）；pool 为 Group + 预捕获顶水面引用 */
 type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
@@ -109,6 +113,16 @@ export class WaterCapability implements SceneCapability {
     });
 
     mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
+      // [shader-patch 守卫] 版本断言 once guard：onBeforeCompile 随材质编译每帧触发，
+      // 断言只跑首次（热路径零开销）；water 锚点是渲染管线稳定 chunk 标记，给宽松范围
+      // [185,190)，升级审计后再收窄
+      if (!waterRevisionChecked) {
+        waterRevisionChecked = true;
+        assertRevisionRange({
+          module: "water-patch",
+          allowed: ["185", "186", "187", "188", "189"],
+        });
+      }
       mat.userData.shader = shader;
       shader.uniforms.uTime = this.waterTime;
       const round = Math.max(0, Math.min(0.5, envState.waterPoolRoundness));
@@ -160,6 +174,18 @@ export class WaterCapability implements SceneCapability {
          }
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
+      // [shader-patch 守卫] 注入检测：5 次无条件 replace 原本零检测（失配全静默）。
+      // 现检查关键符号是否落地——vertex 的 wave 函数 / fragment 的 uRoundness 裁剪段，
+      // 任一缺失即告警（console 兜底），不再静默降级
+      const vertexOk = shader.vertexShader.includes("float wave(");
+      const fragOk = shader.fragmentShader.includes("uRoundness");
+      if (!vertexOk || !fragOk) {
+        reportPatchIssue(
+          "water",
+          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"}），水面波纹/圆角/透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
+          "warn",
+        );
+      }
     };
     mat.needsUpdate = true;
 

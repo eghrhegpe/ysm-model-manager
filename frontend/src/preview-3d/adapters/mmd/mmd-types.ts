@@ -4,6 +4,11 @@ import type { MMDLoader, VpdObject } from "@moeru/three-mmd";
 import type * as THREE from "three";
 import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import type { PreviewBuildCtx } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type {
+  AddOpLog,
+  ListAllFilePaths,
+  ReadFileBytes,
+} from "@/preview-3d/adapters/shared/data-port.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type {
   MaterialControlBridge,
@@ -19,16 +24,18 @@ import type {
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 
-/** MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
+/** MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据；
+ *  公共签名（readFileBytes/listAllFilePaths/addOpLog）引用共享 data-port 类型，
+ *  2026-09-14 收敛逐字重复；batch/KTX2 为 MMD 超集字段，保持本地声明不动） */
 export interface MmdDataPort {
-  readFileBytes(path: string): Promise<string | null>;
+  readFileBytes: ReadFileBytes;
   readFileBytesBatch(paths: string[]): Promise<Record<string, string | null>>;
   /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash） */
   readFileBytesBatchWithMeta?:
     | ((paths: string[]) => Promise<Record<string, { data: string | null; hash: string } | null>>)
     | undefined;
-  listAllFilePaths(dir: string): Promise<string[] | null>;
-  addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
+  listAllFilePaths: ListAllFilePaths;
+  addOpLog: AddOpLog;
   /** 读取纹理文件并检查 KTX2 缓存，返回 { format, data, hash }（已废弃，保留兼容） */
   getCachedTexture?:
     | ((path: string) => Promise<{ format: string; data: string; hash: string } | null>)

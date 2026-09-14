@@ -19,6 +19,7 @@ import type {
   SemanticScene,
   UpdateableScene,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type { AddOpLog } from "@/preview-3d/adapters/shared/data-port.ts";
 import { createBlinkController } from "@/preview-3d/adapters/shared/perception/blink.ts"; // 语义表情消费方：程序化生命力 L1.5
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts"; // 语义骨骼消费方：程序化生命力 L1
 import {
@@ -48,9 +49,10 @@ import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; 
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 
-/** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
+/** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据；
+ *  addOpLog 签名引用共享 data-port 类型，2026-09-14 收敛逐字重复） */
 export interface VrmDataPort {
-  addOpLog(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
+  addOpLog: AddOpLog;
 }
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */

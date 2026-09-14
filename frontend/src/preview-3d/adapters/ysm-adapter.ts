@@ -14,6 +14,7 @@
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 YsmMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
+import type { ListAllFilePaths } from "@/preview-3d/adapters/shared/data-port.ts";
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
 import {
   createPerceptionPauseRef,
@@ -122,8 +123,9 @@ export interface YsmAdapterOptions {
      *  [Bug B] B2 后组件选择不再走状态层订阅——off 只注销 schema + 清 per-scene 会话闭包 */
     registerModelSchema?: (ctx: YsmControlsContext, sessionId?: string) => (() => void) | undefined;
   };
-  /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
-  listAllFilePaths?: (dir: string) => Promise<string[] | null>;
+  /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式；
+   *  签名引用共享 data-port 类型，2026-09-14 收敛逐字重复） */
+  listAllFilePaths?: ListAllFilePaths;
   /** base64 文本读取（读 .animation.json 字节用；对齐 VRM readFn 注入模式） */
   readTextFile?: (path: string) => Promise<string | null>;
   /**

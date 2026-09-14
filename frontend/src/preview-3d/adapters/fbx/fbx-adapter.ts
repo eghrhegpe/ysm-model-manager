@@ -17,6 +17,7 @@ import type {
   ScreenshotScene,
   UpdateableScene,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type { AddOpLog, ReadFileBytes } from "@/preview-3d/adapters/shared/data-port.ts";
 import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
@@ -45,10 +46,11 @@ function safeCall(fn: () => void, label: string): void {
   }
 }
 
-/** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
+/** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据；
+ *  签名引用共享 data-port 类型，2026-09-14 收敛逐字重复） */
 export interface FbxDataPort {
-  readFileBytes(path: string): Promise<string | null>;
-  addOpLog?(op: string, msg: string, status: "ok" | "fail" | "warn", err?: string): Promise<void>;
+  readFileBytes: ReadFileBytes;
+  addOpLog?: AddOpLog;
 }
 
 /** FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160），

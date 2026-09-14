@@ -219,6 +219,8 @@ auto_fields:
     - encodeToKTX2Basis
     - Endianness
     - ensureFabStyles
+    - ensureOverlayShell
+    - ensureViewContainer
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
     - EnvCallback
@@ -461,6 +463,7 @@ auto_fields:
     - oneOf
     - onOverlayStyleTargetReset
     - OrderedTexInput
+    - OverlayShellDeps
     - overlayStyleRoot
     - OverlayStyleTarget
     - ownHandle

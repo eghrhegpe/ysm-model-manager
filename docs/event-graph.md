@@ -443,7 +443,7 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 734 |
+| mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 668 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 166 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |

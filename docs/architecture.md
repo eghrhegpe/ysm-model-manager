@@ -805,7 +805,9 @@ app-content/community/core.ts:35-36
 | Go 单测 | `go/*_test.go`（12 个） | `go/types/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` |
 | 前端 Vitest | `*.test.js`（19 个） | `core/context-menus.test.js`(18.9KB)、`features/community/download-queue.test.js`(13.8KB)、`utils/model2d`、`utils/animation`、`utils/summarize`、`utils/extensions` 等 |
 
-> 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`for f in tests/*.ts; do node "$f"; done` + `go test ./go/... -count=1` + `npm run typecheck`。
+> 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`node scripts/contract-tests.ts` + `go test ./... -count=1` + `npm run typecheck`。
+>
+> ⚠️ 契约测试**勿**手写 `for f in tests/*.ts; do node "$f"; done` 裸跑循环：裸跑缺 `@/` 别名运行时注入，任何 import 链进入 `frontend` `@/` 别名的用例都 `ERR_MODULE_NOT_FOUND`（本地绿、CI 红）——统一走 `scripts/contract-tests.ts`（与 CI、pre-push-gate 同源）。护栏：`tests/test_workflow_contract_runner.ts`。
 
 ---
 

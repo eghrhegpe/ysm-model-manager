@@ -154,7 +154,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
 node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 main.go CLI 入口）
-for f in tests/*.ts; do node "$f"; done     # 契约测试
+node scripts/contract-tests.ts            # 契约测试（95 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts; do node "$f"; done` 裸跑循环——裸跑缺 @/ 别名运行时注入，任何 import 链进入 frontend @/ 别名的用例都 ERR_MODULE_NOT_FOUND（本地绿、CI 红）。护栏：tests/test_workflow_contract_runner.ts）
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量
 node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装

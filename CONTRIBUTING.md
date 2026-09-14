@@ -132,7 +132,10 @@ cd frontend && npx vitest run
 go test ./go/... -timeout 60s
 
 # Node 契约测试（前后端 API 契约）
-for f in tests/*.ts; do node "$f"; done
+# ⚠️ 勿手写 `for f in tests/*.ts; do node "$f"; done` 裸跑循环——裸跑缺 @/ 别名
+# 运行时注入，任何 import 链进入 frontend @/ 别名的用例都 ERR_MODULE_NOT_FOUND
+# （本地绿、CI 红）。统一走 runner（与 CI / pre-push-gate 同源）：
+node scripts/contract-tests.ts
 ```
 
 ### CI 自动跑的测试

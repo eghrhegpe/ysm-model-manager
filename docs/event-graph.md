@@ -243,7 +243,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 220 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 222 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 44 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 256 |
@@ -304,8 +304,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 320 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 169 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 322 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -344,7 +344,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 110 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 338 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 340 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
@@ -475,12 +475,12 @@
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 118 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 257 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 263 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 285 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 291 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 313 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 339 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 259 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 265 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 287 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 293 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 315 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 341 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 113 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 124 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 135 |
@@ -488,17 +488,17 @@
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 94 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 116 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 125 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
+| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 113 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 138 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 145 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 144 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 287 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 146 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 289 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 131 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 141 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 147 |

@@ -348,8 +348,18 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 		}
 	}
 
-	cached, ok, _ := texture_cache.ReadCached(hash)
+	cached, ok, rerr := texture_cache.ReadCached(hash)
 	elapsed := time.Since(start)
+	if rerr != nil {
+		// 读取故障 ≠ 未命中：降级为「未命中」会让磁盘/权限故障显示成
+		// 「尚未编码」，用户据此判定缓存层不工作，结论不可信。
+		return guiFlowResult{
+			Stage:       "④ 纹理缓存",
+			Duration:    elapsed,
+			Success:     false,
+			Description: fmt.Sprintf("❌ 缓存读取失败: %v", rerr),
+		}
+	}
 
 	if ok && cached != nil {
 		return guiFlowResult{

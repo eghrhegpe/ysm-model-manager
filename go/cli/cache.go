@@ -132,7 +132,12 @@ func scanCacheVerify(modelDir string) (texInfos []cacheVerifyTexInfo, walkErrors
 			return nil
 		}
 
-		cached, _ := texture_cache.HasCached(hash)
+		cached, herr := texture_cache.HasCached(hash)
+		if herr != nil {
+			// 探测故障 ≠ 未命中：静默降级会让磁盘/权限故障显示成「该贴图
+			// 没缓存」，用户据此白重编码一遍。显式计入访问异常并保持结论可见。
+			walkErrors = append(walkErrors, fmt.Sprintf("%s: 缓存探测失败: %v", path, herr))
+		}
 		cacheSize := int64(0)
 		if cached {
 			cachePath := texture_cache.CachePath(hash)
@@ -359,6 +364,37 @@ func runCacheClear(ctx *CmdContext) error {
 	return nil
 }
 
+// writeCacheProbe 在缓存目录写一次性探针文件，返回其路径。
+//
+// 刻意不走 texture_cache.WriteCached：诊断只需验证「目录可写可读」，
+// 而 WriteCached 会 ① 写入真实 .ktx2 条目污染索引 ② 触发 maybePrune
+// 后台淘汰（缓存超限时真实删除用户已编码的 KTX2）。只读诊断产生删除
+// 副作用是 P0，故探针用非 .ktx2 名落在同一目录，绕开整条写路径。
+func writeCacheProbe(data []byte) (string, error) {
+	dir := texture_cache.CacheDir()
+	if dir == "" {
+		return "", fmt.Errorf("缓存目录不可用")
+	}
+	if err := os.MkdirAll(dir, fsutil.DirPerms); err != nil {
+		return "", fmt.Errorf("创建缓存目录 %s: %w", dir, err)
+	}
+	f, err := os.CreateTemp(dir, ".ysm_cache_probe_*")
+	if err != nil {
+		return "", fmt.Errorf("创建探针文件: %w", err)
+	}
+	name := f.Name()
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.Remove(name)
+		return "", fmt.Errorf("写入探针文件: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(name)
+		return "", fmt.Errorf("关闭探针文件: %w", err)
+	}
+	return name, nil
+}
+
 // runCacheDiag 诊断缓存流程
 func runCacheDiag(ctx *CmdContext) error {
 	fmt.Printf("🔍 缓存流程诊断\n")
@@ -430,36 +466,29 @@ func runCacheDiag(ctx *CmdContext) error {
 		}
 	}
 
-	fmt.Printf("\n💾 3. 缓存读写测试\n")
-	testHash := "diag_test_hash_12345"
+	fmt.Printf("\n💾 3. 缓存目录读写测试\n")
 	testData := []byte("YSM KTX2 Cache Test Data - " + time.Now().Format(time.RFC3339))
 
-	err = texture_cache.WriteCached(testHash, testData)
-	if err != nil {
-		fmt.Printf("   ❌ 缓存写入失败: %v\n", err)
+	// 探针刻意绕过 texture_cache.WriteCached：后者会写入真实 .ktx2 索引条目，
+	// 并在写路径触发 maybePrune —— 后台淘汰在缓存超限时真实删除用户已编码的
+	// KTX2（P0）。诊断命令是只读语义，不该有任何淘汰副作用；同理不调
+	// ClearCache()（历史 P0 #1：跑一次诊断即清空全部缓存，回归红线）。
+	probePath, perr := writeCacheProbe(testData)
+	if perr != nil {
+		fmt.Printf("   ❌ 缓存写入失败: %v\n", perr)
 		fmt.Printf("   💡 可能是磁盘空间不足或权限问题\n")
 	} else {
+		defer os.Remove(probePath) // 中途早退也清理，诊断对缓存目录零残留
 		fmt.Printf("   ✅ 缓存写入成功\n")
-		fmt.Printf("      文件: %s\n", texture_cache.CachePath(testHash))
+		fmt.Printf("      文件: %s\n", probePath)
 
-		data, ok, err := texture_cache.ReadCached(testHash)
-		if err != nil {
-			fmt.Printf("   ❌ 缓存读取失败: %v\n", err)
-		} else if !ok {
-			fmt.Printf("   ❌ 缓存未命中（刚写入的应该命中）\n")
+		data, rerr := os.ReadFile(probePath)
+		if rerr != nil {
+			fmt.Printf("   ❌ 缓存读取失败: %v\n", rerr)
+		} else if string(data) != string(testData) {
+			fmt.Printf("   ❌ 数据不完整！\n")
 		} else {
-			fmt.Printf("   ✅ 缓存读取成功\n")
-			if string(data) == string(testData) {
-				fmt.Printf("   ✅ 数据完整性验证通过\n")
-			} else {
-				fmt.Printf("   ❌ 数据不完整！\n")
-			}
-		}
-
-		// 只删本次诊断写入的测试条目——曾误调 ClearCache() 全量清空目录，
-		// 用户跑一次 cache-diag 即丢失全部已编码 KTX2 缓存（P0 #1，回归红线）
-		if rmErr := os.Remove(texture_cache.CachePath(testHash)); rmErr != nil && !os.IsNotExist(rmErr) {
-			fmt.Printf("   ⚠️  清理测试缓存条目失败: %v\n", rmErr)
+			fmt.Printf("   ✅ 缓存读取成功（数据完整性验证通过）\n")
 		}
 	}
 

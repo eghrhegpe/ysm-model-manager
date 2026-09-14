@@ -94,7 +94,15 @@ func NewJsonNotSupported(command string, reason string) *JsonResponse {
 func (r *JsonResponse) ToJson() string {
 	data, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
-		return fmt.Sprintf(`{"status":"error","error":{"code":"marshal_error","message":"%s"}}`, err.Error())
+		// 兜底自身必须是合法 JSON：err.Error() 含引号/反斜杠/控制字符时，
+		// fmt.Sprintf 直接拼接会产出破串，前端 JSON.parse 当场抛错——吞错
+		// 修了一圈，兜底却仍是唯一一个手拼 JSON 的死角。用 json.Marshal 转义；
+		// 转义再失败（理论上不可达）则退化为恒合法常量串。
+		msg, mErr := json.Marshal(err.Error())
+		if mErr != nil {
+			return `{"status":"error","error":{"code":"marshal_error","message":"response marshal failed"}}`
+		}
+		return `{"status":"error","error":{"code":"marshal_error","message":` + string(msg) + `}}`
 	}
 	return string(data)
 }

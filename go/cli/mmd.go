@@ -631,6 +631,15 @@ var textureExts = map[string]bool{
 
 // scanMMDAssets 遍历目录并按扩展名分类聚合资产。
 func scanMMDAssets(modelDir string) (*mmdAssetScan, error) {
+	// 根目录不存在/不可读时 filepath.Walk 仅回调一次错误即返回 nil：
+	// WalkErrCount=1、WalkTotalDirs=0 → 错误率恒 100%，把「路径写错」
+	// 误报成「系统性问题：错误率过高」。入口先判存在性，给出准确结论。
+	if di, serr := os.Stat(modelDir); serr != nil {
+		return nil, fmt.Errorf("目录不存在或无法访问: %w", serr)
+	} else if !di.IsDir() {
+		return nil, fmt.Errorf("路径不是目录: %s", modelDir)
+	}
+
 	s := &mmdAssetScan{}
 	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

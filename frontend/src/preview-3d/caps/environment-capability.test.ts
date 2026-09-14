@@ -878,4 +878,23 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
     expect(clearBtn.button!.disabled!()).toBe(false);
   });
+
+  it("[双折叠头修复] folder children 内的 controls 通道控件不带 group（否则 renderCapControls 会同名重复建折叠头）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    // 遍历三个 folder 内所有 controls 通道节点里的控件，断言 group 未定义
+    const folderNodes = nodes.filter((n) => n.kind === "folder");
+    expect(folderNodes).toHaveLength(3);
+    const controlsNodes = folderNodes.flatMap((f) =>
+      (f.children ?? []).filter((c) => c.kind === "controls"),
+    );
+    // preset / histogram / customHdr(image + buttons) 四个 controls 节点
+    expect(controlsNodes).toHaveLength(4);
+    for (const on of controlsNodes) {
+      const ctrls = typeof on.controls === "function" ? on.controls() : on.controls;
+      for (const c of ctrls ?? []) {
+        expect(c.group).toBeUndefined();
+      }
+    }
+  });
 });

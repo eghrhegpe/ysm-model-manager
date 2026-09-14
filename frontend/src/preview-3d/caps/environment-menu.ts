@@ -12,6 +12,10 @@
 //      + env-histogram → controls 通道节点（组分裂修复）
 //   4. folder preview.envGroupCustomHdr：env-hdr-preview → controls 节点（image）
 //      + env-pick-hdr/env-clear-hdr → controls 节点（button 打包）
+// [双折叠头修复] folder 内 controls 通道控件一律去掉 group：folder 即折叠容器，
+//   若控件保留 group 会令 renderCapControls 按同名分组再建一个同名 cap-section →
+//   同组折叠头重复（预设/背景/自定义HDR 三处均曾双头）。ENV_GROUP_* 常量仅供 folder
+//   labelKey 消费。凡「folder 包裹 + 控件原带同名 group」都适用此约定。
 
 import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
@@ -29,7 +33,10 @@ function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
     kind: "preset-thumb",
     labelKey: "preview.envPresetThumbnail",
     fallback: "预设预览",
-    group: ENV_GROUP_PRESET,
+    // [双折叠头修复] 控件已在外层 folder（cap-group-env-preset）内，folder 即折叠容器，
+    // 若再带 group 会令 renderCapControls 按同名字符串再建一个「预设」cap-section →
+    // 同组折叠头重复。去掉 group = 平铺进 folder body，消除双头。
+    // 注：ENV_GROUP_* 常量仍被 folder 的 labelKey 消费，保留定义。
     thumb: {
       size: 64,
       options: (() => {
@@ -58,7 +65,7 @@ function envHistogramControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
     kind: "histogram",
     labelKey: "preview.envHistogram",
     fallback: "亮度直方图",
-    group: ENV_GROUP_BACKGROUND,
+    // [双折叠头修复] 同 preset：histogram 已在外层 background folder 内，去掉 group 避免重复「背景」头
     getValue: () => cap.getLuminanceHistogram(),
     setValue: () => {
       /* 只读 */
@@ -74,7 +81,7 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
     kind: "image",
     labelKey: "preview.envHdrPreview",
     fallback: "HDR 预览",
-    group: ENV_GROUP_CUSTOM_HDR,
+    // [双折叠头修复] 同 preset：image 已在外层 customHdr folder 内，去掉 group 避免重复「自定义 HDR」头
     getValue: () => cap.getCustomHdrThumbnail(),
     setValue: () => {
       /* 只读 */
@@ -86,7 +93,7 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
       kind: "button",
       labelKey: "preview.envPickHdr",
       fallback: "自定义 HDR",
-      group: ENV_GROUP_CUSTOM_HDR,
+      // [双折叠头修复] 按钮已在外层 customHdr folder 内，去掉 group 避免重复头
       button: {
         textKey: "preview.envPickHdrBtn",
         variant: "primary",
@@ -109,7 +116,7 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
       kind: "button",
       labelKey: "preview.envClearHdr",
       fallback: "清除自定义 HDR",
-      group: ENV_GROUP_CUSTOM_HDR,
+      // [双折叠头修复] 同上：按钮在外层 folder 内，去掉 group
       button: {
         textKey: "preview.envClearHdrBtn",
         variant: "ghost",

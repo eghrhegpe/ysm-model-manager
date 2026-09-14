@@ -37,6 +37,7 @@ import {
   TOKEN_PX_BASELINE,
 } from "../scripts/_lib/design-tokens.ts";
 import { walk } from "../scripts/_lib/scan-files.ts";
+import { allIconNames } from "../scripts/_lib/icon-map.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
@@ -390,6 +391,35 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const hit = [...relSet].some((p) => p.includes("/views/app-content/css/"));
   assert.ok(hit, "扫描必须覆盖 views/app-content/css/（默认 skipDir 会误跳 css 目录）");
   console.log("  ✓ 扫描范围: css/ 目录未被跳过（漏扫回归锁）");
+}
+
+// ── 10. emoji 命中附带语义图标建议（ADR-238 D4 回归锁）──
+{
+  // 为什么锁：emoji 债的价值全在「能否机械收敛」。若建议丢失，275 处 UI chrome
+  // 又退回「一堆字形」，AI 只能靠猜——本闸就从「可收债清单」退化成「计数器」。
+  const hits = findEmojiIconViolations('<div>⚠️ ${msg}</div>', 1);
+  assert.equal(hits.length, 1, "⚠️ 应命中 1 处");
+  assert.equal(
+    hits[0]!.suggestion,
+    "UI_ICONS.warning",
+    "⚠️ 应建议 UI_ICONS.warning（ADR-238 语义名）",
+  );
+
+  // 未收录字形：命中但建议为 null（宁可不建议，不猜错）
+  const unmapped = findEmojiIconViolations('<div>🦄 ${msg}</div>', 1);
+  assert.equal(unmapped.length, 1, "未收录 emoji 仍应计入债（它确实是不受控图标）");
+  assert.equal(unmapped[0]!.suggestion, null, "未收录字形不应瞎给建议");
+
+  // 建议名必须真实存在于图标集（防「建议了不存在的名」——比不建议更糟：
+  // AI 会照建议写，然后发现没有这个图标）
+  const mapped = hits.map((h) => h.suggestion).filter(Boolean) as string[];
+  for (const s of mapped) {
+    assert.ok(
+      allIconNames().includes(s.replace(/^UI_ICONS\./, "")),
+      `建议 ${s} 必须在 icon-map 中有对应语义名`,
+    );
+  }
+  console.log("  ✓ emoji 建议: 附语义图标名（⚠️ → UI_ICONS.warning），未收录给 null");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

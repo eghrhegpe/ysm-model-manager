@@ -34,6 +34,8 @@
  * 退出码：本模块无独立 CLI（被 check-design-tokens.ts import）。
  */
 
+import { suggestIconName } from "./icon-map.ts";
+
 /** 违规种类（稳定标识，供 JSON 消费与基线 key）。 */
 export type DesignViolationKind =
   | "inline-style-font-size"
@@ -497,11 +499,15 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
   while ((m = re.exec(line)) !== null) {
     const glyph = m[1] ?? "";
     if (!glyph) continue;
+    // ADR-238 D4：附**建议图标名**（如 ⚠️ → UI_ICONS.warning），使 emoji 债从
+    // 「一堆字形」变成「按语义名可机械收敛的清单」——与令牌债的 `13px → var(--fs-md)`
+    // 建议同构。未收录的字形返回 null（宁可不建议，也不猜错语义）。
+    const iconName = suggestIconName(glyph);
     out.push({
       kind: "emoji-icon",
       line: lineNo,
       snippet: clip(glyph),
-      suggestion: null,
+      suggestion: iconName ? `UI_ICONS.${iconName}` : null,
     });
   }
   return out;

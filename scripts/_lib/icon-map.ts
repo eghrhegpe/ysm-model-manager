@@ -1,0 +1,161 @@
+/**
+ * icon-map.ts — UI 图标语义映射层（scripts/_lib，ADR-238 D4）。
+ *
+ * 是什么：**字形 → 语义名** 的映射表 + 查询函数。它是 ADR-238 D2「语义命名」的
+ * 事实源，同时供：
+ *   ① check-design-tokens 扫描器把「⚠️」这类命中项转成「建议 UI_ICONS.warning」；
+ *   ② 契约测试校验 `frontend/src/utils/icon/ui-icons.ts` 实现了全部映射（防表与实现漂移）。
+ *
+ * 为什么需要独立于 ui-icons.ts：
+ *   `ui-icons.ts` 在 frontend（含 `@/` 别名与浏览器侧依赖），scripts 侧 import 会踩
+ *   别名/环境问题；且映射表要能被**测试与扫描器**共享。故语义名与「该名存在」的事实
+ *   放 scripts/_lib（零依赖），SVG 路径实现放 frontend——两者靠契约测试对拍，
+ *   同 `TOKEN_PX_BASELINE` ↔ `variables.css` 的对账范式。
+ *
+ * 命名原则（ADR-238 D2，最易犯错处）：
+ *   **语义名，非外观名、非字形名**。`warning` 而非 `triangle`/`emoji-warning`。
+ *   外观名把「实现」写进「调用点」——将来 ⚠️ 换成圆形感叹号，语义名调用方零改动。
+ *
+ * 依赖：零依赖（纯数据 + 纯函数）。
+ */
+
+/** 语义名 → 代表该语义的高频字形（用于扫描建议与文档生成）。
+ *
+ * 只收**有明确语义**且值得进图标集的字形；长尾装饰性 emoji（🦴🎤🙏 等）不收——
+ * 它们更适合留在文案里或按需单独补，硬塞进表会让「建议」变成瞎猜。
+ */
+export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
+  // ── 状态语义（UI 最高频，且最需要主题化：成功绿/失败红/警告黄）──
+  "⚠️": "warning",
+  "❌": "error",
+  "✅": "success",
+  "🚫": "blocked",
+  "🛑": "stop",
+  "ℹ️": "info",
+  "💡": "hint",
+  "🔞": "restricted",
+
+  // ── 操作语义 ──
+  "🔍": "search",
+  "🔄": "refresh",
+  "🗑️": "delete",
+  "💾": "save",
+  "⬇️": "download",
+  "⬆️": "upload",
+  "📥": "import",
+  "↩️": "undo",
+  "↩": "undo",
+  "✂️": "cut",
+  "📎": "attach",
+  "🖌️": "brush",
+  "🧹": "clean",
+  "🛠️": "tools",
+  "⚙️": "settings",
+  "🔀": "shuffle",
+  "✕": "close",
+  "☰": "menu",
+  "☐": "checkbox",
+  "🧭": "navigate",
+
+  // ── 内容/分类语义 ──
+  "📁": "folder",
+  "📂": "folderOpen",
+  "📦": "package",
+  "📄": "file",
+  "📋": "clipboard",
+  "📝": "note",
+  "📜": "script",
+  "📊": "chart",
+  "📏": "ruler",
+  "📐": "geometry",
+  "📖": "book",
+  "📅": "calendar",
+  "🗓️": "calendar",
+  "🕐": "clock",
+  "🏷️": "tag",
+  "🔗": "link",
+  "📌": "pin",
+  "🖼️": "image",
+  "🖼": "image",
+  "🎬": "video",
+  "🎥": "video",
+  "📺": "media",
+  "📭": "inboxEmpty",
+  "📮": "inbox",
+  "🗒️": "note",
+
+  // ── 实体/领域语义 ──
+  "🎮": "game",
+  "🕹️": "joystick",
+  "🧸": "model",
+  "🦴": "bone",
+  "🧱": "voxel",
+  "🧊": "unknown",
+  "💎": "gem",
+  "🥽": "vrHeadset",
+  "⚔️": "violent",
+  "🎭": "character",
+  "🎨": "appearance",
+  "🧩": "parser",
+  "🏗️": "build",
+  "🐙": "github",
+  "🌐": "web",
+  "🌍": "globe",
+  "🏠": "home",
+  "🏆": "rank",
+  "👤": "user",
+  "👥": "users",
+  "💳": "payment",
+  "💰": "money",
+  "🩺": "diagnose",
+  "💬": "comment",
+  "📛": "label",
+  "🔒": "lock",
+  "🔐": "lockClosed",
+  "🔑": "key",
+  "⚡": "performance",
+  "🔺": "collision",
+  "🎯": "target",
+  "🎲": "random",
+  "🌙": "moon",
+  "☀️": "sun",
+  "🌸": "sakura",
+  "🍃": "mint",
+  "🌊": "ocean",
+  "⚪": "dot",
+  "🔹": "bullet",
+  "🔸": "bulletAlt",
+  "✨": "sparkle",
+  "👴": "oldest",
+  "👈": "pointerLeft",
+  "↗": "external",
+  "🎤": "voice",
+  "✒️": "author",
+  "🙏": "thanks",
+  "😊": "avatar",
+  "😀": "avatar",
+  "♻️": "recycle",
+} as const;
+
+/**
+ * 字形 → 建议的语义名（未收录返回 null）。
+ *
+ * 返回 null 是**刻意的**：宁可不给建议，也不猜错语义（同 `suggestToken` 对
+ * 「值不精确相等就不建议」的克制）。调用方应把 null 呈现为「需人工命名」。
+ */
+export function suggestIconName(glyph: string): string | null {
+  return EMOJI_TO_ICON[glyph] ?? null;
+}
+
+/** 全部语义名（去重、稳定排序）——供契约测试与文档生成消费。 */
+export function allIconNames(): string[] {
+  return [...new Set(Object.values(EMOJI_TO_ICON))].sort();
+}
+
+/** 该语义名在映射表中的代表字形（反向查询，文档用）。无则 null。 */
+export function glyphOfIconName(name: string): string | null {
+  for (const [glyph, n] of Object.entries(EMOJI_TO_ICON)) {
+    if (n === name) return glyph;
+  }
+  return null;
+}

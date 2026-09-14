@@ -141,6 +141,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 设计令牌守规判定层（design-tokens.ts）：违规识别语义 + TOKEN_PX_BASELINE 与
   // variables.css 对账 + UI-Design.md 数值漂移。前端 UI 规范与前端源码变更都应触发。
   "test_design_tokens.ts": ["tests", "frontend"],
+  "test_ui_icons.ts": ["tests", "frontend"],
   "test_gate_policy_baseline.ts": ["tests"],
   "test_gate_report.ts": ["tests"],
   "test_gate_sh_invariants.ts": ["tests"],
@@ -378,9 +379,16 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // 故两者都列为敏感源（任一改动都应触发本测试）。
   "test_design_tokens.ts": [
     "scripts/_lib/design-tokens.ts",
+    "scripts/_lib/icon-map.ts",
     "scripts/check-design-tokens.ts",
     "frontend/css/variables.css",
     "docs/UI-Design.md",
+  ],
+  // ADR-238：映射表（scripts）↔ 图标实现（frontend）对拍，两份都在敏感源。
+  "test_ui_icons.ts": [
+    "scripts/_lib/icon-map.ts",
+    "frontend/src/utils/icon/ui-icons.ts",
+    "docs/adr/ADR-238-ui.md",
   ],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],

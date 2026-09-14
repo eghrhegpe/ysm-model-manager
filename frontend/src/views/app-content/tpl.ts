@@ -2,6 +2,7 @@
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -26,20 +27,28 @@ export function repositoryHTML(): string {
   // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现），隐藏对应 tab
   const viewerExtras = isViewerMode()
     ? ""
-    : '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">♻️ ' +
+    : '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">' +
+      UI_ICONS.recycle +
+      " " +
       t("recycle.tab") +
       "</button>" +
-      '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">🔗 ' +
+      '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">' +
+      UI_ICONS.link +
+      " " +
       t("repo.tab.dedup") +
       "</button>" +
-      '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">👴 ' +
+      '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">' +
+      UI_ICONS.oldest +
+      " " +
       t("repo.tab.oldest") +
       "</button>";
   return (
     '<div class="repo-wrap">' +
     // 第一栏：操作
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 ' +
+    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">' +
+    UI_ICONS.folder +
+    " " +
     t("repo.tab.tree") +
     "</button>" +
     viewerExtras +
@@ -67,7 +76,9 @@ export function instancesHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="versions">🎮 ' +
+    '<button class="repo-tab active" data-tab="versions">' +
+    UI_ICONS.game +
+    " " +
     t("instances.tab.versions") +
     "</button>" +
     "</div>" +
@@ -92,7 +103,7 @@ export function instancesHTML(): string {
 export function diagnosticsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="repo-tab active" data-tab="diagnostics">🛠️ ${t("diagnostics.title")}</button>
+<button class="repo-tab active" data-tab="diagnostics">${UI_ICONS.tools} ${t("diagnostics.title")}</button>
 </div>
 <div class="tab-body">
 <div class="diag-wrapper">
@@ -136,8 +147,8 @@ export function diagnosticsHTML(): string {
 <div class="diag-panel" id="diag-log" data-testid="diag-log">
 <div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
 <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
-<button class="diag-log-fbtn" data-status="success">✅ ${t("diagnostics.success")}</button>
-<button class="diag-log-fbtn" data-status="failed">❌ ${t("diagnostics.failed")}</button>
+<button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
+<button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
 <button class="diag-log-fbtn" data-status="skipped">⏭️ ${t("diagnostics.skipped")}</button>
 <input id="diag-log-search" placeholder="🔍 ${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
@@ -148,18 +159,18 @@ export function diagnosticsHTML(): string {
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
 <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">⚡ ${t("diagnostics.startScan")}</button>
+<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
 </div></div></div>
 <div class="diag-panel" id="diag-perf" style="display:none">
 <div class="perf-wrap" style="overflow-y:auto;flex:1;padding:10px 12px">
 <div class="perf-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0 10px;border-bottom:1px solid var(--bd)">
-<button class="btn-base accent" id="diag-perf-run">⚡ ${t("diagnostics.perfRunSingle")}</button>
+<button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
 <input id="diag-perf-model" type="text" placeholder="📁 ${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
 <label for="diag-perf-iter" style="font-size:var(--fs-sm);color:var(--muted)">${t("diagnostics.perfIterations")}</label>
 <input id="diag-perf-iter" type="number" min="1" step="1" value="3" style="width:56px;font-size:var(--fs-sm);padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
-<button class="btn-base" id="diag-perf-gui">🩺 ${t("diagnostics.perfRunGui")}</button>
-<button class="btn-base" id="diag-perf-log">🗒️ ${t("diagnostics.perfPerfLog")}</button>
-<button class="btn-base" id="diag-perf-refresh-trace">🔍 ${t("diagnostics.loadTraceRefresh")}</button>
+<button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
+<button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
+<button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
 </div>
 <div id="diag-perf-single"></div>
 <div id="diag-perf-gui-out"></div>
@@ -169,11 +180,11 @@ export function diagnosticsHTML(): string {
 </div>
 <div class="diag-panel" id="diag-health" style="display:none">
 <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
-<button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">🩺 ${t("diagnostics.healthRun")}</button>
+<button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
 </div></div></div>
 <div class="diag-panel" id="diag-sync-conflict" style="display:none">
 <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-<button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">🔍 ${t("diagnostics.scanSyncConflict")}</button>
+<button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
 </div></div></div>
 </div>
 </div>
@@ -187,7 +198,9 @@ export function githubHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="github">🐙 ' +
+    '<button class="repo-tab active" data-tab="github">' +
+    UI_ICONS.github +
+    " " +
     t("workshop.title") +
     "</button>" +
     "</div>" +
@@ -241,7 +254,9 @@ export function workshopHTML(): string {
     "</button>" +
     '<button class="btn-base sm" id="ws-import-btn" title="' +
     t("workshop.importSiteTitle") +
-    '">📥 ' +
+    '">' +
+    UI_ICONS.import +
+    " " +
     t("workshop.importSite") +
     "</button>" +
     "</div>" +
@@ -258,7 +273,9 @@ export function workshopHTML(): string {
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">' +
     '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<span style="font-size:var(--fs-base);font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' +
+    '<span style="font-size:var(--fs-base);font-weight:600;color:var(--txt)" id="ws-cr-title">' +
+    UI_ICONS.appearance +
+    " " +
     t("workshop.activeCreators") +
     "</span>" +
     '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
@@ -276,7 +293,9 @@ export function workshopHTML(): string {
     '<button class="btn-base sm ws-btn-txt" id="ws-win-open" title="' +
     t("workshop.openWindow") +
     '">🖥️</button>' +
-    '<button class="btn-base sm ws-open-btn" id="ws-open">↗ ' +
+    '<button class="btn-base sm ws-open-btn" id="ws-open">' +
+    UI_ICONS.external +
+    " " +
     t("workshop.openBrowser") +
     "</button>" +
     "</div>" +
@@ -289,7 +308,9 @@ export function workshopHTML(): string {
     "<div>" +
     t("workshop.noEmbed") +
     "</div>" +
-    '<button class="btn-base accent" id="ws-open-fallback">↗ ' +
+    '<button class="btn-base accent" id="ws-open-fallback">' +
+    UI_ICONS.external +
+    " " +
     t("workshop.openExternal") +
     "</button>" +
     "</div>" +

@@ -302,6 +302,19 @@ invariant_anchors:
   - **未清项需人工**：剩余 68 处字号圆角无对应令牌（`9px`/`8px`/`32px`/`48px` 等），需设计决策——是新增令牌还是接受一次性值；颜色 41 处需人工判语义令牌。
   - 守卫：9 组契约测试绿 / `tsc --noEmit` ✅ / `vite build` ✅ / **全前端 380 文件 5812 用例全绿**（替换后零回归）/ `check-script-hygiene --strict` 0 warn / `check-readme-index` ✅。
 
+- ✅ **刀⑳ UI 图标规范与命名体系（ADR-238）**（2026-09，用户点题「设计图标规范或命名体系吧」；**331 处 emoji 债从「计数器」变成「可机械收敛清单」**）：
+  - **勘查先于设计**：实测 331 处 / **101 个不同字形** / 51 文件（热点 `tpl-settings.ts` 54、`detail-3d.ts` 32、`app-content/tpl.ts` 26）。关键发现——仓库**已有**一套正确的 SVG 体系（`utils/icon/workshop-icons.ts` 17 图标，约定 `.ws-icon { width:1em; height:1em; fill:none; stroke:currentColor }`），只是**覆盖面止于创作者/平台徽标域**，UI chrome（按钮/标签/状态）无图标可用 → 开发者顺手写 emoji。**故本刀不是「建体系」，是「补上缺的那一半 + 复用既有样式」**，避免造出第二套漂移源。
+  - **数据图标 vs UI chrome 的分界（最易犯的越层错）**：`resource_types.json` 的 `icon`/`groupIcon` 经 `typeIconOf()`/`fileIcon()` 消费，属 Go/JSON 驱动的**数据**（根 AGENTS.md 红线「前端只读不判」）——**改它即跨层重判归属**。判定口径可靠：**扫描只报字面量 emoji**，`typeIconOf(X)` 调用点不含字形字面量，天然不命中。曾误以为注册表图标集（🎨💎🧸…）的 56 处重合是数据图标，实测那些是**硬编码在模板里的 UI 字形恰好同形**（`>🎨 ${t(...)}` 是设置页标签），仍属 UI chrome。
+  - **命名体系（ADR-238 D2，最易错处）**：**语义名，非外观名**。`warning` 而非 `triangle`/`emoji-warning`——外观名把「实现」写进「调用点」，将来 ⚠️ 换成圆形感叹号要全局改名。已写**外观词黑名单断言**（triangle/circle/arrow/emoji/glyph…）进契约测试防退化。
+  - **交付**：`frontend/src/utils/icon/ui-icons.ts`（**97 个 SVG 图标**，全部经 `svg()` 包装 = `ws-icon` + 24×24 统一） + `scripts/_lib/icon-map.ts`（103 条字形→语义名映射，零依赖供扫描器/测试共享）。两者 **97↔97 双向对拍**（映射表建议了不存在的名 = 比不建议更糟，AI 会照写然后编译不过；实现有而映射表无 = 白写接不上扫描器）。
+  - **扫描器接线（D4）**：emoji 命中附语义名建议，实测**覆盖率 100%（331/331）**，债从「一堆字形」变成「按名字可机械收敛」。Top：`warning` 18 / `error` 18 / `appearance` 16 / `search` 14 / `clipboard` 14。
+  - **端到端验证（不只看测试绿）**：迁移 `app-content/tpl.ts` 20 处，**实渲染产物确认 4 个 `<svg class="ws-icon">` + 0 emoji**；emoji 债 331→314；基线 428→411。
+  - **⚠️ 迁移工具踩的两个坑（都险些提交坏 UI，且测试全绿）**：
+    ① **单引号串内 `${}` 不插值**——emoji 图标位大量在 `'<button ...>📁 ' +` 形态里，无脑写 `${UI_ICONS.folder}` 后渲染产物**字面输出 `${UI_ICONS.folder}`**。三重假绿：测试只断言 testid/文案不看图标 ✅、emoji 确实消失 ✅、扫描器报无残留 ✅——**靠 vite-node 实渲染产物才抓到**。正解按引号上下文分派：模板串 `` ` `` → `${x}`，单引号 → `' + x + '`，双引号 → `" + x + "`。
+    ② **属性值内的 emoji 不能替换**——`placeholder="🔍 搜索"` 是**纯文本**，插 SVG 会被字面渲染成 `<svg class=...` 垃圾且截断属性引号。已加属性上下文排除；这类位置需人工决策（去掉 emoji 或改 CSS 背景图）。
+  - **未清项**：emoji 310 处（长尾字形与属性内字号待人工）；`app-content/tpl.ts` 剩 3 处是 placeholder 内的、需人工决策。
+  - 守卫：`test_ui_icons.ts` 5 组断言绿 / `test_design_tokens.ts` 10 组绿 / `tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5812 用例全绿** / pre-commit 基线闸绿（411/411）。
+
 ## 相关
 
 - [frontend_repo_audit](frontend_repo_audit.md)：代码质量基线（4.1/5，2026-08-26）

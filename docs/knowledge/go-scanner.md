@@ -99,7 +99,7 @@ status: active
   - **`rustbridge.ScanManifest` 调用纪律（显式独立出口）**：Rust 侧 `ysm_scan_manifest` 保留，但**只作显式 API**，由业务代码在「已持有一份 Go `[]ModelEntry`、想让 Rust 在其上深加工（Go 算不了的重模型解析等）」时主动调用。**禁止**在 `scanEntriesWithRust` 内以隐式快路径形式回读 `scanCache` 调用它（既不可达，又曾因递归 `ScanEntriesWithHit` 触发 single-flight 死锁隐患）。触发前提 = 未来做 Go/Rust 扫描分工（Go 轻扫探路 + Rust 深加工流水线）之日；在那之前它是休眠的 ABI 守门出口（测试 `TestScanManifest_ABI_MatchesJwalk` 已锁 P2/P3 契约）。详见 ADR-120 §3。
 - `ComputeFileHash(path)` — SHA256
 - `ScanEntriesLite(dir)` — 轻量遍历（2026-08-26，作者提取专用）：与 `ScanEntries` 同过滤口径（recycle/.github/禁用目录跳过、扩展名白名单、ysm.json 判定、`.ban` 恢复），但**不读文件信息（Size/ModTime/Hash 恒零值）、不读不写共享 scanCache**——无哈希条目入缓存会被同步系统当「哈希为空」静默跳过。实现为 `processScanDirEntry(wantMeta=false)`；测试 `scanner_lite_test.go`（过滤同口径 + 双向缓存隔离）。作者路径跳过逐文件 open+hash 后冷扫成本降为纯目录枚举
-- `ListModelAuthors` / `ScanLocalAuthors` — 作者统计：均走 `ScanEntriesLite` 轻量遍历（原走全量扫描陪绑 SHA256，大库下拖慢创作者频道首屏）
+- `ListModelAuthors` / `ScanLocalAuthors` — 作者统计：均走 `ScanEntriesLite` 轻量遍历（原走全量扫描陪绑 SHA256，大库下拖慢创作者频道首屏）。`ScanLocalAuthors` 的 `mergeOrAppendCreator` 用 `nameIndex map[string]int` 做 O(1) 同名 author 定位（2026-09-14 落地：原线性扫描导致大库首屏作者提取 O(作者数×文件数) 二次放大，加索引后纯行为保持重构）
 - `GenerateRepoIndex(repoPath)` — 生成 `index.json`（GitHub Actions workflow 模板）
 
 ## 与其他子系统关系

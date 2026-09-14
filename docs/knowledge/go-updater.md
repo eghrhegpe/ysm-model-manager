@@ -56,7 +56,7 @@ status: active
 
 - 检查版本更新
 - 下载更新包：**多源镜像回退**（用户反馈：直连 GitHub Release 20MB 包 7 分钟仅 17%）——`DownloadWithProgress` 先直连 asset URL，失败/超时后按 `ghProxyPrefixes`（ghfast.top → gh-proxy.com，第三方公开代理，域名可变动）依次拼前缀重试，任一成功即返回；全部失败聚合各源错误（含源标识）。**进度回调** `onProgress(done, total)`：已知长度按 1% 步进、未知长度（分块传输）按 512KB 节流；Copy 成功后补发尾块（<512KB 短包/不足 512KB 的尾块不丢最终字节数）
-- 应用更新（InstallUpdate：2026-08 起**裸 exe 直装**——下载的是 `.exe` 本体（assetPattern 直配），helper 进程原子替换（`.new` 写入 + `.old` 备份 + rename 到位，任一步失败回滚；已无 zip 解压环节）；哈希**校验**实际在 Download 完成——知识卡旧文把 fetchExpectedHash 归于 InstallUpdate 属职责漂移，已修正）
+- 应用更新（InstallUpdate：2026-08 起**裸 exe 直装**——下载的是 `.exe` 本体（assetPattern 直配），helper 进程原子替换（`.new` 写入 + `.old` 备份 + rename 到位，任一步失败回滚；已无 zip 解压环节）；哈希**校验**实际在 Download 完成——知识卡旧文把 fetchExpectedHash 归于 InstallUpdate 属职责漂移，已修正）。内嵌 `ysm-updater-helper.exe` 释放（`extractEmbeddedHelper`）已收敛 `fsutil.WriteFileAtomic`（同目录 tmp+rename 原子落地，2026-09-14 落地：原裸 `os.WriteFile(0755)` 与全仓原子写单一事实源漂移，且中途崩溃会留半截 helper 被下次 `InstallUpdate` 误 exec）
 
 ## 对外 API / 入口
 

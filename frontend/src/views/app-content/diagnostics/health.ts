@@ -8,6 +8,7 @@ import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 
@@ -37,7 +38,9 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
     const report = parseHealthReport(await RepoHealthAudit(filesRoot));
     if (!report) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">❌ ' +
+        '<div class="stat-row diag-msg diag-msg-error">' +
+        UI_ICONS.error +
+        " " +
         esc(t("diagnostics.healthParseFailed")) +
         "</div>";
       return;
@@ -47,7 +50,7 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
   } catch (e) {
     // Go error 通道（路径校验等业务错误）或调用失败：统一展示
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">❌ ${esc(msg)}</div>`;
+    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.error} ${esc(msg)}</div>`;
   } finally {
     _healthBusy = false;
   }
@@ -65,7 +68,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
         : t("diagnostics.healthBad");
 
   const warnings = (r.warnings ?? [])
-    .map((w) => `<div class="stat-row diag-warn">⚠️ ${esc(w)}</div>`)
+    .map((w) => `<div class="stat-row diag-warn">${UI_ICONS.warning} ${esc(w)}</div>`)
     .join("");
 
   return (
@@ -88,29 +91,39 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     "</div>" +
     "</div></div>" +
     '<div class="stat-row" style="justify-content:space-around;padding:8px 12px;border-top:1px solid var(--bd)">' +
-    "<span>📋 " +
+    "<span>" +
+    UI_ICONS.clipboard +
+    " " +
     t("diagnostics.healthComplete") +
     " <b>" +
     formatPct(r.completeness.percentage, esc) +
     "</b></span>" +
-    "<span>💾 " +
+    "<span>" +
+    UI_ICONS.save +
+    " " +
     t("diagnostics.healthCache") +
     " <b>" +
     esc(r.cache.cache_files) +
     "</b></span>" +
-    "<span>🗑️ " +
+    "<span>" +
+    UI_ICONS.delete +
+    " " +
     t("diagnostics.healthDedup") +
     " <b>" +
     esc(r.dedup.groups) +
     "</b></span>" +
-    "<span>📦 " +
+    "<span>" +
+    UI_ICONS.package +
+    " " +
     t("diagnostics.healthFiles") +
     " <b>" +
     esc(r.resources.total_files) +
     "</b></span>" +
     "</div>" +
     '<div class="stat-row" style="flex-direction:column;align-items:stretch;gap:2px;padding:8px 12px;border-top:1px solid var(--bd);font-size:var(--fs-sm);color:var(--muted)">' +
-    "<div>✅ " +
+    "<div>" +
+    UI_ICONS.success +
+    " " +
     t("diagnostics.healthValid") +
     ": " +
     esc(r.completeness.valid) +
@@ -119,15 +132,16 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     ": " +
     esc(r.completeness.invalid) +
     "</div>" +
-    "<div>💾 " +
+    "<div>" +
+    UI_ICONS.save +
+    " " +
     t("diagnostics.healthCacheSize") +
     ": " +
     esc(formatSize(r.cache.cache_size)) +
-    (r.cache.hit_rate > 0
-      ? ` · ${t("diagnostics.healthHitRate")}: ${Math.round(r.cache.hit_rate)}%`
-      : "") +
     "</div>" +
-    "<div>🗑️ " +
+    "<div>" +
+    UI_ICONS.delete +
+    " " +
     t("diagnostics.healthReclaim") +
     ": " +
     esc(formatSize(r.dedup.reclaim_bytes)) +
@@ -136,7 +150,9 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     (warnings
       ? `<div style="padding:6px 12px;border-top:1px solid var(--bd)">${warnings}</div>`
       : "") +
-    '<div class="stat-row diag-stat diag-stat-muted" style="padding:6px 12px">⚙️ ' +
+    '<div class="stat-row diag-stat diag-stat-muted" style="padding:6px 12px">' +
+    UI_ICONS.settings +
+    " " +
     t("diagnostics.healthSource") +
     "</div>"
   );

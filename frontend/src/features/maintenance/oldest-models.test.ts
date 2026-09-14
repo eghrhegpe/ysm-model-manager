@@ -58,7 +58,7 @@ function auditReport(overrides: Record<string, unknown> = {}): Record<string, un
     directory: "/repo",
     score: 87,
     completeness: { checked: 3, valid: 3, invalid: 0, percentage: 100 },
-    cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: 0 },
+    cache: { cache_dir: "", cache_files: 0, cache_size: 0 },
     resources: { total_files: 7, total_size: 1051136, banned: 1, by_type: {} },
     dedup: { groups: 0, extra_files: 0, reclaim_bytes: 0 },
     ...overrides,
@@ -140,12 +140,16 @@ describe("loadOldestModel", () => {
     // 评分/禁用/重复统计均来自 RepoHealthAudit（mock 报告 score=87, banned=1）
     expect(mocks.RepoHealthAudit).toHaveBeenCalledWith("/repo");
     expect(html).toContain('oldest-health-ring-num">87<');
-    expect(html).toContain("🚫 1");
-    expect(html).toContain("🔗 0");
+    // ADR-238：统计 pill 的图标由 emoji 改走 SVG。断言「pill 内是 SVG + 数字」，
+    // 而非某个具体 path——既锁定「图标仍在 pill 里」，又不因图标库换路径而误报。
+    const pill = (n: number): RegExp =>
+      new RegExp(`oldest-stat-pill"><svg class="ws-icon"[\\s\\S]*?</svg>\\s*${n}</`);
+    expect(html).toMatch(pill(1)); // 禁用/封禁计数
+    expect(html).toMatch(pill(0)); // 重复链接计数
     // 同屏双口径修复：count pill 走 audit 仓库域 total_files（=7），
     // 不再用 ScanModelEntriesWithLabel 的类型域 entries.length（=3）
-    expect(html).toContain("📄 7");
-    expect(html).not.toContain("📄 3");
+    expect(html).toMatch(pill(7));
+    expect(html).not.toMatch(pill(3));
     cleanup();
   });
 
@@ -272,7 +276,8 @@ describe("loadOldestModel", () => {
     // 分数/徽章直接来自 Go 审计报告（score=45, dedup.groups=1）
     expect(html).toContain('oldest-health-ring-num">45<');
     expect(html).toContain('health-tag bad');
-    expect(html).toContain("🔗 1");
+    // ADR-238：重复链接 pill 图标已 SVG 化（断言 pill 内 SVG + 计数 1）
+    expect(html).toMatch(/oldest-stat-pill"><svg class="ws-icon"[\s\S]*?<\/svg>\s*1</);
     cleanup();
   });
 

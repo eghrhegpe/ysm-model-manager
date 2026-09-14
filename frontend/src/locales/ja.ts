@@ -920,7 +920,6 @@ export const ja: Record<string, string> = {
   "diagnostics.healthValid": "有効",
   "diagnostics.healthInvalid": "無効",
   "diagnostics.healthCacheSize": "キャッシュ容量",
-  "diagnostics.healthHitRate": "ヒット率",
   "diagnostics.healthReclaim": "回収可能",
   "diagnostics.healthSource": "データ元：Go repoaudit（GUI/CLI 共通）",
 

@@ -91,13 +91,18 @@ type Completeness struct {
 }
 
 // CacheStatus 缓存状态
+//
+// 关于「命中率」：曾在此声明 HitRate/Hits/Misses 三字段，但它们是**语义错误的**——
+// 分子 stats.FileCount 是全局缓存目录的文件总数（内容哈希键，跨仓库、跨资源类型共享，
+// 所有导入过的模型都把 KTX2 堆在同一个目录），分母是**当前审计仓库**的纹理数，
+// 两者不同源、无因果关系；Hits=FileCount 更把「缓存里有 N 个文件」等同于「本仓库命中 N 次」。
+// 该比例随缓存增长必然 >100%，原实现用 `if hitRate > 100 { hitRate = 100 }` 掩盖失真，
+// 结果体检页长期显示「命中率 100%」假绿。真命中率需在 HasCached/ReadCached 处埋点计数
+// （属新功能，见 CacheFiles/CacheSize/ShouldWarn 三个真实量）。故删除而非修补。
 type CacheStatus struct {
-	CacheDir   string  `json:"cache_dir"`
-	CacheFiles int     `json:"cache_files"`
-	CacheSize  int64   `json:"cache_size"`
-	HitRate    float64 `json:"hit_rate"`
-	Hits       int     `json:"hits"`
-	Misses     int     `json:"misses"`
+	CacheDir   string `json:"cache_dir"`
+	CacheFiles int    `json:"cache_files"`
+	CacheSize  int64  `json:"cache_size"`
 	// ShouldWarn 容量接近上限（texture_cache 阈值），体检页提示清理
 	ShouldWarn bool `json:"should_warn,omitempty"`
 }
@@ -157,7 +162,6 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	var totalSize int64
 	var largestFile string
 	var largestSize int64
-	var textureFiles int // 可缓存的纹理文件数（命中率分母）
 	resources := map[string]int{}
 	// 注册表加载提升到 walk 外——per-file TypeByLocation 不再
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
@@ -195,11 +199,6 @@ func Audit(dirPath string) (DirAuditResult, error) {
 		size := info.Size()
 		result.Resources.TotalFiles++
 		totalSize += size
-
-		// 统计可缓存的纹理文件数（命中率分母）
-		if registry.IsTextureExt(ext) {
-			textureFiles++
-		}
 
 		// 禁用文件统计：单一口径 registry.IsDisableSuffix（.disabled/.ban，大小写不敏感）
 		if registry.IsDisableSuffix(d.Name()) {
@@ -260,20 +259,6 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	result.Cache.CacheFiles = stats.FileCount
 	result.Cache.CacheSize = stats.TotalSize
 	result.Cache.ShouldWarn = stats.ShouldWarn
-
-	// 缓存命中率：缓存文件数 / 可缓存纹理文件数（分母为纹理文件总数，非全部文件）
-	if textureFiles > 0 {
-		hitRate := float64(stats.FileCount) / float64(textureFiles) * 100
-		if hitRate > 100 {
-			hitRate = 100
-		}
-		result.Cache.HitRate = hitRate
-		result.Cache.Hits = stats.FileCount
-		result.Cache.Misses = int(textureFiles) - stats.FileCount
-		if result.Cache.Misses < 0 {
-			result.Cache.Misses = 0
-		}
-	}
 
 	// 健康分数 + 警告
 	result.Score = calculateAuditScore(result)

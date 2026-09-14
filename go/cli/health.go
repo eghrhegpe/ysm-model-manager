@@ -113,8 +113,8 @@ func printHealthReport(r healthReportJSON) {
 	fmt.Printf("\n📋 完整性: 检查 %d · 有效 %d · 无效 %d · 有效率 %.1f%%\n",
 		r.Completeness.Checked, r.Completeness.Valid, r.Completeness.Invalid, r.Completeness.Percentage)
 
-	fmt.Printf("💾 缓存: %d 个文件 · %s%s\n",
-		r.Cache.CacheFiles, fsutil.FormatSize(r.Cache.CacheSize), cacheHitSuffix(r.Cache.HitRate))
+	fmt.Printf("💾 缓存: %d 个文件 · %s\n",
+		r.Cache.CacheFiles, fsutil.FormatSize(r.Cache.CacheSize))
 
 	fmt.Printf("📦 资源: %d 个文件 · %s · 类型分布 ", r.Resources.TotalFiles, fsutil.FormatSize(r.Resources.TotalSize))
 	for t, c := range r.Resources.ByType {
@@ -136,14 +136,6 @@ func printHealthReport(r healthReportJSON) {
 	} else {
 		fmt.Printf("\n✅ 无警告\n")
 	}
-}
-
-// cacheHitSuffix 缓存命中率后缀（命中率为 0 且未计算时不展示百分比）
-func cacheHitSuffix(hitRate float64) string {
-	if hitRate > 0 {
-		return fmt.Sprintf(" · 估算命中率 %.0f%%", hitRate)
-	}
-	return ""
 }
 
 // bottleneckStage 返回最慢阶段名（供 --bench 摘要）

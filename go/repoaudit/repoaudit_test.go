@@ -150,35 +150,28 @@ func TestAudit_SymlinkRoot(t *testing.T) {
 	}
 }
 
-// TestAudit_CacheHitRate_TextureFiles 验证缓存命中率分母为纹理文件数（非全部文件）
-func TestAudit_CacheHitRate_TextureFiles(t *testing.T) {
+// TestAudit_NoCacheHitRate 钉住「缓存命中率字段已删除」这一决策（勿复活）。
+//
+// 原 TestAudit_CacheHitRate_TextureFiles 断言「命中率分母为纹理文件数」——它锁定的
+// 恰是错误语义：分子是全局缓存目录文件数（跨仓库共享的内容哈希键），分母是本仓库
+// 纹理数，两者不同源无因果关系，比例随缓存增长必然 >100%（原实现用 >100 截断掩盖，
+// 体检页长期显示「命中率 100%」假绿）。真命中率需在 HasCached/ReadCached 埋点计数。
+func TestAudit_NoCacheHitRate(t *testing.T) {
 	dir := t.TempDir()
-	// 创建 3 个纹理文件 + 2 个非纹理文件
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex1.png"), []byte("png1"))
-	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex2.png"), []byte("png2"))
-	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex3.jpg"), []byte("jpg3"))
-	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.json"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 
 	result, err := Audit(dir)
 	if err != nil {
 		t.Fatalf("Audit 应成功, got %v", err)
 	}
-
-	// 总文件数 = 5
-	if result.Resources.TotalFiles != 5 {
-		t.Errorf("总文件数应为 5, got %d", result.Resources.TotalFiles)
+	// CacheStatus 现只有三个真实量：CacheFiles / CacheSize / ShouldWarn。
+	// 三者必须与 texture_cache.GetCacheStats() 同源（此处只验证结构可用、不引入新字段）。
+	if result.Cache.CacheFiles < 0 {
+		t.Errorf("CacheFiles 不应为负, got %d", result.Cache.CacheFiles)
 	}
-
-	// 命中率分母应为纹理文件数（3），而非总文件数（5）
-	// 注意：由于缓存可能为空（测试环境），HitRate 可能为 0，但分母语义已修正
-	// 这里主要验证分母不是 TotalFiles
-	if result.Cache.HitRate > 0 {
-		// 如果有缓存，验证分母是纹理文件数
-		expectedHitRate := float64(result.Cache.Hits) / 3 * 100
-		if result.Cache.HitRate != expectedHitRate && result.Cache.HitRate != 100 {
-			t.Errorf("命中率分母应为纹理文件数(3), got hitRate=%f", result.Cache.HitRate)
-		}
+	if result.Resources.TotalFiles != 2 {
+		t.Errorf("总文件数应为 2, got %d", result.Resources.TotalFiles)
 	}
 }
 

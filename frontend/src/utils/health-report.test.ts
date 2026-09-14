@@ -14,9 +14,6 @@ function makeReport(overrides: Partial<HealthReport> = {}): HealthReport {
       cache_dir: "/cache",
       cache_files: 10,
       cache_size: 1024,
-      hit_rate: 0.9,
-      hits: 9,
-      misses: 1,
     },
     resources: {
       total_files: 50,
@@ -114,14 +111,14 @@ describe("parseHealthReport — 运行时结构校验", () => {
     expect(parseHealthReport(rest)).toBe(rest);
   });
 
-  it("cache 缺失 → 返回 null（cache.hit_rate 参与校验）", () => {
+  it("cache 缺失 → 返回 null（cache.cache_files 参与校验）", () => {
     const raw = makeReport({ cache: undefined as unknown as HealthReport["cache"] });
     expect(parseHealthReport(raw)).toBeNull();
   });
 
-  it("cache.hit_rate 为非数字 → 返回 null", () => {
+  it("cache.cache_files 为非数字 → 返回 null", () => {
     const raw = makeReport({
-      cache: { cache_dir: "", cache_files: 0, cache_size: 0, hit_rate: "high" as unknown as number, hits: 0, misses: 0 },
+      cache: { cache_dir: "", cache_files: "many" as unknown as number, cache_size: 0 },
     });
     expect(parseHealthReport(raw)).toBeNull();
   });

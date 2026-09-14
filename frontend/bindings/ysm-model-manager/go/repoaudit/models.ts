@@ -3,14 +3,19 @@
 
 /**
  * CacheStatus 缓存状态
+ * 
+ * 关于「命中率」：曾在此声明 HitRate/Hits/Misses 三字段，但它们是**语义错误的**——
+ * 分子 stats.FileCount 是全局缓存目录的文件总数（内容哈希键，跨仓库、跨资源类型共享，
+ * 所有导入过的模型都把 KTX2 堆在同一个目录），分母是**当前审计仓库**的纹理数，
+ * 两者不同源、无因果关系；Hits=FileCount 更把「缓存里有 N 个文件」等同于「本仓库命中 N 次」。
+ * 该比例随缓存增长必然 >100%，原实现用 `if hitRate > 100 { hitRate = 100 }` 掩盖失真，
+ * 结果体检页长期显示「命中率 100%」假绿。真命中率需在 HasCached/ReadCached 处埋点计数
+ * （属新功能，见 CacheFiles/CacheSize/ShouldWarn 三个真实量）。故删除而非修补。
  */
 export interface CacheStatus {
     "cache_dir": string;
     "cache_files": number;
     "cache_size": number;
-    "hit_rate": number;
-    "hits": number;
-    "misses": number;
 
     /**
      * ShouldWarn 容量接近上限（texture_cache 阈值），体检页提示清理

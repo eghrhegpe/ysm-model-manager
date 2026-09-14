@@ -102,7 +102,7 @@ function buildReport() {
     directory: "/repo",
     score: 85,
     completeness: { checked: 10, valid: 9, invalid: 1, percentage: 90 },
-    cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024, hit_rate: 50 },
+    cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024 },
     resources: { total_files: 12, total_size: 2048, by_type: { model: 10, texture: 2 } },
     dedup: { groups: 1, extra_files: 2, reclaim_bytes: 4096 },
     warnings: [],

@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
+import { previewCSS } from "./css.ts";
 import type { PreviewCtx } from "./utils.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { LoadGuard } from "@/utils/async/load-guard.ts";

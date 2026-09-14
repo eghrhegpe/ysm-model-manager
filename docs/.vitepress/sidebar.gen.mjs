@@ -1168,6 +1168,10 @@ export const autoSidebar = [
       {
         "text": "ADR-001：升级至 Wails 3",
         "link": "/adr/ADR-001-wails3-migration"
+      },
+      {
+        "text": "ADR 与代码实现脱节审计报告",
+        "link": "/adr/audit-20260922"
       }
     ]
   },
@@ -1941,6 +1945,16 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "知识卡 vs 代码 语义审计报告",
+            "link": "/knowledge/audit-drift-report-2026"
           }
         ]
       }

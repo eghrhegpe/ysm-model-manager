@@ -265,12 +265,12 @@ var hashFileForEntries = fsutil.SHA256File
 // collectFileEntries 收集目录下的所有文件信息。
 // 错误通道分离（2026-09-14）：
 //   - 返回的 error 仅表示「结构性失败」（root 不存在 / Walk 顶层错误），此时结果不可用。
-//   - 单文件哈希失败属条目级错误：仅记录日志，条目保留 Hash=="" 继续返回，
-//     DetectConflicts 靠 per-entry Hash=="" 识别并标记 HashFailed=true（人工审查路径）。
-//
-// 旧实现把 hashErr 混入 walkErr，导致任意一个被占用/超限的文件就让整个冲突检测
-// 整体失败，HashFailed 分支永远走不到——注释声明"DetectConflicts 不消费它"但实现
-// 消费了，注释与实现背离（2026-09-14 修复）。
+//   - 条目级错误有两条且口径一致：① 单文件哈希失败（hashErr）：仅记录日志，条目保留
+//     Hash=="" 继续返回，DetectConflicts 靠 per-entry Hash=="" 识别并标记 HashFailed=true
+//     （人工审查路径）；② 单条无法求相对路径（relErr）：同样仅记录日志并跳过该条。
+//     二者都不升级为整次失败——旧实现分别把 hashErr 混入 walkErr、把 relErr 直接赋 walkErr，
+//     导致任意一个被占用/超限文件或单条路径异常就让整个冲突检测失败，HashFailed 分支永远
+//     走不到（注释声明「DetectConflicts 不消费它」但实现消费了，注释与实现背离）。
 func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 	entries := make(map[string]fileEntryInfo)
 	var walkErr error
@@ -290,7 +290,12 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 
 		relPath, relErr := filepath.Rel(dir, path)
 		if relErr != nil {
-			walkErr = relErr
+			// 条目级错误：与下方 hashErr 同口径（本条注释上方「错误通道分离」的另一半收口）。
+			// 旧实现 `walkErr = relErr` 把「单条无法求相对路径」升级为整个 DetectConflicts
+			// 结构性失败——同为文件级错误却与 hashErr 处理背离，路径异常时让整次冲突检测
+			// 不可用，而真正该暴露的只是这一条。filepath.Rel 在 Walk 回调内（path 必在 dir
+			// 子树）几乎不可能失败，故实际行为面≈0，此处为口径统一的防御分支。
+			log.Printf("[sync] 冲突检测跳过无法求相对路径的条目 %s: %v", path, relErr)
 			return nil
 		}
 		relPath = filepath.ToSlash(relPath)

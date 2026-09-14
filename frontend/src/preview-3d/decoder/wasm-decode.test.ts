@@ -2,7 +2,7 @@
 // ===== WASM 解码层测试（并发去重守卫）=====
 // decodeYsmViaWasm 必须对同一路径并发去重：preloadModel 并行触发
 // （纹理 + Android spec 兜底）时只解码一次，否则 atob/解析双份、WASM 状态竞争。
-// 注意：cache.ts 为模块级持久 Map（无 clear API），各用例用不同路径隔离。
+// 注意：model-cache.ts 为模块级持久 Map（无 clear API），各用例用不同路径隔离。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { decodeYsmViaWasm } from "./wasm-decode.ts";
 

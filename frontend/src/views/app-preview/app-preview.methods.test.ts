@@ -48,7 +48,7 @@ const litematicSpies = vi.hoisted(() => ({
 }));
 vi.mock("./litematic-meta.ts", () => litematicSpies);
 
-import { cacheSet, cacheGet } from "@/preview-3d/decoder/cache.ts";
+import { cacheSet, cacheGet } from "@/preview-3d/decoder/model-cache.ts";
 import "./index.ts"; // 触发 customElements.define + evict handler 注册
 import { sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 

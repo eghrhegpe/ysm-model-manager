@@ -22,13 +22,13 @@ const appPreviewStyle: CSSStyleSheet = (() => {
 })();
 
 import { t } from "@/core/i18n/t.ts";
+import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
   collectBlobUrls,
-} from "@/preview-3d/decoder/cache.ts";
-import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+} from "@/preview-3d/decoder/model-cache.ts";
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";

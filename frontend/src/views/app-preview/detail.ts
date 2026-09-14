@@ -5,7 +5,7 @@
 // detailGen 已迁至 AppPreview 实例（多实例隔离防串扰，快速切换时各实例在途请求互不影响）。
 
 import { t } from "@/core/i18n/t.ts";
-import { cacheGet, cacheSet } from "@/preview-3d/decoder/cache.ts";
+import { cacheGet, cacheSet } from "@/preview-3d/decoder/model-cache.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";

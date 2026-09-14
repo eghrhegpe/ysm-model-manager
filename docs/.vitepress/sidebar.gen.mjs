@@ -234,6 +234,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-238：UI 图标规范与命名体系",
+        "link": "/adr/ADR-238-ui"
+      },
+      {
+        "text": "ADR-237：下载队列并发模型：启停 worker + epoch 代际 → 常驻 worker + channel",
+        "link": "/adr/ADR-237-worker-epoch-worker-channel"
+      },
+      {
         "text": "ADR-236：命名 stutter（go/sync alias）与注释篇幅：维持现状决策",
         "link": "/adr/ADR-236-go-sync-alias-and-comment-policy-status-quo"
       },

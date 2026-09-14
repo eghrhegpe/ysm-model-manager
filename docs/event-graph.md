@@ -294,7 +294,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 265 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 269 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 207 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 233 |
@@ -344,7 +344,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 110 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 336 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 338 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
@@ -450,7 +450,7 @@
 | showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 43 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
-| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 191 |
+| dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 193 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |
@@ -462,7 +462,7 @@
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 183 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 167 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 300 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 304 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 50 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 88 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 129 |
@@ -475,12 +475,12 @@
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 118 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 255 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 261 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 283 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 289 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 337 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 257 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 263 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 285 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 291 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 313 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 339 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 113 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 124 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 135 |

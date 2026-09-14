@@ -84,6 +84,7 @@ status: active
 - 健康分数有下限 `scoreFloor = 30`，避免多问题叠加直接归零失去区分度
 - `Classify` 未命中任何注册表类型 → `"other"`（不报错）
 - **`Resources.ByType` 只在 walk 结束后一次性赋值（2026-09 落地）**：`DirAuditResult` 字面量初始化时不再预 `make` `ByType` map——原实现先 make 一个随即被下方 `result.Resources.ByType = resources`（局部 map 累积结果）整体覆盖，属无谓分配。后续改动须保持「局部 map 累积 → walk 后赋值」形态，勿在字面量里提前构造。
+- **`CacheStatus` 不含命中率（2026-09 删除，勿复活旧实现）**：曾声明 `HitRate`/`Hits`/`Misses`，但分子 `texture_cache.GetCacheStats().FileCount` 是**全局缓存目录文件数**（内容哈希键，跨仓库跨资源类型共享，所有导入过的模型都堆同一目录），分母是本仓库纹理数——**不同源、无因果关系**；`Hits=FileCount` 更把「缓存里有 N 个文件」当作「本仓库命中 N 次」。该比例随缓存增长必然 >100%，原实现靠 `if hitRate > 100 { hitRate = 100 }` 掩盖，体检页因此长期显示「命中率 100%」假绿。**正确口径已存在于 `cache-verify`**（`go/cli/cache.go` 的 `scanCacheVerify`）：逐个纹理 `TextureHash(path)` → `HasCached(hash)` → 真实命中计数，分子分母同源。若将来要在体检页恢复命中率，须走该口径（`texture_cache.TextureHash`/`HasCached` 均已导出，repoaudit 可自行实现，不必依赖 `go/cli`），并注意其代价是逐纹理 SHA256（与 `cache-verify` 同量级）。`CacheFiles`/`CacheSize`/`ShouldWarn` 三个真实量保留。
 
 ## 已知问题 / 待治理（R34 审计记录）
 

@@ -96,8 +96,10 @@ status: active
 
 - Content-Length = -1 时进度由前端锁定 99% 转菊花（致命陷阱 #6）；Go 端结束时 `total<=0` 归一为 `downloaded` 再发 final progress
 - 三入口（单击/多选/全选）都走 `enqueueDownloads()`，前端只注册一组 Wails EventsOn（致命陷阱 #7）
-- 取消语义：`CancelQueue` 置 cancelled + cancel ctx → 正在下载的文件立即中断、队列结束不发 `queue:status done`；`EnqueueDownloads` 入队时复位 cancelled（取消后再下载不哑火）。队列带 `epoch` 代际计数：取消/新入队递增，旧 process goroutine 退出时仅当代际一致才复位 running / 发 done，防止「取消后立即重新入队」双 goroutine 并发处理同一队列
-- **process 判空退出前复位 running 后重检任务列表**（P2 修复：判空解锁 return 与 defer 复位 running 之间 Enqueue 可能已追加任务——running 仍 true 不启新 goroutine、defer 又复位+发 done → 队列静默停滞；现复位后代际一致且有任务则重启处理）
+- 取消语义：`CancelQueue` 置 cancelled + cancel ctx → 正在下载的文件立即中断、队列结束不发 `queue:status done`；`EnqueueDownloads` 入队时复位 cancelled（取消后再下载不哑火）
+- **队列并发模型 = 常驻 worker + channel（ADR-237，取代原 epoch 代际模型）**：`DownloadQueue.run` 在 `NewDownloadQueue` 中启动**一次**并阻塞在 `select`，`Enqueue` 只投递 `wake` 信号、`Cancel` 只投递 `cancelCh`，**均不启停 goroutine**。原模型的 `epoch` 代际号 / `restart` 丢失唤醒分支 / `spawnEpoch` 捕获 / `shuttingDown` 判断**已整体删除**——四者同一根因（worker 生命周期由共享状态推导而非由同步原语表达），常驻 worker 下「旧 worker vs 新 worker」「spawn 窗口」「丢失唤醒」在结构上不可表达。仅保留 `panicked`（回调 panic 的 recover 兜底，与生命周期解耦）。`wake` 容量 1 的非阻塞信号量即正确性来源：worker 每次唤醒消费到队列排空，多次入队只需一次唤醒，故不丢唤醒
+- **`consume` 的 running 复位与 panicked 解耦**：无论是否 panic，消费循环退出都把 `running` 置 false（否则 `Status().Running` 永久为真、前端卡 downloading）；`panicked` 只抑制 done 的发送（panic 时队列 fail-stop 停在 panic 任务上，假 done 会让前端误判整体完成）
+- **取消后不消费新批次**：`consume` 入口先判 `len(tasks)==0` 即返回且**不置 running**——`Cancel` 已清空 tasks，故陈旧消费驱动不会把已取消的队列重新标记为运行中（原由 epoch 比对守卫的同一保护目标，现为结构保证）
 - **`commitAtomicWrite` 的 Sync 失败分支必须显式 `Close` 释放句柄**（R26 P2-2 修复）：旧实现 Sync 失败直接 return，Close 没被调用，依赖外层 cleanup 的 Close 顺序。Windows 上句柄未释放会导致后续 Remove 失败、`.part-*` 残留。修复：Sync 失败分支显式 `_ = af.tmp.Close()` 释放句柄后再 return。Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
 - **`len(via) >= 10` 重定向上限与标准库对齐，非 off-by-one**（R26 P2-1 误判澄清）：Go 语义里 `via` 是「已发起的请求」（含原始请求），`len(via) >= 10` 拒绝第 10 次重定向（第 11 个请求），允许 9 次重定向——与标准库 `net/http/client.go:834` 的 `defaultMaxRedirect=10` 语义完全对齐。子代理曾误判为 off-by-one，核查标准库源码后确认不修。
 

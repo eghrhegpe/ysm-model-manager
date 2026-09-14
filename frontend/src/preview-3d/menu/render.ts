@@ -203,6 +203,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     : children;
   if (visible.length === 0) return;
   const section = document.createElement("div");
+  section.className = "cap-folder"; // [盒式折叠统一] folder 包裹同款盒框，视觉对齐折叠卡
   section.dataset.testid = node.id;
   const header = document.createElement("div");
   header.className = "cap-section-header";
@@ -226,6 +227,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     header.appendChild(tg);
   }
   const body = document.createElement("div");
+  body.className = "cap-section-body";
   body.dataset.testid = `${node.id}-body`;
   // 动态豁免（P1）：折叠状态读写均依赖内联 display（node-render 测试断言
   // body.style.display 初值 + 点击切换），抽类无法承载运行时状态，保留内联。
@@ -243,10 +245,10 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
 }
 
 /**
- * [子函数 1b/6] card：卡牌分组容器——顶行标题 + 分隔线 + 内容区（不可折叠）。
- * 与 folder 分工：folder 管「可收放的参数组」（参数页内部，点击收放）；
- * card 管「同级行的语义聚拢」（如环境面板「基础：天空/地面/水面」「氛围：环境/雾/反射」），
- * 纯外壳、无折叠交互，故不复用 .cap-section-header 的 pointer/折叠语义。
+ * [子函数 1b/6] card：卡牌分组容器——顶行标题 + 分隔线 + 内容区。
+ * 缺省：经典不可折叠卡壳（ADR-195 语义，同级行语义聚拢）。
+ * collapsible:true：变为可折叠卡——header 整条点击收放内容区，箭头 + 折叠态记忆
+ * 复用 folder 同一套（folderCollapsedState / defaultOpen），统一「盒式折叠」视觉。
  */
 function rmAppendCard(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
@@ -257,17 +259,45 @@ function rmAppendCard(container: HTMLElement, node: PreviewMenuNode, deps: Rende
     ? children.filter((ch) => !ch.visibleWhen || ch.visibleWhen(snapshot))
     : children;
   if (visible.length === 0) return;
+  // [可折叠卡] collapsible:true → 复用 folder 折叠态记忆（按 node.id 隔离），
+  // body display 内联读写（与 rmAppendFolder 同口径，测试断言 style.display）
+  const collapsible = node.collapsible === true;
+  const collapsed = collapsible
+    ? (folderCollapsedState.get(node.id) ?? node.defaultOpen === false)
+    : false;
   const card = document.createElement("div");
   card.className = "cap-card";
   card.dataset.testid = node.id;
   const header = document.createElement("div");
-  header.className = "cap-card-header";
-  header.textContent = rmLabel(node);
+  header.className = collapsible
+    ? "cap-card-header cap-card-header--collapsible"
+    : "cap-card-header";
+  let arrow: HTMLSpanElement | null = null;
+  if (collapsible) {
+    arrow = document.createElement("span");
+    arrow.textContent = collapsed ? "▸" : "▾";
+    arrow.className = "cap-card-arrow";
+    header.appendChild(arrow);
+  }
+  header.appendChild(document.createTextNode(rmLabel(node)));
   const divider = document.createElement("div");
   divider.className = "cap-card-divider";
   const body = document.createElement("div");
   body.className = "cap-card-body";
   body.dataset.testid = `${node.id}-body`;
+  // [可折叠卡] 折叠态读写依赖内联 display（与 rmAppendFolder body 同款豁免——
+  // 抽类无法承载运行时状态；测试断言 body.style.display 初值 + 点击切换）
+  if (collapsible) {
+    body.style.display = collapsed ? "none" : "block";
+    // 折叠点击：整条 header 切换（复用 folder 同款交互 + 记折叠态）
+    header.addEventListener("click", (ev: MouseEvent): void => {
+      ev.stopPropagation();
+      const nowCollapsed = body.style.display === "none";
+      body.style.display = nowCollapsed ? "block" : "none";
+      if (arrow) arrow.textContent = nowCollapsed ? "▾" : "▸";
+      folderCollapsedState.set(node.id, !nowCollapsed); // true=折叠
+    });
+  }
   renderMenu(body, visible, deps);
   card.append(header, divider, body);
   container.appendChild(card);

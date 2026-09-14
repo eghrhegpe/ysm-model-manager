@@ -147,7 +147,9 @@ export type PreviewMenuNodeKind =
   | "row" // 列表行（纹理/材质/bone 等动态列表）
   | "divider"
   | "sectionTitle"
-  | "card" // [ADR-195 终态] 卡牌分组容器：顶行标题+分隔线+内容区，把同级行按语义聚拢（不可折叠；与 folder 分工——folder 管可收放的参数组）
+  // [可折叠卡] card 支持 collapsible:true → 变成可折叠卡牌（顶行标题箭头 + 内容区折叠），
+  // 与 env 顶层 cap 卡 / cap 子视图分组（原 folder 的扁平折叠头）同一盒式折叠视觉；collapsible 缺省不可折叠。
+  | "card" // [ADR-195 终态] 卡牌分组容器：顶行标题+分隔线+内容区，把同级行按语义聚拢（collapsible:true 时可折叠，统一折叠视觉）
   | "material-row" // [doc:adr-126-p5] 组合控件行（label + eye 显隐 + opacity 滑条）——审计 #3 material 声明式化
   | "controls" // [ADR-195 刀3] 承载 PreviewControlDef[]，渲染委托 renderCapControls
   | "custom";
@@ -228,8 +230,11 @@ export interface PreviewMenuNode {
    *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧控件定义 settingsOrder）。 */
   settingsOrder?: number;
   icon?: string;
-  /** 仅 folder：默认展开 */
+  /** 默认展开（folder 用；card 声明 collapsible:true 时也适用，缺省展开） */
   defaultOpen?: boolean;
+  /** [可折叠卡] 仅 card：true = 可折叠卡（箭头 + 点击折叠内容区，复用 folder 折叠态记忆）。
+   *  false/缺省 = 经典不可折叠卡壳（ADR-195 语义保留）。 */
+  collapsible?: boolean;
   /** 仅 folder：header 上的功能总开关（对齐 MikuMikuAR PopupRow.headerToggle——
    *  「功能 = 本 folder」时开关放 header 一眼可见，免展开；createHeaderToggle 内置
    *  stopPropagation，开关点击不触发折叠。folder body 内不得再重复同一开关。 */

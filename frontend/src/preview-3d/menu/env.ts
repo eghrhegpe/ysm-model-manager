@@ -215,6 +215,9 @@ function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
       kind: "card",
       labelKey: sec.labelKey,
       fallback: sec.fallback,
+      // [可折叠卡] 顶行标题可点击折叠内容区（collapsible 卡统一盒式折叠视觉，
+      // 与子视图分组折叠同一形态；折叠态跨 refresh 记忆）
+      collapsible: true,
       children: rows.map(envCapRow),
     });
   }
@@ -225,6 +228,8 @@ function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
       kind: "card",
       labelKey: "preview.envSectionOther",
       fallback: "其它",
+      // [可折叠卡] 与基础/氛围卡同款可折叠（未登记 cap 归此处，折叠保语义聚拢不遮挡其余行）
+      collapsible: true,
       children: rest.map(envCapRow),
     });
   }

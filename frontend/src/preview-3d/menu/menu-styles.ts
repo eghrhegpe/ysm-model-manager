@@ -29,6 +29,29 @@ export const MENU_SECTION_CSS = `.cap-section-header {
 .cap-section-arrow {
   font-size:var(--fs-xs);
   display: inline-block;
+}
+/* [盒式折叠统一] folder 折叠加同款盒框：.cap-folder 包裹折叠头+内容区，
+ * 复用 cap-card 盒式视觉（border/radius/bg），消除「高级」等扁条文折叠的丑陋观感。
+ * 与 cap-card header 同行的标题样式由 .cap-section-header 自身承担，盒框只补外观。 */
+.cap-folder {
+  margin: 6px 8px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius:var(--radius-lg);
+  background: rgba(255,255,255,0.035);
+  overflow: hidden;
+}
+.cap-folder .cap-section-header {
+  /* 盒内头 align 卡头：上下内边距收敛 + 外层留分离线 */
+  min-height: 0;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.cap-folder .cap-section-header:hover {
+  background: rgba(255,255,255,0.05);
+}
+.cap-folder .cap-section-body {
+  border-top: 1px solid rgba(255,255,255,0.12);
+  padding: 2px 0 4px;
 }`;
 
 /**
@@ -103,6 +126,17 @@ export const MENU_CARD_CSS = `.cap-card {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   user-select: none;
+}
+/* [可折叠卡] collapsible 卡：header 整条可点（cursor + hover 微反馈），复用 folder 箭头语义 */
+.cap-card-header--collapsible {
+  cursor: pointer;
+}
+.cap-card-header--collapsible:hover {
+  background: rgba(255,255,255,0.05);
+}
+.cap-card-arrow {
+  font-size:var(--fs-xs);
+  display: inline-block;
 }
 .cap-card-divider {
   height: 1px;

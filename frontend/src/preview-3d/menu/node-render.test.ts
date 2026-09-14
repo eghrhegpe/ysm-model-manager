@@ -963,6 +963,110 @@ describe("renderMenu card：卡牌分组容器", () => {
     renderMenu(c2, hidden, makeDeps() as any);
     expect(c2.querySelector(".cap-card")).toBeNull();
   });
+
+  it("card: collapsible:true 默认展开，header 点击折叠/展开（箭头 ▾/▸ 切换 + 折叠态记忆）", () => {
+    const makeNodes = (): PreviewMenuNode[] => [
+      {
+        id: "card-col",
+        kind: "card",
+        labelKey: "preview.envSectionBasic",
+        fallback: "基础",
+        collapsible: true,
+        children: [{ id: "child-col", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    // ① 初次渲染：collapsible 卡默认展开（body block + 箭头 ▾）
+    const c1 = document.createElement("div");
+    renderMenu(c1, makeNodes(), makeDeps() as any);
+    const header1 = c1.querySelector(".cap-card-header--collapsible") as HTMLElement;
+    expect(header1).not.toBeNull();
+    const arrow1 = header1.querySelector(".cap-card-arrow") as HTMLElement;
+    expect(arrow1.textContent).toBe("▾");
+    const body1 = c1.querySelector('[data-testid="card-col-body"]') as HTMLElement;
+    expect(body1.style.display).toBe("block");
+    // 点击 header → 折叠（body none + 箭头 ▸）
+    header1.click();
+    expect(body1.style.display).toBe("none");
+    expect(arrow1.textContent).toBe("▸");
+    // ② 再次点击 → 展开
+    header1.click();
+    expect(body1.style.display).toBe("block");
+    expect(arrow1.textContent).toBe("▾");
+    // ③ refresh 重建（同 id）：折叠态记忆保持展开
+    const c2 = document.createElement("div");
+    renderMenu(c2, makeNodes(), makeDeps() as any);
+    const body2 = c2.querySelector('[data-testid="card-col-body"]') as HTMLElement;
+    expect(body2.style.display).toBe("block");
+  });
+
+  it("card: collapsible 支持 defaultOpen:false 默认折叠 + 折叠态跨 refresh 记忆", () => {
+    const makeNodes = (): PreviewMenuNode[] => [
+      {
+        id: "card-col2",
+        kind: "card",
+        labelKey: "preview.envSectionAtmosphere",
+        fallback: "氛围",
+        collapsible: true,
+        defaultOpen: false,
+        children: [{ id: "child-col2", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    const c1 = document.createElement("div");
+    renderMenu(c1, makeNodes(), makeDeps() as any);
+    const body1 = c1.querySelector('[data-testid="card-col2-body"]') as HTMLElement;
+    expect(body1.style.display).toBe("none");
+    const arr1 = c1.querySelector(".cap-card-arrow") as HTMLElement;
+    expect(arr1.textContent).toBe("▸");
+    // 点击展开 → 记忆 user 折叠态（未折叠）
+    const header1 = c1.querySelector(".cap-card-header--collapsible") as HTMLElement;
+    header1.click();
+    expect(body1.style.display).toBe("block");
+    // dispose 清折叠态后重挂载 → 回默认折叠
+    clearFolderCollapsedState();
+    const c2 = document.createElement("div");
+    renderMenu(c2, makeNodes(), makeDeps() as any);
+    const body2 = c2.querySelector('[data-testid="card-col2-body"]') as HTMLElement;
+    expect(body2.style.display).toBe("none");
+  });
+
+  it("card: 不可折叠卡（缺省）无折叠头/箭头，body 无内联折叠态（经典卡壳语义保留）", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "card-plain",
+        kind: "card",
+        labelKey: "preview.envSectionBasic",
+        fallback: "基础",
+        children: [{ id: "child-plain", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    expect(container.querySelector(".cap-card-header--collapsible")).toBeNull();
+    expect(container.querySelector(".cap-card-arrow")).toBeNull();
+    const body = container.querySelector('[data-testid="card-plain-body"]') as HTMLElement;
+    expect(body.style.display).toBe("");
+  });
+
+  it("folder: 盒式折叠统一——section 包裹 .cap-folder 盒框，header/body 挂类", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "fld-box",
+        kind: "folder",
+        labelKey: "preview.skyGroupAdvanced",
+        fallback: "高级",
+        children: [{ id: "child-box", kind: "field", labelKey: "preview.child", value: "v" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const section = container.querySelector('[data-testid="fld-box"]') as HTMLElement;
+    expect(section.classList.contains("cap-folder")).toBe(true);
+    const body = container.querySelector('[data-testid="fld-box-body"]') as HTMLElement;
+    expect(body.classList.contains("cap-section-body")).toBe(true);
+    // 折叠交互仍走原 header/arrow
+    expect(container.querySelector(".cap-section-header")).not.toBeNull();
+    expect(container.querySelector(".cap-section-arrow")).not.toBeNull();
+  });
 });
 
 

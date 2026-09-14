@@ -64,19 +64,33 @@ func PrintError(err error) {
 	fmt.Fprintf(os.Stderr, "❌ %v\n", err)
 }
 
+// extractFilesRoot 剥离全局参数中的 --files-root（支持 <值> 与 <key=value> 两种形态），
+// 返回 filesRoot 与剥离后的剩余参数。单一发声源：ParseCommandArgs 与 parseFlags 共用，
+// 保证全局 flag 的识别规则只维护一份（新增全局 flag 时无需多处同步改）。
+func extractFilesRoot(args []string) (filesRoot string, rest []string) {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--files-root" && i+1 < len(args) {
+			filesRoot = args[i+1]
+			i++
+		} else if strings.HasPrefix(a, "--files-root=") {
+			filesRoot = strings.TrimPrefix(a, "--files-root=")
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	return filesRoot, rest
+}
+
 // ParseCommandArgs 从参数中提取 files-root、--json 开关和命令参数
 // 返回: filesRoot, jsonMode, commandArgs（不含全局参数的剩余参数）
 func ParseCommandArgs(args []string) (filesRoot string, jsonMode bool, commandArgs []string) {
-	for i := 0; i < len(args); i++ {
-		if args[i] == "--files-root" && i+1 < len(args) {
-			filesRoot = args[i+1]
-			i++
-		} else if strings.HasPrefix(args[i], "--files-root=") {
-			filesRoot = strings.TrimPrefix(args[i], "--files-root=")
-		} else if args[i] == "--json" {
+	filesRoot, rest := extractFilesRoot(args)
+	for _, a := range rest {
+		if a == "--json" {
 			jsonMode = true
 		} else {
-			commandArgs = append(commandArgs, args[i])
+			commandArgs = append(commandArgs, a)
 		}
 	}
 	return
@@ -102,26 +116,7 @@ func newRuntimeErrf(format string, args ...any) error {
 // parseFlags 解析命令 flags（自动剥离 --files-root 全局参数）
 // 返回提取的 filesRoot 和解析错误（*ErrParam）或 nil
 func parseFlags(fs *flag.FlagSet, args []string) (filesRoot string, err error) {
-	var filtered []string
-	skipNext := false
-	for i, arg := range args {
-		if skipNext {
-			skipNext = false
-			continue
-		}
-		if arg == "--files-root" {
-			if i+1 < len(args) {
-				filesRoot = args[i+1]
-				skipNext = true
-			}
-			continue
-		}
-		if strings.HasPrefix(arg, "--files-root=") {
-			filesRoot = strings.TrimPrefix(arg, "--files-root=")
-			continue
-		}
-		filtered = append(filtered, arg)
-	}
+	filesRoot, filtered := extractFilesRoot(args)
 	if err2 := fs.Parse(filtered); err2 != nil {
 		return filesRoot, &ErrParam{Err: err2}
 	}

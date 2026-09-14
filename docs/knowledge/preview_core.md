@@ -17,6 +17,7 @@ auto_fields:
   symbols_with_lines:
     - _clearPmxStatsCache
     - _resetSingletons
+    - AddOpLog
     - AllocEntry
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
@@ -115,6 +116,7 @@ auto_fields:
     - isLikelyTga
     - LipSyncCallback
     - LipSyncOptions
+    - ListAllFilePaths
     - listBonesWithDepth
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
@@ -179,6 +181,7 @@ auto_fields:
     - PreviewBuildCtx
     - PreviewHandle
     - PreviewScene
+    - ReadFileBytes
     - readPmxStats
     - readVrmMeta
     - readWebFile

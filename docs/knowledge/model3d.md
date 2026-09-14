@@ -18,6 +18,7 @@ auto_fields:
     - ActiveInputSession
     - AdaptiveRenderBudget
     - addMeshToBoneGroup
+    - AddOpLog
     - ALL_PERCEPTION_CAPS
     - ALL_TEXTURE_KEYS
     - AllocEntry
@@ -359,6 +360,7 @@ auto_fields:
     - LightParams
     - LipSyncCallback
     - LipSyncOptions
+    - ListAllFilePaths
     - listBonesWithDepth
     - listMaterials
     - listMmdMaterials
@@ -550,6 +552,7 @@ auto_fields:
     - PreviewStatePath
     - RawYsmAuthor
     - rcMasterToggleNode
+    - ReadFileBytes
     - readPmxStats
     - readVrmMeta
     - rebuildDebug

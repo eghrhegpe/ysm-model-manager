@@ -117,7 +117,10 @@ func cacheYSMavatars(modelPath string) {
 		return
 	}
 	// 全缓存短路：模型已按当前签名处理过 → 直接返回，不再 WASM 解码（探针2）。
-	if done, _ := modelProcessedYet(cacheDir, modelPath); done {
+	// sig 复用到末尾 markModelDone：解码期间模型被替换时，标记仍记入口签名，
+	// 新文件下次重解（若重取签名则记新签名却缓存旧内容，会被错误短路）。
+	done, sig := modelProcessedYet(cacheDir, modelPath)
+	if done {
 		return
 	}
 	data, err := readLimitedModel(modelPath)
@@ -149,6 +152,6 @@ func cacheYSMavatars(modelPath string) {
 			log.Printf("[avatar] .ysm 作者 %s 未提取到头像（无 avatar 声明或文件缺失）", safe)
 		}
 	}
-	// 处理完（无论是否全命中）落标记，供下次短路
-	markModelDone(cacheDir, modelPath, modelSignature(modelPath))
+	// 处理完（无论是否全命中）落标记（复用入口签名），供下次短路
+	markModelDone(cacheDir, modelPath, sig)
 }

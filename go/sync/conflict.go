@@ -196,15 +196,9 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行）。
 // ResolveConflict 自身不加锁，供本函数在持锁前提下调用。
 //
-// 锁契约是文档约束，不做运行时断言：
-// sync.Mutex 不暴露「是否已持锁」的查询，TryLock 在其他 goroutine 持锁时返回 false
-// → 不可靠；且生产环境 panic 不可接受。调用方须自行确保持锁。
-// 唯一受控例外：sync.go 的 assertInstallLockHeld 是 fail-fast 守卫——仅在
-// config.ConflictPolicy 非空时触发（当前生产调用链恒传 nil config，仅测试注入）。
-// 局限：TryLock 无法区分「本 goroutine 持有」与「他人持有」。未持锁违规调用 +
-// 他人 goroutine 正持 InstallLock 时，TryLock 返回 false 被误判为「已持锁」而
-// 放行——此时 ResolveConflictsLocked 将在无锁状态下执行（并发写目录竞态）。
-// 新增非 nil config 调用路径时，必须确保调用方已持有 InstallLock，不可依赖本断言。
+// 锁契约由 sync.go 的 assertInstallLockHeld（LockTracker.HasLock，owner-tracked）
+// 在调用点软断言：持锁走本函数；未持锁走自锁的 ResolveConflicts（2026-09-14 审核修复，
+// 消除旧 fail-soft 无锁执行的并发写目录竞态）。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
 	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
 	for _, c := range conflicts {

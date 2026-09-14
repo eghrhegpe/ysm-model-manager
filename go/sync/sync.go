@@ -531,26 +531,32 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 	// 冲突检测（如果配置了冲突策略）
 	if config != nil && config.ConflictPolicy != "" {
 		// 锁契约软断言（owner-tracked，消除旧 TryLock 误判窗口）：
-		// 若当前未持锁，ResolveConflictsLocked 内部 InstallLocked 会正常自锁——
-		// 不会 self-deadlock（LockTracker 非重入但跨 goroutine 可重入）。
-		// 持锁时走快速路径（已被调用方锁定），未持锁时静默降级（锁内加锁无副作用）。
-		// 断言仅记录日志（非 panic）——原 panic 设计因分段持锁（SyncToggleStatus 阶段2锁外哈希）
+		// 持锁时走 *Locked 变体（快速路径，不重入加锁）；未持锁时改调自锁的
+		// ResolveConflicts（公开入口）——不会 self-deadlock（未持锁语境下加锁无重入），
+		// 消除旧 fail-soft 静默放行导致的无锁并发写目录竞态（2026-09-14 审核修复：
+		// 旧注释声称「ResolveConflictsLocked 内部会自锁」与实现不符，实际无锁执行）。
+		// 断言仅记日志不 panic——原 panic 设计因分段持锁（SyncToggleStatus 阶段2锁外哈希）
 		// 导致锁释放后误报，已降级为 fail-soft。
-		if !assertInstallLockHeld() {
-			log.Printf("[sync] 警告: SyncResourcesWithConfig 冲突处理未在 InstallLock 内执行，将自锁后继续")
+		held := assertInstallLockHeld()
+		if !held {
+			log.Printf("[sync] 警告: SyncResourcesWithConfig 冲突处理未在 InstallLock 内执行，改走自锁入口")
 		}
 		report, err := DetectConflicts(instanceDir, globalDir, rtypeID)
 		if err != nil {
 			log.Printf("[sync] 冲突检测失败: %v", err)
 		} else if report.TotalConflicts > 0 {
 			log.Printf("[sync] 检测到 %d 个冲突，策略: %s", report.TotalConflicts, config.ConflictPolicy)
-			// 自动解决冲突。走 *Locked 变体：本函数可能经 PushResources/PullResources →
-			// SyncResources 在 InstallLock 临界区内运行（config 恒为 nil 走不到此处），
-			// 若改走自锁的 ResolveConflicts 会在持锁语境下重入 sync.Mutex 造成 self-deadlock。
-			// 因此此处约定：config != nil 的冲突解决必须由调用方保证已持有 InstallLock。
 			strategy := ResolutionStrategy(config.ConflictPolicy)
 			if strategy == ResolveForceRemote || strategy == ResolveForceLocal {
-				resolved, failed, manual := ResolveConflictsLocked(report.Conflicts, strategy, instanceDir, globalDir)
+				var resolved, failed, manual int
+				if held {
+					// 已持锁：走 *Locked 变体（可能经 PushResources/PullResources →
+					// SyncResources 在 InstallLock 临界区内运行，重入自锁入口会 self-deadlock）。
+					resolved, failed, manual = ResolveConflictsLocked(report.Conflicts, strategy, instanceDir, globalDir)
+				} else {
+					// 未持锁：走自锁公开入口，避免无锁执行冲突解决（并发写目录竞态）。
+					resolved, failed, manual = ResolveConflicts(report.Conflicts, strategy, instanceDir, globalDir)
+				}
 				log.Printf("[sync] 冲突解决完成: 解决 %d, 失败 %d, 需手动 %d", resolved, failed, manual)
 			} else {
 				// 手动解决模式，返回结果中标记冲突

@@ -105,7 +105,7 @@ func GetAllCommands() []CliCommand {
 // DispatchCommand 分发命令执行。
 // 返回命令的 CmdContext（含结构化结果，ADR-200 D1），供 --json 路径 buildJsonData 读取；
 // 前置短路（help/未知命令/参数缺失）时 ctx 为 nil。调用方无需结果时用 `_` 接收。
-func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, filesRoot string, commandArgs []string, requireFilesRoot bool) (*CmdContext, error) {
+func DispatchCommand(a AppService, filesRoot string, commandArgs []string, requireFilesRoot bool) (*CmdContext, error) {
 	if len(commandArgs) == 0 {
 		return nil, nil
 	}
@@ -129,11 +129,11 @@ func DispatchCommand(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, 
 	}
 
 	if filesRoot != "" {
-		// audit（#4 CLI 写穿）：--files-root 是一次性会话参数——原实现经 saveConfigFn
-		// （a.SaveAppConfig）落盘真实用户配置，临时路径的一次性操作会永久改写 GUI
-		// 仓库根（静默污染）。改为仅覆写内存会话配置：本次命令内 LoadAppConfig 可见，
-		// 磁盘零副作用（不建存储目录、不重启 watcher——CLI 本就无 watcher）。
-		// saveConfigFn 形参保留签兼容（GUI 桥传 a.SaveAppConfig），CLI 路径不再调用。
+		// --files-root 是一次性会话参数，仅覆写内存会话配置：本次命令内
+		// LoadAppConfig 可见，磁盘零副作用（不建存储目录、不重启 watcher——
+		// CLI 本就无 watcher）。早期版本曾经 saveConfigFn 落盘真实用户配置，
+		// 临时路径的一次性操作会静默污染 GUI 仓库根（写穿）；该形参已彻底
+		// 从 DispatchCommand 移除，写穿在类型层面不再有任何触发入口。
 		a.SetSessionFilesRoot(filesRoot)
 	}
 

@@ -22,6 +22,12 @@ auto_fields:
     - InstallToGlobal
     - IsValidRepoRoot
     - LinkOrCopyLocked
+    - LockTracker
+    - LockTracker.HasLock
+    - LockTracker.IsLocked
+    - LockTracker.Lock
+    - LockTracker.TryLock
+    - LockTracker.Unlock
     - SymlinkOrCopyLocked
 quick_groups:
   - 文件操作与标签

@@ -361,13 +361,18 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 		}
 	}
 
+	hashPrefix := hash
+	if len(hashPrefix) > 16 {
+		hashPrefix = hashPrefix[:16]
+	}
+
 	if ok && cached != nil {
 		return guiFlowResult{
 			Stage:    "④ 纹理缓存",
 			Duration: elapsed,
 			Success:  true,
-			Description: fmt.Sprintf("✅ 缓存命中 (%.0f KB)\n   哈希: %s",
-				float64(len(cached))/1024, hash[:16]+"..."),
+			Description: fmt.Sprintf("✅ 缓存命中 (%.0f KB)\n   哈希: %s...",
+				float64(len(cached))/1024, hashPrefix),
 		}
 	}
 
@@ -375,7 +380,7 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 		Stage:       "④ 纹理缓存",
 		Duration:    elapsed,
 		Success:     true,
-		Description: fmt.Sprintf("⚠️  缓存未命中（首次加载会编码生成）\n   哈希: %s", hash[:16]+"..."),
+		Description: fmt.Sprintf("⚠️  缓存未命中（首次加载会编码生成）\n   哈希: %s...", hashPrefix),
 	}
 }
 

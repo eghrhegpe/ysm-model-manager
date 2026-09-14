@@ -59,7 +59,7 @@ func RunCLI(a AppService, args []string) error {
 		start := time.Now()
 		outputBuf, restoreStdout := captureStdout()
 		defer restoreStdout() // panic 兜底：确保 stdout 一定恢复
-		ctx, err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+		ctx, err := DispatchCommand(a, filesRoot, commandArgs, true)
 		restoreStdout() // 显式关闭 pipe，确保 outputBuf.String() 不死锁
 
 		cmdName := commandArgs[0]
@@ -79,7 +79,7 @@ func RunCLI(a AppService, args []string) error {
 		return err
 	}
 
-	_, err := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+	_, err := DispatchCommand(a, filesRoot, commandArgs, true)
 	return err
 }
 
@@ -182,7 +182,7 @@ func runCLIInProcessCore(a AppService, args []string) (json string, err error) {
 	start := time.Now()
 	outputBuf, restoreStdout := captureStdout()
 	defer restoreStdout()
-	ctx, runErr := DispatchCommand(a, nil, filesRoot, commandArgs, true)
+	ctx, runErr := DispatchCommand(a, filesRoot, commandArgs, true)
 	restoreStdout()
 
 	cmdName := commandArgs[0]
@@ -205,14 +205,16 @@ func firstArg(commandArgs []string) string {
 	return "unknown"
 }
 
-// ExecuteCLIWithApp 执行 CLI 命令（GUI 桥接入口：内部经 AppService 分发）
-func ExecuteCLIWithApp(a AppService, saveConfigFn func(filesRoot, rpRoot, mcRoot, linkMode, theme string) error, args []string) error {
+// ExecuteCLIWithApp 执行 CLI 命令（测试专用入口：复用 cliPrologue + DispatchCommand，
+// 便于自动化测试在 AppService 上直接驱动命令；GUI 实际的进程内桥接入口是 RunCLIInProcess）。
+// 不接 saveConfigFn：--files-root 仅覆写内存会话配置，磁盘零副作用。
+func ExecuteCLIWithApp(a AppService, args []string) error {
 	filesRoot, _, commandArgs, handled := cliPrologue(args)
 	if handled {
 		return nil
 	}
 
-	_, err := DispatchCommand(a, saveConfigFn, filesRoot, commandArgs, false)
+	_, err := DispatchCommand(a, filesRoot, commandArgs, false)
 	return err
 }
 

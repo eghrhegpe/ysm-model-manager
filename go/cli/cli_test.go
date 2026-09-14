@@ -348,7 +348,7 @@ func TestConfigShow_PrintsRootAndCache(t *testing.T) {
 func TestRunCLIWithApp_Help(t *testing.T) {
 	a := &app.App{}
 	out := captureOutput(t, func() {
-		if err := ExecuteCLIWithApp(a, a.SaveAppConfig, []string{"--help"}); err != nil {
+		if err := ExecuteCLIWithApp(a, []string{"--help"}); err != nil {
 			t.Errorf("ExecuteCLIWithApp --help 应返回 nil, got %v", err)
 		}
 	})
@@ -360,7 +360,7 @@ func TestRunCLIWithApp_Help(t *testing.T) {
 func TestRunCLIWithApp_Version(t *testing.T) {
 	a := &app.App{}
 	out := captureOutput(t, func() {
-		if err := ExecuteCLIWithApp(a, a.SaveAppConfig, []string{"--version"}); err != nil {
+		if err := ExecuteCLIWithApp(a, []string{"--version"}); err != nil {
 			t.Errorf("ExecuteCLIWithApp --version 应返回 nil, got %v", err)
 		}
 	})
@@ -371,7 +371,7 @@ func TestRunCLIWithApp_Version(t *testing.T) {
 
 func TestRunCLIWithApp_UnknownCommand(t *testing.T) {
 	a := &app.App{}
-	err := ExecuteCLIWithApp(a, a.SaveAppConfig, []string{"no-such-cmd"})
+	err := ExecuteCLIWithApp(a, []string{"no-such-cmd"})
 	if err == nil {
 		t.Error("未知命令应返回错误")
 	}
@@ -384,7 +384,7 @@ func TestRunCLIWithApp_UsesProvidedApp(t *testing.T) {
 	a := &app.App{}
 	out := captureOutput(t, func() {
 		// 不传 --files-root：避免触发 SaveAppConfig 落盘真实用户配置（文件头约束）
-		if err := ExecuteCLIWithApp(a, a.SaveAppConfig, []string{"cache-status"}); err != nil {
+		if err := ExecuteCLIWithApp(a, []string{"cache-status"}); err != nil {
 			t.Errorf("ExecuteCLIWithApp cache-status 应返回 nil, got %v", err)
 		}
 	})
@@ -397,7 +397,7 @@ func TestRunCLIWithApp_NoFilesRoot_RunsAnyway(t *testing.T) {
 	// ExecuteCLIWithApp 设计为测试复用，允许没有 files-root
 	// （与 runCLI 不同，runCLI 会强制要求 files-root）
 	a := &app.App{}
-	err := ExecuteCLIWithApp(a, a.SaveAppConfig, []string{"search", "--keyword", "test"})
+	err := ExecuteCLIWithApp(a, []string{"search", "--keyword", "test"})
 	// 没有 files-root 时应正常运行（search 命令在没有模型时返回空结果）
 	if err != nil {
 		t.Logf("ExecuteCLIWithApp 无 files-root 返回: %v（可能因无模型而正常）", err)
@@ -1125,7 +1125,7 @@ func TestAllCommandsRegistered(t *testing.T) {
 
 func TestDispatchCommand_RequiresFilesRoot(t *testing.T) {
 	a := app.NewApp()
-	_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search"}, true)
+	_, err := DispatchCommand(a, "", []string{"search"}, true)
 	if err == nil {
 		t.Error("requireFilesRoot=true 且 filesRoot 为空时应返回错误")
 	}
@@ -1136,7 +1136,7 @@ func TestDispatchCommand_RequiresFilesRoot(t *testing.T) {
 
 func TestDispatchCommand_AllowsEmptyFilesRoot(t *testing.T) {
 	a := app.NewApp()
-	_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"cache-status"}, false)
+	_, err := DispatchCommand(a, "", []string{"cache-status"}, false)
 	if err != nil {
 		t.Logf("无 files-root 时 dispatch 返回: %v（可能正常）", err)
 	}
@@ -1145,7 +1145,7 @@ func TestDispatchCommand_AllowsEmptyFilesRoot(t *testing.T) {
 func TestDispatchCommand_UnknownCommand(t *testing.T) {
 	a := app.NewApp()
 	dir := t.TempDir()
-	_, err := DispatchCommand(a, a.SaveAppConfig, dir, []string{"no-such-cmd"}, false)
+	_, err := DispatchCommand(a, dir, []string{"no-such-cmd"}, false)
 	if err == nil {
 		t.Error("未知命令应返回错误")
 	}
@@ -1157,7 +1157,7 @@ func TestDispatchCommand_UnknownCommand(t *testing.T) {
 func TestDispatchCommand_SubCommandHelp(t *testing.T) {
 	a := app.NewApp()
 	out := captureOutput(t, func() {
-		_, err := DispatchCommand(a, a.SaveAppConfig, "", []string{"search", "--help"}, false)
+		_, err := DispatchCommand(a, "", []string{"search", "--help"}, false)
 		if err != nil {
 			t.Errorf("--help 应返回 nil, got: %v", err)
 		}
@@ -1167,25 +1167,15 @@ func TestDispatchCommand_SubCommandHelp(t *testing.T) {
 	}
 }
 
-// TestDispatchCommand_SessionRootNoWriteThrough（审核 #4）：--files-root 是一次性
-// 会话参数——DispatchCommand 不得再经 saveConfigFn 落盘真实用户配置，仅覆写内存
-// 会话配置。哨兵 saveConfigFn 被调用即失败（测试自身零磁盘副作用）。
-func TestDispatchCommand_SessionRootNoWriteThrough(t *testing.T) {
+// TestDispatchCommand_SessionRootInMemory：--files-root 仅覆写内存会话配置
+// （LoadAppConfig 可见），不再落盘真实用户配置。写穿机制已从类型层面消失——
+// saveConfigFn 形参自 DispatchCommand 删除后，无任何入口能触发 SaveAppConfig，
+// 故不再需要「哨兵回调被调用即失败」这类锁死空契约的测试。
+func TestDispatchCommand_SessionRootInMemory(t *testing.T) {
 	a := app.NewApp()
-	saved := false
-	saveFn := func(string, string, string, string, string) error {
-		saved = true
-		return nil
-	}
 	dir := t.TempDir()
-	out := captureOutput(t, func() {
-		if _, err := DispatchCommand(a, saveFn, dir, []string{"search", "--keyword", "zz-nohit"}, false); err != nil {
-			t.Errorf("search 执行失败: %v", err)
-		}
-	})
-	_ = out
-	if saved {
-		t.Error("saveConfigFn 不应被 CLI 分发调用（写穿已移除）")
+	if _, err := DispatchCommand(a, dir, []string{"search", "--keyword", "zz-nohit"}, false); err != nil {
+		t.Errorf("search 执行失败: %v", err)
 	}
 	if got := a.LoadAppConfig().FilesRoot; got != dir {
 		t.Errorf("会话覆写未生效: got %q want %q", got, dir)
@@ -1194,7 +1184,7 @@ func TestDispatchCommand_SessionRootNoWriteThrough(t *testing.T) {
 
 func TestDispatchCommand_EmptyCommandList(t *testing.T) {
 	a := app.NewApp()
-	_, err := DispatchCommand(a, a.SaveAppConfig, "", nil, false)
+	_, err := DispatchCommand(a, "", nil, false)
 	if err != nil {
 		t.Errorf("空命令列表应返回 nil, got: %v", err)
 	}

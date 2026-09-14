@@ -123,6 +123,7 @@ status: active
 - `ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error` — 单文件冲突解决：`force_remote` 先备份本地再用远端覆盖（失败回滚备份），`force_local` 不操作，`manual` 返回错误；**路径守卫**：入口用 `paths.RelInside` 校验 conflict.Path 不穿越 localDir/remoteDir（2026-09-05 锐评 P0 刀，原裸 `filepath.Join` 无越界守卫，与 sync_push.go 同款防线不对齐）
 - `ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int)` — 批量解决，`SuggestedStrategy==manual` 时回退到 `defaultStrategy`
 - `suggestStrategy(localTime, remoteTime time.Time) ResolutionStrategy` — 按修改时间推荐：远端新→`force_remote`，本地新→`force_local`，相同→`manual`
+- **`collectFileEntries` 错误通道分离（2026-09 收口）**：返回的 `error` **仅表示结构性失败**（root 不存在 / Walk 顶层错误），此时结果不可用；条目级错误有两条且口径一致——① 单文件哈希失败（`hashErr`）：仅 log，条目保留 `Hash==""` 返回，`DetectConflicts` 据此标记 `HashFailed=true` 走人工审查；② 单条无法求相对路径（`relErr`，2026-09 降级）：同样仅 log 并跳过该条。**二者都不升级为整次 `DetectConflicts` 失败**——旧实现分别把 `hashErr` 混入 `walkErr`、把 `relErr` 直接赋 `walkErr`，导致单个被占用/超限文件或单条路径异常就让整次冲突检测不可用，`HashFailed` 分支永不可达。新增条目级错误须沿用「log + 跳过」形态，勿写入返回 error（护栏 `TestCollectFileEntries_HashFailureIsEntryLevel`、`TestDetectConflicts_HashFailedReportedNotAborted`）
 - 函数类型：`ScanFunc`（扫描注入，由 internal/app 提供）、`ListVersionsFunc`、`Logger`（导入日志回调，薄壳注入 `App.logger.Add`）
 
 ## 与其他子系统关系

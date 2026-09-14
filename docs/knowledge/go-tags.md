@@ -72,10 +72,11 @@ status: active
 ## 不变量
 
 - `sync.RWMutex` 保护：读用 RLock、写用 Lock；`load()` 以 `s.data != nil` 守卫保证只加载一次。**JSON `null` 内容守卫破口已封**（P3 修复：Unmarshal 成功但内容恰为 `null` 时 m 为 nil map → 现补 `if m == nil { m = make(...) }`，防每次 Get/Set 重复整文件读盘）
+- **写路径锁归属内聚 `commit` + `load` 双检（2026-09 重构）**：原 `prepareWrite` 返回解锁函数、由调用方 `defer` 到函数结尾，使 `save()` 的 `json.MarshalIndent` 与 `fsutil.WriteFileAtomic`（磁盘 IO）**全程持写锁**，阻塞所有 `GetTags`/`ListByTag`/`AllTags`。现 `Store.commit(mutate func() (bool, error))` 统一临界区：load → 取写锁 → 改内存 → 序列化快照 → **解锁** → `Store.persist` 写盘（锁外）；`mutate` 返回 `changed=false`（AddTag 命中已存在 / RemoveTag 无变化）时跳过落盘，保持「无变化不写盘」语义。`load` 改「RLock 快路径 → 未加载才升写锁二次检查」，已加载后读路径唯一开销是一次 RLock（原先每次读都要取一次写锁）。`prepareWrite` 已删除（职责并入 `commit`）。回归：`TestStore_ConcurrentReadWrite_NoRace` / `TestStore_Commit_NoChangeSkipsPersist` / `TestStore_LoadDoubleCheck_ConcurrentFirstLoad`。
 - 标签统一 `TrimSpace`，空白标签被丢弃
 - `SetTags` 每次写后都落盘（JSON 缩进格式，**tmp + `os.Rename` 原子替换**，rename 失败清理 tmp；`TestSaveLeavesNoTmp` 守护）；`GetTags` 返回副本防外部篡改
 - **损坏恢复**：tags.json 解析失败 → 备份 `.corrupt`（保留现场）→ 重建空存储（读路径恢复 + 写路径自我修复，`TestCorruptFileRecovers` 守护）——第 4 批修复，知识卡原卡未记载已补
-- P3 观察：`save()` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）
+- P3 观察：`Store.persist` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）
 
 ## 相关
 

@@ -11,30 +11,62 @@ source_files:
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/adv-filter-util.ts
   - frontend/src/backend/web-stats.ts
+  - internal/app/app_geo_cache.go
+  - internal/app/app_scan.go
+  - internal/app/app_model.go
 auto_fields:
   symbols_with_lines:
     - __setStatsRunnerForTest
     - AdvFilterResult
     - AdvFilterValue
+    - App.AnalyzeBedrockModel
+    - App.AnalyzeBedrockModelEntry
+    - App.AnalyzeYSMModel
+    - App.Build3DSpecFromGeometryJSON
+    - App.CheckFileExists
+    - App.ClearScanCache
+    - App.ExportModelStructureJSON
+    - App.ExtractYSMHeader
+    - App.ExtractYSMHeaderFromBase64
+    - App.ExtractYsmSummary
+    - App.GenerateRepoIndex
+    - App.GetModel3DSpec
+    - App.ListAllFilePaths
+    - App.ListFileNames
+    - App.ListModelAuthors
+    - App.ListVersionInstances
+    - App.ReadFileBytes
+    - App.ReadFileBytesBatch
+    - App.ReadFileBytesBatchWithMeta
+    - App.SaveScreenshotFile
+    - App.ScanLocalAuthors
+    - App.ScanModelEntries
+    - App.ScanModelEntriesFiltered
+    - App.ScanModelEntriesWithLabel
+    - App.SearchModels
     - AppTree
     - appTreeStyle
     - batchStatsWebModels
     - bindToolbarEvents
     - buildTree
     - cleanupVirtualScroll
+    - Clear
     - consumeWebSearchDegraded
     - createTreeRenderCtx
     - flattenVisible
+    - Get
     - getRenderMode
     - getStatsPoolSize
     - getVsMode
     - getVsRows
+    - Load
     - modalAdvFilter
     - onStatsProgress
     - openAdvFilterDialog
     - parseFilterNumber
     - pickWebFilesAndImport
     - prefetchStatsWorker
+    - ReadFileMeta
     - RenderMode
     - renderTree
     - ROW_H_GRID
@@ -137,6 +169,21 @@ status: active
 | `SearchModels` | `app_scan.go` | 关键词 + 6 数值范围一次性过滤 |
 | `ListByTag` | `app_tags.go` | 按标签反查路径集 |
 | `AllTags` | `app_tags.go` | 全量标签候选 |
+
+## 后端几何缓存（geoCache，2026-09-14 落地）
+
+`SearchModels` 每次重跑 `AnalyzeBedrockModel` —— 对真实 `.ysm` 二进制还要拉 Node+WASM 子进程解码，是全仓扫描/搜索热路径最贵单步。`ModelEntry` 不含几何字段、扫描层也不填，故几何分析结果此前零缓存。
+
+新增 `internal/app/app_geo_cache.go` 的 `geoCache` 组件（与 `containerTypeCache`/`resolvedRootCache` 同范：`struct{mu; items}` + `NewApp` 注入 + `ensure` 兜底 + `Clear` 失效）：
+
+- **接入点**：`AnalyzeBedrockModel` 包了一层 `geoCache.Get`，真实解析抽成 `analyzeBedrockModelUncached`（缓存包住整条路径，含 `.ysm`/zip/7z/json 分支与路径守卫）。
+- **键**：剥离禁用后缀（`.ban`/`.disabled`）后的 path + 文件指纹（`modtime`+`size`）。文件变动即命中失效、重新计算真实几何。
+- **失效**：挂在 `ClearScanCache`（下载/导入后随扫描缓存一起失效），避免模型几何变化后读到旧缓存。
+- **不缓存不可 stat 路径**：越权 / 剥离后缀后指向不存在文件 → 直接 `compute`，不写垃圾键。
+
+**边界取舍（下次会话勿误判为 bug）**：缓存键按"剥离后缀后的 path"计算，因此同一文件在 `.ban` ↔ 正常之间切换会产生**两条独立键**各自命中（而非共享）。属可接受代价——`.ban`/`.disabled` 切换本就改变 scannable 归属语义，且 `ClearScanCache` 在导入/下载后统一清掉，不会长期分裂。
+
+**与前端 `SearchResult.Type` 字段的关系**：`types.go` 的 `SearchResult.Type` 标了 `omitempty`，但 `SearchModels` 从不填（跨类型搜索语义未接上，类型筛选走 `ScanModelEntriesFiltered`）。属已知死字段，待 ADR-183（8 参数封装）收口时一并决定接上或删除。
 
 ## 与其他子系统关系
 

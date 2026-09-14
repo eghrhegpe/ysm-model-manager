@@ -50,6 +50,11 @@ type syncDirectoryScanEntry struct {
 }
 
 var (
+	// 三类「同步专用扫盘结果」缓存。选型 sync.Map 而非 sync.RWMutex + 普通 map：
+	// 读取路径（同步重算）无写锁竞争、写入按 key 并发分散（每目录/rtype 一个 key，天然
+	// disjoint），正好落入 sync.Map「读多、写 key 集分散」的适用域；失效走全量
+	// Range+Delete（InvalidateSyncScanCaches）由单一失效入口触发，无细粒度锁竞争。
+	// 若未来出现高频「部分 key 写入校验」场景再评估切 RWMutex。
 	syncResourcesScanCache sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]DiffEntry)
 	syncDirLevelScanCache  sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]string)
 	syncFolderScanCache    sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]string)

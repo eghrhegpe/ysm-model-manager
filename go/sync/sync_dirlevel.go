@@ -135,6 +135,11 @@ func patternKey(pattern registry.NestedPattern) string {
 	return b.String()
 }
 
+// defaultNestedMaxDepth 嵌套模式未显式配置 MaxDepth 时的递归上限。
+// 10 层足够覆盖 maid-model assets/<ns>/maid_model.json 等常见嵌套路径，
+// 又避免恶意/异常深层目录把 patternFind 拖入无意义深递归。
+const defaultNestedMaxDepth = 10
+
 // patternFindMemo 语义同 patternFind，但结果写入 memo 避免重复子树扫描。
 // 同一棵 Walk 树内，同一路径+pattern 只递归一次。
 func patternFindMemo(path string, pattern registry.NestedPattern, depth int, memo map[string]string) string {
@@ -144,7 +149,7 @@ func patternFindMemo(path string, pattern registry.NestedPattern, depth int, mem
 
 	maxDepth := pattern.MaxDepth
 	if maxDepth <= 0 {
-		maxDepth = 10
+		maxDepth = defaultNestedMaxDepth
 	}
 	if depth > maxDepth {
 		memo[path] = ""

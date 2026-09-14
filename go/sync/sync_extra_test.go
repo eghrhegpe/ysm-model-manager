@@ -214,32 +214,6 @@ func TestIsDirTypeModelFolder_NonExistent(t *testing.T) {
 	}
 }
 
-// ====== SortEntries ======
-
-func TestSortEntries(t *testing.T) {
-	entries := []types.ModelEntry{
-		{Name: "z_model.ysm", Path: "/a/z.ysm"},
-		{Name: "a_model.ysm", Path: "/a/a.ysm"},
-		{Name: "m_model.ysm", Path: "/a/m.ysm"},
-	}
-	SortEntries(entries)
-	if entries[0].Name != "a_model.ysm" {
-		t.Errorf("first should be a_model.ysm, got %q", entries[0].Name)
-	}
-	if entries[1].Name != "m_model.ysm" {
-		t.Errorf("second should be m_model.ysm, got %q", entries[1].Name)
-	}
-	if entries[2].Name != "z_model.ysm" {
-		t.Errorf("third should be z_model.ysm, got %q", entries[2].Name)
-	}
-}
-
-func TestSortEntries_Empty(t *testing.T) {
-	// should not panic
-	SortEntries(nil)
-	SortEntries([]types.ModelEntry{})
-}
-
 // ====== GetLinkType ======
 
 func TestGetLinkType_NonExistent(t *testing.T) {

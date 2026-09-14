@@ -130,7 +130,7 @@
 | UI 组件、卡片组件、加载动画、滑块、幻灯片菜单 | [UI 组件簇（原 ui 收容所，已归位）](./ui_components.md) | 原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front… |
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
-| 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。… |
+| 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/model-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重… |
 | 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) ⚠️歧义（另见 go-types.md） | 前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。 |
 | 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。 |
 | 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/resource-r… |

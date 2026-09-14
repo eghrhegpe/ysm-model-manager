@@ -7,11 +7,16 @@ source_files:
   - frontend/src/preview-3d/screenshot/screenshot-render.ts
   - frontend/src/preview-3d/screenshot/screenshot-lights.ts
   - frontend/src/preview-3d/texture/texture-loader.ts
-  - frontend/src/preview-3d/decoder/cache.ts
+  - frontend/src/preview-3d/decoder/model-cache.ts
   - frontend/src/preview-3d/screenshot/screenshot.ts
 auto_fields:
   symbols_with_lines:
     - AngleShot
+    - cacheGet
+    - cacheSet
+    - cacheSetEvictHandler
+    - CacheValue
+    - collectBlobUrls
     - loadTextures
     - releaseTextureUrls
     - renderMultiAngle
@@ -34,8 +39,8 @@ perf:
   - memory-heavy
   - gpu-bound
 invariant_anchors:
-  - frontend/src/preview-3d/decoder/cache.ts|cacheSet
-  - frontend/src/preview-3d/decoder/cache.ts|collectBlobUrls
+  - frontend/src/preview-3d/decoder/model-cache.ts|cacheSet
+  - frontend/src/preview-3d/decoder/model-cache.ts|collectBlobUrls
 quick_groups:
   - 截图导出与缓存
 quick_intents:
@@ -57,7 +62,7 @@ status: active
 
 ## 概览
 
-预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面单帧截图经适配器的 `screenshotFn` 注入（非 `screenshotPreview`，已随 ADR-052 P3 移除）。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
+预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/model-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面单帧截图经适配器的 `screenshotFn` 注入（非 `screenshotPreview`，已随 ADR-052 P3 移除）。截图灯光提取（`toScreenshotLights`）与纹理加载（`loadTextures`）已随 ADR-136 第四刀归位 preview-3d（`screenshot-lights.ts` / `texture-loader.ts`）。
 
 ## 核心职责
 
@@ -70,7 +75,7 @@ status: active
 - `renderMultiAngle(modelPath: string, texUrls: string[], opts?: RenderMultiAngleOptions): Promise<AngleShot[] | null>` — 经 `GetModel3DSpec` 取 spec + `loadTextures` 加载纹理，离屏 WebGLRenderer（alpha 透明背景，默认 512×512）渲染四角度，返回 `[{ name, base64 }]`（PNG base64 无 data: 前缀）；结束 traverse dispose 全部 geometry/material + renderer。`RenderMultiAngleOptions`：`size?`（像素）、`componentTextures?`（组件纹理 URL 映射）、`lights?`（预览灯光提取——所见即所得）、`decodeYsm?`（WASM 解码兜底注入）
 - `AngleShot` 接口：`{ name: "front" | "45" | "side" | "back45", base64 }`
 
-`preview-3d/decoder/cache.ts`（preview-cache）：
+`preview-3d/decoder/model-cache.ts`（preview-cache）：
 - `cacheGet(path: string): CacheValue | null` / `cacheSet(path, data)` — key 为模型绝对路径；上限 MAX_CACHE=50，超出时 FIFO 淘汰最旧条目并触发 evict 回调
 - `cacheSetEvictHandler(fn)` — 注册淘汰回调（释放 blob URL 等资源）
 - `CacheValue` 接口：texture/geometry/animations/authors/avatars/_decodedBy 等

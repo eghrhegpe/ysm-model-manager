@@ -96,32 +96,14 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 
 		// 内容冲突判定：两端都存在且哈希不同
 		if localInfo.Hash != remoteInfo.Hash && localInfo.Hash != "" && remoteInfo.Hash != "" {
-			conflict := FileConflict{
-				Path:              path,
-				Type:              ConflictContentModified,
-				LocalModTime:      localInfo.ModTime,
-				RemoteModTime:     remoteInfo.ModTime,
-				LocalSize:         localInfo.Size,
-				RemoteSize:        remoteInfo.Size,
-				LocalHash:         localInfo.Hash,
-				RemoteHash:        remoteInfo.Hash,
-				SuggestedStrategy: suggestStrategy(localInfo.ModTime, remoteInfo.ModTime),
-			}
+			conflict := newConflict(path, localInfo, remoteInfo,
+				ConflictContentModified, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
 			conflicts = append(conflicts, conflict)
 		} else if localInfo.Size != remoteInfo.Size {
 			// 大小不匹配但哈希可能一致（极端情况），标记为 size_mismatch 供参考
 			// 注：哈希一致但大小不同在理论上不可能，此分支为防御性分支
-			conflict := FileConflict{
-				Path:              path,
-				Type:              ConflictSizeMismatch,
-				LocalModTime:      localInfo.ModTime,
-				RemoteModTime:     remoteInfo.ModTime,
-				LocalSize:         localInfo.Size,
-				RemoteSize:        remoteInfo.Size,
-				LocalHash:         localInfo.Hash,
-				RemoteHash:        remoteInfo.Hash,
-				SuggestedStrategy: suggestStrategy(localInfo.ModTime, remoteInfo.ModTime),
-			}
+			conflict := newConflict(path, localInfo, remoteInfo,
+				ConflictSizeMismatch, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
 			conflicts = append(conflicts, conflict)
 		} else if localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == "") {
 			// 两端 size 相同但任一端 hash 失败：
@@ -129,18 +111,8 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 			// 导致哈希失败的真实冲突文件被漏报。
 			// 修复：标记 HashFailed=true + ResolveManual，让 ResolveConflictsLocked
 			// 检测到 HashFailed 时不覆盖 SuggestedStrategy，直接计入 manual。
-			conflict := FileConflict{
-				Path:              path,
-				Type:              ConflictContentModified,
-				LocalModTime:      localInfo.ModTime,
-				RemoteModTime:     remoteInfo.ModTime,
-				LocalSize:         localInfo.Size,
-				RemoteSize:        remoteInfo.Size,
-				LocalHash:         localInfo.Hash,
-				RemoteHash:        remoteInfo.Hash,
-				SuggestedStrategy: ResolveManual,
-				HashFailed:        true,
-			}
+			conflict := newConflict(path, localInfo, remoteInfo,
+				ConflictContentModified, ResolveManual, true)
 			conflicts = append(conflicts, conflict)
 		}
 	}
@@ -269,6 +241,24 @@ type fileEntryInfo struct {
 	Size    int64
 	ModTime time.Time
 	Hash    string
+}
+
+// newConflict 统一构造 FileConflict 字面量——DetectConflicts 的三个分支
+// （内容修改 / 大小不匹配 / 哈希失败）字段布局高度重复，收敛到单点，
+// 避免将来新增字段时三分支漂移。
+func newConflict(path string, local, remote fileEntryInfo, typ ConflictType, strategy ResolutionStrategy, hashFailed bool) FileConflict {
+	return FileConflict{
+		Path:              path,
+		Type:              typ,
+		LocalModTime:      local.ModTime,
+		RemoteModTime:     remote.ModTime,
+		LocalSize:         local.Size,
+		RemoteSize:        remote.Size,
+		LocalHash:         local.Hash,
+		RemoteHash:        remote.Hash,
+		SuggestedStrategy: strategy,
+		HashFailed:        hashFailed,
+	}
 }
 
 // hashFileForEntries 供 collectFileEntries 计算单文件哈希。

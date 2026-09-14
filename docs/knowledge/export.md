@@ -11,7 +11,7 @@ source_files:
   - frontend/src/preview-3d/screenshot/screenshot-lights.ts
   - frontend/src/preview-3d/texture/texture-loader.ts
   - frontend/src/preview-3d/texture/texture-cache.ts
-  - frontend/src/preview-3d/decoder/cache.ts
+  - frontend/src/preview-3d/decoder/model-cache.ts
   - frontend/src/views/app-preview/skeleton-render.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
@@ -22,6 +22,11 @@ auto_fields:
     - buildStatsCard
     - buildToggleRow
     - buildYsmScene
+    - cacheGet
+    - cacheSet
+    - cacheSetEvictHandler
+    - CacheValue
+    - collectBlobUrls
     - componentCountsFromSpec
     - loadTextures
     - makeYsmAdapter
@@ -71,7 +76,7 @@ invariant_anchors:
   - frontend/src/preview-3d/screenshot/screenshot.ts|screenshotFromRenderer
   - frontend/src/preview-3d/screenshot/screenshot-render.ts|renderMultiAngle
   - frontend/src/views/app-preview/skeleton-render.ts|saveScreenshot
-  - frontend/src/preview-3d/decoder/cache.ts|cacheSet
+  - frontend/src/preview-3d/decoder/model-cache.ts|cacheSet
 status: active
 ---
 

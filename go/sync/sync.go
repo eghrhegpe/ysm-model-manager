@@ -79,11 +79,17 @@ func buildRepoIndex(scanFn ScanFunc, repoDir string) *repoIndex {
 
 // compareHashMode 哈希对比路径：计算 Missing/Extra/Disabled/Synced。
 // 先构建 custom 哈希集合（一次遍历），缺失检测从 O(H×C) 降为 O(H+C)。
+// Synced 口径（实例命中仓库哈希的文件数）在集合构建循环内顺带统计，
+// 省去对 customEntries 的二次完整遍历。
 func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing, extra, disabled []string, synced int) {
 	customHash := make(map[string]bool, len(customEntries))
 	for _, c := range customEntries {
-		if c.Hash != "" {
-			customHash[c.Hash] = true
+		if c.Hash == "" {
+			continue
+		}
+		customHash[c.Hash] = true
+		if _, found := idx.ByHash[c.Hash]; found {
+			synced++
 		}
 	}
 
@@ -110,15 +116,6 @@ func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing,
 			extra = append(extra, registry.StripDisableSuffix(c.Name))
 		}
 	}
-
-	// Synced 口径：custom 中命中仓库哈希的文件数
-	for _, c := range customEntries {
-		if c.Hash != "" {
-			if _, found := idx.ByHash[c.Hash]; found {
-				synced++
-			}
-		}
-	}
 	return
 }
 
@@ -128,6 +125,9 @@ func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir
 	for _, c := range customEntries {
 		if rel := relKey(scanDir, c.Path); rel != "" {
 			customByRelKey[rel] = true
+			if _, found := idx.ByRelKey[rel]; found {
+				synced++
+			}
 		}
 	}
 
@@ -145,15 +145,6 @@ func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir
 		if rel := relKey(scanDir, c.Path); rel != "" {
 			if _, found := idx.ByRelKey[rel]; !found {
 				extra = append(extra, c.Name)
-			}
-		}
-	}
-
-	// Synced: 实例中 relKey 命中仓库的文件数
-	for _, c := range customEntries {
-		if rel := relKey(scanDir, c.Path); rel != "" {
-			if _, found := idx.ByRelKey[rel]; found {
-				synced++
 			}
 		}
 	}
@@ -411,7 +402,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		err := os.Rename(op.src, op.dst)
 		if err != nil && isFileLocked(err) {
 			// Windows 共享锁瞬时争用：等待后重试一次
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(fileLockRetryDelay)
 			err = os.Rename(op.src, op.dst)
 		}
 		if err != nil {
@@ -592,13 +583,6 @@ func assertInstallLockHeld() bool {
 	return lt.HasLock()
 }
 
-// SortEntries 按名称排序模型条目
-func SortEntries(entries []types.ModelEntry) {
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Name < entries[j].Name
-	})
-}
-
 // GetLinkType 判断文件的链接类型
 func GetLinkType(path string) types.LinkType {
 	info, err := os.Lstat(path)
@@ -629,6 +613,11 @@ func hasRecycleSegment(p string) bool {
 	}
 	return false
 }
+
+// SyncToggleStatus 阶段 4 遇 Windows 共享锁瞬时争用时的重试窗口。
+// 50ms 足够容忍杀毒/索引器等瞬时句柄占用，又远低于一次同步的提交粒度，
+// 不会让整个 Rename 循环因单文件重试而显著拖长。
+const fileLockRetryDelay = 50 * time.Millisecond
 
 // isFileLocked 判断错误是否因为文件被其他进程锁定。
 // 错误码按 GOOS 分支（对齐 installer.errnoIs 范式）：Windows 与 Unix 的 errno 数值空间

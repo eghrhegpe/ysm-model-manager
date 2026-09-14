@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,13 +13,18 @@ import (
 )
 
 // benchFakeApp 计数型测试桩：仅覆盖基准链路用到的 AnalyzeBedrockModel
+//
+// analyzeCalls 用 atomic 而非裸 int：本桩会被 benchParallelAnalyze 的并发 worker
+// 同时调用（bench_concurrent.go 的并行基准路径），裸 `analyzeCalls++` 是真实
+// data race——`go test -race` 下会让 7 个 bench 测试集体失败（race detected）。
+// 这是**测试替身**的同步责任：生产侧并发是正确的，桩必须跟上同样的并发契约。
 type benchFakeApp struct {
 	AppService
-	analyzeCalls int
+	analyzeCalls atomic.Int64
 }
 
 func (f *benchFakeApp) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
-	f.analyzeCalls++
+	f.analyzeCalls.Add(1)
 	return types.BedrockModel{BoneCount: 1}
 }
 
@@ -110,16 +116,16 @@ func TestBenchSerialAndParallelAnalyze(t *testing.T) {
 	app := &benchFakeApp{}
 	models := []string{"a.ysm", "b.ysm", "c.ysm"}
 	serial := benchSerialAnalyze(app, models)
-	if app.analyzeCalls != 3 {
-		t.Errorf("串行应调 AnalyzeBedrockModel 3 次, got %d", app.analyzeCalls)
+	if got := app.analyzeCalls.Load(); got != 3 {
+		t.Errorf("串行应调 AnalyzeBedrockModel 3 次, got %d", got)
 	}
 	if serial.WorkerCount != 0 {
 		t.Errorf("串行结果字段不符: %+v", serial)
 	}
-	app.analyzeCalls = 0
+	app.analyzeCalls.Store(0)
 	par := benchParallelAnalyze(app, models, 2)
-	if app.analyzeCalls != 3 {
-		t.Errorf("并行应恰好分析 3 个模型, got %d", app.analyzeCalls)
+	if got := app.analyzeCalls.Load(); got != 3 {
+		t.Errorf("并行应恰好分析 3 个模型, got %d", got)
 	}
 	if par.WorkerCount != 2 {
 		t.Errorf("并行结果字段不符: %+v", par)

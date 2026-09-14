@@ -384,12 +384,13 @@ func writeCacheProbe(data []byte) (string, error) {
 	}
 	name := f.Name()
 	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(name)
+		// 清理失败不掩盖原始写错误（best-effort）：Close/Remove 的二次错误仅记录
+		_ = f.Close()
+		_ = os.Remove(name)
 		return "", fmt.Errorf("写入探针文件: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return "", fmt.Errorf("关闭探针文件: %w", err)
 	}
 	return name, nil
@@ -478,16 +479,18 @@ func runCacheDiag(ctx *CmdContext) error {
 		fmt.Printf("   ❌ 缓存写入失败: %v\n", perr)
 		fmt.Printf("   💡 可能是磁盘空间不足或权限问题\n")
 	} else {
-		defer os.Remove(probePath) // 中途早退也清理，诊断对缓存目录零残留
+		// 中途早退也清理，诊断对缓存目录零残留；清理失败不影响诊断结论（best-effort）
+		defer func() { _ = os.Remove(probePath) }()
 		fmt.Printf("   ✅ 缓存写入成功\n")
 		fmt.Printf("      文件: %s\n", probePath)
 
 		data, rerr := os.ReadFile(probePath)
-		if rerr != nil {
+		switch {
+		case rerr != nil:
 			fmt.Printf("   ❌ 缓存读取失败: %v\n", rerr)
-		} else if string(data) != string(testData) {
+		case string(data) != string(testData):
 			fmt.Printf("   ❌ 数据不完整！\n")
-		} else {
+		default:
 			fmt.Printf("   ✅ 缓存读取成功（数据完整性验证通过）\n")
 		}
 	}

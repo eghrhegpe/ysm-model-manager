@@ -100,7 +100,12 @@ func TestLockTracker_SmokeConcurrent(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 200; j++ {
 				lt.Lock()
-				// 短暂忙等模拟临界区（无需真实睡眠）
+				// 临界区须非空：staticcheck SA2001 无法区分「刻意的空临界区」与
+				// 「Lock 后忘写操作」的笔误，故持锁期间真实读写受保护状态——
+				// 顺带让 -race 能真正观测到「owner 追踪 + 受保护数据」的并发行为。
+				if !lt.HasLock() {
+					t.Error("持锁期间 HasLock 应为 true")
+				}
 				lt.Unlock()
 			}
 		}()

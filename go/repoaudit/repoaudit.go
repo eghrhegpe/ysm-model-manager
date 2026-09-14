@@ -381,10 +381,12 @@ func isModelFileValid(path, ext string) bool {
 	if err != nil {
 		return false
 	}
+	// 单点关闭：原实现散落 f.Close() 于各分支，且 json.Unmarshal 失败等早退路径
+	// 直接 return 漏关句柄（每次体检按模型数累积泄漏）。defer 统一收口。
+	defer func() { _ = f.Close() }()
 
 	st, err := f.Stat()
 	if err != nil || st.Size() == 0 {
-		f.Close()
 		return false
 	}
 
@@ -406,7 +408,6 @@ func isModelFileValid(path, ext string) bool {
 		_, hasBones := v["bones"]
 		return hasGeo || hasBones
 	}
-	f.Close()
 	return true
 }
 

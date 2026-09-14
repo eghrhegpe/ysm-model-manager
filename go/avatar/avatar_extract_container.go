@@ -45,7 +45,8 @@ func extractAvatarFromArchive(modelPath, safeName, ext string) string {
 		}
 		return ""
 	}
-	defer r.Close()
+	// 只读句柄关闭失败无补救动作（best-effort），显式丢弃以满足 errcheck
+	defer func() { _ = r.Close() }()
 
 	return extractAvatarFromContainer(r, safeName)
 }
@@ -84,7 +85,8 @@ func cacheContainerAvatars(modelPath, ext string) {
 		}
 		return
 	}
-	defer r.Close()
+	// 只读句柄关闭失败无补救动作（best-effort），显式丢弃以满足 errcheck
+	defer func() { _ = r.Close() }()
 
 	authors := readContainerAuthors(r)
 	for _, au := range authors {
@@ -153,7 +155,7 @@ func extractAvatarFromContainerWithAuthors(r container.Reader, authors []authorE
 			continue
 		}
 		avatarData, rerr := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
-		rc.Close()
+		_ = rc.Close() // 只读句柄 best-effort 关闭；读错误由下方 rerr 判定为主
 		if rerr != nil || int64(len(avatarData)) > registry.MaxReadLimit {
 			continue
 		}

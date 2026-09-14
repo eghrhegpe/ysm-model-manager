@@ -27,7 +27,7 @@ func readContainerName(r container.Reader, target string) []byte {
 		return nil
 	}
 	data, rerr := io.ReadAll(io.LimitReader(rc, registry.MaxReadLimit+1))
-	rc.Close()
+	_ = rc.Close() // 只读句柄 best-effort 关闭；读错误由下方 rerr 判定为主
 	if rerr != nil {
 		log.Printf("[avatar] 容器条目读取失败 %s: %v", e.Name(), rerr)
 		return nil

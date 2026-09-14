@@ -70,12 +70,13 @@ func PrintError(err error) {
 func extractFilesRoot(args []string) (filesRoot string, rest []string) {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		if a == "--files-root" && i+1 < len(args) {
+		switch {
+		case a == "--files-root" && i+1 < len(args):
 			filesRoot = args[i+1]
 			i++
-		} else if strings.HasPrefix(a, "--files-root=") {
+		case strings.HasPrefix(a, "--files-root="):
 			filesRoot = strings.TrimPrefix(a, "--files-root=")
-		} else {
+		default:
 			rest = append(rest, a)
 		}
 	}

@@ -277,8 +277,10 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 		}
 
 		// 收集实例目录中的文件路径（不计算哈希）
+		// WalkDir 仅用于遍历，遍历中途错误已在回调内逐条 log 并跳过；
+		// 返回值仅反映「回调是否主动中断」，本处回调恒返回 nil，故 best-effort 丢弃。
 		var fileInfos []toggleFileInfo
-		filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
+		_ = filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
 			if err != nil {
 				log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
 				return nil

@@ -244,20 +244,13 @@ func TestDownloadQueue_DownloadPanicRecovered(t *testing.T) {
 	}
 }
 
-// TestProcessForEpoch_StaleEpochRejected 锁定 spawnEpoch 代际守卫（P1 竞态回归）。
-// 场景：Enqueue spawn 出 worker 后、worker 首次取锁前，队列被 Cancel+Enqueue 取代
-// （epoch 已越过 spawn 时的值）。旧 worker 必须以过期代际被拒绝运行，否则它会与
-// 新 worker 并发消费同一批任务——重复发 done、提前复位 running。
-//
-// 同步测试：直接以过期代际调用消费循环，无需 goroutine 与时序，天然确定性。
-// 旧实现 Enqueue 走 processForEpoch(0)（跳过守卫）故无法被本用例锁定；
-// 修复后 spawn 路径携带 spawnEpoch，守卫生效。
 // TestConsume_StaleWorkerDoesNotDrainNewBatch 取消后「陈旧消费」不得消费新一批任务。
 //
 // 该保护原由 epoch 代际号实现（旧 worker 启动即比对代际被拒，见已删除的
 // TestProcessForEpoch_StaleEpochRejected）。ADR-237 改为常驻 worker + channel 后，
 // 「旧 worker vs 新 worker」在结构上不可表达——本用例转而钉住**同一保护目标的行为面**：
-// Cancel 后队列已清空，此时即便有陈旧的消费驱动，也不得把随后入队的新批次当作自己的任务。
+// Cancel 后即便有陈旧的消费驱动（迟到 wake 触发的空转 consume），随后入队的新批次
+// 也只会被常驻 worker 恰好消费一次，不因陈旧驱动而重复下载/重复发事件。
 func TestConsume_StaleWorkerDoesNotDrainNewBatch(t *testing.T) {
 	var mu sync.Mutex
 	var downloaded []string
@@ -278,18 +271,73 @@ func TestConsume_StaleWorkerDoesNotDrainNewBatch(t *testing.T) {
 	// 模拟「陈旧消费驱动」在取消后运行：队列为空 → 应立刻返回，不置 running、不发 done
 	q.process()
 
+	// 陈旧驱动运行后入队新批次：必须只被常驻 worker 消费一次，无重复下载
+	batch := []types.DownloadTask{
+		{URL: "https://a.example/new.ysm", SaveDir: t.TempDir(), Name: "new.ysm"},
+	}
+	if err := q.Enqueue(batch); err != nil {
+		t.Fatalf("取消后入队新批次失败: %v", err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		mu.Lock()
+		got := len(downloaded)
+		mu.Unlock()
+		if got == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("新批次未被消费（got=%d）或重复消费", got)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	// 再等一拍确认没有第二次消费（陈旧驱动与新 worker 并发消费的特征）
+	time.Sleep(100 * time.Millisecond)
 	mu.Lock()
 	got := len(downloaded)
 	mu.Unlock()
-	if got != 0 {
-		t.Errorf("取消后的陈旧消费不得下载任何任务, got %d", got)
+	if got != 1 {
+		t.Errorf("新批次应恰好被消费一次, got %d", got)
 	}
 	st := q.Status()
 	if st.Running {
-		t.Error("取消后的陈旧消费不得置 running")
+		t.Error("消费完成后 running 应复位")
 	}
 	if st.Remaining != 0 {
-		t.Errorf("取消后队列应清空, got remaining=%d", st.Remaining)
+		t.Errorf("新批次应被消费排空, got remaining=%d", st.Remaining)
+	}
+}
+
+// TestEnqueue_AfterParentCancel_Rejected 锁住关闭窗口守卫：parentCtx 取消
+// （应用退出）后常驻 worker 已永久退出，Enqueue 必须拒绝新任务而非静默入队——
+// 否则任务滞留、Status 永久 Running=true、前端卡 downloading。
+func TestEnqueue_AfterParentCancel_Rejected(t *testing.T) {
+	parent, parentCancel := context.WithCancel(context.Background())
+	q := NewDownloadQueue(parent,
+		func(ctx context.Context, url, saveDir string) (string, error) { return "", nil },
+		func(name string, args ...interface{}) {},
+		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
+	)
+	parentCancel()
+
+	// worker 退出后（stopped 关闭）再入队，守卫必须拒绝
+	select {
+	case <-q.stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("parent 取消后 worker 未退出")
+	}
+	err := q.Enqueue([]types.DownloadTask{
+		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "x.ysm"},
+	})
+	if err == nil {
+		t.Fatal("parent 取消后 Enqueue 应拒绝新任务")
+	}
+	st := q.Status()
+	if st.Running {
+		t.Error("拒绝入队后 running 不得置位")
+	}
+	if st.Remaining != 0 {
+		t.Errorf("拒绝入队后队列应保持为空, got remaining=%d", st.Remaining)
 	}
 }
 

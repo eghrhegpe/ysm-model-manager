@@ -40,8 +40,8 @@ type DownloadQueue struct {
 	wake chan struct{}
 	// cancelCh 取消信号（容量 1）：Cancel 投递，worker 在 select 中处理。
 	cancelCh chan struct{}
-	// stopped 标记 worker 已因子 context 退出（应用退出），供测试/诊断观察。
-	// 由 worker 在退出前置位，只在锁外读写原子性无关（仅作一次性观察位）。
+	// stopped 标记 worker 已因子 context 退出（应用退出）：
+	// 由 run() 退出前 close，测试可 <-q.stopped 确定性等待 worker 退出。
 	stopped chan struct{}
 
 	downloadFn func(ctx context.Context, url, saveDir string) (string, error)
@@ -88,6 +88,12 @@ func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
 		}
 	}
 	q.mu.Lock()
+	// 关闭窗口守卫：parentCtx 已取消（应用退出）时常驻 worker 已永久退出，
+	// 新任务将无人消费——拒绝入队，否则任务滞留、前端永久卡 downloading。
+	if q.parentCtx.Err() != nil {
+		q.mu.Unlock()
+		return fmt.Errorf("应用正在退出，下载队列已停止，拒绝新任务")
+	}
 	// 新一批任务视为重新开始：复位取消标志，否则上次取消后队列永不发 done
 	//（前端会永久卡 downloading）。原模型的 cancelled 字段现由 wake/cancelCh 双信号表达：
 	// 入队即代表「新一批开始」，无需显式复位标志。
@@ -121,7 +127,9 @@ func (q *DownloadQueue) Cancel() {
 	q.running = false
 	q.mu.Unlock()
 
-	// 通知 worker 清空待处理唤醒信号（防取消后仍消费旧任务）
+	// 通知 worker 取消已发生。陈旧的 wake 信号无需清理：Cancel 已在锁内清空
+	// q.tasks，迟到的唤醒只会触发一次空队列 consume（入口判空直接返回），
+	// 不可能消费已取消的任务。
 	select {
 	case q.cancelCh <- struct{}{}:
 	default:
@@ -156,7 +164,9 @@ func (q *DownloadQueue) run() {
 			// 应用退出：终止消费，不发 done（退出不是「下载完成」）
 			return
 		case <-q.cancelCh:
-			// 取消：清空待处理唤醒，静默丢弃未消费任务（不发 done——前端已收到 cancelled）
+			// 取消：分支体无需动作——Cancel 已在锁内清空 q.tasks，待处理的陈旧
+			// wake 只会触发一次空队列 consume（入口判空直接返回），不可能消费
+			// 已取消的任务（不发 done——前端已收到 cancelled）。
 			// 消费循环下一轮回到 select，等待新一批入队。
 		case <-q.wake:
 			q.consume()

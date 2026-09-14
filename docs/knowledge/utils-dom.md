@@ -77,6 +77,7 @@ auto_fields:
     - trapFocusAcrossShadow
     - VIEW_TESTIDS
     - WebComponentBase
+    - wsIconCSS
     - YSW_TOOLTIP_CSS
 quick_groups:
   - 跨组件通信与页面

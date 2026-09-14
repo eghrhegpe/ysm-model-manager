@@ -11,6 +11,7 @@ auto_fields:
     - btnBaseCSS
     - focusVisibleCSS
     - treeCSS
+    - wsIconCSS
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -536,9 +536,9 @@
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
-| show | `frontend/src/views/app-toast/index.ts` | 137 |
-| show | `frontend/src/views/app-toast/index.ts` | 156 |
-| show | `frontend/src/views/app-toast/index.ts` | 165 |
+| show | `frontend/src/views/app-toast/index.ts` | 139 |
+| show | `frontend/src/views/app-toast/index.ts` | 158 |
+| show | `frontend/src/views/app-toast/index.ts` | 167 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 129 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 153 |
@@ -592,7 +592,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 73 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 75 |
 
 ### `tree:reload`
 

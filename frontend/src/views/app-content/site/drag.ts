@@ -3,6 +3,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
@@ -66,7 +67,9 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
 
       const resetLabel = (): void => {
         dropZone.innerHTML =
-          '<span class="cr-drop-icon">📥</span>' +
+          '<span class="cr-drop-icon">' +
+          UI_ICONS.import +
+          "</span>" +
           '<span class="cr-drop-text">' +
           t("content.dropZoneHint") +
           "</span>";

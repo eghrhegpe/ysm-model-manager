@@ -147,7 +147,8 @@ describe("buildLitematicScene 错误/空数据路径（回归）", () => {
     const ctx = makeCtx();
     const result = await buildLitematicScene(ctx, "/x.nbt", voxelCall);
     expect(result.dispose).toBeDefined();
-    expect(ctx.loadingEl.textContent).toContain("⚠️");
+    // ADR-238：空态图标由 emoji ⚠️ 改走 SVG。loadingEl.innerHTML 含 SVG 即语义成立。
+    expect(ctx.loadingEl.innerHTML).toContain('<svg class="ws-icon"');
   });
 
   it("空 groups → earlyResult（voxelEmpty）", async () => {
@@ -200,7 +201,8 @@ describe("loadingEl 语义契约", () => {
     document.body.appendChild(ctx.loadingEl);
     const result = await buildLitematicScene(ctx, "/null.nbt", voxelCall);
     expect(ctx.loadingEl.parentNode).not.toBeNull();
-    expect(ctx.loadingEl.textContent).toContain("⚠️");
+    // ADR-238：空态图标由 emoji ⚠️ 改走 SVG（innerHTML 含 SVG 即语义成立）
+    expect(ctx.loadingEl.innerHTML).toContain('<svg class="ws-icon"');
     result.dispose();
     document.body.removeChild(ctx.loadingEl);
   });

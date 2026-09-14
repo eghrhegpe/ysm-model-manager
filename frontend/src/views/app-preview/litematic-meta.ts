@@ -239,7 +239,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
   </div>
   <div id="preview-material"${savedTab !== "material" ? ' style="display:none"' : ""}></div>
 </div>
-<button class="preview-fab" id="btn-lt-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>`;
+<button class="preview-fab" id="btn-lt-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>`;
 
   // Tab 切换
   const switchTab = (tab: string): void => {
@@ -283,7 +283,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
     if (litematicGuard.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>`;
+      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>`;
     }
   }
 }

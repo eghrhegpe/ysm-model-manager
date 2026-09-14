@@ -215,7 +215,7 @@ export function buildBoneExportRow(
   boneRow.className = "pv-toggle-row";
   const boneBtn = document.createElement("button");
   boneBtn.className = "pv-btn";
-  boneBtn.textContent = `📋 ${t("preview.action.exportBoneNames")}`;
+  boneBtn.innerHTML = `${UI_ICONS.clipboard} ${t("preview.action.exportBoneNames")}`;
   boneBtn.title = "导出骨骼名称为文本文件";
   const boneHint = document.createElement("span");
   boneHint.className = "pv-hint";

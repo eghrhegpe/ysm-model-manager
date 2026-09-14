@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
@@ -84,7 +85,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
           esc(cr.name) +
           '" title="' +
           t("content.viewLocalModels") +
-          '">📁</span>'
+          '">' +
+          UI_ICONS.folder +
+          "</span>"
         : "";
 
   const platformBadges = (cr.type || "")
@@ -99,7 +102,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
       esc(cr.name) +
       '" title="' +
       t("content.searchMoreModels") +
-      '">🔍</span>'
+      '">' +
+      UI_ICONS.search +
+      "</span>"
     : "";
 
   card.innerHTML =
@@ -333,7 +338,9 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
       '">' +
       '<div class="cr-edit-card-head">' +
       '<span class="cr-drag-handle">⠿</span>' +
-      '<span class="cr-preset-icon">🔍</span>' +
+      '<span class="cr-preset-icon">' +
+      UI_ICONS.search +
+      "</span>" +
       '<input data-idx="' +
       idx +
       '" data-fld="label" value="' +
@@ -355,7 +362,9 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
       idx +
       '" class="cr-btn-icon cr-del-preset" title="' +
       t("content.delete") +
-      '">🗑️</button>' +
+      '">' +
+      UI_ICONS.delete +
+      "</button>" +
       "</div>" +
       "</div>";
   });
@@ -385,7 +394,9 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
     "</button>" +
     "</div>" +
     '<div class="cr-drop-zone" id="cr-drop-zone">' +
-    '<span class="cr-drop-icon">📥</span>' +
+    '<span class="cr-drop-icon">' +
+    UI_ICONS.import +
+    "</span>" +
     '<span class="cr-drop-text">' +
     t("content.dropZoneHint") +
     "</span>" +
@@ -412,7 +423,9 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
       idx +
       '" class="cr-btn-icon cr-del" title="' +
       t("content.delete") +
-      '">🗑️</button>' +
+      '">' +
+      UI_ICONS.delete +
+      "</button>" +
       "</div>" +
       '<div class="cr-edit-card-body">' +
       '<div class="cr-edit-card-row">' +

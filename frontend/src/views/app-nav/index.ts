@@ -254,7 +254,7 @@ class AppNav extends WebComponentBase {
     this._shadow.innerHTML = `
       <style>${navCSS}</style>
       <div class="logo">
-        <span class="logo-icon">💎</span>
+        <span class="logo-icon">${UI_ICONS.gem}</span>
         <span class="logo-text">${esc(this._logoText())}</span>
       </div>
       <div class="menu">
@@ -278,7 +278,7 @@ class AppNav extends WebComponentBase {
           .join("")}
       </div>
       <div class="nav-viewer-fab" data-testid="nav-viewer-fab" title="${t("nav.viewer")}" role="button" tabindex="0">
-        <span class="icon">🎲</span>
+        <span class="icon">${UI_ICONS.random}</span>
         <span class="fab-text">${t("nav.viewer")}</span>
       </div>
       <div class="version" id="nav-version">${t("common.loading")}</div>

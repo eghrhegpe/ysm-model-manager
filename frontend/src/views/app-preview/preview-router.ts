@@ -111,7 +111,7 @@ ${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin
   } catch {
     // P2 修复：catch 分支同样比对代际
     if (ctx.previewGuard.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.folder} ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
+    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.folder} ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.folder}</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
   }
 }
 

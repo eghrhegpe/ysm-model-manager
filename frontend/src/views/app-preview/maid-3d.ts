@@ -218,7 +218,7 @@ function dpRenderPanel(
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
     ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
-    : `<div class="big-icon">🧸</div>`;
+    : `<div class="big-icon">${UI_ICONS.model}</div>`;
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
   <div class="dp-placeholder dp-placeholder--head">
@@ -309,7 +309,7 @@ export async function showMaidPreview(
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
   <div class="dp-placeholder dp-placeholder--head">
-    <div class="big-icon">🧸</div>
+    <div class="big-icon">${UI_ICONS.model}</div>
     <div class="dp-hint">${esc(basename)}</div>
     <div class="dp-hint">${t("preview.bedrockModel")}</div>
     <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>

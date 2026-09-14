@@ -5,6 +5,7 @@ import { stagger } from "@/utils/animation/stagger.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -233,7 +234,9 @@ export function itemHTML(item: SyncItem, index: number): string {
 export function emptyHintHTML(msg: string): string {
   return (
     '<div class="sm-empty" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
-    '<div style="font-size:20px">📭</div>' +
+    '<div style="font-size:20px">' +
+    UI_ICONS.inboxEmpty +
+    "</div>" +
     "<div>" +
     msg +
     "</div>" +

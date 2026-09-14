@@ -5,6 +5,7 @@ import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { type CrCardCtx, createCrCard } from "./render.ts";
@@ -101,7 +102,9 @@ function cmCrBuildDetailHtml(
     (!descTags.length ? esc(cr.desc) : "") +
     "</div>" +
     '<div class="cr-detail-row cr-local-card">' +
-    '<span class="cr-local-icon">📂</span>' +
+    '<span class="cr-local-icon">' +
+    UI_ICONS.folderOpen +
+    "</span>" +
     '<span class="cr-local-text">' +
     t("content.downloadedModels", { n: localCount }) +
     "</span>" +

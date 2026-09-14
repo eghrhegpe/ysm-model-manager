@@ -112,7 +112,8 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
     expect(html).toContain('data-role="synced-count"');
     expect(html).toContain('data-role="missing-count"');
     expect(html).toContain('data-role="extra-count"');
-    expect(html).toContain('<span class="pkg-icon" aria-hidden="true">📦</span>');
+    // ADR-238：包图标由 emoji 📦 改走 SVG（pkg-icon 容器内是 SVG）
+    expect(html).toMatch(/<span class="pkg-icon" aria-hidden="true"><svg class="ws-icon"/);
     expect(html).toContain('<span class="instance-card-pkg-count">');
   });
 

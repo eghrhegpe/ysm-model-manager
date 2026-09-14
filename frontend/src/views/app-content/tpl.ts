@@ -87,7 +87,9 @@ export function instancesHTML(): string {
     '<app-sidebar class="ins-sidebar"></app-sidebar>' +
     '<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
     '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:var(--fs-base);gap:8px">' +
-    '<div style="font-size:var(--fs-xl)">👈</div>' +
+    '<div style="font-size:var(--fs-xl)">' +
+    UI_ICONS.pointerLeft +
+    "</div>" +
     "<div>" +
     t("instances.emptyHint") +
     "</div>" +
@@ -109,15 +111,15 @@ export function diagnosticsHTML(): string {
 <div class="diag-wrapper">
 <div class="diag-left">
 <button class="diag-btn active" data-diag="log">
-<span class="diag-btn-icon">📋</span>
+<span class="diag-btn-icon">${UI_ICONS.clipboard}</span>
 <span>${t("diagnostics.opsLog")}</span>
 </button>
 <button class="diag-btn" data-diag="runtime">
-<span class="diag-btn-icon">🕹️</span>
+<span class="diag-btn-icon">${UI_ICONS.joystick}</span>
 <span>${t("diagnostics.runtimeLog")}</span>
 </button>
 <button class="diag-btn" data-diag="conflict">
-<span class="diag-btn-icon">⚡</span>
+<span class="diag-btn-icon">${UI_ICONS.performance}</span>
 <span>${t("diagnostics.conflict")}</span>
 </button>
 <button class="diag-btn" data-diag="perf">
@@ -125,11 +127,11 @@ export function diagnosticsHTML(): string {
 <span>${t("diagnostics.perfTitle")}</span>
 </button>
 <button class="diag-btn" data-diag="health">
-<span class="diag-btn-icon">🩺</span>
+<span class="diag-btn-icon">${UI_ICONS.diagnose}</span>
 <span>${t("diagnostics.healthTitle")}</span>
 </button>
 <button class="diag-btn" data-diag="sync-conflict">
-<span class="diag-btn-icon">🔄</span>
+<span class="diag-btn-icon">${UI_ICONS.refresh}</span>
 <span>${t("diagnostics.syncConflict")}</span>
 </button>
 <div class="diag-left-spacer"></div>
@@ -304,7 +306,9 @@ export function workshopHTML(): string {
     // 父窗口(wails://)与 iframe(外部真实域)本就不同源，补此标记不会让 iframe 反向访问父窗口。
     '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:var(--fs-base)">' +
-    '<div style="font-size:32px">🚫</div>' +
+    '<div style="font-size:32px">' +
+    UI_ICONS.blocked +
+    "</div>" +
     "<div>" +
     t("workshop.noEmbed") +
     "</div>" +

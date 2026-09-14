@@ -44,7 +44,7 @@ export function headerHTML(): string {
   <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${t("tree.selectAll")}</button>
   <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more" data-testid="tree-more">${t("tree.more")}</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file" data-testid="tree-more-import-file">${UI_ICONS.file} ${t("tree.moreImportFile")}</button><button class="dd-item" data-more="import-dir" data-testid="tree-more-import-dir">${t("tree.moreImportDir")}</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder" data-testid="tree-more-open-folder">${t("tree.moreOpenFolder")}</button><button class="dd-item" data-more="refresh" data-testid="tree-more-refresh">${t("tree.moreRefresh")}</button><button class="dd-item" data-more="genindex" data-testid="tree-more-genindex">${t("tree.moreGenIndex")}</button></div></div>
   <select class="sort-sel" id="sort" data-testid="tree-sort"><option value="name">${t("tree.sortName")}</option><option value="size">${t("tree.sortSize")}</option><option value="date">${t("tree.sortDate")}</option></select>
-  <button class="btn-base sm" id="btn-view-mode" data-testid="tree-view-mode" title="${t("tree.toggleView")}">☰</button>
+  <button class="btn-base sm" id="btn-view-mode" data-testid="tree-view-mode" title="${t("tree.toggleView")}">${UI_ICONS.menu}</button>
 </div>
 <div class="adv-filter" id="adv-filter" style="display:none">
   <div class="adv-filter-row">

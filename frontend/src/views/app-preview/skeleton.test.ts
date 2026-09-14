@@ -314,9 +314,20 @@ describe("loadModel2D — 交互", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     await loadModel2D(ctx, "/m/a.ysm", container);
-    const boneBtn = [...container.querySelectorAll("button")].find(
-      (b) => b.textContent === "📋 preview.action.exportBoneNames",
-    )!;
+    // ADR-238：导出骨骼按钮图标由 emoji 📋 改走 SVG（按钮文本仍是文案，不含图标标记）。
+    // 注：loadModel2D 内部以同名局部 `container` 承载内容，测试传入的 `container` 是其外层；
+    // 故按钮需经 `.sk-loading-box` 嵌套定位（直接 `container.querySelectorAll` 命中不到）。
+    const sk = container.querySelector<HTMLElement>(".sk-loading-box");
+    // ADR-238：导出骨骼按钮图标由 emoji 📋 改走 SVG（按钮文本仍是文案，不含图标标记）。
+    // 注：loadModel2D 内部以同名局部 `container` 承载内容，测试传入的 `container` 是其外层；
+    // 故按钮需经 `.sk-loading-box` 嵌套定位（直接 container.querySelectorAll 命中不到）。
+    const boneBtns = [...(sk?.querySelectorAll<HTMLButtonElement>("button.pv-btn") ?? [])].filter((b) =>
+      (b.textContent ?? "").includes("preview.action.exportBoneNames"),
+    );
+    const boneBtn = boneBtns[0];
+    if (!boneBtn) {
+      throw new Error("导出骨骼名按钮未渲染");
+    }
     boneBtn.click();
     expect(buildBoneNamesText).toHaveBeenCalledWith(
       "/m/a.ysm",

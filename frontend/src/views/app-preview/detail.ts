@@ -176,7 +176,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     void renderPackModelList(ctx, gen, App, path);
   } catch (e) {
     if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
+    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
   }
 }
 
@@ -274,7 +274,7 @@ export async function showShaderpack(
       .filter(Boolean);
     const desc = descs.length
       ? descs.join("\n")
-      : `📦 光影包 (${Object.keys(entries).length} 项配置)`;
+      : `${UI_ICONS.package} 光影包 (${Object.keys(entries).length} 项配置)`;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
@@ -286,7 +286,7 @@ export async function showShaderpack(
     if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
+  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
 </div>`;
   }
 }

@@ -93,7 +93,7 @@ function typeMenuItemsHTML(): string {
     '" style="padding:4px 8px;cursor:pointer;border-radius:var(--radius-sm);color:var(--txt)">' +
     esc(text) +
     "</div>";
-  let html = render("all", `📦 ${t("sidebar.allTypes")}`);
+  let html = render("all", `${UI_ICONS.package} ${t("sidebar.allTypes")}`);
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));
@@ -164,6 +164,6 @@ export function instanceCardHeaderHTML(
         : "");
   return `<div class="instance-card-header">
 <div class="card-name-row"><span class="name">${esc(name)}</span></div>
-<div class="card-status-row"><input type="checkbox" class="chk" data-testid="sidebar-check" data-idx="${idx}" aria-label="${esc(name)}"><span class="pkg-icon" aria-hidden="true">📦</span><span class="instance-card-pkg-count">${chips}</span></div>
+<div class="card-status-row"><input type="checkbox" class="chk" data-testid="sidebar-check" data-idx="${idx}" aria-label="${esc(name)}"><span class="pkg-icon" aria-hidden="true">${UI_ICONS.package}</span><span class="instance-card-pkg-count">${chips}</span></div>
 </div>`;
 }

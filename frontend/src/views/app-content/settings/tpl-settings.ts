@@ -4,6 +4,7 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -12,11 +13,11 @@ export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
 
 function renderStgTabs(): string {
   return `<div class="repo-tabs">
-<button class="stg-tab active" data-tab="basic">⚙️ ${t("settings.basic")}</button>
-<button class="stg-tab" data-tab="ui">🎨 ${t("settings.appearance")}</button>
-<button class="stg-tab" data-tab="parser">🧩 ${t("settings.parser")}</button>
-<button class="stg-tab" data-tab="about">ℹ️ ${t("settings.about")}</button>
-<button class="stg-tab" data-tab="credits">🙏 ${t("settings.credits")}</button>
+<button class="stg-tab active" data-tab="basic">${UI_ICONS.settings} ${t("settings.basic")}</button>
+<button class="stg-tab" data-tab="ui">${UI_ICONS.appearance} ${t("settings.appearance")}</button>
+<button class="stg-tab" data-tab="parser">${UI_ICONS.parser} ${t("settings.parser")}</button>
+<button class="stg-tab" data-tab="about">${UI_ICONS.info} ${t("settings.about")}</button>
+<button class="stg-tab" data-tab="credits">${UI_ICONS.thanks} ${t("settings.credits")}</button>
 </div>`;
 }
 
@@ -24,7 +25,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
   const gameRootCard = isViewer
     ? ""
     : `<div class="stg-card" style="animation-delay:0ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">🔍 ${t("settings.paths.autoSearch")}</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">${UI_ICONS.game} ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button></div>
       <div class="stg-card-body">
         <div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
@@ -34,14 +35,14 @@ function renderStgBasicPaths(isViewer: boolean): string {
     ? ""
     : `<div class="stg-card" style="animation-delay:60ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-        <label for="set-link-mode" class="label" style="font-size:var(--fs-md);font-weight:600">🔗 ${t("settings.links.title")}</label>
-        <button id="set-relink" class="btn-base sm">🔄 ${t("settings.links.reapply")}</button>
+        <label for="set-link-mode" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.link} ${t("settings.links.title")}</label>
+        <button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>
       </div>
       <div class="stg-card-body">
         <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="copy">📋 ${t("settings.links.copy")}</option>
-          <option value="hardlink" selected>🔗 ${t("settings.links.hardlink")} ✅</option>
-          <option value="symlink">🔗 ${t("settings.links.symlink")}</option>
+          <option value="copy">${UI_ICONS.clipboard} ${t("settings.links.copy")}</option>
+          <option value="hardlink" selected>${UI_ICONS.link} ${t("settings.links.hardlink")} ✅</option>
+          <option value="symlink">${UI_ICONS.link} ${t("settings.links.symlink")}</option>
         </select>
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.copyHint")}</div>
         <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.hardlinkHint")}</div>
@@ -53,13 +54,13 @@ function renderStgBasicPaths(isViewer: boolean): string {
     : `
     <div class="stg-card" style="animation-delay:120ms">
       <div class="stg-card-hdr">
-        <label for="set-mirror" class="label" style="font-size:var(--fs-md);font-weight:600">🌐 ${t("settings.mirror.title")}</label>
+        <label for="set-mirror" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.web} ${t("settings.mirror.title")}</label>
       </div>
       <div class="stg-card-body">
         <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="">🌍 ${t("settings.mirror.directOption")}</option>
-          <option value="jsdelivr">⚡ ${t("settings.mirror.jsdelivrOption")}</option>
-          <option value="githubapi">🐙 GitHub API</option>
+          <option value="">${UI_ICONS.globe} ${t("settings.mirror.directOption")}</option>
+          <option value="jsdelivr">${UI_ICONS.performance} ${t("settings.mirror.jsdelivrOption")}</option>
+          <option value="githubapi">${UI_ICONS.github} GitHub API</option>
         </select>
         <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.directHint")}</div>
         <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
@@ -67,7 +68,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
       </div>
     </div>
     `;
-  return `<div class="section-title stg-title">⚙️ ${t("settings.paths.title")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.settings} ${t("settings.paths.title")}</div>
 
 <div class="stg-grid">
     ${gameRootCard}
@@ -80,17 +81,17 @@ function renderStgStorageCard(isWebViewer: boolean): string {
   return isWebViewer
     ? `
   <div class="stg-card" id="stg-web-repo-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr">📁 ${t("settings.webRepo.title")}</div>
+    <div class="stg-card-hdr">${UI_ICONS.folder} ${t("settings.webRepo.title")}</div>
     <div class="stg-card-body">
       <div class="stg-card-desc">${t("settings.webRepo.desc")}</div>
-      <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">📂 ${t("settings.webRepo.authorize")}</button>
+      <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">${UI_ICONS.folderOpen} ${t("settings.webRepo.authorize")}</button>
       <div id="web-repo-auth-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>
     </div>
   </div>
   `
     : `
   <div class="stg-card" id="stg-files-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 ${t("settings.storage.title")}<button class="btn-base sm" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 ${t("settings.storage.expand")} ▸</button></div>
+    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">${UI_ICONS.folder} ${t("settings.storage.title")}<button class="btn-base sm" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button></div>
     <div class="stg-card-body">
       <div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
       <div class="stg-card-desc">${t("settings.storage.desc")}</div>
@@ -104,7 +105,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
 }
 
 function renderStgLangSelect(): string {
-  return `<div class="section-title stg-title" style="margin-top:12px">🌐 ${t("settings.language")}</div>
+  return `<div class="section-title stg-title" style="margin-top:12px">${UI_ICONS.web} ${t("settings.language")}</div>
 <div class="stg-card" style="animation-delay:240ms">
   <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
     <select id="set-lang" class="stg-select" style="width:auto">
@@ -121,7 +122,7 @@ function renderStgThemePicker(): string {
   return `<!-- 主题卡片：直接展示 -->
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
-    <span class="label">🎨 ${t("settings.theme.select")}</span>
+    <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">
       <div class="theme-card" data-theme="warm">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -129,7 +130,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#d4a574"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">☀️ ${t("settings.theme.warm")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">${UI_ICONS.sun} ${t("settings.theme.warm")}</span>
       </div>
       <div class="theme-card" data-theme="sakura">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -137,7 +138,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#f5b8cc"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#fce4ec"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">🌸 ${t("settings.theme.sakura")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">${UI_ICONS.sakura} ${t("settings.theme.sakura")}</span>
       </div>
       <div class="theme-card" data-theme="mint">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -145,7 +146,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#A2D9CE"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#76D7C4"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#2c3e3a">🍃 ${t("settings.theme.mint")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#2c3e3a">${UI_ICONS.mint} ${t("settings.theme.mint")}</span>
       </div>
       <div class="theme-card" data-theme="pro">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -153,7 +154,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#b0bec5"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#757575"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0e0e0">⚪ ${t("settings.theme.pro")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0e0e0">${UI_ICONS.dot} ${t("settings.theme.pro")}</span>
       </div>
       <div class="theme-card" data-theme="cyber">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -161,7 +162,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0d5f5">🌙 ${t("settings.theme.cyber")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0d5f5">${UI_ICONS.moon} ${t("settings.theme.cyber")}</span>
       </div>
       <div class="theme-card" data-theme="ocean">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -169,7 +170,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#7986cb"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#9fa8da"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#c5d8e8">🌊 ${t("settings.theme.ocean")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:#c5d8e8">${UI_ICONS.ocean} ${t("settings.theme.ocean")}</span>
       </div>
     </div>
   </div>
@@ -180,7 +181,7 @@ function renderStgThemeAuto(): string {
   return `<!-- 自动切换：独立一栏 -->
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
   <div class="setting-row">
-    <label for="theme-auto" class="label">🕐 ${t("settings.theme.autoTitle")}</label>
+    <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
       <option value="off">${t("settings.theme.autoOff")}</option>
       <option value="system">${t("settings.theme.autoSystem")}</option>
@@ -191,17 +192,17 @@ function renderStgThemeAuto(): string {
 }
 
 function renderStgFontFamily(): string {
-  return `<div class="section-title stg-title stg-sub-title">📐 ${t("settings.font.title")}</div>
+  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-font-size" class="label" style="font-size:var(--fs-md);font-weight:600">📏 ${t("settings.fontSize")}</label>
+      <label for="set-font-size" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.ruler} ${t("settings.fontSize")}</label>
     </div>
     <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
-      <option value="small">🔹 ${t("settings.fontSize.small")}</option>
-      <option value="normal" selected>🔸 ${t("settings.fontSize.normal")}</option>
-      <option value="large">🔺 ${t("settings.fontSize.large")}</option>
+      <option value="small">${UI_ICONS.bullet} ${t("settings.fontSize.small")}</option>
+      <option value="normal" selected>${UI_ICONS.bulletAlt} ${t("settings.fontSize.normal")}</option>
+      <option value="large">${UI_ICONS.collision} ${t("settings.fontSize.large")}</option>
     </select>
     <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">
       <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">12px</b></span>
@@ -216,19 +217,19 @@ function renderStgFontFamily(): string {
       <label for="set-display-font" class="label" style="font-size:var(--fs-md);font-weight:600">🃏 ${t("settings.font.creatorFont")}</label>
     </div>
     <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="kaiti" selected>🖌️ ${t("settings.font.kaiti")}</option>
-      <option value="system">📝 ${t("settings.font.systemFont")}</option>
+      <option value="kaiti" selected>${UI_ICONS.brush} ${t("settings.font.kaiti")}</option>
+      <option value="system">${UI_ICONS.note} ${t("settings.font.systemFont")}</option>
     </select>
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontHint")}</div>
   </div>
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-card-density" class="label" style="font-size:var(--fs-md);font-weight:600">💳 ${t("settings.density")}</label>
+      <label for="set-card-density" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.payment} ${t("settings.density")}</label>
     </div>
     <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="compact" selected>📦 ${t("settings.density.compact")}</option>
-      <option value="normal">📦 ${t("settings.density.normal")}</option>
+      <option value="compact" selected>${UI_ICONS.package} ${t("settings.density.compact")}</option>
+      <option value="normal">${UI_ICONS.package} ${t("settings.density.normal")}</option>
     </select>
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.densityHint")}</div>
   </div>
@@ -236,11 +237,11 @@ function renderStgFontFamily(): string {
 }
 
 function renderStgAnimDefault(): string {
-  return `<div class="section-title stg-title stg-sub-title">⚡ ${t("settings.animation.title")}</div>
+  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.performance} ${t("settings.animation.title")}</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:180ms">
   <div class="setting-row">
-    <label for="set-animations" class="label">✨ ${t("settings.animation.enable")}</label>
+    <label for="set-animations" class="label">${UI_ICONS.sparkle} ${t("settings.animation.enable")}</label>
     <label class="stg-label" style="gap:8px">
       <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
     </label>
@@ -250,11 +251,11 @@ function renderStgAnimDefault(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:210ms">
   <div class="setting-row">
-    <label for="set-default-page" class="label">🏠 ${t("settings.defaultPage")}</label>
+    <label for="set-default-page" class="label">${UI_ICONS.home} ${t("settings.defaultPage")}</label>
     <select id="set-default-page" class="stg-select">
-      <option value="instances">🎮 ${t("settings.defaultPage.instances")}</option>
-      <option value="workshop">🎨 ${t("settings.defaultPage.workshop")}</option>
-      <option value="repository">📦 ${t("settings.defaultPage.repository")}</option>
+      <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
+      <option value="workshop">${UI_ICONS.appearance} ${t("settings.defaultPage.workshop")}</option>
+      <option value="repository">${UI_ICONS.package} ${t("settings.defaultPage.repository")}</option>
     </select>
   </div>
   <div class="stg-hint">${t("settings.defaultPageHint")}</div>
@@ -262,11 +263,11 @@ function renderStgAnimDefault(): string {
 }
 
 function renderStgPreview3d(): string {
-  return `<div class="section-title stg-title stg-sub-title">🕹️ ${t("settings.preview3d.title")}</div>
+  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:240ms">
   <div class="setting-row">
-    <label for="td-camspeed" class="label">🎥 ${t("settings.preview3d.camSpeed")}</label>
+    <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
     <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
     <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">20</span>
   </div>
@@ -275,7 +276,7 @@ function renderStgPreview3d(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:270ms">
   <div class="setting-row">
-    <label for="td-rotmode" class="label">🔄 ${t("settings.preview3d.rotMode")}</label>
+    <label for="td-rotmode" class="label">${UI_ICONS.refresh} ${t("settings.preview3d.rotMode")}</label>
     <select id="td-rotmode" class="stg-select" style="width:auto">
       <option value="orbit">${t("settings.preview3d.orbit")}</option>
       <option value="free">${t("settings.preview3d.free")}</option>
@@ -286,21 +287,21 @@ function renderStgPreview3d(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:300ms">
   <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
-    <span class="label">🎮 ${t("settings.preview3d.keymap")}</span>
+    <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
     <div id="td-keymap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;width:100%"></div>
   </div>
   <div class="stg-hint">${t("settings.preview3d.keymapHint")}</div>
-  <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">↩️ ${t("settings.preview3d.resetKeys")}</button></div>
+  <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>
 </div>`;
 }
 
 function renderStgParserWorkers(): string {
-  return `<div class="section-title stg-title">🧩 ${t("settings.parser")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.parser} ${t("settings.parser")}</div>
 <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7;margin-bottom:12px">${t("settings.parserDesc")}</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
   <div class="setting-row">
-    <span class="label">🧩 ${t("settings.preview3d.fbxWorker")}</span>
+    <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
     <label class="stg-label" style="gap:8px">
       <input type="checkbox" id="set-fbx-worker"> ${t("settings.preview3d.workerCheck")}
     </label>
@@ -310,7 +311,7 @@ function renderStgParserWorkers(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
   <div class="setting-row">
-    <span class="label">🧩 ${t("settings.preview3d.mmdWorker")}</span>
+    <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
     <label class="stg-label" style="gap:8px">
       <input type="checkbox" id="set-mmd-worker"> ${t("settings.preview3d.workerCheck")}
     </label>
@@ -340,7 +341,7 @@ export function settingsHTML(): string {
   ${renderStgStorageCard(isWebViewer)}
 ${renderStgLangSelect()}`;
 
-  const uiBody = `<div class="section-title stg-title">🌙 ${t("settings.theme.title")}</div>
+  const uiBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
 
 ${renderStgThemePicker()}
 

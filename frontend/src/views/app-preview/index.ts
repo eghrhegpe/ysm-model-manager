@@ -32,6 +32,7 @@ import {
 import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { isYsmWasmPreview } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { PREVIEW_CLEANUP, PREVIEW_INVALIDATE } from "./preview-registry.ts";
@@ -110,7 +111,9 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
         } catch (e) {
           logError("preview", "加载失败", e);
           this.root.innerHTML =
-            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' +
+            '<div class="content"><div class="dp-placeholder"><div class="big-icon">' +
+            UI_ICONS.warning +
+            '</div><div class="dp-hint">' +
             t("preview.loadFailed") +
             "</div></div></div>";
         }

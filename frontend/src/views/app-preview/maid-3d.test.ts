@@ -220,7 +220,8 @@ describe("showMaidPreview 车万女仆详情", () => {
     await showMaidPreview(ctx, "/repo/maid.zip");
     const html = ctx.root.innerHTML;
     expect(html).not.toContain("<img");
-    expect(html).toContain('<div class="big-icon">🧸</div>');
+    // ADR-238：模型占位图标由 emoji 🧸 改走 SVG（无贴图时显示图标而非图片）
+    expect(html).toMatch(/<div class="big-icon"><svg class="ws-icon"/);
   });
 
   it("占位符带紧凑头部类（dp-placeholder--head，避免 24px 空态留白）", async () => {

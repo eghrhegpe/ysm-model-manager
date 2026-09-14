@@ -86,7 +86,7 @@ async function showCard(
     if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${config.icon} ${config.label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
+  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
 </div>`;
   }
 }
@@ -114,7 +114,7 @@ export async function showVrmMeta(
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
+    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
       }
@@ -158,7 +158,7 @@ export async function showVrmMeta(
     ${refBadge}
     ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, "💰")}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", "👥")}${badge(t("preview.sexual"), r.sexual as boolean, "🔞")}${badge(t("preview.violent"), r.violent as boolean, "⚔️")}</div>` : ""}
     ${statsRow}
-    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
+    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
@@ -191,7 +191,7 @@ export async function showMmdPreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div id="mmd-stats-row"></div>
-    <button class="preview-fab" id="btn-mmd-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
+    <button class="preview-fab" id="btn-mmd-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
@@ -252,7 +252,7 @@ export async function showFbxPreview(
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <button class="preview-fab" id="btn-fbx-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">🎨</span></button>
+    <button class="preview-fab" id="btn-fbx-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
@@ -289,7 +289,7 @@ export async function showScenePreview(
       <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
       <span>${t("preview.sceneModelLabel")}</span>
     </div>
-    <button class="preview-fab" id="btn-scene-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">🏗️</span></button>
+    <button class="preview-fab" id="btn-scene-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.build}</span></button>
   </div>
 </div>`;
     },
@@ -328,7 +328,7 @@ export async function showMorphPreview(
       <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
     </div>
     <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-morph-apply" data-fab title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,var(--status-success) 0%,color-mix(in srgb,var(--status-success) 65%,#000) 100%)"><span class="preview-ic">😊</span></button>
+    <button class="preview-fab" id="btn-morph-apply" data-fab title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,var(--status-success) 0%,color-mix(in srgb,var(--status-success) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.avatar}</span></button>
   </div>
 </div>`;
     },
@@ -408,7 +408,7 @@ export async function showStagePreview(
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-stage-load" data-fab title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,var(--warning,#ffa050) 0%,color-mix(in srgb,var(--warning,#ffa050) 65%,#000) 100%)"><span class="preview-ic">🎤</span></button>
+    <button class="preview-fab" id="btn-stage-load" data-fab title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,var(--warning,#ffa050) 0%,color-mix(in srgb,var(--warning,#ffa050) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.voice}</span></button>
   </div>
 </div>`;
     },

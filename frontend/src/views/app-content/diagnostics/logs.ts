@@ -164,7 +164,7 @@ function dgLsRenderDiagGroups(
 <span class="log-status ${l.Status || ""}">${statusLabel}</span>
 <span class="log-msg">${msg}</span>
 <span class="log-time">${timeStr}</span>
-<button class="log-copy" title="${copyLogTitle}">📋</button>
+<button class="log-copy" title="${copyLogTitle}">${UI_ICONS.clipboard}</button>
 </div>`,
       );
     });
@@ -185,10 +185,10 @@ function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle:
     .map((l, i) => {
       const timeStr = dgLsFormatTime(l.Timestamp);
       return `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
-<span class="log-status">🕹️</span>
+<span class="log-status">${UI_ICONS.joystick}</span>
 <span class="log-msg" style="white-space:pre-wrap">${esc(l.Message || "")}</span>
 <span class="log-time">${timeStr}</span>
-<button class="log-copy" title="${copyLogTitle}">📋</button>
+<button class="log-copy" title="${copyLogTitle}">${UI_ICONS.clipboard}</button>
 </div>`;
     })
     .join("");

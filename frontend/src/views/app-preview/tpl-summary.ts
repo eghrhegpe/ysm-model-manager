@@ -117,7 +117,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   } else {
     if (header.authorName) {
       const bili = header.authorBilibili
-        ? `<a href="${esc(safeUrl(header.authorBilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">📺</a>`
+        ? `<a href="${esc(safeUrl(header.authorBilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">${UI_ICONS.media}</a>`
         : "";
       const role = header.authorRole ? cleanText(header.authorRole) : "";
       authorHtml = `${esc(cleanText(header.authorName))}${bili}${role ? `（${esc(role)}）` : ""}`;
@@ -160,7 +160,7 @@ export function summaryCardHTML(
     return `<div class="content" id="preview-content">
 <h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
-  <div class="big-icon">📄</div>
+  <div class="big-icon">${UI_ICONS.file}</div>
   <div class="dp-hint">${t("preview.clickFileHint")}</div>
 </div>
 </div>`;

@@ -236,7 +236,9 @@ describe("createCrCard 创作者卡片工厂", () => {
     expect(c1.querySelector(".cr-card-local-count")?.textContent).toBe("📁5");
     expect(c1.querySelector("[data-local-creator]")?.getAttribute("data-local-creator")).toBe("甲");
     const c2 = mk({ name: "乙", desc: "", _fromLocal: true }, {});
-    expect(c2.querySelector(".cr-card-local-count")?.textContent).toBe("📁");
+    // ADR-238：「仅本地、无作者」分支的徽章图标由 emoji 📁 改走 SVG（含作者分支 c1 仍用 📁+数字，未迁移）
+    const c2html = c2.querySelector(".cr-card-local-count")?.innerHTML ?? "";
+    expect(c2html).toContain('<svg class="ws-icon"');
     const c3 = mk({ name: "丙", desc: "" }, {});
     expect(c3.querySelector(".cr-card-local-count")).toBeNull();
   });

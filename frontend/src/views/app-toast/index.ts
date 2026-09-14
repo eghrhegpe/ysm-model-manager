@@ -8,6 +8,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -117,7 +118,7 @@ class AppToast extends WebComponentBase {
     if (type) t.dataset.toastType = type;
     if (clickCallback) t.style.cursor = "pointer";
     // G-1 稳定钩子：undo/close 按钮同时挂 data-testid，e2e 不再依赖 .undo-btn/.close-btn class
-    t.innerHTML = `<span class="msg">${esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">✕</button>`;
+    t.innerHTML = `<span class="msg">${esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">${UI_ICONS.close}</button>`;
     c.appendChild(t);
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
@@ -134,7 +135,7 @@ class AppToast extends WebComponentBase {
           // 对齐 undo：记录并反馈，不静默
           logError("toast", "点击回调失败:", e);
           bus.emit("toast:show", {
-            msg: `❌ ${translate("error.fallback")}`,
+            msg: `${UI_ICONS.error} ${translate("error.fallback")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });
@@ -153,7 +154,7 @@ class AppToast extends WebComponentBase {
           // P3 修复（审核发现）：内部反馈统一走 bus——原 this.show 绕过 bus，
           // error-diary 的 toast:show 监听收不到（用户可见错误漏出日记链）
           bus.emit("toast:show", {
-            msg: `✅ ${translate("toast.undone")}`,
+            msg: `${UI_ICONS.success} ${translate("toast.undone")}`,
             duration: OK_TOAST_MS,
             type: "success",
           });
@@ -162,7 +163,7 @@ class AppToast extends WebComponentBase {
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
           logError("toast", "撤销回调失败:", e);
           bus.emit("toast:show", {
-            msg: `❌ ${translate("toast.undoFailed")}`,
+            msg: `${UI_ICONS.error} ${translate("toast.undoFailed")}`,
             duration: ERR_TOAST_MS,
             type: "error",
           });

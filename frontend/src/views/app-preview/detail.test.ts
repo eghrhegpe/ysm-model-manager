@@ -503,7 +503,8 @@ describe("showShaderpack 光影包详情", () => {
     const ctx = makeCtx();
     await showShaderpack(ctx, "/s/c.zip");
     const html = (ctx.root.getElementById("preview-content") as HTMLElement).innerHTML;
-    expect(html).toContain("⚠️");
+    // ADR-238：光影包空态图标由 emoji ⚠️ 改走 SVG
+    expect(html).toContain('<svg class="ws-icon"');
     expect(html).toContain("lang boom");
   });
 

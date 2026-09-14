@@ -2,6 +2,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes, sizeColor } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
@@ -26,15 +27,17 @@ export function fileRowHTML(
   ariaLevel = 1,
 ): string {
   const { p, fp, checked, ban, typeIcon, pad } = fileRowCommon(e, icon, indent);
-  const tagMark = e.HasTags ? `<span class="tag-dot" title="${t("tree.hasTags")}">🏷️</span>` : "";
+  const tagMark = e.HasTags
+    ? `<span class="tag-dot" title="${t("tree.hasTags")}">${UI_ICONS.tag}</span>`
+    : "";
   const selected = rowCls.includes("selected");
   return `<div class="fl${ban}${rowCls}" role="treeitem" aria-level="${ariaLevel}" aria-selected="${selected}" data-testid="tree-file" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-testid="tree-toggle" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
 <span class="nm${nmCls}">${tagMark}${nmHtml}</span>
 <span class="hover-actions">
-  <span class="ha-btn ha-preview" data-path="${fp}" title="${t("tree.bilibiliSearch")}">🔍</span>
-  <span class="ha-btn ha-copy" data-path="${fp}" title="${t("tree.copyFilename")}">📋</span>
+  <span class="ha-btn ha-preview" data-path="${fp}" title="${t("tree.bilibiliSearch")}">${UI_ICONS.search}</span>
+  <span class="ha-btn ha-copy" data-path="${fp}" title="${t("tree.copyFilename")}">${UI_ICONS.clipboard}</span>
 </span>
 <span class="sz ${sizeColor(e.size)}">${formatBytes(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }

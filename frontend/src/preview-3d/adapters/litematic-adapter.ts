@@ -17,6 +17,7 @@ import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
   PreviewAdapter,
   PreviewBuildCtx,
@@ -87,7 +88,7 @@ async function loadAndParseData(
 ): Promise<LoadResult> {
   const data = await voxelCall(path);
   if (!data?.groups?.length) {
-    ctx.loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.voxelEmpty")}</div>`;
+    ctx.loadingEl.innerHTML = `<div style="font-size:32px">${UI_ICONS.warning}</div><div>${t("preview.voxelEmpty")}</div>`;
     return { ok: false, earlyResult: { dispose() {} } };
   }
   return { ok: true, data };

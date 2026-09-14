@@ -147,13 +147,13 @@ type ReadFileMeta struct {
 	Hash string `json:"hash"` // SHA256 十六进制
 }
 
-// readFileWithHash 读取文件并计算 SHA256，返回 data 和 hex hash。
-// 路径守卫：与 ReadFileBytes 对齐（防御性编程——当前调用方已校验，但
-// 未来新增调用方可能遗漏，此处兜底防止越权读取）。
-func (a *App) readFileWithHash(path string) ([]byte, string) {
-	if !a.isPathInRootOrSelf(path) {
-		return nil, ""
-	}
+// readFileWithHashUnchecked 读取文件并计算 SHA256，返回 data 和 hex hash。
+// ⚠️ 不做路径守卫——调用方必须先自行 isPathInRootOrSelf 校验（函数名即契约）。
+// 原实现内置守卫，与两个调用方（ReadFileBytesBatchWithMeta 的顺序/并发分支）
+// 各自的前置校验重复：每文件白付一次 isPathInRootOrSelf——该函数遍历全部
+// allScanRoots 逐根 Lstat，是批量纹理读取热路径上的重复 IO。守卫统一收敛到
+// 调用方循环入口（唯一必需的一处），此处只做读取+哈希。
+func (a *App) readFileWithHashUnchecked(path string) ([]byte, string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, ""
@@ -173,7 +173,7 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 			if !a.isPathInRootOrSelf(p) {
 				continue
 			}
-			data, hash := a.readFileWithHash(p)
+			data, hash := a.readFileWithHashUnchecked(p)
 			if data == nil {
 				continue
 			}
@@ -193,7 +193,7 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 		if !a.isPathInRootOrSelf(p) {
 			return fileMeta{}, false
 		}
-		data, hash := a.readFileWithHash(p)
+		data, hash := a.readFileWithHashUnchecked(p)
 		if data == nil {
 			return fileMeta{}, false
 		}

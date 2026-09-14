@@ -220,7 +220,6 @@ func runList(ctx *CmdContext) error {
 // runVerify 执行验证命令
 func runVerify(ctx *CmdContext) error {
 	fs := newCmdFlagSet("verify")
-	repair := fs.Bool("repair", false, "尝试自动修复问题")
 	_, err := parseFlags(fs, ctx.Args)
 	if err != nil {
 		return err
@@ -291,10 +290,6 @@ func runVerify(ctx *CmdContext) error {
 		fmt.Printf("\n❌ 错误详情:\n")
 		for _, e := range errors {
 			fmt.Printf("   %s\n", e)
-		}
-
-		if *repair {
-			fmt.Println("\n🔧 修复模式暂未实现，请手动处理上述错误")
 		}
 	}
 

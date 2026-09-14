@@ -52,7 +52,7 @@ $ysmFlags = @{
   'single-bench' = @('--help', '--model', '--iterations', '--baseline', '--save-baseline', '--threshold', '--format')
   'tags' = @('--help')
   'toggle' = @('--help', '--path')
-  'verify' = @('--help', '--repair')
+  'verify' = @('--help')
   'workshop' = @('--help')
 }
 Register-ArgumentCompleter -Native -CommandName ysm,app,ysm-cli -ScriptBlock {

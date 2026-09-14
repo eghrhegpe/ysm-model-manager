@@ -69,7 +69,7 @@ _ysm_complete() {
     single-bench) COMPREPLY=( $(compgen -W "--help --model --iterations --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
     tags) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     toggle) COMPREPLY=( $(compgen -W "--help --path" -- "$cur") ); return ;;
-    verify) COMPREPLY=( $(compgen -W "--help --repair" -- "$cur") ); return ;;
+    verify) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     workshop) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
       esac
       ;;

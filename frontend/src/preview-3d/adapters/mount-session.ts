@@ -265,15 +265,22 @@ export function teardown(ctx: MountCtx, level: TeardownLevel): void {
   if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
     sceneRegistry.reset();
   }
-  // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用
+  // ⑧ 场景能力：保存状态 + 释放 GPU（下次 mount 由 createAll 重建）；清空能力引用。
+  // cooperate 多会话共享同一 scene/caps/纹理池——仅当本会话是最后存活会话时才 dispose，
+  // 否则同台其他会话的 sky/ground/light 与池内纹理会被误拆（2026-09-14 真 bug 修复；
+  // 守卫语义对齐上方 sceneRegistry.reset：teardown 内 finishSession 在末尾才摘本句柄，
+  // 二次调用时 handles 已不含本会话，`some(gen!==myGen)` 仍正确表达「有无其他存活会话」）。
   sceneCapabilityRegistry.saveAll();
-  sceneCapabilityRegistry.dispose();
-  clearSceneCaps();
-  // ⑨ 纹理缓存池 session 结束统一释放 + 视锥裁剪注册清空
-  textureCache.disposeAll();
-  // 场景字节快照随场景消亡——残留会在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截）
-  resetSceneTextureBytes();
-  clearModelRoots();
+  if (!ctx.handles.some((h) => h.gen !== ctx.myGen)) {
+    sceneCapabilityRegistry.dispose();
+    clearSceneCaps();
+    // ⑨ 纹理缓存池 session 结束统一释放（仅最后会话——同台其他会话的模型材质
+    // 仍引用池内 Texture，误 disposeAll 会释放其 GPU 纹理导致贴图失效）
+    textureCache.disposeAll();
+    // 场景字节快照随场景消亡——残留会在下个轻模型 mount 时被 GPU 预算门误读（假阳性拦截）
+    resetSceneTextureBytes();
+    clearModelRoots();
+  }
   // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
   if (ctx.loadingEl.parentNode) ctx.loadingEl.remove();
   // 本会话关闭 → 注销活跃输入会话（render-loop 不再驱动已释放的相机状态）

@@ -14,6 +14,8 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { ownHandle, removeOwnHandle } from "./mount-session.ts";
+import { sessionLedger } from "./session-ledger.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 
 const h = vi.hoisted(() => ({
   bindInput: vi.fn(),
@@ -254,5 +256,26 @@ describe("多会话 gen-scoped switchTo 隔离（ece0d4a4 #10 回归锚）", () 
     await expect(ctxB!.switchTo!("/m/b3.pmx")).resolves.toBeUndefined();
     expect((adapterA.build as unknown as { mock: { calls: unknown[][] } }).mock.calls.length).toBe(buildsA);
     expect((adapterB.build as unknown as { mock: { calls: unknown[][] } }).mock.calls.length).toBe(buildsB);
+  });
+
+  it("cooperate 双会话：关闭其一不 dispose 共享 caps，最后存活会话才 dispose（2026-09-14 回归锚）", async () => {
+    const disposeSpy = sceneCapabilityRegistry.dispose as ReturnType<typeof vi.fn>;
+    const adapterA = makeAdapter("vrm", () => {});
+    const adapterB = makeAdapter("mmd", () => {});
+
+    await mount3D(adapterA, "/m/a.vrm", { rtype: "vrm" });
+    await mount3D(adapterB, "/m/b.pmx", { rtype: "mmd", cooperate: true });
+    disposeSpy.mockClear();
+    expect(sessionLedger.handles).toHaveLength(2);
+
+    // 关闭 A（非最后存活）→ 共享 caps 保留（sky/ground/light 仍服务同台 B）
+    sessionLedger.handles[0]!.handle.cleanup();
+    expect(disposeSpy).not.toHaveBeenCalled();
+    expect(sessionLedger.handles).toHaveLength(1);
+
+    // 关闭 B（最后存活）→ 完整释放共享 caps
+    sessionLedger.handles[0]!.handle.cleanup();
+    expect(disposeSpy).toHaveBeenCalledTimes(1);
+    expect(sessionLedger.handles).toHaveLength(0);
   });
 });

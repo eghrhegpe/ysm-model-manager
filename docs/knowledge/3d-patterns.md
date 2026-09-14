@@ -725,6 +725,45 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ---
 
+## 17. 误报模式：把「装配序决定的合法接管」当成「覆盖冲突」（2026-09 自行推翻）
+
+### 疑点（看似真 bug）
+`scene.environment` 有两个 cap 写入，守卫却不对称：
+| cap | 位置 | 守卫 |
+|-----|------|------|
+| sky | `clearEnvironment` / `dispose` | ✅ 有所有权判断 |
+| environment | `buildEnvironment` 的 `!enabled` 分支 | ❌ 无条件 `= prevEnvironment` |
+
+且 sky 的注释**明确担忧**此事（"environment 若在本能力之后写过，无条件还原会把别人的贴图冲掉"），
+而 `environment-menu` 的 toggle 直连 `cap.setEnabled()` **绕过 dispatcher**（sky 回调按
+`group="sky"` 过滤，`envEnabled` 非 schema 键 ⇒ sky 不自愈）。
+实测：`env.setEnabled(false)` 后 `scene.environment` 由"sky 的贴图"变为 `null`。
+
+### 推翻它的决定性证据：装配序
+`shared-infra.ts|applyModelDefaults` 的调用序为 **sky → light → fog → shadow → reflector → environment**，
+**environment 恒在 sky 之后应用**；且 `EnvironmentCapability` 默认 `enabled = true`。
+
+实测（真实实现）：`sky.apply()` 后有值 → `env.apply()` 后**换成另一个对象**（两者非同引用）。
+⇒ **environment 是「最后写下 scene.environment 的那个」= 合法持有者**。
+它关闭时把引用还原成 `prevEnvironment`，是**归还自己接管的引用**，不是"冲掉 sky"。
+
+sky 的守卫是**防御性的单边保护**（防止自己在别人的地盘上乱动），与 environment 的接管**并不矛盾**：
+- environment 启用期：`scene.environment` 归 environment；
+- environment 关闭后：还原为构造前值，此时 sky 若想重新持有，应由 sky 自己的启用动作写入。
+
+### 教训（元级，与 §15 同源）
+**判断"某某覆盖了某某"之前，必须先查明「谁后写」**。两个模块写同一字段 ≠ 冲突；
+若两者由**确定的装配序**排序，则后者胜出是**设计**，前者的守卫是**防御**而非"对缺陷的补偿"。
+→ 具体检查动作：找到两者的 apply/初始化调用序（组合根 `applyModelDefaults`、`createAll`），
+确认先后；再看默认 enabled 值。**顺序确定 + 默认启用 ⇒ 合法接管，不是 bug。**
+
+### 方法与证据的可信度（自我约束）
+本次三步都用**真实实现**而非模拟：①真实两 cap 实例化 → ②真实 UI 路径 `setEnabled(false)` →
+③真实装配序 `sky.apply()` → `env.apply()`。**第二步曾让我误判**（看到 null 就以为冲掉），
+第三步（查顺序）才纠正。⇒ **"现象复现"不足以定罪，还须证明"这个现象不该发生"。**
+
+---
+
 ## 模式速查表
 
 | # | 模式名称 | 核心思想 | 适用场景 | 红线/禁忌 |

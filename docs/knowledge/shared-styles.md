@@ -10,6 +10,7 @@ auto_fields:
   symbols_with_lines:
     - btnBaseCSS
     - focusVisibleCSS
+    - noAnimationsCSS
     - treeCSS
     - wsIconCSS
 quick_groups:

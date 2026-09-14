@@ -336,6 +336,22 @@ invariant_anchors:
   - **顺带修**：`app-toast` 3 处 `msg:` 文本槽误用 UI_ICONS（toast 走 `esc()` 转义，会显示字面 `<svg>`）→ 还原 emoji；其 close 按钮图标在 inline `<style>` 的 shadow 里，同样需插值 `wsIconCSS`。
   - 守卫：`tests/test_ui_icons.ts` 新增第 5 组「尺寸规则覆盖面」——断言 5 个 shadow 组件 + 全局副本均带 `.ws-icon{width:1em}`，且已实测「故意移除即红」。
 
+- ✅ **刀㉓ 图标与 i18n 分界收口：i18n 值剥离结构，模板层拼 `UI_ICONS`**（2026-09，承接刀㉒）：
+  - **原则（与 i18n 完全同构）**：`t("key")` → 纯文本 → 放 text node；`UI_ICONS.x` → SVG 结构 → 放 HTML。
+    i18n 值里不应含任何标记，正如翻译文件里不应硬编码 `<b>`——「结构在代码，内容在 i18n」。
+  - **症状**：`content.webSearchTerms` 等 8 键的 i18n 值含 emoji 前缀（如 `"🔍 网页搜索词"`），
+    且**同一 key 既投 HTML 又投 `title=` 属性**（模式切换按钮），标题里跟着 emoji 对无障碍不友好。
+  - **修法**：三个语言包剥离 8 键 emoji 前缀；模板层（`site/render.ts` / `tpl.ts` /
+    `workshop-tabs.ts`）在渲染处补 `UI_ICONS.x + " "` 前缀。`title=` 属性自动退化为纯文本（顺带改进）。
+    缺的图标名（`window` / `edit`）补进 `ui-icons.ts`（99 → 101 名），字形映射补
+    `scripts/_lib/icon-map.ts`（103 → 110 条）。
+  - **分类边界（刻意不动，最易误伤）**：`workshop.action.exported/imported` 等 toast
+    `msg:` 是**文本槽**（`esc()` 转义注入）——SVG 标记进去会显示成字面 `<svg>` 乱码，
+    必须留 emoji。判定口诀：`textContent` / `msg:` / `SetTitle` 是文本槽；innerHTML /
+    模板字符串拼 HTML 是结构槽。
+  - **测试同步**：`app-content.methods.test.ts` 的 mock HTML 从手写字面 SVG 改为插值
+    真实 `UI_ICONS`——防「mock 里的图标」与实现漂移（手写副本必然腐烂）。
+
 
 ## 相关
 

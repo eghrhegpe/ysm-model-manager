@@ -53,6 +53,7 @@ auto_fields:
     - ModalPromptOptions
     - modalSelect
     - ModalSelectOptions
+    - noAnimationsCSS
     - popInputBlock
     - promoteTitle
     - promoteTitleIfPresent

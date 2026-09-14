@@ -207,7 +207,7 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 实测（门禁 dry-run `--files frontend/src/views/app-tree/index.ts`，共 27 项）：`check-complexity` 0.4s / `check-params` 0.7s / `check-type-safety` 0.1s，三者 note 均带「--files 裁剪：本次变更 1 文件」；complexity FAIL 的标签为 `[存量债]`、结论仍 **PASS**（debt 不阻断），FAIL 明细 tail 直出「文件:行 函数 认知分」。对照全库口径：complexity 2.4s（301 命中）/ params **59.4s**（54 命中）——增量不只是防误红，也是 params 可挂门禁的前提。
 
-**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，见 [views-review-crosscheck](../../deliverables/views-review-crosscheck-2026-09-13.md)）。三档位扫描器接门禁后已在前端域被拦（debt 告警、不阻断），但 `--all` 全量路径仍不跑——覆盖率口径照旧须报告。
+**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，交叉复核见 `git show bf0ab60c7:deliverables/views-review-crosscheck-2026-09-13.md`——该报告已随 `deliverables/` 目录退出工作区，正文改引提交以便复核，不再依赖磁盘路径）。三档位扫描器接门禁后已在前端域被拦（debt 告警、不阻断），但 `--all` 全量路径仍不跑——覆盖率口径照旧须报告。
 
 ### 其他
 

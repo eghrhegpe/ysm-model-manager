@@ -460,20 +460,25 @@ func allScanRoots(cfg types.AppConfig) []string {
 // 派生根经 GetRepoRoot("ysm") 取（含类型专属覆写 → FilesRoot 子目录 → 平台默认根三级
 // 回退），CustomRoots 覆写场景与 allScanRoots 同源故天然一致，空串由调用方跳过。
 func (a *App) allAllowedRoots() []string {
-	raw := allScanRoots(a.LoadAppConfig())
-	roots := make([]string, 0, len(raw)+1)
-	for _, r := range raw {
-		// 未配置字段（FilesRoot/McRoot/各废弃专属根）为空串：过滤掉，
-		// 使「清单不含空串」成为本函数保证的不变量，调用方无需各自防御
-		//（空串在 filepath.Rel 下会与 CWD 相关，语义危险）。
-		if r != "" {
-			roots = append(roots, r)
+	// 热路径（isPathInRootOrSelf 逐文件调用）先查缓存短路：
+	// 根清单仅 saveConfig 时变化（Clear 失效），命中免重做
+	// LoadAppConfig + GetRepoRoot（注册表查询 + Android 下文件系统 I/O）。
+	return a.ensureAllowedRootsCache().Get(func() []string {
+		raw := allScanRoots(a.LoadAppConfig())
+		roots := make([]string, 0, len(raw)+1)
+		for _, r := range raw {
+			// 未配置字段（FilesRoot/McRoot/各废弃专属根）为空串：过滤掉，
+			// 使「清单不含空串」成为本函数保证的不变量，调用方无需各自防御
+			//（空串在 filepath.Rel 下会与 CWD 相关，语义危险）。
+			if r != "" {
+				roots = append(roots, r)
+			}
 		}
-	}
-	if ysm, _ := a.GetRepoRoot("ysm"); ysm != "" {
-		roots = append(roots, ysm)
-	}
-	return roots
+		if ysm, _ := a.GetRepoRoot("ysm"); ysm != "" {
+			roots = append(roots, ysm)
+		}
+		return roots
+	})
 }
 
 func (a *App) isPathInRootOrSelf(path string) bool {

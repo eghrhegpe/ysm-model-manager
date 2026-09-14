@@ -92,8 +92,11 @@ func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 // 与 isPathInRootOrSelf 的多根校验口径一致。
 
 // findMoveRoot 找到同时包含 src 和 dstDir 的合法仓库根。
-// 遍历所有已配置根（FilesRoot + McRoot + 各类型专属根 + CustomRoots），
-// 返回第一个同时包含两者的根；全部不匹配返回空串（调用方 fail-closed 拒绝）。
+// 遍历所有允许的根（allAllowedRoots 口径：配置层 FilesRoot + McRoot + 各类型专属根
+// + CustomRoots，另含运行期派生 ysm 仓库根 GetRepoRoot("ysm")——Android 查看器模式
+// 未配 FilesRoot 时由平台默认根回退提供），返回第一个同时包含两者的根；
+// 全部不匹配返回空串（调用方 fail-closed 拒绝）。
+// 空串已由 allAllowedRoots 过滤，下方 root=="" 防御为冗余保留。
 func (a *App) findMoveRoot(src, dstDir string) string {
 	roots := a.allAllowedRoots()
 	absSrc, err := filepath.Abs(src)

@@ -33,39 +33,17 @@ func TestAllowedRoots_SingleSource(t *testing.T) {
 	defer func() { pathMgr = orig }()
 	pathMgr = fakePathMgr{repo: platformDefault}
 
-	a := &App{}
-	// 关键：FilesRoot 必须为空才会走到 GetRepoRoot 的平台默认根分支（L167 FilesRoot
-	// 分支优先于 L180 默认根分支）——这正是 Android「查看器模式」的初始状态：
-	// 用户未配仓库目录，靠 defaultRepoRoot() 的环境变量/固定路径当仓库。
-	a.configCache = types.AppConfig{
+	// 走 repoApp 注入（内部取 configMu）：直接写 configCache/configLoaded 无锁
+	// 注入在本包其他测试与生产读取路径并发时有 -race 风险
+	a := repoApp(t, types.AppConfig{
 		McRoot: filepath.Join(base, "mc"),
-	}
-	a.configLoaded = true
+	})
 
-	// 两侧守卫各自实际使用的根清单——必须同源（allScanRoots 是配置层子集，
-	// 不再作为读写侧的比较对象；读写侧现走 allAllowedRoots）。
-	readRoots := a.allAllowedRoots()
-	toggleRoots := a.toggleAllowedRoots()
+	// 两侧守卫各自实际使用的根清单——现 toggleAllowedRoots 已收敛为 allAllowedRoots
+	// 的同源调用（ADR 34a866ed3），「两套清单漂移」结构上不可表达，原集合差断言
+	// 已恒真、无保护力，删除；改由下方行为面断言钉住不变量。
 
-	// 断言 1：两套根清单须等价（集合差为空）。
-	// 比较对象是「守卫实际使用的清单」——GetRepoRoot 返回的是平台默认根的子目录
-	// （{默认根}/minecraft-mod/ysm），只比默认根本身会漏掉漂移。
-	for _, r := range toggleRoots {
-		if !containsPath(readRoots, r) {
-			t.Errorf("启禁根清单含读写根清单没有的条目（漂移）:\n"+
-				"  仅 toggleAllowedRoots 含: %s\n"+
-				"  allAllowedRoots         : %v\n"+
-				"  toggleAllowedRoots      : %v\n"+
-				"  后果：该根下路径启禁放行而读写拒绝", r, readRoots, toggleRoots)
-		}
-	}
-	for _, r := range readRoots {
-		if !containsPath(toggleRoots, r) {
-			t.Errorf("读写根清单含启禁根清单没有的条目（漂移）: 仅 allAllowedRoots 含 %s", r)
-		}
-	}
-
-	// 断言 2：行为面等价——平台默认根下的文件，两守卫须给出相同判定。
+	// 行为面等价——平台默认根下的文件，两守卫须给出相同判定。
 	// 用 GetRepoRoot 实际返回的根（而非默认根本身）构造路径。
 	ysmRoot, _ := a.GetRepoRoot("ysm")
 	if ysmRoot == "" {
@@ -102,9 +80,7 @@ func TestAllowedRoots_RejectOutsideAllRoots(t *testing.T) {
 	defer func() { pathMgr = orig }()
 	pathMgr = fakePathMgr{repo: ""}
 
-	a := &App{}
-	a.configCache = types.AppConfig{FilesRoot: filepath.Join(base, "files")}
-	a.configLoaded = true
+	a := repoApp(t, types.AppConfig{FilesRoot: filepath.Join(base, "files")})
 
 	if a.isPathInRootOrSelf(outside) {
 		t.Error("读写守卫不得放行全部根之外的路径")
@@ -120,15 +96,13 @@ func TestToggleAllowedRoots_NoLegacyEmptyFields(t *testing.T) {
 	defer func() { pathMgr = orig }()
 	pathMgr = fakePathMgr{repo: ""}
 
-	a := &App{}
-	a.configCache = types.AppConfig{
+	a := repoApp(t, types.AppConfig{
 		FilesRoot:        "/files",
 		McRoot:           "/mc",
 		ResourcepackRoot: "", // migrateLegacyConfigFields 迁移后恒空
 		MmdRoot:          "",
 		CustomRoots:      map[string]string{"ysm": "/custom/ysm"},
-	}
-	a.configLoaded = true
+	})
 
 	for _, r := range a.toggleAllowedRoots() {
 		if r == "" {

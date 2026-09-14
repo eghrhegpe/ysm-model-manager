@@ -332,6 +332,9 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 	// root 解析缓存，防止扫描守卫用过期的根真实路径做 symlink 复核
 	// （组件化 ADR-134 同构，见 app_resolved_root_cache.go）
 	a.ensureResolvedRootCache().Clear()
+	// 允许根清单缓存同失效（allAllowedRoots 结果基于 LoadAppConfig + GetRepoRoot，
+	// 配置变更后须重算——组件化 ADR-134 同构，见 app_allowed_roots_cache.go）
+	a.ensureAllowedRootsCache().Clear()
 	if configDir() == "" {
 		// 平台数据根缺失（Android 沙盒不可用等）：fail-fast 报明确错误，
 		// 绝不退化为相对路径（CWD=/ 只读 → 无意义的 read-only 报错）

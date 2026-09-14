@@ -55,6 +55,8 @@ type App struct {
 	resolvedRootCacheOnce sync.Once
 	geoCache              *geoCache // 几何分析结果缓存组件（SearchModels 免重跑 AnalyzeBedrockModel）
 	geoCacheOnce          sync.Once
+	allowedRootsCache     *allowedRootsCache // 允许根清单缓存（saveConfig 失效）
+	allowedRootsCacheOnce sync.Once
 	tagsStore             *tags.Store
 	tagsStoreMu           sync.Mutex
 	configCache           types.AppConfig

@@ -506,6 +506,8 @@ func sortByTexOrder(texOrder []string, pngs [][]byte, pngNames []string) map[str
 		orderMap[trimTexExt(n)] = i
 	}
 	// 两切片比较器同口径（键均为 pngNames），提取共享闭包消除逐字重复。
+	// 注意：pngNames 与 pngs 同步被本 less 排序，预计算小写 key 会随元素位移失同步，
+	// 必须每次比较实时 strings.ToLower(pngNames[i])（正确优先于微优化）。
 	less := func(i, j int) bool {
 		oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 		oj, hasJ := orderMap[strings.ToLower(pngNames[j])]

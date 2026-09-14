@@ -306,7 +306,10 @@ func callInstallDirRecursiveWithRollback(srcDir, finalDst, linkMode, rtype, file
 	} else if !os.IsNotExist(err) {
 		log.Printf("[installer] 检查目标目录状态失败 %s: %v", finalDst, err)
 	}
-	if err := installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot); err != nil {
+	// 顶层入口：rtype 整树恒定，预计算一次安装扩展名白名单透传递归链，
+	// 避免每条目都经 registry.InstallExtsFor 重新加锁扫描（大目录树 N 次锁竞争）。
+	installExts := registry.InstallExtsFor(rtype)
+	if err := installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot, installExts); err != nil {
 		// 条目级软失败：保留已落地文件，不回滚。
 		// 旧实现无差别整树回滚，把已成功的兄弟文件一起删掉，MMD 多 texture 场景用户可感知。
 		if errors.Is(err, ErrPartialInstall) {
@@ -398,14 +401,17 @@ func checkDstSymlinkSegments(finalDst string) error {
 //     防模型目录内嵌的 .exe 被拷进 .minecraft（BUG-3 修复）；
 //  2. 注册表驱动白名单：registry.InstallExtsFor(rtype) 从 resource_types.json 读取（EntityPlayer/ysm
 //     等声明模型+纹理配套扩展名），空=全放行（仅受硬黑名单限制），新增类型改 JSON 无需改本函数。
-func isAllowedEntryName(name, rtype string) bool {
+//
+// isAllowedEntryName 按文件名白黑名单过滤安装条目。installExts 由调用方按 rtype 预计算
+// 一次透传（rtype 整树恒定），避免每条目都经 registry.InstallExtsFor → LoadRegistry 加锁
+// + 线性扫描 + 三份深拷贝（大目录树递归时被放大为 N 次锁竞争，见 #1 审计发现）。
+func isAllowedEntryName(name string, installExts []string) bool {
 	low := strings.ToLower(name)
 	ext := filepath.Ext(low)
 	switch ext {
 	case ".exe", ".bat", ".dll", ".cmd", ".scr", ".pif", ".com", ".msi", ".ps1", ".vbs":
 		return false
 	}
-	installExts := registry.InstallExtsFor(rtype)
 	if len(installExts) == 0 {
 		return true
 	}
@@ -436,19 +442,19 @@ func applyInstallFileByMode(srcFile, dstDir, linkMode string) error {
 // 包含四个语义阶段：子目录递归 / 文件名白黑名单过滤 / 条目级 symlink 越权逃逸守卫 / 按 linkMode 落地。
 // errs 由调用方传指针（in-place append），条目内部分失败仅记录、不打断整体遍历；
 // 子目录分支递归调用 installDirRecursive，保持原深度优先顺序不变。
-func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype, filesRoot string, errs *[]error) {
+func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype, filesRoot string, installExts []string, errs *[]error) {
 	name := entry.Name()
 	if entry.IsDir() {
 		// 递归处理子目录（MMD 的 spa/textures/toon 等深层子文件夹）
 		subSrc := filepath.Join(srcDir, name)
 		subDst := filepath.Join(finalDst, name)
-		if err := installDirRecursive(subSrc, subDst, linkMode, rtype, filesRoot); err != nil {
+		if err := installDirRecursive(subSrc, subDst, linkMode, rtype, filesRoot, installExts); err != nil {
 			log.Printf("[installer] 递归安装 %s 失败: %v (继续)", subSrc, err)
 			*errs = append(*errs, fmt.Errorf("%s: %w", name, err))
 		}
 		return
 	}
-	if !isAllowedEntryName(name, rtype) {
+	if !isAllowedEntryName(name, installExts) {
 		return
 	}
 	srcFile := filepath.Join(srcDir, name)
@@ -483,7 +489,7 @@ func installSingleDirEntry(entry os.DirEntry, srcDir, finalDst, linkMode, rtype,
 //   - 条目级软失败（单个文件拷贝失败、子目录递归部分失败）：收集到 errs，
 //     返回 ErrPartialInstall 包装错误；上层据此**不**回滚——已成功落地的兄弟文件保留，
 //     让用户看到「哪些装上了、哪些没装上」，重装时只补失败项。
-func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) error {
+func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string, installExts []string) error {
 	// 目标侧符号链接段校验——必须放在 MkdirAll 之前：MkdirAll 会跟随 symlink
 	// 在真实位置建目录，若 finalDst 父链含指向 .minecraft 外的 symlink 段，
 	// 先校验拒绝、避免写入穿透
@@ -507,7 +513,7 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype, filesRoot string) er
 	}
 	var errs []error
 	for _, entry := range entries {
-		installSingleDirEntry(entry, srcDir, finalDst, linkMode, rtype, filesRoot, &errs)
+		installSingleDirEntry(entry, srcDir, finalDst, linkMode, rtype, filesRoot, installExts, &errs)
 	}
 	if len(errs) > 0 {
 		// 分级 errs：fatal（非 ErrPartialInstall）直接返回，让上层触发整树回滚；

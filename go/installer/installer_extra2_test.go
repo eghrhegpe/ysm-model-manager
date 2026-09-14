@@ -135,7 +135,7 @@ func TestInstallDirRecursive_MkdirFail(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := installDirRecursive(t.TempDir(), filepath.Join(blocker, "sub"), "copy", "", "")
+	err := installDirRecursive(t.TempDir(), filepath.Join(blocker, "sub"), "copy", "", "", nil)
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
 		t.Fatalf("MkdirAll 失败应返回 IO_ERROR, got %v", err)
@@ -145,7 +145,7 @@ func TestInstallDirRecursive_MkdirFail(t *testing.T) {
 func TestInstallDirRecursive_OutsideMinecraft(t *testing.T) {
 	srcDir := t.TempDir()
 	finalDst := filepath.Join(t.TempDir(), "plain")
-	err := installDirRecursive(srcDir, finalDst, "copy", "", "")
+	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
 		t.Fatalf("finalDst 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
@@ -157,7 +157,7 @@ func TestInstallDirRecursive_ReadDirFail(t *testing.T) {
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := installDirRecursive(srcFile, filepath.Join(mcCustomDir(t), "model"), "copy", "", "")
+	err := installDirRecursive(srcFile, filepath.Join(mcCustomDir(t), "model"), "copy", "", "", nil)
 	if err == nil {
 		t.Fatal("srcDir 是文件时 ReadDir 应报错")
 	}
@@ -178,7 +178,7 @@ func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	finalDst := filepath.Join(mcCustomDir(t), "model")
-	if err := installDirRecursive(srcDir, finalDst, "copy", "EntityPlayer", ""); err != nil {
+	if err := installDirRecursive(srcDir, finalDst, "copy", "EntityPlayer", "", nil); err != nil {
 		t.Fatalf("installDirRecursive = %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(finalDst, "root.pmx")); err != nil {
@@ -219,7 +219,7 @@ func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(finalDst, "sub"), []byte("blocker"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := installDirRecursive(srcDir, finalDst, "copy", "", "")
+	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 	if err == nil {
 		t.Fatal("应返回错误, got nil")
 	}
@@ -670,7 +670,7 @@ func TestInstallDirRecursive_SymlinkSegmentReject(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "a.ysm"), []byte("a"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := installDirRecursive(srcDir, filepath.Join(link, "sub", "model"), "copy", "", "")
+	err := installDirRecursive(srcDir, filepath.Join(link, "sub", "model"), "copy", "", "", nil)
 	var ae types.AppError
 	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
 		t.Fatalf("父链越界 symlink 应返回 INVALID_PATH, got %v", err)
@@ -702,14 +702,14 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 
 	t.Run("copy 条目失败", func(t *testing.T) {
 		srcDir, finalDst := setup(t)
-		err := installDirRecursive(srcDir, finalDst, "copy", "", "")
+		err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 		if err == nil || !strings.Contains(err.Error(), "部分失败") {
 			t.Fatalf("应返回部分失败, got %v", err)
 		}
 	})
 	t.Run("hardlink 条目失败", func(t *testing.T) {
 		srcDir, finalDst := setup(t)
-		err := installDirRecursive(srcDir, finalDst, "hardlink", "", "")
+		err := installDirRecursive(srcDir, finalDst, "hardlink", "", "", nil)
 		if err == nil || !strings.Contains(err.Error(), "部分失败") {
 			t.Fatalf("应返回部分失败, got %v", err)
 		}
@@ -721,7 +721,7 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 			t.Skipf("平台不支持符号链接: %v", err)
 		}
 		os.Remove(probe)
-		err := installDirRecursive(srcDir, finalDst, "symlink", "", "")
+		err := installDirRecursive(srcDir, finalDst, "symlink", "", "", nil)
 		if err == nil || !strings.Contains(err.Error(), "部分失败") {
 			t.Fatalf("应返回部分失败, got %v", err)
 		}

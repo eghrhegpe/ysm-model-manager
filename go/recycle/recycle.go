@@ -249,6 +249,33 @@ func (tm *TrashManager) List() []types.ModelEntry {
 	return entries
 }
 
+// countEntries 与 List() 同过滤口径只计数：文件夹模型整组（含 ysm.json 的目录）算 1、被
+// IsDisableSuffix/IsSupportedExt 过滤后的文件条目 =1；不构造 []ModelEntry、不调 dirSize，
+// 供 Empty() 清空前拿条目数而不物化全量切片。WalkDir 回调豁免错误继续遍历（与 List 一致）。
+func (tm *TrashManager) countEntries() int {
+	n := 0
+	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			log.Printf("[recycle] countEntries WalkDir 错误 %s: %v", p, err)
+			return nil
+		}
+		if d.IsDir() {
+			if _, statErr := os.Stat(filepath.Join(p, "ysm.json")); statErr == nil {
+				n++
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(p))
+		if !registry.IsDisableSuffix(ext) && !registry.IsSupportedExt(ext) {
+			return nil
+		}
+		n++
+		return nil
+	})
+	return n
+}
+
 // dirSize 递归统计目录总大小（文件夹模型整组条目显示用）
 func dirSize(dir string) int64 {
 	var total int64
@@ -426,8 +453,11 @@ func (tm *TrashManager) Empty() (int, error) {
 	if _, err := os.Stat(tm.recycleDir); os.IsNotExist(err) {
 		return 0, nil
 	}
-	// 先统计文件数（最佳努力）
-	count := len(tm.List())
+	// 先统计文件数（最佳努力）：复用 List() 的过滤口径（含 ysm.json 的文件夹模型
+	// 整组算 1 条、被禁用/受支持扩展名过滤后的文件条目）但只计数——不构造 []ModelEntry
+	// 切片、不递归算 dirSize，避免清空前一次全量物化（List() 的 WalkDir+dirSize 对大回收站是
+	// 纯浪费，仅为了拿一个 len）。
+	count := tm.countEntries()
 	// 删除整个回收站目录
 	if err := os.RemoveAll(tm.recycleDir); err != nil {
 		return 0, fmt.Errorf("清空回收站失败: %w", err)

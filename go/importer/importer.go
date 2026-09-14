@@ -207,6 +207,8 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) error {
 
 func copyDir(src, dst string) error {
 	// 已收敛至 fsutil.CopyDirRecursive（ADR-044 策略 A）：原子 rename + 祖先守卫。
+	// 与 copyDirRecursive 同为薄包装：二者服务于不同 Importer（DirectoryCopy / SimpleCopy）
+	// 且各自被包内测试直接引用（12 处 vs 5 处），保留双入口避免改名 churn。
 	return fsutil.CopyDirRecursive(src, dst, fsutil.CopyDirOptions{
 		Overwrite:    true,
 		AtomicRename: true,

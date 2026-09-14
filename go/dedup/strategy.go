@@ -2,12 +2,12 @@ package dedup
 
 import (
 	"crypto/md5"
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -27,18 +27,9 @@ func (d *DeepHash) Name() string {
 }
 
 func (d *DeepHash) ComputeHash(filePath string) (string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	// 只读哈希路径：Close 错误无观测影响（与并行管道读失败日志无关），显式忽略防 lint 未处理
-	defer func() { _ = f.Close() }()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	// 收敛至 fsutil.SHA256File（全仓哈希单一事实源）：原实现与其逐字节等价
+	// （os.Open→sha256.New→io.Copy→%x），重复实现易漂移。Name() 不变。
+	return fsutil.SHA256File(filePath)
 }
 
 // QuickHash 快速哈希算法 (基于 MD5) - 速度较快，适合大文件

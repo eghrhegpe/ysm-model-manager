@@ -18,6 +18,9 @@
  *           → 这些已回迁 shadow（见 21c01725 / 9942ada3），全局副本是漂移源
  *   [WARN]  shadow tpl/组件 HTML 的 class="..." 使用的类，在当前 shadow 层无定义
  *           → 可能是漏迁/误归全局；WARN 因部分类来自内联或 document 层白名单
+ *   [ERROR] 有 animation/transition 的 shadow 域未 adopt `.no-animations` 通配桥
+ *           → 「关闭动画」开关在该域静默失效（文档层规则不穿透 shadow 边界，见 ADR-015
+ *             §2.4 约束 1「用户关闭时零动画」）
  *
  * 发现机制（全自动，无手写域清单）：
  *   递归遍历 frontend/src/views/_（每个视图目录），凡目录内任一 .ts 命中 shadow 样式标记
@@ -44,10 +47,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   expandKeyframeInterpolations,
-  readConstLiteral,
-  resolveImportAbs,
+  hasMotionDeclaration,
+  hasNoAnimationsBridge,
 } from "./_lib/css-layer-utils.ts";
 import { walk } from "./_lib/scan-files.ts";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const STRICT = process.argv.includes("--strict");
@@ -72,6 +76,13 @@ if (process.env.YSM_SKIP_CSS_LAYER === "1") {
 
 const CSS_MARKER = /export const [A-Za-z]+CSS|:host\b|adoptedStyleSheets/;
 
+/** shadow 域：css = 承载 shadow 样式的源文件（命中 CSS_MARKER 者），html = 域内全部 .ts。 */
+interface ShadowDomain {
+  name: string;
+  css: string[];
+  html: string[];
+}
+
 function walkDir(dir: string): string[] {
   return walk(dir, {
     exts: [".ts"],
@@ -80,29 +91,51 @@ function walkDir(dir: string): string[] {
   }) as string[];
 }
 
-function discoverShadowDomains() {
+/** 域构建：目录内任一 .ts 命中 shadow 样式标记即为 css 源；无标记目录返回 null（纯逻辑域）。 */
+function buildDomain(name: string, dir: string): ShadowDomain | null {
+  const files = walkDir(dir);
+  const cssSources: string[] = [];
+  for (const f of files) {
+    if (CSS_MARKER.test(fs.readFileSync(f, "utf8"))) cssSources.push(f);
+  }
+  if (cssSources.length === 0) return null; // 无 shadow 样式标记的目录：跳过（如 app-resource-manager 纯逻辑）
+  return {
+    name,
+    css: cssSources.map((p) => path.relative(ROOT, p).split(path.sep).join("/")),
+    html: files.map((p) => path.relative(ROOT, p).split(path.sep).join("/")),
+  };
+}
+
+function discoverShadowDomains(): ShadowDomain[] {
   const viewsRoot = path.resolve(ROOT, "frontend/src/views");
-  const domains: { name: string; css: string[]; html: string[] }[] = [];
+  const domains: ShadowDomain[] = [];
   if (!fs.existsSync(viewsRoot)) return domains;
   for (const entry of fs.readdirSync(viewsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const dir = path.join(viewsRoot, entry.name);
-    const files = walkDir(dir);
-    const cssSources: string[] = [];
-    for (const f of files) {
-      if (CSS_MARKER.test(fs.readFileSync(f, "utf8"))) cssSources.push(f);
-    }
-    if (cssSources.length === 0) continue; // 无 shadow 样式标记的目录：跳过（如 app-resource-manager 纯逻辑）
-    domains.push({
-      name: entry.name,
-      css: cssSources.map((p) => path.relative(ROOT, p).split(path.sep).join("/")),
-      html: files.map((p) => path.relative(ROOT, p).split(path.sep).join("/")),
-    });
+    const dom = buildDomain(entry.name, path.join(viewsRoot, entry.name));
+    if (dom) domains.push(dom);
   }
   return domains;
 }
 
 const SHADOW_DOMAINS = discoverShadowDomains();
+
+/**
+ * 检查 4 的额外动效域（**仅供检查 4 消费**，不并入 SHADOW_DOMAINS）。
+ *
+ * 3D HUD overlay 由 `preview-3d/infra/preview-shell.ts` 装配 attachShadow +
+ * adoptedStyleSheets，位置在 `frontend/src/preview-3d/` 而非 `views/`，上面的 views/
+ * 目录遍历发现不到——检查 4 会漏掉它（正是本闸要消灭的「假绿」）。
+ * 刻意不并入 SHADOW_DOMAINS：那会同时扩张检查 1/2/3 的既有判定面（keyframe 本地化
+ * 断言、类归属 WARN 基线），属另一件事，须单独评估后再动。
+ * 判据与 views 侧同源（buildDomain 的 CSS_MARKER），仍是**目录级**发现——域内新增样式
+ * 文件自动纳入，只有「根目录」多一条，不是手写文件清单。
+ */
+const EXTRA_MOTION_DOMAINS: ShadowDomain[] = [
+  { name: "preview-3d-overlay", dir: path.resolve(ROOT, "frontend/src/preview-3d") },
+]
+  .map((d) => buildDomain(d.name, d.dir))
+  .filter((d): d is ShadowDomain => d !== null);
 
 // document 层类白名单：这些类定义在 components.css（全局 <link>），被 document 层 DOM 用，
 // 不进 shadow，故 shadow tpl 不应引用它们（若引用是潜在越界，但此处不阻断，仅统计）。
@@ -156,7 +189,7 @@ function extractAnimationRefs(cssText: string) {
   const refs = new Set();
   const re = /animation\s*:\s*([^;]+)/g;
   for (const m of cssText.matchAll(re)) {
-    const body = m[1]!;
+    const body = m[1] ?? "";
     if (/\bnone\b/.test(body)) continue;
     // 取第一个 token 作为关键帧名（animation: name duration ...）
     const first = body.trim().split(/\s+/)[0];
@@ -385,6 +418,28 @@ for (const dom of SHADOW_DOMAINS) {
       }
     }
   }
+}
+
+// ── 检查 4：有动效的 shadow 域必须 adopt `.no-animations` 通配桥（ADR-015 §2.4 约束 1）──
+// 依据「用户关闭时零动画」。`.no-animations` 类挂 documentElement，而文档层通配规则
+// （variables.css 的 `.no-animations *`）**不穿透 Shadow 边界**——shadow 域不 adopt 桥，
+// 开关在该域静默失效，且无任何编译期/构建期信号。
+// 历史病灶（2026-09 核实）：文档层白名单曾登记 `.no-animations .menu / .toast / .sm-*`，
+// 这些类住在 shadow 内部，选择器恒不匹配（死规则）；实测 app-toast（toastIn）、
+// context-menu（menuPop/itemSlideIn）、app-sidebar（instance-card/sk-shimmer）、
+// app-content（.cr-*/.stg-*/.recy-item/.gh-card/…）的动画都关不掉，而「所有动画都可关闭」
+// 早已写进规范——白名单由此沦为假开关。本检查把该承诺变成可执行断言。
+// 判定用**未展开的源文本**：桥以 `noAnimationsCSS` 标识符形式出现，而
+// expandKeyframeInterpolations 只展开含 @keyframes 的常量，展开后反而看不见该标识符。
+for (const dom of [...SHADOW_DOMAINS, ...EXTRA_MOTION_DOMAINS]) {
+  let srcAgg = "";
+  for (const f of dom.css) srcAgg += `\n${readSafe(f) ?? ""}`;
+  if (!hasMotionDeclaration(srcAgg)) continue;
+  if (hasNoAnimationsBridge(srcAgg)) continue;
+  errorCount++;
+  problems.push(
+    `[ERROR] ${dom.name}: shadow 域含 animation/transition 却未 adopt .no-animations 通配桥——「关闭动画」在本域静默失效（文档层规则不穿透 shadow 边界）。修法：在自身 shadow 样式串拼接 utils/dom/css.ts 的 noAnimationsCSS（勿逐类登记 :host-context 选择器，那正是漂移源）`,
+  );
 }
 
 // ── 输出 ──

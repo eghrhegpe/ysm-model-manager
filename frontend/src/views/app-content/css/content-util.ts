@@ -9,7 +9,7 @@ export const contentUtilCSS: string = `
 .recy-restore { cursor:pointer; }
 .recy-restore:hover { background:var(--hover); }
 .recy-del { cursor:pointer; }
-.recy-del:hover { background:color-mix(in srgb, var(--paid) 12%, transparent); }
+.recy-del:hover { background:color-mix(in srgb, var(--status-error) 12%, transparent); }
 
 /* ===== 资源管理器动画 ===== */
 .rm-item { animation: fadeSlideUp .2s ease both; }

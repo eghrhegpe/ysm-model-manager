@@ -31,6 +31,7 @@ export function readConstLiteral(src: string, name: string): string | null {
   // 正则用普通字符串拼接（非模板字面量）：字符类含反引号时内嵌模板字符串会被
   // Node 24 的 TS 类型剥离器误判为模板边界 → ERR_INVALID_TYPESCRIPT_SYNTAX
   const re = new RegExp(
+    // biome-ignore lint/style/useTemplate: 拼接为刻意选择（上条注释：内嵌模板字面量会被 Node 24 TS 类型剥离器误判模板边界）
     "export\\s+const\\s+" + esc + "\\s*=\\s*([" + "'\u0060\"" + "])([\\s\\S]*?)\\1",
   );
   return src.match(re)?.[2] ?? null;
@@ -70,6 +71,7 @@ export function expandKeyframeInterpolations(cssText: string, fileAbs: string): 
       continue; // 解析不出的 import 保持原样（不因 tooling 缺失制造新假阳性）
     }
     for (const n of names) {
+      // biome-ignore lint/style/useTemplate: 拼接的是被展开占位符的字面量文本本身，非模板
       const token = "${" + n + "}";
       if (!out.includes(token)) continue;
       const lit = readConstLiteral(src, n);
@@ -78,4 +80,37 @@ export function expandKeyframeInterpolations(cssText: string, fileAbs: string): 
     }
   }
   return out;
+}
+
+/**
+ * shadow 域是否含动效声明（`animation` / `transition` 系列的**属性位**）。
+ *
+ * 用途：css-layer-check 检查 4——有动效的 shadow 域必须 adopt `.no-animations` 通配桥。
+ *
+ * 判定要点：
+ * - 前缀用负向后顾 `(?<![-\w])` 而非字符类：`--btn-transition:` 是**自定义属性**声明，
+ *   前面的 `-` 若被 `[^-\w]` 收下就会误判成「本域有动效」（实测噪声源）；
+ * - `transition-duration/-delay/-property` 显式列入：它们同样产生动效，漏判会让域被
+ *   当成纯静态而跳过桥检查（假绿）。
+ */
+export function hasMotionDeclaration(cssText: string): boolean {
+  return /(?<![-\w])animation\s*:|(?<![-\w])transition(?:-duration|-delay|-property)?\s*:/.test(
+    cssText,
+  );
+}
+
+/**
+ * shadow 域是否已 adopt `.no-animations` 通配桥。
+ *
+ * 认可两种形态：
+ *   ① 引用共享片段 `noAnimationsCSS`（`utils/dom/css.ts`，**推荐**——单一事实源）；
+ *   ② 手写等价通配 `:host-context(.no-animations) *`（手抄一份也应放行，闸门不惩罚等价实现）。
+ *
+ * **刻意不认可逐类登记**（`:host-context(.no-animations) .foo`）：那正是漂移源头——
+ * 新增组件动画不会自动被覆盖，「所有动画都可关闭」退化成假承诺。闸门的全部价值就是
+ * 逼出通配形态，故此处对逐类形态判「无桥」。
+ */
+export function hasNoAnimationsBridge(cssText: string): boolean {
+  if (/\bnoAnimationsCSS\b/.test(cssText)) return true;
+  return /:host-context\(\s*\.no-animations\s*\)\s*\*/.test(cssText);
 }

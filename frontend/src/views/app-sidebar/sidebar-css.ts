@@ -1,5 +1,5 @@
 // ===== sidebar Shadow CSS =====
-import { btnBaseCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const sidebarCSS: string = `
 :host {
@@ -23,7 +23,7 @@ export const sidebarCSS: string = `
 }
 .instance-card-header:hover { background: var(--hover); }
 /* 高亮对齐导航栏选中态口径：--hover 淡底（与文件树悬停同口径，亮色主题不加深）+ 指示边框，文字保持 --txt */
-.instance-card-header.active { background: var(--hover); border-left: 3px solid var(--menu-indicator, var(--accent)); padding-left: 7px; }
+.instance-card-header.active { background: var(--hover); border-left: 3px solid var(--accent); padding-left: 7px; }
 .instance-card-header.active .name { color: var(--txt); }
 /* 涟漪选中效果：与选中底同口径（--hover），避免 accent 强调色 */
 .instance-card-header { position: relative; overflow: hidden; }
@@ -71,4 +71,9 @@ ${FADE_SLIDE_LEFT}
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
+
+/* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
+   覆盖 .instance-card（fadeSlideLeft）/ .sk-line（sk-shimmer）/ .footer-btn 等全部动效，
+   不再逐类登记。 */
+${noAnimationsCSS}
 `;

@@ -59,7 +59,12 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
 /** 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 */
 export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   const score = Math.max(0, Math.min(100, r.score));
-  const color = score >= 80 ? "var(--free)" : score >= 60 ? "var(--tag-amber)" : "var(--paid)";
+  const color =
+    score >= 80
+      ? "var(--status-success)"
+      : score >= 60
+        ? "var(--tag-amber)"
+        : "var(--status-error)";
   const label =
     score >= 80
       ? t("diagnostics.healthGood")

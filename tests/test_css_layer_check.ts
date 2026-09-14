@@ -23,8 +23,11 @@
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
 import {
   expandKeyframeInterpolations,
+  hasMotionDeclaration,
+  hasNoAnimationsBridge,
   readConstLiteral,
   resolveImportAbs,
 } from "../scripts/_lib/css-layer-utils.ts";
@@ -38,8 +41,8 @@ const FSL = "${" + "FADE_SLIDE_LEFT" + "}";
   const css = `import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";\n.log-row { animation: fadeSlideLeft .25s ease both; }\n${FSL}`;
   const out = expandKeyframeInterpolations(css, DIAG_ABS);
   assert.ok(out.includes("@keyframes fadeSlideLeft"), "插值应展开为 @keyframes 定义");
-  assert.ok(!out.includes(FSL), "展开后不应残留 ${FADE_SLIDE_LEFT}");
-  console.log("  ✓ @/ 别名 + ${FADE_SLIDE_LEFT} 展开为 @keyframes");
+  assert.ok(!out.includes(FSL), "展开后不应残留 FSL 占位符");
+  console.log("  ✓ @/ 别名 + FSL 占位符 展开为 @keyframes");
 }
 
 // ── 2. 不存在的常量保持原样（无假阳性）──
@@ -78,4 +81,45 @@ const FSL = "${" + "FADE_SLIDE_LEFT" + "}";
   console.log("  ✓ readConstLiteral 跨行字面量");
 }
 
-console.log("\nOK: css-layer-check 插值展开契约（回归锁 5 条）");
+// ── 6. hasMotionDeclaration / hasNoAnimationsBridge（检查 4 判定语义）──
+// 6a) 动效识别：animation / transition 三兄弟属性位命中
+assert.equal(hasMotionDeclaration(".a { animation: fadeSlideUp .2s }"), true, "animation 应命中");
+assert.equal(hasMotionDeclaration(".a{transition:var(--tr-fast)}"), true, "transition 应命中");
+assert.equal(
+  hasMotionDeclaration(".a { transition-duration: .2s }"),
+  true,
+  "transition-duration 应命中（漏判会让域跳过桥检查）",
+);
+assert.equal(hasMotionDeclaration(".a { color: red }"), false, "无动效不应命中");
+
+// 6b) **自定义属性不得误判**：`--btn-transition:` 是令牌声明，不是动效属性
+//     （历史噪声源：前缀字符类把前面的 `-` 收下即误报整个域「有动效」）
+assert.equal(
+  hasMotionDeclaration("--btn-transition: background-color .15s;"),
+  false,
+  "自定义属性 --btn-transition 不得判为动效",
+);
+
+// 6c) 桥识别：共享片段**实体** / 手写通配 → 放行
+//     用真实片段而非手打样例断言：片段若被改回逐类登记形态，本用例立刻报红
+//     （这是「通配桥」这条不变量唯一的机器锚点）。
+assert.equal(
+  hasNoAnimationsBridge(noAnimationsCSS),
+  true,
+  "共享片段 noAnimationsCSS 实体应判为有桥",
+);
+assert.equal(
+  hasNoAnimationsBridge(":host-context(.no-animations) * { animation: none }"),
+  true,
+  "手写等价通配应放行",
+);
+
+// 6d) **逐类登记判「无桥」**（闸门存在的理由：逼出通配形态，杜绝新增动画漏登记）
+assert.equal(
+  hasNoAnimationsBridge(":host-context(.no-animations) .page { animation: none }"),
+  false,
+  "逐类登记不算有桥（漂移源，正是要拦的形态）",
+);
+console.log("  ✓ 检查 4 判定：动效识别（含自定义属性豁免）+ 桥通配/逐类三态");
+
+console.log("\nOK: css-layer-check 插值展开契约（回归锁 6 条）");

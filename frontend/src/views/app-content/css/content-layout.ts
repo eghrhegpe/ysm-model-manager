@@ -5,7 +5,7 @@
 // 故这些 keyframes 必须在本 shadow 层本地重定义（见下方 contentLayoutCSS 内的 @keyframes 块），
 // 引用它们的 .stg-card / .setting-row / .gh-card / .repo-tab / .recy-item 等规则才能产生动画。
 // components.css 的全局副本仅服务 document 层光 DOM（dialog 等）。
-import { btnBaseCSS, focusVisibleCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 
 export const contentLayoutCSS: string = `
@@ -21,7 +21,6 @@ export const contentLayoutCSS: string = `
 #dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }
 @keyframes pageIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 .page { flex:1; display:flex; flex-direction:column; overflow:hidden; animation: pageIn .2s ease; }
-:host-context(.no-animations) .page { animation: none !important; }
 @keyframes ring-spin { to{transform:rotate(360deg)} }
 @keyframes card-in { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 @keyframes detail-in { from{opacity:0;transform:scale(.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
@@ -59,6 +58,11 @@ ${FADE_SLIDE_LEFT}
 /* ===== 统一按钮系统 .btn-base（utils/dom/css.ts 注入） ===== */
 ${btnBaseCSS}
 ${focusVisibleCSS}
+
+/* ===== .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
+   本域任一动效元素均被通配符 * 覆盖，故不再逐类登记 :host-context 选择器。
+   桥置于 layout 叶（内容基础层），聚合层 content-css.ts 被哨兵测试锁为 7 叶纯拼接。 */
+${noAnimationsCSS}
 
 /* ===== 旧按钮兼容层 ===== */
 /* .hdr-btn 已删除：app-tree/app-tree-styles.ts 有独立定义且 tpl 已改用 .btn-base（见其 L41 注释），content-layout 内为死代码 */

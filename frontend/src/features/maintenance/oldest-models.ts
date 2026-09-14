@@ -58,10 +58,10 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
     score,
     healthColor:
       score >= SCORE_HEALTH_GOOD
-        ? "var(--free)"
+        ? "var(--status-success)"
         : score >= SCORE_HEALTH_OK
           ? "var(--tag-amber)"
-          : "var(--paid)",
+          : "var(--status-error)",
     healthLabel:
       score >= SCORE_HEALTH_GOOD
         ? t("oldest.health.good")

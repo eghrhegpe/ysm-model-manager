@@ -90,7 +90,14 @@ el.style.animationDelay = `${stagger(i)}ms`;
 ### 负面 / 已知例外
 - **模型树文件夹展开子行**：原计划的淡入动画**已禁用**——`animation-fill-mode: both` 叠加虚拟滚动 `innerHTML` 替换会导致滚动闪烁（`bug-chronicle.md` 记录），属 §2.4 约束 3 的直接后果，非遗漏；
 - 约束 4 要求 Shadow DOM 组件各自定义动画，对组件库有少量重复样板成本；
-- 存量非规范动画（v1.7.6 前的散落实现）需随改随迁，迁移周期长。
+- 存量非规范动画（v1.7.6 前的散落实现）需随改随迁，迁移周期长；
+- **`.no-animations` 改为全域零动画（2026-09 收敛）**：实现从「文档层逐类白名单 + shadow 各自
+  `:host-context` 逐类登记」改为**双层通配**——文档层 `variables.css` 的 `.no-animations *`（含
+  `::before/::after`）+ shadow 层 `utils/dom/css.ts` 的 `noAnimationsCSS` 片段。副作用：布局过渡
+  （`#root` 的 `grid-template-columns`，即侧栏折叠）也一并即时化——这是 §2.4 约束 1「用户关闭时
+  零动画」的字面执行；原「仅禁装饰性动效、保留布局过渡」的注释口径作废。白名单失效模式（新组件
+  漏登记 ⇒ 开关静默失效；且 `.menu`/`.toast`/`.sm-*` 等条目住在 shadow 内本就是死规则）由
+  `scripts/css-layer-check.ts` 检查 4 阻断堵住。
 
 ---
 

@@ -132,7 +132,7 @@ status: active
 - `BoneTransform` 类型被 `utils/model2d.ts` 引用（动画驱动 2D 姿态）
 - `animateNumber` 消费方：`app-tree/render.ts`、`app-sidebar/events.ts`（统计数字滚动）
 - `stagger` 消费方：`app-content/index.ts`、`app-sync-manager/tpl.ts`、`dialogs/batch-rename.ts`、`features/community/render.ts`、`app-content/site/render.ts`（卡片入场）
-- 全局开关：`app-modules.ts` 按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧对卡片/弹窗/主题动效统一 `animation: none !important`
+- 全局开关：`views/app-content/settings/ui-prefs.ts`（经 `app-modules.ts` 启动链调用）按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧为**双层通配**——文档层 `variables.css` 的 `.no-animations *`，Shadow 层各域 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`（`:host-context(.no-animations) *`）。漏带片段的 shadow 域由 `scripts/css-layer-check.ts` 检查 4 阻断（ADR-015 §2.4 约束 1 的可执行断言）
 - **Molang 消费方**：
   - 解析阶段（`animation.ts`）：`parseAxisItem` / `parseKeyValue` / `extractKeyframe` 调用 `molang.ts` 的 `compileMolang`
   - 求值阶段（`animation-evaluator.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`
@@ -163,7 +163,7 @@ status: active
 
 - Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）；注意实现细节——**直接字符串帧被跳过 ✓，但数组含 Molang 轴被零填充保留**（`animation.ts` Molang 跳过逻辑），`hasMolangInChannelData`（`animation.ts` Molang 检测函数）只识别字符串值（对象/数组/纯数字键均不会被判为 Molang，属宽松误判风险）；**Molang 只是标记不拦截求值**（零填充帧仍被当真实关键帧插值，P3 观察）
 - evaluateKeyframes 对空数组/越界时间返回端点值或 null，不抛异常（`t=NaN` 时二分插值产生 NaN 向量，无守卫，P3 观察）
-- `no-animations` 开关作用于 CSS animation；JS 驱动的动画（模型动画求值/数字滚动）不受该 class 影响，属模型数据呈现而非装饰动效
+- `no-animations` 开关作用于 CSS animation；JS 驱动的动画（模型动画求值/数字滚动）不受该 class 影响，属模型数据呈现而非装饰动效。2026-09 通配化后 `transition`（含 `#root` 布局过渡）亦一并即时化——「零动画」的字面执行，侧栏折叠由滑入改为瞬切
 - **molangjs 全容错原语（2026-08-25 实测）**：molangjs 用容错解析器——对 `"("`、`"@@"`、`"1..2"`、`"query."` 等任意非法/残缺 token 都不抛错、直接返回 0。故 `compileMolang` 走「解析异常→返回 null」的路径在真实世界中几乎不可达，`parseAnimationControllerJSON` 上报「转换条件编译失败」与运行时「condition=null 跳过不触发」均为几乎不触发的防御分支（测试用构造对象直接命中），属低价值死防御，可作后续清理候选
 - **molangjs 全容错**（见上）亦意味着 Molang 条件「真值」判定需注意：未识别表达式稳定返回 0 = 恒假，不会误触发转换
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建

@@ -42,18 +42,19 @@ status: active
 
 ## 概览
 
-两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base` 与通用 focus-visible 规则；`views/app-tree/app-tree-styles.ts` 导出 app-tree 组件的完整样式 `treeCSS`（内联插入 `${btnBaseCSS}` 复用按钮体系）。样式独立成文件可避免 JS 热更新时重编译 CSS，所有颜色/间距/字号均消费 CSS 变量，随主题切换自动适配。
+两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base`、通用 focus-visible 规则、`.ws-icon` 图标规则与 `.no-animations` 通配桥；`views/app-tree/app-tree-styles.ts` 导出 app-tree 组件的完整样式 `treeCSS`（内联插入 `${btnBaseCSS}` 复用按钮体系）。样式独立成文件可避免 JS 热更新时重编译 CSS，所有颜色/间距/字号均消费 CSS 变量，随主题切换自动适配。
 
 ## 核心职责
 
 - `btnBaseCSS`：`.btn-base` 基础按钮（hover/active/focus-visible/disabled 全状态）+ 尺寸变体（`.sm`/`.lg`）+ 语义变体（`.primary`/`.danger`/`.accent`/`.warn`），padding/圆角/过渡全走 `var(--btn-*)` 变量
 - `focusVisibleCSS`：Shadow DOM 内通用 `:focus-visible` 焦点环（`color-mix` 取 `var(--accent)` 30% 透明）
 - `treeCSS`：app-tree 完整样式——头部工具栏（`.hdr`/搜索框/排序）、高级筛选面板（`.adv-filter`/`.af-inp`）、虚拟滚动容器（`.vs-wrap`）、作者分组行（`.fh`）与文件行（`.fl`）及紧凑列表模式（`.fh-list`/`.fl-list`）、启用开关（`.ck` 含 partial 半态）、选中/悬停/锁定/`.ban` 态、元数据彩色标签（`.tag-author`/`.tag-work`/`.tag-date`，走 `var(--meta-*)`）、悬停快捷操作（`.hover-actions`）、下拉菜单（`.dd-menu`/`.batch-menu`）、空态（`.empty`）
-- `no-animations` 响应：`treeCSS` 末尾对 `.fl`/`.fh` 强制 `animation: none !important`
+- `noAnimationsCSS`：`.no-animations` 在 Shadow DOM 内的通配桥（`:host-context(.no-animations) *` → `animation: none` / `transition-duration: 0s` / `transition-delay: 0s` 全 `!important`）。**凡自带动画或过渡的 shadow 域必须拼接本片段**——文档层通配不穿透 shadow 边界；漏带由 `scripts/css-layer-check.ts` 检查 4 阻断
+- `wsIconCSS`：`.ws-icon` 尺寸（`1em`）与着色（`currentColor`），ADR-238 的唯一定义出处
 
 ## 对外 API / 入口
 
-- 导出：`btnBaseCSS: string`、`focusVisibleCSS: string`（frontend/src/utils/dom/css.ts）；`treeCSS: string`（frontend/src/views/app-tree/app-tree-styles.ts）
+- 导出：`btnBaseCSS: string`、`focusVisibleCSS: string`、`wsIconCSS: string`、`noAnimationsCSS: string`（frontend/src/utils/dom/css.ts）；`treeCSS: string`（frontend/src/views/app-tree/app-tree-styles.ts）
 - 消费方式：组件在 Shadow DOM 内经 `adoptedStyleSheets` 或 `<style>` 注入（如 app-tree 注入 `treeCSS`）
 - 无 bus 事件、无 Go 调用
 
@@ -68,7 +69,7 @@ status: active
 - 所有颜色/尺寸必须走 CSS 变量（`var(--txt)`/`var(--bd)`/`var(--btn-*)` 等），禁止引入硬编码主题色（治理红线 §3.3；`#a6e3a1` 等少量状态色为历史存量）。**`--accent-btn-*` 三变量已补入默认 cyber 主题**（P2 修复：原仅在 warm/pro/sakura/ocean/mint 定义，默认暗色主题下 `.btn-base.accent` 主操作按钮静默失去 accent 样式）
 - 新增按钮样式必须扩展 `.btn-base` 变体，禁止另起一套按钮类（UI-Design.md 唯一设计规范）；`components.css` 存在 `.btn-base` 平行副本（light DOM 用，primary:hover 混色与 css.ts 分叉，P3 观察待统一）
 - `treeCSS` 内联 `${btnBaseCSS}` **与 `${focusVisibleCSS}`**（P2 修复：原仅内联按钮体系，`.srch-inp`/`.sort-sel` 显式 `outline:none` 导致键盘聚焦无可见焦点环，a11y 缺口）；保持按钮体系单一来源，不得复制改写
-- 动画必须可被 `no-animations` 类关闭——**Shadow DOM 内必须用 `:host-context(.no-animations)`**（P2 修复：该类挂在 documentElement 上，后代选择器不能跨界上溯 shadow 边界）。**2026-08-09 已把 content-css.ts（4 处）/app-nav（logo-icon）/app-preview（css.ts）的 `.no-animations` 后代选择器全部改为 `:host-context`**——原仅 app-tree 一处收口，其余 6 处跨 shadow 永不生效（P2 修复扩大）
+- 动画必须可被 `no-animations` 类关闭，且实现是**双层通配**而非逐类白名单：文档层 `variables.css` 的 `.no-animations *`（含 `::before/::after`）覆盖光 DOM 全域；Shadow 层各域 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`（`:host-context(.no-animations) *`）。**禁止新增逐类 `.no-animations .foo` 条目**——2026-09 核实：原文档层白名单里的 `.menu` / `.toast` / `.sm-*` 住在 shadow 内部，文档选择器恒不匹配（死规则），实测 app-toast（toastIn）、context-menu（menuPop/itemSlideIn）、app-sidebar（instance-card/sk-shimmer）、app-content（.cr-*/.stg-*/.recy-item/.gh-card…）的动画都关不掉；白名单还必漏新组件（漏登记无警报，承诺退化成假话）。机检 `scripts/css-layer-check.ts` 检查 4：含 `animation`/`transition` 的 shadow 域无桥 → ERROR 阻断。历史：2026-08-09 曾把 content-css/app-nav/app-preview 的 `.no-animations` 后代选择器改为 `:host-context`，但仍逐类登记，覆盖不全
 - **`--bg2` 幽灵变量**（P3 观察）：`app-tree-styles.ts` `.adv-filter` 消费 `var(--bg2)` 全库无定义（content-css.ts 已用 `var(--bg2,transparent)` fallback 佐证）——计算值失效静默降级，待定义或补 fallback
 - **@keyframes 不穿 Shadow DOM 边界**（2026-08-24 铁律，区别于 CSS 变量）：CSS 自定义属性可跨界上溯/下穿 shadow，但 `@keyframes` 只能在其定义的同一 shadow 树（或 document 层 light DOM）内被 `animation` 引用生效。任何 Shadow DOM 组件若 `animation: <name>` 引用一个仅定义在 `frontend/css/components.css`（全局 `<link>`，document 层）的 keyframe，则该动画**静默失效**（`getAnimations()` 返回 0，无动画不破功能故长期潜伏）。修复范式：把所需 keyframe 复制进该 shadow 层的 CSS 源（如 `contentLayoutCSS` / `sidebar-css.ts`），全局副本保留给 light DOM 的 dialog 用。机检 `scripts/css-layer-check.ts`（pre-push 阻断）已覆盖此断言
 

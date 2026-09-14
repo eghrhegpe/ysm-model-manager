@@ -53,6 +53,7 @@ import {
 } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { slideMenuStyleSheet } from "@/preview-3d/menu/slide-menu-styles.ts";
+import { createInstallableStyles } from "@/preview-3d/menu/style-install.ts";
 import {
   type BoneMaps,
   type BoneSelectInfo,
@@ -60,6 +61,7 @@ import {
   loadTdRotMode,
 } from "@/preview-3d/mesh/model3d.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { noAnimationsCSS } from "@/utils/dom/css.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
@@ -551,6 +553,21 @@ function assembleShell(ctx: MountCtx): AssembledShell {
 }
 
 /**
+ * `.no-animations` 通配桥的 CSSStyleSheet（ADR-015 §2.4 约束 1：用户关闭时零动画）。
+ *
+ * 为什么 3D overlay 也要自带：`.no-animations` 类挂 `documentElement`，而文档层通配规则
+ * **不穿透 Shadow 边界**（`preview-shell.ts` 为本 overlay 建了独立 shadow root），
+ * 故须显式 adopt——否则「关闭动画」在 3D HUD 上静默失效。
+ * 复用 style-install 脚手架（勿手写 CSSStyleSheet + try/catch 三件套，见该文件头注释）。
+ * 降级路径（无 shadow → overlay 本体在 light DOM）由文档层通配覆盖，故无需 install()。
+ */
+const noAnimationsStyles = createInstallableStyles(
+  noAnimationsCSS,
+  "data-ui-no-animations",
+  "ui-no-animations",
+);
+
+/**
  * 单例外壳 DOM 装配的适配层：把 core 持有的样式表 / i18n 文案 / 样式目标注入点
  * 打包传给 infra 的 `ensureOverlayShell`（DOM 外壳本体与单例已归 preview-shell.ts）。
  * 焦点陷阱在此安装（依赖 ctx.focusTrap，属会话态而非外壳单例态）。
@@ -561,7 +578,7 @@ function assembleOverlayShell(ctx: MountCtx): {
   root: HTMLElement | ShadowRoot;
 } {
   const shell = ensureOverlayShell({
-    styleSheets: [componentsStyleSheet, slideMenuStyleSheet],
+    styleSheets: [componentsStyleSheet, slideMenuStyleSheet, noAnimationsStyles.sheet],
     ariaLabel: t("preview.title3d"),
     setStyleTarget: setOverlayStyleTarget,
     onStyleError: (err) =>

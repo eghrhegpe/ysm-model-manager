@@ -38,7 +38,7 @@ export const STATUS_ICON: Record<string, string> = {
 };
 
 export const STATUS_COLOR: Record<string, string> = {
-  synced: "var(--sz-green)",
+  synced: "var(--size-ok)",
   missing: "var(--accent)",
   diverged: "var(--accent)",
   disabled: "var(--muted)",

@@ -45,10 +45,10 @@ function buildHeatmapHtml(entries: ModelEntry[]): string {
           c === 0
             ? "var(--bd)"
             : pct > HEATMAP_STRONG
-              ? "var(--free)"
+              ? "var(--status-success)"
               : pct > HEATMAP_MID
                 ? "var(--tag-amber)"
-                : "var(--paid)";
+                : "var(--status-error)";
         const nowYear = new Date().getFullYear();
         const monthLabel = esc(
           new Date(nowYear, i, 1).toLocaleDateString("zh-CN", {

@@ -1,5 +1,5 @@
 // ===== app-nav 样式与模板 =====
-import { wsIconCSS } from "@/utils/dom/css.ts";
+import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 
 export const navCSS: string = `
 :host {
@@ -60,7 +60,6 @@ export const navCSS: string = `
   50% { text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
 }
 .logo-icon { animation: logoBreathe 3s ease-in-out infinite; }
-:host-context(.no-animations) .logo-icon { animation: none !important; }
 /* 「🧭 导航栏」行：label 撑满，折叠按钮置于行尾（紧贴导航项上方，直觉位置） */
 .menu-head { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 /* 折叠/展开按钮：常驻——折叠态窄条上仍可见，防意外找不回导航 */
@@ -94,7 +93,7 @@ export const navCSS: string = `
 .nav-item.active {
   background: var(--hover);
   color: var(--txt);
-  border-left: 3px solid var(--menu-indicator, var(--accent));
+  border-left: 3px solid var(--accent);
   padding-left: 7px;
 }
 .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
@@ -124,4 +123,7 @@ export const navCSS: string = `
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
+
+/* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts） */
+${noAnimationsCSS}
 `;

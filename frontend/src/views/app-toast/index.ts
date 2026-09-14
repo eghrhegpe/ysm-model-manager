@@ -5,7 +5,7 @@ import { bus } from "@/bus";
 // 命名避开 core 的 tr（缺失键兜底安全取值）语义撞名（ADR-207 D3）
 import { t as translate } from "@/core/i18n/t.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
-import { wsIconCSS } from "@/utils/dom/css.ts";
+import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -54,8 +54,8 @@ class AppToast extends WebComponentBase {
           border: 1px solid var(--bd); pointer-events: auto;
           font-family: var(--font-ui);
         }
-        .toast.error { border-left: 3px solid var(--paid); }
-        .toast.success { border-left: 3px solid var(--free); }
+        .toast.error { border-left: 3px solid var(--status-error); }
+        .toast.success { border-left: 3px solid var(--status-success); }
         .toast.warn { border-left: 3px solid var(--status-error); }
         .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
@@ -66,6 +66,10 @@ class AppToast extends WebComponentBase {
         @keyframes toastIn { 0% { transform: translateY(20px) scale(.95); opacity: 0; } 60% { transform: translateY(-4px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
         ${wsIconCSS}
+        /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
+           覆盖 .toast（toastIn）/ slideOut 等动效；此前文档层白名单的 .toast 选择器
+           住在 shadow 内，恒不匹配，开关在本域静默失效。 */
+        ${noAnimationsCSS}
       </style>
       <div id="c" class="toast-container" role="status" aria-live="polite"></div>
     `;

@@ -1,5 +1,5 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
-import { btnBaseCSS, focusVisibleCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 export const treeCSS: string = `
 :host {
   display: flex;
@@ -115,8 +115,8 @@ ${focusVisibleCSS}
 .fh-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
 .fh-list .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fl-list .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; }
-.fl-list .sz.sz-green { color: var(--sz-green,#a6e3a1); }
-.fl-list .sz.sz-red { color: var(--sz-red,#f38ba8); }
+.fl-list .sz.sz-green { color: var(--size-ok,#a6e3a1); }
+.fl-list .sz.sz-red { color: var(--size-large,#f38ba8); }
 .fl-list .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
 .fl-list .ficon { font-size: var(--fs-sm); flex-shrink: 0; }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius:var(--radius-md); background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
@@ -133,8 +133,8 @@ ${focusVisibleCSS}
 .fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
 .fl .nm.ysm { color: var(--txt); }
 .fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.fl .sz.sz-green { color: var(--sz-green,#a6e3a1); }
-.fl .sz.sz-red { color: var(--sz-red,#f38ba8); }
+.fl .sz.sz-green { color: var(--size-ok,#a6e3a1); }
+.fl .sz.sz-red { color: var(--size-large,#f38ba8); }
 .fl .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
 .fl .dt { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; flex-shrink: 0; }
 /* 悬停快捷操作 */
@@ -150,11 +150,12 @@ ${focusVisibleCSS}
 /* 行入场动画 — 暂时移除，排查滚动闪烁 */
 /* @keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } } */
 /* .fl,.fh { animation: treeRowIn .2s ease forwards; } */
-/* P2 修复：no-animations 类挂在 documentElement 上，Shadow DOM 内后代选择器无法
-   跨界上溯命中（app-modules.ts 只 toggle 在 <html>），必须用 :host-context 才能命中 */
-:host-context(.no-animations) .fl,
-:host-context(.no-animations) .fh { animation: none !important; }
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
+
+/* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
+   取代原逐类 :host-context(.no-animations) .fl/.fh（treeRowIn 已注释移除，本域仍有多处
+   transition，且通配桥覆盖未来新增动效——无需再逐类登记）。 */
+${noAnimationsCSS}
 `;

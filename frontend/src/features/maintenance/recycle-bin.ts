@@ -250,7 +250,7 @@ function buildLoadRecycleBin(
         shell.cleanupActions.current();
         shell.cleanupActions.current = null;
       }
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
+      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--status-error);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
       if (count) count.textContent = t("common.loadFailed");
     }
   };

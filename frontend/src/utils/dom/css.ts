@@ -51,3 +51,32 @@ export const wsIconCSS = `
 .ws-icon { width:1em; height:1em; vertical-align:-.15em; fill:none; stroke:currentColor; flex-shrink:0; }
 .ws-icon[fill] { fill:currentColor; stroke:none; }
 `;
+
+/**
+ * `.no-animations` 在 Shadow DOM 内的通配桥（ADR-015 §2.4 约束 1：用户关闭时零动画）。
+ *
+ * ⚠️ 为什么必须每个 Shadow 根各自 adopt：`.no-animations` 类挂在 `documentElement`
+ * （见 `views/app-content/settings/ui-prefs.ts`），而 `frontend/css/variables.css` 的
+ * 文档层通配 `.no-animations *` **不穿透 Shadow 边界**——CSS 规则不可穿透，只有自定义
+ * 属性（var()）能。历史实现是文档层逐类白名单（`.no-animations .menu` / `.toast` /
+ * `.sm-*` …），这些类住在 shadow 内部，选择器永远匹配不到，属恒死规则：开关在
+ * app-toast / context-menu / app-sidebar / app-content 上静默失效（2026-09 核实）。
+ *
+ * 故凡自带动画或过渡的 Web Component，其 shadow 根样式必须含本串。与 `wsIconCSS`
+ * 同一套「各自 adopt，漏带即失效」的机制——区别是本项有闸：
+ * `scripts/css-layer-check.ts` 检查 4 对「shadow 域有 animation/transition 却无桥」
+ * 报 ERROR 阻断，新增视图漏带会在 pre-push 被拦下。
+ *
+ * `:host-context()` 命中宿主祖先链上的 `.no-animations`，`*` 覆盖 shadow 树内全部元素
+ * 与伪元素，故**无需再逐类登记**——这是「不再有假开关」的关键。
+ */
+export const noAnimationsCSS = `
+:host-context(.no-animations),
+:host-context(.no-animations) *,
+:host-context(.no-animations) *::before,
+:host-context(.no-animations) *::after {
+  animation: none !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+`;

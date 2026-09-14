@@ -215,7 +215,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/context-menu/index.ts` | 69 |
+| connectedCallback | `frontend/src/views/context-menu/index.ts` | 70 |
 
 ### `model:select`
 
@@ -443,7 +443,7 @@
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 209 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 240 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 250 |
-| mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 668 |
+| mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 685 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 166 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
@@ -536,9 +536,9 @@
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
-| show | `frontend/src/views/app-toast/index.ts` | 139 |
-| show | `frontend/src/views/app-toast/index.ts` | 158 |
-| show | `frontend/src/views/app-toast/index.ts` | 167 |
+| show | `frontend/src/views/app-toast/index.ts` | 143 |
+| show | `frontend/src/views/app-toast/index.ts` | 162 |
+| show | `frontend/src/views/app-toast/index.ts` | 171 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 129 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 153 |
@@ -592,7 +592,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 75 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 79 |
 
 ### `tree:reload`
 

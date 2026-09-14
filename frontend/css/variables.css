@@ -12,6 +12,9 @@
  * - 亮色主题 --accent 取深色系（文字对比度 ≥4.5:1 on --bg）；深色主题取亮色系
  * - --txt/--muted 的色相必须与 --accent 同色系（禁止冷灰混入暖色主题等脱节）
  * - --bd 一律 color-mix 派生自 --accent（改 accent 无需同步边框）
+ * - 左侧高亮指示条（导航 / 实例卡选中态）**直接消费 --accent**：原 --menu-indicator 在
+ *   六主题取值恒等于各自 --accent，属冗余令牌，2026-09 收敛删除（它曾是六处手写死值，
+ *   正是「改 accent 无需同步」承诺的破口）
  * - 新增变量时在对应主题中同步定义
  *
  * 变量分类：
@@ -41,7 +44,6 @@
   --txt: #e0d5f5;
   --muted: #8b7fad;
   --bd: color-mix(in srgb, var(--accent) 10%, transparent);
-  --menu-indicator: #9575cd;
   --meta-author: #66d9ef;
   --meta-work: #bd93f9;
   --meta-date: #f1fa8c;
@@ -77,7 +79,6 @@
   --bd: color-mix(in srgb, var(--accent) 12%, transparent);
   --card-shadow: var(--shadow-sm);
   --card-shadow-hover: var(--shadow-md);
-  --menu-indicator: #8b4513;
   --meta-author: #b5651d;
   --meta-work: #9b4d2a;
   --meta-date: #a0866a;
@@ -101,7 +102,6 @@
   --txt: #f0e6e0;
   --muted: #a09080;
   --bd: color-mix(in srgb, var(--accent) 10%, transparent);
-  --menu-indicator: #ff8a65;
   --meta-author: #ff8a65;
   --meta-work: #b0bec5;
   --meta-date: #90a4ae;
@@ -126,7 +126,6 @@
   /* --muted 色相须属 accent 粉色系（子代理审计 2026-08-15：原 #78909c 冷蓝灰 WCAG 3.06:1 + 色系脱节） */
   --muted: #7d5a6b;
   --bd: color-mix(in srgb, var(--accent) 12%, transparent);
-  --menu-indicator: #d81b60;
   --meta-author: #d81b60;
   --meta-work: #7b1fa2;
   --meta-date: #ef6c00;
@@ -150,7 +149,6 @@
   --txt: #c5d8e8;
   --muted: #5f8a87;
   --bd: color-mix(in srgb, var(--accent) 12%, transparent);
-  --menu-indicator: #9fa8da;
   --meta-author: #42a5f5;
   --meta-work: #7e57c2;
   --meta-date: #ffb74d;
@@ -175,7 +173,6 @@
   --txt: #2c3e3a;
   --muted: #4d7163;
   --bd: color-mix(in srgb, var(--accent) 12%, transparent);
-  --menu-indicator: #00695c;
   --meta-author: #4db6ac;
   --meta-work: #7986cb;
   --meta-date: #ffb74d;
@@ -284,68 +281,30 @@
   --z-fullscreen: 9999;     /* 全屏预览、拖拽覆盖层 */
 }
 
-/* 减少动画模式：仅禁用 hover/装饰性动画，保留布局过渡 */
-.no-animations .gh-card,
-.no-animations .model-card,
-.no-animations .model-card-sm,
-.no-animations .rec-card,
-.no-animations .vm-card,
-.no-animations .cr-creator-card,
-.no-animations .repo-tab,
-.no-animations .repo-subtab,
-.no-animations .diag-btn,
-.no-animations .hdr-btn,
-.no-animations .btn,
-.no-animations .tb-btn,
-.no-animations .cr-avatar,
-.no-animations .instance-card,
-.no-animations .instance-card-header,
-.no-animations .logo-icon,
-.no-animations .toast,
-.no-animations .theme-ripple-active,
-.no-animations .dlg-overlay,
-.no-animations .dlg-box,
-.no-animations .page,
-.no-animations .content > *,
-.no-animations .btn-base,
-.no-animations #set-advanced-panel,
-.no-animations .sm-list {
-  transition-duration: 0s !important;
+/* ===== 减少动画开关（无障碍 + ui-prefs「关闭动画」）=====
+ * 依据 ADR-015 §2.4 约束 1：用户关闭时**零动画**。
+ *
+ * 为什么是通配而不是逐类白名单（2026-09 收敛，原白名单 30+ 类名已删）：
+ *   ① 白名单的真实失效模式是「新组件声明了动画、忘了登记类名」——开关静默失效，
+ *      而漏登记无人报警（承诺「所有动画都可关闭」就成了假话）；
+ *   ② 白名单里 .menu / .toast / .sm-* 等类位于 Shadow DOM 内，文档层选择器对
+ *      shadow 内部**永远不匹配**（规则不穿透 shadow 边界，只有 var() 能穿透），
+ *      这些条目本就是死规则——白名单连「看得见的动画」都没盖全。
+ * 通配 + !important 覆盖文档树全域（含 ::before/::after 伪元素，如 cyber 网格背景）。
+ * Shadow 组件内部由 utils/dom/css.ts 的 noAnimationsCSS 片段
+ * （`:host-context(.no-animations) *`）兜底，两端合计无盲区；漏带该片段的 shadow 域
+ * 由 scripts/css-layer-check.ts 检查 4 阻断（不再依赖人记得登记）。
+ * 安全前提：全仓无 transitionend / animationend 监听，零时长过渡无功能性依赖（2026-09 核实）。
+ * 副作用说明：布局过渡（#root 的 grid-template-columns）也一并即时化——这是「零动画」
+ * 的字面执行，侧栏折叠从滑入改为瞬切。 */
+.no-animations,
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
   animation: none !important;
-}
-
-.no-animations .sm-item,
-.no-animations .sm-item-btn,
-.no-animations .sm-tab,
-.no-animations .sm-status-tab,
-.no-animations .sm-empty {
   transition-duration: 0s !important;
-  animation: none !important;
+  transition-delay: 0s !important;
 }
-
-/* 网格背景和涟漪动画单独处理 */
-.no-animations.theme-cyber #root::before { animation: none !important; }
-.no-animations .menu { animation: none !important; }
-.no-animations .menu .item { animation: none !important; }
-/* 通用 stagger 入场 */
-.no-animations .stagger-in > * { animation: none !important; }
-/* 导入队列项目滑入 */
-.no-animations #dl-imported-list > div { animation: none !important; }
-/* 创作者卡片筛选淡出 */
-.no-animations .cr-creator-card--grid.cr-card-hidden { transition: none !important; }
-/* 批量重命名行入场 */
-.no-animations .br-row { animation: none !important; }
-/* 诊断面板切换 */
-.no-animations .diag-panel { animation: none !important; }
-/* 回收站项目 */
-.no-animations .recy-item { animation: none !important; }
-.no-animations .recy-item.leaving { transition: none !important; }
-/* 资源管理器 */
-.no-animations .rm-item { animation: none !important; }
-.no-animations .rm-content { animation: none !important; }
-/* 对话框退场动画 */
-.no-animations .dlg-overlay.dlg-closing { animation: none !important; }
-.no-animations .dlg-overlay.dlg-closing .dlg-box { animation: none !important; }
 
 /* ===== 无障碍支持：焦点状态 ===== */
 /* 跳过链接：默认隐藏（屏外），获得焦点时显现 */
@@ -400,10 +359,3 @@ body {
   overflow: hidden;
 }
 
-/* ===== 向后兼容别名（逐步迁移后可删除） ===== */
-:root {
-  --free: var(--status-success);     /* @deprecated 使用 --status-success */
-  --paid: var(--status-error);       /* @deprecated 使用 --status-error */
-  --sz-green: var(--size-ok);        /* @deprecated 使用 --size-ok */
-  --sz-red: var(--size-large);       /* @deprecated 使用 --size-large */
-}

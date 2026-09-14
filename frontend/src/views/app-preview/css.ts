@@ -2,7 +2,7 @@
 // ADR-238：本串被 app-preview 的 shadow 根 adopt。UI_ICONS 的 SVG 依赖 .ws-icon
 // 尺寸/着色规则，而 CSS 不穿透 shadow 边界 ⇒ 必须就地带上 wsIconCSS；
 // 缺它时图标退回 viewBox 默认 24×24，在 12px 按钮里显巨块（.pv-tab 一族即此症状）。
-import { wsIconCSS } from "@/utils/dom/css.ts";
+import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 
 export const previewCSS: string = `
 :host {
@@ -18,7 +18,6 @@ export const previewCSS: string = `
 .content { padding: 10px; overflow-y: auto; flex: 1; }
 @keyframes previewIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .content > * { animation: previewIn .2s ease; }
-:host-context(.no-animations) .content > * { animation: none !important; }
 h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 8px; }
 .dp-placeholder { text-align: center; padding: 24px 0; color: var(--muted); }
 /* 紧凑头部态（maid 封面/文件名区）：压缩 24px 空态留白，贴近下方详情卡 */
@@ -96,4 +95,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
+
+/* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts） */
+${noAnimationsCSS}
 `;

@@ -43,7 +43,7 @@
 
 - 宽度 **160px**（固定）
 - 每个导航项：图标 + 文字，hover 背景变亮
-- 当前页有左侧高亮指示条（`--menu-indicator`）
+- 当前页有左侧高亮指示条（直接消费 `--accent`；原 `--menu-indicator` 六主题取值恒等于各自 accent，属冗余令牌，2026-09 收敛删除）
 - 无子导航，扁平结构
 
 ### 2.3 卡片
@@ -93,13 +93,18 @@
 ### 语义色
 
 ```css
---free:     /* 免费/成功/可用 */ --paid: /* 付费/错误/危险 */
-  --sz-green: /* 文件大小 <1MB */ --sz-red: /* 文件大小 >3MB */
+--status-success: /* 成功/免费/可用 */ --status-error: /* 错误/危险/付费 */
+  --size-ok: /* 文件大小正常 */ --size-large: /* 文件大小过大 */
   --meta-author: /* 作者姓名 */ --meta-work: /* 作品相关 */
   --meta-date: /* 日期相关 */;
 ```
 
 **关键规则**：语义色在浅色主题下用深色值，深色主题下用亮色值。永远不做 `color: #cdd6f4` 之类的硬编码。
+
+> **v1.6.0 兼容别名已退役（2026-09）**：`--free` / `--paid` / `--sz-green` / `--sz-red` 自 v1.6.0 起
+> 标注 `@deprecated`，但全仓仍有 13 个文件在消费——「废弃」形同虚设。2026-09 已全量迁移到上表规范
+> 令牌并删除声明块。新代码只用规范名（1:1 映射：`--free`→`--status-success`、`--paid`→`--status-error`、
+> `--sz-green`→`--size-ok`、`--sz-red`→`--size-large`，像素等价）。
 
 ---
 
@@ -285,6 +290,13 @@ style="animation-delay:${stagger(i)}ms"
 2. 优先使用 `transform` / `opacity`（GPU 合成层，不触发重排）
 3. 禁止在虚拟滚动组件上使用 `height` / `max-height` 过渡（与 `innerHTML` 替换冲突，触发滚动闪烁，见 `docs/archive/bug-chronicle.md`）
 4. Shadow DOM 组件的动画须在各自 `<style>` 内定义，不依赖全局样式
+5. `.no-animations` 的实现是**双层通配**，不是逐类白名单：
+   - 文档层：`variables.css` 的 `.no-animations *`（含 `::before/::after`）→ 全域零动画、零过渡；
+   - Shadow 层：`utils/dom/css.ts` 的 `noAnimationsCSS`（`:host-context(.no-animations) *`），每个 shadow 根各自 adopt。
+
+   **禁止新增逐类 `.no-animations .foo` 条目**：白名单必漏（新组件忘登记 ⇒ 假开关），且文档层
+   选择器本就匹配不到 shadow 内部（历史白名单里的 `.menu` / `.toast` / `.sm-*` 都是死规则）。
+   漏带片段由 `css-layer-check` 检查 4 阻断。
 
 ---
 
@@ -373,17 +385,25 @@ constructor() {
 
 ### Shadow DOM 共享样式
 
-`shared-styles.ts` 导出可复用的 CSS 片段，供各 Shadow DOM 组件 import：
+`frontend/src/utils/dom/css.ts` 导出可复用的 CSS 片段，供各 Shadow DOM 组件 import 拼接：
 
 ```ts
-import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.js";
+import { btnBaseCSS, focusVisibleCSS } from "@/utils/dom/css.ts";
 export const contentCSS = `... ${btnBaseCSS} ${focusVisibleCSS} ...`;
 ```
 
-| 导出 | 用途 |
-|------|------|
-| `btnBaseCSS` | 统一按钮系统（`.btn-base` 全套变体） |
-| `focusVisibleCSS` | 通用 `:focus-visible` 焦点环（所有交互元素） |
+| 导出 | 用途 | 漏带的后果 |
+|------|------|-----------|
+| `btnBaseCSS` | 统一按钮系统（`.btn-base` 全套变体） | 按钮退回浏览器默认外观 |
+| `focusVisibleCSS` | 通用 `:focus-visible` 焦点环（所有交互元素） | 键盘焦点不可见（WCAG 违规） |
+| `wsIconCSS` | `.ws-icon` SVG 尺寸/着色（ADR-238 唯一出处） | 图标退回 viewBox 默认 24×24「裸奔」 |
+| `noAnimationsCSS` | `.no-animations` 通配桥（`:host-context(.no-animations) *`） | 「关闭动画」开关在本组件静默失效 |
+
+> **凡自带动画/过渡的 shadow 域必须 adopt `noAnimationsCSS`**：`.no-animations` 类挂在
+> `documentElement`（`ui-prefs.ts`），而 `variables.css` 的文档层通配**不穿透 Shadow 边界**
+> （CSS 规则不穿透，只有自定义属性 var() 能），故每个 shadow 根须自带桥。
+> `scripts/css-layer-check.ts` 检查 4 对漏带者报 ERROR 阻断——这是 ADR-015 §2.4 约束 1
+> 「用户关闭时零动画」的可执行断言。
 
 > 全仓 **无 `<slot>`、无 `::part()`、无 `exportparts`**（grep 零匹配）。组件间解耦完全依赖 bus 事件 + 模块级函数 + CSS 变量，不依赖槽/部件投射。
 
@@ -852,7 +872,7 @@ disconnectedCallback() {
 - [ ] 所有颜色用 `var(--*)`；无 `#hex` / `rgba()` 硬编码（§10）。
 - [ ] 字号用 `var(--fs-*)`；间距用 §5 层级（4 的倍数）；圆角用 `var(--radius-*)`；过渡用 `var(--tr-*)`；阴影用 `var(--shadow-*)`。
 - [ ] 语义色在 6 套主题下均满足可读性（§3、§13）。
-- [ ] 动画只用 3 个统一 keyframe + `stagger()`，遵守 `.no-animations` 开关（§7.2）。
+- [ ] 动画只用 3 个统一 keyframe + `stagger()`，遵守 `.no-animations` 开关（§7.2）；自带动画/过渡的 shadow 域已 adopt `noAnimationsCSS`（`css-layer-check` 检查 4 绿）。
 
 **组件契约**
 - [ ] 样式经 `adoptedStyleSheets` 注入，不依赖全局样式（§9）。
@@ -910,7 +930,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 - 主题变量与实装主题列表: `frontend/src/app-modules.ts`（VALID 数组 :47）
 - 类型化事件总线契约: `frontend/src/bus.ts`（`BusEvents` :53-107）
 - 全局 CSS 变量: `frontend/css/variables.css` / `layout.css` / `components.css` / `transitions.css`
-- 共享样式片段: `frontend/src/css/shared-styles.ts`（`btnBaseCSS` / `focusVisibleCSS`）
+- 共享样式片段: `frontend/src/utils/dom/css.ts`（`btnBaseCSS` / `focusVisibleCSS` / `wsIconCSS` / `noAnimationsCSS`）
 - 组件注册入口: `frontend/src/app-modules.ts`
 - 组件源码: `frontend/src/views/*`（9 个自定义元素，详见 §15）
 - 页面状态: `frontend/src/core/page-store.ts`

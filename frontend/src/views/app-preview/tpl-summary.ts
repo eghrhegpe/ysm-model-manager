@@ -99,8 +99,8 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
   let authorHtml = "";
   let workHtml = "";
@@ -227,8 +227,8 @@ export function summaryCardHTML(
   // 免费/付费标记
   const freeBadge = header?.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
 
   // 解码器徽标（从 header 或 enriched 来源获取 decodedBy，挂标题行右侧）

@@ -50,8 +50,7 @@ body { transition: background-color 0.3s ease, color 0.3s ease; }
   pointer-events: none;
   z-index: 0;
 }
-.no-animations .theme-cyber #root::before,
-.no-animations.theme-cyber #root::before { animation: none; }
+/* .no-animations 覆盖已上收 variables.css 通配规则（`.no-animations *::before` 含本伪元素），此处不再重复 */
 
 #st {
   font-size: var(--fs-tab);

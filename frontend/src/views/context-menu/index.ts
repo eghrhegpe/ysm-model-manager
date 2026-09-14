@@ -2,6 +2,7 @@
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "@/bus";
+import { noAnimationsCSS } from "@/utils/dom/css.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
 
@@ -112,7 +113,7 @@ class ContextMenu extends WebComponentBase {
           transition: background .1s;
         }
         .item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
-        .item.danger:hover { background: var(--paid); color: var(--bg); }
+        .item.danger:hover { background: var(--status-error); color: var(--bg); }
         .item .icon { font-size: var(--fs-base); width: 16px; text-align: center; }
         .divider {
           border: none;
@@ -121,6 +122,10 @@ class ContextMenu extends WebComponentBase {
         }
         @keyframes menuPop { 0% { opacity: 0; transform: scale(.85) translateY(-6px); } 60% { opacity: 1; transform: scale(1.02) translateY(0); } 100% { transform: scale(1); } }
         @keyframes itemSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+        /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
+           覆盖 .menu（menuPop）与菜单项内联 style 的 itemSlideIn（!important 作者声明
+           压过普通内联声明）。 */
+        ${noAnimationsCSS}
       </style>
       <div class="menu" id="menu" role="menu" aria-label="context menu"></div>
     `;

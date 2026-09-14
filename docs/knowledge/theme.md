@@ -56,12 +56,12 @@ status: active
 - 系统主题监听：`matchMedia` change 事件仅在 localStorage 主题为 `system` 时重应用，并 toast 提示「已跟随系统切换至深/浅色主题」
 - `applyUIPrefs()`：应用 UI 偏好——`ui-font-size`（经 `--fs-scale` 缩放，先清除旧版内联 `--fs-*`）、`ui-display-font`（`--font-display` 楷体/系统）、`ui-card-density`（`--card-padding`/`--card-gap`）、`ui-animations`（off 时给 `<html>` 加 `no-animations` 类全局关动画）
 - 设置页入口（frontend/src/views/app-content/settings/init.ts）：主题卡片点选 → `window.applyTheme(themeName)` + 写 localStorage；`theme-auto` 下拉支持 off/系统跟随/按时间（白天 warm、夜晚 cyber）三种自动模式
-- `variables.css`：定义 `.theme-cyber`/`.theme-warm`/`.theme-pro`/`.theme-sakura`/`.theme-ocean`/`.theme-mint` 六组变量与 `.no-animations` 覆盖规则
+- `variables.css`：定义 `.theme-cyber`/`.theme-warm`/`.theme-pro`/`.theme-sakura`/`.theme-ocean`/`.theme-mint` 六组变量与 `.no-animations` 双层通配规则（文档层 `.no-animations *` 覆盖光 DOM；shadow 域另 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`）
 
 ## 对外 API / 入口
 
 - 全局函数：`window.applyTheme(mode: string)`
-- 入口函数：`initTheme()`（定义于 `theme-core.ts`）、`applyUIPrefs()`（定义于 `app-modules.ts`），启动 IIFE 中依次执行
+- 入口函数：`initTheme()`（定义于 `theme-core.ts`）、`applyUIPrefs()`（定义于 `views/app-content/settings/ui-prefs.ts`，由 `app-modules.ts` 启动链调用），启动 IIFE 中依次执行
 - Wails binding（动态 import）：`LoadAppConfig`（仅取 `cfg.theme`）
 - localStorage 键：`theme`、`theme-auto`、`ui-font-size`、`ui-display-font`、`ui-card-density`、`ui-animations`
 - 派发 bus：`toast:show`（跟随系统切换提示）
@@ -71,7 +71,7 @@ status: active
 - 启动编排在 [app_modules](./app-modules.md)（initTheme → applyUIPrefs → checkUpdateSilent）
 - 主题选择 UI 在 app-content 设置页（settings.ts），经 `window.applyTheme` 与 localStorage 与入口同步
 - 所有组件样式消费 CSS 变量（见 [shared_styles](./shared-styles.md) 与各组件 css），Shadow DOM 内用 `:host-context(.theme-*)` 做主题特判
-- 动画开关 `no-animations` 被各组件 CSS（如 app-tree-styles）以 `animation: none !important` 响应
+- 动画开关 `no-animations` 为双层通配：文档层 `variables.css` 的 `.no-animations *` 直接覆盖光 DOM（含 `::before/::after`，如 cyber 网格背景）；Shadow 域各自 adopt `noAnimationsCSS` 片段（`:host-context(.no-animations) *`），漏带由 `scripts/css-layer-check.ts` 检查 4 阻断。**禁止再新增逐类 `.no-animations .foo` 条目**（白名单必漏，且文档层选择器匹配不到 shadow 内部）
 
 ## 不变量
 

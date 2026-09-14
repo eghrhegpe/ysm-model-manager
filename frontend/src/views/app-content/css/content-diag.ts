@@ -36,8 +36,6 @@ export const contentDiagCSS: string = `
   75%  { top:50%; left:4px; transform:translateY(-50%); }
   100% { top:4px; left:50%; transform:translateX(-50%); }
 }
-:host-context(.no-animations) .log-row, :host-context(.no-animations) .conflict-row, :host-context(.no-animations) .conflict-ins { animation: none !important; }
-:host-context(.no-animations) .btn-base.accent.scanning { animation: none !important; }
 
 .diag-wrapper { flex:1; display:flex; overflow:hidden; }
 .diag-left { width:var(--diag-left-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); padding:8px; gap:4px; background:var(--surf); }
@@ -83,7 +81,6 @@ export const contentDiagCSS: string = `
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
 .perf-hist-head code { background:var(--bg); padding:0 4px; border-radius:var(--radius-xs); font-size:var(--fs-xs); }
 .perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
-:host-context(.no-animations) .perf-hist-card { animation:none !important; }
 
 /* ===== 加载剖析面板 ===== */
 .perf-trace-meta { font-size:var(--fs-xs);color:var(--muted);word-break:break-all; }
@@ -101,8 +98,6 @@ export const contentDiagCSS: string = `
 .perf-no-data { color:var(--muted);font-size:var(--fs-sm);padding:12px 2px;text-align:center; }
 .perf-no-hint { color:var(--muted);font-size:var(--fs-xs);padding:2px 2px 8px;text-align:center;opacity:.7; }
 .perf-trace-hint { color:var(--muted);font-size:var(--fs-xs);padding:4px 2px 8px;text-align:center;opacity:.6;border-top:1px solid var(--bd);margin-top:6px; }
-
-:host-context(.no-animations) #set-advanced-panel { animation: none !important; }
 
 /* ===== 诊断页去重 UI (diag-dedup) ===== */
 .diag-msg { padding:12px;font-size:var(--fs-sm); }

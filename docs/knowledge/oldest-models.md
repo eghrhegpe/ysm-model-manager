@@ -70,7 +70,7 @@ status: active
 - 由 [app_content](./app-content.md) 的 `_bindTabs` 在 oldest tab 首次激活时懒加载，清理函数收进 `_unsubs`
 - 条目扫描后端与去重统计口径相关：[go_types](./go-types.md)（ModelEntry）、[go_dedup](./go-dedup.md)（重复判定同样基于 hash）
 - 卡片点击后由 [app_preview](./app-preview.md) 展示模型详情
-- 健康度配色/字号全走 CSS 变量（`var(--free)`/`var(--paid)`/`var(--tag-amber)` 等），见 [shared_styles](./shared-styles.md) 与主题系统
+- 健康度配色/字号全走 CSS 变量（`var(--status-success)`/`var(--status-error)`/`var(--tag-amber)` 等），见 [shared_styles](./shared-styles.md) 与主题系统
 
 ## 不变量
 

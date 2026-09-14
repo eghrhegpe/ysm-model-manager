@@ -66,24 +66,33 @@ export class RenderModeCapability implements SceneCapability {
 
   /* -------- 快照 / 应用 / 还原 -------- */
 
+  /** 单材质拍快照（已存在则跳过）——collectSnapshot 首批与 applyOverrides 补拍共用 */
+  private collectOne(mat: THREE.MeshBasicMaterial): void {
+    if (this.snapshot.has(mat.uuid)) return;
+    this.snapshot.set(mat.uuid, {
+      wireframe: mat.wireframe ?? false,
+      blending: mat.blending ?? THREE.NormalBlending,
+      depthTest: mat.depthTest ?? true,
+      side: mat.side ?? THREE.FrontSide,
+      depthWrite: mat.depthWrite ?? true,
+    });
+  }
+
   private collectSnapshot(): void {
     this.snapshot.clear();
     for (const m of collectMaterials(this.scene)) {
-      if (this.snapshot.has(m.uuid)) continue;
-      const mat = m as THREE.MeshBasicMaterial;
-      this.snapshot.set(m.uuid, {
-        wireframe: mat.wireframe ?? false,
-        blending: mat.blending ?? THREE.NormalBlending,
-        depthTest: mat.depthTest ?? true,
-        side: mat.side ?? THREE.FrontSide,
-        depthWrite: mat.depthWrite ?? true,
-      });
+      this.collectOne(m as THREE.MeshBasicMaterial);
     }
   }
 
   private applyOverrides(): void {
     for (const m of collectMaterials(this.scene)) {
       const mat = m as THREE.MeshBasicMaterial;
+      // 覆盖生效期间新加入场景的材质（多模型同框 / switchTo 追加）不在首批快照里。
+      // 若不补拍：本函数会**覆盖它**，而 restoreSnapshot 因无 uuid 跳过它 ⇒
+      // cap 亲手写的覆盖值永久残留（2026-09 实测复现的真 bug）。
+      // 补拍时机即「首次被本函数触及」，此刻的值就是它的原始值。
+      this.collectOne(mat);
       const orig = this.snapshot.get(m.uuid);
       this.applyProp("wireframe", mat, envState.renderModeWireframe, orig, (v: boolean) => {
         mat.wireframe = v;

@@ -395,4 +395,39 @@ describe("RenderModeCapability — dispose", () => {
     cap.apply();
     expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(false);
   });
+
+  // 回归（2026-09 实测复现）：覆盖生效期间新加入 scene 的材质，dispose 时**不被还原**。
+  //
+  // 机理：snapshot 在首次 override 时经 collectSnapshot() 建立（只含**当时**场景内材质）；
+  // 此后 applyOverrides() 遍历**当前**材质 ⇒ 新材质同样被写入覆盖值；
+  // 而 restoreSnapshot() 遍历当前材质时 `if (!orig) continue` —— snapshot 无其 uuid ⇒ 跳过
+  // ⇒ 覆盖值永久残留在新材质上。
+  //
+  // 真实触发路径：开启「线框/混合模式」后追加模型（多模型同框 cooperate / keepInScene）。
+  // 残留材质随场景存活，后续读取该材质即见错误渲染状态。
+  it("回归：覆盖生效后新加入 scene 的材质，dispose 应一并还原（当前失败）", () => {
+    const scene = new THREE.Scene();
+    const meshA = makeMesh();
+    scene.add(meshA);
+    const cap = new RenderModeCapability({ scene });
+
+    // 1) 建立快照（此时场景内只有 meshA 的材质）
+    cap.setWireframe(true);
+    const matA = meshA.material as THREE.MeshBasicMaterial;
+    expect(matA.wireframe).toBe(true);
+
+    // 2) 覆盖生效期间追加新模型（多模型同框常态）
+    const matB = new THREE.MeshBasicMaterial();
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matB);
+    scene.add(meshB);
+
+    // 3) 触发同步：applyOverrides 遍历当前材质 → matB 被覆盖
+    cap.setBlending(THREE.AdditiveBlending);
+    expect(matB.blending).toBe(THREE.AdditiveBlending); // 新材质确实被覆盖
+
+    // 4) dispose：matA 正常还原，matB 应同样还原（当前实现漏还原）
+    cap.dispose();
+    expect(matA.wireframe).toBe(false); // 旧材质 OK
+    expect(matB.blending).toBe(THREE.NormalBlending); // ← 新材质还原（当前失败）
+  });
 });

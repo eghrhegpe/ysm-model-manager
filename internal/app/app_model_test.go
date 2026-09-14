@@ -319,3 +319,53 @@ func TestReadFileBytesBatch_ContentCorrectness(t *testing.T) {
 		}
 	}
 }
+
+// TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected 钉住越权读防御契约：
+// 仓库根内指向根外的符号链接不得被读取（isPathInRootOrSelf 的 Lstat+EvalSymlinks
+// 复核是唯一拦截点——os.ReadFile 本身跟随 symlink，复核不命中即越权读出任意文件）。
+// 守卫现收敛于调用方循环入口（readFileWithHashUnchecked 函数名即契约，不内置守卫），
+// 本测试锁定「symlink 指向根外 → 该 key 缺席结果 map」的不变量，防未来调用方漏校验。
+func TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected(t *testing.T) {
+	base := t.TempDir()
+	ysmRoot := filepath.Join(base, "ysm", "models")
+	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// 10 个合法文件（≥5 保并发分支）
+	paths := make([]string, 10)
+	for i := range 10 {
+		p := filepath.Join(ysmRoot, fmt.Sprintf("ok_%d.bin", i))
+		if err := os.WriteFile(p, []byte("ok"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		paths[i] = p
+	}
+	// 根**外** secret 目录（base 的兄弟，不在 FilesRoot 下）+ 根内 symlink 指向它
+	outside := filepath.Join(t.TempDir(), "secret")
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	secret := filepath.Join(outside, "secret.txt")
+	if err := os.WriteFile(secret, []byte("top-secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "ysm", "link")
+	if err := os.Symlink(outside, link); err != nil {
+		// Windows 无特权账户创建 symlink 会失败——按惯例跳过（特权环境仍真跑）
+		t.Skipf("创建符号链接失败（Windows 无特权环境）: %v", err)
+	}
+	linkPath := filepath.Join(link, "secret.txt")
+	paths = append(paths, linkPath)
+
+	a := repoApp(t, types.AppConfig{FilesRoot: base})
+	result := a.ReadFileBytesBatchWithMeta(paths)
+
+	// 合法 10 个全在
+	if len(result) != 10 {
+		t.Errorf("期望 10 个合法文件, got %d", len(result))
+	}
+	// symlink 指向根外：key 必须缺席（守卫拒绝，非 nil 值）
+	if _, exists := result[linkPath]; exists {
+		t.Error("根内 symlink 指向根外文件不得被读取（越权读防御回归）")
+	}
+}

@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -88,14 +89,17 @@ type cacheVerifyTexInfo struct {
 	cacheSize int64
 }
 
-// cacheVerifyExts cache-verify 扫描的贴图扩展名集合。
-var cacheVerifyExts = map[string]bool{
-	".png":  true,
-	".jpg":  true,
-	".jpeg": true,
-	".tga":  true,
-	".bmp":  true,
-	".dds":  true,
+// cache-verify 的贴图口径委托 registry.IsTextureExt（单一事实源）。
+//
+// 为何删掉本地 cacheVerifyExts：它曾比单一事实源多出 .bmp/.dds，而那两个格式
+// **不参与缓存生产管线**——go/ysm 按 IsTextureExt 识别贴图并为之生成 KTX2 缓存，
+// 故 .bmp/.dds 在 cache-verify 里必然恒报 miss：用户看到「贴图未缓存」会据此
+// 白重编码一遍，实为口径错配导致的假 miss。
+//
+// 注：analyze-mmd 的 textureExts（含 .ktx2）是**资产盘点**语义（含已压缩产物），
+// 与「原始贴图识别」不同，不在此收敛——勿一并改掉。
+func isCacheVerifyTexture(ext string) bool {
+	return registry.IsTextureExt(ext)
 }
 
 // scanCacheVerify 遍历目录，对每个贴图计算哈希并检查缓存命中。
@@ -110,7 +114,7 @@ func scanCacheVerify(modelDir string) (texInfos []cacheVerifyTexInfo, walkErrors
 		}
 
 		ext := strings.ToLower(filepath.Ext(path))
-		if !cacheVerifyExts[ext] {
+		if !isCacheVerifyTexture(ext) {
 			return nil
 		}
 

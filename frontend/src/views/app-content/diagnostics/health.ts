@@ -159,8 +159,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   );
 }
 
-/**
- * 缓存命中率后缀（Go 端真命中率：本仓库纹理内容哈希逐张查缓存的结果）。
+/** 缓存命中率后缀（Go 端真命中率：本仓库纹理内容哈希逐张查缓存的结果）。
  *
  * 历史：此处曾展示过一次又删除——旧口径是「全局缓存文件数 / 本仓库纹理数」，
  * 分子分母不同源，比例必然 >100% 被 Go 侧截断成假绿 100%。现 Go 已重写为
@@ -169,13 +168,23 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
  *  - 采样时加「≈」：仓库纹理超上限时 Go 侧只统计前 N 张，不是全量结论；
  *  - 显示「命中/总数」：光看百分比无法判断样本多小；
  *  - 探测失败可见：哈希/缓存探测故障 ≠ 未缓存，静默吞掉会让磁盘故障显示成
- *    「贴图没缓存」，用户据此白重编码一遍。
+ *    「贴图没缓存」，用户据此白重编码一遍。全探测失败时（hits+misses==0
+ *    且 cache_scan_errors>0）同样须保留失败数——故障不能伪装成「没纹理」。
  */
 function cacheHitRateSuffix(cache: HealthReport["cache"], esc_: EscFn): string {
   const hits = cache.hits ?? 0;
   const misses = cache.misses ?? 0;
   const total = hits + misses;
-  if (total === 0) return ""; // 无纹理（分母 0）→ 0/0 无意义，整段省略
+  if (total === 0) {
+    // 无纹理（分母 0）→ 0/0 无意义；但全探测失败时须保留失败数可见
+    const scanErrs = cache.cache_scan_errors ?? 0;
+    if (scanErrs > 0) {
+      return esc_(
+        ` · ${t("diagnostics.healthHitRateUnavailable")} ${t("diagnostics.healthCacheScanErrors")} ${scanErrs}`,
+      );
+    }
+    return "";
+  }
 
   const approx = cache.cache_sampled ? "≈" : "";
   let s = ` · ${t("diagnostics.healthHitRate")} ${approx}${Math.round(cache.hit_rate ?? 0)}%（${hits}/${total}）`;

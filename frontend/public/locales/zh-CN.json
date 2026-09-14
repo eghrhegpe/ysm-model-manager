@@ -821,6 +821,7 @@
   "diagnostics.healthInvalid": "无效",
   "diagnostics.healthCacheSize": "缓存大小",
   "diagnostics.healthHitRate": "命中率",
+  "diagnostics.healthHitRateUnavailable": "命中率不可用",
   "diagnostics.healthCacheScanErrors": "探测失败",
   "diagnostics.healthReclaim": "可回收",
   "diagnostics.healthSource": "数据源：Go repoaudit（GUI/CLI 同源）",

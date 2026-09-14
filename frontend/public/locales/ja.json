@@ -821,6 +821,7 @@
   "diagnostics.healthInvalid": "無効",
   "diagnostics.healthCacheSize": "キャッシュ容量",
   "diagnostics.healthHitRate": "ヒット率",
+  "diagnostics.healthHitRateUnavailable": "ヒット率不可用",
   "diagnostics.healthCacheScanErrors": "検出失敗",
   "diagnostics.healthReclaim": "回収可能",
   "diagnostics.healthSource": "データ元：Go repoaudit（GUI/CLI 共通）",

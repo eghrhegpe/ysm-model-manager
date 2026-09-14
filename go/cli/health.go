@@ -145,10 +145,15 @@ func printHealthReport(r healthReportJSON) {
 // 为逐纹理哈希统计（与 cache-verify 同口径），故本函数如实展示：
 //   - 采样时加「≈」（纹理数超采样上限，非全量统计）；
 //   - 探测失败数可见（故障 ≠ 未缓存，静默吞掉会让磁盘故障显示成「没缓存」）；
-//   - 无纹理（分母为 0）时整段省略——0/0 无意义。
+//   - 无纹理（分母为 0）时整段省略——0/0 无意义。但全探测失败时（hits+misses==0
+//     且 CacheScanErrors>0）仍须显示失败数：缓存目录/磁盘故障不能静默成「没纹理」。
 func cacheHitSuffix(c repoaudit.CacheStatus) string {
 	total := c.Hits + c.Misses
 	if total == 0 {
+		// 无纹理（分母 0）→ 0/0 无意义；但全探测失败时须保留失败数可见
+		if c.CacheScanErrors > 0 {
+			return fmt.Sprintf(" · 命中率不可用（探测失败 %d 个）", c.CacheScanErrors)
+		}
 		return ""
 	}
 	approx := ""

@@ -334,6 +334,12 @@ func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
 	}
 
 	// 缓存哈希集：一次扫描替代逐次 Stat（HasCached 内部即 os.Stat(CachePath)）
+	// CacheDir()=="" 是「配置根不可用」的合法空值形态——ListCacheFiles 在此情形下
+	// 返回 (nil, nil) 而非错误，若不前置判断，全部纹理会被误计为 miss（0% 命中假象），
+	// 违背「故障 ≠ 未缓存」的失败语义。须先显式探测再走「全失败」路径。
+	if texture_cache.CacheDir() == "" {
+		return 0, 0, len(texturePaths)
+	}
 	cachedHashes := make(map[string]struct{})
 	if entries, err := texture_cache.ListCacheFiles(); err == nil {
 		for _, e := range entries {

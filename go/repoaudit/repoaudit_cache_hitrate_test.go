@@ -132,8 +132,8 @@ func TestAudit_CacheHitRate_GlobalCacheDoesNotInflate(t *testing.T) {
 	}
 }
 
-// TestMeasureCacheHitRate_CacheDirUnavailable 缓存目录不可用时全部计为失败，
-// 而非静默当作「0% 命中」（故障 ≠ 未缓存）。
+// TestMeasureCacheHitRate_SamplingLimit 注入极小采样上限，验证 sampled 标记生效
+// 且统计基数被钳制到上限。
 func TestMeasureCacheHitRate_SamplingLimit(t *testing.T) {
 	setTempCacheDir(t)
 	repo := t.TempDir()
@@ -156,5 +156,34 @@ func TestMeasureCacheHitRate_SamplingLimit(t *testing.T) {
 	// 采样后统计基数应等于上限（或更少）
 	if got := result.Cache.Hits + result.Cache.Misses; got != 2 {
 		t.Errorf("采样基数应为 2, got %d", got)
+	}
+}
+
+// TestMeasureCacheHitRate_CacheDirUnavailable 缓存目录不可用（CacheDir()==""，
+// 即配置根不可用）时全部纹理计为探测失败，而非静默当作「0% 命中」（故障 ≠ 未缓存）。
+func TestMeasureCacheHitRate_CacheDirUnavailable(t *testing.T) {
+	// 覆盖 CacheDir 使其返回 ""（模拟平台配置根不可用）
+	oldDir := texture_cache.CacheDir
+	t.Cleanup(func() { texture_cache.CacheDir = oldDir })
+	texture_cache.CacheDir = func() string { return "" }
+
+	repo := t.TempDir()
+	for i := range 3 {
+		testutil.WriteTestFileBytes(t, filepath.Join(repo, string(rune('a'+i))+".png"), []byte("c"))
+	}
+
+	result, err := Audit(repo)
+	if err != nil {
+		t.Fatalf("Audit: %v", err)
+	}
+	if result.Cache.CacheScanErrors != 3 {
+		t.Errorf("缓存目录不可用时应全部计为探测失败, got scanErrs=%d", result.Cache.CacheScanErrors)
+	}
+	if result.Cache.Hits != 0 || result.Cache.Misses != 0 {
+		t.Errorf("缓存目录不可用时不得产生命中/未命中数, got hits=%d misses=%d",
+			result.Cache.Hits, result.Cache.Misses)
+	}
+	if result.Cache.HitRate != 0 {
+		t.Errorf("缓存目录不可用时命中率应为 0（无统计基数）, got %.1f%%", result.Cache.HitRate)
 	}
 }

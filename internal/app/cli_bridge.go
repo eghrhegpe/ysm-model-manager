@@ -32,10 +32,13 @@ type CommandSpecDTO struct {
 // 与 SetAllowedCommands 独立 once：测试/旧装配只注入名单 → 规格为空 → ExecuteCLI 走 legacy 降级
 func (a *App) SetAllowedCommandSpecs(specs []CommandSpecDTO) {
 	a.allowedSpecsOnce.Do(func() {
-		a.allowedSpecs = make(map[string][]ParamSpecDTO, len(specs))
+		// 与 SetAllowedCommands 同范式：局部构造完成 map 后一次性赋值，
+		// 使「字段可见即完整」成为显式不变量（见 SetAllowedCommands 注释）
+		m := make(map[string][]ParamSpecDTO, len(specs))
 		for _, s := range specs {
-			a.allowedSpecs[s.Name] = s.Params
+			m[s.Name] = s.Params
 		}
+		a.allowedSpecs = m
 	})
 }
 
@@ -43,10 +46,12 @@ func (a *App) SetAllowedCommandSpecs(specs []CommandSpecDTO) {
 // 避免 app→cli 循环依赖：命令注册表单一事实来源在 go/cli，前端可见列表经此注入
 func (a *App) SetAllowedCommands(cmds []string) {
 	a.allowedCommandsOnce.Do(func() {
-		// 先在局部构造完成再一次性赋值：原实现先 make map 再逐个填充，
-		// 若注入发生在并发读已可达的时点，读方可能观察到「半填充」的 map。
-		// Once.Do 返回后才为其他 goroutine 建立 happens-before，此处提前赋值无额外收益，
-		// 但一次性赋值让「字段可见即完整」成为显式不变量。
+		// 局部构造完成再赋值：cmdsCopy 与 set 均在闭包内构建完毕，
+		// 然后一次性写入 a.allowedCommands / a.allowedCommandSet 两字段。
+		// 注意：两次字段赋值之间无原子性保证——真正与「并发读已可达」建立
+		// happens-before 的是 Once.Do 的返回本身，而非这里的赋值顺序。
+		// 局部构造的价值在于：即使未来有未同步读方在注入期间观察到某字段，
+		// 也只会看到「完整副本或 nil」，不会看到「半填充的共享 map/slice」。
 		cmdsCopy := append([]string(nil), cmds...)
 		set := make(map[string]bool, len(cmds))
 		for _, c := range cmds {

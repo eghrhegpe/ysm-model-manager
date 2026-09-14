@@ -43,11 +43,17 @@ func (a *App) SetAllowedCommandSpecs(specs []CommandSpecDTO) {
 // 避免 app→cli 循环依赖：命令注册表单一事实来源在 go/cli，前端可见列表经此注入
 func (a *App) SetAllowedCommands(cmds []string) {
 	a.allowedCommandsOnce.Do(func() {
-		a.allowedCommands = append([]string(nil), cmds...)
-		a.allowedCommandSet = make(map[string]bool, len(cmds))
+		// 先在局部构造完成再一次性赋值：原实现先 make map 再逐个填充，
+		// 若注入发生在并发读已可达的时点，读方可能观察到「半填充」的 map。
+		// Once.Do 返回后才为其他 goroutine 建立 happens-before，此处提前赋值无额外收益，
+		// 但一次性赋值让「字段可见即完整」成为显式不变量。
+		cmdsCopy := append([]string(nil), cmds...)
+		set := make(map[string]bool, len(cmds))
 		for _, c := range cmds {
-			a.allowedCommandSet[c] = true
+			set[c] = true
 		}
+		a.allowedCommands = cmdsCopy
+		a.allowedCommandSet = set
 	})
 }
 
@@ -304,8 +310,11 @@ func formatCLINumber(f float64) string {
 // GetAllowedCLICommands 返回可用 CLI 命令列表
 // 列表由 main.go 从 cli 注册表注入（SetAllowedCommands），新增命令自动可见
 func (a *App) GetAllowedCLICommands() string {
+	// 读路径纯只读：原实现在 nil 时回写 `a.allowedCommands = []string{}`——
+	// 与绑定线程/CLI 线程的并发读构成 data race（仅未注入时触发，但路径真实存在）。
+	// nil 与空切片序列化结果同为 `[]`，直接返回即可，无需回写。
 	if a.allowedCommands == nil {
-		a.allowedCommands = []string{}
+		return "[]"
 	}
 	result, err := json.Marshal(a.allowedCommands)
 	if err != nil {

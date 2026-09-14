@@ -566,16 +566,9 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	}
 
 	// 查找目标整合包
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var target *types.VersionInstance
-	for i := range instances {
-		if instances[i].Name == instanceName {
-			target = &instances[i]
-			break
-		}
-	}
-	if target == nil {
-		return fmt.Errorf("未找到整合包: %s", instanceName)
+	target, err := a.findInstance(cfg.McRoot, instanceName)
+	if err != nil {
+		return err
 	}
 
 	// 根据 rtype 确定安装子目录（集中定义在 go/types/extensions.go）

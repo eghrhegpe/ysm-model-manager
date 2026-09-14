@@ -20,6 +20,20 @@ import (
 	"ysm-model-manager/go/ysm"
 )
 
+// findInstance 在 ListVersionInstances 结果中按名称定位整合包。
+// 收敛原先散落 7 处的手写查找循环（app_install_instance.go ×6 + resource_bindings.go ×1）
+// 与重复的「未找到整合包: %s」错误文案——改提示语只需改这里一处。
+// 返回的指针指向本次调用内构造的切片副本，仅限当前调用栈内使用，勿跨调用持有。
+func (a *App) findInstance(mcRoot, name string) (*types.VersionInstance, error) {
+	instances := a.ListVersionInstances(mcRoot)
+	for i := range instances {
+		if instances[i].Name == name {
+			return &instances[i], nil
+		}
+	}
+	return nil, fmt.Errorf("未找到整合包: %s", name)
+}
+
 // CountInstanceResources 统计指定整合包中可清空的资源文件数
 // 只统计仓库中已有的文件（同 clearInstanceDir 逻辑）
 // rtype 为空时统计全部类型，否则只统计指定类型
@@ -33,16 +47,9 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 	if err := requireMcRoot(cfg); err != nil {
 		return 0, err
 	}
-	instances := a.ListVersionInstances(mcRoot)
-	var target *types.VersionInstance
-	for i, ins := range instances {
-		if ins.Name == insName {
-			target = &instances[i]
-			break
-		}
-	}
-	if target == nil {
-		return 0, fmt.Errorf("未找到整合包: %s", insName)
+	target, err := a.findInstance(mcRoot, insName)
+	if err != nil {
+		return 0, err
 	}
 	total := 0
 	for _, d := range registry.AllSubDirs() {
@@ -77,16 +84,9 @@ func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	if err := requireMcRoot(cfg); err != nil {
 		return 0, err
 	}
-	instances := a.ListVersionInstances(mcRoot)
-	var target *types.VersionInstance
-	for i, ins := range instances {
-		if ins.Name == insName {
-			target = &instances[i]
-			break
-		}
-	}
-	if target == nil {
-		return 0, fmt.Errorf("未找到整合包: %s", insName)
+	target, err := a.findInstance(mcRoot, insName)
+	if err != nil {
+		return 0, err
 	}
 
 	// 先统计数量
@@ -246,16 +246,9 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 	if err := requireMcRoot(cfg); err != nil {
 		return 0, err
 	}
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var target *types.VersionInstance
-	for i, ins := range instances {
-		if ins.Name == instanceName {
-			target = &instances[i]
-			break
-		}
-	}
-	if target == nil {
-		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
+	target, err := a.findInstance(cfg.McRoot, instanceName)
+	if err != nil {
+		return 0, err
 	}
 	total := 0
 	for _, d := range registry.AllSubDirs() {
@@ -297,21 +290,18 @@ func (a *App) SyncResources(rtype, instanceName string) (types.ResourceSyncResul
 	}
 
 	// 找整合包
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var targetDir string
-	for _, ins := range instances {
-		if ins.Name == instanceName {
-			subDir := registry.SubDirMap(rtype)
-			if subDir == "" {
-				return empty, fmt.Errorf("未知资源类型: %s", rtype)
-			}
-			// 与展示层同口径：FindInstDir 标准目录无该类型文件时兜底扫描
-			// （Sable-Schematics 等非标准目录；原直拼 schematics 与此 binding
-			// 的展示结果不一致）
-			targetDir = registry.FindInstDir(ins.VersionDir, subDir, rtype)
-			break
-		}
+	target, err := a.findInstance(cfg.McRoot, instanceName)
+	if err != nil {
+		return empty, err
 	}
+	subDir := registry.SubDirMap(rtype)
+	if subDir == "" {
+		return empty, fmt.Errorf("未知资源类型: %s", rtype)
+	}
+	// 与展示层同口径：FindInstDir 标准目录无该类型文件时兜底扫描
+	// （Sable-Schematics 等非标准目录；原直拼 schematics 与此 binding
+	// 的展示结果不一致）
+	targetDir := registry.FindInstDir(target.VersionDir, subDir, rtype)
 	if targetDir == "" {
 		return empty, fmt.Errorf("未找到整合包: %s", instanceName)
 	}
@@ -373,17 +363,15 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 // Sable-Schematics 场景下展示显示 Sable-Schematics 条目、操作却指向空 schematics，
 // mapSrcToGlobal 报"路径不在目标目录内"。统一走 FindInstDir。
 func (a *App) findInstanceDir(rtype, instanceName, mcRoot string) (string, error) {
-	instances := a.ListVersionInstances(mcRoot)
-	for _, ins := range instances {
-		if ins.Name == instanceName {
-			subDir := registry.SubDirMap(rtype)
-			if subDir == "" {
-				return "", fmt.Errorf("未知资源类型: %s", rtype)
-			}
-			return registry.FindInstDir(ins.VersionDir, subDir, rtype), nil
-		}
+	ins, err := a.findInstance(mcRoot, instanceName)
+	if err != nil {
+		return "", err
 	}
-	return "", fmt.Errorf("未找到整合包: %s", instanceName)
+	subDir := registry.SubDirMap(rtype)
+	if subDir == "" {
+		return "", fmt.Errorf("未知资源类型: %s", rtype)
+	}
+	return registry.FindInstDir(ins.VersionDir, subDir, rtype), nil
 }
 
 // PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库
@@ -533,16 +521,9 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 	}
 
 	// 找整合包目录
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var targetIns *types.VersionInstance
-	for i, ins := range instances {
-		if ins.Name == instanceName {
-			targetIns = &instances[i]
-			break
-		}
-	}
-	if targetIns == nil {
-		return nil, fmt.Errorf("未找到整合包: %s", instanceName)
+	targetIns, err := a.findInstance(cfg.McRoot, instanceName)
+	if err != nil {
+		return nil, err
 	}
 
 	// 收集各资源类型的仓库根目录（同步基准：subDirGrouping 类型用 group 根，与仓库树对齐）

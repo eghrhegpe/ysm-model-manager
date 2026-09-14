@@ -31,6 +31,7 @@
 // [ADR-168] 状态层不 import 组合根单例（scene-capability-registry）——cap 查询走注入点
 // setSceneCapabilityLookup（shared-infra createAll 后注入），断 preview-state→registry 运行时环。
 import type { SceneCapability, SceneCapabilityLookup } from "@/preview-3d/caps/scene-capability.ts";
+import { ringLog } from "@/preview-3d/caps/scene-capability.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "@/preview-3d/infra/frustum-cull.ts";
 import {
   getMaxFps,
@@ -298,7 +299,9 @@ function notify(changed: (typeof KNOWN_PATHS)[number]): void {
     try {
       l(changed);
     } catch (e) {
-      console.warn("[preview-state] 订阅回调异常:", e);
+      ringLog("preview-state", "订阅回调异常", "warn", () => {
+        console.warn("[preview-state] 订阅回调异常:", e);
+      });
     }
   }
 }
@@ -329,7 +332,9 @@ export function setStateValue<P extends PreviewStatePath>(
     bindings[path].set(value);
     success = true;
   } catch (e) {
-    console.warn(`[preview-state] setStateValue("${path}") failed:`, e);
+    ringLog("preview-state", `setStateValue("${path}") failed`, "warn", () => {
+      console.warn(`[preview-state] setStateValue("${path}") failed:`, e);
+    });
   }
   if (success && opts?.notify !== false) notify(path);
 }

@@ -107,9 +107,12 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
   });
 
   // [ADR-168] 探针用例会注入 state 层查询器，用后即复（防泄漏到后续用例）
+  // per-mount 订阅隔离：buildEnvSchema 按 menu 句柄隔离订阅，测试创建的 menu 句柄需逐个清理
+  const menusToDispose = new Set<SlideMenuHandle>();
   afterEach(() => {
     setSceneCapabilityLookup(null);
-    disposeEnvSubscriptions();
+    for (const m of menusToDispose) disposeEnvSubscriptions(m);
+    menusToDispose.clear();
   });
 
   it("无 cap → 空态单节点（sectionTitle），零 renderCustom", () => {
@@ -151,6 +154,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog, sky]); // 乱序注入，验证排序
     const menu = makeMenu();
+    menusToDispose.add(menu);
     const schema = buildEnvSchema(makeCtx(), menu);
     expect(schema[0]!.id).toBe("env-preset-bar");
     expect(schema[0]!.kind).toBe("select");
@@ -190,7 +194,9 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       ];
     };
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
-    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const menu = makeMenu();
+    menusToDispose.add(menu);
+    const schema = buildEnvSchema(makeCtx(), menu);
     const row = capRow(schema, 0);
     // navigate 触发 + 子视图渲染
     const { container } = navigateAndRender(row);
@@ -251,7 +257,9 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       },
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([ground]);
-    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const menu = makeMenu();
+    menusToDispose.add(menu);
+    const schema = buildEnvSchema(makeCtx(), menu);
     const row = capRow(schema, 0);
     const { container } = navigateAndRender(row);
     // 无 group 的 ground-visible 平铺；两个 group → 两个 folder section
@@ -280,11 +288,12 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
     const menu = makeMenu();
+    menusToDispose.add(menu);
     buildEnvSchema(makeCtx(), menu);
     expect(listeners.size).toBe(1);
     buildEnvSchema(makeCtx(), menu); // 重跑（refresh 路径）：先退订旧再建新，不叠加
     expect(listeners.size).toBe(1);
-    disposeEnvSubscriptions();
+    disposeEnvSubscriptions(menu);
     expect(listeners.size).toBe(0);
   });
 
@@ -295,6 +304,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const env = makeCap("environment", "preview.environment", []);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky, fog, env]);
     const menu = makeMenu();
+    menusToDispose.add(menu);
     const preset = buildEnvSchema(makeCtx(), menu)[0]!;
     expect(preset.control!.options).toHaveLength(5); // studio/sunset/night/forest/sky
     preset.control!.set!("sunset");
@@ -337,7 +347,9 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       isEnabled: () => enabled,
     });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fog]);
-    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const menu = makeMenu();
+    menusToDispose.add(menu);
+    const schema = buildEnvSchema(makeCtx(), menu);
     const row = capRow(schema, 0);
     // 一级行 headerToggle：读写即 masterCtrl 读写
     expect(row.headerToggle).toBeDefined();
@@ -366,7 +378,9 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       },
     ]);
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
-    const schema = buildEnvSchema(makeCtx(), makeMenu());
+    const menu = makeMenu();
+    menusToDispose.add(menu);
+    const schema = buildEnvSchema(makeCtx(), menu);
     const row = capRow(schema, 0);
     expect(row.headerToggle).toBeUndefined();
     const { container } = navigateAndRender(row);

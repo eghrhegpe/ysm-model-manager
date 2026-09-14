@@ -283,7 +283,14 @@ invariant_anchors:
   - **可读性⑤：`collectVisiblePredicates` 补「禁删」说明**。子代理报其为「生产死代码，建议删除」。**核实后否决**：它是 ADR-128 §5「死穴二」的 cap 级对偶锚点，与 `menu-graph.ts|collectNodePredicates`（节点级）严格区分，是「cap 控件条件显隐」的唯一集中枚举入口，由 `preview-state.test.ts` 作契约测试消费。删除会摧毁该治理能力。已加显式「请勿以孤儿导出为由删除」注释。**教训：无生产调用方 ≠ 死代码，契约锚点须先查 ADR 交点再判**。
   - **测试补全（6 新用例，均经反向验证）**：`mount-preview-core.test.ts` +1（包装 `document.add/removeEventListener` **直数监听器存活数**，锁 escH 解绑契约；反向验证：摘掉两处解绑 → `expected 1 to be +0` 失败）；`render-loop.test.ts` +5（失配告警 4 例 + early-clock 回归 1 例；反向验证：还原 `0` 哨兵 → 3 例失败）。⚠️ **首版写法被自己推翻**：初版只断言「再按一次 ESC 不抛错」——**反向验证时发现旧代码同样通过**（陈旧 handler 只是空转），遂改为直数监听器。**教训：回归测试必须做反向验证（还原缺陷看是否报红），否则可能写出一条永绿的空测试**。
   - **本轮核实为误报/无需改动的项（供下次免重扫）**：`removePerFrame` 的「`?.` 提取 `content.update` 丢 `this` 绑定」指控**不成立**——`setPerFrame` 存取同一引用，全仓无 `.bind` 包装，配对恒成立（真正的风险只是「未来有人这么写」，故以告警兜底而非重构）；`teardown("failed")` 漏解绑 escH 属**责任错配而非现实泄漏**（调用方 `recoverMountFailure` 确实补了，反向验证证明），仍按「三档收敛到单一出口」归位到共用区并删除调用方补丁；`_envCapUnsubs` 模块级共享缺 owner 守卫属潜在风险非活 bug（`mountPreviewRootMenu` 实际单例）；`core.ts` tap-restore 分支缺 `menu.onShow()` 致 `_prevFocus` 未重置属焦点语义瑕疵，未在本轮范围。
-  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome 增量（`--files` 显名）✅ / **全前端 378 文件 5789 用例全绿**（preview-3d 2243 → **2249**）/ `check-layering`・`check-circular`・`check-path-hygiene`・`check-type-safety`（生产侵蚀 0）・`check-redlines` 全通过。
+   - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome 增量（`--files` 显名）✅ / **全前端 378 文件 5789 用例全绿**（preview-3d 2243 → **2249**）/ `check-layering`・`check-circular`・`check-path-hygiene`・`check-type-safety`（生产侵蚀 0）・`check-redlines` 全通过。
+
+- ✅ **刀⑱ preview-3d a11y / 一致性双收口**（2026-09，承接刀⑰「写法收口」结论；用户点题「改进吧」，范围限 `frontend/src/preview-3d`）：
+  - **a11y① tap-restore 焦点恢复一致性**（`menu/core.ts:bindPreviewTapToggle`）：刀⑰ 已点名「`_prevFocus` 未重置属焦点语义瑕疵，未在本轮范围」——现修复。早期 else 分支手搓 `pushInputBlock` 绕过 `slide-menu.onShow()`，`_prevFocus` 未被重新武装，后续 ✕/ESC 关闭时焦点无法恢复给触发元素。现统一走 `menu.onShow()`，onShow/onHide/push/pop 严格配对 + 焦点记忆重新武装。补契约测试锁定「dock 触发 → tap 隐藏 → tap 恢复 → 关闭 → 焦点归还 dock」。反向验证：还原旧写法 → 焦点断言失败（首版只断言「再按 ESC 不抛错」——反向验证发现旧代码同样通过，推倒重写为直数监听器 + 焦点断言）。
+  - **一致性② 裸 console.warn 改走 ringLog 双轨**（AGENTS.md 铁律「日志往环形日志面板塞，不盯 console」）：`preview-state.ts` 2 处（订阅回调异常 / setStateValue 失败）+ `env-dispatcher.ts` 1 处（回调异常）改走 `ringLog(mod, msg, "warn", () => console.warn(...))` 双轨，与 `shader-patches/patch-guard.ts` 既有范式对齐。
+  - **一致性③ `_envCapUnsubs` per-mount 隔离**（`menu/env.ts`）：刀⑰ 已点名「模块级共享缺 owner 守卫属潜在风险非活 bug」——现修复。改 `WeakMap<SlideMenuHandle, Array<() => void>>` 按 menu 句柄隔离，`disposeEnvSubscriptions` 同步改接收 menu 参数（对齐同文件 `coreSchemaOwners`/`customCleanups` 的 per-mount 注入范式）。`env.test.ts` 同步适配（`afterEach` 遍历清理所有测试创建的 menu 句柄）。
+  - **被驳回项（本轮核实为误报/无需改）**：`removePerFrame`「`?.` 丢 `this` 绑定」——刀⑰ 已核验恒配对；`collectVisiblePredicates` 死代码——刀⑰ 已补禁删注释；`core.ts` tap-restore 焦点瑕疵——本轮已修。
+  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome 增量 ✅ / 全前端 378 文件 5790 用例全绿 / 治理门禁全通过。
 
 ## 相关
 

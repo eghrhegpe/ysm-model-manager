@@ -7,6 +7,10 @@ import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
 import { switchTabHighlightBg } from "./switch.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import {
+  __resetInputBlockStackForTest,
+  getStackDepth,
+} from "@/utils/dom/input-block-stack.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { deriveTestIds } from "@/test-utils/self-healing.ts";
@@ -59,6 +63,8 @@ describe("mountPreviewRootMenu", () => {
     // code review P3：全局类型记忆 key 每个测试前清理——断言失败也不污染后续测试
     // （该 key 跨场景/跨会话共享，泄漏会翻转默认高亮与空状态文案，顺序依赖 flaky）
     localStorage.removeItem("ysm.preview.lastRtype");
+    // 输入阻断栈跨用例隔离（菜单 push/pop 必须归零，防上一用例残留翻转 isInputBlocked）
+    __resetInputBlockStackForTest();
     overlay = document.createElement("div");
     document.body.appendChild(overlay);
   });
@@ -143,6 +149,48 @@ describe("mountPreviewRootMenu", () => {
     tap();
     expect(popup.style.display).toBe("flex");
     expect(popup.querySelector(".slide-list")?.childElementCount ?? 0).toBeGreaterThan(0);
+  });
+
+  // 2026-09 焦点恢复一致性收口（刀⑱）：tap-toggle 的隐藏路径早期手搓 pushInputBlock
+  // 绕过 onShow——_prevFocus 未被重新武装（后续关闭焦点无法恢复给触发元素）。
+  // 阻断计数本身仍平衡（onHide pop 一次对应手动 push 一次），但焦点记忆丢失。
+  // 现统一走 onShow，push/pop/焦点记忆三者严格配对。
+  // 本用例锁「dock 触发打开 → tap 隐藏 → tap 恢复 → 关闭」循环后：
+  //   ① 输入阻断栈归零（WASD 不挂起）
+  //   ② 焦点恢复给 dock 触发元素（_prevFocus 经 onShow 重新武装）
+  // 反向验证：还原旧写法（手搓 pushInputBlock 不经 onShow）→ ② 焦点断言失败。
+  it("tap 隐藏→恢复循环后焦点恢复给 dock 触发元素（_prevFocus 经 onShow 重新武装）", () => {
+    const viewEl = document.createElement("div");
+    mountPreviewRootMenu(
+      overlay,
+      makeCtx({ getViewContainer: () => viewEl, getSiblings: () => ["/m/b.ysm"] }),
+    );
+    const dockBtn = overlay.querySelector(`[data-testid="dock-scene"]`) as HTMLElement;
+    dockBtn.focus();
+    dockBtn.click(); // showMenu → onShow 记下 _prevFocus = dockBtn
+    expect(getStackDepth()).toBe(1);
+
+    const popup = overlay.querySelector(".ysm-preview-menu") as HTMLElement;
+    const tap = (): void => {
+      viewEl.dispatchEvent(new MouseEvent("pointerdown", { clientX: 0, clientY: 0 }));
+      viewEl.dispatchEvent(new MouseEvent("pointerup", { clientX: 0, clientY: 0 }));
+    };
+    // tap → 隐藏（onHide → pop + 焦点归还 dockBtn；_prevFocus 清空）
+    tap();
+    expect(popup.style.display).toBe("none");
+    expect(getStackDepth()).toBe(0);
+    // tap → 恢复（onShow 重新武装 _prevFocus = document.activeElement；推阻断）
+    tap();
+    expect(popup.style.display).toBe("flex");
+    expect(getStackDepth()).toBe(1);
+    // 关闭（✕ → onHide 带 restoreFocus）→ 焦点归还给 _prevFocus 记录的元素
+    (overlay.querySelector("#preview-close-3d") as HTMLElement).click();
+    expect(popup.style.display).toBe("none");
+    expect(getStackDepth()).toBe(0);
+    // 焦点应落在 dockBtn（或其容器）——旧写法 _prevFocus=null → body
+    expect(document.activeElement?.tagName).not.toBe("BODY");
+    expect(document.activeElement === dockBtn || dockBtn.contains(document.activeElement))
+      .toBe(true);
   });
 
   it("🧍 dock 按钮：已有加载角色（YS'M/PMX 多角色）→ 直达 roles 面板，adapter model 项不在 dock 根", () => {

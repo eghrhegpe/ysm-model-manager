@@ -50,18 +50,26 @@ const ENV_SECTIONS: ReadonlyArray<{
 ];
 
 // ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
-let _envCapUnsubs: Array<() => void> = [];
+// 按 menu 句柄隔离订阅：每个 mountPreviewRootMenu 实例持有各自的订阅列表，
+// 避免多挂载场景下 A 实例的 rebuildEnvSubs 误清 B 实例的订阅（模块级单例时两者等价，
+// 但设计一致性对齐 coreSchemaOwners / customCleanups 的 per-mount 注入范式）。
+const _envCapUnsubsByMenu = new WeakMap<SlideMenuHandle, Array<() => void>>();
 function rebuildEnvSubs(caps: SceneCapability[], menu: SlideMenuHandle): void {
-  for (const u of _envCapUnsubs) u();
-  _envCapUnsubs = [];
+  const prev = _envCapUnsubsByMenu.get(menu);
+  if (prev) for (const u of prev) u();
+  const subs: Array<() => void> = [];
   for (const c of caps) {
-    if (c.subscribe) _envCapUnsubs.push(c.subscribe(() => menu.refresh()));
+    if (c.subscribe) subs.push(c.subscribe(() => menu.refresh()));
   }
+  _envCapUnsubsByMenu.set(menu, subs);
 }
 /** 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（每次重跑也会重建，此处为显式出口） */
-export function disposeEnvSubscriptions(): void {
-  for (const u of _envCapUnsubs) u();
-  _envCapUnsubs = [];
+export function disposeEnvSubscriptions(menu: SlideMenuHandle): void {
+  const subs = _envCapUnsubsByMenu.get(menu);
+  if (subs) {
+    for (const u of subs) u();
+    _envCapUnsubsByMenu.delete(menu);
+  }
   // 重置预设 select 模块缓存——cap 真值源在
   // environment cap 的 params.preset，本变量仅作无 cap 时的回退，跨会话残留
   // 会让新会话 select 显示上一会话的选中态

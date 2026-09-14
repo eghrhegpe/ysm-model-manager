@@ -17,7 +17,6 @@ import {
 } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
-import { pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
@@ -490,10 +489,18 @@ const TAP_MAX_DURATION_MS = 400;
  *   点按 = 位移≤TAP_MAX_MOVE_PX 且 时长≤TAP_MAX_DURATION_MS，此时切换 popup 显隐（仅切 display，DOM/栈保留）。
  *   pointercancel（系统手势抢占）时复位 downT，防后续 pointerup 误判为点按。
  *   返回 abort 句柄供 dispose 解绑。
+ *
+ * 显隐两条路径严格配对 onShow/onHide（输入阻断栈 + 焦点记忆 _prevFocus）：
+ *   - popup 可见时点按渲染器 → hideMenu()（onHide 解阻断 + 恢复焦点给触发元素）
+ *   - popup 隐藏时点按渲染器 → showMenu()（onShow 记焦点 + 推阻断 + 聚焦首项）
+ * 早期实现隐藏路径手搓 `pushInputBlock` 绕过 onShow：输入阻断计数与 onHide 的单次 pop
+ * 不再配对（计数虚高致 WASD 永久挂起），且 _prevFocus 未重新武装 → 后续关闭时焦点
+ * 无法恢复给触发元素（a11y 缺陷）。现统一走 showMenu/onShow，push/pop 严格成对。
  */
 function bindPreviewTapToggle(
   viewEl: HTMLElement,
   popup: HTMLElement,
+  menu: { onShow: () => void },
   hideMenu: (opts?: { restoreFocus?: boolean }) => void,
 ): () => void {
   const tapAbort = new AbortController();
@@ -523,13 +530,15 @@ function bindPreviewTapToggle(
       const moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
       if (moved > TAP_MAX_MOVE_PX || performance.now() - downT > TAP_MAX_DURATION_MS) return;
       if (popup.style.display !== "none") {
-        hideMenu(); // 点击渲染器 → 隐藏菜单（焦点恢复给触发元素）
+        hideMenu(); // 点击渲染器 → 隐藏菜单（onHide 解阻断 + 恢复焦点给触发元素）
       } else {
         const list = popup.querySelector<HTMLElement>(".slide-list");
         if (list && list.childElementCount > 0) {
+          // 走 onShow 而非手搓 pushInputBlock：重新武装 _prevFocus + 推输入阻断（计数 1），
+          // 与后续 onHide 的单次 pop 严格配对——计数对称，WASD 不永久挂起；焦点可恢复。
+          // 不导航（无具体视图），仅恢复 popup 显示态 + 焦点记忆。
           popup.style.display = "flex";
-          // 仅恢复输入阻断栈（不调 onShow：无具体视图，仅恢复之前 popup 状态）
-          pushInputBlock("slide-menu");
+          menu.onShow();
         }
       }
     },
@@ -602,7 +611,7 @@ export function mountPreviewRootMenu(
       adapterItemsRef,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）
-  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, hideMenu);
+  const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, menu, hideMenu);
 
   // ---- 句柄方法 ----
   const setAdapterItems = (items: PreviewMenuNode[]): void => {
@@ -620,7 +629,7 @@ export function mountPreviewRootMenu(
   const handle: PreviewMenuHandle = {
     dispose: (): void => {
       abortTap();
-      disposeEnvSubscriptions(); // 清环境面板 cap 订阅，防 cap 单例持有过期 menu 引用
+      disposeEnvSubscriptions(menu); // 清环境面板 cap 订阅（per-mount 隔离，防 cap 单例持有过期 menu 引用）
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）
       menu.dispose();

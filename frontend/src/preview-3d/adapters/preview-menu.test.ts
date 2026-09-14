@@ -463,6 +463,13 @@ describe("renderCapControls", () => {
     for (const b of btns) {
       expect(b.querySelector("span")).not.toBeNull();
     }
+    // [点击穿透修复] 缩略图 img 必须 non-pointer-target：让 click 事件落点在 button 而非 img（否则
+    // 真实引擎里 onSelect 不触发——renderCapButton 文本按钮能点，而此处有嵌套 img 被拦截）
+    // getComputedStyle 在 happy-dom 不计算注入样式表，改查注入规则文本（与 cc-thumb-btn-active 测试同法）
+    const thumbSheet = [...document.querySelectorAll("style")].find((s: HTMLStyleElement) =>
+      s.textContent?.includes(".cc-thumb-img"),
+    );
+    expect(thumbSheet?.textContent ?? "").toContain("pointer-events:none");
   });
 
   it("preset-thumb：active 格有 accent 高亮样式", () => {

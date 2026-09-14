@@ -142,26 +142,24 @@ export function resolveThreshold(
   return min;
 }
 
-// 已知无可测试函数的包（如纯配置、纯 CLI 入口、生成代码等），跳过阈值检查
+// 豁免表：仅收「测试不可达、覆盖率无意义」的包。**不放宽口径**——能达标的包一律不豁免。
+//
+// 2026-09 收紧：原表 14 项中 10 项纯属历史沉淀，实测均 ≥50% 门槛
+// （go/cli 57.3%、go/launcher 70.9%、go/updater 76.0%、go/texture_cache 79.9%、
+// go/paths 86.2%、go/packs 86.4%、go/container 87.1%、go/download 89.3%、
+// go/types/registry 89.6%、go/installer 97.3%），豁免只会让真实回归隐形，已移除。
+// 余下 5 项均为**进程入口 / 生成器 / 测试基建**，其 main() 或生成逻辑在测试内不可达。
 const SKIP_PACKAGES = [
-  "ysm-model-manager/build/android/scripts/deps",
-  "ysm-model-manager/cmd/updater",
-  // 根包 = 桌面/CLI 入口（main.go 起 Wails 应用，测试内不可达）；可测部分
-  // （mainWindowOptions / customJSMiddleware）已由 main_test.go 覆盖，
-  // 但 main() 本体必然 0%，会把整包压到 10.5%——与 cmd/updater 同类，豁免。
-  "ysm-model-manager",
-  "ysm-model-manager/go/download",
-  "ysm-model-manager/go/installer",
-  "ysm-model-manager/go/internal/testutil",
-  "ysm-model-manager/go/launcher",
+  // 代码生成器：go run ./gen 产出 block_ids_data.go，无被调用函数
   "ysm-model-manager/go/litematic/gen",
-  "ysm-model-manager/go/paths",
-  "ysm-model-manager/go/texture_cache",
-  "ysm-model-manager/go/types/registry",
-  "ysm-model-manager/go/updater",
-  "ysm-model-manager/go/container",
-  "ysm-model-manager/go/packs",
-  "ysm-model-manager/go/cli",
+  // 测试基建与 Android 构建脚本：非产品代码
+  "ysm-model-manager/go/internal/testutil",
+  "ysm-model-manager/build/android/scripts/deps",
+  // 进程入口：main() 起 Wails 应用 / 等待更新，测试内不可达。
+  // 根包可测部分（mainWindowOptions / customJSMiddleware）已由 main_test.go 覆盖，
+  // 但 main() 本体必然 0%。
+  "ysm-model-manager/cmd/updater",
+  "ysm-model-manager",
 ];
 
 /** 读 profile 文件并聚合为包级语句统计；读取失败抛出（由 main 兜底为 exit 1）。 */

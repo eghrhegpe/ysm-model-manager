@@ -228,7 +228,7 @@ restoreFunc()         // 显式调用
 | # | 检查项 | 文件 | 检查方法 |
 |---|--------|------|----------|
 | Y1 | error shadowing | `resource.go` | `if x, err := foo(); err != nil` 独立变量名 `jsonErr` |
-| Y2 | 审计数据 | `resource.go` | `HitRate/Hits/Misses` 必须填充，不能全零 |
+| Y2 | 审计数据 | `resource.go` | `HitRate/Hits/Misses` 必须填充，不能全零 → **✅ 已填充（2026-09）**：`repoaudit.measureCacheHitRate` 按真口径逐纹理内容哈希统计；CLI `printHealthReport` 经 `cacheHitSuffix` 展示 `命中率 N%（命中/总数）`，采样时加「≈」，探测失败数可见。注意：曾短暂走过「删除字段」路线（因旧算法语义错误），最终以重写为真口径收口 |
 | Y3 | 扣分上限 | `resource.go` | `calculateAuditScore` 加 `scoreFloor` 下限 |
 
 ## 修复示例

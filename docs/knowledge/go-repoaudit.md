@@ -84,7 +84,10 @@ status: active
 - 健康分数有下限 `scoreFloor = 30`，避免多问题叠加直接归零失去区分度
 - `Classify` 未命中任何注册表类型 → `"other"`（不报错）
 - **`Resources.ByType` 只在 walk 结束后一次性赋值（2026-09 落地）**：`DirAuditResult` 字面量初始化时不再预 `make` `ByType` map——原实现先 make 一个随即被下方 `result.Resources.ByType = resources`（局部 map 累积结果）整体覆盖，属无谓分配。后续改动须保持「局部 map 累积 → walk 后赋值」形态，勿在字面量里提前构造。
-- **`CacheStatus` 不含命中率（2026-09 删除，勿复活旧实现）**：曾声明 `HitRate`/`Hits`/`Misses`，但分子 `texture_cache.GetCacheStats().FileCount` 是**全局缓存目录文件数**（内容哈希键，跨仓库跨资源类型共享，所有导入过的模型都堆同一目录），分母是本仓库纹理数——**不同源、无因果关系**；`Hits=FileCount` 更把「缓存里有 N 个文件」当作「本仓库命中 N 次」。该比例随缓存增长必然 >100%，原实现靠 `if hitRate > 100 { hitRate = 100 }` 掩盖，体检页因此长期显示「命中率 100%」假绿。**正确口径已存在于 `cache-verify`**（`go/cli/cache.go` 的 `scanCacheVerify`）：逐个纹理 `TextureHash(path)` → `HasCached(hash)` → 真实命中计数，分子分母同源。若将来要在体检页恢复命中率，须走该口径（`texture_cache.TextureHash`/`HasCached` 均已导出，repoaudit 可自行实现，不必依赖 `go/cli`），并注意其代价是逐纹理 SHA256（与 `cache-verify` 同量级）。`CacheFiles`/`CacheSize`/`ShouldWarn` 三个真实量保留。
+- **缓存命中率 = 真口径（2026-09 重写；勿退回旧算法）**：`measureCacheHitRate` 逐纹理 `TextureHash(内容)` → 查缓存集 → 真实命中计数，分子分母**同为「本仓库纹理」**，故命中率天然 ∈ [0,100]、无需截断。与 `cache-verify` 命令同口径。
+  - **旧算法（已废，识别特征）**：`HitRate = GetCacheStats().FileCount / 本仓库纹理数`——分子是**全局缓存目录文件数**（内容哈希键，跨仓库跨类型共享，所有导入过的模型都堆同一目录），与分母不同源无因果关系；`Hits=FileCount` 更把「缓存里有 N 个文件」当作「本仓库命中 N 次」。比例随缓存增长必然 >100%，靠 `if hitRate > 100 { hitRate = 100 }` 掩盖 → 体检页长期显示「命中率 100%」**假绿**。回归护栏：`TestAudit_CacheHitRate_GlobalCacheDoesNotInflate`（缓存目录塞 50 个无关条目、仓库仅 1 个未缓存纹理 → 命中率必须为 0%，旧算法在此算成 100%）。
+  - **性能设计**：每个纹理都要 SHA256 全文件内容（与 `cache-verify` 同量级），但体检是 GUI 交互路径。故 ① 纹理样本由 `cacheHitSampleLimit` 截断（默认 1000，超限置 `CacheSampled` → 前端显示「≈」）；② 缓存集一次 `ListCacheFiles()` 建好供只读查询，替代逐纹理 `os.Stat`（`HasCached` 内部即 Stat）；③ 哈希计算按 `cacheHitWorkers`（默认 4）**分块**并发——不用 `conc.ParallelCtx` 是因为其 worker 数固定 `NumCPU` 不可外部传，无法落实限流（不与前台操作争抢全部 CPU）。两参数均为包级 var 供测试注入。
+  - **失败语义**：哈希/探测失败**不计入**分子也不计入分母，只累加 `CacheScanErrors`——「探测故障」≠「未缓存」，否则磁盘/权限故障会被误读成「贴图没缓存」、用户据此白重编码一遍。缓存目录不可列时全部计为失败（不静默当 0% 命中）。
 
 ## 已知问题 / 待治理（R34 审计记录）
 

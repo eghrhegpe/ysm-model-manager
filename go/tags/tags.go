@@ -37,11 +37,23 @@ func NewStore(configDir string) *Store {
 }
 
 // load 从磁盘读取 tags.json（如果存在）
+//
+// 双检锁（2026-09 重构）：读路径（GetTags/ListByTag/AllTags）与写路径都会先调 load。
+// 原实现直接取写锁，使**每次读操作**都先经历一次写锁获取（虽有 s.data != nil 早退，
+// 但稳态下仍与并发读互斥）。现改为「RLock 快路径检查 → 未加载才升写锁二次检查」：
+// 已加载后唯一开销是一次 RLock，读路径不再被写锁串行化；仅首次真正加载走写锁。
 func (s *Store) load() error {
+	s.mu.RLock()
+	if s.data != nil {
+		s.mu.RUnlock()
+		return nil // 已加载（内存态与磁盘态统一：仅首次调用初始化）
+	}
+	s.mu.RUnlock()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.data != nil {
-		return nil // 已加载（内存态与磁盘态统一：仅首次调用初始化）
+		return nil // 双检：并发另一 goroutine 已抢先完成加载
 	}
 	if s.path == "" {
 		s.data = make(map[string][]string) // 内存态：首次初始化，后续 SetTags 写入会话内保留
@@ -83,16 +95,43 @@ func (s *Store) load() error {
 	return nil
 }
 
-// save 将内存数据写入磁盘
-func (s *Store) save() error {
+// commit 以统一临界区执行一次写操作：load → 取写锁 → 改内存 → 序列化快照 → 解锁 → 写盘。
+//
+// 锁归属内聚（2026-09 重构）：旧实现由 prepareWrite 返回解锁函数、调用方 defer 到函数结尾，
+// 使 save() 里的 json.MarshalIndent 与 fsutil.WriteFileAtomic（磁盘 IO）**全程持写锁**——
+// 写锁覆盖慢 IO，阻塞所有 GetTags/ListByTag/AllTags 读路径。现把「改数据 + 序列化」留在锁内
+// （保证快照一致），写盘移出锁外（persist）。锁边界不再依赖调用方自觉，无法误用。
+//
+// mutate 返回 changed=false 表示无需落盘（如 AddTag 命中已存在、RemoveTag 无变化），
+// 此时跳过 persist 直接返回——保持原有「无变化不写盘」语义。
+func (s *Store) commit(mutate func() (bool, error)) error {
+	if err := s.load(); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	changed, err := mutate()
+	if err != nil {
+		s.mu.Unlock()
+		return err
+	}
+	if !changed {
+		s.mu.Unlock()
+		return nil
+	}
+	data, err := json.MarshalIndent(s.data, "", "  ")
+	s.mu.Unlock() // 锁只覆盖 改内存+序列化；写盘在锁外，不阻塞读
+	if err != nil {
+		return fmt.Errorf("序列化标签失败: %w", err)
+	}
+	return s.persist(data)
+}
+
+// persist 把已序列化的标签数据原子落盘（无锁；调用方须已释放 s.mu）。
+func (s *Store) persist(data []byte) error {
 	if s.path == "" {
 		// P1 修复：内存态显式返回错误，让调用方感知持久化不可用，
 		// 避免进程崩溃后标签静默丢失
 		return fmt.Errorf("tags 存储不可用：平台数据根未就绪，标签仅保留在会话内存中")
-	}
-	data, err := json.MarshalIndent(s.data, "", "  ")
-	if err != nil {
-		return fmt.Errorf("序列化标签失败: %w", err)
 	}
 	dir := filepath.Dir(s.path)
 	if err := os.MkdirAll(dir, fsutil.DirPerms); err != nil {
@@ -135,30 +174,20 @@ func checkModelPath(modelPath string) error {
 	return nil
 }
 
-// prepareWrite 校验 modelPath 并加载底层数据，随后获取写锁（s.mu），
-// 返回解锁函数与错误。与 SetTags / AddTag 等写路径共用前置逻辑
-// （jscpd 报告的文件内自重复）。临界区由调用方 defer unlock 覆盖整段写操作。
-func (s *Store) prepareWrite(modelPath string) (func(), error) {
-	if err := checkModelPath(modelPath); err != nil {
-		return nil, err
-	}
-	if err := s.load(); err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	return func() { s.mu.Unlock() }, nil
-}
+// 写路径统一经 commit（2026-09 重构）：原 prepareWrite 返回解锁函数、由调用方 defer 到
+// 函数结尾，导致 save() 的 marshal + 落盘全程持写锁。commit 把锁边界内聚，已取代之。
+// checkModelPath 仍为各写方法入口的独立校验（含 NUL 边界）。
 
 // SetTags 设置指定路径的标签列表（覆盖写入）
 func (s *Store) SetTags(modelPath string, tags []string) error {
-	unlock, err := s.prepareWrite(modelPath)
-	if err != nil {
+	if err := checkModelPath(modelPath); err != nil {
 		return err
 	}
-	defer unlock()
-	if len(tags) == 0 {
-		delete(s.data, modelPath) // 空列表 → 删除条目
-	} else {
+	return s.commit(func() (bool, error) {
+		if len(tags) == 0 {
+			delete(s.data, modelPath) // 空列表 → 删除条目
+			return true, nil
+		}
 		// 去重 + 排序
 		set := make(map[string]bool)
 		for _, t := range tags {
@@ -177,8 +206,8 @@ func (s *Store) SetTags(modelPath string, tags []string) error {
 		} else {
 			s.data[modelPath] = unique
 		}
-	}
-	return s.save()
+		return true, nil
+	})
 }
 
 // AddTag 追加单个标签（不会重复）
@@ -187,21 +216,21 @@ func (s *Store) AddTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	unlock, err := s.prepareWrite(modelPath)
-	if err != nil {
+	if err := checkModelPath(modelPath); err != nil {
 		return err
 	}
-	defer unlock()
-	current := s.data[modelPath]
-	for _, t := range current {
-		if t == tag {
-			return nil // 已存在
+	return s.commit(func() (bool, error) {
+		current := s.data[modelPath]
+		for _, t := range current {
+			if t == tag {
+				return false, nil // 已存在：无变化不写盘
+			}
 		}
-	}
-	s.data[modelPath] = append(current, tag)
-	// AddTag 后保持存储排序不变量（SetTags 存的是有序的，GetTags 依赖排序去重缓存）
-	sort.Strings(s.data[modelPath])
-	return s.save()
+		s.data[modelPath] = append(current, tag)
+		// AddTag 后保持存储排序不变量（SetTags 存的是有序的，GetTags 依赖排序去重缓存）
+		sort.Strings(s.data[modelPath])
+		return true, nil
+	})
 }
 
 // RemoveTag 移除单个标签
@@ -210,27 +239,27 @@ func (s *Store) RemoveTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	unlock, err := s.prepareWrite(modelPath)
-	if err != nil {
+	if err := checkModelPath(modelPath); err != nil {
 		return err
 	}
-	defer unlock()
-	current := s.data[modelPath]
-	var kept []string
-	for _, t := range current {
-		if t != tag {
-			kept = append(kept, t)
+	return s.commit(func() (bool, error) {
+		current := s.data[modelPath]
+		var kept []string
+		for _, t := range current {
+			if t != tag {
+				kept = append(kept, t)
+			}
 		}
-	}
-	if len(kept) == len(current) {
-		return nil // 无变化
-	}
-	if len(kept) == 0 {
-		delete(s.data, modelPath)
-	} else {
-		s.data[modelPath] = kept
-	}
-	return s.save()
+		if len(kept) == len(current) {
+			return false, nil // 无变化不写盘
+		}
+		if len(kept) == 0 {
+			delete(s.data, modelPath)
+		} else {
+			s.data[modelPath] = kept
+		}
+		return true, nil
+	})
 }
 
 // ListByTag 返回所有打了指定标签的文件路径列表

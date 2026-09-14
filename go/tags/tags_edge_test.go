@@ -147,10 +147,10 @@ func TestStore_NULInConfigDir(t *testing.T) {
 	store := NewStore(badDir)
 	err := store.SetTags("model.ysm", []string{"test"})
 	if err == nil {
-		// 接受路径 → 保存后 tags.json 决不允许落入当前工作目录
-		store.mu.Lock()
-		_ = store.save()
-		store.mu.Unlock()
+		// 接受路径 → 保存后 tags.json 决不允许落入当前工作目录。
+		// persist 为无锁落盘入口（2026-09 重构后 save 拆分为 commit+persist），
+		// 此处直接触发落盘路径即可验证「NUL configDir 不污染 CWD」。
+		_ = store.persist([]byte("{}"))
 		if _, statErr := os.Stat("tags.json"); statErr == nil {
 			os.Remove("tags.json")
 			t.Fatalf("BUG(INFO-NUL-CFG): NUL configDir 导致 tags.json 写入当前目录")

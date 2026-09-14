@@ -328,9 +328,20 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	// 否则退回 filepath.Walk 原行为（结果叠 30s sync 目录扫描缓存，
 	// 使 maid-model 等嵌套类型的回退 Walk 在 TTL 内也只真正走一次）。
 	collectEntries := func(rootDir string) map[string]string {
+		cacheKey := syncDirectoryScanKey{kind: "dirlevel", root: rootDir, rtype: rtype}
+		if cached, ok := loadSyncScanCache[map[string]string](&syncDirLevelScanCache, cacheKey); ok {
+			return cached
+		}
 		if scanFn != nil {
 			if entries, hit := scanFn(rootDir); hit && len(entries) > 0 {
 				if m := collectEntriesFromScan(entries, rootDir, rtype); m != nil {
+					// scan-hit 衍生结果叠同款 syncDirLevelScanCache：BuildSyncItems 周期内
+					// 8 个 MMD 子类型 × N 个实例反复对同一个全局仓库根 (rootDir, rtype)
+					// 重算 O(entries) 衍生 map——命中 scanner 30s TTL+single-flight 窗口内
+					// 直接返回，与 Walk 回退路径（collectEntriesWalkCached）对称复用缓存。
+					// 仅当 m != nil（无嵌套模式可反推）才存——nil 回退 Walk 不缓存，
+					// 否则会把「须走 Walk」误判为命中而永久跳过 Walk。
+					storeSyncScanCache(&syncDirLevelScanCache, cacheKey, m)
 					return m
 				}
 			}

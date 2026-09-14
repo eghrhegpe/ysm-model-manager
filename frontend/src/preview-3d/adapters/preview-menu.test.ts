@@ -497,6 +497,37 @@ describe("renderCapControls", () => {
     expect(thumbSheet?.textContent ?? "").toContain("var(--accent)");
   });
 
+  it("preset-thumb：点击后 active 高亮即时从旧按钮切到新按钮（不依赖外部 refresh）", () => {
+    const list = mkList();
+    let selected = "";
+    renderCapControls(list, [
+      mk("preset-thumb", {
+        thumb: {
+          size: 64,
+          options: [
+            { value: "a", label: "A", getThumb: () => "data:x" },
+            { value: "b", label: "B", getThumb: () => "data:y" },
+            { value: "c", label: "C", getThumb: () => "data:z" },
+          ],
+          activeValue: () => "a",
+          onSelect: (v) => { selected = v; },
+        },
+      }),
+    ]);
+    const btns = list.querySelectorAll("button");
+    expect(btns[0]!.classList.contains("cc-thumb-btn-active")).toBe(true);
+    // 点第二格 → onSelect 触发 + active 高亮本地即时切换
+    (btns[1] as HTMLElement).click();
+    expect(selected).toBe("b");
+    expect(btns[0]!.classList.contains("cc-thumb-btn-active")).toBe(false);
+    expect(btns[1]!.classList.contains("cc-thumb-btn-active")).toBe(true);
+    // 再点第三格 → 高亮继续前移，旧格清除
+    (btns[2] as HTMLElement).click();
+    expect(selected).toBe("c");
+    expect(btns[1]!.classList.contains("cc-thumb-btn-active")).toBe(false);
+    expect(btns[2]!.classList.contains("cc-thumb-btn-active")).toBe(true);
+  });
+
   it("preset-thumb：点击调用 onSelect", () => {
     const list = mkList();
     let lastSelected = "";

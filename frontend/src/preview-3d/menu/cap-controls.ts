@@ -571,6 +571,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
   }
   const grid = document.createElement("div");
   grid.className = "cc-grid";
+  let activeBtn: HTMLButtonElement | null = null;
   const activeVal = thumb.activeValue();
   for (const opt of thumb.options) {
     const btn = document.createElement("button");
@@ -579,6 +580,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
     btn.style.position = "relative";
     btn.style.zIndex = "1";
     const isActive = opt.value === activeVal;
+    if (isActive) activeBtn = btn;
     if (isActive) btn.classList.add("cc-thumb-btn-active");
     const img = document.createElement("img");
     const dataUrl = opt.getThumb();
@@ -598,6 +600,13 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
     btn.append(img, span);
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
+      // [active 即时切换] 本地维护高亮：把 cc-thumb-btn-active 从旧按钮移到当前点击按钮，
+      // 不依赖外部 menu.refresh 是否命中本 DOM（否则点了 preset 但 active 边框不动，形似「点不中」）。
+      if (activeBtn !== btn) {
+        activeBtn?.classList.remove("cc-thumb-btn-active");
+        btn.classList.add("cc-thumb-btn-active");
+        activeBtn = btn;
+      }
       thumb.onSelect(opt.value);
     };
     grid.appendChild(btn);

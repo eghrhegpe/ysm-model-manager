@@ -505,8 +505,8 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 157 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 168 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 174 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 96 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 143 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 97 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 146 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 142 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 341 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 421 |

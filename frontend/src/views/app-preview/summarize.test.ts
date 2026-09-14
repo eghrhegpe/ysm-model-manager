@@ -115,7 +115,8 @@ describe("summaryCardHTML 徽章与转义", () => {
 
   it("hasFree+非 isFree → 🔒 付费徽章", () => {
     const html = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: false });
-    expect(html).toContain("🔒 付费");
+    // ADR-238：图标由 emoji 🔒 改走 SVG（断言 SVG + 文案同在，锁定语义未丢）
+    expect(html).toMatch(/<svg class="ws-icon"[\s\S]*?<\/svg>\s*付费/);
   });
 
   it("名称含 HTML 字符被转义（防 XSS）", () => {

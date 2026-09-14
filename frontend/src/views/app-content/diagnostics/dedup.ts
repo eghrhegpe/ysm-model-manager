@@ -11,6 +11,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import {
   bindCancelButton,
@@ -112,7 +113,9 @@ export function createDedupSession(): DedupSession {
       list.innerHTML =
         '<div class="stat-row diag-msg ' +
         (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +
-        '">✅ ' +
+        '">' +
+        UI_ICONS.success +
+        " " +
         t("diagnostics.dedupDone", { del, fail }) +
         "</div>";
     } catch (err) {
@@ -174,7 +177,9 @@ export function createDedupSession(): DedupSession {
     const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
     if (!totalGroups) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">✅ ' +
+        '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">' +
+        UI_ICONS.success +
+        " " +
         t("diagnostics.noDups") +
         "</div>";
       return;
@@ -248,7 +253,9 @@ export function createDedupSession(): DedupSession {
           "</div>";
       } catch (e) {
         list.innerHTML =
-          '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
+          '<div class="stat-row diag-stat diag-stat-muted">' +
+          UI_ICONS.error +
+          " " +
           esc(friendlyError(e, t("diagnostics.loadResourceTypesFailed"))) +
           "</div>";
         return;
@@ -269,7 +276,9 @@ export function createDedupSession(): DedupSession {
         );
       } catch (e) {
         list.innerHTML =
-          '<div class="stat-row diag-stat diag-stat-muted">❌ ' +
+          '<div class="stat-row diag-stat diag-stat-muted">' +
+          UI_ICONS.error +
+          " " +
           esc(friendlyError(e, t("diagnostics.loadDedupConfigFailed"))) +
           "</div>";
       }

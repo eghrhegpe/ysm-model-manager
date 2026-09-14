@@ -2,6 +2,7 @@
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   ALL_RESOURCE_TYPES,
@@ -31,14 +32,18 @@ export function headerHTML(): string {
     t("common.selectAll") +
     "</label>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬆️ ' +
+    '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">' +
+    UI_ICONS.upload +
+    " " +
     t("sidebar.pushSelected") +
     " ▾</button>" +
     '<div class="dd-menu" id="sidebar-push-menu" data-testid="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
     typeMenuItemsHTML() +
     "</div></div>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">⬇️ ' +
+    '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">' +
+    UI_ICONS.download +
+    " " +
     t("sidebar.pullSelected") +
     " ▾</button>" +
     '<div class="dd-menu" id="sidebar-pull-menu" data-testid="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
@@ -52,7 +57,7 @@ export function footerHTML(): string {
   return `<div class="footer">
 <div class="footer-stats" id="footer-stats">
   <span class="stat-item" id="stat-sync">${t("sidebar.syncFully")} -/-</span>
-  <button class="btn-base footer-btn btn-mc-dir" id="btn-mc" title="${t("sidebar.configGameDir")}">🎮 ${t("sidebar.notSet")}</button>
+  <button class="btn-base footer-btn btn-mc-dir" id="btn-mc" title="${t("sidebar.configGameDir")}">${UI_ICONS.game} ${t("sidebar.notSet")}</button>
 </div>
 </div>`;
 }

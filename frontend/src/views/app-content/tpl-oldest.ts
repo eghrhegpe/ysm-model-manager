@@ -5,6 +5,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { ModelEntry, RepoStats } from "@/features/maintenance/oldest-models.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 // ===== 展示常量（渲染侧；评分分档 80/60 留守 features）=====
@@ -96,9 +97,13 @@ function renderOldestCardsHtml(sorted4: ModelEntry[]): string {
           '">' +
           renderDisplayName(e.Name) +
           "</div>" +
-          '<div class="oldest-card-meta"><span>📏 ' +
+          '<div class="oldest-card-meta"><span>' +
+          UI_ICONS.ruler +
+          " " +
           formatBytes(e.Size) +
-          "</span><span>📅 " +
+          "</span><span>" +
+          UI_ICONS.calendar +
+          " " +
           dateStr +
           "</span><span> " +
           t("oldest.daysAgo", { n: ageDays }) +
@@ -179,7 +184,9 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     '<div class="oldest-page">' +
     '<div class="oldest-stats-bar">' +
     '<div class="oldest-health-box">' +
-    '<div class="oldest-health-label">📊 ' +
+    '<div class="oldest-health-label">' +
+    UI_ICONS.chart +
+    " " +
     t("repo.score") +
     "</div>" +
     '<div class="oldest-health-ring" style="background:conic-gradient(' +
@@ -200,33 +207,47 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     "</span></div>" +
     '<div class="oldest-stats-divider"></div>' +
     '<div class="oldest-stats-row">' +
-    '<span class="oldest-stat-pill">📄 ' +
+    '<span class="oldest-stat-pill">' +
+    UI_ICONS.file +
+    " " +
     totalFiles +
     "</span>" +
-    '<span class="oldest-stat-pill">📏 ' +
+    '<span class="oldest-stat-pill">' +
+    UI_ICONS.ruler +
+    " " +
     formatBytes(totalSize) +
     "</span>" +
-    '<span class="oldest-stat-pill">🚫 ' +
+    '<span class="oldest-stat-pill">' +
+    UI_ICONS.blocked +
+    " " +
     banned +
     "</span>" +
-    '<span class="oldest-stat-pill">🔗 ' +
+    '<span class="oldest-stat-pill">' +
+    UI_ICONS.link +
+    " " +
     dupGroups +
     "</span></div></div>" +
     '<div class="oldest-section">' +
-    '<div class="oldest-section-title">🏆 ' +
+    '<div class="oldest-section-title">' +
+    UI_ICONS.rank +
+    " " +
     t("repo.tab.oldest") +
     "</div>" +
     '<div style="display:flex;justify-content:center">' +
     oldestHtml +
     "</div></div>" +
     '<div class="oldest-section">' +
-    '<div class="oldest-section-title-sm">📅 ' +
+    '<div class="oldest-section-title-sm">' +
+    UI_ICONS.calendar +
+    " " +
     t("oldest.monthly") +
     "</div>" +
     heatmapHtml +
     "</div>" +
     '<div class="oldest-section" style="text-align:center">' +
-    '<div class="oldest-section-title">🎲 ' +
+    '<div class="oldest-section-title">' +
+    UI_ICONS.random +
+    " " +
     t("oldest.daily") +
     "</div>" +
     '<div style="display:flex;justify-content:center">' +

@@ -12,6 +12,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
@@ -249,7 +250,7 @@ function buildLoadRecycleBin(
         shell.cleanupActions.current();
         shell.cleanupActions.current = null;
       }
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:var(--fs-sm)">❌ ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
+      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
       if (count) count.textContent = t("common.loadFailed");
     }
   };

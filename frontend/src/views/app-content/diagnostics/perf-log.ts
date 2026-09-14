@@ -5,6 +5,7 @@ import { t } from "@/core/i18n/t.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
@@ -57,7 +58,7 @@ function perfLogRenderCards(entries: PerfLogEntry[], rawOutput: string, esc: Esc
         ? `<span class="perf-hist-body">${e.body.map((d) => esc(d)).join("<br>")}</span>`
         : "";
       return `<div class="perf-hist-card" style="animation-delay:${stagger(i)}ms">
-<span class="perf-hist-head">🗓️ ${esc(e.date)} · ${esc(e.area)} · <code>${esc(e.commit)}</code></span>${body}
+<span class="perf-hist-head">${UI_ICONS.calendar} ${esc(e.date)} · ${esc(e.area)} · <code>${esc(e.commit)}</code></span>${body}
 </div>`;
     })
     .join("");

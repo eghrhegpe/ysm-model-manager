@@ -6,6 +6,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppConfig, FileConflict, VersionInstance } from "@/utils/types-re-export.ts";
@@ -130,12 +131,14 @@ function dgCfBuildNameConflictMap(
 function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): string {
   if (!conflicts.length) {
     return (
-      '<div class="stat-row diag-msg diag-msg-success">✅ ' +
+      '<div class="stat-row diag-msg diag-msg-success">' +
+      UI_ICONS.success +
+      " " +
       t("diagnostics.noNameConflict") +
       "</div>"
     );
   }
-  let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">⚠️ ${t("diagnostics.conflictsFound", { n: conflicts.length })}</div>`;
+  let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">${UI_ICONS.warning} ${t("diagnostics.conflictsFound", { n: conflicts.length })}</div>`;
   conflicts.slice(0, 50).forEach(([name, insNames], i) => {
     const delay = stagger(i, 30, 600);
     html += `<div class="conflict-row" style="animation-delay:${delay}ms">
@@ -234,7 +237,9 @@ async function dgCfRunSyncDetection(
   const result = await DetectConflicts(rtype, instanceName);
   if (!result) {
     list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">❌ ' +
+      '<div class="stat-row diag-msg diag-msg-error">' +
+      UI_ICONS.error +
+      " " +
       t("diagnostics.conflictDetectionFailed") +
       "</div>";
     return;
@@ -242,7 +247,9 @@ async function dgCfRunSyncDetection(
   const conflicts = result.conflicts || [];
   if (conflicts.length === 0) {
     list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-success">✅ ' +
+      '<div class="stat-row diag-msg diag-msg-success">' +
+      UI_ICONS.success +
+      " " +
       t("diagnostics.noSyncConflict") +
       "</div>";
     return;
@@ -301,18 +308,18 @@ function dgCfBuildConfigPanelHtml(
   return `
       <div class="diag-sync-config">
         <div class="diag-config-item">
-          <label for="sync-rtype">📦 ${t("diagnostics.selectResourceType")}:</label>
+          <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}:</label>
           <select id="sync-rtype" class="diag-config-select">
             ${rtypeOptions}
           </select>
         </div>
         <div class="diag-config-item">
-          <label for="sync-instance">🎮 ${t("diagnostics.selectInstance")}:</label>
+          <label for="sync-instance">${UI_ICONS.game} ${t("diagnostics.selectInstance")}:</label>
           <select id="sync-instance" class="diag-config-select">
             ${instanceOptions}
           </select>
         </div>
-        <button id="sync-scan-btn" class="diag-dedup-exec">🔍 ${t("diagnostics.scanSyncConflict")}</button>
+        <button id="sync-scan-btn" class="diag-dedup-exec">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
       </div>
     `;
 }
@@ -378,14 +385,14 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
 function dgCfBuildResolveSectionHtml(): string {
   return `<div class="diag-sync-resolve" style="margin-top:16px;padding:12px;background:var(--diag-stat-bg);border-radius:var(--radius-lg)">
 <div class="diag-config-item">
-  <label for="resolve-strategy">🎯 ${t("diagnostics.resolveConflicts")}:</label>
+  <label for="resolve-strategy">${UI_ICONS.target} ${t("diagnostics.resolveConflicts")}:</label>
   <select id="resolve-strategy" class="diag-config-select">
     <option value="force_remote">${t("diagnostics.resolveForceRemote")}</option>
     <option value="force_local">${t("diagnostics.resolveForceLocal")}</option>
     <option value="manual">${t("diagnostics.resolveManual")}</option>
   </select>
 </div>
-<button id="do-resolve-btn" class="diag-dedup-exec" style="margin-top:8px">✅ ${t("diagnostics.resolveConflicts")}</button>
+<button id="do-resolve-btn" class="diag-dedup-exec" style="margin-top:8px">${UI_ICONS.success} ${t("diagnostics.resolveConflicts")}</button>
 </div>`;
 }
 
@@ -403,7 +410,7 @@ async function dgCfExecuteResolve(
     const conflictsJSON = JSON.stringify(conflicts);
     const result = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
     if (!result) {
-      list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">❌ ${t("diagnostics.resolveFailed")}</div>`;
+      list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.error} ${t("diagnostics.resolveFailed")}</div>`;
       return;
     }
     let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
@@ -439,7 +446,7 @@ function renderSyncConflictsResult(
   rtype: string,
   instanceName: string,
 ): void {
-  const header = `<div class="stat-row diag-msg diag-msg-error">⚠️ ${t("diagnostics.syncConflictFound", { n: conflicts.length })}</div>`;
+  const header = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.warning} ${t("diagnostics.syncConflictFound", { n: conflicts.length })}</div>`;
   const rowsHtml = dgCfBuildSyncConflictRows(conflicts, esc);
   const resolveHtml = dgCfBuildResolveSectionHtml();
   const html = header + rowsHtml + resolveHtml;

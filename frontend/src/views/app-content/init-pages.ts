@@ -9,6 +9,7 @@ import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
@@ -243,10 +244,14 @@ async function initDedupTab(
   container.innerHTML =
     '<div style="display:flex;flex-direction:column;height:100%">' +
     '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
-    '<span style="flex:1;font-size:var(--fs-sm);color:var(--muted)">📌 ' +
+    '<span style="flex:1;font-size:var(--fs-sm);color:var(--muted)">' +
+    UI_ICONS.pin +
+    " " +
     t("dedup.sha256Hint") +
     "</span>" +
-    '<button class="btn-base accent" id="dedup-start-btn">🔗 ' +
+    '<button class="btn-base accent" id="dedup-start-btn">' +
+    UI_ICONS.link +
+    " " +
     t("dedup.startDedup") +
     "</button>" +
     "</div>" +

@@ -12,6 +12,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
@@ -221,7 +222,9 @@ export function initAdvancedGrid(
         (isOverridden
           ? '<button class="btn-base sm stg-adv-reset" data-rtype="' +
             at.rtype +
-            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ ' +
+            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">' +
+            UI_ICONS.undo +
+            " " +
             t("settings.path.default") +
             "</button>"
           : "") +

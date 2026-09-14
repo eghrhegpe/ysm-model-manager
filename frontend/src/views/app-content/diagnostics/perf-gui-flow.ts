@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
@@ -74,7 +75,7 @@ function guiFlowRenderStages(
       ? `<div class="perf-total">⏱️ ${t("diagnostics.perfTotal")}: ${flowTotal.toFixed(2)}ms</div>`
       : "";
   const failLine = failed
-    ? `<div class="diag-stat diag-stat-error">❌ ${t("diagnostics.perfGuiFailed")}</div>`
+    ? `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${t("diagnostics.perfGuiFailed")}</div>`
     : "";
   return (
     sectionHeader("🩺", t("diagnostics.perfGuiResult"), rawOutput) +

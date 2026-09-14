@@ -5,6 +5,7 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
@@ -196,7 +197,7 @@ function renderLitematicDetail(
   } else {
     extra = `${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}${field(t("preview.createdAt"), meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field(t("preview.modifiedAt"), meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.formatVersion")}</span><span>Litematica v${meta.version || "?"} · MC Data v${meta.minecraftDataVersion || "?"}</span></div>${field(t("preview.description"), meta.description)}`;
   }
-  detailDiv.innerHTML = `<h3>📋 ${t("preview.blueprintDetail")}</h3>
+  detailDiv.innerHTML = `<h3>${UI_ICONS.clipboard} ${t("preview.blueprintDetail")}</h3>
     <div style="padding:12px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
       ${previewImgHTML}
       <div><strong>${renderFormattedText(basename || "")}</strong></div>
@@ -216,7 +217,7 @@ function renderLitematicMaterial(ctx: PreviewRoot, meta: LitematicMeta): void {
   const blockStats = meta.blockStats || meta.paletteStats;
   const materialDiv = ctx.root.getElementById("preview-material");
   if (!materialDiv) return;
-  materialDiv.innerHTML = `<h3>🧱 ${t("preview.materialList")}</h3>
+  materialDiv.innerHTML = `<h3>${UI_ICONS.voxel} ${t("preview.materialList")}</h3>
 	    <div style="padding:12px;font-size:var(--fs-sm)">
 	      ${renderBlockList(blockStats)}
 	    </div>`;
@@ -230,8 +231,8 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
 
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="pv-tab-row">
-    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">📋 ${t("preview.detailTab")}</button>
-    <button class="pv-tab ${savedTab === "material" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="material">🧱 ${t("preview.materialList")}</button>
+    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">${UI_ICONS.clipboard} ${t("preview.detailTab")}</button>
+    <button class="pv-tab ${savedTab === "material" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="material">${UI_ICONS.voxel} ${t("preview.materialList")}</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}>
     <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsingLitematica")}...</div></div>

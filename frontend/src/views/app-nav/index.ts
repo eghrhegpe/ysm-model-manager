@@ -12,6 +12,7 @@ import { setRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   GROUP_META,
@@ -258,7 +259,7 @@ class AppNav extends WebComponentBase {
       </div>
       <div class="menu">
         <div class="menu-head" data-menu-head title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">
-          <div class="menu-label">🧭 ${t("nav.label")}</div>
+          <div class="menu-label">${UI_ICONS.navigate} ${t("nav.label")}</div>
           <button class="nav-toggle" data-testid="nav-toggle" title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">${this._collapsed ? "»" : "«"}</button>
         </div>
         <div class="nav-repo-sel" data-testid="nav-repo-sel">

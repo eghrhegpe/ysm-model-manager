@@ -9,6 +9,7 @@ import { stagger } from "@/utils/animation/stagger.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -86,7 +87,9 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
             escUtil(cr.name) +
             '">' +
             '<div class="gh-card-body">' +
-            '<div class="ws-name" style="font-size:var(--fs-sm)">🐙 ' +
+            '<div class="ws-name" style="font-size:var(--fs-sm)">' +
+            UI_ICONS.github +
+            " " +
             escUtil(cr.name) +
             "</div>" +
             '<div class="ws-desc" style="font-size:9px">' +
@@ -177,7 +180,9 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       if (resultsBody) {
         resultsBody.innerHTML =
           ghPlaceholder("❌ " + t("downloads.noModelList")) +
-          '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">↗ ' +
+          '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">' +
+          UI_ICONS.external +
+          " " +
           t("downloads.openInGithub") +
           "</button></div>";
       }
@@ -196,7 +201,9 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
     if (resultsBody) {
       resultsBody.innerHTML =
         ghPlaceholder("❌ " + escUtil(msg)) +
-        '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ ' +
+        '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">' +
+        UI_ICONS.external +
+        " " +
         t("downloads.openInGithub") +
         "</button></div>";
     }

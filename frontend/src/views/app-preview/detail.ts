@@ -15,6 +15,7 @@ import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { loadModel2D } from "./skeleton.ts";
@@ -30,10 +31,10 @@ export async function showModelDetail(
   const savedTab = safeGet("ysm_previewTab") || "detail";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="pv-tab-row">
-    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">📄 ${t("preview.detailTab")}</button>
-    <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">🏗️ ${t("preview.tab.skeleton")}</button>
+    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">${UI_ICONS.file} ${t("preview.detailTab")}</button>
+    <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">${UI_ICONS.build} ${t("preview.tab.skeleton")}</button>
   </div>
-  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
+  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
@@ -153,7 +154,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
     // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
     ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🎨 ${t("preview.resourcePack")}</h3>
+  <h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
@@ -175,7 +176,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     void renderPackModelList(ctx, gen, App, path);
   } catch (e) {
     if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
+    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
   }
 }
 

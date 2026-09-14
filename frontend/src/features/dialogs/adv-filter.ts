@@ -9,6 +9,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 
@@ -54,13 +55,13 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
   return `
       <div class="afv-form">
         <div>
-          <label for="afv-kw" class="afv-label">🔍 ${t("dialog.keyword")}</label>
+          <label for="afv-kw" class="afv-label">${UI_ICONS.search} ${t("dialog.keyword")}</label>
           <input id="afv-kw" class="afv-input-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="${t("dialog.matchAll")}">
         </div>
 
         <div class="afv-grid">
           <div>
-            <label for="afv-minBones" class="afv-label">🦴 ${t("dialog.bones")}</label>
+            <label for="afv-minBones" class="afv-label">${UI_ICONS.bone} ${t("dialog.bones")}</label>
             <div class="afv-range-row">
               <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
               <span class="afv-sep">—</span>
@@ -68,7 +69,7 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
             </div>
           </div>
           <div>
-            <label for="afv-minCubes" class="afv-label">🧊 ${t("dialog.cubes")}</label>
+            <label for="afv-minCubes" class="afv-label">${UI_ICONS.unknown} ${t("dialog.cubes")}</label>
             <div class="afv-range-row">
               <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
               <span class="afv-sep">—</span>
@@ -78,7 +79,7 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
         </div>
 
         <div>
-          <label for="afv-minTex" class="afv-label">🖼 ${t("dialog.textureSize")}</label>
+          <label for="afv-minTex" class="afv-label">${UI_ICONS.image} ${t("dialog.textureSize")}</label>
           <div class="afv-range-row">
             <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
             <span class="afv-sep">—</span>
@@ -87,7 +88,7 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
         </div>
 
         <div>
-          <label for="afv-tag" class="afv-label">🏷️ ${t("dialog.tags")}</label>
+          <label for="afv-tag" class="afv-label">${UI_ICONS.tag} ${t("dialog.tags")}</label>
           <div class="afv-range-row">
             <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="${t("dialog.tagPlaceholder")}" class="afv-inp">
             <span id="afv-tag-hint" class="afv-tag-hint"></span>
@@ -98,9 +99,9 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
       <div id="afv-err" class="dlg-err"></div>
 
       <div class="dlg-footer afv-footer">
-        <button id="afv-clear" class="dlg-btn afv-clear">🧹 ${t("dialog.clearAll")}</button>
+        <button id="afv-clear" class="dlg-btn afv-clear">${UI_ICONS.clean} ${t("dialog.clearAll")}</button>
         <button id="afv-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="afv-ok" class="dlg-btn dlg-btn-primary">🔍 ${t("dialog.applyEnter")}</button>
+        <button id="afv-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.search} ${t("dialog.applyEnter")}</button>
       </div>
     `;
 }

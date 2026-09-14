@@ -8,6 +8,7 @@ import { parseModelName } from "@/utils/model-name/display.ts";
 // ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
 
 import type { SummaryAnimGroup, SummaryConfigMenu } from "@/utils/format/ysm-anim-config.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 // 保持转口导出，零下游改动
 export type { SummaryAnimGroup, SummaryConfigMenu };
@@ -99,7 +100,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const freeBadge = header.hasFree
     ? header.isFree
       ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
   let authorHtml = "";
   let workHtml = "";
@@ -138,7 +139,7 @@ ${header.linkHome ? `<div class="md-row"><span class="md-label">${t("format.home
 ${header.linkUpdate ? `<div class="md-row"><span class="md-label">${t("format.update")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkUpdate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.viewUpdate")}</a></span></div>` : ""}
 ${header.hash ? `<div class="md-row" style="font-size:var(--fs-xs);color:var(--muted)"><span class="md-label">${t("format.fingerprint")}</span><span class="md-value" style="font-family:monospace;font-size:var(--fs-xs);word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
-<div class="md-row" style="color:var(--muted);font-size:var(--fs-xs)"><span>🔒 ${t("format.encryptedNotice")}</span></div>
+<div class="md-row" style="color:var(--muted);font-size:var(--fs-xs)"><span>${UI_ICONS.lock} ${t("format.encryptedNotice")}</span></div>
 ${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:right">${t("format.versionLine", { format: header.format ?? 0, crypto: header.crypto ?? 0 })}</div>` : ""}
 </div>`;
 }
@@ -157,7 +158,7 @@ export function summaryCardHTML(
 ): string {
   if (!summary && !header) {
     return `<div class="content" id="preview-content">
-<h3>📄 ${t("preview.modelInfo")}</h3>
+<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
   <div class="big-icon">📄</div>
   <div class="dp-hint">${t("preview.clickFileHint")}</div>
@@ -202,7 +203,7 @@ export function summaryCardHTML(
                 `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
             )
             .join("") + more;
-        return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
+        return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">${UI_ICONS.video} ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
       })
       .filter(Boolean)
       .join("");
@@ -215,7 +216,7 @@ export function summaryCardHTML(
     configHtml = summary.configMenus
       .map((m) => {
         const name = cleanText(m.name || m.id || "");
-        return `<div style="margin-bottom:2px;font-size:var(--fs-xs);color:var(--muted)">⚙️ ${esc(name)}</div>`;
+        return `<div style="margin-bottom:2px;font-size:var(--fs-xs);color:var(--muted)">${UI_ICONS.settings} ${esc(name)}</div>`;
       })
       .join("");
     if (configHtml) {
@@ -227,7 +228,7 @@ export function summaryCardHTML(
   const freeBadge = header?.hasFree
     ? header.isFree
       ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
 
   // 解码器徽标（从 header 或 enriched 来源获取 decodedBy，挂标题行右侧）

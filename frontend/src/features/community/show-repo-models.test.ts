@@ -113,7 +113,8 @@ describe("showRepoModels", () => {
     expect(html).toContain("link-badge-raw");
     expect(html).toContain("link-badge-cdn");
     expect(html).toContain("gh-model-badge-missing");
-    expect(html).toContain("⬇️ 1"); // A 本地已有，C 缺失 → missingCount 1
+    // ADR-238：缺失徽章图标由 emoji ⬇️ 改走 SVG（A 本地已有，C 缺失 → missingCount 1）
+    expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*1</);
     // 事件绑定参数：dlPrefix 固定 raw 前缀；localMap 键经 stripDisableSuffix
     expect(bindRepoEventsMock).toHaveBeenCalledTimes(1);
     const [el, opts] = bindRepoEventsMock.mock.calls[0] as [HTMLElement, Record<string, unknown>];

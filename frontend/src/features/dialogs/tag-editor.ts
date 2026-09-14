@@ -6,6 +6,7 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 import { addTagToSet } from "./tag-set.ts";
 
@@ -90,7 +91,7 @@ function dgTeBuildBoxHTML(modelPath: string): string {
     </div>
 
     <details class="te-suggest-details">
-      <summary class="te-suggest-summary">📋 ${t("dialog.existingTags")}</summary>
+      <summary class="te-suggest-summary">${UI_ICONS.clipboard} ${t("dialog.existingTags")}</summary>
       <div id="te-suggest" class="te-suggest-wrap"></div>
     </details>
 
@@ -98,7 +99,7 @@ function dgTeBuildBoxHTML(modelPath: string): string {
 
     <div class="dlg-footer te-footer">
       <button id="te-cancel" class="dlg-btn">${t("common.cancel")}</button>
-      <button id="te-save" class="dlg-btn dlg-btn-primary">💾 ${t("common.save")}</button>
+      <button id="te-save" class="dlg-btn dlg-btn-primary">${UI_ICONS.save} ${t("common.save")}</button>
     </div>
   `;
 }

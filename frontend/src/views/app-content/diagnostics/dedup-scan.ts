@@ -3,6 +3,7 @@
 // scanEachDirectory（progress 占位 + err 判别 {error} 假绿）。
 
 import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
   DedupConfigShape,
   DedupRegType,
@@ -63,7 +64,9 @@ export async function scanEachDirectory(
     const groups = await FindDuplicateFiles(target.dir, configStr);
     if (!groups) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">❌ ' +
+        '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">' +
+        UI_ICONS.error +
+        " " +
         t("diagnostics.scanFailed", { reason: "扫描返回空" }) +
         "</div>";
       return { allResults, earlyExit: true };

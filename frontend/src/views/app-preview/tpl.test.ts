@@ -30,7 +30,8 @@ describe("modelDetailHTML", () => {
     });
     expect(html).toContain("&lt;模型&gt;");
     expect(html).toContain("1,234");
-    expect(html).toContain("🦴 骨骼");
+    // ADR-238：骨骼/面数图标由 emoji 改走 SVG（断言 SVG + 文案同在）
+    expect(html).toMatch(/<svg class="ws-icon"[\s\S]*?<\/svg>\s*骨骼/);
     expect(html).toContain("◻️ 面");
   });
 

@@ -8,12 +8,13 @@ import { t } from "@/core/i18n/t.ts";
 import type { BatchRenameTpl, BrRowView } from "@/features/dialogs/batch-rename.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 /** 批量重命名弹窗主表单（header + 模式切换 + parse/replace 分区 + footer） */
 function buildFormHTML(dir: string, total: number, changed: number): string {
   return `<div class="dlg-box">
 <div class="dlg-header">
-  <span class="dlg-header-title">📝 ${t("dialog.batchRenameTitle")}</span>
+  <span class="dlg-header-title">${UI_ICONS.note} ${t("dialog.batchRenameTitle")}</span>
   <span class="dlg-header-path">${esc(dir)}</span>
   <span class="dlg-header-count">${total} ${t("dialog.filesUnit")} · <span id="br-changed">${changed}</span> ${t("dialog.changesUnit")}</span>
 </div>
@@ -39,19 +40,19 @@ function buildFormHTML(dir: string, total: number, changed: number): string {
   <label class="dlg-label-check">
     <input type="checkbox" id="br-regex"> ${t("dialog.regex")}
   </label>
-  <button id="br-presets" class="dlg-btn-accent">📋 ${t("dialog.presets")}</button>
+  <button id="br-presets" class="dlg-btn-accent">${UI_ICONS.clipboard} ${t("dialog.presets")}</button>
   <div id="br-presets-menu" class="dlg-presets-menu">
-    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveYear")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">❌ ${t("dialog.presetRemoveVersion")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveYear")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveVersion")}</div>
     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">${t("dialog.presetBrackets")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 ${t("dialog.presetFlatten")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">🔗 ${t("dialog.presetSpaceUnderscore")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">${UI_ICONS.label} ${t("dialog.presetFlatten")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">${UI_ICONS.link} ${t("dialog.presetSpaceUnderscore")}</div>
   </div>
 </div>
 <div id="br-preview" class="dlg-preview"></div>
 <div class="dlg-footer">
   <button id="br-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-  <button id="br-apply" class="dlg-btn dlg-btn-primary">✅ ${t("dialog.applyRenameEnter")}</button>
+  <button id="br-apply" class="dlg-btn dlg-btn-primary">${UI_ICONS.success} ${t("dialog.applyRenameEnter")}</button>
 </div>
 </div>`;
 }

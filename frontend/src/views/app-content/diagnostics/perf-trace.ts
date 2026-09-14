@@ -5,6 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { getLoadTraces } from "@/preview-3d/infra/load-trace.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 
@@ -52,22 +53,22 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
   const a = latest.assets || {};
   const assetRows = [
     a.bones
-      ? `<span class="perf-asset-item">🦴 ${t("diagnostics.metric.assetsBones")}: ${a.bones}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.bone} ${t("diagnostics.metric.assetsBones")}: ${a.bones}</span>`
       : "",
     a.cubes
-      ? `<span class="perf-asset-item">🧊 ${t("diagnostics.assetsCubes")}: ${a.cubes}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.unknown} ${t("diagnostics.assetsCubes")}: ${a.cubes}</span>`
       : "",
     a.materials
-      ? `<span class="perf-asset-item">🎨 ${t("diagnostics.assetsMats")}: ${a.materials}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.appearance} ${t("diagnostics.assetsMats")}: ${a.materials}</span>`
       : "",
     a.textures
-      ? `<span class="perf-asset-item">🖼 ${t("diagnostics.assetsTex")}: ${a.textures}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.image} ${t("diagnostics.assetsTex")}: ${a.textures}</span>`
       : "",
     a.morphs
-      ? `<span class="perf-asset-item">😀 ${t("diagnostics.assetsMorphs")}: ${a.morphs}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.avatar} ${t("diagnostics.assetsMorphs")}: ${a.morphs}</span>`
       : "",
     a.animations
-      ? `<span class="perf-asset-item">🎬 ${t("diagnostics.assetsAnims")}: ${a.animations}</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.video} ${t("diagnostics.assetsAnims")}: ${a.animations}</span>`
       : "",
     a.pmxWorker !== undefined
       ? `<span class="perf-asset-item ${a.pmxWorker ? "perf-badge-ok" : "perf-badge-warn"}">${a.pmxWorker ? "⚡" : "🔄"} ${t("diagnostics.assetsPmxWorker")}: ${a.pmxWorker ? "ON" : "OFF"}</span>`
@@ -76,7 +77,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
       ? `<span class="perf-asset-item">${t("diagnostics.assetsKtx2")}: ${a.ktx2Hits}/${a.ktx2Total ?? a.ktx2Hits}</span>`
       : "",
     latest.gpuMb
-      ? `<span class="perf-asset-item">💾 ${t("diagnostics.assetsGpu")}: ~${latest.gpuMb}MB</span>`
+      ? `<span class="perf-asset-item">${UI_ICONS.save} ${t("diagnostics.assetsGpu")}: ~${latest.gpuMb}MB</span>`
       : "",
   ]
     .filter(Boolean)

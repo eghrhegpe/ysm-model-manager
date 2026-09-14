@@ -23,6 +23,7 @@ import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { loadModelData } from "./loader.ts";
@@ -154,21 +155,26 @@ function dpRenderDetail(modelInfo: MaidModelInfo): string {
   const rows: string[] = [];
   if (modelInfo?.format)
     rows.push(
-      `<div class="dp-hint">📐 ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`,
+      `<div class="dp-hint">${UI_ICONS.geometry} ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`,
     );
   // ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐）
   const md = modelInfo?.metadata;
   if (md) {
-    if (md.name) rows.push(`<div class="dp-hint" style="font-weight:600">🏷️ ${esc(md.name)}</div>`);
+    if (md.name)
+      rows.push(
+        `<div class="dp-hint" style="font-weight:600">${UI_ICONS.tag} ${esc(md.name)}</div>`,
+      );
     if (md.license?.type)
-      rows.push(`<div class="dp-hint">📜 ${t("preview.license")}: ${esc(md.license.type)}</div>`);
+      rows.push(
+        `<div class="dp-hint">${UI_ICONS.script} ${t("preview.license")}: ${esc(md.license.type)}</div>`,
+      );
     if (md.tips)
       rows.push(
-        `<div class="dp-hint" style="white-space:pre-line;font-size:var(--fs-sm)">💬 ${esc(md.tips ?? "")}</div>`,
+        `<div class="dp-hint" style="white-space:pre-line;font-size:var(--fs-sm)">${UI_ICONS.comment} ${esc(md.tips ?? "")}</div>`,
       );
     if (md.authors && md.authors.length > 0) {
       rows.push(
-        `<div class="dp-hint" style="font-weight:600;margin-top:6px">✒️ ${t("preview.authors")} (${md.authors.length})</div>`,
+        `<div class="dp-hint" style="font-weight:600;margin-top:6px">${UI_ICONS.author} ${t("preview.authors")} (${md.authors.length})</div>`,
       );
       for (const a of md.authors) {
         const contact =
@@ -214,7 +220,7 @@ function dpRenderPanel(
     ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
     : `<div class="big-icon">🧸</div>`;
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🧸 ${t("preview.modelInfo")}</h3>
+  <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
   <div class="dp-placeholder dp-placeholder--head">
     ${coverHtml}
     <div class="dp-hint" style="font-weight:600">${esc(basename)}</div>
@@ -301,7 +307,7 @@ export async function showMaidPreview(
   const basename = path.split(/[/\\]/).pop() || path;
   // 先显示加载状态
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🧸 ${t("preview.modelInfo")}</h3>
+  <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
   <div class="dp-placeholder dp-placeholder--head">
     <div class="big-icon">🧸</div>
     <div class="dp-hint">${esc(basename)}</div>

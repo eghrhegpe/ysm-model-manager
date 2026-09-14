@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 
 // ===== 区段头（带可选复制按钮）=====
@@ -15,7 +16,7 @@ import type { EscFn } from "./logs.ts";
 export function sectionHeader(icon: string, label: string, rawText?: string): string {
   const copyBtn =
     rawText !== undefined
-      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">📋 ${t("perf.copy")}</button>`
+      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">${UI_ICONS.clipboard} ${t("perf.copy")}</button>`
       : "";
   const wrapper = rawText !== undefined ? ` data-perf-raw="${encodeURIComponent(rawText)}"` : "";
   return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:6px"${wrapper}>
@@ -92,7 +93,7 @@ function setBusy(out: HTMLElement): void {
 }
 
 function setErrorMsg(out: HTMLElement, msg: string, esc: EscFn): void {
-  out.innerHTML = `<div class="diag-stat diag-stat-error">❌ ${esc(msg)}</div>`;
+  out.innerHTML = `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${esc(msg)}</div>`;
 }
 
 function setErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
@@ -105,7 +106,7 @@ function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
 }
 
 function errorHTML(msg: string, esc: EscFn): string {
-  return `<div class="diag-stat diag-stat-error">❌ ${esc(msg)}</div>`;
+  return `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${esc(msg)}</div>`;
 }
 
 /** 类型谓词：仅当 output 是**非空字符串**时才为 true。

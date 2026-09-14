@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { extOf } from "@/utils/resource/types.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
@@ -22,15 +23,15 @@ export interface ModelDetailMeta {
 export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   if (!meta) {
     return `<div class="content" id="preview-content">
-<h3>📄 ${t("preview.modelInfo")}</h3>
+<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
   <div class="big-icon"></div>
   <div class="dp-hint">${t("preview.clickFileHint")}</div>
   <div class="dp-hints">
-    <span>💎 ${t("preview.ysmModel")}</span>
+    <span>${UI_ICONS.gem} ${t("preview.ysmModel")}</span>
     <span> ${t("preview.mmdSkin")}</span>
-    <span>🥽 ${t("preview.vrcAvatar")}</span>
-    <span>🎨 ${t("preview.resourcePack")}</span>
+    <span>${UI_ICONS.vrHeadset} ${t("preview.vrcAvatar")}</span>
+    <span>${UI_ICONS.appearance} ${t("preview.resourcePack")}</span>
   </div>
 </div>
 </div>`;
@@ -38,20 +39,20 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   if (meta.hasError) {
     const errMsg = meta.errorMsg || t("preview.unknownError");
     return `<div class="content" id="preview-content">
-<h3>📄 ${t("preview.modelInfo")}</h3>
-<div class="err">⚠️ ${errMsg}</div>
+<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
+<div class="err">${UI_ICONS.warning} ${errMsg}</div>
 </div>`;
   }
   return `<div class="content" id="preview-content">
-<h3>📄 ${t("preview.modelInfo")}</h3>
+<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="md-row"><span class="md-label">${t("preview.nameLabel")}</span><span class="md-value">${esc(meta.name || "-")}</span></div>
 <div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${esc(meta.author || "-")}</span></div>
 <div class="md-row"><span class="md-label">${t("preview.versionLabel")}</span><span class="md-value">${esc(meta.version || "-")}</span></div>
 <div class="md-divider"></div>
-<div class="md-row"><span class="md-label">🦴 ${t("preview.label.bones")}</span><span class="md-value">${meta.bones || 0}</span></div>
-<div class="md-row"><span class="md-label">🖼️ ${t("preview.texturesLabel")}</span><span class="md-value">${meta.textures || 0}</span></div>
-<div class="md-row"><span class="md-label">🎬 ${t("preview.animationsLabel")}</span><span class="md-value">${meta.animations || 0}</span></div>
-<div class="md-row"><span class="md-label">🔺 ${t("preview.verticesLabel")}</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
+<div class="md-row"><span class="md-label">${UI_ICONS.bone} ${t("preview.label.bones")}</span><span class="md-value">${meta.bones || 0}</span></div>
+<div class="md-row"><span class="md-label">${UI_ICONS.image} ${t("preview.texturesLabel")}</span><span class="md-value">${meta.textures || 0}</span></div>
+<div class="md-row"><span class="md-label">${UI_ICONS.video} ${t("preview.animationsLabel")}</span><span class="md-value">${meta.animations || 0}</span></div>
+<div class="md-row"><span class="md-label">${UI_ICONS.collision} ${t("preview.verticesLabel")}</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
 <div class="md-row"><span class="md-label">◻️ ${t("preview.facesLabel")}</span><span class="md-value">${(meta.faces || 0).toLocaleString()}</span></div>
 </div>`;
 }
@@ -108,7 +109,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   const componentCounts = model.componentCounts || [];
   const catSummary =
     roleTexCount > 0 || compTexCount > 0
-      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">🎭 ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">${UI_ICONS.character} ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
       : "";
   // L0 清单角色区块（每角色：纹理标题 + 尺寸）
   const subs = model.subModels || [];
@@ -118,7 +119,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
           .map((s) => {
             const texName = (model.textureNames || [])[s.texSlot ?? 0] || "—";
             return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:var(--fs-sm)">
-        <span style="font-weight:600;color:var(--txt)">🎭 ${esc(s.name)}</span>
+        <span style="font-weight:600;color:var(--txt)">${UI_ICONS.character} ${esc(s.name)}</span>
         <span style="color:var(--muted)">${esc(texName)}</span>
         ${model.texWidth && model.texHeight ? `<span style="color:var(--muted)">${model.texWidth}×${model.texHeight}px</span>` : ""}
       </div>`;
@@ -128,7 +129,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   const subBlock =
     subs.length > 0
       ? `<div class="pv-card-section pv-section-blue">
-  <div class="pv-card-section-label">🎭 ${t("preview.rolesList", { n: subs.length })}</div>
+  <div class="pv-card-section-label">${UI_ICONS.character} ${t("preview.rolesList", { n: subs.length })}</div>
   ${subRows}
 </div>`
       : "";
@@ -139,7 +140,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   const subCount = model.subCount || 1;
   const extraCount = texCount > subCount ? texCount - subCount : 0;
   if (extraCount > 0) {
-    texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
+    texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">${UI_ICONS.attach} ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   // Go FileInventory 权威归属清单（zip 模型专属，文件夹模型无此字段）：
   // 非零类目渲染为「emoji 计数」芯片，tooltip 携带权威文件路径——前端只展示不判定
@@ -163,11 +164,11 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   );
   const invHtml =
     invChips.length > 0
-      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0;flex-wrap:wrap;gap:2px 8px">📦 ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0;flex-wrap:wrap;gap:2px 8px">${UI_ICONS.package} ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
       : "";
   return `
 <div class="pv-card-section pv-section-blue">
-  <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
+  <div class="pv-card-section-label">${UI_ICONS.link} ${t("preview.modelStructure")}</div>
   ${
     componentCounts.length > 0
       ? componentCounts
@@ -184,7 +185,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
 </div>
 ${subBlock}
 <div class="pv-card-section pv-section-green">
-  <div class="pv-card-section-label">🖼️ ${t("preview.textureSize")}</div>
+  <div class="pv-card-section-label">${UI_ICONS.image} ${t("preview.textureSize")}</div>
   <div class="pv-card-row">
      <span class="pv-card-val">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> ${t("preview.px")}
   </div>
@@ -193,7 +194,7 @@ ${subBlock}
   ${invHtml}
 </div>
 <div class="pv-card-section pv-section-orange">
-  <div class="pv-card-section-label">💾 ${t("preview.fileInfo")}</div>
+  <div class="pv-card-section-label">${UI_ICONS.save} ${t("preview.fileInfo")}</div>
   <div class="pv-card-row">${fmt}</div>
 </div>`;
 }

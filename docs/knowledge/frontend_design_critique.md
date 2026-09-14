@@ -315,6 +315,20 @@ invariant_anchors:
   - **未清项**：emoji 310 处（长尾字形与属性内字号待人工）；`app-content/tpl.ts` 剩 3 处是 placeholder 内的、需人工决策。
   - 守卫：`test_ui_icons.ts` 5 组断言绿 / `test_design_tokens.ts` 10 组绿 / `tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5812 用例全绿** / pre-commit 基线闸绿（411/411）。
 
+- ✅ **刀㉑ 图标迁移全仓铺开：emoji 331 → 127（-62%）**（2026-09，承接刀⑳）：
+  - 迁移 49 文件 / **694 处**替换；基线 **428 → 228**。剩余 127 处 + 37 处无令牌字号圆角。
+  - **⚠️ 本轮暴露的核心教训：机器迁移的难点不在「替换」，在「判断哪些位置不该替换」——而后者靠黑名单永远做不对。**
+    1. **纯文本槽位不能放 SVG 标记**：`el.textContent = \`${UI_ICONS.warning} ...\`` 会把 SVG 当字符串赋给 textContent，用户看到字面 `<svg class="ws-icon"...>` 乱码；toast 同理（`app-toast` 用 `${esc(msg)}` 转义注入）。
+    2. **黑名单三轮才收敛**（实证）：第 1 轮认 textContent/SetTitle/placeholder → 漏 `msg:` 字段；第 2 轮补 msg:/logError/ringLog → 又漏 `onShowToast(...)` 实参、`ghPlaceholder(...)` helper；**第 3 轮改用正向判据**（「该行确实在拼 HTML」才保留 SVG：行内有 `<tag`/`</tag`/innerHTML 赋值）才收敛。
+       **结论：文本 vs HTML 的判定必须正向白名单**——枚举无穷多的文本槽位不可能穷尽，而「是不是在拼 HTML」有可靠特征。
+    3. **i18n 语言包整体不能迁移**：`locales/{zh-CN,en,ja}.ts` 三个文件被误改 310 行/个——**翻译值是文案正文不是图标位**，且 UI_ICONS 在那里根本 import 不到（tsc TS2304）。已整文件回退。
+    4. **多行 import 语句的插入位置**：按「最后一行以 import 开头」插入会把新 import **劈进多行 import 语句中间**（`import {\n A,\n B,\n} from "..."` 的续行不以 import 开头）→ 4 文件语法错误 TS1003/TS1109。正解：定位 import **块整体结束**处（吃到该语句闭合）。
+    5. **`not.toContain("<svg")` 类断言被图标化污染**：perf 趋势折线测试用「无 `<svg>`」表达「无折线」，图标全变 SVG 后该断言恒假。改为针对**折线特征**（`<polyline`）判定——**断言要锁语义特征而非「某种标签的存在」**。
+  - **测试断言更新的原则**：只改**形态**不改**意图**。`expect(html).toContain("⬇️ 2")` → `expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*2/)`——断言「该徽章内是 SVG 且紧跟数字 2」，比「包含任意 svg」严（后者会放过「徽章换错图标」的真回归），又比写死某条 path 稳（图标库改路径不该弄红测试）。共更新 12 处断言，全部保留原有的 testid/文案/转义断言。
+  - **方法论收获**：**「测试全绿」在结构性重构中几乎不是有效信号**——本轮 3 类真 bug（字面占位符、textContent 乱码、多行 import 劈裂）在单测层面全绿，全部靠**实渲染产物**（`vite-node` 打印 `<svg class="ws-icon">` 计数）与 **`tsc`** 才抓到。故验收标准定为：实渲染产物 + typecheck + 全量测试三条同时成立。
+  - 守卫：`tsc --noEmit` ✅ / `vite build` ✅ / biome `--write` ✅ / **全前端 380 文件 5812 用例全绿** / pre-commit 基线闸 228/228。
+
+
 ## 相关
 
 - [frontend_repo_audit](frontend_repo_audit.md)：代码质量基线（4.1/5，2026-08-26）

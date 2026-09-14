@@ -83,7 +83,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
 
   it("connected 无 instance → 显示错误提示", async () => {
     const el = mountCustomElement("app-sync-manager");
-    expect(el.innerHTML).toContain("⚠️");
+    // ADR-238：警示图标由 emoji ⚠️ 改走 SVG
+    expect(el.innerHTML).toContain('<svg class="ws-icon"');
     unmountElement(el);
   });
 

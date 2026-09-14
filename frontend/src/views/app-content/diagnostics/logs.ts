@@ -5,6 +5,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
@@ -125,7 +126,10 @@ function dgLsMakeStatusLabel(l: ImportLogLike): string {
 }
 
 function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
-  const dir = l.TargetDir || l.SourcePath ? `<br>📂 ${esc(l.TargetDir || l.SourcePath)}` : "";
+  const dir =
+    l.TargetDir || l.SourcePath
+      ? `<br>${UI_ICONS.folderOpen} ${esc(l.TargetDir || l.SourcePath)}`
+      : "";
   const raw = l.ErrorMsg || "";
   const cleanErr = esc(raw)
     // biome-ignore lint/suspicious/noMisleadingCharacterClass: 匹配日志状态 emoji 前缀，变音选择符为边角

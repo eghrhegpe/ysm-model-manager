@@ -9,6 +9,7 @@ import { toScreenshotLights } from "@/preview-3d/screenshot/screenshot-lights.ts
 import { renderMultiAngle } from "@/preview-3d/screenshot/screenshot-render.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
@@ -165,7 +166,9 @@ export async function buildStatsCard(
   }> = model._authors || [];
   if (authors.length > 0) {
     const authorHtml =
-      '<div class="pv-card-section-label" style="margin-top:6px">👥 ' +
+      '<div class="pv-card-section-label" style="margin-top:6px">' +
+      UI_ICONS.users +
+      " " +
       t("preview.authors") +
       "</div>" +
       authors

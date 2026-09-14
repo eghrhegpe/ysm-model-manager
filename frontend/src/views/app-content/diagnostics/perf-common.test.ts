@@ -52,7 +52,11 @@ describe("setBusy / setErrorMsg", () => {
     const esc = vi.fn((s: string) => s.replace(/</g, "&lt;")) as unknown as (s: unknown) => string;
     setErrorMsg(el, "<script>", esc);
     expect(esc).toHaveBeenCalledWith("<script>");
-    expect(el.innerHTML).toContain("❌");
+    // ADR-238：图标由 emoji 改走 SVG（随主题变色 + 随字号缩放），断言形态随之更新。
+    // 断言「是 SVG 图标」而非某个具体路径，避免图标库改路径时本测试无谓报警。
+    expect(el.innerHTML).toContain('<svg class="ws-icon"');
+    // 转义契约不变：文案仍须经 esc（注入意图未因换图标而放松）
+    expect(el.innerHTML).toContain("&lt;script>");
   });
 });
 

@@ -7,14 +7,15 @@ import type { RecycleBinEntry } from "@/features/maintenance/recycle-bin.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 export function recycleHTML(): string {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:var(--fs-sm);color:var(--muted)">${t("common.loading")}</span>
-<button class="btn-base sm" id="recy-refresh" style="margin-left:auto">🔄 ${t("common.refresh")}</button>
-<button class="btn-base danger sm" id="recy-empty">♻️ ${t("recycle.empty")}</button>
+<button class="btn-base sm" id="recy-refresh" style="margin-left:auto">${UI_ICONS.refresh} ${t("common.refresh")}</button>
+<button class="btn-base danger sm" id="recy-empty">${UI_ICONS.recycle} ${t("recycle.empty")}</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 </div>`;
@@ -33,10 +34,10 @@ export function renderRecycleListHtml(entries: RecycleBinEntry[]): string {
 <div style="display:flex;align-items:center;gap:6px">
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("common.viewDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
-<button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">↩️ ${t("recycle.restore")}</button>
-<button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--paid);background:transparent;color:var(--paid);cursor:pointer;font-size:var(--fs-xs)">🗑️ ${t("recycle.delete")}</button>
+<button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.undo} ${t("recycle.restore")}</button>
+<button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--paid);background:transparent;color:var(--paid);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.delete} ${t("recycle.delete")}</button>
 </div>
-<div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">📂 ${esc(e.Path)}</div>
+<div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">${UI_ICONS.folderOpen} ${esc(e.Path)}</div>
 </div>`;
     })
     .join("");

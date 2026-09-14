@@ -5,6 +5,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
@@ -44,7 +45,7 @@ function dgRnBuildBoxHTML(parsed: ReturnType<typeof parseModelName>, currentName
       </div>
       <div class="dlg-footer" style="margin-top:2px">
         <button id="rn-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="rn-ok" class="dlg-btn dlg-btn-primary">✂️ ${t("dialog.renameEnter")}</button>
+        <button id="rn-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.cut} ${t("dialog.renameEnter")}</button>
       </div>
       <div id="rn-err" class="dlg-err"></div>
     `;

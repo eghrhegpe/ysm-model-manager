@@ -12,6 +12,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { createFbx3D } from "./fbx-3d.ts";
@@ -128,7 +129,7 @@ export async function showVrmMeta(
         return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);font-size:var(--fs-sm);margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
       };
       const refBadge = r?.reference
-        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference as string)}</div>`
+        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${UI_ICONS.attach} ${t("preview.reference")}: ${esc(r.reference as string)}</div>`
         : "";
       // ADR-131 P2：readVrmMeta 顺带采集的渲染期统计（traverse 口径；标注「渲染实测」
       // 与 YSM 模型面板的 Go AnalyzeBedrockModel 口径区分，避免双口径困惑——审核建议 ②）
@@ -136,13 +137,13 @@ export async function showVrmMeta(
       const statsRow =
         s && (s.meshCount > 0 || s.boneCount > 0)
           ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
-            <span style="color:var(--accent)">📊 ${t("preview.stats.panel")}</span>
-            <span>🦴 ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
-            <span>🧩 ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
-            <span>🔺 ${t("preview.stats.triangles")}: <b>${s.triangleCount.toLocaleString()}</b></span>
-            <span>🎨 ${t("preview.stats.materials")}: <b>${s.materialCount}</b></span>
-            <span>🖼️ ${t("preview.stats.textures")}: <b>${s.textureCount}</b></span>
-            <span>😊 ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
+            <span style="color:var(--accent)">${UI_ICONS.chart} ${t("preview.stats.panel")}</span>
+            <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
+            <span>${UI_ICONS.parser} ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
+            <span>${UI_ICONS.collision} ${t("preview.stats.triangles")}: <b>${s.triangleCount.toLocaleString()}</b></span>
+            <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${s.materialCount}</b></span>
+            <span>${UI_ICONS.image} ${t("preview.stats.textures")}: <b>${s.textureCount}</b></span>
+            <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
           </div>`
           : "";
       return `<div class="content" id="preview-content">
@@ -218,12 +219,12 @@ export async function showMmdPreview(
             if (!host) return;
             // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
             host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
-              <span style="color:var(--accent)">📊 ${t("preview.stats.file")}</span>
-              <span>🔺 ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
+              <span style="color:var(--accent)">${UI_ICONS.chart} ${t("preview.stats.file")}</span>
+              <span>${UI_ICONS.collision} ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
               <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
-              <span>🦴 ${t("preview.stats.bones")}: <b>${stats.bones}</b></span>
-              <span>🎨 ${t("preview.stats.materials")}: <b>${stats.materials}</b></span>
-              <span>😊 ${t("preview.stats.morphs")}: <b>${stats.morphs}</b></span>
+              <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${stats.bones}</b></span>
+              <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${stats.materials}</b></span>
+              <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${stats.morphs}</b></span>
             </div>`;
           } catch {
             /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */
@@ -281,7 +282,7 @@ export async function showScenePreview(
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
-  <h3>🏗️ ${t("preview.sceneModel")}</h3>
+  <h3>${UI_ICONS.build} ${t("preview.sceneModel")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center">
@@ -318,7 +319,7 @@ export async function showMorphPreview(
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
-  <h3>😊 ${t("preview.customMorph")}</h3>
+  <h3>${UI_ICONS.avatar} ${t("preview.customMorph")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -399,7 +400,7 @@ export async function showStagePreview(
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
-  <h3>🎤 ${t("preview.stageAnim")}</h3>
+  <h3>${UI_ICONS.voice} ${t("preview.stageAnim")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -438,7 +439,7 @@ export async function showStagePreview(
               const audioCount = contents.filter((c) => c.kind === "audio").length;
               const configCount = contents.filter((c) => c.kind === "config").length;
               container.innerHTML =
-                `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
+                `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:6px">${UI_ICONS.chart} ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
                 contents
                   .map((c) => {
                     const name = c.path.split(/[/\\]/).pop() || c.path;

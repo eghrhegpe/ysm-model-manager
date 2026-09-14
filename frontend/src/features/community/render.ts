@@ -2,6 +2,7 @@
 // DOM API，非字符串拼接
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
@@ -199,7 +200,7 @@ export function renderRepoHeaderHTML(params: {
     t("gh.modelCount", { n: modelsLength }) +
     "</span>" +
     (missingCount > 0
-      ? `<span class="gh-model-badge gh-model-badge-missing">⬇️ ${missingCount}</span>`
+      ? `<span class="gh-model-badge gh-model-badge-missing">${UI_ICONS.download} ${missingCount}</span>`
       : "") +
     "</div>" +
     // 行2: 仓库名（独占）+ 来源
@@ -223,11 +224,15 @@ export function renderRepoHeaderHTML(params: {
     '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ☐ ' +
     t("common.selectAll") +
     "</label>" +
-    '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">📁 ' +
+    '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">' +
+    UI_ICONS.folder +
+    " " +
     t("gh.showMissingOnly") +
     "</button>" +
     '<span class="gh-section-fill"></span>' +
-    '<button class="btn-base sm gh-dl-selected" data-testid="gh-dl-selected" disabled>⬇️ ' +
+    '<button class="btn-base sm gh-dl-selected" data-testid="gh-dl-selected" disabled>' +
+    UI_ICONS.download +
+    " " +
     t("gh.downloadSelected", { n: 0 }) +
     "</button>" +
     "</div>" +

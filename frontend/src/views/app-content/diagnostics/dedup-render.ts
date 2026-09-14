@@ -5,6 +5,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { fileIcon } from "@/utils/icon/icon.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { DedupConfigShape, ScanFile, ScanGroupResult } from "./dedup-types.ts";
@@ -30,7 +31,7 @@ function renderGroupFilesHtml(
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} class="diag-dedup-radio">
 <span class="diag-dedup-file-name">
 <span class="diag-dedup-file-name-text" title="${t("common.viewDetail", { name: esc(e.path) })}" data-path="${esc(e.path)}"><span class="diag-dedup-file-ic">${fileIcon(e.name)}</span>${renderDisplayName(e.name)}</span>
-<span class="diag-dedup-file-dir">📁 ${esc(dir)}</span>
+<span class="diag-dedup-file-dir">${UI_ICONS.folder} ${esc(dir)}</span>
 </span>
 <span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>
 ${dateStr ? `<span class="diag-dedup-file-date">${dateStr}</span>` : ""}
@@ -73,21 +74,21 @@ ${rtResult.icon} ${rtResult.label}
 
       html += `<div class="diag-dedup-group">
 <div class="diag-dedup-group-head">
-<span>📎 ${t("diagnostics.group", { n: gi + 1 })}</span>
+<span>${UI_ICONS.attach} ${t("diagnostics.group", { n: gi + 1 })}</span>
 <span class="diag-dedup-group-fill"></span>
 <span class="diag-dedup-group-info">${t("diagnostics.groupInfo", { n: files.length, size: totalSize })}</span>
 </div>`;
       html += renderGroupFilesHtml(files, defaultIdx, gi, esc);
       html += `<label class="diag-dedup-keep-all">
 <input type="radio" name="dedup-keep-${gi}" value="-1" class="diag-dedup-radio">
-<span class="diag-dedup-keep-all-label">🔀 ${t("diagnostics.keepAll")}</span>
+<span class="diag-dedup-keep-all-label">${UI_ICONS.shuffle} ${t("diagnostics.keepAll")}</span>
 </label>`;
       html += `</div>`;
     }
   }
 
   html += `<div class="diag-dedup-actions">
-<button id="diag-dedup-exec" class="diag-dedup-exec">🗑️ ${t("diagnostics.deleteUnselected")}</button>
+<button id="diag-dedup-exec" class="diag-dedup-exec">${UI_ICONS.delete} ${t("diagnostics.deleteUnselected")}</button>
 <button id="diag-dedup-cancel" class="diag-dedup-cancel">${t("common.cancel")}</button>
 </div>`;
   return html;
@@ -119,7 +120,7 @@ export function renderConfigHtml(list: HTMLElement, config: DedupConfigShape): v
   list.innerHTML = `
     <div class="diag-dedup-config">
       <div class="diag-config-item">
-        <label for="dedup-strategy">🔍 ${t("diagnostics.dedupStrategy")}:</label>
+        <label for="dedup-strategy">${UI_ICONS.search} ${t("diagnostics.dedupStrategy")}:</label>
         <select id="dedup-strategy" class="diag-config-select">
           <option value="deep_hash"${config.strategy === "deep_hash" ? " selected" : ""}>${t("diagnostics.strategyDeepHash")} (SHA256)</option>
           <option value="quick_hash"${config.strategy === "quick_hash" ? " selected" : ""}>${t("diagnostics.strategyQuickHash")} (MD5)</option>
@@ -127,7 +128,7 @@ export function renderConfigHtml(list: HTMLElement, config: DedupConfigShape): v
         </select>
       </div>
       <div class="diag-config-item">
-        <label for="keep-policy">💾 ${t("diagnostics.keepPolicy")}:</label>
+        <label for="keep-policy">${UI_ICONS.save} ${t("diagnostics.keepPolicy")}:</label>
         <select id="keep-policy" class="diag-config-select">
           <option value="oldest"${config.keepPolicy === "oldest" ? " selected" : ""}>${t("diagnostics.keepOldest")}</option>
           <option value="newest"${config.keepPolicy === "newest" ? " selected" : ""}>${t("diagnostics.keepNewest")}</option>
@@ -135,7 +136,7 @@ export function renderConfigHtml(list: HTMLElement, config: DedupConfigShape): v
         </select>
       </div>
       <div class="diag-config-item" id="priority-path-item" style="${config.keepPolicy === "path" ? "" : "display:none"}">
-        <label for="priority-path">📁 ${t("diagnostics.priorityPath")}:</label>
+        <label for="priority-path">${UI_ICONS.folder} ${t("diagnostics.priorityPath")}:</label>
         <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="">
       </div>
     </div>

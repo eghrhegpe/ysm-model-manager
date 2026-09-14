@@ -10,6 +10,7 @@ import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
 import { fillAuthorsAsync, loadModelData } from "./loader.ts";
 import {
@@ -53,7 +54,7 @@ export async function loadModel2D(
   content.innerHTML = "";
   const container = document.createElement("div");
   container.className = "sk-loading-box"; // 规则在 css.ts previewCSS(shadow adopted);加载完成运行时 opacity=1 内联覆盖类
-  container.innerHTML = `<div class="pv-loading-title">🏗️ ${t("preview.loadingStructure")}</div><div class="pv-loading-bar"></div>`;
+  container.innerHTML = `<div class="pv-loading-title">${UI_ICONS.build} ${t("preview.loadingStructure")}</div><div class="pv-loading-bar"></div>`;
   content.appendChild(container);
   try {
     const loaded = await loadModelData(modelPath, {
@@ -64,7 +65,7 @@ export async function loadModel2D(
     const decodedBy = loaded.decodedBy;
     if (!container.isConnected) return;
     if (!model?.bones?.length) {
-      container.innerHTML = `<div class="pv-error-title">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.noGeometry")}</div>`;
+      container.innerHTML = `<div class="pv-error-title">${UI_ICONS.build} ${t("preview.skeletonStructure")}</div><div class="pv-error-body">${UI_ICONS.warning} ${t("preview.noGeometry")}</div>`;
       return;
     }
     container.style.opacity = "1";
@@ -75,7 +76,7 @@ export async function loadModel2D(
     const { eyeBtn, getLabelsOn, setLabelsOn } = buildToggleRow(container);
     const zoomBtn = document.createElement("button");
     zoomBtn.className = "pv-btn";
-    zoomBtn.innerHTML = `🔍 ${t("preview.zoom")}`;
+    zoomBtn.innerHTML = `${UI_ICONS.search} ${t("preview.zoom")}`;
     zoomBtn.title = "全窗口查看模型";
     zoomBtn.onclick = (): void => {
       openFullPreview(canvas, model, textureImg, getLabelsOn());
@@ -258,6 +259,6 @@ export async function loadModel2D(
       });
     }
   } catch (e) {
-    container.innerHTML = `<div class="pv-error-title" style="color:var(--status-error)">🏗️ ${t("preview.skeletonStructure")}</div><div class="pv-error-body">⚠️ ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
+    container.innerHTML = `<div class="pv-error-title" style="color:var(--status-error)">${UI_ICONS.build} ${t("preview.skeletonStructure")}</div><div class="pv-error-body">${UI_ICONS.warning} ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
   }
 }

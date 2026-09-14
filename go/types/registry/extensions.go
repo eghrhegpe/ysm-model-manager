@@ -5,6 +5,7 @@ package registry
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 )
@@ -200,18 +201,19 @@ func NormalizeResourceName(name string) string {
 // IsYsmEntryJSON，含 TrimSpace/大小写不敏感）。
 // 原 sync.isSyncAllowed 收敛于此；scanner 内联过滤语义一致（scanner 另有
 // .ban 目录跳过等展示层逻辑，保持独立）。
+//
+// 非 json 分支复用 IsSupportedExt 的 atomic.Value 缓存 extSet（O(1) map 查询），
+// 替代原 AllExts() 每次重建全扩展名 slice + 去重 map + 线性 HasSuffix——
+// 本函数在 sync 逐文件热路径（sync.go WalkDir）调用，大仓库同步千级文件时
+// 省下可观的重复分配与遍历。注册表扩展名均单段带点（resource_types.json 单一
+// 事实源），filepath.Ext(base) 与 HasSuffix(base, ext) 等价，行为零漂移。
 func IsResourceAllowed(name string) bool {
 	base := NormalizeResourceName(name)
 	// .json 只允许 ysm.json（其余为动作/动画/模型引用文件，不应单独同步）
 	if strings.HasSuffix(base, ".json") {
 		return IsYsmEntryJSON(base)
 	}
-	for _, ext := range AllExts() {
-		if strings.HasSuffix(base, ext) {
-			return true
-		}
-	}
-	return false
+	return IsSupportedExt(filepath.Ext(base))
 }
 
 // IsTypeModelFile 已下沉至 go/packs/classify.go（ADR-144：其 zipentry 分支需开容器

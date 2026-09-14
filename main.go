@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"ysm-model-manager/go/cli"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/internal/app"
 )
 
@@ -32,6 +35,27 @@ func cliSpecsToDTO(specs []cli.CommandSpec) []app.CommandSpecDTO {
 		dtos = append(dtos, dto)
 	}
 	return dtos
+}
+
+// marshalBindingError 是 Wails application.Options.MarshalError 的实现：
+// 把 types.AppError 的结构化字段（Code/Operation/Reason/Suggestion/SourcePath/TargetPath）
+// 序列化进 CallError.Cause 供前端按 Code 分支，而非只拿到 err.Error() 拼出的一行中文。
+//
+// 用 errors.As 而非类型断言：绑定路径上 AppError 目前均裸返回（encoding/json 对指向
+// error 接口的指针会按动态具体类型序列化，AppError 有导出字段故本可正常输出），
+// 但一旦被 fmt.Errorf("...: %w", appErr) 包装，动态类型变为 *fmt.wrapError（无导出字段）
+// → Wails 默认 marshalError（json.Marshal(&err)）产出 {}，字段静默丢失。
+// errors.As 同时覆盖裸返回与包装两种情况。
+//
+// 返回 nil 表示「非 AppError」→ Wails 回落默认机制，对其它错误零影响。
+func marshalBindingError(err error) []byte {
+	var ae types.AppError
+	if errors.As(err, &ae) {
+		if b, mErr := json.Marshal(ae); mErr == nil {
+			return b
+		}
+	}
+	return nil
 }
 
 func main() {
@@ -64,6 +88,8 @@ func main() {
 	})
 	wailsApp := application.New(application.Options{
 		Name: "YSM 模型管理器",
+		// MarshalError 见 marshalBindingError 注释
+		MarshalError: marshalBindingError,
 		Services: []application.Service{
 			application.NewService(appStruct),
 		},

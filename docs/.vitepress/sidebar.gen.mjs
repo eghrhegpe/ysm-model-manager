@@ -1715,7 +1715,7 @@ export const autoSidebar = [
             "link": "/knowledge/ground_surface_spec"
           },
           {
-            "text": "ground-cap 材质菜单工厂（material-group factories）",
+            "text": "ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）",
             "link": "/knowledge/ground-cap-materialgroup-factories"
           },
           {
@@ -1899,6 +1899,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "知识卡 vs 代码 语义审计报告",
+            "link": "/knowledge/audit-drift-report-2026"
+          },
+          {
             "text": "auto-import 拆分与缺失 import 检测",
             "link": "/knowledge/auto_import_split"
           },
@@ -1945,16 +1949,6 @@ export const autoSidebar = [
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "知识卡 vs 代码 语义审计报告",
-            "link": "/knowledge/audit-drift-report-2026"
           }
         ]
       }

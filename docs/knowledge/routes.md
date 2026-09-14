@@ -26,6 +26,7 @@
 | 侧边栏、整合包列表、版本卡片、推送、拉取、同步状态卡片 | [侧边栏 app-sidebar](./app-sidebar.md) ⚠️歧义（另见 sync-manager.md等） | `app-sidebar` 是仓库页左栏的整合包列表组件（Shadow DOM），展示当前资源类型下各整合包（Minecraft 版本实例）的同步状态卡片，支持选中联动、勾选批量推送/拉取、一键安装缺失资源。它遵循标准组件拆分规范（inde… |
 | 整合包同步、同步状态、推送资源、拉取资源、待推送、可拉取、已禁用、实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) ⚠️歧义（另见 sync-manager.md） | `app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本… |
 | 树形、资源列表、tree、节点、树、目录树 | [资源树 app-tree](./app-tree.md) | `app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。 |
+| 知识卡审计、文档-代码脱节审计 | [知识卡 vs 代码 语义审计报告](./audit-drift-report-2026.md) | — |
 | 缺失 import、auto-import、导出符号、tokenize、词法、缺失导入、goimports、大脚本拆分 | [auto-import 拆分与缺失 import 检测](./auto_import_split.md) ⚠️歧义（另见 source-graph.md） | `scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆… |
 | 网页版、浏览器模式、browser adapter、IndexedDB、跨域隔离 | [网页版后端 backend-web](./backend_web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md等） | — |
 | IndexedDB、网页版、backend、模型库、browser adapter、web mode | [浏览器后端 IndexedDB 封装](./backend-idb.md) ⚠️歧义（另见 backend_web.md、wails-bridge.md等） | `backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id… |

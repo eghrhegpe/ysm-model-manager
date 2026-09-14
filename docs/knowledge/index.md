@@ -2,16 +2,17 @@
 
 # 知识卡索引
 
-> 总计: 180 张知识卡
+> 总计: 181 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（12 张）
+## config（13 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🏗 audit-drift-report-2026 | 知识卡 vs 代码 语义审计报告 | architecture | — | 知识卡审计, 文档-代码脱节审计 |
 | 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
@@ -239,7 +240,7 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
-| 🍃 ground-cap-materialgroup-factories | ground-cap 材质菜单工厂（material-group factories） | leaf | cpu-bound | 拆 buildGroundMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
+| 🍃 ground-cap-materialgroup-factories | ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点） | leaf | cpu-bound | 评审 ground-capability.ts 菜单构建, ground 材质菜单节点, ADR-195 cap 直产节点 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
@@ -257,7 +258,7 @@
 ### 摘要
 
 - **bone-tools**（跨格式骨骼工具层 bone-tools）：`frontend/src/preview-3d/bone/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D…
-- **ground-cap-materialgroup-factories**（ground-cap 材质菜单工厂（material-group factories））：`ground-capability.ts` 的 `buildGroundMaterialGroup`（`ground-capability.ts|buildGroundMaterialGroup`，超 100 行红线）构建「表面材质」菜单…
+- **ground-cap-materialgroup-factories**（ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点））：ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `PreviewMenuNode[]` 节点直产。`ground-menu.ts` 是纯声明层（零 THREE 依赖），仅构造 `P…
 - **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
 - **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲…

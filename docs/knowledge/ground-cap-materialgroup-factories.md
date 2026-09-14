@@ -1,73 +1,79 @@
 ---
 kind: ground-cap-materialgroup-factories
-name: ground-cap 材质菜单工厂（material-group factories）
+name: ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）
 tier: leaf
 category: rendering
 perf:
   - cpu-bound
 source_files:
+  - frontend/src/preview-3d/caps/ground-menu.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
 auto_fields:
   symbols_with_lines:
+    - buildGroundNodes
     - GroundCapability
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
-  - 拆 buildGroundMaterialGroup 长函数
   - 评审 ground-capability.ts 菜单构建
+  - ground 材质菜单节点
+  - ADR-195 cap 直产节点
 quick_risk_lines:
-  - 地面材质菜单必须经 groundSliderDef/groundColorDef/groundButtonDef 工厂构建，禁止手写控件结构
+  - 地面菜单必须经 ground-menu.ts 的 buildGroundNodes 直产 PreviewMenuNode[]，禁止手写控件结构
 pitfalls:
-  - 手写控件结构 → 与工厂输出不一致、菜单构建重复；必须经工厂函数
-  - 新增地面模式未走工厂 → 菜单缺控件；必须在工厂中注册
+  - 手写菜单结构 → 与 buildGroundNodes 输出不一致、菜单构建重复；必须经工厂函数
+  - 新增地面模式未走工厂 → 菜单缺控件；必须在 ground-menu.ts 中注册
 
 use_when:
-  - 拆 buildGroundMaterialGroup 长函数
   - 评审 ground-capability.ts 菜单构建
+  - ground 材质菜单节点
+  - ADR-195 cap 直产节点
 status: active
 ---
 
-# ground-cap 材质菜单工厂（material-group factories）
+# ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）
 
 ## 概览
 
-`ground-capability.ts` 的 `buildGroundMaterialGroup`（`ground-capability.ts|buildGroundMaterialGroup`，超 100 行红线）构建「表面材质」菜单组全部控件（2026-08-28 拓展：`stripes`/`diamond`/`marble` 三种程序化表面模式；select 列表、副色 color2、density、angle 三项控件；T2 工厂化曾降行，拓展后回升超红线）。控件总数为会漂移的度量，以 `GroundCapability.getMenuControls` 聚合实况为准。已按建议抽 `groundSliderDef`/`groundColorDef`/`groundButtonDef` 工厂，消除重复结构。
+ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `PreviewMenuNode[]` 节点直产。`ground-menu.ts` 是纯声明层（零 THREE 依赖），仅构造 `PreviewMenuNode` 供 `cap.getMenuNodes()` 消费。
+
+**历史**：2026-08-28 前 ground 菜单走 `buildGroundMaterialGroup` + `groundSliderDef`/`groundColorDef`/`groundButtonDef` 三工厂产出 `PreviewControlDef[]`（已退役）；2026-09 ADR-195 刀2 迁移至 `buildGroundNodes` 直产 `PreviewMenuNode[]`。
 
 ## 核心职责
 
-构建「表面材质」菜单组的控件项（source select、底/副/线 3 color、grid-size、density、angle、2 buttons、opacity、scale、rotation、roughness、metalness），返回 `PreviewControlDef[]` 供 `getMenuNodes()` 聚合（控件清单以源码为准，总数不硬编码）。
+构建「地面」参数面板的完整节点树：
+
+- `ground-visible`：平铺 toggle（地面总开关，params 级）
+- 材质组 folder（`preview.groundGroupMaterial`）：mat-source select + 3 color + 9 slider + 2 button（texture/clear，走 controls 通道节点）
 
 ## 对外 API / 入口
 
-- `buildGroundMaterialGroup(cap: GroundCapability): PreviewControlDef[]` — 包级函数，仅 `getMenuNodes()` 桥接消费。
-- 辅助工厂（包级、material group 专用）：`groundSliderDef` / `groundColorDef` / `groundButtonDef`。
-- 水面菜单（原 `buildWaterGroup` 的 12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
+- `buildGroundNodes(cap: GroundCapability): PreviewMenuNode[]` — 包级函数，`GroundCapability.getMenuNodes()` 唯一桥接入口。
+- 内部工厂（包级、material group 专用）：`colorNode` / `sliderNode` / `textureButtonsNode` / `groundBuildMatFolder`。
+- 水面菜单（12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
 
 ## 与其他子系统关系
 
-- 上游：`GroundCapability.getMenuControls()` 聚合 `buildGroundMain`/`buildGroundMaterialGroup` 两组控件（水面已拆为独立 WaterCapability，其 `buildWaterGroup` 在 `water-capability.ts` 内）。
-- 下游：`renderCapControls`（preview-menu/cap-controls.ts）消费控件定义渲染声明式菜单。
-- 横向：`buildGroundMain`（`ground-capability.ts|buildGroundMain`，短函数）与 `buildGroundMaterialGroup`（超 100 行红线：material group 工厂化降行后，2026-08-28 拓展控件回升）——组长尾不再均达标。
+- 上游：`GroundCapability.getMenuNodes()`（`ground-capability.ts:369-370`）调用 `buildGroundNodes(this)`。
+- 下游：`preview-menu/` 渲染层消费 `PreviewMenuNode[]` 递归渲染声明式菜单。
+- 横向：`scene-capability.ts` 定义 `getMenuNodes?()` 可选接口，各 cap（ground/sky/fog/shadow/light/water/reflector/postprocessing/render-mode）统一走 cap 直产节点。
 
 ## 不变量
 
-- 全部控件项的 `id`/`labelKey`/`group`/`kind`/`slider`/`getValue`/`setValue` 字段不可变（e2e 选择器依赖）。
-- `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改；水面组（现 `WaterCapability`）对应 `preview.waterGroup`。
+- 全部节点 `id`/`labelKey`/`group`/`kind`/`control` 字段不可变（e2e 选择器依赖）。
+- `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改。
 - `GROUND_SURFACE_MODES` 白名单与 select 选项列表保持对齐（9 项）：`none/solid/plain/grid/checker/stripes/diamond/marble/texture`。
+- `textureButtonsNode` 走 `controls` 通道节点（保 `variant`/`getHint` 语义），非原生 button 节点。
+- `visibleWhen` 谓词（B 轨快照驱动）原样挂节点：`groundSurfaceOn` 判定 `matSource ≠ none` 时材质子控件可见。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 
-1. ~~超 100 行红线~~：抽出 3 个工厂后，主函数曾从超红线降至红线内；**2026-08-28 拓展后回升超红线**（新增 stripes/diamond/marble 模式 + color2/density/angle 控件）。
-2. ~~重复结构~~：多个 slider → `groundSliderDef` 工厂 1 处；多个 color → `groundColorDef` 工厂。
-3. ~~`as unknown as` 窄化~~：保留现状（私有字段访问用类型断言集中一处），无需扩大 public API 面。
-
-## 建议动作（续）
-
-1. 水面控件（12 项）已迁至 `water-capability.ts` 的 `buildWaterGroup`，其工厂化演进在该卡维护。
-2. 增加 pool 模式下 4 个专属控件的条件隐藏：当前全部常显，菜单偏长——可考虑控件定义加 `enabled?:()=>boolean` 再做（ADR-109 次优先级）。
+1. ~~超 100 行红线~~：抽出工厂后主函数曾降至红线内；2026-08-28 拓展 stripes/diamond/marble 模式 + color2/density/angle 控件后回升超红线。ADR-195 刀2 迁移至 `ground-menu.ts` 后彻底解决（纯声明层，无 THREE 依赖）。
+2. ~~重复结构~~：多个 color → `colorNode` 工厂；多个 slider → `sliderNode` 工厂。
+3. ~~`as unknown as` 窄化~~：ADR-195 刀2 迁移后 `PreviewMenuNode` 类型完整，无需类型断言。
 
 ## 相关
 
 - 兄弟卡：`ground_surface_spec.md`（材质 spec 单源驱动，新增 3 种程序化像素）
-- ADR-076 v2（声明式根菜单，菜单项结构 e2e 依赖）
+- ADR-195（cap 直产 PreviewMenuNode[] 终态）
 - ADR-117（ground-material-spec 单一事实源，参数嵌套设计）

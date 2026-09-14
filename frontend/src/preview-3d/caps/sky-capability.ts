@@ -292,7 +292,12 @@ export class SkyCapability implements SceneCapability {
         if (changed.has("skyGodRaysEnabled")) {
           this.beams.sync(this.elevation, this.azimuth);
         }
-        // skyAutoRotate 仅影响 update(dt) 行为，无需立即响应
+        // ⚠️ 刀⑳：skyAutoRotate 原为「只写不读的孤儿」——schema 声明了该键（env-state-schema.ts），
+        // 但此处无分支、save/loadState 也不读写它 ⇒ 昼夜循环开关**无法持久化**。
+        // 现补齐：回调内同步实例标志（update(dt) 读它驱动推进），持久化随 save/loadState。
+        if (changed.has("skyAutoRotate")) {
+          this.autoRotateOn = state.skyAutoRotate;
+        }
       },
       "sky",
     );
@@ -544,14 +549,16 @@ export class SkyCapability implements SceneCapability {
   private lastPmremElevation = -999;
   private static readonly PMREM_ELEVATION_THRESHOLD = 2.0; // 太阳高度角变化 ≥ 2° 才重建
 
-  /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动） */
+  /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动）。
+   *  刀⑳：走 setEnvState 单一事实源（对齐 setEnabled 范式）——实例标志由 env 回调同步，
+   *  且该键随 saveState/loadState 持久化，否则开关关掉预览就丢。 */
   startAutoRotate(): void {
-    this.autoRotateOn = true;
+    setEnvState({ skyAutoRotate: true }, { source: "manual" });
   }
 
   /** 停止昼夜循环；已停则 no-op */
   stopAutoRotate(): void {
-    this.autoRotateOn = false;
+    setEnvState({ skyAutoRotate: false }, { source: "manual" });
   }
 
   /** 当前是否正在昼夜循环 */
@@ -678,6 +685,8 @@ export class SkyCapability implements SceneCapability {
       environment: envState.skyEnvironment,
       enabled: this.enabled,
       godRaysEnabled: this.beams.isEnabled(),
+      // 刀⑳：昼夜循环开关纳入持久化（原漏 → 关掉预览即丢）
+      autoRotate: envState.skyAutoRotate,
       // §4 解耦：持久化用户调整的太阳耦合尺度
       sunIntensityScale: envState.skySunIntensityScale,
       sunDiscScale: envState.skySunDiscScale,
@@ -710,6 +719,12 @@ export class SkyCapability implements SceneCapability {
       godRaysEnabled: {
         boolean: (v) => {
           this.beams.setEnabled(v);
+        },
+      },
+      // 刀⑳：恢复昼夜循环开关（写 envState → 回调同步实例标志）
+      autoRotate: {
+        boolean: (v) => {
+          setEnvState({ skyAutoRotate: v }, { source: "manual" });
         },
       },
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底

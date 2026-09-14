@@ -190,7 +190,11 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
   const [lr, lg, lb] = st.lineColor;
   const [cr2, cg2, cb2] = st.color2;
 
-  if (st.mode === "solid" || st.mode === "none") {
+  // "plain"（素面）与 "solid" 同为**纯色**语义，仅来源不同（plain = 内置生成的纯色贴图，
+  // solid = 无贴图、材质直出 color）。刀⑳ 修复：原条件漏了 "plain"，使其落到下方 grid
+  // 分支画出格线——而 "plain" 是 schema 默认值、菜单「素面」项，且是「清除贴图」与
+  // loadState 的回退目标，故这是用户可见的行为缺陷。
+  if (st.mode === "solid" || st.mode === "none" || st.mode === "plain") {
     for (let i = 0; i < px.length; i += 4) {
       px[i] = r;
       px[i + 1] = g;

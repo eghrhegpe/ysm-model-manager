@@ -202,12 +202,26 @@ describe("Suite 3 — 合约：rebuild == in-place", () => {
 });
 
 describe("Suite 4 — generateSurfacePixels", () => {
-  it("plain：全图均匀填充 color", () => {
+  // ⚠️ 刀⑳：本用例原名「plain：全图均匀填充 color」却传 `matSource: "solid"` —— 名实不符，
+  // 导致 `"plain"` 分支**从未被覆盖**，掩盖了「素面渲染成格线」的真 bug（见下条用例）。
+  it("solid：全图均匀填充 color", () => {
     const st = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid", matColor: 0xaabbcc }, "").structural;
     const px = generateSurfacePixels(st, 4);
     expect(px.length).toBe(4 * 4 * 4);
     for (let i = 0; i < px.length; i += 4) {
       expect([px[i], px[i + 1], px[i + 2]]).toEqual([0xaa, 0xbb, 0xcc]);
+      expect(px[i + 3]).toBe(255);
+    }
+  });
+
+  it("plain（素面）：必须与 solid 同为纯色，禁止落到 grid 分支画格线（刀⑳ 真 bug 回归）", () => {
+    const st = buildGroundSurfaceSpec(
+      { ...baseParams(), matSource: "plain", matColor: 0xaabbcc, matLineColor: 0x000000, matGridSize: 4 },
+      "",
+    ).structural;
+    const px = generateSurfacePixels(st, 8); // gridSize=4 → cell=2px，若误入 grid 分支则 x/y∈{0,2,4,6} 为线
+    for (let i = 0; i < px.length; i += 4) {
+      expect([px[i], px[i + 1], px[i + 2]]).toEqual([0xaa, 0xbb, 0xcc]); // 全图纯色，无线色
       expect(px[i + 3]).toBe(255);
     }
   });

@@ -48,6 +48,7 @@ const hoisted = vi.hoisted(() => {
     deepDispose: vi.fn(),
     createAnimClip: vi.fn(),
     parseMock: vi.fn(),
+    buildVrmBoneTreeMock: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
   };
 });
 
@@ -100,7 +101,7 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   unregisterModelRoot: vi.fn(),
 }));
 vi.mock("./vrm-bone.ts", () => ({
-  buildVrmBoneTree: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
+  buildVrmBoneTree: hoisted.buildVrmBoneTreeMock,
 }));
 
 // ---- Mock @pixiv/three-vrm ----
@@ -163,6 +164,7 @@ import {
   vrmMenuItems,
   vrmMetaSummary,
 } from "./vrm-adapter.ts";
+import { getLoadTraces } from "@/preview-3d/infra/load-trace.ts";
 
 /** 构造注入端口（含诊断日志 mock） */
 function makePort() {
@@ -316,6 +318,40 @@ describe("buildVrmScene 主路径", () => {
     await expect(
       buildVrmScene(ctx, "/vrm/fake.vrm", makePort(), hoisted.readBytesMock),
     ).rejects.toThrow("VRM 实例解析失败");
+  });
+
+  // 刀⑳ 回归：load-trace 的 bones 必须报**骨骼总数**（byId.size），不是 roots.length
+  // （无父骨根节点 ≈1）。同函数 :513 早修过同一 bug（面板显示「1 骨骼」），此处曾漏改。
+  // 用「多骨骼 + 单根」的树把两口径彻底分开：roots.length=1 而 byId.size=3。
+  it("recordLoadTrace 的 bones 报骨骼总数（byId.size）而非根节点数（roots.length）", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM_DATA"));
+    hoisted.listPathsMock.mockResolvedValue([]);
+    const bones = new Map([
+      ["hips", {}],
+      ["spine", {}],
+      ["head", {}],
+    ]);
+    hoisted.buildVrmBoneTreeMock.mockReturnValue({
+      byId: bones,
+      childrenMap: new Map(),
+      roots: [{ id: "hips" }],
+    } as unknown as ReturnType<typeof hoisted.buildVrmBoneTreeMock>);
+
+    const { ctx } = makeCtx();
+    await buildVrmScene(
+      ctx,
+      "/vrm/test.vrm",
+      makePort(),
+      hoisted.readBytesMock,
+      makePanels(),
+      hoisted.listPathsMock,
+    );
+
+    const traces = getLoadTraces().filter((t) => t.format === "vrm");
+    expect(traces.length).toBeGreaterThan(0);
+    expect(traces[traces.length - 1]!.assets?.bones).toBe(3); // byId.size，不是 1
   });
 });
 

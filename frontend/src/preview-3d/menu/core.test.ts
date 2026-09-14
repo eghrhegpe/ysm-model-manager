@@ -642,3 +642,43 @@ describe("mountPreviewRootMenu", () => {
   });
 });
 
+// ===== 输入阻断栈 disarm 契约（刀⑳）=====
+// ⚠️ 独立 describe：**刻意不带** `__resetInputBlockStackForTest()` 的 beforeEach。
+// 上方 describe 的 reset 会在每个用例前强制归零，恰好掩盖「dispose 未解阻断」的泄漏
+// ——本组用例存在的唯一理由就是让该泄漏暴露出来（3d-patterns §7.3：测试基建的意外
+// 副作用会掩盖真缺陷）。
+describe("输入阻断栈：dispose 必须解除（防 WASD 永久挂起）", () => {
+  let overlay: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sceneRegistry.reset();
+    localStorage.removeItem("ysm.preview.lastRtype");
+    // 刻意不 reset 输入阻断栈——每例自证起止状态
+    __resetInputBlockStackForTest();
+    overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+  });
+
+  it("菜单开启态下 dispose → 输入阻断归零（否则相机 WASD 被永久拦停）", () => {
+    const handle = mountPreviewRootMenu(overlay, makeCtx());
+    // 打开一个 dock 面板 → showMenu → onShow → pushInputBlock
+    (overlay.querySelector('[data-testid="dock-scene"]') as HTMLElement).click();
+    expect(getStackDepth()).toBeGreaterThan(0); // 前置：菜单确实推了阻断
+
+    handle.dispose();
+    // 会话销毁后阻断必须解除：mount-session 的三档 teardown 与 closeAllOverlays
+    // 都直接调 menuHandle.dispose()，前置无 hide——只能由 dispose 自身保证解阻断。
+    expect(getStackDepth()).toBe(0);
+  });
+
+  it("反复「开面板 → dispose」不累积阻断计数（多会话切换不残留）", () => {
+    for (let i = 0; i < 3; i++) {
+      const handle = mountPreviewRootMenu(overlay, makeCtx());
+      (overlay.querySelector('[data-testid="dock-scene"]') as HTMLElement).click();
+      handle.dispose();
+    }
+    expect(getStackDepth()).toBe(0);
+  });
+});
+

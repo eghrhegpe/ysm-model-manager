@@ -177,8 +177,30 @@ export class RenderModeCapability implements SceneCapability {
     return envState.renderModeWireframe;
   }
 
+  /**
+   * 菜单 select 值归一（刀⑳ 真 bug 修复）。
+   *
+   * `menu/cap-controls.ts` 的 select 渲染层恒传 **string**（`sel.value` 本就是 string，
+   * 且 options 由 `String(THREE.AdditiveBlending)` 构造），而 `mat.blending` / `mat.side`
+   * 只认 **number**。原实现直接 `v as number | null` 断言落库（`as number` 本身即是
+   * 「类型其实不是 number」的信号），运行期 string 原样存进 envState → `mat.blending = "2"`
+   * → three 的 WebGLState.setBlending 是数值 switch/case，字符串不匹配任何 case，
+   * 落 `default: error('WebGLState: Invalid blending')` ⇒ 用户点「叠加」「双面」**毫无反应**。
+   *
+   * 归一收口在此（cap 是「控件基元 → 领域值」的边界），渲染层与其它 cap 不必各自处理。
+   * 非法输入回落 null（= 不覆盖），与 select 未选中的语义一致。
+   */
+  private static normalizeEnum(v: unknown): number | null {
+    if (v === null || v === undefined || v === "") return null;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
   setBlending(v: THREE.Blending | null): void {
-    setEnvState({ renderModeBlending: v as number | null }, { source: "manual" });
+    setEnvState(
+      { renderModeBlending: RenderModeCapability.normalizeEnum(v) },
+      { source: "manual" },
+    );
   }
   getBlending(): THREE.Blending | null {
     return envState.renderModeBlending as THREE.Blending | null;
@@ -192,7 +214,7 @@ export class RenderModeCapability implements SceneCapability {
   }
 
   setSide(v: THREE.Side | null): void {
-    setEnvState({ renderModeSide: v as number | null }, { source: "manual" });
+    setEnvState({ renderModeSide: RenderModeCapability.normalizeEnum(v) }, { source: "manual" });
   }
   getSide(): THREE.Side | null {
     return envState.renderModeSide as THREE.Side | null;

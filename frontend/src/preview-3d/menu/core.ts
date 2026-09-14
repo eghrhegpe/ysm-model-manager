@@ -98,7 +98,7 @@ function buildPreviewMenuShell(
   popup: HTMLElement;
   menu: SlideMenuHandle;
   showMenu: (view: SlideMenuView) => void;
-  hideMenu: () => void;
+  hideMenu: (opts?: { restoreFocus?: boolean }) => void;
 } {
   ensureFabStyles();
   ensureCoreStyles();
@@ -629,6 +629,15 @@ export function mountPreviewRootMenu(
   const handle: PreviewMenuHandle = {
     dispose: (): void => {
       abortTap();
+      // ⚠️ 必须**先** hide 再拆壳：菜单处于开启态时 popup 可见，onShow() 已 pushInputBlock
+      // 而 pop 只在 onHide 内。三档 teardown（mount-session 的 early/failed/full）与
+      // closeAllOverlays 都是直接调本 dispose、前置无 hide——漏这一步则阻断计数永久残留，
+      // isInputBlocked() 恒 true，input-and-animation 的 onKeyDown 提前 return，
+      // 该会话之后相机 WASD/方向键彻底失灵（MENU_BLOCK_ID 是常量，打在全局单例栈上）。
+      // 同源教训见 bindPreviewTapToggle 注释：手搓 push 不经 onShow 曾致「计数虚高致
+      // WASD 永久挂起」；此处是同一不变量在 dispose 路径上的另一半。
+      // restoreFocus:false —— 会话正在销毁，焦点归还由 finishSession 的 returnFocus 统一负责。
+      hideMenu({ restoreFocus: false });
       disposeEnvSubscriptions(menu); // 清环境面板 cap 订阅（per-mount 隔离，防 cap 单例持有过期 menu 引用）
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）

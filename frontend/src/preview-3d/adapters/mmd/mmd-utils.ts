@@ -35,13 +35,15 @@ export const DISPOSE_TEX_KEYS = [
 export type MatTexSlots = Record<string, unknown>;
 export const matTexSlots = (mat: THREE.Material): MatTexSlots => mat as unknown as MatTexSlots;
 
-/** 估算纹理 GPU 内存（字节），只计 RGBA 全尺寸；压缩纹理格式不在此列 */
-export function estimateTexGpuBytes(tex: THREE.Texture): number {
-  const img = tex.image as HTMLImageElement | undefined;
-  if (!img?.width || !img?.height) return 0;
-  // RGBA8888 = 4B/px（最普适场景）；其它格式估算偏保守
-  return img.width * img.height * 4;
-}
+/** 估算纹理 GPU 内存（字节）。
+ *
+ *  ⚠️ 刀⑳：本函数原在此处**重复实现**（`w*h*4`），与单一事实源
+ *  `infra/texture-bytes.ts|estimateTextureBytes` 分叉——且漏了 mip 链系数，
+ *  使 MMD 纹理字节**恒低估 ~25%**，直接削弱 GPU 预算（`gpu-budget|guardGpuBudget`）
+ *  的字节维度拦截。现委托单一事实源，口径与池/场景图两条路径完全一致。
+ *  （texture-bytes.ts 文件头明写「两个消费方口径必须一致」——这里就是第三个消费方。）
+ */
+export { estimateTextureBytes as estimateTexGpuBytes } from "@/preview-3d/infra/texture-bytes.ts";
 
 /**
  * 并发分片映射：将 items 按 chunkSize 分组，每组内 Promise.all 并发执行，

@@ -597,7 +597,11 @@ function Stage5BuildResult(
     assets: {
       files: 1,
       textures: vrmMaterials.length,
-      bones: boneAssy.boneTree.roots.length,
+      // ⚠️ 刀⑳：原为 `boneTree.roots.length`——roots 只是「无父骨的根节点」≈1，
+      // 会让 load-trace 把 VRM 报成「1 骨骼」。同一函数 :513 早已修过**完全相同**的
+      // bug 并留注释（"a400b244 review P2：用它面板会错误显示「1 骨骼」"），此处漏改。
+      // 骨骼总数口径 = byId.size（含全部 humanoid 骨骼 ~52 根），与面板同源。
+      bones: boneAssy.boneTree.byId.size,
       materials: vrmMaterials.length,
       animations: motionClips.length,
       vrmaClips: motionClips.length,

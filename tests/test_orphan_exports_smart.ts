@@ -45,9 +45,14 @@ const REAL_ORPHANS_20260908 = [
   { symbol: "VIEW_TESTIDS", file: "frontend/src/views/context-menu/index.ts" },
 
   // 第二类：caps 默认参数/类型（ADR-196 重构中统一数据源暂存）
-  { symbol: "SHADOW_TYPES", file: "frontend/src/preview-3d/caps/shadow-state.ts" },
-  { symbol: "DEFAULT_SHADOW_PARAMS", file: "frontend/src/preview-3d/caps/shadow-state.ts" },
-  { symbol: "DEFAULT_SKY_PARAMS", file: "frontend/src/preview-3d/caps/sky-state.ts" },
+  // ⚠️ 刀⑳（2026-09）：本类**已清空**——2026-09-08 快照中的 5 项经复核全是 ADR-196
+  // 收口后的遗留残骸（零消费者），已连豁免规则一并清理：
+  //   · SHADOW_TYPES / DEFAULT_SHADOW_PARAMS @ caps/shadow-state.ts → 整文件零消费者，已删文件
+  //   · DEFAULT_SKY_PARAMS @ caps/sky-state.ts                    → 整文件零消费者，已删文件
+  //   · DEFAULT_WATER_PARAMS @ caps/water-state.ts                → 零消费者，已删符号
+  //   · deepMergeLightParams @ caps/light-presets.ts              → 零消费者，已删函数
+  // 教训：宽 glob（`DEFAULT_*_PARAMS` / `*_TYPES`）把「检测器看不见」当成了「不存在」，
+  // 遮蔽真孤儿长达数月；默认值唯一事实源现为 state/env-state-schema.ts。
   { symbol: "DEFAULT_WATER_PARAMS", file: "frontend/src/preview-3d/caps/water-state.ts" },
   { symbol: "deepMergeLightParams", file: "frontend/src/preview-3d/caps/light-presets.ts" },
 
@@ -136,14 +141,15 @@ console.log("  ✓ 白名单 + 路径模式 + glob 匹配：28 → 20+ 豁免，
 const viewTestIdsCount = exempted.filter((e) => e.symbol === "VIEW_TESTIDS").length;
 assert.equal(viewTestIdsCount, 13, `VIEW_TESTIDS 应豁免 13 个（got ${viewTestIdsCount}）`);
 
-// DEFAULT_*_PARAMS + *_TYPES 应该豁免 4 个（SHADOW_TYPES + DEFAULT_SHADOW/SKY/WATER_PARAMS）
+// DEFAULT_*_PARAMS + *_TYPES 豁免数：刀⑳ 清空为 0（豁免规则已删，遗留残骸已移除）
 const capsDefaultCount = exempted.filter(
   (e) => globMatch("DEFAULT_*_PARAMS", e.symbol) || globMatch("*_TYPES", e.symbol),
 ).length;
 assert.equal(
   capsDefaultCount,
-  4,
-  `caps 默认参数/类型应豁免 4 个（got ${capsDefaultCount}）—— SHADOW_TYPES + DEFAULT_*_PARAMS ×3`,
+  0,
+  `caps 默认参数/类型豁免应为 0（got ${capsDefaultCount}）——刀⑳ 已删除宽 glob 豁免规则，` +
+    `遗留残骸（shadow-state/sky-state/DEFAULT_WATER_PARAMS/deepMergeLightParams）已清理`,
 );
 
 // wasm glue 应该豁免 4 个（3 × _getWasmBinary* + 1 × _getGlueCodeMt）

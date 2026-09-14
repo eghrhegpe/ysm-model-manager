@@ -52,7 +52,10 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       control: {
         options: blendingOptions(),
         get: () => String(cap.getBlending() ?? THREE.NormalBlending),
-        set: (v) => cap.setBlending(v as unknown as THREE.Blending),
+        // 渲染层恒传 string（sel.value）——转 number 后交 cap（setter 内 normalizeEnum 兜底）。
+        // three 的 blending 是数值枚举；原 `as unknown as THREE.Blending` 是「类型其实不是」
+        // 的信号，运行期 string 落库致混合模式控件完全失效（刀⑳ 修复）。
+        set: (v) => cap.setBlending(Number(v) as THREE.Blending),
       },
     },
     // 💀 X光透视（深度测试关闭 = 可看穿模型）
@@ -78,7 +81,9 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       control: {
         options: sideOptions(),
         get: () => String(cap.getSide() ?? THREE.FrontSide),
-        set: (v) => cap.setSide(v as unknown as THREE.Side),
+        // 同上：渲染层传 string，此处转 number 后交 cap（setter 内 normalizeEnum 兜底）。
+        // 原 `as unknown as THREE.Side` 是「类型其实不是」的信号（刀⑳ 修复）。
+        set: (v) => cap.setSide(Number(v) as THREE.Side),
       },
     },
     // ⚡ 深度写入

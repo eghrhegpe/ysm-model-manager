@@ -30,14 +30,10 @@ auto_fields:
     - CapabilityId
     - CapabilityMap
     - customHdrThumbnail
-    - deepMergeLightParams
     - DeepPartial
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
-    - DEFAULT_SHADOW_PARAMS
-    - DEFAULT_SKY_PARAMS
-    - DEFAULT_WATER_PARAMS
     - DirectionalLightParams
     - drawEnvEquirect
     - ENV_PRESETS
@@ -93,13 +89,9 @@ auto_fields:
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
     - sceneRegistry
-    - SHADOW_TYPES
     - ShadowCapability
-    - ShadowParams
     - ShadowType
     - SkyCapability
-    - SkyModelType
-    - SkyParams
     - SpotlightParams
     - SunBeams
     - surfaceSpecKey
@@ -111,7 +103,6 @@ auto_fields:
     - WATER_MODES
     - WaterCapability
     - WaterMode
-    - WaterParams
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts

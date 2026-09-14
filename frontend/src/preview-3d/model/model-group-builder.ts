@@ -290,41 +290,28 @@ function postProcessAndTextures(
 ): string | null {
   fixOrphanBoneChain(ctx.bones, model.bones, ctx.pivots);
 
-  for (let i = 0; i < ctx.bones.length; i++) {
-    if (ctx.bones[i].name === "RightArm" && ctx.bones[i].parentId === null) {
-      for (let j = 0; j < ctx.bones.length; j++) {
-        if (ctx.bones[j].name === "Arm" && ctx.bones[j].parentId !== null) {
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          const raPivot = ctx.pivots.get("RightArm")!;
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          const armPivot = ctx.pivots.get("Arm")!;
-          ctx.bones[i].parentId = ctx.bones[j].name;
-          ctx.bones[i].localPosition = computeBoneLocalPos(raPivot, armPivot);
-          break;
-        }
-      }
-    }
-    if (ctx.bones[i].name === "LeftArm" && ctx.bones[i].parentId === null) {
-      for (let j = 0; j < ctx.bones.length; j++) {
-        if (ctx.bones[j].name === "Arm" && ctx.bones[j].parentId !== null) {
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          const laPivot = ctx.pivots.get("LeftArm")!;
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          const armPivot = ctx.pivots.get("Arm")!;
-          ctx.bones[i].parentId = ctx.bones[j].name;
-          ctx.bones[i].localPosition = computeBoneLocalPos(laPivot, armPivot);
-          break;
-        }
-      }
-    }
+  // 左右臂挂接：二者逻辑逐字同构（仅骨名与取 pivot 的键不同），合并为循环。
+  // LeftArm 在 MMD/部分基岩模型里与 RightArm 一样可能是「无父链的游离根」，
+  // 需在 Arm 已定父后挂回，否则局部坐标算错。
+  for (const armName of ["RightArm", "LeftArm"] as const) {
+    const armBone = ctx.bones.find((b) => b.name === armName && b.parentId === null);
+    if (!armBone) continue;
+    const armParent = ctx.bones.find((b) => b.name === "Arm" && b.parentId !== null);
+    if (!armParent) continue;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    const armPivot = ctx.pivots.get(armName)!;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    const parentPivot = ctx.pivots.get("Arm")!;
+    armBone.parentId = armParent.name;
+    armBone.localPosition = computeBoneLocalPos(armPivot, parentPivot);
   }
 
-  let texID: string | null = null;
-  const hasTextures = false;
-  if (hasTextures) {
-    texID = `tex_${texIdxBase}`;
-  }
-  return texID;
+  // ⚠️ 刀⑳：此处原有 `const hasTextures = false; if (hasTextures) { texID = ... }` 恒假死分支
+  // （texIdxBase 参数在生产路径因此完全未被使用，仅用于喂这条死路）。删除后统一返回 null；
+  // 参数 texIdxBase 保留以维持 `buildModelGroup` 既有调用签名（对齐 Go spec.go 的同名契约），
+  // 待 Go 侧切片真正下发纹理 ID 时再接线。
+  void texIdxBase;
+  return null;
 }
 
 /**

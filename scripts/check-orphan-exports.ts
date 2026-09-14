@@ -253,9 +253,12 @@ export const ORPHAN_EXEMPT_RULES = [
     pattern: "VIEW_TESTIDS",
     reason: "模板共享空导出（所有 tpl.ts 都有，供测试 query）",
   },
-  // 规则 2：caps 默认参数/类型枚举 —— ADR-196 统一数据源暂存
-  { type: "symbolGlob", pattern: "DEFAULT_*_PARAMS", reason: "ADR-196 caps 统一数据源暂存" },
-  { type: "symbolGlob", pattern: "*_TYPES", reason: "caps 类型枚举导出" },
+  // 规则 2：caps 默认参数/类型枚举
+  // ⚠️ 刀⑳（2026-09）：原 `DEFAULT_*_PARAMS` / `*_TYPES` 两条 symbolGlob 规则已**删除**——
+  // 它们遮蔽的正是真孤儿：`shadow-state.ts` / `sky-state.ts` 整文件零消费者（已删文件），
+  // `DEFAULT_WATER_PARAMS` / `WaterParams` 与 `deepMergeLightParams` 亦零消费者（已删符号）。
+  // 这些是 ADR-196 收口 envState 后的**遗留残骸**，不是「统一数据源暂存」；用宽 glob 豁免
+  // 等于把「看不见」当成「不存在」。默认值唯一事实源现为 `state/env-state-schema.ts`。
   // 规则 3：Emscripten 产物路径（wasm/ 下的 .js/.d.ts）
   { type: "pathGlob", pattern: "**/wasm/*.js", reason: "Emscripten 自动生成产物" },
   { type: "pathGlob", pattern: "**/wasm/*.d.ts", reason: "Emscripten 自动生成产物" },

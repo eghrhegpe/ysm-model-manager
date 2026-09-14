@@ -322,10 +322,7 @@ auto_fields:
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
-    - DEFAULT_SHADOW_PARAMS
-    - DEFAULT_SKY_PARAMS
     - DEFAULT_TD_KEYMAP
-    - DEFAULT_WATER_PARAMS
     - deriveTestIds
     - describeVersionRange
     - detectContainerType
@@ -1150,7 +1147,6 @@ auto_fields:
     - setVrmMaterialVisible
     - setVsRows
     - ShadowCapability
-    - ShadowParams
     - SharedInfra
     - shortLabelOf
     - shotButtonNodes
@@ -1180,8 +1176,6 @@ auto_fields:
     - SiteViewState
     - sizeColor
     - SkyCapability
-    - SkyModelType
-    - SkyParams
     - sleep
     - slideMenuCss
     - SlideMenuHandle
@@ -1330,7 +1324,6 @@ auto_fields:
     - WasmModuleLike
     - WaterCapability
     - WaterMode
-    - WaterParams
     - WEB_ROOT
     - webAnalyzeBedrockModel
     - webAnalyzeBedrockModelEntry

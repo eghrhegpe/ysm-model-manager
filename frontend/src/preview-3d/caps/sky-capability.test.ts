@@ -273,6 +273,24 @@ describe("SkyCapability — 持久化", () => {
     expect(cap2.getParams().sunIntensityScale).toBeCloseTo(0.7, 4);
     expect(cap2.getParams().sunDiscScale).toBeCloseTo(0.55, 4);
   });
+
+  // 刀⑳：昼夜循环开关原为只写不读的孤儿（schema 有键但无人读写）→ 关掉预览即丢。
+  it("saveState/loadState 持久化 skyAutoRotate（昼夜循环开关不再关掉预览就丢）", () => {
+    const cap = newCap();
+    cap.startAutoRotate();
+    expect(cap.isAutoRotating()).toBe(true);
+    cap.saveState();
+
+    resetEnvState();
+    const cap2 = newCap();
+    expect(cap2.isAutoRotating()).toBe(false); // reset 后确为默认关
+    cap2.loadState();
+    expect(cap2.isAutoRotating()).toBe(true); // 已从存储还原
+    // 还原后确实在推进时间轴（不只是标志位对了）
+    const before = cap2.getTimeOfDay();
+    cap2.update(1);
+    expect(cap2.getTimeOfDay()).not.toBe(before);
+  });
 });
 
 describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
@@ -913,6 +931,19 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
   it("stopAutoRotate 未启动时 no-op", () => {
     const cap = newCap();
     expect(() => cap.stopAutoRotate()).not.toThrow();
+    expect(cap.isAutoRotating()).toBe(false);
+  });
+
+  // 刀⑳：start/stop 必须走 envState 单一事实源（ADR-196）——否则该键永远无人写入，
+  // 持久化与菜单 select 都读不到真值。
+  it("start/stop 经 envState 单一事实源写入 skyAutoRotate（非私有实例字段旁路）", () => {
+    const cap = newCap();
+    expect(envState.skyAutoRotate).toBe(false);
+    cap.startAutoRotate();
+    expect(envState.skyAutoRotate).toBe(true); // 唯一事实源已写
+    expect(cap.isAutoRotating()).toBe(true); // 实例标志由 env 回调同步
+    cap.stopAutoRotate();
+    expect(envState.skyAutoRotate).toBe(false);
     expect(cap.isAutoRotating()).toBe(false);
   });
 

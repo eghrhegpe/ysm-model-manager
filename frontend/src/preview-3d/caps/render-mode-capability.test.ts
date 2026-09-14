@@ -242,7 +242,10 @@ describe("RenderModeCapability — getMenuNodes 读写全覆盖", () => {
     const node = cap.getMenuNodes().find((n) => n.id === "rm-side")!;
     expect(node.control!.get!(undefined)).toBe(String(THREE.FrontSide));
     node.control!.set!(String(THREE.DoubleSide));
-    expect(cap.getSide()).toBe(String(THREE.DoubleSide));
+    // ⚠️ 必须断言**数值**：渲染层恒传 string（cap-controls 的 sel.value），cap 负责归一。
+    // 原断言 `toBe(String(...))` 是 string 比 string 恒真，把「string 原样存进 envState」
+    // 这个 bug 固化成了契约——three 的 material.side 只认 number。
+    expect(cap.getSide()).toBe(THREE.DoubleSide);
   });
 
   it("深度写入 toggle：默认开；关 → depthWrite=false，开 → 清 override", () => {
@@ -291,7 +294,8 @@ describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
     const blending = cap.getMenuNodes()[1]!;
     expect(blending.control!.options!.length).toBe(4);
     blending.control!.set!(String(THREE.AdditiveBlending));
-    expect(cap.getBlending()).toBe(String(THREE.AdditiveBlending));
+    // ⚠️ 同「面剔除」：断言数值而非 String(...)，防 string-比-string 的恒真断言复活。
+    expect(cap.getBlending()).toBe(THREE.AdditiveBlending);
   });
 });
 

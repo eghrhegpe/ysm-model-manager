@@ -122,32 +122,12 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
 // 注：LIGHT_PRESETS（v1.14 风格预设表）已并入 state/model-defaults.ts 的 MODEL_DEFAULTS，
 // applyModelPreset 不再读此文件。DEFAULT_LIGHT_PARAMS（参数默认值基线）保留。
 
-/* ============ 合并工具 ============ */
-
-export function deepMergeLightParams(
-  base: LightParams,
-  override: DeepPartial<LightParams>,
-): LightParams {
-  const mergeDir = (
-    a: DirectionalLightParams,
-    b?: Partial<DirectionalLightParams>,
-  ): DirectionalLightParams => ({ ...a, ...b }) as DirectionalLightParams;
-  const mergeAmb = (a: AmbientLightParams, b?: Partial<AmbientLightParams>): AmbientLightParams =>
-    ({ ...a, ...b }) as AmbientLightParams;
-  const mergeSpot = (a: SpotlightParams, b?: Partial<SpotlightParams>): SpotlightParams =>
-    ({ ...a, ...b }) as SpotlightParams;
-  const mergeVol = (a: VolumetricParams, b?: Partial<VolumetricParams>): VolumetricParams =>
-    ({ ...a, ...b }) as VolumetricParams;
-
-  return {
-    key: mergeDir(base.key, override.key),
-    fill: mergeDir(base.fill, override.fill),
-    rim: mergeDir(base.rim, override.rim),
-    ambient: mergeAmb(base.ambient, override.ambient),
-    spotlight: mergeSpot(base.spotlight, override.spotlight),
-    volumetric: mergeVol(base.volumetric, override.volumetric),
-  };
-}
+// ⚠️ 刀⑳：`deepMergeLightParams` 已删除（零消费者）。此前 check-orphan-exports 的
+// ADR-196 豁免规则在 2026-09-11 被误删——理由是「经 light-capability.ts 的
+// `export * from "./light-presets.ts"` 转发消费」，但 `export *` 只是让**检测器漏检**，
+// 不等于真有消费者：全仓 grep 该符号仅命中定义处，light-capability 实际只 import
+// 具体符号。检测器修复后它暴露为真孤儿，此处直接清理（而非重新加豁免）。
+// 嵌套→扁平仍走下方 flattenLightParams（活代码）。
 
 /* ============ 嵌套 ↔ 扁平映射（ADR-196，P3 下沉自 light-capability.ts） ============ */
 

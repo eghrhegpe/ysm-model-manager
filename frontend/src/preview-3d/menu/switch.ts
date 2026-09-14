@@ -27,7 +27,10 @@ function switchTabLabelOf(key: string): string {
 }
 
 /** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5）。
- *  导出供 menu 内同口径复用（roles.ts renderComponentsSection 的 isCur 比较）——防归一操作多处内联漂移 */
+ *  导出供 menu 内同口径复用（roles-views.ts 的 renderComponentsSection 做 isCur 比较）——
+ *  防归一操作多处内联漂移。
+ *  刀⑳：本注释原写 `roles.ts renderComponentsSection`，该函数已整体迁至 roles-views.ts
+ *  （见 roles.ts 头部迁移注释），注释随实现归位。 */
 export function switchNormPath(s: string): string {
   return s.replace(/\\/g, "/").toLowerCase();
 }

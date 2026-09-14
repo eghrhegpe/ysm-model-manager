@@ -13,6 +13,7 @@ import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { getSceneCaps, type SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import {
   cullModelGroups,
   isFrustumCullEnabled,
@@ -29,7 +30,6 @@ import {
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
 } from "./render-budget.ts";
-import { logWarn } from "@/utils/base/primitives/log.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
 
 /** render-loop 活跃输入会话形状（mount-preview-core 经 set/unregister 注入；rAF 每帧读） */
@@ -54,8 +54,22 @@ export class RendererHost {
   private _animId = 0;
   /** 所有 session 的 perFrame 回调（共享同一 renderer） */
   private _perFrames: Array<(dt: number) => void> = [];
-  /** 上次 perFrame 告警时间戳（节流用） */
-  private _lastPerFrameWarnTs = 0;
+  /**
+   * 上次 perFrame 阻塞告警时间戳（节流用，见 animate 内超时告警）。
+   * 初值 `null` = 「从未告警过」——不能用 0：页面刚加载时 `performance.now()` 本身
+   * 小于节流窗（如 900ms < 5000ms），`now - 0 < 窗` 会把**首条**告警吞掉，
+   * 而首个卡顿帧恰是最该被看见的（冷启动解析/上传纹理阶段）。
+   */
+  private _lastPerFrameWarnTs: number | null = null;
+  /**
+   * removePerFrame 引用失配告警的独立节流时间戳。
+   * ⚠️ 不复用 `_lastPerFrameWarnTs`：两者是**互不相关的告警源**（前者=回调执行超时，
+   * 后者=注销未命中），共用槽位会互相吞掉对方的告警——实测共用时「超时告警」先写入
+   * 时间戳，紧接着的失配告警被静默节流 5s，可观测性归零。
+   * ⚠️ 初值用 `null` 而非 `0`：页面刚加载时 `performance.now()` 本身 < 节流窗（如 830ms），
+   * `now - 0 < 5000` ⇒ **首条告警被吞**。null 表示「从未告警过」，首条恒放行。
+   */
+  private _lastRemoveMissWarnTs: number | null = null;
   /** perFrame 快照缓存（dirty 重建）：注册表变更才分配，rAF 热路径零分配（R1-P1-1） */
   private _perFrameSnapshot: Array<(dt: number) => void> | null = null;
   private _perFramesDirty = true;
@@ -119,10 +133,36 @@ export class RendererHost {
     this._perFramesDirty = true;
   }
 
-  /** 注销 perFrame 回调（setPerFrame 换回调 / unloadModel / fullCleanup 用） */
+  /**
+   * 注销 perFrame 回调（setPerFrame 换回调 / unloadModel / fullCleanup 用）。
+   *
+   * ⚠️ 按**引用相等**（indexOf）移除：调用方必须传注册时那个函数实例。`setPerFrame`
+   * 存取同一引用故恒配对；但若有人把 `content.update` 经 `.bind(content)` 或包装闭包
+   * 注册、注销时却传原方法，indexOf 恒 -1 → 回调永久驻留 `_perFrames`，rAF 每帧驱动
+   * 已 dispose 的内容层。此类失配原先**完全静默**（外层的 `if (idx >= 0)` 让漏移除
+   * 看起来像正常 no-op），故此处补一条节流告警留痕。
+   *
+   * 仅在「本该移除」时告警：列表为空是合法（重复注销/清空后重入），不刷屏。
+   */
   removePerFrame(f: (dt: number) => void): void {
     const idx = this._perFrames.indexOf(f);
-    if (idx >= 0) this._perFrames.splice(idx, 1);
+    if (idx >= 0) {
+      this._perFrames.splice(idx, 1);
+    } else if (this._perFrames.length > 0) {
+      // 列表非空却没找到目标 = 引用失配信号（真正的 no-op 只会发生在列表已空时）
+      const now = performance.now();
+      if (
+        this._lastRemoveMissWarnTs === null ||
+        now - this._lastRemoveMissWarnTs > PER_FRAME_WARN_THROTTLE_MS
+      ) {
+        this._lastRemoveMissWarnTs = now;
+        logWarn(
+          "preview 3D",
+          `removePerFrame 未命中（引用失配）：注册表仍有 ${this._perFrames.length} 个回调，` +
+            "该回调不会被移除，可能导致已销毁内容层仍被每帧驱动。请确认注册/注销传同一函数实例。",
+        );
+      }
+    }
     this._perFramesDirty = true;
   }
 
@@ -152,6 +192,10 @@ export class RendererHost {
     this._perFramesDirty = true;
     this._activeInputSession = null;
     this._liveInputSessions.length = 0;
+    // 告警节流时间戳同属循环状态：不清会让「重置后首个告警」被上一轮的时间戳压掉
+    // （测试跨用例串扰；生产侧 close→reopen 后首条告警也可能被静默节流）
+    this._lastPerFrameWarnTs = null;
+    this._lastRemoveMissWarnTs = null;
   }
 
   /**
@@ -224,7 +268,8 @@ export class RendererHost {
       const pfMs = pfNow - pfStart;
       if (
         pfMs > PER_FRAME_WARN_MS &&
-        pfNow - this._lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS
+        (this._lastPerFrameWarnTs === null ||
+          pfNow - this._lastPerFrameWarnTs > PER_FRAME_WARN_THROTTLE_MS)
       ) {
         this._lastPerFrameWarnTs = pfNow;
         logWarn("perFrame", `阻塞 ${pfMs.toFixed(1)}ms (>${PER_FRAME_WARN_MS}ms 阈值)`);

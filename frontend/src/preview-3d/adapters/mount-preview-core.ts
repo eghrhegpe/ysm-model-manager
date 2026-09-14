@@ -976,9 +976,7 @@ async function runBuild(
  */
 function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown): void {
   const session = ctx.session;
-  // 注意：escH 移除须在 runFailedMountCleanup 之前（它不清 escH，调用方负责）——
-  // 与 abort 打断路径（runFullCleanup 内含 escH 移除）的清理分工不同。
-  document.removeEventListener("keydown", session.escH);
+  // escH 解绑已归位 teardown 共用区（mount-session.ts ①b）——三档统一，本处不再手动补。
   runFailedMountCleanup(ctx);
   const infra = ctx.getInfra();
   if (infra && session.sceneBaseline) {

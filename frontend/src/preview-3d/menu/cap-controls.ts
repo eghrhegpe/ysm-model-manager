@@ -44,9 +44,18 @@ export interface CapControlView {
   select?: Array<{ value: string; label: string }>;
 }
 
-/** PreviewControlDef → CapControlView（结构化满足，零拷贝适配） */
+/**
+ * PreviewControlDef → CapControlView（**无需断言**：CapControlView 是 PreviewControlDef 的
+ * 结构子集，赋值即通过——`getValue` 由联合类型窄化到 `unknown` 是协变放宽，
+ * `onChange` 由 `(v: unknown)` 窄化到 `(v: number|string|boolean)` 是逆变收窄，
+ * 两者都安全，故直接 return 即可，编译器自行校验。
+ *
+ * 原实现写作 `c as unknown as CapControlView`（双断言），是历史遗留的噪音：双断言会
+ * **关闭编译期校验**，日后 CapControlView 新增字段或改窄签名时静默失效。2026-09 实测
+ * 删除后 typecheck 零报错，证明该断言从未承担任何职责，已移除。
+ */
 export function capControlToView(c: PreviewControlDef): CapControlView {
-  return c as unknown as CapControlView;
+  return c;
 }
 
 /** i18n 安全取值走 tOf（ADR-207 D3）：PreviewControlDef.labelKey/group/hintKey 为
@@ -596,6 +605,14 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
  *
  * 纯函数（不依赖注册表），供契约测试锁定「全仓共有几个隐藏逻辑、各自行为如何」——
  * 杜绝条件显隐散落各 cap 工厂内部而无集中清单的「隐藏逻辑无人知道」状况。
+ *
+ * ⚠️ **本函数无生产调用方，且这是有意为之——请勿以「孤儿导出」为由删除**：
+ * 它是 ADR-128 §5「死穴二」的 cap 级对偶锚点。`menu-graph.ts|collectNodePredicates`
+ * 负责**节点级**谓词枚举，本函数负责**控件级**枚举，两者语义严格区分、不可混用
+ * （menu-graph.ts 顶部与 menu-node-types.ts 均有交叉引用注释）。删除本函数会让
+ * 「cap 控件条件显隐」失去集中枚举入口，只剩测试里的散点断言。
+ *
+ * 消费方：`preview-state.test.ts`（契约测试，断言枚举结果），非生产代码。
  *
  * [铁律收口] 2026-09 A 轨 `visible` 闭包已整体删除：条件显隐只允许 visibleWhen（吃状态层快照
  * 的纯函数，不摸 cap 实例）。collectVisiblePredicates 现只收 visibleWhen——与

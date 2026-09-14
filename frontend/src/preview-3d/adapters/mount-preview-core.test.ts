@@ -289,6 +289,70 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(adapter.onClose).not.toHaveBeenCalled();
   });
 
+  // teardown("failed") 的 escH 解绑归位（2026-09 可读性收口）：escH 挂在 document 上且闭包捕获
+  // 整个 ctx，任一档漏解绑都是跨会话泄漏 + 「会话已拆但 ESC 仍触发陈旧 handler」。
+  // 此前 failed 档不解绑、由调用方 recoverMountFailure 手动补 —— 是**责任错配**而非现实泄漏
+  // （反向验证：仅还原旧写法本用例仍通过，因调用方那行补丁确实在）。
+  // 本用例锁「解绑契约」本身：删掉任何一侧的解绑即报红（反向验证：把两处解绑都摘掉 →
+  // `expected 1 to be +0` 失败）。这层保护在收敛前是真空的——三档里只有 failed 依赖调用方自觉。
+  //
+  // 断言手法：直接数 document 上 keydown 监听器的存活数（包装 add/remove 记录）。
+  // 比「再按一次 ESC 不抛错」强——陈旧 handler 空转时不抛错，那种写法检测不到残留。
+  it("build 失败后 document 上不残留 escH 监听器（解绑契约）", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const live = new Set<EventListener>();
+    const doc = document as unknown as {
+      addEventListener(t: string, l: EventListener | null, o?: unknown): void;
+      removeEventListener(t: string, l: EventListener | null, o?: unknown): void;
+    };
+    const origAdd = doc.addEventListener.bind(doc);
+    const origRemove = doc.removeEventListener.bind(doc);
+    const addSpy = vi
+      .spyOn(doc, "addEventListener")
+      .mockImplementation(function (t, l, ...rest: unknown[]) {
+        if (t === "keydown" && l) live.add(l);
+        return origAdd(t, l, ...(rest as []));
+      });
+    const removeSpy = vi
+      .spyOn(doc, "removeEventListener")
+      .mockImplementation(function (t, l, ...rest: unknown[]) {
+        if (t === "keydown" && l) live.delete(l);
+        return origRemove(t, l, ...(rest as []));
+      });
+
+    try {
+      const badAdapter: PreviewAdapter = {
+        id: "vrm",
+        onClose: vi.fn(),
+        build: vi.fn(async () => {
+          throw new Error("parse boom");
+        }),
+      };
+      await mount3D(badAdapter, "/m/bad.vrm");
+      expect(errSpy).toHaveBeenCalled();
+
+      // 失败路径必须把本次的 escH 摘干净——留一个即跨会话泄漏（闭包持有整个 ctx）
+      expect(live.size, "build 失败后 document 上不应残留 keydown 监听器").toBe(0);
+      expect(removeSpy).toHaveBeenCalled();
+
+      // 后续正常挂载不受影响，且关闭后同样无残留
+      const goodAdapter: PreviewAdapter = {
+        id: "vrm",
+        onClose: vi.fn(),
+        build: vi.fn(async () => makeContent()),
+      };
+      await mount3D(goodAdapter, "/m/ok.vrm");
+      expect(hasActivePreview()).toBe(true);
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      expect(hasActivePreview()).toBe(false);
+      expect(goodAdapter.onClose).toHaveBeenCalledTimes(1);
+      expect(live.size, "正常关闭后 document 上不应残留 keydown 监听器").toBe(0);
+    } finally {
+      addSpy.mockRestore();
+      removeSpy.mockRestore();
+    }
+  });
+
   it("build 期间被 invalidate：已产出的内容层仍须 dispose，不留 GPU 资源", async () => {
     const content = makeContent();
     let resolveBuild!: (b: PreviewScene) => void;

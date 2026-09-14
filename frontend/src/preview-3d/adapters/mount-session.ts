@@ -209,11 +209,17 @@ export function teardown(ctx: MountCtx, level: TeardownLevel): void {
   // ① 终止标志置位（三路共用，与旧三函数首行一致）
   session.isDisposed.v = true;
   session.status = level === "failed" ? "aborting" : "disposing";
+  // ①b escH 解绑（三路共用）：ESC 监听挂在 document 上，且闭包捕获整个 ctx
+  // （session.cleanupFn / menuHandle / getInfra）——任何一档漏解绑都是跨会话泄漏 +
+  // 会话已拆但 ESC 仍触发陈旧 handler。此前 failed 档漏解绑、由调用方
+  // recoverMountFailure 手动补（注释自述「它不清 escH，调用方负责」），是 ADR-233
+  // 「三档收敛到单一出口」未收敛干净的残留：新增 failed 调用点一旦忘记补解绑即静默泄漏。
+  // 现提到共用区，三档行为一致；调用方的手动补丁已同步删除。
+  document.removeEventListener("keydown", session.escH);
 
   if (level === "early") {
     // 早期 ESC：会话中止且完整收尾（finishSession 幂等）
     session.aborted.v = true;
-    document.removeEventListener("keydown", session.escH);
     clearTipTimer(session); // ②
     ctx.menuHandle.dispose(); // ③
     if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay); // ⑤
@@ -222,9 +228,6 @@ export function teardown(ctx: MountCtx, level: TeardownLevel): void {
   }
 
   // failed + full 共用段
-  if (level === "full") {
-    document.removeEventListener("keydown", session.escH); // ① escH（full 路径亦摘除）
-  }
   clearTipTimer(session); // ②
   ctx.menuHandle.dispose(); // ③
   unbindInputsAndStopLoop(ctx); // ⑦

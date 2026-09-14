@@ -117,7 +117,11 @@ export async function switchToSession(
   ctx.setContent(next);
   // [ADR-159] 容器元数据继承：unregister 前捕获前一活跃 entry 的 displayName/components，
   // 同容器（资源包）会话内切换透传给新 entry（keep=false 时旧 entry 即将被注销，必须先取）。
-  const prevEntry = sceneRegistry.get(sceneRegistry.getActiveId() ?? "");
+  // 该 id 同时是下方 unregisterSwitchPrevious 的注销目标——**同一个 id 只取一次**并显式透传，
+  // 不再让注销侧自行 getActiveId() 二次查表（两处查表虽等价，却让「注销的是这一条」变成
+  // 靠约定维持的隐式事实，改动 register/setActive 次序即静默失效）。
+  const prevId = sceneRegistry.getActiveId();
+  const prevEntry = prevId ? sceneRegistry.get(prevId) : undefined;
   // 仅保留实际存在的元数据键（displayName/components 为可选，exactOptional 收紧后避免
   // 显式 undefined 流入下游可选键参数）
   const containerMeta = prevEntry
@@ -127,7 +131,7 @@ export async function switchToSession(
       }
     : undefined;
   pushSwitchHistory(ctx, keep, next);
-  unregisterSwitchPrevious(ctx, keep);
+  unregisterSwitchPrevious(prevId, keep);
   // ADR-131 C1 修复：注册后立刻按新模型 menuItems 刷新 dock 菜单——switch 路径的
   // 适配器 build 不调 setAdapterItems（grep 实证），此前 dock 残留首次 mount 的菜单
   // （旧模型统计面板数值不匹配）；非空合并 menuItems 一次注入，空则清空适配器项
@@ -334,12 +338,14 @@ function pushSwitchHistory(ctx: SwitchContext, keep: boolean, next: PreviewScene
  * 非 keep 切换注销旧活跃模型（ADR-093 T2 修正）：否则注册表残留旧 entry →
  * count 虚高（误触 MAX_MODELS 拦截）+ visibleRoots 含已移除的 detached root
  * （取景幽灵）。keep 多模型后非 keep 切换的残留由下次 mount 的 reset 兜底。
+ *
+ * @param prevId 调用方在 pushSwitchHistory 前捕获的「前一活跃 entry id」——显式传入而非
+ *   本函数自查 getActiveId()：本函数在 pushSwitchHistory 之后调用，虽然该函数不改 activeId
+ *   （故自查结果与传入值恒等），但依赖「中间没有别的东西动 activeId」是隐式契约，
+ *   传参把这份等价关系固化成编译期的显式事实。
  */
-function unregisterSwitchPrevious(_ctx: SwitchContext, keep: boolean): void {
-  if (!keep) {
-    const prevId = sceneRegistry.getActiveId();
-    if (prevId) sceneRegistry.unregister(prevId);
-  }
+function unregisterSwitchPrevious(prevId: string | null, keep: boolean): void {
+  if (!keep && prevId) sceneRegistry.unregister(prevId);
 }
 
 /**

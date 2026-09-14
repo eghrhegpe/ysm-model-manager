@@ -307,7 +307,7 @@ pitfalls:
   - **两条入口共用一道门**：`switch-preview|beginSwitch`（keep 追加通道，inFlight 置位前判不卡死）与 `mount-preview-core|mount3D`（**直挂通道**——无活跃会话时 preview-library 的 cooperate 退化为直挂，超限走 `runFullCleanup` 完整回收）。缺一条即「某路径裸奔」，勿只加一侧。
 - **生命周期清理**：
   - `runFullCleanup(ctx)`：**完整关闭**语义——拆 overlay + 解绑输入监听 + 拆菜单 + 停 rAF + 清内容层 GPU + 清场景能力 + `textureCache.disposeAll` + `clearSingletons` + **`setPerceptionPaused(false)` 复位感知暂停标志**（防 adapter 崩溃/切模型残留冻结下次 mount，属模块级单例无属主，须由会话完整关闭路径复位；见 `perception.md`） + `finishSession`。ESC / abort / 正常退出走这里
-  - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 由调用方先移除）
+  - `runFailedMountCleanup(ctx)`：**build 失败路径**——保留 overlay（上展示 `showLoadFailure` 错误提示），不清场景能力/纹理缓存（可能被其他活跃会话共享）——只解绑输入监听 + 拆菜单 + 清 tip 定时器 + `removePerFrame` + `stopIfIdle`。catch 段调用（escH 解绑已归位 `teardown` 共用区，**调用方不再手动补**——刀⑰ 见 `frontend_design_critique`）
   - `closeOverlay(ctx)`：**早期关闭**（build 尚未成功，cleanupFn 未赋值的 ESC 出口）——aborted/disposed 置位 + 拆 escH + 拆菜单 + 拆 overlay + `finishSession`
 - **构建后注册统一管线**（`register-built-scene.ts`）：mount 初载与 switchTo 共用「差量捕获 roots → collectSceneStats 统计合并统计面板 → sceneRegistry.register」单一实现（2026-09 锐评 P1-2 收敛）；switch 无快照兜底分支（极简注册不带菜单/骨骼元数据）不在此列
 - **多模型管理**：`sceneRegistry` 存每模型 `roots/visible/content/boneMaps/menuItems`；`fitCameraToRoots(visibleRoots())` 相机框可见模型；统一拾取器（`count >= 2` 激活）沿父链反查归属。**visible 持久化**（2026 锐评 P1）：`setVisible` 经 `safeSet("ysm:model-visible:<path>", "1"/"0")` 落盘（隐私模式静默降级），register/去重重载经 `safeGet` 恢复隐藏态——隐藏模型同时被 `arrangeModelsInGrid` 排布与 `fitCameraToRoots` 取景排除
@@ -332,8 +332,9 @@ pitfalls:
 
 - **外壳单例**：renderer/scene/camera/controls/rAF 循环全局唯一，`clearSingletons()` 只在 `runFullCleanup` 完整关闭时调用——`runFailedMountCleanup` / `switchTo` 不动单例
 - **escH 可变引用**：switchTo 后旧 handler 被替换，cleanup 必须按**当前引用** remove；移除顺序必须先 save 旧引用再替换，否则移新函数（从未注册）旧函数仍残留
+- **escH 解绑三档统一**（刀⑰）：`teardown` 的 `early`/`failed`/`full` 三档在共用区首段统一解绑 escH，**调用方不再各自补**——escH 闭包捕获整个 `ctx`，任一档漏解绑即跨会话泄漏 + 会话已拆但 ESC 仍触发陈旧 handler；曾由 `recoverMountFailure` 手动补（责任错配），新增 failed 调用点易忘。回归守卫见 `mount-preview-core.test.ts`（直数 document 监听器存活数）
 - **能力注册表 `saveAll/dispose` 只在 `runFullCleanup`**——build 失败路径不清（可能共享）；`evictZeroRefIfNeeded` 只淘汰 `refs===0` 条目，已 dispose 纹理禁止再次 dispose（LRU 失效）
-- **会话清理分工**：abort/gen 打断走 `runFullCleanup`（已登记 allContent → 需补登记 content 防 GPU 泄漏）；build 抛错走 `runFailedMountCleanup` + 调用方清 scene 差量 + escH
+- **会话清理分工**：abort/gen 打断走 `runFullCleanup`（已登记 allContent → 需补登记 content 防 GPU 泄漏）；build 抛错走 `runFailedMountCleanup` + 调用方清 scene 差量（escH 已由 `teardown` 统一解绑，调用方不再负责）
 - **focus trap**：`finishSession` 释放焦点陷阱 + `returnFocus()` 归还触发元素焦点，幂等（二次进入 return）
 
 ## 相关

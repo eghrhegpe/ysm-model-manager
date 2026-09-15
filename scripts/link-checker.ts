@@ -68,7 +68,15 @@ function trackedRelPaths(): string[] | null {
  */
 export function listScanTargets(): { rels: string[]; source: "git" | "walk" } {
   const tracked = trackedRelPaths();
-  if (tracked) return { rels: tracked.filter(isScannable), source: "git" };
+  if (tracked) {
+    // 口径 = 索引 ∩ 可扫 ∩ 磁盘存在：被跟踪但工作区缺失的 md（并行会话删除未 add、
+    // 手工误删）若进扫描域，extractLinks 的 readFileSync 进 catch 返空 + 锚点恒 0，
+    // 该文件断链全盲 ⇒ links_broken:0 假绿（review 2d51556ba P2）
+    return {
+      rels: tracked.filter((r) => isScannable(r) && fs.existsSync(path.join(ROOT, r))),
+      source: "git",
+    };
+  }
   const rels = walkMd(ROOT)
     .map((f) => toPosix(path.relative(ROOT, f)))
     .filter(isScannable);

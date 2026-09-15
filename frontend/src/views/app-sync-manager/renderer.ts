@@ -10,7 +10,14 @@ import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 import { applyFilter, tabStatus } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
-import { containerHTML, emptyHintHTML, itemHTML, statusTabHTML, syncDirRowHTML } from "./tpl.ts";
+import {
+  containerHTML,
+  emptyHintHTML,
+  itemHTML,
+  statusIconOf,
+  statusTabHTML,
+  syncDirRowHTML,
+} from "./tpl.ts";
 
 export type SyncRenderSelf = SyncManagerSelf;
 
@@ -74,28 +81,49 @@ export async function render(self: SyncRenderSelf): Promise<void> {
   const curCounts: TypeCounts = self._selectedType
     ? typeCounts[self._selectedType] || globalCounts
     : globalCounts;
+  // 状态 tab 定义：图标经 statusIconOf()（STATUS_ICON 表 + resolveIcon → SVG），
+  // **不再内联字形**——原实现在此写死 `⛔ ${t(...)}`，与 tpl 的 STATUS_ICON 表形成两处来源。
   const statusDefs: Array<[string, string, number]> = [
     [
       "all",
-      `📊 ${t("syncManager.status.all")}`,
+      `${statusIconOf("all")} ${t("syncManager.status.all")}`,
       self._selectedType ? curCounts.total || 0 : self._allItems.length,
     ],
-    ["synced", `✅ ${t("syncManager.status.synced")}`, curCounts.synced || 0],
-    ["missing", `⬇️ ${t("syncManager.status.missing")}`, curCounts.missing || 0],
-    ["disabled", `⛔ ${t("syncManager.status.disabled")}`, curCounts.disabled || 0],
-    ["optional", `📤 ${t("syncManager.status.optional")}`, curCounts.optional || 0],
-    ["legacy", `🔗 ${t("syncManager.status.legacy")}`, curCounts.legacy || 0],
+    [
+      "synced",
+      `${statusIconOf("synced")} ${t("syncManager.status.synced")}`,
+      curCounts.synced || 0,
+    ],
+    [
+      "missing",
+      `${statusIconOf("missing")} ${t("syncManager.status.missing")}`,
+      curCounts.missing || 0,
+    ],
+    [
+      "disabled",
+      `${statusIconOf("disabled")} ${t("syncManager.status.disabled")}`,
+      curCounts.disabled || 0,
+    ],
+    [
+      "optional",
+      `${statusIconOf("optional")} ${t("syncManager.status.optional")}`,
+      curCounts.optional || 0,
+    ],
+    [
+      "legacy",
+      `${statusIconOf("legacy")} ${t("syncManager.status.legacy")}`,
+      curCounts.legacy || 0,
+    ],
   ];
-  // 当前类型只读指示（类型选择已全局化到 nav 下拉，此处仅展示上下文）
+  // 当前类型只读指示（类型选择已全局化到 nav 下拉，此处仅展示上下文）；样式在 .sm-cur-type
   const curCfg = self._typeConfig.find((c) => c.id === self._selectedType);
   const curLabel = (curCfg && (shortLabelOf(curCfg.id) || curCfg.name)) || self._selectedType || "";
+  // curCfg.icon 是**数据图标**（resource_types.json，ADR-238 §1.3 🚨不可动）→ 按文本 esc 输出，勿转 SVG
   const curIcon = curCfg?.icon || "📦";
   statusTabsEl.innerHTML =
     '<span class="sm-cur-type" data-rtype="' +
     esc(self._selectedType || "") +
-    '" style="display:inline-flex;align-items:center;gap:4px;padding:0 8px;' +
-    "color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;" +
-    'border-right:1px solid var(--bd);margin-right:6px" title="' +
+    '" title="' +
     t("syncManager.curTypeHint") +
     '">' +
     esc(curIcon) +

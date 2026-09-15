@@ -5,6 +5,7 @@ import {
   STATUS_COLOR,
   statusIconOf,
   statusColorOf,
+  statusTabHTML,
   actionBtnHTML,
 } from "./tpl.ts";
 
@@ -21,6 +22,25 @@ describe("statusIconOf", () => {
   it("未知状态回退 ·", () => {
     expect(statusIconOf("whatever")).toBe("·");
     expect(statusIconOf("")).toBe("·");
+  });
+
+  // ── 迁移回归锁（2026-09，ADR-238/ADR-248）─────────────────────────────
+  // 起因：tab 构建器曾在 renderer.ts **内联写死** 6 个状态字形，与 STATUS_ICON 表形成两处来源；
+  // 且 emoji 闸的口径只认「标签内容起始处」，看不见模板字面量起始与数据字面量 → 三闸齐哑。
+  // 故在**数据层**钉死：值必须是语义名、必须能解析出 SVG。
+  it("回归锁：STATUS_ICON 全部是语义名且能解析出 SVG（非字形字面量）", () => {
+    const GLYPH_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+    for (const [status, name] of Object.entries(STATUS_ICON)) {
+      expect(GLYPH_RE.test(name), `${status} 仍是字形字面量：${name}`).toBe(false);
+      expect(statusIconOf(status).includes("<svg"), `${status}(${name}) 解析不出 SVG`).toBe(true);
+    }
+  });
+
+  it("回归锁：statusTabHTML 不再输出行内 style（样式归样式表）", () => {
+    const html = statusTabHTML("disabled", "x", 1, false);
+    expect(html).not.toContain("style=");
+    expect(html).toContain('class="sm-status-tab"');
+    expect(statusTabHTML("disabled", "x", 1, true)).toContain('class="sm-status-tab active"');
   });
 });
 

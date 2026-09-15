@@ -5,7 +5,8 @@ import { stagger } from "@/utils/animation/stagger.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
+import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -27,14 +28,20 @@ export interface SyncItem {
   children?: SyncItem[];
 }
 
-// ===== 状态元数据表（单一事实源：syncDirRowHTML / itemHTML 共用，消除 ×2 三元链）=====
-export const STATUS_ICON: Record<string, string> = {
-  synced: "✅",
-  legacy: "🔗",
-  missing: "⬇️",
-  diverged: "🗂️",
-  disabled: "⛔",
-  optional: "📤",
+// ===== 状态元数据表（单一事实源：tab / syncDirRowHTML / itemHTML 共用）=====
+// icon 填**语义名**（ADR-238/ADR-248：经 `resolveIcon()` 渲染为 SVG），不是字形字面量。
+// 本表原是「消除 ×2 三元链」的单一事实源，但 tab 构建器一度**绕过它内联写字形**
+//（同一组字形两处声明）——2026-09 收敛回本表（ADR-248 §3「隐藏的第二来源」同族教训）。
+export const STATUS_ICON: Record<string, UiIconName> = {
+  all: "chart", // 仅 tab 使用（"全部"不是行状态）
+  synced: "success",
+  legacy: "link",
+  missing: "download",
+  // diverged（本/远端均有改动，需处理）取 `warning` 而不另造 `diff`：语义即「需注意」，
+  // 且行色已由 STATUS_COLOR 标为 --accent —— 本次迁移零新增图标。
+  diverged: "warning",
+  disabled: "blocked",
+  optional: "upload",
 };
 
 export const STATUS_COLOR: Record<string, string> = {
@@ -46,7 +53,11 @@ export const STATUS_COLOR: Record<string, string> = {
   legacy: "var(--muted)",
 };
 
-export const statusIconOf = (status: string): string => STATUS_ICON[status] ?? "·";
+/** 状态 → 可渲染串（SVG HTML）；未知状态回落占位符 `·`（占位符非图标位，允许是文本）。 */
+export const statusIconOf = (status: string): string => {
+  const name = STATUS_ICON[status];
+  return (name && resolveIcon(name)) || "·";
+};
 export const statusColorOf = (status: string): string => STATUS_COLOR[status] ?? "var(--muted)";
 
 /** 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） */
@@ -129,8 +140,18 @@ export function containerHTML(): string {
     ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}" +
     ".sm-item-btn:hover{background:var(--hover)}" +
     ".sm-tab{transition:var(--tr-fast)}" +
-    ".sm-status-tab{transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}" +
-    ".sm-empty{animation:fade-in .2s ease}" +
+    // 状态筛选 tab：样式回到样式表（原为 statusTabHTML 里字符串拼接的行内 style=）——
+    // 行内样式绕开样式表，主题切换 / 媒体查询 / 复用都够不着；且与既有 transition 规则分裂成两处。
+    // 12px 横向内边距走 --btn-padding-filter（沿用 --btn-padding-* 既有简写约定）。
+    ".sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}" +
+    ".sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}" +
+    // 当前类型只读指示（原同样是行内 style=）
+    ".sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 8px;color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}" +
+    ".sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}" +
+    // 空状态图标尺寸：原内联 20px（design-tokens 的 inline-style-font-size，属基线内已知债）。
+    // 20px 无精确令牌 → 按既有「归最近档位」口径收为 --fs-xl(24px)：样式从内联回到样式表、
+    // 硬编码字号消失，债真正还掉（非仅搬位置——闸对硬编码字号位置无关）。
+    ".sm-empty-icon{font-size:var(--fs-xl)}" +
     ".sm-list{animation:fade-in .15s ease}" +
     ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:12px}" +
     ".sm-dir{cursor:pointer}" +
@@ -172,13 +193,7 @@ export function statusTabHTML(id: string, label: string, count: number, active: 
     cls +
     '" data-status="' +
     id +
-    '" style="padding:var(--pad-filter) 12px;border-radius:var(--radius-sm);border:1px solid ' +
-    (active ? "var(--accent)" : "transparent") +
-    ";background:" +
-    (active ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "transparent") +
-    ";color:" +
-    (active ? "var(--accent)" : "var(--muted)") +
-    ';cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap">' +
+    '">' +
     label +
     showCount +
     "</button>"
@@ -232,9 +247,11 @@ export function itemHTML(item: SyncItem, index: number): string {
  * @param msg 提示文案
  */
 export function emptyHintHTML(msg: string): string {
+  // 原为两处行内 style=（外层容器 + `font-size:20px` 的图标行）。后者是**基线内已知债**
+  //（design-tokens 的 inline-style-font-size），本次一并还掉：样式归 .sm-empty / .sm-empty-icon。
   return (
-    '<div class="sm-empty" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
-    '<div style="font-size:20px">' +
+    '<div class="sm-empty">' +
+    '<div class="sm-empty-icon">' +
     UI_ICONS.inboxEmpty +
     "</div>" +
     "<div>" +

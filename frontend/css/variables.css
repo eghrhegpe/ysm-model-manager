@@ -240,6 +240,7 @@
   --btn-padding-sm: var(--pad-btn-tool) 6px;    /* 工具栏小按钮 */
   --btn-padding-md: var(--pad-btn-secondary) 8px; /* 次要按钮 */
   --btn-padding-lg: var(--pad-btn-primary) 12px;  /* 主要按钮 */
+  --btn-padding-filter: var(--pad-filter) 12px;   /* 筛选标签（sm-status-tab 等，横向 12px） */
   --btn-transition: background-color var(--tr-normal), border-color var(--tr-normal), color var(--tr-normal), box-shadow var(--tr-normal);
 
   /* ===== 过渡时长系统 ===== */

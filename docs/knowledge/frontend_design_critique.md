@@ -529,6 +529,31 @@ invariant_anchors:
   - 实现细节与已知遗留见 [ADR-248](../adr/ADR-248-icon-field-typing.md) §3（`isIconName` 已随 D3 补齐删除，原记录其使用处为 `app-nav` 有误，实为 `context-menu`
     双源字段已随类型化退役；`ICON_KIT` 与 `UI_ICONS` 两条来源已于同日收敛为一条——ICON_KIT 并入 UI_ICONS 并删除该模块）。
 
+- ✅ **刀㉗ 状态 tab 的三层问题与「闸的位置口径」再证**（2026-09，用户贴 `⛔ 已禁用` 那段代码问「是 i18n 还是硬编码」）：
+  - **结论先摆清**：**不是 i18n 问题**——文案来自 `t("syncManager.status.disabled")` ✓（用户看到的是**渲染结果**，非源码字面量）。
+    真问题是三层叠加：**硬编码字形** + **同一组字形两处来源** + **行内样式**。
+  - **两处来源**：`tpl.ts` 的 `STATUS_ICON` 表（自称「单一事实源」）与 tab 构建器里写死的字形
+    （`renderer.ts` 的 `` `⛔ ${t(...)}` ``）并存，且构建器**根本没 import 那张表**。
+  - **闸为什么齐哑**（各自有理，合起来留出整片盲区）：
+    - `i18n-ui-check`：口径「含 HTML 标记 + 含中文 + **未包 `t()`**」→ 它**已包 `t()`** → 正确地不报；
+    - emoji 闸：口径「**标签内容起始处**」（`>😀` / `' + 😀`）→ 三种形态全在体外：① 模板字面量起始（反引号后）；
+    ② 数据字面量（表内）；③ 更隐蔽——`statusTabHTML` 是 `'…">' + label + '</button>'` **字符串拼接**，
+    `>` 与字形**被拆进不同片段**，连「标签内容起始」也照不到；
+    - 令牌闸：**确实管行内样式**，但只认**字面量**值（`inline-style-font-size/radius/color`）——
+      该处行内样式全是 `var()`，无字面量可令牌化 → 不报。
+  - **处置**：`STATUS_ICON` 改填**语义名**并收紧类型（`Record<string, UiIconName>`）；`statusIconOf` 经 `resolveIcon()`
+    出 SVG；**tab 构建器改为复用它**（消两处来源）；补 `all: "chart"`；`diverged` 取 `warning` 而非另造 `diff`
+    （语义即「需注意」，行色已由 `STATUS_COLOR` 标 accent）→ **零新增图标**；
+    行内样式全归样式表（`.sm-status-tab` / `.sm-status-tab.active` / `.sm-cur-type` / `.sm-empty`），
+    12px 横向内边距走新令牌 `--btn-padding-filter`（沿用 `--btn-padding-*` 既有简写约定）。
+  - **顺带真还了一笔债**：`emptyHintHTML` 的内联 `font-size:20px` 原是基线内已知债（`inline-style-font-size`）。
+    教训：**闸对硬编码字号位置无关**——搬进样式表仍算 `css-font-size`（不算还债）；按既有「归最近档位」口径
+    收为 `--fs-xl(24px)` 后债才真正消失 → **design-tokens 基线 108 → 107**。
+  - **回归锁**（`tpl.test.ts`）：`STATUS_ICON` 值必须是语义名且能解析出 SVG（字形正则拦截）；
+    `statusTabHTML` 输出**不得含 `style=`**（钉住「样式归样式表」）。
+  - **仍待办**：emoji 闸口径未扩（模板字面量起始 + 数据字面量）——扩它会在全仓暴露同类存量，
+    须与基线策略一起决策，故本轮**只记不扩**。
+
 ## 相关
 
 - [frontend_repo_audit](frontend_repo_audit.md)：代码质量基线（4.1/5，2026-08-26）

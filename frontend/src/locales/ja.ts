@@ -1493,7 +1493,7 @@ export const ja: Record<string, string> = {
   "tree.filter": "⚙️ フィルター",
   "tree.authors": "🎨 作者 ▾",
   "tree.batch": "⚡ 一括 ▾",
-  "tree.batchEnableAll": "✅ すべて有効",
+  "tree.batchEnableAll": "すべて有効",
   "tree.batchDisableAll": "すべて無効",
   "tree.more": "⋮ その他 ▾",
   "tree.moreImportFile": "ファイルをインポート",

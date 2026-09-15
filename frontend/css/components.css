@@ -8,6 +8,10 @@
    ⚠️ 改动须与 utils/dom/css.ts|wsIconCSS 保持一致（两份刻意双写，非漂移）。 */
 .ws-icon { width:1em; height:1em; vertical-align:-.15em; fill:none; stroke:currentColor; flex-shrink:0; }
 .ws-icon[fill] { fill:currentColor; stroke:none; }
+/* icon-kit 多源图标兜底：emoji/字体源（.eicon/.ficon）为光 DOM 组件统一对齐。
+   SVG 源用 .ws-icon；emoji/font 源用此两种。Shadow DOM 组件各自引入随需。 */
+.eicon { font-size: var(--fs-sm); flex-shrink: 0; line-height: 1; }
+.ficon { font-size: var(--fs-sm); flex-shrink: 0; }
 
 @keyframes fadeSlideUp {
   from { opacity:0; transform:translateY(6px) }

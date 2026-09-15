@@ -177,3 +177,4 @@ status: active
 
 - `frontend/src/utils/dom/display.ts` — 文件名渲染
 - `frontend/src/views/app-tree/` — 组件目录
+- `frontend/src/utils/icon/icon-kit/` — 多源图标中介层（批量启用/禁用按钮图标经 `ICON_KIT`，不再内联进 i18n 词条）

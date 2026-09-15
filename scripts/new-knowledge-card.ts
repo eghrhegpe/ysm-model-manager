@@ -13,6 +13,11 @@ import { spawnSync } from "node:child_process";
  *   node scripts/new-knowledge-card.ts display_util "文件名渲染 display.ts" utils frontend/src/utils/display.ts --leaf
  * 设计意图：知识卡新建工具
  * 退出码：0（成功）/ 1（失败）。
+ *
+ * ⚠️ 回归坑（2026-09-14 修复）：TEMPLATE 的 frontmatter 区**禁止出现任何 `# 空格` 注释行**。
+ *   check-knowledge-drift.ts 用 `text.match(/^#\s+(.+)$/m)` 取第一个 `# ` 开头的行当作 H1；
+ *   frontmatter 内的 `# 注释` 会被误判为 H1 → 新卡必报「H1 与 name 不一致」。
+ *   frontmatter 说明请写在 JS 头注释，不要写进 TEMPLATE 输出。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -36,7 +41,6 @@ source_files:
   - {source}
 use_when:
   - TODO
-# 解法 B：人工策展字段（手写，drift 仅 WARN）
 pitfalls:
   - TODO
 quick_groups:
@@ -45,7 +49,6 @@ quick_intents:
   - TODO
 quick_risk_lines:
   - TODO
-# 解法 B：invariant_anchors 混合字段（手写声明 + 机器校验）
 invariant_anchors:
   - {source}|TODO
 ---

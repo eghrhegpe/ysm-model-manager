@@ -1,6 +1,7 @@
 // ===== HTML 模板（页面布局级，不含节点行） =====
 
 import { t } from "@/core/i18n/t.ts";
+import { ICON_KIT, renderIcon } from "@/utils/icon/icon-kit/index.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -40,7 +41,7 @@ export function headerHTML(): string {
 <div class="hdr-row hdr-btn-row">
   <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${t("tree.filter")}</button>
   <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
-  <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch" data-testid="tree-batch">${t("tree.batch")}</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all" data-testid="tree-batch-enable">${t("tree.batchEnableAll")}</button><button class="dd-item" data-batch="disable-all" data-testid="tree-batch-disable"> ${t("tree.batchDisableAll")}</button></div></div>
+  <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch" data-testid="tree-batch">${t("tree.batch")}</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all" data-testid="tree-batch-enable">${renderIcon(ICON_KIT.enableAll)} ${t("tree.batchEnableAll")}</button><button class="dd-item" data-batch="disable-all" data-testid="tree-batch-disable">${renderIcon(ICON_KIT.disableAll)} ${t("tree.batchDisableAll")}</button></div></div>
   <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${t("tree.selectAll")}</button>
   <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more" data-testid="tree-more">${t("tree.more")}</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file" data-testid="tree-more-import-file">${UI_ICONS.file} ${t("tree.moreImportFile")}</button><button class="dd-item" data-more="import-dir" data-testid="tree-more-import-dir">${t("tree.moreImportDir")}</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder" data-testid="tree-more-open-folder">${t("tree.moreOpenFolder")}</button><button class="dd-item" data-more="refresh" data-testid="tree-more-refresh">${t("tree.moreRefresh")}</button><button class="dd-item" data-more="genindex" data-testid="tree-more-genindex">${t("tree.moreGenIndex")}</button></div></div>
   <select class="sort-sel" id="sort" data-testid="tree-sort"><option value="name">${t("tree.sortName")}</option><option value="size">${t("tree.sortSize")}</option><option value="date">${t("tree.sortDate")}</option></select>

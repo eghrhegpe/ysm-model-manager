@@ -163,4 +163,46 @@ describe("3D 菜单图标契约（ADR-238/ADR-245 单一事实源）", () => {
       expect(overlap).toEqual([]);
     });
   });
+
+  // ── ④ 仓级扫描：全仓 `icon:` 字形只许出现在登记过的豁免文件里 ──────────
+  // 这是本测试的**牙齿**：前两组靠清单自律，这一组把「有没有漏网之鱼」变成可执行断言。
+  // 口径按**渲染槽**，不按字段名——所以放行的是「登记 + 带通道证据」的豁免文件（见 ③ 自检），
+  // 而非「看起来像文本就只能放过」的猜测。
+  //
+  // ⚠️ 覆盖边界（有意为之，非遗漏）：本组只扫**字面量** `icon: "…"`。动态赋值（如
+  // `icon: cap.icon`、`icon: def?.icon || "📦"`）不在其内——因为**数据图标**
+  // （`resource_types.json` 的 icon/groupIcon，ADR-238 §1.3 🚨不可动）本就是彩色 emoji，
+  // 且会经 `views/app-preview/preview-router.ts|routeTypeMeta` 流入卡片图标通道。
+  // 那是合法来源，不该被本测试拦；渲染层由 `applyIcon` 的兜底分支承载（见该函数注释）。
+  describe("④ 仓级扫描：未登记的文件不得再出现 icon 字形", () => {
+    /** 递归收集 frontend/src 下非测试 .ts 文件（相对 SRC 的 POSIX 路径） */
+    function walk(dir: string, out: string[] = []): string[] {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (["node_modules", "dist", "coverage", ".git"].includes(e.name)) continue;
+          walk(p, out);
+        } else if (e.name.endsWith(".ts") && !e.name.endsWith(".test.ts")) {
+          out.push(path.relative(SRC, p).split(path.sep).join("/"));
+        }
+      }
+      return out;
+    }
+
+    it("全仓 icon 字形仅存在于迁移清单与豁免清单之中", () => {
+      const allowed = new Set([...MIGRATED_FILES, ...TEXT_SLOT_FILES.map((t) => t.rel)]);
+      const offenders: string[] = [];
+      for (const rel of walk(SRC)) {
+        if (allowed.has(rel)) continue;
+        for (const { value, line } of scanIconLiterals(rel)) {
+          if (GLYPH_RE.test(value)) offenders.push(`${rel}:${line}: "${value}"`);
+        }
+      }
+      expect(
+        offenders,
+        "发现未登记的 icon 字形——若是结构槽请迁语义名并加入 MIGRATED_FILES；" +
+          "若是文本槽请连同通道证据登记进 TEXT_SLOT_FILES（ADR-238 §1.4）",
+      ).toEqual([]);
+    });
+  });
 });

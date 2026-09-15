@@ -454,9 +454,13 @@ function renderPreviewDock(
       e.stopPropagation();
       // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）；
       // [ADR-241] env/settings 补显式 directToPanel —— 删「单 panel 自动推断」隐式分支。
-      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落兜底
+      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落兜底。
+      // ⚠️ 查**经 visibleWhen 过滤**的 groupItems（与 dock 按钮渲染同源）而非 allItems：
+      // 声明目标带 visibleWhen 门（如 environment ← env.skyGroundCap）时，门未开则目标被滤出
+      // groupItems → 本组按钮不渲染；即便按钮渲染（他组注入项使组非空），目标也须当前可见
+      // 才导航——防 776598b7d 引入的「绕过 visibleWhen 门导航到隐藏面板」回归。
       if (g.directToPanel) {
-        const direct = allItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
+        const direct = groupItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
         if (direct) {
           showMenu(makePanelViewFn(direct));
           return;

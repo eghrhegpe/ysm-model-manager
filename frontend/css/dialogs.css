@@ -14,7 +14,7 @@
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);
-  font-size: 12px;
+  font-size:var(--fs-base);
   box-sizing: border-box;
 }
 
@@ -30,7 +30,7 @@
 
 /* confirm 消息区：预包装、行高 1.5、超限 55vh 滚动 */
 .dlg-msg {
-  font-size: 11px;
+  font-size:var(--fs-sm);
   color: var(--txt);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -45,13 +45,13 @@
 
 /* 进度弹窗三段 */
 .dlg-prog-pct {
-  font-size: 11px;
+  font-size:var(--fs-sm);
   color: var(--txt);
   text-align: right;
 }
 .dlg-prog-track {
   height: 8px;
-  border-radius: 4px;
+  border-radius:var(--radius-sm);
   background: var(--bd);
   overflow: hidden;
 }
@@ -75,7 +75,7 @@
   margin: 6px 0;
   padding: 10px;
   border: 1px solid var(--bd, #444);
-  border-radius: 8px;
+  border-radius:var(--radius-lg);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -91,17 +91,17 @@
   color: var(--accent, #89b4fa);
 }
 .dlg-pick-sub {
-  font-size: 10px;
+  font-size:var(--fs-xs);
   color: var(--muted, #888);
   margin-top: 5px;
 }
 /* hint 颜色动态（safeHintColor 校验后写内联），此处只给字号与间距 */
 .dlg-pick-hint {
-  font-size: 10px;
+  font-size:var(--fs-xs);
   margin-top: 2px;
 }
 .dlg-pick-subtitle {
-  font-size: 10px;
+  font-size:var(--fs-xs);
   color: var(--muted, #888);
   margin: 5px 0 10px;
 }

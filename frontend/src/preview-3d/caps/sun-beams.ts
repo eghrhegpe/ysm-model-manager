@@ -12,12 +12,18 @@ import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
 /**
- * god rays / sunset tint 共用强度曲线（0~1；太阳高度角 >20° 时无光束）。
- * 纯函数：elevation 低于 20° 越接近地平线强度越高，(20-e)/30 clamp 到 [0,1]。
+ * god rays / sunset tint 共用强度曲线（0~1）。
+ * 语义：仅「太阳在地平线上且接近地平线」的黄金时刻（0° < elevation < 20°）有神光，
+ * 越接近地平线（elevation→0）越强、正午高空（≥20°）无光束。
+ * ⚠️ 关键下限：太阳一旦落山（elevation ≤ 0），光束必须立即归零——
+ * 旧实现分母为 30 无下限，导致 19:00 后（elevation 降至 -17.8° 乃至午夜 -70°）
+ * 整夜满强度发光，出现「天空漆黑、地下却往天上打橙色体积光」的穿帮。
  */
 export function godRaysIntensity(elevation: number): number {
-  if (elevation > 20) return 0;
-  return Math.min(1, Math.max(0, (20 - elevation) / 30));
+  // 1e-3° 容差：hourToSun 在 18:00 算 sin(π)≈1.2e-16 得极小正 elevation，
+  // 须一并判为「落山」（≤0 等价语义），避免地平线处仍满强度发光。
+  if (elevation <= 1e-3 || elevation >= 20) return 0;
+  return Math.min(1, Math.max(0, (20 - elevation) / 20));
 }
 
 /* ============ 光束锥体 shader（两交叉 PlaneGeometry，垂直羽化 + 径向衰减 + shimmer） ============ */

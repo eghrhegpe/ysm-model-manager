@@ -410,16 +410,16 @@ describe("SkyCapability — God Rays（体积光束）", () => {
     expect(cap.isGodRaysEnabled()).toBe(false);
   });
 
-  it("getGodRaysIntensity: elevation=-10 → 1", () => {
+  it("getGodRaysIntensity: elevation=-10（日落后）→ 0（夜间不发光）", () => {
     setEnvState({ skyElevation: -10 }, { source: 'manual' });
     const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBe(1);
+    expect(cap.getGodRaysIntensity()).toBe(0);
   });
 
-  it("getGodRaysIntensity: elevation=10 → ~0.33", () => {
+  it("getGodRaysIntensity: elevation=10（黄金时刻）→ ~0.5", () => {
     setEnvState({ skyElevation: 10 }, { source: 'manual' });
     const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBeCloseTo(0.33, 1);
+    expect(cap.getGodRaysIntensity()).toBeCloseTo(0.5, 1);
   });
 
   it("getGodRaysIntensity: elevation=20 → 0", () => {
@@ -428,16 +428,30 @@ describe("SkyCapability — God Rays（体积光束）", () => {
     expect(cap.getGodRaysIntensity()).toBe(0);
   });
 
-  it("getGodRaysIntensity: elevation=-20 → 1", () => {
+  it("getGodRaysIntensity: elevation=-20（午夜）→ 0（整夜归零）", () => {
     setEnvState({ skyElevation: -20 }, { source: 'manual' });
     const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBe(1);
+    expect(cap.getGodRaysIntensity()).toBe(0);
   });
 
-  it("setTime(sunset=18) 时 intensity>0", () => {
+  it("[修复回归] 19:00 太阳落山后 godRays intensity=0（不再满强度夜光）", () => {
     const cap = newCap();
-    cap.setTime(18);
-    // 日落时 intensity 应 > 0
+    cap.setTime(19); // elevation≈-17.8°
+    expect(cap.getGodRaysIntensity()).toBe(0);
+    cap.setTime(0); // 午夜 elevation≈-70°
+    expect(cap.getGodRaysIntensity()).toBe(0);
+  });
+
+  it("[修复回归] 18:00 日落地平线 elevation≈0 时仍为 0（落山即灭，不整夜亮）", () => {
+    const cap = newCap();
+    cap.setTime(18); // elevation≈0
+    expect(cap.getGodRaysIntensity()).toBe(0);
+  });
+
+  it("setTime(黄金时刻=17) 时 intensity>0", () => {
+    const cap = newCap();
+    cap.setTime(17); // 17:00 elevation≈18.1°，仍在 (0,20) 发光区间
+    // 黄金时刻 intensity 应 > 0
     expect(cap.getGodRaysIntensity()).toBeGreaterThan(0);
   });
 
@@ -458,7 +472,7 @@ describe("SkyCapability — God Rays（体积光束）", () => {
   });
 
   it("saveState/loadState 持久化 godRaysEnabled", () => {
-    setEnvState({ skyTimeOfDay: 18 }, { source: 'manual' });
+    setEnvState({ skyTimeOfDay: 17 }, { source: 'manual' });
     const cap = newCap();
     cap.setGodRaysEnabled(true);
     cap.saveState();
@@ -496,9 +510,9 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
     );
   });
 
-  it("setTime(18) 时 sunsetTint intensity > 0", () => {
+  it("setTime(17) 时 sunsetTint intensity > 0", () => {
     const cap = newCap();
-    cap.setTime(18);
+    cap.setTime(17);
     expect((cap as unknown as { getSunsetTintIntensity: () => number }).getSunsetTintIntensity()).toBeGreaterThan(0);
   });
 
@@ -509,14 +523,14 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
   });
 
   it("saveState/loadState 不存 tint（tint 完全由时间驱动，无需持久化）", () => {
-    setEnvState({ skyTimeOfDay: 18 }, { source: 'manual' });
+    setEnvState({ skyTimeOfDay: 17 }, { source: 'manual' });
     const cap = newCap();
     cap.saveState();
     resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
     // tint 不持久化，由时间重新计算
-    expect(cap2.getTimeOfDay()).toBe(18);
+    expect(cap2.getTimeOfDay()).toBe(17);
     expect((cap2 as unknown as { getSunsetTintIntensity: () => number }).getSunsetTintIntensity()).toBeGreaterThan(
       0
     );
@@ -525,7 +539,7 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
   it("godRays 关闭时 tint mesh 不挂载", () => {
     const cap = newCap();
     cap.setGodRaysEnabled(false);
-    cap.setTime(18);
+    cap.setTime(17);
     const mesh = (cap as unknown as { beams: SunBeams }).beams.tintMesh;
     expect(mesh?.parent).toBeNull();
   });
@@ -790,7 +804,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
     cap.setGodRaysEnabled(true);
-    cap.setTime(18); // 日落 → godRays + tint 挂载
+    cap.setTime(17); // 黄金时刻 → godRays + tint 挂载
     const beams = (cap as unknown as { beams: SunBeams }).beams;
     expect(beams.group!.parent).toBe(scene);
     cap.setEnabled(false);
@@ -1012,7 +1026,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.setGodRaysEnabled(true);
-    cap.setTime(18); // elevation≈0 → intensity>0
+    cap.setTime(17); // 黄金时刻 elevation≈18.1° → intensity>0
     const beams = (cap as unknown as { beams: SunBeams }).beams;
     const group = beams.group!;
     expect(group.parent).toBe(scene);
@@ -1030,7 +1044,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.setGodRaysEnabled(true);
-    cap.setTime(18);
+    cap.setTime(17);
     const beams = (cap as unknown as { beams: SunBeams }).beams;
     expect(beams.group!.parent).toBe(scene);
     cap.setTime(12); // 正午 → intensity=0 → 卸载
@@ -1042,9 +1056,9 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.setGodRaysEnabled(true);
-    cap.setTime(18);
+    cap.setTime(17);
     cap.setGodRaysEnabled(false);
-    cap.setTime(18); // updateGodRays 走 disabled 分支 → remove
+    cap.setTime(17); // updateGodRays 走 disabled 分支 → remove
     expect((cap as unknown as { beams: SunBeams }).beams.group!.parent).toBeNull();
   });
 

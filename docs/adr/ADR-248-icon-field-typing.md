@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-238（图标语义名规范，本 ADR 落地其 §1.3/§1.4 边界）、[ADR-245](./ADR-245-context-menu-icon-semantic-names.md)（右键菜单图标迁语义名）、ADR-239（工具栏下拉）；`frontend/src/utils/icon/ui-icons.ts`、`frontend/src/utils/icon/resolve.ts`、`frontend/src/utils/resource/types.ts`、`frontend/src/preview-3d/menu/menu-node-types.ts`
+- **相关**：ADR-238（图标语义名规范，本 ADR 落地其 §1.3/§1.4 边界）、[ADR-245](./ADR-245-context-menu-adr-238.md)（右键菜单图标迁语义名）、[ADR-239](./ADR-239-toolbar-menu-declarative.md)（工具栏下拉）；`frontend/src/utils/icon/ui-icons.ts`、`frontend/src/utils/icon/resolve.ts`、`frontend/src/utils/resource/types.ts`、`frontend/src/preview-3d/menu/menu-node-types.ts`
 
 ---
 
@@ -86,10 +86,30 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
 - 结构槽字段类型变宽（联合），渲染端仍需运行时区分「语义名 vs 数据字形」——
   `resolveIcon()` 的兜底分支**因此保留**（它对数据图标是承重的，非迁移残留）。
 
-**已知遗留**：
-- `isIconName()` 保留：`views/app-nav/index.ts` 用它做双源字段的运行时鉴别，仍有实际用途；
-- `ICON_KIT`（上游 Mascot/徽标图标）与 `UI_ICONS` 仍是两条来源，由 `resolveIcon()` 定优先级
-  ——本 ADR 不动这条，但它在类型上同属「语义名」侧。
+**已知遗留（含 2026-09 核实更正）**：
+- ~~`isIconName()` 保留~~ → **已删除**（本条 D3 补齐后）：两处剩余结构槽字段（右键菜单项
+  `features/context-menu/menu-defs.ts`、工具栏项 `views/app-tree/toolbar-menus.ts`）本次一并
+  类型化；`views/context-menu/index.ts` 的「命中语义名 → SVG；否则 → `esc()` 文本」双源分支
+  随之退役（该分支在生产侧本就不可达——菜单项早已全语义名，仅测试夹具喂过字形）。
+  运行时判别统一为「`resolveIcon()` 是否返回空串」，不再需要二次查表函数。
+  ⚠️ 更正：本节初稿把它的使用处误记为 `views/app-nav/index.ts`（实为 `views/context-menu/index.ts`）——
+  同一处**凭印象书写**，与下面对 ICON_KIT 的误述同源。
+- **两条语义名来源未收敛**：`utils/icon/icon-kit/`（`ICON_KIT`）与 `UI_ICONS`，由 `resolveIcon()`
+  定优先级（ICON_KIT 优先）。2026-09 核实其现状：
+  - `ICON_KIT` 只注册 **2 个图标**（树工具栏的 `enableAll` / `disableAll`），且**两者 `src` 均为 `"svg"`**；
+    其多源能力（`emoji` / `font`）**生产零使用**，仅 `icon-kit/index.test.ts` 断言过；
+  - **无任何 ADR 建立它**（ADR-244 仅一处提及「属 icon-kit（他人会话）」）；
+  - 其自述理由「承接 ADR-238…**破掉「只支持 SVG」的限制**」**与本 ADR 及 ADR-238 D1 的
+    SVG-only 方向相反**——两个方向都缺少成文决策，故本 ADR 只**记录事实、不动它**；
+  - ⚠️ 更正：本节初稿把 `ICON_KIT` 描述为「上游 Mascot/徽标图标」，**是错的**（同一处凭印象书写）。
+    它实为**多源图标中介层**，并导出了自己的 `IconSpec`（`{src:"svg"|"emoji"|"font"}`）——
+    与本 ADR D3 新增的 `IconSpec`（结构槽字段类型）**同名不同义**。
+  - **本次处置**：ICON_KIT 也收紧为字面量键并导出 `IconKitName`（否则 `keyof` 退化为 `string`，
+    类型形同虚设）；`resolve.ts` 定义 `IconName = UiIconName | IconKitName`（**如实表达「当前有两个
+    来源」而非假装只有一个**）；本 ADR 初版新增的 `IconSpec` 更名为 **`IconRef`**，把 `IconSpec`
+    一名让回 icon-kit，消除同树重名。
+- **待收敛项**：`ICON_KIT` 是否并入 `UI_ICONS`（删除该模块及其第二命名空间）——涉及他人产物
+  与「SVG-only vs 多源」的取向选择，留待专门决策。
 
 ## 4. 数据溯源
 
@@ -100,4 +120,4 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
 | `UI_ICONS: Record<string, string>`（收紧前） | 无字面量联合 → 拼错图标名在编译期无任何提示 |
 | `resource_types.json` + Go 为类型判定唯一事实源（根 `AGENTS.md` 红线） | 数据图标必须与 UI 图标分流，故用品牌类型而非同名字符串 |
 
-<!-- 文件名: adr-238.md → 实际文件 ADR-248-adr-238.md -->
+<!-- 文件名: icon-field-typing.md → 实际文件 ADR-248-icon-field-typing.md -->

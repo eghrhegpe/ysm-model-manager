@@ -24,7 +24,7 @@
 import type { IconSpec } from "./types.ts";
 
 /** 语义名 → 多源图标定义。新增图标在此外挂，消费方只 import 语义名。 */
-export const ICON_KIT: Record<string, IconSpec> = {
+export const ICON_KIT = {
   // ── 批量操作 ──
   // 「全部启用」= 正向肯定动作，视觉用打勾（SVG 首选，随主题/字号）。
   enableAll: {
@@ -37,7 +37,13 @@ export const ICON_KIT: Record<string, IconSpec> = {
     src: "svg",
     svg: '<circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
   },
-};
+} satisfies Record<string, IconSpec>;
+
+/**
+ * icon-kit 语义名（字面量联合）。收紧前是 `Record<string, IconSpec>` → `keyof` 退化为 `string`，
+ * 于是任何字段都"接受"icon-kit 名字，类型形同虚设（ADR-248 D1 同款处理，此处对齐）。
+ */
+export type IconKitName = keyof typeof ICON_KIT;
 
 /** 全部语义名（供测试/文档消费）。 */
 export function iconKitNames(): string[] {

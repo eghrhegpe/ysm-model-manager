@@ -526,7 +526,7 @@ invariant_anchors:
   - **方法论**：能用类型表达的约束不该用闸表达；闸是给类型表达不了的横切不变量用的。
     本仓「有门禁的规矩守得住」是对的，但**门禁的下一层是类型**——这条线正好是
     「本该用类型、却用了闸」的样本：代价是每加一个位置种类就要补一轮口径。
-  - 实现细节与已知遗留见 [ADR-248](../adr/ADR-248-adr-238.md) §3（`isIconName` 因 `app-nav`
+  - 实现细节与已知遗留见 [ADR-248](../adr/ADR-248-icon-field-typing.md) §3（`isIconName` 已随 D3 补齐删除，原记录其使用处为 `app-nav` 有误，实为 `context-menu`
     双源字段仍保留；`ICON_KIT` 与 `UI_ICONS` 两条语义名来源由 `resolveIcon()` 定优先级）。
 
 ## 相关

@@ -6,30 +6,38 @@
 // 下沉自 views/app-tree/toolbar-menus.ts 的私有 resolveIcon，消除重复实现。
 
 import type { DataGlyph } from "@/utils/resource/types.ts";
-import { ICON_KIT, renderIcon } from "./icon-kit/index.ts";
+import { ICON_KIT, type IconKitName, renderIcon } from "./icon-kit/index.ts";
 import { UI_ICONS, type UiIconName } from "./ui-icons.ts";
 
 /**
- * 结构槽图标字段的类型（ADR-248 D3）：**UI 语义名** 或 **数据图标字形**。
+ * 已知图标语义名 = **两个命名空间的并**：`UI_ICONS`（SVG chrome 图标集）∪ `ICON_KIT`
+ * （多源中介层，当前仅 `enableAll` / `disableAll`）。二者由 `resolveIcon()` 定优先级。
  *
- * 关键在于**裸 emoji 字面量两者皆不满足**（`"🧍"` 既不是 `UiIconName` 的键，也没有
+ * 注：两条来源是否收敛成一个命名空间是**待决事项**（见 ADR-248 §3「已知遗留」）——
+ * 在收敛前，类型层如实表达「当前有两个来源」，而不是假装只有一个。
+ */
+export type IconName = UiIconName | IconKitName;
+
+/**
+ * 结构槽图标字段的类型（ADR-248 D3）：**图标语义名** 或 **数据图标字形**。
+ *
+ * 关键在于**裸 emoji 字面量两者皆不满足**（`"🧍"` 既不是任一注册表的键，也没有
  * `DataGlyph` 的品牌）→ 写进去即 `tsc` 报错。这条线正是 ADR-238 §1.3（数据图标不可动）
  * 与 §1.4（结构槽须走 SVG）要守的边界——现在由**类型**守，不再靠清单与扫描。
+ *
+ * 命名：初版叫 `IconSpec`，与 `icon-kit/types.ts` 的同名导出（多源定义 `{src:"svg"|…}`）
+ * **同名不同义**，2026-09 更名 `IconRef` 消除重名（同一棵 `utils/icon/` 树下两个 `IconSpec`
+ * 是明确的阅读陷阱）。`IconSpec` 一名归 icon-kit 所有。
  */
-export type IconSpec = UiIconName | DataGlyph;
+export type IconRef = IconName | DataGlyph;
 
 /** 语义名 → 渲染串（SVG HTML 或 ""）；未命中返回 ""。 */
 export function resolveIcon(name: string): string {
-  if (name in ICON_KIT) return renderIcon(ICON_KIT[name]);
-  // `in` 已给出运行时证明，但 TS 不会把 `string` 收窄到 keyof（ADR-248 D1 收紧 UI_ICONS 后暴露），
-  // 故此处显式断言——断言的范围被紧邻的 `in` 判定框死，属可接受范围。
+  // 两个注册表都在 ADR-248 里收紧成了字面量键：`in` 已给出运行时证明，但 TS 不会把 `string`
+  // 收窄到 keyof，故两处都显式断言——断言范围被紧邻的 `in` 判定框死，属可接受范围。
+  if (name in ICON_KIT) return renderIcon(ICON_KIT[name as IconKitName]);
   if (name in UI_ICONS) return UI_ICONS[name as UiIconName];
   return "";
-}
-
-/** 是否命中已知图标语义名（供渲染层判断是否走 SVG 路径、调用方是否完成迁移）。 */
-export function isIconName(name: string): boolean {
-  return name in ICON_KIT || name in UI_ICONS;
 }
 
 /**
@@ -37,10 +45,14 @@ export function isIconName(name: string): boolean {
  *
  * 两种形态并存是**长期**设计，不是迁移期的临时妥协：图标有两个合法来源，
  * 渲染层必须同时接受——
- *   - **UI 图标**：语义名（ADR-238 §1，如 `folderOpen`/`camera`）→ 命中 `isIconName`，
- *     把 `resolveIcon()` 的产物经 `innerHTML` 落位，渲染为 SVG；
+ *   - **UI 图标**：语义名（ADR-238 §1，如 `folderOpen`/`camera`）→ `resolveIcon()` 有产物，
+ *     把其经 `innerHTML` 落位，渲染为 SVG；
  *   - **数据图标**：`resource_types.json` 的 `icon`/`groupIcon`（ADR-238 §1.3 🚨不可动，
- *     由 Go + 该 JSON 判定归属）→ 本来就是彩色 emoji，按旧路径当**字形文本**写入。
+ *     由 Go + 该 JSON 判定归属）→ `resolveIcon()` 返回 `""`（它不是注册表里的名字），
+ *     按旧路径当**字形文本**写入。
+ *
+ * 运行时判别 = `resolveIcon()` 是否返回空串（不再需要 `isIconName()` 这类二次查表函数：
+ * 名字合法性已由字段类型 `IconRef` 在编译期保证，见 resolve.ts 顶部类型注释）。
  *
  * 为什么兜底分支不可删：`resolveIcon()` 对未知名返回 `""`（其注释明确「emoji/任意字符串
  * 由调用方按兜底路径自行处理」）。`views/app-preview/preview-router.ts|routeTypeMeta`

@@ -243,7 +243,7 @@ export const autoSidebar = [
       },
       {
         "text": "ADR-248：图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地）",
-        "link": "/adr/ADR-248-adr-238"
+        "link": "/adr/ADR-248-icon-field-typing"
       },
       {
         "text": "ADR-247：后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移",

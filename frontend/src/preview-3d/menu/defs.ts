@@ -7,7 +7,7 @@
 // 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
 // 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。
 
-import type { IconSpec } from "@/utils/icon/resolve.ts";
+import type { IconRef } from "@/utils/icon/resolve.ts";
 import type { PreviewMenuGroupId, PreviewMenuNode } from "./node-types.ts";
 
 // 原位 re-export 保公共面——既有 import defs.ts 的消费方零改动。
@@ -25,7 +25,7 @@ export type { PreviewMenuGroupId } from "./node-types.ts";
 /** 底栏分组定义（能力驱动：组内无任何可显示项时不渲染该组按钮） */
 export interface PreviewMenuGroupDef {
   id: PreviewMenuGroupId;
-  icon: IconSpec;
+  icon: IconRef;
   /** i18n 键（dock 按钮/组标题文案）；缺失回退标准统一归 i18n tOf（裸 key 兜底） */
   labelKey: string;
   /** [S5 收口] 静态直达面板声明：点击 dock 按钮首跳该 panel 节点 id（渲染函数数据驱动，

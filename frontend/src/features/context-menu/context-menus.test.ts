@@ -306,7 +306,7 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
       // 与下方 HANDLERS`as Record<string, unknown>` 逃生舱同一模式，测完 pop 清理。
       action: PROBE_ACTION as MenuAction,
       label: () => "probe",
-      icon: "🧪",
+      icon: "info",
       ...(visibleWhen ? { visibleWhen } : {}),
     });
     probeIndex = def.items.length - 1;

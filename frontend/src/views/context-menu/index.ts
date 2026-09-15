@@ -5,7 +5,7 @@ import { bus, type MenuItem } from "@/bus";
 import { noAnimationsCSS } from "@/utils/dom/css.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
-import { isIconName, resolveIcon } from "@/utils/icon/resolve.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -153,7 +153,7 @@ class ContextMenu extends WebComponentBase {
         const iconRaw = item.icon ?? "";
         // icon 分支（ADR-245）：命中语义名 → SVG HTML（不 escape，随主题/字号）；
         // 否则维持原 _esc 文本兜底（emoji/任意串，未迁移调用方零破坏）
-        const icon = iconRaw && isIconName(iconRaw) ? resolveIcon(iconRaw) : this._esc(iconRaw);
+        const icon = resolveIcon(iconRaw); // icon 字段类型为 IconName，必然可解析（ADR-248）
         const danger = item.danger ? "danger" : "";
         // ADR-133 阶段 C+：action 落到 DOM 供测试语义定位。MenuItem.action 本就是
         // 「行为标识（测试按此匹配）」，此前只存在于 JS 层，e2e 只能按 i18n 文案

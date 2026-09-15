@@ -42,7 +42,7 @@ permalink: /adr/
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | ✅ 已采纳 |
-| [ADR-248](./ADR-248-adr-238.md) | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 |
+| [ADR-248](./ADR-248-icon-field-typing.md) | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | ✅ 已采纳 |
 | [ADR-246](./ADR-246-light-volumetric-simplify.md) | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | ✅ 已采纳 |
 | [ADR-245](./ADR-245-context-menu-adr-238.md) | context-menu 图标语义名统一（对齐 ADR-238） | ✅ 已采纳 |

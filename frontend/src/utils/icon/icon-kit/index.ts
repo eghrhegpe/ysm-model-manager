@@ -5,6 +5,6 @@
  *   import { ICON_KIT, renderIcon } from "@/utils/icon/icon-kit/index.ts";
  *   `${renderIcon(ICON_KIT.enableAll)} ${t("tree.batchEnableAll")}`
  */
-export { ICON_KIT, iconKitNames } from "./icons.ts";
+export { ICON_KIT, type IconKitName, iconKitNames } from "./icons.ts";
 export { renderIcon } from "./render.ts";
 export type { IconSource, IconSpec } from "./types.ts";

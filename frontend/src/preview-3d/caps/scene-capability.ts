@@ -6,7 +6,7 @@
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
-import type { IconSpec } from "@/utils/icon/resolve.ts";
+import type { IconRef } from "@/utils/icon/resolve.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { FogCapability } from "./fog-capability.ts";
 import type { GroundCapability } from "./ground-capability.ts";
@@ -87,7 +87,7 @@ export interface SceneCapability {
   readonly labelKey: string;
 
   /** 图标（emoji） */
-  readonly icon: IconSpec;
+  readonly icon: IconRef;
 
   /** 能力描述 i18n 键 */
   readonly descKey: string;

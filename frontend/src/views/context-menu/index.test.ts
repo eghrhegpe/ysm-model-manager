@@ -51,21 +51,18 @@ describe("<context-menu> 渲染", () => {
   });
 
   it("icon 渲染在图标 span 内", () => {
-    const el = showMenu([{ label: "打开", icon: "📂" }]);
+    const el = showMenu([{ label: "打开", icon: "folderOpen" }]);
     const icon = el.shadowRoot!.querySelector(".item .icon")!;
-    expect(icon.textContent).toBe("📂");
+    expect(icon.querySelector("svg.ws-icon")).not.toBeNull();
   });
 
-  it("icon 语义名解析为 SVG（对齐 ADR-238/245），emoji 兜底仍为文本", () => {
-    // 语义名 → SVG（不 escape，innerHTML）
-    const elSvg = showMenu([{ label: "打开文件夹", icon: "folderOpen" }]);
-    const svgIcon = elSvg.shadowRoot!.querySelector(".item .icon")!;
-    expect(svgIcon.querySelector("svg.ws-icon")).not.toBeNull();
-    // 未命中语义名的 emoji → 维持原文本兜底（不破坏未迁移调用方）
-    const elEmoji = showMenu([{ label: "旧项", icon: "📂" }]);
-    const emojiIcon = elEmoji.shadowRoot!.querySelector(".item .icon")!;
-    expect(emojiIcon.querySelector("svg.ws-icon")).toBeNull();
-    expect(emojiIcon.textContent).toBe("📂");
+  it("icon 语义名解析为 SVG（ADR-238/245；字段类型 IconName 保证可解析，双源分支已退役）", () => {
+    const el = showMenu([{ label: "打开文件夹", icon: "folderOpen" }]);
+    const icon = el.shadowRoot!.querySelector(".item .icon")!;
+    expect(icon.querySelector("svg.ws-icon")).not.toBeNull();
+    // 旧的「未命中语义名 → esc() 文本兜底」分支已随字段类型化退役（ADR-248 D3）：
+    // 菜单项 icon 现在只能是 IconName，故不存在"合法但不可解析"的取值。
+    expect(icon.textContent).toBe("");
   });
 
   it("label 特殊字符被转义（防 XSS）", () => {

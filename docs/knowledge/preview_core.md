@@ -51,6 +51,7 @@ auto_fields:
     - BuildSchematicVoxelData
     - BuildSchematicVoxelDataFromRoot
     - buildSharedInfra
+    - buildVmdRetargetClip
     - BuildVoxelData
     - BuildVoxelDataFromRoot
     - buildVrmBoneNodes
@@ -64,6 +65,7 @@ auto_fields:
     - closeOverlay
     - closeUnusedDecodedBitmaps
     - collectAllWebEntries
+    - collectVmdBoneNames
     - concurrentMap
     - createAutoDanceController
     - createBeatDetector
@@ -83,6 +85,7 @@ auto_fields:
     - disposeTextureDecoder
     - Error
     - estimateTexGpuBytes
+    - estimateVrmHeight
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - FbxDataPort
@@ -189,8 +192,11 @@ auto_fields:
     - RenderVrmBonePanel
     - resetSceneInfra
     - resolveMmdZipConfig
+    - resolveVmdBindings
+    - rewriteVmdTracks
     - runFailedMountCleanup
     - runFullCleanup
+    - scaleForHeight
     - scanAllWebModels
     - scanWebModels
     - sceneInfraHost
@@ -235,6 +241,17 @@ auto_fields:
     - typeFromWebDir
     - unloadSessionModel
     - UpdateableScene
+    - VMD_POSITION_SCALE_DEFAULT
+    - VMD_REFERENCE_HEIGHT
+    - VMD_RETARGET_CANDIDATES
+    - VMD_RETARGET_UNMAPPED
+    - VMD_ROOT_TRANSLATION_CANDIDATES
+    - VmdBindingPlan
+    - VmdBoneBinding
+    - VmdHumanoidRig
+    - VmdRetargetOptions
+    - VmdRetargetReport
+    - VmdRetargetResult
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort

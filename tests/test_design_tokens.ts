@@ -388,7 +388,19 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const relSet = new Set(scanned.map((p) => p.replace(/\\/g, "/")));
   const hit = [...relSet].some((p) => p.includes("/views/app-content/css/"));
   assert.ok(hit, "扫描必须覆盖 views/app-content/css/（默认 skipDir 会误跳 css 目录）");
-  console.log("  ✓ 扫描范围: css/ 目录未被跳过（漏扫回归锁）");
+
+  // [范围补齐 2026-09] 文档层 CSS（frontend/css/*.css）加入扫描域回归锁。
+  // 此前闸只 walk(frontend/src, exts:[".ts"])，5 个手写样式表从未被扫——实测藏 60 条
+  // （components.css 单文件 49）。此处复现 CLI 的第二个 walk 调用并断言覆盖。
+  const cssScanned = walk(path.join(ROOT, "frontend/css"), {
+    exts: [".css"],
+    skipDir: () => false,
+  }) as string[];
+  const cssNames = new Set(cssScanned.map((p) => path.basename(p)));
+  for (const f of ["variables.css", "layout.css", "components.css", "dialogs.css", "transitions.css"]) {
+    assert.ok(cssNames.has(f), `文档层 CSS 必须被扫到：${f}（范围回归锁）`);
+  }
+  console.log("  ✓ 扫描范围: src 的 css/ 目录 + 文档层 frontend/css/ 均被覆盖");
 }
 
 // ── 10. emoji 命中附带语义图标建议（ADR-238 D4 回归锁）──
@@ -445,20 +457,22 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     assert.equal(r.length, 0, `非令牌阴影不应报（防噪声）：${v}`);
   }
 
-  // ③ transition：时长与 --tr-* 相等即命中
+  // ③ transition：**除豁免外一律报**（[判定反转 2026-09] 见块 14 的说明）
   const t1 = findStyleAttrViolations(".x { transition: background .12s ease; }", 1, tokens);
   assert.equal(t1[0]?.kind, "css-transition", "0.12s 应命中 css-transition");
-  assert.equal(t1[0]?.suggestion, "--tr-fast", ".12s 应建议 --tr-fast");
+  assert.equal(t1[0]?.suggestion, "--tr-fast", ".12s 应建议 --tr-fast（时长+缓动双匹配）");
+  // 建议与 --fix 同口径：`transform .25s` 缓动为隐式 ease ≠ --tr-enter 的 ease-out，
+  // 给建议会误导（报告说建议、--fix 却不改），故为 null 而仍照报。
   assert.equal(
     findStyleAttrViolations(".x { transition: transform .25s; }", 1, tokens)[0]?.suggestion,
-    "--tr-enter",
-    ".25s 应建议 --tr-enter",
+    null,
+    ".25s 缓动不匹配 → 不给建议（但报告保留）",
   );
-  // 无令牌对应的时长 → 不报
+  // 反转后：无令牌对应的硬编码时长**必须报**（这正是反转修掉的盲区）
   assert.equal(
     findStyleAttrViolations(".x { transition: width 0.2s; }", 1, tokens).length,
-    0,
-    "0.2s 无对应 --tr-* → 不报",
+    1,
+    "0.2s 不撞任何令牌，但仍是硬编码时长 → 反转后必须报",
   );
 
   // ④ 两类归 ERROR 档（与字号/圆角同构：判定条件是「与令牌等价」，无语义猜测空间）。
@@ -467,7 +481,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     findStyleAttrViolations(".x{box-shadow:0 8px 32px rgba(0,0,0,.25);}", 1, tokens).length > 0,
     "压缩写法（无空格）也应命中",
   );
-  console.log("  ✓ box-shadow/transition: 同令牌值命中并给建议；非令牌值沉默（防噪声）");
+  console.log("  ✓ box-shadow: 同令牌值命中并给建议；非令牌值沉默（防噪声）");
 }
 
 // ── 12. 自定义属性名尾撞车回归锁（--fix 曾静默改写令牌定义）──
@@ -567,6 +581,103 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   console.log("  ✓ transition --fix: 时长+缓动双闸；缓动差异/多属性/无令牌一律拒绝");
 }
 
+// ── 14b. transition 判定反转 + 三条豁免（2026-09 收口）──────
+{
+  // 反转动机（实测盲区 11 处声明点）：原口径「时长与某 --tr-* 相等才报」只抓得住
+  // 「差一点就对了」的写法，而 `.1s`/`.2s`/`.3s`/`.4s` 这类**不撞任何令牌**的硬编码
+  // 时长全部隐形——闸对本该管的「硬编码时长」失明。现改为「除豁免外一律报」。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+  const has = (line: string) =>
+    findStyleAttrViolations(line, 1, tokens).some((v) => v.kind === "css-transition");
+
+  // ① 反转正面：各类非令牌时长都必须报
+  for (const raw of [
+    "width 0.2s", // 无对应令牌
+    "opacity .1s", // 无对应令牌
+    "background 0.3s ease", // 主题类慢速
+    "transform .4s ease", // 慢速
+    "all .25s ease", // 时长撞 --tr-enter 但缓动不同
+  ]) {
+    assert.ok(has(`.x { transition: ${raw}; }`), `反转后应报硬编码时长：${raw}`);
+  }
+
+  // ② 豁免一：跟手/进度条（几何属性 + linear + <0.1s）
+  for (const raw of ["width 0.06s linear", "left 0.06s linear,top 0.06s linear"]) {
+    assert.ok(!has(`.x { transition: ${raw}; }`), `跟手类应豁免：${raw}`);
+  }
+  // 边界：0.1s 不满足「严格 <0.1s」→ 报（这正是进度条取 0.06s 而非 0.1s 的原因）
+  assert.ok(has(".x { transition: width 0.1s linear; }"), "0.1s 未严格短于上限 → 应报");
+  // 边界：非几何属性即使短+linear 也不豁免（如 opacity）
+  assert.ok(has(".x { transition: opacity 0.06s linear; }"), "opacity 非跟手属性 → 应报");
+
+  // ③ 豁免二：自定义缓动（cubic-bezier / steps）——令牌三档无法表达回弹
+  for (const raw of [
+    "transform .2s cubic-bezier(.34,1.56,.64,1)",
+    "transform .25s cubic-bezier(.34,1.56,.64,1)",
+    "opacity .3s steps(4, end)",
+  ]) {
+    assert.ok(!has(`.x { transition: ${raw}; }`), `自定义缓动应豁免：${raw}`);
+  }
+  // ⚠️ 回归锁：自定义缓动**含顶层逗号**，若用朴素 split(",") 会被切碎导致豁免失效
+  // （实测 content-layout 的 .num bump 因此被误报）——必须按顶层逗号切分。
+  assert.ok(
+    !has(".x { transition:transform .2s cubic-bezier(.34,1.56,.64,1); }"),
+    "带内部逗号的 cubic-bezier 必须整段识别为自定义缓动（splitTopLevelCommas 回归锁）",
+  );
+
+  // ④ 豁免三：tr-exempt 注释标记（§7「说明为何非它不可」的机器可读出口）
+  assert.ok(
+    !has(".x { transition: opacity 0.4s; /* tr-exempt: 涟漪需缓慢浮现 */ }"),
+    "tr-exempt 标记应豁免该行",
+  );
+  assert.ok(has(".x { transition: opacity 0.4s; }"), "无标记时同一写法仍应报（防标记失效）");
+  // 标记只作用于所在行，不扩散
+  assert.ok(
+    has(".x { transition: opacity 0.4s; }\n.y { transition: opacity 0.4s; }"),
+    "标记不跨行（逐行判定的固有边界）",
+  );
+
+  // ⑤ 已令牌化 / 复合值半令牌化：不得误报
+  for (const raw of [
+    "var(--btn-transition)",
+    "background var(--tr-normal), color var(--tr-normal)",
+  ]) {
+    assert.ok(!has(`.x { transition: ${raw}; }`), `已令牌化不应报：${raw}`);
+  }
+  // 复合值里只要还有真·硬编码分量，就该报（不能因一半 var() 就整体放过）
+  assert.ok(
+    has(".x { transition: background .12s ease, color var(--tr-fast); }"),
+    "复合值中残留硬编码分量仍应报",
+  );
+
+  console.log("  ✓ transition 反转: 非令牌时长全报；跟手/自定义缓动/tr-exempt 三类豁免");
+}
+
+// ── 14c. propValueRe 左边界（自定义属性名尾撞车）──────
+{
+  // 与块 12（font-size/border-radius）同源的假阳性：`--uih-collapsible-panel-transition:`
+  // 这类**自定义属性定义**曾被 propValueRe 无左边界匹配，误当 transition 声明计入违规
+  // （实测该假阳性长期挂在基线里）。左边界补上后应沉默。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+  assert.equal(
+    findStyleAttrViolations(
+      "  --uih-collapsible-panel-transition: max-height 0.3s ease, opacity 0.25s ease;",
+      1,
+      tokens,
+    ).length,
+    0,
+    "自定义属性定义不应被当作 transition 声明",
+  );
+  // 真声明仍须命中（防「一刀切不匹配」的假修复）
+  assert.ok(
+    findStyleAttrViolations(".x { transition: opacity .3s; }", 1, tokens).some(
+      (v) => v.kind === "css-transition",
+    ),
+    "真 transition 声明仍应命中",
+  );
+  console.log("  ✓ 属性左边界: --x-transition 定义不再误判；真声明仍命中");
+}
+
 // ── 15. 值提取的 `}` 边界回归锁（闸静默漏报）──────
 {
   // 踩坑记录（2026-09 实测）：本仓样式多为**压缩成单行的模板串**
@@ -651,18 +762,70 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     0,
     "滑块跟手不应报（0.06s 本无对应令牌，正是会被长期挂账的那类）",
   );
-  // ③ 对照：同样短、但非跟手语义的过渡**照报**（证明豁免是规则而非全局放水）
-  assert.equal(
-    findStyleAttrViolations(".x { transition: background 0.12s linear; }", 1, tokens)[0]?.suggestion,
-    "--tr-fast",
-    "非跟手属性且撞令牌时长 → 仍应报并给建议",
+  // ③ 对照：同样短、但非跟手语义的过渡**照报**（证明豁免是规则而非全局放水）。
+  //    注意建议为 null：`linear` ≠ --tr-fast 的 `ease`，给建议会误导
+  //    （报告说建议、--fix 却不改）——建议与 --fix 同走「时长+缓动双匹配」口径。
+  const nonRealtime = findStyleAttrViolations(
+    ".x { transition: background 0.12s linear; }",
+    1,
+    tokens,
   );
+  assert.equal(nonRealtime.length, 1, "非跟手属性 → 仍应报");
+  assert.equal(nonRealtime[0]?.suggestion, null, "缓动不匹配 → 不给安全建议（但报告保留）");
   // ④ 跟手属性但缓动被改成 ease（即「被顺手修坏」的形态）→ 必须报，守住退化
   assert.ok(
     findStyleAttrViolations(".cs-fill { transition: width 0.12s ease; }", 1, tokens).length > 0,
     "跟手属性套了令牌时长/缓动 → 应报（防跟手被静默改成缓动）",
   );
   console.log("  ✓ 实时反馈过渡: 跟手豁免（属性+linear+<0.1s 三条），非跟手仍报");
+}
+
+// ── 18. 预筛关键词与判定种类同步锁（「静默失明」回归）──────
+{
+  // 踩坑记录（2026-09 实测）：`check-design-tokens.ts` 逐行扫描前有个**快速预筛**——
+  // 行内不含任一关键词即 skip，省掉 95%+ 的正则开销。该关键词表是 box-shadow /
+  // transition 加入判定层**之前**写的，此后从未补，后果是**整类静默失明**：
+  //   `transition: opacity .4s` / `transition: top 0.15s ease` / 单独的 `box-shadow:`
+  // 不含任何旧关键词，永远到不了判定函数（实测 `variables.css` 的
+  // `.skip-link { transition: top 0.15s ease }` 与 components-styles 的折叠箭头
+  // `transform 0.25s ease` 均因此漏报）。
+  // 极难察觉的原因：能命中的那些恰好含 color/background（如 `.cr-avatar-ring` 同行有
+  // `border-radius:50%`），于是报告看起来「正常工作」。
+  //
+  // 本锁建立双向对应：判定层能报的每个属性，预筛源码必须列它；且探针只含该词
+  // （否则探针靠别的关键词蒙混过关，锁失效）。
+  const src = fs.readFileSync(path.join(ROOT, "scripts/check-design-tokens.ts"), "utf8");
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  const PROBES: Array<[kw: string, probe: string]> = [
+    ["font-size", ".x { font-size: 13px; }"],
+    ["border-radius", ".x { border-radius: 6px; }"],
+    ["transition", ".x { transition: transform 0.2s; }"],
+    ["box-shadow", ".x { box-shadow: 0 8px 32px rgba(0,0,0,.25); }"],
+  ];
+  const OTHER_KWS = ["style=", "color", "background"];
+
+  for (const [kw, probe] of PROBES) {
+    // ① 判定层确实能报这类（否则探针无意义）
+    assert.ok(
+      findStyleAttrViolations(probe, 1, tokens).length > 0,
+      `判定层应能报该探针：${probe}`,
+    );
+    // ② 探针不含其它预筛关键词——确保它只能靠 kw 通过预筛
+    for (const other of OTHER_KWS) {
+      if (other === kw) continue;
+      assert.ok(
+        !probe.includes(other),
+        `探针 ${probe} 不应含其它预筛关键词 "${other}"（否则本锁被蒙混）`,
+      );
+    }
+    // ③ 预筛源码必须列该关键词
+    assert.ok(
+      src.includes(`line.includes("${kw}")`),
+      `预筛关键词表缺 "${kw}" —— 该类别在预筛即被跳过（静默失明）`,
+    );
+  }
+  console.log("  ✓ 预筛同步锁: 判定层的每个属性类都在预筛关键词表中");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

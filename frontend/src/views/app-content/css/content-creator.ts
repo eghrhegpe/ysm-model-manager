@@ -122,11 +122,11 @@ export const contentCreatorCSS: string = `
 }
 
 /* 头像（跨域复用：.cr-avatar 亦在 gh-card 中用到） */
-.cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-base);font-weight:700;color:var(--muted);background:var(--surf);z-index:1;transition:all .25s ease; }
+.cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-base);font-weight:700;color:var(--muted);background:var(--surf);z-index:1;transition:all var(--tr-normal); }
 .cr-avatar-container { position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;width:28px;height:28px;margin:6px; }
 /* 光环 transform 0.4s：有意慢于 --tr-* 最长档（--tr-enter 0.25s），与 .8s ring-spin 配套；
-   令牌体系无 0.4s 档，保留硬编码（UI-Design.md §7「说明为何非它不可」口径）。 */
-.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;pointer-events:none;transition:transform .4s ease; }
+   令牌体系无 0.4s 档，故用 tr-exempt 标记留档（UI-Design.md §7「说明为何非它不可」口径）。 */
+.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;pointer-events:none;transition:transform .4s ease; /* tr-exempt: 与 .8s ring-spin 配套的慢起转 */ }
 .cr-avatar-ring[data-spin]:hover { animation:ring-spin .8s linear infinite; }
 
 /* 卡片头部：头像 + 名称行 */

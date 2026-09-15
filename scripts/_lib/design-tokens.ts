@@ -319,6 +319,35 @@ export function isRealtimeFeedbackTransition(value: string): boolean {
   return ease === "linear"; // 跟手必须线性
 }
 
+/**
+ * 自定义缓动函数判定（`cubic-bezier(...)` / `steps(...)`）——命中则该过渡**不套令牌**。
+ *
+ * 为什么需要：`--tr-*` 三档的缓动是固定关键字（`ease` / `ease-out`），**无法表达回弹
+ * （overshoot）或阶跃**。本仓有多处刻意的回弹动效（如 `.stat-card .num` 的 bump
+ * `cubic-bezier(.34,1.56,.64,1)`、`.rec-card` hover 上浮），套任一令牌都会把回弹抹成
+ * 直落——那是把设计意图当债务。故这类按 UI-Design.md §7「说明为何非它不可」豁免。
+ *
+ * 与 `isRealtimeFeedbackTransition` 并列，同属**规则**（哪类写法不适用令牌），
+ * 不是文件/行号豁免清单（后者会与 baseline 形成双真相源）。
+ */
+export function hasCustomEasing(value: string): boolean {
+  return /cubic-bezier\(|steps\(/i.test(value);
+}
+
+/**
+ * 「非它不可」注释豁免标记（UI-Design.md §7 的机器可读出口）。
+ *
+ * 用法：在**同一行**的 CSS 注释里写 `tr-exempt: <理由>`，该行的 transition 即不报。
+ *   `.x { transition: opacity .4s; /* tr-exempt: 涟漪需缓慢浮现 *\/ }`
+ *
+ * 为什么必须同行：判定层是**逐行**纯函数（`findStyleAttrViolations(line, lineNo, …)`），
+ * 不持有上文；跨行回溯会把签名与所有调用方一起复杂化，收益不抵成本。
+ *
+ * 这是**最后手段**，仅在「既非跟手、又无自定义缓动、且现有三档确实表达不了」时使用——
+ * 每处命中都应在注释里写清理由，便于 review 与未来复审。
+ */
+export const TR_EXEMPT_MARKER = "tr-exempt";
+
 /** 缓动关键字白名单（用于区分「缓动缺省」与「显式写了别的缓动」）。 */
 const EASE_KEYWORDS = new Set([
   "ease",
@@ -420,9 +449,40 @@ export function propDeclRe(prop: string): RegExp {
  * 实测 fab.ts / tooltip.ts / app-preview/css.ts 共 6 处可修的 transition
  * 因此被 `--fix` 跳过，且报告层也照样命中（因为报告只看时长子串，不看结尾）。
  * 这类「报告能命中、修复却不生效」的不对称最难察觉，故抽成单一出口。
+ *
+ * ⚠️ 左边界同 `propDeclRe`（2026-09 补）：无边界时 `--uih-collapsible-panel-transition:`
+ * 这类**自定义属性定义**会被误当成 transition 声明并计入违规（实测该假阳性一直挂在
+ * 基线里）。凡「属性名可能作为更长标识符后缀出现」的场景都必须带边界。
  */
 export function propValueRe(prop: string, flags = "g"): RegExp {
-  return new RegExp(`${prop}\\s*:\\s*([^;"'\`}]+)`, flags);
+  return new RegExp(`(?<![\\w-])${prop}\\s*:\\s*([^;"'\`}]+)`, flags);
+}
+
+/**
+ * 按**顶层逗号**切分 CSS 值（忽略括号内的逗号）。
+ *
+ * 为什么不能直接 `.split(",")`（2026-09 实测踩坑）：CSS 函数参数里含逗号，
+ * `transform .2s cubic-bezier(.34,1.56,.64,1)` 用朴素 split 会碎成
+ * `[transform .2s cubic-bezier(.34, 1.56, .64, 1)]` 四段——后三段既无 var()、又不含
+ * `cubic-bezier(` 子串，于是**自定义缓动豁免失效**、误报为违规（实测 content-layout
+ * 的 `.num` bump 即因此被误报）。判定必须按顶层逗号分量进行。
+ */
+export function splitTopLevelCommas(value: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of value) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      if (cur.trim()) out.push(cur.trim());
+      cur = "";
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
 }
 
 /** UI-Design.md 文档与代码的数值漂移项。 */
@@ -714,8 +774,13 @@ export function findStyleAttrViolations(
   //      - box-shadow：仅当归一化后与某 --shadow-* **完全同值**时报。非令牌阴影
   //        （焦点环 color-mix、比 --shadow-xl 更重的浮层阴影）是设计意图，报即噪声。
   //        实测全仓仅 1 处命中——正是「真债少而精」的预期形态。
-  //      - transition：时长分量与 --tr-* 相等即报（整值比对实测 0 命中，永不触发，
-  //        详见 TRANSITION_TOKEN_DURATIONS 注释）。
+  //      - transition（[判定反转 2026-09]）：**除豁免外一律报**，不再「只报能建议令牌的」。
+  //        反转前的口径是「时长与某 --tr-* 相等才报」，后果是 `.2s`/`.1s`/`.3s`/`.4s` 这类
+  //        不撞任何令牌的硬编码时长**全部隐形**（实测盲区 11 处声明点）——闸对本该管的
+  //        「硬编码时长」失明，只抓得住「差一点就对了」的那些。
+  //        现口径：逐分量判定，命中任一豁免即放过，否则报（建议令牌可为 null）。
+  //        三条豁免见 isRealtimeFeedbackTransition（跟手/进度条）/ hasCustomEasing（回弹）/
+  //        TR_EXEMPT_MARKER（注释留档的「非它不可」）。
   //    二者均只扫 CSS 文本（含内联 style 体与 CSS 块），故用 line 全文——与颜色判定
   //    不同，此处不需要区分内外（规范对两者同等禁止，且 box-shadow 罕见于内联）。
   for (const sm2 of line.matchAll(propValueRe("box-shadow"))) {
@@ -730,19 +795,28 @@ export function findStyleAttrViolations(
       suggestion: tok,
     });
   }
+  // 注释豁免标记：整行任一处理由 tr-exempt 覆盖（见 TR_EXEMPT_MARKER）
+  const trExempted = line.includes(TR_EXEMPT_MARKER);
   for (const tm of line.matchAll(propValueRe("transition"))) {
     const v = (tm[1] ?? "").trim();
-    if (!v || /^var\(/.test(v) || /^(none|inherit|initial|unset)$/.test(v)) continue;
-    // 实时反馈（跟手/进度条）先于令牌匹配排除：这类过渡**不适用令牌体系**，
-    // 套 --tr-fast 反而破坏跟手观感。见 isRealtimeFeedbackTransition 的准入三条。
-    if (isRealtimeFeedbackTransition(v)) continue;
-    const tok = suggestTransitionToken(v, tokenMap);
-    if (!tok) continue;
+    if (!v || /^(none|inherit|initial|unset)$/.test(v)) continue;
+    if (trExempted) continue;
+    // 逐分量判定：已含 var() 的分量视为合规（已令牌化，含复合值里只改了一半的情况）。
+    // 必须按**顶层逗号**切分——朴素 split(",") 会把 cubic-bezier(a,b,c,d) 切碎，
+    // 导致自定义缓动豁免失效（见 splitTopLevelCommas 注释）。
+    const offending = splitTopLevelCommas(v).find(
+      (p) => !/var\(/.test(p) && !isRealtimeFeedbackTransition(p) && !hasCustomEasing(p),
+    );
+    if (!offending) continue;
     out.push({
       kind: "css-transition",
       line: lineNo,
       snippet: clip(`transition:${v}`),
-      suggestion: tok,
+      // 建议与 --fix 同口径（suggestTransitionTokenExact：时长 + 缓动双匹配）——
+      // 若这里按「只比时长」给建议，会出现「报告说建议 --tr-enter、--fix 却不改」
+      // 的自相矛盾（`transform .25s` 缓动为隐式 ease ≠ --tr-enter 的 ease-out）。
+      // 给不出安全建议就 null：报告仍保留，供人工决定归位/加档/写 tr-exempt。
+      suggestion: suggestTransitionTokenExact(offending, tokenMap),
     });
   }
 

@@ -305,7 +305,7 @@
   text-decoration: none;
   border-radius: 0 0 6px 6px;
   z-index: 99999;
-  transition: top 0.15s ease;
+  transition: top var(--tr-normal);
   font-size: var(--fs-sm);
 }
 .skip-link:focus-visible {

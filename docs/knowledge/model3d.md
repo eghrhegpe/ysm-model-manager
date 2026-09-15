@@ -108,6 +108,7 @@ auto_fields:
     - buildSpecFromModel
     - buildStatsPanel
     - buildSwitchNodes
+    - buildVmdRetargetClip
     - buildVrmBoneNodes
     - buildVrmBoneTree
     - buildVrmScene
@@ -151,6 +152,7 @@ auto_fields:
     - collectSceneStats
     - collectSettingsCapControls
     - collectVisiblePredicates
+    - collectVmdBoneNames
     - compKey
     - componentsCss
     - componentsStyleSheet
@@ -235,6 +237,7 @@ auto_fields:
     - estimateTexGpuBytes
     - estimateTextureBytes
     - estimateTextureSetBytes
+    - estimateVrmHeight
     - eulerToQuaternion
     - evaluateGpuLoad
     - extractIKChainFromTree
@@ -600,10 +603,12 @@ auto_fields:
     - ResolveModeResponse
     - resolveSemanticBones
     - resolveSemanticMorphs
+    - resolveVmdBindings
     - restoreFields
     - restoreLightParams
     - restoreModelGroupsVisible
     - restoreState
+    - rewriteVmdTracks
     - ringLog
     - ROLE
     - roleBaseName
@@ -615,6 +620,7 @@ auto_fields:
     - safeDispose
     - sampleAdaptivePixelRatio
     - sampleGpuLoad
+    - scaleForHeight
     - SceneCapability
     - SceneCapabilityFactory
     - SceneCapabilityLookup
@@ -752,6 +758,17 @@ auto_fields:
     - unregisterSchema
     - UpdateableScene
     - Vec3
+    - VMD_POSITION_SCALE_DEFAULT
+    - VMD_REFERENCE_HEIGHT
+    - VMD_RETARGET_CANDIDATES
+    - VMD_RETARGET_UNMAPPED
+    - VMD_ROOT_TRANSLATION_CANDIDATES
+    - VmdBindingPlan
+    - VmdBoneBinding
+    - VmdHumanoidRig
+    - VmdRetargetOptions
+    - VmdRetargetReport
+    - VmdRetargetResult
     - VolumetricCone
     - VolumetricParams
     - VrmAdapterDeps

@@ -191,19 +191,30 @@ if (DOCS_ONLY) {
   process.exit(0);
 }
 
-// ── 扫描范围：前端生产 TS（排除测试 / 构建产物 / vendor）──
+// ── 扫描范围：前端生产 TS + 文档层 CSS（排除测试 / 构建产物 / vendor）──
 const FRONTEND_SRC = path.join(ROOT, "frontend/src");
+const FRONTEND_CSS = path.join(ROOT, "frontend/css");
 const files = (
-  walk(FRONTEND_SRC, {
-    exts: [".ts"],
-    skipTest: true, // 测试文件里的样式样本不是产品 UI，误报源
-    // ⚠️ 必须覆盖 walk 的默认 skipDir（默认会跳过**任何名为 css 的目录**）：
-    // 本仓的样式常量恰恰住在 `views/app-content/css/`（content-creator/layout/gh/…）
-    // ——那是设计令牌债最密集的地方。曾因沿用默认值而整目录漏扫（8 文件），
-    // 导致报告数字系统性偏低、--fix 对该目录完全无效（实测发现）。
-    // 此处只排除真正的构建产物/vendor，保留 `css` 目录。
-    skipDir: (n: string) => n.startsWith(".") || n === "node_modules",
-  }) as string[]
+  [
+    ...(walk(FRONTEND_SRC, {
+      exts: [".ts"],
+      skipTest: true, // 测试文件里的样式样本不是产品 UI，误报源
+      // ⚠️ 必须覆盖 walk 的默认 skipDir（默认会跳过**任何名为 css 的目录**）：
+      // 本仓的样式常量恰恰住在 `views/app-content/css/`（content-creator/layout/gh/…）
+      // ——那是设计令牌债最密集的地方。曾因沿用默认值而整目录漏扫（8 文件），
+      // 导致报告数字系统性偏低、--fix 对该目录完全无效（实测发现）。
+      // 此处只排除真正的构建产物/vendor，保留 `css` 目录。
+      skipDir: (n: string) => n.startsWith(".") || n === "node_modules",
+    }) as string[]),
+    // [范围补齐 2026-09] 文档层 CSS（`frontend/css/*.css`，5 个手写样式表）此前**不在扫描域**：
+    // 闸只 `walk(frontend/src, { exts: [".ts"] })`，于是文档层样式债从未被任何闸看过——
+    // 实测 60 条（46 硬编码字号 + 13 圆角 + 1 过渡），其中 `components.css` 单文件 49 条。
+    // 该目录平铺无子目录，故 skipDir 恒 false；exts 只认 .css（目录内本就只有 .css）。
+    ...(walk(FRONTEND_CSS, {
+      exts: [".css"],
+      skipDir: () => false,
+    }) as string[]),
+  ]
 )
   .map((abs) => ({ abs, rel: relPosix(abs) }))
   .filter((f) => inChangedScope(f.rel, scope));
@@ -238,12 +249,22 @@ for (const f of files) {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i] ?? "";
     // 快速预筛：五类特征都不含则跳过（大文件上省掉全部正则，实测占比 >95%）
+    // ⚠️ [2026-09 补齐] 关键词表必须与**判定层实际支持的种类**同步：本表原只有
+    // font-size / border-radius / color / background / style= / emoji —— 是 box-shadow
+    // 与 transition 加入判定层**之前**写的，此后从未补。后果是**静默失明**：
+    // `transition: opacity .4s` / `transition: top 0.15s ease` / 单独的 `box-shadow:`
+    // 不含任何旧关键词，在预筛即被 skip，永远到不了判定函数（实测变量表的
+    // `.skip-link { transition: top 0.15s ease }` 即因此漏报）。
+    // 规律：**新增判定种类时，必须同步本表**——否则新判定形同虚设（且极难察觉，
+    // 因为「能命中的那些」恰好含有 color/background 而显得正常）。
     if (
       !line.includes("style=") &&
       !line.includes("font-size") &&
       !line.includes("border-radius") &&
       !line.includes("color") &&
       !line.includes("background") &&
+      !line.includes("transition") &&
+      !line.includes("box-shadow") &&
       !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u.test(line)
     ) {
       continue;
@@ -401,7 +422,7 @@ const KIND_LABEL: Record<string, string> = {
   "css-radius": "CSS 块硬编码圆角",
   "css-color": "CSS 块硬编码颜色",
   "css-shadow": "硬编码阴影（同 --shadow-* 值）",
-  "css-transition": "硬编码过渡时长（同 --tr-* 时长）",
+  "css-transition": "硬编码过渡时长",
   "emoji-icon": "emoji 当图标",
 };
 

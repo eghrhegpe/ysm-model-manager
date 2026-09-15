@@ -639,7 +639,7 @@ export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 Mik
 .collapsible-arrow {
     font-size: var(--uih-collapsible-arrow-size);
     color: var(--txt);
-    transition: transform 0.25s ease;
+    transition: transform var(--tr-normal);
     flex-shrink: 0;
 }
 

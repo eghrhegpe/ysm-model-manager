@@ -29,7 +29,7 @@ export const sidebarCSS: string = `
  * opacity 0.4s 为**有意**不经 --tr-* 令牌：水波扩散需缓慢浮现（0.4s 长于令牌最长档
  * --tr-enter 0.25s），套 0.15s 会退化成「闪一下」而失去涟漪感。 */
 .instance-card-header { position: relative; overflow: hidden; }
-.instance-card-header::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--hover) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+.instance-card-header::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--hover) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s; /* tr-exempt: 涟漪需缓慢浮现，0.15s 会退化成闪一下 */ pointer-events: none; }
 .instance-card-header.ripple::after { opacity: 0.12; }
 /* 交错瀑布流入场动画 */
 .instance-card { animation: fadeSlideLeft .35s cubic-bezier(.34,1.56,.64,1) both; }

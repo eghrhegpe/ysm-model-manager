@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-239：工具栏下拉菜单声明式收敛（对齐 ADR-021 菜单范式）",
+        "link": "/adr/ADR-239-toolbar-menu-declarative"
+      },
+      {
         "text": "ADR-238：UI 图标规范与命名体系",
         "link": "/adr/ADR-238-ui"
       },

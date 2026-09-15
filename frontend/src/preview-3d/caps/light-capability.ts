@@ -494,18 +494,20 @@ export class LightCapability implements SceneCapability {
   }
 
   /** [ADR-246 D2] 上下亮度比（tip/base）读取——菜单「上下亮度比」滑块的 getter。
-   *  base 为 0 时比值无意义，返回 0（除零守卫，防 NaN/Infinity 漏进 UI）。 */
+   *  值域闭合 [0,1]：base 为 0 时比值无意义返回 0（除零守卫）；tip>base 的存量数据 clamp 到 1
+   *  ——否则滑块 thumb 被 clampPct 压到 100% 而显示值与真实值不符，用户首拖即被静默改写 tip。 */
   getVolumetricTipRatio(): number {
     const { baseStrength, tipStrength } = readVolParams();
     if (baseStrength <= 0) return 0;
-    return tipStrength / baseStrength;
+    return Math.min(1, Math.max(0, tipStrength / baseStrength));
   }
 
   /** [ADR-246 D2] 按 base 派生 tip（比值写入路径）——base 不变，tip = base × ratio。
-   *  base 为 0 时派生结果恒 0，直接沿用比值语义不写脏值。 */
+   *  入参 clamp 到 [0,1] 与 getter 值域对等（程序化调用传越界值不写脏数据）。 */
   setVolumetricTipRatio(ratio: number): void {
     const { baseStrength } = readVolParams();
-    this.setVolumetric({ tipStrength: baseStrength * ratio });
+    const clamped = Math.min(1, Math.max(0, ratio));
+    this.setVolumetric({ tipStrength: baseStrength * clamped });
   }
 
   /** 合并式参数更新（只覆盖给定字段，经 envState） */
@@ -582,7 +584,10 @@ export class LightCapability implements SceneCapability {
         this.cone.attach(this.spotlight.position);
       }
     }
-    // ⑤ helper 显隐随恢复后的聚光灯开关
+    // ⑤ helper 挂场景 + 显隐随恢复后的聚光灯开关。
+    //    显式挂载（不复用「组合根随后必调 apply()」的隐式约定——单独 loadState 的路径
+    //    会静默缺少 helper）。
+    if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
     this.spotHelper.visible = envState.lightSpotEnabled;
     this.spotHelper.update();
   }

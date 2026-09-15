@@ -68,6 +68,11 @@
 `baseStrength` / `tipStrength` 两个参数由**单一「上下亮度比」派生**：
 `tipStrength = baseStrength * ratio`，默认 `0.9 / 0.25` ⇒ `ratio ≈ 0.28`，与现状视觉等价。
 
+**值域契约（独立审查补强）**：`ratio` 的 getter/setter 必须闭合在 `[0,1]`（与滑块量程一致）。
+getter 侧除零守卫之外还须 `clamp(0,1)`——否则存量/预设出现 `tip > base`（如 0.2/0.9 ⇒ 4.5）时，
+滑块 thumb 被渲染层 `clampPct` 压到 100%，**显示值与真实值不符**，且用户首次触碰滑块即被静默
+改写 `tipStrength`（光柱突跳）。setter 侧对称 clamp，避免程序化调用写入越界值。
+
 **理由**：`baseStrength`/`tipStrength` 是 shader 实现细节（`mix()` 的两端），
 对用户不是可理解的概念；暴露它们等于把实现泄漏成配置。三个语义滑块覆盖
 「多浓 / 衰减多快 / 边缘多软」这三个用户真正会问的问题。
@@ -76,6 +81,8 @@
 
 - 新增 `THREE.SpotLightHelper`，随聚光灯开关显隐，`applySpotlightToThree` 内 `update()`，
   `dispose()` 内释放。
+- helper 的**挂载**（`scene.add`）在 `apply()` 与 `loadState()` 两处显式完成——
+  不复用「组合根随后必调 `apply()`」的隐式约定，否则单独 `loadState` 的路径会静默缺少 helper。
 - `zh-CN` 的 `preview.spotlight` 由「顶光」改为「聚光灯」（en/ja 本已正确）。
 - 菜单层把聚光灯与体积光相关控件收进同一个可折叠卡。
 

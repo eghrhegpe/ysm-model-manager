@@ -386,13 +386,56 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     expect(ratio.control!.get!(undefined)).toBeCloseTo(0.5, 5);
   });
 
-  it("baseStrength=0 时比值读取不产生 NaN/Infinity（除零守卫）", () => {
+  it("baseStrength=0 时比值读取返回 0（除零守卫，锁定具体约定）", () => {
     const cap = newCap();
     cap.setVolumetric({ baseStrength: 0 });
     const card = spotVolCard(cap);
     const ratio = card.children!.find((c) => c.id === "light-volumetric-ratio")!;
-    const v = ratio.control!.get!(undefined) as number;
-    expect(Number.isFinite(v)).toBe(true);
+    // 锁「返回 0」而非仅 isFinite——否则实现改成返回越界值用例仍绿
+    expect(ratio.control!.get!(undefined)).toBe(0);
+  });
+
+  it("比值量程闭合 [0,1]：tip>base 的存量数据读取被 clamp 到 1（与滑块 max 一致）", () => {
+    // 审查发现（ADR-246 D2 回归）：滑块声明 max:1，但 getter 原只挡除零——
+    // 存量/预设若出现 base 0.2 / tip 0.9（比值 4.5），滑块 thumb 被 clamp 压到 100%，
+    // 显示值与真实值不符；用户首拖即被静默改写 tip（光柱突跳）。
+    const cap = newCap();
+    cap.setVolumetric({ baseStrength: 0.2, tipStrength: 0.9 });
+    const card = spotVolCard(cap);
+    const ratio = card.children!.find((c) => c.id === "light-volumetric-ratio")!;
+    expect(ratio.control!.get!(undefined)).toBe(1); // clamp 到滑块 max
+  });
+
+  it("比值 setter 对越界入参 clamp，getter/setter 值域对等", () => {
+    const cap = newCap();
+    const card = spotVolCard(cap);
+    const ratio = card.children!.find((c) => c.id === "light-volumetric-ratio")!;
+    ratio.control!.set!(2);
+    const p = cap.getParams().volumetric;
+    expect(p.tipStrength).toBeCloseTo(p.baseStrength * 1, 5); // clamp 到 1，不是 base*2
+    expect(ratio.control!.get!(undefined)).toBe(1);
+    ratio.control!.set!(-1);
+    expect(cap.getParams().volumetric.tipStrength).toBe(0); // clamp 到 0
+    expect(ratio.control!.get!(undefined)).toBe(0);
+  });
+});
+
+// [ADR-246 D3] helper 挂载契约：loadState 单独调用（无 apply）也须挂场景，
+// 不依赖「组合根随后必调 apply()」的隐式约定（审查发现）。
+describe("LightCapability — helper 挂载契约", () => {
+  beforeEach(() => { resetEnvState(); localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it("loadState 单独调用后 helper 已在场景（不依赖后续 apply 兜底）", () => {
+    const cap = newCap();
+    cap.setSpotlight({ enabled: true });
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
+    const helper = capScene.getObjectByName("ysm-light-spot-helper");
+    expect(helper).toBeDefined();
+    expect(helper!.visible).toBe(true);
   });
 });
 

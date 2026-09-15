@@ -26,17 +26,27 @@
 将「批量 + 更多」两个下拉的**菜单项声明**收敛为单个声明式模块
 `views/app-tree/toolbar-menus.ts`：
 
-- `BATCH_MENU_ITEMS` / `MORE_MENU_ITEMS`：按 `{ testid, action, icon, label, dividerBefore? }`
-  声明菜单项，`action` 对应 `data-batch` / `data-more` 委托值（编译期约束为字符串联合语义）。
-- `renderMenuItems(key)`：由数据生成 `<button class="dd-item">`（含 `data-*` 委托属性、
-  `data-testid`、图标前缀、`dividerBefore` 分隔线）。
-- `toolbarMenuTestids()`：派生当前两下拉全部 testid，供 `tpl.ts` 的 `VIEW_TESTIDS` 单一派生。
+- `TOOLBAR_MENUS` Record：按 `{ id, menuId, buttonLabelKey, items: [{ testid, action, labelKey, icon?, dividerBefore? }] }`
+  声明两下拉；`labelKey`/`buttonLabelKey` 存 i18n key（渲染时经 `t()` 解析，支持语言热切换），
+  `icon` 为语义名（`resolveIcon` 统一解析，对齐 ADR-238）；`action` 对应 `data-batch` /
+  `data-more` 委托值（编译期约束为字符串联合语义）。
+- `renderDropdown(key)`：由数据生成完整下拉 HTML（触发按钮 + 菜单容器 + 菜单项，含 `data-*`
+  委托属性、`data-testid`、图标前缀、`dividerBefore` 分隔线），`tpl.ts` 单点调用。
+- `toolbarMenuTestids()`：派生当前两下拉全部 testid（含触发按钮 `tree-batch`/`tree-more`），
+  供 `tpl.ts` 的 `VIEW_TESTIDS` 单一派生。
 
 **明确不动的部分**（收敛边界，最小化风险）：
 
 - `toolbar-events.ts` 的行为委托逻辑不变——仍靠 `[data-batch]` / `[data-more]` 委托绑定。
-- 渲染产出**结构与原手写 HTML 逐字节等价**（保证对 tangent 测试与既有行为零影响）。
+- 渲染产出的**结构**与原手写 HTML 等价（`data-*` 委托、`data-testid`、图标、分隔线位置一一对应），
+  仅 4 项菜单的图标按 ADR-238 语义名补齐（`import-dir`/`open-folder`→folderOpen、`refresh`→refresh、
+  `genindex`→book）——属**预期的图标正规化**，非逐字节不变量；testid 与 data-* 委托值零变化。
 - 作者下拉（`dd-authors`）、搜索/筛选/排序/视图按钮不在本次范围。
+
+> 实施注记（2026-09 审查）：模块初版曾按本 ADR 描述导出 `BATCH_MENU_ITEMS` /
+> `MORE_MENU_ITEMS` 常量 + `renderMenuItems(key)`，后于「icon 语义名声明 + API 收窄」修订中
+> 统一为单一 `TOOLBAR_MENUS` Record + `renderDropdown(key)`（当前真实导出面），
+> `label`/`buttonLabel` 改存 i18n key（`labelKey`/`buttonLabelKey`）以支持语言热切换。
 
 ## 3. 后果（Consequences）
 

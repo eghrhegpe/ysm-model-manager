@@ -4,7 +4,7 @@
 //   - 菜单项声明只描述「语义」：action（行为）、label（i18n）、icon（图标语义名）、divider
 //   - 渲染与图标解析由本层统一处理，调用侧不垫 SVG/emoji 字符串
 // 行为侧不变：toolbar-events.ts 仍靠 data-batch / data-more 委托，本表不碰事件逻辑。
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 
 /** 单个工具栏下拉菜单项声明（只描述语义，不垫渲染字符串） */
@@ -13,8 +13,8 @@ interface ToolbarMenuItem {
   action: string;
   /** 唯一 testid（ADR-133 G-1 契约；与 action 不必同名，勿机械拼凑） */
   testid: string;
-  /** i18n 文案 */
-  label: string;
+  /** i18n 文案 key（渲染时经 t() 解析——模块加载冻结会让语言热切换后文案停留在旧语言） */
+  labelKey: LocaleKey;
   /** 图标语义名（ICON_KIT / UI_ICONS 的 key）；缺省无图标 */
   icon?: string;
   /** 在项前插分隔线 */
@@ -33,8 +33,8 @@ interface ToolbarMenuDef {
   id: string;
   /** 菜单容器 id */
   menuId: string;
-  /** 触发按钮文案 */
-  buttonLabel: string;
+  /** 触发按钮文案 key（渲染时经 t() 解析） */
+  buttonLabelKey: LocaleKey;
   /** 全部菜单项（data-<key> 委托到 toolbar-events.ts） */
   items: readonly ToolbarMenuItem[];
 }
@@ -44,18 +44,18 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
   batch: {
     id: "btn-batch",
     menuId: "menu-batch",
-    buttonLabel: t("tree.batch"),
+    buttonLabelKey: "tree.batch",
     items: [
       {
         action: "enable-all",
         testid: "tree-batch-enable",
-        label: t("tree.batchEnableAll"),
+        labelKey: "tree.batchEnableAll",
         icon: "enableAll",
       },
       {
         action: "disable-all",
         testid: "tree-batch-disable",
-        label: t("tree.batchDisableAll"),
+        labelKey: "tree.batchDisableAll",
         icon: "disableAll",
       },
     ],
@@ -63,37 +63,37 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
   more: {
     id: "btn-more",
     menuId: "menu-more",
-    buttonLabel: t("tree.more"),
+    buttonLabelKey: "tree.more",
     items: [
       {
         action: "import-file",
         testid: "tree-more-import-file",
-        label: t("tree.moreImportFile"),
+        labelKey: "tree.moreImportFile",
         icon: "file",
       },
       {
         action: "import-dir",
         testid: "tree-more-import-dir",
-        label: t("tree.moreImportDir"),
+        labelKey: "tree.moreImportDir",
         icon: "folderOpen",
       },
       {
         action: "open-folder",
         testid: "tree-more-open-folder",
-        label: t("tree.moreOpenFolder"),
+        labelKey: "tree.moreOpenFolder",
         icon: "folderOpen",
         dividerBefore: true,
       },
       {
         action: "refresh",
         testid: "tree-more-refresh",
-        label: t("tree.moreRefresh"),
+        labelKey: "tree.moreRefresh",
         icon: "refresh",
       },
       {
         action: "genindex",
         testid: "tree-more-genindex",
-        label: t("tree.moreGenIndex"),
+        labelKey: "tree.moreGenIndex",
         icon: "book",
       },
     ],
@@ -113,12 +113,12 @@ export function renderDropdown(key: ToolbarMenuKey): string {
         ? '<div style="border-top:1px solid var(--bd);margin:2px 0"></div>'
         : "";
       const icon = it.icon ? `${resolveIcon(it.icon)} ` : "";
-      return `${gap}<button class="dd-item" data-${attr}="${it.action}" data-testid="${it.testid}">${icon}${it.label}</button>`;
+      return `${gap}<button class="dd-item" data-${attr}="${it.action}" data-testid="${it.testid}">${icon}${t(it.labelKey)}</button>`;
     })
     .join("");
   return (
     `<div class="dd-wrap" id="dd-${attr}">` +
-    `<button class="btn-base sm" id="${def.id}" data-testid="tree-${attr}">${def.buttonLabel}</button>` +
+    `<button class="btn-base sm" id="${def.id}" data-testid="tree-${attr}">${t(def.buttonLabelKey)}</button>` +
     `<div class="dd-menu" id="${def.menuId}">${itemsHtml}</div></div>`
   );
 }

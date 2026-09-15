@@ -495,7 +495,8 @@ function renderPreviewDock(
           render: (list) => {
             const rows: PreviewMenuNode[] = groupItems.map((node) => {
               if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
-              const cap = ctx.getCap(SCENE_CAP_FOR_PANEL[node.id]);
+              const capId = SCENE_CAP_FOR_PANEL[node.id];
+              const cap = capId ? ctx.getCap(capId) : null;
               // 单一来源：cap 声明 getMasterNodeId = 有主开关（与面板 filter / env 面板同一契约）
               let headerToggle: PreviewMenuNode["headerToggle"];
               if (

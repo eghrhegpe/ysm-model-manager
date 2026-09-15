@@ -1587,6 +1587,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
+            "text": "icon-kit 多源图标",
+            "link": "/knowledge/icon_kit"
+          },
+          {
             "text": "知识库×前端语义脱节审计",
             "link": "/knowledge/knowledge_frontend_drift_audit"
           },

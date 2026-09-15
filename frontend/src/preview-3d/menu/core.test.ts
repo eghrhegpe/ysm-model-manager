@@ -271,6 +271,51 @@ describe("mountPreviewRootMenu", () => {
     handle.dispose();
   });
 
+  it("场景组根视图：可启停 panel（lighting/shadow/postproc）行尾带能力总开关，相机行不带", () => {
+    // 注入 fake caps：light/shadow/postprocessing 各暴露 isEnabled/setEnabled
+    const states: Record<string, boolean> = { light: true, shadow: true, postprocessing: false };
+    const setCalls: Record<string, boolean[]> = { light: [], shadow: [], postprocessing: [] };
+    const makeFake = (id: string): SceneCapability =>
+      ({
+        id,
+        isEnabled: () => states[id],
+        setEnabled: (v: boolean) => {
+          states[id] = v;
+          setCalls[id].push(v);
+        },
+        // 仅需 isEnabled/setEnabled 的能力总开关
+        getMenuNodes: () => [],
+        getMenuControls: () => [],
+      }) as unknown as SceneCapability;
+
+    const handle = mountPreviewRootMenu(
+      overlay,
+      makeCtx({
+        getSiblings: () => ["/m/b.ysm"],
+        getCap: (id) => (id === "light" || id === "shadow" || id === "postprocessing" ? makeFake(id) : null),
+      }),
+    );
+    (overlay.querySelector(`[data-testid="dock-scene"]`) as HTMLElement).click();
+    // 三个可启停 panel → 行长出 header-toggle
+    for (const pid of ["lighting", "shadow", "postproc"]) {
+      const row = overlay.querySelector(`[data-testid="preview-${pid}"]`)!;
+      expect(row.querySelector(".header-toggle"), `panel ${pid} 应有 headerToggle`).not.toBeNull();
+    }
+    // 相机行无 header-toggle（视口不可关，保语义正确）
+    const camRow = overlay.querySelector(`[data-testid="preview-camera"]`)!;
+    expect(camRow.querySelector(".header-toggle")).toBeNull();
+    // 切换灯光开关 → 直连 cap.setEnabled（读 isEnabled）
+    const lightRow = overlay.querySelector(`[data-testid="preview-lighting"]`)!;
+    const lightToggle = lightRow.querySelector(".header-toggle") as HTMLElement;
+    const lightBox = lightToggle.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(lightBox.checked).toBe(true);
+    // 点击 label（createHeaderToggle 监听 label，input 点击被去重跳过）
+    lightToggle.click();
+    expect(states.light).toBe(false);
+    expect(setCalls.light).toEqual([false]);
+    handle.dispose();
+  });
+
   it("环境拆组：有 env cap → dock-env 独立出现；scene 组不再含 environment 行", () => {
     const cap = { getMenuControls: () => [] } as unknown as SceneCapability;
     const handle = mountPreviewRootMenu(overlay, makeCtx({

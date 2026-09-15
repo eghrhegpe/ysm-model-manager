@@ -21,6 +21,7 @@ import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { ensureFabStyles } from "./fab.ts";
+import { createHeaderToggle } from "./header-toggle.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import {
@@ -146,6 +147,17 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   const lb = document.createElement("span");
   lb.textContent = tOf(node.labelKey ?? node.id);
   row.append(ic, lb);
+  if (node.headerToggle) {
+    // 组根视图 panel 行能力总开关（对齐环境面板 cap 行 / folder headerToggle）：
+    // createHeaderToggle 内置 stopPropagation → 开关点击不触发整行 action（下钻）。
+    const ht = node.headerToggle;
+    const tg = createHeaderToggle({
+      value: ht.value,
+      onChange: (v: boolean) => ht.onChange(v),
+    });
+    tg.style.marginLeft = "auto";
+    row.append(tg);
+  }
   if (opts?.chevron) {
     const chev = document.createElement("span");
     chev.textContent = ">";
@@ -407,6 +419,39 @@ function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]):
 }
 
 /**
+ * 场景组根视图：可启停能力的 panel 行附加能力总开关（对齐环境面板 cap 行 headerToggle）。
+ *  panelId → capId 映射（lighting→light, shadow→shadow, postproc→postprocessing）。
+ *  仅上述三个真「可启停能力」加开关；camera 是视口（关闭=黑屏）不可关，故不加——保持
+ *  「能关的才给开关」语义正确。value/onChange 直连 cap 的 isEnabled/setEnabled（setEnabled(false)
+ *  语义 = 整体 detach 该能力，与 shadow/postproc/light 面板首行总开关同一真值源）。
+ */
+const SCENE_ROW_TOGGLE_CAPS: Readonly<Record<string, string>> = {
+  lighting: "light",
+  shadow: "shadow",
+  postproc: "postprocessing",
+};
+
+function withSceneGroupRowToggles(
+  ctx: PreviewMenuCtx,
+  g: PreviewMenuGroupDef,
+  groupItems: PreviewMenuNode[],
+): PreviewMenuNode[] {
+  if (g.id !== "scene") return groupItems;
+  return groupItems.map((node) => {
+    if (node.kind !== "panel") return node;
+    const capId = SCENE_ROW_TOGGLE_CAPS[node.id];
+    if (!capId) return node;
+    const cap = ctx.getCap(capId);
+    if (!cap?.isEnabled || !cap.setEnabled || node.headerToggle) return node;
+    // 浅克隆：不改 CORE_MENU_ITEMS 共享单例，仅本组视图行附加 headerToggle
+    return {
+      ...node,
+      headerToggle: { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) },
+    };
+  });
+}
+
+/**
  * [子函数 8/9] 底部 dock 渲染（原 renderDock 闭包升格）。
  *   直达语义（[S5 收口] 数据驱动）：组定义 `directToPanel` 静态声明 → 点击直达该面板节点
  *   （model 组 → roles），新增静态直达组零改本函数；
@@ -422,6 +467,7 @@ function renderPreviewDock(
   makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView,
   actionCtx: PreviewActionMenuCtx,
   adapterItemsRef: { v: PreviewMenuNode[] },
+  ctx: PreviewMenuCtx,
 ): void {
   dock.innerHTML = "";
   const allItems = [...CORE_MENU_ITEMS, ...adapterItemsRef.v];
@@ -471,7 +517,9 @@ function renderPreviewDock(
       if (panels.length === 1 && groupItems.length === 1) {
         showMenu(makePanelViewFn(panels[0]));
       } else {
-        showMenu(makeGroupViewFn(g, groupItems));
+        // 组根视图：可启停能力的 panel 行附加能力总开关（对齐环境面板 cap 行 headerToggle；
+        // 相机不可关——视口开关=黑屏——故不附开关，保语义正确）
+        showMenu(makeGroupViewFn(g, withSceneGroupRowToggles(ctx, g, groupItems)));
       }
     };
     dock.appendChild(btn);
@@ -609,6 +657,7 @@ export function mountPreviewRootMenu(
       makeGroupViewFn,
       actionCtx,
       adapterItemsRef,
+      ctx,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）
   const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, menu, hideMenu);

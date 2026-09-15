@@ -342,3 +342,32 @@ describe("app-sidebar — _reload 并发（pending 补跑防 rtype 错配）", (
     await waitFor(() => el.shadowRoot!.querySelector(".chk"));
   });
 });
+
+describe("app-sidebar — 同步菜单图标/标签渲染", () => {
+  it("「全部类型」项渲染真实 SVG 图标而非转义文本", async () => {
+    const el = await mountSidebar();
+    const pullBtn = $<HTMLButtonElement>(el, ".sidebar-pull-selected");
+    pullBtn.click();
+    const menu = $<HTMLElement>(el, "#sidebar-pull-menu");
+    const all = menu.querySelector('.dd-item[data-sync-type="all"]')!;
+    expect(all.innerHTML).toContain("<svg");
+    expect(all.innerHTML).not.toContain("&lt;svg");
+    expect(all.textContent).toContain("全部类型");
+    unmountElement(el);
+  });
+
+  it("兜底注册表项（SYNC_TYPE_MENU 未覆盖）携带图标与可读短标签，不裸显 id", async () => {
+    const el = await mountSidebar();
+    const pullBtn = $<HTMLButtonElement>(el, ".sidebar-pull-selected");
+    pullBtn.click();
+    const menu = $<HTMLElement>(el, "#sidebar-pull-menu");
+    // maid-model 不在 SYNC_TYPE_MENU 展示配置里，应走兜底分支
+    const maid = menu.querySelector('.dd-item[data-sync-type="maid-model"]')!;
+    expect(maid).toBeTruthy();
+    // 兜底项携带图标（typeIconOf：资源类型 emoji 字形）与可读短标签，不再裸显 id
+    expect(maid.textContent).toContain("🧸"); // typeIconOf(maid-model) 派生图标
+    expect(maid.textContent).toContain("女仆"); // shortLabelOf(maid-model) 返回中文短标签
+    expect(maid.textContent!.trim()).not.toBe("maid-model"); // 不再裸显 id
+    unmountElement(el);
+  });
+});

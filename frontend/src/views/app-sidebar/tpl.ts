@@ -118,24 +118,29 @@ function syncDropdownHTML(o: SyncDropdownOpts): string {
 
 /** 推送/拉取下拉菜单共用的资源类型选项（两组共用，防 jscpd 重复） */
 function typeMenuItemsHTML(): string {
-  const render = (id: string, text: string): string =>
+  // 图标为内部可信 SVG（UI_ICONS / 注册表派生 typeIconOf），不转义；
+  // 文本（locale / 类型 id）走 esc 防注入。拆分两参避免把 SVG 转义成纯文本。
+  const render = (id: string, icon: string, text: string): string =>
     '<div class="dd-item" data-testid="sidebar-sync-type" data-sync-type="' +
     esc(id) +
     '">' +
+    icon +
+    " " +
     esc(text) +
     "</div>";
-  let html = render("all", `${UI_ICONS.package} ${t("sidebar.allTypes")}`);
+  let html = render("all", UI_ICONS.package, t("sidebar.allTypes"));
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));
   for (const m of SYNC_TYPE_MENU) {
     if (ALL_RESOURCE_TYPES.includes(m.id)) {
-      html += render(m.id, `${m.icon} ${m.labelKey ? t(m.labelKey) : (m.label ?? m.id)}`);
+      html += render(m.id, m.icon, m.labelKey ? t(m.labelKey) : (m.label ?? m.id));
     }
   }
   for (const id of ALL_RESOURCE_TYPES) {
     if (!configured.has(id)) {
-      html += render(id, id);
+      // 兜底项同样携带图标（typeIconOf）与可读短标签（shortLabelOf），不再裸显 id
+      html += render(id, typeIconOf(id), shortLabelOf(id));
     }
   }
   return html;

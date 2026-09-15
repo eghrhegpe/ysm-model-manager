@@ -69,10 +69,18 @@ tests/python/__pycache__/
 .commandcode/
 .agent-teams/
 .dsh-tmp/
+.openclaw
+
+
 # 个人 AI 工具配置（非项目配置，不入库）
 opencode.json
 reasonix.toml
 CLAUDE.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
 
 # 签名密钥（机密，永不入库；未来移动端签名用）
 *.keystore

@@ -937,7 +937,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
   const items: PreviewMenuNode[] = [
     {
       id: "model",
-      icon: "🧍",
+      icon: "model",
       labelKey: "preview.modelInfo",
       kind: "panel",
       dockGroup: "model",
@@ -949,7 +949,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
     },
     {
       id: "shot",
-      icon: "📷",
+      icon: "camera",
       labelKey: "preview.screenshot",
       kind: "panel",
       dockGroup: "model",
@@ -960,7 +960,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
     },
     {
       id: "material",
-      icon: "🎨",
+      icon: "appearance",
       labelKey: "preview.materialList",
       kind: "panel",
       dockGroup: "model",
@@ -982,7 +982,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
   const playChildren = o.panels?.playNodes?.(o.play ?? emptyVrmPlayBridge());
   items.push({
     id: "vrma-play",
-    icon: "▶️",
+    icon: "play",
     labelKey: "preview.mmdPlay",
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
@@ -992,7 +992,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
   if (o.perception) {
     items.push({
       id: "perception",
-      icon: "👁️",
+      icon: "visibility",
       labelKey: "preview.perception",
       kind: "panel",
       dockGroup: "motion",

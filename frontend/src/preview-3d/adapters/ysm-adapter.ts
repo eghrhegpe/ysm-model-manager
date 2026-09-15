@@ -737,7 +737,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
   const items: PreviewMenuNode[] = [
     {
       id: "model",
-      icon: "🧍",
+      icon: "model",
       labelKey: "preview.modelInfo",
       kind: "panel",
       dockGroup: "model",
@@ -753,7 +753,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
     },
     {
       id: "shot",
-      icon: "📷",
+      icon: "camera",
       labelKey: "preview.screenshot",
       kind: "panel",
       dockGroup: "model",
@@ -773,7 +773,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
   if (o.play) {
     items.push({
       id: "ysm-play",
-      icon: "▶️",
+      icon: "play",
       labelKey: "preview.mmdPlay",
       kind: "panel",
       dockGroup: "motion",
@@ -784,7 +784,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
   if (o.perception) {
     items.push({
       id: "perception",
-      icon: "👁️",
+      icon: "visibility",
       labelKey: "preview.perception",
       kind: "panel",
       dockGroup: "motion",

@@ -304,6 +304,16 @@ export const UI_ICONS: Record<string, string> = {
   motion: svg(
     '<circle cx="12" cy="4" r="2"/><path d="M12 6.5v6"/><path d="M12 8l-4-2"/><path d="M12 8l4-2"/><path d="M12 12.5l-3 7"/><path d="M12 12.5l3 7"/>',
   ),
+  // 相机视角（3D 菜单「相机」面板）
+  camera: svg(
+    '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  ),
+  // 播放（动作/动画播放节点）
+  play: svg('<polygon points="6 3 20 12 6 21 6 3"/>'),
+  // 可见性开关（如骨骼名显示切换）——眼睛
+  visibility: svg(
+    '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>',
+  ),
   // 雾效（阴影/雾面板）——云 + 两道横线
   fog: svg(
     '<path d="M5.5 13h13a3.5 3.5 0 0 0 0-7 5.5 5.5 0 0 0-10.5-1.5A4 4 0 0 0 5.5 13z"/><line x1="4" y1="17" x2="20" y2="17"/><line x1="7" y1="21" x2="17" y2="21"/>',

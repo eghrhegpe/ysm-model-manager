@@ -194,7 +194,7 @@ describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
       "mmd-shot-current", "mmd-shot-front", "mmd-shot-45", "mmd-shot-side", "mmd-shot-back45", "mmd-shot-all",
     ]);
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    expect(nodes[0].icon).toBe("📷");
+    expect(nodes[0].icon).toBe("camera");
   });
 
   it("screenshotFn 为 null → 返回空数组（面板不渲染，与 fillMmdShotPanel 一致）", () => {

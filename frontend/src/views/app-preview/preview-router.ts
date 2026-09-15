@@ -63,7 +63,7 @@ export async function routeModelPreview(
       type: "warn",
     });
     showSimplePreview(ctx, path, {
-      icon: "❓",
+      icon: "unknown",
       label: t("preview.unrecognizedType"),
     });
     return;

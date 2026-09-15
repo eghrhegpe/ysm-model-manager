@@ -277,7 +277,7 @@ export async function showScenePreview(
   path: string,
 ): Promise<void> {
   return showCard(ctx, path, {
-    icon: "🏗️",
+    icon: "build",
     label: t("preview.sceneModel"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
@@ -314,7 +314,7 @@ export async function showMorphPreview(
 ): Promise<void> {
   const basename = path.split(/[/\\]/).pop() || "";
   return showCard(ctx, path, {
-    icon: "😊",
+    icon: "avatar",
     label: t("preview.customMorph"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
@@ -395,7 +395,7 @@ export async function showStagePreview(
 ): Promise<void> {
   const basename = path.split(/[/\\]/).pop() || "";
   return showCard(ctx, path, {
-    icon: "🎤",
+    icon: "voice",
     label: t("preview.stageAnim"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";

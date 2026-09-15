@@ -200,7 +200,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
     id: "model",
     build: (o) => ({
       id: "model",
-      icon: "🧍",
+      icon: "model",
       labelKey: "preview.modelInfo",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
@@ -214,7 +214,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
     id: "morph",
     build: (o) => ({
       id: "morph",
-      icon: "😀",
+      icon: "avatar",
       labelKey: "preview.mmdMorph",
       kind: "panel",
       dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
@@ -235,7 +235,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
     id: "material",
     build: (o) => ({
       id: "material",
-      icon: "🎨",
+      icon: "appearance",
       labelKey: "preview.materialList",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
@@ -249,7 +249,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
     when: (o) => !!o.screenshot,
     build: (o) => ({
       id: "shot",
-      icon: "📷",
+      icon: "camera",
       labelKey: "preview.screenshot",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
@@ -261,7 +261,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
     id: "play",
     build: (o) => ({
       id: "play",
-      icon: "▶️",
+      icon: "play",
       labelKey: "preview.mmdPlay",
       kind: "panel",
       dockGroup: "motion", // 底栏 💃 动作组
@@ -297,7 +297,7 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       const pc = o.perception!;
       return {
         id: "perception",
-        icon: "👁️",
+        icon: "visibility",
         labelKey: "preview.perception",
         kind: "panel",
         dockGroup: "motion",

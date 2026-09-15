@@ -73,7 +73,7 @@ export function shotButtonNodes(
     kind: "button" as const,
     labelKey: SHOT_LABELS[i],
     fallback: key,
-    icon: "📷",
+    icon: "camera",
     action: (): void => {
       void saveShot(key);
     },

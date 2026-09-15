@@ -72,6 +72,11 @@ export function disposeEnvSubscriptions(menu: SlideMenuHandle): void {
   // 会让新会话 select 显示上一会话的选中态
   _lastEnvPreset = "studio";
 }
+// 快捷环境预设：`icon` 是**文本槽**装饰，非结构槽图标——它被拼进下方 options 的 `label`
+// 喂给 `<select>` 的 `<option>`，而 `renderCapSelect` 用 `o.textContent` 落位；`<option>`
+// 的内容模型**只能是文本**，SVG 放进去只会显示 `<svg…>` 字面量。
+// 故按 ADR-238 §1.4「文本槽内符号允许保留」豁免（与 `menu-icons.test.ts` 的豁免清单同源）。
+// 若将来把该控件换成可渲染 SVG 的自定义下拉，请一并撤销豁免并改为语义名。
 const PRESET_ORDER = [
   { id: "studio", icon: "\u2600\uFE0F", labelKey: "preview.presetQuickStudio" },
   { id: "sunset", icon: "\uD83C\uDF05", labelKey: "preview.presetQuickSunset" },

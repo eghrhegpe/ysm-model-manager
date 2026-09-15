@@ -59,7 +59,7 @@ export interface BonesPanelItemOpts {
 export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
   return {
     id: "bones",
-    icon: "🦴",
+    icon: "bone",
     labelKey: "preview.section.bones",
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）

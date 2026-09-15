@@ -26,7 +26,7 @@ describe("buildStatsPanel", () => {
   it("panel + 6 个 field 行（骨骼/网格/三角面/材质/纹理/表情）", () => {
     const panel = buildStatsPanel(stats());
     expect(panel.kind).toBe("panel");
-    expect(panel.icon).toBe("📊");
+    expect(panel.icon).toBe("chart");
     expect(panel.dockGroup).toBe("model");
     expect(panel.id).toBe("stats-panel");
     expect(panel.children).toHaveLength(6);

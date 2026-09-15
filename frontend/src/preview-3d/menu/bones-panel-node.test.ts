@@ -44,7 +44,7 @@ describe("makeBonesPanelItem", () => {
       scene: null,
     });
     expect(item.id).toBe("bones");
-    expect(item.icon).toBe("🦴");
+    expect(item.icon).toBe("bone");
     expect(item.labelKey).toBe("preview.section.bones");
     expect(item.kind).toBe("panel");
     expect(item.dockGroup).toBe("motion");

@@ -37,7 +37,7 @@ export function buildStatsPanel(
   return {
     id: STATS_PANEL_ID,
     kind: "panel",
-    icon: "📊",
+    icon: "chart",
     labelKey: "preview.stats.panel",
     dockGroup: "model",
     // 有统计才显示（铁律：visibleWhen 纯函数守卫；stats 是 build 后闭包值，非状态层项）

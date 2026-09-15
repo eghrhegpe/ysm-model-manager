@@ -144,7 +144,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
       "/repo/unknown",
-      expect.objectContaining({ icon: "❓", label: "无法识别文件类型" }),
+      expect.objectContaining({ icon: "unknown", label: "无法识别文件类型" }),
     );
     unmountElement(el);
   });
@@ -208,7 +208,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
       "/repo/avatar.vrca",
-      expect.objectContaining({ icon: "❓" }),
+      expect.objectContaining({ icon: "unknown" }),
     );
     expect(detailSpies.showVrmMeta).not.toHaveBeenCalled();
     unmountElement(el);
@@ -234,7 +234,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
       "/repo/e.ysm",
-      expect.objectContaining({ icon: "❓", label: "无法识别文件类型" }),
+      expect.objectContaining({ icon: "unknown", label: "无法识别文件类型" }),
     );
     unmountElement(el);
   });

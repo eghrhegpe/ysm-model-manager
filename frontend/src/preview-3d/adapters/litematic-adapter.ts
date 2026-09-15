@@ -391,7 +391,7 @@ function registerSliceSchema(
   registerSchema(sliceKey, buildSliceSchema(sizeInfo, rawGroups, groupMeshes));
   return {
     id: "slice",
-    icon: "🧊",
+    icon: "unknown",
     labelKey: "preview.sliceControl",
     kind: "panel",
     dockGroup: "model",

@@ -68,7 +68,7 @@ describe("vrmShotNodes（current-only 截图按钮）", () => {
     const nodes = vrmShotNodes(() => Promise.resolve("b64"), "/m/a.vrm");
     expect(nodes.map((n) => n.id)).toEqual(["vrm-shot-current"]);
     expect(nodes[0].kind).toBe("button");
-    expect(nodes[0].icon).toBe("📷");
+    expect(nodes[0].icon).toBe("camera");
   });
 
   it("action 触发 saveScreenshot：_modelPath 透传 + screenshotFn 第四参", () => {

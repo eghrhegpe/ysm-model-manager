@@ -69,7 +69,7 @@ describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
       "ysm-shot-current", "ysm-shot-front", "ysm-shot-45", "ysm-shot-side", "ysm-shot-back45", "ysm-shot-all",
     ]);
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    expect(nodes[0].icon).toBe("📷");
+    expect(nodes[0].icon).toBe("camera");
   });
 
   it("screenshot 未定义（undefined，ctx 可选字段）时仍产出 6 按钮（面板常驻，走 fallback）", () => {

@@ -20,6 +20,7 @@ auto_fields:
     - asNumber
     - asString
     - currentRepoType
+    - DataGlyph
     - DedupGroup
     - extBelongsTo
     - extOf

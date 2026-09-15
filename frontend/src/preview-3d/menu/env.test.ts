@@ -59,7 +59,7 @@ function makeCap(
   return {
     id,
     labelKey,
-    icon: "🌤️",
+    icon: "sky" as const,
     descKey: "",
     getMenuNodes: () => nodes,
     apply: vi.fn(),

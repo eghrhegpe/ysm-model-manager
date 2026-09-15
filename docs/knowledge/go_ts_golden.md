@@ -22,6 +22,7 @@ auto_fields:
     - AllSubDirs
     - AMBIGUOUS_EXTS
     - ContainerExts
+    - DataGlyph
     - DisabledSuffix
     - ExtBelongsTo
     - ExtBelongsToBy

@@ -108,7 +108,7 @@ describe("角色面板（roles）", () => {
   it("dock 🧍 → 角色列表（切换模型入口）；点角色名 → 详情模型信息本体直渲；详情「切换角色 ›」回列表", () => {
     const matPanel: PreviewMenuNode = {
       id: "material",
-      icon: "🎨",
+      icon: "appearance",
       labelKey: "preview.material",
       kind: "panel",
       dockGroup: "model",
@@ -158,9 +158,9 @@ describe("角色面板（roles）", () => {
 
   it("dock 🧍 → 列表 → 点角色名 → modelDetailView（模型本体直渲 + 工具行）；不显示 motion 项", () => {
     const defs = (): PreviewMenuNode[] => [
-      { id: "material", icon: "🎨", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
-      { id: "shot", icon: "📷", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
-      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "material", icon: "appearance", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
+      { id: "shot", icon: "camera", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
+      { id: "play", icon: "play", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
     ];
     regRole("/m/a.jsm", defs());
     const handle = mountPreviewRootMenu(overlay, makeCtx());
@@ -181,15 +181,15 @@ describe("角色面板（roles）", () => {
 
   it("dock 💃 → motionDetailView（卡壳收纳 + 入口行 array，内容跳转后渲染）；不显示模型信息本体和工具行", () => {
     const defs = (): PreviewMenuNode[] => [
-      { id: "material", icon: "🎨", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
-      { id: "shot", icon: "📷", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
-      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
+      { id: "material", icon: "appearance", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
+      { id: "shot", icon: "camera", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
+      { id: "play", icon: "play", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
     ];
     regRole("/m/a.jsm", defs());
     const handle = mountPreviewRootMenu(overlay, makeCtx());
     // mountPreviewRootMenu 不自动注入适配器项 → 先注入 motion 组项使 dock-motion 出现
     handle.setAdapterItems([
-      { id: "dockPlay", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
+      { id: "dockPlay", icon: "play", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
     ]);
     // 💃 → motionDetailView：一级 = 卡壳收纳 + 入口行 array（ADR-242），内容不内联
     (overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement).click();
@@ -362,7 +362,7 @@ describe("模型详情信息本体（三通道回归锁）", () => {
       primaryPanel,
       {
         id: "shot",
-        icon: "📷",
+        icon: "camera",
         labelKey: "preview.screenshot",
         kind: "panel",
         dockGroup: "model",

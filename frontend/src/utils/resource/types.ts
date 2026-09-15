@@ -302,12 +302,26 @@ export function resolveDefaultPreviewKey(rtype: string): string {
   return first?.preview ?? rtype;
 }
 
+declare const dataGlyphBrand: unique symbol;
+
+/**
+ * 数据图标字形（品牌类型，ADR-248 D2）。
+ *
+ * 为什么需要品牌：`resource_types.json` 派生的图标（§1.3 🚨不可动）与 UI 图标（`UiIconName`）
+ * 在源码里**都是字符串**，从前靠约定区分、靠闸守。打上品牌后**裸字面量无法构造本类型**——
+ * 于是「结构槽字段里不许出现硬编码 emoji」从审查纪律升格为**编译期约束**。
+ * 形态是彩色 emoji，由 `UI_ICONS` 体系之外的渲染路径（`applyIcon` 的文本兜底）承载。
+ */
+export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
+
 /**
  * 资源类型图标（从 resource_types.json 的 icon 字段派生——扩展点残留清单 #3：
  * 原 icon.ts 手写 RTYPE_ICONS 与 JSON 漂移，新增类型须手改；现 JSON 加 icon 即自动生效）。
+ *
+ * 返回 `DataGlyph`（品牌类型）：调用方可直接喂结构槽 `icon` 字段，但**不可**在此处塞裸字面量。
  */
-export function typeIconOf(id: string): string {
-  return RESOURCE_CAPS[id]?.icon || "📦";
+export function typeIconOf(id: string): DataGlyph {
+  return (RESOURCE_CAPS[id]?.icon || "📦") as DataGlyph;
 }
 
 /** ysm 单文件（.ysm/.json）走前端 WASM 预览；.zip/.7z 容器由 Go FindPreviewImage 兜底 */

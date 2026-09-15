@@ -68,7 +68,7 @@ export async function resolveDstDir(
 ): Promise<{ folder: string; dstDir: string } | null> {
   const folder = await modalPrompt({
     title: opts.title,
-    icon: opts.icon,
+    titleIcon: opts.icon,
     placeholder: t("ctx.dstPlaceholder"),
     okText: opts.okText,
   });

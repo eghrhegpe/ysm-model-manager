@@ -29,7 +29,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "model",
             kind: "panel",
             labelKey: "preview.modelInfo",
-            icon: "🧍",
+            icon: "model",
             dockGroup: "model",
             // renderCustom 逃生舱通道（schema-registry 声明不再允许新面板走此通道；
             // 既有 3D bone panel 等保留——测试锚点仅验节点结构可承载 renderCustom）
@@ -41,7 +41,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "shot",
             kind: "action",
             labelKey: "preview.screenshot",
-            icon: "📷",
+            icon: "camera",
             dockGroup: "model",
             action: (): void => {
               /* screenshot */
@@ -51,7 +51,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "bones",
             kind: "panel",
             labelKey: "preview.section.bones",
-            icon: "🦴",
+            icon: "bone",
             dockGroup: "model",
             renderCustom: (): void => {
               /* 3D bone panel */
@@ -69,7 +69,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "ysm-play",
             kind: "action",
             labelKey: "preview.play",
-            icon: "▶️",
+            icon: "play",
             dockGroup: "motion",
             action: (): void => {
               /* play */

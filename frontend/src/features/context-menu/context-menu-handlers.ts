@@ -216,7 +216,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       try {
         const ok2 = await modalConfirm({
           title: t("ctx.recycleTitle"),
-          icon: "♻️",
+          titleIcon: "♻️",
           message: t("ctx.recycleConfirm", {
             n: ctx.paths.length,
           }),

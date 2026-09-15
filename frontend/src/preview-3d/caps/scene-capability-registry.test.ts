@@ -14,7 +14,7 @@ function makeFakeCap(id: string, overrides: Partial<SceneCapability> = {}): Scen
     id,
     labelKey: `label.${id}`,
     descKey: `desc.${id}`,
-    icon: "🔧",
+    icon: "tools",
     apply: vi.fn(),
     dispose: vi.fn(),
     setEnabled: vi.fn(),

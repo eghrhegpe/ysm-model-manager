@@ -114,7 +114,7 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
     close: settleClose,
   } = createDialog<string[] | null>({
     title: t("dialog.editTags"),
-    icon: "🏷️",
+    titleIcon: "🏷️",
     boxClass: "dlg-box dlg-pad te-box", // 语义类保留,补充布局在 .te-box
     tabIndex: 0,
     cancelValue: null,

@@ -1,6 +1,6 @@
 // ===== 确认弹窗 modalConfirm（modal.ts 拆分 — ADR-187 D2）=====
 // 原 modal.ts（ADR-014 P3）confirm 段独立成文件；脚手架走 modal-core createDialog。
-// 用法: const ok = await modalConfirm({ title, icon, message, danger })
+// 用法: const ok = await modalConfirm({ title, titleIcon, message, danger })
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -9,7 +9,7 @@ import { createDialog, type ModalLabels } from "./modal-core.ts";
 /** modalConfirm 选项 */
 export interface ModalConfirmOptions {
   title: string;
-  icon?: string;
+  titleIcon?: string;
   message: string;
   okText?: string;
   danger?: boolean;
@@ -53,10 +53,10 @@ function confirmBoxBuilder(
  */
 export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    const { title, icon, message, okText, danger, width, bodyHTML, labels } = opts;
+    const { title, titleIcon, message, okText, danger, width, bodyHTML, labels } = opts;
     const { box, close } = createDialog<boolean>({
       title,
-      icon,
+      titleIcon,
       width,
       tabIndex: 0,
       cancelValue: false,

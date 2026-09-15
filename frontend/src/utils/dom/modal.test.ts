@@ -182,7 +182,7 @@ describe("modalConfirm — 确认框", () => {
   });
 
   it("icon 经 esc 转义（P3 修复：标题 icon 裸插 innerHTML 会注入）", async () => {
-    modalConfirm({ title: "确认", icon: '<img src=x onerror="alert(1)">', message: "m" });
+    modalConfirm({ title: "确认", titleIcon: '<img src=x onerror="alert(1)">', message: "m" });
     const titleEl = document.querySelector(".dlg-title") as HTMLElement;
     expect(titleEl.querySelector("img")).toBeNull(); // 未生成 img 元素
     expect(titleEl.innerHTML).toContain("&lt;img"); // 原文以转义形式保留

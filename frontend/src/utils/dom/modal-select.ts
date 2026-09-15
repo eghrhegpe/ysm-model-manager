@@ -1,6 +1,6 @@
 // ===== 下拉选择弹窗 modalSelect（modal.ts 拆分 — ADR-187 D2）=====
 // 原 modal.ts（ADR-014 P3）select 段独立成文件；脚手架走 modal-core createDialog。
-// 用法: const choice = await modalSelect({ title, icon, items })
+// 用法: const choice = await modalSelect({ title, titleIcon, items })
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -9,7 +9,7 @@ import { createDialog, type ModalLabels } from "./modal-core.ts";
 /** modalSelect 选项 */
 export interface ModalSelectOptions {
   title: string;
-  icon?: string;
+  titleIcon?: string;
   items: string[];
   placeholder?: string;
   okText?: string;
@@ -44,10 +44,10 @@ function selectBoxBuilder(
  */
 export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, icon, items, okText, labels } = opts;
+    const { title, titleIcon, items, okText, labels } = opts;
     const { box, close } = createDialog<string | null>({
       title,
-      icon,
+      titleIcon,
       width: "400px",
       tabIndex: -1,
       cancelValue: null,

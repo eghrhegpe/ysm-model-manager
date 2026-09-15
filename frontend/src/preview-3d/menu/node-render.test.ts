@@ -48,7 +48,7 @@ describe("renderMenu 新 kind", () => {
   it("button: 渲染操作按钮行", () => {
     const clicked: string[] = [];
     const nodes: PreviewMenuNode[] = [
-      { id: "shot-current", kind: "button", labelKey: "preview.screenshotCurrent", icon: "📷", action: () => { clicked.push("current"); } },
+      { id: "shot-current", kind: "button", labelKey: "preview.screenshotCurrent", icon: "camera", action: () => { clicked.push("current"); } },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
@@ -242,7 +242,7 @@ describe("renderMenu 新 kind", () => {
         id: "env-cap-fog",
         kind: "row",
         labelKey: "preview.fog",
-        icon: "🌫️",
+        icon: "fog",
         headerToggle: {
           value: false,
           onChange: (v: boolean) => {
@@ -264,7 +264,7 @@ describe("renderMenu 新 kind", () => {
         id: "env-cap-sky",
         kind: "row",
         labelKey: "preview.sky",
-        icon: "☁️",
+        icon: "sky",
         rowDensity: "compact",
         action: () => {},
       },
@@ -424,7 +424,7 @@ describe("renderMenu 新 kind", () => {
   it("action: 渲染可点击行，点击触发 action", () => {
     const clicked: string[] = [];
     const nodes: PreviewMenuNode[] = [
-      { id: "act-close", kind: "action", labelKey: "preview.close", icon: "✕", action: () => { clicked.push("close"); } },
+      { id: "act-close", kind: "action", labelKey: "preview.close", icon: "close", action: () => { clicked.push("close"); } },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);

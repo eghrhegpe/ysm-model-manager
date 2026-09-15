@@ -162,7 +162,7 @@ function onRecycleEmptyClick(opts: {
     if (opts.getEmptyBusy()) return;
     const confirmed = await opts.modalConfirm({
       title: opts.t("recycle.empty"),
-      icon: "♻️",
+      titleIcon: "♻️",
       message: opts.t("recycle.emptyConfirm"),
       okText: opts.t("recycle.emptyOk"),
       danger: true,

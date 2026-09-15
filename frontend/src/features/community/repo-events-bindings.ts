@@ -162,7 +162,7 @@ async function cmReHandleSingleDownload(
     try {
       ok = await modalConfirm({
         title: t("workshop.largeFile"),
-        icon: "📏",
+        titleIcon: "📏",
         message: `${(size / 1024 / 1024).toFixed(1)}MB，${t("workshop.confirmDownload")}`,
         okText: t("workshop.download"),
       });

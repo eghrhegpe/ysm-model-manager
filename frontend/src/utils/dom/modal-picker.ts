@@ -18,7 +18,7 @@ export interface ModalPickerItem {
 /** modalPicker 选项 */
 export interface ModalPickerOptions {
   title: string;
-  icon?: string;
+  titleIcon?: string;
   width?: string;
   /** 标题下、列表上的说明文字 */
   subtitle?: string;
@@ -117,10 +117,10 @@ function pickerBoxBuilder(
  */
 export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult | null> {
   return new Promise((resolve) => {
-    const { title, icon, width, subtitle, items, footerHTML, cancelText, labels } = opts;
+    const { title, titleIcon, width, subtitle, items, footerHTML, cancelText, labels } = opts;
     const { box, close } = createDialog<ModalPickerResult | null>({
       title,
-      icon,
+      titleIcon,
       width: width || "480px",
       tabIndex: 0,
       cancelValue: null,

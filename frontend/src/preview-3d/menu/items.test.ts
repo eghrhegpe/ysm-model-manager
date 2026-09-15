@@ -113,10 +113,10 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
       // [doc:adr-126-p4-b-1] vrm model/shot 走 children 声明式（P5 收尾）：假工厂返回
       // 非空节点，契约测试「panel 必有渲染通道」要求 children 非空
       modelInfoNodes: () => [
-        { id: "vrm-fake-info", icon: "🧪", kind: "field" as const, labelKey: "preview.nameLabel", value: "测试.vrm" },
+        { id: "vrm-fake-info", icon: "info", kind: "field" as const, labelKey: "preview.nameLabel", value: "测试.vrm" },
       ],
       shotNodes: () => [
-        { id: "vrm-fake-shot", icon: "📷", kind: "button" as const, labelKey: "preview.screenshot" },
+        { id: "vrm-fake-shot", icon: "camera", kind: "button" as const, labelKey: "preview.screenshot" },
       ],
     },
   };
@@ -516,7 +516,7 @@ describe("渲染失败兜底（render 抛错不崩）", () => {
       const { overlay, handle } = mountWith([
         {
           id: "broken",
-          icon: "❌",
+          icon: "error",
           labelKey: "preview.modelInfo",
           kind: "panel",
           renderCustom: boom,

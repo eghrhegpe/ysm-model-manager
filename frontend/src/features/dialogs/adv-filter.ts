@@ -179,7 +179,7 @@ export function modalAdvFilter(
     const v = opts.value || {};
     const { overlay, box, close } = createDialog<AdvFilterResult>({
       title: t("dialog.advFilter"),
-      icon: "⚙️",
+      titleIcon: "⚙️",
       width: "420px",
       boxClass: "dlg-box dlg-pad dlg-gap-lg",
       tabIndex: 0,

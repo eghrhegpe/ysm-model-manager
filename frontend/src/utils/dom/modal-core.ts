@@ -199,17 +199,17 @@ function appendDialogBox(
 
 /**
  * 统一标题行（ADR-190 D3：抽象抽全——原 5 个 builder 各自重复渲染）。
- * icon 空时省略图标与空格（与旧实现「空 icon 留前导空格」的视觉差异可忽略）。
+ * titleIcon 空时省略图标与空格（与旧实现「空 titleIcon 留前导空格」的视觉差异可忽略）。
  * titleExtra 追加为行内子节点（如 rename 的「读取头部」按钮），保持在标题行右侧。
  */
 function buildTitleRow(
   title: string,
-  icon: string | undefined,
+  titleIcon: string | undefined,
   titleExtra?: HTMLElement,
 ): HTMLElement {
   const el = document.createElement("div");
   el.className = "dlg-title dlg-title-flush";
-  el.innerHTML = icon ? `${esc(icon)} ${esc(title)}` : esc(title);
+  el.innerHTML = titleIcon ? `${esc(titleIcon)} ${esc(title)}` : esc(title);
   if (titleExtra) el.appendChild(titleExtra);
   return el;
 }
@@ -234,7 +234,7 @@ function registerDialogLife<T>(
  */
 export function createDialog<T>(opts: {
   title: string;
-  icon?: string | undefined;
+  titleIcon?: string | undefined;
   /** 标题行内追加的自定义节点（如操作按钮），保持行内布局 */
   titleExtra?: HTMLElement;
   width?: string | undefined;
@@ -250,7 +250,7 @@ export function createDialog<T>(opts: {
 }): { overlay: HTMLDivElement; box: HTMLDivElement; close: (value: T) => void } {
   const {
     title,
-    icon,
+    titleIcon,
     titleExtra,
     width,
     boxClass,
@@ -264,7 +264,7 @@ export function createDialog<T>(opts: {
   const { overlay, close } = buildOverlay(tabIndex, closable, cancelValue, resolve, onClose);
   const box = appendDialogBox(overlay, width, buildBox, boxClass);
   // 标题行由脚手架统一 prepend（buildBox 内的 innerHTML 赋值先行完成，互不覆盖）
-  box.prepend(buildTitleRow(title, icon, titleExtra));
+  box.prepend(buildTitleRow(title, titleIcon, titleExtra));
   registerDialogLife(overlay, closable, cancelValue, close);
   return { overlay, box, close };
 }

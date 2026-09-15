@@ -189,7 +189,7 @@ export async function showRenameDialog(
     const parsed = parseModelName(currentName);
     const { overlay, box, close } = createDialog<string | null>({
       title: t("dialog.renameModel"),
-      icon: "✂️",
+      titleIcon: "✂️",
       titleExtra: dgRnBuildHeaderBtn(),
       boxClass: "dlg-box dlg-pad dlg-gap",
       tabIndex: 0,

@@ -97,7 +97,7 @@ describe("mergeStatsMenuItems", () => {
 
   it("有统计 → 追加到适配器 menuItems 之后，不覆盖", () => {
     const adapterItems: PreviewMenuNode[] = [
-      { id: "layers", kind: "panel", icon: "⛰️", labelKey: "x" },
+      { id: "layers", kind: "panel", icon: "voxel", labelKey: "x" },
     ];
     const merged = mergeStatsMenuItems(adapterItems, stats());
     expect(merged).toHaveLength(2);
@@ -109,7 +109,7 @@ describe("mergeStatsMenuItems", () => {
 
   it("无统计（全 0）→ 仅保留适配器项，不注入统计面板", () => {
     const adapterItems: PreviewMenuNode[] = [
-      { id: "layers", kind: "panel", icon: "⛰️", labelKey: "x" },
+      { id: "layers", kind: "panel", icon: "voxel", labelKey: "x" },
     ];
     const merged = mergeStatsMenuItems(adapterItems, stats({ meshCount: 0, boneCount: 0 }));
     expect(merged).toHaveLength(1);
@@ -119,8 +119,8 @@ describe("mergeStatsMenuItems", () => {
   it("幂等保护：入参已含 stats-panel（id 去重）→ 不重复追加", () => {
     // 审核 nit：防日后多调用点重复注入（现仅 mount3D + switch 两处互斥调用）
     const existing: PreviewMenuNode[] = [
-      { id: "layers", kind: "panel", icon: "⛰️", labelKey: "x" },
-      { id: "stats-panel", kind: "panel", icon: "📊", labelKey: "x", children: [] },
+      { id: "layers", kind: "panel", icon: "voxel", labelKey: "x" },
+      { id: "stats-panel", kind: "panel", icon: "chart", labelKey: "x", children: [] },
     ];
     const merged = mergeStatsMenuItems(existing, stats());
     expect(merged).toHaveLength(2);

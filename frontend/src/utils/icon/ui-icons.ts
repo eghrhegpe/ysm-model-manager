@@ -41,7 +41,7 @@ function svg(inner: string, filled = false): string {
  * 全部 24×24、`stroke-linecap/linejoin: round` 由 `.ws-icon` 或路径自身保证；
  * 路径取通行线性风格（对齐既有 `ICONS` 的视觉重量，避免新旧图标混排时粗细不一）。
  */
-export const UI_ICONS: Record<string, string> = {
+export const UI_ICONS = {
   // ── 状态语义 ──
   warning: svg(
     '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
@@ -338,7 +338,19 @@ export const UI_ICONS: Record<string, string> = {
   // ── 排序/方向 ──
   chevronUp: svg('<polyline points="6 15 12 9 18 15"/>'),
   chevronDown: svg('<polyline points="6 9 12 15 18 9"/>'),
-};
+} satisfies Record<string, string>;
+
+/**
+ * 图标语义名（字面量联合，ADR-248 D1）——`UI_ICONS` 的键。
+ *
+ * 收紧前是 `Record<string, string>`，于是**拼错图标名在编译期毫无提示**，只在运行时
+ * 经 `resolveIcon()` 返回空 → 静默无图标（本仓真实踩过：菜单表写 `icon: "camera"` 而
+ * 图标不存在时，界面只是"少了点什么"）。现在写错即 `tsc` 报错。
+ *
+ * 与 `DataGlyph`（`utils/resource/types.ts`）的分工见 ADR-248 D3：
+ * 结构槽字段类型为 `UiIconName | DataGlyph`，裸 emoji 字面量两者皆不满足 → 编译失败。
+ */
+export type UiIconName = keyof typeof UI_ICONS;
 
 /** 全部可用图标名（供测试与文档消费）。 */
 export function uiIconNames(): string[] {

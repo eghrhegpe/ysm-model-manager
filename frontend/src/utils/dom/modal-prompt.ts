@@ -1,6 +1,6 @@
 // ===== 输入框弹窗 modalPrompt（modal.ts 拆分 — ADR-187 D2）=====
 // 原 modal.ts（ADR-014 P3）prompt 段独立成文件；脚手架走 modal-core createDialog。
-// 用法: const name = await modalPrompt({ title, icon, value, placeholder })
+// 用法: const name = await modalPrompt({ title, titleIcon, value, placeholder })
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -9,7 +9,7 @@ import { createDialog, type ModalLabels } from "./modal-core.ts";
 /** modalPrompt 选项 */
 export interface ModalPromptOptions {
   title: string;
-  icon?: string;
+  titleIcon?: string;
   value?: string;
   placeholder?: string;
   okText?: string;
@@ -45,10 +45,10 @@ function promptBoxBuilder(
  */
 export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, icon, value, placeholder, okText, labels } = opts;
+    const { title, titleIcon, value, placeholder, okText, labels } = opts;
     const { box, close } = createDialog<string | null>({
       title,
-      icon,
+      titleIcon,
       tabIndex: 0,
       cancelValue: null,
       resolve,

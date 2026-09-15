@@ -79,7 +79,7 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
 {
   const src = fs.readFileSync(UI_ICONS_FILE, "utf-8");
   // 提取实现里的键（`  name: svg(` 或 `  name: svg(`；UI_ICONS 对象字面量的顶层键）
-  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\};/.exec(src)?.[1] ?? "";
+  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
   assert.ok(implBlock.length > 0, "未能从 ui-icons.ts 提取 UI_ICONS 对象体（结构变了请同步本测试）");
   const implNames = new Set<string>();
   for (const m of implBlock.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*)\s*:/gm)) {
@@ -109,7 +109,7 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
 // ── 4. SVG 形态约定（复用 .ws-icon，勿新造第二套）──────
 {
   const src = fs.readFileSync(UI_ICONS_FILE, "utf-8");
-  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\};/.exec(src)?.[1] ?? "";
+  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
   // 每个条目都经 svg() 包装 → 应含 class="ws-icon" 与 viewBox="0 0 24 24"
   const wrapper = /function svg\([\s\S]*?\n\}/.exec(src)?.[0] ?? "";
   assert.ok(wrapper.includes('class="ws-icon"'), "svg() 包装器必须带 class=\"ws-icon\"（否则不随主题/字号）");

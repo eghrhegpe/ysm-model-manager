@@ -1,6 +1,6 @@
 // ===== 进度弹窗 modalProgress（modal.ts 拆分 — ADR-187 D2）=====
 // 原 modal.ts（ADR-014 P3）progress 段独立成文件；脚手架走 modal-core createDialog。
-// 用法: const handle = modalProgress({ title, icon, closable }); handle.update(done, total)
+// 用法: const handle = modalProgress({ title, titleIcon, closable }); handle.update(done, total)
 // 注意: fmtMB 不再经本文件 re-export——消费方直连 utils/format/fmt-mb.ts（原「逐步移除」兑现）。
 
 import { t } from "@/core/i18n/t.ts";
@@ -9,7 +9,7 @@ import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 export interface ModalProgressOptions {
   title: string;
-  icon?: string;
+  titleIcon?: string;
   width?: string;
   /** 是否允许 Esc/点遮罩关闭（默认 true；下载等不可中断任务传 false 防误关丢进度） */
   closable?: boolean;
@@ -104,11 +104,11 @@ function updateProgressHandler(
  * 用于版本更新等长任务的前端进度反馈（配合 update:progress 事件）。
  */
 export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
-  const { title, icon, width, closable = true, labels } = opts;
+  const { title, titleIcon, width, closable = true, labels } = opts;
   const { pctEl, track, fill } = buildProgressDoms();
   const { close: settleClose } = createDialog<undefined>({
     title,
-    icon,
+    titleIcon,
     width,
     tabIndex: 0,
     cancelValue: undefined,

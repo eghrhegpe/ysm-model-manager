@@ -55,7 +55,7 @@ export const FILE_HANDLERS = {
       const names = instances.map((i) => i.Name);
       const chosen = await modalSelect({
         title: t("ctx.pushDialogTitle"),
-        icon: "📦",
+        titleIcon: "📦",
         items: names,
         okText: t("ctx.pushOkText"),
       });
@@ -84,7 +84,7 @@ export const FILE_HANDLERS = {
     try {
       const ok2 = await modalConfirm({
         title: t("ctx.fileRecycleTitle"),
-        icon: "♻️",
+        titleIcon: "♻️",
         message: t("ctx.fileRecycleConfirm", {
           name: (ctx.path || "").split(/[/\\]/).pop() || "",
         }),

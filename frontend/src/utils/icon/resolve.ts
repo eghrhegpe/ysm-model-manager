@@ -4,13 +4,26 @@
 //   - UI_ICONS（SVG，如 folderOpen/file）兜底
 // 未命中返回 ""（无图标）；emoji/任意字符串由调用方按兜底路径自行处理（不在此 escape）。
 // 下沉自 views/app-tree/toolbar-menus.ts 的私有 resolveIcon，消除重复实现。
+
+import type { DataGlyph } from "@/utils/resource/types.ts";
 import { ICON_KIT, renderIcon } from "./icon-kit/index.ts";
-import { UI_ICONS } from "./ui-icons.ts";
+import { UI_ICONS, type UiIconName } from "./ui-icons.ts";
+
+/**
+ * 结构槽图标字段的类型（ADR-248 D3）：**UI 语义名** 或 **数据图标字形**。
+ *
+ * 关键在于**裸 emoji 字面量两者皆不满足**（`"🧍"` 既不是 `UiIconName` 的键，也没有
+ * `DataGlyph` 的品牌）→ 写进去即 `tsc` 报错。这条线正是 ADR-238 §1.3（数据图标不可动）
+ * 与 §1.4（结构槽须走 SVG）要守的边界——现在由**类型**守，不再靠清单与扫描。
+ */
+export type IconSpec = UiIconName | DataGlyph;
 
 /** 语义名 → 渲染串（SVG HTML 或 ""）；未命中返回 ""。 */
 export function resolveIcon(name: string): string {
   if (name in ICON_KIT) return renderIcon(ICON_KIT[name]);
-  if (name in UI_ICONS) return UI_ICONS[name];
+  // `in` 已给出运行时证明，但 TS 不会把 `string` 收窄到 keyof（ADR-248 D1 收紧 UI_ICONS 后暴露），
+  // 故此处显式断言——断言的范围被紧邻的 `in` 判定框死，属可接受范围。
+  if (name in UI_ICONS) return UI_ICONS[name as UiIconName];
   return "";
 }
 

@@ -19,6 +19,7 @@
 // 本叶类型保 30+ 消费者 import 零改动。
 
 import type { PreviewSnapshot, PreviewStatePath } from "@/preview-3d/state/preview-paths.ts";
+import type { IconSpec } from "@/utils/icon/resolve.ts";
 
 /** 控件种类（含简单+复杂）——controls 通道承载元素的 kind。
  *  [ADR-195 刀3] 更名收敛（终名 PreviewControlKind）：cap 控件与节点控件收敛到
@@ -177,7 +178,7 @@ export interface PreviewControlSpec {
   min?: number;
   max?: number;
   step?: number;
-  icon?: string;
+  icon?: IconSpec;
   options?: Array<{ value: string; label: string }>;
   /** 衍生控件：状态值 → 控件显示值 */
   get?: (v: unknown) => unknown;
@@ -233,7 +234,7 @@ export interface PreviewMenuNode {
    *  节点自动并入 ⚙️ 设置面板，按本值升序排列。settings 聚合 collectSettingsCapControls
    *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧控件定义 settingsOrder）。 */
   settingsOrder?: number;
-  icon?: string;
+  icon?: IconSpec;
   /** 默认展开（folder 用；card 声明 collapsible:true 时也适用，缺省展开） */
   defaultOpen?: boolean;
   /** [可折叠卡] 仅 card：true = 可折叠卡（箭头 + 点击折叠内容区，复用 folder 折叠态记忆）。

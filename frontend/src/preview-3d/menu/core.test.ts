@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
+import type { PreviewMenuNode } from "./menu-node-types.ts";
 import { switchTabHighlightBg } from "./switch.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {
@@ -209,9 +210,9 @@ describe("mountPreviewRootMenu", () => {
     // 模拟 YS'M/PMX 加载后 sceneRegistry 非空（角色级管理成为主入口）
     sceneRegistry.register({ path: "/m/a.ysm", rtype: "ysm", roots: [], content: {} as unknown as PreviewScene });
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
-    const adapterModelItem = {
+    const adapterModelItem: PreviewMenuNode = {
       id: "model",
-      icon: "🧍",
+      icon: "model",
       labelKey: "preview.modelInfo",
       kind: "panel" as const,
       dockGroup: "model" as const,
@@ -235,9 +236,9 @@ describe("mountPreviewRootMenu", () => {
   it("🧍 dock 按钮：始终直达 roles 面板（与是否加载角色无关），adapter model 项不在 dock 根", () => {
     // Phase A：🧍 永远开 roles 面板，单模型实例工具下沉角色详情，不再平铺 dock 根
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
-    const adapterModelItem = {
+    const adapterModelItem: PreviewMenuNode = {
       id: "model",
-      icon: "🧍",
+      icon: "model",
       labelKey: "preview.modelInfo",
       kind: "panel" as const,
       dockGroup: "model" as const,
@@ -260,7 +261,7 @@ describe("mountPreviewRootMenu", () => {
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
     const actItem = {
       id: "act",
-      icon: "⚡",
+      icon: "performance" as const,
       label: "执行动作",
       kind: "action" as const,
       dockGroup: "scene" as const,
@@ -368,7 +369,7 @@ describe("mountPreviewRootMenu", () => {
     handle.setAdapterItems([
       {
         id: "play",
-        icon: "▶️",
+        icon: "play",
         label: "播放",
         kind: "panel",
         dockGroup: "motion",
@@ -384,7 +385,7 @@ describe("mountPreviewRootMenu", () => {
     handle.setAdapterItems([
       {
         id: "bones",
-        icon: "🦴",
+        icon: "bone",
         labelKey: "preview.section.bones",
         kind: "panel",
         dockGroup: "model",

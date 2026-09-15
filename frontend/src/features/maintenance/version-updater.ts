@@ -76,7 +76,7 @@ async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise
   // ADR-039 豁免注册不同：本模块是瞬态生命周期，有明确的 Off 路径）
   const progress = modalProgress({
     title: "正在更新",
-    icon: "⬇️",
+    titleIcon: "⬇️",
     width: "420px",
     // P3 修复（用户反馈）：下载中弹窗禁止 Esc/点遮罩关闭——误关后进度不可见，
     // 用户无法判断是否还在下载；窗口标题进度（Window.SetTitle）作全局兜底
@@ -131,7 +131,7 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
       : "");
   const ok = await modalConfirm({
     title: t("update.newVersionTitle"),
-    icon: "📦",
+    titleIcon: "📦",
     message: `${t("update.newVersionPrompt", { latest: info.latest, current: info.current })}\n`,
     okText: `⬇️ ${t("update.download")}`,
     width: "480px",

@@ -63,6 +63,6 @@
 | 锐评核实：`locale.ts` 内联 `fetch`/`navigator`/`document` + happy-dom 测试 | 引擎无双标 → D1 |
 | 锐评核实：`_activeBundle` 刷新契约注释（ADR-189 D5 口头纪律） | 手工缓存 + 幽灵缓存面 → D2 |
 | 锐评核实：`pushToDiary` 未注册静默（error-diary.ts） | 日记失活无留痕 → D5 |
-| `scripts/i18n-check.ts:211` 正则 / `:239-289` 影子包扫描 | `SUPPORTED_LANGS` 字面量冻结 + tr 扫描恒绿容忍 |
+| `scripts/i18n-check.ts:211` 正则 / `:239-289` 影子包扫描 | `SUPPORTED_LANGS` 字面量冻结仍有效；**tr 扫描已退役（2026-09）**——被扫对象已根除故恒空，见 `i18n-check.ts` 原位退役说明 |
 
 <!-- 文件名: core-convergence-locale-host.md → 实际文件 ADR-210-core-convergence-locale-host.md -->

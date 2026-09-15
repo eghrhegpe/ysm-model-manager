@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-246：灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化",
+        "link": "/adr/ADR-246-light-volumetric-simplify"
+      },
+      {
         "text": "ADR-245：context-menu 图标语义名统一（对齐 ADR-238）",
         "link": "/adr/ADR-245-context-menu-adr-238"
       },

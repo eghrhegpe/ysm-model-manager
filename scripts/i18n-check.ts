@@ -23,7 +23,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./_lib/parse-args.ts";
-import { toPosix } from "./_lib/to-posix.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = resolve(__dirname, "..", "frontend", "src", "locales");
@@ -237,65 +236,22 @@ if (inAvailNotFile.length || inFileNotAvail.length) {
   log(`\n✅ SUPPORTED_LANGS (${availableLangs.length}) 与 locales/*.ts 文件集完全一致。`);
 }
 
-// ── 影子包校验（ADR-186 配套）：tr("key", fallback) 的 key 必须存在于基准包 ──
-// fallback 是缺译时的保险丝，不该常态命中。key 不在 zh-CN 包 = 用户永远看到的
-// 是散落在代码里的英文 fallback（事实上的"第四语言包"，不进生成链不进测试）。
-// 本检查强制：先入语言包，再写 tr()——key 缺失即报警。
-import { readdirSync as _rd, statSync as _st } from "node:fs";
-
-function walkSources(dir: string, out: string[] = []) {
-  for (const name of _rd(dir)) {
-    const p = resolve(dir, name);
-    const st = _st(p);
-    if (st.isDirectory()) {
-      if (name === "node_modules" || name === "dist") continue;
-      walkSources(p, out);
-    } else if (name.endsWith(".ts") && !name.endsWith(".test.ts")) {
-      out.push(p);
-    }
-  }
-  return out;
-}
-
-const SRC_ROOT = resolve(__dirname, "..", "frontend", "src");
-const trCallRe = /\btr\(\s*['"]([^'"]+)['"]/g;
-const shadowPack: { file: string; key: string }[] = [];
-for (const file of walkSources(SRC_ROOT)) {
-  const text = readFileSync(file, "utf8");
-  for (const m of text.matchAll(trCallRe)) {
-    if (!base.keys.has(m[1]!)) {
-      shadowPack.push({
-        file: toPosix(file).replace(`${toPosix(SRC_ROOT)}/`, ""),
-        key: m[1]!,
-      });
-    }
-  }
-}
-
-if (shadowPack.length > 0) {
-  log(`\n⚠ ${shadowPack.length} 处 tr() 调用的 key 不在 zh-CN 基准包（影子包常态命中）:`);
-  for (const { file, key } of shadowPack.slice(0, 30)) {
-    log(`  ${key}  (${file})`);
-  }
-  if (shadowPack.length > 30) log(`  ... 及其他 ${shadowPack.length - 30} 处`);
-  log("  fallback 应是保险丝而非正文——先把 key 补入 frontend/src/locales/*.ts。");
-  if (strict && !json) {
-    console.error(
-      `\n[i18n-check] --strict: ${shadowPack.length} shadow-pack tr() call(s) → CI fails.`,
-    );
-    process.exit(1);
-  }
-  log("  (warning mode — non-blocking.)");
-} else {
-  log("\n✅ 所有 tr() 调用的 key 均已在基准包注册（无影子包常态命中）。");
-}
+// ── [2026-09 退役] 原「影子包校验」段（扫 `tr("key", fallback)`）──
+// 被扫对象 `tr` 已由 ADR-210 D3 整体根除：`frontend/src` 中 `tr(` 调用 = 0，
+// `core/i18n/tr.ts` 连同 trDynamic/test 一并删除。扫描遂**恒空**，原先输出的
+// 「✅ 所有 tr() 调用的 key 均已在基准包注册」属**空验证**——读起来像验过 `t()` 的 key，
+// 实际什么都没看（比没有检查更危险：制造假信心）。ADR-210 数据溯源表当时记为
+// 「tr 扫描恒绿容忍」，现按「假绿优于无检查」的口径正式退役。
+//
+// 实质保证**未丢失**，且比脚本扫描更强：`t.ts` 的 `LocaleKey = keyof typeof zhCN`
+// 让「key 必须存在于基准包」在**编译期**成立——任何 `t("不存在的键")` 过不了 `tsc`。
+// 若未来重新引入 tr，请连同本段一并恢复。
 
 if (json) {
   const failed =
     totalMissing > 0 ||
     phIssues > 0 ||
     untranslated.length > 0 ||
-    shadowPack.length > 0 ||
     inAvailNotFile.length > 0 ||
     inFileNotAvail.length > 0;
   console.log(

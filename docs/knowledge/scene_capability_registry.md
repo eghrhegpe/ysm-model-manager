@@ -36,6 +36,7 @@ auto_fields:
     - DEFAULT_POSTPROC_PARAMS
     - DirectionalLightParams
     - drawEnvEquirect
+    - effectiveParamsOf
     - ENV_PRESETS
     - EnvironmentCapability
     - EnvironmentParams
@@ -51,8 +52,11 @@ auto_fields:
     - getTypedCap
     - godRaysIntensity
     - GROUND_LAYER_OFFSETS
+    - GROUND_MAT_PARAMS
+    - GROUND_SURFACE_MODES
     - GroundCapability
     - GroundMaterialParams
+    - GroundMatParam
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -67,6 +71,7 @@ auto_fields:
     - MAX_MODELS
     - ModelEntry
     - oneOf
+    - paramIsEffective
     - persistState
     - pickPersistFields
     - POSTPROC_PERSIST_FIELDS

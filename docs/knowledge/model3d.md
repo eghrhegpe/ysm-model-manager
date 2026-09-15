@@ -217,6 +217,7 @@ auto_fields:
     - DragSliderController
     - DragSliderOptions
     - drawEnvEquirect
+    - effectiveParamsOf
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Endianness
@@ -312,8 +313,11 @@ auto_fields:
     - GpuLoadVerdict
     - GpuPeak
     - GROUND_LAYER_OFFSETS
+    - GROUND_MAT_PARAMS
+    - GROUND_SURFACE_MODES
     - GroundCapability
     - GroundMaterialParams
+    - GroundMatParam
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -480,6 +484,7 @@ auto_fields:
     - packMenuItems
     - PackMenuItemsOpts
     - packTextureLabel
+    - paramIsEffective
     - parseJavaModel
     - ParsePmdCtx
     - parsePmdStage

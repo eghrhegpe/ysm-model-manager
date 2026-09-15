@@ -397,11 +397,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_css_layer_check.ts": ["scripts/css-layer-check.ts"],
   // i18n 未使用键：判定层（点分 token 抽取 + 三级判定）与 CLI 接线同属敏感源；
-  // 真实语言包参与键数对账，故 en 包也列入（改键数会触发本测试）。
+  // 三包键数对账（test 块 7 读 zh-CN/ja 断言 nZh===nEn、nJa===nEn），故三包全列——
+  // 仅改 zh-CN.ts/ja.ts 也须触发（review bb94909f9 P3-7）。
   "test_i18n_unused.ts": [
     "scripts/_lib/i18n-unused.ts",
     "scripts/check-i18n-unused.ts",
     "frontend/src/locales/en.ts",
+    "frontend/src/locales/zh-CN.ts",
+    "frontend/src/locales/ja.ts",
   ],
   // 判定层是纯函数模块，契约测试直接 import 它；令牌基准表与 variables.css 对账，
   // 故两者都列为敏感源（任一改动都应触发本测试）。

@@ -63,9 +63,16 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
     "属性值形态应能抽出",
   );
 
+  // 连字符键：lang.zh-CN 类键名含 `-CN` 段，token 字符类若不含 `-` 会截断到
+  // lang.zh 把活键误判死（review bb94909f9 P2）
+  assert.ok(
+    extractDottedTokens('t("lang.zh-CN")').has("lang.zh-CN"),
+    "连字符键 lang.zh-CN 应整体抽出（不截断到 lang.zh）",
+  );
+
   // 纯标识符（无点）不应被当成键 token
   assert.ok(!extractDottedTokens("const foo = 1;").has("foo"), "无点标识符不应入集（键必含点）");
-  console.log("  ✓ extractDottedTokens: 嵌套引号/单引号/反引号/属性值 四种形态均命中");
+  console.log("  ✓ extractDottedTokens: 嵌套引号/单引号/反引号/属性值/连字符键 五种形态均命中");
 }
 
 // ── 3. token 精确匹配优于子串（前缀误判回归锁）──────────
@@ -101,6 +108,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   assert.equal(dyn.dynamicT, 1, 't(x) 应计 1；t("literal.key") 不计');
   // 带参变量形态同样计入（t(err, {...}) 也是动态查表）
   assert.equal(countDynamicKeySites("t(err, { n: 1 })").dynamicT, 1, "带参变量也应计入");
+  // t( x ) 带空白形态计入（首字符类若含 \s 会与前置 \s* 矛盾而漏计，review bb94909f9 P2）
+  assert.equal(countDynamicKeySites("t( x )\n").dynamicT, 1, "t( x ) 带空白应计入");
+  // 空参 t() 不计（无效查表，非动态键点）
+  assert.equal(countDynamicKeySites("t()\n").dynamicT, 0, "t() 空参不应计入");
 
   // 键构造式（模板串 / 拼接里以 `前缀.` 起头）是 dead 判定的唯一真风险源，必须数出来
   // biome-ignore lint/suspicious/noTemplateCurlyInString: 被测对象就是键构造式模板串，字面量写法刻意

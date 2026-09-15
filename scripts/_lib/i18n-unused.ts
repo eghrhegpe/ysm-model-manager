@@ -75,7 +75,9 @@ export function parseLocaleKeys(localeText: string): string[] {
  */
 export function extractDottedTokens(corpus: string): Set<string> {
   const out = new Set<string>();
-  for (const m of corpus.matchAll(/[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+/g)) {
+  // 字符类含 `-_` 段：键名含连字符（如 `lang.zh-CN`），截断到 `lang.zh` 会把活键误判死
+  // （review bb94909f9 P2）；连字符/下划线只允许**段内**出现——段首仍是字母，不放宽。
+  for (const m of corpus.matchAll(/[A-Za-z][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)+/g)) {
     out.add(m[0]);
   }
   return out;
@@ -85,8 +87,8 @@ export function extractDottedTokens(corpus: string): Set<string> {
  * 逐键判定使用级别。
  *
  * @param keys      语言包键集合（通常取 en 包为准，另两包由一致性测试保证对齐）
- * @param prodLits  生产侧字面量集合（extractStringLiterals 产出）
- * @param allLits   全仓字面量集合（生产 + 测试 + 脚本）
+ * @param prodLits  生产侧点分 token 集合（extractDottedTokens 产出）
+ * @param allLits   全仓点分 token 集合（生产 + 测试 + 脚本）
  */
 export function classifyKeyUsage(
   keys: readonly string[],
@@ -117,7 +119,9 @@ export interface DynamicKeySites {
 export function countDynamicKeySites(corpus: string): DynamicKeySites {
   let dynamicT = 0;
   for (const line of corpus.split("\n")) {
-    for (const _ of line.matchAll(/\bt\(\s*[^"'`\s)][^)]{0,60}\)/g)) dynamicT++;
+    // 首字符类不含 \s 与 )（与前置 \s* 矛盾会漏计「t( 变量」带空白形态；) 排除
+    // t() 空参——那是无效查表，非动态键点，review bb94909f9 P2）
+    for (const _ of line.matchAll(/\bt\(\s*[^"'`)\s][^)]{0,60}\)/g)) dynamicT++;
   }
   let constructed = 0;
   for (const _ of corpus.matchAll(/\bt\(\s*`[a-zA-Z]+\.[^`]*\$\{/g)) constructed++;

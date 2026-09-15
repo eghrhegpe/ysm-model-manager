@@ -171,15 +171,15 @@ const fakeGit =
   );
 }
 
-// ⓪ base 不可解析（全零 sha / 拼错）→ 记 INFO 并退回本地三源，不新增失败模式
+// ⓪ base 不可解析（拼错 ref）→ 记 INFO 并退回本地三源，不新增失败模式
 {
   const notes: string[] = [];
   const r = resolveResponsibleFiles(
     fakeGit({
-      "rev-parse --verify --quiet 000^{commit}": null,
+      "rev-parse --verify --quiet bogus-ref^{commit}": null,
       "diff --cached --name-only": "frontend/src/x.ts\n",
     }),
-    "000",
+    "bogus-ref",
     notes,
   );
   assert(
@@ -189,6 +189,43 @@ const fakeGit =
   assert(
     notes.some((n) => n.includes("不可解析")),
     "base 不可解析应留 INFO 痕",
+  );
+}
+
+// ⓪ 全零 SHA（GitHub 新 tag/新分支 push 的 event.before）→ 试上一个可达 tag 兜底；
+//    取不到（首版）→ 留 INFO 并退回本地三源（与旧行为一致）
+{
+  const notes: string[] = [];
+  const r = resolveResponsibleFiles(
+    fakeGit({
+      "describe --tags --abbrev=0 HEAD^": "v1.0.0\n",
+      "diff --name-only v1.0.0...HEAD": "a.ts\n",
+    }),
+    "000",
+    notes,
+  );
+  assert(
+    JSON.stringify(r) === JSON.stringify(["a.ts"]),
+    `全零 base 应按上一个可达 tag 归属，实际 ${JSON.stringify(r)}`,
+  );
+}
+{
+  const notes: string[] = [];
+  const r = resolveResponsibleFiles(
+    fakeGit({
+      "describe --tags --abbrev=0 HEAD^": null,
+      "diff --cached --name-only": "b.ts\n",
+    }),
+    "000",
+    notes,
+  );
+  assert(
+    JSON.stringify(r) === JSON.stringify(["b.ts"]),
+    "全零 base 无 tag 历史时应退回本地三源",
+  );
+  assert(
+    notes.some((n) => n.includes("全零")),
+    "全零 base 应留 INFO 痕",
   );
 }
 

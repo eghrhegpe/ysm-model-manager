@@ -19,8 +19,11 @@ jobs:
   # ── 测试门禁（可复用 workflow test.yml，main/PR 由 ci.yml 调用）───
   test:
     uses: ./.github/workflows/test.yml
-    # 变更范围（ADR-244）：tag push 的 event.before 多为全零（新 tag）→ 脚本识别为不可解析
-    # 后退回本地解析，与旧行为一致；能解析时则按「上一 tag..HEAD」归属。
+    # 变更范围（ADR-244 + 2026-09 审查 P1）：不能直接传 event.before——
+    # 新 tag 的 event.before 是全零 SHA（非提交对象），脚本会识别为全零基线退回本地解析；
+    # CI 本地三源全空 ⇒ 责任集 null ⇒ 严格模式全阻断（与旧行为同病）。
+    # 修正在解析层（scripts/_lib/deadcode-attrib.ts）：全零 base 时试 `git describe` 找上一个
+    # 可达发版 tag 作归属基线；取不到（首版/异常）仍退回本地解析兜底，行为与旧版一致。
     with:
       changed-base: ${{ github.event.before }}
 

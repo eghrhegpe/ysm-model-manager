@@ -241,12 +241,15 @@ auto_fields:
     - typeFromWebDir
     - unloadSessionModel
     - UpdateableScene
+    - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT
     - VMD_REFERENCE_HEIGHT
     - VMD_RETARGET_CANDIDATES
     - VMD_RETARGET_UNMAPPED
     - VMD_ROOT_TRANSLATION_CANDIDATES
     - VmdBindingPlan
+    - VmdFootIKTarget
+    - VmdFootIKTargets
     - VmdHumanoidRig
     - VmdRetargetOptions
     - VmdRetargetResult

@@ -120,16 +120,49 @@ export function resolveResponsibleFiles(
       .filter(Boolean)
       .map((p: string) => toPosix(p));
   };
-  if (baseRef) {
+  // 全零 SHA（GitHub 新 tag / 新分支 push 的 event.before）与空值同义：无可归属对象。
+  // 若仍按「显式范围」走，rev-parse 必败 → 退回本地解析 → CI 三源全空 → null → 严格模式
+  // 结构性全阻断（正是 ADR-244 要治的恒红）；这里直接当未提供处理，但保留「显式范围」
+  // 的失败兜底语义：本地也归属不到就 fail-closed，不因「空 base 合法化」而静默转绿。
+  const isZeroSha =
+    typeof baseRef === "string" && /^[0]+$/.test(baseRef) && baseRef.length > 0;
+  if (baseRef && !isZeroSha) {
     const verified = git("rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`);
     if (verified?.trim()) {
-      const scope = collect(git("diff", "--name-only", `${verified.trim()}...HEAD`));
-      notes.push(
-        `责任范围: --base ${baseRef.slice(0, 12)}（本次变更 ${scope.length} 个文件）—— CI 场景唯一可用上下文`,
-      );
-      return scope;
+      const out = git("diff", "--name-only", `${verified.trim()}...HEAD`);
+      // diff 失败（null）与「无差异」(空 stdout) 严格区分：force-push / 不可达 base 时
+      // 三点合并基不存在 → diff 报错 ⇒ 必须与不可解析同走本地兜底，而非返回 [] 全放行。
+      if (out === null) {
+        notes.push(`--base ${baseRef} 与 HEAD 无公共历史（diff 失败），已退回本地上下文解析`);
+      } else {
+        const scope = collect(out);
+        notes.push(
+          `责任范围: --base ${baseRef.slice(0, 12)}（本次变更 ${scope.length} 个文件）—— CI 场景唯一可用上下文`,
+        );
+        return scope;
+      }
+    } else {
+      notes.push(`--base ${baseRef} 不可解析（非提交对象），已退回本地上下文解析`);
     }
-    notes.push(`--base ${baseRef} 不可解析（非提交对象），已退回本地上下文解析`);
+  }
+  if (isZeroSha) {
+    // 全零 base（GitHub 新 tag/新分支 push 的 event.before）在 CI 无本地上下文可归
+    // （三源全空）⇒ 试「上一个可达 tag」兜底（tag 发版场景的真实归属基线）；
+    // 取不到（首版/无 tag 历史）仍走本地三源，本地 pre-push 场景非空时照常归属，
+    // 三源全空则 fail-closed 严格模式——与旧版行为一致，仅比旧版多一次 git describe 兜底。
+    const prevTag = git("describe", "--tags", "--abbrev=0", "HEAD^");
+    if (prevTag?.trim()) {
+      const base = prevTag.trim();
+      const out = git("diff", "--name-only", `${base}...HEAD`);
+      if (out !== null) {
+        const scope = collect(out);
+        notes.push(
+          `全零基线兜底: 按上一个可达 tag ${base}..HEAD 归属（本次变更 ${scope.length} 个文件）`,
+        );
+        return scope;
+      }
+    }
+    notes.push(`--base 为全零 SHA（GitHub 新对象事件），已退回本地上下文解析`);
   }
   const files = new Set([
     ...collect(git("diff", "--cached", "--name-only")),
@@ -139,8 +172,11 @@ export function resolveResponsibleFiles(
   if (files.size > 0) return [...files];
   const upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}");
   if (upstream?.trim()) {
-    const pushed = collect(git("diff", "--name-only", `${upstream.trim()}...HEAD`));
-    if (pushed.length > 0) return pushed;
+    const out = git("diff", "--name-only", `${upstream.trim()}...HEAD`);
+    if (out !== null) {
+      const pushed = collect(out);
+      if (pushed.length > 0) return pushed;
+    }
   }
   return null;
 }

@@ -180,6 +180,7 @@ auto_fields:
     - createResolveModeBridge
     - createSlideMenu
     - createTextureDecoder
+    - createVrmFootIKController
     - createWorkerBridge
     - CreateWorkerBridgeOpts
     - createWorkerParser
@@ -241,6 +242,7 @@ auto_fields:
     - eulerToQuaternion
     - evaluateGpuLoad
     - extractIKChainFromTree
+    - extractLegChains
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - fbxBonesToBoneNodes
@@ -268,6 +270,8 @@ auto_fields:
     - FogCapability
     - FogMode
     - FootIKController
+    - FootIKSampler
+    - FootIKSamplers
     - formatCapSliderValue
     - frameCameraSide
     - FrameSideOptions
@@ -356,6 +360,7 @@ auto_fields:
     - Ktx2TextureLoader
     - Ktx2TextureLoaderDeps
     - LARGE_MODEL_WARN_BYTES
+    - LegChain
     - LightCapability
     - lightDirToPosition
     - LightParams
@@ -758,12 +763,15 @@ auto_fields:
     - unregisterSchema
     - UpdateableScene
     - Vec3
+    - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT
     - VMD_REFERENCE_HEIGHT
     - VMD_RETARGET_CANDIDATES
     - VMD_RETARGET_UNMAPPED
     - VMD_ROOT_TRANSLATION_CANDIDATES
     - VmdBindingPlan
+    - VmdFootIKTarget
+    - VmdFootIKTargets
     - VmdHumanoidRig
     - VmdRetargetOptions
     - VmdRetargetResult
@@ -772,6 +780,7 @@ auto_fields:
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort
+    - VrmFootIKController
     - VrmMaterialDetail
     - VrmMaterialListItem
     - vrmMenuItems

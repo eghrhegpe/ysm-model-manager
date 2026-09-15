@@ -53,8 +53,12 @@ export function createFootIKController(
     // （不同模型派系里 腰/下半身 的归属不一），取直接父骨才是格式无关的可靠锚点。
     // 父骨缺失（大腿即树根）或悬空 → 回退大腿自身，保持既有行为。
     const parentId = boneTree.byId.get(rootId)?.parentId ?? null;
-    const chainRootId = parentId && boneTree.byId.has(parentId) ? parentId : rootId;
-    const chain = extractIKChainFromTree(boneTree, chainRootId, footId);
+    const parentEntry = parentId ? boneTree.byId.get(parentId) : undefined;
+    const chainRootId = parentId && parentEntry?.object ? parentId : rootId;
+    // 父骨缺 object / 提取失败（父骨不在祖先链上）→ 回退大腿自身，宁可 3 节链也不整腿失效
+    const chain =
+      extractIKChainFromTree(boneTree, chainRootId, footId) ??
+      (chainRootId !== rootId ? extractIKChainFromTree(boneTree, rootId, footId) : null);
     if (!chain || chain.length < 2) continue;
     // 记录初始足部世界 Y 坐标
     const foot = chain[chain.length - 1];

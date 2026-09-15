@@ -302,12 +302,22 @@ export function buildVmdRetargetClip(
     positionScale,
   };
 
+  let source: THREE.AnimationClip;
   if (ghostBones.length === 0) {
-    return { clip: new THREE.AnimationClip("vmd-retarget", 0, []), report };
+    // 无可用映射时也统计被丢弃的轨道，避免诊断面板把「全不可映射」误读为「0 丢弃」：
+    // 用空幽灵骨架（零骨 + 空 morph 表）跑真实 buildAnimation——上游 buildSkeletalAnimation
+    // 按 mesh.skeleton.bones 名单过滤、buildMorphAnimation 按 morphTargetDictionary 过滤，
+    // 零骨空表 ⇒ 源轨道全被滤掉（droppedTracks = 源全量），与 rewriteVmdTracks 统计口径一致。
+    // ⚠️ 不能传 null：buildSkeletalAnimation 无条件读 mesh.skeleton.bones，会 TypeError。
+    source = buildAnimation(vmd, createGhostMesh([]));
+    const { droppedTracks } = rewriteVmdTracks(source, plan, positionScale);
+    return {
+      clip: new THREE.AnimationClip("vmd-retarget", 0, []),
+      report: { ...report, droppedTracks },
+    };
   }
 
   const ghostMesh = createGhostMesh(ghostBones);
-  let source: THREE.AnimationClip;
   try {
     source = buildAnimation(vmd, ghostMesh);
   } finally {

@@ -126,7 +126,7 @@ export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 Mik
     inset: 0;
     background: var(--muted);
     border-radius:var(--radius-xl);
-    transition: background 0.2s;
+    transition:var(--tr-normal);
 }
 
 .toggle .slider::before {
@@ -138,7 +138,7 @@ export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 Mik
     height: 16px;
     background: #fff;
     border-radius: 50%;
-    transition: transform 0.2s;
+    transition:var(--tr-normal);
 }
 
 .toggle input:checked + .slider {

@@ -39,6 +39,9 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
   return ctx;
 }
 
+/** 注入缝桩：脱离环境（本地根装 / CI frontend 装）确定性地「假装 tsc 存在」。 */
+const STUB_TSC = () => "/stub/node_modules/.bin/tsc";
+
 // ── 1. runScriptsTypecheck：自守卫（模式不匹配 = no-op）──
 {
   const ctx = makeCtx({});
@@ -50,7 +53,7 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
 // ── 2. runScriptsTypecheck：rc=0 通过 ──
 {
   const ctx = makeCtx({}, async () => ({ rc: 0, out: "" }));
-  await runScriptsTypecheck(ctx, { allMode: true, docsMode: false });
+  await runScriptsTypecheck(ctx, { allMode: true, docsMode: false, resolveBin: STUB_TSC });
   assert.equal(ctx.results.length, 1);
   assert.equal(ctx.results[0].ok, true);
   assert.ok(ctx.results[0].label.includes("tsc"), "label 应含 tsc");
@@ -60,7 +63,7 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
 // ── 3. runScriptsTypecheck：rc=2（TS18003 无输入）容忍为通过 ──
 {
   const ctx = makeCtx({}, async () => ({ rc: 2, out: "" }));
-  await runScriptsTypecheck(ctx, { allMode: false, docsMode: true });
+  await runScriptsTypecheck(ctx, { allMode: false, docsMode: true, resolveBin: STUB_TSC });
   assert.equal(ctx.results[0].ok, true, "rc=2 应容忍为通过");
   assert.ok(ctx.results[0].note.includes("无"), "note 应说明无输入");
   console.log("  ✓ runScriptsTypecheck：rc=2（无输入）容忍为通过");
@@ -69,10 +72,30 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
 // ── 4. runScriptsTypecheck：rc=1 阻断 ──
 {
   const ctx = makeCtx({}, async () => ({ rc: 1, out: "error TS2304: x\n" }));
-  await runScriptsTypecheck(ctx, { allMode: true, docsMode: false });
+  await runScriptsTypecheck(ctx, { allMode: true, docsMode: false, resolveBin: STUB_TSC });
   assert.equal(ctx.results[0].ok, false);
   assert.equal(ctx.blocked, true, "tsc 失败应置 blocked");
   console.log("  ✓ runScriptsTypecheck：rc=1 → FAIL + blocked");
+}
+
+// ── 4b. runScriptsTypecheck：tsc 缺失 → 如实 FAIL + blocked，且不 spawn（2026-09-15 CI 实证）──
+// 回归背景：CI 只在 frontend/ 装依赖，硬编码根 .bin 路径 → cmd「找不到路径」。
+// 缺工具必须如实阻断（否则是 fail-open 的「假绿」），并给出可执行处方。
+{
+  const ctx = makeCtx({}, async () => ({ rc: 0, out: "" }));
+  let spawned = 0;
+  ctx.shAsync = async () => {
+    spawned += 1;
+    return { rc: 0, out: "" };
+  };
+  await runScriptsTypecheck(ctx, { allMode: true, docsMode: false, resolveBin: () => null });
+  assert.equal(ctx.results.length, 1);
+  assert.equal(ctx.results[0].ok, false, "缺 tsc 不得记为通过（fail-open）");
+  assert.equal(ctx.blocked, true, "缺 tsc 应置 blocked");
+  assert.ok(ctx.results[0].note.includes("未安装"), "note 应点明工具缺失");
+  assert.ok(ctx.results[0].tail.includes("pnpm install"), "tail 应给出可执行处方");
+  assert.equal(spawned, 0, "缺工具时不应 spawn 子进程");
+  console.log("  ✓ runScriptsTypecheck：tsc 缺失 → FAIL + blocked + 不开子进程（诊断可执行）");
 }
 
 // ── 5. runContractTestsBlock：空域 + 非 all 模式 no-op ──
@@ -136,5 +159,5 @@ function makeCtx(plan: Partial<Plan>, shAsyncImpl?: GateCtx["shAsync"]) {
 }
 
 console.log(
-  "\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc / 契约测试空域 no-op / --static 清单）",
+  "\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc + 缺失阻断 / 契约测试空域 no-op / --static 清单）",
 );

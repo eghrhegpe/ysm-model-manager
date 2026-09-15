@@ -6,7 +6,6 @@
  *
  * @module gate-blocks/schedule
  */
-import path from "node:path";
 import { runContractTestsParallel, selectContractTests } from "../contract-tests.ts";
 import {
   ALL_STATIC_TOOLS,
@@ -17,7 +16,7 @@ import {
   GO_STATIC_TOOLS,
 } from "../gate-config.ts";
 import type { GateCtx } from "../gate-ctx.ts";
-import { ROOT } from "../scan-files.ts";
+import { resolveToolBin } from "../tool-bin.ts";
 import { runScopedDocDrift, runTools } from "./static-tools.ts";
 
 /** 契约测试（按域裁剪 #2：变更域 → 只跑相关契约测试）。
@@ -105,20 +104,29 @@ export function runStaticToolsDispatch(
 }
 
 /** scripts/ TS 类型检查（--all / --docs 模式；.ts 文件随 _lib/ 迁移逐步出现）。
- * tsc 不是 mjs 脚本，不走 runTools 的 node scripts/ 路径；TS18003（无输入）容忍为通过。 */
+ * tsc 不是 mjs 脚本，不走 runTools 的 node scripts/ 路径；TS18003（无输入）容忍为通过。
+ *
+ * ⚠️ 二进制须经 `_lib/tool-bin.ts` 双根探测（2026-09-15 CI 实证）：本地常在根 `npm i`
+ * （工具落根 .bin），CI 只在 `frontend/` 跑 `pnpm install`（工具落 frontend/.bin）——
+ * 曾硬编码根路径，致本步在 CI 报 cmd 的「找不到路径」并以 hard 策略阻断整步。
+ * `opts.resolveBin` 为测试注入缝（默认走真实探测），使契约测试可脱离环境断言。 */
 export async function runScriptsTypecheck(
   ctx: GateCtx,
-  opts: { allMode: boolean; docsMode: boolean },
+  opts: { allMode: boolean; docsMode: boolean; resolveBin?: (name: string) => string | null },
 ): Promise<void> {
   if (!opts.allMode && !opts.docsMode) return;
   const t0 = Date.now();
-  const tSC = path.join(
-    ROOT,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "tsc.cmd" : "tsc",
-  );
-  const r = await ctx.shAsync(`"${tSC}" --noEmit -p scripts/tsconfig.json`);
+  const tsc = (opts.resolveBin ?? resolveToolBin)("tsc");
+  if (!tsc) {
+    // 缺工具不是「类型检查通过」：如实阻断 + 给出可执行处方（比 cmd 的缺路径报错可诊断）。
+    ctx.record("npx tsc --noEmit -p scripts/tsconfig.json", false, {
+      time: Date.now() - t0,
+      note: "tsc 未安装（根 / frontend 两处 node_modules/.bin 均未命中）",
+      tail: "修复：cd frontend && pnpm install（CI 唯一安装点 = frontend/）",
+    });
+    return;
+  }
+  const r = await ctx.shAsync(`"${tsc}" --noEmit -p scripts/tsconfig.json`);
   const tscOk = r.rc === 0 || r.rc === 2; // rc=2 = TS18003 无输入，容忍
   ctx.record("npx tsc --noEmit -p scripts/tsconfig.json", tscOk, {
     time: Date.now() - t0,

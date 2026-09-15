@@ -41,6 +41,7 @@ import {
 } from "./_lib/deadcode-attrib.ts";
 import { ROOT, toPosix } from "./_lib/scan-files.ts";
 import { checkStale } from "./_lib/stale-baseline.ts";
+import { resolveToolBin } from "./_lib/tool-bin.ts";
 
 const FRONTEND = path.join(ROOT, "frontend");
 const BASELINE_FILE = path.join(ROOT, "scripts/baseline/deadcode-baseline.json");
@@ -67,20 +68,9 @@ let jscpdParseFailed = false;
 // ── 工具探测与执行 ────────────────────────────────────
 
 function bin(name: string) {
-  // 与 doctor.ts frontendBin 对齐：win32 优先 .cmd（npm shim 真实形态，shell:true 走 cmd.exe），
-  // 其它平台优先 plain（无扩展名可执行）。.ps1 仅作最后兜底（cmd.exe 不直接执行 .ps1）。
-  // monorepo 化（workspaces）后依赖被 hoist 到根 node_modules/.bin，frontend 不再必有——
-  // 根 / frontend 两处都搜，取先存在的（根优先，符合 npm hoist 语义）。
-  const dirs = [
-    path.join(ROOT, "node_modules", ".bin"),
-    path.join(FRONTEND, "node_modules", ".bin"),
-  ];
-  const candidates = dirs.flatMap((dir) =>
-    process.platform === "win32"
-      ? [path.join(dir, `${name}.cmd`), path.join(dir, name), path.join(dir, `${name}.ps1`)]
-      : [path.join(dir, name), path.join(dir, `${name}.ps1`)],
-  );
-  return candidates.find((c) => fs.existsSync(c)) || null;
+  // 双根探测收敛至 _lib/tool-bin.ts 单一事实源（2026-09-15）：本地工具落在根 .bin、
+  // CI 只在 frontend/ 装依赖 ⇒ 单路径硬编码必「本地绿、CI 红」。
+  return resolveToolBin(name);
 }
 
 function run(name: string, args: string[], opts: { allowExit1?: boolean; cwd?: string } = {}) {

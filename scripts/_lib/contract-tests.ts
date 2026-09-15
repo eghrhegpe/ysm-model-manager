@@ -138,6 +138,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_static_tools.ts": ["tests"],
   "test_gate_domains.ts": ["tests"],
   "test_gate_schedule.ts": ["tests"],
+  // 工具二进制双根探测（CI 只在 frontend/ 装依赖 ⇒ 单路径硬编码 = 本地绿 CI 红）
+  "test_tool_bin.ts": ["tests"],
   // 2026-09-14 锐评修复回归锁：css-layer-check 的 TS 插值展开（keyframes 假阳性根治）
   "test_css_layer_check.ts": ["tests", "frontend"],
   // 设计令牌守规判定层（design-tokens.ts）：违规识别语义 + TOKEN_PX_BASELINE 与
@@ -375,8 +377,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/pre-push-gate.ts",
   ],
   // ADR-206 阶段 5：契约测试 / 静态工具补挂 / scripts typecheck 调度迁入 schedule.ts。
-  // 该测试锁 tsc 三态 rc（0/1/2-TS18003）与自守卫语义。
+  // 该测试锁 tsc 三态 rc（0/1/2-TS18003）+ tsc 缺失如实阻断 + 自守卫语义。
   "test_gate_schedule.ts": ["scripts/_lib/gate-blocks/schedule.ts", "scripts/pre-push-gate.ts"],
+  // 工具二进制双根探测的唯一事实源：两个消费方（schedule 的 tsc / deadcode 的 knip+jscpd）
+  // 任一改动都要重验探测语义。
+  "test_tool_bin.ts": [
+    "scripts/_lib/tool-bin.ts",
+    "scripts/_lib/gate-blocks/schedule.ts",
+    "scripts/check-deadcode-baseline.ts",
+  ],
   "test_css_layer_check.ts": ["scripts/css-layer-check.ts"],
   // 判定层是纯函数模块，契约测试直接 import 它；令牌基准表与 variables.css 对账，
   // 故两者都列为敏感源（任一改动都应触发本测试）。

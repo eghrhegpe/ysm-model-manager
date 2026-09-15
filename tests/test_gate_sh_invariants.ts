@@ -41,9 +41,9 @@ const DENYLIST =
  * 新增动态调用点必须在此登记「插值内容全部为开发者常量」的理由并通过 review。
  */
 const DYNAMIC_ALLOWLIST: Record<string, string> = {
-  // schedule.ts：tSC 来自 npx tsc --version 探测的本机 tsc 路径（npx 解析产物，非用户输入）
-  'schedule.ts|`"${tSC}" --noEmit -p scripts/tsconfig.json`':
-    "tSC 为 npx 探测的本机 tsc 路径（工具链产物）",
+  // schedule.ts：tsc 由 _lib/tool-bin.ts 双根探测（候选路径为开发者常量目录拼装 + fs 存在性判定）
+  'schedule.ts|`"${tsc}" --noEmit -p scripts/tsconfig.json`':
+    "tsc 为 tool-bin 双根探测命中的本机 tsc 路径（开发者常量目录 + fs.existsSync，非用户输入）",
   // static-tools：tool 来自 gate-config 清单（开发者维护的常量表），stagedArg/extra 为常量
   'static-tools.ts|`node scripts/${tool} --json ${stagedArg} ${extra.join(" ")}`':
     "tool 来自 gate-config 开发者清单，stagedArg 为常量 --staged，extra 为清单 args",

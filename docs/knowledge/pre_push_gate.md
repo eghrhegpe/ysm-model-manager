@@ -89,7 +89,7 @@ pitfalls:
   - 「判定口径 A/B/C 收口」2026-09-13（重锐评 #一）：体系内三套判定口径并存——A=parseToolOutput 宽容链（静态工具段，容忍情报型 rc 恒 0 工具）；B=requireSummaryOk 严格链（域检查块专用，缺 _summary.ok 一律 FAIL）；C=认特定计数字段的真特例（type-consistency issues===0 / link-checker links_broken===0，保留手写但 fail-closed）。menu-health / ctx-menu-i18n / binding-usage 三处已全量收编进 B，**新增域块判定一律走 B，禁止手写同形判定**（test_gate_parse_output.ts 尾部源码扫描断言锁死）
   - 「goTestCmd 数组化」2026-09-13（重锐评 #二②）：go 域 go test 分段执行改数组式 procRun（-race 段 + 普通段顺序执行，任一非零即 FAIL）——otherPkgs 来自 go list 输出（运行期数据），拼进 shell 命令违反 gate-ctx「禁入运行期数据」不变式（与旧 gofmt 拼串同模式递梯子）；goTestCmd 字符串仅作 label 展示
   - 「autoFix 写盘语义」2026-09-13（重锐评 #三）：static-tools 的 autoFix 是 pre-push-gate 唯一写仓库文件的执行点（gen 产物 FAIL 时写盘刷新后重验）。刻意不受 --dry-run 限制（commit-with-check 走 --files --dry-run，不刷新会阻断提交流）；写盘发生在 pre-push 钩子内，**被推送 oid 是刷新前快照——刷新产物不进本次推送、push 后工作树 gen 产物呈脏态属预期**，钩子内严禁 amend/git add（amend 不变式）
-  - 「覆盖尾行」2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查
+  - "「覆盖尾行」2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查"
   - 「check-deadcode-baseline 的瞬态 FAIL」~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁
 status: active
 invariant_anchors:

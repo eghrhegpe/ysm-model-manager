@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-245：context-menu 图标语义名统一（对齐 ADR-238）",
+        "link": "/adr/ADR-245-context-menu-adr-238"
+      },
+      {
         "text": "ADR-244：CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件",
         "link": "/adr/ADR-244-ci-gate-change-context-and-scan-scope"
       },

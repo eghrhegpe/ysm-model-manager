@@ -215,7 +215,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/context-menu/index.ts` | 70 |
+| connectedCallback | `frontend/src/views/context-menu/index.ts` | 71 |
 
 ### `model:select`
 

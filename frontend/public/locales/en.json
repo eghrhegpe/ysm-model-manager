@@ -477,7 +477,7 @@
   "content.loadedCached": "✅ Loaded (cached)",
   "content.browseRepo": "📦 Browse",
   "content.loaded": "✅ Loaded",
-  "content.errNoIndex": "❌ No index.json<br>",
+  "content.errNoIndex": "No index.json<br>",
   "content.errNoIndexDesc": "This repository has no workshop index yet, please download using your browser.<br>",
   "content.errNoIndexHint": "(This repository needs an index.json file to call the API to download files)",
   "content.btnNoIndex": "❌ No Index",

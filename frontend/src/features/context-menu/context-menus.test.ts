@@ -20,6 +20,8 @@ import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, type MenuAction } from "./menu-defs.ts";
 import { HANDLERS, createContextMenuHandlers } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { ICON_KIT } from "@/utils/icon/icon-kit/index.ts";
 import {
   getMocks,
   menuShows,
@@ -504,4 +506,22 @@ describe("createContextMenuHandlers — 独立 handlers 实例隔离", () => {
     expect(typeof HANDLERS["file.rename"]).toBe("function");
     expect(typeof HANDLERS["dir.mkdir"]).toBe("function");
   });
+});
+
+// ===== ADR-245 守卫：menu-defs 的 icon 必须为 UI_ICONS 语义名（无彩色 emoji 残留）=====
+describe("ADR-245 — menu-defs icon 语义名化（无 emoji）", () => {
+  const KNOWN = new Set([...Object.keys(UI_ICONS), ...Object.keys(ICON_KIT)]);
+
+  for (const def of MENU_DEFS) {
+    for (const item of def.items) {
+      if (!item.icon || item.divider) continue;
+      const iconName = item.icon; // 收窄：闭包外固定，避免 TS 丢失收窄
+      const idLabel = `${def.type}.${item.action ?? "title"}`;
+      it(`${idLabel} icon="${iconName}" 为合法语义名`, () => {
+        // emoji（非 ASCII 语义名）一律视为残留，须迁移为 UI_ICONS 语义名
+        expect(KNOWN.has(iconName)).toBe(true);
+        expect(iconName.match(/[^\x00-\x7F]/)).toBeNull();
+      });
+    }
+  }
 });

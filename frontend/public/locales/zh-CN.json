@@ -477,7 +477,7 @@
   "content.loadedCached": "✅ 加载完成（缓存）",
   "content.browseRepo": "📦 浏览",
   "content.loaded": "✅ 加载完成",
-  "content.errNoIndex": "❌ 无 index.json<br>",
+  "content.errNoIndex": "无 index.json<br>",
   "content.errNoIndexDesc": "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>",
   "content.errNoIndexHint": "（这个仓库需要有 index.json 文件，才能调用 API 下载文件）",
   "content.btnNoIndex": "❌ 无索引",

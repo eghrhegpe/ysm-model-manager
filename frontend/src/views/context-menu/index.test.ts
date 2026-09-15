@@ -56,6 +56,18 @@ describe("<context-menu> 渲染", () => {
     expect(icon.textContent).toBe("📂");
   });
 
+  it("icon 语义名解析为 SVG（对齐 ADR-238/245），emoji 兜底仍为文本", () => {
+    // 语义名 → SVG（不 escape，innerHTML）
+    const elSvg = showMenu([{ label: "打开文件夹", icon: "folderOpen" }]);
+    const svgIcon = elSvg.shadowRoot!.querySelector(".item .icon")!;
+    expect(svgIcon.querySelector("svg.ws-icon")).not.toBeNull();
+    // 未命中语义名的 emoji → 维持原文本兜底（不破坏未迁移调用方）
+    const elEmoji = showMenu([{ label: "旧项", icon: "📂" }]);
+    const emojiIcon = elEmoji.shadowRoot!.querySelector(".item .icon")!;
+    expect(emojiIcon.querySelector("svg.ws-icon")).toBeNull();
+    expect(emojiIcon.textContent).toBe("📂");
+  });
+
   it("label 特殊字符被转义（防 XSS）", () => {
     const el = showMenu([{ label: '<img src=x onerror=alert(1)>' }]);
     expect(el.shadowRoot!.querySelector("img")).toBeFalsy();

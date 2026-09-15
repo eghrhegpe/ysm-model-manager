@@ -5,15 +5,7 @@
 //   - 渲染与图标解析由本层统一处理，调用侧不垫 SVG/emoji 字符串
 // 行为侧不变：toolbar-events.ts 仍靠 data-batch / data-more 委托，本表不碰事件逻辑。
 import { t } from "@/core/i18n/t.ts";
-import { ICON_KIT, renderIcon } from "@/utils/icon/icon-kit/index.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-
-/** 图标语义名 → 渲染串。统一入口：ICON_KIT（多源）优先，UI_ICONS（SVG）兜底。 */
-function resolveIcon(name: string): string {
-  if (name in ICON_KIT) return renderIcon(ICON_KIT[name]);
-  if (name in UI_ICONS) return UI_ICONS[name];
-  return "";
-}
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 
 /** 单个工具栏下拉菜单项声明（只描述语义，不垫渲染字符串） */
 interface ToolbarMenuItem {

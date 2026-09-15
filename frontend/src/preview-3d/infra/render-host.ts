@@ -276,9 +276,16 @@ export class RendererHost {
       }
     }
     if (isFrustumCullEnabled()) {
-      const caps = getSceneCaps();
-      const hasCapUpdate = caps.length > 0 && caps.some((c) => typeof c.update === "function");
-      if (this._perFrames.length > 0 || hasCapUpdate) markCullMatricesDirty();
+      // 矩阵置脏只由「真有变换写入」的 perFrame 回调决定：`_perFrames` 非空即置脏。
+      //
+      // [2026-09 修复] 原条件 `|| hasCapUpdate`（扫描 getSceneCaps 找实现了 update 的 cap）
+      // 恒真——10 个内置 cap 里 sky/water 都实现了 update，故标志**每帧**被置脏，
+      // 恰好在下一行 cullModelGroups 消费它之前，frustum-cull 的「动静分治」
+      // （_matricesDirty=false 时跳过 expandBoxVisible 的全子树 updateWorldMatrix）
+      // 永不生效，即其注释宣称已修掉的「每帧双重全树矩阵更新」依然存在。
+      // 且判据本身是错的：cap 的 update() 只推进 uniform/时间值（water 写 waterTime、
+      // sky 写 beams.time），**从不写 Object3D 变换**，本就不该触发矩阵刷新。
+      if (this._perFrames.length > 0) markCullMatricesDirty();
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
     // 每帧动态解析（coop 会话切换后指向当前存活 cap；全清后为 null 走直渲兜底）

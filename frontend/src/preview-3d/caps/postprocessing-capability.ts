@@ -376,6 +376,44 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.renderer.toneMappingExposure = envState.ppExposure;
   }
 
+  /**
+   * 归还输出设置给构造前的值（曝光归权出口）。
+   *
+   * [2026-09 修复] 原实现把这三行**只**写在 dispose() 内，而两条关闭路径
+   * （setEnabled(false) / syncEffectiveEnabled() 的关分支）都只调 disposeComposer()
+   * 且刻意不动 renderer，注释称「交给 dispose 精确还原」——但**切换开关不会触发
+   * dispose()**，于是 ppExposure(默认 1.0) 永久残留在 renderer 上，SkyCapability
+   * 期望的 skyExposure(默认 0.5) 再也回不来：切性能档位（perf-presets `low` →
+   * render.bloom=false → setMasterEnabled(false)）即触发 2× 亮度跳变且不自愈。
+   * 曝光是「谁接管谁归还」的所有权问题，故收敛为单一出口，三处共用。
+   *
+   * ⚠️ 归还前先验「我们是否仍持有」——本 cap 从构造期快照归还，而快照可能是陈旧值
+   * （组合根 createAll 时本 cap 先于 sky.apply 构造，快照=sky 接管前的 renderer 值），
+   * 且 sky 对同一 renderer 有持续写入权（ACESFilmic + skyExposure，经 refcount 仲裁）。
+   * 若无条件按快照还原，会把 sky 当前的值打回默认，制造「关后处理却让天空跳变」的二次伤害。
+   * 故按**归属**判定（对齐本文件 applyReflectorSync 的 reflectorSuppressing 范式）：
+   * 只有当 renderer 上仍是本 cap 写入的那个 exposure 时才归还——那时我们确实是持有者；
+   * 已被 sky/他人改写则说明控制权已易主，本 cap 不越权回放陈旧快照。
+   */
+  private restoreOutputSettings(): void {
+    // sky 活跃即让位（一个字段都不写）：sky 对 renderer 有持续写入权
+    //（ACESFilmic + skyExposure，经 refcount 仲裁多 session 共享 renderer），
+    // 此刻它才是 tone/exposure 的属主。本 cap 的构造期快照可能陈旧
+    //（组合根 createAll 时本 cap 先于 sky.apply 构造，快照=sky 接管前的默认值），
+    // 盲还原会把 sky 当前值打回默认，制造「关后处理却让天空跳变」的二次伤害。
+    const skyOwns = getTypedCap(this.caps, "sky")?.isEnabled() === true;
+    if (skyOwns) return;
+    // sky 缺席/停用时，按字段各自的归属归还：renderer 上仍是本 cap 写入的值
+    // 才说明我们仍是持有者（对齐本文件 applyReflectorSync 的抑制态归属范式）。
+    if (this.renderer.toneMapping === toneMappingValue(envState.ppToneMapping)) {
+      this.renderer.toneMapping = this.prevToneMapping;
+    }
+    if (this.renderer.toneMappingExposure === envState.ppExposure) {
+      this.renderer.toneMappingExposure = this.prevExposure;
+    }
+    this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
+  }
+
   private syncBloomPass(lightCap: LightCapability | null): void {
     if (!this.bloomPass) return;
     // 独立辉光开关：false 时整个 bloomPass 旁路（Pass.enabled=false），不影响 SSAO/SSR
@@ -476,8 +514,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.applyToneMapping();
     } else {
       this.disposeComposer();
-      // 切到 off：不主动改 renderer exposure/toneMapping，交给 dispose 精确还原 prev 值
-      // （SkyCapability 仍会在 apply/setTime 时重写自己的曝光值，不会长期残留 postproc 的高曝光）
+      // 切到 off：归还 renderer 输出设置（曝光归权单一出口——不再依赖永不触发的
+      // dispose()；详见 restoreOutputSettings 注释）。SkyCapability 随后仍可在
+      // apply/setTime 时重写自己的曝光值，不会与本还原冲突。
+      this.restoreOutputSettings();
     }
     this.applyReflectorSync();
   }
@@ -501,6 +541,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.applyToneMapping();
     } else {
       this.disposeComposer();
+      // [2026-09 修复] 关分支必须与 setEnabled(false) 同口径归还输出设置：
+      // 性能档位（perf-presets low → render.bloom=false）走的就是这条路径，
+      // 原先漏还原会让 ppExposure 永久残留（2× 亮度跳变不自愈）。
+      this.restoreOutputSettings();
     }
     this.applyReflectorSync();
   }
@@ -735,8 +779,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.reflectorSuppressing = false;
     this.unsubscribeEnv();
     this.disposeComposer();
-    this.renderer.toneMapping = this.prevToneMapping;
-    this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
-    this.renderer.toneMappingExposure = this.prevExposure;
+    this.restoreOutputSettings();
   }
 }

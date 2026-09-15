@@ -423,24 +423,43 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     expect(renderer.toneMappingExposure).toBeCloseTo(1.2, 4);
   });
 
-  it("setEnabled(false→true) 时立刻写入 renderer；setEnabled(true→false) 不还原 Sky 写入（交给 dispose 精确还原 prev 值）", () => {
+  it("setEnabled(false→true) 时立刻写入 renderer；setEnabled(true→false) 在 sky 活跃时让位（不还原 sky 写入值）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.5);
-    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    // 生产形态：sky 已注册且活跃（组合根 createAll 里 sky 恒先于本 cap apply），
+    // 此时 sky 才是 tone/exposure 属主 → postproc 关闭必须整体让位。
+    // 原先本用例以「手写 renderer 值」模拟 sky（不挂 caps），无法表达让位语义，
+    // 也正是当初漏掉「关闭分支不归还 exposure」bug 的原因。
+    const skyStub = { id: "sky", isEnabled: () => true } as unknown as SceneCapability;
+    const caps = { getById: (id: string) => (id === "sky" ? skyStub : undefined) };
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false, caps });
     expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
     expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
-    // 手动模拟 SkyCapability 写入值
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.58;
+    // 开启 postproc → 接管输出设置（写入 ppExposure=1.0）
     cap.setEnabled(true);
-    // 默认 exposure=1.0
     expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+    // 模拟 sky 在接管后周期性重写自己的值（sky apply/setTime 每帧有写入权）
+    renderer.toneMappingExposure = 0.58;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     cap.setEnabled(false);
-    // setEnabled(false) 不主动改 renderer（SkyCapability 自己仍会在 apply 时重写）
-    // 这里我们验证关闭后仍然保持最近值，不引起跳变
+    // sky 活跃 → 让位：postproc 不越权按自己的陈旧快照还原，保持 sky 的当前值不跳变
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.58, 4);
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
-    expect(typeof renderer.toneMappingExposure).toBe("number");
+  });
+
+  it("setEnabled(false→true) 时立刻写入 renderer；sky 不活跃时关闭归还构造前快照（曝光不残留）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    // 无 sky（或 sky 停用）：本 cap 是唯一属主，关闭必须归还，否则 ppExposure 残留。
+    const renderer = makeRendererWithState(THREE.NoToneMapping, 0.5);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    cap.setEnabled(true);
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4); // 已写入 ppExposure
+    cap.setEnabled(false);
+    // 归还构造前快照 → 恢复到 0.5，不再残留 1.0（本次修复的核心回归）
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
+    expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
   });
 
   it("setToneMapping/setExposure 在 enabled=false 时只改 params，不动 renderer", () => {

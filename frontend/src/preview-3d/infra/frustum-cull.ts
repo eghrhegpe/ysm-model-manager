@@ -14,6 +14,13 @@ const _vec = new THREE.Vector3();
 /** 需要裁剪的模型根节点列表（adapter 在 scene.add 时注册） */
 const modelRoots: THREE.Object3D[] = [];
 
+/**
+ * 被**本模块**压成 visible=false 的根集合（抑制态归属，2026-09 修复）。
+ * 只记录「我们写的隐藏」，restoreModelGroupsVisible 据此精确还原，
+ * 不覆盖用户经 sceneRegistry.setVisible 施加的隐藏意图。
+ */
+const _culled = new Set<THREE.Object3D>();
+
 // ===== 矩阵新鲜度标记（code review #4：每帧双重全树矩阵更新）=====
 // expandBoxVisible 原每帧对每个根 updateWorldMatrix(true, true) 递归全子树，
 // 随后 render() 内部又 updateMatrixWorld 一遍——多模型同框时每帧两遍全场景遍历。
@@ -42,6 +49,8 @@ export function registerModelRoot(obj: THREE.Object3D): void {
 export function unregisterModelRoot(obj: THREE.Object3D): void {
   const i = modelRoots.indexOf(obj);
   if (i >= 0) modelRoots.splice(i, 1);
+  // 抑制态一并摘除：已注销的根不再由我们负责还原（引用可能被 adapter 复用/释放）
+  _culled.delete(obj);
 }
 
 /** 获取当前注册的模型根节点数 */
@@ -62,9 +71,17 @@ export function cullModelGroups(camera: THREE.Camera): void {
   if (modelRoots.length === 0) return;
   if (modelRoots.length === 1) {
     const obj = modelRoots[0];
+    // 尊重用户隐藏：单根场景下本分支只做「空组压隐藏」这一件事，若该根已被
+    // 非本模块隐藏（用户面板隐藏），不得写 true 复活它。
+    if (!obj.visible && !_culled.has(obj)) return;
     const v = Boolean((obj as THREE.Mesh).isMesh || obj.children.length > 0);
     // 值未变不写（code review #9：每帧给 visible 赋同值触发无谓的脏检查）
-    if (obj.visible !== v) obj.visible = v;
+    if (obj.visible !== v) {
+      obj.visible = v;
+      // 抑制态归属：只有「我们写的隐藏」才登记，供 restore 精确还原
+      if (!v) _culled.add(obj);
+      else _culled.delete(obj);
+    }
     return;
   }
   _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -77,6 +94,14 @@ export function cullModelGroups(camera: THREE.Camera): void {
       modelRoots.splice(i, 1);
       continue;
     }
+    // 尊重非本模块置的隐藏：用户经 sceneRegistry.setVisible 隐藏的根（未登记在 _culled）
+    // 直接跳过，既不做剔除判定也不改写 visible——否则剔除会「接管」用户意图并在
+    // restore 时把它当自己的抑制态还原，造成「隐藏被兜底复活」。
+    if (!obj.visible && !_culled.has(obj)) {
+      // 唯一例外：子树全空（无 isMesh 且无子节点）仍需压隐藏由下面的 isEmpty 分支处理，
+      // 但那种根本就不可能可见，跳过不影响正确性。
+      continue;
+    }
     // 只累加 visible 子树：Box3.setFromObject 默认计入 visible=false 的子节点，
     // 多组件模型里隐藏的车/载具会把 bounding box 撑大并偏移，导致视锥剔除在
     // 边界来回翻转（角色闪烁）。手写递归跳过 !visible 子树修复此问题。
@@ -84,10 +109,15 @@ export function cullModelGroups(camera: THREE.Camera): void {
     expandBoxVisible(obj, _box);
     if (_box.isEmpty()) {
       obj.visible = false;
+      _culled.add(obj);
       continue;
     }
     _box.getBoundingSphere(_sphere);
-    obj.visible = _frustum.intersectsSphere(_sphere);
+    const inFrustum = _frustum.intersectsSphere(_sphere);
+    obj.visible = inFrustum;
+    // 抑制态归属：入册/出册随本帧判定同步，restore 时只还原仍被我们压着的
+    if (inFrustum) _culled.delete(obj);
+    else _culled.add(obj);
   }
   // 本帧矩阵已刷新（紧随其后的 render() 再次 updateMatrixWorld，保持新鲜）；
   // 下帧若无 ①注册/②perFrame 置脏，expandBoxVisible 可跳过强制更新
@@ -124,6 +154,7 @@ function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3): void {
 /** 清空所有注册（session 结束时调用） */
 export function clearModelRoots(): void {
   modelRoots.length = 0;
+  _culled.clear(); // 抑制态随注册表一同消亡，防跨会话残留引用了已 dispose 的根
   _matricesDirty = true; // 下次裁剪从保守态起步
 }
 
@@ -154,7 +185,25 @@ export function setFrustumCullEnabled(enabled: boolean): void {
   _cullEnabledCache = enabled;
 }
 
-/** 关闭剔除时恢复所有注册模型根可见性（幂等） */
+/**
+ * 关闭剔除时恢复**被本模块压下的**注册根可见性。
+ *
+ * [2026-09 修复] 原实现无条件 `root.visible = true`，与「按模型隐藏」共用同一个
+ * `Object3D.visible` 布尔而互相踩踏：`sceneRegistry.setVisible(id,false)` 把
+ * `roots[].visible=false` 后，本函数在**下一帧**（剔除默认关，render-host 每帧走此分支）
+ * 又把同一批引用抹回 true——用户点「隐藏」闪一下即复活。
+ * （roots 与 modelRoots 是同一批对象：register-built-scene 用 scene.children 差量捕获，
+ * 捕获到的正是 adapter 里 scene.add + registerModelRoot 的同一个 rootGroup。）
+ *
+ * 现按「抑制态归属」判定：只恢复**我们压下去的**根（`_culled` 集合记录），
+ * 用户/其它属主主动隐藏的根原样保留。范式对齐 postprocessing-capability 的
+ * reflectorSuppressing（ADR-247 D2）——同样是「谁压下、谁还原，不覆盖他人选择」。
+ */
 export function restoreModelGroupsVisible(): void {
-  for (const root of modelRoots) root.visible = true;
+  if (_culled.size === 0) return; // 常态（剔除从没裁剪过）：零写，不做无谓 dirty
+  for (const root of _culled) {
+    // 仍注册着的才恢复；已注销的不再触碰（引用可能已被 adapter 复用）
+    if (modelRoots.includes(root)) root.visible = true;
+  }
+  _culled.clear();
 }

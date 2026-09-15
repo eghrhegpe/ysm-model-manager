@@ -389,7 +389,12 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       // 继承另一功能的运行时状态：默认配置（联动 on + 体积光 off）下 gain 恒 0，开关显示
       // 「开」却从不生效，正是「开关撒谎」。联动语义是「是否接受体积光浓度调制 bloom」的
       // 用户偏好；可见性取决于聚光灯这一物理前置，不该静默撤销用户偏好。
-      const gain = vol.opacity;
+      // [ADR-247 D1 审查补强 R2] 数值守卫：原式 `vol.enabled ? vol.opacity : 0` 在体积光关闭时
+      // 短路为 0，顺带掩盖了 opacity 缺失；改成直读后，undefined 会经乘法扩散成 NaN 并永久
+      // 污染 bloomPass（strength/threshold 无 clamp）。生产路径 readVolParams 恒出数值，
+      // 但 syncBloomPass 接受外部 LightCapability stub，需自守。
+      const raw = vol.opacity;
+      const gain = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
       // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
@@ -673,6 +678,11 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       enabled: {
         boolean: (v) => {
           this.enabled = v;
+          // [ADR-247 D3 审查修复 R1] 门禁必须与恢复的 enabled 同步：构造时
+          // perTypeGate 取的是构造入参 enabled（常为默认 false），若此处只恢复 enabled
+          // 而不动门禁，两者永久失配——总闸 off→on 时被陈旧门禁无声否决，后处理再也开不回来。
+          // （POSTPROC_PRESETS.default = {} 不写门禁，故「default」类型必踩此坑。）
+          this.perTypeGate = v;
         },
       },
       bloomStrength: { number: (v) => setEnvState({ ppBloomStrength: v }, { source: "manual" }) },

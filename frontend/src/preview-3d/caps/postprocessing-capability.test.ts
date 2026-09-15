@@ -592,6 +592,26 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.strength).toBe(0.9);
     expect(bp.radius).toBe(0.4);
   });
+
+  // [ADR-247 D1 审查补强 R2] opacity 非法（undefined/NaN）时必须退化为 0（=不联动），
+  // 不得让 NaN 经乘法扩散进 bloomPass.strength/threshold 并永久污染 bloom。
+  // 原式 `vol.enabled ? vol.opacity : 0` 在体积光关闭时短路为 0 顺带掩盖了缺失；
+  // 改直读后需显式守卫。syncBloomPass 接受外部 stub，生产路径以外也须安全。
+  it.each([
+    ["undefined", undefined],
+    ["NaN", Number.NaN],
+    ["null", null],
+    ["字符串", "0.5" as unknown as number],
+  ])("opacity 非法（%s）时联动退化为 0，不产生 NaN", (_label, bad) => {
+    const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
+    const bp = mockBloomPass(cap);
+    const stub = { getParams: () => ({ volumetric: { opacity: bad } }) } as unknown as SceneCapability;
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(stub);
+    expect(Number.isFinite(bp.threshold)).toBe(true);
+    expect(Number.isFinite(bp.strength)).toBe(true);
+    expect(bp.threshold).toBe(0.6); // 与「不联动」等价
+    expect(bp.strength).toBe(0.6);
+  });
 });
 
 // ============ 性能档位总闸 setMasterEnabled + applyPostProcDefaults 构建次数（审核修复回归） ============
@@ -635,6 +655,40 @@ describe("PostprocessingCapability — 总闸与 applyPostProcDefaults 构建次
     expect(cap.isEnabled()).toBe(false);
     cap.applyPostProcDefaults("vrm"); // 门禁 → true
     expect(cap.isEnabled()).toBe(true);
+  });
+
+  // [ADR-247 D3 审查修复 R1] loadState 恢复 enabled 时必须同步门禁，否则两者永久失配：
+  // 存档 enabled=true + 构造 enabled=false → 门禁停在 false，总闸 off→on 后无声否决，
+  // 后处理再也开不回来（POSTPROC_PRESETS.default = {} 不写门禁的「default」类型必踩）。
+  it("loadState 恢复 enabled=true 后门禁同步：总闸 off→on 仍可恢复（R1 回归）", () => {
+    localStorage.clear();
+    // ① 存档：用户开着后处理
+    const cap1 = newCap({ enabled: true });
+    cap1.saveState();
+    // ② 新会话：构造默认 enabled=false（门禁初值 false），再 loadState 恢复 enabled=true
+    const cap2 = newCap({ enabled: false });
+    cap2.loadState();
+    expect(cap2.isEnabled()).toBe(true); // 存档值生效
+    // ③ 总闸 off→on：门禁若未同步，此处会被无声否决（R1 症状）
+    cap2.setMasterEnabled(false);
+    expect(cap2.isEnabled()).toBe(false);
+    cap2.setMasterEnabled(true);
+    expect(cap2.isEnabled()).toBe(true); // ← 修复前为 false
+    localStorage.clear();
+  });
+
+  it("applyPostProcDefaults('default') 不写门禁，但 loadState 后总闸循环仍自洽（R1 组合场景）", () => {
+    localStorage.clear();
+    const cap1 = newCap({ enabled: true });
+    cap1.saveState();
+    const cap2 = newCap({ enabled: false });
+    cap2.loadState();
+    cap2.applyPostProcDefaults("default"); // 预设为空 → 不触碰门禁
+    expect(cap2.isEnabled()).toBe(true);
+    cap2.setMasterEnabled(false);
+    cap2.setMasterEnabled(true);
+    expect(cap2.isEnabled()).toBe(true);
+    localStorage.clear();
   });
 
   it("setMasterEnabled 值未变时不做无谓重建", () => {
@@ -974,6 +1028,23 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     // SSR 关闭：我们已非压制持有者（reflector 已被用户开回），须保留用户选择
     cap.setReflectionMode("envmap-only");
     expect(reflector.isEnabled()).toBe(true); // ← 旧实现用 prev=false 抹掉，此处转红
+  });
+
+  // [R3] 用户手动重开后再触发任意一次 postprocessing 侧同步：SSR 仍活动 → 会再次压制。
+  // 这是「SSR 活动期间 reflector 必须关闭」功能的预期行为（用户偏好让位于功能语义），
+  // 本用例锁定该预期，避免被误当缺陷「修掉」。
+  it("SSR 仍活动时用户手动重开会被再次压制（功能语义优先，非缺陷）", () => {
+    const { cap, reflector } = makePair();
+    cap.setEnabled(true);
+    expect(reflector.isEnabled()).toBe(false);
+    reflector.setEnabled(true); // 用户手动重开
+    expect(reflector.isEnabled()).toBe(true);
+    // 任意一次 postprocessing 侧同步（如切 disableWhenSSR 开关）→ SSR 仍活动 → 重新压制
+    cap.setReflectorDisableWhenSSR(true);
+    expect(reflector.isEnabled()).toBe(false);
+    // 且压制基准仍是「最初压制前」的值（true），SSR 关闭后正确恢复
+    cap.setReflectionMode("envmap-only");
+    expect(reflector.isEnabled()).toBe(true);
   });
 
   it("SSR 关闭后不残留抑制态：再次开启 SSR 仍能正常抑制与还原", () => {

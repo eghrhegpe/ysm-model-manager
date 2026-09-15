@@ -83,6 +83,31 @@
   经反证发现是空洞的（压制前为「开」时，回放 prev 与用户选择恰好相同，无法区分两条路径），
   已改为「压制前关、期间手动开」才真正区分。
 
+## 3.1 独立审查补强（同批修复）
+
+初版实现经子代理对抗式审查后，确认两处真实缺陷并补强，一处为**阻断级**：
+
+**R1（阻断，D3 引入的回归）**：构造器以 `perTypeGate = this.enabled` 播种门禁，但
+`loadState` 只恢复 `this.enabled`、不写门禁，二者永久失配。当存档 `enabled=true` 而构造
+入参为默认 `false` 时，门禁停在 `false`：总闸 off→on 后被陈旧门禁无声否决，**后处理再也开
+不回来**——恰是本 ADR 声称要保护的「off→on 可恢复」不变量。因
+`POSTPROC_PRESETS.default = {}`（`postprocessing-state.ts`）不写门禁，且
+`shared-infra.ts` 传原始 `adapter.id`，任何六个预设之外的模型类型必踩。
+**修复**：`loadState` 的 `enabled` 恢复分支同步写 `this.perTypeGate`。已补两条回归测试
+（含 `applyPostProcDefaults("default")` 组合场景），修复前均转红。
+
+**R2（D1 移除守卫）**：原式 `vol.enabled ? vol.opacity : 0` 在体积光关闭时短路为 0，
+顺带掩盖了 `opacity` 缺失；改为直读后，`undefined` 经乘法扩散为 `NaN` 写入
+`bloomPass.strength/threshold`（无 clamp）永久污染 bloom。生产路径
+`light-capability.readVolParams` 恒出数值，但 `syncBloomPass` 接受外部 `LightCapability`
+stub，须自守。**修复**：加 `typeof raw === "number" && Number.isFinite(raw) ? raw : 0`
+守卫，并补 4 例参数化测试（undefined / NaN / null / 字符串），去守卫后转红。
+
+**R3（非缺陷，补测试锁定）**：SSR 活动期间用户手动重开 reflector 会被下一次同步再次压制。
+经核验这是「SSR 活动时 reflector 必须关闭」的**预期功能语义**（`applyReflectorSync` 六处
+调用点均为 pull 式，SSR 活动即重新施加压制），并非 D2 的漏洞——D2 只负责解除时的归属判定。
+已补测试锁定该预期，避免后续被误当缺陷「修掉」。
+
 ## 4. 数据溯源
 
 | 来源 | 结果 |

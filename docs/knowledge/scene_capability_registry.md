@@ -70,7 +70,6 @@ auto_fields:
     - persistState
     - pickPersistFields
     - POSTPROC_PERSIST_FIELDS
-    - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
     - PP_PARAMS_TO_ENV

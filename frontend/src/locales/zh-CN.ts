@@ -8,7 +8,9 @@
 // （锐评整改；生成脚本经 mod.exports 取对象，不依赖此注解）
 export const zhCN = {
   // ── 语言自名（SUPPORTED_LANGS.key 引用；P2 修复：原 key 缺失 → 设置页下拉若
-  // 按 key 渲染会裸奔，i18n-check KNOWN_INTENTIONAL 期望存在）──
+  // 按 key 渲染会裸奔，i18n-check KNOWN_INTENTIONAL 期望存在。
+  // 注：49b5ce13d 起 lang.zh-CN 已随死键清理出包，zh-CN 自名走 label 不占键，
+  // en/ja 保留供渲染消费）──
   "lang.en": "English",
   "lang.ja": "日本語",
   // ── 导航栏 ──

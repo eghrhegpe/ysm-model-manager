@@ -45,7 +45,6 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - PoseScene
-    - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingParams
     - PreviewAdapter

@@ -9,13 +9,7 @@ source_files:
   - frontend/src/utils/icon/icon-kit/types.ts
   - frontend/src/utils/icon/icon-kit/icons.ts
 auto_fields:
-  symbols_with_lines:
-    - ICON_KIT
-    - IconKitName
-    - iconKitNames
-    - IconSource
-    - IconSpec
-    - renderIcon
+  symbols_with_lines: []
 use_when:
   - 图标
   - emoji

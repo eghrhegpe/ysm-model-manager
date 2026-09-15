@@ -525,7 +525,6 @@ auto_fields:
     - PmxVertexData
     - PoseScene
     - POSTPROC_PERSIST_FIELDS
-    - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingLike
     - PostprocessingParams

@@ -196,8 +196,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| setLang | `frontend/src/core/i18n/locale.ts` | 168 |
-| initI18n | `frontend/src/core/i18n/locale.ts` | 223 |
+| setLang | `frontend/src/core/i18n/locale.ts` | 172 |
+| initI18n | `frontend/src/core/i18n/locale.ts` | 227 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -918,7 +918,6 @@ auto_fields:
     - PmxVertexData
     - pngBytes
     - popInputBlock
-    - POSTPROC_PRESETS
     - PostprocessingCapability
     - PostprocessingLike
     - PostprocessingParams

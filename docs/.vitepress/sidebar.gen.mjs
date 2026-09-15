@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-250：后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky",
+        "link": "/adr/ADR-250-cap-composer-sky"
+      },
+      {
         "text": "ADR-249：地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层）",
         "link": "/adr/ADR-249-ground-material-axis-split-layer-overlay"
       },

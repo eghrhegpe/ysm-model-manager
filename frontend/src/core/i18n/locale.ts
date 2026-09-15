@@ -13,7 +13,11 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 const STORAGE_KEY = "uiLang";
 
-/** 支持的语言列表（规划清单；i18n-check.ts 正则解析此字面量形式，勿改结构） */
+/** 支持的语言列表（规划清单；i18n-check.ts 正则解析此字面量形式，勿改结构）。
+ * zh-CN 的 `key` 字段（`lang.zh-CN`）在 49b5ce13d 死键清理中已随三语言包一并删除——
+ * zh-CN 自名由本处 label 硬编码，设置页下拉按 label 渲染 `<option>`，从不按 key 取 t，
+ * 故 `key` 字段仅为 i18n-check KNOWN_INTENTIONAL 的解析契约面（脚本期望字面量存在，
+ * 不要求键入包），无消费方 `t(key)`，悬空无运行时后果。 */
 export const SUPPORTED_LANGS = [
   { code: "zh-CN", label: "简体中文", key: "lang.zh-CN" },
   { code: "en", label: "English", key: "lang.en" },

@@ -673,8 +673,14 @@ func speedEmoji(speedup float64) string {
 // benchNoiseFloorMs 退化判定的绝对噪声下限。
 // 当基准耗时近零（如内存操作的 fake 模型、子毫秒阶段）时，纯相对百分比
 // (now-base)/base 会因计时抖动而 >阈值% 误报退化（或 now 偶尔比假基准更小而漏报）。
-// 引入绝对下限后：base 与 now 双双落在噪声区间内一律判「无退化」，只有 now 远超
-// 下限（真实退化）才报。下限取 1ms——低于此值的人眼不可察抖动不计入性能回归。
+// 两层保护（2026-09-15 补齐第二层）：
+//  1. base 与 now **双双**落在噪声区间 → 一律判「无退化」；
+//  2. **绝对增量**（now-base）落在噪声区间 → 同样判「无退化」。只挡第 1 层是不够的：
+//     base 亚毫秒时 now 只要刚过下限（如 0.5 → 1.4ms），相对百分比即被放大成 +180%
+//     的假退化，pre-push 与 vitest 并跑时 go/cli 整包必炸（实测）。
+//
+// 真实退化不受影响：0.001 → 50ms 增量达 49.999ms，远超下限，仍被拦下。
+// 下限取 1ms——低于此值的人眼不可察抖动不计入性能回归。
 const benchNoiseFloorMs = 1.0
 
 // compareSingleBenchBaseline 与基准 JSON 对比：任一阶段退化超 thresholdPct % 返回错误（供 CI 判定）
@@ -707,6 +713,12 @@ func compareSingleBenchBaseline(baselinePath string, stages []singleBenchStage, 
 		// 双向落入噪声区间（base 与 now 都近零）→ 计时抖动，判无退化不计入。
 		if baseMs <= benchNoiseFloorMs && now <= benchNoiseFloorMs {
 			fmt.Printf("   🟢 %-16s %8.2f → %8.2fms (噪声区间，跳过)\n", s.Name, baseMs, now)
+			continue
+		}
+		// 绝对增量本身落在噪声区间 → 同样判无退化（第 2 层保护，见 benchNoiseFloorMs 注释）。
+		// 只判退化为正的一侧：neg 为「更快」，交由下方 relative 分支照常标注 🟢 更快。
+		if delta := now - baseMs; delta > 0 && delta <= benchNoiseFloorMs {
+			fmt.Printf("   🟢 %-16s %8.2f → %8.2fms (增量在噪声区间，跳过)\n", s.Name, baseMs, now)
 			continue
 		}
 		ratio := 0.0

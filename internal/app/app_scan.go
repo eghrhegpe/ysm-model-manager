@@ -469,7 +469,7 @@ func (a *App) allAllowedRoots() []string {
 		for _, r := range raw {
 			// 未配置字段（FilesRoot/McRoot/各废弃专属根）为空串：过滤掉，
 			// 使「清单不含空串」成为本函数保证的不变量，调用方无需各自防御
-			//（空串在 filepath.Rel 下会与 CWD 相关，语义危险）。
+			// （空串在 filepath.Rel 下会与 CWD 相关，语义危险）。
 			if r != "" {
 				roots = append(roots, r)
 			}

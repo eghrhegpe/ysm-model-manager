@@ -254,7 +254,10 @@ func (tm *TrashManager) List() []types.ModelEntry {
 // 供 Empty() 清空前拿条目数而不物化全量切片。WalkDir 回调豁免错误继续遍历（与 List 一致）。
 func (tm *TrashManager) countEntries() int {
 	n := 0
-	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
+	// 显式丢弃 WalkDir 顶层返回值：它只在「根目录本身不可读」时非 nil，
+	// 而本函数仅用于 Empty() 清空前取条目数——根不可读即 0 条，静默豁免即可。
+	// 回调内每条错误已走 log.Printf（与 List() 口径一致），不重复上报。
+	_ = filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[recycle] countEntries WalkDir 错误 %s: %v", p, err)
 			return nil

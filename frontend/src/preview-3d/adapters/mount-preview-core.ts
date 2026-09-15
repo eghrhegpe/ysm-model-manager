@@ -1041,13 +1041,3 @@ function commitSession(ctx: MountCtx, switchCtx: SwitchContext, content: Preview
   };
   ctx.handles.push({ handle: sessionHandle, gen: ctx.myGen });
 }
-
-// ===== §5 mount3D 会话状态（其余私有工具已拆出独立模块）=====
-// → shared-infra.ts（场景单例 + buildSharedInfra + syncShadowLights）
-// → render-loop.ts（rAF 全局循环 + perFrame 注册表）
-// → mount-session.ts（MpSessionState + MountCtx + finishSession/closeOverlay/
-// → wasd-camera.ts（applyWasdCameraMotion + WasdReuse）
-// → unified-pick.ts（makeUnifiedPickHandler）
-// → unload-model.ts（unloadModel + UnloadCtx）
-// → input-and-animation.ts（bindInputHandlers / InputOptions）
-// → switch-preview.ts（switchToSession / SwitchContext）

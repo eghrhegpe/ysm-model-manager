@@ -95,7 +95,7 @@ func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
 		return fmt.Errorf("应用正在退出，下载队列已停止，拒绝新任务")
 	}
 	// 新一批任务视为重新开始：复位取消标志，否则上次取消后队列永不发 done
-	//（前端会永久卡 downloading）。原模型的 cancelled 字段现由 wake/cancelCh 双信号表达：
+	// （前端会永久卡 downloading）。原模型的 cancelled 字段现由 wake/cancelCh 双信号表达：
 	// 入队即代表「新一批开始」，无需显式复位标志。
 	q.tasks = append(q.tasks, tasks...)
 	q.running = true

@@ -296,4 +296,24 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 	if err := compareSingleBenchBaseline(declinePath, declineStages, 1); err == nil {
 		t.Error("对照 0.001ms 历史基准必须触发退化门禁")
 	}
+
+	// 亚毫秒基准 + 小幅绝对增量：相对百分比爆表（0.5 → 1.4ms = +180% > 50%），
+	// 但绝对增量仅 0.9ms，落在噪声下限内 → 不应判退化。
+	// 守住这一条，上面「自对比」断言才能在负载抖动下不再误报——2026-09-15 实证：
+	// 此前只挡「base 与 now 双双在噪声区间」，base 亚毫秒作分母时，now 刚过 1ms 下限即被
+	// (now-base)/base 放大成 +200% 假退化，pre-push 与 vitest 并跑时必炸（go/cli 整包 FAIL）。
+	subBase := make([]benchStageMs, len(stageNames))
+	subStages := make([]singleBenchStage, len(stageNames))
+	for i, name := range stageNames {
+		subBase[i] = benchStageMs{Name: name, Ms: 0.5}
+		subStages[i] = singleBenchStage{Name: name, Duration: 1400 * time.Microsecond}
+	}
+	subJSON, _ := json.Marshal(subBase)
+	subPath := filepath.Join(root, "subnoise.json")
+	if err := os.WriteFile(subPath, subJSON, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := compareSingleBenchBaseline(subPath, subStages, 50); err != nil {
+		t.Errorf("亚毫秒基准 + 小幅绝对增量不应触发退化门禁: %v", err)
+	}
 }

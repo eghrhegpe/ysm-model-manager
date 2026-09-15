@@ -37,8 +37,8 @@ export interface VmdRetargetOptions {
   positionScale?: number;
 }
 
-/** 单条成功建立的骨骼映射 */
-export interface VmdBoneBinding {
+/** 单条成功建立的骨骼映射（仅本模块内使用——经 VmdBindingPlan 对外暴露） */
+interface VmdBoneBinding {
   readonly vrm: VRMHumanBoneName;
   readonly mmd: string;
 }
@@ -57,8 +57,8 @@ export interface VmdBindingPlan {
   readonly translationBase: THREE.Vector3 | null;
 }
 
-/** 重定向诊断报告 */
-export interface VmdRetargetReport {
+/** 重定向诊断报告（仅本模块内使用——经 VmdRetargetResult 对外暴露） */
+interface VmdRetargetReport {
   readonly bindings: readonly VmdBoneBinding[];
   readonly translationSource: string | null;
   /** 被丢弃的轨道数（morph 通道 + 未映射骨 + 非位移源的 position 通道） */

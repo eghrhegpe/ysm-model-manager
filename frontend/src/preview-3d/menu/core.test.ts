@@ -275,6 +275,11 @@ describe("mountPreviewRootMenu", () => {
     // 注入 fake caps：light/shadow/postprocessing 各暴露 isEnabled/setEnabled
     const states: Record<string, boolean> = { light: true, shadow: true, postprocessing: false };
     const setCalls: Record<string, boolean[]> = { light: [], shadow: [], postprocessing: [] };
+    const masterIds: Record<string, string> = {
+        light: "light-enabled",
+        shadow: "shadow-enabled",
+        postprocessing: "pp-enabled",
+      };
     const makeFake = (id: string): SceneCapability =>
       ({
         id,
@@ -283,7 +288,7 @@ describe("mountPreviewRootMenu", () => {
           states[id] = v;
           setCalls[id].push(v);
         },
-        // 仅需 isEnabled/setEnabled 的能力总开关
+        getMasterNodeId: () => masterIds[id],
         getMenuNodes: () => [],
         getMenuControls: () => [],
       }) as unknown as SceneCapability;

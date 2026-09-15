@@ -329,6 +329,13 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
 describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => resetEnvState());
 
+  it("getMasterNodeId 声明 light-enabled（场景组一级 headerToggle + 面板 filter 契约）", () => {
+    const cap = newCap();
+    expect(cap.getMasterNodeId()).toBe("light-enabled");
+    // master id 必须在完整节点树顶层存在（filter 剔除才有意义）
+    expect(cap.getMenuNodes().map((n) => n.id)).toContain("light-enabled");
+  });
+
   it("完整树 = light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();

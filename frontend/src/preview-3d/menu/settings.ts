@@ -12,7 +12,7 @@
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
 import { tOf } from "@/core/i18n/t.ts";
-import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
+import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
@@ -76,6 +76,19 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
   ];
 }
 
+/**
+ * cap 面板节点：取完整节点树，剔除能力总开关节点（getMasterNodeId）。
+ * 与 env 面板 envCapSubNodes 同一「简单数组 filter」范式——能力总开关已升一级
+ * （场景组根视图 / env 面板行）headerToggle，二级面板渲染时 filter 掉主节点防双份。
+ * 长治久安：删二级开关 = 删 getMasterNodeId 声明，纯数据驱动，无旁路硬编码。
+ */
+function capPanelNodes(cap: SceneCapability): PreviewMenuNode[] {
+  const all = cap.getMenuNodes?.() ?? [];
+  const masterId = cap.getMasterNodeId?.();
+  if (!masterId) return all;
+  return all.filter((n) => n.id !== masterId);
+}
+
 /** 灯光面板 schema：从 light cap 自报控件渲染 */
 export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
   const lightFromReg = sceneCapabilityRegistry.getById("light");
@@ -97,7 +110,7 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return lightCap.getMenuNodes?.() ?? [];
+  return capPanelNodes(lightCap);
 }
 
 /** 阴影面板 schema：从 shadow cap 直产节点渲染 */
@@ -113,7 +126,7 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return fromReg.getMenuNodes?.() ?? [];
+  return capPanelNodes(fromReg);
 }
 
 /** 后处理面板 schema：从 postprocessing cap 直产节点渲染 */
@@ -129,7 +142,7 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
       },
     ];
   }
-  return fromReg.getMenuNodes?.() ?? [];
+  return capPanelNodes(fromReg);
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。

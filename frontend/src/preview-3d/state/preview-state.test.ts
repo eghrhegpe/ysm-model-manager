@@ -28,6 +28,7 @@ import {
   buildPostprocessingSchema,
 } from "@/preview-3d/menu/settings.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { renderMenu } from "@/preview-3d/menu/render.ts";
 import { capControlsToNodes } from "@/preview-3d/menu/cap-to-node.ts";
 import { collectVisiblePredicates } from "@/preview-3d/menu/cap-controls.ts";
@@ -516,6 +517,33 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(shadow[0]!.kind).toBe("slider");
     const postproc = buildPostprocessingSchema(ctx);
     expect(postproc[0]!.kind).toBe("slider");
+  });
+
+  it("cap 声明 getMasterNodeId → panel schema filter 掉能力总开关（防一二级双份；长治久安单一来源）", () => {
+    // 模拟 light cap：完整树 = 能力总开关 light-enabled + 参数 toggle
+    const masterToggle: PreviewMenuNode = {
+      id: "light-enabled",
+      kind: "toggle",
+      labelKey: "preview.lighting",
+      fallback: "灯光",
+    };
+    const paramToggle: PreviewMenuNode = {
+      id: "light-key",
+      kind: "toggle",
+      labelKey: "preview.keyLight",
+      fallback: "主灯",
+    };
+    const lightCap = {
+      id: "light",
+      getMasterNodeId: () => "light-enabled",
+      getMenuNodes: () => [masterToggle, paramToggle],
+      getMenuControls: () => [],
+    } as unknown as SceneCapability;
+    mountCaps(lightCap);
+    const lighting = buildLightingSchema({ getCap: () => lightCap } as unknown as PreviewMenuCtx);
+    // 面板首行不再是能力总开关——被 filter 掉（总开关已升场景组根视图 headerToggle）
+    expect(lighting.map((n) => n.id)).not.toContain("light-enabled");
+    expect(lighting.map((n) => n.id)).toEqual(["light-key"]);
   });
 });
 

@@ -588,6 +588,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
+  /* -------- ADR-195 刀3：getMasterNodeId（能力总开关）-------- */
+  /** 能力总开关节点 id（pp-enabled）：已升场景组根视图 headerToggle +
+   *  面板首行统一经 filter 移除（复用 envCapSubNodes 同一剔除逻辑，防一二级双份）。 */
+  getMasterNodeId(): string {
+    return "pp-enabled";
+  }
+
   /** 完整后处理节点树：基座 toggle + 5 文件夹（Color/Bloom/SSAO/Reflection/SSR）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildPostprocessingNodes(this);

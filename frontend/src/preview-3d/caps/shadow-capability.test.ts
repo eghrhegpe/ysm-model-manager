@@ -684,6 +684,12 @@ describe("ShadowCapability — 持久化", () => {
 describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
   beforeEach(() => { resetEnvState(); });
 
+  it("getMasterNodeId 声明 shadow-enabled（场景组一级 headerToggle + 面板 filter 契约）", () => {
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    expect(cap.getMasterNodeId()).toBe("shadow-enabled");
+    expect(cap.getMenuNodes().map((n) => n.id)).toContain("shadow-enabled");
+  });
+
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     const nodes = cap.getMenuNodes();

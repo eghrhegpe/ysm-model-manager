@@ -513,6 +513,13 @@ export class LightCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
+  /* -------- ADR-195 刀3：getMasterNodeId（能力总开关）-------- */
+  /** 能力总开关节点 id（light-enabled）：已升场景组根视图 headerToggle +
+   *  面板首行统一经 filter 移除（复用 envCapSubNodes 同一剔除逻辑，防一二级双份）。 */
+  getMasterNodeId(): string {
+    return "light-enabled";
+  }
+
   /** 完整参数面板节点树：light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）。
    *  能力总开关是 light-enabled（isEnabled/setEnabled）；light-key 是主灯 params 开关。 */
   getMenuNodes(): PreviewMenuNode[] {

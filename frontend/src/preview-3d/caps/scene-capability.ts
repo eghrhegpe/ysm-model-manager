@@ -112,14 +112,16 @@ export interface SceneCapability {
   getMenuNodes?(): PreviewMenuNode[];
 
   /**
-   * 能力总开关节点 id（可选）：folder 聚合器（如 env 面板）据此把开关升到 folder header
-   * （对齐 MikuMikuAR PopupRow.headerToggle——「功能=本 folder」时开关免展开可见），
-   * 并自动从 body 剔除同源节点。仅当存在「启停整个能力」的 toggle 时实现
-   * （env/fog/ground/water/reflector/sky 的 enabled/visible toggle 属此）——
-   * 环境面板 6 cap（sky/ground/water/environment/fog/reflector）已全部实现；
-   * 环境面板每个 cap 必须上报（守护测试：env.test.ts），防漏声明→一级默默无开关。
-   * 返回值是 getMenuNodes() 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"），
-   * 非控件定义（PreviewControlDef）。
+   * 能力总开关节点 id（可选）：**「此 cap 有启停整个能力」的唯一真值源**。
+   * 消费方三处同契：
+   *  - env 面板：cap 行升 folder header 的 headerToggle，子视图 filter 剔除
+   *  - 场景组根视图：panel 行 headerToggle（是否给开关由本声明决定）。
+   *  - 直达面板（light/shadow/postproc 等）：面板渲染时 filter 移除首行主开关防一二级双份。
+   * 仅当存在「启停整个能力」的 toggle 时实现（enabled/visible toggle）；audio 返回
+   *   getMenuNodes() 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"、"shadow-enabled"、
+   *  "light-enabled"、"pp-enabled"），非控件定义（PreviewControlDef）。
+   * 守护：env.test.ts 遍历 6 环境 cap 断言必须上报；light/shadow/postproc 由
+   *  cap 自身测试断言 getMasterNodeId 声明 + 面板渲染 filter 契约。
    */
   getMasterNodeId?(): string;
 

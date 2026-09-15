@@ -984,6 +984,12 @@ describe("PostprocessingCapability — 菜单控件联动补充", () => {
 
 // ============ ADR-195 刀2：cap 直产节点（getMenuNodes 契约）============
 describe("PostprocessingCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
+  it("getMasterNodeId 声明 pp-enabled（场景组一级 headerToggle + 面板 filter 契约）", () => {
+    const cap = newCap();
+    expect(cap.getMasterNodeId()).toBe("pp-enabled");
+    expect(cap.getMenuNodes().map((n) => n.id)).toContain("pp-enabled");
+  });
+
   it("顶层结构：3 基座 toggle + 5 文件夹，顺序与 getMenuControls 渲染等价", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();

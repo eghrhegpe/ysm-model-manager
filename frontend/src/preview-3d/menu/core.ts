@@ -407,13 +407,12 @@ function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]):
 }
 
 /**
- * 场景组根视图能力总开关的 panelId → capId 映射（lighting→light, shadow→shadow,
- *  postproc→postprocessing）。仅这三个真「可启停能力」给总开关；camera 是视口
- *  （关闭=黑屏）不可关，故不加——保持「能关的才给开关」语义正确。
- *  value/onChange 直连 cap 的 isEnabled/setEnabled（setEnabled(false) 语义 = 整体 detach
- *  该能力，与 shadow/postproc/light 面板首行总开关同一真值源）。
+ * 场景组 panelId → capId 解析（lighting→light, shadow→shadow, postproc→postprocessing）。
+ *  panel id 与 cap id 命名天然不同（面板用 lighting/postproc，cap 用 light/postprocessing），
+ *  需此桥。**是否给某行总开关由 cap.getMasterNodeId() 单一来源决定**——camera 无对应
+ *  cap/不声明 getMasterNodeId（视口不可关，关闭=黑屏）故自然无开关，保持「能关才给开关」。
  */
-const SCENE_ROW_TOGGLE_CAPS: Readonly<Record<string, string>> = {
+const SCENE_CAP_FOR_PANEL: Readonly<Record<string, string>> = {
   lighting: "light",
   shadow: "shadow",
   postproc: "postprocessing",
@@ -501,10 +500,14 @@ function renderPreviewDock(
           render: (list) => {
             const rows: PreviewMenuNode[] = groupItems.map((node) => {
               if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
-              const capId = SCENE_ROW_TOGGLE_CAPS[node.id];
-              const cap = capId ? ctx.getCap(capId) : null;
+              const cap = ctx.getCap(SCENE_CAP_FOR_PANEL[node.id]);
+              // 单一来源：cap 声明 getMasterNodeId = 有主开关（与面板 filter / env 面板同一契约）
               let headerToggle: PreviewMenuNode["headerToggle"];
-              if (capId && cap?.isEnabled && cap?.setEnabled) {
+              if (
+                cap?.getMasterNodeId?.() &&
+                typeof cap.isEnabled === "function" &&
+                typeof cap.setEnabled === "function"
+              ) {
                 headerToggle = { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) };
               }
               return {

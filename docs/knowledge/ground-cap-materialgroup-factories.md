@@ -43,7 +43,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 构建「地面」参数面板的完整节点树：
 
-- `ground-visible`：平铺 toggle（地面总开关，params 级）
+- `ground-visible`：平铺 toggle（地面总开关，`GroundCapability.getMasterNodeId()="ground-visible"` 升级为 env 面板一级行 headerToggle）
 - 材质组 folder（`preview.groundGroupMaterial`）：mat-source select + 3 color + 9 slider + 2 button（texture/clear，走 controls 通道节点）
 
 ## 对外 API / 入口

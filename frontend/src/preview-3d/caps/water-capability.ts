@@ -635,6 +635,13 @@ export class WaterCapability implements SceneCapability {
     return buildWaterNodes(this);
   }
 
+  /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
+
+  /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
+  getMasterNodeId(): string {
+    return "ground-water-enabled";
+  }
+
   /** 保存状态到 localStorage */
   saveState(): void {
     persistState(this.id, {

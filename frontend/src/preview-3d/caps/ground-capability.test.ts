@@ -72,6 +72,16 @@ describe("GroundCapability — getMenuNodes 分组（节点化后 group 由 fold
   });
 });
 
+describe("GroundCapability — getMasterNodeId（env 面板 headerToggle 用）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("返回 ground-visible 使 env 面板能在行首渲染开关", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    expect(cap.getMasterNodeId()).toBe("ground-visible");
+  });
+});
+
 describe("GroundCapability — 材质控件按 matSource 条件显隐（visibleWhen B 轨，节点化）", () => {
   beforeEach(() => { resetEnvState(); });
 

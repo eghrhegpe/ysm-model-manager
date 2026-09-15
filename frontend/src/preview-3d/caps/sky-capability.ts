@@ -671,10 +671,17 @@ export class SkyCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树：timeline controls 节点 + sky-time/sky-env 平铺原生
-   *  + 高级组 folder。sky 无能力总开关（无 getMasterToggle）。 */
+  /** 完整参数面板节点树：sky-enabled 总开关 + timeline controls 节点 + sky-time/sky-env
+   *  平铺原生 + 高级组 folder。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildSkyNodes(this);
+  }
+
+  /* -------- ADR-195 刀3：getMasterNodeId（替代 getMasterToggle）-------- */
+
+  /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
+  getMasterNodeId(): string {
+    return "sky-enabled";
   }
 
   /** 保存状态到 localStorage */

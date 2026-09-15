@@ -52,6 +52,12 @@ describe("WaterCapability", () => {
     ]);
   });
 
+  it("getMasterNodeId 返回 ground-water-enabled 使 env 面板能在行首渲染开关", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    expect(cap.getMasterNodeId()).toBe("ground-water-enabled");
+  });
+
   it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });

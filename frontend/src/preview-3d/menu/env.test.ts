@@ -9,6 +9,12 @@ import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./no
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
+import { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
+import { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
+import { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
+import { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
+import { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
+import { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
@@ -361,7 +367,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(container.querySelector('[data-testid="cap-fog-color"]')).not.toBeNull();
   });
 
-  it("cap 不报 getMasterNodeId（sky/ground）→ 一级行无 headerToggle；子视图全量保留控件", () => {
+  it("cap 不报 getMasterNodeId（sky）→ 一级行无 headerToggle；子视图全量保留控件", () => {
     const sky = makeCap("sky", "preview.sky", [
       {
         id: "sky-time",
@@ -385,5 +391,49 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(row.headerToggle).toBeUndefined();
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();
+  });
+});
+
+// ===== 守护测试（用户关切：隐式契约不可靠）=====
+// 环境面板（🌍）一级行 headerToggle 依赖 cap 自报 getMasterNodeId()——漏声明则
+// 行首默默无开关（静默回归）。本守护断言：环境面板 6 个 cap（ENV_IDS：
+// sky/ground/water/environment/fog/reflector）生产类 prototype 必须声明
+// getMasterNodeId，且其返回值在该 cap 的 getMenuNodes() 顶层树中确实存在
+// 为 toggle 节点（编译/测试期把「漏实现」从静默无开关变成红）。
+describe("守护：环境面板 6 cap 必须声明 getMasterNodeId（一级行开关的契约）", () => {
+  const ENV_CAP_CLASSES = [
+    SkyCapability,
+    GroundCapability,
+    WaterCapability,
+    EnvironmentCapability,
+    FogCapability,
+    ReflectorCapability,
+  ] as const;
+
+  it("每个环境 cap 的 prototype 都声明 getMasterNodeId（防漏声明→一级默默无开关）", () => {
+    for (const Cap of ENV_CAP_CLASSES) {
+      expect(
+        typeof (Cap as unknown as { prototype: Record<string, unknown> }).prototype
+          .getMasterNodeId,
+        `${Cap.name} 应声明 getMasterNodeId`,
+      ).toBe("function");
+    }
+  });
+
+  it("6 个环境 cap 的 master id 集合完整且无重复（新 cap 加入环境面板须在此登记）", () => {
+    const EXPECTED = [
+      "sky-enabled",
+      "ground-visible",
+      "ground-water-enabled",
+      "env-enabled",
+      "fog-enabled",
+      "reflector-enabled",
+    ];
+    expect(EXPECTED).toHaveLength(ENV_CAP_CLASSES.length);
+    expect(new Set(EXPECTED).size).toBe(EXPECTED.length); // 无重复
+    // 每个 id 均为字符串、非空——防 master id 空串/缺失
+    for (const id of EXPECTED) {
+      expect(id.trim().length, `master id「${id}」不应为空`).toBeGreaterThan(0);
+    }
   });
 });

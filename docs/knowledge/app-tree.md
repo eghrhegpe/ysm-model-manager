@@ -48,6 +48,7 @@ auto_fields:
     - toggleSelect
     - treeCSS
     - TreeEntry
+    - treeLoadFailedHTML
     - TreeNode
     - TreeRenderCtx
     - TreeRow

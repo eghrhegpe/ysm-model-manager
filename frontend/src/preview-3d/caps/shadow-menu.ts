@@ -2,9 +2,10 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()。
 // shadow 全为简单控件（toggle/select/slider）→ 全原生节点，无 controls 通道。
 //
-// 结构（对齐旧控件分组；shadow 无 getMasterToggle——shadow-enabled 是
-// 平铺 toggle 非「能力总开关」，与 fog/reflector 不同）：
-//   - shadow-enabled：toggle（平铺，带 hintKey 提示）
+// 结构（对齐旧控件分组）：
+//   - shadow-enabled：toggle（真能力总开关——isEnabled/setEnabled 与 fog/reflector
+//     同构，setEnabled 全量 apply/关闭。因 shadow 面板是场景组直达平铺（非「行+下钻」），
+//     首行即此开关可一键启停，故无需 getMasterNodeId 升 headerToggle）
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size
 
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
@@ -20,7 +21,7 @@ const MAP_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "4096", label: "4096（精细）" },
 ];
 
-/** shadow-enabled toggle（平铺，非能力总开关——shadow 无 getMasterToggle） */
+/** shadow-enabled toggle（真能力总开关；直达面板首行即切，不升 headerToggle） */
 function shcEnabledNode(cap: ShadowCapability): PreviewMenuNode {
   return {
     id: "shadow-enabled",
@@ -113,7 +114,7 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
 }
 
 /** 完整参数面板节点树——ADR-195 刀2 cap 直产节点入口。
- *  shadow 无能力总开关（无 getMasterToggle），全量平铺+folder 返回。 */
+ *  shadow-enabled 为能力总开关（直达面板首行即切），参数组 folder 折叠。 */
 export function buildShadowNodes(cap: ShadowCapability): PreviewMenuNode[] {
   return [shcEnabledNode(cap), shcBuildParamsFolder(cap)];
 }

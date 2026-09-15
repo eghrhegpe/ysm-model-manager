@@ -104,6 +104,9 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // scripts/baseline/design-tokens-baseline.json 放行——属「代码质量建议」类，
   // 与 check-complexity/check-params 同档（全库阈值 + 存量债），故记 debt。
   "check-design-tokens.ts": "debt",
+  // i18n 未使用键（2026-09 接线）：同为基线比对 + 只拦新增；判定含启发式成分
+  // （动态查表无法静态判定），故记 debt。
+  "check-i18n-unused.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

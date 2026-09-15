@@ -86,6 +86,8 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
   // 本闸管「样式值是否走了令牌」。全量模式不传 --files（全库扫描 + 基线比对）。
   { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt" },
+  // i18n 未使用键（2026-09）：全量模式亦挂——死键是全仓性质的，与扫描域裁剪无关。
+  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
   { tool: "check-android-unavailable.ts", blockPolicy: "hard" },
@@ -134,6 +136,13 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
+  // i18n 未使用键（2026-09 接线）：补四个既有 i18n 闸的公共盲区——它们查「该有的有没有」
+  // （缺失键 / 命名 / UI 硬编码中文 / 右键菜单键齐），**没有一个查「有的还有没有人要」**，
+  // 故死键只增不减（实测 182/1459 = 12%，多为迁移后遗留）。
+  // blockPolicy: debt —— 基线模式（存量冻结）；判定含启发式成分（动态查表无法静态判定），
+  // 按 gate-config 准入判据「不存在存量债冒充」才可 hard，故记 debt。
+  // 不置 scopedFiles：本闸是「全仓键使用面」分析，单文件无法独立判定（见脚本头注释）。
+  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
   { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },

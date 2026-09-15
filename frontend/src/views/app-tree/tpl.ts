@@ -2,20 +2,17 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { renderMenuItems, toolbarMenuTestids } from "./toolbar-menus.ts";
+import { renderDropdown, toolbarMenuTestids } from "./toolbar-menus.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-// 批量/更多下拉的 testid 由 toolbarMenus 声明单一派生（改菜单项只改一处），
+// 批量/更多下拉的触发按钮 + 菜单项 testid 由 toolbarMenuTestids 单一派生，
 // 其余工具栏控件 testid 手工登记于下方字面量。
 export const VIEW_TESTIDS: readonly string[] = [
   "tree-srch",
   "tree-adv-filter",
   "tree-authors",
-  "tree-batch",
-  ...toolbarMenuTestids().filter((id) => id.startsWith("tree-batch")),
-  "tree-more",
-  ...toolbarMenuTestids().filter((id) => id.startsWith("tree-more")),
+  ...toolbarMenuTestids(),
   "tree-sel-all",
   "tree-sort",
   "tree-view-mode",
@@ -38,9 +35,9 @@ export function headerHTML(): string {
 <div class="hdr-row hdr-btn-row">
   <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${t("tree.filter")}</button>
   <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
-  <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch" data-testid="tree-batch">${t("tree.batch")}</button><div class="dd-menu" id="menu-batch">${renderMenuItems("batch")}</div></div>
+  ${renderDropdown("batch")}
   <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${t("tree.selectAll")}</button>
-  <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more" data-testid="tree-more">${t("tree.more")}</button><div class="dd-menu" id="menu-more">${renderMenuItems("more")}</div></div>
+  ${renderDropdown("more")}
   <select class="sort-sel" id="sort" data-testid="tree-sort"><option value="name">${t("tree.sortName")}</option><option value="size">${t("tree.sortSize")}</option><option value="date">${t("tree.sortDate")}</option></select>
   <button class="btn-base sm" id="btn-view-mode" data-testid="tree-view-mode" title="${t("tree.toggleView")}">${UI_ICONS.menu}</button>
 </div>

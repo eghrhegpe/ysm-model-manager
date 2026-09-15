@@ -11,7 +11,6 @@ auto_fields:
     - AppTree
     - appTreeStyle
     - AuthorInfo
-    - BATCH_MENU_ITEMS
     - batchRenameTpl
     - bindBusEvents
     - bindToolbarEvents
@@ -28,7 +27,6 @@ auto_fields:
     - folderRowHTML
     - footerHTML
     - getRenderMode
-    - getToolbarMenu
     - getVsMode
     - getVsRows
     - headerHTML
@@ -36,10 +34,9 @@ auto_fields:
     - listFolderRowHTML
     - loadAuthors
     - loadEntries
-    - MORE_MENU_ITEMS
     - openAdvFilterDialog
     - pickWebFilesAndImport
-    - renderMenuItems
+    - renderDropdown
     - RenderMode
     - renderTree
     - ROW_H_GRID
@@ -50,8 +47,6 @@ auto_fields:
     - setVsRows
     - spinnerHTML
     - toggleSelect
-    - ToolbarMenuItem
-    - ToolbarMenuKey
     - toolbarMenuTestids
     - treeCSS
     - TreeEntry

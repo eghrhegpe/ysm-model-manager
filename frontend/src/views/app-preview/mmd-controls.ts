@@ -92,8 +92,8 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
 /**
  * [doc:adr-126-p5-收尾] MMD 播放/动作面板——声明式节点版。
  * 播放/暂停 = toggle（get 读 isPlaying，set 调 toggle，rmAppendToggle 点击即时反馈）；
- * 动作切换 = select（闭包 get/set 读写 bridge，非状态层路径）；空态 = field 提示 + button 重新扫描；
- * animDir = field 路径提示。fillMmdPlayPanel（命令式）已删除。
+ * 动作切换 = select（闭包 get/set 读写 bridge，非状态层路径）；空态 = field 提示 + button 重新扫描。
+ * fillMmdPlayPanel（命令式）已删除。
  */
 export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
   // 空态：无动作文件 → 引导提示 + 重新扫描（requestReload）
@@ -123,7 +123,9 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
     }
     return nodes;
   }
-  // 正常态：播放/暂停 toggle + 动作 select（多动作时）+ animDir 提示
+  // 正常态：播放/暂停 toggle + 动作 select（多动作时）。
+  // 注：不再追加 animDir 路径 field——有动作可播时用户已在操作动作，磁盘绝对路径无操作价值
+  // （YSM/VRM 侧同为 animDir:null 从不显示）。路径引导仅在空态 play-empty 提示里出现一次。
   const nodes: PreviewMenuNode[] = [
     {
       id: "play-toggle",
@@ -149,14 +151,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
           bridge.select(Number(v) || 0);
         },
       },
-    });
-  }
-  if (bridge.animDir) {
-    nodes.push({
-      id: "play-dir",
-      kind: "field" as const,
-      label: `动作库: ${bridge.animDir}`,
-      value: `动作库: ${bridge.animDir}`,
     });
   }
   return nodes;

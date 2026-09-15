@@ -252,10 +252,19 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
     expect(bridge.requestReload).toHaveBeenCalled();
   });
 
-  it("animDir 配置：追加路径提示 field", () => {
+  it("animDir 配置：正常态不追加路径 field（路径仅空态引导出现一次，有动作时不暴露磁盘路径）", () => {
     const bridge = makeBridge({ animDir: "/custom/anim" });
     const nodes = playNodes(bridge);
-    expect(nodes.some((n) => n.id === "play-dir")).toBe(true);
+    expect(nodes.some((n) => n.id === "play-dir")).toBe(false);
+    // 正常态只有播放相关节点（toggle + 多动作时的 select），无路径 field
+    expect(nodes.every((n) => n.kind !== "field")).toBe(true);
+  });
+
+  it("animDir 配置：空态引导提示里含动作库路径（该显示时才显示，且只一次）", () => {
+    const bridge = makeBridge({ clips: [], animDir: "/custom/anim" });
+    const nodes = playNodes(bridge);
+    const empty = nodes.find((n) => n.id === "play-empty");
+    expect(empty?.value).toContain("/custom/anim");
   });
 });
 

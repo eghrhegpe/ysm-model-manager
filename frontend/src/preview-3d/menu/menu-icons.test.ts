@@ -49,12 +49,46 @@ const MIGRATED_FILES = [
 ];
 
 /**
- * 豁免（ADR-238 §1.4 文本槽）：`menu/env.ts` 的快捷环境预设图标**不是结构槽**——
- * 它被拼进 `label` 喂给 `<select>` 的 `<option>`，而 `renderCapSelect` 用 `o.textContent` 落位、
- * `<option>` 的内容模型**只能是文本**。迁 SVG 只会让下拉里显示一屏 `<svg…>` 字面量。
- * 故按 §1.4「文本槽内符号允许保留」豁免，不列入 MIGRATED_FILES。
+ * 豁免（ADR-238 §1.4 文本槽）：**登记理由 + 通道证据**，避免豁免退化成漏检。
+ *
+ * `marker` 是该文件走文本槽的**结构性证据**——测试断言它仍存在；
+ * 若某文件将来改为结构槽渲染（marker 消失），本条会失败并提醒撤销豁免。
  */
-const TEXT_SLOT_FILES = ["preview-3d/menu/env.ts"];
+const TEXT_SLOT_FILES: { rel: string; marker: string; why: string }[] = [
+  {
+    rel: "preview-3d/menu/env.ts",
+    marker: "label:",
+    why: "预设 emoji 拼进 label 喂 <select> 的 <option>；renderCapSelect 用 o.textContent，<option> 只能文本",
+  },
+  // 以下文件的 icon 一律作为「标题/文案前缀」传入 modal 或 toast 模板，
+  // 最终经 utils/dom/modal-core.ts 的 `esc(icon)` 转义内联——SVG 会被转义成字面量，故属文本槽。
+  { rel: "features/dialogs/adv-filter.ts", marker: "createDialog", why: "对话框标题前缀（esc 通道）" },
+  { rel: "features/dialogs/rename.ts", marker: "createDialog", why: "对话框标题前缀（esc 通道）" },
+  { rel: "features/dialogs/tag-editor.ts", marker: "createDialog", why: "对话框标题前缀（esc 通道）" },
+  { rel: "features/maintenance/recycle-bin.ts", marker: "modalConfirm", why: "确认框标题前缀" },
+  { rel: "features/maintenance/version-updater.ts", marker: "modalConfirm", why: "确认框标题前缀" },
+  { rel: "features/pack-ops/instance-ops.ts", marker: "modalConfirm", why: "确认框标题前缀" },
+  { rel: "views/app-content/settings/path-cards.ts", marker: "modalPicker", why: "选择器标题前缀" },
+  {
+    rel: "views/app-sidebar/launcher-detect.ts",
+    marker: "modalSelect",
+    why: "选择器标题前缀（esc 通道）",
+  },
+  { rel: "views/app-tree/bus-handlers.ts", marker: "modalConfirm", why: "确认框标题前缀" },
+  { rel: "views/app-tree/index.ts", marker: "modalConfirm", why: "确认框标题前缀" },
+  {
+    rel: "features/community/repo-events-bindings.ts",
+    marker: "modalConfirm",
+    why: "确认框标题前缀",
+  },
+  // 右键菜单的 toast/弹窗**文案模板**（BATCH_TPL）——不是菜单项图标（ADR-245 迁移完好）
+  { rel: "features/context-menu/context-menu-handlers.ts", marker: "BATCH_TPL", why: "toast 文案模板" },
+  {
+    rel: "features/context-menu/context-menu-file-handlers.ts",
+    marker: "modalSelect",
+    why: "选择器标题前缀（esc 通道）",
+  },
+];
 
 /** 从源码里抽出所有 `icon: "…"` 字面量（闭包内的表只能这样枚举） */
 function scanIconLiterals(rel: string): { value: string; line: number }[] {
@@ -111,17 +145,22 @@ describe("3D 菜单图标契约（ADR-238/ADR-245 单一事实源）", () => {
   });
 
   describe("③ 豁免清单自检（防「豁免」悄悄变成漏检）", () => {
-    for (const rel of TEXT_SLOT_FILES) {
-      it(`${rel} 仍只出现在文本槽（豁免理由见文件头）`, () => {
+    for (const { rel, marker, why } of TEXT_SLOT_FILES) {
+      it(`${rel} 仍走文本槽（${why}）`, () => {
         const literals = scanIconLiterals(rel);
-        expect(literals.length).toBeGreaterThan(0);
-        // 豁免的前提是「喂给 <option> 文本」。若将来该文件改为结构槽渲染，本条会提醒撤销豁免。
+        // 豁免的前提是「该文件确有字形 icon」——若已无，说明已迁走，本条提醒从清单移除
+        expect(literals.length, `${rel} 已无 icon 字面量？可移出豁免清单`).toBeGreaterThan(0);
         const src = fs.readFileSync(path.join(SRC, rel), "utf8");
         expect(
-          src.includes("label:"),
-          `${rel} 不再走 label 文本拼接？请复核 §1.4 豁免是否仍成立`,
+          src.includes(marker),
+          `${rel} 不再含文本槽通道标记「${marker}」？请复核 §1.4 豁免是否仍成立`,
         ).toBe(true);
       });
     }
+
+    it("豁免清单与迁移清单不重叠（同一文件不能既迁又豁免）", () => {
+      const overlap = TEXT_SLOT_FILES.map((t) => t.rel).filter((r) => MIGRATED_FILES.includes(r));
+      expect(overlap).toEqual([]);
+    });
   });
 });

@@ -134,12 +134,13 @@ status: active
 
 ### 域二：3D 全域状态层
 - `preview-3d/state/preview-state.ts`（ADR-126 P4-A 升格；ADR-129 第一刀归位）
-- 11 条已落地横切设置路径（`KNOWN_PATHS`，见 `preview-paths.ts`；ADR-125 P1 六条 → ADR-126 P4-A 升格 → 后扩至 11）：
+- 10 条已落地横切设置路径（`KNOWN_PATHS`，见 `preview-paths.ts`；ADR-125 P1 六条 → ADR-126 P4-A 升格 → 后扩至 11 → [ADR-250] 退 1 至 10）：
   - 直管 localStorage（3 条）：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
-  - cap 派生（不落盘，5 条）：`render.bloom` / `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource`
+  - cap 派生（不落盘，4 条）：`render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource`
+    （**`render.bloom` 已随 [ADR-250] 退场**——后处理开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`；它兼具性能总闸与模型门禁语义，属「一枚字段三重语义」，且档位切换会覆盖用户手动开关。）
   - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
   - 探针路径（2 条，cap 内部状态上浮供 `visibleWhen` 谓词消费）：`ui.mode`（预览会话模式 shared/self）、`env.skyGroundCap`（环境能力可用性）
-  - 详见 [preview_state](./preview_state.md)（卡间口径以 11 条为准）
+  - 详见 [preview_state](./preview_state.md)（卡间口径以 10 条为准）
 
 ### 域三：截图 & 填充面板
 - `shot-panel-shared.ts`（6 角度按钮）、`skeleton-render.ts`（`saveScreenshot`）、`skeleton-fill-panel.ts`（组件选择 + 统计 + 纹理）
@@ -154,7 +155,7 @@ status: active
 | `ysm_3d_maxFps` | 帧率上限（0=不限，负数回退 60） | `60` | `render-budget.ts` |
 | `ysm_3d_maxPixelRatio` | 像素比上限（clamp [0.5, 2]） | `1.5` | `render-budget.ts` |
 
-> `render.bloom` / `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource` 由对应 `SceneCapability` 自行 `saveState`，状态层**不落盘**（ADR-125 P1 防双写红线）；`ui.activeComponent` 是 per-scene 会话态，`resetActiveComponent()` 在预览 dispose 时复位。
+> `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource` 由对应 `SceneCapability` 自行 `saveState`，状态层**不落盘**（ADR-125 P1 防双写红线）；`ui.activeComponent` 是 per-scene 会话态，`resetActiveComponent()` 在预览 dispose 时复位。
 
 ## 设置项清单
 
@@ -167,7 +168,7 @@ status: active
 | 帧率上限 | 3D 渲染节流（0=不限） | `60` | `render-budget.ts` |
 | 像素比上限 | 渲染分辨率上限（clamp [0.5,2]） | `1.5` | `render-budget.ts` |
 | 视锥剔除 | `render.frustumCull`（状态层直管） | 待确认 | `preview-state.ts` |
-| Bloom 后处理 | `render.bloom`（postprocessing cap 派生） | `false` | `preview-state.ts` |
+| 后处理开关 | `pp-enabled`（postprocessing cap 自报 → 写 `envState.ppEnabled`） | `false` | `postprocessing-menu.ts` |
 | 线框模式 | `render.wireframe`（wireframe cap） | `false` | `preview-state.ts` |
 | PMREM 环境 | `env.pmrem`（sky cap） | `false` | `preview-state.ts` |
 | 水面模式 | `env.waterMode` | `"film"` | `preview-state.ts` |
@@ -195,14 +196,14 @@ status: active
 
 ## 不变量
 
-- **状态层双写红线**：cap 派生项（`render.bloom` 等）状态层不落盘——cap 自己 `saveState`；直管项（`maxFps`/`maxPixelRatio`/`frustumCull`）由状态层直管 localStorage；`ui.activeComponent` 是会话态内存值
+- **状态层双写红线**：cap 派生项（`render.wireframe` 等）状态层不落盘——cap 自己 `saveState`；直管项（`maxFps`/`maxPixelRatio`/`frustumCull`）由状态层直管 localStorage；`ui.activeComponent` 是会话态内存值
 - **路径契约**（ADR-129）：`PreviewStatePath = typeof KNOWN_PATHS[number]`；新增路径必须「扩 `KNOWN_PATHS` + 填 `bindings`」两步走，否则编译失败
 - **`ui.activeComponent` 会话态隔离**（ADR-126 P5-B2）：真源是 `registerYsmModelSchema(sessionId)` 内的 per-scene 闭包 `sessionActiveComponent`（不再读全局状态层）；预览 dispose 时 `unregisterSchema` 注销 + 关闭钩子清理；`resetActiveComponent()` 复位模块级 `_activeComponent = -1`，防跨预览陈旧下标越界
 - **截图能力守卫**：`screenshotFn === null`（MMD 无活跃 renderer）→ `shotButtonNodes` 返回 `[]`；`=== undefined`（YSM ctx 可选字段缺省）→ 仍返回 6 按钮，走 `saveScreenshot` 的 `renderMultiAngle` fallback
 - **截图幂等**：`makeShotAction` 内 `let saving=false` 防连点；`saveScreenshot` 对空返回抛错（陷阱 #3：异步失败须可观测），上层 catch 后 toast
 - **3D 关闭语义**（ADR-057 §2.5）：用户主动关闭（ESC/✕/返回键）→ `setPrefer3D(false)`；切模型自动关层 → 保留 `_prefer3D`
 - **截图灯光"所见即所得"**（ADR-126 P5）：`toScreenshotLights` 从预览 `LightCapability` 提取；三点全关 = 用户刻意暗场景，截图必须保持暗；cap 缺失时才回退标准灯
-- **`render.bloom=false` 只做总闸关闭**（低档保性能），`=true` 不强制打开——尊重 per-type 门禁
+- **[ADR-250] 后处理开关不进性能档位表**：原 `render.bloom` 兼具「总闸」「per-type 门禁」「用户开关」三重语义，档位切换会覆盖用户手动开关；现档位只管 `maxFps`/`maxPixelRatio`，后处理开关唯一入口 = `pp-enabled` 控件（写 `envState.ppEnabled`）。语义与既有的「wireframe/pmrem 是视觉项不进档位表」口径一致。
 - **存储必须走 `safeGet`/`safeSet`**（ADR-044 隐私模式红线），不得裸调 `localStorage`
 
 ## 相关

@@ -71,7 +71,7 @@ describe("teardownSharedInfra", () => {
 // ===== ADR-196 装配链收敛契约（applyModelDefaults / applyPostProcDefaults） =====
 // 断言「7 个散落 setPreset 调用收敛为 2 个命名入口」后，编排仍逐字复刻原顺序，
 // 且按 modelType 透传（未知类型由各 cap 内部回落 default，装配层不越权）。
-describe("applyModelDefaults / applyPostProcDefaults（ADR-196 装配链收敛契约）", () => {
+describe("applyModelDefaults（ADR-196 装配链收敛契约）", () => {
   function makeDeps() {
     const cap = (name: string) => ({ applyModelPreset: vi.fn(), id: name });
     const sky = cap("sky");
@@ -117,16 +117,8 @@ describe("applyModelDefaults / applyPostProcDefaults（ADR-196 装配链收敛�
     ).not.toThrow();
   });
 
-  it("applyPostProcDefaults 调用 postProc.applyPostProcDefaults(modelType)", async () => {
-    const { applyPostProcDefaults } = await import("./shared-infra.ts");
-    const postProc = { applyPostProcDefaults: vi.fn() };
-    applyPostProcDefaults(postProc as never, "mmd");
-    expect(postProc.applyPostProcDefaults).toHaveBeenCalledTimes(1);
-    expect(postProc.applyPostProcDefaults).toHaveBeenCalledWith("mmd");
-  });
-
-  it("applyPostProcDefaults 遇 null 静默跳过", async () => {
-    const { applyPostProcDefaults } = await import("./shared-infra.ts");
-    expect(() => applyPostProcDefaults(null, "vrm")).not.toThrow();
+  it("[ADR-250] 装配链不再导出 applyPostProcDefaults（钩子已删，per-type 走 MODEL_DEFAULTS）", async () => {
+    const mod = await import("./shared-infra.ts");
+    expect("applyPostProcDefaults" in mod).toBe(false);
   });
 });

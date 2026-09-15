@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import { envState } from "@/preview-3d/state/env-state.ts";
 import { deriveDefaultEnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { ENV_PRESETS } from "./environment-capability.ts";
-import { POSTPROC_PRESETS } from "./postprocessing-capability.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 
 describe("envState 默认值结构完整性", () => {
@@ -66,10 +65,11 @@ describe("cap 预设/默认值结构完整性", () => {
     expect("fogEnabled" in fog("default")).toBe(false);
   });
 
-  it("POSTPROC_PRESETS has default key", () => {
-    expect(POSTPROC_PRESETS.default).toBeDefined();
-    expect(typeof POSTPROC_PRESETS.default).toBe("object");
-    // per-type preset 携带 enabled 门禁（能力级开关，不入 schema）
-    expect(typeof POSTPROC_PRESETS.vrm?.enabled).toBe("boolean");
+  it("[ADR-250] ppEnabled 落 MODEL_DEFAULTS（原 POSTPROC_PRESETS 的职责）", () => {
+    // 原表 default:{} 语义 = default 类型不写该键（继承 envState 默认 false）
+    expect("ppEnabled" in MODEL_DEFAULTS.default).toBe(false);
+    // per-type 意图（原 preset.enabled）现为 ppEnabled 参数
+    expect(MODEL_DEFAULTS.vrm.ppEnabled).toBe(true);
+    expect(MODEL_DEFAULTS.ysm.ppEnabled).toBe(false);
   });
 });

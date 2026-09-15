@@ -134,9 +134,12 @@ invariant_anchors:
   （原 `volumetricEngine` 运行时态已随 ADR-246 D1 删除——postprocess 空壳引擎移除。）
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。
-- MODEL_DEFAULTS 缺口（已决断收口）：postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删。**收口理由（2026-09-07）**：该表只额外携带 `enabled` 一个键（per-type 门禁），而 `enabled` 属**能力级 enabled**（ADR-196 红线：不入 schema，留 cap 私有 this.enabled），故按专属数据源保留为**正确决策**而非遗漏，风险封存不复现。MODEL_DEFAULTS 内的 postproc 参数键（ppBloomStrength 等）与它不重叠。
+- **[ADR-250] 后处理启用意图已入 schema（`ppEnabled`）**：原 `perTypeGate`（模型类别门禁）与 `perfMaster`（性能总闸）两枚 cap 私有字段、`syncEffectiveEnabled()` 二元相与、`POSTPROC_PRESETS` 表**全部退役**。「默认是否开后处理」由 `MODEL_DEFAULTS` 的 `ppEnabled` 参数表达（与六 cap 同构，经 `auto-model` 源写入，用户 `manual` 可覆盖）。cap 内 `enabled` 现为**读 envState 的 getter**，不再是被四路写入的独立字段。
+- **[ADR-250] `renderer.toneMappingExposure` 属主归 sky，唯一写入口 = `SkyCapability.applyExposure`**（有效曝光 = `skyExposure × ppExposure`）。`PostprocessingCapability` **任何情况下都不写该字段**——原双写造成约 1.8× 亮度跳变（后处理一开即从 `skyExposure` 0.55 跳到 `ppExposure` 1.0），这是「MMD 亮瞎 / YSM 恰好正常」的真因。并发持有无解，只能定单一属主。
+- **[ADR-250] composer 生命周期在会话轴，不在模型/开关轴**：构造即建、`dispose()` 才拆；启用意图翻转只切 pass 旁路（`buildComposer(syncReflector=false)` 于构造期不压制 reflector），不 allocate/dispose。原「换模型 → 门禁翻转 → 整组 GPU 资源重建」是配置缓存失效的结构性来源。
+- MODEL_DEFAULTS 缺口**已收敛（ADR-250）**：原「postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`，未改读 MODEL_DEFAULTS——第 7 张表未删」这一 known gap 随该表删除而消失。后处理「启用意图」经查证实为**用户可见效果偏好**（非能力级挂载），故以 `ppEnabled` 正式入 schema；其余 cap 的 `this.enabled`（能力是否挂载）红线不变。
 
 ## 相关
 
-- ADR-196（预设三轴统一）、ADR-195（cap 控件单类型化）
+- ADR-196（预设三轴统一）、ADR-195（cap 控件单类型化）、**ADR-250（后处理门禁降参 / composer 常驻 / 曝光属主归 sky）**
 - `docs/knowledge/scene_capability_registry.md`

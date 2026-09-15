@@ -110,8 +110,8 @@ function hasMethod<T>(obj: unknown, name: keyof T): boolean {
 }
 
 /**
- * 惰性 cap 解析工厂（2026-09-14 收敛：toggleCap/envToggleCap/waterCap/groundMatCap/
- * wireframeModeCap 五个同构函数抽此一处）——cap 缺席或任一方法不齐 → undefined；
+ * 惰性 cap 解析工厂（2026-09-14 收敛：envToggleCap/waterCap/groundMatCap/
+ * wireframeModeCap 等同构函数抽此一处）——cap 缺席或任一方法不齐 → undefined；
  * 返回类型由 T 参数化，消费方零 cast。
  */
 function lazyCap<T extends object>(id: string, ...methods: Array<keyof T>): T | undefined {
@@ -123,15 +123,8 @@ function lazyCap<T extends object>(id: string, ...methods: Array<keyof T>): T | 
   return cap as unknown as T;
 }
 
-/** 带 isEnabled/setEnabled 的开关型 cap */
-interface ToggleCap {
-  isEnabled(): boolean;
-  setEnabled(v: boolean): void;
-}
-
-function toggleCap(id: string): ToggleCap | undefined {
-  return lazyCap<ToggleCap>(id, "isEnabled", "setEnabled");
-}
+// [ADR-250] 原 `toggleCap`（isEnabled/setEnabled 开关型 cap 解析）已删除——
+// 其唯一消费方 `render.bloom` 已退表（后处理开关归 envState.ppEnabled）。
 
 /** 环境贴图开关型 cap（SkyCapability 的 PMREM 语义） */
 interface EnvToggleCap {
@@ -206,32 +199,10 @@ const bindings: PathBindingMap = {
     available: () => true,
   },
   // ── cap 派生项：走 get/set 映射，本层不落盘（cap 存自己的域）──
-  //   与 cap 自报控件同源：pp-enabled / wireframe-toggle / sky-env
-  "render.bloom": {
-    get: () => toggleCap("postprocessing")?.isEnabled() ?? false,
-    set: (v) => {
-      const cap = toggleCap("postprocessing");
-      if (!cap) return;
-      // 性能档位只做「总闸」：render.bloom=false 关闭全部（低档保性能）；
-      // =true 不强制打开 —— 尊重 per-type 预设设为关闭的类型（方块/体素/光影包），
-      // 根治「medium 默认强制全类型开 Bloom → YSM/车万女仆爆亮」的越权。
-      // 最终开关 = 总闸(render.bloom) && per-type 门禁(params.enabled)，手动开关不受此限。
-      // [ADR-247 D3] 总闸语义已内移进 cap：setMasterEnabled(v) 内部按「总闸 && per-type 门禁」
-      // 重算生效开关并自持门禁保护。此处只传档位意图，不再回读 getParams().enabled 传回
-      //（旧写法把门禁保护落在调用方，任何绕过本行的调用都会毁掉 off→on 可恢复性）。
-      // 缺 setMasterEnabled（旧实现/测试 fake）时结构化回退旧语义 setEnabled(Boolean(v))，
-      // 不做硬转——hasMethod 模式防运行期炸裂。
-      const master = cap as unknown as {
-        setMasterEnabled?: (v: boolean) => void;
-      };
-      if (master.setMasterEnabled) {
-        master.setMasterEnabled(Boolean(v));
-      } else {
-        cap.setEnabled(Boolean(v));
-      }
-    },
-    available: () => toggleCap("postprocessing") !== undefined,
-  },
+  //   与 cap 自报控件同源：wireframe-toggle / sky-env
+  // [ADR-250] `render.bloom` 已退场——后处理是视觉项，与 wireframe/pmrem 同类不进性能档位表。
+  // 历史：该路径经 setMasterEnabled 写 cap 私有总闸字段，与 per-type 门禁二元相与，
+  // 构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。现后处理开关唯一入口 = `pp-enabled`。
   // [幽灵船收口 2026-09] render.wireframe 原绑定指向 WireframeCapability——该 cap 从未注册
   // （scene-capability-registry 无 wireframe 工厂），toggleCap("wireframe") 恒 undefined →
   // available() 永远 false 死链。真身是 RenderModeCapability.rm-wireframe（settingsOrder:30）。

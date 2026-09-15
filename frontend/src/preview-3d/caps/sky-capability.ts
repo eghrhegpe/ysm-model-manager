@@ -282,8 +282,11 @@ export class SkyCapability implements SceneCapability {
         this.applyScaledUniform(changed, "skySunDiscScale", "sunDiscScale", state.skySunDiscScale);
 
         // ④ 渲染状态类
-        if (changed.has("skyExposure")) {
-          this.renderer.toneMappingExposure = state.skyExposure;
+        // [ADR-250 §2.3] 曝光属主归 sky：有效曝光 = skyExposure × ppExposure。
+        // ppExposure 变更亦走此处重算（原由 PostprocessingCapability 直接覆写，两 cap 并写同一字段
+        // 造成约 1.8× 亮度跳变——「MMD 亮瞎」的真因，见 ADR-250 §1.4）。
+        if (changed.has("skyExposure") || changed.has("ppExposure")) {
+          this.applyExposure();
         }
         if (changed.has("skyEnvironment")) {
           if (state.skyEnvironment) this.regenerateEnvironment();
@@ -299,7 +302,9 @@ export class SkyCapability implements SceneCapability {
           this.autoRotateOn = state.skyAutoRotate;
         }
       },
-      "sky",
+      // [ADR-250 §2.3] 本 cap 是曝光属主（有效曝光 = skyExposure × ppExposure），
+      // 故需跨组订阅：自己组的 skyExposure + postprocessing 组的 ppExposure。
+      ["sky", "postprocessing"],
     );
   }
 
@@ -379,11 +384,24 @@ export class SkyCapability implements SceneCapability {
     }
     // exposure 每次都刷：apply→detach→apply 往返时 toneApplied 已为 true，
     // 但 exposure 可能已被外部改过，必须重新写入。
-    this.renderer.toneMappingExposure = envState.skyExposure;
+    // [ADR-250 §2.3] 统一走 applyExposure（skyExposure × ppExposure）。
+    this.applyExposure();
     if (envState.skyEnvironment) this.regenerateEnvironment();
     else this.clearEnvironment();
     // 同步日落光束 + tint overlay 挂载（按当前太阳角度决策）
     this.beams.sync(this.elevation, this.azimuth);
+  }
+
+  /**
+   * 写入 `renderer.toneMappingExposure` —— [ADR-250 §2.3] 本 cap 是**唯一属主**。
+   *
+   * 有效曝光 = `skyExposure × ppExposure`（ppExposure 默认 1.0，故默认行为与原
+   * `skyExposure` 一致）。后处理侧只提供 `ppExposure` 作为**乘法系数**，
+   * 不再直接覆写渲染器字段——原双写造成约 1.8× 亮度跳变（「MMD 亮瞎」的真因）：后处理一开
+   * 即从 `skyExposure`(per-type 0.5~0.6) 跳到 `ppExposure`(全局 1.0)。
+   */
+  private applyExposure(): void {
+    this.renderer.toneMappingExposure = envState.skyExposure * envState.ppExposure;
   }
 
   private writeUniforms(sky: Sky): void {

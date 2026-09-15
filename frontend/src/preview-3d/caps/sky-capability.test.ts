@@ -767,8 +767,35 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(cap.isEnabled()).toBe(true);
     expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
-    expect(renderer.toneMappingExposure).toBe(envState.skyExposure);
+    // [ADR-250] 有效曝光 = skyExposure × ppExposure（ppExposure 默认 1.0 → 此处等于 skyExposure）
+    expect(renderer.toneMappingExposure).toBeCloseTo(
+      envState.skyExposure * envState.ppExposure,
+      6,
+    );
     expect(scene.environment).not.toBeNull();
+  });
+
+  // [ADR-250 §2.3] 曝光属主归 sky：本 cap 是 `renderer.toneMappingExposure` 的唯一写者，
+  // 有效值 = skyExposure × ppExposure。原后处理侧直接覆写该字段，导致开/关后处理时
+  // 约 1.8× 亮度跳变（「MMD 亮瞎」真因）——本组锁定乘算口径。
+  it("[ADR-250] 曝光 = skyExposure × ppExposure（ppExposure 作为乘法系数，非夺属主）", () => {
+    const scene = new THREE.Scene();
+    setEnvState({ skyExposure: 0.5, ppExposure: 1.2 }, { source: "manual" });
+    const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 9 });
+    const cap = new SkyCapability({ scene, renderer });
+    cap.apply();
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.6, 6); // 0.5 × 1.2
+  });
+
+  it("[ADR-250] ppExposure 变更经 envState 派发重算曝光（无需 postproc 介入）", () => {
+    const scene = new THREE.Scene();
+    setEnvState({ skyExposure: 0.5, ppExposure: 1.0 }, { source: "manual" });
+    const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 9 });
+    const cap = new SkyCapability({ scene, renderer });
+    cap.apply();
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 6);
+    setEnvState({ ppExposure: 2.0 }, { source: "manual" });
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 6); // 0.5 × 2.0
   });
 
   it("environment=false 时 apply 清空 environment 但仍挂载天空", () => {

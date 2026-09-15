@@ -15,17 +15,20 @@ import {
 } from "./scene-capability.ts";
 
 // ADR-196 装配链收敛：SceneCapability 接口已删 setPreset，cap 预设套用方法
-// 降级为非接口 public（applyModelPreset / applyPostProcDefaults）。运行时锁定
-// 具体 cap 的 prototype 不再暴露 setPreset，防止接口删除被回退。
+// 降级为非接口 public（六 cap 的 applyModelPreset + postprocessing 的 applyModelPreset）。
+// 运行时锁定具体 cap 的 prototype 不再暴露 setPreset，防止接口删除被回退。
 describe("ADR-196 接口收敛——cap 不再暴露 setPreset", () => {
   it("SkyCapability.prototype 无 setPreset、有 applyModelPreset", () => {
     expect(SkyCapability.prototype).not.toHaveProperty("setPreset");
     expect(SkyCapability.prototype).toHaveProperty("applyModelPreset");
   });
 
-  it("PostprocessingCapability.prototype 无 setPreset、有 applyPostProcDefaults", () => {
+  // [ADR-250] PostprocessingCapability 的 applyPostProcDefaults 已删除，
+  // 改为与六 cap 同构的 applyModelPreset（读 MODEL_DEFAULTS 写 ppEnabled 状态参数）。
+  it("[ADR-250] PostprocessingCapability.prototype 无 setPreset / 无 applyPostProcDefaults、有 applyModelPreset", () => {
     expect(PostprocessingCapability.prototype).not.toHaveProperty("setPreset");
-    expect(PostprocessingCapability.prototype).toHaveProperty("applyPostProcDefaults");
+    expect(PostprocessingCapability.prototype).not.toHaveProperty("applyPostProcDefaults");
+    expect(PostprocessingCapability.prototype).toHaveProperty("applyModelPreset");
   });
 });
 

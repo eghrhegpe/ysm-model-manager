@@ -11,7 +11,7 @@ export type EnvCallback = (changed: Set<string>, state: EnvState) => void;
 interface Registration {
   cb: EnvCallback;
   /** 非空时只派发 group 匹配的键（前置过滤，cap 回调不再需要自行过滤） */
-  group?: string;
+  group?: string | readonly string[];
   /** group 键集，注册时算一次缓存（getPresetKeys 是静态查表；昼夜循环每帧派发，
    *  若每次 dispatch 重建 Set 会在热路径重复分配——锐评 §四） */
   groupKeys?: Set<string>;
@@ -26,10 +26,26 @@ const _callbacks = new Map<unknown, Registration>();
  * @param cb   回调函数
  * @param group 可选：只接收该 group 的键变更（如 "sky"/"fog"/"ground" 等）；
  *              省略则接收全量（兼容未分组场景）。
+ *              **[ADR-250] 可为数组**——cap 跨组关注时使用（如 sky 拥有曝光属主，
+ *              需同时消费自己组的 `skyExposure` 与 postprocessing 组的 `ppExposure`）。
+ *              单组仍传字符串（既有调用点零改动）。
  * 返回取消订阅函数。
  */
-export function registerEnvCallback(cap: unknown, cb: EnvCallback, group?: string): () => void {
-  _callbacks.set(cap, group ? { cb, group, groupKeys: new Set(getPresetKeys(group)) } : { cb });
+export function registerEnvCallback(
+  cap: unknown,
+  cb: EnvCallback,
+  group?: string | readonly string[],
+): () => void {
+  if (!group) {
+    _callbacks.set(cap, { cb });
+  } else {
+    const groups = typeof group === "string" ? [group] : group;
+    const keys = new Set<string>();
+    for (const g of groups) {
+      for (const k of getPresetKeys(g)) keys.add(k);
+    }
+    _callbacks.set(cap, { cb, group, groupKeys: keys });
+  }
   return () => {
     _callbacks.delete(cap);
   };

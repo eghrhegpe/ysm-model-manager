@@ -102,14 +102,14 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.frustumCull` | `isFrustumCullEnabled/setFrustumCullEnabled`（`frustum-cull.ts`） | 本层管（键 `ysm_3d_frustumCull`） |
 | `render.maxFps` | `MAX_FPS_KEY` | 本层管，写入后**必须** `invalidateMaxFpsCache()`（rAF 热路径有模块级缓存） |
 | `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY` | 本层管 |
-| `render.bloom` | postprocessing cap `pp-enabled` | **不落盘**（cap 存自己的域） |
 | `render.wireframe` | RenderModeCapability `rm-wireframe`（幽灵船 `wireframe-toggle` 已收口） | 不落盘 |
 | `env.pmrem` | sky cap `sky-env` | 不落盘 |
 
+> **[ADR-250] `render.bloom` 已退场**（原「postprocessing cap `pp-enabled`」，不落盘）。它经 `setMasterEnabled` 写 cap 私有总闸，与 per-type 门禁二元相与构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。后处理是视觉项（与 wireframe/pmrem 同类），开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。
+
 - 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu/node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
 - cap 派生路径**惰性解析**：每次 `get/set` 都现查 `sceneCapabilityRegistry.getById()`，不在构建期捕获实例。这是 ADR-125 P3 明令禁止的「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修「水池分组不出现」同类病）的根治点。
-- 结构性探测：`hasMethod()` 判断 cap 是否真有 `isEnabled/setEnabled`，冒牌 cap 不误判为可用。
-- **`render.bloom` 总闸语义（2026-08-29 审核修复）**：性能档位写入 = 总闸。`false` 关全部；`true` 尊重 per-type 门禁（`params.enabled`）不强制打开（防 YSM/车万女仆爆亮）。实现走 cap 的 `setMasterEnabled`（只写生效开关、**不抹门禁**，总闸 off→on 循环可恢复），缺该方法/`getParams`（旧实现/测试 fake）时结构化回退 `setEnabled(Boolean(v))`——不做硬转，防运行期炸裂。
+- 结构性探测：`hasMethod()` 判断 cap 是否真有 `isEnabled/setEnabled`，冒牌 cap 不误判为可用。（原 `toggleCap()` 工厂随 `render.bloom` 退表一并删除——其唯一消费方即该路径。）
 
 ### P2 自动聚合：cap 侧自声明，settings 侧零接线
 
@@ -126,7 +126,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 
 一键性能档位 = **纯数据表 + 通用套用器**，刻意规避隔壁 MikuMikuAR 的坑（每个模式手写参数映射 + Go 绑定 + custom 档手动 reRender）：
 
-- `PERF_PRESETS`：低/中/高三档 → `StatePath → 值`（路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫）。一期只控有状态层路径的性能项：`render.maxFps` / `render.maxPixelRatio` / `render.bloom`。wireframe/pmrem 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。
+- `PERF_PRESETS`：低/中/高三档 → `StatePath → 值`（路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫）。只控有状态层路径的性能项：`render.maxFps` / `render.maxPixelRatio`。wireframe/pmrem/**bloom** 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。
 - `applyPerfPreset(level)`：遍历表走 `setStateValue`（cap 缺席的派生路径静默跳过）；**custom 不套用**（保持用户手调，零副作用）。
 - `setPerfPreset(level)`：持久化（键 `ysm_3d_perfPreset`）+ 套用；`getPerfPreset()` 无存档回 `medium`。
 - 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点），切档套用后 `menu?.refresh()` 刷新兄弟控件显示。
@@ -144,9 +144,11 @@ settings 面板是**聚合器**：横切项（P1 本层管）与 cap 自报项�
 3. **有无 cap 私有状态依赖**——依赖 `this.enabled` / `isStateLoaded` 等 cap 私有运行时态？依赖 → cap。
 全部否定 → 横切（frustumCull/maxFps/maxPixelRatio 即此例：无宿主、无仲裁、无私有态）。
 
+> **[ADR-250] 判据落点修订**：bloom 经该三句判定归 cap——**且该判定被证明是对的**，但当时的实现把它落成了「cap 私有总闸字段 + 与门禁相与」，由此产生三重语义。现 bloom 归 cap 的形式改为 **cap 自报控件（`pp-enabled`）写 `envState.ppEnabled`**：仍属 cap 域（判据不变），但真值源在统一状态层，不再有 cap 私有字段参与仲裁。
+
 **历史动机 vs 规则**：frustumCull/maxFps/maxPixelRatio 归横切是 ADR-125 P1 时代"settings-state"遗产（无 cap 归属）；wireframe 等归 cap 是同一能力注销时"真值源归属 cap"。规则把历史分歧收敛为可判定口诀，避免新增设置主观选边。
 
-**已知缝隙（非 bug，记录）**：preview-state 的 cap 派生路径（bindings 中"cap 派生项不落盘"备注）使 preview-state **兼作状态 + 转发代理**——`render.bloom` 经 set 转发给 postprocessing cap（`setMasterEnabled`），本层不落盘。这是"本层是状态层还是代理"的模糊点；因跨 cap 聚合总闸语义无法完全下沉，现状可接受，勿再新增此类代理 path（新能力级开关走 P2 cap 自报，不复制进本层）。
+**已知缝隙已闭合（ADR-250）**：原记录「preview-state 兼作状态 + 转发代理——`render.bloom` 经 set 转发给 postprocessing cap 的 `setMasterEnabled`，本层不落盘」。该代理 path 已随 `render.bloom` 退表删除，本层不再有任何「转发给 cap 私有字段」的路径——**新能力级开关一律走 P2 cap 自报控件 + `envState` 参数**，不复制进本层（该约束继续有效）。
 
 ## 对外 API / 入口
 

@@ -77,20 +77,20 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ## 核心职责
 
-1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——六项：`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.bloom` / `render.wireframe` / `env.pmrem`。
+1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.wireframe` / `env.pmrem`。（原含 `render.bloom`，已随 [ADR-250] 退表——后处理是视觉项，开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。）
 2. **cap 派生路径惰性解析**：cap 缺席时 `available()=false`，不在构建期冻结（ADR-125 P3 明令禁止的 `if (cap)` 声明期求值反例的根治点）。
 3. **订阅通知**（`subscribeSettings`）：供后续把 `05fe24b7` 的手工 refresh 链路降级为「状态变更自动重算」。
 
 **持久化边界（ADR-125 P1 继承，防双写）**：
 - 三项无 cap 归属的横切项（frustumCull/maxFps/maxPixelRatio）由本层读写 localStorage，键名与迁移前完全一致。
-- bloom/pmrem/wireframe 走 cap 的 get/set 派生映射，**本层不落盘**（cap 存自己的域）。
+- pmrem/wireframe 走 cap 的 get/set 派生映射，**本层不落盘**（cap 存自己的域）。（`render.bloom` 原属此类，已退表。）
 
 ## 对外 API / 入口
 
 ```ts
 // 路径类型（编译期契约）
-type PreviewStatePath          // = typeof KNOWN_PATHS[number]（10 键联合，2026-09 收紧：类型=实现）
-const KNOWN_PATHS              // readonly ["render.frustumCull", ...]（10 项：6 横切 + 2 env 探针 + ui.mode + env.skyGroundCap；ui.activeComponent 已移出）
+type PreviewStatePath          // = typeof KNOWN_PATHS[number]（9 键联合，2026-09 收紧：类型=实现；ADR-250 后 render.bloom 退场）
+const KNOWN_PATHS              // readonly ["render.frustumCull", ...]（9 项：5 横切 + 2 env 探针 + ui.mode + env.skyGroundCap；ui.activeComponent 已移出）
 
 // 状态层（入参窄类型 = typeof KNOWN_PATHS[number]，编译期守「加新路径 = 扩 KNOWN_PATHS + 填 binding」）
 getStateValue(path)                       // 读（返回类型 = PathValue[path] 精确值域，2026 锐评 P1 消灭 unknown 擦除）
@@ -116,7 +116,7 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 
 ## 不变量
 
-1. 十一条已落地路径的读写必须经状态层，**不得**在菜单侧直接 `safeSet` 那两个 localStorage 键。
+1. 已落地路径的读写必须经状态层，**不得**在菜单侧直接 `safeSet` 那两个 localStorage 键。
 2. cap 派生路径**永不落盘**——双写即双源。
 3. `getStateValue/setStateValue/isPathAvailable` 的入参类型是 `typeof KNOWN_PATHS[number]`（窄联合）——加新路径必须先扩 `KNOWN_PATHS` + 在 `PathValue` 补值类型 + 填 binding，类型层守住。读侧返回/写侧入参经 `PathValue`/`PathInput` 逐路径精确（2026 锐评 P1：消灭 `unknown` 擦除与消费端 `as boolean` cast；`PathInput` 放宽到控件基元联合，binding 内部归一——读精确、写宽松的分裂是承重设计，勿把 `setStateValue` 收紧回 `PathValue`，否则 `settings.ts`/`render.ts`/`perf-presets.ts` 的泛型控件调用点会重新报错）。
 4. `PreviewStatePath` = `KNOWN_PATHS` 联合（2026-09 收紧）——**不存在未落地键**，谓词写未落地键（如 `s["ui.activePanel"]`，P4-C 预留）编译报错（TS7053），静默假死从根上消除；谓词入参为 `Partial<PreviewSnapshot>`（可传部分快照，键存在性仍守卫）。

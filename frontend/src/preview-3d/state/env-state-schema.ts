@@ -168,7 +168,11 @@ export const ENV_STATE_SCHEMA = {
   renderModeDepthWrite: { type: "nullable-boolean", default: null, group: "renderMode" },
 
   // --- Postprocessing ---
-  // 注意：schema 键 = cap 实际参数扁平化。enabled(能力级) 不入 schema。
+  // [ADR-250] ppEnabled = 后处理启用意图，正式入 schema。
+  //  历史：该语义曾以 `perTypeGate`（模型类别门禁）形式留 cap 私有，与「能力级挂载」混淆，
+  //  导致模型切换翻转它 → composer 整组重建（缓存失效）+ exposure 属主争夺（亮度跳变）。
+  //  降参后唯一真值在本层，cap 不再持有该字段，模型类别经 MODEL_DEFAULTS 写本键即可。
+  ppEnabled: { type: "boolean", default: false, group: "postprocessing" },
   ppBloomEnabled: { type: "boolean", default: true, group: "postprocessing" },
   ppBloomStrength: { type: "number", default: 0.6, group: "postprocessing" },
   ppBloomThreshold: { type: "number", default: 0.6, group: "postprocessing" },

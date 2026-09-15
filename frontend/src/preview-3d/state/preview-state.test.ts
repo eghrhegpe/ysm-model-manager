@@ -36,6 +36,7 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/infra/render-budget.ts";
+import { PERF_PRESETS } from "./perf-presets.ts";
 
 /** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
 const renderMenuStubDeps = {
@@ -213,7 +214,7 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
 
 describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   it("cap 缺席时：读安全缺省、available=false、写入静默不抛", () => {
-    for (const p of ["render.bloom", "render.wireframe", "env.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
+    for (const p of ["render.wireframe", "env.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
       expect(isPathAvailable(p)).toBe(false);
       expect(getStateValue(p)).toBe(false);
       expect(() => setStateValue(p, true)).not.toThrow();
@@ -223,7 +224,6 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     // （旧断言 `ysm_3d_cap_*` 是臆造前缀——代码从未写过它，断言无条件通过 = 假保证；
     //  真实 cap 存储前缀见 scene-capability.ts STORAGE_PREFIX = "ysm-scene-cap-"）。
     const keysBefore = Object.keys(localStorage);
-    setStateValue("render.bloom", true);
     setStateValue("render.wireframe", true);
     setStateValue("env.pmrem", true);
     expect(Object.keys(localStorage)).toEqual(keysBefore);
@@ -235,10 +235,9 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     const sky = makeFakeCap("sky", { env: false });
     mountCaps(pp, rm, sky);
 
-    expect(isPathAvailable("render.bloom")).toBe(true);
-    setStateValue("render.bloom", true);
-    expect(pp.isEnabled()).toBe(true);
-    expect(getStateValue("render.bloom")).toBe(true);
+    // [ADR-250] render.bloom 已退表——后处理开关唯一入口 = pp-enabled 控件（写 envState.ppEnabled），
+    // 故此处不再经状态层路径断言后处理；wireframe/pmrem 仍为 cap 派生项。
+    expect(isPathAvailable("render.wireframe")).toBe(true);
 
     // render.wireframe 走 renderMode 单项语义（rm-wireframe 真值源）：写 true → setWireframe(true)
     setStateValue("render.wireframe", true);
@@ -252,62 +251,20 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     expect(sky.isEnvironmentEnabled()).toBe(true);
     expect(getStateValue("env.pmrem")).toBe(true);
 
-    // 防双写（cap 就位态）：状态层写入透传 cap.setEnabled，但绝不自行创建 cap 域存储键
+    // 防双写（cap 就位态）：状态层写入透传 cap，但绝不自行创建 cap 域存储键
     // （cap 域键只由 cap.saveState 写，会话退出时统一落盘——真实前缀 ysm-scene-cap-）。
     for (const capId of ["postprocessing", "renderMode", "sky"]) {
       expect(localStorage.getItem(`ysm-scene-cap-${capId}`)).toBeNull();
     }
   });
 
-  it("render.bloom 总闸语义：=true 尊重 per-type 门禁、=false 恒关，且不抹门禁（off→on 循环可恢复）", () => {
-    // [ADR-247 D3] 镜像真实 PostprocessingCapability：门禁与总闸是 cap 内部两个正交字段，
-    // 生效开关 = 总闸 && 门禁；setMasterEnabled 只写总闸。门禁保护由 cap 自持，
-    // 调用方只传档位意图（不再回读 getParams().enabled）。
-    let perTypeGate = true;
-    let perfMaster = true;
-    const pp = {
-      id: "postprocessing",
-      labelKey: "x",
-      icon: "x",
-      descKey: "x",
-      enabled: false,
-      controls: [],
-      apply: vi.fn(),
-      dispose: vi.fn(),
-      setEnabled(v: boolean) {
-        pp.enabled = v; // 手动开关：绕过总闸与门禁
-      },
-      isEnabled: () => pp.enabled,
-      getParams: () => ({ enabled: pp.enabled }),
-      setMasterEnabled(v: boolean) {
-        perfMaster = v;
-        pp.enabled = perfMaster && perTypeGate;
-      },
-      getMenuControls: () => pp.controls,
-      saveState: vi.fn(),
-      loadState: vi.fn(),
-    };
-    mountCaps(pp as unknown as SceneCapability);
-
-    // per-type 门禁关 + 总闸开 → 不得越权开启（YSM/车万女仆爆亮回归防护）
-    perTypeGate = false;
-    setStateValue("render.bloom", true);
-    expect(pp.isEnabled()).toBe(false);
-
-    // 门禁开 + 总闸开 → 正常开启
-    perTypeGate = true;
-    setStateValue("render.bloom", true);
-    expect(pp.isEnabled()).toBe(true);
-
-    // 总闸关 → 恒关，且门禁不被抹掉（P2 回归：此前 setEnabled(false) 把门禁写死为 false）
-    setStateValue("render.bloom", false);
-    expect(pp.isEnabled()).toBe(false);
-    expect(perTypeGate).toBe(true);
-
-    // 总闸再开 → 恢复（off→on 循环不失效）
-    setStateValue("render.bloom", true);
-    expect(pp.isEnabled()).toBe(true);
-    expect(perTypeGate).toBe(true);
+  it("[ADR-250] render.bloom 已退出 KNOWN_PATHS（视觉项不进性能档位表）", () => {
+    // 它是「一枚字段三重语义」的载体：经 setMasterEnabled 写 cap 私有总闸，与 per-type 门禁
+    // 二元相与，且档位切换会覆盖用户手动开关。现后处理开关归 envState.ppEnabled。
+    expect((KNOWN_PATHS as readonly string[]).includes("render.bloom")).toBe(false);
+    expect((PERF_PRESETS.low as Record<string, unknown>)["render.bloom"]).toBeUndefined();
+    expect((PERF_PRESETS.medium as Record<string, unknown>)["render.bloom"]).toBeUndefined();
+    expect((PERF_PRESETS.high as Record<string, unknown>)["render.bloom"]).toBeUndefined();
   });
 
   it("结构性探测：id 对得上但方法不全的 cap 不误判为可用", () => {

@@ -1,9 +1,8 @@
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { FieldKind } from "./scene-capability.ts";
 
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====
 // 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
-// （ReflectionMode / PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表），
+// （ReflectionMode / PostprocessingParams / 默认值 / toneMapping 键表），
 // 零 THREE 依赖、无顶层副作用；postprocessing-capability.ts 保留 EffectComposer /
 // Bloom / SSAO / SSR pass 装配、惰性 THREE 枚举求值等渲染轴。
 // 注意：THREE.ToneMapping 枚举值不在本文件求值（verbatimModuleSyntax + 测试 mock 约束），
@@ -156,23 +155,12 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
 };
 
 /**
- * 模型类别后处理预设（ADR-196 刀2）—— envState 键 partial + per-type enabled 门禁
+ * [ADR-250] 原 `POSTPROC_PRESETS` 表已删除。
  *
- * 亮度参数（bloomStrength/threshold/radius/exposure/toneMapping）一律继承 envState 默认值
- * （光影包全局值），**不按类型分别调**：同一光影包 → 同一观感，消除「YSM/车万女仆爆亮、
- * MMD/VRM 无反应」的不对称（材质差异不应由 per-type 亮度补偿）。
+ * 它名为「模型类别后处理预设」，但六个条目唯一的键是 `enabled`（能力级启用开关），
+ * 在参数轴上内容为空——不是预设，是六个开关。且模型类别写 cap 私有字段属职责越界。
  *
- * per-type 预设只携带 `enabled`（能力级门禁，不入 schema）+ envState 亮度覆盖（当前为空，
- * 全部继承默认）。最终生效开关 = 性能档位 `render.bloom`（总闸）&& 此处 `enabled`（per-type 门禁）。
- *
- * applyPostProcDefaults 读取 preset.enabled 落库 this.enabled，其余 envState 键走 setEnvState({source:'auto-model'})。
+ * 「YSM/体素默认不开后处理」这一偏好改由 `MODEL_DEFAULTS`（state/model-defaults.ts）
+ * 写 `ppEnabled: false` 表达，与 sky/light/fog/shadow/reflector/environment 六 cap
+ * 走同一条路——此时它是可被用户覆盖的默认值，而非钉死在 cap 里的 per-type 分支。
  */
-export const POSTPROC_PRESETS: Record<string, Partial<EnvState> & { enabled?: boolean }> = {
-  default: {},
-  ysm: { enabled: false }, // 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮
-  vrm: { enabled: true }, // PBR 角色：开柔光
-  mmd: { enabled: true }, // toon：开辉光
-  litematic: { enabled: false }, // 体素：默认关
-  resourcepack: { enabled: false }, // 资源包：默认关
-  "mmd-scene": { enabled: false }, // 场景：默认关
-};

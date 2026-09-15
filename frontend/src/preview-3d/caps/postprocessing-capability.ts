@@ -4,15 +4,20 @@
 //
 // 设计要点：
 //   - 兼容旧 PostprocessingManager 外部接口：render(dt, lightCap): boolean，setSize，dispose
-//   - 延迟创建 composer：需要启用（enabled=true 或 lightCap volumetric postprocess 触发）时才创建，无 composer 时走普通 renderer.render
+//   - [ADR-250 §2.2] composer 常驻：构造即建、dispose 才拆（会话轴）。启用意图翻转走 pass
+//     旁路（不 allocate、不 dispose），故「换模型」不再触发整组 GPU 资源重建（缓存失效根治）。
 //   - Pass 顺序：RenderPass → (SSAOPass 可选) → UnrealBloomPass → (SSRPass 可选，reflectionMode 控制) → OutputPass
 //   - dispose 还原构造前 renderer.toneMapping 等输出设置，不泄漏
 //   - SceneCapability 接口 + 注册表驱动：菜单自动渲染所有控件
-//   - applyPostProcDefaults 按模型类别分：方块/体素 = Bloom 薄 + 关 SSAO（无明显细节）；VRM/MMD = SSAO 中档 + Bloom 柔光
 //   - reflectionMode 三档：envmap-only (SSR off) / envmap+ssr (默认，SSR 叠上 envmap 反射当屏外 fallback) / ssr-only (SSR 无屏外补全)
 //
 // ADR-196 刀2：参数真值源从 this.params 迁移到全局 envState 单例。
-// - 构造只留 scene/renderer/camera/enabled（enabled 默认 false，与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
+// ADR-250：**启用意图亦入 envState（`ppEnabled`）**，本 cap 不再持有 enabled 字段；
+//   `POSTPROC_PRESETS` / `applyPostProcDefaults` / `perTypeGate` / `perfMaster` /
+//   `syncEffectiveEnabled` 全部退役——模型类别不再写 cap 私有字段（职责越界收口）。
+//   `toneMappingExposure` 属主归 sky（有效曝光 = skyExposure × ppExposure），本 cap 只写
+//   toneMapping / outputColorSpace。
+// - 构造只留 scene/renderer/camera/caps（enabled 形参保留仅为兼容，经 setEnvState 落状态层）
 // - setter 收口为 setEnvState({ppXxx: v}, {source:'manual'})；callback 就地同步 pass 属性
 // - 结构性变化（ssaoEnabled/reflectionMode）→ callback 内 rebuild composer
 // - getParams() 从 envState 组装新对象（兼容层，供 menu/测试读）
@@ -32,15 +37,16 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
-// 状态/序列化轴（PostprocessingParams / 默认值 / 光影包预设 / toneMapping 键表）已下沉
+// 状态/序列化轴（PostprocessingParams / 默认值 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
 // cap-configs.test.ts 等）的 import 路径不破坏。THREE.ToneMapping 枚举求值仍在本文件
 // toneMappingValue()（惰性，测试 mock 约束见 state 文件头注释）。
+// [ADR-250] POSTPROC_PRESETS 已删除——模型类别默认偏好改走 MODEL_DEFAULTS 写 `ppEnabled`。
 import {
   DEFAULT_POSTPROC_PARAMS,
-  POSTPROC_PRESETS,
   type PostprocessingParams,
   type ReflectionMode,
 } from "./postprocessing-state.ts";
@@ -56,7 +62,7 @@ import {
 } from "./scene-capability.ts";
 
 export type { PostprocessingParams, ReflectionMode };
-export { DEFAULT_POSTPROC_PARAMS, POSTPROC_PRESETS };
+export { DEFAULT_POSTPROC_PARAMS };
 
 /** 惰性求值 THREE 枚举：调用期才触碰 THREE.ToneMapping（规避测试 mock 缺枚举导出的收集期崩溃） */
 function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneMapping {
@@ -88,7 +94,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
   private camera: THREE.PerspectiveCamera;
-  private enabled: boolean;
 
   // composer
   private composer: EffectComposer | null = null;
@@ -109,19 +114,19 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /** 本 cap 施加抑制前的 reflector 状态（仅 suppressing=true 期间有效） */
   private reflectorPrevEnabled = false;
 
-  /** [ADR-247 D3] per-type 门禁（模型类别预设是否允许后处理）。
-   *  与「性能档位总闸」正交：最终生效开关 = 总闸 && 门禁。手动开关（pp-enabled）绕过二者。
-   *  ADR-196 删掉 params.enabled 双写后，门禁一度与生效开关共用 this.enabled，靠调用方
-   *  `setMasterEnabled(v ? this.enabled : false)` 把门禁值回读再传回才得以存活——
-   *  约束落在调用方、注释还引用了已删除的字段。现恢复为显式字段，语义自持。 */
-  private perTypeGate = false;
-  /** 性能档位总闸（render.bloom）。默认放行，由 applyPerfPreset 驱动。 */
-  private perfMaster = true;
+  /** [ADR-250] 启用意图唯一真值源 = `envState.ppEnabled`，本 cap 不再持有该字段。
+   *  历史：`enabled` 曾一枚字段扛三重语义（能力级挂载 / 模型类别门禁 perTypeGate /
+   *  性能总闸 perfMaster），由 `syncEffectiveEnabled()` 二元相与重算，且被构造入参、
+   *  loadState、setEnabled、applyPostProcDefaults 四条写路径写——ADR-247 R1 即「补一条漏一条」
+   *  的产物。降参后写路径收敛为一条状态流，模型类别不再写 cap 私有字段。 */
+  private get enabled(): boolean {
+    return envState.ppEnabled;
+  }
 
   // prev 状态（dispose 还原）
+  // [ADR-250] prevExposure 已删除——曝光属主归 sky，本 cap 不再持有/归还该字段。
   private prevToneMapping: THREE.ToneMapping;
   private prevOutputColorSpace: string;
-  private prevExposure: number;
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
@@ -130,6 +135,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
+    /** [ADR-250] 保留形参以兼容既有调用方/测试，但**不再写 cap 字段**——
+     *  启用意图唯一真值源是 `envState.ppEnabled`。传值仅在显式给定时用于初始化该状态。 */
     enabled?: boolean;
     /** cap 间协调查询器（组合根 createAll 注入）——reflector 联动经查询器，不手工接线 */
     caps?: SceneCapabilityLookup;
@@ -139,26 +146,38 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.camera = opts.camera;
     // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
     if (opts.caps !== undefined) this.caps = opts.caps;
-    // ADR-196：enabled 默认 false（与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
-    this.enabled = opts.enabled ?? false;
-    // [ADR-247 D3] 构造期 enabled 同时作为 per-type 门禁初值，保证「生效 = 总闸 && 门禁」
-    // 在构造后立即自洽（总闸默认放行）。否则 setMasterEnabled 会因门禁初值 false 而无声失效。
-    this.perTypeGate = this.enabled;
+    // [ADR-250] 显式传值才写状态层；不传则尊重 envState 现有值（含用户存档恢复的顺序）。
+    // ⚠️ 顺序敏感：此处 setEnvState 发生在 registerEnvCallback **之前**，订阅者尚未就位，
+    // 故其副作用（tone mapping 接管）不会自动触发——构造末尾显式补一次 apply()。
+    if (opts.enabled !== undefined) {
+      setEnvState({ ppEnabled: opts.enabled }, { source: "manual" });
+    }
 
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
-    this.prevExposure = this.renderer.toneMappingExposure;
 
-    // 曝光归权：enabled=false 时绝不触碰 renderer（保留 SkyCapability 的低曝光值）
-    if (this.enabled) this.applyToneMapping();
+    // [ADR-250] composer 常驻（§2.2）：构造即建，会话内不再随开关/换模型销毁重建。
+    // 关闭态走 pass 旁路（见 render），不 allocate、不 dispose——GPU 资源与模型轴解耦。
+    // syncReflector=false：构造期不压制 reflector（见 buildComposer 注释）。
+    this.buildComposer(false);
 
     // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer（只接收 postprocessing 组的键）
     this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged, "postprocessing");
+    // 订阅就位后补齐构造期已写状态的副作用（tone mapping 接管）。
+    // ⚠️ **不在此调 applyReflectorSync**：SSR↔reflector 抑制是 pull 式、由启用动作驱动
+    //（原实现在 buildComposer 内触发）。构造期未启用即压制 reflector 会越权，
+    // 破坏「enable 才同步」的既有语义（reflector 联动测试锁死）。
+    this.apply();
   }
 
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
 
   private onEnvChanged = (changed: Set<string>, state: EnvState): void => {
+    // [ADR-250] 启用意图翻转：不再销毁/重建 composer，只切旁路 + 归权曝光
+    if (changed.has("ppEnabled")) {
+      this.applyEnabledSideEffects();
+    }
+
     // 结构性变化（影响 pass 组合）→ 重建 composer（若已存在）
     if (changed.has("ppSsaoEnabled") || changed.has("ppReflectionMode")) {
       if (this.composer) this.buildComposer();
@@ -212,8 +231,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.ssrPass.bouncing = state.ppSsrBouncing;
     }
 
-    // 色彩映射 / 曝光
-    if (this.enabled && (changed.has("ppExposure") || changed.has("ppToneMapping"))) {
+    // 色彩映射（[ADR-250] 曝光已退出本 cap 属主范围，见 applyToneMapping）。
+    // 保留 enabled 守卫：未启用时不得夺取 renderer.toneMapping（否则「关了后处理却改色调」）。
+    if (this.enabled && changed.has("ppToneMapping")) {
       this.applyToneMapping();
     }
 
@@ -225,14 +245,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- 内部：构建/销毁 composer -------- */
 
+  /** [ADR-250 §2.2] composer 常驻：一旦建立即不随启用意图/模型切换销毁。
+   *  `lightCap` 形参保留以兼容 PostprocessingLike 契约与既有调用方。 */
   private needComposer(lightCap: LightCapability | null): boolean {
-    if (this.enabled) return true;
-    // [ADR-246 D1] 原 volumetric 分支已删除：它要求 engine === "postprocess" &&
-    // volumetric.enabled，而写入 postprocess 的同时该 enabled 已被强制置 false —— 条件恒不成立，
-    // 是一段永不生效的死逻辑（postprocess 引擎本身也从未有任何体积光 pass）。
-    // 体积光现由 cone 引擎（Geometry+Shader）独立渲染，不需要 composer。
+    // [ADR-246 D1] 体积光分支已删除（条件恒不成立）；[ADR-250] 启用意图分支亦不再参与——
+    // composer 生命周期已从「模型/开关轴」移到「会话轴」，故仅以「是否已建」为准。
     void lightCap;
-    return false;
+    return this.composer !== null;
   }
 
   private createComposerBase(): EffectComposer {
@@ -318,13 +337,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     }
   }
 
-  private buildComposer(): void {
+  private buildComposer(syncReflector = true): void {
     this.disposeComposer();
     const useSSR = envState.ppReflectionMode !== "envmap-only";
     this.composer = this.createComposerBase();
     this.attachSSAOPass(this.composer);
     this.attachSSRAndBloomPasses(this.composer, useSSR);
-    this.applyReflectorSync();
+    // [ADR-250] 构造期建 composer 时不触发 reflector 抑制（`syncReflector=false`）：
+    // 抑制是「启用后借走 reflector」的动作，未启用即压制属越权，且会破坏
+    // 「enable 才同步」的既有语义（reflector 联动测试锁死）。
+    if (syncReflector) this.applyReflectorSync();
   }
 
   private disposeComposer(): void {
@@ -380,35 +402,35 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- 参数应用 -------- */
 
+  /**
+   * 写入色彩映射。[ADR-250 §2.3] **不再写 `toneMappingExposure`**——曝光属主归 sky。
+   *
+   * 历史（本 ADR 的根因）：本方法与 `SkyCapability.apply()` 并写同一个
+   * `renderer.toneMappingExposure`，值为 `ppExposure`(全局 1.0) 对 `skyExposure`(per-type 0.5~0.6)。
+   * 后处理一开即夺走属主，造成约 1.8× 亮度跳变——这才是「MMD 亮瞎」的真因
+   * （per-type 亮度参数实为空，见 ADR §1.1）。且该跳变被误归因为「切档位忘了归还」，
+   * 「切模型门禁翻 true」这条同源路径从未被识别。
+   *
+   * 现口径：`renderer.toneMappingExposure = skyExposure × ppExposure`，由 sky 侧统一写入
+   * （`sky-capability.ts|applyExposure`），本 cap 只负责 tone mapping 与色彩空间。
+   */
   private applyToneMapping(): void {
     this.renderer.toneMapping = toneMappingValue(envState.ppToneMapping);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMappingExposure = envState.ppExposure;
   }
 
   /**
-   * 归还输出设置给构造前的值（曝光归权出口）。
+   * 归还输出设置给构造前的值。
    *
-   * [2026-09 修复] 原实现把这三行**只**写在 dispose() 内，而两条关闭路径
-   * （setEnabled(false) / syncEffectiveEnabled() 的关分支）都只调 disposeComposer()
-   * 且刻意不动 renderer，注释称「交给 dispose 精确还原」——但**切换开关不会触发
-   * dispose()**，于是 ppExposure(默认 1.0) 永久残留在 renderer 上，SkyCapability
-   * 期望的 skyExposure(默认 0.5) 再也回不来：切性能档位（perf-presets `low` →
-   * render.bloom=false → setMasterEnabled(false)）即触发 2× 亮度跳变且不自愈。
-   * 曝光是「谁接管谁归还」的所有权问题，故收敛为单一出口，三处共用。
-   *
-   * ⚠️ 归还前先验「我们是否仍持有」——本 cap 从构造期快照归还，而快照可能是陈旧值
-   * （组合根 createAll 时本 cap 先于 sky.apply 构造，快照=sky 接管前的 renderer 值），
-   * 且 sky 对同一 renderer 有持续写入权（ACESFilmic + skyExposure，经 refcount 仲裁）。
-   * 若无条件按快照还原，会把 sky 当前的值打回默认，制造「关后处理却让天空跳变」的二次伤害。
-   * 故按**归属**判定（对齐本文件 applyReflectorSync 的 reflectorSuppressing 范式）：
-   * 只有当 renderer 上仍是本 cap 写入的那个 exposure 时才归还——那时我们确实是持有者；
-   * 已被 sky/他人改写则说明控制权已易主，本 cap 不越权回放陈旧快照。
+   * [ADR-250 §2.3] 曝光已不在本 cap 属主范围内——`toneMappingExposure` 由 sky 独占
+   * （`skyExposure × ppExposure`），故此处**只归还 toneMapping / outputColorSpace**。
+   * 原实现归还 exposure 的那段「是否仍持有」的归属判定随之退役：
+   * 并发持有是无解的（不像 reflector 可串行压制），只能定单一属主。
    */
   private restoreOutputSettings(): void {
     // sky 活跃即让位（一个字段都不写）：sky 对 renderer 有持续写入权
-    //（ACESFilmic + skyExposure，经 refcount 仲裁多 session 共享 renderer），
-    // 此刻它才是 tone/exposure 的属主。本 cap 的构造期快照可能陈旧
+    //（ACESFilmic + skyExposure × ppExposure，经 refcount 仲裁多 session 共享 renderer），
+    // 此刻它才是 tone/outputColorSpace 的属主。本 cap 的构造期快照可能陈旧
     //（组合根 createAll 时本 cap 先于 sky.apply 构造，快照=sky 接管前的默认值），
     // 盲还原会把 sky 当前值打回默认，制造「关后处理却让天空跳变」的二次伤害。
     const skyOwns = getTypedCap(this.caps, "sky")?.isEnabled() === true;
@@ -417,9 +439,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // 才说明我们仍是持有者（对齐本文件 applyReflectorSync 的抑制态归属范式）。
     if (this.renderer.toneMapping === toneMappingValue(envState.ppToneMapping)) {
       this.renderer.toneMapping = this.prevToneMapping;
-    }
-    if (this.renderer.toneMappingExposure === envState.ppExposure) {
-      this.renderer.toneMappingExposure = this.prevExposure;
     }
     this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
   }
@@ -477,17 +496,22 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- 兼容旧 PostprocessingManager 对外 API -------- */
 
-  /** 每帧调用：若返回 true 表示已渲染（composer.render）；否则调用方需 renderer.render */
+  /** 每帧调用：若返回 true 表示已渲染（composer.render）；否则调用方需 renderer.render。
+   *  [ADR-250 §2.2] composer 常驻，启用意图不再销毁它——关闭态走 pass 旁路（outputPass
+   *  直通 renderPass，等价于原 `renderer.render`），故返回 true 且不 allocate。 */
   render(dt: number, lightCap: LightCapability | null): boolean {
-    const need = this.needComposer(lightCap);
-    if (!need) {
-      if (this.composer) this.disposeComposer();
-      return false;
+    if (!this.needComposer(lightCap)) return false;
+    const on = this.enabled;
+    if (this.ssaoPass) this.ssaoPass.enabled = on && envState.ppSsaoEnabled;
+    if (this.ssrPass) this.ssrPass.enabled = on && envState.ppReflectionMode !== "envmap-only";
+    if (this.bloomPass) this.bloomPass.enabled = on && envState.ppBloomEnabled;
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    this.renderPass!.enabled = true;
+    if (on) {
+      this.syncBloomPass(lightCap);
+      this.syncSSAOPass();
+      this.syncSSRPass();
     }
-    if (!this.composer) this.buildComposer();
-    this.syncBloomPass(lightCap);
-    this.syncSSAOPass();
-    this.syncSSRPass();
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.composer!.render(dt);
     return true;
@@ -512,48 +536,23 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- SceneCapability 接口 -------- */
 
   apply(): void {
-    // 曝光归权：enabled=false 时跳 applyToneMapping，让 SkyCapability 的曝光值成为事实源
+    // [ADR-250] 曝光归 sky，本 cap 只在启用时接管 tone mapping / 色彩空间
     if (this.enabled) this.applyToneMapping();
   }
 
+  /** 写入启用意图。[ADR-250] 唯一真值源 = `envState.ppEnabled`——本方法走 setEnvState，
+   *  副作用（tone mapping 接管/归还、reflector 联动）由 onEnvChanged 统一落地，
+   *  不再在此直接改 cap 字段（消除「四路写同一字段」的对账负担）。 */
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    if (v) {
-      // 切到 on：立刻写入当前 tone mapping / exposure 到 renderer
-      this.buildComposer();
-      this.applyToneMapping();
-    } else {
-      this.disposeComposer();
-      // 切到 off：归还 renderer 输出设置（曝光归权单一出口——不再依赖永不触发的
-      // dispose()；详见 restoreOutputSettings 注释）。SkyCapability 随后仍可在
-      // apply/setTime 时重写自己的曝光值，不会与本还原冲突。
-      this.restoreOutputSettings();
-    }
-    this.applyReflectorSync();
+    setEnvState({ ppEnabled: v }, { source: "manual" });
   }
 
-  /** 性能档位总闸（render.bloom 绑定入口）：[ADR-247 D3] 只写总闸字段，生效开关 = 总闸 && 门禁。
-   *  门禁由 applyPostProcDefaults 维护，总闸 off 不得抹掉门禁（否则 off→on 循环后
-   *  bloom 再也开不回来）——该保护现由本方法自持，不再依赖调用方把门禁值回读传回。
-   *  手动开关（pp-enabled）走 setEnabled，不受总闸/门禁限制。 */
-  setMasterEnabled(v: boolean): void {
-    this.perfMaster = v;
-    this.syncEffectiveEnabled();
-  }
-
-  /** 按「总闸 && 门禁」重算生效开关并落地副作用（composer 构建/销毁 + 曝光 + reflector 联动） */
-  private syncEffectiveEnabled(): void {
-    const next = this.perfMaster && this.perTypeGate;
-    if (this.enabled === next) return;
-    this.enabled = next;
-    if (next) {
-      this.buildComposer();
+  /** 启用意图翻转的副作用出口。[ADR-250 §2.2] composer 常驻，故此处**不建不销毁**，
+   *  只做输出设置归权与 reflector 联动；启停的实际渲染效果由 render() 的 pass 旁路实现。 */
+  private applyEnabledSideEffects(): void {
+    if (this.enabled) {
       this.applyToneMapping();
     } else {
-      this.disposeComposer();
-      // [2026-09 修复] 关分支必须与 setEnabled(false) 同口径归还输出设置：
-      // 性能档位（perf-presets low → render.bloom=false）走的就是这条路径，
-      // 原先漏还原会让 ppExposure 永久残留（2× 亮度跳变不自愈）。
       this.restoreOutputSettings();
     }
     this.applyReflectorSync();
@@ -590,28 +589,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     };
   }
 
-  applyPostProcDefaults(modelType: string): void {
-    const preset = POSTPROC_PRESETS[modelType] ?? POSTPROC_PRESETS.default;
-    // per-type 门禁 enabled（不入 schema，单独携带）
-    const { enabled: presetEnabled, ...presetEnv } = preset;
-
-    // envState 亮度/参数覆盖（统一亮度口径：preset 当前为空，全部继承 envState 默认）
-    if (Object.keys(presetEnv).length > 0) {
-      setEnvState(presetEnv, { source: "auto-model" });
-    }
-
-    // [ADR-247 D3] 预设的 enabled 写入 per-type 门禁（不再直接写生效开关），
-    // 生效开关由「总闸 && 门禁」重算——总闸 off 时门禁仍被正确记录，off→on 可恢复。
-    const gateChanged = presetEnabled !== undefined && presetEnabled !== this.perTypeGate;
-    if (presetEnabled !== undefined) {
-      this.perTypeGate = presetEnabled;
-    }
-    this.syncEffectiveEnabled();
-    // 门禁未翻转但生效开关已开：envState 可能更新了参数 → 重建 composer 同步 pass 组合
-    // （翻转路径已由 syncEffectiveEnabled 构建过，二者互斥，避免 double build）
-    if (!gateChanged && this.enabled) {
-      if (this.composer) this.buildComposer();
-      this.applyToneMapping();
+  /** [ADR-250] 按模型类别套用「后处理默认是否开启」。
+   *  与 sky/light/fog/shadow/reflector/environment 六 cap 的 `applyModelPreset` 同构：
+   *  读 `MODEL_DEFAULTS` 里自己关注的键（此处仅 `ppEnabled`），经 `setEnvState` 以
+   *  `auto-model` 源写入——**写的是状态参数，不是 cap 私有字段**（职责边界收口）。
+   *  用户手动开关（`source: "manual"`）按 ADR-196 仲裁规则不被覆盖。 */
+  applyModelPreset(modelType: string): void {
+    const preset = pickModelDefaultFields(toModelType(modelType), ["ppEnabled"]);
+    if (Object.keys(preset).length > 0) {
+      setEnvState(preset, { source: "auto-model" });
     }
   }
 
@@ -729,16 +715,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
     // 表驱动恢复：存档键（params 名）→ envState 键，类型校验后写回
     restoreFields(state, {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
-          // [ADR-247 D3 审查修复 R1] 门禁必须与恢复的 enabled 同步：构造时
-          // perTypeGate 取的是构造入参 enabled（常为默认 false），若此处只恢复 enabled
-          // 而不动门禁，两者永久失配——总闸 off→on 时被陈旧门禁无声否决，后处理再也开不回来。
-          // （POSTPROC_PRESETS.default = {} 不写门禁，故「default」类型必踩此坑。）
-          this.perTypeGate = v;
-        },
-      },
+      // [ADR-250] 存档的 `enabled` 键名保持向后兼容，但落点改为统一状态层。
+      // 原实现写 this.enabled + 手工同步 perTypeGate（ADR-247 R1 的补丁），
+      // 降参后二者归一，**该失配在结构上不再可能发生**。
+      enabled: { boolean: (v) => setEnvState({ ppEnabled: v }, { source: "manual" }) },
       bloomStrength: { number: (v) => setEnvState({ ppBloomStrength: v }, { source: "manual" }) },
       bloomThreshold: { number: (v) => setEnvState({ ppBloomThreshold: v }, { source: "manual" }) },
       bloomRadius: { number: (v) => setEnvState({ ppBloomRadius: v }, { source: "manual" }) },
@@ -771,7 +751,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       },
     });
 
-    // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
+    // [ADR-250] 恢复后按启用意图落输出设置（曝光已归 sky，此处只管 tone mapping）
     if (this.enabled) this.applyToneMapping();
     this.applyReflectorSync();
   }

@@ -27,9 +27,10 @@ describe("PERF_PRESETS 档位表结构", () => {
     }
   });
 
-  it("bloom 为 boolean（cap 派生开关，走 cap 缺席静默跳过）", () => {
-    expect(PERF_PRESETS.low["render.bloom"]).toBeTypeOf("boolean");
-    expect(PERF_PRESETS.high["render.bloom"]).toBe(true);
+  it("[ADR-250] bloom 已退表（视觉项不进档位表），档位不再管后处理开关", () => {
+    for (const level of ["low", "medium", "high"] as const) {
+      expect("render.bloom" in PERF_PRESETS[level]).toBe(false);
+    }
   });
 
   it("档位表键全部落在 KNOWN_PATHS（编译期已守，运行期再断言无越界键）", () => {
@@ -69,8 +70,8 @@ describe("applyPerfPreset", () => {
     expect(getMaxFps()).toBe(60); // 无存档默认
   });
 
-  it("cap 缺席时 render.bloom 派生路径静默跳过（不抛）", () => {
-    // 测试环境无 postprocessing cap 实例——setStateValue 对不可用路径静默丢弃
+  it("cap 缺席时派生路径静默跳过（不抛）", () => {
+    // 测试环境无 cap 实例——setStateValue 对不可用路径静默丢弃
     expect(() => applyPerfPreset("low")).not.toThrow();
   });
 });

@@ -85,7 +85,9 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
   shadowType: "hard",
   // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
-  // --- postprocessing (来自 POSTPROC_PRESETS.default = 空，总闸外) ---
+  // --- postprocessing (来自 POSTPROC_PRESETS.default = 空) ---
+  // [ADR-250] 原 POSTPROC_PRESETS 表已删除；per-type「默认是否开后处理」改写 `ppEnabled`
+  // 参数（与其余 cap 同构）。default 不写该键 → 继承 envState 默认（false）。
 };
 
 export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
@@ -128,8 +130,10 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     reflectorSize: 200,
     reflectorResolution: 512,
     reflectorColor: 0xf0f4fa,
-    // postprocessing (POSTPROC_PRESETS.ysm = {enabled: false})
-    // → 由 cap 侧 this.enabled 副作用处理
+    // postprocessing (原 POSTPROC_PRESETS.ysm = {enabled: false})
+    // [ADR-250] 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮。
+    // 与 envState 默认同值（false），显式写下以表达意图（用户可覆盖）。
+    ppEnabled: false,
   },
   vrm: {
     // sky (MODEL_SKY_PRESETS.vrm)
@@ -166,7 +170,9 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     reflectorSize: 60,
     reflectorResolution: 1024,
     reflectorColor: 0xf8efe2,
-    // postprocessing (POSTPROC_PRESETS.vrm = {enabled: true})
+    // postprocessing (原 POSTPROC_PRESETS.vrm = {enabled: true})
+    // [ADR-250] PBR 角色：开柔光。
+    ppEnabled: true,
   },
   mmd: {
     // sky (MODEL_SKY_PRESETS.mmd)
@@ -202,7 +208,10 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     reflectorSize: 80,
     reflectorResolution: 1024,
     reflectorColor: 0xfafcff,
-    // postprocessing (POSTPROC_PRESETS.mmd = {enabled: true})
+    // postprocessing (原 POSTPROC_PRESETS.mmd = {enabled: true})
+    // [ADR-250] toon：开辉光。注意：此前「MMD 亮瞎」并非本行所致——亮度轴无 per-type 值，
+    // 真因是后处理一开即夺走 exposure 属主（skyExposure 0.55 → ppExposure 1.0）。
+    ppEnabled: true,
   },
   "mmd-scene": {
     // sky (MODEL_SKY_PRESETS.mmd-scene)
@@ -238,7 +247,8 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // shadow (SHADOW_PRESET_BY_MODEL.mmd-scene = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS 无 mmd-scene → 同 default = 空)
-    // postprocessing (POSTPROC_PRESETS.mmd-scene = {enabled: false})
+    // postprocessing (原 POSTPROC_PRESETS.mmd-scene = {enabled: false})
+    ppEnabled: false,
   },
   litematic: {
     // sky (MODEL_SKY_PRESETS.litematic)
@@ -279,7 +289,8 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     reflectorSize: 500,
     reflectorResolution: 512,
     reflectorColor: 0xeaf1fb,
-    // postprocessing (POSTPROC_PRESETS.litematic = {enabled: false})
+    // postprocessing (原 POSTPROC_PRESETS.litematic = {enabled: false})
+    ppEnabled: false,
   },
   resourcepack: {
     // sky/shadow/reflector/environment 与 default 逐字段相同 → 直接 spread，
@@ -302,5 +313,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     reflectorSize: 200,
     reflectorResolution: 512,
     reflectorColor: 0xf0f4fa,
+    // postprocessing (原 POSTPROC_PRESETS.resourcepack = {enabled: false})
+    ppEnabled: false,
   },
 };

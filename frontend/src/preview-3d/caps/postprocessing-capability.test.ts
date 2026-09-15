@@ -8,14 +8,14 @@ import type { Pass } from "three/addons/postprocessing/Pass.js";
 import {
   PostprocessingCapability,
   DEFAULT_POSTPROC_PARAMS,
-  POSTPROC_PRESETS,
 } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-state.ts";
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 // ADR-196：统一状态层（测试隔离）
-import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -362,16 +362,24 @@ describe("PostprocessingCapability — 预设数据完整性", () => {
     expect(typeof DEFAULT_POSTPROC_PARAMS.exposure).toBe("number");
   });
 
-  it("POSTPROC_PRESETS 覆盖所有模型类型", () => {
+  it("[ADR-250] ppEnabled 经 MODEL_DEFAULTS 覆盖所有模型类型（原 POSTPROC_PRESETS 职责）", () => {
     const expectedTypes = ["default", "ysm", "vrm", "mmd", "litematic", "resourcepack", "mmd-scene"];
     for (const t of expectedTypes) {
-      expect(POSTPROC_PRESETS[t]).toBeDefined();
+      expect(MODEL_DEFAULTS[t as keyof typeof MODEL_DEFAULTS]).toBeDefined();
+    }
+    // 显式声明意图的类型必须带布尔 ppEnabled（default 不写 → 继承 envState 默认 false）
+    for (const t of ["ysm", "vrm", "mmd", "litematic", "resourcepack", "mmd-scene"] as const) {
+      expect(typeof MODEL_DEFAULTS[t].ppEnabled).toBe("boolean");
     }
   });
 });
 
-// ============ 曝光归权（曝光治理 §1）：enabled=false 时绝不触碰 renderer toneMapping / exposure ============
-describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 renderer）", () => {
+// ============ [ADR-250 §2.3] 曝光属主归 sky：postproc 只写 toneMapping ============
+// 本组取代原「曝光归权（enabled=false 不碰 renderer）」——原契约是「postproc 拥有 exposure，
+// 开启时写入、关闭时归还/让位」。ADR-250 判定该字段有两个并发持有者（sky 与 postproc），
+// 并发持有无解，只能定单一属主；sky 有物理理由（天空为场景定基调、skyExposure 本就 per-type），
+// postproc 没有（只管 ACES 转换与 bloom）。故 postproc **任何情况下都不写 toneMappingExposure**。
+describe("PostprocessingCapability — 曝光属主归 sky（ADR-250）", () => {
   function makeRendererWithState(toneMapping: THREE.ToneMapping = THREE.NoToneMapping as THREE.ToneMapping, exposure: number = 0.5) {
     const r = makeFakeRenderer();
     r.toneMapping = toneMapping;
@@ -379,25 +387,23 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     return r as THREE.WebGLRenderer;
   }
 
-  it("构造 enabled=false 时，不覆盖 renderer.toneMapping / exposure（保留 SkyCapability 写入值）", () => {
+  it("构造 enabled=false 时，不覆盖 renderer.toneMapping / exposure（保留 sky 写入值）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    // 模拟 SkyCapability 已经设置的状态
     const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.55);
-    // 构造默认 enabled=false（DEFAULT_POSTPROC_PARAMS.enabled=false）
     new PostprocessingCapability({ scene, renderer, camera });
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
     expect(renderer.toneMappingExposure).toBeCloseTo(0.55, 4);
   });
 
-  it("构造 enabled=true 时，正常写入 toneMapping / exposure", () => {
+  it("构造 enabled=true 时写 toneMapping，但 exposure 保持 sky 的值（不夺属主）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.55);
     new PostprocessingCapability({ scene, renderer, camera, enabled: true });
-    // 默认 toneMapping=aces, exposure=1.0
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+    // 关键：0.55（sky）而非 1.0（ppExposure 默认）——原实现会跳到 1.0，即「亮瞎」真因
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.55, 4);
   });
 
   it("apply() enabled=false 时跳 applyToneMapping，保留 renderer 原值", () => {
@@ -412,54 +418,42 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     expect(renderer.toneMappingExposure).toBeCloseTo(0.6, 4);
   });
 
-  it("apply() enabled=true 时写入 toneMapping / exposure", () => {
+  it("apply() enabled=true 时写 toneMapping，exposure 不动", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.1);
-    // ADR-196：构造不再收 params，覆盖走 envState seed
     setEnvState({ ppExposure: 1.2 }, { source: "manual" });
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
     cap.apply();
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.2, 4);
+    // [ADR-250] ppExposure 不再是 postproc 直写值——它由 sky 侧乘算生效
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.1, 4);
   });
 
-  it("setEnabled(false→true) 时立刻写入 renderer；setEnabled(true→false) 在 sky 活跃时让位（不还原 sky 写入值）", () => {
+  it("sky 活跃时：开关往返全程不写 exposure（sky 的写入权不被侵犯）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.5);
-    // 生产形态：sky 已注册且活跃（组合根 createAll 里 sky 恒先于本 cap apply），
-    // 此时 sky 才是 tone/exposure 属主 → postproc 关闭必须整体让位。
-    // 原先本用例以「手写 renderer 值」模拟 sky（不挂 caps），无法表达让位语义，
-    // 也正是当初漏掉「关闭分支不归还 exposure」bug 的原因。
     const skyStub = { id: "sky", isEnabled: () => true } as unknown as SceneCapability;
     const caps = { getById: (id: string) => (id === "sky" ? skyStub : undefined) };
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false, caps });
-    expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
     expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
-    // 开启 postproc → 接管输出设置（写入 ppExposure=1.0）
     cap.setEnabled(true);
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
-    // 模拟 sky 在接管后周期性重写自己的值（sky apply/setTime 每帧有写入权）
-    renderer.toneMappingExposure = 0.58;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // 开启不再跳到 ppExposure(1.0)——这正是 1.8× 亮瞎跳变的消除点
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
+    renderer.toneMappingExposure = 0.58; // sky 周期性重写
     cap.setEnabled(false);
-    // sky 活跃 → 让位：postproc 不越权按自己的陈旧快照还原，保持 sky 的当前值不跳变
     expect(renderer.toneMappingExposure).toBeCloseTo(0.58, 4);
-    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
   });
 
-  it("setEnabled(false→true) 时立刻写入 renderer；sky 不活跃时关闭归还构造前快照（曝光不残留）", () => {
+  it("sky 缺席时：开关往返亦不写 exposure（属主恒定，与 sky 存否无关）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    // 无 sky（或 sky 停用）：本 cap 是唯一属主，关闭必须归还，否则 ppExposure 残留。
     const renderer = makeRendererWithState(THREE.NoToneMapping, 0.5);
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
     cap.setEnabled(true);
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4); // 已写入 ppExposure
-    cap.setEnabled(false);
-    // 归还构造前快照 → 恢复到 0.5，不再残留 1.0（本次修复的核心回归）
     expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
-    expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
+    cap.setEnabled(false);
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
   });
 
   it("setToneMapping/setExposure 在 enabled=false 时只改 params，不动 renderer", () => {
@@ -467,79 +461,68 @@ describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 rende
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.62);
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
-    // 记录 SkyCapability 写入值
     const origTM = renderer.toneMapping;
     const origExp = renderer.toneMappingExposure;
     cap.setToneMapping("reinhard");
     cap.setExposure(1.8);
-    // renderer 不动
     expect(renderer.toneMapping).toBe(origTM);
     expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
-    // params 已经更新
     expect(cap.getParams().toneMapping).toBe("reinhard");
     expect(cap.getParams().exposure).toBeCloseTo(1.8, 4);
   });
 
-  it("setToneMapping/setExposure 在 enabled=true 时同步写 renderer", () => {
+  it("setToneMapping 在 enabled=true 时写 renderer.toneMapping；setExposure 仍不写 exposure", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    const renderer = makeRendererWithState();
+    const renderer = makeRendererWithState(THREE.NoToneMapping, 0.55);
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
     cap.setToneMapping("linear");
     cap.setExposure(2.0);
     expect(renderer.toneMapping).toBe(THREE.LinearToneMapping);
-    expect(renderer.toneMappingExposure).toBeCloseTo(2.0, 4);
+    // [ADR-250] 曝光值由 sky 侧乘算（skyExposure × ppExposure），非本 cap 直写
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.55, 4);
   });
 
-  it("applyPostProcDefaults 在 enabled=false 时不碰 renderer（只更新 params）", () => {
+  it("[ADR-250] 启用意图关闭时不碰 renderer（曝光属主归 sky）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.58);
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
     const origExp = renderer.toneMappingExposure;
     const origTM = renderer.toneMapping;
-    // ysm 预设 enabled=false：统一亮度口径下预设只带 enabled，不携 exposure
-    cap.applyPostProcDefaults("ysm");
+    cap.applyModelPreset("ysm"); // ysm 的 ppEnabled:false
     expect(renderer.toneMapping).toBe(origTM);
     expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
-    // params 保持全局默认曝光（光影包统一值），不出现 per-type 1.05
     expect(cap.getParams().exposure).toBeCloseTo(1.0, 4);
     expect(cap.isEnabled()).toBe(false);
   });
 
-  it("applyPostProcDefaults 在 enabled=true 时正常写 tone mapping / exposure（全局统一值）", () => {
+  it("[ADR-250] 启用时写 tone mapping，但**不写** toneMappingExposure（sky 独占）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState();
+    // sky 已写入自己的曝光（如 0.55），postproc 启用不得覆写它
+    renderer.toneMappingExposure = 0.55;
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
-    // vrm 预设 enabled=true：写全局默认曝光 1.0（不再 per-type 1.05）
-    cap.applyPostProcDefaults("vrm");
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
-    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+    // 关键断言：曝光保持 sky 的值，不被 ppExposure(1.0) 顶掉（原 1.8× 亮瞎的真因）
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.55, 4);
+    void cap;
   });
 
-  it("applyPostProcDefaults 落库 this.enabled（per-type 开关生效，根治死代码）", () => {
+  it("[ADR-250] 启用意图经 state 翻转：不再落 cap 字段、不重建 composer", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const renderer = makeRendererWithState();
-    // 构造 off，套用 vrm（enabled:true）→ 应翻转为 on 并构建 composer
-    const capOn = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
-    let composerBuilt = false;
-    (capOn as unknown as { buildComposer: () => void }).buildComposer = () => { composerBuilt = true; };
-    (capOn as unknown as { disposeComposer: () => void }).disposeComposer = () => {};
-    (capOn as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
-    capOn.applyPostProcDefaults("vrm");
+    // 不传 enabled → 不写状态层（源未定），故 auto-model 预设可自由落地
+    const capOn = new PostprocessingCapability({ scene, renderer, camera });
+    capOn.applyModelPreset("vrm"); // vrm 的 ppEnabled:true
     expect(capOn.isEnabled()).toBe(true);
-    expect(composerBuilt).toBe(true);
-    // 构造 on，套用 ysm（enabled:false）→ 应翻转为 off 并销毁 composer
-    const capOff = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
-    let disposed = false;
-    (capOff as unknown as { buildComposer: () => void }).buildComposer = () => {};
-    (capOff as unknown as { disposeComposer: () => void }).disposeComposer = () => { disposed = true; };
-    (capOff as unknown as { applyReflectorSync: () => void }).applyReflectorSync = () => {};
-    capOff.applyPostProcDefaults("ysm");
+    const capOff = new PostprocessingCapability({ scene, renderer, camera });
+    capOff.applyModelPreset("ysm"); // ysm 的 ppEnabled:false
     expect(capOff.isEnabled()).toBe(false);
-    expect(disposed).toBe(true);
+    capOff.setEnabled(true); // 手动开关可任意翻转
+    expect(capOff.isEnabled()).toBe(true);
   });
 });
 
@@ -633,107 +616,154 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   });
 });
 
-// ============ 性能档位总闸 setMasterEnabled + applyPostProcDefaults 构建次数（审核修复回归） ============
-describe("PostprocessingCapability — 总闸与 applyPostProcDefaults 构建次数", () => {
+// ============ [ADR-250] 启用意图（envState.ppEnabled）唯一真值源 ============
+// 本组原为「总闸 setMasterEnabled + per-type 门禁 applyPostProcDefaults」二元机制测试。
+// ADR-250 退役该机制后，保留其**保护意图**转为等价断言：
+//   · 「off→on 可恢复」→ ppEnabled 写入即生效且可往返
+//   · 「不越权开启」　→ 模型预设不得覆盖用户手动开关（auto-model vs manual 仲裁）
+//   · 「无谓重建」　　→ composer 常驻：启用意图翻转不触发 build/dispose
+describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () => {
   function buildSpy() {
     return vi.spyOn(
       PostprocessingCapability.prototype as unknown as { buildComposer: () => void },
       "buildComposer",
     );
   }
+  function disposeSpy() {
+    return vi.spyOn(
+      PostprocessingCapability.prototype as unknown as { disposeComposer: () => void },
+      "disposeComposer",
+    );
+  }
 
-  // [ADR-247 D3] 生效开关 = 总闸 && per-type 门禁。门禁初值取自构造 enabled；
-  // newCap({enabled:true}) 即「门禁开」，故总闸可直接切换生效开关。
-  it("setMasterEnabled 切换生效开关并构建/销毁 composer（门禁已开时）", () => {
-    const cap = newCap({ enabled: true });
-    cap.setMasterEnabled(false);
-    expect(cap.isEnabled()).toBe(false);
-    cap.setMasterEnabled(true);
-    expect(cap.isEnabled()).toBe(true);
-  });
-
-  it("门禁关时 setMasterEnabled(true) 不越权开启（总闸放行但门禁否决）", () => {
-    const cap = newCap({ enabled: false }); // 门禁初值 = false（如 YSM/车万女仆预设）
-    cap.setMasterEnabled(true);
-    expect(cap.isEnabled()).toBe(false); // 总闸开，但门禁否决
-  });
-
-  it("总闸关闭不抹门禁：off→on 循环后仍能恢复（门禁保护自持，不靠调用方）", () => {
+  it("setEnabled 写 envState.ppEnabled 并即时反映到 isEnabled（唯一真值源）", () => {
     const cap = newCap({ enabled: false });
-    cap.applyPostProcDefaults("vrm"); // 门禁 → true
-    expect(cap.isEnabled()).toBe(true);
-    cap.setMasterEnabled(false); // 总闸关
     expect(cap.isEnabled()).toBe(false);
-    cap.setMasterEnabled(true); // 总闸再开 → 门禁仍在，恢复
+    cap.setEnabled(true);
     expect(cap.isEnabled()).toBe(true);
+    expect(envState.ppEnabled).toBe(true);
+    cap.setEnabled(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(envState.ppEnabled).toBe(false);
   });
 
-  it("门禁自身变化也走同一重算：预设切到关闭类型时立即生效", () => {
+  it("启用意图 off→on 往返可恢复（原「总闸不抹门禁」不变量等价形式）", () => {
     const cap = newCap({ enabled: true });
-    cap.applyPostProcDefaults("ysm"); // 门禁 → false
+    cap.setEnabled(false);
     expect(cap.isEnabled()).toBe(false);
-    cap.applyPostProcDefaults("vrm"); // 门禁 → true
+    cap.setEnabled(true);
     expect(cap.isEnabled()).toBe(true);
   });
 
-  // [ADR-247 D3 审查修复 R1] loadState 恢复 enabled 时必须同步门禁，否则两者永久失配：
-  // 存档 enabled=true + 构造 enabled=false → 门禁停在 false，总闸 off→on 后无声否决，
-  // 后处理再也开不回来（POSTPROC_PRESETS.default = {} 不写门禁的「default」类型必踩）。
-  it("loadState 恢复 enabled=true 后门禁同步：总闸 off→on 仍可恢复（R1 回归）", () => {
+  it("模型预设写 ppEnabled（auto-model 源）；用户手动设置后不被覆盖", () => {
+    // 用户手动开启（manual 源）→ 后续 auto-model 预设不得覆盖（ADR-196 仲裁：manual 最高）
+    const cap = newCap({ enabled: false });
+    cap.setEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
+    cap.applyModelPreset("ysm"); // ysm = ppEnabled:false，但用户已 manual → 不覆盖
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("模型预设写 ppEnabled（auto-model 源）；未经用户手动设置时 preset 生效", () => {
+    // envState 是模块级单例，beforeEach 已 reset → 此处 ppEnabled 为默认 false 且源未定
+    expect(envState.ppEnabled).toBe(false);
+    const fresh = newCap({});
+    fresh.applyModelPreset("ysm"); // ysm = ppEnabled:false
+    expect(fresh.isEnabled()).toBe(false);
+  });
+
+  it("模型预设 vrm/ysm 分别落 true/false", () => {
+    const vrmCap = newCap({});
+    vrmCap.applyModelPreset("vrm");
+    expect(vrmCap.isEnabled()).toBe(true);
+  });
+
+  it("applyModelPreset('default') 不写 ppEnabled（default 无该键），保持现值", () => {
+    const cap = newCap({ enabled: true });
+    cap.applyModelPreset("default");
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  // [ADR-250 §2.2] composer 常驻是本 ADR 对「配置缓存失效」的根治点：
+  // 启用意图翻转**不得**触发整组 GPU 资源重建——这正是原机制每次换模型的代价。
+  it("启用意图翻转不构建/销毁 composer（composer 常驻，缓存失效根治）", () => {
+    const cap = newCap({ enabled: true });
+    const bSpy = buildSpy();
+    const dSpy = disposeSpy();
+    bSpy.mockClear();
+    dSpy.mockClear();
+    cap.setEnabled(false);
+    cap.setEnabled(true);
+    cap.setEnabled(false);
+    expect(bSpy).not.toHaveBeenCalled();
+    expect(dSpy).not.toHaveBeenCalled();
+  });
+
+  // [ADR-250] loadState 恢复 enabled 落入 ppEnabled，与原 R1 场景等价但失配已不可能发生。
+  it("loadState 恢复 enabled=true 落 ppEnabled，off→on 往返自洽（原 R1 场景）", () => {
     localStorage.clear();
-    // ① 存档：用户开着后处理
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
-    // ② 新会话：构造默认 enabled=false（门禁初值 false），再 loadState 恢复 enabled=true
     const cap2 = newCap({ enabled: false });
     cap2.loadState();
-    expect(cap2.isEnabled()).toBe(true); // 存档值生效
-    // ③ 总闸 off→on：门禁若未同步，此处会被无声否决（R1 症状）
-    cap2.setMasterEnabled(false);
+    expect(cap2.isEnabled()).toBe(true);
+    cap2.setEnabled(false);
     expect(cap2.isEnabled()).toBe(false);
-    cap2.setMasterEnabled(true);
-    expect(cap2.isEnabled()).toBe(true); // ← 修复前为 false
+    cap2.setEnabled(true);
+    expect(cap2.isEnabled()).toBe(true);
     localStorage.clear();
   });
 
-  it("applyPostProcDefaults('default') 不写门禁，但 loadState 后总闸循环仍自洽（R1 组合场景）", () => {
+  it("loadState 后 applyModelPreset('default') 不扰动已恢复的启用意图（原 R1 组合场景）", () => {
     localStorage.clear();
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
     const cap2 = newCap({ enabled: false });
     cap2.loadState();
-    cap2.applyPostProcDefaults("default"); // 预设为空 → 不触碰门禁
-    expect(cap2.isEnabled()).toBe(true);
-    cap2.setMasterEnabled(false);
-    cap2.setMasterEnabled(true);
+    cap2.applyModelPreset("default"); // default 无 ppEnabled 键 → 不触碰
     expect(cap2.isEnabled()).toBe(true);
     localStorage.clear();
   });
 
-  it("setMasterEnabled 值未变时不做无谓重建", () => {
-    const cap = newCap({ enabled: true });
+  // ===== ADR-250 三症状端到端回归（数值锁定，防回退）=====
+
+  it("[症状③] 换模型（ppEnabled 翻转）不重建 composer——GPU 资源同一实例", () => {
+    const cap = newCap({});
+    const internals = cap as unknown as { composer: unknown; buildComposer: () => void };
+    const composerAtStart = internals.composer;
+    expect(composerAtStart).not.toBeNull();
     const spy = buildSpy();
     spy.mockClear();
-    cap.setMasterEnabled(true);
+    // 模拟切模型序列：ysm(false) → vrm(true) → mmd(true) → ysm(false)
+    cap.applyModelPreset("ysm");
+    cap.applyModelPreset("vrm");
+    cap.applyModelPreset("mmd");
+    cap.applyModelPreset("ysm");
+    // 关键：整个切模型序列零重建（原实现每次翻转都 dispose + 重新 allocate 整组 RT）
     expect(spy).not.toHaveBeenCalled();
+    expect(internals.composer).toBe(composerAtStart);
   });
 
-  it("applyPostProcDefaults enabled 翻转（false→true）时 composer 只构建一次", () => {
-    const cap = newCap(); // 默认 enabled=false（params.enabled=false）
-    const spy = buildSpy();
-    spy.mockClear();
-    cap.applyPostProcDefaults("vrm"); // 门禁 false→true 翻转
+  it("[症状②] MMD 开启后处理不抬高 exposure（1.8× 亮瞎消除，数值锁定）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeFakeRenderer();
+    // sky 已按 mmd 的 skyExposure 写入有效曝光
+    const skyExposure = envState.skyExposure * envState.ppExposure;
+    renderer.toneMappingExposure = skyExposure;
+    const cap = new PostprocessingCapability({ scene, renderer, camera });
+    cap.applyModelPreset("mmd"); // mmd: ppEnabled = true
     expect(cap.isEnabled()).toBe(true);
-    expect(spy).toHaveBeenCalledTimes(1); // 修复前末尾无条件重建会二次 build
+    // 原实现此处会跳到 ppExposure(1.0) = 约 1.8~2× 亮；现保持不变
+    expect(renderer.toneMappingExposure).toBeCloseTo(skyExposure, 6);
   });
 
-  it("applyPostProcDefaults enabled 未变（保持 on）时重建 composer 一次以同步参数", () => {
-    const cap = newCap({ enabled: true, params: { enabled: true } });
-    cap.setEnabled(true); // 建真 composer（后续 buildComposer 内部 disposeComposer 依赖真实实例）
-    const spy = buildSpy();
-    spy.mockClear();
-    cap.applyPostProcDefaults("vrm");
-    expect(spy).toHaveBeenCalledTimes(1);
+  it("[症状①] YSM 默认不开后处理，但用户可手动开回（偏好可覆盖，非钉死）", () => {
+    const cap = newCap({});
+    cap.applyModelPreset("ysm");
+    expect(cap.isEnabled()).toBe(false); // 默认关（满亮材质 + 发光骨）
+    cap.setEnabled(true); // 用户手动开 → 生效（原门禁在 cap 私有字段，用户无法覆盖）
+    expect(cap.isEnabled()).toBe(true);
   });
 });
 // ============ 真实 composer 构建管线 ============
@@ -823,22 +853,25 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(ssr.opacity).toBe(1);
   });
 
-  it("setEnabled(false) 拆除 composer（全部 pass 引用清空）；再启用重建", () => {
+  it("[ADR-250] setEnabled(false) 不拆 composer（常驻）；passes 转旁路，再启用立即可用", () => {
     const { cap } = newRealCap();
     cap.setEnabled(true);
-    expect(internalsOf(cap).composer).not.toBeNull();
+    const composerOn = internalsOf(cap).composer;
+    expect(composerOn).not.toBeNull();
     cap.setEnabled(false);
-    expect(internalsOf(cap).composer).toBeNull();
-    expect(internalsOf(cap).bloomPass).toBeNull();
+    // 关键：composer 与各 pass 引用仍在（不再 dispose），这是「换模型不再重建 GPU 资源」的根基
+    expect(internalsOf(cap).composer).toBe(composerOn);
+    expect(internalsOf(cap).bloomPass).not.toBeNull();
     cap.setEnabled(true);
-    expect(internalsOf(cap).composer).not.toBeNull();
+    expect(internalsOf(cap).composer).toBe(composerOn);
   });
 
-  it("setEnabled(true) 写入 renderer：SRGB 色彩空间 + toneMapping/exposure", () => {
+  it("[ADR-250] setEnabled(true) 写 toneMapping / SRGB；exposure 归 sky 不受本 cap 支配", () => {
     const { renderer } = newRealCap({ enabled: true, params: { toneMapping: "reinhard", exposure: 1.8 } });
     expect(renderer.toneMapping).toBe(THREE.ReinhardToneMapping);
-    expect(renderer.toneMappingExposure).toBe(1.8);
     expect(renderer.outputColorSpace).toBe(THREE.SRGBColorSpace);
+    // ppExposure(1.8) 不再是 renderer 上的直写值——由 sky 侧乘算 skyExposure × ppExposure
+    expect(renderer.toneMappingExposure).not.toBe(1.8);
   });
 
   it("setSSAOEnabled(true) 重建 composer 挂 SSAO；setSSAORadius/MinDist/MaxDist 直改 pass", () => {
@@ -922,23 +955,39 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(bloom.strength).toBeCloseTo(1.0, 6);
   });
 
-  it("render()：disabled 返回 false 且不建 composer；enabled 建 composer 并渲染", () => {
+  it("render()：[ADR-250] composer 常驻——关闭态亦返回 true 并渲染（pass 旁路，不拆不建）", () => {
     const { cap } = newRealCap();
     const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    expect(cap.render(0.016, null)).toBe(false);
-    expect(internalsOf(cap).composer).toBeNull();
-    cap.setEnabled(true);
+    // 构造即建 composer（常驻），关闭态走旁路渲染而非回退 renderer.render
+    expect(internalsOf(cap).composer).not.toBeNull();
     expect(cap.render(0.016, null)).toBe(true);
     expect(renderSpy).toHaveBeenCalled();
+    cap.setEnabled(true);
+    expect(cap.render(0.016, null)).toBe(true);
   });
 
-  it("needComposer：disabled 时不再因体积光强制建 composer（ADR-246 D1 死逻辑已删）", () => {
+  it("render()：[ADR-250] 关闭态旁路——passes 全部 disabled（等价原 renderer.render）", () => {
     const { cap } = newRealCap();
-    const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
+    vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
+    expect(cap.isEnabled()).toBe(false);
+    cap.render(0.016, stubLightCap({ opacity: 1 }));
+    const internals = internalsOf(cap) as unknown as {
+      bloomPass: { enabled: boolean };
+      composer: unknown;
+    };
+    // 关闭态 bloomPass 旁路；composer 不销毁（缓存失效根治点）
+    expect(internals.bloomPass.enabled).toBe(false);
+    expect(internals.composer).not.toBeNull();
+  });
+
+  it("needComposer：[ADR-250] composer 常驻后不再因体积光/开关变化而拆建", () => {
+    const { cap } = newRealCap();
+    vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
+    const composerBefore = internalsOf(cap).composer;
     const rendered = cap.render(0.016, stubLightCap({ opacity: 1 }));
-    expect(rendered).toBe(false);
-    expect(internalsOf(cap).composer).toBeNull();
-    expect(renderSpy).not.toHaveBeenCalled();
+    expect(rendered).toBe(true);
+    // 同一实例：未重建（原实现会在 disabled 时 disposeComposer 使其为 null）
+    expect(internalsOf(cap).composer).toBe(composerBefore);
   });
 
   it("setSize 同步 composer 与 bloom/SSR 分辨率；setPixelRatio 透传", () => {
@@ -987,10 +1036,13 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
       ppReflectorDisableWhenSSR: opts.disableWhenSSR ?? true,
     }, { source: "manual" });
     // 2026-09-14 查询器机制：构造注入 caps（替代原 setReflectorCap 注入器）
+    // [ADR-250] 显式 enabled:false —— composer 构造即建（常驻），此时不启用；
+    // 后续 setEnabled(true) 经 envState 派发触发 applyReflectorSync。
     const cap = new PostprocessingCapability({
       scene,
       renderer,
       camera,
+      enabled: false,
       caps: { getById: (id) => (id === "reflector" ? reflector : undefined) },
     });
     return { cap, reflector, renderer };
@@ -1096,12 +1148,13 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     expect(reflector.isEnabled()).toBe(true);
   });
 
-  it("masterEnabled off 后 reflector 保持禁用（SSR 配置仍在），dispose 才恢复", () => {
+  it("启用意图关闭后 reflector 保持禁用（SSR 配置仍在），dispose 才恢复", () => {
     const { cap, reflector } = makePair();
     cap.setEnabled(true);
     expect(reflector.isEnabled()).toBe(false);
-    // 总闸 off 只拆 composer；params.reflectionMode 仍是 SSR → applyReflectorSync 维持禁用语义
-    cap.setMasterEnabled(false);
+    // [ADR-250] 关闭后 composer 常驻（不拆）；params.reflectionMode 仍是 SSR
+    // → applyReflectorSync 维持禁用语义
+    cap.setEnabled(false);
     expect(reflector.isEnabled()).toBe(false);
     cap.dispose(); // dispose 精确还原 prev
     expect(reflector.isEnabled()).toBe(true);

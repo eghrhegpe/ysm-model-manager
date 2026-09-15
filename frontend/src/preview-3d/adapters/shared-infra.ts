@@ -62,19 +62,13 @@ export function applyModelDefaults(
 }
 
 /**
- * 装配链——post-apply 后处理模型预设（ADR-196）。
- * 须跑在 `for(cap)cap.apply()` + `syncShadowLights` 之后（composer 时序）。
- * SSR↔Reflector 联动已由 PostprocessingCapability 内部经构造注入的 caps 查询器
- * （applyReflectorSync → getTypedCap）驱动，装配链不再手动 setReflectorCap，
- * 故本函数无「跑在 setReflectorCap 之前」的时序约束。postproc per-type enabled
- * 不入 schema，读自家 POSTPROC_PRESETS，由 cap 内 applyPostProcDefaults 完成翻转 + composer 侧效。
+ * 装配链——[ADR-250] 原 `applyPostProcDefaults` 已删除。
+ *
+ * 它按模型类别写 cap 私有门禁（`perTypeGate`），导致：①模型类别伸进 cap 内部（职责越界）；
+ * ②门禁翻转触发 composer 整组重建（配置缓存失效）；③与总闸二元相与造成「一枚字段三重语义」。
+ * 「默认是否开后处理」现由 `MODEL_DEFAULTS` 写 `ppEnabled` 状态参数表达，
+ * 随 `applyModelDefaults` 的既定路径生效，无需独立的后处理装配钩子。
  */
-export function applyPostProcDefaults(
-  postProcCap: PostprocessingCapability | null,
-  modelType: string,
-): void {
-  postProcCap?.applyPostProcDefaults(modelType);
-}
 
 /**
  * 遍历 scene 树释放 geometry/material GPU 资源 + 清空场景。
@@ -302,8 +296,10 @@ export function buildSharedInfra(
   const postProcCap = sceneCapabilityRegistry.getById("postprocessing") ?? null;
   // 兼容老接口：postProc 变量也指向同一 capability（对外 render/setSize/dispose 方法签名一致）
   const postProc = postProcCap;
-  // 按模型类别套用预设（post-apply，须在 apply/syncShadowLights 之后）
-  applyPostProcDefaults(postProcCap, adapter.id);
+  // [ADR-250] 后处理 per-type 默认：原 `applyPostProcDefaults`（写 cap 私有门禁）已删除，
+  // 现与六 cap 同构——读 MODEL_DEFAULTS 的 `ppEnabled` 写状态参数（post-apply，composer 时序无约束）。
+  // 未走上方 applyModelDefaults 是因该函数签名只收六 cap（属地接口不扩张），此处单独一行更显式。
+  postProc?.applyModelPreset(adapter.id);
   // SSR↔Reflector 联动已前端化（postprocessing-capability 构造注入 caps 查询器，
   // applyReflectorSync 经 getTypedCap 现场取 reflector——不再需要此处手工接线）
   // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项

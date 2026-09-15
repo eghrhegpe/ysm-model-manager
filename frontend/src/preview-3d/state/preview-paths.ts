@@ -25,7 +25,8 @@ export const KNOWN_PATHS = [
   "render.frustumCull",
   "render.maxFps",
   "render.maxPixelRatio",
-  "render.bloom",
+  // [ADR-250] `render.bloom` 已退表：后处理是视觉项（与 wireframe/pmrem 同类），不进性能档位。
+  // 后处理开关唯一入口 = postprocessing cap 自报的 `pp-enabled` 控件（写 envState.ppEnabled）。
   "render.wireframe",
   "env.pmrem",
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
@@ -62,7 +63,6 @@ export type PathValue = {
   "render.frustumCull": boolean;
   "render.maxFps": number;
   "render.maxPixelRatio": number;
-  "render.bloom": boolean;
   "render.wireframe": boolean;
   "env.pmrem": boolean;
   "env.waterMode": string;

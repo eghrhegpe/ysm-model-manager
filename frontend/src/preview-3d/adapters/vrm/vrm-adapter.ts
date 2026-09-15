@@ -511,11 +511,11 @@ async function loadMotionClips(
   }
   return { motionClips, motionMixer, motionAction, motionPlaying };
 }
-/** 取 action 实播的 clip。three r185 的 AnimationAction 公开 `.clip` getter 已移除，
- * clip 存于私有 `_clip`（`mixer.clipAction(clip)` 内部即 `new AnimationAction(this, clip)`）。
+/** 取 action 实播的 clip。three r185 起 AnimationAction 不再暴露 `.clip` 属性，
+ * 改用公开方法 `getClip()`（私有字段 `_clip` 无跨版本契约，勿直接读）。
  * 用于「time 源与 target 源同一对象」的反查（review 64c24cf3e P1）。 */
 function motionClipOf(action: THREE.AnimationAction): THREE.AnimationClip {
-  return (action as unknown as { _clip: THREE.AnimationClip })._clip;
+  return action.getClip();
 }
 function setupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
   // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
@@ -743,8 +743,8 @@ function Stage5BuildResult(
       // 写在 vrm.update(dt) 之后——归一化骨的位姿是**单向烘回**原始骨的，IK 结论要落在
       // 原始骨上就必须晚于那一步（detail 见 vrm-foot-ik.ts 文件头）。
       // 按 live action 的 clip 反查 targets（非独立维护的 index）——time 源与 target 源
-      // 同一对象，永不脱钩（review 64c24cf3e P1；three r185 公开 .clip getter 已移除，
-      // clip 存于 action._clip，经 motionClipOf 读取）。
+      // 同一对象，永不脱钩（review 64c24cf3e P1；clip 经公开 `action.getClip()` 读取，
+      // 不碰 three 私有 `_clip`）。
       if (animActive && motion.motionAction) {
         const action = motion.motionAction;
         const current = motionClips.find((c) => c.clip === motionClipOf(action));

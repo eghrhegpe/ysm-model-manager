@@ -67,7 +67,7 @@ export function actionBtnHTML(status: string): string {
   }
   if (status === "legacy") {
     return (
-      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted);font-size:var(--fs-tiny)">' +
+      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted)">' +
       t("syncManager.pullHere") +
       "</button>"
     );
@@ -109,7 +109,7 @@ export function syncDirRowHTML(
     renderFormattedText(syncItem.name) +
     "</span>" +
     (sizeStr
-      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-tiny)">' +
+      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">' +
         sizeStr +
         "</span>"
       : "") +
@@ -218,7 +218,7 @@ export function itemHTML(item: SyncItem, index: number): string {
     renderFormattedText(item.name) +
     "</span>" +
     (sizeStr
-      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-tiny)">' +
+      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">' +
         sizeStr +
         "</span>"
       : "") +

@@ -53,12 +53,12 @@ describe("actionBtnHTML", () => {
     expect(html).toContain('data-action="pull"');
   });
 
-  it("legacy 渲染 pullHere 按钮（无 testid，弱化样式）", () => {
+  it("legacy 渲染 pullHere 按钮（无 testid，弱化样式，字号回落类默认）", () => {
     const html = actionBtnHTML("legacy");
     expect(html).not.toContain("data-testid");
     expect(html).toContain('data-action="pull"');
     expect(html).toMatch(/>[^<]+<\/button>$/);
-    expect(html).toContain("var(--fs-tiny)");
+    expect(html).not.toContain("font-size:"); // 无内联字号覆盖，回落 .sm-item-btn 类默认 --fs-btn-secondary
   });
 
   it("其余状态无按钮", () => {

@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-15T07:36:15.489Z",
-  "count": 128,
+  "generated": "2026-09-15T09:46:16.405Z",
+  "count": 127,
   "note": "设计令牌存量债基线——门禁只拦新增；清理后重跑 --update-baseline 收缩",
   "violations": [
     "frontend/src/features/community/render.ts:218:emoji-icon",
@@ -109,7 +109,6 @@
     "frontend/src/views/app-nav/tpl.ts:56:css-font-size",
     "frontend/src/views/app-nav/tpl.ts:85:css-radius",
     "frontend/src/views/app-nav/tpl.ts:99:css-font-size",
-    "frontend/src/views/app-preview/css.ts:55:css-font-size",
     "frontend/src/views/app-preview/css.ts:78:css-font-size",
     "frontend/src/views/app-preview/css.ts:78:css-transition",
     "frontend/src/views/app-preview/detail.ts:159:emoji-icon",

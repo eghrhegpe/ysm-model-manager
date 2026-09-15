@@ -48,7 +48,7 @@ ${focusVisibleCSS}
 .srch-inp { flex: 1; padding: 5px 8px; border-radius:var(--radius-md); border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-base); outline: none; font-family: inherit; }
 .srch-inp::placeholder { color: var(--muted); }
 .sort-sel { padding: 5px 6px; border-radius: 5px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-sm); outline: none; font-family: inherit; cursor: pointer; }
-.tag { font-size: var(--fs-tiny); background: color-mix(in srgb, var(--sm-optional) 20%, transparent); color: var(--sm-optional); padding: 0 4px; border-radius:var(--radius-xs); margin-left: 2px; }
+.tag { font-size: var(--fs-xs); background: color-mix(in srgb, var(--sm-optional) 20%, transparent); color: var(--sm-optional); padding: 0 4px; border-radius:var(--radius-xs); margin-left: 2px; }
 .list { flex: 1; overflow-y: auto; padding: 6px 0; position: relative; }
 /* 拖拽导入提示条（底部固定，始终可见） */
 .tree-drop-hint {

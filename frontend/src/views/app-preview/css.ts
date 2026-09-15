@@ -40,21 +40,21 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 /* === 骨骼预览区 === */
 .pv-btn { font-size:var(--fs-xs);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
 .pv-btn:hover { background:var(--hover); }
-.pv-hint { font-size:var(--fs-tiny);color:var(--muted); }
+.pv-hint { font-size:var(--fs-xs);color:var(--muted); }
 .pv-canvas { width:100%;height:auto;border-radius:var(--radius-lg);background:rgba(0,0,0,.12);margin-bottom:6px;touch-action:none; }
 .pv-grab { cursor:grab;touch-action:none; }
 .pv-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:8px 10px;margin-bottom:8px; }
 .pv-card-title { display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:var(--fs-sm);font-weight:600;color:var(--txt); }
 .pv-card-section { padding-left:8px;margin-bottom:5px; }
-.pv-card-section-label { font-size:var(--fs-tiny);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
+.pv-card-section-label { font-size:var(--fs-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
 .pv-card-row { font-size:var(--fs-sm);color:var(--txt);line-height:1.6; }
 .pv-tree-item { display:flex;align-items:center;gap:4px;padding-left:8px; }
 .pv-tree-icon { font-size:var(--fs-xs);flex-shrink:0;width:16px;text-align:center; }
 .pv-tree-arrow { color:var(--muted);margin:0 2px; }
 .pv-tree-unit { color:var(--muted);font-size:var(--fs-xs);margin-left:2px; }
-.pv-tree-size { color:var(--muted);font-size:8px;margin-left:auto; }
+.pv-tree-size { color:var(--muted);font-size:var(--fs-xs);margin-left:auto; }
 .pv-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { font-size:var(--fs-tiny);padding:0 5px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--accent) 25%, transparent);color:var(--txt);margin-left:auto; }
+.ysm-badge { font-size:var(--fs-xs);padding:0 5px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--accent) 25%, transparent);color:var(--txt);margin-left:auto; }
 .pv-section-blue { border-left:2px solid var(--accent); }
 .pv-section-green { border-left:2px solid var(--status-success); }
 .pv-section-orange { border-left:2px solid var(--sm-optional); }

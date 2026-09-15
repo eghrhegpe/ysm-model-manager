@@ -453,10 +453,23 @@ invariant_anchors:
         ① 数据层直查可 import 的表；② **源码层扫描**——适配器的图标写在 `build: (o) => ({…})`
         闭包内，静态 import 枚举不到，只能源码扫描（与 `check-menu-health` 的正则解析同源思路）。
         另设「豁免清单自检」：断言 `env.ts` 仍走 `label` 文本拼接，若将来改为结构槽渲染会提醒撤销豁免。
-    - **仍在账外（下一批）**：全域扫描显示 `features/` 与 `views/` 另有约 40 处 `icon:` 字形
-      （`app-nav` 左导航、`context-menu`、`dialogs`、`recycle-bin`、`app-tree`、`app-sidebar`、
-      `app-preview/tpl.ts` 等）。其中部分可能是数据图标（§1.3 不可动）或文本槽，**必须先按渲染槽
-      逐处判定**再决定迁或豁免——不可按字段名一刀切（本期已因此纠偏一次）。
+    - **第 3 批（全域侦察 + 结构槽收口，2026-09）**：全域扫描曾估「约 40 处仍在账外」，
+      但**按渲染槽逐个查消费端**后发现绝大多数**不是结构槽**——它们走
+      `utils/dom/modal-core.ts` 的 `esc()` 通道（对话框/toast 的 title 前缀，SVG 会被转义成
+      字面量）或 `features/context-menu` 的 `BATCH_TPL`（toast 文案模板）。
+      按 §1.4 属**文本槽豁免**。**真实结构槽余量只有 11 处**：
+      - `views/app-nav/index.ts`（左导航）：本已**局部迁移**（logo/navigate/random 用 UI_ICONS），
+        导航项却还是 emoji → 迁 `book`/`game`/`appearance`/`parser`/`tools`/`settings`
+      - `views/app-preview/tpl.ts`（包内文件清单芯片）→ 迁 `video`/`controls`/`web`/`parser`/`image`
+      - **两处零新增图标**（UI_ICONS 全部已有）；映射表仅补 📚→book
+      - **顺带修 5 个 i18n 泄漏**：芯片 label 原为硬编码中文（经 `${esc(c.label)}` 进 DOM），
+        切语言后仍显示中文；它逃过 `i18n-ui-check` 的原因与 JS 侧 UI 槽同源——闸要求
+        「含 HTML 标记 + 含中文 + 未包 t()」，而这是**对象字面量字段**，无 HTML 标记
+      - **又一次误判纠正**：曾怀疑「ADR-245 声称右键菜单已迁完却仍有字形」，核实后
+        **ADR-245 完好**——那些 emoji 在 `BATCH_TPL`（toast 模板）里，不是菜单项。
+        **同一教训第三次现身：按字段名 `icon:` 收集会误伤，必须按渲染槽判定。**
+    - **收口状态**：结构槽图标已清（3D 菜单 + 导航域），仅剩 `menu/env.ts` 那 5 处**文本槽**
+      （`<option>` 只能文本）——已在就地注释与契约测试的**豁免自检**中显式登记，防豁免退化成漏检。
     - **踩坑记录**：`check-redlines` 的 R8 扫描器**不剥注释**——文档注释里写「innerHTML + 空格等号
       + 空格 + 函数调用」的字面形态会被当违规行拦下（且带反引号时「含反引号」豁免项反而失效）。
       引用被禁模式时须改描述式措辞，不要写出可被正则命中的字面形态。

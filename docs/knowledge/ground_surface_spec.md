@@ -16,14 +16,19 @@ auto_fields:
     - generateSurfacePixels
     - GROUND_MAT_PARAMS
     - GROUND_SURFACE_MODES
+    - GroundAxisMapping
+    - GroundCanvasStyle
     - GroundCapability
     - GroundMaterialParams
     - GroundMatParam
+    - groundMatSourceFromAxes
+    - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
+    - migrateGroundMatSource
     - paramIsEffective
     - surfaceSpecKey
     - textureRepeat
@@ -77,7 +82,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **applyGroundSurfaceAppearance(mat,spec,meshSize)**：外观参数**唯一**落地入口（opacity/transparent/depthWrite/PBR/map.center+rotation+repeat）
 - **generateSurfacePixels(st,sizePx)**：纯函数像素生成（solid/plain 均匀、checker 奇偶交替、grid 首行首列画线、stripes/diamond/marble 种子化噪声；matColor2 仅 stripes/marble 参与）。**ADR-249 §2.2：`none` 与 `texture` 均返回空数组**——`none` = 真的关闭表面层（历史行为：与 solid/plain 同支返回不透明纯色，造成「控件隐了却仍盖实色」的语义矛盾）；`texture` = 表面来自用户贴图，程序化像素本是死计算（历史未短路，落进尾部 grid 分支画出格线但永不被使用）。消费方判据：空数组 ⇒ 不创建/不显示表面贴图。
 - **参数 × 模式生效矩阵（ADR-249 §2.4）**：`GROUND_SURFACE_MODES` / `GROUND_MAT_PARAMS` / `paramIsEffective(mode, param)` / `effectiveParamsOf(mode)`——菜单控件可见性与渲染参数读取的**共同单一事实源**（菜单可见 ⇔ `paramIsEffective` 为真），禁止菜单与渲染各写一份 if。历史缺陷：全部材质控件共用一条粗谓词（仅判 `matSource !== "none"`），致 solid/plain/grid 下「线色/副色/格数」可见可拖可写、渲染却不读——零反馈死控件（用户实测「选纯色还显示线色」）。⚠️ `matScale`/`matRotationDeg` 作用于 `mat.map`，凡产出贴图的模式（plain 起）均被读取，属「生效但视觉不可见」，与 solid（完全不产贴图）性质不同。
-- GroundCapability 侧：`refreshSurface()` 唯一变更入口（needsRebuild→rebuild 否则 applyAppearance）；自定义贴图照抄 EnvironmentCapability customHdrTex 模式（缓存独立于材质、不随 dispose、不持久化二进制、loadState 无缓存回退 plain）
+- GroundCapability 侧：`refreshSurface()` 唯一变更入口（needsRebuild→rebuild 否则 applyAppearance）；自定义贴图照抄 EnvironmentCapability customHdrTex 模式（缓存独立于材质、不随 dispose、不持久化二进制）。**ADR-249 §2.5 第 2 条：loadState 不再静默降级**——历史行为 `v === "texture" && !customTex ? "plain" : v`（因贴图二进制不持久化，重启后 customTex 必空），致用户存档里选的「自定义贴图」重启后变成看似无关的纯色地面；现保留用户来源选择，无贴图的渲染兜底归 `rebuildSurface` 的 `customTex ?? makeGeneratedTexture({...st, mode:"solid"})`（材质层）。
+- **拆轴映射（ADR-249 §2.1/§2.5）**：`GroundSourceKind`（来源轴 none/solid/canvas/texture）× `GroundCanvasStyle`（样式轴 plain/grid/checker/stripes/diamond/marble）+ `migrateGroundMatSource(old)` / `groundMatSourceFromAxes(sourceKind, canvasStyle)` 互逆对。旧单枚举压了两条正交轴（「线色是否适用」属样式轴，「有无贴图」属来源轴），是死控件的根源。
 
 ## 对外 API / 入口
 
@@ -94,7 +100,9 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 1. **单路径原则**：外观参数只经 `applyGroundSurfaceAppearance` 落地，capability 里禁止散落 mutate（合约测试锁死 rebuild==in-place 等价）
 2. **纹理密度单点**：`textureRepeat(meshSize,scale)=meshSize/TILE_WORLD_SIZE(10)/scale` 只在 spec 模块算一次
 3. **customTex 缓存生命周期**：独立于当前 surfaceTex，dispose 只释放自建纹理；clearCustomTexture 时 wasAttached 才清 surfaceTex 防误判归属
-4. **持久化白名单**：loadState 校验 matSource ∈ GROUND_SURFACE_MODES（非法回退 none）；texture 模式无 customTex 缓存回退 plain
+4. **持久化白名单**：loadState 校验 matSource ∈ GROUND_SURFACE_MODES（非法回退 none）；~~texture 无 customTex 回退 plain~~（**ADR-249 §2.5 已废除**——静默降级致用户来源选择丢失，改为保留来源、渲染层兜底）
+5. **默认值单一事实源**：`env-state-schema.ts` 的 `groundMat*` 默认值一律引用 spec 侧 `DEFAULT_GROUND_SURFACE_PARAMS`，禁止重写字面量（历史双源：matGridSize 10/8、matRoughness 0.8/0.85、matLineColor、matColor2 四处分歧，用户实测显示 spec 侧胜出）
+6. **GROUND_SURFACE_MODES 单一定义**：由 `ground-surface-spec.ts` 导出，`ground-capability.ts` 不得本地重建同名常量（历史常量双源）
 
 ## 相关
 

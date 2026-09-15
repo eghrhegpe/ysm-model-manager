@@ -235,7 +235,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     cap.dispose();
   });
 
-  it("saveState/loadState 往返 mat 字段；texture 模式持久化后回退 plain", () => {
+  it("saveState/loadState 往返 mat 字段；texture 来源不再被静默降级（ADR-249 §2.5）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.setMatSource("checker");
@@ -247,13 +247,16 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(cap2.getMatSource()).toBe("checker");
     expect(cap2.getMatScale()).toBe(3);
 
+    // ADR-249 §2.5 第 2 条：旧行为把 texture 改写成 plain（因贴图二进制不持久化，
+    // 重启后 customTex 必为空）——用户存档里选的「自定义贴图」重启后变成纯色地面。
+    // 新契约：保留用户选择的来源；无贴图的渲染兜底归材质层，不改写状态。
     const cap3 = new GroundCapability({ scene });
     cap3.acceptLoadedTexture(new THREE.DataTexture(new Uint8Array(16), 2, 2), "t.png");
     cap3.saveState();
     resetEnvState();
     const cap4 = new GroundCapability({ scene });
     cap4.loadState();
-    expect(cap4.getMatSource()).toBe("plain");
+    expect(cap4.getMatSource()).toBe("texture");
   });
 
   it("loadState 非法 matSource 回退 none（缺字段不崩）", () => {

@@ -1,6 +1,13 @@
 // ===== 统一场景状态 Schema（ADR-196 刀 0）=====
 // 收口全部 cap 参数声明：类型 + 默认值 + dispatch 组。
 // 仿 MikuMikuAR ENV_STATE_SCHEMA 模式，新增字段只需在此追加。
+//
+// ⚠️ 默认值单一事实源（ADR-249 §2.6）：地面材质字段的默认值取自
+// ground-surface-spec.ts 的 DEFAULT_GROUND_SURFACE_PARAMS，**不在此重写字面量**。
+// 历史缺陷：两处各自声明默认值且不一致（matGridSize 10 vs 8、matRoughness 0.8 vs 0.85、
+// matLineColor/matColor2 亦分歧），实际渲染读 spec 侧 → schema 侧为死值，
+// 用户看到的数值与 schema 声明对不上。同类病例参照 MikuMikuAR bd65c02f（常量双源）。
+import { DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS } from "@/preview-3d/caps/ground-surface-spec.ts";
 
 type FieldDefaultMap = {
   number: number;
@@ -83,17 +90,22 @@ export const ENV_STATE_SCHEMA = {
   groundDivisions: { type: "number", default: 60, group: "ground" },
   groundColorCenter: { type: "number", default: 0x555577, group: "ground" },
   groundColorGrid: { type: "number", default: 0x2a2a3a, group: "ground" },
-  groundMatColor: { type: "number", default: 0x9a8b78, group: "ground" },
-  groundMatLineColor: { type: "number", default: 0x5a4b3a, group: "ground" },
-  groundMatColor2: { type: "number", default: 0x7a6b5a, group: "ground" },
-  groundMatGridSize: { type: "number", default: 10, group: "ground" },
-  groundMatOpacity: { type: "number", default: 1.0, group: "ground" },
-  groundMatScale: { type: "number", default: 1.0, group: "ground" },
-  groundMatRotationDeg: { type: "number", default: 0, group: "ground" },
-  groundMatDensity: { type: "number", default: 1.0, group: "ground" },
-  groundMatAngleDeg: { type: "number", default: 0, group: "ground" },
-  groundMatRoughness: { type: "number", default: 0.8, group: "ground" },
-  groundMatMetalness: { type: "number", default: 0.0, group: "ground" },
+  // ADR-249 §2.6：默认值统一取自 spec（唯一事实源），不在此重写字面量。
+  groundMatColor: { type: "number", default: GROUND_DEFAULTS.matColor, group: "ground" },
+  groundMatLineColor: { type: "number", default: GROUND_DEFAULTS.matLineColor, group: "ground" },
+  groundMatColor2: { type: "number", default: GROUND_DEFAULTS.matColor2, group: "ground" },
+  groundMatGridSize: { type: "number", default: GROUND_DEFAULTS.matGridSize, group: "ground" },
+  groundMatOpacity: { type: "number", default: GROUND_DEFAULTS.matOpacity, group: "ground" },
+  groundMatScale: { type: "number", default: GROUND_DEFAULTS.matScale, group: "ground" },
+  groundMatRotationDeg: {
+    type: "number",
+    default: GROUND_DEFAULTS.matRotationDeg,
+    group: "ground",
+  },
+  groundMatDensity: { type: "number", default: GROUND_DEFAULTS.matDensity, group: "ground" },
+  groundMatAngleDeg: { type: "number", default: GROUND_DEFAULTS.matAngleDeg, group: "ground" },
+  groundMatRoughness: { type: "number", default: GROUND_DEFAULTS.matRoughness, group: "ground" },
+  groundMatMetalness: { type: "number", default: GROUND_DEFAULTS.matMetalness, group: "ground" },
 
   // --- Water ---
   waterEnabled: { type: "boolean", default: true, group: "water" },

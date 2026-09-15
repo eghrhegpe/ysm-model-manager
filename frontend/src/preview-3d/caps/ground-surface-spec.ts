@@ -188,6 +188,82 @@ export function effectiveParamsOf(mode: GroundSurfaceMode): GroundMatParam[] {
   return GROUND_MAT_PARAMS.filter((p) => paramIsEffective(mode, p));
 }
 
+/* ============ 拆轴：来源轴 × 样式轴（ADR-249 §2.1）============ */
+// 旧的单枚举 groundMatSource 压了两条正交轴：
+//   来源轴（颜色从哪来）  —— none / solid / canvas / texture
+//   样式轴（画布长什么样）—— plain / grid / checker / stripes / diamond / marble
+// 「线色是否适用」是样式轴的属性，「有没有贴图」是来源轴的属性；压成一个枚举后，
+// 菜单层只能做整组显隐，无法表达「纯色来源下线色不适用」——这是死控件的根源。
+
+/** 来源轴：颜色从哪来（决定渲染管线） */
+export type GroundSourceKind = "none" | "solid" | "canvas" | "texture";
+
+/** 样式轴：程序化画布长什么样（仅 sourceKind === "canvas" 有效） */
+export type GroundCanvasStyle = "plain" | "grid" | "checker" | "stripes" | "diamond" | "marble";
+
+/** 旧枚举 → 新两轴的映射结果 */
+export interface GroundAxisMapping {
+  sourceKind: GroundSourceKind;
+  canvasStyle?: GroundCanvasStyle;
+}
+
+/** 新两轴中属于画布管线的样式集（迁移判据用） */
+const CANVAS_STYLES: readonly GroundCanvasStyle[] = [
+  "plain",
+  "grid",
+  "checker",
+  "stripes",
+  "diamond",
+  "marble",
+];
+
+/**
+ * 旧单枚举值 → 新两轴（ADR-249 §2.5 迁移映射）。
+ *
+ * 映射表（与 ADR-249 §2.1 逐行对应）：
+ *   none                     → { sourceKind: "none" }
+ *   solid                    → { sourceKind: "solid" }
+ *   texture                  → { sourceKind: "texture" }
+ *   plain/grid/checker/
+ *   stripes/diamond/marble   → { sourceKind: "canvas", canvasStyle: <同名> }
+ *
+ * 注意：不在此做「texture 无贴图则改写为 plain」的降级——那是历史缺陷
+ * （loadState 曾静默改写，致用户存档中的自定义贴图重启后变成纯色地面）。
+ * 来源选择归用户，「无贴图」由 UI 提示处理（ADR-249 §2.5 第 2 条）。
+ */
+export function migrateGroundMatSource(old: GroundSurfaceMode): GroundAxisMapping {
+  if (old === "none" || old === "solid" || old === "texture") {
+    return { sourceKind: old };
+  }
+  if (CANVAS_STYLES.includes(old as GroundCanvasStyle)) {
+    return { sourceKind: "canvas", canvasStyle: old as GroundCanvasStyle };
+  }
+  // 脏数据兜底：未知值回退 none（不抛错、不静默选中某个真实样式）
+  return { sourceKind: "none" };
+}
+
+/**
+ * 新两轴 → 旧单枚举值（渲染分支与持久化回写用）。
+ *
+ * 与 migrateGroundMatSource 互逆（往返测试锁死）。canvas 缺样式时回退 plain
+ * （画布默认样式，对齐 DEFAULT_GROUND_SURFACE_PARAMS.matSource 的历史语义）。
+ */
+export function groundMatSourceFromAxes(
+  sourceKind: GroundSourceKind,
+  canvasStyle?: GroundCanvasStyle,
+): GroundSurfaceMode {
+  switch (sourceKind) {
+    case "none":
+    case "solid":
+    case "texture":
+      return sourceKind;
+    case "canvas":
+      return canvasStyle ?? "plain";
+    default:
+      return "none";
+  }
+}
+
 export interface GroundSurfaceStructuralSpec {
   mode: GroundSurfaceMode;
   color: [number, number, number];

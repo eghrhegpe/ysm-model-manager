@@ -17,6 +17,7 @@ import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
   buildGroundSurfaceSpec,
+  GROUND_SURFACE_MODES,
   type GroundSurfaceMode,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
@@ -34,18 +35,9 @@ import {
 
 /** 程序化表面纹理边长（plain/grid/checker 共用；512² 够细且重建成本低） */
 const SURFACE_TEX_SIZE = 512;
-/** matSource 合法值白名单（loadState 校验用） */
-const GROUND_SURFACE_MODES: readonly GroundSurfaceMode[] = [
-  "none",
-  "solid",
-  "plain",
-  "grid",
-  "checker",
-  "texture",
-  "stripes",
-  "diamond",
-  "marble",
-];
+// matSource 合法值白名单（loadState 校验用）——ADR-249：
+// 原本地重复定义一份（与 ground-surface-spec.ts 导出的 GROUND_SURFACE_MODES 同内容），
+// 属常量双源（同类病例：MikuMikuAR bd65c02f）。现统一 import spec 侧单一事实源。
 
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
@@ -468,10 +460,14 @@ export class GroundCapability implements SceneCapability {
         boolean: (v) => this.setVisible(v),
       },
       groundMatSource: oneOf(GROUND_SURFACE_MODES, (v) =>
-        setEnvState(
-          { groundMatSource: v === "texture" && !this.customTex ? "plain" : v },
-          { source: "manual" },
-        ),
+        // ADR-249 §2.5 第 2 条：拆除静默降级。
+        // 历史行为：`v === "texture" && !this.customTex ? "plain" : v` —— 因自定义贴图
+        // 二进制不持久化，重启后 customTex 必为空，于是用户存档里选的「自定义贴图」
+        // 被静默改写成 plain，而 plain 是纯色分支 → 重启后表现为一块看似无关的纯色地面。
+        // 现改为：保留用户选择的来源；无贴图时的渲染兜底由 rebuildSurface 的
+        // `customTex ?? makeGeneratedTexture({...st, mode: "solid"})` 承担（材质层兜底），
+        // 不改写状态层，用户重选贴图后自动恢复。
+        setEnvState({ groundMatSource: v }, { source: "manual" }),
       ),
       groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
       groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }) },

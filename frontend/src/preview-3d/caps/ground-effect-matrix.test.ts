@@ -13,6 +13,7 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
+import { envState, resetEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import {
   GROUND_SURFACE_MODES,
@@ -265,6 +266,32 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
       if (typeof node.visibleWhen === "function") {
         expect(node.visibleWhen(snapshot), `${node.id} 在 none 下不应可见`).toBe(false);
       }
+    }
+  });
+});
+
+/* ============ Suite 5 — 默认值单一事实源（ADR-249 §2.6）============ */
+
+describe("Suite 5 — 默认值单一事实源", () => {
+  it("envState 初始默认值与 DEFAULT_GROUND_SURFACE_PARAMS 逐字段一致", () => {
+    resetEnvState();
+    const pairs: Array<[keyof typeof envState, keyof GroundMaterialParams]> = [
+      ["groundMatColor", "matColor"],
+      ["groundMatLineColor", "matLineColor"],
+      ["groundMatColor2", "matColor2"],
+      ["groundMatGridSize", "matGridSize"],
+      ["groundMatOpacity", "matOpacity"],
+      ["groundMatScale", "matScale"],
+      ["groundMatRotationDeg", "matRotationDeg"],
+      ["groundMatDensity", "matDensity"],
+      ["groundMatAngleDeg", "matAngleDeg"],
+      ["groundMatRoughness", "matRoughness"],
+      ["groundMatMetalness", "matMetalness"],
+    ];
+    for (const [stateKey, specKey] of pairs) {
+      expect(envState[stateKey], `${String(stateKey)} 与 spec.${String(specKey)} 不一致`).toBe(
+        DEFAULT_GROUND_SURFACE_PARAMS[specKey],
+      );
     }
   });
 });

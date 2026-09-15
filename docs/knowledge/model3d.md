@@ -315,9 +315,13 @@ auto_fields:
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
     - GROUND_SURFACE_MODES
+    - GroundAxisMapping
+    - GroundCanvasStyle
     - GroundCapability
     - GroundMaterialParams
     - GroundMatParam
+    - groundMatSourceFromAxes
+    - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -431,6 +435,7 @@ auto_fields:
     - mergeStatsMenuItems
     - MeshData
     - MeshFragment
+    - migrateGroundMatSource
     - MIPMAP_CHAIN_FACTOR
     - MMD_SEMANTIC_CANDIDATES
     - MMD_SEMANTIC_MORPH_CANDIDATES

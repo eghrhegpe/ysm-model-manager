@@ -54,9 +54,13 @@ auto_fields:
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
     - GROUND_SURFACE_MODES
+    - GroundAxisMapping
+    - GroundCanvasStyle
     - GroundCapability
     - GroundMaterialParams
     - GroundMatParam
+    - groundMatSourceFromAxes
+    - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
@@ -69,6 +73,7 @@ auto_fields:
     - LightParams
     - luminanceHistogram
     - MAX_MODELS
+    - migrateGroundMatSource
     - ModelEntry
     - oneOf
     - paramIsEffective

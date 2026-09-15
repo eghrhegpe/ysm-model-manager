@@ -32,19 +32,16 @@ const ENV_IDS = new Set<string>(ORDERED_IDS);
 const ENV_SECTIONS: ReadonlyArray<{
   id: string;
   labelKey: string;
-  fallback: string;
   caps: readonly string[];
 }> = [
   {
     id: "env-card-basic",
     labelKey: "preview.envSectionBasic",
-    fallback: "基础",
     caps: ["sky", "ground", "water"],
   },
   {
     id: "env-card-atmosphere",
     labelKey: "preview.envSectionAtmosphere",
-    fallback: "氛围",
     caps: ["environment", "fog", "reflector"],
   },
 ];
@@ -178,7 +175,7 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
     id: `env-cap-${cap.id}`,
     kind: "row",
     labelKey: cap.labelKey,
-    fallback: cap.id,
+    label: cap.id,
     icon: cap.icon,
     rowDensity: "compact",
     ...(master?.control?.get
@@ -214,7 +211,6 @@ function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
       id: sec.id,
       kind: "card",
       labelKey: sec.labelKey,
-      fallback: sec.fallback,
       // [可折叠卡] 顶行标题可点击折叠内容区（collapsible 卡统一盒式折叠视觉，
       // 与子视图分组折叠同一形态；折叠态跨 refresh 记忆）
       collapsible: true,
@@ -227,7 +223,6 @@ function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
       id: "env-card-other",
       kind: "card",
       labelKey: "preview.envSectionOther",
-      fallback: "其它",
       // [可折叠卡] 与基础/氛围卡同款可折叠（未登记 cap 归此处，折叠保语义聚拢不遮挡其余行）
       collapsible: true,
       children: rest.map(envCapRow),
@@ -251,7 +246,6 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
         id: "env-empty",
         kind: "sectionTitle",
         labelKey: "preview.noEnvironment",
-        fallback: "进入 3D 后再打开环境面板",
       },
     ];
   }
@@ -260,7 +254,6 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
       id: "env-preset-bar",
       kind: "select",
       labelKey: "preview.envPresetThumbnail",
-      fallback: "氛围预设",
       control: {
         options: PRESET_ORDER.map((p) => ({
           value: p.id,

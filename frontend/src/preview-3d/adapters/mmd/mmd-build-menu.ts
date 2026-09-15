@@ -202,7 +202,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       id: "model",
       icon: "🧍",
       labelKey: "preview.modelInfo",
-      fallback: "模型",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
       // [doc:adr-126-p4-b-1] 面板内容声明式化：children = modelInfoNodes 纯数据节点（经 panels 注入，
@@ -217,7 +216,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       id: "morph",
       icon: "😀",
       labelKey: "preview.mmdMorph",
-      fallback: "表情",
       kind: "panel",
       dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
       // [doc:adr-126-p5-收尾] morph 面板声明式化：children = morphNodes 纯数据节点
@@ -239,7 +237,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       id: "material",
       icon: "🎨",
       labelKey: "preview.materialList",
-      fallback: "材质",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
       children: materialNodes(o.material),
@@ -254,7 +251,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       id: "shot",
       icon: "📷",
       labelKey: "preview.screenshot",
-      fallback: "截图",
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
       // 面板内容声明式化：children = shotNodes 纯数据节点（6 截图按钮，经 panels 注入），渲染走 renderMenu。
@@ -267,7 +263,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
       id: "play",
       icon: "▶️",
       labelKey: "preview.mmdPlay",
-      fallback: "播放",
       kind: "panel",
       dockGroup: "motion", // 底栏 💃 动作组
       // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（toggle 播放/暂停 +
@@ -304,7 +299,6 @@ const MMD_MENU_TABLE: readonly MmdMenuEntry[] = [
         id: "perception",
         icon: "👁️",
         labelKey: "preview.perception",
-        fallback: "感知",
         kind: "panel",
         dockGroup: "motion",
         children: perceptionNodes(pc.state, pc.caps),

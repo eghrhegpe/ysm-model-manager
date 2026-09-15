@@ -222,8 +222,10 @@ export interface PreviewMenuNode {
   kind: PreviewMenuNodeKind;
   /** i18n 键（folder/divider 不需要） */
   labelKey?: string;
-  /** i18n 缺失时的回退文案 */
-  fallback?: string;
+  /** 明文标签（动态数据名，不经 i18n）：仅当节点无 labelKey、且显示名是运行时数据
+   *  （表情名/材质名/角色名等）时承载。回退标准统一归 i18n tOf（labelKey → FALLBACK → 裸 key）；
+   *  本字段不参与「i18n 缺 key 回退」，只装数据明文。 */
+  label?: string;
   /** 控件辅助说明 i18n 键（[ADR-195] 自 PreviewControlDef.hintKey 同构——toggle/select/slider
    *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
   hintKey?: string;

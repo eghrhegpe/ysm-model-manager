@@ -20,7 +20,6 @@ const groundSurfaceOn = (s: Partial<PreviewSnapshot>) => s["env.groundMatSource"
 function colorNode(
   id: string,
   labelKey: string,
-  fallback: string,
   getValue: () => number,
   setValue: (v: number) => void,
 ): PreviewMenuNode {
@@ -28,7 +27,6 @@ function colorNode(
     id,
     kind: "color",
     labelKey,
-    fallback,
     visibleWhen: groundSurfaceOn,
     control: {
       get: () => getValue(),
@@ -40,7 +38,6 @@ function colorNode(
 function sliderNode(
   id: string,
   labelKey: string,
-  fallback: string,
   slider: { min: number; max: number; step: number; unit?: string },
   getValue: () => number,
   setValue: (v: number) => void,
@@ -49,7 +46,6 @@ function sliderNode(
     id,
     kind: "slider",
     labelKey,
-    fallback,
     visibleWhen: groundSurfaceOn,
     control: {
       min: slider.min,
@@ -108,7 +104,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       id: "ground-mat-source",
       kind: "select",
       labelKey: "preview.groundMatSource",
-      fallback: "表面材质",
       control: {
         options: [
           { value: "none", label: "无" },
@@ -128,28 +123,24 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     colorNode(
       "ground-mat-color",
       "preview.groundMatColor",
-      "底色",
       () => cap.getMatColor(),
       (v) => cap.setMatColor(v),
     ),
     colorNode(
       "ground-mat-color2",
       "preview.groundMatColor2",
-      "副色",
       () => cap.getMatColor2(),
       (v) => cap.setMatColor2(v),
     ),
     colorNode(
       "ground-mat-line-color",
       "preview.groundMatLineColor",
-      "线色",
       () => cap.getMatLineColor(),
       (v) => cap.setMatLineColor(v),
     ),
     sliderNode(
       "ground-mat-grid-size",
       "preview.groundMatGridSize",
-      "格数",
       { min: 2, max: 32, step: 1 },
       () => cap.getMatGridSize(),
       (v) => cap.setMatGridSize(Math.round(v)),
@@ -157,7 +148,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-density",
       "preview.groundMatDensity",
-      "纹理密度",
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatDensity(),
       (v) => cap.setMatDensity(v),
@@ -165,7 +155,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-angle",
       "preview.groundMatAngle",
-      "纹理角度",
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatAngle(),
       (v) => cap.setMatAngle(v),
@@ -174,7 +163,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-opacity",
       "preview.groundMatOpacity",
-      "表面不透明度",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatOpacity(),
       (v) => cap.setMatOpacity(v),
@@ -182,7 +170,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-scale",
       "preview.groundMatScale",
-      "纹理缩放",
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatScale(),
       (v) => cap.setMatScale(v),
@@ -190,7 +177,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-rotation",
       "preview.groundMatRotation",
-      "纹理旋转",
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatRotation(),
       (v) => cap.setMatRotation(v),
@@ -198,7 +184,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-roughness",
       "preview.groundMatRoughness",
-      "粗糙度",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatRoughness(),
       (v) => cap.setMatRoughness(v),
@@ -206,7 +191,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-metalness",
       "preview.groundMatMetalness",
-      "金属度",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatMetalness(),
       (v) => cap.setMatMetalness(v),
@@ -216,7 +200,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     id: "cap-group-ground-material",
     kind: "folder",
     labelKey: MAT_GROUP,
-    fallback: "地面材质",
     children,
   };
 }
@@ -229,7 +212,6 @@ export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
       id: "ground-visible",
       kind: "toggle",
       labelKey: "preview.ground",
-      fallback: "地面",
       control: {
         get: () => cap.getVisible(),
         set: (v) => cap.setVisible(v as boolean),

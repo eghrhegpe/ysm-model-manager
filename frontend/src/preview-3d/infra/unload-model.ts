@@ -6,9 +6,9 @@
 import type * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { fitCameraToRoots } from "./camera-setup.ts";
 import { safeDispose } from "./safe-dispose.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 
 /** unloadModel 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */

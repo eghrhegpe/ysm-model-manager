@@ -37,12 +37,13 @@ describe("CORE_MENU_ITEMS 表结构", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("非 divider 项必有 icon/fallback/labelKey", () => {
+  it("非 divider 项必有 icon + i18n labelKey（回退标准统一归 i18n，无 fallback 字段）", () => {
     CORE_MENU_ITEMS.forEach((d) => {
       if (d.kind === "divider") return;
       expect(d.icon?.length).toBeGreaterThan(0);
-      expect(d.fallback?.length).toBeGreaterThan(0);
       expect(d.labelKey?.length).toBeGreaterThan(0);
+      // 确定性 core 项 labelKey 恒在，不得再残留 fallback 字段
+      expect("fallback" in d, `${d.id} 不应再有 fallback 字段`).toBe(false);
     });
   });
 
@@ -201,7 +202,6 @@ describe("mountPreviewRootMenu", () => {
       id: "model",
       icon: "🧍",
       labelKey: "preview.modelInfo",
-      fallback: "模型",
       kind: "panel" as const,
       dockGroup: "model" as const,
       renderCustom: (l: HTMLElement) => {
@@ -228,7 +228,6 @@ describe("mountPreviewRootMenu", () => {
       id: "model",
       icon: "🧍",
       labelKey: "preview.modelInfo",
-      fallback: "模型",
       kind: "panel" as const,
       dockGroup: "model" as const,
       renderCustom: (l: HTMLElement) => {
@@ -251,8 +250,7 @@ describe("mountPreviewRootMenu", () => {
     const actItem = {
       id: "act",
       icon: "⚡",
-      labelKey: "",
-      fallback: "执行动作",
+      label: "执行动作",
       kind: "action" as const,
       dockGroup: "scene" as const,
       run: vi.fn(),
@@ -360,8 +358,7 @@ describe("mountPreviewRootMenu", () => {
       {
         id: "play",
         icon: "▶️",
-        labelKey: "",
-        fallback: "播放",
+        label: "播放",
         kind: "panel",
         dockGroup: "motion",
         renderCustom: () => {},
@@ -378,7 +375,6 @@ describe("mountPreviewRootMenu", () => {
         id: "bones",
         icon: "🦴",
         labelKey: "preview.section.bones",
-        fallback: "骨骼",
         kind: "panel",
         dockGroup: "model",
         renderCustom: (l) => {
@@ -425,7 +421,7 @@ describe("mountPreviewRootMenu", () => {
         {
           id: "fld",
           kind: "folder" as const,
-          fallback: "组",
+          label: "组",
           defaultOpen: false,
           children: [{ id: "leaf", kind: "field" as const, value: "x" }],
         },

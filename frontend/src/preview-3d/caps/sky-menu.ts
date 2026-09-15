@@ -16,7 +16,6 @@ function skyEnabledNode(cap: SkyCapability): PreviewMenuNode {
     id: "sky-enabled",
     kind: "toggle",
     labelKey: "preview.sky",
-    fallback: "天空",
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
@@ -48,7 +47,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-cloud",
       kind: "slider",
       labelKey: "preview.cloudCoverage",
-      fallback: "云量",
       control: {
         min: 0,
         max: 1,
@@ -62,7 +60,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-sun-intensity",
       kind: "slider",
       labelKey: "preview.skySunIntensityScale",
-      fallback: "天空×太阳耦合",
       hintKey: "preview.skySunIntensityScaleHint",
       control: {
         min: 0.3,
@@ -76,7 +73,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-sun-disc",
       kind: "slider",
       labelKey: "preview.skySunDiscScale",
-      fallback: "太阳盘强度",
       hintKey: "preview.skySunDiscScaleHint",
       control: {
         min: 0.0,
@@ -90,7 +86,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-auto-rotate",
       kind: "toggle",
       labelKey: "preview.skyAutoRotate",
-      fallback: "昼夜循环",
       hintKey: "preview.skyAutoRotateHint",
       control: {
         get: () => cap.isAutoRotating(),
@@ -104,7 +99,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-godrays",
       kind: "toggle",
       labelKey: "preview.skyGodRays",
-      fallback: "体积光束",
       hintKey: "preview.skyGodRaysHint",
       control: {
         get: () => cap.isGodRaysEnabled(),
@@ -119,7 +113,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-time",
       kind: "slider",
       labelKey: "preview.timeOfDay",
-      fallback: "时间",
       control: {
         min: 0,
         max: 24,
@@ -133,7 +126,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "sky-env",
       kind: "toggle",
       labelKey: "preview.environmentMapping",
-      fallback: "环境贴图",
       control: {
         get: () => cap.isEnvironmentEnabled(),
         set: (v) => cap.setEnvironmentEnabled(v as boolean),
@@ -143,7 +135,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "cap-group-sky-advanced",
       kind: "folder",
       labelKey: SKY_GROUP_ADVANCED,
-      fallback: "高级",
       children: advanced,
     },
   ];

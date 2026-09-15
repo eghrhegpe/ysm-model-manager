@@ -44,7 +44,6 @@ function enabledNode(cap: PostprocessingCapability): PreviewMenuNode {
     id: "pp-enabled",
     kind: "toggle",
     labelKey: "preview.postprocessing",
-    fallback: "后处理管线",
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
@@ -58,13 +57,11 @@ function colorFolder(cap: PostprocessingCapability): PreviewMenuNode {
     id: "cap-group-postprocessing-color",
     kind: "folder",
     labelKey: "preview.postprocessingGroupColor",
-    fallback: "色彩",
     children: [
       {
         id: "pp-toneMapping",
         kind: "select",
         labelKey: "preview.toneMapping",
-        fallback: "色彩映射",
         control: {
           options: [...TONE_MAPPING_OPTIONS],
           get: () => cap.getParams().toneMapping,
@@ -75,7 +72,6 @@ function colorFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-exposure",
         kind: "slider",
         labelKey: "preview.exposure",
-        fallback: "曝光",
         control: {
           min: 0.1,
           max: 3,
@@ -94,7 +90,6 @@ function bloomEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
     id: "pp-bloom-enabled",
     kind: "toggle",
     labelKey: "preview.bloomEnabled",
-    fallback: "辉光开关",
     control: {
       get: () => cap.getParams().bloomEnabled,
       set: (v) => cap.setBloomEnabled(v as boolean),
@@ -108,13 +103,11 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
     id: "cap-group-postprocessing-bloom",
     kind: "folder",
     labelKey: "preview.postprocessingGroupBloom",
-    fallback: "辉光",
     children: [
       {
         id: "pp-bloom-strength",
         kind: "slider",
         labelKey: "preview.bloomStrength",
-        fallback: "辉光强度",
         control: {
           min: 0,
           max: 3,
@@ -127,7 +120,6 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-bloom-threshold",
         kind: "slider",
         labelKey: "preview.bloomThreshold",
-        fallback: "辉光阈值",
         control: {
           min: 0,
           max: 1,
@@ -140,7 +132,6 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-bloom-radius",
         kind: "slider",
         labelKey: "preview.bloomRadius",
-        fallback: "辉光半径",
         control: {
           min: 0,
           max: 2,
@@ -153,7 +144,6 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-bloom-follow",
         kind: "toggle",
         labelKey: "preview.bloomFollowVolumetric",
-        fallback: "跟随体积光联动",
         control: {
           get: () => cap.getParams().bloomFollowVolumetric,
           set: (v) => cap.setBloomFollowVolumetric(v as boolean),
@@ -169,7 +159,6 @@ function ssaoEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
     id: "pp-ssao-enabled",
     kind: "toggle",
     labelKey: "preview.ssao",
-    fallback: "环境光遮蔽 (SSAO)",
     control: {
       get: () => cap.getParams().ssaoEnabled,
       set: (v) => cap.setSSAOEnabled(v as boolean),
@@ -183,13 +172,11 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
     id: "cap-group-postprocessing-ssao",
     kind: "folder",
     labelKey: "preview.postprocessingGroupSsao",
-    fallback: "环境光遮蔽",
     children: [
       {
         id: "pp-ssao-radius",
         kind: "slider",
         labelKey: "preview.ssaoRadius",
-        fallback: "SSAO 采样半径",
         control: {
           min: 0.5,
           max: 32,
@@ -202,7 +189,6 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssao-mindist",
         kind: "slider",
         labelKey: "preview.ssaoMinDist",
-        fallback: "SSAO 最小距离",
         control: {
           min: 0.001,
           max: 0.05,
@@ -215,7 +201,6 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssao-maxdist",
         kind: "slider",
         labelKey: "preview.ssaoMaxDist",
-        fallback: "SSAO 最大距离",
         control: {
           min: 0.01,
           max: 1,
@@ -234,13 +219,11 @@ function reflectionFolder(cap: PostprocessingCapability): PreviewMenuNode {
     id: "cap-group-postprocessing-reflection",
     kind: "folder",
     labelKey: "preview.postprocessingGroupReflection",
-    fallback: "反射",
     children: [
       {
         id: "pp-reflection-mode",
         kind: "select",
         labelKey: "preview.reflectionMode",
-        fallback: "反射模式",
         control: {
           options: [...REFLECTION_MODE_OPTIONS],
           get: () => cap.getParams().reflectionMode,
@@ -251,7 +234,6 @@ function reflectionFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-reflector-disable-when-ssr",
         kind: "toggle",
         labelKey: "preview.reflectorDisableWhenSSR",
-        fallback: "SSR 时自动禁用地面镜面",
         control: {
           get: () => cap.getParams().reflectorDisableWhenSSR,
           set: (v) => cap.setReflectorDisableWhenSSR(v as boolean),
@@ -267,13 +249,11 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
     id: "cap-group-postprocessing-ssr",
     kind: "folder",
     labelKey: "preview.postprocessingGroupSsr",
-    fallback: "屏幕空间反射",
     children: [
       {
         id: "pp-ssr-opacity",
         kind: "slider",
         labelKey: "preview.ssrOpacity",
-        fallback: "SSR 反射强度",
         control: {
           min: 0,
           max: 1,
@@ -286,7 +266,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-maxdistance",
         kind: "slider",
         labelKey: "preview.ssrMaxDistance",
-        fallback: "SSR 最大距离",
         control: {
           min: 10,
           max: 800,
@@ -299,7 +278,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-thickness",
         kind: "slider",
         labelKey: "preview.ssrThickness",
-        fallback: "SSR 厚度判定",
         control: {
           min: 0.001,
           max: 0.1,
@@ -312,7 +290,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-blur",
         kind: "toggle",
         labelKey: "preview.ssrBlur",
-        fallback: "SSR 模糊",
         control: {
           get: () => cap.getParams().ssrBlur,
           set: (v) => cap.setSSRBlur(v as boolean),
@@ -322,7 +299,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-distanceAttenuation",
         kind: "toggle",
         labelKey: "preview.ssrDistanceAttenuation",
-        fallback: "SSR 距离衰减",
         control: {
           get: () => cap.getParams().ssrDistanceAttenuation,
           set: (v) => cap.setSSRDistanceAttenuation(v as boolean),
@@ -332,7 +308,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-fresnel",
         kind: "toggle",
         labelKey: "preview.ssrFresnel",
-        fallback: "SSR 菲涅尔",
         control: {
           get: () => cap.getParams().ssrFresnel,
           set: (v) => cap.setSSRFresnel(v as boolean),
@@ -342,7 +317,6 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         id: "pp-ssr-bouncing",
         kind: "toggle",
         labelKey: "preview.ssrBouncing",
-        fallback: "SSR 多重弹射（慢）",
         control: {
           get: () => cap.getParams().ssrBouncing,
           set: (v) => cap.setSSRBouncing(v as boolean),

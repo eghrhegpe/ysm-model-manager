@@ -145,10 +145,12 @@ interface RenderMenuDeps {
   renderCustomDirect?: boolean;
 }
 
-/** 统一 label 取值：labelKey→tOf；无 labelKey 直接用 node.id（labelKey 为数据字段 string，ADR-207 D3） */
+/** 统一 label 取值：labelKey→tOf（i18n 三级回退）；无 labelKey → node.label（明文）/ node.id。
+ *  回退标准唯一 = i18n tOf；node.label 只装动态数据明文，非 i18n 回退概念（ADR-207 D3）。 */
 function rmLabel(node: PreviewMenuNode, valueOverride?: unknown): string {
   if (node.labelKey) return tOf(node.labelKey);
-  return valueOverride !== undefined ? String(valueOverride) : node.id;
+  if (valueOverride !== undefined) return String(valueOverride);
+  return node.label ?? node.id;
 }
 
 /** [模式⑥·提纯 1/2] 通用 action click：ev.stopPropagation + void action?(actionCtx)，button/row 两段同构共用 */
@@ -310,8 +312,8 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
   row.dataset.testid = `preview-${node.id}`;
   const k = document.createElement("span");
   k.className = "field-label";
-  k.textContent = node.labelKey ? tOf(node.labelKey) : node.id;
-  const displayed = node.value ?? (node.labelKey ? tOf(node.labelKey) : node.id);
+  k.textContent = node.labelKey ? tOf(node.labelKey) : (node.label ?? node.id);
+  const displayed = node.value ?? (node.labelKey ? tOf(node.labelKey) : (node.label ?? node.id));
   const v = document.createElement("span");
   v.className = "field-value";
   v.textContent = String(displayed);
@@ -370,7 +372,7 @@ function rmAppendDynamicRow(
       row.appendChild(meta);
     }
   } else {
-    lb.textContent = node.fallback ?? node.id;
+    lb.textContent = node.label ?? node.id;
   }
   if (node.radio) {
     const radio = document.createElement("button");
@@ -446,7 +448,7 @@ export function nodeControlToView(
 ): CapControlView {
   const spec = node.control;
   const labelKey = node.labelKey ?? "";
-  const fallback = node.fallback ?? node.id;
+  const fallback = node.label ?? node.id;
 
   const getValue = (): unknown => {
     if (!spec) return null;
@@ -555,7 +557,7 @@ function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
   // sectionTitle（无 labelKey → fallback 直出，同 rmAppendDynamicRow 口径）
   const st = document.createElement("div");
   st.dataset.testid = node.id;
-  st.textContent = node.labelKey ? rmLabel(node) : (node.fallback ?? node.id);
+  st.textContent = node.labelKey ? rmLabel(node) : (node.label ?? node.id);
   st.className = "section-title";
   container.appendChild(st);
 }

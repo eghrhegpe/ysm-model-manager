@@ -136,7 +136,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "sky-time",
         kind: "slider",
         labelKey: "preview.timeOfDay",
-        fallback: "时间",
         control: {
           min: 0,
           max: 24,
@@ -151,7 +150,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "fog-enabled",
         kind: "toggle",
         labelKey: "preview.fogEnabled",
-        fallback: "雾",
         control: {
           get: () => false,
           set: () => {},
@@ -188,7 +186,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
           id: "sky-time",
           kind: "slider",
           labelKey: "preview.timeOfDay",
-          fallback: "时间",
           control: {
             min: 0,
             max: 24,
@@ -218,7 +215,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "ground-visible",
         kind: "toggle",
         labelKey: "preview.ground",
-        fallback: "地面",
         control: {
           get: () => true,
           set: () => {},
@@ -228,13 +224,11 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "cap-group-ground-water",
         kind: "folder",
         labelKey: "preview.groundGroupWater",
-        fallback: "水面",
         children: [
           {
             id: "ground-water-enabled",
             kind: "toggle",
             labelKey: "preview.groundWaterEnabled",
-            fallback: "水面",
             control: {
               get: () => true,
               set: () => {},
@@ -246,13 +240,11 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "cap-group-ground-material",
         kind: "folder",
         labelKey: "preview.groundGroupMaterial",
-        fallback: "材质",
         children: [
           {
             id: "ground-mat-source",
             kind: "select",
             labelKey: "preview.groundMatSource",
-            fallback: "材质",
             control: {
               options: [{ value: "none", label: "无" }],
               get: () => "none",
@@ -330,7 +322,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "fog-enabled",
         kind: "toggle" as const,
         labelKey: "preview.fog",
-        fallback: "雾效",
         control: {
           get: () => enabled,
           set: (v: boolean) => {
@@ -342,7 +333,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "fog-color",
         kind: "color" as const,
         labelKey: "preview.fogColor",
-        fallback: "雾色",
         control: {
           get: () => 0,
           set: () => {},
@@ -373,7 +363,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
         id: "sky-time",
         kind: "slider" as const,
         labelKey: "preview.timeOfDay",
-        fallback: "时间",
         control: {
           min: 0,
           max: 24,

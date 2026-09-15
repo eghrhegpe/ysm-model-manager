@@ -514,7 +514,6 @@ function renderPreviewDock(
                 id: node.id,
                 icon: node.icon,
                 labelKey: node.labelKey ?? node.id,
-                fallback: node.fallback ?? node.id,
                 kind: "row",
                 rowDensity: "compact",
                 headerToggle,

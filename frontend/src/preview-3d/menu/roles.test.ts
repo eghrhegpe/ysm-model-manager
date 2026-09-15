@@ -26,13 +26,13 @@ function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): stri
 }
 
 describe("CORE_MENU_ITEMS roles 项", () => {
-  it("roles 项声明在 model 组（panel + icon/fallback/labelKey 齐全）", () => {
+  it("roles 项声明在 model 组（panel + icon/labelKey 齐全）", () => {
     const def = CORE_MENU_ITEMS.find((d) => d.id === "roles");
     expect(def).toBeDefined();
     expect(def!.kind).toBe("panel");
     expect(def!.dockGroup).toBe("model");
     expect(def!.icon?.length).toBeGreaterThan(0);
-    expect(def!.fallback?.length).toBeGreaterThan(0);
+    expect(def!.labelKey?.length).toBeGreaterThan(0);
   });
 });
 
@@ -110,7 +110,6 @@ describe("角色面板（roles）", () => {
       id: "material",
       icon: "🎨",
       labelKey: "preview.material",
-      fallback: "材质",
       kind: "panel",
       dockGroup: "model",
       renderCustom: (l) => {
@@ -159,9 +158,9 @@ describe("角色面板（roles）", () => {
 
   it("dock 🧍 → 列表 → 点角色名 → modelDetailView（模型本体直渲 + 工具行）；不显示 motion 项", () => {
     const defs = (): PreviewMenuNode[] => [
-      { id: "material", icon: "🎨", labelKey: "", fallback: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
-      { id: "shot", icon: "📷", labelKey: "", fallback: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
-      { id: "play", icon: "▶️", labelKey: "", fallback: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "material", icon: "🎨", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
+      { id: "shot", icon: "📷", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
+      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
     ];
     regRole("/m/a.jsm", defs());
     const handle = mountPreviewRootMenu(overlay, makeCtx());
@@ -180,15 +179,15 @@ describe("角色面板（roles）", () => {
 
   it("dock 💃 → motionDetailView（动作项平铺）；不显示模型信息本体和工具行", () => {
     const defs = (): PreviewMenuNode[] => [
-      { id: "material", icon: "🎨", labelKey: "", fallback: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
-      { id: "shot", icon: "📷", labelKey: "", fallback: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
-      { id: "play", icon: "▶️", labelKey: "", fallback: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "material", icon: "🎨", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
+      { id: "shot", icon: "📷", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
+      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
     ];
     regRole("/m/a.jsm", defs());
     const handle = mountPreviewRootMenu(overlay, makeCtx());
     // mountPreviewRootMenu 不自动注入适配器项 → 先注入 motion 组项使 dock-motion 出现
     handle.setAdapterItems([
-      { id: "dockPlay", icon: "▶️", labelKey: "", fallback: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "dockPlay", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
     ]);
     // 💃 → motionDetailView：动作项平铺直达
     (overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement).click();
@@ -353,10 +352,9 @@ describe("模型详情信息本体（三通道回归锁）", () => {
         id: "shot",
         icon: "📷",
         labelKey: "preview.screenshot",
-        fallback: "截图",
         kind: "panel",
         dockGroup: "model",
-        children: [{ id: "ysm-shot-front", kind: "button", labelKey: "preview.screenshot", fallback: "正面", action: vi.fn() }],
+        children: [{ id: "ysm-shot-front", kind: "button", labelKey: "preview.screenshot", action: vi.fn() }],
       },
     ]);
     const handle = mountPreviewRootMenu(overlay, makeCtx());
@@ -367,7 +365,7 @@ describe("模型详情信息本体（三通道回归锁）", () => {
 
   it("schemaId 通道：模型信息本体渲染（ysm/maid 形态——统计/纹理/组件 select 载体）", () => {
     registerSchema("detail-schema-test", () => [
-      { id: "stat-tex", kind: "field", labelKey: "preview.textures", fallback: "纹理", value: 4 },
+      { id: "stat-tex", kind: "field", labelKey: "preview.textures", value: 4 },
     ]);
     const { handle } = enterDetail({ id: "model", kind: "panel", dockGroup: "model", schemaId: "detail-schema-test" });
     expect(overlay.querySelector('[data-testid="preview-stat-tex"]')).not.toBeNull();
@@ -383,7 +381,7 @@ describe("模型详情信息本体（三通道回归锁）", () => {
       id: "model",
       kind: "panel",
       dockGroup: "model",
-      children: [{ id: "info-name", kind: "field", labelKey: "preview.modelInfo", fallback: "模型", value: "ATRI" }],
+      children: [{ id: "info-name", kind: "field", labelKey: "preview.modelInfo", value: "ATRI" }],
     });
     expect(overlay.querySelector('[data-testid="preview-info-name"]')).not.toBeNull();
     handle.dispose();

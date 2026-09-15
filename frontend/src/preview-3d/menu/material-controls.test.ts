@@ -23,7 +23,7 @@ describe("materialNodes（组合行声明式节点）", () => {
     const nodes = materialNodes(makeBridge());
     expect(nodes.map((n) => n.id)).toEqual(["mat-0", "mat-1"]);
     expect(nodes.every((n) => n.kind === "material-row")).toBe(true);
-    expect(nodes[0]).toMatchObject({ labelKey: "Body", fallback: "Body" });
+    expect(nodes[0]).toMatchObject({ labelKey: "Body" });
     expect(typeof nodes[0].eye?.get).toBe("function");
     expect(typeof nodes[0].opacity?.get).toBe("function");
   });
@@ -31,7 +31,7 @@ describe("materialNodes（组合行声明式节点）", () => {
   it("空态（list 空）→ 提示 field 节点（对齐旧「（无材质）」行）", () => {
     const nodes = materialNodes(makeBridge({ list: () => [] }));
     expect(nodes).toEqual([
-      { id: "mat-empty", kind: "field", labelKey: "preview.noMaterial", fallback: "（无材质）", value: "" },
+      { id: "mat-empty", kind: "field", labelKey: "preview.noMaterial", value: "" },
     ]);
   });
 

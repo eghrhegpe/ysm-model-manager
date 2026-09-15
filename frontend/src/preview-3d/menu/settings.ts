@@ -36,7 +36,6 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       id: "camera-orbit",
       kind: "select",
       labelKey: "preview.cameraRotation",
-      fallback: "摄像机旋转",
       control: {
         options: [
           { value: "orbit", label: "环绕" },
@@ -54,7 +53,6 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       id: "camera-speed",
       kind: "slider",
       labelKey: "preview.cameraSpeed",
-      fallback: "摄像机速度",
       control: {
         min: 2,
         max: 200,
@@ -70,7 +68,6 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       id: "camera-reset",
       kind: "button",
       labelKey: "preview.resetView",
-      fallback: "重置视角",
       action: () => ctx.getCamBridge().reset(),
     },
   ];
@@ -106,7 +103,6 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
         id: "lighting-empty",
         kind: "sectionTitle",
         labelKey: "preview.noLightCap",
-        fallback: "进入 3D 后再打开灯光面板",
       },
     ];
   }
@@ -122,7 +118,6 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
         id: "shadow-empty",
         kind: "sectionTitle",
         labelKey: "preview.noShadowCap",
-        fallback: "进入 3D 后再打开阴影面板",
       },
     ];
   }
@@ -138,7 +133,6 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
         id: "postproc-empty",
         kind: "sectionTitle",
         labelKey: "preview.noPostprocCap",
-        fallback: "进入 3D 后再打开后处理面板",
       },
     ];
   }
@@ -153,12 +147,12 @@ export function buildSettingsSchema(
   menu?: SlideMenuHandle,
 ): PreviewMenuNode[] {
   return [
-    bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
+    bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf"),
     // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示
     bsBuildPerfPresetRow(menu),
     // [ADR-195 刀 2.5] 横切控件转节点展开（原 controls 通道退役）
     ...capControlsToNodes(buildCrossCuttingControls()),
-    bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality", "画质"),
+    bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality"),
     // [ADR-195 刀 2.5] cap 聚合节点直接展开（collectSettingsCapControls 返回节点数组）
     ...collectSettingsCapControls(),
     bsBuildNote(),
@@ -168,11 +162,11 @@ export function buildSettingsSchema(
 // ── 设置面板：横切数据节点（无 cap 归属，统一走 settingsState 路径）──
 
 /** 帧率上限选项（值 → i18n 键 → 回退） */
-const FPS_OPTIONS: ReadonlyArray<{ value: string; labelKey: string; fallback: string }> = [
-  { value: "30", labelKey: "preview.settingsFps30", fallback: "30 fps" },
-  { value: "60", labelKey: "preview.settingsFps60", fallback: "60 fps" },
-  { value: "120", labelKey: "preview.settingsFps120", fallback: "120 fps" },
-  { value: "0", labelKey: "preview.settingsFpsUncapped", fallback: "不限" },
+const FPS_OPTIONS: ReadonlyArray<{ value: string; labelKey: string }> = [
+  { value: "30", labelKey: "preview.settingsFps30" },
+  { value: "60", labelKey: "preview.settingsFps60" },
+  { value: "120", labelKey: "preview.settingsFps120" },
+  { value: "0", labelKey: "preview.settingsFpsUncapped" },
 ];
 
 /**
@@ -276,11 +270,11 @@ export function buildSettingsControls(): PreviewMenuNode[] {
  *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。
  *  声明式 select 节点（control.get/set 闭包 + onChange 刷新），不再手写 DOM 壳。 */
 function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
-  const LEVELS: Array<{ value: PerfLevel; labelKey: string; fallback: string }> = [
-    { value: "low", labelKey: "preview.settingsPerfLow", fallback: "低" },
-    { value: "medium", labelKey: "preview.settingsPerfMedium", fallback: "中" },
-    { value: "high", labelKey: "preview.settingsPerfHigh", fallback: "高" },
-    { value: "custom", labelKey: "preview.settingsPerfCustom", fallback: "自定义" },
+  const LEVELS: Array<{ value: PerfLevel; labelKey: string }> = [
+    { value: "low", labelKey: "preview.settingsPerfLow" },
+    { value: "medium", labelKey: "preview.settingsPerfMedium" },
+    { value: "high", labelKey: "preview.settingsPerfHigh" },
+    { value: "custom", labelKey: "preview.settingsPerfCustom" },
   ];
   return {
     id: "settings-perf-preset",
@@ -300,8 +294,8 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
   };
 }
 
-function bsBuildSectionTitle(id: string, labelKey: string, fallback: string): PreviewMenuNode {
-  return { id, kind: "sectionTitle", labelKey, fallback };
+function bsBuildSectionTitle(id: string, labelKey: string): PreviewMenuNode {
+  return { id, kind: "sectionTitle", labelKey };
 }
 
 function bsBuildNote(): PreviewMenuNode {
@@ -309,6 +303,5 @@ function bsBuildNote(): PreviewMenuNode {
     id: "settings-note",
     kind: "sectionTitle",
     labelKey: "preview.settingsNote",
-    fallback: "分辨率上限需重新进入 3D 预览生效；其余开关即时生效。",
   };
 }

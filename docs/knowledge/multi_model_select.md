@@ -105,7 +105,6 @@ multiModelSelectNode(opts: {
   activeId: () => string;                          // 当前选中（per-scene 闭包；非法值回退首项）
   onSelect: (id: string) => void;                  // 切换副作用（switchTo / showModelGroup）
   labelKey?: string;                               // 缺省 "preview.component"
-  fallback?: string;                               // 缺省 "模型"
   nodeId?: string;                                 // 缺省 "multi-model-select"
   refreshOnChange?: boolean;                       // 切档后 menu.refresh() 重渲染面板（YSM 组件 select 语义）
 }): PreviewMenuNode | null

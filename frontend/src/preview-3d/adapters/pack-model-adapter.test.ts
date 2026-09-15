@@ -460,7 +460,6 @@ describe("pack-model 专属纹理段（ADR-159 续）", () => {
     expect(rows.every((n) => n.kind === "row" && n.dockGroup === "stats")).toBe(true);
     // 首现序 + 短名（musketmod:item/blunderbuss）+ 引用面数 + 完整 png 条目
     const first = rows[0]!;
-    expect(first.fallback).toBe("musketmod:item/blunderbuss");
     expect(first.labelKey).toBe("musketmod:item/blunderbuss");
     expect(first.value).toBe("2 面 · assets/musketmod/textures/item/blunderbuss.png");
     const second = rows[1]!;

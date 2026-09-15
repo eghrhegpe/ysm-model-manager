@@ -34,7 +34,6 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       id: "rm-wireframe",
       kind: "toggle",
       labelKey: "preview.wireframe",
-      fallback: "线框",
       hintKey: "preview.wireframeDesc",
       settingsOrder: 30,
       control: {
@@ -47,7 +46,6 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       id: "rm-blending",
       kind: "select",
       labelKey: "preview.renderModeBlending",
-      fallback: "混合模式",
       settingsOrder: 31,
       control: {
         options: blendingOptions(),
@@ -63,7 +61,6 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       id: "rm-depth-test",
       kind: "toggle",
       labelKey: "preview.renderModeXray",
-      fallback: "X光透视",
       hintKey: "preview.renderModeXrayDesc",
       settingsOrder: 32,
       control: {
@@ -76,7 +73,6 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       id: "rm-side",
       kind: "select",
       labelKey: "preview.renderModeSide",
-      fallback: "面剔除",
       settingsOrder: 33,
       control: {
         options: sideOptions(),
@@ -91,7 +87,6 @@ export function buildRenderModeNodes(cap: RenderModeCapability): PreviewMenuNode
       id: "rm-depth-write",
       kind: "toggle",
       labelKey: "preview.renderModeDepthWrite",
-      fallback: "深度写入",
       hintKey: "preview.renderModeDepthWriteDesc",
       settingsOrder: 34,
       control: {

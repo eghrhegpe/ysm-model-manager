@@ -24,14 +24,12 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-name",
       kind: "field",
       labelKey: "preview.nameLabel",
-      fallback: "名称",
       value: ctx.modelName,
     },
     {
       id: "vrm-model-overview",
       kind: "field",
       labelKey: "preview.modelOverview",
-      fallback: "模型",
       value: `${ctx.boneCount} 骨骼 ${ctx.materialCount} 材质`,
     },
   ];
@@ -44,7 +42,6 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-title",
       kind: "field",
       labelKey: "preview.modelEmbeddedName",
-      fallback: "内嵌名",
       value: meta.title,
     });
   }
@@ -53,7 +50,6 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-author",
       kind: "field",
       labelKey: "preview.authorLabel",
-      fallback: "作者",
       value: meta.author,
     });
   }
@@ -62,7 +58,6 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-license",
       kind: "field",
       labelKey: "preview.modelLicense",
-      fallback: "授权",
       value: meta.license,
     });
   }
@@ -71,7 +66,6 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-version",
       kind: "field",
       labelKey: "preview.versionLabel",
-      fallback: "版本",
       value: meta.version,
     });
   }

@@ -67,7 +67,6 @@ describe("renderMenu 新 kind", () => {
         id: "perception-breath",
         kind: "toggle",
         labelKey: "preview.perceptionBreath",
-        fallback: "呼吸",
         control: { get: () => on, set: (v: unknown) => { on = Boolean(v); } },
       },
     ];
@@ -97,7 +96,6 @@ describe("renderMenu 新 kind", () => {
         id: "mat-0",
         kind: "material-row",
         labelKey: "Body",
-        fallback: "Body",
         eye: { get: () => visible, set: (v: boolean) => { visible = v; } },
         opacity: { get: () => opacity, set: (v: number) => { opacity = v; } },
       },
@@ -127,7 +125,7 @@ describe("renderMenu 新 kind", () => {
     // [doc:adr-126-p5] P2 回归锁：preview.noMaterial 键缺失时 rmAppendField 的 tr 落
     // node.id（mat-empty 原文）——补键后应渲染 locale 文本
     const nodes: PreviewMenuNode[] = [
-      { id: "mat-empty", kind: "field", labelKey: "preview.noMaterial", fallback: "（无材质）", value: "" },
+      { id: "mat-empty", kind: "field", labelKey: "preview.noMaterial", value: "" },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
@@ -164,7 +162,6 @@ describe("renderMenu 新 kind", () => {
         id: "folder-1",
         kind: "folder",
         labelKey: "preview.folder",
-        fallback: "文件夹",
         defaultOpen: true,
         children: [
           { id: "child-1", kind: "field", labelKey: "preview.child", value: "val" },
@@ -185,7 +182,6 @@ describe("renderMenu 新 kind", () => {
         id: "folder-2",
         kind: "folder",
         labelKey: "preview.folder",
-        fallback: "文件夹",
         defaultOpen: false,
         children: [
           { id: "child-2", kind: "field", labelKey: "preview.child", value: "val" },
@@ -211,7 +207,6 @@ describe("renderMenu 新 kind", () => {
         id: "folder-tg",
         kind: "folder",
         labelKey: "preview.folder",
-        fallback: "组",
         defaultOpen: false,
         headerToggle: {
           value: false,
@@ -247,7 +242,6 @@ describe("renderMenu 新 kind", () => {
         id: "env-cap-fog",
         kind: "row",
         labelKey: "preview.fog",
-        fallback: "雾效",
         icon: "🌫️",
         headerToggle: {
           value: false,
@@ -270,7 +264,6 @@ describe("renderMenu 新 kind", () => {
         id: "env-cap-sky",
         kind: "row",
         labelKey: "preview.sky",
-        fallback: "天空",
         icon: "☁️",
         rowDensity: "compact",
         action: () => {},
@@ -300,7 +293,6 @@ describe("renderMenu 新 kind", () => {
         id: "folder-mem-a",
         kind: "folder",
         labelKey: "preview.folder",
-        fallback: "组 A",
         defaultOpen: false,
         children: [{ id: "child-a", kind: "field", labelKey: "preview.child", value: "a" }],
       },
@@ -308,7 +300,6 @@ describe("renderMenu 新 kind", () => {
         id: "folder-mem-b",
         kind: "folder",
         labelKey: "preview.folder",
-        fallback: "组 B",
         defaultOpen: false,
         children: [{ id: "child-b", kind: "field", labelKey: "preview.child", value: "b" }],
       },
@@ -472,7 +463,6 @@ describe("renderMenu 新 kind", () => {
         id: "layer-slider",
         kind: "slider",
         labelKey: "preview.sliceLayer",
-        fallback: "层",
         control: {
           min: 1,
           max: 100,
@@ -526,7 +516,7 @@ describe("renderMenu 新 kind", () => {
     expect(bar.getAttribute("aria-valuenow")).toBe("10");
   });
 
-  it("slider: 无 labelKey 时 cap 栈仍渲染 head + fallback/id 文案（视觉行为变化，结构已变）", () => {
+  it("slider: 无 labelKey 时 cap 栈仍渲染 head + label/id 文案（视觉行为变化，结构已变）", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "bare-slider", kind: "slider", control: { get: () => 1, set: () => {} } },
     ];
@@ -712,7 +702,6 @@ describe("nodeControlToView", () => {
       id: "test-frustum",
       kind: "toggle",
       labelKey: "preview.frustumCull",
-      fallback: "视锥剔除",
       control: {
         bind: "render.frustumCull",
         get: (v: unknown) => Boolean(v),
@@ -737,7 +726,6 @@ describe("nodeControlToView", () => {
       id: "test-refresh",
       kind: "toggle",
       labelKey: "preview.frustumCull",
-      fallback: "视锥剔除",
       control: {
         bind: "render.frustumCull",
         get: (v: unknown) => Boolean(v),
@@ -761,7 +749,6 @@ describe("nodeControlToView", () => {
       id: "test-onchange",
       kind: "toggle",
       labelKey: "preview.frustumCull",
-      fallback: "视锥剔除",
       control: {
         get: () => false,
         set: () => {},
@@ -780,7 +767,6 @@ describe("nodeControlToView", () => {
       id: "test-numeric",
       kind: "slider",
       labelKey: "preview.maxFps",
-      fallback: "最大帧率",
       control: {
         min: 30,
         max: 120,
@@ -802,7 +788,7 @@ describe("nodeControlToView", () => {
     expect(view.slider!.onCommit).toBeTypeOf("function");
   });
 
-  it("无 labelKey 时 fallback 兜底：view.fallback = node.fallback ?? node.id", () => {
+  it("无 labelKey 时 label 兜底：view.fallback = node.label ?? node.id", () => {
     const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "bare-control",
@@ -821,7 +807,7 @@ describe("nodeControlToView", () => {
       id: "labeled-control",
       kind: "toggle",
       labelKey: "preview.frustumCull",
-      fallback: "视锥剔除",
+      label: "视锥剔除",
       control: { get: () => false, set: () => {} },
     };
     const view = nodeControlToView(node, snapshot);
@@ -835,7 +821,6 @@ describe("nodeControlToView", () => {
       id: "test-select",
       kind: "select",
       labelKey: "preview.waterMode",
-      fallback: "水面模式",
       control: {
         options: [
           { value: "film", label: "薄膜" },
@@ -857,7 +842,6 @@ describe("nodeControlToView", () => {
       id: "hint-control",
       kind: "toggle",
       labelKey: "preview.frustumCull",
-      fallback: "视锥剔除",
       hintKey: "preview.frustumCullHint",
       control: { get: () => false, set: () => {} },
     };
@@ -889,7 +873,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-1",
         kind: "card",
         labelKey: "preview.envSectionBasic",
-        fallback: "基础",
         children: [{ id: "child-card-1", kind: "field", labelKey: "preview.child", value: "v" }],
       },
     ];
@@ -914,7 +897,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-2",
         kind: "card",
         labelKey: "preview.envSectionAtmosphere",
-        fallback: "氛围",
         children: [{ id: "child-card-2", kind: "field", labelKey: "preview.child", value: "v" }],
       },
     ];
@@ -934,7 +916,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-empty",
         kind: "card",
         labelKey: "preview.envSectionOther",
-        fallback: "其它",
         children: [],
       },
     ];
@@ -947,7 +928,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-hidden",
         kind: "card",
         labelKey: "preview.envSectionOther",
-        fallback: "其它",
         children: [
           {
             id: "hidden-child",
@@ -970,7 +950,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-col",
         kind: "card",
         labelKey: "preview.envSectionBasic",
-        fallback: "基础",
         collapsible: true,
         children: [{ id: "child-col", kind: "field", labelKey: "preview.child", value: "v" }],
       },
@@ -1005,7 +984,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-col2",
         kind: "card",
         labelKey: "preview.envSectionAtmosphere",
-        fallback: "氛围",
         collapsible: true,
         defaultOpen: false,
         children: [{ id: "child-col2", kind: "field", labelKey: "preview.child", value: "v" }],
@@ -1035,7 +1013,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-plain",
         kind: "card",
         labelKey: "preview.envSectionBasic",
-        fallback: "基础",
         children: [{ id: "child-plain", kind: "field", labelKey: "preview.child", value: "v" }],
       },
     ];
@@ -1053,7 +1030,6 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "fld-box",
         kind: "folder",
         labelKey: "preview.skyGroupAdvanced",
-        fallback: "高级",
         children: [{ id: "child-box", kind: "field", labelKey: "preview.child", value: "v" }],
       },
     ];

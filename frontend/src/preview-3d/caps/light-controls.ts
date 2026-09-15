@@ -33,7 +33,6 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
     id: "light-enabled",
     kind: "toggle",
     labelKey: "preview.lighting",
-    fallback: "灯光",
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
@@ -49,7 +48,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-fill",
       kind: "toggle",
       labelKey: "preview.fillLight",
-      fallback: "补灯",
       control: {
         get: () => cap.getParams().fill.enabled,
         set: (v) => cap.setParams({ fill: { enabled: v as boolean } }),
@@ -59,7 +57,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-rim",
       kind: "toggle",
       labelKey: "preview.rimLight",
-      fallback: "轮廓灯",
       control: {
         get: () => cap.getParams().rim.enabled,
         set: (v) => cap.setParams({ rim: { enabled: v as boolean } }),
@@ -69,7 +66,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-ambient",
       kind: "slider",
       labelKey: "preview.ambientIntensity",
-      fallback: "环境光",
       control: {
         min: 0,
         max: 2,
@@ -82,7 +78,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-spotlight",
       kind: "toggle",
       labelKey: "preview.spotlight",
-      fallback: "聚光灯",
       control: {
         get: () => cap.getParams().spotlight.enabled,
         set: (v) => cap.setSpotlight({ enabled: v as boolean }),
@@ -92,7 +87,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-volumetric",
       kind: "toggle",
       labelKey: "preview.volumetric",
-      fallback: "体积光",
       control: {
         get: () => cap.getParams().volumetric.enabled,
         set: (v) => cap.setVolumetric({ enabled: v as boolean }),
@@ -102,7 +96,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-engine",
       kind: "select",
       labelKey: "preview.volumetricEngine",
-      fallback: "锥引擎",
       control: {
         options: LIGHT_ENGINE_OPTIONS,
         get: () => cap.getVolumetricEngine(),
@@ -113,7 +106,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-cone-angle",
       kind: "slider",
       labelKey: "preview.coneAngle",
-      fallback: "锥角",
       control: {
         min: 10,
         max: 60,
@@ -127,7 +119,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-preset",
       kind: "select",
       labelKey: "preview.lightPreset",
-      fallback: "灯光预设",
       control: {
         options: LIGHT_PRESET_OPTIONS,
         get: () => cap.getCurrentPreset(),
@@ -141,7 +132,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "light-key",
       kind: "toggle",
       labelKey: "preview.keyLight",
-      fallback: "主灯",
       control: {
         get: () => cap.getParams().key.enabled,
         set: (v) => cap.setParams({ key: { enabled: v as boolean } }),
@@ -151,7 +141,6 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "cap-group-light-params",
       kind: "folder",
       labelKey: LIGHT_PARAMS_GROUP,
-      fallback: "灯光参数",
       children,
     },
   ];

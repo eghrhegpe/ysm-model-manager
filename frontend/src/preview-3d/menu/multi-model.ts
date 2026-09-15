@@ -22,8 +22,6 @@ export interface MultiModelSelectOpts {
   onSelect: (id: string) => void;
   /** i18n labelKey（缺省 preview.component） */
   labelKey?: string;
-  /** i18n 缺失时回退文案（缺省「模型」） */
-  fallback?: string;
   /** 稳定节点 id（缺省 "multi-model-select"） */
   nodeId?: string;
   /** [doc:adr-132] 切档后重渲染当前面板（menu.refresh()）——YSM 组件 select 切档后
@@ -42,7 +40,6 @@ export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNod
     activeId,
     onSelect,
     labelKey = "preview.component",
-    fallback = "模型",
     nodeId = "multi-model-select",
     refreshOnChange,
   } = opts;
@@ -53,7 +50,6 @@ export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNod
     id: nodeId,
     kind: "select",
     labelKey,
-    fallback,
     control: {
       options: entries.map((e) => ({ value: e.id, label: e.label })),
       get: (): string => {

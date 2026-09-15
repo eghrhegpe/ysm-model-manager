@@ -61,7 +61,6 @@ export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
     id: "bones",
     icon: "🦴",
     labelKey: "preview.section.bones",
-    fallback: "骨骼",
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
     // biome-ignore lint/suspicious/noConfusingVoidType: 同 node-types.ts renderCustom 契约（void 表「cleanup 或空」），改 undefined 连锁破坏 6+ 实现点

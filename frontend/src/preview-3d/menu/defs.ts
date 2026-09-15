@@ -1,6 +1,6 @@
 // ===== 3D 预览底部根菜单（ADR-076 v3：底部根菜单 + SlideMenu 多层派生，按能力动态显示）=====
 // 对齐 MikuMikuAR 范式：底部根按钮 → createSlideMenu 多层导航。
-// 唯一事实来源：仅描述结构（id / icon / labelKey / fallback / kind / 能力门槛）。
+// 唯一事实来源：仅描述结构（id / icon / labelKey / kind / 能力门槛）。
 // 渲染与 handler 见 preview-menu.ts；测试遍历本表 + 适配器真实注入项断言结构与
 // dock 渲染（preview-menu-items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 //
@@ -25,10 +25,8 @@ export type { PreviewMenuGroupId } from "./node-types.ts";
 export interface PreviewMenuGroupDef {
   id: PreviewMenuGroupId;
   icon: string;
-  /** i18n 键（dock 按钮/组标题文案）；缺失时回退 fallback（tr 兜底，杜绝裸中文） */
+  /** i18n 键（dock 按钮/组标题文案）；缺失回退标准统一归 i18n tOf（裸 key 兜底） */
   labelKey: string;
-  /** i18n 缺失时的回退文案 */
-  fallback: string;
   /** [S5 收口] 静态直达面板声明：点击 dock 按钮首跳该 panel 节点 id（渲染函数数据驱动，
    *  新增「静态直达」组零改 core.ts）；缺省走通用逻辑（单 panel 直达 / 组根视图）。
    *  动态直达（如 motion 依赖活跃角色详情）无法静态声明，见 core.ts 唯一特例标注。 */
@@ -42,18 +40,17 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
     id: "model",
     icon: "🧍",
     labelKey: "preview.groupModel",
-    fallback: "角色",
     directToPanel: "roles",
   },
-  { id: "motion", icon: "💃", labelKey: "preview.groupMotion", fallback: "动作" },
+  { id: "motion", icon: "💃", labelKey: "preview.groupMotion" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆
-  { id: "env", icon: "🌍", labelKey: "preview.groupEnv", fallback: "环境" },
+  { id: "env", icon: "🌍", labelKey: "preview.groupEnv" },
   // 场景组只留相机/灯光/阴影/后处理（icon 换 🎛️ 与 🌍 环境区分）
-  { id: "scene", icon: "🎛️", labelKey: "preview.groupScene", fallback: "场景" },
+  { id: "scene", icon: "🎛️", labelKey: "preview.groupScene" },
   // 设置独立成组：聚合所有场景能力（sky/ground/fog/shadow/reflector/postprocessing/light）的控件，
   // 用户一处调全部，即时生效。与 🌍 环境的区别：环境是能力开关+下钻参数，设置是平铺总览。
-  { id: "settings", icon: "⚙️", labelKey: "preview.groupSettings", fallback: "设置" },
+  { id: "settings", icon: "⚙️", labelKey: "preview.groupSettings" },
 ];
 
 /**
@@ -68,7 +65,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "roles",
     icon: "🎭",
     labelKey: "preview.roles",
-    fallback: "加载角色",
     kind: "panel",
     /** 已加载角色列表（MikuMikuAR buildModelRootItems 移植）：焦点切换 + 详情 + 工具 + 加载入口 */
     dockGroup: "model",
@@ -77,7 +73,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "environment",
     icon: "🌍",
     labelKey: "preview.environment",
-    fallback: "环境",
     kind: "panel",
     dockGroup: "env",
     // 环境能力门禁（requiresEnvironment 谓词化）：sky/ground cap 任一挂载才显示；
@@ -88,7 +83,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "camera",
     icon: "🎥",
     labelKey: "preview.cameraView",
-    fallback: "视图",
     kind: "panel",
     dockGroup: "scene",
     // self 模式隐藏（hideInSelfMode 谓词化）：相机由适配器自驱，camBridge 控件（旋转/速度/
@@ -100,7 +94,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "lighting",
     icon: "💡",
     labelKey: "preview.lighting",
-    fallback: "灯光",
     kind: "panel",
     dockGroup: "scene",
   },
@@ -108,7 +101,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "shadow",
     icon: "🌫️",
     labelKey: "preview.shadow",
-    fallback: "阴影",
     kind: "panel",
     dockGroup: "scene",
   },
@@ -116,7 +108,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "postproc",
     icon: "🎇",
     labelKey: "preview.postprocessing",
-    fallback: "后处理",
     kind: "panel",
     dockGroup: "scene",
   },
@@ -127,7 +118,6 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     id: "settings",
     icon: "⚙️",
     labelKey: "preview.settings",
-    fallback: "设置",
     kind: "panel",
     dockGroup: "settings",
   },

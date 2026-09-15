@@ -307,14 +307,12 @@ function buildSliceSchema(
   const layerSlider = (
     id: string,
     labelKey: string,
-    fallback: string,
     pick: "layerVal" | "layerVal2",
     visibleWhen: (s: Partial<PreviewSnapshot>) => boolean,
   ): PreviewMenuNode => ({
     id,
     kind: "slider",
     labelKey,
-    fallback,
     visibleWhen,
     control: {
       min: 1,
@@ -333,7 +331,6 @@ function buildSliceSchema(
       id: "slice-axis",
       kind: "select",
       labelKey: "preview.sliceAxis",
-      fallback: "分层轴",
       control: {
         options: SLICE_AXIS_OPTIONS,
         get: () => SLICE_AXES[shell.layerAxis] ?? "Y",
@@ -351,7 +348,6 @@ function buildSliceSchema(
       id: "slice-mode",
       kind: "select",
       labelKey: "preview.sliceMode",
-      fallback: "模式",
       control: {
         options: [
           { value: "all", label: "全部" },
@@ -369,24 +365,16 @@ function buildSliceSchema(
         refreshOnChange: true,
       },
     },
-    layerSlider(
-      "slice-layer",
-      "preview.sliceLayer",
-      "层",
-      "layerVal",
-      () => shell.mode === "single",
-    ),
+    layerSlider("slice-layer", "preview.sliceLayer", "layerVal", () => shell.mode === "single"),
     layerSlider(
       "slice-range-start",
       "preview.sliceRangeStart",
-      "起",
       "layerVal",
       () => shell.mode === "range",
     ),
     layerSlider(
       "slice-range-end",
       "preview.sliceRangeEnd",
-      "止",
       "layerVal2",
       () => shell.mode === "range",
     ),
@@ -405,7 +393,6 @@ function registerSliceSchema(
     id: "slice",
     icon: "🧊",
     labelKey: "preview.sliceControl",
-    fallback: "分层切片",
     kind: "panel",
     dockGroup: "model",
     schemaId: sliceKey,

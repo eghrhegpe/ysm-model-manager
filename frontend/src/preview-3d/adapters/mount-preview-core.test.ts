@@ -145,7 +145,7 @@ import { bus } from "@/bus";
 
 /** 最小 panel 菜单项 */
 function panelItem(id: string): unknown {
-  return { id, icon: "x", labelKey: "x", fallback: id, kind: "panel" };
+  return { id, icon: "x", labelKey: "x", label: id, kind: "panel" };
 }
 
 /** 最小可用 content（adapter.build 返回） */

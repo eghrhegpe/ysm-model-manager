@@ -250,7 +250,7 @@ function registeredItems(content: { menuItems?: Array<{ id: string; kind: string
 function makePanels(): VrmPanelHooks {
   return {
     playNodes: () => [
-      { id: "stub-play-toggle", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
+      { id: "stub-play-toggle", kind: "toggle" as const, labelKey: "x", control: { get: () => false, set: () => {} } },
     ],
   };
 }
@@ -554,7 +554,7 @@ describe("VRMA 多动作切换", () => {
 
     // 通过 panels.playNodes 验证 play bridge（[doc:adr-126-p5-收尾] play 面板声明式化）
     const playNodes = vi.fn((_bridge: unknown) => [
-      { id: "stub-play", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
+      { id: "stub-play", kind: "toggle" as const, labelKey: "x", control: { get: () => false, set: () => {} } },
     ]);
     const panelsWithPlay = makePanels();
     panelsWithPlay.playNodes = playNodes;

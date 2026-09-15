@@ -27,7 +27,6 @@ function shcEnabledNode(cap: ShadowCapability): PreviewMenuNode {
     id: "shadow-enabled",
     kind: "toggle",
     labelKey: "preview.shadow",
-    fallback: "阴影",
     hintKey: "preview.shadowEnabledHint",
     control: {
       get: () => cap.isEnabled(),
@@ -43,7 +42,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       id: "shadow-soft",
       kind: "toggle",
       labelKey: "preview.shadowSoft",
-      fallback: "软阴影",
       control: {
         get: () => cap.isSoft(),
         set: (v) => cap.setSoft(v as boolean),
@@ -53,7 +51,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       id: "shadow-map-size",
       kind: "select",
       labelKey: "preview.shadowMapSize",
-      fallback: "分辨率",
       hintKey: "preview.shadowMapSizeDesc",
       control: {
         options: MAP_SIZE_OPTIONS,
@@ -65,7 +62,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       id: "shadow-bias",
       kind: "slider",
       labelKey: "preview.shadowBias",
-      fallback: "阴影偏移",
       hintKey: "preview.shadowBiasDesc",
       control: {
         min: -0.01,
@@ -79,7 +75,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       id: "shadow-normal-bias",
       kind: "slider",
       labelKey: "preview.shadowNormalBias",
-      fallback: "法线偏移",
       hintKey: "preview.shadowNormalBiasDesc",
       control: {
         min: 0,
@@ -93,7 +88,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       id: "shadow-camera-size",
       kind: "slider",
       labelKey: "preview.shadowCameraSize",
-      fallback: "视锥大小",
       hintKey: "preview.shadowCameraSizeDesc",
       control: {
         min: 5,
@@ -108,7 +102,6 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
     id: "cap-group-shadow-params",
     kind: "folder",
     labelKey: SHADOW_PARAMS_GROUP,
-    fallback: "阴影参数",
     children,
   };
 }

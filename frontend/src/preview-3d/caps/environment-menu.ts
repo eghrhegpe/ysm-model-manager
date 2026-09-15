@@ -145,7 +145,6 @@ function envBuildPresetFolder(cap: EnvironmentCapability): PreviewMenuNode {
     id: "cap-group-env-preset",
     kind: "folder",
     labelKey: ENV_GROUP_PRESET,
-    fallback: "预设",
     children: [envPresetControlsNode(cap)],
   };
 }
@@ -156,13 +155,11 @@ function envBuildBackgroundFolder(cap: EnvironmentCapability): PreviewMenuNode {
     id: "cap-group-env-background",
     kind: "folder",
     labelKey: ENV_GROUP_BACKGROUND,
-    fallback: "背景",
     children: [
       {
         id: "env-use-as-background",
         kind: "toggle",
         labelKey: "preview.envUseAsBackground",
-        fallback: "用作背景",
         hintKey: "preview.envUseAsBackgroundHint",
         control: {
           get: () => cap.isUseAsBackground(),
@@ -173,7 +170,6 @@ function envBuildBackgroundFolder(cap: EnvironmentCapability): PreviewMenuNode {
         id: "env-intensity",
         kind: "slider",
         labelKey: "preview.envIntensity",
-        fallback: "反射强度",
         control: {
           min: 0,
           max: 3,
@@ -193,7 +189,6 @@ function envBuildCustomHdrFolder(cap: EnvironmentCapability): PreviewMenuNode {
     id: "cap-group-env-custom-hdr",
     kind: "folder",
     labelKey: ENV_GROUP_CUSTOM_HDR,
-    fallback: "自定义 HDR",
     children: envCustomHdrControlsNodes(cap),
   };
 }
@@ -207,7 +202,6 @@ export function buildEnvironmentNodes(cap: EnvironmentCapability): PreviewMenuNo
       id: "env-enabled",
       kind: "toggle",
       labelKey: "preview.environment",
-      fallback: "环境贴图",
       control: {
         get: () => cap.isEnabled(),
         set: (v) => cap.setEnabled(v as boolean),

@@ -102,7 +102,6 @@ export function buildYsmModelSchema(
     const select = multiModelSelectNode({
       nodeId: "ysm-component-select",
       labelKey: "preview.component",
-      fallback: "组件",
       refreshOnChange: true,
       entries: [
         { id: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel },
@@ -125,14 +124,12 @@ export function buildYsmModelSchema(
       id: "ysm-stats-bones",
       kind: "field",
       labelKey: "preview.section.bones",
-      fallback: "骨骼",
       value: `${bones} 根`,
     },
     {
       id: "ysm-stats-cubes",
       kind: "field",
       labelKey: "preview.cubesLabel",
-      fallback: "立方体",
       value: `${cubes} 个`,
     },
   );
@@ -155,7 +152,6 @@ export function buildYsmModelSchema(
         id: `ysm-tex-ex-${k}`,
         kind: "row",
         labelKey: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
-        fallback: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
         value: `专属纹理 声明 ${decl}`,
       });
     });
@@ -179,7 +175,6 @@ export function buildYsmModelSchema(
         id: `ysm-tex-${s}`,
         kind: "row",
         labelKey: name,
-        fallback: name,
         value: `${cat ? `${cat} · ` : ""}声明 ${decl} · 加载 ${size}`,
       });
     }

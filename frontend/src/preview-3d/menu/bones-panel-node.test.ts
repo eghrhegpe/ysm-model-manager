@@ -1,5 +1,5 @@
 // ===== bones-panel-node.ts 测试（通用骨骼面板菜单项工厂）=====
-// 覆盖：节点形状（id/icon/labelKey/fallback/kind/dockGroup/renderCustom）
+// 覆盖：节点形状（id/icon/labelKey/kind/dockGroup/renderCustom）
 // / null 守卫（viewContainer/camera/scene 任一缺失早 return）/ cleanup 双持有者 /
 // tree=null 走 makeBonePanelRenderer 空态（让被委托函数自己处理，工厂不二次包装）。
 // 4 个 adapter 的 menuItems 测试覆盖「是否有 bones 项」，本测覆盖「骨头项形状契约」。
@@ -35,7 +35,7 @@ function makeCtx() {
 }
 
 describe("makeBonesPanelItem", () => {
-  it("节点形状：id/icon/labelKey/fallback/kind/dockGroup 固定，renderCustom 是函数", () => {
+  it("节点形状：id/icon/labelKey/kind/dockGroup 固定，renderCustom 是函数", () => {
     const item = makeBonesPanelItem({
       tree: null,
       cleanupRef: { current: null },
@@ -46,7 +46,6 @@ describe("makeBonesPanelItem", () => {
     expect(item.id).toBe("bones");
     expect(item.icon).toBe("🦴");
     expect(item.labelKey).toBe("preview.section.bones");
-    expect(item.fallback).toBe("骨骼");
     expect(item.kind).toBe("panel");
     expect(item.dockGroup).toBe("motion");
     expect(typeof item.renderCustom).toBe("function");

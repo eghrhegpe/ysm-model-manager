@@ -25,7 +25,6 @@ export function morphNodes(ctx: MorphMeshLike): PreviewMenuNode[] {
         id: "morph-empty",
         kind: "field" as const,
         labelKey: "preview.noOtherMorph",
-        fallback: "无表情",
         value: "",
       },
     ];
@@ -33,8 +32,8 @@ export function morphNodes(ctx: MorphMeshLike): PreviewMenuNode[] {
   return names.map((name) => ({
     id: `morph-${name}`,
     kind: "toggle" as const,
-    // morph 名是动态数据（非 i18n key）——用 fallback 承载显示名（rmLabel 缺 labelKey 时回退）
-    fallback: name,
+    // morph 名是动态数据（非 i18n key）——用 label 承载显示名（rmLabel 缺 labelKey 时回退）
+    label: name,
     control: {
       get: (): boolean => {
         const idx = ctx.morphTargetDictionary?.[name];

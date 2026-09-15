@@ -61,7 +61,7 @@ export function capControlToNode(c: PreviewControlDef): PreviewMenuNode {
     kind: c.kind as "toggle" | "slider" | "select" | "divider" | "color",
   };
   if (c.labelKey) node.labelKey = c.labelKey;
-  if (c.fallback) node.fallback = c.fallback;
+  if (c.fallback) node.label = c.fallback;
   if (c.hintKey) node.hintKey = c.hintKey;
   if (c.visibleWhen) node.visibleWhen = c.visibleWhen;
   if (c.settingsOrder !== undefined) node.settingsOrder = c.settingsOrder;
@@ -116,7 +116,6 @@ export function capControlsToNodes(controls: PreviewControlDef[]): PreviewMenuNo
           id: `cap-group-${c.id}`,
           kind: "folder",
           labelKey: g,
-          fallback: g,
           children: [],
         };
       }

@@ -525,13 +525,11 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
       id: "light-enabled",
       kind: "toggle",
       labelKey: "preview.lighting",
-      fallback: "灯光",
     };
     const paramToggle: PreviewMenuNode = {
       id: "light-key",
       kind: "toggle",
       labelKey: "preview.keyLight",
-      fallback: "主灯",
     };
     const lightCap = {
       id: "light",

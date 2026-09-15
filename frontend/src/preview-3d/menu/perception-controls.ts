@@ -19,18 +19,17 @@ export interface PerceptionState {
 export interface PerceptionCapability {
   id: keyof PerceptionState;
   labelKey: string;
-  fallback: string;
 }
 
-/** 所有可能的感知模块（id + i18n key + fallback 文案，单一事实源）。
- *  adapter 声明能力时经 pickPerceptionCaps 按 id 裁剪本表——不复制 labelKey/fallback 字面量，
+/** 所有可能的感知模块（id + i18n key，单一事实源）。
+ *  adapter 声明能力时经 pickPerceptionCaps 按 id 裁剪本表——不复制 labelKey 字面量，
  *  文案只在改一处（防三 adapter + 本表四处漂移）。 */
 export const ALL_PERCEPTION_CAPS: PerceptionCapability[] = [
-  { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
-  { id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" },
-  { id: "blink", labelKey: "preview.perceptionBlink", fallback: "眨眼" },
-  { id: "lipSync", labelKey: "preview.perceptionLipSync", fallback: "口型" },
-  { id: "autoDance", labelKey: "preview.perceptionAutoDance", fallback: "律动" },
+  { id: "breath", labelKey: "preview.perceptionBreath" },
+  { id: "gaze", labelKey: "preview.perceptionGaze" },
+  { id: "blink", labelKey: "preview.perceptionBlink" },
+  { id: "lipSync", labelKey: "preview.perceptionLipSync" },
+  { id: "autoDance", labelKey: "preview.perceptionAutoDance" },
 ];
 
 /** 按 id 从全量表挑选能力（顺序稳定 = ALL_PERCEPTION_CAPS 声明序，保证跨适配器面板顺序一致） */
@@ -56,7 +55,6 @@ export function perceptionNodes(
         id: "perception-empty",
         kind: "field" as const,
         labelKey: "preview.noPerception",
-        fallback: "无感知模块",
         value: "",
       },
     ];
@@ -65,7 +63,6 @@ export function perceptionNodes(
     id: `perception-${mod.id}`,
     kind: "toggle" as const,
     labelKey: mod.labelKey,
-    fallback: mod.fallback,
     control: {
       get: () => state[mod.id],
       set: (v: unknown) => {

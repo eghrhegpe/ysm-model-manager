@@ -24,7 +24,6 @@ const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "poo
 function wSliderNode(
   id: string,
   labelKey: string,
-  fallback: string,
   slider: { min: number; max: number; step: number; unit?: string },
   getValue: () => number,
   setValue: (v: number) => void,
@@ -34,7 +33,6 @@ function wSliderNode(
     id,
     kind: "slider",
     labelKey,
-    fallback,
     ...(visibleWhen ? { visibleWhen } : {}),
     control: {
       min: slider.min,
@@ -51,7 +49,6 @@ function wSliderNode(
 function wColorNode(
   id: string,
   labelKey: string,
-  fallback: string,
   getValue: () => number,
   setValue: (v: number) => void,
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
@@ -60,7 +57,6 @@ function wColorNode(
     id,
     kind: "color",
     labelKey,
-    fallback,
     ...(visibleWhen ? { visibleWhen } : {}),
     control: {
       get: () => getValue(),
@@ -78,7 +74,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       id: "ground-water-enabled",
       kind: "toggle",
       labelKey: "preview.groundWaterEnabled",
-      fallback: "启用水面",
       control: {
         get: () => cap.getWaterEnabled(),
         set: (v) => cap.setWaterEnabled(v as boolean),
@@ -88,13 +83,11 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       id: "cap-group-water-form",
       kind: "folder",
       labelKey: WATER_GROUP_FORM,
-      fallback: "水面形态",
       children: [
         {
           id: "ground-water-mode",
           kind: "select",
           labelKey: "preview.groundWaterMode",
-          fallback: "水面形态",
           control: {
             options: [
               { value: "film", label: "薄膜" },
@@ -110,12 +103,10 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       id: "cap-group-water-look",
       kind: "folder",
       labelKey: WATER_GROUP_LOOK,
-      fallback: "水面外观",
       children: [
         wSliderNode(
           "ground-wetness",
           "preview.waterFilmDensity",
-          "水膜浓度",
           { min: 0, max: 1, step: 0.05 },
           () => cap.getWetness(),
           (v) => cap.setWetness(v),
@@ -124,14 +115,12 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wColorNode(
           "ground-water-color",
           "preview.groundWaterColor",
-          "水色",
           () => cap.getWaterColor(),
           (v) => cap.setWaterColor(v),
         ),
         wSliderNode(
           "ground-water-opacity",
           "preview.groundWaterOpacity",
-          "不透明度",
           { min: 0, max: 1, step: 0.05 },
           () => cap.getWaterOpacity(),
           (v) => cap.setWaterOpacity(v),
@@ -139,7 +128,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wSliderNode(
           "ground-normal-strength",
           "preview.groundNormalStrength",
-          "法线强度",
           { min: 0, max: 1, step: 0.05 },
           () => cap.getNormalStrength(),
           (v) => cap.setNormalStrength(v),
@@ -147,7 +135,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wSliderNode(
           "ground-water-clarity",
           "preview.groundWaterClarity",
-          "水体通透度",
           { min: 0, max: 1, step: 0.05 },
           () => cap.getClarity(),
           (v) => cap.setClarity(v),
@@ -158,12 +145,10 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       id: "cap-group-water-pool",
       kind: "folder",
       labelKey: WATER_GROUP_POOL,
-      fallback: "水池",
       children: [
         wSliderNode(
           "ground-pool-height",
           "preview.groundPoolHeight",
-          "水池高度",
           { min: 0.01, max: 5, step: 0.05, unit: "m" },
           () => cap.getPoolHeight(),
           (v) => cap.setPoolHeight(v),
@@ -172,7 +157,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wSliderNode(
           "ground-pool-wall-thickness",
           "preview.groundPoolWallThickness",
-          "池壁厚度",
           { min: 0.01, max: 2, step: 0.01, unit: "m" },
           () => cap.getPoolWallThickness(),
           (v) => cap.setPoolWallThickness(v),
@@ -181,7 +165,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wColorNode(
           "ground-pool-wall-color",
           "preview.groundPoolWallColor",
-          "池壁颜色",
           () => cap.getPoolWallColor(),
           (v) => cap.setPoolWallColor(v),
           waterPoolOn,
@@ -189,7 +172,6 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wSliderNode(
           "ground-pool-roundness",
           "preview.groundPoolRoundness",
-          "边缘圆角",
           { min: 0, max: 0.5, step: 0.01 },
           () => cap.getPoolRoundness(),
           (v) => cap.setPoolRoundness(v),
@@ -201,12 +183,10 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       id: "cap-group-water-wave",
       kind: "folder",
       labelKey: WATER_GROUP_WAVE,
-      fallback: "波纹",
       children: [
         wSliderNode(
           "ground-wave-speed",
           "preview.groundWaveSpeed",
-          "波速",
           { min: 0, max: 3, step: 0.05, unit: "x" },
           () => cap.getWaveSpeed(),
           (v) => cap.setWaveSpeed(v),

@@ -42,7 +42,7 @@ function fakeYsmOpts(): YsmMenuItemsOpts {
     bonePanel: fakeBonePanel(),
     // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
     panels: {
-      shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
+      shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x" }],
     },
   };
 }
@@ -76,8 +76,8 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
     bonePanel: null,
     panels: {
       playNodes: () => [
-        { id: "play-toggle", kind: "toggle" as const, labelKey: "x", fallback: "播放", control: { get: () => false, set: () => {} } },
-        { id: "play-select", kind: "select" as const, labelKey: "x", fallback: "动作", control: { options: [], get: () => "0", set: () => {} } },
+        { id: "play-toggle", kind: "toggle" as const, labelKey: "x", control: { get: () => false, set: () => {} } },
+        { id: "play-select", kind: "select" as const, labelKey: "x", control: { options: [], get: () => "0", set: () => {} } },
       ],
       // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
       modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
@@ -113,10 +113,10 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
       // [doc:adr-126-p4-b-1] vrm model/shot 走 children 声明式（P5 收尾）：假工厂返回
       // 非空节点，契约测试「panel 必有渲染通道」要求 children 非空
       modelInfoNodes: () => [
-        { id: "vrm-fake-info", icon: "🧪", kind: "field" as const, labelKey: "preview.nameLabel", fallback: "名称", value: "测试.vrm" },
+        { id: "vrm-fake-info", icon: "🧪", kind: "field" as const, labelKey: "preview.nameLabel", value: "测试.vrm" },
       ],
       shotNodes: () => [
-        { id: "vrm-fake-shot", icon: "📷", kind: "button" as const, labelKey: "preview.screenshot", fallback: "截图" },
+        { id: "vrm-fake-shot", icon: "📷", kind: "button" as const, labelKey: "preview.screenshot" },
       ],
     },
   };
@@ -142,28 +142,24 @@ const fakeCap = {
       id: "sky-time",
       kind: "slider" as const,
       labelKey: "preview.timeOfDay",
-      fallback: "时间",
       control: { min: 0, max: 24, step: 0.5, get: () => fakeCapCore.getTimeOfDay(), set: (v: unknown) => fakeCapCore.setTime(v) },
     },
     {
       id: "sky-cloud",
       kind: "slider" as const,
       labelKey: "preview.cloudCoverage",
-      fallback: "云量",
       control: { min: 0, max: 1, step: 0.05, get: () => fakeCapCore.getCloudCoverage(), set: (v: unknown) => fakeCapCore.setCloudCoverage(v) },
     },
     {
       id: "sky-env",
       kind: "toggle" as const,
       labelKey: "preview.environmentMapping",
-      fallback: "环境贴图",
       control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
     },
     {
       id: "ground-visible",
       kind: "toggle" as const,
       labelKey: "preview.ground",
-      fallback: "地面",
       control: { get: () => fakeCapCore.getVisible(), set: (v: unknown) => fakeCapCore.setVisible(v) },
     },
   ],
@@ -202,13 +198,15 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     });
   });
 
-  it("非 divider 项必有 icon/fallback/labelKey，kind/dockGroup 合法", () => {
+  it("非 divider 项必有 icon/labelKey 或 label，kind/dockGroup 合法", () => {
     const groupIds = PREVIEW_MENU_GROUPS.map((g) => g.id);
     allItems.forEach((d) => {
       if (d.kind === "divider") return;
       expect(d.icon!.length, `${d.id}.icon`).toBeGreaterThan(0);
-      expect(d.fallback!.length, `${d.id}.fallback`).toBeGreaterThan(0);
-      expect(d.labelKey!.length, `${d.id}.labelKey`).toBeGreaterThan(0);
+      expect(
+        (d.labelKey?.length ?? 0) > 0 || (d.label?.length ?? 0) > 0,
+        `${d.id} 缺 labelKey/label`,
+      ).toBe(true);
       expect(["panel", "action", "divider"]).toContain(d.kind);
       if (d.dockGroup) expect(groupIds, `${d.id}.dockGroup`).toContain(d.dockGroup);
     });
@@ -520,7 +518,6 @@ describe("渲染失败兜底（render 抛错不崩）", () => {
           id: "broken",
           icon: "❌",
           labelKey: "preview.modelInfo",
-          fallback: "坏",
           kind: "panel",
           renderCustom: boom,
         },

@@ -15,7 +15,7 @@ const allCaps = ALL_PERCEPTION_CAPS;
 const offState = (): PerceptionState => ({ breath: false, gaze: false, blink: false, lipSync: false, autoDance: false });
 
 describe("perceptionNodes（声明式 toggle 节点）", () => {
-  it("按 ALL_PERCEPTION_CAPS 顺序产出 toggle 节点（id/labelKey/fallback 对齐 caps）", () => {
+  it("按 ALL_PERCEPTION_CAPS 顺序产出 toggle 节点（id/labelKey 对齐 caps）", () => {
     const state = { ...offState(), breath: true, blink: true };
     const nodes = perceptionNodes(state, allCaps);
     expect(nodes.map((n) => n.id)).toEqual([
@@ -26,18 +26,18 @@ describe("perceptionNodes（声明式 toggle 节点）", () => {
       "perception-autoDance",
     ]);
     expect(nodes.every((n) => n.kind === "toggle")).toBe(true);
-    expect(nodes[0]).toMatchObject({ labelKey: "preview.perceptionBreath", fallback: "呼吸" });
+    expect(nodes[0]).toMatchObject({ labelKey: "preview.perceptionBreath" });
   });
 
   it("caps 裁剪：只产出注入的模块（无 chest 骨 → 无 breath）", () => {
-    const nodes = perceptionNodes(offState(), [{ id: "gaze", labelKey: "preview.perceptionGaze", fallback: "注视" }]);
+    const nodes = perceptionNodes(offState(), [{ id: "gaze", labelKey: "preview.perceptionGaze" }]);
     expect(nodes.map((n) => n.id)).toEqual(["perception-gaze"]);
   });
 
   it("空态（caps 空）→ 提示 field 节点（对齐旧 noPerception 行）", () => {
     const nodes = perceptionNodes(offState(), []);
     expect(nodes).toEqual([
-      { id: "perception-empty", kind: "field", labelKey: "preview.noPerception", fallback: "无感知模块", value: "" },
+      { id: "perception-empty", kind: "field", labelKey: "preview.noPerception", value: "" },
     ]);
   });
 
@@ -60,7 +60,7 @@ describe("pickPerceptionCaps（按 id 裁剪单一事实源 ALL_PERCEPTION_CAPS�
     const caps = pickPerceptionCaps(["breath", "gaze", "blink"]);
     expect(caps.map((c) => c.id)).toEqual(["breath", "gaze", "blink"]);
     // 文案来自单一事实源（与 ALL 常量逐字一致）
-    expect(caps[0]).toMatchObject({ labelKey: "preview.perceptionBreath", fallback: "呼吸" });
+    expect(caps[0]).toMatchObject({ labelKey: "preview.perceptionBreath" });
   });
 
   it("空集 → 空数组（无感知模块）", () => {

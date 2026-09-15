@@ -4,7 +4,7 @@
 //   2. 多候选 → 返回 kind:"select" 节点，options/get/set 装配齐全
 //   3. get：读 activeId 闭包；闭包返回不在 entries 的 id → 回退首项
 //   4. set：调 onSelect(id) 副作用 + 返回 id
-//   5. 自定义 labelKey / fallback / nodeId 生效
+//   5. 自定义 labelKey / nodeId 生效（fallback 已随 schema 退役，回退标准统一归 i18n tOf）
 import { describe, it, expect, vi } from "vitest";
 import { multiModelSelectNode } from "./multi-model.ts";
 
@@ -38,7 +38,6 @@ describe("multiModelSelectNode（ADR-132 多模型选择原语）", () => {
     expect(node.kind).toBe("select");
     expect(node.id).toBe("multi-model-select");
     expect(node.labelKey).toBe("preview.component");
-    expect(node.fallback).toBe("模型");
     expect(node.control?.options?.map((o) => o.value)).toEqual(["/a.pmx", "/b.pmx", "/c.pmx"]);
     expect(node.control?.options?.[0].label).toBe("a.pmx");
   });
@@ -77,17 +76,15 @@ describe("multiModelSelectNode（ADR-132 多模型选择原语）", () => {
     expect(ret).toBe("/ghost.pmx");
   });
 
-  it("自定义 labelKey / fallback / nodeId 生效", () => {
+  it("自定义 labelKey / nodeId 生效", () => {
     const node = multiModelSelectNode({
       entries,
       activeId: () => "/a.pmx",
       onSelect: () => {},
       labelKey: "preview.multiModel",
-      fallback: "多模型",
       nodeId: "pack-model-select",
     })!;
     expect(node.labelKey).toBe("preview.multiModel");
-    expect(node.fallback).toBe("多模型");
     expect(node.id).toBe("pack-model-select");
   });
 

@@ -18,7 +18,6 @@ export function rcMasterToggleNode(cap: ReflectorCapability): PreviewMenuNode {
     id: "reflector-enabled",
     kind: "toggle",
     labelKey: "preview.reflector",
-    fallback: "反光地面",
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
@@ -31,7 +30,6 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
   const slider = (
     id: string,
     labelKey: string,
-    fallback: string,
     min: number,
     max: number,
     step: number,
@@ -41,7 +39,6 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
     id,
     kind: "slider",
     labelKey,
-    fallback,
     control: {
       min,
       max,
@@ -54,12 +51,10 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
     id: `cap-group-reflector-params`,
     kind: "folder",
     labelKey: REFLECTOR_PARAMS_GROUP,
-    fallback: "反光地面参数",
     children: [
       slider(
         "reflector-opacity",
         "preview.reflectorOpacity",
-        "反射强度",
         0,
         1,
         0.01,
@@ -69,7 +64,6 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
       slider(
         "reflector-resolution",
         "preview.reflectorResolution",
-        "反射精度",
         256,
         2048,
         256,
@@ -79,7 +73,6 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
       slider(
         "reflector-size",
         "preview.reflectorSize",
-        "地面大小",
         20,
         500,
         10,

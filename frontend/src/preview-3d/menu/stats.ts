@@ -26,17 +26,10 @@ export function buildStatsPanel(
   stats: SceneStats,
   extraFields?: PreviewMenuNode[],
 ): PreviewMenuNode {
-  const field = (
-    id: string,
-    labelKey: string,
-    fallback: string,
-    value: number,
-    visible = true,
-  ): PreviewMenuNode => ({
+  const field = (id: string, labelKey: string, value: number, visible = true): PreviewMenuNode => ({
     id,
     kind: "field",
     labelKey,
-    fallback,
     value,
     // visibleWhen 吃统计闭包值（非状态层快照）；渲染端 renderMenu 对 field 行统一执行守卫
     ...(visible ? {} : { visibleWhen: () => false }),
@@ -46,8 +39,6 @@ export function buildStatsPanel(
     kind: "panel",
     icon: "📊",
     labelKey: "preview.stats.panel",
-    // 口径标注（审核建议 ②）：traverse 渲染实测，与 YSM 模型面板 Go 口径区分
-    fallback: "渲染实测",
     dockGroup: "model",
     // 有统计才显示（铁律：visibleWhen 纯函数守卫；stats 是 build 后闭包值，非状态层项）
     visibleWhen: () => hasSceneStats(stats),
@@ -55,18 +46,12 @@ export function buildStatsPanel(
       // 口径：骨骼/纹理/表情对体素类格式（litematic 等）天然恒 0，展示无信息量——
       // 「为 0 就藏」通用规则（visibleWhen 守卫；网格/三角面/材质三行不守卫，
       // 全 0 空场景已由 panel 级 hasSceneStats 拦截）
-      field("stat-bones", "preview.stats.bones", "骨骼", stats.boneCount, stats.boneCount > 0),
-      field("stat-meshes", "preview.stats.meshes", "网格", stats.meshCount),
-      field("stat-triangles", "preview.stats.triangles", "三角面", stats.triangleCount),
-      field("stat-materials", "preview.stats.materials", "材质", stats.materialCount),
-      field(
-        "stat-textures",
-        "preview.stats.textures",
-        "纹理",
-        stats.textureCount,
-        stats.textureCount > 0,
-      ),
-      field("stat-morphs", "preview.stats.morphs", "表情", stats.morphCount, stats.morphCount > 0),
+      field("stat-bones", "preview.stats.bones", stats.boneCount, stats.boneCount > 0),
+      field("stat-meshes", "preview.stats.meshes", stats.meshCount),
+      field("stat-triangles", "preview.stats.triangles", stats.triangleCount),
+      field("stat-materials", "preview.stats.materials", stats.materialCount),
+      field("stat-textures", "preview.stats.textures", stats.textureCount, stats.textureCount > 0),
+      field("stat-morphs", "preview.stats.morphs", stats.morphCount, stats.morphCount > 0),
       // [ADR-159] 适配器统计附加行（dockGroup:"stats"，由 mergeStatsMenuItems 抽出透传）
       ...(extraFields ?? []),
     ],

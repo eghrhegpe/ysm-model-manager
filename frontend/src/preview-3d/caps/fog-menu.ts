@@ -17,7 +17,6 @@ export function fcMasterToggleNode(cap: FogCapability): PreviewMenuNode {
     id: "fog-enabled",
     kind: "toggle",
     labelKey: "preview.fog",
-    fallback: "雾效",
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
@@ -32,7 +31,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-color",
       kind: "color",
       labelKey: "preview.fogColor",
-      fallback: "雾色",
       control: {
         get: () => cap.getColor(),
         set: (v) => cap.setColor(v as number),
@@ -42,7 +40,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-mode",
       kind: "select",
       labelKey: "preview.fogMode",
-      fallback: "雾型",
       control: {
         options: [
           { value: "linear", label: "线性" },
@@ -56,7 +53,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-density",
       kind: "slider",
       labelKey: "preview.fogDensity",
-      fallback: "密度",
       control: {
         min: 0.001,
         max: 0.1,
@@ -69,7 +65,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-near",
       kind: "slider",
       labelKey: "preview.fogNear",
-      fallback: "近距",
       control: {
         min: 0,
         max: 500,
@@ -83,7 +78,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-far",
       kind: "slider",
       labelKey: "preview.fogFar",
-      fallback: "远距",
       control: {
         min: 10,
         max: 2000,
@@ -98,7 +92,6 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
     id: "cap-group-fog-params",
     kind: "folder",
     labelKey: FOG_PARAMS_GROUP,
-    fallback: "雾效参数",
     children,
   };
 }

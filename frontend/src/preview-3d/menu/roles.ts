@@ -50,8 +50,7 @@ export function buildRolesSchema(
     nodes.push({
       id: "roles-empty",
       kind: "sectionTitle",
-      labelKey: "",
-      fallback: t("preview.noRoles"),
+      label: t("preview.noRoles"),
     });
   }
   for (const e of entries) {
@@ -59,7 +58,7 @@ export function buildRolesSchema(
     nodes.push({
       id: `role-${e.id}`,
       kind: "row",
-      fallback: roleBaseName(e),
+      label: roleBaseName(e),
       // 整行进详情（navigate 目标 = modelDetailView：组件导航/统计/工具齐备）
       action: () =>
         deps.actionCtx.navigate?.(

@@ -197,7 +197,7 @@ function makeMmdPanels(): MmdPanelHooks {
         id: string;
         kind: "toggle" | "select";
         labelKey?: string;
-        fallback: string;
+        label?: string;
         control: {
           options?: Array<{ value: string; label: string }>;
           get?: (v?: unknown) => unknown;
@@ -207,7 +207,7 @@ function makeMmdPanels(): MmdPanelHooks {
         {
           id: "play-toggle",
           kind: "toggle",
-          fallback: "播放",
+          label: "播放",
           control: { get: () => bridge.isPlaying(), set: () => bridge.toggle() },
         },
       ];
@@ -215,7 +215,7 @@ function makeMmdPanels(): MmdPanelHooks {
         nodes.push({
           id: "play-select",
           kind: "select",
-          fallback: "动作",
+          label: "动作",
           control: {
             options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })),
             get: () => String(bridge.currentIndex()),
@@ -226,7 +226,7 @@ function makeMmdPanels(): MmdPanelHooks {
       return nodes as unknown as PreviewMenuNode[];
     },
     // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
-    modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x", fallback: "x", value: "测试.pmx" }],
+    modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x", value: "测试.pmx" }],
     shotNodes: () => [],
   };
 }

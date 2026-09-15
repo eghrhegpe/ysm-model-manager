@@ -112,8 +112,7 @@ function switchCandidateRows(
       {
         id: "switch-empty",
         kind: "sectionTitle",
-        labelKey: "",
-        fallback: viaType ? t("preview.noTypeModel") : t("preview.noOtherModel"),
+        label: viaType ? t("preview.noTypeModel") : t("preview.noOtherModel"),
       },
     ];
   }
@@ -124,7 +123,7 @@ function switchCandidateRows(
     return {
       id: `switch-cand-${i}`,
       kind: "row",
-      fallback: `${isCur ? "✓" : "📦"} ${p.split(/[/\\]/).pop() || p}`,
+      label: `${isCur ? "✓" : "📦"} ${p.split(/[/\\]/).pop() || p}`,
       action: () => applySwitchRowClick(p, sameType, ctx, false),
       ...(isCur
         ? {}
@@ -156,7 +155,6 @@ export function buildSwitchNodes(
       id: "switch-tab",
       kind: "select",
       labelKey: "preview.switchTypeTab",
-      fallback: "类型",
       control: {
         options: rtypes.map((r) => ({ value: r, label: switchTabLabelOf(r) })),
         get: () => st.activeTab,
@@ -193,8 +191,7 @@ export function buildSwitchNodes(
     nodes.push({
       id: "switch-loading",
       kind: "sectionTitle",
-      labelKey: "",
-      fallback: t("preview.loadingModels"),
+      label: t("preview.loadingModels"),
     });
     return nodes;
   }

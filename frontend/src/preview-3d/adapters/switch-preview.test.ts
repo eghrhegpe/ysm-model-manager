@@ -222,7 +222,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     state.sceneBaseline = new Set([mesh]);
     mockScene.add(mesh);
-    const firstMenuItems = [{ id: "model-a", kind: "panel" as const, icon: "x", labelKey: "", fallback: "A" }];
+    const firstMenuItems = [{ id: "model-a", kind: "panel" as const, icon: "x", labelKey: "", label: "A" }];
     sceneRegistry.reset();
     sceneRegistry.register({
       path: "initial.glb",
@@ -238,7 +238,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       mockScene.add(newMesh);
       return {
         dispose: vi.fn(),
-        menuItems: [{ id: "model-b", kind: "panel", icon: "y", labelKey: "", fallback: "B" }],
+        menuItems: [{ id: "model-b", kind: "panel", icon: "y", labelKey: "", label: "B" }],
       } as unknown as PreviewScene;
     });
 
@@ -265,7 +265,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       rtype: "vrm",
       roots: [mesh],
       content: { dispose: vi.fn() } as unknown as PreviewScene,
-      menuItems: [{ id: "model-a", kind: "panel", icon: "x", labelKey: "", fallback: "A" }],
+      menuItems: [{ id: "model-a", kind: "panel", icon: "x", labelKey: "", label: "A" }],
     });
 
     // 新模型 build 返回空 menuItems、不挂 mesh（无统计）

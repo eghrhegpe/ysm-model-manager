@@ -17,13 +17,11 @@ const ysmDetailTree: PreviewMenuNode[] = [
     id: "detail",
     kind: "folder",
     labelKey: "preview.roleDetail",
-    fallback: "角色详情",
     children: [
       {
         id: "model-section",
         kind: "folder",
         labelKey: "preview.roleModelSection",
-        fallback: "模型",
         defaultOpen: true,
         dockGroup: "model",
         children: [
@@ -31,7 +29,6 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "model",
             kind: "panel",
             labelKey: "preview.modelInfo",
-            fallback: "模型信息",
             icon: "🧍",
             dockGroup: "model",
             // renderCustom 逃生舱通道（schema-registry 声明不再允许新面板走此通道；
@@ -44,7 +41,6 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "shot",
             kind: "action",
             labelKey: "preview.screenshot",
-            fallback: "截图",
             icon: "📷",
             dockGroup: "model",
             action: (): void => {
@@ -55,7 +51,6 @@ const ysmDetailTree: PreviewMenuNode[] = [
             id: "bones",
             kind: "panel",
             labelKey: "preview.section.bones",
-            fallback: "骨骼",
             icon: "🦴",
             dockGroup: "model",
             renderCustom: (): void => {
@@ -68,14 +63,12 @@ const ysmDetailTree: PreviewMenuNode[] = [
         id: "motion-section",
         kind: "folder",
         labelKey: "preview.roleMotionSection",
-        fallback: "动作",
         dockGroup: "motion",
         children: [
           {
             id: "ysm-play",
             kind: "action",
             labelKey: "preview.play",
-            fallback: "播放",
             icon: "▶️",
             dockGroup: "motion",
             action: (): void => {

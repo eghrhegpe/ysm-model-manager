@@ -410,7 +410,6 @@ export function packMenuItems(o: PackMenuItemsOpts): PreviewMenuNode[] {
       id: "pack-cubes-field",
       kind: "field",
       labelKey: "preview.stats.cubes",
-      fallback: "立方体(Cubes)",
       value: o.elementCount,
       dockGroup: "stats",
     });
@@ -425,7 +424,6 @@ export function packMenuItems(o: PackMenuItemsOpts): PreviewMenuNode[] {
       id: "pack-textures-title",
       kind: "sectionTitle",
       labelKey: "preview.pack.textures",
-      fallback: "专属纹理",
       dockGroup: "stats",
     });
     let texIdx = 0;
@@ -435,7 +433,6 @@ export function packMenuItems(o: PackMenuItemsOpts): PreviewMenuNode[] {
         id: `pack-tex-${texIdx++}`,
         kind: "row",
         labelKey: label,
-        fallback: label,
         value: t("preview.pack.textureFaces", { count: faceCount, entry }),
         dockGroup: "stats",
       });

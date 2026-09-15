@@ -46,14 +46,12 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       id: "mmd-model-name",
       kind: "field",
       labelKey: "preview.nameLabel",
-      fallback: "名称",
       value: ctx.modelName,
     },
     {
       id: "mmd-model-overview",
       kind: "field",
       labelKey: "preview.modelOverview",
-      fallback: "模型",
       value: `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
     },
   );
@@ -76,7 +74,6 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       id: "mmd-model-embedded-name",
       kind: "field",
       labelKey: "preview.modelEmbeddedName",
-      fallback: "内嵌名",
       value: embeddedName,
     });
   }
@@ -86,7 +83,6 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       id: "mmd-model-comment",
       kind: "field",
       labelKey: "preview.modelComment",
-      fallback: "规约说明",
       value: comment,
     });
   }
@@ -112,7 +108,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
         id: "play-empty",
         kind: "field" as const,
         labelKey: "preview.playEmpty",
-        fallback: hint,
         value: hint,
       },
     ];
@@ -121,7 +116,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
         id: "play-reload",
         kind: "button" as const,
         labelKey: "preview.playReload",
-        fallback: "重新扫描",
         action: (): void => {
           bridge.requestReload?.();
         },
@@ -135,7 +129,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
       id: "play-toggle",
       kind: "toggle" as const,
       labelKey: "preview.mmdPlay",
-      fallback: "播放",
       control: {
         get: (): boolean => bridge.isPlaying(),
         set: (): void => {
@@ -149,7 +142,6 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
       id: "play-select",
       kind: "select" as const,
       labelKey: "preview.mmdMotion",
-      fallback: "动作",
       control: {
         options: bridge.clips.map((c, i) => ({ value: String(i), label: c.label })),
         get: (): string => String(bridge.currentIndex()),
@@ -163,8 +155,8 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
     nodes.push({
       id: "play-dir",
       kind: "field" as const,
-      fallback: `动作库: ${bridge.animDir}`,
-      value: `动作库: ${bridge.animDir}`, // [doc:adr-126-p5] rmAppendField 渲染 value 不读 fallback
+      label: `动作库: ${bridge.animDir}`,
+      value: `动作库: ${bridge.animDir}`,
     });
   }
   return nodes;

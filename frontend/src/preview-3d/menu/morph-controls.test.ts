@@ -13,12 +13,12 @@ function makeMesh(): MorphMeshLike {
 }
 
 describe("morphNodes（声明式 toggle 节点）", () => {
-  it("每表情一个 toggle 节点，id 稳定，fallback = 表情名", () => {
+  it("每表情一个 toggle 节点，id 稳定，label = 表情名", () => {
     const nodes = morphNodes(makeMesh());
     expect(nodes.length).toBe(3);
     expect(nodes.map((n) => n.id)).toEqual(["morph-微笑", "morph-怒", "morph-哀"]);
     expect(nodes.every((n) => n.kind === "toggle")).toBe(true);
-    expect(nodes[0].fallback).toBe("微笑");
+    expect(nodes[0].label).toBe("微笑");
     // 无 labelKey（动态名不走 i18n）
     expect(nodes[0].labelKey).toBeUndefined();
   });

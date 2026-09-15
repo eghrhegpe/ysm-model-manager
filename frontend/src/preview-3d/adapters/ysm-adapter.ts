@@ -732,7 +732,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       id: "model",
       icon: "🧍",
       labelKey: "preview.modelInfo",
-      fallback: "模型",
       kind: "panel",
       dockGroup: "model",
       // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 优先查 schema-registry 的
@@ -749,7 +748,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       id: "shot",
       icon: "📷",
       labelKey: "preview.screenshot",
-      fallback: "截图",
       kind: "panel",
       dockGroup: "model",
       // [doc:adr-126-p4-b-2] 面板内容声明式化：children = shotNodes 纯数据节点（经 panels 注入，
@@ -770,7 +768,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       id: "ysm-play",
       icon: "▶️",
       labelKey: "preview.mmdPlay",
-      fallback: "播放",
       kind: "panel",
       dockGroup: "motion",
       // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
@@ -782,7 +779,6 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       id: "perception",
       icon: "👁️",
       labelKey: "preview.perception",
-      fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)

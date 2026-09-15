@@ -160,7 +160,6 @@ export function modelDetailView(
             id: "preview-role-tools",
             kind: "folder",
             labelKey: "preview.roleToolsSection",
-            fallback: "工具",
             defaultOpen: true,
             children: toolItems,
           });

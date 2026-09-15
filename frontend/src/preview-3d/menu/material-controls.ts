@@ -23,7 +23,6 @@ export function materialNodes(bridge: MaterialBridgeLike): PreviewMenuNode[] {
         id: "mat-empty",
         kind: "field" as const,
         labelKey: "preview.noMaterial",
-        fallback: "（无材质）",
         value: "",
       },
     ];
@@ -32,7 +31,6 @@ export function materialNodes(bridge: MaterialBridgeLike): PreviewMenuNode[] {
     id: `mat-${it.index}`,
     kind: "material-row" as const,
     labelKey: it.name,
-    fallback: it.name,
     eye: {
       get: () => bridge.getDetail(it.index)?.visible ?? true,
       set: (v: boolean) => bridge.setVisible(it.index, v),

@@ -295,7 +295,6 @@ beforeEach(() => {
     id: "bones",
     icon: "🦴",
     labelKey: "preview.section.bones",
-    fallback: "骨骼",
     kind: "panel" as const,
     dockGroup: "motion" as const,
   }));
@@ -477,7 +476,7 @@ type MenuItemShape = {
   kind: string;
   dockGroup?: string;
   schemaId?: string;
-  children?: Array<{ id: string; kind: string; fallback?: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }>;
+  children?: Array<{ id: string; kind: string; label?: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }>;
 };
 
 function directMenuOpts(over: Partial<Parameters<typeof ysmMenuItems>[0]> = {}) {
@@ -519,7 +518,7 @@ describe("ysmMenuItems 表契约", () => {
 
   it("shot 项 children = panels.shotNodes 注入产物；无 panels → 空 children（渲染退化 no-op 安全）", () => {
     const shotNodes = vi.fn(() => [
-      { id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "当前" },
+      { id: "ysm-shot-current", kind: "button" as const, labelKey: "x" },
     ]);
     const items = ysmMenuItems(directMenuOpts({ panels: { shotNodes } }));
     const shot = items.find((i) => i.id === "shot") as MenuItemShape;
@@ -563,7 +562,7 @@ describe("ysmMenuItems 表契约", () => {
       directMenuOpts({
         perception: {
           state,
-          caps: [{ id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" }],
+          caps: [{ id: "breath", labelKey: "preview.perceptionBreath" }],
         },
       }),
     );

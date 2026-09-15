@@ -83,6 +83,9 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
+  // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
+  // 本闸管「样式值是否走了令牌」。全量模式不传 --files（全库扫描 + 基线比对）。
+  { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt" },
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
   { tool: "check-android-unavailable.ts", blockPolicy: "hard" },
@@ -135,6 +138,17 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
+  // 设计令牌守规（2026-09 接线）：此前**只挂 pre-commit**，pre-push / CI 均无——
+  // 而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI --static 模式的
+  // 立项目的正是补这一层，见 pre-push-gate.ts 的 staticMode 注释）。现补第二重防线。
+  //
+  // blockPolicy: debt —— 本闸是**基线比对 + 增量**模式（--baseline 只拦新增，
+  // 存量 128 条在 scripts/baseline/design-tokens-baseline.json 放行），与 check-complexity
+  // 等同属「全库阈值 + 存量债」档，按上方 2026-09-13 的准入判据（「不存在存量债冒充」才可
+  // hard）应记 debt。待存量清空、基线归零后可单独升 hard。
+  // scopedFiles: true —— 脚本已 import _lib/changed-scope.ts 并接 --files（准入条件满足），
+  // 由 tests/test_gate_config.ts 的 scopedFiles 契约断言兜底。
+  { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt", scopedFiles: true },
   // ── 三档位阈值扫描器（2026-09-13 接线）──
   // 此前是「无守护债务」：仓库 32 个 check-*.ts 中这 3 个无任何自动化入口，只能手动跑
   // （实证：views 域 10 个 🟥 复杂度档长期无人拦，见 pre_push_gate.md 门禁覆盖边界）。

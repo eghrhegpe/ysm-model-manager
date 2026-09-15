@@ -389,11 +389,13 @@ if [ "${YSM_SKIP_BIOME_LINES:-0}" != "1" ] && command -v node >/dev/null 2>&1; t
 fi
 
 # ── 硬阻断③（exit 1，非提示）：设计令牌「只减不增」闸 ──
-# 依据：docs/UI-Design.md 明文禁止硬编码 font-size / border-radius / 颜色；
+# 依据：docs/UI-Design.md 明文禁止硬编码 font-size / border-radius / 颜色 / 阴影 / 过渡时长；
 #   emoji 图标应走 utils/icon 的 SVG 体系（跨平台渲染与主题一致性）。
-# 策略：--baseline 只拦「本次新增」违规（存量 428 条记在 scripts/baseline/
-#   design-tokens-baseline.json，不阻塞提交）——新代码不得再欠设计债。
-# 防 --no-verify 绕过：与 biome 行级闸同构，挂在钩子里而非仅 pre-push。
+# 策略：--baseline 只拦「本次新增」违规（存量条数见 scripts/baseline/
+#   design-tokens-baseline.json 的 count 字段，刻意不在此写死——数字会漂移），
+#   不阻塞提交——新代码不得再欠设计债。
+# 防 --no-verify 绕过：与 biome 行级闸同构，挂在钩子里而非仅 pre-push；
+#   另有第二重防线 = gate-config.ts 的 static 清单（pre-push / CI --static）。
 # 清债后收缩基线：node scripts/check-design-tokens.ts --update-baseline
 # 逃生阀：YSM_SKIP_DESIGN_TOKENS=1（与另两段解耦，命中即留痕）
 if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" = "1" ] && command -v node >/dev/null 2>&1; then

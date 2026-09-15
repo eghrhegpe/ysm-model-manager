@@ -36,8 +36,8 @@ import {
   suggestToken,
   TOKEN_PX_BASELINE,
 } from "../scripts/_lib/design-tokens.ts";
-import { walk } from "../scripts/_lib/scan-files.ts";
 import { allIconNames } from "../scripts/_lib/icon-map.ts";
+import { walk } from "../scripts/_lib/scan-files.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
@@ -254,10 +254,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 
   // **变体选择符保真**：`♻️`（U+267B U+FE0F）须整体保留，不能截成裸 `♻`
   // （曾因把 FE0F 放进 + 字符类而丢失变体；biome noMisleadingCharacterClass 亦告警）
-  const vs = findEmojiIconViolations(
-    `<button class="a">♻️ ' + t("recycle.tab") + "</button>"`,
-    1,
-  );
+  const vs = findEmojiIconViolations(`<button class="a">♻️ ' + t("recycle.tab") + "</button>"`, 1);
   assert.equal(vs.length, 1, "VS16 序列应命中");
   assert.equal(vs[0]!.snippet, "♻️", "变体选择符应保留完整字形");
 
@@ -397,7 +394,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 {
   // 为什么锁：emoji 债的价值全在「能否机械收敛」。若建议丢失，275 处 UI chrome
   // 又退回「一堆字形」，AI 只能靠猜——本闸就从「可收债清单」退化成「计数器」。
-  const hits = findEmojiIconViolations('<div>⚠️ ${msg}</div>', 1);
+  const hits = findEmojiIconViolations("<div>⚠️ ${msg}</div>", 1);
   assert.equal(hits.length, 1, "⚠️ 应命中 1 处");
   assert.equal(
     hits[0]!.suggestion,
@@ -406,7 +403,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   );
 
   // 未收录字形：命中但建议为 null（宁可不建议，不猜错）
-  const unmapped = findEmojiIconViolations('<div>🦄 ${msg}</div>', 1);
+  const unmapped = findEmojiIconViolations("<div>🦄 ${msg}</div>", 1);
   assert.equal(unmapped.length, 1, "未收录 emoji 仍应计入债（它确实是不受控图标）");
   assert.equal(unmapped[0]!.suggestion, null, "未收录字形不应瞎给建议");
 
@@ -420,6 +417,109 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     );
   }
   console.log("  ✓ emoji 建议: 附语义图标名（⚠️ → UI_ICONS.warning），未收录给 null");
+}
+
+// ── 11. box-shadow / transition 判定（2026-09 补：UI-Design.md §7/§7.1 的漏网面）──
+{
+  // 为什么补：UI-Design.md §7.1 明文「所有 box-shadow 必须使用 --shadow-*」、
+  // §7 明文「所有 transition 时长必须使用 --tr-*」，但判定层原只覆盖
+  // font-size/radius/color/emoji 四类——这两条规范长期「有规范无断言」。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // ① 与令牌同值 → 命中且给建议（含书写形态归一：rgba .25 vs 0.25）
+  const eq = findStyleAttrViolations(".x { box-shadow: 0 8px 32px rgba(0,0,0,.25); }", 1, tokens);
+  assert.equal(eq.length, 1, "与 --shadow-xl 同值的阴影应命中");
+  assert.equal(eq[0]!.kind, "css-shadow", "种类应为 css-shadow");
+  assert.equal(eq[0]!.suggestion, "--shadow-xl", "应建议 --shadow-xl");
+
+  // ② 非令牌阴影 → **不报**（核心防噪声口径：这些是设计意图，不是债）
+  for (const v of [
+    "0 4px 12px rgba(0,0,0,.3)", // 无对应令牌的浮层阴影
+    "0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent)", // 焦点环
+    "0 8px 24px rgba(0,0,0,.5)", // 比 --shadow-xl 更重的浮层
+    "var(--shadow-lg)", // 已是令牌形态
+    "none",
+  ]) {
+    const r = findStyleAttrViolations(`.x { box-shadow: ${v}; }`, 1, tokens);
+    assert.equal(r.length, 0, `非令牌阴影不应报（防噪声）：${v}`);
+  }
+
+  // ③ transition：时长与 --tr-* 相等即命中
+  const t1 = findStyleAttrViolations(".x { transition: background .12s ease; }", 1, tokens);
+  assert.equal(t1[0]?.kind, "css-transition", "0.12s 应命中 css-transition");
+  assert.equal(t1[0]?.suggestion, "--tr-fast", ".12s 应建议 --tr-fast");
+  assert.equal(
+    findStyleAttrViolations(".x { transition: transform .25s; }", 1, tokens)[0]?.suggestion,
+    "--tr-enter",
+    ".25s 应建议 --tr-enter",
+  );
+  // 无令牌对应的时长 → 不报
+  assert.equal(
+    findStyleAttrViolations(".x { transition: width 0.2s; }", 1, tokens).length,
+    0,
+    "0.2s 无对应 --tr-* → 不报",
+  );
+
+  // ④ 两类归 ERROR 档（与字号/圆角同构：判定条件是「与令牌等价」，无语义猜测空间）。
+  //    此处只锁判定层产出非空，CLI 的分档由 check-design-tokens 的 ERROR_KINDS 负责。
+  assert.ok(
+    findStyleAttrViolations(".x{box-shadow:0 8px 32px rgba(0,0,0,.25);}", 1, tokens).length > 0,
+    "压缩写法（无空格）也应命中",
+  );
+  console.log("  ✓ box-shadow/transition: 同令牌值命中并给建议；非令牌值沉默（防噪声）");
+}
+
+// ── 12. 自定义属性名尾撞车回归锁（--fix 曾静默改写令牌定义）──
+{
+  // 踩坑记录（2026-09 实测触发）：朴素正则 `/font-size\s*:\s*(\d+)px/` 无属性名左边界，
+  // 会匹配 `--uih-section-title-font-size: 11px;` 这类**自定义属性定义**。
+  // 危害不止于假阳性——`--fix` 会真的把它改写成 `var(--fs-sm)`，而 `--uih-*` 前缀的
+  // 存在意义正是「隔离于 ysm 全局主题令牌」（见 components-styles.ts 头注），
+  // 改写即破坏隔离 = 自动修复造成的静默语义损坏。实测已在 components-styles.ts 上
+  // 真实发生一次，靠人工 diff 复核才发现。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  for (const line of [
+    "  --uih-section-title-font-size: 11px;",
+    "  --my-font-size: 13px;",
+    "  --foo-border-radius: 6px;",
+  ]) {
+    assert.equal(
+      findStyleAttrViolations(line, 1, tokens).length,
+      0,
+      `自定义属性定义不应被判为违规：${line}`,
+    );
+    assert.equal(
+      fixLineTokens(line, tokens).text,
+      line,
+      `自定义属性定义不应被 --fix 改写：${line}`,
+    );
+  }
+
+  // 同行的真属性仍须被抓到（防「一刀切不匹配」的假修复）
+  const mixed = ".x { --uih-font-size: 11px; font-size: 13px; }";
+  const hits = findStyleAttrViolations(mixed, 1, tokens);
+  assert.equal(hits.length, 1, "同行内真 font-size 应命中，自定义属性不计入");
+  assert.equal(hits[0]!.suggestion, "--fs-md", "真属性应仍给正确建议");
+  const fixed = fixLineTokens(mixed, tokens).text;
+  assert.ok(fixed.includes("--uih-font-size: 11px"), "自定义属性须原样保留");
+  assert.ok(fixed.includes("font-size:var(--fs-md)"), "真属性须被令牌化");
+  console.log("  ✓ 属性左边界: --x-font-size 不再误判/误改；同行真属性仍命中");
+}
+
+// ── 13. box-shadow 自动修复：值等价 + 幂等 ──────────────
+{
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+  const src = ".x { box-shadow: 0 8px 32px rgba(0,0,0,.25); }";
+  const once = fixLineTokens(src, tokens);
+  assert.ok(once.text.includes("box-shadow:var(--shadow-xl)"), "应替换为 var(--shadow-xl)");
+  assert.equal(once.edits.length, 1, "应记账 1 处");
+  // 幂等：再跑一次不应变化（var() 内不重复替换）
+  assert.equal(fixLineTokens(once.text, tokens).text, once.text, "--fix 必须幂等");
+  // 非令牌阴影不动
+  const bespoke = ".x { box-shadow: 0 4px 12px rgba(0,0,0,.3); }";
+  assert.equal(fixLineTokens(bespoke, tokens).text, bespoke, "非令牌阴影不得被改写");
+  console.log("  ✓ box-shadow --fix: 值等价替换 + 幂等 + 非令牌不碰");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

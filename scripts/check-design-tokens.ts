@@ -6,14 +6,16 @@
  *       parse-args.ts}；无外部工具依赖（纯文本扫描）。
  *
  * 为什么需要这个闸（补的是「横向统计盲区」）：
- *   `docs/UI-Design.md`（918 行）是项目唯一 UI 规范，明文写着「禁止硬编码
+ *   `docs/UI-Design.md` 是项目唯一 UI 规范，明文写着「禁止硬编码
  *   font-size: Npx」「禁止硬编码 border-radius」「永远不做 color: #cdd6f4 之类的硬编码」。
- *   但**规范长期无机器守护**，实测（本脚本全仓扫描，520 文件）：
- *     硬编码字号 159 处（内联 86 + CSS 块 73）/ 硬编码圆角 116 处 /
- *     硬编码颜色 39 处 / emoji 当图标 331 处，合计 645 处、涉 71 个文件。
- *   同一时刻 `var(--fs-*)` 325 处、`var(--radius-*)` 91 处**是合规的**——即
- *   「体系与野路子并存」，一半守规一半绕过。这比没规范更危险：切主题 / 调 --fs-scale
+ *   但**规范长期无机器守护**：立项时全仓扫描即发现硬编码字号/圆角/颜色与 emoji 图标
+ *   合计数百处、涉数十个文件，而同一时刻 `var(--fs-*)` / `var(--radius-*)` 已大量合规——
+ *   即「体系与野路子并存」，一半守规一半绕过。这比没规范更危险：切主题 / 调 --fs-scale
  *   时会出现「部分跟随、部分不跟随」的割裂，且因无度量而无人知晓债有多大。
+ *
+ *   ⚠️ 具体条数**刻意不在此写死**（ADR-162 去行号/去计数精神：数字会漂移且无人维护）。
+ *   实况请跑 `node scripts/check-design-tokens.ts`，权威基线数见
+ *   `scripts/baseline/design-tokens-baseline.json` 的 `count`。
  *
  *   历次三子代理锐评（架构/UIUX/3D）均未发现此项——a11y 是标准清单项，而
  *   「令牌失守」需要**跨文件横向统计**才能看见，不在任何单点审查的视野里。
@@ -21,8 +23,15 @@
  * 检查项（均对应 UI-Design.md 明文规则，不自造规则）：
  *   [ERROR] font-size:Npx 硬编码（内联或 CSS 块）→ 应走 var(--fs-*)
  *   [ERROR] border-radius:Npx 硬编码            → 应走 var(--radius-*)
+ *   [ERROR] box-shadow 与某 --shadow-* 完全同值 → 应走 var(--shadow-*)（2026-09 补）
+ *   [ERROR] transition 时长与某 --tr-* 相等     → 应走 var(--tr-*)（2026-09 补）
  *   [WARN]  硬编码颜色（内联或 CSS 块，中性色豁免）→ 应走语义色 token
  *   [WARN]  emoji 当图标                        → 应走 utils/icon 的 SVG 体系
+ *
+ * ⚠️ box-shadow / transition 两类口径**刻意极窄**：仅报「与令牌等价」的写法。
+ *   非令牌阴影（焦点环 color-mix、比 --shadow-xl 更重的浮层阴影）是设计意图，
+ *   报即噪声——详见 _lib/design-tokens.ts|SHADOW_TOKEN_VALUES 的注释。
+ *   这两类补的是 UI-Design.md §7/§7.1 明文规则长期「有规范无断言」的漏网面。
  *
  * 输出亮点：**带令牌建议**。`font-size:13px` → 提示改用 `var(--fs-md)`；
  *   `border-radius:6px` → `var(--radius-md)`。建议只在「令牌基准 px 值与硬编码值精确
@@ -47,7 +56,9 @@
  *
  * 逃生阀：YSM_SKIP_DESIGN_TOKENS=1。
  *
- * 门禁接线（2026-09）：pre-commit 挂 `--baseline`（只拦新增，存量 440 处放行）。
+ * 门禁接线（2026-09）：pre-commit 挂 `--baseline`（只拦新增，存量放行）；
+ *   2026-09 补第二重防线——`_lib/gate-config.ts` 的 FRONTEND/ALL_STATIC_TOOLS 各挂一条
+ *   （pre-push + CI --static），堵住「`git commit --no-verify` 一条命令绕过」的单点。
  *   「只减不增」策略——存量债不阻塞提交，但新代码不得再欠；
  *   清理后跑 --update-baseline 收缩基线，债务只降不升。
  *
@@ -93,7 +104,7 @@ const TOP_N = Number(args.top ?? 15) || 15;
 /**
  * 基线文件（「只减不增」策略）。
  *
- * 为什么需要：存量债 440 处无法一次清完，但**新代码不该再欠**。基线记录当前债务集，
+ * 为什么需要：存量债无法一次清完，但**新代码不该再欠**。基线记录当前债务集，
  * 门禁只拦「新增」违规——与 check-redlines / check-deadcode-baseline 同构。
  *
  * 键格式 `file:line:kind`：行号入键意味着**改动行会移动行号 → 该条被当作新增**。
@@ -274,13 +285,20 @@ for (const f of files) {
 reports.sort((a, b) => b.violations.length - a.violations.length);
 const total = reports.reduce((n, r) => n + r.violations.length, 0);
 
-// ERROR 类 = 明文「禁止」的硬编码字号/圆角；WARN 类 = 内联颜色 / emoji 图标
+// ERROR 类 = 明文「禁止」的硬编码字号/圆角/阴影/过渡时长；
+// WARN 类 = 内联颜色 / emoji 图标（语义映射需人工判断，机器判不了）。
+// css-shadow / css-transition 归 ERROR 的理由：与字号圆角同构——判定条件是「与令牌
+// 完全同值」（见 _lib/design-tokens.ts|suggestShadowToken），即**等价替换**，
+// 不存在语义猜测空间，故与 font-size/radius 同档。
 const ERROR_KINDS: DesignViolationKind[] = [
   "inline-style-font-size",
   "inline-style-radius",
   "css-font-size",
   "css-radius",
-];const errorCount = ERROR_KINDS.reduce((n, k) => n + (kindCounts[k] ?? 0), 0);
+  "css-shadow",
+  "css-transition",
+];
+const errorCount = ERROR_KINDS.reduce((n, k) => n + (kindCounts[k] ?? 0), 0);
 const warnCount = total - errorCount;
 // ── 基线比对（「只减不增」）：只拦本次新增违规，存量债放行 ──
 const allViolationKeys: string[] = reports.flatMap((r) =>
@@ -289,9 +307,10 @@ const allViolationKeys: string[] = reports.flatMap((r) =>
 
 if (BASELINE_MODE) {
   if (UPDATE_BASELINE) {
-    // 去重后入盘：一行可含同类多处违规（如同一行两个 emoji），键相同 → Set 收敛。
-    // count 必须报**去重后**的数量，否则基线自称 440、比对时报 428，会被误读成
-    // 「有 12 条违规凭空消失」（实测踩过，查了一遍才发现是重复键而非漏检）。
+    // 去重后入盘：一行可含同类多处违规（如同一行两个 emoji，或压缩成单行的
+    // components-styles.ts 一行十个 transition），键相同 → Set 收敛。
+    // count 必须报**去重后**的数量，否则基线自称 N、比对时报 M<N，会被误读成
+    // 「有若干条违规凭空消失」（实测踩过，查了一遍才发现是重复键而非漏检）。
     const uniqueKeys = [...new Set(allViolationKeys)].sort();
     fs.mkdirSync(path.dirname(BASELINE_FILE), { recursive: true });
     fs.writeFileSync(
@@ -356,13 +375,17 @@ if (BASELINE_MODE) {
   console.log(`基线比对：当前 ${currentSet.size} / 基线 ${baseSet.size}`);
   console.log(`新增违规：${added.length}    已清理：${gone.length}`);
   if (gone.length > 0 && added.length === 0) {
-    console.log(`ℹ 债务减少 ${gone.length} 条——建议 node scripts/check-design-tokens.ts --update-baseline 收缩基线`);
+    console.log(
+      `ℹ 债务减少 ${gone.length} 条——建议 node scripts/check-design-tokens.ts --update-baseline 收缩基线`,
+    );
   }
   if (added.length > 0) {
     console.error(`\n❌ 本次新增 ${added.length} 处设计令牌违规（存量债不拦）：`);
     for (const k of added.slice(0, 20)) console.error(`   ${k}`);
     if (added.length > 20) console.error(`   … 其余 ${added.length - 20} 条（--json 全量）`);
-    console.error("\n修复：硬编码字号/圆角改走 var(--fs-*)/var(--radius-*)（可跑 --fix 自动令牌化）；");
+    console.error(
+      "\n修复：硬编码字号/圆角改走 var(--fs-*)/var(--radius-*)（可跑 --fix 自动令牌化）；",
+    );
     console.error("      emoji 图标改走 utils/icon 的 SVG 体系。");
     process.exit(1);
   }
@@ -377,6 +400,8 @@ const KIND_LABEL: Record<string, string> = {
   "css-font-size": "CSS 块硬编码字号",
   "css-radius": "CSS 块硬编码圆角",
   "css-color": "CSS 块硬编码颜色",
+  "css-shadow": "硬编码阴影（同 --shadow-* 值）",
+  "css-transition": "硬编码过渡时长（同 --tr-* 时长）",
   "emoji-icon": "emoji 当图标",
 };
 
@@ -467,7 +492,9 @@ if (FIX_MODE) {
   if (fixApplied === 0) {
     console.log("🔧 --fix：无可机械替换项（无精确令牌对应，或均已令牌化）");
   } else {
-    console.log(`🔧 --fix：已替换 ${fixApplied} 处（${fixLog.length} 文件）——值等价，附加收益=跟随 --fs-scale`);
+    console.log(
+      `🔧 --fix：已替换 ${fixApplied} 处（${fixLog.length} 文件）——值等价，附加收益=跟随 --fs-scale`,
+    );
     for (const l of fixLog) {
       console.log(`   ${String(l.edits.length).padStart(4)}  ${l.file}`);
       for (const e of l.edits.slice(0, 3)) console.log(`          ${e.from} → ${e.to}`);

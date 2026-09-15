@@ -3,24 +3,25 @@
  *
  * 解决什么问题（为什么需要新闸）：
  *   `docs/UI-Design.md` 是项目唯一 UI 规范，明文规定「禁止硬编码 font-size / border-radius /
- *   内联 style / 硬编码颜色」。但规范**长期无机器守护**——实测（2026-09 全仓扫描）：
- *   - 内联 `style="..."`        471 处（views 域 445 处，其中 tpl-settings.ts 单文件 100 处）
- *   - 硬编码 `font-size: Npx`   222 处
- *   - 硬编码 `border-radius:Npx` 130 处
- *   而同一时刻 `var(--fs-*)` 325 处、`var(--radius-*)` 91 处**是正确写法的**。
- *   即：不是「体系没建立」，而是「体系与野路子并存」——一半代码守规、一半绕过。
+ *   内联 style / 硬编码颜色」。但规范**长期无机器守护**——立项时全仓扫描实测：
+ *   硬编码字号/圆角各上百处、内联 style 数百处，而同一时刻 `var(--fs-*)` / `var(--radius-*)`
+ *   已大量合规使用。即：不是「体系没建立」，而是「体系与野路子并存」——一半守规、一半绕过。
  *   这比完全没规范更危险：切主题/改 --fs-scale 时出现「部分跟随、部分不跟随」的割裂，
  *   且因为无度量，没人知道债有多大（三子代理历次锐评均未发现，属横向统计盲区）。
+ *
+ *   ⚠️ 具体存量条数**刻意不在此写死**——数字随收债漂移且无人维护（ADR-162 去行号精神）。
+ *   权威数字见 `scripts/baseline/design-tokens-baseline.json` 的 `count` 字段，
+ *   或随时 `node scripts/check-design-tokens.ts` 打印实况。
  *
  * 本模块只做**纯判定**（零 IO、零顶层副作用），CLI 与测试共用：
  *   - parseTokenMap      : variables.css 文本 → 令牌名→值 映射（含 px 等价换算）
  *   - suggestToken       : 硬编码值 → 建议替换的令牌名（值相等才建议，不瞎猜）
- *   - findStyleAttrViolations : 单行文本 → 内联 style / 硬编码字号圆角命中
+ *   - findStyleAttrViolations : 单行文本 → 内联 style / 硬编码字号圆角/阴影/过渡时长命中
  *   - findEmojiIconViolations : 单行文本 → emoji 当图标命中
  *
  * 设计原则（三条都是踩过的坑）：
  *   1. **不误伤存量**：本层只「发现」，不含阻断——是否拦由 CLI 的 --strict/基线策略决定。
- *      仓库存量债巨大（471+222+130），一上来就 hard 会阻塞全体提交。
+ *      仓库存量债巨大，一上来就 hard 会阻塞全体提交。
  *   2. **建议必须可信**：`suggestToken` 只在「令牌 px 值 == 硬编码值」时才给建议
  *      （如 6px→--radius-md、13px→--fs-md）。值不等时返回 null，宁可不说，不给错答案。
  *   3. **排除非 UI 代码**：注释行、测试文件、`coverage/` 构建产物、`upstream/` vendor
@@ -44,6 +45,8 @@ export type DesignViolationKind =
   | "css-font-size"
   | "css-radius"
   | "css-color"
+  | "css-shadow"
+  | "css-transition"
   | "emoji-icon";
 
 /** 单条命中。 */
@@ -96,6 +99,42 @@ export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
   "--radius-lg": 8,
   "--radius-xl": 10,
   "--radius-pill": 20,
+};
+
+/**
+ * `--shadow-*` 令牌的**归一化值**（供 box-shadow 精确比对）。
+ *
+ * 归一化口径见 `normalizeShadowValue`——把 `rgba(0,0,0,.25)` 与
+ * `rgba(0, 0, 0, 0.25)` 归到同一形态。值来自 `frontend/css/variables.css`。
+ *
+ * ⚠️ **只用于「精确相等才建议」的比对**，不做数值近似：实测全仓硬编码 box-shadow
+ * 里绝大多数是刻意的非令牌值（焦点环 `0 0 0 3px color-mix(...)`、比 `--shadow-xl`
+ * 更重的浮层阴影 `0 8px 24px rgba(0,0,0,.5)`）。对这些报违规＝把设计意图当债务，
+ * 属本模块注释里批判过的「自造规则」，故一律不报。仅「与某令牌完全同值」者报。
+ */
+export const SHADOW_TOKEN_VALUES: Readonly<Record<string, string>> = {
+  "--shadow-sm": "0 1px 3px rgba(0, 0, 0, 0.06)",
+  "--shadow-md": "0 2px 8px rgba(0, 0, 0, 0.1)",
+  "--shadow-lg": "0 4px 16px rgba(0, 0, 0, 0.15)",
+  "--shadow-xl": "0 8px 32px rgba(0, 0, 0, 0.25)",
+};
+
+/**
+ * `--tr-*` 令牌的**时长分量**（秒）→ 令牌名。
+ *
+ * 为什么只比时长分量、不比整条 transition：实测 transition 是复合值
+ * （`background .12s ease` / `all .15s ease` / `transform .2s cubic-bezier(...)`），
+ * 属性名与缓动函数千变万化，整值精确相等几乎永不命中（实测全仓 0 例），
+ * 而**时长**才是令牌真正约定的部分（`--tr-fast/normal/enter` 的差异就在时长与缓动）。
+ * 故口径：transition 里出现「与某令牌时长相等」的时长分量 → 提示改用该令牌。
+ *
+ * 取 0.12 / 0.15 / 0.25 三档（对应 --tr-fast / --tr-normal / --tr-enter）。
+ * 注意 `--tr-fast` 与 `--tr-normal` 的缓动同为 ease、仅时长不同，故按值即可区分。
+ */
+export const TRANSITION_TOKEN_DURATIONS: Readonly<Record<string, number>> = {
+  "--tr-fast": 0.12,
+  "--tr-normal": 0.15,
+  "--tr-enter": 0.25,
 };
 
 /**
@@ -153,6 +192,63 @@ export function suggestToken(
 }
 
 /**
+ * 阴影值归一化（供 box-shadow 与令牌精确比对）。
+ *
+ * 归一的只是**书写形态**，不含任何数值近似：
+ *   - 空白收敛：`0  1px   3px` → `0 1px 3px`
+ *   - 逗号后补空格：`rgba(0,0,0,.25)` → `rgba(0, 0, 0, .25)`
+ *   - alpha 前导零补齐：`.25` → `0.25`
+ * 归一后仍不相等者一律**不报**（见 SHADOW_TOKEN_VALUES 的注释：非令牌阴影是设计意图）。
+ */
+export function normalizeShadowValue(v: string): string {
+  return v
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/,\s*\.(\d)/g, ", 0.$1")
+    .replace(/\(\.(\d)/g, "(0.$1")
+    .toLowerCase();
+}
+
+/**
+ * 硬编码阴影值 → 建议令牌名（**归一化后精确相等才建议**，否则 null）。
+ *
+ * 与 `suggestToken` 同一哲学：建议错了比不建议更糟。故只认「与某 `--shadow-*`
+ * 完全同值」的写法，且要求该令牌真实存在于 variables.css。
+ */
+export function suggestShadowToken(value: string, tokenMap?: TokenRawMap | null): string | null {
+  const norm = normalizeShadowValue(value);
+  for (const [name, tokVal] of Object.entries(SHADOW_TOKEN_VALUES)) {
+    if (normalizeShadowValue(tokVal) !== norm) continue;
+    if (tokenMap && !tokenMap.has(name)) continue;
+    return name;
+  }
+  return null;
+}
+
+/**
+ * 硬编码 transition 值 → 建议令牌名（**时长分量与某令牌相等才建议**，否则 null）。
+ *
+ * 命中即返回该令牌；一条 transition 里多处时长等值只报一次（由调用方去重）。
+ */
+export function suggestTransitionToken(
+  value: string,
+  tokenMap?: TokenRawMap | null,
+): string | null {
+  // 取所有时长分量：0.12s / .12s / 120ms
+  for (const m of value.matchAll(/(\d*\.?\d+)(s|ms)\b/g)) {
+    const raw = Number(m[1]);
+    const secs = m[2] === "ms" ? raw / 1000 : raw;
+    for (const [name, dur] of Object.entries(TRANSITION_TOKEN_DURATIONS)) {
+      if (Math.abs(dur - secs) > 1e-6) continue;
+      if (tokenMap && !tokenMap.has(name)) continue;
+      return name;
+    }
+  }
+  return null;
+}
+
+/**
  * 是否为注释行（`//` 或块注释续行 `*`）。注释里的样式示例不算违规——
  * 实测全仓仅 1 处 `font-size:Npx` 落在注释里，但口径必须一开始就对，
  * 否则文档性注释会被反复误报。
@@ -166,6 +262,27 @@ export function isCommentLine(line: string): boolean {
 function clip(s: string, max = 120): string {
   const t = s.trim();
   return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
+
+/**
+ * 「真实 CSS 属性声明」正则工厂——**必须带属性名左边界**。
+ *
+ * 为什么需要（2026-09 实测踩坑）：朴素写法 `font-size\s*:\s*(\d+)px` 会匹配到
+ * **自定义属性名以该串结尾**的声明：
+ *     `--uih-section-title-font-size: 11px;`   ← 被误判成 font-size 属性
+ *     `--foo-border-radius: 6px;`              ← 被误判成 border-radius 属性
+ * 后果分两层：① 报告层假阳性（把令牌定义当违规）；② **--fix 层会真的改写令牌定义**
+ *     `--uih-section-title-font-size: 11px` → `--uih-section-title-font-size:var(--fs-sm)`
+ * 而 `--uih-*` 前缀的存在意义（见 components-styles.ts 头注）正是**隔离于 ysm 全局
+ * 主题令牌**，被改写即破坏该隔离——这是「自动修复」造成的静默语义损坏，比不修更糟。
+ * （实测该 bug 已在 components-styles.ts 上真实触发过一次。）
+ *
+ * 边界口径：属性名左侧不得是标识符字符或 `-`（用 `(?<![\w-])`），
+ * 这样 `--x-font-size:` 里 `font-size` 左侧是 `-` → 不匹配；
+ * 而 `.a{font-size:` / `;font-size:` / `{ font-size:` 左侧是 `{;` 或空白 → 匹配。
+ */
+export function propDeclRe(prop: string): RegExp {
+  return new RegExp(`(?<![\\w-])${prop}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`, "g");
 }
 
 /** UI-Design.md 文档与代码的数值漂移项。 */
@@ -233,12 +350,26 @@ export function fixLineTokens(
       return to;
     });
 
-  let text = apply(/font-size\s*:\s*(\d+(?:\.\d+)?)px/g, "font-size");
-  text = text.replace(/border-radius\s*:\s*(\d+(?:\.\d+)?)px/g, (match, px: string, offset: number) => {
+  let text = apply(propDeclRe("font-size"), "font-size");
+  text = text.replace(propDeclRe("border-radius"), (match, px: string, offset: number) => {
     if (inVar(offset)) return match;
     const token = suggestToken(Number(px), "border-radius", tokenMap);
     if (!token) return match;
     const to = `border-radius:var(${token})`;
+    edits.push({ from: match, to, count: 1 });
+    return to;
+  });
+
+  // box-shadow：值等价替换（归一化后与令牌完全同值才替换，故视觉零变化）。
+  // 不处理 transition：其时长藏在复合值里（`background .12s ease`），替换需重写整条
+  // 声明且属性/缓动各异，机械替换易改变语义（如把 `all .15s` 换成 `var(--tr-normal)`
+  // 会连缓动一起改）——按本模块「不猜测语义」原则留给人工。
+  text = text.replace(/box-shadow\s*:\s*([^;"'`]+)/g, (match, val: string, offset: number) => {
+    if (inVar(offset)) return match;
+    const v = val.trim();
+    const token = suggestShadowToken(v, tokenMap);
+    if (!token) return match;
+    const to = `box-shadow:var(${token})`;
     edits.push({ from: match, to, count: 1 });
     return to;
   });
@@ -351,7 +482,9 @@ export function findStyleAttrViolations(
   while ((sm = styleRe.exec(line)) !== null) inlineBodies.push(sm[2] ?? "");
 
   // ① font-size:Npx —— 内联与 CSS 块统一判定（规范对两者同等禁止）
-  const fsRe = /font-size\s*:\s*(\d+(?:\.\d+)?)px/g;
+  //    注意用 propDeclRe 取**属性名左边界**：否则 `--x-font-size: 11px` 这类
+  //    自定义属性定义会被误判（并会被 --fix 改写，见 propDeclRe 注释）。
+  const fsRe = propDeclRe("font-size");
   let fm: RegExpExecArray | null;
   while ((fm = fsRe.exec(line)) !== null) {
     const px = Number(fm[1]);
@@ -366,7 +499,7 @@ export function findStyleAttrViolations(
   }
 
   // ② border-radius:Npx
-  const brRe = /border-radius\s*:\s*(\d+(?:\.\d+)?)px/g;
+  const brRe = propDeclRe("border-radius");
   let bm: RegExpExecArray | null;
   while ((bm = brRe.exec(line)) !== null) {
     const px = Number(bm[1]);
@@ -422,6 +555,44 @@ export function findStyleAttrViolations(
     });
   }
 
+  // ⑤ 硬编码 box-shadow / transition（[gap 补齐 2026-09] UI-Design.md §7/§7.1 明文
+  //    「所有 box-shadow 必须使用 --shadow-*」「所有 transition 时长必须使用 --tr-*」，
+  //    但本模块原只覆盖 font-size/radius/color/emoji 四类——这两类**长期零守护**，
+  //    新代码写死阴影/时长不会被任何闸拦下，属「有规范无断言」的漏网面。
+  //
+  //    口径刻意**极窄**（这是本类不产生噪声的关键，勿放宽）：
+  //      - box-shadow：仅当归一化后与某 --shadow-* **完全同值**时报。非令牌阴影
+  //        （焦点环 color-mix、比 --shadow-xl 更重的浮层阴影）是设计意图，报即噪声。
+  //        实测全仓仅 1 处命中——正是「真债少而精」的预期形态。
+  //      - transition：时长分量与 --tr-* 相等即报（整值比对实测 0 命中，永不触发，
+  //        详见 TRANSITION_TOKEN_DURATIONS 注释）。
+  //    二者均只扫 CSS 文本（含内联 style 体与 CSS 块），故用 line 全文——与颜色判定
+  //    不同，此处不需要区分内外（规范对两者同等禁止，且 box-shadow 罕见于内联）。
+  for (const sm2 of line.matchAll(/box-shadow\s*:\s*([^;"'`]+)/g)) {
+    const v = (sm2[1] ?? "").trim();
+    if (!v || /^var\(/.test(v) || /^(none|inherit|initial|unset)$/.test(v)) continue;
+    const tok = suggestShadowToken(v, tokenMap);
+    if (!tok) continue; // 非令牌阴影：设计意图，不报（防噪声淹没真信号）
+    out.push({
+      kind: "css-shadow",
+      line: lineNo,
+      snippet: clip(`box-shadow:${v}`),
+      suggestion: tok,
+    });
+  }
+  for (const tm of line.matchAll(/transition\s*:\s*([^;"'`]+)/g)) {
+    const v = (tm[1] ?? "").trim();
+    if (!v || /^var\(/.test(v) || /^(none|inherit|initial|unset)$/.test(v)) continue;
+    const tok = suggestTransitionToken(v, tokenMap);
+    if (!tok) continue;
+    out.push({
+      kind: "css-transition",
+      line: lineNo,
+      snippet: clip(`transition:${v}`),
+      suggestion: tok,
+    });
+  }
+
   return out;
 }
 
@@ -436,8 +607,11 @@ export function isNeutralColor(v: string): boolean {
   const hex = /^#([0-9a-f]{3,8})$/.exec(s);
   if (hex?.[1]) {
     const h = hex[1];
-    const rgb = h.length >= 6 ? [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)] : h.slice(0, 3).split("");
-    const vals = rgb.map((x) => (x.length === 1 ? Number.parseInt(x + x, 16) : Number.parseInt(x, 16)));
+    const rgb =
+      h.length >= 6 ? [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)] : h.slice(0, 3).split("");
+    const vals = rgb.map((x) =>
+      x.length === 1 ? Number.parseInt(x + x, 16) : Number.parseInt(x, 16),
+    );
     return vals.every((x) => x === 0 || x === 255);
   }
   // rgb()/rgba()：三通道全 0 或全 255 视为中性（忽略 alpha）
@@ -489,7 +663,8 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
   // 关于 `\uFE0F`（变体选择符）与 ZWJ：它们是**组合字符**，写进 `+` 字符类会让正则
   // 语义模糊（biome noMisleadingCharacterClass 实测告警），且会把 `♻️` 匹配成孤立的
   // `♻`（丢失变体，显示成与源码不同的字形）。改为「图形字符 + 尾部组合符*」序列。
-  const GRAPHIC = "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}]";
+  const GRAPHIC =
+    "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}]";
   const COMBINING = "[\\u{FE0F}\\u{200D}]";
   const re = new RegExp(
     `(?:>|["'\`])\\s?(${GRAPHIC}${COMBINING}*(?:${GRAPHIC}${COMBINING}*)*)(?=\\s*["'\`]|\\s*<|\\s|$)`,

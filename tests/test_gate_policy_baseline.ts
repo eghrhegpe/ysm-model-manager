@@ -100,6 +100,10 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   "check-proc-adoption.ts": "debt",
   "check-lib-adoption.ts": "debt",
   "check-toast-duration.ts": "debt",
+  // 设计令牌守规（2026-09 接线）：基线比对 + 增量模式，存量 128 条债在
+  // scripts/baseline/design-tokens-baseline.json 放行——属「代码质量建议」类，
+  // 与 check-complexity/check-params 同档（全库阈值 + 存量债），故记 debt。
+  "check-design-tokens.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

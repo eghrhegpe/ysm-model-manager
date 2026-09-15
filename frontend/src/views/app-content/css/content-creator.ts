@@ -302,7 +302,7 @@ export const contentCreatorCSS: string = `
 
 /* ===== 创作者详情浮层 (cr-detail) ===== */
 .cr-detail-overlay { position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
-.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:20px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
+.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:20px;max-width:420px;width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
 .cr-detail-box { position:relative; }
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
 .cr-detail-name { font-size:16px;font-weight:700;color:var(--txt); }

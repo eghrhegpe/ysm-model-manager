@@ -91,6 +91,8 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🎮": "game",
   "🕹️": "joystick",
   "🧸": "model",
+  // 3D 菜单坞站「角色」组用 🧍（2026-09 迁移补：与 🧸 同指 model 语义）
+  "🧍": "model",
   "🦴": "bone",
   "🧱": "voxel",
   "🧊": "unknown",
@@ -104,6 +106,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🐙": "github",
   "🌐": "web",
   "🌍": "globe",
+  // 3D 菜单坞站「动作」组（2026-09 迁移补）
+  "💃": "motion",
+  "🎛️": "controls",
+  "🌫️": "fog",
   "🏠": "home",
   "🏆": "rank",
   "👤": "user",

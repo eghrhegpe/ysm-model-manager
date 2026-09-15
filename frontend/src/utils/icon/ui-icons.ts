@@ -110,6 +110,10 @@ export const UI_ICONS: Record<string, string> = {
   navigate: svg(
     '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
   ),
+  // 参数调节（「场景」坞站组：相机/灯光/阴影/后处理聚合）——三滑块即「可调参数」的通用隐喻
+  controls: svg(
+    '<line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/>',
+  ),
 
   // ── 内容/分类语义 ──
   folder: svg(
@@ -295,6 +299,14 @@ export const UI_ICONS: Record<string, string> = {
   ),
   recycle: svg(
     '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  ),
+  // 动作/动画（「动作」坞站组：骨骼动画与动作播放）——举臂人形，读作「舞动」
+  motion: svg(
+    '<circle cx="12" cy="4" r="2"/><path d="M12 6.5v6"/><path d="M12 8l-4-2"/><path d="M12 8l4-2"/><path d="M12 12.5l-3 7"/><path d="M12 12.5l3 7"/>',
+  ),
+  // 雾效（阴影/雾面板）——云 + 两道横线
+  fog: svg(
+    '<path d="M5.5 13h13a3.5 3.5 0 0 0 0-7 5.5 5.5 0 0 0-10.5-1.5A4 4 0 0 0 5.5 13z"/><line x1="4" y1="17" x2="20" y2="17"/><line x1="7" y1="21" x2="17" y2="21"/>',
   ),
   // ── 视图/模式 ──
   window: svg(

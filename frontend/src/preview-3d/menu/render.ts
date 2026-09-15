@@ -15,6 +15,7 @@ import {
   previewSnapshot,
   setStateValue,
 } from "@/preview-3d/state/preview-state.ts";
+import { applyIcon } from "@/utils/icon/resolve.ts";
 import {
   type CapControlView,
   renderCapColor,
@@ -348,7 +349,8 @@ function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSp
   if (node.icon) {
     const ic = document.createElement("span");
     ic.className = "slide-icon";
-    ic.textContent = node.icon;
+    // 语义名 → SVG；未迁的旧字形 → 文本兜底（统一入口见 utils/icon/resolve.ts）
+    applyIcon(ic, node.icon);
     row.appendChild(ic);
   }
   const lb = document.createElement("span");

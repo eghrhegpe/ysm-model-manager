@@ -80,6 +80,17 @@ describe("mountPreviewRootMenu", () => {
     expect(overlay.querySelector(`[data-testid="dock-motion"]`)).toBeNull();
   });
 
+  it("dock 按钮图标渲染为 SVG（ADR-238/245：语义名 → resolveIcon，非字形文本）", () => {
+    mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
+    for (const id of ["model", "scene", "settings"]) {
+      const btn = overlay.querySelector<HTMLElement>(`[data-testid="dock-${id}"]`);
+      const ic = btn?.querySelector(".preview-ic");
+      expect(ic?.querySelector("svg"), `dock-${id} 的图标应为 SVG`).not.toBeNull();
+      // 回归锁：图标位不得残留字形文本（emoji/符号）——迁移前此处是 "🧍"/"🎛️"/"⚙️"
+      expect(ic?.textContent ?? "").toBe("");
+    }
+  });
+
   it("selfMode → scene 组仍可见（lighting/shadow/postproc 已去 sharedOnly，self 模式亦可调）；model 组始终显示", () => {
     mountPreviewRootMenu(overlay, makeCtx({ selfMode: true }));
     expect(overlay.querySelector(`[data-testid="dock-model"]`)).not.toBeNull();

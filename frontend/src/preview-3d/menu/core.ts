@@ -17,6 +17,7 @@ import {
 } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
@@ -142,7 +143,7 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   row.dataset.testid = `preview-${node.id}`;
   if (node.danger) row.style.color = "#ff7b7b";
   const ic = document.createElement("span");
-  ic.textContent = node.icon ?? "";
+  applyIcon(ic, node.icon); // 语义名 → SVG；未迁的旧字形 → 文本兜底
   ic.className = "cm-row-icon";
   const lb = document.createElement("span");
   lb.textContent = tOf(node.labelKey ?? node.id);
@@ -450,7 +451,7 @@ function renderPreviewDock(
     // 进去叫加载角色」的语义错位；机器可读 data-dock-group 供测试/诊断
     btn.dataset.dockGroup = g.id;
     btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
-    btn.innerHTML = `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tOf(g.labelKey)}</span>`;
+    btn.innerHTML = `<span class="preview-ic">${resolveIcon(g.icon)}</span><span class="preview-dock-navlabel">${tOf(g.labelKey)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
       // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）；

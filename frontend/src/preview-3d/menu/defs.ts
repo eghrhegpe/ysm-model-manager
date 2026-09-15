@@ -46,19 +46,19 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
   // 原 fallback「模型」与落地标题「加载角色」错位——改「角色」按钮即面板，用户无转译歧义
   {
     id: "model",
-    icon: "🧍",
+    icon: "model",
     labelKey: "preview.groupModel",
     directToPanel: "roles",
   },
   // [ADR-241] 动态直达（依赖活跃角色详情，directToPanel 表达不了）——directViewKey 声明，
   // 工厂映射核心见 core.ts
-  { id: "motion", icon: "💃", labelKey: "preview.groupMotion", directViewKey: "motion" },
+  { id: "motion", icon: "motion", labelKey: "preview.groupMotion", directViewKey: "motion" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆
   // [ADR-241] 补显式 directToPanel（替代单 panel 推断；组内 core 固定仅 environment）
   {
     id: "env",
-    icon: "🌍",
+    icon: "globe",
     labelKey: "preview.groupEnv",
     directToPanel: "environment",
   },
@@ -66,7 +66,7 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
   // [ADR-241] rootView 显式声明走 renderMenu 组根视图（多 panel 聚合），取代 g.id!=="scene" 反向特判
   {
     id: "scene",
-    icon: "🎛️",
+    icon: "controls",
     labelKey: "preview.groupScene",
     rootView: true,
   },
@@ -75,7 +75,7 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
   // [ADR-241] 补显式 directToPanel（替代单 panel 推断；组内 core 固定仅 settings）
   {
     id: "settings",
-    icon: "⚙️",
+    icon: "settings",
     labelKey: "preview.groupSettings",
     directToPanel: "settings",
   },
@@ -91,7 +91,7 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
 export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
   {
     id: "roles",
-    icon: "🎭",
+    icon: "character",
     labelKey: "preview.roles",
     kind: "panel",
     /** 已加载角色列表（MikuMikuAR buildModelRootItems 移植）：焦点切换 + 详情 + 工具 + 加载入口 */
@@ -99,7 +99,7 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
   },
   {
     id: "environment",
-    icon: "🌍",
+    icon: "globe",
     labelKey: "preview.environment",
     kind: "panel",
     dockGroup: "env",
@@ -109,7 +109,7 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
   },
   {
     id: "camera",
-    icon: "🎥",
+    icon: "video",
     labelKey: "preview.cameraView",
     kind: "panel",
     dockGroup: "scene",
@@ -120,21 +120,21 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
   },
   {
     id: "lighting",
-    icon: "💡",
+    icon: "hint",
     labelKey: "preview.lighting",
     kind: "panel",
     dockGroup: "scene",
   },
   {
     id: "shadow",
-    icon: "🌫️",
+    icon: "fog",
     labelKey: "preview.shadow",
     kind: "panel",
     dockGroup: "scene",
   },
   {
     id: "postproc",
-    icon: "🎇",
+    icon: "sparkle",
     labelKey: "preview.postprocessing",
     kind: "panel",
     dockGroup: "scene",
@@ -144,7 +144,7 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
   // fillSettings 容错：cap 不存在时跳过该分组，不渲染空 section。
   {
     id: "settings",
-    icon: "⚙️",
+    icon: "settings",
     labelKey: "preview.settings",
     kind: "panel",
     dockGroup: "settings",

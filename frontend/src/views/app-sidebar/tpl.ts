@@ -31,24 +31,20 @@ export function headerHTML(): string {
     '<input type="checkbox" id="sb-select-all" data-testid="sidebar-select-all" style="cursor:pointer"> ' +
     t("common.selectAll") +
     "</label>" +
-    '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-push-selected" data-testid="sidebar-push" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">' +
-    UI_ICONS.upload +
-    " " +
-    t("sidebar.pushSelected") +
-    " ▾</button>" +
-    '<div class="dd-menu" id="sidebar-push-menu" data-testid="sidebar-push-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
-    typeMenuItemsHTML() +
-    "</div></div>" +
-    '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    '<button class="sidebar-pull-selected" data-testid="sidebar-pull" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">' +
-    UI_ICONS.download +
-    " " +
-    t("sidebar.pullSelected") +
-    " ▾</button>" +
-    '<div class="dd-menu" id="sidebar-pull-menu" data-testid="sidebar-pull-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">' +
-    typeMenuItemsHTML() +
-    "</div></div>" +
+    syncDropdownHTML({
+      icon: UI_ICONS.upload,
+      label: t("sidebar.pushSelected"),
+      theme: "accent",
+      testid: "sidebar-push",
+      menuTestid: "sidebar-push-menu",
+    }) +
+    syncDropdownHTML({
+      icon: UI_ICONS.download,
+      label: t("sidebar.pullSelected"),
+      theme: "sm-optional",
+      testid: "sidebar-pull",
+      menuTestid: "sidebar-pull-menu",
+    }) +
     "</div>"
   );
 }
@@ -84,6 +80,33 @@ const SYNC_TYPE_MENU: ReadonlyArray<{
     labelKey: "rtype.litematic",
   },
 ];
+
+/** 推送/拉取下拉容器（dd-wrap + 触发按钮 + dd-menu）。参数化按钮图标/文案/主题色/testid，
+ * 收敛 headerHTML 里两处手写重复；菜单项由 typeMenuItemsHTML() 统一生成（SYNC_TYPE_MENU 驱动）。 */
+interface SyncDropdownOpts {
+  icon: string;
+  label: string;
+  /** CSS 变量名（不含 `--` 前缀）：accent / sm-optional，切按钮边框/文字主题色 */
+  theme: "accent" | "sm-optional";
+  testid: string;
+  menuTestid: string;
+}
+function syncDropdownHTML(o: SyncDropdownOpts): string {
+  const theme = `var(--${o.theme})`;
+  const cls = o.theme === "accent" ? "sidebar-push-selected" : "sidebar-pull-selected";
+  const menuId = o.menuTestid;
+  return (
+    '<div class="dd-wrap" style="position:relative;display:inline-block">' +
+    `<button class="${cls}" data-testid="${o.testid}" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid ${theme};background:transparent;color:${theme};cursor:pointer;font-size:var(--fs-btn-tool);font-family:inherit">` +
+    o.icon +
+    " " +
+    o.label +
+    " ▾</button>" +
+    `<div class="dd-menu" id="${menuId}" data-testid="${o.menuTestid}" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">` +
+    typeMenuItemsHTML() +
+    "</div></div>"
+  );
+}
 
 /** 推送/拉取下拉菜单共用的资源类型选项（两组共用，防 jscpd 重复） */
 function typeMenuItemsHTML(): string {

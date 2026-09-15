@@ -112,7 +112,9 @@ VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专�
 - `resolveVmdBindings(present, rig)` → `VmdBindingPlan`（诊断面板与测试直读）。
 - `rewriteVmdTracks(clip, plan, scale)` → `{ tracks, droppedTracks, ikTracks }`。
 - `createVrmFootIKController(boneTree, semanticBones)` → `{ apply(timeSeconds, targets), dispose() }`。
-- 接入点：`vrm-adapter.ts` 的 `loadMotionClips()`；每帧在 `update()` 中**晚于** `vrm.update(dt)` 调 `vrmFootIK.apply(motionAction.time, clip.footIK)`。
+- 接入点：`vrm-adapter.ts` 的 `loadMotionClips()`；每帧在 `update()` 中**晚于** `vrm.update(dt)` 调 `vrmFootIK.apply(action.time, clip.footIK)`。
+- **采样源不变量（review 64c24cf3e P1 修复，1dc31247d）**：足 IK 的 targets 必须按 **live action 实播 clip** 反查（`motionClips.find(c => c.clip === motionClipOf(action))`），而非独立维护的索引——索引与 mixer 实际播放脱钩时（`select` 切动作后），身体 FK 与腿 IK 会来自不同动作，脚底打滑。`VrmMotionState.motionIdx` 已删除（脱钩根源）。
+- **three r185 API 注**：`AnimationAction` 公开 `.clip` getter 已移除，clip 存于私有 `action._clip`；本仓统一经 `motionClipOf()`（vrm-adapter.ts）读取，勿直接散落 `_clip` 访问。
 
 ## 与其他子系统关系
 

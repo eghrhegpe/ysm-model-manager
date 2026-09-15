@@ -110,6 +110,23 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
     一名让回 icon-kit，消除同树重名。
 - **待收敛项**：`ICON_KIT` 是否并入 `UI_ICONS`（删除该模块及其第二命名空间）——涉及他人产物
   与「SVG-only vs 多源」的取向选择，留待专门决策。
+- **已收敛（2026-09，本节末尾决策）**：`ICON_KIT` **并入 `UI_ICONS`**，模块整体删除。
+  依据即上列事实：**2 个图标、两者 `src` 均 `svg`、多源能力生产零使用、无 ADR 背书、
+  且其立论与 ADR-238 D1 方向相反**——留着它换来「第二命名空间 + 解析优先级 + 类型并集
+  + 同树重名」四项持续成本，而收益（emoji/字体源）从未被使用过。
+  处置：
+  - `enableAll` / `disableAll`（**动作语义，合 ADR-238 D2**）原样搬进 `UI_ICONS`，
+    消费点零改动（`views/app-tree/toolbar-menus.ts` 的图标名不变）；
+  - `icon-map.ts` 为二者补字形映射 `☑️` / `⛔`（纯 SVG 设计、无字形来源，取最贴近者以满足
+    「映射表 ↔ 实现双向对拍」；刻意避开已被 `success`/`error` 占用的 `✅`/`🚫`，防建议串味）；
+  - `resolve.ts` 由「两表按优先级查找」简化为**单表查找**；过渡类型 `IconKitName` / `IconName`
+    一并删除，结构槽字段直接写 `UiIconName`（或 `IconRef`）；
+  - 知识卡 `icon_kit.md` 转为 **superseded 存根**（保留「曾有此设计、为何移除」的可检索性）；
+  - 多源能力（`emoji` / `font` 源与 `renderIcon`）随之删除；`.ficon` 样式另有独立消费者
+    （app-tree 文件列表），不受影响。
+  **方法论收获**：这是本 ADR「用类型取代清单」的延伸——**类型收紧会逼出隐藏的第二来源**：
+  `ICON_KIT` 的 `keyof` 退化为 `string` 时它看起来"无害"，一旦要求字面量联合，
+  它作为第二命名空间的成本立刻显形。
 
 ## 4. 数据溯源
 

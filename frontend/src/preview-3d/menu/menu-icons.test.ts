@@ -27,7 +27,7 @@ describe("3D 菜单图标：运行时渲染契约（类型已保证命名合法�
     const bad = entries.filter((e) => !resolveIcon(e.icon).includes("<svg"));
     expect(
       bad.map((b) => `${b.kind} ${b.id}: "${b.icon}"`),
-      "图标名合法却解析不出 SVG——请检查 UI_ICONS / ICON_KIT 是否真有该实现",
+      "图标名合法却解析不出 SVG——请检查 UI_ICONS 是否真有该实现",
     ).toEqual([]);
   });
 

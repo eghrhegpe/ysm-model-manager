@@ -1,74 +1,70 @@
 ---
 kind: icon_kit
-name: icon-kit 多源图标
+name: icon-kit 多源图标（已并入 UI_ICONS）
 tier: leaf
 category: ui
+status: superseded
+affected: false
 source_files:
-  - frontend/src/utils/icon/icon-kit/index.ts
-  - frontend/src/utils/icon/icon-kit/render.ts
-  - frontend/src/utils/icon/icon-kit/types.ts
-  - frontend/src/utils/icon/icon-kit/icons.ts
-auto_fields:
-  symbols_with_lines: []
-use_when:
-  - 图标
-  - emoji
-  - SVG 图标
-  - icon-kit
-  - renderIcon
-quick_intents:
-  - 多源图标、SVG/emoji/图标字体、renderIcon
-pitfalls:
-  - 图标实现写进调用点（外观名）→ 违反 ADR-238 D2，换图标要全局改名；必须用语义名
-  - UI chrome 图标内联进 i18n 词条 → 应改走 ICON_KIT / UI_ICONS，词条只留纯文本
+  - frontend/src/utils/icon/ui-icons.ts
+  - frontend/src/utils/icon/resolve.ts
 invariant_anchors:
-  - frontend/src/utils/icon/icon-kit/icons.ts|ICON_KIT
-  - frontend/src/utils/icon/icon-kit/render.ts|renderIcon
-status: active
+  - frontend/src/utils/icon/ui-icons.ts|UI_ICONS
+use_when:
+  - icon-kit
+  - 多源图标
+  - renderIcon
+  - emoji 图标源
+  - 图标字体
+quick_intents:
+  - icon-kit 去哪了、为何被删
+  - 想给图标加 emoji 或字体源该怎么做
+  - resolveIcon 现在查几张表
+quick_groups:
+  - 图标体系
+pitfalls:
+  - 别再新建第二图标命名空间——多源中介层的成本已实测高于收益（见 ADR-248 §3）
+  - 若确需 emoji/图标字体源，那是推翻 ADR-238 D1 的决策，须另立 ADR 而非「补一个源」
+  - 纯 SVG 设计的新图标若漏登记 icon-map，双向对拍会失败（需补字形映射）
 ---
 
-# icon-kit 多源图标
+# icon-kit 多源图标（已并入 UI_ICONS）
 
-## 概览
+> **状态：已废弃（superseded）**——2026-09 由 [ADR-248](../adr/ADR-248-icon-field-typing.md) §3 决策
+> 并入 `UI_ICONS`，模块整体删除。本卡保留为**可检索的历史记录**：它曾是什么、为何移除、
+> 以及「若想再要多源能力，先读哪两份 ADR」。
 
-在 ADR-238 的 `UI_ICONS`（纯 SVG）之上新增的**多源图标中介层**：把一个「图标语义名」绑定到
-SVG / emoji / 图标字体中的某一种源，由 `renderIcon` 统一渲染成对应的 HTML 结构。
+## 概览（历史）
 
-## 核心职责
+`frontend/src/utils/icon/icon-kit/`（4 文件 + 单测）是一个**多源图标中介层**：
+语义名 → `{ src: "svg" | "emoji" | "font" }`，由 `renderIcon(spec)` 渲染成
+`<svg>` / `<span class="eicon">` / `<span class="ficon">`。
+当时自述目的是「承接 ADR-238 的 SVG 单一体系，**破掉「只支持 SVG」的限制**」。
 
-- 解耦「图标语义」与「图标源」：调用方只 import 语义名（`ICON_KIT.enableAll`），
-  不关心其底层是 SVG 还是 emoji。
-- 提供三种源（`IconSource`）：
-  - `svg` → 复用 `.ws-icon` 外壳（24×24 + currentColor，随主题/字号）；
-  - `emoji` → `.eicon` span，保留字符原始外观（多源策略允许作回退/长尾）；
-  - `font` → `.ficon` span + 图标字体类名（预留，接入字体库时启用）。
-- 渲染策略：SVG 优先（默认选中），不强制全 SVG —— 需要世界表情/特殊字形时允许 emoji 源。
+## 为何被移除（实测事实，非判断）
 
-## 对外 API / 入口
+| 事实 | 含义 |
+|---|---|
+| 只注册 **2 个图标**（`enableAll` / `disableAll`，树工具栏批量按钮用） | 收益面极窄 |
+| 两者 `src` **均为 `"svg"`** | 多源能力**一次都没用上** |
+| `emoji` / `font` 源**生产零使用**（仅其单测断言过） | 投机性抽象 |
+| **无任何 ADR 建立它** | 缺决策背书 |
+| 其立论与 **ADR-238 D1**（UI 图标一律走 SVG）**方向相反** | 与既有决策冲突 |
+| 引入**第二个语义名命名空间** | 换来解析优先级 + 类型并集 + 同树 `IconSpec` 重名 + 对拍复杂度 |
 
-- `ICON_KIT: Record<string, IconSpec>` — 语义名 → 多源图标定义（`icons.ts`）。
-- `renderIcon(spec: IconSpec): string` — 把定义渲染成 HTML 字符串（`render.ts`）。
-- `iconKitNames(): string[]` — 全部语义名（测试/文档用）。
-- 类型：`IconSpec` / `IconSource`（`types.ts`）。
-- 入口聚合：`@/utils/icon/icon-kit/index.ts`。
+结论：收益（emoji/字体源）从未被使用，成本是四项持续开销。
 
-## 与其他子系统关系
+## 决策与去向
 
-- 是 `UI_ICONS`（`utils/icon/ui-icons.ts`，ADR-238）的**上层中介**：需要 SVG 时由
-  render 内部复用 `.ws-icon` 外壳，不为 SVG 重造轮子。
-- 语义名规范沿用 ADR-238 D2（语义名非外观名），`UI_ICONS` 的对拍契约
-  `tests/test_ui_icons.ts` 不受影响。
-- 消费方示例：`app-tree/tpl.ts` 批量按钮（`ICON_KIT.enableAll` / `disableAll`）。
-
-## 不变量
-
-- SVG 源渲染的字符串必须含 `class="ws-icon"` 与 `viewBox="0 0 24 24"`（否则不随主题/字号）。
-- emoji 源渲染为 `<span class="eicon">…</span>`。
-- 未知源回退为空串（不输出破坏结构的 HTML）。
-- 新增图标必须用语义名，禁止把 emoji/SVG 字形写进调用点或 i18n 词条。
+- 决策见 [ADR-248](../adr/ADR-248-icon-field-typing.md) §3「已收敛」；
+- `enableAll` / `disableAll` 两个语义名原样搬进 `UI_ICONS`（消费点零改动）；
+- `resolveIcon()` 由「两表按优先级查找」简化为**单表查找**；
+- 过渡类型 `IconKitName` / `IconName` 一并删除，结构槽字段直接写 `UiIconName`；
+- 多源能力（`emoji`/`font` 源与 `renderIcon`）删除；`.ficon` 样式另有独立消费者
+  （app-tree 文件列表），不受影响。
 
 ## 相关
 
-- [utils-icon](./utils-icon.md) — ADR-238 SVG 图标体系（本层在其之上）
-- `docs/adr/ADR-238-ui.md` — UI 图标规范
-- `frontend/src/utils/icon/icon-kit/index.test.ts` — 单元测试
+- [ADR-238](../adr/ADR-238-ui.md)：图标语义名规范（移除本模块的依据）
+- [ADR-248](../adr/ADR-248-icon-field-typing.md)：图标字段类型化 + 本次收敛决策
+- [app-tree](./app-tree.md)：批量启用/禁用按钮（两个图标的消费方）

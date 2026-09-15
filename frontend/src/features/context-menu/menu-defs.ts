@@ -6,7 +6,7 @@
 // 的精神面一致），实现右键菜单与3D 菜单的声明式语义统一；未定义时行为不变。
 import type { CtxShowPayload } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import type { IconName } from "@/utils/icon/resolve.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 
 /** 菜单项声明：结构（label/icon/danger/divider）+ 行为标识（action）+ 节点级显隐守卫 */
 interface MenuItemDef {
@@ -19,7 +19,7 @@ interface MenuItemDef {
    * 收紧为纯函数式让「label 必须经 i18n 或 ctx 动态生成」成为类型级约束。
    */
   label?: (ctx: CtxShowPayload) => string;
-  icon?: IconName;
+  icon?: UiIconName;
   danger?: boolean;
   divider?: boolean;
   /**

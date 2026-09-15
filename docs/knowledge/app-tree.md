@@ -179,4 +179,4 @@ status: active
 
 - `frontend/src/utils/dom/display.ts` — 文件名渲染
 - `frontend/src/views/app-tree/` — 组件目录
-- `frontend/src/utils/icon/icon-kit/` — 多源图标中介层（批量启用/禁用按钮图标经 `ICON_KIT`，不再内联进 i18n 词条）
+- 批量启用/禁用按钮图标：`icon` 填**语义名**（`enableAll` / `disableAll`），经 `resolveIcon()` 取 `UI_ICONS` 的 SVG（原 `ICON_KIT` 多源中介层已于 2026-09 并入 `UI_ICONS`，见 ADR-248 §3）

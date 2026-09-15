@@ -32,7 +32,6 @@ auto_fields:
     - applyGroundSurfaceStructural
     - applyModelDefaults
     - applyPerfPreset
-    - applyPostProcDefaults
     - applyRotationIfNonIdentity
     - applyVPDToMesh
     - applyWasdCameraMotion

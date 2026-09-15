@@ -21,7 +21,6 @@ import { MENU_DEFS, type MenuAction } from "./menu-defs.ts";
 import { HANDLERS, createContextMenuHandlers } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { ICON_KIT } from "@/utils/icon/icon-kit/index.ts";
 import {
   getMocks,
   menuShows,
@@ -510,7 +509,7 @@ describe("createContextMenuHandlers — 独立 handlers 实例隔离", () => {
 
 // ===== ADR-245 守卫：menu-defs 的 icon 必须为 UI_ICONS 语义名（无彩色 emoji 残留）=====
 describe("ADR-245 — menu-defs icon 语义名化（无 emoji）", () => {
-  const KNOWN = new Set([...Object.keys(UI_ICONS), ...Object.keys(ICON_KIT)]);
+  const KNOWN = new Set(Object.keys(UI_ICONS));
 
   for (const def of MENU_DEFS) {
     for (const item of def.items) {

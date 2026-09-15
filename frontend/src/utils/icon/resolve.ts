@@ -1,41 +1,29 @@
-// ===== 图标语义名解析（ADR-238 / ADR-245 单一事实源）=====
-// 菜单项 icon 字段填「语义名」（UI_ICONS / ICON_KIT 的 key），统一解析为渲染串：
-//   - ICON_KIT（多源，如 enableAll）优先
-//   - UI_ICONS（SVG，如 folderOpen/file）兜底
+// ===== 图标语义名解析（ADR-238 / ADR-245 / ADR-248 单一事实源）=====
+// 菜单项 icon 字段填「语义名」（**UI_ICONS 的 key**），统一解析为渲染串。
 // 未命中返回 ""（无图标）；emoji/任意字符串由调用方按兜底路径自行处理（不在此 escape）。
 // 下沉自 views/app-tree/toolbar-menus.ts 的私有 resolveIcon，消除重复实现。
+// 2026-09：原并列的 icon-kit（多源中介层 ICON_KIT）按 ADR-248 §3 并入 UI_ICONS——
+// 故本函数由「两表按优先级查找」简化为**单表查找**，语义名命名空间收敛为一个。
 
 import type { DataGlyph } from "@/utils/resource/types.ts";
-import { ICON_KIT, type IconKitName, renderIcon } from "./icon-kit/index.ts";
 import { UI_ICONS, type UiIconName } from "./ui-icons.ts";
-
-/**
- * 已知图标语义名 = **两个命名空间的并**：`UI_ICONS`（SVG chrome 图标集）∪ `ICON_KIT`
- * （多源中介层，当前仅 `enableAll` / `disableAll`）。二者由 `resolveIcon()` 定优先级。
- *
- * 注：两条来源是否收敛成一个命名空间是**待决事项**（见 ADR-248 §3「已知遗留」）——
- * 在收敛前，类型层如实表达「当前有两个来源」，而不是假装只有一个。
- */
-export type IconName = UiIconName | IconKitName;
 
 /**
  * 结构槽图标字段的类型（ADR-248 D3）：**图标语义名** 或 **数据图标字形**。
  *
- * 关键在于**裸 emoji 字面量两者皆不满足**（`"🧍"` 既不是任一注册表的键，也没有
+ * 关键在于**裸 emoji 字面量两者皆不满足**（`"🧍"` 既不是 `UI_ICONS` 的键，也没有
  * `DataGlyph` 的品牌）→ 写进去即 `tsc` 报错。这条线正是 ADR-238 §1.3（数据图标不可动）
  * 与 §1.4（结构槽须走 SVG）要守的边界——现在由**类型**守，不再靠清单与扫描。
  *
- * 命名：初版叫 `IconSpec`，与 `icon-kit/types.ts` 的同名导出（多源定义 `{src:"svg"|…}`）
- * **同名不同义**，2026-09 更名 `IconRef` 消除重名（同一棵 `utils/icon/` 树下两个 `IconSpec`
- * 是明确的阅读陷阱）。`IconSpec` 一名归 icon-kit 所有。
+ * 命名沿革：初版名 `IconSpec`，与当时 icon-kit 导出的同名类型（多源定义 `{src:"svg"|…}`）
+ * 撞名 → 更名 `IconRef`；随后 icon-kit 整体并入 `UI_ICONS`（ADR-248 §3），该重名源已消失。
  */
-export type IconRef = IconName | DataGlyph;
+export type IconRef = UiIconName | DataGlyph;
 
 /** 语义名 → 渲染串（SVG HTML 或 ""）；未命中返回 ""。 */
 export function resolveIcon(name: string): string {
-  // 两个注册表都在 ADR-248 里收紧成了字面量键：`in` 已给出运行时证明，但 TS 不会把 `string`
-  // 收窄到 keyof，故两处都显式断言——断言范围被紧邻的 `in` 判定框死，属可接受范围。
-  if (name in ICON_KIT) return renderIcon(ICON_KIT[name as IconKitName]);
+  // `UI_ICONS` 已在 ADR-248 收紧为字面量键：`in` 已给出运行时证明，但 TS 不会把 `string`
+  // 收窄到 keyof，故显式断言——断言范围被紧邻的 `in` 判定框死，属可接受范围。
   if (name in UI_ICONS) return UI_ICONS[name as UiIconName];
   return "";
 }

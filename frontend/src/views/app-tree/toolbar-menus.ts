@@ -5,7 +5,8 @@
 //   - 渲染与图标解析由本层统一处理，调用侧不垫 SVG/emoji 字符串
 // 行为侧不变：toolbar-events.ts 仍靠 data-batch / data-more 委托，本表不碰事件逻辑。
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { type IconName, resolveIcon } from "@/utils/icon/resolve.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 
 /** 单个工具栏下拉菜单项声明（只描述语义，不垫渲染字符串） */
 interface ToolbarMenuItem {
@@ -15,8 +16,8 @@ interface ToolbarMenuItem {
   testid: string;
   /** i18n 文案 key（渲染时经 t() 解析——模块加载冻结会让语言热切换后文案停留在旧语言） */
   labelKey: LocaleKey;
-  /** 图标语义名（ICON_KIT / UI_ICONS 的 key）；缺省无图标 */
-  icon?: IconName;
+  /** 图标语义名（UI_ICONS 的 key）；缺省无图标 */
+  icon?: UiIconName;
   /** 在项前插分隔线 */
   dividerBefore?: boolean;
 }

@@ -114,6 +114,13 @@ export const UI_ICONS = {
   controls: svg(
     '<line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/>',
   ),
+  // 批量操作（树工具栏「全部启用/全部禁用」两键，2026-09 自 icon-kit 并入）——
+  // 名字保留动作语义（enableAll/disableAll），而非复用品类名 `success`/`error`：
+  // 形状同为对勾/叉，但**调用点要读得出「这是动作」**（ADR-238 D2 语义命名）。
+  enableAll: svg('<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>'),
+  disableAll: svg(
+    '<circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
+  ),
 
   // ── 内容/分类语义 ──
   folder: svg(

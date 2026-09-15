@@ -125,6 +125,12 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🌑": "shadow",
   "🪟": "mirror",
   "🌤️": "sky",
+  // 批量操作动作（2026-09 自 icon-kit 并入 UI_ICONS）：两枚是**纯 SVG 设计、无字形来源**，
+  // 此处取最贴近的字形仅为满足「映射表 ↔ 实现双向对拍」并给扫描器一个建议入口
+  //（☑️ 全勾 ≈ 全部启用；⛔ 禁止 ≈ 全部禁用）。已刻意避开 ✅/🚫——那两枚在表里已归
+  // success/error 的「状态」语义，不宜再指向「动作」语义，否则建议会串味。
+  "☑️": "enableAll",
+  "⛔": "disableAll",
   "🏠": "home",
   "🏆": "rank",
   "👤": "user",

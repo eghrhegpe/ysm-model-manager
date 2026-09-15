@@ -1639,7 +1639,7 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_repo_audit"
           },
           {
-            "text": "icon-kit 多源图标",
+            "text": "icon-kit 多源图标（已并入 UI_ICONS）",
             "link": "/knowledge/icon_kit"
           },
           {

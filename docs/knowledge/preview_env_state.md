@@ -18,7 +18,6 @@ tests:
 auto_fields:
   symbols_with_lines:
     - applyModelDefaults
-    - applyPostProcDefaults
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
     - buildSharedInfra

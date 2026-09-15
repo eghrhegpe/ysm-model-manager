@@ -22,7 +22,6 @@ auto_fields:
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
     - applyModelDefaults
-    - applyPostProcDefaults
     - applyVPDToMesh
     - applyWorkerDecodedTextures
     - AssembledShell

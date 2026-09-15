@@ -3,6 +3,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appFn, resetAppMock } from "@/test-utils/mock-app.ts";
 import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 /** vi.fn 返回类型（hoisted 占位标注用） */
 type MockFn = ReturnType<typeof vi.fn>;
@@ -196,7 +198,10 @@ describe("checkUpdateSilent", () => {
 describe("initVersionUpdater（手动检查）", () => {
   async function setupRoot(): Promise<{ btn: HTMLButtonElement }> {
     // initVersionUpdater 只接受 Document | ShadowRoot（root.getElementById），需挂真实文档
-    document.body.innerHTML = '<button id="set-check-update">🔄 检查更新</button>';
+    // fixture 插值**真实** markup（对齐 tpl-settings-about.ts 的按钮：SVG refresh + i18n 文案）——
+  // 手写 emoji 副本会让「检查结束后图标降级成 emoji」这个 bug 测不出来（刀㉓ 教训：mock 里的
+  // 图标必须来自真实实现，手写副本必然腐烂）。
+  document.body.innerHTML = `<button id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>`;
     const btn = document.body.querySelector<HTMLButtonElement>("#set-check-update")!;
     const { initVersionUpdater } = await import("./version-updater.ts");
     initVersionUpdater(document);
@@ -212,7 +217,7 @@ describe("initVersionUpdater（手动检查）", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.msg.includes("已是最新版本") && t.type === "success")).toBe(true);
-    expect(btn.textContent).toBe("🔄 检查更新");
+    expect(btn.textContent?.trim()).toBe(t("about.checkUpdate"));
     expect(btn.disabled).toBe(false);
   });
 
@@ -344,7 +349,7 @@ describe("initVersionUpdater（手动检查）", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("更新失败: 磁盘已满"))).toBe(true);
-    expect(btn.textContent).toBe("🔄 检查更新");
+    expect(btn.textContent?.trim()).toBe(t("about.checkUpdate"));
   });
 
   it("DoUpdate reject → error toast 透传 Go 错误", async () => {
@@ -370,7 +375,7 @@ describe("initVersionUpdater（手动检查）", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("restart fail"))).toBe(true);
-    expect(btn.textContent).toBe("🔄 检查更新");
+    expect(btn.textContent?.trim()).toBe(t("about.checkUpdate"));
     expect(btn.disabled).toBe(false);
   });
 
@@ -396,14 +401,18 @@ describe("initVersionUpdater（手动检查）", () => {
       btn.click();
       // 冲刷微任务直到 race 建立、超时计时器注册
       await vi.advanceTimersByTimeAsync(0);
-      expect(btn.textContent).toBe("⏳ 检查中...");
+      expect(btn.textContent?.trim()).toBe(t("update.status.checking"));
+      expect(btn.querySelector("svg")).not.toBeNull(); // 检查中态也是 SVG 图标（非 emoji）
       expect(btn.disabled).toBe(true);
 
       // 推进 30s → 超时 reject → catch toast + finally 恢复按钮
       await vi.advanceTimersByTimeAsync(30_000);
 
       expect(toasts.some((t) => t.type === "error" && t.msg.includes("检查更新超时"))).toBe(true);
-      expect(btn.textContent).toBe("🔄 检查更新");
+      expect(btn.textContent?.trim()).toBe(t("about.checkUpdate"));
+      // 回归锁：恢复后图标必须仍是 SVG。原实现用 textContent="🔄 检查更新" 还原，
+      // 会把按钮从 SVG 图标**降级成 emoji**（点一次「检查更新」就变样）。
+      expect(btn.querySelector("svg")).not.toBeNull();
       expect(btn.disabled).toBe(false);
     } finally {
       vi.useRealTimers();

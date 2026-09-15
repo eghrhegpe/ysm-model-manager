@@ -67,7 +67,7 @@ export function buildToggleRow(container: HTMLElement): {
   eyeBtn.innerHTML = _labelsOn
     ? `👁 ${t("preview.field.boneNames")}`
     : `👁‍🗨 ${t("preview.field.boneNames")}`;
-  eyeBtn.title = "切换骨骼名称显示";
+  eyeBtn.title = t("preview.hint.toggleBoneLabels");
   const eyeHint = document.createElement("span");
   eyeHint.className = "pv-hint";
   eyeHint.textContent = _labelsOn ? t("preview.on") : t("preview.off");
@@ -216,7 +216,7 @@ export function buildBoneExportRow(
   const boneBtn = document.createElement("button");
   boneBtn.className = "pv-btn";
   boneBtn.innerHTML = `${UI_ICONS.clipboard} ${t("preview.action.exportBoneNames")}`;
-  boneBtn.title = "导出骨骼名称为文本文件";
+  boneBtn.title = t("preview.hint.exportBoneNames");
   const boneHint = document.createElement("span");
   boneHint.className = "pv-hint";
   boneHint.textContent = `${model.boneCount} ${t("preview.section.bones")}`;

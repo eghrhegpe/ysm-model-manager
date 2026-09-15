@@ -77,7 +77,7 @@ export async function loadModel2D(
     const zoomBtn = document.createElement("button");
     zoomBtn.className = "pv-btn";
     zoomBtn.innerHTML = `${UI_ICONS.search} ${t("preview.zoom")}`;
-    zoomBtn.title = "全窗口查看模型";
+    zoomBtn.title = t("preview.hint.fullWindow");
     zoomBtn.onclick = (): void => {
       openFullPreview(canvas, model, textureImg, getLabelsOn());
     };
@@ -105,7 +105,7 @@ export async function loadModel2D(
       doRender();
     };
     canvas.classList.add("pv-grab");
-    canvas.title = "左键全窗放大 · 滚轮缩放 · 左右拖拽旋转";
+    canvas.title = t("preview.hint.zoomControls");
     let _dragging = false,
       _dragged = false,
       _lastX = 0;

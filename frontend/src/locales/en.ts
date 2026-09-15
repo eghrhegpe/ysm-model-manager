@@ -454,6 +454,8 @@ export const en: Record<string, string> = {
   "update.found": "New version {latest} found (current {current}) — click to view",
   "update.latest": "Already up to date ({version})",
   "update.windowsOnly": "Auto-update is only supported on Windows",
+  "update.status.installing": "⬇️ Downloading & installing...",
+  "update.status.checking": "Checking…",
 
   // ── Credits ──
   "credits.inspiration": "Inspiration",
@@ -846,6 +848,7 @@ export const en: Record<string, string> = {
   "downloadQueue.preparingTotal": "Preparing… {n} total",
   "downloadQueue.failedCount": "{n} files failed to download",
   "downloadQueue.failedListTitle": "{n} files failed to download:",
+  "downloadQueue.hint.failed": "Download failed",
   "downloadQueue.moreCount": "{n} more",
 
   // ── Error Messages ──
@@ -1007,6 +1010,10 @@ export const en: Record<string, string> = {
   "preview.off": "Off",
   "preview.zoom": "Zoom In",
   "preview.hint.zoom": "🖱️ Drag to rotate · Scroll to zoom · ESC to close",
+  "preview.hint.toggleBoneLabels": "Toggle bone name labels",
+  "preview.hint.exportBoneNames": "Export bone names to a text file",
+  "preview.hint.fullWindow": "View model in full window",
+  "preview.hint.zoomControls": "Left-click to enlarge · Scroll to zoom · Drag sideways to rotate",
   "preview.action.exportBoneNames": "Export Bone Names",
   "preview.section.bones": "Bones",
   "preview.close3d": "Close 3D",

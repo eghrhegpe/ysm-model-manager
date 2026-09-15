@@ -459,6 +459,8 @@ export const ja: Record<string, string> = {
   "update.found": "新しいバージョン {latest} が見つかりました（現在 {current}）— クリックして表示",
   "update.latest": "最新バージョンです（{version}）",
   "update.windowsOnly": "自動更新は Windows のみ対応しています",
+  "update.status.installing": "⬇️ ダウンロード・インストール中...",
+  "update.status.checking": "確認中…",
 
   // ── Credits ──
   "credits.inspiration": "インスピレーション",
@@ -854,6 +856,7 @@ export const ja: Record<string, string> = {
   "downloadQueue.preparingTotal": "ダウンロード準備中… 計 {n} 個",
   "downloadQueue.failedCount": "{n} 個のファイルのダウンロードに失敗",
   "downloadQueue.failedListTitle": "{n} 個のファイルのダウンロードに失敗：",
+  "downloadQueue.hint.failed": "ダウンロードに失敗",
   "downloadQueue.moreCount": "他 {n} 個",
 
   // ── Error Messages ──
@@ -1018,6 +1021,10 @@ export const ja: Record<string, string> = {
   "preview.off": "オフ",
   "preview.zoom": "拡大",
   "preview.hint.zoom": "🖱️ ドラッグで回転・スクロールでズーム・ESCで閉じる",
+  "preview.hint.toggleBoneLabels": "ボーン名表示の切り替え",
+  "preview.hint.exportBoneNames": "ボーン名をテキストファイルに書き出す",
+  "preview.hint.fullWindow": "モデルを全画面で表示",
+  "preview.hint.zoomControls": "左クリックで拡大・スクロールでズーム・左右ドラッグで回転",
   "preview.action.exportBoneNames": "ボーン名をエクスポート",
   "preview.section.bones": "ボーン",
   "preview.close3d": "3Dを閉じる",

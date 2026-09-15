@@ -258,7 +258,7 @@ function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string 
     if (pctEl) {
       pctEl.textContent = "❌";
       pctEl.classList.add("gh-progress-error");
-      pctEl.title = done.errMsg || "下载失败";
+      pctEl.title = done.errMsg || t("downloadQueue.hint.failed");
     }
     ctx._stuckLocked = false;
     if (ctx._stuckTimer) {

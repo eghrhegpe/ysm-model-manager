@@ -18,6 +18,7 @@
 //  - onShow() / onHide() 管理焦点记忆恢复 + 输入阻断栈（menu.openId →
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
+import { t } from "@/core/i18n/t.ts";
 import { popInputBlock, pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { installComponentsStyles } from "./components-styles.ts";
 import { installSlideMenuStyles } from "./slide-menu-styles.ts";
@@ -179,7 +180,7 @@ function smBuildShell(opts?: { title?: string; closeIcon?: string }): SmShell {
   backBtn.setAttribute("role", "button");
   backBtn.tabIndex = 0;
   backBtn.textContent = opts?.closeIcon ?? "✕";
-  backBtn.title = "关闭";
+  backBtn.title = t("common.close");
 
   const title = document.createElement("span");
   title.className = "slide-title";
@@ -219,7 +220,7 @@ function smRenderTop(
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
   backBtn.textContent = atRoot ? (opts?.closeIcon ?? "✕") : "←";
-  backBtn.title = atRoot ? "关闭" : "返回";
+  backBtn.title = atRoot ? t("common.close") : t("common.back");
   top.render(list);
 
   // 恢复焦点到原索引位置的菜单项

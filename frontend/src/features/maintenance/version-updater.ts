@@ -12,6 +12,7 @@ import { modalProgress } from "@/utils/dom/modal-progress.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { esc } from "@/utils/html/html.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 /** 更新信息（CheckUpdate 返回） */
@@ -63,7 +64,7 @@ function markChecked(): void {
 /** 下载并应用更新（公共逻辑） */
 async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise<void> {
   if (statusEl) {
-    statusEl.textContent = "⬇️ 下载+安装中...";
+    statusEl.textContent = t("update.status.installing");
   }
   const { DoUpdate, RestartApplication } = await maintenanceGetApp();
   // 全局标题进度（用户反馈：弹窗可被误关丢进度）：下载前记录原标题，
@@ -217,7 +218,11 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
     // P3（审核发现）：重入守卫——编程式 .click()/异常事件流下 disabled 语义不可靠，
     // 首行显式拦截避免双执行（真实用户连点已由 disabled 挡住，此处为防御补强）
     if (btn.disabled) return;
-    btn.textContent = "⏳ 检查中...";
+    // 记住初始 markup（模板里是 `UI_ICONS.refresh + t("about.checkUpdate")`，见
+    // tpl-settings-about.ts）——检查结束用**同一个串**还原。原实现用
+    // `textContent = "🔄 检查更新"` 还原，会把按钮从 SVG 图标**降级成 emoji**（且文案硬编码）。
+    const idleHTML = btn.innerHTML;
+    btn.innerHTML = `${UI_ICONS.clock} ${t("update.status.checking")}`;
     btn.disabled = true;
     // P3（审核，资源）：超时计时器句柄——CheckUpdate 先返回时若不清理，计时器会
     // 悬挂 30s 才空转（reject 已 settled 的 Promise 虽无害但属资源泄漏）；
@@ -254,7 +259,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       });
     } finally {
       clearTimeout(timeoutId);
-      btn.textContent = "🔄 检查更新";
+      btn.innerHTML = idleHTML;
       btn.disabled = false;
     }
   });

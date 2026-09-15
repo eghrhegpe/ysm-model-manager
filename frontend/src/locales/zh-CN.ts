@@ -451,6 +451,8 @@ export const zhCN = {
   "update.found": "发现新版本 {latest}（当前 {current}）— 点击查看",
   "update.latest": "已是最新版本 ({version})",
   "update.windowsOnly": "自动更新仅支持 Windows 平台",
+  "update.status.installing": "⬇️ 下载+安装中...",
+  "update.status.checking": "检查中…",
 
   // ── 鸣谢 ──
   "credits.inspiration": "灵感来源",
@@ -836,6 +838,7 @@ export const zhCN = {
   "downloadQueue.preparingTotal": "准备下载… 共 {n} 个",
   "downloadQueue.failedCount": "{n} 个文件下载失败",
   "downloadQueue.failedListTitle": "{n} 个文件下载失败：",
+  "downloadQueue.hint.failed": "下载失败",
   "downloadQueue.moreCount": "还有 {n} 个",
 
   // ── 错误消息 ──
@@ -992,6 +995,10 @@ export const zhCN = {
   "preview.off": "关闭",
   "preview.zoom": "放大",
   "preview.hint.zoom": "🖱️ 拖拽旋转 · 滚轮缩放 · ESC 关闭",
+  "preview.hint.toggleBoneLabels": "切换骨骼名称显示",
+  "preview.hint.exportBoneNames": "导出骨骼名称为文本文件",
+  "preview.hint.fullWindow": "全窗口查看模型",
+  "preview.hint.zoomControls": "左键全窗放大 · 滚轮缩放 · 左右拖拽旋转",
   "preview.action.exportBoneNames": "导出骨骼名",
   "preview.section.bones": "骨骼",
   "preview.close3d": "关闭 3D",

@@ -39,7 +39,8 @@ core.ts `btn.onclick` 收敛后无任何 `g.id === "..."` 字面量：全 5 组�
 - **正面**：`PREVIEW_MENU_GROUPS` 一张表可读「每个 dock 组点了去哪」；删除 `if(g.id==="motion")`、单 panel 推断、`g.id!=="scene"` 三处隐式分支；dock 路由零隐式。
 - **正面**：对齐 MikuMikuAR「每 dock 按钮显式菜单域」范式；与 ADR-240 的 kind 形态脱钩同一收敛方向。
 - **代价**：env/settings 补 directToPanel 后，若未来向 env/settings 组注入第 2 个 core panel，不再自动退化组根视图——显式直达优先（当前 env/settings adapter 不注入额外 panel，grep 实证，行为不变）。
-- **已知遗留**：`directViewKey:"motion"` 的动态工厂映射表仍在 core.ts（需注入 sceneRegistry/详情工厂），是「多态路由表」而非 id 特判，属可接受的动态注入边界。adapter 注入 panel 的 `dockGroup` 字段仍未收敛成独立 `navDomain`（归属域语义），留待后续（可选 ADR）。
+- **已知遗留**：`directViewKey:"motion"` 的动态工厂映射表仍在 core.ts（需注入 sceneRegistry/详情工厂），是「多态路由表」而非 id 特判，属可接受的动态注入边界。
+- **已核验非问题（勿再追）**：本 ADR 初稿曾把「`dockGroup` 收敛成独立 `navDomain` 归属域」列为后续项，2026-09 复核**证伪**——`dockGroup` 已是静态类型化声明字段（`PreviewDockGroup` = dock 组 ∪ `"stats"` 统计通道，类型叶单源），已是 dock→panel 投影的唯一真值源，且 `menu-graph.ts`（ADR-128）已把它投影成**静态可机验导航图**（`dock(group) → panel → node → children`）。改名 `navDomain` 是零功能增益的 churn（触发 AGENTS 反 churn 红线）。`roles-views.ts` 的 `dockGroup === "model"|"motion"` 运行时过滤对象是**per-model 实例注入的 panel**（适配器按模型类型产出），是本质运行时数据——MikuMikuAR 同样运行时 per-model 构建，无法静态化。故该项关闭，不再另立 ADR。
 
 ## 4. 数据溯源
 

@@ -9,6 +9,8 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - btnBaseCSS
+    - dropdownBaseCSS
+    - dropdownHoverCSS
     - focusVisibleCSS
     - noAnimationsCSS
     - treeCSS

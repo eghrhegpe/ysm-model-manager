@@ -24,6 +24,8 @@ auto_fields:
     - createTooltipManager
     - disposeTooltipCore
     - downloadTextFile
+    - dropdownBaseCSS
+    - dropdownHoverCSS
     - ensureTooltipStyles
     - findTabbableAcrossShadow
     - FLASH_DURATION_MS

@@ -171,7 +171,9 @@ describe("角色面板（roles）", () => {
     const aRow = overlay.querySelector('[data-testid^="preview-role-"]');
     (aRow as HTMLElement).click();
     expect(overlay.textContent).toContain("MAT-BODY");
-    expect(overlay.querySelector('[data-testid="preview-shot"]')).not.toBeNull();
+    // 工具行 shot（renderCustom panel）按折叠卡渲染（改法 B：面板内容统一内联卡壳）
+    expect(overlay.querySelector('[data-testid="shot"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="shot-body"]')).not.toBeNull();
     // 模型详情不显示 motion 项
     expect(overlay.querySelector('[data-testid="preview-play"]')).toBeNull();
     handle.dispose();
@@ -192,9 +194,12 @@ describe("角色面板（roles）", () => {
     // 💃 → motionDetailView：动作项平铺直达
     (overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement).click();
     expect(overlay.textContent).not.toContain("MAT-BODY");
-    expect(overlay.querySelector('[data-testid="preview-play"]')).not.toBeNull();
+    // play（renderCustom panel）按折叠卡渲染（改法 B：动作项内容统一内联卡壳）
+    expect(overlay.querySelector('[data-testid="play"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="play-body"]')).not.toBeNull();
     // 动作详情不显示模型信息和工具行
     expect(overlay.querySelector('[data-testid="preview-shot"]')).toBeNull();
+    expect(overlay.querySelector('[data-testid="shot"]')).toBeNull();
     handle.dispose();
   });
 

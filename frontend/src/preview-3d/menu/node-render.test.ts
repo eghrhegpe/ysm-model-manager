@@ -455,6 +455,35 @@ describe("renderMenu 新 kind", () => {
     expect(row).not.toBeNull();
   });
 
+  it("panel+renderCustom（无 children）：渲染为可折叠卡，卡 body 内 runCustomMount（视觉统一测绘兵）", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "bones",
+        kind: "panel",
+        labelKey: "preview.section.bones",
+        renderCustom: (list) => {
+          const d = document.createElement("div");
+          d.dataset.testid = "custom-bone-content";
+          d.textContent = "bone content";
+          list.appendChild(d);
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    // 折叠卡 section 壳（cap-folder + header + body）
+    const section = container.querySelector('[data-testid="bones"]') as HTMLElement;
+    expect(section).not.toBeNull();
+    expect(section.classList.contains("cap-folder")).toBe(true);
+    const body = container.querySelector('[data-testid="bones-body"]') as HTMLElement;
+    expect(body).not.toBeNull();
+    // renderCustom 内容经 runCustomMount 内联进卡 body（不再渲染成单行导航）
+    expect(container.querySelector('[data-testid="custom-bone-content"]')).not.toBeNull();
+    // 单行导航 testid 不得出现（被折叠卡取代）
+    expect(container.querySelector('[data-testid="preview-bones"]')).toBeNull();
+    disposeCustomCleanups();
+  });
+
   it("slider: 渲染 range 行，value 来自 control.get，oninput 触发 set+onChange（归一后 cap- testid + head 结构）", () => {
     let val = 40;
     const changed: number[] = [];

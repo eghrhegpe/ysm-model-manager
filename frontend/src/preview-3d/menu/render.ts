@@ -191,19 +191,31 @@ export function clearFolderCollapsedState(): void {
   folderCollapsedState.clear();
 }
 
+/** [ADR-240 收敛] 折叠内容判定：panel 带 renderCustom（无 children）也进可折叠卡，
+ *  与「带 children 的 panel 被折叠」同一语义（面板内容内联展示），消除
+ *  「靠隐式 children 决定渲染形态 → rendercustom 面板退化成单行」的形态分裂。 */
+function hasFoldedBody(node: PreviewMenuNode): boolean {
+  return node.kind === "panel" && !node.children && !!node.renderCustom;
+}
+
 /** [子函数 1/6] folder：可折叠 section，递归 renderMenu 渲染 children */
 function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: RenderMenuDeps): void {
   const children = node.children ?? [];
-  if (children.length === 0) return;
+  const isCustomBody = !node.children && !!node.renderCustom && node.kind === "panel";
+  if (children.length === 0 && !isCustomBody) return;
   // 渲染 header 前预筛 visibleWhen（与 renderMenu 顶层
   // 循环同口径）——全隐组不再渲染空 folder 头。回归场景：water 水池组四控件全门控
   // `env.waterMode === "pool"`，film 模式下旧 renderCapControls 全隐组不建节头，
   // 桥接后 folder 无条件建 → 空「水池」folder 行误导用户。
   const snapshot = previewSnapshot();
-  const visible = snapshot
-    ? children.filter((ch) => !ch.visibleWhen || ch.visibleWhen(snapshot))
-    : children;
-  if (visible.length === 0) return;
+  // [B 收敛] custom body（panel+renderCustom 折叠卡）无 children 可预筛——跳过
+  // children-based visibleWhen 过滤与空筛 return，卡壳恒渲染（renderCustom 内容本身由逃生舱自洽）。
+  const visible = isCustomBody
+    ? children
+    : snapshot
+      ? children.filter((ch) => !ch.visibleWhen || ch.visibleWhen(snapshot))
+      : children;
+  if (!isCustomBody && visible.length === 0) return;
   const section = document.createElement("div");
   section.className = "cap-folder"; // [盒式折叠统一] folder 包裹同款盒框，视觉对齐折叠卡
   section.dataset.testid = node.id;
@@ -241,7 +253,14 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     arrow.textContent = nowCollapsed ? "▾" : "▸";
     folderCollapsedState.set(node.id, !nowCollapsed); // 仅记用户交互态（ADR-193 第三刀；true=折叠）
   });
-  renderMenu(body, children, deps);
+  if (isCustomBody) {
+    // [B 收敛] panel+renderCustom 折叠卡：body 内 runCustomMount 渲染内容（逃生舱
+    // cleanup 生命周期走 render.ts 注册表；replace 后同容器重渲染先清旧）
+    // biome-ignore lint/style/noNonNullAssertion: isCustomBody 已守卫 renderCustom 非空
+    runCustomMount(body, node.renderCustom!);
+  } else {
+    renderMenu(body, children, deps);
+  }
   section.append(header, body);
   container.appendChild(section);
 }
@@ -667,7 +686,7 @@ export function renderMenu(
       rmAppendCard(container, node, deps);
       continue;
     }
-    if (node.kind === "folder" || Array.isArray(node.children)) {
+    if (node.kind === "folder" || Array.isArray(node.children) || hasFoldedBody(node)) {
       rmAppendFolder(container, node, deps);
       continue;
     }

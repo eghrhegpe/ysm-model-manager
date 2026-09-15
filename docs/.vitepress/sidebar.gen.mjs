@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-240：3D 菜单内容型 panel 统一折叠卡渲染（kind 形态脱钩）",
+        "link": "/adr/ADR-240-preview-menu-panel-fold"
+      },
+      {
         "text": "ADR-239：工具栏下拉菜单声明式收敛（对齐 ADR-021 菜单范式）",
         "link": "/adr/ADR-239-toolbar-menu-declarative"
       },

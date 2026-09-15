@@ -150,19 +150,21 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   if (node.headerToggle) {
     // 组根视图 panel 行能力总开关（对齐环境面板 cap 行 / folder headerToggle）：
     // createHeaderToggle 内置 stopPropagation → 开关点击不触发整行 action（下钻）。
+    // 对齐 rmAppendDynamicRow（render.ts）：行尾有 chevron 时 toggle 紧跟 label、chevvron
+    // 靠 auto margin 推行尾；无 chevron（纯 action 行）才 toggle 自己 auto 推右。二者绝不同时 auto。
     const ht = node.headerToggle;
     const tg = createHeaderToggle({
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
     });
-    tg.style.marginLeft = "auto";
+    if (!opts?.chevron) tg.style.marginLeft = "auto";
     row.append(tg);
   }
   if (opts?.chevron) {
     const chev = document.createElement("span");
     chev.textContent = ">";
     chev.dataset.testid = "row-chevron";
-    chev.className = "cm-row-chev";
+    chev.className = "cm-row-chev"; // CSS .cm-row-chev 已含 margin-left:auto 推行尾
     row.append(chev);
   }
   row.onmouseenter = (): void => {

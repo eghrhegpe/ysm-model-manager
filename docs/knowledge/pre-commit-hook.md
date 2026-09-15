@@ -54,7 +54,7 @@ status: active
 
 ## 概览
 
-`.githooks/pre-commit`（非阻断）在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。阻断检查留给 pre-push。
+`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。gen 与格式化段**非阻断**；但钩子另含**三段硬阻断（exit 1）**：`check-biome-lines`（行级新增违规）、`check-android-unavailable`（平台黑名单）、`check-design-tokens --baseline`（设计令牌只减不增）——它们刻意挂 pre-commit 而非仅 pre-push，目的是防 `--no-verify` 单点绕过；全量门禁仍留给 pre-push。
 
 ## 核心职责
 
@@ -72,14 +72,15 @@ status: active
 
 - **禁止 `git add -u docs/` 兜底**：会吞他人未提交 docs 半成品，违反 P2-2。快照缺失宁可跳过也不吞（ADR-150）
 - gen 产物同步幂等：已同步时无 diff，`git add` 无副作用
-- 任何 gen 失败仅提示，不阻断 commit（阻断留给 pre-push）
-- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复；`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中即留痕 SKIPPED_PRECOMMIT（ADR-232 D2）
+- 任何 gen 失败仅提示，不阻断 commit；**但三段硬阻断闸是例外**（biome-lines / android / design-tokens），失败 exit 1——它们与 gen 段解耦，各有独立逃生阀
+- 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复；`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` / `YSM_SKIP_DESIGN_TOKENS=1` 命中即留痕 SKIPPED_PRECOMMIT（ADR-232 D2）
 - **PARENT_OID 必须先于 stage 段定义 + `set -u` 下引用须 `:-` 守卫**（`PARENT_OID=` 赋值处；引用处统一 `"${PARENT_OID:-}"`）——2026-09-13 实证：定义晚于 stage 段 + 无守卫 → `git commit` 触发 `PARENT_OID: unbound variable` 中止
 
 ## 与其他子系统关系
 
 - 与 `post-commit` 互补：post-commit 按 `HEAD~1`（父 oid）读 `.git/ysm_gen_staged_<oid>` 清单清生成物残留，判定锚点 `HEAD~1..HEAD`（commit 不可变对象，根治「HEAD 此刻」误判，ADR-232 D1）；清完 `gen-staged-pair.ts delete` 删本清单 + `sweep` 回收 48h 孤儿
-- 与 `pre-push` 互补：pre-commit 只快同步+stage，pre-push 全量门禁阻断
+- 与 `pre-push` 互补：pre-commit 快同步+stage（另含三段硬阻断闸防 `--no-verify` 绕过），pre-push 全量门禁阻断
+- 「只减不增」型闸须**双挂**：pre-commit（拦提交）+ `_lib/gate-config.ts` 的静态工具清单（拦推送/CI）——只挂 pre-commit 属单点防线。`check-design-tokens` 2026-09 补齐第二重后与 `css-layer-check` 同等防护
 - 与 `prepare-commit-msg` 互补：只读 `frontend/coverage/` 不触发慢检查
 - 知识卡漂移由 `check-knowledge-drift` 守护，gen 产物由本钩子 stage
 

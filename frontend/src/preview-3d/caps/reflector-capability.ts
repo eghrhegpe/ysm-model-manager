@@ -113,6 +113,12 @@ export class ReflectorCapability implements SceneCapability {
     const shader = { ...REFLECTOR_SHADER };
     this.injectOpacityIntoShader({ shader });
 
+    // ⚠️ 官方 Reflector（非 ReflectorForSSRPass）。若将来要把本平面接进 SSRPass 的
+    // groundReflector，**不能**直接传本实例——SSRPass 调的是 `doRender()`，本类没有该方法
+    // （会抛 "doRender is not a function"）。正确做法是整体换成 `ReflectorForSSRPass`
+    // （自带与 SSR 对齐的 maxDistance/opacity/fresnel uniform，是替代品不是附加品）。
+    // 现状不需替换：SSR 活动时 postprocessing 侧 applyReflectorSync 已按
+    // envState.ppReflectorDisableWhenSSR（默认 true）压制本 cap，双反射默认不可达。
     const reflector = new Reflector(geometry, {
       clipBias: envState.reflectorClipBias,
       textureWidth: envState.reflectorResolution,

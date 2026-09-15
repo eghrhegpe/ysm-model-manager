@@ -284,6 +284,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     composer.passes.splice(outputPassIndex, 0, this.bloomPass);
 
     if (useSSR) {
+      // ⚠️ groundReflector 必须保持 null（2026-09 读 three r185 源码核实）：SSRPass 期望的是
+      // `ReflectorForSSRPass` 实例（`import { ReflectorForSSRPass } from "three/addons/objects/..."`），
+      // 其 render 会调 `groundReflector.doRender(...)`——本仓用的是官方 `Reflector`（无 doRender），
+      // 误接线会在 SSRPass.render 抛 "doRender is not a function"。
+      // 且 ReflectorForSSRPass 是**替代品**而非附加品（自带与 SSR 对齐的 maxDistance/opacity/
+      // fresnel uniform），要启用须整体替换 ReflectorCapability 的 mesh，不是在此补参数。
+      // 现状无需它：SSR 活动时 applyReflectorSync 已按 envState.ppReflectorDisableWhenSSR（默认 true）
+      // 压制单平面镜，双反射默认不可达。
+      // selects=null 是**故意的**：使 SSRPass 的 `selective = Array.isArray(null) = false` →
+      // 跳过 metalness pass（少一次整场渲染），全场景统一走非 select 分支。
       this.ssrPass = new SSRPass({
         renderer: this.renderer,
         scene: this.scene,

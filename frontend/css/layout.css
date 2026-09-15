@@ -1,5 +1,8 @@
-/* ===== 主题切换过渡 ===== */
-body { transition: background-color 0.3s ease, color 0.3s ease; }
+/* ===== 主题切换（即时，无过渡）=====
+ * 原 `body { transition: background-color .3s ease, color .3s ease }` 已移除：主题切换改的是
+ * **全站 CSS 变量**（--bg/--surf/--card/--accent…），而 body 过渡只覆盖自身这两个属性，
+ * 侧栏 / 卡片 / 边框等消费 var() 的元素仍瞬间跳变 → 0.3s 内新旧配色并存，比不做过渡更难看。
+ * 真要平滑须给全站临时挂过渡类（代价大且易掉帧），故选择即时切换。 */
 .theme-cyber,.theme-pro,.theme-ocean { color-scheme: dark; }
 .theme-warm,.theme-sakura,.theme-mint { color-scheme: light; }
 

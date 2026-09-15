@@ -25,9 +25,11 @@ export const sidebarCSS: string = `
 /* 高亮对齐导航栏选中态口径：--hover 淡底（与文件树悬停同口径，亮色主题不加深）+ 指示边框，文字保持 --txt */
 .instance-card-header.active { background: var(--hover); border-left: 3px solid var(--accent); padding-left: 7px; }
 .instance-card-header.active .name { color: var(--txt); }
-/* 涟漪选中效果：与选中底同口径（--hover），避免 accent 强调色 */
+/* 涟漪选中效果：与选中底同口径（--hover），避免 accent 强调色。
+ * opacity 0.4s 为**有意**不经 --tr-* 令牌：水波扩散需缓慢浮现（0.4s 长于令牌最长档
+ * --tr-enter 0.25s），套 0.15s 会退化成「闪一下」而失去涟漪感。 */
 .instance-card-header { position: relative; overflow: hidden; }
-.instance-card-header::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--hover) 0%, transparent 70%); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.instance-card-header::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--hover) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
 .instance-card-header.ripple::after { opacity: 0.12; }
 /* 交错瀑布流入场动画 */
 .instance-card { animation: fadeSlideLeft .35s cubic-bezier(.34,1.56,.64,1) both; }

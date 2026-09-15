@@ -92,7 +92,7 @@ ${MENU_SECTION_CSS}
 .cc-canvas-auto { width:100%;height:auto;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.12);display:block; }
 .cc-picker { width:28px;height:20px;padding:0;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);cursor:pointer;background:transparent; }
 .cc-band { position:relative;width:100%;border-radius:var(--radius-md);overflow:hidden;cursor:pointer;touch-action:none; }
-.cc-marker { position:absolute;width:10px;height:10px;border-radius:50%;background:#fff4c2;border:1px solid rgba(0,0,0,0.3);box-shadow:0 0 6px rgba(255,244,194,0.8);transform:translate(-50%,-50%);pointer-events:none;transition:left 0.1s,top 0.1s; }
+.cc-marker { position:absolute;width:10px;height:10px;border-radius:50%;background:#fff4c2;border:1px solid rgba(0,0,0,0.3);box-shadow:0 0 6px rgba(255,244,194,0.8);transform:translate(-50%,-50%);pointer-events:none;transition:left 0.06s linear,top 0.06s linear; }
 .cc-grid { display:flex;gap:6px;flex-wrap:wrap; }
 .cc-thumb-btn { display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:var(--radius-md);cursor:pointer;padding:2px; }
 .cc-thumb-btn-active { border-color:var(--accent,#7c83ff);background:color-mix(in srgb,var(--accent) 15%,transparent); }

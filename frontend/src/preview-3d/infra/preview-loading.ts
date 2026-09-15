@@ -26,7 +26,7 @@ export function renderLoadingState(
 ): void {
   const bar =
     mode === "determinate"
-      ? `<div id="${barId}" style="height:100%;width:5%;background:var(--accent,#7c83ff);border-radius:2px;transition:width 0.2s"></div>`
+      ? `<div id="${barId}" style="height:100%;width:5%;background:var(--accent,#7c83ff);border-radius:2px;transition:width 0.06s linear"></div>`
       : '<div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:preview-prog 1.5s ease-in-out infinite"></div>';
   loadingEl.innerHTML =
     '<div style="font-size:32px">' +

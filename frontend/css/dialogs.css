@@ -59,7 +59,7 @@
   height: 100%;
   width: 0%;
   background: var(--accent, #66d9ef);
-  transition: width 0.2s;
+  transition: width 0.06s linear;
 }
 
 /* picker 富列表 */

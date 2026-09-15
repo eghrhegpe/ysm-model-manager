@@ -110,7 +110,7 @@ class ContextMenu extends WebComponentBase {
           font-size: var(--fs-btn-secondary);
           color: var(--txt);
           cursor: pointer;
-          transition: background .1s;
+          transition: background var(--tr-fast);
         }
         .item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
         .item.danger:hover { background: var(--status-error); color: var(--bg); }

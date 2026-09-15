@@ -41,6 +41,7 @@ ${FADE_SLIDE_LEFT}
 /* ===== 页头 & 段落标题（跨域通用） ===== */
 .section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:16px; }
+/* .num bump 用回弹缓动（overshoot 1.56）：令牌三档均 ease/ease-out 直落、无回弹档 → 保留硬编码 */
 .stat-card .num { font-size:var(--fs-xl); font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
 .stat-card .num.bump { transform:scale(1.15); }
 .stat-card .label { font-size:var(--fs-base); color:var(--muted); margin-top:2px; }
@@ -141,6 +142,7 @@ ${noAnimationsCSS}
   text-align:left;
   min-width:200px;
   cursor:default;
+  /* 回弹缓动（overshoot 1.56）：令牌无回弹档 → 保留硬编码（同上） */
   transition:transform .25s cubic-bezier(.34,1.56,.64,1);
 }
 .rec-card:hover {

@@ -227,7 +227,7 @@ function dpRenderPanel(
     <div class="dp-hint">Bedrock Edition Model</div>
   </div>
   ${statsHTML}
-  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⚠️ 无法读取模型数据</div>` : ""}
+  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 

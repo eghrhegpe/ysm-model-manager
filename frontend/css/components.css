@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size:var(--fs-xl);
   display: none;
 }
 
@@ -177,7 +177,7 @@
 }
 .dlg-btn {
   padding: 5px 14px;
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   cursor: pointer;
   font-size:var(--fs-sm);
   font-family: inherit;
@@ -193,7 +193,7 @@
 .dlg-btn-sm {
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  font-size: 9px;
+  font-size:var(--fs-xs);
   cursor: pointer;
   border: 1px solid var(--bd);
   background: transparent;
@@ -212,7 +212,7 @@
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  font-size: 9px;
+  font-size:var(--fs-xs);
 }
 .dlg-footer {
   padding: 8px 12px;
@@ -231,7 +231,7 @@
 }
 .dlg-preset-chip {
   padding: 3px 8px;
-  font-size: 9px;
+  font-size:var(--fs-xs);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   cursor: pointer;
@@ -272,7 +272,7 @@
 /* 高级筛选弹窗 — 范围输入（成对的最小/最大数字框） */
 .afv-inp {
   padding: 5px 6px;
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);
@@ -300,7 +300,7 @@
 .afv-input-kw {
   width: 100%;
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);
@@ -325,7 +325,7 @@
   color: var(--muted);
 }
 .afv-tag-hint {
-  font-size: 9px;
+  font-size:var(--fs-xs);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -362,7 +362,7 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
-  font-size: 9px;
+  font-size:var(--fs-xs);
   padding: 0;
   line-height: 1;
   opacity: 0.7;
@@ -395,7 +395,7 @@
   min-height: 28px;
   padding: 4px;
   border: 1px solid var(--bd);
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   background: var(--bg);
   align-content: flex-start;
 }
@@ -406,7 +406,7 @@
 .te-input {
   flex: 1;
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);
@@ -457,7 +457,7 @@
   white-space: nowrap;
 }
 .dlg-header-count {
-  font-size: 9px;
+  font-size:var(--fs-xs);
   color: var(--muted);
 }
 .dlg-presets-menu {
@@ -471,7 +471,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 9px;
+  font-size:var(--fs-xs);
   color: var(--muted);
   cursor: pointer;
 }
@@ -491,7 +491,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 4px;
-  font-size: 9px;
+  font-size:var(--fs-xs);
   color: var(--muted);
   border-bottom: 1px solid var(--bd);
 }
@@ -620,7 +620,7 @@
   background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
 }
 .mc-pick-box {
-  background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:16px;
+  background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:16px;
   max-width:500px;width:90%;max-height:70vh;overflow-y:auto;
   box-shadow:var(--shadow-xl);
 }

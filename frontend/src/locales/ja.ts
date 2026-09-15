@@ -540,7 +540,7 @@ export const ja: Record<string, string> = {
   "content.loadedCached": "✅ 読み込み完了（キャッシュ）",
   "content.browseRepo": "📦 参照",
   "content.loaded": "✅ 読み込み完了",
-  "content.errNoIndex": "❌ index.json なし<br>",
+  "content.errNoIndex": "index.json なし<br>",
   "content.errNoIndexDesc":
     "このリポジトリにはワークショップ索引がまだありません。ブラウザでダウンロードしてください。<br>",
   "content.errNoIndexHint":

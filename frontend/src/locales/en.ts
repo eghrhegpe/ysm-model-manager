@@ -537,7 +537,7 @@ export const en: Record<string, string> = {
   "content.loadedCached": "✅ Loaded (cached)",
   "content.browseRepo": "📦 Browse",
   "content.loaded": "✅ Loaded",
-  "content.errNoIndex": "❌ No index.json<br>",
+  "content.errNoIndex": "No index.json<br>",
   "content.errNoIndexDesc":
     "This repository has no workshop index yet, please download using your browser.<br>",
   "content.errNoIndexHint":

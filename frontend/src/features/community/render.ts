@@ -221,7 +221,9 @@ export function renderRepoHeaderHTML(params: {
     "</div>" +
     // 行4: 操作按钮
     '<div class="gh-header-actions">' +
-    '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ☐ ' +
+    '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ' +
+    UI_ICONS.checkbox +
+    " " +
     t("common.selectAll") +
     "</label>" +
     '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">' +

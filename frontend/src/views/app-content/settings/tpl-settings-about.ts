@@ -143,7 +143,7 @@ export function creditsHTML(): string {
   ${CONTRIBUTORS.map(
     (c) => `
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">👤 ${c.name}</div>
+    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.user} ${c.name}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
       ${t(c.descKey)}<br>
       <a href="https://github.com/${c.github}" target="_blank" style="color:var(--accent)">@${c.github}</a>

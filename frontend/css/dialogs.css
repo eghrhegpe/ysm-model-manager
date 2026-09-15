@@ -10,7 +10,7 @@
 .dlg-field {
   width: 100%;
   padding: 6px 8px;
-  border-radius: 5px;
+  border-radius:var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);

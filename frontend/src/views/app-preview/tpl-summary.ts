@@ -244,6 +244,6 @@ ${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px
 ${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
 ${configHtml ? `<div class="md-divider"></div>${configHtml}` : ""}
 
-${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 ${t("format.links")}</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.homepage")}</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.donate")}</a>` : ""}</span></div>` : ""}
+${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">${UI_ICONS.link} ${t("format.links")}</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.homepage")}</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.donate")}</a>` : ""}</span></div>` : ""}
 </div>`;
 }

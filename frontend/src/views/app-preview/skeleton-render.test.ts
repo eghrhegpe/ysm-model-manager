@@ -178,7 +178,7 @@ describe("buildStatsCard", () => {
     expect(ctx.root.querySelector("#ysm-author-avatars")).toBeNull();
   });
 
-  it("作者带 bilibili → 渲染 📺 链接（保留 Go SummaryAuthor.Bilibili 透传）", async () => {
+  it("作者带 bilibili → 渲染媒体图标链接（保留 Go SummaryAuthor.Bilibili 透传）", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     await buildStatsCard(
@@ -191,10 +191,16 @@ describe("buildStatsCard", () => {
     const link = container.querySelector(".pv-card a") as HTMLAnchorElement;
     expect(link).not.toBeNull();
     expect(link.getAttribute("href")).toBe("https://space.bilibili.com/123");
-    expect(link.textContent).toBe("📺");
+    // 图标已由 emoji（📺）迁移为 SVG（ADR-238 令牌体系）：断言图标形状而非旧字形。
+    // ⚠️ 不能用 `not.toContain("<svg")` 之类泛化判据——ADR-238 后图标本身即 SVG；
+    // 此处链接内**唯一**的 SVG 就是媒体图标，故 `querySelector("svg")` 已是精确判据。
+    const svg = link.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.classList.contains("ws-icon")).toBe(true); // 带共享图标类，尺寸/着色才生效
+    expect(link.textContent).toBe(""); // 不再有 emoji 文本节点
   });
 
-  it("作者无 bilibili → 不渲染 📺 链接", async () => {
+  it("作者无 bilibili → 不渲染媒体图标链接", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     await buildStatsCard(

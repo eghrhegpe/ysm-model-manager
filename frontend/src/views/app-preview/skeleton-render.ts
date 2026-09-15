@@ -187,7 +187,7 @@ export async function buildStatsCard(
         }
         ${
           au.bilibili
-            ? `<a href="${esc(safeUrl(au.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none;font-size:var(--fs-sm)" title="${esc(au.bilibili)}">📺</a>`
+            ? `<a href="${esc(safeUrl(au.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none;font-size:var(--fs-sm)" title="${esc(au.bilibili)}">${UI_ICONS.media}</a>`
             : ""
         }
       </div>`,

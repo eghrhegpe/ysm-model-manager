@@ -1423,6 +1423,7 @@ export const ja: Record<string, string> = {
   "preview.ysmModel": "YSMモデル",
   "preview.mmdSkin": "MMDスキン",
   "preview.mmdPlay": "再生",
+  "preview.mmdMotion": "モーション",
   "preview.playEmpty": "内蔵アニメーションなし",
   "preview.playReload": "再スキャン",
   "preview.mmdPause": "一時停止",

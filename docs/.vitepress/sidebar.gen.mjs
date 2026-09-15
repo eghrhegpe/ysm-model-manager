@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-243：VMD 动作重定向到 VRM 人形骨骼（跨格式动作复用）",
+        "link": "/adr/ADR-243-vmd-to-vrm-retarget"
+      },
+      {
         "text": "ADR-242：3D 动作/模型组一级卡壳收纳（面板入口行 array，内容跳转后渲染）",
         "link": "/adr/ADR-242-preview-group-card-nav"
       },

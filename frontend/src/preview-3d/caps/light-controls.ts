@@ -26,8 +26,23 @@ const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string }> = [
 
 const LIGHT_PARAMS_GROUP = "preview.lightGroupParams";
 
-/** 完整参数面板节点树：light-key 平铺 toggle + 参数组 folder（8 控件）——
- *  light 无能力总开关（light-key 是主灯 params 开关，非启停），无 getMasterNodeId。 */
+/** 灯光能力总开关 toggle（首行；读 isEnabled/setEnabled——setEnabled(false) 移除场景全部灯）。
+ *  真值源/持久化与 shadow-enabled / pp-enabled 同构；light 面板直达平铺，不升 getMasterNodeId。 */
+function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
+  return {
+    id: "light-enabled",
+    kind: "toggle",
+    labelKey: "preview.lighting",
+    fallback: "灯光",
+    control: {
+      get: () => cap.isEnabled(),
+      set: (v) => cap.setEnabled(v as boolean),
+    },
+  };
+}
+
+/** 完整参数面板节点树：light-enabled 能力总开关（首行）+ light-key 平铺 toggle + 参数组 folder（8 控件）。
+ *  light-key 是主灯 params 开关（单盏主灯），非能力总开关——总开关是首行 light-enabled。 */
 export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
   const children: PreviewMenuNode[] = [
     {
@@ -121,6 +136,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
     },
   ];
   return [
+    lightEnabledNode(cap),
     {
       id: "light-key",
       kind: "toggle",

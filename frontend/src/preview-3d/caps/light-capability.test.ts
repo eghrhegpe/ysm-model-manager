@@ -306,10 +306,11 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
   it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // light-key 平铺
-    expect(nodes[0]!.id).toBe("light-key");
+    // light-enabled 能力总开关 + light-key 平铺
+    expect(nodes[0]!.id).toBe("light-enabled");
+    expect(nodes[1]!.id).toBe("light-key");
     // 其余节点在 folder children 内
-    const folder = nodes[1]!;
+    const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     const childIds = folder.children!.map((c: { id: string }) => c.id);
     expect(childIds).toContain("light-fill");
@@ -328,17 +329,23 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
 describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => resetEnvState());
 
-  it("完整树 = light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
+  it("完整树 = light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(2);
-    // light-key 平铺（light 无 getMasterToggle）
+    expect(nodes).toHaveLength(3);
+    // light-enabled 能力总开关（isEnabled/setEnabled）
     expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("light-key");
+    expect(nodes[0]!.id).toBe("light-enabled");
+    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
     nodes[0]!.control!.set!(false);
+    expect(cap.isEnabled()).toBe(false);
+    // light-key 平铺（主灯参数开关）
+    expect(nodes[1]!.kind).toBe("toggle");
+    expect(nodes[1]!.id).toBe("light-key");
+    nodes[1]!.control!.set!(false);
     expect(cap.getParams().key.enabled).toBe(false);
     // 参数组 folder
-    const folder = nodes[1]!;
+    const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
@@ -355,7 +362,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 
   it("slider/toggle 节点读写闭包直连 cap（fill/ambient）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes()[2]!;
     const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill")!;
     fill.control!.set!(true);
     expect(cap.getParams().fill.enabled).toBe(true);
@@ -366,7 +373,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 
   it("light-preset select 直连 cap 预设", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes()[2]!;
     const preset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
     expect(preset.control!.options!.length).toBe(6);
     preset.control!.set!("mmd");
@@ -655,7 +662,7 @@ describe("LightCapability — 菜单控件联动", () => {
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const folder = nodes[1]!;
+    const folder = nodes[2]!;
     const by = (id: string) => folder.children!.find((c: PreviewMenuNode) => c.id === id)!;
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
@@ -677,7 +684,7 @@ describe("LightCapability — 菜单控件联动", () => {
 
   it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes()[2]!;
     const presetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
     presetNode.control!.set!("ysm");
     expect(cap.getCurrentPreset()).toBe("ysm");

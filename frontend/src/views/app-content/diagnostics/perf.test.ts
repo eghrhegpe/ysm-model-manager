@@ -191,14 +191,15 @@ describe("single-bench 面板", () => {
     run(); await new Promise((r) => setTimeout(r, 10));
     // 仅 1 条历史：无趋势折线（<2 条提示）
     const out1 = root.getElementById("diag-perf-single") as HTMLElement;
-    // ⚠️ 不能用 `not.toContain("<svg")` —— ADR-238 后**图标本身也是 SVG**，
-    // 该断言会把「有图标」误判成「有趋势折线」。改为针对折线特征（polyline）
-    // 判定，这才是本测试真正要锁的语义。
-    expect(out1.innerHTML).not.toContain("<polyline");
+    // ⚠️ 不能用 `not.toContain("<svg")` —— ADR-238 后**图标本身也是 SVG**；
+    // 也不能用 `<polyline` 判「有折线」——UI_ICONS.clock（总耗时行）路径里含
+    // <polyline>（钟摆），与趋势图同名元素撞判据。改用趋势图独有特征
+    // `<svg width="560"`（perf-trend 固定画布宽），这才是本测试真正要锁的语义。
+    expect(out1.innerHTML).not.toContain('<svg width="560"');
     run(); await new Promise((r) => setTimeout(r, 10));
     // ≥2 条：渲染趋势 SVG 折线
     const out2 = root.getElementById("diag-perf-single") as HTMLElement;
-    expect(out2.innerHTML).toContain("<polyline");
+    expect(out2.innerHTML).toContain('<svg width="560"');
   });
 });
 

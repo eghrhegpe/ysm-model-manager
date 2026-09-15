@@ -303,6 +303,9 @@ export const UI_ICONS: Record<string, string> = {
   edit: svg(
     '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
   ),
+  // ── 排序/方向 ──
+  chevronUp: svg('<polyline points="6 15 12 9 18 15"/>'),
+  chevronDown: svg('<polyline points="6 9 12 15 18 9"/>'),
 };
 
 /** 全部可用图标名（供测试与文档消费）。 */

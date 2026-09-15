@@ -41,7 +41,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
       <div class="stg-card-body">
         <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="copy">${UI_ICONS.clipboard} ${t("settings.links.copy")}</option>
-          <option value="hardlink" selected>${UI_ICONS.link} ${t("settings.links.hardlink")} ✅</option>
+          <option value="hardlink" selected>${UI_ICONS.link} ${t("settings.links.hardlink")} ${UI_ICONS.success}</option>
           <option value="symlink">${UI_ICONS.link} ${t("settings.links.symlink")}</option>
         </select>
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.copyHint")}</div>
@@ -214,7 +214,7 @@ function renderStgFontFamily(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-display-font" class="label" style="font-size:var(--fs-md);font-weight:600">🃏 ${t("settings.font.creatorFont")}</label>
+      <label for="set-display-font" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.brush} ${t("settings.font.creatorFont")}</label>
     </div>
     <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="kaiti" selected>${UI_ICONS.brush} ${t("settings.font.kaiti")}</option>

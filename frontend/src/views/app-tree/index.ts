@@ -39,7 +39,7 @@ import {
   updateStat,
 } from "./render.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { footerHTML, headerHTML, spinnerHTML } from "./tpl.ts";
+import { footerHTML, headerHTML, spinnerHTML, treeLoadFailedHTML } from "./tpl.ts";
 import { type TreeSnapshot, TreeState } from "./tree-state.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
@@ -273,7 +273,7 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       logError("app-tree", "Init Error", e);
       const tree = this._root?.getElementById("tree");
-      if (tree) tree.innerHTML = t("tree.treeLoadFailed");
+      if (tree) tree.innerHTML = treeLoadFailedHTML();
       toastThrottled(e, t("tree.treeLoadFailed"));
     } finally {
       this._ready = true;

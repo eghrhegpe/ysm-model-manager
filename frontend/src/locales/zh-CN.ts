@@ -1510,8 +1510,8 @@ export const zhCN = {
   "tree.repoConfigTitle": "配置仓库目录",
   "tree.repoNotSet": "📁 未设置",
   "tree.authorsEmpty": "暂无作者",
-  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>加载失败</div>',
-  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>扫描中...</div></div>',
+  "tree.treeLoadFailed": "加载失败",
+  "tree.scanning": "扫描中...",
   "tree.dropHint": "拖入模型文件快速导入",
   "tree.fileList": "模型文件列表",
 

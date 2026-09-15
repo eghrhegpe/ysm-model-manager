@@ -30,21 +30,21 @@ interface ImportLogLike {
   Level?: "" | "debug" | "info" | "warn" | "error" | "fatal";
 }
 
-/** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用） */
+/** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用；图标走 UI_ICONS SVG，ADR-238） */
 const OP_META: Record<string, { label: string; icon: string }> = {
-  import: { label: t("diagnostics.opImport"), icon: "📥" },
-  scan: { label: t("diagnostics.opScan"), icon: "🔍" },
-  download: { label: t("diagnostics.opDownload"), icon: "⬇️" },
-  sync: { label: t("diagnostics.opSync"), icon: "🔄" },
-  rename: { label: t("diagnostics.opRename"), icon: "✏️" },
-  delete: { label: t("diagnostics.opDelete"), icon: "🗑️" },
-  ui: { label: t("diagnostics.opUI"), icon: "⚠️" },
+  import: { label: t("diagnostics.opImport"), icon: UI_ICONS.import },
+  scan: { label: t("diagnostics.opScan"), icon: UI_ICONS.search },
+  download: { label: t("diagnostics.opDownload"), icon: UI_ICONS.download },
+  sync: { label: t("diagnostics.opSync"), icon: UI_ICONS.refresh },
+  rename: { label: t("diagnostics.opRename"), icon: UI_ICONS.edit },
+  delete: { label: t("diagnostics.opDelete"), icon: UI_ICONS.delete },
+  ui: { label: t("diagnostics.opUI"), icon: UI_ICONS.warning },
 };
 
 /** 未知 op 回退到通用标签，避免显示裸英文 */
 function opMeta(op: string | undefined): { label: string; icon: string } {
   if (op && OP_META[op]) return OP_META[op];
-  return { label: op || t("diagnostics.opImportFallback"), icon: "🧾" };
+  return { label: op || t("diagnostics.opImportFallback"), icon: UI_ICONS.note };
 }
 
 function dgLsGetListAndGen(

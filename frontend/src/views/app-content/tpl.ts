@@ -123,7 +123,7 @@ export function diagnosticsHTML(): string {
 <span>${t("diagnostics.conflict")}</span>
 </button>
 <button class="diag-btn" data-diag="perf">
-<span class="diag-btn-icon">⏱️</span>
+<span class="diag-btn-icon">${UI_ICONS.clock}</span>
 <span>${t("diagnostics.perfTitle")}</span>
 </button>
 <button class="diag-btn" data-diag="health">
@@ -151,8 +151,8 @@ export function diagnosticsHTML(): string {
 <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
 <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
 <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
-<button class="diag-log-fbtn" data-status="skipped">⏭️ ${t("diagnostics.skipped")}</button>
-<input id="diag-log-search" placeholder="🔍 ${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
+<button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
+<input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
 <div id="diag-log-list" data-testid="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
 </div>
@@ -167,7 +167,7 @@ export function diagnosticsHTML(): string {
 <div class="perf-wrap" style="overflow-y:auto;flex:1;padding:10px 12px">
 <div class="perf-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0 10px;border-bottom:1px solid var(--bd)">
 <button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
-<input id="diag-perf-model" type="text" placeholder="📁 ${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
+<input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
 <label for="diag-perf-iter" style="font-size:var(--fs-sm);color:var(--muted)">${t("diagnostics.perfIterations")}</label>
 <input id="diag-perf-iter" type="number" min="1" step="1" value="3" style="width:56px;font-size:var(--fs-sm);padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
 <button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
@@ -216,7 +216,9 @@ export function githubHTML(): string {
     '<span class="gh-left-head-spacer"></span>' +
     "</div>" +
     '<div class="gh-grid" id="gh-grid">' +
-    '<div class="gh-loading-placeholder">⏳ ' +
+    '<div class="gh-loading-placeholder">' +
+    UI_ICONS.refresh +
+    " " +
     t("common.loading") +
     "</div>" +
     "</div>" +
@@ -243,7 +245,9 @@ export function workshopHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs" data-testid="ws-tabs">' +
-    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ ' +
+    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
+    UI_ICONS.refresh +
+    " " +
     t("common.loading") +
     "</span>" +
     "</div>" +
@@ -290,7 +294,9 @@ export function workshopHTML(): string {
     "</div>" +
     '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
     '<div class="ws-browser-bar">' +
-    '<button class="btn-base sm ws-back" id="ws-back">← ' +
+    '<button class="btn-base sm ws-back" id="ws-back">' +
+    UI_ICONS.navigate +
+    " " +
     t("common.back") +
     "</button>" +
     '<span class="ws-url" id="ws-url"></span>' +

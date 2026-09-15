@@ -89,7 +89,7 @@ function getOutBox(root: ShadowRoot, id: string): HTMLElement | null {
 }
 
 function setBusy(out: HTMLElement): void {
-  out.innerHTML = `<div class="diag-stat diag-stat-muted">⏳ ${t("diagnostics.perfRunning")}</div>`;
+  out.innerHTML = `<div class="diag-stat diag-stat-muted">${UI_ICONS.refresh} ${t("diagnostics.perfRunning")}</div>`;
 }
 
 function setErrorMsg(out: HTMLElement, msg: string, esc: EscFn): void {

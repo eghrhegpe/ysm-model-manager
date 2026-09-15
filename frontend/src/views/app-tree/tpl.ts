@@ -70,5 +70,11 @@ export function emptyStateHTML(icon: string, msg: string): string {
 }
 
 export function spinnerHTML(): string {
-  return t("tree.scanning");
+  // HTML 结构（empty/big 包裹）在模板层，i18n 值只含纯文本（刀㉓：结构与内容分界）
+  return emptyStateHTML(UI_ICONS.refresh, t("tree.scanning"));
+}
+
+/** 树加载失败兜底视图：结构（empty/big + 图标）在模板层，i18n 值纯文本。 */
+export function treeLoadFailedHTML(): string {
+  return emptyStateHTML(UI_ICONS.warning, t("tree.treeLoadFailed"));
 }

@@ -142,6 +142,12 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "💻": "window",
   "✏️": "edit",
   "🖊️": "edit",
+  "↑": "chevronUp",
+  "↓": "chevronDown",
+  "⏰": "clock",
+  "🕒": "clock",
+  "⏳": "refresh",
+  "⏭️": "performance",
 } as const;
 
 /**

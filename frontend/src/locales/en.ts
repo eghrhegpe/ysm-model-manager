@@ -1538,8 +1538,8 @@ export const en: Record<string, string> = {
   "tree.repoConfigTitle": "Configure repository directory",
   "tree.repoNotSet": "📁 Not set",
   "tree.authorsEmpty": "No authors",
-  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>Load failed</div>',
-  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>Scanning...</div></div>',
+  "tree.treeLoadFailed": "Load failed",
+  "tree.scanning": "Scanning...",
   "tree.dropHint": "Drop model files here to import",
   "tree.fileList": "Model file list",
 

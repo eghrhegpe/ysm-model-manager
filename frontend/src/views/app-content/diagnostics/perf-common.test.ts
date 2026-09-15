@@ -9,23 +9,24 @@ vi.mock("@/bus", () => ({
 }));
 
 import { sectionHeader, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput } from "./perf-common.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 describe("sectionHeader", () => {
   it("icon + label → 带 icon 和 label 的 HTML", () => {
-    const html = sectionHeader("📊", "性能概览");
-    expect(html).toContain("📊");
+    const html = sectionHeader(UI_ICONS.chart, "性能概览");
+    expect(html).toContain('<svg class="ws-icon"');
     expect(html).toContain("性能概览");
   });
 
   it("带 rawText → HTML 包含 rawText（encodeURIComponent 编码）", () => {
-    const html = sectionHeader("🔍", "慢查询", "TOP 10");
-    expect(html).toContain("🔍");
+    const html = sectionHeader(UI_ICONS.search, "慢查询", "TOP 10");
+    expect(html).toContain('<svg class="ws-icon"');
     expect(html).toContain("慢查询");
     expect(html).toContain(encodeURIComponent("TOP 10"));
   });
 
   it("无 rawText → 不抛错", () => {
-    expect(() => sectionHeader("⚙", "配置")).not.toThrow();
+    expect(() => sectionHeader(UI_ICONS.settings, "配置")).not.toThrow();
   });
 
   it("空字符串参数 → 不抛错", () => {
@@ -44,7 +45,8 @@ describe("setBusy / setErrorMsg", () => {
   it("setBusy 注入占位文案", () => {
     const el = { innerHTML: "" } as HTMLElement;
     setBusy(el);
-    expect(el.innerHTML).toContain("⏳");
+    // ADR-238：占位图标由 emoji 改走 SVG 形态（断言形态而非具体路径）
+    expect(el.innerHTML).toContain('<svg class="ws-icon"');
   });
 
   it("setErrorMsg 注入错误文案（经 esc 转义）", () => {

@@ -1552,8 +1552,8 @@ export const ja: Record<string, string> = {
   "tree.repoConfigTitle": "リポジトリディレクトリを設定",
   "tree.repoNotSet": "📁 未設定",
   "tree.authorsEmpty": "作者なし",
-  "tree.treeLoadFailed": '<div class="empty"><div class="big">⚠️</div>読み込み失敗</div>',
-  "tree.scanning": '<div class="empty"><div class="big">⏳</div><div>スキャン中...</div></div>',
+  "tree.treeLoadFailed": "読み込み失敗",
+  "tree.scanning": "スキャン中...",
   "tree.dropHint": "モデルファイルをドロップしてインポート",
   "tree.fileList": "モデルファイルリスト",
 

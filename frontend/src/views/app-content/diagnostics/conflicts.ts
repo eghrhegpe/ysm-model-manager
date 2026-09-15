@@ -146,7 +146,7 @@ function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): st
 <span class="conflict-ver">${t("diagnostics.modpackCount", { n: insNames.length })}</span>
 </div>`;
     insNames.forEach((n, j) => {
-      html += `<div class="conflict-ins" style="animation-delay:${delay + (j + 1) * 15}ms">&nbsp;&nbsp;📦 ${esc(n)}</div>`;
+      html += `<div class="conflict-ins" style="animation-delay:${delay + (j + 1) * 15}ms">&nbsp;&nbsp;${UI_ICONS.package} ${esc(n)}</div>`;
     });
   });
   if (conflicts.length > 50) {

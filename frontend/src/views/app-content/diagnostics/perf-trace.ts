@@ -71,7 +71,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
       ? `<span class="perf-asset-item">${UI_ICONS.video} ${t("diagnostics.assetsAnims")}: ${a.animations}</span>`
       : "",
     a.pmxWorker !== undefined
-      ? `<span class="perf-asset-item ${a.pmxWorker ? "perf-badge-ok" : "perf-badge-warn"}">${a.pmxWorker ? "⚡" : "🔄"} ${t("diagnostics.assetsPmxWorker")}: ${a.pmxWorker ? "ON" : "OFF"}</span>`
+      ? `<span class="perf-asset-item ${a.pmxWorker ? "perf-badge-ok" : "perf-badge-warn"}">${a.pmxWorker ? UI_ICONS.performance : UI_ICONS.refresh} ${t("diagnostics.assetsPmxWorker")}: ${a.pmxWorker ? "ON" : "OFF"}</span>`
       : "",
     a.ktx2Hits !== undefined
       ? `<span class="perf-asset-item">${t("diagnostics.assetsKtx2")}: ${a.ktx2Hits}/${a.ktx2Total ?? a.ktx2Hits}</span>`
@@ -106,10 +106,10 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
     second: "2-digit",
   });
   container.innerHTML =
-    sectionHeader("🔍", t("diagnostics.loadTraceTitle")) +
+    sectionHeader(UI_ICONS.search, t("diagnostics.loadTraceTitle")) +
     `<div class="perf-trace-meta" style="padding:6px 2px;font-size:var(--fs-xs);color:var(--muted)">${esc(latest.path)} · ${fmtTs} · ${latest.format.toUpperCase()}</div>` +
     `<div class="perf-gantt-wrap" style="padding:8px 2px">${ganttSvg}</div>` +
-    `<div class="perf-total">⏱️ ${t("diagnostics.perfTotal")}: ${formatTime(totalMs)}</div>` +
+    `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${formatTime(totalMs)}</div>` +
     `<div class="perf-asset-grid">${assetRows}</div>` +
     texDetailHtml +
     `<div class="perf-trace-hint">${t("diagnostics.loadTraceHint")}</div>`;

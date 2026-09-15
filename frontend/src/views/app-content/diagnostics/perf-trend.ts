@@ -5,6 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 
@@ -43,7 +44,7 @@ export function savePerfRecord(stages: { name: string; ms: number }[]): void {
 /** 渲染趋势区段（<2 次时提示收集数据；否则渲染 SVG 折线 + 图例） */
 export function renderPerfTrendSection(esc: EscFn): string {
   const hist = loadPerfHistory();
-  const head = sectionHeader("📈", t("diagnostics.perfTrendTitle"));
+  const head = sectionHeader(UI_ICONS.chart, t("diagnostics.perfTrendTitle"));
   if (hist.length < 2) {
     return (
       head +

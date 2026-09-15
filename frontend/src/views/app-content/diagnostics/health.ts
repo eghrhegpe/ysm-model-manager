@@ -29,7 +29,9 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
   _healthBusy = true;
   try {
     list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-muted">⏳ ' +
+      '<div class="stat-row diag-stat diag-stat-muted">' +
+      UI_ICONS.refresh +
+      " " +
       t("diagnostics.healthScanning") +
       "</div>";
 

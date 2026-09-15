@@ -151,12 +151,12 @@ export async function showVrmMeta(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${thumb}
     <div><strong>${renderFormattedText((m.name as string) || basename)}</strong></div>
-    ${authors ? `<div style="color:var(--muted)">👤 ${esc(authors)}</div>` : ""}
+    ${authors ? `<div style="color:var(--muted)">${UI_ICONS.author} ${esc(authors)}</div>` : ""}
     ${(m.version as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(m.version as string)}</div>` : ""}
-    ${(m.contact as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📮 ${esc(m.contact as string)}</div>` : ""}
-    ${(m.license as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">📜 ${esc(m.license as string)}</div>` : ""}
+    ${(m.contact as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.comment} ${esc(m.contact as string)}</div>` : ""}
+    ${(m.license as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.script} ${esc(m.license as string)}</div>` : ""}
     ${refBadge}
-    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, "💰")}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", "👥")}${badge(t("preview.sexual"), r.sexual as boolean, "🔞")}${badge(t("preview.violent"), r.violent as boolean, "⚔️")}</div>` : ""}
+    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, UI_ICONS.payment)}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", UI_ICONS.users)}${badge(t("preview.sexual"), r.sexual as boolean, UI_ICONS.violent)}${badge(t("preview.violent"), r.violent as boolean, UI_ICONS.violent)}</div>` : ""}
     ${statsRow}
     <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>

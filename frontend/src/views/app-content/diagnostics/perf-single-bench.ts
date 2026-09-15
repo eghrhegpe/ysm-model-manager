@@ -5,6 +5,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
@@ -106,9 +107,9 @@ function singleBenchRenderBars(
     .join("");
   savePerfRecord(stages);
   return (
-    sectionHeader("⚡", t("diagnostics.perfSingleResult"), rawOutput) +
+    sectionHeader(UI_ICONS.performance, t("diagnostics.perfSingleResult"), rawOutput) +
     `<div class="perf-bars" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${bars}</div>` +
-    `<div class="perf-total">⏱️ ${t("diagnostics.perfTotal")}: ${total.toFixed(2)}ms</div>` +
+    `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${total.toFixed(2)}ms</div>` +
     renderPerfTrendSection(esc)
   );
 }

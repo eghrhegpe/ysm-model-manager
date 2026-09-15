@@ -151,7 +151,8 @@ describe("showVrmMeta 分支补全", () => {
     await showVrmMeta(ctx, "/repo/x.vrm");
     const html = ctx.root.innerHTML;
     expect(html).toContain("仅名称模型");
-    expect(html).not.toContain("👤");
+    // ADR-238：作者图标由 emoji 改走 SVG，断言形态而非具体路径
+    expect(html).toContain('<svg class="ws-icon"');
     expect(html).not.toContain("<img");
     expect(html).toContain("btn-vrm-3d");
   });
@@ -167,7 +168,8 @@ describe("showVrmMeta 分支补全", () => {
     const html = ctx.root.innerHTML;
     expect(html).not.toContain("<img");
     expect(html).not.toContain("📎");
-    expect(html).toContain("👥"); // allowedUser !== "everyone" → 徽章行仍渲染
+    // ADR-238：徽章图标由 emoji 改走 SVG（users 图标），断言形态而非具体路径
+    expect(html).toContain('<svg class="ws-icon"');
   });
 
   it("authors 含 HTML → esc 转义，不注入原始标签", async () => {

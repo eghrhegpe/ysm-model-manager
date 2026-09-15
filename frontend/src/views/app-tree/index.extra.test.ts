@@ -472,7 +472,9 @@ describe("app-tree index 入口生命周期（补位）", () => {
       throw new Error("toolbar boom");
     });
     const el = await mountEl();
-    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toBe(t("tree.treeLoadFailed"));
+    // 结构兜底断言：empty/big 容器仍在（图标与包裹在模板层 treeLoadFailedHTML）
+    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain('class="big"');
+    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain(t("tree.treeLoadFailed"));
     expect(loader).not.toHaveBeenCalled(); // _load 未及执行
     expect(el.ready).toBe(true);
   });

@@ -63,7 +63,7 @@ function perfLogRenderCards(entries: PerfLogEntry[], rawOutput: string, esc: Esc
     })
     .join("");
   return (
-    sectionHeader("🗒️", t("diagnostics.perfHistResult"), rawOutput) +
+    sectionHeader(UI_ICONS.note, t("diagnostics.perfHistResult"), rawOutput) +
     `<div class="perf-hist" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${cards}</div>`
   );
 }

@@ -72,13 +72,13 @@ function guiFlowRenderStages(
     .join("");
   const totalLine =
     flowTotal !== null
-      ? `<div class="perf-total">⏱️ ${t("diagnostics.perfTotal")}: ${flowTotal.toFixed(2)}ms</div>`
+      ? `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${flowTotal.toFixed(2)}ms</div>`
       : "";
   const failLine = failed
     ? `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${t("diagnostics.perfGuiFailed")}</div>`
     : "";
   return (
-    sectionHeader("🩺", t("diagnostics.perfGuiResult"), rawOutput) +
+    sectionHeader(UI_ICONS.diagnose, t("diagnostics.perfGuiResult"), rawOutput) +
     `<div class="perf-gui" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${rows}</div>` +
     totalLine +
     failLine

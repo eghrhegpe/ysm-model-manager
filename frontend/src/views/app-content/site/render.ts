@@ -367,12 +367,16 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
       idx +
       '" class="cr-btn-icon cr-order-up" title="' +
       t("content.moveUp") +
-      '">↑</button>' +
+      '">' +
+      UI_ICONS.chevronUp +
+      "</button>" +
       '<button data-idx="' +
       idx +
       '" class="cr-btn-icon cr-order-down" title="' +
       t("content.moveDown") +
-      '">↓</button>' +
+      '">' +
+      UI_ICONS.chevronDown +
+      "</button>" +
       '<button data-idx="' +
       idx +
       '" class="cr-btn-icon cr-del-preset" title="' +

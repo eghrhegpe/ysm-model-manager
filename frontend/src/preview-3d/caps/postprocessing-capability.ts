@@ -101,8 +101,22 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   // 联动 ReflectorCapability（SSR 开启时可自动禁用）——2026-09-14 起经构造注入的
   // caps 查询器现场取（getTypedCap(this.caps, "reflector")），替代原 setReflectorCap 注入器
   private readonly caps?: SceneCapabilityLookup;
-  // 记录上次 SSR on 时 Reflector 原本 enabled，SSR 关闭时精确恢复
-  private reflectorPrevEnabled: boolean | undefined;
+  // [ADR-247 D2] SSR 联动抑制态。原实现只用单个 `reflectorPrevEnabled: boolean | undefined`
+  // 承载「上一值 + 是否在抑制」两重语义，哨兵 undefined 与合法值 false 混淆：
+  // SSR 抑制期间用户手动重开 reflector 后，SSR 关闭会用陈旧 prev 抹掉用户选择。
+  // 现拆为显式两态——suppressing 表示「当前压制由本 cap 施加」，仅在 true 时才谈还原。
+  private reflectorSuppressing = false;
+  /** 本 cap 施加抑制前的 reflector 状态（仅 suppressing=true 期间有效） */
+  private reflectorPrevEnabled = false;
+
+  /** [ADR-247 D3] per-type 门禁（模型类别预设是否允许后处理）。
+   *  与「性能档位总闸」正交：最终生效开关 = 总闸 && 门禁。手动开关（pp-enabled）绕过二者。
+   *  ADR-196 删掉 params.enabled 双写后，门禁一度与生效开关共用 this.enabled，靠调用方
+   *  `setMasterEnabled(v ? this.enabled : false)` 把门禁值回读再传回才得以存活——
+   *  约束落在调用方、注释还引用了已删除的字段。现恢复为显式字段，语义自持。 */
+  private perTypeGate = false;
+  /** 性能档位总闸（render.bloom）。默认放行，由 applyPerfPreset 驱动。 */
+  private perfMaster = true;
 
   // prev 状态（dispose 还原）
   private prevToneMapping: THREE.ToneMapping;
@@ -127,6 +141,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (opts.caps !== undefined) this.caps = opts.caps;
     // ADR-196：enabled 默认 false（与 DEFAULT_POSTPROC_PARAMS.enabled 一致）
     this.enabled = opts.enabled ?? false;
+    // [ADR-247 D3] 构造期 enabled 同时作为 per-type 门禁初值，保证「生效 = 总闸 && 门禁」
+    // 在构造后立即自洽（总闸默认放行）。否则 setMasterEnabled 会因门禁初值 false 而无声失效。
+    this.perTypeGate = this.enabled;
 
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
@@ -332,16 +349,22 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // SSR 活动 + 用户设置了 reflectorDisableWhenSSR
     const shouldDisableReflector = this.ssrIsActive() && envState.ppReflectorDisableWhenSSR;
     if (shouldDisableReflector) {
-      if (this.reflectorPrevEnabled === undefined) {
+      // 首次施加压制时记录原值（后续同步不覆盖基准）
+      if (!this.reflectorSuppressing) {
         this.reflectorPrevEnabled = reflectorCap.isEnabled();
+        this.reflectorSuppressing = true;
       }
       if (reflectorCap.isEnabled()) reflectorCap.setEnabled(false);
-    } else {
-      // 还原：当 SSR 不活动或用户取消了 reflectorDisableWhenSSR
-      if (this.reflectorPrevEnabled !== undefined) {
+    } else if (this.reflectorSuppressing) {
+      // 解除压制。本同步是 pull 式（仅由 postprocessing 侧事件触发），无法观测用户手动
+      // 拨动 reflector 开关——故以「reflector 此刻是否仍处于我们压下的关闭态」判定归属：
+      //   · 仍为 false → 压制仍由我们持有 → 还原 prev（压制前用户意图）
+      //   · 已为 true  → 用户手动重开过 → 我们已非持有者，保留用户选择，不回放陈旧 prev
+      // 两种情况都清空抑制态，保证下一轮 SSR 能重新记录基准。
+      if (!reflectorCap.isEnabled()) {
         reflectorCap.setEnabled(this.reflectorPrevEnabled);
-        this.reflectorPrevEnabled = undefined;
       }
+      this.reflectorSuppressing = false;
     }
   }
 
@@ -360,10 +383,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (!envState.ppBloomEnabled) return;
     if (envState.ppBloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
-      // [ADR-246 D1] 联动门禁收紧为 volumetric.enabled——原实现无条件读 opacity 联动，
-      // 而 postprocess 模式下该 enabled 被 setVolumetricEngine 强制置 false，
-      // 「体积光关着、bloom 却按体积光浓度联动」语义自相矛盾。现只在体积光真正启用时联动。
-      const gain = vol.enabled ? vol.opacity : 0;
+      // [ADR-247] 联动门禁只看联动开关本身，读「浓度意图」opacity，与体积光「此刻是否可见」解耦。
+      // 历史：ADR-246 D1 曾把门禁收紧为 volumetric.enabled（原实现无条件读 opacity，而该
+      // opacity 在 postprocess 模式下被引擎强制关闭，更荒谬）——但读「可见性」会让联动开关
+      // 继承另一功能的运行时状态：默认配置（联动 on + 体积光 off）下 gain 恒 0，开关显示
+      // 「开」却从不生效，正是「开关撒谎」。联动语义是「是否接受体积光浓度调制 bloom」的
+      // 用户偏好；可见性取决于聚光灯这一物理前置，不该静默撤销用户偏好。
+      const gain = vol.opacity;
       // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
@@ -451,13 +477,21 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.applyReflectorSync();
   }
 
-  /** 性能档位总闸（render.bloom 绑定入口）：只写当前生效开关 this.enabled，
-   *  不触碰 per-type 门禁 params.enabled——门禁由 applyPostProcDefaults 维护，总闸 off 不得抹掉
-   *  （否则 off→on 循环后门禁已毁，bloom 再也开不回来）。手动开关（pp-enabled）仍走 setEnabled。 */
+  /** 性能档位总闸（render.bloom 绑定入口）：[ADR-247 D3] 只写总闸字段，生效开关 = 总闸 && 门禁。
+   *  门禁由 applyPostProcDefaults 维护，总闸 off 不得抹掉门禁（否则 off→on 循环后
+   *  bloom 再也开不回来）——该保护现由本方法自持，不再依赖调用方把门禁值回读传回。
+   *  手动开关（pp-enabled）走 setEnabled，不受总闸/门禁限制。 */
   setMasterEnabled(v: boolean): void {
-    if (this.enabled === v) return;
-    this.enabled = v;
-    if (v) {
+    this.perfMaster = v;
+    this.syncEffectiveEnabled();
+  }
+
+  /** 按「总闸 && 门禁」重算生效开关并落地副作用（composer 构建/销毁 + 曝光 + reflector 联动） */
+  private syncEffectiveEnabled(): void {
+    const next = this.perfMaster && this.perTypeGate;
+    if (this.enabled === next) return;
+    this.enabled = next;
+    if (next) {
       this.buildComposer();
       this.applyToneMapping();
     } else {
@@ -507,19 +541,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       setEnvState(presetEnv, { source: "auto-model" });
     }
 
-    // 关键修复：将预设 enabled 落库到实例字段 this.enabled，使 per-type 开关真正生效
-    if (presetEnabled !== undefined && presetEnabled !== this.enabled) {
-      this.enabled = presetEnabled;
-      if (this.enabled) {
-        this.buildComposer();
-        this.applyToneMapping();
-      } else {
-        this.disposeComposer();
-      }
-      this.applyReflectorSync();
-    } else if (this.enabled) {
-      // enabled 未变但 envState 可能更新了参数：重建 composer 同步 pass 组合
-      // （重建只此一条路径——翻转分支已构建过，末尾不再无条件重建，避免 double build）
+    // [ADR-247 D3] 预设的 enabled 写入 per-type 门禁（不再直接写生效开关），
+    // 生效开关由「总闸 && 门禁」重算——总闸 off 时门禁仍被正确记录，off→on 可恢复。
+    const gateChanged = presetEnabled !== undefined && presetEnabled !== this.perTypeGate;
+    if (presetEnabled !== undefined) {
+      this.perTypeGate = presetEnabled;
+    }
+    this.syncEffectiveEnabled();
+    // 门禁未翻转但生效开关已开：envState 可能更新了参数 → 重建 composer 同步 pass 组合
+    // （翻转路径已由 syncEffectiveEnabled 构建过，二者互斥，避免 double build）
+    if (!gateChanged && this.enabled) {
       if (this.composer) this.buildComposer();
       this.applyToneMapping();
     }
@@ -684,12 +715,14 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- 生命周期 -------- */
 
   dispose(): void {
-    // SSR 禁用时若 reflector 被禁用，要恢复
+    // SSR 禁用时若 reflector 被禁用，要恢复。
+    // [ADR-247 D2] 判定与 applyReflectorSync 同口径：仅当我们仍持有压制（reflector 仍为
+    // 关闭态）时才还原；用户压制期内已手动重开则保留其选择。
     const reflectorCap = this.reflectorCap();
-    if (reflectorCap && this.reflectorPrevEnabled !== undefined) {
+    if (reflectorCap && this.reflectorSuppressing && !reflectorCap.isEnabled()) {
       reflectorCap.setEnabled(this.reflectorPrevEnabled);
-      this.reflectorPrevEnabled = undefined;
     }
+    this.reflectorSuppressing = false;
     this.unsubscribeEnv();
     this.disposeComposer();
     this.renderer.toneMapping = this.prevToneMapping;

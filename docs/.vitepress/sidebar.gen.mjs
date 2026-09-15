@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-247：后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移",
+        "link": "/adr/ADR-247-postproc-linkage-gate"
+      },
+      {
         "text": "ADR-246：灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化",
         "link": "/adr/ADR-246-light-volumetric-simplify"
       },

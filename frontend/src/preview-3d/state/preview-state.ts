@@ -216,15 +216,16 @@ const bindings: PathBindingMap = {
       // =true 不强制打开 —— 尊重 per-type 预设设为关闭的类型（方块/体素/光影包），
       // 根治「medium 默认强制全类型开 Bloom → YSM/车万女仆爆亮」的越权。
       // 最终开关 = 总闸(render.bloom) && per-type 门禁(params.enabled)，手动开关不受此限。
-      // 经 setMasterEnabled 只写生效开关、不抹 per-type 门禁（总闸 off→on 循环可恢复）；
-      // 缺 setMasterEnabled/getParams（旧实现/测试 fake）时结构化回退旧语义 setEnabled(Boolean(v))，
+      // [ADR-247 D3] 总闸语义已内移进 cap：setMasterEnabled(v) 内部按「总闸 && per-type 门禁」
+      // 重算生效开关并自持门禁保护。此处只传档位意图，不再回读 getParams().enabled 传回
+      //（旧写法把门禁保护落在调用方，任何绕过本行的调用都会毁掉 off→on 可恢复性）。
+      // 缺 setMasterEnabled（旧实现/测试 fake）时结构化回退旧语义 setEnabled(Boolean(v))，
       // 不做硬转——hasMethod 模式防运行期炸裂。
       const master = cap as unknown as {
-        getParams?: () => { enabled: boolean };
         setMasterEnabled?: (v: boolean) => void;
       };
       if (master.setMasterEnabled) {
-        master.setMasterEnabled(v ? (master.getParams?.()?.enabled ?? true) : false);
+        master.setMasterEnabled(Boolean(v));
       } else {
         cap.setEnabled(Boolean(v));
       }

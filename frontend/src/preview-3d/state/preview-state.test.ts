@@ -260,8 +260,11 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   });
 
   it("render.bloom 总闸语义：=true 尊重 per-type 门禁、=false 恒关，且不抹门禁（off→on 循环可恢复）", () => {
-    // 镜像真实 PostprocessingCapability：setEnabled 写两处、setMasterEnabled 只写生效开关
-    const params = { enabled: true };
+    // [ADR-247 D3] 镜像真实 PostprocessingCapability：门禁与总闸是 cap 内部两个正交字段，
+    // 生效开关 = 总闸 && 门禁；setMasterEnabled 只写总闸。门禁保护由 cap 自持，
+    // 调用方只传档位意图（不再回读 getParams().enabled）。
+    let perTypeGate = true;
+    let perfMaster = true;
     const pp = {
       id: "postprocessing",
       labelKey: "x",
@@ -272,13 +275,13 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
       apply: vi.fn(),
       dispose: vi.fn(),
       setEnabled(v: boolean) {
-        pp.enabled = v;
-        params.enabled = v;
+        pp.enabled = v; // 手动开关：绕过总闸与门禁
       },
       isEnabled: () => pp.enabled,
-      getParams: () => params,
+      getParams: () => ({ enabled: pp.enabled }),
       setMasterEnabled(v: boolean) {
-        pp.enabled = v;
+        perfMaster = v;
+        pp.enabled = perfMaster && perTypeGate;
       },
       getMenuControls: () => pp.controls,
       saveState: vi.fn(),
@@ -287,24 +290,24 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     mountCaps(pp as unknown as SceneCapability);
 
     // per-type 门禁关 + 总闸开 → 不得越权开启（YSM/车万女仆爆亮回归防护）
-    params.enabled = false;
+    perTypeGate = false;
     setStateValue("render.bloom", true);
     expect(pp.isEnabled()).toBe(false);
 
     // 门禁开 + 总闸开 → 正常开启
-    params.enabled = true;
+    perTypeGate = true;
     setStateValue("render.bloom", true);
     expect(pp.isEnabled()).toBe(true);
 
     // 总闸关 → 恒关，且门禁不被抹掉（P2 回归：此前 setEnabled(false) 把门禁写死为 false）
     setStateValue("render.bloom", false);
     expect(pp.isEnabled()).toBe(false);
-    expect(params.enabled).toBe(true);
+    expect(perTypeGate).toBe(true);
 
     // 总闸再开 → 恢复（off→on 循环不失效）
     setStateValue("render.bloom", true);
     expect(pp.isEnabled()).toBe(true);
-    expect(params.enabled).toBe(true);
+    expect(perTypeGate).toBe(true);
   });
 
   it("结构性探测：id 对得上但方法不全的 cap 不误判为可用", () => {

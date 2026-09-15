@@ -48,10 +48,11 @@ function makeFakeRenderer() {
 }
 
 /** stub LightCapability：供 render() 的 volumetric 联动查询。
- *  [ADR-246 D1] 原 engine 维度已删——postprocess 空壳引擎移除后无需再 stub getVolumetricEngine。 */
-function stubLightCap(opts: { volEnabled?: boolean; opacity?: number } = {}) {
+ *  [ADR-246 D1] 原 engine 维度已删——postprocess 空壳引擎移除后无需再 stub getVolumetricEngine。
+ *  [ADR-247] 联动读「浓度意图」opacity，故 stub 不再需要 volEnabled 维度（可见性不参与联动）。 */
+function stubLightCap(opts: { opacity?: number } = {}) {
   return {
-    getParams: () => ({ volumetric: { enabled: opts.volEnabled ?? false, opacity: opts.opacity ?? 0.45 } }),
+    getParams: () => ({ volumetric: { opacity: opts.opacity ?? 0.45 } }),
   } as unknown as LightCapability;
 }
 
@@ -531,10 +532,12 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     (cap as unknown as { bloomPass: unknown }).bloomPass = bp;
     return bp;
   }
-  // [ADR-246 D1] 联动门禁为 volumetric.enabled：体积光关闭时不联动（gain=0），
-  // 开启时按 opacity 做 ±20% 微调——消除「体积光关着、bloom 却按浓度联动」的矛盾。
-  const lightCap = (opacity: number, enabled = true) =>
-    ({ getParams: () => ({ volumetric: { enabled, opacity } }) }) as unknown as SceneCapability;
+  // [ADR-247] 联动读「用户浓度意图」而非「体积光此刻是否可见」：
+  // 联动开关是用户偏好（是否接受体积光浓度调制 bloom），不应因聚光灯未开（体积光物理上
+  // 不可见）而被静默撤销——否则默认配置（联动 on + 体积光 off）下开关显示「开」却从不生效，
+  // 复现「开关撒谎」。故门禁只看联动开关本身，gain 恒取 opacity。
+  const lightCap = (opacity: number) =>
+    ({ getParams: () => ({ volumetric: { opacity } }) }) as unknown as SceneCapability;
 
   it("默认体积光（opacity 0.45）：threshold/strength 落在用户设置 ±20% 内，radius 保持用户设置", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
@@ -547,12 +550,20 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.radius).toBe(0.5); // radius 不再被 edgeFade 劫持
   });
 
-  it("体积光关闭时不联动：threshold/strength 取用户设置原值（ADR-246 D1）", () => {
+  it("联动只受联动开关控制：体积光是否可见（enabled）不影响联动（ADR-247）", () => {
+    // 回归锁：曾因门禁读 volumetric.enabled，导致默认配置（联动 on + 体积光 off）
+    // 下开关显示「开」却恒不生效——开关撒谎。
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0, false));
-    expect(bp.threshold).toBe(0.6);
-    expect(bp.strength).toBe(0.6);
+    const withEnabled = (enabled: boolean) =>
+      ({ getParams: () => ({ volumetric: { enabled, opacity: 1.0 } }) }) as unknown as SceneCapability;
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(false));
+    const off = { threshold: bp.threshold, strength: bp.strength };
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(true));
+    // 两种可见性下联动结果必须一致（均按 opacity=1.0 微调）
+    expect(bp.threshold).toBeCloseTo(off.threshold, 10);
+    expect(bp.strength).toBeCloseTo(off.strength, 10);
+    expect(bp.strength).toBeCloseTo(0.6 * 1.2, 6); // 确实联动了（非原值 0.6）
   });
 
   it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold ≥ -20%", () => {
@@ -592,14 +603,37 @@ describe("PostprocessingCapability — 总闸与 applyPostProcDefaults 构建次
     );
   }
 
-  // ADR-196：this.enabled 已是唯一真值源（无 params.enabled 双写），setMasterEnabled 直接切换
-  it("setMasterEnabled 切换生效开关并构建/销毁 composer", () => {
-    const cap = newCap({ enabled: false });
-    cap.setMasterEnabled(true);
-    expect(cap.isEnabled()).toBe(true);
+  // [ADR-247 D3] 生效开关 = 总闸 && per-type 门禁。门禁初值取自构造 enabled；
+  // newCap({enabled:true}) 即「门禁开」，故总闸可直接切换生效开关。
+  it("setMasterEnabled 切换生效开关并构建/销毁 composer（门禁已开时）", () => {
+    const cap = newCap({ enabled: true });
     cap.setMasterEnabled(false);
     expect(cap.isEnabled()).toBe(false);
     cap.setMasterEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("门禁关时 setMasterEnabled(true) 不越权开启（总闸放行但门禁否决）", () => {
+    const cap = newCap({ enabled: false }); // 门禁初值 = false（如 YSM/车万女仆预设）
+    cap.setMasterEnabled(true);
+    expect(cap.isEnabled()).toBe(false); // 总闸开，但门禁否决
+  });
+
+  it("总闸关闭不抹门禁：off→on 循环后仍能恢复（门禁保护自持，不靠调用方）", () => {
+    const cap = newCap({ enabled: false });
+    cap.applyPostProcDefaults("vrm"); // 门禁 → true
+    expect(cap.isEnabled()).toBe(true);
+    cap.setMasterEnabled(false); // 总闸关
+    expect(cap.isEnabled()).toBe(false);
+    cap.setMasterEnabled(true); // 总闸再开 → 门禁仍在，恢复
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("门禁自身变化也走同一重算：预设切到关闭类型时立即生效", () => {
+    const cap = newCap({ enabled: true });
+    cap.applyPostProcDefaults("ysm"); // 门禁 → false
+    expect(cap.isEnabled()).toBe(false);
+    cap.applyPostProcDefaults("vrm"); // 门禁 → true
     expect(cap.isEnabled()).toBe(true);
   });
 
@@ -803,14 +837,14 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     cap.setEnabled(true);
     const bloom = internalsOf(cap).bloomPass as unknown as { strength: number; threshold: number; radius: number };
     const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    const rendered = cap.render(0.016, stubLightCap({ volEnabled: true, opacity: 0.5 }));
+    const rendered = cap.render(0.016, stubLightCap({ opacity: 0.5 }));
     expect(rendered).toBe(true);
     expect(renderSpy).toHaveBeenCalled();
     expect(bloom.threshold).toBeCloseTo(0.85 * (1 - 0.2 * 0.5), 6);
     expect(bloom.strength).toBeCloseTo(1.0 * (1 + 0.2 * 0.5), 6);
     // 联动关闭时回用户原值
     cap.setBloomFollowVolumetric(false);
-    cap.render(0.016, stubLightCap({ volEnabled: true, opacity: 0.5 }));
+    cap.render(0.016, stubLightCap({ opacity: 0.5 }));
     expect(bloom.threshold).toBeCloseTo(0.85, 6);
     expect(bloom.strength).toBeCloseTo(1.0, 6);
   });
@@ -828,7 +862,7 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
   it("needComposer：disabled 时不再因体积光强制建 composer（ADR-246 D1 死逻辑已删）", () => {
     const { cap } = newRealCap();
     const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    const rendered = cap.render(0.016, stubLightCap({ volEnabled: true }));
+    const rendered = cap.render(0.016, stubLightCap({ opacity: 1 }));
     expect(rendered).toBe(false);
     expect(internalsOf(cap).composer).toBeNull();
     expect(renderSpy).not.toHaveBeenCalled();
@@ -923,6 +957,45 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     const cap = new PostprocessingCapability({ scene, renderer, camera });
     cap.setEnabled(true);
     expect(cap.isEnabled()).toBe(true);
+  });
+
+  // [ADR-247 D2] 用户手动覆盖：SSR 抑制期间用户自己重新开 reflector，
+  // SSR 关闭时不得用陈旧的 prev 值把用户的选择抹掉。
+  // 关键用例：用户压制前是「关」，压制期间手动开 → 解除时必须保持「开」。
+  // （若压制前是「开」，回放 prev=true 恰好与用户选择相同，无法区分两条代码路径。）
+  it("SSR 抑制期间用户手动开 reflector → SSR 关闭后保留用户的「开」（不回放陈旧 prev=false）", () => {
+    const { cap, reflector } = makePair();
+    reflector.setEnabled(false); // 用户压制前：reflector 关
+    cap.setEnabled(true); // SSR 活动 → prev 记录 false（本就关，无需动作）
+    expect(reflector.isEnabled()).toBe(false);
+    // 用户在 SSR 仍活动时手动开启 reflector（面板 toggle 走 setEnabled）
+    reflector.setEnabled(true);
+    expect(reflector.isEnabled()).toBe(true);
+    // SSR 关闭：我们已非压制持有者（reflector 已被用户开回），须保留用户选择
+    cap.setReflectionMode("envmap-only");
+    expect(reflector.isEnabled()).toBe(true); // ← 旧实现用 prev=false 抹掉，此处转红
+  });
+
+  it("SSR 关闭后不残留抑制态：再次开启 SSR 仍能正常抑制与还原", () => {
+    const { cap, reflector } = makePair();
+    cap.setEnabled(true);
+    expect(reflector.isEnabled()).toBe(false);
+    cap.setReflectionMode("envmap-only");
+    expect(reflector.isEnabled()).toBe(true);
+    // 第二轮：抑制态须已完全清空，不能因残留哨兵而跳过抑制
+    cap.setReflectionMode("envmap+ssr");
+    expect(reflector.isEnabled()).toBe(false);
+    cap.setReflectionMode("envmap-only");
+    expect(reflector.isEnabled()).toBe(true);
+  });
+
+  it("reflector 原本就关：SSR 开关一轮后仍保持关闭（不误恢复为开）", () => {
+    const { cap, reflector } = makePair();
+    reflector.setEnabled(false); // 用户先关掉 reflector
+    cap.setEnabled(true); // SSR 活动，prev=false
+    expect(reflector.isEnabled()).toBe(false);
+    cap.setReflectionMode("envmap-only");
+    expect(reflector.isEnabled()).toBe(false); // 仍关，不被误开
   });
 
   it("dispose 恢复被禁用的 reflector", () => {

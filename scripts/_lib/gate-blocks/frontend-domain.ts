@@ -87,8 +87,11 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // 菜单表违规 = hard（默认）：ctx.record() 已自动置 blocked，无需重复手动设
 
   // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
-  // 里所有字面量 tr("key") 必须存在于 zh-CN 基准包，否则运行时静默回退英文。
+  // 里所有字面量 t("key")（原文 tr("key")）必须存在于 zh-CN 基准包，否则运行时静默回退。
   // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。
+  // 2026-09 修复：该闸的 SOURCE_FILES 曾整体指向已不存在的 `core/*`，叠加「文件不存在
+  // 即跳过」的容错 → 扫零文件报绿（假绿）。现闸自带空域 fail-loud（0 文件 / 0 键 → exit 2），
+  // 并在 note 里输出文件数，便于一眼看出「是否真的扫到了东西」。
   const tC = Date.now();
   const ci = await ctx.shAsync("node scripts/check-ctx-menu-i18n.ts --json");
   const { ok: cOk, summary: cz } = requireSummaryOk(ci.out, ci.rc);
@@ -99,8 +102,8 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
       cz === null
         ? "输出解析失败"
         : cOk
-          ? `右键菜单 ${cz.total} 个 tr() key 全绿`
-          : `${cz.violations} 个 key 缺失（运行时静默回退英文）`,
+          ? `右键菜单 ${cz.filesScanned ?? "?"} 文件 / ${cz.total} 个 key 全绿`
+          : `${cz.violations} 个 key 缺失（运行时静默回退）`,
     tail: cOk ? "" : ci.out.trim().split("\n").slice(-8).join("\n"),
   });
   // 右键菜单 i18n 缺失 = hard（默认）：ctx.record() 已自动置 blocked，无需重复手动设

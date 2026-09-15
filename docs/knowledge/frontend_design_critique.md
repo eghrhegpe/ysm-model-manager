@@ -191,6 +191,7 @@ invariant_anchors:
 
 - ✅ **刀① perception 帧内 prealloc**：`perception/gaze.ts`、`perception/autodance.ts` 闭包级 scratch（Quaternion/Euler/Vector3 复用），每帧 0 分配；EYE_IDS / 左右臂 Set 提常量。45 感知测试全绿。
 - ✅ **刀② accent 收编 var(--accent)**：8 文件 15 处 `rgba(124,131,255)` → `color-mix(in srgb,var(--accent) X%,transparent)`；`#7c83ff` → `var(--accent)`；canvas 2D（model2d-draw.ts）加 `accentRgba()` 运行时解析（fillStyle 不解析 CSS 变量）；`variables.css --mmd-morph-active-bg` 改派生。roles/switch/vrm-bone-ui 样式串提纯函数（happy-dom 不认 color-mix()，测试直断字符串）。全量 5171 测试 + typecheck + vite build 全绿。
+- 🔧 **死代码清理（2026-09 后续）**：刀②派生式收编的 `--mmd-morph-active-bg` 与 `--clr-ch-r/g/b` 自始零消费（死 token），已连同 `--pad-tab`/`--space-xs`/`--space-lg`/`--tr-slow`/`--z-dropdown`/`--z-sticky`/`--z-modal-backdrop` 一并删除；组件库 `--uih-ui-scale`（恒 1 的伪缩放，全仓无赋值方）拍平为固定值；`.hdr-btn` 死样式（tpl 早改 .btn-base）与 treeRowIn 排查注释残留清除；slide-menu 内容卡背景 `rgba(15,15,22,0.92)` 统一为外壳同源 `rgba(20,20,30,0.55)`（透景口径生效，双源色值收敛）。
 - ✅ **刀③ _render → 页面面板常驻化**：兄弟会话 `486b9033` 实施完成（**单面板挂载复用**方案，非 ADR-163 原文「tab-panel 常驻 + active 切换」——落地方案更优）：
   - `index.ts` 每页首次访问构建面板 + 执行 init（每页仅一次），之后复用缓存节点、不重建不重复 init——消灭「再进 dedup 永久卡死」（busy 锁 finally 必复位 + 不再重复 init）；
   - **单面板挂载**：root 下同一时刻仅保留当前面板（其余从 DOM 分离、引用留缓存），root 内 id 天然唯一，页内 `host._root.getElementById` 无跨页冲突 → **无需页内查询作用域化**（省去 237 处 getElementById 改造）；

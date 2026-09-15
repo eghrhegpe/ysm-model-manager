@@ -19,6 +19,10 @@ jobs:
   # ── 测试门禁（可复用 workflow test.yml，main/PR 由 ci.yml 调用）───
   test:
     uses: ./.github/workflows/test.yml
+    # 变更范围（ADR-244）：tag push 的 event.before 多为全零（新 tag）→ 脚本识别为不可解析
+    # 后退回本地解析，与旧行为一致；能解析时则按「上一 tag..HEAD」归属。
+    with:
+      changed-base: ${{ github.event.before }}
 
   # ── 版本提取与校验 ─────────────────────────────────────
   prepare:

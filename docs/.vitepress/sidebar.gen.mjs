@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-244：CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件",
+        "link": "/adr/ADR-244-ci-gate-change-context-and-scan-scope"
+      },
+      {
         "text": "ADR-243：VMD 动作重定向到 VRM 人形骨骼（跨格式动作复用）",
         "link": "/adr/ADR-243-vmd-to-vrm-retarget"
       },

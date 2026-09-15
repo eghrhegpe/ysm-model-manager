@@ -6,6 +6,16 @@ name: Test Gate
 
 on:
   workflow_call:
+    inputs:
+      # 本次变更范围的基线 ref（ADR-244）：push=github.event.before、PR=base.sha。
+      # 本工作流跑在 push **之后**，本地三源（staged/未提交/未跟踪）必然全空 ⇒ 死代码门禁
+      # 的责任集恒无从归属 ⇒ 结构性地全阻断。由调用方给出范围，归属才落到本次真改过的文件。
+      # 空值（workflow_dispatch / 无法解析）→ 脚本退回本地解析（行为与旧版一致）。
+      changed-base:
+        description: 本次变更范围的基线 ref（供变更上下文类门禁做归属裁剪）
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -125,6 +135,10 @@ jobs:
 
       - name: 死代码基线门禁（check-deadcode-baseline，依赖 knip/jscpd → pnpm install 后跑）
         shell: pwsh
+        env:
+          # 责任范围（ADR-244）：CI 在 push 之后跑，本地上下文必然全空——不给范围就恒退严格模式
+          # 全阻断（结构性恒红，且 --json 关掉自动收编 ⇒ 无法自愈）。空值 → 脚本退回本地解析。
+          YSM_DEADCODE_BASE: ${{ inputs.changed-base }}
         run: |
           node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -71,3 +71,76 @@ export function canWriteBaseline(
     trusted(jscpdFindings, jscpdOut, jscpdParseFailed)
   );
 }
+
+// ── 责任文件集解析（2026-09-15 下沉自 check-deadcode-baseline main，可注入 git 便于契约测试）──
+
+/** git 运行器：成功返回 stdout（可能含换行）、失败返回 null。 */
+export type GitRunner = (...args: string[]) => string | null;
+
+/**
+ * 显式变更范围解析（纯函数）：`--base <rev>` 优先，其次 env `YSM_DEADCODE_BASE`。
+ * 空白 / 缺省 → null（= 不启用显式范围，退回本地上下文语义）。
+ * 为什么需要它：CI 跑在 push **之后**，本地三源与未推送 diff 必然全空 ⇒ 责任集恒 null
+ * ⇒ 严格模式全阻断，而 CI 传 `--json` 又关掉自动收编 ⇒ 门禁结构性恒红且无法自愈。
+ */
+export function parseBaseRef(
+  argv: string[],
+  env: Record<string, string | undefined> = {},
+): string | null {
+  const i = argv.indexOf("--base");
+  const cli = i >= 0 ? (argv[i + 1] ?? "") : "";
+  const raw = (cli || env.YSM_DEADCODE_BASE || "").trim();
+  return raw || null;
+}
+
+/**
+ * 责任文件集解析（仓库根相对 posix 路径）。
+ *
+ * 解析顺序：
+ *   ⓪ `baseRef` 可解析为提交对象 → `git diff --name-only <base>...HEAD`（**CI 唯一可用上下文**）；
+ *      结果**允许为空数组**——「本次范围没改到相关文件 ⇒ 谁都不该背锅」与「无从归属」(null)
+ *      必须严格区分，前者不该触发严格模式全阻断。
+ *   ①②③ 本地三源：staged（commit 场景）+ 未暂存改动 + 未跟踪文件（gitignore 之外）；
+ *   ④ 回退未推送提交 diff（push 场景）→ null（严格模式，调用方全阻断 fail-closed）。
+ *
+ * 「未暂存改动」必须纳入：pre-commit / 手工检查在 `git add` 前运行时，自己的新死代码若不在
+ * 责任集，会被当成「他人遗留」自动收编进基线、永久洗白（code_review P2-2）。
+ * @param notes 追加诊断行（--base 生效 / 不可解析），调用方据此输出 INFO
+ */
+export function resolveResponsibleFiles(
+  git: GitRunner,
+  baseRef?: string | null,
+  notes: string[] = [],
+): string[] | null {
+  const collect = (out: string | null): string[] => {
+    if (out === null || !out.trim()) return [];
+    return out
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((p: string) => toPosix(p));
+  };
+  if (baseRef) {
+    const verified = git("rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`);
+    if (verified?.trim()) {
+      const scope = collect(git("diff", "--name-only", `${verified.trim()}...HEAD`));
+      notes.push(
+        `责任范围: --base ${baseRef.slice(0, 12)}（本次变更 ${scope.length} 个文件）—— CI 场景唯一可用上下文`,
+      );
+      return scope;
+    }
+    notes.push(`--base ${baseRef} 不可解析（非提交对象），已退回本地上下文解析`);
+  }
+  const files = new Set([
+    ...collect(git("diff", "--cached", "--name-only")),
+    ...collect(git("diff", "--name-only")),
+    ...collect(git("ls-files", "--others", "--exclude-standard")),
+  ]);
+  if (files.size > 0) return [...files];
+  const upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}");
+  if (upstream?.trim()) {
+    const pushed = collect(git("diff", "--name-only", `${upstream.trim()}...HEAD`));
+    if (pushed.length > 0) return pushed;
+  }
+  return null;
+}

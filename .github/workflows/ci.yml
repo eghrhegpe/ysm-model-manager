@@ -19,3 +19,7 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/test.yml
+    # 变更范围（ADR-244）：push 用 event.before（本次推送的起点）、PR 用 base.sha；
+    # workflow_dispatch 二者皆无 → 空串 → 脚本退回本地解析（= 旧行为）。
+    with:
+      changed-base: ${{ github.event.before || github.event.pull_request.base.sha || '' }}

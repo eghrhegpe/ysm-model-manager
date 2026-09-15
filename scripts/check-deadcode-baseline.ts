@@ -5,11 +5,18 @@ import { spawnSync } from "node:child_process";
  *
  * 调用 knip（死代码）+ jscpd（重复代码）的 JSON 输出，与基线
  * scripts/baseline/deadcode-baseline.json 对比，并按「归属裁剪」分流：
- *   - 新增 ∩ 责任文件集（staged / 未推送提交改动）→ ERROR（自己的债自己还）
+ *   - 新增 ∩ 责任文件集（显式 --base 范围 / staged / 未推送提交改动）→ ERROR（自己的债自己还）
  *   - 新增 ∩ 责任集为空 → 自动收编进基线 + INFO 留痕（他人遗留债务不拦路，但记账）
  *   - 基线已知项      → OK（放行，支持渐进清理）
  *   - 基线中已消失项  → INFO（已清理；收编写盘时一并移除）
- *   - 无 git 上下文可归属 → 严格模式：全部新增阻断（fail-closed）
+ *   - 无任何变更上下文可归属 → 严格模式：全部新增阻断（fail-closed）
+ *
+ * ⚠️ CI 必须传 `--base`（或 env `YSM_DEADCODE_BASE`）：CI 跑在 **push 之后**，此时
+ *    staged / 未提交 / 未跟踪三源全空，且 `origin/main...HEAD` 也空（远端已推进到本次提交）
+ *    ⇒ 责任集恒为 null ⇒ 严格模式全阻断；而 CI 传 `--json` 又关掉自动收编写盘
+ *    ⇒ 门禁**结构性恒红且无法自愈**（2026-09-15 实证：main 连红两天，任何非基线死代码都阻断，
+ *    报的还全是别的会话的债）。调用方给出本次变更范围的基线 ref（push = `github.event.before`、
+ *    PR = base.sha），责任集才能落在「本次范围真正改过的文件」上——同 `_lib/changed-scope.ts` 的味。
  *
  * 依赖：frontend/ 需安装 knip + jscpd（npm i -D knip jscpd）。
  *
@@ -17,6 +24,7 @@ import { spawnSync } from "node:child_process";
  *   node scripts/check-deadcode-baseline.ts              # 对比基线
  *   node scripts/check-deadcode-baseline.ts --update-baseline   # 刷新基线（直接写入，不拦新增项）
  *   node scripts/check-deadcode-baseline.ts --json       # JSON（CI 用）
+ *   node scripts/check-deadcode-baseline.ts --json --base <rev> # 显式变更范围（CI push/PR 必传）
  *   node scripts/check-deadcode-baseline.ts --update-baseline --force  # 同 --update-baseline（--force 保留兼容）
  *
  * 退出码：新增 ERROR → 1；工具缺失 → 1；否则 0。
@@ -25,7 +33,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { canWriteBaseline, splitNewFindings } from "./_lib/deadcode-attrib.ts";
+import {
+  canWriteBaseline,
+  parseBaseRef,
+  resolveResponsibleFiles,
+  splitNewFindings,
+} from "./_lib/deadcode-attrib.ts";
 import { ROOT, toPosix } from "./_lib/scan-files.ts";
 import { checkStale } from "./_lib/stale-baseline.ts";
 
@@ -35,6 +48,13 @@ const BASELINE_FILE = path.join(ROOT, "scripts/baseline/deadcode-baseline.json")
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has("--json");
 const UPDATE = ARGS.has("--update-baseline");
+
+/**
+ * 显式变更范围（2026-09-15，ADR-244）：`--base <rev>` 或 env `YSM_DEADCODE_BASE`。
+ * CI 专用——push 之后 staged / 未提交 / 未跟踪三源必然全空，只能由调用方告知变更范围。
+ * 空值 / 缺省 → null（本地既有语义完全不变）。解析与语义见 `_lib/deadcode-attrib.ts`。
+ */
+const BASE_REF = parseBaseRef(process.argv.slice(2), process.env);
 
 const errors: string[] = [];
 const infos: string[] = [];
@@ -63,11 +83,7 @@ function bin(name: string) {
   return candidates.find((c) => fs.existsSync(c)) || null;
 }
 
-function run(
-  name: string,
-  args: string[],
-  opts: { allowExit1?: boolean; cwd?: string } = {},
-) {
+function run(name: string, args: string[], opts: { allowExit1?: boolean; cwd?: string } = {}) {
   const exe = bin(name);
   if (!exe) {
     errors.push(`[工具缺失] ${name} 未安装：cd frontend && npm i -D ${name}`);
@@ -179,38 +195,15 @@ function parseJscpd() {
 }
 
 // ── 责任文件集解析（归属裁剪）─────────────────────────
-// 合并三源：staged（commit 场景）+ 未暂存改动 + 未跟踪文件（gitignore 之外），
-// 再回退未推送提交 diff（push 场景）→ null（严格模式）。
-// 返回仓库根相对 posix 路径数组；null = 无 git 上下文，调用方全阻断（fail-closed）。
-// 未暂存改动必须纳入：pre-commit/手工检查在 git add 前运行时，自己的新死代码
-// 若不在责任集会被当「他人遗留」自动收编进基线、永久洗白（code_review P2-2）。
+// 语义与解析顺序已下沉 `_lib/deadcode-attrib.ts`（纯逻辑可契约测试）：
+//   ⓪ 显式 --base（CI push/PR 唯一可用上下文，结果允许为空数组）
+//   ①②③ 本地三源 staged / 未暂存 / 未跟踪 → ④ 未推送提交 diff → null（严格模式全阻断）
 
-function resolveResponsibleFiles() {
-  const git = (...args: string[]) => {
-    const r = spawnSync("git", args, { encoding: "utf-8" });
-    return r.status === 0 ? r.stdout : null;
-  };
-  const collect = (out: string | null) => {
-    if (out === null || !out.trim()) return [];
-    return out
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((p: string) => toPosix(p));
-  };
-  const files = new Set([
-    ...collect(git("diff", "--cached", "--name-only")),
-    ...collect(git("diff", "--name-only")),
-    ...collect(git("ls-files", "--others", "--exclude-standard")),
-  ]);
-  if (files.size > 0) return [...files];
-  const upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}");
-  if (upstream?.trim()) {
-    const pushed = collect(git("diff", "--name-only", `${upstream.trim()}...HEAD`));
-    if (pushed.length > 0) return pushed;
-  }
-  return null;
-}
+/** git 运行器：成功 stdout、失败 null（与 _lib 的 GitRunner 同口径）。 */
+const gitRunner = (...args: string[]) => {
+  const r = spawnSync("git", args, { encoding: "utf-8" });
+  return r.status === 0 ? r.stdout : null;
+};
 
 // ── 主流程 ────────────────────────────────────────────
 
@@ -317,7 +310,7 @@ function main() {
     const goneJ = [...baseJ].filter((k) => !current.jscpd.includes(k));
 
     const newKeys = [...newK, ...newJ];
-    const responsible = resolveResponsibleFiles();
+    const responsible = resolveResponsibleFiles(gitRunner, BASE_REF, infos);
     const strictMode = responsible === null;
     const { blocking, absorbable } = splitNewFindings(
       newKeys,

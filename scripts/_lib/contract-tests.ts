@@ -51,6 +51,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-card-status.ts": ["docs", "tests"],
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
   "test_check_readme_index.ts": ["docs", "tests"],
+  // link-checker 扫描域 = git 跟踪 ∩ 可扫（防未跟踪 md 拦住全仓推送）——docs 域变更亦触发
+  "test_link_checker_scope.ts": ["docs", "tests"],
   "test_sidebar_gen.ts": ["docs", "tests"],
   "verify-adr-042.ts": ["docs"],
   // —— data ——
@@ -215,6 +217,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
   "test_changed_scope.ts": ["scripts/_lib/changed-scope.ts"],
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
+  "test_link_checker_scope.ts": ["scripts/link-checker.ts", "scripts/_lib/scan-files.ts"],
   "test_check_path_hygiene.ts": [
     "scripts/check-path-hygiene.ts",
     "scripts/_lib/alias-resolve.ts",

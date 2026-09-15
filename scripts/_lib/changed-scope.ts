@@ -10,14 +10,17 @@
  *   --files <换行分隔的相对路径>   门禁 / CI 侧显式传入（pre-push-gate 同款）
  *   --changed                     本地便利：相对默认分支基线自动解析变更文件
  *
- * 语义要点（三条都是踩过的坑）：
+ * 语义要点（四条都是踩过的坑）：
  *   1. 路径口径 = 相对仓库根、正斜杠（与 pre-push-gate 的 --files 一致）；非 ASCII 路径
  *      靠 `-c core.quotepath=false` 拿原始 UTF-8，避免八进制转义后匹配不上。
  *   2. 重命名/删除的文件不会出现在扫描树里——静默忽略，**不报错**（--files 传的是
  *      「本次变更」而非「现存文件」，把删除项当错误会让每次重命名提交都红）。
  *   3. 两 flag 都缺 → scope=null = 全库，向后兼容既有行为。
- *   4. --files 给了但为空 / --changed 解析失败 → 返回 error，调用方**必须** fail-closed
- *      （不许静默退回全库）——同 gate-parse 第 4 条纪律：解析失败不得与「扫描通过」同形。
+ *   4. --files 给了但为空 / --changed 解析失败**或解析结果为空** → 返回 error，调用方
+ *      **必须** fail-closed（不许静默退回全库）——同 gate-parse 第 4 条纪律：解析失败不得
+ *      与「扫描通过」同形。空 diff 为何也算失败（2026-09-15 修）：CI 在 push 之后跑，
+ *      origin/main 已推进到本次提交 → merge-base = HEAD → diff 必空；若把空结果当
+ *      「合法空域」，三扫描器会扫 0 文件恒绿——正是本纪律要防的假绿形态。
  *
  * 依赖：node:child_process（自建 git()）+ ./to-posix.ts + ./scan-files.ts（ROOT）。
  *
@@ -72,12 +75,29 @@ export function inChangedScope(rel: string, scope: Set<string> | null | undefine
 const DEFAULT_BRANCH_REFS = ["origin/HEAD", "origin/main", "origin/master", "main", "master"];
 
 /**
+ * `git diff --name-only` 的 stdout → 变更文件数组；**空输出 → null**（2026-09-15）。
+ *
+ * 空输出有两类成因：① 确实无改动；② 基线已等于 HEAD（CI 在 push 之后跑——`origin/main`
+ * 已推进到本次提交 → `merge-base` = HEAD → diff 必空）。两者在本层不可区分，而 ② 一旦被
+ * 当成「合法空域」，`--changed` 就会产出空 scope → 三扫描器扫 0 文件恒绿（假绿）。
+ * 故一律 null，由调用方 fail-closed。纯函数（契约测试锁定）。
+ */
+export function parseGitNameOnly(stdout: string): string[] | null {
+  const files = stdout
+    .split("\n")
+    .map((f) => toPosix(f.trim()))
+    .filter(Boolean);
+  return files.length ? files : null;
+}
+
+/**
  * `--changed` 本地解析：相对默认分支合并基线的变更文件（含已提交 + 工作区/暂存改动）。
  *
  * 口径 = `git merge-base HEAD <默认分支>` 后 `git diff --name-only <基线>`——即
  * 「我在本分支上改过的一切」，与 check-biome 的 `--changed`（vcs.defaultBranch 比对）同义。
  * 已知边界：**不含未跟踪文件**（`git diff` 天然不列），新文件请先 `git add` 或改传 `--files`。
- * @returns 变更文件相对路径数组；git 不可用 / 无任何默认分支基线 → null（调用方 fail-closed）。
+ * @returns 变更文件相对路径数组；git 不可用 / 无任何默认分支基线 / **解析结果为空** → null
+ *          （后一种即「无有效变更域」，调用方必须 fail-closed，见 parseGitNameOnly 注释）。
  */
 export function resolveLocalChanged(): string[] | null {
   let base: string | null = null;
@@ -92,10 +112,7 @@ export function resolveLocalChanged(): string[] | null {
   if (!base) return null;
   const d = git(["diff", "--name-only", base]);
   if (d.rc !== 0) return null;
-  return d.out
-    .split("\n")
-    .map((f) => toPosix(f.trim()))
-    .filter(Boolean);
+  return parseGitNameOnly(d.out);
 }
 
 /** 变更域解析结果：scope=null 表示未启用过滤（全库）。 */
@@ -120,14 +137,16 @@ export function resolveChangedScope(filesRaw: unknown, changed: boolean): Change
     if (!s) return { scope: null, error: "--files 未提供任何文件路径（空列表）" };
     return { scope: s };
   }
-  // ② --changed：git 自解析失败即 fail-closed（静默退回全库会让存量债淹没本次变更）
+  // ② --changed：git 自解析失败 / 结果为空即 fail-closed（静默退回全库会让存量债淹没本次变更；
+  //    空结果退化成空 scope 则扫 0 文件恒绿，两者都是假绿）
   if (changed) {
     const list = resolveLocalChanged();
     if (!list)
       return {
         scope: null,
         error:
-          "--changed 无法解析变更文件（git 不可用 / 找不到默认分支基线）；请改传 --files <换行分隔文件列表>",
+          "--changed 解析不到任何变更文件（git 不可用 / 找不到默认分支基线 / 相对基线无差异或基线已等于 HEAD）；" +
+          "请改传 --files <换行分隔文件列表>，或在有变更时使用 --changed",
       };
     return { scope: new Set(list) };
   }

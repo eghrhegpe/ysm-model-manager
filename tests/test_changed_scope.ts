@@ -6,12 +6,17 @@
  * 增量裁剪契约——它是「存量债不淹没本次变更」的唯一实现点，错了会同时影响三者：
  *   - parseChangedFiles：换行分隔列表 → 集合；反斜杠归一化；空/非字符串 → null。
  *   - inChangedScope：未启用过滤（null）恒 true；命中/未命中；反斜杠输入归一化。
+ *   - parseGitNameOnly：`git diff --name-only` 输出 → 数组；**空输出 → null**。
  *   - resolveChangedScope：三路优先级（--files 优先 → --changed → 全库）与
  *     **fail-closed 不变量**——`--files` 空列表必须报 error（不许静默退回全库），
  *     `--changed` 自动解析失败时必须报 error（同 gate-parse 第 4 条纪律）。
  *
  * resolveLocalChanged 依赖本机 git 状态（CI 浅克隆 / 无远端时不可用），故只断言
  * 「形状」与「不变量」，不断言具体文件集——避免把环境差异固化成红。
+ * ⚠️ 但「非 null 时不应为空数组」不是环境巧合，而是**构造性保证**：空 diff 场景真实
+ * 存在于 CI（push 之后 origin/main 已推进到本次提交 → merge-base = HEAD → diff 必空），
+ * 若空结果退化成 `[]`，则 (a) 本测试红、(b) resolveChangedScope 产出**空 scope** →
+ * 三扫描器扫 0 文件恒绿（假绿）。故由 parseGitNameOnly 空输出 → null 钉死。
  *
  * 运行：node tests/test_changed_scope.ts（失败 exit 1；契约 runner 收集）。
  */
@@ -19,6 +24,7 @@ import assert from "node:assert/strict";
 import {
   inChangedScope,
   parseChangedFiles,
+  parseGitNameOnly,
   resolveChangedScope,
   resolveLocalChanged,
 } from "../scripts/_lib/changed-scope.ts";
@@ -88,11 +94,13 @@ import {
 }
 
 // ─── 6) resolveLocalChanged：形状（不断言具体文件集）──────
+// 非 null 一定是**非空**数组：空 diff（CI push 后 merge-base=HEAD）必须走 null 分支，
+// 否则既是本断言的红、也是 --changed 空 scope 恒绿的根。纯函数侧由第 7 组钉死。
 {
   const list = resolveLocalChanged();
   if (list !== null) {
     assert.ok(Array.isArray(list), "非 null 时必为数组");
-    assert.ok(list.length > 0, "非 null 时不应为空数组");
+    assert.ok(list.length > 0, "非 null 时不应为空数组（空 diff 必须落 null → fail-closed）");
     assert.ok(
       list.every((f) => typeof f === "string" && f.length > 0 && !f.includes("\\")),
       "全部为非空正斜杠相对路径",
@@ -100,4 +108,30 @@ import {
   }
 }
 
-console.log("✅ test_changed_scope.ts 全部通过（6 组契约断言）");
+// ─── 7) parseGitNameOnly：空输出 → null（2026-09-15 修 CI 空 diff 假绿）──
+// git diff --name-only 的 stdout 有两种「空」：真空串、仅换行。二者都必须 → null
+// （= 无有效变更域 → 调用方 fail-closed），绝不可返回 []（空 scope = 扫 0 文件恒绿）。
+{
+  assert.equal(parseGitNameOnly(""), null, "空串 → null（空 diff 不得成空域）");
+  assert.equal(parseGitNameOnly("\n"), null, "仅换行 → null");
+  assert.equal(parseGitNameOnly("\n\n  \n"), null, "全空白行 → null");
+
+  // 用 deepEqual 钉住**精确形状**：尾换行不得产生空项、反斜杠须归一化
+  assert.deepEqual(
+    parseGitNameOnly("frontend/src/a.ts\n"),
+    ["frontend/src/a.ts"],
+    "单行（含尾换行）→ 单元素数组，无空项",
+  );
+  assert.deepEqual(
+    parseGitNameOnly("frontend/src/a.ts\ngo/recycle/recycle.go"),
+    ["frontend/src/a.ts", "go/recycle/recycle.go"],
+    "两行 → 两元素",
+  );
+  assert.deepEqual(
+    parseGitNameOnly("frontend\\src\\a.ts"),
+    ["frontend/src/a.ts"],
+    "反斜杠输出归一化为正斜杠",
+  );
+}
+
+console.log("✅ test_changed_scope.ts 全部通过（7 组契约断言）");

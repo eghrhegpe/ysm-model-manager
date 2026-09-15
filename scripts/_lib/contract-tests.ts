@@ -103,6 +103,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_diff_coverage.ts": ["tests"],
   "test_check_go_diff_coverage_skip.ts": ["tests"],
   "test_check_go_diff_coverage.ts": ["tests"],
+  "test_diff_coverage_shallow.ts": ["tests"],
   // Go 覆盖率门禁聚合口径（语句加权）——锁「单函数 0% 不拖垮整包」不回归
   "test_check_go_coverage_threshold.ts": ["tests"],
   "test_check_complexity.ts": ["tests"],
@@ -257,6 +258,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_go_diff_coverage.ts": ["scripts/check-go-diff-coverage.ts"],
   "test_check_go_coverage_threshold.ts": ["scripts/check-go-coverage-threshold.ts"],
   "test_check_go_diff_coverage_skip.ts": ["scripts/check-go-diff-coverage.ts"],
+  // 浅克隆兜底守卫：盯 _lib/diff-coverage-core 的「直推 main 兜底」（HEAD~1 不可达不得升为 null）
+  "test_diff_coverage_shallow.ts": [
+    "scripts/_lib/diff-coverage-core.ts",
+    "scripts/check-go-diff-coverage.ts",
+  ],
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],

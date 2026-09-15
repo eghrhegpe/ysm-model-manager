@@ -53,19 +53,30 @@ export function getChangedFiles(base: string, head: string, uncommitted: boolean
   g1.split("\n").forEach((l) => {
     if (l) out.add(l);
   });
-  // 兜底：直推 main 时三圆点可能为空，退化为上一提交
+  // 兜底：直推 main 时三圆点可能为空，退化为上一提交。
+  // ⚠️ 该兜底依赖 `HEAD~1` 可解析，而 CI 的 `git fetch origin main --depth=1` 会把
+  // fetch-depth:0 的全量克隆**退化为浅克隆**（生成 .git/shallow），`HEAD~1` 随即
+  // `fatal: ambiguous argument ... unknown revision` → git 返回 null → 这里 `return null`
+  // → 调用方「拒绝空跑放行」硬阻断（2026-09-15 实证：main push 恒红且与本次改动无关）。
+  // 故先探可达性：不可达 ⇒ 三圆点已空（origin/main==HEAD，本次范围无变更文件）**且**
+  // 兜底不可用，语义上就该是「空责任集」而非「解析失败」；返回既有 out（空）即可，
+  // 不得让 git 报错升级为门禁红。浅历史下 `base...head` 仍可用（已实证），
+  // 真正的变更集不受影响。
   if (out.size === 0) {
-    const g2 = git([
-      "diff",
-      "--diff-filter=ACMR",
-      "--find-renames=30",
-      "--name-only",
-      `${head}~1...${head}`,
-    ]);
-    if (g2 === null) return null;
-    g2.split("\n").forEach((l) => {
-      if (l) out.add(l);
-    });
+    const parentResolvable = git(["rev-parse", "--verify", "--quiet", `${head}~1^{commit}`]);
+    if (parentResolvable !== null) {
+      const g2 = git([
+        "diff",
+        "--diff-filter=ACMR",
+        "--find-renames=30",
+        "--name-only",
+        `${head}~1...${head}`,
+      ]);
+      if (g2 === null) return null;
+      g2.split("\n").forEach((l) => {
+        if (l) out.add(l);
+      });
+    }
   }
   if (uncommitted) {
     const g3 = git(["diff", "--find-renames=30", "--name-only"]);
@@ -167,12 +178,22 @@ export function getChangedLines(
     out,
     git(["diff", "--unified=0", "--find-renames=30", `${base}...${head}`, "--", file]),
   );
-  // 兜底：直推 main 时三圆点可能为空
+  // 兜底：直推 main 时三圆点可能为空。
+  // ⚠️ 该兜底依赖 `HEAD~1` 可解析，而 CI 的 `git fetch origin main --depth=1` 会把
+  // fetch-depth:0 的全量克隆**退化为浅克隆**（生成 .git/shallow），`HEAD~1` 随即
+  // `fatal: ambiguous argument ... unknown revision`——git 报错进 stderr 而 stdout 为空，
+  // 上游把 stderr 当致命错误 → 门禁硬阻断（2026-09-15 实证：main push 恒红，
+  // 与本次改动无关）。故此兜底先探可达性：不可达则**跳过**（三圆点已空 ⇒ 本文件无变更行，
+  // 本来就不该判它覆盖率），而不是让 git 抛错。浅历史下 `base...head` 仍可用（已实证），
+  // 真正的变更集不受影响。
   if (out.size === 0) {
-    addLinesFromDiff(
-      out,
-      git(["diff", "--unified=0", "--find-renames=30", `${head}~1...${head}`, "--", file]),
-    );
+    const hasParent = git(["rev-parse", "--verify", "--quiet", `${head}~1^{commit}`]) !== null;
+    if (hasParent) {
+      addLinesFromDiff(
+        out,
+        git(["diff", "--unified=0", "--find-renames=30", `${head}~1...${head}`, "--", file]),
+      );
+    }
   }
   if (uncommitted) {
     addLinesFromDiff(out, git(["diff", "--unified=0", "--find-renames=30", "--", file]));

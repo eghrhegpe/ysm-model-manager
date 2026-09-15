@@ -184,12 +184,16 @@ jobs:
       # Go 增量覆盖率门禁（ADR-145/ADR-202）：本地 GO_STATIC_TOOLS hard 项的远端兜底。
       # 只查本次变更 Go 文件的变更行覆盖率，内部跑 go test -coverprofile（须置于 Go 检查后）。
       # 基线语义：PR 场景 merge-base(origin/main, HEAD) 有真实 diff；main push 场景
-      # origin/main==HEAD → 变更集为空自动 PASS（无害）。git fetch origin main 幂等，
-      # 保证 PR 场景基线 ref 存在（checkout 默认只检出当前分支）。
+      # origin/main==HEAD → 变更集为空自动 PASS（无害）。
+      # ⚠️ 用 `git fetch origin main`（**不带 --depth=1**）：本轮 checkout 是 fetch-depth:0
+      # 全量克隆，`--depth=1` 会把仓库**退化为浅克隆**（生成 .git/shallow），`HEAD~1`
+      # 随即不可解析 ⇒ `check-go-diff-coverage` 的直推兜底 `HEAD~1...HEAD` 抛
+      # `fatal: ambiguous argument` ⇒ 门禁硬阻断（2026-09-15 实证：main 恒红且与改动无关）。
+      # 不带 depth 的 fetch 保持历史完整，PR 场景基线 ref 照样补全（契约不变，仅不再截断）。
       - name: Go 增量覆盖率门禁（check-go-diff-coverage）
         shell: pwsh
         run: |
-          git fetch origin main --depth=1 2>$null
+          git fetch origin main 2>$null
           node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

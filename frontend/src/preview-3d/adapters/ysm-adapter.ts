@@ -621,10 +621,17 @@ function makeSceneHandle(
     menuItems,
     onBonePick: (id: string) => ctx.menu.openPanel(id),
     update: (dt: number): void => {
-      animPlayer?.apply(dt);
       // #9 全局暂停标志：动画激活时感知 controller 自查静默（breath 已挂标志），
       // 取代原先散布的 `!animPlayer?.isAnimActive()` 守卫。
+      // ⚠️ 必须先于下方 visible 早退写（对齐 vrm-adapter 同款注释）：不可见帧也要刷新标志，
+      // 否则早退期间标志停在上一帧的值，恢复可见后感知层被陈旧状态冻结。
       perceptionPauseRef.paused = !!animPlayer?.isAnimActive();
+      // [ADR-098「Adapter skip invisible models」] Frustum Culling / 面板隐藏 → 跳过
+      // molang 时间轴求值 + 逐骨骼 slerp/lerp，省 CPU。ADR-098 立项时 YSM「无 update 函数
+      // （纯静态模型），无需改造」，该前提已随动画播放器接入而失效——本守卫补齐契约，
+      // 与 vrm-adapter（!vrm.scene.visible）/ mmd-build-result（!c.mesh.visible）对齐。
+      if (!obj.rootGroup.visible) return;
+      animPlayer?.apply(dt);
       if (semanticBones && perceptionState.breath) {
         breath?.apply(dt, semanticBones);
       }

@@ -35,15 +35,11 @@ export function headerHTML(): string {
       icon: UI_ICONS.upload,
       label: t("sidebar.pushSelected"),
       theme: "accent",
-      testid: "sidebar-push",
-      menuTestid: "sidebar-push-menu",
     }) +
     syncDropdownHTML({
       icon: UI_ICONS.download,
       label: t("sidebar.pullSelected"),
       theme: "sm-optional",
-      testid: "sidebar-pull",
-      menuTestid: "sidebar-pull-menu",
     }) +
     "</div>"
   );
@@ -81,28 +77,40 @@ const SYNC_TYPE_MENU: ReadonlyArray<{
   },
 ];
 
-/** 推送/拉取下拉容器（dd-wrap + 触发按钮 + dd-menu）。参数化按钮图标/文案/主题色/testid，
- * 收敛 headerHTML 里两处手写重复；菜单项由 typeMenuItemsHTML() 统一生成（SYNC_TYPE_MENU 驱动）。 */
+/** 推送/拉取下拉容器（dd-wrap + 触发按钮 + dd-menu）。参数化按钮图标/文案/主题色。
+ * 收敛 headerHTML 里两处手写重复；菜单项由 typeMenuItemsHTML() 统一生成（SYNC_TYPE_MENU 驱动）。
+ * 触发按钮与菜单容器 testid 按 theme 派生为固定字面量，保证 test_testid_contract 静态扫描可命中
+ *（动态插值 testid 会被契约自然排除）。 */
 interface SyncDropdownOpts {
   icon: string;
   label: string;
-  /** CSS 变量名（不含 `--` 前缀）：accent / sm-optional，切按钮边框/文字主题色 */
+  /** CSS 变量名（不含 `--` 前缀）：accent / sm-optional，切按钮边框/文字主题色；
+     同时决定派生 testid：accent→push，sm-optional→pull */
   theme: "accent" | "sm-optional";
-  testid: string;
-  menuTestid: string;
 }
 function syncDropdownHTML(o: SyncDropdownOpts): string {
   const theme = `var(--${o.theme})`;
-  const cls = o.theme === "accent" ? "sidebar-push-selected" : "sidebar-pull-selected";
-  const menuId = o.menuTestid;
+  const verb = o.theme === "accent" ? "push" : "pull";
+  const cls = `sidebar-${verb}-selected`;
+  // testid 必须保持**字面量**（非插值）：侧栏的 push/pull testid 声明于 VIEW_TESTIDS
+  //（ADR-133 阶段 B 注册表），test_testid_contract 静态扫描 `data-testid="sidebar-..."`
+  // 字面量才能命中——插值/模板变量会让契约 MISSING（动态派生才允许从注册表排除，
+  // 而 push/pull 是固定两枚，应保留登记保护）。故直接写字面量，不用 `${verb}` 拼。
+  const btnTestid =
+    o.theme === "accent" ? 'data-testid="sidebar-push"' : 'data-testid="sidebar-pull"';
+  const menuAttrs =
+    o.theme === "accent"
+      ? 'id="sidebar-push-menu" data-testid="sidebar-push-menu"'
+      : 'id="sidebar-pull-menu" data-testid="sidebar-pull-menu"';
   return (
-    '<div class="dd-wrap" style="position:relative;display:inline-block">' +
-    `<button class="${cls}" data-testid="${o.testid}" style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid ${theme};background:transparent;color:${theme};cursor:pointer;font-size:var(--fs-btn-tool);font-family:inherit">` +
+    // dd-wrap / dd-menu 外观由共享 dropdownBaseCSS 承载（sidebar-css.ts 注入 + 局部覆盖），不再内联
+    '<div class="dd-wrap">' +
+    `<button class="${cls}" ${btnTestid} style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid ${theme};background:transparent;color:${theme};cursor:pointer;font-size:var(--fs-btn-tool);font-family:inherit">` +
     o.icon +
     " " +
     o.label +
     " ▾</button>" +
-    `<div class="dd-menu" id="${menuId}" data-testid="${o.menuTestid}" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:var(--fs-xs);white-space:nowrap">` +
+    `<div class="dd-menu" ${menuAttrs}>` +
     typeMenuItemsHTML() +
     "</div></div>"
   );
@@ -113,7 +121,7 @@ function typeMenuItemsHTML(): string {
   const render = (id: string, text: string): string =>
     '<div class="dd-item" data-testid="sidebar-sync-type" data-sync-type="' +
     esc(id) +
-    '" style="padding:4px 8px;cursor:pointer;border-radius:var(--radius-sm);color:var(--txt)">' +
+    '">' +
     esc(text) +
     "</div>";
   let html = render("all", `${UI_ICONS.package} ${t("sidebar.allTypes")}`);

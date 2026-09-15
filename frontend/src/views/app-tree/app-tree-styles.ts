@@ -1,5 +1,12 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
-import { btnBaseCSS, focusVisibleCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import {
+  btnBaseCSS,
+  dropdownBaseCSS,
+  dropdownHoverCSS,
+  focusVisibleCSS,
+  noAnimationsCSS,
+  wsIconCSS,
+} from "@/utils/dom/css.ts";
 export const treeCSS: string = `
 :host {
   display: flex;
@@ -34,12 +41,9 @@ ${focusVisibleCSS}
 /* flash 反馈样式（feedback.ts 全局原语）：实际使用点为 .dd-item（sel-all 全选）/ .btn-base（btn-view-mode 视图切换） */
 .dd-item.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .btn-base.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
-.dd-wrap { position:relative;display:inline-block; }
-.dd-wrap:hover .dd-menu { display:block; }
-.dd-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);display:none;min-width:130px;max-height:220px;overflow-y:auto; }
-.dd-menu.show { display:block; }
-.dd-item { display:block;width:100%;padding:4px 10px;border:none;background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-secondary);text-align:left;border-radius:var(--radius-sm); }
-.dd-item:hover { background:var(--hover); }
+/* 下拉容器基础 + hover 展开（共享 dropdownBase/dropdownHoverCSS，见 utils/dom/css.ts）；
+   .dd-item.flash 保留在上方为本视图 feedback 特化，不随共享以维持无动画观感 */
+${dropdownBaseCSS}${dropdownHoverCSS}
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding: 3px; min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
 .batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }

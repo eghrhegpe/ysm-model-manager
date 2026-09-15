@@ -1,5 +1,5 @@
 // ===== sidebar Shadow CSS =====
-import { btnBaseCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { btnBaseCSS, dropdownBaseCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const sidebarCSS: string = `
 :host {
@@ -76,4 +76,11 @@ ${wsIconCSS}
    覆盖 .instance-card（fadeSlideLeft）/ .sk-line（sk-shimmer）/ .footer-btn 等全部动效，
    不再逐类登记。 */
 ${noAnimationsCSS}
+/* 下拉容器（push/pull）共享基础样式：.dd-wrap/.dd-menu/.dd-item（见 utils/dom/css.ts）。
+   原内联于 tpl.ts syncDropdownHTML，此处收敛为 shadow 级共享，删内联后外观由本块承载。
+   sidebar 用 click 展开（JS 改 style.display），故只引基础串、不引 dropdownHoverCSS */
+${dropdownBaseCSS}
+/* sidebar 下拉局部差异（宽度/换行/字号/项间距），覆盖共享默认值——勿回内联 */
+.dd-wrap .dd-menu { min-width:160px; white-space:nowrap; font-size:var(--fs-xs); }
+.dd-wrap .dd-item { padding:4px 8px; }
 `;

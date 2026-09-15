@@ -53,6 +53,48 @@ export const wsIconCSS = `
 `;
 
 /**
+ * 下拉容器基础样式（`.dd-wrap` / `.dd-menu` / `.dd-item`）。
+ *
+ * 是什么：app-tree（工具栏 batch/more）与 app-sidebar（push/pull）各有一份同构的
+ * 下拉视觉，app-tree 走样式表单 `app-tree-styles.ts`，app-sidebar 曾**全内联**在
+ * `tpl.ts`（每处手写 `style="display:none;position:absolute;..."` 且借 .dd-item 当
+ * 事件委托选择器）。本串收敛那份重复，供两个 shadow 根各自 adopt。
+ *
+ * ⚠️ 任一个 shadow 根若渲染 `.dd-*` 却漏带本串，菜单会「裸奔」：外观全失（无边框/
+ * 圆角/阴影），`display:none` 也不生效 → 菜单常驻可见。与 `wsIconCSS` 同一套「各自
+ * adopt，漏带即失效」机制。
+ *
+ * 展开方式默认 `display:none`，由消费方决定交互：
+ *   - 需要 hover 展开 → 追加 `dropdownHoverCSS`（`.dd-wrap:hover .dd-menu`）；
+ *   - 需要 click 展开 → JS 改 `style.display`（内联优先级高于本串的 display:none，
+ *     可正常覆写开关）。
+ * 两套互斥可选，避免「hover + JS 控制」打架（js 侧 closeAll 会压不过 hover）。
+ *
+ * 尺寸/阴影等字面量已收敛为默认值；消费方如需局部差异，在各自 stylesheet 里追加
+ * 更高优先级的选择器（如 `.dd-wrap .dd-menu { min-width:160px }`）覆盖，勿再回内联。
+ */
+export const dropdownBaseCSS = `
+.dd-wrap { position:relative;display:inline-block; }
+.dd-menu {
+  position:absolute;top:100%;left:0;z-index:100;
+  background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);
+  padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);
+  display:none;min-width:130px;max-height:220px;overflow-y:auto;
+}
+.dd-item {
+  display:block;width:100%;padding:4px 10px;border:none;background:transparent;
+  color:var(--txt);cursor:pointer;font-size:var(--fs-btn-secondary);
+  text-align:left;border-radius:var(--radius-sm);
+}
+.dd-item:hover { background:var(--hover); }
+`;
+
+/** hover 展开增强（`.dd-wrap:hover` 时显示菜单）。与 JS click 展开互斥，勿混用。 */
+export const dropdownHoverCSS = `
+.dd-wrap:hover .dd-menu { display:block; }
+`;
+
+/**
  * `.no-animations` 在 Shadow DOM 内的通配桥（ADR-015 §2.4 约束 1：用户关闭时零动画）。
  *
  * ⚠️ 为什么必须每个 Shadow 根各自 adopt：`.no-animations` 类挂在 `documentElement`

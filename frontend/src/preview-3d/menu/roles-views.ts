@@ -151,20 +151,19 @@ export function modelDetailView(
             l.appendChild(errRow);
           }
         }
-        // 工具行（截图/材质）：单项平铺，多项折叠
-        const sections: PreviewMenuNode[] = [];
-        if (toolItems.length === 1) {
-          sections.push(toolItems[0]);
-        } else if (toolItems.length > 1) {
-          sections.push({
+        // [ADR-242] 工具行（截图/材质）：卡壳收纳 + 面板入口行 array（与环境/动作组同形态）——
+        // 内容仅在 navigate 到次级菜单后渲染，一级不被巨多内容淹没。
+        if (toolItems.length > 0) {
+          const card: PreviewMenuNode = {
             id: "preview-role-tools",
-            kind: "folder",
+            kind: "card",
             labelKey: "preview.roleToolsSection",
+            collapsible: true,
             defaultOpen: true,
-            children: toolItems,
-          });
+            children: toolItems.map((item) => panelEntryRow(item, panelDeps, "model-entry")),
+          };
+          renderMenu(l, [card], panelDeps);
         }
-        if (sections.length > 0) renderMenu(l, sections, panelDeps);
       };
       renderAll();
     },
@@ -172,7 +171,10 @@ export function modelDetailView(
 }
 
 // ── 动作详情（💃 动作 dock 入口）──
-// 纯动作上下文：骨骼/播放/感知——无模型信息、无工具项、无折叠
+// 纯动作上下文：骨骼/播放/感知——无模型信息、无工具项。
+// [ADR-242] 一级 = 卡壳收纳 + 面板入口行 array（对齐 env `env-card-basic` 范式）：
+// 卡内每行是「跳转入口」（icon + label + ›），内容仅在 navigate 到次级菜单后渲染——
+// 骨骼/表情这类巨多内容不再在一级内联铺开，与环境组形态统一（环境有收纳，动作也有）。
 export function motionDetailView(
   e: ModelEntry,
   deps: {
@@ -197,9 +199,40 @@ export function motionDetailView(
         l.appendChild(empty);
         return;
       }
-      // 动作项全部平铺——骨骼/播放/感知各自直达，不需要折叠
-      renderMenu(l, motionItems, deps);
+      // [ADR-242] 卡壳收纳：kind:"card" + collapsible（复用 rmAppendCard 盒式折叠），
+      // 卡内每行 = 面板入口 row，action → navigate 到该面板内容视图（内容此时才渲染）。
+      const card: PreviewMenuNode = {
+        id: "motion-card",
+        kind: "card",
+        labelKey: "preview.groupMotion",
+        collapsible: true,
+        defaultOpen: true,
+        children: motionItems.map((item) => panelEntryRow(item, deps, "motion-entry")),
+      };
+      renderMenu(l, [card], deps);
     },
+  };
+}
+
+/** [ADR-242] 面板入口行：icon + label + ›，整行 action navigate 到该面板内容视图。
+ *  照抄 env `envCapRow` 形态（row + compact + action:navigate）——内容跳转后才渲染。
+ *  prefix 区分归属域（motion-entry / model-entry），testid 可定位。 */
+function panelEntryRow(
+  item: PreviewMenuNode,
+  deps: {
+    makePanelView: (node: PreviewMenuNode) => SlideMenuView;
+  },
+  prefix = "motion-entry",
+): PreviewMenuNode {
+  return {
+    id: `${prefix}-${item.id}`,
+    kind: "row",
+    labelKey: item.labelKey ?? item.id,
+    rowDensity: "compact",
+    // exactOptionalPropertyTypes：可选字段按存在性展开（undefined 不得显式赋值）
+    ...(item.icon ? { icon: item.icon } : {}),
+    ...(item.label ? { label: item.label } : {}),
+    action: (ctx) => ctx.navigate?.(deps.makePanelView(item)),
   };
 }
 

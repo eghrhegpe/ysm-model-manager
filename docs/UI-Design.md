@@ -213,18 +213,24 @@
 ```css
 --tr-fast: 0.12s ease;      /* 按钮 hover、微交互 */
 --tr-normal: 0.15s ease;    /* 面板展开、卡片过渡 */
---tr-slow: 0.2s ease;       /* 页面切换、内容淡入 */
 --tr-enter: 0.25s ease-out; /* 入场动画 */
 ```
+
+> 令牌档位以此处 + `frontend/css/variables.css` 为准，**仅此三档**。
+> 历史上的 `--tr-slow: 0.2s ease` 已作为零消费死令牌删除（见
+> `docs/knowledge/frontend_design_critique.md`），**不再恢复**——需要 0.2s 时
+> 要么归入现有档位，要么说明为何非 0.2s 不可。
 
 ```css
 transition: background var(--tr-fast);        /* 按钮 hover */
 transition: grid-template-columns var(--tr-normal); /* 布局变化 */
-transition: opacity var(--tr-slow);           /* 淡入淡出 */
 ```
 
 - 所有 `transition` 时长必须使用 `--tr-*` 变量
 - 禁止硬编码 `transition: ... 0.15s`
+- **例外（不算违规）**：拖拽跟手 / 进度条填充这类**实时反馈**过渡
+  （如 `transition: width 0.06s linear`）不套令牌——套 0.12s 会显得迟钝；
+  这类须用短时长 + `linear`，语义是「跟手」而非「缓动」
 
 - 所有 interactive 元素必须有 hover 过渡
 - 不要用闪烁动画（除了加载骨架屏）

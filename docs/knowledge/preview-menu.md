@@ -194,6 +194,7 @@ status: active
 - **setAdapterItems id 冲突守卫**（ADR-085 S1）：重复 id 或与 CORE_MENU_ITEMS 冲突时抛错阻断。
 - **dock 一级路由声明化（ADR-241）**：点击路由由 `PREVIEW_MENU_GROUPS` 数据表显式声明，`renderPreviewDock` 纯查表（directToPanel → directViewKey → rootView → 兜底 makeGroupViewFn），无 `g.id === ...` 字面量。model/env/settings → `directToPanel` 静态直达；motion → `directViewKey:"motion"` 动态工厂（活跃角色详情，directToPanel 表达不了）；scene → `rootView:true` renderMenu 组根视图。`motion` 的 key→工厂映射仍在 core.ts（需注入 sceneRegistry/详情工厂），是多态路由表而非 id 特判。
 - **`dockGroup` 已是归属域单源，勿再改名 `navDomain`**（2026-09 复核证伪）：`dockGroup`（`PreviewDockGroup` = dock 组 ∪ `"stats"` 统计通道）是静态类型化声明字段，为 dock→panel 投影唯一真值源；`menu-graph.ts`（ADR-128）已把它投影成静态可机验导航图。改名是零增益 churn。`roles-views.ts` 的 `dockGroup === "model"|"motion"` 运行时过滤对象是**per-model 实例注入 panel**（适配器按模型类型产出），属本质运行时数据，无法静态化（MikuMikuAR 同样 per-model 运行时构建）。
+- **动作/模型组一级卡壳收纳（ADR-242）**：`modelDetailView`/`motionDetailView` 一级改为 `kind:"card"`(collapsible) 卡壳 + 面板**入口行 array**（`panelEntryRow`：`kind:"row"` + icon + label + `rowDensity:"compact"` + `action: ctx.navigate(makePanelView(item))`），照抄 env `envCapRow` 范式——**内容仅在 navigate 到次级菜单后渲染**，骨骼/表情/材质等巨多内容不再一级内联铺开（与环境组形态统一：环境有收纳，动作也有）。骨骼二级仍走 `makeBonePanelRenderer` 逃生舱（动态树 + 跨域拾取，schema 化 ROI 为负）；表情/材质二级仍走既有声明式 children。入口行 testid 形如 `preview-motion-entry-<id>` / `preview-model-entry-<id>`（row testid 统一 `preview-` 前缀）。此决策部分推翻 ADR-240 的「renderCustom 内容内联进卡 body」做法（视觉统一保留，内联内容改跳转入口）。
 
 ## 相关
 

@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-242：3D 动作/模型组一级卡壳收纳（面板入口行 array，内容跳转后渲染）",
+        "link": "/adr/ADR-242-preview-group-card-nav"
+      },
+      {
         "text": "ADR-241：3D dock 一级路由声明化（组定义 direct 判定收敛 core.ts 隐式分支）",
         "link": "/adr/ADR-241-preview-dock-route-decl"
       },

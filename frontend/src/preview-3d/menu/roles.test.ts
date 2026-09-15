@@ -171,32 +171,39 @@ describe("角色面板（roles）", () => {
     const aRow = overlay.querySelector('[data-testid^="preview-role-"]');
     (aRow as HTMLElement).click();
     expect(overlay.textContent).toContain("MAT-BODY");
-    // 工具行 shot（renderCustom panel）按折叠卡渲染（改法 B：面板内容统一内联卡壳）
-    expect(overlay.querySelector('[data-testid="shot"]')).not.toBeNull();
-    expect(overlay.querySelector('[data-testid="shot-body"]')).not.toBeNull();
+    // [ADR-242] 工具行 shot 按卡壳入口行渲染（内容跳转后渲染，不内联）
+    expect(overlay.querySelector('[data-testid="preview-role-tools"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-model-entry-shot"]')).not.toBeNull();
     // 模型详情不显示 motion 项
     expect(overlay.querySelector('[data-testid="preview-play"]')).toBeNull();
     handle.dispose();
   });
 
-  it("dock 💃 → motionDetailView（动作项平铺）；不显示模型信息本体和工具行", () => {
+  it("dock 💃 → motionDetailView（卡壳收纳 + 入口行 array，内容跳转后渲染）；不显示模型信息本体和工具行", () => {
     const defs = (): PreviewMenuNode[] => [
       { id: "material", icon: "🎨", label: "材质", kind: "panel", dockGroup: "model", renderCustom: (l) => { l.append("MAT-BODY"); } },
       { id: "shot", icon: "📷", label: "截图", kind: "panel", dockGroup: "model", renderCustom: () => {} },
-      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "play", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
     ];
     regRole("/m/a.jsm", defs());
     const handle = mountPreviewRootMenu(overlay, makeCtx());
     // mountPreviewRootMenu 不自动注入适配器项 → 先注入 motion 组项使 dock-motion 出现
     handle.setAdapterItems([
-      { id: "dockPlay", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: () => {} },
+      { id: "dockPlay", icon: "▶️", label: "播放", kind: "panel", dockGroup: "motion", renderCustom: (l) => { l.append("PLAY-BODY"); } },
     ]);
-    // 💃 → motionDetailView：动作项平铺直达
+    // 💃 → motionDetailView：一级 = 卡壳收纳 + 入口行 array（ADR-242），内容不内联
     (overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement).click();
     expect(overlay.textContent).not.toContain("MAT-BODY");
-    // play（renderCustom panel）按折叠卡渲染（改法 B：动作项内容统一内联卡壳）
-    expect(overlay.querySelector('[data-testid="play"]')).not.toBeNull();
-    expect(overlay.querySelector('[data-testid="play-body"]')).not.toBeNull();
+    // 一级：卡壳（cap-card）包住入口行；入口行是 row 节点（有 chevron 跳转提示）
+    const card = overlay.querySelector(".cap-card");
+    expect(card).not.toBeNull();
+    const entryRow = card!.querySelector('[data-testid="preview-motion-entry-play"]');
+    expect(entryRow).not.toBeNull();
+    // 内容未内联——一级不出现面板内容本体
+    expect(overlay.textContent).not.toContain("PLAY-BODY");
+    // 点入口行 → navigate 到次级菜单，内容此时才渲染
+    (entryRow as HTMLElement).click();
+    expect(overlay.textContent).toContain("PLAY-BODY");
     // 动作详情不显示模型信息和工具行
     expect(overlay.querySelector('[data-testid="preview-shot"]')).toBeNull();
     expect(overlay.querySelector('[data-testid="shot"]')).toBeNull();
@@ -374,9 +381,12 @@ describe("模型详情信息本体（三通道回归锁）", () => {
     ]);
     const { handle } = enterDetail({ id: "model", kind: "panel", dockGroup: "model", schemaId: "detail-schema-test" });
     expect(overlay.querySelector('[data-testid="preview-stat-tex"]')).not.toBeNull();
-    // 工具行不受影响（本体修复不能反杀截图段）：shot 面板带 children → folder 形态
-    // （section testid = 节点 id），角度按钮平铺在展开 body 里（用户所见「📷 六连」）
-    expect(overlay.querySelector('[data-testid="shot"]')).not.toBeNull();
+    // [ADR-242] 工具行 shot 变卡壳入口行（内容跳转后渲染，不在一级内联）；
+    // 点入口行 → navigate 到 shot 面板，六连角度按钮此时才渲染（用户所见「📷 六连」）
+    const shotEntry = overlay.querySelector('[data-testid="preview-model-entry-shot"]');
+    expect(shotEntry).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-ysm-shot-front"]')).toBeNull();
+    (shotEntry as HTMLElement).click();
     expect(overlay.querySelector('[data-testid="preview-ysm-shot-front"]')).not.toBeNull();
     handle.dispose();
   });

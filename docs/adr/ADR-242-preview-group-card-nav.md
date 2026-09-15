@@ -44,6 +44,12 @@ ADR-240（内容型 panel 统一折叠卡）解决了「新旧样式混排」，
 `row` 节点的 `headerToggle` 复用 `envCapRow` 语义：有主开关的面板（如某能力总开关）开关置行尾，
 一眼可切、免展开；`_` 无则不渲染。
 
+> 实施注记（2026-09 审查）：`headerToggle` 实际由 `env.ts` 的 `envCapRow`（经 cap
+> `getMasterNodeId/isEnabled/setEnabled` 驱动）在环境组落地；`panelEntryRow`（本 ADR 的动作/模型
+> 入口行）仅透传 icon/label/action——动作/模型组面板当前无能力总开关（`getMasterNodeId` 仅
+> env 的 caps 体系拥有），暂无可挂开关面。若未来该组面板引入 master toggle，再按 envCapRow
+> 同法扩展 `panelEntryRow`。
+
 ## 3. 后果（Consequences）
 
 - **正面**：动作组一级不再铺满骨骼树，视觉收敛为少量入口行；与环境组形态统一（都有卡壳收纳）；

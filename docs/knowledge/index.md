@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 183 张知识卡
+> 总计: 184 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -233,7 +233,7 @@
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## rendering（15 张）
+## rendering（16 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -254,6 +254,7 @@
 | 🏗 preview_env_state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
+| 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼映射（MMD 骨名 → VRM humanoid 骨名）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」 |
 
 ### 摘要
 
@@ -268,6 +269,7 @@
 - **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
 - **preview_core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
 - **preview_env_state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
+- **vmd_vrm_retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
 
 ## ui（37 张）
 

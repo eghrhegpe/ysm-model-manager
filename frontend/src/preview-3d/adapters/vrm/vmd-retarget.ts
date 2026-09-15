@@ -1,6 +1,8 @@
-// ===== VMD → VRM 人形骨骼重定向器（ADR-243 §2.1/§2.2/§2.4/§2.5）=====
+// ===== VMD → VRM 人形骨骼重定向器（ADR-243 §2.1/§2.2/§2.4/§2.5/§2.8）=====
 // 输入：已解析的 VmdObject + VRM humanoid 归一化骨骼；输出：可直接交给
-// `AnimationMixer(vrm.scene)` 播放的 AnimationClip（轨道名已绑到归一化骨骼 uuid）。
+// `AnimationMixer(vrm.scene)` 播放的 AnimationClip（轨道名已绑到归一化骨骼 uuid），
+// 外加**足 IK 目标采样器**（VMD 的 左足ＩＫ/右足ＩＫ 只在 position 通道上有意义，
+// 被摘出来交给 VRM 侧的 CCD 求解，见 §2.8）。
 //
 // 为什么写**归一化**骨骼：`VRMHumanoidRig.update()` 是「归一化 → 原始」的单向烘焙
 // （读 rigBoneNode.quaternion，hips 另读世界位置；`autoUpdateHumanBones` 默认 true），
@@ -17,6 +19,7 @@ import { buildAnimation, type VmdObject } from "@moeru/three-mmd";
 import type { VRMHumanBoneName } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import {
+  VMD_FOOT_IK_CANDIDATES,
   VMD_POSITION_SCALE_DEFAULT,
   VMD_REFERENCE_HEIGHT,
   VMD_RETARGET_CANDIDATES,
@@ -26,6 +29,24 @@ import {
 /** 归一化骨骼访问面（`vrm.humanoid` 天然满足；窄接口便于单测注入假体） */
 export interface VmdHumanoidRig {
   getNormalizedBoneNode(name: VRMHumanBoneName): THREE.Object3D | null;
+}
+
+/**
+ * 单条腿的 VMD 足 IK 目标采样器（ADR-243 §2.8 方案 A）。
+ *
+ * 采样值是**世界空间偏移（米）**，已含两样重定向变换：上游 `buildAnimation` 的轴系翻转
+ * `(px, py, -pz)` 与 §2.5 的位置缩放 `k`。目标是「相对 VRM 足骨静止世界位置」的增量，
+ * 使用方按 `目标世界 = 足静止世界 + 采样值` 合成（该式不变量见 `vrm-foot-ik.ts` 文件头）。
+ */
+export interface VmdFootIKTarget {
+  /** 采样时间（秒，与重定向 clip 同一时间轴）→ 写入 out；无可用数据返回 false */
+  sample(timeSeconds: number, out: THREE.Vector3): boolean;
+}
+
+/** 双侧足 IK 目标（某侧为 null = 该 VMD 未含该侧 IK 骨） */
+export interface VmdFootIKTargets {
+  readonly left: VmdFootIKTarget | null;
+  readonly right: VmdFootIKTarget | null;
 }
 
 /** 重定向配置 */
@@ -55,6 +76,8 @@ export interface VmdBindingPlan {
   readonly translationTarget: THREE.Object3D | null;
   /** 位移基准（hips 归一化骨静止局部位置；幽灵骨静止位置与缩放基准同源，不变量） */
   readonly translationBase: THREE.Vector3 | null;
+  /** 命中的 VMD 足 IK 骨名（null = 该侧无 IK 骨；不参与旋转绑定，仅摘目标轨道） */
+  readonly footIK: Readonly<Record<"left" | "right", string | null>>;
 }
 
 /** 重定向诊断报告（仅本模块内使用——经 VmdRetargetResult 对外暴露） */
@@ -72,7 +95,12 @@ export interface VmdRetargetResult {
   /** 已绑到 VRM 归一化骨骼的 clip；无任何可用映射时 tracks 为空 */
   readonly clip: THREE.AnimationClip;
   readonly report: VmdRetargetReport;
+  /** 足 IK 目标采样器（供 VRM 侧 CCD 求解；ADR-243 §2.8 方案 A） */
+  readonly footIK: VmdFootIKTargets;
 }
+
+/** 无 IK 目标的常态值（模型未驱动 IK 骨 / 无可用映射时复用，避免各处重复构造） */
+const NO_FOOT_IK: VmdFootIKTargets = { left: null, right: null };
 
 /**
  * 归一化骨静止位姿的身体比例（VRM/MMD 通例）：
@@ -87,6 +115,8 @@ const BONE_TRACK_NAME = /^\.bones\[(.+)\]\.(position|quaternion)$/;
 
 const _probeHead = new THREE.Vector3();
 const _probeFoot = new THREE.Vector3();
+/** 幽灵 IK 骨的静止位置（零）：使 buildAnimation 的 `basePosition + offset` 退化为纯偏移 */
+const _zeroOrigin = new THREE.Vector3();
 
 // ---------------------------------------------------------------------------
 // 比例（ADR-243 §2.5）
@@ -151,12 +181,20 @@ export function resolveVmdBindings(
       ? null
       : (VMD_ROOT_TRANSLATION_CANDIDATES.find((c) => present.has(c) && !nodesByMmd.has(c)) ?? null);
 
+  // 足 IK 骨只解析名字：它**不产生 FK 绑定**（关键帧活在 position 通道），也不占
+  // nodesByMmd 的认领位——与旋转绑定的候选空间天然不相交（映射表里无 ＩＫ 骨）。
+  const footIK = {
+    left: VMD_FOOT_IK_CANDIDATES.left.find((c) => present.has(c)) ?? null,
+    right: VMD_FOOT_IK_CANDIDATES.right.find((c) => present.has(c)) ?? null,
+  };
+
   return {
     bindings,
     nodesByMmd,
     translationSource,
     translationTarget: translationSource ? hipsNode : null,
     translationBase: translationSource && hipsNode ? hipsNode.position.clone() : null,
+    footIK,
   };
 }
 
@@ -214,8 +252,17 @@ export function rewriteVmdTracks(
   source: THREE.AnimationClip,
   plan: VmdBindingPlan,
   positionScale: number,
-): { tracks: THREE.KeyframeTrack[]; droppedTracks: number } {
+): {
+  tracks: THREE.KeyframeTrack[];
+  droppedTracks: number;
+  /** 摘出的足 IK 目标轨道（未进 clip；null = 该侧无目标） */
+  ikTracks: Readonly<Record<"left" | "right", THREE.KeyframeTrack | null>>;
+} {
   const tracks: THREE.KeyframeTrack[] = [];
+  const ikTracks: { left: THREE.KeyframeTrack | null; right: THREE.KeyframeTrack | null } = {
+    left: null,
+    right: null,
+  };
   let droppedTracks = 0;
 
   for (const track of source.tracks) {
@@ -238,7 +285,18 @@ export function rewriteVmdTracks(
       continue;
     }
 
-    // position：VRMHumanoidRig.update 只读 hips 的位置，其余骨的位移通道一律丢弃
+    // position ①：足 IK 目标骨 → **摘出来**交给 VRM 侧 CCD 求解（ADR-243 §2.8 方案 A）。
+    // 不进 clip（clip 的接收方是 AnimationMixer，IK 骨在 VRM 里不存在对应节点），
+    // 也**不计入 droppedTracks**——它另有去处，不是被丢弃。
+    const side = mmd === plan.footIK.left ? "left" : mmd === plan.footIK.right ? "right" : null;
+    if (side) {
+      // 幽灵 IK 骨静止位置为零 ⇒ 轨道值即「相对 bind 的偏移」，直接整体按 k 缩放
+      scaleTranslationTrack(track, _zeroOrigin, positionScale);
+      ikTracks[side] = track;
+      continue;
+    }
+
+    // position ②：VRMHumanoidRig.update 只读 hips 的位置，其余骨的位移通道一律丢弃
     // （保留只会得到每帧写回自身静止值的空转轨道）
     const { translationSource, translationTarget, translationBase } = plan;
     if (mmd !== translationSource || !translationTarget || !translationBase) {
@@ -250,7 +308,56 @@ export function rewriteVmdTracks(
     tracks.push(track);
   }
 
-  return { tracks, droppedTracks };
+  return { tracks, droppedTracks, ikTracks };
+}
+
+// ---------------------------------------------------------------------------
+// 足 IK 目标采样（ADR-243 §2.8 方案 A 的重定向侧出口）
+// ---------------------------------------------------------------------------
+
+/** `Interpolant` 窄接口：`@types/three` 未声明 `KeyframeTrack.createInterpolant`（实例覆写） */
+interface InterpolantLike {
+  evaluate(t: number): void;
+  readonly resultBuffer: unknown;
+}
+
+/**
+ * 把摘出的 IK 轨道包成采样器。
+ *
+ * ⚠️ 走 `track.createInterpolant()` 而**不是**自己插值：上游把 MMD 逐轴贝塞尔挂在
+ * 这个实例方法上（与 §2.2 同一条红线），自己线性插值会让抬脚轨迹出现卡点。
+ * `evaluate` 的 t 超界行为在不同 three 版本间不一致，故显式 clamp 到首末关键帧。
+ */
+function createFootIKTarget(track: THREE.KeyframeTrack): VmdFootIKTarget {
+  const factory = track as unknown as { createInterpolant?: () => unknown };
+  const interpolant = (
+    typeof factory.createInterpolant === "function" ? factory.createInterpolant() : null
+  ) as InterpolantLike | null;
+  const times = track.times;
+
+  return {
+    sample(timeSeconds: number, out: THREE.Vector3): boolean {
+      if (!interpolant || times.length === 0) return false;
+      const t = Math.min(Math.max(timeSeconds, times[0]), times[times.length - 1]);
+      interpolant.evaluate(t);
+      const buf = interpolant.resultBuffer as Float32Array;
+      out.set(buf[0], buf[1], buf[2]);
+      return true;
+    },
+  };
+}
+
+/** 摘出的轨道 → 对外采样器（缺侧为 null） */
+function toFootIKTargets(
+  ikTracks: Readonly<Record<"left" | "right", THREE.KeyframeTrack | null>>,
+): VmdFootIKTargets {
+  const left = ikTracks.left;
+  const right = ikTracks.right;
+  if (!left && !right) return NO_FOOT_IK;
+  return {
+    left: left ? createFootIKTarget(left) : null,
+    right: right ? createFootIKTarget(right) : null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +401,11 @@ export function buildVmdRetargetClip(
   if (plan.translationSource && plan.translationBase) {
     pushGhost(plan.translationSource, plan.translationBase);
   }
+  // 幽灵 IK 骨：静止位置**置零**（见 rewriteVmdTracks 的 position ①），因此产出的轨道
+  // 值就是「相对 bind 的偏移」本身，无需再减基准。这两条轨道随后被摘出，不会进 clip。
+  for (const mmd of [plan.footIK.left, plan.footIK.right]) {
+    if (mmd) pushGhost(mmd, _zeroOrigin);
+  }
 
   const report: VmdRetargetReport = {
     bindings: plan.bindings,
@@ -314,6 +426,7 @@ export function buildVmdRetargetClip(
     return {
       clip: new THREE.AnimationClip("vmd-retarget", 0, []),
       report: { ...report, droppedTracks },
+      footIK: NO_FOOT_IK,
     };
   }
 
@@ -325,10 +438,11 @@ export function buildVmdRetargetClip(
     (ghostMesh.material as THREE.Material).dispose();
   }
 
-  const { tracks, droppedTracks } = rewriteVmdTracks(source, plan, positionScale);
+  const { tracks, droppedTracks, ikTracks } = rewriteVmdTracks(source, plan, positionScale);
   return {
     // duration 传 -1 → AnimationClip 构造函数按过滤后的轨道重算时长
     clip: new THREE.AnimationClip("vmd-retarget", -1, tracks),
     report: { ...report, droppedTracks },
+    footIK: toFootIKTargets(ikTracks),
   };
 }

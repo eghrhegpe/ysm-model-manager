@@ -201,6 +201,21 @@ describe("resolveVmdBindings", () => {
     // グルーブ 只作位移兜底源，不进旋转绑定
     expect(plan.translationSource).toBe("グルーブ");
   });
+
+  it("足 IK 骨只解析名字：不进旋转绑定（全角 ＩＫ 与半角变体均命中）", () => {
+    const plan = resolveVmdBindings(
+      new Set(["左足ＩＫ", "右足IK", "左腕"]),
+      makeRig(makeStandingRig()),
+    );
+
+    expect(plan.footIK).toEqual({ left: "左足ＩＫ", right: "右足IK" });
+    expect(plan.bindings.map((b) => b.mmd)).toEqual(["左腕"]);
+  });
+
+  it("VMD 未驱动 IK 骨 → 双侧 null（不猜、不占位）", () => {
+    const plan = resolveVmdBindings(new Set(["左腕"]), makeRig(makeStandingRig()));
+    expect(plan.footIK).toEqual({ left: null, right: null });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -238,6 +253,7 @@ function makePlan(overrides: Partial<VmdBindingPlan> = {}): VmdBindingPlan {
     translationSource: "センター",
     translationTarget: makeNode("hips", [0, 0.8, 0]),
     translationBase: new THREE.Vector3(0, 0.8, 0),
+    footIK: { left: null, right: null },
     ...overrides,
   };
 }
@@ -319,6 +335,38 @@ describe("rewriteVmdTracks", () => {
     rewriteVmdTracks(new THREE.AnimationClip("", -1, [posTrack]), makePlan(), 1);
     expectValues(posTrack.values, [1, 2.8, -3]);
   });
+
+  it("足 IK 目标轨道被摘出：不进 clip、不计 dropped、按 k 缩放、对象同一", () => {
+    // 幽灵 IK 骨静止位置为零 ⇒ 值即纯偏移（含上游 z 翻转）
+    const ikTrack = new THREE.VectorKeyframeTrack(
+      ".bones[左足ＩＫ].position",
+      [0, 1],
+      [0, 20, 0, 0, 20, 10],
+    );
+    const { tracks, droppedTracks, ikTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [ikTrack]),
+      makePlan({ footIK: { left: "左足ＩＫ", right: null } }),
+      0.5,
+    );
+
+    expect(tracks).toEqual([]);
+    expect(ikTracks.left).toBe(ikTrack); // 引用同一对象：没有重建（贝塞尔覆写因此存活）
+    expect(ikTracks.right).toBeNull();
+    expect(droppedTracks).toBe(0); // 摘出 ≠ 丢弃
+    expectValues(ikTrack.values, [0, 10, 0, 0, 10, 5]);
+  });
+
+  it("plan 未认领的 IK 骨 position 走常规丢弃（防「摘出」变成漏网通道）", () => {
+    const track = new THREE.VectorKeyframeTrack(".bones[左足ＩＫ].position", [0], [0, 20, 0]);
+    const { ikTracks, droppedTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [track]),
+      makePlan(),
+      1,
+    );
+
+    expect(ikTracks).toEqual({ left: null, right: null });
+    expect(droppedTracks).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -333,7 +381,10 @@ const E2E_VMD = makeFakeVmd(
     bone("左腕", 0, [0, 0, 0], [0, 0, 0, 1]),
     bone("左腕", 30, [0, 0, 0], [0.1, 0.2, 0.3, 0.9]),
     bone("左ひざ", 0, [0, 0, 0], [0.4, 0, 0, 0.9]),
-    bone("左足ＩＫ", 0, [0, 0, 0], [0, 0, 0, 1]),
+    // 足 IK 骨：关键帧活在 position 通道（VMD 惯例：IK 骨只该有位移），
+    // 第 30 帧偏移 (1,2,3) → 轴系翻转 (1,2,-3) → 按 k 缩放
+    bone("左足ＩＫ", 0, [0, 0, 0]),
+    bone("左足ＩＫ", 30, [1, 2, 3]),
   ],
   // morph 入表 ⇒ 幽灵网格若漏置 morphTargetDictionary，上游解引用即抛（回归哨兵）
   [{ morphName: "まばたき", frameNumber: 0, weight: 0 }],
@@ -401,5 +452,49 @@ describe("buildVmdRetargetClip", () => {
   it("clip 时长按 MMD 帧率 30fps 换算（第 30 帧 ⇒ 1s）", () => {
     const { clip } = buildVmdRetargetClip(E2E_VMD, makeRig(makeStandingRig()), { positionScale: 1 });
     expect(clip.duration).toBeCloseTo(1, 6);
+  });
+
+  // ── 足 IK 目标出口（ADR-243 §2.8 方案 A 的重定向侧）──
+
+  it("足 IK 目标：采样含轴系翻转 + 比例缩放，时间 clamp 到首末关键帧", () => {
+    const { footIK } = buildVmdRetargetClip(E2E_VMD, makeRig(makeStandingRig()), {
+      positionScale: 0.5,
+    });
+
+    expect(footIK.right).toBeNull();
+    const left = footIK.left;
+    if (!left) throw new Error("左足ＩＫ 未被摘出");
+
+    const out = new THREE.Vector3();
+    expect(left.sample(1, out)).toBe(true); // 第 30 帧 ÷ 30fps
+    expectValues(out.toArray(), [0.5, 1, -1.5]); // (1,2,3) → z 翻转 → ×0.5
+
+    expect(left.sample(99, out)).toBe(true); // 超尾 → 末帧
+    expectValues(out.toArray(), [0.5, 1, -1.5]);
+    expect(left.sample(-5, out)).toBe(true); // 超首 → 首帧
+    expectValues(out.toArray(), [0, 0, 0]);
+  });
+
+  it("足 IK 目标走真实 buildAnimation 的插值（中间时刻落在两端之间）", () => {
+    const { footIK } = buildVmdRetargetClip(E2E_VMD, makeRig(makeStandingRig()), {
+      positionScale: 1,
+    });
+    const left = footIK.left;
+    if (!left) throw new Error("左足ＩＫ 未被摘出");
+
+    const out = new THREE.Vector3();
+    expect(left.sample(0.5, out)).toBe(true);
+    expect(out.x).toBeGreaterThan(0);
+    expect(out.x).toBeLessThan(1);
+  });
+
+  it("VMD 未驱动 IK 骨 → footIK 双侧 null（不产空采样器）", () => {
+    const { footIK } = buildVmdRetargetClip(
+      makeFakeVmd([bone("左腕", 0)]),
+      makeRig(makeStandingRig()),
+      { positionScale: 1 },
+    );
+
+    expect(footIK).toEqual({ left: null, right: null });
   });
 });

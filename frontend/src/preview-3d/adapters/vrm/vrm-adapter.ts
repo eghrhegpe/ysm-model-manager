@@ -3,6 +3,7 @@
 // VRMLoaderPlugin 解析 → rotateVRM0 摆正 → 注入核心场景 + 灯光 + 包围盒定相机。
 // 通用外壳（overlay/renderer/循环/释放）由 mount-preview-core.ts 拥有。
 
+import { VmdObject } from "@moeru/three-mmd";
 import { type VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import {
   createVRMAnimationClip,
@@ -12,6 +13,8 @@ import {
 import type { VRM0Meta, VRM1Meta } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+// VMD 源（MMD 圈产 VMD、动捕产 FBX，无人专门产 .vrma——ADR-243 §1.1）
+import { getCustomAnimPath } from "@/preview-3d/adapters/mmd/mmd-anim-library.ts";
 import type {
   PreviewAdapter,
   PreviewBuildCtx,
@@ -30,6 +33,7 @@ import { createGazeController } from "@/preview-3d/adapters/shared/perception/ga
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
+import { createVrmFootIKController } from "@/preview-3d/bone/vrm-foot-ik.ts"; // VMD 足ＩＫ 驱动（ADR-243 §2.8 方案 A）
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
@@ -46,7 +50,8 @@ import {
   pickPerceptionCaps,
 } from "@/preview-3d/menu/perception-controls.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
-import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
+import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
+import { buildVmdRetargetClip, type VmdFootIKTargets } from "./vmd-retarget.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 
 /** VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据；
@@ -274,8 +279,15 @@ interface VrmParseResult {
   tParseStart: number;
   tParseEnd: number;
 }
+/** 单个动作条目：`clip` 可直接交给 AnimationMixer；`footIK` 仅 VMD 重定向产物具备 */
+interface VrmMotionClipEntry {
+  label: string;
+  clip: THREE.AnimationClip;
+  /** VMD 足ＩＫ 目标（`.vrma` 无此通道 ⇒ null）；由 Stage5 每帧喂给 VRM 足 IK 控制器 */
+  footIK: VmdFootIKTargets | null;
+}
 interface VrmMotionState {
-  motionClips: Array<{ label: string; clip: THREE.AnimationClip }>;
+  motionClips: VrmMotionClipEntry[];
   motionMixer: THREE.AnimationMixer | null;
   motionAction: THREE.AnimationAction | null;
   motionPlaying: boolean;
@@ -362,13 +374,112 @@ async function Stage1ReadParse(
   );
   return { vrm, gltf, tStart, tParseStart, tParseEnd };
 }
-async function loadVrmaAnims(
+/** 动作标签 = 文件名去扩展名（无可用名 → "motion"） */
+function motionLabel(filePath: string): string {
+  return (filePath.split(/[/\\]/).pop() || "").replace(/\.[^.]+$/, "") || "motion";
+}
+
+/** `.vrma` 通道：官方 GLTFLoader + VRMAnimationLoaderPlugin → createVRMAnimationClip */
+async function loadVrmaClips(
+  paths: readonly string[],
+  readFn: (p: string) => Promise<string | null>,
+  vrm: VRM,
+): Promise<VrmMotionClipEntry[]> {
+  const loader = new GLTFLoader();
+  loader.register((parser) => new VRMLoaderPlugin(parser));
+  loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+  const clips: VrmMotionClipEntry[] = [];
+  for (const vp of paths) {
+    try {
+      const b64 = await readFn(vp);
+      if (!b64) continue;
+      const bytes = base64ToBytes(b64) as Uint8Array;
+      const buf = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      ) as ArrayBuffer;
+      const animGltf = await new Promise<GLTF>((resolve, reject) =>
+        loader.parse(buf, "", resolve, reject),
+      );
+      const anims = (animGltf.userData as { vrmAnimations?: VRMAnimation[] }).vrmAnimations;
+      if (!anims || anims.length === 0) continue;
+      clips.push({
+        label: motionLabel(vp),
+        clip: createVRMAnimationClip(anims[0], vrm),
+        footIK: null, // .vrma 自带完整腿部数据（含 IK 已烘好的 FK），无需外部求解
+      });
+    } catch {
+      /* 单个 .vrma 解析失败 → 跳过其余照常 */
+    }
+  }
+  return clips;
+}
+
+/**
+ * `.vmd` 通道（ADR-243 §2 管线）：VmdObject 解析 → 重定向到 humanoid 归一化骨骼。
+ * VMD 的腿部动作活在 `左足ＩＫ`/`右足ＩＫ` 的 position 通道上，`buildAnimation` 不解 IK，
+ * 故重定向器把 IK 目标摘出来，交给 Stage5 每帧的 CCD 驱动（`vrm-foot-ik.ts`）。
+ */
+async function loadVmdClips(
+  paths: readonly string[],
+  readFn: (p: string) => Promise<string | null>,
+  vrm: VRM,
+): Promise<VrmMotionClipEntry[]> {
+  const clips: VrmMotionClipEntry[] = [];
+  for (const vp of paths) {
+    try {
+      const b64 = await readFn(vp);
+      if (!b64) continue;
+      const vmd = await VmdObject.ParseFromBuffer(
+        bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array),
+      );
+      const retarget = buildVmdRetargetClip(vmd, vrm.humanoid);
+      // 一条 FK 轨道都建不起来（VMD 驱动的骨名本模型一个都没有）→ 不产条目，
+      // 否则播放面板会多出「点了没反应」的空动作
+      if (retarget.clip.tracks.length === 0) continue;
+      clips.push({
+        label: motionLabel(vp),
+        clip: retarget.clip,
+        footIK: retarget.footIK,
+      });
+    } catch {
+      /* 单个 .vmd 解析失败 → 跳过其余照常 */
+    }
+  }
+  return clips;
+}
+
+/** MMD 动作库（CustomAnim）里的 .vmd 路径；库根不可用 / 不可列 → 空数组（静默降级） */
+async function listCustomAnimVmd(
+  listAllFilePaths: (dir: string) => Promise<string[] | null>,
+): Promise<string[]> {
+  const animDir = await getCustomAnimPath();
+  if (!animDir) return [];
+  try {
+    const files = (await listAllFilePaths(animDir)) || [];
+    return files.filter((p) => p.toLowerCase().endsWith(".vmd"));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 加载动作通道（ADR-243 §2.7）：
+ *   ① 模型同目录 `.vrma` —— VRM 原生（官方 createVRMAnimationClip）
+ *   ② 模型同目录 `.vmd` —— MMD 动作，重定向到 humanoid
+ *   ③ MMD 动作库（`CustomAnim`）`.vmd` —— MMD 圈的动作资产是共享的，两边吃同一份
+ * 顺序即播放面板顺序（原生动作先露出，重定向动作随后）。
+ *
+ * 磁盘枚举一律走 Go 交付的 `listAllFilePaths`——前端不自行扫描磁盘（AGENTS.md 归属红线）。
+ * 逐文件读取（VMD 个头不大）；若将来动作库批量变大，可对齐 MMD 侧改走批量读。
+ */
+async function loadMotionClips(
   vrm: VRM,
   path: string,
   readFn: (p: string) => Promise<string | null>,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
 ): Promise<VrmMotionState> {
-  const motionClips: Array<{ label: string; clip: THREE.AnimationClip }> = [];
+  const motionClips: VrmMotionClipEntry[] = [];
   let motionMixer: THREE.AnimationMixer | null = null;
   let motionAction: THREE.AnimationAction | null = null;
   const motionPlaying = true;
@@ -379,31 +490,20 @@ async function loadVrmaAnims(
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
     const vrmaPaths = files.filter((p) => p.toLowerCase().endsWith(".vrma"));
-    const loader = new GLTFLoader();
-    loader.register((parser) => new VRMLoaderPlugin(parser));
-    loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
-    for (const vp of vrmaPaths) {
-      try {
-        const b64 = await readFn(vp);
-        if (!b64) continue;
-        const bytes = base64ToBytes(b64) as Uint8Array;
-        const buf = bytes.buffer.slice(
-          bytes.byteOffset,
-          bytes.byteOffset + bytes.byteLength,
-        ) as ArrayBuffer;
-        const animGltf = await new Promise<GLTF>((resolve, reject) =>
-          loader.parse(buf, "", resolve, reject),
-        );
-        const anims = (animGltf.userData as { vrmAnimations?: VRMAnimation[] }).vrmAnimations;
-        if (!anims || anims.length === 0) continue;
-        motionClips.push({
-          label: (vp.split(/[/\\]/).pop() || "motion").replace(/\.vrma$/i, "") || "motion",
-          clip: createVRMAnimationClip(anims[0], vrm),
-        });
-      } catch {
-        /* 单个 .vrma 解析失败 → 跳过其余照常 */
-      }
+    const vmdPaths = files.filter((p) => p.toLowerCase().endsWith(".vmd"));
+
+    // 追加动作库来源并去重（同目录已发现的路径不再重复解析）
+    const seen = new Set(vmdPaths.map((p) => p.toLowerCase()));
+    for (const p of await listCustomAnimVmd(listAllFilePaths)) {
+      const key = p.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      vmdPaths.push(p);
     }
+
+    motionClips.push(...(await loadVrmaClips(vrmaPaths, readFn, vrm)));
+    motionClips.push(...(await loadVmdClips(vmdPaths, readFn, vrm)));
+
     if (motionClips.length > 0) {
       motionMixer = new THREE.AnimationMixer(vrm.scene);
       motionAction = motionMixer.clipAction(motionClips[0].clip);
@@ -586,6 +686,9 @@ function Stage5BuildResult(
     exprMgr,
     perceptionPauseRef,
   } = perception;
+  // VMD 足 IK 驱动（ADR-243 §2.8 方案 A）：内部在**创建期快照**足骨的静止世界位置，
+  // 因此必须在任何 mixer.update 之前构造——本函数处于 build 阶段，天然满足。
+  const vrmFootIK = createVrmFootIKController(boneAssy.boneTree, semanticBones);
   recordLoadTrace({
     ts: Date.now(),
     format: "vrm",
@@ -627,6 +730,14 @@ function Stage5BuildResult(
           gaze!.apply(dt, semanticBones, ctx.camera!.position);
       }
       footIK.apply(dt, !animActive);
+      // VMD 足 IK：与上面的待机锚地以 animActive 互斥（待机走锚地、动画走 VMD 目标）。
+      // 写在 vrm.update(dt) 之后——归一化骨的位姿是**单向烘回**原始骨的，IK 结论要落在
+      // 原始骨上就必须晚于那一步（detail 见 vrm-foot-ik.ts 文件头）。
+      // 时间取 action.time 而非自行累加：暂停 / 切曲 / 循环 / 变速都自动对齐。
+      if (animActive && motion.motionAction) {
+        const current = motionClips[motion.motionIdx];
+        if (current?.footIK) vrmFootIK.apply(motion.motionAction.time, current.footIK);
+      }
       if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
         const mgr = exprMgr;
         blink.apply(dt, (weight: number) => {
@@ -647,6 +758,7 @@ function Stage5BuildResult(
       gaze?.dispose();
       blink.dispose();
       footIK.dispose();
+      vrmFootIK.dispose();
       motionMixer?.stopAllAction();
       motionMixer?.uncacheRoot(vrm.scene);
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
@@ -694,7 +806,7 @@ export async function buildVrmScene(
 ): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
   const parseRes = await Stage1ReadParse(ctx, path, port, readFn);
   const { vrm } = parseRes;
-  const motion = await loadVrmaAnims(vrm, path, readFn, listAllFilePaths);
+  const motion = await loadMotionClips(vrm, path, readFn, listAllFilePaths);
   setupCameraBounds(ctx, vrm);
   const boneAssy = Stage2BonesHumanoid(vrm);
   const vrmMaterials = Stage3Materials(vrm);
@@ -772,7 +884,7 @@ export interface VrmAdapterDeps {
   readFileBytes: (p: string) => Promise<string | null>;
   /** 面板 UI hooks（model/shot/play 菜单节点，视图层组装） */
   panels?: VrmPanelHooks;
-  /** VRMA 动作扫描文件枚举（可选） */
+  /** 动作扫描文件枚举（`.vrma` + `.vmd`；ADR-243 §2.7 起还用于 MMD 动作库） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
 }
 export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
@@ -784,10 +896,17 @@ export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
 }
 
 /**
- * [ADR-242 后续] 无 .vrma 时的空播放桥：clips 空 → playNodes 走空态引导分支。
- * VRMA 在现实生态里极稀少（MMD 圈产 VMD、动捕产 FBX，无人专门产 .vrma），
- * 故「扫不到动作」是常态而非异常——面板须显示引导而非消失（对齐 MMD 固定表项行为）。
- * emptyHint 自报 VRM 专有说明，避免复用 MMD playNodes 时误报 CustomAnim/VMD 路径。
+ * [ADR-242 后续 / ADR-243 §2.7] 播放面板空态引导文案。
+ * VRMA 在现实生态里极稀少（MMD 圈产 VMD、动捕产 FBX，无人专门产 .vrma），故「扫不到动作」
+ * 曾是常态；ADR-243 落地后 VMD 成为第二条来源，文案须同时交代两条路径——否则用户会以为
+ * 这里只认 .vrma（bridge.emptyHint 与兜底空态节点共用同一份，防两处漂移）。
+ */
+const VRM_PLAY_EMPTY_HINT =
+  "未找到动作文件。把 .vrma / .vmd 放到该模型所在目录即可（同目录自动发现）；MMD 动作库（CustomAnim）里的 .vmd 也会自动重定向到本模型。";
+
+/**
+ * [ADR-242 后续] 无动作时的空播放桥：clips 空 → playNodes 走空态引导分支。
+ * 面板须显示引导而非消失（对齐 MMD 固定表项行为）。
  */
 function emptyVrmPlayBridge(): MmdPlayBridge {
   return {
@@ -797,7 +916,7 @@ function emptyVrmPlayBridge(): MmdPlayBridge {
     currentIndex: () => 0,
     select: () => {},
     animDir: null,
-    emptyHint: "未找到动作文件。请将 .vrma 动作放到该模型所在目录（同目录自动发现）。",
+    emptyHint: VRM_PLAY_EMPTY_HINT,
   };
 }
 
@@ -807,7 +926,7 @@ const VRM_PLAY_EMPTY_NODE: PreviewMenuNode = {
   id: "vrma-play-empty",
   kind: "field",
   labelKey: "preview.playEmpty",
-  value: "未找到动作文件。请将 .vrma 动作放到该模型所在目录（同目录自动发现）。",
+  value: VRM_PLAY_EMPTY_HINT,
 };
 
 /**

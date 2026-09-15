@@ -5,6 +5,7 @@
 // 错误路径（空字节/解析失败）、GPU 释放（deepDispose + uncacheRoot）。
 // @pixiv/three-vrm 全 mock；three 用真实实现（Box3/Vector3/LoadingManager）。
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts"
+import type { MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts"
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
@@ -38,6 +39,7 @@ vi.stubGlobal("document", {
 const hoisted = vi.hoisted(() => {
   const loaderParsers: Array<() => unknown> = [];
   const deepDisposeCalls: Array<unknown> = [];
+  const footIKController = { apply: vi.fn(), dispose: vi.fn() };
   return {
     readBytesMock: vi.fn(),
     listPathsMock: vi.fn(),
@@ -49,6 +51,11 @@ const hoisted = vi.hoisted(() => {
     createAnimClip: vi.fn(),
     parseMock: vi.fn(),
     buildVrmBoneTreeMock: vi.fn(() => ({ byId: new Map(), childrenMap: new Map(), roots: [] })),
+    // ADR-243：VMD 重定向通道
+    parseVmdMock: vi.fn(),
+    getCustomAnimPathMock: vi.fn(),
+    footIKController,
+    createVrmFootIKMock: vi.fn(() => footIKController),
   };
 });
 
@@ -102,6 +109,26 @@ vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
 }));
 vi.mock("./vrm-bone.ts", () => ({
   buildVrmBoneTree: hoisted.buildVrmBoneTreeMock,
+}));
+
+// ---- Mock @moeru/three-mmd（ADR-243）：保留真 buildAnimation（重定向走端到端），
+//      只替掉二进制解析——`.vmd` 二进制构造需要 Shift-JIS 编码器，不值当 ----
+vi.mock("@moeru/three-mmd", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@moeru/three-mmd")>();
+  return {
+    ...actual,
+    VmdObject: { ParseFromBuffer: hoisted.parseVmdMock },
+  };
+});
+
+// ---- Mock MMD 动作库路径解析（隔离 backend 绑定；用例内按需指定目录）----
+vi.mock("@/preview-3d/adapters/mmd/mmd-anim-library.ts", () => ({
+  getCustomAnimPath: hoisted.getCustomAnimPathMock,
+}));
+
+// ---- Mock VRM 足 IK 控制器：算法细节归 vrm-foot-ik.test.ts，此处只验「装配 + 每帧驱动」----
+vi.mock("@/preview-3d/bone/vrm-foot-ik.ts", () => ({
+  createVrmFootIKController: hoisted.createVrmFootIKMock,
 }));
 
 // ---- Mock @pixiv/three-vrm ----
@@ -175,10 +202,61 @@ function makePort() {
   };
 }
 
-/** 构造假 VRM */
-function makeFakeVrm() {
+/**
+ * 鸭子类型 VMD（ADR-243）：真 `buildAnimation` 只经 `boneKeyFrames` / `morphKeyFrames`
+ * 两个读取器取值，不碰 VmdObject 的私有状态 ⇒ 结构等价即可，免去构造 Shift-JIS 二进制。
+ */
+function makeFakeVmd(
+  bones: Array<
+    | [string, number, [number, number, number]]
+    | [string, number, [number, number, number], [number, number, number, number]]
+  >,
+): unknown {
+  const reader = <T>(items: T[]) => ({
+    length: items.length,
+    get: (i: number): T => {
+      const item = items[i];
+      if (item === undefined) throw new RangeError(`index ${i} out of range`);
+      return item;
+    },
+  });
+  return {
+    boneKeyFrames: reader(
+      bones.map((frame) => ({
+        boneName: frame[0],
+        frameNumber: frame[1],
+        position: frame[2],
+        rotation: frame[3] ?? [0, 0, 0, 1],
+        interpolation: new Array(16).fill(20),
+      })),
+    ),
+    morphKeyFrames: reader([]),
+  };
+}
+
+/** VMD 重定向会读到的归一化骨（其余骨缺席 ⇒ 绑定解析自动跳过） */
+function makeNormalizedNodes(): Record<string, THREE.Object3D> {
+  const nodes: Record<string, THREE.Object3D> = {};
+  const defs: Array<[string, [number, number, number]]> = [
+    ["hips", [0, 0.8, 0]],
+    ["leftUpperArm", [0.12, 1.32, 0]],
+    ["leftFoot", [0.1, 0.08, 0]],
+  ];
+  for (const [name, pos] of defs) {
+    const node = new THREE.Object3D();
+    node.position.set(...pos);
+    nodes[name] = node;
+  }
+  return nodes;
+}
+
+/** 构造假 VRM；`humanoidNodes` 供 VMD 重定向读取归一化骨（缺省 = 模型无任何 humanoid 骨） */
+function makeFakeVrm(humanoidNodes: Record<string, THREE.Object3D> = {}) {
   const scene = new THREE.Scene();
-  const humanoid = { humanBones: {} as Record<string, THREE.Bone | null> };
+  const humanoid = {
+    humanBones: {} as Record<string, THREE.Bone | null>,
+    getNormalizedBoneNode: (name: string): THREE.Object3D | null => humanoidNodes[name] ?? null,
+  };
   const lookAt = { target: null as THREE.Object3D | null };
   const exprMgr = {
     getExpression: (name: string) => {
@@ -260,6 +338,10 @@ beforeEach(() => {
   hoisted.deepDisposeCalls.length = 0;
   hoisted.loaderParsers.length = 0;
   mockElements.clear();
+  // 每个用例独立起点：动作库默认不可用、VMD 默认解析为空动作、足 IK 控制器每次新建
+  hoisted.getCustomAnimPathMock.mockResolvedValue(null);
+  hoisted.parseVmdMock.mockResolvedValue(makeFakeVmd([]));
+  hoisted.createVrmFootIKMock.mockReturnValue(hoisted.footIKController);
 });
 
 afterEach(() => {
@@ -463,6 +545,204 @@ describe("VRMA 动作加载", () => {
     const items = registeredItems(content);
     const play = items.find((i) => i.id === "vrma-play");
     expect(play).toBeDefined();
+    content.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VMD 动作加载与重定向（ADR-243 §2.7 发现 / §2.8 IK 驱动）
+// ---------------------------------------------------------------------------
+
+/** 扫描场景构建器：同目录 files + 动作库 libFiles，并捕获 play bridge */
+async function buildWithMotion(opts: {
+  files: string[];
+  libFiles?: string[];
+  animDir?: string | null;
+  vmd?: unknown;
+  vmdReject?: boolean;
+  humanoidNodes?: Record<string, THREE.Object3D>;
+  readVmd?: string | null;
+}): Promise<{
+  content: Awaited<ReturnType<typeof buildVrmScene>>;
+  // 显式 `| undefined`（非可选属性）：exactOptionalPropertyTypes 下不许把 undefined 赋给 `play?`
+  play: MmdPlayBridge | undefined;
+}> {
+  const nodes = opts.humanoidNodes ?? makeNormalizedNodes();
+  const vrm = makeFakeVrm(nodes);
+  // 归一化骨真实处于 mixer root（vrm.scene）子树内：否则轨道 uuid 绑不上，
+  // PropertyBinding 只会打一条警告后静默失效（真实 loader 把 normalizedHumanBonesRoot
+  // 挂在 gltf.scene 下，见 ADR-243 §2.2）
+  for (const node of Object.values(nodes)) {
+    if (!node.parent) vrm.scene.add(node);
+  }
+  // GLTFLoader.parse 同时服务主模型与 .vrma：第 1 次是主模型，之后按 .vrma 处理
+  //（.vmd 不走 GLTFLoader，走 mocked 的 VmdObject.ParseFromBuffer）
+  let parseCalls = 0;
+  hoisted.parseMock.mockImplementation(() => {
+    parseCalls++;
+    return parseCalls === 1
+      ? { userData: { vrm } }
+      : { userData: { vrmAnimations: [{ name: "anim" }] } };
+  });
+  if (opts.vmdReject) {
+    hoisted.parseVmdMock.mockRejectedValue(new Error("bad vmd"));
+  } else {
+    hoisted.parseVmdMock.mockResolvedValue(opts.vmd ?? makeFakeVmd([]));
+  }
+  hoisted.getCustomAnimPathMock.mockResolvedValue(opts.animDir ?? null);
+  hoisted.readBytesMock.mockImplementation((p: string) => {
+    if (p.toLowerCase().endsWith(".vmd")) return Promise.resolve(opts.readVmd ?? btoa("VMD"));
+    return Promise.resolve(btoa("VRM"));
+  });
+  hoisted.listPathsMock.mockImplementation((dir: string) =>
+    Promise.resolve(dir.includes("CustomAnim") ? (opts.libFiles ?? []) : opts.files),
+  );
+  hoisted.createAnimClip.mockReturnValue(new THREE.AnimationClip("vrma-clip", -1, []));
+
+  const captured: { play?: MmdPlayBridge } = {};
+  const panels = makePanels();
+  panels.playNodes = (bridge) => {
+    captured.play = bridge;
+    return [];
+  };
+
+  const { ctx } = makeCtx();
+  const content = await buildVrmScene(
+    ctx,
+    "/vrm/test.vrm",
+    makePort(),
+    hoisted.readBytesMock,
+    panels,
+    hoisted.listPathsMock,
+  );
+  return { content, play: captured.play };
+}
+
+describe("VMD 动作加载与重定向（ADR-243）", () => {
+  /** センター 位移 + 左腕 旋转 + 左足ＩＫ 目标（覆盖三条通道） */
+  const VMD_FRAMES: Array<[string, number, [number, number, number]]> = [
+    ["センター", 0, [0, 0, 0]],
+    ["センター", 30, [1, 2, 3]],
+    ["左腕", 0, [0, 0, 0]],
+    ["左足ＩＫ", 0, [0, 0, 0]],
+    ["左足ＩＫ", 30, [1, 2, 3]],
+  ];
+
+  it("同目录 .vmd → 重定向成 clip 进播放列表（label 去扩展名）", async () => {
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    expect(play?.clips.map((c) => c.label)).toEqual(["wave"]);
+    content.dispose();
+  });
+
+  it("原生 .vrma 排在 .vmd 之前（顺序即面板顺序：原生动作先露出）", async () => {
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/idle.vrma", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    expect(play?.clips.map((c) => c.label)).toEqual(["idle", "wave"]);
+    content.dispose();
+  });
+
+  it("动作库（CustomAnim）来源并入，且与同目录重复的同一路径不重复列出", async () => {
+    const { content, play } = await buildWithMotion({
+      // 模型本身就放在动作库里：同目录扫到 wave.vmd，动作库也扫到同一路径
+      files: ["/repo/CustomAnim/test.vrm", "/repo/CustomAnim/wave.vmd"],
+      libFiles: ["/repo/CustomAnim/wave.vmd", "/repo/CustomAnim/lib.vmd"],
+      animDir: "/repo/CustomAnim",
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    // 去重按**完整路径**：同名不同目录的两个动作是两个不同资产，不该被合并
+    expect(play?.clips.map((c) => c.label)).toEqual(["wave", "lib"]);
+    content.dispose();
+  });
+
+  it("动画激活 → 每帧把当前动作的足 IK 目标喂给控制器（时间取 action.time）", async () => {
+    const { content } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    content.update(0.016);
+
+    expect(hoisted.footIKController.apply).toHaveBeenCalledTimes(1);
+    const [time, targets] = hoisted.footIKController.apply.mock.calls[0];
+    expect(time).toBeGreaterThanOrEqual(0);
+    // 左足ＩＫ 被摘出为目标；右足未出现在 VMD 里 ⇒ null（不猜）
+    expect(targets.left).not.toBeNull();
+    expect(targets.right).toBeNull();
+    content.dispose();
+  });
+
+  it("仅 .vrma（无 VMD）→ 控制器不被驱动，足部交给动画自带数据", async () => {
+    const { content } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/idle.vrma"],
+    });
+
+    content.update(0.016);
+
+    expect(hoisted.footIKController.apply).not.toHaveBeenCalled();
+    content.dispose();
+  });
+
+  it("VMD 骨名全不可映射（模型无对应 humanoid 骨）→ 不产空动作项", async () => {
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+      humanoidNodes: {}, // 该模型一根 humanoid 骨都没有
+    });
+
+    // 「点了没反应」的空动作比没有动作更糟——宁可让它落到空态引导
+    expect(play?.clips).toEqual([]);
+    content.dispose();
+  });
+
+  it(".vmd 解析抛错 → 跳过该动作，其余动作照常", async () => {
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/idle.vrma", "/vrm/wave.vmd"],
+      vmdReject: true,
+    });
+
+    expect(play?.clips.map((c) => c.label)).toEqual(["idle"]);
+    content.dispose();
+  });
+
+  it("重定向轨道在真实 mixer 里命中归一化骨（uuid 绑定端到端，非仅轨道名对）", async () => {
+    const nodes = makeNormalizedNodes();
+    const { content } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd([
+        ["左腕", 0, [0, 0, 0], [0, 0, 0, 1]],
+        ["左腕", 30, [0, 0, 0], [0.6, 0, 0, 0.8]], // 明显旋转，便于观察
+      ]),
+      humanoidNodes: nodes,
+    });
+
+    const arm = nodes.leftUpperArm;
+    if (!arm) throw new Error("测试装置损坏");
+    expect(arm.quaternion.w).toBeCloseTo(1, 6); // 播放前恒等
+
+    content.update(0.5); // 推进到动画中段
+
+    // 轴系翻转（x 取反）+ 贝塞尔插值 ⇒ 四元数必然离开恒等
+    expect(Math.abs(arm.quaternion.w - 1)).toBeGreaterThan(0.01);
+    content.dispose();
+  });
+
+  it("空态文案同时交代 .vrma 与 .vmd 两条路径（不再只认 .vrma）", async () => {
+    const { content, play } = await buildWithMotion({ files: ["/vrm/test.vrm"] });
+
+    expect(play?.clips).toEqual([]);
+    expect(play?.emptyHint).toContain(".vmd");
+    expect(play?.emptyHint).toContain("CustomAnim");
+
+    const items = registeredItems(content);
+    expect(items.find((i) => i.id === "vrma-play")).toBeDefined();
     content.dispose();
   });
 });

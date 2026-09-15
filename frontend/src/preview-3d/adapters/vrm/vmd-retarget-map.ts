@@ -127,6 +127,21 @@ export const VMD_ROOT_TRANSLATION_CANDIDATES: readonly string[] = [
   "root",
 ];
 
+/**
+ * 足 IK 目标骨候选名（顺序即优先级，首个命中胜出）。
+ *
+ * ⚠️ 与 {@link VMD_RETARGET_CANDIDATES} **不是**同一类东西：IK 骨的 VMD 关键帧活在
+ * **position** 通道（目标是「足该到哪」的世界偏移），而不是 quaternion 通道——
+ * 把它当 FK 旋转源只会得到恒等轨道。故本表**不产生任何 FK 绑定**，只用于把
+ * IK 目标轨道从产物里摘出来，交给 `vrm-foot-ik.ts` 驱动 CCD 求解（ADR-243 §2.8 方案 A）。
+ *
+ * MMD 标准命名用**全角** `ＩＫ`；半角变体见于部分导出/转换工具。
+ */
+export const VMD_FOOT_IK_CANDIDATES: Readonly<Record<"left" | "right", readonly string[]>> = {
+  left: ["左足ＩＫ", "左足IK", "leftFootIK", "LeftFootIK"],
+  right: ["右足ＩＫ", "右足IK", "rightFootIK", "RightFootIK"],
+};
+
 /** MMD 单位 → 米的默认缩放（MMD 标准模型 ≈ 20 单位高 ≈ 1.6 m；ADR-243 §2.5） */
 export const VMD_POSITION_SCALE_DEFAULT = 0.08;
 

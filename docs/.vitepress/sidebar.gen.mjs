@@ -1805,6 +1805,10 @@ export const autoSidebar = [
           {
             "text": "场景能力注册表 scene-capability-registry",
             "link": "/knowledge/scene_capability_registry"
+          },
+          {
+            "text": "VMD→VRM 动作重定向 vmd-retarget",
+            "link": "/knowledge/vmd_vrm_retarget"
           }
         ]
       },

@@ -184,13 +184,15 @@ VMD 重定向写的是**归一化骨骼**，天然落在 `vrm.update(dt)` 之前
 - **菜单**：复用 ADR-241/242 的声明式 `MenuNode`，扩展既有 `vrma-play` 桥（`vrm-adapter.ts:752/787/800/858-865`）的 clips 来源与空态文案（不再只说 `.vrma`）。**不新增节点类型**（AGENTS.md「3d 菜单只允许 MenuNode schema」红线）。
 - **落点**：新增 `frontend/src/preview-3d/adapters/vrm/vmd-retarget.ts`（重定向器）与 `.../vmd-retarget-map.ts`（映射表）。放 VRM 侧的理由：靶面是 VRM humanoid，且 §2.2 的 uuid 绑定依赖 VRM 归一化节点，非格式无关物。
 
-### 2.8 IK 决策项（**待拍板**，本 ADR 不替用户定）
+> **实施注记（2026-09-15 二阶段）**：`loadVrmaAnims` 改名并扩为 `loadMotionClips`，拆出 `loadVrmaClips` / `loadVmdClips` / `listCustomAnimVmd` 三个小函数；顺序为「同目录 `.vrma` → 同目录 `.vmd` → 动作库 `.vmd`」，**按完整路径去重**（同名不同目录是两个不同资产，不合并）。两条边界：① 「全骨不可映射」的 VMD 直接跳过、不产条目——`tracks: []` 的动作点在面板上是「点了没反应」，比空态引导更糟；② 空态文案由 `VRM_PLAY_EMPTY_HINT` 单点持有（`emptyVrmPlayBridge` 与兜底节点共用），防两处漂移。逐文件读取（VMD 个头不大）；动作库规模若显著变大，可对齐 MMD 侧改走批量读。
+
+### 2.8 IK 决策项（**方案 A 已采纳并落地**，2026-09-15）
 
 VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 CCDIK 在**运行时**解算成 FK（`mmd-build-result.ts:61` `updateWithMixer(dt, mixer, { ik: true, grant: true })`）。而 `buildAnimation` 是纯关键帧搬运、**不解 IK**（`buildAnimation` 版 `buildSkeletalAnimation` 内无 IK 分支）；VRM 侧也无解算器。三个候选：
 
 | 方案 | 做法 | 评估 |
 |---|---|---|
-| **A. 复用 in-repo CCD** | `solveIK(chain, target)` 驱动 VRM 归一化腿链，target 由 VMD 足ＩＫ 的 position 经 §2.5 缩放后给出 | **推荐**。求解器已在仓库（`ik-solver.ts:98`），边际成本低 |
+| **A. 复用 in-repo CCD**（**已采纳**） | `solveIK(chain, target)` 驱动 VRM 归一化腿链，target 由 VMD 足ＩＫ 的 position 经 §2.5 缩放后给出 | **推荐**。求解器已在仓库（`ik-solver.ts:98`），边际成本低 |
 | **B. 只转 FK** | 忽略 IK 目标，接受腿部降级 | 站桩/idle 勉强能看，**舞蹈会明显不对**（IK 开启时 FK 的足/ひざ被 IK 覆盖） |
 | **C. 隐藏 MMD 骨架跑 `MMDIKSolver` 再烘 FK** | 用真实 IK 解算后采样 | **否决**：VRM 预览场景无 PMX，IK 需要真实骨长，无法构造等价骨架 |
 
@@ -198,9 +200,35 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 
 1. **链根必须是骨盆语义（大腿的父骨），不是 `upperLeg` 自身**。`mmd-foot-ik.ts:48` 原本用 `extractIKChainFromTree(tree, leftUpperLeg, leftFoot)` 得到 `chain=[upperLeg, lowerLeg, foot]`，而 `solveIK` 的关节遍历是 `for (let j = chain.length - 2; j >= 1; j--)`（`ik-solver.ts:122`）——**跳过链根**。该链下 j 只能取 1（膝盖），大腿不动。链根改取大腿就多一节 ⇒ `chain=[骨盆, upperLeg, lowerLeg, foot]`，j 取 2、1 ⇒ **大腿与膝盖都参与、骨盆保持锚定**。零求解器改动。
    - **实施期修订（2026-09-15）**：原文写「链起点必须是 `hips`」，实现改为「取大腿的**直接父骨**（`boneTree.byId.get(upperLegId).parentId`），父骨缺失或悬空则回退大腿自身」。理由：MMD 的 `腰` 不保证是 `左足` 的祖先（不同模型派系里 `腰`/`下半身` 归属不一），硬编码语义 id 会让 `extractIKChainFromTree` 直接返回 null ⇒ 整腿静默失效；而 VRM 的大腿父骨恰好就是 `hips`，两者统一为「直接父骨」后同一份代码对两个格式都对。
+   - **实施期落地（2026-09-15 二阶段）**：该提取逻辑连同「链根取直接父骨」约定抽为 `bone/leg-chain.ts` 的 `extractLegChains()`，由 `mmd-foot-ik.ts`（待机锚地）与 `vrm-foot-ik.ts`（VMD 足ＩＫ 驱动）共用——两份实现分叉会让这条约定在某一路径上悄悄回退，症状是「某格式的腿只动膝盖」且不报错。
 2. **角度钳制与符号方向**。膝/肘需单向钳制（`minAngle`/`maxAngle` 同号区间），而 `solveIK` 是 axis-angle 形式按角度**大小**钳制（`ik-solver.ts:146`），反向旋转的符号行为需实测；`poleTarget`/`poleWeight` 用于膝盖朝向矫正，MMD 的极向量约定需对照确定。
+   - **实施期处置**：v1 刻意沿用 `mmd-foot-ik.ts` 那一组**已在实机跑过**的保守参数（4 轮 / damping 0.6 / ±π⁄3），不分叉——先让两条腿走同一组值，等实机肉眼校出问题再按需分叉，免得多一份未经实证的魔数。
 
-一期若先落 B（FK only），需在 UI 明示「腿部动作已降级」，避免用户误判为 bug。
+#### 2.8.1 目标世界位置的一步推导（实施期发现，结论比直觉干净）
+
+VMD 的骨骼 position 是「相对 bind pose 的偏移」（格式规范原文：*"the position coordinates are relative to the bind pose, or the model's default pose"*）。源模型里：
+
+```
+足世界   = 足bind   + ikOffset
+骨盆世界 = 骨盆bind + centerOffset          （センター 的偏移）
+⇒ 足 − 骨盆 = (足bind − 骨盆bind) + (ikOffset − centerOffset)
+```
+
+VRM 侧 `hips` 的归一化 position 轨道已承载 `centerOffset × k`（由 §2.4 的重定向器写入），即 `骨盆世界 = 骨盆bind + centerOffset × k`。展开后 **`centerOffset` 项相消**：
+
+```
+目标世界 = 足静止世界 + ikOffset × k        ← vrm-foot-ik.ts 的唯一公式
+```
+
+**推论：IK 驱动不需要读 `センター` 轨道**，只需「VRM 足骨在静止位姿下的世界位置」这一个常量 + 采样器给出的偏移（采样值已含轴系翻转与 `k`）。全身位移由 `hips` 轨道承载、足被 IK 钉在世界系——这正是 MMD「IK 目标取绝对坐标、身体走动」的语义。
+
+⚠️ 该常量必须取**创建期快照**，不可每帧现读：创建期 = 模型刚加载、动作还没跑过第一帧 ⇒ 读到的是 rest；每帧现读会拿到「上一帧已被动画覆盖的位姿」，目标被自己的上一帧结果拖着走 ⇒ 足部**自反馈漂移**。已由测试钉死（`创建后骨架被动画移动，目标基准仍停在创建期 rest`）。
+
+#### 2.8.2 每帧顺序（§2.6 契约的落地形态）
+
+`footIK.apply(dt, !animActive)` 与 `vrmFootIK.apply(action.time, 当前动作的 footIK)` 以 **`animActive` 互斥**：待机走锚地、动画走 VMD 目标，两者都不改 §2.6 的既有顺序，只在其末尾追加一步。
+
+IK 结论写在**原始骨**上、且晚于 `vrm.update(dt)`——因为归一化骨位姿是**单向烘回**原始骨的，IK 结论要生效就必须晚于那一步（写在归一化骨则须早于它，且要额外刷世界矩阵）。采样时间取 `action.time` 而非自行累加：暂停 / 切曲 / 循环 / 变速全部自动对齐。
 
 ### 2.9 范围
 
@@ -255,6 +283,26 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 
 尚未落地：§2.7 的适配器接入（`.vmd` 发现 + 菜单空态文案）与 §2.8 方案 A 的 IK 驱动接线。
 
+### 3.5 实施注记（2026-09-15，二阶段：适配器接入 + 足 IK 驱动）
+
+| 文件 | 内容 |
+|---|---|
+| `frontend/src/preview-3d/adapters/vrm/vmd-retarget-map.ts` | 补 `VMD_FOOT_IK_CANDIDATES`（全角 `ＩＫ` 为主 + 半角变体；**不产 FK 绑定**，只用于摘目标轨道） |
+| `frontend/src/preview-3d/adapters/vrm/vmd-retarget.ts` | `VmdBindingPlan.footIK` / 幽灵骨架纳入 IK 骨（静止位置置零 ⇒ 轨道值即纯偏移）/ `rewriteVmdTracks` 摘出 IK position 轨道（按 `k` 缩放、不计 dropped、不入 clip）/ `createFootIKTarget` 采样器 / `VmdRetargetResult.footIK` |
+| `frontend/src/preview-3d/bone/leg-chain.ts` | **新增**：`extractLegChains()`——腿链提取（含「链根取大腿直接父骨」约定）从 `mmd-foot-ik.ts` 抽出，供 MMD 待机锚地与 VRM 足 IK 共用 |
+| `frontend/src/preview-3d/bone/vrm-foot-ik.ts` | **新增**：`createVrmFootIKController()`——创建期快照足骨静止世界位置，每帧 `restWorld + ikOffset×k` → `solveIK` |
+| `frontend/src/preview-3d/bone/mmd-foot-ik.ts` | 改为复用 `leg-chain.ts`（行为等价，测试未动） |
+| `frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts` | `loadVrmaAnims` → `loadMotionClips`（同目录 `.vrma` + `.vmd`，追加 `CustomAnim` 动作库 VMD 来源）；`VrmMotionClipEntry.footIK`；Stage5 装配 `vrmFootIK` 并与 `footIK` 以 `animActive` 互斥驱动；`dispose` 释放；空态文案补 `.vmd` |
+
+单测新增/改动：`vmd-retarget.test.ts` 28 例（+6：IK 摘出、缩放、采样 clamp、贝塞尔、无 IK 骨的 null 语义）、`vrm-foot-ik.test.ts` 10 例（**新增**）、`vrm-adapter.test.ts` 46 例（+8：`.vmd` 入列、原生优先、动作库来源与去重、每帧 IK 驱动、`.vrma` 不驱动、全骨不可映射跳过、解析失败跳过、文案）。`bone/` 全域 127 例、`preview-3d/` 全域 2356 例全绿。
+
+四条值得留下的实现细节：
+
+1. **足 IK 目标的世界位置公式**（§2.8.1）：`目标 = 足静止世界 + ikOffset × k`，`centerOffset` 项在代数上相消 ⇒ 不必读 `センター` 轨道。
+2. **静止位置必须创建期快照**（§2.8.1 尾注）：每帧现读会自反馈漂移，已由测试钉死。
+3. **`.vmd` 的足 IK 目标轨道走同一条「原地保留 track 对象」路线**（§2.2 红线）：`createFootIKTarget` 经 `track.createInterpolant()` 采样，贝塞尔插值同样不能丢——否则抬脚轨迹退化成线性、出现卡点。
+4. **适配器测试把归一化骨挂进 `vrm.scene` 子树**：否则 `PropertyBinding` 找不到 uuid 目标，只打一条警告后静默失效。这既是消噪，也是对 §2.2「uuid 绑定可命中」的端到端哨兵（测试断言播放后四元数确实离开恒等）。
+
 ---
 
 ## 4. 数据溯源
@@ -277,6 +325,8 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 | `semantic-bones.ts:249` `matchSemanticBone` | 匹配算法可复用（避免新表重写） | §2.3 |
 | `mmd-anim-library.ts:12/24` | MMD 动作库路径解析与文件筛选可复用 | §2.7 |
 | ADR-081 §2.1/§2.5、ADR-066、ADR-231、ADR-241/242 | 语义层边界 / 预览通道 / adapters 层 / 菜单 schema | §2.3 / §2.7 |
+| VMD 格式规范（OpenMikuParser / MMDBridge 格式文档）：*"the position coordinates are relative to the bind pose, or the model's default pose"* | 「VMD position 是偏移而非绝对坐标」——§2.8.1 目标公式的代数前提 | §2.8.1 |
+| 用户 2026-09-15：「尝试执行」→「继续」 | 拍板 §2.8 方案 A 并授权二期（适配器接入 + IK 接线）落地 | §2.8 / §3.5 |
 | 外部参考：Blender「Vmd Retargeting」(xianran)、3dretarget.com「VMD conversion」指南 | 难点清单（臂旋速率、高跟鞋忽略脚旋、比例自动缩放）、先分离 body 与 camera/light/facial/physics 轨道 | §2.5 / §2.8 / §2.9 |
 
 <!-- 文件名: vmd-to-vrm-retarget.md → 实际文件 ADR-243-vmd-to-vrm-retarget.md -->

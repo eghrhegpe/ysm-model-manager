@@ -37,6 +37,8 @@ status: active
 
 ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `PreviewMenuNode[]` 节点直产。`ground-menu.ts` 是纯声明层（零 THREE 依赖），仅构造 `PreviewMenuNode` 供 `cap.getMenuNodes()` 消费。
 
+**ADR-249 阶段1（2026-09-16）**：材质控件的 `visibleWhen` 由单一的粗粒度谓词 `groundSurfaceOn`（仅判 `matSource !== "none"`）改为 `paramVisible(param)` —— 逐参数 × 逐模式判定，事实源 = `ground-surface-spec.ts|paramIsEffective`。`colorNode`/`sliderNode` 工厂新增 `param: GroundMatParam` 形参。原 `groundSurfaceOn` 已删除（`paramIsEffective` 对 `none` 全返 false，语义已覆盖）。
+
 **历史**：2026-08-28 前 ground 菜单走 `buildGroundMaterialGroup` + `groundSliderDef`/`groundColorDef`/`groundButtonDef` 三工厂产出 `PreviewControlDef[]`（已退役）；2026-09 ADR-195 刀2 迁移至 `buildGroundNodes` 直产 `PreviewMenuNode[]`。
 
 ## 核心职责

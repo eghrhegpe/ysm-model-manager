@@ -38,7 +38,7 @@ type WaterRenderBody =
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
   readonly labelKey = "preview.water";
-  readonly icon = "💧";
+  readonly icon = "ocean";
   readonly descKey = "preview.waterDesc";
 
   private scene: THREE.Scene;

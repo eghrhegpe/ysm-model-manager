@@ -29,7 +29,7 @@ export type ShadowType = (typeof SHADOW_TYPES)[number];
 export class ShadowCapability implements SceneCapability {
   readonly id = "shadow";
   readonly labelKey = "preview.shadow";
-  readonly icon = "🌑";
+  readonly icon = "shadow";
   readonly descKey = "preview.shadowDesc";
 
   private scene: THREE.Scene;

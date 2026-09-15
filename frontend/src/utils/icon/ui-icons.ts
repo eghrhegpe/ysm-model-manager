@@ -318,6 +318,16 @@ export const UI_ICONS: Record<string, string> = {
   fog: svg(
     '<path d="M5.5 13h13a3.5 3.5 0 0 0 0-7 5.5 5.5 0 0 0-10.5-1.5A4 4 0 0 0 5.5 13z"/><line x1="4" y1="17" x2="20" y2="17"/><line x1="7" y1="21" x2="17" y2="21"/>',
   ),
+  // 阴影（阴影能力行）——实心圆 + 偏移的投影轮廓
+  shadow: svg(
+    '<circle cx="10" cy="10" r="6"/><path d="M18 8a6 6 0 0 1-8 8" stroke-dasharray="2 2"/>',
+  ),
+  // 反射面/镜面（反射器能力行）——圆角方框 + 斜向反光
+  mirror: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16l5-8 3 5"/>'),
+  // 天空（天空能力行）——小太阳 + 云
+  sky: svg(
+    '<circle cx="6.5" cy="6.5" r="2.5"/><path d="M18 21H8a4 4 0 0 1 0-8h.5a5 5 0 0 1 9.4 1.4A3.3 3.3 0 0 1 18 21z"/>',
+  ),
   // ── 视图/模式 ──
   window: svg(
     '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="7" y1="12" x2="7" y2="12"/><line x1="11" y1="12" x2="11" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/>',

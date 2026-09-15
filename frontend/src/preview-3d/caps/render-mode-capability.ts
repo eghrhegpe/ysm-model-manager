@@ -39,7 +39,7 @@ function collectMaterials(scene: THREE.Scene): THREE.Material[] {
 export class RenderModeCapability implements SceneCapability {
   readonly id = "renderMode";
   readonly labelKey = "preview.renderMode";
-  readonly icon = "🎨";
+  readonly icon = "appearance";
   readonly descKey = "preview.renderModeDesc";
 
   private scene: THREE.Scene;

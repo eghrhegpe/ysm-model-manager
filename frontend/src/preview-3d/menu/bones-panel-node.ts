@@ -51,7 +51,7 @@ export interface BonesPanelItemOpts {
 
 /**
  * 构造「骨骼」菜单项节点。返回的 PreviewMenuNode 形状固定：
- *   id="bones" / icon="🦴" / dockGroup="motion" / kind="panel"
+ *   id="bones" / icon="bone" / dockGroup="motion" / kind="panel"
  * caller 决定「是否 push」（有无骨骼 / 有无 bonePanel）。
  * renderCustom 把 renderer 的 cleanup 同时交给两方：return 给渲染器（面板级生命周期），
  * 写回 caller 的 cleanupRef（模型级 dispose 兜底）。两者持同一函数，幂等。

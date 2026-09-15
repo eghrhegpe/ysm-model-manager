@@ -121,6 +121,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "❔": "unknown",
   // 左导航「资源库」项（2026-09 迁移补）
   "📚": "book",
+  // 能力行图标（2026-09 迁移补；cap 用 `readonly icon = "…"` 声明，见 caps/*-capability.ts）
+  "🌑": "shadow",
+  "🪟": "mirror",
+  "🌤️": "sky",
   "🏠": "home",
   "🏆": "rank",
   "👤": "user",

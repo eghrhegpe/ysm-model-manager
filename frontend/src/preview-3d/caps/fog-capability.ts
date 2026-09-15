@@ -28,7 +28,7 @@ const FOG_MODES = ["linear", "exp2"] as const satisfies readonly FogMode[];
 export class FogCapability implements SceneCapability {
   readonly id = "fog";
   readonly labelKey = "preview.fog";
-  readonly icon = "🌫️";
+  readonly icon = "fog";
   readonly descKey = "preview.fogDesc";
 
   private scene: THREE.Scene;

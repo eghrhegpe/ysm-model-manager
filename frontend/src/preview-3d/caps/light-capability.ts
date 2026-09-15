@@ -180,7 +180,7 @@ function hasAny(changed: Set<string>, keys: Set<string>): boolean {
 export class LightCapability implements SceneCapability {
   readonly id = "light";
   readonly labelKey = "preview.lighting";
-  readonly icon = "💡";
+  readonly icon = "hint";
   readonly descKey = "preview.lightingDesc";
 
   private scene: THREE.Scene;

@@ -82,7 +82,7 @@ const SSRPASS_OUTPUT_DEFAULT = 0;
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
   readonly id = "postprocessing";
   readonly labelKey = "preview.postprocessing";
-  readonly icon = "🎇";
+  readonly icon = "sparkle";
   readonly descKey = "preview.postprocessingDesc";
 
   private scene: THREE.Scene;

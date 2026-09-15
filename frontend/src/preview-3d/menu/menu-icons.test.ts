@@ -46,6 +46,18 @@ const MIGRATED_FILES = [
   "views/app-nav/index.ts",
   // 包内文件清单芯片（2026-09）：同上；label 已同时转 i18n
   "views/app-preview/tpl.ts",
+  // 能力类（2026-09）：`readonly icon = "…"` 经 `menu/env.ts|envCapRow` 流入菜单行图标位。
+  // ⚠️ 这批是**放宽扫描口径**后才现形的——原正则只认 `icon: "…"`（冒号），漏了等号形态。
+  "preview-3d/caps/environment-capability.ts",
+  "preview-3d/caps/fog-capability.ts",
+  "preview-3d/caps/ground-capability.ts",
+  "preview-3d/caps/light-capability.ts",
+  "preview-3d/caps/postprocessing-capability.ts",
+  "preview-3d/caps/reflector-capability.ts",
+  "preview-3d/caps/render-mode-capability.ts",
+  "preview-3d/caps/shadow-capability.ts",
+  "preview-3d/caps/water-capability.ts",
+  "preview-3d/caps/sky-capability.ts",
 ];
 
 /**
@@ -88,14 +100,42 @@ const TEXT_SLOT_FILES: { rel: string; marker: string; why: string }[] = [
     marker: "modalSelect",
     why: "选择器标题前缀（esc 通道）",
   },
+  // **数据图标**兜底（ADR-238 §1.3 🚨不可动）：资源类型图标来自 resource_types.json，
+  // 本来就是彩色 emoji；此处的 `|| "📦"` 是未知类型的兜底字面量，属数据域而非 UI chrome。
+  {
+    rel: "views/app-content/diagnostics/dedup-scan.ts",
+    marker: "typeIcon",
+    why: "数据图标兜底（§1.3 不可动）",
+  },
 ];
 
-/** 从源码里抽出所有 `icon: "…"` 字面量（闭包内的表只能这样枚举） */
+/** 从源码里抽出所有 `icon: "…"` / `icon = "…"` 字面量（闭包内的表只能这样枚举）。
+ *
+ * ⚠️ 必须同时认**冒号**与**等号**两种形态：菜单表用对象字面量 `icon: "x"`，
+ * 而能力类用字段声明 `readonly icon = "🌍"`——只写冒号会漏掉整族（2026-09 实测漏了
+ * `preview-3d/caps/*-capability.ts` 的 9 处，正是这条教训促成的放宽）。
+ *
+ * ⚠️ 必须**剥注释**：文档注释里常引用形如 `icon="🦴"` 的示例（本仓实测命中，
+ * 且那条注释当时已过时）。不剥会把注释当违规行——与 check-redlines R8「扫描器不剥注释」
+ * 踩的是同一个坑。
+ */
 function scanIconLiterals(rel: string): { value: string; line: number }[] {
   const src = fs.readFileSync(path.join(SRC, rel), "utf8");
   const out: { value: string; line: number }[] = [];
+  let inBlockComment = false;
   src.split("\n").forEach((line, i) => {
-    const m = /\bicon:\s*"([^"]*)"/.exec(line);
+    const trimmed = line.trim();
+    // 块注释开关（简化处理：逐行检测 /* 与 */，足够覆盖本仓注释风格）
+    if (inBlockComment) {
+      if (trimmed.includes("*/")) inBlockComment = false;
+      return;
+    }
+    if (trimmed.startsWith("/*")) {
+      if (!trimmed.includes("*/")) inBlockComment = true;
+      return;
+    }
+    if (trimmed.startsWith("//") || trimmed.startsWith("*")) return;
+    const m = /\bicon\s*[:=]\s*"([^"]*)"/.exec(line);
     if (m) out.push({ value: m[1]!, line: i + 1 });
   });
   return out;

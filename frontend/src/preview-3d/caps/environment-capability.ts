@@ -86,7 +86,7 @@ function pickHdrFile(): Promise<File | null> {
 export class EnvironmentCapability implements SceneCapability {
   readonly id = "environment";
   readonly labelKey = "preview.environment";
-  readonly icon = "🌍";
+  readonly icon = "globe";
   readonly descKey = "preview.environmentDesc";
 
   private scene: THREE.Scene;

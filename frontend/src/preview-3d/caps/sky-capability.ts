@@ -161,7 +161,7 @@ export function injectSkySunScalePatch(
 export class SkyCapability implements SceneCapability {
   readonly id = "sky";
   readonly labelKey = "preview.sky";
-  readonly icon = "🌤️";
+  readonly icon = "sky";
   readonly descKey = "preview.skyDesc";
 
   private scene: THREE.Scene;

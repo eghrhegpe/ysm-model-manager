@@ -32,7 +32,7 @@ const REFLECTOR_SHADER = (Reflector as typeof Reflector & { ReflectorShader: Ref
 export class ReflectorCapability implements SceneCapability {
   readonly id = "reflector";
   readonly labelKey = "preview.reflector";
-  readonly icon = "🪟";
+  readonly icon = "mirror";
   readonly descKey = "preview.reflectorDesc";
 
   private scene: THREE.Scene;

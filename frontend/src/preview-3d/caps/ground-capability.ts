@@ -50,7 +50,7 @@ const GROUND_SURFACE_MODES: readonly GroundSurfaceMode[] = [
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
   readonly labelKey = "preview.ground";
-  readonly icon = "🌐";
+  readonly icon = "web";
   readonly descKey = "preview.groundDesc";
 
   private scene: THREE.Scene;

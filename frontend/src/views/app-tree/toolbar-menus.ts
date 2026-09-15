@@ -23,7 +23,13 @@ interface ToolbarMenuItem {
 
 /**
  * 某下拉的菜单项声明（数组序 = 渲染序）。
- * testid 由 action 语义按前缀派生，避免「声明 + testid 双处维护」。
+ *
+ * testid **在表中显式声明**，不由 action 派生。原注释误称「由 action 语义按前缀派生」，
+ * 与本文件 ToolbarMenuItem.testid 的注释（「与 action 不必同名，勿机械拼凑」）自相矛盾，
+ * 且事实不成立——7 项里有 2 项不可派生：action `enable-all` 的 testid 是 `tree-batch-enable`
+ * （非 `…-enable-all`）。**刻意不改成派生**：testid 是 ADR-133 G-1 契约（e2e 按它寻址），
+ * 机械拼凑会改名 → 破坏契约；且「双处维护」早已由「表即单一事实源」消解——
+ * 渲染端 renderDropdown() 只从表取（`data-testid="${it.testid}"`），模板里不二次手写。
  */
 type ToolbarMenuKey = "batch" | "more";
 

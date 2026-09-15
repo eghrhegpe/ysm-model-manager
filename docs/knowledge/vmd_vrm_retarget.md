@@ -114,7 +114,8 @@ VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专�
 - `createVrmFootIKController(boneTree, semanticBones)` → `{ apply(timeSeconds, targets), dispose() }`。
 - 接入点：`vrm-adapter.ts` 的 `loadMotionClips()`；每帧在 `update()` 中**晚于** `vrm.update(dt)` 调 `vrmFootIK.apply(action.time, clip.footIK)`。
 - **采样源不变量（review 64c24cf3e P1 修复，1dc31247d）**：足 IK 的 targets 必须按 **live action 实播 clip** 反查（`motionClips.find(c => c.clip === motionClipOf(action))`），而非独立维护的索引——索引与 mixer 实际播放脱钩时（`select` 切动作后），身体 FK 与腿 IK 会来自不同动作，脚底打滑。`VrmMotionState.motionIdx` 已删除（脱钩根源）。
-- **three r185 API 注**：`AnimationAction` 公开 `.clip` getter 已移除，clip 存于私有 `action._clip`；本仓统一经 `motionClipOf()`（vrm-adapter.ts）读取，勿直接散落 `_clip` 访问。
+- **three r185 API 注**：`AnimationAction` 的 `.clip` 属性已移除，clip 经**公开方法 `action.getClip()`** 读取；本仓统一走 `motionClipOf()`（vrm-adapter.ts），勿直接碰 three 私有字段 `_clip`（无跨版本契约，升级即静默失配）。
+- **P3 留档（可选优化，当前 N 小可略）**：每帧 `update` 的 clip 反查是 O(n) find（原 `motionIdx` 为 O(1)）。动作条目数 = 目录内 `.vrma` + `.vmd` 数量，常规场景个位数~几十，每帧成本可忽略；若将来动作库规模化（单目录数百 vmd），再在 `select` 时缓存命中项（`VrmMotionState` 加 clip 引用字段），`update` 改 O(1) 直读，勿为当前量级预优化。
 
 ## 与其他子系统关系
 

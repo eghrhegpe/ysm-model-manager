@@ -420,10 +420,9 @@ const SCENE_CAP_FOR_PANEL: Readonly<Record<string, string>> = {
 
 /**
  * [子函数 8/9] 底部 dock 渲染（原 renderDock 闭包升格）。
- *   直达语义（[S5 收口] 数据驱动）：组定义 `directToPanel` 静态声明 → 点击直达该面板节点
- *   （model 组 → roles），新增静态直达组零改本函数；
- *   💃 motion 是唯一动态直达特例（活跃角色 → 动作详情），保留下方显式分支。
- *   通用分支：组内仅 1 个 panel 项 → 直达面板；否则进组根视图。
+ *   [ADR-241 路由声明化] 点击路由由 `PREVIEW_MENU_GROUPS` 数据表显式声明，本函数纯查表：
+ *   directToPanel（静态直达面板）→ directViewKey（动态视图工厂，motion）→ rootView
+ *   （renderMenu 组根视图，scene）→ 兜底 makeGroupViewFn。无任何 `g.id === ...` 字面量。
  */
 function renderPreviewDock(
   dock: HTMLElement,
@@ -453,8 +452,9 @@ function renderPreviewDock(
     btn.innerHTML = `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${tOf(g.labelKey)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
-      // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）。
-      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落通用逻辑
+      // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）；
+      // [ADR-241] env/settings 补显式 directToPanel —— 删「单 panel 自动推断」隐式分支。
+      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落兜底
       if (g.directToPanel) {
         const direct = allItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
         if (direct) {
@@ -462,10 +462,11 @@ function renderPreviewDock(
           return;
         }
       }
-      // 💃 动作组动态直达特例（全库唯一非声明——目标依赖 sceneRegistry 活跃角色 + 详情工厂，
-      // 静态 directToPanel 无法表达；声明式化属 ADR-126 P4 候选）：
+      // [ADR-241] 动态直达视图工厂：directViewKey 声明（原 if(g.id==="motion") 隐式特例）。
+      // 目标依赖 sceneRegistry 活跃角色 + 详情工厂，directToPanel 静态表达不了——key → 工厂
+      // 映射在 core.ts（多态路由表），非 id 特判：新增动态组只加声明 + 工厂映射，不改本结构。
       // 有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）
-      if (g.id === "motion") {
+      if (g.directViewKey === "motion") {
         const activeId = sceneRegistry.getActiveId();
         const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;
         if (active?.menuItems) {
@@ -480,15 +481,9 @@ function renderPreviewDock(
           return;
         }
       }
-      const panels = groupItems.filter((d) => d.kind === "panel");
-      if (panels.length === 1 && groupItems.length === 1) {
-        showMenu(makePanelViewFn(panels[0]));
-      } else if (g.id !== "scene") {
-        // 非场景组保持旧组根视图（cmd 兼容：roles/motion detail 等自建行）
-        showMenu(makeGroupViewFn(g, groupItems));
-      } else {
-        // 场景组根视图：改用 renderMenu 渲染 row 节点，与环境面板一级 nav 行完全统一样式
-        // 每 panel → `kind:"row"` + headerToggle（可启停能力）+ action navigate + compact 密度
+      // [ADR-241] rootView 显式声明走 renderMenu 通用组根视图（原 g.id!=="scene" 反向特判）。
+      // 每 panel → `kind:"row"` + headerToggle（可启停能力）+ action navigate + compact 密度
+      if (g.rootView) {
         const renderMenuDeps = {
           menu,
           actionCtx,
@@ -523,7 +518,11 @@ function renderPreviewDock(
             renderMenu(list, rows, renderMenuDeps);
           },
         });
+        return;
       }
+      // [ADR-241] 兜底：组未声明 directToPanel / directViewKey / rootView 时走旧组根视图
+      // （roles/motion detail 等自建行 cmd 兼容）。当前全 5 组都有显式路由，本分支为文档化缺省。
+      showMenu(makeGroupViewFn(g, groupItems));
     };
     dock.appendChild(btn);
   }

@@ -234,6 +234,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-241：3D dock 一级路由声明化（组定义 direct 判定收敛 core.ts 隐式分支）",
+        "link": "/adr/ADR-241-preview-dock-route-decl"
+      },
+      {
         "text": "ADR-240：3D 菜单内容型 panel 统一折叠卡渲染（kind 形态脱钩）",
         "link": "/adr/ADR-240-preview-menu-panel-fold"
       },

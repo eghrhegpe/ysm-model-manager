@@ -31,6 +31,14 @@ export interface PreviewMenuGroupDef {
    *  新增「静态直达」组零改 core.ts）；缺省走通用逻辑（单 panel 直达 / 组根视图）。
    *  动态直达（如 motion 依赖活跃角色详情）无法静态声明，见 core.ts 唯一特例标注。 */
   directToPanel?: string;
+  /** [ADR-241 路由声明化] 直达动态视图工厂 key：`directToPanel` 表达不了「依赖运行时
+   *  场景状态」的目标（如 motion 的活跃角色动作详情）。key → 工厂映射表在 core.ts
+   *  （需注入 sceneRegistry/详情工厂，不进纯数据 defs）。触发从 id 特判改为查本字段。 */
+  directViewKey?: "motion";
+  /** [ADR-241 路由声明化] 显式声明该组点击走 renderMenu 通用组根视图（每 panel →
+   *  row + headerToggle + navigate）。scene 用它，取代 core.ts 的 `g.id !== "scene"`
+   *  反向特判。缺省且无 direct* 时兜底走旧 makeGroupViewFn。 */
+  rootView?: boolean;
 }
 
 export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
@@ -42,15 +50,35 @@ export const PREVIEW_MENU_GROUPS: PreviewMenuGroupDef[] = [
     labelKey: "preview.groupModel",
     directToPanel: "roles",
   },
-  { id: "motion", icon: "💃", labelKey: "preview.groupMotion" },
+  // [ADR-241] 动态直达（依赖活跃角色详情，directToPanel 表达不了）——directViewKey 声明，
+  // 工厂映射核心见 core.ts
+  { id: "motion", icon: "💃", labelKey: "preview.groupMotion", directViewKey: "motion" },
   // 环境独立成组（2026-08-19 拆组）：体量 > 全部场景设置（sky/ground/env/fog/reflector），
   // 且地面/水面系统后续会持续膨胀，单独 root 按钮避免场景组挤爆
-  { id: "env", icon: "🌍", labelKey: "preview.groupEnv" },
+  // [ADR-241] 补显式 directToPanel（替代单 panel 推断；组内 core 固定仅 environment）
+  {
+    id: "env",
+    icon: "🌍",
+    labelKey: "preview.groupEnv",
+    directToPanel: "environment",
+  },
   // 场景组只留相机/灯光/阴影/后处理（icon 换 🎛️ 与 🌍 环境区分）
-  { id: "scene", icon: "🎛️", labelKey: "preview.groupScene" },
+  // [ADR-241] rootView 显式声明走 renderMenu 组根视图（多 panel 聚合），取代 g.id!=="scene" 反向特判
+  {
+    id: "scene",
+    icon: "🎛️",
+    labelKey: "preview.groupScene",
+    rootView: true,
+  },
   // 设置独立成组：聚合所有场景能力（sky/ground/fog/shadow/reflector/postprocessing/light）的控件，
   // 用户一处调全部，即时生效。与 🌍 环境的区别：环境是能力开关+下钻参数，设置是平铺总览。
-  { id: "settings", icon: "⚙️", labelKey: "preview.groupSettings" },
+  // [ADR-241] 补显式 directToPanel（替代单 panel 推断；组内 core 固定仅 settings）
+  {
+    id: "settings",
+    icon: "⚙️",
+    labelKey: "preview.groupSettings",
+    directToPanel: "settings",
+  },
 ];
 
 /**

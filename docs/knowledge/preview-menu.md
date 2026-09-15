@@ -192,7 +192,7 @@ status: active
 - **renderCustom cleanup 双持有者**（2026-09 生命周期收编）：`renderCustom` 返回 cleanup 后同时交给两方——① 渲染器（render.ts `runCustomMount` 按容器持有，重渲染前先清旧 / `disposeCustomCleanups` 菜单 dispose 全清）；② bones 的 `cleanupRef`（adapter.dispose 模型级兜底，摘挂 viewContainer 的 raycaster listener——模型卸载而菜单存活时唯一防线）。两者持同一函数，renderer 实现幂等，双清无害。**新增 renderCustom 逃生舱自动获得面板级生命周期，勿自搓 cleanupRef**；仅当 cleanup 跨面板存活（引用模型资源）时才需模型级兜底通道。
 - **disposeCustomCleanups 只挂 dispose**：不可挂 `onOverlayStyleTargetReset`——该钩子每次 mount 都触发，而 cleanup 表是模块级共享，全清会误伤并行挂载会话仍存活的骨骼面板（listener 被摘而 DOM 仍在 → 拾取静默失效）。
 - **setAdapterItems id 冲突守卫**（ADR-085 S1）：重复 id 或与 CORE_MENU_ITEMS 冲突时抛错阻断。
-- **motion 组动态直达唯一特例**：活跃角色 + 技能 → 直达动作详情；静态直达走 `directToPanel` 声明。
+- **dock 一级路由声明化（ADR-241）**：点击路由由 `PREVIEW_MENU_GROUPS` 数据表显式声明，`renderPreviewDock` 纯查表（directToPanel → directViewKey → rootView → 兜底 makeGroupViewFn），无 `g.id === ...` 字面量。model/env/settings → `directToPanel` 静态直达；motion → `directViewKey:"motion"` 动态工厂（活跃角色详情，directToPanel 表达不了）；scene → `rootView:true` renderMenu 组根视图。`motion` 的 key→工厂映射仍在 core.ts（需注入 sceneRegistry/详情工厂），是多态路由表而非 id 特判。
 
 ## 相关
 

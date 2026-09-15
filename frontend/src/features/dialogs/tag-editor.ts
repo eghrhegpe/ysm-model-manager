@@ -34,7 +34,9 @@ function dgTeRenderTags(shell: DgTeShell): void {
         esc(tag) +
         '<button class="te-tag-del" data-tag="' +
         esc(tag) +
-        '">✕</button>' +
+        '">' +
+        UI_ICONS.close + // ADR-238 §1.4：结构槽图标位走 SVG（原字面 glyph "✕"）
+        "</button>" +
         "</span>",
     )
     .join("");

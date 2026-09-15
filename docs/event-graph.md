@@ -95,7 +95,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 115 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 116 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -330,7 +330,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 56 |
@@ -414,8 +414,8 @@
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 303 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 327 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 304 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 328 |
 | cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 67 |
 | cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 79 |
 | cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 153 |
@@ -600,7 +600,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 121 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 57 |

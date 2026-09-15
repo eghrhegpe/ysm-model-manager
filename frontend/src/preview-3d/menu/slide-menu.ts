@@ -5,7 +5,13 @@
 // 分派产物（MenuNode schema 声明式：folder 折叠组 / row 行动态行 / cap 栈控件）。
 //
 // 解耦要点：
-//  - 关闭/返回按钮用字面量 glyph（根级 ✕，子集 ←），不依赖 iconify 运行时；
+//  - 关闭按钮用 **SVG 图标**（`UI_ICONS.close`，ADR-238 §1.4：结构槽图标位走 SVG；
+//    原为字面量 glyph "✕"——那条注释的理由「不依赖 iconify 运行时」基于过时前提，
+//    UI_ICONS 是内联 SVG 字符串，本就不需要任何运行时）；
+//    子级返回仍用字面 glyph `←` —— 图标库暂无「返回」语义名，按 §1.4 记债而**不硬塞**
+//    （`pointerLeft` 语义是「指针左」，拿它冒充会腐蚀 D2 语义命名）；
+//    原 `closeIcon?: string` 覆盖参数已同批删除——它把未转义 HTML 串做成公开注入面
+//    （触发 check-redlines R8），而全仓唯一调用方 core.ts 从不需要它；
 //  - 外壳恒含行级组件样式（.slide-item/.cs-bar 等），故安装外壳样式时一并安装 ui-components 样式；
 //  - 零业务依赖，可被任意预览/面板复用；
 //  - 向后兼容：不调用 home/navigate 的调用方（直接操作 menu.list）行为不变——
@@ -20,6 +26,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { popInputBlock, pushInputBlock } from "@/utils/dom/input-block-stack.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { installComponentsStyles } from "./components-styles.ts";
 import { installSlideMenuStyles } from "./slide-menu-styles.ts";
 
@@ -65,8 +72,14 @@ export interface SlideMenuHandle {
   onHide(opts?: { restoreFocus?: boolean }): void;
 }
 
-/** 构建 slide-menu 卡片外壳（含轻量导航栈 + 键盘导航）。 */
-export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): SlideMenuHandle {
+/**
+ * 构建 slide-menu 卡片外壳（含轻量导航栈 + 键盘导航）。
+ *
+ * 关闭图标固定为 `UI_ICONS.close`（SVG，ADR-238 §1.4）。原 `closeIcon?: string`
+ * 覆盖参数已删：它把未转义的 HTML 串做成公开注入面（触发 check-redlines R8），
+ * 而唯一调用方从不需要它。将来若确需换图标，请传**语义图标名**而非 HTML 串。
+ */
+export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
   smInstallStyles();
   const shell = smBuildShell(opts);
   const stack: SlideMenuView[] = [];
@@ -75,7 +88,7 @@ export function createSlideMenu(opts?: { title?: string; closeIcon?: string }): 
   const MENU_BLOCK_ID = "slide-menu";
 
   const renderTop = (): void => {
-    smRenderTop(stack, shell.list, shell.title, shell.backBtn, opts);
+    smRenderTop(stack, shell.list, shell.title, shell.backBtn);
     smSetupNavItems(shell.list);
   };
   const handleBack = (): void => {
@@ -164,7 +177,7 @@ interface SmShell {
   backBtn: HTMLSpanElement;
 }
 
-function smBuildShell(opts?: { title?: string; closeIcon?: string }): SmShell {
+function smBuildShell(opts?: { title?: string }): SmShell {
   const root = document.createElement("div");
   root.className = "menu-wrapper slide-menu";
   root.tabIndex = -1;
@@ -179,7 +192,11 @@ function smBuildShell(opts?: { title?: string; closeIcon?: string }): SmShell {
   backBtn.className = "slide-back";
   backBtn.setAttribute("role", "button");
   backBtn.tabIndex = 0;
-  backBtn.textContent = opts?.closeIcon ?? "✕";
+  // 关闭图标恒为 UI_ICONS.close（ADR-238 §1.4 结构槽走 SVG）。
+  // 原 `closeIcon?: string` 覆盖参数已删——它把「未转义的 HTML 串」作为公开注入面，
+  // 触发 check-redlines R8（innerHTML XSS）；而全仓唯一调用方 core.ts 早就不传它。
+  // 若将来确需换图标，请改为传**语义图标名**（如 UiIconName），而不是 HTML 串。
+  backBtn.innerHTML = UI_ICONS.close;
   backBtn.title = t("common.close");
 
   const title = document.createElement("span");
@@ -207,7 +224,6 @@ function smRenderTop(
   list: HTMLElement,
   title: HTMLSpanElement,
   backBtn: HTMLSpanElement,
-  opts?: { closeIcon?: string },
 ): void {
   const top = stack[stack.length - 1];
   if (!top) return;
@@ -219,7 +235,14 @@ function smRenderTop(
   list.innerHTML = "";
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
-  backBtn.textContent = atRoot ? (opts?.closeIcon ?? "✕") : "←";
+  // 根级 = SVG 关闭图标；子级 = 字面 glyph「←」（图标库暂无「返回」语义名，见文件头 §1.4 记债）。
+  // 刻意用 if/else 而非三元赋 innerHTML：三元会被 check-redlines R8 视为未转义注入面，
+  // 且分开后每条赋值各自命中既有豁免（ICONS 常量 / 纯字面量），语义也更直白。
+  if (atRoot) {
+    backBtn.innerHTML = UI_ICONS.close;
+  } else {
+    backBtn.textContent = "←";
+  }
   backBtn.title = atRoot ? t("common.close") : t("common.back");
   top.render(list);
 

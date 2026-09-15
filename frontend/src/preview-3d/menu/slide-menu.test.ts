@@ -99,18 +99,18 @@ describe("createSlideMenu", () => {
     expect((backBtn as HTMLElement).tabIndex).toBe(0);
   });
 
-  it("默认 back 按钮 glyph 为 ✕，title 属性为『关闭』", () => {
+  it("默认 back 按钮为 SVG 关闭图标（ADR-238 §1.4 结构槽走 SVG），title 属性为『关闭』", () => {
     const h = createSlideMenu();
     const backBtn = h.root.querySelector(".slide-back")!;
-    expect(backBtn.textContent).toBe("✕");
+    // 原为字面 glyph "✕"（textContent 非空）；迁移后是内联 SVG → textContent 为空、含 <svg>
+    expect(backBtn.querySelector("svg")).not.toBeNull();
+    expect(backBtn.textContent).toBe("");
     expect((backBtn as HTMLElement).title).toBe("关闭");
   });
 
-  it("opts.closeIcon 覆盖默认关闭 glyph", () => {
-    const h = createSlideMenu({ closeIcon: "✗" });
-    const backBtn = h.root.querySelector(".slide-back")!;
-    expect(backBtn.textContent).toBe("✗");
-  });
+  // 「opts.closeIcon 覆盖默认图标」用例已删：该参数随迁移一并移除
+  // （未转义 HTML 的公开注入面，触发 check-redlines R8；全仓唯一调用方 core.ts 从不需要）。
+  // 关闭图标现恒为 UI_ICONS.close，由上一用例断言。
 
   it("opts.title 写入 slide-title 文本", () => {
     const h = createSlideMenu({ title: "模型信息" });
@@ -148,7 +148,7 @@ describe("createSlideMenu", () => {
     expect((backBtn as HTMLElement).title).toBe("返回");
   });
 
-  it("back() 从子集返回根，恢复关闭 glyph ✕", () => {
+  it("back() 从子集返回根，恢复 SVG 关闭图标", () => {
     const h = createSlideMenu();
     h.home(makeView("主菜单", "root-row"));
     h.navigate(makeView("子菜单", "sub-row"));
@@ -157,7 +157,7 @@ describe("createSlideMenu", () => {
     const backBtn = h.root.querySelector(".slide-back")!;
     expect(title.textContent).toBe("主菜单");
     expect(h.list.textContent).toBe("root-row");
-    expect(backBtn.textContent).toBe("✕");
+    expect(backBtn.querySelector("svg")).not.toBeNull(); // 子级 ← → 根级恢复 SVG 关闭图标
     expect((backBtn as HTMLElement).title).toBe("关闭");
   });
 
@@ -378,7 +378,7 @@ describe("createSlideMenu", () => {
 
     h.home(v1);
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("一级");
-    expect(h.root.querySelector(".slide-back")!.textContent).toBe("✕");
+    expect(h.root.querySelector(".slide-back")!.querySelector("svg")).not.toBeNull();
     expect(h.isAtRoot()).toBe(true);
 
     h.navigate(v2);
@@ -396,13 +396,13 @@ describe("createSlideMenu", () => {
 
     h.back();
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("一级");
-    expect(h.root.querySelector(".slide-back")!.textContent).toBe("✕");
+    expect(h.root.querySelector(".slide-back")!.querySelector("svg")).not.toBeNull();
     expect(h.isAtRoot()).toBe(true);
 
     // 再次进入新根（替换原栈）
     h.home(vNew);
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("新根");
-    expect(h.root.querySelector(".slide-back")!.textContent).toBe("✕");
+    expect(h.root.querySelector(".slide-back")!.querySelector("svg")).not.toBeNull();
     expect(h.isShowing(vNew)).toBe(true);
     expect(h.isShowing(v1)).toBe(false);
   });

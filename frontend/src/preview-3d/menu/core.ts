@@ -112,7 +112,8 @@ function buildPreviewMenuShell(
   popup.style.display = "none";
   overlay.appendChild(popup);
 
-  const menu = createSlideMenu({ title: "", closeIcon: "✕" });
+  // closeIcon 不再显式传 "✕"：缺省即 UI_ICONS.close（SVG，ADR-238 §1.4 结构槽图标位）
+  const menu = createSlideMenu({ title: "" });
   popup.appendChild(menu.root);
   menu.root.querySelector<HTMLElement>(".slide-back")?.setAttribute("id", "preview-close-3d");
 

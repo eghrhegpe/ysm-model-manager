@@ -11,6 +11,7 @@ import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { createProgressGuard, type ProgressGuard } from "./download-queue-progress.ts";
@@ -153,7 +154,7 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
     const cancel = document.createElement("button");
     cancel.className = "btn-base sm gh-cancel-queue";
     cancel.title = t("common.cancel");
-    cancel.textContent = "✕";
+    cancel.innerHTML = UI_ICONS.close; // ADR-238 §1.4：结构槽图标位走 SVG（原字面 glyph "✕"）
     cancel.addEventListener("click", async () => {
       if (cancelling) return;
       cancelling = true;

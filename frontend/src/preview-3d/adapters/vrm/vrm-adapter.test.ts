@@ -439,7 +439,7 @@ describe("VRMA 动作加载", () => {
     content.dispose();
   });
 
-  it("无同目录 .vrma → 无播放菜单项", async () => {
+  it("无同目录 .vrma → 播放菜单项仍在（空态引导，对齐 MMD 固定表项）", async () => {
     const vrm = makeFakeVrm();
     hoisted.parseMock.mockImplementation(() => ({
       userData: { vrm },
@@ -458,8 +458,11 @@ describe("VRMA 动作加载", () => {
       hoisted.listPathsMock,
     );
 
+    // [ADR-242 后续] .vrma 稀少是常态，面板不得凭空消失——显示播放项（空态引导由
+    // playNodes 渲染；此处 makePanels 是桩，故只断言项存在 + 收到空 clips 的桥）
     const items = registeredItems(content);
-    expect(items.find((i) => i.id === "vrma-play")).toBeUndefined();
+    const play = items.find((i) => i.id === "vrma-play");
+    expect(play).toBeDefined();
     content.dispose();
   });
 });
@@ -612,9 +615,9 @@ describe("VRMA 多动作切换", () => {
     // 模型仍加载
     expect(scene.children).toContain(vrm.scene);
     expect(content.update).toBeDefined();
-    // 无动作
+    // 扫描失败 → 无动作，但播放项仍在（空态引导，ADR-242 后续：面板不凭空消失）
     const items = registeredItems(content);
-    expect(items.find((i: { id: string }) => i.id === "vrma-play")).toBeUndefined();
+    expect(items.find((i: { id: string }) => i.id === "vrma-play")).toBeDefined();
     content.dispose();
   });
 });

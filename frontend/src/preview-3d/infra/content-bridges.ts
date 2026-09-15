@@ -50,6 +50,9 @@ export interface MmdPlayBridge {
   animDir: string | null;
   /** 请求重新加载动作（刷新 CustomAnim 目录扫描结果） */
   requestReload?: () => void;
+  /** 空态引导文案（各格式自报；缺省走 playNodes 的 MMD 默认文案）——
+   *  MMD=CustomAnim/VMD-VPD，VRM=同目录 .vrma。避免 VRM 复用时提示 MMD 专有路径。 */
+  emptyHint?: string;
 }
 
 /** 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） */

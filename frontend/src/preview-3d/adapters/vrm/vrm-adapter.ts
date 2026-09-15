@@ -784,6 +784,33 @@ export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
 }
 
 /**
+ * [ADR-242 后续] 无 .vrma 时的空播放桥：clips 空 → playNodes 走空态引导分支。
+ * VRMA 在现实生态里极稀少（MMD 圈产 VMD、动捕产 FBX，无人专门产 .vrma），
+ * 故「扫不到动作」是常态而非异常——面板须显示引导而非消失（对齐 MMD 固定表项行为）。
+ * emptyHint 自报 VRM 专有说明，避免复用 MMD playNodes 时误报 CustomAnim/VMD 路径。
+ */
+function emptyVrmPlayBridge(): MmdPlayBridge {
+  return {
+    clips: [],
+    isPlaying: () => false,
+    toggle: () => {},
+    currentIndex: () => 0,
+    select: () => {},
+    animDir: null,
+    emptyHint: "未找到动作文件。请将 .vrma 动作放到该模型所在目录（同目录自动发现）。",
+  };
+}
+
+/** [ADR-242 后续] playNodes 未注入时的兜底空态节点：保证 play 面板恒有渲染通道
+ *  （items.test 契约「panel 必有 renderCustom/children/schemaId 三选一」，空 children 即静默空面板）。 */
+const VRM_PLAY_EMPTY_NODE: PreviewMenuNode = {
+  id: "vrma-play-empty",
+  kind: "field",
+  labelKey: "preview.playEmpty",
+  value: "未找到动作文件。请将 .vrma 动作放到该模型所在目录（同目录自动发现）。",
+};
+
+/**
  * VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。
  * 提取为可导出表：适配器与测试共用同一份真实数组（对齐 MikuMikuAR），加菜单项只改这里。
  */
@@ -828,17 +855,21 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       scene: o.bonePanel.scene,
     }),
   ];
-  if (o.play) {
-    items.push({
-      id: "vrma-play",
-      icon: "▶️",
-      labelKey: "preview.mmdPlay",
-      kind: "panel",
-      dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
-      // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
-      children: o.panels?.playNodes?.(o.play) ?? [],
-    });
-  }
+  // [ADR-242 后续] play 面板无条件注入（对齐 MMD 的固定表项）：无 .vrma 时也显示面板 +
+  // 空态引导，用户才知道「此处可放动作」——此前 if(o.play) 门控致面板凭空消失，
+  // 用户误以为 VRM 不支持动作。空态文案由 bridge.emptyHint 自报（VRM 专有 .vrma 说明）。
+  // playNodes 未注入时兜底空态 field：面板恒有渲染通道（items.test 契约：panel 必有
+  // renderCustom/children/schemaId 三选一，空 children 会被判为静默空面板）。
+  const playChildren = o.panels?.playNodes?.(o.play ?? emptyVrmPlayBridge());
+  items.push({
+    id: "vrma-play",
+    icon: "▶️",
+    labelKey: "preview.mmdPlay",
+    kind: "panel",
+    dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
+    // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
+    children: playChildren && playChildren.length > 0 ? playChildren : [VRM_PLAY_EMPTY_NODE],
+  });
   if (o.perception) {
     items.push({
       id: "perception",

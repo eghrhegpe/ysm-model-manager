@@ -98,9 +98,13 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
 export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
   // 空态：无动作文件 → 引导提示 + 重新扫描（requestReload）
   if (bridge.clips.length === 0) {
-    const hint = bridge.animDir
-      ? `动作库目录：${bridge.animDir}（暂无 VMD/VPD 文件，请将动作文件放入此目录）`
-      : "当前模型无内置动作。请将 VMD/VPD 动作放入仓库的 CustomAnim 子目录。";
+    // [ADR-242 后续] 引导文案优先用 bridge.emptyHint（各格式自报：MMD=CustomAnim/VMD-VPD，
+    // VRM=同目录 .vrma）——VRM 复用本工厂时不再误报 MMD 专有路径。
+    const hint =
+      bridge.emptyHint ??
+      (bridge.animDir
+        ? `动作库目录：${bridge.animDir}（暂无 VMD/VPD 文件，请将动作文件放入此目录）`
+        : "当前模型无内置动作。请将 VMD/VPD 动作放入仓库的 CustomAnim 子目录。");
     const nodes: PreviewMenuNode[] = [
       // [doc:adr-126-p5] play-empty 提示文本必须进 value（rmAppendField 渲染 value，不读
       // fallback——9a65f796 review P2：此前塞 fallback 导致空态引导完全丢失）

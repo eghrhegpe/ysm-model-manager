@@ -266,6 +266,15 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
     const empty = nodes.find((n) => n.id === "play-empty");
     expect(empty?.value).toContain("/custom/anim");
   });
+
+  it("emptyHint 自报优先：VRM 空态显示 .vrma 引导，不误报 MMD 专有 CustomAnim/VMD 路径", () => {
+    // [ADR-242 后续] VRM 复用本工厂，但动作格式是 .vrma（非 VMD/CustomAnim）
+    const bridge = makeBridge({ clips: [], animDir: null, emptyHint: "请放 .vrma 到模型同目录" });
+    const nodes = playNodes(bridge);
+    const empty = nodes.find((n) => n.id === "play-empty");
+    expect(empty?.value).toBe("请放 .vrma 到模型同目录");
+    expect(empty?.value).not.toContain("CustomAnim");
+  });
 });
 
 describe("边界条件", () => {

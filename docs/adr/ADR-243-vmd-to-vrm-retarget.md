@@ -130,7 +130,7 @@ vrm.update()  ← 静止位姿校正由 three-vrm 自动完成
 | `head` | `頭`、`head` |
 | `leftEye` / `rightEye` | `左目` / `右目` |
 | `jaw` | — |
-| `leftShoulder` / `rightShoulder` | `左肩` / `右肩`（含 `P`/`C`/`捩` 变体） |
+| `leftShoulder` / `rightShoulder` | `左肩` / `右肩`（含 `P`/`C` 变体；`捩` 属扭骨，按下方丢弃清单排除） |
 | `leftUpperArm` / `rightUpperArm` | `左腕` / `右腕` |
 | `leftLowerArm` / `rightLowerArm` | `左ひじ` / `右ひじ`（含 `左肘` 等变体） |
 | `leftHand` / `rightHand` | `左手首` / `右手首` |
@@ -152,7 +152,9 @@ vrm.update()  ← 静止位姿校正由 three-vrm 自动完成
 
 ### 2.4 位移通道：以 `センター` 为主源，合成到 `hips`
 
-MMD 惯例把全身位移放在 `センター`（或 `グルーブ`），旋转放在 `腰`；而 VRM 只有一个 `hips` 同时承担两者。**决策**：`hips` 的旋转取自 `腰`，`hips` 的 position 偏移合并 `センター` + `グルーブ`（若存在）。非根骨骼的 VMD position 偏移通常为零，按 §2.1 的 `basePosition + offset` 语义直接透传。
+MMD 惯例把全身位移放在 `センター`（或 `グルーブ`），旋转放在 `腰`；而 VRM 只有一个 `hips` 同时承担两者。**决策**：`hips` 的旋转取自 `腰`，`hips` 的 position 偏移取 `センター`（缺则 `グルーブ`）。非根骨骼的 VMD position 偏移通常为零，按 §2.1 的 `basePosition + offset` 语义直接透传。
+
+> **实施期修订（2026-09-15）**：原文为「合并 `センター` + `グルーブ`（若存在）」，实现改为**首个命中**（`センター` 优先）。理由：两者关键帧时间轴一般不同，真叠加需重采样两条曲线，v1 不值得；且 `グルーブ` 在主流动作里基本不用。另：VRM 侧只有 `hips` 的 **position** 会被 `VRMHumanoidRig.update()` 读取（其余骨只读 quaternion）⇒ 其他骨的 position 轨道一律丢弃，不产生空转轨道。
 
 ### 2.5 比例缩放：参考比例 + 可视校准
 
@@ -194,7 +196,8 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 
 若采纳 A，有两处必须先验证的实现细节（**不能照抄 `mmd-foot-ik.ts`**）：
 
-1. **链起点必须是 `hips`，不是 `upperLeg`**。`mmd-foot-ik.ts:48` 用 `extractIKChainFromTree(tree, leftUpperLeg, leftFoot)` 得到 `chain=[upperLeg, lowerLeg, foot]`，而 `solveIK` 的关节遍历是 `for (let j = chain.length - 2; j >= 1; j--)`（`ik-solver.ts:122`）——**跳过链根**。该链下 j 只能取 1（膝盖），大腿不动。改起点为 `hips`（语义 id 已存在）⇒ `chain=[hips, upperLeg, lowerLeg, foot]`，j 取 2、1 ⇒ **大腿与膝盖都参与、hips 保持锚定**。零求解器改动。
+1. **链根必须是骨盆语义（大腿的父骨），不是 `upperLeg` 自身**。`mmd-foot-ik.ts:48` 原本用 `extractIKChainFromTree(tree, leftUpperLeg, leftFoot)` 得到 `chain=[upperLeg, lowerLeg, foot]`，而 `solveIK` 的关节遍历是 `for (let j = chain.length - 2; j >= 1; j--)`（`ik-solver.ts:122`）——**跳过链根**。该链下 j 只能取 1（膝盖），大腿不动。链根改取大腿就多一节 ⇒ `chain=[骨盆, upperLeg, lowerLeg, foot]`，j 取 2、1 ⇒ **大腿与膝盖都参与、骨盆保持锚定**。零求解器改动。
+   - **实施期修订（2026-09-15）**：原文写「链起点必须是 `hips`」，实现改为「取大腿的**直接父骨**（`boneTree.byId.get(upperLegId).parentId`），父骨缺失或悬空则回退大腿自身」。理由：MMD 的 `腰` 不保证是 `左足` 的祖先（不同模型派系里 `腰`/`下半身` 归属不一），硬编码语义 id 会让 `extractIKChainFromTree` 直接返回 null ⇒ 整腿静默失效；而 VRM 的大腿父骨恰好就是 `hips`，两者统一为「直接父骨」后同一份代码对两个格式都对。
 2. **角度钳制与符号方向**。膝/肘需单向钳制（`minAngle`/`maxAngle` 同号区间），而 `solveIK` 是 axis-angle 形式按角度**大小**钳制（`ik-solver.ts:146`），反向旋转的符号行为需实测；`poleTarget`/`poleWeight` 用于膝盖朝向矫正，MMD 的极向量约定需对照确定。
 
 一期若先落 B（FK only），需在 UI 明示「腿部动作已降级」，避免用户误判为 bug。
@@ -235,6 +238,22 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 - **表情未映射**：morph 通道留白。
 - **知识卡未建**：按 AGENTS.md，知识卡需锚定真实 `source_files`；`vmd-retarget.ts` / `vmd-retarget-map.ts` 落地后应用 `new-knowledge-card.ts` 补卡（本 ADR 完成时文件尚不存在，故不建，防 `check-knowledge-drift` 漂移）。
 - **影响面未做实测**：本 ADR 基于依赖源码与仓库现状的查证（含上游 issue 实证），尚未跑通端到端；幽灵骨架的 `SkinnedMesh` 最小构造是否被 `buildAnimation` 完整接受，属实现期首个验证点。
+
+### 3.4 实施注记（2026-09-15，一期 FK 主干）
+
+| 文件 | 内容 |
+|---|---|
+| `frontend/src/preview-3d/adapters/vrm/vmd-retarget-map.ts` | 映射表 v1（53 骨映射 + 2 骨显式不映射）+ 位移源候选 + 缩放常量 |
+| `frontend/src/preview-3d/adapters/vrm/vmd-retarget.ts` | `resolveVmdBindings` / 幽灵骨架 / `rewriteVmdTracks` / `buildVmdRetargetClip` / 身高估算 |
+| `frontend/src/preview-3d/bone/mmd-foot-ik.ts` | 腿链链根改取大腿直接父骨（§2.8 方案 A 前置项 1） |
+
+单测 36 + 13 例全绿。三条关键哨兵：① `createInterpolant` 覆写存活（防重建 track 丢贝塞尔）；
+② 幽灵网格 `morphTargetDictionary` 置空（上游 `buildMorphAnimation` 会直接解引用它，普通
+`BufferGeometry` 下该字段是 `undefined` ⇒ 必抛）；③ VMD 鸭子类型假体 + **真实** `buildAnimation`
+端到端，把上游「白名单过滤 → 静止位置合成 → 轴系翻转 → 贝塞尔挂载 → 轨道命名」五段私有行为
+一并拉进断言范围（即 §3.2「依赖上游私有行为」风险的回归哨兵）。
+
+尚未落地：§2.7 的适配器接入（`.vmd` 发现 + 菜单空态文案）与 §2.8 方案 A 的 IK 驱动接线。
 
 ---
 

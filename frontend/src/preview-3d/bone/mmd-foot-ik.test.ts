@@ -61,6 +61,34 @@ function makeMmdLegRig() {
   return { tree, semanticBones, left, right };
 }
 
+/** 双腿 + 骨盆环境（ADR-243 §2.8 方案 A：链根应取大腿的直接父骨） */
+function makeMmdLegRigWithPelvis() {
+  const pelvis = new THREE.Object3D();
+  pelvis.position.set(0, 0.9, 0);
+  const left = makeLeg();
+  const right = makeLeg();
+  left.root.position.set(0.1, 0.8, 0);
+  right.root.position.set(-0.1, 0.8, 0);
+  pelvis.add(left.root);
+  pelvis.add(right.root);
+  const tree = makeTree([
+    { id: "pelvis", parentId: null, object: pelvis },
+    { id: "legL_root", parentId: "pelvis", object: left.root },
+    { id: "legL_knee", parentId: "legL_root", object: left.knee },
+    { id: "legL_foot", parentId: "legL_knee", object: left.foot },
+    { id: "legR_root", parentId: "pelvis", object: right.root },
+    { id: "legR_knee", parentId: "legR_root", object: right.knee },
+    { id: "legR_foot", parentId: "legR_knee", object: right.foot },
+  ]);
+  const semanticBones: SemanticBoneMap = {
+    leftUpperLeg: { id: "legL_root", object: left.root },
+    leftFoot: { id: "legL_foot", object: left.foot },
+    rightUpperLeg: { id: "legR_root", object: right.root },
+    rightFoot: { id: "legR_foot", object: right.foot },
+  };
+  return { tree, semanticBones, left, right, pelvis };
+}
+
 function footWorldY(foot: THREE.Object3D): number {
   const wp = new THREE.Vector3();
   foot.getWorldPosition(wp);
@@ -201,5 +229,60 @@ describe("createFootIKController 正常双腿", () => {
     controller.apply(0.016, true);
 
     expect(solveIKMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("链根取大腿的直接父骨（ADR-243 §2.8 方案 A）", () => {
+  it("有骨盆 → 链 [骨盆, 大腿, 膝盖, 踝]：大腿与膝盖都参与，骨盆锚定", () => {
+    const { tree, semanticBones, left, pelvis } = makeMmdLegRigWithPelvis();
+    const controller = createFootIKController(tree, semanticBones);
+
+    // 抬腿：整链绕髋抬起，足部离开锚地（锚地 = 0.9 + 0.8 − 0.4 − 0.4）
+    left.root.rotation.x = 0.5;
+    const anchor = 0.9;
+    const before = footWorldY(left.foot);
+    expect(before).toBeGreaterThan(anchor);
+
+    controller.apply(0.016, true);
+
+    // 只抬了左腿 ⇒ 右腿足部仍贴锚地，走 continue 早退，故仅一次求解
+    expect(solveIKMock).toHaveBeenCalledTimes(1);
+    const [leftChain] = solveIKMock.mock.calls[0];
+    // 4 节点 ⇒ solveIK 的 j 可取 2、1，大腿（j=1）不再被跳过
+    expect(leftChain).toHaveLength(4);
+    expect(leftChain[0]).toBe(pelvis);
+    expect(leftChain[1]).toBe(left.root);
+    expect(leftChain[3]).toBe(left.foot);
+    expect(footWorldY(left.foot)).toBeLessThan(before); // 向锚地靠拢
+  });
+
+  it("父骨 id 悬空（不在树中）→ 回退大腿自身，链长 3（不因坏数据整腿失效）", () => {
+    const left = makeLeg();
+    const tree = makeTree([
+      { id: "legL_root", parentId: "ghost_pelvis", object: left.root },
+      { id: "legL_knee", parentId: "legL_root", object: left.knee },
+      { id: "legL_foot", parentId: "legL_knee", object: left.foot },
+    ]);
+    const controller = createFootIKController(tree, {
+      leftUpperLeg: { id: "legL_root", object: left.root },
+      leftFoot: { id: "legL_foot", object: left.foot },
+    });
+    left.knee.rotation.x = 0.5;
+
+    controller.apply(0.016, true);
+
+    expect(solveIKMock).toHaveBeenCalledTimes(1);
+    expect(solveIKMock.mock.calls[0][0]).toHaveLength(3);
+  });
+
+  it("大腿即树根（无父骨）→ 链长 3，保持既有行为", () => {
+    const { tree, semanticBones, left } = makeMmdLegRig();
+    const controller = createFootIKController(tree, semanticBones);
+    left.knee.rotation.x = 0.5;
+
+    controller.apply(0.016, true);
+
+    expect(solveIKMock).toHaveBeenCalledTimes(1);
+    expect(solveIKMock.mock.calls[0][0]).toHaveLength(3);
   });
 });

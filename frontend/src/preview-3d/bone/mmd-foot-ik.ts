@@ -45,7 +45,16 @@ export function createFootIKController(
 
   for (const { rootId, footId } of legRoots) {
     if (!rootId || !footId) continue;
-    const chain = extractIKChainFromTree(boneTree, rootId, footId);
+    // 链根取「大腿的**直接父骨**」（骨盆语义：VRM hips、MMD 下半身/腰），不是大腿自身。
+    // solveIK 的关节遍历跳过链根（ik-solver.ts:122 `j >= 1`）⇒ 链根即「保持锚定」的那一节：
+    //   [大腿, 膝盖, 踝]      → 只有膝盖参与，腿只能「向锚地靠拢」
+    //   [骨盆, 大腿, 膝盖, 踝] → 大腿与膝盖都参与，骨盆保持锚定（ADR-243 §2.8 方案 A）
+    // 刻意**不**硬编码语义 id（如 hips）：MMD 的「腰」不保证是「左足」的祖先
+    // （不同模型派系里 腰/下半身 的归属不一），取直接父骨才是格式无关的可靠锚点。
+    // 父骨缺失（大腿即树根）或悬空 → 回退大腿自身，保持既有行为。
+    const parentId = boneTree.byId.get(rootId)?.parentId ?? null;
+    const chainRootId = parentId && boneTree.byId.has(parentId) ? parentId : rootId;
+    const chain = extractIKChainFromTree(boneTree, chainRootId, footId);
     if (!chain || chain.length < 2) continue;
     // 记录初始足部世界 Y 坐标
     const foot = chain[chain.length - 1];

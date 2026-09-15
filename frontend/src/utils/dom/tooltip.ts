@@ -10,7 +10,7 @@
 const TOOLTIP_STYLE_ID = "ysw-tooltip-styles";
 
 export const YSW_TOOLTIP_CSS = `
-.ysw-tooltip{position:fixed;z-index:calc(var(--z-fullscreen, 9999) + 1);max-width:240px;padding:4px 8px;border-radius:var(--radius-md);background:rgba(27,28,36,.95);border:1px solid rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.35);color:rgba(255,255,255,.9);font-size:var(--fs-sm);font-family:inherit;line-height:1.4;pointer-events:none;white-space:pre-line;opacity:0;transition:opacity .12s ease}
+.ysw-tooltip{position:fixed;z-index:calc(var(--z-fullscreen, 9999) + 1);max-width:240px;padding:4px 8px;border-radius:var(--radius-md);background:rgba(27,28,36,.95);border:1px solid rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.35);color:rgba(255,255,255,.9);font-size:var(--fs-sm);font-family:inherit;line-height:1.4;pointer-events:none;white-space:pre-line;opacity:0;transition:var(--tr-fast)}
 .ysw-tooltip--show{opacity:1}
 `;
 

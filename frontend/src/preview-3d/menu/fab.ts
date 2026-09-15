@@ -20,7 +20,7 @@ export const YSW_FAB_CSS = `
 /* ===== 3D overlay 控制层（顶栏按钮/下拉/标签，light DOM） ===== */
 .ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}
 .ysm-ovl-spacer{flex:1}
-.ysm-ovl-btn{font-size:var(--fs-sm);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:rgba(255,255,255,.8);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .12s ease}
+.ysm-ovl-btn{font-size:var(--fs-sm);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:rgba(255,255,255,.8);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-btn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 .ysm-ovl-btn:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#7c83ff) 35%,transparent)}
 .ysm-ovl-select{font-size:var(--fs-sm);padding:2px 4px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:rgba(255,255,255,.8);cursor:pointer;font-family:inherit}
@@ -30,7 +30,7 @@ export const YSW_FAB_CSS = `
 .ysm-ovl-slider{width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)}
 .ysm-ovl-shotwrap{position:relative;display:inline-block;margin-right:8px}
 .ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:#2a2b3e;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-md);padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-.ysm-ovl-shotitem{padding:4px 12px;font-size:var(--fs-sm);color:rgba(255,255,255,.85);cursor:pointer;white-space:nowrap;transition:background .12s ease}
+.ysm-ovl-shotitem{padding:4px 12px;font-size:var(--fs-sm);color:rgba(255,255,255,.85);cursor:pointer;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-shotitem:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 
 /* ===== 3D 信息面板（原内联布局，移入 CSS 以便响应式覆盖宽度） ===== */
@@ -39,7 +39,7 @@ export const YSW_FAB_CSS = `
 /* ===== 底部导航 + 分类弹窗（紧凑工具型外观）=====
    3D 全屏无常驻侧栏，功能经底部导航按域分组。 */
 .preview-dock-nav{position:absolute;left:12px;bottom:12px;display:flex;gap:2px;padding:4px;border-radius:5px;background:#1b1c24;border:1px solid rgba(255,255,255,.12);box-shadow:0 3px 10px rgba(0,0,0,.28);z-index:20}
-.preview-dock-navbtn{display:flex;align-items:center;min-width:0;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid transparent;background:transparent;color:rgba(255,255,255,.72);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);line-height:1.2;transition:background .12s ease}
+.preview-dock-navbtn{display:flex;align-items:center;min-width:0;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid transparent;background:transparent;color:rgba(255,255,255,.72);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);line-height:1.2;transition:var(--tr-fast)}
 .preview-dock-navbtn .preview-ic{display:none}
 .preview-dock-navbtn:hover{background:rgba(255,255,255,.08);color:#fff}
 .preview-dock-navbtn--on{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.12)}
@@ -52,7 +52,7 @@ export const YSW_FAB_CSS = `
 .ysm-3d-popselect{flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit}
 .ysm-3d-popslider{flex:1;accent-color:var(--accent,#7c83ff);cursor:pointer}
 .ysm-3d-popval{font-size:var(--fs-sm);color:rgba(255,255,255,.7);min-width:24px;text-align:right}
-.ysm-3d-popbtn{font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:rgba(255,255,255,.8);cursor:pointer;font-family:inherit;text-align:left;transition:background .12s ease}
+.ysm-3d-popbtn{font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:rgba(255,255,255,.8);cursor:pointer;font-family:inherit;text-align:left;transition:var(--tr-fast)}
 .ysm-3d-popbtn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 .ysm-3d-popbtn--row{width:100%;margin:1px 0}
 

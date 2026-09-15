@@ -75,7 +75,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-error-body { font-size:var(--fs-xs);color:var(--muted);padding:8px 0; }
 
 /* === 3D 悬浮触发 FAB（ADR-057 §2.3，Shadow DOM 内面板右下角） === */
-.preview-fab{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--bd);background:var(--accent);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:20;transition:filter .12s ease}
+.preview-fab{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--bd);background:var(--accent);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:20;transition:var(--tr-fast)}
 .preview-fab:hover{filter:brightness(1.1)}
 .preview-fab:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}
 .preview-fab .preview-ic{line-height:1}

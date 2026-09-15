@@ -523,6 +523,105 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   console.log("  ✓ box-shadow --fix: 值等价替换 + 幂等 + 非令牌不碰");
 }
 
+// ── 14. transition 精确修复：时长 + 缓动双双一致才动 ────
+{
+  // 为什么需要（2026-09 踩坑）：transition 是复合值，只看时长就自动替换会**改语义**——
+  // `transform .25s ease` 与 `--tr-enter`(0.25s **ease-out**) 时长相同但缓动不同，
+  // 替换会把「平滑」偷偷变成「减速」。故 --fix 走 suggestTransitionTokenExact
+  // （时长与缓动双闸），报告层则仍用只比时长的 suggestTransitionToken 提示作者。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // ① 可安全整值替换（时长 + 缓动一致）
+  for (const [raw, want] of [
+    ["background .12s ease", "var(--tr-fast)"],
+    ["opacity .12s ease", "var(--tr-fast)"],
+    ["filter .12s ease", "var(--tr-fast)"],
+    ["background 0.12s", "var(--tr-fast)"], // 缓动缺省 = CSS 默认 ease
+    ["background 0.15s", "var(--tr-normal)"],
+    ["all 0.15s ease", "var(--tr-normal)"],
+    ["transform .25s ease-out", "var(--tr-enter)"],
+  ] as const) {
+    const line = `.x { transition: ${raw}; }`;
+    const out = fixLineTokens(line, tokens).text;
+    assert.ok(out.includes(want), `${raw} 应替换为 ${want}（实际: ${out}）`);
+  }
+
+  // ② 必须拒绝的四类（防「自动化造成的语义漂移」，比不修更糟）
+  for (const [raw, why] of [
+    ["all .25s ease", "缓动 ease ≠ --tr-enter 的 ease-out"],
+    ["transform 0.25s ease", "同上"],
+    ["background .12s, color .12s", "多属性值整值替换会塌缩成一个属性"],
+    ["max-height 0.3s ease, opacity 0.25s ease", "多属性 + 0.3s 无令牌"],
+    ["background 0.2s", "0.2s 无对应 --tr-* 令牌"],
+    ["width 0.06s linear", "滑块跟手，linear 且无令牌"],
+    ["transform .25s cubic-bezier(.34,1.56,.64,1)", "自定义缓动不碰"],
+    ["background .12s linear", "linear ≠ ease"],
+  ] as const) {
+    const line = `.x { transition: ${raw}; }`;
+    assert.equal(fixLineTokens(line, tokens).text, line, `不应改写（${why}）：${raw}`);
+  }
+
+  // ③ 幂等
+  const once = fixLineTokens(".x { transition: background .12s ease; }", tokens).text;
+  assert.equal(fixLineTokens(once, tokens).text, once, "transition --fix 必须幂等");
+  console.log("  ✓ transition --fix: 时长+缓动双闸；缓动差异/多属性/无令牌一律拒绝");
+}
+
+// ── 15. 值提取的 `}` 边界回归锁（闸静默漏报）──────
+{
+  // 踩坑记录（2026-09 实测）：本仓样式多为**压缩成单行的模板串**
+  // （`...;transition:background .12s ease}`），值提取正则的停止符若漏 `}`，
+  // 值尾会带上规则块闭合括号 → 精确比对（shadow/transition）**恒不匹配**。
+  // 最阴的是不对称：报告层照样命中（只看时长子串），--fix 却不生效——
+  // 实测 fab.ts / tooltip.ts / app-preview/css.ts 共 6 处可修项被静默跳过。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // 压缩单行形态（值紧跟 `}`）
+  const minified = ".b{transition:background .12s ease}";
+  const outMini = fixLineTokens(minified, tokens).text;
+  assert.ok(
+    outMini.includes("transition:var(--tr-fast)}"),
+    `压缩单行（值尾接 }）应能修复，实际: ${outMini}`,
+  );
+
+  const miniShadow = ".b{box-shadow: 0 8px 32px rgba(0,0,0,.25)}";
+  assert.ok(
+    fixLineTokens(miniShadow, tokens).text.includes("box-shadow:var(--shadow-xl)}"),
+    "压缩单行的 box-shadow 同样应能修复",
+  );
+
+  // 报告层在两种形态下都应命中（防「只有一种形态能看见」）
+  for (const line of [
+    ".b{transition:background .12s ease}",
+    ".b { transition: background .12s ease; }",
+  ]) {
+    assert.ok(
+      findStyleAttrViolations(line, 1, tokens).some((v) => v.kind === "css-transition"),
+      `transition 报告不应依赖结尾形态：${line}`,
+    );
+  }
+  console.log("  ✓ 值提取边界: 压缩单行（值尾接 }）报告与修复均生效");
+}
+
+// ── 16. components-styles.ts 形态锁（单行 23KB 字符串 → 模板字面量）──
+{
+  // 该文件原为「单行字符串字面量 + \n 转义」（MikuMikuAR 迁移脚本产物），
+  // 全 CSS 挤在 1 行 23KB：diff 不可读、行号无意义、基线 key 退化（一行塌缩成一个 key）。
+  // 2026-09 转为模板字面量。此锁防「哪天重跑迁移脚本又被压回单行」。
+  const SRC = path.join(ROOT, "frontend/src/preview-3d/menu/components-styles.ts");
+  const text = fs.readFileSync(SRC, "utf8");
+  assert.ok(
+    text.includes("`"),
+    "components-styles.ts 应使用模板字面量（形态可读；勿退回 \\n 转义单行）",
+  );
+  const longest = Math.max(...text.split("\n").map((l) => l.length));
+  assert.ok(
+    longest < 2000,
+    `最长行 ${longest} 字符——疑似样式被压回单行（应 <2000）`,
+  );
+  console.log(`  ✓ components-styles 形态锁: 模板字面量、最长行 ${longest} 字符`);
+}
+
 // ── 14. 实时反馈（跟手）过渡不适用令牌（UI-Design.md §7 例外条款）──
 {
   // 为什么补：滑块跟手 `.cs-fill { transition: width 0.06s linear }` /

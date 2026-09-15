@@ -4,8 +4,1021 @@
 //  - Shadow DOM 组件：root.adoptedStyleSheets = [componentsStyleSheet, ...others];
 //  - 全局/light-DOM：installComponentsStyles() 会把样式注入 document.head 一次。
 
-export const componentsCss =
-  "/* ===== 🥉 ui-helpers 组件库样式（自 MikuMikuAR app.css 迁移，ADR 去桶化配套） ===== */\n/* 专用 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；撞色 token 已映射为 ysm 等价变量。 */\n:root {\n  --uih-font-ui-sm: 11px;\n  --uih-white-40: rgba(255, 255, 255, 0.4);\n  --uih-toggle-row-gap: 8px;\n  --uih-slide-item-pad-y: 6px;\n  --uih-content-px: 12px;\n  --uih-slide-item-min-height: 38px;\n  --uih-toggle-row-margin-bottom: 2px;\n  --uih-cs-label-font-size: 15px;\n  --uih-slide-item-gap: 8px;\n  --uih-slide-item-pad-x: var(--uih-content-px);\n  --uih-font-ui: 13px;\n  --uih-slide-item-radius: 6px;\n  --uih-slide-item-margin-bottom: 2px;\n  --uih-card-hover: rgba(255, 255, 255, 0.1);\n  --uih-card-active: rgba(255, 255, 255, 0.16);\n  --uih-accent-dim: rgba(74, 108, 247, 0.2);\n  --uih-slide-icon-size: 21px;\n  --uih-white-08: rgba(255, 255, 255, 0.08);\n  --uih-font-time: 12px;\n  --uih-font-title: 14px;\n  --uih-font-ui-xs: 10px;\n  --uih-white-04: rgba(255, 255, 255, 0.04);\n  --uih-white-12: rgba(255, 255, 255, 0.12);\n  --uih-mode-btn-pad-y: 0.3em;\n  --uih-mode-btn-pad-x: 0.7em;\n  --uih-mode-btn-radius: 4px;\n  --uih-white-16: rgba(255, 255, 255, 0.16);\n  --uih-preset-chip-pad-y: 4px;\n  --uih-preset-chip-pad-x: 12px;\n  --uih-preset-chip-height: 28px;\n  --uih-preset-chip-radius: 6px;\n  --uih-preset-chip-icon-size: 14px;\n  --uih-preset-chip-gap: 6px;\n  --uih-preset-chip-group-pad: 6px var(--uih-content-px)\n        10px;\n  --uih-section-title-font-size: 11px;\n  --uih-section-title-pad-y: 8px;\n  --uih-section-title-pad-x: var(--uih-content-px);\n  --uih-section-title-pad-bottom: 4px;\n  --uih-section-title-border-bottom: 1px solid var(--uih-white-06);\n  --uih-section-title-margin-bottom: 2px;\n  --uih-section-title-letter-spacing: 0.3px;\n  --uih-collapsible-header-gap: 8px;\n  --uih-collapsible-header-pad-y: 6px;\n  --uih-collapsible-header-pad-x: var(--uih-content-px);\n  --uih-collapsible-header-radius: 6px;\n  --uih-collapsible-header-min-height: 38px;\n  --uih-collapsible-icon-size: 21px;\n  --uih-collapsible-arrow-size: 12px;\n  --uih-collapsible-panel-transition: max-height 0.3s ease, opacity 0.25s ease;\n  --uih-collapsible-inner-pad: 2px 0 4px;\n  --uih-white-05: rgba(255, 255, 255, 0.05);\n  --uih-white-10: rgba(255, 255, 255, 0.1);\n  --uih-white-06: rgba(255, 255, 255, 0.06);\n  --uih-cs-row-pad-y: 8px;\n  --uih-cs-row-pad-x: var(--uih-content-px);\n  --uih-cs-row-pad-bottom: 6px;\n  --uih-cs-row-min-height: 44px;\n  --uih-cs-row-radius: 6px;\n  --uih-cs-top-gap: 10px;\n  --uih-cs-bar-height: 6px;\n  --uih-cs-bar-radius: 3px;\n  --uih-card-bg: #12121e;\n}\n\n/* 危险文字统一样式 */\n.danger-text {\n    color: var(--status-error);\n}\n\n.danger-text:hover {\n    color: var(--status-error);\n}\n\n.accent-text {\n    color: var(--accent);\n}\n\n/* 空状态行 — 灰色、不可点击 */\n.slide-item-muted {\n    opacity: 0.5;\n    font-size: var(--uih-font-ui-sm);\n    cursor: default;\n}\n\n.slide-item-muted:hover {\n    background: transparent;\n}\n\n/* 危险操作按钮（红色） */\n.slide-act-danger {\n    color: var(--status-error);\n}\n\n.slide-act-danger:hover {\n    color: var(--status-error);\n}\n\n/* 开关 (toggle) */\n.toggle {\n    position: relative;\n    display: inline-flex;\n    align-items: center;\n    width: 36px;\n    height: 20px;\n    cursor: pointer;\n}\n\n.toggle input {\n    opacity: 0;\n    width: 0;\n    height: 0;\n}\n\n.toggle .slider {\n    position: absolute;\n    inset: 0;\n    background: var(--muted);\n    border-radius:var(--radius-xl);\n    transition: background 0.2s;\n}\n\n.toggle .slider::before {\n    content: '';\n    position: absolute;\n    left: 2px;\n    top: 2px;\n    width: 16px;\n    height: 16px;\n    background: #fff;\n    border-radius: 50%;\n    transition: transform 0.2s;\n}\n\n.toggle input:checked + .slider {\n    background: var(--accent);\n}\n\n.toggle input:checked + .slider::before {\n    transform: translateX(16px);\n}\n\n/* Header toggle — 嵌入 collapsible-header 的紧凑 toggle */\n.toggle.header-toggle {\n    width: 30px;\n    height: 16px;\n    flex-shrink: 0;\n    margin: 0 4px;\n}\n\n.toggle.header-toggle .slider::before {\n    width: 12px;\n    height: 12px;\n}\n\n.toggle.header-toggle input:checked + .slider::before {\n    transform: translateX(14px);\n}\n\n/* Disabled toggle (e.g. WebGL 2.0 required) */\n.toggle.header-toggle.toggle-disabled {\n    opacity: 0.5;\n    cursor: not-allowed;\n}\n\n.toggle.header-toggle.toggle-disabled .slider {\n    background: var(--uih-white-40) !important;\n}\n\n/* Icon fallback (shown when Iconify icon fails to load) */\n.cs-icon-fallback {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    width: 18px;\n    height: 18px;\n    border-radius:var(--radius-sm);\n    background: var(--accent-dim, rgba(255, 255, 255, 0.12));\n    color: var(--text-dim, #aaa);\n    font-size:var(--fs-sm);\n    font-weight: 600;\n    flex-shrink: 0;\n}\n\n/* Toggle row layout (replaces inline styles in addToggleRow) */\n.toggle-row {\n    display: flex;\n    align-items: center;\n    gap: var(--uih-toggle-row-gap);\n    padding: var(--uih-slide-item-pad-y) var(--uih-content-px);\n    min-height: var(--uih-slide-item-min-height);\n    margin-bottom: var(--uih-toggle-row-margin-bottom);\n    justify-content: space-between;\n    cursor: pointer;\n}\n\n.toggle-left {\n    display: flex;\n    align-items: center;\n    gap: 8px;\n}\n\n.toggle-label {\n    font-size: var(--uih-cs-label-font-size);\n    color: var(--txt);\n}\n\n/* renderCustom 内容区域：背景由调用方自行决定，避免与外层卡片容器双重叠加 */\n.slide-list.render-card {\n    flex: 1;\n}\n\n.slide-list.render-card .cs-row {\n    margin-left: 0;\n    margin-right: 0;\n}\n\n.slide-item {\n    display: flex;\n    align-items: center;\n    gap: var(--uih-slide-item-gap);\n    padding: var(--uih-slide-item-pad-y) var(--uih-slide-item-pad-x);\n    cursor: pointer;\n    transition: background 0.12s;\n    font-size: var(--uih-font-ui);\n    color: var(--txt);\n    line-height: 1.4;\n    min-height: var(--uih-slide-item-min-height);\n    border-radius: var(--uih-slide-item-radius);\n    margin-bottom: var(--uih-slide-item-margin-bottom);\n}\n\n.slide-item:hover {\n    background: var(--uih-card-hover);\n}\n\n.slide-item:active {\n    background: var(--uih-card-active);\n}\n\n.slide-item.slide-focused,\n.collapsible-header.slide-focused {\n    background: var(--uih-card-hover);\n    outline: 1px solid var(--uih-accent-dim);\n    outline-offset: -1px;\n}\n\n.slide-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    flex-shrink: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: var(--txt);\n}\n\n.slide-icon iconify-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    font-size: var(--uih-slide-icon-size);\n    display: block;\n}\n\n/* 统一左侧行为区按钮：复用 .slide-icon 尺寸（21px）的透明可点击按钮，\n   保持 radio 指示图标视觉一致；非 22px 盒装 .slide-add-btn。 */\n.slide-lead-btn {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    flex-shrink: 0;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    cursor: pointer;\n    border-radius:var(--radius-sm);\n    transition: background 0.12s;\n}\n\n.slide-lead-btn:hover {\n    background: var(--uih-white-08);\n}\n\n.slide-lead-btn iconify-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    font-size: var(--uih-slide-icon-size);\n    display: block;\n}\n\n.slide-label {\n    flex: 1;\n    flex-shrink: 0;\n    white-space: nowrap;\n    font-size: 16px;\n}\n\n.slide-label.wrap-2 {\n    white-space: normal;\n    word-break: break-all;\n    flex-shrink: 1;\n    overflow: visible;\n    text-overflow: unset;\n    line-height: 1.2;\n}\n\n.slide-sublabel {\n    font-size: var(--uih-font-ui-sm);\n    color: var(--txt);\n    margin-left: auto;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    flex-shrink: 1;\n    min-width: 0;\n}\n\n.slide-sublabel-inline {\n    margin-left: 0;\n    flex: 1;\n    min-width: 0;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    color: var(--muted);\n}\n\n.slide-arrow {\n    color: var(--txt);\n    font-size: var(--uih-font-time);\n    flex-shrink: 0;\n    margin-left: 4px;\n}\n\n/* Field label/value — 键值字段行（替代 inline style） */\n.field-label {\n    flex: none !important;\n    color: var(--muted) !important;\n}\n\n.field-value {\n    text-align: right;\n    max-width: 60%;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    font-size:var(--fs-sm);\n    color: var(--txt);\n}\n\n/* key-value 字段行（addFieldRow）：纯展示信息，无需 38px 触控热区，压缩为紧凑行 */\n.field-row {\n    min-height: 24px;\n    padding-top: 2px;\n    padding-bottom: 2px;\n    margin-bottom: 0;\n    cursor: default;\n}\n\n.field-row:hover {\n    background: transparent;\n}\n\n/* 隐藏左侧空图标占位后，将值推至行尾右对齐 */\n.field-row .field-value {\n    margin-left: auto;\n}\n\n/* 基本信息区：响应式信息卡网格（auto-fill，窄屏 2 列、宽屏自动加列） */\n.info-grid {\n    display: grid;\n    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));\n    gap: 6px;\n}\n\n.info-card {\n    background: rgba(255, 255, 255, 0.06);\n    border: 0.5px solid rgba(255, 255, 255, 0.1);\n    border-radius:var(--radius-md);\n    padding: 6px 8px;\n    min-width: 0;\n    overflow: hidden;\n}\n\n.info-card--wide {\n    grid-column: 1 / -1;\n}\n\n.info-card-label {\n    font-size:var(--fs-md);\n    color: var(--muted);\n    margin-bottom: 2px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n.info-card-value {\n    font-size: var(--uih-font-title);\n    font-weight: 600;\n    color: var(--txt);\n    line-height: 1.35;\n    overflow-wrap: anywhere;\n    word-break: break-word;\n}\n\n.info-card-sub {\n    font-size: var(--uih-font-ui-xs);\n    color: var(--muted);\n    margin-top: 2px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n.slide-add-btn {\n    cursor: pointer;\n    margin-left: 4px;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    width: 22px;\n    height: 22px;\n    border-radius:var(--radius-sm);\n    font-size: var(--uih-font-ui);\n    background: var(--uih-white-04);\n    transition: background 0.15s;\n    flex-shrink: 0;\n    user-select: none;\n}\n\n.slide-add-btn:hover {\n    background: var(--uih-white-12);\n}\n\n/* 修复：trailing/del 按钮内的 iconify 图标需显式尺寸，否则回退 1em(≈--font-ui)\n * 在 22px 盒内显得又小又空；与左侧 .slide-lead-btn 21px 对齐。 */\n.slide-add-btn iconify-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    font-size: var(--uih-slide-icon-size);\n    display: block;\n}\n\n/* Mode selection buttons (shadow type, sky mode, etc.) */\n.mode-btn {\n    font-size: var(--uih-font-ui);\n    padding: var(--uih-mode-btn-pad-y) var(--uih-mode-btn-pad-x);\n    line-height: 1.3;\n    border-radius: var(--uih-mode-btn-radius);\n    border: 1px solid var(--uih-white-08);\n    background: transparent;\n    color: var(--txt);\n    cursor: pointer;\n    transition:\n        background 0.15s,\n        border-color 0.15s;\n}\n\n.mode-btn:hover {\n    background: var(--uih-white-08);\n    border-color: var(--uih-white-16);\n}\n\n.mode-btn:active {\n    background: var(--uih-white-16);\n}\n\n.mode-btn.active {\n    background: var(--accent);\n    border-color: var(--accent);\n}\n\n.mode-btn.active:hover {\n    background: var(--accent);\n    filter: brightness(1.15);\n}\n\n/* ===== Compact Slider (zone-click bar) ===== */\n.preset-chip {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: 4px;\n    padding: var(--uih-preset-chip-pad-y) var(--uih-preset-chip-pad-x);\n    height: var(--uih-preset-chip-height);\n    border-radius: var(--uih-preset-chip-radius);\n    border: 1px solid var(--uih-white-08);\n    background: transparent;\n    color: var(--txt);\n    font-size: var(--uih-font-ui-sm);\n    cursor: pointer;\n    transition: all 0.15s ease;\n    white-space: nowrap;\n    user-select: none;\n    line-height: 1;\n}\n\n.preset-chip:hover {\n    background: var(--uih-white-08);\n    border-color: var(--uih-white-16);\n    color: var(--txt);\n}\n\n.preset-chip:active {\n    transform: scale(0.96);\n    background: var(--uih-white-12);\n}\n\n.preset-chip.active {\n    border-color: var(--accent);\n    background: var(--uih-accent-dim);\n    color: var(--accent);\n}\n\n/* 危险动作按钮（清除全部等破坏性操作）— 红底强调 */\n.preset-chip.danger {\n    background: var(--status-error);\n    border-color: var(--status-error);\n    color: #fff;\n}\n\n.preset-chip.danger:hover {\n    background: var(--status-error);\n    border-color: var(--status-error);\n    color: #fff;\n    filter: brightness(1.1);\n}\n\n/* 只读标签（程序化激活徽标等）— 不可点击 */\n.preset-chip.badge {\n    cursor: default;\n    background: var(--uih-white-08);\n    opacity: 0.85;\n}\n\n.preset-chip.badge:hover,\n.preset-chip.badge:active {\n    background: var(--uih-white-08);\n    border-color: var(--uih-white-08);\n    color: var(--txt);\n    transform: none;\n}\n\n.preset-chip.wrap-2 {\n    white-space: normal;\n    height: auto;\n    min-height: var(--uih-preset-chip-height);\n    line-height: 1.2;\n    max-width: 140px;\n    text-align: left;\n    justify-content: flex-start;\n}\n\n.preset-chip iconify-icon {\n    width: var(--uih-preset-chip-icon-size);\n    height: var(--uih-preset-chip-icon-size);\n    font-size: var(--uih-preset-chip-icon-size);\n    display: block;\n}\n\n.preset-group {\n    display: flex;\n    gap: var(--uih-preset-chip-gap);\n    flex-wrap: wrap;\n    padding: var(--uih-preset-chip-group-pad);\n}\n\n/* ===== Section 分区标题 ===== */\n.section-title {\n    font-size: var(--uih-section-title-font-size);\n    color: var(--txt);\n    padding: var(--uih-section-title-pad-y) var(--uih-section-title-pad-x) var(--uih-section-title-pad-bottom);\n    border-bottom: var(--uih-section-title-border-bottom);\n    margin-bottom: var(--uih-section-title-margin-bottom);\n    letter-spacing: var(--uih-section-title-letter-spacing);\n}\n\n/* ===== Collapsible 通用折叠组件 ===== */\n.collapsible-wrapper {\n    margin-bottom: 2px;\n}\n\n.collapsible-header {\n    display: flex;\n    align-items: center;\n    gap: var(--uih-collapsible-header-gap);\n    padding: var(--uih-collapsible-header-pad-y) var(--uih-collapsible-header-pad-x);\n    cursor: pointer;\n    user-select: none;\n    border-radius: var(--uih-collapsible-header-radius);\n    transition: background 0.12s;\n    min-height: var(--uih-collapsible-header-min-height);\n}\n\n.collapsible-header:hover {\n    background: var(--uih-card-hover);\n}\n\n.collapsible-header:active {\n    background: var(--uih-card-active);\n}\n\n.collapsible-icon {\n    width: var(--uih-collapsible-icon-size);\n    height: var(--uih-collapsible-icon-size);\n    flex-shrink: 0;\n    color: var(--txt);\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.collapsible-icon iconify-icon {\n    width: var(--uih-collapsible-icon-size);\n    height: var(--uih-collapsible-icon-size);\n    font-size: var(--uih-collapsible-icon-size);\n    display: block;\n}\n\n.collapsible-label {\n    flex: 1;\n    font-size: var(--uih-cs-label-font-size);\n    color: var(--txt);\n}\n\n/* 折叠头 + toggle-row 字体放大，与 cs-row 的 15px 区分 */\n.collapsible-header .collapsible-label,\n.toggle-label {\n    font-size: 16px;\n}\n\n.collapsible-arrow {\n    font-size: var(--uih-collapsible-arrow-size);\n    color: var(--txt);\n    transition: transform 0.25s ease;\n    flex-shrink: 0;\n}\n\n.collapsible-panel {\n    overflow: hidden;\n    max-height: 0;\n    transition: var(--uih-collapsible-panel-transition);\n    opacity: 0;\n}\n\n.collapsible-panel.open {\n    opacity: 1;\n}\n\n.collapsible-inner {\n    padding: var(--uih-collapsible-inner-pad);\n}\n\n/* Collapsible — mat variant（材质分类用，灰色小按钮风格） */\n.collapsible-header.collapsible-mat {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    gap: 6px;\n    padding: 7px 10px;\n    margin-top: 6px;\n    border-radius:var(--radius-md);\n    font-size: var(--uih-font-ui-sm);\n    color: var(--muted);\n    background: var(--uih-white-05);\n    border: 1px solid var(--uih-white-08);\n    transition:\n        background 0.12s,\n        color 0.12s,\n        border-color 0.12s;\n    min-height: auto;\n}\n\n.collapsible-header.collapsible-mat:hover {\n    background: var(--uih-white-10);\n    color: var(--txt);\n    border-color: var(--uih-white-12);\n}\n\n.collapsible-header.collapsible-mat:active {\n    background: var(--uih-white-16);\n}\n\n.collapsible-header.collapsible-mat .collapsible-icon {\n    width: auto;\n    height: auto;\n    color: inherit;\n}\n\n.collapsible-header.collapsible-mat .collapsible-icon iconify-icon {\n    width: var(--uih-font-ui-sm);\n    height: var(--uih-font-ui-sm);\n    font-size: var(--uih-font-ui-sm);\n}\n\n.collapsible-header.collapsible-mat .collapsible-label {\n    flex: 0 0 auto;\n    font-size: inherit;\n    color: inherit;\n}\n\n.collapsible-header.collapsible-mat .collapsible-arrow {\n    font-size: var(--uih-font-ui-xs);\n    margin-left: 2px;\n}\n\n.collapsible-panel.mat-slider-panel {\n    margin-top: 6px;\n    padding: 6px 0 0;\n    border-top: 1px solid var(--uih-white-06);\n}\n\n.collapsible-panel.mat-slider-panel.open {\n    opacity: 1;\n}\n\n.cs-row {\n    padding: var(--uih-cs-row-pad-y) var(--uih-cs-row-pad-x) var(--uih-cs-row-pad-bottom);\n    cursor: pointer;\n    transition: background 0.12s;\n    user-select: none;\n    min-height: var(--uih-cs-row-min-height);\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    border-radius: var(--uih-cs-row-radius);\n}\n\n.cs-row:hover {\n    background: var(--uih-card-hover);\n}\n\n.cs-row:active {\n    background: var(--uih-card-active);\n}\n\n.cs-top {\n    display: flex;\n    align-items: center;\n    gap: var(--uih-cs-top-gap);\n    margin-bottom: 4px;\n}\n\n.cs-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    flex-shrink: 0;\n    color: var(--txt);\n}\n\n.cs-icon iconify-icon {\n    width: var(--uih-slide-icon-size);\n    height: var(--uih-slide-icon-size);\n    font-size: var(--uih-slide-icon-size);\n    display: block;\n}\n\n.cs-label {\n    flex: 1;\n    font-size: var(--uih-cs-label-font-size);\n    color: var(--txt);\n}\n\n.cs-value {\n    font-size: var(--uih-font-title);\n    color: var(--txt);\n    font-variant-numeric: tabular-nums;\n}\n\n/* standalone / cs-row column: explicit width fills parent */\n.cs-bar {\n    width: 100%;\n    height: var(--uih-cs-bar-height);\n    background: var(--uih-white-12);\n    border-radius: var(--uih-cs-bar-radius);\n    overflow: visible;\n    position: relative;\n    cursor: pointer;\n    box-shadow:\n        inset 0 1px 2px rgba(0, 0, 0, 0.3),\n        0 0 0 1px rgba(255, 255, 255, 0.06);\n}\n\n/* clr-row flex context: bar fills remaining inline space */\n.clr-row .cs-bar {\n    flex: 1;\n    width: auto;\n}\n\n.cs-bar::before {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    height: 50%;\n    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent);\n    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;\n    pointer-events: none;\n}\n\n.cs-bar::after {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    background: repeating-linear-gradient(\n        90deg,\n        transparent,\n        transparent 4px,\n        rgba(255, 255, 255, 0.04) 4px,\n        rgba(255, 255, 255, 0.04) 5px\n    );\n    border-radius: var(--uih-cs-bar-radius);\n    pointer-events: none;\n}\n\n.cs-bar:focus-visible {\n    /* box-shadow 提供键盘焦点视觉指示，优先级高于全局 :focus-visible outline */\n    box-shadow:\n        inset 0 1px 2px rgba(0, 0, 0, 0.3),\n        0 0 0 2px var(--accent),\n        0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);\n}\n\n.cs-fill {\n    height: 100%;\n    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 80%, transparent), var(--accent));\n    border-radius: var(--uih-cs-bar-radius);\n    transition: width 0.06s linear;\n    pointer-events: none;\n    position: relative;\n    overflow: hidden;\n}\n\n.cs-fill::after {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    height: 50%;\n    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);\n    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;\n}\n\n.cs-fill::before {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: -100%;\n    right: 0;\n    bottom: 0;\n    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);\n    animation: csShimmer 2s infinite;\n}\n\n.cs-thumb {\n    position: absolute;\n    top: 0;\n    width: 2px;\n    height: 100%;\n    background: var(--accent);\n    border-radius: 1px;\n    transform: translateX(-50%);\n    pointer-events: none;\n    transition: left 0.06s linear;\n}\n\n/* Slider dropdown panel (collapsed by default) */\n.mat-slider-panel {\n    margin-top: 6px;\n    padding: 6px 0 0;\n    border-top: 1px solid var(--uih-white-06);\n}\n\n/* Batch category slider context */\n.mat-cat-slider .cs-row {\n    background: var(--uih-card-bg);\n}\n\n.mat-cat-slider .cs-row:hover {\n    background: var(--uih-card-hover);\n}\n\n/* Per-material slider context */\n.mat-mat-slider .cs-row {\n    background: var(--uih-white-04);\n    border: 1px solid var(--uih-white-06);\n}\n\n.mat-mat-slider .cs-row:hover {\n    background: var(--uih-card-hover);\n}\n\n/* ===== Color Picker ===== */\n.clr-block {\n    padding: 0 var(--uih-content-px) 10px;\n}\n\n.clr-header {\n    display: flex;\n    align-items: center;\n    gap: 8px;\n    margin-bottom: 4px;\n}\n\n.clr-title {\n    font-size: var(--uih-font-title);\n    color: var(--txt);\n}\n\n.clr-swatch {\n    width: 18px;\n    height: 18px;\n    border-radius:var(--radius-sm);\n    border: 1px solid var(--uih-white-08);\n    flex-shrink: 0;\n}\n\n.clr-row {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-bottom: 2px;\n}\n\n.clr-channel {\n    font-size: var(--uih-font-ui-sm);\n    font-weight: 600;\n    width: 14px;\n    text-align: center;\n    flex-shrink: 0;\n}\n\n.clr-value {\n    font-size: var(--uih-font-ui-sm);\n    color: var(--txt);\n    width: 28px;\n    text-align: right;\n    font-variant-numeric: tabular-nums;\n}\n\n/* ===== Vector3 Slider ===== */\n.vec3-block {\n    padding: 0 var(--uih-content-px) 10px;\n}\n\n.vec3-header {\n    display: flex;\n    align-items: center;\n    gap: 8px;\n    margin-bottom: 4px;\n}\n\n.vec3-title {\n    font-size: var(--uih-font-title);\n    color: var(--txt);\n}\n\n.vec3-row {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-bottom: 2px;\n}\n\n.vec3-axis {\n    font-size: var(--uih-font-ui-sm);\n    font-weight: 600;\n    width: 14px;\n    text-align: center;\n    flex-shrink: 0;\n}\n\n.vec3-value {\n    font-size: var(--uih-font-ui-sm);\n    color: var(--txt);\n    width: 36px;\n    text-align: right;\n    font-variant-numeric: tabular-nums;\n}\n\n/* Shadow type selector */\n.type-row {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    margin-bottom: 12px;\n    flex-wrap: wrap;\n}\n\n.type-label {\n    font-size: var(--uih-font-ui-sm);\n    color: var(--muted);\n    width: 60px;\n}\n\n\n/* 下拉选择框 */\n.setting-select {\n    flex: 1;\n    padding: 4px 8px;\n    border-radius:var(--radius-md);\n    font-size:var(--fs-base);\n}\n\n.diag-model-chips .preset-chip {\n    font-size: var(--uih-font-ui-xs);\n    padding: 2px 8px;\n}\n";
+export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 MikuMikuAR app.css 迁移，ADR 去桶化配套） ===== */
+/* 专用 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；撞色 token 已映射为 ysm 等价变量。 */
+:root {
+  --uih-font-ui-sm: 11px;
+  --uih-white-40: rgba(255, 255, 255, 0.4);
+  --uih-toggle-row-gap: 8px;
+  --uih-slide-item-pad-y: 6px;
+  --uih-content-px: 12px;
+  --uih-slide-item-min-height: 38px;
+  --uih-toggle-row-margin-bottom: 2px;
+  --uih-cs-label-font-size: 15px;
+  --uih-slide-item-gap: 8px;
+  --uih-slide-item-pad-x: var(--uih-content-px);
+  --uih-font-ui: 13px;
+  --uih-slide-item-radius: 6px;
+  --uih-slide-item-margin-bottom: 2px;
+  --uih-card-hover: rgba(255, 255, 255, 0.1);
+  --uih-card-active: rgba(255, 255, 255, 0.16);
+  --uih-accent-dim: rgba(74, 108, 247, 0.2);
+  --uih-slide-icon-size: 21px;
+  --uih-white-08: rgba(255, 255, 255, 0.08);
+  --uih-font-time: 12px;
+  --uih-font-title: 14px;
+  --uih-font-ui-xs: 10px;
+  --uih-white-04: rgba(255, 255, 255, 0.04);
+  --uih-white-12: rgba(255, 255, 255, 0.12);
+  --uih-mode-btn-pad-y: 0.3em;
+  --uih-mode-btn-pad-x: 0.7em;
+  --uih-mode-btn-radius: 4px;
+  --uih-white-16: rgba(255, 255, 255, 0.16);
+  --uih-preset-chip-pad-y: 4px;
+  --uih-preset-chip-pad-x: 12px;
+  --uih-preset-chip-height: 28px;
+  --uih-preset-chip-radius: 6px;
+  --uih-preset-chip-icon-size: 14px;
+  --uih-preset-chip-gap: 6px;
+  --uih-preset-chip-group-pad: 6px var(--uih-content-px)
+        10px;
+  --uih-section-title-font-size: 11px;
+  --uih-section-title-pad-y: 8px;
+  --uih-section-title-pad-x: var(--uih-content-px);
+  --uih-section-title-pad-bottom: 4px;
+  --uih-section-title-border-bottom: 1px solid var(--uih-white-06);
+  --uih-section-title-margin-bottom: 2px;
+  --uih-section-title-letter-spacing: 0.3px;
+  --uih-collapsible-header-gap: 8px;
+  --uih-collapsible-header-pad-y: 6px;
+  --uih-collapsible-header-pad-x: var(--uih-content-px);
+  --uih-collapsible-header-radius: 6px;
+  --uih-collapsible-header-min-height: 38px;
+  --uih-collapsible-icon-size: 21px;
+  --uih-collapsible-arrow-size: 12px;
+  --uih-collapsible-panel-transition: max-height 0.3s ease, opacity 0.25s ease;
+  --uih-collapsible-inner-pad: 2px 0 4px;
+  --uih-white-05: rgba(255, 255, 255, 0.05);
+  --uih-white-10: rgba(255, 255, 255, 0.1);
+  --uih-white-06: rgba(255, 255, 255, 0.06);
+  --uih-cs-row-pad-y: 8px;
+  --uih-cs-row-pad-x: var(--uih-content-px);
+  --uih-cs-row-pad-bottom: 6px;
+  --uih-cs-row-min-height: 44px;
+  --uih-cs-row-radius: 6px;
+  --uih-cs-top-gap: 10px;
+  --uih-cs-bar-height: 6px;
+  --uih-cs-bar-radius: 3px;
+  --uih-card-bg: #12121e;
+}
+
+/* 危险文字统一样式 */
+.danger-text {
+    color: var(--status-error);
+}
+
+.danger-text:hover {
+    color: var(--status-error);
+}
+
+.accent-text {
+    color: var(--accent);
+}
+
+/* 空状态行 — 灰色、不可点击 */
+.slide-item-muted {
+    opacity: 0.5;
+    font-size: var(--uih-font-ui-sm);
+    cursor: default;
+}
+
+.slide-item-muted:hover {
+    background: transparent;
+}
+
+/* 危险操作按钮（红色） */
+.slide-act-danger {
+    color: var(--status-error);
+}
+
+.slide-act-danger:hover {
+    color: var(--status-error);
+}
+
+/* 开关 (toggle) */
+.toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--muted);
+    border-radius:var(--radius-xl);
+    transition: background 0.2s;
+}
+
+.toggle .slider::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.toggle input:checked + .slider {
+    background: var(--accent);
+}
+
+.toggle input:checked + .slider::before {
+    transform: translateX(16px);
+}
+
+/* Header toggle — 嵌入 collapsible-header 的紧凑 toggle */
+.toggle.header-toggle {
+    width: 30px;
+    height: 16px;
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+.toggle.header-toggle .slider::before {
+    width: 12px;
+    height: 12px;
+}
+
+.toggle.header-toggle input:checked + .slider::before {
+    transform: translateX(14px);
+}
+
+/* Disabled toggle (e.g. WebGL 2.0 required) */
+.toggle.header-toggle.toggle-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle.header-toggle.toggle-disabled .slider {
+    background: var(--uih-white-40) !important;
+}
+
+/* Icon fallback (shown when Iconify icon fails to load) */
+.cs-icon-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius:var(--radius-sm);
+    background: var(--accent-dim, rgba(255, 255, 255, 0.12));
+    color: var(--text-dim, #aaa);
+    font-size:var(--fs-sm);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Toggle row layout (replaces inline styles in addToggleRow) */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--uih-toggle-row-gap);
+    padding: var(--uih-slide-item-pad-y) var(--uih-content-px);
+    min-height: var(--uih-slide-item-min-height);
+    margin-bottom: var(--uih-toggle-row-margin-bottom);
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-label {
+    font-size: var(--uih-cs-label-font-size);
+    color: var(--txt);
+}
+
+/* renderCustom 内容区域：背景由调用方自行决定，避免与外层卡片容器双重叠加 */
+.slide-list.render-card {
+    flex: 1;
+}
+
+.slide-list.render-card .cs-row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.slide-item {
+    display: flex;
+    align-items: center;
+    gap: var(--uih-slide-item-gap);
+    padding: var(--uih-slide-item-pad-y) var(--uih-slide-item-pad-x);
+    cursor: pointer;
+    transition:var(--tr-fast);
+    font-size: var(--uih-font-ui);
+    color: var(--txt);
+    line-height: 1.4;
+    min-height: var(--uih-slide-item-min-height);
+    border-radius: var(--uih-slide-item-radius);
+    margin-bottom: var(--uih-slide-item-margin-bottom);
+}
+
+.slide-item:hover {
+    background: var(--uih-card-hover);
+}
+
+.slide-item:active {
+    background: var(--uih-card-active);
+}
+
+.slide-item.slide-focused,
+.collapsible-header.slide-focused {
+    background: var(--uih-card-hover);
+    outline: 1px solid var(--uih-accent-dim);
+    outline-offset: -1px;
+}
+
+.slide-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--txt);
+}
+
+.slide-icon iconify-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    font-size: var(--uih-slide-icon-size);
+    display: block;
+}
+
+/* 统一左侧行为区按钮：复用 .slide-icon 尺寸（21px）的透明可点击按钮，
+   保持 radio 指示图标视觉一致；非 22px 盒装 .slide-add-btn。 */
+.slide-lead-btn {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius:var(--radius-sm);
+    transition:var(--tr-fast);
+}
+
+.slide-lead-btn:hover {
+    background: var(--uih-white-08);
+}
+
+.slide-lead-btn iconify-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    font-size: var(--uih-slide-icon-size);
+    display: block;
+}
+
+.slide-label {
+    flex: 1;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 16px;
+}
+
+.slide-label.wrap-2 {
+    white-space: normal;
+    word-break: break-all;
+    flex-shrink: 1;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.2;
+}
+
+.slide-sublabel {
+    font-size: var(--uih-font-ui-sm);
+    color: var(--txt);
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.slide-sublabel-inline {
+    margin-left: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--muted);
+}
+
+.slide-arrow {
+    color: var(--txt);
+    font-size: var(--uih-font-time);
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+/* Field label/value — 键值字段行（替代 inline style） */
+.field-label {
+    flex: none !important;
+    color: var(--muted) !important;
+}
+
+.field-value {
+    text-align: right;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size:var(--fs-sm);
+    color: var(--txt);
+}
+
+/* key-value 字段行（addFieldRow）：纯展示信息，无需 38px 触控热区，压缩为紧凑行 */
+.field-row {
+    min-height: 24px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin-bottom: 0;
+    cursor: default;
+}
+
+.field-row:hover {
+    background: transparent;
+}
+
+/* 隐藏左侧空图标占位后，将值推至行尾右对齐 */
+.field-row .field-value {
+    margin-left: auto;
+}
+
+/* 基本信息区：响应式信息卡网格（auto-fill，窄屏 2 列、宽屏自动加列） */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 6px;
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-radius:var(--radius-md);
+    padding: 6px 8px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.info-card--wide {
+    grid-column: 1 / -1;
+}
+
+.info-card-label {
+    font-size:var(--fs-md);
+    color: var(--muted);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-card-value {
+    font-size: var(--uih-font-title);
+    font-weight: 600;
+    color: var(--txt);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.info-card-sub {
+    font-size: var(--uih-font-ui-xs);
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.slide-add-btn {
+    cursor: pointer;
+    margin-left: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius:var(--radius-sm);
+    font-size: var(--uih-font-ui);
+    background: var(--uih-white-04);
+    transition:var(--tr-normal);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.slide-add-btn:hover {
+    background: var(--uih-white-12);
+}
+
+/* 修复：trailing/del 按钮内的 iconify 图标需显式尺寸，否则回退 1em(≈--font-ui)
+ * 在 22px 盒内显得又小又空；与左侧 .slide-lead-btn 21px 对齐。 */
+.slide-add-btn iconify-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    font-size: var(--uih-slide-icon-size);
+    display: block;
+}
+
+/* Mode selection buttons (shadow type, sky mode, etc.) */
+.mode-btn {
+    font-size: var(--uih-font-ui);
+    padding: var(--uih-mode-btn-pad-y) var(--uih-mode-btn-pad-x);
+    line-height: 1.3;
+    border-radius: var(--uih-mode-btn-radius);
+    border: 1px solid var(--uih-white-08);
+    background: transparent;
+    color: var(--txt);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.mode-btn:hover {
+    background: var(--uih-white-08);
+    border-color: var(--uih-white-16);
+}
+
+.mode-btn:active {
+    background: var(--uih-white-16);
+}
+
+.mode-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.mode-btn.active:hover {
+    background: var(--accent);
+    filter: brightness(1.15);
+}
+
+/* ===== Compact Slider (zone-click bar) ===== */
+.preset-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: var(--uih-preset-chip-pad-y) var(--uih-preset-chip-pad-x);
+    height: var(--uih-preset-chip-height);
+    border-radius: var(--uih-preset-chip-radius);
+    border: 1px solid var(--uih-white-08);
+    background: transparent;
+    color: var(--txt);
+    font-size: var(--uih-font-ui-sm);
+    cursor: pointer;
+    transition:var(--tr-normal);
+    white-space: nowrap;
+    user-select: none;
+    line-height: 1;
+}
+
+.preset-chip:hover {
+    background: var(--uih-white-08);
+    border-color: var(--uih-white-16);
+    color: var(--txt);
+}
+
+.preset-chip:active {
+    transform: scale(0.96);
+    background: var(--uih-white-12);
+}
+
+.preset-chip.active {
+    border-color: var(--accent);
+    background: var(--uih-accent-dim);
+    color: var(--accent);
+}
+
+/* 危险动作按钮（清除全部等破坏性操作）— 红底强调 */
+.preset-chip.danger {
+    background: var(--status-error);
+    border-color: var(--status-error);
+    color: #fff;
+}
+
+.preset-chip.danger:hover {
+    background: var(--status-error);
+    border-color: var(--status-error);
+    color: #fff;
+    filter: brightness(1.1);
+}
+
+/* 只读标签（程序化激活徽标等）— 不可点击 */
+.preset-chip.badge {
+    cursor: default;
+    background: var(--uih-white-08);
+    opacity: 0.85;
+}
+
+.preset-chip.badge:hover,
+.preset-chip.badge:active {
+    background: var(--uih-white-08);
+    border-color: var(--uih-white-08);
+    color: var(--txt);
+    transform: none;
+}
+
+.preset-chip.wrap-2 {
+    white-space: normal;
+    height: auto;
+    min-height: var(--uih-preset-chip-height);
+    line-height: 1.2;
+    max-width: 140px;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+.preset-chip iconify-icon {
+    width: var(--uih-preset-chip-icon-size);
+    height: var(--uih-preset-chip-icon-size);
+    font-size: var(--uih-preset-chip-icon-size);
+    display: block;
+}
+
+.preset-group {
+    display: flex;
+    gap: var(--uih-preset-chip-gap);
+    flex-wrap: wrap;
+    padding: var(--uih-preset-chip-group-pad);
+}
+
+/* ===== Section 分区标题 ===== */
+.section-title {
+    font-size: var(--uih-section-title-font-size);
+    color: var(--txt);
+    padding: var(--uih-section-title-pad-y) var(--uih-section-title-pad-x) var(--uih-section-title-pad-bottom);
+    border-bottom: var(--uih-section-title-border-bottom);
+    margin-bottom: var(--uih-section-title-margin-bottom);
+    letter-spacing: var(--uih-section-title-letter-spacing);
+}
+
+/* ===== Collapsible 通用折叠组件 ===== */
+.collapsible-wrapper {
+    margin-bottom: 2px;
+}
+
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    gap: var(--uih-collapsible-header-gap);
+    padding: var(--uih-collapsible-header-pad-y) var(--uih-collapsible-header-pad-x);
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--uih-collapsible-header-radius);
+    transition:var(--tr-fast);
+    min-height: var(--uih-collapsible-header-min-height);
+}
+
+.collapsible-header:hover {
+    background: var(--uih-card-hover);
+}
+
+.collapsible-header:active {
+    background: var(--uih-card-active);
+}
+
+.collapsible-icon {
+    width: var(--uih-collapsible-icon-size);
+    height: var(--uih-collapsible-icon-size);
+    flex-shrink: 0;
+    color: var(--txt);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapsible-icon iconify-icon {
+    width: var(--uih-collapsible-icon-size);
+    height: var(--uih-collapsible-icon-size);
+    font-size: var(--uih-collapsible-icon-size);
+    display: block;
+}
+
+.collapsible-label {
+    flex: 1;
+    font-size: var(--uih-cs-label-font-size);
+    color: var(--txt);
+}
+
+/* 折叠头 + toggle-row 字体放大，与 cs-row 的 15px 区分 */
+.collapsible-header .collapsible-label,
+.toggle-label {
+    font-size: 16px;
+}
+
+.collapsible-arrow {
+    font-size: var(--uih-collapsible-arrow-size);
+    color: var(--txt);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.collapsible-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: var(--uih-collapsible-panel-transition);
+    opacity: 0;
+}
+
+.collapsible-panel.open {
+    opacity: 1;
+}
+
+.collapsible-inner {
+    padding: var(--uih-collapsible-inner-pad);
+}
+
+/* Collapsible — mat variant（材质分类用，灰色小按钮风格） */
+.collapsible-header.collapsible-mat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    margin-top: 6px;
+    border-radius:var(--radius-md);
+    font-size: var(--uih-font-ui-sm);
+    color: var(--muted);
+    background: var(--uih-white-05);
+    border: 1px solid var(--uih-white-08);
+    transition:
+        background 0.12s,
+        color 0.12s,
+        border-color 0.12s;
+    min-height: auto;
+}
+
+.collapsible-header.collapsible-mat:hover {
+    background: var(--uih-white-10);
+    color: var(--txt);
+    border-color: var(--uih-white-12);
+}
+
+.collapsible-header.collapsible-mat:active {
+    background: var(--uih-white-16);
+}
+
+.collapsible-header.collapsible-mat .collapsible-icon {
+    width: auto;
+    height: auto;
+    color: inherit;
+}
+
+.collapsible-header.collapsible-mat .collapsible-icon iconify-icon {
+    width: var(--uih-font-ui-sm);
+    height: var(--uih-font-ui-sm);
+    font-size: var(--uih-font-ui-sm);
+}
+
+.collapsible-header.collapsible-mat .collapsible-label {
+    flex: 0 0 auto;
+    font-size: inherit;
+    color: inherit;
+}
+
+.collapsible-header.collapsible-mat .collapsible-arrow {
+    font-size: var(--uih-font-ui-xs);
+    margin-left: 2px;
+}
+
+.collapsible-panel.mat-slider-panel {
+    margin-top: 6px;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--uih-white-06);
+}
+
+.collapsible-panel.mat-slider-panel.open {
+    opacity: 1;
+}
+
+.cs-row {
+    padding: var(--uih-cs-row-pad-y) var(--uih-cs-row-pad-x) var(--uih-cs-row-pad-bottom);
+    cursor: pointer;
+    transition:var(--tr-fast);
+    user-select: none;
+    min-height: var(--uih-cs-row-min-height);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: var(--uih-cs-row-radius);
+}
+
+.cs-row:hover {
+    background: var(--uih-card-hover);
+}
+
+.cs-row:active {
+    background: var(--uih-card-active);
+}
+
+.cs-top {
+    display: flex;
+    align-items: center;
+    gap: var(--uih-cs-top-gap);
+    margin-bottom: 4px;
+}
+
+.cs-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    flex-shrink: 0;
+    color: var(--txt);
+}
+
+.cs-icon iconify-icon {
+    width: var(--uih-slide-icon-size);
+    height: var(--uih-slide-icon-size);
+    font-size: var(--uih-slide-icon-size);
+    display: block;
+}
+
+.cs-label {
+    flex: 1;
+    font-size: var(--uih-cs-label-font-size);
+    color: var(--txt);
+}
+
+.cs-value {
+    font-size: var(--uih-font-title);
+    color: var(--txt);
+    font-variant-numeric: tabular-nums;
+}
+
+/* standalone / cs-row column: explicit width fills parent */
+.cs-bar {
+    width: 100%;
+    height: var(--uih-cs-bar-height);
+    background: var(--uih-white-12);
+    border-radius: var(--uih-cs-bar-radius);
+    overflow: visible;
+    position: relative;
+    cursor: pointer;
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* clr-row flex context: bar fills remaining inline space */
+.clr-row .cs-bar {
+    flex: 1;
+    width: auto;
+}
+
+.cs-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent);
+    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;
+    pointer-events: none;
+}
+
+.cs-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 4px,
+        rgba(255, 255, 255, 0.04) 4px,
+        rgba(255, 255, 255, 0.04) 5px
+    );
+    border-radius: var(--uih-cs-bar-radius);
+    pointer-events: none;
+}
+
+.cs-bar:focus-visible {
+    /* box-shadow 提供键盘焦点视觉指示，优先级高于全局 :focus-visible outline */
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.3),
+        0 0 0 2px var(--accent),
+        0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.cs-fill {
+    height: 100%;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 80%, transparent), var(--accent));
+    border-radius: var(--uih-cs-bar-radius);
+    transition: width 0.06s linear;
+    pointer-events: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.cs-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;
+}
+
+.cs-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: csShimmer 2s infinite;
+}
+
+.cs-thumb {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    transition: left 0.06s linear;
+}
+
+/* Slider dropdown panel (collapsed by default) */
+.mat-slider-panel {
+    margin-top: 6px;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--uih-white-06);
+}
+
+/* Batch category slider context */
+.mat-cat-slider .cs-row {
+    background: var(--uih-card-bg);
+}
+
+.mat-cat-slider .cs-row:hover {
+    background: var(--uih-card-hover);
+}
+
+/* Per-material slider context */
+.mat-mat-slider .cs-row {
+    background: var(--uih-white-04);
+    border: 1px solid var(--uih-white-06);
+}
+
+.mat-mat-slider .cs-row:hover {
+    background: var(--uih-card-hover);
+}
+
+/* ===== Color Picker ===== */
+.clr-block {
+    padding: 0 var(--uih-content-px) 10px;
+}
+
+.clr-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.clr-title {
+    font-size: var(--uih-font-title);
+    color: var(--txt);
+}
+
+.clr-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius:var(--radius-sm);
+    border: 1px solid var(--uih-white-08);
+    flex-shrink: 0;
+}
+
+.clr-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.clr-channel {
+    font-size: var(--uih-font-ui-sm);
+    font-weight: 600;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.clr-value {
+    font-size: var(--uih-font-ui-sm);
+    color: var(--txt);
+    width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== Vector3 Slider ===== */
+.vec3-block {
+    padding: 0 var(--uih-content-px) 10px;
+}
+
+.vec3-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.vec3-title {
+    font-size: var(--uih-font-title);
+    color: var(--txt);
+}
+
+.vec3-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.vec3-axis {
+    font-size: var(--uih-font-ui-sm);
+    font-weight: 600;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.vec3-value {
+    font-size: var(--uih-font-ui-sm);
+    color: var(--txt);
+    width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Shadow type selector */
+.type-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.type-label {
+    font-size: var(--uih-font-ui-sm);
+    color: var(--muted);
+    width: 60px;
+}
+
+
+/* 下拉选择框 */
+.setting-select {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius:var(--radius-md);
+    font-size:var(--fs-base);
+}
+
+.diag-model-chips .preset-chip {
+    font-size: var(--uih-font-ui-xs);
+    padding: 2px 8px;
+}
+`;
 
 // 顶层初始化包：happy-dom/vitest 等无 CSSStyleSheet 的环境 import 即崩，会连带所有 import 本库的模块测试失败。
 // 样式注入（installComponentsStyles）走 style 标签，不依赖 _sheet，失败仅影响 shadow 组件。

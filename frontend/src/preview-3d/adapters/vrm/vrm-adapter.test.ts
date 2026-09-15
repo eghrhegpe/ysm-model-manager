@@ -734,6 +734,32 @@ describe("VMD 动作加载与重定向（ADR-243）", () => {
     content.dispose();
   });
 
+  it("select 切换到 .vmd 动作 → 足 IK targets 跟随新 clip（live-action 反查，非索引脱钩）", async () => {
+    // 顺序：.vrma 先入列（footIK: null），.vmd 随后（footIK 含左足目标）
+    // 初始播放 clip0 = idle(vrma) → 无 IK 通道，apply 不被调用
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/idle.vrma", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+    expect(play?.clips.map((c) => c.label)).toEqual(["idle", "wave"]);
+
+    hoisted.footIKController.apply.mockClear();
+    content.update(0.016);
+    expect(hoisted.footIKController.apply).not.toHaveBeenCalled();
+
+    // 切到 wave（vmd 重定向，含左足 IK 目标）。
+    // 旧病灶（独立索引脱钩）：切后采样仍钉 clip0 的 footIK(null) ⇒ apply 不触发；
+    // 修复（live-action 反查）：采样源跟随实际播放的 clip ⇒ 左足目标命中
+    play?.select!(1);
+    content.update(0.016);
+
+    expect(hoisted.footIKController.apply).toHaveBeenCalledTimes(1);
+    const [, targets] = hoisted.footIKController.apply.mock.calls[0];
+    expect(targets.left).not.toBeNull();
+    expect(targets.right).toBeNull(); // 右足未出现在 VMD ⇒ 不猜
+    content.dispose();
+  });
+
   it("空态文案同时交代 .vrma 与 .vmd 两条路径（不再只认 .vrma）", async () => {
     const { content, play } = await buildWithMotion({ files: ["/vrm/test.vrm"] });
 
@@ -1444,7 +1470,10 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
       return Promise.resolve(null);
     });
     hoisted.listPathsMock.mockResolvedValue(["/vrm/t.vrm", "/vrm/a.vrma", "/vrm/b.vrma"]);
-    hoisted.createAnimClip.mockReturnValue(new THREE.AnimationClip("m", -1, []));
+    let clipN = 0;
+    hoisted.createAnimClip.mockImplementation(() =>
+      new THREE.AnimationClip("m" + clipN++, -1, []),
+    );
 
     let bridge: Record<string, (...a: unknown[]) => unknown> | null = null;
     const panels = makePanels();

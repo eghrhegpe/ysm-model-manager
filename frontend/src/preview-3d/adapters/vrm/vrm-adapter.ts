@@ -291,7 +291,6 @@ interface VrmMotionState {
   motionMixer: THREE.AnimationMixer | null;
   motionAction: THREE.AnimationAction | null;
   motionPlaying: boolean;
-  motionIdx: number;
 }
 interface VrmPerceptionState {
   perceptionState: PerceptionState;
@@ -483,9 +482,7 @@ async function loadMotionClips(
   let motionMixer: THREE.AnimationMixer | null = null;
   let motionAction: THREE.AnimationAction | null = null;
   const motionPlaying = true;
-  const motionIdx = 0;
-  if (!listAllFilePaths)
-    return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
+  if (!listAllFilePaths) return { motionClips, motionMixer, motionAction, motionPlaying };
   try {
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
@@ -512,7 +509,13 @@ async function loadMotionClips(
   } catch {
     /* 目录不可列 → 白模降级，不阻断模型渲染 */
   }
-  return { motionClips, motionMixer, motionAction, motionPlaying, motionIdx };
+  return { motionClips, motionMixer, motionAction, motionPlaying };
+}
+/** 取 action 实播的 clip。three r185 的 AnimationAction 公开 `.clip` getter 已移除，
+ * clip 存于私有 `_clip`（`mixer.clipAction(clip)` 内部即 `new AnimationAction(this, clip)`）。
+ * 用于「time 源与 target 源同一对象」的反查（review 64c24cf3e P1）。 */
+function motionClipOf(action: THREE.AnimationAction): THREE.AnimationClip {
+  return (action as unknown as { _clip: THREE.AnimationClip })._clip;
 }
 function setupCameraBounds(ctx: PreviewBuildCtx, vrm: VRM): void {
   // 侧上方取景（对齐 fbx/pack 口径，见 camera-setup.frameCameraSide）
@@ -644,13 +647,19 @@ function Stage4MenuPanels(
               motion.motionPlaying = !motion.motionPlaying;
               if (motion.motionAction) motion.motionAction.paused = !motion.motionPlaying;
             },
-            currentIndex: () => motion.motionIdx,
+            currentIndex: () => {
+              const cur = motion.motionAction;
+              if (!cur) return -1;
+              return motionClips.findIndex((c) => c.clip === motionClipOf(cur));
+            },
             select: (i: number) => {
-              if (i === motion.motionIdx || !motionMixer) return;
               if (i < 0 || i >= motionClips.length) return;
-              motion.motionIdx = i;
+              const cur = motion.motionAction;
+              if (cur && motionClips[i].clip === motionClipOf(cur)) return;
+              if (!motionMixer) return;
               motion.motionAction?.stop();
-              motion.motionAction = motionMixer.clipAction(motionClips[i].clip);
+              const newAction = motionMixer.clipAction(motionClips[i].clip);
+              motion.motionAction = newAction;
               motion.motionAction.play();
               motion.motionAction.paused = !motion.motionPlaying;
             },
@@ -733,10 +742,13 @@ function Stage5BuildResult(
       // VMD 足 IK：与上面的待机锚地以 animActive 互斥（待机走锚地、动画走 VMD 目标）。
       // 写在 vrm.update(dt) 之后——归一化骨的位姿是**单向烘回**原始骨的，IK 结论要落在
       // 原始骨上就必须晚于那一步（detail 见 vrm-foot-ik.ts 文件头）。
-      // 时间取 action.time 而非自行累加：暂停 / 切曲 / 循环 / 变速都自动对齐。
+      // 按 live action 的 clip 反查 targets（非独立维护的 index）——time 源与 target 源
+      // 同一对象，永不脱钩（review 64c24cf3e P1；three r185 公开 .clip getter 已移除，
+      // clip 存于 action._clip，经 motionClipOf 读取）。
       if (animActive && motion.motionAction) {
-        const current = motionClips[motion.motionIdx];
-        if (current?.footIK) vrmFootIK.apply(motion.motionAction.time, current.footIK);
+        const action = motion.motionAction;
+        const current = motionClips.find((c) => c.clip === motionClipOf(action));
+        if (current?.footIK) vrmFootIK.apply(action.time, current.footIK);
       }
       if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
         const mgr = exprMgr;

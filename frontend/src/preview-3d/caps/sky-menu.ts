@@ -36,11 +36,13 @@ function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
   return { id: "cap-node-sky-timeline", kind: "controls", controls: [timeline] };
 }
 
-/** 完整参数面板节点树：timeline controls 节点 + sky-time/sky-env 平铺原生
+/** 完整参数面板节点树：timeline controls 节点 + sky-env 平铺原生
  *  + 高级组 folder（cloud/sun-intensity/sun-disc/auto-rotate/godrays 全原生）。
- *  顶层：sky-enabled 能力总开关 → timeline → sky-time/sky-env 平铺 + 高级组 folder。
+ *  顶层：sky-enabled 能力总开关 → timeline → sky-env 平铺 + 高级组 folder。
  *  （sky 原被注释为「无能力总开关」——误将 sky-env 视作总开关；实则有
- *   isEnabled/setEnabled 真总开关，enabled 已被 saveState/loadState 持久化。） */
+ *   isEnabled/setEnabled 真总开关，enabled 已被 saveState/loadState 持久化。）
+ *  （「时间」slider 已删：与 timeline 同源同槽，timeline 自带 HH:MM 读数 + 拖动，
+ *   精度远高于原 0.5h 步进；同一参数不重复声明两条控件。） */
 export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
   const advanced: PreviewMenuNode[] = [
     {
@@ -109,19 +111,6 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
   return [
     skyEnabledNode(cap),
     skyTimelineControlsNode(cap),
-    {
-      id: "sky-time",
-      kind: "slider",
-      labelKey: "preview.timeOfDay",
-      control: {
-        min: 0,
-        max: 24,
-        step: 0.5,
-        unit: "h",
-        get: () => cap.getTimeOfDay(),
-        set: (v) => cap.setTime(v as number),
-      },
-    },
     {
       id: "sky-env",
       kind: "toggle",

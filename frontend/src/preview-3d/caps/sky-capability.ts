@@ -671,8 +671,8 @@ export class SkyCapability implements SceneCapability {
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
-  /** 完整参数面板节点树：sky-enabled 总开关 + timeline controls 节点 + sky-time/sky-env
-   *  平铺原生 + 高级组 folder。 */
+  /** 完整参数面板节点树：sky-enabled 总开关 + timeline controls 节点 + sky-env
+   *  平铺原生 + 高级组 folder（时间 slider 已删，见 sky-menu.ts 注释）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildSkyNodes(this);
   }

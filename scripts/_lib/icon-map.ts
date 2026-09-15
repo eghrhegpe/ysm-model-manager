@@ -131,6 +131,9 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   // success/error 的「状态」语义，不宜再指向「动作」语义，否则建议会串味。
   "☑️": "enableAll",
   "⛔": "disableAll",
+  // 「槽内容就是一个字形」→ 语义名（2026-09 收口；字形此前直接写进 textContent）
+  "➕": "add",
+  "←": "back",
   "🏠": "home",
   "🏆": "rank",
   "👤": "user",

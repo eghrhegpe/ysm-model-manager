@@ -531,10 +531,12 @@ describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
     const { pctEl, fillEl } = progressEls(sr);
     expect(pctEl!.textContent).toBe("99%");
     emit("queue:file-done", ["f.ysm", "fail", "磁盘已满"]); // 锁定 2s 窗口内 fail
-    expect(pctEl!.textContent).toBe("❌");
+    // 失败标记现为 UI_ICONS.error（SVG），断言"仍是错误图标"而非字形
+      expect(pctEl!.querySelector("svg")).not.toBeNull();
     expect(fillEl!.classList.contains("gh-progress-fill-error")).toBe(true);
     vi.advanceTimersByTime(2000); // _stuckTimer 已清，补写逻辑不再把 ❌ 改成 ⏳
-    expect(pctEl!.textContent).toBe("❌");
+    // 失败标记现为 UI_ICONS.error（SVG），断言"仍是错误图标"而非字形
+      expect(pctEl!.querySelector("svg")).not.toBeNull();
     ctrl.destroy();
   });
 

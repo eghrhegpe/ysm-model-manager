@@ -144,7 +144,8 @@ describe("createSlideMenu", () => {
     const backBtn = h.root.querySelector(".slide-back")!;
     expect(title.textContent).toBe("子菜单");
     expect(h.list.textContent).toBe("sub-row");
-    expect(backBtn.textContent).toBe("←");
+    // 子级返回：2026-09 起为 UI_ICONS.back（SVG），不再是字面 glyph
+    expect(backBtn.querySelector("svg")).not.toBeNull();
     expect((backBtn as HTMLElement).title).toBe("返回");
   });
 
@@ -383,12 +384,12 @@ describe("createSlideMenu", () => {
 
     h.navigate(v2);
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("二级");
-    expect(h.root.querySelector(".slide-back")!.textContent).toBe("←");
+    expect(h.root.querySelector(".slide-back")!.querySelector("svg")).not.toBeNull();
     expect(h.isAtRoot()).toBe(false);
 
     h.navigate(v3);
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("三级");
-    expect(h.root.querySelector(".slide-back")!.textContent).toBe("←");
+    expect(h.root.querySelector(".slide-back")!.querySelector("svg")).not.toBeNull();
 
     h.back();
     expect(h.root.querySelector(".slide-title")!.textContent).toBe("二级");

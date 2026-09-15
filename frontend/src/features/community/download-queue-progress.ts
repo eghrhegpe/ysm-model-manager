@@ -4,6 +4,7 @@
 // 职责：进度条渲染 + 小文件 300ms 强制 100% / 大文件 2s 转菊花 / file-done 强制复位 /
 // 3s completeTimer 收口互斥（与队列结束双路收口防重复）。
 import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type DownloadState, isActiveStatus, resetProgress } from "./download-queue-store.ts";
 
 // ===== 进度条守卫时序常量 =====
@@ -256,7 +257,7 @@ function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string 
   } else if (done.status === "fail") {
     const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
     if (pctEl) {
-      pctEl.textContent = "❌";
+      pctEl.innerHTML = UI_ICONS.error;
       pctEl.classList.add("gh-progress-error");
       pctEl.title = done.errMsg || t("downloadQueue.hint.failed");
     }

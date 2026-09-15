@@ -91,7 +91,7 @@ function cmDqDlBtn(ctx: CmDqCtx): HTMLButtonElement | null {
 function cmDqSetStatusLine(qs: HTMLElement, text: string): void {
   const icon = document.createElement("span");
   icon.className = "gh-queue-icon";
-  icon.textContent = "⬇️";
+  icon.innerHTML = UI_ICONS.download;
   qs.replaceChildren(icon, document.createTextNode(` ${text}`));
 }
 
@@ -137,7 +137,7 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
     row.className = "gh-progress-row";
     const icon = document.createElement("span");
     icon.className = "gh-queue-icon";
-    icon.textContent = "⬇️";
+    icon.innerHTML = UI_ICONS.download;
     const name = document.createElement("span");
     name.className = "gh-progress-name";
     name.innerHTML = renderDisplayName(s.currentFile);

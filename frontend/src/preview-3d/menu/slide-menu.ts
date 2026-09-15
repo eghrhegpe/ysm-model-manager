@@ -5,7 +5,7 @@
 // 分派产物（MenuNode schema 声明式：folder 折叠组 / row 行动态行 / cap 栈控件）。
 //
 // 解耦要点：
-//  - 关闭按钮用 **SVG 图标**（`UI_ICONS.close`，ADR-238 §1.4：结构槽图标位走 SVG；
+//  - 关闭/返回按钮均用 **SVG 图标**（`UI_ICONS.close` / `UI_ICONS.back`，ADR-238 §1.4：结构槽图标位走 SVG；
 //    原为字面量 glyph "✕"——那条注释的理由「不依赖 iconify 运行时」基于过时前提，
 //    UI_ICONS 是内联 SVG 字符串，本就不需要任何运行时）；
 //    子级返回仍用字面 glyph `←` —— 图标库暂无「返回」语义名，按 §1.4 记债而**不硬塞**
@@ -241,7 +241,7 @@ function smRenderTop(
   if (atRoot) {
     backBtn.innerHTML = UI_ICONS.close;
   } else {
-    backBtn.textContent = "←";
+    backBtn.innerHTML = UI_ICONS.back;
   }
   backBtn.title = atRoot ? t("common.close") : t("common.back");
   top.render(list);

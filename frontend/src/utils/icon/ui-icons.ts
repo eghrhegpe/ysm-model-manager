@@ -121,6 +121,11 @@ export const UI_ICONS = {
   disableAll: svg(
     '<circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
   ),
+  // 新增/追加（`➕` 的语义名）——按钮整个内容是一个加号，属图标位
+  add: svg('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
+  // 返回（`←` 的语义名）——补齐自 ADR-238 §1.4 记下的债：此前 slide-menu 子级用字面 glyph，
+  // 因「图标库缺『返回』语义名」而按纪律**不硬塞**（拿 pointerLeft 冒充会腐蚀 D2 语义命名）。
+  back: svg('<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'),
 
   // ── 内容/分类语义 ──
   folder: svg(

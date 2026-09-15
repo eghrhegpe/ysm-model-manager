@@ -16,6 +16,10 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   --uih-slide-header-pad-y: 6px;
   --uih-slide-header-pad-x: 8px;
   --uih-slide-list-pad: 6px 8px;
+  /* 内容卡背景：色值统一自外壳 rgba(20,20,30) 系（原 15,15,22 双源漂移），
+     透明度 0.92 → 0.55 让外壳 blur(16px) 的场景透出——透景口径与 34 行注释一致；
+     可读性由 blur 深底 + 白色文字保证。 */
+  --uih-slide-card-bg: rgba(20, 20, 30, 0.55);
 }
 
 /* 定位容器：底部居中（替代原 .ysm-3d-popup 的定位职责；卡片视觉交给 .menu-wrapper） */
@@ -71,7 +75,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   flex-direction: column;
   gap: 2px;
   padding: var(--uih-slide-list-pad);
-  background: rgba(15, 15, 22, 0.92);
+  background: var(--uih-slide-card-bg);
   border-radius:var(--radius-xl);
 }
 

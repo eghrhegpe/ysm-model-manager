@@ -3,7 +3,7 @@
 // 原树组件私有实现，已全局化供各视图复用。
 // 与 toast（全局重反馈）/ modal（模态槽位）并列，属轻量层。
 // 样式约定：.flash 基础高亮；非 success 色系追加 .flash--warn / .flash--error 修饰符，
-// 颜色由消费方组件样式用 --status-* 变量实现（如 app-tree 内 .hdr-btn.flash / .fl.flash）。
+// 颜色由消费方组件样式用 --status-* 变量实现（如 app-tree 内 .btn-base.flash / .fl.flash）。
 
 /** 默认闪烁时长（ms） */
 export const FLASH_DURATION_MS = 400;

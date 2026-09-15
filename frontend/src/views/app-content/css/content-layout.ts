@@ -64,10 +64,6 @@ ${focusVisibleCSS}
    桥置于 layout 叶（内容基础层），聚合层 content-css.ts 被哨兵测试锁为 7 叶纯拼接。 */
 ${noAnimationsCSS}
 
-/* ===== 旧按钮兼容层 ===== */
-/* .hdr-btn 已删除：app-tree/app-tree-styles.ts 有独立定义且 tpl 已改用 .btn-base（见其 L41 注释），content-layout 内为死代码 */
-/* .btn 裸类兼容层已删除：设置页 3 处遗留（web-repo-auth-btn / set-advanced-toggle / stg-adv-reset）均已迁移至 .btn-base，统一按钮系统见 utils/dom/css.ts */
-
 /* ===== 通用卡片系统（元老页原型 → 全项目复用） ===== */
 /* ring-fill 动画已废弃，health-ring 改用 breathe-subtle */
 

@@ -31,15 +31,7 @@ ${btnBaseCSS}
 /* P2 修复：内联 focusVisibleCSS——Shadow DOM 内通用 :focus-visible 焦点环，
    覆盖 srch-inp/sort-sel 等显式 outline:none 的输入控件（键盘聚焦可见性，a11y） */
 ${focusVisibleCSS}
-/* ===== 旧按钮兼容层 ===== */
-.hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
-.hdr-btn:hover { background:var(--hover); }
-.hdr-btn.accent { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
-/* 主题特判收口：warm 主题 --accent 即 #8b4513（冗余行已删）；pro 主题浅色文字走 --txt */
-:host-context(.theme-pro) .hdr-btn.accent { color: var(--txt); }
-.hdr-btn.accent:hover { background: color-mix(in srgb, var(--accent) 33%, transparent); }
-/* flash 反馈样式（feedback.ts 全局原语）：.hdr-btn 已无实际元素（tpl 用 btn-base），
-   实际使用点为 .dd-item（sel-all 全选）/ .btn-base（btn-view-mode 视图切换） */
+/* flash 反馈样式（feedback.ts 全局原语）：实际使用点为 .dd-item（sel-all 全选）/ .btn-base（btn-view-mode 视图切换） */
 .dd-item.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .btn-base.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .dd-wrap { position:relative;display:inline-block; }
@@ -147,15 +139,12 @@ ${focusVisibleCSS}
 .ftr { padding: 8px 12px; border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
 .ftr .stat { font-size: var(--fs-sm); color: var(--muted); margin-right: auto; }
 .type-bar { padding:2px 12px;gap:4px;display:flex;align-items:center;border-bottom:1px solid var(--bd); }
-/* 行入场动画 — 暂时移除，排查滚动闪烁 */
-/* @keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } } */
-/* .fl,.fh { animation: treeRowIn .2s ease forwards; } */
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
 
 /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
-   取代原逐类 :host-context(.no-animations) .fl/.fh（treeRowIn 已注释移除，本域仍有多处
+   取代原逐类 :host-context(.no-animations) .fl/.fh（本域仍有多处
    transition，且通配桥覆盖未来新增动效——无需再逐类登记）。 */
 ${noAnimationsCSS}
 `;

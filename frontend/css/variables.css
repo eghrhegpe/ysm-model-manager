@@ -21,7 +21,7 @@
  * - 颜色变量：--bg, --surf, --card, --accent, --txt, --muted, --bd
  * - 状态变量：--status-success, --status-error, --size-ok, --size-large
  * - 元数据变量：--meta-author, --meta-work, --meta-date
- * - 布局变量：--sidebar-width, --preview-width, --r (圆角)
+ * - 布局变量：--sidebar-width, --preview-width
  * - 字体变量：--fs-*, --fw-*, --font-*
  * - 间距变量：--space-*, --pad-*
  * - 按钮变量：--btn-radius, --btn-padding-*, --btn-transition
@@ -58,12 +58,6 @@
   --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
   /* R5 治理：原硬编码 UI 颜色上提到主题变量（颜色即数据/算法色豁免见 check-redlines.mjs） */
   --uih-slide-divider: rgba(255, 255, 255, 0.1);
-  /* 2026-09-03 刀②收编：原 rgba(124,131,255,0.25) 硬编码紫 → color-mix 派生自 --accent，
-     使 mmd 形态高亮随主题切换（原值为死 token 无消费方，保留派生值防未来消费踩坑） */
-  --mmd-morph-active-bg: color-mix(in srgb, var(--accent) 25%, transparent);
-  --clr-ch-r: #f66;
-  --clr-ch-g: #6f6;
-  --clr-ch-b: #66f;
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */
@@ -219,10 +213,8 @@
   --card-gap: 6px;
   --sm-optional: #f9a826;
   /* 间距变量 — 按钮/tab padding-V 使用，随字号缩放 */
-  --space-xs: calc(3px + var(--fs-scale) * 0.25);
   --space-sm: calc(4px + var(--fs-scale) * 0.35);
   --space-md: calc(5px + var(--fs-scale) * 0.42);
-  --space-lg: calc(6px + var(--fs-scale) * 0.5);
 
   /* 语义化字号 — 按 UI 角色命名，随 --fs-scale 缩放 */
   --fs-nav: calc(13px + var(--fs-scale)); /* 导航主标签（repo-tab）*/
@@ -238,7 +230,6 @@
 
   /* 语义化垂直间距 — 按 UI 角色，随字号比例缩放 */
   --pad-nav: calc(6px + var(--fs-scale) * 0.5);
-  --pad-tab: calc(5px + var(--fs-scale) * 0.42);
   --pad-filter: calc(4px + var(--fs-scale) * 0.35);
   --pad-btn-primary: calc(5px + var(--fs-scale) * 0.42);
   --pad-btn-secondary: calc(4px + var(--fs-scale) * 0.35);
@@ -254,7 +245,6 @@
   /* ===== 过渡时长系统 ===== */
   --tr-fast: 0.12s ease;      /* 按钮 hover、微交互 */
   --tr-normal: 0.15s ease;    /* 面板展开、卡片过渡 */
-  --tr-slow: 0.2s ease;       /* 页面切换、内容淡入 */
   --tr-enter: 0.25s ease-out; /* 入场动画 */
 
   /* ===== 阴影层级系统 ===== */
@@ -272,9 +262,6 @@
   --radius-pill: 20px; /* 药丸形徽章 */
 
   /* ===== Z-Index 层级系统 ===== */
-  --z-dropdown: 100;        /* 下拉菜单、弹出框 */
-  --z-sticky: 200;          /* 吸顶元素 */
-  --z-modal-backdrop: 900;  /* 模态框背景 */
   --z-modal: 1000;          /* 模态框内容 */
   --z-popover: 1100;        /* Popover、Tooltip */
   --z-toast: 1200;          /* Toast 通知 */

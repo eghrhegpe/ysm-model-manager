@@ -204,7 +204,8 @@ export const ENV_STATE_SCHEMA = {
   // 注意：schema 键 = cap LightParams 扁平化（key/fill/rim 各含
   // enabled/color/intensity/azimuth/elevation；spotlight/volumetric 各自参数集）。
   // 颜色统一 number(hex)，与 cap 内部一致（勿用 tuple3）。
-  // enabled(能力级) + currentPreset/manualPreset/volumetricEngine 运行时态不入 schema。
+  // enabled(能力级) + currentPreset/manualPreset 运行时态不入 schema。
+  // [ADR-246 D1] 原 volumetricEngine 运行时态随 postprocess 空壳引擎一并移除。
   lightKeyEnabled: { type: "boolean", default: true, group: "light" },
   lightKeyColor: { type: "number", default: 0xffffff, group: "light" },
   lightKeyIntensity: { type: "number", default: 1.2, group: "light" },
@@ -235,12 +236,8 @@ export const ENV_STATE_SCHEMA = {
   lightVolumetricEdgeFade: { type: "number", default: 0.4, group: "light" },
   lightVolumetricBaseStrength: { type: "number", default: 0.9, group: "light" },
   lightVolumetricTipStrength: { type: "number", default: 0.25, group: "light" },
-  lightVolumetricEngine: {
-    type: "enum",
-    values: ["cone", "postprocess"] as const,
-    default: "cone",
-    group: "light",
-  },
+  // [ADR-246 D1] lightVolumetricEngine 已删除——postprocess 引擎为空壳（无任何体积光 pass），
+  // 「cone/postprocess 切换」维度整体移除，回归单引擎。
 } as const satisfies Record<string, _AnyFieldDef>;
 
 export type EnvStateSchema = typeof ENV_STATE_SCHEMA;

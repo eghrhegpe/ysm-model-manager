@@ -298,7 +298,6 @@ vi.mock("@/preview-3d/caps/light-capability.ts", () => ({
     applyModelPreset = vi.fn(); // code_review 13b8b4e5f #1/#2：setPreset 已改名 applyModelPreset
     setTarget = vi.fn();
     setTargetHeight = vi.fn();
-    getVolumetricEngine = vi.fn(() => "none");
     getParams = vi.fn(() => ({ volumetric: { enabled: false } }));
     constructor() {}
   },

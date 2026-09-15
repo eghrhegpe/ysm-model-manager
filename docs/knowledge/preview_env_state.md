@@ -131,7 +131,8 @@ invariant_anchors:
 ## 不变量
 
 - 只经 `setEnvState` 写 envState，不直接改对象字段（否则不派发）。
-- 能力级 enabled 不入 schema；运行时态（customHdrTex/currentPreset/manualPreset/volumetricEngine）留 cap 私有。
+- 能力级 enabled 不入 schema；运行时态（customHdrTex/currentPreset/manualPreset）留 cap 私有。
+  （原 `volumetricEngine` 运行时态已随 ADR-246 D1 删除——postprocess 空壳引擎移除。）
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。
 - MODEL_DEFAULTS 缺口（已决断收口）：postprocessing 的 `applyPostProcDefaults` 仍读自家 `POSTPROC_PRESETS`（postprocessing-state.ts），未改读 MODEL_DEFAULTS——第 7 张表未删。**收口理由（2026-09-07）**：该表只额外携带 `enabled` 一个键（per-type 门禁），而 `enabled` 属**能力级 enabled**（ADR-196 红线：不入 schema，留 cap 私有 this.enabled），故按专属数据源保留为**正确决策**而非遗漏，风险封存不复现。MODEL_DEFAULTS 内的 postproc 参数键（ppBloomStrength 等）与它不重叠。

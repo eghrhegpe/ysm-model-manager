@@ -28,8 +28,9 @@ function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?
   });
 }
 
-/** 往返 helper：saveState 后新实例 loadState（cone 引擎 + spotlight 开启），
- *  返回恢复后的实例与 params。ON/OFF 两方向共用，消除测试结构重复（jscpd）。 */
+/** 往返 helper：saveState 后新实例 loadState（spotlight 开启），
+ *  返回恢复后的实例与 params。ON/OFF 两方向共用，消除测试结构重复（jscpd）。
+ *  [ADR-246 D1] 原「cone 引擎」维度已随 postprocess 空壳一并删除。 */
 function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
   cap2: LightCapability;
   p: ReturnType<LightCapability["getParams"]>;
@@ -38,7 +39,6 @@ function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
   cap.applyModelPreset("mmd", { manual: true });
   cap.setSpotlight({ enabled: true });
   cap.setVolumetric({ enabled: opts.volumetricEnabled });
-  expect(cap.getVolumetricEngine()).toBe("cone"); // 默认引擎
   cap.saveState();
   const cap2 = newCap();
   cap2.loadState();
@@ -316,13 +316,83 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
     expect(childIds).toContain("light-fill");
     expect(childIds).toContain("light-rim");
     expect(childIds).toContain("light-ambient");
-    expect(childIds).toContain("light-spotlight");
-    expect(childIds).toContain("light-volumetric");
-    expect(childIds).toContain("light-engine");
-    expect(childIds).toContain("light-cone-angle");
     expect(childIds).toContain("light-preset");
+    // [ADR-246 D3] 聚光灯 + 体积光收进同一可折叠卡（不再平铺、不做输入隐藏）
+    expect(childIds).toContain("cap-group-spot-vol");
     // folder labelKey 对应原 group
     expect(folder.labelKey).toBe("preview.lightGroupParams");
+  });
+});
+
+// [ADR-246 D3] 聚光灯与体积光折叠卡：控件树契约（不做 visibleWhen 隐藏，只折叠）
+describe("LightCapability — 聚光灯与体积光折叠卡", () => {
+  beforeEach(() => resetEnvState());
+
+  function spotVolCard(cap: LightCapability): PreviewMenuNode {
+    const folder = cap.getMenuNodes()[2]!;
+    const card = folder.children!.find((c: PreviewMenuNode) => c.id === "cap-group-spot-vol");
+    expect(card).toBeDefined();
+    return card!;
+  }
+
+  it("是 collapsible card，含聚光灯 + 体积光全量控件；体积光参数不做 visibleWhen 隐藏", () => {
+    const cap = newCap();
+    const card = spotVolCard(cap);
+    expect(card.kind).toBe("card");
+    expect(card.collapsible).toBe(true);
+    expect(card.labelKey).toBe("preview.spotlightVolume");
+    expect(card.children!.map((c) => c.id)).toEqual([
+      "light-spotlight",
+      "light-cone-angle",
+      "light-volumetric",
+      "light-volumetric-density",
+      "light-volumetric-falloff",
+      "light-volumetric-edge-fade",
+      "light-volumetric-ratio",
+    ]);
+    // [用户裁定] 不做条件显隐：所有子节点无 visibleWhen，参数不因开关状态消失
+    for (const child of card.children!) {
+      expect(child.visibleWhen).toBeUndefined();
+    }
+  });
+
+  it("三个语义滑块读写映射到 opacity / fogPower / edgeFade", () => {
+    const cap = newCap();
+    const card = spotVolCard(cap);
+    const by = (id: string) => card.children!.find((c) => c.id === id)!;
+    by("light-volumetric-density").control!.set!(0.8);
+    expect(cap.getParams().volumetric.opacity).toBe(0.8);
+    by("light-volumetric-falloff").control!.set!(2.4);
+    expect(cap.getParams().volumetric.fogPower).toBe(2.4);
+    by("light-volumetric-edge-fade").control!.set!(0.6);
+    expect(cap.getParams().volumetric.edgeFade).toBe(0.6);
+    // getter 回读一致
+    expect(by("light-volumetric-density").control!.get!(undefined)).toBe(0.8);
+    expect(by("light-volumetric-falloff").control!.get!(undefined)).toBe(2.4);
+    expect(by("light-volumetric-edge-fade").control!.get!(undefined)).toBe(0.6);
+  });
+
+  it("上下亮度比滑块：读 tip/base 比值，写按 base 派生 tip", () => {
+    const cap = newCap();
+    const card = spotVolCard(cap);
+    const ratio = card.children!.find((c) => c.id === "light-volumetric-ratio")!;
+    const p0 = cap.getParams().volumetric;
+    // 默认 base 0.9 / tip 0.25 → ratio ≈ 0.2778
+    expect(ratio.control!.get!(undefined)).toBeCloseTo(p0.tipStrength / p0.baseStrength, 5);
+    ratio.control!.set!(0.5);
+    const p1 = cap.getParams().volumetric;
+    expect(p1.tipStrength).toBeCloseTo(p1.baseStrength * 0.5, 5);
+    expect(p1.baseStrength).toBeCloseTo(p0.baseStrength, 5); // base 不被比值滑块改写
+    expect(ratio.control!.get!(undefined)).toBeCloseTo(0.5, 5);
+  });
+
+  it("baseStrength=0 时比值读取不产生 NaN/Infinity（除零守卫）", () => {
+    const cap = newCap();
+    cap.setVolumetric({ baseStrength: 0 });
+    const card = spotVolCard(cap);
+    const ratio = card.children!.find((c) => c.id === "light-volumetric-ratio")!;
+    const v = ratio.control!.get!(undefined) as number;
+    expect(Number.isFinite(v)).toBe(true);
   });
 });
 
@@ -336,7 +406,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(cap.getMenuNodes().map((n) => n.id)).toContain("light-enabled");
   });
 
-  it("完整树 = light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）", () => {
+  it("完整树 = light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（4 控件 + 折叠卡）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(3);
@@ -351,19 +421,16 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(nodes[1]!.id).toBe("light-key");
     nodes[1]!.control!.set!(false);
     expect(cap.getParams().key.enabled).toBe(false);
-    // 参数组 folder
+    // 参数组 folder：预设 + 三点布光平铺 + 聚光灯/体积光折叠卡
     const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
+      "light-preset",
       "light-fill",
       "light-rim",
       "light-ambient",
-      "light-spotlight",
-      "light-volumetric",
-      "light-engine",
-      "light-cone-angle",
-      "light-preset",
+      "cap-group-spot-vol",
     ]);
   });
 
@@ -388,42 +455,8 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   });
 });
 
-describe("LightCapability — setVolumetricEngine", () => {
-  beforeEach(() => resetEnvState());
-
-  it("cone 模式默认", () => {
-    const cap = newCap();
-    expect(cap.getVolumetricEngine()).toBe("cone");
-  });
-
-  it("切换 postprocess：锥组移除", () => {
-    const scene = new THREE.Scene();
-    const cap = new LightCapability({
-      scene, renderer: makeFakeRenderer(),
-    });
-    cap.setSpotlight({ enabled: true });
-    cap.setVolumetric({ enabled: true });
-    cap.apply();
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    cap.setVolumetricEngine("postprocess");
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
-    expect(cap.getVolumetricEngine()).toBe("postprocess");
-  });
-
-  it("postprocess 切回 cone：锥组重新挂载", () => {
-    const scene = new THREE.Scene();
-    const cap = new LightCapability({
-      scene, renderer: makeFakeRenderer(),
-    });
-    cap.setSpotlight({ enabled: true });
-    cap.setVolumetric({ enabled: true });
-    cap.apply();
-    cap.setVolumetricEngine("postprocess");
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
-    cap.setVolumetricEngine("cone");
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-  });
-});
+// [ADR-246 D1] 原 setVolumetricEngine 描述块整体删除——postprocess 空壳引擎已移除，
+// 「cone/postprocess 切换」维度不复存在（含 3 条为绕开引擎恢复副作用而写的回归用例）。
 
 describe("LightCapability — setParams 合并更新", () => {
   beforeEach(() => resetEnvState());
@@ -492,30 +525,21 @@ describe("LightCapability — 持久化", () => {
     expect(cap2.getCurrentPreset()).toBe("mmd");
   });
 
-  it("saveState/loadState 往返：volumetric=false + cone 引擎 + spotlight 开启 → 体积光不被引擎恢复重新打开（审核修复回归）", () => {
+  it("saveState/loadState 往返：volumetric=false + spotlight 开启 → 体积光保持关闭（不被重新打开）", () => {
     const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: false });
-    // 修复前：loadState 步骤④ setVolumetricEngine("cone") 因 spotlight 开启而强制
-    // volumetric.enabled=true 并重建挂载光锥——用户保存的「体积光关」跨会话丢失。
-    // 修复后：cone 引擎走无副作用字段恢复，用户保存值存活。
+    // [ADR-246 D1] 原「引擎恢复强制开启体积光」的坑随 postprocess 空壳一并消除；
+    // 本用例保留为「用户关闭意图跨会话存活」的契约锁。
     expect(p.spotlight.enabled).toBe(true);
     expect(p.volumetric.enabled).toBe(false);
-    expect(cap2.getVolumetricEngine()).toBe("cone");
-    // 锥组不因引擎恢复被挂载（spotlight 开启但 volumetric 关闭 → 无光锥；
-    // cap2 从未构建锥组，场景中不应出现锥组——code review P2 修复：
-    // 原断言检查 coneGroup 字段，重构后该字段已删，可选链恒 undefined 成空洞断言）
+    // 锥组不因任何恢复路径被挂载（spotlight 开启但 volumetric 关闭 → 无光锥）
     const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
     expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
-  it("saveState/loadState 往返：volumetric=true + cone 引擎 + spotlight 开启 → 锥组重建并挂载（复核 P1 回归）", () => {
+  it("saveState/loadState 往返：volumetric=true + spotlight 开启 → 锥组重建并挂载", () => {
     const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: true });
-    // 复核修复前：cone 分支改纯字段赋值后，loadState 无任何路径重建锥组——保存
-    // volumetric=true 的会话重载后锥组静默消失（coneGroup 恒 null、syncConeMount
-    // 只处理已挂载、setSpotlight 因 coneGroup null 短路）。
-    // 复核修复后：cone 分支按恢复后的 params 重建+挂载锥组（不强制翻转开关）。
     expect(p.spotlight.enabled).toBe(true);
     expect(p.volumetric.enabled).toBe(true);
-    expect(cap2.getVolumetricEngine()).toBe("cone");
     const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
     expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
   });
@@ -526,14 +550,13 @@ describe("LightCapability — 持久化", () => {
     expect(cap.getParams().ambient.intensity).toBe(0.5);
   });
 
-  it("loadState 非法 volumetricEngine 跳过；仅 currentPreset 时走自动恢复", () => {
+  it("loadState 老存档残留 volumetricEngine 字段被忽略（ADR-246 D1 惰性数据）", () => {
     localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
-      volumetricEngine: "warp", currentPreset: "vrm",
+      volumetricEngine: "postprocess", currentPreset: "vrm",
     }));
     const cap = newCap();
-    cap.loadState();
-    expect(cap.getVolumetricEngine()).toBe("cone"); // 非法值跳过
-    expect(cap.getCurrentPreset()).toBe("vrm"); // 自动恢复
+    expect(() => cap.loadState()).not.toThrow();
+    expect(cap.getCurrentPreset()).toBe("vrm"); // 预设仍自动恢复
   });
 
   it("loadState manualPreset 存在时按手动恢复并压制后续自动预设", () => {
@@ -679,14 +702,17 @@ describe("LightCapability — 菜单控件联动", () => {
     expect(by("light-rim").control!.get!(undefined)).toBe(false);
     by("light-ambient").control!.set!(1.2);
     expect(by("light-ambient").control!.get!(undefined)).toBe(1.2);
-    by("light-spotlight").control!.set!(true);
-    expect(by("light-spotlight").control!.get!(undefined)).toBe(true);
-    by("light-volumetric").control!.set!(true);
-    expect(by("light-volumetric").control!.get!(undefined)).toBe(true);
-    by("light-cone-angle").control!.set!(45);
-    expect(by("light-cone-angle").control!.get!(undefined)).toBe(45);
     by("light-preset").control!.set!("vrm");
     expect(by("light-preset").control!.get!(undefined)).toBe("vrm");
+    // [ADR-246 D3] 聚光灯/体积光控件下沉折叠卡
+    const card = by("cap-group-spot-vol");
+    const inCard = (id: string) => card.children!.find((c: PreviewMenuNode) => c.id === id)!;
+    inCard("light-spotlight").control!.set!(true);
+    expect(inCard("light-spotlight").control!.get!(undefined)).toBe(true);
+    inCard("light-volumetric").control!.set!(true);
+    expect(inCard("light-volumetric").control!.get!(undefined)).toBe(true);
+    inCard("light-cone-angle").control!.set!(45);
+    expect(inCard("light-cone-angle").control!.get!(undefined)).toBe(45);
   });
 
   it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
@@ -697,6 +723,42 @@ describe("LightCapability — 菜单控件联动", () => {
     expect(cap.getCurrentPreset()).toBe("ysm");
     cap.applyModelPreset("mmd"); // 自动入口被手动压制
     expect(cap.getCurrentPreset()).toBe("ysm");
+  });
+});
+
+// [ADR-246 D3] 聚光灯可视化：SpotLightHelper 线框（空间参照，消灭盲拖调参）
+describe("LightCapability — 聚光灯 helper 线框", () => {
+  beforeEach(() => resetEnvState());
+
+  it("apply 后场景中存在聚光灯 helper，且随聚光灯开关显隐", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    const helper = scene.getObjectByName("ysm-light-spot-helper");
+    expect(helper).toBeDefined();
+    // 聚光灯默认关 → helper 不可见
+    expect(helper!.visible).toBe(false);
+    cap.setSpotlight({ enabled: true });
+    expect(scene.getObjectByName("ysm-light-spot-helper")!.visible).toBe(true);
+    cap.setSpotlight({ enabled: false });
+    expect(scene.getObjectByName("ysm-light-spot-helper")!.visible).toBe(false);
+  });
+
+  it("setEnabled(false) 卸载时 helper 一并移除场景", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeDefined();
+    cap.setEnabled(false);
+    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeUndefined();
+  });
+
+  it("dispose 释放 helper（不泄漏）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(() => cap.dispose()).not.toThrow();
+    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeUndefined();
   });
 });
 

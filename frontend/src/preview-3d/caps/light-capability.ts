@@ -1,20 +1,21 @@
 // ===== LightCapability — 3D 预览个人灯光系统（ADR-177 编排器）=====
-// 递进第一步（ADR-081 L1）：聚光灯 + 体积光锥。后续可平滑升级 post-process 体积光管线。
+// 递进第一步（ADR-081 L1）：聚光灯 + 体积光锥。
+// [ADR-246 D1] postprocess 空壳引擎已删除——原「双引擎切换」抽象从未有任何体积光 pass 落地，
+// 只带来「选了就关掉体积光」的欺骗性控件与 3 条绕 bug 回归用例；现回归单引擎（cone）。
 //
 // 职责拆分（ADR-177，2026-09-04）：
 //   - 灯光对象管理（key/fill/rim/ambient/spotlight + 阴影协作）保留本类（核心职责①）
 //   - 体积光锥体② → light-cone.ts（VolumetricCone）
 //   - 预设数据③ → light-presets.ts（经 export * 重导出，外部 import 零改动）
 //   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-presets.ts（P3 下沉：纯映射样板，不触 cap 状态）
-//   - 菜单 UI 定义④ → light-controls.ts（getLightMenuControls）
+//   - 菜单 UI 定义④ → light-controls.ts（buildLightNodes）
 //   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
 //
 // 设计要点（对齐 SkyCapability / GroundCapability 的能力模式）：
 //   - 默认经典三点布光（key/fill/rim DirectionalLight）+ AmbientLight
-//   - Spotlight 从对象正上方打下（聚光灯），cone + penumbra 可调
+//   - Spotlight 从对象正上方打下（聚光灯），cone + penumbra 可调 + SpotLightHelper 线框可视（ADR-246 D3）
 //   - 体积光锥：两交叉 PlaneGeometry + Cone 遮罩 shader（轻量，无 post-process 管线）
 //   - 按模型类别预设（对齐 SkyCapability.setPreset 模式）
-//   - 预留 setVolumetricEngine("cone" | "postprocess") 枚举，后续升级不动对外 API
 //   - 本类不持有 backend 引用，纯 Three.js 侧逻辑
 //   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
 //   - ADR-196 刀2：参数真值源从 this.params 迁到 envState 单例
@@ -199,8 +200,8 @@ export class LightCapability implements SceneCapability {
   // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
   private cone: VolumetricCone;
 
-  // 体积光锥引擎（运行时态，不入 envState）
-  private volumetricEngine: "cone" | "postprocess" = "cone";
+  // [ADR-246 D3] 聚光灯线框 helper（空间参照：锥角/朝向/位置一眼可见）
+  private spotHelper: THREE.SpotLightHelper;
 
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
   private currentPreset: ModelType = "default";
@@ -253,6 +254,12 @@ export class LightCapability implements SceneCapability {
     // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
     this.cone = new VolumetricCone(this.scene);
     this.cone.rebuild(this.targetHeight, sp, readVolParams(), this.spotlight.position);
+
+    // [ADR-246 D3] 聚光灯线框 helper：空间参照（调锥角时看得见锥在哪）。
+    // 初始按 envState 的聚光灯开关定显隐；apply() 时挂场景，detach() 时移除。
+    this.spotHelper = new THREE.SpotLightHelper(this.spotlight);
+    this.spotHelper.name = "ysm-light-spot-helper";
+    this.spotHelper.visible = envState.lightSpotEnabled;
 
     // ADR-196：订阅 envState 变更 → 分派到 Three 应用（只接收 light 组的键）
     this.unsubscribeEnv = registerEnvCallback(
@@ -350,6 +357,10 @@ export class LightCapability implements SceneCapability {
     if (!this.rimLight.target.parent) this.scene.add(this.rimLight.target);
     if (this.spotlightTarget && !this.spotlightTarget.parent) this.scene.add(this.spotlightTarget);
     if (!this.spotlight.parent) this.scene.add(this.spotlight);
+    // [ADR-246 D3] helper 与聚光灯同生命周期挂场景
+    if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
+    this.spotHelper.visible = envState.lightSpotEnabled;
+    this.spotHelper.update();
     if (envState.lightVolumetricEnabled && envState.lightSpotEnabled && this.cone.hasGroup()) {
       if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
     }
@@ -372,6 +383,8 @@ export class LightCapability implements SceneCapability {
     if (this.cone.hasGroup()) {
       this.cone.syncPosition(this.spotlight.position);
     }
+    // [ADR-246 D3] 聚光灯移位后线框同步（否则 helper 停在旧位置误导）
+    this.spotHelper.update();
   }
 
   getTarget(): THREE.Vector3 {
@@ -401,6 +414,8 @@ export class LightCapability implements SceneCapability {
       this.spotlight.position,
     );
     if (wasMounted && this.cone.hasGroup()) this.cone.attach(this.spotlight.position);
+    // [ADR-246 D3] 高度变化 → 聚光灯移位 → 线框同步
+    this.spotHelper.update();
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
@@ -478,22 +493,19 @@ export class LightCapability implements SceneCapability {
     // callback 处理 uniforms + 挂载态
   }
 
-  /** 切换体积光锥引擎（预留：当前仅 "cone"） */
-  setVolumetricEngine(engine: "cone" | "postprocess"): void {
-    this.volumetricEngine = engine;
-    if (engine === "postprocess") {
-      // postprocess 模式暂不渲染体积光锥，同步关闭 volumetric.enabled 避免 toggle 状态矛盾
-      setEnvState({ lightVolumetricEnabled: false }, { source: "manual" });
-      // callback 处理 detach
-    } else if (engine === "cone" && envState.lightSpotEnabled) {
-      // 切回 cone：重新启用 volumetric 并重建锥组
-      setEnvState({ lightVolumetricEnabled: true }, { source: "manual" });
-      // callback 处理 rebuild + attach
-    }
+  /** [ADR-246 D2] 上下亮度比（tip/base）读取——菜单「上下亮度比」滑块的 getter。
+   *  base 为 0 时比值无意义，返回 0（除零守卫，防 NaN/Infinity 漏进 UI）。 */
+  getVolumetricTipRatio(): number {
+    const { baseStrength, tipStrength } = readVolParams();
+    if (baseStrength <= 0) return 0;
+    return tipStrength / baseStrength;
   }
 
-  getVolumetricEngine(): "cone" | "postprocess" {
-    return this.volumetricEngine;
+  /** [ADR-246 D2] 按 base 派生 tip（比值写入路径）——base 不变，tip = base × ratio。
+   *  base 为 0 时派生结果恒 0，直接沿用比值语义不写脏值。 */
+  setVolumetricTipRatio(ratio: number): void {
+    const { baseStrength } = readVolParams();
+    this.setVolumetric({ tipStrength: baseStrength * ratio });
   }
 
   /** 合并式参数更新（只覆盖给定字段，经 envState） */
@@ -531,7 +543,6 @@ export class LightCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       ...buildLightPersistPayload(),
-      volumetricEngine: this.volumetricEngine,
       currentPreset: this.currentPreset,
       manualPreset: this.manualPreset,
     });
@@ -542,7 +553,7 @@ export class LightCapability implements SceneCapability {
     const state = restoreState(this.id);
     if (!state) return;
     if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    // ① 预设先套用（内含 rebuildCone / 锥组挂载判定）。必须在灯开关恢复之前：
+    // ① 预设先套用（内含锥组挂载判定）。必须在灯开关恢复之前：
     //    预设以 envState 为准，后恢复的开关才会生效。
     if (typeof state.manualPreset === "string") {
       // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）；存储串经 toModelType
@@ -557,23 +568,23 @@ export class LightCapability implements SceneCapability {
     restoreLightParams(state);
     // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步
     this.syncConeMount();
-    // ④ 引擎最后恢复
-    if (state.volumetricEngine === "postprocess") {
-      this.setVolumetricEngine("postprocess");
-    } else if (state.volumetricEngine === "cone") {
-      this.volumetricEngine = "cone";
-      if (envState.lightVolumetricEnabled && envState.lightSpotEnabled) {
-        this.cone.rebuild(
-          this.targetHeight,
-          readSpotParams(),
-          readVolParams(),
-          this.spotlight.position,
-        );
-        if (this.cone.hasGroup() && !this.cone.isMounted()) {
-          this.cone.attach(this.spotlight.position);
-        }
+    // ④ 锥组按恢复后的 params 重建 + 挂载（[ADR-246 D1] 原「引擎恢复」步骤删除——
+    //    单引擎后无引擎维度；此处只按用户保存的 volumetric/spotlight 双开态决定，
+    //    不强制翻转任何开关）。
+    if (envState.lightVolumetricEnabled && envState.lightSpotEnabled) {
+      this.cone.rebuild(
+        this.targetHeight,
+        readSpotParams(),
+        readVolParams(),
+        this.spotlight.position,
+      );
+      if (this.cone.hasGroup() && !this.cone.isMounted()) {
+        this.cone.attach(this.spotlight.position);
       }
     }
+    // ⑤ helper 显隐随恢复后的聚光灯开关
+    this.spotHelper.visible = envState.lightSpotEnabled;
+    this.spotHelper.update();
   }
 
   /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
@@ -594,6 +605,10 @@ export class LightCapability implements SceneCapability {
     this.spotlight.penumbra = state.lightSpotPenumbra;
     this.spotlight.decay = state.lightSpotDecay;
     this.spotlight.visible = state.lightSpotEnabled;
+    // [ADR-246 D3] helper 跟随聚光灯开关显隐（关灯即收起线框，不残留误导性参照）；
+    // 参数（angle/penumbra/distance）变化后必须 update() 才反映到线框几何。
+    this.spotHelper.visible = state.lightSpotEnabled;
+    this.spotHelper.update();
   }
 
   private detach(): void {
@@ -607,6 +622,7 @@ export class LightCapability implements SceneCapability {
       this.rimLight?.target ?? null,
       this.spotlight,
       this.spotlightTarget,
+      this.spotHelper,
     ]
       .filter((o): o is THREE.Object3D => o !== null && o !== undefined)
       .forEach((o) => {
@@ -619,6 +635,7 @@ export class LightCapability implements SceneCapability {
     this.unsubscribeEnv();
     this.detach();
     this.cone.dispose();
+    this.spotHelper.dispose();
     this.keyLight.dispose();
     this.fillLight.dispose();
     this.rimLight.dispose();

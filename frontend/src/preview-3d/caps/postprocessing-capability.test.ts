@@ -47,10 +47,10 @@ function makeFakeRenderer() {
   } as unknown as THREE.WebGLRenderer;
 }
 
-/** stub LightCapability：供 render() 的 volumetric 联动查询 */
-function stubLightCap(opts: { engine?: "cone" | "postprocess"; volEnabled?: boolean; opacity?: number } = {}) {
+/** stub LightCapability：供 render() 的 volumetric 联动查询。
+ *  [ADR-246 D1] 原 engine 维度已删——postprocess 空壳引擎移除后无需再 stub getVolumetricEngine。 */
+function stubLightCap(opts: { volEnabled?: boolean; opacity?: number } = {}) {
   return {
-    getVolumetricEngine: () => opts.engine ?? "cone",
     getParams: () => ({ volumetric: { enabled: opts.volEnabled ?? false, opacity: opts.opacity ?? 0.45 } }),
   } as unknown as LightCapability;
 }
@@ -531,7 +531,10 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     (cap as unknown as { bloomPass: unknown }).bloomPass = bp;
     return bp;
   }
-  const lightCap = (opacity: number) => ({ getParams: () => ({ volumetric: { opacity } }) }) as unknown as SceneCapability;
+  // [ADR-246 D1] 联动门禁为 volumetric.enabled：体积光关闭时不联动（gain=0），
+  // 开启时按 opacity 做 ±20% 微调——消除「体积光关着、bloom 却按浓度联动」的矛盾。
+  const lightCap = (opacity: number, enabled = true) =>
+    ({ getParams: () => ({ volumetric: { enabled, opacity } }) }) as unknown as SceneCapability;
 
   it("默认体积光（opacity 0.45）：threshold/strength 落在用户设置 ±20% 内，radius 保持用户设置", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
@@ -542,6 +545,14 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.strength).toBeGreaterThanOrEqual(0.6);
     expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2);
     expect(bp.radius).toBe(0.5); // radius 不再被 edgeFade 劫持
+  });
+
+  it("体积光关闭时不联动：threshold/strength 取用户设置原值（ADR-246 D1）", () => {
+    const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
+    const bp = mockBloomPass(cap);
+    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0, false));
+    expect(bp.threshold).toBe(0.6);
+    expect(bp.strength).toBe(0.6);
   });
 
   it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold ≥ -20%", () => {
@@ -814,13 +825,13 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(renderSpy).toHaveBeenCalled();
   });
 
-  it("needComposer：disabled 但 lightCap 走 postprocess 体积光引擎 → 仍需 composer", () => {
+  it("needComposer：disabled 时不再因体积光强制建 composer（ADR-246 D1 死逻辑已删）", () => {
     const { cap } = newRealCap();
     const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    const rendered = cap.render(0.016, stubLightCap({ engine: "postprocess", volEnabled: true }));
-    expect(rendered).toBe(true);
-    expect(internalsOf(cap).composer).not.toBeNull();
-    expect(renderSpy).toHaveBeenCalled();
+    const rendered = cap.render(0.016, stubLightCap({ volEnabled: true }));
+    expect(rendered).toBe(false);
+    expect(internalsOf(cap).composer).toBeNull();
+    expect(renderSpy).not.toHaveBeenCalled();
   });
 
   it("setSize 同步 composer 与 bloom/SSR 分辨率；setPixelRatio 透传", () => {

@@ -2,6 +2,11 @@
 // 经 `import type` 取 LightCapability（仅类型，不引入运行时环），全部调用其公开 API。
 // [ADR-195 刀3] 删旧 getLightMenuControls + lcBuild*（旧控件工厂）；
 // 仅保留 buildLightNodes 直产 PreviewMenuNode[]（cap.getMenuNodes 用）。
+//
+// [ADR-246] 三项菜单层收敛：
+//   D1 删「锥引擎」下拉（postprocess 空壳引擎已移除，控件本就只会关掉体积光）
+//   D2 体积光 5 参数收编为 3 个语义滑块 + 1 个上下亮度比（base/tip 不再各自暴露）
+//   D3 聚光灯与体积光合并进同一可折叠卡（用户裁定：不做 visibleWhen 隐藏，只折叠）
 
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
@@ -9,10 +14,6 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { LightCapability } from "./light-capability.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
-const LIGHT_ENGINE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "cone", label: "锥形" },
-  { value: "postprocess", label: "后处理" },
-];
 const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "default", label: "默认" },
   { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
@@ -25,6 +26,7 @@ const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string }> = [
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
 const LIGHT_PARAMS_GROUP = "preview.lightGroupParams";
+const SPOT_VOL_CARD = "cap-group-spot-vol";
 
 /** 灯光能力总开关 toggle（首行；读 isEnabled/setEnabled——setEnabled(false) 移除场景全部灯）。
  *  真值源/持久化与 shadow-enabled / pp-enabled 同构；light 面板直达平铺，不升 getMasterNodeId。 */
@@ -40,10 +42,9 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
   };
 }
 
-/** 完整参数面板节点树：light-enabled 能力总开关（首行）+ light-key 平铺 toggle + 参数组 folder（8 控件）。
- *  light-key 是主灯 params 开关（单盏主灯），非能力总开关——总开关是首行 light-enabled。 */
-export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
-  const children: PreviewMenuNode[] = [
+/** 三点布光 + ambient 节点（与聚光灯/体积光分卡，保持「基础光照」与「戏剧光」语义分离） */
+function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
+  return [
     {
       id: "light-fill",
       kind: "toggle",
@@ -74,58 +75,111 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
         set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
       },
     },
-    {
-      id: "light-spotlight",
-      kind: "toggle",
-      labelKey: "preview.spotlight",
-      control: {
-        get: () => cap.getParams().spotlight.enabled,
-        set: (v) => cap.setSpotlight({ enabled: v as boolean }),
-      },
-    },
-    {
-      id: "light-volumetric",
-      kind: "toggle",
-      labelKey: "preview.volumetric",
-      control: {
-        get: () => cap.getParams().volumetric.enabled,
-        set: (v) => cap.setVolumetric({ enabled: v as boolean }),
-      },
-    },
-    {
-      id: "light-engine",
-      kind: "select",
-      labelKey: "preview.volumetricEngine",
-      control: {
-        options: LIGHT_ENGINE_OPTIONS,
-        get: () => cap.getVolumetricEngine(),
-        set: (v) => cap.setVolumetricEngine(v as "cone" | "postprocess"),
-      },
-    },
-    {
-      id: "light-cone-angle",
-      kind: "slider",
-      labelKey: "preview.coneAngle",
-      control: {
-        min: 10,
-        max: 60,
-        step: 1,
-        unit: "°",
-        get: () => cap.getParams().spotlight.angle,
-        set: (v) => cap.setSpotlight({ angle: v as number }),
-      },
-    },
-    {
-      id: "light-preset",
-      kind: "select",
-      labelKey: "preview.lightPreset",
-      control: {
-        options: LIGHT_PRESET_OPTIONS,
-        get: () => cap.getCurrentPreset(),
-        set: (v) => cap.applyModelPreset(toModelType(v as string), { manual: true }),
-      },
-    },
   ];
+}
+
+/** [ADR-246 D3] 聚光灯与体积光折叠卡：两者是同一光学事件的「光源」与「可见化」，同卡呈现即传达依赖。
+ *  体积光是聚光灯锥体的可见化——故聚光灯未开时体积光无效果（物理设定，非缺陷）；
+ *  用户在卡内一眼可同时开关两者，不靠隐藏控件去「解释」依赖。 */
+function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
+  return {
+    id: SPOT_VOL_CARD,
+    kind: "card",
+    collapsible: true,
+    labelKey: "preview.spotlightVolume",
+    children: [
+      {
+        id: "light-spotlight",
+        kind: "toggle",
+        labelKey: "preview.spotlight",
+        hintKey: "preview.spotlightHint",
+        control: {
+          get: () => cap.getParams().spotlight.enabled,
+          set: (v) => cap.setSpotlight({ enabled: v as boolean }),
+        },
+      },
+      {
+        id: "light-cone-angle",
+        kind: "slider",
+        labelKey: "preview.coneAngle",
+        control: {
+          min: 10,
+          max: 60,
+          step: 1,
+          unit: "°",
+          get: () => cap.getParams().spotlight.angle,
+          set: (v) => cap.setSpotlight({ angle: v as number }),
+        },
+      },
+      {
+        id: "light-volumetric",
+        kind: "toggle",
+        labelKey: "preview.volumetric",
+        hintKey: "preview.volumetricHint",
+        control: {
+          get: () => cap.getParams().volumetric.enabled,
+          set: (v) => cap.setVolumetric({ enabled: v as boolean }),
+        },
+      },
+      // [ADR-246 D2] 三个语义滑块：覆盖「多浓 / 衰减多快 / 边缘多软」
+      {
+        id: "light-volumetric-density",
+        kind: "slider",
+        labelKey: "preview.volumetricDensity",
+        control: {
+          min: 0,
+          max: 1,
+          step: 0.05,
+          get: () => cap.getParams().volumetric.opacity,
+          set: (v) => cap.setVolumetric({ opacity: v as number }),
+        },
+      },
+      {
+        id: "light-volumetric-falloff",
+        kind: "slider",
+        labelKey: "preview.volumetricFalloff",
+        control: {
+          min: 0.5,
+          max: 3,
+          step: 0.1,
+          get: () => cap.getParams().volumetric.fogPower,
+          set: (v) => cap.setVolumetric({ fogPower: v as number }),
+        },
+      },
+      {
+        id: "light-volumetric-edge-fade",
+        kind: "slider",
+        labelKey: "preview.volumetricEdgeFade",
+        control: {
+          min: 0,
+          max: 1,
+          step: 0.05,
+          get: () => cap.getParams().volumetric.edgeFade,
+          set: (v) => cap.setVolumetric({ edgeFade: v as number }),
+        },
+      },
+      // [ADR-246 D2] base/tip 合并为单一「上下亮度比」——原两参数是 shader 的 mix() 两端
+      // （实现细节），对用户不是可理解的概念
+      {
+        id: "light-volumetric-ratio",
+        kind: "slider",
+        labelKey: "preview.volumetricTipRatio",
+        control: {
+          min: 0,
+          max: 1,
+          step: 0.05,
+          get: () => cap.getVolumetricTipRatio(),
+          set: (v) => cap.setVolumetricTipRatio(v as number),
+        },
+      },
+    ],
+  };
+}
+
+/** 完整参数面板节点树：light-enabled 能力总开关（首行）+ light-key 平铺 toggle
+ *  + 参数组 folder（预设 + 三点布光 + 聚光灯/体积光折叠卡）。
+ *  light-key 是主灯 params 开关（单盏主灯），非能力总开关——总开关是首行 light-enabled。 */
+export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
   return [
     lightEnabledNode(cap),
     {
@@ -141,7 +195,20 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       id: "cap-group-light-params",
       kind: "folder",
       labelKey: LIGHT_PARAMS_GROUP,
-      children,
+      children: [
+        {
+          id: "light-preset",
+          kind: "select",
+          labelKey: "preview.lightPreset",
+          control: {
+            options: LIGHT_PRESET_OPTIONS,
+            get: () => cap.getCurrentPreset(),
+            set: (v) => cap.applyModelPreset(toModelType(v as string), { manual: true }),
+          },
+        },
+        ...baseLightingNodes(cap),
+        spotVolCardNode(cap),
+      ],
     },
   ];
 }

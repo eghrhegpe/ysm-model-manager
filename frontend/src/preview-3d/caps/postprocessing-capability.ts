@@ -210,11 +210,12 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   private needComposer(lightCap: LightCapability | null): boolean {
     if (this.enabled) return true;
-    const useVolumetric =
-      lightCap &&
-      lightCap.getVolumetricEngine() === "postprocess" &&
-      lightCap.getParams().volumetric.enabled;
-    return !!useVolumetric;
+    // [ADR-246 D1] 原 volumetric 分支已删除：它要求 engine === "postprocess" &&
+    // volumetric.enabled，而写入 postprocess 的同时该 enabled 已被强制置 false —— 条件恒不成立，
+    // 是一段永不生效的死逻辑（postprocess 引擎本身也从未有任何体积光 pass）。
+    // 体积光现由 cone 引擎（Geometry+Shader）独立渲染，不需要 composer。
+    void lightCap;
+    return false;
   }
 
   private createComposerBase(): EffectComposer {
@@ -359,12 +360,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (!envState.ppBloomEnabled) return;
     if (envState.ppBloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
+      // [ADR-246 D1] 联动门禁收紧为 volumetric.enabled——原实现无条件读 opacity 联动，
+      // 而 postprocess 模式下该 enabled 被 setVolumetricEngine 强制置 false，
+      // 「体积光关着、bloom 却按体积光浓度联动」语义自相矛盾。现只在体积光真正启用时联动。
+      const gain = vol.enabled ? vol.opacity : 0;
       // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
       // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
-      this.bloomPass.threshold = envState.ppBloomThreshold * (1 - 0.2 * vol.opacity);
-      this.bloomPass.strength = envState.ppBloomStrength * (1 + 0.2 * vol.opacity);
+      this.bloomPass.threshold = envState.ppBloomThreshold * (1 - 0.2 * gain);
+      this.bloomPass.strength = envState.ppBloomStrength * (1 + 0.2 * gain);
       this.bloomPass.radius = envState.ppBloomRadius;
     } else {
       this.bloomPass.threshold = envState.ppBloomThreshold;

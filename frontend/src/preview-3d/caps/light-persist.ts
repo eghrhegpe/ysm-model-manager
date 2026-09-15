@@ -1,8 +1,9 @@
 // ===== LightCapability 持久化数据层（锐评 §三 下沉：职责⑤的纯数据面）=====
 // 从 light-capability.ts 抽离：saveState 的参数映射 + loadState 的开关/参数恢复块。
 // 均为「envState ↔ localStorage 嵌套结构」的纯数据映射，不触达 cap 私有字段
-//（私有态：enabled/volumetricEngine/currentPreset/manualPreset 仍由主类 saveState/loadState
-// 编排；顺序敏感段——预设先套用→开关恢复→syncConeMount→引擎恢复——留在主类）。
+//（私有态：enabled/currentPreset/manualPreset 仍由主类 saveState/loadState
+// 编排；顺序敏感段——预设先套用→开关恢复→syncConeMount→锥组重建——留在主类）。
+// [ADR-246 D1] 原 volumetricEngine 维度已删（postprocess 空壳引擎移除）。
 // 对齐 light-presets.ts（参数面）/ light-controls.ts（菜单面）的拆分先例。
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

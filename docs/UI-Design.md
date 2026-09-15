@@ -131,7 +131,7 @@
 | `--fs-filter`        | 11px（基准缩放） | `.sm-status-tab` 筛选标签       |
 | `--fs-btn-primary`   | 12px（基准缩放） | `.hdr-btn` `.btn` 主要按钮      |
 | `--fs-btn-secondary` | 11px（基准缩放） | `.sm-item-btn` 次要/行内按钮    |
-| `--fs-btn-tool`      | 10px（基准缩放） | `.repo-bar-btn` 工具栏按钮      |
+| `--fs-btn-tool`      | 11px（基准缩放） | `.repo-bar-btn` `.btn-base.sm` 工具栏按钮 |
 
 ### 语义化间距变量（按 UI 角色）
 

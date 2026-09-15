@@ -91,7 +91,7 @@ export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
   "--fs-filter": 11,
   "--fs-btn-primary": 12,
   "--fs-btn-secondary": 11,
-  "--fs-btn-tool": 10,
+  "--fs-btn-tool": 11,
   // 圆角
   "--radius-xs": 3,
   "--radius-sm": 4,

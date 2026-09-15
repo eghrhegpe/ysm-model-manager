@@ -226,7 +226,7 @@
   --fs-btn-secondary: calc(
     11px + var(--fs-scale)
   ); /* 次要/行内按钮（sm-item-btn）*/
-  --fs-btn-tool: calc(10px + var(--fs-scale)); /* 工具栏小按钮（repo-bar-btn）*/
+  --fs-btn-tool: calc(11px + var(--fs-scale)); /* 工具栏小按钮（repo-bar-btn, btn-base.sm）；2026-09 从 10px→11px（对齐 3d 菜单基调） */
 
   /* 语义化垂直间距 — 按 UI 角色，随字号比例缩放 */
   --pad-nav: calc(6px + var(--fs-scale) * 0.5);

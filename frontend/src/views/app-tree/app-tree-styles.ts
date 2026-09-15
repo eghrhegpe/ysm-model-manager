@@ -38,7 +38,7 @@ ${focusVisibleCSS}
 .dd-wrap:hover .dd-menu { display:block; }
 .dd-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);display:none;min-width:130px;max-height:220px;overflow-y:auto; }
 .dd-menu.show { display:block; }
-.dd-item { display:block;width:100%;padding:4px 10px;border:none;background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm); }
+.dd-item { display:block;width:100%;padding:4px 10px;border:none;background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-secondary);text-align:left;border-radius:var(--radius-sm); }
 .dd-item:hover { background:var(--hover); }
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding: 3px; min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }

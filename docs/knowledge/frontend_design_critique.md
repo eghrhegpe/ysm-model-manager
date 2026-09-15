@@ -411,11 +411,36 @@ invariant_anchors:
     顺带纠正 `slide-menu.ts` 的一条**过时理由**：原注释称用字面 glyph 是「不依赖 iconify 运行时」——
     `UI_ICONS` 是内联 SVG 字符串，本就不需要任何运行时；iconify 是上游 MikuMikuAR 外壳的另一条通道。
   - **留债**（按 §1.4「缺语义名不硬塞」）：
-    ① `fab.ts` 的 5 个 CSS `content:` glyph 图标（`📷 ⟲ ✕ ◀ ▶`）——它是一套**自成一体的局部图标系统**
-    （`.preview-ic--*` + 白名单 + `textContent` 防 XSS），只迁 `close` 会留下「1 SVG + 4 glyph」的半态，
-    故整批迁移，且需先补 `camera` / `panelHide` / `panelShow` 三个语义图标；
+    ① `fab.ts` 的 CSS `content:` glyph 图标（`📷 ⟲ ✕ ◀ ▶`）——它是一套**自成一体的局部图标系统**
+    （`.preview-ic--*` + 白名单 + `textContent` 防 XSS）。**后经核实其消费者 `createIconButton` 无生产
+    调用方**（仅测试引用），故整块迁/删是独立决策，不是「换图标」；
     ② `←` 返回——无「返回」语义名，需新增 `back`；
     ③ `render.ts` 的 `'← '` 在**文本标签**里（§1.4 文本槽豁免，允许保留）。
+  - **刀㉕-续：3D 菜单表 emoji 图标迁移**（2026-09，用户「继续」）：
+    勘察发现**真正的 emoji 图标面不是 fab 那套 CSS 字形，而是菜单数据表里的 `icon` 字段**——
+    `preview-3d` 全域实测 35 处、23 个唯一字形、**0 处已是 SVG**。它们长期逃逸 emoji 闸，因为闸的
+    口径是「标签内容起始处」（`>😀` / `' + 😀`），而这里是**数据字面量** → 两者都不是。于是
+    「emoji 债 = 1」与「3D 菜单满屏 emoji 图标」可以同时为真，**债在账外**。这与令牌闸的
+    「预筛关键词陈旧致整类静默失明」是同一种病：**闸只看得见它被写死的那一种位置**。
+    - **既有约定本就存在**：`utils/icon/resolve.ts|resolveIcon` 头部明写「菜单项 icon 字段填
+      **语义名**（UI_ICONS / ICON_KIT 的 key）」，工具栏下拉（ADR-239）与右键菜单（ADR-245）
+      均已按此迁完——3D 菜单表是最后一块。故本次**不新造机制，只是补上落位函数与迁移**。
+    - **第 1 期已迁**：`menu/defs.ts` 的坞站组与 core 菜单项 → 语义名（复用 `model`/`globe`/
+      `settings`/`character`/`video`/`hint`/`sparkle`，新增 `controls`(调参滑块) / `motion`(动作) /
+      `fog`(雾) 三个语义图标 + `icon-map.ts` 对应字形映射，双向对拍 104↔104）。
+    - **渲染层关键取舍**：新增 `utils/icon/resolve.ts|applyIcon(el, icon)` 作为**迁移期统一入口**
+      ——命中语义名走 `innerHTML` 落位 SVG，未命中回落 `textContent` 写字形文本。
+      **兜底分支不可省**：`resolveIcon` 对未知名返回 `""`，若渲染层不判命中就塞 `innerHTML`，
+      未迁的表其 emoji 图标会**整片消失**（比继续显示 emoji 更糟）。全表迁完后方可删兜底。
+    - **测试**：新增 `menu/defs.test.ts` 三块契约（每个 icon 是已知语义名 / 渲染为 SVG /
+      回归锁「不得再出现 emoji 与符号字形」）——把口径钉在**数据层**，比逐处渲染断言更早拦住回潮；
+      `core.test.ts` 另补 DOM 层断言（dock 按钮内 `svg` 存在且 textContent 为空）。
+    - **剩余期次**：`menu/env.ts` 天空/天气预设族、三个适配器的菜单表；全部迁完后删 `applyIcon`
+      兜底分支，并**扩展 emoji 闸口径覆盖 `icon:` 字段位置**（否则债继续隐形——但按用户偏好，
+      该口径扩展与迁移同批做，不单留基线）。
+    - **踩坑记录**：`check-redlines` 的 R8 扫描器**不剥注释**——文档注释里写「innerHTML + 空格等号
+      + 空格 + 函数调用」的字面形态会被当违规行拦下（且带反引号时「含反引号」豁免项反而失效）。
+      引用被禁模式时须改描述式措辞，不要写出可被正则命中的字面形态。
 
 
 ## 相关

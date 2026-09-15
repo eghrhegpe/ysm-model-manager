@@ -32,6 +32,7 @@ import {
   findStyleAttrViolations,
   fixLineTokens,
   isCommentLine,
+  isRealtimeFeedbackTransition,
   parseTokenMap,
   suggestToken,
   TOKEN_PX_BASELINE,
@@ -520,6 +521,49 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const bespoke = ".x { box-shadow: 0 4px 12px rgba(0,0,0,.3); }";
   assert.equal(fixLineTokens(bespoke, tokens).text, bespoke, "非令牌阴影不得被改写");
   console.log("  ✓ box-shadow --fix: 值等价替换 + 幂等 + 非令牌不碰");
+}
+
+// ── 14. 实时反馈（跟手）过渡不适用令牌（UI-Design.md §7 例外条款）──
+{
+  // 为什么补：滑块跟手 `.cs-fill { transition: width 0.06s linear }` /
+  // `.cs-thumb { transition: left 0.06s linear }` 语义是**跟手**而非缓动。判定层原
+  // 按「时长撞令牌」机械匹配，这类会长期挂在基线里当「永远不会修的债」，或更糟——
+  // 被人「顺手修好」套上 --tr-fast，让拖拽从跟手退化为迟钝。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // ① 规则本身：三条准入（跟手属性 + linear + <0.1s）
+  for (const v of ["width 0.06s linear", "left 0.06s linear", "height .05s linear", "top 60ms linear"]) {
+    assert.equal(isRealtimeFeedbackTransition(v), true, `应判为实时反馈：${v}`);
+  }
+  // 反向：任一条不满足即**不**豁免（防规则过宽变成变相白名单）
+  for (const v of [
+    "width 0.06s ease", // ② 缓动非 linear → 跟手会滞后于指针
+    "width 0.2s linear", // ③ 时长 >= 0.1s → 属常规过渡
+    "width 0.12s linear", // ③ 且撞 --tr-fast 时长，更该报
+    "opacity 0.06s linear", // ① 非跟手属性（淡入淡出该套令牌）
+    "background 0.06s linear", // ① 非跟手属性
+  ]) {
+    assert.equal(isRealtimeFeedbackTransition(v), false, `不应豁免：${v}`);
+  }
+
+  // ② 报告层：豁免生效——跟手过渡不再产出 css-transition
+  assert.equal(
+    findStyleAttrViolations(".cs-fill { transition: width 0.06s linear; }", 1, tokens).length,
+    0,
+    "滑块跟手不应报（0.06s 本无对应令牌，正是会被长期挂账的那类）",
+  );
+  // ③ 对照：同样短、但非跟手语义的过渡**照报**（证明豁免是规则而非全局放水）
+  assert.equal(
+    findStyleAttrViolations(".x { transition: background 0.12s linear; }", 1, tokens)[0]?.suggestion,
+    "--tr-fast",
+    "非跟手属性且撞令牌时长 → 仍应报并给建议",
+  );
+  // ④ 跟手属性但缓动被改成 ease（即「被顺手修坏」的形态）→ 必须报，守住退化
+  assert.ok(
+    findStyleAttrViolations(".cs-fill { transition: width 0.12s ease; }", 1, tokens).length > 0,
+    "跟手属性套了令牌时长/缓动 → 应报（防跟手被静默改成缓动）",
+  );
+  console.log("  ✓ 实时反馈过渡: 跟手豁免（属性+linear+<0.1s 三条），非跟手仍报");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

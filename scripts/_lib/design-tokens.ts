@@ -138,6 +138,23 @@ export const TRANSITION_TOKEN_DURATIONS: Readonly<Record<string, number>> = {
 };
 
 /**
+ * `--tr-*` 令牌的**完整简写值**（时长 + 缓动），供「整值等价替换」判定。
+ *
+ * 与 `TRANSITION_TOKEN_DURATIONS` 分工：
+ *   - 前者供**报告**（时长撞车即提示，即使缓动不同也让作者知道有此令牌可对齐）；
+ *   - 本表供 **--fix**（整值替换，必须时长与缓动**双双**一致才动，否则会改语义）。
+ *
+ * 为什么必须分两档（实测教训）：`transform .25s ease` 与 `--tr-enter`（`0.25s ease-out`）
+ * 时长相同但缓动不同——若只看时长就自动替换，会把「平滑 ease」偷偷变成「减速 ease-out」，
+ * 属**静默改变动效观感**。这类必须留给人工判断（是要对齐令牌，还是令牌该加一档）。
+ */
+export const TRANSITION_TOKEN_VALUES: Readonly<Record<string, { dur: number; ease: string }>> = {
+  "--tr-fast": { dur: 0.12, ease: "ease" },
+  "--tr-normal": { dur: 0.15, ease: "ease" },
+  "--tr-enter": { dur: 0.25, ease: "ease-out" },
+};
+
+/**
  * 从 variables.css 文本解析 `--name: value;` 声明。
  *
  * 只做**朴素声明扫描**（不实现完整 CSS 解析器）：匹配行内的 `--x: y;`。
@@ -249,6 +266,115 @@ export function suggestTransitionToken(
 }
 
 /**
+ * 「实时反馈」类过渡的属性白名单——这些属性上的短时长 + `linear` **不适用令牌体系**。
+ *
+ * 为什么需要（实测教训）：滑块跟手（`.cs-fill { transition: width 0.06s linear }`、
+ * `.cs-thumb { transition: left 0.06s linear }`）语义是**跟手**而非**缓动**——它跟随
+ * pointermove 的实时位置，每帧都在重设目标值。这类过渡若套 `--tr-fast`（0.12s）会
+ * 叠加进拖拽回路，观感从「跟手」退化为「拖泥带水」。
+ *
+ * 因此本仓 `docs/UI-Design.md` §7 明确把「拖拽跟手 / 进度条填充」列为**不违规例外**。
+ * 本表是该例外在判定层的唯一表达，**不是豁免清单**：它描述的是「这类过渡不适用令牌」
+ * 这一条**规则**，而非「这几个文件不要报」——后者会与 baseline 形成双真相源并漂移。
+ *
+ * 准入三条（须同时满足，见 `isRealtimeFeedbackTransition`）：
+ *   ① 属性属于跟手类（几何位移/尺寸：width/height/left/top/right/bottom/transform 的位移分量）；
+ *   ② 缓动为 `linear`（跟手必须线性；缓动函数会让位置滞后于指针）；
+ *   ③ 时长 < 0.1s（足够短以致不被感知为「动画」，纯为消除抖动）。
+ */
+export const REALTIME_FEEDBACK_PROPS: ReadonlySet<string> = new Set([
+  "width",
+  "height",
+  "left",
+  "top",
+  "right",
+  "bottom",
+]);
+
+/** 实时反馈类过渡的时长上限（秒）——达到或超过即视为常规过渡，须套令牌。 */
+export const REALTIME_FEEDBACK_MAX_SECS = 0.1;
+
+/**
+ * 判定一条 transition 是否属「实时反馈」（跟手）——是则**不适用令牌**，报告层应放过。
+ *
+ * 与 `suggestTransitionToken` 的关系：后者按「时长是否撞令牌」机械匹配，会把它当成
+ * 「无对应令牌的硬编码时长」；本函数在报告层**先于**令牌匹配生效，识别出跟手语义后
+ * 直接排除，避免规则把一条正确的写法长期挂在基线里当「永远不会修的债」。
+ *
+ * 只处理**单属性**值（`width 0.06s linear`）；多属性值返回 false（交由既有逻辑报告）。
+ *
+ * @param value transition 属性值（如 `width 0.06s linear`）
+ */
+export function isRealtimeFeedbackTransition(value: string): boolean {
+  const v = value.trim();
+  if (!v || v.includes(",")) return false;
+  const m = /^([a-z-]+)\s+(\d*\.?\d+)(s|ms)\s*(.*)$/i.exec(v);
+  if (!m) return false;
+  const prop = (m[1] ?? "").toLowerCase();
+  if (!REALTIME_FEEDBACK_PROPS.has(prop)) return false;
+  const rawNum = Number(m[2]);
+  const secs = m[3] === "ms" ? rawNum / 1000 : rawNum;
+  if (!(secs < REALTIME_FEEDBACK_MAX_SECS)) return false; // 须严格短于上限
+  const ease = (m[4] ?? "").trim().toLowerCase();
+  return ease === "linear"; // 跟手必须线性
+}
+
+/** 缓动关键字白名单（用于区分「缓动缺省」与「显式写了别的缓动」）。 */
+const EASE_KEYWORDS = new Set([
+  "ease",
+  "ease-in",
+  "ease-out",
+  "ease-in-out",
+  "linear",
+  "step-start",
+  "step-end",
+]);
+
+/**
+ * transition 值 → **可整值替换**的令牌名（时长与缓动双双一致才返回，否则 null）。
+ *
+ * 与 `suggestTransitionToken`（只比时长，供报告）严格区分：本函数是 **--fix 的准入闸**。
+ *
+ * 三条安全前提（缺一不可，均为「不改语义」服务）：
+ *   ① **单属性单时长**：值形如 `<prop> <dur> [<ease>]`。多属性值
+ *      （`background .12s, color .12s`）**一律不整值替换**——用 `var(--tr-fast)` 覆盖
+ *      会把两个属性塌缩成一个，语义直接丢失。这类由报告层提示、人工逐条处理。
+ *   ② **时长与令牌相等**（数值级，`.12s` 与 `0.12s` 视为同）。
+ *   ③ **缓动与令牌相等**：缺省缓动按 CSS 规范视为 `ease`；显式写了 `linear` /
+ *      `cubic-bezier(...)` 等与令牌不同的一律拒绝——否则会把「平滑 ease」偷偷换成
+ *      「减速 ease-out」，属静默改变动效观感。
+ *
+ * @param value     transition 属性值（如 `background .12s ease`）
+ * @param tokenMap  已解析令牌映射（校验令牌真实存在）
+ */
+export function suggestTransitionTokenExact(
+  value: string,
+  tokenMap?: TokenRawMap | null,
+): string | null {
+  const v = value.trim();
+  if (!v || v.includes(",")) return null; // 前提①：多属性不整值替换
+  const m = /^([a-z-]+)\s+(\d*\.?\d+)(s|ms)\s*(.*)$/i.exec(v);
+  if (!m) return null;
+  const prop = (m[1] ?? "").toLowerCase();
+  if (prop === "none") return null; // `transition: none` 之类
+  const rawNum = Number(m[2]);
+  const secs = m[3] === "ms" ? rawNum / 1000 : rawNum;
+  const easeRaw = (m[4] ?? "").trim();
+  // 缓动可能是多值（`ease 0.1s` 之类非常规写法）——只认单 token 或空
+  if (easeRaw.includes(" ")) return null;
+  const ease = easeRaw === "" ? "ease" : easeRaw.toLowerCase(); // 前提③：缺省 = ease
+  if (easeRaw !== "" && !EASE_KEYWORDS.has(ease)) return null; // cubic-bezier()/steps() 等不碰
+
+  for (const [name, tok] of Object.entries(TRANSITION_TOKEN_VALUES)) {
+    if (Math.abs(tok.dur - secs) > 1e-6) continue;
+    if (tok.ease !== ease) continue;
+    if (tokenMap && !tokenMap.has(name)) continue;
+    return name;
+  }
+  return null;
+}
+
+/**
  * 是否为注释行（`//` 或块注释续行 `*`）。注释里的样式示例不算违规——
  * 实测全仓仅 1 处 `font-size:Npx` 落在注释里，但口径必须一开始就对，
  * 否则文档性注释会被反复误报。
@@ -283,6 +409,20 @@ function clip(s: string, max = 120): string {
  */
 export function propDeclRe(prop: string): RegExp {
   return new RegExp(`(?<![\\w-])${prop}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`, "g");
+}
+
+/**
+ * 「任意 CSS 属性值」提取正则工厂（值到 `;` / 引号 / **`}`** / 反引号 为止）。
+ *
+ * ⚠️ 停止符必须含 `}`（2026-09 实测踩坑）：本仓样式多为**压缩成单行的模板串**
+ * （`...;transition:background .12s ease}`），漏掉 `}` 会让值尾带上规则块闭合括号，
+ * 于是精确比对（shadow/transition 的整值等价判定）恒不匹配——**闸静默漏报**：
+ * 实测 fab.ts / tooltip.ts / app-preview/css.ts 共 6 处可修的 transition
+ * 因此被 `--fix` 跳过，且报告层也照样命中（因为报告只看时长子串，不看结尾）。
+ * 这类「报告能命中、修复却不生效」的不对称最难察觉，故抽成单一出口。
+ */
+export function propValueRe(prop: string, flags = "g"): RegExp {
+  return new RegExp(`${prop}\\s*:\\s*([^;"'\`}]+)`, flags);
 }
 
 /** UI-Design.md 文档与代码的数值漂移项。 */
@@ -361,15 +501,25 @@ export function fixLineTokens(
   });
 
   // box-shadow：值等价替换（归一化后与令牌完全同值才替换，故视觉零变化）。
-  // 不处理 transition：其时长藏在复合值里（`background .12s ease`），替换需重写整条
-  // 声明且属性/缓动各异，机械替换易改变语义（如把 `all .15s` 换成 `var(--tr-normal)`
-  // 会连缓动一起改）——按本模块「不猜测语义」原则留给人工。
-  text = text.replace(/box-shadow\s*:\s*([^;"'`]+)/g, (match, val: string, offset: number) => {
+  text = text.replace(propValueRe("box-shadow"), (match, val: string, offset: number) => {
     if (inVar(offset)) return match;
     const v = val.trim();
     const token = suggestShadowToken(v, tokenMap);
     if (!token) return match;
     const to = `box-shadow:var(${token})`;
+    edits.push({ from: match, to, count: 1 });
+    return to;
+  });
+
+  // transition：**仅在时长与缓动双双与令牌一致时**整值替换（见 suggestTransitionTokenExact
+  // 的三条安全前提）。多属性值（`background .12s, color .12s`）、缓动不匹配
+  // （`transform .25s ease` vs --tr-enter 的 ease-out）、无对应令牌（0.2s/0.06s）一律不碰——
+  // 这些由报告层提示、人工判断「是对齐令牌还是令牌该加档」。
+  text = text.replace(propValueRe("transition"), (match, val: string, offset: number) => {
+    if (inVar(offset)) return match;
+    const token = suggestTransitionTokenExact(val.trim(), tokenMap);
+    if (!token) return match;
+    const to = `transition:var(${token})`;
     edits.push({ from: match, to, count: 1 });
     return to;
   });
@@ -568,7 +718,7 @@ export function findStyleAttrViolations(
   //        详见 TRANSITION_TOKEN_DURATIONS 注释）。
   //    二者均只扫 CSS 文本（含内联 style 体与 CSS 块），故用 line 全文——与颜色判定
   //    不同，此处不需要区分内外（规范对两者同等禁止，且 box-shadow 罕见于内联）。
-  for (const sm2 of line.matchAll(/box-shadow\s*:\s*([^;"'`]+)/g)) {
+  for (const sm2 of line.matchAll(propValueRe("box-shadow"))) {
     const v = (sm2[1] ?? "").trim();
     if (!v || /^var\(/.test(v) || /^(none|inherit|initial|unset)$/.test(v)) continue;
     const tok = suggestShadowToken(v, tokenMap);
@@ -580,9 +730,12 @@ export function findStyleAttrViolations(
       suggestion: tok,
     });
   }
-  for (const tm of line.matchAll(/transition\s*:\s*([^;"'`]+)/g)) {
+  for (const tm of line.matchAll(propValueRe("transition"))) {
     const v = (tm[1] ?? "").trim();
     if (!v || /^var\(/.test(v) || /^(none|inherit|initial|unset)$/.test(v)) continue;
+    // 实时反馈（跟手/进度条）先于令牌匹配排除：这类过渡**不适用令牌体系**，
+    // 套 --tr-fast 反而破坏跟手观感。见 isRealtimeFeedbackTransition 的准入三条。
+    if (isRealtimeFeedbackTransition(v)) continue;
     const tok = suggestTransitionToken(v, tokenMap);
     if (!tok) continue;
     out.push({

@@ -296,6 +296,15 @@ describe("mountPreviewRootMenu", () => {
       }),
     );
     (overlay.querySelector(`[data-testid="dock-scene"]`) as HTMLElement).click();
+    // 场景组根视图已统一走 renderMenu：所有 panel 行都是 .slide-item.rm-row-compact（同 env 一级导航行）
+    for (const pid of ["lighting", "shadow", "postproc", "camera"]) {
+      const row = overlay.querySelector(`[data-testid="preview-${pid}"]`)!;
+      expect(
+        row.classList.contains("slide-item") && row.classList.contains("rm-row-compact"),
+        `panel ${pid} 应走统一 slide-item.rm-row-compact（大统一，非 cm-row）`,
+      ).toBe(true);
+      expect(row.classList.contains("cm-row")).toBe(false);
+    }
     // 三个可启停 panel → 行长出 header-toggle
     for (const pid of ["lighting", "shadow", "postproc"]) {
       const row = overlay.querySelector(`[data-testid="preview-${pid}"]`)!;

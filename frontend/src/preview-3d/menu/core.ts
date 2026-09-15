@@ -21,7 +21,6 @@ import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { ensureFabStyles } from "./fab.ts";
-import { createHeaderToggle } from "./header-toggle.ts";
 import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import {
@@ -147,19 +146,6 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   const lb = document.createElement("span");
   lb.textContent = tOf(node.labelKey ?? node.id);
   row.append(ic, lb);
-  if (node.headerToggle) {
-    // 组根视图 panel 行能力总开关（对齐环境面板 cap 行 / folder headerToggle）：
-    // createHeaderToggle 内置 stopPropagation → 开关点击不触发整行 action（下钻）。
-    // 对齐 rmAppendDynamicRow（render.ts）：行尾有 chevron 时 toggle 紧跟 label、chevvron
-    // 靠 auto margin 推行尾；无 chevron（纯 action 行）才 toggle 自己 auto 推右。二者绝不同时 auto。
-    const ht = node.headerToggle;
-    const tg = createHeaderToggle({
-      value: ht.value,
-      onChange: (v: boolean) => ht.onChange(v),
-    });
-    if (!opts?.chevron) tg.style.marginLeft = "auto";
-    row.append(tg);
-  }
   if (opts?.chevron) {
     const chev = document.createElement("span");
     chev.textContent = ">";
@@ -421,37 +407,17 @@ function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]):
 }
 
 /**
- * 场景组根视图：可启停能力的 panel 行附加能力总开关（对齐环境面板 cap 行 headerToggle）。
- *  panelId → capId 映射（lighting→light, shadow→shadow, postproc→postprocessing）。
- *  仅上述三个真「可启停能力」加开关；camera 是视口（关闭=黑屏）不可关，故不加——保持
- *  「能关的才给开关」语义正确。value/onChange 直连 cap 的 isEnabled/setEnabled（setEnabled(false)
- *  语义 = 整体 detach 该能力，与 shadow/postproc/light 面板首行总开关同一真值源）。
+ * 场景组根视图能力总开关的 panelId → capId 映射（lighting→light, shadow→shadow,
+ *  postproc→postprocessing）。仅这三个真「可启停能力」给总开关；camera 是视口
+ *  （关闭=黑屏）不可关，故不加——保持「能关的才给开关」语义正确。
+ *  value/onChange 直连 cap 的 isEnabled/setEnabled（setEnabled(false) 语义 = 整体 detach
+ *  该能力，与 shadow/postproc/light 面板首行总开关同一真值源）。
  */
 const SCENE_ROW_TOGGLE_CAPS: Readonly<Record<string, string>> = {
   lighting: "light",
   shadow: "shadow",
   postproc: "postprocessing",
 };
-
-function withSceneGroupRowToggles(
-  ctx: PreviewMenuCtx,
-  g: PreviewMenuGroupDef,
-  groupItems: PreviewMenuNode[],
-): PreviewMenuNode[] {
-  if (g.id !== "scene") return groupItems;
-  return groupItems.map((node) => {
-    if (node.kind !== "panel") return node;
-    const capId = SCENE_ROW_TOGGLE_CAPS[node.id];
-    if (!capId) return node;
-    const cap = ctx.getCap(capId);
-    if (!cap?.isEnabled || !cap.setEnabled || node.headerToggle) return node;
-    // 浅克隆：不改 CORE_MENU_ITEMS 共享单例，仅本组视图行附加 headerToggle
-    return {
-      ...node,
-      headerToggle: { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) },
-    };
-  });
-}
 
 /**
  * [子函数 8/9] 底部 dock 渲染（原 renderDock 闭包升格）。
@@ -518,10 +484,43 @@ function renderPreviewDock(
       const panels = groupItems.filter((d) => d.kind === "panel");
       if (panels.length === 1 && groupItems.length === 1) {
         showMenu(makePanelViewFn(panels[0]));
+      } else if (g.id !== "scene") {
+        // 非场景组保持旧组根视图（cmd 兼容：roles/motion detail 等自建行）
+        showMenu(makeGroupViewFn(g, groupItems));
       } else {
-        // 组根视图：可启停能力的 panel 行附加能力总开关（对齐环境面板 cap 行 headerToggle；
-        // 相机不可关——视口开关=黑屏——故不附开关，保语义正确）
-        showMenu(makeGroupViewFn(g, withSceneGroupRowToggles(ctx, g, groupItems)));
+        // 场景组根视图：改用 renderMenu 渲染 row 节点，与环境面板一级 nav 行完全统一样式
+        // 每 panel → `kind:"row"` + headerToggle（可启停能力）+ action navigate + compact 密度
+        const renderMenuDeps = {
+          menu,
+          actionCtx,
+          makeRow: makeRowFn,
+          makePanelView: makePanelViewFn,
+        };
+        showMenu({
+          title: tOf(g.labelKey),
+          render: (list) => {
+            const rows: PreviewMenuNode[] = groupItems.map((node) => {
+              if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
+              const capId = SCENE_ROW_TOGGLE_CAPS[node.id];
+              const cap = capId ? ctx.getCap(capId) : null;
+              let headerToggle: PreviewMenuNode["headerToggle"];
+              if (capId && cap?.isEnabled && cap?.setEnabled) {
+                headerToggle = { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) };
+              }
+              return {
+                id: node.id,
+                icon: node.icon,
+                labelKey: node.labelKey ?? node.id,
+                fallback: node.fallback ?? node.id,
+                kind: "row",
+                rowDensity: "compact",
+                headerToggle,
+                action: (actCtx) => actCtx.navigate?.(makePanelViewFn(node)),
+              } as PreviewMenuNode;
+            });
+            renderMenu(list, rows, renderMenuDeps);
+          },
+        });
       }
     };
     dock.appendChild(btn);

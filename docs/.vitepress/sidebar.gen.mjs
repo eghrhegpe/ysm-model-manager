@@ -219,6 +219,10 @@ export const autoSidebar = [
         "link": "/audit-src-map"
       },
       {
+        "text": "地面材质参数 × 模式生效矩阵（ADR-249 §2.4 交付物）",
+        "link": "/ADR-249-ground-material-effect-matrix"
+      },
+      {
         "text": "CLI 命令参考",
         "link": "/cli-commands"
       },
@@ -233,6 +237,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-249：地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层）",
+        "link": "/adr/ADR-249-ground-material-axis-split-layer-overlay"
+      },
       {
         "text": "ADR-248：图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地）",
         "link": "/adr/ADR-248-adr-238"

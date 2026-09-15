@@ -47,16 +47,19 @@ describe("toolbar-menus 声明式菜单（icon 语义名声明式）", () => {
     expect(divIdx).toBeLessThan(html.indexOf('data-more="open-folder"'));
   });
 
-  it("import-file 图标经语义名 'file' 解析为 SVG；其余更多项无图标", () => {
+  it("更多下拉全部 5 个菜单项图标均经语义名解析为纯 SVG（无 emoji 残留，ADR-238）", () => {
     const html = renderDropdown("more");
-    // 整个更多下拉只 1 个 .ws-icon（import-file）
-    expect(html.match(/class="ws-icon"/g)).toHaveLength(1);
-    // import-file 按钮内图标在前
-    const fileBtn = html.slice(
-      html.indexOf('data-more="import-file"'),
-      html.indexOf("</button>", html.indexOf('data-more="import-file"')),
-    );
-    expect(fileBtn).toContain('class="ws-icon"');
+    // 五个菜单项都有 SVG 图标（file/folderOpen/folderOpen/refresh/book），无 emoji 并排
+    expect(html.match(/class="ws-icon"/g)).toHaveLength(5);
+    for (const action of ["import-file", "import-dir", "open-folder", "refresh", "genindex"]) {
+      const btn = html.slice(
+        html.indexOf(`data-more="${action}"`),
+        html.indexOf("</button>", html.indexOf(`data-more="${action}"`)),
+      );
+      expect(btn).toContain('class="ws-icon"');
+      // 文案回归纯文本：不出现文件夹/刷新/索引类 emoji
+      expect(btn).not.toMatch(/[📁📂🔄📇]/);
+    }
   });
 
   it("toolbarMenuTestids 含触发按钮 + 全部菜单项 testid（保 ADR-133 派生）", () => {

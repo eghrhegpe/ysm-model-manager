@@ -56,7 +56,7 @@
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
 | 🍃 i18n_accuracy | i18n 翻译准确度扫描记录 | leaf | — | 翻译准确度, 键名与值语义错位, i18n 翻译扫描, en 丢 Count, Opacity 误译, 术语统一, 翻译名实不符 |
-| 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD |
+| 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
 | 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, 触屏, 拖拽, 旋转 |

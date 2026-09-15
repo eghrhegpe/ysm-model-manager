@@ -6,9 +6,17 @@
  * `The system cannot find the path specified.` ⇒ hard 阻断整步（且此前被前序失败步骤
  * skip，长期潜伏）。本契约的头号断言即「候选集必须覆盖 frontend/.bin」——防复发。
  *
+ * 同族第二例（2026-09-15，TS2688）：**二进制**解析修好后，**类型**解析仍踩同一坑——
+ * `scripts/tsconfig.json` 的 `types: ["node"]` 依赖 `typeRoots` 默认向上走到
+ * `<ROOT>/node_modules/@types`，CI 无根 node_modules ⇒
+ * `error TS2688: Cannot find type definition file for 'node'` ⇒ scripts typecheck 再次 hard 阻断
+ * （34990867684 / 34988991645 等连续红）。故本契约同时钉住 **typeRoots 双根**（见 §6）——
+ * 修一处不等于修一族，二进制与类型两层都要覆盖双安装点。
+ *
  * 运行：node tests/test_tool_bin.ts
  */
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
 import { resolveToolBin, TOOL_BIN_DIRS, toolBinCandidates } from "../scripts/_lib/tool-bin.ts";
@@ -91,6 +99,36 @@ const FRONTEND_BIN = path.join(ROOT, "frontend", "node_modules", ".bin");
   }
 }
 
+// ── 6. 回归守卫（同族第二例）：scripts/tsconfig.json 的 typeRoots 必须双根 ──
+// 二进制走 tool-bin 探测，类型走 tsconfig typeRoots——两条独立解析链，各自都要覆盖
+// 「根 + frontend」两安装点。缺 frontend 根即复发 TS2688（本地绿、CI 红）。
+{
+  const TSCONFIG = path.join(ROOT, "scripts", "tsconfig.json");
+  const raw = fs.readFileSync(TSCONFIG, "utf8");
+  const cfg = JSON.parse(raw) as { compilerOptions?: { types?: string[]; typeRoots?: string[] } };
+  const typeRoots = cfg.compilerOptions?.typeRoots;
+  assert.ok(
+    Array.isArray(typeRoots) && typeRoots.length > 0,
+    "scripts/tsconfig.json 必须显式声明 compilerOptions.typeRoots（默认向上走只命中根 ⇒ CI 无根 node_modules 即 TS2688）",
+  );
+  // 路径相对 scripts/ 解析后应精确落在两处 @types（顺序 = 根优先，与 TOOL_BIN_DIRS 同款口径）。
+  const abs = typeRoots.map((r) => path.resolve(path.join(ROOT, "scripts"), r));
+  const ROOT_TYPES = path.join(ROOT, "node_modules", "@types");
+  const FRONTEND_TYPES = path.join(ROOT, "frontend", "node_modules", "@types");
+  assert.ok(abs.includes(ROOT_TYPES), `typeRoots 须含根 @types（实得 ${abs.join(" , ")}）`);
+  assert.ok(
+    abs.includes(FRONTEND_TYPES),
+    "typeRoots 须含 frontend/node_modules/@types（CI 唯一安装点；缺失即复发 TS2688「本地绿 CI 红」）",
+  );
+  assert.ok(
+    abs.indexOf(ROOT_TYPES) < abs.indexOf(FRONTEND_TYPES),
+    "根优先于 frontend（与 TOOL_BIN_DIRS 同款 npm hoist 语义）",
+  );
+  // types 仍须含 node——否则本契约在 typeRoots 被清空时反而恒绿（自毁风险）。
+  assert.ok(cfg.compilerOptions?.types?.includes("node"), "compilerOptions.types 须仍含 'node'");
+  console.log("  ✓ 回归守卫（第二例）：scripts/tsconfig.json typeRoots 覆盖双根且根优先");
+}
+
 console.log(
-  "\nOK: _lib/tool-bin 契约（双根探测 / 根优先 / win32 .cmd 优先 / frontend 在列 / 缺失 → null）",
+  "\nOK: _lib/tool-bin 契约（双根探测 / 根优先 / win32 .cmd 优先 / frontend 在列 / 缺失 → null / typeRoots 双根）",
 );

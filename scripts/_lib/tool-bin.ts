@@ -9,6 +9,13 @@
  *   scripts typecheck 就因写死根路径，在 CI 报 cmd 的
  *   `The system cannot find the path specified.` 并以 hard 策略阻断整步。
  *
+ * ⚠️ 同族第二例（2026-09-15 二次实证）：**二进制**探测修好后，**类型解析**仍踩同一坑——
+ *   `scripts/tsconfig.json` 的 `types: ["node"]` 依赖 `typeRoots` 默认向上走到 `<ROOT>/node_modules/@types`，
+ *   而 CI 无根 node_modules ⇒ `TS2688: Cannot find type definition file for 'node'`，
+ *   本步再次 hard 阻断（34990867684 等连续红）。修复 = 同款双根显式 `typeRoots`
+ *   （根 + frontend 两处，`@types/node` 任一在即可满足）。教训：仓库「双安装点」的每一处
+ *   隐式解析（二进制 / 类型 / 配置）都要显式双根，修一处不等于修一族。
+ *
  * 约定（与 `check-deadcode-baseline` 原内联实现对齐，现收敛于此）：
  *   1. 两处都探，**根优先**（npm hoist 语义：hoist 后根是真实落点）；
  *   2. win32 优先 `.cmd`（npm shim 真实形态，`shell: true` 走 cmd.exe），

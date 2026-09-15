@@ -158,9 +158,16 @@ export function paramIsEffective(mode: GroundSurfaceMode, param: GroundMatParam)
   // 外观参数：任何非 none 模式都生效（含 texture）
   if (APPEARANCE_PARAMS.includes(param)) return true;
 
-  // texture：自定义贴图白乘，色值已烘进用户图片——全部色彩/图案参数不生效
-  if (mode === "texture") return false;
+  // texture 专属例外（须在早退之前判定，否则被下方 texture 早退吞掉）：
+  // 自定义贴图 mat.map = customTex（非 null），applyGroundSurfaceAppearance 对其
+  // 应用 repeat/rotation——matScale/matRotationDeg 正是「自定义贴图缩放/旋转」的
+  // 设计用途（ADR-249 §2.4 矩阵 texture 列 ✔；acceptLoadedTexture 设 RepeatWrapping
+  // 即为此）。矩阵单一事实源约束：渲染消费的参数菜单必须可见，禁死控件。
+  if (mode === "texture") {
+    return param === "matScale" || param === "matRotationDeg";
+  }
 
+  // 其余（非 texture）色彩/图案参数
   switch (param) {
     case "matColor":
       // solid 直出 color；canvas 类（plain/grid/...）填充 color

@@ -76,9 +76,12 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     }
   });
 
-  it("matScale/matRotationDeg 凡产出贴图的模式均生效（plain 起），solid/none/texture 不生效", () => {
-    // 核实要点：applyGroundSurfaceAppearance 对 mat.map 生效 → 凡 generateSurfacePixels
-    // 产出贴图的模式（含 plain 纯色贴图）都会被读取，属「生效但视觉不可见」。
+  it("matScale/matRotationDeg 凡产出或消费贴图的模式均生效，solid/none 不生效", () => {
+    // 核实要点：applyGroundSurfaceAppearance 对 mat.map 生效 →
+    // ① generateSurfacePixels 产出贴图的模式（含 plain 纯色贴图）被读取；
+    // ② texture 的 mat.map = 用户自定义贴图，matScale/matRotationDeg 正是
+    //    「自定义贴图缩放/旋转」的设计用途（ADR-249 §2.4 矩阵 texture 列 ✔，
+    //    acceptLoadedTexture 设 RepeatWrapping 即为此）——不得被隐藏（死控件）。
     const mapProducing: GroundSurfaceMode[] = [
       "plain",
       "grid",
@@ -86,6 +89,7 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
       "stripes",
       "diamond",
       "marble",
+      "texture",
     ];
     for (const mode of GROUND_SURFACE_MODES) {
       const expected = mapProducing.includes(mode);

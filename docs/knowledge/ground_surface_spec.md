@@ -12,14 +12,19 @@ auto_fields:
     - applyGroundSurfaceStructural
     - buildGroundSurfaceSpec
     - DEFAULT_GROUND_SURFACE_PARAMS
+    - effectiveParamsOf
     - generateSurfacePixels
+    - GROUND_MAT_PARAMS
+    - GROUND_SURFACE_MODES
     - GroundCapability
     - GroundMaterialParams
+    - GroundMatParam
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
+    - paramIsEffective
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE
@@ -56,7 +61,9 @@ status: active
 
 ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMaterialSpec 单一事实源」精髓——**spec 是唯一数据源**，所有下游（重建判别、材质落地、纹理密度）只从 `buildGroundSurfaceSpec()` 的产物取值，杜绝双路径手写平行逻辑。
 
-扁平 mode 枚举 `"none"|"solid"|"plain"|"grid"|"checker"|"stripes"|"diamond"|"marble"|"texture"`：单字段表达来源+样式组合，避免双字段耦合守卫坑。CPU 像素生成（Uint8Array→DataTexture）对齐既有 generateNormalMap 口径，node 可测。新增 3 个像素模式：
+扁平 mode 枚举 `"none"|"solid"|"plain"|"grid"|"checker"|"stripes"|"diamond"|"marble"|"texture"`：单字段表达来源+样式组合。CPU 像素生成（Uint8Array→DataTexture）对齐既有 generateNormalMap 口径，node 可测。新增 3 个像素模式：
+
+> ⚠️ **ADR-249 已决策拆轴**（`sourceKind` 来源轴 + `canvasStyle` 样式轴 + 装饰叠加层），理由：单枚举压了两条正交轴，菜单层无法表达「纯色来源下线色不适用」，直接导致死控件。ADR-249 另要求消除 `DEFAULT_GROUND_SURFACE_PARAMS` 与 `env-state-schema.ts` 的默认值双源（`matGridSize`/`matRoughness` 两处不一致）。实施状态查 ADR-249。
 - **stripes**：按 matDensity 密度、matAngleDeg 角度、用 matColor/matColor2 的双色按 1:1 正弦条纹交替
 - **diamond**：菱形网格线（单边界，线宽 ≤ 1px，线面积占比 ≤ 50%），底色 matColor、线色 matLineColor
 - **marble**：种子化哈希噪声叠加多频三角波，matColor/matColor2 之间插值产生随机大理石紊纹理
@@ -68,7 +75,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **groundSurfaceNeedsRebuild(prev,next)**：specKey 比较，重建/原地唯一判据
 - **applyGroundSurfaceStructural(mat,st,tex)**：重建路径材质组装（有贴图→map+白乘色；无贴图→color 直出）
 - **applyGroundSurfaceAppearance(mat,spec,meshSize)**：外观参数**唯一**落地入口（opacity/transparent/depthWrite/PBR/map.center+rotation+repeat）
-- **generateSurfacePixels(st,sizePx)**：纯函数像素生成（solid/none 均匀、checker 奇偶交替、grid 首行首列画线、stripes/diamond/marble 种子化噪声；matColor2 仅 stripes/marble 参与）
+- **generateSurfacePixels(st,sizePx)**：纯函数像素生成（solid/plain 均匀、checker 奇偶交替、grid 首行首列画线、stripes/diamond/marble 种子化噪声；matColor2 仅 stripes/marble 参与）。**ADR-249 §2.2：`none` 与 `texture` 均返回空数组**——`none` = 真的关闭表面层（历史行为：与 solid/plain 同支返回不透明纯色，造成「控件隐了却仍盖实色」的语义矛盾）；`texture` = 表面来自用户贴图，程序化像素本是死计算（历史未短路，落进尾部 grid 分支画出格线但永不被使用）。消费方判据：空数组 ⇒ 不创建/不显示表面贴图。
+- **参数 × 模式生效矩阵（ADR-249 §2.4）**：`GROUND_SURFACE_MODES` / `GROUND_MAT_PARAMS` / `paramIsEffective(mode, param)` / `effectiveParamsOf(mode)`——菜单控件可见性与渲染参数读取的**共同单一事实源**（菜单可见 ⇔ `paramIsEffective` 为真），禁止菜单与渲染各写一份 if。历史缺陷：全部材质控件共用一条粗谓词（仅判 `matSource !== "none"`），致 solid/plain/grid 下「线色/副色/格数」可见可拖可写、渲染却不读——零反馈死控件（用户实测「选纯色还显示线色」）。⚠️ `matScale`/`matRotationDeg` 作用于 `mat.map`，凡产出贴图的模式（plain 起）均被读取，属「生效但视觉不可见」，与 solid（完全不产贴图）性质不同。
 - GroundCapability 侧：`refreshSurface()` 唯一变更入口（needsRebuild→rebuild 否则 applyAppearance）；自定义贴图照抄 EnvironmentCapability customHdrTex 模式（缓存独立于材质、不随 dispose、不持久化二进制、loadState 无缓存回退 plain）
 
 ## 对外 API / 入口

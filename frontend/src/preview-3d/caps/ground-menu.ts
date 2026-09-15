@@ -10,16 +10,33 @@
 import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
-import type { GroundSurfaceMode } from "./ground-surface-spec.ts";
+import {
+  type GroundMatParam,
+  type GroundSurfaceMode,
+  paramIsEffective,
+} from "./ground-surface-spec.ts";
 
 const MAT_GROUP = "preview.groundGroupMaterial";
 
-/** B 轨唯一条件显隐谓词：地面承接面开启（matSource ≠ none）时材质子控件可见 */
-const groundSurfaceOn = (s: Partial<PreviewSnapshot>) => s["env.groundMatSource"] !== "none";
+/** ADR-249 §2.4：参数级显隐谓词——控件可见 ⇔ 矩阵判定该参在当前模式生效。
+ *
+ * 历史：全部控件共用一条粗谓词（仅判 ≠ none），导致 solid/plain/grid 等模式下
+ * 「线色/副色/格数」等控件可见、可拖、可写入、可触发重建，但渲染不读该参数
+ * ——零视觉反馈的死控件（用户实测反馈「选纯色还显示线色」）。
+ * 现改为逐参数 × 逐模式判定，事实源 = ground-surface-spec.ts 的 paramIsEffective，
+ * 不在此重写一套判断（防两处漂移）。 */
+function paramVisible(param: GroundMatParam) {
+  return (s: Partial<PreviewSnapshot>): boolean => {
+    const mode = s["env.groundMatSource"] as GroundSurfaceMode | undefined;
+    if (!mode) return false;
+    return paramIsEffective(mode, param);
+  };
+}
 
 function colorNode(
   id: string,
   labelKey: string,
+  param: GroundMatParam,
   getValue: () => number,
   setValue: (v: number) => void,
 ): PreviewMenuNode {
@@ -27,7 +44,7 @@ function colorNode(
     id,
     kind: "color",
     labelKey,
-    visibleWhen: groundSurfaceOn,
+    visibleWhen: paramVisible(param),
     control: {
       get: () => getValue(),
       set: (v) => setValue(v as number),
@@ -38,6 +55,7 @@ function colorNode(
 function sliderNode(
   id: string,
   labelKey: string,
+  param: GroundMatParam,
   slider: { min: number; max: number; step: number; unit?: string },
   getValue: () => number,
   setValue: (v: number) => void,
@@ -46,7 +64,7 @@ function sliderNode(
     id,
     kind: "slider",
     labelKey,
-    visibleWhen: groundSurfaceOn,
+    visibleWhen: paramVisible(param),
     control: {
       min: slider.min,
       max: slider.max,
@@ -123,24 +141,28 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     colorNode(
       "ground-mat-color",
       "preview.groundMatColor",
+      "matColor",
       () => cap.getMatColor(),
       (v) => cap.setMatColor(v),
     ),
     colorNode(
       "ground-mat-color2",
       "preview.groundMatColor2",
+      "matColor2",
       () => cap.getMatColor2(),
       (v) => cap.setMatColor2(v),
     ),
     colorNode(
       "ground-mat-line-color",
       "preview.groundMatLineColor",
+      "matLineColor",
       () => cap.getMatLineColor(),
       (v) => cap.setMatLineColor(v),
     ),
     sliderNode(
       "ground-mat-grid-size",
       "preview.groundMatGridSize",
+      "matGridSize",
       { min: 2, max: 32, step: 1 },
       () => cap.getMatGridSize(),
       (v) => cap.setMatGridSize(Math.round(v)),
@@ -148,6 +170,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-density",
       "preview.groundMatDensity",
+      "matDensity",
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatDensity(),
       (v) => cap.setMatDensity(v),
@@ -155,6 +178,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-angle",
       "preview.groundMatAngle",
+      "matAngleDeg",
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatAngle(),
       (v) => cap.setMatAngle(v),
@@ -163,6 +187,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-opacity",
       "preview.groundMatOpacity",
+      "matOpacity",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatOpacity(),
       (v) => cap.setMatOpacity(v),
@@ -170,6 +195,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-scale",
       "preview.groundMatScale",
+      "matScale",
       { min: 0.25, max: 8, step: 0.25 },
       () => cap.getMatScale(),
       (v) => cap.setMatScale(v),
@@ -177,6 +203,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-rotation",
       "preview.groundMatRotation",
+      "matRotationDeg",
       { min: 0, max: 360, step: 5, unit: "°" },
       () => cap.getMatRotation(),
       (v) => cap.setMatRotation(v),
@@ -184,6 +211,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-roughness",
       "preview.groundMatRoughness",
+      "matRoughness",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatRoughness(),
       (v) => cap.setMatRoughness(v),
@@ -191,6 +219,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
     sliderNode(
       "ground-mat-metalness",
       "preview.groundMatMetalness",
+      "matMetalness",
       { min: 0, max: 1, step: 0.05 },
       () => cap.getMatMetalness(),
       (v) => cap.setMatMetalness(v),

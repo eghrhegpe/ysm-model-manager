@@ -67,6 +67,127 @@ export const DEFAULT_GROUND_SURFACE_PARAMS: GroundMaterialParams = {
   matAngleDeg: 0,
 };
 
+/* ============ 参数 × 模式生效矩阵（ADR-249 §2.4 单一事实源）============ */
+// 本矩阵是「菜单控件可见性」与「渲染参数读取」的**共同事实源**：
+//     菜单可见 ⇔ paramIsEffective(mode, param) === true
+// 禁止菜单与渲染各写一份 if——两处必须共同派生自此处，否则必然回归死控件。
+//
+// 核实基准（2026-09-16）：generateSurfacePixels 的像素读取分支 +
+// applyGroundSurfaceAppearance 的 mat.map 读取。逐格核实记录见
+// docs/ADR-249-ground-material-effect-matrix.md。
+//
+// 注意 matScale / matRotationDeg：二者作用于 mat.map，故凡产出贴图的模式
+// （plain 起）均被读取——属「生效但视觉不可见」（纯色贴图重复仍是纯色）。
+// 这与 solid（完全不产出贴图、参数无从作用）性质不同，故不并入真死控件。
+
+export const GROUND_SURFACE_MODES = [
+  "none",
+  "solid",
+  "plain",
+  "grid",
+  "checker",
+  "texture",
+  "stripes",
+  "diamond",
+  "marble",
+] as const satisfies readonly GroundSurfaceMode[];
+
+/** 矩阵行：材质面板的全部可调参数（与 ground-menu.ts 控件一一对应） */
+export const GROUND_MAT_PARAMS = [
+  "matColor",
+  "matColor2",
+  "matLineColor",
+  "matGridSize",
+  "matDensity",
+  "matAngleDeg",
+  "matOpacity",
+  "matScale",
+  "matRotationDeg",
+  "matRoughness",
+  "matMetalness",
+] as const;
+
+export type GroundMatParam = (typeof GROUND_MAT_PARAMS)[number];
+
+/** 产出贴图的模式集（generateSurfacePixels 非空返回）——matScale/matRotationDeg 的生效前提 */
+const MAP_PRODUCING_MODES: readonly GroundSurfaceMode[] = [
+  "plain",
+  "grid",
+  "checker",
+  "stripes",
+  "diamond",
+  "marble",
+];
+
+/** 使用 lineColor 的模式集（generateSurfacePixels 中读 st.lineColor 的分支） */
+const LINE_COLOR_MODES: readonly GroundSurfaceMode[] = [
+  "grid",
+  "checker",
+  "stripes",
+  "diamond",
+  "marble",
+];
+
+/** 使用 color2 的模式集（仅 marble 的渐变副色） */
+const COLOR2_MODES: readonly GroundSurfaceMode[] = ["marble"];
+
+/** 使用 density / angleRad 的模式集（新三模式的旋转坐标系分支） */
+const NEW_PATTERN_MODES: readonly GroundSurfaceMode[] = ["stripes", "diamond", "marble"];
+
+/** 使用 gridSize 的模式集（grid/checker 为「每边格数」，新三模式为「图案周期数」） */
+const GRID_SIZE_MODES: readonly GroundSurfaceMode[] = [
+  "grid",
+  "checker",
+  "stripes",
+  "diamond",
+  "marble",
+];
+
+/** 外观参数（与模式无关，凡非 none 均生效；texture 亦生效） */
+const APPEARANCE_PARAMS: readonly GroundMatParam[] = ["matOpacity", "matRoughness", "matMetalness"];
+
+/**
+ * 判定单个参数在某表面模式下是否生效（矩阵查询）。
+ *
+ * 菜单 visibleWhen 谓词与渲染读取分支均从此派生（ADR-249 §2.4）。
+ */
+export function paramIsEffective(mode: GroundSurfaceMode, param: GroundMatParam): boolean {
+  // none：表面层关闭，无任何参数生效（ADR-249 §2.2）
+  if (mode === "none") return false;
+
+  // 外观参数：任何非 none 模式都生效（含 texture）
+  if (APPEARANCE_PARAMS.includes(param)) return true;
+
+  // texture：自定义贴图白乘，色值已烘进用户图片——全部色彩/图案参数不生效
+  if (mode === "texture") return false;
+
+  switch (param) {
+    case "matColor":
+      // solid 直出 color；canvas 类（plain/grid/...）填充 color
+      return true;
+    case "matColor2":
+      return COLOR2_MODES.includes(mode);
+    case "matLineColor":
+      return LINE_COLOR_MODES.includes(mode);
+    case "matGridSize":
+      return GRID_SIZE_MODES.includes(mode);
+    case "matDensity":
+    case "matAngleDeg":
+      return NEW_PATTERN_MODES.includes(mode);
+    case "matScale":
+    case "matRotationDeg":
+      // 作用于 mat.map：凡产出贴图的模式均可被读取
+      return MAP_PRODUCING_MODES.includes(mode);
+    default:
+      return false;
+  }
+}
+
+/** 某模式下生效的参数全集（供测试断言「菜单可见集 == 生效集」） */
+export function effectiveParamsOf(mode: GroundSurfaceMode): GroundMatParam[] {
+  return GROUND_MAT_PARAMS.filter((p) => paramIsEffective(mode, p));
+}
+
 export interface GroundSurfaceStructuralSpec {
   mode: GroundSurfaceMode;
   color: [number, number, number];
@@ -185,6 +306,19 @@ function valueNoise(x: number, y: number): number {
 }
 
 export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: number): Uint8Array {
+  // ADR-249 §2.2："none" = 真的关闭地面表面层——不产出任何像素（空数组）。
+  // 历史行为：none 曾与 solid/plain 同支返回不透明纯色，导致「菜单隐了控件、
+  // 地面却仍盖一层实色」的语义矛盾（用户实测反馈）。none 与 solid 自此彻底分离。
+  // 消费方判据：空数组 ⇒ 不创建/不显示表面贴图（GroundCapability.updateSurfaceVisible
+  // 已按 groundMatSource !== "none" 门控 surface.visible，二者语义现已自洽）。
+  if (st.mode === "none") return new Uint8Array(0);
+
+  // ADR-249："texture" 同样不产程序化像素——表面来自用户上传的贴图（走
+  // applyGroundSurfaceStructural 的 tex 非空分支：mat.map = tex + 白乘色）。
+  // 历史行为：texture 未短路，落进尾部 grid 分支画出格线像素，而该像素
+  // **永不被使用**（材质用用户贴图）——属死计算。矩阵测试捕获。
+  if (st.mode === "texture") return new Uint8Array(0);
+
   const px = new Uint8Array(sizePx * sizePx * 4);
   const [r, g, b] = st.color;
   const [lr, lg, lb] = st.lineColor;
@@ -194,7 +328,7 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
   // solid = 无贴图、材质直出 color）。刀⑳ 修复：原条件漏了 "plain"，使其落到下方 grid
   // 分支画出格线——而 "plain" 是 schema 默认值、菜单「素面」项，且是「清除贴图」与
   // loadState 的回退目标，故这是用户可见的行为缺陷。
-  if (st.mode === "solid" || st.mode === "none" || st.mode === "plain") {
+  if (st.mode === "solid" || st.mode === "plain") {
     for (let i = 0; i < px.length; i += 4) {
       px[i] = r;
       px[i + 1] = g;

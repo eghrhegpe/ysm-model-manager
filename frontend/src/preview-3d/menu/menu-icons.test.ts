@@ -42,6 +42,10 @@ const MIGRATED_FILES = [
   "views/app-preview/shot-panel-shared.ts",
   "views/app-preview/detail-3d.ts",
   "views/app-preview/preview-router.ts",
+  // 左导航（2026-09）：`<span class="icon">${resolveIcon(item.icon)}</span>` 结构槽
+  "views/app-nav/index.ts",
+  // 包内文件清单芯片（2026-09）：同上；label 已同时转 i18n
+  "views/app-preview/tpl.ts",
 ];
 
 /**

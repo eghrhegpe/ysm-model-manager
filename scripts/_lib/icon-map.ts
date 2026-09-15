@@ -119,6 +119,8 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "👁": "visibility",
   "❓": "unknown",
   "❔": "unknown",
+  // 左导航「资源库」项（2026-09 迁移补）
+  "📚": "book",
   "🏠": "home",
   "🏆": "rank",
   "👤": "user",

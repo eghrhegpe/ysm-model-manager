@@ -12,6 +12,7 @@ import { setRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
@@ -243,12 +244,13 @@ class AppNav extends WebComponentBase {
     // 替代 isViewerMode() 复合判定（平台检测收敛到 capabilities 抽象，债务 #2）。
     const isViewer = !can("ListVersionInstances");
     const items = [
-      { id: "repository", icon: "📚", key: "nav.repository" },
-      ...(isViewer ? [] : [{ id: "instances", icon: "🎮", key: "nav.instances" }]),
-      { id: "workshop", icon: "🎨", key: "nav.community" },
-      { id: "github", icon: "🧩", key: "nav.workshop" },
-      { id: "diagnostics", icon: "🛠️", key: "nav.diagnostics" },
-      { id: "settings", icon: "⚙️", key: "nav.settings" },
+      // icon 为**语义名**（ADR-238/ADR-245：resolveIcon 解析为 SVG），非字形字面量
+      { id: "repository", icon: "book", key: "nav.repository" },
+      ...(isViewer ? [] : [{ id: "instances", icon: "game", key: "nav.instances" }]),
+      { id: "workshop", icon: "appearance", key: "nav.community" },
+      { id: "github", icon: "parser", key: "nav.workshop" },
+      { id: "diagnostics", icon: "tools", key: "nav.diagnostics" },
+      { id: "settings", icon: "settings", key: "nav.settings" },
     ];
 
     this._shadow.innerHTML = `
@@ -270,7 +272,7 @@ class AppNav extends WebComponentBase {
           .map(
             (item) => `
           <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key as LocaleKey)}" role="button" tabindex="0">
-            <span class="icon">${item.icon}</span>
+            <span class="icon">${resolveIcon(item.icon)}</span>
             <span class="nav-text">${t(item.key as LocaleKey)}</span>
           </div>
         `,

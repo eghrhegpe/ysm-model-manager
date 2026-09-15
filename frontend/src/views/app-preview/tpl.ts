@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { extOf } from "@/utils/resource/types.ts";
 
@@ -143,19 +144,21 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
     texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">${UI_ICONS.attach} ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   // Go FileInventory 权威归属清单（zip 模型专属，文件夹模型无此字段）：
-  // 非零类目渲染为「emoji 计数」芯片，tooltip 携带权威文件路径——前端只展示不判定
+  // 非零类目渲染为「图标 + 计数」芯片，tooltip 携带权威文件路径——前端只展示不判定。
+  // 图标填**语义名**（ADR-238/ADR-245：resolveIcon 解析为 SVG）；label 走 i18n
+  //（原为硬编码中文，切语言后仍显示中文——与 JS 侧 UI 槽同族的 i18n 泄漏）。
   const inv = model.fileInventory;
   const invChips = [
-    { icon: "🎬", label: "动画", files: inv?.animations },
-    { icon: "🎛️", label: "控制器", files: inv?.controllers },
-    { icon: "🌐", label: "语言", files: inv?.langFiles },
-    { icon: "🧩", label: "旧格式", files: inv?.legacyModels },
-    { icon: "🖼️", label: "头像", files: inv?.avatars },
+    { icon: "video", label: t("preview.inventory.animations"), files: inv?.animations },
+    { icon: "controls", label: t("preview.inventory.controllers"), files: inv?.controllers },
+    { icon: "web", label: t("preview.inventory.langFiles"), files: inv?.langFiles },
+    { icon: "parser", label: t("preview.inventory.legacyModels"), files: inv?.legacyModels },
+    { icon: "image", label: t("preview.inventory.avatars"), files: inv?.avatars },
   ].flatMap((c) =>
     c.files?.length
       ? [
           {
-            icon: c.icon,
+            icon: resolveIcon(c.icon),
             label: `${c.label} ${c.files.length}`,
             title: c.files.join("\n"),
           },

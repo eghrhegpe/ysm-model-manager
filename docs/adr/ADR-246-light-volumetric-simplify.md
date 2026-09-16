@@ -1,10 +1,17 @@
 # ADR-246：灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化
 
-- **状态**：已采纳（Accepted）
+> ⚠️ **D1 的「Bloom 联动门禁收紧」半句已被 [ADR-247](./ADR-247-postproc-linkage-gate.md) D1 取代**（2026-09-16）。
+> 原定「改为只在 `volumetric.enabled` 为真时联动」在默认配置（联动 on + 体积光 off）下
+> 使 `gain` 恒为 0——「开关撒谎」只是从体积光搬到了 bloom 联动；ADR-247 改为门禁只看
+> `ppBloomFollowVolumetric` 开关本身、`gain` 读 `volumetric.opacity` 浓度意图。
+> 另：`needComposer` 的 volumetric 分支随后随 [ADR-250](./ADR-250-cap-composer-sky.md)（composer 常驻）彻底失去意义。
+> **D1 其余项（删引擎抽象 / schema 字段 / 菜单下拉 / 持久化）与 D2、D3 依然有效**。
+
+- **状态**：🔄 部分采纳（D1 的 Bloom 联动门禁被 ADR-247 D1 取代；删空壳引擎主体与 D2/D3 有效）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/light-capability.ts, frontend/src/preview-3d/caps/light-controls.ts, frontend/src/preview-3d/caps/light-cone.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-081, ADR-177, ADR-196`
+- **相关**：`frontend/src/preview-3d/caps/light-capability.ts, frontend/src/preview-3d/caps/light-controls.ts, frontend/src/preview-3d/caps/light-cone.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-081, ADR-177, ADR-196, ADR-247（取代 D1 的 Bloom 联动门禁）, ADR-250（composer 常驻使 needComposer 分支失去意义）`
 
 ---
 
@@ -48,6 +55,9 @@
 `saveState` 写入 / `loadState` ④步引擎恢复 / `needComposer` 的 volumetric 分支。
 同时修正 `postprocessing-capability` 的 Bloom 联动——原逻辑读的是一个在 postprocess
 模式下必然被关闭的 `volumetric.opacity`，语义为空；改为只在 `volumetric.enabled` 为真时联动。
+>
+> **[ADR-247 D1 取代]** 上面这半句已作废——该门禁使默认配置（联动 on + 体积光 off）下联动
+> 恒不生效；现门禁只看 `ppBloomFollowVolumetric` 开关本身，`gain` 读 `volumetric.opacity` 浓度意图。
 
 **理由**：一个没有实现的抽象不是「预留」，是负债。它污染了公开 API、schema、
 持久化格式、状态机与测试契约五处，且对外暴露为「选了就坏的按钮」。

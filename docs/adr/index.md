@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **253** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **254** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -17,7 +17,7 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 9 |
+| [🔄 部分采纳](#部分采纳) | 10 |
 | [✅ 已采纳](#已采纳) | 234 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
@@ -25,12 +25,13 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（9）
+### 🔄 部分采纳（10）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 |
+| [ADR-246](./ADR-246-light-volumetric-simplify.md) | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | 🔄 部分采纳 |
 | [ADR-227](./ADR-227-preview-3d-singleton-to-instance.md) | preview-3d 模块级单例收敛为实例（P1 战役） | 🔄 部分采纳 |
 | [ADR-218](./ADR-218-stats-pool-concurrency.md) | stats worker 池并发契约与协议收敛 | 🔄 部分采纳 |
 | [ADR-207](./ADR-207-core-sharp-review-remediation.md) | frontend core 锐评整改：去重键净化后判定 / AppError 跨语言契约 / tr-trDynamic 双入口 / 残留占位符守卫 | 🔄 部分采纳 |
@@ -43,6 +44,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-256](./ADR-256-design-tokens-added-lines.md) | 设计令牌门禁改判真行级：判定与账本分离（行位移幻影 95% 实证） | ✅ 已采纳 |
 | [ADR-255](./ADR-255-water-gerstner-uniform.md) | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 |
 | [ADR-254](./ADR-254-ground-material-preset-explicit-state.md) | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 |
 | [ADR-253](./ADR-253-3d-entry-siblings-unification.md) | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 |
@@ -50,7 +52,6 @@ permalink: /adr/
 | [ADR-250](./ADR-250-cap-composer-sky.md) | 后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky | ✅ 已采纳 |
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | ✅ 已采纳 |
 | [ADR-248](./ADR-248-icon-field-typing.md) | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 |
-| [ADR-246](./ADR-246-light-volumetric-simplify.md) | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | ✅ 已采纳 |
 | [ADR-245](./ADR-245-context-menu-adr-238.md) | context-menu 图标语义名统一（对齐 ADR-238） | ✅ 已采纳 |
 | [ADR-244](./ADR-244-ci-gate-change-context-and-scan-scope.md) | CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件 | ✅ 已采纳 |
 | [ADR-243](./ADR-243-vmd-to-vrm-retarget.md) | VMD 动作重定向到 VRM 人形骨骼（跨格式动作复用） | ✅ 已采纳 |
@@ -302,6 +303,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-256 | 设计令牌门禁改判真行级：判定与账本分离（行位移幻影 95% 实证） | ✅ 已采纳 | 2026-09-16 |
 | ADR-255 | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 | 2026-09-16 |
 | ADR-254 | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 | 2026-09-16 |
 | ADR-253 | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 | 2026-09-16 |
@@ -311,7 +313,7 @@ permalink: /adr/
 | ADR-249 | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | ✅ 已采纳 | 2026-09-16 |
 | ADR-248 | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 | 2026-09-16 |
 | ADR-247 | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 | 2026-09-16 |
-| ADR-246 | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | ✅ 已采纳 | 2026-09-16 |
+| ADR-246 | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | 🔄 部分采纳 | 2026-09-16 |
 | ADR-245 | context-menu 图标语义名统一（对齐 ADR-238） | ✅ 已采纳 | 2026-09-15 |
 | ADR-244 | CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件 | ✅ 已采纳 | 2026-09-15 |
 | ADR-243 | VMD 动作重定向到 VRM 人形骨骼（跨格式动作复用） | ✅ 已采纳 | 2026-09-15 |

@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-256：设计令牌门禁改判真行级：判定与账本分离（行位移幻影 95% 实证）",
+        "link": "/adr/ADR-256-design-tokens-added-lines"
+      },
+      {
         "text": "ADR-255：水面波浪 uniform 化 + Gerstner 升级",
         "link": "/adr/ADR-255-water-gerstner-uniform"
       },

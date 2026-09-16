@@ -135,6 +135,12 @@ invariant_anchors:
 - 只经 `setEnvState` 写 envState，不直接改对象字段（否则不派发）。
 - 能力级 enabled 不入 schema；运行时态（customHdrTex/currentPreset/manualPreset）留 cap 私有。
   （原 `volumetricEngine` 运行时态已随 ADR-246 D1 删除——postprocess 空壳引擎移除。）
+- **[ADR-246] 灯光/体积光简化已落地（2026-09-16，主提交 `66f7b5d6f`）**：
+  - **D1 删空壳引擎**：`set/getVolumetricEngine`、`lightVolumetricEngine` schema 字段、菜单「锥引擎」下拉、`saveState` 写入、`loadState` 引擎恢复步、`needComposer` 的 volumetric 分支全部摘除；老存档残留 `volumetricEngine` 成惰性数据（read 时忽略，有测试锁）。
+  - **D2 参数收编**：`VolumetricParams` 内部 5 字段不动（shader 契约 + 预设表兼容），菜单层收编为「浓度 `opacity` / 衰减 `fogPower` / 边缘羽化 `edgeFade`」三语义滑块 + 单一「上下亮度比」（`tipStrength = baseStrength × ratio`，getter 除零守卫 + `clamp[0,1]`、setter 对称 clamp）。
+  - **D3 可视化**：`THREE.SpotLightHelper` 随聚光灯开关显隐（`apply()` 与 `loadState()` 两处显式挂载，`update()` 随聚光灯更新，`dispose()` 释放）+ zh`preview.spotlight`「顶光」→「聚光灯」+ 聚光灯/体积光合并进同一 `collapsible` 卡（**不做 visibleWhen 隐藏**）。
+  - 验证：`light-capability`(61) + `postprocessing-capability`(86) + `fog-capability`(26) = 173 测试绿。
+- **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 §L3）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。
 - **[ADR-250] 后处理启用意图已入 schema（`ppEnabled`）**：原 `perTypeGate`（模型类别门禁）与 `perfMaster`（性能总闸）两枚 cap 私有字段、`syncEffectiveEnabled()` 二元相与、`POSTPROC_PRESETS` 表**全部退役**。「默认是否开后处理」由 `MODEL_DEFAULTS` 的 `ppEnabled` 参数表达（与六 cap 同构，经 `auto-model` 源写入，用户 `manual` 可覆盖）。cap 内 `enabled` 现为**读 envState 的 getter**，不再是被四路写入的独立字段。

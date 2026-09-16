@@ -72,4 +72,4 @@
 - testid 契约：`views/app-tree/tpl.ts` `VIEW_TESTIDS`（ADR-133 阶段 B）。
 - 范式蓝本：`features/context-menu/menu-defs.ts`（ADR-021）、`preview-3d/menu/node-types.ts`。
 
-<!-- 文件名: toolbar-menu-declarative.md → 实际文件 ADR-239-toolbar-menu-declarative.md -->
+<!-- 文件名: ADR-239-toolbar-menu-declarative.md -->

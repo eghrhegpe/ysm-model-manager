@@ -25,6 +25,7 @@ pitfalls:
   - 在生成器里 import three 或 DOM → 破坏 node 单测与 src/core 隔离边界
   - 改像素算法却不更新 ground-surface-spec.test.ts（确定性/非均匀/跨材质差异用例）
   - 误以为 surface-pixels 管 spec/key —— 那些仍在 ground-surface-spec.ts
+  - 在生成器内对坐标做 2D 旋转来施加 angleRad → 破坏 4D 环面周期，平铺露接缝。angleRad 必须走 tiledFbm 的「环面相位偏移」（任意角度无缝）；整体旋转归 GPU texture.rotation
 quick_groups:
   - 地面材质
   - 程序化贴图
@@ -64,14 +65,15 @@ invariant_anchors:
 ## 不变量
 
 - `surfaceSpecKey` 只序列化 structural 字段，与像素算法无关 → 重构/改算法不触发无谓重建。
-- `generateSurfacePixels` 确定性：种子化噪声（`hash2`），非 `Math.random`。
+- `generateSurfacePixels` 确定性：种子化噪声（`hash2` / `hash4`），非 `Math.random`。
 - 零 three 运行时 import（仅 `type`），保留 node 单测能力。
+- **无缝**：噪声材质（marble/sand/grass）一律走 4D 环面噪声 `tiledFbm`（`noise.ts`），纹理自身 `RepeatWrapping` 无接缝。`angleRad` 是「环面相位偏移」（任意角度无缝），整体旋转归 GPU `texture.rotation`。
 
 ## 行业形状质量手法（2026-09-16 网页检索：unity / three / glsl）
 
-- **草（各向异性）**：游戏行业多不用平铺贴图做草（InstancedMesh + 贝塞尔草叶 + 风噪声）；本场景是地面 albedo 平铺贴图，对应**各向异性坐标拉伸**或 **Gabor 噪声**（定向微细节）。
+- **草（各向异性）**：游戏行业多不用平铺贴图做草（InstancedMesh + 贝塞尔草叶 + 风噪声）；本场景是地面 albedo 平铺贴图，对应**各向异性坐标拉伸**（`ANISO_X = 0.35` 压缩 x 轴频率）或 **Gabor 噪声**（定向微细节）。
 - **大理石（脉络）**：全网共识 `sin(x + k·fbm(p))`——正弦带被 fbm 湍流掰弯成脉络（domain warping，Inigo Quilez）。团块感源于缺这步。
-- **平铺无缝**：生成的 `DataTexture` 要真正无接缝，应采样 **4D 环面噪声** `(cos,sin,cos,sin)→4D noise`；且「无缝 ≠ 无重复」，需双变体混合/随机化/宏观叠加破重复（**留待后续增强，不影响当前正确性**）。
+- **平铺无缝（已落地）**：生成的 `DataTexture` 用 **4D 环面噪声** `(cos,sin,cos,sin)→4D noise` 采样，u=0 与 u=1 落回同点 → 严格周期 1 → 无接缝。验证见 `ground-surface-spec.test.ts` Suite 9（`tiledFbm(u,v) ≡ tiledFbm(u+1,v)`）。「无缝 ≠ 无重复」的重复感仍需双变体混合/随机化破（**仍留待增强**）。
 
 ## 相关
 

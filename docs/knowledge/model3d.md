@@ -787,6 +787,7 @@ auto_fields:
     - textureRepeat
     - TextureTooLargeError
     - TILE_WORLD_SIZE
+    - tiledFbm
     - toggleBone
     - toggleBoneVisible
     - toggleMaterialVisible
@@ -805,6 +806,7 @@ auto_fields:
     - unregisterSchema
     - UpdateableScene
     - valueNoise
+    - valueNoise4D
     - Vec3
     - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT

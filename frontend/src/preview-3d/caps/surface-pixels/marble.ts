@@ -1,8 +1,9 @@
 // ===== surface-pixels/marble.ts — 大理石：域扭曲把直线正弦带弯成脉络 =====
 // 行业手法（Inigo Quilez domain warping）：sin(x + k·fbm) —— fbm 湍流扰动带坐标，
 // 直线纹路被掰弯成自然脉络，团块感消失。零资产、保平铺。
+// 无缝：带坐标 u*periodCount（periodCount 取整）+ warp 用 4D 环面噪声 → 边界严格对齐。
 
-import { fbm } from "./noise.ts";
+import { tiledFbm } from "./noise.ts";
 import type { SurfacePixelGenerator } from "./types.ts";
 
 const TAU = Math.PI * 2;
@@ -13,21 +14,17 @@ export const generateMarblePixels: SurfacePixelGenerator = (input, sizePx) => {
   const px = new Uint8Array(sizePx * sizePx * 4);
   const [r, g, b] = input.color;
   const [cr2, cg2, cb2] = input.color2;
-  const cosA = Math.cos(input.angleRad);
-  const sinA = Math.sin(input.angleRad);
-  const half = sizePx / 2;
   const density = Math.max(0.25, input.density);
-  const periodCount = Math.max(1, input.gridSize) * density;
+  const periodCount = Math.max(1, Math.round(input.gridSize * density)); // 取整 → 带在边界对齐
+  const warpFreq = Math.max(1, Math.round(3 * density));
 
   for (let y = 0; y < sizePx; y++) {
-    const ny = (y - half) / half;
+    const v = (y + 0.5) / sizePx;
     for (let x = 0; x < sizePx; x++) {
-      const nx = (x - half) / half;
-      const rx = nx * cosA + ny * sinA;
-      const ry = -nx * sinA + ny * cosA;
-      // 域扭曲：fbm 湍流偏移带坐标 → 直线带弯成自然脉络
-      const warp = fbm(rx * 3 * density + 10, ry * 3 * density + 10, 4) - 0.5;
-      const band = Math.sin((rx * periodCount + warp * WARP_STRENGTH) * TAU);
+      const u = (x + 0.5) / sizePx;
+      // 域扭曲：4D 环面 fbm 湍流偏移带坐标（无缝）→ 直线带弯成自然脉络
+      const warp = tiledFbm(u, v, warpFreq, warpFreq, 0, 4) - 0.5;
+      const band = Math.sin(TAU * (u * periodCount + warp * WARP_STRENGTH));
       const t = 0.5 + 0.5 * band;
       const i = (y * sizePx + x) * 4;
       px[i] = Math.round(r + t * (cr2 - r));

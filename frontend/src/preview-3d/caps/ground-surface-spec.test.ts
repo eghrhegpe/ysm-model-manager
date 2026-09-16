@@ -10,6 +10,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
+import { tiledFbm } from "./surface-pixels/noise.ts";
 import {
   DEFAULT_GROUND_SURFACE_PARAMS,
   buildGroundSurfaceSpec,
@@ -481,4 +482,55 @@ describe("Suite 8 — 叠加层 stripes / diamond", () => {
       expect(Array.from(px(style))).toEqual(Array.from(px(style)));
     }
   });
+});
+
+/* ============ Suite 9 — 4D 环面无缝（RepeatWrapping 接缝根治）============ */
+
+describe("Suite 9 — 4D 环面无缝噪声（治平铺接缝）", () => {
+  it("tiledFbm 周期 1：u→u+1 / v→v+1 严格相等（任意 angleRad 仍无缝）", () => {
+    const freqs: Array<[number, number]> = [
+      [3, 5],
+      [8, 8],
+      [1, 12],
+      [5, 3],
+    ];
+    for (const [fx, fy] of freqs) {
+      for (const a of [0, 0.7, 2.3, 5.1]) {
+        const u = 0.31;
+        const v = 0.57;
+        const a1 = tiledFbm(u, v, fx, fy, a, 4);
+        const a2 = tiledFbm(u + 1, v, fx, fy, a, 4);
+        const a3 = tiledFbm(u, v + 1, fx, fy, a, 4);
+        expect(a1).toBeCloseTo(a2, 9);
+        expect(a1).toBeCloseTo(a3, 9);
+      }
+    }
+  });
+
+  it("tiledFbm 确定性：同参两次一致（seed 噪声非 Math.random）", () => {
+    const a = tiledFbm(0.2, 0.8, 6, 6, 1.1, 4);
+    const b = tiledFbm(0.2, 0.8, 6, 6, 1.1, 4);
+    expect(a).toBe(b);
+  });
+
+  // 生成器层回归：4D 无缝改造后，噪声材质仍非均匀、可复现；
+  // angleRad 现已改为「环面相位偏移」（任意角度无缝），不再旋转坐标系。
+  const build = (m: GroundSurfaceMode) =>
+    buildGroundSurfaceSpec(
+      { ...DEFAULT_GROUND_SURFACE_PARAMS, matSource: m, matColor: 0x000000, matColor2: 0xffffff },
+      "",
+    ).structural;
+
+  for (const m of ["marble", "sand", "grass"] as const) {
+    it(`${m}：生成器非均匀且确定性（4D 无缝改造行为保持）`, () => {
+      const st = build(m);
+      const a = generateSurfacePixels(st, 32);
+      const b = generateSurfacePixels(st, 32);
+      const first = a[0];
+      let varied = false;
+      for (let i = 0; i < a.length; i += 4) if (a[i] !== first) varied = true;
+      expect(varied, `${m} 应为噪声而非均匀色`).toBe(true);
+      expect(Array.from(a)).toEqual(Array.from(b));
+    });
+  }
 });

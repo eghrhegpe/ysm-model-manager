@@ -193,7 +193,15 @@ registerEnvStateMiddleware((patch) => {
 - `surface-pixels/index.ts`：`SURFACE_PIXEL_GENERATORS` 调度表
 - `ground-surface-spec.ts`：`generateSurfacePixels` 退化为「structural → 查表分发」，spec/key/apply 不动
 
-**不变量（已锁）**：`surfaceSpecKey` 只序列化 structural 字段，与像素算法无关 → 重构零无谓重建；`ground-surface-spec.test.ts` 37 用例全绿（含 Phase1 行为等价 + Phase2 形状增强）。零 three 运行时依赖，保留 node 单测。
+**不变量（已锁）**：`surfaceSpecKey` 只序列化 structural 字段，与像素算法无关 → 重构零无谓重建；`ground-surface-spec.test.ts` 42 用例全绿（含 Phase1 行为等价 + Phase2 形状增强 + Suite 9 无缝性）。零 three 运行时依赖，保留 node 单测。
 
-**未做（留待）**：4D 环面无缝采样（治 `repeat` 接缝）、双变体破重复——属后续增强，不影响当前正确性。
+### 6.2 落地：4D 环面无缝（治 repeat 接缝）
+
+旧 2D 值噪声非周期 → `RepeatWrapping` 平铺时边缘不对接（接缝）。新增 **4D 环面噪声 `tiledFbm`**（`surface-pixels/noise.ts`）：把 `(u,v)∈[0,1)` 嵌入 4D 环面 `(cos2πu, sin2πu, cos2πv, sin2πv)` 喂 4D 值噪声，`u=0` 与 `u=1` 落回同一点 → 噪声严格周期 1 → 纹理自身无缝。所有 octave 频率 `Math.round` 取整 → 整体无缝。
+
+- `grass` / `sand`：改用 `tiledFbm`；`marble`：带坐标 `u*periodCount`（`periodCount` 取整）→ 边界对齐，warp 用 `tiledFbm` → 无缝脉络。
+- **`angleRad` 语义变更（关键）**：原在生成器内做 2D 坐标系旋转（破坏环面周期，且是接缝根因之一）；现改为「环面相位偏移」（`tiledFbm` 的 `angleRad` 加在 2π 整周期上，**任意角度仍严格无缝**）。整体图案旋转本就由 GPU `texture.rotation`（`applyGroundSurfaceStructural` 已设 `center(0.5,0.5)` + `rotation=rotationRad`）负责，与平铺正交、已无缝。故 `angleRad`（颗粒方向）与 `matRotationDeg`（整体旋转）职责分离、互不干扰。
+- **验证**：`ground-surface-spec.test.ts` 新增 **Suite 9** 直接断言 `tiledFbm(u,v) ≡ tiledFbm(u+1,v) / (u,v+1)`（周期 1），覆盖多频率 / 多 `angleRad`；全量 42 用例绿。
+
+**未做（仍留待）**：双变体混合 / 随机化破「无缝 ≠ 无重复」的重复感——属锦上添花，不影响当前正确性。
 <!-- 文件名: ground-material-preset-explicit-state.md → 实际文件 ADR-254-ground-material-preset-explicit-state.md -->

@@ -893,6 +893,7 @@
 | 在生成器里 import three 或 DOM | - | 破坏 node 单测与 src/core 隔离边界 |
 | 改像素算法却不更新 ground-surface-spec.test.ts（确定性/非均匀/跨材质差异用例） | - | - |
 | 误以为 surface-pixels 管 spec/key —— 那些仍在 ground-surface-spec.ts | - | - |
+| 在生成器内对坐标做 2D 旋转来施加 angleRad | - | 破坏 4D 环面周期，平铺露接缝。angleRad 必须走 tiledFbm 的「环面相位偏移」（任意角度无缝）；整体旋转归 GPU texture.rotation |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |

@@ -136,8 +136,10 @@ auto_fields:
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE
+    - tiledFbm
     - TONE_MAPPING_KEYS
     - valueNoise
+    - valueNoise4D
     - VolumetricCone
     - VolumetricParams
     - WATER_MODES

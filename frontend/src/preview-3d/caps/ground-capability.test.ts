@@ -585,6 +585,25 @@ describe("GroundCapability — 叠加层（ADR-249 §2.3 独立格线层）", ()
     expect(mat1.opacity).toBeCloseTo(0.4);
   });
 
+  // ADR-249 §2.4 死控件回归：初版 generateOverlayPixels 硬编码 sizePx/8，
+  // 「叠加格数」滑杆拖了不改变任何像素（可拖、有重建、零视觉反馈）。
+  it("overlaySize 变化 → 重建贴图且像素确实不同（死控件回归）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlaySize(8);
+    cap.setOverlayStyle("grid");
+    const readImg = (): number[] => {
+      const mat = (scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh)
+        .material as THREE.MeshStandardMaterial;
+      return Array.from((mat.map as THREE.DataTexture).image.data as Uint8Array);
+    };
+    const img8 = readImg();
+    cap.setOverlaySize(32);
+    const img32 = readImg();
+    expect(img32).not.toEqual(img8);
+  });
+
   it("setVisible(false) 同步隐藏叠加层；恢复后重现", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

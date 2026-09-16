@@ -183,7 +183,7 @@ export class GroundCapability implements SceneCapability {
 
   /** 叠加层像素 → DataTexture（透明底；style=none 时返回 null） */
   private makeOverlayTexture(spec: GroundOverlaySpec): THREE.DataTexture | null {
-    const px = generateOverlayPixels(spec.style, OVERLAY_TEX_SIZE, spec.color);
+    const px = generateOverlayPixels(spec.style, OVERLAY_TEX_SIZE, spec.color, spec.size);
     if (px.length === 0) return null;
     const tex = new THREE.DataTexture(px, OVERLAY_TEX_SIZE, OVERLAY_TEX_SIZE, THREE.RGBAFormat);
     tex.wrapS = THREE.RepeatWrapping;

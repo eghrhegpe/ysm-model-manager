@@ -383,11 +383,11 @@ describe("Suite 6 — 叠加层 spec / 像素生成", () => {
   });
 
   it("generateOverlayPixels：none 返回空数组（表示无叠加）", () => {
-    expect(generateOverlayPixels("none", 16, [255, 255, 255]).length).toBe(0);
+    expect(generateOverlayPixels("none", 16, [255, 255, 255], 8).length).toBe(0);
   });
 
   it("generateOverlayPixels：grid 透明底 + 不透明线（alpha 二值化）", () => {
-    const px = generateOverlayPixels("grid", 32, [255, 0, 0]);
+    const px = generateOverlayPixels("grid", 32, [255, 0, 0], 8);
     expect(px.length).toBe(32 * 32 * 4);
     let opaque = 0;
     let transparent = 0;
@@ -402,14 +402,35 @@ describe("Suite 6 — 叠加层 spec / 像素生成", () => {
   });
 
   it("generateOverlayPixels：checker 与 grid 像素分布不同（样式真实生效）", () => {
-    const a = generateOverlayPixels("grid", 32, [255, 0, 0]);
-    const b = generateOverlayPixels("checker", 32, [255, 0, 0]);
+    const a = generateOverlayPixels("grid", 32, [255, 0, 0], 8);
+    const b = generateOverlayPixels("checker", 32, [255, 0, 0], 8);
     expect(Array.from(a)).not.toEqual(Array.from(b));
   });
 
+  // ADR-249 §2.4 死控件回归：格数必须真实改变像素。
+  // 初版硬编码 `sizePx / 8` 且不设 map.repeat，「叠加格数」滑杆拖了没反应。
+  it("generateOverlayPixels：cells 变化 → 像素分布变化（格数真实生效）", () => {
+    const few = generateOverlayPixels("grid", 64, [255, 0, 0], 4);
+    const many = generateOverlayPixels("grid", 64, [255, 0, 0], 16);
+    expect(Array.from(few)).not.toEqual(Array.from(many));
+    const countLines = (px: Uint8Array): number => {
+      let n = 0;
+      for (let i = 3; i < px.length; i += 4) if (px[i] === 255) n++;
+      return n;
+    };
+    // 格数越多，线（不透明像素）越多
+    expect(countLines(many)).toBeGreaterThan(countLines(few));
+  });
+
+  it("generateOverlayPixels：cells 相同则像素完全一致（确定性）", () => {
+    const a = generateOverlayPixels("checker", 32, [1, 2, 3], 6);
+    const b = generateOverlayPixels("checker", 32, [1, 2, 3], 6);
+    expect(Array.from(a)).toEqual(Array.from(b));
+  });
+
   it("线色真实进入像素：不同 color 产出不同 RGB", () => {
-    const red = generateOverlayPixels("grid", 32, [255, 0, 0]);
-    const blue = generateOverlayPixels("grid", 32, [0, 0, 255]);
+    const red = generateOverlayPixels("grid", 32, [255, 0, 0], 8);
+    const blue = generateOverlayPixels("grid", 32, [0, 0, 255], 8);
     // 找到第一个不透明像素比较首通道
     const firstOpaque = (px: Uint8Array): number => {
       for (let i = 0; i < px.length; i += 4) if (px[i + 3] === 255) return px[i];

@@ -273,21 +273,24 @@ export function generateOverlayPixels(
   style: GroundOverlayStyle,
   sizePx: number,
   color: [number, number, number],
+  cells: number,
 ): Uint8Array {
   if (style === "none") return new Uint8Array(0);
   const px = new Uint8Array(sizePx * sizePx * 4);
   const [r, g, b] = color;
+  // 格数必须真实参与像素生成（与 surface 侧 `cell = sizePx / gridSize` 同口径）。
+  // 回归：初版硬编码 `sizePx / 8` 且不设 map.repeat → 「叠加格数」滑杆可拖、
+  // 会触发重建，却产出完全相同的贴图——死控件（ADR-249 要消灭的正是这类）。
+  const n = Math.max(1, Math.round(cells));
+  const cellSize = sizePx / n;
   const lineWidth = Math.max(1, Math.round(sizePx / 256));
   for (let y = 0; y < sizePx; y++) {
     for (let x = 0; x < sizePx; x++) {
       const idx = (y * sizePx + x) * 4;
       let isLine = false;
       if (style === "grid") {
-        isLine =
-          x % Math.max(1, Math.floor(sizePx / 8)) < lineWidth ||
-          y % Math.max(1, Math.floor(sizePx / 8)) < lineWidth;
+        isLine = x % cellSize < lineWidth || y % cellSize < lineWidth;
       } else if (style === "checker") {
-        const cellSize = Math.max(1, Math.floor(sizePx / 8));
         isLine = (Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2 === 1;
       }
       if (isLine) {

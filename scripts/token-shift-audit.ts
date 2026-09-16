@@ -26,6 +26,8 @@
  *       这正是「代理」二字的含义——A 只能给上界，真值由判据 B 给。
  *   判据 B（真行级规则）：`git diff --unified=0 -M <c>^ <c>` 的**新增行号**上跑同两个判定
  *       函数 → 行级命中数。违规行本身没被本次提交改动就不算，行号位移天然免疫。
+ *   另计**键碰撞漏检**：行级命中而键在父侧**已存在**的条数——旧规则因键相同而放过的真债，
+ *       即判据 A 与 B 方向相反的那一侧（只报误伤不报漏检，论证就只对了一半）。
  *
  * 只读保证（硬约束）：本工具**永不写盘、永不改动 git 状态**——只跑 `git log / diff / show`
  *   三个只读命令，不建索引、不 fetch、不 checkout。任何「顺手修一下」都不属于本工具。
@@ -136,6 +138,8 @@ export interface FileAuditResult {
   lineHits: number;
   /** 判据 B 的命中清单（供审计逐条复查）。 */
   lineHitKeys: string[];
+  /** 键碰撞漏检数：行级命中但键在父版本已存在（旧规则判「非新增」→ 盲区）。 */
+  keyCollisionMisses: number;
 }
 
 /** 单个提交的判定汇总（subject 由主流程按需补齐）。 */
@@ -150,6 +154,8 @@ export interface CommitAudit {
   real: number;
   /** 判据 B：行级命中数（真行级规则会据此阻断）。 */
   lineHits: number;
+  /** 判据 B 附带：键碰撞漏检数（旧规则因键相同而放过的真债）。 */
+  keyCollisionMisses: number;
 }
 
 /** 汇总指标（纯函数输出，JSON 与文本共用）。 */
@@ -166,6 +172,8 @@ export interface AuditSummary {
   real: number;
   /** 判据 B：行级命中总数。 */
   lineHits: number;
+  /** 键碰撞漏检总数：行级命中而键在父侧已存在的条数（旧规则盲区）。 */
+  keyCollisionMisses: number;
   /** baseline 会阻断的提交数（added > 0）。 */
   baselineBlocked: number;
   /** 真行级规则会阻断的提交数（行级命中 > 0）。 */
@@ -364,11 +372,25 @@ export function analyzeFilePair(input: {
   const parentKeys = violationKeys(rel, parentPoints);
   const addedKeys = diffKeys(curKeys, parentKeys);
   const { shift, real } = classifyAddedKeys(addedKeys, parentPoints, matchWindow);
+  const parentKeySet = new Set(parentKeys);
   const lineHitKeys = curKeys.filter((k) => {
     const p = parseViolationKey(k);
     return p !== null && addedLines.has(p.line);
   });
-  return { rel, curKeys, addedKeys, shift, real, lineHits: lineHitKeys.length, lineHitKeys };
+  // 键碰撞漏检：行级命中、但键在父侧**已存在**的条数。旧规则用「键集差」判新增，这类真债
+  // （同行替换同类违规，如 color 换了个值）键不变 → 被判「不是新增」放过；行级判定看的是
+  // 「这行本次被改动过」，故照样命中。这是判据 A 与 B **方向相反**的那一侧，必须单独计量。
+  const keyCollisionMisses = lineHitKeys.filter((k) => parentKeySet.has(k)).length;
+  return {
+    rel,
+    curKeys,
+    addedKeys,
+    shift,
+    real,
+    lineHits: lineHitKeys.length,
+    lineHitKeys,
+    keyCollisionMisses,
+  };
 }
 
 /**
@@ -421,6 +443,7 @@ export function summarizeCommits(commits: readonly CommitAudit[]): AuditSummary 
   let shift = 0;
   let real = 0;
   let lineHits = 0;
+  let keyCollisionMisses = 0;
   let baselineBlocked = 0;
   let lineBlocked = 0;
   let purePhantom = 0;
@@ -443,6 +466,7 @@ export function summarizeCommits(commits: readonly CommitAudit[]): AuditSummary 
     real,
     shiftPct: added > 0 ? round1((shift / added) * 100) : 0,
     lineHits,
+    keyCollisionMisses,
     baselineBlocked,
     lineBlocked,
     purePhantom,
@@ -574,6 +598,7 @@ function main(): void {
     let shift = 0;
     let real = 0;
     let lineHits = 0;
+    let collisions = 0;
     for (const u of units) {
       // ② 两个版本的提交侧内容（git show 读的是 object store，与工作区脏不脏无关——
       //    并行会话改了同一文件也不会污染本审计）
@@ -601,9 +626,10 @@ function main(): void {
       shift += r.shift.length;
       real += r.real.length;
       lineHits += r.lineHits;
+      collisions += r.keyCollisionMisses;
       filesScanned++;
     }
-    commits.push({ hash, subject: "", added, shift, real, lineHits });
+    commits.push({ hash, subject: "", added, shift, real, lineHits, keyCollisionMisses: collisions });
   }
 
   if (diffFailed > 0) {
@@ -648,6 +674,7 @@ function main(): void {
     shiftPct: core.shiftPct,
     real: core.real,
     lineHits: core.lineHits,
+    keyCollisionMisses: core.keyCollisionMisses,
     baselineBlocked: core.baselineBlocked,
     lineBlocked: core.lineBlocked,
     purePhantom: core.purePhantom,
@@ -692,6 +719,9 @@ function main(): void {
   console.log(`   真新增候选    : ${core.real}`);
   console.log(" 判据 B（真行级：只判本次 diff 的新增行）");
   console.log(`   行级命中      : ${core.lineHits}`);
+  console.log(
+    `   键碰撞漏检    : ${core.keyCollisionMisses}  （行级命中但键在父侧已存在 → 旧规则判「非新增」，真债被放过）`,
+  );
   console.log("──────────────────────────────────────────────────");
   console.log(`baseline 会阻断 : ${core.baselineBlocked} 个提交（added > 0）`);
   console.log(`行级会阻断      : ${core.lineBlocked} 个提交（行级命中 > 0）`);

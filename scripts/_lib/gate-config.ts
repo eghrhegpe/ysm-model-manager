@@ -156,8 +156,9 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   // args: --added-lines —— 判定域 = **本次推送引入的新增行**（range 源 base..head，
   // base 取与默认分支的 merge-base；内容取 head blob），与 pre-commit 的索引源共用
   // `_lib/diff-source.ts` + `_lib/git-hunks.ts` + `findViolationsOnLines`（单一事实源）。
-  // 为什么不再用 --baseline：键 file:line:kind 实测 95% 的「新增」是行位移幻影，且漏检
-  // 同行替换类真新增（ADR-256 §1，可复现 node scripts/token-shift-audit.ts）。
+  // 为什么不再用 --baseline：键 file:line:kind 实测高噪声——116 提交窗里 added 330 中 322 条（97.6%）
+  // 是行位移幻影、真新增候选仅 8；阻断视角 24 次里 19 次行级命中为 0（ADR-256 §1/§4，
+  // 可复现 node scripts/token-shift-audit.ts --window 120）。
   // 注：ALL_STATIC_TOOLS 保留 `--baseline`（--all 模式无 diff 上下文，那里是**账本漂移报告**）。
   //
   // blockPolicy: debt —— 行级判定已无「存量债冒充」问题（只判新增行），但先观察一轮

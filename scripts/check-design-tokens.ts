@@ -67,9 +67,10 @@
  *
  * 门禁接线（2026-09，2026-09-16 改判行级 ADR-256）：pre-commit 挂 `--staged --added-lines`——
  *   判定域 = **本次提交的新增行**，内容取**提交侧 blob**（索引 `:path`，非磁盘）。
- *   为何弃用 `--baseline`（键 `file:line:kind`）：116 提交窗实测，它报的「新增」95% 是
- *   **行位移幻影**（存量违规被挤到新行号），且因键相同**漏检** 36 条同行替换类真新增；
- *   行级判定两侧同时修掉，且不再依赖账本文件（少一类 fail-closed 失败面）。
+ *   为何弃用 `--baseline`（键 `file:line:kind`）：116 提交窗实测（scripts/token-shift-audit.ts --window 120），
+ *   它报的 added 330 条里 **322 条（97.6%）是行位移幻影**（存量违规被挤到新行号），真新增候选仅 8；
+ *   阻断视角 24 次里 19 次（79%）行级命中为 0。行级判定天然免疫位移，且不再依赖账本文件
+ *   （少一类 fail-closed 失败面）。「同行替换同类」的键碰撞盲区是机制性风险（本窗口实测 0 次）。
  *   可复现：node scripts/token-shift-audit.ts --window 120
  *   钩子无需知道临时索引如何裁剪：git 已把 GIT_INDEX_FILE 交给钩子，`git diff --cached`
  *   天然只含本次提交文件；`--files` 路径走 range 源（pre-push / CI，base = merge-base）。
@@ -360,8 +361,8 @@ if (files.length === 0) {
 }
 
 // ── 行级判定模式（--added-lines，ADR-256）：判定域 = 本次变更的**新增行**，内容取提交侧 blob ──
-// 为什么取代「基线文件级」：键 `file:line:kind` 在 116 提交窗实测中，95% 的「新增」是行位移
-// 幻影（存量违规被挤到新行号），同时漏检 36 条同行替换类真新增——两侧同时失效（可复现：
+// 为什么取代「基线文件级」：键 `file:line:kind` 在 116 提交窗实测中，added 330 条里 322 条（97.6%）
+// 是行位移幻影（存量违规被挤到新行号），真新增候选仅 8——阻断视角 24 次里 19 次行级命中为 0（可复现：
 // node scripts/token-shift-audit.ts）。行级判定天然不需要基线，且只扫新增行（全树 → diff）。
 if (ADDED_LINES) {
   const src: DiffSource = (() => {

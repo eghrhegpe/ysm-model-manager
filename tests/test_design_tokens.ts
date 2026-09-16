@@ -831,8 +831,8 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 }
 
 // ─── 行级判定（ADR-256）：只对自己动过的行负责 ─────────────────────
-// 为何这组是本闸的**红线**：基线文件级判定（键 `file:line:kind`）在 116 提交窗实测中，95% 的
-// 「新增」是行位移幻影，同时漏检 36 条同行替换类真新增（复现：node scripts/token-shift-audit.ts）。
+// 为何这组是本闸的**红线**：基线文件级判定（键 `file:line:kind`）在 116 提交窗实测中，added 330 条里
+// 322 条（97.6%）是行位移幻影、真新增候选仅 8（复现：node scripts/token-shift-audit.ts --window 120）。
 // 行级判定（新增行 ∩ 违规行）把两侧同时修掉——下面四组断言就是这条结论的机器化形式。
 {
   const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
@@ -884,7 +884,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     sl,
     tokens,
   );
-  assert.ok(hit3.length > 0, "同行替换同类违规 = 新债，行级判定不得因「键相同」漏判（旧规则漏 36 条）");
+  assert.ok(hit3.length > 0, "同行替换同类违规 = 新债，行级判定不得因「键相同」漏判（旧规则的机制性盲区）");
 
   // ④ 越界 / 重复 / 非整数行号：安全忽略，不抛错、不重复计数
   assert.deepEqual(

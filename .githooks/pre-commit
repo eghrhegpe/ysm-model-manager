@@ -394,8 +394,8 @@ fi
 #   emoji 图标应走 utils/icon 的 SVG 体系（跨平台渲染与主题一致性）。
 # 策略（2026-09-16 起，ADR-256 D1/D2/D3）：--staged --added-lines =
 #   判定域 = **本次提交的新增行**；内容取**提交侧 blob**（索引 `:path`，非磁盘）。
-#   为什么弃用 `--baseline`（键 file:line:kind）：116 提交窗实测，baseline 报的「新增」
-#   95% 是**行位移幻影**（存量违规被挤到新行号），同时因键相同**漏检** 36 条同行替换类真新增。
+#   为什么弃用 `--baseline`（键 file:line:kind）：116 提交窗实测 added 330 条里 322 条（97.6%）是
+#   **行位移幻影**（存量违规被挤到新行号），真新增候选仅 8；阻断视角 24 次里 19 次行级命中为 0。
 #   行级判定两侧同时修掉，且不再依赖基线文件（少一类 fail-closed 失败面）。
 #   可复现：node scripts/token-shift-audit.ts --window 120
 # ⚠️ --staged 不可省：无 scope 时脚本 walk(frontend/src)+walk(frontend/css) 全树扫，并行会话

@@ -46,7 +46,7 @@ pitfalls:
   - snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在
   - 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误
   - drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报
-  - 用 `file:line:kind` 键做「只减不增」增量判定 = **双向失效**：行位移被当新增（116 提交窗实测 327/346 = 95% 幻影），同行替换同类被当存量（漏检 36 条）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）
+  - 用 `file:line:kind` 键做「只减不增」增量判定 = **高噪声**：行位移被当新增（116 提交窗实测 322/330 = 97.6% 幻影，真新增候选仅 8）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）；「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 0 次）
   - 无 scope 的 `--baseline` 扫磁盘全树 → 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上）
   - 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件
 status: active
@@ -67,7 +67,7 @@ status: active
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）
 - gofmt 自动修复 staged go 文件（失败仅提示）
 - biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐
-- 设计令牌硬阻断③改判**真行级**（ADR-256，2026-09-16）：`check-design-tokens --staged --added-lines` 只判**本次提交的新增行**，内容取**提交侧 blob**（索引 `:path`，非磁盘）——`git commit` 把裁剪后的索引（`commit-temp-index.ts` 的临时索引 / pathspec 提交的 next-index）经 `GIT_INDEX_FILE` 交给钩子，故脚本内 `git diff --cached` 天然只含本次提交，钩子无需知道调用方怎么裁剪；`--files`（pre-push 推送集）走 range 源（base = 与默认分支 merge-base）。**为何弃用 `--baseline`**：键 `file:line:kind` 实测双向失效——95% 的「新增」是行位移幻影，同时漏检 36 条同行替换类真新增（`scripts/token-shift-audit.ts --window 120` 可复现）。行级模式判 blob 而非磁盘 → 「未暂存编辑」不再需要跳过（判定对象 == 提交对象 by construction）
+- 设计令牌硬阻断③改判**真行级**（ADR-256，2026-09-16）：`check-design-tokens --staged --added-lines` 只判**本次提交的新增行**，内容取**提交侧 blob**（索引 `:path`，非磁盘）——`git commit` 把裁剪后的索引（`commit-temp-index.ts` 的临时索引 / pathspec 提交的 next-index）经 `GIT_INDEX_FILE` 交给钩子，故脚本内 `git diff --cached` 天然只含本次提交，钩子无需知道调用方怎么裁剪；`--files`（pre-push 推送集）走 range 源（base = 与默认分支 merge-base）。**为何弃用 `--baseline`**：键 `file:line:kind` 实测高噪声——`scripts/token-shift-audit.ts --window 120`（116 提交样本）复算：added 330 条中 **322 条（97.6%）** 是行位移幻影，真新增候选仅 8；阻断视角 24 次里 19 次（79%）行级命中为 0，而行级规则总共只阻断 9 次（8%）。另：「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 `键碰撞漏检` 0 次；行级判定天然免疫）。行级模式判 blob 而非磁盘 → 「未暂存编辑」不再需要跳过（判定对象 == 提交对象 by construction）
 - 并发配对生成物清单（ADR-232 D1，2026-09-13）：`PARENT_OID=$(git rev-parse HEAD)` 早于 stage 段定义（`set -u` 下必须 `:-` 守卫引用）；gen 产物清单写 `.git/ysm_gen_staged_<PARENT_OID12>`（`_lib/gen-staged-pair.ts` 配对，替代旧版 last-writer-wins 单文件 `ysm_gen_staged`，并发会话父 oid 不同天然互不覆盖）；`/tmp/ysm_gen_to_stage_$$.txt` 加 `$$` 进程后缀防互踩
 - 逃生留痕（ADR-232 D2，2026-09-13）：`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中时调用 `_lib/hook-audit.ts` 写 `.git/gate-audit.log` 的 `SKIPPED_PRECOMMIT` 行（钩子仍执行→可留痕，区别于 `--no-verify` 整钩不跑的零痕迹绕过）；文案纠正：旧「绕过不留审计」误导已改为「命中即留痕可审计」
 

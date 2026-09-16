@@ -398,6 +398,39 @@ const REL = "frontend/src/a.ts";
   assert.equal(median([4, 1]), 2.5, "偶数个取中间两个均值");
 }
 
+// ─── 13) 键碰撞漏检：同行同 kind 被重写（键不变 → 旧规则判「非新增」放过）─────
+// 这是判据 A 的**盲区**侧，必须与「位移幻影」成对计量：只测误伤不测漏检，
+// 论证就只对了一半。行级判定看的是「这行本次被改动过」，故照样命中。
+{
+  const line = 4;
+  const parent = lineAt(line, "  .a { font-size:13px; }");
+  const cur = lineAt(line, "  .a { font-size:14px; }"); // 同行同 kind，值变了
+  const r = analyzeFilePair({
+    rel: REL,
+    curText: cur,
+    parentText: parent,
+    matchWindow: 80,
+    addedLines: new Set([line]),
+    tokenMap: null,
+  });
+  assert.equal(r.addedKeys.length, 0, "键相同 → 旧规则判「不是新增」（这正是漏检的成因）");
+  assert.equal(r.lineHits, 1, "行级命中：这行本次确实被改写了");
+  assert.equal(r.keyCollisionMisses, 1, "计入键碰撞漏检（旧规则放过的真债）");
+  assert.equal(r.shift.length, 0, "不得同时算作位移幻影（两种失效方向互斥）");
+
+  // 对照组：违规行没被本次改动（新增行是别处）→ 既不命中也不计入漏检
+  const untouched = analyzeFilePair({
+    rel: REL,
+    curText: cur,
+    parentText: parent,
+    matchWindow: 80,
+    addedLines: new Set([1]),
+    tokenMap: null,
+  });
+  assert.equal(untouched.lineHits, 0, "未改动该行 → 行级不命中");
+  assert.equal(untouched.keyCollisionMisses, 0, "未命中不计漏检");
+}
+
 console.log(
-  "✅ test_token_shift_audit.ts 全部通过（12 组契约断言：位移幻影 / 真新增 / 窗口边界 / 多近邻 / 空输入 / 参数 / 判定域 / 键格式 / 逐行扫描 / name-status / 汇总 / median）",
+  "✅ test_token_shift_audit.ts 全部通过（13 组契约断言：位移幻影 / 真新增 / 窗口边界 / 多近邻 / 空输入 / 参数 / 判定域 / 键格式 / 逐行扫描 / name-status / 汇总 / median / 键碰撞漏检）",
 );

@@ -7,19 +7,18 @@
 // 外壳始终承载 🥉 行组件，故 createSlideMenu 会同时安装 ui-components 样式。
 
 export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMikuAR app.css 迁移） ===== */
-/* 外壳专属尺寸 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；颜色 token 已映射为 ysm 等价变量。 */
+/* 外壳专属 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；颜色 token 已映射为 ysm 等价变量。
+   2026-09 收敛：原 8 个 token 中 7 个仅单次消费（纯间接层），已内联回消费点；
+   余下 --uih-slide-card-bg 保持 token 形态——卡片背景独立于 ysm 主题，属真语义 token。 */
 :root {
-  --uih-slide-back-pad-y: 4px;
-  --uih-slide-back-pad-x: 8px;
-  --uih-slide-back-min-width: 28px;
-  --uih-slide-back-radius: var(--radius-sm);
-  --uih-slide-header-pad-y: 6px;
-  --uih-slide-header-pad-x: 8px;
-  --uih-slide-list-pad: 6px 8px;
   /* 内容卡背景：色值统一自外壳 rgba(20,20,30) 系（原 15,15,22 双源漂移），
      透明度 0.92 → 0.55 让外壳 blur(16px) 的场景透出——透景口径与 34 行注释一致；
      可读性由 blur 深底 + 白色文字保证。 */
   --uih-slide-card-bg: rgba(20, 20, 30, 0.55);
+  /* 分隔线（标题栏下沿 / 折叠头边框）：--uih-slide-divider 曾被引用但从未定义
+     （2026-09 收敛时发现的历史悬空引用），致两条 border 声明整条失效、分隔线长期不可见。
+     此处补上定义，取玻璃卡内白色弱分隔调，与 --uih-white-weak 同视觉重量。 */
+  --uih-slide-divider: rgba(255, 255, 255, 0.08);
 }
 
 /* 定位容器：底部居中（替代原 .ysm-3d-popup 的定位职责；卡片视觉交给 .menu-wrapper） */
@@ -74,7 +73,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--uih-slide-list-pad);
+  padding: 6px 8px;
   background: var(--uih-slide-card-bg);
   border-radius:var(--radius-xl);
 }
@@ -83,7 +82,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: var(--uih-slide-header-pad-y) var(--uih-slide-header-pad-x);
+  padding: 6px 8px;
   border-bottom: 1px solid var(--uih-slide-divider);
   flex-shrink: 0;
 }
@@ -91,14 +90,14 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
 .slide-back {
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  padding: var(--uih-slide-back-pad-y) var(--uih-slide-back-pad-x);
+  padding: 4px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--uih-slide-back-radius);
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  min-width: var(--uih-slide-back-min-width);
+  min-width: 28px;
   transition: background var(--tr-fast);
 }
 

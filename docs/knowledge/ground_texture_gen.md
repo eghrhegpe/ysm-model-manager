@@ -15,8 +15,10 @@ auto_fields:
     - derandomize
     - derandomizeDual
     - generatePlainPixels
+    - lowFreqMask
     - makeDecorrelatedVariant
     - maxSeamDiscontinuity
+    - maxWrapSeamDiscontinuity
     - repetitionScore
     - SURFACE_PIXEL_GENERATORS
     - textureRepeatForDerepeat

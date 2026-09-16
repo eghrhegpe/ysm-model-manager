@@ -97,10 +97,12 @@ auto_fields:
     - LightCapability
     - lightDirToPosition
     - LightParams
+    - lowFreqMask
     - luminanceHistogram
     - makeDecorrelatedVariant
     - MAX_MODELS
     - maxSeamDiscontinuity
+    - maxWrapSeamDiscontinuity
     - migrateGroundMatSource
     - ModelEntry
     - oneOf

@@ -9,69 +9,27 @@ import { wsIconCSS } from "@/utils/dom/css.ts";
 export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 MikuMikuAR app.css 迁移，ADR 去桶化配套） ===== */
 /* 专用 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；撞色 token 已映射为 ysm 等价变量。 */
 :root {
-  --uih-font-ui-sm: 11px;
-  --uih-white-40: rgba(255, 255, 255, 0.4);
-  --uih-toggle-row-gap: 8px;
+  /* 白色透明度三档（原 04/05/06/08/10/12/16/40 八档视觉难分辨，收敛为三档） */
+  --uih-white-weak: rgba(255, 255, 255, 0.05);
+  --uih-white-medium: rgba(255, 255, 255, 0.1);
+  --uih-font-ui-sm: calc(11px + var(--fs-scale));
+  --uih-font-lg: calc(16px + var(--fs-scale));
+  /* 卡片不透明底：3D 菜单内滑块/分类行需实底遮挡底层网格（区别于玻璃卡背景）。 */
+  --uih-card-bg: #12121e;
   --uih-slide-item-pad-y: 6px;
   --uih-content-px: 12px;
-  --uih-slide-item-min-height: 38px;
-  --uih-toggle-row-margin-bottom: 2px;
-  --uih-cs-label-font-size: 15px;
-  --uih-slide-item-gap: 8px;
-  --uih-slide-item-pad-x: var(--uih-content-px);
-  --uih-font-ui: 13px;
-  --uih-slide-item-radius: 6px;
-  --uih-slide-item-margin-bottom: 2px;
+  --uih-slide-item-min-height: calc(38px + var(--fs-scale) * 1);
+  --uih-cs-label-font-size: calc(15px + var(--fs-scale));
+  --uih-font-ui: calc(13px + var(--fs-scale));
   --uih-card-hover: rgba(255, 255, 255, 0.1);
   --uih-card-active: rgba(255, 255, 255, 0.16);
   --uih-accent-dim: rgba(74, 108, 247, 0.2);
-  --uih-slide-icon-size: 21px;
-  --uih-white-08: rgba(255, 255, 255, 0.08);
-  --uih-font-time: 12px;
-  --uih-font-title: 14px;
-  --uih-font-ui-xs: 10px;
-  --uih-white-04: rgba(255, 255, 255, 0.04);
-  --uih-white-12: rgba(255, 255, 255, 0.12);
-  --uih-mode-btn-pad-y: 0.3em;
-  --uih-mode-btn-pad-x: 0.7em;
-  --uih-mode-btn-radius: 4px;
-  --uih-white-16: rgba(255, 255, 255, 0.16);
-  --uih-preset-chip-pad-y: 4px;
-  --uih-preset-chip-pad-x: 12px;
-  --uih-preset-chip-height: 28px;
-  --uih-preset-chip-radius: 6px;
-  --uih-preset-chip-icon-size: 14px;
-  --uih-preset-chip-gap: 6px;
-  --uih-preset-chip-group-pad: 6px var(--uih-content-px)
-        10px;
-  --uih-section-title-font-size: 11px;
-  --uih-section-title-pad-y: 8px;
-  --uih-section-title-pad-x: var(--uih-content-px);
-  --uih-section-title-pad-bottom: 4px;
-  --uih-section-title-border-bottom: 1px solid var(--uih-white-06);
-  --uih-section-title-margin-bottom: 2px;
-  --uih-section-title-letter-spacing: 0.3px;
-  --uih-collapsible-header-gap: 8px;
-  --uih-collapsible-header-pad-y: 6px;
-  --uih-collapsible-header-pad-x: var(--uih-content-px);
-  --uih-collapsible-header-radius: 6px;
-  --uih-collapsible-header-min-height: 38px;
-  --uih-collapsible-icon-size: 21px;
-  --uih-collapsible-arrow-size: 12px;
-  --uih-collapsible-panel-transition: max-height 0.3s ease, opacity 0.25s ease;
-  --uih-collapsible-inner-pad: 2px 0 4px;
-  --uih-white-05: rgba(255, 255, 255, 0.05);
-  --uih-white-10: rgba(255, 255, 255, 0.1);
-  --uih-white-06: rgba(255, 255, 255, 0.06);
-  --uih-cs-row-pad-y: 8px;
-  --uih-cs-row-pad-x: var(--uih-content-px);
-  --uih-cs-row-pad-bottom: 6px;
-  --uih-cs-row-min-height: 44px;
-  --uih-cs-row-radius: 6px;
-  --uih-cs-top-gap: 10px;
-  --uih-cs-bar-height: 6px;
-  --uih-cs-bar-radius: 3px;
-  --uih-card-bg: #12121e;
+  --uih-slide-icon-size: calc(21px + var(--fs-scale) * 1.2);
+  --uih-font-title: calc(14px + var(--fs-scale));
+  --uih-font-ui-xs: calc(10px + var(--fs-scale));
+  --uih-preset-chip-height: calc(28px + var(--fs-scale) * 1);
+  --uih-preset-chip-icon-size: calc(14px + var(--fs-scale) * 1.2);
+  --uih-collapsible-icon-size: calc(21px + var(--fs-scale) * 1.2);
 }
 
 /* ===== .ws-icon（UI_ICONS SVG 的尺寸/着色唯一出处，ADR-238）=====
@@ -181,7 +139,7 @@ ${wsIconCSS}
 }
 
 .toggle.header-toggle.toggle-disabled .slider {
-    background: var(--uih-white-40) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
 }
 
 /* Icon fallback (shown when Iconify icon fails to load) */
@@ -203,10 +161,10 @@ ${wsIconCSS}
 .toggle-row {
     display: flex;
     align-items: center;
-    gap: var(--uih-toggle-row-gap);
+    gap: 8px;
     padding: var(--uih-slide-item-pad-y) var(--uih-content-px);
     min-height: var(--uih-slide-item-min-height);
-    margin-bottom: var(--uih-toggle-row-margin-bottom);
+    margin-bottom: 2px;
     justify-content: space-between;
     cursor: pointer;
 }
@@ -235,16 +193,16 @@ ${wsIconCSS}
 .slide-item {
     display: flex;
     align-items: center;
-    gap: var(--uih-slide-item-gap);
-    padding: var(--uih-slide-item-pad-y) var(--uih-slide-item-pad-x);
+    gap: 8px;
+    padding: var(--uih-slide-item-pad-y) var(--uih-content-px);
     cursor: pointer;
     transition:var(--tr-fast);
     font-size: var(--uih-font-ui);
     color: var(--txt);
     line-height: 1.4;
     min-height: var(--uih-slide-item-min-height);
-    border-radius: var(--uih-slide-item-radius);
-    margin-bottom: var(--uih-slide-item-margin-bottom);
+    border-radius:var(--radius-md);
+    margin-bottom: 2px;
 }
 
 .slide-item:hover {
@@ -294,7 +252,7 @@ ${wsIconCSS}
 }
 
 .slide-lead-btn:hover {
-    background: var(--uih-white-08);
+    background: var(--uih-white-medium);
 }
 
 .slide-lead-btn iconify-icon {
@@ -308,7 +266,7 @@ ${wsIconCSS}
     flex: 1;
     flex-shrink: 0;
     white-space: nowrap;
-    font-size: 16px;
+    font-size: var(--uih-font-lg);
 }
 
 .slide-label.wrap-2 {
@@ -342,7 +300,7 @@ ${wsIconCSS}
 
 .slide-arrow {
     color: var(--txt);
-    font-size: var(--uih-font-time);
+    font-size: calc(12px + var(--fs-scale));
     flex-shrink: 0;
     margin-left: 4px;
 }
@@ -437,14 +395,14 @@ ${wsIconCSS}
     height: 22px;
     border-radius:var(--radius-sm);
     font-size: var(--uih-font-ui);
-    background: var(--uih-white-04);
+    background: var(--uih-white-weak);
     transition:var(--tr-normal);
     flex-shrink: 0;
     user-select: none;
 }
 
 .slide-add-btn:hover {
-    background: var(--uih-white-12);
+    background: var(--uih-white-medium);
 }
 
 /* 修复：trailing/del 按钮内的 iconify 图标需显式尺寸，否则回退 1em(≈--font-ui)
@@ -459,10 +417,10 @@ ${wsIconCSS}
 /* Mode selection buttons (shadow type, sky mode, etc.) */
 .mode-btn {
     font-size: var(--uih-font-ui);
-    padding: var(--uih-mode-btn-pad-y) var(--uih-mode-btn-pad-x);
+    padding: 0.3em 0.7em;
     line-height: 1.3;
-    border-radius: var(--uih-mode-btn-radius);
-    border: 1px solid var(--uih-white-08);
+    border-radius:var(--radius-sm);
+    border: 1px solid var(--uih-white-medium);
     background: transparent;
     color: var(--txt);
     cursor: pointer;
@@ -472,12 +430,12 @@ ${wsIconCSS}
 }
 
 .mode-btn:hover {
-    background: var(--uih-white-08);
-    border-color: var(--uih-white-16);
+    background: var(--uih-white-medium);
+    border-color: var(--uih-white-medium);
 }
 
 .mode-btn:active {
-    background: var(--uih-white-16);
+    background: var(--uih-white-medium);
 }
 
 .mode-btn.active {
@@ -496,10 +454,10 @@ ${wsIconCSS}
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: var(--uih-preset-chip-pad-y) var(--uih-preset-chip-pad-x);
+    padding: 4px 12px;
     height: var(--uih-preset-chip-height);
-    border-radius: var(--uih-preset-chip-radius);
-    border: 1px solid var(--uih-white-08);
+    border-radius:var(--radius-md);
+    border: 1px solid var(--uih-white-medium);
     background: transparent;
     color: var(--txt);
     font-size: var(--uih-font-ui-sm);
@@ -511,14 +469,14 @@ ${wsIconCSS}
 }
 
 .preset-chip:hover {
-    background: var(--uih-white-08);
-    border-color: var(--uih-white-16);
+    background: var(--uih-white-medium);
+    border-color: var(--uih-white-medium);
     color: var(--txt);
 }
 
 .preset-chip:active {
     transform: scale(0.96);
-    background: var(--uih-white-12);
+    background: var(--uih-white-medium);
 }
 
 .preset-chip.active {
@@ -544,14 +502,14 @@ ${wsIconCSS}
 /* 只读标签（程序化激活徽标等）— 不可点击 */
 .preset-chip.badge {
     cursor: default;
-    background: var(--uih-white-08);
+    background: var(--uih-white-medium);
     opacity: 0.85;
 }
 
 .preset-chip.badge:hover,
 .preset-chip.badge:active {
-    background: var(--uih-white-08);
-    border-color: var(--uih-white-08);
+    background: var(--uih-white-medium);
+    border-color: var(--uih-white-medium);
     color: var(--txt);
     transform: none;
 }
@@ -575,19 +533,19 @@ ${wsIconCSS}
 
 .preset-group {
     display: flex;
-    gap: var(--uih-preset-chip-gap);
+    gap: 6px;
     flex-wrap: wrap;
-    padding: var(--uih-preset-chip-group-pad);
+    padding: 6px var(--uih-content-px) 10px;
 }
 
 /* ===== Section 分区标题 ===== */
 .section-title {
-    font-size: var(--uih-section-title-font-size);
+    font-size: calc(11px + var(--fs-scale));
     color: var(--txt);
-    padding: var(--uih-section-title-pad-y) var(--uih-section-title-pad-x) var(--uih-section-title-pad-bottom);
-    border-bottom: var(--uih-section-title-border-bottom);
-    margin-bottom: var(--uih-section-title-margin-bottom);
-    letter-spacing: var(--uih-section-title-letter-spacing);
+    padding: 8px var(--uih-content-px) 4px;
+    border-bottom: 1px solid var(--uih-white-weak);
+    margin-bottom: 2px;
+    letter-spacing: 0.3px;
 }
 
 /* ===== Collapsible 通用折叠组件 ===== */
@@ -598,13 +556,13 @@ ${wsIconCSS}
 .collapsible-header {
     display: flex;
     align-items: center;
-    gap: var(--uih-collapsible-header-gap);
-    padding: var(--uih-collapsible-header-pad-y) var(--uih-collapsible-header-pad-x);
+    gap: 8px;
+    padding: 6px var(--uih-content-px);
     cursor: pointer;
     user-select: none;
-    border-radius: var(--uih-collapsible-header-radius);
+    border-radius:var(--radius-md);
     transition:var(--tr-fast);
-    min-height: var(--uih-collapsible-header-min-height);
+    min-height: calc(38px + var(--fs-scale) * 1);
 }
 
 .collapsible-header:hover {
@@ -641,11 +599,11 @@ ${wsIconCSS}
 /* 折叠头 + toggle-row 字体放大，与 cs-row 的 15px 区分 */
 .collapsible-header .collapsible-label,
 .toggle-label {
-    font-size: 16px;
+    font-size: var(--uih-font-lg);
 }
 
 .collapsible-arrow {
-    font-size: var(--uih-collapsible-arrow-size);
+    font-size: calc(12px + var(--fs-scale) * 1);
     color: var(--txt);
     transition: transform var(--tr-normal);
     flex-shrink: 0;
@@ -654,7 +612,10 @@ ${wsIconCSS}
 .collapsible-panel {
     overflow: hidden;
     max-height: 0;
-    transition: var(--uih-collapsible-panel-transition);
+    /* 折叠展开动画：0.3s ease 比 --tr-normal(0.15s) 慢一倍——面板 max-height 过渡需更从容；
+       --tr-enter(0.25s ease-out) 缓动不同，替换会静默改变观感。三档令牌均表达不了，
+       故按 UI-Design.md §7 走同行豁免。 */
+    transition: max-height 0.3s ease, opacity 0.25s ease; /* tr-exempt: 折叠面板需慢速从容展开，现有一档无 0.3s ease */
     opacity: 0;
 }
 
@@ -663,7 +624,7 @@ ${wsIconCSS}
 }
 
 .collapsible-inner {
-    padding: var(--uih-collapsible-inner-pad);
+    padding: 2px 0 4px;
 }
 
 /* Collapsible — mat variant（材质分类用，灰色小按钮风格） */
@@ -677,8 +638,8 @@ ${wsIconCSS}
     border-radius:var(--radius-md);
     font-size: var(--uih-font-ui-sm);
     color: var(--muted);
-    background: var(--uih-white-05);
-    border: 1px solid var(--uih-white-08);
+    background: var(--uih-white-weak);
+    border: 1px solid var(--uih-white-medium);
     transition:
         background 0.12s,
         color 0.12s,
@@ -687,13 +648,13 @@ ${wsIconCSS}
 }
 
 .collapsible-header.collapsible-mat:hover {
-    background: var(--uih-white-10);
+    background: var(--uih-white-medium);
     color: var(--txt);
-    border-color: var(--uih-white-12);
+    border-color: var(--uih-white-medium);
 }
 
 .collapsible-header.collapsible-mat:active {
-    background: var(--uih-white-16);
+    background: var(--uih-white-medium);
 }
 
 .collapsible-header.collapsible-mat .collapsible-icon {
@@ -722,7 +683,7 @@ ${wsIconCSS}
 .collapsible-panel.mat-slider-panel {
     margin-top: 6px;
     padding: 6px 0 0;
-    border-top: 1px solid var(--uih-white-06);
+    border-top: 1px solid var(--uih-white-weak);
 }
 
 .collapsible-panel.mat-slider-panel.open {
@@ -730,15 +691,15 @@ ${wsIconCSS}
 }
 
 .cs-row {
-    padding: var(--uih-cs-row-pad-y) var(--uih-cs-row-pad-x) var(--uih-cs-row-pad-bottom);
+    padding: 8px var(--uih-content-px) 6px;
     cursor: pointer;
     transition:var(--tr-fast);
     user-select: none;
-    min-height: var(--uih-cs-row-min-height);
+    min-height: 44px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border-radius: var(--uih-cs-row-radius);
+    border-radius:var(--radius-md);
 }
 
 .cs-row:hover {
@@ -752,7 +713,7 @@ ${wsIconCSS}
 .cs-top {
     display: flex;
     align-items: center;
-    gap: var(--uih-cs-top-gap);
+    gap: 10px;
     margin-bottom: 4px;
 }
 
@@ -785,9 +746,9 @@ ${wsIconCSS}
 /* standalone / cs-row column: explicit width fills parent */
 .cs-bar {
     width: 100%;
-    height: var(--uih-cs-bar-height);
-    background: var(--uih-white-12);
-    border-radius: var(--uih-cs-bar-radius);
+    height: 6px;
+    background: var(--uih-white-medium);
+    border-radius: var(--radius-xs);
     overflow: visible;
     position: relative;
     cursor: pointer;
@@ -810,7 +771,7 @@ ${wsIconCSS}
     right: 0;
     height: 50%;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent);
-    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
     pointer-events: none;
 }
 
@@ -828,7 +789,7 @@ ${wsIconCSS}
         rgba(255, 255, 255, 0.04) 4px,
         rgba(255, 255, 255, 0.04) 5px
     );
-    border-radius: var(--uih-cs-bar-radius);
+    border-radius: var(--radius-xs);
     pointer-events: none;
 }
 
@@ -843,7 +804,7 @@ ${wsIconCSS}
 .cs-fill {
     height: 100%;
     background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 80%, transparent), var(--accent));
-    border-radius: var(--uih-cs-bar-radius);
+    border-radius: var(--radius-xs);
     transition: width 0.06s linear;
     pointer-events: none;
     position: relative;
@@ -858,7 +819,7 @@ ${wsIconCSS}
     right: 0;
     height: 50%;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
-    border-radius: var(--uih-cs-bar-radius) var(--uih-cs-bar-radius) 0 0;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 }
 
 .cs-fill::before {
@@ -878,7 +839,9 @@ ${wsIconCSS}
     width: 2px;
     height: 100%;
     background: var(--accent);
-    border-radius: 1px;
+    /* 滑块手柄 2px 宽：--radius-xs(3px) 经 CSS 收缩规则（半径 > 宽/半即按比例限定）
+       实际渲染为 1px，与硬编码 1px 逐像素一致，故走令牌无视觉差异。 */
+    border-radius: var(--radius-xs);
     transform: translateX(-50%);
     pointer-events: none;
     transition: left 0.06s linear;
@@ -888,7 +851,7 @@ ${wsIconCSS}
 .mat-slider-panel {
     margin-top: 6px;
     padding: 6px 0 0;
-    border-top: 1px solid var(--uih-white-06);
+    border-top: 1px solid var(--uih-white-weak);
 }
 
 /* Batch category slider context */
@@ -902,8 +865,8 @@ ${wsIconCSS}
 
 /* Per-material slider context */
 .mat-mat-slider .cs-row {
-    background: var(--uih-white-04);
-    border: 1px solid var(--uih-white-06);
+    background: var(--uih-white-weak);
+    border: 1px solid var(--uih-white-weak);
 }
 
 .mat-mat-slider .cs-row:hover {
@@ -931,7 +894,7 @@ ${wsIconCSS}
     width: 18px;
     height: 18px;
     border-radius:var(--radius-sm);
-    border: 1px solid var(--uih-white-08);
+    border: 1px solid var(--uih-white-medium);
     flex-shrink: 0;
 }
 

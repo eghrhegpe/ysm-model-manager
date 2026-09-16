@@ -421,6 +421,7 @@ auto_fields:
     - LoadTraceAssets
     - LoadTraceStage
     - LoadTraceTexture
+    - lowFreqMask
     - luminanceHistogram
     - makeBonePanelRenderer
     - makeBonesPanelItem
@@ -454,6 +455,7 @@ auto_fields:
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
     - maxSeamDiscontinuity
+    - maxWrapSeamDiscontinuity
     - MENU_BTN_CSS
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS

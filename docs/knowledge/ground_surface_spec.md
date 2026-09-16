@@ -95,6 +95,9 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 >
 > ⚠️ **ADR-254 材质名兼现配色**：`canvasStyle` 原本只控形状（频率/对比度）、颜色正交——于是选「草地」得到的是**棕色斑块**（默认 matColor/matColor2 均棕）。现增 `GROUND_MATERIAL_PRESETS`（**配色唯一事实源**）+ 显式状态 `groundMaterialPreset`（plain|marble|sand|grass|custom）：选材质 = **一次性写入形状+配色**；手改预设关心的字段 → 中间件置 `custom`（菜单下拉可见）。
 >
+> ⚠️ **中间件与存档恢复的边界**（审核 1807efcd7 修正）：「手改即 custom」中间件只许拦**用户 setter** 写入——`loadState` 恢复路径必须 `skipMiddleware: true`（`setEnvState` opts 通道），否则逐字段还原配色会触发中间件，用户选的预设重启恒显示「自定义（已手改）」（名实不符）；`groundMaterialPreset` 须持久化（saveState 写、loadState oneOf 恢复，旧存档缺字段回退 plain）。**教训：新增全局写入中间件 = 同时定义「豁免通道」，恢复/同步类非用户写入一律显式豁免。**
+> ⚠️ **legacy 迁移分支禁止整对象替换**（同轮实测发现）：`state = migrated` 会把混合存档（旧键+已前缀化新键共存，如 `{visible, groundCanvasStyle}`）中未映射的 `ground*` 键静默丢弃——迁移后须透传 `ground` 前缀键保底。
+>
 > `sand`：高频细颗粒低对比（freq 14 / contrast 0.45）；`grass`：中频块状高对比（freq 5 / contrast 0.95）。两者与 `marble` 共用 `valueNoise` 三倍频基建。
 - **marble**：种子化哈希噪声叠加多频三角波，matColor/matColor2 之间插值产生随机大理石紊纹理
 - **sand / grass**（ADR-251）：纯噪声材质（三倍频 `valueNoise`，无色带），在 matColor/matColor2 间 lerp；仅频率与对比度不同。`gridSize` 作粒度基准，`density` 作频率倍率，`angleRad` 旋转颗粒。

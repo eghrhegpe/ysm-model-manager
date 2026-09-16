@@ -21,6 +21,7 @@ import {
   buildGroundOverlaySpec,
   buildGroundSurfaceSpec,
   GROUND_CANVAS_STYLES,
+  GROUND_MATERIAL_PRESET_IDS,
   GROUND_MATERIAL_PRESETS,
   GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
@@ -555,6 +556,21 @@ export class GroundCapability implements SceneCapability {
     setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
     this.refreshSurface();
   }
+  /** 存档恢复变体（skipMiddleware：还原非手改，不触发「脱离预设」标记，ADR-254） */
+  private setMatDensityRestore(v: number): void {
+    setEnvState(
+      { groundMatDensity: Math.max(0.25, Math.min(8, v)) },
+      { source: "manual", skipMiddleware: true },
+    );
+    this.refreshSurface();
+  }
+  private setMatAngleRestore(deg: number): void {
+    setEnvState(
+      { groundMatAngleDeg: ((deg % 360) + 360) % 360 },
+      { source: "manual", skipMiddleware: true },
+    );
+    this.refreshSurface();
+  }
 
   isEnabled(): boolean {
     return this.enabled;
@@ -595,6 +611,9 @@ export class GroundCapability implements SceneCapability {
       groundMatAngleDeg: envState.groundMatAngleDeg,
       groundMatRoughness: envState.groundMatRoughness,
       groundMatMetalness: envState.groundMatMetalness,
+      // ADR-254：预设状态是持久化的可见事实（名实相符），不持久化则重启后
+      // loadState 恢复配色会被中间件误判为手改 → 恒显示「自定义」
+      groundMaterialPreset: envState.groundMaterialPreset,
       // ADR-249 §2.3 叠加层持久化
       groundOverlay: envState.groundOverlay,
       groundOverlayColor: envState.groundOverlayColor,
@@ -665,6 +684,13 @@ export class GroundCapability implements SceneCapability {
       for (const k of legacyGroundKeys) {
         if (k in gs && k !== "matSource") migrated[map[k]] = gs[k];
       }
+      // 新前缀键保底透传：legacy 判据是「缺 groundSize + 有任一旧键」，混合存档
+      // （部分字段已升级）若整对象替换会把已前缀化的字段静默丢弃（审核回归实测：
+      // {visible, groundCanvasStyle} 混合 → canvasStyle 丢失）。旧键已由上方 map
+      // 处理，这里只透传 ground 前缀的新键（旧键均不带 ground 前缀，无冲突）。
+      for (const [k, v] of Object.entries(gs)) {
+        if (k.startsWith("ground") && !(k in migrated)) migrated[k] = v;
+      }
       // ADR-249 §2.1 + ADR-252：旧单枚举 matSource 拆为来源轴 + 材质轴 + 叠加层
       if ("matSource" in gs) {
         const m = migrateGroundMatSource(String(gs.matSource) as LegacyGroundMatSource);
@@ -714,10 +740,17 @@ export class GroundCapability implements SceneCapability {
         boolean: (v) => this.setVisible(v),
       },
       groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
-        setEnvState({ groundSourceKind: v }, { source: "manual" }),
+        setEnvState({ groundSourceKind: v }, { source: "manual", skipMiddleware: true }),
+      ),
+      // ADR-254：恢复路径全部 skipMiddleware——存档还原是**非用户手改**写入，
+      // 配色/形状还原不得触发「手改即 custom」中间件（实测：逐字段恢复会把
+      // 用户选的预设恒打成 custom，名实不符）。preset 单独 oneOf 恢复；
+      // 旧存档缺该字段 → 回退 plain（与 schema 默认一致，保守兜底）。
+      groundMaterialPreset: oneOf([...GROUND_MATERIAL_PRESET_IDS, "custom"] as const, (v) =>
+        setEnvState({ groundMaterialPreset: v }, { source: "manual", skipMiddleware: true }),
       ),
       groundCanvasStyle: oneOf(GROUND_CANVAS_STYLES, (v) =>
-        setEnvState({ groundCanvasStyle: v }, { source: "manual" }),
+        setEnvState({ groundCanvasStyle: v }, { source: "manual", skipMiddleware: true }),
       ),
       groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
       groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }) },
@@ -725,16 +758,23 @@ export class GroundCapability implements SceneCapability {
         number: (v) => setEnvState({ groundColorCenter: v }, { source: "manual" }),
       },
       groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }) },
-      groundMatColor: { number: (v) => setEnvState({ groundMatColor: v }, { source: "manual" }) },
-      groundMatColor2: { number: (v) => setEnvState({ groundMatColor2: v }, { source: "manual" }) },
+      groundMatColor: {
+        number: (v) =>
+          setEnvState({ groundMatColor: v }, { source: "manual", skipMiddleware: true }),
+      },
+      groundMatColor2: {
+        number: (v) =>
+          setEnvState({ groundMatColor2: v }, { source: "manual", skipMiddleware: true }),
+      },
       groundMatGridSize: {
-        number: (v) => setEnvState({ groundMatGridSize: v }, { source: "manual" }),
+        number: (v) =>
+          setEnvState({ groundMatGridSize: v }, { source: "manual", skipMiddleware: true }),
       },
       groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
       groundMatScale: { number: (v) => this.setMatScale(v) },
       groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },
-      groundMatDensity: { number: (v) => this.setMatDensity(v) },
-      groundMatAngleDeg: { number: (v) => this.setMatAngle(v) },
+      groundMatDensity: { number: (v) => this.setMatDensityRestore(v) },
+      groundMatAngleDeg: { number: (v) => this.setMatAngleRestore(v) },
       groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
       groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
       // ADR-249 §2.3 叠加层恢复

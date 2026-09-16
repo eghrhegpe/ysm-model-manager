@@ -58,7 +58,7 @@ function shouldOverwrite(key: string, source: WriteSource): boolean {
  */
 export function setEnvState(
   partial: Partial<EnvState>,
-  opts?: { source?: WriteSource; force?: boolean },
+  opts?: { source?: WriteSource; force?: boolean; skipMiddleware?: boolean },
 ): void {
   const source = opts?.source ?? "auto-model";
   const force = opts?.force ?? false;
@@ -67,10 +67,15 @@ export function setEnvState(
   // 范式：中间件拿到**本次 patch**，可返回补充 patch（合并回本次写入）。
   // 用途：地面材质的「手改即脱离预设」标记收口——只在此一处置位，
   // 不靠每个 setter 自觉（防漏、防前缀匹配误清）。
+  // skipMiddleware：存档恢复/程序化同步等**非用户手改**写入豁免——恢复路径的
+  // 配色还原不得被误判为「已手改」（ADR-254 审核修正：loadState 逐字段恢复
+  // 曾把用户选的预设恒打成 custom）。
   let patch = partial;
-  for (const mw of _writeMiddlewares) {
-    const extra = mw(patch);
-    if (extra) patch = { ...patch, ...extra };
+  if (!opts?.skipMiddleware) {
+    for (const mw of _writeMiddlewares) {
+      const extra = mw(patch);
+      if (extra) patch = { ...patch, ...extra };
+    }
   }
 
   const changedKeys = new Set<string>();

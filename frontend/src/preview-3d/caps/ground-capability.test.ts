@@ -855,4 +855,35 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     expect(cap.getMaterialPreset()).toBe("grass");
     expect(cap.getMatColor()).toBe(c);
   });
+
+  it("存档往返：预设状态持久化且 loadState 不误判 custom（审核回归）", () => {
+    const scene = new THREE.Scene();
+    localStorage.removeItem("ysm-scene-cap-ground");
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new GroundCapability({ scene });
+    cap2.loadState();
+    localStorage.removeItem("ysm-scene-cap-ground");
+    // 审查器 P2 实锤案例：loadState 逐字段恢复曾触发中间件 → 恒 custom，
+    // 用户选的「草地」重启显示「自定义（已手改）」——名实不符
+    expect(cap2.getMaterialPreset(), "恢复路径不得触发手改标记").toBe("grass");
+    expect(cap2.getCanvasStyle()).toBe("grass");
+    expect(cap2.getMatColor()).toBe(GROUND_MATERIAL_PRESETS.grass.matColor);
+  });
+
+  it("旧存档缺 groundMaterialPreset 字段 → 回退 plain（保守兜底）", () => {
+    const scene = new THREE.Scene();
+    localStorage.removeItem("ysm-scene-cap-ground");
+    localStorage.setItem(
+      "ysm-scene-cap-ground",
+      JSON.stringify({ enabled: true, visible: true, groundCanvasStyle: "marble" }),
+    );
+    const cap = new GroundCapability({ scene });
+    cap.loadState();
+    localStorage.removeItem("ysm-scene-cap-ground");
+    expect(cap.getMaterialPreset()).toBe("plain");
+    expect(cap.getCanvasStyle()).toBe("marble");
+  });
 });

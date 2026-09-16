@@ -26,7 +26,12 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { allIconNames, EMOJI_TO_ICON, glyphOfIconName, suggestIconName } from "../scripts/_lib/icon-map.ts";
+import {
+  allIconNames,
+  EMOJI_TO_ICON,
+  glyphOfIconName,
+  suggestIconName,
+} from "../scripts/_lib/icon-map.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
@@ -79,8 +84,12 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
 {
   const src = fs.readFileSync(UI_ICONS_FILE, "utf-8");
   // 提取实现里的键（`  name: svg(` 或 `  name: svg(`；UI_ICONS 对象字面量的顶层键）
-  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
-  assert.ok(implBlock.length > 0, "未能从 ui-icons.ts 提取 UI_ICONS 对象体（结构变了请同步本测试）");
+  const implBlock =
+    /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
+  assert.ok(
+    implBlock.length > 0,
+    "未能从 ui-icons.ts 提取 UI_ICONS 对象体（结构变了请同步本测试）",
+  );
   const implNames = new Set<string>();
   for (const m of implBlock.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*)\s*:/gm)) {
     implNames.add(m[1]!);
@@ -109,15 +118,24 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
 // ── 4. SVG 形态约定（复用 .ws-icon，勿新造第二套）──────
 {
   const src = fs.readFileSync(UI_ICONS_FILE, "utf-8");
-  const implBlock = /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
+  const implBlock =
+    /export const UI_ICONS[^{]*\{([\s\S]*?)\n\}\s*(?:satisfies[^;]*)?;/.exec(src)?.[1] ?? "";
   // 每个条目都经 svg() 包装 → 应含 class="ws-icon" 与 viewBox="0 0 24 24"
   const wrapper = /function svg\([\s\S]*?\n\}/.exec(src)?.[0] ?? "";
-  assert.ok(wrapper.includes('class="ws-icon"'), "svg() 包装器必须带 class=\"ws-icon\"（否则不随主题/字号）");
-  assert.ok(wrapper.includes('viewBox="0 0 24 24"'), "svg() 包装器必须带 24×24 viewBox（视觉重量统一）");
+  assert.ok(
+    wrapper.includes('class="ws-icon"'),
+    'svg() 包装器必须带 class="ws-icon"（否则不随主题/字号）',
+  );
+  assert.ok(
+    wrapper.includes('viewBox="0 0 24 24"'),
+    "svg() 包装器必须带 24×24 viewBox（视觉重量统一）",
+  );
 
   // 条目数应等于实现名数（防解析漏项）
   const entries = [...implBlock.matchAll(/^\s{2}[a-zA-Z][a-zA-Z0-9]*\s*:\s*svg\(/gm)].length;
-  const names = new Set([...implBlock.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*)\s*:/gm)].map((m) => m[1]));
+  const names = new Set(
+    [...implBlock.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*)\s*:/gm)].map((m) => m[1]),
+  );
   assert.equal(
     entries,
     names.size,
@@ -137,6 +155,11 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
 //   a) 每个渲染 UI_ICONS 的 Shadow DOM 组件，其 CSS 必须含 .ws-icon 规则（经 wsIconCSS
 //      插值引入或就地定义）；
 //   b) 全局 components.css 必须有一份副本（覆盖光 DOM 组件）。
+// 2026-09-16 二次复盘：上述「12 个漏带」实为 13 个——3D overlay（preview-3d）连扫描
+// 都没进（文件判据要 `export const xCSS`，它是 xCss；样式主要走 installOnceStyles 内联串）。
+// 后果也不是「巨块」而是**图标 0×0 彻底不可见**：.slide-icon 是 flex 容器，无 width:1em
+// 的 SVG 自动尺寸为 0（实测 computed fill=rgb(0,0,0) / stroke=none / box=0x0）。
+// 故本组已把 preview-3d 纳入并对齐导出名惯例。
 // 只靠 review 记不住「新增视图要带上它」，必须机器兜底。
 {
   const srcRoot = path.join(ROOT, "frontend/src");
@@ -162,7 +185,8 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
       } catch {
         return false;
       }
-      if (!/export const \w+CSS(?:\s*:\s*string)?\s*=/.test(txt)) return false;
+      // 导出名两种惯例：views 的 xCSS（大写）与 preview-3d/menu 的 xCss（小写）——两者都要扫到
+      if (!/export const \w+(?:CSS|Css)(?:\s*:\s*string)?\s*=/.test(txt)) return false;
       // 取 CSS 串本体（从 `export const xCSS =` 起到文件尾；够用且稳）
       const body = txt.slice(txt.indexOf("= `"));
       return /\.ws-icon\s*\{/.test(body) || /\$\{wsIconCSS\}/.test(body);
@@ -175,6 +199,10 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
     "views/app-tree",
     "views/app-nav",
     "views/app-content",
+    // 2026-09-16 复盘补漏：3D overlay 是第 13 个漏网 shadow 根——adopt 的是
+    // preview-3d/menu/components-styles.ts 的 componentsCss（曾整串无 .ws-icon 规则，
+    // 且导出名小写 Css / 样式另走 installOnceStyles 内联串，双重逃过本组扫描）。
+    "preview-3d",
   ];
   const missing = shadowDirs.filter((d) => !cssHasWsIcon(d));
   assert.deepEqual(

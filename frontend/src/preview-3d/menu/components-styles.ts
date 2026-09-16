@@ -4,6 +4,8 @@
 //  - Shadow DOM 组件：root.adoptedStyleSheets = [componentsStyleSheet, ...others];
 //  - 全局/light-DOM：installComponentsStyles() 会把样式注入 document.head 一次。
 
+import { wsIconCSS } from "@/utils/dom/css.ts";
+
 export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 MikuMikuAR app.css 迁移，ADR 去桶化配套） ===== */
 /* 专用 token 加 --uih- 命名空间以防与 ysm 全局主题冲突；撞色 token 已映射为 ysm 等价变量。 */
 :root {
@@ -72,6 +74,12 @@ export const componentsCss = `/* ===== 🥉 ui-helpers 组件库样式（自 Mik
   --uih-card-bg: #12121e;
 }
 
+/* ===== .ws-icon（UI_ICONS SVG 的尺寸/着色唯一出处，ADR-238）=====
+ * 3D overlay 是本串最主要（也是唯一）的 shadow 根 adopt 方；图标只能吃 shadow 内可达的规则。
+ * 漏带后果不是「巨块」而是 **0×0 彻底不可见**——.slide-icon 是 flex 容器，无 width:1em 的
+ * SVG 自动尺寸为 0（2026-09-16 实测 computed fill=rgb(0,0,0) / stroke=none / box=0x0）。
+ * 与 utils/dom/css.ts|wsIconCSS、全局 css/components.css 副本同源，勿就地改写规则本体。 */
+${wsIconCSS}
 /* 危险文字统一样式 */
 .danger-text {
     color: var(--status-error);

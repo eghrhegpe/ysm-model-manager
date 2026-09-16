@@ -87,8 +87,8 @@ status: active
 | 加载 | （已拔管） | `ui-loading.ts`（`withLoadingIndicator` 自包含加载遮罩）2026-09-10 删除——生产零消费者；其 orphan 样式 `.loading-overlay*`（`components-styles.ts`）同批清空 |
 | 顶部切换 | `preview-3d/menu/header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；纯创建函数，无注册表自更新（bind 注册链 + control-registry 2026-09 拔除，见 ADR-085） |
 | 滑块 | `preview-3d/menu/slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls\|renderCapSlider` 生产消费） |
-| 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——生产行图标经 textContent 直写 / 字面量 glyph |
-| 样式 | `preview-3d/menu/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次） |
+| 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——**现行入口 = `utils/icon/resolve.ts\|applyIcon`**：语义名 → `UI_ICONS` 的 SVG（`class="ws-icon"`，着色/定尺靠 `.ws-icon` 规则）；数据图标（`resource_types.json` 的 emoji/字形）→ `textContent` 兜底（ADR-238 D1 不可动） |
+| 样式 | `preview-3d/menu/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次）。**本串必须自带 `.ws-icon` 规则**（经 `@/utils/dom/css.ts\|wsIconCSS` 插值，勿就地重写规则本体）——3D overlay 是 adopt 本串的唯一 shadow 根，`UI_ICONS` 的 SVG 靠它着色/定尺；漏带时在 `.slide-icon`（flex 容器）里自动尺寸为 0 → **图标 0×0 不可见**（2026-09-16 实测），非「巨块」 |
 | 外壳样式 | `preview-3d/menu/slide-menu-styles.ts` | `slideMenuCss` → `slideMenuStyleSheet` + `installSlideMenuStyles()` |
 | 样式脚手架 | `preview-3d/menu/style-install.ts` | `createInstallableStyles`——上面两样式文件共用的「CSSStyleSheet + 幂等 light-DOM 注入」脚手架 |
 | 常量 | `preview-3d/infra/ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID）——**仅 `mount-preview-core` 建、`preview-3d/infra/overlay-active\|isPreviewOverlayActive` 查**两个出口，其它模块不得直接引用该常量裸查 DOM；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |

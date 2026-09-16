@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-251：地面材质家族补全：噪声材质与非几何图案分工",
+        "link": "/adr/ADR-251-ground-material-family-completion"
+      },
+      {
         "text": "ADR-250：后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky",
         "link": "/adr/ADR-250-cap-composer-sky"
       },

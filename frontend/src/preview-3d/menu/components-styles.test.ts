@@ -32,6 +32,14 @@ describe("componentsCss 契约冒烟", () => {
     });
   }
 
+  // 3D overlay 是唯一 adopt 本串的 shadow 根，UI_ICONS 的 SVG 靠这里的 .ws-icon 着色/定尺。
+  // 缺失时不是「图块过大」而是**0×0 不可见**：.slide-icon 是 flex 容器，无 width:1em 的
+  // SVG 自动尺寸为 0（2026-09 实测 computed fill=rgb(0,0,0) / stroke=none / box=0x0）。
+  it("自带 .ws-icon 规则（3D overlay 行图标唯一可达的着色/尺寸源）", () => {
+    expect(componentsCss).toMatch(/\.ws-icon\s*\{[^}]*width:\s*1em/);
+    expect(componentsCss).toMatch(/\.ws-icon\s*\{[^}]*fill:\s*none/);
+    expect(componentsCss).toMatch(/\.ws-icon\s*\{[^}]*stroke:\s*currentColor/);
+  });
   it("非空字符串", () => {
     expect(componentsCss.length).toBeGreaterThan(1000);
   });

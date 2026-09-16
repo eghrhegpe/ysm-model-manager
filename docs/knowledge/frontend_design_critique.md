@@ -336,6 +336,8 @@ invariant_anchors:
   - **⚠️ 最值得记的一条：我第一版守卫测试是「假绿」**——它只查「文件里出现 `wsIconCSS` 字样」，而 `import` 语句里也有该字样，**删掉插值 `${wsIconCSS}` 后测试照样通过**。改成要求「CSS 串本体内含 `.ws-icon{` 或 `${wsIconCSS}` 插值」才真正拦得住。**写完守卫必须故意破坏一次验证它会红**，否则等于没写。
   - **顺带修**：`app-toast` 3 处 `msg:` 文本槽误用 UI_ICONS（toast 走 `esc()` 转义，会显示字面 `<svg>`）→ 还原 emoji；其 close 按钮图标在 inline `<style>` 的 shadow 里，同样需插值 `wsIconCSS`。
   - 守卫：`tests/test_ui_icons.ts` 新增第 5 组「尺寸规则覆盖面」——断言 5 个 shadow 组件 + 全局副本均带 `.ws-icon{width:1em}`，且已实测「故意移除即红」。
+  - **⚠️ 2026-09-16 补漏（本刀当时数错了）**：漏带的不是 12 个而是 **13 个**——第 13 个是 3D overlay（`preview-3d`），它连上面这条守卫都没进：判据要 `export const xCSS`（它是 `componentsCss`，小写 Css），且样式主要走 `installOnceStyles` 内联串。后果也不同：不是「24×24 巨块」而是**图标 0×0 彻底不可见**（`.slide-icon` 是 flex 容器，无 `width:1em` 的 SVG 自动尺寸为 0；实测 computed `fill=rgb(0,0,0)` / `stroke=none` / `box=0x0`）。
+    修法：`componentsCss` 插值 `${wsIconCSS}`（overlay 已在 adopt 本串）；守卫 `shadowDirs` 纳入 `preview-3d` 并放宽导出名判据到 `\w+(?:CSS|Css)`。
 
 - ✅ **刀㉓ 图标与 i18n 分界收口：i18n 值剥离结构，模板层拼 `UI_ICONS`**（2026-09，承接刀㉒）：
   - **原则（与 i18n 完全同构）**：`t("key")` → 纯文本 → 放 text node；`UI_ICONS.x` → SVG 结构 → 放 HTML。

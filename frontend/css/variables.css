@@ -42,7 +42,9 @@
   --act: #313145;
   --accent: #9575cd;
   --txt: #e0d5f5;
-  --muted: #8b7fad;
+  /* WCAG 实测 2026：原 #8b7fad on --card 仅 4.11（卡片内不合格，on --bg 5.12 却合格）——
+     同一令牌在三种表面上合格性不同，取值必须按最差表面定 */
+  --muted: #9a8fbb;
   --bd: color-mix(in srgb, var(--accent) 10%, transparent);
   --meta-author: #66d9ef;
   --meta-work: #bd93f9;
@@ -69,7 +71,9 @@
   --act: #ddd0b8;
   --accent: #8b4513;
   --txt: #3e2723;
-  --muted: #8b7355;
+  /* WCAG 实测 2026：原 #8b7355 三面全不合格（bg 3.94 / surf 3.55 / card 4.16）——
+     亮色主题 --muted 是全站用量最大的文字色，压暗至三面均 ≥4.5 */
+  --muted: #786140;
   --bd: color-mix(in srgb, var(--accent) 12%, transparent);
   --card-shadow: var(--shadow-sm);
   --card-shadow-hover: var(--shadow-md);
@@ -302,7 +306,9 @@
   left: 8px;
   padding: 8px 16px;
   background: var(--accent);
-  color: #fff;
+  /* 原 `color: #fff` 在 pro/ocean accent（#ff8a65/#9fa8da）上仅 2.31:1；
+     改取 --bg，与 .btn-base.primary 同口径（暗底配亮 accent / 亮底配暗 accent 两端恒成立） */
+  color: var(--bg);
   text-decoration: none;
   border-radius: 0 0 6px 6px;
   z-index: 99999;

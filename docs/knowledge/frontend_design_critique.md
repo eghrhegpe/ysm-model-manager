@@ -580,6 +580,17 @@ invariant_anchors:
   - **方法论**：**提案要经得起实测**——这次若凭直觉扩口径，会把 235 条合法文案变成"债"，
     逼出一次大规模基线膨胀与误改。闸的口径宁窄勿宽：**宽口径的假阳性会稀释真信号**。
 
+- ✅ **刀㉙ 美学体检：渲染态量测首次落地 + 三处 WCAG 实证修复**（2026-09，用户点题「前端设计美学如何，担心」）：
+  - **方法层的补课**：刀①–㉘ 全在**源码/文档层**（令牌、图标、a11y 结构），**从未量过渲染结果**。本轮用 Playwright + mock bridge，跨 Shadow DOM 遍历 `getComputedStyle`，量对比度 / 字号种类 / padding 节奏 / 点击命中区——「美学」第一次变成可复现的数字。
+  - **实测三症**（1440×900，7 页 × 多主题）：
+    ① **层级扁平**：每页 `--muted` 用量压过 `--txt`（diagnostics 21:2、workshop 22:15、repo 19:15）——设计哲学「可扫描」被次色泛滥抵消；
+    ② **亮色主题塌陷**：warm `--muted` 三面全不合格（bg 3.94 / surf 3.55 / card 4.16），cyber 对 `--card` 4.11 亦不合格——**同一令牌在不同表面合格性不同，而令牌表只记一个值**（sakura 2026-08-15 修过，warm 未进那轮审计）；
+    ③ **规范与渲染漂移**：`app-nav/tpl.ts|.nav-item` 的 `calc(var(--fs-nav) + 2px)` 渲染成 **15px**（文档写 13px，语义令牌被就地改写等于没用）、单页 **22 种 padding**（规范 5 档）、5px 圆角 7 处（不在令牌集）。
+  - **已修（本刀只做客观项；审美取向项如导航 13↔15px 留用户拍板）**：`frontend/css/variables.css`——warm `--muted` `#8b7355`→`#786140`（三面 5.15/4.63/5.43）、cyber `--muted` `#8b7fad`→`#9a8fbb`（card 5.03）、`.skip-link` `color:#fff`→`var(--bg)`（白字在 pro/ocean accent 上仅 **2.31**；改后与 `.btn-base.primary` 同口径，两端恒成立）。
+  - **端到端验收（不只看测试绿）**：重建后**重渲染复测**，对比度失败 **cyber repo 1→0 / warm repo 17→0 / cyber workshop 3→0**，且 `mutedCount` 不变（19/22，同批元素仅由不合格转合格）。`vite build` ✅ / `npm run typecheck` ✅ / `check-design-tokens --baseline` 新增 **0** ✅。
+  - **⚠️ 顺带发现（覆盖面缺口）**：`frontend/css/` **不在 biome 覆盖面内**——`check-biome --files frontend/css/variables.css` 报 `No files were processed`（`biome.json` 忽略该路径）。那 5 个手写样式表当前**唯一守卫就是设计令牌闸**。
+  - **方法论（与刀⑲–㉘ 同构的下一站）**：令牌闸守的是「有没有写成 `var()`」，**对「`var()` 取值对不对」零感知**。`warm --muted = 3.94` 能活到今天不是没人认真，是**它不在任何闸的视野里**——**闸只看得见它被写死的那一类位置**。
+
 ## 相关
 
 - [frontend_repo_audit](frontend_repo_audit.md)：代码质量基线（4.1/5，2026-08-26）

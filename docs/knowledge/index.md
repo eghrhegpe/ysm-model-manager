@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 185 张知识卡
+> 总计: 186 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -235,7 +235,7 @@
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## rendering（16 张）
+## rendering（17 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -244,6 +244,7 @@
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
 | 🍃 ground-cap-materialgroup-factories | ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点） | leaf | cpu-bound | 评审 ground-capability.ts 菜单构建, ground 材质菜单节点, ADR-195 cap 直产节点 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（噪声材质 plain/marble/sand/grass + 几何图案 grid/checker/stripes/diamond）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
+| 🏗 ground_texture_gen | 程序化地面贴图生成 surface-pixels | architecture | — | 修改地面材质（草/大理石/沙）的像素形状，或新增材质时, 排查地面贴图重建频率、平铺重复、接缝问题时 |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | memory-heavy, gpu-bound | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
@@ -263,6 +264,7 @@
 - **bone-tools**（跨格式骨骼工具层 bone-tools）：`frontend/src/preview-3d/bone/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D…
 - **ground-cap-materialgroup-factories**（ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点））：ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `PreviewMenuNode[]` 节点直产。`ground-menu.ts` 是纯声明层（零 THREE 依赖），仅构造 `P…
 - **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
+- **ground_texture_gen**（程序化地面贴图生成 surface-pixels）：`caps/surface-pixels/` 是 ground 地面材质（plain / marble / sand / grass）的纯像素生成器目录，从 `ground-surface-spec.ts` 的 `generateSurfa…
 - **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲…
 - **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。代际计数器（原 `mount-preview-core.ts` 模块级 `let _gen = 0`，ADR-227 后为 `session-ledger.ts` 的 `sessionLedger` 实例字段）在 `moun…

@@ -56,7 +56,6 @@ auto_fields:
     - generateOverlayPixels
     - generatePlainPixels
     - generateSandPixels
-    - generateSurfacePixels
     - getTypedCap
     - godRaysIntensity
     - GROUND_CANVAS_STYLES

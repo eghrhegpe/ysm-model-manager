@@ -88,6 +88,7 @@
 | 监听、文件变化、刷新、watcher | [文件监听 go/watcher](./go-watcher.md) | `go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。 |
 | YSM、解析、摘要、ysm 文件、元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | `go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。 |
 | golangci-lint、Go 静态分析、errcheck、未检查错误、lint 基线、new-from-rev、增量 lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入 |
+| 修改地面材质（草/大理石/沙）的像素形状，或新增材质时、排查地面贴图重建频率、平铺重复、接缝问题时 | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | `caps/surface-pixels/` 是 ground 地面材质（plain / marble / sand / grass）的纯像素生成器目录，从 `ground-surface-spec.ts` 的 `generateSurfa… |
 | 翻译、多语言、i18n、t()、语言切换、lang:changed | [国际化 i18n 模块](./i18n.md) | `i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化… |
 | 导入、导入队列、拖拽导入、文件夹导入、覆盖导入、import、拖拽 | [全局导入执行 import-executor](./import-queue.md) ⚠️歧义（另见 go-importer.md、global-handlers.md、pointer-events.md等） | **2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex… |
 | internal/app 再切分或迁移 App god-object 字段/方法时、评估某子域「迁出 internal/app 包」的收益与成本、复述 ADR-179 实际收敛边界 | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /… |

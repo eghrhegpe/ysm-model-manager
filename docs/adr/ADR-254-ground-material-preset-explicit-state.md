@@ -172,4 +172,28 @@ registerEnvStateMiddleware((patch) => {
 4. **真正的差距是生成器形状质量**：我们的 `grass` 是**各向同性**噪声（圆形斑块），草叶应呈**各向异性**（定向纤维）；`marble` 应呈**脉络**而非斑块。这属像素生成函数的形状建模，**与是否使用贴图资产无关**。
 
 **影响**：§2.6「不引入贴图资产」一项**非必要**——它不是缺点的补偿措施。若未来提升形状质量，两条路均可：改噪声函数（保平铺、零资产），或改预生成/加载贴图（同为平铺载体）。本 ADR 不锁定。
+
+---
+
+## 6. 行业对标 + 形状质量落地（4cb5fa154 后续执行）
+
+用户以 `unity` / `three` / `glsl` 关键词网页检索，确认 §5.4「两条路都开着」并给出形状质量的标准行业配方：
+
+- **草（各向异性）**：游戏行业多不用平铺贴图做草（InstancedMesh + 贝塞尔草叶几何 + 风噪声），但本场景是地面 albedo 平铺贴图，对应手法为**各向异性坐标拉伸**（`noise(p.x*0.2, p.y)` 把斑块拉成纤维）或 **Gabor 噪声**（定向微细节）。
+- **大理石（脉络）**：全网共识 `sin(x + k·fbm(p))`——正弦带被 fbm 湍流掰弯成脉络（domain warping，Inigo Quilez）。团块感源于缺这步。
+- **平铺无缝**：生成的 `DataTexture` 若要真正无接缝，应采样 **4D 环面噪声** `(cos,sin,cos,sin)→4D noise`；且「无缝 ≠ 无重复」，需双变体混合/随机化/宏观叠加破重复。
+
+### 6.1 落地：材质像素生成器拆分（caps/surface-pixels/）
+
+原 `generateSurfacePixels` 在 `ground-surface-spec.ts` 内用 `switch(mode)` 把 marble 的 sin 带、sand/grass 的噪声块全塞一个函数；加各向异性/域扭曲会膨胀成意大利面。按项目「纯像素逻辑下沉独立文件」先例（env-pixels.ts / sun-beams.ts / light-cone.ts），拆分为：
+
+- `surface-pixels/types.ts`：生成器输入/签名（去环依赖，不 import cap 文件）
+- `surface-pixels/noise.ts`：`hash2` / `valueNoise` / `fbm`（octave 叠加，域扭曲用）
+- `surface-pixels/{plain,marble,sand,grass}.ts`：各材质一个生成器（marble 用域扭曲，grass 用各向异性拉伸 `ANISO_X = 0.35`）
+- `surface-pixels/index.ts`：`SURFACE_PIXEL_GENERATORS` 调度表
+- `ground-surface-spec.ts`：`generateSurfacePixels` 退化为「structural → 查表分发」，spec/key/apply 不动
+
+**不变量（已锁）**：`surfaceSpecKey` 只序列化 structural 字段，与像素算法无关 → 重构零无谓重建；`ground-surface-spec.test.ts` 37 用例全绿（含 Phase1 行为等价 + Phase2 形状增强）。零 three 运行时依赖，保留 node 单测。
+
+**未做（留待）**：4D 环面无缝采样（治 `repeat` 接缝）、双变体破重复——属后续增强，不影响当前正确性。
 <!-- 文件名: ground-material-preset-explicit-state.md → 实际文件 ADR-254-ground-material-preset-explicit-state.md -->

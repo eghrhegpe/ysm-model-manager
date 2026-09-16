@@ -10,6 +10,14 @@
 // 对齐 ground-capability.generateNormalMap 的 DataTexture 口径），不用 DOM canvas。
 
 import type * as THREE from "three";
+import {
+  generatePlainPixels,
+  SURFACE_PIXEL_GENERATORS,
+} from "@/preview-3d/caps/surface-pixels/index.ts";
+import type {
+  SurfaceCanvasStyle,
+  SurfacePixelInput,
+} from "@/preview-3d/caps/surface-pixels/types.ts";
 
 /* ============ 类型 ============ */
 
@@ -584,112 +592,40 @@ export function textureRepeat(meshSize: number, scale: number): number {
 }
 
 /* ============ 程序化像素生成（RGBA，node 可测）============ */
-
-/** 位置哈希（种子化：不使用 Math.random，保证同参数可复现） */
-function hash2(x: number, y: number): number {
-  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263);
-  h = (h ^ (h >>> 13)) >>> 0;
-  h = Math.imul(h, 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
-}
-function smoothStep(t: number): number {
-  return t * t * (3 - 2 * t);
-}
-function valueNoise(x: number, y: number): number {
-  const xi = Math.floor(x),
-    yi = Math.floor(y);
-  const xf = x - xi,
-    yf = y - yi;
-  const a = hash2(xi, yi),
-    b = hash2(xi + 1, yi);
-  const c = hash2(xi, yi + 1),
-    d = hash2(xi + 1, yi + 1);
-  const u = smoothStep(xf),
-    v = smoothStep(yf);
-  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
-}
+// 像素算法已下沉至 caps/surface-pixels/（每材质一个生成器 + 共享 noise 原语）。
+// 本函数退化为「取 structural → 查表分发」，spec/key/apply 逻辑不变。
+// 设计：surface-pixels/* 零 three 运行时依赖、零 DOM，保留 node 单测能力（对齐原约束）。
 
 export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: number): Uint8Array {
   // ADR-249 §2.2："none" = 真的关闭地面表面层——不产出任何像素（空数组）。
-  // 消费方判据：空数组 ⇒ 不创建/不显示表面贴图。
   if (st.mode === "none") return new Uint8Array(0);
 
   // ADR-249："texture" 同样不产程序化像素——表面来自用户上传的贴图。
   if (st.mode === "texture") return new Uint8Array(0);
 
-  const px = new Uint8Array(sizePx * sizePx * 4);
-  const [r, g, b] = st.color;
-  const [cr2, cg2, cb2] = st.color2;
-
-  // "plain"（素面）与 "solid" 同为**纯色**语义，仅来源不同（plain = 内置生成的纯色贴图，
-  // solid = 无贴图、材质直出 color）。刀⑳ 修复：原条件漏了 "plain"，使其落到下方 grid
-  // 分支画出格线——而 "plain" 是 schema 默认值、菜单「素面」项，且是「清除贴图」与
-  // loadState 的回退目标，故这是用户可见的行为缺陷。
+  // "plain"（素面）与 "solid" 同为**纯色**语义（刀⑳ 修复：漏 plain 会画出格线）。
+  // 二者走纯色生成器，不进噪声材质表。
   if (st.mode === "solid" || st.mode === "plain") {
-    for (let i = 0; i < px.length; i += 4) {
-      px[i] = r;
-      px[i + 1] = g;
-      px[i + 2] = b;
-      px[i + 3] = 255;
-    }
-    return px;
+    const input: SurfacePixelInput = {
+      color: st.color,
+      color2: st.color2,
+      gridSize: st.gridSize,
+      density: st.density,
+      angleRad: st.angleRad,
+    };
+    return generatePlainPixels(input, sizePx);
   }
 
-  // ADR-252：此函数现在只处理**噪声材质**（marble / sand / grass）。
-  // 几何图案（grid/checker/stripes/diamond）已迁至叠加层轴（generateOverlayPixels），
-  // 不再由本函数产出——故原先的 cell 逐格分支与旋转坐标系中的图案分支均已删除。
-  const cosA = Math.cos(st.angleRad);
-  const sinA = Math.sin(st.angleRad);
-  const half = sizePx / 2;
-  const density = Math.max(0.25, st.density);
-  const periodCount = Math.max(1, st.gridSize) * density;
-
-  for (let y = 0; y < sizePx; y++) {
-    const ny = (y - half) / half; // [-1, 1]
-    for (let x = 0; x < sizePx; x++) {
-      const nx = (x - half) / half; // [-1, 1]
-      // 2D 旋转：应用颗粒角度（st.angleRad 为结构性变化，与 appearance.rotationRad 不同层）
-      const rx = nx * cosA + ny * sinA;
-      const ry = -nx * sinA + ny * cosA;
-
-      let pr: number;
-      let pg: number;
-      let pb: number;
-      if (st.mode === "marble") {
-        // marble：多层 valueNoise 叠加 + 沿旋转轴的正弦带，在 color 与 color2 间 lerp
-        let n = 0;
-        n += valueNoise(rx * 3 * density + 10, ry * 3 * density + 10) * 0.5;
-        n += valueNoise(rx * 6 * density - 5, ry * 6 * density - 5) * 0.3;
-        n += valueNoise(rx * 12 * density + 3, ry * 12 * density + 3) * 0.2;
-        const band = Math.sin((rx * periodCount + n * 2.4) * Math.PI * 2);
-        const t = 0.5 + 0.5 * band; // [0,1]
-        pr = Math.round(r + t * (cr2 - r));
-        pg = Math.round(g + t * (cg2 - g));
-        pb = Math.round(b + t * (cb2 - b));
-      } else {
-        // sand / grass：纯噪声材质（与 marble 同族，但不是带纹）。
-        // 仅频率与对比度不同——沙=高频细颗粒低对比，草=中频块状高对比。
-        const grain = Math.max(1, st.gridSize) / 8; // 粒度基准（默认 gridSize=8 → 1.0）
-        const freq = (st.mode === "sand" ? 14 : 5) * density * grain;
-        const contrast = st.mode === "sand" ? 0.45 : 0.95;
-        let n = 0;
-        n += valueNoise(rx * freq + 17, ry * freq + 17) * 0.5;
-        n += valueNoise(rx * freq * 2 - 9, ry * freq * 2 - 9) * 0.3;
-        n += valueNoise(rx * freq * 4 + 5, ry * freq * 4 + 5) * 0.2;
-        const t = Math.min(1, Math.max(0, 0.5 + (n - 0.5) * contrast * 2));
-        pr = Math.round(r + t * (cr2 - r));
-        pg = Math.round(g + t * (cg2 - g));
-        pb = Math.round(b + t * (cb2 - b));
-      }
-
-      const i = (y * sizePx + x) * 4;
-      px[i] = pr;
-      px[i + 1] = pg;
-      px[i + 2] = pb;
-      px[i + 3] = 255;
-    }
-  }
-  return px;
+  // 剩余为噪声材质（marble / sand / grass），查表分发到 surface-pixels/ 各生成器。
+  // 形状建模（大理石域扭曲、草各向异性）集中在各材质文件，本函数不再含像素算法。
+  const input: SurfacePixelInput = {
+    color: st.color,
+    color2: st.color2,
+    gridSize: st.gridSize,
+    density: st.density,
+    angleRad: st.angleRad,
+  };
+  return SURFACE_PIXEL_GENERATORS[st.mode as SurfaceCanvasStyle](input, sizePx);
 }
 
 /* ============ 落地函数（两条路径共用，禁止绕过）============ */

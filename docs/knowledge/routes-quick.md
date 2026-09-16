@@ -446,6 +446,18 @@
 |----------|--------|----------|----------|
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | - | - |
 
+## 🎯 地面材质
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| "草为什么是圆斑不像纤维" → 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
+
+## 🎯 程序化贴图
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| "大理石没有脉络像团块" → domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
+
 ## 🎯 install: queue / linkMode / launcher
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -878,6 +890,9 @@
 | 别开 enable-all | `别开 enable-all` | 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter |
 | 别启用 govet/gofmt/dupl | `别启用 govet/gofmt/dupl` | govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） |
 | 版本 < v1.64 解析 go1.26 directive 直接失败 | `版本 < v1.64 解析 go1.26 directive 直接失败` | 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 |
+| 在生成器里 import three 或 DOM | - | 破坏 node 单测与 src/core 隔离边界 |
+| 改像素算法却不更新 ground-surface-spec.test.ts（确定性/非均匀/跨材质差异用例） | - | - |
+| 误以为 surface-pixels 管 spec/key —— 那些仍在 ground-surface-spec.ts | - | - |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |

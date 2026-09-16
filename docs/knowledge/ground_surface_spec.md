@@ -16,7 +16,6 @@ auto_fields:
     - DEFAULT_GROUND_SURFACE_PARAMS
     - effectiveParamsOf
     - generateOverlayPixels
-    - generateSurfacePixels
     - GROUND_CANVAS_STYLES
     - GROUND_MAT_PARAMS
     - GROUND_MATERIAL_PRESET_IDS

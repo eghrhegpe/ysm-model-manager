@@ -465,7 +465,6 @@ auto_fields:
     - friendlyError
     - FsaAuthState
     - FSLike
-    - generateSurfacePixels
     - getAllByTestId
     - getAllowedCLICommands
     - getAndroidBridge

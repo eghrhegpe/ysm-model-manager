@@ -1799,6 +1799,10 @@ export const autoSidebar = [
             "link": "/knowledge/ground_surface_spec"
           },
           {
+            "text": "程序化地面贴图生成 surface-pixels",
+            "link": "/knowledge/ground_texture_gen"
+          },
+          {
             "text": "ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）",
             "link": "/knowledge/ground-cap-materialgroup-factories"
           },

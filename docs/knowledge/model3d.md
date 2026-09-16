@@ -286,7 +286,6 @@ auto_fields:
     - generateOverlayPixels
     - generatePlainPixels
     - generateSandPixels
-    - generateSurfacePixels
     - getActiveInputSession
     - getBoneDetail
     - getBoneList

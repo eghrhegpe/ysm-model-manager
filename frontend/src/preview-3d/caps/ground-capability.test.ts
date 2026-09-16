@@ -454,11 +454,11 @@ describe("GroundCapability — 菜单控件联动", () => {
 describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("完整树 = ground-visible 平铺 toggle + 材质组 folder", () => {
+  it("完整树 = ground-visible 平铺 toggle + 材质组 folder + 叠加层 folder", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(2);
+    expect(nodes).toHaveLength(3);
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("ground-visible");
     nodes[0]!.control!.set!(false);
@@ -466,6 +466,11 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const folder = nodes[1]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.groundGroupMaterial");
+    // ADR-249 §2.3 叠加层 folder（独立于材质组）
+    const overlayFolder = nodes[2]!;
+    expect(overlayFolder.kind).toBe("folder");
+    expect(overlayFolder.id).toBe("cap-group-ground-overlay");
+    expect(overlayFolder.labelKey).toBe("preview.groundGroupOverlay");
   });
 
   it("材质 folder 混排原生节点 + controls 通道（texture/clear button）", () => {
@@ -508,5 +513,139 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     // ADR-249 §2.1：由两轴派生模式，canvas/checker 下可见
     expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "grid" })).toBe(true);
     expect(color.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
+  });
+});
+
+describe("GroundCapability — 叠加层（ADR-249 §2.3 独立格线层）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("默认 overlay=none：mesh 存在但不可见，无纹理", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    expect(overlay).toBeDefined();
+    expect(overlay.visible).toBe(false);
+    expect((overlay.material as THREE.MeshStandardMaterial).map).toBeNull();
+  });
+
+  it("setOverlayStyle(grid) → mesh 可见 + 透明材质 + DataTexture；层高在 surface 之上", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlayStyle("grid");
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    const surface = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+    expect(overlay.visible).toBe(true);
+    expect(overlay.position.y).toBeGreaterThan(surface.position.y);
+    const mat = overlay.material as THREE.MeshStandardMaterial;
+    expect(mat.map).toBeInstanceOf(THREE.DataTexture);
+    expect(mat.transparent).toBe(true);
+    expect(mat.depthWrite).toBe(false);
+  });
+
+  it("叠加层与来源轴正交：solid 底层 + grid 叠加可共存", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setSourceKind("solid");
+    cap.setOverlayStyle("grid");
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    const surface = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+    // 两者同时可见 —— 这正是旧互斥枚举下不可达的「纯色 + 格线」
+    expect(surface.visible).toBe(true);
+    expect(overlay.visible).toBe(true);
+    const surfMat = surface.material as THREE.MeshStandardMaterial;
+    expect(surfMat.map).toBeNull(); // solid 不产贴图
+    expect((overlay.material as THREE.MeshStandardMaterial).map).toBeInstanceOf(THREE.DataTexture);
+  });
+
+  it("overlay 切回 none：纹理释放、mesh 隐藏", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlayStyle("checker");
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    const tex = (overlay.material as THREE.MeshStandardMaterial).map;
+    const spy = vi.spyOn(tex!, "dispose");
+    cap.setOverlayStyle("none");
+    expect(overlay.visible).toBe(false);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("overlayOpacity 走原地路径（材质引用不变）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlayStyle("grid");
+    const mat0 = (scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    cap.setOverlayOpacity(0.4);
+    const mat1 = (scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    expect(mat1).toBe(mat0);
+    expect(mat1.opacity).toBeCloseTo(0.4);
+  });
+
+  it("setVisible(false) 同步隐藏叠加层；恢复后重现", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlayStyle("grid");
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    cap.setVisible(false);
+    expect(overlay.visible).toBe(false);
+    cap.setVisible(true);
+    expect(overlay.visible).toBe(true);
+  });
+
+  it("dispose 释放叠加层几何/材质/纹理且幂等", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setOverlayStyle("grid");
+    const overlay = scene.getObjectByName("ysm-ground-overlay") as THREE.Mesh;
+    const tex = (overlay.material as THREE.MeshStandardMaterial).map;
+    const texSpy = vi.spyOn(tex!, "dispose");
+    const geoSpy = vi.spyOn(overlay.geometry, "dispose");
+    cap.dispose();
+    expect(scene.getObjectByName("ysm-ground-overlay")).toBeUndefined();
+    expect(texSpy).toHaveBeenCalled();
+    expect(geoSpy).toHaveBeenCalled();
+    cap.dispose();
+  });
+
+  it("saveState/loadState 往返叠加层字段", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setOverlayStyle("checker");
+    cap.setOverlayColor(0x00ff00);
+    cap.setOverlaySize(16);
+    cap.setOverlayOpacity(0.6);
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new GroundCapability({ scene });
+    cap2.loadState();
+    expect(cap2.getOverlayStyle()).toBe("checker");
+    expect(cap2.getOverlayColor()).toBe(0x00ff00);
+    expect(cap2.getOverlaySize()).toBe(16);
+    expect(cap2.getOverlayOpacity()).toBeCloseTo(0.6);
+  });
+
+  it("叠加层控件：color/size/opacity 仅 overlay ≠ none 时可见", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-overlay")!;
+    const color = folder.children!.find((c) => c.id === "ground-overlay-color")!;
+    expect(color.visibleWhen?.({ "env.groundOverlay": "none" })).toBe(false);
+    expect(color.visibleWhen?.({ "env.groundOverlay": "grid" })).toBe(true);
+  });
+
+  it("叠加层 select 读写闭包直连 cap", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-overlay")!;
+    const style = folder.children!.find((c) => c.id === "ground-overlay")!;
+    style.control!.set!("checker");
+    expect(cap.getOverlayStyle()).toBe("checker");
+    expect(style.control!.get!(undefined)).toBe("checker");
   });
 });

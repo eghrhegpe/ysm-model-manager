@@ -110,6 +110,16 @@ export const GROUND_CANVAS_STYLES = [
   "marble",
 ] as const satisfies readonly GroundCanvasStyle[];
 
+/** 叠加层样式（独立于来源轴/样式轴，可叠加在任意底层之上） */
+export type GroundOverlayStyle = "none" | "grid" | "checker";
+
+/** 叠加层样式取值集合（ADR-249 §2.3；首期仅落地格线/棋盘，scan/glowEdge 等由后续扩展） */
+export const GROUND_OVERLAY_STYLES = [
+  "none",
+  "grid",
+  "checker",
+] as const satisfies readonly GroundOverlayStyle[];
+
 /** 矩阵行：材质面板的全部可调参数（与 ground-menu.ts 控件一一对应） */
 export const GROUND_MAT_PARAMS = [
   "matColor",
@@ -212,6 +222,102 @@ export function paramIsEffective(mode: GroundSurfaceMode, param: GroundMatParam)
 export function effectiveParamsOf(mode: GroundSurfaceMode): GroundMatParam[] {
   return GROUND_MAT_PARAMS.filter((p) => paramIsEffective(mode, p));
 }
+
+/* ============ 叠加层（ADR-249 §2.3）：独立透明格线层 ============ */
+// 叠加层是独立于来源轴/样式轴的第三正交维度：可叠加在任意底层（solid/canvas/texture）
+// 之上，以透明底色 + 彩色格线/棋盘图案呈现。首期落地 grid/checker 两种样式。
+
+export interface GroundOverlayParams {
+  overlayStyle: GroundOverlayStyle;
+  overlayColor: number;
+  overlaySize: number;
+  overlayOpacity: number;
+}
+
+export interface GroundOverlaySpec {
+  style: GroundOverlayStyle;
+  /** 线色 [r,g,b] 0-255 */
+  color: [number, number, number];
+  size: number;
+  opacity: number;
+}
+
+export function buildGroundOverlaySpec(p: GroundOverlayParams): GroundOverlaySpec {
+  const hex = p.overlayColor;
+  return {
+    style: p.overlayStyle,
+    color: [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff],
+    size: p.overlaySize,
+    opacity: p.overlayOpacity,
+  };
+}
+
+export function overlaySpecKey(spec: GroundOverlaySpec): string {
+  return JSON.stringify({ style: spec.style, color: spec.color, size: spec.size });
+}
+
+export function overlayNeedsRebuild(
+  prev: GroundOverlaySpec | null,
+  next: GroundOverlaySpec,
+): boolean {
+  return prev === null || overlaySpecKey(prev) !== overlaySpecKey(next);
+}
+
+/**
+ * 生成叠加层像素：透明底色 + 彩色格线/棋盘。
+ * - grid：首行首列画线（与 surface grid 一致）
+ * - checker：奇偶格交替（线色/透明交替）
+ * - style 为 none 时返回空数组（表示「无叠加」）
+ */
+export function generateOverlayPixels(
+  style: GroundOverlayStyle,
+  sizePx: number,
+  color: [number, number, number],
+): Uint8Array {
+  if (style === "none") return new Uint8Array(0);
+  const px = new Uint8Array(sizePx * sizePx * 4);
+  const [r, g, b] = color;
+  const lineWidth = Math.max(1, Math.round(sizePx / 256));
+  for (let y = 0; y < sizePx; y++) {
+    for (let x = 0; x < sizePx; x++) {
+      const idx = (y * sizePx + x) * 4;
+      let isLine = false;
+      if (style === "grid") {
+        isLine =
+          x % Math.max(1, Math.floor(sizePx / 8)) < lineWidth ||
+          y % Math.max(1, Math.floor(sizePx / 8)) < lineWidth;
+      } else if (style === "checker") {
+        const cellSize = Math.max(1, Math.floor(sizePx / 8));
+        isLine = (Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2 === 1;
+      }
+      if (isLine) {
+        px[idx] = r;
+        px[idx + 1] = g;
+        px[idx + 2] = b;
+        px[idx + 3] = 255;
+      } else {
+        px[idx + 3] = 0; // 透明
+      }
+    }
+  }
+  return px;
+}
+
+/** 叠加层材质的 appearance 落地（map 由 capability 侧构造后传入；本模块不碰 THREE 运行时） */
+export function applyOverlayMaterial(
+  mat: THREE.MeshStandardMaterial,
+  spec: GroundOverlaySpec,
+  tex: THREE.Texture | null,
+): void {
+  mat.map = tex;
+  mat.transparent = true;
+  mat.opacity = spec.opacity;
+  mat.depthWrite = false;
+  mat.needsUpdate = true;
+}
+
+/** 叠加层纹理边长（capability 侧构造 DataTexture 用；与 surface 同口径） */
+export const OVERLAY_TEX_SIZE = 512;
 
 /* ============ 拆轴：来源轴 × 样式轴（ADR-249 §2.1）============ */
 // 旧的单枚举 groundMatSource 压了两条正交轴：

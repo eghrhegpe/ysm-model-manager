@@ -6,6 +6,7 @@
 // Suite 3 合约：rebuild == in-place（同 structural 下外观迁移两条路径产物等价）
 // Suite 4 generateSurfacePixels 像素正确性（plain/grid/checker）
 // Suite 5 textureRepeat 密度不变量
+// Suite 6 叠加层 spec（ADR-249 §2.3 独立格线层）
 
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
@@ -17,6 +18,10 @@ import {
   generateSurfacePixels,
   applyGroundSurfaceAppearance,
   textureRepeat,
+  buildGroundOverlaySpec,
+  overlaySpecKey,
+  overlayNeedsRebuild,
+  generateOverlayPixels,
   type GroundMaterialParams,
 } from "./ground-surface-spec.ts";
 
@@ -345,5 +350,72 @@ describe("Suite 6 — 新材质模式（stripes/diamond/marble）", () => {
     expect(groundSurfaceNeedsRebuild(a, c)).toBe(true);
     expect(groundSurfaceNeedsRebuild(a, d)).toBe(true);
     expect(groundSurfaceNeedsRebuild(a, a)).toBe(false);
+  });
+});
+
+/* ============ Suite 6 — 叠加层 spec（ADR-249 §2.3）============ */
+
+describe("Suite 6 — 叠加层 spec / 像素生成", () => {
+  const ov = (style: "none" | "grid" | "checker") =>
+    buildGroundOverlaySpec({ overlayStyle: style, overlayColor: 0xff0000, overlaySize: 8, overlayOpacity: 0.5 });
+
+  it("buildGroundOverlaySpec：hex → [r,g,b] 拆解正确", () => {
+    const s = buildGroundOverlaySpec({
+      overlayStyle: "grid",
+      overlayColor: 0x3366cc,
+      overlaySize: 12,
+      overlayOpacity: 0.25,
+    });
+    expect(s.color).toEqual([0x33, 0x66, 0xcc]);
+    expect(s.style).toBe("grid");
+    expect(s.size).toBe(12);
+    expect(s.opacity).toBe(0.25);
+  });
+
+  it("overlaySpecKey：style/color/size 入 key；opacity 不入（外观参数走原地）", () => {
+    const a = ov("grid");
+    const b = { ...a, opacity: 0.9 };
+    expect(overlaySpecKey(a)).toBe(overlaySpecKey(b));
+    expect(overlayNeedsRebuild(a, b)).toBe(false);
+    expect(overlayNeedsRebuild(a, { ...a, size: 16 })).toBe(true);
+    expect(overlayNeedsRebuild(a, { ...a, style: "checker" })).toBe(true);
+    expect(overlayNeedsRebuild(null, a)).toBe(true);
+  });
+
+  it("generateOverlayPixels：none 返回空数组（表示无叠加）", () => {
+    expect(generateOverlayPixels("none", 16, [255, 255, 255]).length).toBe(0);
+  });
+
+  it("generateOverlayPixels：grid 透明底 + 不透明线（alpha 二值化）", () => {
+    const px = generateOverlayPixels("grid", 32, [255, 0, 0]);
+    expect(px.length).toBe(32 * 32 * 4);
+    let opaque = 0;
+    let transparent = 0;
+    for (let i = 3; i < px.length; i += 4) {
+      if (px[i] === 255) opaque++;
+      else if (px[i] === 0) transparent++;
+    }
+    expect(opaque).toBeGreaterThan(0);
+    expect(transparent).toBeGreaterThan(0);
+    // 线面积占比 < 50%（格线而非实心）
+    expect(opaque).toBeLessThan(transparent);
+  });
+
+  it("generateOverlayPixels：checker 与 grid 像素分布不同（样式真实生效）", () => {
+    const a = generateOverlayPixels("grid", 32, [255, 0, 0]);
+    const b = generateOverlayPixels("checker", 32, [255, 0, 0]);
+    expect(Array.from(a)).not.toEqual(Array.from(b));
+  });
+
+  it("线色真实进入像素：不同 color 产出不同 RGB", () => {
+    const red = generateOverlayPixels("grid", 32, [255, 0, 0]);
+    const blue = generateOverlayPixels("grid", 32, [0, 0, 255]);
+    // 找到第一个不透明像素比较首通道
+    const firstOpaque = (px: Uint8Array): number => {
+      for (let i = 0; i < px.length; i += 4) if (px[i + 3] === 255) return px[i];
+      return -1;
+    };
+    expect(firstOpaque(red)).toBe(255);
+    expect(firstOpaque(blue)).toBe(0);
   });
 });

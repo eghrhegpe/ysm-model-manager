@@ -13,11 +13,13 @@ auto_fields:
     - AmbientLightParams
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
+    - applyOverlayMaterial
     - attenuateAmbientForSky
     - bindFieldRestorers
     - buildEnvironmentNodes
     - buildFogNodes
     - buildGroundNodes
+    - buildGroundOverlaySpec
     - buildGroundSurfaceSpec
     - buildLightNodes
     - buildLightPersistPayload
@@ -48,12 +50,14 @@ auto_fields:
     - flattenLightParams
     - FogCapability
     - FogMode
+    - generateOverlayPixels
     - generateSurfacePixels
     - getTypedCap
     - godRaysIntensity
     - GROUND_CANVAS_STYLES
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
+    - GROUND_OVERLAY_STYLES
     - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
     - GroundAxisMapping
@@ -62,6 +66,9 @@ auto_fields:
     - GroundMaterialParams
     - GroundMatParam
     - groundMatSourceFromAxes
+    - GroundOverlayParams
+    - GroundOverlaySpec
+    - GroundOverlayStyle
     - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
@@ -78,6 +85,9 @@ auto_fields:
     - migrateGroundMatSource
     - ModelEntry
     - oneOf
+    - OVERLAY_TEX_SIZE
+    - overlayNeedsRebuild
+    - overlaySpecKey
     - paramIsEffective
     - persistState
     - pickPersistFields

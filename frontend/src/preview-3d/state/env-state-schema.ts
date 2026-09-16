@@ -10,6 +10,7 @@
 import {
   GROUND_CANVAS_STYLES,
   DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS,
+  GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
 } from "@/preview-3d/caps/ground-surface-spec.ts";
 
@@ -88,6 +89,16 @@ export const ENV_STATE_SCHEMA = {
     default: "plain",
     group: "ground",
   },
+  // ADR-249 §2.3 叠加层：独立透明格线层（正交于来源/样式两轴）
+  groundOverlay: {
+    type: "enum",
+    values: GROUND_OVERLAY_STYLES,
+    default: "none",
+    group: "ground",
+  },
+  groundOverlayColor: { type: "number", default: 0xffffff, group: "ground" },
+  groundOverlaySize: { type: "number", default: 10, group: "ground" },
+  groundOverlayOpacity: { type: "number", default: 1, group: "ground" },
   groundSize: { type: "number", default: 80, group: "ground" },
   groundDivisions: { type: "number", default: 60, group: "ground" },
   groundColorCenter: { type: "number", default: 0x555577, group: "ground" },

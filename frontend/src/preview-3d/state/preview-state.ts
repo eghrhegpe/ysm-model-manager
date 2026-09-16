@@ -145,12 +145,14 @@ function waterCap(): WaterModeCap | undefined {
   return lazyCap<WaterModeCap>("water", "getWaterMode", "setWaterMode");
 }
 
-/** [doc:adr-126-p5-c] 地面能力（读/写 来源轴+样式轴）——供 env.groundSourceKind / env.groundCanvasStyle 惰性绑定 */
+/** [doc:adr-126-p5-c] 地面能力（读/写 来源轴+样式轴+叠加层）——供 env.ground* 惰性绑定 */
 interface GroundMatCap {
   getSourceKind(): string;
   setSourceKind(v: string): void;
   getCanvasStyle(): string;
   setCanvasStyle(v: string): void;
+  getOverlayStyle(): string;
+  setOverlayStyle(v: string): void;
 }
 function groundMatCap(): GroundMatCap | undefined {
   return lazyCap<GroundMatCap>(
@@ -159,6 +161,8 @@ function groundMatCap(): GroundMatCap | undefined {
     "setSourceKind",
     "getCanvasStyle",
     "setCanvasStyle",
+    "getOverlayStyle",
+    "setOverlayStyle",
   );
 }
 
@@ -240,6 +244,12 @@ const bindings: PathBindingMap = {
   "env.groundCanvasStyle": {
     get: () => groundMatCap()?.getCanvasStyle() ?? "plain",
     set: (v) => groundMatCap()?.setCanvasStyle(String(v)),
+    available: () => groundMatCap() !== undefined,
+  },
+  // ADR-249 §2.3 叠加层：独立透明格线层状态上浮（菜单叠加层控件 visibleWhen 消费）
+  "env.groundOverlay": {
+    get: () => groundMatCap()?.getOverlayStyle() ?? "none",
+    set: (v) => groundMatCap()?.setOverlayStyle(String(v)),
     available: () => groundMatCap() !== undefined,
   },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen

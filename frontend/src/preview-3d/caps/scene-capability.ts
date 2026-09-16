@@ -163,6 +163,8 @@ export function ringLog(
 export const GROUND_LAYER_OFFSETS = {
   /** ground 承接面（SurfaceMesh）相对 y=0 的微抬 */
   groundSurface: 0.005,
+  /** ADR-249 §2.3 装饰叠加层（透明格线，位于 surface 之上、water 之下） */
+  groundOverlay: 0.007,
   /** water film 模式水膜高度（高于 groundSurface，避免与地面闪面） */
   waterFilm: 0.01,
   /** water pool 池底相对 y=0 的微抬（贴 GridHelper 基准面） */

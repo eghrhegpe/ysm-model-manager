@@ -10,12 +10,16 @@ auto_fields:
   symbols_with_lines:
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
+    - applyOverlayMaterial
+    - buildGroundOverlaySpec
     - buildGroundSurfaceSpec
     - DEFAULT_GROUND_SURFACE_PARAMS
     - effectiveParamsOf
+    - generateOverlayPixels
     - generateSurfacePixels
     - GROUND_CANVAS_STYLES
     - GROUND_MAT_PARAMS
+    - GROUND_OVERLAY_STYLES
     - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
     - GroundAxisMapping
@@ -24,6 +28,9 @@ auto_fields:
     - GroundMaterialParams
     - GroundMatParam
     - groundMatSourceFromAxes
+    - GroundOverlayParams
+    - GroundOverlaySpec
+    - GroundOverlayStyle
     - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
@@ -31,6 +38,9 @@ auto_fields:
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
     - migrateGroundMatSource
+    - OVERLAY_TEX_SIZE
+    - overlayNeedsRebuild
+    - overlaySpecKey
     - paramIsEffective
     - surfaceSpecKey
     - textureRepeat
@@ -70,8 +80,6 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 
 > ⚠️ **ADR-249 已拆轴**：状态层从单枚举 `groundMatSource`（9 值）拆为来源轴 `groundSourceKind`（none/solid/canvas/texture）+ 样式轴 `groundCanvasStyle`（plain/grid/checker/stripes/diamond/marble，仅 canvas 来源生效）。spec 内部仍以派生的 `GroundSurfaceMode` 运作（`groundMatSourceFromAxes` 往返），渲染管线零改动；菜单从「9 选 1」变为「来源 × 样式」双 select 组装（`none` = 真的关闭表面层，`texture` 来源不再被静默降级）。
 扁平 mode 枚举 `"none"|"solid"|"plain"|"grid"|"checker"|"stripes"|"diamond"|"marble"|"texture"`：单字段表达来源+样式组合。CPU 像素生成（Uint8Array→DataTexture）对齐既有 generateNormalMap 口径，node 可测。新增 3 个像素模式：
-
-> ⚠️ **ADR-249 已决策拆轴**（`sourceKind` 来源轴 + `canvasStyle` 样式轴 + 装饰叠加层），理由：单枚举压了两条正交轴，菜单层无法表达「纯色来源下线色不适用」，直接导致死控件。ADR-249 另要求消除 `DEFAULT_GROUND_SURFACE_PARAMS` 与 `env-state-schema.ts` 的默认值双源（`matGridSize`/`matRoughness` 两处不一致）。实施状态查 ADR-249。
 - **stripes**：按 matDensity 密度、matAngleDeg 角度、用 matColor/matColor2 的双色按 1:1 正弦条纹交替
 - **diamond**：菱形网格线（单边界，线宽 ≤ 1px，线面积占比 ≤ 50%），底色 matColor、线色 matLineColor
 - **marble**：种子化哈希噪声叠加多频三角波，matColor/matColor2 之间插值产生随机大理石紊纹理
@@ -87,6 +95,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **参数 × 模式生效矩阵（ADR-249 §2.4）**：`GROUND_SURFACE_MODES` / `GROUND_MAT_PARAMS` / `paramIsEffective(mode, param)` / `effectiveParamsOf(mode)`——菜单控件可见性与渲染参数读取的**共同单一事实源**（菜单可见 ⇔ `paramIsEffective` 为真），禁止菜单与渲染各写一份 if。历史缺陷：全部材质控件共用一条粗谓词（仅判 `matSource !== "none"`），致 solid/plain/grid 下「线色/副色/格数」可见可拖可写、渲染却不读——零反馈死控件（用户实测「选纯色还显示线色」）。⚠️ `matScale`/`matRotationDeg` 作用于 `mat.map`：凡产出**或消费**贴图的模式均生效——plain 起的程序化贴图（generateSurfacePixels 产出）+ **texture 的用户自定义贴图**（`mat.map = customTex`，`applyGroundSurfaceAppearance` 对其应用 repeat/rotation，`acceptLoadedTexture` 设 RepeatWrapping 即为此）。ADR-249 矩阵 texture 列对这两项标 ✔，不得被 `if (mode === "texture") return false` 早退一并吞掉（review 1a9517465 P2 回归，34db0ac 修复）。
 - GroundCapability 侧：`refreshSurface()` 唯一变更入口（needsRebuild→rebuild 否则 applyAppearance）；自定义贴图照抄 EnvironmentCapability customHdrTex 模式（缓存独立于材质、不随 dispose、不持久化二进制）。**ADR-249 §2.5 第 2 条：loadState 不再静默降级**——历史行为 `v === "texture" && !customTex ? "plain" : v`（因贴图二进制不持久化，重启后 customTex 必空），致用户存档里选的「自定义贴图」重启后变成看似无关的纯色地面；现保留用户来源选择，无贴图的渲染兜底归 `rebuildSurface` 的 `customTex ?? makeGeneratedTexture({...st, mode:"solid"})`（材质层）。
 - **拆轴映射（ADR-249 §2.1/§2.5）**：`GroundSourceKind`（来源轴 none/solid/canvas/texture）× `GroundCanvasStyle`（样式轴 plain/grid/checker/stripes/diamond/marble）+ `migrateGroundMatSource(old)` / `groundMatSourceFromAxes(sourceKind, canvasStyle)` 互逆对。旧单枚举压了两条正交轴（「线色是否适用」属样式轴，「有无贴图」属来源轴），是死控件的根源。
+- **叠加层（ADR-249 §2.3）**：第三个正交层——独立透明格线 mesh（`ysm-ground-overlay`，y 取 `GROUND_LAYER_OFFSETS.groundOverlay`，介于 surface 与 water 之间），可叠加在任意底层（solid/canvas/texture）之上，实现旧互斥枚举下不可达的「纯色 + 格线」。`GroundOverlayStyle`（none/grid/checker）+ `buildGroundOverlaySpec` / `overlaySpecKey`（style/color/size 入 key，opacity 属外观走原地）/ `overlayNeedsRebuild` / `generateOverlayPixels`（透明底 + alpha 二值化线色，none → 空数组）/ `applyOverlayMaterial`。**资源所有权**：`overlayTex`/`overlayMat`/`overlay.geometry` 均属 GroundCapability（非 customTex），`dispose` 与切换到 none 时释放（§1.4 第 2 条“谁拥有纹理”的落实）。纹理构造在 capability（`makeOverlayTexture`）而非 spec——spec 保持 `import type * as THREE` 的零运行时依赖（node 可测）。
 
 ## 对外 API / 入口
 
@@ -95,7 +104,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 ## 与其他子系统关系
 
 - 挂在场景能力注册表（scene_capability_registry 卡）的 GroundCapability 内，复用其显隐/持久化/菜单框架，无独立 registry 条目
-- i18n key `preview.groundMat*` ×3 语言包（新增 `groundMatColor2`/`groundMatDensity`/`groundMatAngle`）
+- i18n key `preview.groundMat*` / `preview.groundOverlay*` ×3 语言包（叠加层新增 `groundGroupOverlay`/`groundOverlay`/`groundOverlayColor`/`groundOverlaySize`/`groundOverlayOpacity`）
 - 参考项目 MikuMikuAR ADR-089/226/231（演进线调研结论）
 
 ## 不变量
@@ -106,6 +115,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 4. **持久化白名单**：loadState 校验 matSource ∈ GROUND_SURFACE_MODES（非法回退 none）；~~texture 无 customTex 回退 plain~~（**ADR-249 §2.5 已废除**——静默降级致用户来源选择丢失，改为保留来源、渲染层兜底）
 5. **默认值单一事实源**：`env-state-schema.ts` 的 `groundMat*` 默认值一律引用 spec 侧 `DEFAULT_GROUND_SURFACE_PARAMS`，禁止重写字面量（历史双源：matGridSize 10/8、matRoughness 0.8/0.85、matLineColor、matColor2 四处分歧，用户实测显示 spec 侧胜出）
 6. **GROUND_SURFACE_MODES 单一定义**：由 `ground-surface-spec.ts` 导出，`ground-capability.ts` 不得本地重建同名常量（历史常量双源）
+7. **叠加层资源自有**：`overlayTex`/`overlayMat`/`overlay.geometry` 释放责任全在 GroundCapability（切 none 与 dispose 两路）；叠加层永不触碰 `customTex`/`surfaceTex`（防 MikuMikuAR 907fa26b 式跨层误 dispose）
+8. **spec 零运行时依赖**：`ground-surface-spec.ts` 保持 `import type * as THREE`——像素生成只产出 `Uint8Array`，DataTexture 构造一律在 capability（叠加层与表面层同口径，保证 spec 可 node 单测）
 
 ## 相关
 

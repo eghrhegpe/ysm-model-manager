@@ -16,18 +16,26 @@ import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
+  applyOverlayMaterial,
+  buildGroundOverlaySpec,
   buildGroundSurfaceSpec,
   GROUND_CANVAS_STYLES,
+  GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
   type GroundCanvasStyle,
+  type GroundOverlaySpec,
+  type GroundOverlayStyle,
   type GroundSourceKind,
   type GroundSurfaceMode,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
+  generateOverlayPixels,
   generateSurfacePixels,
   groundMatSourceFromAxes,
   groundSurfaceNeedsRebuild,
   migrateGroundMatSource,
+  OVERLAY_TEX_SIZE,
+  overlayNeedsRebuild,
 } from "./ground-surface-spec.ts";
 import {
   GROUND_LAYER_OFFSETS,
@@ -58,6 +66,11 @@ export class GroundCapability implements SceneCapability {
   private surfaceSpec: GroundSurfaceSpec | null = null;
   private customTex: THREE.Texture | null = null;
   private customTexName = "";
+  // ADR-249 §2.3 叠加层：独立透明格线 mesh
+  private overlay: THREE.Mesh;
+  private overlayMat: THREE.MeshStandardMaterial | null = null;
+  private overlayTex: THREE.Texture | null = null;
+  private overlaySpec: GroundOverlaySpec | null = null;
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅材质来源切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
@@ -71,14 +84,16 @@ export class GroundCapability implements SceneCapability {
     this.scene = opts.scene;
     this.enabled = opts.enabled ?? true;
     this.grid = this.createGridHelper();
+    this.overlay = this.createOverlayMesh();
     this.surface = this.createSurfaceMesh();
 
     // ADR-196：订阅 envState 变更（只接收 ground 组的键，dispatcher 前置过滤）
     this.unsubscribeEnv = registerEnvCallback(
       this,
       () => {
-        // 任何 ground 组字段变更都触发 refreshSurface（dispatcher 已过滤，无需再判断 changed）
+        // 任何 ground 组字段变更都触发 refreshSurface + refreshOverlay
         this.refreshSurface();
+        this.refreshOverlay();
       },
       "ground",
     );
@@ -107,10 +122,82 @@ export class GroundCapability implements SceneCapability {
     return surface;
   }
 
+  private createOverlayMesh(): THREE.Mesh {
+    const overlayGeo = new THREE.PlaneGeometry(envState.groundSize, envState.groundSize);
+    const overlay = new THREE.Mesh(overlayGeo);
+    overlay.rotation.x = -Math.PI / 2;
+    overlay.position.y = GROUND_LAYER_OFFSETS.groundOverlay;
+    overlay.name = "ysm-ground-overlay";
+    overlay.visible = false;
+    this.overlay = overlay;
+    this.refreshOverlay();
+    return overlay;
+  }
+
+  /** 叠加层唯一变更入口：判别重建/原地并落地（与 refreshSurface 同构） */
+  private refreshOverlay(): void {
+    const next = buildGroundOverlaySpec({
+      overlayStyle: envState.groundOverlay,
+      overlayColor: envState.groundOverlayColor,
+      overlaySize: envState.groundOverlaySize,
+      overlayOpacity: envState.groundOverlayOpacity,
+    });
+
+    if (next.style === "none") {
+      // 叠加层关闭：释放纹理，隐藏 mesh
+      if (this.overlayTex) {
+        safeDispose(this.overlayTex);
+        this.overlayTex = null;
+      }
+      if (this.overlayMat) {
+        this.overlayMat.map = null;
+        this.overlayMat.needsUpdate = true;
+      }
+      this.overlay.visible = false;
+      this.overlaySpec = next;
+      return;
+    }
+
+    if (!this.overlaySpec || overlayNeedsRebuild(this.overlaySpec, next)) {
+      this.rebuildOverlay(next);
+    } else if (this.overlayMat) {
+      this.overlayMat.opacity = next.opacity;
+      this.overlayMat.needsUpdate = true;
+    }
+    this.overlay.visible = this.enabled && envState.groundVisible;
+    this.overlaySpec = next;
+  }
+
+  private rebuildOverlay(spec: GroundOverlaySpec): void {
+    if (this.overlayTex) {
+      safeDispose(this.overlayTex);
+      this.overlayTex = null;
+    }
+    this.overlayTex = this.makeOverlayTexture(spec);
+    if (!this.overlayMat) {
+      this.overlayMat = new THREE.MeshStandardMaterial();
+    }
+    applyOverlayMaterial(this.overlayMat, spec, this.overlayTex);
+    this.overlay.material = this.overlayMat;
+  }
+
+  /** 叠加层像素 → DataTexture（透明底；style=none 时返回 null） */
+  private makeOverlayTexture(spec: GroundOverlaySpec): THREE.DataTexture | null {
+    const px = generateOverlayPixels(spec.style, OVERLAY_TEX_SIZE, spec.color);
+    if (px.length === 0) return null;
+    const tex = new THREE.DataTexture(px, OVERLAY_TEX_SIZE, OVERLAY_TEX_SIZE, THREE.RGBAFormat);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
   apply(): void {
     if (!this.enabled) return;
     if (!this.grid.parent) this.scene.add(this.grid);
     if (!this.surface.parent) this.scene.add(this.surface);
+    if (!this.overlay.parent) this.scene.add(this.overlay);
   }
 
   /** 地面显隐开关（表面层跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
@@ -118,6 +205,9 @@ export class GroundCapability implements SceneCapability {
     setEnvState({ groundVisible: v }, { source: "manual" });
     this.grid.visible = v;
     this.updateSurfaceVisible();
+    if (this.overlaySpec && this.overlaySpec.style !== "none") {
+      this.overlay.visible = v && this.enabled;
+    }
   }
 
   getVisible(): boolean {
@@ -130,6 +220,7 @@ export class GroundCapability implements SceneCapability {
     else {
       if (this.grid.parent) this.grid.parent.remove(this.grid);
       if (this.surface.parent) this.surface.parent.remove(this.surface);
+      if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
     }
     this.updateSurfaceVisible();
   }
@@ -276,6 +367,46 @@ export class GroundCapability implements SceneCapability {
     this.notify();
   }
 
+  // ── 叠加层 setter（ADR-249 §2.3）──
+  getOverlayStyle(): GroundOverlayStyle {
+    return envState.groundOverlay;
+  }
+  setOverlayStyle(style: GroundOverlayStyle): void {
+    if (envState.groundOverlay === style) return;
+    setEnvState({ groundOverlay: style }, { source: "manual" });
+    this.refreshOverlay();
+    this.notify();
+  }
+  getOverlayColor(): number {
+    return envState.groundOverlayColor;
+  }
+  setOverlayColor(hex: number): void {
+    if (envState.groundOverlayColor === hex) return;
+    setEnvState({ groundOverlayColor: hex }, { source: "manual" });
+    this.refreshOverlay();
+    this.notify();
+  }
+  getOverlaySize(): number {
+    return envState.groundOverlaySize;
+  }
+  setOverlaySize(n: number): void {
+    const clamped = Math.max(2, Math.min(64, Math.round(n)));
+    if (envState.groundOverlaySize === clamped) return;
+    setEnvState({ groundOverlaySize: clamped }, { source: "manual" });
+    this.refreshOverlay();
+    this.notify();
+  }
+  getOverlayOpacity(): number {
+    return envState.groundOverlayOpacity;
+  }
+  setOverlayOpacity(v: number): void {
+    const clamped = Math.max(0, Math.min(1, v));
+    if (envState.groundOverlayOpacity === clamped) return;
+    setEnvState({ groundOverlayOpacity: clamped }, { source: "manual" });
+    this.refreshOverlay();
+    this.notify();
+  }
+
   /** 订阅参数变更（材质来源切换触发）；返回取消订阅函数 */
   subscribe(listener: () => void): () => void {
     return this.listenerSet.subscribe(listener);
@@ -406,6 +537,11 @@ export class GroundCapability implements SceneCapability {
       groundMatAngleDeg: envState.groundMatAngleDeg,
       groundMatRoughness: envState.groundMatRoughness,
       groundMatMetalness: envState.groundMatMetalness,
+      // ADR-249 §2.3 叠加层持久化
+      groundOverlay: envState.groundOverlay,
+      groundOverlayColor: envState.groundOverlayColor,
+      groundOverlaySize: envState.groundOverlaySize,
+      groundOverlayOpacity: envState.groundOverlayOpacity,
     });
   }
 
@@ -507,6 +643,15 @@ export class GroundCapability implements SceneCapability {
       groundMatAngleDeg: { number: (v) => this.setMatAngle(v) },
       groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
       groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
+      // ADR-249 §2.3 叠加层恢复
+      groundOverlay: oneOf(GROUND_OVERLAY_STYLES, (v) =>
+        setEnvState({ groundOverlay: v }, { source: "manual" }),
+      ),
+      groundOverlayColor: {
+        number: (v) => setEnvState({ groundOverlayColor: v }, { source: "manual" }),
+      },
+      groundOverlaySize: { number: (v) => this.setOverlaySize(v) },
+      groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v) },
     });
   }
 
@@ -515,6 +660,7 @@ export class GroundCapability implements SceneCapability {
     this.unsubscribeEnv();
     if (this.grid.parent) this.grid.parent.remove(this.grid);
     if (this.surface.parent) this.surface.parent.remove(this.surface);
+    if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
     this.grid.geometry.dispose();
     const mat = this.grid.material;
     if (Array.isArray(mat))
@@ -534,5 +680,16 @@ export class GroundCapability implements SceneCapability {
       safeDispose(this.customTex);
       this.customTex = null;
     }
+    // ADR-249 §2.3：叠加层资源释放（owner = GroundCapability，非 customTex）
+    if (this.overlayTex) {
+      safeDispose(this.overlayTex);
+      this.overlayTex = null;
+    }
+    if (this.overlayMat) {
+      this.overlayMat.dispose();
+      this.overlayMat = null;
+    }
+    this.overlay.geometry.dispose();
+    this.overlaySpec = null;
   }
 }

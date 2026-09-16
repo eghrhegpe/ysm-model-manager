@@ -562,12 +562,14 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     expect(getStateValue("env.groundSourceKind")).toBe("none");
     expect(isPathAvailable("env.groundCanvasStyle")).toBe(false);
     expect(getStateValue("env.groundCanvasStyle")).toBe("plain");
+    expect(isPathAvailable("env.groundOverlay")).toBe(false);
+    expect(getStateValue("env.groundOverlay")).toBe("none");
     expect(() => setStateValue("env.waterMode", "pool")).not.toThrow();
   });
 
   it("cap 就位：get 透传 cap 内部状态、available=true、set 透传", () => {
     const water = { ...baseCap("water"), getWaterMode: () => "pool", setWaterMode: vi.fn() };
-    const ground = { ...baseCap("ground"), getSourceKind: () => "texture", setSourceKind: vi.fn(), getCanvasStyle: () => "plain", setCanvasStyle: vi.fn() };
+    const ground = { ...baseCap("ground"), getSourceKind: () => "texture", setSourceKind: vi.fn(), getCanvasStyle: () => "plain", setCanvasStyle: vi.fn(), getOverlayStyle: () => "none", setOverlayStyle: vi.fn() };
     mountCaps(water as unknown as SceneCapability, ground as unknown as SceneCapability);
     expect(isPathAvailable("env.waterMode")).toBe(true);
     expect(getStateValue("env.waterMode")).toBe("pool");
@@ -585,5 +587,7 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     expect(snap["env.waterMode"]).toBe("film");
     expect(snap["env.groundSourceKind"]).toBe("none");
     expect(snap["env.groundCanvasStyle"]).toBe("plain");
+    expect("env.groundOverlay" in snap).toBe(true);
+    expect(snap["env.groundOverlay"]).toBe("none");
   });
 });

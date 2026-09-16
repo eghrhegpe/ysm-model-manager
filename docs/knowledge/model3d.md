@@ -31,6 +31,7 @@ auto_fields:
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
     - applyModelDefaults
+    - applyOverlayMaterial
     - applyPerfPreset
     - applyRotationIfNonIdentity
     - applyVPDToMesh
@@ -79,6 +80,7 @@ auto_fields:
     - buildFbxSceneFromData
     - buildFogNodes
     - buildGroundNodes
+    - buildGroundOverlaySpec
     - buildGroundSurfaceSpec
     - buildLightingSchema
     - buildLightNodes
@@ -276,6 +278,7 @@ auto_fields:
     - frameCameraSide
     - FrameSideOptions
     - frBuildToolsView
+    - generateOverlayPixels
     - generateSurfacePixels
     - getActiveInputSession
     - getBoneDetail
@@ -315,6 +318,7 @@ auto_fields:
     - GROUND_CANVAS_STYLES
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
+    - GROUND_OVERLAY_STYLES
     - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
     - GroundAxisMapping
@@ -323,6 +327,9 @@ auto_fields:
     - GroundMaterialParams
     - GroundMatParam
     - groundMatSourceFromAxes
+    - GroundOverlayParams
+    - GroundOverlaySpec
+    - GroundOverlayStyle
     - GroundSourceKind
     - GroundSurfaceAppearanceSpec
     - GroundSurfaceMode
@@ -481,7 +488,10 @@ auto_fields:
     - oneOf
     - onOverlayStyleTargetReset
     - OrderedTexInput
+    - OVERLAY_TEX_SIZE
+    - overlayNeedsRebuild
     - OverlayShellDeps
+    - overlaySpecKey
     - overlayStyleRoot
     - OverlayStyleTarget
     - ownHandle

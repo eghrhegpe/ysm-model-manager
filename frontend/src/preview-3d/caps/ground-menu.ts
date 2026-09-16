@@ -13,12 +13,14 @@ import type { GroundCapability } from "./ground-capability.ts";
 import {
   type GroundCanvasStyle,
   type GroundMatParam,
+  type GroundOverlayStyle,
   type GroundSourceKind,
   groundMatSourceFromAxes,
   paramIsEffective,
 } from "./ground-surface-spec.ts";
 
 const MAT_GROUP = "preview.groundGroupMaterial";
+const OVERLAY_GROUP = "preview.groundGroupOverlay";
 
 /** ADR-249 §2.4：参数级显隐谓词——控件可见 ⇔ 矩阵判定该参在当前模式生效。
  *
@@ -252,7 +254,71 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
   };
 }
 
-/** 完整参数面板节点树：ground-visible 平铺 + 材质组 folder——ADR-195 刀2 入口。
+/** ADR-249 §2.3 叠加层 folder：独立透明格线层（正交于来源/样式两轴）。
+ *  style 为 none 时子控件全隐（与材质组同一 paramVisible 思路：可见 ⇔ 生效）。 */
+function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
+  const overlayOn = (s: Partial<PreviewSnapshot>): boolean => s["env.groundOverlay"] !== "none";
+  const children: PreviewMenuNode[] = [
+    {
+      id: "ground-overlay",
+      kind: "select",
+      labelKey: "preview.groundOverlay",
+      control: {
+        options: [
+          { value: "none", label: "无" },
+          { value: "grid", label: "格线" },
+          { value: "checker", label: "棋盘" },
+        ],
+        get: () => cap.getOverlayStyle(),
+        set: (v) => cap.setOverlayStyle(v as GroundOverlayStyle),
+      },
+    },
+    {
+      id: "ground-overlay-color",
+      kind: "color",
+      labelKey: "preview.groundOverlayColor",
+      visibleWhen: overlayOn,
+      control: {
+        get: () => cap.getOverlayColor(),
+        set: (v) => cap.setOverlayColor(v as number),
+      },
+    },
+    {
+      id: "ground-overlay-size",
+      kind: "slider",
+      labelKey: "preview.groundOverlaySize",
+      visibleWhen: overlayOn,
+      control: {
+        min: 2,
+        max: 64,
+        step: 1,
+        get: () => cap.getOverlaySize(),
+        set: (v) => cap.setOverlaySize(v as number),
+      },
+    },
+    {
+      id: "ground-overlay-opacity",
+      kind: "slider",
+      labelKey: "preview.groundOverlayOpacity",
+      visibleWhen: overlayOn,
+      control: {
+        min: 0,
+        max: 1,
+        step: 0.05,
+        get: () => cap.getOverlayOpacity(),
+        set: (v) => cap.setOverlayOpacity(v as number),
+      },
+    },
+  ];
+  return {
+    id: "cap-group-ground-overlay",
+    kind: "folder",
+    labelKey: OVERLAY_GROUP,
+    children,
+  };
+}
+
+/** 完整参数面板节点树：ground-visible 平铺 + 材质组 folder + 叠加层 folder。
  *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。 */
 export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
   return [
@@ -266,5 +332,6 @@ export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
       },
     },
     groundBuildMatFolder(cap),
+    groundBuildOverlayFolder(cap),
   ];
 }

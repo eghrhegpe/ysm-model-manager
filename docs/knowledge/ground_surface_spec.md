@@ -99,13 +99,19 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 
 ## 对外 API / 入口
 
-见上「核心职责」；消费入口 = `GroundCapability.setMat*()` 12 组 setter/getter（新增 matColor2/matDensity/matAngle） + 菜单控件（group `preview.groundGroupMaterial`，14 控件）。
+见上「核心职责」；消费入口 = `GroundCapability.setMat*()` / `setSourceKind`/`setCanvasStyle` / `setOverlay*` 各组 setter/getter + 菜单控件（材质组 `preview.groundGroupMaterial` + 叠加层组 `preview.groundGroupOverlay`）。
 
 ## 与其他子系统关系
 
 - 挂在场景能力注册表（scene_capability_registry 卡）的 GroundCapability 内，复用其显隐/持久化/菜单框架，无独立 registry 条目
 - i18n key `preview.groundMat*` / `preview.groundOverlay*` ×3 语言包（叠加层新增 `groundGroupOverlay`/`groundOverlay`/`groundOverlayColor`/`groundOverlaySize`/`groundOverlayOpacity`）
 - 参考项目 MikuMikuAR ADR-089/226/231（演进线调研结论）
+
+## 已知遗留（ADR-249 §2.7 登记）
+
+1. **旧网格层与表面层字段语义重叠（病例 C）**：`env-state-schema.ts` 同时存在两套语义重叠的地面字段——旧网格层（y=0，`groundType` plain/grid/checker/lines/dots + `groundColor` tuple3 + `groundLineColor` tuple3，即 GridHelper）与表面层（y=0.005，`groundSourceKind`/`groundCanvasStyle` + `groundMatColor` hex + `groundMatLineColor` hex + …）。两套都表达「底色/线色/样式」，是历史层叠的双重实现。**未合并**（ADR-249 显式排除以避免范围蔓延）；合并是独立议题。
+2. **地面 y 位置固定**：承接面/叠加层/水膜高度均取 `GROUND_LAYER_OFFSETS` 常量，不可调（与菜单拆轴无关）。
+3. **叠加层样式集首期未全**：ADR-249 §2.3 仅锁架构方向，当前仅落地 grid/checker；scan/glowEdge 等样式待后续扩展（扩展时只需改 `GROUND_OVERLAY_STYLES` + `generateOverlayPixels` 分支）。
 
 ## 不变量
 

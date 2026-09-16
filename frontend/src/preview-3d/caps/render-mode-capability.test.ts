@@ -6,7 +6,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
 import { resetEnvState } from "@/preview-3d/state/env-state.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
+// ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
+// afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
+afterEach(() => { clearEnvCallbacks(); });
 const STORAGE_KEY = "ysm-scene-cap-renderMode";
 
 function makeScene(...meshes: THREE.Mesh[]) {

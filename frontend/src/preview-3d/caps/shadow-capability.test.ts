@@ -7,6 +7,11 @@ import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
 import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+
+// ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
+// afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
+afterEach(() => { clearEnvCallbacks(); });
 
 function makeFakeRenderer() {
   return {

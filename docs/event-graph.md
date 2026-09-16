@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 178 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -285,8 +285,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 287 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 309 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 288 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 310 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 121 |
 
 **订阅方（on）：**
@@ -342,7 +342,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 110 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 150 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 151 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 340 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -463,14 +463,16 @@
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 183 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 167 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 304 |
-| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 50 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 88 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 129 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 152 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 160 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 169 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 197 |
-| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 243 |
+| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
+| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
+| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 51 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 89 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 130 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 153 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 161 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 170 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 198 |
+| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 244 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 107 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 118 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
@@ -481,11 +483,10 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 293 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 315 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 341 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 113 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 124 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 135 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 147 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 157 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 111 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 122 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 133 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 145 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |

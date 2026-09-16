@@ -105,90 +105,86 @@ export function instancesHTML(): string {
 export function diagnosticsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="repo-tab active" data-tab="diagnostics">${UI_ICONS.tools} ${t("diagnostics.title")}</button>
+<button class="repo-tab active" data-tab="log">${UI_ICONS.clipboard} ${t("diagnostics.opsLog")}</button>
+<button class="repo-tab" data-tab="single">${UI_ICONS.clock} ${t("diagnostics.perfRunSingle")}</button>
+<button class="repo-tab" data-tab="gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
+<button class="repo-tab" data-tab="hist">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
+<button class="repo-tab" data-tab="trace">${UI_ICONS.search} ${t("diagnostics.loadTraceTitle")}</button>
+<button class="repo-tab" data-tab="conflict">${UI_ICONS.performance} ${t("diagnostics.conflict")}</button>
+<button class="repo-tab" data-tab="health">${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}</button>
+<button class="repo-tab" data-tab="sync-conflict">${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}</button>
+<span class="repo-tab-spacer"></span>
+<button class="repo-tab-action" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+<button class="repo-tab-action" id="diag-refresh">${t("diagnostics.refresh")}</button>
 </div>
 <div class="tab-body">
-<div class="diag-wrapper">
-<div class="diag-left">
-<button class="diag-btn active" data-diag="log">
-<span class="diag-btn-icon">${UI_ICONS.clipboard}</span>
-<span>${t("diagnostics.opsLog")}</span>
-</button>
-<button class="diag-btn" data-diag="runtime">
-<span class="diag-btn-icon">${UI_ICONS.joystick}</span>
-<span>${t("diagnostics.runtimeLog")}</span>
-</button>
-<button class="diag-btn" data-diag="conflict">
-<span class="diag-btn-icon">${UI_ICONS.performance}</span>
-<span>${t("diagnostics.conflict")}</span>
-</button>
-<button class="diag-btn" data-diag="perf">
-<span class="diag-btn-icon">${UI_ICONS.clock}</span>
-<span>${t("diagnostics.perfTitle")}</span>
-</button>
-<button class="diag-btn" data-diag="health">
-<span class="diag-btn-icon">${UI_ICONS.diagnose}</span>
-<span>${t("diagnostics.healthTitle")}</span>
-</button>
-<button class="diag-btn" data-diag="sync-conflict">
-<span class="diag-btn-icon">${UI_ICONS.refresh}</span>
-<span>${t("diagnostics.syncConflict")}</span>
-</button>
-<div class="diag-left-spacer"></div>
-<button class="diag-btn diag-btn-action" id="diag-copy" title="${t("diagnostics.copyLog")}">
-<span>${t("diagnostics.copyLog")}</span>
-</button>
-<button class="diag-btn diag-btn-action" id="diag-refresh">
-<span>${t("diagnostics.refresh")}</span>
-</button>
-<button class="diag-btn diag-btn-action" id="diag-clear">
-<span>${t("diagnostics.clearLog")}</span>
-</button>
+<div class="diag-panel" id="diag-tab-log" data-testid="diag-log">
+  <div class="diag-log-bar">
+    <div class="diag-log-subtabs">
+      <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
+      <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
+    </div>
+    <div class="diag-log-filter" id="diag-log-filter">
+      <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
+      <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
+      <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
+      <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
+      <input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
+    </div>
+    <button class="btn-base sm" id="diag-clear">${t("diagnostics.clearLog")}</button>
+  </div>
+  <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
+  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
 </div>
-<div class="diag-right">
-<div class="diag-panel" id="diag-log" data-testid="diag-log">
-<div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
-<button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
-<button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
-<button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
-<button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
-<input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}" style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
+<div class="diag-panel" id="diag-tab-single" style="display:none">
+  <div class="perf-wrap">
+    <div class="perf-controls">
+      <button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
+      <input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}">
+      <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
+      <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
+    </div>
+    <div id="diag-perf-single"></div>
+  </div>
 </div>
-<div id="diag-log-list" data-testid="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
+<div class="diag-panel" id="diag-tab-gui" style="display:none">
+  <div class="perf-wrap">
+    <div class="perf-controls">
+      <button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
+    </div>
+    <div id="diag-perf-gui-out"></div>
+  </div>
 </div>
-<div class="diag-panel" id="diag-runtime" data-testid="diag-runtime" style="display:none">
-<div id="diag-runtime-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noRuntimeLogs")}</div></div>
+<div class="diag-panel" id="diag-tab-hist" style="display:none">
+  <div class="perf-wrap">
+    <div class="perf-controls">
+      <button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
+    </div>
+    <div id="diag-perf-hist"></div>
+  </div>
 </div>
-<div class="diag-panel" id="diag-conflict" style="display:none">
-<div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
-</div></div></div>
-<div class="diag-panel" id="diag-perf" style="display:none">
-<div class="perf-wrap" style="overflow-y:auto;flex:1;padding:10px 12px">
-<div class="perf-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0 10px;border-bottom:1px solid var(--bd)">
-<button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
-<input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}" style="flex:1;min-width:150px;font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
-<label for="diag-perf-iter" style="font-size:var(--fs-sm);color:var(--muted)">${t("diagnostics.perfIterations")}</label>
-<input id="diag-perf-iter" type="number" min="1" step="1" value="3" style="width:56px;font-size:var(--fs-sm);padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt)">
-<button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
-<button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
-<button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
+<div class="diag-panel" id="diag-tab-trace" style="display:none">
+  <div class="perf-wrap">
+    <div class="perf-controls">
+      <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
+    </div>
+    <div id="diag-load-trace"></div>
+  </div>
 </div>
-<div id="diag-perf-single"></div>
-<div id="diag-perf-gui-out"></div>
-<div id="diag-perf-hist"></div>
-<div id="diag-load-trace"></div>
+<div class="diag-panel" id="diag-tab-conflict" style="display:none">
+  <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
+  <button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
+  </div></div>
 </div>
+<div class="diag-panel" id="diag-tab-health" style="display:none">
+  <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
+  <button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
+  </div></div>
 </div>
-<div class="diag-panel" id="diag-health" style="display:none">
-<div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
-<button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
-</div></div></div>
-<div class="diag-panel" id="diag-sync-conflict" style="display:none">
-<div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-<button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
-</div></div></div>
-</div>
+<div class="diag-panel" id="diag-tab-sync-conflict" style="display:none">
+  <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
+  <button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
+  </div></div>
 </div>
 </div>
 </div>`;
@@ -286,7 +282,7 @@ export function workshopHTML(): string {
     " " +
     t("workshop.activeCreators") +
     "</span>" +
-    '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
+    '<span style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto">creators/</span>' +
     "</div>" +
     '<div class="ws-creators-list" id="ws-cr-list"></div>' +
     "</div>" +

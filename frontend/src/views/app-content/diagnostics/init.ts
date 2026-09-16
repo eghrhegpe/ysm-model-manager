@@ -12,7 +12,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
-import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
+import { initPerfPanel } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
@@ -30,9 +30,7 @@ function dgInCopyTextFallback(text: string): void {
 
 function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   root.getElementById("diag-refresh")?.addEventListener("click", () => {
-    const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
-    const name = active?.dataset.diag;
-    if (name === "runtime") loadRuntimeLogs(root, esc);
+    if (dgInIsRuntimeLog(root)) loadRuntimeLogs(root, esc);
     else loadDiagnosticsLogs(root, esc);
   });
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
@@ -63,35 +61,57 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   });
 }
 
-function dgInBindCopyPanel(root: ShadowRoot): void {
-  root.getElementById("diag-copy")?.addEventListener("click", async () => {
-    const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
-    const name = active?.dataset.diag ?? "log";
-    const list = root.getElementById(`diag-${name}`);
-    const clone = list?.cloneNode(true) as HTMLElement | null;
-    clone?.querySelectorAll(".log-copy").forEach((b) => {
-      b.remove();
-    });
-    const text = (clone?.textContent ?? "").trim();
-    if (!text) {
-      bus.emit("toast:show", {
-        msg: `📋 ${t("diagnostics.noLogsToCopy")}`,
-        duration: TOAST_MS.success,
-        type: "info",
+/** 当前日志子 tab 是否运行时日志（决定刷新/复制取哪个列表、清空是否可见） */
+function dgInIsRuntimeLog(root: ShadowRoot): boolean {
+  const active = root.querySelector(".diag-sub-tab.active") as HTMLElement | null;
+  return active?.dataset.log === "runtime";
+}
+
+/** 切换日志子 tab（op / runtime）：显隐两个列表 + 控制清空按钮可见性 */
+function dgInBindLogSubTabs(root: ShadowRoot, esc: EscFn): void {
+  root.querySelectorAll(".diag-sub-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      root.querySelectorAll(".diag-sub-tab").forEach((b) => {
+        b.classList.toggle("active", b === btn);
       });
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      dgInCopyTextFallback(text);
-    }
-    bus.emit("toast:show", {
-      msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
-      duration: TOAST_MS.normal,
-      type: "info",
+      const isRuntime = (btn as HTMLElement).dataset.log === "runtime";
+      const opList = root.getElementById("diag-log-list");
+      const rtList = root.getElementById("diag-runtime-list");
+      if (opList) opList.style.display = isRuntime ? "none" : "";
+      if (rtList) rtList.style.display = isRuntime ? "" : "none";
+      const clearBtn = root.getElementById("diag-clear");
+      if (clearBtn) clearBtn.style.display = isRuntime ? "none" : "";
+      if (isRuntime) loadRuntimeLogs(root, esc);
+      else loadDiagnosticsLogs(root, esc);
     });
   });
+}
+
+/** 复制当前激活日志列表文本（op / runtime 二选一） */
+function dgInCopyActiveLog(root: ShadowRoot): void {
+  const list = root.getElementById(dgInIsRuntimeLog(root) ? "diag-runtime-list" : "diag-log-list");
+  const clone = list?.cloneNode(true) as HTMLElement | null;
+  clone?.querySelectorAll(".log-copy").forEach((b) => {
+    b.remove();
+  });
+  const text = (clone?.textContent ?? "").trim();
+  if (!text) {
+    bus.emit("toast:show", {
+      msg: `📋 ${t("diagnostics.noLogsToCopy")}`,
+      duration: TOAST_MS.success,
+      type: "info",
+    });
+    return;
+  }
+  navigator.clipboard.writeText(text).catch(() => dgInCopyTextFallback(text));
+  bus.emit("toast:show", {
+    msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
+    duration: TOAST_MS.normal,
+    type: "info",
+  });
+}
+function dgInBindCopyPanel(root: ShadowRoot): void {
+  root.getElementById("diag-copy")?.addEventListener("click", () => dgInCopyActiveLog(root));
 }
 
 function dgInCopyRowLog(row: HTMLElement): void {
@@ -143,50 +163,27 @@ function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
   });
 }
 
-function dgInBindTabSwitcher(root: ShadowRoot, esc: EscFn): void {
-  root.querySelectorAll(".diag-btn[data-diag]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = (btn as HTMLElement).dataset.diag;
-      root.querySelectorAll(".diag-btn[data-diag]").forEach((b) => {
-        b.classList.toggle("active", b === btn);
-      });
-      const logPanel = root.getElementById("diag-log");
-      const runtimePanel = root.getElementById("diag-runtime");
-      const conflictPanel = root.getElementById("diag-conflict");
-      const perfPanel = root.getElementById("diag-perf");
-      const healthPanel = root.getElementById("diag-health");
-      const syncConflictPanel = root.getElementById("diag-sync-conflict");
-      if (logPanel) logPanel.style.display = name === "log" ? "" : "none";
-      if (runtimePanel) runtimePanel.style.display = name === "runtime" ? "" : "none";
-      if (conflictPanel) conflictPanel.style.display = name === "conflict" ? "" : "none";
-      if (perfPanel) perfPanel.style.display = name === "perf" ? "" : "none";
-      if (healthPanel) healthPanel.style.display = name === "health" ? "" : "none";
-      if (syncConflictPanel)
-        syncConflictPanel.style.display = name === "sync-conflict" ? "" : "none";
-      const activePanel =
-        name === "log"
-          ? logPanel
-          : name === "runtime"
-            ? runtimePanel
-            : name === "conflict"
-              ? conflictPanel
-              : name === "perf"
-                ? perfPanel
-                : name === "health"
-                  ? healthPanel
-                  : syncConflictPanel;
-      if (activePanel) {
-        activePanel.style.animation = "none";
-        void activePanel.offsetHeight;
-        activePanel.style.animation = "";
-      }
-      if (name === "log") loadDiagnosticsLogs(root, esc);
-      if (name === "runtime") loadRuntimeLogs(root, esc);
-      if (name === "perf") renderLoadTraceSection(root, esc);
-    });
-  });
+/** 查看器/网页版：隐藏依赖 Go 本地能力或 CLI 的诊断 tab，避免“可见但不可用” */
+function dgInHideDesktopOnly(root: ShadowRoot): void {
+  if (!isViewerMode()) return;
+  for (const tab of root.querySelectorAll<HTMLElement>(
+    '.repo-tab[data-tab="conflict"], .repo-tab[data-tab="health"], .repo-tab[data-tab="sync-conflict"]',
+  )) {
+    tab.style.display = "none";
+  }
+  for (const id of [
+    "diag-scan-conflict",
+    "diag-scan-health",
+    "diag-scan-sync-conflict",
+    "diag-perf-run",
+    "diag-perf-gui",
+    "diag-perf-log",
+    "diag-perf-refresh-trace",
+  ]) {
+    const el = root.getElementById(id);
+    if (el) el.style.display = "none";
+  }
 }
-
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
   root.querySelectorAll(".diag-log-fbtn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -210,27 +207,6 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
   }
 }
 
-/** 查看器/网页版：隐藏依赖 Go 本地能力或 CLI 的诊断面板，避免“可见但不可用” */
-function dgInHideDesktopOnly(root: ShadowRoot): void {
-  if (!isViewerMode()) return;
-  for (const btn of root.querySelectorAll<HTMLElement>(
-    '[data-diag="conflict"], [data-diag="health"], [data-diag="sync-conflict"]',
-  )) {
-    btn.style.display = "none";
-  }
-  for (const id of [
-    "diag-scan-conflict",
-    "diag-scan-health",
-    "diag-scan-sync-conflict",
-    "diag-perf-run",
-    "diag-perf-gui",
-    "diag-perf-log",
-  ]) {
-    const el = root.getElementById(id);
-    if (el) el.style.display = "none";
-  }
-}
-
 /**
  * 初始化诊断页所有功能
  * @param root - 组件 shadow root
@@ -243,7 +219,7 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindCopyRows(root);
   dgInBindScanBtns(root, esc);
   initPerfPanel(root, esc);
-  dgInBindTabSwitcher(root, esc);
+  dgInBindLogSubTabs(root, esc);
   loadDiagnosticsLogs(root, esc);
   dgInBindLogFilter(root, esc);
   dgInBindLogSearch(root, esc);

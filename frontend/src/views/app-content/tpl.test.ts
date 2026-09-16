@@ -175,8 +175,12 @@ describe("app-content 模板", () => {
     expect(html).not.toContain("web-repo-auth-btn");
   });  it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
     const html = diagnosticsHTML();
-    expect(html).toContain('data-tab="diagnostics"');
+    expect(html).toContain('data-tab="log"');
+    expect(html).toContain('data-tab="conflict"');
+    expect(html).toContain('id="diag-tab-log"');
     expect(html).toContain('id="diag-scan-conflict"');
+    expect(html).toContain('id="diag-clear"');
+    expect(html).toContain('data-tab="sync-conflict"');
   });
 
   it("recycleHTML 包含清空回收站按钮", () => {

@@ -44,18 +44,23 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-scan-conflict"></div>
     <div id="diag-scan-sync-conflict"></div>
     <div id="diag-scan-health"></div>
-    <button class="diag-btn" data-diag="log">日志</button>
-    <button class="diag-btn" data-diag="runtime">运行时</button>
-    <button class="diag-btn" data-diag="conflict">冲突</button>
-    <button class="diag-btn" data-diag="perf">性能</button>
-    <button class="diag-btn" data-diag="health">体检</button>
-    <button class="diag-btn" data-diag="sync-conflict">同步</button>
-    <div id="diag-log"><div id="diag-log-list"></div></div>
-    <div id="diag-runtime"><div id="diag-runtime-list"></div></div>
-    <div id="diag-conflict"><div id="diag-conflict-list"></div></div>
-    <div id="diag-perf"><div id="diag-load-trace"></div></div>
-    <div id="diag-health"><div id="diag-health-list"></div></div>
-    <div id="diag-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
+    <button class="repo-tab" data-tab="log">日志</button>
+    <button class="repo-tab" data-tab="single">单一</button>
+    <button class="repo-tab" data-tab="gui">GUI</button>
+    <button class="repo-tab" data-tab="hist">历史</button>
+    <button class="repo-tab" data-tab="trace">剖析</button>
+    <button class="repo-tab" data-tab="conflict">冲突</button>
+    <button class="repo-tab" data-tab="health">体检</button>
+    <button class="repo-tab" data-tab="sync-conflict">同步</button>
+    <button class="diag-sub-tab active" data-log="op">操作</button>
+    <button class="diag-sub-tab" data-log="runtime">运行时</button>
+    <div id="diag-tab-log">
+      <div id="diag-log-list"></div>
+      <div id="diag-runtime-list" style="display:none"></div>
+    </div>
+    <div id="diag-tab-conflict"><div id="diag-conflict-list"></div></div>
+    <div id="diag-tab-health"><div id="diag-health-list"></div></div>
+    <div id="diag-tab-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
     <button class="diag-log-fbtn" data-status="all">全部</button>
     <button class="diag-log-fbtn" data-status="success">成功</button>
     <input id="diag-log-search">
@@ -205,13 +210,13 @@ describe("initDiagnostics — 日志面板", () => {
     );
   });
 
-  it("刷新按钮：runtime tab 激活 → 加载运行时日志；否则重载导入日志", async () => {
+  it("刷新按钮：runtime 子 tab 激活 → 加载运行时日志；否则重载导入日志", async () => {
     const runtimeFn = vi.fn(() => [{ Message: "watcher ok", Timestamp: 1700000000000 }]);
     mockApp({ GetRuntimeLogs: runtimeFn });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    // 切到 runtime tab
-    (root.querySelector('.diag-btn[data-diag="runtime"]') as HTMLElement).click();
+    // 切到 runtime 子 tab
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
     await waitFor(() =>
       (root.getElementById("diag-runtime-list") as HTMLElement).textContent!.includes(
         "watcher ok",
@@ -234,24 +239,28 @@ describe("initDiagnostics — 日志面板", () => {
     );
   });
 
-  it("tab 切换 → panel display 联动", () => {
+  it("日志子 tab 切换 → op/runtime 列表显隐 + 清空按钮可见性联动", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    const logPanel = root.getElementById("diag-log") as HTMLElement;
-    const runtimePanel = root.getElementById("diag-runtime") as HTMLElement;
-    const conflictPanel = root.getElementById("diag-conflict") as HTMLElement;
-    (root.querySelector('.diag-btn[data-diag="conflict"]') as HTMLElement).click();
-    expect(logPanel.style.display).toBe("none");
-    expect(runtimePanel.style.display).toBe("none");
-    expect(conflictPanel.style.display).toBe("");
+    const opList = root.getElementById("diag-log-list") as HTMLElement;
+    const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
+    const clearBtn = root.getElementById("diag-clear") as HTMLElement;
+    // 初始：op 激活，runtime 隐藏，清空可见
+    expect(opList.style.display).not.toBe("none");
+    expect(rtList.style.display).toBe("none");
+    expect(clearBtn.style.display).not.toBe("none");
+    // 切到 runtime 子 tab
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    expect(opList.style.display).toBe("none");
+    expect(rtList.style.display).not.toBe("none");
+    expect(clearBtn.style.display).toBe("none"); // 运行时日志无清空能力
     expect(
-      (root.querySelector('.diag-btn[data-diag="conflict"]') as HTMLElement).classList.contains(
+      (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).classList.contains(
         "active",
       ),
     ).toBe(true);
   });
 });
-
 describe("startDedup（会话工厂 createDedupSession）", () => {
   const dedup = createDedupSession();
   const groupJson = [
@@ -663,37 +672,15 @@ describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
   });
 });
 
-describe("initDiagnostics — tab 联动扩展与查看器降级", () => {
-  it("tab 切到 perf → perf 面板显示 + 加载剖析空态渲染", () => {
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.querySelector('.diag-btn[data-diag="perf"]') as HTMLElement).click();
-    expect((root.getElementById("diag-perf") as HTMLElement).style.display).toBe("");
-    expect((root.getElementById("diag-log") as HTMLElement).style.display).toBe("none");
-    expect((root.getElementById("diag-load-trace") as HTMLElement).textContent).toContain(
-      "暂无加载记录",
-    );
-  });
-
-  it("tab 切到 health / sync-conflict → 对应面板 display 联动", () => {
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.querySelector('.diag-btn[data-diag="health"]') as HTMLElement).click();
-    expect((root.getElementById("diag-health") as HTMLElement).style.display).toBe("");
-    expect((root.getElementById("diag-runtime") as HTMLElement).style.display).toBe("none");
-    (root.querySelector('.diag-btn[data-diag="sync-conflict"]') as HTMLElement).click();
-    expect((root.getElementById("diag-sync-conflict") as HTMLElement).style.display).toBe("");
-    expect((root.getElementById("diag-health") as HTMLElement).style.display).toBe("none");
-  });
-
-  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 tab 与扫描入口", () => {
+describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
+  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 top tab 与扫描入口", () => {
     isViewerMode.mockReturnValue(true);
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    // 桌面专属 tab 按钮
+    // 桌面专属 top tab
     for (const name of ["conflict", "health", "sync-conflict"]) {
       expect(
-        (root.querySelector(`.diag-btn[data-diag="${name}"]`) as HTMLElement).style.display,
+        (root.querySelector(`.repo-tab[data-tab="${name}"]`) as HTMLElement).style.display,
       ).toBe("none");
     }
     // 扫描与 perf 桌面按钮

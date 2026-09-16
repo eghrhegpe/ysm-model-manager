@@ -20,7 +20,23 @@ import type { AppContentHost } from "./host.ts";
 /**
  * 初始化诊断页
  */
+/**
+ * 初始化诊断页
+ * 顶部 tab 走全站统一 bindTabs 范式（ARIA/键盘/懒加载），与仓库页同构。
+ * 左栏分段已在 ADR-258 收敛为顶部 repo-tab：
+ *   log(日志,含op/runtime子tab) / single / gui / hist / trace / conflict / health / sync-conflict
+ */
 export function initDiagnosticsPage(host: AppContentHost): void {
+  bindTabs(host, ".repo-tab", "diag", [
+    "log",
+    "single",
+    "gui",
+    "hist",
+    "trace",
+    "conflict",
+    "health",
+    "sync-conflict",
+  ]);
   initDiagnostics(host.state.root, (s) => esc(String(s || "")));
 }
 

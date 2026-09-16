@@ -266,7 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 38 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 54 |
 
 ### `repo:focus-search`
 
@@ -293,8 +293,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 80 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 269 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 96 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 285 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 241 |
@@ -451,18 +451,18 @@
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | dgCfWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 39 |
 | dgCfSyncWebGate | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 193 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |
-| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 77 |
-| dgInBindCopyPanel | `frontend/src/views/app-content/diagnostics/init.ts` | 89 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 104 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 112 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 38 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 49 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 55 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 99 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 107 |
+| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 124 |
+| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 183 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 167 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 304 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 183 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 320 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 51 |

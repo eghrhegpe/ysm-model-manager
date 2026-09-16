@@ -168,10 +168,7 @@ describe("_render — 页面分支", () => {
     expect(el.shadowRoot.querySelector(".stg-tab")).not.toBeNull();
     el.state.current = "diagnostics";
     el._render();
-    // P3 修复（审核）：原断言 .repo-tab 是全部页面模板的通用类名（tpl.ts 各页都有），
-    // 诊断页渲染错误也会通过——改断言诊断页专属 .diag-wrapper
-    expect(el.shadowRoot.querySelector(".diag-wrapper")).not.toBeNull();
-    el.state.current = "workshop";
+    expect(el.shadowRoot.querySelector("#diag-tab-log")).not.toBeNull();
     el._render();
     expect(el.shadowRoot.querySelector("#ws-tabs")).not.toBeNull();
     el.state.current = "github";

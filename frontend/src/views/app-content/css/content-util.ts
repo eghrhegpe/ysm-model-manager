@@ -31,7 +31,6 @@ export const contentUtilCSS: string = `
 /* ===== 响应式 ===== */
 @media (max-width:768px) {
   .cr-left,.gh-left,.ins-sidebar { width:100%; height:auto; border-right:none; flex-direction:row; flex-wrap:wrap; }
-  .cr-scroll,.gh-grid,.diag-right { padding:4px 6px; }
-  .diag-left { width:100%; border-right:none; flex-direction:row; flex-wrap:wrap; }
+  .cr-scroll,.gh-grid { padding:4px 6px; }
 }
 `;

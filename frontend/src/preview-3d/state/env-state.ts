@@ -15,6 +15,25 @@ type WriteSource = "auto-model" | "auto-atmosphere" | "manual";
 const _writeSource: Record<string, WriteSource> = {};
 
 /**
+ * ADR-254：envState 写入中间件。
+ * 拿到**本次 patch**，可返回一个补充 patch（合并回本次写入）；返回 undefined 表示不改。
+ * 只在真正写入前执行，不持有实例、不落盘。
+ */
+export type EnvStateMiddleware = (patch: Partial<EnvState>) => Partial<EnvState> | undefined;
+
+const _writeMiddlewares: EnvStateMiddleware[] = [];
+
+/** 注册写入中间件（顺序执行）。测试间需 `clearEnvStateMiddlewares()` 防泄漏。 */
+export function registerEnvStateMiddleware(mw: EnvStateMiddleware): void {
+  _writeMiddlewares.push(mw);
+}
+
+/** 清空中间件（测试用）。 */
+export function clearEnvStateMiddlewares(): void {
+  _writeMiddlewares.length = 0;
+}
+
+/**
  * 守卫决策：当前写入是否应覆盖已有值。
  * 优先级：manual > auto-atmosphere > auto-model
  */
@@ -44,10 +63,20 @@ export function setEnvState(
   const source = opts?.source ?? "auto-model";
   const force = opts?.force ?? false;
 
+  // ADR-254：写入中间件（邻座 registerEnvStateMiddleware 的最小等价物）。
+  // 范式：中间件拿到**本次 patch**，可返回补充 patch（合并回本次写入）。
+  // 用途：地面材质的「手改即脱离预设」标记收口——只在此一处置位，
+  // 不靠每个 setter 自觉（防漏、防前缀匹配误清）。
+  let patch = partial;
+  for (const mw of _writeMiddlewares) {
+    const extra = mw(patch);
+    if (extra) patch = { ...patch, ...extra };
+  }
+
   const changedKeys = new Set<string>();
-  for (const key of Object.keys(partial) as Array<keyof EnvState>) {
+  for (const key of Object.keys(patch) as Array<keyof EnvState>) {
     if (force || shouldOverwrite(key as string, source)) {
-      (envState as unknown as Record<string, unknown>)[key as string] = partial[key];
+      (envState as unknown as Record<string, unknown>)[key as string] = patch[key];
       _writeSource[key as string] = source;
       changedKeys.add(key as string);
     }

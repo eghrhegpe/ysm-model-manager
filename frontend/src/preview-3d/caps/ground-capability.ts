@@ -8,7 +8,8 @@ import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, registerEnvStateMiddleware, setEnvState } from "@/preview-3d/state/env-state.ts";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -20,9 +21,11 @@ import {
   buildGroundOverlaySpec,
   buildGroundSurfaceSpec,
   GROUND_CANVAS_STYLES,
+  GROUND_MATERIAL_PRESETS,
   GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
   type GroundCanvasStyle,
+  type GroundMaterialPreset,
   type GroundOverlaySpec,
   type GroundOverlayStyle,
   type GroundSourceKind,
@@ -53,6 +56,27 @@ const SURFACE_TEX_SIZE = 512;
 // matSource 合法值白名单（loadState 校验用）——ADR-249：
 // 原本地重复定义一份（与 ground-surface-spec.ts 导出的 GROUND_SURFACE_MODES 同内容），
 // 属常量双源（同类病例：MikuMikuAR bd65c02f）。现统一 import spec 侧单一事实源。
+/**
+ * ADR-254：材质预设关心的 envState 字段（**精确白名单**，禁止前缀匹配）。
+ * 与 `GROUND_MATERIAL_PRESETS` 写入的字段一一对应；改其中任一字段即视为「脱离预设」。
+ * 刻意**不含** groundSize / groundVisible / groundOverlay 系列 / groundMatOpacity 等预设不管的字段——
+ * 否则改这些会误清预设标记（邻座 `_WATER_KEYS` 精确清单教训）。
+ */
+export const GROUND_MATERIAL_PRESET_KEYS = [
+  "groundCanvasStyle",
+  "groundMatColor",
+  "groundMatColor2",
+  "groundMatDensity",
+  "groundMatGridSize",
+  "groundMatAngleDeg",
+] as const satisfies readonly (keyof EnvState)[];
+
+// 收口置位：不依赖每个 setter 自觉。预设点击自带 groundMaterialPreset，故不会被误清。
+registerEnvStateMiddleware((patch) => {
+  if (patch.groundMaterialPreset !== undefined) return undefined;
+  const touched = GROUND_MATERIAL_PRESET_KEYS.some((k) => patch[k] !== undefined);
+  return touched ? { groundMaterialPreset: "custom" } : undefined;
+});
 
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
@@ -271,7 +295,9 @@ export class GroundCapability implements SceneCapability {
     let tex: THREE.Texture | null = null;
     if (st.mode === "texture") {
       tex = this.customTex ?? this.makeGeneratedTexture({ ...st, mode: "solid" });
-    } else if (st.mode !== "solid" && st.mode !== "none") {
+      // ADR-254 §2.5：`plain` 与 `solid` 都是平坦 matColor，同一输出不留两条实现路径——
+      // plain 也走 tex=null（材质直出 color），不再生成一张均匀贴图。
+    } else if (st.mode !== "solid" && st.mode !== "none" && st.mode !== "plain") {
       tex = this.makeGeneratedTexture(st);
     }
 
@@ -357,6 +383,34 @@ export class GroundCapability implements SceneCapability {
         .finally(() => URL.revokeObjectURL(url));
     };
     input.click();
+  }
+
+  // ── 材质预设（ADR-254）：选材质 = 套用「形状 + 配色」完整预设 ──
+  getMaterialPreset(): GroundMaterialPreset {
+    return envState.groundMaterialPreset;
+  }
+  /**
+   * 选材质预设：一次性写入形状与配色（**同一事务**，避免中间态）。
+   * `custom` 是显示项（表示已手改），手选它不做事。
+   * 本调用自带 `groundMaterialPreset`，故不会被中间件误清为 custom。
+   */
+  setMaterialPreset(preset: GroundMaterialPreset): void {
+    if (preset === "custom") return;
+    const def = GROUND_MATERIAL_PRESETS[preset];
+    setEnvState(
+      {
+        groundMaterialPreset: preset,
+        groundCanvasStyle: def.canvasStyle,
+        groundMatColor: def.matColor,
+        groundMatColor2: def.matColor2,
+        groundMatDensity: def.matDensity,
+        groundMatGridSize: def.matGridSize,
+        groundMatAngleDeg: def.matAngleDeg,
+      },
+      { source: "manual" },
+    );
+    this.refreshSurface();
+    this.notify();
   }
 
   // ── 材质参数 setter/getter（全部经 refreshSurface 单路径落地）──

@@ -94,6 +94,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 >
 > **ADR-252 关键收敛**：几何图案（grid/checker/stripes/diamond）**已从 canvasStyle 迁出**——它属于叠加层，不是材质。故 `GroundSurfaceMode` = `none|solid|plain|marble|sand|grass|texture`（**运行时不含图案**）；旧 9 值扁平枚举另立为 `LegacyGroundMatSource`，**仅作迁移输入**。菜单不再需要分组标注：每个轴只装一类。
 >
+> ⚠️ **ADR-254 材质名兼现配色**：`canvasStyle` 原本只控形状（频率/对比度）、颜色正交——于是选「草地」得到的是**棕色斑块**（默认 matColor/matColor2 均棕）。现增 `GROUND_MATERIAL_PRESETS`（**配色唯一事实源**）+ 显式状态 `groundMaterialPreset`（plain|marble|sand|grass|custom）：选材质 = **一次性写入形状+配色**；手改预设关心的字段 → 中间件置 `custom`（菜单下拉可见）。
+>
 > `sand`：高频细颗粒低对比（freq 14 / contrast 0.45）；`grass`：中频块状高对比（freq 5 / contrast 0.95）。两者与 `marble` 共用 `valueNoise` 三倍频基建。
 - **marble**：种子化哈希噪声叠加多频三角波，matColor/matColor2 之间插值产生随机大理石紊纹理
 - **sand / grass**（ADR-251）：纯噪声材质（三倍频 `valueNoise`，无色带），在 matColor/matColor2 间 lerp；仅频率与对比度不同。`gridSize` 作粒度基准，`density` 作频率倍率，`angleRad` 旋转颗粒。
@@ -143,6 +145,10 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 6. **GROUND_SURFACE_MODES 单一定义**：由 `ground-surface-spec.ts` 导出，`ground-capability.ts` 不得本地重建同名常量（历史常量双源）
 7. **叠加层资源自有**：`overlayTex`/`overlayMat`/`overlay.geometry` 释放责任全在 GroundCapability（切 none 与 dispose 两路）；叠加层永不触碰 `customTex`/`surfaceTex`（防 MikuMikuAR 907fa26b 式跨层误 dispose）
 8. **spec 零运行时依赖**：`ground-surface-spec.ts` 保持 `import type * as THREE`——像素生成只产出 `Uint8Array`，DataTexture 构造一律在 capability（叠加层与表面层同口径，保证 spec 可 node 单测）
+9. **材质预设配色单一事实源（ADR-254）**：材质名 ⇒ 配色只能来自 `GROUND_MATERIAL_PRESETS`。菜单选项与 `setMaterialPreset` 均从它派生，**禁止在菜单里重写色值**。
+10. **预设白名单精确匹配（ADR-254）**：`GROUND_MATERIAL_PRESET_KEYS`（定义在 `ground-capability.ts`）必须与 `setMaterialPreset` 写入的 envState 键**一一对应**（有一致性断言测试）。**严禁前缀匹配**——否则改 groundSize/groundVisible/groundOverlay 系列会误清预设标记（邻座 `_WATER_KEYS` 精确清单教训）。
+11. **预设状态由中间件收口置位（ADR-254）**：`custom` 的置位只发生在 `env-state.ts` 的写入中间件（`registerEnvStateMiddleware`）一處，**不靠每个 setter 自觉**（防漏）。预设点击自带 `groundMaterialPreset`，故不会被误清。
+12. **plain 与 solid 同路径（ADR-254 §2.5）**：两者均为平坦 matColor，`plain` 走 `tex = null`（材质直出 color），**不再生成均匀贴图**——同一输出不留两条实现路径。
 
 ## 相关
 

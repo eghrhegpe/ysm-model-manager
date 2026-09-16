@@ -129,6 +129,84 @@ export const GROUND_CANVAS_STYLES = [
   "grass",
 ] as const satisfies readonly GroundCanvasStyle[];
 
+/* ============ 材质预设（ADR-254）：材质名兑现配色 ============ */
+// 病根：`canvasStyle` 只控制「纹理形状」（频率/对比度），颜色是正交参数。
+// 于是选「草地」得到的是棕色斑块——材质名是**预设**语汇，实现却是**原语**语汇。
+// 此处把材质名兑换为「形状 + 配色」完整预设，并附显式状态供菜单展示。
+
+/** 材质预设键（`custom` = 用户已手改脱离预设，非可选项） */
+export type GroundMaterialPreset = GroundCanvasStyle | "custom";
+
+/** 菜单可选的预设项（不含 custom） */
+export const GROUND_MATERIAL_PRESET_IDS = [
+  "plain",
+  "marble",
+  "sand",
+  "grass",
+] as const satisfies readonly GroundCanvasStyle[];
+
+export interface GroundMaterialPresetDef {
+  /** 菜单标签（中文兜底） */
+  label: string;
+  /** 形状：写入 groundCanvasStyle */
+  canvasStyle: GroundCanvasStyle;
+  /** 配色：底色 */
+  matColor: number;
+  /** 配色：副色（噪声插值另一端） */
+  matColor2: number;
+  /** 颗粒参数（预设推荐值；用户可再调） */
+  matDensity: number;
+  matGridSize: number;
+  matAngleDeg: number;
+}
+
+/**
+ * 材质预设表——**配色的唯一事实源**。
+ * 邻座（MikuMikuAR）实证：材质名必须自带颜色，否则「选草地」名实不符。
+ * 配色取向参考邻座 `GROUND_PRESETS`（其草地为 `[0.3,0.5,0.25]` 绿系）。
+ */
+export const GROUND_MATERIAL_PRESETS: Record<GroundCanvasStyle, GroundMaterialPresetDef> = {
+  plain: {
+    label: "素面",
+    canvasStyle: "plain",
+    matColor: 0x9a8b78,
+    matColor2: 0x6b5d4c,
+    matDensity: 1,
+    matGridSize: 8,
+    matAngleDeg: 0,
+  },
+  marble: {
+    // 真大理石：浅底 + 中灰纹（非棕色）
+    label: "大理石",
+    canvasStyle: "marble",
+    matColor: 0xe8e5df,
+    matColor2: 0x8f8a80,
+    matDensity: 1.5,
+    matGridSize: 6,
+    matAngleDeg: 0,
+  },
+  sand: {
+    // 沙：暖黄底 + 深沙粒（高频低对比）
+    label: "沙子",
+    canvasStyle: "sand",
+    matColor: 0xd8c49a,
+    matColor2: 0xa88f5f,
+    matDensity: 1,
+    matGridSize: 8,
+    matAngleDeg: 0,
+  },
+  grass: {
+    // 草：绿底 + 深绿（中频高对比）
+    label: "草地",
+    canvasStyle: "grass",
+    matColor: 0x4c7a3a,
+    matColor2: 0x2f5524,
+    matDensity: 1.5,
+    matGridSize: 8,
+    matAngleDeg: 0,
+  },
+};
+
 /** 叠加层样式（独立于来源轴/样式轴，可叠加在任意底层之上） */
 export type GroundOverlayStyle = "none" | "grid" | "checker" | "stripes" | "diamond";
 

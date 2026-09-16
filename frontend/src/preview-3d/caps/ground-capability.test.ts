@@ -6,6 +6,11 @@ import { GroundCapability } from "./ground-capability.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
+import {
+  GROUND_MATERIAL_PRESETS,
+  GROUND_MATERIAL_PRESET_IDS,
+} from "./ground-surface-spec.ts";
+import { GROUND_MATERIAL_PRESET_KEYS } from "./ground-capability.ts";
 
 /** 便捷设置：材质值走 canvas 来源，none/solid/texture 直接设来源轴。
  *  ADR-252：图案不在表面模式里，图案请走 `setOverlayStyle`。 */
@@ -464,10 +469,12 @@ describe("GroundCapability — 菜单控件联动", () => {
     sourceNode.control!.set!("canvas");
     expect(cap.getSourceKind()).toBe("canvas");
     expect(sourceNode.control!.get!(undefined)).toBe("canvas");
+    // ADR-254：样式 select 的值 = **材质预设**；选它会一次性套用形状 + 配色
     const styleNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-canvas-style")!;
-    styleNode.control!.set!("stripes");
-    expect(cap.getCanvasStyle()).toBe("stripes");
-    expect(styleNode.control!.get!(undefined)).toBe("stripes");
+    styleNode.control!.set!("grass");
+    expect(cap.getMaterialPreset()).toBe("grass");
+    expect(cap.getCanvasStyle()).toBe("grass");
+    expect(styleNode.control!.get!(undefined)).toBe("grass");
   });
 
   it("材质参数控件 setValue/getValue 全联动（canvas 模式下可见，节点 control 闭包）", () => {
@@ -760,5 +767,92 @@ describe("GroundCapability — 叠加层（ADR-249 §2.3 独立格线层）", ()
     style.control!.set!("checker");
     expect(cap.getOverlayStyle()).toBe("checker");
     expect(style.control!.get!(undefined)).toBe("checker");
+  });
+});
+
+describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("选「草地」→ 真绿：配色落到绿系且形状为 grass（名实相符）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setMaterialPreset("grass");
+    const def = GROUND_MATERIAL_PRESETS.grass;
+    expect(cap.getMaterialPreset()).toBe("grass");
+    expect(cap.getCanvasStyle()).toBe("grass");
+    expect(cap.getMatColor()).toBe(def.matColor);
+    expect(cap.getMatColor2()).toBe(def.matColor2);
+    // 绿主导：G 通道 > R 且 > B（裸色值断言，防“名字绿了但色值没绿”）
+    const g = (def.matColor >> 8) & 0xff;
+    expect(g, "草地底色应为绿主导").toBeGreaterThan((def.matColor >> 16) & 0xff);
+    expect(g).toBeGreaterThan(def.matColor & 0xff);
+  });
+
+  it("四个预设各有独立配色 + 大理石/沙不绿（防调色板复制粘贴错位）", () => {
+    const seen = new Set<number>();
+    for (const id of GROUND_MATERIAL_PRESET_IDS) {
+      seen.add(GROUND_MATERIAL_PRESETS[id].matColor);
+    }
+    expect(seen.size, "四个预设底色不得重复").toBe(4);
+    const marble = GROUND_MATERIAL_PRESETS.marble.matColor;
+    const mg = (marble >> 8) & 0xff;
+    expect(mg, "大理石不应是绿系").toBeLessThanOrEqual(Math.max((marble >> 16) & 0xff, marble & 0xff));
+  });
+
+  it("手改预设关心的字段 → 状态变 custom（显式脱离），形状保留", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    cap.setMatColor(0x123456);
+    expect(cap.getMaterialPreset()).toBe("custom");
+    expect(cap.getCanvasStyle(), "custom 态保留上一次形状").toBe("grass");
+  });
+
+  it("改预设不管的字段 → 不清预设（白名单精确性，非前缀匹配）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    cap.setMatOpacity(0.5);
+    cap.setVisible(false);
+    cap.setOverlayStyle("grid");
+    expect(cap.getMaterialPreset(), "预设不管的字段不应误清预设").toBe("grass");
+  });
+
+  it("白名单与预设表写入字段一一对应（防两处漂移断言）", () => {
+    const fromSpec = [
+      "groundCanvasStyle",
+      "groundMatColor",
+      "groundMatColor2",
+      "groundMatDensity",
+      "groundMatGridSize",
+      "groundMatAngleDeg",
+    ];
+    expect([...GROUND_MATERIAL_PRESET_KEYS].sort()).toEqual(fromSpec.sort());
+  });
+
+  it("同一事务：预设写入后无中间态（形状与配色同时到位）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    // 材质轴仅当 sourceKind=canvas 时生效（菜单也仅在该来源下显示本轴）
+    cap.setSourceKind("canvas");
+    cap.setMaterialPreset("sand");
+    const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial;
+    // 形状为 sand → 产贴图（非 plain/solid 的 tex=null 路径）
+    expect(mat.map).toBeInstanceOf(THREE.DataTexture);
+    expect(cap.getCanvasStyle()).toBe("sand");
+    expect(cap.getMaterialPreset()).toBe("sand");
+  });
+
+  it("手选「自定义」为无操作（形状与配色保留）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    const c = cap.getMatColor();
+    cap.setMaterialPreset("custom");
+    expect(cap.getMaterialPreset()).toBe("grass");
+    expect(cap.getMatColor()).toBe(c);
   });
 });

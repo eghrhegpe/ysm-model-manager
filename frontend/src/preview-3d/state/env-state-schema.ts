@@ -10,6 +10,7 @@
 import {
   GROUND_CANVAS_STYLES,
   DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS,
+  GROUND_MATERIAL_PRESET_IDS,
   GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
 } from "@/preview-3d/caps/ground-surface-spec.ts";
@@ -86,6 +87,14 @@ export const ENV_STATE_SCHEMA = {
   groundCanvasStyle: {
     type: "enum",
     values: GROUND_CANVAS_STYLES,
+    default: "plain",
+    group: "ground",
+  },
+  // ADR-254：材质预设显式状态——「当前处于哪个材质预设」是可见事实。
+  // `custom` = 用户手改过预设关心的字段，已脱离预设（由写入中间件置位）。
+  groundMaterialPreset: {
+    type: "enum",
+    values: [...GROUND_MATERIAL_PRESET_IDS, "custom"] as const,
     default: "plain",
     group: "ground",
   },

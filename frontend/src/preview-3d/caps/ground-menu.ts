@@ -12,6 +12,7 @@ import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import {
   type GroundCanvasStyle,
+  type GroundMaterialPreset,
   type GroundMatParam,
   type GroundOverlayStyle,
   type GroundSourceKind,
@@ -149,14 +150,16 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       control: {
         options: [
           // ADR-252：本轴只装**噪声材质**；几何图案已归叠加层 folder。
-          // 不加上下文前缀：矩阵已用「哪些控件出现」行为性告知家族（材质无线色控件）。
+          // ADR-254：下拉值 = **预设状态**；选材质会一次性套用形状 + 配色（材质名兼现颜色）。
           { value: "plain", label: "素面" },
           { value: "marble", label: "大理石" },
           { value: "sand", label: "沙子" },
           { value: "grass", label: "草地" },
+          // 显示项：用户手改过预设关心的字段后由中间件置位，手选它不做事
+          { value: "custom", label: "自定义（已手改）" },
         ],
-        get: () => cap.getCanvasStyle(),
-        set: (v) => cap.setCanvasStyle(v as GroundCanvasStyle),
+        get: () => cap.getMaterialPreset(),
+        set: (v) => cap.setMaterialPreset(v as GroundMaterialPreset),
       },
     },
     colorNode(

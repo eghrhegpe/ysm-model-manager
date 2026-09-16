@@ -24,6 +24,7 @@ auto_fields:
     - buildToggleRow
     - buildYsmModelSchema
     - calcBoneHitZones
+    - CardShowConfig
     - cleanupEmpty3D
     - cleanupLitematic3D
     - cleanupMaid3D
@@ -108,6 +109,7 @@ auto_fields:
     - setActive3DClose
     - setup2DCanvas
     - shotButtonNodes
+    - showCard
     - showFbxPreview
     - showLitematic
     - showMaidPreview

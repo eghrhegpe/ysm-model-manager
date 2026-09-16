@@ -44,13 +44,18 @@ auto_fields:
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
+    - fbm
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
     - flattenLightParams
     - FogCapability
     - FogMode
+    - generateGrassPixels
+    - generateMarblePixels
     - generateOverlayPixels
+    - generatePlainPixels
+    - generateSandPixels
     - generateSurfacePixels
     - getTypedCap
     - godRaysIntensity
@@ -80,6 +85,7 @@ auto_fields:
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
+    - hash2
     - injectSkySunScalePatch
     - isSkyEnvironmentOn
     - LEGACY_CANVAS_PATTERNS
@@ -121,12 +127,18 @@ auto_fields:
     - ShadowCapability
     - ShadowType
     - SkyCapability
+    - smoothStep
     - SpotlightParams
     - SunBeams
+    - SURFACE_PIXEL_GENERATORS
+    - SurfaceCanvasStyle
+    - SurfacePixelGenerator
+    - SurfacePixelInput
     - surfaceSpecKey
     - textureRepeat
     - TILE_WORLD_SIZE
     - TONE_MAPPING_KEYS
+    - valueNoise
     - VolumetricCone
     - VolumetricParams
     - WATER_MODES

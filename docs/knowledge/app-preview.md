@@ -73,6 +73,7 @@ auto_fields:
     - ModelDetailMeta
     - ModelLike
     - openEmpty3DFullscreen
+    - OpenerOptions
     - openFullPreview
     - openModel3DFullscreen
     - OpenModel3DOptions

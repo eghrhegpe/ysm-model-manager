@@ -146,3 +146,18 @@ export const MENU_CARD_CSS = `.cap-card {
 .cap-card-body {
   padding: 2px 0 4px;
 }`;
+
+/**
+ * 行内按钮基础样式（`.cc-btn` 族）：**cap 控件与菜单行共用的同一套按钮**。
+ *
+ * 为何收敛（2026-09-16 事故）：`render.ts` 的行首 radio / 行尾 badge 一直挂这三个类，
+ * 但规则曾只住在 `cap-controls.ts|ensureCapStyles()`，而它唯一调用点是
+ * `renderCapControls()`——角色面板（纯 row，无 cap 控件）永远拿不到该样式表 ⇒ `<button>`
+ * 回落 UA 默认：不透明白底 `rgb(240,240,240)` + 2px 黑框 + 直角（实测 box 21×20）。
+ * 收敛后两条渲染路径各自插值本常量：**谁先跑谁注入**，与调用顺序解耦。
+ * 类名保留 `cc-` 前缀（历史命名，改名=无谓 churn，非第二套样式）。
+ * 消费者守卫：`menu-styles.test.ts`。
+ */
+export const MENU_BTN_CSS = `.cc-btn { padding:4px 10px;font-size:var(--fs-sm);border-radius:var(--radius-md);cursor:pointer; }
+.cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
+.cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }`;

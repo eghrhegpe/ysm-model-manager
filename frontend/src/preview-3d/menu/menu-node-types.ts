@@ -278,11 +278,12 @@ export interface PreviewMenuNode {
   //   - 环境能力门禁 → (s) => !!s["env.skyGroundCap"]
 
   /** row 类型：行首焦点钮（radio 语义，ADR-193 第四刀 roles 角色行首用）——
-   *  active 显 ● / ○，onClick 供焦点切换（如 sceneRegistry.setActive） */
+   *  active 渲染 radioOn（外环+圆心）/ radioOff（空环）SVG 图标，onClick 供焦点切换
+   *  （如 sceneRegistry.setActive）；图标走语义名，几何不随字体字形漂移（ADR-238）。 */
   radio?: { active: boolean; title: string; onClick: () => void };
-  /** row 类型：行尾徽标按钮（如 roles ⚙ 工具 / switch ➕ 追加）——
-   *  独立于整行 action 的行内次级动作 */
-  badge?: { label: string; title: string; onClick: () => void };
+  /** row 类型：行尾徽标按钮（如 roles 工具 / switch 追加）——
+   *  独立于整行 action 的行内次级动作；icon 为语义名（ADR-238 结构槽走 SVG，非字形） */
+  badge?: { icon: IconRef; title: string; onClick: () => void };
   /** 危险操作（如删除/卸载），渲染红色文字 */
   danger?: boolean;
   /** [P3 已清退 2026-09-05] 原 legacyTestId e2e 兼容映射字段已删除——查证 e2e（frontend/e2e/）对 legacyTestId/panelTestId/各具体 id 值零消费，淘汰前提失效提前清退；e2e 选择器统一走 data-testid="preview-"+node.id 派生（makePreviewMenuRow）*/

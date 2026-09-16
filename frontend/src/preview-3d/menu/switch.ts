@@ -129,7 +129,7 @@ function switchCandidateRows(
         ? {}
         : {
             badge: {
-              label: "➕",
+              icon: "add",
               title: t("preview.appendModel"),
               onClick: () => applySwitchRowClick(p, sameType, ctx, true),
             },

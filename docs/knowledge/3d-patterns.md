@@ -33,6 +33,7 @@ auto_fields:
     - loadModel2D
     - mount3D
     - Mount3DOptions
+    - OpenerOptions
     - openModel3DFullscreen
     - OpenModel3DOptions
     - PoseScene

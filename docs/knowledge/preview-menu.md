@@ -198,6 +198,8 @@ status: active
   - 注意区分三个「时间」：天空 time-of-day（本卡）／动画播放进度（`model/ysm-animation-player.ts|executeTimeline`，Molang 时间轴事件）／昼夜自动循环开关（`sky-auto-rotate`，按真实时间推进 timeOfDay）。名字相像，语义无关。
 - **动作/模型组一级卡壳收纳（ADR-242）**：`modelDetailView`/`motionDetailView` 一级改为 `kind:"card"`(collapsible) 卡壳 + 面板**入口行 array**（`panelEntryRow`：`kind:"row"` + icon + label + `rowDensity:"compact"` + `action: ctx.navigate(makePanelView(item))`），照抄 env `envCapRow` 范式——**内容仅在 navigate 到次级菜单后渲染**，骨骼/表情/材质等巨多内容不再一级内联铺开（与环境组形态统一：环境有收纳，动作也有）。骨骼二级仍走 `makeBonePanelRenderer` 逃生舱（动态树 + 跨域拾取，schema 化 ROI 为负）；表情/材质二级仍走既有声明式 children。入口行 testid 形如 `preview-motion-entry-<id>` / `preview-model-entry-<id>`（row testid 统一 `preview-` 前缀）。此决策部分推翻 ADR-240 的「renderCustom 内容内联进卡 body」做法（视觉统一保留，内联内容改跳转入口）。
 
+- **行内按钮样式单源（`MENU_BTN_CSS`）**：`render.ts` 的 radio/badge 与 cap 控件共用 `.cc-btn` 族，规则住在 `menu-styles.ts|MENU_BTN_CSS`，行/控件两条渲染路径**各自插值**——不可只让 cap 栈注入（`ensureCapStyles()` 唯一调用点是 `renderCapControls()`）：纯 row 面板（roles 角色列表，不渲染任何 cap 控件）拿不到规则 ⇒ `<button>` 回落 UA 默认**不透明白底 + 2px 黑框**（2026-09-16 实测 `background=rgb(240,240,240)`、`box 21×20`）。守卫：`menu-styles.test.ts`（常量内容 + 两消费方真插值）+ `roles.test.ts` 断言菜单样式表含 `.cc-btn-ghost`。
+- **row 槽位图标走语义名（ADR-238）**：`radio` 渲染 `radioOn`（外环+圆心）/`radioOff`（空环）SVG 图标，`badge.icon` 为 `IconRef`（roles 工具=`tools`、switch 追加=`add`）——不再用 `●/○/⚙/➕` 字形拼凑（几何随字体漂移，且 `.cc-btn-ghost` 的圆角矩形边框被误当「外圈」）。激活色用**双类锚定** `.rm-radio-btn.row-radio-active`（同为单类时后者胜，曾把 accent 吃掉）；按钮本体 18px 正圆、无边框、透明底（`.rm-radio-btn`）。
 ## 相关
 
 - `docs/knowledge/preview-state.md`（状态层快照 + visibleWhen 谓词）

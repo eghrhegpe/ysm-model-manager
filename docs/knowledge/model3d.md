@@ -247,6 +247,7 @@ auto_fields:
     - evaluateGpuLoad
     - extractIKChainFromTree
     - extractLegChains
+    - fbm
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - fbxBonesToBoneNodes
@@ -280,7 +281,11 @@ auto_fields:
     - frameCameraSide
     - FrameSideOptions
     - frBuildToolsView
+    - generateGrassPixels
+    - generateMarblePixels
     - generateOverlayPixels
+    - generatePlainPixels
+    - generateSandPixels
     - generateSurfacePixels
     - getActiveInputSession
     - getBoneDetail
@@ -348,6 +353,7 @@ auto_fields:
     - guardSessionAlive
     - hasActivePreview
     - hasBoneRotation
+    - hash2
     - hasSceneStats
     - hasSchema
     - HeaderToggleConfig
@@ -443,6 +449,7 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
+    - MENU_BTN_CSS
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS
     - MENU_ERROR_NOTE_CSS
@@ -717,6 +724,7 @@ auto_fields:
     - slideMenuStyleSheet
     - SlideMenuView
     - SLIDER_BAR_CLASS
+    - smoothStep
     - solveIK
     - Spec3D
     - SpecBone
@@ -750,6 +758,10 @@ auto_fields:
     - subscribeSettings
     - suggestGpuLimits
     - SunBeams
+    - SURFACE_PIXEL_GENERATORS
+    - SurfaceCanvasStyle
+    - SurfacePixelGenerator
+    - SurfacePixelInput
     - surfaceSpecKey
     - SwitchContext
     - switchNormPath
@@ -793,6 +805,7 @@ auto_fields:
     - unregisterModelRoot
     - unregisterSchema
     - UpdateableScene
+    - valueNoise
     - Vec3
     - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT

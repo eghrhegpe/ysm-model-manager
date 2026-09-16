@@ -14,7 +14,7 @@ import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";
 import { createHeaderToggle } from "./header-toggle.ts";
-import { MENU_SECTION_CSS } from "./menu-styles.ts";
+import { MENU_BTN_CSS, MENU_SECTION_CSS } from "./menu-styles.ts";
 import { DragSliderController } from "./slider-controller.ts";
 
 /**
@@ -63,7 +63,9 @@ export function capControlToView(c: PreviewControlDef): CapControlView {
 /** P1 抽类迁移(2026-09):cap-controls 控件样式集中注入(幂等,renderCapControls 入口调用,
  *  覆盖 env.ts 直调 ×3 与 render.ts:543 委托的全部路径,不依赖 renderMenu 曾运行)。
  *  .cap-section-header/.cap-section-arrow 自 menu-styles.ts 共享常量引入（单一事实源，
- *  render.ts rmAppendFolder 消费同一常量——不再双源漂移）；cc-* 为本模块控件独有类
+ *  render.ts rmAppendFolder 消费同一常量——不再双源漂移）；.cc-btn 族同理由
+ *  MENU_BTN_CSS 引入（render.ts 行内按钮也用它，曾经只有本栈注入 → 行路径拿不到）；
+ *  cc-* 为本模块控件独有类
  *  (双类锚定压过 .slide-label/.setting-select)。 */
 function ensureCapStyles(): void {
   installOnceStyles(
@@ -98,9 +100,7 @@ ${MENU_SECTION_CSS}
 .cc-thumb-btn-active { border-color:var(--accent,#7c83ff);background:color-mix(in srgb,var(--accent) 15%,transparent); }
 .cc-thumb-img { object-fit:cover;display:block;border-radius:var(--radius-sm);pointer-events:none;user-select:none; }
 .cc-span-cap { font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px; }
-.cc-btn { padding:4px 10px;font-size:var(--fs-sm);border-radius:var(--radius-md);cursor:pointer; }
-.cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
-.cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }
+${MENU_BTN_CSS}
 `,
   );
 }

@@ -24,6 +24,10 @@ function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): stri
     onBonePick: null,
   });
 }
+/** radio 指示器几何：off = 单圆环（1 个 <circle>）；on = 外环 + 圆心（2 个 <circle>） */
+function radioCircles(row: Element | null): number {
+  return row?.querySelectorAll('[data-testid="row-radio"] svg circle').length ?? -1;
+}
 
 describe("CORE_MENU_ITEMS roles 项", () => {
   it("roles 项声明在 model 组（panel + icon/labelKey 齐全）", () => {
@@ -56,7 +60,7 @@ describe("角色面板（roles）", () => {
     handle.dispose();
   });
 
-  it("注册 2 角色 → 面板列出 2 行，焦点行 radio 为 ● 且行高亮", () => {
+  it("注册 2 角色 → 面板列出 2 行，焦点行 radio 为「环+圆心」图标且行高亮", () => {
     const a = regRole("/m/a.ysm");
     const b = regRole("/m/b.ysm"); // b 为 active（register 即置活跃）
     const handle = mountPreviewRootMenu(overlay, makeCtx());
@@ -67,14 +71,24 @@ describe("角色面板（roles）", () => {
     const bRow = overlay.querySelector(`[data-testid="preview-role-${b}"]`);
     expect(aRow).not.toBeNull();
     expect(bRow).not.toBeNull();
-    expect((aRow!.querySelector('[data-testid="row-radio"]') as HTMLElement).textContent).toBe("○");
-    expect((bRow!.querySelector('[data-testid="row-radio"]') as HTMLElement).textContent).toBe("●");
+    // radio = SVG 图标（ADR-238：UI chrome 走图标，不靠字形）：off 单环 / on 环+圆心
+    expect(aRow!.querySelector('[data-testid="row-radio"] svg.ws-icon')).not.toBeNull();
+    expect(radioCircles(aRow)).toBe(1);
+    expect(radioCircles(bRow)).toBe(2);
+    const aRadio = aRow!.querySelector('[data-testid="row-radio"]') as HTMLElement;
+    const bRadio = bRow!.querySelector('[data-testid="row-radio"]') as HTMLElement;
+    expect(aRadio.className).not.toContain("row-radio-active");
+    expect(bRadio.className).toContain("row-radio-active");
     // 行高亮走主题 token 派生（刀②收编）。happy-dom 计算样式读 color-mix() 丢声明
     //（与真实 WebView2 不一致），故锁两级：类 token（rm-row-active）+ 注入样式表原文。
     expect(aRow!.className).not.toContain("rm-row-active");
     expect(bRow!.className).toContain("rm-row-active");
     const menuSheet = [...document.querySelectorAll("style")].find((st) => st.textContent?.includes(".rm-row-active"));
     expect(menuSheet?.textContent ?? "").toContain("var(--accent)");
+    // 归属回归（2026-09-16）：行内按钮用的 cc-btn 族必须随本样式表注入——曾经只搭
+    // cap 栈便车（ensureCapStyles 仅 renderCapControls 调用），角色面板这种纯 row 路径
+    // 拿不到 ⇒ UA 默认不透明白底 + 2px 黑框（实测 background=rgb(240,240,240)）。
+    expect(menuSheet?.textContent ?? "").toContain(".cc-btn-ghost");
     handle.dispose();
   });
 
@@ -88,7 +102,7 @@ describe("角色面板（roles）", () => {
     (aRow!.querySelector('[data-testid="row-radio"]') as HTMLElement).click();
     expect(sceneRegistry.getActiveId()).toBe(a);
     const aRow2 = overlay.querySelector(`[data-testid="preview-role-${a}"]`);
-    expect((aRow2!.querySelector('[data-testid="row-radio"]') as HTMLElement).textContent).toBe("●");
+    expect(radioCircles(aRow2)).toBe(2);
     handle.dispose();
   });
 

@@ -26,6 +26,7 @@ import {
 } from "./cap-controls.ts";
 import { createHeaderToggle } from "./header-toggle.ts";
 import {
+  MENU_BTN_CSS,
   MENU_CARD_CSS,
   MENU_DIVIDER_CSS,
   MENU_ROW_DENSITY_CSS,
@@ -120,8 +121,34 @@ ${MENU_CARD_CSS}
 }
 /* row 槽位样式（ADR-193 第四刀）：radio 活跃行高亮 + 行内按钮尺寸微调 */
 .rm-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-.row-radio-active { color: var(--accent, #7c83ff); }
-.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size:var(--fs-base); line-height: 1.2; }`,
+/* 焦点钮激活态：外环+圆心染 accent——双类锚定（0,2,0）压过 .rm-radio-btn 的默认白，
+ * 不依赖样式书写顺序（同为单类时后者胜，曾把激活色吃掉） */
+.rm-radio-btn.row-radio-active { color: var(--accent, #7c83ff); }
+.rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size:var(--fs-base); line-height: 1.2; }
+/* [行内按钮归属] .cc-btn 族由 menu-styles|MENU_BTN_CSS 单源引入（radio/badge 也用），
+ * 不再只搭 cap 栈 ensureCapStyles 便车——纯 row 面板（roles 角色列表）此前拿不到规则，
+ * <button> 回落 UA 默认：不透明白底 + 2px 黑框（实测 background=rgb(240,240,240)）。 */
+${MENU_BTN_CSS}
+/* 行首焦点钮（radio 语义）：正圆图标钮——外环/环+圆心由 SVG 图标给，按钮本体不画边框底。
+ * 几何固定（18px 正圆 + 居中），不随字体字形漂移（旧实现用 ○/● 字形 + 圆角矩形边框）。 */
+.rm-radio-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  transition: var(--tr-fast);
+}
+.rm-radio-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }`,
   );
 }
 
@@ -399,10 +426,10 @@ function rmAppendDynamicRow(
     const radio = document.createElement("button");
     radio.type = "button";
     radio.dataset.testid = "row-radio";
-    radio.textContent = node.radio.active ? "●" : "○";
+    // 语义名图标（ADR-238：UI chrome 走 SVG，不靠字形）：off 单环 / on 环+圆心
+    applyIcon(radio, node.radio.active ? "radioOn" : "radioOff");
     radio.title = node.radio.title;
-    radio.className = `cc-btn cc-btn-ghost rm-inline-btn${node.radio.active ? " row-radio-active" : ""}`;
-    radio.style.marginRight = "6px";
+    radio.className = `rm-radio-btn${node.radio.active ? " row-radio-active" : ""}`;
     radio.onclick = (ev): void => {
       ev.stopPropagation();
       node.radio?.onClick();
@@ -426,7 +453,7 @@ function rmAppendDynamicRow(
     const badge = document.createElement("button");
     badge.type = "button";
     badge.dataset.testid = "row-badge";
-    badge.textContent = node.badge.label;
+    applyIcon(badge, node.badge.icon);
     badge.title = node.badge.title;
     badge.className = "cc-btn cc-btn-ghost rm-inline-btn";
     badge.style.marginLeft = "auto";

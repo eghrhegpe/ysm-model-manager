@@ -289,6 +289,12 @@ export const UI_ICONS = {
   dot: svg('<circle cx="12" cy="12" r="9"/>'),
   bullet: svg('<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'),
   bulletAlt: svg('<circle cx="12" cy="12" r="6"/>'),
+  // radio 焦点指示（roles 角色行首 / 任何 radio 语义槽）：off = 空环，on = 环 + 实心圆心。
+  // 旧实现是 ○/● 两个字体字形（实心饼 / 圆角矩形边框），几何随字体漂移，ADR-238 收编。
+  radioOff: svg('<circle cx="12" cy="12" r="9"/>'),
+  radioOn: svg(
+    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',
+  ),
   sparkle: svg(
     '<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z"/><path d="M18 15l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z"/>',
   ),

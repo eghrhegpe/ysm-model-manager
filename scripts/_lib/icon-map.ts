@@ -158,6 +158,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "⚪": "dot",
   "🔹": "bullet",
   "🔸": "bulletAlt",
+  // radio 焦点钮：●/○ 是「实心饼 + 圆角矩形边框」的字形拼凑（旧实现），
+  // 语义名收编后建议用 ◉（环+圆心）/ ○（空环）两态字形兜底识别
+  "◉": "radioOn",
+  "○": "radioOff",
   "✨": "sparkle",
   "👴": "oldest",
   "👈": "pointerLeft",

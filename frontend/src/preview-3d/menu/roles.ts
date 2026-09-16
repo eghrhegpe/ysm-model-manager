@@ -81,7 +81,7 @@ export function buildRolesSchema(
         },
       },
       badge: {
-        label: "⚙",
+        icon: "tools",
         title: t("preview.roleTools"),
         onClick: () =>
           deps.actionCtx.navigate?.(

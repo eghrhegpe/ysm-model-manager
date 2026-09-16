@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-254：地面材质预设化：材质名兑现配色 + 显式预设状态",
+        "link": "/adr/ADR-254-ground-material-preset-explicit-state"
+      },
+      {
         "text": "ADR-253：3D 入口统一：路由层 siblings 兜底与详情卡收编",
         "link": "/adr/ADR-253-3d-entry-siblings-unification"
       },

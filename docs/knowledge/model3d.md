@@ -136,6 +136,7 @@ auto_fields:
     - checkRevision
     - cleanupPreview
     - clearEnvCallbacks
+    - clearEnvStateMiddlewares
     - clearFolderCollapsedState
     - clearGpuBudgetCalibration
     - clearLoadTraces
@@ -235,6 +236,7 @@ auto_fields:
     - EnvPresetId
     - envState
     - EnvState
+    - EnvStateMiddleware
     - EnvStateSchema
     - estimateSceneTextureBytes
     - estimateTexGpuBytes
@@ -318,6 +320,9 @@ auto_fields:
     - GROUND_CANVAS_STYLES
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
+    - GROUND_MATERIAL_PRESET_IDS
+    - GROUND_MATERIAL_PRESET_KEYS
+    - GROUND_MATERIAL_PRESETS
     - GROUND_OVERLAY_STYLES
     - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
@@ -325,6 +330,8 @@ auto_fields:
     - GroundCanvasStyle
     - GroundCapability
     - GroundMaterialParams
+    - GroundMaterialPreset
+    - GroundMaterialPresetDef
     - GroundMatParam
     - groundMatSourceFromAxes
     - GroundOverlayParams
@@ -594,6 +601,7 @@ auto_fields:
     - registerBuiltScene
     - RegisterBuiltSceneInput
     - registerEnvCallback
+    - registerEnvStateMiddleware
     - registerModelRoot
     - registerPerFrame
     - registerSchema

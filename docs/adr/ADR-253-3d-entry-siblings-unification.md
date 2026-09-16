@@ -131,7 +131,21 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
 `wireFab` + `postRender`），消除最后一个手写详情壳。数据通道（`ReadPackMeta` /
 `ListPackModelsDetail`）不变，仅收敛渲染装配方式。
 
+### D5 · 3D 切换机制与 2D 骨架加载解耦（实施中发现的缺陷修复）
+
+`loadModel2D` 内的 3D 切换块（`_toggle3D` / `close3D` / `onClose` / android-back / FAB 绑定 /
+`_prefer3D` 自动弹）**必须在 `try` 之前同步执行**，不得位于 2D 骨架加载成功路径末端。
+
+- 原因：该块只依赖入参 `modelPath` 与 `ctx`，与 `loadModelData` 的结果无关；
+  置于 try 尾部会使 FAB 在「解析失败 / 无 bones / 摘要提取失败」三条路径上永不绑定 → 死点击。
+- 兼容性：A 的迟到渲染不会污染 B 的按钮——同步绑定发生在 A 自己的渲染时机，
+  B 后续重建 `innerHTML` 得到的是全新未绑定按钮（既有跨文件污染守卫用例仍绿）。
+
 ### 否决的方案
+
+- **否决「给 `_toggle3D` 加空 model 兜底」**（D5）：治标——根因是绑定时机错位，不是缺数据。
+- **否决「在 detail.ts 渲染 FAB 时立即绑一个占位 handler」**（D5）：会导致两处绑定源、
+  后者覆盖前者，新增隐性顺序依赖。
 
 - **否决「给 nav-fab 加与详情卡并列的 siblings 计算」**：治标不治本，同类第 3 个调用方还会再漏一次。
 - **否决「在详情卡新增 zip 内条目列表 UI」**：与 ADR-132 冲突（容器多模型选择属 3D 菜单域），
@@ -158,12 +172,17 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
 ### 已知遗留
 
 - 详情卡 FAB 的存废与 `_prefer3D` 语义迁移（§D3）待单独决策。
-- YSM 详情卡 `#btn-3d-preview` 的「延迟绑定致错误路径下点击无响应」缺陷（`loadModel2D`
-  末尾才绑 onclick）不在本 ADR 范围——无论 FAB 存废都需单独修复。
+- ~~YSM 详情卡 `#btn-3d-preview` 的「延迟绑定致错误路径下点击无响应」缺陷~~
+  **已于 2026-09-16 修复**（§D5）：原 `btn3d.onclick` 挂在 `loadModel2D` 的 try 尾部
+  （所有 `await` + 两个早退之后），解析失败 / 无 bones / 摘要提取失败三条路径上 FAB
+  渲染出来却点击无反应。修复方式：把整块 3D 切换机制（`_toggle3D` + FAB 绑定 +
+  `_prefer3D` 自动弹）提到 `try` **之前**同步执行——依据是 `_toggle3D` 只依赖 `modelPath`
+  参数与 `ctx`，与 2D 加载出的 `model` 无关（3D 侧自带 `loader` 重新加载）。
 
 ## 4. 数据溯源
 
-- 来源：`preview-library.ts:52-64`（`OpenModel3DOptions` 已含 siblings）、
+- 来源：`skeleton.ts` `loadModel2D`（D5 修复现场：3D 切换块原位于 try 尾部）、
+  `preview-library.ts:52-64`（`OpenModel3DOptions` 已含 siblings）、
   `preview-library.ts:76`（`openModel3DFullscreen`）、`app-nav/index.ts:322`（零 options 调用）、
   `siblings.ts:41`（`resolveSiblingsByType` 按 rtype 扫描）、
   `mount-preview-core.ts:661`（getSiblings 仅滤 currentPath，**无同目录过滤**）、

@@ -11,6 +11,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildGroundNodes
+    - GROUND_MATERIAL_PRESET_KEYS
     - GroundCapability
 quick_groups:
   - 3D 预览与模型追加

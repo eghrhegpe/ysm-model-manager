@@ -22,6 +22,7 @@ auto_fields:
     - AtmospherePresetId
     - buildSharedInfra
     - clearEnvCallbacks
+    - clearEnvStateMiddlewares
     - clearSceneCaps
     - deriveDefaultEnvState
     - dispatchEnvChange
@@ -29,6 +30,7 @@ auto_fields:
     - EnvCallback
     - envState
     - EnvState
+    - EnvStateMiddleware
     - EnvStateSchema
     - getEnvCallbackCount
     - getPresetKeys
@@ -38,6 +40,7 @@ auto_fields:
     - ModelType
     - pickModelDefaultFields
     - registerEnvCallback
+    - registerEnvStateMiddleware
     - resetEnvState
     - resetSceneInfra
     - sceneInfraHost

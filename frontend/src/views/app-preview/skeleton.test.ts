@@ -158,6 +158,38 @@ describe("loadModel2D — 防御路径", () => {
     expect(container.textContent).toContain("boom");
   });
 
+  // ADR-253 遗留缺陷修复：3D FAB 绑定不得依赖 2D 骨架加载成功。
+  // 原实现把 btn3d.onclick 挂在 loadModel2D 的 try 尾部（所有 await + 两个早退之后），
+  // 导致解析失败/无几何/摘要失败三条路径上按钮渲染出来却点了没反应（死点击）。
+  it("loadModelData 抛错 → 3D FAB 仍已绑定（不再死点击）", async () => {
+    loadModelData.mockRejectedValue(new Error("boom"));
+    const ctx = makeCtx();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await loadModel2D(ctx, "/m/a.ysm", container);
+    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
+    expect(btn3d).not.toBeNull();
+    expect(btn3d?.onclick).not.toBeNull();
+  });
+
+  it("model 无 bones → 3D FAB 仍已绑定（不再死点击）", async () => {
+    loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
+    const ctx = makeCtx();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await loadModel2D(ctx, "/m/a.ysm", container);
+    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
+    expect(btn3d?.onclick).not.toBeNull();
+  });
+
+  it("3D FAB 在 loadModelData 完成前即已绑定（同步绑定，不等异步链）", () => {
+    loadModelData.mockReturnValue(new Promise(() => {})); // 永不 resolve
+    const ctx = makeCtx();
+    void loadModel2D(ctx, "/m/a.ysm", document.createElement("div"));
+    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
+    expect(btn3d?.onclick).not.toBeNull();
+  });
+
   it("model 无 bones → 未找到几何数据提示", async () => {
     loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
     const ctx = makeCtx();

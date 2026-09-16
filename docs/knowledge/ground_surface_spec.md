@@ -19,6 +19,9 @@ auto_fields:
     - generateSurfacePixels
     - GROUND_CANVAS_STYLES
     - GROUND_MAT_PARAMS
+    - GROUND_MATERIAL_PRESET_IDS
+    - GROUND_MATERIAL_PRESET_KEYS
+    - GROUND_MATERIAL_PRESETS
     - GROUND_OVERLAY_STYLES
     - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
@@ -26,6 +29,8 @@ auto_fields:
     - GroundCanvasStyle
     - GroundCapability
     - GroundMaterialParams
+    - GroundMaterialPreset
+    - GroundMaterialPresetDef
     - GroundMatParam
     - groundMatSourceFromAxes
     - GroundOverlayParams

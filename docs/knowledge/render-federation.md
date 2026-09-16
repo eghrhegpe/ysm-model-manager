@@ -33,6 +33,7 @@ auto_fields:
     - EnvPresetId
     - FogCapability
     - FogMode
+    - GROUND_MATERIAL_PRESET_KEYS
     - GroundCapability
     - GroupedScene
     - hasActivePreview

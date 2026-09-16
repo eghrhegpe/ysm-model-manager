@@ -107,6 +107,7 @@ auto_fields:
     - getCustomAnimPath
     - getSceneCaps
     - getTextureDecoder
+    - GROUND_MATERIAL_PRESET_KEYS
     - GroundCapability
     - GroupedScene
     - guardSessionAlive

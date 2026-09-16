@@ -193,7 +193,9 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 
 ## e2e 覆盖边界
 
-3D 预览菜单（slide menu）的交互断言在 e2e 环境**不可行**：mock 数据下 `showModelDetail` 走 catch 分支、不绑定 `btn-3d-preview` 的 onclick（3D 不挂载，`preview.spec.ts` 注释实证），无 GPU 环境 WebGL 又 `test.skip`。故设置面板（含性能档位 select）的断言**由 vitest 层完整覆盖**（`preview-state.test` 面板接入 + `perf-presets.test` 切档语义/持久化/custom），不补「no-op 点击」类假断言。
+3D 预览菜单（slide menu）的交互断言在 e2e 环境**不可行**：mock 数据下 `showModelDetail` 走 catch 分支、`loadModel2D` 在 throw 之前不会被调用，故 `btn-3d-preview` 的 onclick 不绑定（3D 不挂载，`preview.spec.ts` 注释实证），无 GPU 环境 WebGL 又 `test.skip`。故设置面板（含性能档位 select）的断言**由 vitest 层完整覆盖**（`preview-state.test` 面板接入 + `perf-presets.test` 切档语义/持久化/custom），不补「no-op 点击」类假断言。
+
+**注（2026-09-16，ADR-253 D5）**：`loadModel2D` 内部三条错误路径（`loadModelData` 抛错 / 无 bones / 容器被移除）原先也不绑定 FAB，已改为在 2D 加载前同步绑定。但本节所述 e2e 场景（`showModelDetail` 自身 catch → **根本不调用** `loadModel2D`）**不受该修复影响**，`preview.spec.ts` 的注释与断言仍然成立；要覆盖该路径需走 ADR-253 D4（`showResourcePack`/YSM 详情收编 `showCard`，渲染期同步绑 `wireFab`）。
 
 ## 相关
 

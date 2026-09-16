@@ -12,9 +12,10 @@ export const contentStgCSS: string = `
   padding: 16px 20px;
 }
 /* .stg-title：仅作「设置页节标题」标记，不再提供 margin-bottom——
-   标题下间距单一来源 = .section-title 的 padding-bottom:8px。
-   历史 bug：本条曾写 margin-bottom:8px，与 .section-title 的 padding-bottom 叠加成 16px
-   （padding 与 margin 不折叠），两个旋钮管同一件事、改一个不生效。
+   标题下间距单一来源 = .section-title 的 padding-bottom（现 16px）。
+   历史 bug：本条曾写 margin-bottom:8px，与 .section-title 的 padding-bottom:8px 叠加成 16px
+   （padding 与 margin 不折叠），两个旋钮管同一件事、改一个不生效——
+   现统一由 .section-title 供 16px，视觉与旧叠加值一致但只剩一个旋钮。
    全仓 9 处用法均写作 class="section-title stg-title"，无单独使用，故删除安全。 */
 .stg-title {
   /* 间距归 .section-title，勿在此加 margin */
@@ -86,7 +87,7 @@ export const contentStgCSS: string = `
 
 /* ===== 设置页卡片/路径样式（settings 独占） ===== */
 /* 设置页「组」间距契约（两种组，各取其一的间距来源，勿叠加）：
-     A. 带标题的组 → 标题行用 .section-title（自带 padding:16px 16px 8px）撑开上方空白；
+     A. 带标题的组 → 标题行用 .section-title（自带 padding:16px 16px 16px）撑开上方空白；
      B. 无标题的组 → 容器自身挂 .stg-section（margin-top:16px）。
    卡片自带 card-hdr 的组（如「行为与动画」+「启动默认页」）走 B。
    历史坑：界面上 tab 的两卡组曾直接吐裸 .stg-grid，与上方行组零间距——

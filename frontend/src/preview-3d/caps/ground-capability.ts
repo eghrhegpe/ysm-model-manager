@@ -545,31 +545,27 @@ export class GroundCapability implements SceneCapability {
   getMatDensity(): number {
     return envState.groundMatDensity;
   }
-  setMatDensity(v: number): void {
-    setEnvState({ groundMatDensity: Math.max(0.25, Math.min(8, v)) }, { source: "manual" });
+  setMatDensity(v: number, opts?: { skipMiddleware?: boolean }): void {
+    setEnvState(
+      { groundMatDensity: Math.max(0.25, Math.min(8, v)) },
+      { source: "manual", ...opts },
+    );
     this.refreshSurface();
   }
   getMatAngle(): number {
     return envState.groundMatAngleDeg;
   }
-  setMatAngle(deg: number): void {
-    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
+  setMatAngle(deg: number, opts?: { skipMiddleware?: boolean }): void {
+    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual", ...opts });
     this.refreshSurface();
   }
-  /** 存档恢复变体（skipMiddleware：还原非手改，不触发「脱离预设」标记，ADR-254） */
+  /** 存档恢复：委托同一 setter + skipMiddleware（还原非手改，不触发「脱离预设」标记，ADR-254）。
+   *  委托而非独立方法：clamp/取模 边界单一事实源，避免与用户 setter 双写漂移。 */
   private setMatDensityRestore(v: number): void {
-    setEnvState(
-      { groundMatDensity: Math.max(0.25, Math.min(8, v)) },
-      { source: "manual", skipMiddleware: true },
-    );
-    this.refreshSurface();
+    this.setMatDensity(v, { skipMiddleware: true });
   }
   private setMatAngleRestore(deg: number): void {
-    setEnvState(
-      { groundMatAngleDeg: ((deg % 360) + 360) % 360 },
-      { source: "manual", skipMiddleware: true },
-    );
-    this.refreshSurface();
+    this.setMatAngle(deg, { skipMiddleware: true });
   }
 
   isEnabled(): boolean {
